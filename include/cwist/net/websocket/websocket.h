@@ -1,8 +1,3 @@
-/**
- * @file websocket.h
- * @brief WebSocket upgrade and frame handling.
- */
-
 #ifndef __CWIST_WEBSOCKET_H__
 #define __CWIST_WEBSOCKET_H__
 
@@ -31,68 +26,20 @@ typedef struct cwist_ws_frame {
     size_t payload_len;
 } cwist_ws_frame;
 
-/**
- * @brief Upgrade a standard HTTP request to a WebSocket connection.
- * @return `NULL` if the handshake fails or the request is invalid, otherwise the upgraded context.
- */
+// Upgrade a standard HTTP request to a WebSocket connection.
+// Returns NULL if the handshake fails or the request is not a valid WebSocket upgrade.
+// If successful, sends the 101 Switching Protocols response and returns the WS context.
 cwist_websocket *cwist_websocket_upgrade(cwist_http_request *req, int client_fd);
 
-/**
- * @brief Receive a frame, blocking until data arrives or the socket closes.
- * @return `NULL` on error or if the connection was closed.
- */
+// Receive a frame. Blocks until a frame is received or connection closed.
+// Returns NULL on error or connection close.
 cwist_ws_frame *cwist_websocket_receive(cwist_websocket *ws);
 
-/**
- * @brief Send a frame with the specified opcode and payload.
- */
+// Send a frame.
 int cwist_websocket_send(cwist_websocket *ws, cwist_ws_opcode_t opcode, const uint8_t *data, size_t len);
 
-/**
- * @brief Send a large payload as sequenced binary frames.
- *
- * Splits @p data into chunks of @p chunk_payload_size (or smaller for the
- * final chunk), prefixes each chunk with the CWIST sequence header, and sends
- * every chunk as an independent binary frame.  The peer can reassemble the
- * original payload even when frames arrive out of order.
- *
- * @param ws WebSocket connection.
- * @param data Payload bytes.
- * @param len Payload length.
- * @param chunk_payload_size Maximum payload bytes per chunk (must be > 0).
- * @return 0 on success, -1 on failure.
- */
-int cwist_websocket_send_sequenced(cwist_websocket *ws,
-                                   const uint8_t *data,
-                                   size_t len,
-                                   uint16_t chunk_payload_size);
-
-/**
- * @brief Receive and reassemble a sequenced binary message.
- *
- * Reads binary frames until every chunk of one sequenced message has arrived,
- * discarding duplicates and reordering out-of-order chunks.  The returned
- * buffer is heap-allocated and must be freed with cwist_free().
- *
- * @param ws WebSocket connection.
- * @param out_len Receives the length of the reassembled payload.
- * @return Newly allocated payload buffer, or NULL on error/incomplete message.
- */
-uint8_t *cwist_websocket_receive_sequenced(cwist_websocket *ws, size_t *out_len);
-
-/**
- * @brief Destroy a frame.
- */
 void cwist_websocket_frame_destroy(cwist_ws_frame *frame);
-
-/**
- * @brief Close the WebSocket connection.
- */
 void cwist_websocket_close(cwist_websocket *ws);
-
-/**
- * @brief Destroy the WebSocket context.
- */
 void cwist_websocket_destroy(cwist_websocket *ws);
 
 #endif

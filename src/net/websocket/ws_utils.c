@@ -1,12 +1,8 @@
 #include "ws_utils.h"
-#include <cwist/core/mem/alloc.h>
 #include <stdlib.h>
 #include <string.h>
 
-/**
- * @file ws_utils.c
- * @brief Small SHA-1 and Base64 helpers used by the WebSocket handshake path.
- */
+/* --- SHA1 Implementation --- */
 
 #define ROL(value, bits) (((value) << (bits)) | ((value) >> (32 - (bits))))
 
@@ -34,12 +30,7 @@ typedef struct {
     uint8_t buffer[64];
 } SHA1_CTX;
 
-/**
- * @brief Execute one 64-byte SHA-1 compression round.
- * @param state Rolling 160-bit digest state.
- * @param buffer Input block to compress.
- */
-static void SHA1Transform(uint32_t state[5], const uint8_t *buffer) {
+static void SHA1Transform(uint32_t state[5], const uint8_t buffer[64]) {
     uint32_t a, b, c, d, e;
     typedef union {
         uint8_t c[64];
@@ -86,10 +77,6 @@ static void SHA1Transform(uint32_t state[5], const uint8_t *buffer) {
     state[4] += e;
 }
 
-/**
- * @brief Initialize a SHA-1 context with the standard IV constants.
- * @param context SHA-1 context to initialize.
- */
 static void SHA1Init(SHA1_CTX *context) {
     context->state[0] = 0x67452301;
     context->state[1] = 0xEFCDAB89;
@@ -99,12 +86,6 @@ static void SHA1Init(SHA1_CTX *context) {
     context->count[0] = context->count[1] = 0;
 }
 
-/**
- * @brief Feed additional bytes into the SHA-1 streaming state.
- * @param context SHA-1 context being updated.
- * @param data Input bytes to hash.
- * @param len Number of input bytes.
- */
 static void SHA1Update(SHA1_CTX *context, const uint8_t *data, uint32_t len) {
     uint32_t i, j;
     j = context->count[0];
@@ -114,27 +95,16 @@ static void SHA1Update(SHA1_CTX *context, const uint8_t *data, uint32_t len) {
     j = (j >> 3) & 63;
     if ((j + len) > 63) {
         memcpy(&context->buffer[j], data, (i = 64 - j));
-        /* GCC's -Wstringop-overread fires on this classic buffered-SHA1
-         * shape: the block buffer is provably full here (j + 64 - j bytes),
-         * and the loop below only runs while i + 63 < len. */
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wstringop-overread"
         SHA1Transform(context->state, context->buffer);
         for (; i + 63 < len; i += 64) {
             SHA1Transform(context->state, &data[i]);
         }
-#pragma GCC diagnostic pop
         j = 0;
     } else
         i = 0;
     memcpy(&context->buffer[j], &data[i], len - i);
 }
 
-/**
- * @brief Finalize a SHA-1 hash and write the 20-byte digest.
- * @param digest Output buffer that receives the finalized digest.
- * @param context SHA-1 context to finalize.
- */
 static void SHA1Final(uint8_t digest[20], SHA1_CTX *context) {
     unsigned i;
     uint8_t finalcount[8];
@@ -154,12 +124,6 @@ static void SHA1Final(uint8_t digest[20], SHA1_CTX *context) {
     }
 }
 
-/**
- * @brief Compute a SHA-1 digest for the provided input bytes.
- * @param data Input bytes to hash.
- * @param len Number of bytes in @p data.
- * @param hash Output buffer that receives the 20-byte digest.
- */
 void sha1(const uint8_t *data, size_t len, uint8_t *hash) {
     SHA1_CTX ctx;
     SHA1Init(&ctx);
@@ -179,16 +143,9 @@ static const char encoding_table[] = {'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H',
                                       '4', '5', '6', '7', '8', '9', '+', '/'};
 static const int mod_table[] = {0, 2, 1};
 
-/**
- * @brief Base64-encode binary data for WebSocket handshake header generation.
- * @param data Input bytes to encode.
- * @param input_length Number of input bytes.
- * @param output_length Output parameter that receives the encoded length.
- * @return Heap-allocated Base64 string, or NULL when allocation fails.
- */
 char *base64_encode(const uint8_t *data, size_t input_length, size_t *output_length) {
     *output_length = 4 * ((input_length + 2) / 3);
-    char *encoded_data = (char *)cwist_alloc(*output_length + 1);
+    char *encoded_data = (char *)malloc(*output_length + 1);
     if (encoded_data == NULL) return NULL;
 
     for (size_t i = 0, j = 0; i < input_length;) {

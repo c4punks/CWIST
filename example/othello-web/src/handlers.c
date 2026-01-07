@@ -8,7 +8,6 @@
 #include <cwist/net/http/query.h>
 #include <cwist/core/utils/json_builder.h>
 #include <cwist/core/template/template.h>
-#include <cwist/core/mem/alloc.h>
 #include <cjson/cJSON.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -126,7 +125,7 @@ void join_handler(cwist_http_request *req, cwist_http_response *res) {
     
     char *str = cJSON_PrintUnformatted(json);
     cwist_sstring_assign(res->body, str);
-    cwist_free(str);
+    free(str);
     cJSON_Delete(json);
     
     cwist_http_header_add(&res->headers, "Content-Type", "application/json");
@@ -158,7 +157,7 @@ void state_handler(cwist_http_request *req, cwist_http_response *res) {
     
     char *str = cJSON_PrintUnformatted(json);
     cwist_sstring_assign(res->body, str);
-    cwist_free(str);
+    free(str);
     cJSON_Delete(json);
     cwist_http_header_add(&res->headers, "Content-Type", "application/json");
 }

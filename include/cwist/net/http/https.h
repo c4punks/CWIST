@@ -1,8 +1,3 @@
-/**
- * @file https.h
- * @brief HTTPS/TLS wrapper interface.
- */
-
 #ifndef __CWIST_HTTPS_H__
 #define __CWIST_HTTPS_H__
 
@@ -11,22 +6,10 @@
 #include <openssl/ssl.h>
 #include <openssl/err.h>
 
-#define HTTPS_THREAD_POOL_SIZE HTTP_THREAD_POOL_SIZE;
-
-/** --- SSL Structures --- */
-
-typedef enum cwist_https_protocol {
-    CWIST_HTTPS_PROTOCOL_NONE = 0,
-    CWIST_HTTPS_PROTOCOL_HTTP11,
-    CWIST_HTTPS_PROTOCOL_HTTP2,
-    CWIST_HTTPS_PROTOCOL_HTTP3
-} cwist_https_protocol;
+/* --- SSL Structures --- */
 
 typedef struct cwist_https_context {
     SSL_CTX *ctx;
-    bool http2_enabled;
-    bool http3_enabled;
-    void *ticket_key; ///< Shared session-ticket key material (forked workers inherit it)
 } cwist_https_context;
 
 typedef struct cwist_https_connection {
@@ -34,38 +17,15 @@ typedef struct cwist_https_connection {
     SSL *ssl;
     char *read_buf;
     size_t buf_len;
-    bool negotiated_http2;
-    cwist_https_protocol negotiated_protocol;
-    bool http3_enabled;
-    bool http2_sequenced_data; /*< Enable CWIST-specific sequenced DATA frames. */
-    bool deferred;             /*< True when response processing has been deferred. */
 } cwist_https_connection;
 
-typedef struct cwist_app cwist_app;
-
-typedef struct cwist_https_options {
-    bool enable_http2;
-    bool enable_http3;
-} cwist_https_options;
-
-/** --- API Functions --- */
+/* --- API Functions --- */
 
 /**
  * Initialize the OpenSSL library and create an SSL context.
  * Loads certificate and private key.
  */
 cwist_error_t cwist_https_init_context(cwist_https_context **ctx, const char *cert_path, const char *key_path);
-
-/**
- * Initialize an HTTPS context with explicit transport options.
- * The HTTP/2 option only applies the standard TLS/ALPN profile today.
- * Application request handling remains HTTP/1.1 unless a frame engine is added.
- */
-cwist_error_t cwist_https_init_context_with_options(cwist_https_context **ctx,
-                                                    const char *cert_path,
-                                                    const char *key_path,
-                                                    const cwist_https_options *options,
-                                                    cwist_app *app);
 
 /**
  * Destroy the HTTPS context and cleanup OpenSSL.
@@ -77,16 +37,6 @@ void cwist_https_destroy_context(cwist_https_context *ctx);
  * Returns a new cwist_https_connection wrapper.
  */
 cwist_error_t cwist_https_accept(cwist_https_context *ctx, int client_fd, cwist_https_connection **conn);
-
-/**
- * Returns true when ALPN negotiated h2 on this TLS connection.
- */
-bool cwist_https_connection_uses_http2(const cwist_https_connection *conn);
-
-/**
- * Returns the protocol selected by ALPN, or HTTP/1.1 when no higher protocol matched.
- */
-cwist_https_protocol cwist_https_connection_protocol(const cwist_https_connection *conn);
 
 /**
  * Close and free the HTTPS connection.
@@ -101,11 +51,9 @@ cwist_http_request *cwist_https_receive_request(cwist_https_connection *conn);
 
 /**
  * Serialize an HTTP response and send it over the SSL connection.
- * Streams the header block and body separately (zero-copy; no intermediate
- * serialization blob) and supports pointer bodies and file streams.
+ * Uses cwist_http_stringify_response internally.
  */
 cwist_error_t cwist_https_send_response(cwist_https_connection *conn, cwist_http_response *res);
-cwist_error_t cwist_https_send_response_head(cwist_https_connection *conn, cwist_http_response *res);
 
 /**
  * Helper to start a simple HTTPS server loop.
@@ -113,30 +61,8 @@ cwist_error_t cwist_https_send_response_head(cwist_https_connection *conn, cwist
  */
 cwist_error_t cwist_https_server_loop(int server_fd, cwist_https_context *ctx, void (*handler)(cwist_https_connection *conn, void *), void *user_ctx);
 
-/**
- * Thread pool helpers for hybrid async-accept + threaded-process mode.
- */
-int https_pool_init(void);
-void https_pool_submit(int client_fd, cwist_https_context *ctx, void (*handler)(cwist_https_connection *, void *), void *user_ctx);
-void https_pool_submit_conn(cwist_https_connection *conn, cwist_https_context *ctx, void (*handler)(cwist_https_connection *, void *), void *user_ctx);
-void https_pool_destroy(void);
-
-/**
- * @brief Accept a TLS connection without parking a worker on the handshake.
- * Completes the handshake inline when the ClientHello is already pending,
- * otherwise parks the connection with the handshake shepherd thread and
- * returns immediately.  Established sessions are submitted to the HTTPS
- * worker pool.  Safe to call from reactor callbacks.
- */
-void cwist_https_dispatch(int client_fd, cwist_https_context *ctx, void (*handler)(cwist_https_connection *, void *), void *user_ctx);
-
-/** @brief Number of TLS handshakes currently parked in the shepherd. */
-long cwist_https_pending_handshakes(void);
-
-/** --- Error Codes --- */
-/**
- * @brief Defined as errno-like constants used with `cwist_error_t` fields.
- * Values are declared elsewhere alongside their implementations.
- */
+/* --- Error Codes --- */
+// Defined as constants to be used with cwist_error_t (err_i16) or err_json
+// We will use standard errno-like negative values or specific error codes.
 
 #endif

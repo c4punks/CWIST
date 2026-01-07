@@ -16,27 +16,6 @@ cwist_error_t cwist_app_use_https(cwist_app *app, const char *cert_path, const c
 ```
 Enables HTTPS for the application.
 
-### `cwist_app_use_https2` / `cwist_use_https2`
-```c
-cwist_error_t cwist_app_use_https2(cwist_app *app, bool enabled);
-
-// Convenience macro when your app variable is named `app`
-cwist_use_https2(true);
-```
-Keeps the default HTTPS request path in legacy `HTTP/1.1` mode unless explicitly enabled.
-When enabled, CWIST rebuilds the TLS context with an HTTP/2-compatible TLS profile, negotiates `h2` through ALPN, and swaps in the HTTPS/2 request-handler slot for the app.
-The HTTP/2 handler feeds decoded requests into the existing routing/middleware stack, so handler code does not need to change.
-The current implementation is intentionally narrow: one request stream is handled at a time per TLS connection, with support for the standard client preface, `SETTINGS`, `HEADERS`, `CONTINUATION`, `DATA`, `PING`, and `GOAWAY`.
-
-### `cwist_app_use_pqc_layer`
-```c
-void cwist_app_use_pqc_layer(cwist_app *app, bool enabled);
-```
-Enables the post-quantum cryptography (PQC) hybrid TLS layer.
-When `enabled` is `true`, CWIST forces `X25519MLKEM768:X25519:P-256` as the key-exchange group list, sets TLS 1.3 as the minimum version, and disables all legacy TLSv1.0–1.2 cipher suites.
-This provides **transport-layer quantum resistance** via the NIST-standard ML-KEM-768 (Kyber) hybridized with classical X25519 ECDH, without requiring any OpenSSL knowledge from the application.
-Application code never touches BoringSSL directly.
-
 ### `cwist_app_use_db`
 ```c
 cwist_error_t cwist_app_use_db(cwist_app *app, const char *db_path);
@@ -77,27 +56,6 @@ void cwist_app_ws(cwist_app *app, const char *path, cwist_ws_handler_func handle
 ```
 
 Routes without parameters are stored in a hash table for O(1) lookups while parameterized patterns fall back to sequential matching.
-
-### `cwist_endpoint_opt_t`
-Each route can be annotated with a bitmask of behavioral flags:
-
-| Flag | Description |
-| ---- | ----------- |
-| `CWIST_DYNAMIC` | Default dynamic handler behavior. |
-| `CWIST_ENDPOINT_FIXED` | Persist the first response in the Big Dumb Reply cache and reuse it immediately on subsequent hits. |
-| `CWIST_ENDPOINT_FILE` | Hint that the endpoint streams files, enabling Linux/BSD `sendfile` fast paths. |
-
-Use the `_opt` helpers to set these flags:
-
-```c
-cwist_app_get_opt(app, "/feed", feed_handler, CWIST_ENDPOINT_FIXED);
-cwist_app_get_opt(app,
-                  "/download/:id",
-                  download_handler,
-                  CWIST_DYNAMIC | CWIST_ENDPOINT_FILE);
-```
-
-Flags may be OR-ed together to combine behaviors (e.g., `fixed + file`).
 
 ## Static Assets
 

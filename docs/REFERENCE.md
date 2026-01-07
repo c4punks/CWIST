@@ -19,13 +19,12 @@ A multi-process/threaded HTTP server framework.
   - Helper functions for headers/status codes.
 
 ### 3. HTTPS Support
-Secure transport layer using BoringSSL with post-quantum cryptography support.
+Secure transport layer using OpenSSL.
 - **Header:** `<cwist/net/http/https.h>`
 - **Features:**
-  - `cwist_https_init_context`: Loads Cert/Key with TLS 1.3+ enforcement.
+  - `cwist_https_init_context`: Loads Cert/Key.
   - `cwist_https_accept`: SSL Handshake.
   - `cwist_https_send_response`: Encrypted sending.
-  - `cwist_app_use_pqc_layer`: One-line toggle for hybrid PQC TLS (`X25519MLKEM768:X25519:P-256`), disabling legacy TLS < 1.3.
   - **Note:** Internally reuses `cwist/http.h` for logic, adding a security layer.
 
 ### 4. Query Parsing
@@ -50,22 +49,6 @@ Cryptographic hash function for hash maps (used in Query/Headers).
 Unified error handling system using `cwist_error_t`.
 - **Header:** `<cwist/sys/err/cwist_err.h>`
 - **Features:** Can return simple integer codes or complex JSON objects (e.g., OpenSSL/SQLite errors).
-
-### 8. Big Dumb Reply (BDR)
-Auto-caches serialized responses for expensive handlers.
-- **Header:** `<cwist/sys/app/big_dumb_reply.h>`
-- **Functions:** `cwist_bdr_get`, `cwist_bdr_put`, `cwist_bdr_set_limits`.
-- **Guard Rails:** Entries expire after a configurable TTL or hit budget and the cache maintains a soft byte cap (32 MiB by default). Use `cwist_app_configure_bdr` to tune per-application behavior.
-
-## LibTTAK Memory Features
-
-CWIST embeds libttak and exposes its latest memory runtime:
-
-- **Generational Arenas:** Static assets and cache entries are tracked via `ttak_mem_tree` and retired generation-by-generation to avoid RSS spikes.
-- **Epoch-Based Reclamation:** Hot reloads and Big Dumb Reply swaps call `ttak_epoch_enter/exit` so readers never block when arenas rotate.
-- **Detachable Memory:** `ttak_detachable_mem_alloc` backs zero-copy HTTP bodies; cached slices reuse the tiny detachable cache and register cleanup hooks with `cwist_http_response_set_body_ptr_managed`.
-
-See `example/rps-showcase/` for a runnable demonstration that combines all three pieces to keep `/rps` saturated during load tests.
 
 ## Example: Othello Web
 Located in `example/othello-web/`.

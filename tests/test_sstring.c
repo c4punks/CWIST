@@ -1,5 +1,4 @@
 #include <cwist/core/sstring/sstring.h>
-#include <cwist/core/mem/alloc.h>
 #include <stdio.h>
 #include <string.h>
 #include <assert.h>
@@ -30,8 +29,7 @@ void test_resize() {
     // Grow
     cwist_error_t err = cwist_sstring_change_size(s, 10, false);
     assert(err.errtype == CWIST_ERR_INT8); // Success
-    assert(s->size == 5);
-    assert(strcmp(s->data, "12345") == 0);
+    assert(s->size == 10);
     
     // Shrink safely
     err = cwist_sstring_change_size(s, 5, false); // "12345" fits in 5
@@ -40,7 +38,6 @@ void test_resize() {
     // Shrink with data loss warning
     err = cwist_sstring_change_size(s, 2, false); // "12345" -> 2 bytes?
     assert(err.errtype == CWIST_ERR_JSON); // Should fail
-    cwist_error_dispose(&err);
 
     // Shrink with blow_data
     err = cwist_sstring_change_size(s, 2, true);
@@ -122,8 +119,8 @@ void test_sstring_ops() {
 
     assert(left.compare(&left, &right) == 0);
 
-    cwist_free(left.data);
-    cwist_free(right.data);
+    free(left.data);
+    free(right.data);
     printf("Passed sstring-to-sstring ops.\n");
 }
 

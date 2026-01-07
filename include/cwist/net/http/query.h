@@ -1,8 +1,3 @@
-/**
- * @file query.h
- * @brief Query string parser and map.
- */
-
 #ifndef __CWIST_QUERY_H__
 #define __CWIST_QUERY_H__
 
@@ -19,68 +14,18 @@ typedef struct cwist_query_map {
     cwist_query_bucket **buckets;
     size_t size;
     uint8_t seed[16];
-    void *arena;
 } cwist_query_map;
 
-/** @name Lifecycle */
-/** @{ */
-
-/**
- * @brief Create a new query map.
- */
+// Lifecycle
 cwist_query_map *cwist_query_map_create(void);
-cwist_query_map *cwist_query_map_create_in_arena(void *arena);
-
-/**
- * @brief Destroy a query map.
- */
 void cwist_query_map_destroy(cwist_query_map *map);
 
-/** @} */
-
-/** @name Parsing */
-/** @{ */
-
-/**
- * @brief Parse raw query strings (e.g., "a=1&b=2") into the map.
- */
+// Parse raw query string (e.g., "a=1&b=2") into map
 void cwist_query_map_parse(cwist_query_map *map, const char *raw_query);
-
-/**
- * @brief Clear all entries.
- */
 void cwist_query_map_clear(cwist_query_map *map);
 
-/** @} */
-
-/** @name Access */
-/** @{ */
-
-/**
- * @brief Get a value by key.
- */
+// Access
 const char *cwist_query_map_get(cwist_query_map *map, const char *key);
-
-/**
- * @brief Set a key-value pair.
- */
 void cwist_query_map_set(cwist_query_map *map, const char *key, const char *value);
-
-/**
- * @brief Delete a key from the map.
- */
-void cwist_query_map_delete(cwist_query_map *map, const char *key);
-
-/**
- * @brief Iterator callback signature.
- */
-typedef void (*cwist_query_map_iter_func)(const char *key, const char *value, void *ctx);
-
-/**
- * @brief Iterate over all key-value pairs in the map.
- */
-void cwist_query_map_foreach(cwist_query_map *map, cwist_query_map_iter_func cb, void *ctx);
-
-/** @} */
 
 #endif
