@@ -17,25 +17,17 @@ Powered by BoringSSL, lsquic, OpenSSL without context contamination.
 
 Two server modes, tuned for opposite things; pick per workload.
 
-  CWIST reactor   takes the throughput. Many connections per event loop,
-                  so a connection costs a reactor slot, not a parked
-                  thread. On the run below: 142,258 req/s against Axum's
-                  114,649, 24% more.
+== What am I doing for implementing socket handler? ==
+- Abstract socket listener
+- Easy socket accept with handler function
+  - Human-friendly error with cJSON
 
-  CWIST Classic pool  takes the latency. A thread per connection, so no
-                      request waits behind another in a batch. Median 1.55ms
-                      against Axum's 3.21ms, and ahead through p99.
-
-The distribution, not the average, is the point:
-
-                    p50      p90      p99    p99.9  p99.999
-  CWIST Classic   1.55ms   4.12ms   7.35ms  13.30ms  29.39ms
-  CWIST           1.99ms   7.86ms  15.06ms  19.58ms  25.82ms
-  Axum            3.21ms   5.78ms   8.61ms  11.57ms  18.09ms
-
-Classic pool leads for the first 99% of requests and both modes answer
-the median faster. The crossover is at p99.9, where Axum's extreme tail
-is tighter; closing that is open work.
+== Plans ==
+- Memory manager
+- (optional) libgc extension
+- Mux Router
+- CORS, HTTPS
+- RestAPI Server
 
 
 ==================================================================
