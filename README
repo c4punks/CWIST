@@ -1,14 +1,6 @@
-+------------------------------------------------------------------+
-|                                            ________              |
-|   #####  #   #  #  #   ####  #####   ==   /        \             |
-|   #      #   #  #  #  #        #      == |     !    \            |
-|   #      #   #  #  #   ###     #       ==|           \___        |
-|   #      #   #  #  #      #    #      == |    | |    /           |
-|   #####  ########  #  ####     #     ==   \_________/            |
-|                                                                  |
-|              C Web development Is Still Trustworthy              |
-|                                                                  |
-+------------------------------------------------------------------+
+==== What is CWIST? =====
+CWIST is a acronym of "C Web development Is Still Trustworthy".
+This aims for modern, and fast C web framework.
 
 A high-performance, C17 web framework that brings modern ergonomics
 (HTTP/3, WebTransport, Post-Quantum TLS, zero-copy I/O) to systems
