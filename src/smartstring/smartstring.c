@@ -5,6 +5,11 @@
 #include <string.h>
 #include <ctype.h>
 
+/*
+cwist_error_t smartstring_init(smartstring *str) {
+
+}*/
+
 cwist_error_t smartstring_ltrim(smartstring *str) {
     cwist_error_t err = make_error(CWIST_ERR_INT8);
     err.error.err_i8 = ERR_SMARTSTRING_NULL_STRING;
@@ -114,7 +119,14 @@ cwist_error_t smartstring_assign(smartstring *str, char *data) {
     if (str->is_fixed) {
         if (data_len > str->size) {
           cJSON_AddStringToObject(err.error.err_json, "err", "string's assigned size is smaller than given data");
-          return err;
+
+          
+          cwist_error_t err_resize = smartstring_change_size(str, strlen(str->data), false);
+          if(err_resize.error.err_i8 == ERR_SMARTSTRING_OKAY) {
+            return err_resize;
+          } else {
+            return err;
+          }
         }
         if (str->data) strcpy(str->data, data ? data : "");
     } else {
