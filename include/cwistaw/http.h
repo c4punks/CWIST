@@ -90,6 +90,7 @@ typedef struct cwist_server_config {
 } cwist_server_config;
 
 cwist_error_t cwist_http_server_loop(int server_fd, cwist_server_config *config, void (*handler)(int));
+int headers_have_content_length(cwist_http_header_node *headers);
 
 #endif
 

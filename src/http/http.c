@@ -229,24 +229,40 @@ cwist_http_request *cwist_http_parse_request(const char *raw_request) {
     return req;
 }
 
+int headers_have_content_length(cwist_http_header_node *headers) {
+    cwist_http_header_node *curr = headers;
+    while (curr) {
+        if (curr->key && curr->key->data && strcasecmp(curr->key->data, "Content-Length") == 0) {
+            return 1;
+        }
+        curr = curr->next;
+    }
+    return 0;
+}
+
+
 cwist_error_t cwist_http_send_response(int client_fd, cwist_http_response *res) {
     cwist_error_t err = make_error(CWIST_ERR_INT16);
-    
+
     if (client_fd < 0 || !res) {
         err.error.err_i16 = -1;
         return err;
     }
 
-    smartstring *response_str = smartstring_create();
-    
+    cwist_sstring *response_str = cwist_sstring_create();
+    size_t body_len = 0;
+    if (res->body && res->body->data) {
+        body_len = strlen(res->body->data);
+    }
+
     // Status Line
     char status_line[256];
-    snprintf(status_line, sizeof(status_line), "%s %d %s\r\n", 
-             res->version->data ? res->version->data : "HTTP/1.1", 
-             res->status_code, 
+    snprintf(status_line, sizeof(status_line), "%s %d %s\r\n",
+             res->version->data ? res->version->data : "HTTP/1.1",
+             res->status_code,
              res->status_text->data ? res->status_text->data : "OK");
-    smartstring_append(response_str, status_line);
-    
+    cwist_sstring_append(response_str, status_line);
+
     // Headers
     cwist_http_header_node *curr = res->headers;
     while (curr) {
@@ -258,24 +274,64 @@ cwist_error_t cwist_http_send_response(int client_fd, cwist_http_response *res) 
         }
         curr = curr->next;
     }
-    
+
+    if (!headers_have_content_length(res->headers)) {
+        char cl_header[64];
+        snprintf(cl_header, sizeof(cl_header), "Content-Length: %zu\r\n", body_len);
+        cwist_sstring_append(response_str, cl_header);
+    }
+
+    if (!headers_have_connection(res->headers)) {
+        if (res->keep_alive) {
+            cwist_sstring_append(response_str, "Connection: keep-alive\r\n");
+        } else {
+            cwist_sstring_append(response_str, "Connection: close\r\n");
+        }
+    }
+
     // End of headers
-    smartstring_append(response_str, "\r\n");
-    
+    cwist_sstring_append(response_str, "\r\n");
+
     // Body
-    if (res->body->data) {
-        smartstring_append(response_str, res->body->data);
+    if (res->body && res->body->data) {
+        cwist_sstring_append(response_str, res->body->data);
     }
-    
     // Send
-    ssize_t sent = send(client_fd, response_str->data, response_str->size, 0);
-    if (sent < 0) {
-        err.error.err_i16 = -1;
-    } else {
-        err.error.err_i16 = 0;
+    err.error.err_i16 = 0;
+
+    const char *p = response_str->data;
+    size_t left = response_str->size;
+
+    while (left > 0) {
+        ssize_t sent;
+
+        #ifdef MSG_NOSIGNAL
+        sent = send(client_fd, p, left, MSG_NOSIGNAL);
+        #else
+        sent = send(client_fd, p, left, 0);
+        #endif
+
+        if (sent < 0) {
+            if (errno == EINTR) {
+                continue;
+            }
+            if (errno == EPIPE || errno == ECONNRESET) {
+                err.error.err_i16 = -1;
+                break;
+            }
+            err.error.err_i16 = -1;
+            break;
+        }
+        if (sent == 0) {
+            err.error.err_i16 = -1;
+            break;
+        }
+
+        p += (size_t)sent;
+        left -= (size_t)sent;
     }
-    
-    smartstring_destroy(response_str);
+
+    cwist_sstring_destroy(response_str);
     return err;
 }
 
