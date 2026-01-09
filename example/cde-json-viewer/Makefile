@@ -1,10 +1,10 @@
 CC = gcc
-CFLAGS = -Wall -Wextra -g -I../../include
-LDFLAGS = -L../../
-LIBS = -lcwist -lcjson -luriparser -lssl -lcrypto -lpthread -ldl -lstdc++ -lm -lz
+CFLAGS = -Wall -Wextra
+LIBS = -lcjson -lcwist
 
 SRCS = main.c
-TARGET = cde_json_viewer
+OBJS = $(SRCS:.c=.o)
+TARGET = cde-viewer
 
 all: $(TARGET)
 
