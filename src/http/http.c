@@ -78,7 +78,7 @@ cwist_error_t cwist_http_header_add(cwist_http_header_node **head, const char *k
 char *cwist_http_header_get(cwist_http_header_node *head, const char *key) {
     cwist_http_header_node *curr = head;
     while (curr) {
-        // Case-insensitive comparison for headers is standard, but keeping it strict for now for simplicity
+        // case-insensitive comparison for headers is standard, but keeping it strict for now for simplicity
         if (curr->key->data && strcmp(curr->key->data, key) == 0) {
             return curr->value->data;
         }
@@ -229,7 +229,7 @@ cwist_error_t cwist_accept_socket(int server_fd, struct sockaddr *sockv4, void (
   struct sockaddr_in peer_addr;
   socklen_t addrlen = sizeof(peer_addr);
 
-  while(true) {
+  while(true) { // TODO: ADD MULTIPROCESSING SUPPORT
     if((client_fd = accept(server_fd, (struct sockaddr *)&peer_addr, &addrlen)) < 0) {
       if (errno == EINTR) continue;
 
