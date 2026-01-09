@@ -10,12 +10,26 @@ typedef struct smartstring {
   char   *data;  // please access this data if raw handling is necessary
   bool   is_fixed;
   size_t size;
+  size_t (*get_size)(void);
+  int     (*compare )(void); // should mimic strcmp, internally use strncmp
+  bool    (*copy    )(smartstring *str, smartstring from);
+  bool    (*append  )(smartstring); 
+                                   // returns 1 on success, returns 0 on failure
+                                   // should be used in this form:
+                                   // smartstring str1;
+                                   // smartsring str2;
+                                   // smartstring_init(&str);
+                                   // smartstring_init(&str2);
+                                   // bool err = str->copy(&str1, str2);
+                                   // bool err = rstr->append(&str2, str1);
+                                   // ...
 } smartstring;
 
 smartstring *smartstring_create(void);
 void smartstring_destroy(smartstring *str);
 
 // String manipulation API
+cwist_error_r smartstring_init (smartstring *str);
 cwist_error_t smartstring_ltrim(smartstring *str);
 cwist_error_t smartstring_rtrim(smartstring *str);
 cwist_error_t smartstring_trim(smartstring *str);
