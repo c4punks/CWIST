@@ -1,0 +1,95 @@
+==== Implementation Trade-offs & Analysis =====
+
+== Concurrency Models ==
+- Forking (Process-per-request)
+  - Pros:
+    - Excellent isolation (crash in one request doesn't kill server).
+    - No thread safety issues.
+  - Cons:
+    - High memory overhead per client.
+    - Slow context switching.
+    - Difficulty in sharing state (requires IPC).
+
+- Threading (Thread-per-request)
+  - Pros:
+    - Lower overhead than forking.
+    - Easy shared state.
+  - Cons:
+    - Race conditions (requires complex locking).
+    - Crash in one thread kills the whole process.
+    - Stack memory limit per thread.
+
+- Event Loop (epoll/kqueue) - *Recommended for high performance*
+  - Pros:
+    - Extremely low overhead (handles thousands of C10k).
+    - Single-threaded logic is simpler (no locks needed for logic).
+  - Cons:
+    - Callback hell or complex state machine management.
+    - CPU-bound tasks block the entire loop (requires worker thread pool).
+
+== Memory Management ==
+- Manual malloc/free
+  - Pros:
+    - Standard, no extra dependencies.
+    - Granular control.
+  - Cons:
+    - Prone to leaks and double-frees.
+    - Fragmentation over time.
+
+- Pool/Arena Allocator
+  - Pros:
+    - Fast allocation/deallocation (pointer bump).
+    - Cache locality.
+    - "Free all" capability (request-scoped memory).
+  - Cons:
+    - Wasted memory if pool is oversized.
+    - Complexity in implementing a robust generic pool.
+
+- Garbage Collection (libgc)
+  - Pros:
+    - Developer convenience (no use-after-free, no leaks).
+  - Cons:
+    - Nondeterministic pauses.
+    - Overhead.
+    - Not idiomatic for low-level system C programming.
+
+== Routing Algorithms ==
+- Linear Regex Matching
+  - Pros:
+    - Simple to implement.
+    - Flexible patterns.
+  - Cons:
+    - O(N) where N is number of routes.
+    - Slow for many routes.
+
+- Trie / Radix Tree
+  - Pros:
+    - O(K) where K is URL length (independent of number of routes).
+    - Supports parameter extraction naturally (/users/:id).
+  - Cons:
+    - Complex implementation.
+    - Higher memory usage for sparse trees.
+
+- Hash Map
+  - Pros:
+    - O(1) lookup for static paths.
+  - Cons:
+    - Doesn't handle wildcards or parameters easily.
+    - Hash collisions.
+
+== HTTP Parsing ==
+- Hand-written State Machine
+  - Pros:
+    - No external dependencies.
+    - Easier to debug than generated code.
+  - Cons:
+    - Error-prone to write and maintain.
+    - Can be slower if not optimized.
+
+- Parser Generators (Ragel / Bison)
+  - Pros:
+    - Mathematically correct state transitions.
+    - Extremely fast (Ragel).
+  - Cons:
+    - Adds build step complexity.
+    - steeper learning curve.

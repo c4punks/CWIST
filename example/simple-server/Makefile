@@ -1,15 +1,20 @@
 CC = gcc
-CFLAGS = -Wall -Wextra -g -I../../include
-LDFLAGS = -L../../
-LIBS = -lcwist -lcjson -lsqlite3 -luriparser -lssl -lcrypto -lpthread -lstdc++ -lm -lz
+CFLAGS = -I../../include -I../../lib -Wall -Wextra -g
+LIBS = -lcjson
 
-SRCS = main.c
+# Path to library sources
+SRC_DIR = ../../src
+SRCS = $(SRC_DIR)/smartstring/smartstring.c \
+       $(SRC_DIR)/process/err/error.c \
+       $(SRC_DIR)/http/http.c \
+       main.c
+
 TARGET = simple_server
 
 all: $(TARGET)
 
 $(TARGET): $(SRCS)
-	$(CC) $(CFLAGS) -o $(TARGET) $(SRCS) $(LDFLAGS) $(LIBS)
+	$(CC) $(CFLAGS) -o $(TARGET) $(SRCS) $(LIBS)
 
 clean:
 	rm -f $(TARGET)
