@@ -62,10 +62,12 @@ typedef struct cwist_http_response {
 // Request Lifecycle
 cwist_http_request *cwist_http_request_create(void);
 void cwist_http_request_destroy(cwist_http_request *req);
+cwist_http_request *cwist_http_parse_request(const char *raw_request); // New
 
 // Response Lifecycle
 cwist_http_response *cwist_http_response_create(void);
 void cwist_http_response_destroy(cwist_http_response *res);
+cwist_error_t cwist_http_send_response(int client_fd, cwist_http_response *res); // New
 
 // Header Manipulation
 cwist_error_t cwist_http_header_add(cwist_http_header_node **head, const char *key, const char *value);
@@ -80,6 +82,14 @@ cwist_http_method_t cwist_http_string_to_method(const char *method_str);
 // socket -> bind -> listen
 int cwist_make_socket_ipv4(struct sockaddr_in *sockv4, const char *address, uint16_t port, uint16_t backlog);
 cwist_error_t cwist_accept_socket(int server_fd, struct sockaddr *sockv4, void (*handler_func)(int client_fd));
+
+typedef struct cwist_server_config {
+    bool use_forking;     // Process per request
+    bool use_threading;   // Thread per request
+    bool use_epoll;       // Use epoll for accepting
+} cwist_server_config;
+
+cwist_error_t cwist_http_server_loop(int server_fd, cwist_server_config *config, void (*handler)(int));
 
 #endif
 

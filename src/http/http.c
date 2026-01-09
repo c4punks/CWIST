@@ -158,6 +158,127 @@ void cwist_http_response_destroy(cwist_http_response *res) {
     }
 }
 
+cwist_http_request *cwist_http_parse_request(const char *raw_request) {
+    if (!raw_request) return NULL;
+
+    cwist_http_request *req = cwist_http_request_create();
+    if (!req) return NULL;
+    
+    const char *line_start = raw_request;
+    const char *line_end = strstr(line_start, "\r\n");
+    if (!line_end) { 
+        cwist_http_request_destroy(req); 
+        return NULL; 
+    }
+
+    // 1. Request Line
+    int request_line_len = line_end - line_start;
+    char *request_line = (char*)malloc(request_line_len + 1);
+    if (!request_line) {
+        cwist_http_request_destroy(req);
+        return NULL;
+    }
+    strncpy(request_line, line_start, request_line_len);
+    request_line[request_line_len] = '\0';
+    
+    char *method_str = strtok(request_line, " ");
+    char *path_str = strtok(NULL, " ");
+    char *version_str = strtok(NULL, " ");
+    
+    if (method_str) req->method = cwist_http_string_to_method(method_str);
+    if (path_str) smartstring_assign(req->path, path_str);
+    if (version_str) smartstring_assign(req->version, version_str);
+    
+    free(request_line);
+
+    // 2. Headers
+    line_start = line_end + 2; // Skip \r\n
+    while ((line_end = strstr(line_start, "\r\n")) != NULL) {
+        if (line_end == line_start) {
+            // Empty line found, body follows
+            line_start += 2;
+            break;
+        }
+        
+        int header_len = line_end - line_start;
+        char *header_line = (char*)malloc(header_len + 1);
+        if (header_line) {
+            strncpy(header_line, line_start, header_len);
+            header_line[header_len] = '\0';
+            
+            char *colon = strchr(header_line, ':');
+            if (colon) {
+                *colon = '\0';
+                char *key = header_line;
+                char *value = colon + 1;
+                while (*value == ' ') value++; // Trim leading space
+                
+                cwist_http_header_add(&req->headers, key, value);
+            }
+            free(header_line);
+        }
+        
+        line_start = line_end + 2;
+    }
+
+    // 3. Body
+    if (*line_start) {
+        smartstring_assign(req->body, (char*)line_start);
+    }
+
+    return req;
+}
+
+cwist_error_t cwist_http_send_response(int client_fd, cwist_http_response *res) {
+    cwist_error_t err = make_error(CWIST_ERR_INT16);
+    
+    if (client_fd < 0 || !res) {
+        err.error.err_i16 = -1;
+        return err;
+    }
+
+    smartstring *response_str = smartstring_create();
+    
+    // Status Line
+    char status_line[256];
+    snprintf(status_line, sizeof(status_line), "%s %d %s\r\n", 
+             res->version->data ? res->version->data : "HTTP/1.1", 
+             res->status_code, 
+             res->status_text->data ? res->status_text->data : "OK");
+    smartstring_append(response_str, status_line);
+    
+    // Headers
+    cwist_http_header_node *curr = res->headers;
+    while (curr) {
+        if (curr->key->data && curr->value->data) {
+            smartstring_append(response_str, curr->key->data);
+            smartstring_append(response_str, ": ");
+            smartstring_append(response_str, curr->value->data);
+            smartstring_append(response_str, "\r\n");
+        }
+        curr = curr->next;
+    }
+    
+    // End of headers
+    smartstring_append(response_str, "\r\n");
+    
+    // Body
+    if (res->body->data) {
+        smartstring_append(response_str, res->body->data);
+    }
+    
+    // Send
+    ssize_t sent = send(client_fd, response_str->data, response_str->size, 0);
+    if (sent < 0) {
+        err.error.err_i16 = -1;
+    } else {
+        err.error.err_i16 = 0;
+    }
+    
+    smartstring_destroy(response_str);
+    return err;
+}
+
 /* --- Socket Manipulation --- */
 
 int cwist_make_socket_ipv4(struct sockaddr_in *sockv4, const char *address, uint16_t port, uint16_t backlog) {

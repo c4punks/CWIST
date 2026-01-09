@@ -10,10 +10,19 @@
 |                                                                  |
 +------------------------------------------------------------------+
 
-A high-performance, C17 web framework that brings modern ergonomics
-(HTTP/3, WebTransport, Post-Quantum TLS, zero-copy I/O) to systems
-programming without sacrificing control.
-Powered by BoringSSL, lsquic, OpenSSL without context contamination.
+== What is going on? ==
+- Smart String (with compare & substr)
+- Error Codes
+- HTTP Request Parsing
+- HTTP Response Sending
+
+== What's next? ==
+- HTTP Handlers
+  - Abstract socket handlers
+  - Memory-safe easy multiprocessing
+- HTTP Client Support
+- SmartString formatted printing (sprintf)
+- Robust error handling in parser
 
 Two server modes, tuned for opposite things; pick per workload.
 

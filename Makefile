@@ -1,6 +1,6 @@
 CC = gcc
-CFLAGS = -I./include -I./lib -Wall -Wextra -lcjson
-LIBS = -lcjson
+CFLAGS = -I./include -I./lib -Wall -Wextra -lcjson -pthread
+LIBS = -lcjson -pthread
 
 CURL_CFLAGS := $(shell pkg-config --cflags libcurl 2>/dev/null)
 NGHTTP2_CFLAGS := $(shell pkg-config --cflags libnghttp2 2>/dev/null)
