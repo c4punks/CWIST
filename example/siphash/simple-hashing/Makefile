@@ -1,14 +1,13 @@
 CC = gcc
-CFLAGS = -Wall -Wextra -g -I../../../include
-LDFLAGS = -L../../../
-LIBS = -lcwist -lcjson -lstdc++ -lm -lz
+CFLAGS = -Wall -Wextra
+LIBS = -lcjson -lcwist
 
 TARGET = simple-hashing
 
 all: $(TARGET)
 
 $(TARGET): main.c
-	$(CC) $(CFLAGS) main.c $(LDFLAGS) $(LIBS) -o $(TARGET)
+	$(CC) $(CFLAGS) main.c $(LIBS) -o $(TARGET)
 
 clean:
 	rm -f $(TARGET)

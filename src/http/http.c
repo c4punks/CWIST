@@ -1,6 +1,7 @@
-#include <cwistaw/http.h>
-#include <cwistaw/smartstring.h>
-#include <cwistaw/err/cwist_err.h>
+#define _POSIX_C_SOURCE 200809L
+#include <cwist/http.h>
+#include <cwist/sstring.h>
+#include <cwist/err/cwist_err.h>
 
 #include <limits.h>
 #include <stdio.h>
@@ -105,9 +106,10 @@ cwist_http_request *cwist_http_request_create(void) {
     if (!req) return NULL;
 
     req->method = CWIST_HTTP_GET; // Default
-    req->path = smartstring_create();
-    req->query = smartstring_create();
-    req->version = smartstring_create();
+    req->path = cwist_sstring_create();
+    req->query = cwist_sstring_create();
+    req->query_params = cwist_query_map_create();
+    req->version = cwist_sstring_create();
     req->headers = NULL;
     req->body = smartstring_create();
 
@@ -120,10 +122,11 @@ cwist_http_request *cwist_http_request_create(void) {
 
 void cwist_http_request_destroy(cwist_http_request *req) {
     if (req) {
-        smartstring_destroy(req->path);
-        smartstring_destroy(req->query);
-        smartstring_destroy(req->version);
-        smartstring_destroy(req->body);
+        cwist_sstring_destroy(req->path);
+        cwist_sstring_destroy(req->query);
+        cwist_query_map_destroy(req->query_params);
+        cwist_sstring_destroy(req->version);
+        cwist_sstring_destroy(req->body);
         cwist_http_header_free_all(req->headers);
         free(req);
     }
@@ -181,13 +184,33 @@ cwist_http_request *cwist_http_parse_request(const char *raw_request) {
     strncpy(request_line, line_start, request_line_len);
     request_line[request_line_len] = '\0';
     
-    char *method_str = strtok(request_line, " ");
-    char *path_str = strtok(NULL, " ");
-    char *version_str = strtok(NULL, " ");
+    char *next_ptr;
+    char *method_str = strtok_r(request_line, " ", &next_ptr);
+    char *path_str = strtok_r(NULL, " ", &next_ptr);
+    char *version_str = strtok_r(NULL, " ", &next_ptr);
     
     if (method_str) req->method = cwist_http_string_to_method(method_str);
-    if (path_str) smartstring_assign(req->path, path_str);
-    if (version_str) smartstring_assign(req->version, version_str);
+    if (path_str) {
+      char *query = strchr(path_str, '?');
+      if(query) {
+        *query = '\0';
+        cwist_sstring_assign(req->path, path_str);
+        cwist_sstring_assign(req->query, query + 1); // exclude ? mark
+        cwist_query_map_parse(req->query_params, req->query->data);
+      } else {
+        cwist_sstring_assign(req->path, path_str);
+        cwist_sstring_assign(req->query, "");
+      }
+    }
+
+    if (version_str) {
+        cwist_sstring_assign(req->version, version_str);
+        if (strcmp(version_str, "HTTP/1.1") == 0) {
+            req->keep_alive = true;
+        } else {
+            req->keep_alive = false;
+        }
+    }
     
     free(request_line);
 
