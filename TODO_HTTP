@@ -1,0 +1,30 @@
+# HTTP Module TODO
+
+## Immediate Fixes & Improvements
+- [v] **Request Parsing Robustness**:
+    - Current `cwist_http_parse_request` uses `strtok`, which is not thread-safe. Replace with `strtok_r` or a custom pointer-walking parser.
+    - Implement Query String separation: Currently, `path` might include `?query=...`. Needs splitting into `req->path` and `req->query`.
+    - URL Decoding: Implement percent-decoding for paths and query parameters.
+- [ ] **Partial Read Handling**:
+    - The current parser expects the full request in a single buffer. Implement a buffering mechanism to read from the socket until `\r\n\r\n` is found before parsing.
+
+## Core Features
+- [ ] **Router**:
+    - Create a routing mechanism to map `Method + Path` to a handler function.
+    - Support for dynamic path parameters (e.g., `/users/:id`).
+- [ ] **Static File Serving**:
+    - Implement a helper function to serve static files efficiently (handling MIME types, `Content-Length`, and potentially `sendfile`).
+- [ ] **Chunked Transfer Encoding**:
+    - Support `Transfer-Encoding: chunked` for both request parsing and response sending, allowing streaming of large bodies.
+
+## Architectural Improvements
+- [ ] **Event-Driven Architecture**:
+    - The current `cwist_http_server_loop` with epoll/kqueue accepts connections but calls the handler synchronously.
+    - Refactor to register client FDs with the event loop for true non-blocking I/O (Reactor pattern).
+- [ ] **Middleware Support**:
+    - Design a middleware system for cross-cutting concerns (logging, authentication, CORS).
+
+## Future / Long-term
+- [ ] **HTTPS Support**: Integration with OpenSSL or MbedTLS.
+- [ ] **Timeouts**: Implement read/write timeouts to prevent slowloris attacks.
+- [ ] **Multipart/Form-data**: Support for file uploads.
