@@ -9,6 +9,8 @@
 #include <string.h>
 #include <stdbool.h>
 #include <errno.h>
+#include <poll.h>
+#include <signal.h>
 
 #include <sys/types.h>
 #include <unistd.h>
@@ -116,6 +118,7 @@ cwist_http_request *cwist_http_request_create(void) {
     req->keep_alive = true;
     req->client_fd = -1;
     req->upgraded = false;
+    req->content_length = 0;
 
     // Defaults
     smartstring_assign(req->version, "HTTP/1.1");
@@ -173,8 +176,14 @@ cwist_http_request *cwist_http_parse_request(const char *raw_request) {
     if (!req) return NULL;
     
     const char *line_start = raw_request;
+    const char *header_end = strstr(raw_request, "\r\n\r\n");
+    if (!header_end) {
+        cwist_http_request_destroy(req);
+        return NULL;
+    }
+
     const char *line_end = strstr(line_start, "\r\n");
-    if (!line_end) { 
+    if (!line_end || line_end > header_end) { 
         cwist_http_request_destroy(req); 
         return NULL; 
     }
@@ -221,9 +230,12 @@ cwist_http_request *cwist_http_parse_request(const char *raw_request) {
 
     // 2. Headers
     line_start = line_end + 2; // Skip \r\n
-    while ((line_end = strstr(line_start, "\r\n")) != NULL) {
+    while (line_start < header_end) {
+        line_end = strstr(line_start, "\r\n");
+        if (!line_end) break;
+
         if (line_end == line_start) {
-            // Empty line found, body follows
+            // Empty line found
             line_start += 2;
             break;
         }
@@ -242,6 +254,15 @@ cwist_http_request *cwist_http_parse_request(const char *raw_request) {
                 while (*value == ' ') value++; // Trim leading space
                 
                 cwist_http_header_add(&req->headers, key, value);
+                if (header_key_is_connection(key)) {
+                    if (header_value_is_close(value)) {
+                        req->keep_alive = false;
+                    } else if (header_value_is_keep_alive(value)) {
+                        req->keep_alive = true;
+                    }
+                } else if (strcasecmp(key, "Content-Length") == 0) {
+                    req->content_length = (size_t)atoll(value);
+                }
             }
             free(header_line);
         }
@@ -249,10 +270,93 @@ cwist_http_request *cwist_http_parse_request(const char *raw_request) {
         line_start = line_end + 2;
     }
 
-    // 3. Body
-    if (*line_start) {
-        smartstring_assign(req->body, (char*)line_start);
+    return req;
+}
+
+cwist_http_request *cwist_http_receive_request(int client_fd, char *read_buf, size_t buf_size, size_t *buf_len) {
+    size_t total_received = *buf_len;
+    char *header_end = NULL;
+
+    // 1. Read until headers are complete
+    while (!(header_end = strstr(read_buf, "\r\n\r\n"))) {
+        if (total_received >= buf_size - 1) {
+            // Buffer full, but headers not complete
+            return NULL;
+        }
+        
+        struct pollfd pfd = { .fd = client_fd, .events = POLLIN };
+        int ret = poll(&pfd, 1, CWIST_HTTP_TIMEOUT_MS);
+        if (ret <= 0) return NULL; // Timeout or error
+
+        ssize_t bytes = recv(client_fd, read_buf + total_received, buf_size - 1 - total_received, 0);
+        if (bytes <= 0) return NULL;
+        total_received += (size_t)bytes;
+        read_buf[total_received] = '\0';
     }
+
+    cwist_http_request *req = cwist_http_parse_request(read_buf);
+    if (!req) return NULL;
+
+    size_t header_len = (header_end + 4) - read_buf;
+    size_t body_received = total_received - header_len;
+
+    // 2. Read body based on Content-Length
+    if (req->content_length > 0) {
+        if (req->content_length > CWIST_HTTP_MAX_BODY_SIZE) {
+            cwist_http_request_destroy(req);
+            return NULL;
+        }
+
+        // Allocate body
+        char *body = malloc(req->content_length + 1);
+        if (!body) {
+            cwist_http_request_destroy(req);
+            return NULL;
+        }
+
+        size_t to_copy = (body_received < req->content_length) ? body_received : req->content_length;
+        memcpy(body, header_end + 4, to_copy);
+        size_t current_body_len = to_copy;
+
+        while (current_body_len < req->content_length) {
+            struct pollfd pfd = { .fd = client_fd, .events = POLLIN };
+            int ret = poll(&pfd, 1, CWIST_HTTP_TIMEOUT_MS);
+            if (ret <= 0) {
+                free(body);
+                cwist_http_request_destroy(req);
+                return NULL;
+            }
+
+            ssize_t bytes = recv(client_fd, body + current_body_len, req->content_length - current_body_len, 0);
+            if (bytes <= 0) {
+                free(body);
+                cwist_http_request_destroy(req);
+                return NULL;
+            }
+            current_body_len += (size_t)bytes;
+        }
+        body[req->content_length] = '\0';
+        cwist_sstring_assign_len(req->body, body, req->content_length);
+        free(body);
+
+        // Calculate leftovers
+        if (body_received > req->content_length) {
+            size_t leftover_len = body_received - req->content_length;
+            memmove(read_buf, header_end + 4 + req->content_length, leftover_len);
+            *buf_len = leftover_len;
+        } else {
+            *buf_len = 0;
+        }
+    } else {
+        // No body, leftovers are everything after headers
+        if (body_received > 0) {
+            memmove(read_buf, header_end + 4, body_received);
+            *buf_len = body_received;
+        } else {
+            *buf_len = 0;
+        }
+    }
+    read_buf[*buf_len] = '\0';
 
     return req;
 }
@@ -274,8 +378,8 @@ cwist_sstring *cwist_http_stringify_response(cwist_http_response *res) {
 
     cwist_sstring *response_str = cwist_sstring_create();
     size_t body_len = 0;
-    if (res->body && res->body->data) {
-        body_len = strlen(res->body->data);
+    if (res->body) {
+        body_len = res->body->size;
     }
 
     // Status Line
@@ -317,7 +421,7 @@ cwist_sstring *cwist_http_stringify_response(cwist_http_response *res) {
 
     // Body
     if (res->body && res->body->data) {
-        cwist_sstring_append(response_str, res->body->data);
+        cwist_sstring_append_len(response_str, res->body->data, res->body->size);
     }
     
     return response_str;
@@ -343,9 +447,17 @@ cwist_error_t cwist_http_send_response(int client_fd, cwist_http_response *res) 
     const char *p = response_str->data;
     size_t left = response_str->size;
 
-    while (left > 0) {
-        ssize_t sent;
+    signal(SIGPIPE, SIG_IGN);
 
+    while (left > 0) {
+        struct pollfd pfd = { .fd = client_fd, .events = POLLOUT };
+        int ret = poll(&pfd, 1, CWIST_HTTP_TIMEOUT_MS);
+        if (ret <= 0) {
+            err.error.err_i16 = -1;
+            break;
+        }
+
+        ssize_t sent;
         #ifdef MSG_NOSIGNAL
         sent = send(client_fd, p, left, MSG_NOSIGNAL);
         #else
@@ -356,9 +468,8 @@ cwist_error_t cwist_http_send_response(int client_fd, cwist_http_response *res) 
             if (errno == EINTR) {
                 continue;
             }
-            if (errno == EPIPE || errno == ECONNRESET) {
-                err.error.err_i16 = -1;
-                break;
+            if (errno == EAGAIN || errno == EWOULDBLOCK) {
+                continue;
             }
             err.error.err_i16 = -1;
             break;

@@ -218,30 +218,48 @@ static void static_ssl_handler(cwist_https_connection *conn, void *ctx) {
 
 static void static_http_handler(int client_fd, void *ctx) {
     cwist_app *app = (cwist_app *)ctx;
-    char buffer[8192];
-    int bytes = recv(client_fd, buffer, sizeof(buffer)-1, 0);
-    if (bytes <= 0) {
+    char *read_buf = malloc(CWIST_HTTP_READ_BUFFER_SIZE);
+    if (!read_buf) {
         close(client_fd);
         return;
     }
-    buffer[bytes] = '\0';
-    
-    cwist_http_request *req = cwist_http_parse_request(buffer);
-    if (!req) {
-        close(client_fd);
-        return;
-    }
-    req->client_fd = client_fd;
+    size_t buf_len = 0;
+    read_buf[0] = '\0';
 
-    cwist_http_response *res = cwist_http_response_create();
-    internal_route_handler(app, req, res);
-    
-    if (!req->upgraded) {
-        cwist_http_send_response(client_fd, res);
+    while (true) {
+        cwist_http_request *req = cwist_http_receive_request(client_fd, read_buf, CWIST_HTTP_READ_BUFFER_SIZE, &buf_len);
+        if (!req) {
+            break;
+        }
+        req->client_fd = client_fd;
+
+        cwist_http_response *res = cwist_http_response_create();
+        if (!res) {
+            cwist_http_request_destroy(req);
+            break;
+        }
+        
+        internal_route_handler(app, req, res);
+        
+        bool keep_alive = req->keep_alive && res->keep_alive;
+        
+        if (!req->upgraded) {
+            if (cwist_http_send_response(client_fd, res).error.err_i16 < 0) {
+                cwist_http_response_destroy(res);
+                cwist_http_request_destroy(req);
+                break;
+            }
+        }
+        
+        cwist_http_response_destroy(res);
+        cwist_http_request_destroy(req);
+        
+        if (!keep_alive || req->upgraded) {
+            break;
+        }
     }
     
-    cwist_http_response_destroy(res);
-    cwist_http_request_destroy(req);
+    free(read_buf);
     close(client_fd);
 }
 

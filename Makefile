@@ -23,6 +23,10 @@ test_websocket: $(LIB_NAME) tests/test_websocket.c
 	$(CC) $(CFLAGS) -o test_websocket tests/test_websocket.c $(LIB_NAME) $(LIBS)
 	./test_websocket
 
+stress-test: $(LIB_NAME) tests/stress_test.c
+	$(CC) $(CFLAGS) -o stress_test tests/stress_test.c $(LIB_NAME) $(LIBS)
+	./stress_test
+
 test_http: $(LIB_NAME) tests/test_http.c
 	$(CC) $(CFLAGS) -o test_http tests/test_http.c $(LIB_NAME) $(LIBS)
 	./test_http
@@ -51,4 +55,4 @@ uninstall:
 	rm -rf $(INCLUDEDIR)/cwist
 
 clean:
-	rm -f $(OBJS) $(LIB_NAME) test_sstring test_http test_siphash test_mux
+	rm -f $(OBJS) $(LIB_NAME) test_sstring test_http test_siphash test_mux stress_test
