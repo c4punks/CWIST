@@ -1,8 +1,8 @@
 CC = gcc
 CFLAGS = -I./include -I./lib -I./lib/cjson -Wall -Wextra -pthread
-LIBS = -pthread -lcjson
+LIBS = -pthread -lcjson -lssl -lcrypto -luriparser -lsqlite3
 
-SRCS = src/sstring/sstring.c src/process/err/error.c src/http/http.c src/http/mux.c src/http/query.c src/session/session_manager.c src/siphash/siphash.c
+SRCS = src/sstring/sstring.c src/process/err/error.c src/http/http.c src/http/https.c src/http/mux.c src/http/query.c src/session/session_manager.c src/siphash/siphash.c src/db/db.c src/framework/app.c
 OBJS = $(SRCS:.c=.o)
 LIB_NAME = libcwist.a
 
