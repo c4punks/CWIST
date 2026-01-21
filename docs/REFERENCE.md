@@ -30,7 +30,7 @@ Secure transport layer using OpenSSL.
 ### 4. Query Parsing
 Robust query string parsing using `liburiparser`.
 - **Header:** `<cwist/query.h>`
-- **Function:** `cwist_query_map_parse(map, raw_query)`
+- **Function:** `void cwist_query_map_parse(map, raw_query)`
 - **Behavior:** Parses `key=value&key2=val2` into a hash map (SipHash).
 
 ### 5. Database (SQL)

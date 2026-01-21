@@ -2,7 +2,7 @@ CC = gcc
 CFLAGS = -I./include -I./lib -I./lib/cjson -Wall -Wextra -pthread
 LIBS = -pthread -lcjson -lssl -lcrypto -luriparser -lsqlite3
 
-SRCS = src/sstring/sstring.c src/process/err/error.c src/http/http.c src/http/https.c src/http/mux.c src/http/query.c src/session/session_manager.c src/siphash/siphash.c src/db/db.c src/framework/app.c
+SRCS = src/sstring/sstring.c src/process/err/error.c src/http/http.c src/http/https.c src/http/mux.c src/http/query.c src/session/session_manager.c src/siphash/siphash.c src/db/db.c src/framework/app.c src/websocket/websocket.c src/websocket/ws_utils.c src/utils/json_builder.c src/framework/middleware.c
 OBJS = $(SRCS:.c=.o)
 LIB_NAME = libcwist.a
 
@@ -18,6 +18,10 @@ $(LIB_NAME): $(OBJS)
 test: $(LIB_NAME) tests/test_sstring.c
 	$(CC) $(CFLAGS) -o test_sstring tests/test_sstring.c $(LIB_NAME) $(LIBS)
 	./test_sstring
+
+test_websocket: $(LIB_NAME) tests/test_websocket.c
+	$(CC) $(CFLAGS) -o test_websocket tests/test_websocket.c $(LIB_NAME) $(LIBS)
+	./test_websocket
 
 test_http: $(LIB_NAME) tests/test_http.c
 	$(CC) $(CFLAGS) -o test_http tests/test_http.c $(LIB_NAME) $(LIBS)

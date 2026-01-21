@@ -37,7 +37,7 @@ char *read_file_content(const char *path) {
 // --- DB Logic ---
 
 void init_db() {
-    cwist_db_open(&db_conn, "example/othello-web/othello.db");
+    cwist_db_open(&db_conn, "othello.db");
     
     const char *schema = "CREATE TABLE IF NOT EXISTS games (room_id INTEGER PRIMARY KEY, board TEXT, turn INTEGER, status TEXT, players INTEGER);";
     
@@ -131,7 +131,8 @@ void update_game_state(int room_id, int board[SIZE][SIZE], int turn, const char 
 
 // --- Handler ---
 
-void handle_client(cwist_https_connection *conn) {
+void handle_client(cwist_https_connection *conn, void *ctx) {
+    (void)ctx;
     cwist_http_request *req = cwist_https_receive_request(conn);
     if (!req) return;
 
@@ -147,7 +148,7 @@ void handle_client(cwist_https_connection *conn) {
     }
 
     if (strcmp(req->path->data, "/") == 0) {
-        char *content = read_file_content("example/othello-web/index.html");
+        char *content = read_file_content("index.html");
         if (content) {
             cwist_sstring_assign(res->body, content);
             free(content);
@@ -156,14 +157,14 @@ void handle_client(cwist_https_connection *conn) {
             res->status_code = CWIST_HTTP_NOT_FOUND;
         }
     } else if (strcmp(req->path->data, "/style.css") == 0) {
-        char *content = read_file_content("example/othello-web/style.css");
+        char *content = read_file_content("style.css");
         if (content) {
             cwist_sstring_assign(res->body, content);
             free(content);
             cwist_http_header_add(&res->headers, "Content-Type", "text/css");
         }
     } else if (strcmp(req->path->data, "/script.js") == 0) {
-        char *content = read_file_content("example/othello-web/script.js");
+        char *content = read_file_content("script.js");
         if (content) {
             cwist_sstring_assign(res->body, content);
             free(content);
@@ -288,7 +289,7 @@ int main() {
     init_db();
 
     cwist_https_context *ctx = NULL;
-    cwist_error_t err = cwist_https_init_context(&ctx, "example/othello-web/server.crt", "example/othello-web/server.key");
+    cwist_error_t err = cwist_https_init_context(&ctx, "server.crt", "server.key");
     
     if (err.errtype == CWIST_ERR_JSON) {
         printf("Init Failed: %s\n", cJSON_GetStringValue(cJSON_GetObjectItem(err.error.err_json, "openssl_error")));
@@ -304,7 +305,7 @@ int main() {
     }
 
     printf("Starting HTTPS Othello Server on port %d...\n", PORT);
-    cwist_https_server_loop(server_fd, ctx, handle_client);
+    cwist_https_server_loop(server_fd, ctx, handle_client, NULL);
 
     cwist_https_destroy_context(ctx);
     cwist_db_close(db_conn);

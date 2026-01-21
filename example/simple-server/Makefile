@@ -1,6 +1,7 @@
 CC = gcc
-CFLAGS = -Wall -Wextra -g
-LIBS = -lcwist -lcjson
+CFLAGS = -Wall -Wextra -g -I../../include
+LDFLAGS = -L../../
+LIBS = -lcwist -lcjson -lsqlite3 -luriparser -lssl -lcrypto -lpthread
 
 SRCS = main.c
 TARGET = simple_server
@@ -8,7 +9,7 @@ TARGET = simple_server
 all: $(TARGET)
 
 $(TARGET): $(SRCS)
-	$(CC) $(CFLAGS) -o $(TARGET) $(SRCS) $(LIBS)
+	$(CC) $(CFLAGS) -o $(TARGET) $(SRCS) $(LDFLAGS) $(LIBS)
 
 clean:
 	rm -f $(TARGET)

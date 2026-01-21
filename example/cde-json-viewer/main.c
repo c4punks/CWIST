@@ -63,48 +63,42 @@ static cwist_sstring *form_ui(cJSON *json) {
     return out;
 }
 
-void send_response(int client_fd, cwist_http_response *res) {
-    smartstring *raw = smartstring_create();
-    
-    // Status Line
-    char status_line[128];
-    snprintf(status_line, 127, "%s %d %s\r\n", res->version->data, res->status_code, res->status_text->data);
-    smartstring_append(raw, status_line);
-
-    // Headers
-    cwist_http_header_node *curr = res->headers;
-    while(curr) {
-        smartstring_append(raw, curr->key->data);
-        smartstring_append(raw, ": ");
-        smartstring_append(raw, curr->value->data);
-        smartstring_append(raw, "\r\n");
-        curr = curr->next;
-    }
-    smartstring_append(raw, "\r\n"); // End of headers
-
-    // Body
-    if(res->body->data) {
-        smartstring_append(raw, res->body->data);
-    }
-
-    if (raw->data) {
-        send(client_fd, raw->data, strlen(raw->data), 0);
-    }
-    smartstring_destroy(raw);
-}
-
-void handle_client(int client_fd) {
+void handle_client(int client_fd, void *ctx) {
+    (void)ctx;
     char buffer[BUFFER_SIZE];
     int read_len = read(client_fd, buffer, BUFFER_SIZE - 1);
     if (read_len < 0) {
         close(client_fd);
         return;
     }
-    cwist_sstring *html = form_ui(json);
-    cJSON_Delete(json);
-    cwist_http_header_add(&res->headers, "Content-Type", "text/html");
-    cwist_sstring_assign(res->body, html->data);
-    cwist_sstring_destroy(html);
+    buffer[read_len] = '\0';
+    
+    // Log request (optional)
+    printf("Received Request:\n%s\n----------------\n", buffer);
+
+    // Prepare Response
+    cwist_http_response *res = cwist_http_response_create();
+    
+    // Generate Body
+    cJSON *json = cJSON_Parse(MOCK_JSON_INPUT);
+    if (json) {
+        generate_cde_html(res->body, json);
+        cJSON_Delete(json);
+        cwist_http_header_add(&res->headers, "Content-Type", "text/html");
+        
+        char len_str[32];
+        if (res->body->data) {
+            sprintf(len_str, "%zu", strlen(res->body->data));
+            cwist_http_header_add(&res->headers, "Content-Length", len_str);
+        }
+    } else {
+         res->status_code = CWIST_HTTP_INTERNAL_ERROR;
+         cwist_sstring_assign(res->status_text, "Internal Server Error");
+    }
+
+    cwist_http_send_response(client_fd, res);
+    cwist_http_response_destroy(res);
+    close(client_fd);
 }
 
 int main() {
@@ -121,6 +115,6 @@ int main() {
     printf("Server listening on port %d\n", PORT);
     printf("Visit http://%s:%d to see the CDE JSON Viewer\n", addr, port);
 
-    cwist_accept_socket(server_fd, (struct sockaddr*)&sockv4, handle_client);
+    cwist_accept_socket(server_fd, (struct sockaddr*)&sockv4, handle_client, NULL);
     return 0;
 }

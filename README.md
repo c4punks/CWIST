@@ -53,16 +53,16 @@ gcc -o server main.c -lcwist -lssl -lcrypto -luriparser -lsqlite3 -lcjson
 ./server
 ```
 
-## Key Features
+## Features
 
-*   **⚡ Modern API**: Intuitive `app_get` / `app_post` routing.
-*   **🔒 Secure by Default**: Built-in HTTPS support via OpenSSL.
-*   **💾 Database Ready**: Simple SQLite integration out of the box.
-*   **🚀 Performance**: Multi-threaded architecture.
-*   **🛠 Utilities**:
-    *   Safe Dynamic Strings (`SString`)
-    *   Query Parameter Parsing
-    *   JSON Support
+- **HTTP/1.1 Server**: Robust request parsing and response handling.
+- **WebSocket Support**: Easy upgrade from HTTP to persistent WebSocket connections.
+- **Middleware System**: Chainable processing for logging, security, and more.
+- **Path Parameters**: Express-style routing with `:param` support.
+- **JSON Builder**: Lightweight utility for building JSON responses.
+- **Secure by Design**: Integration with Monocypher for cryptographic needs.
+
+
 
 ## Documentation
 

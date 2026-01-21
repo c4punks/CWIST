@@ -27,7 +27,7 @@ int main() {
     char buffer[64];
     // Let's skip "Hello, " (7 chars) to get "SString!"
     cwist_error_t seek_err = cwist_sstring_seek(s, buffer, 7);
-    if (seek_err.errtype == CWIST_ERR_INT8 && seek_err.error.err_i8 == ERR_SSTRING_OKAY) {
+    if (seek_err.errtype == CWIST_ERR_INT8 && seek_err.error.err_i8 == ERR_SSTRING_OKAY) { 
         printf("Seek(7):       '%s'\n", buffer);
     } else {
         printf("Seek failed!\n");

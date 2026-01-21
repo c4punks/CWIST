@@ -33,3 +33,20 @@ Adds a header to the linked list.
 char *cwist_http_header_get(cwist_http_header_node *head, const char *key);
 ```
 Retrieves the value of a header by key. Returns `NULL` if not found.
+
+## Server Core
+
+### `cwist_http_server_loop`
+```c
+cwist_error_t cwist_http_server_loop(int server_fd, cwist_server_config *config, void (*handler)(int, void *), void *ctx);
+```
+Starts the main server loop. 
+- Supports iterative, forking, and multithreaded models via `config`.
+- `ctx` is passed to the handler for thread-safe state management.
+
+### `cwist_accept_socket`
+```c
+cwist_error_t cwist_accept_socket(int server_fd, struct sockaddr *sockv4, void (*handler_func)(int, void *), void *ctx);
+```
+Low-level accept loop wrapper.
+
