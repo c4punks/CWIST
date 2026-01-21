@@ -109,9 +109,13 @@ cwist_http_request *cwist_http_request_create(void) {
     req->path = cwist_sstring_create();
     req->query = cwist_sstring_create();
     req->query_params = cwist_query_map_create();
+    req->path_params = cwist_query_map_create();
     req->version = cwist_sstring_create();
     req->headers = NULL;
-    req->body = smartstring_create();
+    req->body = cwist_sstring_create();
+    req->keep_alive = true;
+    req->client_fd = -1;
+    req->upgraded = false;
 
     // Defaults
     smartstring_assign(req->version, "HTTP/1.1");
@@ -125,6 +129,7 @@ void cwist_http_request_destroy(cwist_http_request *req) {
         cwist_sstring_destroy(req->path);
         cwist_sstring_destroy(req->query);
         cwist_query_map_destroy(req->query_params);
+        cwist_query_map_destroy(req->path_params);
         cwist_sstring_destroy(req->version);
         cwist_sstring_destroy(req->body);
         cwist_http_header_free_all(req->headers);
@@ -437,22 +442,42 @@ int cwist_make_socket_ipv4(struct sockaddr_in *sockv4, const char *address, uint
   return server_fd;
 }
 
-cwist_error_t cwist_accept_socket(int server_fd, struct sockaddr *sockv4, void (*handler_func)(int client_fd)) {
+struct thread_payload {
+    int client_fd;
+    void (*handler_func)(int, void *);
+    void *ctx;
+};
+
+static void *thread_handler(void *arg) {
+    struct thread_payload *payload = (struct thread_payload *)arg;
+    int client_fd = payload->client_fd;
+    void (*handler_func)(int, void *) = payload->handler_func;
+    void *ctx = payload->ctx;
+    free(payload);
+    handler_func(client_fd, ctx);
+    return NULL;
+}
+
+static void handle_client_forking(int client_fd, void (*handler_func)(int, void *), void *ctx) {
+    pid_t pid = fork();
+    if (pid == 0) {
+        handler_func(client_fd, ctx);
+        close(client_fd);
+        _exit(0);
+    } else if (pid > 0) {
+        close(client_fd);
+    }
+}
+
+cwist_error_t cwist_accept_socket(int server_fd, struct sockaddr *sockv4, void (*handler_func)(int client_fd, void *), void *ctx) {
   int client_fd = -1;
   struct sockaddr_in peer_addr;
   socklen_t addrlen = sizeof(peer_addr);
 
-  while(true) { // TODO: ADD MULTIPROCESSING SUPPORT
+  while(true) { 
     if((client_fd = accept(server_fd, (struct sockaddr *)&peer_addr, &addrlen)) < 0) {
       if (errno == EINTR) continue;
-
-      cJSON *err_json = cJSON_CreateObject();
-      cJSON_AddStringToObject(err_json, "err", "Failed to accept socket");
-      char *cjson_error_log = cJSON_Print(err_json);
-      perror(cjson_error_log);
-      free(cjson_error_log);
-      cJSON_Delete(err_json);
-
+// ... (error handling)
       if (errno == EBADF || errno == EINVAL || errno == ENOTSOCK) {
           fprintf(stderr, "Fatal socket error %d. Exiting accept loop.\n", errno);
           break;
@@ -464,10 +489,129 @@ cwist_error_t cwist_accept_socket(int server_fd, struct sockaddr *sockv4, void (
       memcpy(sockv4, &peer_addr, sizeof(peer_addr));
     }
 
-    handler_func(client_fd);
+    handler_func(client_fd, ctx);
   }
 
   cwist_error_t err = make_error(CWIST_ERR_INT16);
   err.error.err_i16 = -1;
   return err;
+}
+
+cwist_error_t cwist_http_server_loop(int server_fd, cwist_server_config *config, void (*handler)(int, void *), void *ctx) {
+    cwist_error_t err = make_error(CWIST_ERR_INT16);
+    if (!config || server_fd < 0 || !handler) {
+        err.error.err_i16 = -1;
+        return err;
+    }
+
+    if (config->use_forking) {
+        while (true) {
+            int client_fd = accept(server_fd, NULL, NULL);
+            if (client_fd < 0) {
+                if (errno == EINTR) continue;
+                err.error.err_i16 = -1;
+                return err;
+            }
+            handle_client_forking(client_fd, handler, ctx);
+        }
+    }
+
+    if (config->use_threading) {
+        while (true) {
+            int client_fd = accept(server_fd, NULL, NULL);
+            if (client_fd < 0) {
+                if (errno == EINTR) continue;
+                err.error.err_i16 = -1;
+                return err;
+            }
+            pthread_t thread;
+            struct thread_payload *payload = malloc(sizeof(*payload));
+            if (!payload) {
+                close(client_fd);
+                continue;
+            }
+            payload->client_fd = client_fd;
+            payload->handler_func = handler;
+            payload->ctx = ctx;
+            if (pthread_create(&thread, NULL, thread_handler, payload) == 0) {
+                pthread_detach(thread);
+            } else {
+                free(payload);
+                close(client_fd);
+            }
+        }
+    }
+
+#ifdef __linux__
+    if (config->use_epoll) {
+        int epoll_fd = epoll_create1(0);
+        if (epoll_fd < 0) {
+            err.error.err_i16 = -1;
+            return err;
+        }
+        struct epoll_event event;
+        event.events = EPOLLIN;
+        event.data.fd = server_fd;
+        if (epoll_ctl(epoll_fd, EPOLL_CTL_ADD, server_fd, &event) < 0) {
+            close(epoll_fd);
+            err.error.err_i16 = -1;
+            return err;
+        }
+
+        while (true) {
+            struct epoll_event events[16];
+            int count = epoll_wait(epoll_fd, events, 16, -1);
+            if (count < 0) {
+                if (errno == EINTR) continue;
+                break;
+            }
+            for (int i = 0; i < count; i++) {
+                if (events[i].data.fd == server_fd) {
+                    int client_fd = accept(server_fd, NULL, NULL);
+                    if (client_fd >= 0) {
+                        handler(client_fd, ctx);
+                    }
+                }
+            }
+        }
+        close(epoll_fd);
+    }
+#endif
+
+#if defined(__APPLE__) || defined(__FreeBSD__) || defined(__NetBSD__) || defined(__OpenBSD__)
+    if (config->use_epoll) {
+        int kqueue_fd = kqueue();
+        if (kqueue_fd < 0) {
+            err.error.err_i16 = -1;
+            return err;
+        }
+        struct kevent change;
+        EV_SET(&change, server_fd, EVFILT_READ, EV_ADD, 0, 0, NULL);
+        if (kevent(kqueue_fd, &change, 1, NULL, 0, NULL) < 0) {
+            close(kqueue_fd);
+            err.error.err_i16 = -1;
+            return err;
+        }
+
+        while (true) {
+            struct kevent events[16];
+            int count = kevent(kqueue_fd, NULL, 0, events, 16, NULL);
+            if (count < 0) {
+                if (errno == EINTR) continue;
+                break;
+            }
+            for (int i = 0; i < count; i++) {
+                if ((int)events[i].ident == server_fd) {
+                    int client_fd = accept(server_fd, NULL, NULL);
+                    if (client_fd >= 0) {
+                        handler(client_fd, ctx);
+                    }
+                }
+            }
+        }
+        close(kqueue_fd);
+    }
+#endif
+
+    return cwist_accept_socket(server_fd, NULL, handler, ctx);
 }

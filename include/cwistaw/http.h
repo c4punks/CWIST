@@ -46,9 +46,14 @@ typedef struct cwist_http_request {
     cwist_sstring *path;        // e.g., "/users/1"
     cwist_sstring *query;       // e.g., "active=true" (raw)
     cwist_query_map *query_params; // Parsed query parameters
+    cwist_query_map *path_params;  // Parsed path parameters (e.g. :id)
     cwist_sstring *version;     // e.g., "HTTP/1.1"
     cwist_http_header_node *headers;
-    smartstring *body;
+    cwist_sstring *body;
+    bool keep_alive;
+    int client_fd;
+    bool upgraded;
+    void *private_data; // Internal framework use
 } cwist_http_request;
 
 typedef struct cwist_http_response {
@@ -84,7 +89,7 @@ cwist_http_method_t cwist_http_string_to_method(const char *method_str);
 // TCP socket handler
 // socket -> bind -> listen
 int cwist_make_socket_ipv4(struct sockaddr_in *sockv4, const char *address, uint16_t port, uint16_t backlog);
-cwist_error_t cwist_accept_socket(int server_fd, struct sockaddr *sockv4, void (*handler_func)(int client_fd));
+cwist_error_t cwist_accept_socket(int server_fd, struct sockaddr *sockv4, void (*handler_func)(int client_fd, void *ctx), void *ctx);
 
 typedef struct cwist_server_config {
     bool use_forking;     // Process per request
@@ -92,7 +97,7 @@ typedef struct cwist_server_config {
     bool use_epoll;       // Use epoll for accepting
 } cwist_server_config;
 
-cwist_error_t cwist_http_server_loop(int server_fd, cwist_server_config *config, void (*handler)(int));
+cwist_error_t cwist_http_server_loop(int server_fd, cwist_server_config *config, void (*handler)(int, void *), void *ctx);
 int headers_have_content_length(cwist_http_header_node *headers);
 
 #endif

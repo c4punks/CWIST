@@ -202,11 +202,34 @@ cwist_error_t cwist_https_send_response(cwist_https_connection *conn, cwist_http
     return err;
 }
 
-/* --- Server Loop --- */
+struct https_thread_payload {
+    int client_fd;
+    cwist_https_context *ctx;
+    void (*handler)(cwist_https_connection *, void *);
+    void *user_ctx;
+};
 
-cwist_error_t cwist_https_server_loop(int server_fd, cwist_https_context *ctx, void (*handler)(cwist_https_connection *conn)) {
-    cwist_error_t err = make_error(CWIST_ERR_INT16);
+static void *https_thread_handler(void *arg) {
+    struct https_thread_payload *payload = (struct https_thread_payload *)arg;
+    cwist_https_connection *conn = NULL;
+    cwist_error_t hs_err = cwist_https_accept(payload->ctx, payload->client_fd, &conn);
     
+    if (hs_err.errtype == CWIST_ERR_INT16 && hs_err.error.err_i16 == 0) {
+        payload->handler(conn, payload->user_ctx);
+        cwist_https_close_connection(conn);
+    } else {
+        if (hs_err.errtype == CWIST_ERR_JSON) {
+            cJSON_Delete(hs_err.error.err_json);
+        }
+        close(payload->client_fd);
+    }
+    
+    free(payload);
+    return NULL;
+}
+
+cwist_error_t cwist_https_server_loop(int server_fd, cwist_https_context *ctx, void (*handler)(cwist_https_connection *, void *), void *user_ctx) {
+    cwist_error_t err = make_error(CWIST_ERR_INT16);
     if (server_fd < 0 || !ctx || !handler) {
         err.error.err_i16 = -1;
         return err;
@@ -219,29 +242,24 @@ cwist_error_t cwist_https_server_loop(int server_fd, cwist_https_context *ctx, v
 
         if (client_fd < 0) {
             if (errno == EINTR) continue;
-            perror("Unable to accept");
             continue; 
         }
 
-        // Fork or Thread could go here. For now, iterative.
-        // Doing handshake in the main loop blocks other connections.
-        // Ideally this should be threaded/forked as in http.c
-        
-        cwist_https_connection *conn = NULL;
-        cwist_error_t hs_err = cwist_https_accept(ctx, client_fd, &conn);
-        
-        if (hs_err.errtype == CWIST_ERR_INT16 && hs_err.error.err_i16 == 0) {
-            // Success
-            handler(conn);
-            cwist_https_close_connection(conn);
+        pthread_t thread;
+        struct https_thread_payload *payload = malloc(sizeof(*payload));
+        if (!payload) {
+            close(client_fd);
+            continue;
+        }
+        payload->client_fd = client_fd;
+        payload->ctx = ctx;
+        payload->handler = handler;
+        payload->user_ctx = user_ctx;
+
+        if (pthread_create(&thread, NULL, https_thread_handler, payload) == 0) {
+            pthread_detach(thread);
         } else {
-            // Handshake failure
-            if (hs_err.errtype == CWIST_ERR_JSON) {
-                char *json_str = cJSON_Print(hs_err.error.err_json);
-                fprintf(stderr, "HTTPS Error: %s\n", json_str);
-                free(json_str);
-                cJSON_Delete(hs_err.error.err_json);
-            }
+            free(payload);
             close(client_fd);
         }
     }

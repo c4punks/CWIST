@@ -50,12 +50,19 @@ uint64_t siphash24(const void *src, size_t len, const uint8_t key[16]) {
     /* 3. Final Block & Padding: Handle the remaining 0-7 bytes */
     uint64_t t = 0;
     switch (len % 8) {
+        /* fall through */
         case 7: t |= ((uint64_t)m[6]) << 48;
+        /* fall through */
         case 6: t |= ((uint64_t)m[5]) << 40;
+        /* fall through */
         case 5: t |= ((uint64_t)m[4]) << 32;
+        /* fall through */
         case 4: t |= ((uint64_t)m[3]) << 24;
+        /* fall through */
         case 3: t |= ((uint64_t)m[2]) << 16;
+        /* fall through */
         case 2: t |= ((uint64_t)m[1]) << 8;
+        /* fall through */
         case 1: t |= ((uint64_t)m[0]);
     }
     

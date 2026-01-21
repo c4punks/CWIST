@@ -93,7 +93,8 @@ static int request_wants_close(cwist_http_request *req) {
 }
 
 // Actual request handler logic (keep-alive capable)
-void handle_client(int client_fd) {
+void handle_client(int client_fd, void *ctx) {
+    (void)ctx;
     char buffer[BUFFER_SIZE];
     size_t buf_len = 0;
 
@@ -254,7 +255,7 @@ int main() {
     memset(&config, 0, sizeof(config));
     config.use_threading = true;
 
-    cwist_http_server_loop(server_fd, &config, handle_client);
+    cwist_http_server_loop(server_fd, &config, handle_client, NULL);
     return 0;
 }
 

@@ -12,9 +12,9 @@ Creates a dynamic string.
 
 ### `cwist_sstring_append`
 ```c
-void cwist_sstring_append(cwist_sstring *str, const char *suffix);
+cwist_error_t cwist_sstring_append(cwist_sstring *str, const char *suffix);
 ```
-Safe concatenation.
+Safe concatenation. Returns `cwist_error_t`.
 
 ### `cwist_sstring_destroy`
 ```c

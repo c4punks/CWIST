@@ -15,13 +15,12 @@ void cwist_app_use(cwist_app *app, cwist_middleware_func mw);
 ### Request ID Middleware
 Generates a unique ID for each request and adds it to the `X-Request-Id` header in both request and response.
 ```c
-#include <cwist/sys/app/middleware.h>
+#include <cwist/middleware.h>
 cwist_app_use(app, cwist_mw_request_id(NULL));
 ```
 
 ### Access Log Middleware
 Logs request details (method, path, status, latency) to stdout.
-For a response deferred with `cwist_async_defer()` the status and size are not known when the chain returns; they are logged as `-` (`null` in the JSON format).
 ```c
 cwist_app_use(app, cwist_mw_access_log(CWIST_LOG_COMBINED));
 ```
@@ -30,37 +29,6 @@ cwist_app_use(app, cwist_mw_access_log(CWIST_LOG_COMBINED));
 Limits the number of requests per minute from a single IP.
 ```c
 cwist_app_use(app, cwist_mw_rate_limit_ip(60));
-```
-
-### CORS Middleware
-Enables Cross-Origin Resource Sharing (CORS) support.
-- Adds `Access-Control-Allow-Origin: *` to all responses.
-- Handles `OPTIONS` preflight requests with a 204 No Content status and appropriate headers, short-circuiting the request processing.
-```c
-cwist_app_use(app, cwist_mw_cors());
-```
-
-### Prometheus Metrics Middleware
-Exposes a `/metrics` endpoint in Prometheus exposition format. Tracks request counts, latency histograms, and active connections.
-```c
-#include <cwist/sys/app/middleware.h>
-cwist_app_use(app, cwist_mw_metrics());
-```
-
-### JWT Auth Middleware
-Validates a `Bearer` token in the `Authorization` header using HMAC-SHA256. Responds with `401 Unauthorized` and short-circuits the chain on failure. Decoded claims are available to downstream handlers via `cwist_mw_jwt_get_claims()`.
-```c
-cwist_app_use(app, cwist_mw_jwt_auth("my-secret"));
-
-// Inside a handler behind the middleware:
-const cwist_jwt_claims *claims = cwist_mw_jwt_get_claims(req);
-```
-`secret` must be a null-terminated string that outlives the middleware invocations (typically a static or global string).
-
-### Compression Middleware
-Inspects `Accept-Encoding`, compresses the response body with a registered backend (gzip/zstd), and adds `Content-Encoding`. Only compresses bodies at or above `min_body_size` bytes. A response deferred with `cwist_async_defer()` is sent uncompressed: it belongs to its completion once the handler defers it.
-```c
-cwist_app_use(app, cwist_mw_compress(1024)); /* compress responses >= 1 KiB */
 ```
 
 ## Creating Custom Middleware
