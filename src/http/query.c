@@ -4,6 +4,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
+#include <uriparser/Uri.h>
 
 #define CWIST_QUERY_MAP_DEFAULT_SIZE 16
 
@@ -83,24 +84,21 @@ const char *cwist_query_map_get(cwist_query_map *map, const char *key) {
 void cwist_query_map_parse(cwist_query_map *map, const char *raw_query) {
     if (!map || !raw_query || strlen(raw_query) == 0) return;
 
-    char *query_dup = strdup(raw_query);
-    if (!query_dup) return;
-
-    char *pair_token;
-    char *pair_rest = query_dup;
-
-    while ((pair_token = strtok_r(pair_rest, "&", &pair_rest))) {
-        char *eq = strchr(pair_token, '=');
-        if (eq) {
-            *eq = '\0';
-            const char *key = pair_token;
-            const char *value = eq + 1;
-            cwist_query_map_set(map, key, value);
-        } else {
-            // Flag style: "active" -> key="active", value=""
-            cwist_query_map_set(map, pair_token, "");
-        }
+    UriQueryListA *queryList = NULL;
+    int itemCount = 0;
+    
+    // uriparser handles & and = and url decoding
+    if (uriDissectQueryMallocA(&queryList, &itemCount, raw_query, raw_query + strlen(raw_query)) != URI_SUCCESS) {
+        return;
     }
 
-    free(query_dup);
+    UriQueryListA *curr = queryList;
+    while (curr) {
+        if (curr->key) {
+            cwist_query_map_set(map, curr->key, curr->value ? curr->value : "");
+        }
+        curr = curr->next;
+    }
+
+    uriFreeQueryListA(queryList);
 }

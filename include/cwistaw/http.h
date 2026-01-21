@@ -69,6 +69,7 @@ cwist_http_request *cwist_http_parse_request(const char *raw_request); // New
 // Response Lifecycle
 cwist_http_response *cwist_http_response_create(void);
 void cwist_http_response_destroy(cwist_http_response *res);
+cwist_sstring *cwist_http_stringify_response(cwist_http_response *res); // New helper
 cwist_error_t cwist_http_send_response(int client_fd, cwist_http_response *res); // New
 
 // Header Manipulation

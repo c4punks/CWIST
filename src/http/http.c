@@ -264,13 +264,8 @@ int headers_have_content_length(cwist_http_header_node *headers) {
 }
 
 
-cwist_error_t cwist_http_send_response(int client_fd, cwist_http_response *res) {
-    cwist_error_t err = make_error(CWIST_ERR_INT16);
-
-    if (client_fd < 0 || !res) {
-        err.error.err_i16 = -1;
-        return err;
-    }
+cwist_sstring *cwist_http_stringify_response(cwist_http_response *res) {
+    if (!res) return NULL;
 
     cwist_sstring *response_str = cwist_sstring_create();
     size_t body_len = 0;
@@ -319,6 +314,24 @@ cwist_error_t cwist_http_send_response(int client_fd, cwist_http_response *res) 
     if (res->body && res->body->data) {
         cwist_sstring_append(response_str, res->body->data);
     }
+    
+    return response_str;
+}
+
+cwist_error_t cwist_http_send_response(int client_fd, cwist_http_response *res) {
+    cwist_error_t err = make_error(CWIST_ERR_INT16);
+
+    if (client_fd < 0 || !res) {
+        err.error.err_i16 = -1;
+        return err;
+    }
+
+    cwist_sstring *response_str = cwist_http_stringify_response(res);
+    if (!response_str) {
+        err.error.err_i16 = -1;
+        return err;
+    }
+
     // Send
     err.error.err_i16 = 0;
 
