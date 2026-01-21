@@ -15,6 +15,8 @@ typedef struct cwist_https_context {
 typedef struct cwist_https_connection {
     int fd;
     SSL *ssl;
+    char *read_buf;
+    size_t buf_len;
 } cwist_https_connection;
 
 /* --- API Functions --- */
