@@ -32,6 +32,12 @@ typedef enum cwist_http_status_t {
     CWIST_HTTP_NOT_IMPLEMENTED = 501
 } cwist_http_status_t;
 
+/* --- Constants and Limits --- */
+#define CWIST_HTTP_MAX_HEADER_SIZE (8 * 1024)
+#define CWIST_HTTP_MAX_BODY_SIZE   (10 * 1024 * 1024)
+#define CWIST_HTTP_READ_BUFFER_SIZE (16 * 1024)
+#define CWIST_HTTP_TIMEOUT_MS      5000
+
 /* --- Structures --- */
 
 // Linked list for headers to handle multiple headers easily
@@ -54,6 +60,7 @@ typedef struct cwist_http_request {
     int client_fd;
     bool upgraded;
     void *private_data; // Internal framework use
+    size_t content_length;
 } cwist_http_request;
 
 typedef struct cwist_http_response {
@@ -69,13 +76,14 @@ typedef struct cwist_http_response {
 // Request Lifecycle
 cwist_http_request *cwist_http_request_create(void);
 void cwist_http_request_destroy(cwist_http_request *req);
-cwist_http_request *cwist_http_parse_request(const char *raw_request); // New
+cwist_http_request *cwist_http_parse_request(const char *raw_request); 
+cwist_http_request *cwist_http_receive_request(int client_fd, char *read_buf, size_t buf_size, size_t *buf_len);
 
 // Response Lifecycle
 cwist_http_response *cwist_http_response_create(void);
 void cwist_http_response_destroy(cwist_http_response *res);
-cwist_sstring *cwist_http_stringify_response(cwist_http_response *res); // New helper
-cwist_error_t cwist_http_send_response(int client_fd, cwist_http_response *res); // New
+cwist_sstring *cwist_http_stringify_response(cwist_http_response *res);
+cwist_error_t cwist_http_send_response(int client_fd, cwist_http_response *res);
 
 // Header Manipulation
 cwist_error_t cwist_http_header_add(cwist_http_header_node **head, const char *key, const char *value);

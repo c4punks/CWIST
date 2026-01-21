@@ -8,9 +8,63 @@
 /*
 cwist_error_t smartstring_init(smartstring *str) {
 
-}*/
+cwist_error_t cwist_sstring_assign_len(cwist_sstring *str, const char *data, size_t len) {
+    if (!str) {
+      cwist_error_t err = make_error(CWIST_ERR_INT8);
+      err.error.err_i8 = ERR_SSTRING_NULL_STRING;
+      return err;
+    }
+    
+    char *new_data = (char *)realloc(str->data, len + 1);
+    if (!new_data && len > 0) {
+      cwist_error_t err = make_error(CWIST_ERR_JSON);
+      err.error.err_json = cJSON_CreateObject();
+      cJSON_AddStringToObject(err.error.err_json, "err", "cannot assign string: memory is full");
+      return err;
+    }
+    str->data = new_data;
+    str->size = len; 
+    if (data && len > 0) memcpy(str->data, data, len);
+    if (str->data) str->data[len] = '\0';
 
-cwist_error_t smartstring_ltrim(smartstring *str) {
+    cwist_error_t err = make_error(CWIST_ERR_INT8);
+    err.error.err_i8 = ERR_SSTRING_OKAY;
+    return err;
+}
+
+cwist_error_t cwist_sstring_append_len(cwist_sstring *str, const char *data, size_t len) {
+    if (!str) {
+        cwist_error_t err = make_error(CWIST_ERR_INT8);
+        err.error.err_i8 = ERR_SSTRING_NULL_STRING;
+        return err;
+    }
+    if (!data || len == 0) {
+        cwist_error_t err = make_error(CWIST_ERR_INT8);
+        err.error.err_i8 = ERR_SSTRING_OKAY;
+        return err;
+    }
+
+    size_t current_len = str->size;
+    size_t new_size = current_len + len;
+
+    char *new_data = (char *)realloc(str->data, new_size + 1);
+    if (!new_data) {
+         cwist_error_t err = make_error(CWIST_ERR_JSON);
+         err.error.err_json = cJSON_CreateObject();
+         cJSON_AddStringToObject(err.error.err_json, "err", "Cannot append: memory full");
+         return err;
+    }
+    str->data = new_data;
+    memcpy(str->data + current_len, data, len);
+    str->size = new_size;
+    str->data[new_size] = '\0';
+
+    cwist_error_t err = make_error(CWIST_ERR_INT8);
+    err.error.err_i8 = ERR_SSTRING_OKAY;
+    return err;
+}
+
+cwist_error_t cwist_sstring_init(cwist_sstring *str) {
     cwist_error_t err = make_error(CWIST_ERR_INT8);
     err.error.err_i8 = ERR_SMARTSTRING_NULL_STRING;
     if (!str || !str->data) return err;
