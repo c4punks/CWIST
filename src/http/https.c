@@ -9,6 +9,7 @@
 #include <unistd.h>
 #include <string.h>
 #include <errno.h>
+#include <poll.h>
 #include <sys/socket.h>
 #include <arpa/inet.h>
 
@@ -122,6 +123,16 @@ cwist_error_t cwist_https_accept(cwist_https_context *ctx, int client_fd, cwist_
 
     (*conn)->fd = client_fd;
     (*conn)->ssl = ssl;
+    (*conn)->read_buf = malloc(CWIST_HTTP_READ_BUFFER_SIZE);
+    if (!(*conn)->read_buf) {
+        SSL_free(ssl);
+        free(*conn);
+        *conn = NULL;
+        err.error.err_i16 = -1;
+        return err;
+    }
+    (*conn)->buf_len = 0;
+    (*conn)->read_buf[0] = '\0';
 
     err.error.err_i16 = 0;
     return err;
@@ -136,6 +147,7 @@ void cwist_https_close_connection(cwist_https_connection *conn) {
         if (conn->fd >= 0) {
             close(conn->fd);
         }
+        free(conn->read_buf);
         free(conn);
     }
 }
@@ -143,22 +155,102 @@ void cwist_https_close_connection(cwist_https_connection *conn) {
 /* --- I/O Operations --- */
 
 cwist_http_request *cwist_https_receive_request(cwist_https_connection *conn) {
-    if (!conn || !conn->ssl) return NULL;
+    if (!conn || !conn->ssl || !conn->read_buf) return NULL;
 
-    // Read buffer
-    // For simplicity, we read up to 8KB. Real implementations handle buffering/chunking.
-    char buffer[8192]; 
-    int bytes = SSL_read(conn->ssl, buffer, sizeof(buffer) - 1);
-    
-    if (bytes <= 0) {
-        // Error or closed
-        return NULL;
+    size_t total_received = conn->buf_len;
+    char *header_end = NULL;
+
+    while (!(header_end = strstr(conn->read_buf, "\r\n\r\n"))) {
+        if (total_received >= CWIST_HTTP_READ_BUFFER_SIZE - 1) {
+            return NULL;
+        }
+
+        struct pollfd pfd = { .fd = conn->fd, .events = POLLIN };
+        int pret = poll(&pfd, 1, CWIST_HTTP_TIMEOUT_MS);
+        if (pret <= 0) {
+            return NULL;
+        }
+
+        int bytes = SSL_read(conn->ssl, conn->read_buf + total_received, (int)(CWIST_HTTP_READ_BUFFER_SIZE - 1 - total_received));
+        if (bytes <= 0) {
+            int ssl_err = SSL_get_error(conn->ssl, bytes);
+            if (ssl_err == SSL_ERROR_WANT_READ || ssl_err == SSL_ERROR_WANT_WRITE) {
+                continue;
+            }
+            return NULL;
+        }
+
+        total_received += (size_t)bytes;
+        conn->read_buf[total_received] = '\0';
     }
 
-    buffer[bytes] = '\0';
-    
-    // Delegate to existing HTTP parser
-    return cwist_http_parse_request(buffer);
+    cwist_http_request *req = cwist_http_parse_request(conn->read_buf);
+    if (!req) return NULL;
+
+    req->client_fd = conn->fd;
+
+    size_t header_len = (header_end + 4) - conn->read_buf;
+    size_t body_received = total_received - header_len;
+
+    if (req->content_length > 0) {
+        if (req->content_length > CWIST_HTTP_MAX_BODY_SIZE) {
+            cwist_http_request_destroy(req);
+            return NULL;
+        }
+
+        char *body = malloc(req->content_length + 1);
+        if (!body) {
+            cwist_http_request_destroy(req);
+            return NULL;
+        }
+
+        size_t to_copy = body_received < req->content_length ? body_received : req->content_length;
+        memcpy(body, header_end + 4, to_copy);
+        size_t current_body_len = to_copy;
+
+        while (current_body_len < req->content_length) {
+            struct pollfd pfd = { .fd = conn->fd, .events = POLLIN };
+            int pret = poll(&pfd, 1, CWIST_HTTP_TIMEOUT_MS);
+            if (pret <= 0) {
+                free(body);
+                cwist_http_request_destroy(req);
+                return NULL;
+            }
+
+            int bytes = SSL_read(conn->ssl, body + current_body_len, (int)(req->content_length - current_body_len));
+            if (bytes <= 0) {
+                int ssl_err = SSL_get_error(conn->ssl, bytes);
+                if (ssl_err == SSL_ERROR_WANT_READ || ssl_err == SSL_ERROR_WANT_WRITE) {
+                    continue;
+                }
+                free(body);
+                cwist_http_request_destroy(req);
+                return NULL;
+            }
+            current_body_len += (size_t)bytes;
+        }
+        body[req->content_length] = '\0';
+        cwist_sstring_assign_len(req->body, body, req->content_length);
+        free(body);
+
+        if (body_received > req->content_length) {
+            size_t leftover_len = body_received - req->content_length;
+            memmove(conn->read_buf, header_end + 4 + req->content_length, leftover_len);
+            conn->buf_len = leftover_len;
+        } else {
+            conn->buf_len = 0;
+        }
+    } else {
+        if (body_received > 0) {
+            memmove(conn->read_buf, header_end + 4, body_received);
+            conn->buf_len = body_received;
+        } else {
+            conn->buf_len = 0;
+        }
+    }
+    conn->read_buf[conn->buf_len] = '\0';
+
+    return req;
 }
 
 cwist_error_t cwist_https_send_response(cwist_https_connection *conn, cwist_http_response *res) {
