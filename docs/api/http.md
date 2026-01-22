@@ -18,6 +18,10 @@ Defined in `<cwist/http.h>` to guard every connection against resource exhaustio
 cwist_http_request *cwist_http_request_create(void);
 ```
 Allocates a new HTTP request structure.
+`cwist_app_listen` wires each inbound request with framework context:
+
+- `req->app` – back-reference to the running `cwist_app` (useful for pulling global config).
+- `req->db` – shared `cwist_db` handle configured via `cwist_app_use_db`.
 
 ### `cwist_http_parse_request`
 ```c
@@ -45,6 +49,17 @@ Blocking, framed read helper for keep-alive sockets.
 cwist_http_response *cwist_http_response_create(void);
 ```
 Allocates a new HTTP response structure. Default status is 200 OK.
+
+### `cwist_http_response_send_file`
+```c
+cwist_error_t cwist_http_response_send_file(
+    cwist_http_response *res,
+    const char *file_path,
+    const char *content_type_hint,
+    size_t *out_size
+);
+```
+Reads a static file from disk, copies it into the response body, and sets a sensible `Content-Type`. Files larger than `CWIST_HTTP_MAX_BODY_SIZE` are rejected with `-EFBIG`. Returns `0` on success and propagates `-errno` on failures (`-ENOENT`, `-EISDIR`, etc.). `out_size` is optional; when provided it receives the file length so handlers can emit HEAD responses without buffering the payload.
 
 ### `cwist_http_header_add`
 ```c

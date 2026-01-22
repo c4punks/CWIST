@@ -21,3 +21,5 @@ Executes a non-query SQL command (INSERT, UPDATE, DELETE).
 cwist_error_t cwist_db_query(cwist_db *db, const char *sql, cJSON **result);
 ```
 Executes a SELECT query. `result` is populated with a cJSON Array of Objects.
+
+Integrate the handle with the framework via `cwist_app_use_db(app, "app.db");` — every incoming `cwist_http_request` then exposes the pointer at `req->db`.

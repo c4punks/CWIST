@@ -11,18 +11,20 @@
 
 ## Phase 2: Framework Evolution (Current Focus)
 - [ ] **Routing System**:
-    - [ ] Implement `cwist_router` (Hash map or Trie based).
-    - [ ] Support dynamic parameters (e.g., `/users/:id`).
+    - [x] Landed `cwist_mux_router` + `cwist_app_get/post/ws` registration (docs/api/app.md & docs/api/http.md).
+    - [x] Support dynamic parameters (Express-style `:id` matching inside `cwist_app`).
+    - [x] Replace the linked-list router with a hash map (fallback list for parameterized paths) for large route tables and method+path lookups.
 - [ ] **Application Abstraction**:
-    - [ ] `cwist_app` struct to bundle server config, routes, and DB.
-    - [ ] Middleware support (chains of handlers).
+    - [x] `cwist_app` struct now bundles server config, TLS, routes, middleware, and WebSocket handlers.
+    - [x] Middleware support (request-id, access log, rate limiting) is chainable per docs/api/middleware.md.
+    - [x] Fold database handles/configuration pools into `cwist_app` so handlers stop wiring SQLite manually.
 - [ ] **Advanced Security**:
     - [ ] Automatic Security Headers (HSTS, X-Frame-Options, CSP).
-    - [ ] Rate Limiting (Token Bucket or Leaky Bucket).
+    - [x] Rate Limiting middleware (`cwist_mw_rate_limit_ip`).
     - [ ] CSRF Token generation/validation.
 - [ ] **Concurrency Model**:
-    - [ ] Thread Pool implementation (move away from simple fork/thread-per-req).
-    - [ ] Event Loop integration (epoll/kqueue) for high concurrency.
+    - [ ] Thread Pool implementation (move away from simple thread-per-request dispatch in `cwist_http_server_loop`).
+    - [ ] Event Loop integration (register client FDs with epoll/kqueue for non-blocking I/O instead of synchronous handlers).
 
 ## Phase 3: Developer Experience
 - [ ] Template Engine (Simple replacement or Mustache).

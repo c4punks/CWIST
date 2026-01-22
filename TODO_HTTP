@@ -1,30 +1,28 @@
 # HTTP Module TODO
 
 ## Immediate Fixes & Improvements
-- [v] **Request Parsing Robustness**:
-    - Current `cwist_http_parse_request` uses `strtok`, which is not thread-safe. Replace with `strtok_r` or a custom pointer-walking parser.
-    - Implement Query String separation: Currently, `path` might include `?query=...`. Needs splitting into `req->path` and `req->query`.
-    - URL Decoding: Implement percent-decoding for paths and query parameters.
-- [ ] **Partial Read Handling**:
-    - The current parser expects the full request in a single buffer. Implement a buffering mechanism to read from the socket until `\r\n\r\n` is found before parsing.
+- [x] **Request Parsing Robustness**:
+    - `cwist_http_parse_request` now uses `strtok_r`, splits the query string off `req->path`, and feeds the raw query into `cwist_query_map_parse` (liburiparser) for percent-decoding.
+    - Documented in `docs/api/http.md` under *cwist_http_request_create/parse*.
+- [x] **Partial Read Handling**:
+    - `cwist_http_receive_request` polls until `\r\n\r\n`, enforces `CWIST_HTTP_MAX_HEADER_SIZE`, buffers bodies until `Content-Length` is satisfied, and keeps leftovers for the next keep-alive request (see docs/api/http.md).
 
 ## Core Features
-- [ ] **Router**:
-    - Create a routing mechanism to map `Method + Path` to a handler function.
-    - Support for dynamic path parameters (e.g., `/users/:id`).
-- [ ] **Static File Serving**:
-    - Implement a helper function to serve static files efficiently (handling MIME types, `Content-Length`, and potentially `sendfile`).
+- [x] **Router**:
+    - `cwist_mux_router` + `cwist_app_get/post/ws` register handlers by method+path and `match_path` supports `:param` extraction documented in docs/api/app.md.
+- [x] **Static File Serving**:
+    - `cwist_http_response_send_file` + `cwist_app_static` cover MIME detection, traversal protection, and HEAD-aware `Content-Length`.
 - [ ] **Chunked Transfer Encoding**:
     - Support `Transfer-Encoding: chunked` for both request parsing and response sending, allowing streaming of large bodies.
 
 ## Architectural Improvements
 - [ ] **Event-Driven Architecture**:
-    - The current `cwist_http_server_loop` with epoll/kqueue accepts connections but calls the handler synchronously.
-    - Refactor to register client FDs with the event loop for true non-blocking I/O (Reactor pattern).
-- [ ] **Middleware Support**:
-    - Design a middleware system for cross-cutting concerns (logging, authentication, CORS).
+    - `cwist_http_server_loop` still runs handlers synchronously even when the acceptor is epoll/kqueue driven.
+    - Refactor to register client FDs with the event loop for true non-blocking I/O (Reactor pattern) and reuse the keep-alive read buffer there.
+- [x] **Middleware Support**:
+    - `cwist_app_use` exposes a middleware chain plus built-ins (request-id, access log, rate limit) per docs/api/middleware.md.
 
 ## Future / Long-term
-- [ ] **HTTPS Support**: Integration with OpenSSL or MbedTLS.
-- [ ] **Timeouts**: Implement read/write timeouts to prevent slowloris attacks.
+- [x] **HTTPS Support**: OpenSSL-backed transport (`cwist_https_*`) is implemented and documented (docs/api/https.md).
+- [x] **Timeouts**: Header/body reads and response writes now use `poll()` with `CWIST_HTTP_TIMEOUT_MS` to prevent slowloris.
 - [ ] **Multipart/Form-data**: Support for file uploads.

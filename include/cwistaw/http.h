@@ -4,8 +4,11 @@
 #include <cwist/sstring.h>
 #include <cwist/err/cwist_err.h>
 #include <cwist/query.h>
+#include <cwist/sql.h>
 #include <netinet/in.h>
 #include <sys/socket.h>
+
+struct cwist_app;
 
 /* --- Enums --- */
 
@@ -58,6 +61,8 @@ typedef struct cwist_http_request {
     cwist_sstring *body;
     bool keep_alive;
     int client_fd;
+    struct cwist_app *app;  // Owning app context (if any)
+    cwist_db *db;           // Shared database handle from cwist_app
     bool upgraded;
     void *private_data; // Internal framework use
     size_t content_length;
@@ -84,6 +89,7 @@ cwist_http_response *cwist_http_response_create(void);
 void cwist_http_response_destroy(cwist_http_response *res);
 cwist_sstring *cwist_http_stringify_response(cwist_http_response *res);
 cwist_error_t cwist_http_send_response(int client_fd, cwist_http_response *res);
+cwist_error_t cwist_http_response_send_file(cwist_http_response *res, const char *file_path, const char *content_type_hint, size_t *out_size);
 
 // Header Manipulation
 cwist_error_t cwist_http_header_add(cwist_http_header_node **head, const char *key, const char *value);
