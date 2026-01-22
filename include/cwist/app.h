@@ -3,6 +3,7 @@
 
 #include <cwist/http.h>
 #include <cwist/https.h>
+#include <cwist/sql.h>
 #include <cwist/err/cwist_err.h>
 #include <cwist/macros.h>
 
@@ -20,13 +21,8 @@ typedef struct cwist_middleware_node {
     struct cwist_middleware_node *next;
 } cwist_middleware_node;
 
-typedef struct cwist_route_node {
-    const char *path;
-    cwist_http_method_t method;
-    cwist_handler_func handler;
-    cwist_ws_handler_func ws_handler; // For WS routes
-    struct cwist_route_node *next;
-} cwist_route_node;
+typedef struct cwist_route_table cwist_route_table;
+typedef struct cwist_static_dir cwist_static_dir;
 
 typedef struct cwist_app {
     int port;
@@ -37,14 +33,16 @@ typedef struct cwist_app {
     // Middlewares
     cwist_middleware_node *middlewares;
 
-    // Simple linked list router for now
-    cwist_route_node *routes;
+    cwist_route_table *router;
+    cwist_static_dir *static_dirs;
     
     // Error Handling
     cwist_error_handler_func error_handler;
 
     // Internal contexts
     cwist_https_context *ssl_ctx;
+    cwist_db *db;
+    char *db_path;
 } cwist_app;
 
 // --- API ---
@@ -58,14 +56,15 @@ void cwist_app_use(cwist_app *app, cwist_middleware_func mw);
 // Error Handling Configuration
 void cwist_app_set_error_handler(cwist_app *app, cwist_error_handler_func handler);
 
-
-
 cwist_error_t cwist_app_use_https(cwist_app *app, const char *cert_path, const char *key_path);
+cwist_error_t cwist_app_use_db(cwist_app *app, const char *db_path);
+cwist_db *cwist_app_get_db(cwist_app *app);
 
 // Routing
 void cwist_app_get(cwist_app *app, const char *path, cwist_handler_func handler);
 void cwist_app_post(cwist_app *app, const char *path, cwist_handler_func handler);
 void cwist_app_ws(cwist_app *app, const char *path, cwist_ws_handler_func handler);
+cwist_error_t cwist_app_static(cwist_app *app, const char *url_prefix, const char *directory);
 // Add other methods as needed
 
 // Start

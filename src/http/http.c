@@ -18,6 +18,14 @@
 #include <arpa/inet.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
+#include <sys/stat.h>
+#include <fcntl.h>
+#ifdef __linux__
+#include <sys/epoll.h>
+#endif
+#if defined(__APPLE__) || defined(__FreeBSD__) || defined(__NetBSD__) || defined(__OpenBSD__)
+#include <sys/event.h>
+#endif
 
 const int CWIST_CREATE_SOCKET_FAILED     = -1;
 const int CWIST_HTTP_UNAVAILABLE_ADDRESS = -2;
@@ -117,6 +125,8 @@ cwist_http_request *cwist_http_request_create(void) {
     req->body = cwist_sstring_create();
     req->keep_alive = true;
     req->client_fd = -1;
+    req->app = NULL;
+    req->db = NULL;
     req->upgraded = false;
     req->content_length = 0;
 
@@ -484,6 +494,125 @@ cwist_error_t cwist_http_send_response(int client_fd, cwist_http_response *res) 
     }
 
     cwist_sstring_destroy(response_str);
+    return err;
+}
+
+typedef struct {
+    const char *ext;
+    const char *mime;
+} cwist_mime_entry;
+
+static const cwist_mime_entry CWIST_MIME_TABLE[] = {
+    { ".html", "text/html; charset=utf-8" },
+    { ".htm",  "text/html; charset=utf-8" },
+    { ".css",  "text/css; charset=utf-8" },
+    { ".js",   "application/javascript" },
+    { ".json", "application/json" },
+    { ".png",  "image/png" },
+    { ".jpg",  "image/jpeg" },
+    { ".jpeg", "image/jpeg" },
+    { ".gif",  "image/gif" },
+    { ".svg",  "image/svg+xml" },
+    { ".txt",  "text/plain; charset=utf-8" },
+    { ".ico",  "image/x-icon" }
+};
+
+static const char *cwist_guess_mime(const char *file_path) {
+    if (!file_path) return "application/octet-stream";
+    const char *dot = strrchr(file_path, '.');
+    if (!dot) {
+        return "application/octet-stream";
+    }
+    for (size_t i = 0; i < sizeof(CWIST_MIME_TABLE) / sizeof(CWIST_MIME_TABLE[0]); i++) {
+        if (strcasecmp(dot, CWIST_MIME_TABLE[i].ext) == 0) {
+            return CWIST_MIME_TABLE[i].mime;
+        }
+    }
+    return "application/octet-stream";
+}
+
+cwist_error_t cwist_http_response_send_file(cwist_http_response *res, const char *file_path, const char *content_type_hint, size_t *out_size) {
+    cwist_error_t err = make_error(CWIST_ERR_INT16);
+    if (!res || !file_path) {
+        err.error.err_i16 = -EINVAL;
+        return err;
+    }
+
+    int fd = open(file_path, O_RDONLY);
+    if (fd < 0) {
+        err.error.err_i16 = -errno;
+        return err;
+    }
+
+    struct stat st;
+    if (fstat(fd, &st) < 0) {
+        err.error.err_i16 = -errno;
+        close(fd);
+        return err;
+    }
+
+    if (!S_ISREG(st.st_mode)) {
+        close(fd);
+        err.error.err_i16 = -EISDIR;
+        return err;
+    }
+
+    if ((size_t)st.st_size > CWIST_HTTP_MAX_BODY_SIZE) {
+        close(fd);
+        err.error.err_i16 = -EFBIG;
+        return err;
+    }
+
+    size_t file_size = (size_t)st.st_size;
+    char *buffer = NULL;
+
+    if (file_size > 0) {
+        buffer = (char *)malloc(file_size);
+        if (!buffer) {
+            close(fd);
+            err.error.err_i16 = -ENOMEM;
+            return err;
+        }
+    }
+
+    size_t total_read = 0;
+    while (total_read < file_size) {
+        ssize_t bytes = read(fd, buffer + total_read, file_size - total_read);
+        if (bytes < 0) {
+            if (errno == EINTR) continue;
+            err.error.err_i16 = -errno;
+            free(buffer);
+            close(fd);
+            return err;
+        }
+        if (bytes == 0) {
+            err.error.err_i16 = -EIO;
+            free(buffer);
+            close(fd);
+            return err;
+        }
+        total_read += (size_t)bytes;
+    }
+    close(fd);
+
+    if (file_size > 0) {
+        cwist_sstring_assign_len(res->body, buffer, file_size);
+        free(buffer);
+    } else {
+        cwist_sstring_assign(res->body, "");
+    }
+
+    const char *mime = content_type_hint ? content_type_hint : cwist_guess_mime(file_path);
+    if (mime && !cwist_http_header_get(res->headers, "Content-Type")) {
+        cwist_http_header_add(&res->headers, "Content-Type", mime);
+    }
+
+    if (out_size) {
+        *out_size = file_size;
+    }
+
+    res->status_code = CWIST_HTTP_OK;
+    err.error.err_i16 = 0;
     return err;
 }
 

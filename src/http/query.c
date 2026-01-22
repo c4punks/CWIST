@@ -25,6 +25,13 @@ cwist_query_map *cwist_query_map_create(void) {
 
 void cwist_query_map_destroy(cwist_query_map *map) {
     if (!map) return;
+    cwist_query_map_clear(map);
+    free(map->buckets);
+    free(map);
+}
+
+void cwist_query_map_clear(cwist_query_map *map) {
+    if (!map) return;
     for (size_t i = 0; i < map->size; i++) {
         cwist_query_bucket *curr = map->buckets[i];
         while (curr) {
@@ -34,9 +41,8 @@ void cwist_query_map_destroy(cwist_query_map *map) {
             free(curr);
             curr = next;
         }
+        map->buckets[i] = NULL;
     }
-    free(map->buckets);
-    free(map);
 }
 
 void cwist_query_map_set(cwist_query_map *map, const char *key, const char *value) {

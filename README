@@ -10,6 +10,7 @@ CWIST is a modern, lightweight C web framework designed for building secure and 
 - Middleware System: Chainable processing for logging and security.
 - Path Parameters: Express-style routing with :param support and Mux Router.
 - JSON Builder: Lightweight utility using cJSON for response building.
+- Static Assets & DB Sharing: Serve directories with `cwist_app_static` and reuse SQLite handles via `cwist_app_use_db`.
 - Secure by Design: Built-in integration with Monocypher.
 
 == QUICK START ==
@@ -31,6 +32,7 @@ $ make install
 |                                                                             |
 | int main() {                                                                |
 |     cwist_app *app = cwist_app_create();                                    |
+|     cwist_app_use_db(app, ":memory:");                                      |
 |     cwist_app_get(app, "/", index_handler);                                 |
 |     cwist_app_listen(app, 8080);                                            |
 |     cwist_app_destroy(app);                                                 |
