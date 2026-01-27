@@ -1,3 +1,4 @@
+#define _GNU_SOURCE
 #include <cwist/net/websocket/websocket.h>
 #include <cwist/net/http/http.h>
 #include "ws_utils.h"
