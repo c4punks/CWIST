@@ -39,6 +39,10 @@ test_mux: $(LIB_NAME) tests/test_mux.c
 	$(CC) $(CFLAGS) -o test_mux tests/test_mux.c $(LIB_NAME) $(LIBS)
 	./test_mux
 
+test_cors: $(LIB_NAME) tests/test_cors.c
+	$(CC) $(CFLAGS) -o test_cors tests/test_cors.c $(LIB_NAME) $(LIBS)
+	./test_cors
+
 %.o: %.c
 	$(CC) $(CFLAGS) -c $< -o $@
 
@@ -55,4 +59,4 @@ uninstall:
 	rm -rf $(INCLUDEDIR)/cwist
 
 clean:
-	rm -f $(OBJS) $(LIB_NAME) test_sstring test_http test_siphash test_mux stress_test
+	rm -f $(OBJS) $(LIB_NAME) test_sstring test_http test_siphash test_mux stress_test test_cors

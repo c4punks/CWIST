@@ -84,6 +84,9 @@ void cwist_http_request_destroy(cwist_http_request *req);
 cwist_http_request *cwist_http_parse_request(const char *raw_request); 
 cwist_http_request *cwist_http_receive_request(int client_fd, char *read_buf, size_t buf_size, size_t *buf_len);
 
+// Request Data Processing
+cwist_sstring* cwist_get_client_ip_from_fd(int fd);
+
 // Response Lifecycle
 cwist_http_response *cwist_http_response_create(void);
 void cwist_http_response_destroy(cwist_http_response *res);

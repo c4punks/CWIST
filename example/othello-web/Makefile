@@ -1,15 +1,20 @@
 CC = gcc
-CFLAGS = -Wall -Wextra -g -I../../include
-LDFLAGS = -L../../
-LIBS = -lcwist -lcjson -lsqlite3 -luriparser -lssl -lcrypto -lpthread
+CFLAGS = -Wall -Wextra -Isrc -Ilibs/include -O2
+LDFLAGS = -Llibs/lib -lcwist -lcjson -lssl -lcrypto -lsqlite3 -luriparser -lpthread
 
-SRCS = server.c
+SRCS = src/main.c src/db.c src/handlers.c src/utils.c
+OBJS = $(SRCS:.c=.o)
 TARGET = server
 
 all: $(TARGET)
 
-$(TARGET): $(SRCS)
-	$(CC) $(CFLAGS) -o $(TARGET) $(SRCS) $(LDFLAGS) $(LIBS)
+$(TARGET): $(OBJS)
+	$(CC) $(OBJS) -o $(TARGET) $(LDFLAGS)
+
+%.o: %.c
+	$(CC) $(CFLAGS) -c $< -o $@
 
 clean:
-	rm -f $(TARGET)
+	rm -f $(OBJS) $(TARGET)
+
+.PHONY: all clean

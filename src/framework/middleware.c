@@ -68,6 +68,7 @@ void cwist_mw_access_log_handler(cwist_http_request *req, cwist_http_response *r
     gettimeofday(&end, NULL);
     long msec = (end.tv_sec - start.tv_sec) * 1000 + (end.tv_usec - start.tv_usec) / 1000;
 
+    // get request id from header.
     const char *rid = cwist_http_header_get(res->headers, "X-Request-Id");
     
     pthread_mutex_lock(&log_mutex);
@@ -101,32 +102,39 @@ static int ip_cache_count = 0;
 static pthread_mutex_t rate_mutex = PTHREAD_MUTEX_INITIALIZER;
 
 void cwist_mw_rate_limit_ip_handler(cwist_http_request *req, cwist_http_response *res, cwist_handler_func next) {
-    const char *ip = "127.0.0.1"; // TODO: Extract real IP from socket
+
+    // Get client ip from fd
+    cwist_sstring *ip = cwist_get_client_ip_from_fd(req->client_fd);
 
     time_t now = time(NULL);
     ip_limit_t *found = NULL;
 
     pthread_mutex_lock(&rate_mutex);
+
+    // if ip is found on ip_cache, set found = &ip_cache[i];
     for (int i = 0; i < ip_cache_count; i++) {
-        if (strcmp(ip_cache[i].ip, ip) == 0) {
+        if (!cwist_sstring_compare(ip, ip_cache[i].ip)) {
             found = &ip_cache[i];
             break;
         }
     }
 
+    // if not found, add current ip to ip_cache
     if (!found && ip_cache_count < MAX_IP_TRACK) {
         found = &ip_cache[ip_cache_count++];
-        strncpy(found->ip, ip, sizeof(found->ip) - 1);
+        strncpy(found->ip, ip->data, sizeof(found->ip) - 1);
         found->last_reset = now;
         found->count = 0;
     }
 
+    // if found, refresh reset time
     if (found) {
         if (now - found->last_reset >= 60) {
             found->last_reset = now;
             found->count = 0;
         }
 
+        // if cound count is more than 60, block request
         if (found->count >= 60) {
             pthread_mutex_unlock(&rate_mutex);
             res->status_code = 429;
@@ -136,6 +144,7 @@ void cwist_mw_rate_limit_ip_handler(cwist_http_request *req, cwist_http_response
         }
         found->count++;
     }
+    free(ip);
     pthread_mutex_unlock(&rate_mutex);
 
     next(req, res);
@@ -144,4 +153,28 @@ void cwist_mw_rate_limit_ip_handler(cwist_http_request *req, cwist_http_response
 cwist_middleware_func cwist_mw_rate_limit_ip(int requests_per_minute) {
     CWIST_UNUSED(requests_per_minute);
     return cwist_mw_rate_limit_ip_handler;
+}
+
+/* --- CORS Middleware --- */
+
+void cwist_mw_cors_handler(cwist_http_request *req, cwist_http_response *res, cwist_handler_func next) {
+    // Add standard CORS headers
+    cwist_http_header_add(&res->headers, "Access-Control-Allow-Origin", "*");
+
+    // Handle Preflight (OPTIONS)
+    if (req->method == CWIST_HTTP_OPTIONS) {
+        cwist_http_header_add(&res->headers, "Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, PATCH, OPTIONS, HEAD");
+        cwist_http_header_add(&res->headers, "Access-Control-Allow-Headers", "Content-Type, Authorization, X-Request-Id");
+        cwist_http_header_add(&res->headers, "Access-Control-Max-Age", "86400"); // 24 hours
+
+        res->status_code = CWIST_HTTP_NO_CONTENT; // 204 No Content
+        // Short-circuit: do not call next()
+        return;
+    }
+
+    next(req, res);
+}
+
+cwist_middleware_func cwist_mw_cors(void) {
+    return cwist_mw_cors_handler;
 }

@@ -6,12 +6,12 @@ CWIST is a custom C library for building secure, scalable web applications. It i
 
 ### 1. SString (Smart String)
 A safe, dynamic string implementation.
-- **Header:** `<cwist/core/sstring/sstring.h>`
+- **Header:** `<cwist/sstring.h>`
 - **Features:** Automatic resizing, concatenation, safe manipulation.
 
 ### 2. HTTP Server
 A multi-process/threaded HTTP server framework.
-- **Header:** `<cwist/net/http/http.h>`
+- **Header:** `<cwist/http.h>`
 - **Structures:** `cwist_http_request`, `cwist_http_response`
 - **Features:** 
   - Request parsing
@@ -20,7 +20,7 @@ A multi-process/threaded HTTP server framework.
 
 ### 3. HTTPS Support
 Secure transport layer using OpenSSL.
-- **Header:** `<cwist/net/http/https.h>`
+- **Header:** `<cwist/https.h>`
 - **Features:**
   - `cwist_https_init_context`: Loads Cert/Key.
   - `cwist_https_accept`: SSL Handshake.
@@ -29,13 +29,13 @@ Secure transport layer using OpenSSL.
 
 ### 4. Query Parsing
 Robust query string parsing using `liburiparser`.
-- **Header:** `<cwist/net/http/query.h>`
+- **Header:** `<cwist/query.h>`
 - **Function:** `cwist_query_map_parse(map, raw_query)`
 - **Behavior:** Parses `key=value&key2=val2` into a hash map (SipHash).
 
 ### 5. Database (SQL)
 A wrapper around `sqlite3` for persistent storage.
-- **Header:** `<cwist/core/db/sql.h>`
+- **Header:** `<cwist/sql.h>`
 - **Features:**
   - `cwist_db_open`: Connect to DB file.
   - `cwist_db_exec`: Run commands (CREATE/INSERT/UPDATE).
@@ -43,11 +43,11 @@ A wrapper around `sqlite3` for persistent storage.
 
 ### 6. SipHash
 Cryptographic hash function for hash maps (used in Query/Headers).
-- **Header:** `<cwist/core/siphash/siphash.h>`
+- **Header:** `<cwist/siphash.h>`
 
 ### 7. Error Handling
 Unified error handling system using `cwist_error_t`.
-- **Header:** `<cwist/sys/err/cwist_err.h>`
+- **Header:** `<cwist/err/cwist_err.h>`
 - **Features:** Can return simple integer codes or complex JSON objects (e.g., OpenSSL/SQLite errors).
 
 ## Example: Othello Web

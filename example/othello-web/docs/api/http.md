@@ -1,6 +1,6 @@
 # HTTP Core API
 
-*Header:* `<cwist/net/http/http.h>`
+*Header:* `<cwist/http.h>`
 
 Low-level HTTP structures and parsing logic.
 

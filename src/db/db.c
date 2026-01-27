@@ -5,6 +5,7 @@
 #include <stdlib.h>
 #include <string.h>
 
+// Make SQLite Error type as cwist_error_t
 static cwist_error_t make_sqlite_error(int rc, char *msg) {
     cwist_error_t err = make_error(CWIST_ERR_JSON);
     err.error.err_json = cJSON_CreateObject();
@@ -13,14 +14,18 @@ static cwist_error_t make_sqlite_error(int rc, char *msg) {
     return err;
 }
 
+// Open SQLite database file
+// 0 on success, -1 on failure
 cwist_error_t cwist_db_open(cwist_db **db, const char *path) {
     cwist_error_t err = make_error(CWIST_ERR_INT16);
     
+    // if there's no db or path, return -1
     if (!db || !path) {
         err.error.err_i16 = -1;
         return err;
     }
 
+    // if malloc fails, return -1
     *db = (cwist_db*)malloc(sizeof(cwist_db));
     if (!*db) {
         err.error.err_i16 = -1;
@@ -49,6 +54,8 @@ void cwist_db_close(cwist_db *db) {
     }
 }
 
+// Execute given SQL command
+// return errmsg on failure
 cwist_error_t cwist_db_exec(cwist_db *db, const char *sql) {
     char *zErrMsg = 0;
     int rc = sqlite3_exec(db->conn, sql, 0, 0, &zErrMsg);
@@ -88,6 +95,7 @@ static int query_callback(void *data, int argc, char **argv, char **azColName) {
     return 0;
 }
 
+// execute a query and store result at result pointer
 cwist_error_t cwist_db_query(cwist_db *db, const char *sql, cJSON **result) {
     if (!db || !sql || !result) {
         cwist_error_t err = make_error(CWIST_ERR_INT16);

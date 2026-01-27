@@ -137,6 +137,40 @@ cwist_http_request *cwist_http_request_create(void) {
     return req;
 }
 
+/* --- Request Data Processing */
+
+// Get client IP from client file descriptor                                                                           
+cwist_sstring* cwist_get_client_ip_from_fd(int fd) {
+    cwist_sstring *s = cwist_sstring_create();
+    cwist_sstring_assign(s, "127.0.0.1");
+    // First, check if fd is available
+    // If unavailable, return localhost
+    if(fd <= 0) return s;
+
+    struct sockaddr_storage addr;
+    socklen_t len = sizeof(addr);
+
+    // get client info
+    if(getpeername(fd, (struct sockaddr *)&addr, &len) == -1) {
+        fprintf(stdout, "[ERROR] Failed to get client info from file descriptor");
+        return s;
+    }
+
+    char ip[INET6_ADDRSTRLEN];
+
+    if(addr.ss_family == AF_INET) {
+        struct sockaddr_in *s = (struct sockaddr_in *)&addr;
+        inet_ntop(AF_INET, &s->sin_addr, ip, sizeof(ip));
+    } else if(addr.ss_family == AF_INET6) {
+        struct sockaddr_in6 *s = (struct sockaddr_in6 *)&addr;
+        inet_ntop(AF_INET6, &s->sin6_addr, ip, sizeof(ip));
+    }
+
+    // assign found ip as a value
+    cwist_sstring_assign(s, ip);
+    return s;
+}
+
 void cwist_http_request_destroy(cwist_http_request *req) {
     if (req) {
         cwist_sstring_destroy(req->path);
