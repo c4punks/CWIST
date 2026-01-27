@@ -6,8 +6,8 @@
 #ifndef __CWIST_HTTPS_H__
 #define __CWIST_HTTPS_H__
 
-#include <cwist/http.h>
-#include <cwist/err/cwist_err.h>
+#include <cwist/net/http/http.h>
+#include <cwist/sys/err/cwist_err.h>
 #include <openssl/ssl.h>
 #include <openssl/err.h>
 

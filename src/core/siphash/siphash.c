@@ -5,13 +5,7 @@
 #include <cwist/sys/wasi.h>
 #include <stdio.h>
 #include <string.h>
-#include <time.h>
 #include <cwist/core/siphash/siphash.h>
-
-/**
- * @file siphash.c
- * @brief SipHash implementation plus CWIST-specific entropy expansion for hash seeds.
- */
 
 /* Left-rotate a 64-bit integer by 'b' bits */
 #define ROTL(x, b) (uint64_t)(((x) << (b)) | ((x) >> (64 - (b))))

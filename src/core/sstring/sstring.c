@@ -1,5 +1,4 @@
 #include <cwist/core/sstring/sstring.h>
-#include <cwist/core/mem/alloc.h>
 #include <cwist/sys/err/cwist_err.h>
 #include <stdio.h>
 #include <stdlib.h>

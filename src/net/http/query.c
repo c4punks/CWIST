@@ -1,8 +1,6 @@
 #define _POSIX_C_SOURCE 200809L
 #include <cwist/net/http/query.h>
 #include <cwist/core/siphash/siphash.h>
-#include <cwist/core/mem/alloc.h>
-#include <cwist/core/mem/arena.h>
 #include <stdlib.h>
 #include <string.h>
 #include <ctype.h>

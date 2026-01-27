@@ -7,7 +7,7 @@
 #include <string.h>
 #include <stdlib.h>
 #include <stdbool.h>
-#include <cwist/err/cwist_err.h>
+#include <cwist/sys/err/cwist_err.h>
 
 typedef struct cwist_sstring {
     char *data;  ///< please access this data if raw handling is necessary

@@ -4,7 +4,7 @@
 #ifndef __CWIST_WEBSOCKET_H__
 #define __CWIST_WEBSOCKET_H__
 
-#include <cwist/http.h>
+#include <cwist/net/http/http.h>
 #include <stdint.h>
 #include <stdbool.h>
 

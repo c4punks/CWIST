@@ -4,7 +4,7 @@
 #ifndef __CWIST_JSON_BUILDER_H__
 #define __CWIST_JSON_BUILDER_H__
 
-#include <cwist/sstring.h>
+#include <cwist/core/sstring/sstring.h>
 #include <stdbool.h>
 
 /*

@@ -3,7 +3,6 @@
 #include <cwist/net/http/http.h>
 #include <cwist/core/macros.h>
 #include <cwist/core/utils/json_builder.h>
-#include <cwist/core/mem/alloc.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>

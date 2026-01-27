@@ -7,7 +7,7 @@
 #define __CWIST_SQL_H__
 
 #include <sqlite3.h>
-#include <cwist/err/cwist_err.h>
+#include <cwist/sys/err/cwist_err.h>
 #include <cjson/cJSON.h>
 
 typedef struct cwist_db {
