@@ -1,14 +1,17 @@
-/**
- * @file websocket.h
- * @brief WebSocket upgrade and frame handling.
+/** @file websocket.h
+ * @brief websocket.h interface.
  */
-
 #ifndef __CWIST_WEBSOCKET_H__
 #define __CWIST_WEBSOCKET_H__
 
-#include <cwist/net/http/http.h>
+#include <cwist/http.h>
 #include <stdint.h>
 #include <stdbool.h>
+
+typedef struct cwist_websocket {
+    int fd;
+    bool is_closed;
+} cwist_websocket;
 
 typedef enum {
     CWIST_WS_FRAME_CONTINUATION = 0x0,
@@ -19,19 +22,6 @@ typedef enum {
     CWIST_WS_FRAME_PONG = 0xA
 } cwist_ws_opcode_t;
 
-typedef struct cwist_websocket {
-    int fd;
-    bool is_closed;
-    /* Fragmented-message reassembly state (RFC 6455 section 5.4).
-     * frag_buf accumulates payload bytes across FIN=0 frames; frag_opcode
-     * preserves the first fragment's opcode so the assembled frame reports
-     * the correct type (text vs binary). */
-    uint8_t *frag_buf;
-    size_t frag_len;
-    size_t frag_cap;
-    cwist_ws_opcode_t frag_opcode;
-} cwist_websocket;
-
 typedef struct cwist_ws_frame {
     bool fin;
     cwist_ws_opcode_t opcode;
@@ -40,66 +30,22 @@ typedef struct cwist_ws_frame {
 } cwist_ws_frame;
 
 /**
- * @brief Validate the upgrade request and fill a 101 Switching Protocols response.
- *
- * Computes the Sec-WebSocket-Accept key (sha1 + base64), sets status 101 and
- * the Upgrade/Connection/Sec-WebSocket-Accept headers on @p res, but does NOT
- * send anything.  Shared by the blocking cwist_websocket_upgrade() and the
- * C1M reactor path, which sends the 101 through the coalesced HTTP writer.
- *
- * @param req Parsed upgrade request to validate.
- * @param res Response object to fill (must be empty).
- * @return true when the handshake is valid and @p res carries the 101 reply.
- */
-bool cwist_websocket_upgrade_response(cwist_http_request *req, cwist_http_response *res);
-
-/**
- * @brief Upgrade a standard HTTP request to a WebSocket connection.
- * @return `NULL` if the handshake fails or the request is invalid, otherwise the upgraded context.
+ * @brief Upgrade an HTTP request to WebSocket.
+ * @return NULL if the handshake fails or the request is not a valid WebSocket upgrade.
  */
 cwist_websocket *cwist_websocket_upgrade(cwist_http_request *req, int client_fd);
 
 /**
- * @brief Receive a frame, blocking until data arrives or the socket closes.
- * @return `NULL` on error or if the connection was closed.
+ * @brief Receive a frame. Blocks until a frame is received or connection closed.
+ * @return NULL on error or connection close.
  */
 cwist_ws_frame *cwist_websocket_receive(cwist_websocket *ws);
 
 /**
- * @brief Send a frame with the specified opcode and payload.
+ * @brief Send a frame.
  */
 int cwist_websocket_send(cwist_websocket *ws, cwist_ws_opcode_t opcode, const uint8_t *data,
                          size_t len);
-
-/**
- * @brief Send a large payload as sequenced binary frames.
- *
- * Splits @p data into chunks of @p chunk_payload_size (or smaller for the
- * final chunk), prefixes each chunk with the CWIST sequence header, and sends
- * every chunk as an independent binary frame.  The peer can reassemble the
- * original payload even when frames arrive out of order.
- *
- * @param ws WebSocket connection.
- * @param data Payload bytes.
- * @param len Payload length.
- * @param chunk_payload_size Maximum payload bytes per chunk (must be > 0).
- * @return 0 on success, -1 on failure.
- */
-int cwist_websocket_send_sequenced(cwist_websocket *ws, const uint8_t *data, size_t len,
-                                   uint16_t chunk_payload_size);
-
-/**
- * @brief Receive and reassemble a sequenced binary message.
- *
- * Reads binary frames until every chunk of one sequenced message has arrived,
- * discarding duplicates and reordering out-of-order chunks.  The returned
- * buffer is heap-allocated and must be freed with cwist_free().
- *
- * @param ws WebSocket connection.
- * @param out_len Receives the length of the reassembled payload.
- * @return Newly allocated payload buffer, or NULL on error/incomplete message.
- */
-uint8_t *cwist_websocket_receive_sequenced(cwist_websocket *ws, size_t *out_len);
 
 /**
  * @brief Destroy a frame.

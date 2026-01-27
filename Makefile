@@ -240,44 +240,9 @@ SRCS = src/core/sstring/sstring.c \
        src/net/websocket/websocket_async.c \
        src/net/websocket/ws_utils.c \
        src/core/utils/json_builder.c \
-       src/core/utils/json_heal.c \
-       src/core/utils/zod.c \
        src/sys/app/middleware.c \
-       src/sys/app/config.c \
-       src/sys/app/logger.c \
-       src/sys/app/shutdown.c \
-       src/sys/app/compress.c \
-       src/sys/app/test_client.c \
-       src/core/log/log.c lib/libttak/src/net/mols_control.c \
-    src/net/http/async.c src/core/mem/gc.c lib/libttak/src/mem/epoch.c src/sys/sys_info.c \
-    lib/libttak/src/mem/mem.c lib/libttak/src/mem/fastpath.c \
-    lib/libttak/src/mem/owner.c lib/libttak/src/mem/abstract.c \
-       src/sys/session/flash.c \
        src/core/template/template.c \
-       src/core/html/builder.c \
-       src/core/html/css_composer.c \
-       src/core/html/component.c \
-       src/net/http/html_response.c \
-       src/sys/app/assets.c \
-       src/sys/app/big_dumb_reply.c \
-       src/sys/sys_info.c \
-       src/core/mem/alloc.c \
-       src/core/mem/arena.c \
-       src/core/mem/gc.c \
-       lib/sqlite3/sqlite3.c \
-       src/security/jwt/jwt.c \
-       src/security/db_crypt/db_crypt.c \
-       src/security/tls/ech.c \
-       src/net/db_sync/db_sync.c \
-       src/net/nats/cwist_nats.c \
-       src/net/redis/cwist_redis.c \
-       src/core/validation/bind.c \
-       src/sys/io/reactor.c \
-       src/sys/job/scheduler.c \
-       src/sys/job/durable_queue.c \
-       src/sys/metrics/metrics.c \
-       src/sys/health/healthz.c \
-       $(IO_SRC)
+       src/core/html/builder.c
 
 # --- WASM (Emscripten) static library -------------------------------------
 # Socket-independent core only: app dispatch, mux/middleware, HTTP/1

@@ -1,12 +1,11 @@
-/**
- * @file main.c
- * @brief CDE-style JSON viewer using the app-level API with HTML builder
- *        and dynamic CSS composer.
- */
-
-#include <cwist/app.h>
-#include <cwist/core/html/builder.h>
-#include <cwist/core/html/css_composer.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <unistd.h>
+#include <sys/socket.h>
+#include <netinet/in.h>
+#include <cwist/core/sstring/sstring.h>
+#include <cwist/net/http/http.h>
 #include <cjson/cJSON.h>
 
 static const char *MOCK_JSON = "{\"System\":\"Solaris 2.5.1\",\"Host\":\"sun-sparc-station\","

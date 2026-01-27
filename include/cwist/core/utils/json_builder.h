@@ -1,28 +1,26 @@
-/**
- * @file json_builder.h
- * @brief Simple JSON string builder utility.
+/** @file json_builder.h
+ * @brief json_builder.h interface.
  */
-
 #ifndef __CWIST_JSON_BUILDER_H__
 #define __CWIST_JSON_BUILDER_H__
 
-#include <cwist/core/sstring/sstring.h>
+#include <cwist/sstring.h>
 #include <stdbool.h>
 
-/**
- * @brief Simple JSON string builder utility.
+/*
+ * Simple JSON String Builder
  *
  * Usage:
- * @code
  * cwist_json_builder *jb = cwist_json_builder_create();
  * cwist_json_begin_object(jb);
  * cwist_json_add_string(jb, "message", "Hello");
  * cwist_json_add_int(jb, "code", 200);
  * cwist_json_end_object(jb);
- * char *json = cwist_json_build(jb);
+ * char *json = cwist_json_build(jb); ///< Returns owned char* (dup) or reference?
+ * // To enforce ownership, let's say build returns a copy, or we access internal sstring.
+ * // Let's return the internal sstring* but user must not free it directly if they destroy builder.
  * cwist_sstring *res = cwist_json_get_string(jb);
  * cwist_json_builder_destroy(jb);
- * @endcode
  */
 
 typedef struct cwist_json_builder {
@@ -30,59 +28,20 @@ typedef struct cwist_json_builder {
     bool needs_comma;
 } cwist_json_builder;
 
-/**
- * @brief Create a new JSON builder.
- */
 cwist_json_builder *cwist_json_builder_create(void);
-
-/**
- * @brief Destroy a JSON builder.
- */
 void cwist_json_builder_destroy(cwist_json_builder *b);
 
-/**
- * @brief Begin a JSON object.
- */
 void cwist_json_begin_object(cwist_json_builder *b);
-
-/**
- * @brief End a JSON object.
- */
 void cwist_json_end_object(cwist_json_builder *b);
-
-/**
- * @brief Begin a JSON array.
- */
 void cwist_json_begin_array(cwist_json_builder *b, const char *key);
-
-/**
- * @brief End a JSON array.
- */
 void cwist_json_end_array(cwist_json_builder *b);
 
-/**
- * @brief Add a string value.
- */
 void cwist_json_add_string(cwist_json_builder *b, const char *key, const char *value);
-
-/**
- * @brief Add an integer value.
- */
 void cwist_json_add_int(cwist_json_builder *b, const char *key, int value);
-
-/**
- * @brief Add a boolean value.
- */
 void cwist_json_add_bool(cwist_json_builder *b, const char *key, bool value);
-
-/**
- * @brief Add a null value.
- */
 void cwist_json_add_null(cwist_json_builder *b, const char *key);
 
-/**
- * @brief Returns the raw string buffer. Invalidated on destroy.
- */
+/// Returns the raw string buffer. Invalidated on destroy.
 const char *cwist_json_get_raw(cwist_json_builder *b);
 
 #endif
