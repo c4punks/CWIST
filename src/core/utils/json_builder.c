@@ -1,6 +1,5 @@
 #include <cwist/core/utils/json_builder.h>
 #include <cwist/core/sstring/sstring.h>
-#include <cwist/core/mem/alloc.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>

@@ -1,10 +1,5 @@
-#ifndef _GNU_SOURCE
-#define _GNU_SOURCE
-#endif
 #include <cwist/net/websocket/websocket.h>
 #include <cwist/net/http/http.h>
-#include <cwist/core/mem/alloc.h>
-#include <cwist/core/seq/seq.h>
 #include "ws_utils.h"
 
 #include <ctype.h>

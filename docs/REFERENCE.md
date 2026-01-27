@@ -19,7 +19,7 @@ A multi-process/threaded HTTP server framework.
   - Helper functions for headers/status codes.
 
 ### 3. HTTPS Support
-Secure transport layer using BoringSSL with post-quantum cryptography support.
+Secure transport layer using OpenSSL.
 - **Header:** `<cwist/net/http/https.h>`
 - **Features:**
   - `cwist_https_init_context`: Loads Cert/Key with TLS 1.3+ enforcement.

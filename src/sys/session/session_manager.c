@@ -1,5 +1,4 @@
 #include <cwist/sys/session/session_manager.h>
-#include <cwist/core/mem/alloc.h>
 #include <stdlib.h>
 #include <string.h>
 

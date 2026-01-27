@@ -2,38 +2,11 @@
 #define _GNU_SOURCE
 #endif
 #define _POSIX_C_SOURCE 200809L
-#define _DEFAULT_SOURCE
-#include <sched.h>
-#if defined(__linux__) && defined(_GNU_SOURCE)
-#include "worker_affinity.h"
-#endif
-#include "assets_internal.h"
-#include <cwist/sys/app/app.h>
-#include <cwist/sys/app/config.h>
-#include <cwist/sys/app/logger.h>
-#include <cwist/sys/app/shutdown.h>
-#include <cwist/sys/wasi.h>
-#include <cwist/sys/app/big_dumb_reply.h>
 #include <cwist/sys/app/app.h>
 #include <cwist/net/http/http.h>
-#include <cwist/net/http/async.h>
-#include <cwist/net/http/https.h>
-#include <cwist/net/http/http2.h>
-#include <cwist/net/grpc/grpc.h>
-#include <cwist/net/http/http3.h>
-#include <cwist/net/http/async_server.h>
-#include "../../net/http/simd_parser.h"
-#include "../../net/websocket/ws_async_internal.h"
-#include <cwist/sys/health/healthz.h>
 #include <cwist/net/http/https.h>
 #include <cwist/core/sstring/sstring.h>
-#include <cwist/core/db/nuke_db.h>
-#include <cwist/core/mem/alloc.h>
-#include <cwist/core/utils/json_builder.h>
-#include <ttak/net/lattice.h>
-#include <ttak/mols_control.h>
-#include <ttak/priority/scheduler.h>
-#include <ttak/async/sched.h>
+#include <cwist/core/utils/json_builder.h> // Helper included for apps, though not strictly used here yet
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>

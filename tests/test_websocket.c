@@ -1,8 +1,6 @@
 #include <cwist/net/websocket/websocket.h>
 #include <cwist/net/http/http.h>
 #include <cwist/core/sstring/sstring.h>
-#include <cwist/core/seq/seq.h>
-#include <cwist/core/mem/alloc.h>
 #include "../src/net/websocket/ws_utils.h"
 #include <stdio.h>
 #include <assert.h>

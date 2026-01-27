@@ -1,13 +1,8 @@
 #define _POSIX_C_SOURCE 200809L
 
 #include <cwist/net/http/https.h>
-#include <cwist/net/http/writer_fast.h>
 #include <cwist/core/sstring/sstring.h>
 #include <cwist/sys/err/cwist_err.h>
-#include <cwist/core/mem/alloc.h>
-#include <cwist/core/mem/gc.h>
-#include <cwist/sys/app/shutdown.h>
-#include "tls_chain.h"
 #include <openssl/ssl.h>
 #include <openssl/err.h>
 #include <openssl/evp.h>

@@ -5,25 +5,9 @@
 #elif !defined(__FreeBSD__) && !defined(__NetBSD__) && !defined(__OpenBSD__) && \
     !defined(__DragonFly__)
 #define _POSIX_C_SOURCE 200809L
-#endif
 #include <cwist/net/http/http.h>
-#include <cwist/sys/wasi.h>
-#include <cwist/net/http/session.h>
 #include <cwist/core/sstring/sstring.h>
 #include <cwist/sys/err/cwist_err.h>
-#include <cwist/core/mem/alloc.h>
-#include <cwist/core/mem/arena.h>
-#include <cwist/sys/app/shutdown.h>
-#include <cwist/sys/io/reactor.h>
-#include "../../sys/io/reactor_rx.h"
-#include <cwist/net/http/writer_fast.h>
-#include <cwist/core/log.h>
-#include <cwist/sys/metrics/metrics.h>
-#include <ttak/mols_control.h>
-#include <ttak/net/lattice.h>
-#include <ttak/priority/scheduler.h>
-#include "simd_parser.h"
-#include "async_internal.h"
 
 #include <limits.h>
 #include <stdio.h>
@@ -2024,34 +2008,203 @@ void cwist_http_response_destroy(cwist_http_response *res) {
     }
 }
 
-/**
- * @brief Attach an unmanaged zero-copy body pointer to a response.
- * @param res Response object to modify.
- * @param ptr External body pointer.
- * @param len Length of the external body in bytes.
- */
-void cwist_http_response_set_body_ptr(cwist_http_response *res, const void *ptr, size_t len) {
-    cwist_http_response_set_body_ptr_managed(res, ptr, len, NULL, NULL);
+cwist_http_request *cwist_http_parse_request(const char *raw_request) {
+    if (!raw_request) return NULL;
+
+    cwist_http_request *req = cwist_http_request_create();
+    if (!req) return NULL;
+    
+    const char *line_start = raw_request;
+    const char *header_end = strstr(raw_request, "\r\n\r\n");
+    if (!header_end) {
+        cwist_http_request_destroy(req);
+        return NULL;
+    }
+
+    const char *line_end = strstr(line_start, "\r\n");
+    if (!line_end || line_end > header_end) { 
+        cwist_http_request_destroy(req); 
+        return NULL; 
+    }
+
+    // 1. Request Line
+    int request_line_len = line_end - line_start;
+    char *request_line = (char*)malloc(request_line_len + 1);
+    if (!request_line) {
+        cwist_http_request_destroy(req);
+        return NULL;
+    }
+    strncpy(request_line, line_start, request_line_len);
+    request_line[request_line_len] = '\0';
+    
+    char *next_ptr;
+    char *method_str = strtok_r(request_line, " ", &next_ptr);
+    char *path_str = strtok_r(NULL, " ", &next_ptr);
+    char *version_str = strtok_r(NULL, " ", &next_ptr);
+    
+    if (method_str) req->method = cwist_http_string_to_method(method_str);
+    if (path_str) {
+      char *query = strchr(path_str, '?');
+      if(query) {
+        *query = '\0';
+        cwist_sstring_assign(req->path, path_str);
+        cwist_sstring_assign(req->query, query + 1); // exclude ? mark
+        cwist_query_map_parse(req->query_params, req->query->data);
+      } else {
+        cwist_sstring_assign(req->path, path_str);
+        cwist_sstring_assign(req->query, "");
+      }
+    }
+
+    if (version_str) {
+        cwist_sstring_assign(req->version, version_str);
+        if (strcmp(version_str, "HTTP/1.1") == 0) {
+            req->keep_alive = true;
+        } else {
+            req->keep_alive = false;
+        }
+    }
+    
+    free(request_line);
+
+    // 2. Headers
+    line_start = line_end + 2; // Skip \r\n
+    while (line_start < header_end) {
+        line_end = strstr(line_start, "\r\n");
+        if (!line_end) break;
+
+        if (line_end == line_start) {
+            // Empty line found
+            line_start += 2;
+            break;
+        }
+        
+        int header_len = line_end - line_start;
+        char *header_line = (char*)malloc(header_len + 1);
+        if (header_line) {
+            strncpy(header_line, line_start, header_len);
+            header_line[header_len] = '\0';
+            
+            char *colon = strchr(header_line, ':');
+            if (colon) {
+                *colon = '\0';
+                char *key = header_line;
+                char *value = colon + 1;
+                while (*value == ' ') value++; // Trim leading space
+                
+                cwist_http_header_add(&req->headers, key, value);
+                if (header_key_is_connection(key)) {
+                    if (header_value_is_close(value)) {
+                        req->keep_alive = false;
+                    } else if (header_value_is_keep_alive(value)) {
+                        req->keep_alive = true;
+                    }
+                } else if (strcasecmp(key, "Content-Length") == 0) {
+                    req->content_length = (size_t)atoll(value);
+                }
+            }
+            free(header_line);
+        }
+        
+        line_start = line_end + 2;
+    }
+
+    const char *body_start = header_end + 4;
+    if (*body_start != '\0') {
+        cwist_sstring_assign(req->body, (char*)body_start);
+    }
+
+    return req;
 }
 
-/**
- * @brief Attach a managed zero-copy body pointer and optional cleanup hook to a response.
- * @param res Response object to modify.
- * @param ptr External body pointer.
- * @param len Length of the external body in bytes.
- * @param cleanup Optional cleanup callback for the body pointer.
- * @param ctx Opaque context forwarded to the cleanup callback.
- */
-void cwist_http_response_set_body_ptr_managed(cwist_http_response *res, const void *ptr, size_t len,
-                                              cwist_http_body_cleanup_fn cleanup, void *ctx) {
-    if (!res) return;
-    cwist_http_response_release_file_stream(res);
-    cwist_http_response_release_ptr_body(res);
-    res->is_ptr_body = true;
-    res->ptr_body = ptr;
-    res->ptr_body_len = len;
-    res->ptr_body_cleanup = cleanup;
-    res->ptr_body_cleanup_ctx = ctx;
+
+
+cwist_http_request *cwist_http_receive_request(int client_fd, char *read_buf, size_t buf_size, size_t *buf_len) {
+    size_t total_received = *buf_len;
+    char *header_end = NULL;
+
+    // 1. Read until headers are complete
+    while (!(header_end = strstr(read_buf, "\r\n\r\n"))) {
+        if (total_received >= buf_size - 1) {
+            // Buffer full, but headers not complete
+            return NULL;
+        }
+        
+        struct pollfd pfd = { .fd = client_fd, .events = POLLIN };
+        int ret = poll(&pfd, 1, CWIST_HTTP_TIMEOUT_MS);
+        if (ret <= 0) return NULL; // Timeout or error
+
+        ssize_t bytes = recv(client_fd, read_buf + total_received, buf_size - 1 - total_received, 0);
+        if (bytes <= 0) return NULL;
+        total_received += (size_t)bytes;
+        read_buf[total_received] = '\0';
+    }
+
+    cwist_http_request *req = cwist_http_parse_request(read_buf);
+    if (!req) return NULL;
+
+    size_t header_len = (header_end + 4) - read_buf;
+    size_t body_received = total_received - header_len;
+
+    // 2. Read body based on Content-Length
+    if (req->content_length > 0) {
+        if (req->content_length > CWIST_HTTP_MAX_BODY_SIZE) {
+            cwist_http_request_destroy(req);
+            return NULL;
+        }
+
+        // Allocate body
+        char *body = malloc(req->content_length + 1);
+        if (!body) {
+            cwist_http_request_destroy(req);
+            return NULL;
+        }
+
+        size_t to_copy = (body_received < req->content_length) ? body_received : req->content_length;
+        memcpy(body, header_end + 4, to_copy);
+        size_t current_body_len = to_copy;
+
+        while (current_body_len < req->content_length) {
+            struct pollfd pfd = { .fd = client_fd, .events = POLLIN };
+            int ret = poll(&pfd, 1, CWIST_HTTP_TIMEOUT_MS);
+            if (ret <= 0) {
+                free(body);
+                cwist_http_request_destroy(req);
+                return NULL;
+            }
+
+            ssize_t bytes = recv(client_fd, body + current_body_len, req->content_length - current_body_len, 0);
+            if (bytes <= 0) {
+                free(body);
+                cwist_http_request_destroy(req);
+                return NULL;
+            }
+            current_body_len += (size_t)bytes;
+        }
+        body[req->content_length] = '\0';
+        cwist_sstring_assign_len(req->body, body, req->content_length);
+        free(body);
+
+        // Calculate leftovers
+        if (body_received > req->content_length) {
+            size_t leftover_len = body_received - req->content_length;
+            memmove(read_buf, header_end + 4 + req->content_length, leftover_len);
+            *buf_len = leftover_len;
+        } else {
+            *buf_len = 0;
+        }
+    } else {
+        // No body, leftovers are everything after headers
+        if (body_received > 0) {
+            memmove(read_buf, header_end + 4, body_received);
+            *buf_len = body_received;
+        } else {
+            *buf_len = 0;
+        }
+    }
+    read_buf[*buf_len] = '\0';
+
+    return req;
 }
 
 /**

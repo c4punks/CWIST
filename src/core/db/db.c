@@ -1,8 +1,5 @@
 #include <cwist/core/db/sql.h>
-#include <cwist/core/utils/json_heal.h>
-#include <cwist/core/utils/zod.h>
 #include <cwist/sys/err/cwist_err.h>
-#include <cwist/core/mem/alloc.h>
 #include <sqlite3.h>
 #include <stdio.h>
 #include <stdlib.h>
