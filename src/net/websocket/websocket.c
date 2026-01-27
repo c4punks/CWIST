@@ -1,87 +1,27 @@
-#ifndef _GNU_SOURCE
-#define _GNU_SOURCE
-#endif
-#include <cwist/net/websocket/websocket.h>
-#include <cwist/net/http/http.h>
-#include <cwist/core/mem/alloc.h>
-#include <cwist/core/seq/seq.h>
+#include <cwist/websocket.h>
+#include <cwist/http.h>
 #include "ws_utils.h"
 
-#include <ctype.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <strings.h>
 #include <unistd.h>
 #include <arpa/inet.h>
 #include <errno.h>
 
-/**
- * @file websocket.c
- * @brief WebSocket handshake and frame transport helpers for CWIST handlers.
- */
-
 #define WS_GUID "258EAFA5-E914-47DA-95CA-C5AB0DC85B11"
 
-/* Per-frame payload size cap (16 MiB).  RFC 6455 allows up to 2^63 bytes per
- * frame, but allocating that blindly gives any connected client a trivial OOM
- * DoS vector.  Applications that need larger transfers should use WebSocket
- * message fragmentation (RFC 6455 section 5.4) with frames within this cap. */
-#define CWIST_WS_MAX_PAYLOAD_BYTES ((uint64_t)(16u * 1024u * 1024u))
-
-/* Reassembled-message size cap (64 MiB).  Each individual fragment is bounded
- * by CWIST_WS_MAX_PAYLOAD_BYTES, but a client can send many frames to grow the
- * reassembly buffer without limit.  64 MiB is a generous ceiling that stops
- * multi-fragment OOM attacks while accommodating large real-world messages. */
-#define CWIST_WS_MAX_MESSAGE_BYTES ((size_t)(64u * 1024u * 1024u))
-
-/**
- * @brief Portable case-insensitive substring search.
- *
- * strcasestr() is a GNU extension that does not exist on macOS, so keep a
- * small ASCII-only variant for header validation.
- */
-static char *ws_strcasestr(const char *haystack, const char *needle) {
-    if (!*needle) return (char *)haystack;
-    for (; *haystack; haystack++) {
-        const char *h = haystack;
-        const char *n = needle;
-        while (*h && *n && tolower((unsigned char)*h) == tolower((unsigned char)*n)) {
-            h++;
-            n++;
-        }
-        if (!*n) return (char *)haystack;
-    }
-    return NULL;
-}
-
-/**
- * @brief Validate the upgrade request and fill a 101 Switching Protocols response.
- *
- * Computes the Sec-WebSocket-Accept key (sha1 + base64), sets status 101 and
- * the Upgrade/Connection/Sec-WebSocket-Accept headers on @p res, but does NOT
- * send anything.  Shared by the blocking cwist_websocket_upgrade() and the
- * C1M reactor path, which sends the 101 through the coalesced HTTP writer.
- *
- * @param req Parsed upgrade request to validate.
- * @param res Response object to fill (must be empty).
- * @return true when the handshake is valid and @p res carries the 101 reply.
- */
-bool cwist_websocket_upgrade_response(cwist_http_request *req, cwist_http_response *res) {
-    if (!req || !res) return false;
+cwist_websocket *cwist_websocket_upgrade(cwist_http_request *req, int client_fd) {
+    if (!req || client_fd < 0) return NULL;
 
     // Validate Headers
     char *connection = cwist_http_header_get(req->headers, "Connection");
     char *upgrade = cwist_http_header_get(req->headers, "Upgrade");
     char *key = cwist_http_header_get(req->headers, "Sec-WebSocket-Key");
 
-    if (!connection || !upgrade || !key) return false;
-    if (ws_strcasestr(connection, "Upgrade") == NULL) return false;
-    if (strcasecmp(upgrade, "websocket") != 0) return false;
-
-    /* RFC 6455 section 4.2.1: the client MUST include Sec-WebSocket-Version: 13. */
-    char *ws_version = cwist_http_header_get(req->headers, "Sec-WebSocket-Version");
-    if (!ws_version || strcmp(ws_version, "13") != 0) return false;
+    if (!connection || !upgrade || !key) return NULL;
+    if (strcasestr(connection, "Upgrade") == NULL) return NULL;
+    if (strcasecmp(upgrade, "websocket") != 0) return NULL;
 
     // Handshake Key Generation
     char combined_key[512];
@@ -92,66 +32,31 @@ bool cwist_websocket_upgrade_response(cwist_http_request *req, cwist_http_respon
 
     size_t accept_len;
     char *accept_key = base64_encode(hash, 20, &accept_len);
-    if (!accept_key) return false;
+    if (!accept_key) return NULL;
 
+    // Send Response
+    cwist_http_response *res = cwist_http_response_create();
     res->status_code = 101;
     cwist_sstring_assign(res->status_text, "Switching Protocols");
     cwist_http_header_add(&res->headers, "Upgrade", "websocket");
     cwist_http_header_add(&res->headers, "Connection", "Upgrade");
     cwist_http_header_add(&res->headers, "Sec-WebSocket-Accept", accept_key);
 
-    cwist_free(accept_key);
-    return true;
-}
-
-/**
- * @brief Upgrade an HTTP request to a WebSocket connection.
- *
- * The function validates the required upgrade headers, computes the
- * Sec-WebSocket-Accept response, emits the 101 Switching Protocols reply, and
- * returns a lightweight wrapper around the already-open client socket.
- *
- * @param req Parsed HTTP request that requested the upgrade.
- * @param client_fd Accepted client socket descriptor.
- * @return WebSocket wrapper on success, or NULL when the handshake fails.
- */
-cwist_websocket *cwist_websocket_upgrade(cwist_http_request *req, int client_fd) {
-    if (!req || client_fd < 0) return NULL;
-
-    cwist_http_response *res = cwist_http_response_create();
-    if (!res) return NULL;
-
-    if (!cwist_websocket_upgrade_response(req, res)) {
-        cwist_http_response_destroy(res);
-        return NULL;
-    }
-
     cwist_error_t err = cwist_http_send_response(client_fd, res);
-
+    
     cwist_http_response_destroy(res);
+    free(accept_key);
 
     if (err.error.err_i16 != 0) return NULL;
 
     req->upgraded = true;
 
-    cwist_websocket *ws = (cwist_websocket *)cwist_alloc(sizeof(cwist_websocket));
-    if (!ws) return NULL;
+    cwist_websocket *ws = (cwist_websocket *)malloc(sizeof(cwist_websocket));
     ws->fd = client_fd;
     ws->is_closed = false;
-    ws->frag_buf = NULL;
-    ws->frag_len = 0;
-    ws->frag_cap = 0;
-    ws->frag_opcode = CWIST_WS_FRAME_CONTINUATION;
     return ws;
 }
 
-/**
- * @brief Read exactly @p len bytes from a socket unless the peer closes first.
- * @param fd Socket descriptor to read from.
- * @param buf Destination buffer.
- * @param len Number of bytes required to complete the operation.
- * @return Number of bytes read, or -1 when the stream cannot satisfy the request.
- */
 static ssize_t read_exact(int fd, void *buf, size_t len) {
     size_t total = 0;
     while (total < len) {
@@ -162,238 +67,76 @@ static ssize_t read_exact(int fd, void *buf, size_t len) {
     return total;
 }
 
-/**
- * @brief Append @p len bytes of @p src to the connection's fragmented-message
- * reassembly buffer, growing it as needed.
- *
- * Doubles the buffer capacity on growth and enforces the
- * CWIST_WS_MAX_MESSAGE_BYTES total-message cap even when each individual
- * frame passed the per-frame CWIST_WS_MAX_PAYLOAD_BYTES check.  A zero-length
- * append is a no-op and always succeeds.
- *
- * @param ws WebSocket connection owning the reassembly buffer.
- * @param src Source bytes to copy (may be NULL when @p len is zero).
- * @param len Number of bytes to append.
- * @return true on success, false on allocation failure or when the message
- *         would exceed CWIST_WS_MAX_MESSAGE_BYTES.
- */
-static bool ws_frag_append(cwist_websocket *ws, const uint8_t *src, size_t len) {
-    if (len == 0) return true;
-    /* Reject a reassembled message that exceeds the total-message cap, even
-     * though each individual frame already passed the per-frame check. */
-    if (ws->frag_len + len > CWIST_WS_MAX_MESSAGE_BYTES) return false;
-    size_t need = ws->frag_len + len + 1; /* +1 for null terminator */
-    if (need > ws->frag_cap) {
-        size_t new_cap = ws->frag_cap ? ws->frag_cap * 2 : 4096;
-        if (new_cap < need) new_cap = need;
-        uint8_t *nb = (uint8_t *)cwist_alloc(new_cap);
-        if (!nb) return false;
-        if (ws->frag_len) memcpy(nb, ws->frag_buf, ws->frag_len);
-        cwist_free(ws->frag_buf);
-        ws->frag_buf = nb;
-        ws->frag_cap = new_cap;
-    }
-    memcpy(ws->frag_buf + ws->frag_len, src, len);
-    ws->frag_len += len;
-    return true;
-}
-
-/**
- * @brief Receive the next complete WebSocket message from a connected client.
- *
- * Transparently reassembles fragmented messages (RFC 6455 section 5.4): frames with
- * FIN=0 are buffered internally and the function blocks until the final
- * FIN=1 frame arrives, at which point the fully-assembled payload is returned
- * as a single frame.  Control frames (CLOSE, PING, PONG) are always FIN=1 and
- * are delivered immediately even when a fragmented data message is in progress.
- *
- * Client frames are required to be masked by RFC 6455, so unmasked payloads
- * are rejected.  The returned payload is null-terminated for convenience.
- *
- * @param ws WebSocket connection wrapper returned by cwist_websocket_upgrade().
- * @return Newly allocated frame, or NULL when the connection is closed or invalid.
- */
 cwist_ws_frame *cwist_websocket_receive(cwist_websocket *ws) {
     if (!ws || ws->is_closed) return NULL;
 
-    while (1) {
-        uint8_t head[2];
-        if (read_exact(ws->fd, head, 2) < 0) return NULL;
+    uint8_t head[2];
+    if (read_exact(ws->fd, head, 2) < 0) return NULL;
 
-        bool fin = (head[0] & 0x80) != 0;
-        cwist_ws_opcode_t opcode = head[0] & 0x0F;
-        bool masked = (head[1] & 0x80) != 0;
-        uint64_t payload_len = head[1] & 0x7F;
+    bool fin = (head[0] & 0x80) != 0;
+    cwist_ws_opcode_t opcode = head[0] & 0x0F;
+    bool masked = (head[1] & 0x80) != 0;
+    uint64_t payload_len = head[1] & 0x7F;
 
-        /* RFC 6455 section 5.2: RSV1/RSV2/RSV3 MUST be 0 unless an extension
-         * defines their meaning.  CWIST has no such extension. */
-        if (head[0] & 0x70) return NULL;
+    if (!masked) {
+        // Client-to-server frames must be masked per spec
+        // We can choose to strict close or allow. Strict is better.
+        // For now, let's just return error.
+        return NULL;
+    }
 
-        /* Client-to-server frames must be masked per RFC 6455 section 5.3. */
-        if (!masked) return NULL;
+    if (payload_len == 126) {
+        uint16_t len16;
+        if (read_exact(ws->fd, &len16, 2) < 0) return NULL;
+        payload_len = ntohs(len16);
+    } else if (payload_len == 127) {
+        uint64_t len64;
+        if (read_exact(ws->fd, &len64, 8) < 0) return NULL;
+        // manually swap if no be64toh
+        // assuming be64toh or similar exists, or manual
+        // Linux usually has be64toh in <endian.h>
+        // Let's implement manual swap to be portable
+        uint8_t *p = (uint8_t *)&len64;
+        payload_len = ((uint64_t)p[0] << 56) | ((uint64_t)p[1] << 48) |
+                      ((uint64_t)p[2] << 40) | ((uint64_t)p[3] << 32) |
+                      ((uint64_t)p[4] << 24) | ((uint64_t)p[5] << 16) |
+                      ((uint64_t)p[6] << 8)  | ((uint64_t)p[7]);
+    }
 
-        if (payload_len == 126) {
-            uint16_t len16;
-            if (read_exact(ws->fd, &len16, 2) < 0) return NULL;
-            payload_len = ntohs(len16);
-        } else if (payload_len == 127) {
-            uint64_t len64;
-            if (read_exact(ws->fd, &len64, 8) < 0) return NULL;
-            uint8_t *p = (uint8_t *)&len64;
-            payload_len = ((uint64_t)p[0] << 56) | ((uint64_t)p[1] << 48) | ((uint64_t)p[2] << 40) |
-                          ((uint64_t)p[3] << 32) | ((uint64_t)p[4] << 24) | ((uint64_t)p[5] << 16) |
-                          ((uint64_t)p[6] << 8) | ((uint64_t)p[7]);
-        }
+    uint8_t masking_key[4];
+    if (read_exact(ws->fd, masking_key, 4) < 0) return NULL;
 
-        /* Reject frames that would force a huge allocation before any payload
-         * is read.  A single malicious frame with length=4 GiB costs only
-         * ~14 bytes on the wire but would OOM-kill the server otherwise. */
-        if (payload_len > CWIST_WS_MAX_PAYLOAD_BYTES) return NULL;
-
-        /* RFC 6455 section 5.5: control frames MUST NOT carry more than 125 bytes. */
-        bool is_control_early = (opcode >= 0x8);
-        if (is_control_early && payload_len > 125) return NULL;
-
-        uint8_t masking_key[4];
-        if (read_exact(ws->fd, masking_key, 4) < 0) return NULL;
-
-        uint8_t *payload = NULL;
-        if (payload_len > 0) {
-            payload = (uint8_t *)cwist_alloc(payload_len + 1);
-            if (!payload) return NULL;
-            if (read_exact(ws->fd, payload, payload_len) < 0) {
-                cwist_free(payload);
-                return NULL;
-            }
-            for (uint64_t i = 0; i < payload_len; i++) payload[i] ^= masking_key[i % 4];
-            payload[payload_len] = '\0';
-        }
-
-        /* --- Fragmented-message reassembly (RFC 6455 section 5.4) -------------- */
-
-        /* Control frames (CLOSE/PING/PONG) are never fragmented: deliver
-         * immediately, even when a data message fragmentation is underway. */
-        bool is_control = (opcode >= 0x8);
-
-        if (!is_control && !fin) {
-            /* Fragment with FIN=0: start or continue reassembly. */
-            if (opcode == CWIST_WS_FRAME_CONTINUATION) {
-                /* RFC 6455 section 5.4: CONTINUATION is only valid when a fragmented
-                 * message is already in progress. */
-                if (ws->frag_len == 0) {
-                    cwist_free(payload);
-                    return NULL;
-                }
-            } else {
-                /* First fragment: save opcode (text vs binary). */
-                ws->frag_opcode = opcode;
-            }
-            if (!ws_frag_append(ws, payload, (size_t)payload_len)) {
-                cwist_free(payload);
-                return NULL;
-            }
-            cwist_free(payload);
-            continue; /* read the next frame */
-        }
-
-        /* RFC 6455 section 5.4: a CONTINUATION frame is only valid inside an
-         * active fragmented-message sequence.  The FIN=0 case is rejected in
-         * the reassembly branch above; without this check an orphan
-         * CONTINUATION with FIN=1 would fall through and be delivered as a
-         * complete message. */
-        if (!is_control && opcode == CWIST_WS_FRAME_CONTINUATION && ws->frag_len == 0) {
-            cwist_free(payload);
+    uint8_t *payload = NULL;
+    if (payload_len > 0) {
+        payload = (uint8_t *)malloc(payload_len + 1); // +1 for safety null term if text
+        if (!payload) return NULL;
+        if (read_exact(ws->fd, payload, payload_len) < 0) {
+            free(payload);
             return NULL;
         }
 
-        /* FIN=1 data frame: may be the last fragment of a multi-frame message. */
-        if (!is_control && ws->frag_len > 0) {
-            /* Final CONTINUATION frame: flush the reassembly buffer. */
-            if (!ws_frag_append(ws, payload, (size_t)payload_len)) {
-                cwist_free(payload);
-                cwist_free(ws->frag_buf);
-                ws->frag_buf = NULL;
-                ws->frag_len = ws->frag_cap = 0;
-                return NULL;
-            }
-            cwist_free(payload);
-
-            /* Hand ownership of frag_buf to the returned frame. */
-            payload = ws->frag_buf;
-            payload_len = ws->frag_len;
-            opcode = ws->frag_opcode;
-
-            ws->frag_buf = NULL;
-            ws->frag_len = ws->frag_cap = 0;
+        // Unmask
+        for (uint64_t i = 0; i < payload_len; i++) {
+            payload[i] ^= masking_key[i % 4];
         }
-
-        /* --- Deliver the complete frame ---------------------------------- */
-
-        if (opcode == CWIST_WS_FRAME_CLOSE) {
-            /* RFC 6455 section 5.5.1: echo CLOSE before marking closed. */
-            cwist_websocket_send(ws, CWIST_WS_FRAME_CLOSE,
-                                 payload, (payload_len >= 2) ? 2 : 0);
-            ws->is_closed = true;
-        } else if (opcode == CWIST_WS_FRAME_PING) {
-            /* RFC 6455 section 5.5.3: respond to every PING with a PONG carrying
-             * the same payload (up to 125 bytes per section 5.5). */
-            cwist_websocket_send(ws, CWIST_WS_FRAME_PONG,
-                                 payload, payload_len);
-        }
-
-        cwist_ws_frame *frame = (cwist_ws_frame *)cwist_alloc(sizeof(cwist_ws_frame));
-        if (!frame) {
-            cwist_free(payload);
-            return NULL;
-        }
-        frame->fin = fin;
-        frame->opcode = opcode;
-        frame->payload = payload;
-        frame->payload_len = (size_t)payload_len;
-        return frame;
+        payload[payload_len] = '\0'; // Null terminate for convenience if text
     }
+
+    if (opcode == CWIST_WS_FRAME_CLOSE) {
+        ws->is_closed = true;
+    }
+
+    cwist_ws_frame *frame = (cwist_ws_frame *)malloc(sizeof(cwist_ws_frame));
+    frame->fin = fin;
+    frame->opcode = opcode;
+    frame->payload = payload;
+    frame->payload_len = payload_len;
+
+    return frame;
 }
 
-/**
- * @brief Write the full buffer to the socket, looping over short writes.
- * @return 0 when every byte was accepted by the kernel, -1 on error.
- *
- * Blocking-model note (issue #181): this loops on partial writes so a frame
- * is never silently truncated, but it still blocks the calling thread while
- * the socket buffer is full. The reactor-driven rewrite will replace this
- * with the parked-write mechanism; until then this is strictly better than
- * the previous single-send() version, which could report success after a
- * short write.
- */
-static int ws_send_all(int fd, const uint8_t *buf, size_t len) {
-    size_t off = 0;
-    while (off < len) {
-#ifdef MSG_NOSIGNAL
-        ssize_t n = send(fd, buf + off, len - off, MSG_NOSIGNAL);
-#else
-        ssize_t n = send(fd, buf + off, len - off, 0);
-#endif
-        if (n < 0) {
-            if (errno == EINTR) continue;
-            return -1;
-        }
-        if (n == 0) return -1;
-        off += (size_t)n;
-    }
-    return 0;
-}
-
-/**
- * @brief Send a single FIN-terminated WebSocket frame to the peer.
- * @param ws Active WebSocket connection wrapper.
- * @param opcode WebSocket opcode describing the payload semantics.
- * @param data Optional payload buffer. May be NULL when @p len is zero.
- * @param len Number of payload bytes to transmit.
- * @return 0 on success, or -1 when the socket write fails.
- */
-int cwist_websocket_send(cwist_websocket *ws, cwist_ws_opcode_t opcode, const uint8_t *data,
-                         size_t len) {
-    if (!ws || ws->is_closed || (!data && len > 0)) return -1;
+int cwist_websocket_send(cwist_websocket *ws, cwist_ws_opcode_t opcode, const uint8_t *data, size_t len) {
+    if (!ws || ws->is_closed) return -1;
 
     uint8_t head[10]; // Max header size (2 + 8)
     size_t head_len = 2;
@@ -417,95 +160,21 @@ int cwist_websocket_send(cwist_websocket *ws, cwist_ws_opcode_t opcode, const ui
 
     // Server does not mask frames
 
-    if (ws_send_all(ws->fd, head, head_len) != 0) return -1;
+    if (send(ws->fd, head, head_len, 0) < 0) return -1;
     if (len > 0) {
-        if (ws_send_all(ws->fd, data, len) != 0) return -1;
+        if (send(ws->fd, data, len, 0) < 0) return -1;
     }
 
     return 0;
 }
 
-/**
- * @brief Release a frame and its owned payload buffer.
- * @param frame Frame object to destroy. NULL is ignored.
- */
 void cwist_websocket_frame_destroy(cwist_ws_frame *frame) {
     if (frame) {
-        if (frame->payload) cwist_free(frame->payload);
-        cwist_free(frame);
+        if (frame->payload) free(frame->payload);
+        free(frame);
     }
 }
 
-/**
- * @brief Send a large payload as sequenced binary frames.
- */
-int cwist_websocket_send_sequenced(cwist_websocket *ws,
-                                   const uint8_t *data,
-                                   size_t len,
-                                   uint16_t chunk_payload_size) {
-    if (!ws || ws->is_closed || !data || len == 0 || chunk_payload_size == 0) return -1;
-
-    cwist_seq_message_t msg;
-    if (!cwist_seq_split(data, len, chunk_payload_size, &msg)) return -1;
-
-    int rc = 0;
-    for (size_t i = 0; i < msg.count && rc == 0; i++) {
-        if (cwist_websocket_send(ws, CWIST_WS_FRAME_BINARY, msg.chunks[i], msg.chunk_lens[i]) != 0) {
-            rc = -1;
-        }
-    }
-
-    cwist_seq_message_free(&msg);
-    return rc;
-}
-
-/**
- * @brief Receive and reassemble a sequenced binary message.
- */
-uint8_t *cwist_websocket_receive_sequenced(cwist_websocket *ws, size_t *out_len) {
-    if (!out_len) return NULL;
-    *out_len = 0;
-    if (!ws || ws->is_closed) return NULL;
-
-    cwist_seq_assembler_t *a = cwist_seq_assembler_create();
-    if (!a) return NULL;
-
-    uint8_t *result = NULL;
-    while (!cwist_seq_assembler_is_complete(a)) {
-        cwist_ws_frame *frame = cwist_websocket_receive(ws);
-        if (!frame) break;
-
-        if (frame->opcode == CWIST_WS_FRAME_BINARY && frame->payload && frame->payload_len > 0) {
-            cwist_seq_chunk_t chunk;
-            if (cwist_seq_chunk_parse(frame->payload, frame->payload_len, &chunk)) {
-                cwist_seq_assembler_feed(a, &chunk);
-            }
-        }
-
-        bool is_close = (frame->opcode == CWIST_WS_FRAME_CLOSE);
-        cwist_websocket_frame_destroy(frame);
-        if (is_close) break;
-    }
-
-    const uint8_t *assembled = NULL;
-    size_t assembled_len = 0;
-    if (cwist_seq_assembler_get_data(a, &assembled, &assembled_len) && assembled_len > 0) {
-        result = (uint8_t *)cwist_alloc(assembled_len + 1);
-        if (result) {
-            memcpy(result, assembled, assembled_len);
-            result[assembled_len] = '\0';
-            *out_len = assembled_len;
-        }
-    }
-
-    cwist_seq_assembler_destroy(a);
-    return result;
-}
-
-/**
- * @brief Initiate a close handshake for the WebSocket wrapper.
- * @param ws Connection to close. NULL is ignored.
- */
 void cwist_websocket_close(cwist_websocket *ws) {
     if (ws && !ws->is_closed) {
         cwist_websocket_send(ws, CWIST_WS_FRAME_CLOSE, NULL, 0);
@@ -513,13 +182,11 @@ void cwist_websocket_close(cwist_websocket *ws) {
     }
 }
 
-/**
- * @brief Destroy the WebSocket wrapper without closing the underlying socket.
- * @param ws Wrapper to release. NULL is ignored.
- */
 void cwist_websocket_destroy(cwist_websocket *ws) {
     if (ws) {
-        cwist_free(ws->frag_buf);
-        cwist_free(ws);
+        // We don't own fd in terms of closing it immediately if the app wants to, 
+        // but typically destroying WS wrapper implies we are done.
+        // The App handler owns the FD usually.
+        free(ws);
     }
 }

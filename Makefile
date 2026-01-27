@@ -2,7 +2,21 @@ CC = gcc
 CFLAGS = -I./include -I./lib -I./lib/cjson -Wall -Wextra -pthread
 LIBS = -pthread -lcjson -lssl -lcrypto -luriparser -lsqlite3
 
-SRCS = src/sstring/sstring.c src/process/err/error.c src/http/http.c src/http/https.c src/http/mux.c src/http/query.c src/session/session_manager.c src/siphash/siphash.c src/db/db.c src/framework/app.c src/websocket/websocket.c src/websocket/ws_utils.c src/utils/json_builder.c src/framework/middleware.c
+SRCS = src/core/sstring/sstring.c \
+       src/sys/err/error.c \
+       src/net/http/http.c \
+       src/net/http/https.c \
+       src/net/http/mux.c \
+       src/net/http/query.c \
+       src/sys/session/session_manager.c \
+       src/core/siphash/siphash.c \
+       src/core/db/db.c \
+       src/sys/app/app.c \
+       src/net/websocket/websocket.c \
+       src/net/websocket/ws_utils.c \
+       src/core/utils/json_builder.c \
+       src/sys/app/middleware.c
+
 OBJS = $(SRCS:.c=.o)
 LIB_NAME = libcwist.a
 
