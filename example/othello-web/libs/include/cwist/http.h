@@ -45,8 +45,8 @@ typedef enum cwist_http_status_t {
 
 // Linked list for headers to handle multiple headers easily
 typedef struct cwist_http_header_node {
-    smartstring *key;
-    smartstring *value;
+    cwist_sstring *key;
+    cwist_sstring *value;
     struct cwist_http_header_node *next;
 } cwist_http_header_node;
 
@@ -69,11 +69,12 @@ typedef struct cwist_http_request {
 } cwist_http_request;
 
 typedef struct cwist_http_response {
-    smartstring *version;     // e.g., "HTTP/1.1"
+    cwist_sstring *version;     // e.g., "HTTP/1.1"
     cwist_http_status_t status_code;
-    smartstring *status_text; // e.g., "OK"
+    cwist_sstring *status_text; // e.g., "OK"
     cwist_http_header_node *headers;
-    smartstring *body;
+    cwist_sstring *body;
+    bool keep_alive;
 } cwist_http_response;
 
 /* --- API Functions --- */
@@ -83,9 +84,6 @@ cwist_http_request *cwist_http_request_create(void);
 void cwist_http_request_destroy(cwist_http_request *req);
 cwist_http_request *cwist_http_parse_request(const char *raw_request); 
 cwist_http_request *cwist_http_receive_request(int client_fd, char *read_buf, size_t buf_size, size_t *buf_len);
-
-// Request Data Processing
-cwist_sstring* cwist_get_client_ip_from_fd(int fd);
 
 // Response Lifecycle
 cwist_http_response *cwist_http_response_create(void);

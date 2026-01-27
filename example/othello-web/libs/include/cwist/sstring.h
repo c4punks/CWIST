@@ -11,7 +11,7 @@ typedef struct cwist_sstring {
   bool   is_fixed;
   size_t size;
   size_t (*get_size)(struct cwist_sstring *str);
-  int    (*compare )(struct cwist_sstring *left, const struct cwist_sstring *right); // should mimic strcmp, internally use strncmp
+  int     (*compare )(struct cwist_sstring *left, const struct cwist_sstring *right); // should mimic strcmp, internally use strncmp
   cwist_error_t (*copy  )(struct cwist_sstring *str, const struct cwist_sstring *from);
   cwist_error_t (*append)(struct cwist_sstring *str, const struct cwist_sstring *from);
                                    // returns 1 on success, returns 0 on failure

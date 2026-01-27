@@ -31,6 +31,14 @@ Limits the number of requests per minute from a single IP.
 cwist_app_use(app, cwist_mw_rate_limit_ip(60));
 ```
 
+### CORS Middleware
+Enables Cross-Origin Resource Sharing (CORS) support.
+- Adds `Access-Control-Allow-Origin: *` to all responses.
+- Handles `OPTIONS` preflight requests with a 204 No Content status and appropriate headers, short-circuiting the request processing.
+```c
+cwist_app_use(app, cwist_mw_cors());
+```
+
 ## Creating Custom Middleware
 A middleware is a function that takes `req`, `res`, and a `next` callback.
 

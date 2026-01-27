@@ -1,7 +1,7 @@
 #define _GNU_SOURCE
-#include <cwist/sys/app/app.h>
-#include <cwist/net/http/http.h>
-#include <cwist/core/db/sql.h>
+#include <cwist/app.h>
+#include <cwist/http.h>
+#include <cwist/sql.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -14,9 +14,10 @@
 #include "utils.h"
 
 #define PORT 31744
+
 void *cleanup_thread(void *arg) {
     cwist_db *db = (cwist_db *)arg;
-    while (1) {
+    while(1) {
         sleep(60);
         cleanup_stale_rooms(db);
     }
@@ -50,17 +51,16 @@ int main(int argc, char **argv) {
     }
 
     cwist_app_use_db(app, "othello.db");
-
+    
     cwist_db *db = cwist_app_get_db(app);
-    init_db(db);
+    init_db(db); 
 
     pthread_t tid;
     pthread_create(&tid, NULL, cleanup_thread, db);
     pthread_detach(tid);
 
     // Static assets
-    cwist_app_get(app, "/", root_handler);
-    cwist_app_static(app, "/public", "public");
+    cwist_app_static(app, "/", "./"); 
 
     // API Routes
     cwist_app_post(app, "/join", join_handler);
@@ -68,6 +68,6 @@ int main(int argc, char **argv) {
     cwist_app_post(app, "/move", move_handler);
 
     printf("Starting %s Othello Server on port %d...\n", use_https ? "HTTPS" : "HTTP", port);
-
+    
     return cwist_app_listen(app, port);
 }
