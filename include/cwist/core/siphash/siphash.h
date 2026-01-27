@@ -12,13 +12,11 @@
  * * Returns the 64-bit hash value.
  */
 uint64_t siphash24(const void *src, size_t len, const uint8_t key[16]);
-/**
- * @brief Generates a random SipHash seed.
- * @code
- * uint8_t key[16];
- * cwist_generate_hash_seed(key);
- * uint64_t hash = siphash24(src, len, key);
- * @endcode
- */
+// Generates random hash
+// e.g.,
+// (...)
+// uint8_t key[16];
+// cwist_generate_hash_seed(key);
+// uint64_t hash = siphash24(src, len, key);
 void cwist_generate_hash_seed(uint8_t key[16]);
 #endif

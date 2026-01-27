@@ -1,24 +1,21 @@
-/**
- * @file sstring.h
- * @brief Safe string type with helper methods.
+/** @file sstring.h
+ * @brief sstring.h interface.
  */
-
 #ifndef __CWIST_SSTRING_H__
 #define __CWIST_SSTRING_H__
 
 #include <string.h>
 #include <stdlib.h>
 #include <stdbool.h>
-#include <cwist/sys/err/cwist_err.h>
+#include <cwist/err/cwist_err.h>
 
 typedef struct cwist_sstring {
-    char *data;  ///< Access directly only when raw handling is necessary.
+    char *data;  ///< please access this data if raw handling is necessary
     bool is_fixed;
     bool owns_storage;
-    bool borrows_buffer; ///< data points at storage owned elsewhere (static/arena); never freed or
-                         ///< realloc'd in place
+    bool borrows_buffer; ///< data is borrowed (static/arena); never freed, detached on mutation
     size_t size;
-    size_t capacity; ///< Payload bytes the current data buffer can hold,
+    size_t capacity;     ///< Payload bytes the current data buffer can hold,
                      ///< excluding the NUL; 0 means unknown, in which case
                      ///< growth falls back to exact-fit reallocation.
     char *base; ///< Allocation base when data views a region inside it
@@ -26,23 +23,23 @@ typedef struct cwist_sstring {
     size_t (*get_size)(struct cwist_sstring *str);
     int (*compare)(
         struct cwist_sstring *left,
-        const struct cwist_sstring *right); ///< Should mimic `strcmp`, internally use `strncmp`.
+        const struct cwist_sstring *right); ///< should mimic strcmp, internally use strncmp
     cwist_error_t (*copy)(struct cwist_sstring *str, const struct cwist_sstring *from);
-    /**
-     * @brief Append another sstring.
-     * @return 1 on success, 0 on failure.
-     */
     cwist_error_t (*append)(struct cwist_sstring *str, const struct cwist_sstring *from);
+    /// @brief returns 1 on success, returns 0 on failure
+    /// @note should be used in this form:
+    /// @code
+    /// cwist_sstring str1;
+    /// cwist_sstring str2;
+    /// cwist_sstring_init(&str);
+    /// cwist_sstring_init(&str2);
+    /// cwist_error_t err = str1.copy(&str1, &str2);
+    /// cwist_error_t err = str2.append(&str2, &str1);
+    /// ...
+    /// @endcode
 } cwist_sstring;
 
-/**
- * @brief Create a new sstring instance.
- */
 cwist_sstring *cwist_sstring_create(void);
-
-/**
- * @brief Destroy an sstring instance.
- */
 void cwist_sstring_destroy(cwist_sstring *str);
 
 /** @name String manipulation API */
@@ -52,41 +49,30 @@ void cwist_sstring_destroy(cwist_sstring *str);
  * @brief Append raw bytes with length.
  */
 cwist_error_t cwist_sstring_append_len(cwist_sstring *str, const char *data, size_t len);
+
 /**
  * @brief Assign raw bytes with length.
  */
 cwist_error_t cwist_sstring_assign_len(cwist_sstring *str, const char *data, size_t len);
 
 /**
- * @brief Borrow an external buffer without copying.
- *
- * The sstring points at @p data (which must outlive the sstring, e.g. a
- * string literal or arena chunk) and never frees it. The first mutating call
- * transparently detaches the contents into owned heap storage, so borrowed
- * strings stay fully mutable from the caller's perspective.
+ * @brief Borrow an external buffer without copying; detached to heap on first mutation.
  */
 cwist_error_t cwist_sstring_borrow(cwist_sstring *str, const char *data, size_t len);
 
 /**
- * @brief Adopt a heap buffer, taking ownership without copying.
- *
- * @p buf must come from cwist_alloc (or compatible) with room for a NUL at
- * @p buf[len]; the sstring frees it on destroy/reassign. The previous
- * contents are released.
+ * @brief Adopt a cwist_alloc'd heap buffer, taking ownership without copying.
  */
 cwist_error_t cwist_sstring_adopt_len(cwist_sstring *str, char *buf, size_t len);
 
 /**
- * @brief Adopt a heap buffer as a region view without copying.
- *
+ * @brief Adopt a cwist_alloc'd heap buffer as a region view without copying.
  * @param str Target string object; any owned buffer it holds is released.
- * @param base cwist_alloc'd allocation base; ownership transfers to the
- *        string (freed on destroy/reassign). NULL clears.
+ * @param base Allocation base (cwist_alloc'd); ownership transfers to the string.
  * @param offset Payload start relative to @p base.
- * @param len Payload length in bytes; base[offset + len] must be the NUL slot.
- * @return ERR_SSTRING_OKAY on success, or ERR_SSTRING_NULL_STRING for NULL input.
- * @note Growth reallocs @p base and preserves the offset, so data keeps
- *       viewing the same region.
+ * @param len Payload length in bytes.
+ * @note @p base must have room for a NUL at base[offset + len]. Growth
+ *       reallocs @p base and preserves the offset.
  */
 cwist_error_t cwist_sstring_adopt_region(cwist_sstring *str, char *base, size_t offset, size_t len);
 
@@ -94,11 +80,6 @@ cwist_error_t cwist_sstring_adopt_region(cwist_sstring *str, char *base, size_t 
  * @brief Initialize an sstring.
  */
 cwist_error_t cwist_sstring_init(cwist_sstring *str);
-
-/**
- * @brief Initialize an sstring with escaping enabled.
- */
-cwist_error_t cwist_sstring_init_escaped(cwist_sstring *str);
 
 /**
  * @brief Left-trim whitespace.
@@ -131,19 +112,9 @@ cwist_error_t cwist_sstring_assign(cwist_sstring *str, const char *data);
 cwist_error_t cwist_sstring_append(cwist_sstring *str, const char *data);
 
 /**
- * @brief Append an escaped C string.
- */
-cwist_error_t cwist_sstring_append_escaped(cwist_sstring *str, const char *data);
-
-/**
  * @brief Append another sstring.
  */
 cwist_error_t cwist_sstring_append_sstring(cwist_sstring *str, const cwist_sstring *from);
-
-/**
- * @brief Append another sstring with escaping.
- */
-cwist_error_t cwist_sstring_append_sstring_escaped(cwist_sstring *str, const cwist_sstring *from);
 
 /**
  * @brief Seek a substring at a location.

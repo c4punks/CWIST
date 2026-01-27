@@ -1,6 +1,5 @@
 #include "db.h"
 #include <cwist/core/db/sql.h>
-#include <cwist/core/mem/alloc.h>
 #include <cjson/cJSON.h>
 #include <stdio.h>
 #include <stdlib.h>

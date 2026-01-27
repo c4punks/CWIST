@@ -8,7 +8,6 @@
 #include <cwist/net/http/query.h>
 #include <cwist/core/utils/json_builder.h>
 #include <cwist/core/template/template.h>
-#include <cwist/core/mem/alloc.h>
 #include <cjson/cJSON.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -33,12 +32,9 @@ void root_handler(cwist_http_request *req, cwist_http_response *res) {
     cJSON_AddStringToObject(context, "status", status);
 
     char turn_str[16];
-    if (turn == 1)
-        strcpy(turn_str, "Black");
-    else if (turn == 2)
-        strcpy(turn_str, "White");
-    else
-        strcpy(turn_str, "None");
+    if (turn == 1) strcpy(turn_str, "Black");
+    else if (turn == 2) strcpy(turn_str, "White");
+    else strcpy(turn_str, "None");
     cJSON_AddStringToObject(context, "turn", turn_str);
 
     cJSON *board_json = cJSON_CreateArray();
@@ -52,7 +48,7 @@ void root_handler(cwist_http_request *req, cwist_http_response *res) {
     }
     cJSON_AddItemToObject(context, "board", board_json);
 
-    cwist_sstring *rendered_html = cwist_template_render_file("public/index.html.tmpl", context);
+    cwist_sstring* rendered_html = cwist_template_render_file("public/index.html.tmpl", context);
     if (rendered_html) {
         cwist_sstring_assign(res->body, rendered_html->data);
         cwist_sstring_destroy(rendered_html);
@@ -128,12 +124,12 @@ void join_handler(cwist_http_request *req, cwist_http_response *res) {
     cJSON_AddNumberToObject(json, "player_id", pid);
     cJSON_AddNumberToObject(json, "room_id", room_id);
     cJSON_AddStringToObject(json, "mode", mode);
-
+    
     char *str = cJSON_PrintUnformatted(json);
     cwist_sstring_assign(res->body, str);
-    cwist_free(str);
+    free(str);
     cJSON_Delete(json);
-
+    
     cwist_http_header_add(&res->headers, "Content-Type", "application/json");
 }
 
@@ -152,9 +148,9 @@ void state_handler(cwist_http_request *req, cwist_http_response *res) {
     cJSON_AddNumberToObject(json, "room_id", room_id);
 
     cJSON *board_arr = cJSON_CreateArray();
-    for (int r = 0; r < SIZE; r++) {
+    for(int r=0; r<SIZE; r++) {
         cJSON *row_arr = cJSON_CreateArray();
-        for (int c = 0; c < SIZE; c++) {
+        for(int c=0; c<SIZE; c++) {
             cJSON_AddItemToArray(row_arr, cJSON_CreateNumber(board[r][c]));
         }
         cJSON_AddItemToArray(board_arr, row_arr);
