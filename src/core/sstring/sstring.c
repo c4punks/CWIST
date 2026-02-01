@@ -644,7 +644,7 @@ cwist_error_t cwist_sstring_append_sstring(cwist_sstring *str, const cwist_sstri
     return cwist_sstring_append(str, from->data);
 }
 
-cwist_error_t cwist_sttring_append_sstring_escaped(cwist_sstring *str, const cwist_sstring *from) {
+cwist_error_t cwist_string_append_sstring_escaped(cwist_sstring *str, const cwist_sstring *from) {
     if(!str) {
         cwist_error_t err = make_error(CWIST_ERR_INT8);
         err.error.err_i8 = ERR_SSTRING_NULL_STRING;
