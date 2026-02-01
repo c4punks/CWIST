@@ -54,36 +54,8 @@ cwist_error_t cwist_sstring_append_len(cwist_sstring *str, const char *data, siz
  * @brief Assign raw bytes with length.
  */
 cwist_error_t cwist_sstring_assign_len(cwist_sstring *str, const char *data, size_t len);
-
-/**
- * @brief Borrow an external buffer without copying; detached to heap on first mutation.
- */
-cwist_error_t cwist_sstring_borrow(cwist_sstring *str, const char *data, size_t len);
-
-/**
- * @brief Adopt a cwist_alloc'd heap buffer, taking ownership without copying.
- */
-cwist_error_t cwist_sstring_adopt_len(cwist_sstring *str, char *buf, size_t len);
-
-/**
- * @brief Adopt a cwist_alloc'd heap buffer as a region view without copying.
- * @param str Target string object; any owned buffer it holds is released.
- * @param base Allocation base (cwist_alloc'd); ownership transfers to the string.
- * @param offset Payload start relative to @p base.
- * @param len Payload length in bytes.
- * @note @p base must have room for a NUL at base[offset + len]. Growth
- *       reallocs @p base and preserves the offset.
- */
-cwist_error_t cwist_sstring_adopt_region(cwist_sstring *str, char *base, size_t offset, size_t len);
-
-/**
- * @brief Initialize an sstring.
- */
-cwist_error_t cwist_sstring_init(cwist_sstring *str);
-
-/**
- * @brief Left-trim whitespace.
- */
+cwist_error_t cwist_sstring_init (cwist_sstring *str);
+cwist_error_t cwist_sstring_init_escaped (cwist_sstring *str);
 cwist_error_t cwist_sstring_ltrim(cwist_sstring *str);
 
 /**
@@ -110,15 +82,9 @@ cwist_error_t cwist_sstring_assign(cwist_sstring *str, const char *data);
  * @brief Append a C string.
  */
 cwist_error_t cwist_sstring_append(cwist_sstring *str, const char *data);
-
-/**
- * @brief Append another sstring.
- */
+cwist_error_t cwist_sstring_append_escaped(cwist_sstring *str, const char *data);
 cwist_error_t cwist_sstring_append_sstring(cwist_sstring *str, const cwist_sstring *from);
-
-/**
- * @brief Seek a substring at a location.
- */
+cwist_error_t cwist_sstring_append_sstring_escaped(cwist_sstring *str, const cwist_sstring *from);
 cwist_error_t cwist_sstring_seek(cwist_sstring *str, char *substr, int location);
 
 /**

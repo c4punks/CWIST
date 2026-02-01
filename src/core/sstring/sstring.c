@@ -5,11 +5,11 @@
 #include <string.h>
 #include <ctype.h>
 
-/**
- * @file sstring.c
- * @brief Mutable string helpers used throughout CWIST for request/response and utility text
- * handling.
- */
+size_t cwist_sstring_get_size(cwist_sstring *str);
+int cwist_sstring_compare_sstring(cwist_sstring *left, const cwist_sstring *right);
+cwist_error_t cwist_sstring_copy_sstring(cwist_sstring *origin, const cwist_sstring *from);
+cwist_error_t cwist_sstring_append_sstring(cwist_sstring *str, const cwist_sstring *from);
+cwist_error_t cwist_sstring_append_sstring_escaped(cwist_sstring *str, const cwist_sstring *from);
 
 /** @brief Forward declaration for the method-table size callback. */
 size_t cwist_sstring_get_size(cwist_sstring *str);
@@ -267,11 +267,6 @@ cwist_error_t cwist_sstring_init(cwist_sstring *str) {
     return err;
 }
 
-/**
- * @brief Initialize a mutable string whose append helper performs HTML escaping.
- * @param str String object to initialize in caller-owned storage.
- * @return ERR_SSTRING_OKAY on success, or ERR_SSTRING_NULL_STRING for NULL input.
- */
 cwist_error_t cwist_sstring_init_escaped(cwist_sstring *str) {
     cwist_error_t err = make_error(CWIST_ERR_INT8);
     if (!str) {
@@ -281,11 +276,7 @@ cwist_error_t cwist_sstring_init_escaped(cwist_sstring *str) {
 
     str->data = NULL;
     str->size = 0;
-    str->capacity = 0;
-    str->base = NULL;
     str->is_fixed = false;
-    str->owns_storage = false;
-    str->borrows_buffer = false;
     str->get_size = cwist_sstring_get_size;
     str->compare = cwist_sstring_compare_sstring;
     str->copy = cwist_sstring_copy_sstring;
@@ -295,11 +286,6 @@ cwist_error_t cwist_sstring_init_escaped(cwist_sstring *str) {
     return err;
 }
 
-/**
- * @brief Return the cached string size in bytes.
- * @param str String object to inspect.
- * @return Stored size, or 0 when the string is NULL.
- */
 size_t cwist_sstring_get_size(cwist_sstring *str) {
     return str ? str->size : 0;
 }
@@ -571,12 +557,6 @@ cwist_error_t cwist_sstring_append(cwist_sstring *str, const char *data) {
     return err;
 }
 
-/**
- * @brief Append a string while escaping a small HTML-sensitive character set.
- * @param str Target string object.
- * @param data Source string to append in escaped form.
- * @return ERR_SSTRING_OKAY on success, or an error payload describing the failure.
- */
 cwist_error_t cwist_sstring_append_escaped(cwist_sstring *str, const char *data) {
     if (!str) {
         cwist_error_t err = make_error(CWIST_ERR_INT8);
@@ -594,40 +574,33 @@ cwist_error_t cwist_sstring_append_escaped(cwist_sstring *str, const char *data)
     size_t input_len = strlen(data);
     size_t new_size = current_len + (input_len * 6) + 1;
 
+    cwist_error_t err = make_error(CWIST_ERR_JSON);
+    err.error.err_json = cJSON_CreateObject();
+
     if (str->is_fixed) {
         if (new_size > str->size) {
-            cwist_error_t err = make_error(CWIST_ERR_JSON);
-            err.error.err_json = cJSON_CreateObject();
-            if (err.error.err_json) {
-                cJSON_AddStringToObject(err.error.err_json, "err",
-                                        "Cannot append: would exceed fixed size");
-            }
+            cJSON_AddStringToObject(err.error.err_json, "err", "Cannot append: would exceed fixed size");
             return err;
         }
     } else {
-        char *new_data = cwist_sstring_reserve(str, new_size, current_len);
+        char *new_data = (char *)realloc(str->data, new_size + 1);
         if (!new_data) {
-            cwist_error_t err = make_error(CWIST_ERR_JSON);
-            err.error.err_json = cJSON_CreateObject();
-            if (err.error.err_json) {
-                cJSON_AddStringToObject(err.error.err_json, "err", "Cannot append: memory full");
-            }
-            return err;
+             cJSON_AddStringToObject(err.error.err_json, "err", "Cannot append: memory full");
+             return err;
         }
         str->data = new_data;
-        str->borrows_buffer = false;
         str->size = new_size;
     }
 
     char *ptr = str->data + current_len;
     for (size_t i = 0; i < input_len; i++) {
-        switch (data[i]) {
+        switch(data[i]) {
             case '<':
                 memcpy(ptr, "&lt;", 4);
                 ptr += 4;
                 break;
             case '>':
-                memcpy(ptr, "&gt;", 4);
+                memcpy(ptr, "&gtl", 4);
                 ptr += 4;
                 break;
             case '&':
@@ -642,24 +615,21 @@ cwist_error_t cwist_sstring_append_escaped(cwist_sstring *str, const char *data)
                 memcpy(ptr, "&#39;", 5);
                 ptr += 5;
                 break;
-            default: *ptr++ = data[i]; break;
+            default:
+                *ptr++ = data[i];
+                break;   
         }
     }
 
     *ptr = '\0';
-    str->size = (size_t)(ptr - str->data);
+    str->size = (size_t) (ptr - str->data);
 
-    cwist_error_t err = make_error(CWIST_ERR_INT8);
+    cJSON_Delete(err.error.err_json);
+    err = make_error(CWIST_ERR_INT8);
     err.error.err_i8 = ERR_SSTRING_OKAY;
     return err;
 }
 
-/**
- * @brief Append the contents of one CWIST string onto another.
- * @param str Destination string.
- * @param from Source CWIST string.
- * @return ERR_SSTRING_OKAY on success, or an error describing invalid input.
- */
 cwist_error_t cwist_sstring_append_sstring(cwist_sstring *str, const cwist_sstring *from) {
     if (!str) {
         cwist_error_t err = make_error(CWIST_ERR_INT8);
@@ -674,19 +644,13 @@ cwist_error_t cwist_sstring_append_sstring(cwist_sstring *str, const cwist_sstri
     return cwist_sstring_append(str, from->data);
 }
 
-/**
- * @brief Append one CWIST string to another while escaping HTML-sensitive characters.
- * @param str Destination string.
- * @param from Source CWIST string.
- * @return ERR_SSTRING_OKAY on success, or an error describing invalid input.
- */
-cwist_error_t cwist_sstring_append_sstring_escaped(cwist_sstring *str, const cwist_sstring *from) {
-    if (!str) {
+cwist_error_t cwist_sttring_append_sstring_escaped(cwist_sstring *str, const cwist_sstring *from) {
+    if(!str) {
         cwist_error_t err = make_error(CWIST_ERR_INT8);
         err.error.err_i8 = ERR_SSTRING_NULL_STRING;
         return err;
     }
-    if (!from) {
+    if(!from) {
         cwist_error_t err = make_error(CWIST_ERR_INT8);
         err.error.err_i8 = ERR_SSTRING_OKAY;
         return err;
@@ -694,13 +658,6 @@ cwist_error_t cwist_sstring_append_sstring_escaped(cwist_sstring *str, const cwi
     return cwist_sstring_append_escaped(str, from->data);
 }
 
-/**
- * @brief Copy a suffix of the string into a caller-provided buffer.
- * @param str Source string object.
- * @param substr Destination C buffer.
- * @param location Starting offset inside the source string.
- * @return ERR_SSTRING_OKAY on success, or an error describing invalid bounds/input.
- */
 cwist_error_t cwist_sstring_seek(cwist_sstring *str, char *substr, int location) {
     cwist_error_t err = make_error(CWIST_ERR_INT8);
     if (!str || !str->data || !substr) {
