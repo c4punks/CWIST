@@ -97,6 +97,16 @@ static void render_element(cwist_html_element_t *el, cwist_sstring *out) {
     if(el->tag) {
         cwist_sstring_append(out, "<");
         cwist_sstring_append(out, el->tag->data);
+        // Render attributes (Use normal append for system-generated attrs)
+        cJSON *attr = NULL;
+        cJSON_ArrayForEach(attr, el->attributes) {
+            cwist_sstring_append(out, " ");
+            cwist_sstring_append(out, attr->string);
+            cwist_sstring_append(out, "=\"");
+            cwist_sstring_append(out, attr->valuestring);
+            cwist_sstring_append(out, "\"");
+        }
+        cwist_sstring_append(out, ">");
     } else if(el->inner_text) {
       cwist_sstring_append_escaped(out, el->inner_text->data);
     }
