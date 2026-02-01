@@ -94,8 +94,12 @@ void cwist_html_element_add_child(cwist_html_element_t *el, cwist_html_element_t
 static void render_element(cwist_html_element_t *el, cwist_sstring *out) {
     if (!el) return;
     
-    cwist_sstring_append(out, "<");
-    cwist_sstring_append(out, el->tag->data);
+    if(el->tag) {
+        cwist_sstring_append(out, "<");
+        cwist_sstring_append(out, el->tag->data);
+    } else if(el->inner_text) {
+      cwist_sstring_append_escaped(out, el->inner_text->data);
+    }
     
     // Render attributes
     cJSON *attr = NULL;
