@@ -1,7 +1,7 @@
 CC = gcc
 CFLAGS = -Wall -Wextra -g -I../../include
 LDFLAGS = -L../../
-LIBS = -lcwist -lcjson -luriparser -lssl -lcrypto -lpthread -ldl -lstdc++ -lm -lz
+LIBS = -lcwist -lcjson -luriparser -lssl -lcrypto -lpthread -ldl
 
 SRCS = main.c
 TARGET = cde_json_viewer

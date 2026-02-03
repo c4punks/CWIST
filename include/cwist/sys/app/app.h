@@ -1,31 +1,44 @@
-/** @file app.h
- * @brief Top-level application header.
- *
- * Umbrella include for the application API. Historically this header carried
- * its own (stale) copy of the application types under the same include guard
- * as <cwist/sys/app/app.h>, which made the two headers mutually exclusive and
- * produced divergent cwist_app layouts across translation units. It now
- * forwards to the canonical header; include either path and you get the same
- * definitions.
+/**
+ * @file app.h
+ * @brief Core Application Structure and Lifecycle Management.
  */
-#ifndef __CWIST_APP_UMBRELLA_H__
-#define __CWIST_APP_UMBRELLA_H__
+
+#ifndef __CWIST_APP_H__
+#define __CWIST_APP_H__
 
 #include <cwist/net/http/http.h>
 #include <cwist/net/http/https.h>
 #include <cwist/core/db/sql.h>
 #include <cwist/sys/err/cwist_err.h>
 #include <cwist/core/macros.h>
+#include <cwist/sys/app/big_dumb_reply.h>
 
 #include <cwist/net/websocket/websocket.h>
 
+/**
+ * @brief Function pointer type for HTTP route handlers.
+ * @param req Pointer to the HTTP request object.
+ * @param res Pointer to the HTTP response object.
+ */
 typedef void (*cwist_handler_func)(cwist_http_request *req, cwist_http_response *res);
+
+/**
+ * @brief Function pointer type for WebSocket handlers.
+ * @param ws Pointer to the WebSocket context.
+ */
 typedef void (*cwist_ws_handler_func)(cwist_websocket *ws);
+
+/**
+ * @brief Function pointer type for error handlers.
+ */
 typedef void (*cwist_error_handler_func)(cwist_http_request *req, cwist_http_response *res, cwist_http_status_t status);
 
 // Middleware type: receives req, res, and the next stage in the chain
 typedef void (*cwist_middleware_func)(cwist_http_request *req, cwist_http_response *res, cwist_handler_func next);
 
+/**
+ * @brief Linked list node for middleware chain.
+ */
 typedef struct cwist_middleware_node {
     cwist_middleware_func func;
     struct cwist_middleware_node *next;
@@ -34,6 +47,12 @@ typedef struct cwist_middleware_node {
 typedef struct cwist_route_table cwist_route_table;
 typedef struct cwist_static_dir cwist_static_dir;
 
+/**
+ * @brief Main Application Context.
+ * 
+ * Manages routing, middleware, database connections, memory pools,
+ * and caching strategies (BDR).
+ */
 typedef struct cwist_app {
     int port;
     bool use_ssl;
@@ -53,12 +72,70 @@ typedef struct cwist_app {
     cwist_https_context *ssl_ctx;
     cwist_db *db;
     char *db_path;
+
+    /** @brief Max memory space for static file pool (0 = auto-detected * 2) */
+    size_t max_mem_space;
+    /** @brief Memory manager for static asset caching and hot-reloading */
+    struct cwist_fix_server_mem *mem_manager;
+    
+    /** @brief Big Dumb Reply context for auto-caching high-latency endpoints */
+    cwist_bdr_t *bdr_ctx;
 } cwist_app;
+
+// --- Memory Management ---
+
+/**
+ * @brief Represents a file loaded into the fixed memory pool.
+ */
+typedef struct cwist_file_t {
+    char *path;       ///< Relative path (URL path)
+    char *fs_path;    ///< Full filesystem path
+    size_t offset;    ///< Offset in the raw_memory block
+    size_t size;      ///< Size of the file in bytes
+    time_t last_mod;  ///< Last modification time
+} cwist_file_t;
+
+/**
+ * @brief Fixed Server Memory Manager.
+ * 
+ * Pre-allocates a large contiguous block of memory to serve static files
+ * via Zero-Copy pointer passing. Supports hot-reloading on file change.
+ */
+typedef struct cwist_fix_server_mem {
+    unsigned char *raw_memory; ///< The big contiguous memory block
+    size_t total_capacity;     ///< Total capacity (defaults to sum of files * 2)
+    size_t current_used;       ///< Current byte offset used
+    
+    cwist_file_t *files;       ///< Array of tracked files
+    size_t file_count;
+    size_t files_capacity;     ///< Capacity of the files array
+
+    pthread_mutex_t lock;
+    pthread_t watcher_thread;
+    bool watcher_running;
+    int check_interval_ms;
+} cwist_fix_server_mem;
 
 // --- API ---
 
+/**
+ * @brief Creates a new CWIST application instance.
+ * @return Pointer to the allocated app, or NULL on failure.
+ */
 cwist_app *cwist_app_create(void);
+
+/**
+ * @brief Destroys the application and frees all resources.
+ * @param app Pointer to the app to destroy.
+ */
 void cwist_app_destroy(cwist_app *app);
+
+/**
+ * @brief Sets the maximum memory space for the static file pool.
+ * @param app Pointer to the app.
+ * @param size Size in bytes (Use macros like CWIST_MIB(64)).
+ */
+void cwist_app_set_max_memspace(cwist_app *app, size_t size);
 
 // Middleware
 void cwist_app_use(cwist_app *app, cwist_middleware_func mw);
@@ -71,9 +148,20 @@ cwist_error_t cwist_app_use_db(cwist_app *app, const char *db_path);
 cwist_db *cwist_app_get_db(cwist_app *app);
 
 // Routing
+/**
+ * @brief Registers a GET route handler.
+ */
 void cwist_app_get(cwist_app *app, const char *path, cwist_handler_func handler);
 void cwist_app_post(cwist_app *app, const char *path, cwist_handler_func handler);
 void cwist_app_ws(cwist_app *app, const char *path, cwist_ws_handler_func handler);
+
+/**
+ * @brief Serves a directory of static files at a URL prefix.
+ * Files are loaded into the fixed memory pool for Zero-Copy serving.
+ * @param app Pointer to the app.
+ * @param url_prefix URL prefix (e.g., "/static").
+ * @param directory Local filesystem path.
+ */
 cwist_error_t cwist_app_static(cwist_app *app, const char *url_prefix, const char *directory);
 // Add other methods as needed
 

@@ -11,10 +11,15 @@ Two server modes, tuned for opposite things; pick per workload.
 CWIST reactor is the default (no env var needed); CWIST_C1M_MODE=0 selects
 CWIST Classic pool.
 
-  CWIST reactor (default)  takes the throughput. Many connections per event
-                           loop, so a connection costs a reactor slot, not a
-                           parked thread. On the run below: 142,258 req/s
-                           against Axum's 114,649, 24% more.
+- HTTP/1.1 Server: Robust request parsing and response handling.
+- SString: Custom string library with compare and substr support.
+- WebSocket Support: Easy upgrade from HTTP to persistent connections.
+- Middleware System: Chainable processing for logging and security.
+- Path Parameters: Express-style routing with :param support and Mux Router.
+- JSON Builder: Lightweight utility using cJSON for response building.
+- Static Assets & DB Sharing: Serve directories with `cwist_app_static` and reuse SQLite handles via `cwist_app_use_db`.
+- Nuke DB: High-performance In-Memory SQLite with persistent disk synchronization (`cwist_nuke_init`).
+- Secure by Design: Built-in integration with Monocypher.
 
   CWIST Classic pool       takes the latency. A thread per connection, so no
                            request waits behind another in a batch. Median
@@ -46,14 +51,27 @@ The distribution, not the average, is the point:
 | }                                                                           |
 ===============================================================================
 
+3. Compilation:
+$ gcc -o server main.c -lcwist -lssl -lcrypto -luriparser -lcjson -ldl -lpthread
+$ ./server
 
-==================================================================
- WHY CWIST?
-==================================================================
+== NUKE DB ==
 
-* "Why not just use Axum (Rust) or Gin (Go)?" -- CWIST's True Niche
-  At first glance, one might ask: Why use a C-based web framework
-  when modern memory-safe languages with massive ecosystems exist?
+Nuke DB provides the speed of an in-memory database with the persistence of a disk-based one.
+It embeds SQLite directly into your application binary.
+
+Usage:
+1. `cwist_nuke_init("my_data.db", 5000);` // Loads my_data.db to memory, syncs every 5s.
+2. Use `cwist_nuke_get_db()` to get the raw `sqlite3*` handle for high-speed memory operations.
+3. `cwist_nuke_sync()` can be called manually to flush data to disk.
+4. On application exit (SIGINT/SIGTERM), Nuke DB automatically syncs data to disk before closing.
+
+== DEPENDENCIES ==
+
+- cJSON ([https://github.com/DaveGamble/cJSON](https://github.com/DaveGamble/cJSON))
+- OpenSSL (libssl, libcrypto)
+- uriparser
+- (SQLite3 is now statically embedded)
 
 == PAST ROADMAP ==
 

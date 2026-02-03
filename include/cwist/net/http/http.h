@@ -1,6 +1,8 @@
-/** @file http.h
- * @brief http.h interface.
+/**
+ * @file http.h
+ * @brief HTTP Protocol Definitions and Helpers.
  */
+
 #ifndef __CWIST_HTTP_H__
 #define __CWIST_HTTP_H__
 
@@ -79,12 +81,22 @@ typedef struct cwist_http_request {
     size_t content_length;
 } cwist_http_request;
 
+/**
+ * @brief HTTP Response Object.
+ * Supports standard string body or Zero-Copy pointer body.
+ */
 typedef struct cwist_http_response {
     cwist_sstring *version;     ///< e.g., "HTTP/1.1"
     cwist_http_status_t status_code;
     cwist_sstring *status_text; ///< e.g., "OK"
     cwist_http_header_node *headers;
     cwist_sstring *body;
+    
+    // Zero-Copy Pointer Body
+    bool is_ptr_body;        ///< If true, body data is read from ptr_body
+    const void *ptr_body;    ///< Pointer to external data (e.g., mmap region)
+    size_t ptr_body_len;     ///< Length of external data
+    
     bool keep_alive;
 } cwist_http_response;
 
@@ -128,6 +140,18 @@ void cwist_http_send_error_response(int fd, int status, const char *msg);
  * @brief Create a new HTTP response object.
  */
 cwist_http_response *cwist_http_response_create(void);
+void cwist_http_response_destroy(cwist_http_response *res);
+
+/**
+ * @brief Sets a direct pointer for the response body (Zero Copy).
+ * Use this when serving large files from memory mapped regions.
+ * The pointer must remain valid until the response is sent.
+ */
+void cwist_http_response_set_body_ptr(cwist_http_response *res, const void *ptr, size_t len);
+
+cwist_sstring *cwist_http_stringify_response(cwist_http_response *res);
+cwist_error_t cwist_http_send_response(int client_fd, cwist_http_response *res);
+cwist_error_t cwist_http_response_send_file(cwist_http_response *res, const char *file_path, const char *content_type_hint, size_t *out_size);
 
 /**
  * @brief Destroy an HTTP response object.

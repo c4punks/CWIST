@@ -6,18 +6,9 @@
 #include <string.h>
 #include <unistd.h>
 
-/**
- * @file sys_info.c
- * @brief Cross-platform helpers for estimating available RAM and low-memory pressure.
- */
-
 #if defined(__linux__)
 #include <sys/sysinfo.h>
 
-/**
- * @brief Estimate currently available RAM on Linux using sysinfo or /proc/meminfo.
- * @return Available RAM in bytes, or 0 when the platform cannot provide an estimate.
- */
 uint64_t cwist_get_available_ram(void) {
     // Attempt 1: sysinfo() (Fastest, standard libc)
     struct sysinfo si;
@@ -42,7 +33,7 @@ uint64_t cwist_get_available_ram(void) {
         }
         fclose(fp);
     }
-
+    
     return 0; // Unknown
 }
 
@@ -50,18 +41,14 @@ uint64_t cwist_get_available_ram(void) {
 #include <sys/types.h>
 #include <sys/sysctl.h>
 
-/**
- * @brief Estimate currently available RAM on Apple and BSD platforms.
- * @return Available RAM in bytes, or 0 when the platform cannot provide an estimate.
- */
 uint64_t cwist_get_available_ram(void) {
     // macOS/BSD Logic
-    // Getting strict "Available" like Linux is harder.
+    // Getting strict "Available" like Linux is harder. 
     // We can get page size * free pages.
-
+    
     int mib[2];
     mib[0] = CTL_HW;
-
+    
 #ifdef __APPLE__
     // Roughly estimate using page size and free count is tricky portably.
     // Let's rely on a simpler 'usermem' or just fail-safe to "High Enough" if we can't detect,
@@ -73,30 +60,21 @@ uint64_t cwist_get_available_ram(void) {
     u_int page_size;
     u_int free_count;
     size_t len = sizeof(page_size);
-
+    
     if (sysctlbyname("vm.stats.vm.v_page_size", &page_size, &len, NULL, 0) == -1) return 0;
     len = sizeof(free_count);
     if (sysctlbyname("vm.stats.vm.v_free_count", &free_count, &len, NULL, 0) == -1) return 0;
-
+    
     return (uint64_t)page_size * (uint64_t)free_count;
 #endif
 }
 
 #else
-/**
- * @brief Fallback RAM estimate for unsupported platforms.
- * @return Conservative mock availability used when no platform-specific API exists.
- */
 uint64_t cwist_get_available_ram(void) {
     return CWIST_GIB(1); // Default Mock
 }
 #endif
 
-/**
- * @brief Check whether the current available RAM is below a caller-supplied threshold.
- * @param threshold_bytes Threshold in bytes that marks memory as critical.
- * @return true when the estimated available RAM is below the threshold.
- */
 bool cwist_is_ram_critical(uint64_t threshold_bytes) {
     uint64_t avail = cwist_get_available_ram();
     if (avail == 0) return false; // Could not detect, assume safe
