@@ -16,13 +16,13 @@ static cwist_nuke_db_t g_nuke = {0};
 static pthread_t g_sync_thread;
 static volatile bool g_running = false;
 static pthread_mutex_t g_nuke_lock = PTHREAD_MUTEX_INITIALIZER;
+static sigset_t g_sigset;
 
 // Helper: Backup source_db to dest_db
 static int nuke_backup(sqlite3 *dest, sqlite3 *source) {
     if (!dest || !source) return -1;
     sqlite3_backup *backup = sqlite3_backup_init(dest, "main", source, "main");
     if (!backup) {
-        // fprintf(stderr, "[NukeDB] Backup init failed: %s\n", sqlite3_errmsg(dest));
         return -1;
     }
 
@@ -45,14 +45,7 @@ static void nuke_switch_to_disk(void) {
     // 1. Flush Memory -> Disk
     nuke_backup(g_nuke.disk_db, g_nuke.mem_db);
     
-    // 2. Set mode flag (Readers will now get disk_db)
-    // Note: We cannot safely close mem_db yet as other threads might hold the pointer.
-    // We intentionally leak the mem_db connection handle for the session duration 
-    // or until we can implement safe refcounting.
-    // However, SQLite memory usually is freed when the connection closes.
-    // For now, we keep it open but unused to prevent segfaults.
-    // To actually free RAM, we need to instruct SQLite to shrink memory.
-    
+    // 2. Set mode flag
     sqlite3_db_release_memory(g_nuke.mem_db); 
     
     g_nuke.is_disk_mode = true;
@@ -63,8 +56,6 @@ static void nuke_switch_to_disk(void) {
 int cwist_nuke_sync(void) {
     pthread_mutex_lock(&g_nuke_lock);
     if (g_nuke.is_disk_mode) {
-        // Already on disk, nothing to sync from memory.
-        // Maybe WAL checkpoint?
         sqlite3_wal_checkpoint_v2(g_nuke.disk_db, "main", SQLITE_CHECKPOINT_PASSIVE, NULL, NULL);
         pthread_mutex_unlock(&g_nuke_lock);
         return 0;
@@ -80,48 +71,100 @@ int cwist_nuke_sync(void) {
     return rc;
 }
 
+// Internal idempotent cleanup
+static void nuke_cleanup_internal(void) {
+    pthread_mutex_lock(&g_nuke_lock);
+    
+    // Close Memory DB
+    if (g_nuke.mem_db) {
+        sqlite3_close(g_nuke.mem_db);
+        g_nuke.mem_db = NULL;
+    }
+
+    // Close Disk DB
+    if (g_nuke.disk_db) {
+        sqlite3_close(g_nuke.disk_db);
+        g_nuke.disk_db = NULL;
+    }
+
+    if (g_nuke.disk_path) {
+        free(g_nuke.disk_path);
+        g_nuke.disk_path = NULL;
+    }
+
+    pthread_mutex_unlock(&g_nuke_lock);
+}
+
 void cwist_nuke_close(void) {
     if (!g_running) return;
     g_running = false;
 
-    if (g_nuke.auto_sync && g_sync_thread) {
+    // Wake up the sync thread if it's sleeping/waiting
+    if (g_sync_thread) {
+        pthread_kill(g_sync_thread, SIGUSR1);
         pthread_join(g_sync_thread, NULL);
     }
 
     printf("[NukeDB] Saving data before exit...\n");
     cwist_nuke_sync();
-
-    pthread_mutex_lock(&g_nuke_lock);
-    if (g_nuke.mem_db) sqlite3_close(g_nuke.mem_db);
-    if (g_nuke.disk_db) sqlite3_close(g_nuke.disk_db);
-    if (g_nuke.disk_path) free(g_nuke.disk_path);
-
-    g_nuke.mem_db = NULL;
-    g_nuke.disk_db = NULL;
-    g_nuke.disk_path = NULL;
-    pthread_mutex_unlock(&g_nuke_lock);
+    nuke_cleanup_internal();
     
     printf("[NukeDB] Closed safely.\n");
 }
 
-void cwist_nuke_signal_handler(int signum) {
-    CWIST_UNUSED(signum);
-    printf("\n[NukeDB] Signal received. Shutting down...\n");
-    cwist_nuke_close();
-    exit(0);
-}
-
 static void *sync_thread_func(void *arg) {
     CWIST_UNUSED(arg);
+    struct timespec timeout;
+    int signum;
+
     while (g_running) {
-        usleep(g_nuke.sync_interval_ms * 1000);
-        if (!g_running) break;
-        
-        // Monitor RAM (Threshold: 128MB for example)
-        if (cwist_is_ram_critical(CWIST_MIB(128))) {
-            nuke_switch_to_disk();
-        } else {
+        // Calculate timeout for periodic sync
+        // Note: sigtimedwait uses relative timeout? No, struct timespec is usually absolute for sem_timedwait 
+        // but sigtimedwait uses RELATIVE timeout interval.
+        timeout.tv_sec = g_nuke.sync_interval_ms / 1000;
+        timeout.tv_nsec = (g_nuke.sync_interval_ms % 1000) * 1000000;
+
+        // Wait for signals (INT, TERM, USR1) or Timeout
+        signum = sigtimedwait(&g_sigset, NULL, &timeout);
+
+        if (signum > 0) {
+            if (signum == SIGUSR1) {
+                // Requested to stop via cwist_nuke_close
+                break;
+            }
+            
+            // Handle termination signals (SIGINT, SIGTERM)
+            printf("\n[NukeDB] Intercepted Signal %d. Saving and shutting down...\n", signum);
+            
+            // 1. Force Sync
             cwist_nuke_sync();
+            
+            // 2. Cleanup resources
+            nuke_cleanup_internal();
+            g_running = false;
+
+            // 3. Re-raise the signal to allow default handling (and proper exit code)
+            // Unblock the signal first
+            sigset_t s;
+            sigemptyset(&s);
+            sigaddset(&s, signum);
+            pthread_sigmask(SIG_UNBLOCK, &s, NULL);
+            
+            // Restore default handler
+            signal(signum, SIG_DFL);
+            
+            // Send delayed signal to self
+            raise(signum);
+            return NULL;
+        } else { // Timeout (EAGAIN) or Interruption
+            if (errno == EAGAIN && g_running && g_nuke.auto_sync) {
+                // RAM Check
+                if (cwist_is_ram_critical(CWIST_MIB(128))) {
+                    nuke_switch_to_disk();
+                } else {
+                    cwist_nuke_sync();
+                }
+            }
         }
     }
     return NULL;
@@ -131,7 +174,7 @@ int cwist_nuke_init(const char *disk_path, int sync_interval_ms) {
     if (g_running) return -1; // Already running
 
     g_nuke.disk_path = strdup(disk_path);
-    g_nuke.sync_interval_ms = sync_interval_ms;
+    g_nuke.sync_interval_ms = sync_interval_ms > 0 ? sync_interval_ms : 1000; // Default 1s if 0
     g_nuke.auto_sync = (sync_interval_ms > 0);
     g_nuke.is_disk_mode = false;
 
@@ -153,31 +196,36 @@ int cwist_nuke_init(const char *disk_path, int sync_interval_ms) {
     printf("[NukeDB] Loading data from disk...\n");
     if (nuke_backup(g_nuke.mem_db, g_nuke.disk_db) != 0) {
         fprintf(stderr, "[NukeDB] Initial load failed. Starting with empty memory DB.\n");
-        // Not fatal, might be fresh DB
     }
 
     g_running = true;
 
-    // 4. Setup Signal Handlers
-    struct sigaction sa;
-    sa.sa_handler = cwist_nuke_signal_handler;
-    sigemptyset(&sa.sa_mask);
-    sa.sa_flags = 0;
-    sigaction(SIGINT, &sa, NULL);
-    sigaction(SIGTERM, &sa, NULL);
-
-    // 5. Start Sync Thread
-    if (g_nuke.auto_sync) {
-        pthread_create(&g_sync_thread, NULL, sync_thread_func, NULL);
+    // 4. Setup Signal Interception (Block signals in main thread)
+    sigemptyset(&g_sigset);
+    sigaddset(&g_sigset, SIGINT);
+    sigaddset(&g_sigset, SIGTERM);
+    sigaddset(&g_sigset, SIGUSR1); // Used for internal thread wake-up
+    
+    // This blocks these signals for the calling thread (main) and any subsequently created threads.
+    // The sync_thread will consume them via sigtimedwait.
+    int s_rc = pthread_sigmask(SIG_BLOCK, &g_sigset, NULL);
+    if (s_rc != 0) {
+        fprintf(stderr, "[NukeDB] Failed to block signals: %d\n", s_rc);
     }
+
+    // 5. Start Sync/Signal Thread
+    pthread_create(&g_sync_thread, NULL, sync_thread_func, NULL);
 
     return 0;
 }
 
 sqlite3 *cwist_nuke_get_db(void) {
-    // Thread-safe fetch of the current active handle
-    // Note: If using NukeDB, applications should get the handle per request
-    // and not cache it, because it might switch to disk_db on low memory.
     if (g_nuke.is_disk_mode) return g_nuke.disk_db;
     return g_nuke.mem_db;
+}
+
+// Deprecated: No longer used with the sigwait model, but kept for symbol compatibility if needed
+void cwist_nuke_signal_handler(int signum) {
+    CWIST_UNUSED(signum);
+    // No-op
 }
