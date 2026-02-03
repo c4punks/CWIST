@@ -6,7 +6,7 @@
 #ifndef __CWIST_NUKE_DB_H__
 #define __CWIST_NUKE_DB_H__
 
-#include <cwist/vendor/sqlite3.h>
+#include <sqlite3.h>
 #include <stdbool.h>
 
 /**

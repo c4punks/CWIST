@@ -6,7 +6,7 @@
 #ifndef __CWIST_SQL_H__
 #define __CWIST_SQL_H__
 
-#include <cwist/vendor/sqlite3.h>
+#include <sqlite3.h>
 #include <cwist/sys/err/cwist_err.h>
 #include <cjson/cJSON.h>
 

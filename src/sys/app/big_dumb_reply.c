@@ -3,7 +3,7 @@
 #include <cwist/core/siphash/siphash.h>
 #include <cwist/sys/sys_info.h>
 #include <cwist/core/macros.h>
-#include <cwist/vendor/sqlite3.h>
+#include <sqlite3.h>
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
