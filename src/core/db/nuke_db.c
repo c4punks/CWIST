@@ -3,7 +3,7 @@
 #include <cwist/core/db/nuke_db.h>
 #include <cwist/core/macros.h>
 #include <cwist/sys/sys_info.h>
-#include <cwist/vendor/sqlite3.h>
+#include <sqlite3.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
