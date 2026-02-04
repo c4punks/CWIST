@@ -81,6 +81,8 @@ typedef struct cwist_http_request {
     size_t content_length;
 } cwist_http_request;
 
+typedef void (*cwist_http_body_cleanup_fn)(const void *ptr, size_t len, void *ctx);
+
 /**
  * @brief HTTP Response Object.
  * Supports standard string body or Zero-Copy pointer body.
@@ -96,6 +98,8 @@ typedef struct cwist_http_response {
     bool is_ptr_body;        ///< If true, body data is read from ptr_body
     const void *ptr_body;    ///< Pointer to external data (e.g., mmap region)
     size_t ptr_body_len;     ///< Length of external data
+    cwist_http_body_cleanup_fn ptr_body_cleanup; ///< Optional release hook
+    void *ptr_body_cleanup_ctx; ///< User data for release hook
     
     bool keep_alive;
 } cwist_http_response;
@@ -148,6 +152,7 @@ void cwist_http_response_destroy(cwist_http_response *res);
  * The pointer must remain valid until the response is sent.
  */
 void cwist_http_response_set_body_ptr(cwist_http_response *res, const void *ptr, size_t len);
+void cwist_http_response_set_body_ptr_managed(cwist_http_response *res, const void *ptr, size_t len, cwist_http_body_cleanup_fn cleanup, void *ctx);
 
 cwist_sstring *cwist_http_stringify_response(cwist_http_response *res);
 cwist_error_t cwist_http_send_response(int client_fd, cwist_http_response *res);
