@@ -12,6 +12,7 @@
 #include <cwist/sys/err/cwist_err.h>
 #include <cwist/core/macros.h>
 #include <cwist/sys/app/big_dumb_reply.h>
+#include <ttak/mem_tree/mem_tree.h>
 
 #include <cwist/net/websocket/websocket.h>
 
@@ -91,9 +92,10 @@ typedef struct cwist_app {
 typedef struct cwist_file_t {
     char *path;       ///< Relative path (URL path)
     char *fs_path;    ///< Full filesystem path
-    size_t offset;    ///< Offset in the raw_memory block
+    void *data;       ///< Pointer to memory-tracked file contents
     size_t size;      ///< Size of the file in bytes
     time_t last_mod;  ///< Last modification time
+    ttak_mem_node_t *node; ///< Tracking node for libttak lifecycle
 } cwist_file_t;
 
 /**
@@ -103,13 +105,15 @@ typedef struct cwist_file_t {
  * via Zero-Copy pointer passing. Supports hot-reloading on file change.
  */
 typedef struct cwist_fix_server_mem {
-    unsigned char *raw_memory; ///< The big contiguous memory block
     size_t total_capacity;     ///< Total capacity (defaults to sum of files * 2)
-    size_t current_used;       ///< Current byte offset used
+    size_t current_used;       ///< Bytes accounted for by active files
     
     cwist_file_t *files;       ///< Array of tracked files
     size_t file_count;
     size_t files_capacity;     ///< Capacity of the files array
+
+    uint64_t retire_grace_ns;  ///< Delay before recycling replaced buffers
+    ttak_mem_tree_t file_tree; ///< Lifetime tracking tree for file buffers
 
     pthread_mutex_t lock;
     pthread_t watcher_thread;

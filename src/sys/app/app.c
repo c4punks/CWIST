@@ -29,84 +29,16 @@
 #include <sys/stat.h>
 #include <time.h>
 #include <pthread.h>
+#include <ttak/mem/mem.h>
+#include <ttak/timing/timing.h>
 
 #define CWIST_ROUTE_BUCKETS 127
 #define CWIST_STATIC_RETIRE_NS TT_SECOND(5)
 
-#ifndef __EMSCRIPTEN__
-/* Default open-file soft-limit target: covers C1M's one-fd-per-connection
- * budget with headroom. Overridable via CWIST_FD_LIMIT_TARGET for
- * deployments that need a different budget (a smaller container quota, or a
- * larger one for a workload with more fds-per-connection than plain HTTP -
- * e.g. proxying, or per-connection log/temp files). */
-#define CWIST_DEFAULT_FD_LIMIT_TARGET ((rlim_t)1050000)
-
-/**
- * @brief Tune system resource limits to handle high concurrency loads.
- */
-static void cwist_app_tune_system(void) {
-#ifdef __wasi__
-    /* WASI preview1 has no rlimit; fd budgeting is the host's concern. */
-#else
-    struct rlimit rl;
-    if (getrlimit(RLIMIT_NOFILE, &rl) != 0) {
-        fprintf(stderr, "[CWIST] Cannot read file limits: %s\n", strerror(errno));
-        return;
-    }
-    /* Keep the hard limit. Increase the soft limit only, up to a tunable
-     * target - CWIST_FD_LIMIT_TARGET overrides the default when set to a
-     * valid positive integer; any other value (unset, empty, non-numeric,
-     * trailing garbage, zero or negative) falls back to the default rather
-     * than silently using 0 or a partially-parsed number. */
-    rlim_t target = CWIST_DEFAULT_FD_LIMIT_TARGET;
-    const char *fd_limit_env = getenv("CWIST_FD_LIMIT_TARGET");
-    if (fd_limit_env && fd_limit_env[0]) {
-        char *end = NULL;
-        errno = 0;
-        long parsed = strtol(fd_limit_env, &end, 10);
-        if (errno == 0 && end && *end == '\0' && parsed > 0) {
-            target = (rlim_t)parsed;
-        } else {
-            fprintf(stderr,
-                    "[CWIST] Ignoring invalid CWIST_FD_LIMIT_TARGET=\"%s\" (using default %llu)\n",
-                    fd_limit_env, (unsigned long long)CWIST_DEFAULT_FD_LIMIT_TARGET);
-        }
-    }
-    if (rl.rlim_max != RLIM_INFINITY && target > rl.rlim_max) {
-        target = rl.rlim_max;
-    }
-    if (rl.rlim_cur < target) {
-        rl.rlim_cur = target;
-        if (setrlimit(RLIMIT_NOFILE, &rl) != 0) {
-            fprintf(stderr, "[CWIST] Cannot increase file limit: %s\n", strerror(errno));
-            return;
-        }
-    }
-    printf("[CWIST] Open file soft limit: %llu\n", (unsigned long long)rl.rlim_cur);
-#endif
-}
-#endif
-
-#if !defined(__EMSCRIPTEN__) && !defined(__wasi__)
-/**
- * @brief Read the current libttak tick count used for static-file retirement deadlines.
- * @return Monotonic tick value compatible with libttak memory APIs.
- */
 static inline uint64_t cwist_mem_now(void) {
     return ttak_get_tick_count();
 }
-#endif
 
-#if !defined(__EMSCRIPTEN__) && !defined(__wasi__)
-/* The static-file memory cache rides on libttak's mem tree and a watcher
- * thread; WASM hosts get neither (cwist_prepare_static() always declines). */
-/**
- * @brief Check whether the static-file memory cache can admit a payload after reclamation.
- * @param mem Static-file memory manager.
- * @param incoming Size of the candidate payload.
- * @param reclaimable Bytes that could be reclaimed from an existing entry.
- * @return true when the projected usage fits inside the configured capacity.
- */
 static bool cwist_mem_has_capacity(cwist_fix_server_mem *mem, size_t incoming, size_t reclaimable) {
     if (!mem || mem->total_capacity == 0) {
         return true;
@@ -122,16 +54,11 @@ static bool cwist_mem_has_capacity(cwist_fix_server_mem *mem, size_t incoming, s
     return projected <= mem->total_capacity;
 }
 
-/**
- * @brief Reserve one metadata slot in the static-file registry, growing the array when needed.
- * @param mem Static-file memory manager.
- * @return Pointer to the claimed entry slot, or NULL on allocation failure.
- */
 static cwist_file_t *cwist_mem_claim_entry(cwist_fix_server_mem *mem) {
     if (!mem) return NULL;
     if (mem->file_count >= mem->files_capacity) {
         size_t new_cap = mem->files_capacity == 0 ? 16 : mem->files_capacity * 2;
-        cwist_file_t *new_files = cwist_realloc(mem->files, new_cap * sizeof(cwist_file_t));
+        cwist_file_t *new_files = realloc(mem->files, new_cap * sizeof(cwist_file_t));
         if (!new_files) {
             return NULL;
         }
@@ -144,24 +71,12 @@ static cwist_file_t *cwist_mem_claim_entry(cwist_fix_server_mem *mem) {
     return entry;
 }
 
-/**
- * @brief Load a filesystem object into libttak-managed memory and track its tree node.
- * @param mem Static-file memory manager.
- * @param fs_path Filesystem path to read.
- * @param size Number of bytes to load.
- * @param data_out Output pointer receiving the allocated payload.
- * @param node_out Output pointer receiving the libttak tree node.
- * @return true when the payload was loaded and registered successfully.
- */
-static bool cwist_mem_create_payload(cwist_fix_server_mem *mem, const char *fs_path, size_t size,
-                                     void **data_out, ttak_mem_node_t **node_out) {
+static bool cwist_mem_create_payload(cwist_fix_server_mem *mem, const char *fs_path, size_t size, void **data_out, ttak_mem_node_t **node_out) {
     if (!mem || !fs_path || !data_out || !node_out) return false;
 
-    void *buffer = ttak_mem_alloc_safe(size ? size : 1, __TTAK_UNSAFE_MEM_FOREVER__,
-                                       cwist_mem_now(), true, false, true, true, TTAK_MEM_DEFAULT);
+    void *buffer = ttak_mem_alloc_safe(size ? size : 1, __TTAK_UNSAFE_MEM_FOREVER__, cwist_mem_now(), true, false, true, true, TTAK_MEM_DEFAULT);
     if (!buffer) {
-        fprintf(stderr, "[StaticMem] Failed to allocate %zu bytes via libttak for %s\n", size,
-                fs_path);
+        fprintf(stderr, "[StaticMem] Failed to allocate %zu bytes via libttak for %s\n", size, fs_path);
         return false;
     }
 
@@ -176,8 +91,7 @@ static bool cwist_mem_create_payload(cwist_fix_server_mem *mem, const char *fs_p
     if (to_read > 0) {
         size_t read = fread(buffer, 1, to_read, f);
         if (read != to_read) {
-            fprintf(stderr, "[StaticMem] Short read for %s (expected %zu, got %zu)\n", fs_path,
-                    to_read, read);
+            fprintf(stderr, "[StaticMem] Short read for %s (expected %zu, got %zu)\n", fs_path, to_read, read);
             fclose(f);
             ttak_mem_free(buffer);
             return false;
@@ -185,8 +99,7 @@ static bool cwist_mem_create_payload(cwist_fix_server_mem *mem, const char *fs_p
     }
     fclose(f);
 
-    ttak_mem_node_t *node = ttak_mem_tree_add(&mem->file_tree, buffer, size ? size : 1,
-                                              __TTAK_UNSAFE_MEM_FOREVER__, true);
+    ttak_mem_node_t *node = ttak_mem_tree_add(&mem->file_tree, buffer, size ? size : 1, __TTAK_UNSAFE_MEM_FOREVER__, true);
     if (!node) {
         ttak_mem_free(buffer);
         return false;
@@ -197,11 +110,6 @@ static bool cwist_mem_create_payload(cwist_fix_server_mem *mem, const char *fs_p
     return true;
 }
 
-/**
- * @brief Retire an old static-file node after a grace period so in-flight reads can finish.
- * @param mem Static-file memory manager.
- * @param node Previous libttak node to release.
- */
 static void cwist_mem_release_node_delayed(cwist_fix_server_mem *mem, ttak_mem_node_t *node) {
     if (!mem || !node) return;
     uint64_t now = cwist_mem_now();
@@ -211,21 +119,9 @@ static void cwist_mem_release_node_delayed(cwist_fix_server_mem *mem, ttak_mem_n
     ttak_mem_node_release(node);
 }
 
-/**
- * @brief Populate a registry entry with a freshly loaded static-file payload.
- * @param mem Static-file memory manager.
- * @param entry Registry entry to fill.
- * @param fs_path Filesystem path associated with the payload.
- * @param st Stat information for the file.
- * @param data Loaded file bytes.
- * @param node Libttak node tracking the payload.
- * @return true when the entry was attached successfully.
- */
-static bool cwist_mem_attach_entry(cwist_fix_server_mem *mem, cwist_file_t *entry,
-                                   const char *fs_path, const struct stat *st, void *data,
-                                   ttak_mem_node_t *node) {
+static bool cwist_mem_attach_entry(cwist_fix_server_mem *mem, cwist_file_t *entry, const char *fs_path, const struct stat *st, void *data, ttak_mem_node_t *node) {
     if (!mem || !entry || !fs_path || !st) return false;
-    char *path_copy = cwist_strdup(fs_path);
+    char *path_copy = strdup(fs_path);
     if (!path_copy) {
         ttak_mem_tree_remove(&mem->file_tree, node);
         return false;
@@ -236,28 +132,16 @@ static bool cwist_mem_attach_entry(cwist_fix_server_mem *mem, cwist_file_t *entr
     entry->data = data;
     entry->size = st->st_size;
     entry->last_mod = st->st_mtime;
-    snprintf(entry->etag, sizeof(entry->etag), "\"%lx-%lx\"", (unsigned long)st->st_mtime,
-             (unsigned long)st->st_size);
-    cwist_http_format_date(st->st_mtime, entry->last_mod_hdr, sizeof(entry->last_mod_hdr));
     entry->node = node;
 
     mem->current_used += st->st_size;
     return true;
 }
 
-/**
- * @brief Register a new static file in the fixed-memory cache.
- * @param mem Static-file memory manager.
- * @param fs_path Filesystem path to cache.
- * @param st Stat information describing the file.
- * @return true when the file was admitted to the cache.
- */
-static bool cwist_mem_register_file(cwist_fix_server_mem *mem, const char *fs_path,
-                                    const struct stat *st) {
+static bool cwist_mem_register_file(cwist_fix_server_mem *mem, const char *fs_path, const struct stat *st) {
     if (!mem || !fs_path || !st) return false;
     if (!cwist_mem_has_capacity(mem, st->st_size, 0)) {
-        fprintf(stderr, "[StaticMem] Skipping %s (size %zu exceeds capacity)\n", fs_path,
-                st->st_size);
+        fprintf(stderr, "[StaticMem] Skipping %s (size %zu exceeds capacity)\n", fs_path, st->st_size);
         return false;
     }
     cwist_file_t *entry = cwist_mem_claim_entry(mem);
@@ -278,20 +162,11 @@ static bool cwist_mem_register_file(cwist_fix_server_mem *mem, const char *fs_pa
     return true;
 }
 
-/**
- * @brief Reload a cached static file after detecting a modification on disk.
- * @param mem Static-file memory manager.
- * @param entry Existing cache entry to refresh.
- * @param st Updated stat information for the file.
- * @return true when the file was refreshed successfully.
- */
-static bool cwist_mem_refresh_file(cwist_fix_server_mem *mem, cwist_file_t *entry,
-                                   const struct stat *st) {
+static bool cwist_mem_refresh_file(cwist_fix_server_mem *mem, cwist_file_t *entry, const struct stat *st) {
     if (!mem || !entry || !st) return false;
     size_t reclaimable = entry->size;
     if (!cwist_mem_has_capacity(mem, st->st_size, reclaimable)) {
-        fprintf(stderr, "[StaticMem] OOM reloading %s (%zu bytes)\n", entry->fs_path,
-                (size_t)st->st_size);
+        fprintf(stderr, "[StaticMem] OOM reloading %s (%zu bytes)\n", entry->fs_path, (size_t)st->st_size);
         return false;
     }
 
@@ -308,9 +183,6 @@ static bool cwist_mem_refresh_file(cwist_fix_server_mem *mem, cwist_file_t *entr
     entry->node = node;
     entry->size = st->st_size;
     entry->last_mod = st->st_mtime;
-    snprintf(entry->etag, sizeof(entry->etag), "\"%lx-%lx\"", (unsigned long)st->st_mtime,
-             (unsigned long)st->st_size);
-    cwist_http_format_date(st->st_mtime, entry->last_mod_hdr, sizeof(entry->last_mod_hdr));
 
     if (mem->current_used >= old_size) {
         mem->current_used -= old_size;
@@ -324,7 +196,7 @@ static bool cwist_mem_refresh_file(cwist_fix_server_mem *mem, cwist_file_t *entr
     }
     return true;
 }
-#endif /* __EMSCRIPTEN__ */
+
 
 typedef struct cwist_route_entry {
     char *path;
@@ -783,32 +655,8 @@ static void cwist_scan_recursive(const char *fs_root, size_t *total_size, cwist_
             if (dry_run) {
                 if (total_size) *total_size += st.st_size;
             } else if (mem) {
-                if (mem->current_used + st.st_size <= mem->total_capacity) {
-                    FILE *f = fopen(full_path, "rb");
-                    if (f) {
-                        fread(mem->raw_memory + mem->current_used, 1, st.st_size, f);
-                        fclose(f);
-                        
-                        if (mem->file_count >= mem->files_capacity) {
-                            size_t new_cap = mem->files_capacity == 0 ? 16 : mem->files_capacity * 2;
-                            cwist_file_t *new_files = realloc(mem->files, new_cap * sizeof(cwist_file_t));
-                            if (new_files) {
-                                mem->files = new_files;
-                                mem->files_capacity = new_cap;
-                            }
-                        }
-                        
-                        if (mem->file_count < mem->files_capacity) {
-                            cwist_file_t *entry = &mem->files[mem->file_count++];
-                            entry->path = NULL; 
-                            entry->fs_path = strdup(full_path);
-                            entry->offset = mem->current_used;
-                            entry->size = st.st_size;
-                            entry->last_mod = st.st_mtime;
-                        }
-                        
-                        mem->current_used += st.st_size;
-                    }
+                if (!cwist_mem_register_file(mem, full_path, &st)) {
+                    fprintf(stderr, "[StaticMem] Failed to load %s\n", full_path);
                 }
             }
         }
@@ -822,6 +670,8 @@ static void cwist_mem_init(cwist_app *app) {
     app->mem_manager = calloc(1, sizeof(cwist_fix_server_mem));
     app->mem_manager->check_interval_ms = 2000; 
     pthread_mutex_init(&app->mem_manager->lock, NULL);
+    app->mem_manager->retire_grace_ns = CWIST_STATIC_RETIRE_NS;
+    ttak_mem_tree_init(&app->mem_manager->file_tree);
 
     size_t total_size = 0;
     cwist_static_dir *curr = app->static_dirs;
@@ -837,11 +687,6 @@ static void cwist_mem_init(cwist_app *app) {
         app->mem_manager->total_capacity = total_size * 2;
     }
 
-    app->mem_manager->raw_memory = malloc(app->mem_manager->total_capacity);
-    if (!app->mem_manager->raw_memory) {
-        fprintf(stderr, "Failed to allocate server memory: %zu bytes\n", app->mem_manager->total_capacity);
-        return;
-    }
     app->mem_manager->current_used = 0;
     
     // Load files
@@ -868,21 +713,9 @@ static void *cwist_mem_watcher(void *arg) {
             struct stat st;
             if (stat(f->fs_path, &st) == 0) {
                 if (st.st_mtime > f->last_mod) {
-                     if (mem->current_used + st.st_size <= mem->total_capacity) {
-                        FILE *fp = fopen(f->fs_path, "rb");
-                        if (fp) {
-                            fread(mem->raw_memory + mem->current_used, 1, st.st_size, fp);
-                            fclose(fp);
-                            
-                            f->offset = mem->current_used;
-                            f->size = st.st_size;
-                            f->last_mod = st.st_mtime;
-                            mem->current_used += st.st_size;
-                            printf("[Hot Reload] Updated: %s\n", f->fs_path);
-                        }
-                     } else {
-                         fprintf(stderr, "[Hot Reload] OOM for %s\n", f->fs_path);
-                     }
+                    if (cwist_mem_refresh_file(mem, f, &st)) {
+                        printf("[Hot Reload] Updated: %s\n", f->fs_path);
+                    }
                 }
             }
         }
@@ -949,13 +782,6 @@ static char *cwist_normalize_directory(const char *directory) {
     return copy;
 }
 
-#if !defined(__EMSCRIPTEN__) && !defined(__wasi__)
-/**
- * @brief Cleanup hook used when a response borrows a static-file cache payload.
- * @param ptr Borrowed body pointer.
- * @param len Borrowed body length.
- * @param ctx Cache entry that owns the libttak node.
- */
 static void cwist_static_release_body(const void *ptr, size_t len, void *ctx) {
     (void)ptr;
     (void)len;
@@ -965,11 +791,6 @@ static void cwist_static_release_body(const void *ptr, size_t len, void *ctx) {
     }
 }
 
-/**
- * @brief Serve a static file response from the fixed-memory cache or disk fallback.
- * @param req Incoming request targeting a static mapping.
- * @param res Response object to populate.
- */
 static void cwist_static_handler(cwist_http_request *req, cwist_http_response *res) {
     mw_executor_ctx *ctx = (mw_executor_ctx *)req->private_data;
     cwist_static_request_info *info = ctx ? (cwist_static_request_info *)ctx->handler_data : NULL;
@@ -1038,14 +859,18 @@ static void cwist_static_handler(cwist_http_request *req, cwist_http_response *r
             cwist_http_header_add(&res->headers, "Content-Length", len_buf);
             cwist_http_header_add(&res->headers, "Content-Type", mime);
             cwist_sstring_assign(res->body, "");
-        } else {
+        } else if (file->data && file->node) {
             // ZERO COPY
-            cwist_http_response_set_body_ptr(res, mem->raw_memory + file->offset, file->size);
+            ttak_mem_node_acquire(file->node);
+            cwist_http_response_set_body_ptr_managed(res, file->data, file->size, cwist_static_release_body, file->node);
             
             char len_buf[32];
             snprintf(len_buf, sizeof(len_buf), "%zu", file->size);
             cwist_http_header_add(&res->headers, "Content-Length", len_buf);
             cwist_http_header_add(&res->headers, "Content-Type", mime);
+        } else {
+            res->status_code = CWIST_HTTP_INTERNAL_ERROR;
+            cwist_sstring_assign(res->body, "Static buffer missing");
         }
         res->status_code = CWIST_HTTP_OK;
     } else {
@@ -1306,8 +1131,14 @@ void cwist_app_destroy(cwist_app *app) {
             free(app->mem_manager->files[i].path);
             free(app->mem_manager->files[i].fs_path);
         }
+        for (size_t i = 0; i < app->mem_manager->file_count; i++) {
+            if (app->mem_manager->files[i].node) {
+                ttak_mem_tree_remove(&app->mem_manager->file_tree, app->mem_manager->files[i].node);
+                app->mem_manager->files[i].node = NULL;
+            }
+        }
         free(app->mem_manager->files);
-        free(app->mem_manager->raw_memory);
+        ttak_mem_tree_destroy(&app->mem_manager->file_tree);
         free(app->mem_manager);
     }
     

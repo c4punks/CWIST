@@ -1873,26 +1873,6 @@ void cwist_http_request_destroy(cwist_http_request *req) {
 
 /* --- Response Lifecycle --- */
 
-/**
- * @brief Release any file-stream state attached to a response.
- * @param res Response object whose streaming fields should be reset.
- */
-static void cwist_http_response_release_file_stream(cwist_http_response *res) {
-    if (!res || !res->use_file_stream) return;
-    if (res->file_stream_auto_close && res->file_stream_fd >= 0) {
-        close(res->file_stream_fd);
-    }
-    res->use_file_stream = false;
-    res->file_stream_fd = -1;
-    res->file_stream_len = 0;
-    res->file_stream_offset = 0;
-    res->file_stream_auto_close = false;
-}
-
-/**
- * @brief Release any zero-copy pointer-body cleanup hook attached to a response.
- * @param res Response object whose pointer-body state should be reset.
- */
 static void cwist_http_response_release_ptr_body(cwist_http_response *res) {
     if (!res || !res->is_ptr_body) return;
     if (res->ptr_body_cleanup && res->ptr_body) {
@@ -1905,20 +1885,8 @@ static void cwist_http_response_release_ptr_body(cwist_http_response *res) {
     res->ptr_body_cleanup_ctx = NULL;
 }
 
-/**
- * @brief Allocate and initialize a default HTTP response object.
- * @return Newly allocated response, or NULL on allocation failure.
- */
-/**
- * @brief Shared allocator for cwist_http_response_create{,_in_arena}.
- * @param arena Arena to carve from (NULL allocates from the heap).
- * @param arena_borrowed true when the arena is owned by the caller.
- * @return Newly initialized response, or NULL on allocation failure.
- */
-static cwist_http_response *cwist_http_response_create_impl(cwist_arena_t *arena,
-                                                            bool arena_borrowed) {
-    cwist_http_response *res =
-        (cwist_http_response *)cwist_http_struct_alloc(arena, sizeof(cwist_http_response));
+cwist_http_response *cwist_http_response_create(void) {
+    cwist_http_response *res = (cwist_http_response *)malloc(sizeof(cwist_http_response));
     if (!res) return NULL;
 
     res->version = cwist_http_sstring_create(arena);
@@ -1931,6 +1899,8 @@ static cwist_http_response *cwist_http_response_create_impl(cwist_arena_t *arena
     res->is_ptr_body = false;
     res->ptr_body = NULL;
     res->ptr_body_len = 0;
+    res->ptr_body_cleanup = NULL;
+    res->ptr_body_cleanup_ctx = NULL;
 
     // Defaults (borrowed statics; handlers may overwrite via regular assign)
     cwist_sstring_borrow(res->version, "HTTP/1.1", 8);
@@ -1969,9 +1939,7 @@ cwist_http_response *cwist_http_response_create_in_arena(void *arena) {
  */
 void cwist_http_response_destroy(cwist_http_response *res) {
     if (res) {
-        cwist_arena_t *arena = (cwist_arena_t *)res->arena;
         cwist_http_response_release_ptr_body(res);
-        cwist_http_response_release_file_stream(res);
         cwist_sstring_destroy(res->version);
         cwist_sstring_destroy(res->status_text);
         cwist_sstring_destroy(res->body);
@@ -1992,10 +1960,17 @@ void cwist_http_response_destroy(cwist_http_response *res) {
 }
 
 void cwist_http_response_set_body_ptr(cwist_http_response *res, const void *ptr, size_t len) {
+    cwist_http_response_set_body_ptr_managed(res, ptr, len, NULL, NULL);
+}
+
+void cwist_http_response_set_body_ptr_managed(cwist_http_response *res, const void *ptr, size_t len, cwist_http_body_cleanup_fn cleanup, void *ctx) {
     if (!res) return;
+    cwist_http_response_release_ptr_body(res);
     res->is_ptr_body = true;
     res->ptr_body = ptr;
     res->ptr_body_len = len;
+    res->ptr_body_cleanup = cleanup;
+    res->ptr_body_cleanup_ctx = ctx;
 }
 
 // ... (request parsing omitted) ...
@@ -2102,6 +2077,7 @@ cwist_error_t cwist_http_send_response(int client_fd, cwist_http_response *res) 
         err.error.err_i16 = 0;
     }
 
+    cwist_http_response_release_ptr_body(res);
     return err;
 }
 
