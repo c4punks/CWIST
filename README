@@ -61,6 +61,7 @@ Nuke DB is a **Read-Optimal Persistent Store**. It follows a "Read-from-RAM, Wri
 - **Ultra-Fast Reads**: All queries are executed against an in-memory SQLite instance, providing sub-millisecond response times for read-heavy workloads.
 - **Reliable Writes**: Every `COMMIT` triggers an immediate background synchronization to the physical disk (WAL mode), ensuring your data is safe even if the process crashes.
 - **Trade-off**: While write performance is slightly affected by disk I/O synchronization, the system guarantees that reads remain unblocked and consistently fast.
+- **Raw Bootstrap**: On startup, the on-disk SQLite file is read directly as a raw image (`sqlite3_deserialize`) so the in-memory copy is hydrated without walking through the backup API.
 
 Usage:
 1. `cwist_nuke_init("data.db", 5000);` // Loads data.db to memory, enables auto-sync every 5s + immediate sync on commit.

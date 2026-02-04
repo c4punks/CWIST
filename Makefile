@@ -1,6 +1,6 @@
 # Compiler and Flags
 CC = gcc
-CFLAGS = -I./include -I./lib -I./lib/cjson -I./lib/sqlite3 -Wall -Wextra -pthread -g -D_GNU_SOURCE -O3
+CFLAGS = -I./include -I./lib -I./lib/cjson -I./lib/sqlite3 -Wall -Wextra -pthread -g -D_GNU_SOURCE -O3 -DSQLITE_ENABLE_DESERIALIZE
 LIBS = -pthread -lcjson -lssl -lcrypto -luriparser -ldl -lttak
 
 # SQLite Automation
