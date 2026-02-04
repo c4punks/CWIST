@@ -72,6 +72,7 @@ typedef struct cwist_app {
     cwist_https_context *ssl_ctx;
     cwist_db *db;
     char *db_path;
+    bool nuke_enabled;
 
     /** @brief Max memory space for static file pool (0 = auto-detected * 2) */
     size_t max_mem_space;
@@ -145,6 +146,7 @@ void cwist_app_set_error_handler(cwist_app *app, cwist_error_handler_func handle
 
 cwist_error_t cwist_app_use_https(cwist_app *app, const char *cert_path, const char *key_path);
 cwist_error_t cwist_app_use_db(cwist_app *app, const char *db_path);
+cwist_error_t cwist_app_use_nuke_db(cwist_app *app, const char *db_path, int sync_interval_ms);
 cwist_db *cwist_app_get_db(cwist_app *app);
 
 // Routing
