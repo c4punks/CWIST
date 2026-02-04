@@ -11,12 +11,78 @@
 #include <signal.h>
 #include <pthread.h>
 #include <errno.h>
+#include <sys/stat.h>
 
 static cwist_nuke_db_t g_nuke = {0};
 static pthread_t g_sync_thread;
 static volatile bool g_running = false;
 static pthread_mutex_t g_nuke_lock = PTHREAD_MUTEX_INITIALIZER;
 static sigset_t g_sigset;
+
+// Attempt to hydrate the in-memory DB directly from the on-disk file bytes.
+static int nuke_load_raw_into_memory(sqlite3_int64 *bytes_loaded) {
+#if defined(SQLITE_ENABLE_DESERIALIZE)
+    if (!g_nuke.disk_path) return -1;
+
+    struct stat st;
+    if (stat(g_nuke.disk_path, &st) != 0) {
+        if (errno == ENOENT) return 1; // Treat missing file as new DB
+        return -1;
+    }
+
+    if (st.st_size == 0) {
+        return 1; // Empty file -> treat as new DB
+    }
+
+    sqlite3_int64 file_size = (sqlite3_int64)st.st_size;
+    unsigned char *buffer = sqlite3_malloc64(file_size);
+    if (!buffer) {
+        return -1;
+    }
+
+    FILE *fp = fopen(g_nuke.disk_path, "rb");
+    if (!fp) {
+        sqlite3_free(buffer);
+        return -1;
+    }
+
+    size_t total = 0;
+    while (total < (size_t)file_size) {
+        size_t chunk = fread(buffer + total, 1, (size_t)file_size - total, fp);
+        if (chunk == 0) {
+            if (ferror(fp)) {
+                sqlite3_free(buffer);
+                fclose(fp);
+                return -1;
+            }
+            break;
+        }
+        total += chunk;
+    }
+    fclose(fp);
+
+    if (total != (size_t)file_size) {
+        sqlite3_free(buffer);
+        return -1;
+    }
+
+    int rc = sqlite3_deserialize(g_nuke.mem_db, "main", buffer, file_size, file_size, SQLITE_DESERIALIZE_FREEONCLOSE);
+    if (rc != SQLITE_OK) {
+        sqlite3_free(buffer);
+        fprintf(stderr, "[NukeDB] sqlite3_deserialize failed: %d\n", rc);
+        return -1;
+    }
+
+    if (bytes_loaded) {
+        *bytes_loaded = file_size;
+    }
+
+    return 0;
+#else
+    CWIST_UNUSED(bytes_loaded);
+    return -2;
+#endif
+}
 
 // Helper: Backup source_db to dest_db
 static int nuke_backup(sqlite3 *dest, sqlite3 *source) {
@@ -224,26 +290,40 @@ int cwist_nuke_init(const char *disk_path, int sync_interval_ms) {
     // 3. Load Disk -> Memory
     printf("[NukeDB] Loading data from disk to memory (Full Copy)...\n");
     pthread_mutex_lock(&g_nuke_lock);
-    int backup_rc = nuke_backup(g_nuke.mem_db, g_nuke.disk_db);
-    if (backup_rc == 0) {
+    sqlite3_int64 raw_bytes = 0;
+    int raw_rc = nuke_load_raw_into_memory(&raw_bytes);
+    if (raw_rc == 0) {
+        printf("[NukeDB] Raw SQLite image %lld bytes loaded directly into RAM.\n", (long long)raw_bytes);
+        g_nuke.load_successful = true;
+    } else if (raw_rc == 1) {
+        printf("[NukeDB] New or empty database detected. Initializing Memory-Master mode.\n");
         g_nuke.load_successful = true;
     } else {
-        // If load failed, it might be a brand new file (0 bytes).
-        sqlite3_stmt *stmt;
-        int has_tables = 0;
-        if (sqlite3_prepare_v2(g_nuke.disk_db, "SELECT count(*) FROM sqlite_master WHERE type='table';", -1, &stmt, NULL) == SQLITE_OK) {
-            if (sqlite3_step(stmt) == SQLITE_ROW) {
-                has_tables = sqlite3_column_int(stmt, 0) > 0;
-            }
-            sqlite3_finalize(stmt);
+        if (raw_rc == -2) {
+            printf("[NukeDB] Raw deserialize disabled at build time. Falling back to sqlite3_backup.\n");
         }
 
-        if (!has_tables) {
-            printf("[NukeDB] New or empty database detected. Initializing Memory-Master mode.\n");
+        int backup_rc = nuke_backup(g_nuke.mem_db, g_nuke.disk_db);
+        if (backup_rc == 0) {
             g_nuke.load_successful = true;
         } else {
-            fprintf(stderr, "[NukeDB] Initial load failed for existing database. Synchronization to disk disabled.\n");
-            g_nuke.load_successful = false;
+            // If load failed, it might be a brand new file (0 bytes).
+            sqlite3_stmt *stmt;
+            int has_tables = 0;
+            if (sqlite3_prepare_v2(g_nuke.disk_db, "SELECT count(*) FROM sqlite_master WHERE type='table';", -1, &stmt, NULL) == SQLITE_OK) {
+                if (sqlite3_step(stmt) == SQLITE_ROW) {
+                    has_tables = sqlite3_column_int(stmt, 0) > 0;
+                }
+                sqlite3_finalize(stmt);
+            }
+
+            if (!has_tables) {
+                printf("[NukeDB] New or empty database detected. Initializing Memory-Master mode.\n");
+                g_nuke.load_successful = true;
+            } else {
+                fprintf(stderr, "[NukeDB] Initial load failed for existing database. Synchronization to disk disabled.\n");
+                g_nuke.load_successful = false;
+            }
         }
     }
     pthread_mutex_unlock(&g_nuke_lock);
