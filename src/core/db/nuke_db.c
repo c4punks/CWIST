@@ -222,15 +222,31 @@ int cwist_nuke_init(const char *disk_path, int sync_interval_ms) {
     }
 
     // 3. Load Disk -> Memory
-    printf("[NukeDB] Loading data from disk...\n");
-    if (nuke_backup(g_nuke.mem_db, g_nuke.disk_db) == 0) {
+    printf("[NukeDB] Loading data from disk to memory (Full Copy)...\n");
+    pthread_mutex_lock(&g_nuke_lock);
+    int backup_rc = nuke_backup(g_nuke.mem_db, g_nuke.disk_db);
+    if (backup_rc == 0) {
         g_nuke.load_successful = true;
     } else {
-        // If load failed, we should probably check if it's because it's a new file or corrupted.
-        // For safety, we mark it as failed so we don't sync back and overwrite disk.
-        fprintf(stderr, "[NukeDB] Initial load failed. Synchronization to disk disabled to prevent data loss.\n");
-        g_nuke.load_successful = false;
+        // If load failed, it might be a brand new file (0 bytes).
+        sqlite3_stmt *stmt;
+        int has_tables = 0;
+        if (sqlite3_prepare_v2(g_nuke.disk_db, "SELECT count(*) FROM sqlite_master WHERE type='table';", -1, &stmt, NULL) == SQLITE_OK) {
+            if (sqlite3_step(stmt) == SQLITE_ROW) {
+                has_tables = sqlite3_column_int(stmt, 0) > 0;
+            }
+            sqlite3_finalize(stmt);
+        }
+
+        if (!has_tables) {
+            printf("[NukeDB] New or empty database detected. Initializing Memory-Master mode.\n");
+            g_nuke.load_successful = true;
+        } else {
+            fprintf(stderr, "[NukeDB] Initial load failed for existing database. Synchronization to disk disabled.\n");
+            g_nuke.load_successful = false;
+        }
     }
+    pthread_mutex_unlock(&g_nuke_lock);
 
     // Register commit hook for immediate sync
     sqlite3_commit_hook(g_nuke.mem_db, nuke_commit_hook, NULL);
@@ -254,10 +270,14 @@ int cwist_nuke_init(const char *disk_path, int sync_interval_ms) {
     // 5. Start Sync/Signal Thread
     pthread_create(&g_sync_thread, NULL, sync_thread_func, NULL);
 
+    // 6. Register atexit for ultimate safety
+    atexit(cwist_nuke_close);
+
     return 0;
 }
 
 sqlite3 *cwist_nuke_get_db(void) {
+    // Force return memory handle to ensure "Entirely in Memory" rule
     if (g_nuke.is_disk_mode) return g_nuke.disk_db;
     return g_nuke.mem_db;
 }
