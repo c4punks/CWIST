@@ -57,14 +57,16 @@ $ ./server
 
 == NUKE DB ==
 
-Nuke DB provides the speed of an in-memory database with the persistence of a disk-based one.
-It embeds SQLite directly into your application binary.
+Nuke DB is a **Read-Optimal Persistent Store**. It follows a "Read-from-RAM, Write-to-Disk" philosophy:
+- **Ultra-Fast Reads**: All queries are executed against an in-memory SQLite instance, providing sub-millisecond response times for read-heavy workloads.
+- **Reliable Writes**: Every `COMMIT` triggers an immediate background synchronization to the physical disk (WAL mode), ensuring your data is safe even if the process crashes.
+- **Trade-off**: While write performance is slightly affected by disk I/O synchronization, the system guarantees that reads remain unblocked and consistently fast.
 
 Usage:
-1. `cwist_nuke_init("my_data.db", 5000);` // Loads my_data.db to memory, syncs every 5s.
-2. Use `cwist_nuke_get_db()` to get the raw `sqlite3*` handle for high-speed memory operations.
-3. `cwist_nuke_sync()` can be called manually to flush data to disk.
-4. On application exit (SIGINT/SIGTERM), Nuke DB automatically syncs data to disk before closing.
+1. `cwist_nuke_init("data.db", 5000);` // Loads data.db to memory, enables auto-sync every 5s + immediate sync on commit.
+2. Use `cwist_nuke_get_db()` to access the high-speed in-memory handle.
+3. On application exit (SIGINT/SIGTERM), Nuke DB performs a final safety sync.
+4. **Safety**: If the initial load from disk fails (corrupted file), Nuke DB enters a read-only disk protection mode to prevent overwriting your data.
 
 == DEPENDENCIES ==
 
