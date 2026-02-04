@@ -7,6 +7,7 @@
 #include <cwist/net/http/http.h>
 #include <cwist/net/http/https.h>
 #include <cwist/core/sstring/sstring.h>
+#include <cwist/core/db/nuke_db.h>
 #include <cwist/core/utils/json_builder.h> // Helper included for apps, though not strictly used here yet
 #include <stdlib.h>
 #include <stdio.h>
@@ -1150,6 +1151,7 @@ cwist_app *cwist_app_create(void) {
     app->logger = cwist_logger_create("cwist");
     app->db = NULL;
     app->db_path = NULL;
+    app->nuke_enabled = false;
     app->max_mem_space = 0;
     app->mem_manager = NULL;
     app->bdr_ctx = cwist_bdr_create();
@@ -1313,6 +1315,10 @@ void cwist_app_destroy(cwist_app *app) {
         cwist_bdr_destroy(app->bdr_ctx);
     }
 
+    if (app->nuke_enabled) {
+        cwist_nuke_close();
+    }
+
     if (app->db) {
         // If nuke was used, app->db->conn was shared with nuke.
         // But nuke_close already closed its handles.
@@ -1322,12 +1328,11 @@ void cwist_app_destroy(cwist_app *app) {
         // OR we should make sure it's safe.
         // Based on cwist_db_close implementation, it calls sqlite3_close.
         if (app->nuke_enabled) {
-            // Just free the wrapper, don't close the conn as Nuke already did it.
-            ttak_mem_free(app->db);
+             // Just free the wrapper, don't close the conn as Nuke already did it.
+             free(app->db);
         } else {
-            cwist_db_close(app->db);
+             cwist_db_close(app->db);
         }
-        app->db = NULL;
     }
 #endif /* __EMSCRIPTEN__ */
     if (app->db_path) {
@@ -1578,8 +1583,37 @@ cwist_error_t cwist_app_use_db(cwist_app *app, const char *db_path) {
     }
 
     app->db = db;
-    app->db_path = cwist_strdup(db_path);
+    app->db_path = strdup(db_path);
     app->nuke_enabled = false;
+    return err;
+}
+
+cwist_error_t cwist_app_use_nuke_db(cwist_app *app, const char *db_path, int sync_interval_ms) {
+    cwist_error_t err = make_error(CWIST_ERR_INT16);
+    if (!app || !db_path) {
+        err.error.err_i16 = -1;
+        return err;
+    }
+
+    if (cwist_nuke_init(db_path, sync_interval_ms) != 0) {
+        err.error.err_i16 = -1;
+        return err;
+    }
+
+    if (app->db) {
+        if (app->nuke_enabled) free(app->db);
+        else cwist_db_close(app->db);
+    }
+    if (app->db_path) {
+        free(app->db_path);
+    }
+
+    app->db = (cwist_db *)malloc(sizeof(cwist_db));
+    app->db->conn = cwist_nuke_get_db();
+    app->db_path = strdup(db_path);
+    app->nuke_enabled = true;
+
+    err.error.err_i16 = 0;
     return err;
 #endif
 }
