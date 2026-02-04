@@ -53,8 +53,26 @@ static void nuke_switch_to_disk(void) {
     pthread_mutex_unlock(&g_nuke_lock);
 }
 
+// Internal commit hook to trigger immediate sync
+static int nuke_commit_hook(void *arg) {
+    CWIST_UNUSED(arg);
+    if (g_running && !g_nuke.is_disk_mode) {
+        // Send signal to wake up sync thread
+        pthread_kill(g_sync_thread, SIGUSR2);
+    }
+    return 0;
+}
+
 int cwist_nuke_sync(void) {
     pthread_mutex_lock(&g_nuke_lock);
+    
+    // Safety: If initial load failed, don't overwrite disk with empty memory DB
+    // unless this is a new file (which we'd have to track)
+    if (!g_nuke.load_successful) {
+        pthread_mutex_unlock(&g_nuke_lock);
+        return -1;
+    }
+
     if (g_nuke.is_disk_mode) {
         sqlite3_wal_checkpoint_v2(g_nuke.disk_db, "main", SQLITE_CHECKPOINT_PASSIVE, NULL, NULL);
         pthread_mutex_unlock(&g_nuke_lock);
@@ -124,13 +142,19 @@ static void *sync_thread_func(void *arg) {
         timeout.tv_sec = g_nuke.sync_interval_ms / 1000;
         timeout.tv_nsec = (g_nuke.sync_interval_ms % 1000) * 1000000;
 
-        // Wait for signals (INT, TERM, USR1) or Timeout
+        // Wait for signals (INT, TERM, USR1, USR2) or Timeout
         signum = sigtimedwait(&g_sigset, NULL, &timeout);
 
         if (signum > 0) {
             if (signum == SIGUSR1) {
                 // Requested to stop via cwist_nuke_close
                 break;
+            }
+
+            if (signum == SIGUSR2) {
+                // Immediate sync requested via commit hook
+                cwist_nuke_sync();
+                continue;
             }
             
             // Handle termination signals (SIGINT, SIGTERM)
@@ -185,18 +209,31 @@ int cwist_nuke_init(const char *disk_path, int sync_interval_ms) {
         return -1;
     }
 
+    // Set WAL mode for robustness and performance
+    sqlite3_exec(g_nuke.disk_db, "PRAGMA journal_mode=WAL;", NULL, NULL, NULL);
+    sqlite3_exec(g_nuke.disk_db, "PRAGMA synchronous=NORMAL;", NULL, NULL, NULL);
+
     // 2. Open Memory DB
     rc = sqlite3_open(":memory:", &g_nuke.mem_db);
     if (rc != SQLITE_OK) {
         fprintf(stderr, "[NukeDB] Failed to open memory DB: %s\n", sqlite3_errmsg(g_nuke.mem_db));
+        sqlite3_close(g_nuke.disk_db);
         return -1;
     }
 
     // 3. Load Disk -> Memory
     printf("[NukeDB] Loading data from disk...\n");
-    if (nuke_backup(g_nuke.mem_db, g_nuke.disk_db) != 0) {
-        fprintf(stderr, "[NukeDB] Initial load failed. Starting with empty memory DB.\n");
+    if (nuke_backup(g_nuke.mem_db, g_nuke.disk_db) == 0) {
+        g_nuke.load_successful = true;
+    } else {
+        // If load failed, we should probably check if it's because it's a new file or corrupted.
+        // For safety, we mark it as failed so we don't sync back and overwrite disk.
+        fprintf(stderr, "[NukeDB] Initial load failed. Synchronization to disk disabled to prevent data loss.\n");
+        g_nuke.load_successful = false;
     }
+
+    // Register commit hook for immediate sync
+    sqlite3_commit_hook(g_nuke.mem_db, nuke_commit_hook, NULL);
 
     g_running = true;
 
@@ -205,6 +242,7 @@ int cwist_nuke_init(const char *disk_path, int sync_interval_ms) {
     sigaddset(&g_sigset, SIGINT);
     sigaddset(&g_sigset, SIGTERM);
     sigaddset(&g_sigset, SIGUSR1); // Used for internal thread wake-up
+    sigaddset(&g_sigset, SIGUSR2); // Used for immediate sync trigger
     
     // This blocks these signals for the calling thread (main) and any subsequently created threads.
     // The sync_thread will consume them via sigtimedwait.
