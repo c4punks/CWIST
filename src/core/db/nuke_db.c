@@ -12,6 +12,8 @@
 #include <pthread.h>
 #include <errno.h>
 #include <sys/stat.h>
+#include <sys/mman.h>
+#include <fcntl.h>
 
 static cwist_nuke_db_t g_nuke = {0};
 static pthread_t g_sync_thread;
@@ -35,36 +37,26 @@ static int nuke_load_raw_into_memory(sqlite3_int64 *bytes_loaded) {
     }
 
     sqlite3_int64 file_size = (sqlite3_int64)st.st_size;
+
+    int fd = open(g_nuke.disk_path, O_RDONLY);
+    if (fd < 0) {
+        return -1;
+    }
+
+    void *mapped = mmap(NULL, file_size, PROT_READ, MAP_PRIVATE, fd, 0);
+    close(fd);
+    if (mapped == MAP_FAILED) {
+        return -1;
+    }
+
     unsigned char *buffer = sqlite3_malloc64(file_size);
     if (!buffer) {
+        munmap(mapped, file_size);
         return -1;
     }
 
-    FILE *fp = fopen(g_nuke.disk_path, "rb");
-    if (!fp) {
-        sqlite3_free(buffer);
-        return -1;
-    }
-
-    size_t total = 0;
-    while (total < (size_t)file_size) {
-        size_t chunk = fread(buffer + total, 1, (size_t)file_size - total, fp);
-        if (chunk == 0) {
-            if (ferror(fp)) {
-                sqlite3_free(buffer);
-                fclose(fp);
-                return -1;
-            }
-            break;
-        }
-        total += chunk;
-    }
-    fclose(fp);
-
-    if (total != (size_t)file_size) {
-        sqlite3_free(buffer);
-        return -1;
-    }
+    memcpy(buffer, mapped, (size_t)file_size);
+    munmap(mapped, file_size);
 
     // SQLite takes ownership of buffer (even on failure) when FREEONCLOSE is set.
     int deserialize_flags = SQLITE_DESERIALIZE_FREEONCLOSE | SQLITE_DESERIALIZE_RESIZEABLE;
