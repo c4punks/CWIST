@@ -66,9 +66,10 @@ static int nuke_load_raw_into_memory(sqlite3_int64 *bytes_loaded) {
         return -1;
     }
 
-    int rc = sqlite3_deserialize(g_nuke.mem_db, "main", buffer, file_size, file_size, SQLITE_DESERIALIZE_FREEONCLOSE);
+    // SQLite takes ownership of buffer (even on failure) when FREEONCLOSE is set.
+    int deserialize_flags = SQLITE_DESERIALIZE_FREEONCLOSE | SQLITE_DESERIALIZE_RESIZEABLE;
+    int rc = sqlite3_deserialize(g_nuke.mem_db, "main", buffer, file_size, file_size, deserialize_flags);
     if (rc != SQLITE_OK) {
-        sqlite3_free(buffer);
         fprintf(stderr, "[NukeDB] sqlite3_deserialize failed: %d\n", rc);
         return -1;
     }
