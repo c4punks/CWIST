@@ -1515,11 +1515,9 @@ cwist_error_t cwist_app_use_nuke_db(cwist_app *app, const char *db_path, int syn
  */
 cwist_db *cwist_app_get_db(cwist_app *app) {
     if (!app) return NULL;
-#if !defined(__EMSCRIPTEN__) && !defined(__wasi__)
     if (app->nuke_enabled) {
         app->db->conn = cwist_nuke_get_db();
     }
-#endif
     return app->db;
 }
 
