@@ -1426,7 +1426,11 @@ cwist_error_t cwist_app_use_nuke_db(cwist_app *app, const char *db_path, int syn
         return err;
     }
 
-    if (cwist_nuke_init(db_path, sync_interval_ms) != 0) {
+    int nuke_rc = cwist_nuke_init(db_path, sync_interval_ms);
+    if (nuke_rc == CWIST_NUKE_ERR_LOW_MEMORY) {
+        fprintf(stderr, "[CWIST] Nuke DB disabled for '%s' (insufficient RAM). Falling back to standard SQLite.\n", db_path);
+        return cwist_app_use_db(app, db_path);
+    } else if (nuke_rc != CWIST_NUKE_OK) {
         err.error.err_i16 = -1;
         return err;
     }

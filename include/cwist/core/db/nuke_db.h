@@ -16,6 +16,13 @@
 #include <stdbool.h>
 
 /**
+ * @brief Return codes for cwist_nuke_init.
+ */
+#define CWIST_NUKE_OK 0
+#define CWIST_NUKE_ERR_GENERIC (-1)
+#define CWIST_NUKE_ERR_LOW_MEMORY (-2)
+
+/**
  * @brief Nuke DB Context.
  * 
  * Logic:
@@ -46,7 +53,7 @@ typedef struct cwist_nuke_db_t {
  * 
  * @param disk_path Path to the persistent database file.
  * @param sync_interval_ms Auto-sync interval in ms (0 to disable).
- * @return 0 on success, -1 on failure.
+ * @return 0 on success, negative on failure (see CWIST_NUKE_ERR_* codes).
  */
 int cwist_nuke_init(const char *disk_path, int sync_interval_ms);
 
