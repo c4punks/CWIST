@@ -21,6 +21,20 @@ static volatile bool g_running = false;
 static pthread_mutex_t g_nuke_lock = PTHREAD_MUTEX_INITIALIZER;
 static sigset_t g_sigset;
 
+static uint64_t nuke_estimate_required_ram(const char *disk_path) {
+    struct stat st;
+    uint64_t db_size = 0;
+    if (disk_path && stat(disk_path, &st) == 0 && st.st_size > 0) {
+        db_size = (uint64_t)st.st_size;
+    }
+    // Need room for the DB plus SQLite cache/overhead. Double the DB and add base buffer.
+    uint64_t required = (db_size * 2) + CWIST_MIB(32);
+    if (required < CWIST_MIB(64)) {
+        required = CWIST_MIB(64);
+    }
+    return required;
+}
+
 // Helper: Backup source_db to dest_db
 static int nuke_backup(sqlite3 *dest, sqlite3 *source) {
     if (!dest || !source) return -1;
@@ -186,7 +200,17 @@ static void *sync_thread_func(void *arg) {
 }
 
 int cwist_nuke_init(const char *disk_path, int sync_interval_ms) {
-    if (g_running) return -1; // Already running
+    if (g_running) return CWIST_NUKE_ERR_GENERIC; // Already running
+
+    uint64_t required_ram = nuke_estimate_required_ram(disk_path);
+    uint64_t available_ram = cwist_get_available_ram();
+    if (available_ram > 0 && available_ram < required_ram) {
+        fprintf(stderr,
+                "[NukeDB] Insufficient RAM for in-memory mode (have %zu bytes, need ~%zu bytes).\n",
+                (size_t)available_ram,
+                (size_t)required_ram);
+        return CWIST_NUKE_ERR_LOW_MEMORY;
+    }
 
     g_nuke.disk_path = cwist_strdup(disk_path);
     g_nuke.sync_interval_ms = sync_interval_ms > 0 ? sync_interval_ms : 1000;
@@ -197,7 +221,7 @@ int cwist_nuke_init(const char *disk_path, int sync_interval_ms) {
     int rc = sqlite3_open(disk_path, &g_nuke.disk_db);
     if (rc != SQLITE_OK) {
         fprintf(stderr, "[NukeDB] Failed to open disk DB: %s\n", sqlite3_errmsg(g_nuke.disk_db));
-        return -1;
+        return CWIST_NUKE_ERR_GENERIC;
     }
 
     sqlite3_exec(g_nuke.disk_db, "PRAGMA journal_mode=WAL;", NULL, NULL, NULL);
@@ -208,7 +232,7 @@ int cwist_nuke_init(const char *disk_path, int sync_interval_ms) {
     if (rc != SQLITE_OK) {
         fprintf(stderr, "[NukeDB] Failed to open memory DB: %s\n", sqlite3_errmsg(g_nuke.mem_db));
         sqlite3_close(g_nuke.disk_db);
-        return -1;
+        return CWIST_NUKE_ERR_GENERIC;
     }
 
     // 3. Load Disk -> Memory
@@ -254,13 +278,13 @@ int cwist_nuke_init(const char *disk_path, int sync_interval_ms) {
     // 5. Start Sync/Signal Thread
     if (pthread_create(&g_sync_thread, NULL, sync_thread_func, NULL) != 0) {
         g_running = false;
-        return -1;
+        return CWIST_NUKE_ERR_GENERIC;
     }
 
     // 6. Register atexit for ultimate safety
     atexit(cwist_nuke_close);
 
-    return 0;
+    return CWIST_NUKE_OK;
 }
 
 sqlite3 *cwist_nuke_get_db(void) {
