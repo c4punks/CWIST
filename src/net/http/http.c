@@ -2550,29 +2550,20 @@ int cwist_make_socket_ipv4(struct sockaddr_in *sockv4, const char *address, uint
     return server_fd;
 }
 
-/**
- * @brief Decide whether an accept(2) error should be treated as transient.
- * @param err errno value returned by accept(2).
- * @return true when the caller should retry the accept loop.
- */
-static bool cwist_accept_error_should_retry(int err) {
-    switch (err) {
-        case EINTR:
-        case EAGAIN:
-        case ECONNABORTED:
-#ifdef ECONNRESET
-        case ECONNRESET:
-#endif
-#ifdef EPROTO
-        case EPROTO:
-#endif
-            return true;
-        case EMFILE:
-        case ENFILE:
-        case ENOBUFS:
-        case ENOMEM: return true;
-        default: return false;
-    }
+struct thread_payload {
+    int client_fd;
+    void (*handler_func)(int, void *);
+    void *ctx;
+};
+
+static void *thread_handler(void *arg) {
+    struct thread_payload *payload = (struct thread_payload *)arg;
+    int client_fd = payload->client_fd;
+    void (*handler_func)(int, void *) = payload->handler_func;
+    void *ctx = payload->ctx;
+    free(payload);
+    handler_func(client_fd, ctx);
+    return NULL;
 }
 
 /**
@@ -2703,18 +2694,25 @@ cwist_error_t cwist_http_server_loop(int server_fd, cwist_server_config *config,
         while (atomic_load(&g_cwist_running)) {
             int client_fd = accept(server_fd, NULL, NULL);
             if (client_fd < 0) {
-                int accept_err = errno;
-                if (accept_err == EINTR) continue;
-                if (accept_err == EBADF || accept_err == EINVAL || accept_err == ENOTSOCK) break;
-                if (cwist_accept_error_should_retry(accept_err)) {
-                    cwist_accept_error_backoff(accept_err);
-                    continue;
-                }
+                if (errno == EINTR) continue;
+                err.error.err_i16 = -1;
+                return err;
+            }
+            pthread_t thread;
+            struct thread_payload *payload = malloc(sizeof(*payload));
+            if (!payload) {
+                close(client_fd);
                 continue;
             }
-            int nodelay = 1;
-            setsockopt(client_fd, IPPROTO_TCP, TCP_NODELAY, &nodelay, sizeof(nodelay));
-            cwist_http_pool_submit(client_fd, handler, ctx);
+            payload->client_fd = client_fd;
+            payload->handler_func = handler;
+            payload->ctx = ctx;
+            if (pthread_create(&thread, NULL, thread_handler, payload) == 0) {
+                pthread_detach(thread);
+            } else {
+                free(payload);
+                close(client_fd);
+            }
         }
         cwist_http_pool_destroy();
         err.error.err_i16 = 0;

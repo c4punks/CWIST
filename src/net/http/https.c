@@ -1996,8 +1996,8 @@ static void *https_thread_handler(void *arg) {
             close(payload->client_fd);
         }
     }
-
-    cwist_free(payload);
+    
+    free(payload);
     return NULL;
 }
 
@@ -2030,27 +2030,21 @@ cwist_error_t cwist_https_server_loop(int server_fd, cwist_https_context *ctx,
 
         if (client_fd < 0) {
             if (errno == EINTR) continue;
-            if (errno == EBADF || errno == EINVAL) break;
+            continue; 
+        }
+
+        pthread_t thread;
+        struct https_thread_payload *payload = malloc(sizeof(*payload));
+        if (!payload) {
+            close(client_fd);
             continue;
         }
 
-        /* Reap vanished peers within ~2 minutes instead of the ~2h kernel
-         * default, so dead connections cannot park pool workers forever. */
-        {
-            int one = 1;
-            setsockopt(client_fd, SOL_SOCKET, SO_KEEPALIVE, &one, sizeof(one));
-#ifdef TCP_KEEPIDLE
-            int keepidle = 60;
-            setsockopt(client_fd, IPPROTO_TCP, TCP_KEEPIDLE, &keepidle, sizeof(keepidle));
-#endif
-#ifdef TCP_KEEPINTVL
-            int keepintvl = 10;
-            setsockopt(client_fd, IPPROTO_TCP, TCP_KEEPINTVL, &keepintvl, sizeof(keepintvl));
-#endif
-#ifdef TCP_KEEPCNT
-            int keepcnt = 6;
-            setsockopt(client_fd, IPPROTO_TCP, TCP_KEEPCNT, &keepcnt, sizeof(keepcnt));
-#endif
+        if (pthread_create(&thread, NULL, https_thread_handler, payload) == 0) {
+            pthread_detach(thread);
+        } else {
+            free(payload);
+            close(client_fd);
         }
 
         cwist_https_dispatch(client_fd, ctx, handler, user_ctx);
