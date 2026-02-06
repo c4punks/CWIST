@@ -2,10 +2,8 @@
 #include <cwist/core/db/nuke_db.h>
 #include <cwist/core/db/sql.h>
 #include <cjson/cJSON.h>
-#include <sqlite3.h>
 #include <stdio.h>
 #include <string.h>
-#include <unistd.h>
 
 static void test_missing_user_lookup(cwist_db *db) {
     cJSON *result = NULL;
@@ -21,7 +19,6 @@ static void test_missing_table_query(cwist_db *db) {
     cwist_error_t err = cwist_db_query(db, "SELECT * FROM __cwist_missing_table;", &result);
     assert(err.errtype == CWIST_ERR_JSON);
     assert(result == NULL);
-    cwist_error_dispose(&err);
 }
 
 static void test_null_db_guards(void) {
@@ -49,21 +46,9 @@ static void test_integrity_check(cwist_db *db) {
 }
 
 int main(void) {
-    const char *db_path = "/tmp/nuke_test.db";
-
-    sqlite3 *setup = NULL;
-    if (sqlite3_open(db_path, &setup) == SQLITE_OK) {
-        sqlite3_exec(setup, "CREATE TABLE IF NOT EXISTS users(id INT, username TEXT);", NULL, NULL,
-                     NULL);
-        sqlite3_close(setup);
-    } else {
-        fprintf(stderr, "Failed to create test DB\n");
-        return 1;
-    }
-
+    const char *db_path = "ceversi/othello.db";
     if (cwist_nuke_init(db_path, 0) != 0) {
         fprintf(stderr, "cwist_nuke_init failed\n");
-        unlink(db_path);
         return 1;
     }
 
@@ -71,7 +56,6 @@ int main(void) {
     if (!handle) {
         fprintf(stderr, "cwist_nuke_get_db returned NULL\n");
         cwist_nuke_close();
-        unlink(db_path);
         return 1;
     }
 
@@ -86,6 +70,5 @@ int main(void) {
     printf("[NukeDB] Missing-record safety tests passed.\n");
 
     cwist_nuke_close();
-    unlink(db_path);
     return 0;
 }
