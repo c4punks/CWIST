@@ -35,6 +35,37 @@ static uint64_t nuke_estimate_required_ram(const char *disk_path) {
     return required;
 }
 
+static bool nuke_disk_has_tables(sqlite3 *db) {
+    if (!db) return true;
+    sqlite3_stmt *stmt = NULL;
+    bool has_tables = true;
+    if (sqlite3_prepare_v2(db,
+                           "SELECT count(*) FROM sqlite_master WHERE type='table';",
+                           -1,
+                           &stmt,
+                           NULL) == SQLITE_OK) {
+        if (sqlite3_step(stmt) == SQLITE_ROW) {
+            has_tables = sqlite3_column_int(stmt, 0) > 0;
+        }
+    }
+    if (stmt) sqlite3_finalize(stmt);
+    return has_tables;
+}
+
+static bool nuke_integrity_ok(sqlite3 *db) {
+    if (!db) return false;
+    sqlite3_stmt *stmt = NULL;
+    bool healthy = false;
+    if (sqlite3_prepare_v2(db, "PRAGMA integrity_check;", -1, &stmt, NULL) == SQLITE_OK) {
+        if (sqlite3_step(stmt) == SQLITE_ROW) {
+            const unsigned char *state = sqlite3_column_text(stmt, 0);
+            healthy = (state && strcmp((const char *)state, "ok") == 0);
+        }
+    }
+    if (stmt) sqlite3_finalize(stmt);
+    return healthy;
+}
+
 // Helper: Backup source_db to dest_db
 static int nuke_backup(sqlite3 *dest, sqlite3 *source) {
     if (!dest || !source) return -1;
@@ -84,16 +115,20 @@ static int nuke_commit_hook(void *arg) {
 int cwist_nuke_sync(void) {
     pthread_mutex_lock(&g_nuke_lock);
     
-    // Safety: If initial load failed, don't overwrite disk with empty memory DB
-    if (!g_nuke.load_successful) {
+    if (g_nuke.is_disk_mode) {
+        if (g_nuke.disk_db) {
+            sqlite3_wal_checkpoint_v2(g_nuke.disk_db, "main", SQLITE_CHECKPOINT_PASSIVE, NULL, NULL);
+            pthread_mutex_unlock(&g_nuke_lock);
+            return 0;
+        }
         pthread_mutex_unlock(&g_nuke_lock);
         return -1;
     }
 
-    if (g_nuke.is_disk_mode) {
-        sqlite3_wal_checkpoint_v2(g_nuke.disk_db, "main", SQLITE_CHECKPOINT_PASSIVE, NULL, NULL);
+    // Safety: If initial load failed, don't overwrite disk with empty memory DB
+    if (!g_nuke.load_successful) {
         pthread_mutex_unlock(&g_nuke_lock);
-        return 0;
+        return -1;
     }
     
     if (!g_nuke.mem_db || !g_nuke.disk_db) {
@@ -126,6 +161,11 @@ static void nuke_cleanup_internal(void) {
         free(g_nuke.disk_path);
         g_nuke.disk_path = NULL;
     }
+
+    g_nuke.auto_sync = false;
+    g_nuke.sync_interval_ms = 0;
+    g_nuke.is_disk_mode = false;
+    g_nuke.load_successful = false;
 
     pthread_mutex_unlock(&g_nuke_lock);
 }
@@ -201,6 +241,7 @@ static void *sync_thread_func(void *arg) {
 
 int cwist_nuke_init(const char *disk_path, int sync_interval_ms) {
     if (g_running) return CWIST_NUKE_ERR_GENERIC; // Already running
+    if (!disk_path) return CWIST_NUKE_ERR_GENERIC;
 
     uint64_t required_ram = nuke_estimate_required_ram(disk_path);
     uint64_t available_ram = cwist_get_available_ram();
@@ -213,14 +254,25 @@ int cwist_nuke_init(const char *disk_path, int sync_interval_ms) {
     }
 
     g_nuke.disk_path = cwist_strdup(disk_path);
+    if (!g_nuke.disk_path) {
+        return CWIST_NUKE_ERR_GENERIC;
+    }
     g_nuke.sync_interval_ms = sync_interval_ms > 0 ? sync_interval_ms : 1000;
     g_nuke.auto_sync = (sync_interval_ms > 0);
     g_nuke.is_disk_mode = false;
+    g_nuke.load_successful = false;
 
     // 1. Open Disk DB
     int rc = sqlite3_open(disk_path, &g_nuke.disk_db);
     if (rc != SQLITE_OK) {
         fprintf(stderr, "[NukeDB] Failed to open disk DB: %s\n", sqlite3_errmsg(g_nuke.disk_db));
+        nuke_cleanup_internal();
+        return CWIST_NUKE_ERR_GENERIC;
+    }
+
+    if (!nuke_integrity_ok(g_nuke.disk_db)) {
+        fprintf(stderr, "[NukeDB] Integrity check failed for '%s'. Aborting in-memory mode.\n", disk_path);
+        nuke_cleanup_internal();
         return CWIST_NUKE_ERR_GENERIC;
     }
 
@@ -231,7 +283,7 @@ int cwist_nuke_init(const char *disk_path, int sync_interval_ms) {
     rc = sqlite3_open(":memory:", &g_nuke.mem_db);
     if (rc != SQLITE_OK) {
         fprintf(stderr, "[NukeDB] Failed to open memory DB: %s\n", sqlite3_errmsg(g_nuke.mem_db));
-        sqlite3_close(g_nuke.disk_db);
+        nuke_cleanup_internal();
         return CWIST_NUKE_ERR_GENERIC;
     }
 
@@ -242,27 +294,20 @@ int cwist_nuke_init(const char *disk_path, int sync_interval_ms) {
     int backup_rc = nuke_backup(g_nuke.mem_db, g_nuke.disk_db);
     if (backup_rc == 0) {
         g_nuke.load_successful = true;
+    } else if (!nuke_disk_has_tables(g_nuke.disk_db)) {
+        g_nuke.load_successful = true;
     } else {
-        sqlite3_stmt *stmt;
-        int has_tables = 0;
-        if (sqlite3_prepare_v2(g_nuke.disk_db, "SELECT count(*) FROM sqlite_master WHERE type='table';", -1, &stmt, NULL) == SQLITE_OK) {
-            if (sqlite3_step(stmt) == SQLITE_ROW) {
-                has_tables = sqlite3_column_int(stmt, 0) > 0;
-            }
-            sqlite3_finalize(stmt);
-        }
-
-        if (!has_tables) {
-            g_nuke.load_successful = true;
-        } else {
-            fprintf(stderr, "[NukeDB] Initial load failed. Persistence disabled.\n");
-            g_nuke.load_successful = false;
-        }
+        fprintf(stderr, "[NukeDB] Initial disk->memory load failed. Falling back to disk-only mode.\n");
+        g_nuke.is_disk_mode = true;
+        sqlite3_close(g_nuke.mem_db);
+        g_nuke.mem_db = NULL;
     }
     pthread_mutex_unlock(&g_nuke_lock);
 
-    // Register commit hook for immediate sync
-    sqlite3_commit_hook(g_nuke.mem_db, nuke_commit_hook, NULL);
+    // Register commit hook for immediate sync. Only needed while in-memory mode is active.
+    if (g_nuke.mem_db && !g_nuke.is_disk_mode) {
+        sqlite3_commit_hook(g_nuke.mem_db, nuke_commit_hook, NULL);
+    }
 
     g_running = true;
 
@@ -278,6 +323,8 @@ int cwist_nuke_init(const char *disk_path, int sync_interval_ms) {
     // 5. Start Sync/Signal Thread
     if (pthread_create(&g_sync_thread, NULL, sync_thread_func, NULL) != 0) {
         g_running = false;
+        pthread_sigmask(SIG_UNBLOCK, &g_sigset, NULL);
+        nuke_cleanup_internal();
         return CWIST_NUKE_ERR_GENERIC;
     }
 

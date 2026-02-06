@@ -71,7 +71,8 @@ void cwist_nuke_close(void);
 
 /**
  * @brief Get the raw SQLite3 handle for the In-Memory DB.
- * @return Pointer to the active sqlite3* handle.
+ * @return Pointer to the active sqlite3* handle. Returns the disk handle when
+ *         NukeDB is operating in disk-only fallback mode.
  */
 sqlite3 *cwist_nuke_get_db(void);
 

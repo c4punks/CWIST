@@ -35,14 +35,15 @@ void cwist_db_close(cwist_db *db);
 /** @{ */
 
 /**
- * @brief Execute a command (INSERT, UPDATE, DELETE, CREATE).
- * Does not return rows.
+ * Execute a command (INSERT, UPDATE, DELETE, CREATE).
+ * Does not return rows. Returns err_i16 = -1 when db/sql pointer is invalid.
  */
 cwist_error_t cwist_db_exec(cwist_db *db, const char *sql);
 
 /**
  * @brief Execute a query and return results as a cJSON Array of Objects.
  * Example: [{"id":1, "name":"foo"}, {"id":2, "name":"bar"}]
+ * The `result` pointer is reset to NULL on entry and left NULL on failure.
  */
 cwist_error_t cwist_db_query(cwist_db *db, const char *sql, cJSON **result);
 
