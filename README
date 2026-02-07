@@ -76,6 +76,7 @@ Usage:
 - cJSON ([https://github.com/DaveGamble/cJSON](https://github.com/DaveGamble/cJSON))
 - OpenSSL (libssl, libcrypto)
 - uriparser
+- libttak ([https://github.com/gg582/libttak](https://github.com/gg582/libttak))
 - (SQLite3 is now statically embedded)
 
 == PAST ROADMAP ==
