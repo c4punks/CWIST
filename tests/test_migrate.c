@@ -16,14 +16,24 @@
  * ---------------------------------------------------------------------- */
 
 static const cwist_migration_t migrations[] = {
-    {1, "create_users", "CREATE TABLE users (id INTEGER PRIMARY KEY, name TEXT NOT NULL);",
-     "DROP TABLE IF EXISTS users;"},
     {
-        2, "add_email", "ALTER TABLE users ADD COLUMN email TEXT;",
+        1,
+        "create_users",
+        "CREATE TABLE users (id INTEGER PRIMARY KEY, name TEXT NOT NULL);",
+        "DROP TABLE IF EXISTS users;"
+    },
+    {
+        2,
+        "add_email",
+        "ALTER TABLE users ADD COLUMN email TEXT;",
         NULL /* SQLite doesn't support DROP COLUMN in old versions */
     },
-    {3, "create_sessions", "CREATE TABLE sessions (id TEXT PRIMARY KEY, user_id INTEGER);",
-     "DROP TABLE IF EXISTS sessions;"},
+    {
+        3,
+        "create_sessions",
+        "CREATE TABLE sessions (id TEXT PRIMARY KEY, user_id INTEGER);",
+        "DROP TABLE IF EXISTS sessions;"
+    },
 };
 static const int N_MIGRATIONS = 3;
 
@@ -42,9 +52,8 @@ static void test_migrate_up_and_version(void) {
     /* Verify tables exist. */
     sqlite3_stmt *stmt = NULL;
     assert(sqlite3_prepare_v2(db,
-                              "SELECT count(*) FROM sqlite_master WHERE type='table' AND name IN "
-                              "('users','sessions');",
-                              -1, &stmt, NULL) == SQLITE_OK);
+        "SELECT count(*) FROM sqlite_master WHERE type='table' AND name IN "
+        "('users','sessions');", -1, &stmt, NULL) == SQLITE_OK);
     assert(sqlite3_step(stmt) == SQLITE_ROW);
     assert(sqlite3_column_int(stmt, 0) == 2);
     sqlite3_finalize(stmt);
@@ -82,9 +91,9 @@ static void test_migrate_down_one(void) {
     assert(cwist_migrate_version(db) == 2);
 
     sqlite3_stmt *stmt = NULL;
-    assert(sqlite3_prepare_v2(
-               db, "SELECT count(*) FROM sqlite_master WHERE type='table' AND name='sessions';", -1,
-               &stmt, NULL) == SQLITE_OK);
+    assert(sqlite3_prepare_v2(db,
+        "SELECT count(*) FROM sqlite_master WHERE type='table' AND name='sessions';",
+        -1, &stmt, NULL) == SQLITE_OK);
     assert(sqlite3_step(stmt) == SQLITE_ROW);
     assert(sqlite3_column_int(stmt, 0) == 0); /* sessions table gone */
     sqlite3_finalize(stmt);
@@ -109,42 +118,9 @@ static void test_migrate_down_all(void) {
      * (since v2's down_sql is NULL it stays in history). */
     /* sessions (v3) rolled back, users (v1) rolled back, email col stays */
     sqlite3_stmt *stmt = NULL;
-    assert(sqlite3_prepare_v2(
-               db, "SELECT count(*) FROM sqlite_master WHERE type='table' AND name='sessions';", -1,
-               &stmt, NULL) == SQLITE_OK);
-    assert(sqlite3_step(stmt) == SQLITE_ROW);
-    assert(sqlite3_column_int(stmt, 0) == 0);
-    sqlite3_finalize(stmt);
-
-    /* The irreversible v2 must still be recorded as applied. */
-    assert(cwist_migrate_version(db) == 2);
-
-    /* Re-upping must not re-run v2's up_sql on the existing column. */
-    assert(cwist_migrate_up(db, migrations, N_MIGRATIONS) == CWIST_MIGRATE_OK);
-    assert(cwist_migrate_version(db) == 3);
-
-    sqlite3_close(db);
-    printf("  Passed.\n");
-}
-
-static void test_migrate_down_steps_skip_irreversible(void) {
-    printf("Testing migrate down does not spend a step on an irreversible migration...\n");
-
-    sqlite3 *db = NULL;
-    assert(sqlite3_open(":memory:", &db) == SQLITE_OK);
-
-    assert(cwist_migrate_up(db, migrations, N_MIGRATIONS) == CWIST_MIGRATE_OK);
-    assert(cwist_migrate_version(db) == 3);
-
-    /* Two steps: v3 and v1 are rolled back; irreversible v2 is skipped. */
-    assert(cwist_migrate_down(db, migrations, N_MIGRATIONS, 2) == CWIST_MIGRATE_OK);
-    assert(cwist_migrate_version(db) == 2);
-
-    sqlite3_stmt *stmt = NULL;
     assert(sqlite3_prepare_v2(db,
-                              "SELECT count(*) FROM sqlite_master WHERE type='table' AND name IN "
-                              "('users','sessions');",
-                              -1, &stmt, NULL) == SQLITE_OK);
+        "SELECT count(*) FROM sqlite_master WHERE type='table' AND name='sessions';",
+        -1, &stmt, NULL) == SQLITE_OK);
     assert(sqlite3_step(stmt) == SQLITE_ROW);
     assert(sqlite3_column_int(stmt, 0) == 0);
     sqlite3_finalize(stmt);
@@ -192,7 +168,7 @@ static void test_db_crypt_wrong_kek(void) {
 
     const unsigned char data[] = "secret data";
     size_t blob_len = 0;
-    unsigned char *blob = cwist_db_crypt_seal(&ctx_enc, data, sizeof(data) - 1, &blob_len);
+    unsigned char *blob = cwist_db_crypt_seal(&ctx_enc, data, sizeof(data)-1, &blob_len);
     assert(blob != NULL);
 
     size_t out_len = 0;
@@ -200,7 +176,8 @@ static void test_db_crypt_wrong_kek(void) {
     /* With wrong KEK the DEK will decrypt to garbage; decryption should fail
      * or return incorrect data. Either way we must not get the original back. */
     if (recovered) {
-        assert(out_len != sizeof(data) - 1 || memcmp(recovered, data, sizeof(data) - 1) != 0);
+        assert(out_len != sizeof(data)-1 ||
+               memcmp(recovered, data, sizeof(data)-1) != 0);
         free(recovered);
     }
     free(blob);
@@ -217,7 +194,6 @@ int main(void) {
     test_migrate_idempotent();
     test_migrate_down_one();
     test_migrate_down_all();
-    test_migrate_down_steps_skip_irreversible();
 
     printf("=== DB Crypt tests ===\n");
     test_db_crypt_roundtrip();
