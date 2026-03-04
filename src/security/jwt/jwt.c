@@ -1,7 +1,5 @@
 #include <cwist/security/jwt/jwt.h>
 #include <cwist/core/mem/alloc.h>
-#include <cwist/core/sstring/sstring.h>
-#include <cwist/core/seq/seq.h>
 
 #include <cjson/cJSON.h>
 #include <openssl/hmac.h>
@@ -12,11 +10,6 @@
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
-
-/**
- * @file jwt.c
- * @brief HS256 JWT signing, verification, and decoded-claims access helpers.
- */
 
 /* --------------------------------------------------------------------------
  * Internal: Base64URL helpers
@@ -29,56 +22,54 @@ static size_t b64url_encoded_len(size_t input_len) {
 
 /** Encode @p src_len bytes of @p src into @p dst (null-terminated). */
 static void b64url_encode(const unsigned char *src, size_t src_len, char *dst) {
-    static const char tbl[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_";
+    static const char tbl[] =
+        "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_";
     size_t i = 0, j = 0;
     while (i + 2 < src_len) {
-        uint32_t v = ((uint32_t)src[i] << 16) | ((uint32_t)src[i + 1] << 8) | src[i + 2];
+        uint32_t v = ((uint32_t)src[i] << 16) | ((uint32_t)src[i+1] << 8) | src[i+2];
         dst[j++] = tbl[(v >> 18) & 0x3F];
         dst[j++] = tbl[(v >> 12) & 0x3F];
-        dst[j++] = tbl[(v >> 6) & 0x3F];
-        dst[j++] = tbl[v & 0x3F];
+        dst[j++] = tbl[(v >>  6) & 0x3F];
+        dst[j++] = tbl[ v        & 0x3F];
         i += 3;
     }
     if (i + 1 == src_len) {
         uint32_t v = (uint32_t)src[i] << 4;
         dst[j++] = tbl[(v >> 6) & 0x3F];
-        dst[j++] = tbl[v & 0x3F];
+        dst[j++] = tbl[ v       & 0x3F];
     } else if (i + 2 == src_len) {
-        uint32_t v = ((uint32_t)src[i] << 10) | ((uint32_t)src[i + 1] << 2);
+        uint32_t v = ((uint32_t)src[i] << 10) | ((uint32_t)src[i+1] << 2);
         dst[j++] = tbl[(v >> 12) & 0x3F];
-        dst[j++] = tbl[(v >> 6) & 0x3F];
-        dst[j++] = tbl[v & 0x3F];
+        dst[j++] = tbl[(v >>  6) & 0x3F];
+        dst[j++] = tbl[ v        & 0x3F];
     }
     dst[j] = '\0';
 }
 
 /**
- * @brief Decode a Base64URL string.
- * @param src Base64URL input; either standard or URL-safe alphabet, with optional '=' padding.
- * @param src_len Length of @p src in bytes.
- * @param out_len Set to the number of decoded bytes on success.
- * @return Heap-allocated decoded buffer, or NULL on invalid input or allocation failure.
- * @retval NULL Invalid input or allocation failure.
- *
- * Ownership of a non-NULL return passes to the caller; free with cwist_free().
+ * Decode a Base64URL string.
+ * Returns heap-allocated buffer and sets *out_len, or NULL on error.
+ * Caller must free with cwist_free().
  */
 static unsigned char *b64url_decode(const char *src, size_t src_len, size_t *out_len) {
     /* Accept either standard or url-safe alphabet; strip '=' padding. */
     static const signed char lut[256] = {
-        -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
-        -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 62,
-        -1, 62, -1, 63, /* '+' -> 62, '-' -> 62, '/' & '_' -> 63 */
-        52, 53, 54, 55, 56, 57, 58, 59, 60, 61, -1, -1, -1, 0,  -1, -1, /* '0'-'9', '=' -> 0 */
-        -1, 0,  1,  2,  3,  4,  5,  6,  7,  8,  9,  10, 11, 12, 13, 14, /* 'A'-'O' */
-        15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, -1, -1, -1, -1, 63, /* 'P'-'Z', '_' -> 63 */
-        -1, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, /* 'a'-'o' */
-        41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, -1, -1, -1, -1, -1, /* 'p'-'z' */
-        -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
-        -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
-        -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
-        -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
-        -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
-        -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+        -1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,
+        -1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,
+        -1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,62,-1,62,-1,63, /* '+' -> 62, '-' -> 62, '/' & '_' -> 63 */
+        52,53,54,55,56,57,58,59,60,61,-1,-1,-1, 0,-1,-1, /* '0'-'9', '=' -> 0 */
+        -1, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9,10,11,12,13,14, /* 'A'-'O' */
+        15,16,17,18,19,20,21,22,23,24,25,-1,-1,-1,-1,63, /* 'P'-'Z', '_' -> 63 */
+        -1,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40, /* 'a'-'o' */
+        41,42,43,44,45,46,47,48,49,50,51,-1,-1,-1,-1,-1, /* 'p'-'z' */
+        -1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,
+        -1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,
+        -1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,
+        -1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,
+        -1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,
+        -1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,
+        -1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,
+        -1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,
     };
 
     /* Calculate how many padding chars to expect */
@@ -94,43 +85,32 @@ static unsigned char *b64url_decode(const char *src, size_t src_len, size_t *out
     size_t i = 0, j = 0;
     while (i + 3 < padded_len) {
         signed char a = lut[(unsigned char)src[i]];
-        signed char b = lut[(unsigned char)src[i + 1]];
-        signed char c = lut[(unsigned char)src[i + 2]];
-        signed char d = lut[(unsigned char)src[i + 3]];
+        signed char b = lut[(unsigned char)src[i+1]];
+        signed char c = lut[(unsigned char)src[i+2]];
+        signed char d = lut[(unsigned char)src[i+3]];
         if (a < 0 || b < 0 || c < 0 || d < 0) {
             cwist_free(out);
             return NULL;
         }
         out[j++] = (unsigned char)((a << 2) | (b >> 4));
         out[j++] = (unsigned char)((b << 4) | (c >> 2));
-        out[j++] = (unsigned char)((c << 6) | d);
+        out[j++] = (unsigned char)((c << 6) |  d);
         i += 4;
     }
 
     size_t rem = padded_len - i;
     if (rem == 2) {
         signed char a = lut[(unsigned char)src[i]];
-        signed char b = lut[(unsigned char)src[i + 1]];
-        if (a < 0 || b < 0) {
-            cwist_free(out);
-            return NULL;
-        }
+        signed char b = lut[(unsigned char)src[i+1]];
+        if (a < 0 || b < 0) { cwist_free(out); return NULL; }
         out[j++] = (unsigned char)((a << 2) | (b >> 4));
     } else if (rem == 3) {
         signed char a = lut[(unsigned char)src[i]];
-        signed char b = lut[(unsigned char)src[i + 1]];
-        signed char c = lut[(unsigned char)src[i + 2]];
-        if (a < 0 || b < 0 || c < 0) {
-            cwist_free(out);
-            return NULL;
-        }
+        signed char b = lut[(unsigned char)src[i+1]];
+        signed char c = lut[(unsigned char)src[i+2]];
+        if (a < 0 || b < 0 || c < 0) { cwist_free(out); return NULL; }
         out[j++] = (unsigned char)((a << 2) | (b >> 4));
         out[j++] = (unsigned char)((b << 4) | (c >> 2));
-    } else if (rem == 1) {
-        /* RFC 4648 section 4: 1 base64 character (6 bits) cannot encode a whole byte.
-         * A remainder of 1 is malformed and must be rejected. */
-        cwist_free(out);
-        return NULL;
     }
 
     out[j] = '\0';
@@ -143,11 +123,14 @@ static unsigned char *b64url_decode(const char *src, size_t src_len, size_t *out
  * -------------------------------------------------------------------------- */
 
 /** Compute HMAC-SHA256 of @p msg using @p key; writes to @p out (32 bytes). */
-static bool hmac_sha256(const char *key, size_t key_len, const char *msg, size_t msg_len,
+static bool hmac_sha256(const char *key, size_t key_len,
+                        const char *msg, size_t msg_len,
                         unsigned char out[32]) {
     unsigned int out_len = 0;
-    unsigned char *r =
-        HMAC(EVP_sha256(), key, (int)key_len, (const unsigned char *)msg, msg_len, out, &out_len);
+    unsigned char *r = HMAC(EVP_sha256(),
+                            key, (int)key_len,
+                            (const unsigned char *)msg, msg_len,
+                            out, &out_len);
     return r != NULL && out_len == 32;
 }
 
@@ -163,13 +146,6 @@ struct cwist_jwt_claims {
  * Public API
  * -------------------------------------------------------------------------- */
 
-/**
- * @brief Sign a JSON payload as an HS256 JWT and optionally inject exp/iat claims.
- * @param payload_json Raw payload JSON string to sign.
- * @param secret Shared HS256 signing secret.
- * @param exp_seconds Lifetime in seconds to add when the payload lacks exp/iat.
- * @return Heap-allocated JWT string, or NULL on parse/signature allocation failure.
- */
 char *cwist_jwt_sign(const char *payload_json, const char *secret, long exp_seconds) {
     if (!payload_json || !secret) return NULL;
 
@@ -199,65 +175,68 @@ char *cwist_jwt_sign(const char *payload_json, const char *secret, long exp_seco
     size_t hdr_enc_len = b64url_encoded_len(strlen(HEADER_JSON));
     size_t pay_enc_len = b64url_encoded_len(strlen(final_payload_json));
 
-    char *hdr_enc CWIST_DEFER_FREE = (char *)cwist_alloc(hdr_enc_len);
-    char *pay_enc CWIST_DEFER_FREE = (char *)cwist_alloc(pay_enc_len);
+    char *hdr_enc = (char *)cwist_alloc(hdr_enc_len);
+    char *pay_enc = (char *)cwist_alloc(pay_enc_len);
     if (!hdr_enc || !pay_enc) {
-        cJSON_free(final_payload_json);
+        cwist_free(hdr_enc);
+        cwist_free(pay_enc);
+        free(final_payload_json);
         return NULL;
     }
 
     b64url_encode((const unsigned char *)HEADER_JSON, strlen(HEADER_JSON), hdr_enc);
     b64url_encode((const unsigned char *)final_payload_json, strlen(final_payload_json), pay_enc);
-    cJSON_free(final_payload_json);
+    free(final_payload_json);
 
-    /* --- Build "header.payload" signing input using sstring --------------- */
-    cwist_sstring *signing_input = cwist_sstring_create();
+    /* --- Build "header.payload" signing input ----------------------------- */
+    size_t signing_input_len = strlen(hdr_enc) + 1 + strlen(pay_enc);
+    char *signing_input = (char *)cwist_alloc(signing_input_len + 1);
     if (!signing_input) {
+        cwist_free(hdr_enc);
+        cwist_free(pay_enc);
         return NULL;
     }
-    cwist_sstring_append(signing_input, hdr_enc);
-    cwist_sstring_append(signing_input, ".");
-    cwist_sstring_append(signing_input, pay_enc);
+    snprintf(signing_input, signing_input_len + 1, "%s.%s", hdr_enc, pay_enc);
 
     /* --- Compute HMAC-SHA256 signature ------------------------------------ */
     unsigned char sig_raw[32];
-    if (!hmac_sha256(secret, strlen(secret), signing_input->data, signing_input->size, sig_raw)) {
-        cwist_sstring_destroy(signing_input);
+    if (!hmac_sha256(secret, strlen(secret), signing_input, signing_input_len, sig_raw)) {
+        cwist_free(hdr_enc);
+        cwist_free(pay_enc);
+        cwist_free(signing_input);
         return NULL;
     }
 
     size_t sig_enc_len = b64url_encoded_len(32);
-    char *sig_enc CWIST_DEFER_FREE = (char *)cwist_alloc(sig_enc_len);
+    char *sig_enc = (char *)cwist_alloc(sig_enc_len);
     if (!sig_enc) {
-        cwist_sstring_destroy(signing_input);
+        cwist_free(hdr_enc);
+        cwist_free(pay_enc);
+        cwist_free(signing_input);
         return NULL;
     }
     b64url_encode(sig_raw, 32, sig_enc);
 
-    /* --- Assemble final token using sstring ------------------------------- */
-    cwist_sstring *token = cwist_sstring_create();
+    /* --- Assemble final token --------------------------------------------- */
+    size_t token_len = signing_input_len + 1 + strlen(sig_enc);
+    char *token = (char *)cwist_alloc(token_len + 1);
     if (!token) {
-        cwist_sstring_destroy(signing_input);
+        cwist_free(hdr_enc);
+        cwist_free(pay_enc);
+        cwist_free(signing_input);
+        cwist_free(sig_enc);
         return NULL;
     }
-    cwist_sstring_append(token, signing_input->data);
-    cwist_sstring_append(token, ".");
-    cwist_sstring_append(token, sig_enc);
+    snprintf(token, token_len + 1, "%s.%s", signing_input, sig_enc);
 
-    char *result = cwist_strdup(token->data);
+    cwist_free(hdr_enc);
+    cwist_free(pay_enc);
+    cwist_free(signing_input);
+    cwist_free(sig_enc);
 
-    cwist_sstring_destroy(token);
-    cwist_sstring_destroy(signing_input);
-
-    return result;
+    return token;
 }
 
-/**
- * @brief Verify a JWT signature, parse its payload, and enforce the exp claim when present.
- * @param token JWT string in header.payload.signature form.
- * @param secret Shared HS256 signing secret.
- * @return Heap-allocated claims object, or NULL when verification/parsing fails.
- */
 cwist_jwt_claims *cwist_jwt_verify(const char *token, const char *secret) {
     if (!token || !secret) return NULL;
 
@@ -267,64 +246,33 @@ cwist_jwt_claims *cwist_jwt_verify(const char *token, const char *secret) {
     if (!tok_copy) return NULL;
 
     char *dot1 = strchr(tok_copy, '.');
-    if (!dot1) {
-        cwist_free(tok_copy);
-        return NULL;
-    }
+    if (!dot1) { cwist_free(tok_copy); return NULL; }
     *dot1 = '\0';
 
     char *dot2 = strchr(dot1 + 1, '.');
-    if (!dot2) {
-        cwist_free(tok_copy);
-        return NULL;
-    }
+    if (!dot2) { cwist_free(tok_copy); return NULL; }
     *dot2 = '\0';
 
-    /* --- Validate the header: must declare alg=HS256 (RFC 8725 section 3.1) ----- */
-    size_t hdr_json_len = 0;
-    unsigned char *hdr_json = b64url_decode(tok_copy, strlen(tok_copy), &hdr_json_len);
-    if (!hdr_json) {
-        cwist_free(tok_copy);
-        return NULL;
-    }
-    cJSON *hdr = cJSON_ParseWithLength((const char *)hdr_json, hdr_json_len);
-    cwist_free(hdr_json);
-    if (!hdr) {
-        cwist_free(tok_copy);
-        return NULL;
-    }
-    cJSON *alg_item = cJSON_GetObjectItemCaseSensitive(hdr, "alg");
-    bool alg_ok =
-        alg_item && cJSON_IsString(alg_item) && strcmp(alg_item->valuestring, "HS256") == 0;
-    cJSON_Delete(hdr);
-    if (!alg_ok) {
-        cwist_free(tok_copy);
-        return NULL;
-    }
-
-    const char *pay_enc = dot1 + 1;
-    const char *sig_enc = dot2 + 1;
+    const char *pay_enc  = dot1 + 1;
+    const char *sig_enc  = dot2 + 1;
 
     /* --- Re-build the signing input from the original token --------------- */
     /* signing_input = original "hdr_enc.pay_enc" (up to the second dot) */
     size_t first_two_len = (size_t)(dot2 - tok_copy);
     /* dot2 points inside tok_copy which is already modified; use original */
-    cwist_sstring *signing_input = cwist_sstring_create();
-    if (!signing_input) {
-        cwist_free(tok_copy);
-        return NULL;
-    }
-    cwist_sstring_assign_len(signing_input, token, first_two_len);
+    char *signing_input = (char *)cwist_alloc(first_two_len + 1);
+    if (!signing_input) { cwist_free(tok_copy); return NULL; }
+    memcpy(signing_input, token, first_two_len);
+    signing_input[first_two_len] = '\0';
 
     /* --- Recompute expected signature ------------------------------------- */
     unsigned char expected_sig[32];
-    if (!hmac_sha256(secret, strlen(secret), signing_input->data, signing_input->size,
-                     expected_sig)) {
-        cwist_sstring_destroy(signing_input);
+    if (!hmac_sha256(secret, strlen(secret), signing_input, first_two_len, expected_sig)) {
         cwist_free(tok_copy);
+        cwist_free(signing_input);
         return NULL;
     }
-    cwist_sstring_destroy(signing_input);
+    cwist_free(signing_input);
 
     /* --- Decode the provided signature ------------------------------------ */
     size_t provided_sig_len = 0;
@@ -359,23 +307,13 @@ cwist_jwt_claims *cwist_jwt_verify(const char *token, const char *secret) {
 
     if (!json) return NULL;
 
-    /* --- Validate "exp" and "nbf" claims with leeway for clock skew/high-RTT --- */
-#define CWIST_JWT_TIME_LEEWAY 300
-    time_t now = time(NULL);
+    /* --- Validate "exp" claim if present ---------------------------------- */
     cJSON *exp_item = cJSON_GetObjectItemCaseSensitive(json, "exp");
     if (exp_item && cJSON_IsNumber(exp_item)) {
-        time_t exp_time = (time_t)exp_item->valuedouble;
-        if (now > CWIST_JWT_TIME_LEEWAY && exp_time < now - CWIST_JWT_TIME_LEEWAY) {
+        time_t now = time(NULL);
+        if ((time_t)exp_item->valuedouble < now) {
             cJSON_Delete(json);
             return NULL; /* token expired */
-        }
-    }
-    cJSON *nbf_item = cJSON_GetObjectItemCaseSensitive(json, "nbf");
-    if (nbf_item && cJSON_IsNumber(nbf_item)) {
-        time_t nbf_time = (time_t)nbf_item->valuedouble;
-        if (nbf_time > now && (nbf_time - now) > CWIST_JWT_TIME_LEEWAY) {
-            cJSON_Delete(json);
-            return NULL; /* token not yet valid */
         }
     }
 
@@ -389,12 +327,6 @@ cwist_jwt_claims *cwist_jwt_verify(const char *token, const char *secret) {
     return claims;
 }
 
-/**
- * @brief Retrieve one string-valued claim from a verified JWT payload.
- * @param claims Verified claims object.
- * @param key Claim name to retrieve.
- * @return Borrowed pointer to the claim string, or NULL when absent/non-string.
- */
 const char *cwist_jwt_claims_get(const cwist_jwt_claims *claims, const char *key) {
     if (!claims || !key) return NULL;
     cJSON *item = cJSON_GetObjectItemCaseSensitive(claims->json, key);
@@ -404,158 +336,8 @@ const char *cwist_jwt_claims_get(const cwist_jwt_claims *claims, const char *key
     return NULL;
 }
 
-/**
- * @brief Destroy a verified claims object and its parsed JSON payload.
- * @param claims Claims object to destroy.
- */
 void cwist_jwt_claims_destroy(cwist_jwt_claims *claims) {
     if (!claims) return;
     cJSON_Delete(claims->json);
     cwist_free(claims);
-}
-
-/* --------------------------------------------------------------------------
- * Sequenced JWT transport helpers
- * -------------------------------------------------------------------------- */
-
-/**
- * @brief Split a JWT token into sequenced transport chunks.
- * @param token Null-terminated JWT string to split.
- * @param chunk_payload_size Maximum payload bytes per chunk; must be non-zero.
- * @param out_count Set to the number of chunks produced.
- * @return Heap-allocated array of @p out_count chunks, or NULL on invalid input,
- *         split failure, or allocation failure.
- *
- * Each chunk's @c data buffer is owned by the caller and must be released with
- * cwist_jwt_chunks_free().
- */
-cwist_jwt_chunk_t *cwist_jwt_split_chunks(const char *token, uint16_t chunk_payload_size,
-                                          size_t *out_count) {
-    if (!token || chunk_payload_size == 0 || !out_count) return NULL;
-    *out_count = 0;
-
-    size_t token_len = strlen(token);
-    if (token_len == 0) return NULL;
-
-    cwist_seq_message_t msg;
-    if (!cwist_seq_split((const uint8_t *)token, token_len, chunk_payload_size, &msg)) {
-        return NULL;
-    }
-
-    cwist_jwt_chunk_t *chunks =
-        (cwist_jwt_chunk_t *)cwist_alloc_array(msg.count, sizeof(cwist_jwt_chunk_t));
-    if (!chunks) {
-        cwist_seq_message_free(&msg);
-        return NULL;
-    }
-
-    for (size_t i = 0; i < msg.count; i++) {
-        chunks[i].data = msg.chunks[i];
-        chunks[i].len = msg.chunk_lens[i];
-        msg.chunks[i] = NULL; /* ownership transferred */
-    }
-
-    size_t count = msg.count;
-    cwist_seq_message_free(&msg);
-    *out_count = count;
-    return chunks;
-}
-
-/**
- * @brief Free a chunk array produced by cwist_jwt_split_chunks() or cwist_jwt_sign_chunks().
- * @param chunks Chunk array to free; NULL is accepted as a no-op.
- * @param count Number of entries in @p chunks.
- */
-void cwist_jwt_chunks_free(cwist_jwt_chunk_t *chunks, size_t count) {
-    if (!chunks) return;
-    for (size_t i = 0; i < count; i++) cwist_free(chunks[i].data);
-    cwist_free(chunks);
-}
-
-/**
- * @brief Reassemble a JWT token from sequenced transport chunks.
- * @param chunks Array of sequenced chunks, in any order accepted by the assembler.
- * @param count Number of entries in @p chunks.
- * @return Heap-allocated null-terminated JWT string, or NULL when the chunk set is
- *         invalid/incomplete or assembly/allocation fails.
- *
- * The caller owns the returned string and must free it with cwist_free().
- */
-char *cwist_jwt_join_chunks(const cwist_jwt_chunk_t *chunks, size_t count) {
-    if (!chunks || count == 0) return NULL;
-
-    cwist_seq_assembler_t *a = cwist_seq_assembler_create();
-    if (!a) return NULL;
-
-    for (size_t i = 0; i < count; i++) {
-        cwist_seq_chunk_t chunk;
-        if (!cwist_seq_chunk_parse(chunks[i].data, chunks[i].len, &chunk)) {
-            cwist_seq_assembler_destroy(a);
-            return NULL;
-        }
-        if (!cwist_seq_assembler_feed(a, &chunk)) {
-            cwist_seq_assembler_destroy(a);
-            return NULL;
-        }
-    }
-
-    const uint8_t *data = NULL;
-    size_t len = 0;
-    bool ok = cwist_seq_assembler_get_data(a, &data, &len);
-    char *token = NULL;
-    if (ok && len > 0) {
-        token = (char *)cwist_alloc(len + 1);
-        if (token) {
-            memcpy(token, data, len);
-            token[len] = '\0';
-        }
-    }
-
-    cwist_seq_assembler_destroy(a);
-    return token;
-}
-
-/**
- * @brief Sign a payload as an HS256 JWT and split it into sequenced transport chunks.
- * @param payload_json Raw payload JSON string to sign.
- * @param secret Shared HS256 signing secret.
- * @param exp_seconds Lifetime in seconds to add when the payload lacks exp/iat.
- * @param chunk_payload_size Maximum payload bytes per chunk; must be non-zero.
- * @param out_count Set to the number of chunks produced.
- * @return Heap-allocated chunk array, or NULL when signing or chunking fails.
- *
- * Free the result with cwist_jwt_chunks_free().
- */
-cwist_jwt_chunk_t *cwist_jwt_sign_chunks(const char *payload_json, const char *secret,
-                                         long exp_seconds, uint16_t chunk_payload_size,
-                                         size_t *out_count) {
-    if (!payload_json || !secret || chunk_payload_size == 0 || !out_count) return NULL;
-    *out_count = 0;
-
-    char *token = cwist_jwt_sign(payload_json, secret, exp_seconds);
-    if (!token) return NULL;
-
-    cwist_jwt_chunk_t *chunks = cwist_jwt_split_chunks(token, chunk_payload_size, out_count);
-    cwist_free(token);
-    return chunks;
-}
-
-/**
- * @brief Reassemble sequenced chunks into a token, verify it, and return its claims.
- * @param chunks Array of sequenced chunks carrying the JWT token.
- * @param count Number of entries in @p chunks.
- * @param secret Shared HS256 signing secret.
- * @return Heap-allocated verified claims object, or NULL when assembly, parsing,
- *         signature verification, or claim validation fails.
- *
- * The caller owns the result and must release it with cwist_jwt_claims_destroy().
- */
-cwist_jwt_claims *cwist_jwt_verify_chunks(const cwist_jwt_chunk_t *chunks, size_t count,
-                                          const char *secret) {
-    if (!chunks || count == 0 || !secret) return NULL;
-    char *token = cwist_jwt_join_chunks(chunks, count);
-    if (!token) return NULL;
-    cwist_jwt_claims *claims = cwist_jwt_verify(token, secret);
-    cwist_free(token);
-    return claims;
 }

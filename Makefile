@@ -30,7 +30,7 @@ else
     CFLAGS = $(COMMON_CFLAGS) $(PERF_WARNINGS) $(PERF_STACK_FLAGS)
 endif
 
-LIBS = -L./lib/libttak/lib -pthread -lcjson -lssl -lcrypto -luriparser -ldl -lttak
+LIBS = -L./lib/libttak/lib -L./lib/cjson -pthread -lcjson -lssl -lcrypto -luriparser -ldl -lttak
 
 # SQLite Automation
 SQLITE_YEAR = 2024
@@ -109,6 +109,7 @@ SRCS = src/core/sstring/sstring.c \
        src/sys/app/big_dumb_reply.c \
        src/sys/sys_info.c \
        lib/sqlite3/sqlite3.c \
+       src/security/jwt/jwt.c \
        $(IO_SRC)
 
 # Object Files and Target
@@ -116,14 +117,8 @@ OBJS = $(SRCS:.c=.o)
 LIB_NAME = libcwist.a
 LIBTTAK_DIR = lib/libttak
 LIBTTAK_LIB = $(LIBTTAK_DIR)/lib/libttak.a
-LIBTTAK_EXTRA_CFLAGS =
-ifeq ($(UNAME_S),Darwin)
-    LIBTTAK_EXTRA_CFLAGS += -D_DARWIN_C_SOURCE
-endif
 CJSON_DIR = lib/cjson
 CJSON_LIB = $(CJSON_DIR)/libcjson.a
-CNATS_DIR = lib/cnats
-CNATS_LIB = $(CNATS_DIR)/build/lib/libnats_static.a
 
 # Installation Paths
 PREFIX ?= /usr/local
@@ -135,7 +130,7 @@ DEPSDIR ?= $(LIBDIR)/cwist
 
 # --- Build Targets ---
 
-all: $(SQLITE_DIR)/sqlite3.c $(LIB_NAME)
+all: $(LIBTTAK_LIB) $(CJSON_LIB) $(SQLITE_DIR)/sqlite3.c $(LIB_NAME)
 
 # SQLite Download & Extraction Rule
 $(SQLITE_DIR)/sqlite3.c:
@@ -151,11 +146,25 @@ $(LIB_NAME): $(OBJS)
 	@echo "Creating static library..."
 	ar rcs $@ $^
 
+$(LIBTTAK_LIB):
+	@echo "Building libttak..."
+	$(MAKE) -C $(LIBTTAK_DIR)
+
+$(CJSON_LIB):
+	@echo "Building cJSON..."
+	$(CC) -O3 -fPIC -I$(CJSON_DIR) -c $(CJSON_DIR)/cJSON.c -o $(CJSON_DIR)/cJSON.o
+	ar rcs $@ $(CJSON_DIR)/cJSON.o
+	@echo "cJSON Ready."
+
 # --- Test Targets ---
 
 test: $(LIB_NAME) tests/test_sstring.c
 	$(CC) $(CFLAGS) -o test_sstring tests/test_sstring.c $(LIB_NAME) $(LIBS)
 	./test_sstring
+
+test_jwt: $(LIB_NAME) tests/test_jwt.c
+	$(CC) $(CFLAGS) -o test_jwt tests/test_jwt.c $(LIB_NAME) $(LIBS)
+	./test_jwt
 
 # ... (other tests omitted for brevity, keeping standard ones)
 
@@ -185,6 +194,8 @@ clean:
 	@echo "Cleaning up build artifacts..."
 	rm -f $(OBJS) $(LIB_NAME)
 	rm -rf include/cwist/vendor
-	rm -f test_sstring test_http test_siphash test_mux stress_test test_cors test_websocket
+	rm -f test_sstring test_http test_siphash test_mux stress_test test_cors test_websocket test_jwt
+	rm -f $(CJSON_DIR)/cJSON.o $(CJSON_LIB)
+	@$(MAKE) -C $(LIBTTAK_DIR) clean
 
 rebuild: clean all
