@@ -7,7 +7,6 @@
 #include <arpa/inet.h>
 #include <errno.h>
 #include <netdb.h>
-#include <inttypes.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -16,56 +15,42 @@
 #include <sys/types.h>
 #include <unistd.h>
 
-/**
- * @file db_sync.c
- * @brief Minimal TCP protocol for shipping encrypted SQLite snapshots between peers.
- */
+/* -------------------------------------------------------------------------
+ * Protocol constants
+ * ---------------------------------------------------------------------- */
 
-static const unsigned char SYNC_MAGIC[4] = {0x43, 0x57, 0x53, 0x59}; /* "CWSY" */
+static const unsigned char SYNC_MAGIC[4] = { 0x43, 0x57, 0x53, 0x59 }; /* "CWSY" */
 
-/**
- * @brief Write exactly the requested number of bytes to a socket.
- * @param fd Connected socket descriptor.
- * @param buf Source buffer to write.
- * @param len Number of bytes to send.
- * @return 0 on success, or -1 on short/failed writes.
- */
+/* -------------------------------------------------------------------------
+ * Internal I/O helpers (handle short reads/writes on TCP)
+ * ---------------------------------------------------------------------- */
+
 static int write_all(int fd, const void *buf, size_t len) {
     const unsigned char *p = (const unsigned char *)buf;
     while (len > 0) {
         ssize_t n = write(fd, p, len);
         if (n <= 0) return -1;
-        p += (size_t)n;
+        p   += (size_t)n;
         len -= (size_t)n;
     }
     return 0;
 }
 
-/**
- * @brief Read exactly the requested number of bytes from a socket.
- * @param fd Connected socket descriptor.
- * @param buf Destination buffer to fill.
- * @param len Number of bytes to read.
- * @return 0 on success, or -1 on short/failed reads.
- */
 static int read_all(int fd, void *buf, size_t len) {
     unsigned char *p = (unsigned char *)buf;
     while (len > 0) {
         ssize_t n = read(fd, p, len);
         if (n <= 0) return -1;
-        p += (size_t)n;
+        p   += (size_t)n;
         len -= (size_t)n;
     }
     return 0;
 }
 
-/**
- * @brief Serialize and encrypt a SQLite database, then serve it to one TCP client.
- * @param db SQLite connection whose main database should be transferred.
- * @param ctx Encryption context used to seal the serialized bytes.
- * @param port TCP port to listen on, or the default when <= 0.
- * @return CWIST_DB_SYNC_OK on success, or a protocol/network/crypto error code.
- */
+/* -------------------------------------------------------------------------
+ * Public API
+ * ---------------------------------------------------------------------- */
+
 int cwist_db_sync_serve(sqlite3 *db, const cwist_db_crypt_ctx_t *ctx, int port) {
     if (!db || !ctx) return CWIST_DB_SYNC_ERR_ARGS;
     if (port <= 0) port = CWIST_DB_SYNC_DEFAULT_PORT;
@@ -80,7 +65,10 @@ int cwist_db_sync_serve(sqlite3 *db, const cwist_db_crypt_ctx_t *ctx, int port) 
 
     /* 2. Seal the bytes. */
     size_t blob_len = 0;
-    unsigned char *blob = cwist_db_crypt_seal(ctx, db_bytes, (size_t)db_size, &blob_len);
+    unsigned char *blob = cwist_db_crypt_seal(ctx,
+                                               db_bytes,
+                                               (size_t)db_size,
+                                               &blob_len);
     sqlite3_free(db_bytes);
 
     if (!blob) {
@@ -100,12 +88,13 @@ int cwist_db_sync_serve(sqlite3 *db, const cwist_db_crypt_ctx_t *ctx, int port) 
 
     struct sockaddr_in addr;
     memset(&addr, 0, sizeof(addr));
-    addr.sin_family = AF_INET;
+    addr.sin_family      = AF_INET;
     addr.sin_addr.s_addr = INADDR_ANY;
-    addr.sin_port = htons((uint16_t)port);
+    addr.sin_port        = htons((uint16_t)port);
 
     if (bind(srv_fd, (struct sockaddr *)&addr, sizeof(addr)) < 0) {
-        fprintf(stderr, "[db_sync] bind port %d failed: %s\n", port, strerror(errno));
+        fprintf(stderr, "[db_sync] bind port %d failed: %s\n",
+                port, strerror(errno));
         close(srv_fd);
         free(blob);
         return CWIST_DB_SYNC_ERR_NET;
@@ -130,7 +119,8 @@ int cwist_db_sync_serve(sqlite3 *db, const cwist_db_crypt_ctx_t *ctx, int port) 
 
     /* 5. Read client magic. */
     unsigned char magic_buf[4];
-    if (read_all(cli_fd, magic_buf, 4) < 0 || memcmp(magic_buf, SYNC_MAGIC, 4) != 0) {
+    if (read_all(cli_fd, magic_buf, 4) < 0 ||
+        memcmp(magic_buf, SYNC_MAGIC, 4) != 0) {
         fprintf(stderr, "[db_sync] bad client magic\n");
         close(cli_fd);
         free(blob);
@@ -139,8 +129,10 @@ int cwist_db_sync_serve(sqlite3 *db, const cwist_db_crypt_ctx_t *ctx, int port) 
 
     /* 6. Send length (little-endian uint64) then blob. */
     unsigned char len_buf[8];
-    for (int i = 0; i < 8; i++) len_buf[i] = (unsigned char)((uint64_t)blob_len >> (8 * i));
-    if (write_all(cli_fd, len_buf, 8) < 0 || write_all(cli_fd, blob, blob_len) < 0) {
+    for (int i = 0; i < 8; i++)
+        len_buf[i] = (unsigned char)((uint64_t)blob_len >> (8 * i));
+    if (write_all(cli_fd, len_buf, 8) < 0 ||
+        write_all(cli_fd, blob, blob_len) < 0) {
         close(cli_fd);
         free(blob);
         return CWIST_DB_SYNC_ERR_NET;
@@ -151,16 +143,8 @@ int cwist_db_sync_serve(sqlite3 *db, const cwist_db_crypt_ctx_t *ctx, int port) 
     return CWIST_DB_SYNC_OK;
 }
 
-/**
- * @brief Connect to a sync server, download the encrypted snapshot, and decrypt it.
- * @param host Remote host name or address to connect to.
- * @param port Remote TCP port, or the default when <= 0.
- * @param ctx Encryption context used to decrypt the transferred blob.
- * @param out_bytes Output pointer that receives the decrypted SQLite image.
- * @param out_len Output pointer that receives the decrypted byte count.
- * @return CWIST_DB_SYNC_OK on success, or a protocol/network/crypto error code.
- */
-int cwist_db_sync_pull(const char *host, int port, const cwist_db_crypt_ctx_t *ctx,
+int cwist_db_sync_pull(const char *host, int port,
+                       const cwist_db_crypt_ctx_t *ctx,
                        unsigned char **out_bytes, size_t *out_len) {
     if (!host || !ctx || !out_bytes || !out_len) return CWIST_DB_SYNC_ERR_ARGS;
     if (port <= 0) port = CWIST_DB_SYNC_DEFAULT_PORT;
@@ -168,7 +152,7 @@ int cwist_db_sync_pull(const char *host, int port, const cwist_db_crypt_ctx_t *c
     /* 1. Resolve host. */
     struct addrinfo hints, *res = NULL;
     memset(&hints, 0, sizeof(hints));
-    hints.ai_family = AF_UNSPEC;
+    hints.ai_family   = AF_UNSPEC;
     hints.ai_socktype = SOCK_STREAM;
 
     char port_str[16];
@@ -187,7 +171,8 @@ int cwist_db_sync_pull(const char *host, int port, const cwist_db_crypt_ctx_t *c
     }
 
     if (connect(fd, res->ai_addr, res->ai_addrlen) < 0) {
-        fprintf(stderr, "[db_sync] connect to %s:%d failed: %s\n", host, port, strerror(errno));
+        fprintf(stderr, "[db_sync] connect to %s:%d failed: %s\n",
+                host, port, strerror(errno));
         close(fd);
         freeaddrinfo(res);
         return CWIST_DB_SYNC_ERR_NET;
@@ -207,23 +192,13 @@ int cwist_db_sync_pull(const char *host, int port, const cwist_db_crypt_ctx_t *c
         return CWIST_DB_SYNC_ERR_PROTO;
     }
     uint64_t blob_len_u64 = 0;
-    for (int i = 0; i < 8; i++) blob_len_u64 |= ((uint64_t)len_buf[i]) << (8 * i);
+    for (int i = 0; i < 8; i++)
+        blob_len_u64 |= ((uint64_t)len_buf[i]) << (8 * i);
     if (blob_len_u64 == 0) {
         close(fd);
         return CWIST_DB_SYNC_ERR_PROTO;
     }
 
-    /* Reject unreasonably large blobs before allocating to prevent OOM from a
-     * rogue or malicious sync server.  4 GiB is well above any realistic
-     * SQLite snapshot; adjust CWIST_DB_SYNC_MAX_BLOB_SIZE if needed. */
-#ifndef CWIST_DB_SYNC_MAX_BLOB_SIZE
-#define CWIST_DB_SYNC_MAX_BLOB_SIZE ((uint64_t)4 * 1024 * 1024 * 1024)
-#endif
-    if (blob_len_u64 > CWIST_DB_SYNC_MAX_BLOB_SIZE) {
-        fprintf(stderr, "[db_sync] blob_len %" PRIu64 " exceeds limit\n", blob_len_u64);
-        close(fd);
-        return CWIST_DB_SYNC_ERR_PROTO;
-    }
     size_t blob_len = (size_t)blob_len_u64;
     unsigned char *blob = (unsigned char *)malloc(blob_len);
     if (!blob) {
@@ -250,6 +225,6 @@ int cwist_db_sync_pull(const char *host, int port, const cwist_db_crypt_ctx_t *c
     }
 
     *out_bytes = pt;
-    *out_len = pt_len;
+    *out_len   = pt_len;
     return CWIST_DB_SYNC_OK;
 }
