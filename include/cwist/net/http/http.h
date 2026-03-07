@@ -10,8 +10,10 @@
 #include <cwist/sys/err/cwist_err.h>
 #include <cwist/net/http/query.h>
 #include <cwist/core/db/sql.h>
+#include <cwist/sys/app/endpoint_opts.h>
 #include <netinet/in.h>
 #include <sys/socket.h>
+#include <sys/types.h>
 
 /** --- Enums --- */
 
@@ -35,7 +37,8 @@ typedef enum cwist_http_status_t {
     CWIST_HTTP_FORBIDDEN = 403,
     CWIST_HTTP_NOT_FOUND = 404,
     CWIST_HTTP_INTERNAL_ERROR = 500,
-    CWIST_HTTP_NOT_IMPLEMENTED = 501
+    CWIST_HTTP_NOT_IMPLEMENTED = 501,
+    CWIST_HTTP_SERVICE_UNAVAILABLE = 503
 } cwist_http_status_t;
 
 /** --- Constants and Limits --- */
@@ -79,6 +82,7 @@ typedef struct cwist_http_request {
     uint32_t stream_id;     ///< HTTP/2 or HTTP/3 stream ID (0 for HTTP/1.1).
     void *private_data;     ///< Internal framework use (protocol-specific context).
     size_t content_length;
+    cwist_endpoint_opt_t endpoint_opts; ///< Behavior hints for the active endpoint.
 } cwist_http_request;
 
 typedef void (*cwist_http_body_cleanup_fn)(const void *ptr, size_t len, void *ctx);
@@ -93,6 +97,7 @@ typedef struct cwist_http_response {
     cwist_sstring *status_text; ///< e.g., "OK"
     cwist_http_header_node *headers;
     cwist_sstring *body;
+    cwist_endpoint_opt_t endpoint_opts; ///< Mirrors req->endpoint_opts.
     
     // Zero-Copy Pointer Body
     bool is_ptr_body;        ///< If true, body data is read from ptr_body
@@ -100,6 +105,13 @@ typedef struct cwist_http_response {
     size_t ptr_body_len;     ///< Length of external data
     cwist_http_body_cleanup_fn ptr_body_cleanup; ///< Optional release hook
     void *ptr_body_cleanup_ctx; ///< User data for release hook
+
+    /// Fast File Streaming
+    bool use_file_stream;        ///< True when sendfile/splice path is used.
+    int file_stream_fd;          ///< Open descriptor for sendfile.
+    size_t file_stream_len;      ///< Total bytes to stream.
+    off_t file_stream_offset;    ///< Current offset for sendfile loop.
+    bool file_stream_auto_close; ///< Close fd after streaming.
     
     bool keep_alive;
 } cwist_http_response;

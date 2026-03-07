@@ -5,6 +5,7 @@
 #include <cwist/sys/wasi.h>
 #include <stdio.h>
 #include <string.h>
+#include <time.h>
 #include <cwist/core/siphash/siphash.h>
 
 /* Left-rotate a 64-bit integer by 'b' bits */
@@ -98,27 +99,23 @@ uint64_t siphash24(const void *src, size_t len, const uint8_t key[16]) {
 }
 
 static const uint8_t CHOE_ORTHO_PRIMARY[4][4] = {
-    {0, 1, 2, 3}, {1, 0, 3, 2}, {2, 3, 0, 1}, {3, 2, 1, 0}};
+    {0, 1, 2, 3},
+    {1, 0, 3, 2},
+    {2, 3, 0, 1},
+    {3, 2, 1, 0}
+};
 
 static const uint8_t CHOE_ORTHO_SECONDARY[4][4] = {
-    {0, 1, 2, 3}, {2, 3, 0, 1}, {3, 2, 1, 0}, {1, 0, 3, 2}};
+    {0, 1, 2, 3},
+    {2, 3, 0, 1},
+    {3, 2, 1, 0},
+    {1, 0, 3, 2}
+};
 
-/**
- * @brief Rotate a 64-bit value left by the requested amount.
- * @param v Input value to rotate.
- * @param r Rotation count in bits.
- * @return Rotated value.
- */
 static inline uint64_t rotl64(uint64_t v, unsigned int r) {
-    r &= 63U;
-    return (v << r) | (v >> ((64U - r) & 63U));
+    return (v << r) | (v >> (64U - r));
 }
 
-/**
- * @brief Fill a buffer with entropy from /dev/urandom or a timing-based fallback.
- * @param buf Destination buffer to fill.
- * @param len Number of bytes to generate.
- */
 static void cwist_entropy_fill(uint8_t *buf, size_t len) {
     size_t filled = 0;
     int fd = open("/dev/urandom", O_RDONLY);
@@ -133,16 +130,10 @@ static void cwist_entropy_fill(uint8_t *buf, size_t len) {
     if (filled < len) {
         struct timespec ts = {0};
         clock_gettime(CLOCK_MONOTONIC, &ts);
-        /* WASI preview1 has no getppid(); the fallback entropy degrades to
-         * pid + clock only, which is acceptable for a last-resort mixer. */
-#if defined(__wasi__)
-/* WASI preview1 has no getpid(); the fallback entropy degrades to pure
-         * clock mixing, which is acceptable for a last-resort mixer. */
-        uint64_t fallbacks[2] = {(uint64_t)ts.tv_nsec, (uint64_t)ts.tv_sec ^ (uint64_t)ts.tv_nsec};
-#else
-        uint64_t fallbacks[2] = {(uint64_t)ts.tv_nsec ^ (uint64_t)getpid(),
-                                 (uint64_t)ts.tv_sec ^ (uint64_t)getppid()};
-#endif
+        uint64_t fallbacks[2] = {
+            (uint64_t)ts.tv_nsec ^ (uint64_t)getpid(),
+            (uint64_t)ts.tv_sec ^ (uint64_t)getppid()
+        };
         srand((unsigned int)(fallbacks[0] ^ fallbacks[1]));
         size_t idx = 0;
         while (filled + idx < len) {
@@ -154,12 +145,6 @@ static void cwist_entropy_fill(uint8_t *buf, size_t len) {
     }
 }
 
-/**
- * @brief Mix two 2-bit cell coordinates into one Latin-square derived nibble.
- * @param a First input byte.
- * @param b Second input byte.
- * @return Mixed 4-bit value encoded in the low nibble of the byte.
- */
 static uint8_t gusuryak_cell(uint8_t a, uint8_t b) {
     uint8_t row = a & 0x3;
     uint8_t col = b & 0x3;
@@ -168,11 +153,6 @@ static uint8_t gusuryak_cell(uint8_t a, uint8_t b) {
     return (uint8_t)((primary << 2) | secondary);
 }
 
-/**
- * @brief Expand 16 raw entropy bytes through the Gusuryak-inspired mixing stage.
- * @param in Raw entropy bytes.
- * @param out Mixed 16-byte seed material.
- */
 static void gusuryak_mix(const uint8_t in[16], uint8_t out[16]) {
     /* Following Choe Seok-jeong (Gusuryak), treat 16 bytes as a 4x4 Latin board. */
     uint64_t hi = 0x9e3779b185ebca87ULL;
@@ -183,8 +163,10 @@ static void gusuryak_mix(const uint8_t in[16], uint8_t out[16]) {
             uint8_t base = in[idx];
             uint8_t partner = in[((col + 1) % 4) + ((row + 1) % 4) * 4];
             uint8_t orth = gusuryak_cell(base, partner);
-            uint64_t delta = ((uint64_t)base << 32) | ((uint64_t)orth << 24) |
-                             ((uint64_t)row << 12) | ((uint64_t)col << 4) |
+            uint64_t delta = ((uint64_t)base << 32) |
+                             ((uint64_t)orth << 24) |
+                             ((uint64_t)row << 12) |
+                             ((uint64_t)col << 4) |
                              (uint64_t)gusuryak_cell(partner, base);
             hi ^= rotl64(delta ^ hi, (unsigned int)((row * 13 + col * 7) & 63));
             lo += rotl64(delta + lo, (unsigned int)((row * 11 + col * 5) & 63));
@@ -196,10 +178,6 @@ static void gusuryak_mix(const uint8_t in[16], uint8_t out[16]) {
     memcpy(out + 8, &lo, 8);
 }
 
-/**
- * @brief Generate a non-trivial 16-byte key suitable for SipHash table seeding.
- * @param key Output buffer that receives the generated seed.
- */
 void cwist_generate_hash_seed(uint8_t key[16]) {
     uint8_t raw[16];
     cwist_entropy_fill(raw, sizeof(raw));

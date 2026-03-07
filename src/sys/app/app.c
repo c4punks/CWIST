@@ -211,8 +211,6 @@ typedef struct cwist_route_entry {
      *  or a multiport clone sharing the root app's context). */
     cwist_handler_ctx_destroy_func ctx_destroy;
     cwist_ws_handler_func ws_handler;
-    cwist_ws_on_message_t ws_async_on_message;
-    void *ws_async_user_data;
     cwist_endpoint_opt_t opts;
     struct cwist_route_entry *next;
 } cwist_route_entry;
@@ -254,13 +252,14 @@ typedef struct {
 
 static cwist_route_table *cwist_route_table_create(void);
 static void cwist_route_table_destroy(cwist_route_table *table);
-static bool cwist_route_table_insert(cwist_route_table *table, const char *path, const char *name,
-                                     cwist_http_method_t method, const cwist_route_target *target,
+static void cwist_route_table_insert(cwist_route_table *table,
+                                     const char *path,
+                                     cwist_http_method_t method,
+                                     cwist_handler_func handler,
+                                     cwist_ws_handler_func ws_handler,
                                      cwist_endpoint_opt_t opts);
-static cwist_route_entry *cwist_route_table_lookup(cwist_route_table *table,
-                                                   cwist_http_method_t method, const char *path);
-static cwist_route_entry *cwist_route_table_match_params(cwist_route_table *table,
-                                                         cwist_http_request *req);
+static cwist_route_entry *cwist_route_table_lookup(cwist_route_table *table, cwist_http_method_t method, const char *path);
+static cwist_route_entry *cwist_route_table_match_params(cwist_route_table *table, cwist_http_request *req);
 static bool match_path(const char *pattern, const char *actual, cwist_query_map *params);
 static void execute_chain(cwist_app *app, cwist_http_request *req, cwist_http_response *res,
                           cwist_handler_func final_handler, void *handler_data);
@@ -302,27 +301,10 @@ static size_t cwist_route_hash(cwist_http_method_t method, const char *path, siz
     return (size_t)(hash % bucket_count);
 }
 
-/* Run and forget an entry's context destructor, if it owns one. */
-static void cwist_route_entry_release_ctx(cwist_route_entry *entry) {
-    if (entry->ctx_destroy) entry->ctx_destroy(entry->user_ctx);
-    entry->user_ctx = NULL;
-    entry->ctx_destroy = NULL;
-}
-
-static void cwist_route_entry_set_target(cwist_route_entry *entry,
-                                         const cwist_route_target *target) {
-    entry->handler = target->handler;
-    entry->handler_ex = target->handler_ex;
-    entry->user_ctx = target->user_ctx;
-    entry->ctx_destroy = target->ctx_destroy;
-    entry->ws_handler = target->ws_handler;
-    entry->ws_async_on_message = NULL;
-    entry->ws_async_user_data = NULL;
-}
-
-static cwist_route_entry *cwist_route_entry_create(const char *path, const char *name,
+static cwist_route_entry *cwist_route_entry_create(const char *path,
                                                    cwist_http_method_t method,
-                                                   const cwist_route_target *target,
+                                                   cwist_handler_func handler,
+                                                   cwist_ws_handler_func ws_handler,
                                                    cwist_endpoint_opt_t opts) {
     cwist_route_entry *entry = (cwist_route_entry *)cwist_alloc(sizeof(cwist_route_entry));
     if (!entry) return NULL;
@@ -336,7 +318,8 @@ static cwist_route_entry *cwist_route_entry_create(const char *path, const char 
     }
     entry->path_len = strlen(entry->path);
     entry->method = method;
-    cwist_route_entry_set_target(entry, target);
+    entry->handler = handler;
+    entry->ws_handler = ws_handler;
     entry->opts = opts;
     entry->has_params = route_has_params(entry->path);
     entry->next = NULL;
@@ -394,23 +377,15 @@ static void cwist_route_table_destroy(cwist_route_table *table) {
     cwist_free(table);
 }
 
-/**
- * @brief Add a route, or replace the target of an existing exact route.
- *
- * The table takes ownership of target->user_ctx when target->ctx_destroy is
- * set; on failure the destructor runs before returning, so the caller never
- * has to clean up a context it handed over.
- * @return true when the route is in the table.
- */
-static bool cwist_route_table_insert(cwist_route_table *table, const char *path, const char *name,
-                                     cwist_http_method_t method, const cwist_route_target *target,
+static void cwist_route_table_insert(cwist_route_table *table,
+                                     const char *path,
+                                     cwist_http_method_t method,
+                                     cwist_handler_func handler,
+                                     cwist_ws_handler_func ws_handler,
                                      cwist_endpoint_opt_t opts) {
-    cwist_route_entry *entry =
-        (table && path) ? cwist_route_entry_create(path, name, method, target, opts) : NULL;
-    if (!entry) {
-        if (target->ctx_destroy) target->ctx_destroy(target->user_ctx);
-        return false;
-    }
+    if (!table || !path) return;
+    cwist_route_entry *entry = cwist_route_entry_create(path, method, handler, ws_handler, opts);
+    if (!entry) return;
 
     if (entry->has_params) {
         entry->next = table->param_routes;
@@ -423,15 +398,9 @@ static bool cwist_route_table_insert(cwist_route_table *table, const char *path,
     cwist_route_entry *curr = *bucket;
     while (curr) {
         if (!curr->has_params && curr->method == method && strcmp(curr->path, entry->path) == 0) {
-            /* Re-registering the same non-NULL context keeps it alive; anything else
-             * releases the old one before the new target takes over. */
-            if (!target->user_ctx || curr->user_ctx != target->user_ctx) {
-                cwist_route_entry_release_ctx(curr);
-            }
-            cwist_route_entry_set_target(curr, target);
+            curr->handler = handler;
+            curr->ws_handler = ws_handler;
             curr->opts = opts;
-            /* The replacement entry never owned the context now in curr. */
-            entry->ctx_destroy = NULL;
             cwist_route_entry_free(entry);
             return true;
         }
@@ -1661,69 +1630,16 @@ cwist_error_t cwist_app_static(cwist_app *app, const char *url_prefix, const cha
     return err;
 }
 
-/**
- * @brief Register a filesystem directory with a custom Cache-Control header.
- * @param app Application being configured.
- * @param url_prefix Request-path prefix such as "/static".
- * @param directory Filesystem directory that backs the mapping.
- * @param cache_control Value for the Cache-Control header (e.g. "public, max-age=86400").
- * @return Tagged CWIST error describing success or failure.
- */
-cwist_error_t cwist_app_static_with_cache(cwist_app *app, const char *url_prefix,
-                                          const char *directory, const char *cache_control) {
-    cwist_error_t err = make_error(CWIST_ERR_INT16);
-    if (!app || !url_prefix || !directory || !cache_control) {
-        err.error.err_i16 = -1;
-        return err;
-    }
-
-    char *normalized = cwist_normalize_prefix(url_prefix);
-    if (!normalized) {
-        err.error.err_i16 = -1;
-        return err;
-    }
-
-    char *resolved = cwist_normalize_directory(directory);
-    if (!resolved) {
-        cwist_free(normalized);
-        err.error.err_i16 = -1;
-        return err;
-    }
-
-    cwist_static_dir *entry = (cwist_static_dir *)cwist_alloc(sizeof(cwist_static_dir));
-    if (!entry) {
-        cwist_free(normalized);
-        cwist_free(resolved);
-        err.error.err_i16 = -1;
-        return err;
-    }
-
-    entry->url_prefix = normalized;
-    entry->fs_root = resolved;
-    entry->cache_control = cwist_strdup(cache_control);
-    if (!entry->cache_control) {
-        cwist_free(normalized);
-        cwist_free(resolved);
-        cwist_free(entry);
-        err.error.err_i16 = -1;
-        return err;
-    }
-    entry->next = app->static_dirs;
-    app->static_dirs = entry;
-
-    err.error.err_i16 = 0;
-    return err;
-}
-
-static void add_route_named(cwist_app *app, const char *path, const char *name,
-                            cwist_http_method_t method, cwist_handler_func handler,
-                            cwist_endpoint_opt_t opts) {
+static void add_route(cwist_app *app,
+                      const char *path,
+                      cwist_http_method_t method,
+                      cwist_handler_func handler,
+                      cwist_endpoint_opt_t opts) {
     if (!app || !app->router || !path) return;
     if (opts == 0) {
         opts = CWIST_ENDPOINT_DEFAULT;
     }
-    const cwist_route_target target = {.handler = handler};
-    cwist_route_table_insert(app->router, path, name, method, &target, opts);
+    cwist_route_table_insert(app->router, path, method, handler, NULL, opts);
 }
 
 /* Shared body of the cwist_app_*_ex() registrations. The context is owned by
@@ -1877,90 +1793,23 @@ void cwist_app_patch_named(cwist_app *app, const char *path, const char *name,
  */
 void cwist_app_ws(cwist_app *app, const char *path, cwist_ws_handler_func handler) {
     if (!app || !app->router || !path) return;
-    const cwist_route_target target = {.ws_handler = handler};
-    cwist_route_table_insert(app->router, path, NULL, CWIST_HTTP_GET, &target,
-                             CWIST_ENDPOINT_DEFAULT);
+    cwist_route_table_insert(app->router, path, CWIST_HTTP_GET, NULL, handler, CWIST_ENDPOINT_DEFAULT);
 }
 
-/**
- * @brief Register a callback-shaped non-blocking WebSocket endpoint (C1M mode).
- * @param app Application being configured.
- * @param path Exact GET route that should upgrade to WebSocket.
- * @param on_message Callback invoked per complete message on the reactor path.
- * @param user_data Opaque pointer forwarded to the callback.
- */
-void cwist_app_ws_async(cwist_app *app, const char *path, cwist_ws_on_message_t on_message,
-                        void *user_data) {
-    if (!app || !app->router || !path || !on_message) return;
-    const cwist_route_target target = {0};
-    cwist_route_table_insert(app->router, path, NULL, CWIST_HTTP_GET, &target,
-                             CWIST_ENDPOINT_DEFAULT);
-    cwist_route_entry *entry = cwist_route_table_lookup(app->router, CWIST_HTTP_GET, path);
-    if (entry) {
-        entry->ws_async_on_message = on_message;
-        entry->ws_async_user_data = user_data;
-    }
-}
-
-/* Forwards to the inline helper so the two can never disagree. */
-bool cwist_endpoint_has_extern(cwist_endpoint_opt_t opts, cwist_endpoint_opt_t flag) {
-    return cwist_endpoint_has(opts, flag);
-}
-
-/**
- * @brief Register a GET handler with explicit endpoint options.
- * @param app Application being configured.
- * @param path Exact route path.
- * @param handler HTTP handler invoked for matching requests.
- * @param opts Endpoint flags controlling cache and transport behavior.
- */
-void cwist_app_get_opt(cwist_app *app, const char *path, cwist_handler_func handler,
-                       cwist_endpoint_opt_t opts) {
+void cwist_app_get_opt(cwist_app *app, const char *path, cwist_handler_func handler, cwist_endpoint_opt_t opts) {
     add_route(app, path, CWIST_HTTP_GET, handler, opts);
 }
 
-/**
- * @brief Register a POST handler with explicit endpoint options.
- * @param app Application being configured.
- * @param path Exact route path.
- * @param handler HTTP handler invoked for matching requests.
- * @param opts Endpoint flags controlling cache and transport behavior.
- */
-void cwist_app_post_opt(cwist_app *app, const char *path, cwist_handler_func handler,
-                        cwist_endpoint_opt_t opts) {
+void cwist_app_post_opt(cwist_app *app, const char *path, cwist_handler_func handler, cwist_endpoint_opt_t opts) {
     add_route(app, path, CWIST_HTTP_POST, handler, opts);
 }
 
-void cwist_app_put_opt(cwist_app *app, const char *path, cwist_handler_func handler,
-                       cwist_endpoint_opt_t opts) {
-    add_route(app, path, CWIST_HTTP_PUT, handler, opts);
-}
-
-void cwist_app_delete_opt(cwist_app *app, const char *path, cwist_handler_func handler,
-                          cwist_endpoint_opt_t opts) {
-    add_route(app, path, CWIST_HTTP_DELETE, handler, opts);
-}
-
-void cwist_app_patch_opt(cwist_app *app, const char *path, cwist_handler_func handler,
-                         cwist_endpoint_opt_t opts) {
-    add_route(app, path, CWIST_HTTP_PATCH, handler, opts);
-}
-
-/**
- * @brief Register a WebSocket route with explicit endpoint options.
- * @param app Application being configured.
- * @param path Exact GET route that should upgrade to WebSocket.
- * @param handler WebSocket handler invoked after a successful upgrade.
- * @param opts Endpoint flags associated with the route.
- */
-void cwist_app_ws_opt(cwist_app *app, const char *path, cwist_ws_handler_func handler,
-                      cwist_endpoint_opt_t opts) {
+void cwist_app_ws_opt(cwist_app *app, const char *path, cwist_ws_handler_func handler, cwist_endpoint_opt_t opts) {
     if (!app || !app->router || !path) return;
     if (opts == 0) {
         opts = CWIST_ENDPOINT_DEFAULT;
     }
-    const cwist_route_target target = {.ws_handler = handler};
-    cwist_route_table_insert(app->router, path, NULL, CWIST_HTTP_GET, &target, opts);
+    cwist_route_table_insert(app->router, path, CWIST_HTTP_GET, NULL, handler, opts);
 }
 
 static bool match_path(const char *pattern, const char *actual, cwist_query_map *params) {
@@ -2318,54 +2167,21 @@ static void internal_route_handler(cwist_app *app, cwist_http_request *req,
         res->endpoint_opts = req->endpoint_opts;
     }
 
+    cwist_static_request_info static_info = {0};
+    if (cwist_prepare_static(app, req, &static_info)) {
+        req->endpoint_opts = CWIST_ENDPOINT_FILE;
+        if (res) res->endpoint_opts = req->endpoint_opts;
+        execute_chain(app, req, res, cwist_static_handler, &static_info);
+        return;
+    }
+
     const char *path = (req->path && req->path->data) ? req->path->data : "/";
     cwist_route_entry *found_route = cwist_route_table_lookup(app->router, req->method, path);
 
     if (found_route) {
         req->endpoint_opts = found_route->opts ? found_route->opts : CWIST_ENDPOINT_DEFAULT;
         if (res) res->endpoint_opts = req->endpoint_opts;
-        if (found_route->ws_async_on_message && req->async_conn) {
-#if !defined(__EMSCRIPTEN__) && !defined(__wasi__)
-            /* C1M path (issue #181): the route handler runs on the reactor
-             * thread, so invoking a blocking ws_handler here would park the
-             * whole worker in recv().  Complete the upgrade, send the 101
-             * through the coalesced writer, then hand the fd to the
-             * reactor-driven callback-shaped WebSocket path. */
-            if (cwist_websocket_upgrade_response(req, res)) {
-                cwist_http_async_conn_t *aconn = (cwist_http_async_conn_t *)req->async_conn;
-                req->upgraded = true;
-                res->keep_alive = true;
-                cwist_http_send_response_coalesced(req->client_fd, res, aconn, false, false);
-                cwist_http_coalesce_flush_blocking(req->client_fd, aconn);
-                if (cwist_websocket_async_attach(req->client_fd, aconn->reactor,
-                                                 found_route->ws_async_on_message,
-                                                 found_route->ws_async_user_data,
-                                                 (const uint8_t *)aconn->rbuf, aconn->len)) {
-                    /* Bytes already read past the upgrade request were
-                     * copied into the WS stash by attach.  The HTTP layer
-                     * releases the connection shell (without closing the fd)
-                     * when the C1M loop reports CWIST_ASYNC_DETACH on
-                     * req->ws_async_handoff; the WS async state owns the fd
-                     * from here on. */
-                    req->async_conn = NULL;
-                    req->ws_async_handoff = true;
-                } else {
-                    /* 101 already sent and attach closed the fd; detach so
-                     * the HTTP layer only releases the connection shell. */
-                    req->async_conn = NULL;
-                    req->ws_async_handoff = true;
-                }
-            } else {
-                res->status_code = CWIST_HTTP_BAD_REQUEST;
-                cwist_sstring_assign(res->body, "WebSocket Upgrade Failed");
-            }
-#endif
-        } else if (found_route->ws_handler) {
-#if defined(__EMSCRIPTEN__) || defined(__wasi__)
-            /* WebSocket upgrades need a live socket; in-memory dispatch has none. */
-            res->status_code = CWIST_HTTP_BAD_REQUEST;
-            cwist_sstring_assign(res->body, "WebSocket Upgrade Failed");
-#else
+        if (found_route->ws_handler) {
             if (req->client_fd >= 0) {
                 cwist_websocket *ws = cwist_websocket_upgrade(req, req->client_fd);
                 if (ws) {
@@ -2386,6 +2202,36 @@ static void internal_route_handler(cwist_app *app, cwist_http_request *req,
         } else {
             execute_route(app, req, res, found_route);
         }
+        } else {
+            if (app->error_handler) {
+                app->error_handler(req, res, CWIST_HTTP_NOT_FOUND);
+            } else {
+                res->status_code = CWIST_HTTP_NOT_FOUND;
+            cwist_sstring_assign(res->body, "404 Not Found");
+        }
+    }
+}
+
+static void static_ssl_handler(cwist_https_connection *conn, void *ctx) {
+    cwist_app *app = (cwist_app *)ctx;
+    cwist_http_request *req = cwist_https_receive_request(conn);
+    if (!req) return;
+    req->app = app;
+    req->db = app->db;
+    
+    cwist_http_response *res = cwist_http_response_create();
+    internal_route_handler(app, req, res);
+    
+    cwist_https_send_response(conn, res);
+    cwist_http_response_destroy(res);
+    cwist_http_request_destroy(req);
+}
+
+static void static_http_handler(int client_fd, void *ctx) {
+    cwist_app *app = (cwist_app *)ctx;
+    char *read_buf = cwist_alloc(CWIST_HTTP_READ_BUFFER_SIZE);
+    if (!read_buf) {
+        close(client_fd);
         return;
     }
 
@@ -3180,7 +3026,12 @@ void cwist_app_http_handler(int client_fd, void *ctx) {
             }
             
             // --- Big Dumb Reply (Learn) ---
-            if (app->bdr_ctx && req->method == CWIST_HTTP_GET && duration_ms > (uint64_t)app->bdr_ctx->latency_threshold_ms) {
+            bool endpoint_fixed = cwist_endpoint_has(req->endpoint_opts, CWIST_ENDPOINT_FIXED);
+            bool endpoint_file = cwist_endpoint_has(req->endpoint_opts, CWIST_ENDPOINT_FILE);
+            if (app->bdr_ctx &&
+                req->method == CWIST_HTTP_GET &&
+                !endpoint_file &&
+                (endpoint_fixed || duration_ms > (uint64_t)app->bdr_ctx->latency_threshold_ms)) {
                 // Too slow! Cache it.
                 // We need to serialize the response we just sent.
                 // Note: This duplicates serialization work (once in send_response, once here).
