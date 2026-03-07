@@ -7,12 +7,6 @@
 #include <ctype.h>
 #include <stdbool.h>
 
-/**
- * @file db.c
- * @brief SQLite convenience wrappers plus lightweight heuristics for query execution and JSON
- * healing.
- */
-
 typedef struct {
     uint32_t join_count;
     uint32_t predicate_count;
@@ -20,11 +14,6 @@ typedef struct {
 } cwist_db_plan_hint;
 
 /* Bhaskara II style integer-root refinement keeps everything in integer space. */
-/**
- * @brief Compute an integer square-root style refinement for heuristic scaling.
- * @param value Input value to reduce.
- * @return Integer root approximation used for timeout tuning.
- */
 static uint64_t cwist_db_integer_root(uint64_t value) {
     if (value == 0) return 0;
     uint64_t x = value;
@@ -36,22 +25,10 @@ static uint64_t cwist_db_integer_root(uint64_t value) {
     return x;
 }
 
-/**
- * @brief Check whether a character is an ASCII alphabetic letter.
- * @param c Character to classify.
- * @return true when @p c is an ASCII letter.
- */
 static bool cwist_db_is_alpha(char c) {
     return (c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z');
 }
 
-/**
- * @brief Match an uppercase SQL keyword at a specific position with identifier boundaries.
- * @param sql SQL string to inspect.
- * @param pos Candidate keyword start position.
- * @param kw Uppercase keyword to match.
- * @return true when the keyword occurs at @p pos with token boundaries.
- */
 static bool cwist_db_match_keyword(const char *sql, size_t pos, const char *kw) {
     size_t i = 0;
     while (kw[i]) {
@@ -71,11 +48,6 @@ static bool cwist_db_match_keyword(const char *sql, size_t pos, const char *kw) 
     return true;
 }
 
-/**
- * @brief Derive simple execution heuristics from raw SQL text.
- * @param sql SQL text to analyze.
- * @return Hint bundle containing join count, predicate count, and symbolic weight.
- */
 static cwist_db_plan_hint cwist_db_analyze_sql(const char *sql) {
     cwist_db_plan_hint hint = {0, 0, 0};
     if (!sql) return hint;
@@ -86,10 +58,8 @@ static cwist_db_plan_hint cwist_db_analyze_sql(const char *sql) {
         char upper = (char)toupper((unsigned char)sql[i]);
         accum ^= (uint64_t)upper;
         accum *= 0x100000001b3ULL;
-        if (upper == '(')
-            depth++;
-        else if (upper == ')' && depth > 0)
-            depth--;
+        if (upper == '(') depth++;
+        else if (upper == ')' && depth > 0) depth--;
 
         if (upper == 'J' && cwist_db_match_keyword(sql, i, "JOIN")) {
             hint.join_count++;
@@ -105,14 +75,10 @@ static cwist_db_plan_hint cwist_db_analyze_sql(const char *sql) {
     return hint;
 }
 
-/**
- * @brief Apply coarse SQLite pragmas and busy timeouts derived from the SQL hint.
- * @param conn SQLite connection to tune.
- * @param hint Analyzed SQL complexity hint.
- */
 static void cwist_db_apply_hint(sqlite3 *conn, const cwist_db_plan_hint *hint) {
     if (!conn || !hint) return;
-    uint64_t complexity = hint->symbolic_weight + ((uint64_t)hint->join_count * 131ULL) +
+    uint64_t complexity = hint->symbolic_weight +
+                          ((uint64_t)hint->join_count * 131ULL) +
                           ((uint64_t)hint->predicate_count * 53ULL) + 1ULL;
     uint64_t root = cwist_db_integer_root(complexity);
     int busy_ms = 50 + (int)(root % 350);

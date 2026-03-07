@@ -41,6 +41,7 @@
 #include <fcntl.h>
 #ifdef __linux__
 #include <sys/epoll.h>
+#include <sys/sendfile.h>
 #endif
 #if defined(__linux__)
 #include <sys/sendfile.h>
@@ -1749,13 +1750,8 @@ cwist_http_request *cwist_http_request_create(void) {
     req->flash = NULL;
     req->upgraded = false;
     req->content_length = 0;
-    req->stream_id = 0;
     req->private_data = NULL;
     req->endpoint_opts = CWIST_ENDPOINT_DEFAULT;
-    req->arena = arena;
-    req->async_conn = NULL;
-    req->https_conn = NULL;
-    req->h2_queue = NULL;
 
     // Defaults (borrowed statics; parsing overwrites them via arena/heap assign)
     cwist_sstring_borrow(req->version, "HTTP/1.1", 8);
@@ -1873,6 +1869,18 @@ void cwist_http_request_destroy(cwist_http_request *req) {
 
 /* --- Response Lifecycle --- */
 
+static void cwist_http_response_release_file_stream(cwist_http_response *res) {
+    if (!res || !res->use_file_stream) return;
+    if (res->file_stream_auto_close && res->file_stream_fd >= 0) {
+        close(res->file_stream_fd);
+    }
+    res->use_file_stream = false;
+    res->file_stream_fd = -1;
+    res->file_stream_len = 0;
+    res->file_stream_offset = 0;
+    res->file_stream_auto_close = false;
+}
+
 static void cwist_http_response_release_ptr_body(cwist_http_response *res) {
     if (!res || !res->is_ptr_body) return;
     if (res->ptr_body_cleanup && res->ptr_body) {
@@ -1893,7 +1901,7 @@ cwist_http_response *cwist_http_response_create(void) {
     res->status_code = CWIST_HTTP_OK;
     res->status_text = cwist_http_sstring_create(arena);
     res->headers = NULL;
-    res->body = cwist_http_sstring_create(arena);
+    res->body = cwist_sstring_create();
     res->endpoint_opts = CWIST_ENDPOINT_DEFAULT;
     res->keep_alive = true;
     res->is_ptr_body = false;
@@ -1901,6 +1909,11 @@ cwist_http_response *cwist_http_response_create(void) {
     res->ptr_body_len = 0;
     res->ptr_body_cleanup = NULL;
     res->ptr_body_cleanup_ctx = NULL;
+    res->use_file_stream = false;
+    res->file_stream_fd = -1;
+    res->file_stream_len = 0;
+    res->file_stream_offset = 0;
+    res->file_stream_auto_close = false;
 
     // Defaults (borrowed statics; handlers may overwrite via regular assign)
     cwist_sstring_borrow(res->version, "HTTP/1.1", 8);
@@ -1940,6 +1953,7 @@ cwist_http_response *cwist_http_response_create_in_arena(void *arena) {
 void cwist_http_response_destroy(cwist_http_response *res) {
     if (res) {
         cwist_http_response_release_ptr_body(res);
+        cwist_http_response_release_file_stream(res);
         cwist_sstring_destroy(res->version);
         cwist_sstring_destroy(res->status_text);
         cwist_sstring_destroy(res->body);
@@ -1965,6 +1979,7 @@ void cwist_http_response_set_body_ptr(cwist_http_response *res, const void *ptr,
 
 void cwist_http_response_set_body_ptr_managed(cwist_http_response *res, const void *ptr, size_t len, cwist_http_body_cleanup_fn cleanup, void *ctx) {
     if (!res) return;
+    cwist_http_response_release_file_stream(res);
     cwist_http_response_release_ptr_body(res);
     res->is_ptr_body = true;
     res->ptr_body = ptr;
@@ -1988,7 +2003,14 @@ int headers_have_content_length(cwist_http_header_node *headers) {
 
 // Helper to serialize headers only
 static size_t serialize_headers(cwist_http_response *res, char *buf, size_t buf_size) {
-    size_t body_len = res->is_ptr_body ? res->ptr_body_len : (res->body ? res->body->size : 0);
+    size_t body_len = 0;
+    if (res->use_file_stream) {
+        body_len = res->file_stream_len;
+    } else if (res->is_ptr_body) {
+        body_len = res->ptr_body_len;
+    } else if (res->body) {
+        body_len = res->body->size;
+    }
     int offset = 0;
     
     // Status Line
@@ -2022,7 +2044,64 @@ static size_t serialize_headers(cwist_http_response *res, char *buf, size_t buf_
     return offset;
 }
 
-#include <sys/uio.h> // For writev
+#include <sys/uio.h> // For writev and BSD sendfile
+
+static bool cwist_http_stream_file_fast(int client_fd, cwist_http_response *res) {
+#if defined(__linux__) || defined(__APPLE__) || defined(__FreeBSD__)
+    if (!res || !res->use_file_stream || res->file_stream_fd < 0) return false;
+    size_t remaining = res->file_stream_len;
+    off_t offset = res->file_stream_offset;
+    while (remaining > 0) {
+#if defined(__linux__)
+        ssize_t sent = sendfile(client_fd, res->file_stream_fd, &offset, remaining);
+        if (sent < 0) {
+            if (errno == EINTR || errno == EAGAIN) continue;
+            return false;
+        }
+        if (sent == 0) break;
+        remaining -= (size_t)sent;
+#elif defined(__APPLE__)
+        off_t chunk = (off_t)remaining;
+        int rc = sendfile(res->file_stream_fd, client_fd, offset, &chunk, NULL, 0);
+        if (rc == -1) {
+            if (errno == EINTR || errno == EAGAIN) {
+                if (chunk == 0) continue;
+                offset += chunk;
+                remaining -= (size_t)chunk;
+                continue;
+            }
+            return false;
+        }
+        if (chunk == 0) break;
+        offset += chunk;
+        remaining -= (size_t)chunk;
+#elif defined(__FreeBSD__)
+        off_t sent = 0;
+        size_t chunk = remaining;
+        int rc = sendfile(res->file_stream_fd, client_fd, offset, chunk, NULL, &sent, 0);
+        if (rc == -1) {
+            if (errno == EINTR || errno == EAGAIN) {
+                if (sent == 0) continue;
+                offset += sent;
+                remaining -= (size_t)sent;
+                continue;
+            }
+            return false;
+        }
+        if (sent == 0) break;
+        offset += sent;
+        remaining -= (size_t)sent;
+#endif
+    }
+    res->file_stream_offset = offset;
+    return remaining == 0;
+#else
+    (void)client_fd;
+    (void)res;
+    errno = ENOTSUP;
+    return false;
+#endif
+}
 
 cwist_error_t cwist_http_send_response(int client_fd, cwist_http_response *res) {
     cwist_error_t err = make_error(CWIST_ERR_INT16);
@@ -2056,7 +2135,7 @@ cwist_error_t cwist_http_send_response(int client_fd, cwist_http_response *res) 
     iov[0].iov_base = header_buf;
     iov[0].iov_len = header_len;
 
-    if (body_len > 0 && body_ptr) {
+    if (!res->use_file_stream && body_len > 0 && body_ptr) {
         iov[1].iov_base = (void*)body_ptr;
         iov[1].iov_len = body_len;
         iov_cnt = 2;
@@ -2075,9 +2154,15 @@ cwist_error_t cwist_http_send_response(int client_fd, cwist_http_response *res) 
         err.error.err_i16 = -1;
     } else {
         err.error.err_i16 = 0;
+        if (res->use_file_stream) {
+            if (!cwist_http_stream_file_fast(client_fd, res)) {
+                err.error.err_i16 = -1;
+            }
+        }
     }
 
     cwist_http_response_release_ptr_body(res);
+    cwist_http_response_release_file_stream(res);
     return err;
 }
 
@@ -2396,7 +2481,7 @@ cwist_error_t cwist_http_response_send_file(cwist_http_response *res, const char
     char *buffer = NULL;
 
     if (!use_fast_stream && file_size > 0) {
-        buffer = (char *)cwist_alloc(file_size + 1);
+        buffer = (char *)cwist_alloc(file_size);
         if (!buffer) {
             close(fd);
             err.error.err_i16 = -ENOMEM;
@@ -2426,11 +2511,10 @@ cwist_error_t cwist_http_response_send_file(cwist_http_response *res, const char
         close(fd);
 
         if (file_size > 0) {
-            /* Adopt the read buffer as the body: no second file-size copy. */
-            buffer[file_size] = '\0';
-            cwist_sstring_adopt_len(res->body, buffer, file_size);
+            cwist_sstring_assign_len(res->body, buffer, file_size);
+            cwist_free(buffer);
         } else {
-            cwist_sstring_borrow(res->body, "", 0);
+            cwist_sstring_assign(res->body, "");
         }
     } else {
         cwist_sstring_borrow(res->body, "", 0);
