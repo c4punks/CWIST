@@ -1,24 +1,22 @@
 <map id="src/core/siphash/siphash.c" name="src/core/siphash/siphash.c">
-<area shape="rect" id="Node000001" title="SipHash implementation plus CWIST&#45;specific entropy expansion for hash seeds." alt="" coords="283,5,475,31"/>
-<area shape="rect" id="Node000002" title=" " alt="" coords="321,167,392,192"/>
-<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="283,24,207,30,129,40,63,56,39,67,23,80,12,96,8,110,10,122,18,132,48,149,93,162,147,170,205,174,308,176,308,182,205,180,147,175,92,167,46,154,14,136,6,124,3,110,7,94,19,77,36,63,61,51,128,35,207,24,283,19"/>
-<area shape="rect" id="Node000003" title=" " alt="" coords="33,86,104,111"/>
-<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="318,33,223,53,117,81,110,84,108,79,116,76,221,48,316,28"/>
-<area shape="rect" id="Node000004" title=" " alt="" coords="129,86,203,111"/>
-<area shape="poly" id="edge3_Node000001_Node000004" title=" " alt="" coords="348,33,216,81,210,84,208,79,214,76,346,28"/>
-<area shape="rect" id="Node000005" title=" " alt="" coords="228,86,291,111"/>
-<area shape="poly" id="edge4_Node000001_Node000005" title=" " alt="" coords="363,33,290,80,287,76,360,29"/>
-<area shape="rect" id="Node000006" href="$d3/da3/wasi_8h.html" title="WASI target feature detection shared by all CWIST sources." alt="" coords="315,86,443,111"/>
-<area shape="poly" id="edge5_Node000001_Node000006" title=" " alt="" coords="382,31,382,72,377,72,377,31"/>
-<area shape="rect" id="Node000007" title=" " alt="" coords="467,86,534,111"/>
-<area shape="poly" id="edge6_Node000001_Node000007" title=" " alt="" coords="399,29,473,76,470,81,396,33"/>
-<area shape="rect" id="Node000008" title=" " alt="" coords="559,86,629,111"/>
-<area shape="poly" id="edge7_Node000001_Node000008" title=" " alt="" coords="413,28,547,76,553,79,552,84,545,81,412,33"/>
-<area shape="rect" id="Node000009" title=" " alt="" coords="654,86,718,111"/>
-<area shape="poly" id="edge8_Node000001_Node000009" title=" " alt="" coords="443,28,538,48,641,76,648,78,647,83,640,81,536,53,442,33"/>
-<area shape="rect" id="Node000010" href="$d0/db0/core_2siphash_2siphash_8h.html" title=" " alt="" coords="743,79,885,119"/>
-<area shape="poly" id="edge9_Node000001_Node000010" title=" " alt="" coords="453,28,730,76,729,81,453,33"/>
-<area shape="poly" id="edge10_Node000010_Node000002" title=" " alt="" coords="743,119,730,121,552,152,406,174,405,169,551,147,729,116,742,114"/>
-<area shape="rect" id="Node000011" title=" " alt="" coords="777,167,851,192"/>
-<area shape="poly" id="edge11_Node000010_Node000011" title=" " alt="" coords="817,119,817,153,811,153,811,119"/>
+<area shape="rect" id="Node000001" title="SipHash implementation plus CWIST&#45;specific entropy expansion for hash seeds." alt="" coords="200,5,391,33"/>
+<area shape="rect" id="Node000002" title=" " alt="" coords="238,174,308,201"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="200,31,145,39,91,50,46,64,30,73,19,83,11,95,8,106,9,116,14,125,34,141,65,154,145,172,223,181,222,186,144,177,63,159,31,145,10,128,4,117,3,106,6,93,15,79,27,69,44,60,90,45,144,34,199,26"/>
+<area shape="rect" id="Node000003" title=" " alt="" coords="29,90,98,117"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="252,36,111,84,107,85,105,80,110,78,250,31"/>
+<area shape="rect" id="Node000004" title=" " alt="" coords="123,90,196,117"/>
+<area shape="poly" id="edge3_Node000001_Node000004" title=" " alt="" coords="275,36,196,83,193,79,273,31"/>
+<area shape="rect" id="Node000005" title=" " alt="" coords="221,90,283,117"/>
+<area shape="poly" id="edge4_Node000001_Node000005" title=" " alt="" coords="291,35,268,77,264,75,286,32"/>
+<area shape="rect" id="Node000006" title=" " alt="" coords="307,90,372,117"/>
+<area shape="poly" id="edge5_Node000001_Node000006" title=" " alt="" coords="305,32,328,75,323,77,301,35"/>
+<area shape="rect" id="Node000007" title=" " alt="" coords="397,90,467,117"/>
+<area shape="poly" id="edge6_Node000001_Node000007" title=" " alt="" coords="319,31,398,79,396,83,316,36"/>
+<area shape="rect" id="Node000008" title=" " alt="" coords="491,90,554,117"/>
+<area shape="poly" id="edge7_Node000001_Node000008" title=" " alt="" coords="342,31,479,79,484,80,482,85,478,83,340,36"/>
+<area shape="rect" id="Node000009" href="$df/dac/siphash_8h_source.html" title=" " alt="" coords="578,81,720,126"/>
+<area shape="poly" id="edge8_Node000001_Node000009" title=" " alt="" coords="357,31,564,78,563,83,356,36"/>
+<area shape="poly" id="edge9_Node000009_Node000002" title=" " alt="" coords="579,126,567,128,325,179,323,174,566,123,577,120"/>
+<area shape="rect" id="Node000010" title=" " alt="" coords="612,174,686,201"/>
+<area shape="poly" id="edge10_Node000009_Node000010" title=" " alt="" coords="652,126,652,158,646,158,646,126"/>
 </map>
