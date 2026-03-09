@@ -1,19 +1,8 @@
 var searchData=
 [
-  ['obuf_0',['obuf',['../db/d8a/structcwist__http__async__conn.html#a29aafbe9496f8be60a5d9f4c8b83d8bc',1,'cwist_http_async_conn']]],
-  ['ocap_1',['ocap',['../db/d8a/structcwist__http__async__conn.html#ae95142c1a80b7e177cc37bbd94ad3644',1,'cwist_http_async_conn']]],
-  ['offset_2',['offset',['../d4/d6b/structsession__arena.html#a4cd5f89d68a2eaf4fba5e733fd112be3',1,'session_arena']]],
-  ['ok_3',['ok',['../de/ddb/structcwist__bind__result.html#a11707e64c1b5f009e85dc4aecf1aceb4',1,'cwist_bind_result']]],
-  ['olen_4',['olen',['../db/d8a/structcwist__http__async__conn.html#a9b96713b430493a686e80bb0377f6200',1,'cwist_http_async_conn']]],
-  ['on_5fcancel_5',['on_cancel',['../d6/d48/structcwist__http2__stream__hooks.html#add07e70d2ceb39d13ccd204622ba86ef',1,'cwist_http2_stream_hooks']]],
-  ['on_5fclose_6',['on_close',['../d6/d48/structcwist__http2__stream__hooks.html#a9c603592b065e5c3ff213ae36cca0690',1,'cwist_http2_stream_hooks']]],
-  ['on_5fconn_5fclose_7',['on_conn_close',['../d6/d48/structcwist__http2__stream__hooks.html#aec3bf56a54cf3b4dd1d1ad5ff0c942da',1,'cwist_http2_stream_hooks']]],
-  ['on_5fconn_5fopen_8',['on_conn_open',['../d6/d48/structcwist__http2__stream__hooks.html#a4cb1c164289077cef35e4e77c4a7fe62',1,'cwist_http2_stream_hooks']]],
-  ['on_5fdata_9',['on_data',['../d6/d48/structcwist__http2__stream__hooks.html#a3e7f4126144d8f56706a874499d9d993',1,'cwist_http2_stream_hooks']]],
-  ['on_5fheaders_10',['on_headers',['../d6/d48/structcwist__http2__stream__hooks.html#a689f26d676b664064d462544bdb1eded',1,'cwist_http2_stream_hooks']]],
-  ['on_5fpoll_11',['on_poll',['../d6/d48/structcwist__http2__stream__hooks.html#a167ed5a114f403170755827261986e27',1,'cwist_http2_stream_hooks']]],
-  ['opcode_12',['opcode',['../db/d40/structcwist__ws__frame.html#a7f032014ace0c0fe03d9ac4ff90354ad',1,'cwist_ws_frame']]],
-  ['owner_5fpid_13',['owner_pid',['../dc/d88/structcwist__webrtc__ctx.html#a934c9ad24821fbb9420b2af3ffc444a0',1,'cwist_webrtc_ctx']]],
-  ['owns_5freactor_14',['owns_reactor',['../dc/d88/structcwist__webrtc__ctx.html#ad19d3c4a868238bf704a02454f4bc4be',1,'cwist_webrtc_ctx']]],
-  ['owns_5fstorage_15',['owns_storage',['../d5/ddc/structcwist__sstring.html#aae22aad488c0a5867565bcd648fcf322',1,'cwist_sstring']]]
+  ['path_0',['path',['../d6/de0/structcwist__file__t.html#aa3ac45f2b9ac20d97ee20cb0e71537e7',1,'cwist_file_t']]],
+  ['ptr_5fbody_1',['ptr_body',['../dd/d22/structcwist__http__response.html#a4d1207137724ed8a3ce273e19e228ebe',1,'cwist_http_response']]],
+  ['ptr_5fbody_5fcleanup_2',['ptr_body_cleanup',['../dd/d22/structcwist__http__response.html#a7795a5eefb5b3cd1b99c02bd77157b93',1,'cwist_http_response']]],
+  ['ptr_5fbody_5fcleanup_5fctx_3',['ptr_body_cleanup_ctx',['../dd/d22/structcwist__http__response.html#a1946d4b2ad4858dc3d8e323857fb26c2',1,'cwist_http_response']]],
+  ['ptr_5fbody_5flen_4',['ptr_body_len',['../dd/d22/structcwist__http__response.html#ac6c3558639fc917b5f2ba31bcd418278',1,'cwist_http_response']]]
 ];

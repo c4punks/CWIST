@@ -1,38 +1,30 @@
 <map id="src/core/template/template.c" name="src/core/template/template.c">
-<area shape="rect" id="Node000001" title="Minimal template renderer supporting variable substitution and simple control flow." alt="" coords="409,5,619,31"/>
-<area shape="rect" id="Node000002" href="$de/db8/template_8h.html" title="Simple template engine." alt="" coords="205,79,356,119"/>
-<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="481,33,351,77,349,72,479,28"/>
-<area shape="rect" id="Node000004" title=" " alt="" coords="317,262,388,287"/>
-<area shape="poly" id="edge19_Node000001_Node000004" title=" " alt="" coords="509,32,370,251,365,249,504,29"/>
-<area shape="rect" id="Node000005" title=" " alt="" coords="412,262,483,287"/>
-<area shape="poly" id="edge18_Node000001_Node000005" title=" " alt="" coords="513,32,498,79,455,249,450,248,493,78,508,30"/>
-<area shape="rect" id="Node000006" title=" " alt="" coords="358,343,441,368"/>
-<area shape="poly" id="edge21_Node000001_Node000006" title=" " alt="" coords="519,30,527,76,531,145,529,183,524,222,513,260,496,296,474,321,446,339,443,334,470,317,492,293,508,259,519,221,524,183,526,145,521,77,514,31"/>
-<area shape="rect" id="Node000010" href="$d2/dfe/alloc_8h.html" title="Memory allocation wrappers backed by libttak." alt="" coords="553,86,726,111"/>
-<area shape="poly" id="edge11_Node000001_Node000010" title=" " alt="" coords="534,29,611,76,608,81,531,33"/>
-<area shape="rect" id="Node000014" title=" " alt="" coords="750,86,817,111"/>
-<area shape="poly" id="edge17_Node000001_Node000014" title=" " alt="" coords="565,28,647,49,739,76,745,78,744,84,737,81,646,54,564,33"/>
-<area shape="rect" id="Node000015" title=" " alt="" coords="841,86,912,111"/>
-<area shape="poly" id="edge20_Node000001_Node000015" title=" " alt="" coords="598,28,708,47,829,76,838,79,837,84,828,81,707,53,597,33"/>
-<area shape="rect" id="Node000003" href="$d4/dbd/core_2sstring_2sstring_8h.html" title="Safe string type with helper methods." alt="" coords="213,167,349,207"/>
-<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="283,119,283,153,278,153,278,119"/>
-<area shape="rect" id="Node000009" title=" " alt="" coords="5,343,116,368"/>
-<area shape="poly" id="edge10_Node000002_Node000009" title=" " alt="" coords="246,121,209,144,166,175,124,212,88,256,72,293,65,330,60,329,67,292,84,253,120,209,162,171,206,139,244,116"/>
-<area shape="poly" id="edge3_Node000003_Node000004" title=" " alt="" coords="299,205,336,249,332,253,295,209"/>
-<area shape="poly" id="edge4_Node000003_Node000005" title=" " alt="" coords="318,204,414,253,412,258,316,209"/>
-<area shape="poly" id="edge5_Node000003_Node000006" title=" " alt="" coords="283,206,289,249,296,272,307,293,330,317,358,334,355,339,327,321,303,296,291,274,283,250,278,207"/>
-<area shape="rect" id="Node000007" href="$d7/da1/sys_2err_2cwist__err_8h.html" title="Unified error code and type definitions for the CWIST system layer." alt="" coords="99,255,241,295"/>
-<area shape="poly" id="edge6_Node000003_Node000007" title=" " alt="" coords="258,209,207,248,204,244,254,205"/>
-<area shape="poly" id="edge8_Node000007_Node000006" title=" " alt="" coords="226,292,354,336,352,341,224,297"/>
-<area shape="rect" id="Node000008" title=" " alt="" coords="140,343,211,368"/>
-<area shape="poly" id="edge7_Node000007_Node000008" title=" " alt="" coords="174,295,176,329,171,329,169,295"/>
-<area shape="poly" id="edge9_Node000007_Node000009" title=" " alt="" coords="145,297,89,337,86,332,142,293"/>
-<area shape="rect" id="Node000011" title=" " alt="" coords="687,262,762,287"/>
-<area shape="poly" id="edge12_Node000010_Node000011" title=" " alt="" coords="674,109,712,131,730,146,744,165,751,187,751,210,739,250,734,249,746,209,746,188,740,168,726,150,709,135,671,114"/>
-<area shape="rect" id="Node000012" title=" " alt="" coords="805,174,946,199"/>
-<area shape="poly" id="edge13_Node000010_Node000012" title=" " alt="" coords="672,109,832,167,830,172,670,114"/>
-<area shape="rect" id="Node000013" href="$da/d0c/arena_8h.html" title="Request&#45;scoped arena allocator backed by libttak arena generations." alt="" coords="551,174,730,199"/>
-<area shape="poly" id="edge14_Node000010_Node000013" title=" " alt="" coords="642,111,643,160,638,160,637,112"/>
-<area shape="poly" id="edge15_Node000013_Node000006" title=" " alt="" coords="634,201,597,246,570,273,541,297,496,322,451,341,449,336,494,317,538,292,567,269,593,243,630,198"/>
-<area shape="poly" id="edge16_Node000013_Node000011" title=" " alt="" coords="654,198,705,250,701,253,650,201"/>
+<area shape="rect" id="Node000001" title="Minimal template renderer supporting variable substitution and simple control flow." alt="" coords="165,5,374,33"/>
+<area shape="rect" id="Node000002" href="$de/db8/template_8h_source.html" title=" " alt="" coords="195,81,345,126"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="272,34,272,65,267,65,267,34"/>
+<area shape="rect" id="Node000004" title=" " alt="" coords="5,275,76,302"/>
+<area shape="poly" id="edge15_Node000001_Node000004" title=" " alt="" coords="234,36,195,55,157,83,120,127,90,176,68,223,52,261,47,259,63,221,86,173,116,124,153,79,192,51,232,31"/>
+<area shape="rect" id="Node000005" title=" " alt="" coords="99,275,168,302"/>
+<area shape="poly" id="edge14_Node000001_Node000005" title=" " alt="" coords="243,36,212,55,185,83,162,127,148,176,140,222,137,260,132,259,135,221,143,175,157,125,181,79,209,51,240,31"/>
+<area shape="rect" id="Node000010" href="$d2/dfe/alloc_8h_source.html" title=" " alt="" coords="418,90,591,117"/>
+<area shape="poly" id="edge10_Node000001_Node000010" title=" " alt="" coords="308,31,454,82,452,87,307,36"/>
+<area shape="rect" id="Node000013" title=" " alt="" coords="614,90,680,117"/>
+<area shape="poly" id="edge13_Node000001_Node000013" title=" " alt="" coords="375,30,487,48,604,78,610,81,609,86,602,84,485,54,374,35"/>
+<area shape="rect" id="Node000003" href="$d1/d34/sstring_8h_source.html" title=" " alt="" coords="196,174,331,218"/>
+<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="271,126,269,158,263,158,266,126"/>
+<area shape="rect" id="Node000009" title=" " alt="" coords="372,359,482,387"/>
+<area shape="poly" id="edge9_Node000002_Node000009" title=" " alt="" coords="312,124,349,148,389,180,426,219,455,265,460,286,459,308,445,346,440,344,453,306,455,287,450,267,422,223,385,184,346,152,309,129"/>
+<area shape="poly" id="edge3_Node000003_Node000004" title=" " alt="" coords="207,221,88,269,84,271,82,266,86,264,205,216"/>
+<area shape="poly" id="edge4_Node000003_Node000005" title=" " alt="" coords="234,221,167,268,164,263,231,216"/>
+<area shape="rect" id="Node000006" title=" " alt="" coords="358,275,440,302"/>
+<area shape="poly" id="edge5_Node000003_Node000006" title=" " alt="" coords="297,217,369,264,366,268,294,221"/>
+<area shape="rect" id="Node000007" href="$d7/d82/cwist__err_8h_source.html" title=" " alt="" coords="192,266,334,311"/>
+<area shape="poly" id="edge6_Node000003_Node000007" title=" " alt="" coords="266,219,266,251,260,251,260,219"/>
+<area shape="rect" id="Node000008" title=" " alt="" coords="228,359,298,387"/>
+<area shape="poly" id="edge7_Node000007_Node000008" title=" " alt="" coords="266,311,266,343,260,343,260,311"/>
+<area shape="poly" id="edge8_Node000007_Node000009" title=" " alt="" coords="308,309,389,349,386,354,305,314"/>
+<area shape="rect" id="Node000011" title=" " alt="" coords="516,182,589,210"/>
+<area shape="poly" id="edge11_Node000010_Node000011" title=" " alt="" coords="514,116,541,167,536,170,509,119"/>
+<area shape="rect" id="Node000012" title=" " alt="" coords="613,182,753,210"/>
+<area shape="poly" id="edge12_Node000010_Node000012" title=" " alt="" coords="532,115,645,172,643,177,529,120"/>
 </map>

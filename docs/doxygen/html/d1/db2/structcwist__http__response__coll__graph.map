@@ -1,14 +1,6 @@
 <map id="cwist_http_response" name="cwist_http_response">
-<area shape="rect" id="Node000001" title="HTTP Response Object. Supports standard string body or Zero&#45;Copy pointer body." alt="" coords="146,229,301,255"/>
-<area shape="rect" id="Node000002" href="$d5/ddc/structcwist__sstring.html" title=" " alt="" coords="326,5,433,31"/>
-<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="361,43,305,110,262,177,232,231,227,228,257,174,301,106,357,39"/>
-<area shape="rect" id="Node000004" href="$d8/dca/struct____prim__cwist__error__t.html" title="Internal union&#45;like structure to store the actual error value." alt="" coords="390,125,547,150"/>
-<area shape="poly" id="edge4_Node000004_Node000002" title=" " alt="" coords="399,40,462,123,458,126,394,43"/>
-<area shape="rect" id="Node000005" href="$d3/d72/structcwist__http__header__node.html" title="Linked list for headers to handle multiple headers easily." alt="" coords="5,125,185,150"/>
-<area shape="poly" id="edge6_Node000005_Node000002" title=" " alt="" coords="313,34,236,57,166,93,113,127,110,122,164,88,234,52,312,29"/>
-<area shape="rect" id="Node000003" href="$d4/d50/structcwist__error__t.html" title="Integrated error structure used throughout the system." alt="" coords="510,229,617,255"/>
-<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="567,215,569,205,572,155,568,134,557,109,533,80,502,57,467,42,432,31,434,26,468,37,504,53,537,76,562,107,573,132,578,155,574,206,572,216"/>
-<area shape="poly" id="edge3_Node000003_Node000004" title=" " alt="" coords="491,158,555,227,551,231,487,162"/>
-<area shape="poly" id="edge5_Node000001_Node000005" title=" " alt="" coords="122,157,210,227,207,231,119,161"/>
-<area shape="poly" id="edge7_Node000005_Node000005" title=" " alt="" coords="200,127,208,131,212,138,204,146,186,150,185,145,202,141,207,137,205,135,198,132"/>
+<area shape="rect" id="Node000001" title="HTTP Response Object. Supports standard string body or Zero&#45;Copy pointer body." alt="" coords="18,106,172,134"/>
+<area shape="rect" id="Node000002" href="$d3/d72/structcwist__http__header__node.html" title="Linked list node for request/response headers." alt="" coords="5,5,185,33"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="98,49,98,105,92,105,92,49"/>
+<area shape="poly" id="edge2_Node000002_Node000002" title=" " alt="" coords="202,11,211,19,203,27,186,30,185,25,201,22,206,19,199,15"/>
 </map>

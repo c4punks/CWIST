@@ -1,5 +1,4 @@
 var searchData=
 [
-  ['bdr_5fblob_5ft_0',['bdr_blob_t',['../da/d2c/big__dumb__reply_8h.html#a31b00c7156cbbbc3b57e3f745100a89f',1,'big_dumb_reply.h']]],
-  ['bdr_5fentry_5ft_1',['bdr_entry_t',['../da/d2c/big__dumb__reply_8h.html#a5856b5ac26d6827bac275040413ed3b2',1,'big_dumb_reply.h']]]
+  ['job_5fnode_5ft_0',['job_node_t',['../d2/d29/io__uring_8c.html#a33eb97006e5539c94cc623bb804d7564',1,'io_uring.c']]]
 ];

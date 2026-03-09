@@ -1,23 +1,4 @@
 var searchData=
 [
-  ['u_0',['u',['../de/d25/structcwist__bind__rule.html#a27bf8f3b31c5ea4171cbc12cf10aa066',1,'cwist_bind_rule']]],
-  ['udp_5farmed_1',['udp_armed',['../dc/d88/structcwist__webrtc__ctx.html#aaa69c85e630d8ad4dff35615ba5e9ec5',1,'cwist_webrtc_ctx']]],
-  ['udp_5ffd_2',['udp_fd',['../d9/dae/structcwist__http3__context.html#a213752bd0aa2f75b9d8e3fe1e764bc42',1,'cwist_http3_context::udp_fd'],['../dc/d88/structcwist__webrtc__ctx.html#a667b50602547a713edcdfa880ec7db0d',1,'cwist_webrtc_ctx::udp_fd']]],
-  ['udp_5fsockbuf_3',['UDP_SOCKBUF',['../d3/d90/webrtc_8c.html#a42a7349257ad10380bcc9144b3fa2889',1,'webrtc.c']]],
-  ['up_5fsql_4',['up_sql',['../da/d46/structcwist__migration__t.html#a60afc48bf07d4005997e8a659e411ec5',1,'cwist_migration_t']]],
-  ['upgraded_5',['upgraded',['../dd/d68/structcwist__http__request.html#a93bc1facc9f75e9d2e243ea9f82b5669',1,'cwist_http_request']]],
-  ['uring_5fsqpoll_2ec_6',['uring_sqpoll.c',['../da/d44/uring__sqpoll_8c.html',1,'']]],
-  ['uring_5fsqpoll_2eh_7',['uring_sqpoll.h',['../d1/dd9/uring__sqpoll_8h.html',1,'']]],
-  ['use_5fcolors_8',['use_colors',['../d0/dd4/structcwist__logger.html#a6163a98da8d92f1fb5ace698fbb2a7ba',1,'cwist_logger']]],
-  ['use_5fepoll_9',['use_epoll',['../d5/d6e/structcwist__server__config.html#aa19c99a44f55f599e8b41ecfc74c0844',1,'cwist_server_config']]],
-  ['use_5ffile_5fstream_10',['use_file_stream',['../dd/d22/structcwist__http__response.html#a2dc25ecc16aa4a8a602035df19ecc468',1,'cwist_http_response']]],
-  ['use_5fforking_11',['use_forking',['../d5/d6e/structcwist__server__config.html#a07f28b6c21a9895aecbe90d944e99caf',1,'cwist_server_config']]],
-  ['use_5fhttp2_12',['use_http2',['../dc/da0/structcwist__app.html#a573d18871d76aa15723a9098e020a497',1,'cwist_app']]],
-  ['use_5fhttp3_13',['use_http3',['../dc/da0/structcwist__app.html#a70eed69c83ea4c036be65bc27fcd401f',1,'cwist_app']]],
-  ['use_5fhttps2_14',['use_https2',['../dc/da0/structcwist__app.html#a074e553f4ea7ec14339c1f0498ab11a3',1,'cwist_app']]],
-  ['use_5fhttps3_15',['use_https3',['../dc/da0/structcwist__app.html#ad05f5c80f94854fc131454e114f50a22',1,'cwist_app']]],
-  ['use_5fssl_16',['use_ssl',['../dc/da0/structcwist__app.html#a0c4364c0d0a629e8161fd6e8fc12020b',1,'cwist_app']]],
-  ['use_5fthreading_17',['use_threading',['../d5/d6e/structcwist__server__config.html#a8d288dcc0631f8e4ba48a2b0e386e52e',1,'cwist_server_config']]],
-  ['use_5ftls_18',['use_tls',['../d7/d79/structcwist__grpc__channel__options.html#a7588283b20da9d8fd929d32bf870c2d7',1,'cwist_grpc_channel_options::use_tls'],['../da/d65/structcwist__grpc__client__options.html#a04b2c0e299109ff5c96b01338cbd57c7',1,'cwist_grpc_client_options::use_tls']]],
-  ['user_5fctx_19',['user_ctx',['../db/d8a/structcwist__http__async__conn.html#ae11aabec78487fd25035496636eb734c',1,'cwist_http_async_conn::user_ctx'],['../d9/dae/structcwist__http3__context.html#a2cc515d04c26458bddeb106ef2bca285',1,'cwist_http3_context::user_ctx'],['../d8/d41/structcwist__middleware__node.html#a084c59d501931888acc0e38280bac35e',1,'cwist_middleware_node::user_ctx']]]
+  ['version_0',['version',['../dd/d22/structcwist__http__response.html#a4d176bf9a62ef668419e94313bdfc042',1,'cwist_http_response']]]
 ];
