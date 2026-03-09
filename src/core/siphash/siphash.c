@@ -8,6 +8,11 @@
 #include <time.h>
 #include <cwist/core/siphash/siphash.h>
 
+/**
+ * @file siphash.c
+ * @brief SipHash implementation plus CWIST-specific entropy expansion for hash seeds.
+ */
+
 /* Left-rotate a 64-bit integer by 'b' bits */
 #define ROTL(x, b) (uint64_t)(((x) << (b)) | ((x) >> (64 - (b))))
 
@@ -112,10 +117,21 @@ static const uint8_t CHOE_ORTHO_SECONDARY[4][4] = {
     {1, 0, 3, 2}
 };
 
+/**
+ * @brief Rotate a 64-bit value left by the requested amount.
+ * @param v Input value to rotate.
+ * @param r Rotation count in bits.
+ * @return Rotated value.
+ */
 static inline uint64_t rotl64(uint64_t v, unsigned int r) {
     return (v << r) | (v >> (64U - r));
 }
 
+/**
+ * @brief Fill a buffer with entropy from /dev/urandom or a timing-based fallback.
+ * @param buf Destination buffer to fill.
+ * @param len Number of bytes to generate.
+ */
 static void cwist_entropy_fill(uint8_t *buf, size_t len) {
     size_t filled = 0;
     int fd = open("/dev/urandom", O_RDONLY);
@@ -145,6 +161,12 @@ static void cwist_entropy_fill(uint8_t *buf, size_t len) {
     }
 }
 
+/**
+ * @brief Mix two 2-bit cell coordinates into one Latin-square derived nibble.
+ * @param a First input byte.
+ * @param b Second input byte.
+ * @return Mixed 4-bit value encoded in the low nibble of the byte.
+ */
 static uint8_t gusuryak_cell(uint8_t a, uint8_t b) {
     uint8_t row = a & 0x3;
     uint8_t col = b & 0x3;
@@ -153,6 +175,11 @@ static uint8_t gusuryak_cell(uint8_t a, uint8_t b) {
     return (uint8_t)((primary << 2) | secondary);
 }
 
+/**
+ * @brief Expand 16 raw entropy bytes through the Gusuryak-inspired mixing stage.
+ * @param in Raw entropy bytes.
+ * @param out Mixed 16-byte seed material.
+ */
 static void gusuryak_mix(const uint8_t in[16], uint8_t out[16]) {
     /* Following Choe Seok-jeong (Gusuryak), treat 16 bytes as a 4x4 Latin board. */
     uint64_t hi = 0x9e3779b185ebca87ULL;
@@ -178,6 +205,10 @@ static void gusuryak_mix(const uint8_t in[16], uint8_t out[16]) {
     memcpy(out + 8, &lo, 8);
 }
 
+/**
+ * @brief Generate a non-trivial 16-byte key suitable for SipHash table seeding.
+ * @param key Output buffer that receives the generated seed.
+ */
 void cwist_generate_hash_seed(uint8_t key[16]) {
     uint8_t raw[16];
     cwist_entropy_fill(raw, sizeof(raw));

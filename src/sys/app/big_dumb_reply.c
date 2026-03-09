@@ -8,12 +8,154 @@
 #include <string.h>
 #include <stdio.h>
 
+/**
+ * @file big_dumb_reply.c
+ * @brief Opportunistic response cache that stores stable GET replies in memory or on disk.
+ */
+
 #define BDR_BUCKETS 1024
 
-// SipHash key for BDR (Hardcoded or random at startup)
+/**
+ * @brief Static SipHash key used to bucket request and response fingerprints.
+ */
 static const uint8_t BDR_KEY[16] = {0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07,
-                                    0x08, 0x09, 0x0a, 0x0b, 0x0c, 0x0d, 0x0e, 0x0f};
+                                     0x08, 0x09, 0x0a, 0x0b, 0x0c, 0x0d, 0x0e, 0x0f};
 
+/**
+ * @brief Free a cached response blob and debit its size from the cache budget.
+ * @param bdr Cache instance that owns the blob.
+ * @param entry Cache entry whose blob should be released.
+ */
+static void bdr_release_blob(cwist_bdr_t *bdr, bdr_entry_t *entry) {
+    if (!entry || !entry->response_blob) return;
+    if (bdr) {
+        if (bdr->current_bytes >= entry->len) {
+            bdr->current_bytes -= entry->len;
+        } else {
+            bdr->current_bytes = 0;
+        }
+    }
+    cwist_free(entry->response_blob);
+    entry->response_blob = NULL;
+    entry->len = 0;
+}
+
+/**
+ * @brief Remove one cache entry from its hash bucket and free its payload.
+ * @param bdr Cache instance that owns the bucket array.
+ * @param idx Bucket index that contains the entry.
+ * @param prev Previous node in the chain, or NULL when removing the head.
+ * @param entry Entry to remove.
+ */
+static void bdr_remove_entry(cwist_bdr_t *bdr, size_t idx, bdr_entry_t *prev, bdr_entry_t *entry) {
+    if (!bdr || !entry || idx >= bdr->bucket_count) return;
+    bdr_release_blob(bdr, entry);
+    if (prev) {
+        prev->next = entry->next;
+    } else {
+        bdr->buckets[idx] = entry->next;
+    }
+    cwist_free(entry);
+}
+
+/**
+ * @brief Determine whether a cache entry should be invalidated by age or hit count.
+ * @param bdr Cache configuration and guardrail state.
+ * @param entry Entry being evaluated.
+ * @param now Current wall-clock time.
+ * @return true when the entry should be evicted.
+ */
+static bool bdr_entry_should_decay(const cwist_bdr_t *bdr, const bdr_entry_t *entry, time_t now) {
+    if (!bdr || !entry) return false;
+    if (bdr->max_entry_age_sec > 0 && entry->created_at > 0) {
+        if (now - entry->created_at > bdr->max_entry_age_sec) {
+            return true;
+        }
+    }
+    if (entry->is_stable && bdr->revalidate_hits > 0 && entry->hits >= bdr->revalidate_hits) {
+        return true;
+    }
+    return false;
+}
+
+/**
+ * @brief Evict the oldest cached entry to bring memory usage back under budget.
+ * @param bdr Cache instance to trim.
+ * @param now Current wall-clock time.
+ * @return true when an entry was removed.
+ */
+static bool bdr_trim_oldest(cwist_bdr_t *bdr, time_t now) {
+    if (!bdr) return false;
+    size_t victim_idx = SIZE_MAX;
+    bdr_entry_t *victim = NULL;
+    bdr_entry_t *victim_prev = NULL;
+    time_t oldest = now;
+
+    for (size_t i = 0; i < bdr->bucket_count; ++i) {
+        bdr_entry_t *prev = NULL;
+        bdr_entry_t *curr = bdr->buckets[i];
+        while (curr) {
+            if (curr->response_blob && (!victim || curr->created_at < oldest)) {
+                victim = curr;
+                victim_prev = prev;
+                victim_idx = i;
+                oldest = curr->created_at;
+            }
+            prev = curr;
+            curr = curr->next;
+        }
+    }
+
+    if (!victim || victim_idx == SIZE_MAX) return false;
+    bdr_remove_entry(bdr, victim_idx, victim_prev, victim);
+    return true;
+}
+
+/**
+ * @brief Sweep a bounded number of buckets looking for stale cache entries.
+ * @param bdr Cache instance to sweep.
+ * @param steps Number of buckets to inspect this round.
+ */
+static void bdr_sweep(cwist_bdr_t *bdr, size_t steps) {
+    if (!bdr || bdr->bucket_count == 0 || steps == 0) return;
+    time_t now = time(NULL);
+    for (size_t i = 0; i < steps; ++i) {
+        size_t idx = bdr->gc_cursor % bdr->bucket_count;
+        bdr->gc_cursor = (bdr->gc_cursor + 1) % bdr->bucket_count;
+        bdr_entry_t *prev = NULL;
+        bdr_entry_t *curr = bdr->buckets[idx];
+        while (curr) {
+            if (bdr_entry_should_decay(bdr, curr, now)) {
+                bdr_entry_t *victim = curr;
+                curr = curr->next;
+                bdr_remove_entry(bdr, idx, prev, victim);
+                continue;
+            }
+            prev = curr;
+            curr = curr->next;
+        }
+    }
+}
+
+/**
+ * @brief Apply cache GC and size guardrails after inserts or disk-mode transitions.
+ * @param bdr Cache instance to constrain.
+ */
+static void bdr_guardrails(cwist_bdr_t *bdr) {
+    if (!bdr) return;
+    bdr_sweep(bdr, BDR_GC_SWEEP);
+
+    if (bdr->max_bytes == 0) return;
+    time_t now = time(NULL);
+    while (bdr->current_bytes > bdr->max_bytes) {
+        if (!bdr_trim_oldest(bdr, now)) break;
+    }
+}
+
+/**
+ * @brief Allocate and initialize the Big Dumb Reply cache.
+ * @return Newly allocated cache object, or NULL on allocation failure.
+ */
 cwist_bdr_t *cwist_bdr_create(void) {
     cwist_bdr_t *bdr = calloc(1, sizeof(cwist_bdr_t));
     if (!bdr) return NULL;
@@ -25,6 +167,10 @@ cwist_bdr_t *cwist_bdr_create(void) {
     return bdr;
 }
 
+/**
+ * @brief Destroy the cache and every response blob it currently owns.
+ * @param bdr Cache instance to destroy.
+ */
 void cwist_bdr_destroy(cwist_bdr_t *bdr) {
     if (!bdr) return;
     for (size_t i = 0; i < bdr->bucket_count; i++) {
@@ -44,12 +190,22 @@ void cwist_bdr_destroy(cwist_bdr_t *bdr) {
     free(bdr);
 }
 
+/**
+ * @brief Hash a request method/path pair into the cache key space.
+ * @param method HTTP method string.
+ * @param path Canonical request path.
+ * @return 64-bit bucket key for the request.
+ */
 static uint64_t bdr_hash(const char *method, const char *path) {
     uint64_t h = siphash24((const void*)path, strlen(path), BDR_KEY);
     h ^= (uint64_t)(method[0]); 
     return h;
 }
 
+/**
+ * @brief Detect low-memory conditions and spill stable cache entries to SQLite.
+ * @param bdr Cache instance to downgrade when RAM becomes critical.
+ */
 static void bdr_check_ram(cwist_bdr_t *bdr) {
     if (bdr->is_disk_mode) return;
     
@@ -90,6 +246,12 @@ static void bdr_check_ram(cwist_bdr_t *bdr) {
     }
 }
 
+/**
+ * @brief Hash a serialized response blob for stability comparisons.
+ * @param data Response bytes to hash.
+ * @param len Number of bytes in the response blob.
+ * @return 64-bit content hash.
+ */
 static uint64_t bdr_hash_data(const void *data, size_t len) {
 
     return siphash24(data, len, BDR_KEY);
@@ -98,6 +260,14 @@ static uint64_t bdr_hash_data(const void *data, size_t len) {
 
 
 
+/**
+ * @brief Look up a previously stabilized GET response in the cache.
+ * @param bdr Cache instance to query.
+ * @param method HTTP method string.
+ * @param path Canonical request path.
+ * @param out_len Optional output pointer that receives the blob length.
+ * @return Cached response blob, or NULL when absent/unstable/invalidated.
+ */
 const void *cwist_bdr_get(cwist_bdr_t *bdr, const char *method, const char *path, size_t *out_len) {
 
     if (!bdr || !method || !path) return NULL;
@@ -158,6 +328,14 @@ const void *cwist_bdr_get(cwist_bdr_t *bdr, const char *method, const char *path
 
 
 
+/**
+ * @brief Feed a candidate GET response into the cache and promote stable blobs.
+ * @param bdr Cache instance to update.
+ * @param method HTTP method string.
+ * @param path Canonical request path.
+ * @param data Serialized response bytes.
+ * @param len Number of bytes in @p data.
+ */
 void cwist_bdr_put(cwist_bdr_t *bdr, const char *method, const char *path, const void *data, size_t len) {
 
     if (!bdr || !method || !path || !data || len == 0) return;

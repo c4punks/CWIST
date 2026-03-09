@@ -11,27 +11,12 @@
  * @brief Hash-map based storage and parsing helpers for URL query parameters.
  */
 
-#define CWIST_QUERY_MAP_DEFAULT_SIZE 16
-
 /**
- * @brief Duplicate a string using the map's allocator.
- * @param arena Memory arena to allocate from, or NULL to use heap allocation.
- * @param str Source string; NULL yields NULL.
- * @return Newly allocated copy owned by the arena or heap, or NULL on failure.
+ * @file query.c
+ * @brief Hash-map based storage and parsing helpers for URL query parameters.
  */
-static char *query_strdup(void *arena, const char *str) {
-    if (!str) return NULL;
-    size_t len = strlen(str);
-    if (arena) {
-        char *copy = (char *)cwist_arena_alloc((cwist_arena_t *)arena, len + 1);
-        if (copy) {
-            memcpy(copy, str, len + 1);
-        }
-        return copy;
-    } else {
-        return cwist_strdup(str);
-    }
-}
+
+#define CWIST_QUERY_MAP_DEFAULT_SIZE 16
 
 /**
  * @brief Allocate a query map and seed its SipHash key material.
@@ -174,34 +159,18 @@ const char *cwist_query_map_get(cwist_query_map *map, const char *key) {
 }
 
 /**
- * @brief Remove a key/value pair from the map if present.
- * @param map Query map to modify; NULL is a no-op.
- * @param key Key to delete; NULL is a no-op.
- * @retval In heap-managed maps the node and its strings are freed.
- * @retval In arena-managed maps the node is only unlinked; storage is reclaimed with the arena.
- *        (Nothing is freed.)
+ * @brief Parse a raw `a=1&b=2` query string into the existing map.
+ * @param map Destination map that receives decoded keys and values.
+ * @param raw_query Raw query substring without the leading question mark.
  */
-void cwist_query_map_delete(cwist_query_map *map, const char *key) {
-    if (!map || !key) return;
-    if (map->arena) {
-        /* In an arena-managed map, deletion is handled as a no-op or lazy nullification to prevent
-         * manual frees. */
-        uint64_t hash = siphash24(key, strlen(key), map->seed);
-        size_t index = hash % map->size;
-        cwist_query_bucket *curr = map->buckets[index];
-        cwist_query_bucket *prev = NULL;
-        while (curr) {
-            if (strcmp(curr->key, key) == 0) {
-                if (prev) {
-                    prev->next = curr->next;
-                } else {
-                    map->buckets[index] = curr->next;
-                }
-                return;
-            }
-            prev = curr;
-            curr = curr->next;
-        }
+void cwist_query_map_parse(cwist_query_map *map, const char *raw_query) {
+    if (!map || !raw_query || strlen(raw_query) == 0) return;
+
+    UriQueryListA *queryList = NULL;
+    int itemCount = 0;
+    
+    // uriparser handles & and = and url decoding
+    if (uriDissectQueryMallocA(&queryList, &itemCount, raw_query, raw_query + strlen(raw_query)) != URI_SUCCESS) {
         return;
     }
 
