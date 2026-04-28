@@ -22,6 +22,16 @@ cwist_error_t cwist_https_init_context_with_options(cwist_https_context **ctx,
 Builds the TLS context with explicit transport options.
 If `options->enable_http2` is true, CWIST merges HTTP/2-oriented TLS defaults such as ALPN negotiation and stricter cipher preferences into the legacy HTTPS setup.
 
+### `cwist_https_init_context_with_options`
+```c
+cwist_error_t cwist_https_init_context_with_options(cwist_https_context **ctx,
+                                                    const char *cert_path,
+                                                    const char *key_path,
+                                                    const cwist_https_options *options);
+```
+Builds the TLS context with explicit transport options.
+If `options->enable_http2` is true, CWIST merges HTTP/2-oriented TLS defaults such as ALPN negotiation and stricter cipher preferences into the legacy HTTPS setup.
+
 ### `cwist_https_accept`
 ```c
 cwist_error_t cwist_https_accept(cwist_https_context *ctx, int client_fd, cwist_https_connection **conn);
