@@ -5,6 +5,7 @@
 #define _DEFAULT_SOURCE
 #include <cwist/sys/app/app.h>
 #include <cwist/net/http/http.h>
+#include <cwist/net/http/http2.h>
 #include <cwist/net/http/https.h>
 #include <cwist/core/sstring/sstring.h>
 #include <cwist/core/db/nuke_db.h>
@@ -912,10 +913,13 @@ static cwist_error_t cwist_app_refresh_https_context(cwist_app *app) {
         app->ssl_ctx = NULL;
     }
 
-    cwist_https_options options = {.enable_http2 = app->use_https2,
-                                   .enable_http3 = app->use_https3};
-    return cwist_https_init_context_with_options(&app->ssl_ctx, app->cert_path, app->key_path,
-                                                 &options, app);
+    cwist_https_options options = {
+        .enable_http2 = app->use_http2
+    };
+    return cwist_https_init_context_with_options(&app->ssl_ctx,
+                                                 app->cert_path,
+                                                 app->key_path,
+                                                 &options);
 }
 
 static void static_ssl_http1_handler(cwist_https_connection *conn, void *ctx);
@@ -923,42 +927,8 @@ static void static_ssl_http2_handler(cwist_https_connection *conn, void *ctx);
 
 static void cwist_app_refresh_https_request_handler(cwist_app *app) {
     if (!app) return;
-    app->https_request_handler =
-        app->use_https2 ? static_ssl_http2_handler : static_ssl_http1_handler;
+    app->https_request_handler = app->use_http2 ? static_ssl_http2_handler : static_ssl_http1_handler;
 }
-
-/**
- * @brief Initialize or refresh the HTTP/3 context based on current settings.
- */
-static cwist_error_t cwist_app_refresh_http3_context(cwist_app *app) {
-    cwist_error_t err = make_error(CWIST_ERR_INT16);
-    if (!app) {
-        err.error.err_i16 = -1;
-        return err;
-    }
-
-    if (app->h3_ctx) {
-        cwist_http3_destroy_context(app->h3_ctx);
-        app->h3_ctx = NULL;
-    }
-
-    if (app->use_https3 || app->use_http3) {
-        if (app->use_https3 && app->cert_path && app->key_path) {
-            err = cwist_http3_init_context(&app->h3_ctx, app->cert_path, app->key_path);
-        } else if (app->use_http3) {
-            err = cwist_http3_init_context_ephemeral(&app->h3_ctx);
-        } else {
-            err.error.err_i16 = -1; // Missing config for strict https3
-        }
-        if (app->h3_ctx && app->wt_handler) {
-            cwist_http3_set_webtransport_handler(app->h3_ctx, app->wt_handler);
-        }
-    } else {
-        err.error.err_i16 = 0;
-    }
-    return err;
-}
-#endif /* __EMSCRIPTEN__ */
 
 cwist_app *cwist_app_create(void) {
     cwist_app *app = (cwist_app *)cwist_alloc(sizeof(cwist_app));
@@ -967,9 +937,6 @@ cwist_app *cwist_app_create(void) {
     app->port = 8080;
     app->use_ssl = false;
     app->use_http2 = false;
-    app->use_http3 = false;
-    app->use_https2 = false;
-    app->use_https3 = false;
     app->cert_path = NULL;
     app->key_path = NULL;
     app->https_request_handler = NULL;
@@ -992,6 +959,7 @@ cwist_app *cwist_app_create(void) {
     app->max_mem_space = 0;
     app->mem_manager = NULL;
     app->bdr_ctx = cwist_bdr_create();
+    cwist_app_refresh_https_request_handler(app);
     
     return app;
 }
@@ -1286,27 +1254,7 @@ cwist_error_t cwist_app_use_https(cwist_app *app, const char *cert_path, const c
         return err;
     }
 
-    if (app->use_https3 || app->use_http3) {
-        cwist_app_refresh_http3_context(app);
-    }
     return cwist_app_refresh_https_context(app);
-#endif
-}
-
-void cwist_app_use_pqc_layer(cwist_app *app, bool enabled) {
-    if (!app) return;
-    app->pqc_layer_enabled = enabled;
-}
-
-void cwist_app_set_tls_groups(cwist_app *app, const char *groups) {
-    if (!app) return;
-    if (app->tls_groups) {
-        cwist_free(app->tls_groups);
-        app->tls_groups = NULL;
-    }
-    if (groups) {
-        app->tls_groups = cwist_strdup(groups);
-    }
 }
 
 cwist_error_t cwist_app_use_https2(cwist_app *app, bool enabled) {
@@ -1316,11 +1264,7 @@ cwist_error_t cwist_app_use_https2(cwist_app *app, bool enabled) {
         return err;
     }
 
-    app->use_https2 = enabled;
-#if defined(__EMSCRIPTEN__) || defined(__wasi__)
-    err.error.err_i16 = -1; /* HTTP/2 transport is native-only */
-    return err;
-#else
+    app->use_http2 = enabled;
     cwist_app_refresh_https_request_handler(app);
     err.error.err_i16 = 0;
 
@@ -1329,69 +1273,6 @@ cwist_error_t cwist_app_use_https2(cwist_app *app, bool enabled) {
     }
 
     return cwist_app_refresh_https_context(app);
-#endif
-}
-
-cwist_error_t cwist_app_use_https3(cwist_app *app, bool enabled) {
-    cwist_error_t err = make_error(CWIST_ERR_INT16);
-    if (!app) {
-        err.error.err_i16 = -1;
-        return err;
-    }
-
-    app->use_https3 = enabled;
-#if defined(__EMSCRIPTEN__) || defined(__wasi__)
-    err.error.err_i16 = -1; /* HTTP/3 transport is native-only */
-    return err;
-#else
-    err.error.err_i16 = 0;
-
-    if (!app->use_ssl || !app->cert_path || !app->key_path) {
-        return err;
-    }
-
-    cwist_app_refresh_http3_context(app);
-    return cwist_app_refresh_https_context(app);
-#endif
-}
-
-cwist_error_t cwist_app_use_http2(cwist_app *app, bool enabled) {
-    cwist_error_t err = make_error(CWIST_ERR_INT16);
-    if (!app) {
-        err.error.err_i16 = -1;
-        return err;
-    }
-
-    app->use_http2 = enabled;
-    err.error.err_i16 = 0;
-    return err;
-}
-
-cwist_error_t cwist_app_use_http3(cwist_app *app, bool enabled) {
-    cwist_error_t err = make_error(CWIST_ERR_INT16);
-    if (!app) {
-        err.error.err_i16 = -1;
-        return err;
-    }
-
-    app->use_http3 = enabled;
-#if defined(__EMSCRIPTEN__) || defined(__wasi__)
-    err.error.err_i16 = -1; /* HTTP/3 transport is native-only */
-    return err;
-#else
-    err.error.err_i16 = 0;
-    return cwist_app_refresh_http3_context(app);
-#endif
-}
-
-void cwist_app_use_webtransport(cwist_app *app, cwist_webtransport_handler_func handler) {
-    if (!app) return;
-    app->wt_handler = handler;
-#if !defined(__EMSCRIPTEN__) && !defined(__wasi__)
-    if (app->h3_ctx) {
-        cwist_http3_set_webtransport_handler(app->h3_ctx, handler);
-    }
-#endif
 }
 
 /**
@@ -2254,7 +2135,21 @@ static void internal_route_handler(cwist_app *app, cwist_http_request *req,
     }
 }
 
+static void static_http2_route_bridge(void *user_ctx, cwist_http_request *req, cwist_http_response *res) {
+    cwist_app *app = (cwist_app *)user_ctx;
+    if (!app || !req || !res) return;
+    req->app = app;
+    req->db = app->db;
+    internal_route_handler(app, req, res);
+}
+
 static void static_ssl_handler(cwist_https_connection *conn, void *ctx) {
+    cwist_app *app = (cwist_app *)ctx;
+    if (!app || !app->https_request_handler) return;
+    app->https_request_handler(conn, ctx);
+}
+
+static void static_ssl_http1_handler(cwist_https_connection *conn, void *ctx) {
     cwist_app *app = (cwist_app *)ctx;
     cwist_http_request *req = cwist_https_receive_request(conn);
     if (!req) return;
@@ -2267,6 +2162,14 @@ static void static_ssl_handler(cwist_https_connection *conn, void *ctx) {
     cwist_https_send_response(conn, res);
     cwist_http_response_destroy(res);
     cwist_http_request_destroy(req);
+}
+
+static void static_ssl_http2_handler(cwist_https_connection *conn, void *ctx) {
+    cwist_app *app = (cwist_app *)ctx;
+    cwist_error_t err = cwist_http2_serve_connection(conn, app, static_http2_route_bridge);
+    if (err.errtype == CWIST_ERR_JSON && err.error.err_json) {
+        cJSON_Delete(err.error.err_json);
+    }
 }
 
 static void static_http_handler(int client_fd, void *ctx) {

@@ -36,6 +36,7 @@ typedef void (*cwist_error_handler_func)(cwist_http_request *req, cwist_http_res
 
 // Middleware type: receives req, res, and the next stage in the chain
 typedef void (*cwist_middleware_func)(cwist_http_request *req, cwist_http_response *res, cwist_handler_func next);
+typedef void (*cwist_https_request_handler_func)(cwist_https_connection *conn, void *ctx);
 
 /**
  * @brief Linked list node for middleware chain.
@@ -57,8 +58,10 @@ typedef struct cwist_static_dir cwist_static_dir;
 typedef struct cwist_app {
     int port;
     bool use_ssl;
+    bool use_http2;
     char *cert_path;
     char *key_path;
+    cwist_https_request_handler_func https_request_handler;
     
     // Middlewares
     cwist_middleware_node *middlewares;
@@ -149,11 +152,15 @@ void cwist_app_use(cwist_app *app, cwist_middleware_func mw);
 void cwist_app_set_error_handler(cwist_app *app, cwist_error_handler_func handler);
 
 cwist_error_t cwist_app_use_https(cwist_app *app, const char *cert_path, const char *key_path);
+cwist_error_t cwist_app_use_https2(cwist_app *app, bool enabled);
 cwist_error_t cwist_app_use_db(cwist_app *app, const char *db_path);
 cwist_error_t cwist_app_use_nuke_db(cwist_app *app, const char *db_path, int sync_interval_ms);
 cwist_db *cwist_app_get_db(cwist_app *app);
 
-// Routing
+#define cwist_use_https2(enabled) cwist_app_use_https2((app), (enabled))
+
+/** @name Routing */
+/** @{ */
 /**
  * @brief Registers a GET route handler.
  */
