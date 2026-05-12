@@ -43,10 +43,9 @@
  * @brief Internal state for an HTTP/2 connection.
  */
 typedef struct {
-    SSL *ssl;
-    bool preface_received;
-    uint32_t last_stream_id;
-    // Additional state fields (window size, settings, etc.) would be defined here
+    SSL *ssl;                 /**< Pointer to the underlying BoringSSL SSL object */
+    bool preface_received;    /**< Flag indicating if the HTTP/2 connection preface was received */
+    uint32_t last_stream_id;  /**< The highest stream ID seen on this connection */
 } cwist_http2_conn_internal;
 
 /* --- Private Function Prototypes --- */
