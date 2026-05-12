@@ -79,6 +79,8 @@
 static pthread_mutex_t g_h3_global_mtx = PTHREAD_MUTEX_INITIALIZER;
 static int g_h3_global_ref = 0;
 
+#if CWIST_HAVE_OPENSSL_QUIC
+
 /**
  * @brief Take a process-wide reference on the lsquic global state.
  * Initializes lsquic on the first reference; later calls only bump the
@@ -3227,541 +3229,53 @@ cwist_error_t cwist_http3_server_loop(int udp_fd, cwist_http3_context *ctx,
     return err;
 }
 
-/* ------------------------------------------------------------------ */
-/* Push, Priority, and 0-RTT APIs                                     */
-/* ------------------------------------------------------------------ */
+#else
 
-/**
- * @brief Enable or disable HTTP/3 server push for this context.
- * Takes effect at cwist_http3_server_loop() time (lsquic engine setting).
- */
-void cwist_http3_set_push_enabled(cwist_http3_context *ctx, int enabled) {
-    if (ctx) ctx->push_enabled = enabled;
+static cwist_error_t cwist_http3_quic_unavailable(void) {
+    cwist_error_t err = make_error(CWIST_ERR_INT16);
+    err.error.err_i16 = -1;
+    return err;
 }
 
-/**
- * @brief Enable or disable TLS 1.3 early data (0-RTT) on the context.
- *
- * Enabling also arms the replay guard (only idempotent methods are accepted
- * as early data) unless the application overrides it with
- * cwist_http3_set_early_data_guard().
- */
-void cwist_http3_set_early_data(cwist_http3_context *ctx, bool enabled) {
-    if (!ctx || !ctx->ssl_ctx) return;
-    ctx->early_data_enabled = enabled ? 1 : 0;
-    SSL_CTX_set_early_data_enabled(ctx->ssl_ctx, enabled ? 1 : 0);
-    if (enabled) {
-        /* Replay protection is opt-out: restrict 0-RTT requests to
-         * idempotent methods unless the application overrides the guard. */
-        ctx->early_data_guard = 1;
-    }
+cwist_error_t cwist_http3_init_context(cwist_http3_context **ctx,
+                                       const char *cert_path,
+                                       const char *key_path) {
+    (void)cert_path;
+    (void)key_path;
+    if (ctx) *ctx = NULL;
+    return cwist_http3_quic_unavailable();
 }
 
-/**
- * @brief Enable or disable the 0-RTT replay guard.
- *
- * While armed, requests received while the QUIC handshake is still in
- * progress are refused with 425 unless their method is idempotent (RFC
- * 8470).
- */
-void cwist_http3_set_early_data_guard(cwist_http3_context *ctx, int enabled) {
-    if (ctx) ctx->early_data_guard = enabled ? 1 : 0;
+cwist_error_t cwist_http3_init_context_ephemeral(cwist_http3_context **ctx) {
+    if (ctx) *ctx = NULL;
+    return cwist_http3_quic_unavailable();
 }
 
-/**
- * @brief String-based idempotency check (RFC 9110), used by tests and
- *        external checks.
- * @retval 1 The method is idempotent (GET/HEAD/PUT/DELETE/OPTIONS/TRACE).
- * @retval 0 NULL input or a non-idempotent/unknown method.
- */
-int cwist_http3_method_is_idempotent(const char *method_str) {
-    if (!method_str) return 0;
-    /* TRACE is absent from cwist_http_method_t; match it by name. */
-    if (strcasecmp(method_str, "TRACE") == 0) return 1;
-    return h3_method_is_idempotent(cwist_http_string_to_method(method_str)) ? 1 : 0;
-}
-
-/**
- * @brief Promise a pushed resource from inside a request handler.
- * @param req Request whose stream anchors the push (must carry the lsquic
- *            stream in private_data).
- * @param path Request path for the pushed resource.
- * @param content_type Ignored; a response field, not valid in a push
- *                     request set.
- * @retval 0 Push stream created.
- * @retval -1 Bad arguments, no connection, or push not negotiated.
- *
- * Builds a request header set (:method GET, :scheme https, :path from
- * @p path, :authority copied from the original request's Host or
- * "localhost").
- */
-int cwist_http3_push_resource(cwist_http_request *req, const char *path, const char *content_type) {
-    if (!req || !req->private_data || !path) return -1;
-    lsquic_stream_t *stream = (lsquic_stream_t *)req->private_data;
-    lsquic_conn_t *conn = lsquic_stream_conn(stream);
-    if (!conn || !lsquic_conn_is_push_enabled(conn)) return -1;
-    (void)content_type; /* response field; not valid in a push request set */
-
-    /* Build push headers (a request header set needs :method, :scheme,
-     * :authority, :path; content-type is a response field and is omitted) */
-    struct lsxpack_header headers_arr[4];
-    char hbuf[2048];
-    size_t hbuf_off = 0;
-    size_t hdr_count = 0;
-
-    /* :method = GET */
-    const char *method = "GET";
-    size_t mlen = strlen(method);
-    if (hbuf_off + 7 + 2 + mlen <= sizeof(hbuf)) {
-        memcpy(hbuf + hbuf_off, ":method", 7);
-        memcpy(hbuf + hbuf_off + 9, method, mlen);
-        lsxpack_header_set_offset2(&headers_arr[hdr_count], hbuf + hbuf_off, 0, 7, 9, mlen);
-        hbuf_off += 9 + mlen;
-        hdr_count++;
-    }
-
-    /* :scheme = https (HTTP/3 is always over QUIC/TLS) */
-    const char *scheme = "https";
-    size_t sclen = strlen(scheme);
-    if (hbuf_off + 7 + 2 + sclen <= sizeof(hbuf)) {
-        memcpy(hbuf + hbuf_off, ":scheme", 7);
-        memcpy(hbuf + hbuf_off + 9, scheme, sclen);
-        lsxpack_header_set_offset2(&headers_arr[hdr_count], hbuf + hbuf_off, 0, 7, 9, sclen);
-        hbuf_off += 9 + sclen;
-        hdr_count++;
-    }
-
-    /* :path */
-    size_t plen = strlen(path);
-    if (hbuf_off + 5 + 2 + plen <= sizeof(hbuf)) {
-        memcpy(hbuf + hbuf_off, ":path", 5);
-        memcpy(hbuf + hbuf_off + 7, path, plen);
-        lsxpack_header_set_offset2(&headers_arr[hdr_count], hbuf + hbuf_off, 0, 5, 7, plen);
-        hbuf_off += 7 + plen;
-        hdr_count++;
-    }
-
-    /* :authority (copy from original request if available) */
-    char *authority = cwist_http_header_get(req->headers, "host");
-    if (!authority) authority = "localhost";
-    size_t alen = strlen(authority);
-    if (hbuf_off + 10 + 2 + alen <= sizeof(hbuf)) {
-        memcpy(hbuf + hbuf_off, ":authority", 10);
-        memcpy(hbuf + hbuf_off + 12, authority, alen);
-        lsxpack_header_set_offset2(&headers_arr[hdr_count], hbuf + hbuf_off, 0, 10, 12, alen);
-        hbuf_off += 12 + alen;
-        hdr_count++;
-    }
-
-    lsquic_http_headers_t headers = {
-        .count = (unsigned)hdr_count,
-        .headers = headers_arr,
-    };
-
-    return lsquic_conn_push_stream(conn, NULL, stream, &headers);
-}
-
-/**
- * @brief Deprecated and always refused: returns -1.
- *
- * lsquic_stream_set_priority() on a request stream emits a PRIORITY_UPDATE
- * frame on the control stream, which violates RFC 9218 (PRIORITY_UPDATE may
- * only reference client-opened streams).  Strict stacks (Firefox/neqo) then
- * kill the connection with H3_FRAME_UNEXPECTED. Use the RFC 9218 `Priority`
- * header instead.  See the deprecation note in
- * include/cwist/net/http/http3.h.
- */
-int cwist_http3_set_stream_priority(cwist_http_request *req, unsigned priority) {
-    (void)req;
-    (void)priority;
-    CWIST_LOG_WARN("[HTTP/3] cwist_http3_set_stream_priority() is deprecated "
-                   "and refused (RFC 9218 violation); use the Priority header");
-    return -1;
-}
-
-/* ------------------------------------------------------------------ */
-/* WebTransport API                                                   */
-/* ------------------------------------------------------------------ */
-
-/**
- * @brief Register the WebTransport session handler (extended CONNECT).
- *
- * When set, the server loop enables the lsquic WebTransport settings and
- * extended-CONNECT requests with :protocol "webtransport" are handed to this
- * handler via cwist_h3_wt_on_session_open().
- */
-void cwist_http3_set_webtransport_handler(cwist_http3_context *ctx,
-                                          cwist_webtransport_handler_func handler) {
-    if (ctx) ctx->wt_handler = handler;
-}
-
-/**
- * @brief Register the callback invoked for every new WebTransport stream.
- * @param user_ctx Passed through as the second argument of @p handler.
- */
-void cwist_webtransport_set_new_stream_handler(cwist_http3_context *ctx,
-                                               void (*handler)(void *stream, void *user_ctx),
-                                               void *user_ctx) {
+void cwist_http3_destroy_context(cwist_http3_context *ctx) {
     if (ctx) {
-        ctx->wt_new_stream_handler = handler;
-        ctx->wt_new_stream_ctx = user_ctx;
+        if (ctx->ssl_ctx) SSL_CTX_free(ctx->ssl_ctx);
+        cwist_free(ctx);
     }
 }
 
-#ifdef CWIST_WEBTRANSPORT
-
-/**
- * @brief Read from a WebTransport stream (CWIST_WEBTRANSPORT build).
- * @param stream Stream handle (opaque cwist_wt_handle_t).
- * @return Bytes read, or -1 on bad arguments/invalid handle.
- */
-ssize_t cwist_webtransport_read(void *stream, void *buf, size_t len) {
-    if (!stream || !buf) return -1;
-    lsquic_stream_t *s = cwist_wt_handle_stream(stream);
-    if (!s) return -1;
-    return lsquic_stream_read(s, buf, len);
+cwist_error_t cwist_http3_serve_connection(cwist_http3_connection *conn,
+                                           void *user_ctx,
+                                           cwist_http3_request_handler_func handler) {
+    (void)conn;
+    (void)user_ctx;
+    (void)handler;
+    return cwist_http3_quic_unavailable();
 }
 
-/**
- * @brief Write to a WebTransport stream (CWIST_WEBTRANSPORT build).
- * @param stream Stream handle (opaque cwist_wt_handle_t).
- * @return Bytes written, or -1 on bad arguments/invalid handle.
- */
-ssize_t cwist_webtransport_write(void *stream, const void *data, size_t len) {
-    if (!stream || !data) return -1;
-    lsquic_stream_t *s = cwist_wt_handle_stream(stream);
-    if (!s) return -1;
-    return lsquic_stream_write(s, data, len);
+cwist_error_t cwist_http3_server_loop(int udp_fd,
+                                      cwist_http3_context *ctx,
+                                      cwist_http3_request_handler_func handler,
+                                      void *user_ctx) {
+    (void)udp_fd;
+    (void)ctx;
+    (void)handler;
+    (void)user_ctx;
+    return cwist_http3_quic_unavailable();
 }
 
-/**
- * @brief Flush a WebTransport stream (CWIST_WEBTRANSPORT build).
- * @retval 0 Flushed.
- * @retval -1 Bad arguments or invalid handle.
- */
-int cwist_webtransport_flush(void *stream) {
-    if (!stream) return -1;
-    lsquic_stream_t *s = cwist_wt_handle_stream(stream);
-    if (!s) return -1;
-    return lsquic_stream_flush(s);
-}
-
-/**
- * @brief Close a WebTransport stream (CWIST_WEBTRANSPORT build).
- * @retval 0 Closed.
- * @retval -1 Bad arguments or invalid handle.
- */
-int cwist_webtransport_close_stream(void *stream) {
-    if (!stream) return -1;
-    lsquic_stream_t *s = cwist_wt_handle_stream(stream);
-    if (!s) return -1;
-    return lsquic_stream_close(s);
-}
-
-/**
- * @brief Open a bidirectional WebTransport stream (CWIST_WEBTRANSPORT
- *        build).
- * @param session Session handle (opaque cwist_wt_handle_t).
- * @retval 0 Stream opened (and reported to the new-stream handler when one
- *         is registered).
- * @retval -1 Bad arguments, invalid session, stream open failure, or handle
- *         allocation failure.
- */
-int cwist_webtransport_open_bidi_stream(void *session) {
-    if (!session) return -1;
-    cwist_wt_handle_t *session_handle = cwist_wt_handle_cast(session, CWIST_WT_HANDLE_SESSION);
-    lsquic_wt_session_t *raw_session =
-        session_handle ? (lsquic_wt_session_t *)session_handle->ptr : NULL;
-    if (!raw_session) return -1;
-    lsquic_stream_t *stream = lsquic_wt_open_bidi(raw_session);
-    if (!stream) return -1;
-    lsquic_wt_session_t *sess = lsquic_wt_session_from_stream(stream);
-    if (sess) {
-        lsquic_conn_t *conn = lsquic_wt_session_conn(sess);
-        cwist_http3_context *ctx = h3_shared_ctx(conn);
-        if (ctx && ctx->wt_new_stream_handler) {
-            cwist_wt_handle_t *stream_handle = cwist_wt_handle_new(CWIST_WT_HANDLE_STREAM, stream);
-            if (!stream_handle) return -1;
-            cwist_wt_handle_attach(session_handle, stream_handle);
-            ctx->wt_new_stream_handler(stream_handle, ctx->wt_new_stream_ctx);
-        }
-    }
-    return 0;
-}
-
-/**
- * @brief Open a unidirectional WebTransport stream (CWIST_WEBTRANSPORT
- *        build).
- * @param session Session handle (opaque cwist_wt_handle_t).
- * @retval 0 Stream opened (and reported to the new-stream handler when one
- *         is registered).
- * @retval -1 Bad arguments, invalid session, stream open failure, or handle
- *         allocation failure.
- */
-int cwist_webtransport_open_uni_stream(void *session) {
-    if (!session) return -1;
-    cwist_wt_handle_t *session_handle = cwist_wt_handle_cast(session, CWIST_WT_HANDLE_SESSION);
-    lsquic_wt_session_t *raw_session =
-        session_handle ? (lsquic_wt_session_t *)session_handle->ptr : NULL;
-    if (!raw_session) return -1;
-    lsquic_stream_t *stream = lsquic_wt_open_uni(raw_session);
-    if (!stream) return -1;
-    lsquic_wt_session_t *sess = lsquic_wt_session_from_stream(stream);
-    if (sess) {
-        lsquic_conn_t *conn = lsquic_wt_session_conn(sess);
-        cwist_http3_context *ctx = h3_shared_ctx(conn);
-        if (ctx && ctx->wt_new_stream_handler) {
-            cwist_wt_handle_t *stream_handle = cwist_wt_handle_new(CWIST_WT_HANDLE_STREAM, stream);
-            if (!stream_handle) return -1;
-            cwist_wt_handle_attach(session_handle, stream_handle);
-            ctx->wt_new_stream_handler(stream_handle, ctx->wt_new_stream_ctx);
-        }
-    }
-    return 0;
-}
-
-#else /* CWIST_WEBTRANSPORT */
-
-/**
- * @brief Stub used when CWIST_WEBTRANSPORT is not compiled in: always -1.
- */
-ssize_t cwist_webtransport_read(void *stream, void *buf, size_t len) {
-    (void)stream;
-    (void)buf;
-    (void)len;
-    return -1;
-}
-
-/**
- * @brief Stub used when CWIST_WEBTRANSPORT is not compiled in: always -1.
- */
-ssize_t cwist_webtransport_write(void *stream, const void *data, size_t len) {
-    (void)stream;
-    (void)data;
-    (void)len;
-    return -1;
-}
-
-/**
- * @brief Stub used when CWIST_WEBTRANSPORT is not compiled in: always -1.
- */
-int cwist_webtransport_flush(void *stream) {
-    (void)stream;
-    return -1;
-}
-
-/**
- * @brief Stub used when CWIST_WEBTRANSPORT is not compiled in: always -1.
- */
-int cwist_webtransport_close_stream(void *stream) {
-    (void)stream;
-    return -1;
-}
-
-/**
- * @brief Stub used when CWIST_WEBTRANSPORT is not compiled in: always -1.
- */
-int cwist_webtransport_open_bidi_stream(void *session) {
-    (void)session;
-    return -1;
-}
-
-/**
- * @brief Stub used when CWIST_WEBTRANSPORT is not compiled in: always -1.
- */
-int cwist_webtransport_open_uni_stream(void *session) {
-    (void)session;
-    return -1;
-}
-
-#endif /* CWIST_WEBTRANSPORT */
-
-/* ------------------------------------------------------------------ */
-/* Resilience knobs                                                   */
-/* ------------------------------------------------------------------ */
-
-/**
- * @brief Set the connection idle timeout (milliseconds, <= 0 disables).
- * Takes effect at cwist_http3_server_loop() time.
- */
-void cwist_http3_set_idle_timeout(cwist_http3_context *ctx, int ms) {
-    if (ctx) ctx->idle_timeout_ms = ms > 0 ? ms : 0;
-}
-
-/**
- * @brief Set the handshake timeout (milliseconds, <= 0 disables).
- * Takes effect at cwist_http3_server_loop() time.
- */
-void cwist_http3_set_handshake_timeout(cwist_http3_context *ctx, int ms) {
-    if (ctx) ctx->handshake_timeout_ms = ms > 0 ? ms : 0;
-}
-
-/**
- * @brief Set the keep-alive ping period (milliseconds, <= 0 disables).
- * Takes effect at cwist_http3_server_loop() time.
- */
-void cwist_http3_set_ping_period(cwist_http3_context *ctx, int ms) {
-    if (ctx) ctx->ping_period_ms = ms > 0 ? ms : 0;
-}
-
-/**
- * @brief Set the no-progress timeout (milliseconds, <= 0 disables).
- * Takes effect at cwist_http3_server_loop() time.
- */
-void cwist_http3_set_noprogress_timeout(cwist_http3_context *ctx, int ms) {
-    if (ctx) ctx->noprogress_timeout_ms = ms > 0 ? ms : 0;
-}
-
-/* ------------------------------------------------------------------ */
-/* Datagram API                                                       */
-/* ------------------------------------------------------------------ */
-
-/**
- * @brief Enable or disable H3 datagrams for this context.
- *
- * Note: enabling WebTransport forces the datagram engine settings on
- * regardless of this knob.
- */
-void cwist_http3_set_datagram_enabled(cwist_http3_context *ctx, int enabled) {
-    if (ctx) ctx->datagram_enabled = enabled;
-}
-
-/**
- * @brief Register the callback for incoming H3/WebTransport datagrams.
- * @param user_ctx Passed through as the last argument of @p cb.
- */
-void cwist_http3_set_datagram_callback(cwist_http3_context *ctx,
-                                       void (*cb)(const void *data, size_t len, void *user_ctx),
-                                       void *user_ctx) {
-    if (ctx) {
-        ctx->datagram_cb = cb;
-        ctx->datagram_user_ctx = user_ctx;
-    }
-}
-
-/**
- * @brief Queue an outgoing H3 datagram on a connection.
- * @param conn lsquic connection (as seen in cwist_http_request::private_data
- *             chains); used to find the per-connection queue.
- * @param data Payload to copy.
- * @param len Payload length.
- * @retval 0 Datagram queued; lsquic is signaled to drain it via the
- *         on_dg_write callback.
- * @retval -1 Bad arguments, no per-connection ctx, or OOM (nothing queued).
- *
- * Thread-safe: the payload is copied and appended to the connection's own
- * mutex-guarded queue, so concurrent sends on different connections never
- * share state and concurrent sends on one connection queue instead of
- * clobbering each other.
- */
-int cwist_http3_send_datagram(void *conn, const void *data, size_t len) {
-    lsquic_conn_t *c = (lsquic_conn_t *)conn;
-    if (!c || !data || len == 0) return -1;
-
-    h3_conn_ctx_t *cc = (h3_conn_ctx_t *)lsquic_conn_get_ctx(c);
-    if (!cc) return -1;
-
-    h3_dgram_node_t *node = (h3_dgram_node_t *)malloc(sizeof(*node));
-    if (!node) return -1;
-    node->data = malloc(len);
-    if (!node->data) {
-        free(node);
-        return -1;
-    }
-    memcpy(node->data, data, len);
-    node->len = len;
-    node->next = NULL;
-
-    /* Append to this connection's own queue - concurrent sends on other
-     * connections touch their own h3_conn_ctx_t and never see this lock,
-     * and concurrent sends on *this* connection now queue instead of one
-     * clobbering (free()ing) the other's buffer. */
-    pthread_mutex_lock(&cc->dgram_lock);
-    if (cc->dgram_tail) {
-        cc->dgram_tail->next = node;
-    } else {
-        cc->dgram_head = node;
-    }
-    cc->dgram_tail = node;
-    pthread_mutex_unlock(&cc->dgram_lock);
-
-    lsquic_conn_want_datagram_write(c, 1);
-    return 0;
-}
-
-#ifdef CWIST_WEBTRANSPORT
-
-/**
- * @brief Send a datagram on a WebTransport session (CWIST_WEBTRANSPORT
- *        build).
- * @param session Session handle (opaque cwist_wt_handle_t).
- * @return lsquic_wt_send_datagram() result, or -1 on bad arguments/invalid
- *         handle.
- */
-ssize_t cwist_webtransport_send_datagram(void *session, const void *data, size_t len) {
-    if (!session || !data || len == 0) return -1;
-    lsquic_wt_session_t *sess = cwist_wt_handle_session(session);
-    if (!sess) return -1;
-    return lsquic_wt_send_datagram(sess, data, len);
-}
-
-/**
- * @brief Maximum datagram size on a WebTransport session
- *        (CWIST_WEBTRANSPORT build).
- * @param session Session handle (opaque cwist_wt_handle_t).
- * @return Maximum payload size, or 0 on bad arguments/invalid handle.
- */
-size_t cwist_webtransport_max_datagram_size(void *session) {
-    if (!session) return 0;
-    lsquic_wt_session_t *sess = cwist_wt_handle_session(session);
-    if (!sess) return 0;
-    return lsquic_wt_max_datagram_size(sess);
-}
-
-/**
- * @brief Close a WebTransport session with an application error code
- *        (CWIST_WEBTRANSPORT build).
- * @param session Session handle (opaque cwist_wt_handle_t).
- * @param code 32-bit WebTransport application error code.
- * @param reason Human-readable reason; may be NULL.
- * @retval 0 Close frame sent.
- * @retval -1 Bad arguments or invalid handle.
- */
-int cwist_webtransport_close_session(void *session, uint64_t code, const char *reason) {
-    if (!session) return -1;
-    lsquic_wt_session_t *sess = cwist_wt_handle_session(session);
-    if (!sess) return -1;
-    return lsquic_wt_close(sess, code, reason, reason ? strlen(reason) : 0);
-}
-
-#else /* CWIST_WEBTRANSPORT */
-
-/**
- * @brief Stub used when CWIST_WEBTRANSPORT is not compiled in: always -1.
- */
-ssize_t cwist_webtransport_send_datagram(void *session, const void *data, size_t len) {
-    (void)session;
-    (void)data;
-    (void)len;
-    return -1;
-}
-
-/**
- * @brief Stub used when CWIST_WEBTRANSPORT is not compiled in: always 0.
- */
-size_t cwist_webtransport_max_datagram_size(void *session) {
-    (void)session;
-    return 0;
-}
-
-/**
- * @brief Stub used when CWIST_WEBTRANSPORT is not compiled in: always -1.
- */
-int cwist_webtransport_close_session(void *session, uint64_t code, const char *reason) {
-    (void)session;
-    (void)code;
-    (void)reason;
-    return -1;
-}
-
-#endif /* CWIST_WEBTRANSPORT */
+#endif /* CWIST_HAVE_OPENSSL_QUIC */

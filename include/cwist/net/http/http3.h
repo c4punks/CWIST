@@ -9,22 +9,17 @@
 #include <cwist/net/http/http.h>
 #include <cwist/sys/err/cwist_err.h>
 #include <openssl/ssl.h>
-#include <stdbool.h>
-#include <stdint.h>
-
-/** --- Forward Declarations --- */
-
-typedef struct cwist_http3_context cwist_http3_context;
-
-/**
- * @brief Callback function type for handling WebTransport sessions over HTTP/3.
- *
- * @param req Parsed HTTP request object (CONNECT with :protocol=webtransport).
- * @param res HTTP response object to be populated (e.g., 200 OK to accept).
- * @param stream Opaque CWIST WebTransport session handle.
- */
-typedef void (*cwist_webtransport_handler_func)(cwist_http_request *req, cwist_http_response *res,
-                                                void *stream);
+#include <openssl/opensslv.h>
+#if defined(__has_include)
+#  if __has_include(<openssl/quic.h>) && OPENSSL_VERSION_NUMBER >= 0x30200000L
+#    include <openssl/quic.h>
+#    define CWIST_HAVE_OPENSSL_QUIC 1
+#  else
+#    define CWIST_HAVE_OPENSSL_QUIC 0
+#  endif
+#else
+#  define CWIST_HAVE_OPENSSL_QUIC 0
+#endif
 
 /** --- HTTP/3 Structures --- */
 
