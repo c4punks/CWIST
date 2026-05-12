@@ -155,9 +155,45 @@ $(CJSON_LIB):
 
 # --- Test Targets ---
 
-test: $(LIB_NAME) tests/test_sstring.c
+TEST_TARGETS = test_sstring \
+               test_http \
+               test_siphash \
+               test_mux \
+               test_mux_param \
+               stress_test \
+               test_cors \
+               test_websocket \
+               test_jwt \
+               test_migrate \
+               test_json_heal \
+               test_https \
+               test_http2 \
+               test_http3 \
+               nuke_missing_user_test
+
+.PHONY: all test $(TEST_TARGETS) install uninstall clean rebuild
+
+test: $(TEST_TARGETS)
+
+test_sstring: $(LIB_NAME) tests/test_sstring.c
 	$(CC) $(CFLAGS) -o test_sstring tests/test_sstring.c $(LIB_NAME) $(LIBS)
 	./test_sstring
+
+test_http: $(LIB_NAME) tests/test_http.c
+	$(CC) $(CFLAGS) -o test_http tests/test_http.c $(LIB_NAME) $(LIBS)
+	./test_http
+
+test_siphash: $(LIB_NAME) tests/test_siphash.c
+	$(CC) $(CFLAGS) -o test_siphash tests/test_siphash.c $(LIB_NAME) $(LIBS)
+	./test_siphash
+
+test_mux: $(LIB_NAME) tests/test_mux.c
+	$(CC) $(CFLAGS) -o test_mux tests/test_mux.c $(LIB_NAME) $(LIBS)
+	./test_mux
+
+test_mux_param: $(LIB_NAME) tests/test_mux_param.c
+	$(CC) $(CFLAGS) -o test_mux_param tests/test_mux_param.c $(LIB_NAME) $(LIBS)
+	./test_mux_param
 
 test_jwt: $(LIB_NAME) tests/test_jwt.c
 	$(CC) $(CFLAGS) -o test_jwt tests/test_jwt.c $(LIB_NAME) $(LIBS)
@@ -179,7 +215,25 @@ test_http2: $(LIB_NAME) tests/test_http2.c
 	$(CC) $(CFLAGS) -o test_http2 tests/test_http2.c $(LIB_NAME) $(LIBS)
 	./test_http2
 
-# ... (other tests omitted for brevity, keeping standard ones)
+test_http3: $(LIB_NAME) tests/test_http3.c
+	$(CC) $(CFLAGS) -o test_http3 tests/test_http3.c $(LIB_NAME) $(LIBS)
+	./test_http3
+
+stress_test: $(LIB_NAME) tests/stress_test.c
+	$(CC) $(CFLAGS) -o stress_test tests/stress_test.c $(LIB_NAME) $(LIBS)
+	./stress_test
+
+test_cors: $(LIB_NAME) tests/test_cors.c
+	$(CC) $(CFLAGS) -o test_cors tests/test_cors.c $(LIB_NAME) $(LIBS)
+	./test_cors
+
+test_websocket: $(LIB_NAME) tests/test_websocket.c
+	$(CC) $(CFLAGS) -o test_websocket tests/test_websocket.c $(LIB_NAME) $(LIBS)
+	./test_websocket
+
+nuke_missing_user_test: $(LIB_NAME) tests/nuke_missing_user_test.c
+	$(CC) $(CFLAGS) -o nuke_missing_user_test tests/nuke_missing_user_test.c $(LIB_NAME) $(LIBS)
+	./nuke_missing_user_test
 
 install: $(LIB_NAME)
 	@echo "Installing library to $(LIBDIR)..."
@@ -207,9 +261,7 @@ clean:
 	@echo "Cleaning up build artifacts..."
 	rm -f $(OBJS) $(LIB_NAME)
 	rm -rf include/cwist/vendor
-	rm -f test_sstring test_http test_siphash test_mux stress_test test_cors test_websocket test_jwt test_migrate test_json_heal
-	rm -f test_https
-	rm -f test_http2
+	rm -f $(TEST_TARGETS)
 	rm -f $(CJSON_DIR)/cJSON.o $(CJSON_LIB)
 	@$(MAKE) -C $(LIBTTAK_DIR) clean
 
