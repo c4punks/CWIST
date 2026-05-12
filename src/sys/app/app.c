@@ -914,7 +914,7 @@ static cwist_error_t cwist_app_refresh_https_context(cwist_app *app) {
     }
 
     cwist_https_options options = {
-        .enable_http2 = app->use_http2
+        .enable_http2 = app->use_https2
     };
     return cwist_https_init_context_with_options(&app->ssl_ctx,
                                                  app->cert_path,
@@ -2145,8 +2145,14 @@ static void static_http2_route_bridge(void *user_ctx, cwist_http_request *req, c
 
 static void static_ssl_handler(cwist_https_connection *conn, void *ctx) {
     cwist_app *app = (cwist_app *)ctx;
-    if (!app || !app->https_request_handler) return;
-    app->https_request_handler(conn, ctx);
+    if (!app || !conn) return;
+
+    if (cwist_https_connection_uses_http2(conn)) {
+        static_ssl_http2_handler(conn, ctx);
+        return;
+    }
+
+    static_ssl_http1_handler(conn, ctx);
 }
 
 static void static_ssl_http1_handler(cwist_https_connection *conn, void *ctx) {
@@ -2166,6 +2172,11 @@ static void static_ssl_http1_handler(cwist_https_connection *conn, void *ctx) {
 
 static void static_ssl_http2_handler(cwist_https_connection *conn, void *ctx) {
     cwist_app *app = (cwist_app *)ctx;
+    if (!cwist_https_connection_uses_http2(conn)) {
+        static_ssl_http1_handler(conn, ctx);
+        return;
+    }
+
     cwist_error_t err = cwist_http2_serve_connection(conn, app, static_http2_route_bridge);
     if (err.errtype == CWIST_ERR_JSON && err.error.err_json) {
         cJSON_Delete(err.error.err_json);
@@ -2174,6 +2185,18 @@ static void static_ssl_http2_handler(cwist_https_connection *conn, void *ctx) {
 
 static void static_http_handler(int client_fd, void *ctx) {
     cwist_app *app = (cwist_app *)ctx;
+    
+    if (app->use_http2) {
+        char peek_buf[24];
+        ssize_t peeked = recv(client_fd, peek_buf, 24, MSG_PEEK);
+        if (peeked >= 24 && memcmp(peek_buf, "PRI * HTTP/2.0\r\n\r\nSM\r\n\r\n", 24) == 0) {
+            cwist_https_connection conn = { .fd = client_fd, .ssl = NULL, .negotiated_http2 = true, .negotiated_protocol = CWIST_HTTPS_PROTOCOL_HTTP2 };
+            cwist_http2_serve_connection(&conn, app, static_http2_route_bridge);
+            close(client_fd);
+            return;
+        }
+    }
+
     char *read_buf = cwist_alloc(CWIST_HTTP_READ_BUFFER_SIZE);
     if (!read_buf) {
         close(client_fd);
