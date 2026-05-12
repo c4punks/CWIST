@@ -15,16 +15,7 @@
 #include <string.h>
 #include <strings.h>
 #include <unistd.h>
-#if !defined(__EMSCRIPTEN__) && !defined(__wasi__)
-#include <sys/wait.h>
-#include <signal.h>
-#endif
-#include <errno.h>
-#include <fcntl.h>
-#include <poll.h>
-#if defined(__GLIBC__)
-#include <malloc.h>
-#endif
+#include <sigpipe.h>
 #include <arpa/inet.h>
 #include <dirent.h>
 #include <sys/stat.h>
@@ -3990,41 +3981,8 @@ void cwist_apply_profile(void) {
  * @return 0 on success, or -1 when initialization, bind, or worker shutdown fails.
  */
 int cwist_app_listen(cwist_app *app, int port) {
-    return cwist_app_listen_ex(app, port, 0, -1);
-}
-
-#if !defined(__EMSCRIPTEN__) && !defined(CWIST_WASI_NO_SOCKETS)
-static int app_listen_serve(cwist_app *app, int port, int workers_override, int c1m_override);
-#endif
-
-int cwist_app_listen_ex(cwist_app *app, int port, int workers_override, int c1m_override) {
-#if defined(__EMSCRIPTEN__) || defined(CWIST_WASI_NO_SOCKETS)
-    (void)port;
-    (void)workers_override;
-    (void)c1m_override;
-    if (app) app->port = port;
-    return -1; /* WASM hosts drive requests through cwist_app_dispatch_memory() */
-#else
-#ifndef __wasi__
     // Ignore SIGPIPE
     signal(SIGPIPE, SIG_IGN);
-#endif
-    /* SIGTERM/SIGINT request a graceful stop only while this server runs:
-     * the caller's own handlers are back in place when it returns, on every
-     * path (including in forked workers, which also return here). */
-    cwist_shutdown_install_handlers();
-    int rc = app_listen_serve(app, port, workers_override, c1m_override);
-    cwist_shutdown_restore_handlers();
-    return rc;
-#endif
-}
-
-#if !defined(__EMSCRIPTEN__) && !defined(CWIST_WASI_NO_SOCKETS)
-/* Body of cwist_app_listen_ex() between installing and restoring the
- * shutdown signal handlers. */
-static int app_listen_serve(cwist_app *app, int port, int workers_override, int c1m_override) {
-    cwist_app_tune_system();
-    cwist_apply_profile();
     if (!app) return -1;
     app->port = port;
     
