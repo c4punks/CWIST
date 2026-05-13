@@ -38,20 +38,30 @@
 #include <sys/stat.h>
 #include <poll.h>
 #include <pthread.h>
-#ifdef __linux__
-#include <sys/epoll.h>
-#endif
-#include <ctype.h>
-#include <strings.h>
-#include <inttypes.h>
-
-#include <openssl/ssl.h>
 #include <openssl/x509.h>
 #include <openssl/evp.h>
 #include <openssl/rsa.h>
 #include <ctype.h>
 
 #if CWIST_HAVE_OPENSSL_QUIC
+
+static int cwist_http3_alpn_select_cb(SSL *ssl,
+                                      const unsigned char **out,
+                                      unsigned char *outlen,
+                                      const unsigned char *in,
+                                      unsigned int inlen,
+                                      void *arg) {
+    (void)ssl;
+    (void)arg;
+    static const unsigned char h3_alpn[] = "\x02h3";
+    if (SSL_select_next_proto((unsigned char **)out,
+                              outlen,
+                              h3_alpn, sizeof(h3_alpn) - 1,
+                              in, inlen) == OPENSSL_NPN_NEGOTIATED) {
+        return SSL_TLSEXT_ERR_OK;
+    }
+    return SSL_TLSEXT_ERR_NOACK;
+}
 
 static const struct {
     const char *name;
@@ -177,9 +187,10 @@ static size_t qpack_encode_response_headers(cwist_http_response *res,
     } else {
         char status_str[16];
         int status_len = snprintf(status_str, sizeof(status_str), "%d", res->status_code);
+        (void)status_len;
         if (pos + 1 > dst_cap) return 0;
         dst[pos] = 0x20; /* Literal Field Line with Literal Name, H=0 */
-        size_t n = qpack_encode_integer(dst + pos, dst_cap - pos, 7, 4); /* ":status" len */
+        size_t n = qpack_encode_integer(dst + pos, dst_cap - pos, 7, 5); /* ":status" len */
         if (n == 0) return 0;
         pos += n;
         if (pos + 7 > dst_cap) return 0;
@@ -199,6 +210,7 @@ static size_t qpack_encode_response_headers(cwist_http_response *res,
     if (!headers_have_content_length(res->headers)) {
         char cl_str[32];
         int cl_len = snprintf(cl_str, sizeof(cl_str), "%zu", body_len);
+        (void)cl_len;
         int name_idx = qpack_static_table_find_name("content-length");
         if (name_idx >= 0 && name_idx < 16) {
             if (pos + 1 > dst_cap) return 0;
@@ -209,7 +221,7 @@ static size_t qpack_encode_response_headers(cwist_http_response *res,
         } else {
             if (pos + 1 > dst_cap) return 0;
             dst[pos] = 0x20; /* Literal with Literal Name */
-            size_t n = qpack_encode_integer(dst + pos, dst_cap - pos, 14, 4);
+            size_t n = qpack_encode_integer(dst + pos, dst_cap - pos, 14, 5);
             if (n == 0) return 0;
             pos += n;
             if (pos + 14 > dst_cap) return 0;
@@ -254,7 +266,7 @@ static size_t qpack_encode_response_headers(cwist_http_response *res,
         } else {
             if (pos + 1 > dst_cap) return 0;
             dst[pos] = 0x20; /* Literal with Literal Name */
-            size_t n = qpack_encode_integer(dst + pos, dst_cap - pos, (uint32_t)name_len, 4);
+            size_t n = qpack_encode_integer(dst + pos, dst_cap - pos, (uint32_t)name_len, 5);
             if (n == 0) return 0;
             pos += n;
             if (pos + name_len > dst_cap) return 0;
@@ -2591,21 +2603,8 @@ cwist_error_t cwist_http3_init_context(cwist_http3_context **ctx, const char *ce
         return err;
     }
 
-    if (cwist_tls_autoload_intermediates(ssl_ctx) < 0) {
-        cwist_h3_free_session_ticket_key(ssl_ctx);
-        SSL_CTX_free(ssl_ctx);
-        h3_global_cleanup();
-        err.error.err_i16 = -1;
-        return err;
-    }
-
-    if (SSL_CTX_check_private_key(ssl_ctx) != 1) {
-        cwist_h3_free_session_ticket_key(ssl_ctx);
-        SSL_CTX_free(ssl_ctx);
-        h3_global_cleanup();
-        err.error.err_i16 = -1;
-        return err;
-    }
+    /* 3. Set ALPN for HTTP/3 (server-side callback) */
+    SSL_CTX_set_alpn_select_cb(ssl_ctx, cwist_http3_alpn_select_cb, NULL);
 
     *ctx = (cwist_http3_context *)cwist_alloc(sizeof(cwist_http3_context));
     if (!*ctx) {
@@ -2714,6 +2713,8 @@ cwist_error_t cwist_http3_init_context_ephemeral(cwist_http3_context **ctx) {
     X509_free(x509);
     EVP_PKEY_free(pkey);
 
+    SSL_CTX_set_alpn_select_cb(ssl_ctx, cwist_http3_alpn_select_cb, NULL);
+
     *ctx = (cwist_http3_context *)cwist_alloc(sizeof(cwist_http3_context));
     if (!*ctx) {
         cwist_h3_free_session_ticket_key(ssl_ctx);
@@ -2777,8 +2778,11 @@ void cwist_http3_destroy_context(cwist_http3_context *ctx) {
 }
 
 
-#define CWIST_HTTP3_FRAME_DATA 0x00
-#define CWIST_HTTP3_FRAME_HEADERS 0x01
+
+#define CWIST_HTTP3_FRAME_DATA     0x00
+#define CWIST_HTTP3_FRAME_HEADERS  0x01
+#define CWIST_HTTP3_FRAME_SETTINGS 0x04
+#define CWIST_HTTP3_FRAME_GOAWAY   0x07
 
 static size_t h3_encode_varint(uint64_t value, unsigned char out[8]) {
     if (value <= 0x3f) {
@@ -2851,6 +2855,145 @@ static int h3_write_frame(SSL *stream, uint64_t type, const unsigned char *paylo
     return 0;
 }
 
+static int h3_read_frame(SSL *stream, uint64_t *type, uint64_t *payload_len,
+                         unsigned char **payload, bool *closed) {
+    *closed = false;
+    unsigned char buf[16];
+
+    int n = SSL_read(stream, buf, 1);
+    if (n <= 0) {
+        int err = SSL_get_error(stream, n);
+        if (err == SSL_ERROR_ZERO_RETURN) {
+            *closed = true;
+        }
+        return -1;
+    }
+
+    size_t got = 1;
+    while (got < sizeof(buf)) {
+        size_t pos = 0;
+        uint64_t t;
+        if (h3_decode_varint(buf, got, &pos, &t) == 0) {
+            uint64_t l;
+            size_t pos2 = pos;
+            if (h3_decode_varint(buf, got, &pos2, &l) == 0) {
+                *type = t;
+                *payload_len = l;
+                if (l == 0) {
+                    *payload = NULL;
+                    return 0;
+                }
+                *payload = (unsigned char *)malloc((size_t)l);
+                if (!*payload) return -1;
+                size_t payload_got = 0;
+                while (payload_got < l) {
+                    n = SSL_read(stream, *payload + payload_got, (int)(l - payload_got));
+                    if (n <= 0) {
+                        int ssl_err = SSL_get_error(stream, n);
+                        if (ssl_err == SSL_ERROR_ZERO_RETURN) {
+                            *closed = true;
+                            free(*payload);
+                            return -1;
+                        }
+                        if (ssl_err == SSL_ERROR_WANT_READ || ssl_err == SSL_ERROR_WANT_WRITE) {
+                            usleep(1000);
+                            continue;
+                        }
+                        free(*payload);
+                        return -1;
+                    }
+                    payload_got += n;
+                }
+                return 0;
+            }
+        }
+
+        n = SSL_read(stream, buf + got, 1);
+        if (n <= 0) {
+            int ssl_err = SSL_get_error(stream, n);
+            if (ssl_err == SSL_ERROR_ZERO_RETURN) {
+                *closed = true;
+            }
+            return -1;
+        }
+        got++;
+    }
+    return -1;
+}
+
+static int h3_send_settings(SSL *stream) {
+    unsigned char settings[32];
+    size_t pos = 0;
+    /* SETTINGS_MAX_FIELD_SECTION_SIZE (0x06) = 16384 */
+    pos += h3_encode_varint(0x06, settings + pos);
+    pos += h3_encode_varint(16384, settings + pos);
+    /* SETTINGS_QPACK_MAX_TABLE_CAPACITY (0x01) = 0 (no dynamic table) */
+    pos += h3_encode_varint(0x01, settings + pos);
+    pos += h3_encode_varint(0, settings + pos);
+    return h3_write_frame(stream, CWIST_HTTP3_FRAME_SETTINGS, settings, pos);
+}
+
+static int h3_setup_server_control_streams(SSL *quic_conn) {
+    /* Server control stream (unidirectional, type = 0x00) */
+    SSL *ctrl = SSL_new_stream(quic_conn, SSL_STREAM_FLAG_UNI);
+    if (!ctrl) return -1;
+
+    unsigned char stream_type = 0x00;
+    if (SSL_write(ctrl, &stream_type, 1) != 1) {
+        SSL_free(ctrl);
+        return -1;
+    }
+
+    if (h3_send_settings(ctrl) != 0) {
+        SSL_free(ctrl);
+        return -1;
+    }
+
+    SSL_stream_conclude(ctrl, 0);
+    SSL_free(ctrl);
+
+    /* Server QPACK decoder stream (unidirectional, type = 0x03) */
+    SSL *decoder = SSL_new_stream(quic_conn, SSL_STREAM_FLAG_UNI);
+    if (decoder) {
+        stream_type = 0x03;
+        SSL_write(decoder, &stream_type, 1);
+        SSL_stream_conclude(decoder, 0);
+        SSL_free(decoder);
+    }
+
+    return 0;
+}
+
+static void h3_handle_client_control_stream(SSL *stream) {
+    unsigned char stream_type;
+    int n = SSL_read(stream, &stream_type, 1);
+    if (n != 1 || stream_type != 0x00) {
+        return;
+    }
+
+    uint64_t ftype, flen;
+    unsigned char *payload = NULL;
+    bool closed = false;
+    if (h3_read_frame(stream, &ftype, &flen, &payload, &closed) == 0) {
+        if (ftype == CWIST_HTTP3_FRAME_SETTINGS) {
+            /* Accept client settings */
+        }
+        free(payload);
+    }
+}
+
+static void h3_handle_client_qpack_stream(SSL *stream) {
+    unsigned char stream_type;
+    int n = SSL_read(stream, &stream_type, 1);
+    if (n != 1 || stream_type != 0x02) {
+        return;
+    }
+    char discard[1024];
+    while ((n = SSL_read(stream, discard, sizeof(discard))) > 0) {
+        /* discard dynamic table instructions */
+    }
+}
+
 static void h3_apply_header(cwist_http_request *req, const char *name, const char *value) {
     if (!req || !name || !value) return;
 
@@ -2860,6 +3003,9 @@ static void h3_apply_header(cwist_http_request *req, const char *name, const cha
         cwist_sstring_assign(req->path, (char *)value);
     } else if (strcmp(name, ":authority") == 0 || strcmp(name, "host") == 0) {
         cwist_http_header_add(&req->headers, "host", value);
+    } else if (strcmp(name, "content-length") == 0) {
+        req->content_length = atol(value);
+        cwist_http_header_add(&req->headers, name, value);
     } else if (strcmp(name, ":scheme") != 0 && name[0] != ':') {
         cwist_http_header_add(&req->headers, name, value);
     }
@@ -3039,83 +3185,169 @@ static int h3_send_response(SSL *stream, cwist_http_response *res) {
     return 0;
 }
 
-/**
- * @brief Handle an individual QUIC stream.
- *
- * This function processes HTTP/3 frames (HEADERS, DATA) from a single QUIC stream,
- * invokes the application handler, and sends the response back over the same stream.
- *
- * @param stream SSL object representing the accepted QUIC stream.
- * @param handler Application request handler.
- * @param user_ctx Opaque pointer.
- */
-static void cwist_http3_handle_stream(SSL *stream, cwist_http3_request_handler_func handler, void *user_ctx) {
-    unsigned char buf[4096];
-    size_t buffered = 0;
+struct h3_stream_thread_ctx {
+    SSL *stream;
+    cwist_http3_request_handler_func handler;
+    void *user_ctx;
+};
 
-    while (buffered < sizeof(buf)) {
-        int n = SSL_read(stream, buf + buffered, sizeof(buf) - buffered);
-        if (n > 0) {
-            buffered += (size_t)n;
-            break;
-        }
-
-        int ssl_err = SSL_get_error(stream, n);
-        if (ssl_err == SSL_ERROR_WANT_READ || ssl_err == SSL_ERROR_WANT_WRITE) {
-            usleep(1000);
-            continue;
-        }
-        if (ssl_err == SSL_ERROR_ZERO_RETURN) {
-            break;
-        }
-        break;
-    }
+static void *h3_stream_thread_func(void *arg) {
+    struct h3_stream_thread_ctx *ctx = (struct h3_stream_thread_ctx *)arg;
+    SSL *stream = ctx->stream;
+    cwist_http3_request_handler_func handler = ctx->handler;
+    void *user_ctx = ctx->user_ctx;
+    free(ctx);
 
     cwist_http_request *req = cwist_http_request_create();
     cwist_http_response *res = cwist_http_response_create();
     if (!req || !res) {
-        cwist_http_request_destroy(req);
-        cwist_http_response_destroy(res);
-        SSL_free(stream);
-        return;
+        goto stream_cleanup;
     }
 
     cwist_sstring_assign(req->version, "HTTP/3");
-    h3_apply_minimal_request_headers(req, buf, buffered);
 
-    if (handler) {
-        handler(user_ctx, req, res);
+    unsigned char *body_buf = NULL;
+    size_t body_len = 0;
+    size_t body_cap = 0;
+    bool headers_received = false;
+    bool stream_closed = false;
+
+    while (!stream_closed) {
+        uint64_t frame_type, frame_len;
+        unsigned char *payload = NULL;
+
+        if (h3_read_frame(stream, &frame_type, &frame_len, &payload, &stream_closed) != 0) {
+            break;
+        }
+
+        if (frame_type == CWIST_HTTP3_FRAME_HEADERS && !headers_received) {
+            h3_apply_minimal_request_headers(req, payload, (size_t)frame_len);
+            headers_received = true;
+        } else if (frame_type == CWIST_HTTP3_FRAME_DATA && headers_received) {
+            if (frame_len > 0 && payload) {
+                size_t need = body_len + (size_t)frame_len;
+                if (need > body_cap) {
+                    size_t new_cap = body_cap ? body_cap * 2 : 4096;
+                    while (new_cap < need) new_cap *= 2;
+                    unsigned char *nb = (unsigned char *)realloc(body_buf, new_cap);
+                    if (!nb) {
+                        free(payload);
+                        goto stream_cleanup;
+                    }
+                    body_buf = nb;
+                    body_cap = new_cap;
+                }
+                memcpy(body_buf + body_len, payload, (size_t)frame_len);
+                body_len += (size_t)frame_len;
+            }
+        } else if (frame_type == CWIST_HTTP3_FRAME_HEADERS && headers_received) {
+            /* Trailer headers - ignore for now */
+        }
+        /* Other frame types are ignored for request streams */
+
+        free(payload);
+
+        if (req->content_length > 0 && body_len >= (size_t)req->content_length) {
+            break;
+        }
     }
 
-    h3_send_response(stream, res);
+    if (body_len > 0) {
+        cwist_sstring_assign_len(req->body, (char *)body_buf, body_len);
+    }
+
+    if (handler && headers_received) {
+        handler(user_ctx, req, res);
+        h3_send_response(stream, res);
+    } else if (!headers_received) {
+        res->status_code = CWIST_HTTP_BAD_REQUEST;
+        h3_send_response(stream, res);
+    }
+
     SSL_stream_conclude(stream, 0);
 
+stream_cleanup:
+    if (body_buf) free(body_buf);
     cwist_http_request_destroy(req);
     cwist_http_response_destroy(res);
     SSL_free(stream);
+    return NULL;
 }
 
-/**
- * @brief Run the blocking HTTP/3 server loop on a UDP socket.
- * @param udp_fd Bound UDP socket; forced non-blocking here (idempotent).
- * @param ctx Context with an initialized SSL_CTX.
- * @param handler Request handler invoked per request (required).
- * @param user_ctx Passed through to @p handler.
- * @return err.error.err_i16 == 0 when the loop exits cleanly (ctx->running
- *         cleared or process shutdown); -1 on invalid arguments or setup
- *         failure (socket flags, epoll, memory).
- *
- * Configures lsquic engine settings from the context's knobs (push,
- * WebTransport, datagrams, flow-control windows, timeout set), then polls
- * the socket (epoll on Linux, poll elsewhere; recvmmsg batching when
- * available), feeds packets to the engine, and processes connections until
- * shutdown.  Linux receive batches and the packet buffer are heap-allocated
- * so the loop does not require an oversized thread stack.  On exit the
- * engine is gracefully stopped and destroyed.  CWIST_H3_DEBUG=1 routes
- * lsquic's logger to stderr.
- */
-cwist_error_t cwist_http3_server_loop(int udp_fd, cwist_http3_context *ctx,
-                                      cwist_http3_request_handler_func handler, void *user_ctx) {
+static void cwist_http3_handle_stream(SSL *stream, cwist_http3_request_handler_func handler, void *user_ctx) {
+    struct h3_stream_thread_ctx *ctx = (struct h3_stream_thread_ctx *)malloc(sizeof(*ctx));
+    if (!ctx) {
+        SSL_free(stream);
+        return;
+    }
+    ctx->stream = stream;
+    ctx->handler = handler;
+    ctx->user_ctx = user_ctx;
+
+    pthread_t tid;
+    if (pthread_create(&tid, NULL, h3_stream_thread_func, ctx) != 0) {
+        free(ctx);
+        SSL_free(stream);
+        return;
+    }
+    pthread_detach(tid);
+}
+
+cwist_error_t cwist_http3_serve_connection(cwist_http3_connection *conn,
+                                           void *user_ctx,
+                                           cwist_http3_request_handler_func handler) {
+    cwist_error_t err = make_error(CWIST_ERR_INT16);
+
+    if (!conn || !conn->quic_ssl || !handler) {
+        err.error.err_i16 = -1;
+        return err;
+    }
+
+    /* Create server control streams before accepting client streams */
+    h3_setup_server_control_streams(conn->quic_ssl);
+
+    /* Accept and dispatch all incoming streams */
+    while (1) {
+        SSL *stream = SSL_accept_stream(conn->quic_ssl, SSL_STREAM_FLAG_NO_BLOCK);
+        if (!stream) {
+            int ssl_err = SSL_get_error(conn->quic_ssl, 0);
+            if (ssl_err == SSL_ERROR_WANT_READ || ssl_err == SSL_ERROR_WANT_WRITE) {
+                struct pollfd pfd = { .fd = conn->udp_fd, .events = POLLIN };
+                poll(&pfd, 1, 100);
+                continue;
+            }
+            if (ssl_err == SSL_ERROR_ZERO_RETURN) {
+                break; /* Connection closed */
+            }
+            break; /* Other error */
+        }
+
+        int stype = SSL_get_stream_type(stream);
+        if (stype == SSL_STREAM_TYPE_BIDI) {
+            cwist_http3_handle_stream(stream, handler, user_ctx);
+        } else {
+            /* Unidirectional stream: control (0x00), push (0x01), or qpack encoder (0x02) */
+            unsigned char stream_type_byte;
+            int n = SSL_read(stream, &stream_type_byte, 1);
+            if (n == 1) {
+                if (stream_type_byte == 0x00) {
+                    h3_handle_client_control_stream(stream);
+                } else if (stream_type_byte == 0x02) {
+                    h3_handle_client_qpack_stream(stream);
+                }
+            }
+            SSL_free(stream);
+        }
+    }
+
+    err.error.err_i16 = 0;
+    return err;
+}
+
+cwist_error_t cwist_http3_server_loop(int udp_fd,
+                                      cwist_http3_context *ctx,
+                                      cwist_http3_request_handler_func handler,
+                                      void *user_ctx) {
     cwist_error_t err = make_error(CWIST_ERR_INT16);
     if (udp_fd < 0 || !ctx || !ctx->ssl_ctx || !handler) {
         err.error.err_i16 = -1;
@@ -3154,415 +3386,33 @@ cwist_error_t cwist_http3_server_loop(int udp_fd, cwist_http3_context *ctx,
     settings.es_pace_packets = 1;
     settings.es_optimistic_nat = 1;
 
-    if (ctx->idle_timeout_ms > 0)
-        settings.es_idle_timeout = (unsigned)(ctx->idle_timeout_ms / 1000);
-    if (ctx->handshake_timeout_ms > 0)
-        settings.es_handshake_to = (unsigned long)ctx->handshake_timeout_ms * 1000UL;
-    if (ctx->ping_period_ms > 0) settings.es_ping_period = (unsigned)(ctx->ping_period_ms / 1000);
-    if (ctx->noprogress_timeout_ms > 0)
-        settings.es_noprogress_timeout = (unsigned)(ctx->noprogress_timeout_ms / 1000);
+    while (1) {
+        SSL *quic_conn = SSL_new(ctx->ssl_ctx);
+        if (!quic_conn) {
+            usleep(10000);
+            continue;
+        }
 
-    char err_buf[256];
-    if (lsquic_engine_check_settings(&settings, LSENG_HTTP_SERVER, err_buf, sizeof(err_buf)) != 0) {
-        fprintf(stderr, "[HTTP/3] Invalid engine settings: %s\n", err_buf);
-        err.error.err_i16 = -1;
-        return err;
-    }
+        SSL_set_fd(quic_conn, udp_fd);
 
-    /* ea_packets_out_ctx points at ctx->udp_fd (not the udp_fd local) so the
-     * pointer stays valid for the graceful-shutdown flush in
-     * cwist_http3_destroy_context(), which may run after this function's
-     * frame is gone. */
-    ctx->udp_fd = udp_fd;
+        if (SSL_accept(quic_conn) <= 0) {
+            SSL_free(quic_conn);
+            usleep(10000);
+            continue;
+        }
 
-    struct lsquic_engine_api api = {
-        .ea_stream_if = &cwist_h3_stream_if,
-        .ea_stream_if_ctx = ctx,
-        .ea_packets_out = cwist_h3_packets_out,
-        .ea_packets_out_ctx = &ctx->udp_fd,
-        .ea_get_ssl_ctx = cwist_h3_get_ssl_ctx,
-        .ea_hsi_if = &cwist_h3_hset_if,
-        .ea_hsi_ctx = ctx,
-        .ea_settings = &settings,
-        .ea_alpn = "h3",
-    };
-
-    lsquic_engine_t *engine = lsquic_engine_new(LSENG_HTTP_SERVER, &api);
-    if (!engine) {
-        err.error.err_i16 = -1;
-        return err;
-    }
-
-    /* Diagnostic hook: CWIST_H3_DEBUG=1 routes lsquic's internal logger to
-     * stderr so CONNECTION_CLOSE error codes become visible in the journal. */
-    if (getenv("CWIST_H3_DEBUG")) {
-        static const struct lsquic_logger_if h3_log_if = {
-            .log_buf = cwist_h3_log_stderr,
+        cwist_http3_connection conn = {
+            .quic_ssl = quic_conn,
+            .udp_fd = udp_fd,
+            .peer_addr_len = sizeof(struct sockaddr_storage)
         };
-        lsquic_logger_init(&h3_log_if, NULL, LLTS_HHMMSSMS);
-        lsquic_logger_lopt("engine=debug,conn=debug,event=debug");
+
+        cwist_http3_serve_connection(&conn, user_ctx, handler);
+
+        SSL_shutdown(quic_conn);
+        SSL_free(quic_conn);
     }
 
-    ctx->engine = engine;
-    ctx->handler = handler;
-    ctx->user_ctx = user_ctx;
-    ctx->running = 1;
-
-    /* The receive loop relies on MSG_DONTWAIT, which some platforms lack
-     * (it degrades to 0).  Guarantee non-blocking semantics at the socket
-     * level instead; idempotent if the caller already set O_NONBLOCK. */
-    int fl = fcntl(udp_fd, F_GETFL, 0);
-    if (fl >= 0 && !(fl & O_NONBLOCK)) {
-        fcntl(udp_fd, F_SETFL, fl | O_NONBLOCK);
-    }
-
-    struct sockaddr_storage local_addr;
-    socklen_t local_addr_len = sizeof(local_addr);
-    if (getsockname(udp_fd, (struct sockaddr *)&local_addr, &local_addr_len) != 0) {
-        local_addr_len = 0;
-    }
-
-#ifdef IP_PKTINFO
-    int opt_pktinfo = 1;
-    setsockopt(udp_fd, IPPROTO_IP, IP_PKTINFO, &opt_pktinfo, sizeof(opt_pktinfo));
-#endif
-#ifdef IP_RECVTOS
-    int opt_tos = 1;
-    setsockopt(udp_fd, IPPROTO_IP, IP_RECVTOS, &opt_tos, sizeof(opt_tos));
-#endif
-#ifdef IPV6_RECVPKTINFO
-    int opt_pktinfo6 = 1;
-    setsockopt(udp_fd, IPPROTO_IPV6, IPV6_RECVPKTINFO, &opt_pktinfo6, sizeof(opt_pktinfo6));
-#endif
-#ifdef IPV6_RECVTCLASS
-    int opt_tclass = 1;
-    setsockopt(udp_fd, IPPROTO_IPV6, IPV6_RECVTCLASS, &opt_tclass, sizeof(opt_tclass));
-#endif
-
-    unsigned char *pkt_buf = malloc(65535);
-    if (!pkt_buf) {
-        lsquic_engine_destroy(engine);
-        ctx->engine = NULL;
-        err.error.err_i16 = -1;
-        return err;
-    }
-
-#ifdef __linux__
-    int epoll_fd = epoll_create1(0);
-    if (epoll_fd < 0) {
-        free(pkt_buf);
-        err.error.err_i16 = -1;
-        lsquic_engine_destroy(engine);
-        ctx->engine = NULL;
-        return err;
-    }
-    struct epoll_event ev;
-    ev.events = EPOLLIN;
-    ev.data.fd = udp_fd;
-    if (epoll_ctl(epoll_fd, EPOLL_CTL_ADD, udp_fd, &ev) < 0) {
-        free(pkt_buf);
-        close(epoll_fd);
-        err.error.err_i16 = -1;
-        lsquic_engine_destroy(engine);
-        ctx->engine = NULL;
-        return err;
-    }
-#endif
-
-#if defined(__linux__) && defined(_GNU_SOURCE)
-#define H3_RECV_BATCH 32
-    /* recvmmsg() batch scratch space: was 5 fixed-size arrays declared on
-     * the stack inside the loop below (2.1MB total, dominated by
-     * batch_bufs[32][65535]). That only worked because this loop is known
-     * to run on a dedicated thread with the default ~8MB stack - the
-     * comment used to live right above the arrays explaining that TLS
-     * (.tbss) had been tried and rejected for the same reason (it forces
-     * every explicit pthread stack size below ~2.2MB to fail). Heap
-     * allocation removes that "must have a big-stack thread" requirement
-     * entirely without reintroducing the TLS problem (this was never
-     * about a thread-local instance, just about not using the stack),
-     * paying one extra pointer indirection per packet in exchange. Sized
-     * once here, freed once after the loop below (same place pkt_buf is),
-     * since this whole function's body has exactly one path out of the
-     * loop (break/continue only, no returns inside it). */
-    unsigned char(*batch_bufs)[65535] = malloc(sizeof(*batch_bufs) * H3_RECV_BATCH);
-    struct sockaddr_storage *batch_peers = malloc(sizeof(*batch_peers) * H3_RECV_BATCH);
-    char(*batch_cmsgs)[512] = malloc(sizeof(*batch_cmsgs) * H3_RECV_BATCH);
-    struct iovec *batch_iovs = malloc(sizeof(*batch_iovs) * H3_RECV_BATCH);
-    struct mmsghdr *batch_msgs = malloc(sizeof(*batch_msgs) * H3_RECV_BATCH);
-    if (!batch_bufs || !batch_peers || !batch_cmsgs || !batch_iovs || !batch_msgs) {
-        free(batch_bufs);
-        free(batch_peers);
-        free(batch_cmsgs);
-        free(batch_iovs);
-        free(batch_msgs);
-        free(pkt_buf);
-        close(epoll_fd);
-        err.error.err_i16 = -1;
-        lsquic_engine_destroy(engine);
-        ctx->engine = NULL;
-        return err;
-    }
-#endif
-
-    while (ctx && ctx->running && atomic_load(&g_cwist_running)) {
-        int diff = 100000;
-        int timeout_ms = 50;
-        bool has_tick = lsquic_engine_earliest_adv_tick(engine, &diff);
-        if (has_tick) {
-            if (diff <= 0)
-                timeout_ms = 0;
-            else if (diff < 1000)
-                timeout_ms = 0;
-            else if (diff > 1000000)
-                timeout_ms = 1000;
-            else
-                timeout_ms = (diff + 999) / 1000;
-        }
-        if (lsquic_engine_has_unsent_packets(engine)) {
-            timeout_ms = 0;
-        }
-
-#ifdef __linux__
-        struct epoll_event events[1];
-        int pret = epoll_wait(epoll_fd, events, 1, timeout_ms);
-        if (pret < 0) {
-            if (errno == EINTR) continue;
-            break;
-        }
-        if (pret > 0 && (events[0].events & (EPOLLERR | EPOLLHUP))) {
-            fprintf(stderr, "[HTTP/3] UDP socket error, exiting loop.\n");
-            break;
-        }
-        bool can_read = (pret > 0 && (events[0].events & EPOLLIN));
-#else
-        struct pollfd pfd = {.fd = udp_fd, .events = POLLIN};
-        int pret = poll(&pfd, 1, timeout_ms);
-
-        if (pret < 0) {
-            if (errno == EINTR) continue;
-            if (errno == EBADF) {
-                fprintf(stderr, "[HTTP/3] UDP socket closed, exiting loop.\n");
-                break;
-            }
-            break;
-        }
-
-        if (pret > 0 && (pfd.revents & (POLLERR | POLLNVAL))) {
-            fprintf(stderr, "[HTTP/3] UDP socket error, exiting loop.\n");
-            break;
-        }
-        bool can_read = (pret > 0 && (pfd.revents & POLLIN));
-#endif
-
-#if defined(__linux__) && defined(_GNU_SOURCE)
-        if (can_read) {
-            /* batch_bufs/batch_peers/batch_cmsgs/batch_iovs/batch_msgs are
-             * heap-allocated once above the outer loop now - see the
-             * comment by their malloc()s. */
-            while (1) {
-                for (int b = 0; b < H3_RECV_BATCH; b++) {
-                    batch_iovs[b].iov_base = batch_bufs[b];
-                    batch_iovs[b].iov_len = sizeof(batch_bufs[b]);
-                    memset(&batch_msgs[b], 0, sizeof(batch_msgs[b]));
-                    batch_msgs[b].msg_hdr.msg_name = &batch_peers[b];
-                    batch_msgs[b].msg_hdr.msg_namelen = sizeof(batch_peers[b]);
-                    batch_msgs[b].msg_hdr.msg_iov = &batch_iovs[b];
-                    batch_msgs[b].msg_hdr.msg_iovlen = 1;
-                    batch_msgs[b].msg_hdr.msg_control = batch_cmsgs[b];
-                    batch_msgs[b].msg_hdr.msg_controllen = sizeof(batch_cmsgs[b]);
-                }
-
-                int nmsgs = recvmmsg(udp_fd, batch_msgs, H3_RECV_BATCH, MSG_DONTWAIT, NULL);
-                if (nmsgs <= 0) {
-                    if (nmsgs < 0 && errno != EAGAIN && errno != EWOULDBLOCK) {
-                        if (errno == ECONNREFUSED || errno == ENETUNREACH || errno == EHOSTUNREACH)
-                            continue;
-                        if (errno == EBADF) break;
-                    }
-                    break;
-                }
-
-                for (int b = 0; b < nmsgs; b++) {
-                    size_t nr = (size_t)batch_msgs[b].msg_len;
-                    if (nr == 0) continue;
-
-                    struct sockaddr_storage cur_local_addr;
-                    socklen_t cur_local_len = local_addr_len;
-                    if (local_addr_len) memcpy(&cur_local_addr, &local_addr, local_addr_len);
-
-                    int ecn = 0;
-                    for (struct cmsghdr *cmsg = CMSG_FIRSTHDR(&batch_msgs[b].msg_hdr); cmsg != NULL;
-                         cmsg = CMSG_NXTHDR(&batch_msgs[b].msg_hdr, cmsg)) {
-                        if (cmsg->cmsg_level == IPPROTO_IP) {
-#ifdef IP_PKTINFO
-                            if (cmsg->cmsg_type == IP_PKTINFO) {
-                                struct in_pktinfo *pi = (struct in_pktinfo *)CMSG_DATA(cmsg);
-                                if (pi->ipi_addr.s_addr != INADDR_ANY) {
-                                    struct sockaddr_in *sin = (struct sockaddr_in *)&cur_local_addr;
-                                    sin->sin_family = AF_INET;
-                                    sin->sin_addr = pi->ipi_addr;
-                                    if (local_addr_len >= sizeof(struct sockaddr_in)) {
-                                        sin->sin_port =
-                                            ((struct sockaddr_in *)&local_addr)->sin_port;
-                                    }
-                                    cur_local_len = sizeof(struct sockaddr_in);
-                                }
-                            }
-#endif
-#ifdef IP_TOS
-                            if (cmsg->cmsg_type == IP_TOS) {
-                                ecn = *(int *)CMSG_DATA(cmsg) & 0x3;
-                            }
-#endif
-                        } else if (cmsg->cmsg_level == IPPROTO_IPV6) {
-#ifdef IPV6_PKTINFO
-                            if (cmsg->cmsg_type == IPV6_PKTINFO) {
-                                struct in6_pktinfo *pi6 = (struct in6_pktinfo *)CMSG_DATA(cmsg);
-                                if (memcmp(&pi6->ipi6_addr, &in6addr_any,
-                                           sizeof(struct in6_addr)) != 0) {
-                                    struct sockaddr_in6 *sin6 =
-                                        (struct sockaddr_in6 *)&cur_local_addr;
-                                    sin6->sin6_family = AF_INET6;
-                                    sin6->sin6_addr = pi6->ipi6_addr;
-                                    if (local_addr_len >= sizeof(struct sockaddr_in6)) {
-                                        sin6->sin6_port =
-                                            ((struct sockaddr_in6 *)&local_addr)->sin6_port;
-                                    }
-                                    cur_local_len = sizeof(struct sockaddr_in6);
-                                }
-                            }
-#endif
-#ifdef IPV6_TCLASS
-                            if (cmsg->cmsg_type == IPV6_TCLASS) {
-                                ecn = *(int *)CMSG_DATA(cmsg) & 0x3;
-                            }
-#endif
-                        }
-                    }
-
-                    lsquic_engine_packet_in(engine, batch_bufs[b], nr,
-                                            cur_local_len ? (struct sockaddr *)&cur_local_addr
-                                                          : NULL,
-                                            (struct sockaddr *)&batch_peers[b], ctx, ecn);
-                }
-            }
-        }
-#else
-        if (can_read) {
-            while (1) {
-                struct sockaddr_storage peer_addr;
-                socklen_t peer_addr_len = sizeof(peer_addr);
-                struct sockaddr_storage cur_local_addr;
-                socklen_t cur_local_len = local_addr_len;
-                if (local_addr_len) memcpy(&cur_local_addr, &local_addr, local_addr_len);
-
-                struct msghdr msg = {0};
-                struct iovec iov = {pkt_buf, 65535};
-                msg.msg_name = &peer_addr;
-                msg.msg_namelen = peer_addr_len;
-                msg.msg_iov = &iov;
-                msg.msg_iovlen = 1;
-
-                char cmsg_buf[512];
-                msg.msg_control = cmsg_buf;
-                msg.msg_controllen = sizeof(cmsg_buf);
-
-                ssize_t nr = recvmsg(udp_fd, &msg, MSG_DONTWAIT);
-                if (nr <= 0) {
-                    if (nr < 0 && errno != EAGAIN && errno != EWOULDBLOCK) {
-                        if (errno == ECONNREFUSED || errno == ENETUNREACH ||
-                            errno == EHOSTUNREACH) {
-                            continue;
-                        }
-                        if (errno == EBADF) {
-                            fprintf(stderr, "[HTTP/3] UDP socket closed.\n");
-                            break;
-                        }
-                    }
-                    break;
-                }
-
-                int ecn = 0;
-                for (struct cmsghdr *cmsg = CMSG_FIRSTHDR(&msg); cmsg != NULL;
-                     cmsg = CMSG_NXTHDR(&msg, cmsg)) {
-                    if (cmsg->cmsg_level == IPPROTO_IP) {
-#ifdef IP_PKTINFO
-                        if (cmsg->cmsg_type == IP_PKTINFO) {
-                            struct in_pktinfo *pi = (struct in_pktinfo *)CMSG_DATA(cmsg);
-                            if (pi->ipi_addr.s_addr != INADDR_ANY) {
-                                struct sockaddr_in *sin = (struct sockaddr_in *)&cur_local_addr;
-                                sin->sin_family = AF_INET;
-                                sin->sin_addr = pi->ipi_addr;
-                                if (local_addr_len >= sizeof(struct sockaddr_in)) {
-                                    sin->sin_port = ((struct sockaddr_in *)&local_addr)->sin_port;
-                                }
-                                cur_local_len = sizeof(struct sockaddr_in);
-                            }
-                        }
-#endif
-#ifdef IP_TOS
-                        if (cmsg->cmsg_type == IP_TOS) {
-                            ecn = *(int *)CMSG_DATA(cmsg) & 0x3;
-                        }
-#endif
-                    } else if (cmsg->cmsg_level == IPPROTO_IPV6) {
-#ifdef IPV6_PKTINFO
-                        if (cmsg->cmsg_type == IPV6_PKTINFO) {
-                            struct in6_pktinfo *pi6 = (struct in6_pktinfo *)CMSG_DATA(cmsg);
-                            if (memcmp(&pi6->ipi6_addr, &in6addr_any, sizeof(struct in6_addr)) !=
-                                0) {
-                                struct sockaddr_in6 *sin6 = (struct sockaddr_in6 *)&cur_local_addr;
-                                sin6->sin6_family = AF_INET6;
-                                sin6->sin6_addr = pi6->ipi6_addr;
-                                if (local_addr_len >= sizeof(struct sockaddr_in6)) {
-                                    sin6->sin6_port =
-                                        ((struct sockaddr_in6 *)&local_addr)->sin6_port;
-                                }
-                                cur_local_len = sizeof(struct sockaddr_in6);
-                            }
-                        }
-#endif
-#ifdef IPV6_TCLASS
-                        if (cmsg->cmsg_type == IPV6_TCLASS) {
-                            ecn = *(int *)CMSG_DATA(cmsg) & 0x3;
-                        }
-#endif
-                    }
-                }
-
-                lsquic_engine_packet_in(engine, pkt_buf, (size_t)nr,
-                                        cur_local_len ? (struct sockaddr *)&cur_local_addr : NULL,
-                                        (struct sockaddr *)&peer_addr, ctx, ecn);
-            }
-        }
-#endif
-
-        lsquic_engine_process_conns(engine);
-        if (lsquic_engine_has_unsent_packets(engine)) {
-            lsquic_engine_send_unsent_packets(engine);
-        }
-    }
-
-#ifdef __linux__
-    if (epoll_fd >= 0) close(epoll_fd);
-#endif
-
-#if defined(__linux__) && defined(_GNU_SOURCE)
-    free(batch_bufs);
-    free(batch_peers);
-    free(batch_cmsgs);
-    free(batch_iovs);
-    free(batch_msgs);
-#endif
-
-    free(pkt_buf);
-    if (ctx && ctx->engine) {
-        cwist_h3_engine_graceful_stop(ctx);
-        lsquic_engine_destroy((lsquic_engine_t *)ctx->engine);
-        ctx->engine = NULL;
-        cwist_h3_hset_sweep(ctx);
-    }
     err.error.err_i16 = 0;
     return err;
 }

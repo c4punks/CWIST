@@ -22,10 +22,12 @@
 #include <arpa/inet.h>
 #include <stdint.h>
 
-#define CWIST_ALPN_HTTP11 ((const unsigned char *)"\x08http/1.1")
-#define CWIST_ALPN_H2_HTTP11 ((const unsigned char *)"\x02h2\x08http/1.1")
-#define CWIST_ALPN_HTTP11_LEN 9
-#define CWIST_ALPN_H2_HTTP11_LEN 12
+#define CWIST_ALPN_HTTP11       ((const unsigned char *)"\x08http/1.1")
+#define CWIST_ALPN_H2_HTTP11    ((const unsigned char *)"\x02h2\x08http/1.1")
+#define CWIST_ALPN_H3_H2_HTTP11 ((const unsigned char *)"\x02h3\x02h2\x08http/1.1")
+#define CWIST_ALPN_HTTP11_LEN       9
+#define CWIST_ALPN_H2_HTTP11_LEN    12
+#define CWIST_ALPN_H3_H2_HTTP11_LEN 15
 
 /**
  * @file https.c
@@ -98,9 +100,23 @@ static int cwist_https_alpn_select_cb(SSL *ssl,
                                       unsigned int inlen,
                                       void *arg) {
     (void)ssl;
-    bool enable_http2 = (bool)(uintptr_t)arg;
-    const unsigned char *supported = enable_http2 ? CWIST_ALPN_H2_HTTP11 : CWIST_ALPN_HTTP11;
-    unsigned int supported_len = enable_http2 ? CWIST_ALPN_H2_HTTP11_LEN : CWIST_ALPN_HTTP11_LEN;
+    const cwist_https_options *opts = (const cwist_https_options *)arg;
+    bool enable_http3 = opts && opts->enable_http3;
+    bool enable_http2 = opts && (opts->enable_http2 || enable_http3);
+
+    const unsigned char *supported;
+    unsigned int supported_len;
+
+    if (enable_http3) {
+        supported = CWIST_ALPN_H3_H2_HTTP11;
+        supported_len = CWIST_ALPN_H3_H2_HTTP11_LEN;
+    } else if (enable_http2) {
+        supported = CWIST_ALPN_H2_HTTP11;
+        supported_len = CWIST_ALPN_H2_HTTP11_LEN;
+    } else {
+        supported = CWIST_ALPN_HTTP11;
+        supported_len = CWIST_ALPN_HTTP11_LEN;
+    }
 
     if (SSL_select_next_proto((unsigned char **)out,
                               outlen,
@@ -125,7 +141,8 @@ cwist_error_t cwist_https_init_context_with_options(cwist_https_context **ctx,
                                                     const char *key_path,
                                                     const cwist_https_options *options) {
     cwist_error_t err = make_error(CWIST_ERR_INT16);
-    bool enable_http2 = options && options->enable_http2;
+    bool enable_http3 = options && options->enable_http3;
+    bool enable_http2 = options && (options->enable_http2 || enable_http3);
     
     if (!ctx || !cert_path || !key_path) {
         err.error.err_i16 = -1;
@@ -158,7 +175,7 @@ cwist_error_t cwist_https_init_context_with_options(cwist_https_context **ctx,
 
     SSL_CTX_set_alpn_select_cb(ssl_ctx,
                                cwist_https_alpn_select_cb,
-                               (void *)(uintptr_t)enable_http2);
+                               (void *)options);
 
     // Load Cert and Key
     if (SSL_CTX_use_certificate_chain_file(ssl_ctx, cert_path) <= 0) {
@@ -190,6 +207,7 @@ cwist_error_t cwist_https_init_context_with_options(cwist_https_context **ctx,
     }
     (*ctx)->ctx = ssl_ctx;
     (*ctx)->http2_enabled = enable_http2;
+    (*ctx)->http3_enabled = enable_http3;
 
     err.error.err_i16 = 0; // Success
     return err;
@@ -378,6 +396,7 @@ cwist_error_t cwist_https_accept(cwist_https_context *ctx, int client_fd,
     (*conn)->read_buf[0] = '\0';
     (*conn)->negotiated_http2 = false;
     (*conn)->negotiated_protocol = CWIST_HTTPS_PROTOCOL_HTTP11;
+    (*conn)->http3_enabled = ctx->http3_enabled;
 
     const unsigned char *alpn = NULL;
     unsigned int alpn_len = 0;
@@ -385,6 +404,8 @@ cwist_error_t cwist_https_accept(cwist_https_context *ctx, int client_fd,
     if (alpn && alpn_len == 2 && memcmp(alpn, "h2", 2) == 0) {
         (*conn)->negotiated_http2 = true;
         (*conn)->negotiated_protocol = CWIST_HTTPS_PROTOCOL_HTTP2;
+    } else if (alpn && alpn_len == 2 && memcmp(alpn, "h3", 2) == 0) {
+        (*conn)->negotiated_protocol = CWIST_HTTPS_PROTOCOL_HTTP3;
     }
 
     err.error.err_i16 = 0;
@@ -625,9 +646,8 @@ cwist_error_t cwist_https_send_response(cwist_https_connection *conn, cwist_http
         return err;
     }
 
-    // Inject Alt-Svc when HTTP/3 is enabled so clients discover the QUIC endpoint,
-    // unless the application already set or cleared the Alt-Svc header.
-    if (conn->http3_enabled && !cwist_http_header_get(res->headers, "Alt-Svc")) {
+    // Inject Alt-Svc when HTTP/3 is enabled so clients discover the QUIC endpoint
+    if (conn->http3_enabled) {
         struct sockaddr_storage ss;
         socklen_t ss_len = sizeof(ss);
         int port = 443;
@@ -643,80 +663,9 @@ cwist_error_t cwist_https_send_response(cwist_https_connection *conn, cwist_http
         cwist_http_header_add(&res->headers, "Alt-Svc", alt_svc);
     }
 
-    // 1+2. Headers onto a stack buffer; a small body rides in the same TLS
-    // record, saving one record's AEAD tag and one syscall on the common
-    // short-response path. Larger bodies keep the split writes (BoringSSL
-    // records a big SSL_write at 16 KiB internally).
-    char header_buf[CWIST_HTTP_MAX_HEADER_SIZE];
-    size_t header_len = cwist_http_serialize_headers(res, header_buf, sizeof(header_buf));
-
-    const char *body_ptr = NULL;
-    size_t body_len = 0;
-    if (res->is_ptr_body) {
-        body_ptr = (const char *)res->ptr_body;
-        body_len = res->ptr_body_len;
-    } else if (res->body && res->body->data) {
-        body_ptr = res->body->data;
-        body_len = res->body->size;
-    }
-
-    bool body_coalesced = false;
-    if (body_ptr && body_len > 0 && body_len <= CWIST_TLS_COALESCE_MAX) {
-        char *combined = (char *)cwist_alloc(header_len + body_len);
-        if (combined) {
-            memcpy(combined, header_buf, header_len);
-            memcpy(combined + header_len, body_ptr, body_len);
-            int rc = cwist_ssl_write_all(conn, combined, header_len + body_len);
-            cwist_free(combined);
-            if (rc != 0) {
-                return make_ssl_error("SSL coalesced write failed");
-            }
-            body_coalesced = true;
-        }
-        /* Allocation failure: fall through to the split writes. */
-    }
-    if (!body_coalesced) {
-        if (cwist_ssl_write_all(conn, header_buf, header_len) != 0) {
-            return make_ssl_error("SSL header write failed");
-        }
-        if (body_ptr && body_len > 0) {
-            if (cwist_ssl_write_all(conn, body_ptr, body_len) != 0) {
-                return make_ssl_error("SSL body write failed");
-            }
-        }
-    }
-
-    // 3. File streams cannot use sendfile() through userland TLS; chunk them
-    if (res->use_file_stream && res->file_stream_fd >= 0) {
-        char fbuf[65536];
-        size_t remaining = res->file_stream_len;
-        off_t offset = res->file_stream_offset;
-        while (remaining > 0) {
-            size_t to_read = remaining < sizeof(fbuf) ? remaining : sizeof(fbuf);
-            ssize_t n = pread(res->file_stream_fd, fbuf, to_read, offset);
-            if (n < 0) {
-                if (errno == EINTR) continue;
-                return make_ssl_error("file stream read failed");
-            }
-            if (n == 0) break;
-            if (cwist_ssl_write_all(conn, fbuf, (size_t)n) != 0) {
-                return make_ssl_error("SSL file stream write failed");
-            }
-            offset += n;
-            remaining -= (size_t)n;
-        }
-        res->file_stream_offset = offset;
-    }
-
-    err.error.err_i16 = 0;
-    return err;
-}
-
-cwist_error_t cwist_https_send_response_head(cwist_https_connection *conn,
-                                             cwist_http_response *res) {
-    cwist_error_t err = make_error(CWIST_ERR_INT16);
-
-    if (!conn || !conn->ssl || !res) {
+    // 1. Serialize using existing HTTP logic
+    cwist_sstring *response_str = cwist_http_stringify_response(res);
+    if (!response_str) {
         err.error.err_i16 = -1;
         return err;
     }
