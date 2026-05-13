@@ -3360,19 +3360,75 @@ cwist_error_t cwist_http3_server_loop(int udp_fd,
     settings.es_allow_migration = ctx->allow_migration ? ctx->allow_migration : 1;
     settings.es_max_delayed_0rtt_packets = 32;
     settings.es_datagrams = ctx->datagram_enabled;
-#ifdef CWIST_WEBTRANSPORT
-    if (ctx->wt_handler) {
-        /* Required lsquic settings for WebTransport (see DEV_LSQUIC.md).
-         * RFC 9297 Section 3.1: H3_DATAGRAM is only meaningful when the
-         * QUIC DATAGRAM transport parameter is also sent, so enabling
-         * WebTransport (or H3 datagrams) must force es_datagrams on. */
-        settings.es_webtransport = 1;
-        settings.es_http_datagrams = 1;
-        settings.es_datagrams = 1;
-        settings.es_max_webtransport_sessions = 1;
-        settings.es_reset_stream_at = 1;
-    } else {
-        settings.es_http_datagrams = ctx->datagram_enabled;
+
+    struct lsquic_engine_api api = {
+        .ea_stream_if        = &cwist_h3_stream_if,
+        .ea_stream_if_ctx    = ctx,
+        .ea_packets_out      = cwist_h3_packets_out,
+        .ea_packets_out_ctx  = &udp_fd,
+        .ea_hsi_if           = &cwist_h3_hset_if,
+        .ea_hsi_ctx          = NULL,
+        .ea_settings         = &settings,
+        .ea_alpn             = "h3",
+    };
+
+    lsquic_engine_t *engine = lsquic_engine_new(LSENG_HTTP_SERVER, &api);
+    if (!engine) {
+        err.error.err_i16 = -1;
+        return err;
+    }
+
+    ctx->engine = engine;
+    ctx->handler = handler;
+    ctx->user_ctx = user_ctx;
+    ctx->udp_fd = udp_fd;
+    ctx->running = 1;
+
+    printf("[HTTP/3] Listening on UDP socket %d\n", udp_fd);
+
+    struct sockaddr_storage local_addr;
+    socklen_t local_addr_len = sizeof(local_addr);
+    memset(&local_addr, 0, sizeof(local_addr));
+    if (getsockname(udp_fd, (struct sockaddr *)&local_addr, &local_addr_len) != 0) {
+        local_addr_len = 0;
+    }
+
+    /* Make socket non-blocking for polling */
+    int flags = fcntl(udp_fd, F_GETFL, 0);
+    if (flags >= 0) fcntl(udp_fd, F_SETFL, flags | O_NONBLOCK);
+
+    /* Enable ECN reception for congestion control feedback */
+    int on = 1;
+    setsockopt(udp_fd, IPPROTO_IP, IP_RECVTOS, &on, sizeof(on));
+#ifdef IPV6_RECVTCLASS
+    setsockopt(udp_fd, IPPROTO_IPV6, IPV6_RECVTCLASS, &on, sizeof(on));
+#endif
+
+    unsigned char *pkt_buf = malloc(65535);
+    if (!pkt_buf) {
+        lsquic_engine_destroy(engine);
+        ctx->engine = NULL;
+        err.error.err_i16 = -1;
+        return err;
+    }
+
+#ifdef __linux__
+    int epoll_fd = epoll_create1(0);
+    if (epoll_fd < 0) {
+        err.error.err_i16 = -1;
+        lsquic_engine_destroy(engine);
+        ctx->engine = NULL;
+        return err;
+    }
+    struct epoll_event ev;
+    ev.events = EPOLLIN;
+    ev.data.fd = udp_fd;
+    if (epoll_ctl(epoll_fd, EPOLL_CTL_ADD, udp_fd, &ev) < 0) {
+        close(epoll_fd);
+        err.error.err_i16 = -1;
+        lsquic_engine_destroy(engine);
+        ctx->engine = NULL;
+        return err;
     }
 #endif
     settings.es_max_cfcw = 16 * 1024 * 1024;
@@ -3409,8 +3465,46 @@ cwist_error_t cwist_http3_server_loop(int udp_fd,
 
         cwist_http3_serve_connection(&conn, user_ctx, handler);
 
-        SSL_shutdown(quic_conn);
-        SSL_free(quic_conn);
+                ssize_t nr = recvmsg(udp_fd, &msg, 0);
+                if (nr > 0) {
+                    int ecn = 0;
+                    for (struct cmsghdr *cmsg = CMSG_FIRSTHDR(&msg);
+                         cmsg != NULL;
+                         cmsg = CMSG_NXTHDR(&msg, cmsg)) {
+                        if (cmsg->cmsg_level == IPPROTO_IP &&
+                            cmsg->cmsg_type == IP_TOS) {
+                            ecn = *(int *)CMSG_DATA(cmsg) & 0x3;
+                            break;
+                        }
+#ifdef IPV6_TCLASS
+                        if (cmsg->cmsg_level == IPPROTO_IPV6 &&
+                            cmsg->cmsg_type == IPV6_TCLASS) {
+                            ecn = *(int *)CMSG_DATA(cmsg) & 0x3;
+                            break;
+                        }
+#endif
+                    }
+                    lsquic_engine_packet_in(engine, pkt_buf, (size_t)nr,
+                                            local_addr_len ? (struct sockaddr *)&local_addr : NULL,
+                                            (struct sockaddr *)&peer_addr,
+                                            &ecn, sizeof(ecn));
+                } else if (nr < 0 && errno != EAGAIN && errno != EWOULDBLOCK) {
+                    if (errno == ECONNREFUSED || errno == ENETUNREACH ||
+                        errno == EHOSTUNREACH) {
+                        /* Transient error, keep going */
+                    } else if (errno == EBADF) {
+                        fprintf(stderr, "[HTTP/3] UDP socket closed.\n");
+                        break;
+                    }
+                }
+#ifdef __linux__
+            }
+#else
+            }
+        }
+#endif
+
+        lsquic_engine_process_conns(engine);
     }
 
     err.error.err_i16 = 0;
