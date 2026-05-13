@@ -11,11 +11,6 @@
  * @brief Hash-map based storage and parsing helpers for URL query parameters.
  */
 
-/**
- * @file query.c
- * @brief Hash-map based storage and parsing helpers for URL query parameters.
- */
-
 #define CWIST_QUERY_MAP_DEFAULT_SIZE 16
 
 /**
@@ -159,83 +154,23 @@ const char *cwist_query_map_get(cwist_query_map *map, const char *key) {
 }
 
 /**
- * @brief Parse a raw `a=1&b=2` query string into the existing map.
- * @param map Destination map that receives decoded keys and values.
- * @param raw_query Raw query substring without the leading question mark.
- */
-void cwist_query_map_parse(cwist_query_map *map, const char *raw_query) {
-    if (!map || !raw_query || strlen(raw_query) == 0) return;
-
-    UriQueryListA *queryList = NULL;
-    int itemCount = 0;
-    
-    // uriparser handles & and = and url decoding
-    if (uriDissectQueryMallocA(&queryList, &itemCount, raw_query, raw_query + strlen(raw_query)) != URI_SUCCESS) {
-        return;
-    }
-
-    uint64_t hash = siphash24(key, strlen(key), map->seed);
-    size_t index = hash % map->size;
-
-    cwist_query_bucket *curr = map->buckets[index];
-    cwist_query_bucket *prev = NULL;
-    while (curr) {
-        if (strcmp(curr->key, key) == 0) {
-            if (prev) {
-                prev->next = curr->next;
-            } else {
-                map->buckets[index] = curr->next;
-            }
-            cwist_free(curr->key);
-            cwist_free(curr->value);
-            cwist_free(curr);
-            return;
-        }
-        prev = curr;
-        curr = curr->next;
-    }
-}
-
-/**
- * @brief Invoke a callback for every key/value pair stored in the map.
- * @param map Query map to iterate; NULL is a no-op.
- * @param cb Callback invoked as cb(key, value, ctx) for each entry; NULL is a no-op.
- * @param ctx Opaque pointer forwarded to the callback for each entry.
- * @note Iteration order is bucket order and is not sorted.
- */
-void cwist_query_map_foreach(cwist_query_map *map, cwist_query_map_iter_func cb, void *ctx) {
-    if (!map || !cb) return;
-    for (size_t i = 0; i < map->size; i++) {
-        cwist_query_bucket *curr = map->buckets[i];
-        while (curr) {
-            cb(curr->key, curr->value, ctx);
-            curr = curr->next;
-        }
-    }
-}
-
-/**
  * @brief Decode a URL-encoded component with '+' → space semantics.
  *        '+' → 0x20, '%XY' → hex byte (strict), everything else passthrough.
  * @param src Raw (still encoded) key or value.
  * @return Newly allocated decoded string, or NULL on allocation failure.
  */
-static char *url_decode(void *arena, const char *src) {
+static char *url_decode(const char *src) {
     if (!src) return NULL;
 
     size_t len = strlen(src);
-    char *out;
-    if (arena) {
-        out = (char *)cwist_arena_alloc((cwist_arena_t *)arena, len + 1);
-    } else {
-        out = (char *)cwist_alloc(len + 1);
-    }
+    char *out = (char *)cwist_alloc(len + 1);
     if (!out) return NULL;
 
     size_t j = 0;
     for (size_t i = 0; i < len; i++) {
-        if (src[i] == '%' && i + 2 < len && isxdigit((unsigned char)src[i + 1]) &&
-            isxdigit((unsigned char)src[i + 2])) {
+        if (src[i] == '%' && i + 2 < len
+            && isxdigit((unsigned char)src[i + 1])
+            && isxdigit((unsigned char)src[i + 2])) {
             unsigned int byte;
             sscanf(src + i + 1, "%2x", &byte);
             out[j++] = (char)byte;
@@ -258,7 +193,7 @@ static char *url_decode(void *arena, const char *src) {
 void cwist_query_map_parse(cwist_query_map *map, const char *raw_query) {
     if (!map || !raw_query || strlen(raw_query) == 0) return;
 
-    char *buffer = query_strdup(map->arena, raw_query);
+    char *buffer = cwist_strdup(raw_query);
     if (!buffer) return;
 
     char *save_ptr = NULL;
@@ -275,21 +210,17 @@ void cwist_query_map_parse(cwist_query_map *map, const char *raw_query) {
         const char *key_raw = token;
         const char *value_raw = eq + 1;
 
-        char *key_dec = url_decode(map->arena, key_raw);
-        char *value_dec = url_decode(map->arena, value_raw);
+        char *key_dec = url_decode(key_raw);
+        char *value_dec = url_decode(value_raw);
 
         if (key_dec && cwist_query_map_get(map, key_dec) == NULL) {
             cwist_query_map_set(map, key_dec, value_dec ? value_dec : "");
         }
 
-        if (!map->arena) {
-            cwist_free(key_dec);
-            cwist_free(value_dec);
-        }
+        cwist_free(key_dec);
+        cwist_free(value_dec);
         token = strtok_r(NULL, "&", &save_ptr);
     }
 
-    if (!map->arena) {
-        cwist_free(buffer);
-    }
+    cwist_free(buffer);
 }
