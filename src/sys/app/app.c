@@ -4066,8 +4066,24 @@ int cwist_app_listen(cwist_app *app, int port) {
             int sndbuf = 2 * 1024 * 1024;
             setsockopt(udp_fd, SOL_SOCKET, SO_RCVBUF, &rcvbuf, sizeof(rcvbuf));
             setsockopt(udp_fd, SOL_SOCKET, SO_SNDBUF, &sndbuf, sizeof(sndbuf));
-
-            if (bind(udp_fd, (struct sockaddr *)&udp_addr, sizeof(udp_addr)) != 0) {
+            
+            if (bind(udp_fd, (struct sockaddr *)&udp_addr, sizeof(udp_addr)) == 0) {
+                struct h3_thread_payload *h3_p = malloc(sizeof(*h3_p));
+                if (h3_p) {
+                    h3_p->udp_fd = udp_fd;
+                    h3_p->app = app;
+                    pthread_t h3_tid;
+                    if (pthread_create(&h3_tid, NULL, h3_server_thread_func, h3_p) == 0) {
+                        pthread_detach(h3_tid);
+                        printf("HTTP/3 (QUIC) enabled on UDP port %d\n", port);
+                    } else {
+                        free(h3_p);
+                        close(udp_fd);
+                    }
+                } else {
+                    close(udp_fd);
+                }
+            } else {
                 perror("Failed to bind UDP port for HTTP/3");
                 close(udp_fd);
                 udp_fd = -1;
