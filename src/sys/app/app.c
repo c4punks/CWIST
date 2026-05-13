@@ -905,7 +905,8 @@ static cwist_error_t cwist_app_refresh_https_context(cwist_app *app) {
     }
 
     cwist_https_options options = {
-        .enable_http2 = app->use_https2
+        .enable_http2 = app->use_https2,
+        .enable_http3 = app->use_https3
     };
     return cwist_https_init_context_with_options(&app->ssl_ctx,
                                                  app->cert_path,
@@ -1264,6 +1265,48 @@ cwist_error_t cwist_app_use_https2(cwist_app *app, bool enabled) {
     }
 
     return cwist_app_refresh_https_context(app);
+}
+
+cwist_error_t cwist_app_use_https3(cwist_app *app, bool enabled) {
+    cwist_error_t err = make_error(CWIST_ERR_INT16);
+    if (!app) {
+        err.error.err_i16 = -1;
+        return err;
+    }
+
+    app->use_https3 = enabled;
+    err.error.err_i16 = 0;
+
+    if (!app->use_ssl || !app->cert_path || !app->key_path) {
+        return err;
+    }
+
+    cwist_app_refresh_http3_context(app);
+    return cwist_app_refresh_https_context(app);
+}
+
+cwist_error_t cwist_app_use_http2(cwist_app *app, bool enabled) {
+    cwist_error_t err = make_error(CWIST_ERR_INT16);
+    if (!app) {
+        err.error.err_i16 = -1;
+        return err;
+    }
+
+    app->use_http2 = enabled;
+    err.error.err_i16 = 0;
+    return err;
+}
+
+cwist_error_t cwist_app_use_http3(cwist_app *app, bool enabled) {
+    cwist_error_t err = make_error(CWIST_ERR_INT16);
+    if (!app) {
+        err.error.err_i16 = -1;
+        return err;
+    }
+
+    app->use_http3 = enabled;
+    err.error.err_i16 = 0;
+    return cwist_app_refresh_http3_context(app);
 }
 
 /**
