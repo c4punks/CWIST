@@ -142,7 +142,7 @@ DEPSDIR ?= $(LIBDIR)/cwist
 
 # --- Build Targets ---
 
-all: $(LIBTTAK_LIB) $(CJSON_LIB) $(URIPARSER_LIB) $(SQLITE_DIR)/sqlite3.c $(LIB_NAME)
+all: $(LIBTTAK_LIB) $(CJSON_LIB) $(URIPARSER_LIB) $(SQLITE_DIR)/sqlite3.c $(LSQUIC_LIB) $(LIB_NAME)
 
 # SQLite Download & Extraction Rule
 $(SQLITE_DIR)/sqlite3.c:
@@ -154,7 +154,16 @@ $(SQLITE_DIR)/sqlite3.c:
 	@rm $(SQLITE_DIR)/$(SQLITE_ZIP)
 	@echo "SQLite Ready."
 
-$(LIB_NAME): $(URIPARSER_LIB) $(CJSON_LIB) $(LIBTTAK_LIB) $(CNATS_LIB) $(OBJS)
+# Ensure lsquic submodule is checked out before compiling objects that need its headers
+$(OBJS): | lib/lsquic/include/lsquic.h
+
+lib/lsquic/include/lsquic.h:
+	@if [ ! -f "$@" ]; then \
+		echo "Initializing lsquic submodule..."; \
+		git submodule update --init --recursive $(LSQUIC_DIR); \
+	fi
+
+$(LIB_NAME): $(URIPARSER_LIB) $(CJSON_LIB) $(LIBTTAK_LIB) $(CNATS_LIB) $(BORINGSSL_SSL_LIB) $(BORINGSSL_CRYPTO_LIB) $(LSQUIC_LIB) $(OBJS)
 	@echo "Creating static library..."
 	@rm -rf .lib_merge_tmp
 	@mkdir -p .lib_merge_tmp
