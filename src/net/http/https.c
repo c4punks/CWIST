@@ -3,6 +3,8 @@
 #include <cwist/net/http/https.h>
 #include <cwist/core/sstring/sstring.h>
 #include <cwist/sys/err/cwist_err.h>
+#include <cwist/core/mem/alloc.h>
+#include <cwist/sys/app/shutdown.h>
 #include <openssl/ssl.h>
 #include <openssl/err.h>
 #include <openssl/evp.h>
@@ -763,11 +765,6 @@ cwist_error_t cwist_https_server_loop(int server_fd, cwist_https_context *ctx, v
         return err;
     }
 
-    if (https_pool_init() != 0) {
-        err.error.err_i16 = -1;
-        return err;
-    }
-
     while (atomic_load(&g_cwist_running)) {
         struct sockaddr_in addr;
         socklen_t len = sizeof(addr);
@@ -775,7 +772,8 @@ cwist_error_t cwist_https_server_loop(int server_fd, cwist_https_context *ctx, v
 
         if (client_fd < 0) {
             if (errno == EINTR) continue;
-            continue; 
+            if (errno == EBADF || errno == EINVAL) break;
+            continue;
         }
 
         pthread_t thread;

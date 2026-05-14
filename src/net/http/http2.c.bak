@@ -21,7 +21,6 @@
 #include <cwist/net/http/http2.h>
 #include <cwist/core/mem/alloc.h>
 #include <cwist/sys/err/cwist_err.h>
-#include <cwist/sys/app/shutdown.h>
 
 #include <openssl/ssl.h>
 #include <openssl/err.h>
@@ -44,6 +43,9 @@
 
 /**
  * @brief Internal state for an HTTP/2 connection.
+ *
+ * Maintains the SSL context, connection preface status,
+ * and stream management information.
  */
 typedef struct {
     SSL *ssl;                 /**< Pointer to the underlying BoringSSL SSL object */
@@ -52,7 +54,6 @@ typedef struct {
 } cwist_http2_conn_internal;
 
 /* --- Private Function Prototypes --- */
-static int cwist_http2_verify_preface(SSL *ssl);
 
 typedef struct {
     const char *name;
@@ -129,36 +130,9 @@ static int h2_read(cwist_https_connection *conn, void *buf, int len) {
     return read(conn->fd, buf, len);
 }
 
-    /* 1. Validation */
-    if (!conn || !conn->ssl || !handler) {
-        result = make_error(CWIST_ERR_INT32);
-        result.error.err_i32 = CWIST_ERROR_INVALID_PARAM;
-        return result;
-    }
-
-    SSL *ssl = conn->ssl;
-
-    /* 2. Verify HTTP/2 Connection Preface */
-    if (cwist_http2_verify_preface(ssl) != 0) {
-        result = make_error(CWIST_ERR_INT32);
-        result.error.err_i32 = CWIST_ERROR_PROTOCOL;
-        return result;
-    }
-
-    /* 3. Main Event Loop (Simplified for structure) */
-    bool connected = true;
-    while (connected) {
-        // Implementation of frame reading, HPACK decoding, and stream management
-        // When a full request is assembled:
-        // handler(user_ctx, req, res);
-
-        // Break on connection close or error
-        break;
-    }
-
-    result = make_error(CWIST_ERR_INT32);
-    result.error.err_i32 = CWIST_SUCCESS;
-    return result;
+static int h2_write(cwist_https_connection *conn, const void *buf, int len) {
+    if (conn->ssl) return SSL_write(conn->ssl, buf, len);
+    return write(conn->fd, buf, len);
 }
 
 static int h2_write_all(cwist_https_connection *conn, const void *buf, size_t len) {
@@ -899,15 +873,17 @@ static int h2_send_response(cwist_https_connection *conn, uint32_t stream_id, cw
 
 /**
  * @brief Verifies the mandatory HTTP/2 connection preface.
- * @param ssl Pointer to the SSL session.
- * @return 0 on success, -1 on failure.
+ *
+ * @param conn Pointer to the connection to read from.
+ * @return 0 on success (preface matches), -1 on failure.
  */
-static int cwist_http2_verify_preface(SSL *ssl) {
+static int cwist_http2_verify_preface(cwist_https_connection *conn) {
     char buffer[CWIST_HTTP2_CONNECTION_PREFACE_LEN];
-    int n = SSL_read(ssl, buffer, CWIST_HTTP2_CONNECTION_PREFACE_LEN);
-
-    if (n != CWIST_HTTP2_CONNECTION_PREFACE_LEN) {
-        return -1;
+    int offset = 0;
+    while (offset < CWIST_HTTP2_CONNECTION_PREFACE_LEN) {
+        int n = h2_read(conn, buffer + offset, CWIST_HTTP2_CONNECTION_PREFACE_LEN - offset);
+        if (n <= 0) return -1;
+        offset += n;
     }
 
     if (memcmp(buffer, CWIST_HTTP2_CONNECTION_PREFACE, CWIST_HTTP2_CONNECTION_PREFACE_LEN) != 0) {
@@ -959,9 +935,7 @@ cwist_error_t cwist_http2_serve_connection(
 
     /* 3. Main Event Loop */
     bool connected = true;
-    cwist_http_request *pending_req = NULL;
-    uint32_t pending_stream_id = 0;
-    while (connected && atomic_load(&g_cwist_running)) {
+    while (connected) {
         unsigned char hdr[9];
         int n = 0;
         int offset = 0;
@@ -1018,65 +992,29 @@ cwist_error_t cwist_http2_serve_connection(
                 h2_decode_header_block(req, payload + block_offset, block_len);
             }
 
-            if (hdr[4] & CWIST_HTTP2_FLAG_END_STREAM) {
-                cwist_http_response *res = cwist_http_response_create();
-                if (res) {
-                    handler(user_ctx, req, res);
-                    if (conn->http3_enabled) {
-                        struct sockaddr_storage ss;
-                        socklen_t ss_len = sizeof(ss);
-                        int port = 443;
-                        if (getsockname(conn->fd, (struct sockaddr *)&ss, &ss_len) == 0) {
-                            if (ss.ss_family == AF_INET) {
-                                port = ntohs(((struct sockaddr_in *)&ss)->sin_port);
-                            } else if (ss.ss_family == AF_INET6) {
-                                port = ntohs(((struct sockaddr_in6 *)&ss)->sin6_port);
-                            }
+            cwist_http_response *res = cwist_http_response_create();
+            if (res) {
+                handler(user_ctx, req, res);
+                if (conn->http3_enabled) {
+                    struct sockaddr_storage ss;
+                    socklen_t ss_len = sizeof(ss);
+                    int port = 443;
+                    if (getsockname(conn->fd, (struct sockaddr *)&ss, &ss_len) == 0) {
+                        if (ss.ss_family == AF_INET) {
+                            port = ntohs(((struct sockaddr_in *)&ss)->sin_port);
+                        } else if (ss.ss_family == AF_INET6) {
+                            port = ntohs(((struct sockaddr_in6 *)&ss)->sin6_port);
                         }
-                        char alt_svc[64];
-                        snprintf(alt_svc, sizeof(alt_svc), "h3=\":%d\"; ma=86400", port);
-                        cwist_http_header_add(&res->headers, "Alt-Svc", alt_svc);
                     }
-                    if (h2_send_response(conn, stream_id, res) != 0) connected = false;
-                    cwist_http_response_destroy(res);
+                    char alt_svc[64];
+                    snprintf(alt_svc, sizeof(alt_svc), "h3=\":%d\"; ma=86400", port);
+                    cwist_http_header_add(&res->headers, "Alt-Svc", alt_svc);
                 }
-                cwist_http_request_destroy(req);
-            } else {
-                pending_req = req;
-                pending_stream_id = stream_id;
+                if (h2_send_response(conn, stream_id, res) != 0) connected = false;
+                cwist_http_response_destroy(res);
             }
-        } else if (type == CWIST_HTTP2_FRAME_DATA && stream_id != 0) {
-            if (pending_req && pending_stream_id == stream_id) {
-                if (payload && len > 0) {
-                    cwist_sstring_append_len(pending_req->body, (const char *)payload, len);
-                }
-                if (hdr[4] & CWIST_HTTP2_FLAG_END_STREAM) {
-                    cwist_http_response *res = cwist_http_response_create();
-                    if (res) {
-                        handler(user_ctx, pending_req, res);
-                        if (conn->http3_enabled) {
-                            struct sockaddr_storage ss;
-                            socklen_t ss_len = sizeof(ss);
-                            int port = 443;
-                            if (getsockname(conn->fd, (struct sockaddr *)&ss, &ss_len) == 0) {
-                                if (ss.ss_family == AF_INET) {
-                                    port = ntohs(((struct sockaddr_in *)&ss)->sin_port);
-                                } else if (ss.ss_family == AF_INET6) {
-                                    port = ntohs(((struct sockaddr_in6 *)&ss)->sin6_port);
-                                }
-                            }
-                            char alt_svc[64];
-                            snprintf(alt_svc, sizeof(alt_svc), "h3=\":%d\"; ma=86400", port);
-                            cwist_http_header_add(&res->headers, "Alt-Svc", alt_svc);
-                        }
-                        if (h2_send_response(conn, stream_id, res) != 0) connected = false;
-                        cwist_http_response_destroy(res);
-                    }
-                    cwist_http_request_destroy(pending_req);
-                    pending_req = NULL;
-                    pending_stream_id = 0;
-                }
-            }
+
+            cwist_http_request_destroy(req);
         }
 
         free(payload);

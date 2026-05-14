@@ -11,23 +11,11 @@
 
 cwist_macro_log_level_t g_cwist_log_level = CWIST_LOG_LEVEL_NONE;
 
-/**
- * @brief Write a single log record to stderr with a timestamp and level tag.
- *
- * Emits one line of the form `[LEVEL] [YYYY-MM-DD HH:MM:SS] <formatted message>`
- * to stderr. Unknown level values print as `???`. Output is not buffered beyond
- * the C runtime's default stderr buffering; no synchronization is performed, so
- * interleaving may occur when called concurrently from multiple threads.
- *
- * @param level Severity tag for the record (INFO, WARN, ERROR, DEBUG, or other).
- * @param fmt   printf-style format string, followed by its arguments.
- */
 void cwist_log_write(cwist_macro_log_level_t level, const char *fmt, ...) {
     const char *level_str = "???";
     switch (level) {
-        case CWIST_LOG_LEVEL_INFO: level_str = "INFO"; break;
-        case CWIST_LOG_LEVEL_WARN: level_str = "WARN"; break;
-        case CWIST_LOG_LEVEL_ERROR: level_str = "ERROR"; break;
+        case CWIST_LOG_LEVEL_INFO:  level_str = "INFO";  break;
+        case CWIST_LOG_LEVEL_WARN:  level_str = "WARN";  break;
         case CWIST_LOG_LEVEL_DEBUG: level_str = "DEBUG"; break;
         default: break;
     }
