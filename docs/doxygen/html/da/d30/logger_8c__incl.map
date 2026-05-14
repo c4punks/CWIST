@@ -1,28 +1,24 @@
 <map id="src/sys/app/logger.c" name="src/sys/app/logger.c">
-<area shape="rect" id="Node000001" title="logger.c interface." alt="" coords="444,5,595,31"/>
-<area shape="rect" id="Node000002" href="$d1/d8c/logger_8h.html" title="Application&#45;level structured logging." alt="" coords="392,152,559,177"/>
-<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="488,33,455,52,441,65,430,80,426,96,430,111,453,141,449,144,426,114,421,96,425,78,437,61,452,47,485,29"/>
-<area shape="rect" id="Node000006" href="$d2/dfe/alloc_8h.html" title="Memory allocation wrappers backed by libttak." alt="" coords="118,79,291,104"/>
-<area shape="poly" id="edge5_Node000001_Node000006" title=" " alt="" coords="469,33,269,78,268,73,468,28"/>
-<area shape="rect" id="Node000009" title=" " alt="" coords="439,79,506,104"/>
-<area shape="poly" id="edge11_Node000001_Node000009" title=" " alt="" coords="514,32,490,69,485,66,509,30"/>
-<area shape="rect" id="Node000010" title=" " alt="" coords="531,79,601,104"/>
-<area shape="poly" id="edge12_Node000001_Node000010" title=" " alt="" coords="529,30,553,66,549,69,525,32"/>
-<area shape="rect" id="Node000011" title=" " alt="" coords="625,79,696,104"/>
-<area shape="poly" id="edge13_Node000001_Node000011" title=" " alt="" coords="543,28,627,70,624,75,541,33"/>
-<area shape="rect" id="Node000012" title=" " alt="" coords="721,79,785,104"/>
-<area shape="poly" id="edge14_Node000001_Node000012" title=" " alt="" coords="558,28,708,74,707,79,556,33"/>
-<area shape="rect" id="Node000003" title=" " alt="" coords="75,225,150,251"/>
-<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="417,180,164,229,163,224,416,175"/>
-<area shape="rect" id="Node000004" title=" " alt="" coords="253,225,335,251"/>
-<area shape="poly" id="edge3_Node000002_Node000004" title=" " alt="" coords="447,180,337,223,335,218,445,175"/>
-<area shape="rect" id="Node000005" title=" " alt="" coords="438,225,513,251"/>
-<area shape="poly" id="edge4_Node000002_Node000005" title=" " alt="" coords="478,178,478,212,473,212,473,178"/>
-<area shape="poly" id="edge6_Node000006_Node000003" title=" " alt="" coords="118,99,89,106,60,117,34,132,13,154,9,163,9,172,20,189,41,205,68,218,65,223,38,209,16,193,3,173,4,162,9,150,31,128,58,112,87,101,117,94"/>
-<area shape="rect" id="Node000007" title=" " alt="" coords="226,152,367,177"/>
-<area shape="poly" id="edge7_Node000006_Node000007" title=" " alt="" coords="221,102,272,141,269,146,218,106"/>
-<area shape="rect" id="Node000008" href="$da/d0c/arena_8h.html" title="Request&#45;scoped arena allocator backed by libttak arena generations." alt="" coords="23,152,202,177"/>
-<area shape="poly" id="edge8_Node000006_Node000008" title=" " alt="" coords="191,106,140,146,137,141,188,102"/>
-<area shape="poly" id="edge10_Node000008_Node000003" title=" " alt="" coords="115,178,115,212,110,212,110,178"/>
-<area shape="poly" id="edge9_Node000008_Node000004" title=" " alt="" coords="143,175,253,218,251,223,141,180"/>
+<area shape="rect" id="Node000001" title="logger.c interface." alt="" coords="459,5,610,31"/>
+<area shape="rect" id="Node000002" href="$d1/d8c/logger_8h.html" title="Application&#45;level structured logging." alt="" coords="66,79,233,104"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="473,33,226,79,225,73,472,28"/>
+<area shape="rect" id="Node000006" href="$d2/dfe/alloc_8h_source.html" title=" " alt="" coords="257,79,431,104"/>
+<area shape="poly" id="edge5_Node000001_Node000006" title=" " alt="" coords="505,33,389,76,387,71,503,28"/>
+<area shape="rect" id="Node000008" title=" " alt="" coords="455,79,521,104"/>
+<area shape="poly" id="edge8_Node000001_Node000008" title=" " alt="" coords="529,32,505,69,501,66,525,30"/>
+<area shape="rect" id="Node000009" title=" " alt="" coords="546,79,617,104"/>
+<area shape="poly" id="edge9_Node000001_Node000009" title=" " alt="" coords="545,30,568,66,564,69,540,32"/>
+<area shape="rect" id="Node000010" title=" " alt="" coords="641,79,711,104"/>
+<area shape="poly" id="edge10_Node000001_Node000010" title=" " alt="" coords="559,28,642,70,640,75,556,33"/>
+<area shape="rect" id="Node000011" title=" " alt="" coords="736,79,800,104"/>
+<area shape="poly" id="edge11_Node000001_Node000011" title=" " alt="" coords="573,28,724,74,722,79,571,33"/>
+<area shape="rect" id="Node000003" title=" " alt="" coords="211,152,285,177"/>
+<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="167,102,222,142,219,146,164,106"/>
+<area shape="rect" id="Node000004" title=" " alt="" coords="5,152,88,177"/>
+<area shape="poly" id="edge3_Node000002_Node000004" title=" " alt="" coords="134,106,76,146,73,142,131,102"/>
+<area shape="rect" id="Node000005" title=" " alt="" coords="112,152,187,177"/>
+<area shape="poly" id="edge4_Node000002_Node000005" title=" " alt="" coords="152,104,152,138,147,138,147,104"/>
+<area shape="poly" id="edge6_Node000006_Node000003" title=" " alt="" coords="330,106,276,146,273,141,327,102"/>
+<area shape="rect" id="Node000007" title=" " alt="" coords="309,152,451,177"/>
+<area shape="poly" id="edge7_Node000006_Node000007" title=" " alt="" coords="352,103,370,138,366,141,348,106"/>
 </map>

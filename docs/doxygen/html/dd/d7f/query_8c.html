@@ -201,6 +201,7 @@ Functions</h2></td></tr>
 </div><div class="memdoc">
 
 <p>Allocate a query map and seed its SipHash key material. </p>
+<p>Lifecycle.</p>
 <dl class="section return"><dt>Returns</dt><dd>Newly allocated map, or NULL when memory allocation fails. </dd></dl>
 
 <p class="definition">Definition at line <a class="el" href="../../dd/d7f/query_8c_source.html#l00021">21</a> of file <a class="el" href="../../dd/d7f/query_8c_source.html">query.c</a>.</p>
@@ -258,6 +259,7 @@ Functions</h2></td></tr>
 </div><div class="memdoc">
 
 <p>Look up a decoded query parameter by key. </p>
+<p>Access.</p>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
     <tr><td class="paramname">map</td><td>Query map to search. </td></tr>
@@ -292,7 +294,8 @@ Functions</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p>Parse a raw <span class="tt">a=1&amp;b=2</span> query string into the existing map. </p>
+<p>Parse a raw <code>a=1&amp;b=2</code> query string into the existing map. </p>
+<p>Parse raw query string (e.g., "a=1&amp;b=2") into map.</p>
 <p>Parse raw query strings (e.g., "a=1&amp;b=2") into the map.</p>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
