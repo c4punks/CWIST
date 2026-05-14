@@ -67,8 +67,10 @@ void cwist_healthz_unregister(const char *name);
  * @param out_overall    [out] OK only if every probe is OK; FAIL if any probe is FAIL;
  *                       otherwise DEGRADED.
  */
-void cwist_healthz_run(cwist_health_probe_t *out_probes, size_t max_probes, size_t *out_count,
-                       cwist_health_status_t *out_overall);
+void cwist_healthz_run(cwist_health_probe_t *out_probes,
+                        size_t max_probes,
+                        size_t *out_count,
+                        cwist_health_status_t *out_overall);
 
 /* -------------------------------------------------------------------------
  * HTTP integration
@@ -79,7 +81,8 @@ void cwist_healthz_run(cwist_health_probe_t *out_probes, size_t max_probes, size
  *
  * Status mapping:
  *  - 200 OK       when overall == CWIST_HEALTH_OK
- *  - 503 Service Unavailable when overall == CWIST_HEALTH_FAIL or DEGRADED
+ *  - 503 Service Unavailable when overall == CWIST_HEALTH_FAIL
+ *  - 429 Too Many Requests (re-used as degraded) when overall == CWIST_HEALTH_DEGRADED
  *
  * JSON shape:
  * @code
@@ -89,15 +92,6 @@ void cwist_healthz_run(cwist_health_probe_t *out_probes, size_t max_probes, size
  * @param res Response to populate.
  */
 void cwist_app_healthz(cwist_http_response *res);
-
-/**
- * @brief Register built-in health check routes on an application.
- *
- * Adds /healthz, /live, and /ready GET routes.
- *
- * @param app Application to register routes on.
- */
-void cwist_app_enable_healthz(struct cwist_app *app);
 
 #ifdef __cplusplus
 }

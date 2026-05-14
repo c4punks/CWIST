@@ -98,8 +98,8 @@ Automated OS benchmark history is published in `docs/benchmark-trends.svg`. Late
 | WebSocket Server | ✅ | Upgrade, frame parsing, ping/pong |
 | TLS 1.3 / HTTPS | ✅ | BoringSSL, ECH, persistent HTTP/1.1 requests, split header/body writes, and shared prefork session-ticket keys |
 | Alt-Svc Header Injection | ✅ | HTTP/3 upgrade advertisement from HTTP/1.1/2 |
-| **io_uring Backend** | ✅ | io_uring readiness multiplexer in `src/sys/io/reactor.c` (one-shot POLL_ADD wait layer, epoll fallback); request I/O hot path stays synchronous |
-| **kqueue Backend** | ✅ | `src/sys/io/kqueue.c`, BSD/macOS I/O multiplexing event loop, integration tests in GitHub Actions CI gate |
+| **io_uring Backend** | 🔄 | Initial implementation added (`io_uring_backend.c`, `test_io_uring.c`) |
+| **kqueue Backend** | ⏳ | BSD/macOS; blocked on non-Linux test environment |
 | HTTP/2 Server Push | ✅ | `cwist_http2_push_resource` with PUSH_PROMISE frame, HPACK encoding, server-initiated even stream IDs |
 | **WebTransport** | ⏳ / 🔮 | Excluded from `main`; experimental WebTransport server/native C client work stays on `dev` until upstream lsquic ships WebTransport client support; no topic-branch pin |
 | HTTP/3 Datagram Extension | ✅ | `send_datagram`, callbacks, `es_datagrams` enabled |
@@ -131,8 +131,8 @@ Automated OS benchmark history is published in `docs/benchmark-trends.svg`. Late
 | **Access Logging** | 🔄 | Macro-based internal logging added; standardized Common/Combined/JSON access format pending |
 | **Request ID / Tracing** | ⏳ | No distributed tracing or request correlation ID injection |
 | Graceful Shutdown | ✅ | Unified atomic `running` flag + SIGTERM/SIGINT handlers across HTTP/1.1, HTTP/2, HTTP/3 loops |
-| **Health Check Endpoint** | ⏳ | No built-in `/healthz` or readiness/liveness probe |
-| **Metrics / Observability** | 🔄 | Basic structured logger + macro-based `core/log` added; Prometheus endpoint missing |
+| **Health Check Endpoint** | 🔄 | Basic `/healthz` endpoint added (`healthz.c`, `healthz.h`) |
+| **Metrics / Observability** | 🔄 | Metrics module added (`metrics.c`, `metrics.h`, `test_metrics.c`); Prometheus endpoint pending |
 | **Per-Status Error Handlers** | ✅ | `cwist_app_register_error_handler` for custom 404, 500, etc. |
 | **URL Reverse Routing** | ✅ | `cwist_app_get_named` + `cwist_url_for` with param substitution |
 | **Flash Messages** | ✅ | One-time session-scoped messages via `cwist_flash_get/set` |
@@ -149,12 +149,11 @@ Automated OS benchmark history is published in `docs/benchmark-trends.svg`. Late
 | JWT (encode/decode/verify) | ✅ | HS256 / RS256 |
 | Database Encryption | ✅ | `db_crypt` layer |
 | ECH (Encrypted Client Hello) | ✅ | BoringSSL ECH |
-| **PQC Hybrid KEM (TLS)** | ✅ | `cwist_app_use_pqc_layer` forces `X25519MLKEM768:X25519:P-256`, TLS 1.3 only |
-| **CSRF Protection** | ✅ | 256-bit double-submit cookie, constant-time comparison, strict SameSite, header and URL-encoded form support |
-| **Secure Headers** | ✅ | Automatic injection of HSTS, CSP, X-Frame-Options, Referrer-Policy, CORP via `cwist_http_response_add_security_headers()` |
-| **Request Size Limits** | ✅ | HTTP/1.1/2/3 body limits audited and enforced (`CWIST_HTTP_MAX_BODY_SIZE`) |
+| **CSRF Protection** | ⏳ | No double-submit cookie or synchronizer token |
+| **Secure Headers** | ⏳ | No automatic HSTS, CSP, X-Frame-Options injection |
+| **Request Size Limits** | 🔄 | HTTP/3 has body limit; HTTP/1.1/2 limits need audit |
 | **Input Validation** | ✅ | Bind validator added (`bind.c`, `bind.h`, `test_bind.c`) |
-| **WAF-lite / Sanitization** | ✅ | Linear-time request signature checks plus `cwist_sanitize_html()` output escaping; parameterized SQL remains required |
+| **WAF-lite / Sanitization** | ⏳ | No XSS/SQLi sanitizer middleware |
 
 ---
 
@@ -651,17 +650,14 @@ The tag history (`v0.1` → `v3.3`) settles into this convention from v3 onward,
 2. ~~**Multipart / File Upload** parser~~ ✅
 3. ~~**Graceful Shutdown** unified across HTTP/1.1, HTTP/2, HTTP/3~~ ✅
 4. ~~**Compression** (gzip at minimum, brotli preferred)~~ ✅
-5. **Form / Request Validation** middleware
+5. ~~**Form / Request Validation** middleware~~ ✅
 
 ### P1 — Production Readiness
-6. ~~**Access Logs** (Common/JSON format)~~ ✅
-7. ~~**Metrics endpoint** (Prometheus text format)~~ ✅
-8. ~~**Rate Limiting** middleware~~ ✅
-9. ~~**Caching** (ETag generation + in-memory cache)~~ ✅
-10. ~~**Health Check** endpoints~~ ✅
-11. ~~**Secure Headers** (HSTS, CSP, X-Frame-Options, etc.)~~ ✅
-12. ~~**Request Size Limits** (HTTP/1.1/2/3 body limit audit)~~ ✅
-13. ~~**Multiport facade hardening**: counted port descriptor, per-port sub-app lifecycle, duplicate/default-port validation, and smoke tests~~ ✅
+6. **Access Logs** (Common/JSON format)
+7. **Metrics endpoint** (Prometheus text format) 🔄
+8. **Rate Limiting** middleware
+9. **Caching** (ETag generation + in-memory cache)
+10. **Health Check** endpoints 🔄
 
 ### P2 — Developer Velocity
 14. ~~**Hot Reload** for development~~ ✅
@@ -671,11 +667,10 @@ The tag history (`v0.1` → `v3.3`) settles into this convention from v3 onward,
 18. ~~**Deferred Async Handlers** (`cwist_async_defer` cross-thread completion)~~ ✅
 
 ### P3 — Advanced Protocols
-19. **Native C WebTransport client stabilization** (experimental `dev` implementation available; planned for v4.1)
-20. ~~**HTTP/2 Server Push**~~ ✅
-21. ~~**io_uring** UDP packet loop for HTTP/3~~ ✅
-22. ~~**kqueue** backend for macOS/BSD~~ ✅
-23. ~~**Multiport HTTP/3 parity**: per-port UDP contexts and global setting propagation to non-detached ports~~ ✅
+15. ~~**WebTransport** server + client~~ ✅ (basic server handler)
+16. ~~**HTTP/2 Server Push**~~ ✅
+17. **io_uring** UDP packet loop for HTTP/3 🔄
+18. **kqueue** backend for macOS/BSD
 
 ### P4 — Ecosystem
 24. ~~**gRPC unary and buffered streaming server support**~~ ✅

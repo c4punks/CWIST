@@ -57,19 +57,6 @@ typedef enum cwist_metric_id {
     CWIST_METRIC_VALIDATION_ERRORS,       /**< Validation error frequency. */
     CWIST_METRIC_REQUESTS_TOTAL,          /**< Total HTTP requests handled. */
     CWIST_METRIC_REQUEST_DURATION_NS,     /**< Request duration (nanoseconds sum). */
-    CWIST_METRIC_HTTP_HEADER_OVERFLOW, /**< H1 connections dropped: headers exceeded read buffer. */
-    CWIST_METRIC_H2_HEADERS_DROPPED, /**< H2 header fields dropped: unresolvable HPACK index. */
-    CWIST_METRIC_HTTP_CONTINUATION_SHED, /**< Pipelined continuations dropped due to full reactor
-                                            queue. */
-    CWIST_METRIC_TLS_HANDSHAKES_TOTAL,      /**< TLS handshakes completed (full + resumed). */
-    CWIST_METRIC_TLS_HANDSHAKES_RESUMED,    /**< TLS handshakes resumed via session/ticket. */
-    CWIST_METRIC_TLS_CONNECTIONS_ACTIVE,    /**< Currently established TLS connections. */
-    CWIST_METRIC_TLS_HANDSHAKES_TLS12,      /**< Handshakes negotiated as TLS 1.2. */
-    CWIST_METRIC_TLS_HANDSHAKES_TLS13,      /**< Handshakes negotiated as TLS 1.3. */
-    CWIST_METRIC_TLS_CIPHERS_AES128_GCM,    /**< TLS_AES_128_GCM_SHA256 handshakes. */
-    CWIST_METRIC_TLS_CIPHERS_AES256_GCM,    /**< TLS_AES_256_GCM_SHA384 handshakes. */
-    CWIST_METRIC_TLS_CIPHERS_CHACHA20,      /**< TLS_CHACHA20_POLY1305_SHA256 handshakes. */
-    CWIST_METRIC_TLS_CIPHERS_OTHER,         /**< Handshakes with any other cipher. */
     CWIST_METRIC_COUNT
 } cwist_metric_id_t;
 
