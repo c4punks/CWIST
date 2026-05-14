@@ -88,6 +88,11 @@ $(function(){initNavTree('dd/d6e/query_8h_source.html','../../',''); });
 </div>
 </div>
 
+<div id="nav-path" class="navpath">
+  <ul>
+<li class="navelem"><a class="el" href="../../dir_d44c64559bbebec7f509842c48db8b23.html">include</a></li><li class="navelem"><a class="el" href="../../dir_2109d32ae718f50aecd8856dacda770b.html">cwist</a></li>  </ul>
+</div>
+</div><!-- top -->
 <div class="header">
   <div class="headertitle"><div class="title">query.h</div></div>
 </div><!--header-->
@@ -107,18 +112,19 @@ $(function(){initNavTree('dd/d6e/query_8h_source.html','../../',''); });
 <div class="line"><a id="l00015" name="l00015"></a><span class="lineno">   15</span>    <span class="keywordtype">size_t</span> size;</div>
 <div class="line"><a id="l00016" name="l00016"></a><span class="lineno">   16</span>    uint8_t seed[16];</div>
 <div class="line"><a id="l00017" name="l00017"></a><span class="lineno">   17</span>} cwist_query_map;</div>
-<div class="line"><a id="l00018" name="l00018"></a><span class="lineno">   18</span></div>
-<div class="line"><a id="l00021" name="l00021"></a><span class="lineno">   21</span>cwist_query_map *<a class="code hl_function" href="../../dd/d7f/query_8c.html#a93eddf49027cbbc8fc6a0a3270a0985a">cwist_query_map_create</a>(<span class="keywordtype">void</span>);</div>
-<div class="line"><a id="l00022" name="l00022"></a><span class="lineno">   22</span><span class="keywordtype">void</span> cwist_query_map_destroy(cwist_query_map *map);</div>
-<div class="line"><a id="l00024" name="l00024"></a><span class="lineno">   24</span></div>
-<div class="line"><a id="l00028" name="l00028"></a><span class="lineno">   28</span><span class="keywordtype">void</span> cwist_query_map_parse(cwist_query_map *map, <span class="keyword">const</span> <span class="keywordtype">char</span> *raw_query);</div>
-<div class="line"><a id="l00029" name="l00029"></a><span class="lineno">   29</span><span class="keywordtype">void</span> cwist_query_map_clear(cwist_query_map *map);</div>
-<div class="line"><a id="l00031" name="l00031"></a><span class="lineno">   31</span></div>
-<div class="line"><a id="l00034" name="l00034"></a><span class="lineno">   34</span><span class="keyword">const</span> <span class="keywordtype">char</span> *cwist_query_map_get(cwist_query_map *map, <span class="keyword">const</span> <span class="keywordtype">char</span> *key);</div>
-<div class="line"><a id="l00035" name="l00035"></a><span class="lineno">   35</span><span class="keywordtype">void</span> cwist_query_map_set(cwist_query_map *map, <span class="keyword">const</span> <span class="keywordtype">char</span> *key, <span class="keyword">const</span> <span class="keywordtype">char</span> *value);</div>
-<div class="line"><a id="l00037" name="l00037"></a><span class="lineno">   37</span> </div>
-<div class="line"><a id="l00038" name="l00038"></a><span class="lineno">   38</span><span class="preprocessor">#endif</span></div>
-<div class="ttc" id="aquery_8c_html_a93eddf49027cbbc8fc6a0a3270a0985a"><div class="ttname"><a href="../../dd/d7f/query_8c.html#a93eddf49027cbbc8fc6a0a3270a0985a">cwist_query_map_create</a></div><div class="ttdeci">cwist_query_map * cwist_query_map_create(void)</div><div class="ttdoc">Allocate a query map and seed its SipHash key material.</div><div class="ttdef"><b>Definition</b> <a href="../../dd/d7f/query_8c_source.html#l00021">query.c:21</a></div></div>
+<div class="line"><a id="l00018" name="l00018"></a><span class="lineno">   18</span> </div>
+<div class="line"><a id="l00019" name="l00019"></a><span class="lineno">   19</span><span class="comment">// Lifecycle</span></div>
+<div class="line"><a id="l00020" name="l00020"></a><span class="lineno">   20</span>cwist_query_map *cwist_query_map_create(<span class="keywordtype">void</span>);</div>
+<div class="line"><a id="l00021" name="l00021"></a><span class="lineno">   21</span><span class="keywordtype">void</span> cwist_query_map_destroy(cwist_query_map *map);</div>
+<div class="line"><a id="l00022" name="l00022"></a><span class="lineno">   22</span> </div>
+<div class="line"><a id="l00023" name="l00023"></a><span class="lineno">   23</span><span class="comment">// Parse raw query string (e.g., &quot;a=1&amp;b=2&quot;) into map</span></div>
+<div class="line"><a id="l00024" name="l00024"></a><span class="lineno">   24</span><span class="keywordtype">void</span> cwist_query_map_parse(cwist_query_map *map, <span class="keyword">const</span> <span class="keywordtype">char</span> *raw_query);</div>
+<div class="line"><a id="l00025" name="l00025"></a><span class="lineno">   25</span> </div>
+<div class="line"><a id="l00026" name="l00026"></a><span class="lineno">   26</span><span class="comment">// Access</span></div>
+<div class="line"><a id="l00027" name="l00027"></a><span class="lineno">   27</span><span class="keyword">const</span> <span class="keywordtype">char</span> *cwist_query_map_get(cwist_query_map *map, <span class="keyword">const</span> <span class="keywordtype">char</span> *key);</div>
+<div class="line"><a id="l00028" name="l00028"></a><span class="lineno">   28</span><span class="keywordtype">void</span> cwist_query_map_set(cwist_query_map *map, <span class="keyword">const</span> <span class="keywordtype">char</span> *key, <span class="keyword">const</span> <span class="keywordtype">char</span> *value);</div>
+<div class="line"><a id="l00029" name="l00029"></a><span class="lineno">   29</span> </div>
+<div class="line"><a id="l00030" name="l00030"></a><span class="lineno">   30</span><span class="preprocessor">#endif</span></div>
 </div><!-- fragment --></div><!-- contents -->
 </div><!-- doc-content -->
 </div><!-- container -->

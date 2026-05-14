@@ -1,11 +1,11 @@
 <map id="src/core/mem/gc.c" name="src/core/mem/gc.c">
-<area shape="rect" id="Node000001" title="Thin implementation wrapper around libttak epoch&#45;based reclamation." alt="" coords="77,5,218,33"/>
-<area shape="rect" id="Node000002" href="$d0/daa/gc_8h_source.html" title=" " alt="" coords="69,81,226,109"/>
-<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="150,34,150,65,145,65,145,34"/>
-<area shape="rect" id="Node000003" title=" " alt="" coords="5,157,87,184"/>
-<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="131,111,78,150,75,145,128,107"/>
-<area shape="rect" id="Node000004" title=" " alt="" coords="111,157,184,184"/>
-<area shape="poly" id="edge3_Node000002_Node000004" title=" " alt="" coords="150,109,150,141,145,141,145,109"/>
-<area shape="rect" id="Node000005" title=" " alt="" coords="208,157,370,184"/>
-<area shape="poly" id="edge4_Node000002_Node000005" title=" " alt="" coords="174,107,251,147,249,152,171,112"/>
+<area shape="rect" id="Node000001" title="Thin implementation wrapper around libttak epoch&#45;based reclamation." alt="" coords="79,5,220,31"/>
+<area shape="rect" id="Node000002" href="$d0/daa/gc_8h_source.html" title=" " alt="" coords="71,79,228,104"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="152,31,152,65,147,65,147,31"/>
+<area shape="rect" id="Node000003" title=" " alt="" coords="5,152,88,177"/>
+<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="134,106,76,146,73,142,131,102"/>
+<area shape="rect" id="Node000004" title=" " alt="" coords="112,152,187,177"/>
+<area shape="poly" id="edge3_Node000002_Node000004" title=" " alt="" coords="152,104,152,138,147,138,147,104"/>
+<area shape="rect" id="Node000005" title=" " alt="" coords="211,152,373,177"/>
+<area shape="poly" id="edge4_Node000002_Node000005" title=" " alt="" coords="173,102,258,143,255,148,171,106"/>
 </map>

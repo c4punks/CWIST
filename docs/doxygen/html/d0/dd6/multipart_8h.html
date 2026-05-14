@@ -75,8 +75,6 @@ $(function() {
 </div><!-- top -->
 <div class="header">
   <div class="summary">
-<a href="#nested-classes">Classes</a> &#124;
-<a href="#typedef-members">Typedefs</a> &#124;
 <a href="#func-members">Functions</a>  </div>
   <div class="headertitle"><div class="title">multipart.h File Reference</div></div>
 </div><!--header-->
@@ -101,33 +99,19 @@ This graph shows which files directly or indirectly include this file:</div>
 <div class="center"><img src="../../d4/d79/multipart_8h__dep__incl.png" border="0" usemap="#ainclude_2cwist_2net_2http_2multipart_8hdep" alt=""/></div>
 <map name="ainclude_2cwist_2net_2http_2multipart_8hdep" id="ainclude_2cwist_2net_2http_2multipart_8hdep">
 <area shape="rect" title="RFC 7578 multipart/form&#45;data parser." alt="" coords="9,5,172,45"/>
-<area shape="rect" href="../../d3/d79/multipart_8c.html" title="RFC 7578 multipart/form&#45;data parser &#45; wrapper around multipart&#45;parser&#45;c." alt="" coords="5,93,176,119"/>
+<area shape="rect" href="../../d3/d79/multipart_8c.html" title="RFC 7578 multipart/form&#45;data parser — wrapper around multipart&#45;parser&#45;c." alt="" coords="5,93,176,119"/>
 <area shape="poly" title=" " alt="" coords="93,59,93,93,88,93,88,59"/>
 </map>
 </div>
 </div>
 <p><a href="../../d0/dd6/multipart_8h_source.html">Go to the source code of this file.</a></p>
 <table class="memberdecls">
-<tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="nested-classes" name="nested-classes"></a>
-Classes</h2></td></tr>
-<tr class="memitem:"><td class="memItemLeft" align="right" valign="top">struct &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d9/d34/structcwist__multipart__field.html">cwist_multipart_field</a></td></tr>
-<tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:"><td class="memItemLeft" align="right" valign="top">struct &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d3/dd4/structcwist__multipart__result.html">cwist_multipart_result</a></td></tr>
-<tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
-</table><table class="memberdecls">
-<tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="typedef-members" name="typedef-members"></a>
-Typedefs</h2></td></tr>
-<tr class="memitem:a371ca74b09e7442380666042ade23875" id="r_a371ca74b09e7442380666042ade23875"><td class="memItemLeft" align="right" valign="top">typedef struct <a class="el" href="../../d9/d34/structcwist__multipart__field.html">cwist_multipart_field</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d0/dd6/multipart_8h.html#a371ca74b09e7442380666042ade23875">cwist_multipart_field</a></td></tr>
-<tr class="separator:a371ca74b09e7442380666042ade23875"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a9918e5caa3ddd384372149c38ae920ce" id="r_a9918e5caa3ddd384372149c38ae920ce"><td class="memItemLeft" align="right" valign="top">typedef struct <a class="el" href="../../d3/dd4/structcwist__multipart__result.html">cwist_multipart_result</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d0/dd6/multipart_8h.html#a9918e5caa3ddd384372149c38ae920ce">cwist_multipart_result</a></td></tr>
-<tr class="separator:a9918e5caa3ddd384372149c38ae920ce"><td class="memSeparator" colspan="2">&#160;</td></tr>
-</table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="func-members" name="func-members"></a>
 Functions</h2></td></tr>
-<tr class="memitem:aee23385fdec89feda55f4eeae45ac030" id="r_aee23385fdec89feda55f4eeae45ac030"><td class="memItemLeft" align="right" valign="top"><a class="el" href="../../d3/dd4/structcwist__multipart__result.html">cwist_multipart_result</a> *&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d0/dd6/multipart_8h.html#aee23385fdec89feda55f4eeae45ac030">cwist_multipart_parse</a> (const char *body, size_t body_len, const char *boundary)</td></tr>
+<tr class="memitem:aee23385fdec89feda55f4eeae45ac030" id="r_aee23385fdec89feda55f4eeae45ac030"><td class="memItemLeft" align="right" valign="top">cwist_multipart_result *&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d0/dd6/multipart_8h.html#aee23385fdec89feda55f4eeae45ac030">cwist_multipart_parse</a> (const char *body, size_t body_len, const char *boundary)</td></tr>
 <tr class="memdesc:aee23385fdec89feda55f4eeae45ac030"><td class="mdescLeft">&#160;</td><td class="mdescRight">Parse a multipart/form-data body.  <br /></td></tr>
 <tr class="separator:aee23385fdec89feda55f4eeae45ac030"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a1ab0ea22a33afa70cac42856fcbf07ef" id="r_a1ab0ea22a33afa70cac42856fcbf07ef"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d0/dd6/multipart_8h.html#a1ab0ea22a33afa70cac42856fcbf07ef">cwist_multipart_result_destroy</a> (<a class="el" href="../../d3/dd4/structcwist__multipart__result.html">cwist_multipart_result</a> *result)</td></tr>
+<tr class="memitem:a1ab0ea22a33afa70cac42856fcbf07ef" id="r_a1ab0ea22a33afa70cac42856fcbf07ef"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d0/dd6/multipart_8h.html#a1ab0ea22a33afa70cac42856fcbf07ef">cwist_multipart_result_destroy</a> (cwist_multipart_result *result)</td></tr>
 <tr class="memdesc:a1ab0ea22a33afa70cac42856fcbf07ef"><td class="mdescLeft">&#160;</td><td class="mdescRight">Free all memory associated with a multipart parse result.  <br /></td></tr>
 <tr class="separator:a1ab0ea22a33afa70cac42856fcbf07ef"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a300a26bea890db4715752e2ac2cea9a7" id="r_a300a26bea890db4715752e2ac2cea9a7"><td class="memItemLeft" align="right" valign="top">char *&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d0/dd6/multipart_8h.html#a300a26bea890db4715752e2ac2cea9a7">cwist_multipart_extract_boundary</a> (const char *content_type)</td></tr>
@@ -138,36 +122,7 @@ Functions</h2></td></tr>
 <div class="textblock"><p>RFC 7578 multipart/form-data parser. </p>
 
 <p class="definition">Definition in file <a class="el" href="../../d0/dd6/multipart_8h_source.html">multipart.h</a>.</p>
-</div><h2 class="groupheader">Typedef Documentation</h2>
-<a id="a371ca74b09e7442380666042ade23875" name="a371ca74b09e7442380666042ade23875"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a371ca74b09e7442380666042ade23875">&#9670;&#160;</a></span>cwist_multipart_field</h2>
-
-<div class="memitem">
-<div class="memproto">
-      <table class="memname">
-        <tr>
-          <td class="memname">typedef struct <a class="el" href="../../d9/d34/structcwist__multipart__field.html">cwist_multipart_field</a> <a class="el" href="../../d9/d34/structcwist__multipart__field.html">cwist_multipart_field</a></td>
-        </tr>
-      </table>
-</div><div class="memdoc">
-
-</div>
-</div>
-<a id="a9918e5caa3ddd384372149c38ae920ce" name="a9918e5caa3ddd384372149c38ae920ce"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a9918e5caa3ddd384372149c38ae920ce">&#9670;&#160;</a></span>cwist_multipart_result</h2>
-
-<div class="memitem">
-<div class="memproto">
-      <table class="memname">
-        <tr>
-          <td class="memname">typedef struct <a class="el" href="../../d3/dd4/structcwist__multipart__result.html">cwist_multipart_result</a> <a class="el" href="../../d3/dd4/structcwist__multipart__result.html">cwist_multipart_result</a></td>
-        </tr>
-      </table>
-</div><div class="memdoc">
-
-</div>
-</div>
-<h2 class="groupheader">Function Documentation</h2>
+</div><h2 class="groupheader">Function Documentation</h2>
 <a id="a300a26bea890db4715752e2ac2cea9a7" name="a300a26bea890db4715752e2ac2cea9a7"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#a300a26bea890db4715752e2ac2cea9a7">&#9670;&#160;</a></span>cwist_multipart_extract_boundary()</h2>
 
@@ -191,20 +146,9 @@ Functions</h2></td></tr>
   </table>
   </dd>
 </dl>
-<dl class="section return"><dt>Returns</dt><dd>Heap-allocated boundary string (caller must free), or NULL if not found.</dd></dl>
-<p>Extract the boundary string from a Content-Type header value.</p>
-<p>Scans semicolon-separated parameters of <code>content_type</code>, skipping optional whitespace, and accepts both quoted and unquoted boundary values.</p>
-<dl class="params"><dt>Parameters</dt><dd>
-  <table class="params">
-    <tr><td class="paramname">content_type</td><td>Content-Type header value, e.g. from the request; may be NULL. </td></tr>
-  </table>
-  </dd>
-</dl>
-<dl class="section return"><dt>Returns</dt><dd>Newly allocated NUL-terminated boundary string (caller frees with cwist_free), or NULL if no boundary parameter is present or allocation failed. </dd></dl>
+<dl class="section return"><dt>Returns</dt><dd>Heap-allocated boundary string (caller must free), or NULL if not found. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d3/d79/multipart_8c_source.html#l00363">363</a> of file <a class="el" href="../../d3/d79/multipart_8c_source.html">multipart.c</a>.</p>
-
-<p class="reference">References <a class="el" href="../../d9/d39/alloc_8c_source.html#l00275">cwist_alloc()</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d3/d79/multipart_8c_source.html#l00209">209</a> of file <a class="el" href="../../d3/d79/multipart_8c_source.html">multipart.c</a>.</p>
 
 </div>
 </div>
@@ -215,7 +159,7 @@ Functions</h2></td></tr>
 <div class="memproto">
       <table class="memname">
         <tr>
-          <td class="memname"><a class="el" href="../../d3/dd4/structcwist__multipart__result.html">cwist_multipart_result</a> * cwist_multipart_parse </td>
+          <td class="memname">cwist_multipart_result * cwist_multipart_parse </td>
           <td>(</td>
           <td class="paramtype">const char *&#160;</td>
           <td class="paramname"><em>body</em>, </td>
@@ -249,22 +193,9 @@ Functions</h2></td></tr>
   </table>
   </dd>
 </dl>
-<dl class="section return"><dt>Returns</dt><dd>Parsed result, or NULL on allocation failure or malformed input.</dd></dl>
-<p>Parse a multipart/form-data body.</p>
-<p>Runs the multipart-parser-c state machine over <code>body</code> with <code>boundary</code> (the boundary without leading dashes). On malformed or truncated input the parser stops early and NULL is returned, with all intermediate state freed.</p>
-<dl class="params"><dt>Parameters</dt><dd>
-  <table class="params">
-    <tr><td class="paramname">body</td><td>Raw body bytes; must not be NULL. </td></tr>
-    <tr><td class="paramname">body_len</td><td>Length of <code>body</code> in bytes. </td></tr>
-    <tr><td class="paramname">boundary</td><td>MIME boundary string, without the leading "--". </td></tr>
-  </table>
-  </dd>
-</dl>
-<dl class="section return"><dt>Returns</dt><dd>Newly allocated <a class="el" href="../../d3/dd4/structcwist__multipart__result.html">cwist_multipart_result</a> on success (caller owns it, release with cwist_multipart_result_destroy), NULL on invalid arguments, malformed input, or allocation failure. </dd></dl>
+<dl class="section return"><dt>Returns</dt><dd>Parsed result, or NULL on allocation failure or malformed input. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d3/d79/multipart_8c_source.html#l00269">269</a> of file <a class="el" href="../../d3/d79/multipart_8c_source.html">multipart.c</a>.</p>
-
-<p class="reference">References <a class="el" href="../../d9/d39/alloc_8c_source.html#l00275">cwist_alloc()</a>, <a class="el" href="../../d9/d39/alloc_8c_source.html#l00390">cwist_free()</a>, <a class="el" href="../../d3/d79/multipart_8c_source.html#l00336">cwist_multipart_result_destroy()</a>, <a class="el" href="../../d2/dfe/alloc_8h_source.html#l00190">CWIST_SCRATCH_DEFER</a>, and <a class="el" href="../../d0/dd6/multipart_8h_source.html#l00021">cwist_multipart_result::fields</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d3/d79/multipart_8c_source.html#l00163">163</a> of file <a class="el" href="../../d3/d79/multipart_8c_source.html">multipart.c</a>.</p>
 
 </div>
 </div>
@@ -277,7 +208,7 @@ Functions</h2></td></tr>
         <tr>
           <td class="memname">void cwist_multipart_result_destroy </td>
           <td>(</td>
-          <td class="paramtype"><a class="el" href="../../d3/dd4/structcwist__multipart__result.html">cwist_multipart_result</a> *&#160;</td>
+          <td class="paramtype">cwist_multipart_result *&#160;</td>
           <td class="paramname"><em>result</em></td><td>)</td>
           <td></td>
         </tr>
@@ -287,24 +218,12 @@ Functions</h2></td></tr>
 <p>Free all memory associated with a multipart parse result. </p>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
-    <tr><td class="paramname">result</td><td>Result to destroy. NULL is ignored.</td></tr>
-  </table>
-  </dd>
-</dl>
-<p>Free all memory associated with a multipart parse result.</p>
-<p>Frees every field's name, filename, content_type, and data, then the field nodes and the result itself. Safe to call with NULL.</p>
-<dl class="params"><dt>Parameters</dt><dd>
-  <table class="params">
-    <tr><td class="paramname">result</td><td>Result returned by cwist_multipart_parse, or NULL. </td></tr>
+    <tr><td class="paramname">result</td><td>Result to destroy. NULL is ignored. </td></tr>
   </table>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d3/d79/multipart_8c_source.html#l00336">336</a> of file <a class="el" href="../../d3/d79/multipart_8c_source.html">multipart.c</a>.</p>
-
-<p class="reference">References <a class="el" href="../../d0/dd6/multipart_8h_source.html#l00014">cwist_multipart_field::content_type</a>, <a class="el" href="../../d9/d39/alloc_8c_source.html#l00390">cwist_free()</a>, <a class="el" href="../../d0/dd6/multipart_8h_source.html#l00015">cwist_multipart_field::data</a>, <a class="el" href="../../d0/dd6/multipart_8h_source.html#l00021">cwist_multipart_result::fields</a>, <a class="el" href="../../d0/dd6/multipart_8h_source.html#l00013">cwist_multipart_field::filename</a>, <a class="el" href="../../d0/dd6/multipart_8h_source.html#l00012">cwist_multipart_field::name</a>, and <a class="el" href="../../d0/dd6/multipart_8h_source.html#l00017">cwist_multipart_field::next</a>.</p>
-
-<p class="reference">Referenced by <a class="el" href="../../d3/d79/multipart_8c_source.html#l00269">cwist_multipart_parse()</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d3/d79/multipart_8c_source.html#l00194">194</a> of file <a class="el" href="../../d3/d79/multipart_8c_source.html">multipart.c</a>.</p>
 
 </div>
 </div>
