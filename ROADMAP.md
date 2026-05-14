@@ -94,10 +94,10 @@ Automated OS & Web Server benchmark histories are published in `docs/benchmark-t
 | WebSocket Server | ✅ | Upgrade, frame parsing, ping/pong |
 | TLS 1.3 / HTTPS | ✅ | BoringSSL, ECH, persistent HTTP/1.1 requests, split header/body writes, and shared prefork session-ticket keys |
 | Alt-Svc Header Injection | ✅ | HTTP/3 upgrade advertisement from HTTP/1.1/2 |
-| **io_uring Backend** | ✅ | `io_uring_backend.c`, focused smoke tests, demolition tests, SQE/CQE synchronization, and fixed-buffer fallback |
-| **kqueue Backend** | 🔄 | macOS GitHub Actions gate builds the kqueue-selected backend and runs focused regressions |
+| **io_uring Backend** | ⏳ | Linux-only; `epoll` done, io_uring needs `liburing` or raw syscalls |
+| **kqueue Backend** | ⏳ | BSD/macOS; blocked on non-Linux test environment |
 | HTTP/2 Server Push | ✅ | `cwist_http2_push_resource` with PUSH_PROMISE frame, HPACK encoding, server-initiated even stream IDs |
-| **WebTransport** | 🔄 | Server sessions, streams, and datagrams are implemented with a browser example; native C client sessions await a client-capable QUIC dependency |
+| **WebTransport** | ✅ | Basic server handler (`:protocol=webtransport` detection via HTTP/3 CONNECT) |
 | HTTP/3 Datagram Extension | ✅ | `send_datagram`, callbacks, `es_datagrams` enabled |
 | ECN (Explicit Congestion Notification) | ✅ | UDP socket with `IP_RECVTOS` / `IPV6_RECVTCLASS` |
 | Connection Migration | ✅ | `es_allow_migration` enabled |
@@ -614,11 +614,10 @@ The tag history (`v0.1` → `v3.3`) settles into this convention from v3 onward,
 18. ~~**Deferred Async Handlers** (`cwist_async_defer` cross-thread completion)~~ ✅
 
 ### P3 — Advanced Protocols
-19. **Native C WebTransport client stabilization** (experimental `dev` implementation available)
-20. ~~**HTTP/2 Server Push**~~ ✅
-21. ~~**io_uring** UDP packet loop for HTTP/3~~ ✅
-22. ~~**kqueue** backend for macOS/BSD~~ ✅
-23. ~~**Multiport HTTP/3 parity**: per-port UDP contexts and global setting propagation to non-detached ports~~ ✅
+15. ~~**WebTransport** server + client~~ ✅ (basic server handler)
+16. ~~**HTTP/2 Server Push**~~ ✅
+17. **io_uring** UDP packet loop for HTTP/3
+18. **kqueue** backend for macOS/BSD
 
 ### P4 — Ecosystem
 24. ~~**gRPC unary and buffered streaming server support**~~ ✅

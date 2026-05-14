@@ -89,6 +89,9 @@ $(function(){initNavTree('d7/ddf/structcwist__json__builder.html','../../','d5/d
 </div>
 
 <div class="header">
+  <div class="summary">
+<a href="#pub-attribs">Public Attributes</a> &#124;
+<a href="../../d5/dc2/structcwist__json__builder-members.html">List of all members</a>  </div>
   <div class="headertitle"><div class="title">cwist_json_builder Struct Reference</div></div>
 </div><!--header-->
 <div class="contents">
@@ -100,7 +103,7 @@ $(function(){initNavTree('d7/ddf/structcwist__json__builder.html','../../','d5/d
 <div class="dynheader">
 Collaboration diagram for cwist_json_builder:</div>
 <div class="dyncontent">
-<div class="center"><img src="../../d8/df7/structcwist__json__builder__coll__graph.png" border="0" usemap="#acwist__json__builder_coll__map" loading="lazy" alt="Collaboration graph"/></div>
+<div class="center"><img src="../../d8/df7/structcwist__json__builder__coll__graph.png" border="0" usemap="#acwist__json__builder_coll__map" alt="Collaboration graph"/></div>
 <map name="acwist__json__builder_coll__map" id="acwist__json__builder_coll__map">
 <area shape="rect" title="Simple JSON string builder utility." alt="" coords="5,95,148,121"/>
 <area shape="rect" href="../../d5/ddc/structcwist__sstring.html" title=" " alt="" coords="198,5,305,31"/>
@@ -111,14 +114,16 @@ Collaboration diagram for cwist_json_builder:</div>
 <area shape="poly" title=" " alt="" coords="325,172,338,135,341,114,339,94,334,73,321,57,304,43,285,33,287,28,307,39,325,53,339,71,345,93,346,115,344,136,330,174"/>
 <area shape="poly" title=" " alt="" coords="270,130,309,183,305,187,266,133"/>
 </map>
-<center><span class="legend">[<a target="top" href="../../graph_legend.html">legend</a>]</span></center></div>
+<center><span class="legend">[<a href="../../graph_legend.html">legend</a>]</span></center></div>
 <table class="memberdecls">
-<tr class="heading"><td colspan="2"><h2 id="header-pub-attribs" class="groupheader"><a id="pub-attribs" name="pub-attribs"></a>
+<tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="pub-attribs" name="pub-attribs"></a>
 Public Attributes</h2></td></tr>
-<tr class="memitem:a344bf2fc97ae0d2ea75d1f67300af8ce" id="r_a344bf2fc97ae0d2ea75d1f67300af8ce"><td class="memItemLeft"><a class="el" href="../../d5/ddc/structcwist__sstring.html">cwist_sstring</a> *&#160;</td><td class="memItemRight"><a class="el" href="#a344bf2fc97ae0d2ea75d1f67300af8ce">buffer</a></td></tr>
-<tr class="memitem:a71b8701fc8a846f3a8b1242ee0982dce" id="r_a71b8701fc8a846f3a8b1242ee0982dce"><td class="memItemLeft">bool&#160;</td><td class="memItemRight"><a class="el" href="#a71b8701fc8a846f3a8b1242ee0982dce">needs_comma</a></td></tr>
+<tr class="memitem:a344bf2fc97ae0d2ea75d1f67300af8ce" id="r_a344bf2fc97ae0d2ea75d1f67300af8ce"><td class="memItemLeft" align="right" valign="top"><a class="el" href="../../d5/ddc/structcwist__sstring.html">cwist_sstring</a> *&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d7/ddf/structcwist__json__builder.html#a344bf2fc97ae0d2ea75d1f67300af8ce">buffer</a></td></tr>
+<tr class="separator:a344bf2fc97ae0d2ea75d1f67300af8ce"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a71b8701fc8a846f3a8b1242ee0982dce" id="r_a71b8701fc8a846f3a8b1242ee0982dce"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d7/ddf/structcwist__json__builder.html#a71b8701fc8a846f3a8b1242ee0982dce">needs_comma</a></td></tr>
+<tr class="separator:a71b8701fc8a846f3a8b1242ee0982dce"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
-<a name="details" id="details"></a><h2 id="header-details" class="groupheader">Detailed Description</h2>
+<a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
 <div class="textblock"><p>Simple JSON string builder utility. </p>
 <p>Usage: </p><div class="fragment"><div class="line"><a class="code hl_struct" href="../../d7/ddf/structcwist__json__builder.html">cwist_json_builder</a> *jb = <a class="code hl_function" href="../../d5/df8/json__builder_8h.html#abc5bd58d0eb39778e6f35b3a3b37a9aa">cwist_json_builder_create</a>();</div>
 <div class="line"><a class="code hl_function" href="../../d5/df8/json__builder_8h.html#a49cc54211811685e921b8f399044ca2f">cwist_json_begin_object</a>(jb);</div>
@@ -134,10 +139,11 @@ Public Attributes</h2></td></tr>
 <div class="ttc" id="ajson__builder_8h_html_a88a116a0cf5bb638deb16291e02717ce"><div class="ttname"><a href="../../d5/df8/json__builder_8h.html#a88a116a0cf5bb638deb16291e02717ce">cwist_json_add_int</a></div><div class="ttdeci">void cwist_json_add_int(cwist_json_builder *b, const char *key, int value)</div><div class="ttdoc">Append a JSON integer value.</div><div class="ttdef"><b>Definition</b> <a href="../../d5/d7f/json__builder_8c_source.html#l00124">json_builder.c:124</a></div></div>
 <div class="ttc" id="ajson__builder_8h_html_aab53471747464d76028ea4641e26925c"><div class="ttname"><a href="../../d5/df8/json__builder_8h.html#aab53471747464d76028ea4641e26925c">cwist_json_builder_destroy</a></div><div class="ttdeci">void cwist_json_builder_destroy(cwist_json_builder *b)</div><div class="ttdoc">Release a builder and its owned string buffer.</div><div class="ttdef"><b>Definition</b> <a href="../../d5/d7f/json__builder_8c_source.html#l00032">json_builder.c:32</a></div></div>
 <div class="ttc" id="ajson__builder_8h_html_abc5bd58d0eb39778e6f35b3a3b37a9aa"><div class="ttname"><a href="../../d5/df8/json__builder_8h.html#abc5bd58d0eb39778e6f35b3a3b37a9aa">cwist_json_builder_create</a></div><div class="ttdeci">cwist_json_builder * cwist_json_builder_create(void)</div><div class="ttdoc">Allocate a new JSON builder with an empty output buffer.</div><div class="ttdef"><b>Definition</b> <a href="../../d5/d7f/json__builder_8c_source.html#l00020">json_builder.c:20</a></div></div>
-<div class="ttc" id="astructcwist__json__builder_html"><div class="ttname"><a href="../../d7/ddf/structcwist__json__builder.html">cwist_json_builder</a></div><div class="ttdoc">Simple JSON string builder utility.</div><div class="ttdef"><b>Definition</b> <a href="../../d3/dc7/core_2utils_2json__builder_8h_source.html#l00023">json_builder.h:23</a></div></div>
+<div class="ttc" id="astructcwist__json__builder_html"><div class="ttname"><a href="../../d7/ddf/structcwist__json__builder.html">cwist_json_builder</a></div><div class="ttdoc">Simple JSON string builder utility.</div><div class="ttdef"><b>Definition</b> <a href="../../d3/dc7/core_2utils_2json__builder_8h_source.html#l00028">json_builder.h:28</a></div></div>
+<div class="ttc" id="astructcwist__sstring_html"><div class="ttname"><a href="../../d5/ddc/structcwist__sstring.html">cwist_sstring</a></div><div class="ttdef"><b>Definition</b> <a href="../../d4/dbd/core_2sstring_2sstring_8h_source.html#l00014">sstring.h:14</a></div></div>
 </div><!-- fragment --> 
 <p class="definition">Definition at line <a class="el" href="../../d3/dc7/core_2utils_2json__builder_8h_source.html#l00028">28</a> of file <a class="el" href="../../d3/dc7/core_2utils_2json__builder_8h_source.html">json_builder.h</a>.</p>
-</div><a name="doc-variable-members" id="doc-variable-members"></a><h2 id="header-doc-variable-members" class="groupheader">Member Data Documentation</h2>
+</div><h2 class="groupheader">Member Data Documentation</h2>
 <a id="a344bf2fc97ae0d2ea75d1f67300af8ce" name="a344bf2fc97ae0d2ea75d1f67300af8ce"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#a344bf2fc97ae0d2ea75d1f67300af8ce">&#9670;&#160;</a></span>buffer</h2>
 

@@ -84,7 +84,8 @@ typedef void (*cwist_http3_request_handler_func)(void *user_ctx, cwist_http_requ
 /**
  * @brief Initialize an HTTP/3 context with a certificate.
  */
-cwist_error_t cwist_http3_init_context(cwist_http3_context **ctx, const char *cert_path,
+cwist_error_t cwist_http3_init_context(cwist_http3_context **ctx,
+                                       const char *cert_path,
                                        const char *key_path);
 
 /**
@@ -98,10 +99,19 @@ cwist_error_t cwist_http3_init_context_ephemeral(cwist_http3_context **ctx);
 void cwist_http3_destroy_context(cwist_http3_context *ctx);
 
 /**
+ * @brief Serve a single HTTP/3 connection.
+ */
+cwist_error_t cwist_http3_serve_connection(cwist_http3_connection *conn,
+                                           void *user_ctx,
+                                           cwist_http3_request_handler_func handler);
+
+/**
  * @brief Run the HTTP/3 server event loop.
  */
-cwist_error_t cwist_http3_server_loop(int udp_fd, cwist_http3_context *ctx,
-                                      cwist_http3_request_handler_func handler, void *user_ctx);
+cwist_error_t cwist_http3_server_loop(int udp_fd,
+                                      cwist_http3_context *ctx,
+                                      cwist_http3_request_handler_func handler,
+                                      void *user_ctx);
 
 /** --- Advanced Features --- */
 

@@ -9,6 +9,13 @@
 #include <sqlite3.h>
 #include <cwist/sys/err/cwist_err.h>
 #include <cjson/cJSON.h>
+#include <cwist/core/utils/json_heal.h>
+#include <cwist/core/utils/zod.h>
+
+/**
+ * @brief Wrapper for Database Operations.
+ * Currently uses SQLite3.
+ */
 
 typedef struct cwist_db {
     sqlite3 *conn;

@@ -93,11 +93,11 @@ $(function(){initNavTree('d5/d7f/json__builder_8c.html','../../',''); });
 </div><!--header-->
 <div class="contents">
 
-<p>Incremental JSON emission helpers backed by cwist_sstring.  
+<p>Incremental JSON emission helpers backed by <a class="el" href="../../d5/ddc/structcwist__sstring.html">cwist_sstring</a>.  
 <a href="#details">More...</a></p>
-<div class="textblock"><code>#include &lt;cwist/core/utils/json_builder.h&gt;</code><br />
-<code>#include &lt;cwist/core/sstring/sstring.h&gt;</code><br />
-<code>#include &lt;cwist/core/mem/alloc.h&gt;</code><br />
+<div class="textblock"><code>#include &lt;<a class="el" href="../../d3/dc7/core_2utils_2json__builder_8h_source.html">cwist/core/utils/json_builder.h</a>&gt;</code><br />
+<code>#include &lt;<a class="el" href="../../d4/dbd/core_2sstring_2sstring_8h_source.html">cwist/core/sstring/sstring.h</a>&gt;</code><br />
+<code>#include &lt;<a class="el" href="../../d2/dfe/alloc_8h_source.html">cwist/core/mem/alloc.h</a>&gt;</code><br />
 <code>#include &lt;stdlib.h&gt;</code><br />
 <code>#include &lt;stdio.h&gt;</code><br />
 </div><div class="textblock"><div class="dynheader">
@@ -106,13 +106,13 @@ Include dependency graph for json_builder.c:</div>
 <div class="center"><img src="../../d5/d13/json__builder_8c__incl.png" border="0" usemap="#asrc_2core_2utils_2json__builder_8c" loading="lazy" alt=""/></div>
 <map name="asrc_2core_2utils_2json__builder_8c" id="asrc_2core_2utils_2json__builder_8c">
 <area shape="rect" title="Incremental JSON emission helpers backed by cwist_sstring." alt="" coords="252,5,388,45"/>
-<area shape="rect" href="../../d3/dc7/core_2utils_2json__builder_8h_source.html" title=" " alt="" coords="80,93,231,133"/>
+<area shape="rect" href="../../d3/dc7/core_2utils_2json__builder_8h.html" title="Simple JSON string builder utility." alt="" coords="80,93,231,133"/>
 <area shape="poly" title=" " alt="" coords="285,48,205,89,202,85,282,43"/>
-<area shape="rect" href="../../d4/dbd/core_2sstring_2sstring_8h_source.html" title=" " alt="" coords="117,181,253,221"/>
+<area shape="rect" href="../../d4/dbd/core_2sstring_2sstring_8h.html" title="Safe string type with helper methods." alt="" coords="117,181,253,221"/>
 <area shape="poly" title=" " alt="" coords="309,47,244,135,213,172,209,169,240,132,305,44"/>
 <area shape="rect" title=" " alt="" coords="338,277,408,302"/>
 <area shape="poly" title=" " alt="" coords="325,45,336,122,356,221,367,263,362,264,350,222,331,123,319,46"/>
-<area shape="rect" href="../../d2/dfe/alloc_8h_source.html" title=" " alt="" coords="357,101,530,126"/>
+<area shape="rect" href="../../d2/dfe/alloc_8h.html" title="Memory allocation wrappers backed by libttak." alt="" coords="357,101,530,126"/>
 <area shape="poly" title=" " alt="" coords="349,43,417,91,414,95,346,48"/>
 <area shape="rect" title=" " alt="" coords="554,101,621,126"/>
 <area shape="poly" title=" " alt="" coords="389,43,543,91,549,93,547,98,541,96,387,48"/>
@@ -164,7 +164,7 @@ Functions</h2></td></tr>
 <tr class="memitem:a0432f1c0583865e2374694c60e868eb5" id="r_a0432f1c0583865e2374694c60e868eb5"><td class="memItemLeft">const char *&#160;</td><td class="memItemRight"><a class="el" href="#a0432f1c0583865e2374694c60e868eb5">cwist_json_get_raw</a> (<a class="el" href="../../d7/ddf/structcwist__json__builder.html">cwist_json_builder</a> *b)</td></tr>
 <tr class="memdesc:a0432f1c0583865e2374694c60e868eb5"><td class="mdescLeft">&#160;</td><td class="mdescRight">Expose the builder's raw character buffer.  <br /></td></tr>
 </table>
-<a name="details" id="details"></a><h2 id="header-details" class="groupheader">Detailed Description</h2>
+<a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
 <div class="textblock"><p>Incremental JSON emission helpers backed by <a class="el" href="../../d5/ddc/structcwist__sstring.html">cwist_sstring</a>. </p>
 
 <p class="definition">Definition in file <a class="el" href="../../d5/d7f/json__builder_8c_source.html">json_builder.c</a>.</p>
@@ -194,6 +194,7 @@ Functions</h2></td></tr>
 </div><div class="memdoc">
 
 <p>Append a JSON boolean literal. </p>
+<p>Add a boolean value.</p>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
     <tr><td class="paramname">b</td><td>Builder to update. NULL is ignored. </td></tr>
@@ -206,8 +207,6 @@ Functions</h2></td></tr>
 <p class="definition">Definition at line <a class="el" href="../../d5/d7f/json__builder_8c_source.html#l00144">144</a> of file <a class="el" href="../../d5/d7f/json__builder_8c_source.html">json_builder.c</a>.</p>
 
 <p class="reference">References <a class="el" href="../../d3/dc7/core_2utils_2json__builder_8h_source.html#l00029">cwist_json_builder::buffer</a>, <a class="el" href="../../dd/d79/sstring_8c_source.html#l00341">cwist_sstring_append()</a>, and <a class="el" href="../../d3/dc7/core_2utils_2json__builder_8h_source.html#l00030">cwist_json_builder::needs_comma</a>.</p>
-
-<p class="reference">Referenced by <a class="el" href="../../d6/d6d/bind_8c_source.html#l00431">cwist_bind_write_error_response()</a>.</p>
 
 </div>
 </div>
@@ -236,6 +235,7 @@ Functions</h2></td></tr>
 </div><div class="memdoc">
 
 <p>Append a JSON integer value. </p>
+<p>Add an integer value.</p>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
     <tr><td class="paramname">b</td><td>Builder to update. NULL is ignored. </td></tr>
@@ -246,6 +246,8 @@ Functions</h2></td></tr>
 </dl>
 
 <p class="definition">Definition at line <a class="el" href="../../d5/d7f/json__builder_8c_source.html#l00124">124</a> of file <a class="el" href="../../d5/d7f/json__builder_8c_source.html">json_builder.c</a>.</p>
+
+<p class="reference">References <a class="el" href="../../d3/dc7/core_2utils_2json__builder_8h_source.html#l00029">cwist_json_builder::buffer</a>, <a class="el" href="../../dd/d79/sstring_8c_source.html#l00341">cwist_sstring_append()</a>, and <a class="el" href="../../d3/dc7/core_2utils_2json__builder_8h_source.html#l00030">cwist_json_builder::needs_comma</a>.</p>
 
 </div>
 </div>
@@ -269,6 +271,7 @@ Functions</h2></td></tr>
 </div><div class="memdoc">
 
 <p>Append a JSON null literal. </p>
+<p>Add a null value.</p>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
     <tr><td class="paramname">b</td><td>Builder to update. NULL is ignored. </td></tr>
@@ -278,6 +281,8 @@ Functions</h2></td></tr>
 </dl>
 
 <p class="definition">Definition at line <a class="el" href="../../d5/d7f/json__builder_8c_source.html#l00161">161</a> of file <a class="el" href="../../d5/d7f/json__builder_8c_source.html">json_builder.c</a>.</p>
+
+<p class="reference">References <a class="el" href="../../d3/dc7/core_2utils_2json__builder_8h_source.html#l00029">cwist_json_builder::buffer</a>, <a class="el" href="../../dd/d79/sstring_8c_source.html#l00341">cwist_sstring_append()</a>, and <a class="el" href="../../d3/dc7/core_2utils_2json__builder_8h_source.html#l00030">cwist_json_builder::needs_comma</a>.</p>
 
 </div>
 </div>
@@ -306,6 +311,7 @@ Functions</h2></td></tr>
 </div><div class="memdoc">
 
 <p>Append a JSON string value. </p>
+<p>Add a string value.</p>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
     <tr><td class="paramname">b</td><td>Builder to update. NULL is ignored. </td></tr>
@@ -318,8 +324,6 @@ Functions</h2></td></tr>
 <p class="definition">Definition at line <a class="el" href="../../d5/d7f/json__builder_8c_source.html#l00104">104</a> of file <a class="el" href="../../d5/d7f/json__builder_8c_source.html">json_builder.c</a>.</p>
 
 <p class="reference">References <a class="el" href="../../d3/dc7/core_2utils_2json__builder_8h_source.html#l00029">cwist_json_builder::buffer</a>, <a class="el" href="../../dd/d79/sstring_8c_source.html#l00341">cwist_sstring_append()</a>, and <a class="el" href="../../d3/dc7/core_2utils_2json__builder_8h_source.html#l00030">cwist_json_builder::needs_comma</a>.</p>
-
-<p class="reference">Referenced by <a class="el" href="../../da/d6c/healthz_8c_source.html#l00099">cwist_app_healthz()</a>, and <a class="el" href="../../d6/d6d/bind_8c_source.html#l00431">cwist_bind_write_error_response()</a>.</p>
 
 </div>
 </div>
@@ -343,6 +347,7 @@ Functions</h2></td></tr>
 </div><div class="memdoc">
 
 <p>Begin a JSON array, optionally as the value for an object key. </p>
+<p>Begin a JSON array.</p>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
     <tr><td class="paramname">b</td><td>Builder to update. NULL is ignored. </td></tr>
@@ -354,8 +359,6 @@ Functions</h2></td></tr>
 <p class="definition">Definition at line <a class="el" href="../../d5/d7f/json__builder_8c_source.html#l00075">75</a> of file <a class="el" href="../../d5/d7f/json__builder_8c_source.html">json_builder.c</a>.</p>
 
 <p class="reference">References <a class="el" href="../../d3/dc7/core_2utils_2json__builder_8h_source.html#l00029">cwist_json_builder::buffer</a>, <a class="el" href="../../dd/d79/sstring_8c_source.html#l00341">cwist_sstring_append()</a>, and <a class="el" href="../../d3/dc7/core_2utils_2json__builder_8h_source.html#l00030">cwist_json_builder::needs_comma</a>.</p>
-
-<p class="reference">Referenced by <a class="el" href="../../da/d6c/healthz_8c_source.html#l00099">cwist_app_healthz()</a>, and <a class="el" href="../../d6/d6d/bind_8c_source.html#l00431">cwist_bind_write_error_response()</a>.</p>
 
 </div>
 </div>
@@ -375,6 +378,7 @@ Functions</h2></td></tr>
 </div><div class="memdoc">
 
 <p>Begin a JSON object in the current builder context. </p>
+<p>Begin a JSON object.</p>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
     <tr><td class="paramname">b</td><td>Builder to update. NULL is ignored. </td></tr>
@@ -385,8 +389,6 @@ Functions</h2></td></tr>
 <p class="definition">Definition at line <a class="el" href="../../d5/d7f/json__builder_8c_source.html#l00053">53</a> of file <a class="el" href="../../d5/d7f/json__builder_8c_source.html">json_builder.c</a>.</p>
 
 <p class="reference">References <a class="el" href="../../d3/dc7/core_2utils_2json__builder_8h_source.html#l00029">cwist_json_builder::buffer</a>, <a class="el" href="../../dd/d79/sstring_8c_source.html#l00341">cwist_sstring_append()</a>, and <a class="el" href="../../d3/dc7/core_2utils_2json__builder_8h_source.html#l00030">cwist_json_builder::needs_comma</a>.</p>
-
-<p class="reference">Referenced by <a class="el" href="../../da/d6c/healthz_8c_source.html#l00099">cwist_app_healthz()</a>, and <a class="el" href="../../d6/d6d/bind_8c_source.html#l00431">cwist_bind_write_error_response()</a>.</p>
 
 </div>
 </div>
@@ -406,14 +408,13 @@ Functions</h2></td></tr>
 </div><div class="memdoc">
 
 <p>Allocate a new JSON builder with an empty output buffer. </p>
+<p>Create a new JSON builder.</p>
 <p>The builder keeps only a minimal amount of state: the backing string buffer and whether the next value must be prefixed with a comma.</p>
 <dl class="section return"><dt>Returns</dt><dd>Newly allocated builder, or NULL when allocation fails. </dd></dl>
 
 <p class="definition">Definition at line <a class="el" href="../../d5/d7f/json__builder_8c_source.html#l00020">20</a> of file <a class="el" href="../../d5/d7f/json__builder_8c_source.html">json_builder.c</a>.</p>
 
-<p class="reference">References <a class="el" href="../../dd/d79/sstring_8c_source.html#l00574">cwist_sstring_create()</a>.</p>
-
-<p class="reference">Referenced by <a class="el" href="../../da/d6c/healthz_8c_source.html#l00099">cwist_app_healthz()</a>, and <a class="el" href="../../d6/d6d/bind_8c_source.html#l00431">cwist_bind_write_error_response()</a>.</p>
+<p class="reference">References <a class="el" href="../../d3/dc7/core_2utils_2json__builder_8h_source.html#l00029">cwist_json_builder::buffer</a>, <a class="el" href="../../d9/d39/alloc_8c_source.html#l00221">cwist_alloc()</a>, <a class="el" href="../../dd/d79/sstring_8c_source.html#l00576">cwist_sstring_create()</a>, and <a class="el" href="../../d3/dc7/core_2utils_2json__builder_8h_source.html#l00030">cwist_json_builder::needs_comma</a>.</p>
 
 </div>
 </div>
@@ -433,6 +434,7 @@ Functions</h2></td></tr>
 </div><div class="memdoc">
 
 <p>Release a builder and its owned string buffer. </p>
+<p>Destroy a JSON builder.</p>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
     <tr><td class="paramname">b</td><td>Builder instance to destroy. NULL is ignored. </td></tr>
@@ -443,8 +445,6 @@ Functions</h2></td></tr>
 <p class="definition">Definition at line <a class="el" href="../../d5/d7f/json__builder_8c_source.html#l00032">32</a> of file <a class="el" href="../../d5/d7f/json__builder_8c_source.html">json_builder.c</a>.</p>
 
 <p class="reference">References <a class="el" href="../../d3/dc7/core_2utils_2json__builder_8h_source.html#l00029">cwist_json_builder::buffer</a>, <a class="el" href="../../d9/d39/alloc_8c_source.html#l00315">cwist_free()</a>, and <a class="el" href="../../dd/d79/sstring_8c_source.html#l00597">cwist_sstring_destroy()</a>.</p>
-
-<p class="reference">Referenced by <a class="el" href="../../da/d6c/healthz_8c_source.html#l00099">cwist_app_healthz()</a>, and <a class="el" href="../../d6/d6d/bind_8c_source.html#l00431">cwist_bind_write_error_response()</a>.</p>
 
 </div>
 </div>
@@ -464,6 +464,7 @@ Functions</h2></td></tr>
 </div><div class="memdoc">
 
 <p>Close the current JSON array. </p>
+<p>End a JSON array.</p>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
     <tr><td class="paramname">b</td><td>Builder to update. NULL is ignored. </td></tr>
@@ -474,8 +475,6 @@ Functions</h2></td></tr>
 <p class="definition">Definition at line <a class="el" href="../../d5/d7f/json__builder_8c_source.html#l00092">92</a> of file <a class="el" href="../../d5/d7f/json__builder_8c_source.html">json_builder.c</a>.</p>
 
 <p class="reference">References <a class="el" href="../../d3/dc7/core_2utils_2json__builder_8h_source.html#l00029">cwist_json_builder::buffer</a>, <a class="el" href="../../dd/d79/sstring_8c_source.html#l00341">cwist_sstring_append()</a>, and <a class="el" href="../../d3/dc7/core_2utils_2json__builder_8h_source.html#l00030">cwist_json_builder::needs_comma</a>.</p>
-
-<p class="reference">Referenced by <a class="el" href="../../da/d6c/healthz_8c_source.html#l00099">cwist_app_healthz()</a>, and <a class="el" href="../../d6/d6d/bind_8c_source.html#l00431">cwist_bind_write_error_response()</a>.</p>
 
 </div>
 </div>
@@ -495,6 +494,7 @@ Functions</h2></td></tr>
 </div><div class="memdoc">
 
 <p>Close the current JSON object. </p>
+<p>End a JSON object.</p>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
     <tr><td class="paramname">b</td><td>Builder to update. NULL is ignored. </td></tr>
@@ -505,8 +505,6 @@ Functions</h2></td></tr>
 <p class="definition">Definition at line <a class="el" href="../../d5/d7f/json__builder_8c_source.html#l00064">64</a> of file <a class="el" href="../../d5/d7f/json__builder_8c_source.html">json_builder.c</a>.</p>
 
 <p class="reference">References <a class="el" href="../../d3/dc7/core_2utils_2json__builder_8h_source.html#l00029">cwist_json_builder::buffer</a>, <a class="el" href="../../dd/d79/sstring_8c_source.html#l00341">cwist_sstring_append()</a>, and <a class="el" href="../../d3/dc7/core_2utils_2json__builder_8h_source.html#l00030">cwist_json_builder::needs_comma</a>.</p>
-
-<p class="reference">Referenced by <a class="el" href="../../da/d6c/healthz_8c_source.html#l00099">cwist_app_healthz()</a>, and <a class="el" href="../../d6/d6d/bind_8c_source.html#l00431">cwist_bind_write_error_response()</a>.</p>
 
 </div>
 </div>
@@ -538,8 +536,6 @@ Functions</h2></td></tr>
 <p class="definition">Definition at line <a class="el" href="../../d5/d7f/json__builder_8c_source.html#l00178">178</a> of file <a class="el" href="../../d5/d7f/json__builder_8c_source.html">json_builder.c</a>.</p>
 
 <p class="reference">References <a class="el" href="../../d3/dc7/core_2utils_2json__builder_8h_source.html#l00029">cwist_json_builder::buffer</a>, and <a class="el" href="../../d4/dbd/core_2sstring_2sstring_8h_source.html#l00015">cwist_sstring::data</a>.</p>
-
-<p class="reference">Referenced by <a class="el" href="../../da/d6c/healthz_8c_source.html#l00099">cwist_app_healthz()</a>, and <a class="el" href="../../d6/d6d/bind_8c_source.html#l00431">cwist_bind_write_error_response()</a>.</p>
 
 </div>
 </div>

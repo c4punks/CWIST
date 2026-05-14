@@ -11,8 +11,6 @@
 #include <cwist/net/http/query.h>
 #include <cwist/core/db/sql.h>
 #include <cwist/sys/app/endpoint_opts.h>
-#include <cwist/sys/app/big_dumb_reply.h>
-#include <cwist/sys/io/reactor.h>
 #include <stdint.h>
 #include <netinet/in.h>
 #include <sys/socket.h>
@@ -87,6 +85,7 @@ typedef struct cwist_http_request {
     bool upgraded;
     uint32_t stream_id;     ///< HTTP/2 or HTTP/3 stream ID (0 for HTTP/1.1).
     void *private_data;     ///< Internal framework use (protocol-specific context).
+    void *route_middleware_state; ///< Router middleware chain state (internal).
     size_t content_length;
     cwist_endpoint_opt_t endpoint_opts; ///< Behavior hints for the active endpoint.
     cwist_query_map *flash; ///< Flash messages for this request (one-time read).
@@ -312,109 +311,6 @@ typedef struct cwist_server_config {
 cwist_error_t cwist_http_server_loop(int server_fd, cwist_server_config *config,
                                      void (*handler)(int, void *), void *ctx);
 int headers_have_content_length(cwist_http_header_node *headers);
-
-/** @brief Initialize the handler pool in the mode CWIST_C1M_MODE selects. */
-int cwist_http_pool_init(void);
-/** @brief Initialize the handler pool as reactor workers (@p use_c1m) or the
- *  classic thread pool, whatever CWIST_C1M_MODE says. */
-int cwist_http_pool_init_mode(bool use_c1m);
-void cwist_http_pool_limit_core(unsigned int limit);
-void cwist_http_pool_submit(int client_fd, void (*handler)(int, void *), void *ctx);
-bool cwist_http_pool_rearm_current(int client_fd, void (*handler)(int, void *), void *ctx);
-void cwist_http_pool_destroy(void);
-
-/* --- Event-driven (one-shot) connection path for the C1M reactor ---------
- * The classic pool handler parks a worker thread on each keep-alive
- * connection, capping concurrent connections at the thread count.  The async
- * path below never blocks on a read: the callback drains whatever arrived,
- * serves every complete request, and rearms the fd, so one thread can hold
- * hundreds of thousands of mostly-idle connections.
- *
- * Writes on the deferred-completion path are resumable: when a slow client
- * saturates the socket, cwist_http_async_send_response deep-copies the unsent
- * remainder and parks it on a one-shot POLLOUT slot instead of blocking the
- * reactor thread in a poll() wait.  Synchronous (non-deferred) responses
- * still use the bounded poll wait inside cwist_http_send_response
- * (CWIST_HTTP_TIMEOUT_MS). */
-typedef enum {
-    CWIST_ASYNC_CLOSE = 0,  /* Close fd and release the connection. */
-    CWIST_ASYNC_REARM,      /* Keep the connection; wait for more reads. */
-    CWIST_ASYNC_DETACH,     /* Handler took ownership of fd (h2c, upgrades). */
-    CWIST_ASYNC_DEFER       /* Response deferred (cwist_async); leave fd and conn untouched. */
-} cwist_async_action_t;
-
-typedef cwist_async_action_t (*cwist_async_handler_t)(int fd, struct cwist_http_async_conn *conn);
-
-typedef struct cwist_http_async_conn {
-    int fd;
-    void *user_ctx;                       /* Owning app context. */
-    char *rbuf;                           /* Lazy recv stash; freed while empty. */
-    size_t cap;
-    size_t len;
-    char *obuf; /* Coalesced output stash (C1M async batch); reused across turns. */
-    size_t ocap;
-    size_t olen;
-    bool virgin; /* No bytes seen yet (h2c preface sniff). */
-    bool expect_continue_sent; /* 100 Continue already emitted for the pending request. */
-    uint32_t last_active_sec; /* Monotonic timestamp of last activity (for idle reaping). */
-    uint32_t worker_id; /* Assigned worker thread index for load tracking. */
-    cwist_reactor_t *reactor; /* Owning reactor (deferred-response completion target). */
-    cwist_async_handler_t handler; /* Connection handler, reused for re-arm after a defer. */
-    bool peer_eof; /* Read side closed; drain complete buffered requests. */
-    /* RX-uring receive path (Linux reactors with a real io_uring ring only;
-     * unused elsewhere).  Wait-state discipline, all transitions on the
-     * reactor owner thread: at most one of {RECV SQE in flight, one-shot
-     * POLL armed} at any time, or NONE while buffered work is served.
-     * While rx_recv_inflight is true the stash buffer must not move or be
-     * consumed: the in-flight SQE references rbuf + len. */
-    bool rx_recv_inflight; /* RECV SQE armed on the reactor ring. */
-    bool rx_data_ready;    /* RECV completion already staged bytes into the stash. */
-    /* Learned mode: set when an armed RECV completed -EAGAIN (the client
-     * sends one request per idle period, so arming RECV first just burns an
-     * SQE before the POLL fallback).  Cleared whenever a RECV stages bytes,
-     * so pipelining clients keep the SQE path.  While set, waits go straight
-     * to the legacy POLL, making the steady-state op count identical to the
-     * legacy path for non-pipelining clients. */
-    bool rx_prefers_poll;
-    uint64_t rx_armed_ns;  /* Latency-probe arm timestamp of the in-flight RECV. */
-    /* Env-gated kernel-arrival probe (CWIST_KERN_TS=1, Linux only, experiment
-     * instrumentation for issue #153): monotonic time of the recvmsg that
-     * last delivered request bytes. Paired with SCM_TIMESTAMPNS at fill time. */
-    uint64_t kern_last_mono_ns;
-    bool kern_valid;
-    /* Last BDR hit on this connection: repeated routes skip the SipHash and
-     * bucket walk via a content-compare (validated under the EBR epoch on
-     * every use). Zero-initialized at connection setup. */
-    cwist_bdr_cursor_t bdr_cursor;
-} cwist_http_async_conn_t;
-
-/* Re-arm a connection after a deferred response completed on the reactor
- * thread (keep-alive), reusing the same one-shot event slot model as
- * http_async_event_cb.  On failure the fd is closed and conn released.
- * cwist_http_async_close closes the fd and releases the connection shell. */
-bool cwist_http_async_rearm(int client_fd, cwist_reactor_t *reactor, cwist_http_async_conn_t *conn);
-void cwist_http_async_close(int client_fd, cwist_http_async_conn_t *conn);
-
-/* Send a deferred completion's response on the reactor path without ever
- * blocking the reactor thread: speculative non-blocking write first; on a
- * partial write the unsent remainder is deep-copied into an owned buffer and
- * parked on a one-shot POLLOUT slot, which resumes the send and then re-arms
- * (keep_alive) or closes exactly like the synchronous completion.  File-stream
- * bodies keep the existing bounded-blocking send path.  Takes over rearm/close
- * of (client_fd, conn) in all outcomes. */
-void cwist_http_async_send_response(int client_fd, cwist_http_response *res,
-                                    cwist_reactor_t *reactor, cwist_http_async_conn_t *conn,
-                                    bool keep_alive, bool head_only);
-
-typedef enum {
-    CWIST_RECV_OK = 0,
-    CWIST_RECV_NEED_MORE,   /* Partial request; rearm and wait. */
-    CWIST_RECV_FATAL        /* Protocol error / overflow; close. */
-} cwist_recv_status_t;
-
-bool cwist_http_pool_submit_async(int client_fd, cwist_async_handler_t handler, void *ctx);
-int cwist_http_async_conn_fill(cwist_http_async_conn_t *conn);
-cwist_recv_status_t cwist_http_receive_request_nb(cwist_http_async_conn_t *conn, cwist_http_request **out, cwist_http_parse_error_t *err_out);
 
 extern const int CWIST_CREATE_SOCKET_FAILED;
 extern const int CWIST_HTTP_UNAVAILABLE_ADDRESS;

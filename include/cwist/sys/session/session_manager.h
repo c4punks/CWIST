@@ -1,6 +1,8 @@
-/** @file session_manager.h
- * @brief session_manager.h interface.
+/**
+ * @file session_manager.h
+ * @brief Request-scoped arena and shared-payload helpers for session data.
  */
+
 #ifndef cwist_session_manager_h
 #define cwist_session_manager_h
 

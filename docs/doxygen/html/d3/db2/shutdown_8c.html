@@ -89,6 +89,10 @@ $(function(){initNavTree('d3/db2/shutdown_8c.html','../../',''); });
 </div>
 
 <div class="header">
+  <div class="summary">
+<a href="#define-members">Macros</a> &#124;
+<a href="#func-members">Functions</a> &#124;
+<a href="#var-members">Variables</a>  </div>
   <div class="headertitle"><div class="title">shutdown.c File Reference</div></div>
 </div><!--header-->
 <div class="contents">
@@ -119,9 +123,19 @@ Include dependency graph for shutdown.c:</div>
 </div>
 <p><a href="../../d3/db2/shutdown_8c_source.html">Go to the source code of this file.</a></p>
 <table class="memberdecls">
-<tr class="heading"><td colspan="2"><h2 id="header-define-members" class="groupheader"><a id="define-members" name="define-members"></a>
+<tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="define-members" name="define-members"></a>
 Macros</h2></td></tr>
-<tr class="memitem:a3024ccd4a9af5109d24e6c57565d74a1" id="r_a3024ccd4a9af5109d24e6c57565d74a1"><td class="memItemLeft">#define&#160;</td><td class="memItemRight"><a class="el" href="#a3024ccd4a9af5109d24e6c57565d74a1">_POSIX_C_SOURCE</a>&#160;&#160;&#160;200809L</td></tr>
+<tr class="memitem:a3024ccd4a9af5109d24e6c57565d74a1" id="r_a3024ccd4a9af5109d24e6c57565d74a1"><td class="memItemLeft" align="right" valign="top">#define&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d3/db2/shutdown_8c.html#a3024ccd4a9af5109d24e6c57565d74a1">_POSIX_C_SOURCE</a>&#160;&#160;&#160;200809L</td></tr>
+<tr class="separator:a3024ccd4a9af5109d24e6c57565d74a1"><td class="memSeparator" colspan="2">&#160;</td></tr>
+</table><table class="memberdecls">
+<tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="func-members" name="func-members"></a>
+Functions</h2></td></tr>
+<tr class="memitem:a842323fa5d238344cac27795d7b1f0a0" id="r_a842323fa5d238344cac27795d7b1f0a0"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d3/db2/shutdown_8c.html#a842323fa5d238344cac27795d7b1f0a0">cwist_shutdown_install_handlers</a> (void)</td></tr>
+<tr class="memdesc:a842323fa5d238344cac27795d7b1f0a0"><td class="mdescLeft">&#160;</td><td class="mdescRight">Install SIGTERM and SIGINT handlers for graceful shutdown.  <br /></td></tr>
+<tr class="separator:a842323fa5d238344cac27795d7b1f0a0"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:af05218e1b1db6bfc291221dc7ba551b9" id="r_af05218e1b1db6bfc291221dc7ba551b9"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d3/db2/shutdown_8c.html#af05218e1b1db6bfc291221dc7ba551b9">cwist_shutdown_reset</a> (void)</td></tr>
+<tr class="memdesc:af05218e1b1db6bfc291221dc7ba551b9"><td class="mdescLeft">&#160;</td><td class="mdescRight">Reset shutdown state (useful in test suites).  <br /></td></tr>
+<tr class="separator:af05218e1b1db6bfc291221dc7ba551b9"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 id="header-func-members" class="groupheader"><a id="func-members" name="func-members"></a>
 Functions</h2></td></tr>
@@ -132,20 +146,24 @@ Functions</h2></td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 id="header-var-members" class="groupheader"><a id="var-members" name="var-members"></a>
 Variables</h2></td></tr>
-<tr class="memitem:a46320ca3cf98c46468dd97ac4fe9dc18" id="r_a46320ca3cf98c46468dd97ac4fe9dc18"><td class="memItemLeft">atomic_int&#160;</td><td class="memItemRight"><a class="el" href="#a46320ca3cf98c46468dd97ac4fe9dc18">g_cwist_running</a> = 1</td></tr>
+<tr class="memitem:a46320ca3cf98c46468dd97ac4fe9dc18" id="r_a46320ca3cf98c46468dd97ac4fe9dc18"><td class="memItemLeft" align="right" valign="top">atomic_int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d3/db2/shutdown_8c.html#a46320ca3cf98c46468dd97ac4fe9dc18">g_cwist_running</a> = 1</td></tr>
 <tr class="memdesc:a46320ca3cf98c46468dd97ac4fe9dc18"><td class="mdescLeft">&#160;</td><td class="mdescRight">Global running flag. Checked by all server event loops.  <br /></td></tr>
-<tr class="memitem:a3e09cfe577c8855dafc10053c7c0d15e" id="r_a3e09cfe577c8855dafc10053c7c0d15e"><td class="memItemLeft">int&#160;</td><td class="memItemRight"><a class="el" href="#a3e09cfe577c8855dafc10053c7c0d15e">g_cwist_listen_fd</a> = -1</td></tr>
+<tr class="separator:a46320ca3cf98c46468dd97ac4fe9dc18"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a3e09cfe577c8855dafc10053c7c0d15e" id="r_a3e09cfe577c8855dafc10053c7c0d15e"><td class="memItemLeft" align="right" valign="top">int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d3/db2/shutdown_8c.html#a3e09cfe577c8855dafc10053c7c0d15e">g_cwist_listen_fd</a> = -1</td></tr>
 <tr class="memdesc:a3e09cfe577c8855dafc10053c7c0d15e"><td class="mdescLeft">&#160;</td><td class="mdescRight">Registered TCP listening socket (for signal-handler closure).  <br /></td></tr>
-<tr class="memitem:ad174686dc7f76f914e2f96823b7d04a0" id="r_ad174686dc7f76f914e2f96823b7d04a0"><td class="memItemLeft">int&#160;</td><td class="memItemRight"><a class="el" href="#ad174686dc7f76f914e2f96823b7d04a0">g_cwist_udp_fd</a> = -1</td></tr>
+<tr class="separator:a3e09cfe577c8855dafc10053c7c0d15e"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ad174686dc7f76f914e2f96823b7d04a0" id="r_ad174686dc7f76f914e2f96823b7d04a0"><td class="memItemLeft" align="right" valign="top">int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d3/db2/shutdown_8c.html#ad174686dc7f76f914e2f96823b7d04a0">g_cwist_udp_fd</a> = -1</td></tr>
 <tr class="memdesc:ad174686dc7f76f914e2f96823b7d04a0"><td class="mdescLeft">&#160;</td><td class="mdescRight">Registered UDP socket for HTTP/3 (for signal-handler closure).  <br /></td></tr>
-<tr class="memitem:a097fcc1a5d003d8f7b287932fa0adb98" id="r_a097fcc1a5d003d8f7b287932fa0adb98"><td class="memItemLeft">int&#160;</td><td class="memItemRight"><a class="el" href="#a097fcc1a5d003d8f7b287932fa0adb98">g_cwist_drain_timeout_sec</a> = 5</td></tr>
+<tr class="separator:ad174686dc7f76f914e2f96823b7d04a0"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a097fcc1a5d003d8f7b287932fa0adb98" id="r_a097fcc1a5d003d8f7b287932fa0adb98"><td class="memItemLeft" align="right" valign="top">int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d3/db2/shutdown_8c.html#a097fcc1a5d003d8f7b287932fa0adb98">g_cwist_drain_timeout_sec</a> = 5</td></tr>
 <tr class="memdesc:a097fcc1a5d003d8f7b287932fa0adb98"><td class="mdescLeft">&#160;</td><td class="mdescRight">Drain timeout in seconds before process exits.  <br /></td></tr>
+<tr class="separator:a097fcc1a5d003d8f7b287932fa0adb98"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <a name="details" id="details"></a><h2 id="header-details" class="groupheader">Detailed Description</h2>
 <div class="textblock"><p>Graceful shutdown implementation. </p>
 
 <p class="definition">Definition in file <a class="el" href="../../d3/db2/shutdown_8c_source.html">shutdown.c</a>.</p>
-</div><a name="doc-define-members" id="doc-define-members"></a><h2 id="header-doc-define-members" class="groupheader">Macro Definition Documentation</h2>
+</div><h2 class="groupheader">Macro Definition Documentation</h2>
 <a id="a3024ccd4a9af5109d24e6c57565d74a1" name="a3024ccd4a9af5109d24e6c57565d74a1"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#a3024ccd4a9af5109d24e6c57565d74a1">&#9670;&#160;</a></span>_POSIX_C_SOURCE</h2>
 
@@ -162,7 +180,7 @@ Variables</h2></td></tr>
 
 </div>
 </div>
-<a name="doc-func-members" id="doc-func-members"></a><h2 id="header-doc-func-members" class="groupheader">Function Documentation</h2>
+<h2 class="groupheader">Function Documentation</h2>
 <a id="a842323fa5d238344cac27795d7b1f0a0" name="a842323fa5d238344cac27795d7b1f0a0"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#a842323fa5d238344cac27795d7b1f0a0">&#9670;&#160;</a></span>cwist_shutdown_install_handlers()</h2>
 
@@ -172,7 +190,8 @@ Variables</h2></td></tr>
         <tr>
           <td class="memname">void cwist_shutdown_install_handlers </td>
           <td>(</td>
-          <td class="paramtype">void</td>          <td class="paramname"><span class="paramname"><em></em></span></td><td>)</td>
+          <td class="paramtype">void&#160;</td>
+          <td class="paramname"></td><td>)</td>
           <td></td>
         </tr>
       </table>
@@ -182,7 +201,7 @@ Variables</h2></td></tr>
 
 <p class="definition">Definition at line <a class="el" href="../../d3/db2/shutdown_8c_source.html#l00029">29</a> of file <a class="el" href="../../d3/db2/shutdown_8c_source.html">shutdown.c</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../df/d7f/app_8c_source.html#l02977">cwist_app_listen()</a>, and <a class="el" href="../../df/d7f/app_8c_source.html#l02801">cwist_app_multiport()</a>.</p>
+<p class="reference">Referenced by <a class="el" href="../../df/d7f/app_8c_source.html#l01810">cwist_app_listen()</a>.</p>
 
 </div>
 </div>
@@ -195,7 +214,8 @@ Variables</h2></td></tr>
         <tr>
           <td class="memname">void cwist_shutdown_reset </td>
           <td>(</td>
-          <td class="paramtype">void</td>          <td class="paramname"><span class="paramname"><em></em></span></td><td>)</td>
+          <td class="paramtype">void&#160;</td>
+          <td class="paramname"></td><td>)</td>
           <td></td>
         </tr>
       </table>
@@ -209,7 +229,7 @@ Variables</h2></td></tr>
 
 </div>
 </div>
-<a name="doc-var-members" id="doc-var-members"></a><h2 id="header-doc-var-members" class="groupheader">Variable Documentation</h2>
+<h2 class="groupheader">Variable Documentation</h2>
 <a id="a097fcc1a5d003d8f7b287932fa0adb98" name="a097fcc1a5d003d8f7b287932fa0adb98"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#a097fcc1a5d003d8f7b287932fa0adb98">&#9670;&#160;</a></span>g_cwist_drain_timeout_sec</h2>
 
@@ -226,7 +246,7 @@ Variables</h2></td></tr>
 
 <p class="definition">Definition at line <a class="el" href="../../d3/db2/shutdown_8c_source.html#l00014">14</a> of file <a class="el" href="../../d3/db2/shutdown_8c_source.html">shutdown.c</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../df/d7f/app_8c_source.html#l02977">cwist_app_listen()</a>, and <a class="el" href="../../dd/d43/http_8c_source.html#l00189">cwist_http_pool_destroy()</a>.</p>
+<p class="reference">Referenced by <a class="el" href="../../df/d7f/app_8c_source.html#l01810">cwist_app_listen()</a>.</p>
 
 </div>
 </div>
@@ -246,7 +266,7 @@ Variables</h2></td></tr>
 
 <p class="definition">Definition at line <a class="el" href="../../d3/db2/shutdown_8c_source.html#l00012">12</a> of file <a class="el" href="../../d3/db2/shutdown_8c_source.html">shutdown.c</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../df/d7f/app_8c_source.html#l02977">cwist_app_listen()</a>, <a class="el" href="../../df/d7f/app_8c_source.html#l02801">cwist_app_multiport()</a>, and <a class="el" href="../../d3/db2/shutdown_8c_source.html#l00038">cwist_shutdown_reset()</a>.</p>
+<p class="reference">Referenced by <a class="el" href="../../df/d7f/app_8c_source.html#l01810">cwist_app_listen()</a>, and <a class="el" href="../../d3/db2/shutdown_8c_source.html#l00038">cwist_shutdown_reset()</a>.</p>
 
 </div>
 </div>
@@ -266,7 +286,7 @@ Variables</h2></td></tr>
 
 <p class="definition">Definition at line <a class="el" href="../../d3/db2/shutdown_8c_source.html#l00011">11</a> of file <a class="el" href="../../d3/db2/shutdown_8c_source.html">shutdown.c</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../df/d7f/app_8c_source.html#l02801">cwist_app_multiport()</a>, <a class="el" href="../../d2/db0/http2_8c_source.html#l01309">cwist_http2_serve_connection()</a>, <a class="el" href="../../de/daf/http3_8c_source.html#l01119">cwist_http3_server_loop()</a>, <a class="el" href="../../dd/d43/http_8c_source.html#l01645">cwist_http_server_loop()</a>, <a class="el" href="../../d2/db2/https_8c_source.html#l00684">cwist_https_server_loop()</a>, <a class="el" href="../../d3/d99/reactor_8c_source.html#l00251">cwist_reactor_run()</a>, and <a class="el" href="../../d3/db2/shutdown_8c_source.html#l00038">cwist_shutdown_reset()</a>.</p>
+<p class="reference">Referenced by <a class="el" href="../../d2/db0/http2_8c_source.html#l00970">cwist_http2_serve_connection()</a>, <a class="el" href="../../de/daf/http3_8c_source.html#l00826">cwist_http3_server_loop()</a>, <a class="el" href="../../dd/d43/http_8c_source.html#l01217">cwist_http_server_loop()</a>, <a class="el" href="../../d2/db2/https_8c_source.html#l00516">cwist_https_server_loop()</a>, and <a class="el" href="../../d3/db2/shutdown_8c_source.html#l00038">cwist_shutdown_reset()</a>.</p>
 
 </div>
 </div>
@@ -286,20 +306,11 @@ Variables</h2></td></tr>
 
 <p class="definition">Definition at line <a class="el" href="../../d3/db2/shutdown_8c_source.html#l00013">13</a> of file <a class="el" href="../../d3/db2/shutdown_8c_source.html">shutdown.c</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../df/d7f/app_8c_source.html#l02977">cwist_app_listen()</a>, <a class="el" href="../../df/d7f/app_8c_source.html#l02801">cwist_app_multiport()</a>, and <a class="el" href="../../d3/db2/shutdown_8c_source.html#l00038">cwist_shutdown_reset()</a>.</p>
+<p class="reference">Referenced by <a class="el" href="../../df/d7f/app_8c_source.html#l01810">cwist_app_listen()</a>, and <a class="el" href="../../d3/db2/shutdown_8c_source.html#l00038">cwist_shutdown_reset()</a>.</p>
 
 </div>
 </div>
 </div><!-- contents -->
-</div><!-- doc-content -->
-<div id="page-nav" class="page-nav-panel">
-<div id="page-nav-resize-handle"></div>
-<div id="page-nav-tree">
-<div id="page-nav-contents">
-</div><!-- page-nav-contents -->
-</div><!-- page-nav-tree -->
-</div><!-- page-nav -->
-</div><!-- container -->
 <!-- start footer part -->
 <div id="nav-path" class="navpath"><!-- id is needed for treeview function! -->
   <ul>
