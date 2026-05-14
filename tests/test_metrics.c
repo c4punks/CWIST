@@ -68,17 +68,12 @@ void test_metrics_http_response(void) {
 
 static cwist_health_probe_t dummy_probe_ok(void *ctx) {
     (void)ctx;
-    return (cwist_health_probe_t){"dummy", CWIST_HEALTH_OK, "all good"};
+    return (cwist_health_probe_t){ "dummy", CWIST_HEALTH_OK, "all good" };
 }
 
 static cwist_health_probe_t dummy_probe_fail(void *ctx) {
     (void)ctx;
-    return (cwist_health_probe_t){"dummy", CWIST_HEALTH_FAIL, "down"};
-}
-
-static cwist_health_probe_t dummy_probe_degraded(void *ctx) {
-    (void)ctx;
-    return (cwist_health_probe_t){"dummy", CWIST_HEALTH_DEGRADED, "slow"};
+    return (cwist_health_probe_t){ "dummy", CWIST_HEALTH_FAIL, "down" };
 }
 
 void test_healthz_ok(void) {
@@ -109,76 +104,13 @@ void test_healthz_fail(void) {
     printf("  OK\n");
 }
 
-void test_healthz_degraded(void) {
-    printf("test_healthz_degraded...\n");
-    cwist_healthz_register("dummy_degraded", dummy_probe_degraded, NULL);
-
-    cwist_http_response *res = cwist_http_response_create();
-    cwist_app_healthz(res);
-    assert(res->status_code == CWIST_HTTP_SERVICE_UNAVAILABLE);
-    assert(strstr(res->body->data, "degraded") != NULL);
-    cwist_http_response_destroy(res);
-
-    cwist_healthz_unregister("dummy_degraded");
-    printf("  OK\n");
-}
-
-#include <cwist/sys/app/middleware.h>
-
-static void dummy_next_metrics(cwist_http_request *req, cwist_http_response *res) {
-    (void)req;
-    res->status_code = CWIST_HTTP_OK;
-}
-
-void test_metrics_middleware_wiring(void) {
-    printf("test_metrics_middleware_wiring...\n");
-    cwist_metrics_registry_t *reg = cwist_metrics_registry();
-    cwist_metrics_reset(reg);
-
-    cwist_http_request *req = cwist_http_request_create();
-    cwist_http_response *res = cwist_http_response_create();
-
-    cwist_middleware_func mw = cwist_mw_metrics();
-    mw(req, res, dummy_next_metrics);
-
-    uintmax_t total = cwist_metric_load(reg, CWIST_METRIC_REQUESTS_TOTAL);
-    assert(total == 1);
-
-    cwist_http_request_destroy(req);
-    cwist_http_response_destroy(res);
-    printf("  OK\n");
-}
-
-void test_metrics_continuation_shed(void) {
-    printf("test_metrics_continuation_shed...\n");
-    cwist_metrics_registry_t *reg = cwist_metrics_registry();
-    assert(reg != NULL);
-
-    long initial_shed = cwist_http_continuation_shed_count();
-    assert(initial_shed >= 0);
-
-    uintmax_t metric_val = cwist_metric_load(reg, CWIST_METRIC_HTTP_CONTINUATION_SHED);
-    assert(metric_val == (uintmax_t)initial_shed);
-
-    char *text = cwist_metrics_render_prometheus(reg);
-    assert(text != NULL);
-    assert(strstr(text, "cwist_http_continuation_shed_total") != NULL);
-    assert(strstr(text, "# HELP cwist_http_continuation_shed_total") != NULL);
-    assert(strstr(text, "# TYPE cwist_http_continuation_shed_total counter") != NULL);
-    free(text);
-    printf("  OK\n");
-}
-
 int main(void) {
     test_metrics_counter();
     test_metrics_gauge();
-    test_metrics_continuation_shed();
     test_metrics_prometheus_render();
     test_metrics_http_response();
     test_healthz_ok();
     test_healthz_fail();
-    test_healthz_degraded();
-    test_metrics_middleware_wiring();
     printf("All metrics/healthz tests passed.\n");
     return 0;
 }

@@ -285,15 +285,13 @@ cwist_error_t cwist_sstring_change_size(cwist_sstring *str, size_t new_size, boo
     }
 
     str->data = new_data;
-    str->borrows_buffer = false;
-
+    
     if (new_size < current_len) {
         str->size = new_size;
         str->data[new_size] = '\0';
     } else {
-        if (current_len == 0 || was_borrowed) {
-             /* Detached buffers carry no NUL past the preserved payload. */
-            str->data[current_len] = '\0';
+        if (current_len == 0) {
+             str->data[0] = '\0';
         }
         // str->size remains current_len (existing data preserved)
     }

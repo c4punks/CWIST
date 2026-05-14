@@ -5,7 +5,6 @@
 
 #include <cwist/sys/metrics/metrics.h>
 #include <cwist/net/http/http.h>
-#include <cwist/net/http/https.h>
 #include <cwist/core/sstring/sstring.h>
 #include <cwist/core/mem/alloc.h>
 #include <stdio.h>
@@ -22,93 +21,20 @@ struct cwist_metrics_registry {
 };
 
 static const cwist_metric_t metric_defaults[CWIST_METRIC_COUNT] = {
-    [CWIST_METRIC_URING_SQES_PENDING] = {.name = "cwist_io_uring_sqes_pending",
-                                         .help = "Active io_uring SQEs waiting for kernel pickup",
-                                         .type = CWIST_METRIC_COUNTER},
-    [CWIST_METRIC_URING_BUFFERS_ACTIVE] = {.name = "cwist_io_uring_buffers_active",
-                                           .help = "In-flight fixed buffers in io_uring pool",
-                                           .type = CWIST_METRIC_GAUGE},
-    [CWIST_METRIC_STREAMS_HTTP2] = {.name = "cwist_streams_http2",
-                                    .help = "Active HTTP/2 streams",
-                                    .type = CWIST_METRIC_GAUGE},
-    [CWIST_METRIC_STREAMS_HTTP3] = {.name = "cwist_streams_http3",
-                                    .help = "Active HTTP/3 streams",
-                                    .type = CWIST_METRIC_GAUGE},
-    [CWIST_METRIC_FLOW_WINDOW_HEALTH] = {.name = "cwist_flow_window_health",
-                                         .help = "Flow-control window health (0-100)",
-                                         .type = CWIST_METRIC_GAUGE},
-    [CWIST_METRIC_VALIDATION_ERRORS] = {.name = "cwist_validation_errors",
-                                        .help = "Validation error frequency",
-                                        .type = CWIST_METRIC_COUNTER},
-    [CWIST_METRIC_REQUESTS_TOTAL] = {.name = "cwist_requests_total",
-                                     .help = "Total HTTP requests handled",
-                                     .type = CWIST_METRIC_COUNTER},
-    [CWIST_METRIC_REQUEST_DURATION_NS] = {.name = "cwist_request_duration_ns",
-                                          .help = "Request duration sum in nanoseconds",
-                                          .type = CWIST_METRIC_COUNTER},
-    [CWIST_METRIC_HTTP_HEADER_OVERFLOW] =
-        {.name = "cwist_http_header_overflow_total",
-         .help = "HTTP/1.1 connections dropped because headers exceeded the read buffer",
-         .type = CWIST_METRIC_COUNTER},
-    [CWIST_METRIC_H2_HEADERS_DROPPED] =
-        {.name = "cwist_h2_headers_dropped_total",
-         .help = "HTTP/2 header fields dropped due to unresolvable HPACK index",
-         .type = CWIST_METRIC_COUNTER},
-    [CWIST_METRIC_HTTP_CONTINUATION_SHED] =
-        {.name = "cwist_http_continuation_shed_total",
-         .help = "Pipelined HTTP/1.1 continuations dropped due to full reactor queue",
-         .type = CWIST_METRIC_COUNTER},
-    [CWIST_METRIC_TLS_HANDSHAKES_TOTAL] =
-        {.name = "cwist_tls_handshakes_total",
-         .help = "TLS handshakes completed (full + resumed)",
-         .type = CWIST_METRIC_COUNTER},
-    [CWIST_METRIC_TLS_HANDSHAKES_RESUMED] =
-        {.name = "cwist_tls_handshakes_resumed_total",
-         .help = "TLS handshakes resumed via session ID or ticket",
-         .type = CWIST_METRIC_COUNTER},
-    [CWIST_METRIC_TLS_CONNECTIONS_ACTIVE] =
-        {.name = "cwist_tls_connections_active",
-         .help = "Currently established TLS connections",
-         .type = CWIST_METRIC_GAUGE},
-    [CWIST_METRIC_TLS_HANDSHAKES_TLS12] =
-        {.name = "cwist_tls_handshakes_tls12_total",
-         .help = "TLS handshakes that negotiated TLS 1.2",
-         .type = CWIST_METRIC_COUNTER},
-    [CWIST_METRIC_TLS_HANDSHAKES_TLS13] =
-        {.name = "cwist_tls_handshakes_tls13_total",
-         .help = "TLS handshakes that negotiated TLS 1.3",
-         .type = CWIST_METRIC_COUNTER},
-    [CWIST_METRIC_TLS_CIPHERS_AES128_GCM] =
-        {.name = "cwist_tls_ciphers_aes128_gcm_total",
-         .help = "TLS handshakes negotiated with TLS_AES_128_GCM_SHA256",
-         .type = CWIST_METRIC_COUNTER},
-    [CWIST_METRIC_TLS_CIPHERS_AES256_GCM] =
-        {.name = "cwist_tls_ciphers_aes256_gcm_total",
-         .help = "TLS handshakes negotiated with TLS_AES_256_GCM_SHA384",
-         .type = CWIST_METRIC_COUNTER},
-    [CWIST_METRIC_TLS_CIPHERS_CHACHA20] =
-        {.name = "cwist_tls_ciphers_chacha20_total",
-         .help = "TLS handshakes negotiated with TLS_CHACHA20_POLY1305_SHA256",
-         .type = CWIST_METRIC_COUNTER},
-    [CWIST_METRIC_TLS_CIPHERS_OTHER] =
-        {.name = "cwist_tls_ciphers_other_total",
-         .help = "TLS handshakes negotiated with any other cipher",
-         .type = CWIST_METRIC_COUNTER},
+    [CWIST_METRIC_URING_SQES_PENDING]   = { "cwist_io_uring_sqes_pending",   "Active io_uring SQEs waiting for kernel pickup",   CWIST_METRIC_COUNTER },
+    [CWIST_METRIC_URING_BUFFERS_ACTIVE] = { "cwist_io_uring_buffers_active", "In-flight fixed buffers in io_uring pool",         CWIST_METRIC_GAUGE   },
+    [CWIST_METRIC_STREAMS_HTTP2]        = { "cwist_streams_http2",           "Active HTTP/2 streams",                            CWIST_METRIC_GAUGE   },
+    [CWIST_METRIC_STREAMS_HTTP3]        = { "cwist_streams_http3",           "Active HTTP/3 streams",                            CWIST_METRIC_GAUGE   },
+    [CWIST_METRIC_FLOW_WINDOW_HEALTH]   = { "cwist_flow_window_health",      "Flow-control window health (0-100)",               CWIST_METRIC_GAUGE   },
+    [CWIST_METRIC_VALIDATION_ERRORS]    = { "cwist_validation_errors",       "Validation error frequency",                       CWIST_METRIC_COUNTER },
+    [CWIST_METRIC_REQUESTS_TOTAL]       = { "cwist_requests_total",          "Total HTTP requests handled",                      CWIST_METRIC_COUNTER },
+    [CWIST_METRIC_REQUEST_DURATION_NS]  = { "cwist_request_duration_ns",     "Request duration sum in nanoseconds",              CWIST_METRIC_COUNTER },
 };
 
 /* -------------------------------------------------------------------------
  * Singleton registry
  * ---------------------------------------------------------------------- */
 
-/**
- * @brief Return the process-wide singleton metrics registry.
- *
- * Allocates and initializes the registry on first call; later calls return
- * the cached pointer. All metric atomics are zero-initialized from the
- * static metric_defaults table.
- *
- * @return Pointer to the singleton registry, or NULL on allocation failure.
- */
 cwist_metrics_registry_t *cwist_metrics_registry(void) {
     static cwist_metrics_registry_t *g_reg = NULL;
     if (__builtin_expect(g_reg != NULL, 1)) return g_reg;
@@ -125,11 +51,6 @@ cwist_metrics_registry_t *cwist_metrics_registry(void) {
     return g_reg;
 }
 
-/**
- * @brief Reset all metrics in a registry to zero.
- *
- * @param reg Registry to reset; NULL is a no-op.
- */
 void cwist_metrics_reset(cwist_metrics_registry_t *reg) {
     if (!reg) return;
     for (int i = 0; i < CWIST_METRIC_COUNT; ++i) {
@@ -143,88 +64,24 @@ void cwist_metrics_reset(cwist_metrics_registry_t *reg) {
  * Lock-free updates
  * ---------------------------------------------------------------------- */
 
-/* Mirror the TLS counters owned by src/net/http/https.c into the registry,
- * same synchronization contract as the shed counter below. */
-static void cwist_metrics_sync_tls(cwist_metrics_registry_t *reg) {
-    static const struct {
-        cwist_metric_id_t id;
-        long (*read)(void);
-    } tls_counters[] = {
-        {CWIST_METRIC_TLS_HANDSHAKES_TOTAL, cwist_https_tls_handshakes_total},
-        {CWIST_METRIC_TLS_HANDSHAKES_RESUMED, cwist_https_tls_handshakes_resumed_total},
-        {CWIST_METRIC_TLS_CONNECTIONS_ACTIVE, cwist_https_tls_connections_active},
-        {CWIST_METRIC_TLS_HANDSHAKES_TLS12, cwist_https_tls_handshakes_tls12_total},
-        {CWIST_METRIC_TLS_HANDSHAKES_TLS13, cwist_https_tls_handshakes_tls13_total},
-        {CWIST_METRIC_TLS_CIPHERS_AES128_GCM, cwist_https_tls_ciphers_aes128_gcm_total},
-        {CWIST_METRIC_TLS_CIPHERS_AES256_GCM, cwist_https_tls_ciphers_aes256_gcm_total},
-        {CWIST_METRIC_TLS_CIPHERS_CHACHA20, cwist_https_tls_ciphers_chacha20_total},
-        {CWIST_METRIC_TLS_CIPHERS_OTHER, cwist_https_tls_ciphers_other_total},
-    };
-    for (size_t i = 0; i < sizeof(tls_counters) / sizeof(tls_counters[0]); ++i) {
-        uintmax_t v = (uintmax_t)tls_counters[i].read();
-        atomic_store_explicit(&reg->metrics[tls_counters[i].id].value.raw, v * 1000,
-                              memory_order_relaxed);
-        atomic_store_explicit(&reg->metrics[tls_counters[i].id].count, v, memory_order_relaxed);
-    }
-}
-
-/**
- * @brief Increment a metric's value by one and bump its observation count.
- *
- * Lock-free relaxed atomic update; safe to call from any thread.
- *
- * @param reg Registry holding the metric; NULL is a no-op.
- * @param id Metric identifier; out-of-range ids are ignored.
- */
 void cwist_metric_inc(cwist_metrics_registry_t *reg, cwist_metric_id_t id) {
     if (!reg || id < 0 || id >= CWIST_METRIC_COUNT) return;
     atomic_fetch_add_explicit(&reg->metrics[id].value.raw, 1, memory_order_relaxed);
     atomic_fetch_add_explicit(&reg->metrics[id].count, 1, memory_order_relaxed);
 }
 
-/**
- * @brief Add a delta to a metric's value and bump its observation count.
- *
- * Lock-free relaxed atomic update; safe to call from any thread.
- *
- * @param reg Registry holding the metric; NULL is a no-op.
- * @param id Metric identifier; out-of-range ids are ignored.
- * @param delta Value increment to add.
- */
 void cwist_metric_add(cwist_metrics_registry_t *reg, cwist_metric_id_t id, uintmax_t delta) {
     if (!reg || id < 0 || id >= CWIST_METRIC_COUNT) return;
     atomic_fetch_add_explicit(&reg->metrics[id].value.raw, delta, memory_order_relaxed);
     atomic_fetch_add_explicit(&reg->metrics[id].count, 1, memory_order_relaxed);
 }
 
-/**
- * @brief Set a gauge metric to an absolute value.
- *
- * The value is stored with fixed-point scaling: the raw value is
- * roundl(value * 1000), so one unit is 0.001 in rendered output.
- *
- * @param reg Registry holding the metric; NULL is a no-op.
- * @param id Metric identifier; out-of-range ids are ignored.
- * @param value New absolute value.
- */
 void cwist_metric_set(cwist_metrics_registry_t *reg, cwist_metric_id_t id, long double value) {
     if (!reg || id < 0 || id >= CWIST_METRIC_COUNT) return;
     uintmax_t scaled = (uintmax_t)roundl(value * 1000.0L);
     atomic_store_explicit(&reg->metrics[id].value.raw, scaled, memory_order_relaxed);
 }
 
-/**
- * @brief Observe a sample for a metric: accumulate sum and bump the count.
- *
- * The value is stored with fixed-point scaling (roundl(value * 1000)),
- * added to both the raw accumulated value and the sum, while the
- * observation count is incremented by one. Lock-free relaxed atomic
- * update; safe to call from any thread.
- *
- * @param reg Registry holding the metric; NULL is a no-op.
- * @param id Metric identifier; out-of-range ids are ignored.
- * @param value Observed sample value.
- */
 void cwist_metric_observe(cwist_metrics_registry_t *reg, cwist_metric_id_t id, long double value) {
     if (!reg || id < 0 || id >= CWIST_METRIC_COUNT) return;
     uintmax_t scaled = (uintmax_t)roundl(value * 1000.0L);
@@ -233,23 +90,8 @@ void cwist_metric_observe(cwist_metrics_registry_t *reg, cwist_metric_id_t id, l
     atomic_fetch_add_explicit(&reg->metrics[id].sum, scaled, memory_order_relaxed);
 }
 
-/**
- * @brief Read the current raw value of a metric.
- *
- * Acquire load of the stored raw (fixed-point scaled) value. For
- * CWIST_METRIC_HTTP_CONTINUATION_SHED the value is read live from the
- * net/http shed counter instead of the registry.
- *
- * @param reg Registry holding the metric; NULL returns 0.
- * @param id Metric identifier; out-of-range ids return 0.
- * @return Current raw metric value.
- */
 uintmax_t cwist_metric_load(const cwist_metrics_registry_t *reg, cwist_metric_id_t id) {
     if (!reg || id < 0 || id >= CWIST_METRIC_COUNT) return 0;
-    cwist_metrics_sync_tls((cwist_metrics_registry_t *)reg);
-    if (id == CWIST_METRIC_HTTP_CONTINUATION_SHED) {
-        return (uintmax_t)cwist_http_continuation_shed_count();
-    }
     return atomic_load_explicit(&reg->metrics[id].value.raw, memory_order_acquire);
 }
 
@@ -257,46 +99,17 @@ uintmax_t cwist_metric_load(const cwist_metrics_registry_t *reg, cwist_metric_id
  * Prometheus exposition
  * ---------------------------------------------------------------------- */
 
-/**
- * @brief Map a metric type enum to its Prometheus exposition type string.
- * @param t Metric type.
- * @return Static string "counter", "gauge", "histogram", or "unknown".
- */
 static const char *type_str(cwist_metric_type_t t) {
     switch (t) {
-        case CWIST_METRIC_COUNTER: return "counter";
-        case CWIST_METRIC_GAUGE: return "gauge";
+        case CWIST_METRIC_COUNTER:   return "counter";
+        case CWIST_METRIC_GAUGE:     return "gauge";
         case CWIST_METRIC_HISTOGRAM: return "histogram";
-        default: return "unknown";
+        default:                     return "unknown";
     }
 }
 
-/**
- * @brief Render the full registry in Prometheus text exposition format.
- *
- * Before rendering, synchronizes the HTTP_CONTINUATION_SHED metric from
- * the live net/http shed counter into the registry (cast away const for
- * that store). The output buffer grows by doubling and is heap-allocated;
- * the caller owns it.
- *
- * @param reg Registry to render; NULL returns NULL.
- * @return Newly allocated NUL-terminated exposition text, or NULL on
- *         allocation or formatting failure.
- */
 char *cwist_metrics_render_prometheus(const cwist_metrics_registry_t *reg) {
     if (!reg) return NULL;
-
-    /* Synchronize read-only shed counter from net/http */
-    long shed = cwist_http_continuation_shed_count();
-    atomic_store_explicit(
-        &((cwist_metrics_registry_t *)reg)->metrics[CWIST_METRIC_HTTP_CONTINUATION_SHED].value.raw,
-        (uintmax_t)shed * 1000, memory_order_relaxed);
-    atomic_store_explicit(
-        &((cwist_metrics_registry_t *)reg)->metrics[CWIST_METRIC_HTTP_CONTINUATION_SHED].count,
-        (uintmax_t)shed, memory_order_relaxed);
-
-    /* Synchronize TLS counters from the HTTPS layer */
-    cwist_metrics_sync_tls((cwist_metrics_registry_t *)reg);
 
     size_t cap = 4096;
     char *buf = malloc(cap);
@@ -313,56 +126,39 @@ char *cwist_metrics_render_prometheus(const cwist_metrics_registry_t *reg) {
                             "# TYPE %s %s\n"
                             "%s %lu.%03lu\n"
                             "%s_count %lu\n\n",
-                            m->name, m->help, m->name, type_str(m->type), m->name,
-                            (unsigned long)(raw / 1000), (unsigned long)(raw % 1000), m->name,
+                            m->name, m->help,
+                            m->name, type_str(m->type),
+                            m->name,
+                            (unsigned long)(raw / 1000),
+                            (unsigned long)(raw % 1000),
+                            m->name,
                             (unsigned long)cnt);
-        if (need < 0) {
-            free(buf);
-            return NULL;
-        }
 
-        size_t required = (size_t)need + 1;
-        if (required > cap - len) {
-            size_t new_cap = cap;
-            while (required > new_cap - len) new_cap *= 2;
-            char *nb = realloc(buf, new_cap);
-            if (!nb) {
-                free(buf);
-                return NULL;
-            }
+        if (len + (size_t)need + 1 > cap) {
+            cap = (len + (size_t)need + 1) * 2;
+            char *nb = realloc(buf, cap);
+            if (!nb) { free(buf); return NULL; }
             buf = nb;
-            cap = new_cap;
         }
 
-        int written = snprintf(buf + len, cap - len,
-                               "# HELP %s %s\n"
-                               "# TYPE %s %s\n"
-                               "%s %lu.%03lu\n"
-                               "%s_count %lu\n\n",
-                               m->name, m->help, m->name, type_str(m->type), m->name,
-                               (unsigned long)(raw / 1000), (unsigned long)(raw % 1000), m->name,
-                               (unsigned long)cnt);
-        if (written < 0 || (size_t)written >= cap - len) {
-            free(buf);
-            return NULL;
-        }
-        len += (size_t)written;
+        len += (size_t)snprintf(buf + len, cap - len,
+                                "# HELP %s %s\n"
+                                "# TYPE %s %s\n"
+                                "%s %lu.%03lu\n"
+                                "%s_count %lu\n\n",
+                                m->name, m->help,
+                                m->name, type_str(m->type),
+                                m->name,
+                                (unsigned long)(raw / 1000),
+                                (unsigned long)(raw % 1000),
+                                m->name,
+                                (unsigned long)cnt);
     }
 
     buf[len] = '\0';
     return buf;
 }
 
-/**
- * @brief HTTP handler that serves the metrics registry as Prometheus text.
- *
- * On success sets the response status to 200 OK with the exposition text
- * as body and a Prometheus text Content-Type header. On render failure
- * sets 500 INTERNAL_ERROR with a "metrics render failed" body.
- *
- * @param res Response to fill; NULL is a no-op. The body sstring is
- *        assigned via cwist_sstring_assign.
- */
 void cwist_metrics_serve_http(cwist_http_response *res) {
     if (!res) return;
     cwist_metrics_registry_t *reg = cwist_metrics_registry();
@@ -374,7 +170,6 @@ void cwist_metrics_serve_http(cwist_http_response *res) {
     }
     res->status_code = CWIST_HTTP_OK;
     cwist_sstring_assign(res->body, text);
-    cwist_http_header_add(&res->headers, "Content-Type",
-                          "text/plain; version=0.0.4; charset=utf-8");
+    cwist_http_header_add(&res->headers, "Content-Type", "text/plain; version=0.0.4; charset=utf-8");
     free(text);
 }
