@@ -21,6 +21,7 @@
 #include <cwist/net/http/http2.h>
 #include <cwist/core/mem/alloc.h>
 #include <cwist/sys/err/cwist_err.h>
+#include <cwist/sys/app/shutdown.h>
 
 #include <openssl/ssl.h>
 #include <openssl/err.h>
@@ -960,7 +961,7 @@ cwist_error_t cwist_http2_serve_connection(
     bool connected = true;
     cwist_http_request *pending_req = NULL;
     uint32_t pending_stream_id = 0;
-    while (connected) {
+    while (connected && atomic_load(&g_cwist_running)) {
         unsigned char hdr[9];
         int n = 0;
         int offset = 0;

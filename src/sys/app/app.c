@@ -4,6 +4,9 @@
 #define _POSIX_C_SOURCE 200809L
 #define _DEFAULT_SOURCE
 #include <cwist/sys/app/app.h>
+#include <cwist/sys/app/config.h>
+#include <cwist/sys/app/logger.h>
+#include <cwist/sys/app/shutdown.h>
 #include <cwist/net/http/http.h>
 #include <cwist/net/http/http2.h>
 #include <cwist/net/http/https.h>
@@ -4026,6 +4029,7 @@ void cwist_apply_profile(void) {
 int cwist_app_listen(cwist_app *app, int port) {
     // Ignore SIGPIPE
     signal(SIGPIPE, SIG_IGN);
+    cwist_shutdown_install_handlers();
     if (!app) return -1;
     app->port = port;
     
@@ -4075,6 +4079,7 @@ int cwist_app_listen(cwist_app *app, int port) {
                     pthread_t h3_tid;
                     if (pthread_create(&h3_tid, NULL, h3_server_thread_func, h3_p) == 0) {
                         pthread_detach(h3_tid);
+                        g_cwist_udp_fd = udp_fd;
                         printf("HTTP/3 (QUIC) enabled on UDP port %d\n", port);
                     } else {
                         free(h3_p);
@@ -4112,156 +4117,13 @@ int cwist_app_listen(cwist_app *app, int port) {
         long cores = get_cpu_cores();
         workers = (cores > 0) ? (int)cores : 1;
     }
-    if (workers < 1) workers = 1;
-
-#if defined(__GLIBC__)
-    /* Experimental (issue #25, ROADMAP.md v3.5): cap glibc's per-process
-     * arena count before forking, so the setting is inherited by every
-     * worker. mallopt() state is plain process memory, not something a
-     * live fork() can "share back" afterward - COW means a child's first
-     * write to any inherited page (which malloc always does) forks its own
-     * private copy immediately, so there's no way to keep multiple
-     * processes pointed at one mutable arena. What *is* achievable is
-     * capping how many arenas each process can independently accumulate:
-     * by default glibc lets internal thread contention grow up to
-     * ncpus*8 arenas *per process* (each worker here forks before
-     * creating its own watcher/HTTP-3 threads, so every worker can hit
-     * that ceiling independently) - with N worker processes that's a
-     * multiplicative blow-up, and each extra arena is its own mmap'd
-     * region that adds directly to RSS. CWIST_MALLOC_ARENA_MAX=1 forces
-     * every worker down to its single main arena regardless of how many
-     * threads it spins up afterward. Unset by default: preserves today's
-     * behavior exactly. Measured against the mimalloc A/B in that issue
-     * and adopted (PR #35, merged) after winning on every metric - the CI
-     * benchmark job keeps confirming that decision on every run, this is
-     * not an open question anymore, just still opt-in rather than a
-     * default so existing deployments' behavior never changes silently. */
-    const char *arena_max_env = getenv("CWIST_MALLOC_ARENA_MAX");
-    if (arena_max_env && arena_max_env[0]) {
-        char *end = NULL;
-        long arena_max = strtol(arena_max_env, &end, 10);
-        if (end && *end == '\0' && arena_max >= 0 && arena_max <= INT_MAX) {
-            mallopt(M_ARENA_MAX, (int)arena_max);
-        }
-    }
-#endif
-
-    /* Prime libttak's TSC calibration before forking workers. calibrate_tsc()
-     * sleeps for 10 ms (timing.c) and is triggered lazily by the first
-     * ttak_get_tick_count_ns() call - which used to arrive with the first
-     * request's arena creation inside each worker process, adding ~10 ms to
-     * that worker's first request. The calibrated g_tsc_freq_ghz/g_tsc_scale
-     * globals are plain process memory, so fork children inherit the values
-     * copy-on-write and never repeat the sleep. */
-#ifndef __wasi__
-    (void)ttak_get_tick_count_ns();
-#endif
-
-    bool is_worker_child = false;
-    pid_t worker_pids[workers > 1 ? workers - 1 : 1];
-    size_t worker_count = 0;
-    int child_idx = 0;
-#ifndef __wasi__
-    for (int i = 1; i < workers; i++) {
-        pid_t pid = fork();
-        if (pid == 0) {
-            is_worker_child = true;
-            child_idx = i;
-            break;
-        } else if (pid < 0) {
-            perror("fork worker failed");
-            break;
-        } else {
-            worker_pids[worker_count++] = pid;
-        }
-    }
-
-#if defined(__linux__) && defined(_GNU_SOURCE)
-    /* Keep each worker inside its inherited affinity mask (including sparse IDs). */
-    if (workers > 1 && cwist_app_pin_worker((size_t)(is_worker_child ? child_idx : 0)) < 0) {
-        /* On failure, retain the inherited mask rather than guessing a CPU ID. */
-        perror("worker CPU affinity");
-    }
-#endif
-
-    if (is_worker_child) {
-        close(server_fd);
-        server_fd = cwist_make_socket_ipv4(&addr, "0.0.0.0", port, 32768);
-        if (server_fd >= 0) {
-            g_cwist_listen_fd = server_fd;
-        }
-        if (udp_fd >= 0) {
-            close(udp_fd);
-            udp_fd = -1;
-        }
-    }
-#else
-    (void)addr;
-#endif /* __wasi__ (single process) */
-
-    /* The static cache owns a libttak cleanup thread as well as the watcher.
-     * Initialize it only after all worker forks so no child inherits mutexes
-     * or a pthread handle whose owning thread exists only in the parent. */
-#ifndef __wasi__
-    cwist_mem_init(app);
-
-    // Per-process threads start here.  Each worker gets its own watcher and
-    // HTTP/3 thread, so fork-after-thread deadlock is avoided.
-    if (app->mem_manager) {
-        app->mem_manager->watcher_running = true;
-        pthread_create(&app->mem_manager->watcher_thread, NULL, cwist_mem_watcher, app);
-    }
-
-    if (udp_fd >= 0) {
-        struct h3_thread_payload *h3_p = malloc(sizeof(*h3_p));
-        if (h3_p) {
-            h3_p->udp_fd = udp_fd;
-            h3_p->app = app;
-            pthread_t h3_tid;
-            if (pthread_create(&h3_tid, NULL, h3_server_thread_func, h3_p) == 0) {
-                pthread_detach(h3_tid);
-                g_cwist_udp_fd = udp_fd;
-                printf("HTTP/3 (QUIC) enabled on UDP port %d\n", port);
-            } else {
-                free(h3_p);
-                close(udp_fd);
-                udp_fd = -1;
-            }
-        } else {
-            close(udp_fd);
-            udp_fd = -1;
-        }
-    }
-
-#endif /* __wasi__ (no static-cache thread, watcher, or H3 thread) */
-    printf("CWIST App running on port %d (SSL: %s) [Event-driven, workers=%d, pid=%d]\n", port,
-           app->use_ssl ? "On" : "Off", workers, (int)getpid());
-
-    // Check config for non-blocking scale mode (default enabled)
-    const char *c1m = getenv("CWIST_C1M_MODE");
-#ifdef __wasi__
-    /* The C1M reactor is epoll/eventfd-based; WASI hosts run the blocking
-     * accept loop instead. */
-    bool use_c1m = false;
-#else
-    bool use_c1m = true;
-#endif
-    if (c1m_override < 0 && c1m) {
-        if (c1m[0] == '0' || strcmp(c1m, "false") == 0) {
-            use_c1m = false;
-        }
-    }
-#ifndef __wasi__
-    if (c1m_override >= 0) use_c1m = c1m_override != 0;
-#else
-    (void)c1m_override;
-#endif
-    if (use_c1m) {
-        cwist_async_server_loop(server_fd, app);
-    } else {
-#ifdef __wasi__
-        if (app->use_ssl) {
-            fprintf(stderr, "TLS is not available on WASI (no BoringSSL); serve cleartext.\n");
+    g_cwist_listen_fd = server_fd;
+    
+    printf("CWIST App running on port %d (SSL: %s)\n", port, app->use_ssl ? "On" : "Off");
+    
+    if (app->use_ssl) {
+        if (!app->ssl_ctx) {
+            fprintf(stderr, "SSL enabled but context not initialized.\n");
             g_cwist_listen_fd = -1;
             return -1;
         }
@@ -4299,110 +4161,9 @@ int cwist_app_listen(cwist_app *app, int port) {
         app->mem_manager->watcher_running = false;
     }
 
-    /* Post-stop drain: give in-flight C1M connections a bounded window to
-     * finish before the process exits, but only for as long as something is
-     * actually alive. The reactor and pool are already torn down at this
-     * point, so an idle server used to sleep out the full timeout on every
-     * shutdown; exit as soon as no connection remains. */
     printf("[CWIST] Draining connections for %d seconds...\n", g_cwist_drain_timeout_sec);
-    if ((is_worker_child || workers == 1) && g_cwist_drain_timeout_sec > 0) {
-        for (int i = 0; i < g_cwist_drain_timeout_sec * 10; i++) {
-            if (cwist_http_inflight_count() <= 0) break;
-            usleep(100 * 1000);
-        }
-    }
-
-    int worker_result = 0;
-    /* Parent process reaps worker children so they do not become zombies. */
-#ifndef __wasi__
-    if (!is_worker_child && workers > 1) {
-        /* SIGTERM is delivered to the supervisor only.  Ask every worker to
-         * leave its inherited accept loop before waiting for it; otherwise a
-         * supervisor shutdown can block indefinitely. */
-        for (size_t i = 0; i < worker_count; i++) {
-            kill(worker_pids[i], SIGTERM);
-        }
-        for (size_t i = 0; i < worker_count; i++) {
-            int status;
-            pid_t reaped;
-            do {
-                reaped = waitpid(worker_pids[i], &status, 0);
-            } while (reaped < 0 && errno == EINTR);
-            if (reaped < 0) {
-                perror("waitpid worker");
-                worker_result = -1;
-            } else if (!WIFEXITED(status) || WEXITSTATUS(status) != 0) {
-                fprintf(stderr, "Worker %d exited abnormally (status=%d)\n", (int)worker_pids[i],
-                        status);
-                worker_result = -1;
-            }
-        }
-    }
-#else
-    (void)worker_pids;
-    (void)worker_count;
-#endif /* __wasi__ (no child processes) */
-
+    sleep(g_cwist_drain_timeout_sec);
     printf("[CWIST] Shutdown complete.\n");
-
-    return worker_result;
-}
-#endif
-
-static char cwist_swagger_json_path[512] = "openapi.json";
-
-static void cwist_swagger_html_handler(cwist_http_request *req, cwist_http_response *res) {
-    (void)req;
-    static const char html[] =
-        "<!DOCTYPE html>\n<html>\n<head>\n"
-        "<title>CWIST Swagger UI</title>\n"
-        "<link rel=\"stylesheet\" href=\"https://unpkg.com/swagger-ui-dist@5/swagger-ui.css\" />\n"
-        "</head>\n<body>\n"
-        "<div id=\"swagger-ui\"></div>\n"
-        "<script src=\"https://unpkg.com/swagger-ui-dist@5/swagger-ui-bundle.js\"></script>\n"
-        "<script>\n"
-        "window.onload = () => {\n"
-        "  SwaggerUIBundle({\n"
-        "    url: '/openapi.json',\n"
-        "    dom_id: '#swagger-ui',\n"
-        "  });\n"
-        "};\n"
-        "</script>\n"
-        "</body>\n</html>\n";
-    cwist_sstring_assign(res->body, (char *)html);
-    cwist_http_header_add(&res->headers, "Content-Type", "text/html; charset=utf-8");
-}
-
-static void cwist_swagger_json_handler(cwist_http_request *req, cwist_http_response *res) {
-    (void)req;
-    FILE *f = fopen(cwist_swagger_json_path, "rb");
-    if (!f) {
-        res->status_code = 404;
-        cwist_sstring_assign(res->body, (char *)"{\"error\":\"openapi.json not found\"}");
-        cwist_http_header_add(&res->headers, "Content-Type", "application/json");
-        return;
-    }
-    fseek(f, 0, SEEK_END);
-    long sz = ftell(f);
-    fseek(f, 0, SEEK_SET);
-    char *buf = (char *)malloc((size_t)sz + 1);
-    if (buf) {
-        size_t rd = fread(buf, 1, (size_t)sz, f);
-        buf[rd] = '\0';
-        cwist_sstring_assign(res->body, buf);
-        free(buf);
-    }
-    fclose(f);
-    cwist_http_header_add(&res->headers, "Content-Type", "application/json");
-}
-
-void cwist_app_enable_swagger(cwist_app *app, const char *mount_path,
-                              const char *openapi_json_path) {
-    if (!app) return;
-    if (openapi_json_path) {
-        snprintf(cwist_swagger_json_path, sizeof(cwist_swagger_json_path), "%s", openapi_json_path);
-    }
-    const char *mp = mount_path ? mount_path : "/docs";
-    cwist_app_get(app, mp, cwist_swagger_html_handler);
-    cwist_app_get(app, "/openapi.json", cwist_swagger_json_handler);
+    
+    return 0;
 }

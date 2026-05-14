@@ -21,9 +21,6 @@
 #include <cwist/core/seq/seq.h>
 #include <cwist/sys/err/cwist_err.h>
 #include <cwist/sys/app/shutdown.h>
-#include <ttak/timing/timing.h>
-#include <ttak/async/sched.h>
-#include "tls_chain.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -3454,11 +3451,13 @@ cwist_error_t cwist_http3_server_loop(int udp_fd,
     settings.es_pace_packets = 1;
     settings.es_optimistic_nat = 1;
 
-    while (1) {
-        SSL *quic_conn = SSL_new(ctx->ssl_ctx);
-        if (!quic_conn) {
-            usleep(10000);
-            continue;
+    while (ctx && ctx->running && atomic_load(&g_cwist_running)) {
+        int diff = 100000; /* default 100 ms in microseconds */
+        if (lsquic_engine_earliest_adv_tick(engine, &diff)) {
+            if (diff <= 0)
+                diff = 0;
+            else if (diff > 1000000)
+                diff = 1000000;
         }
 
         SSL_set_fd(quic_conn, udp_fd);

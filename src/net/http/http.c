@@ -8,6 +8,8 @@
 #include <cwist/net/http/http.h>
 #include <cwist/core/sstring/sstring.h>
 #include <cwist/sys/err/cwist_err.h>
+#include <cwist/core/mem/alloc.h>
+#include <cwist/sys/app/shutdown.h>
 
 #include <limits.h>
 #include <stdio.h>
@@ -1331,17 +1333,15 @@ cwist_error_t cwist_http_server_loop(int server_fd, cwist_server_config *config,
 #endif /* __wasi__ (no fork) */
 
     if (config->use_threading) {
-        /* This loop submits to the classic dynamic pool, so initialise that
-         * pool whatever CWIST_C1M_MODE says (cwist_app_listen_ex() may have
-         * overridden it). */
-        if (cwist_http_pool_init_mode(false) != 0) {
-            err.error.err_i16 = -1;
-            return err;
-        }
         while (atomic_load(&g_cwist_running)) {
             int client_fd = accept(server_fd, NULL, NULL);
             if (client_fd < 0) {
-                if (errno == EINTR) continue;
+                int accept_err = errno;
+                if (accept_err == EBADF || accept_err == EINVAL) break;
+                if (cwist_accept_error_should_retry(accept_err)) {
+                    cwist_accept_error_backoff(accept_err);
+                    continue;
+                }
                 err.error.err_i16 = -1;
                 return err;
             }
@@ -1386,8 +1386,8 @@ cwist_error_t cwist_http_server_loop(int server_fd, cwist_server_config *config,
         }
 
         while (atomic_load(&g_cwist_running)) {
-            struct epoll_event events[1024];
-            int count = epoll_wait(epoll_fd, events, 1024, -1);
+            struct epoll_event events[16];
+            int count = epoll_wait(epoll_fd, events, 16, -1);
             if (count < 0) {
                 if (errno == EINTR) continue;
                 if (errno == EBADF) break;
@@ -1395,25 +1395,15 @@ cwist_error_t cwist_http_server_loop(int server_fd, cwist_server_config *config,
             }
             for (int i = 0; i < count; i++) {
                 if (events[i].data.fd == server_fd) {
-                    while (1) {
-                        int client_fd = accept(server_fd, NULL, NULL);
-                        if (client_fd >= 0) {
-                            int nodelay = 1;
-                            setsockopt(client_fd, IPPROTO_TCP, TCP_NODELAY, &nodelay,
-                                       sizeof(nodelay));
-                            handler(client_fd, ctx);
-                        } else {
-                            int accept_err = errno;
-                            if (accept_err == EAGAIN || accept_err == EWOULDBLOCK) break;
-                            if (accept_err == EBADF || accept_err == EINVAL) goto epoll_exit;
-                            if (accept_err == EINTR) continue;
-                            if (cwist_accept_error_should_retry(accept_err)) {
-                                cwist_accept_error_backoff(accept_err);
-                                continue;
-                            }
-                            err.error.err_i16 = -1;
-                            close(epoll_fd);
-                            return err;
+                    int client_fd = accept(server_fd, NULL, NULL);
+                    if (client_fd >= 0) {
+                        handler(client_fd, ctx);
+                    } else {
+                        int accept_err = errno;
+                        if (accept_err == EBADF || accept_err == EINVAL) break;
+                        if (cwist_accept_error_should_retry(accept_err)) {
+                            cwist_accept_error_backoff(accept_err);
+                            continue;
                         }
                     }
                 }
@@ -1452,25 +1442,15 @@ cwist_error_t cwist_http_server_loop(int server_fd, cwist_server_config *config,
             }
             for (int i = 0; i < count; i++) {
                 if ((int)events[i].ident == server_fd) {
-                    while (1) {
-                        int client_fd = accept(server_fd, NULL, NULL);
-                        if (client_fd >= 0) {
-                            int nodelay = 1;
-                            setsockopt(client_fd, IPPROTO_TCP, TCP_NODELAY, &nodelay,
-                                       sizeof(nodelay));
-                            handler(client_fd, ctx);
-                        } else {
-                            int accept_err = errno;
-                            if (accept_err == EAGAIN || accept_err == EWOULDBLOCK) break;
-                            if (accept_err == EBADF || accept_err == EINVAL) goto kq_exit;
-                            if (accept_err == EINTR) continue;
-                            if (cwist_accept_error_should_retry(accept_err)) {
-                                cwist_accept_error_backoff(accept_err);
-                                continue;
-                            }
-                            err.error.err_i16 = -1;
-                            close(kqueue_fd);
-                            return err;
+                    int client_fd = accept(server_fd, NULL, NULL);
+                    if (client_fd >= 0) {
+                        handler(client_fd, ctx);
+                    } else {
+                        int accept_err = errno;
+                        if (accept_err == EBADF || accept_err == EINVAL) break;
+                        if (cwist_accept_error_should_retry(accept_err)) {
+                            cwist_accept_error_backoff(accept_err);
+                            continue;
                         }
                     }
                 }
