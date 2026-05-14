@@ -9,7 +9,7 @@ Two server modes, tuned for opposite things; pick per workload.
 CWIST reactor is the default (no env var needed); CWIST_C1M_MODE=0 selects
 CWIST Classic pool.
 
-* HTTP/1.1 Server: Robust request parsing and response handling.
+* HTTP/1.1-HTTP/3 Server: Robust request parsing and response handling.
 * SString: Custom string library with compare and substr support.
 * WebSocket Support: Easy upgrade from HTTP to persistent connections.
 * Middleware System: Chainable processing for logging and security.
