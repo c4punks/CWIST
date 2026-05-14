@@ -129,6 +129,9 @@ cwist_http_request *cwist_http_request_create(void) {
     req->db = NULL;
     req->upgraded = false;
     req->content_length = 0;
+    req->stream_id = 0;
+    req->private_data = NULL;
+    req->endpoint_opts = CWIST_ENDPOINT_DEFAULT;
 
     // Defaults
     smartstring_assign(req->version, "HTTP/1.1");

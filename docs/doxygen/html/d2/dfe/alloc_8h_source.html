@@ -92,28 +92,27 @@ $(function(){initNavTree('d2/dfe/alloc_8h_source.html','../../',''); });
   <div class="headertitle"><div class="title">alloc.h</div></div>
 </div><!--header-->
 <div class="contents">
-<a href="../../d2/dfe/alloc_8h.html">Go to the documentation of this file.</a><div class="fragment"><div class="line"><a id="l00001" name="l00001"></a><span class="lineno">    1</span></div>
-<div class="line"><a id="l00005" name="l00005"></a><span class="lineno">    5</span> </div>
+<a href="../../d2/dfe/alloc_8h.html">Go to the documentation of this file.</a><div class="fragment"><div class="line"><a id="l00001" name="l00001"></a><span class="lineno">    1</span> </div>
 <div class="line"><a id="l00006" name="l00006"></a><span class="lineno">    6</span><span class="preprocessor">#ifndef __CWIST_CORE_MEM_ALLOC_H__</span></div>
 <div class="line"><a id="l00007" name="l00007"></a><span class="lineno">    7</span><span class="preprocessor">#define __CWIST_CORE_MEM_ALLOC_H__</span></div>
 <div class="line"><a id="l00008" name="l00008"></a><span class="lineno">    8</span> </div>
 <div class="line"><a id="l00009" name="l00009"></a><span class="lineno">    9</span><span class="preprocessor">#include &lt;stddef.h&gt;</span></div>
 <div class="line"><a id="l00010" name="l00010"></a><span class="lineno">   10</span><span class="preprocessor">#include &lt;ttak/mem/owner.h&gt;</span></div>
-<div class="line"><a id="l00011" name="l00011"></a><span class="lineno">   11</span></div>
+<div class="line"><a id="l00011" name="l00011"></a><span class="lineno">   11</span> </div>
 <div class="line"><a id="l00015" name="l00015"></a><span class="lineno">   15</span>ttak_owner_t *<a class="code hl_function" href="../../d2/dfe/alloc_8h.html#ae6cc1524fc3d8181424c53acee7d0fcc">cwist_create_owner</a>(<span class="keywordtype">void</span>);</div>
-<div class="line"><a id="l00016" name="l00016"></a><span class="lineno">   16</span></div>
+<div class="line"><a id="l00016" name="l00016"></a><span class="lineno">   16</span> </div>
 <div class="line"><a id="l00020" name="l00020"></a><span class="lineno">   20</span><span class="keywordtype">void</span> *<a class="code hl_function" href="../../d2/dfe/alloc_8h.html#a71c06a91ed09f17d092e8bb9c1763f64">cwist_malloc</a>(<span class="keywordtype">size_t</span> size);</div>
-<div class="line"><a id="l00021" name="l00021"></a><span class="lineno">   21</span></div>
+<div class="line"><a id="l00021" name="l00021"></a><span class="lineno">   21</span> </div>
 <div class="line"><a id="l00025" name="l00025"></a><span class="lineno">   25</span><span class="keywordtype">void</span> *<a class="code hl_function" href="../../d2/dfe/alloc_8h.html#aeba69949fe17751318e6b5fc84a74096">cwist_alloc</a>(<span class="keywordtype">size_t</span> size);</div>
-<div class="line"><a id="l00026" name="l00026"></a><span class="lineno">   26</span></div>
+<div class="line"><a id="l00026" name="l00026"></a><span class="lineno">   26</span> </div>
 <div class="line"><a id="l00030" name="l00030"></a><span class="lineno">   30</span><span class="keywordtype">void</span> *<a class="code hl_function" href="../../d2/dfe/alloc_8h.html#acf0a2673b8792bf9a1b3267c17ca0385">cwist_alloc_array</a>(<span class="keywordtype">size_t</span> count, <span class="keywordtype">size_t</span> elem_size);</div>
-<div class="line"><a id="l00031" name="l00031"></a><span class="lineno">   31</span></div>
+<div class="line"><a id="l00031" name="l00031"></a><span class="lineno">   31</span> </div>
 <div class="line"><a id="l00035" name="l00035"></a><span class="lineno">   35</span><span class="keywordtype">void</span> *<a class="code hl_function" href="../../d2/dfe/alloc_8h.html#a42c763d29fa97fa0fb23b0fd91dab294">cwist_realloc</a>(<span class="keywordtype">void</span> *ptr, <span class="keywordtype">size_t</span> new_size);</div>
-<div class="line"><a id="l00036" name="l00036"></a><span class="lineno">   36</span></div>
+<div class="line"><a id="l00036" name="l00036"></a><span class="lineno">   36</span> </div>
 <div class="line"><a id="l00040" name="l00040"></a><span class="lineno">   40</span><span class="keywordtype">char</span> *<a class="code hl_function" href="../../d2/dfe/alloc_8h.html#a59e88ae09b889a715cfdec6966d9cb43">cwist_strdup</a>(<span class="keyword">const</span> <span class="keywordtype">char</span> *src);</div>
-<div class="line"><a id="l00041" name="l00041"></a><span class="lineno">   41</span></div>
+<div class="line"><a id="l00041" name="l00041"></a><span class="lineno">   41</span> </div>
 <div class="line"><a id="l00045" name="l00045"></a><span class="lineno">   45</span><span class="keywordtype">char</span> *<a class="code hl_function" href="../../d2/dfe/alloc_8h.html#ae7766da022549f5efa733487814a371b">cwist_strndup</a>(<span class="keyword">const</span> <span class="keywordtype">char</span> *src, <span class="keywordtype">size_t</span> n);</div>
-<div class="line"><a id="l00046" name="l00046"></a><span class="lineno">   46</span></div>
+<div class="line"><a id="l00046" name="l00046"></a><span class="lineno">   46</span> </div>
 <div class="line"><a id="l00050" name="l00050"></a><span class="lineno">   50</span><span class="keywordtype">void</span> <a class="code hl_function" href="../../d2/dfe/alloc_8h.html#a220abeebe2823e72511d1690fc561306">cwist_free</a>(<span class="keywordtype">void</span> *ptr);</div>
 <div class="line"><a id="l00051" name="l00051"></a><span class="lineno">   51</span> </div>
 <div class="line"><a id="l00052" name="l00052"></a><span class="lineno">   52</span><span class="preprocessor">#endif</span></div>

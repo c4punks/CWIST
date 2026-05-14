@@ -1,6 +1,8 @@
-/** @file sstring.h
- * @brief sstring.h interface.
+/**
+ * @file sstring.h
+ * @brief Safe string type with helper methods.
  */
+
 #ifndef __CWIST_SSTRING_H__
 #define __CWIST_SSTRING_H__
 
@@ -10,36 +12,28 @@
 #include <cwist/sys/err/cwist_err.h>
 
 typedef struct cwist_sstring {
-    char *data;  ///< please access this data if raw handling is necessary
-    bool is_fixed;
-    bool owns_storage;
-    bool borrows_buffer; ///< data is borrowed (static/arena); never freed, detached on mutation
-    size_t size;
-    size_t capacity;     ///< Payload bytes the current data buffer can hold,
-                     ///< excluding the NUL; 0 means unknown, in which case
-                     ///< growth falls back to exact-fit reallocation.
-    char *base; ///< Allocation base when data views a region inside it
-                ///< (NULL means data is the base). Freed on destroy.
-    size_t (*get_size)(struct cwist_sstring *str);
-    int (*compare)(
-        struct cwist_sstring *left,
-        const struct cwist_sstring *right); ///< should mimic strcmp, internally use strncmp
-    cwist_error_t (*copy)(struct cwist_sstring *str, const struct cwist_sstring *from);
-    cwist_error_t (*append)(struct cwist_sstring *str, const struct cwist_sstring *from);
-    /// @brief returns 1 on success, returns 0 on failure
-    /// @note should be used in this form:
-    /// @code
-    /// cwist_sstring str1;
-    /// cwist_sstring str2;
-    /// cwist_sstring_init(&str);
-    /// cwist_sstring_init(&str2);
-    /// cwist_error_t err = str1.copy(&str1, &str2);
-    /// cwist_error_t err = str2.append(&str2, &str1);
-    /// ...
-    /// @endcode
+  char   *data;  ///< Access directly only when raw handling is necessary.
+  bool   is_fixed;
+  bool   owns_storage;
+  size_t size;
+  size_t (*get_size)(struct cwist_sstring *str);
+  int    (*compare )(struct cwist_sstring *left, const struct cwist_sstring *right); ///< Should mimic `strcmp`, internally use `strncmp`.
+  cwist_error_t (*copy  )(struct cwist_sstring *str, const struct cwist_sstring *from);
+  /**
+   * @brief Append another sstring.
+   * @return 1 on success, 0 on failure.
+   */
+  cwist_error_t (*append)(struct cwist_sstring *str, const struct cwist_sstring *from);
 } cwist_sstring;
 
+/**
+ * @brief Create a new sstring instance.
+ */
 cwist_sstring *cwist_sstring_create(void);
+
+/**
+ * @brief Destroy an sstring instance.
+ */
 void cwist_sstring_destroy(cwist_sstring *str);
 
 /** @name String manipulation API */
@@ -49,13 +43,24 @@ void cwist_sstring_destroy(cwist_sstring *str);
  * @brief Append raw bytes with length.
  */
 cwist_error_t cwist_sstring_append_len(cwist_sstring *str, const char *data, size_t len);
-
 /**
  * @brief Assign raw bytes with length.
  */
 cwist_error_t cwist_sstring_assign_len(cwist_sstring *str, const char *data, size_t len);
+
+/**
+ * @brief Initialize an sstring.
+ */
 cwist_error_t cwist_sstring_init (cwist_sstring *str);
+
+/**
+ * @brief Initialize an sstring with escaping enabled.
+ */
 cwist_error_t cwist_sstring_init_escaped (cwist_sstring *str);
+
+/**
+ * @brief Left-trim whitespace.
+ */
 cwist_error_t cwist_sstring_ltrim(cwist_sstring *str);
 
 /**
@@ -76,15 +81,31 @@ cwist_error_t cwist_sstring_change_size(cwist_sstring *str, size_t size, bool bl
 /**
  * @brief Assign a C string.
  */
-cwist_error_t cwist_sstring_assign(cwist_sstring *str, const char *data);
+cwist_error_t cwist_sstring_assign(cwist_sstring *str, char *data);
 
 /**
  * @brief Append a C string.
  */
 cwist_error_t cwist_sstring_append(cwist_sstring *str, const char *data);
+
+/**
+ * @brief Append an escaped C string.
+ */
 cwist_error_t cwist_sstring_append_escaped(cwist_sstring *str, const char *data);
+
+/**
+ * @brief Append another sstring.
+ */
 cwist_error_t cwist_sstring_append_sstring(cwist_sstring *str, const cwist_sstring *from);
+
+/**
+ * @brief Append another sstring with escaping.
+ */
 cwist_error_t cwist_sstring_append_sstring_escaped(cwist_sstring *str, const cwist_sstring *from);
+
+/**
+ * @brief Seek a substring at a location.
+ */
 cwist_error_t cwist_sstring_seek(cwist_sstring *str, char *substr, int location);
 
 /**

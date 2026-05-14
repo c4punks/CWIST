@@ -1,6 +1,8 @@
-/** @file mux.h
- * @brief mux.h interface.
+/**
+ * @file mux.h
+ * @brief HTTP request multiplexer (router).
  */
+
 #ifndef __CWIST_MUX_H__
 #define __CWIST_MUX_H__
 
@@ -37,7 +39,7 @@ typedef struct cwist_mux_router {
 cwist_mux_router *cwist_mux_router_create(void);
 
 /**
- * @brief Destroy a router.
+ * @brief Destroy a router and all its routes.
  */
 void cwist_mux_router_destroy(cwist_mux_router *router);
 
@@ -49,8 +51,42 @@ void cwist_mux_router_destroy(cwist_mux_router *router);
 /**
  * @brief Register a route handler.
  */
-void cwist_mux_handle(cwist_mux_router *router, cwist_http_method_t method, const char *path,
-                      cwist_http_handler_func handler);
+void cwist_mux_handle(cwist_mux_router *router, cwist_http_method_t method, const char *path, cwist_http_handler_func handler);
+
+/**
+ * @brief Find a matching route.
+ */
+cwist_mux_route *cwist_mux_find_route(cwist_mux_router *router, cwist_http_method_t method, const char *path);
+
+/** @} */
+
+/** @name Route Groups */
+/** @{ */
+
+/**
+ * @brief Create a route group with a path prefix.
+ */
+cwist_mux_group *cwist_mux_group_create(cwist_mux_router *router, const char *prefix);
+
+/**
+ * @brief Destroy a route group.
+ */
+void cwist_mux_group_destroy(cwist_mux_group *group);
+
+/**
+ * @brief Register a handler inside a group.
+ */
+void cwist_mux_group_handle(cwist_mux_group *group, cwist_http_method_t method, const char *path, cwist_http_handler_func handler);
+
+/** @} */
+
+/** @name Per-Route Middleware */
+/** @{ */
+
+/**
+ * @brief Attach middleware to a specific route.
+ */
+void cwist_mux_route_use(cwist_mux_route *route, cwist_middleware_func mw);
 
 /** @} */
 

@@ -89,6 +89,10 @@ $(function(){initNavTree('d5/df8/json__builder_8h.html','../../',''); });
 </div>
 
 <div class="header">
+  <div class="summary">
+<a href="#nested-classes">Classes</a> &#124;
+<a href="#typedef-members">Typedefs</a> &#124;
+<a href="#func-members">Functions</a>  </div>
   <div class="headertitle"><div class="title">json_builder.h File Reference</div></div>
 </div><!--header-->
 <div class="contents">
@@ -128,11 +132,12 @@ Classes</h2></td></tr>
 <tr class="memitem:cwist_5Fjson_5Fbuilder" id="r_cwist_5Fjson_5Fbuilder"><td class="memItemLeft">struct &#160;</td><td class="memItemRight"><a class="el" href="../../d7/ddf/structcwist__json__builder.html">cwist_json_builder</a></td></tr>
 <tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">Simple JSON string builder utility.  <a href="../../d7/ddf/structcwist__json__builder.html#details">More...</a><br /></td></tr>
 </table><table class="memberdecls">
-<tr class="heading"><td colspan="2"><h2 id="header-typedef-members" class="groupheader"><a id="typedef-members" name="typedef-members"></a>
+<tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="typedef-members" name="typedef-members"></a>
 Typedefs</h2></td></tr>
-<tr class="memitem:a7db557149f715ffff70a6194f9aa8cef" id="r_a7db557149f715ffff70a6194f9aa8cef"><td class="memItemLeft">typedef struct cwist_json_builder&#160;</td><td class="memItemRight"><a class="el" href="#a7db557149f715ffff70a6194f9aa8cef">cwist_json_builder</a></td></tr>
+<tr class="memitem:a7db557149f715ffff70a6194f9aa8cef" id="r_a7db557149f715ffff70a6194f9aa8cef"><td class="memItemLeft" align="right" valign="top">typedef struct <a class="el" href="../../d7/ddf/structcwist__json__builder.html">cwist_json_builder</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d5/df8/json__builder_8h.html#a7db557149f715ffff70a6194f9aa8cef">cwist_json_builder</a></td></tr>
+<tr class="separator:a7db557149f715ffff70a6194f9aa8cef"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table><table class="memberdecls">
-<tr class="heading"><td colspan="2"><h2 id="header-func-members" class="groupheader"><a id="func-members" name="func-members"></a>
+<tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="func-members" name="func-members"></a>
 Functions</h2></td></tr>
 <tr class="memitem:abc5bd58d0eb39778e6f35b3a3b37a9aa" id="r_abc5bd58d0eb39778e6f35b3a3b37a9aa"><td class="memItemLeft"><a class="el" href="../../d7/ddf/structcwist__json__builder.html">cwist_json_builder</a> *&#160;</td><td class="memItemRight"><a class="el" href="#abc5bd58d0eb39778e6f35b3a3b37a9aa">cwist_json_builder_create</a> (void)</td></tr>
 <tr class="memdesc:abc5bd58d0eb39778e6f35b3a3b37a9aa"><td class="mdescLeft">&#160;</td><td class="mdescRight">Allocate a new JSON builder with an empty output buffer.  <br /></td></tr>
@@ -161,7 +166,7 @@ Functions</h2></td></tr>
 <div class="textblock"><p>json_builder.h interface. </p>
 
 <p class="definition">Definition in file <a class="el" href="../../d5/df8/json__builder_8h_source.html">json_builder.h</a>.</p>
-</div><a name="doc-typedef-members" id="doc-typedef-members"></a><h2 id="header-doc-typedef-members" class="groupheader">Typedef Documentation</h2>
+</div><h2 class="groupheader">Typedef Documentation</h2>
 <a id="a7db557149f715ffff70a6194f9aa8cef" name="a7db557149f715ffff70a6194f9aa8cef"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#a7db557149f715ffff70a6194f9aa8cef">&#9670;&#160;</a></span>cwist_json_builder</h2>
 
@@ -169,14 +174,14 @@ Functions</h2></td></tr>
 <div class="memproto">
       <table class="memname">
         <tr>
-          <td class="memname">typedef struct cwist_json_builder cwist_json_builder</td>
+          <td class="memname">typedef struct <a class="el" href="../../d7/ddf/structcwist__json__builder.html">cwist_json_builder</a> <a class="el" href="../../d7/ddf/structcwist__json__builder.html">cwist_json_builder</a></td>
         </tr>
       </table>
 </div><div class="memdoc">
 
 </div>
 </div>
-<a name="doc-func-members" id="doc-func-members"></a><h2 id="header-doc-func-members" class="groupheader">Function Documentation</h2>
+<h2 class="groupheader">Function Documentation</h2>
 <a id="ab3302e0dcb0d2385c380cd9b41fc3e40" name="ab3302e0dcb0d2385c380cd9b41fc3e40"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#ab3302e0dcb0d2385c380cd9b41fc3e40">&#9670;&#160;</a></span>cwist_json_add_bool()</h2>
 
@@ -202,6 +207,7 @@ Functions</h2></td></tr>
 </div><div class="memdoc">
 
 <p>Append a JSON boolean literal. </p>
+<p>Add a boolean value.</p>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
     <tr><td class="paramname">b</td><td>Builder to update. NULL is ignored. </td></tr>
@@ -240,6 +246,7 @@ Functions</h2></td></tr>
 </div><div class="memdoc">
 
 <p>Append a JSON integer value. </p>
+<p>Add an integer value.</p>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
     <tr><td class="paramname">b</td><td>Builder to update. NULL is ignored. </td></tr>
@@ -273,6 +280,7 @@ Functions</h2></td></tr>
 </div><div class="memdoc">
 
 <p>Append a JSON null literal. </p>
+<p>Add a null value.</p>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
     <tr><td class="paramname">b</td><td>Builder to update. NULL is ignored. </td></tr>
@@ -310,6 +318,7 @@ Functions</h2></td></tr>
 </div><div class="memdoc">
 
 <p>Append a JSON string value. </p>
+<p>Add a string value.</p>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
     <tr><td class="paramname">b</td><td>Builder to update. NULL is ignored. </td></tr>
@@ -343,6 +352,7 @@ Functions</h2></td></tr>
 </div><div class="memdoc">
 
 <p>Begin a JSON array, optionally as the value for an object key. </p>
+<p>Begin a JSON array.</p>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
     <tr><td class="paramname">b</td><td>Builder to update. NULL is ignored. </td></tr>
@@ -371,6 +381,7 @@ Functions</h2></td></tr>
 </div><div class="memdoc">
 
 <p>Begin a JSON object in the current builder context. </p>
+<p>Begin a JSON object.</p>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
     <tr><td class="paramname">b</td><td>Builder to update. NULL is ignored. </td></tr>
@@ -398,6 +409,7 @@ Functions</h2></td></tr>
 </div><div class="memdoc">
 
 <p>Allocate a new JSON builder with an empty output buffer. </p>
+<p>Create a new JSON builder.</p>
 <p>The builder keeps only a minimal amount of state: the backing string buffer and whether the next value must be prefixed with a comma.</p>
 <dl class="section return"><dt>Returns</dt><dd>Newly allocated builder, or NULL when allocation fails. </dd></dl>
 
@@ -421,6 +433,7 @@ Functions</h2></td></tr>
 </div><div class="memdoc">
 
 <p>Release a builder and its owned string buffer. </p>
+<p>Destroy a JSON builder.</p>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
     <tr><td class="paramname">b</td><td>Builder instance to destroy. NULL is ignored. </td></tr>
@@ -448,6 +461,7 @@ Functions</h2></td></tr>
 </div><div class="memdoc">
 
 <p>Close the current JSON array. </p>
+<p>End a JSON array.</p>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
     <tr><td class="paramname">b</td><td>Builder to update. NULL is ignored. </td></tr>
@@ -475,6 +489,7 @@ Functions</h2></td></tr>
 </div><div class="memdoc">
 
 <p>Close the current JSON object. </p>
+<p>End a JSON object.</p>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
     <tr><td class="paramname">b</td><td>Builder to update. NULL is ignored. </td></tr>
