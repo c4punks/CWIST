@@ -102,25 +102,19 @@ This graph shows which files directly or indirectly include this file:</div>
 <div class="dyncontent">
 <div class="center"><img src="../../db/daa/shutdown_8h__dep__incl.png" border="0" usemap="#ainclude_2cwist_2sys_2app_2shutdown_8hdep" alt=""/></div>
 <map name="ainclude_2cwist_2sys_2app_2shutdown_8hdep" id="ainclude_2cwist_2sys_2app_2shutdown_8hdep">
-<area shape="rect" title="Unified Graceful Shutdown support for CWIST." alt="" coords="665,5,826,45"/>
-<area shape="rect" href="../../db/d84/async_8c.html" title="Deferred&#45;response (async handler) implementation." alt="" coords="5,101,155,126"/>
-<area shape="poly" title=" " alt="" coords="651,37,430,60,167,96,129,103,128,98,166,91,429,55,651,32"/>
-<area shape="rect" href="../../d0/d3d/async__server_8c.html" title=" " alt="" coords="179,93,317,133"/>
-<area shape="poly" title=" " alt="" coords="651,43,500,66,330,96,318,98,317,93,329,91,499,61,650,37"/>
-<area shape="rect" href="../../dd/d43/http_8c.html" title="Core HTTP request/response allocation, serialization, socket, and server&#45;loop helpers." alt="" coords="342,101,479,126"/>
-<area shape="poly" title=" " alt="" coords="659,51,456,103,455,98,658,46"/>
-<area shape="rect" href="../../d2/db0/http2_8c.html" title="Implementation of HTTP/2 protocol handler for CWIST." alt="" coords="503,101,649,126"/>
-<area shape="poly" title=" " alt="" coords="697,54,600,103,597,98,695,49"/>
-<area shape="rect" href="../../de/daf/http3_8c.html" title="lsquic/BoringSSL&#45;based HTTP/3 server for CWIST." alt="" coords="673,101,818,126"/>
-<area shape="poly" title=" " alt="" coords="748,59,748,100,743,100,743,59"/>
-<area shape="rect" href="../../d2/db2/https_8c.html" title="OpenSSL&#45;backed HTTPS accept, receive, send, and server&#45;loop helpers." alt="" coords="843,101,987,126"/>
-<area shape="poly" title=" " alt="" coords="796,49,893,98,891,103,794,54"/>
-<area shape="rect" href="../../df/d7f/app_8c.html" title=" " alt="" coords="1011,101,1146,126"/>
-<area shape="poly" title=" " alt="" coords="832,46,1035,98,1034,103,831,51"/>
-<area shape="rect" href="../../d3/db2/shutdown_8c.html" title="Graceful shutdown implementation." alt="" coords="1171,101,1344,126"/>
-<area shape="poly" title=" " alt="" coords="840,39,1159,91,1199,98,1198,103,1158,96,839,44"/>
-<area shape="rect" href="../../d3/d99/reactor_8c.html" title="Readiness multiplexer (io_uring / epoll / kqueue) driving CWIST&#39;s synchronous callback model." alt="" coords="1369,101,1511,126"/>
-<area shape="poly" title=" " alt="" coords="840,31,1075,53,1216,70,1356,91,1394,98,1393,103,1356,96,1215,75,1075,59,839,36"/>
+<area shape="rect" title="Unified Graceful Shutdown support for CWIST." alt="" coords="412,5,573,45"/>
+<area shape="rect" href="../../dd/d43/http_8c.html" title="Core HTTP request/response allocation, serialization, socket, and server&#45;loop helpers." alt="" coords="5,93,143,119"/>
+<area shape="poly" title=" " alt="" coords="399,47,136,96,135,91,398,42"/>
+<area shape="rect" href="../../d2/db0/http2_8c.html" title="Implementation of HTTP/2 protocol handler for CWIST." alt="" coords="167,93,312,119"/>
+<area shape="poly" title=" " alt="" coords="420,52,277,96,276,91,418,47"/>
+<area shape="rect" href="../../de/daf/http3_8c.html" title="lsquic/BoringSSL&#45;based HTTP/3 server for CWIST." alt="" coords="336,93,481,119"/>
+<area shape="poly" title=" " alt="" coords="464,57,423,95,419,91,461,53"/>
+<area shape="rect" href="../../d2/db2/https_8c.html" title="OpenSSL&#45;backed HTTPS accept, receive, send, and server&#45;loop helpers." alt="" coords="506,93,650,119"/>
+<area shape="poly" title=" " alt="" coords="525,53,567,91,563,95,522,57"/>
+<area shape="rect" href="../../df/d7f/app_8c_source.html" title=" " alt="" coords="675,93,809,119"/>
+<area shape="poly" title=" " alt="" coords="566,47,706,91,705,96,565,52"/>
+<area shape="rect" href="../../d3/db2/shutdown_8c.html" title="Graceful shutdown implementation." alt="" coords="834,93,1007,119"/>
+<area shape="poly" title=" " alt="" coords="588,41,859,91,858,96,587,46"/>
 </map>
 </div>
 </div>
@@ -128,32 +122,32 @@ This graph shows which files directly or indirectly include this file:</div>
 <table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="func-members" name="func-members"></a>
 Functions</h2></td></tr>
-<tr class="memitem:a842323fa5d238344cac27795d7b1f0a0" id="r_a842323fa5d238344cac27795d7b1f0a0"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../da/d39/shutdown_8h.html#a842323fa5d238344cac27795d7b1f0a0">cwist_shutdown_install_handlers</a> (void)</td></tr>
-<tr class="memdesc:a842323fa5d238344cac27795d7b1f0a0"><td class="mdescLeft">&#160;</td><td class="mdescRight">Install SIGTERM and SIGINT handlers for graceful shutdown.  <br /></td></tr>
+<tr class="memitem:a842323fa5d238344cac27795d7b1f0a0" id="r_a842323fa5d238344cac27795d7b1f0a0"><td class="memItemLeft" align="right" valign="top"><a id="a842323fa5d238344cac27795d7b1f0a0" name="a842323fa5d238344cac27795d7b1f0a0"></a>
+void&#160;</td><td class="memItemRight" valign="bottom"><b>cwist_shutdown_install_handlers</b> (void)</td></tr>
+<tr class="memdesc:a842323fa5d238344cac27795d7b1f0a0"><td class="mdescLeft">&#160;</td><td class="mdescRight">Install SIGTERM and SIGINT handlers for graceful shutdown. <br /></td></tr>
 <tr class="separator:a842323fa5d238344cac27795d7b1f0a0"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:ab4c262bb875f1568c4944e36bfa68a5d" id="r_ab4c262bb875f1568c4944e36bfa68a5d"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../da/d39/shutdown_8h.html#ab4c262bb875f1568c4944e36bfa68a5d">cwist_shutdown_restore_handlers</a> (void)</td></tr>
-<tr class="memdesc:ab4c262bb875f1568c4944e36bfa68a5d"><td class="mdescLeft">&#160;</td><td class="mdescRight">Put back the SIGTERM and SIGINT handlers that were in place before <a class="el" href="../../da/d39/shutdown_8h.html#a842323fa5d238344cac27795d7b1f0a0" title="Install SIGTERM and SIGINT handlers for graceful shutdown.">cwist_shutdown_install_handlers()</a>. Does nothing if they are not installed. <a class="el" href="../../d0/d77/sys_2app_2app_8h.html#ac41b80406f8bc60ccf68ba36b2810db2" title="cwist_app_listen() with the worker count and server mode given explicitly.">cwist_app_listen_ex()</a> calls it before returning, so the signals request a graceful stop only while a server runs.  <br /></td></tr>
-<tr class="separator:ab4c262bb875f1568c4944e36bfa68a5d"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a187fec9efab22d0e0dbdaf44442b5b80" id="r_a187fec9efab22d0e0dbdaf44442b5b80"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../da/d39/shutdown_8h.html#a187fec9efab22d0e0dbdaf44442b5b80">cwist_shutdown_request</a> (void)</td></tr>
-<tr class="memdesc:a187fec9efab22d0e0dbdaf44442b5b80"><td class="mdescLeft">&#160;</td><td class="mdescRight">Request a graceful shutdown, as SIGTERM/SIGINT do: clear the running flag and shut down the listening sockets, so <a class="el" href="../../d0/d77/sys_2app_2app_8h.html#a05f9a10f4d2ab307c211dd56d54fe7c3" title="Serve app on port until SIGTERM, SIGINT or cwist_shutdown_request(); blocks the calling thread.">cwist_app_listen()</a> drains and returns. Safe from any thread, a handler or a signal handler; repeated calls are harmless.  <br /></td></tr>
-<tr class="separator:a187fec9efab22d0e0dbdaf44442b5b80"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:af05218e1b1db6bfc291221dc7ba551b9" id="r_af05218e1b1db6bfc291221dc7ba551b9"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../da/d39/shutdown_8h.html#af05218e1b1db6bfc291221dc7ba551b9">cwist_shutdown_reset</a> (void)</td></tr>
-<tr class="memdesc:af05218e1b1db6bfc291221dc7ba551b9"><td class="mdescLeft">&#160;</td><td class="mdescRight">Reset shutdown state (useful in test suites).  <br /></td></tr>
+<tr class="memitem:af05218e1b1db6bfc291221dc7ba551b9" id="r_af05218e1b1db6bfc291221dc7ba551b9"><td class="memItemLeft" align="right" valign="top"><a id="af05218e1b1db6bfc291221dc7ba551b9" name="af05218e1b1db6bfc291221dc7ba551b9"></a>
+void&#160;</td><td class="memItemRight" valign="bottom"><b>cwist_shutdown_reset</b> (void)</td></tr>
+<tr class="memdesc:af05218e1b1db6bfc291221dc7ba551b9"><td class="mdescLeft">&#160;</td><td class="mdescRight">Reset shutdown state (useful in test suites). <br /></td></tr>
 <tr class="separator:af05218e1b1db6bfc291221dc7ba551b9"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="var-members" name="var-members"></a>
 Variables</h2></td></tr>
-<tr class="memitem:a46320ca3cf98c46468dd97ac4fe9dc18" id="r_a46320ca3cf98c46468dd97ac4fe9dc18"><td class="memItemLeft" align="right" valign="top">atomic_int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../da/d39/shutdown_8h.html#a46320ca3cf98c46468dd97ac4fe9dc18">g_cwist_running</a></td></tr>
-<tr class="memdesc:a46320ca3cf98c46468dd97ac4fe9dc18"><td class="mdescLeft">&#160;</td><td class="mdescRight">Global running flag. Checked by all server event loops.  <br /></td></tr>
+<tr class="memitem:a46320ca3cf98c46468dd97ac4fe9dc18" id="r_a46320ca3cf98c46468dd97ac4fe9dc18"><td class="memItemLeft" align="right" valign="top"><a id="a46320ca3cf98c46468dd97ac4fe9dc18" name="a46320ca3cf98c46468dd97ac4fe9dc18"></a>
+atomic_int&#160;</td><td class="memItemRight" valign="bottom"><b>g_cwist_running</b></td></tr>
+<tr class="memdesc:a46320ca3cf98c46468dd97ac4fe9dc18"><td class="mdescLeft">&#160;</td><td class="mdescRight">Global running flag. Checked by all server event loops. <br /></td></tr>
 <tr class="separator:a46320ca3cf98c46468dd97ac4fe9dc18"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a3e09cfe577c8855dafc10053c7c0d15e" id="r_a3e09cfe577c8855dafc10053c7c0d15e"><td class="memItemLeft" align="right" valign="top">int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../da/d39/shutdown_8h.html#a3e09cfe577c8855dafc10053c7c0d15e">g_cwist_listen_fd</a></td></tr>
-<tr class="memdesc:a3e09cfe577c8855dafc10053c7c0d15e"><td class="mdescLeft">&#160;</td><td class="mdescRight">Registered TCP listening socket (for signal-handler closure).  <br /></td></tr>
+<tr class="memitem:a3e09cfe577c8855dafc10053c7c0d15e" id="r_a3e09cfe577c8855dafc10053c7c0d15e"><td class="memItemLeft" align="right" valign="top"><a id="a3e09cfe577c8855dafc10053c7c0d15e" name="a3e09cfe577c8855dafc10053c7c0d15e"></a>
+int&#160;</td><td class="memItemRight" valign="bottom"><b>g_cwist_listen_fd</b></td></tr>
+<tr class="memdesc:a3e09cfe577c8855dafc10053c7c0d15e"><td class="mdescLeft">&#160;</td><td class="mdescRight">Registered TCP listening socket (for signal-handler closure). <br /></td></tr>
 <tr class="separator:a3e09cfe577c8855dafc10053c7c0d15e"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:ad174686dc7f76f914e2f96823b7d04a0" id="r_ad174686dc7f76f914e2f96823b7d04a0"><td class="memItemLeft" align="right" valign="top">int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../da/d39/shutdown_8h.html#ad174686dc7f76f914e2f96823b7d04a0">g_cwist_udp_fd</a></td></tr>
-<tr class="memdesc:ad174686dc7f76f914e2f96823b7d04a0"><td class="mdescLeft">&#160;</td><td class="mdescRight">Registered UDP socket for HTTP/3 (for signal-handler closure).  <br /></td></tr>
+<tr class="memitem:ad174686dc7f76f914e2f96823b7d04a0" id="r_ad174686dc7f76f914e2f96823b7d04a0"><td class="memItemLeft" align="right" valign="top"><a id="ad174686dc7f76f914e2f96823b7d04a0" name="ad174686dc7f76f914e2f96823b7d04a0"></a>
+int&#160;</td><td class="memItemRight" valign="bottom"><b>g_cwist_udp_fd</b></td></tr>
+<tr class="memdesc:ad174686dc7f76f914e2f96823b7d04a0"><td class="mdescLeft">&#160;</td><td class="mdescRight">Registered UDP socket for HTTP/3 (for signal-handler closure). <br /></td></tr>
 <tr class="separator:ad174686dc7f76f914e2f96823b7d04a0"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a097fcc1a5d003d8f7b287932fa0adb98" id="r_a097fcc1a5d003d8f7b287932fa0adb98"><td class="memItemLeft" align="right" valign="top">int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../da/d39/shutdown_8h.html#a097fcc1a5d003d8f7b287932fa0adb98">g_cwist_drain_timeout_sec</a></td></tr>
-<tr class="memdesc:a097fcc1a5d003d8f7b287932fa0adb98"><td class="mdescLeft">&#160;</td><td class="mdescRight">Drain timeout in seconds before process exits.  <br /></td></tr>
+<tr class="memitem:a097fcc1a5d003d8f7b287932fa0adb98" id="r_a097fcc1a5d003d8f7b287932fa0adb98"><td class="memItemLeft" align="right" valign="top"><a id="a097fcc1a5d003d8f7b287932fa0adb98" name="a097fcc1a5d003d8f7b287932fa0adb98"></a>
+int&#160;</td><td class="memItemRight" valign="bottom"><b>g_cwist_drain_timeout_sec</b></td></tr>
+<tr class="memdesc:a097fcc1a5d003d8f7b287932fa0adb98"><td class="mdescLeft">&#160;</td><td class="mdescRight">Drain timeout in seconds before process exits. <br /></td></tr>
 <tr class="separator:a097fcc1a5d003d8f7b287932fa0adb98"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
@@ -161,224 +155,7 @@ Variables</h2></td></tr>
 <p>Provides a global atomic 'running' flag and signal handling for SIGTERM/SIGINT. All protocol server loops (HTTP/1.1, HTTP/2, HTTP/3) check this flag. </p>
 
 <p class="definition">Definition in file <a class="el" href="../../da/d39/shutdown_8h_source.html">shutdown.h</a>.</p>
-</div><h2 class="groupheader">Function Documentation</h2>
-<a id="a842323fa5d238344cac27795d7b1f0a0" name="a842323fa5d238344cac27795d7b1f0a0"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a842323fa5d238344cac27795d7b1f0a0">&#9670;&#160;</a></span>cwist_shutdown_install_handlers()</h2>
-
-<div class="memitem">
-<div class="memproto">
-      <table class="memname">
-        <tr>
-          <td class="memname">void cwist_shutdown_install_handlers </td>
-          <td>(</td>
-          <td class="paramtype">void&#160;</td>
-          <td class="paramname"></td><td>)</td>
-          <td></td>
-        </tr>
-      </table>
-</div><div class="memdoc">
-
-<p>Install SIGTERM and SIGINT handlers for graceful shutdown. </p>
-<p>The handlers in place before the first install are saved for <a class="el" href="../../da/d39/shutdown_8h.html#ab4c262bb875f1568c4944e36bfa68a5d" title="Put back the SIGTERM and SIGINT handlers that were in place before cwist_shutdown_install_handlers()....">cwist_shutdown_restore_handlers()</a>.</p>
-<p>Install SIGTERM and SIGINT handlers for graceful shutdown.</p>
-<p>Both signals are routed to cwist_shutdown_handler() with SA_RESTART. The pre-existing handlers are saved on the first install after a restore so <a class="el" href="../../da/d39/shutdown_8h.html#ab4c262bb875f1568c4944e36bfa68a5d" title="Put back the SIGTERM and SIGINT handlers that were in place before cwist_shutdown_install_handlers()....">cwist_shutdown_restore_handlers()</a> can put them back; a second install without a restore does not overwrite the saved handlers. The previous handlers are only recorded when both sigaction() calls succeed. No-op on WASI hosts, which own the instance lifecycle. </p>
-
-<p class="definition">Definition at line <a class="el" href="../../d3/db2/shutdown_8c_source.html#l00107">107</a> of file <a class="el" href="../../d3/db2/shutdown_8c_source.html">shutdown.c</a>.</p>
-
-<p class="reference">Referenced by <a class="el" href="../../df/d7f/app_8c_source.html#l04459">cwist_app_listen_ex()</a>, and <a class="el" href="../../df/d7f/app_8c_source.html#l04210">cwist_app_multiport()</a>.</p>
-
-</div>
-</div>
-<a id="a187fec9efab22d0e0dbdaf44442b5b80" name="a187fec9efab22d0e0dbdaf44442b5b80"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a187fec9efab22d0e0dbdaf44442b5b80">&#9670;&#160;</a></span>cwist_shutdown_request()</h2>
-
-<div class="memitem">
-<div class="memproto">
-      <table class="memname">
-        <tr>
-          <td class="memname">void cwist_shutdown_request </td>
-          <td>(</td>
-          <td class="paramtype">void&#160;</td>
-          <td class="paramname"></td><td>)</td>
-          <td></td>
-        </tr>
-      </table>
-</div><div class="memdoc">
-
-<p>Request a graceful shutdown, as SIGTERM/SIGINT do: clear the running flag and shut down the listening sockets, so <a class="el" href="../../d0/d77/sys_2app_2app_8h.html#a05f9a10f4d2ab307c211dd56d54fe7c3" title="Serve app on port until SIGTERM, SIGINT or cwist_shutdown_request(); blocks the calling thread.">cwist_app_listen()</a> drains and returns. Safe from any thread, a handler or a signal handler; repeated calls are harmless. </p>
-<p>Request a graceful shutdown, as SIGTERM/SIGINT do: clear the running flag and shut down the listening sockets, so <a class="el" href="../../d0/d77/sys_2app_2app_8h.html#a05f9a10f4d2ab307c211dd56d54fe7c3" title="Serve app on port until SIGTERM, SIGINT or cwist_shutdown_request(); blocks the calling thread.">cwist_app_listen()</a> drains and returns. Safe from any thread, a handler or a signal handler; repeated calls are harmless.</p>
-<p>Clears the g_cwist_running flag and closes the listening and UDP descriptors (if open). Closing the listen descriptor also calls shutdown(SHUT_RDWR) so accept() loops blocked in other threads wake up with EINVAL. Safe to call more than once and from any thread: each descriptor is claimed atomically, so a second call cannot close a descriptor number that has been reused for an unrelated file. </p>
-
-<p class="definition">Definition at line <a class="el" href="../../d3/db2/shutdown_8c_source.html#l00056">56</a> of file <a class="el" href="../../d3/db2/shutdown_8c_source.html">shutdown.c</a>.</p>
-
-<p class="reference">References <a class="el" href="../../d3/db2/shutdown_8c_source.html#l00017">g_cwist_listen_fd</a>, <a class="el" href="../../d3/db2/shutdown_8c_source.html#l00016">g_cwist_running</a>, and <a class="el" href="../../d3/db2/shutdown_8c_source.html#l00018">g_cwist_udp_fd</a>.</p>
-
-</div>
-</div>
-<a id="af05218e1b1db6bfc291221dc7ba551b9" name="af05218e1b1db6bfc291221dc7ba551b9"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#af05218e1b1db6bfc291221dc7ba551b9">&#9670;&#160;</a></span>cwist_shutdown_reset()</h2>
-
-<div class="memitem">
-<div class="memproto">
-      <table class="memname">
-        <tr>
-          <td class="memname">void cwist_shutdown_reset </td>
-          <td>(</td>
-          <td class="paramtype">void&#160;</td>
-          <td class="paramname"></td><td>)</td>
-          <td></td>
-        </tr>
-      </table>
-</div><div class="memdoc">
-
-<p>Reset shutdown state (useful in test suites). </p>
-<p>Reset shutdown state (useful in test suites).</p>
-<p>Sets g_cwist_running back to 1 and marks the listening and UDP descriptors as closed (-1). Does not close any open descriptors or touch signal handlers. </p>
-
-<p class="definition">Definition at line <a class="el" href="../../d3/db2/shutdown_8c_source.html#l00169">169</a> of file <a class="el" href="../../d3/db2/shutdown_8c_source.html">shutdown.c</a>.</p>
-
-<p class="reference">References <a class="el" href="../../d3/db2/shutdown_8c_source.html#l00017">g_cwist_listen_fd</a>, <a class="el" href="../../d3/db2/shutdown_8c_source.html#l00016">g_cwist_running</a>, and <a class="el" href="../../d3/db2/shutdown_8c_source.html#l00018">g_cwist_udp_fd</a>.</p>
-
-</div>
-</div>
-<a id="ab4c262bb875f1568c4944e36bfa68a5d" name="ab4c262bb875f1568c4944e36bfa68a5d"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#ab4c262bb875f1568c4944e36bfa68a5d">&#9670;&#160;</a></span>cwist_shutdown_restore_handlers()</h2>
-
-<div class="memitem">
-<div class="memproto">
-      <table class="memname">
-        <tr>
-          <td class="memname">void cwist_shutdown_restore_handlers </td>
-          <td>(</td>
-          <td class="paramtype">void&#160;</td>
-          <td class="paramname"></td><td>)</td>
-          <td></td>
-        </tr>
-      </table>
-</div><div class="memdoc">
-
-<p>Put back the SIGTERM and SIGINT handlers that were in place before <a class="el" href="../../da/d39/shutdown_8h.html#a842323fa5d238344cac27795d7b1f0a0" title="Install SIGTERM and SIGINT handlers for graceful shutdown.">cwist_shutdown_install_handlers()</a>. Does nothing if they are not installed. <a class="el" href="../../d0/d77/sys_2app_2app_8h.html#ac41b80406f8bc60ccf68ba36b2810db2" title="cwist_app_listen() with the worker count and server mode given explicitly.">cwist_app_listen_ex()</a> calls it before returning, so the signals request a graceful stop only while a server runs. </p>
-<p>Put back the SIGTERM and SIGINT handlers that were in place before <a class="el" href="../../da/d39/shutdown_8h.html#a842323fa5d238344cac27795d7b1f0a0" title="Install SIGTERM and SIGINT handlers for graceful shutdown.">cwist_shutdown_install_handlers()</a>. Does nothing if they are not installed. <a class="el" href="../../d0/d77/sys_2app_2app_8h.html#ac41b80406f8bc60ccf68ba36b2810db2" title="cwist_app_listen() with the worker count and server mode given explicitly.">cwist_app_listen_ex()</a> calls it before returning, so the signals request a graceful stop only while a server runs.</p>
-<p>Does nothing if no previous handlers were saved. After restoring, the saved state is cleared so a later install records the handlers then in effect. No-op on WASI hosts. </p>
-
-<p class="definition">Definition at line <a class="el" href="../../d3/db2/shutdown_8c_source.html#l00129">129</a> of file <a class="el" href="../../d3/db2/shutdown_8c_source.html">shutdown.c</a>.</p>
-
-<p class="reference">Referenced by <a class="el" href="../../df/d7f/app_8c_source.html#l04459">cwist_app_listen_ex()</a>.</p>
-
-</div>
-</div>
-<h2 class="groupheader">Variable Documentation</h2>
-<a id="a097fcc1a5d003d8f7b287932fa0adb98" name="a097fcc1a5d003d8f7b287932fa0adb98"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a097fcc1a5d003d8f7b287932fa0adb98">&#9670;&#160;</a></span>g_cwist_drain_timeout_sec</h2>
-
-<div class="memitem">
-<div class="memproto">
-<table class="mlabels">
-  <tr>
-  <td class="mlabels-left">
-      <table class="memname">
-        <tr>
-          <td class="memname">int g_cwist_drain_timeout_sec</td>
-        </tr>
-      </table>
-  </td>
-  <td class="mlabels-right">
-<span class="mlabels"><span class="mlabel">extern</span></span>  </td>
-  </tr>
-</table>
-</div><div class="memdoc">
-
-<p>Drain timeout in seconds before process exits. </p>
-
-<p class="definition">Definition at line <a class="el" href="../../d3/db2/shutdown_8c_source.html#l00023">23</a> of file <a class="el" href="../../d3/db2/shutdown_8c_source.html">shutdown.c</a>.</p>
-
-</div>
-</div>
-<a id="a3e09cfe577c8855dafc10053c7c0d15e" name="a3e09cfe577c8855dafc10053c7c0d15e"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a3e09cfe577c8855dafc10053c7c0d15e">&#9670;&#160;</a></span>g_cwist_listen_fd</h2>
-
-<div class="memitem">
-<div class="memproto">
-<table class="mlabels">
-  <tr>
-  <td class="mlabels-left">
-      <table class="memname">
-        <tr>
-          <td class="memname">int g_cwist_listen_fd</td>
-        </tr>
-      </table>
-  </td>
-  <td class="mlabels-right">
-<span class="mlabels"><span class="mlabel">extern</span></span>  </td>
-  </tr>
-</table>
-</div><div class="memdoc">
-
-<p>Registered TCP listening socket (for signal-handler closure). </p>
-
-<p class="definition">Definition at line <a class="el" href="../../d3/db2/shutdown_8c_source.html#l00017">17</a> of file <a class="el" href="../../d3/db2/shutdown_8c_source.html">shutdown.c</a>.</p>
-
-<p class="reference">Referenced by <a class="el" href="../../df/d7f/app_8c_source.html#l04210">cwist_app_multiport()</a>, <a class="el" href="../../d0/d3d/async__server_8c_source.html#l00129">cwist_async_server_loop()</a>, <a class="el" href="../../d3/db2/shutdown_8c_source.html#l00056">cwist_shutdown_request()</a>, and <a class="el" href="../../d3/db2/shutdown_8c_source.html#l00169">cwist_shutdown_reset()</a>.</p>
-
-</div>
-</div>
-<a id="a46320ca3cf98c46468dd97ac4fe9dc18" name="a46320ca3cf98c46468dd97ac4fe9dc18"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a46320ca3cf98c46468dd97ac4fe9dc18">&#9670;&#160;</a></span>g_cwist_running</h2>
-
-<div class="memitem">
-<div class="memproto">
-<table class="mlabels">
-  <tr>
-  <td class="mlabels-left">
-      <table class="memname">
-        <tr>
-          <td class="memname">atomic_int g_cwist_running</td>
-        </tr>
-      </table>
-  </td>
-  <td class="mlabels-right">
-<span class="mlabels"><span class="mlabel">extern</span></span>  </td>
-  </tr>
-</table>
-</div><div class="memdoc">
-
-<p>Global running flag. Checked by all server event loops. </p>
-
-<p class="definition">Definition at line <a class="el" href="../../d3/db2/shutdown_8c_source.html#l00016">16</a> of file <a class="el" href="../../d3/db2/shutdown_8c_source.html">shutdown.c</a>.</p>
-
-<p class="reference">Referenced by <a class="el" href="../../df/d7f/app_8c_source.html#l04210">cwist_app_multiport()</a>, <a class="el" href="../../d2/db0/http2_8c_source.html#l03587">cwist_http2_serve_connection_ex()</a>, <a class="el" href="../../de/daf/http3_8c_source.html#l02610">cwist_http3_server_loop()</a>, <a class="el" href="../../dd/d43/http_8c_source.html#l03100">cwist_http_async_send_response()</a>, <a class="el" href="../../dd/d43/http_8c_source.html#l03367">cwist_http_coalesce_flush()</a>, <a class="el" href="../../dd/d43/http_8c_source.html#l05204">cwist_http_server_loop()</a>, <a class="el" href="../../d2/db2/https_8c_source.html#l02017">cwist_https_server_loop()</a>, <a class="el" href="../../d3/db2/shutdown_8c_source.html#l00056">cwist_shutdown_request()</a>, and <a class="el" href="../../d3/db2/shutdown_8c_source.html#l00169">cwist_shutdown_reset()</a>.</p>
-
-</div>
-</div>
-<a id="ad174686dc7f76f914e2f96823b7d04a0" name="ad174686dc7f76f914e2f96823b7d04a0"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#ad174686dc7f76f914e2f96823b7d04a0">&#9670;&#160;</a></span>g_cwist_udp_fd</h2>
-
-<div class="memitem">
-<div class="memproto">
-<table class="mlabels">
-  <tr>
-  <td class="mlabels-left">
-      <table class="memname">
-        <tr>
-          <td class="memname">int g_cwist_udp_fd</td>
-        </tr>
-      </table>
-  </td>
-  <td class="mlabels-right">
-<span class="mlabels"><span class="mlabel">extern</span></span>  </td>
-  </tr>
-</table>
-</div><div class="memdoc">
-
-<p>Registered UDP socket for HTTP/3 (for signal-handler closure). </p>
-
-<p class="definition">Definition at line <a class="el" href="../../d3/db2/shutdown_8c_source.html#l00018">18</a> of file <a class="el" href="../../d3/db2/shutdown_8c_source.html">shutdown.c</a>.</p>
-
-<p class="reference">Referenced by <a class="el" href="../../df/d7f/app_8c_source.html#l04210">cwist_app_multiport()</a>, <a class="el" href="../../d3/db2/shutdown_8c_source.html#l00056">cwist_shutdown_request()</a>, and <a class="el" href="../../d3/db2/shutdown_8c_source.html#l00169">cwist_shutdown_reset()</a>.</p>
-
-</div>
-</div>
-</div><!-- contents -->
+</div></div><!-- contents -->
 <!-- start footer part -->
 <hr class="footer"/><address class="footer"><small>
 Generated by&#160;<a href="https://www.doxygen.org/index.html"><img class="footer" src="../../doxygen.svg" width="104" height="31" alt="doxygen"/></a> 1.9.8
