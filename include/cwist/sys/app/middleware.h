@@ -17,6 +17,12 @@ cwist_middleware_func cwist_mw_request_id(const char *header_name);
 /** @brief Access log middleware output formats. */
 typedef enum { CWIST_LOG_COMMON, CWIST_LOG_COMBINED, CWIST_LOG_JSON } cwist_log_format_t;
 
+/** @brief Reset the internal rate-limit IP bucket table (test helper). */
+void cwist_mw_rate_limit_reset(void);
+
+/** @brief Prometheus metrics collection middleware. */
+cwist_middleware_func cwist_mw_metrics(void);
+
 /**
  * @brief Access log middleware factory.
  */

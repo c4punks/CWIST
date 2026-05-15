@@ -29,7 +29,127 @@ all: $(LIB_NAME)
 $(LIB_NAME): $(OBJS)
 	ar rcs $@ $^
 
-test: $(LIB_NAME) tests/test_sstring.c
+# SQLite Download & Extraction Rule
+$(SQLITE_DIR)/sqlite3.c:
+	@echo "Downloading SQLite..."
+	@mkdir -p $(SQLITE_DIR)
+	@wget -q $(SQLITE_URL) -O $(SQLITE_DIR)/$(SQLITE_ZIP)
+	@echo "Extracting SQLite..."
+	@unzip -q -j $(SQLITE_DIR)/$(SQLITE_ZIP) -d $(SQLITE_DIR)
+	@rm $(SQLITE_DIR)/$(SQLITE_ZIP)
+	@echo "SQLite Ready."
+
+# Ensure lsquic submodule is checked out before compiling objects that need its headers
+$(OBJS): | lib/lsquic/include/lsquic.h
+
+lib/lsquic/include/lsquic.h:
+	@if [ ! -f "$@" ]; then \
+		echo "Initializing lsquic submodule..."; \
+		git submodule update --init --recursive $(LSQUIC_DIR); \
+	fi
+
+$(LIB_NAME): $(URIPARSER_LIB) $(CJSON_LIB) $(LIBTTAK_LIB) $(CNATS_LIB) $(BORINGSSL_SSL_LIB) $(BORINGSSL_CRYPTO_LIB) $(LSQUIC_LIB) $(OBJS)
+	@echo "Creating static library..."
+	@rm -rf .lib_merge_tmp
+	@mkdir -p .lib_merge_tmp
+	@cd .lib_merge_tmp && \
+		ar x $(abspath $(URIPARSER_LIB)) && \
+		ar x $(abspath $(CJSON_LIB)) && \
+		ar x $(abspath $(LIBTTAK_LIB)) && \
+		ar x $(abspath $(CNATS_LIB)) && \
+		ar x $(abspath $(LSQUIC_LIB)) && \
+		ar x $(abspath $(BORINGSSL_SSL_LIB)) && \
+		ar x $(abspath $(BORINGSSL_CRYPTO_LIB))
+	ar rcs $@ $(OBJS) .lib_merge_tmp/*.o
+	@rm -rf .lib_merge_tmp
+
+$(LIBTTAK_LIB):
+	@echo "Building libttak..."
+	$(MAKE) -C $(LIBTTAK_DIR)
+
+$(CJSON_LIB):
+	@echo "Building cJSON..."
+	$(CC) -O3 -fPIC -I$(CJSON_DIR) -c $(CJSON_DIR)/cJSON.c -o $(CJSON_DIR)/cJSON.o
+	ar rcs $@ $(CJSON_DIR)/cJSON.o
+	@echo "cJSON Ready."
+
+$(URIPARSER_LIB):
+	@echo "Configuring uriparser..."
+	cmake -S $(URIPARSER_DIR) -B $(URIPARSER_BUILD_DIR) -DCMAKE_C_COMPILER=$(CC) $(URIPARSER_CMAKE_FLAGS)
+	@echo "Building uriparser..."
+	cmake --build $(URIPARSER_BUILD_DIR) --target uriparser
+
+BORINGSSL_STAMP = $(BORINGSSL_BUILD_DIR)/.boringssl_built
+
+$(BORINGSSL_STAMP):
+	@echo "Building BoringSSL..."
+	@mkdir -p $(BORINGSSL_BUILD_DIR)
+	cmake -S $(BORINGSSL_DIR) -B $(BORINGSSL_BUILD_DIR) \
+		-DCMAKE_C_COMPILER=$(CC) \
+		-DCMAKE_CXX_COMPILER=$(CXX) \
+		-DCMAKE_BUILD_TYPE=Release
+	cmake --build $(BORINGSSL_BUILD_DIR) --target ssl crypto
+	@touch $@
+
+$(BORINGSSL_SSL_LIB) $(BORINGSSL_CRYPTO_LIB): $(BORINGSSL_STAMP)
+
+$(LSQUIC_LIB): $(BORINGSSL_SSL_LIB) $(BORINGSSL_CRYPTO_LIB)
+	@echo "Building lsquic..."
+	@mkdir -p $(LSQUIC_BUILD_DIR)
+	cmake -S $(LSQUIC_DIR) -B $(LSQUIC_BUILD_DIR) \
+		-DCMAKE_C_COMPILER=$(CC) \
+		-DCMAKE_BUILD_TYPE=Release \
+		-DCMAKE_C_FLAGS="-Wno-unused-function" \
+		-DBORINGSSL_DIR=$(abspath $(BORINGSSL_DIR)) \
+		-DBORINGSSL_LIB_ssl=$(abspath $(BORINGSSL_SSL_LIB)) \
+		-DBORINGSSL_LIB_crypto=$(abspath $(BORINGSSL_CRYPTO_LIB)) \
+		-DBORINGSSL_INCLUDE=$(abspath $(BORINGSSL_DIR)/include) \
+		-DBUILD_SHARED_LIBS=OFF
+	cmake --build $(LSQUIC_BUILD_DIR) --target lsquic
+
+$(CNATS_LIB):
+	@echo "Building cnats..."
+	@mkdir -p $(CNATS_DIR)/build
+	cmake -S $(CNATS_DIR) -B $(CNATS_DIR)/build \
+		-DCMAKE_C_COMPILER=$(CC) \
+		-DCMAKE_BUILD_TYPE=Release \
+		-DBUILD_SHARED_LIBS=OFF \
+		-DNATS_BUILD_WITH_TLS=OFF \
+		-DNATS_BUILD_STREAMING=OFF
+	cmake --build $(CNATS_DIR)/build --target nats_static
+
+# --- Test Targets ---
+
+TEST_TARGETS = test_sstring \
+               test_http \
+               test_siphash \
+               test_mux \
+               test_mux_param \
+               stress_test \
+               test_cors \
+               test_websocket \
+               test_jwt \
+               test_migrate \
+               test_json_heal \
+               test_https \
+               test_http2 \
+               test_http3 \
+               test_shutdown \
+               test_compress \
+               test_log \
+               nuke_missing_user_test \
+               test_bind \
+               test_metrics \
+               test_io_uring \
+               test_access_log \
+               test_rate_limit \
+               test_cache
+
+.PHONY: all test $(TEST_TARGETS) install uninstall clean rebuild
+
+test: $(TEST_TARGETS)
+
+test_sstring: $(LIB_NAME) tests/test_sstring.c
 	$(CC) $(CFLAGS) -o test_sstring tests/test_sstring.c $(LIB_NAME) $(LIBS)
 	./test_sstring
 
@@ -59,6 +179,18 @@ test_cors: $(LIB_NAME) tests/test_cors.c
 
 %.o: %.c
 	$(CC) $(CFLAGS) -c $< -o $@
+
+test_access_log: $(LIB_NAME) tests/test_access_log.c
+	$(CC) $(CFLAGS) -o test_access_log tests/test_access_log.c $(LIB_NAME) $(LIBS)
+	./test_access_log
+
+test_rate_limit: $(LIB_NAME) tests/test_rate_limit.c
+	$(CC) $(CFLAGS) -o test_rate_limit tests/test_rate_limit.c $(LIB_NAME) $(LIBS)
+	./test_rate_limit
+
+test_cache: $(LIB_NAME) tests/test_cache.c
+	$(CC) $(CFLAGS) -o test_cache tests/test_cache.c $(LIB_NAME) $(LIBS)
+	./test_cache
 
 install: $(LIB_NAME)
 	install -d $(LIBDIR)

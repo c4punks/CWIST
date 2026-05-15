@@ -1,9 +1,18 @@
 #define _POSIX_C_SOURCE 200809L
-#include <cwist/app.h>
-#include <cwist/http.h>
-#include <cwist/https.h>
-#include <cwist/sstring.h>
-#include <cwist/json_builder.h> // Helper included for apps, though not strictly used here yet
+#define _DEFAULT_SOURCE
+#include <cwist/sys/app/app.h>
+#include <cwist/sys/app/config.h>
+#include <cwist/sys/app/logger.h>
+#include <cwist/sys/app/shutdown.h>
+#include <cwist/sys/health/healthz.h>
+#include <cwist/net/http/http.h>
+#include <cwist/net/http/http2.h>
+#include <cwist/net/http/http3.h>
+#include <cwist/net/http/https.h>
+#include <cwist/core/sstring/sstring.h>
+#include <cwist/core/db/nuke_db.h>
+#include <cwist/core/mem/alloc.h>
+#include <cwist/core/utils/json_builder.h> // Helper included for apps, though not strictly used here yet
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
@@ -327,21 +336,89 @@ static void cwist_static_handler(cwist_http_request *req, cwist_http_response *r
         return;
     }
 
-    size_t file_size = 0;
-    cwist_error_t ferr = cwist_http_response_send_file(res, fs_path, NULL, &file_size);
-    if (ferr.error.err_i16 == 0) {
-        if (req->method == CWIST_HTTP_HEAD) {
-            char len_buf[32];
-            snprintf(len_buf, sizeof(len_buf), "%zu", file_size);
-            if (!cwist_http_header_get(res->headers, "Content-Length")) {
-                cwist_http_header_add(&res->headers, "Content-Length", len_buf);
-            }
-            cwist_sstring_assign(res->body, "");
-        }
-        return;
+    cwist_app *app = req->app;
+    if (!app || !app->mem_manager) {
+         res->status_code = CWIST_HTTP_INTERNAL_ERROR;
+         cwist_sstring_assign(res->body, "Server memory not initialized");
+         return;
     }
 
-    if (ferr.error.err_i16 == -ENOENT) {
+    cwist_fix_server_mem *mem = app->mem_manager;
+    pthread_mutex_lock(&mem->lock);
+    cwist_file_t *file = cwist_mem_get_file(mem, fs_path);
+    
+    if (file) {
+        // Simple MIME guess
+        const char *dot = strrchr(fs_path, '.');
+        const char *mime = "application/octet-stream";
+        if (dot) {
+            if (strcasecmp(dot, ".html") == 0) mime = "text/html; charset=utf-8";
+            else if (strcasecmp(dot, ".css") == 0) mime = "text/css; charset=utf-8";
+            else if (strcasecmp(dot, ".js") == 0) mime = "application/javascript";
+            else if (strcasecmp(dot, ".json") == 0) mime = "application/json";
+            else if (strcasecmp(dot, ".png") == 0) mime = "image/png";
+            else if (strcasecmp(dot, ".jpg") == 0 || strcasecmp(dot, ".jpeg") == 0) mime = "image/jpeg";
+            else if (strcasecmp(dot, ".gif") == 0) mime = "image/gif";
+            else if (strcasecmp(dot, ".svg") == 0) mime = "image/svg+xml";
+            else if (strcasecmp(dot, ".txt") == 0) mime = "text/plain; charset=utf-8";
+        }
+
+        // Generate cache headers
+        char etag[64];
+        snprintf(etag, sizeof(etag), "\"%lx-%lx\"", (unsigned long)file->last_mod, (unsigned long)file->size);
+        char last_mod_buf[64];
+        cwist_http_format_date(file->last_mod, last_mod_buf, sizeof(last_mod_buf));
+
+        // Check conditional requests
+        bool not_modified = false;
+        const char *if_none_match = cwist_http_header_get(req->headers, "If-None-Match");
+        if (if_none_match && strcmp(if_none_match, etag) == 0) {
+            not_modified = true;
+        } else {
+            const char *if_modified_since = cwist_http_header_get(req->headers, "If-Modified-Since");
+            if (if_modified_since) {
+                time_t ims = cwist_http_parse_date(if_modified_since);
+                if (ims != (time_t)-1 && file->last_mod <= ims) {
+                    not_modified = true;
+                }
+            }
+        }
+
+        if (not_modified) {
+            res->status_code = CWIST_HTTP_NOT_MODIFIED; // 304
+            cwist_http_header_add(&res->headers, "ETag", etag);
+            cwist_http_header_add(&res->headers, "Last-Modified", last_mod_buf);
+            cwist_http_header_add(&res->headers, "Cache-Control", "public, max-age=3600");
+            cwist_sstring_assign(res->body, "");
+        } else if (req->method == CWIST_HTTP_HEAD) {
+            char len_buf[32];
+            snprintf(len_buf, sizeof(len_buf), "%zu", file->size);
+            cwist_http_header_add(&res->headers, "Content-Length", len_buf);
+            cwist_http_header_add(&res->headers, "Content-Type", mime);
+            cwist_http_header_add(&res->headers, "ETag", etag);
+            cwist_http_header_add(&res->headers, "Last-Modified", last_mod_buf);
+            cwist_http_header_add(&res->headers, "Cache-Control", "public, max-age=3600");
+            cwist_sstring_assign(res->body, "");
+        } else if (file->data && file->node) {
+            // ZERO COPY
+            ttak_mem_node_acquire(file->node);
+            cwist_http_response_set_body_ptr_managed(res, file->data, file->size, cwist_static_release_body, file->node);
+            
+            char len_buf[32];
+            snprintf(len_buf, sizeof(len_buf), "%zu", file->size);
+            cwist_http_header_add(&res->headers, "Content-Length", len_buf);
+            cwist_http_header_add(&res->headers, "Content-Type", mime);
+            cwist_http_header_add(&res->headers, "ETag", etag);
+            cwist_http_header_add(&res->headers, "Last-Modified", last_mod_buf);
+            cwist_http_header_add(&res->headers, "Cache-Control", "public, max-age=3600");
+        } else {
+            res->status_code = CWIST_HTTP_INTERNAL_ERROR;
+            cwist_sstring_assign(res->body, "Static buffer missing");
+        }
+        if (!not_modified) {
+            res->status_code = CWIST_HTTP_OK;
+        }
+    } else {
         res->status_code = CWIST_HTTP_NOT_FOUND;
         cwist_sstring_assign(res->body, "Not Found");
     } else if (ferr.error.err_i16 == -EISDIR) {
@@ -545,6 +622,48 @@ void cwist_app_get(cwist_app *app, const char *path, cwist_handler_func handler)
     add_route(app, path, CWIST_HTTP_GET, handler);
 }
 
+#include <cwist/sys/metrics/metrics.h>
+
+static void cwist_metrics_route_handler(cwist_http_request *req, cwist_http_response *res) {
+    cwist_metrics_serve_http(res);
+}
+
+void cwist_app_enable_metrics(cwist_app *app) {
+    if (!app) return;
+    cwist_app_get(app, "/metrics", cwist_metrics_route_handler);
+}
+
+static void cwist_healthz_route_handler(cwist_http_request *req, cwist_http_response *res) {
+    cwist_app_healthz(res);
+}
+
+static void cwist_liveness_route_handler(cwist_http_request *req, cwist_http_response *res) {
+    res->status_code = CWIST_HTTP_OK;
+    cwist_sstring_assign(res->body, "{\"status\":\"alive\"}");
+    cwist_http_header_add(&res->headers, "Content-Type", "application/json");
+}
+
+static void cwist_readiness_route_handler(cwist_http_request *req, cwist_http_response *res) {
+    cwist_app_healthz(res);
+}
+
+void cwist_app_enable_healthz(cwist_app *app) {
+    if (!app) return;
+    cwist_app_get(app, "/healthz", cwist_healthz_route_handler);
+    cwist_app_get(app, "/live", cwist_liveness_route_handler);
+    cwist_app_get(app, "/ready", cwist_readiness_route_handler);
+}
+
+void cwist_app_get_named(cwist_app *app, const char *path, const char *name, cwist_handler_func handler) {
+    add_route_named(app, path, name, CWIST_HTTP_GET, handler, CWIST_ENDPOINT_DEFAULT);
+}
+
+/**
+ * @brief Register a POST handler with default endpoint options.
+ * @param app Application being configured.
+ * @param path Exact route path.
+ * @param handler HTTP handler invoked for matching requests.
+ */
 void cwist_app_post(cwist_app *app, const char *path, cwist_handler_func handler) {
     add_route(app, path, CWIST_HTTP_POST, handler);
 }

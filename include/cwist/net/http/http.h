@@ -38,7 +38,6 @@ typedef enum cwist_http_status_t {
     CWIST_HTTP_OK = 200,
     CWIST_HTTP_CREATED = 201,
     CWIST_HTTP_NO_CONTENT = 204,
-    CWIST_HTTP_PARTIAL_CONTENT = 206,
     CWIST_HTTP_NOT_MODIFIED = 304,
     CWIST_HTTP_BAD_REQUEST = 400,
     CWIST_HTTP_UNAUTHORIZED = 401,
@@ -139,32 +138,19 @@ typedef struct cwist_http_response {
 /** @name Request Lifecycle */
 /** @{ */
 
-/**
- * @brief Create a new HTTP request object.
- */
-cwist_http_request *cwist_http_request_create(void);
+/** @name Request Data Processing */
+/** @{ */
+cwist_sstring* cwist_get_client_ip_from_fd(int fd);
 
 /**
- * @brief Destroy an HTTP request object.
+ * @brief Format a time_t as an HTTP-date (RFC 7231).
  */
-void cwist_http_request_destroy(cwist_http_request *req);
+void cwist_http_format_date(time_t t, char *buf, size_t len);
 
 /**
- * @brief Parse a raw HTTP request string.
+ * @brief Parse an HTTP-date string into a time_t.
  */
-cwist_http_request *cwist_http_parse_request(const char *raw_request);
-
-/**
- * @brief Receive and parse an HTTP request from a socket.
- */
-cwist_http_request *cwist_http_receive_request(int client_fd, char *read_buf, size_t buf_size,
-                                               size_t *buf_len, cwist_http_parse_error_t *err_out);
-
-/**
- * @brief Send a minimal error response (Connection: close) for a failed request.
- */
-void cwist_http_send_error_response(int fd, int status, const char *msg);
-
+time_t cwist_http_parse_date(const char *str);
 /** @} */
 
 /** @name Response Lifecycle */
