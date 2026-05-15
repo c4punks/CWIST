@@ -35,6 +35,14 @@
 #include <sys/stat.h>
 #include <poll.h>
 #include <pthread.h>
+#ifdef __linux__
+#include <sys/epoll.h>
+#endif
+#include <ctype.h>
+#include <strings.h>
+#include <inttypes.h>
+
+#include <openssl/ssl.h>
 #include <openssl/x509.h>
 #include <openssl/evp.h>
 #include <openssl/rsa.h>
@@ -1148,34 +1156,15 @@ static lsquic_conn_ctx_t *cwist_h3_on_new_conn(void *stream_if_ctx, lsquic_conn_
  */
 static void cwist_h3_on_conn_closed(lsquic_conn_t *conn) {
     if (!conn) return;
-    char errbuf[256] = {0};
-    enum LSQUIC_CONN_STATUS status = lsquic_conn_status(conn, errbuf, sizeof(errbuf));
-    fprintf(stderr, "[HTTP/3] Conn close status=%d msg=%s\n", (int)status,
-            errbuf[0] ? errbuf : "(none)");
     struct lsquic_conn_info info;
     if (lsquic_conn_get_info(conn, &info) == 0) {
         fprintf(stderr,
                 "[HTTP/3] Conn closed rtt=%u rttvar=%u "
                 "pkts_sent=%" PRIu64 " pkts_lost=%" PRIu64 " "
                 "pkts_retx=%" PRIu64 " cwnd=%u\n",
-                info.lci_rtt, info.lci_rttvar, info.lci_pkts_sent, info.lci_pkts_lost,
+                info.lci_rtt, info.lci_rttvar,
+                info.lci_pkts_sent, info.lci_pkts_lost,
                 info.lci_pkts_retx, info.lci_cwnd);
-    }
-
-    h3_conn_ctx_t *cc = (h3_conn_ctx_t *)lsquic_conn_get_ctx(conn);
-    if (cc) {
-        pthread_mutex_lock(&cc->dgram_lock);
-        h3_dgram_node_t *n = cc->dgram_head;
-        cc->dgram_head = cc->dgram_tail = NULL;
-        pthread_mutex_unlock(&cc->dgram_lock);
-        while (n) {
-            h3_dgram_node_t *next = n->next;
-            free(n->data);
-            free(n);
-            n = next;
-        }
-        pthread_mutex_destroy(&cc->dgram_lock);
-        free(cc);
     }
 }
 
@@ -3368,6 +3357,26 @@ cwist_error_t cwist_http3_server_loop(int udp_fd,
     settings.es_allow_migration = ctx->allow_migration ? ctx->allow_migration : 1;
     settings.es_max_delayed_0rtt_packets = 32;
     settings.es_datagrams = ctx->datagram_enabled;
+    settings.es_ecn = 1;
+    settings.es_pace_packets = 1;
+    settings.es_optimistic_nat = 1;
+
+    if (ctx->idle_timeout_ms > 0)
+        settings.es_idle_timeout = (unsigned)(ctx->idle_timeout_ms / 1000);
+    if (ctx->handshake_timeout_ms > 0)
+        settings.es_handshake_to = (unsigned long)ctx->handshake_timeout_ms * 1000UL;
+    if (ctx->ping_period_ms > 0)
+        settings.es_ping_period = (unsigned)(ctx->ping_period_ms / 1000);
+    if (ctx->noprogress_timeout_ms > 0)
+        settings.es_noprogress_timeout = (unsigned)(ctx->noprogress_timeout_ms / 1000);
+
+    char err_buf[256];
+    if (lsquic_engine_check_settings(&settings, LSENG_HTTP_SERVER,
+                                     err_buf, sizeof(err_buf)) != 0) {
+        fprintf(stderr, "[HTTP/3] Invalid engine settings: %s\n", err_buf);
+        err.error.err_i16 = -1;
+        return err;
+    }
 
     struct lsquic_engine_api api = {
         .ea_stream_if        = &cwist_h3_stream_if,
@@ -3452,7 +3461,7 @@ cwist_error_t cwist_http3_server_loop(int udp_fd,
     settings.es_optimistic_nat = 1;
 
     while (ctx && ctx->running && atomic_load(&g_cwist_running)) {
-        int diff = 100000; /* default 100 ms in microseconds */
+        int diff = 1000; /* default 1 ms; let earliest_adv_tick drive it */
         if (lsquic_engine_earliest_adv_tick(engine, &diff)) {
             if (diff <= 0)
                 diff = 0;
@@ -3544,7 +3553,46 @@ cwist_error_t cwist_http3_init_context_ephemeral(cwist_http3_context **ctx) {
     return cwist_http3_quic_unavailable();
 }
 
-void cwist_http3_destroy_context(cwist_http3_context *ctx) {
+/* ------------------------------------------------------------------ */
+/* WebTransport API                                                   */
+/* ------------------------------------------------------------------ */
+
+void cwist_http3_set_webtransport_handler(cwist_http3_context *ctx,
+                                          cwist_webtransport_handler_func handler) {
+    if (ctx) ctx->wt_handler = handler;
+}
+
+/* ------------------------------------------------------------------ */
+/* Resilience knobs                                                   */
+/* ------------------------------------------------------------------ */
+
+void cwist_http3_set_idle_timeout(cwist_http3_context *ctx, int ms) {
+    if (ctx) ctx->idle_timeout_ms = ms > 0 ? ms : 0;
+}
+
+void cwist_http3_set_handshake_timeout(cwist_http3_context *ctx, int ms) {
+    if (ctx) ctx->handshake_timeout_ms = ms > 0 ? ms : 0;
+}
+
+void cwist_http3_set_ping_period(cwist_http3_context *ctx, int ms) {
+    if (ctx) ctx->ping_period_ms = ms > 0 ? ms : 0;
+}
+
+void cwist_http3_set_noprogress_timeout(cwist_http3_context *ctx, int ms) {
+    if (ctx) ctx->noprogress_timeout_ms = ms > 0 ? ms : 0;
+}
+
+/* ------------------------------------------------------------------ */
+/* Datagram API                                                       */
+/* ------------------------------------------------------------------ */
+
+void cwist_http3_set_datagram_enabled(cwist_http3_context *ctx, int enabled) {
+    if (ctx) ctx->datagram_enabled = enabled;
+}
+
+void cwist_http3_set_datagram_callback(cwist_http3_context *ctx,
+                                       void (*cb)(const void *data, size_t len, void *user_ctx),
+                                       void *user_ctx) {
     if (ctx) {
         if (ctx->ssl_ctx) SSL_CTX_free(ctx->ssl_ctx);
         cwist_free(ctx);

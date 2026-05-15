@@ -42,15 +42,11 @@ struct cwist_http3_context {
     int datagram_enabled; /**< QUIC datagram extension enabled */
     void (*datagram_cb)(const void *data, size_t len, void *user_ctx);
     void *datagram_user_ctx;
-    cwist_webtransport_handler_func wt_handler; /**< WebTransport session handler */
-    void (*wt_new_stream_handler)(void *stream,
-                                  void *user_ctx); /**< Callback for new WT data streams */
-    void *wt_new_stream_ctx; /**< User context for wt_new_stream_handler */
+    cwist_webtransport_handler_func wt_handler;
     int idle_timeout_ms;       /**< 0 = use lsquic default (30s) */
     int handshake_timeout_ms;  /**< 0 = use lsquic default (10s) */
     int ping_period_ms;        /**< 0 = use lsquic default (server: none) */
     int noprogress_timeout_ms; /**< 0 = use lsquic default (60s server) */
-    void *hsets; /**< Head of tracked cwist_h3_hset list (internal; swept on engine destroy) */
 };
 
 /**
@@ -217,105 +213,6 @@ int cwist_http3_send_datagram(void *conn, const void *data, size_t len);
  */
 void cwist_http3_set_webtransport_handler(cwist_http3_context *ctx,
                                           cwist_webtransport_handler_func handler);
-
-/** @name WebTransport I/O */
-/** @{ */
-
-/**
- * @brief Read data from a WebTransport stream.
- *
- * Non-blocking.  Returns number of bytes read, 0 if no data is
- * currently available, or -1 on error.
- *
- * @param stream  Opaque CWIST WebTransport stream handle.
- * @param buf     Destination buffer.
- * @param len     Buffer capacity in bytes.
- * @return Number of bytes read, 0 if none available, or -1 on error.
- */
-ssize_t cwist_webtransport_read(void *stream, void *buf, size_t len);
-
-/**
- * @brief Write data to a WebTransport stream.
- *
- * Returns number of bytes accepted into the send buffer, or -1 on error.
- *
- * @param stream  Opaque CWIST WebTransport stream handle.
- * @param data    Payload to write.
- * @param len     Payload length in bytes.
- * @return Number of bytes buffered, or -1 on error.
- */
-ssize_t cwist_webtransport_write(void *stream, const void *data, size_t len);
-
-/**
- * @brief Flush any buffered data on a WebTransport stream.
- *
- * @param stream  Opaque CWIST WebTransport stream handle.
- * @return 0 on success, -1 on error.
- */
-int cwist_webtransport_flush(void *stream);
-
-/**
- * @brief Close a WebTransport stream.
- *
- * @param stream  Opaque CWIST WebTransport stream handle.
- * @return 0 on success, -1 on error.
- */
-int cwist_webtransport_close_stream(void *stream);
-
-/**
- * @brief Register a callback for newly created WebTransport data streams.
- *
- * Invoked for both server-initiated and client-initiated streams.
- *
- * @param ctx       HTTP/3 context.
- * @param handler   Callback invoked for each new data stream.
- * @param user_ctx  Opaque pointer forwarded to @p handler.
- */
-void cwist_webtransport_set_new_stream_handler(cwist_http3_context *ctx,
-                                               void (*handler)(void *stream, void *user_ctx),
-                                               void *user_ctx);
-
-/**
- * @brief Request a new server-initiated bidirectional WebTransport stream.
- *
- * The actual stream is delivered asynchronously via the new-stream handler.
- *
- * @param session  Opaque CWIST WebTransport session handle.
- * @return 0 on success, -1 on failure.
- */
-int cwist_webtransport_open_bidi_stream(void *session);
-
-/**
- * @brief Request a new server-initiated unidirectional WebTransport stream.
- *
- * The actual stream is delivered asynchronously via the new-stream handler.
- *
- * @param session  Opaque CWIST WebTransport session handle.
- * @return 0 on success, -1 on failure.
- */
-int cwist_webtransport_open_uni_stream(void *session);
-
-/**
- * @brief Send an unreliable WebTransport datagram in session context.
- *
- * @param session Opaque CWIST WebTransport session handle.
- * @param data    Datagram payload.
- * @param len     Payload length in bytes.
- * @return Number of bytes queued, or -1 on error.
- */
-ssize_t cwist_webtransport_send_datagram(void *session, const void *data, size_t len);
-
-/**
- * @brief Return the current maximum WebTransport datagram payload size.
- */
-size_t cwist_webtransport_max_datagram_size(void *session);
-
-/**
- * @brief Close a WebTransport session with an application error code.
- */
-int cwist_webtransport_close_session(void *session, uint64_t code, const char *reason);
-
-/** @} */
 
 /** --- Unstable-network resilience knobs --- */
 

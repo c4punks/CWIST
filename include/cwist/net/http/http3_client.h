@@ -127,6 +127,43 @@ void cwist_http3_client_set_retry_delay_ms(cwist_http3_client *client, int delay
  */
 void cwist_http3_client_set_conn_timeout_ms(cwist_http3_client *client, int timeout_ms);
 
+/**
+ * @brief Set the maximum number of request retries on transient failure.
+ *
+ * When a request fails due to timeout or connection loss, the client
+ * will retry up to @p max_retries times with exponential backoff.
+ * Default is 0 (no retries).
+ *
+ * @param client     Client handle.
+ * @param max_retries Maximum retry count (0 to disable).
+ */
+void cwist_http3_client_set_max_retries(cwist_http3_client *client,
+                                        int max_retries);
+
+/**
+ * @brief Set the base delay between retries in milliseconds.
+ *
+ * The actual delay is doubled on each retry (1x, 2x, 4x, ...).
+ * Default is 1000 ms.
+ *
+ * @param client   Client handle.
+ * @param delay_ms Base delay in milliseconds.
+ */
+void cwist_http3_client_set_retry_delay_ms(cwist_http3_client *client,
+                                           int delay_ms);
+
+/**
+ * @brief Set the connection establishment / stream creation timeout.
+ *
+ * This controls how long the client waits for the QUIC handshake and
+ * stream creation before giving up.  Default is 5000 ms.
+ *
+ * @param client     Client handle.
+ * @param timeout_ms Timeout in milliseconds.
+ */
+void cwist_http3_client_set_conn_timeout_ms(cwist_http3_client *client,
+                                            int timeout_ms);
+
 /** @} */
 
 /** @name Resilience */
@@ -257,6 +294,20 @@ void cwist_http3_client_set_max_retries(cwist_http3_client *client, int max_retr
 void cwist_http3_client_set_retry_delay_ms(cwist_http3_client *client, int delay_ms);
 
 void cwist_http3_client_set_conn_timeout_ms(cwist_http3_client *client, int timeout_ms);
+
+/** @} */
+
+/** @name Resilience */
+/** @{ */
+
+void cwist_http3_client_set_max_retries(cwist_http3_client *client,
+                                        int max_retries);
+
+void cwist_http3_client_set_retry_delay_ms(cwist_http3_client *client,
+                                           int delay_ms);
+
+void cwist_http3_client_set_conn_timeout_ms(cwist_http3_client *client,
+                                            int timeout_ms);
 
 /** @} */
 
