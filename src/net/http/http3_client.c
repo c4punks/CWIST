@@ -865,16 +865,10 @@ cwist_http3_client *cwist_http3_client_create(void) {
     settings.es_ecn = 1;
     settings.es_pace_packets = 1;
     settings.es_optimistic_nat = 1;
-    settings.es_datagrams = client->datagram_enabled ? 1 : 0;
-#ifdef CWIST_WEBTRANSPORT
-    settings.es_webtransport = 1;
-    settings.es_max_webtransport_sessions = 4;
-    settings.es_http_datagrams = 1;
-    settings.es_reset_stream_at = 1;
-#endif
 
     char err_buf[256];
-    if (lsquic_engine_check_settings(&settings, LSENG_HTTP, err_buf, sizeof(err_buf)) != 0) {
+    if (lsquic_engine_check_settings(&settings, LSENG_HTTP,
+                                     err_buf, sizeof(err_buf)) != 0) {
         fprintf(stderr, "[HTTP/3-CLIENT] Invalid engine settings: %s\n", err_buf);
         SSL_CTX_free(client->ssl_ctx);
         pthread_mutex_destroy(&client->mtx);
@@ -1013,24 +1007,6 @@ cwist_error_t cwist_http3_client_request(cwist_http3_client *client, const char 
         freeaddrinfo(res);
     }
 
-    /* lsquic dereferences the local address in client mode
-     * (ietf_full_conn_ci_record_addrs), so a NULL local_sa segfaults.
-     * Connect the UDP socket to the peer and learn the local endpoint. */
-    if (client->local_addr_len == 0) {
-        if (connect(client->udp_fd, (struct sockaddr *)&client->peer_addr, client->peer_addr_len) !=
-            0) {
-            err.error.err_i16 = -1;
-            return err;
-        }
-        client->local_addr_len = sizeof(client->local_addr);
-        if (getsockname(client->udp_fd, (struct sockaddr *)&client->local_addr,
-                        &client->local_addr_len) != 0) {
-            client->local_addr_len = 0;
-            err.error.err_i16 = -1;
-            return err;
-        }
-    }
-
     /* ---------------------------------------------------------------- */
     /* Retry loop with exponential backoff                               */
     /* ---------------------------------------------------------------- */
@@ -1049,9 +1025,11 @@ cwist_error_t cwist_http3_client_request(cwist_http3_client *client, const char 
 
         if (!client->conn) {
             client->conn = lsquic_engine_connect(client->engine, N_LSQVER,
-                                                 (struct sockaddr *)&client->local_addr,
-                                                 (struct sockaddr *)&client->peer_addr, client,
-                                                 NULL, client->host, 0, NULL, 0, NULL, 0);
+                                                  NULL,
+                                                  (struct sockaddr *)&client->peer_addr,
+                                                  client, NULL,
+                                                  client->host, 0,
+                                                  NULL, 0, NULL, 0);
             if (!client->conn) {
                 err.error.err_i16 = -1;
                 goto retry_backoff;
@@ -1059,9 +1037,6 @@ cwist_error_t cwist_http3_client_request(cwist_http3_client *client, const char 
         }
 
         /* Request a new stream */
-        pthread_mutex_lock(&client->mtx);
-        client->active_stream = NULL;
-        pthread_mutex_unlock(&client->mtx);
         lsquic_conn_make_stream(client->conn);
 
         /* I/O loop until stream is created */
@@ -1079,20 +1054,6 @@ cwist_error_t cwist_http3_client_request(cwist_http3_client *client, const char 
             pthread_mutex_lock(&client->mtx);
             st = client->active_stream;
             pthread_mutex_unlock(&client->mtx);
-            if (st) break;
-            /* Fail fast when the handshake is dead (e.g. certificate
-             * verification failure) instead of waiting out the timeout.
-             * h3c_on_conn_closed() NULLs client->conn once the engine
-             * tears the connection down. */
-            if (!client->conn) break;
-            enum LSQUIC_CONN_STATUS cst = lsquic_conn_status(client->conn, NULL, 0);
-            if (cst == LSCONN_ST_HSK_FAILURE || cst == LSCONN_ST_ERROR || cst == LSCONN_ST_CLOSED ||
-                cst == LSCONN_ST_TIMED_OUT || cst == LSCONN_ST_RESET) {
-                /* The engine owns and may already have destroyed the failed
-                 * connection; drop our pointer before the next attempt. */
-                client->conn = NULL;
-                break;
-            }
             struct timespec now;
             clock_gettime(CLOCK_REALTIME, &now);
             if (now.tv_sec > stream_deadline.tv_sec ||
@@ -1105,24 +1066,6 @@ cwist_error_t cwist_http3_client_request(cwist_http3_client *client, const char 
             goto retry_backoff;
         }
 
-        st->req_path = strdup(path);
-        if (!st->req_path) {
-            err.error.err_i16 = -1;
-            goto retry_backoff;
-        }
-        st->req_method = method;
-        st->req_headers = headers;
-#ifdef CWIST_WEBTRANSPORT
-        for (cwist_http_header_node *header = headers; header; header = header->next) {
-            if (header->key && header->value && header->key->data && header->value->data &&
-                strcasecmp(header->key->data, ":protocol") == 0 &&
-                strcasecmp(header->value->data, "webtransport") == 0) {
-                st->is_webtransport_connect = 1;
-                break;
-            }
-        }
-#endif
-
         /* Store request body */
         if (body && body_len > 0) {
             st->req_body = malloc(body_len);
@@ -1133,9 +1076,6 @@ cwist_error_t cwist_http3_client_request(cwist_http3_client *client, const char 
             memcpy(st->req_body, body, body_len);
             st->req_body_len = body_len;
         }
-
-        /* All request fields are in place: arm the write side now. */
-        lsquic_stream_wantwrite(st->stream, 1);
 
         /* I/O loop until response is ready or timeout */
         struct timespec deadline;
@@ -1168,20 +1108,14 @@ cwist_error_t cwist_http3_client_request(cwist_http3_client *client, const char 
             return err;
         }
 
-        /* Timeout on this attempt: close the stream so lsquic releases the
-         * context via h3c_on_close.  Freeing it here would leave lsquic
-         * holding a dangling stream ctx (use-after-free on the next event). */
+        /* Timeout on this attempt – clean up stream state and retry */
         err.error.err_i16 = -1;
         pthread_mutex_lock(&client->mtx);
-        if (client->active_stream == st) {
-            client->active_stream = NULL;
-        }
+        client->active_stream = NULL;
         pthread_mutex_unlock(&client->mtx);
-        if (st->res) {
-            cwist_http_response_destroy(st->res);
-            st->res = NULL;
-        }
-        lsquic_stream_close(st->stream);
+        free(st->req_body);
+        st->req_body = NULL;
+        free(st);
 
     retry_backoff:
         attempt++;
@@ -1199,27 +1133,31 @@ cwist_error_t cwist_http3_client_request(cwist_http3_client *client, const char 
 /* Datagram API (RFC 9221)                                            */
 /* ------------------------------------------------------------------ */
 
-int cwist_http3_client_send_datagram(cwist_http3_client *client, const void *data, size_t len) {
-    if (!client || !client->conn || !data || len == 0) return -1;
-    if (!client->datagram_enabled) return -1;
+/* ------------------------------------------------------------------ */
+/* Resilience knobs                                                   */
+/* ------------------------------------------------------------------ */
 
-    pthread_mutex_lock(&client->dgram_mtx);
-    if (client->out_dgram.pending) {
-        pthread_mutex_unlock(&client->dgram_mtx);
-        return -1;
-    }
-    client->out_dgram.data = malloc(len);
-    if (!client->out_dgram.data) {
-        pthread_mutex_unlock(&client->dgram_mtx);
-        return -1;
-    }
-    memcpy(client->out_dgram.data, data, len);
-    client->out_dgram.len = len;
-    client->out_dgram.pending = 1;
-    pthread_mutex_unlock(&client->dgram_mtx);
+void cwist_http3_client_set_max_retries(cwist_http3_client *client,
+                                        int max_retries) {
+    if (client) client->max_retries = max_retries > 0 ? max_retries : 0;
+}
 
-    lsquic_conn_want_datagram_write(client->conn, 1);
-    return 0;
+void cwist_http3_client_set_retry_delay_ms(cwist_http3_client *client,
+                                           int delay_ms) {
+    if (client) client->retry_delay_ms = delay_ms > 0 ? delay_ms : 0;
+}
+
+void cwist_http3_client_set_conn_timeout_ms(cwist_http3_client *client,
+                                            int timeout_ms) {
+    if (client) client->conn_timeout_ms = timeout_ms > 0 ? timeout_ms : 5000;
+}
+
+int cwist_http3_client_send_datagram(cwist_http3_client *client,
+                                     const void *data, size_t len) {
+    (void)client;
+    (void)data;
+    (void)len;
+    return -1; /* Not yet implemented: requires lsquic datagram API */
 }
 
 ssize_t cwist_http3_client_recv_datagram(cwist_http3_client *client, void *buf, size_t len) {

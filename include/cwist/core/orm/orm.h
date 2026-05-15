@@ -10,12 +10,6 @@
  * The default transaction mode is manual (immediate commit disabled).
  * Call cwist_orm_immediate_commit(true) to make every write operation
  * automatically commit.
- *
- * Values in the cJSON @c data objects are escaped and table/column names
- * are quoted before they reach the SQL text.  Raw SQL arguments are not:
- * @c sql in cwist_orm_exec() / cwist_orm_query(), every @c where_clause,
- * and the @c columns list of cwist_orm_select() are inserted verbatim.
- * Do not build those strings from untrusted input.
  */
 
 #ifndef __CWIST_ORM_H__
@@ -152,7 +146,8 @@ cwist_error_t cwist_orm_exec(cwist_orm_t *orm, const char *sql);
  *               @c NULL.
  * @return cwist_error_t with err_i16 == 0 on success.
  */
-cwist_error_t cwist_orm_query(cwist_orm_t *orm, const char *sql, cJSON **result);
+cwist_error_t cwist_orm_query(cwist_orm_t *orm, const char *sql,
+                              cJSON **result);
 
 /* High-level helpers ------------------------------------------------------ */
 
@@ -175,7 +170,8 @@ cwist_error_t cwist_orm_query(cwist_orm_t *orm, const char *sql, cJSON **result)
  * @param data  cJSON object (not array) containing the row data.
  * @return cwist_error_t with err_i16 == 0 on success.
  */
-cwist_error_t cwist_orm_insert(cwist_orm_t *orm, const char *table, const cJSON *data);
+cwist_error_t cwist_orm_insert(cwist_orm_t *orm, const char *table,
+                               const cJSON *data);
 
 /**
  * @brief Update rows in a table.
@@ -190,7 +186,8 @@ cwist_error_t cwist_orm_insert(cwist_orm_t *orm, const char *table, const cJSON 
  *                     @c WHERE keyword), or @c NULL to update all rows.
  * @return cwist_error_t with err_i16 == 0 on success.
  */
-cwist_error_t cwist_orm_update(cwist_orm_t *orm, const char *table, const cJSON *data,
+cwist_error_t cwist_orm_update(cwist_orm_t *orm, const char *table,
+                               const cJSON *data,
                                const char *where_clause);
 
 /**
@@ -202,7 +199,8 @@ cwist_error_t cwist_orm_update(cwist_orm_t *orm, const char *table, const cJSON 
  *                     @c NULL to delete every row.
  * @return cwist_error_t with err_i16 == 0 on success.
  */
-cwist_error_t cwist_orm_delete(cwist_orm_t *orm, const char *table, const char *where_clause);
+cwist_error_t cwist_orm_delete(cwist_orm_t *orm, const char *table,
+                               const char *where_clause);
 
 /**
  * @brief Convenience SELECT helper.
@@ -217,27 +215,38 @@ cwist_error_t cwist_orm_delete(cwist_orm_t *orm, const char *table, const char *
  * @param result       [out] cJSON array result; caller must free.
  * @return cwist_error_t with err_i16 == 0 on success.
  */
-cwist_error_t cwist_orm_select(cwist_orm_t *orm, const char *table, const char *columns,
-                               const char *where_clause, cJSON **result);
+cwist_error_t cwist_orm_select(cwist_orm_t *orm, const char *table,
+                               const char *columns,
+                               const char *where_clause,
+                               cJSON **result);
 
 /* ------------------------------------------------------------------ */
 /* _Generic type-dispatched RETURNING INSERT                           */
 /* ------------------------------------------------------------------ */
 
-cwist_error_t cwist_orm_insert_returning_json(cwist_orm_t *orm, const char *table,
-                                              const cJSON *data, const char *returning_col,
-                                              cJSON **out);
+cwist_error_t cwist_orm_insert_returning_json(cwist_orm_t *orm,
+                                               const char *table,
+                                               const cJSON *data,
+                                               const char *returning_col,
+                                               cJSON **out);
 
-cwist_error_t cwist_orm_insert_returning_int(cwist_orm_t *orm, const char *table, const cJSON *data,
-                                             const char *returning_col, int *out);
+cwist_error_t cwist_orm_insert_returning_int(cwist_orm_t *orm,
+                                              const char *table,
+                                              const cJSON *data,
+                                              const char *returning_col,
+                                              int *out);
 
-cwist_error_t cwist_orm_insert_returning_long(cwist_orm_t *orm, const char *table,
-                                              const cJSON *data, const char *returning_col,
-                                              long *out);
+cwist_error_t cwist_orm_insert_returning_long(cwist_orm_t *orm,
+                                               const char *table,
+                                               const cJSON *data,
+                                               const char *returning_col,
+                                               long *out);
 
-cwist_error_t cwist_orm_insert_returning_llong(cwist_orm_t *orm, const char *table,
-                                               const cJSON *data, const char *returning_col,
-                                               long long *out);
+cwist_error_t cwist_orm_insert_returning_llong(cwist_orm_t *orm,
+                                                const char *table,
+                                                const cJSON *data,
+                                                const char *returning_col,
+                                                long long *out);
 
 /**
  * @brief Type-generic INSERT with RETURNING clause.
@@ -254,33 +263,52 @@ cwist_error_t cwist_orm_insert_returning_llong(cwist_orm_t *orm, const char *tab
  * @endcode
  */
 #define cwist_orm_insert_r(orm, table, data, returning_col, out) \
-    _Generic((out),                                              \
-        int *: cwist_orm_insert_returning_int,                   \
-        long *: cwist_orm_insert_returning_long,                 \
-        long long *: cwist_orm_insert_returning_llong,           \
-        cJSON **: cwist_orm_insert_returning_json)((orm), (table), (data), (returning_col), (out))
+    _Generic((out), \
+        int *        : cwist_orm_insert_returning_int, \
+        long *       : cwist_orm_insert_returning_long, \
+        long long *  : cwist_orm_insert_returning_llong, \
+        cJSON **     : cwist_orm_insert_returning_json \
+    )((orm), (table), (data), (returning_col), (out))
 
 /* ------------------------------------------------------------------ */
 /* _Generic type-dispatched SELECT single scalar                       */
 /* ------------------------------------------------------------------ */
 
-cwist_error_t cwist_orm_select_one_json(cwist_orm_t *orm, const char *table, const char *column,
-                                        const char *where_clause, cJSON **out);
+cwist_error_t cwist_orm_select_one_json(cwist_orm_t *orm,
+                                        const char *table,
+                                        const char *column,
+                                        const char *where_clause,
+                                        cJSON **out);
 
-cwist_error_t cwist_orm_select_one_int(cwist_orm_t *orm, const char *table, const char *column,
-                                       const char *where_clause, int *out);
+cwist_error_t cwist_orm_select_one_int(cwist_orm_t *orm,
+                                       const char *table,
+                                       const char *column,
+                                       const char *where_clause,
+                                       int *out);
 
-cwist_error_t cwist_orm_select_one_long(cwist_orm_t *orm, const char *table, const char *column,
-                                        const char *where_clause, long *out);
+cwist_error_t cwist_orm_select_one_long(cwist_orm_t *orm,
+                                        const char *table,
+                                        const char *column,
+                                        const char *where_clause,
+                                        long *out);
 
-cwist_error_t cwist_orm_select_one_llong(cwist_orm_t *orm, const char *table, const char *column,
-                                         const char *where_clause, long long *out);
+cwist_error_t cwist_orm_select_one_llong(cwist_orm_t *orm,
+                                         const char *table,
+                                         const char *column,
+                                         const char *where_clause,
+                                         long long *out);
 
-cwist_error_t cwist_orm_select_one_double(cwist_orm_t *orm, const char *table, const char *column,
-                                          const char *where_clause, double *out);
+cwist_error_t cwist_orm_select_one_double(cwist_orm_t *orm,
+                                          const char *table,
+                                          const char *column,
+                                          const char *where_clause,
+                                          double *out);
 
-cwist_error_t cwist_orm_select_one_string(cwist_orm_t *orm, const char *table, const char *column,
-                                          const char *where_clause, char **out);
+cwist_error_t cwist_orm_select_one_string(cwist_orm_t *orm,
+                                          const char *table,
+                                          const char *column,
+                                          const char *where_clause,
+                                          char **out);
 
 /**
  * @brief Type-generic SELECT a single scalar value.
@@ -297,13 +325,14 @@ cwist_error_t cwist_orm_select_one_string(cwist_orm_t *orm, const char *table, c
  * @endcode
  */
 #define cwist_orm_select_one(orm, table, column, where, out) \
-    _Generic((out),                                          \
-        int *: cwist_orm_select_one_int,                     \
-        long *: cwist_orm_select_one_long,                   \
-        long long *: cwist_orm_select_one_llong,             \
-        double *: cwist_orm_select_one_double,               \
-        char **: cwist_orm_select_one_string,                \
-        cJSON **: cwist_orm_select_one_json)((orm), (table), (column), (where), (out))
+    _Generic((out), \
+        int *        : cwist_orm_select_one_int, \
+        long *       : cwist_orm_select_one_long, \
+        long long *  : cwist_orm_select_one_llong, \
+        double *     : cwist_orm_select_one_double, \
+        char **      : cwist_orm_select_one_string, \
+        cJSON **     : cwist_orm_select_one_json \
+    )((orm), (table), (column), (where), (out))
 
 #ifdef __cplusplus
 }

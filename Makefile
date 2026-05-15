@@ -102,6 +102,8 @@ SRCS = src/core/sstring/sstring.c \
        src/core/db/db.c \
        src/core/db/nuke_db.c \
        src/core/db/migrate.c \
+       src/core/orm/orm.c \
+       src/core/orm/orm_socket.c \
        src/sys/app/app.c \
        src/net/websocket/websocket.c \
        src/net/websocket/websocket_async.c \
@@ -201,6 +203,34 @@ $(URIPARSER_LIB):
 	cmake -S $(URIPARSER_DIR) -B $(URIPARSER_BUILD_DIR) -DCMAKE_C_COMPILER=$(CC) $(URIPARSER_CMAKE_FLAGS)
 	@echo "Building uriparser..."
 	cmake --build $(URIPARSER_BUILD_DIR) --target uriparser
+
+BORINGSSL_STAMP = $(BORINGSSL_BUILD_DIR)/.boringssl_built
+
+$(BORINGSSL_STAMP):
+	@echo "Building BoringSSL..."
+	@mkdir -p $(BORINGSSL_BUILD_DIR)
+	cmake -S $(BORINGSSL_DIR) -B $(BORINGSSL_BUILD_DIR) \
+		-DCMAKE_C_COMPILER=$(CC) \
+		-DCMAKE_CXX_COMPILER=$(CXX) \
+		-DCMAKE_BUILD_TYPE=Release
+	cmake --build $(BORINGSSL_BUILD_DIR) --target ssl crypto
+	@touch $@
+
+$(BORINGSSL_SSL_LIB) $(BORINGSSL_CRYPTO_LIB): $(BORINGSSL_STAMP)
+
+$(LSQUIC_LIB): $(BORINGSSL_SSL_LIB) $(BORINGSSL_CRYPTO_LIB)
+	@echo "Building lsquic..."
+	@mkdir -p $(LSQUIC_BUILD_DIR)
+	cmake -S $(LSQUIC_DIR) -B $(LSQUIC_BUILD_DIR) \
+		-DCMAKE_C_COMPILER=$(CC) \
+		-DCMAKE_BUILD_TYPE=Release \
+		-DCMAKE_C_FLAGS="-Wno-unused-function" \
+		-DBORINGSSL_DIR=$(abspath $(BORINGSSL_DIR)) \
+		-DBORINGSSL_LIB_ssl=$(abspath $(BORINGSSL_SSL_LIB)) \
+		-DBORINGSSL_LIB_crypto=$(abspath $(BORINGSSL_CRYPTO_LIB)) \
+		-DBORINGSSL_INCLUDE=$(abspath $(BORINGSSL_DIR)/include) \
+		-DBUILD_SHARED_LIBS=OFF
+	cmake --build $(LSQUIC_BUILD_DIR) --target lsquic
 
 $(CNATS_LIB):
 	@echo "Building cnats..."

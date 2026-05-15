@@ -6,22 +6,9 @@
  * links against SQLite3.  It exposes the database as a byte stream
  * over a local Unix socket pair so that cwist_orm_t remains fully
  * decoupled from sqlite3.h.
- *
- * Trust boundary: the worker executes whatever SQL text arrives on its
- * end of the pair, verbatim.  That is safe only because the pair is
- * created with socketpair(AF_UNIX) in cwist_db_transfer_sqlite_to_socket():
- * it has no filesystem path or network address, so no other process can
- * connect to it, and the only peer is the caller's end (normally a
- * cwist_orm_t in the same process).  Anyone holding that caller fd can run
- * arbitrary SQL against the database, so it must never be handed to an
- * untrusted party (SCM_RIGHTS, inheritance across fork() without exec, and
- * so on).  Escaping of untrusted values is the job of the layer that
- * builds the SQL (orm.c), not of this bridge.
  */
 
-#ifndef _GNU_SOURCE
-#define _GNU_SOURCE 1
-#endif
+#define _GNU_SOURCE
 #include <cwist/core/orm/orm_socket.h>
 
 #include <stdio.h>
@@ -29,7 +16,6 @@
 #include <string.h>
 #include <unistd.h>
 #include <errno.h>
-#include <fcntl.h>
 #include <pthread.h>
 #include <sys/socket.h>
 #include <sys/un.h>
@@ -38,7 +24,6 @@
 
 #include <sqlite3.h>
 #include <cjson/cJSON.h>
-#include <cwist/core/mem/alloc.h>
 
 /* ------------------------------------------------------------------------- */
 /* Protocol constants                                                        */
@@ -100,9 +85,6 @@ static int send_all(int fd, const void *buf, size_t n)
  */
 static void free_worker_ctx(cwist_orm_worker_ctx_t *ctx)
 {
-    /* The context is allocated by the caller's thread and freed by the
-     * detached worker, so it stays on the raw allocator: a cwist_alloc
-     * scope sweep on the caller side must not reclaim it. */
     if (!ctx) return;
     free(ctx->db_path);
     free(ctx);
@@ -191,23 +173,21 @@ static void *cwist_orm_socket_worker(void *arg)
         if (sql_len == 0 || sql_len > 16 * 1024 * 1024) break; /* sanity */
 
         /* ---- read SQL text ---- */
-        char *sql = (char *)cwist_alloc(sql_len + 1);
+        char *sql = (char *)malloc(sql_len + 1);
         if (!sql) break;
         if (recv_all(ctx->fd, sql, sql_len) != 0) {
-            cwist_free(sql);
+            free(sql);
             break;
         }
         sql[sql_len] = '\0';
 
-        /* ---- execute ----
-         * sql comes from the in-process peer, not from an external client;
-         * see the trust boundary note at the top of this file. */
+        /* ---- execute ---- */
         query_accumulator_t acc;
         acc.rows = cJSON_CreateArray();
         char *errmsg = NULL;
 
         rc = sqlite3_exec(db, sql, socket_query_callback, &acc, &errmsg);
-        cwist_free(sql);
+        free(sql);
 
         /* ---- build response payload ---- */
         cJSON *resp = cJSON_CreateObject();
@@ -232,21 +212,21 @@ static void *cwist_orm_socket_worker(void *arg)
 
         uint32_t payload_len = (uint32_t)strlen(payload);
         if (payload_len > UINT32_MAX - 1) {
-            cJSON_free(payload);
+            free(payload);
             break;
         }
 
         /* ---- send framed response ---- */
         uint32_t net_payload = htonl(payload_len);
         if (send_all(ctx->fd, &net_payload, sizeof(net_payload)) != 0) {
-            cJSON_free(payload);
+            free(payload);
             break;
         }
         if (send_all(ctx->fd, payload, payload_len) != 0) {
-            cJSON_free(payload);
+            free(payload);
             break;
         }
-        cJSON_free(payload);
+        free(payload);
     }
 
     sqlite3_close(db);
@@ -259,38 +239,6 @@ static void *cwist_orm_socket_worker(void *arg)
 /* Public API                                                                */
 /* ------------------------------------------------------------------------- */
 
-#ifndef SOCK_CLOEXEC
-#define SOCK_CLOEXEC 0
-#endif
-
-static void set_cloexec(int fd) {
-    if (fd >= 0) {
-        int flags = fcntl(fd, F_GETFD);
-        if (flags != -1) {
-            fcntl(fd, F_SETFD, flags | FD_CLOEXEC);
-        }
-    }
-}
-
-int cwist_orm_socketpair_cloexec(int domain, int type, int protocol, int sv[2]) {
-    int res = -1;
-#if defined(SOCK_CLOEXEC) && SOCK_CLOEXEC != 0
-    res = socketpair(domain, type | SOCK_CLOEXEC, protocol, sv);
-#endif
-    if (res != 0) {
-        res = socketpair(domain, type & ~SOCK_CLOEXEC, protocol, sv);
-        if (res == 0) {
-            set_cloexec(sv[0]);
-            set_cloexec(sv[1]);
-        }
-    } else {
-        set_cloexec(sv[0]);
-        set_cloexec(sv[1]);
-    }
-    return res;
-}
-
-
 int cwist_db_transfer_sqlite_to_socket(const char *db_path)
 {
     if (!db_path) {
@@ -299,9 +247,7 @@ int cwist_db_transfer_sqlite_to_socket(const char *db_path)
     }
 
     int sv[2];
-    /* SOCK_CLOEXEC is not available on every BSD-family system (macOS lacks
-     * it); the helper falls back to fcntl(FD_CLOEXEC) there. */
-    if (cwist_orm_socketpair_cloexec(AF_UNIX, SOCK_STREAM, 0, sv) != 0) {
+    if (socketpair(AF_UNIX, SOCK_STREAM | SOCK_CLOEXEC, 0, sv) == -1) {
         return -1;
     }
 
