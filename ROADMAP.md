@@ -123,12 +123,12 @@ Automated OS & Web Server benchmark histories are published in `docs/benchmark-t
 | **Caching Layer** | ✅ | ETag, Last-Modified, Cache-Control, 304 Not Modified for static files |
 | **Rate Limiting** | ✅ | Per-IP token bucket via libttak; parameter respected |
 | **CORS** | ✅ | Permissive CORS + preflight handler implemented |
-| **SSE (Server-Sent Events)** | ✅ | Buffered and live structured events, IDs, retry directives, multiline data, comments, and convenience macros |
+| **SSE (Server-Sent Events)** | ⏳ | No structured SSE stream API |
 | **Access Logging** | ✅ | Common, Combined, and JSON formats implemented |
 | **Request ID / Tracing** | ✅ | X-Request-Id middleware injects and propagates request IDs |
 | Graceful Shutdown | ✅ | Unified atomic `running` flag + SIGTERM/SIGINT handlers across HTTP/1.1, HTTP/2, HTTP/3 loops |
-| **Health Check Endpoint** | 🔄 | Basic `/healthz` endpoint added (`healthz.c`, `healthz.h`) |
-| **Metrics / Observability** | 🔄 | Metrics module added (`metrics.c`, `metrics.h`, `test_metrics.c`); Prometheus endpoint pending |
+| **Health Check Endpoint** | ✅ | `/healthz`, `/live`, `/ready` with probe registry and auto-registration |
+| **Metrics / Observability** | ✅ | Prometheus `/metrics` endpoint wired; request counter & duration middleware |
 | **Per-Status Error Handlers** | ✅ | `cwist_app_register_error_handler` for custom 404, 500, etc. |
 | **URL Reverse Routing** | ✅ | `cwist_app_get_named` + `cwist_url_for` with param substitution |
 | **Flash Messages** | ✅ | One-time session-scoped messages via `cwist_flash_get/set` |
@@ -602,9 +602,6 @@ The tag history (`v0.1` → `v3.3`) settles into this convention from v3 onward,
 8. ~~**Rate Limiting** middleware~~ ✅
 9. ~~**Caching** (ETag generation + in-memory cache)~~ ✅
 10. ~~**Health Check** endpoints~~ ✅
-11. ~~**Secure Headers** (HSTS, CSP, X-Frame-Options, etc.)~~ ✅
-12. ~~**Request Size Limits** (HTTP/1.1/2/3 body limit audit)~~ ✅
-13. ~~**Multiport facade hardening**: counted port descriptor, per-port sub-app lifecycle, duplicate/default-port validation, and smoke tests~~ ✅
 
 ### P2 — Developer Velocity
 14. **Hot Reload** for development
