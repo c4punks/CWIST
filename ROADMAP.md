@@ -92,7 +92,7 @@ Automated OS benchmark history is published in `docs/benchmark-trends.svg`. Late
 |---------|--------|-------|
 | HTTP/1.1 Server (epoll, threading, forking) | ✅ | Zero-copy sendfile, keep-alive, and supervisor-to-worker shutdown propagation |
 | HTTP/2 Server | ✅ | h2 with ALPN |
-| HTTP/3 Server (QUIC) | ✅ | lsquic + BoringSSL, QPACK, 0-RTT, migration, push, resilience timeout knobs, lowercase/CRLF-safe response headers |
+| HTTP/3 Server (QUIC) | ✅ | lsquic + BoringSSL, QPACK, 0-RTT, migration, push, resilience timeout knobs |
 | HTTP/1.1 + HTTP/2 Client | ✅ | libcurl based, sync & async APIs |
 | HTTP/3 Client | ✅ | lsquic based, async stream callbacks, auto-retry with exponential backoff, conn timeout knobs |
 | WebSocket Server | ✅ | Upgrade, frame parsing, ping/pong |
@@ -163,9 +163,9 @@ Automated OS benchmark history is published in `docs/benchmark-trends.svg`. Late
 |---------|--------|-------|
 | SQLite Integration | ✅ | `sqlite3` embedded |
 | Database Migration | ✅ | `migrate` system |
-| **Connection Pool** | ✅ | Bounded SQLite pool with shared `:memory:` URI mode, O(1) leasing, timeout acquisition, and graceful drain on destroy |
-| **ORM / Query Builder** | ✅ | Socket-backed ORM with dialect-aware query builder, `_Generic` type-dispatched RETURNING / scalar helpers |
-| **Redis / Key-Value Cache** | ✅ | RESP2 client/pool, binary-safe argv commands, AUTH/SELECT, pub/sub, and app-level pool integration |
+| **Connection Pool** | ⏳ | SQLite is direct; no generic connection pool abstraction |
+| **ORM / Query Builder** | ✅ | Socket-backed ORM with dialect-aware query builder, _Generic type-dispatched RETURNING / scalar helpers |
+| **Redis / Key-Value Cache** | ⏳ | No Redis client integration |
 | NATS Integration | ✅ | `cwist_nats` wrapper |
 | **Message Queue (Job Queue)** | ✅ | `cwist_io_queue` lock-free job queue plus scheduler-backed immediate and delayed jobs |
 
