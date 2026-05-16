@@ -179,7 +179,18 @@ void cwist_app_ws_opt(cwist_app *app, const char *path, cwist_ws_handler_func ha
  * @param directory Local filesystem path.
  */
 cwist_error_t cwist_app_static(cwist_app *app, const char *url_prefix, const char *directory);
-// Add other methods as needed
+
+/**
+ * @brief Serves a directory of static files at a URL prefix with custom Cache-Control.
+ * Files are loaded into the fixed memory pool for Zero-Copy serving.
+ * @param app Pointer to the app.
+ * @param url_prefix URL prefix (e.g., "/static").
+ * @param directory Local filesystem path.
+ * @param cache_control Cache-Control directive string (e.g., "public, max-age=31536000, immutable").
+ *        Pass NULL to use the default "public, max-age=3600".
+ */
+cwist_error_t cwist_app_static_with_cache(cwist_app *app, const char *url_prefix, const char *directory, const char *cache_control);
+/** @} */
 
 // Start
 int cwist_app_listen(cwist_app *app, int port);
