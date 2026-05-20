@@ -62,19 +62,11 @@ static void async_accept_cb(int fd, void *ctx) {
 #else
     struct sockaddr_in addr;
     socklen_t len = sizeof(addr);
-    while ((client_fd = accept(fd, (struct sockaddr *)&addr, &len)) >= 0) {
-#endif
-        int nodelay = 1;
-        setsockopt(client_fd, IPPROTO_TCP, TCP_NODELAY, &nodelay, sizeof(nodelay));
-#if defined(__linux__) && defined(TCP_QUICKACK)
-        int quickack = 1;
-        setsockopt(client_fd, IPPROTO_TCP, TCP_QUICKACK, &quickack, sizeof(quickack));
-#endif
+    int client_fd;
 
-        if (app_use_https(app)) {
-            cwist_https_dispatch(client_fd, app->ssl_ctx, app->https_request_handler, app);
-        } else if (app && !app->use_ssl) {
-            cwist_http_pool_submit_async(client_fd, cwist_app_http_handler_async, app);
+    while ((client_fd = accept(fd, (struct sockaddr*)&addr, &len)) >= 0) {
+        if (app->use_ssl && app->ssl_ctx && app->https_request_handler) {
+            https_pool_submit(client_fd, app->ssl_ctx, app->https_request_handler, app);
         } else {
             fprintf(
                 stderr,
@@ -84,6 +76,7 @@ static void async_accept_cb(int fd, void *ctx) {
             close(client_fd);
         }
     }
+
     /* Re-arm the listening socket so we can accept the next batch. */
     if (g_reactor) {
         cwist_reactor_add(g_reactor, fd, async_accept_cb, ctx);
