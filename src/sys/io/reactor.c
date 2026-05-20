@@ -919,7 +919,14 @@ bool cwist_reactor_mod(cwist_reactor_t *reactor, int fd, cwist_reactor_cb_t cb, 
 }
 
 bool cwist_reactor_del(cwist_reactor_t *reactor, int fd) {
-    if (!reactor || fd < 0) return false;
+    (void)reactor;
+    (void)fd;
+    return true;
+}
+
+void cwist_reactor_run(cwist_reactor_t *reactor) {
+    if (!reactor) return;
+    reactor->running = true;
 
 #ifdef __linux__
     if (!reactor->impl.use_epoll) {
@@ -927,16 +934,12 @@ bool cwist_reactor_del(cwist_reactor_t *reactor, int fd) {
             int ret = sys_io_uring_enter(reactor->impl.ring_fd, 0, 1, IORING_ENTER_GETEVENTS, NULL);
             if (ret < 0) {
                 if (errno == EINTR) continue;
-                if (errno == EAGAIN || errno == EBUSY) {
-                    usleep(1000);
-                    continue;
-                }
                 break;
             }
             uint32_t head = __atomic_load_n(reactor->impl.cq_head, __ATOMIC_ACQUIRE);
             uint32_t tail = *reactor->impl.cq_tail;
             if (head == tail) {
-                usleep(1000);
+                usleep(100);
                 continue;
             }
             while (head != tail) {
