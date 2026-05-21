@@ -1,5 +1,11 @@
-#include <cwist/net/http/http.h>
-#include <cwist/core/sstring/sstring.h>
+/**
+ * @file main.c
+ * @brief CWIST simple server using the high-level app API.
+ *
+ * HTML is composed dynamically via cwist_html_builder and cwist_css_composer
+ * inside form_ui().  Handlers receive the rendered markup — no hard-coded
+ * strings, no manual socket code.
+ */
 
 #include <cwist/app.h>
 #include <cwist/core/html/builder.h>
