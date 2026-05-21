@@ -317,8 +317,7 @@ static bool cwist_prepare_static(cwist_app *app, cwist_http_request *req,
 static void cwist_static_handler(cwist_http_request *req, cwist_http_response *res);
 static void cwist_multiport_destroy_owned_subapps(cwist_app *root);
 static void cwist_multiport_unlink_app(cwist_app *app);
-static void cwist_multiport_h3_copy_tunables(cwist_http3_context *dst,
-                                             const cwist_http3_context *src);
+static void cwist_multiport_h3_copy_tunables(cwist_http3_context *dst, const cwist_http3_context *src);
 
 /**
  * @brief Detect whether a route pattern contains colon-prefixed path parameters.
@@ -958,7 +957,36 @@ static void static_ssl_http2_handler(cwist_https_connection *conn, void *ctx);
 
 static void cwist_app_refresh_https_request_handler(cwist_app *app) {
     if (!app) return;
-    app->https_request_handler = app->use_http2 ? static_ssl_http2_handler : static_ssl_http1_handler;
+    app->https_request_handler = app->use_https2 ? static_ssl_http2_handler : static_ssl_http1_handler;
+}
+
+/**
+ * @brief Initialize or refresh the HTTP/3 context based on current settings.
+ */
+static cwist_error_t cwist_app_refresh_http3_context(cwist_app *app) {
+    cwist_error_t err = make_error(CWIST_ERR_INT16);
+    if (!app) {
+        err.error.err_i16 = -1;
+        return err;
+    }
+
+    if (app->h3_ctx) {
+        cwist_http3_destroy_context(app->h3_ctx);
+        app->h3_ctx = NULL;
+    }
+
+    if (app->use_https3 || app->use_http3) {
+        if (app->use_https3 && app->cert_path && app->key_path) {
+            err = cwist_http3_init_context(&app->h3_ctx, app->cert_path, app->key_path);
+        } else if (app->use_http3) {
+            err = cwist_http3_init_context_ephemeral(&app->h3_ctx);
+        } else {
+            err.error.err_i16 = -1; // Missing config for strict https3
+        }
+    } else {
+        err.error.err_i16 = 0;
+    }
+    return err;
 }
 
 cwist_app *cwist_app_create(void) {
@@ -3666,8 +3694,7 @@ static cwist_app *cwist_multiport_bound_app(cwist_multiport_group *group, cwist_
  * @param dst Destination runtime context.
  * @param src Source template context.
  */
-static void cwist_multiport_h3_copy_tunables(cwist_http3_context *dst,
-                                             const cwist_http3_context *src) {
+static void cwist_multiport_h3_copy_tunables(cwist_http3_context *dst, const cwist_http3_context *src) {
     if (!dst || !src) return;
     dst->push_enabled = src->push_enabled;
     dst->early_data_enabled = src->early_data_enabled;
@@ -3755,8 +3782,7 @@ static int cwist_multiport_bind_udp(unsigned short port) {
 static void *cwist_multiport_h3_thread(void *arg) {
     cwist_multiport_h3_listener *listener = (cwist_multiport_h3_listener *)arg;
     if (!listener || !listener->ctx || !listener->app) return NULL;
-    cwist_http3_server_loop(listener->udp_fd, listener->ctx, static_http3_route_bridge,
-                            listener->app);
+    cwist_http3_server_loop(listener->udp_fd, listener->ctx, static_http3_route_bridge, listener->app);
     listener->running = false;
     return NULL;
 }
@@ -3768,8 +3794,7 @@ static void *cwist_multiport_h3_thread(void *arg) {
  * @param port UDP/TCP port number.
  * @return 0 on success, or -1 on failure.
  */
-static int cwist_multiport_h3_start_one(cwist_multiport_group *group, cwist_app *app,
-                                        unsigned short port) {
+static int cwist_multiport_h3_start_one(cwist_multiport_group *group, cwist_app *app, unsigned short port) {
     if (!group || !app || (!app->use_http3 && !app->use_https3)) return 0;
     if (group->h3_listener_count >= CWIST_MULTIPORT_MAX_PORTS) return -1;
 
@@ -3817,8 +3842,10 @@ static int cwist_multiport_h3_start_one(cwist_multiport_group *group, cwist_app 
  * @param port_count Number of entries in bind_ports.
  * @return 0 on success, or -1 on any listener failure.
  */
-static int cwist_multiport_h3_start_all(cwist_multiport_group *group, cwist_app *root,
-                                        const unsigned short *bind_ports, size_t port_count) {
+static int cwist_multiport_h3_start_all(cwist_multiport_group *group,
+                                        cwist_app *root,
+                                        const unsigned short *bind_ports,
+                                        size_t port_count) {
     if (!group || !root || !bind_ports) return -1;
     cwist_multiport_h3_stop_group(group);
     for (size_t i = 0; i < port_count; i++) {
@@ -3852,9 +3879,7 @@ static int cwist_multiport_validate_port_app(cwist_app *app, unsigned short port
         return -1;
     }
     if (app->use_http3 && app->use_https3) {
-        fprintf(stderr,
-                "Port %hu invalid: ephemeral HTTP/3 and TLS HTTP/3 cannot both be enabled.\n",
-                port);
+        fprintf(stderr, "Port %hu invalid: ephemeral HTTP/3 and TLS HTTP/3 cannot both be enabled.\n", port);
         return -1;
     }
     if (app->use_https3 && (!app->cert_path || !app->key_path)) {
@@ -3872,8 +3897,10 @@ static int cwist_multiport_validate_port_app(cwist_app *app, unsigned short port
  * @param port_count Number of entries in bind_ports.
  * @return true when at least one assigned app uses TLS over TCP.
  */
-static bool cwist_multiport_needs_https_pool(cwist_multiport_group *group, cwist_app *root,
-                                             const unsigned short *bind_ports, size_t port_count) {
+static bool cwist_multiport_needs_https_pool(cwist_multiport_group *group,
+                                             cwist_app *root,
+                                             const unsigned short *bind_ports,
+                                             size_t port_count) {
     for (size_t i = 0; i < port_count; i++) {
         cwist_app *port_app = cwist_multiport_bound_app(group, root, bind_ports[i]);
         if (port_app && port_app->use_ssl) return true;
