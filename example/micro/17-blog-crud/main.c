@@ -24,9 +24,29 @@
 static cwist_orm_t *g_orm = NULL;
 
 /* ---------- Middleware ---------- */
-static void logger(cwist_http_request *req, cwist_http_response *res, cwist_handler_func next) {
+static void logger(cwist_http_request *req, cwist_http_response *res,
+                   cwist_handler_func next) {
     (void)res;
-    printf("[LOG] %s %s\n", cwist_http_method_to_string(req->method), req->path->data);
+    printf("[LOG] %s %s\n", cwist_http_method_to_string(req->method),
+           req->path->data);
+    next(req, res);
+}
+
+static void require_auth(cwist_http_request *req, cwist_http_response *res,
+                         cwist_handler_func next) {
+    char *auth = cwist_http_header_get(req->headers, "Authorization");
+    if (!auth || strncmp(auth, "Bearer ", 7) != 0) {
+        res->status_code = CWIST_HTTP_UNAUTHORIZED;
+        cwist_sstring_assign(res->body, "{\"error\":\"unauthorized\"}");
+        return;
+    }
+    cwist_jwt_claims *claims = cwist_jwt_verify(auth + 7, JWT_SECRET);
+    if (!claims) {
+        res->status_code = CWIST_HTTP_UNAUTHORIZED;
+        cwist_sstring_assign(res->body, "{\"error\":\"invalid token\"}");
+        return;
+    }
+    cwist_jwt_claims_destroy(claims);
     next(req, res);
 }
 
@@ -61,7 +81,8 @@ static cwist_sstring *form_ui(void) {
             cwist_html_element_t *li = cwist_html_element_create("li");
             cwist_html_element_t *a = cwist_html_element_create("a");
             char href[64];
-            snprintf(href, sizeof(href), "/posts/%s", id ? id->valuestring : "0");
+            snprintf(href, sizeof(href), "/posts/%s",
+                     id ? id->valuestring : "0");
             cwist_html_element_add_attr(a, "href", href);
             cwist_html_element_set_text(a, title ? title->valuestring : "Untitled");
             cwist_html_element_add_child(li, a);
@@ -111,9 +132,9 @@ static void api_show(cwist_http_request *req, cwist_http_response *res) {
 
     cJSON *out = cJSON_CreateObject();
     cJSON_AddItemToObject(out, "post",
-                          (rows && cJSON_GetArraySize(rows) > 0)
-                              ? cJSON_Duplicate(cJSON_GetArrayItem(rows, 0), true)
-                              : cJSON_CreateObject());
+        (rows && cJSON_GetArraySize(rows) > 0)
+            ? cJSON_Duplicate(cJSON_GetArrayItem(rows, 0), true)
+            : cJSON_CreateObject());
     char *json = cJSON_Print(out);
     cwist_http_header_add(&res->headers, "Content-Type", "application/json");
     cwist_sstring_assign(res->body, json);
@@ -164,7 +185,8 @@ static void api_delete(cwist_http_request *req, cwist_http_response *res) {
 
 static void login(cwist_http_request *req, cwist_http_response *res) {
     (void)req;
-    char *token = cwist_jwt_sign("{\"sub\":\"1\",\"role\":\"admin\"}", JWT_SECRET, 3600);
+    char *token = cwist_jwt_sign("{\"sub\":\"1\",\"role\":\"admin\"}",
+                                 JWT_SECRET, 3600);
     cwist_json_builder *jb = cwist_json_builder_create();
     cwist_json_begin_object(jb);
     cwist_json_add_string(jb, "token", token ? token : "");
@@ -180,7 +202,8 @@ int main(void) {
     int sock = cwist_db_transfer_sqlite_to_socket(":memory:");
     g_orm = cwist_orm_open_socket(sock);
     cwist_orm_immediate_commit(true);
-    cwist_orm_exec(g_orm, "CREATE TABLE posts(id INTEGER PRIMARY KEY, title TEXT, body TEXT);");
+    cwist_orm_exec(g_orm,
+        "CREATE TABLE posts(id INTEGER PRIMARY KEY, title TEXT, body TEXT);");
 
     cwist_app *app = cwist_app_create();
     cwist_app_use(app, logger);
@@ -193,9 +216,9 @@ int main(void) {
     cwist_app_get(app, "/", index_handler);
 
     /* API */
-    cwist_app_get(app, "/api/posts", api_list);
-    cwist_app_get(app, "/api/posts/:id", api_show);
-    cwist_app_post(app, "/api/posts", api_create);
+    cwist_app_get(app,  "/api/posts",          api_list);
+    cwist_app_get(app,  "/api/posts/:id",      api_show);
+    cwist_app_post(app, "/api/posts",          api_create);
     cwist_app_post(app, "/api/posts/:id/edit", api_update);
     cwist_app_post(app, "/api/posts/:id/delete", api_delete);
 
