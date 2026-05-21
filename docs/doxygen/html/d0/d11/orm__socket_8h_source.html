@@ -82,32 +82,22 @@ $(document).ready(function() { init_codefold(1); });
   <div class="headertitle"><div class="title">orm_socket.h</div></div>
 </div><!--header-->
 <div class="contents">
-<a href="../../d0/d11/orm__socket_8h.html">Go to the documentation of this file.</a><div class="fragment"><div class="line"><a id="l00001" name="l00001"></a><span class="lineno">    1</span><span class="preprocessor">#ifndef CWIST_CORE_ORM_SOCKET_H</span></div>
-<div class="line"><a id="l00002" name="l00002"></a><span class="lineno">    2</span><span class="preprocessor">#define CWIST_CORE_ORM_SOCKET_H</span></div>
-<div class="line"><a id="l00003" name="l00003"></a><span class="lineno">    3</span> </div>
-<div class="line"><a id="l00004" name="l00004"></a><span class="lineno">    4</span><span class="preprocessor">#include &lt;<a class="code" href="../../d6/d9b/orm_8h.html">cwist/core/orm/orm.h</a>&gt;</span></div>
-<div class="line"><a id="l00005" name="l00005"></a><span class="lineno">    5</span> </div>
-<div class="line"><a id="l00006" name="l00006"></a><span class="lineno">    6</span><span class="preprocessor">#ifdef __cplusplus</span></div>
-<div class="line"><a id="l00007" name="l00007"></a><span class="lineno">    7</span><span class="keyword">extern</span> <span class="stringliteral">&quot;C&quot;</span> {</div>
-<div class="line"><a id="l00008" name="l00008"></a><span class="lineno">    8</span><span class="preprocessor">#endif</span></div>
-<div class="line"><a id="l00009" name="l00009"></a><span class="lineno">    9</span> </div>
-<div class="line"><a id="l00026" name="l00026"></a><span class="lineno">   26</span><span class="keywordtype">int</span> <a class="code hl_function" href="../../d0/d11/orm__socket_8h.html#a075b96d77de4eb6fb2386e826379a04d">cwist_db_transfer_sqlite_to_socket</a>(<span class="keyword">const</span> <span class="keywordtype">char</span> *path);</div>
-<div class="line"><a id="l00027" name="l00027"></a><span class="lineno">   27</span><a class="code hl_typedef" href="../../d6/d9b/orm_8h.html#aeacfe257785ac940ef6c5813dd335a0e">cwist_orm_t</a> *<a class="code hl_function" href="../../d0/d11/orm__socket_8h.html#a49e4e067f82940d518da70b53f2e0db9">cwist_orm_open_socket</a>(<span class="keywordtype">int</span> sock);</div>
-<div class="line"><a id="l00028" name="l00028"></a><span class="lineno">   28</span><span class="keywordtype">void</span> <a class="code hl_function" href="../../d0/d11/orm__socket_8h.html#ab8358b56c5396e61785186a6e0895f67">cwist_orm_close_socket</a>(<a class="code hl_typedef" href="../../d6/d9b/orm_8h.html#aeacfe257785ac940ef6c5813dd335a0e">cwist_orm_t</a> *orm);</div>
-<div class="line"><a id="l00029" name="l00029"></a><span class="lineno">   29</span> </div>
-<div class="line"><a id="l00030" name="l00030"></a><span class="lineno">   30</span><span class="keywordtype">int</span> <a class="code hl_function" href="../../d0/d11/orm__socket_8h.html#aa28eec9fd7323d02594d68cd79b4abf5">cwist_orm_socketpair_cloexec</a>(<span class="keywordtype">int</span> domain, <span class="keywordtype">int</span> type, <span class="keywordtype">int</span> protocol, <span class="keywordtype">int</span> sv[2]);</div>
-<div class="line"><a id="l00031" name="l00031"></a><span class="lineno">   31</span> </div>
-<div class="line"><a id="l00032" name="l00032"></a><span class="lineno">   32</span><span class="preprocessor">#ifdef __cplusplus</span></div>
-<div class="line"><a id="l00033" name="l00033"></a><span class="lineno">   33</span>}</div>
-<div class="line"><a id="l00034" name="l00034"></a><span class="lineno">   34</span><span class="preprocessor">#endif</span></div>
-<div class="line"><a id="l00035" name="l00035"></a><span class="lineno">   35</span> </div>
-<div class="line"><a id="l00036" name="l00036"></a><span class="lineno">   36</span><span class="preprocessor">#endif </span><span class="comment">/* CWIST_CORE_ORM_SOCKET_H */</span><span class="preprocessor"></span></div>
-<div class="ttc" id="aorm_8h_html"><div class="ttname"><a href="../../d6/d9b/orm_8h.html">orm.h</a></div><div class="ttdoc">Tiny ORM over a SQL socket stream.</div></div>
-<div class="ttc" id="aorm_8h_html_aeacfe257785ac940ef6c5813dd335a0e"><div class="ttname"><a href="../../d6/d9b/orm_8h.html#aeacfe257785ac940ef6c5813dd335a0e">cwist_orm_t</a></div><div class="ttdeci">struct cwist_orm cwist_orm_t</div><div class="ttdoc">Opaque ORM session handle.</div><div class="ttdef"><b>Definition</b> <a href="../../d6/d9b/orm_8h_source.html#l00035">orm.h:35</a></div></div>
-<div class="ttc" id="aorm__socket_8h_html_a075b96d77de4eb6fb2386e826379a04d"><div class="ttname"><a href="../../d0/d11/orm__socket_8h.html#a075b96d77de4eb6fb2386e826379a04d">cwist_db_transfer_sqlite_to_socket</a></div><div class="ttdeci">int cwist_db_transfer_sqlite_to_socket(const char *path)</div><div class="ttdoc">Open a SQLite database behind an in-process SQL socket.</div><div class="ttdef"><b>Definition</b> <a href="../../d5/dcf/orm__socket_8c_source.html#l00294">orm_socket.c:294</a></div></div>
-<div class="ttc" id="aorm__socket_8h_html_a49e4e067f82940d518da70b53f2e0db9"><div class="ttname"><a href="../../d0/d11/orm__socket_8h.html#a49e4e067f82940d518da70b53f2e0db9">cwist_orm_open_socket</a></div><div class="ttdeci">cwist_orm_t * cwist_orm_open_socket(int sock)</div><div class="ttdoc">Wrap a connected socket descriptor in an ORM session.</div><div class="ttdef"><b>Definition</b> <a href="../../d8/d03/orm_8c_source.html#l00145">orm.c:145</a></div></div>
-<div class="ttc" id="aorm__socket_8h_html_aa28eec9fd7323d02594d68cd79b4abf5"><div class="ttname"><a href="../../d0/d11/orm__socket_8h.html#aa28eec9fd7323d02594d68cd79b4abf5">cwist_orm_socketpair_cloexec</a></div><div class="ttdeci">int cwist_orm_socketpair_cloexec(int domain, int type, int protocol, int sv[2])</div><div class="ttdef"><b>Definition</b> <a href="../../d5/dcf/orm__socket_8c_source.html#l00275">orm_socket.c:275</a></div></div>
-<div class="ttc" id="aorm__socket_8h_html_ab8358b56c5396e61785186a6e0895f67"><div class="ttname"><a href="../../d0/d11/orm__socket_8h.html#ab8358b56c5396e61785186a6e0895f67">cwist_orm_close_socket</a></div><div class="ttdeci">void cwist_orm_close_socket(cwist_orm_t *orm)</div><div class="ttdoc">Close an ORM session and release its socket.</div><div class="ttdef"><b>Definition</b> <a href="../../d8/d03/orm_8c_source.html#l00163">orm.c:163</a></div></div>
+<a href="../../d0/d11/orm__socket_8h.html">Go to the documentation of this file.</a><div class="fragment"><div class="line"><a id="l00001" name="l00001"></a><span class="lineno">    1</span> </div>
+<div class="line"><a id="l00011" name="l00011"></a><span class="lineno">   11</span><span class="preprocessor">#ifndef __CWIST_ORM_SOCKET_H__</span></div>
+<div class="line"><a id="l00012" name="l00012"></a><span class="lineno">   12</span><span class="preprocessor">#define __CWIST_ORM_SOCKET_H__</span></div>
+<div class="line"><a id="l00013" name="l00013"></a><span class="lineno">   13</span> </div>
+<div class="line"><a id="l00014" name="l00014"></a><span class="lineno">   14</span><span class="preprocessor">#ifdef __cplusplus</span></div>
+<div class="line"><a id="l00015" name="l00015"></a><span class="lineno">   15</span><span class="keyword">extern</span> <span class="stringliteral">&quot;C&quot;</span> {</div>
+<div class="line"><a id="l00016" name="l00016"></a><span class="lineno">   16</span><span class="preprocessor">#endif</span></div>
+<div class="line"><a id="l00017" name="l00017"></a><span class="lineno">   17</span> </div>
+<div class="line"><a id="l00036" name="l00036"></a><span class="lineno">   36</span><span class="keywordtype">int</span> <a class="code hl_function" href="../../d0/d11/orm__socket_8h.html#a1d377436b68c6d7a8cc963bed96f8b13">cwist_db_transfer_sqlite_to_socket</a>(<span class="keyword">const</span> <span class="keywordtype">char</span> *db_path);</div>
+<div class="line"><a id="l00037" name="l00037"></a><span class="lineno">   37</span> </div>
+<div class="line"><a id="l00038" name="l00038"></a><span class="lineno">   38</span><span class="preprocessor">#ifdef __cplusplus</span></div>
+<div class="line"><a id="l00039" name="l00039"></a><span class="lineno">   39</span>}</div>
+<div class="line"><a id="l00040" name="l00040"></a><span class="lineno">   40</span><span class="preprocessor">#endif</span></div>
+<div class="line"><a id="l00041" name="l00041"></a><span class="lineno">   41</span> </div>
+<div class="line"><a id="l00042" name="l00042"></a><span class="lineno">   42</span><span class="preprocessor">#endif </span><span class="comment">/* __CWIST_ORM_SOCKET_H__ */</span><span class="preprocessor"></span></div>
+<div class="ttc" id="aorm__socket_8h_html_a1d377436b68c6d7a8cc963bed96f8b13"><div class="ttname"><a href="../../d0/d11/orm__socket_8h.html#a1d377436b68c6d7a8cc963bed96f8b13">cwist_db_transfer_sqlite_to_socket</a></div><div class="ttdeci">int cwist_db_transfer_sqlite_to_socket(const char *db_path)</div><div class="ttdoc">Spawn a background SQLite worker attached to a Unix socket pair.</div><div class="ttdef"><b>Definition</b> <a href="../../d5/dcf/orm__socket_8c_source.html#l00242">orm_socket.c:242</a></div></div>
 </div><!-- fragment --></div><!-- contents -->
 <!-- start footer part -->
 <hr class="footer"/><address class="footer"><small>

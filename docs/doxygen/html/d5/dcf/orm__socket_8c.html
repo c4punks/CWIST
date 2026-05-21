@@ -89,7 +89,6 @@ $(function() {
 <code>#include &lt;string.h&gt;</code><br />
 <code>#include &lt;unistd.h&gt;</code><br />
 <code>#include &lt;errno.h&gt;</code><br />
-<code>#include &lt;fcntl.h&gt;</code><br />
 <code>#include &lt;pthread.h&gt;</code><br />
 <code>#include &lt;sys/socket.h&gt;</code><br />
 <code>#include &lt;sys/un.h&gt;</code><br />
@@ -97,61 +96,38 @@ $(function() {
 <code>#include &lt;stdint.h&gt;</code><br />
 <code>#include &lt;sqlite3.h&gt;</code><br />
 <code>#include &lt;cjson/cJSON.h&gt;</code><br />
-<code>#include &lt;<a class="el" href="../../d2/dfe/alloc_8h_source.html">cwist/core/mem/alloc.h</a>&gt;</code><br />
 </div><div class="textblock"><div class="dynheader">
 Include dependency graph for orm_socket.c:</div>
 <div class="dyncontent">
 <div class="center"><img src="../../d3/d15/orm__socket_8c__incl.png" border="0" usemap="#asrc_2core_2orm_2orm__socket_8c" alt=""/></div>
 <map name="asrc_2core_2orm_2orm__socket_8c" id="asrc_2core_2orm_2orm__socket_8c">
-<area shape="rect" title="SQLite&#45;to&#45;socket bridge implementation." alt="" coords="788,5,981,31"/>
-<area shape="rect" href="../../d0/d11/orm__socket_8h.html" title=" " alt="" coords="132,79,280,119"/>
-<area shape="poly" title=" " alt="" coords="788,30,569,51,312,81,294,84,293,79,311,76,569,45,787,25"/>
-<area shape="rect" title=" " alt="" coords="141,328,212,353"/>
-<area shape="poly" title=" " alt="" coords="788,22,674,26,548,35,435,53,390,65,358,81,333,102,317,125,307,148,300,172,287,225,275,253,255,282,233,304,209,322,206,318,229,300,251,278,270,250,282,223,295,171,302,146,312,122,329,99,355,76,388,60,433,47,548,30,674,20,788,17"/>
-<area shape="rect" title=" " alt="" coords="5,328,116,353"/>
-<area shape="poly" title=" " alt="" coords="788,24,609,29,400,39,219,56,156,67,121,81,98,104,80,133,69,165,61,198,57,263,60,314,55,315,51,263,56,197,63,163,76,131,93,101,118,76,154,62,218,51,400,34,609,23,788,18"/>
-<area shape="rect" title=" " alt="" coords="566,86,633,111"/>
-<area shape="poly" title=" " alt="" coords="831,33,744,54,647,81,640,83,638,78,645,76,742,49,829,28"/>
-<area shape="rect" title=" " alt="" coords="657,86,728,111"/>
-<area shape="poly" title=" " alt="" coords="858,33,734,83,732,78,856,28"/>
-<area shape="rect" title=" " alt="" coords="752,86,823,111"/>
-<area shape="poly" title=" " alt="" coords="872,33,814,79,811,75,869,29"/>
-<area shape="rect" title=" " alt="" coords="847,86,922,111"/>
-<area shape="poly" title=" " alt="" coords="887,31,887,72,882,72,882,31"/>
-<area shape="rect" title=" " alt="" coords="947,86,1015,111"/>
-<area shape="poly" title=" " alt="" coords="901,29,958,75,954,79,897,33"/>
-<area shape="rect" title=" " alt="" coords="1039,86,1101,111"/>
-<area shape="poly" title=" " alt="" coords="914,28,1028,76,1032,78,1030,83,1026,81,912,33"/>
-<area shape="rect" title=" " alt="" coords="1125,86,1209,111"/>
-<area shape="poly" title=" " alt="" coords="934,28,1115,76,1124,79,1122,84,1113,81,933,33"/>
-<area shape="rect" title=" " alt="" coords="1233,86,1336,111"/>
-<area shape="poly" title=" " alt="" coords="965,28,1087,48,1223,76,1237,80,1235,85,1221,81,1086,53,964,33"/>
-<area shape="rect" title=" " alt="" coords="1360,86,1436,111"/>
-<area shape="poly" title=" " alt="" coords="982,22,1154,40,1252,56,1349,76,1359,79,1358,84,1348,81,1252,61,1153,46,981,28"/>
-<area shape="rect" title=" " alt="" coords="1460,86,1552,111"/>
-<area shape="poly" title=" " alt="" coords="982,21,1197,38,1324,54,1449,76,1462,79,1461,85,1448,81,1323,59,1197,43,981,26"/>
-<area shape="rect" title=" " alt="" coords="1576,86,1655,111"/>
-<area shape="poly" title=" " alt="" coords="982,17,1100,21,1247,30,1407,48,1565,76,1576,79,1575,84,1564,81,1406,53,1246,36,1100,26,982,22"/>
-<area shape="rect" href="../../d2/dfe/alloc_8h.html" title="Memory allocation wrappers backed by libttak." alt="" coords="369,86,542,111"/>
-<area shape="poly" title=" " alt="" coords="820,33,554,81,529,86,528,81,554,76,820,28"/>
-<area shape="rect" href="../../d6/d9b/orm_8h.html" title="Tiny ORM over a SQL socket stream." alt="" coords="102,167,262,192"/>
-<area shape="poly" title=" " alt="" coords="203,120,192,154,187,153,198,118"/>
-<area shape="rect" title=" " alt="" coords="238,328,321,353"/>
-<area shape="poly" title=" " alt="" coords="203,190,230,211,255,239,271,277,279,313,274,314,266,278,250,241,227,214,200,194"/>
-<area shape="rect" href="../../d7/da1/sys_2err_2cwist__err_8h.html" title="Unified error code and type definitions for the CWIST system layer." alt="" coords="99,240,241,280"/>
-<area shape="poly" title=" " alt="" coords="183,193,178,227,172,226,178,192"/>
-<area shape="poly" title=" " alt="" coords="153,194,119,213,88,242,71,278,65,314,59,313,66,276,84,238,115,209,150,190"/>
-<area shape="poly" title=" " alt="" coords="198,278,254,318,251,322,195,282"/>
-<area shape="poly" title=" " alt="" coords="174,280,177,314,172,314,169,280"/>
-<area shape="poly" title=" " alt="" coords="145,282,89,322,86,318,142,278"/>
-<area shape="rect" title=" " alt="" coords="482,247,557,273"/>
-<area shape="poly" title=" " alt="" coords="490,109,528,131,546,146,560,166,565,184,562,204,542,238,538,235,557,202,560,185,556,168,542,150,525,135,487,114"/>
-<area shape="rect" title=" " alt="" coords="621,167,762,192"/>
-<area shape="poly" title=" " alt="" coords="490,109,645,160,643,165,489,114"/>
-<area shape="rect" href="../../da/d0c/arena_8h.html" title="Request&#45;scoped arena allocator backed by libttak arena generations." alt="" coords="367,167,546,192"/>
-<area shape="poly" title=" " alt="" coords="458,111,459,153,454,153,453,112"/>
-<area shape="poly" title=" " alt="" coords="446,194,350,282,305,321,302,317,347,278,442,190"/>
-<area shape="poly" title=" " alt="" coords="468,191,504,235,499,238,464,194"/>
+<area shape="rect" title="SQLite&#45;to&#45;socket bridge implementation." alt="" coords="596,5,789,31"/>
+<area shape="rect" href="../../d0/d11/orm__socket_8h.html" title="SQLite&#45;to&#45;Unix&#45;Socket bridge helpers." alt="" coords="5,79,153,119"/>
+<area shape="poly" title=" " alt="" coords="596,30,402,50,167,81,166,76,401,44,595,25"/>
+<area shape="rect" title=" " alt="" coords="178,86,245,111"/>
+<area shape="poly" title=" " alt="" coords="596,28,436,46,346,61,257,81,250,84,248,79,256,76,345,56,435,41,595,23"/>
+<area shape="rect" title=" " alt="" coords="269,86,340,111"/>
+<area shape="poly" title=" " alt="" coords="596,33,479,52,352,81,344,84,343,79,351,76,478,47,595,28"/>
+<area shape="rect" title=" " alt="" coords="364,86,435,111"/>
+<area shape="poly" title=" " alt="" coords="637,33,548,54,448,81,441,84,439,79,447,76,546,49,636,28"/>
+<area shape="rect" title=" " alt="" coords="459,86,534,111"/>
+<area shape="poly" title=" " alt="" coords="665,33,539,83,537,78,663,28"/>
+<area shape="rect" title=" " alt="" coords="559,86,627,111"/>
+<area shape="poly" title=" " alt="" coords="680,33,620,79,617,75,676,29"/>
+<area shape="rect" title=" " alt="" coords="651,86,735,111"/>
+<area shape="poly" title=" " alt="" coords="695,31,695,72,690,72,690,31"/>
+<area shape="rect" title=" " alt="" coords="759,86,861,111"/>
+<area shape="poly" title=" " alt="" coords="711,29,783,76,780,80,709,33"/>
+<area shape="rect" title=" " alt="" coords="885,86,961,111"/>
+<area shape="poly" title=" " alt="" coords="730,28,875,76,882,79,880,84,873,81,728,33"/>
+<area shape="rect" title=" " alt="" coords="985,86,1077,111"/>
+<area shape="poly" title=" " alt="" coords="757,28,859,49,975,76,986,79,985,84,973,81,858,54,756,33"/>
+<area shape="rect" title=" " alt="" coords="1101,86,1172,111"/>
+<area shape="poly" title=" " alt="" coords="790,25,933,43,1013,58,1091,76,1100,79,1098,84,1089,81,1011,63,932,49,789,30"/>
+<area shape="rect" title=" " alt="" coords="1196,86,1275,111"/>
+<area shape="poly" title=" " alt="" coords="790,22,974,39,1081,55,1185,76,1196,79,1194,84,1184,81,1080,60,974,44,789,27"/>
+<area shape="rect" title=" " alt="" coords="1299,86,1409,111"/>
+<area shape="poly" title=" " alt="" coords="790,21,1018,39,1153,55,1288,76,1305,80,1304,85,1287,81,1153,60,1018,44,789,26"/>
 </map>
 </div>
 </div>
@@ -159,26 +135,21 @@ Include dependency graph for orm_socket.c:</div>
 <table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="define-members" name="define-members"></a>
 Macros</h2></td></tr>
-<tr class="memitem:a369266c24eacffb87046522897a570d5" id="r_a369266c24eacffb87046522897a570d5"><td class="memItemLeft" align="right" valign="top">#define&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d5/dcf/orm__socket_8c.html#a369266c24eacffb87046522897a570d5">_GNU_SOURCE</a>&#160;&#160;&#160;1</td></tr>
+<tr class="memitem:a369266c24eacffb87046522897a570d5" id="r_a369266c24eacffb87046522897a570d5"><td class="memItemLeft" align="right" valign="top">#<a class="el" href="../../de/daf/http3_8c.html#a7360b55975153b822efc5217b7734e6a">define</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d5/dcf/orm__socket_8c.html#a369266c24eacffb87046522897a570d5">_GNU_SOURCE</a></td></tr>
 <tr class="separator:a369266c24eacffb87046522897a570d5"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:aad0e1b104655825167fa9ad8dcdd97be" id="r_aad0e1b104655825167fa9ad8dcdd97be"><td class="memItemLeft" align="right" valign="top">#define&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d5/dcf/orm__socket_8c.html#aad0e1b104655825167fa9ad8dcdd97be">ORM_PROTO_MAGIC</a>&#160;&#160;&#160;0x43574F52   /* &quot;CWOR&quot; in ASCII hex trickery */</td></tr>
+<tr class="memitem:aad0e1b104655825167fa9ad8dcdd97be" id="r_aad0e1b104655825167fa9ad8dcdd97be"><td class="memItemLeft" align="right" valign="top">#<a class="el" href="../../de/daf/http3_8c.html#a7360b55975153b822efc5217b7734e6a">define</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d5/dcf/orm__socket_8c.html#aad0e1b104655825167fa9ad8dcdd97be">ORM_PROTO_MAGIC</a>&#160;&#160;&#160;0x43574F52   /* &quot;CWOR&quot; <a class="el" href="../../de/daf/http3_8c.html#a7360b55975153b822efc5217b7734e6a">in</a> <a class="el" href="../../de/daf/http3_8c.html#a7360b55975153b822efc5217b7734e6a">ASCII</a> <a class="el" href="../../de/daf/http3_8c.html#a7360b55975153b822efc5217b7734e6a">hex</a> <a class="el" href="../../de/daf/http3_8c.html#a7360b55975153b822efc5217b7734e6a">trickery</a> */</td></tr>
 <tr class="memdesc:aad0e1b104655825167fa9ad8dcdd97be"><td class="mdescLeft">&#160;</td><td class="mdescRight">Magic value placed at the start of every response.  <br /></td></tr>
 <tr class="separator:aad0e1b104655825167fa9ad8dcdd97be"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:ac337901f5606f0cf6f8e9867ef3fc1c4" id="r_ac337901f5606f0cf6f8e9867ef3fc1c4"><td class="memItemLeft" align="right" valign="top">#define&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d5/dcf/orm__socket_8c.html#ac337901f5606f0cf6f8e9867ef3fc1c4">SOCK_CLOEXEC</a>&#160;&#160;&#160;0</td></tr>
-<tr class="separator:ac337901f5606f0cf6f8e9867ef3fc1c4"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="func-members" name="func-members"></a>
 Functions</h2></td></tr>
-<tr class="memitem:aa28eec9fd7323d02594d68cd79b4abf5" id="r_aa28eec9fd7323d02594d68cd79b4abf5"><td class="memItemLeft" align="right" valign="top">int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d5/dcf/orm__socket_8c.html#aa28eec9fd7323d02594d68cd79b4abf5">cwist_orm_socketpair_cloexec</a> (int domain, int type, int protocol, int sv[2])</td></tr>
-<tr class="separator:aa28eec9fd7323d02594d68cd79b4abf5"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a1d377436b68c6d7a8cc963bed96f8b13" id="r_a1d377436b68c6d7a8cc963bed96f8b13"><td class="memItemLeft" align="right" valign="top">int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d5/dcf/orm__socket_8c.html#a1d377436b68c6d7a8cc963bed96f8b13">cwist_db_transfer_sqlite_to_socket</a> (const char *db_path)</td></tr>
-<tr class="memdesc:a1d377436b68c6d7a8cc963bed96f8b13"><td class="mdescLeft">&#160;</td><td class="mdescRight">Open a SQLite database behind an in-process SQL socket.  <br /></td></tr>
+<tr class="memitem:a1d377436b68c6d7a8cc963bed96f8b13" id="r_a1d377436b68c6d7a8cc963bed96f8b13"><td class="memItemLeft" align="right" valign="top"><a class="el" href="../../de/daf/http3_8c.html#a7360b55975153b822efc5217b7734e6a">int</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d5/dcf/orm__socket_8c.html#a1d377436b68c6d7a8cc963bed96f8b13">cwist_db_transfer_sqlite_to_socket</a> (<a class="el" href="../../de/daf/http3_8c.html#a7360b55975153b822efc5217b7734e6a">const</a> <a class="el" href="../../de/daf/http3_8c.html#a7360b55975153b822efc5217b7734e6a">char</a> *db_path)</td></tr>
+<tr class="memdesc:a1d377436b68c6d7a8cc963bed96f8b13"><td class="mdescLeft">&#160;</td><td class="mdescRight">Spawn a background SQLite worker attached to a Unix socket pair.  <br /></td></tr>
 <tr class="separator:a1d377436b68c6d7a8cc963bed96f8b13"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
 <div class="textblock"><p>SQLite-to-socket bridge implementation. </p>
-<p>This file is the only place in the ORM subsystem that directly links against SQLite3. It exposes the database as a byte stream over a local Unix socket pair so that cwist_orm_t remains fully decoupled from sqlite3.h.</p>
-<p>Trust boundary: the worker executes whatever SQL text arrives on its end of the pair, verbatim. That is safe only because the pair is created with socketpair(AF_UNIX) in <a class="el" href="../../d5/dcf/orm__socket_8c.html#a1d377436b68c6d7a8cc963bed96f8b13" title="Open a SQLite database behind an in-process SQL socket.">cwist_db_transfer_sqlite_to_socket()</a>: it has no filesystem path or network address, so no other process can connect to it, and the only peer is the caller's end (normally a cwist_orm_t in the same process). Anyone holding that caller fd can run arbitrary SQL against the database, so it must never be handed to an untrusted party (SCM_RIGHTS, inheritance across fork() without exec, and so on). Escaping of untrusted values is the job of the layer that builds the SQL (<a class="el" href="../../d8/d03/orm_8c.html" title="Tiny ORM client over a framed Unix socket stream.">orm.c</a>), not of this bridge. </p>
+<p>This file is the only place in the ORM subsystem that directly links against SQLite3. It exposes the database as a byte stream over a local Unix socket pair so that cwist_orm_t remains fully decoupled from sqlite3.h. </p>
 
 <p class="definition">Definition in file <a class="el" href="../../d5/dcf/orm__socket_8c_source.html">orm_socket.c</a>.</p>
 </div><h2 class="groupheader">Macro Definition Documentation</h2>
@@ -189,12 +160,12 @@ Functions</h2></td></tr>
 <div class="memproto">
       <table class="memname">
         <tr>
-          <td class="memname">#define _GNU_SOURCE&#160;&#160;&#160;1</td>
+          <td class="memname">#<a class="el" href="../../de/daf/http3_8c.html#a7360b55975153b822efc5217b7734e6a">define</a> _GNU_SOURCE</td>
         </tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../d5/dcf/orm__socket_8c_source.html#l00023">23</a> of file <a class="el" href="../../d5/dcf/orm__socket_8c_source.html">orm_socket.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d5/dcf/orm__socket_8c_source.html#l00011">11</a> of file <a class="el" href="../../d5/dcf/orm__socket_8c_source.html">orm_socket.c</a>.</p>
 
 </div>
 </div>
@@ -205,30 +176,14 @@ Functions</h2></td></tr>
 <div class="memproto">
       <table class="memname">
         <tr>
-          <td class="memname">#define ORM_PROTO_MAGIC&#160;&#160;&#160;0x43574F52   /* &quot;CWOR&quot; in ASCII hex trickery */</td>
+          <td class="memname">#<a class="el" href="../../de/daf/http3_8c.html#a7360b55975153b822efc5217b7734e6a">define</a> ORM_PROTO_MAGIC&#160;&#160;&#160;0x43574F52   /* &quot;CWOR&quot; <a class="el" href="../../de/daf/http3_8c.html#a7360b55975153b822efc5217b7734e6a">in</a> <a class="el" href="../../de/daf/http3_8c.html#a7360b55975153b822efc5217b7734e6a">ASCII</a> <a class="el" href="../../de/daf/http3_8c.html#a7360b55975153b822efc5217b7734e6a">hex</a> <a class="el" href="../../de/daf/http3_8c.html#a7360b55975153b822efc5217b7734e6a">trickery</a> */</td>
         </tr>
       </table>
 </div><div class="memdoc">
 
 <p>Magic value placed at the start of every response. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d5/dcf/orm__socket_8c_source.html#l00048">48</a> of file <a class="el" href="../../d5/dcf/orm__socket_8c_source.html">orm_socket.c</a>.</p>
-
-</div>
-</div>
-<a id="ac337901f5606f0cf6f8e9867ef3fc1c4" name="ac337901f5606f0cf6f8e9867ef3fc1c4"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#ac337901f5606f0cf6f8e9867ef3fc1c4">&#9670;&#160;</a></span>SOCK_CLOEXEC</h2>
-
-<div class="memitem">
-<div class="memproto">
-      <table class="memname">
-        <tr>
-          <td class="memname">#define SOCK_CLOEXEC&#160;&#160;&#160;0</td>
-        </tr>
-      </table>
-</div><div class="memdoc">
-
-<p class="definition">Definition at line <a class="el" href="../../d5/dcf/orm__socket_8c_source.html#l00263">263</a> of file <a class="el" href="../../d5/dcf/orm__socket_8c_source.html">orm_socket.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d5/dcf/orm__socket_8c_source.html#l00033">33</a> of file <a class="el" href="../../d5/dcf/orm__socket_8c_source.html">orm_socket.c</a>.</p>
 
 </div>
 </div>
@@ -240,75 +195,28 @@ Functions</h2></td></tr>
 <div class="memproto">
       <table class="memname">
         <tr>
-          <td class="memname">int cwist_db_transfer_sqlite_to_socket </td>
+          <td class="memname"><a class="el" href="../../de/daf/http3_8c.html#a7360b55975153b822efc5217b7734e6a">int</a> cwist_db_transfer_sqlite_to_socket </td>
           <td>(</td>
-          <td class="paramtype">const char *&#160;</td>
-          <td class="paramname"><em>path</em></td><td>)</td>
+          <td class="paramtype"><a class="el" href="../../de/daf/http3_8c.html#a7360b55975153b822efc5217b7734e6a">const</a> <a class="el" href="../../de/daf/http3_8c.html#a7360b55975153b822efc5217b7734e6a">char</a> *&#160;</td>
+          <td class="paramname"><em>db_path</em></td><td>)</td>
           <td></td>
         </tr>
       </table>
 </div><div class="memdoc">
 
-<p>Open a SQLite database behind an in-process SQL socket. </p>
-<p>Creates an AF_UNIX socket pair and starts a detached worker thread that owns the SQLite connection on one end. The other end is returned to the caller, typically to be passed to <a class="el" href="../../d0/d11/orm__socket_8h.html#a49e4e067f82940d518da70b53f2e0db9" title="Wrap a connected socket descriptor in an ORM session.">cwist_orm_open_socket()</a>.</p>
-<p>The worker executes every SQL request it receives on the returned fd as-is, with no escaping or filtering. Treat the fd as full access to the database: keep it inside the process and do not pass it to untrusted code or processes (for example over SCM_RIGHTS, or by fork() without exec). Both ends are close-on-exec.</p>
+<p>Spawn a background SQLite worker attached to a Unix socket pair. </p>
+<p>Internally creates an <code>AF_UNIX</code> <code>SOCK_STREAM</code> socket pair, opens <code>db_path</code> with SQLite3 in a detached worker thread, and returns the client-side file descriptor. Every SQL statement sent to this fd is executed by the worker and results are streamed back.</p>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
-    <tr><td class="paramname">path</td><td>SQLite database path, or ":memory:". </td></tr>
+    <tr><td class="paramname">db_path</td><td>Path to the SQLite database file, or <code>":memory:"</code>. </td></tr>
   </table>
   </dd>
 </dl>
-<dl class="section return"><dt>Returns</dt><dd>The caller's socket fd, or -1 with errno set on failure. </dd></dl>
+<dl class="section return"><dt>Returns</dt><dd>A valid socket fd on success, or <code>-1</code> if the socket pair could not be created or the worker thread could not be spawned.</dd></dl>
+<dl class="section note"><dt>Note</dt><dd>The caller owns the returned fd and must close it (preferably via <a class="el" href="../../d6/d9b/orm_8h.html#ab8358b56c5396e61785186a6e0895f67" title="Destroy an ORM session and close its underlying socket.">cwist_orm_close_socket()</a>) when done. </dd></dl>
+<dl class="section warning"><dt>Warning</dt><dd>The background thread is detached; there is no explicit join point. Closing the client fd causes the worker to shut down gracefully on the next read failure. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d5/dcf/orm__socket_8c_source.html#l00294">294</a> of file <a class="el" href="../../d5/dcf/orm__socket_8c_source.html">orm_socket.c</a>.</p>
-
-<p class="reference">References <a class="el" href="../../d5/dcf/orm__socket_8c_source.html#l00275">cwist_orm_socketpair_cloexec()</a>.</p>
-
-</div>
-</div>
-<a id="aa28eec9fd7323d02594d68cd79b4abf5" name="aa28eec9fd7323d02594d68cd79b4abf5"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#aa28eec9fd7323d02594d68cd79b4abf5">&#9670;&#160;</a></span>cwist_orm_socketpair_cloexec()</h2>
-
-<div class="memitem">
-<div class="memproto">
-      <table class="memname">
-        <tr>
-          <td class="memname">int cwist_orm_socketpair_cloexec </td>
-          <td>(</td>
-          <td class="paramtype">int&#160;</td>
-          <td class="paramname"><em>domain</em>, </td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
-          <td></td>
-          <td class="paramtype">int&#160;</td>
-          <td class="paramname"><em>type</em>, </td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
-          <td></td>
-          <td class="paramtype">int&#160;</td>
-          <td class="paramname"><em>protocol</em>, </td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
-          <td></td>
-          <td class="paramtype">int&#160;</td>
-          <td class="paramname"><em>sv</em>[2]&#160;</td>
-        </tr>
-        <tr>
-          <td></td>
-          <td>)</td>
-          <td></td><td></td>
-        </tr>
-      </table>
-</div><div class="memdoc">
-
-<p class="definition">Definition at line <a class="el" href="../../d5/dcf/orm__socket_8c_source.html#l00275">275</a> of file <a class="el" href="../../d5/dcf/orm__socket_8c_source.html">orm_socket.c</a>.</p>
-
-<p class="reference">References <a class="el" href="../../d5/dcf/orm__socket_8c_source.html#l00263">SOCK_CLOEXEC</a>.</p>
-
-<p class="reference">Referenced by <a class="el" href="../../d5/dcf/orm__socket_8c_source.html#l00294">cwist_db_transfer_sqlite_to_socket()</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d5/dcf/orm__socket_8c_source.html#l00242">242</a> of file <a class="el" href="../../d5/dcf/orm__socket_8c_source.html">orm_socket.c</a>.</p>
 
 </div>
 </div>

@@ -189,26 +189,71 @@ Include dependency graph for websocket.c:</div>
 </div>
 <p><a href="../../d4/de6/websocket_8c_source.html">Go to the source code of this file.</a></p>
 <table class="memberdecls">
-<tr class="heading"><td colspan="2"><h2 id="header-func-members" class="groupheader"><a id="func-members" name="func-members"></a>
+<tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="define-members" name="define-members"></a>
+Macros</h2></td></tr>
+<tr class="memitem:a369266c24eacffb87046522897a570d5" id="r_a369266c24eacffb87046522897a570d5"><td class="memItemLeft" align="right" valign="top">#<a class="el" href="../../de/daf/http3_8c.html#a7360b55975153b822efc5217b7734e6a">define</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d4/de6/websocket_8c.html#a369266c24eacffb87046522897a570d5">_GNU_SOURCE</a></td></tr>
+<tr class="separator:a369266c24eacffb87046522897a570d5"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a19b2fa8561bcd550d68b56b81d783e98" id="r_a19b2fa8561bcd550d68b56b81d783e98"><td class="memItemLeft" align="right" valign="top">#<a class="el" href="../../de/daf/http3_8c.html#a7360b55975153b822efc5217b7734e6a">define</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d4/de6/websocket_8c.html#a19b2fa8561bcd550d68b56b81d783e98">WS_GUID</a>&#160;&#160;&#160;&quot;258EAFA5-<a class="el" href="../../de/daf/http3_8c.html#a7360b55975153b822efc5217b7734e6a">E914</a>-47<a class="el" href="../../de/daf/http3_8c.html#a7360b55975153b822efc5217b7734e6a">DA</a>-95<a class="el" href="../../de/daf/http3_8c.html#a7360b55975153b822efc5217b7734e6a">CA</a>-<a class="el" href="../../de/daf/http3_8c.html#a7360b55975153b822efc5217b7734e6a">C5AB0DC85B11&quot;</a></td></tr>
+<tr class="separator:a19b2fa8561bcd550d68b56b81d783e98"><td class="memSeparator" colspan="2">&#160;</td></tr>
+</table><table class="memberdecls">
+<tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="func-members" name="func-members"></a>
 Functions</h2></td></tr>
-<tr class="memitem:a25531b0d899d92a6618a28ed0b5482d0" id="r_a25531b0d899d92a6618a28ed0b5482d0"><td class="memItemLeft" align="right" valign="top">cwist_websocket *&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a25531b0d899d92a6618a28ed0b5482d0">cwist_websocket_upgrade</a> (cwist_http_request *req, int client_fd)</td></tr>
+<tr class="memitem:a25531b0d899d92a6618a28ed0b5482d0" id="r_a25531b0d899d92a6618a28ed0b5482d0"><td class="memItemLeft" align="right" valign="top"><a class="el" href="../../d9/d2c/structcwist__websocket.html">cwist_websocket</a> *&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d4/de6/websocket_8c.html#a25531b0d899d92a6618a28ed0b5482d0">cwist_websocket_upgrade</a> (<a class="el" href="../../dd/d68/structcwist__http__request.html">cwist_http_request</a> *req, <a class="el" href="../../de/daf/http3_8c.html#a7360b55975153b822efc5217b7734e6a">int</a> client_fd)</td></tr>
 <tr class="memdesc:a25531b0d899d92a6618a28ed0b5482d0"><td class="mdescLeft">&#160;</td><td class="mdescRight">Upgrade an HTTP request to a WebSocket connection.  <br /></td></tr>
-<tr class="memitem:a7c4cc8a5486ce33aab2199a8f5ec82d0" id="r_a7c4cc8a5486ce33aab2199a8f5ec82d0"><td class="memItemLeft" align="right" valign="top">cwist_ws_frame *&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a7c4cc8a5486ce33aab2199a8f5ec82d0">cwist_websocket_receive</a> (cwist_websocket *ws)</td></tr>
+<tr class="separator:a25531b0d899d92a6618a28ed0b5482d0"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a7c4cc8a5486ce33aab2199a8f5ec82d0" id="r_a7c4cc8a5486ce33aab2199a8f5ec82d0"><td class="memItemLeft" align="right" valign="top"><a class="el" href="../../db/d40/structcwist__ws__frame.html">cwist_ws_frame</a> *&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d4/de6/websocket_8c.html#a7c4cc8a5486ce33aab2199a8f5ec82d0">cwist_websocket_receive</a> (<a class="el" href="../../d9/d2c/structcwist__websocket.html">cwist_websocket</a> *<a class="el" href="../../de/daf/http3_8c.html#a7360b55975153b822efc5217b7734e6a">ws</a>)</td></tr>
 <tr class="memdesc:a7c4cc8a5486ce33aab2199a8f5ec82d0"><td class="mdescLeft">&#160;</td><td class="mdescRight">Receive the next WebSocket frame from a connected client.  <br /></td></tr>
-<tr class="memitem:a84b014c343b059d06c899fd2b9285966" id="r_a84b014c343b059d06c899fd2b9285966"><td class="memItemLeft" align="right" valign="top">int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a84b014c343b059d06c899fd2b9285966">cwist_websocket_send</a> (cwist_websocket *ws, cwist_ws_opcode_t opcode, const uint8_t *data, size_t len)</td></tr>
+<tr class="separator:a7c4cc8a5486ce33aab2199a8f5ec82d0"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a84b014c343b059d06c899fd2b9285966" id="r_a84b014c343b059d06c899fd2b9285966"><td class="memItemLeft" align="right" valign="top"><a class="el" href="../../de/daf/http3_8c.html#a7360b55975153b822efc5217b7734e6a">int</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d4/de6/websocket_8c.html#a84b014c343b059d06c899fd2b9285966">cwist_websocket_send</a> (<a class="el" href="../../d9/d2c/structcwist__websocket.html">cwist_websocket</a> *<a class="el" href="../../de/daf/http3_8c.html#a7360b55975153b822efc5217b7734e6a">ws</a>, <a class="el" href="../../dd/dec/net_2websocket_2websocket_8h.html#a8095ae87a6487e56281d92a11c419254">cwist_ws_opcode_t</a> opcode, <a class="el" href="../../de/daf/http3_8c.html#a7360b55975153b822efc5217b7734e6a">const</a> <a class="el" href="../../de/daf/http3_8c.html#a7360b55975153b822efc5217b7734e6a">uint8_t</a> *<a class="el" href="../../de/daf/http3_8c.html#a91a70b77df95bd8b0830b49a094c2acb">data</a>, <a class="el" href="../../de/daf/http3_8c.html#a7360b55975153b822efc5217b7734e6a">size_t</a> <a class="el" href="../../de/daf/http3_8c.html#a7360b55975153b822efc5217b7734e6a">len</a>)</td></tr>
 <tr class="memdesc:a84b014c343b059d06c899fd2b9285966"><td class="mdescLeft">&#160;</td><td class="mdescRight">Send a single FIN-terminated WebSocket frame to the peer.  <br /></td></tr>
-<tr class="memitem:ad0076021ccbab9a5990c269dca59df99" id="r_ad0076021ccbab9a5990c269dca59df99"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ad0076021ccbab9a5990c269dca59df99">cwist_websocket_frame_destroy</a> (cwist_ws_frame *frame)</td></tr>
+<tr class="separator:a84b014c343b059d06c899fd2b9285966"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ad0076021ccbab9a5990c269dca59df99" id="r_ad0076021ccbab9a5990c269dca59df99"><td class="memItemLeft" align="right" valign="top"><a class="el" href="../../de/daf/http3_8c.html#a7360b55975153b822efc5217b7734e6a">void</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d4/de6/websocket_8c.html#ad0076021ccbab9a5990c269dca59df99">cwist_websocket_frame_destroy</a> (<a class="el" href="../../db/d40/structcwist__ws__frame.html">cwist_ws_frame</a> *<a class="el" href="../../de/daf/http3_8c.html#a7360b55975153b822efc5217b7734e6a">frame</a>)</td></tr>
 <tr class="memdesc:ad0076021ccbab9a5990c269dca59df99"><td class="mdescLeft">&#160;</td><td class="mdescRight">Release a frame and its owned payload buffer.  <br /></td></tr>
-<tr class="memitem:a81ea5930173790e2b2157c5c3693f641" id="r_a81ea5930173790e2b2157c5c3693f641"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a81ea5930173790e2b2157c5c3693f641">cwist_websocket_close</a> (cwist_websocket *ws)</td></tr>
+<tr class="separator:ad0076021ccbab9a5990c269dca59df99"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a81ea5930173790e2b2157c5c3693f641" id="r_a81ea5930173790e2b2157c5c3693f641"><td class="memItemLeft" align="right" valign="top"><a class="el" href="../../de/daf/http3_8c.html#a7360b55975153b822efc5217b7734e6a">void</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d4/de6/websocket_8c.html#a81ea5930173790e2b2157c5c3693f641">cwist_websocket_close</a> (<a class="el" href="../../d9/d2c/structcwist__websocket.html">cwist_websocket</a> *<a class="el" href="../../de/daf/http3_8c.html#a7360b55975153b822efc5217b7734e6a">ws</a>)</td></tr>
 <tr class="memdesc:a81ea5930173790e2b2157c5c3693f641"><td class="mdescLeft">&#160;</td><td class="mdescRight">Initiate a close handshake for the WebSocket wrapper.  <br /></td></tr>
-<tr class="memitem:adfa3c97f06abeb3ba1a0fe252b8e4eac" id="r_adfa3c97f06abeb3ba1a0fe252b8e4eac"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#adfa3c97f06abeb3ba1a0fe252b8e4eac">cwist_websocket_destroy</a> (cwist_websocket *ws)</td></tr>
+<tr class="separator:a81ea5930173790e2b2157c5c3693f641"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:adfa3c97f06abeb3ba1a0fe252b8e4eac" id="r_adfa3c97f06abeb3ba1a0fe252b8e4eac"><td class="memItemLeft" align="right" valign="top"><a class="el" href="../../de/daf/http3_8c.html#a7360b55975153b822efc5217b7734e6a">void</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d4/de6/websocket_8c.html#adfa3c97f06abeb3ba1a0fe252b8e4eac">cwist_websocket_destroy</a> (<a class="el" href="../../d9/d2c/structcwist__websocket.html">cwist_websocket</a> *<a class="el" href="../../de/daf/http3_8c.html#a7360b55975153b822efc5217b7734e6a">ws</a>)</td></tr>
 <tr class="memdesc:adfa3c97f06abeb3ba1a0fe252b8e4eac"><td class="mdescLeft">&#160;</td><td class="mdescRight">Destroy the WebSocket wrapper without closing the underlying socket.  <br /></td></tr>
 </table>
 <a name="details" id="details"></a><h2 id="header-details" class="groupheader">Detailed Description</h2>
 <div class="textblock"><p>WebSocket handshake and frame transport helpers for CWIST handlers. </p>
 
 <p class="definition">Definition in file <a class="el" href="../../d4/de6/websocket_8c_source.html">websocket.c</a>.</p>
-</div><a name="doc-func-members" id="doc-func-members"></a><h2 id="header-doc-func-members" class="groupheader">Function Documentation</h2>
+</div><h2 class="groupheader">Macro Definition Documentation</h2>
+<a id="a369266c24eacffb87046522897a570d5" name="a369266c24eacffb87046522897a570d5"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a369266c24eacffb87046522897a570d5">&#9670;&#160;</a></span>_GNU_SOURCE</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">#<a class="el" href="../../de/daf/http3_8c.html#a7360b55975153b822efc5217b7734e6a">define</a> _GNU_SOURCE</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p class="definition">Definition at line <a class="el" href="../../d4/de6/websocket_8c_source.html#l00001">1</a> of file <a class="el" href="../../d4/de6/websocket_8c_source.html">websocket.c</a>.</p>
+
+</div>
+</div>
+<a id="a19b2fa8561bcd550d68b56b81d783e98" name="a19b2fa8561bcd550d68b56b81d783e98"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a19b2fa8561bcd550d68b56b81d783e98">&#9670;&#160;</a></span>WS_GUID</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">#<a class="el" href="../../de/daf/http3_8c.html#a7360b55975153b822efc5217b7734e6a">define</a> WS_GUID&#160;&#160;&#160;&quot;258EAFA5-<a class="el" href="../../de/daf/http3_8c.html#a7360b55975153b822efc5217b7734e6a">E914</a>-47<a class="el" href="../../de/daf/http3_8c.html#a7360b55975153b822efc5217b7734e6a">DA</a>-95<a class="el" href="../../de/daf/http3_8c.html#a7360b55975153b822efc5217b7734e6a">CA</a>-<a class="el" href="../../de/daf/http3_8c.html#a7360b55975153b822efc5217b7734e6a">C5AB0DC85B11&quot;</a></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p class="definition">Definition at line <a class="el" href="../../d4/de6/websocket_8c_source.html#l00019">19</a> of file <a class="el" href="../../d4/de6/websocket_8c_source.html">websocket.c</a>.</p>
+
+</div>
+</div>
+<h2 class="groupheader">Function Documentation</h2>
 <a id="a81ea5930173790e2b2157c5c3693f641" name="a81ea5930173790e2b2157c5c3693f641"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#a81ea5930173790e2b2157c5c3693f641">&#9670;&#160;</a></span>cwist_websocket_close()</h2>
 
@@ -216,7 +261,7 @@ Functions</h2></td></tr>
 <div class="memproto">
       <table class="memname">
         <tr>
-          <td class="memname">void cwist_websocket_close </td>
+          <td class="memname"><a class="el" href="../../de/daf/http3_8c.html#a7360b55975153b822efc5217b7734e6a">void</a> cwist_websocket_close </td>
           <td>(</td>
           <td class="paramtype">cwist_websocket *</td>          <td class="paramname"><span class="paramname"><em>ws</em></span></td><td>)</td>
           <td></td>
@@ -234,7 +279,7 @@ Functions</h2></td></tr>
 
 <p class="definition">Definition at line <a class="el" href="../../d4/de6/websocket_8c_source.html#l00229">229</a> of file <a class="el" href="../../d4/de6/websocket_8c_source.html">websocket.c</a>.</p>
 
-<p class="reference">References <a class="el" href="../../d4/de6/websocket_8c_source.html#l00181">cwist_websocket_send()</a>.</p>
+<p class="reference">References <a class="el" href="../../d4/de6/websocket_8c_source.html#l00181">cwist_websocket_send()</a>, <a class="el" href="../../dd/dec/net_2websocket_2websocket_8h_source.html#l00022">CWIST_WS_FRAME_CLOSE</a>, and <a class="el" href="../../de/daf/http3_8c_source.html#l00654">len</a>.</p>
 
 </div>
 </div>
@@ -245,7 +290,7 @@ Functions</h2></td></tr>
 <div class="memproto">
       <table class="memname">
         <tr>
-          <td class="memname">void cwist_websocket_destroy </td>
+          <td class="memname"><a class="el" href="../../de/daf/http3_8c.html#a7360b55975153b822efc5217b7734e6a">void</a> cwist_websocket_destroy </td>
           <td>(</td>
           <td class="paramtype">cwist_websocket *</td>          <td class="paramname"><span class="paramname"><em>ws</em></span></td><td>)</td>
           <td></td>
@@ -263,6 +308,8 @@ Functions</h2></td></tr>
 
 <p class="definition">Definition at line <a class="el" href="../../d4/de6/websocket_8c_source.html#l00240">240</a> of file <a class="el" href="../../d4/de6/websocket_8c_source.html">websocket.c</a>.</p>
 
+<p class="reference">References <a class="el" href="../../d9/d39/alloc_8c_source.html#l00315">cwist_free()</a>, and <a class="el" href="../../de/daf/http3_8c_source.html#l00654">len</a>.</p>
+
 </div>
 </div>
 <a id="ad0076021ccbab9a5990c269dca59df99" name="ad0076021ccbab9a5990c269dca59df99"></a>
@@ -272,7 +319,7 @@ Functions</h2></td></tr>
 <div class="memproto">
       <table class="memname">
         <tr>
-          <td class="memname">void cwist_websocket_frame_destroy </td>
+          <td class="memname"><a class="el" href="../../de/daf/http3_8c.html#a7360b55975153b822efc5217b7734e6a">void</a> cwist_websocket_frame_destroy </td>
           <td>(</td>
           <td class="paramtype">cwist_ws_frame *</td>          <td class="paramname"><span class="paramname"><em>frame</em></span></td><td>)</td>
           <td></td>
@@ -289,6 +336,8 @@ Functions</h2></td></tr>
 </dl>
 
 <p class="definition">Definition at line <a class="el" href="../../d4/de6/websocket_8c_source.html#l00218">218</a> of file <a class="el" href="../../d4/de6/websocket_8c_source.html">websocket.c</a>.</p>
+
+<p class="reference">References <a class="el" href="../../d9/d39/alloc_8c_source.html#l00315">cwist_free()</a>, and <a class="el" href="../../de/daf/http3_8c_source.html#l00654">len</a>.</p>
 
 </div>
 </div>
@@ -320,6 +369,8 @@ Functions</h2></td></tr>
 
 <p class="definition">Definition at line <a class="el" href="../../d4/de6/websocket_8c_source.html#l00105">105</a> of file <a class="el" href="../../d4/de6/websocket_8c_source.html">websocket.c</a>.</p>
 
+<p class="reference">References <a class="el" href="../../d9/d39/alloc_8c_source.html#l00221">cwist_alloc()</a>, <a class="el" href="../../d9/d39/alloc_8c_source.html#l00315">cwist_free()</a>, <a class="el" href="../../dd/dec/net_2websocket_2websocket_8h_source.html#l00022">CWIST_WS_FRAME_CLOSE</a>, <a class="el" href="../../dd/dec/net_2websocket_2websocket_8h_source.html#l00028">cwist_ws_frame::fin</a>, and <a class="el" href="../../de/daf/http3_8c_source.html#l00654">len</a>.</p>
+
 </div>
 </div>
 <a id="a84b014c343b059d06c899fd2b9285966" name="a84b014c343b059d06c899fd2b9285966"></a>
@@ -329,7 +380,7 @@ Functions</h2></td></tr>
 <div class="memproto">
       <table class="memname">
         <tr>
-          <td class="memname">int cwist_websocket_send </td>
+          <td class="memname"><a class="el" href="../../de/daf/http3_8c.html#a7360b55975153b822efc5217b7734e6a">int</a> cwist_websocket_send </td>
           <td>(</td>
           <td class="paramtype">cwist_websocket *</td>          <td class="paramname"><span class="paramname"><em>ws</em></span>, </td>
         </tr>
@@ -341,12 +392,19 @@ Functions</h2></td></tr>
         <tr>
           <td class="paramkey"></td>
           <td></td>
-          <td class="paramtype">const uint8_t *</td>          <td class="paramname"><span class="paramname"><em>data</em></span>, </td>
+          <td class="paramtype"><a class="el" href="../../de/daf/http3_8c.html#a7360b55975153b822efc5217b7734e6a">const</a> <a class="el" href="../../de/daf/http3_8c.html#a7360b55975153b822efc5217b7734e6a">uint8_t</a> *&#160;</td>
+          <td class="paramname"><em>data</em>, </td>
         </tr>
         <tr>
           <td class="paramkey"></td>
           <td></td>
-          <td class="paramtype">size_t</td>          <td class="paramname"><span class="paramname"><em>len</em></span>&#160;)</td>
+          <td class="paramtype"><a class="el" href="../../de/daf/http3_8c.html#a7360b55975153b822efc5217b7734e6a">size_t</a>&#160;</td>
+          <td class="paramname"><em>len</em>&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td></td>
         </tr>
       </table>
 </div><div class="memdoc">
@@ -367,6 +425,8 @@ Functions</h2></td></tr>
 
 <p class="definition">Definition at line <a class="el" href="../../d4/de6/websocket_8c_source.html#l00181">181</a> of file <a class="el" href="../../d4/de6/websocket_8c_source.html">websocket.c</a>.</p>
 
+<p class="reference">References <a class="el" href="../../de/daf/http3_8c_source.html#l00653">data</a>, and <a class="el" href="../../de/daf/http3_8c_source.html#l00654">len</a>.</p>
+
 <p class="reference">Referenced by <a class="el" href="../../d4/de6/websocket_8c_source.html#l00229">cwist_websocket_close()</a>.</p>
 
 </div>
@@ -385,7 +445,13 @@ Functions</h2></td></tr>
         <tr>
           <td class="paramkey"></td>
           <td></td>
-          <td class="paramtype">int</td>          <td class="paramname"><span class="paramname"><em>client_fd</em></span>&#160;)</td>
+          <td class="paramtype"><a class="el" href="../../de/daf/http3_8c.html#a7360b55975153b822efc5217b7734e6a">int</a>&#160;</td>
+          <td class="paramname"><em>client_fd</em>&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td></td>
         </tr>
       </table>
 </div><div class="memdoc">
@@ -404,7 +470,7 @@ Functions</h2></td></tr>
 
 <p class="definition">Definition at line <a class="el" href="../../d4/de6/websocket_8c_source.html#l00032">32</a> of file <a class="el" href="../../d4/de6/websocket_8c_source.html">websocket.c</a>.</p>
 
-<p class="reference">References <a class="el" href="../../df/db2/ws__utils_8c_source.html#l00183">base64_encode()</a>, <a class="el" href="../../dd/d43/http_8c_source.html#l00092">cwist_http_header_add()</a>, <a class="el" href="../../dd/d43/http_8c_source.html#l00123">cwist_http_header_get()</a>, <a class="el" href="../../dd/d43/http_8c_source.html#l00324">cwist_http_response_create()</a>, <a class="el" href="../../dd/d43/http_8c_source.html#l00357">cwist_http_response_destroy()</a>, <a class="el" href="../../dd/d43/http_8c_source.html#l00558">cwist_http_send_response()</a>, <a class="el" href="../../d3/d73/err_2cwist__err_8h_source.html#l00048">__prim_cwist_error_t::err_i16</a>, <a class="el" href="../../d3/d73/err_2cwist__err_8h_source.html#l00073">cwist_error_t::error</a>, <a class="el" href="../../df/db2/ws__utils_8c_source.html#l00157">sha1()</a>, and <a class="el" href="../../dd/d56/http_8h_source.html#l00072">cwist_http_response::status_text</a>.</p>
+<p class="reference">References <a class="el" href="../../df/db2/ws__utils_8c_source.html#l00183">base64_encode()</a>, <a class="el" href="../../d9/d39/alloc_8c_source.html#l00221">cwist_alloc()</a>, <a class="el" href="../../d9/d39/alloc_8c_source.html#l00315">cwist_free()</a>, <a class="el" href="../../dd/d43/http_8c_source.html#l00215">cwist_http_header_add()</a>, <a class="el" href="../../dd/d43/http_8c_source.html#l00246">cwist_http_header_get()</a>, <a class="el" href="../../dd/d43/http_8c_source.html#l00482">cwist_http_response_create()</a>, <a class="el" href="../../dd/d43/http_8c_source.html#l00515">cwist_http_response_destroy()</a>, <a class="el" href="../../dd/d43/http_8c_source.html#l00716">cwist_http_send_response()</a>, <a class="el" href="../../dd/d79/sstring_8c_source.html#l00291">cwist_sstring_assign()</a>, <a class="el" href="../../dd/dec/net_2websocket_2websocket_8h_source.html#l00014">cwist_websocket::fd</a>, <a class="el" href="../../dd/d56/http_8h_source.html#l00061">cwist_http_request::headers</a>, <a class="el" href="../../dd/d56/http_8h_source.html#l00075">cwist_http_response::headers</a>, <a class="el" href="../../de/daf/http3_8c_source.html#l00654">len</a>, <a class="el" href="../../df/db2/ws__utils_8c_source.html#l00157">sha1()</a>, <a class="el" href="../../dd/d56/http_8h_source.html#l00073">cwist_http_response::status_code</a>, <a class="el" href="../../dd/d56/http_8h_source.html#l00074">cwist_http_response::status_text</a>, <a class="el" href="../../dd/d56/http_8h_source.html#l00065">cwist_http_request::upgraded</a>, and <a class="el" href="../../d4/de6/websocket_8c_source.html#l00019">WS_GUID</a>.</p>
 
 </div>
 </div>
