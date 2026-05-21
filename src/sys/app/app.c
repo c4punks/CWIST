@@ -4231,19 +4231,19 @@ int cwist_app_listen(cwist_app *app, int port) {
         if (fork() == 0) break;
     }
     
-    if (app->use_ssl) {
-        if (!app->ssl_ctx) {
-            fprintf(stderr, "SSL enabled but context not initialized.\n");
-            g_cwist_listen_fd = -1;
-            return -1;
+    printf("CWIST App running on port %d (SSL: %s) [Event-driven]\n", port, app->use_ssl ? "On" : "Off");
+    
+    // Check config for non-blocking scale mode (default enabled)
+    const char *c1m = getenv("CWIST_C1M_MODE");
+    bool use_c1m = true;
+    if (c1m) {
+        if (c1m[0] == '0' || strcmp(c1m, "false") == 0) {
+            use_c1m = false;
         }
-        /* Single-threaded host: no pool, no epoll - the blocking accept
-         * fallback in cwist_http_server_loop() handles one connection at a
-         * time, which is what a WASM socket grant can drive anyway. */
-        cwist_server_config config = {
-            .use_forking = false, .use_threading = false, .use_epoll = false};
-        cwist_http_server_loop(server_fd, &config, cwist_app_http_handler, app);
-#else
+    }
+    if (use_c1m) {
+        cwist_async_server_loop(server_fd, app);
+    } else {
         if (app->use_ssl) {
             if (!app->ssl_ctx) {
                 fprintf(stderr, "SSL enabled but context not initialized.\n");
