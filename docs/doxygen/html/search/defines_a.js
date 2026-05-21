@@ -1,4 +1,4 @@
 var searchData=
 [
-  ['orm_5fproto_5fmagic_0',['ORM_PROTO_MAGIC',['../d5/dcf/orm__socket_8c.html#aad0e1b104655825167fa9ad8dcdd97be',1,'orm_socket.c']]]
+  ['ticket_5fsend_5fbit_0',['TICKET_SEND_BIT',['../de/d29/io__uring__backend_8c.html#afa6d0fef1b14b4ebce1ed4f95333801a',1,'io_uring_backend.c']]]
 ];
