@@ -452,42 +452,7 @@ cwist_multiport_t cwist_create_multiport_from_array(const unsigned short *ports,
  */
 #define cwist_create_multiport(ports) cwist_create_multiport_from_array((ports), sizeof(ports) / sizeof((ports)[0]))
 
-void cwist_app_http_handler(int client_fd, void *ctx);
-cwist_async_action_t cwist_app_http_handler_async(int client_fd, cwist_http_async_conn_t *conn);
-
-/**
- * @brief Apply CWIST_PROFILE preset env-var defaults.
- *
- * Reads CWIST_PROFILE and uses setenv(overwrite=0) to fill in defaults for
- * the relevant tuning variables before cwist_app_listen() reads them.
- * Recognized values: "performance", "lowmem", "lowlat", "default" (no-op).
- * Called automatically by cwist_app_listen(); exposed here so tests and
- * tools can invoke it directly before any env-var caches are populated.
- */
-void cwist_apply_profile(void);
-
-/**
- * @brief Serve @p app on @p port until SIGTERM, SIGINT or
- * cwist_shutdown_request(); blocks the calling thread.
- *
- * CWIST_WORKERS (default: one worker process per three online cores, at
- * least 2; "auto" or an explicit number overrides) and CWIST_C1M_MODE select
- * the worker count and server mode; with more than one worker it forks and
- * returns in each worker. Same as cwist_app_listen_ex(app, port, 0, -1).
- */
 int cwist_app_listen(cwist_app *app, int port);
-
-/**
- * @brief cwist_app_listen() with the worker count and server mode given
- * explicitly.
- * @param workers_override Worker processes (1 serves without forking); 0 or
- *        less reads CWIST_WORKERS.
- * @param c1m_override 1 for the reactor server, which joins its handler
- *        threads before returning; 0 for the classic pool; negative reads
- *        CWIST_C1M_MODE. Ignored on WASI.
- * @return 0 after a graceful shutdown, -1 if the server could not start.
- */
-int cwist_app_listen_ex(cwist_app *app, int port, int workers_override, int c1m_override);
 
 /**
  * @brief Start one app facade across a public port and counted backend port list.
@@ -501,8 +466,7 @@ int cwist_app_multiport(cwist_app **app_ref, unsigned short public_port, cwist_m
 /**
  * @brief Detach one additional multiport port into its own tunable application.
  * @param app_ref Address of the root cwist_app pointer.
- * @param port Additional port to detach. The public/default port is rejected by
- * cwist_app_multiport().
+ * @param port Additional port to detach. The public/default port is rejected by cwist_app_multiport().
  * @return Detached sub-application for per-port tuning, or NULL on allocation failure.
  */
 cwist_app *cwist_multiport_get_app(cwist_app **app_ref, unsigned short port);
