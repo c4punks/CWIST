@@ -5,6 +5,7 @@
 #include <cwist/sys/err/cwist_err.h>
 #include <cwist/core/mem/alloc.h>
 #include <cwist/sys/app/shutdown.h>
+#include "tls_chain.h"
 #include <openssl/ssl.h>
 #include <openssl/err.h>
 #include <openssl/evp.h>
