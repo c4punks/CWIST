@@ -32,31 +32,12 @@ typedef struct cwist_cert_fetch_buffer {
     size_t cap;
 } cwist_cert_fetch_buffer;
 
-/**
- * @brief Check whether a URL uses the http or https scheme.
- *
- * Comparison is case-insensitive and matches only the scheme prefix.
- *
- * @param url URL string to inspect; may be NULL.
- * @return true if @p url starts with "http://" or "https://", false otherwise.
- */
 static bool cwist_url_has_http_scheme(const char *url) {
-    return url && (strncasecmp(url, "http://", 7) == 0 || strncasecmp(url, "https://", 8) == 0);
+    return url &&
+           (strncasecmp(url, "http://", 7) == 0 ||
+            strncasecmp(url, "https://", 8) == 0);
 }
 
-/**
- * @brief libcurl write callback that appends response bytes to a fetch buffer.
- *
- * Grows the buffer geometrically up to CWIST_AIA_MAX_RESPONSE_BYTES. Any
- * failure (size overflow, size cap exceeded, or realloc failure) aborts the
- * transfer by returning a short count.
- *
- * @param ptr incoming data bytes.
- * @param size size of each element.
- * @param nmemb number of elements.
- * @param userdata pointer to cwist_cert_fetch_buffer.
- * @return number of bytes consumed (size * nmemb) on success, 0 on failure.
- */
 static size_t cwist_cert_fetch_write_cb(void *ptr, size_t size, size_t nmemb, void *userdata) {
     if (size != 0 && nmemb > SIZE_MAX / size) return 0;
 
@@ -88,18 +69,6 @@ static size_t cwist_cert_fetch_write_cb(void *ptr, size_t size, size_t nmemb, vo
     return total;
 }
 
-/**
- * @brief Fetch a certificate (or certificate container) over HTTP(S).
- *
- * Only http/https URLs are accepted. The curl global state is acquired for
- * the duration of the request. Timeouts and redirect limits are bounded by
- * CWIST_AIA_* constants. On success @p out owns a malloc'd buffer that the
- * caller must free; on failure @p out is zeroed and holds nothing.
- *
- * @param url http or https URL to fetch.
- * @param out fetch buffer to fill; must not be NULL.
- * @return true on success, false on failure.
- */
 static bool cwist_fetch_cert_url(const char *url, cwist_cert_fetch_buffer *out) {
     if (!cwist_url_has_http_scheme(url) || !out) return false;
 
@@ -143,16 +112,7 @@ static bool cwist_fetch_cert_url(const char *url, cwist_cert_fetch_buffer *out) 
     return true;
 }
 
-/**
- * @brief Parse a single DER-encoded X.509 certificate.
- *
- * OpenSSL error state is cleared before returning NULL on parse failure.
- *
- * @param data DER certificate bytes.
- * @param len length of @p data.
- * @return newly allocated stack containing one X509 (caller frees), or NULL.
- */
-static STACK_OF(X509) * cwist_parse_der_x509(const uint8_t *data, size_t len) {
+static STACK_OF(X509) *cwist_parse_der_x509(const uint8_t *data, size_t len) {
     if (!data || len == 0 || len > LONG_MAX) return NULL;
 
     const uint8_t *p = data;
@@ -171,18 +131,7 @@ static STACK_OF(X509) * cwist_parse_der_x509(const uint8_t *data, size_t len) {
     return certs;
 }
 
-/**
- * @brief Parse PEM-encoded X.509 certificates.
- *
- * Reads every PEM certificate from the buffer. OpenSSL error state is
- * cleared before returning.
- *
- * @param data PEM certificate text.
- * @param len length of @p data.
- * @return newly allocated stack of X509 (caller frees), or NULL if none
- *         could be parsed.
- */
-static STACK_OF(X509) * cwist_parse_pem_x509(const uint8_t *data, size_t len) {
+static STACK_OF(X509) *cwist_parse_pem_x509(const uint8_t *data, size_t len) {
     if (!data || len == 0 || len > INT_MAX) return NULL;
 
     BIO *bio = BIO_new_mem_buf(data, (int)len);
@@ -213,16 +162,7 @@ static STACK_OF(X509) * cwist_parse_pem_x509(const uint8_t *data, size_t len) {
     return certs;
 }
 
-/**
- * @brief Parse a DER-encoded PKCS#7 container and extract its certificates.
- *
- * OpenSSL error state is cleared before returning NULL on failure.
- *
- * @param data DER PKCS#7 bytes.
- * @param len length of @p data.
- * @return newly allocated stack of X509 (caller frees), or NULL.
- */
-static STACK_OF(X509) * cwist_parse_der_pkcs7(const uint8_t *data, size_t len) {
+static STACK_OF(X509) *cwist_parse_der_pkcs7(const uint8_t *data, size_t len) {
     if (!data || len == 0) return NULL;
 
     STACK_OF(X509) *certs = sk_X509_new_null();
@@ -239,16 +179,7 @@ static STACK_OF(X509) * cwist_parse_der_pkcs7(const uint8_t *data, size_t len) {
     return certs;
 }
 
-/**
- * @brief Parse a PEM-encoded PKCS#7 container and extract its certificates.
- *
- * OpenSSL error state is cleared before returning NULL on failure.
- *
- * @param data PEM PKCS#7 text.
- * @param len length of @p data.
- * @return newly allocated stack of X509 (caller frees), or NULL.
- */
-static STACK_OF(X509) * cwist_parse_pem_pkcs7(const uint8_t *data, size_t len) {
+static STACK_OF(X509) *cwist_parse_pem_pkcs7(const uint8_t *data, size_t len) {
     if (!data || len == 0 || len > INT_MAX) return NULL;
 
     BIO *bio = BIO_new_mem_buf(data, (int)len);
@@ -271,17 +202,7 @@ static STACK_OF(X509) * cwist_parse_pem_pkcs7(const uint8_t *data, size_t len) {
     return certs;
 }
 
-/**
- * @brief Try each supported certificate container format in turn.
- *
- * Attempts, in order: DER X.509, PEM X.509, DER PKCS#7, PEM PKCS#7.
- *
- * @param data raw certificate bytes of unknown encoding.
- * @param len length of @p data.
- * @return newly allocated stack of X509 from the first format that parses
- *         (caller frees), or NULL if none matched.
- */
-static STACK_OF(X509) * cwist_parse_certificates(const uint8_t *data, size_t len) {
+static STACK_OF(X509) *cwist_parse_certificates(const uint8_t *data, size_t len) {
     STACK_OF(X509) *certs = cwist_parse_der_x509(data, len);
     if (certs) return certs;
 
@@ -294,17 +215,6 @@ static STACK_OF(X509) * cwist_parse_certificates(const uint8_t *data, size_t len
     return cwist_parse_pem_pkcs7(data, len);
 }
 
-/**
- * @brief Check whether @p issuer is a valid issuing CA for @p subject.
- *
- * Rejects identical certificates, non-CA issuers, name/constraint
- * mismatches, and signatures that do not verify with the issuer's public
- * key. No reference counts are changed.
- *
- * @param issuer candidate issuer certificate.
- * @param subject candidate subject (child) certificate.
- * @return true if @p issuer validly signed @p subject, false otherwise.
- */
 static bool cwist_x509_is_valid_issuer(X509 *issuer, X509 *subject) {
     if (!issuer || !subject || X509_cmp(issuer, subject) == 0) return false;
     if (X509_check_ca(issuer) != 1) return false;
@@ -314,18 +224,7 @@ static bool cwist_x509_is_valid_issuer(X509 *issuer, X509 *subject) {
     return issuer_key && X509_verify(subject, issuer_key) == 1;
 }
 
-/**
- * @brief Find the first certificate in @p candidates that validly issued
- *        @p subject.
- *
- * The returned pointer is borrowed from @p candidates; no reference count
- * is incremented.
- *
- * @param subject certificate whose issuer is sought.
- * @param candidates stack of candidate issuer certificates.
- * @return matching issuer certificate, or NULL if none qualifies.
- */
-static X509 *cwist_find_issuer(X509 *subject, STACK_OF(X509) * candidates) {
+static X509 *cwist_find_issuer(X509 *subject, STACK_OF(X509) *candidates) {
     if (!subject || !candidates) return NULL;
 
     for (size_t i = 0; i < sk_X509_num(candidates); i++) {
@@ -337,17 +236,6 @@ static X509 *cwist_find_issuer(X509 *subject, STACK_OF(X509) * candidates) {
     return NULL;
 }
 
-/**
- * @brief Check whether @p cert is already present in the SSL_CTX chain.
- *
- * Compares against both the leaf certificate and the extra chain
- * certificates. Returned pointers are borrowed; no reference counts change.
- *
- * @param ssl_ctx SSL context to inspect.
- * @param cert certificate to look for.
- * @return true if an identical certificate is already installed, false
- *         otherwise.
- */
 static bool cwist_ctx_contains_cert(SSL_CTX *ssl_ctx, X509 *cert) {
     if (!ssl_ctx || !cert) return false;
 
@@ -363,16 +251,6 @@ static bool cwist_ctx_contains_cert(SSL_CTX *ssl_ctx, X509 *cert) {
     return false;
 }
 
-/**
- * @brief Return the last certificate in the SSL_CTX chain.
- *
- * The returned pointer is borrowed from the SSL_CTX; no reference count
- * is incremented. If no extra chain certificates are set, the leaf
- * certificate is returned.
- *
- * @param ssl_ctx SSL context to inspect.
- * @return chain-tail certificate, or NULL if @p ssl_ctx has no certificate.
- */
 static X509 *cwist_ctx_chain_tail(SSL_CTX *ssl_ctx) {
     if (!ssl_ctx) return NULL;
 
@@ -383,14 +261,6 @@ static X509 *cwist_ctx_chain_tail(SSL_CTX *ssl_ctx) {
     return SSL_CTX_get0_certificate(ssl_ctx);
 }
 
-/**
- * @brief Check whether a certificate is self-signed (self-issued and its
- *        signature verifies with its own public key).
- *
- * @param cert certificate to test.
- * @return true if @p cert is NULL (treated as end of chain) or self-signed,
- *         false otherwise.
- */
 static bool cwist_x509_is_self_signed(X509 *cert) {
     if (!cert) return true;
     if (X509_NAME_cmp(X509_get_subject_name(cert), X509_get_issuer_name(cert)) != 0) {
@@ -401,16 +271,6 @@ static bool cwist_x509_is_self_signed(X509 *cert) {
     return key && X509_verify(cert, key) == 1;
 }
 
-/**
- * @brief Extract an http/https caIssuers URI from an ACCESS_DESCRIPTION.
- *
- * Only ad_caIssuers entries whose location is a GEN_URI without embedded
- * NUL bytes and with an http/https scheme are accepted.
- *
- * @param desc access description from a certificate's AIA extension.
- * @return newly allocated NUL-terminated URL string (caller frees), or
- *         NULL if the entry is not a usable http/https URI.
- */
 static char *cwist_dup_aia_uri(const ACCESS_DESCRIPTION *desc) {
     if (!desc || OBJ_obj2nid(desc->method) != NID_ad_ca_issuers || !desc->location) {
         return NULL;
@@ -438,18 +298,6 @@ static char *cwist_dup_aia_uri(const ACCESS_DESCRIPTION *desc) {
     return url;
 }
 
-/**
- * @brief Fetch a certificate container from @p url and return an issuer of
- *        @p subject found within it.
- *
- * Fetches the URL, parses it in every supported format, and selects a
- * valid issuing certificate. On success the returned X509 owns one new
- * reference that the caller must free.
- *
- * @param url http/https URL to fetch.
- * @param subject certificate whose issuer is sought.
- * @return newly referenced issuer certificate (caller frees), or NULL.
- */
 static X509 *cwist_fetch_issuer_from_url(const char *url, X509 *subject) {
     cwist_cert_fetch_buffer buf = {0};
     if (!cwist_fetch_cert_url(url, &buf)) return NULL;
@@ -467,18 +315,6 @@ static X509 *cwist_fetch_issuer_from_url(const char *url, X509 *subject) {
     return issuer;
 }
 
-/**
- * @brief Fetch an issuer certificate via the subject's AIA caIssuers URLs.
- *
- * Iterates the subject's Authority Information Access extension and tries
- * each http/https caIssuers URI in order until a valid issuer is found.
- * OpenSSL error state is cleared if no AIA extension is present. On
- * success the returned X509 owns one new reference that the caller must
- * free.
- *
- * @param subject certificate whose AIA extension should be consulted.
- * @return newly referenced issuer certificate (caller frees), or NULL.
- */
 static X509 *cwist_fetch_issuer_from_aia(X509 *subject) {
     if (!subject) return NULL;
 
@@ -504,19 +340,6 @@ static X509 *cwist_fetch_issuer_from_aia(X509 *subject) {
     return issuer;
 }
 
-/**
- * @brief Autoload missing intermediate CA certificates into an SSL_CTX chain.
- *
- * Starting from the current chain tail, walks up the issuance path using AIA
- * caIssuers URLs until a self-signed (root) certificate is reached, the chain
- * depth limit (CWIST_AIA_MAX_CHAIN_DEPTH) is hit, or no issuer can be
- * fetched. Issuers that would duplicate a certificate already installed are
- * not added.
- *
- * @param ssl_ctx SSL context whose certificate chain should be completed.
- * @return number of intermediate certificates added (0 if none were needed or
- *         found), or -1 on error.
- */
 int cwist_tls_autoload_intermediates(SSL_CTX *ssl_ctx) {
     if (!ssl_ctx) return -1;
 

@@ -21,6 +21,7 @@
 #include <cwist/core/seq/seq.h>
 #include <cwist/sys/err/cwist_err.h>
 #include <cwist/sys/app/shutdown.h>
+#include "tls_chain.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -2600,8 +2601,19 @@ cwist_error_t cwist_http3_init_context(cwist_http3_context **ctx, const char *ce
         return err;
     }
 
-    /* 3. Set ALPN for HTTP/3 (server-side callback) */
-    SSL_CTX_set_alpn_select_cb(ssl_ctx, cwist_http3_alpn_select_cb, NULL);
+    if (cwist_tls_autoload_intermediates(ssl_ctx) < 0) {
+        SSL_CTX_free(ssl_ctx);
+        h3_global_cleanup();
+        err.error.err_i16 = -1;
+        return err;
+    }
+
+    if (SSL_CTX_check_private_key(ssl_ctx) != 1) {
+        SSL_CTX_free(ssl_ctx);
+        h3_global_cleanup();
+        err.error.err_i16 = -1;
+        return err;
+    }
 
     *ctx = (cwist_http3_context *)cwist_alloc(sizeof(cwist_http3_context));
     if (!*ctx) {
