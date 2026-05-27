@@ -11,7 +11,9 @@
 #include <openssl/ssl.h>
 #include <openssl/err.h>
 
-/* --- SSL Structures --- */
+#define HTTPS_THREAD_POOL_SIZE HTTP_THREAD_POOL_SIZE
+
+/** --- SSL Structures --- */
 
 typedef enum cwist_https_protocol {
     CWIST_HTTPS_PROTOCOL_NONE = 0,
