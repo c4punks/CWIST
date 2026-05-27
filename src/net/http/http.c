@@ -55,6 +55,119 @@
 #include <sys/event.h>
 #endif
 
+#define HTTP_TASKS_PER_THREAD 32768
+
+typedef struct {
+    int client_fd;
+    void (*handler_func)(int, void *);
+    void *ctx;
+} http_pool_task_t;
+
+typedef struct {
+    pthread_t thread;
+    http_pool_task_t *queue;
+    size_t head;
+    size_t tail;
+    size_t count;
+    pthread_mutex_t mutex;
+    pthread_cond_t cond_not_empty;
+    pthread_cond_t cond_not_full;
+    int shutdown;
+    uint32_t worker_id;
+} http_thread_worker_t;
+
+static http_thread_worker_t g_workers[HTTP_THREAD_POOL_SIZE];
+static size_t g_rr_index = 0;
+
+static void *http_pool_worker(void *arg) {
+    http_thread_worker_t *w = (http_thread_worker_t *)arg;
+    /* Bind this thread to the lattice worker ID for deterministic slot selection. */
+    ttak_net_lattice_set_worker_id(w->worker_id);
+
+    while (1) {
+        pthread_mutex_lock(&w->mutex);
+        while (w->count == 0 && !w->shutdown) {
+            pthread_cond_wait(&w->cond_not_empty, &w->mutex);
+        }
+        if (w->shutdown && w->count == 0) {
+            pthread_mutex_unlock(&w->mutex);
+            break;
+        }
+        http_pool_task_t task = w->queue[w->head];
+        w->head = (w->head + 1) % HTTP_TASKS_PER_THREAD;
+        w->count--;
+        pthread_cond_signal(&w->cond_not_full);
+        pthread_mutex_unlock(&w->mutex);
+
+        task.handler_func(task.client_fd, task.ctx);
+    }
+    return NULL;
+}
+
+static int http_pool_init(void) {
+    g_rr_index = 0;
+    memset(g_workers, 0, sizeof(g_workers));
+    for (int i = 0; i < HTTP_THREAD_POOL_SIZE; i++) {
+        g_workers[i].queue = cwist_alloc(HTTP_TASKS_PER_THREAD * sizeof(http_pool_task_t));
+        if (!g_workers[i].queue) return -1;
+        
+        pthread_mutex_init(&g_workers[i].mutex, NULL);
+        pthread_cond_init(&g_workers[i].cond_not_empty, NULL);
+        pthread_cond_init(&g_workers[i].cond_not_full, NULL);
+        g_workers[i].worker_id = (uint32_t)i;
+        if (pthread_create(&g_workers[i].thread, NULL, http_pool_worker, &g_workers[i]) != 0) {
+            return -1;
+        }
+    }
+    return 0;
+}
+
+static void http_pool_submit(int client_fd, void (*handler)(int, void *), void *ctx) {
+    /* Deterministic worker selection using Choi Seok-jeong's MOLS to minimize cache bouncing. */
+    uint16_t node_id = (uint16_t)(client_fd % TTAK_MOLS_NODE_COUNT);
+    uint32_t mixed = ttak_apply_mols_control(node_id, (uint32_t)g_rr_index);
+    size_t worker_idx = mixed % HTTP_THREAD_POOL_SIZE;
+
+    g_rr_index = (g_rr_index + 1) % HTTP_THREAD_POOL_SIZE;
+    
+    http_thread_worker_t *w = &g_workers[worker_idx];
+
+    pthread_mutex_lock(&w->mutex);
+    while (w->count >= HTTP_TASKS_PER_THREAD && !w->shutdown) {
+        pthread_cond_wait(&w->cond_not_full, &w->mutex);
+    }
+    if (w->shutdown) {
+        pthread_mutex_unlock(&w->mutex);
+        close(client_fd);
+        return;
+    }
+    w->queue[w->tail].client_fd = client_fd;
+    w->queue[w->tail].handler_func = handler;
+    w->queue[w->tail].ctx = ctx;
+    w->tail = (w->tail + 1) % HTTP_TASKS_PER_THREAD;
+    w->count++;
+    pthread_cond_signal(&w->cond_not_empty);
+    pthread_mutex_unlock(&w->mutex);
+}
+static void http_pool_destroy(void) {
+    for (int i = 0; i < HTTP_THREAD_POOL_SIZE; i++) {
+        pthread_mutex_lock(&g_workers[i].mutex);
+        g_workers[i].shutdown = 1;
+        pthread_cond_broadcast(&g_workers[i].cond_not_empty);
+        pthread_mutex_unlock(&g_workers[i].mutex);
+    }
+    for (int i = 0; i < HTTP_THREAD_POOL_SIZE; i++) {
+        pthread_join(g_workers[i].thread, NULL);
+        pthread_mutex_destroy(&g_workers[i].mutex);
+        pthread_cond_destroy(&g_workers[i].cond_not_empty);
+        pthread_cond_destroy(&g_workers[i].cond_not_full);
+        if (g_workers[i].queue) {
+            cwist_free(g_workers[i].queue);
+        }
+    }
+}
+/* --- End Thread Pool --- */
+
 /**
  * @file http.c
  * @brief Core HTTP request/response allocation, serialization, socket, and server-loop helpers.
