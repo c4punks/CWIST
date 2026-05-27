@@ -3,7 +3,7 @@ CC ?= gcc
 
 INCLUDE_PATHS = -I./include -I./lib -I./lib/libttak/include -I./lib/cjson -I./lib/sqlite3 -I./lib/uriparser/include -I./lib/cnats/src
 COMMON_DEFINES = -D_GNU_SOURCE -D_XOPEN_SOURCE=700 -D_REENTRANT -DSQLITE_ENABLE_DESERIALIZE
-COMMON_WARNINGS = -std=c17 -Wall -pthread -fPIC
+COMMON_WARNINGS = -std=c2x -Wall -pthread -fPIC
 COMMON_CFLAGS = $(INCLUDE_PATHS) $(COMMON_WARNINGS) $(COMMON_DEFINES)
 
 BUILD_PROFILE = perf
