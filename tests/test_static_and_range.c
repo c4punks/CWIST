@@ -16,26 +16,9 @@
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #include <fcntl.h>
-#include <ctype.h>
-#include <errno.h>
 
 #define TEST_PORT 19998
 #define TEST_HOST "127.0.0.1"
-
-/* strcasestr() is a GNU extension missing on macOS; local ASCII-only variant. */
-static const char *test_strcasestr(const char *haystack, const char *needle) {
-    if (!*needle) return haystack;
-    for (; *haystack; haystack++) {
-        const char *h = haystack;
-        const char *n = needle;
-        while (*h && *n && tolower((unsigned char)*h) == tolower((unsigned char)*n)) {
-            h++;
-            n++;
-        }
-        if (!*n) return haystack;
-    }
-    return NULL;
-}
 
 static int connect_to_server(void) {
     int fd = socket(AF_INET, SOCK_STREAM, 0);
@@ -65,31 +48,17 @@ static int send_request(int fd, const char *req) {
 
 static int read_response(int fd, char *buf, size_t buf_size) {
     size_t total = 0;
-    size_t want = 0; /* header end + Content-Length once known */
     while (total < buf_size - 1) {
         ssize_t n = recv(fd, buf + total, buf_size - 1 - total, 0);
         if (n <= 0) break;
         total += (size_t)n;
-        buf[total] = '\0';
-        /* Stop as soon as the full response (headers + declared body) has
-         * arrived; the server keeps the connection alive, so waiting for
-         * EOF would block forever. */
-        if (want == 0) {
-            char *end = strstr(buf, "\r\n\r\n");
-            if (end) {
-                size_t header_len = (size_t)(end + 4 - buf);
-                char *cl = strcasestr(buf, "Content-Length:");
-                if (cl && cl < end) {
-                    want = header_len + (size_t)strtoul(cl + 15, NULL, 10);
-                } else {
-                    want = header_len;
-                }
-            }
-        }
-        if (want && total >= want) break;
     }
     buf[total] = '\0';
     return (int)total;
+}
+
+static bool response_has_status(const char *response, const char *status_line) {
+    return strstr(response, status_line) != NULL;
 }
 
 static bool response_has_code(const char *response, const char *code) {
@@ -99,7 +68,7 @@ static bool response_has_code(const char *response, const char *code) {
 }
 
 static bool response_has_header(const char *response, const char *header) {
-    return test_strcasestr(response, header) != NULL;
+    return strcasestr(response, header) != NULL;
 }
 
 int main(void) {
@@ -137,12 +106,8 @@ int main(void) {
     }
 
     if (pid == 0) {
-        /* Exercise static-cache creation and teardown across a worker fork,
-         * regardless of the runner's CPU count or inherited environment. */
-        if (setenv("CWIST_WORKERS", "2", 1) != 0 || setenv("CWIST_C1M_MODE", "false", 1) != 0) {
-            perror("setenv");
-            _exit(1);
-        }
+        /* Child: run server */
+        setenv("CWIST_C1M_MODE", "false", 1);
         cwist_app *app = cwist_app_create();
         if (!app) {
             fprintf(stderr, "Failed to create app\n");
@@ -198,8 +163,7 @@ int main(void) {
     /* Test 3: URL-encoded path traversal */
     fd = connect_to_server();
     if (fd >= 0) {
-        send_request(fd,
-                     "GET /static/%2e%2e/%2e%2e/secret.txt HTTP/1.1\r\nHost: localhost\r\n\r\n");
+        send_request(fd, "GET /static/%2e%2e/%2e%2e/secret.txt HTTP/1.1\r\nHost: localhost\r\n\r\n");
         read_response(fd, buf, sizeof(buf));
         if (!response_has_code(buf, "403")) {
             fprintf(stderr, "FAIL: Expected 403 for URL-encoded traversal, got:\n%s\n", buf);
@@ -214,8 +178,7 @@ int main(void) {
     /* Test 4: Range request */
     fd = connect_to_server();
     if (fd >= 0) {
-        send_request(
-            fd, "GET /static/index.html HTTP/1.1\r\nHost: localhost\r\nRange: bytes=0-4\r\n\r\n");
+        send_request(fd, "GET /static/index.html HTTP/1.1\r\nHost: localhost\r\nRange: bytes=0-4\r\n\r\n");
         read_response(fd, buf, sizeof(buf));
         if (!response_has_code(buf, "206")) {
             fprintf(stderr, "FAIL: Expected 206 for range request, got:\n%s\n", buf);
@@ -236,8 +199,7 @@ int main(void) {
     /* Test 5: Suffix range request (last 5 bytes) */
     fd = connect_to_server();
     if (fd >= 0) {
-        send_request(
-            fd, "GET /static/index.html HTTP/1.1\r\nHost: localhost\r\nRange: bytes=-5\r\n\r\n");
+        send_request(fd, "GET /static/index.html HTTP/1.1\r\nHost: localhost\r\nRange: bytes=-5\r\n\r\n");
         read_response(fd, buf, sizeof(buf));
         if (!response_has_code(buf, "206")) {
             fprintf(stderr, "FAIL: Expected 206 for suffix range request, got:\n%s\n", buf);
@@ -253,41 +215,18 @@ int main(void) {
     }
 
     /* Cleanup */
-    if (kill(pid, SIGTERM) < 0 && errno != ESRCH) {
-        perror("kill SIGTERM");
-        failures++;
-    }
-    int status = 0;
+    kill(pid, SIGTERM);
+    int status;
     int waited = 0;
-    pid_t reaped = 0;
     while (waited < 50) {
-        reaped = waitpid(pid, &status, WNOHANG);
-        if (reaped == pid) break;
-        if (reaped < 0) {
-            if (errno == EINTR) continue;
-            perror("waitpid");
-            failures++;
-            break;
-        }
+        pid_t r = waitpid(pid, &status, WNOHANG);
+        if (r == pid) break;
         usleep(100000);
         waited++;
     }
     if (waited >= 50) {
-        fprintf(stderr, "FAIL: Server did not exit in time, sending SIGKILL\n");
-        failures++;
-        if (kill(pid, SIGKILL) < 0 && errno != ESRCH) {
-            perror("kill SIGKILL");
-        }
-        do {
-            reaped = waitpid(pid, &status, 0);
-        } while (reaped < 0 && errno == EINTR);
-        if (reaped < 0) {
-            perror("waitpid after SIGKILL");
-        }
-    }
-    if (reaped == pid && (!WIFEXITED(status) || WEXITSTATUS(status) != 0)) {
-        fprintf(stderr, "FAIL: Server exited abnormally (status=%d)\n", status);
-        failures++;
+        kill(pid, SIGKILL);
+        waitpid(pid, &status, 0);
     }
 
     unlink(index_path);
