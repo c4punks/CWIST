@@ -19,70 +19,37 @@
 
 ```
 [P0: Critical]      ████████████████████ 100% (Completed)
-[P1: Production]     ████████████████████ 100% (Multiport hardening complete)
-[P2: DevEx]          ████████████████████ 100% (30 English hands-on tutorials, CLI, hot reload, and test client complete)
-[P3: Deep Protocols] ███████████████░░░░░  75% (HTTP/3 extension specs and io_uring backend done)
-[P4: Ecosystem]      ████████████████░░░░  80% (gRPC client retry policy and load balancing done)
+[P1: Production]     ████████████████░░░░  80% (Multiport hardening in progress)
+[P2: DevEx]          ██░░░░░░░░░░░░░░░░░░  20% (Config loader done; test tooling WIP)
+[P3: Deep Protocols] ████████████░░░░░░░░  60% (HTTP/3 extension specs done; io_uring WIP)
 ```
-
-### v3.8 Release Progress
-
-| Phase | Theme | Progress |
-|-------|-------|----------|
-| Phase 1 — Performance | Reactor latency, RX-uring pipelining, HTTPS handshake shards, worker warmup | Mostly done: #293 closed the measurement loop; RX-uring and worker warmup dropped; HTTPS shard tuning remains open |
-| Phase 2 — Rust FFI | `bindings/rust/` (`cwist-sys` + `cwist`) | Done: middleware + async wrappers, example, FFI overhead benchmark; `cwist-sys` and `cwist` published to crates.io as v0.1.0 |
-| Phase 3 — HTTP/3 Close Correctness | Re-pin lsquic after upstream fixes | Deferred indefinitely — waiting for upstream lsquic to ship WebTransport client support |
-| Phase 4 — v4.0 Scope Confirmation | Enact v3.7 Phase 5 decisions, record experimental-item fates | Done: v3.7 Phase 5 enacted; GraphQL subscriptions, durable queue, Redis RESP2/NATS borrow promoted to supported; WASM component deferred to v4.0; WebTransport stays experimental until v4.1 |
 
 ### 1) Transport Layer
 
-* **Native protocols ready**: HTTP/1.1 through HTTP/3 (QUIC via `lsquic`), WebSocket, SSE, and a bounded GraphQL query layer are implemented in-tree (WebTransport server/client evaluation is isolated to `dev`). Low-level socket controls (ECN, 0-RTT, connection migration) are complete.
-* **HTTP/3 browser hardening**: Response header emission now normalizes field names to lowercase and rejects CR/LF-bearing values, covering login/logout cookie and redirect paths in strict browsers such as Firefox.
-* **HTTPS hot-path optimization**: HTTP/1.1 connections now remain alive across requests, TLS writes stream headers and bodies separately without an intermediate response blob, and prefork workers share session-ticket keys for cross-worker resumption.
-* **Request-memory optimization**: Parsed request strings and static response headers use arena-backed or borrowed storage with copy-on-write detachment, while received bodies can transfer ownership without a second copy.
-* **Async I/O optimization (`io_uring`)**: io_uring serves as the readiness/wait layer inside `reactor.c` (epoll_wait replacement); its ring setup, teardown, and free-stack slot infrastructure were absorbed from the retired completion-based backend.
-* **Multiport HTTP/3 fan-out**: The `cwist_multiport_t` facade now creates per-port UDP contexts and copies global HTTP/3 settings unless a port is detached into a sub-app.
+* **Native protocols ready**: HTTP/1.1 through HTTP/3 (QUIC via `lsquic`), WebTransport, and WebSocket are all implemented in-tree. Low-level socket controls (ECN, 0-RTT, connection migration) are complete.
+* **Async I/O optimization (`io_uring`)**: `io_uring_backend.c` and test code have been added; currently prototyping to reduce context-switching overhead in high-volume UDP send/receive loops (`🔄`).
+* **Multiport HTTP/3 fan-out**: The `cwist_multiport_t` facade that isolates multiple ports is being refactored. Future work will split independent UDP contexts per port (`⏳`).
 
 ### 2) Application Layer
 
 * **High-performance router & middleware**: Deterministic resource management with parameterized routes (`/user/:id`), compression (Gzip via zlib), CORS, and rate limiting (libttak token bucket) are integrated.
 * **Observability**: Prometheus `/metrics` and a probe-registry health-check system are operational.
-* **Per-port sub-applications**: Lifecycle and exception handling for `cwist_multiport_get_app(&app, port)` are hardened; detached ports are separately tunable sub-applications. "Independently tunable" covers app-level config (routes, middleware, TLS, size limits) -- it does not extend to process-wide subsystems. `cwist_full_gc()` (see docs/GC.md) is one process-wide switch: enabling it for one sub-app enables it for every `cwist_app` instance sharing that process, with no per-app opt-out. The cJSON allocator hook installed at process start is the same shape. A deployment that needs different memory-management behavior per sub-app needs separate processes, not separate `cwist_app` instances in one process.
-* **gRPC services**: Applications can register unary and streaming handlers, incrementally decode arbitrarily split gRPC frames, attach transport output sinks, expose standard health/reflection services, and generate C models/method paths with `cwist proto`. Clients use `cwist_grpc_channel`: dns/ipv4/ipv6 target resolution, `pick_first`/`round_robin` load balancing over per-address subchannels, and the gRFC A6 retry engine (exponential backoff, retryable codes, server pushback, throttling, transparent retries); error responses go out Trailers-Only so conforming clients can retry.
-* **Packaging**: `libcwist.a` is a CWIST-only static archive; bundled dependency archives and public headers install side-by-side with `PREFIX`/`DESTDIR` staging support. `cwist.pc` pkg-config metadata, a versioned dist tarball (`make dist VERSION=X.Y.Z`), and Homebrew (`packaging/homebrew/cwist.rb`) / vcpkg (`packaging/vcpkg/`) packaging drafts are available.
-* **Deferred async handlers**: `cwist_async_defer()` hands a request/response pair to any thread (scheduler job, NATS callback, custom worker) for later completion via `cwist_async_respond()` / `respond_with()` / `abort()`, with optional 504 timeout and per-mode completion routing (reactor-posted in C1M, inline in thread-pool mode).
+* **Per-port sub-applications (`🔄`)**: Hardening the lifecycle and exception handling of `cwist_multiport_get_app(&app, port)` logic, which detaches a port into a separately tunable sub-application.
 
 ### 3) Security & Data Layer
 
-* **Security specs**: BoringSSL-based TLS 1.3 and hybrid post-quantum KEM (`X25519MLKEM768`) are implemented ahead of time. CSRF uses a 256-bit double-submit token with constant-time validation; WAF-lite compiles its signature set into an Aho-Corasick automaton (single O(n) pass per input, ~10.7M checks/s benchmarked) plus HTML output escaping.
-* **Data-layer integrity**: SQLite3 embedded integration, migration system, and a `_Generic` macro-based type-dispatched ORM/query builder are in the build stream. The lock-free work queue (`cwist_io_queue`) protects node reclamation with ttak EBR critical sections and a two-stage retire deferral across global-epoch boundaries, and scheduler-backed background jobs are implemented.
-* **Protobuf wire helpers**: A lightweight Protobuf runtime supports varint keys, unsigned/signed/bool fields, length-delimited bytes/strings, reader iteration, and ZigZag helpers for hand-written services.
+* **Security specs**: BoringSSL-based TLS 1.3 and hybrid post-quantum KEM (`X25519MLKEM768`) are implemented ahead of time. CSRF and automatic secure-header injection remain planned (`⏳`).
+* **Data-layer integrity**: SQLite3 embedded integration, migration system, and a `_Generic` macro-based type-dispatched ORM/query builder are in the build stream. A lock-free work queue (`cwist_io_queue`) is partially implemented (`🔄`).
 
 ---
 
 ## Current Snapshot
 
-<!-- CI-BENCHMARKS:START -->
-Automated OS benchmark history is published in `docs/benchmark-trends.svg`. Latest platform: **Darwin**.
-<!-- CI-BENCHMARKS:END -->
-
-- Core HTTP/1.1, HTTP/2, HTTP/3, WebSocket, routing, middleware, validation, metrics, health checks, static-file caching, and graceful shutdown are fully implemented in-tree.
-- **Developer Ecosystem & Tutorials**: 30 comprehensive hands-on tutorial modules with C source (`main.c`), `CMakeLists.txt`, and English documentation guides (`README.md`) are available under `tutorials/`.
-- **CI Automated Web Server Benchmark**: Inline CI job dynamically generates and measures CWIST, Axum, and Spring Boot web servers using `wrk`, rendering real-time RPS, Latency, Peak RSS, and Context Switch metrics. A `the-benchmarker/web-frameworks` contract app lives in `benchmarks/web-frameworks/`, pinned to the `v3.3` tag with the uriparser lib path wired in.
-- **P0 (must-have) is 100% complete**: the framework’s core architecture and protocol stack are locked.
-- **Resolved**: HTTP/3 header-set objects for streams still open at engine destroy are now tracked per `cwist_http3_context` and swept on the engine/context teardown path; the `leak:cwist_h3_hsi_create` entry was removed from `tests/lsan.supp`.
-- **Resolved**: Deferred async completions on the reactor path now park unsent bytes in an owned buffer and resume via one-shot POLLOUT (`cwist_reactor_add_out`), so slow clients no longer occupy a worker/reactor thread for the send budget; a deadline (keep-alive timeout, refreshed on progress) bounds parked writers.
-- **Resolved**: gRPC handler-thread sends now wait for WINDOW_UPDATE credit via a condvar rendezvous signalled by the dispatcher (`h2_fc_wait_credit`), instead of failing a zero-credit send with UNAVAILABLE; RST/teardown/stall-timeout still fail fast.
-- **Resolved (v3.4 perf wave)**: C1M reactor tail latency — request batches now yield cooperatively (`CWIST_HTTP_YIELD_BATCH`), batch responses coalesce into one writev per turn (256 KiB stash), reactor wake eventfds are registered with the ring (`IORING_REGISTER_EVENTFD`), and post bursts coalesce to a single wake. P99.999 CI measurement fixed end-to-end (lua output format + `$GITHUB_WORKSPACE` script path).
-- **Resolved (v3.4 perf wave)**: BDR cache learn/read paths are lock-free (CAS-published entries, atomic blob swaps, EBR reclamation) and entries support hit-time revalidation hooks with zero-copy pointer swaps (`cwist_bdr_put_revalidatable`); classic pool gained `CWIST_POOL_PREWARM` / `CWIST_POOL_IDLE_TIMEOUT_MS` tunables; the HTTPS handshake shepherd shard count is tunable via `CWIST_HTTPS_HS_SHARDS`.
-- **Resolved (v3.4 gRPC client wave)**: gRPC client retry policy and client-side load balancing are done — `cwist_grpc_channel` resolves dns/ipv4/ipv6 targets into per-address subchannels with connection backoff (doc/connection-backoff.md), balances calls with `pick_first`/`round_robin` (doc/load-balancing.md), and runs the gRFC A6 retry engine (jittered exponential backoff, retryable codes, server pushback, token-bucket throttling, transparent retries, commit-on-headers) configured via C structs or JSON service config. Error responses are Trailers-Only on both unary and streaming server paths so retries can actually happen; `test_grpc_channel` covers the matrix against loopback backends plus a raw GOAWAY fake.
-- **CWIST v3.7.2 released 2026-09-29**: WASI 0.2 formally supported, WASM component pipeline evaluated, durable queue and GraphQL subscriptions shipped behind flags.
-- **CWIST v3.8 released 2026-10-01**: theme was *performance, Rust FFI, and v4.0 scope confirmation*. WebTransport moved to v4.1 on 2026-09-25.
-- **CWIST v3.9 released 2026-10-05**: TLS observability in `/metrics`, CI HTTPS performance gates, and WebRTC DataChannel support.
-- **CWIST v4.0 in preparation**: open decisions and work are listed under [CWIST v4.0 Readiness](#cwist-v40-readiness).
-- **Landed on `dev` since v3.7.2**: HTTP close-drain correctness (#292), HTTPS connection-churn optimization (#291), Rust listen-shutdown support (#287).
-- **Performance sweep done** (issue #293): CWIST C1M already leads Axum on a single CI run; batch/yield is near-optimal; RX-uring pipelining and worker ttak warmup showed no win; HTTPS handshake shards are a real niche lever (shard=1 is a bottleneck, 4+ saturate).
-- **Deferred**: HTTP/3 connection-close correctness and the lsquic re-pin are on hold until upstream lsquic ships WebTransport client support.
+- Core HTTP/1.1, HTTP/2, HTTP/3, WebSocket, routing, middleware, validation, metrics, health checks, static-file caching, and graceful shutdown are already implemented in-tree.
+- **P0 (must-have) is 100 % complete**: the framework’s core architecture and protocol stack are locked.
+- We are now in the **P1–P3 hardening phase**, focusing on structural completeness and extreme performance:
+  * Refining the **multiport facade** (`cwist_multiport_t`) so the root app retains ownership of the default port while counted descriptors and per-port sub-app lifecycle validation are proved by tests.
+  * Hardening the **`io_uring` packet loop** for HTTP/3 UDP workloads: synchronizing SQE submission and CQE consumption, and minimizing memory copies between the `lsquic` async stream callbacks and the kernel ring buffer.
 
 ---
 
@@ -98,16 +65,16 @@ Automated OS benchmark history is published in `docs/benchmark-trends.svg`. Late
 | WebSocket Server | ✅ | Upgrade, frame parsing, ping/pong |
 | TLS 1.3 / HTTPS | ✅ | BoringSSL, ECH, persistent HTTP/1.1 requests, split header/body writes, and shared prefork session-ticket keys |
 | Alt-Svc Header Injection | ✅ | HTTP/3 upgrade advertisement from HTTP/1.1/2 |
-| **io_uring Backend** | 🔄 | Initial implementation added (`io_uring_backend.c`, `test_io_uring.c`) |
+| **io_uring Backend** | 🔄 | Initial implementation added (`io_uring_backend.c`, `test_io_uring.c`); SQE/CQE timing synchronization and copy-minimization with `lsquic` callbacks being hardened |
 | **kqueue Backend** | ⏳ | BSD/macOS; blocked on non-Linux test environment |
 | HTTP/2 Server Push | ✅ | `cwist_http2_push_resource` with PUSH_PROMISE frame, HPACK encoding, server-initiated even stream IDs |
 | **WebTransport** | ⏳ / 🔮 | Excluded from `main`; experimental WebTransport server/native C client work stays on `dev` until upstream lsquic ships WebTransport client support; no topic-branch pin |
 | HTTP/3 Datagram Extension | ✅ | `send_datagram`, callbacks, `es_datagrams` enabled |
 | ECN (Explicit Congestion Notification) | ✅ | UDP socket with `IP_RECVTOS` / `IPV6_RECVTCLASS` |
 | Connection Migration | ✅ | `es_allow_migration` enabled |
-| 0-RTT Early Data | ✅ | Client: `cwist_http3_client_enable_0rtt`; Server: opt-in via `cwist_http3_set_early_data` (default OFF), shared session-ticket keys for resumption, and a default-ON replay guard restricting early-data requests to idempotent methods |
-| **Multiport TCP Facade** | ✅ | Counted `cwist_multiport_t` descriptor, shared accept loop, duplicate/default-port validation, and per-port smoke tests |
-| **Multiport HTTP/3 Fan-out** | ✅ | One UDP socket/context per bound port, with global settings copied unless the port is detached into a sub-app |
+| 0-RTT Early Data | ✅ | `SSL_CTX_set_early_data_enabled` |
+| **Multiport TCP Facade** | 🔄 | Counted `cwist_multiport_t` descriptor and shared accept loop implemented; duplicate/default-port validation and per-port smoke tests in progress |
+| **Multiport HTTP/3 Fan-out** | ⏳ | Needs one UDP socket/context per bound port, with global settings copied unless the port is detached into a sub-app |
 
 ---
 
@@ -136,9 +103,7 @@ Automated OS benchmark history is published in `docs/benchmark-trends.svg`. Late
 | **Per-Status Error Handlers** | ✅ | `cwist_app_register_error_handler` for custom 404, 500, etc. |
 | **URL Reverse Routing** | ✅ | `cwist_app_get_named` + `cwist_url_for` with param substitution |
 | **Flash Messages** | ✅ | One-time session-scoped messages via `cwist_flash_get/set` |
-| **Per-Port Sub-Applications** | ✅ | `cwist_multiport_get_app(&app, port)` detaches additional ports for independent tuning; public/default port remains owned by root app. Independent tuning is per-app config only -- `cwist_full_gc()` and the cJSON allocator hook are process-wide singletons shared by every sub-app in the process (docs/GC.md) |
-| **Standard Status Codes** | ✅ | Full 1xx–5xx `cwist_http_status_t` enum (RFC 9110 + WebDAV extensions), `cwist_http_status_reason()` table, and automatic reason phrases when handlers only set the numeric code |
-| **Async / Deferred Handlers** | ✅ | `cwist_async_defer` parks the request for cross-thread completion (`respond` / `respond_with` / `abort`), optional 504 timeout, reactor-posted completion in C1M mode with keep-alive re-arm; covered by `test_async_defer` |
+| **Per-Port Sub-Applications** | 🔄 | `cwist_multiport_get_app(&app, port)` detaches additional ports for independent tuning; public/default port must remain owned by root app; lifecycle & exception hardening ongoing |
 
 ---
 
@@ -150,8 +115,8 @@ Automated OS benchmark history is published in `docs/benchmark-trends.svg`. Late
 | Database Encryption | ✅ | `db_crypt` layer |
 | ECH (Encrypted Client Hello) | ✅ | BoringSSL ECH |
 | **CSRF Protection** | ⏳ | No double-submit cookie or synchronizer token |
-| **Secure Headers** | ⏳ | No automatic HSTS, CSP, X-Frame-Options injection |
-| **Request Size Limits** | 🔄 | HTTP/3 has body limit; HTTP/1.1/2 limits need audit |
+| **Secure Headers** | ✅ | Automatic injection of HSTS, CSP, X-Frame-Options, Referrer-Policy, CORP via `cwist_http_response_add_security_headers()` |
+| **Request Size Limits** | ✅ | HTTP/1.1/2/3 body limits audited and enforced (`CWIST_HTTP_MAX_BODY_SIZE`) |
 | **Input Validation** | ✅ | Bind validator added (`bind.c`, `bind.h`, `test_bind.c`) |
 | **WAF-lite / Sanitization** | ⏳ | No XSS/SQLi sanitizer middleware |
 
@@ -164,7 +129,7 @@ Automated OS benchmark history is published in `docs/benchmark-trends.svg`. Late
 | SQLite Integration | ✅ | `sqlite3` embedded |
 | Database Migration | ✅ | `migrate` system |
 | **Connection Pool** | ⏳ | SQLite is direct; no generic connection pool abstraction |
-| **ORM / Query Builder** | ✅ | Socket-backed ORM with dialect-aware query builder, _Generic type-dispatched RETURNING / scalar helpers |
+| **ORM / Query Builder** | ✅ | Socket-backed ORM with dialect-aware query builder, `_Generic` type-dispatched RETURNING / scalar helpers |
 | **Redis / Key-Value Cache** | ⏳ | No Redis client integration |
 | NATS Integration | ✅ | `cwist_nats` wrapper |
 | **Message Queue (Job Queue)** | ✅ | `cwist_io_queue` lock-free job queue plus scheduler-backed immediate and delayed jobs |
@@ -181,12 +146,9 @@ Automated OS benchmark history is published in `docs/benchmark-trends.svg`. Late
 | **CLI Scaffolding** | ✅ | `cwist new project`, `.cwpro` manifests, OpenAPI generation, and include-aware incremental watcher |
 | **Hot Reload (Dev Mode)** | ✅ | `cwist watcher` uses inotify/kqueue with snapshot/poll fallback, debounces changes, exports include-graph scope, preserves prior process on build failure, and performs zero-downtime SO_REUSEPORT overlap process hot-swapping |
 | **Configuration Management** | ✅ | `.env` file + environment variable loader via `cwist_config` |
-| **Static Library Packaging** | ✅ | CWIST-only archive plus separately installed bundled libraries/headers, deterministic static-link order, `PREFIX`/`DESTDIR` staging, `cwist.pc` pkg-config file, versioned dist tarball, and Homebrew/vcpkg packaging drafts |
-| **Testing Utilities** | ✅ | In-process test client (`cwist_test_client`), cookie jar, multipart helper, and BDD-style fluent assertions (`CWIST_ASSERT_STATUS`, `CWIST_ASSERT_HEADER`, `CWIST_ASSERT_BODY_CONTAINS`) |
-| **Interactive API Documentation** | ✅ | Embedded Swagger UI interactive documentation page (`cwist_app_enable_swagger`) serving `/docs` and `/openapi.json` |
-| **Benchmark Suite** | ✅ | GitHub Actions Linux/macOS measurements publish CPU, throughput, RSS, memory-recovery drift, and context-switch SVG trends; `benchmarks/web-frameworks/` contract app pinned to the `v3.3` tag for the-benchmarker harness |
-| **Interop Gate** | ✅ | h2spec HTTP/2 conformance diff against a pinned baseline (`scripts/ci/h2spec_gate.sh`); new failures break the build. Builds run with `-Werror`, stack protector, `_FORTIFY_SOURCE=2`, PIE, and full RELRO on Linux |
-| **Fuzzing / Hardening** | ✅ | Stateful sequence/auth libFuzzer coverage plus bounded reassembly and strict HTTP chunk framing checks |
+| **Testing Utilities** | 🔄 | In-process test client (`cwist_test_client_get/post`) added; `test_io_uring_demolition` target wired in Makefile; harness WIP |
+| **Benchmark Suite** | ⏳ | No `wrk`/`oha`/`h2load` benchmark automation |
+| **Fuzzing / Hardening** | ⏳ | No AFL/libFuzzer targets for HTTP parser or QUIC path |
 
 ---
 
@@ -643,6 +605,23 @@ The tag history (`v0.1` → `v3.3`) settles into this convention from v3 onward,
 
 ---
 
+## Current Focus (P1 – P3 Core Hardening)
+
+The top priority is blocking side effects in internal implementations and locking down stable interfaces.
+
+### Multiport Facade Hardening (`cwist_multiport_t`)
+
+* Convert normal port arrays into counted descriptors while ensuring the **root application retains ownership of the default port**.
+* Add lifecycle validation so detaching a port into a sub-app does not accidentally release the primary listener.
+* Detect duplicate bindings and prove isolation / global-settings copy-share mechanics with focused tests.
+
+### `io_uring` Packet Loop Hardening
+
+* Guarantee SQE (Submission Queue Entry) submission and CQE (Completion Queue Entry) consumption timing consistency under HTTP/3 UDP workloads.
+* Refine control logic to minimize memory copies between the `lsquic` engine’s async stream callbacks and the kernel ring buffer.
+
+---
+
 ## Priority Queue (Suggested)
 
 ### P0 — Framework Gap (Must Have) ✅ COMPLETE
@@ -653,33 +632,32 @@ The tag history (`v0.1` → `v3.3`) settles into this convention from v3 onward,
 5. ~~**Form / Request Validation** middleware~~ ✅
 
 ### P1 — Production Readiness
-6. **Access Logs** (Common/JSON format)
-7. **Metrics endpoint** (Prometheus text format) 🔄
-8. **Rate Limiting** middleware
-9. **Caching** (ETag generation + in-memory cache)
-10. **Health Check** endpoints 🔄
+6. ~~**Access Logs** (Common/JSON format)~~ ✅
+7. ~~**Metrics endpoint** (Prometheus text format)~~ ✅
+8. ~~**Rate Limiting** middleware~~ ✅
+9. ~~**Caching** (ETag generation + in-memory cache)~~ ✅
+10. ~~**Health Check** endpoints~~ ✅
+11. ~~**Secure Headers** (HSTS, CSP, X-Frame-Options, etc.)~~ ✅
+12. ~~**Request Size Limits** (HTTP/1.1/2/3 body limit audit)~~ ✅
+13. **Multiport facade hardening** 🔄: counted port descriptor, per-port sub-app lifecycle, duplicate/default-port validation, and smoke tests
 
 ### P2 — Developer Velocity
-14. ~~**Hot Reload** for development~~ ✅
-15. ~~**CLI Tooling** (project scaffold, route generator, watcher)~~ ✅
+14. **Hot Reload** for development
+15. **CLI Tooling** (project scaffold, route generator)
 16. ~~**Configuration** loader (`.env`, `.toml`)~~ ✅
-17. ~~**Test Harness** with HTTP mock client~~ ✅
-18. ~~**Deferred Async Handlers** (`cwist_async_defer` cross-thread completion)~~ ✅
+17. **Test Harness** with HTTP mock client 🔄
 
 ### P3 — Advanced Protocols
-15. ~~**WebTransport** server + client~~ ✅ (basic server handler)
-16. ~~**HTTP/2 Server Push**~~ ✅
-17. **io_uring** UDP packet loop for HTTP/3 🔄
-18. **kqueue** backend for macOS/BSD
+18. ~~**WebTransport** server + client~~ ✅ (basic server handler)
+19. ~~**HTTP/2 Server Push**~~ ✅
+20. **io_uring** UDP packet loop for HTTP/3 🔄
+21. **kqueue** backend for macOS/BSD
+22. **Multiport HTTP/3 parity** ⏳: per-port UDP contexts and global setting propagation to non-detached ports
 
 ### P4 — Ecosystem
-24. ~~**gRPC unary and buffered streaming server support**~~ ✅
-25. ~~**GraphQL** bounded Query executor~~ ✅
-26. ~~**OpenAPI** generator~~ ✅
-27. ~~**Background Jobs / Scheduler**~~ ✅
-28. ~~**Incremental gRPC framing, reflection, health checks, and `.proto` codegen**~~ ✅
-29. ~~**gRPC wire streaming**: DATA-frame wiring, trailers, deadlines, gzip negotiation~~ ✅
-30. ~~**Distribution**~~ ✅ (Homebrew tap published at `c4punks/homebrew-cwist`; vcpkg kept as in-tree draft, upstream submission postponed)
+23. **gRPC** support
+24. **GraphQL** executor
+25. **OpenAPI** generator
 
 ---
 
