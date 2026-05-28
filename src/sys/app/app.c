@@ -2438,7 +2438,7 @@ static void static_ssl_http2_handler(cwist_https_connection *conn, void *ctx) {
     }
 }
 
-static void static_http_handler(int client_fd, void *ctx) {
+void cwist_app_http_handler(int client_fd, void *ctx) {
     cwist_app *app = (cwist_app *)ctx;
     
     if (app->use_http2) {
@@ -4367,8 +4367,7 @@ int cwist_app_listen(cwist_app *app, int port) {
             }
             cwist_https_server_loop(server_fd, app->ssl_ctx, static_ssl_handler, app);
         } else {
-            cwist_server_config config = {
-                .use_forking = false, .use_threading = true, .use_epoll = false};
+            cwist_server_config config = { .use_forking = false, .use_threading = true, .use_epoll = false };
             cwist_http_server_loop(server_fd, &config, cwist_app_http_handler, app);
         }
 #endif
