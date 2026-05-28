@@ -68,12 +68,7 @@ static void async_accept_cb(int fd, void *ctx) {
         if (app->use_ssl && app->ssl_ctx && app->https_request_handler) {
             https_pool_submit(client_fd, app->ssl_ctx, app->https_request_handler, app);
         } else {
-            fprintf(
-                stderr,
-                "[async] SSL request accepted but HTTPS not ready (use_ssl=%d ssl_ctx=%p handler=%p), closing fd=%d\n",
-                app ? app->use_ssl : -1, app ? (void *)app->ssl_ctx : NULL,
-                app ? (void *)app->https_request_handler : NULL, client_fd);
-            close(client_fd);
+            cwist_http_pool_submit(client_fd, cwist_app_http_handler, app);
         }
     }
 
@@ -115,9 +110,7 @@ cwist_error_t cwist_async_server_loop(int server_fd, cwist_app *app) {
             return err;
         }
     } else {
-        /* This loop only drives reactor workers: do not re-read
-         * CWIST_C1M_MODE, which cwist_app_listen_ex() may have overridden. */
-        if (cwist_http_pool_init_mode(true) != 0) {
+        if (cwist_http_pool_init() != 0) {
             fprintf(stderr, "[async] Failed to init HTTP thread pool\n");
             return err;
         }
@@ -126,10 +119,8 @@ cwist_error_t cwist_async_server_loop(int server_fd, cwist_app *app) {
     int flags = fcntl(server_fd, F_GETFL, 0);
     if (flags < 0 || fcntl(server_fd, F_SETFL, flags | O_NONBLOCK) < 0) {
         perror("[async] Failed to set server socket non-blocking");
-        if (use_https)
-            https_pool_destroy();
-        else
-            cwist_http_pool_destroy();
+        if (app->use_ssl) https_pool_destroy();
+        else cwist_http_pool_destroy();
         return err;
     }
 

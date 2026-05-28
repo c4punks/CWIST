@@ -322,7 +322,37 @@ cwist_error_t cwist_app_static(cwist_app *app, const char *url_prefix, const cha
 cwist_error_t cwist_app_static_with_cache(cwist_app *app, const char *url_prefix, const char *directory, const char *cache_control);
 /** @} */
 
-// Start
+/** @name Startup */
+/** @{ */
+
+#ifndef CWIST_MULTIPORT_MAX_PORTS
+#define CWIST_MULTIPORT_MAX_PORTS 64
+#endif
+
+/**
+ * @brief Counted multiport descriptor created from a normal C array.
+ */
+typedef struct cwist_multiport_t {
+    unsigned short ports[CWIST_MULTIPORT_MAX_PORTS]; ///< Additional TCP ports.
+    size_t count; ///< Number of valid entries in ports.
+    bool valid; ///< False when construction failed, e.g. too many ports.
+} cwist_multiport_t;
+
+/**
+ * @brief Create a counted multiport descriptor from an explicit pointer and length.
+ * @param ports Source port array.
+ * @param count Number of elements in ports.
+ * @return Counted descriptor accepted by cwist_app_multiport().
+ */
+cwist_multiport_t cwist_create_multiport_from_array(const unsigned short *ports, size_t count);
+
+/**
+ * @brief Create a counted multiport descriptor from a real C array.
+ * @param ports Real C array, not a decayed pointer.
+ */
+#define cwist_create_multiport(ports) cwist_create_multiport_from_array((ports), sizeof(ports) / sizeof((ports)[0]))
+
+void cwist_app_http_handler(int client_fd, void *ctx);
 int cwist_app_listen(cwist_app *app, int port);
 
 #endif
