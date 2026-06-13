@@ -30,6 +30,26 @@
 /* Forward declaration: PQC layer applied inside TLS bootstrap */
 bool cwist_tls_apply_pqc_layer(cwist_app *app, SSL_CTX *ctx);
 
+/**
+ * @brief Poll the socket for the direction OpenSSL is waiting on.
+ * @return 0 if the requested event is ready, -1 on timeout/error.
+ */
+static int cwist_ssl_wait(int fd, int ssl_error, int timeout_ms) {
+    struct pollfd pfd = { .fd = fd, .events = 0 };
+    if (ssl_error == SSL_ERROR_WANT_READ) {
+        pfd.events = POLLIN;
+    } else if (ssl_error == SSL_ERROR_WANT_WRITE) {
+        pfd.events = POLLOUT;
+    } else {
+        return -1;
+    }
+
+    int ret = poll(&pfd, 1, timeout_ms);
+    if (ret <= 0) return -1;
+    if (pfd.revents & (POLLERR | POLLHUP | POLLNVAL)) return -1;
+    return 0;
+}
+
 struct https_thread_payload {
     int client_fd;
     cwist_https_context *ctx;
@@ -468,27 +488,11 @@ cwist_error_t cwist_https_accept(cwist_https_context *ctx, int client_fd,
     SSL_set_fd(ssl, client_fd);
     cwist_tcp_quickack(client_fd);
 
-    /* Bound the whole handshake so a client dribbling bytes cannot pin a
-     * pool worker forever. */
-    uint64_t handshake_deadline = cwist_https_now_ms() + CWIST_HTTPS_HANDSHAKE_TIMEOUT_MS;
     int rc;
     while ((rc = SSL_accept(ssl)) <= 0) {
-        /* Keep immediate ACKs armed: the kernel drops out of quickack mode
-         * as the handshake segments flow, and the delayed ACK of the
-         * client's Finished would hold a Nagle-bound request by ~40 ms. */
-        cwist_tcp_quickack(client_fd);
         int ssl_err = SSL_get_error(ssl, rc);
         if (ssl_err == SSL_ERROR_WANT_READ || ssl_err == SSL_ERROR_WANT_WRITE) {
-            uint64_t now = cwist_https_now_ms();
-            if (now >= handshake_deadline) {
-                cwist_error_t err_obj = make_ssl_error("SSL handshake timed out");
-                SSL_free(ssl);
-                return err_obj;
-            }
-            int wait_ms = CWIST_HTTP_TIMEOUT_MS;
-            uint64_t remaining = handshake_deadline - now;
-            if (remaining < (uint64_t)wait_ms) wait_ms = (int)remaining;
-            if (cwist_ssl_wait(client_fd, ssl_err, wait_ms) != 0) {
+            if (cwist_ssl_wait(client_fd, ssl_err, CWIST_HTTP_TIMEOUT_MS) != 0) {
                 cwist_error_t err_obj = make_ssl_error("SSL handshake timed out or socket error");
                 SSL_free(ssl);
                 return err_obj;
@@ -793,15 +797,23 @@ cwist_error_t cwist_https_send_response(cwist_https_connection *conn, cwist_http
         return err;
     }
 
-    if (conn->http3_enabled && !cwist_http_header_get(res->headers, "Alt-Svc")) {
-        struct sockaddr_storage ss;
-        socklen_t ss_len = sizeof(ss);
-        int port = 443;
-        if (getsockname(conn->fd, (struct sockaddr *)&ss, &ss_len) == 0) {
-            if (ss.ss_family == AF_INET) {
-                port = ntohs(((struct sockaddr_in *)&ss)->sin_port);
-            } else if (ss.ss_family == AF_INET6) {
-                port = ntohs(((struct sockaddr_in6 *)&ss)->sin6_port);
+    // 2. Send over SSL
+    const char *p = response_str->data;
+    int left = (int)response_str->size;
+    int total_sent = 0;
+
+    err.error.err_i16 = 0; // Assume success initially
+
+    while (left > 0) {
+        int sent = SSL_write(conn->ssl, p, left);
+        if (sent <= 0) {
+            int ssl_err = SSL_get_error(conn->ssl, sent);
+            if (ssl_err == SSL_ERROR_WANT_WRITE || ssl_err == SSL_ERROR_WANT_READ) {
+                if (cwist_ssl_wait(conn->fd, ssl_err, CWIST_HTTP_TIMEOUT_MS) != 0) {
+                    err = make_ssl_error("SSL write timed out or socket error");
+                    break;
+                }
+                continue; // Retry
             }
         }
         char alt_svc[64];
