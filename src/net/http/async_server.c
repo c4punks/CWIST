@@ -21,38 +21,10 @@
 
 static cwist_reactor_t *g_reactor = NULL;
 
-/**
- * @brief Decide whether the app is fully configured for HTTPS serving.
- *
- * Checks that the app pointer is non-NULL and that SSL mode, an SSL context,
- * and an HTTPS request handler are all present. No side effects; read-only.
- *
- * @param app Application object, may be NULL.
- * @return true if HTTPS dispatch can be used for accepted connections.
- */
 static bool app_use_https(const cwist_app *app) {
     return app && app->use_ssl && app->ssl_ctx && app->https_request_handler;
 }
 
-/**
- * @brief Reactor callback: accept pending connections on a listening socket.
- *
- * Accepts all currently queued connections in a loop (non-blocking), disables
- * Nagle (and enables TCP_QUICKACK on Linux where available) on each accepted
- * socket, then hands it either to the HTTPS dispatcher or to the HTTP
- * connection pool, depending on the app configuration. Connections accepted
- * while SSL is requested but not fully configured are closed with a warning.
- *
- * After the accept loop drains, the listening socket is re-armed so the worker
- * keeps accepting: transient reactor re-add failures (e.g. a full io_uring SQ)
- * are retried up to 1000 times with a 10 ms backoff before giving up with a
- * fatal message; if the process is shutting down (@c g_cwist_running cleared),
- * the reactor is stopped instead. Runs on a reactor worker thread; the
- * accepted sockets are owned by the HTTP/HTTPS pools once dispatched.
- *
- * @param fd    Listening socket fd that became readable.
- * @param ctx   Reactor slot payload holding the `cwist_app *` pointer.
- */
 static void async_accept_cb(int fd, void *ctx) {
     /* ctx is the reactor slot's inline payload holding the app pointer. */
     cwist_app *app = *(cwist_app **)ctx;
@@ -65,10 +37,17 @@ static void async_accept_cb(int fd, void *ctx) {
     int client_fd;
 
     while ((client_fd = accept(fd, (struct sockaddr*)&addr, &len)) >= 0) {
-        if (app->use_ssl && app->ssl_ctx && app->https_request_handler) {
+        if (app_use_https(app)) {
             https_pool_submit(client_fd, app->ssl_ctx, app->https_request_handler, app);
-        } else {
+        } else if (app && !app->use_ssl) {
             cwist_http_pool_submit(client_fd, cwist_app_http_handler, app);
+        } else {
+            fprintf(stderr, "[async] SSL request accepted but HTTPS not ready (use_ssl=%d ssl_ctx=%p handler=%p), closing fd=%d\n",
+                    app ? app->use_ssl : -1,
+                    app ? (void*)app->ssl_ctx : NULL,
+                    app ? (void*)app->https_request_handler : NULL,
+                    client_fd);
+            close(client_fd);
         }
     }
 
@@ -119,7 +98,7 @@ cwist_error_t cwist_async_server_loop(int server_fd, cwist_app *app) {
     int flags = fcntl(server_fd, F_GETFL, 0);
     if (flags < 0 || fcntl(server_fd, F_SETFL, flags | O_NONBLOCK) < 0) {
         perror("[async] Failed to set server socket non-blocking");
-        if (app->use_ssl) https_pool_destroy();
+        if (use_https) https_pool_destroy();
         else cwist_http_pool_destroy();
         return err;
     }
@@ -134,10 +113,8 @@ cwist_error_t cwist_async_server_loop(int server_fd, cwist_app *app) {
     g_reactor = cwist_reactor_create();
     if (!g_reactor) {
         fprintf(stderr, "[async] Failed to create reactor\n");
-        if (use_https)
-            https_pool_destroy();
-        else
-            cwist_http_pool_destroy();
+        if (use_https) https_pool_destroy();
+        else cwist_http_pool_destroy();
         return err;
     }
 
