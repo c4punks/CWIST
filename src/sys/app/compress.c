@@ -9,7 +9,6 @@
 #include <cwist/net/http/http.h>
 #include <zlib.h>
 #include <brotli/encode.h>
-#include <zstd.h>
 #include <string.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -172,12 +171,6 @@ typedef struct {
     size_t out_pos;
 } cwist_brotli_state_t;
 
-/**
- * @brief Allocate a Brotli backend state.
- * @param state Out param receiving the allocated state on success.
- * @retval 0 on success, with *state set.
- * @retval -1 on allocation failure.
- */
 static int brotli_init(void **state) {
     cwist_brotli_state_t *bs = (cwist_brotli_state_t *)calloc(1, sizeof(*bs));
     if (!bs) return -1;
@@ -185,13 +178,6 @@ static int brotli_init(void **state) {
     return 0;
 }
 
-/**
- * @brief Grow the input accumulation buffer if it cannot hold @p need more bytes.
- * @param bs Brotli state.
- * @param need Additional bytes that must fit in the accumulator.
- * @retval 0 if the accumulator has capacity for @p need more bytes.
- * @retval -1 if @p bs is NULL or reallocation failed (state unchanged on failure).
- */
 static int brotli_ensure_accum(cwist_brotli_state_t *bs, size_t need) {
     if (!bs) return -1;
     size_t required = bs->accum_len + need;
@@ -206,25 +192,8 @@ static int brotli_ensure_accum(cwist_brotli_state_t *bs, size_t need) {
     return 0;
 }
 
-/**
- * @brief Compress one body chunk with Brotli.
- *
- * Without flush, input is appended to an internal accumulator and no output is
- * produced. With flush, the accumulated input plus the final chunk is
- * compressed into an internal buffer, and as much of the result as fits is
- * copied to @p out; the remainder is drained via brotli_finish().
- *
- * @param state Brotli state.
- * @param in Input chunk (may be NULL when nothing new to add).
- * @param in_len Length of @p in.
- * @param out Caller output buffer.
- * @param in,out out_len On entry, capacity of @p out; on success, bytes copied.
- * @param flush Non-zero for the final chunk of the body.
- * @retval 0 on success.
- * @retval -1 on invalid arguments or allocation/compression failure.
- */
-static int brotli_compress(void *state, const char *in, size_t in_len, char *out, size_t *out_len,
-                           int flush) {
+static int brotli_compress(void *state, const char *in, size_t in_len,
+                           char *out, size_t *out_len, int flush) {
     cwist_brotli_state_t *bs = (cwist_brotli_state_t *)state;
     if (!bs || !out || !out_len) return -1;
 
@@ -291,14 +260,6 @@ static int brotli_compress(void *state, const char *in, size_t in_len, char *out
     return 0;
 }
 
-/**
- * @brief Drain remaining compressed output from the internal buffer.
- * @param state Brotli state.
- * @param out Caller output buffer.
- * @param in,out out_len On entry, capacity of @p out; on success, bytes copied.
- * @retval 0 on success (including when the internal buffer is fully drained).
- * @retval -1 on invalid arguments.
- */
 static int brotli_finish(void *state, char *out, size_t *out_len) {
     cwist_brotli_state_t *bs = (cwist_brotli_state_t *)state;
     if (!bs || !out || !out_len) return -1;
@@ -311,10 +272,6 @@ static int brotli_finish(void *state, char *out, size_t *out_len) {
     return 0;
 }
 
-/**
- * @brief Free a Brotli state and all its buffers. Safe on NULL.
- * @param state Brotli state allocated by brotli_init.
- */
 static void brotli_cleanup(void *state) {
     cwist_brotli_state_t *bs = (cwist_brotli_state_t *)state;
     if (!bs) return;
@@ -331,170 +288,8 @@ static const cwist_compress_backend cwist_backend_brotli = {
     .cleanup = brotli_cleanup,
 };
 
-/**
- * @brief Get the built-in Brotli backend.
- * @return Pointer to the static Brotli backend descriptor.
- */
 const cwist_compress_backend *cwist_compress_backend_brotli(void) {
     return &cwist_backend_brotli;
-}
-
-/* --- Zstandard (zstd) backend --- */
-
-typedef struct {
-    ZSTD_CStream *cstream;
-    char         *accum;
-    size_t        accum_len;
-    size_t        accum_cap;
-    char         *out;
-    size_t        out_len;
-    size_t        out_pos;
-} cwist_zstd_state_t;
-
-/**
- * @brief Allocate and initialize a zstd backend state (compression stream).
- * @param state Out param receiving the allocated state on success.
- * @retval 0 on success, with *state set.
- * @retval -1 on allocation or stream initialization failure (resources freed).
- */
-static int zstd_init(void **state) {
-    cwist_zstd_state_t *zs = (cwist_zstd_state_t *)calloc(1, sizeof(*zs));
-    if (!zs) return -1;
-    zs->cstream = ZSTD_createCStream();
-    if (!zs->cstream) { free(zs); return -1; }
-    size_t rc = ZSTD_initCStream(zs->cstream, ZSTD_CLEVEL_DEFAULT);
-    if (ZSTD_isError(rc)) { ZSTD_freeCStream(zs->cstream); free(zs); return -1; }
-    *state = zs;
-    return 0;
-}
-
-/**
- * @brief Grow the input accumulation buffer if it cannot hold @p need more bytes.
- * @param zs zstd state.
- * @param need Additional bytes that must fit in the accumulator.
- * @retval 0 if the accumulator has capacity for @p need more bytes.
- * @retval -1 if reallocation failed (state unchanged on failure).
- */
-static int zstd_ensure_accum(cwist_zstd_state_t *zs, size_t need) {
-    size_t required = zs->accum_len + need;
-    if (required > zs->accum_cap) {
-        size_t new_cap = zs->accum_cap ? zs->accum_cap * 2 : 4096;
-        while (new_cap < required) new_cap *= 2;
-        char *tmp = (char *)realloc(zs->accum, new_cap);
-        if (!tmp) return -1;
-        zs->accum = tmp;
-        zs->accum_cap = new_cap;
-    }
-    return 0;
-}
-
-/**
- * @brief Compress one body chunk with zstd.
- *
- * Without flush, input is appended to an internal accumulator and no output is
- * produced. With flush, the accumulated input plus the final chunk is
- * compressed into an internal buffer, and as much of the result as fits is
- * copied to @p out; the remainder is drained via zstd_finish().
- *
- * @param state zstd state.
- * @param in Input chunk (may be NULL when nothing new to add).
- * @param in_len Length of @p in.
- * @param out Caller output buffer.
- * @param in,out out_len On entry, capacity of @p out; on success, bytes copied.
- * @param flush Non-zero for the final chunk of the body.
- * @retval 0 on success.
- * @retval -1 on invalid arguments or allocation/compression failure.
- */
-static int zstd_compress(void *state, const char *in, size_t in_len, char *out, size_t *out_len,
-                         int flush) {
-    cwist_zstd_state_t *zs = (cwist_zstd_state_t *)state;
-    if (!zs || !out || !out_len) return -1;
-
-    if (!flush) {
-        if (in_len == 0) { *out_len = 0; return 0; }
-        if (zstd_ensure_accum(zs, in_len) != 0) return -1;
-        memcpy(zs->accum + zs->accum_len, in, in_len);
-        zs->accum_len += in_len;
-        *out_len = 0;
-        return 0;
-    }
-
-    size_t total_in_len = zs->accum_len + in_len;
-    char *total_in = (char *)malloc(total_in_len);
-    if (!total_in) return -1;
-    if (zs->accum_len > 0) memcpy(total_in, zs->accum, zs->accum_len);
-    if (in_len > 0) memcpy(total_in + zs->accum_len, in, in_len);
-
-    size_t out_cap = ZSTD_compressBound(total_in_len);
-    char *out_buf = (char *)malloc(out_cap);
-    if (!out_buf) { free(total_in); return -1; }
-
-    ZSTD_inBuffer  ib = { total_in, total_in_len, 0 };
-    ZSTD_outBuffer ob = { out_buf, out_cap, 0 };
-
-    size_t rc = ZSTD_compressStream2(zs->cstream, &ob, &ib, ZSTD_e_end);
-    free(total_in);
-    if (ZSTD_isError(rc)) { free(out_buf); return -1; }
-
-    zs->accum_len = 0;
-    free(zs->out);
-    zs->out = out_buf;
-    zs->out_len = ob.pos;
-    zs->out_pos = 0;
-
-    size_t to_copy = (ob.pos < *out_len) ? ob.pos : *out_len;
-    memcpy(out, out_buf, to_copy);
-    zs->out_pos = to_copy;
-    *out_len = to_copy;
-    return 0;
-}
-
-/**
- * @brief Drain remaining compressed output from the internal buffer.
- * @param state zstd state.
- * @param out Caller output buffer.
- * @param in,out out_len On entry, capacity of @p out; on success, bytes copied.
- * @retval 0 on success (including when the internal buffer is fully drained).
- * @retval -1 on invalid arguments.
- */
-static int zstd_finish(void *state, char *out, size_t *out_len) {
-    cwist_zstd_state_t *zs = (cwist_zstd_state_t *)state;
-    if (!zs || !out || !out_len) return -1;
-    size_t remaining = zs->out_len - zs->out_pos;
-    size_t to_copy = (remaining < *out_len) ? remaining : *out_len;
-    if (to_copy > 0) memcpy(out, zs->out + zs->out_pos, to_copy);
-    zs->out_pos += to_copy;
-    *out_len = to_copy;
-    return 0;
-}
-
-/**
- * @brief Free a zstd state, its stream, and its buffers. Safe on NULL.
- * @param state zstd state allocated by zstd_init.
- */
-static void zstd_cleanup(void *state) {
-    cwist_zstd_state_t *zs = (cwist_zstd_state_t *)state;
-    if (!zs) return;
-    if (zs->cstream) ZSTD_freeCStream(zs->cstream);
-    free(zs->accum);
-    free(zs->out);
-    free(zs);
-}
-
-static const cwist_compress_backend cwist_backend_zstd = {
-    .encoding_name = "zstd",
-    .init     = zstd_init,
-    .compress = zstd_compress,
-    .finish   = zstd_finish,
-    .cleanup  = zstd_cleanup,
-};
-
-/**
- * @brief Get the built-in zstd backend.
- * @return Pointer to the static zstd backend descriptor.
- */
-const cwist_compress_backend *cwist_compress_backend_zstd(void) {
-    return &cwist_backend_zstd;
 }
 
 /* --- Middleware helpers --- */

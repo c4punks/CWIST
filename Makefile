@@ -2,6 +2,97 @@ CC = gcc
 CFLAGS = -I./include -I./lib -I./lib/cjson -Wall -Wextra -pthread
 LIBS = -pthread -lcjson -lssl -lcrypto -luriparser -lsqlite3
 
+CURL_CFLAGS := $(shell pkg-config --cflags libcurl 2>/dev/null)
+NGHTTP2_CFLAGS := $(shell pkg-config --cflags libnghttp2 2>/dev/null)
+BROTLI_CFLAGS := $(shell pkg-config --cflags libbrotlienc libbrotlicommon libbrotlidec 2>/dev/null)
+
+INCLUDE_PATHS = -I./include -I./lib -I./lib/libttak/include -I./lib/cjson -I./lib/sqlite3 -I./lib/uriparser/include -I./lib/cnats/src -I./lib/boringssl/include -I./lib/lsquic/include -I./lib/multipart-parser-c $(CURL_CFLAGS) $(NGHTTP2_CFLAGS) $(BROTLI_CFLAGS)
+COMMON_DEFINES = -D_GNU_SOURCE -D_XOPEN_SOURCE=700 -D_REENTRANT -DSQLITE_ENABLE_DESERIALIZE
+COMMON_WARNINGS = -std=c2x -Wall -pthread -fPIC
+COMMON_CFLAGS = $(INCLUDE_PATHS) $(COMMON_WARNINGS) $(COMMON_DEFINES)
+
+BUILD_PROFILE = perf
+ifneq (,$(findstring tcc,$(notdir $(CC))))
+    BUILD_PROFILE = tcc
+endif
+
+TCC_STACK_FLAGS = -O3 -g \
+                  -fno-inline \
+                  -fno-omit-frame-pointer \
+                  -fno-optimize-sibling-calls \
+                  -fno-semantic-interposition \
+                  -fno-trapping-math \
+                  -falign-functions=32 \
+                  -fno-plt \
+                  -fno-math-errno
+
+PERF_WARNINGS = -Wextra
+PERF_STACK_FLAGS = -O3 -g
+
+ifeq ($(BUILD_PROFILE),tcc)
+    CFLAGS = $(COMMON_CFLAGS) $(TCC_STACK_FLAGS) -ftls-model=global-dynamic
+else
+    CFLAGS = $(COMMON_CFLAGS) $(PERF_WARNINGS) $(PERF_STACK_FLAGS)
+endif
+
+URIPARSER_DIR = lib/uriparser
+URIPARSER_BUILD_DIR = $(URIPARSER_DIR)/build
+URIPARSER_LIB = $(URIPARSER_BUILD_DIR)/liburiparser.a
+URIPARSER_CMAKE_FLAGS = -DCMAKE_BUILD_TYPE=Release \
+                        -DBUILD_SHARED_LIBS=OFF \
+                        -DURIPARSER_SHARED_LIBS=OFF \
+                        -DURIPARSER_BUILD_DOCS=OFF \
+                        -DURIPARSER_BUILD_TESTS=OFF \
+                        -DURIPARSER_BUILD_FUZZERS=OFF \
+                        -DURIPARSER_BUILD_TOOLS=OFF
+
+BORINGSSL_DIR = lib/boringssl
+BORINGSSL_BUILD_DIR = $(BORINGSSL_DIR)/build
+BORINGSSL_SSL_LIB = $(BORINGSSL_BUILD_DIR)/libssl.a
+BORINGSSL_CRYPTO_LIB = $(BORINGSSL_BUILD_DIR)/libcrypto.a
+
+LSQUIC_DIR = lib/lsquic
+LSQUIC_BUILD_DIR = $(LSQUIC_DIR)/build
+LSQUIC_LIB = $(LSQUIC_BUILD_DIR)/src/liblsquic/liblsquic.a
+
+CURL_LIBS := $(shell pkg-config --libs libcurl 2>/dev/null)
+NGHTTP2_LIBS := $(shell pkg-config --libs libnghttp2 2>/dev/null)
+BROTLI_LIBS := $(shell pkg-config --libs libbrotlienc libbrotlicommon libbrotlidec 2>/dev/null)
+
+LIBS = -pthread -ldl -lm -lstdc++ -lz \
+       $(LSQUIC_LIB) \
+       $(BORINGSSL_SSL_LIB) \
+       $(BORINGSSL_CRYPTO_LIB) \
+       $(CURL_LIBS) \
+       $(NGHTTP2_LIBS) \
+       $(BROTLI_LIBS)
+
+# SQLite Automation
+SQLITE_YEAR = 2024
+SQLITE_VER = 3450100
+SQLITE_ZIP = sqlite-amalgamation-$(SQLITE_VER).zip
+SQLITE_URL = https://www.sqlite.org/$(SQLITE_YEAR)/$(SQLITE_ZIP)
+SQLITE_DIR = lib/sqlite3
+
+# Detect OS
+UNAME_S := $(shell uname -s)
+IO_SRC = src/sys/io/io_select.c # Default fallback
+
+ifeq ($(UNAME_S),Linux)
+    CFLAGS += -DCWIST_OS_LINUX
+    # Check for io_uring headers? For now assume available or user manages env.
+    IO_SRC = src/sys/io/io_uring.c
+endif
+ifeq ($(UNAME_S),Darwin)
+    CFLAGS += -DCWIST_OS_BSD
+    IO_SRC = src/sys/io/kqueue.c
+endif
+ifeq ($(UNAME_S),FreeBSD)
+    CFLAGS += -DCWIST_OS_BSD
+    IO_SRC = src/sys/io/kqueue.c
+endif
+
+# Source Files
 SRCS = src/core/sstring/sstring.c \
        src/sys/err/error.c \
        src/net/http/http.c \
