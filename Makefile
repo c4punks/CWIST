@@ -1,7 +1,11 @@
 # Compiler and Flags
 CC ?= gcc
 
-INCLUDE_PATHS = -I./include -I./lib -I./lib/libttak/include -I./lib/cjson -I./lib/sqlite3 -I./lib/uriparser/include -I./lib/cnats/src
+CURL_CFLAGS := $(shell pkg-config --cflags libcurl 2>/dev/null)
+NGHTTP2_CFLAGS := $(shell pkg-config --cflags libnghttp2 2>/dev/null)
+BROTLI_CFLAGS := $(shell pkg-config --cflags libbrotlienc libbrotlicommon libbrotlidec 2>/dev/null)
+
+INCLUDE_PATHS = -I./include -I./lib -I./lib/libttak/include -I./lib/cjson -I./lib/sqlite3 -I./lib/uriparser/include -I./lib/cnats/src -I./lib/boringssl/include -I./lib/lsquic/include -I./lib/multipart-parser-c $(CURL_CFLAGS) $(NGHTTP2_CFLAGS) $(BROTLI_CFLAGS)
 COMMON_DEFINES = -D_GNU_SOURCE -D_XOPEN_SOURCE=700 -D_REENTRANT -DSQLITE_ENABLE_DESERIALIZE
 COMMON_WARNINGS = -std=c2x -Wall -pthread -fPIC
 COMMON_CFLAGS = $(INCLUDE_PATHS) $(COMMON_WARNINGS) $(COMMON_DEFINES)
@@ -41,7 +45,26 @@ URIPARSER_CMAKE_FLAGS = -DCMAKE_BUILD_TYPE=Release \
                         -DURIPARSER_BUILD_FUZZERS=OFF \
                         -DURIPARSER_BUILD_TOOLS=OFF
 
-LIBS = -pthread -ldl -lm -lstdc++ -lssl -lcrypto
+BORINGSSL_DIR = lib/boringssl
+BORINGSSL_BUILD_DIR = $(BORINGSSL_DIR)/build
+BORINGSSL_SSL_LIB = $(BORINGSSL_BUILD_DIR)/libssl.a
+BORINGSSL_CRYPTO_LIB = $(BORINGSSL_BUILD_DIR)/libcrypto.a
+
+LSQUIC_DIR = lib/lsquic
+LSQUIC_BUILD_DIR = $(LSQUIC_DIR)/build
+LSQUIC_LIB = $(LSQUIC_BUILD_DIR)/src/liblsquic/liblsquic.a
+
+CURL_LIBS := $(shell pkg-config --libs libcurl 2>/dev/null)
+NGHTTP2_LIBS := $(shell pkg-config --libs libnghttp2 2>/dev/null)
+BROTLI_LIBS := $(shell pkg-config --libs libbrotlienc libbrotlicommon libbrotlidec 2>/dev/null)
+
+LIBS = -pthread -ldl -lm -lstdc++ -lz \
+       $(LSQUIC_LIB) \
+       $(BORINGSSL_SSL_LIB) \
+       $(BORINGSSL_CRYPTO_LIB) \
+       $(CURL_LIBS) \
+       $(NGHTTP2_LIBS) \
+       $(BROTLI_LIBS)
 
 # SQLite Automation
 SQLITE_YEAR = 2024
