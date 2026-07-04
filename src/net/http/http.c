@@ -143,6 +143,33 @@ void cwist_http_header_free_all(cwist_http_header_node *head) {
     }
 }
 
+/**
+ * @brief Check whether a header key names the Connection header.
+ * @param key Header key to inspect.
+ * @return true when the key is "connection" ignoring case.
+ */
+static bool header_key_is_connection(const char *key) {
+    if (!key) return false;
+    return strcasecmp(key, "connection") == 0;
+}
+
+
+/**
+ * @brief Detect whether the current header list already contains a Connection header.
+ * @param head Head of the header linked list.
+ * @return true when a Connection header is present.
+ */
+static bool headers_have_connection(cwist_http_header_node *head) {
+    cwist_http_header_node *curr = head;
+    while (curr) {
+        if (curr->key && curr->key->data && header_key_is_connection(curr->key->data)) {
+            return true;
+        }
+        curr = curr->next;
+    }
+    return false;
+}
+
 /* --- Request Lifecycle --- */
 
 cwist_http_request *cwist_http_request_create(void) {
@@ -290,6 +317,367 @@ void cwist_http_response_destroy(cwist_http_response *res) {
     }
 }
 
+/**
+ * @brief Attach an unmanaged zero-copy body pointer to a response.
+ * @param res Response object to modify.
+ * @param ptr External body pointer.
+ * @param len Length of the external body in bytes.
+ */
+void cwist_http_response_set_body_ptr(cwist_http_response *res, const void *ptr, size_t len) {
+    cwist_http_response_set_body_ptr_managed(res, ptr, len, NULL, NULL);
+}
+
+/**
+ * @brief Attach a managed zero-copy body pointer and optional cleanup hook to a response.
+ * @param res Response object to modify.
+ * @param ptr External body pointer.
+ * @param len Length of the external body in bytes.
+ * @param cleanup Optional cleanup callback for the body pointer.
+ * @param ctx Opaque context forwarded to the cleanup callback.
+ */
+void cwist_http_response_set_body_ptr_managed(cwist_http_response *res, const void *ptr, size_t len, cwist_http_body_cleanup_fn cleanup, void *ctx) {
+    if (!res) return;
+    cwist_http_response_release_file_stream(res);
+    cwist_http_response_release_ptr_body(res);
+    res->is_ptr_body = true;
+    res->ptr_body = ptr;
+    res->ptr_body_len = len;
+    res->ptr_body_cleanup = cleanup;
+    res->ptr_body_cleanup_ctx = ctx;
+}
+
+/**
+ * @brief Set the Alt-Svc header value for HTTP/3 upgrade advertisement.
+ * @param res Response object to modify.
+ * @param alt_svc Alt-Svc header value (e.g., `h3=":443"; ma=86400`).
+ *        Pass NULL to clear any previously set value.
+ */
+void cwist_http_response_set_alt_svc(cwist_http_response *res, const char *alt_svc) {
+    if (!res) return;
+    if (res->alt_svc) {
+        cwist_free(res->alt_svc);
+        res->alt_svc = NULL;
+    }
+    if (alt_svc) {
+        res->alt_svc = strdup(alt_svc);
+    }
+}
+
+// ... (request parsing omitted) ...
+
+/**
+ * @brief Detect whether a header list already defines Content-Length.
+ * @param headers Header linked list to scan.
+ * @return 1 when a Content-Length header is present, otherwise 0.
+ */
+int headers_have_content_length(cwist_http_header_node *headers) {
+    cwist_http_header_node *curr = headers;
+    while (curr) {
+        if (curr->key && curr->key->data && strcasecmp(curr->key->data, "Content-Length") == 0) {
+            return 1;
+        }
+        curr = curr->next;
+    }
+    return 0;
+}
+
+/**
+ * @brief Serialize the HTTP status line and headers into a caller-provided buffer.
+ * @param res Response object to serialize.
+ * @param buf Destination buffer for the header block.
+ * @param buf_size Total capacity of @p buf in bytes.
+ * @return Number of bytes written into the buffer.
+ */
+static size_t serialize_headers(cwist_http_response *res, char *buf, size_t buf_size) {
+    size_t body_len = 0;
+    if (res->use_file_stream) {
+        body_len = res->file_stream_len;
+    } else if (res->is_ptr_body) {
+        body_len = res->ptr_body_len;
+    } else if (res->body) {
+        body_len = res->body->size;
+    }
+    size_t offset = 0;
+    
+    // Status Line
+    const char *status_txt = (res->status_text && res->status_text->data) 
+                             ? res->status_text->data 
+                             : "OK";
+    if (offset < buf_size) {
+        int n = snprintf(buf + offset, buf_size - offset, "%s %d %s\r\n",
+                 res->version->data ? res->version->data : "HTTP/1.1",
+                 res->status_code,
+                 status_txt);
+        if (n > 0) {
+            offset += n;
+            if (offset > buf_size) offset = buf_size;
+        }
+    }
+
+    // Headers
+    cwist_http_header_node *curr = res->headers;
+    while (curr) {
+        if (curr->key->data && curr->value->data) {
+            if (offset < buf_size) {
+                int n = snprintf(buf + offset, buf_size - offset, "%s: %s\r\n", curr->key->data, curr->value->data);
+                if (n > 0) {
+                    offset += n;
+                    if (offset > buf_size) offset = buf_size;
+                }
+            }
+        }
+        curr = curr->next;
+    }
+
+    if (!headers_have_content_length(res->headers)) {
+        if (offset < buf_size) {
+            int n = snprintf(buf + offset, buf_size - offset, "Content-Length: %zu\r\n", body_len);
+            if (n > 0) {
+                offset += n;
+                if (offset > buf_size) offset = buf_size;
+            }
+        }
+    }
+
+    if (!headers_have_connection(res->headers)) {
+        if (offset < buf_size) {
+            int n = snprintf(buf + offset, buf_size - offset, "Connection: %s\r\n", res->keep_alive ? "keep-alive" : "close");
+            if (n > 0) {
+                offset += n;
+                if (offset > buf_size) offset = buf_size;
+            }
+        }
+    }
+
+    if (res->alt_svc) {
+        if (offset < buf_size) {
+            int n = snprintf(buf + offset, buf_size - offset, "Alt-Svc: %s\r\n", res->alt_svc);
+            if (n > 0) {
+                offset += n;
+                if (offset > buf_size) offset = buf_size;
+            }
+        }
+    }
+
+    if (offset < buf_size) {
+        int n = snprintf(buf + offset, buf_size - offset, "\r\n");
+        if (n > 0) {
+            offset += n;
+            if (offset > buf_size) offset = buf_size;
+        }
+    }
+    return offset;
+}
+
+#include <sys/uio.h> // For writev and BSD sendfile
+
+/**
+ * @brief Send an entire iovec over a (possibly non-blocking) socket.
+ * Handles EINTR, EAGAIN/EWOULDBLOCK with POLLOUT polling, and partial writes.
+ * @return 0 on success, -1 on fatal error or timeout.
+ */
+static int cwist_http_sendmsg_all(int fd, struct iovec *iov, int iovcnt, int flags) {
+    struct iovec *cur = iov;
+    int curcnt = iovcnt;
+    while (curcnt > 0) {
+        struct msghdr msg = {0};
+        msg.msg_iov = cur;
+        msg.msg_iovlen = (size_t)curcnt;
+        ssize_t n = sendmsg(fd, &msg, flags);
+        if (n < 0) {
+            if (errno == EINTR) continue;
+            if (errno == EAGAIN || errno == EWOULDBLOCK) {
+                struct pollfd pfd = { .fd = fd, .events = POLLOUT };
+                int ret = poll(&pfd, 1, CWIST_HTTP_TIMEOUT_MS);
+                if (ret <= 0) return -1;
+                if (pfd.revents & (POLLERR | POLLHUP | POLLNVAL)) return -1;
+                continue;
+            }
+            return -1;
+        }
+        if (n == 0) return -1;
+
+        while (curcnt > 0 && (size_t)n >= cur->iov_len) {
+            n -= (ssize_t)cur->iov_len;
+            cur++;
+            curcnt--;
+        }
+        if (curcnt > 0) {
+            cur->iov_base = (char *)cur->iov_base + n;
+            cur->iov_len -= (size_t)n;
+        }
+    }
+    return 0;
+}
+
+/**
+ * @brief Attempt an optimized file-stream send path using platform sendfile support.
+ * @param client_fd Connected client socket descriptor.
+ * @param res Response object configured for file streaming.
+ * @return true when the file body and headers were transmitted successfully.
+ */
+static bool cwist_http_stream_file_fast(int client_fd, cwist_http_response *res) {
+#if defined(__linux__) || defined(__APPLE__) || defined(__FreeBSD__)
+    if (!res || !res->use_file_stream || res->file_stream_fd < 0) return false;
+    size_t remaining = res->file_stream_len;
+    off_t offset = res->file_stream_offset;
+    while (remaining > 0) {
+#if defined(__linux__)
+        ssize_t sent = sendfile(client_fd, res->file_stream_fd, &offset, remaining);
+        if (sent < 0) {
+            if (errno == EINTR) continue;
+            if (errno == EAGAIN || errno == EWOULDBLOCK) {
+                struct pollfd pfd = { .fd = client_fd, .events = POLLOUT };
+                int ret = poll(&pfd, 1, CWIST_HTTP_TIMEOUT_MS);
+                if (ret <= 0 || (pfd.revents & (POLLERR | POLLHUP | POLLNVAL))) return false;
+                continue;
+            }
+            return false;
+        }
+        if (sent == 0) break;
+        remaining -= (size_t)sent;
+#elif defined(__APPLE__)
+        off_t chunk = (off_t)remaining;
+        int rc = sendfile(res->file_stream_fd, client_fd, offset, &chunk, NULL, 0);
+        if (rc == -1) {
+            if (errno == EINTR) continue;
+            if (errno == EAGAIN || errno == EWOULDBLOCK) {
+                if (chunk > 0) {
+                    offset += chunk;
+                    remaining -= (size_t)chunk;
+                }
+                struct pollfd pfd = { .fd = client_fd, .events = POLLOUT };
+                int ret = poll(&pfd, 1, CWIST_HTTP_TIMEOUT_MS);
+                if (ret <= 0 || (pfd.revents & (POLLERR | POLLHUP | POLLNVAL))) return false;
+                continue;
+            }
+            return false;
+        }
+        if (chunk == 0) break;
+        offset += chunk;
+        remaining -= (size_t)chunk;
+#elif defined(__FreeBSD__)
+        off_t sent = 0;
+        size_t chunk = remaining;
+        int rc = sendfile(res->file_stream_fd, client_fd, offset, chunk, NULL, &sent, 0);
+        if (rc == -1) {
+            if (errno == EINTR) continue;
+            if (errno == EAGAIN || errno == EWOULDBLOCK) {
+                if (sent > 0) {
+                    offset += sent;
+                    remaining -= (size_t)sent;
+                }
+                struct pollfd pfd = { .fd = client_fd, .events = POLLOUT };
+                int ret = poll(&pfd, 1, CWIST_HTTP_TIMEOUT_MS);
+                if (ret <= 0 || (pfd.revents & (POLLERR | POLLHUP | POLLNVAL))) return false;
+                continue;
+            }
+            return false;
+        }
+        if (sent == 0) break;
+        offset += sent;
+        remaining -= (size_t)sent;
+#endif
+    }
+    res->file_stream_offset = offset;
+    return remaining == 0;
+#else
+    (void)client_fd;
+    (void)res;
+    errno = ENOTSUP;
+    return false;
+#endif
+}
+
+/**
+ * @brief Serialize and send an HTTP response to a connected client socket.
+ * @param client_fd Connected client socket descriptor.
+ * @param res Response object to send.
+ * @return Tagged CWIST error describing success or transmission failure.
+ */
+cwist_error_t cwist_http_send_response(int client_fd, cwist_http_response *res) {
+    cwist_error_t err = make_error(CWIST_ERR_INT16);
+
+    if (client_fd < 0 || !res) {
+        err.error.err_i16 = -1;
+        return err;
+    }
+
+    // 1. Prepare Headers (On Stack)
+    char header_buf[CWIST_HTTP_MAX_HEADER_SIZE];
+    size_t header_len = serialize_headers(res, header_buf, sizeof(header_buf));
+
+    // 2. Prepare Body
+    const void *body_ptr = NULL;
+    size_t body_len = 0;
+
+    if (res->is_ptr_body) {
+        body_ptr = res->ptr_body;
+        body_len = res->ptr_body_len;
+    } else if (res->body && res->body->data) {
+        body_ptr = res->body->data;
+        body_len = res->body->size;
+    }
+
+    // 3. sendmsg (Scatter/Gather + Flags) - Zero Copy Send
+    struct iovec iov[2];
+    int iov_cnt = 1;
+
+    iov[0].iov_base = header_buf;
+    iov[0].iov_len = header_len;
+
+    if (!res->use_file_stream && body_len > 0 && body_ptr) {
+        iov[1].iov_base = (void*)body_ptr;
+        iov[1].iov_len = body_len;
+        iov_cnt = 2;
+    }
+
+    int flags = 0;
+    #if defined(MSG_NOSIGNAL)
+    flags = MSG_NOSIGNAL;
+    #endif
+
+    if (cwist_http_sendmsg_all(client_fd, iov, iov_cnt, flags) != 0) {
+        err.error.err_i16 = -1;
+    } else {
+        err.error.err_i16 = 0;
+        if (res->use_file_stream) {
+            if (!cwist_http_stream_file_fast(client_fd, res)) {
+                err.error.err_i16 = -1;
+            }
+        }
+    }
+
+    cwist_http_response_release_ptr_body(res);
+    cwist_http_response_release_file_stream(res);
+    return err;
+}
+
+/**
+ * @brief Materialize an HTTP response into a contiguous string for debugging or TLS writes.
+ * @param res Response object to stringify.
+ * @return Heap-allocated response string, or NULL on invalid input.
+ */
+cwist_sstring *cwist_http_stringify_response(cwist_http_response *res) {
+    // Deprecated / Debug only
+    if (!res) return NULL;
+    cwist_sstring *s = cwist_sstring_create();
+    char header_buf[CWIST_HTTP_MAX_HEADER_SIZE];
+    serialize_headers(res, header_buf, sizeof(header_buf));
+    cwist_sstring_assign(s, header_buf);
+    if (res->is_ptr_body && res->ptr_body) {
+        cwist_sstring_append_len(s, (char*)res->ptr_body, res->ptr_body_len);
+    } else if (res->body) {
+        cwist_sstring_append_len(s, res->body->data, res->body->size);
+    }
+    return s;
+}
+
+/**
+ * @brief Parse a raw HTTP request buffer into a CWIST request object.
+ * @param raw_request NUL-terminated request buffer containing headers and optional body.
+ * @return Parsed request object, or NULL on malformed input.
+ */
 cwist_http_request *cwist_http_parse_request(const char *raw_request) {
     if (!raw_request) return NULL;
 
