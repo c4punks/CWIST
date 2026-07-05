@@ -182,15 +182,10 @@ static uint32_t h2_max_rst_rate(void) {
 typedef struct h2_stream {
     uint32_t stream_id;
     cwist_http_request *req;
-    /* Adaptive flow control (send: peer-advertised credit; receive: our
-     * advertised credit).  Replaces the old hand-rolled window ints. */
-    cwist_http2_stream_flow_control fc;
-    bool send_aborted;       /* RST_STREAM received while sending */
-    int fc_waiters;          /* handler threads parked in h2_fc_wait_credit */
-    bool fc_detached;        /* stream removed / connection tearing down */
+    int32_t send_window;   /* peer-advertised; bytes we may send */
+    int32_t recv_window;   /* our window; bytes peer may send */
     uint8_t recv_xor;      /* running XOR of received DATA payload bytes */
     uint8_t send_xor;      /* running XOR of sent DATA payload bytes */
-    cwist_seq_assembler_t *body_assembler; /* reorders sequenced DATA chunks */
     struct h2_stream *next;
 } h2_stream;
 
@@ -829,9 +824,34 @@ static int h2_write(cwist_https_connection *conn, const void *buf, int len) {
     return write(conn->fd, buf, len);
 }
 
-/**
- * @brief Write the entire buffer, looping until completion.
- */
+/* Lightweight XOR checksum over a byte buffer. */
+static uint8_t h2_xor_bytes(const unsigned char *buf, size_t len) {
+    uint8_t x = 0;
+    for (size_t i = 0; i < len; i++) x ^= buf[i];
+    return x;
+}
+
+/* Poll the socket for the direction OpenSSL is waiting on, or for plain
+ * socket writability. Returns 0 when ready, -1 on timeout/error. */
+static int h2_wait_socket(cwist_https_connection *conn, int ssl_error, int timeout_ms) {
+    struct pollfd pfd = { .fd = conn->fd, .events = 0 };
+    if (conn->ssl) {
+        if (ssl_error == SSL_ERROR_WANT_READ) {
+            pfd.events = POLLIN;
+        } else if (ssl_error == SSL_ERROR_WANT_WRITE) {
+            pfd.events = POLLOUT;
+        } else {
+            return -1;
+        }
+    } else {
+        pfd.events = POLLOUT;
+    }
+    int ret = poll(&pfd, 1, timeout_ms);
+    if (ret <= 0) return -1;
+    if (pfd.revents & (POLLERR | POLLHUP | POLLNVAL)) return -1;
+    return 0;
+}
+
 static int h2_write_all(cwist_https_connection *conn, const void *buf, size_t len) {
     const unsigned char *p = (const unsigned char *)buf;
     int retries = 0;
@@ -2564,8 +2584,9 @@ static int h2_send_response_hc(h2_conn *hc, uint32_t stream_id, cwist_http_respo
                 cwist_free(chunk_buf); return -1;
             }
             if (s) s->send_xor ^= h2_xor_bytes(chunk_buf, (size_t)r);
-            cwist_free(chunk_buf);
-            h2_commit_send(hc, s, (uint32_t)r);
+            free(chunk_buf);
+            hc->conn_send_window -= (int32_t)r;
+            if (s) s->send_window -= (int32_t)r;
             offset += r;
             remaining -= (size_t)r;
         }
@@ -2600,7 +2621,8 @@ static int h2_send_response_hc(h2_conn *hc, uint32_t stream_id, cwist_http_respo
                 return -1;
             }
             if (s) s->send_xor ^= h2_xor_bytes(body_data + sent, allowed);
-            h2_commit_send(hc, s, allowed);
+            hc->conn_send_window -= (int32_t)allowed;
+            if (s) s->send_window -= (int32_t)allowed;
             sent += allowed;
         }
     }
@@ -3482,6 +3504,10 @@ cwist_error_t cwist_http2_serve_connection_ex(cwist_https_connection *conn, void
                         h2_stream_remove(&hc, stream_id);
                         break;
                     }
+                    s->recv_xor ^= h2_xor_bytes(payload, len);
+                    cwist_sstring_append_len(s->req->body, (const char *)payload, len);
+                }
+                if (flags & CWIST_HTTP2_FLAG_END_STREAM) {
                     cwist_http_response *res = cwist_http_response_create();
                     if (res) {
                         handler(user_ctx, s->req, res);

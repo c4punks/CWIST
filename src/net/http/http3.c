@@ -173,16 +173,6 @@ typedef struct h3_stream_ctx {
     size_t body_sent;
     uint8_t recv_xor; /* running XOR of received body bytes */
     uint8_t send_xor; /* running XOR of sent body bytes */
-    int sequenced_data; /* X-CWIST-Sequenced-Data: 1 request body */
-    unsigned char *seq_buf;
-    size_t seq_len;
-    size_t seq_cap;
-    cwist_seq_assembler_t *body_assembler;
-    unsigned pseudo_seen;    /* H3_PSEUDO_* bits seen so far */
-    int seen_regular_header; /* a non-pseudo header already arrived */
-    int is_connect;          /* :method CONNECT */
-    int saw_empty_path;      /* :path arrived with a zero-length value */
-    int malformed;           /* RFC 9114 Section 4.3.1 violation */
 #ifdef CWIST_WEBTRANSPORT
     int is_webtransport;
     int wt_taken;
@@ -1053,81 +1043,15 @@ static void h3_parse_path(cwist_http_request *req, const char *path) {
     }
 }
 
-/**
- * @brief Lightweight XOR checksum over a byte buffer.
- * @return XOR of all bytes (0 for an empty buffer).
- */
+/* Lightweight XOR checksum over a byte buffer. */
 static uint8_t h3_xor_bytes(const unsigned char *buf, size_t len) {
     uint8_t x = 0;
     for (size_t i = 0; i < len; i++) x ^= buf[i];
     return x;
 }
 
-/**
- * @brief Whether a byte is a valid RFC 9110 field-name character
- *        (tchar: alphanumerics and !#$%&'*+-.^_`|~).
- */
-static int h3_header_name_char_is_valid(unsigned char c) {
-    return (c >= 'a' && c <= 'z') ||
-           (c >= 'A' && c <= 'Z') ||
-           (c >= '0' && c <= '9') ||
-           c == '!' || c == '#' || c == '$' || c == '%' ||
-           c == '&' || c == '\'' || c == '*' || c == '+' ||
-           c == '-' || c == '.' || c == '^' || c == '_' ||
-           c == '`' || c == '|' || c == '~';
-}
-
-/**
- * @brief Normalize a response header name to lowercase HTTP/3 form.
- * @param name Source name.
- * @param out Output buffer of at least @p out_len bytes.
- * @param out_len Capacity of @p out (NUL included).
- * @retval 0 Name copied to @p out as lowercase NUL-terminated text.
- * @retval -1 NULL/empty input, insufficient capacity, pseudo-header prefix,
- *            or a character outside the RFC 9110 field-name grammar.
- */
-int cwist_http3_normalize_response_header_name(const char *name, char *out, size_t out_len) {
-    if (!name || !out || out_len == 0) return -1;
-
-    size_t len = strlen(name);
-    if (len == 0 || len >= out_len || name[0] == ':') return -1;
-
-    for (size_t i = 0; i < len; i++) {
-        unsigned char c = (unsigned char)name[i];
-        if (!h3_header_name_char_is_valid(c)) return -1;
-        out[i] = (char)tolower(c);
-    }
-    out[len] = '\0';
-    return 0;
-}
-
-/**
- * @brief Whether a response header value is safe to put on the wire.
- * @retval 1 Every byte satisfies the RFC 9113/9114 field-value grammar
- *           (no CTLs including CR/LF, no DEL).
- * @retval 0 @p value is NULL or contains a forbidden byte; clients would
- *           reject the response as malformed.
- */
-int cwist_http3_response_header_value_is_safe(const char *value) {
-    if (!value) return 0;
-    for (const unsigned char *p = (const unsigned char *)value; *p; p++) {
-        /* RFC 9113/9114 field-value grammar: no CTLs (incl. CR/LF) or DEL;
-         * clients reject such responses as malformed. */
-        if (*p < 0x20 || *p == 0x7f) return 0;
-    }
-    return 1;
-}
-
-/**
- * @brief Fold one decoded request header into the cwist_http_request.
- *
- * Recognized pseudo-headers update method/path/authority; known regular
- * headers are stored in the header list; unrecognized pseudo-headers are
- * silently ignored (RFC 9114); other regular headers pass through.  Also
- * detects the WebTransport extended-CONNECT signature (:protocol
- * "webtransport" with method CONNECT).
- */
-static void h3_apply_header(cwist_http_request *req, const char *name, const char *value) {
+static void h3_apply_header(cwist_http_request *req,
+                            const char *name, const char *value) {
     if (strcmp(name, ":method") == 0) {
         req->method = cwist_http_string_to_method(value);
     } else if (strcmp(name, ":path") == 0) {
@@ -1461,6 +1385,7 @@ static void cwist_h3_on_read(lsquic_stream_t *stream, lsquic_stream_ctx_t *st_h)
             st->body_cap = new_cap;
         }
         memcpy(st->body + st->body_len, buf, (size_t)nread);
+        st->recv_xor ^= h3_xor_bytes((const unsigned char *)buf, (size_t)nread);
         st->body_len += (size_t)nread;
     }
 
@@ -1814,6 +1739,7 @@ static void cwist_h3_on_write(lsquic_stream_t *stream, lsquic_stream_ctx_t *st_h
                         lsquic_stream_close(stream);
                         return;
                     }
+                    st->send_xor ^= h3_xor_bytes((const unsigned char *)file_buf, (size_t)nw);
                     st->body_sent += (size_t)nw;
                     if (nw < nr) {
                         /* Stream buffer full for now; come back when writable. */
@@ -1877,6 +1803,7 @@ static void cwist_h3_on_write(lsquic_stream_t *stream, lsquic_stream_ctx_t *st_h
                 lsquic_stream_close(stream);
                 return;
             }
+            st->send_xor ^= h3_xor_bytes((const unsigned char *)(body_data + st->body_sent), (size_t)n);
             st->body_sent += (size_t)n;
         }
 
