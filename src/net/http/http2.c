@@ -66,6 +66,8 @@ typedef struct h2_stream {
     cwist_http_request *req;
     int32_t send_window;   /* peer-advertised; bytes we may send */
     int32_t recv_window;   /* our window; bytes peer may send */
+    uint8_t recv_xor;      /* running XOR of received DATA payload bytes */
+    uint8_t send_xor;      /* running XOR of sent DATA payload bytes */
     struct h2_stream *next;
 } h2_stream;
 
@@ -223,6 +225,34 @@ static int h2_read(cwist_https_connection *conn, void *buf, int len) {
 static int h2_write(cwist_https_connection *conn, const void *buf, int len) {
     if (conn->ssl) return SSL_write(conn->ssl, buf, len);
     return write(conn->fd, buf, len);
+}
+
+/* Lightweight XOR checksum over a byte buffer. */
+static uint8_t h2_xor_bytes(const unsigned char *buf, size_t len) {
+    uint8_t x = 0;
+    for (size_t i = 0; i < len; i++) x ^= buf[i];
+    return x;
+}
+
+/* Poll the socket for the direction OpenSSL is waiting on, or for plain
+ * socket writability. Returns 0 when ready, -1 on timeout/error. */
+static int h2_wait_socket(cwist_https_connection *conn, int ssl_error, int timeout_ms) {
+    struct pollfd pfd = { .fd = conn->fd, .events = 0 };
+    if (conn->ssl) {
+        if (ssl_error == SSL_ERROR_WANT_READ) {
+            pfd.events = POLLIN;
+        } else if (ssl_error == SSL_ERROR_WANT_WRITE) {
+            pfd.events = POLLOUT;
+        } else {
+            return -1;
+        }
+    } else {
+        pfd.events = POLLOUT;
+    }
+    int ret = poll(&pfd, 1, timeout_ms);
+    if (ret <= 0) return -1;
+    if (pfd.revents & (POLLERR | POLLHUP | POLLNVAL)) return -1;
+    return 0;
 }
 
 static int h2_write_all(cwist_https_connection *conn, const void *buf, size_t len) {
@@ -1167,6 +1197,7 @@ static int h2_send_response_hc(h2_conn *hc, uint32_t stream_id, cwist_http_respo
             if (h2_write_frame(hc->conn, CWIST_HTTP2_FRAME_DATA, flags, stream_id, chunk_buf, (uint32_t)r) != 0) {
                 free(chunk_buf); return -1;
             }
+            if (s) s->send_xor ^= h2_xor_bytes(chunk_buf, (size_t)r);
             free(chunk_buf);
             hc->conn_send_window -= (int32_t)r;
             if (s) s->send_window -= (int32_t)r;
@@ -1196,6 +1227,7 @@ static int h2_send_response_hc(h2_conn *hc, uint32_t stream_id, cwist_http_respo
                                body_data + sent, allowed) != 0) {
                 return -1;
             }
+            if (s) s->send_xor ^= h2_xor_bytes(body_data + sent, allowed);
             hc->conn_send_window -= (int32_t)allowed;
             if (s) s->send_window -= (int32_t)allowed;
             sent += allowed;
@@ -1624,6 +1656,7 @@ cwist_error_t cwist_http2_serve_connection(
                         h2_stream_remove(&hc, stream_id);
                         break;
                     }
+                    s->recv_xor ^= h2_xor_bytes(payload, len);
                     cwist_sstring_append_len(s->req->body, (const char *)payload, len);
                 }
                 if (flags & CWIST_HTTP2_FLAG_END_STREAM) {
