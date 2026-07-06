@@ -341,8 +341,6 @@ typedef struct h3_stream_ctx {
     int response_ready;
     int write_state; /* 0=headers, 1=body, 2=done */
     size_t body_sent;
-    uint8_t recv_xor; /* running XOR of received body bytes */
-    uint8_t send_xor; /* running XOR of sent body bytes */
 #ifdef CWIST_WEBTRANSPORT
     int is_webtransport;
     int wt_taken;
@@ -537,7 +535,6 @@ typedef struct cwist_h3_hset {
 
 static void *cwist_h3_hsi_create(void *hsi_ctx, lsquic_stream_t *stream,
                                  int is_push_promise) {
-    (void)hsi_ctx;
     (void)is_push_promise;
     cwist_h3_hset_t *hset = calloc(1, sizeof(*hset));
     if (!hset) return NULL;
@@ -565,12 +562,10 @@ static struct lsxpack_header *cwist_h3_hsi_prepare(void *hset_p, struct lsxpack_
     if (!hset) return NULL;
 
     if (xhdr) {
-        /* Previous header now has its final size known; advance offset.
-         * lsquic stores the decoded name/value back-to-back in decode_buf
-         * plus any QPACK/HPACK overhead.  Use the helper that accounts for
-         * name_len + val_len + dec_overhead so the next header does not
-         * overwrite the previous one and multi-value Cookie headers are
-         * preserved intact. */
+        /* Advance by the exact decoded size lsquic reports
+         * (name_len + val_len + dec_overhead).  The old pointer-offset
+         * arithmetic computed the wrong length and corrupted headers
+         * when multiple Cookie values arrived in separate QPACK entries. */
         size_t total = lsxpack_header_get_dec_size(xhdr);
         if (total > sizeof(hset->decode_buf) - hset->decode_off)
             total = sizeof(hset->decode_buf) - hset->decode_off;
@@ -667,7 +662,6 @@ static int cwist_h3_packets_out(void *ctx,
                                   unsigned n_specs) {
     int udp_fd = *(int *)ctx;
     unsigned i;
-    int transient_errors = 0;
     for (i = 0; i < n_specs; ++i) {
         const struct lsquic_out_spec *spec = &specs[i];
         struct msghdr msg = {0};
@@ -681,19 +675,10 @@ static int cwist_h3_packets_out(void *ctx,
         if (nw < 0) {
             if (errno == EAGAIN || errno == EWOULDBLOCK)
                 break;
-            /* UDP is connectionless: ICMP errors and local socket hiccups
-             * should not tear down the whole QUIC connection.  Keep the
-             * stream alive and let lsquic's loss recovery retransmit.
-             * EPIPE/ECONNRESET are treated as transient because the next
-             * datagram may still reach the peer through a different path. */
+            /* Non-fatal errors: log and continue if possible */
             if (errno == ECONNREFUSED || errno == ENETUNREACH ||
-                errno == EHOSTUNREACH || errno == EMSGSIZE ||
-                errno == EPIPE || errno == ECONNRESET ||
-                errno == ENOENT /* routing transient */) {
-                transient_errors++;
+                errno == EHOSTUNREACH || errno == EMSGSIZE)
                 continue;
-            }
-            fprintf(stderr, "[HTTP/3] sendmsg fatal error %d\n", errno);
             return -1;
         }
         break;
@@ -803,11 +788,6 @@ static int cwist_h3_packets_out(void *ctx, const struct lsquic_out_spec *specs, 
                 continue;
             return (i > 0) ? (int)i : -1;
         }
-    }
-    if (transient_errors > 0 && i > 0) {
-        /* We delivered at least some packets; report the count so lsquic
-         * can schedule retransmission for the rest instead of aborting. */
-        return (int)i;
     }
     return (int)i;
 #endif
@@ -968,13 +948,6 @@ static void h3_parse_path(cwist_http_request *req, const char *path) {
     } else {
         cwist_sstring_assign(req->path, (char *)path);
     }
-}
-
-/* Lightweight XOR checksum over a byte buffer. */
-static uint8_t h3_xor_bytes(const unsigned char *buf, size_t len) {
-    uint8_t x = 0;
-    for (size_t i = 0; i < len; i++) x ^= buf[i];
-    return x;
 }
 
 static void h3_apply_header(cwist_http_request *req,
@@ -1309,7 +1282,6 @@ static void cwist_h3_on_read(lsquic_stream_t *stream, lsquic_stream_ctx_t *st_h)
             st->body_cap = new_cap;
         }
         memcpy(st->body + st->body_len, buf, (size_t)nread);
-        st->recv_xor ^= h3_xor_bytes((const unsigned char *)buf, (size_t)nread);
         st->body_len += (size_t)nread;
     }
 
@@ -1563,10 +1535,9 @@ static void cwist_h3_on_write(lsquic_stream_t *stream, lsquic_stream_ctx_t *st_h
 
         /* content-length */
         size_t body_len = 0;
-        const char *body_ptr = NULL;
         if (st->res->use_file_stream) body_len = st->res->file_stream_len;
-        else if (st->res->is_ptr_body) { body_len = st->res->ptr_body_len; body_ptr = (const char *)st->res->ptr_body; }
-        else if (st->res->body) { body_len = st->res->body->size; body_ptr = st->res->body->data; }
+        else if (st->res->is_ptr_body) body_len = st->res->ptr_body_len;
+        else if (st->res->body) body_len = st->res->body->size;
 
         const char *user_cl =
             st->res->headers ? cwist_http_header_get(st->res->headers, "content-length") : NULL;
@@ -1605,25 +1576,6 @@ static void cwist_h3_on_write(lsquic_stream_t *stream, lsquic_stream_ctx_t *st_h
                     hbuf_off += total;
                     hdr_count++;
                 }
-            }
-        }
-
-        /* Lightweight XOR integrity tag for in-memory bodies.
-         * This lets compliant peers detect truncated/corrupted streams
-         * and retry/fallback instead of trusting silently broken payloads. */
-        if (body_ptr && body_len > 0 && hdr_count < 64) {
-            uint8_t xor_val = h3_xor_bytes((const unsigned char *)body_ptr, body_len);
-            char xor_str[8];
-            snprintf(xor_str, sizeof(xor_str), "%02x", xor_val);
-            size_t xk = strlen("x-cwist-body-xor");
-            size_t xv = strlen(xor_str);
-            if (hbuf_off + xk + 2 + xv <= sizeof(hbuf)) {
-                memcpy(hbuf + hbuf_off, "x-cwist-body-xor", xk);
-                memcpy(hbuf + hbuf_off + xk + 2, xor_str, xv);
-                lsxpack_header_set_offset2(&headers_arr[hdr_count], hbuf + hbuf_off,
-                                           0, xk, xk + 2, xv);
-                hbuf_off += xk + 2 + xv;
-                hdr_count++;
             }
         }
 
@@ -1710,10 +1662,6 @@ static void cwist_h3_on_write(lsquic_stream_t *stream, lsquic_stream_ctx_t *st_h
             .headers = headers_arr,
         };
         if (lsquic_stream_send_headers(stream, &headers, eos) != 0) {
-            if (errno == EAGAIN || errno == EWOULDBLOCK) {
-                lsquic_stream_wantwrite(stream, 1);
-                return;
-            }
             lsquic_stream_close(stream);
             return;
         }
@@ -1770,14 +1718,9 @@ static void cwist_h3_on_write(lsquic_stream_t *stream, lsquic_stream_ctx_t *st_h
                     chunks_this_tick++;
                     ssize_t nw = lsquic_stream_write(stream, file_buf, (size_t)nr);
                     if (nw < 0) {
-                        if (errno == EAGAIN || errno == EWOULDBLOCK) {
-                            lsquic_stream_wantwrite(stream, 1);
-                            return;
-                        }
                         lsquic_stream_close(stream);
                         return;
                     }
-                    st->send_xor ^= h3_xor_bytes((const unsigned char *)file_buf, (size_t)nw);
                     st->body_sent += (size_t)nw;
                 } else if (nr == 0) {
                     /* EOF: mark everything as sent */
@@ -1851,14 +1794,9 @@ static void cwist_h3_on_write(lsquic_stream_t *stream, lsquic_stream_ctx_t *st_h
                 continue;
             }
             if (n < 0) {
-                if (errno == EAGAIN || errno == EWOULDBLOCK) {
-                    lsquic_stream_wantwrite(stream, 1);
-                    return;
-                }
                 lsquic_stream_close(stream);
                 return;
             }
-            st->send_xor ^= h3_xor_bytes((const unsigned char *)(body_data + st->body_sent), (size_t)n);
             st->body_sent += (size_t)n;
         }
 
@@ -3202,6 +3140,7 @@ cwist_error_t cwist_http3_server_loop(int udp_fd,
             if (pfd.revents & POLLIN) {
 #endif
                 struct sockaddr_storage peer_addr;
+                socklen_t peer_addr_len = sizeof(peer_addr);
                 struct msghdr msg = {0};
                 struct iovec iov = { pkt_buf, 65535 };
                 msg.msg_name = &peer_addr;
