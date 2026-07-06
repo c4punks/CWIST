@@ -565,16 +565,18 @@ static struct lsxpack_header *cwist_h3_hsi_prepare(void *hset_p, struct lsxpack_
     if (!hset) return NULL;
 
     if (xhdr) {
-        if (req_space > LSXPACK_MAX_STRLEN || xhdr->name_offset < 0 ||
-            (size_t)xhdr->name_offset >= sizeof(hset->decode_buf) ||
-            req_space > sizeof(hset->decode_buf) - (size_t)xhdr->name_offset) {
-            fprintf(stderr,
-                    "[HTTP/3] Rejecting oversized QPACK header resize (space=%zu, offset=%d)\n",
-                    req_space, (int)xhdr->name_offset);
-            return NULL;
-        }
-        xhdr->val_len = (lsxpack_strlen_t)req_space;
-        return xhdr;
+        /* Previous header now has its final size known; advance offset.
+         * lsquic stores the decoded name/value back-to-back in decode_buf
+         * plus any QPACK/HPACK overhead.  Use the helper that accounts for
+         * name_len + val_len + dec_overhead so the next header does not
+         * overwrite the previous one and multi-value Cookie headers are
+         * preserved intact. */
+        size_t total = lsxpack_header_get_dec_size(xhdr);
+        if (total > sizeof(hset->decode_buf) - hset->decode_off)
+            total = sizeof(hset->decode_buf) - hset->decode_off;
+        hset->decode_off += total;
+        if (hset->count < H3_MAX_HEADERS)
+            hset->count++;
     }
 
     if (hset->count >= H3_MAX_HEADERS) return NULL;
@@ -660,241 +662,38 @@ static SSL_CTX *cwist_h3_get_ssl_ctx(void *peer_ctx,
 /* Packet-out callback                                                */
 /* ------------------------------------------------------------------ */
 
-/**
- * @brief Build the ancillary-data block for one outgoing UDP datagram.
- * @param msg Message header to populate (msg_control/msg_controllen).
- * @param cbuf Control buffer, zeroed here.
- * @param cbuf_sz Capacity of @p cbuf.
- * @param spec lsquic output spec carrying addresses and ECN bits.
- * @param gso_seg UDP_SEGMENT segment size, or 0 to omit the cmsg (Linux only).
- *
- * Adds, as platform support allows: UDP_SEGMENT (Linux GSO), IP_PKTINFO /
- * IP_SENDSRCADDR / IPV6_PKTINFO with a non-anyhole local source address, and
- * IP_TOS / IPV6_TCLASS for ECN.  msg_control is reset to NULL when nothing
- * was queued.
- */
-static void h3_setup_cmsg(struct msghdr *msg, char *cbuf, size_t cbuf_sz,
-                          const struct lsquic_out_spec *spec, uint16_t gso_seg) {
-    msg->msg_control = cbuf;
-    msg->msg_controllen = cbuf_sz;
-    memset(cbuf, 0, cbuf_sz);
-    size_t ctl_len = 0;
-
-#if defined(__linux__) && defined(UDP_SEGMENT)
-    if (gso_seg > 0) {
-        struct cmsghdr *cmsg = (struct cmsghdr *)(cbuf + ctl_len);
-        cmsg->cmsg_level = SOL_UDP;
-        cmsg->cmsg_type = UDP_SEGMENT;
-        cmsg->cmsg_len = CMSG_LEN(sizeof(uint16_t));
-        memcpy(CMSG_DATA(cmsg), &gso_seg, sizeof(uint16_t));
-        ctl_len += CMSG_SPACE(sizeof(uint16_t));
-    }
-#else
-    (void)gso_seg;
-#endif
-
-    if (spec->local_sa && spec->dest_sa) {
-        if (spec->dest_sa->sa_family == AF_INET && spec->local_sa->sa_family == AF_INET) {
-            struct in_addr addr = ((const struct sockaddr_in *)spec->local_sa)->sin_addr;
-            if (addr.s_addr != INADDR_ANY) {
-#if defined(__linux__) && defined(IP_PKTINFO)
-                struct cmsghdr *cmsg = (struct cmsghdr *)(cbuf + ctl_len);
-                cmsg->cmsg_level = IPPROTO_IP;
-                cmsg->cmsg_type = IP_PKTINFO;
-                cmsg->cmsg_len = CMSG_LEN(sizeof(struct in_pktinfo));
-                struct in_pktinfo info = {0};
-                info.ipi_spec_dst = addr;
-                memcpy(CMSG_DATA(cmsg), &info, sizeof(info));
-                ctl_len += CMSG_SPACE(sizeof(struct in_pktinfo));
-#elif defined(IP_SENDSRCADDR)
-                struct cmsghdr *cmsg = (struct cmsghdr *)(cbuf + ctl_len);
-                cmsg->cmsg_level = IPPROTO_IP;
-                cmsg->cmsg_type = IP_SENDSRCADDR;
-                cmsg->cmsg_len = CMSG_LEN(sizeof(struct in_addr));
-                memcpy(CMSG_DATA(cmsg), &addr, sizeof(addr));
-                ctl_len += CMSG_SPACE(sizeof(struct in_addr));
-#endif
-            }
-        } else if (spec->dest_sa->sa_family == AF_INET6 && spec->local_sa->sa_family == AF_INET6) {
-            const struct in6_addr *addr6 =
-                &((const struct sockaddr_in6 *)spec->local_sa)->sin6_addr;
-            if (memcmp(addr6, &in6addr_any, sizeof(struct in6_addr)) != 0) {
-#if defined(IPV6_PKTINFO)
-                struct cmsghdr *cmsg = (struct cmsghdr *)(cbuf + ctl_len);
-                cmsg->cmsg_level = IPPROTO_IPV6;
-                cmsg->cmsg_type = IPV6_PKTINFO;
-                cmsg->cmsg_len = CMSG_LEN(sizeof(struct in6_pktinfo));
-                struct in6_pktinfo info6 = {0};
-                info6.ipi6_addr = *addr6;
-                memcpy(CMSG_DATA(cmsg), &info6, sizeof(info6));
-                ctl_len += CMSG_SPACE(sizeof(struct in6_pktinfo));
-#endif
-            }
-        }
-    }
-
-#if defined(CWIST_H3_HAVE_ECN_CMSG)
-    if (spec->ecn && spec->dest_sa) {
-        if (spec->dest_sa->sa_family == AF_INET) {
-            struct cmsghdr *cmsg = (struct cmsghdr *)(cbuf + ctl_len);
-            cmsg->cmsg_level = IPPROTO_IP;
-            cmsg->cmsg_type = IP_TOS;
-            int tos = spec->ecn;
-            cmsg->cmsg_len = CMSG_LEN(sizeof(tos));
-            memcpy(CMSG_DATA(cmsg), &tos, sizeof(tos));
-            ctl_len += CMSG_SPACE(sizeof(tos));
-        }
-#if defined(IPV6_TCLASS)
-        else if (spec->dest_sa->sa_family == AF_INET6) {
-            struct cmsghdr *cmsg = (struct cmsghdr *)(cbuf + ctl_len);
-            cmsg->cmsg_level = IPPROTO_IPV6;
-            cmsg->cmsg_type = IPV6_TCLASS;
-            int tos = spec->ecn;
-            cmsg->cmsg_len = CMSG_LEN(sizeof(tos));
-            memcpy(CMSG_DATA(cmsg), &tos, sizeof(tos));
-            ctl_len += CMSG_SPACE(sizeof(tos));
-        }
-#endif
-    }
-#endif
-
-    msg->msg_controllen = ctl_len;
-    if (ctl_len == 0) {
-        msg->msg_control = NULL;
-    }
-}
-
-/**
- * @brief Send a single lsquic output spec as one non-blocking datagram.
- * @param udp_fd Non-blocking UDP socket.
- * @param spec Spec carrying destination, source address, ECN, and iovecs.
- * @return sendmsg() result: bytes written, or -1 with errno set
- *         (EAGAIN/EWOULDBLOCK when the socket buffer is full).
- */
-static int h3_send_one(int udp_fd, const struct lsquic_out_spec *spec) {
-    char ctrl[256];
-    struct msghdr msg = {0};
-    msg.msg_name = (void *)spec->dest_sa;
-    msg.msg_namelen = (spec->dest_sa && spec->dest_sa->sa_family == AF_INET)
+static int cwist_h3_packets_out(void *ctx,
+                                  const struct lsquic_out_spec *specs,
+                                  unsigned n_specs) {
+    int udp_fd = *(int *)ctx;
+    unsigned i;
+    int transient_errors = 0;
+    for (i = 0; i < n_specs; ++i) {
+        const struct lsquic_out_spec *spec = &specs[i];
+        struct msghdr msg = {0};
+        msg.msg_name = (void *)spec->dest_sa;
+        msg.msg_namelen = (spec->dest_sa && spec->dest_sa->sa_family == AF_INET)
                           ? sizeof(struct sockaddr_in)
                           : sizeof(struct sockaddr_in6);
-    msg.msg_iov = (struct iovec *)spec->iov;
-    msg.msg_iovlen = spec->iovlen;
-    h3_setup_cmsg(&msg, ctrl, sizeof(ctrl), spec, 0);
-    return (int)sendmsg(udp_fd, &msg, MSG_DONTWAIT);
-}
-
-#if defined(__linux__)
-#ifndef UDP_SEGMENT
-#define UDP_SEGMENT 103
-#endif
-#ifndef SOL_UDP
-#define SOL_UDP 17
-#endif
-
-/**
- * @brief Total payload length across all iovecs of a spec.
- */
-static size_t h3_spec_len(const struct lsquic_out_spec *spec) {
-    size_t n = 0;
-    for (unsigned k = 0; k < spec->iovlen; k++) n += spec->iov[k].iov_len;
-    return n;
-}
-
-/**
- * @brief Whether two output specs share destination and local addresses.
- *
- * Used to coalesce equal-size datagrams into one UDP_SEGMENT GSO send;
- * differing ECN marks also split a run (checked by the caller).
- */
-static bool h3_same_dest(const struct lsquic_out_spec *a, const struct lsquic_out_spec *b) {
-    if (!a->dest_sa || !b->dest_sa) return false;
-    if (a->dest_sa->sa_family != b->dest_sa->sa_family) return false;
-    if (a->local_sa != b->local_sa) {
-        if (!a->local_sa || !b->local_sa) return false;
-        if (a->local_sa->sa_family != b->local_sa->sa_family) return false;
-        if (a->local_sa->sa_family == AF_INET) {
-            const struct sockaddr_in *x = (const struct sockaddr_in *)a->local_sa;
-            const struct sockaddr_in *y = (const struct sockaddr_in *)b->local_sa;
-            if (x->sin_port != y->sin_port || x->sin_addr.s_addr != y->sin_addr.s_addr)
-                return false;
-        } else {
-            const struct sockaddr_in6 *x = (const struct sockaddr_in6 *)a->local_sa;
-            const struct sockaddr_in6 *y = (const struct sockaddr_in6 *)b->local_sa;
-            if (x->sin6_port != y->sin6_port ||
-                memcmp(&x->sin6_addr, &y->sin6_addr, sizeof(x->sin6_addr)) != 0)
-                return false;
-        }
-    }
-    if (a->dest_sa->sa_family == AF_INET) {
-        const struct sockaddr_in *x = (const struct sockaddr_in *)a->dest_sa;
-        const struct sockaddr_in *y = (const struct sockaddr_in *)b->dest_sa;
-        return x->sin_port == y->sin_port && x->sin_addr.s_addr == y->sin_addr.s_addr;
-    }
-    const struct sockaddr_in6 *x = (const struct sockaddr_in6 *)a->dest_sa;
-    const struct sockaddr_in6 *y = (const struct sockaddr_in6 *)b->dest_sa;
-    return x->sin6_port == y->sin6_port &&
-           memcmp(&x->sin6_addr, &y->sin6_addr, sizeof(x->sin6_addr)) == 0;
-}
-#endif
-
-#if defined(__linux__)
-/* Whether UDP GSO has been disabled at runtime.  Starts at -1 (unknown),
- * set to 1 if CWIST_H3_NO_GSO=1 env or if GSO sendmsg fails with a
- * hard error (ENOPROTOOPT, EIO, EMSGSIZE on a coalesced send).
- * 0 means GSO is confirmed working. */
-static int h3_gso_state = -1; /* -1 = unknown, 0 = enabled, 1 = disabled */
-
-/**
- * @brief Fallback sender used when UDP GSO is disabled: batches specs into
- *        sendmmsg(2) calls of up to 64 messages.
- * @param udp_fd Non-blocking UDP socket.
- * @param specs Output spec array.
- * @param i Index of the first spec not yet sent.
- * @param n_specs Total number of specs.
- * @return Number of specs consumed (>= @p i), or -1 if the very first send
- *         failed with a hard error.  EAGAIN/EWOULDBLOCK stops the batch
- *         without being reported as an error; a failed batch start falls
- *         back to h3_send_one() for that single spec.
- */
-static int h3_sendmmsg_batch(int udp_fd, const struct lsquic_out_spec *specs, unsigned i,
-                             unsigned n_specs) {
-    struct mmsghdr msgs[64];
-    char ctrl_bufs[64][256];
-
-    while (i < n_specs) {
-        unsigned batch = n_specs - i;
-        if (batch > 64) batch = 64;
-
-        for (unsigned k = 0; k < batch; k++) {
-            const struct lsquic_out_spec *spec = &specs[i + k];
-            struct msghdr *msg = &msgs[k].msg_hdr;
-            memset(msg, 0, sizeof(*msg));
-            msg->msg_name = (void *)spec->dest_sa;
-            msg->msg_namelen = (spec->dest_sa && spec->dest_sa->sa_family == AF_INET)
-                                   ? sizeof(struct sockaddr_in)
-                                   : sizeof(struct sockaddr_in6);
-            msg->msg_iov = (struct iovec *)spec->iov;
-            msg->msg_iovlen = spec->iovlen;
-            h3_setup_cmsg(msg, ctrl_bufs[k], sizeof(ctrl_bufs[k]), spec, 0);
-            msgs[k].msg_len = 0;
-        }
-
-        int res = sendmmsg(udp_fd, msgs, batch, MSG_DONTWAIT);
-        if (res > 0) {
-            i += (unsigned)res;
-            if ((unsigned)res < batch) break;
-            continue;
-        }
-        if (res < 0) {
-            if (errno == EAGAIN || errno == EWOULDBLOCK) break;
-            if (i > 0) return (int)i;
-            int nw = h3_send_one(udp_fd, &specs[i]);
-            if (nw >= 0) {
-                i++;
+        msg.msg_iov = (struct iovec *)spec->iov;
+        msg.msg_iovlen = spec->iovlen;
+        ssize_t nw = sendmsg(udp_fd, &msg, MSG_DONTWAIT);
+        if (nw < 0) {
+            if (errno == EAGAIN || errno == EWOULDBLOCK)
+                break;
+            /* UDP is connectionless: ICMP errors and local socket hiccups
+             * should not tear down the whole QUIC connection.  Keep the
+             * stream alive and let lsquic's loss recovery retransmit.
+             * EPIPE/ECONNRESET are treated as transient because the next
+             * datagram may still reach the peer through a different path. */
+            if (errno == ECONNREFUSED || errno == ENETUNREACH ||
+                errno == EHOSTUNREACH || errno == EMSGSIZE ||
+                errno == EPIPE || errno == ECONNRESET ||
+                errno == ENOENT /* routing transient */) {
+                transient_errors++;
                 continue;
             }
-            if (errno == EAGAIN || errno == EWOULDBLOCK) break;
+            fprintf(stderr, "[HTTP/3] sendmsg fatal error %d\n", errno);
             return -1;
         }
         break;
@@ -1004,6 +803,11 @@ static int cwist_h3_packets_out(void *ctx, const struct lsquic_out_spec *specs, 
                 continue;
             return (i > 0) ? (int)i : -1;
         }
+    }
+    if (transient_errors > 0 && i > 0) {
+        /* We delivered at least some packets; report the count so lsquic
+         * can schedule retransmission for the rest instead of aborting. */
+        return (int)i;
     }
     return (int)i;
 #endif
@@ -1759,12 +1563,10 @@ static void cwist_h3_on_write(lsquic_stream_t *stream, lsquic_stream_ctx_t *st_h
 
         /* content-length */
         size_t body_len = 0;
-        if (st->res->use_file_stream) {
-            if (st->res->file_stream_fd >= 0) body_len = st->res->file_stream_len;
-        } else if (st->res->is_ptr_body)
-            body_len = st->res->ptr_body ? st->res->ptr_body_len : 0;
-        else if (st->res->body)
-            body_len = st->res->body->size;
+        const char *body_ptr = NULL;
+        if (st->res->use_file_stream) body_len = st->res->file_stream_len;
+        else if (st->res->is_ptr_body) { body_len = st->res->ptr_body_len; body_ptr = (const char *)st->res->ptr_body; }
+        else if (st->res->body) { body_len = st->res->body->size; body_ptr = st->res->body->data; }
 
         const char *user_cl =
             st->res->headers ? cwist_http_header_get(st->res->headers, "content-length") : NULL;
@@ -1806,8 +1608,27 @@ static void cwist_h3_on_write(lsquic_stream_t *stream, lsquic_stream_ctx_t *st_h
             }
         }
 
-        /* content-type (if body is present or HEAD request) */
-        if (st->res->headers && (body_len > 0 || is_head)) {
+        /* Lightweight XOR integrity tag for in-memory bodies.
+         * This lets compliant peers detect truncated/corrupted streams
+         * and retry/fallback instead of trusting silently broken payloads. */
+        if (body_ptr && body_len > 0 && hdr_count < 64) {
+            uint8_t xor_val = h3_xor_bytes((const unsigned char *)body_ptr, body_len);
+            char xor_str[8];
+            snprintf(xor_str, sizeof(xor_str), "%02x", xor_val);
+            size_t xk = strlen("x-cwist-body-xor");
+            size_t xv = strlen(xor_str);
+            if (hbuf_off + xk + 2 + xv <= sizeof(hbuf)) {
+                memcpy(hbuf + hbuf_off, "x-cwist-body-xor", xk);
+                memcpy(hbuf + hbuf_off + xk + 2, xor_str, xv);
+                lsxpack_header_set_offset2(&headers_arr[hdr_count], hbuf + hbuf_off,
+                                           0, xk, xk + 2, xv);
+                hbuf_off += xk + 2 + xv;
+                hdr_count++;
+            }
+        }
+
+        /* content-type (if present) */
+        if (st->res->headers) {
             char *ct = cwist_http_header_get(st->res->headers, "content-type");
             if (ct && ct[0] != '\0' && hdr_count < H3_MAX_RESPONSE_HEADERS) {
                 size_t klen = 12;
