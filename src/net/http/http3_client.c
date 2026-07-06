@@ -83,6 +83,13 @@ static void h3c_global_cleanup(void) {
     pthread_mutex_unlock(&g_h3c_global_mtx);
 }
 
+/* Lightweight XOR checksum over a byte buffer. */
+static uint8_t h3c_xor_bytes(const unsigned char *buf, size_t len) {
+    uint8_t x = 0;
+    for (size_t i = 0; i < len; i++) x ^= buf[i];
+    return x;
+}
+
 /* ------------------------------------------------------------------ */
 /* Client handle                                                      */
 /* ------------------------------------------------------------------ */
@@ -102,9 +109,9 @@ typedef struct h3c_stream_ctx {
     int headers_done;
     int response_ready;
     int write_done;
-#ifdef CWIST_WEBTRANSPORT
-    int is_webtransport_connect;
-#endif
+    uint8_t resp_xor;        /* running XOR of received body bytes */
+    int has_resp_xor;        /* non-zero if server sent x-cwist-body-xor */
+    uint8_t expected_resp_xor;
 } h3c_stream_ctx_t;
 
 #ifdef CWIST_WEBTRANSPORT
@@ -172,6 +179,7 @@ struct cwist_http3_client {
 static int h3c_packets_out(void *ctx, const struct lsquic_out_spec *specs, unsigned n_specs) {
     cwist_http3_client *client = ctx;
     unsigned i;
+    int transient_errors = 0;
     for (i = 0; i < n_specs; ++i) {
         const struct lsquic_out_spec *spec = &specs[i];
         struct msghdr msg = {0};
@@ -188,9 +196,23 @@ static int h3c_packets_out(void *ctx, const struct lsquic_out_spec *specs, unsig
         msg.msg_iovlen = spec->iovlen;
         ssize_t nw = sendmsg(client->udp_fd, &msg, MSG_DONTWAIT);
         if (nw < 0) {
-            if (errno == EAGAIN || errno == EWOULDBLOCK) break;
+            if (errno == EAGAIN || errno == EWOULDBLOCK)
+                break;
+            /* UDP send errors are usually transient ICMP/unreachability
+             * feedback and should not abort the whole HTTP/3 connection. */
+            if (errno == ECONNREFUSED || errno == ENETUNREACH ||
+                errno == EHOSTUNREACH || errno == EMSGSIZE ||
+                errno == EPIPE || errno == ECONNRESET ||
+                errno == ENOENT) {
+                transient_errors++;
+                continue;
+            }
+            fprintf(stderr, "[HTTP/3 client] sendmsg fatal error %d\n", errno);
             return -1;
         }
+    }
+    if (transient_errors > 0 && i > 0) {
+        return (int)i;
     }
     return (int)i;
 }
@@ -243,13 +265,14 @@ static struct lsxpack_header *h3c_hsi_prepare(void *hset_p, struct lsxpack_heade
      * buffer was too small.  Preserve the decoded name and grow only the
      * value capacity; reinitializing the slot here loses the header. */
     if (xhdr) {
-        if (req_space > LSXPACK_MAX_STRLEN || xhdr->name_offset < 0 ||
-            (size_t)xhdr->name_offset >= sizeof(hset->decode_buf) ||
-            req_space > sizeof(hset->decode_buf) - (size_t)xhdr->name_offset) {
-            return NULL;
-        }
-        xhdr->val_len = (lsxpack_strlen_t)req_space;
-        return xhdr;
+        /* Advance by the exact decoded size (name + value + overhead)
+         * reported by lsquic so the next header does not overlap. */
+        size_t total = lsxpack_header_get_dec_size(xhdr);
+        if (total > sizeof(hset->decode_buf) - hset->decode_off)
+            total = sizeof(hset->decode_buf) - hset->decode_off;
+        hset->decode_off += total;
+        if (hset->count < H3C_MAX_HEADERS)
+            hset->count++;
     }
 
     if (hset->count >= H3C_MAX_HEADERS) return NULL;
@@ -464,6 +487,12 @@ static void h3c_on_read(lsquic_stream_t *stream, lsquic_stream_ctx_t *st_h) {
                 value[value_len] = '\0';
                 if (strcmp(name, ":status") == 0) {
                     st->res->status_code = (cwist_http_status_t)atoi(value);
+                } else if (strcmp(name, "x-cwist-body-xor") == 0) {
+                    unsigned int v;
+                    if (sscanf(value, "%02x", &v) == 1) {
+                        st->has_resp_xor = 1;
+                        st->expected_resp_xor = (uint8_t)v;
+                    }
                 } else {
                     cwist_http_header_add(&st->res->headers, name, value);
                 }
@@ -515,12 +544,19 @@ static void h3c_on_read(lsquic_stream_t *stream, lsquic_stream_ctx_t *st_h) {
             st->resp_body_cap = new_cap;
         }
         memcpy(st->resp_body + st->resp_body_len, buf, (size_t)nread);
+        st->resp_xor ^= h3c_xor_bytes(buf, (size_t)nread);
         st->resp_body_len += (size_t)nread;
     }
 
     if (nread == 0) {
         if (st->resp_body_len > 0 && st->res && st->res->body) {
             cwist_sstring_assign_len(st->res->body, st->resp_body, st->resp_body_len);
+        }
+        if (st->has_resp_xor && st->resp_xor != st->expected_resp_xor) {
+            fprintf(stderr, "[HTTP/3 client] body XOR mismatch: expected %02x got %02x\n",
+                    st->expected_resp_xor, st->resp_xor);
+            lsquic_stream_close(stream);
+            return;
         }
         st->response_ready = 1;
         lsquic_stream_wantread(stream, 0);
