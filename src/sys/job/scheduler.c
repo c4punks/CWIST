@@ -10,7 +10,6 @@
 #define _POSIX_C_SOURCE 200809L
 #include <cwist/sys/job/scheduler.h>
 #include <cwist/core/mem/alloc.h>
-#include <cwist/core/mem/gc.h>
 #include <pthread.h>
 #include <time.h>
 #include <stdlib.h>
@@ -42,40 +41,17 @@ struct cwist_scheduler {
 
 /* --- Time helpers ------------------------------------------------------- */
 
-/**
- * @brief Return the current monotonic clock time in milliseconds.
- *
- * Uses CLOCK_MONOTONIC, so the value is not affected by wall-clock changes.
- *
- * @retval Millisecond timestamp on success.
- * @retval 0 if clock_gettime() fails.
- */
 static uint64_t now_ms(void) {
     struct timespec ts;
     if (clock_gettime(CLOCK_MONOTONIC, &ts) != 0) return 0;
     return (uint64_t)ts.tv_sec * 1000ULL + (uint64_t)ts.tv_nsec / 1000000ULL;
 }
 
-/**
- * @brief Convert a millisecond timestamp into a struct timespec.
- *
- * @param[in] ms Milliseconds since the monotonic clock epoch.
- * @param[out] ts Destination timespec to fill.
- */
 static void ms_to_timespec(uint64_t ms, struct timespec *ts) {
     ts->tv_sec = (time_t)(ms / 1000ULL);
     ts->tv_nsec = (long)((ms % 1000ULL) * 1000000ULL);
 }
 
-/**
- * @brief Initialize a condition variable using the monotonic clock.
- *
- * Where supported (Linux and the BSDs) the condition variable is configured
- * with CLOCK_MONOTONIC so timed waits are immune to wall-clock changes;
- * elsewhere the platform default clock is used.
- *
- * @param[out] cond Condition variable to initialize.
- */
 static void cond_init_monotonic(pthread_cond_t *cond) {
     pthread_condattr_t attr;
     pthread_condattr_init(&attr);
@@ -88,53 +64,22 @@ static void cond_init_monotonic(pthread_cond_t *cond) {
 
 /* --- Min-heap of delayed jobs ------------------------------------------- */
 
-/**
- * @brief Grow the delayed-job heap if it is full.
- *
- * Doubles the heap capacity, starting from CWIST_SCHEDULER_HEAP_INIT. The new
- * buffer is immediately disowned from the calling thread's GC tracking (when
- * full GC is enabled) because the scheduler owns it until
- * cwist_scheduler_destroy().
- *
- * @retval 0 on success or if capacity is already sufficient.
- * @retval -1 if the allocation failed.
- */
 static int heap_grow(cwist_scheduler_t *s) {
     if (s->heap_count < s->heap_capacity) return 0;
     size_t new_cap = s->heap_capacity ? s->heap_capacity * 2 : CWIST_SCHEDULER_HEAP_INIT;
     scheduled_job_t *new_heap = cwist_realloc(s->heap, new_cap * sizeof(scheduled_job_t));
     if (!new_heap) return -1;
-    /* s->heap is owned by the scheduler for its whole lifetime, not by
-     * whichever caller thread happens to trigger a resize -- cwist_realloc()
-     * tracks it on that thread's full-GC pending-sweep list (matching
-     * cwist_alloc()'s tracking of a fresh NULL-in allocation). Left tracked
-     * there, that thread exiting would have the sweep free this array out
-     * from under a scheduler that's still using it. Disown it immediately;
-     * cwist_scheduler_destroy() is what actually releases it. */
-    if (cwist_full_gc_enabled()) cwist_gc_scope_disown(new_heap);
     s->heap = new_heap;
     s->heap_capacity = new_cap;
     return 0;
 }
 
-/**
- * @brief Swap two heap entries.
- */
 static void heap_swap(scheduled_job_t *a, scheduled_job_t *b) {
     scheduled_job_t tmp = *a;
     *a = *b;
     *b = tmp;
 }
 
-/**
- * @brief Push a job onto the min-heap ordered by deadline.
- *
- * Grows the heap first if needed. On allocation failure the job is silently
- * dropped. Caller must hold @p s->delayed_mtx.
- *
- * @param s Scheduler owning the heap.
- * @param job Job entry to insert.
- */
 static void heap_push(cwist_scheduler_t *s, scheduled_job_t job) {
     if (heap_grow(s) != 0) return;
     size_t i = s->heap_count++;
@@ -147,13 +92,6 @@ static void heap_push(cwist_scheduler_t *s, scheduled_job_t job) {
     }
 }
 
-/**
- * @brief Pop the earliest-deadline job from the min-heap.
- *
- * Caller must hold @p s->delayed_mtx and the heap must be non-empty.
- *
- * @return The job with the smallest deadline_ms.
- */
 static scheduled_job_t heap_pop(cwist_scheduler_t *s) {
     scheduled_job_t root = s->heap[0];
     s->heap[0] = s->heap[--s->heap_count];
@@ -177,26 +115,12 @@ static scheduled_job_t heap_pop(cwist_scheduler_t *s) {
 
 /* --- Worker and timer threads ------------------------------------------- */
 
-/**
- * @brief Worker thread entry point.
- *
- * Runs the scheduler's io queue event loop; returns NULL when the queue is
- * stopped.
- */
 static void *scheduler_worker_thread(void *arg) {
     cwist_scheduler_t *s = (cwist_scheduler_t *)arg;
     cwist_io_queue_run(s->queue);
     return NULL;
 }
 
-/**
- * @brief Timer thread entry point.
- *
- * Waits on @p s->delayed_cond for delayed jobs. When the earliest deadline
- * arrives, the job is submitted to the io queue for execution by a worker;
- * otherwise it sleeps until the deadline with a timed wait. Exits when
- * @p s->running becomes false.
- */
 static void *scheduler_timer_thread(void *arg) {
     cwist_scheduler_t *s = (cwist_scheduler_t *)arg;
 
@@ -225,16 +149,6 @@ static void *scheduler_timer_thread(void *arg) {
     return NULL;
 }
 
-/**
- * @brief Stop and join the first @p started_workers worker threads.
- *
- * Used on the partial-failure paths of cwist_scheduler_create(). Stops the io
- * queue first so workers can exit their event loops.
- *
- * @param s Scheduler being torn down.
- * @param started_workers Number of worker threads that were successfully
- *                        started and must be joined.
- */
 static void scheduler_cleanup_threads(cwist_scheduler_t *s, size_t started_workers) {
     s->running = false;
     cwist_io_queue_stop(s->queue);
@@ -245,25 +159,11 @@ static void scheduler_cleanup_threads(cwist_scheduler_t *s, size_t started_worke
 
 /* --- Public API --------------------------------------------------------- */
 
-/**
- * @brief Create a scheduler with worker and timer threads.
- *
- * Spawns @p worker_count worker threads (defaulting to 1 if 0) running the io
- * queue event loop, plus one timer thread for delayed jobs. On any failure,
- * all partially created resources are torn down and freed.
- *
- * @param worker_count Number of worker threads; 0 is treated as 1.
- * @param queue_capacity Capacity passed to cwist_io_queue_create().
- * @return The new scheduler, or NULL on allocation or thread-creation failure.
- */
 cwist_scheduler_t *cwist_scheduler_create(size_t worker_count, size_t queue_capacity) {
     if (worker_count == 0) worker_count = 1;
 
     cwist_scheduler_t *s = (cwist_scheduler_t *)cwist_alloc(sizeof(*s));
     if (!s) return NULL;
-    /* Explicit destroy owns the scheduler, not its creator's TLS scope.
-     * Detach on the allocating thread before publishing to workers. */
-    if (cwist_full_gc_enabled()) cwist_gc_scope_disown(s);
     memset(s, 0, sizeof(*s));
 
     s->queue = cwist_io_queue_create(queue_capacity);
@@ -309,15 +209,6 @@ cwist_scheduler_t *cwist_scheduler_create(size_t worker_count, size_t queue_capa
     return s;
 }
 
-/**
- * @brief Destroy a scheduler and free all its resources.
- *
- * Stops the timer and worker threads (waiting for them to finish), then
- * destroys the io queue and frees the heap, worker array, and scheduler.
- * Safe to call with NULL.
- *
- * @param s Scheduler to destroy.
- */
 void cwist_scheduler_destroy(cwist_scheduler_t *s) {
     if (!s) return;
 
@@ -341,36 +232,11 @@ void cwist_scheduler_destroy(cwist_scheduler_t *s) {
     cwist_free(s);
 }
 
-/**
- * @brief Submit a job for immediate execution by a worker thread.
- *
- * @param s Scheduler to submit to.
- * @param func Job function to run.
- * @param arg Opaque argument passed to @p func.
- * @retval true if the job was submitted.
- * @retval false if @p s or @p func is NULL, the scheduler is not running, or
- *         the queue submission failed.
- */
 bool cwist_scheduler_submit(cwist_scheduler_t *s, cwist_job_func func, void *arg) {
     if (!s || !func || !s->running) return false;
     return cwist_io_queue_submit(s->queue, func, arg);
 }
 
-/**
- * @brief Schedule a job to run after a delay.
- *
- * With a zero delay the job is submitted immediately as with
- * cwist_scheduler_submit(). Otherwise it is pushed onto the delayed-job
- * min-heap and the timer thread runs it once the deadline passes.
- *
- * @param s Scheduler to schedule on.
- * @param func Job function to run.
- * @param arg Opaque argument passed to @p func.
- * @param delay_ms Delay in milliseconds before execution; 0 means immediate.
- * @retval true if the job was scheduled.
- * @retval false if @p s or @p func is NULL, the scheduler is not running, or
- *         heap insertion failed (e.g. out of memory).
- */
 bool cwist_scheduler_schedule(cwist_scheduler_t *s, cwist_job_func func, void *arg,
                               uint64_t delay_ms) {
     if (!s || !func || !s->running) return false;
@@ -395,14 +261,6 @@ bool cwist_scheduler_schedule(cwist_scheduler_t *s, cwist_job_func func, void *a
     return true;
 }
 
-/**
- * @brief Return the number of jobs waiting on the delayed-job heap.
- *
- * Does not include jobs already submitted to the io queue.
- *
- * @param s Scheduler to query.
- * @return Number of pending delayed jobs; 0 if @p s is NULL.
- */
 size_t cwist_scheduler_pending_count(cwist_scheduler_t *s) {
     if (!s) return 0;
     pthread_mutex_lock(&s->delayed_mtx);

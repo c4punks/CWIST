@@ -1106,8 +1106,19 @@ cwist_app *cwist_app_create(void) {
     app->max_mem_space = 0;
     app->mem_manager = NULL;
     app->bdr_ctx = cwist_bdr_create();
+    app->pqc_layer_enabled = false;
+    app->tls_groups = NULL;
+    app->wt_handler = NULL;
+
+    app->session_secret = NULL;
+    app->session_name = NULL;
+    app->session_max_age = 0;
+    app->db_pool = NULL;
+    app->redis_pool = NULL;
+    app->scheduler = NULL;
+
     cwist_app_refresh_https_request_handler(app);
-    
+
     return app;
 }
 
@@ -1300,7 +1311,6 @@ void cwist_app_destroy(cwist_app *app) {
     if (app->session_secret) cwist_free(app->session_secret);
     if (app->session_name) cwist_free(app->session_name);
 
-#if !defined(__EMSCRIPTEN__) && !defined(__wasi__)
     if (app->db_pool) {
         cwist_db_pool_destroy((cwist_db_pool_t *)app->db_pool);
     }
@@ -1310,8 +1320,6 @@ void cwist_app_destroy(cwist_app *app) {
     if (app->scheduler) {
         cwist_scheduler_destroy((cwist_scheduler_t *)app->scheduler);
     }
-    cwist_grpc_routes_destroy(app);
-#endif /* __EMSCRIPTEN__ */
 
     cwist_free(app);
 }
@@ -1612,12 +1620,6 @@ cwist_error_t cwist_app_use_db_pool(cwist_app *app, const char *db_path, size_t 
         err.error.err_i16 = -1;
         return err;
     }
-#if defined(__EMSCRIPTEN__) || defined(__wasi__)
-    (void)db_path;
-    (void)max_conns;
-    err.error.err_i16 = -1; /* connection pools need native sockets/threads */
-    return err;
-#else
     if (app->db_pool) {
         cwist_db_pool_destroy((cwist_db_pool_t *)app->db_pool);
     }
@@ -1628,7 +1630,6 @@ cwist_error_t cwist_app_use_db_pool(cwist_app *app, const char *db_path, size_t 
     }
     err.error.err_i16 = 0;
     return err;
-#endif
 }
 
 cwist_db_pool_t *cwist_app_get_db_pool(cwist_app *app) {
@@ -1642,13 +1643,6 @@ cwist_error_t cwist_app_use_redis(cwist_app *app, const char *host, int port, si
         err.error.err_i16 = -1;
         return err;
     }
-#if defined(__EMSCRIPTEN__) || defined(__wasi__)
-    (void)host;
-    (void)port;
-    (void)max_conns;
-    err.error.err_i16 = -1; /* Redis needs native sockets */
-    return err;
-#else
     if (app->redis_pool) {
         cwist_redis_pool_destroy((cwist_redis_pool_t *)app->redis_pool);
     }
@@ -1659,7 +1653,6 @@ cwist_error_t cwist_app_use_redis(cwist_app *app, const char *host, int port, si
     }
     err.error.err_i16 = 0;
     return err;
-#endif
 }
 
 cwist_redis_pool_t *cwist_app_get_redis_pool(cwist_app *app) {
@@ -1673,12 +1666,6 @@ cwist_error_t cwist_app_use_scheduler(cwist_app *app, size_t worker_count, size_
         err.error.err_i16 = -1;
         return err;
     }
-#if defined(__EMSCRIPTEN__) || defined(__wasi__)
-    (void)worker_count;
-    (void)queue_capacity;
-    err.error.err_i16 = -1; /* worker pools need native threads */
-    return err;
-#else
     if (app->scheduler) {
         cwist_scheduler_destroy((cwist_scheduler_t *)app->scheduler);
     }
@@ -1689,7 +1676,6 @@ cwist_error_t cwist_app_use_scheduler(cwist_app *app, size_t worker_count, size_
     }
     err.error.err_i16 = 0;
     return err;
-#endif
 }
 
 cwist_scheduler_t *cwist_app_get_scheduler(cwist_app *app) {
@@ -1943,23 +1929,19 @@ void cwist_app_patch(cwist_app *app, const char *path, cwist_handler_func handle
     add_route(app, path, CWIST_HTTP_PATCH, handler, CWIST_ENDPOINT_DEFAULT);
 }
 
-void cwist_app_post_named(cwist_app *app, const char *path, const char *name,
-                          cwist_handler_func handler) {
+void cwist_app_post_named(cwist_app *app, const char *path, const char *name, cwist_handler_func handler) {
     add_route_named(app, path, name, CWIST_HTTP_POST, handler, CWIST_ENDPOINT_DEFAULT);
 }
 
-void cwist_app_put_named(cwist_app *app, const char *path, const char *name,
-                         cwist_handler_func handler) {
+void cwist_app_put_named(cwist_app *app, const char *path, const char *name, cwist_handler_func handler) {
     add_route_named(app, path, name, CWIST_HTTP_PUT, handler, CWIST_ENDPOINT_DEFAULT);
 }
 
-void cwist_app_delete_named(cwist_app *app, const char *path, const char *name,
-                            cwist_handler_func handler) {
+void cwist_app_delete_named(cwist_app *app, const char *path, const char *name, cwist_handler_func handler) {
     add_route_named(app, path, name, CWIST_HTTP_DELETE, handler, CWIST_ENDPOINT_DEFAULT);
 }
 
-void cwist_app_patch_named(cwist_app *app, const char *path, const char *name,
-                           cwist_handler_func handler) {
+void cwist_app_patch_named(cwist_app *app, const char *path, const char *name, cwist_handler_func handler) {
     add_route_named(app, path, name, CWIST_HTTP_PATCH, handler, CWIST_ENDPOINT_DEFAULT);
 }
 
@@ -1982,6 +1964,25 @@ void cwist_app_post_opt(cwist_app *app, const char *path, cwist_handler_func han
     add_route(app, path, CWIST_HTTP_POST, handler, opts);
 }
 
+void cwist_app_put_opt(cwist_app *app, const char *path, cwist_handler_func handler, cwist_endpoint_opt_t opts) {
+    add_route(app, path, CWIST_HTTP_PUT, handler, opts);
+}
+
+void cwist_app_delete_opt(cwist_app *app, const char *path, cwist_handler_func handler, cwist_endpoint_opt_t opts) {
+    add_route(app, path, CWIST_HTTP_DELETE, handler, opts);
+}
+
+void cwist_app_patch_opt(cwist_app *app, const char *path, cwist_handler_func handler, cwist_endpoint_opt_t opts) {
+    add_route(app, path, CWIST_HTTP_PATCH, handler, opts);
+}
+
+/**
+ * @brief Register a WebSocket route with explicit endpoint options.
+ * @param app Application being configured.
+ * @param path Exact GET route that should upgrade to WebSocket.
+ * @param handler WebSocket handler invoked after a successful upgrade.
+ * @param opts Endpoint flags associated with the route.
+ */
 void cwist_app_ws_opt(cwist_app *app, const char *path, cwist_ws_handler_func handler, cwist_endpoint_opt_t opts) {
     if (!app || !app->router || !path) return;
     if (opts == 0) {

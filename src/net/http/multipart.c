@@ -34,21 +34,9 @@ typedef struct {
 
 static void mp_parse_headers(mp_parse_ctx *ctx);
 
-/**
- * @brief multipart-parser-c callback: header field fragment received.
- *
- * Appends the fragment to the buffered header field name (truncated at the
- * fixed buffer size). If a header value was already seen for the previous
- * field, that pair is finalized via mp_parse_headers() before buffering.
- *
- * @param p Parser instance (carries mp_parse_ctx).
- * @param at Pointer to the fragment.
- * @param len Fragment length.
- * @return 0 on success.
- */
 static int mp_on_header_field(multipart_parser *p, const char *at, size_t len) {
     mp_parse_ctx *ctx = (mp_parse_ctx *)multipart_parser_get_data(p);
-    if (ctx->have_value) {
+    if (ctx->header_value_len > 0) {
         /* Previous header value is complete, parse it before moving to next field. */
         mp_parse_headers(ctx);
     }
@@ -162,7 +150,7 @@ static int mp_on_headers_complete(multipart_parser *p) {
  */
 static int mp_on_part_data_begin(multipart_parser *p) {
     mp_parse_ctx *ctx = (mp_parse_ctx *)multipart_parser_get_data(p);
-    if (ctx->have_value) {
+    if (ctx->header_value_len > 0) {
         mp_parse_headers(ctx);
     }
     ctx->header_field_len = 0;
@@ -289,8 +277,7 @@ cwist_multipart_result *cwist_multipart_parse(const char *body, size_t body_len,
 
     /* multipart-parser-c expects the leading dashes in the boundary. */
     size_t blen = strlen(boundary);
-    cwist_scratch_t parser_boundary_s CWIST_SCRATCH_DEFER = {0};
-    char *parser_boundary = (char *)cwist_scratch_alloc(&parser_boundary_s, blen + 3);
+    char *parser_boundary = (char *)cwist_alloc(blen + 3);
     if (!parser_boundary) {
         cwist_free(result);
         return NULL;
@@ -300,6 +287,7 @@ cwist_multipart_result *cwist_multipart_parse(const char *body, size_t body_len,
     parser_boundary[blen + 2] = '\0';
 
     multipart_parser *parser = multipart_parser_init(parser_boundary, &settings);
+    cwist_free(parser_boundary);
     if (!parser) {
         cwist_free(result);
         return NULL;

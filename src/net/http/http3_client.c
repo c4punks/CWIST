@@ -145,9 +145,6 @@ struct cwist_http3_client {
         size_t len;
         int ready;
     } in_dgram;
-#ifdef CWIST_WEBTRANSPORT
-    cwist_webtransport_client_session *wt_connecting;
-#endif
 };
 
 /* ------------------------------------------------------------------ */
@@ -688,17 +685,6 @@ static void h3c_on_close(lsquic_stream_t *stream, lsquic_stream_ctx_t *st_h) {
     free(st);
 }
 
-/**
- * @brief lsquic datagram-write callback: emit one pending outgoing datagram.
- *
- * Copies the client-held pending datagram (protected by dgram_mtx) into
- * lsquic's buffer, frees the stored copy, and clears the pending flag.
- *
- * @param conn   The lsquic connection asking for a datagram.
- * @param buf    Destination buffer provided by lsquic.
- * @param len    Capacity of @p buf in bytes.
- * @return Number of bytes written to @p buf, or 0 if nothing is pending.
- */
 static ssize_t h3c_on_dg_write(lsquic_conn_t *conn, void *buf, size_t len) {
     cwist_http3_client *client = (cwist_http3_client *)lsquic_conn_get_ctx(conn);
     if (!client) return 0;
@@ -717,18 +703,6 @@ static ssize_t h3c_on_dg_write(lsquic_conn_t *conn, void *buf, size_t len) {
     return 0;
 }
 
-/**
- * @brief lsquic datagram-received callback: store one incoming datagram.
- *
- * Takes ownership of the datagram payload by copying it into the client's
- * in_dgram slot (protected by dgram_mtx), replacing any previously received
- * datagram that was not yet consumed, and sets the ready flag so the
- * receiving thread can pick it up.
- *
- * @param conn   The lsquic connection the datagram arrived on.
- * @param buf    Pointer to the datagram payload.
- * @param len    Payload length in bytes.
- */
 static void h3c_on_datagram(lsquic_conn_t *conn, const void *buf, size_t len) {
     cwist_http3_client *client = (cwist_http3_client *)lsquic_conn_get_ctx(conn);
     if (!client || !buf || len == 0) return;
@@ -746,12 +720,12 @@ static void h3c_on_datagram(lsquic_conn_t *conn, const void *buf, size_t len) {
 static const struct lsquic_stream_if h3c_stream_if = {
     .on_new_conn = h3c_on_new_conn,
     .on_conn_closed = h3c_on_conn_closed,
-    .on_new_stream = h3c_on_new_stream,
-    .on_read = h3c_on_read,
-    .on_write = h3c_on_write,
-    .on_close = h3c_on_close,
-    .on_dg_write = h3c_on_dg_write,
-    .on_datagram = h3c_on_datagram,
+    .on_new_stream  = h3c_on_new_stream,
+    .on_read        = h3c_on_read,
+    .on_write       = h3c_on_write,
+    .on_close       = h3c_on_close,
+    .on_dg_write    = h3c_on_dg_write,
+    .on_datagram    = h3c_on_datagram,
 };
 
 /* ------------------------------------------------------------------ */
@@ -864,6 +838,7 @@ cwist_http3_client *cwist_http3_client_create(void) {
     settings.es_ecn = 1;
     settings.es_pace_packets = 1;
     settings.es_optimistic_nat = 1;
+    settings.es_datagrams = client->datagram_enabled ? 1 : 0;
 
     char err_buf[256];
     if (lsquic_engine_check_settings(&settings, LSENG_HTTP,
@@ -916,9 +891,6 @@ void cwist_http3_client_destroy(cwist_http3_client *client) {
     free(client->host);
     free(client->out_dgram.data);
     free(client->in_dgram.data);
-#ifdef CWIST_WEBTRANSPORT
-    free(client->wt_connecting);
-#endif
     pthread_mutex_destroy(&client->dgram_mtx);
     pthread_mutex_destroy(&client->mtx);
     pthread_cond_destroy(&client->cond);
@@ -1132,34 +1104,32 @@ cwist_error_t cwist_http3_client_request(cwist_http3_client *client, const char 
 /* Datagram API (RFC 9221)                                            */
 /* ------------------------------------------------------------------ */
 
-/* ------------------------------------------------------------------ */
-/* Resilience knobs                                                   */
-/* ------------------------------------------------------------------ */
-
-void cwist_http3_client_set_max_retries(cwist_http3_client *client,
-                                        int max_retries) {
-    if (client) client->max_retries = max_retries > 0 ? max_retries : 0;
-}
-
-void cwist_http3_client_set_retry_delay_ms(cwist_http3_client *client,
-                                           int delay_ms) {
-    if (client) client->retry_delay_ms = delay_ms > 0 ? delay_ms : 0;
-}
-
-void cwist_http3_client_set_conn_timeout_ms(cwist_http3_client *client,
-                                            int timeout_ms) {
-    if (client) client->conn_timeout_ms = timeout_ms > 0 ? timeout_ms : 5000;
-}
-
 int cwist_http3_client_send_datagram(cwist_http3_client *client,
                                      const void *data, size_t len) {
-    (void)client;
-    (void)data;
-    (void)len;
-    return -1; /* Not yet implemented: requires lsquic datagram API */
+    if (!client || !client->conn || !data || len == 0) return -1;
+    if (!client->datagram_enabled) return -1;
+
+    pthread_mutex_lock(&client->dgram_mtx);
+    if (client->out_dgram.pending) {
+        pthread_mutex_unlock(&client->dgram_mtx);
+        return -1;
+    }
+    client->out_dgram.data = malloc(len);
+    if (!client->out_dgram.data) {
+        pthread_mutex_unlock(&client->dgram_mtx);
+        return -1;
+    }
+    memcpy(client->out_dgram.data, data, len);
+    client->out_dgram.len = len;
+    client->out_dgram.pending = 1;
+    pthread_mutex_unlock(&client->dgram_mtx);
+
+    lsquic_conn_want_datagram_write(client->conn, 1);
+    return 0;
 }
 
-ssize_t cwist_http3_client_recv_datagram(cwist_http3_client *client, void *buf, size_t len) {
+ssize_t cwist_http3_client_recv_datagram(cwist_http3_client *client,
+                                         void *buf, size_t len) {
     if (!client || !buf || len == 0) return -1;
 
     pthread_mutex_lock(&client->dgram_mtx);
@@ -1176,18 +1146,22 @@ ssize_t cwist_http3_client_recv_datagram(cwist_http3_client *client, void *buf, 
     pthread_mutex_unlock(&client->dgram_mtx);
     return (ssize_t)to_copy;
 }
+
 /* ------------------------------------------------------------------ */
 /* Resilience knobs                                                   */
 /* ------------------------------------------------------------------ */
 
-void cwist_http3_client_set_max_retries(cwist_http3_client *client, int max_retries) {
+void cwist_http3_client_set_max_retries(cwist_http3_client *client,
+                                        int max_retries) {
     if (client) client->max_retries = max_retries > 0 ? max_retries : 0;
 }
 
-void cwist_http3_client_set_retry_delay_ms(cwist_http3_client *client, int delay_ms) {
+void cwist_http3_client_set_retry_delay_ms(cwist_http3_client *client,
+                                           int delay_ms) {
     if (client) client->retry_delay_ms = delay_ms > 0 ? delay_ms : 0;
 }
 
-void cwist_http3_client_set_conn_timeout_ms(cwist_http3_client *client, int timeout_ms) {
+void cwist_http3_client_set_conn_timeout_ms(cwist_http3_client *client,
+                                            int timeout_ms) {
     if (client) client->conn_timeout_ms = timeout_ms > 0 ? timeout_ms : 5000;
 }

@@ -58,7 +58,7 @@ CURL_LIBS := $(shell pkg-config --libs libcurl 2>/dev/null)
 NGHTTP2_LIBS := $(shell pkg-config --libs libnghttp2 2>/dev/null)
 BROTLI_LIBS := $(shell pkg-config --libs libbrotlienc libbrotlicommon libbrotlidec 2>/dev/null)
 
-LIBS = -pthread -ldl -lm -lstdc++ -lz \
+LIBS = -pthread -ldl -lm -lstdc++ -lz -lzstd \
        $(LSQUIC_LIB) \
        $(BORINGSSL_SSL_LIB) \
        $(BORINGSSL_CRYPTO_LIB) \
@@ -110,18 +110,15 @@ SRCS = src/core/sstring/sstring.c \
        src/net/http/writer_fast.c \
        src/sys/io/uring_sqpoll.c \
        src/net/http/async_server.c \
-       src/net/http/async.c src/core/mem/gc.c lib/libttak/src/mem/epoch.c src/sys/sys_info.c \
-    lib/libttak/src/mem/mem.c lib/libttak/src/mem/fastpath.c \
-    lib/libttak/src/mem/owner.c lib/libttak/src/mem/abstract.c \
        src/net/http/cookie.c \
        src/net/http/session.c \
        src/net/http/query.c \
        lib/multipart-parser-c/multipart_parser.c \
        src/sys/session/session_manager.c \
        src/sys/app/csrf.c \
-       src/sys/app/waf.c \
        src/core/siphash/siphash.c \
        src/core/db/db.c \
+       src/core/db/pool.c \
        src/core/db/nuke_db.c \
        src/core/db/migrate.c \
        src/core/orm/orm.c \
@@ -151,8 +148,11 @@ SRCS = src/core/sstring/sstring.c \
        src/security/tls/ech.c \
        src/net/db_sync/db_sync.c \
        src/net/nats/cwist_nats.c \
+       src/net/redis/cwist_redis.c \
        src/core/validation/bind.c \
        src/sys/io/io_uring_backend.c \
+       src/sys/io/reactor.c \
+       src/sys/job/scheduler.c \
        src/sys/metrics/metrics.c \
        src/sys/health/healthz.c \
        $(IO_SRC)
@@ -294,7 +294,13 @@ TEST_TARGETS = test_sstring \
                test_cache \
                test_secure_headers \
                test_http_chunked \
-               test_static_and_range
+               test_static_and_range \
+               test_session \
+               test_csrf \
+               test_db_pool \
+               test_redis \
+               test_scheduler \
+               test_test_client
 
 .PHONY: all test $(TEST_TARGETS) install uninstall clean rebuild
 
@@ -572,3 +578,27 @@ test_http_chunked: $(LIB_NAME) tests/test_http_chunked.c
 test_static_and_range: $(LIB_NAME) tests/test_static_and_range.c
 	$(CC) $(CFLAGS) -o test_static_and_range tests/test_static_and_range.c $(LIB_NAME) $(LIBS)
 	./test_static_and_range
+
+test_session: $(LIB_NAME) tests/test_session.c
+	$(CC) $(CFLAGS) -o test_session tests/test_session.c $(LIB_NAME) $(LIBS)
+	./test_session
+
+test_csrf: $(LIB_NAME) tests/test_csrf.c
+	$(CC) $(CFLAGS) -o test_csrf tests/test_csrf.c $(LIB_NAME) $(LIBS)
+	./test_csrf
+
+test_db_pool: $(LIB_NAME) tests/test_db_pool.c
+	$(CC) $(CFLAGS) -o test_db_pool tests/test_db_pool.c $(LIB_NAME) $(LIBS)
+	./test_db_pool
+
+test_redis: $(LIB_NAME) tests/test_redis.c
+	$(CC) $(CFLAGS) -o test_redis tests/test_redis.c $(LIB_NAME) $(LIBS)
+	./test_redis
+
+test_scheduler: $(LIB_NAME) tests/test_scheduler.c
+	$(CC) $(CFLAGS) -o test_scheduler tests/test_scheduler.c $(LIB_NAME) $(LIBS)
+	./test_scheduler
+
+test_test_client: $(LIB_NAME) tests/test_test_client.c
+	$(CC) $(CFLAGS) -o test_test_client tests/test_test_client.c $(LIB_NAME) $(LIBS)
+	./test_test_client

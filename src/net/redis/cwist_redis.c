@@ -21,13 +21,6 @@
 
 #define CWIST_REDIS_BUF_SIZE 65536
 #define CWIST_REDIS_LINE_MAX 8192
-/* Maximum accepted bulk-string byte count (512 MiB). Redis's own protocol
- * limit is 512 MiB; cap here so a rogue server can't force a huge alloc. */
-#define CWIST_REDIS_MAX_BULK_BYTES ((long long)(512 * 1024 * 1024))
-/* Reply-tree guards: XREADGROUP-style replies nest ~4 levels; anything far
- * beyond that (or an absurd element count) means a rogue server. */
-#define CWIST_REDIS_MAX_REPLY_DEPTH 16
-#define CWIST_REDIS_MAX_REPLY_ELEMENTS (1 << 20)
 
 struct cwist_redis {
     int fd;
@@ -50,15 +43,11 @@ struct cwist_redis_pool {
 
 /* --- Socket helpers ----------------------------------------------------- */
 
-/** Open a blocking TCP connection to the Redis server.
- * @param host Server host name or IPv4 address.
- * @param port Server port.
- * @return Connected socket fd on success, -1 on resolution/connection failure. */
 static int redis_open_socket(const char *host, int port) {
     struct addrinfo hints = {0}, *res = NULL;
     hints.ai_family = AF_INET;
     hints.ai_socktype = SOCK_STREAM;
-    char port_str[16];
+    char port_str[8];
     snprintf(port_str, sizeof(port_str), "%d", port);
     if (getaddrinfo(host, port_str, &hints, &res) != 0 || !res) return -1;
 
@@ -76,17 +65,10 @@ static int redis_open_socket(const char *host, int port) {
     return fd;
 }
 
-// codeql[cpp/cleartext-transmission]
-/** Send a buffer fully over the socket, retrying on EINTR.
- * @return 0 if all bytes were sent, -1 on send error or disconnect. */
 static int redis_send_all(int fd, const char *buf, size_t len) {
     size_t sent = 0;
     while (sent < len) {
-        /* RESP speaks plaintext TCP by design (same as redis-cli without
-         * --tls). Credentials must be protected at the deployment layer:
-         * loopback/Unix sockets, private network, or a TLS-terminating proxy
-         * such as stunnel/spiped in front of Redis. */
-        ssize_t n = send(fd, buf + sent, len - sent, 0); // codeql[cpp/cleartext-transmission]
+        ssize_t n = send(fd, buf + sent, len - sent, 0);
         if (n < 0) {
             if (errno == EINTR) continue;
             return -1;
@@ -97,12 +79,6 @@ static int redis_send_all(int fd, const char *buf, size_t len) {
     return 0;
 }
 
-/** Read one CRLF-terminated RESP line from the connection's buffered stream,
- * stripping the trailing "\r\n".
- * @param line Output buffer of @p line_len bytes.
- * @return 0 on success, -1 on I/O error, disconnect, or line longer than
- *         @p line_len - 1 bytes. Not thread-safe by itself; callers must hold
- *         the connection mutex. */
 static int redis_recv_line(cwist_redis_t *r, char *line, size_t line_len) {
     size_t i = 0;
     while (1) {
@@ -121,8 +97,8 @@ static int redis_recv_line(cwist_redis_t *r, char *line, size_t line_len) {
             }
             if (i >= line_len - 1) return -1;
         }
-        ssize_t n =
-            recv(r->fd, r->recv_buf + r->recv_len, CWIST_REDIS_BUF_SIZE - r->recv_len - 1, 0);
+        ssize_t n = recv(r->fd, r->recv_buf + r->recv_len,
+                         CWIST_REDIS_BUF_SIZE - r->recv_len - 1, 0);
         if (n < 0) {
             if (errno == EINTR) continue;
             return -1;
@@ -132,10 +108,6 @@ static int redis_recv_line(cwist_redis_t *r, char *line, size_t line_len) {
     }
 }
 
-/** Read exactly @p len raw bytes from the connection's buffered stream.
- * @return 0 on success, -1 on I/O error or disconnect before @p len bytes
- *         were read. Not thread-safe by itself; callers must hold the
- *         connection mutex. */
 static int redis_recv_bytes(cwist_redis_t *r, char *out, size_t len) {
     size_t got = 0;
     while (got < len) {
@@ -147,8 +119,8 @@ static int redis_recv_bytes(cwist_redis_t *r, char *out, size_t len) {
             got += take;
             continue;
         }
-        ssize_t n =
-            recv(r->fd, r->recv_buf + r->recv_len, CWIST_REDIS_BUF_SIZE - r->recv_len - 1, 0);
+        ssize_t n = recv(r->fd, r->recv_buf + r->recv_len,
+                         CWIST_REDIS_BUF_SIZE - r->recv_len - 1, 0);
         if (n < 0) {
             if (errno == EINTR) continue;
             return -1;
@@ -161,11 +133,6 @@ static int redis_recv_bytes(cwist_redis_t *r, char *out, size_t len) {
 
 /* --- RESP2 helpers ------------------------------------------------------ */
 
-void cwist_redis_reply_free(cwist_redis_reply_t *reply);
-
-/** Append one RESP2 bulk string ("$<len>\r\n<payload>\r\n") to a frame being
- * built. A NULL @p s is encoded as an empty string.
- * @return Always 0 (appends to the sstring unconditionally). */
 static int write_bulk_string(cwist_sstring *out, const char *s) {
     char prefix[32];
     size_t len = s ? strlen(s) : 0;
@@ -176,244 +143,70 @@ static int write_bulk_string(cwist_sstring *out, const char *s) {
     return 0;
 }
 
-/** Flatten a reply tree into the legacy out_value/out_len contract. */
-static void flatten_reply(const cwist_redis_reply_t *tree, char **out_value, size_t *out_len) {
-    if (out_value) *out_value = NULL;
-    if (out_len) *out_len = 0;
-    if (!tree) return;
-    if (out_value) {
-        if ((tree->type == '+' || tree->type == ':') && tree->str) {
-            *out_value = cwist_strdup(tree->str);
-            if (out_len) *out_len = strlen(tree->str);
-        } else if (tree->type == '$' && tree->str) {
-            char *buf = cwist_alloc(tree->len + 1);
-            if (!buf) return; /* legacy contract: allocation failure yields NULL */
-            memcpy(buf, tree->str, tree->len);
-            buf[tree->len] = '\0';
-            *out_value = buf;
-            if (out_len) *out_len = tree->len;
-        }
-    } else if (out_len && tree->str) {
-        *out_len = tree->len;
-    }
-}
-
-/** Recursive RESP2 reply parser: builds a cwist_redis_reply_t tree. On any
- * failure the partially built tree is freed and *@p out is NULL. */
-static cwist_error_t redis_read_resp(cwist_redis_t *r, int depth, cwist_redis_reply_t **out) {
+static cwist_error_t read_reply(cwist_redis_t *r, char **out_value, char *out_type) {
     char line[CWIST_REDIS_LINE_MAX];
-    cwist_redis_reply_t *node = cwist_alloc(sizeof(*node));
-    if (!node) return make_error(CWIST_ERR_INT16);
-    *out = node;
-    if (redis_recv_line(r, line, sizeof(line)) != 0) goto fail;
-    node->type = line[0];
+    if (redis_recv_line(r, line, sizeof(line)) != 0) return make_error(CWIST_ERR_INT16);
+    if (out_type) *out_type = line[0];
 
     switch (line[0]) {
         case '+': /* simple string */
         case '-': /* error */
-            node->str = cwist_strdup(line + 1);
-            if (!node->str) goto fail;
-            node->len = strlen(line + 1);
-            /* Legacy behavior: a '-' reply is signalled through the reply
-             * tree (type '-') with a zeroed error value. */
-            return (line[0] == '-')
-                       ? make_error(CWIST_ERR_INT16)
-                       : (cwist_error_t){.errtype = CWIST_ERR_INT16, .error.err_i16 = 0};
+            if (out_value) {
+                if (line[0] == '+') {
+                    *out_value = cwist_strdup(line + 1);
+                } else {
+                    *out_value = NULL;
+                }
+            }
+            return (line[0] == '-') ? make_error(CWIST_ERR_INT16) : (cwist_error_t){.errtype = CWIST_ERR_INT16, .error.err_i16 = 0};
 
-        case ':': { /* integer */
-            char *end = NULL;
-            long long v = strtoll(line + 1, &end, 10);
-            if (end == line + 1 || *end != '\0') goto fail;
-            node->str = cwist_strdup(line + 1);
-            if (!node->str) goto fail;
-            node->len = strlen(line + 1);
-            node->integer = v;
+        case ':': /* integer */
+            if (out_value) *out_value = cwist_strdup(line + 1);
             return (cwist_error_t){.errtype = CWIST_ERR_INT16, .error.err_i16 = 0};
-        }
 
         case '$': { /* bulk string */
-            char *end = NULL;
-            long long blen = strtoll(line + 1, &end, 10);
-            if (end == line + 1 || *end != '\0') goto fail;
-            if (blen < 0) return (cwist_error_t){.errtype = CWIST_ERR_INT16, .error.err_i16 = 0};
-            /* Guard against a rogue/malicious server advertising a huge bulk
-             * string that would exhaust memory before we read a single byte. */
-            if (blen > CWIST_REDIS_MAX_BULK_BYTES) goto fail;
+            long long blen = atoll(line + 1);
+            if (blen < 0) {
+                if (out_value) *out_value = NULL;
+                return (cwist_error_t){.errtype = CWIST_ERR_INT16, .error.err_i16 = 0};
+            }
             char *buf = cwist_alloc((size_t)blen + 1);
-            if (!buf) goto fail;
+            if (!buf) return make_error(CWIST_ERR_INT16);
             if (redis_recv_bytes(r, buf, (size_t)blen) != 0) {
                 cwist_free(buf);
-                goto fail;
+                return make_error(CWIST_ERR_INT16);
             }
             buf[blen] = '\0';
             /* consume trailing \r\n */
             char crlf[2];
             if (redis_recv_bytes(r, crlf, 2) != 0) {
                 cwist_free(buf);
-                goto fail;
+                return make_error(CWIST_ERR_INT16);
             }
-            node->str = buf;
-            node->len = (size_t)blen;
-            node->integer = blen;
+            if (out_value) *out_value = buf;
+            else cwist_free(buf);
             return (cwist_error_t){.errtype = CWIST_ERR_INT16, .error.err_i16 = 0};
         }
 
-        case '*': { /* array */
-            if (depth >= CWIST_REDIS_MAX_REPLY_DEPTH) goto fail;
-            char *end = NULL;
-            long long count = strtoll(line + 1, &end, 10);
-            if (end == line + 1 || *end != '\0' || count < 0 ||
-                count > CWIST_REDIS_MAX_REPLY_ELEMENTS)
-                goto fail;
-            node->elements = (size_t)count;
-            if (count > 0) {
-                node->element = cwist_alloc_array((size_t)count, sizeof(*node->element));
-                if (!node->element) goto fail;
-                for (long long i = 0; i < count; i++) {
-                    node->element[i] = NULL;
-                    cwist_error_t e = redis_read_resp(r, depth + 1, &node->element[i]);
-                    if (e.error.err_i16 != 0) goto fail;
-                }
+        case '*': { /* array - skip for simple client */
+            long long count = atoll(line + 1);
+            for (long long i = 0; i < count; i++) {
+                char *tmp = NULL;
+                cwist_error_t e = read_reply(r, &tmp, NULL);
+                cwist_free(tmp);
+                if (e.error.err_i16 != 0) return e;
             }
+            if (out_value) *out_value = NULL;
             return (cwist_error_t){.errtype = CWIST_ERR_INT16, .error.err_i16 = 0};
         }
 
-        default: goto fail;
+        default:
+            return make_error(CWIST_ERR_INT16);
     }
-
-fail:
-    cwist_redis_reply_free(*out);
-    *out = NULL;
-    return make_error(CWIST_ERR_INT16);
-}
-
-/** Compatibility wrapper: flatten a reply tree into the legacy
- * out_value/out_len contract (arrays and errors yield NULL, like before). */
-static cwist_error_t read_reply(cwist_redis_t *r, char **out_value, size_t *out_len,
-                                char *out_type) {
-    cwist_redis_reply_t *tree = NULL;
-    cwist_error_t err = redis_read_resp(r, 0, &tree);
-    if (out_type) *out_type = tree ? (char)tree->type : '\0';
-    if (err.error.err_i16 != 0 || !tree) {
-        cwist_redis_reply_free(tree);
-        return err;
-    }
-    char *value = NULL;
-    size_t len = 0;
-    flatten_reply(tree, &value, &len);
-    if (out_value) {
-        *out_value = value;
-        if (out_len) *out_len = len;
-    } else {
-        cwist_free(value);
-        if (out_len) *out_len = len;
-    }
-    cwist_redis_reply_free(tree);
-    return (cwist_error_t){.errtype = CWIST_ERR_INT16, .error.err_i16 = 0};
-}
-
-/** Recursively free a reply tree, including all child elements and string
- * payloads. Safe to call with NULL. */
-void cwist_redis_reply_free(cwist_redis_reply_t *reply) {
-    if (!reply) return;
-    if (reply->element) {
-        for (size_t i = 0; i < reply->elements; i++) {
-            cwist_redis_reply_free(reply->element[i]);
-        }
-        cwist_free(reply->element);
-    }
-    cwist_free(reply->str);
-    cwist_free(reply);
-}
-
-/** Send a pre-built RESP frame and read the raw reply tree, holding the
- * connection mutex for the whole request/reply pair so concurrent callers
- * cannot consume each other's replies.
- * @return Error value; on success *@p out_tree holds the reply tree (which the
- *         caller must free with cwist_redis_reply_free()). */
-static cwist_error_t redis_command_frame_tree(cwist_redis_t *r, const char *frame, size_t frame_len,
-                                              cwist_redis_reply_t **out_tree) {
-    if (!r || !frame) return make_error(CWIST_ERR_INT16);
-    if (out_tree) *out_tree = NULL;
-    /* A request/reply pair must be serialized as one critical section.  Keeping
-     * send and receive separate allows two callers to consume each other's
-     * replies on the same connection. */
-    pthread_mutex_lock(&r->mtx);
-    cwist_error_t err = redis_send_all(r->fd, frame, frame_len) == 0
-                            ? redis_read_resp(r, 0, out_tree)
-                            : make_error(CWIST_ERR_INT16);
-    pthread_mutex_unlock(&r->mtx);
-    return err;
-}
-
-/** Send a pre-built RESP frame and flatten the reply into the legacy
- * out_value/out_len contract (arrays and errors yield NULL).
- * @return Error value; on success *@p out_value (if requested) is a
- *         heap-allocated value the caller must free. */
-static cwist_error_t redis_command_frame(cwist_redis_t *r, const char *frame, size_t frame_len,
-                                         char **out_value, size_t *out_len) {
-    cwist_redis_reply_t *tree = NULL;
-    cwist_error_t err = redis_command_frame_tree(r, frame, frame_len, &tree);
-    if (err.error.err_i16 != 0 || !tree) {
-        cwist_redis_reply_free(tree);
-        if (out_value) *out_value = NULL;
-        if (out_len) *out_len = 0;
-        return err;
-    }
-    char *value = NULL;
-    size_t len = 0;
-    flatten_reply(tree, &value, &len);
-    if (out_value) {
-        *out_value = value;
-        if (out_len) *out_len = len;
-    } else {
-        cwist_free(value);
-        if (out_len) *out_len = len;
-    }
-    cwist_redis_reply_free(tree);
-    return (cwist_error_t){.errtype = CWIST_ERR_INT16, .error.err_i16 = 0};
-}
-
-cwist_error_t cwist_redis_command_argv_reply(cwist_redis_t *r, size_t argc, const void *const *argv,
-                                             const size_t *argv_lens, cwist_redis_reply_t **reply) {
-    if (!r || !argc || !argv || !argv_lens || !reply) return make_error(CWIST_ERR_INT16);
-    *reply = NULL;
-    cwist_sstring *frame = cwist_sstring_create();
-    if (!frame) return make_error(CWIST_ERR_INT16);
-    char count[32];
-    snprintf(count, sizeof(count), "*%zu\r\n", argc);
-    if (cwist_sstring_append_len(frame, count, strlen(count)).error.err_i8) goto fail;
-    for (size_t i = 0; i < argc; ++i) {
-        if (!argv[i] && argv_lens[i]) goto fail;
-        char len[32];
-        snprintf(len, sizeof(len), "$%zu\r\n", argv_lens[i]);
-        if (cwist_sstring_append_len(frame, len, strlen(len)).error.err_i8 ||
-            (argv_lens[i] && cwist_sstring_append_len(frame, argv[i], argv_lens[i]).error.err_i8) ||
-            cwist_sstring_append_len(frame, "\r\n", 2).error.err_i8)
-            goto fail;
-    }
-    cwist_error_t err = redis_command_frame_tree(r, frame->data, frame->size, reply);
-    cwist_sstring_destroy(frame);
-    /* Unlike the legacy string API, surface Redis '-' error replies as
-     * failure so callers can tell a server error from an empty array. */
-    if (cwist_error_is_ok(&err) && *reply && (*reply)->type == '-') {
-        cwist_redis_reply_free(*reply);
-        *reply = NULL;
-        return make_error(CWIST_ERR_INT16);
-    }
-    return err;
-fail:
-    cwist_sstring_destroy(frame);
-    return make_error(CWIST_ERR_INT16);
 }
 
 /* --- Connection lifecycle ----------------------------------------------- */
 
-/** Open a TCP connection to a Redis server and allocate the client handle.
- * @param host Server host name or IPv4 address.
- * @param port Server port.
- * @return New connection handle on success, NULL on connection or allocation
- *         failure. */
 cwist_redis_t *cwist_redis_connect(const char *host, int port) {
     if (!host || port <= 0) return NULL;
     int fd = redis_open_socket(host, port);
@@ -432,18 +225,9 @@ cwist_redis_t *cwist_redis_connect(const char *host, int port) {
     return r;
 }
 
-/** Close a connection and free the handle. Shuts the socket down first to wake
- * a subscriber blocked in recv; this is the documented way to stop
- * cwist_redis_subscribe(). Safe to call with NULL. */
 void cwist_redis_close(cwist_redis_t *r) {
     if (!r) return;
-    /* shutdown wakes a subscriber blocked in recv before the descriptor is
-     * released.  This is also the documented way to stop subscribe(). */
-    if (r->fd >= 0) {
-        shutdown(r->fd, SHUT_RDWR);
-        close(r->fd);
-        r->fd = -1;
-    }
+    if (r->fd >= 0) close(r->fd);
     cwist_free(r->host);
     pthread_mutex_destroy(&r->mtx);
     cwist_free(r);
@@ -451,137 +235,36 @@ void cwist_redis_close(cwist_redis_t *r) {
 
 /* --- Command helpers ---------------------------------------------------- */
 
-/** Read one reply from the connection under the mutex and flatten it into the
- * legacy out_value contract.
- * @return Error value; on success *@p out_value (if non-NULL input) is a
- *         heap-allocated value the caller must free. */
 static cwist_error_t recv_reply(cwist_redis_t *r, char **out_value) {
     if (!r) return make_error(CWIST_ERR_INT16);
     pthread_mutex_lock(&r->mtx);
-    cwist_error_t err = read_reply(r, out_value, NULL, NULL);
+    cwist_error_t err = read_reply(r, out_value, NULL);
     pthread_mutex_unlock(&r->mtx);
     return err;
 }
 
-/** Send one raw command under the connection mutex without waiting for a
- * reply (used for SUBSCRIBE-style flows where the reply is read separately).
- * @return Error value indicating success or send failure. */
 static cwist_error_t send_command(cwist_redis_t *r, const char *cmd) {
     pthread_mutex_lock(&r->mtx);
     cwist_error_t err = redis_send_all(r->fd, cmd, strlen(cmd)) == 0
-                            ? (cwist_error_t){.errtype = CWIST_ERR_INT16, .error.err_i16 = 0}
-                            : make_error(CWIST_ERR_INT16);
+        ? (cwist_error_t){.errtype = CWIST_ERR_INT16, .error.err_i16 = 0}
+        : make_error(CWIST_ERR_INT16);
     pthread_mutex_unlock(&r->mtx);
     return err;
 }
 
-/** Send a raw RESP command string and return the flattened first-payload
- * reply.
- * @param r Connection handle.
- * @param cmd Full RESP-encoded command.
- * @param out Optional out: heap-allocated reply value (caller frees); freed
- *        internally when NULL.
- * @return Error value indicating success or failure. */
 cwist_error_t cwist_redis_command(cwist_redis_t *r, const char *cmd, char **out) {
     if (!r || !cmd) return make_error(CWIST_ERR_INT16);
+    cwist_error_t err = send_command(r, cmd);
+    if (err.error.err_i16 != 0) return err;
+    pthread_mutex_lock(&r->mtx);
     char *value = NULL;
-    cwist_error_t err = redis_command_frame(r, cmd, strlen(cmd), &value, NULL);
-    if (out)
-        *out = value;
-    else
-        cwist_free(value);
+    err = read_reply(r, &value, NULL);
+    pthread_mutex_unlock(&r->mtx);
+    if (out) *out = value;
+    else cwist_free(value);
     return err;
 }
 
-/**
- * @brief Append to a RESP frame being built. A failed allocation is
- *        reported on the JSON error channel, where err_i8 stays 0, so the
- *        result is checked with cwist_error_is_ok() and then released;
- *        otherwise a truncated command would be sent to the server.
- */
-static bool redis_frame_append(cwist_sstring *frame, const void *data, size_t len) {
-    cwist_error_t err = cwist_sstring_append_len(frame, (const char *)data, len);
-    bool ok = cwist_error_is_ok(&err);
-    cwist_error_dispose(&err);
-    return ok;
-}
-
-cwist_error_t cwist_redis_command_argv(cwist_redis_t *r, size_t argc, const void *const *argv,
-                                       const size_t *argv_lens, char **out, size_t *out_len) {
-    if (!r || !argc || !argv || !argv_lens) return make_error(CWIST_ERR_INT16);
-    if (out) *out = NULL;
-    if (out_len) *out_len = 0;
-    cwist_sstring *frame = cwist_sstring_create();
-    if (!frame) return make_error(CWIST_ERR_INT16);
-    char count[32];
-    snprintf(count, sizeof(count), "*%zu\r\n", argc);
-    if (!redis_frame_append(frame, count, strlen(count))) goto fail;
-    for (size_t i = 0; i < argc; ++i) {
-        if (!argv[i] && argv_lens[i]) goto fail;
-        char len[32];
-        snprintf(len, sizeof(len), "$%zu\r\n", argv_lens[i]);
-        if (!redis_frame_append(frame, len, strlen(len)) ||
-            (argv_lens[i] && !redis_frame_append(frame, argv[i], argv_lens[i])) ||
-            !redis_frame_append(frame, "\r\n", 2))
-            goto fail;
-    }
-    char *value = NULL;
-    cwist_error_t err = redis_command_frame(r, frame->data, frame->size, &value, out_len);
-    cwist_sstring_destroy(frame);
-    if (out)
-        *out = value;
-    else
-        cwist_free(value);
-    return err;
-fail:
-    cwist_sstring_destroy(frame);
-    return make_error(CWIST_ERR_INT16);
-}
-
-/** Authenticate against the server with ACL-style (username, password) or
- * legacy (password-only) AUTH.
- * @param r Connection handle.
- * @param username Optional ACL username; NULL selects password-only AUTH.
- * @param password Password (required).
- * @return Error value indicating success or failure. */
-cwist_error_t cwist_redis_auth(cwist_redis_t *r, const char *username, const char *password) {
-    if (!r || !password) return make_error(CWIST_ERR_INT16);
-    char *reply = NULL;
-    cwist_error_t err;
-    if (username) {
-        const void *args[3] = {"AUTH", username, password};
-        size_t lengths[3] = {4, strlen(username), strlen(password)};
-        err = cwist_redis_command_argv(r, 3, args, lengths, &reply, NULL);
-    } else {
-        const void *args[2] = {"AUTH", password};
-        size_t lengths[2] = {4, strlen(password)};
-        err = cwist_redis_command_argv(r, 2, args, lengths, &reply, NULL);
-    }
-    cwist_free(reply);
-    return err;
-}
-
-/** Select the logical database for subsequent commands (SELECT).
- * @param r Connection handle.
- * @param database Database index.
- * @return Error value indicating success or failure. */
-cwist_error_t cwist_redis_select(cwist_redis_t *r, unsigned int database) {
-    char db[16];
-    snprintf(db, sizeof(db), "%u", database);
-    const void *args[] = {"SELECT", db};
-    size_t lengths[] = {6, strlen(db)};
-    char *reply = NULL;
-    cwist_error_t err = cwist_redis_command_argv(r, 2, args, lengths, &reply, NULL);
-    cwist_free(reply);
-    return err;
-}
-
-/** Fetch the value of a key (GET).
- * @param r Connection handle.
- * @param key Key to read.
- * @param out_value Out: heap-allocated value on success, NULL when the key is
- *        missing (caller frees).
- * @return Error value indicating success or failure. */
 cwist_error_t cwist_redis_get(cwist_redis_t *r, const char *key, char **out_value) {
     if (!r || !key || !out_value) return make_error(CWIST_ERR_INT16);
     cwist_sstring *cmd = cwist_sstring_create();
@@ -594,11 +277,6 @@ cwist_error_t cwist_redis_get(cwist_redis_t *r, const char *key, char **out_valu
     return err;
 }
 
-/** Set the value of a key (SET).
- * @param r Connection handle.
- * @param key Key to write.
- * @param value Value to store.
- * @return Error value indicating success or failure. */
 cwist_error_t cwist_redis_set(cwist_redis_t *r, const char *key, const char *value) {
     if (!r || !key || !value) return make_error(CWIST_ERR_INT16);
     cwist_sstring *cmd = cwist_sstring_create();
@@ -614,12 +292,6 @@ cwist_error_t cwist_redis_set(cwist_redis_t *r, const char *key, const char *val
     return err;
 }
 
-/** Set the value of a key with a time-to-live (SETEX).
- * @param r Connection handle.
- * @param key Key to write.
- * @param value Value to store.
- * @param seconds TTL in seconds; must be positive.
- * @return Error value indicating success or failure. */
 cwist_error_t cwist_redis_setex(cwist_redis_t *r, const char *key, const char *value, int seconds) {
     if (!r || !key || !value || seconds <= 0) return make_error(CWIST_ERR_INT16);
     cwist_sstring *cmd = cwist_sstring_create();
@@ -638,10 +310,6 @@ cwist_error_t cwist_redis_setex(cwist_redis_t *r, const char *key, const char *v
     return err;
 }
 
-/** Delete a key (DEL).
- * @param r Connection handle.
- * @param key Key to delete.
- * @return Error value indicating success or failure. */
 cwist_error_t cwist_redis_del(cwist_redis_t *r, const char *key) {
     if (!r || !key) return make_error(CWIST_ERR_INT16);
     cwist_sstring *cmd = cwist_sstring_create();
@@ -656,11 +324,6 @@ cwist_error_t cwist_redis_del(cwist_redis_t *r, const char *key) {
     return err;
 }
 
-/** Set a key's time-to-live in seconds (EXPIRE).
- * @param r Connection handle.
- * @param key Key to expire.
- * @param seconds TTL in seconds; must be positive.
- * @return Error value indicating success or failure. */
 cwist_error_t cwist_redis_expire(cwist_redis_t *r, const char *key, int seconds) {
     if (!r || !key || seconds <= 0) return make_error(CWIST_ERR_INT16);
     cwist_sstring *cmd = cwist_sstring_create();
@@ -678,11 +341,6 @@ cwist_error_t cwist_redis_expire(cwist_redis_t *r, const char *key, int seconds)
     return err;
 }
 
-/** Publish a message to a channel (PUBLISH).
- * @param r Connection handle.
- * @param channel Channel to publish to.
- * @param message Message payload.
- * @return Error value indicating success or failure. */
 cwist_error_t cwist_redis_publish(cwist_redis_t *r, const char *channel, const char *message) {
     if (!r || !channel || !message) return make_error(CWIST_ERR_INT16);
     cwist_sstring *cmd = cwist_sstring_create();
@@ -700,17 +358,11 @@ cwist_error_t cwist_redis_publish(cwist_redis_t *r, const char *channel, const c
 
 /* --- Pub/Sub ------------------------------------------------------------ */
 
-/** Subscribe to channels and run a blocking message loop, invoking the
- * callback for each incoming message.
- * @param r Connection handle.
- * @param channels NULL-terminated list of channel names.
- * @param cb Callback invoked as cb(channel, message, ctx) per message.
- * @param ctx Opaque pointer passed through to the callback.
- * @return Zero error value; the loop ends when the connection is shut down
- *         (see cwist_redis_close()). */
-cwist_error_t cwist_redis_subscribe(cwist_redis_t *r, const char **channels, cwist_redis_msg_cb cb,
+cwist_error_t cwist_redis_subscribe(cwist_redis_t *r,
+                                    const char **channels,
+                                    cwist_redis_msg_cb cb,
                                     void *ctx) {
-    if (!r || !channels || !channels[0] || !cb) return make_error(CWIST_ERR_INT16);
+    if (!r || !channels || !cb) return make_error(CWIST_ERR_INT16);
 
     cwist_sstring *cmd = cwist_sstring_create();
     if (!cmd) return make_error(CWIST_ERR_INT16);
@@ -732,7 +384,7 @@ cwist_error_t cwist_redis_subscribe(cwist_redis_t *r, const char **channels, cwi
         char *out = NULL;
         err = recv_reply(r, &out);
         cwist_free(out);
-        if (err.error.err_i16 != 0) return err;
+        (void)err;
     }
 
     /* Blocking read loop for messages. */
@@ -740,22 +392,20 @@ cwist_error_t cwist_redis_subscribe(cwist_redis_t *r, const char **channels, cwi
         char line[CWIST_REDIS_LINE_MAX];
         if (redis_recv_line(r, line, sizeof(line)) != 0) break;
         if (line[0] != '*') continue;
-        char *arr_end = NULL;
-        long long arr_count = strtoll(line + 1, &arr_end, 10);
-        if (arr_end == line + 1 || *arr_end != '\0') continue;
+        long long arr_count = atoll(line + 1);
         if (arr_count < 3) continue;
 
         char *type = NULL;
-        if (read_reply(r, &type, NULL, NULL).error.err_i16 != 0) break;
+        if (read_reply(r, &type, NULL).error.err_i16 != 0) break;
 
         char *channel = NULL;
-        if (read_reply(r, &channel, NULL, NULL).error.err_i16 != 0) {
+        if (read_reply(r, &channel, NULL).error.err_i16 != 0) {
             cwist_free(type);
             break;
         }
 
         char *message = NULL;
-        if (read_reply(r, &message, NULL, NULL).error.err_i16 != 0) {
+        if (read_reply(r, &message, NULL).error.err_i16 != 0) {
             cwist_free(type);
             cwist_free(channel);
             break;
@@ -773,12 +423,6 @@ cwist_error_t cwist_redis_subscribe(cwist_redis_t *r, const char **channels, cwi
 
 /* --- Connection pool ---------------------------------------------------- */
 
-/** Create a connection pool with max_conns pre-opened connections.
- * @param host Server host name or IPv4 address.
- * @param port Server port.
- * @param max_conns Number of connections to open; must be non-zero.
- * @return New pool handle on success, NULL on any connection or allocation
- *         failure (partial state is cleaned up). */
 cwist_redis_pool_t *cwist_redis_pool_create(const char *host, int port, size_t max_conns) {
     if (!host || port <= 0 || max_conns == 0) return NULL;
 
@@ -814,7 +458,6 @@ fail:
     return NULL;
 }
 
-/** Destroy a pool, closing every connection it owns. Safe to call with NULL. */
 void cwist_redis_pool_destroy(cwist_redis_pool_t *pool) {
     if (!pool) return;
     pthread_mutex_lock(&pool->mtx);
@@ -830,9 +473,6 @@ void cwist_redis_pool_destroy(cwist_redis_pool_t *pool) {
     cwist_free(pool);
 }
 
-/** Acquire an idle pool connection, blocking on the condition variable until
- * one becomes available.
- * @return A connection marked in-use; NULL only when @p pool is NULL. */
 static cwist_redis_t *redis_pool_acquire(cwist_redis_pool_t *pool) {
     if (!pool) return NULL;
     pthread_mutex_lock(&pool->mtx);
@@ -848,7 +488,6 @@ static cwist_redis_t *redis_pool_acquire(cwist_redis_pool_t *pool) {
     }
 }
 
-/** Return a connection to the pool and signal a waiting acquirer. */
 static void redis_pool_release(cwist_redis_pool_t *pool, cwist_redis_t *r) {
     if (!pool || !r) return;
     pthread_mutex_lock(&pool->mtx);
@@ -862,8 +501,6 @@ static void redis_pool_release(cwist_redis_pool_t *pool, cwist_redis_t *r) {
     pthread_mutex_unlock(&pool->mtx);
 }
 
-/** Pool wrapper of cwist_redis_get(): acquires a connection, runs GET, and
- * releases the connection. See cwist_redis_get() for parameter details. */
 cwist_error_t cwist_redis_pool_get(cwist_redis_pool_t *pool, const char *key, char **out_value) {
     cwist_redis_t *r = redis_pool_acquire(pool);
     if (!r) return make_error(CWIST_ERR_INT16);
@@ -872,8 +509,6 @@ cwist_error_t cwist_redis_pool_get(cwist_redis_pool_t *pool, const char *key, ch
     return err;
 }
 
-/** Pool wrapper of cwist_redis_set(): acquires a connection, runs SET, and
- * releases the connection. See cwist_redis_set() for parameter details. */
 cwist_error_t cwist_redis_pool_set(cwist_redis_pool_t *pool, const char *key, const char *value) {
     cwist_redis_t *r = redis_pool_acquire(pool);
     if (!r) return make_error(CWIST_ERR_INT16);
@@ -882,10 +517,7 @@ cwist_error_t cwist_redis_pool_set(cwist_redis_pool_t *pool, const char *key, co
     return err;
 }
 
-/** Pool wrapper of cwist_redis_setex(): acquires a connection, runs SETEX, and
- * releases the connection. See cwist_redis_setex() for parameter details. */
-cwist_error_t cwist_redis_pool_setex(cwist_redis_pool_t *pool, const char *key, const char *value,
-                                     int seconds) {
+cwist_error_t cwist_redis_pool_setex(cwist_redis_pool_t *pool, const char *key, const char *value, int seconds) {
     cwist_redis_t *r = redis_pool_acquire(pool);
     if (!r) return make_error(CWIST_ERR_INT16);
     cwist_error_t err = cwist_redis_setex(r, key, value, seconds);
@@ -893,8 +525,6 @@ cwist_error_t cwist_redis_pool_setex(cwist_redis_pool_t *pool, const char *key, 
     return err;
 }
 
-/** Pool wrapper of cwist_redis_del(): acquires a connection, runs DEL, and
- * releases the connection. See cwist_redis_del() for parameter details. */
 cwist_error_t cwist_redis_pool_del(cwist_redis_pool_t *pool, const char *key) {
     cwist_redis_t *r = redis_pool_acquire(pool);
     if (!r) return make_error(CWIST_ERR_INT16);
@@ -903,27 +533,10 @@ cwist_error_t cwist_redis_pool_del(cwist_redis_pool_t *pool, const char *key) {
     return err;
 }
 
-/** Pool wrapper of cwist_redis_publish(): acquires a connection, runs
- * PUBLISH, and releases the connection. See cwist_redis_publish() for
- * parameter details. */
-cwist_error_t cwist_redis_pool_publish(cwist_redis_pool_t *pool, const char *channel,
-                                       const char *message) {
+cwist_error_t cwist_redis_pool_publish(cwist_redis_pool_t *pool, const char *channel, const char *message) {
     cwist_redis_t *r = redis_pool_acquire(pool);
     if (!r) return make_error(CWIST_ERR_INT16);
     cwist_error_t err = cwist_redis_publish(r, channel, message);
-    redis_pool_release(pool, r);
-    return err;
-}
-
-/** Pool wrapper of cwist_redis_command_argv(): acquires a connection, runs the
- * argv command, and releases the connection. See cwist_redis_command_argv()
- * for parameter details. */
-cwist_error_t cwist_redis_pool_command_argv(cwist_redis_pool_t *pool, size_t argc,
-                                            const void *const *argv, const size_t *argv_lens,
-                                            char **out, size_t *out_len) {
-    cwist_redis_t *r = redis_pool_acquire(pool);
-    if (!r) return make_error(CWIST_ERR_INT16);
-    cwist_error_t err = cwist_redis_command_argv(r, argc, argv, argv_lens, out, out_len);
     redis_pool_release(pool, r);
     return err;
 }
