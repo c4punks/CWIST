@@ -19,6 +19,7 @@
 #include <ctype.h>
 #include <strings.h>
 #include <unistd.h>
+#include <sys/wait.h>
 #include <signal.h>
 #include <arpa/inet.h>
 #include <dirent.h>
@@ -4265,14 +4266,33 @@ int cwist_app_listen(cwist_app *app, int port) {
     cwist_shutdown_install_handlers();
     if (!app) return -1;
     app->port = port;
-    
-    // Initialize Memory Manager
-    cwist_mem_init(app);
-    if (app->mem_manager) {
-        app->mem_manager->watcher_running = true;
-        pthread_create(&app->mem_manager->watcher_thread, NULL, cwist_mem_watcher, app);
+
+    // Validate protocol combinations for the same port
+    if (app->use_ssl) {
+        if (app->use_http2) {
+            fprintf(stderr, "Assertion failed: Cannot use cleartext HTTP/2 and HTTPS on the same port.\n");
+            abort();
+        }
+    } else {
+        if (app->use_https2) {
+            fprintf(stderr, "Assertion failed: Cannot use HTTPS/2 without configuring SSL via cwist_app_use_https.\n");
+            abort();
+        }
     }
-    
+
+    if (app->use_http3 && app->use_https3) {
+        fprintf(stderr, "Assertion failed: Cannot use both ephemeral HTTP/3 and TLS HTTP/3 simultaneously on the same port.\n");
+        abort();
+    }
+
+    // Initialize Memory Manager (structure only; thread is started per-process after fork)
+    cwist_mem_init(app);
+
+    /* Create the shared TCP listen socket before forking workers.
+     * With SO_REUSEPORT each worker process gets its own accept queue and the
+     * kernel load-balances incoming connections.  Creating it here avoids the
+     * previous anti-pattern where workers forked before binding and inherited
+     * threads that do not exist in the child. */
     struct sockaddr_in addr;
     int server_fd = cwist_make_socket_ipv4(&addr, "0.0.0.0", port, 32768);
     if (server_fd < 0) {
@@ -4284,7 +4304,6 @@ int cwist_app_listen(cwist_app *app, int port) {
     /* Bind the HTTP/3 UDP socket before forking as well.  The thread that
      * services it is started per-process after the fork. */
     int udp_fd = -1;
-#ifndef __wasi__
     if (app->h3_ctx && (app->use_http3 || app->use_https3)) {
         udp_fd = socket(AF_INET, SOCK_DGRAM, 0);
         if (udp_fd >= 0) {
@@ -4303,25 +4322,8 @@ int cwist_app_listen(cwist_app *app, int port) {
             int sndbuf = 2 * 1024 * 1024;
             setsockopt(udp_fd, SOL_SOCKET, SO_RCVBUF, &rcvbuf, sizeof(rcvbuf));
             setsockopt(udp_fd, SOL_SOCKET, SO_SNDBUF, &sndbuf, sizeof(sndbuf));
-            
-            if (bind(udp_fd, (struct sockaddr *)&udp_addr, sizeof(udp_addr)) == 0) {
-                struct h3_thread_payload *h3_p = malloc(sizeof(*h3_p));
-                if (h3_p) {
-                    h3_p->udp_fd = udp_fd;
-                    h3_p->app = app;
-                    pthread_t h3_tid;
-                    if (pthread_create(&h3_tid, NULL, h3_server_thread_func, h3_p) == 0) {
-                        pthread_detach(h3_tid);
-                        g_cwist_udp_fd = udp_fd;
-                        printf("HTTP/3 (QUIC) enabled on UDP port %d\n", port);
-                    } else {
-                        free(h3_p);
-                        close(udp_fd);
-                    }
-                } else {
-                    close(udp_fd);
-                }
-            } else {
+
+            if (bind(udp_fd, (struct sockaddr *)&udp_addr, sizeof(udp_addr)) != 0) {
                 perror("Failed to bind UDP port for HTTP/3");
                 close(udp_fd);
                 udp_fd = -1;
@@ -4354,15 +4356,54 @@ int cwist_app_listen(cwist_app *app, int port) {
     
     printf("CWIST App running on port %d (SSL: %s)\n", port, app->use_ssl ? "On" : "Off");
 
+    // Fork worker processes before any threads are created.
     int workers = 1;
     const char *workers_env = getenv("CWIST_WORKERS");
     if (workers_env) workers = atoi(workers_env);
     if (workers < 1) workers = 1;
+    pid_t parent_pid = getpid();
+    bool is_worker_child = false;
     for (int i = 1; i < workers; i++) {
-        if (fork() == 0) break;
+        pid_t pid = fork();
+        if (pid == 0) {
+            is_worker_child = true;
+            break;
+        } else if (pid < 0) {
+            perror("fork worker failed");
+            break;
+        }
     }
-    
-    printf("CWIST App running on port %d (SSL: %s) [Event-driven]\n", port, app->use_ssl ? "On" : "Off");
+
+    // Per-process threads start here.  Each worker gets its own watcher and
+    // HTTP/3 thread, so fork-after-thread deadlock is avoided.
+    if (app->mem_manager) {
+        app->mem_manager->watcher_running = true;
+        pthread_create(&app->mem_manager->watcher_thread, NULL, cwist_mem_watcher, app);
+    }
+
+    if (udp_fd >= 0) {
+        struct h3_thread_payload *h3_p = malloc(sizeof(*h3_p));
+        if (h3_p) {
+            h3_p->udp_fd = udp_fd;
+            h3_p->app = app;
+            pthread_t h3_tid;
+            if (pthread_create(&h3_tid, NULL, h3_server_thread_func, h3_p) == 0) {
+                pthread_detach(h3_tid);
+                g_cwist_udp_fd = udp_fd;
+                printf("HTTP/3 (QUIC) enabled on UDP port %d\n", port);
+            } else {
+                free(h3_p);
+                close(udp_fd);
+                udp_fd = -1;
+            }
+        } else {
+            close(udp_fd);
+            udp_fd = -1;
+        }
+    }
+
+    printf("CWIST App running on port %d (SSL: %s) [Event-driven, workers=%d, pid=%d]\n",
+           port, app->use_ssl ? "On" : "Off", workers, (int)getpid());
     
     // Check config for non-blocking scale mode (default enabled)
     const char *c1m = getenv("CWIST_C1M_MODE");
@@ -4403,7 +4444,16 @@ int cwist_app_listen(cwist_app *app, int port) {
 
     printf("[CWIST] Draining connections for %d seconds...\n", g_cwist_drain_timeout_sec);
     sleep(g_cwist_drain_timeout_sec);
+
+    /* Parent process reaps worker children so they do not become zombies. */
+    if (!is_worker_child && workers > 1) {
+        for (int i = 1; i < workers; i++) {
+            int status;
+            wait(&status);
+        }
+    }
+
     printf("[CWIST] Shutdown complete.\n");
-    
+
     return 0;
 }
