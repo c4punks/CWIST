@@ -535,6 +535,7 @@ typedef struct cwist_h3_hset {
 
 static void *cwist_h3_hsi_create(void *hsi_ctx, lsquic_stream_t *stream,
                                  int is_push_promise) {
+    (void)hsi_ctx;
     (void)is_push_promise;
     cwist_h3_hset_t *hset = calloc(1, sizeof(*hset));
     if (!hset) return NULL;
@@ -3146,7 +3147,7 @@ cwist_error_t cwist_http3_server_loop(int udp_fd,
                 struct msghdr msg = {0};
                 struct iovec iov = { pkt_buf, 65535 };
                 msg.msg_name = &peer_addr;
-                msg.msg_namelen = sizeof(peer_addr);
+                msg.msg_namelen = peer_addr_len;
                 msg.msg_iov = &iov;
                 msg.msg_iovlen = 1;
 
@@ -3198,12 +3199,12 @@ cwist_error_t cwist_http3_server_loop(int udp_fd,
     return err;
 }
 
-#else
+/* ------------------------------------------------------------------ */
+/* Push, Priority, and 0-RTT APIs                                     */
+/* ------------------------------------------------------------------ */
 
-static cwist_error_t cwist_http3_quic_unavailable(void) {
-    cwist_error_t err = make_error(CWIST_ERR_INT16);
-    err.error.err_i16 = -1;
-    return err;
+void cwist_http3_set_push_enabled(cwist_http3_context *ctx, int enabled) {
+    if (ctx) ctx->push_enabled = enabled;
 }
 
 cwist_error_t cwist_http3_init_context(cwist_http3_context **ctx,
@@ -3266,24 +3267,70 @@ void cwist_http3_set_datagram_callback(cwist_http3_context *ctx,
     }
 }
 
-cwist_error_t cwist_http3_serve_connection(cwist_http3_connection *conn,
-                                           void *user_ctx,
-                                           cwist_http3_request_handler_func handler) {
-    (void)conn;
-    (void)user_ctx;
-    (void)handler;
-    return cwist_http3_quic_unavailable();
+int cwist_http3_send_datagram(void *conn, const void *data, size_t len) {
+    lsquic_conn_t *c = (lsquic_conn_t *)conn;
+    if (!c || !data || len == 0) return -1;
+    if (g_h3_dgram.data) free(g_h3_dgram.data);
+    g_h3_dgram.conn = c;
+    g_h3_dgram.data = malloc(len);
+    if (!g_h3_dgram.data) return -1;
+    memcpy(g_h3_dgram.data, data, len);
+    g_h3_dgram.len = len;
+    lsquic_conn_want_datagram_write(c, 1);
+    return 0;
 }
 
-cwist_error_t cwist_http3_server_loop(int udp_fd,
-                                      cwist_http3_context *ctx,
-                                      cwist_http3_request_handler_func handler,
-                                      void *user_ctx) {
-    (void)udp_fd;
-    (void)ctx;
-    (void)handler;
-    (void)user_ctx;
-    return cwist_http3_quic_unavailable();
+#ifdef CWIST_WEBTRANSPORT
+
+ssize_t cwist_webtransport_send_datagram(void *session,
+                                         const void *data, size_t len) {
+    if (!session || !data || len == 0) return -1;
+    lsquic_wt_session_t *sess = cwist_wt_handle_session(session);
+    if (!sess) return -1;
+    return lsquic_wt_send_datagram(sess, data, len);
 }
 
-#endif /* CWIST_HAVE_OPENSSL_QUIC */
+size_t cwist_webtransport_max_datagram_size(void *session) {
+    if (!session) return 0;
+    lsquic_wt_session_t *sess = cwist_wt_handle_session(session);
+    if (!sess) return 0;
+    return lsquic_wt_max_datagram_size(sess);
+}
+
+int cwist_webtransport_close_session(void *session,
+                                     uint64_t code,
+                                     const char *reason) {
+    if (!session) return -1;
+    lsquic_wt_session_t *sess = cwist_wt_handle_session(session);
+    if (!sess) return -1;
+    return lsquic_wt_close(sess, code, reason,
+                           reason ? strlen(reason) : 0);
+}
+
+#else /* CWIST_WEBTRANSPORT */
+
+ssize_t cwist_webtransport_send_datagram(void *session,
+                                         const void *data, size_t len) {
+    (void)session;
+    (void)data;
+    (void)len;
+    return -1;
+}
+
+size_t cwist_webtransport_max_datagram_size(void *session) {
+    (void)session;
+    return 0;
+}
+
+int cwist_webtransport_close_session(void *session,
+                                     uint64_t code,
+                                     const char *reason) {
+    (void)session;
+    (void)code;
+    (void)reason;
+    return -1;
+}
+
+#endif /* CWIST_WEBTRANSPORT */
+
+

@@ -10,23 +10,12 @@
 #include <string.h>
 #include <ctype.h>
 
-/**
- * @brief Add a Set-Cookie header. cwist_http_header_add() reports a failed
- *        allocation on the JSON error channel (err_i16 stays 0), so the
- *        result is checked with cwist_error_is_ok() and then released.
- * @return 0 on success, -1 on failure.
- */
-static int add_set_cookie(cwist_http_response *res, const char *value) {
-    cwist_error_t err = cwist_http_header_add(&res->headers, "Set-Cookie", value);
-    bool ok = cwist_error_is_ok(&err);
-    cwist_error_dispose(&err);
-    return ok ? 0 : -1;
-}
-
 /* URL-safe cookie characters: unreserved + !#$%&'()*+-./:<>?@[]^_`{|}~ */
 static int needs_url_encode(char c) {
-    if ((c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z') || (c >= '0' && c <= '9') || c == '-' ||
-        c == '_' || c == '.' || c == '~') {
+    if ((c >= 'A' && c <= 'Z') ||
+        (c >= 'a' && c <= 'z') ||
+        (c >= '0' && c <= '9') ||
+        c == '-' || c == '_' || c == '.' || c == '~') {
         return 0;
     }
     return 1;
@@ -58,8 +47,7 @@ int cwist_cookie_decode(const char *in, char *out, size_t out_len) {
     size_t j = 0;
     for (size_t i = 0; i < len; i++) {
         if (j >= out_len - 1) return -1;
-        if (in[i] == '%' && i + 2 < len && isxdigit((unsigned char)in[i + 1]) &&
-            isxdigit((unsigned char)in[i + 2])) {
+        if (in[i] == '%' && i + 2 < len) {
             unsigned int hex;
             if (sscanf(in + i + 1, "%2x", &hex) != 1) {
                 out[j++] = in[i];
@@ -94,16 +82,12 @@ void cwist_cookie_parse(cwist_query_map *map, const char *header) {
             char *name = pair;
             char *value = eq + 1;
             /* trim trailing whitespace on name */
-            size_t nlen = strlen(name);
-            while (nlen > 0 && (name[nlen - 1] == ' ' || name[nlen - 1] == '\t')) {
-                name[--nlen] = '\0';
-            }
+            char *end = name + strlen(name) - 1;
+            while (end > name && (*end == ' ' || *end == '\t')) *end-- = '\0';
 
-            if (nlen > 0) {
-                char decoded[4096];
-                if (cwist_cookie_decode(value, decoded, sizeof(decoded)) >= 0) {
-                    cwist_query_map_set(map, name, decoded);
-                }
+            char decoded[4096];
+            if (cwist_cookie_decode(value, decoded, sizeof(decoded)) >= 0) {
+                cwist_query_map_set(map, name, decoded);
             }
         }
         pair = strtok_r(NULL, ";", &save);
@@ -116,7 +100,9 @@ const char *cwist_cookie_get(cwist_query_map *map, const char *name) {
     return cwist_query_map_get(map, name);
 }
 
-int cwist_cookie_set(cwist_http_response *res, const char *name, const char *value,
+int cwist_cookie_set(cwist_http_response *res,
+                     const char *name,
+                     const char *value,
                      const cwist_cookie_options *opts) {
     if (!res || !name) return -1;
 
@@ -159,9 +145,9 @@ int cwist_cookie_set(cwist_http_response *res, const char *name, const char *val
         }
     }
 
-    int rc = add_set_cookie(res, cookie->data);
+    cwist_error_t err = cwist_http_header_add(&res->headers, "Set-Cookie", cookie->data);
     cwist_sstring_destroy(cookie);
-    return rc;
+    return err.error.err_i16 == 0 ? 0 : -1;
 }
 
 int cwist_cookie_delete(cwist_http_response *res, const char *name) {
@@ -173,7 +159,7 @@ int cwist_cookie_delete(cwist_http_response *res, const char *name) {
     char buf[256];
     snprintf(buf, sizeof(buf), "%s=; Path=/; Max-Age=0", name);
     cwist_sstring_append(cookie, buf);
-    int rc = add_set_cookie(res, cookie->data);
+    cwist_error_t err = cwist_http_header_add(&res->headers, "Set-Cookie", cookie->data);
     cwist_sstring_destroy(cookie);
-    return rc;
+    return err.error.err_i16 == 0 ? 0 : -1;
 }

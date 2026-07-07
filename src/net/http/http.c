@@ -6,6 +6,7 @@
     !defined(__DragonFly__)
 #define _POSIX_C_SOURCE 200809L
 #include <cwist/net/http/http.h>
+#include <cwist/net/http/session.h>
 #include <cwist/core/sstring/sstring.h>
 #include <cwist/sys/err/cwist_err.h>
 #include <cwist/core/mem/alloc.h>

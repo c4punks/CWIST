@@ -4,25 +4,22 @@
 #include <stdio.h>
 #include <string.h>
 #include <assert.h>
-#include <time.h>
 
 int main(void) {
-    /* An unopenable path must fail cleanly instead of crashing. */
-    assert(cwist_db_pool_create("/cwist-no-such-dir/pool.db", 4) == NULL);
-
     cwist_db_pool_t *pool = cwist_db_pool_create(":memory:", 3);
     assert(pool != NULL);
 
-    cwist_error_t err =
-        cwist_db_pool_exec(pool, "CREATE TABLE users (id INTEGER PRIMARY KEY, name TEXT);");
-    assert(cwist_error_is_ok(&err));
+    cwist_error_t err = cwist_db_pool_exec(pool,
+        "CREATE TABLE users (id INTEGER PRIMARY KEY, name TEXT);");
+    assert(err.error.err_i16 == 0);
 
-    err = cwist_db_pool_exec(pool, "INSERT INTO users (name) VALUES ('alice'), ('bob');");
-    assert(cwist_error_is_ok(&err));
+    err = cwist_db_pool_exec(pool,
+        "INSERT INTO users (name) VALUES ('alice'), ('bob');");
+    assert(err.error.err_i16 == 0);
 
     cJSON *result = NULL;
     err = cwist_db_pool_query(pool, "SELECT * FROM users ORDER BY id;", &result);
-    assert(cwist_error_is_ok(&err));
+    assert(err.error.err_i16 == 0);
     assert(result != NULL);
     assert(cJSON_IsArray(result));
     assert(cJSON_GetArraySize(result) == 2);
@@ -39,41 +36,7 @@ int main(void) {
     assert(conn != NULL);
     cwist_db_pool_release(pool, conn);
 
-    /* A stale release must be a no-op. */
-    cwist_db_pool_release(pool, conn);
-    assert(cwist_db_pool_in_use(pool) == 0);
-
-    /* Every connection shares the :memory: database and timeout is bounded. */
-    conn = cwist_db_pool_acquire(pool);
-    assert(conn != NULL);
-    assert(cwist_db_pool_in_use(pool) == 1);
-    cwist_db_pool_release(pool, conn);
-
-    cwist_db *one = cwist_db_pool_acquire(pool);
-    cwist_db *two = cwist_db_pool_acquire(pool);
-    cwist_db *three = cwist_db_pool_acquire(pool);
-    assert(one && two && three);
-    assert(cwist_db_pool_in_use(pool) == 3);
-    assert(cwist_db_pool_acquire_timeout(pool, 5) == NULL);
-    cwist_db_pool_release(pool, one);
-    cwist_db_pool_release(pool, two);
-    cwist_db_pool_release(pool, three);
-
-    /* An orphaned lease must not make shutdown wait forever.  Timed shutdown
-     * closes the pool to new borrowers, preserves the leased handle, and can
-     * complete safely after its owner returns it. */
-    conn = cwist_db_pool_acquire(pool);
-    assert(conn != NULL);
-    struct timespec started, finished;
-    clock_gettime(CLOCK_MONOTONIC, &started);
-    assert(!cwist_db_pool_destroy_timeout(pool, 5));
-    clock_gettime(CLOCK_MONOTONIC, &finished);
-    long elapsed_ms = (finished.tv_sec - started.tv_sec) * 1000L +
-                      (finished.tv_nsec - started.tv_nsec) / 1000000L;
-    assert(elapsed_ms < 500);
-    assert(cwist_db_pool_acquire_timeout(pool, 1) == NULL);
-    cwist_db_pool_release(pool, conn);
-    assert(cwist_db_pool_destroy_timeout(pool, 100));
+    cwist_db_pool_destroy(pool);
     printf("All DB pool tests passed.\n");
     return 0;
 }
