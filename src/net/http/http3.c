@@ -392,20 +392,7 @@ static void *cwist_h3_hsi_create(void *hsi_ctx, lsquic_stream_t *stream,
 static struct lsxpack_header *cwist_h3_hsi_prepare(void *hset_p, struct lsxpack_header *xhdr,
                                                    size_t req_space) {
     cwist_h3_hset_t *hset = hset_p;
-    if (!hset) return NULL;
-
-    if (xhdr) {
-        if (req_space > LSXPACK_MAX_STRLEN || xhdr->name_offset < 0 ||
-            (size_t)xhdr->name_offset >= sizeof(hset->decode_buf) ||
-            req_space > sizeof(hset->decode_buf) - (size_t)xhdr->name_offset) {
-            fprintf(stderr, "[HTTP/3] Rejecting oversized QPACK header resize (space=%zu, offset=%d)\n",
-                    req_space, (int)xhdr->name_offset);
-            return NULL;
-        }
-        xhdr->val_len = (lsxpack_strlen_t)req_space;
-        return xhdr;
-    }
-
+    (void)xhdr;
     if (hset->count >= H3_MAX_HEADERS)
         return NULL;
     if (req_space > sizeof(hset->decode_buf) - hset->decode_off)
@@ -426,20 +413,15 @@ static struct lsxpack_header *cwist_h3_hsi_prepare(void *hset_p, struct lsxpack_
  */
 static int cwist_h3_hsi_process_header(void *hset_p, struct lsxpack_header *xhdr) {
     cwist_h3_hset_t *hset = hset_p;
-    /* A NULL header marks the end of a header block. */
     if (!hset || !xhdr)
         return 0;
-
-    /* The QPACK decoder exposes the exact storage used by this completed
-     * header. */
-    size_t total = lsxpack_header_get_dec_size(xhdr);
-    if (total > sizeof(hset->decode_buf) - hset->decode_off) {
-        fprintf(stderr, "[HTTP/3] Rejecting oversized QPACK header (size=%zu, used=%zu)\n",
-                total, hset->decode_off);
-        return -1;
-    }
+    size_t total = (xhdr->val_offset + xhdr->val_len + xhdr->dec_overhead)
+                   - (size_t)hset->decode_off;
+    if (total > sizeof(hset->decode_buf) - hset->decode_off)
+        total = sizeof(hset->decode_buf) - hset->decode_off;
     hset->decode_off += total;
-    hset->count++;
+    if (hset->count < H3_MAX_HEADERS)
+        hset->count++;
     return 0;
 }
 
