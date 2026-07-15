@@ -1,6 +1,8 @@
 #define _GNU_SOURCE
 #include <cwist/net/websocket/websocket.h>
 #include <cwist/net/http/http.h>
+#include <cwist/core/mem/alloc.h>
+#include <cwist/core/seq/seq.h>
 #include "ws_utils.h"
 
 #include <ctype.h>
@@ -439,7 +441,9 @@ void cwist_websocket_frame_destroy(cwist_ws_frame *frame) {
 /**
  * @brief Send a large payload as sequenced binary frames.
  */
-int cwist_websocket_send_sequenced(cwist_websocket *ws, const uint8_t *data, size_t len,
+int cwist_websocket_send_sequenced(cwist_websocket *ws,
+                                   const uint8_t *data,
+                                   size_t len,
                                    uint16_t chunk_payload_size) {
     if (!ws || ws->is_closed || !data || len == 0 || chunk_payload_size == 0) return -1;
 
@@ -448,8 +452,7 @@ int cwist_websocket_send_sequenced(cwist_websocket *ws, const uint8_t *data, siz
 
     int rc = 0;
     for (size_t i = 0; i < msg.count && rc == 0; i++) {
-        if (cwist_websocket_send(ws, CWIST_WS_FRAME_BINARY, msg.chunks[i], msg.chunk_lens[i]) !=
-            0) {
+        if (cwist_websocket_send(ws, CWIST_WS_FRAME_BINARY, msg.chunks[i], msg.chunk_lens[i]) != 0) {
             rc = -1;
         }
     }
