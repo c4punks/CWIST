@@ -3,9 +3,8 @@
  * @brief TCP-like sequenced message fragmentation and reassembly.
  *
  * Splits large payloads into small numbered chunks, transmits them, and
- * reassembles them even when they arrive out of order.  It also exposes the
- * exact missing sequence numbers so a transport can request retransmission
- * rather than treating a partially assembled body as complete.
+ * reassembles them even when they arrive out of order.  Duplicate chunks
+ * and malformed sequence pairs are discarded.
  *
  * Chunk wire format (8 bytes, big-endian):
  *   seq          uint16_t  1-based sequence number
@@ -30,11 +29,6 @@ extern "C" {
 
 /** Default payload size for each chunk when the caller does not care. */
 #define CWIST_SEQ_DEFAULT_CHUNK_PAYLOAD 1024
-
-/** Hard resource ceilings for network-facing reassembly, including callers
- * that use cwist_seq_assembler_create() without an explicit limit. */
-#define CWIST_SEQ_MAX_CHUNKS 8192
-#define CWIST_SEQ_MAX_REASSEMBLED_SIZE (64U * 1024U * 1024U)
 
 /**
  * @brief Parsed view of one sequenced chunk.
@@ -85,8 +79,11 @@ bool cwist_seq_chunk_parse(const uint8_t *data, size_t len, cwist_seq_chunk_t *o
  * @param payload_len Payload length in this chunk.
  * @param chunk_size Full chunk payload size.
  */
-void cwist_seq_chunk_build_header(uint8_t out[CWIST_SEQ_HEADER_SIZE], uint16_t seq, uint16_t total,
-                                  uint16_t payload_len, uint16_t chunk_size);
+void cwist_seq_chunk_build_header(uint8_t out[CWIST_SEQ_HEADER_SIZE],
+                                  uint16_t seq,
+                                  uint16_t total,
+                                  uint16_t payload_len,
+                                  uint16_t chunk_size);
 
 /**
  * @brief Split @p data into sequenced chunks.
@@ -98,7 +95,9 @@ void cwist_seq_chunk_build_header(uint8_t out[CWIST_SEQ_HEADER_SIZE], uint16_t s
  *            cwist_seq_message_free().
  * @return true on success, false on bad arguments or allocation failure.
  */
-bool cwist_seq_split(const uint8_t *data, size_t len, uint16_t chunk_payload_size,
+bool cwist_seq_split(const uint8_t *data,
+                     size_t len,
+                     uint16_t chunk_payload_size,
                      cwist_seq_message_t *out);
 
 /**
@@ -110,15 +109,6 @@ void cwist_seq_message_free(cwist_seq_message_t *msg);
  * @brief Create an empty assembler.
  */
 cwist_seq_assembler_t *cwist_seq_assembler_create(void);
-
-/**
- * @brief Create an assembler with a maximum possible reassembled size.
- *
- * A non-zero limit rejects a sequence layout whose full chunks would exceed
- * it before allocating its reassembly buffer.  Use this for network-facing
- * parsers.  A zero limit has the same behaviour as cwist_seq_assembler_create.
- */
-cwist_seq_assembler_t *cwist_seq_assembler_create_limited(size_t max_data_len);
 
 /**
  * @brief Destroy an assembler and its internal buffer.
@@ -143,23 +133,6 @@ bool cwist_seq_assembler_feed(cwist_seq_assembler_t *a, const cwist_seq_chunk_t 
 bool cwist_seq_assembler_is_complete(const cwist_seq_assembler_t *a);
 
 /**
- * @brief Return the sequence numbers still required to complete a message.
- *
- * This is the ARQ recovery side of the sequenced protocol: callers can use
- * the returned 1-based values as retry targets.  The return value is the
- * total number of missing chunks, even when @p out is NULL or too small.
- * The result is zero for a complete assembler or one that has not yet seen a
- * valid chunk.
- *
- * @param a Assembler state.
- * @param out Optional output array for missing sequence numbers.
- * @param out_cap Number of entries available in @p out.
- * @return Number of missing chunks.
- */
-size_t cwist_seq_assembler_recovery_targets(const cwist_seq_assembler_t *a, uint16_t *out,
-                                            size_t out_cap);
-
-/**
  * @brief Borrow the assembled message when complete.
  *
  * The returned pointer is valid until the assembler is destroyed or reset.
@@ -169,7 +142,8 @@ size_t cwist_seq_assembler_recovery_targets(const cwist_seq_assembler_t *a, uint
  * @param out_len Receives assembled length.
  * @return true when the message is complete and outputs were written.
  */
-bool cwist_seq_assembler_get_data(cwist_seq_assembler_t *a, const uint8_t **out_data,
+bool cwist_seq_assembler_get_data(cwist_seq_assembler_t *a,
+                                  const uint8_t **out_data,
                                   size_t *out_len);
 
 /**

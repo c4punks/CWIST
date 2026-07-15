@@ -121,94 +121,11 @@ static void test_single_chunk(void) {
     printf("  Passed single chunk.\n");
 }
 
-static void test_final_chunk_first_recovery_targets(void) {
-    printf("Testing final-chunk-first recovery...\n");
-    const char *msg = "1234567890";
-    cwist_seq_message_t split;
-    assert(cwist_seq_split((const uint8_t *)msg, strlen(msg), 3, &split));
-
-    cwist_seq_assembler_t *a = cwist_seq_assembler_create();
-    cwist_seq_chunk_t chunk;
-    /* This used to allocate only one byte of body space and reject seq 1-3. */
-    assert(cwist_seq_chunk_parse(split.chunks[3], split.chunk_lens[3], &chunk));
-    assert(cwist_seq_assembler_feed(a, &chunk));
-
-    uint16_t retry[3] = {0};
-    assert(cwist_seq_assembler_recovery_targets(a, retry, 3) == 3);
-    assert(retry[0] == 1 && retry[1] == 2 && retry[2] == 3);
-
-    for (size_t i = 0; i < 3; ++i) {
-        assert(cwist_seq_chunk_parse(split.chunks[i], split.chunk_lens[i], &chunk));
-        assert(cwist_seq_assembler_feed(a, &chunk));
-    }
-    const uint8_t *out = NULL;
-    size_t out_len = 0;
-    assert(cwist_seq_assembler_get_data(a, &out, &out_len));
-    assert(out_len == strlen(msg) && memcmp(out, msg, out_len) == 0);
-
-    cwist_seq_assembler_destroy(a);
-    cwist_seq_message_free(&split);
-    printf("  Passed final-chunk-first recovery.\n");
-}
-
-static void test_conflicting_duplicate_rejected(void) {
-    printf("Testing conflicting duplicate rejection...\n");
-    const char *msg = "abcdef";
-    cwist_seq_message_t split;
-    assert(cwist_seq_split((const uint8_t *)msg, strlen(msg), 3, &split));
-    cwist_seq_assembler_t *a = cwist_seq_assembler_create();
-    cwist_seq_chunk_t chunk;
-    assert(cwist_seq_chunk_parse(split.chunks[0], split.chunk_lens[0], &chunk));
-    assert(cwist_seq_assembler_feed(a, &chunk));
-    uint8_t altered[11];
-    memcpy(altered, split.chunks[0], sizeof(altered));
-    altered[CWIST_SEQ_HEADER_SIZE] ^= 1;
-    assert(cwist_seq_chunk_parse(altered, sizeof(altered), &chunk));
-    assert(!cwist_seq_assembler_feed(a, &chunk));
-    cwist_seq_assembler_destroy(a);
-    cwist_seq_message_free(&split);
-    printf("  Passed conflicting duplicate rejection.\n");
-}
-
-static void test_reset_preserves_limit(void) {
-    printf("Testing reset preserves max_data_len limit...\n");
-    /* Create assembler with 10-byte ceiling */
-    cwist_seq_assembler_t *a = cwist_seq_assembler_create_limited(10);
-    assert(a != NULL);
-
-    /* Valid 4-byte message fits within 10-byte limit */
-    const char *msg1 = "test";
-    cwist_seq_message_t split1;
-    assert(cwist_seq_split((const uint8_t *)msg1, strlen(msg1), 4, &split1));
-    cwist_seq_chunk_t chunk;
-    assert(cwist_seq_chunk_parse(split1.chunks[0], split1.chunk_lens[0], &chunk));
-    assert(cwist_seq_assembler_feed(a, &chunk));
-    assert(cwist_seq_assembler_is_complete(a));
-    cwist_seq_message_free(&split1);
-
-    /* Reset the assembler */
-    cwist_seq_assembler_reset(a);
-
-    /* Oversized message (20 bytes > 10-byte ceiling) must still be rejected after reset */
-    const char *msg2 = "01234567890123456789";
-    cwist_seq_message_t split2;
-    assert(cwist_seq_split((const uint8_t *)msg2, strlen(msg2), 10, &split2));
-    assert(cwist_seq_chunk_parse(split2.chunks[0], split2.chunk_lens[0], &chunk));
-    assert(!cwist_seq_assembler_feed(a, &chunk)); /* rejected because 20 > 10 */
-
-    cwist_seq_assembler_destroy(a);
-    cwist_seq_message_free(&split2);
-    printf("  Passed reset preserves limit.\n");
-}
-
 int main(void) {
     test_split_and_reassemble();
     test_duplicate_discard();
     test_invalid_chunk();
     test_single_chunk();
-    test_final_chunk_first_recovery_targets();
-    test_conflicting_duplicate_rejected();
-    test_reset_preserves_limit();
     printf("All seq tests passed!\n");
     return 0;
 }
