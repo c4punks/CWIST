@@ -936,6 +936,48 @@ static void h3_parse_path(cwist_http_request *req, const char *path) {
     }
 }
 
+/* Lightweight XOR checksum over a byte buffer. */
+static uint8_t h3_xor_bytes(const unsigned char *buf, size_t len) {
+    uint8_t x = 0;
+    for (size_t i = 0; i < len; i++) x ^= buf[i];
+    return x;
+}
+
+static int h3_header_name_char_is_valid(unsigned char c) {
+    return (c >= 'a' && c <= 'z') ||
+           (c >= 'A' && c <= 'Z') ||
+           (c >= '0' && c <= '9') ||
+           c == '!' || c == '#' || c == '$' || c == '%' ||
+           c == '&' || c == '\'' || c == '*' || c == '+' ||
+           c == '-' || c == '.' || c == '^' || c == '_' ||
+           c == '`' || c == '|' || c == '~';
+}
+
+int cwist_http3_normalize_response_header_name(const char *name,
+                                               char *out,
+                                               size_t out_len) {
+    if (!name || !out || out_len == 0) return -1;
+
+    size_t len = strlen(name);
+    if (len == 0 || len >= out_len || name[0] == ':') return -1;
+
+    for (size_t i = 0; i < len; i++) {
+        unsigned char c = (unsigned char)name[i];
+        if (!h3_header_name_char_is_valid(c)) return -1;
+        out[i] = (char)tolower(c);
+    }
+    out[len] = '\0';
+    return 0;
+}
+
+int cwist_http3_response_header_value_is_safe(const char *value) {
+    if (!value) return 0;
+    for (const unsigned char *p = (const unsigned char *)value; *p; p++) {
+        if (*p == '\r' || *p == '\n') return 0;
+    }
+    return 1;
+}
+
 static void h3_apply_header(cwist_http_request *req,
                             const char *name, const char *value) {
     if (strcmp(name, ":method") == 0) {
@@ -1584,13 +1626,12 @@ static void cwist_h3_on_write(lsquic_stream_t *stream, lsquic_stream_ctx_t *st_h
 
         /* user headers (skip content-length/content-type already handled) */
         cwist_http_header_node *node = st->res->headers;
-        while (node && hdr_count < H3_MAX_RESPONSE_HEADERS) {
-            if (node->key && node->key->data && node->key->size > 0 && node->value &&
-                node->value->data) {
+        while (node && hdr_count < 64) {
+            if (node->key && node->key->data && node->value && node->value->data) {
                 char h3_name[256];
-                if (cwist_http3_normalize_response_header_name(node->key->data, h3_name,
+                if (cwist_http3_normalize_response_header_name(node->key->data,
+                                                               h3_name,
                                                                sizeof(h3_name)) != 0 ||
-                    h3_name[0] == '\0' || strlen(node->value->data) != node->value->size ||
                     !cwist_http3_response_header_value_is_safe(node->value->data)) {
                     node = node->next;
                     continue;
@@ -1601,20 +1642,10 @@ static void cwist_h3_on_write(lsquic_stream_t *stream, lsquic_stream_ctx_t *st_h
                     node = node->next;
                     continue;
                 }
-                /* RFC 9114 section 4.2: connection-specific fields are malformed in
-                 * HTTP/3; te is only allowed with the value "trailers". */
-                if (strcmp(h3_name, "connection") == 0 || strcmp(h3_name, "keep-alive") == 0 ||
-                    strcmp(h3_name, "proxy-connection") == 0 ||
-                    strcmp(h3_name, "transfer-encoding") == 0 || strcmp(h3_name, "upgrade") == 0 ||
-                    (strcmp(h3_name, "te") == 0 &&
-                     strcasecmp(node->value->data, "trailers") != 0)) {
-                    node = node->next;
-                    continue;
-                }
 
                 size_t klen = strlen(h3_name);
                 size_t vlen = node->value->size;
-                if (klen > 0 && hbuf_off + klen + 2 + vlen <= sizeof(hbuf)) {
+                if (hbuf_off + klen + 2 + vlen <= sizeof(hbuf)) {
                     memcpy(hbuf + hbuf_off, h3_name, klen);
                     memcpy(hbuf + hbuf_off + klen + 2, node->value->data, vlen);
                     lsxpack_header_set_offset2(&headers_arr[hdr_count], hbuf + hbuf_off, 0, klen,
@@ -3317,5 +3348,3 @@ int cwist_webtransport_close_session(void *session,
 }
 
 #endif /* CWIST_WEBTRANSPORT */
-
-

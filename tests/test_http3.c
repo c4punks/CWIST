@@ -18,6 +18,11 @@ int cwist_http3_normalize_response_header_name(const char *name, char *out, size
 int cwist_http3_response_header_value_is_safe(const char *value);
 int cwist_http3_method_is_idempotent(const char *method_str);
 
+int cwist_http3_normalize_response_header_name(const char *name,
+                                               char *out,
+                                               size_t out_len);
+int cwist_http3_response_header_value_is_safe(const char *value);
+
 static volatile int g_handler_called = 0;
 
 static void http3_test_handler(void *user_ctx, cwist_http_request *req, cwist_http_response *res) {
@@ -99,6 +104,26 @@ int main(void) {
     assert(ctx == NULL);
     printf("HTTP/3 QUIC support unavailable in this OpenSSL build; TCP HTTP/1.1 fallback remains available.\n");
 #endif
+
+    /* --- Test 7: response header normalization for browser strictness --- */
+    char h3_name[64];
+    assert(cwist_http3_normalize_response_header_name("Set-Cookie",
+                                                       h3_name,
+                                                       sizeof(h3_name)) == 0);
+    assert(strcmp(h3_name, "set-cookie") == 0);
+    assert(cwist_http3_normalize_response_header_name("Location",
+                                                       h3_name,
+                                                       sizeof(h3_name)) == 0);
+    assert(strcmp(h3_name, "location") == 0);
+    assert(cwist_http3_normalize_response_header_name(":bad",
+                                                       h3_name,
+                                                       sizeof(h3_name)) == -1);
+    assert(cwist_http3_normalize_response_header_name("Bad Header",
+                                                       h3_name,
+                                                       sizeof(h3_name)) == -1);
+    assert(cwist_http3_response_header_value_is_safe("sid=gone; Path=/; Max-Age=0"));
+    assert(!cwist_http3_response_header_value_is_safe("ok\r\nbad: value"));
+    printf("[PASS] HTTP/3 response headers are lowercased and CRLF-safe.\n");
 
     printf("All HTTP/3 infrastructure tests passed!\n");
     return 0;
