@@ -534,6 +534,15 @@ cwist_app *cwist_app_create(void) {
     app->pqc_layer_enabled = false;
     app->tls_groups = NULL;
     app->wt_handler = NULL;
+
+    app->session_secret = NULL;
+    app->session_name = NULL;
+    app->session_max_age = 0;
+    app->db_pool = NULL;
+    app->redis_pool = NULL;
+    app->scheduler = NULL;
+    app->grpc_routes = NULL;
+
     cwist_app_refresh_https_request_handler(app);
     
     return app;
@@ -606,8 +615,22 @@ void cwist_app_destroy(cwist_app *app) {
     if (app->db_path) {
         free(app->db_path);
     }
-    
-    free(app);
+
+    if (app->session_secret) cwist_free(app->session_secret);
+    if (app->session_name) cwist_free(app->session_name);
+
+    if (app->db_pool) {
+        cwist_db_pool_destroy((cwist_db_pool_t *)app->db_pool);
+    }
+    if (app->redis_pool) {
+        cwist_redis_pool_destroy((cwist_redis_pool_t *)app->redis_pool);
+    }
+    if (app->scheduler) {
+        cwist_scheduler_destroy((cwist_scheduler_t *)app->scheduler);
+    }
+    cwist_grpc_routes_destroy(app);
+
+    cwist_free(app);
 }
 
 static void mw_next_wrapper(cwist_http_request *req, cwist_http_response *res) {
@@ -1280,6 +1303,10 @@ static cwist_app *cwist_app_clone_for_multiport(cwist_app *src) {
     dst->middlewares = cwist_middleware_clone(src->middlewares);
     dst->error_handlers = cwist_error_handlers_clone(src->error_handlers);
     dst->static_dirs = cwist_static_dirs_clone(src->static_dirs);
+    if (cwist_grpc_routes_clone(dst, src) != 0) {
+        cwist_app_destroy(dst);
+        return NULL;
+    }
 
     if (src->use_ssl && src->cert_path && src->key_path) {
         dst->use_https2 = src->use_https2;

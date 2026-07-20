@@ -97,6 +97,9 @@ SRCS = src/core/sstring/sstring.c \
        src/sys/err/error.c \
        src/net/http/http.c \
        src/net/http/https.c \
+       src/net/http/tls_chain.c \
+       src/net/grpc/grpc.c \
+       src/net/grpc/protobuf.c \
        src/https/pqc_layer.c \
        src/net/http/mux.c \
        src/net/http/query.c \
@@ -242,7 +245,18 @@ TEST_TARGETS = test_sstring \
                test_io_uring \
                test_access_log \
                test_rate_limit \
-               test_cache
+               test_cache \
+               test_secure_headers \
+               test_http_chunked \
+               test_static_and_range \
+               test_session \
+               test_csrf \
+               test_db_pool \
+               test_redis \
+               test_scheduler \
+               test_test_client \
+               test_multiport \
+               test_grpc
 
 .PHONY: all test $(TEST_TARGETS) install uninstall clean rebuild examples clean-examples
 
@@ -483,3 +497,43 @@ example/micro/17-blog-crud/blog-crud: $(LIB_NAME) example/micro/17-blog-crud/mai
 
 clean-examples:
 	rm -f $(EXAMPLE_BINS) $(MICRO_BINS)
+
+test_http_chunked: $(LIB_NAME) tests/test_http_chunked.c
+	$(CC) $(CFLAGS) -o test_http_chunked tests/test_http_chunked.c $(LIB_NAME) $(LIBS)
+	./test_http_chunked
+
+test_static_and_range: $(LIB_NAME) tests/test_static_and_range.c
+	$(CC) $(CFLAGS) -o test_static_and_range tests/test_static_and_range.c $(LIB_NAME) $(LIBS)
+	./test_static_and_range
+
+test_session: $(LIB_NAME) tests/test_session.c
+	$(CC) $(CFLAGS) -o test_session tests/test_session.c $(LIB_NAME) $(LIBS)
+	./test_session
+
+test_csrf: $(LIB_NAME) tests/test_csrf.c
+	$(CC) $(CFLAGS) -o test_csrf tests/test_csrf.c $(LIB_NAME) $(LIBS)
+	./test_csrf
+
+test_db_pool: $(LIB_NAME) tests/test_db_pool.c
+	$(CC) $(CFLAGS) -o test_db_pool tests/test_db_pool.c $(LIB_NAME) $(LIBS)
+	./test_db_pool
+
+test_redis: $(LIB_NAME) tests/test_redis.c
+	$(CC) $(CFLAGS) -o test_redis tests/test_redis.c $(LIB_NAME) $(LIBS)
+	./test_redis
+
+test_scheduler: $(LIB_NAME) tests/test_scheduler.c
+	$(CC) $(CFLAGS) -o test_scheduler tests/test_scheduler.c $(LIB_NAME) $(LIBS)
+	./test_scheduler
+
+test_test_client: $(LIB_NAME) tests/test_test_client.c
+	$(CC) $(CFLAGS) -o test_test_client tests/test_test_client.c $(LIB_NAME) $(LIBS)
+	./test_test_client
+
+test_multiport: $(LIB_NAME) tests/test_multiport.c
+	$(CC) $(CFLAGS) -o test_multiport tests/test_multiport.c $(LIB_NAME) $(LIBS)
+	./test_multiport
+
+test_grpc: $(LIB_NAME) tests/test_grpc.c
+	$(CC) $(CFLAGS) -o test_grpc tests/test_grpc.c $(LIB_NAME) $(LIBS)
+	./test_grpc

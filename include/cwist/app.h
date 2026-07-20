@@ -6,7 +6,7 @@
 
 #include <cwist/http.h>
 #include <cwist/https.h>
-#include <cwist/sql.h>
+#include <cwist/net/grpc/grpc.h>
 #include <cwist/err/cwist_err.h>
 #include <cwist/macros.h>
 
