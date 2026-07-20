@@ -543,6 +543,85 @@ static void grpc_dispatch_stream(cwist_http_request *req, cwist_http_response *r
     cwist_free(messages);
 }
 
+static int grpc_validate_request(cwist_http_request *req, cwist_http_response *res) {
+    const char *ct = cwist_http_header_get(req->headers, "content-type");
+    if (!grpc_content_type_is_grpc(ct)) {
+        ct = cwist_http_header_get(req->headers, "Content-Type");
+    }
+    if (!grpc_content_type_is_grpc(ct)) {
+        cwist_grpc_set_error(res, CWIST_GRPC_INVALID_ARGUMENT, "content-type must be application/grpc");
+        return -1;
+    }
+    if (!req->body || !req->body->data) {
+        cwist_grpc_set_error(res, CWIST_GRPC_INVALID_ARGUMENT, "missing gRPC request body");
+        return -1;
+    }
+    return 0;
+}
+
+static void grpc_dispatch_stream(cwist_http_request *req, cwist_http_response *res) {
+    if (!req || !res || !req->app || !req->path || !req->path->data) return;
+
+    cwist_grpc_route *route = grpc_find_route(req->app, req->path->data);
+    if (!route || !route->stream_handler) {
+        cwist_grpc_set_error(res, CWIST_GRPC_UNIMPLEMENTED, "gRPC stream method not registered");
+        return;
+    }
+    if (grpc_validate_request(req, res) != 0) return;
+
+    size_t offset = 0;
+    size_t cap = 4;
+    size_t count = 0;
+    cwist_grpc_message *messages = (cwist_grpc_message *)cwist_alloc(cap * sizeof(*messages));
+    if (!messages) {
+        cwist_grpc_set_error(res, CWIST_GRPC_RESOURCE_EXHAUSTED, "failed to allocate gRPC stream messages");
+        return;
+    }
+
+    while (offset < req->body->size) {
+        if (count == cap) {
+            cap *= 2;
+            cwist_grpc_message *next = (cwist_grpc_message *)cwist_realloc(messages, cap * sizeof(*messages));
+            if (!next) {
+                cwist_free(messages);
+                cwist_grpc_set_error(res, CWIST_GRPC_RESOURCE_EXHAUSTED, "failed to grow gRPC stream messages");
+                return;
+            }
+            messages = next;
+        }
+        if (cwist_grpc_decode_next_message(req->body->data, req->body->size,
+                                           &offset, &messages[count]) != 0) {
+            cwist_free(messages);
+            cwist_grpc_set_error(res, CWIST_GRPC_INVALID_ARGUMENT, "malformed gRPC stream frame");
+            return;
+        }
+        if (messages[count].compressed != 0) {
+            cwist_free(messages);
+            cwist_grpc_set_error(res, CWIST_GRPC_UNIMPLEMENTED, "compressed gRPC messages are not supported");
+            return;
+        }
+        count++;
+    }
+
+    res->status_code = CWIST_HTTP_OK;
+    cwist_http_header_add(&res->headers, "content-type", "application/grpc");
+    cwist_http_header_add(&res->headers, "grpc-accept-encoding", "identity");
+    if (res->body) cwist_sstring_assign(res->body, "");
+
+    cwist_grpc_stream stream = {
+        .req = req,
+        .res = res,
+        .messages = messages,
+        .message_count = count,
+        .status = CWIST_GRPC_OK,
+        .status_message = NULL,
+        .closed = 0,
+    };
+    route->stream_handler(&stream, route->user_ctx);
+    cwist_grpc_stream_close(&stream, stream.status, stream.status_message);
+    cwist_free(messages);
+}
+
 int cwist_grpc_decode_message(const void *frame,
                               size_t frame_len,
                               cwist_grpc_message *out) {

@@ -210,6 +210,15 @@ int main(void) {
     cwist_sstring_destroy(stream_body);
 
     opts.content_type = "application/grpc";
+    res = cwist_test_client_request_ex(client, CWIST_HTTP_POST,
+                                       "/cwist.test.Echo/Chat",
+                                       &opts);
+    const char *expected_stream[] = { "chunk-1:one", "chunk-2:two" };
+    assert_stream_response(res, expected_stream, 2);
+    cwist_http_response_destroy(res);
+    cwist_sstring_destroy(stream_body);
+
+    opts.content_type = "application/grpc";
     res = cwist_test_client_request_ex(client, CWIST_HTTP_POST, "/cwist.test.Echo/Chat", &opts);
     const char *expected_stream[] = {"chunk-1:one", "chunk-2:two"};
     assert_stream_response(res, expected_stream, 2);
