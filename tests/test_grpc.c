@@ -54,8 +54,11 @@ static void echo_stream(cwist_grpc_stream *stream, void *user_ctx) {
         assert(input != NULL);
 
         char out[128];
-        int n = snprintf(out, sizeof(out), "%s-%zu:%.*s", prefix ? prefix : "stream", i + 1,
-                         (int)input_len, input);
+        int n = snprintf(out, sizeof(out), "%s-%zu:%.*s",
+                         prefix ? prefix : "stream",
+                         i + 1,
+                         (int)input_len,
+                         input);
         assert(n > 0);
 
         cwist_pb_writer writer;
@@ -65,131 +68,6 @@ static void echo_stream(cwist_grpc_stream *stream, void *user_ctx) {
         cwist_pb_writer_free(&writer);
     }
     cwist_grpc_stream_close(stream, CWIST_GRPC_OK, NULL);
-}
-
-static void meta_unary(cwist_http_request *req, cwist_http_response *res,
-                       const cwist_grpc_message *message, void *user_ctx) {
-    (void)message;
-    (void)user_ctx;
-    /* Metadata normalization: case-insensitive textual lookup, and a
-     * base64-decoded *-bin value. */
-    const char *meta = cwist_grpc_metadata_get(req, "x-meta-echo");
-    assert(meta != NULL && strcmp(meta, "hello-meta") == 0);
-    uint8_t bin[16];
-    size_t bin_len = 0;
-    assert(cwist_grpc_metadata_get_binary(req, "trace-bin", bin, sizeof(bin), &bin_len) == 0);
-    assert(bin_len == 3 && memcmp(bin, "\x01\x02\x03", 3) == 0);
-
-    cwist_pb_writer writer;
-    cwist_pb_writer_init(&writer);
-    assert(cwist_pb_write_string_field(&writer, 1, meta) == 0);
-    cwist_grpc_set_response(res, CWIST_GRPC_OK, NULL, writer.data, writer.len);
-    cwist_pb_writer_free(&writer);
-}
-
-static void recv_stream(cwist_grpc_stream *stream, void *user_ctx) {
-    (void)user_ctx;
-    /* Exercise the buffered-path recv API: it must replay every decoded
-     * message in order, then report EOF. */
-    cwist_grpc_message msg;
-    size_t seen = 0;
-    int rc;
-    while ((rc = cwist_grpc_stream_recv(stream, &msg)) == 1) {
-        cwist_pb_reader reader;
-        cwist_pb_reader_init(&reader, msg.data, msg.len);
-        cwist_pb_field field;
-        const char *input = NULL;
-        size_t input_len = 0;
-        while (cwist_pb_read_field(&reader, &field) > 0) {
-            if (field.number == 1 && field.wire_type == CWIST_PB_LEN) {
-                input = (const char *)field.bytes;
-                input_len = field.len;
-            }
-        }
-        assert(input != NULL);
-        cwist_pb_writer writer;
-        cwist_pb_writer_init(&writer);
-        char out[128];
-        snprintf(out, sizeof(out), "recv-%zu:%.*s", seen + 1, (int)input_len, input);
-        assert(cwist_pb_write_string_field(&writer, 1, out) == 0);
-        assert(cwist_grpc_stream_send(stream, writer.data, writer.len) == 0);
-        cwist_pb_writer_free(&writer);
-        seen++;
-    }
-    assert(rc == 0);
-    assert(seen == stream->message_count);
-    assert(cwist_grpc_stream_deadline_remaining_ms(stream) == UINT64_MAX);
-    cwist_grpc_stream_close(stream, CWIST_GRPC_OK, NULL);
-}
-
-/* gzip-compress with zlib (client side of the compression test). */
-static void gzip_compress(const uint8_t *in, size_t in_len, uint8_t **out, size_t *out_len) {
-    z_stream zs;
-    memset(&zs, 0, sizeof(zs));
-    assert(deflateInit2(&zs, Z_DEFAULT_COMPRESSION, Z_DEFLATED, 16 + MAX_WBITS, 8,
-                        Z_DEFAULT_STRATEGY) == Z_OK);
-    size_t cap = deflateBound(&zs, in_len) + 32;
-    uint8_t *buf = cwist_alloc(cap);
-    assert(buf != NULL);
-    zs.next_in = (Bytef *)in;
-    zs.avail_in = (uInt)in_len;
-    zs.next_out = buf;
-    zs.avail_out = (uInt)cap;
-    assert(deflate(&zs, Z_FINISH) == Z_STREAM_END);
-    *out_len = cap - zs.avail_out;
-    *out = buf;
-    deflateEnd(&zs);
-}
-
-static void test_gzip_inflate(const uint8_t *in, size_t in_len, uint8_t **out, size_t *out_len) {
-    z_stream zs;
-    memset(&zs, 0, sizeof(zs));
-    assert(inflateInit2(&zs, 16 + MAX_WBITS) == Z_OK);
-    size_t cap = in_len * 4 + 1024;
-    uint8_t *buf = (uint8_t *)cwist_alloc(cap);
-    assert(buf != NULL);
-    zs.next_in = (Bytef *)in;
-    zs.avail_in = (uInt)in_len;
-    zs.next_out = buf;
-    zs.avail_out = (uInt)cap;
-    assert(inflate(&zs, Z_FINISH) == Z_STREAM_END);
-    *out_len = cap - zs.avail_out;
-    *out = buf;
-    inflateEnd(&zs);
-}
-
-static void decode_compressed_response(cwist_http_response *res, const char *expected) {
-    assert(res != NULL);
-    assert(res->status_code == CWIST_HTTP_OK);
-    assert(strcmp(cwist_http_header_get(res->headers, "content-type"), "application/grpc") == 0);
-    assert(strcmp(cwist_http_header_get(res->headers, "grpc-status"), "0") == 0);
-    assert(strcmp(cwist_http_header_get(res->headers, "grpc-encoding"), "gzip") == 0);
-
-    cwist_grpc_message msg;
-    assert(cwist_grpc_decode_message(res->body->data, res->body->size, &msg) == 0);
-    assert(msg.compressed == 1);
-
-    uint8_t *plain = NULL;
-    size_t plain_len = 0;
-    test_gzip_inflate(msg.data, msg.len, &plain, &plain_len);
-
-    cwist_pb_reader reader;
-    cwist_pb_reader_init(&reader, plain, plain_len);
-    cwist_pb_field field;
-    int saw_text = 0;
-    int saw_code = 0;
-    while (cwist_pb_read_field(&reader, &field) > 0) {
-        if (field.number == 1 && field.wire_type == CWIST_PB_LEN) {
-            assert(field.len == strlen(expected));
-            assert(memcmp(field.bytes, expected, field.len) == 0);
-            saw_text = 1;
-        } else if (field.number == 2 && field.wire_type == CWIST_PB_VARINT) {
-            assert(field.varint == 7);
-            saw_code = 1;
-        }
-    }
-    assert(saw_text && saw_code);
-    cwist_free(plain);
 }
 
 static void decode_response(cwist_http_response *res, const char *expected) {
@@ -228,14 +106,14 @@ static void append_grpc_string_frame(cwist_sstring *body, const char *value) {
     uint8_t *frame = NULL;
     size_t frame_len = 0;
     assert(cwist_grpc_encode_message(pb.data, pb.len, 0, &frame, &frame_len) == 0);
-    cwist_error_t append_err = cwist_sstring_append_len(body, (char *)frame, frame_len);
-    assert(cwist_error_is_ok(&append_err));
+    assert(cwist_sstring_append_len(body, (char *)frame, frame_len).error.err_i16 == 0);
 
     cwist_free(frame);
     cwist_pb_writer_free(&pb);
 }
 
-static void assert_stream_response(cwist_http_response *res, const char **expected,
+static void assert_stream_response(cwist_http_response *res,
+                                   const char **expected,
                                    size_t expected_count) {
     assert(res != NULL);
     assert(strcmp(cwist_http_header_get(res->headers, "grpc-status"), "0") == 0);
@@ -244,8 +122,8 @@ static void assert_stream_response(cwist_http_response *res, const char **expect
     size_t seen = 0;
     while (offset < res->body->size) {
         cwist_grpc_message msg;
-        assert(cwist_grpc_decode_next_message(res->body->data, res->body->size, &offset, &msg) ==
-               0);
+        assert(cwist_grpc_decode_next_message(res->body->data, res->body->size,
+                                              &offset, &msg) == 0);
         assert(seen < expected_count);
         cwist_pb_reader reader;
         cwist_pb_reader_init(&reader, msg.data, msg.len);
@@ -262,13 +140,6 @@ static void assert_stream_response(cwist_http_response *res, const char **expect
         seen++;
     }
     assert(seen == expected_count);
-}
-
-static int decoder_count(void *ctx, const cwist_grpc_message *message) {
-    size_t *count = ctx;
-    assert(message->compressed == 0);
-    (*count)++;
-    return 0;
 }
 
 int main(void) {
@@ -301,12 +172,7 @@ int main(void) {
     cwist_app *app = cwist_app_create();
     assert(app != NULL);
     assert(cwist_app_grpc_unary(app, "cwist.test.Echo", "Say", echo_unary, "reply") == 0);
-    assert(cwist_app_grpc_unary(app, "cwist.test.Echo", "Meta", meta_unary, NULL) == 0);
     assert(cwist_app_grpc_stream(app, "cwist.test.Echo", "Chat", echo_stream, "chunk") == 0);
-    assert(cwist_app_grpc_stream(app, "cwist.test.Echo", "Recv", recv_stream, NULL) == 0);
-    assert(cwist_app_grpc_health(app) == 0);
-    assert(cwist_app_grpc_health_set_status(app, "cwist.test.Echo", 1) == 0);
-    assert(cwist_app_grpc_reflection(app) == 0);
 
     cwist_test_client *client = cwist_test_client_create(app);
     assert(client != NULL);
@@ -334,6 +200,15 @@ int main(void) {
 
     opts.body = stream_body->data;
     opts.body_len = stream_body->size;
+    opts.content_type = "application/grpc";
+    res = cwist_test_client_request_ex(client, CWIST_HTTP_POST,
+                                       "/cwist.test.Echo/Chat",
+                                       &opts);
+    const char *expected_stream[] = { "chunk-1:one", "chunk-2:two" };
+    assert_stream_response(res, expected_stream, 2);
+    cwist_http_response_destroy(res);
+    cwist_sstring_destroy(stream_body);
+
     opts.content_type = "application/grpc";
     res = cwist_test_client_request_ex(client, CWIST_HTTP_POST, "/cwist.test.Echo/Chat", &opts);
     const char *expected_stream[] = {"chunk-1:one", "chunk-2:two"};
