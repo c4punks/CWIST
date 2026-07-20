@@ -20,7 +20,6 @@
 typedef struct cwist_grpc_route {
     char *path;
     int streaming;
-    int builtin;
     cwist_grpc_unary_handler_func handler;
     cwist_grpc_stream_handler_func stream_handler;
     void *user_ctx;
@@ -465,45 +464,22 @@ static void grpc_dispatch_unary(cwist_http_request *req, cwist_http_response *re
     }
 }
 
-/** @brief Validate the gRPC framing of a request before buffered dispatch.
- *
- * On failure a matching gRPC error (INVALID_ARGUMENT or UNIMPLEMENTED) is
- * written into @p res.
- *
- * @retval 0 Request is well-formed.
- * @retval -1 Validation failed; @p res carries the error response. */
 static int grpc_validate_request(cwist_http_request *req, cwist_http_response *res) {
     const char *ct = cwist_http_header_get(req->headers, "content-type");
     if (!grpc_content_type_is_grpc(ct)) {
         ct = cwist_http_header_get(req->headers, "Content-Type");
     }
     if (!grpc_content_type_is_grpc(ct)) {
-        cwist_grpc_set_error(res, CWIST_GRPC_INVALID_ARGUMENT,
-                             "content-type must be application/grpc");
+        cwist_grpc_set_error(res, CWIST_GRPC_INVALID_ARGUMENT, "content-type must be application/grpc");
         return -1;
     }
     if (!req->body || !req->body->data) {
         cwist_grpc_set_error(res, CWIST_GRPC_INVALID_ARGUMENT, "missing gRPC request body");
         return -1;
     }
-    if (grpc_request_encoding(req) < 0) {
-        cwist_grpc_set_error(res, CWIST_GRPC_UNIMPLEMENTED, "unsupported grpc-encoding");
-        return -1;
-    }
     return 0;
 }
 
-/** @brief Dispatch a buffered client-streaming gRPC request to its handler.
- *
- * Decodes every message in the request body (inflating compressed ones when
- * grpc-encoding: gzip), computes the grpc-timeout deadline, then invokes the
- * streaming handler with a pre-populated cwist_grpc_stream and closes the
- * stream with the handler's final status.  All protocol and allocation
- * failures are written into @p res as gRPC error responses.
- *
- * @param req Incoming request whose body holds concatenated length-prefixed
- *        messages.
- * @param res Response object filled from the handler's stream state. */
 static void grpc_dispatch_stream(cwist_http_request *req, cwist_http_response *res) {
     if (!req || !res || !req->app || !req->path || !req->path->data) return;
 
@@ -519,75 +495,38 @@ static void grpc_dispatch_stream(cwist_http_request *req, cwist_http_response *r
     size_t count = 0;
     cwist_grpc_message *messages = (cwist_grpc_message *)cwist_alloc(cap * sizeof(*messages));
     if (!messages) {
-        cwist_grpc_set_error(res, CWIST_GRPC_RESOURCE_EXHAUSTED,
-                             "failed to allocate gRPC stream messages");
+        cwist_grpc_set_error(res, CWIST_GRPC_RESOURCE_EXHAUSTED, "failed to allocate gRPC stream messages");
         return;
     }
 
     while (offset < req->body->size) {
         if (count == cap) {
             cap *= 2;
-            cwist_grpc_message *next =
-                (cwist_grpc_message *)cwist_realloc(messages, cap * sizeof(*messages));
+            cwist_grpc_message *next = (cwist_grpc_message *)cwist_realloc(messages, cap * sizeof(*messages));
             if (!next) {
                 cwist_free(messages);
-                cwist_grpc_set_error(res, CWIST_GRPC_RESOURCE_EXHAUSTED,
-                                     "failed to grow gRPC stream messages");
+                cwist_grpc_set_error(res, CWIST_GRPC_RESOURCE_EXHAUSTED, "failed to grow gRPC stream messages");
                 return;
             }
             messages = next;
         }
-        if (cwist_grpc_decode_next_message(req->body->data, req->body->size, &offset,
-                                           &messages[count]) != 0) {
+        if (cwist_grpc_decode_next_message(req->body->data, req->body->size,
+                                           &offset, &messages[count]) != 0) {
             cwist_free(messages);
             cwist_grpc_set_error(res, CWIST_GRPC_INVALID_ARGUMENT, "malformed gRPC stream frame");
+            return;
+        }
+        if (messages[count].compressed != 0) {
+            cwist_free(messages);
+            cwist_grpc_set_error(res, CWIST_GRPC_UNIMPLEMENTED, "compressed gRPC messages are not supported");
             return;
         }
         count++;
     }
 
-    /* Decompress any compressed-flag messages when grpc-encoding: gzip. */
-    uint8_t **owned CWIST_DEFER_FREE = NULL;
-    int has_compressed = 0;
-    for (size_t i = 0; i < count; i++)
-        if (messages[i].compressed) {
-            has_compressed = 1;
-            break;
-        }
-    if (has_compressed) {
-        owned = (uint8_t **)cwist_alloc(count * sizeof(*owned));
-        if (!owned) {
-            cwist_free(messages);
-            cwist_grpc_set_error(res, CWIST_GRPC_RESOURCE_EXHAUSTED,
-                                 "failed to allocate inflate state");
-            return;
-        }
-        memset(owned, 0, count * sizeof(*owned));
-        for (size_t i = 0; i < count; i++) {
-            if (grpc_message_inflate(req, &messages[i], &owned[i]) != 0) {
-                for (size_t j = 0; j < count; j++) cwist_free(owned[j]);
-                cwist_free(messages);
-                cwist_grpc_set_error(res, CWIST_GRPC_UNIMPLEMENTED,
-                                     "unsupported compressed gRPC message");
-                return;
-            }
-        }
-    }
-
-    uint64_t deadline_ms = 0;
-    const char *timeout = grpc_header_get(req, "grpc-timeout");
-    if (timeout) {
-        uint64_t timeout_ms = 0;
-        if (cwist_grpc_parse_timeout(timeout, &timeout_ms) == 0)
-            deadline_ms = grpc_now_ms() + timeout_ms;
-    }
-
     res->status_code = CWIST_HTTP_OK;
     cwist_http_header_add(&res->headers, "content-type", "application/grpc");
-    cwist_http_header_add(&res->headers, "grpc-accept-encoding", "gzip, identity");
-    if (grpc_client_accepts_gzip(req)) {
-        cwist_http_header_add(&res->headers, "grpc-encoding", "gzip");
-    }
+    cwist_http_header_add(&res->headers, "grpc-accept-encoding", "identity");
     if (res->body) cwist_sstring_assign(res->body, "");
 
     cwist_grpc_stream stream = {
@@ -598,28 +537,15 @@ static void grpc_dispatch_stream(cwist_http_request *req, cwist_http_response *r
         .status = CWIST_GRPC_OK,
         .status_message = NULL,
         .closed = 0,
-        .session = NULL,
-        .cancelled = 0,
-        .deadline_ms = deadline_ms,
     };
     route->stream_handler(&stream, route->user_ctx);
     cwist_grpc_stream_close(&stream, stream.status, stream.status_message);
-    if (owned) {
-        for (size_t i = 0; i < count; i++) cwist_free(owned[i]);
-    }
     cwist_free(messages);
 }
 
-/** @brief Decode a single gRPC length-prefixed message frame.
- *
- * @param frame Frame bytes: 1-byte compression flag + 4-byte big-endian
- *        length + payload.
- * @param frame_len Total frame length; must be exactly 5 + payload length.
- * @param out Receives compression flag and a pointer/length into @p frame
- *        (borrowed; not copied).
- * @retval 0 Success.
- * @retval -1 NULL input, frame shorter than 5 bytes, or length mismatch. */
-int cwist_grpc_decode_message(const void *frame, size_t frame_len, cwist_grpc_message *out) {
+int cwist_grpc_decode_message(const void *frame,
+                              size_t frame_len,
+                              cwist_grpc_message *out) {
     if (!frame || !out || frame_len < 5) return -1;
     const uint8_t *p = (const uint8_t *)frame;
     uint32_t len =
@@ -633,28 +559,19 @@ int cwist_grpc_decode_message(const void *frame, size_t frame_len, cwist_grpc_me
     return 0;
 }
 
-/** @brief Decode the next message in a concatenated gRPC frame buffer.
- *
- * Advances *@p offset past the decoded message so it can be called again to
- * iterate.
- *
- * @param frames Buffer holding concatenated length-prefixed messages.
- * @param frames_len Total buffer length.
- * @param offset In/out cursor into @p frames; on entry the message start, on
- *        exit one past the decoded message.
- * @param out Receives the compression flag and a borrowed pointer/length
- *        into @p frames.
- * @retval 0 Success.
- * @retval -1 NULL input, offset out of range, or truncated frame. */
-int cwist_grpc_decode_next_message(const void *frames, size_t frames_len, size_t *offset,
+int cwist_grpc_decode_next_message(const void *frames,
+                                   size_t frames_len,
+                                   size_t *offset,
                                    cwist_grpc_message *out) {
     if (!frames || !offset || !out || *offset > frames_len) return -1;
     size_t pos = *offset;
     if (frames_len - pos < 5) return -1;
 
     const uint8_t *p = (const uint8_t *)frames + pos;
-    uint32_t len =
-        ((uint32_t)p[1] << 24) | ((uint32_t)p[2] << 16) | ((uint32_t)p[3] << 8) | (uint32_t)p[4];
+    uint32_t len = ((uint32_t)p[1] << 24) |
+                   ((uint32_t)p[2] << 16) |
+                   ((uint32_t)p[3] << 8) |
+                   (uint32_t)p[4];
     if ((size_t)len > frames_len - pos - 5) return -1;
 
     out->compressed = p[0];
@@ -664,18 +581,11 @@ int cwist_grpc_decode_next_message(const void *frames, size_t frames_len, size_t
     return 0;
 }
 
-/** @brief Wrap a payload in a gRPC length-prefixed message frame.
- *
- * @param payload Message bytes; may be NULL when @p payload_len is 0.
- * @param payload_len Payload length; must fit in a 32-bit field.
- * @param compressed Non-zero to set the compression flag in the frame header.
- * @param out Receives a newly allocated frame.
- * @param out_len Receives the frame length (5 + payload length).
- * @retval 0 Success; caller owns *@p out and must free it with cwist_free().
- * @retval -1 NULL output pointers, NULL payload with nonzero length, payload
- *         too large, or allocation failure. */
-int cwist_grpc_encode_message(const void *payload, size_t payload_len, uint8_t compressed,
-                              uint8_t **out, size_t *out_len) {
+int cwist_grpc_encode_message(const void *payload,
+                              size_t payload_len,
+                              uint8_t compressed,
+                              uint8_t **out,
+                              size_t *out_len) {
     if (!out || !out_len || (payload_len > 0 && !payload)) return -1;
     if (payload_len > UINT32_MAX) return -1;
 
@@ -821,82 +731,20 @@ void cwist_grpc_set_error(cwist_http_response *res, cwist_grpc_status_t status,
     cwist_grpc_set_response(res, status, message, NULL, 0);
 }
 
-/** @brief Send one message on an open gRPC stream.
- *
- * Frames the payload (gzip-compressing it when the peer negotiated gzip and
- * deflation succeeds) and delivers it either to the transport-backed
- * write_frame hook or by appending to the buffered response body.  On any
- * failure the stream status and status message are set to describe the error.
- *
- * @param stream Open stream to send on; may be NULL.
- * @param payload Message bytes; may be NULL when @p payload_len is 0.
- * @param payload_len Message length in bytes.
- * @retval 0 Message accepted by the transport/buffer.
- * @retval -1 Encoding or write failure; stream->status is updated. */
-int cwist_grpc_stream_send(cwist_grpc_stream *stream, const void *payload, size_t payload_len) {
-    if (!stream) return -1;
-    int use_gzip = 0;
-    if (stream->session) {
-        use_gzip = (((cwist_grpc_session *)stream->session)->resp_encoding == 1);
-    } else if (stream->req) {
-        use_gzip = grpc_client_accepts_gzip(stream->req);
-    }
-
+int cwist_grpc_stream_send(cwist_grpc_stream *stream,
+                           const void *payload,
+                           size_t payload_len) {
+    if (!stream || !stream->res || !stream->res->body) return -1;
     uint8_t *frame = NULL;
     size_t frame_len = 0;
-    if (use_gzip && payload_len > 0) {
-        uint8_t *cbuf = NULL;
-        size_t clen = 0;
-        if (grpc_gzip_deflate(payload, payload_len, &cbuf, &clen) == 0) {
-            int enc_rc = cwist_grpc_encode_message(cbuf, clen, 1, &frame, &frame_len);
-            cwist_free(cbuf);
-            if (enc_rc != 0) {
-                stream->status = CWIST_GRPC_INTERNAL;
-                stream->status_message = "failed to encode gRPC stream message";
-                return -1;
-            }
-        } else {
-            if (cwist_grpc_encode_message(payload, payload_len, 0, &frame, &frame_len) != 0) {
-                stream->status = CWIST_GRPC_INTERNAL;
-                stream->status_message = "failed to encode gRPC stream message";
-                return -1;
-            }
-        }
-    } else {
-        if (cwist_grpc_encode_message(payload, payload_len, 0, &frame, &frame_len) != 0) {
-            stream->status = CWIST_GRPC_INTERNAL;
-            stream->status_message = "failed to encode gRPC stream message";
-            return -1;
-        }
-    }
-    if (stream->session) {
-        /* Transport-backed stream: emit a DATA frame immediately. */
-        if (!stream->write_frame ||
-            stream->write_frame(stream->write_frame_ctx, frame, frame_len, 0) != 0) {
-            cwist_free(frame);
-            stream->status = CWIST_GRPC_UNAVAILABLE;
-            stream->status_message = "failed to write gRPC DATA frame";
-            return -1;
-        }
-        cwist_free(frame);
-        return 0;
-    }
-    if (!stream->res || !stream->res->body) {
-        cwist_free(frame);
-        return -1;
-    }
-    if (stream->write_frame &&
-        stream->write_frame(stream->write_frame_ctx, frame, frame_len, 0) != 0) {
-        cwist_free(frame);
-        stream->status = CWIST_GRPC_UNAVAILABLE;
-        stream->status_message = "failed to write gRPC DATA frame";
+    if (cwist_grpc_encode_message(payload, payload_len, 0, &frame, &frame_len) != 0) {
+        stream->status = CWIST_GRPC_INTERNAL;
+        stream->status_message = "failed to encode gRPC stream message";
         return -1;
     }
     cwist_error_t err = cwist_sstring_append_len(stream->res->body, (char *)frame, frame_len);
     cwist_free(frame);
-    bool appended = cwist_error_is_ok(&err);
-    cwist_error_dispose(&err);
-    if (!appended) {
+    if (err.error.err_i16 != 0) {
         stream->status = CWIST_GRPC_INTERNAL;
         stream->status_message = "failed to append gRPC stream message";
         return -1;
@@ -904,45 +752,14 @@ int cwist_grpc_stream_send(cwist_grpc_stream *stream, const void *payload, size_
     return 0;
 }
 
-/** @brief Install a custom frame writer on a stream.
- *
- * Overrides where cwist_grpc_stream_send() delivers frames (and, for the
- * buffered path, cwist_grpc_stream_close() trailers are still used).  May be
- * NULL to clear the hook.
- *
- * @param stream Stream to configure; may be NULL (no-op).
- * @param write_frame Callback invoked with each framed message; may be NULL.
- * @param ctx Opaque pointer passed as the first callback argument. */
-void cwist_grpc_stream_set_writer(cwist_grpc_stream *stream,
-                                  int (*write_frame)(void *, const uint8_t *, size_t, int),
-                                  void *ctx) {
-    if (!stream) return;
-    stream->write_frame = write_frame;
-    stream->write_frame_ctx = ctx;
-}
-
-/** @brief Close a gRPC stream with a final status.
- *
- * Idempotent: a second call is a no-op.  Emits grpc-status/grpc-message
- * trailers through the transport session when present, otherwise adds them
- * as response headers on the buffered path.
- *
- * @param stream Stream to close; may be NULL (no-op).
- * @param status Final gRPC status.
- * @param message Final status message; may be NULL. */
-void cwist_grpc_stream_close(cwist_grpc_stream *stream, cwist_grpc_status_t status,
+void cwist_grpc_stream_close(cwist_grpc_stream *stream,
+                             cwist_grpc_status_t status,
                              const char *message) {
-    if (!stream) return;
+    if (!stream || !stream->res) return;
     if (stream->closed) return;
     stream->status = status;
     stream->status_message = message;
     stream->closed = 1;
-
-    if (stream->session) {
-        grpc_session_send_trailers(stream->session, status, message);
-        return;
-    }
-    if (!stream->res) return;
 
     char status_buf[16];
     snprintf(status_buf, sizeof(status_buf), "%d", (int)status);
@@ -952,361 +769,13 @@ void cwist_grpc_stream_close(cwist_grpc_stream *stream, cwist_grpc_status_t stat
     }
 }
 
-/** @brief Advertise a server-side retry pushback hint to the client.
- *
- * Records the hint on the stream; on the buffered path it is also emitted as
- * the grpc-retry-pushback-ms header for the HTTP/2 layer to move into the
- * trailers.
- *
- * @param stream Stream to annotate; may be NULL (no-op).
- * @param ms Retry delay hint in milliseconds. */
-void cwist_grpc_stream_set_retry_pushback(cwist_grpc_stream *stream, int32_t ms) {
-    if (!stream) return;
-    stream->retry_pushback_ms = ms;
-    stream->retry_pushback_set = 1;
-    if (!stream->session && stream->res) {
-        /* Buffered path: the HTTP/2 layer moves this header into the
-         * trailers (Trailers-Only on error). */
-        char buf[20];
-        snprintf(buf, sizeof(buf), "%d", (int)ms);
-        cwist_http_header_add(&stream->res->headers, "grpc-retry-pushback-ms", buf);
-    }
-}
-
-/** @brief Look up the ServingStatus for a service in the health registry.
- *
- * Caller must hold reg->mu.  Empty/NULL service names the whole server.
- *
- * @retval 1 SERVING.
- * @retval 2 NOT_SERVING.
- * @retval 3 SERVICE_UNKNOWN (only when a concrete service name is given and
- *         no status was ever recorded for it). */
-static int grpc_health_status_locked(const cwist_grpc_health_registry *reg, const char *service) {
-    for (const cwist_grpc_health_state *it = reg->states; it; it = it->next)
-        if (it->service && strcmp(it->service, service ? service : "") == 0)
-            return it->serving ? 1 : 2;
-    return service && *service ? 3 : 1; /* SERVICE_UNKNOWN, or overall SERVING */
-}
-
-/** @brief Extract the HealthCheckRequest service field as an owned string.
- *
- * @param message Decoded HealthCheckRequest protobuf message.
- * @return Newly allocated NUL-terminated copy of field 1, or NULL when the
- *         field is absent or allocation fails.  Caller frees with cwist_free(). */
-static char *grpc_health_service_copy(const cwist_grpc_message *message) {
-    cwist_pb_reader reader;
-    cwist_pb_reader_init(&reader, message->data, message->len);
-    cwist_pb_field field;
-    while (cwist_pb_read_field(&reader, &field) > 0)
-        if (field.number == 1 && field.wire_type == CWIST_PB_LEN) {
-            char *owned = cwist_alloc(field.len + 1);
-            if (!owned) return NULL;
-            memcpy(owned, field.bytes, field.len);
-            owned[field.len] = '\0';
-            return owned;
-        }
-    return NULL;
-}
-
-/** @brief Resolve and encode a HealthCheckResponse for a Check request.
- *
- * @param res Response to fill.
- * @param reg Shared health registry.
- * @param message Decoded HealthCheckRequest; the service field selects the
- *        entry to report on. */
-static void grpc_health_reply(cwist_http_response *res, cwist_grpc_health_registry *reg,
-                              const cwist_grpc_message *message) {
-    char *service = grpc_health_service_copy(message);
-    pthread_mutex_lock(&reg->mu);
-    int status = grpc_health_status_locked(reg, service);
-    pthread_mutex_unlock(&reg->mu);
-    cwist_pb_writer writer;
-    cwist_pb_writer_init(&writer);
-    if (cwist_pb_write_uint64_field(&writer, 1, (uint64_t)status) != 0)
-        cwist_grpc_set_error(res, CWIST_GRPC_INTERNAL, "health encoding failed");
-    else
-        cwist_grpc_set_response(res, CWIST_GRPC_OK, NULL, writer.data, writer.len);
-    cwist_pb_writer_free(&writer);
-    cwist_free(service);
-}
-
-/** @brief Unary handler for grpc.health.v1 Health/Check.
- *
- * Thin adapter over grpc_health_reply(); @p ctx is the shared health registry.
- *
- * @param req Unused.
- * @param res Response to fill.
- * @param message Decoded HealthCheckRequest.
- * @param ctx cwist_grpc_health_registry route user context. */
-static void grpc_health_check(cwist_http_request *req, cwist_http_response *res,
-                              const cwist_grpc_message *message, void *ctx) {
-    (void)req;
-    grpc_health_reply(res, ctx, message);
-}
-
-/** @brief Encode and send the current health status as a stream message.
- *
- * Resolves the status under the registry lock, writes a HealthCheckResponse,
- * and sends it on @p stream.  On failure the stream status is set to INTERNAL
- * with a "health encoding failed" message.
- *
- * @retval 0 Status message sent.
- * @retval -1 Encoding or send failure; stream->status updated. */
-static int grpc_health_send_status(cwist_grpc_stream *stream, cwist_grpc_health_registry *reg,
-                                   const char *service) {
-    pthread_mutex_lock(&reg->mu);
-    int status = grpc_health_status_locked(reg, service);
-    pthread_mutex_unlock(&reg->mu);
-    cwist_pb_writer writer;
-    cwist_pb_writer_init(&writer);
-    int rc = cwist_pb_write_uint64_field(&writer, 1, (uint64_t)status);
-    if (rc == 0) rc = cwist_grpc_stream_send(stream, writer.data, writer.len);
-    cwist_pb_writer_free(&writer);
-    if (rc != 0 && stream->status == CWIST_GRPC_OK) {
-        stream->status = CWIST_GRPC_INTERNAL;
-        stream->status_message = "health encoding failed";
-    }
-    return rc;
-}
-
-/** @brief Streaming handler for grpc.health.v1 Health/Watch.
- *
- * Sends the current status immediately, then on the transport path waits for
- * registry generation changes and re-sends the status on each change, until
- * the stream is cancelled or its deadline expires.  The buffered path
- * delivers a single snapshot.
- *
- * @param stream Open Watch stream; @p ctx is the shared health registry. */
-static void grpc_health_watch(cwist_grpc_stream *stream, void *ctx) {
-    cwist_grpc_health_registry *reg = ctx;
-    char *service = NULL;
-    if (stream->session) {
-        /* Transport path: the HealthCheckRequest arrives as the first
-         * (and only) message; the client then half-closes. */
-        cwist_grpc_message msg;
-        int rc = cwist_grpc_stream_recv(stream, &msg);
-        if (rc < 0) return; /* cancelled before the request arrived */
-        if (rc > 0) service = grpc_health_service_copy(&msg);
-    } else {
-        cwist_grpc_message empty = {0, NULL, 0};
-        const cwist_grpc_message *message = stream->message_count ? &stream->messages[0] : &empty;
-        service = grpc_health_service_copy(message);
-    }
-
-    /* Send the current status immediately, as the protocol requires. */
-    if (grpc_health_send_status(stream, reg, service) != 0) goto out;
-    if (!stream->session) goto out; /* buffered dispatch: single snapshot */
-
-    atomic_fetch_add(&reg->watchers, 1);
-    for (;;) {
-        int changed = 0;
-        pthread_mutex_lock(&reg->mu);
-        uint64_t gen = reg->generation;
-        while (reg->generation == gen && !cwist_grpc_stream_cancelled(stream) &&
-               cwist_grpc_stream_deadline_remaining_ms(stream) > 0) {
-            /* Poll cancellation/deadline on a short tick; status changes
-             * wake us immediately through the registry condvar. */
-            struct timespec ts;
-            clock_gettime(CLOCK_REALTIME, &ts);
-            ts.tv_nsec += 100000000L;
-            if (ts.tv_nsec >= 1000000000L) {
-                ts.tv_sec++;
-                ts.tv_nsec -= 1000000000L;
-            }
-            pthread_cond_timedwait(&reg->cond, &reg->mu, &ts);
-        }
-        changed = reg->generation != gen;
-        pthread_mutex_unlock(&reg->mu);
-        if (!changed) break; /* cancelled or deadline expired */
-        if (grpc_health_send_status(stream, reg, service) != 0) break;
-    }
-    atomic_fetch_sub(&reg->watchers, 1);
-out:
-    cwist_free(service);
-}
-
-/** @brief Register the built-in grpc.health.v1.Health service on an app.
- *
- * Installs the Check (unary) and Watch (streaming) routes backed by a single
- * newly allocated health registry.  On failure the registry is freed and no
- * routes remain half-installed.
- *
- * @param app Application to register on; may be NULL.
- * @retval 0 Both routes registered.
- * @retval -1 NULL app, allocation failure, or route registration failure. */
-int cwist_app_grpc_health(cwist_app *app) {
-    if (!app) return -1;
-    cwist_grpc_health_registry *reg = cwist_alloc(sizeof(*reg));
-    if (!reg) return -1;
-    memset(reg, 0, sizeof(*reg));
-    pthread_mutex_init(&reg->mu, NULL);
-    pthread_cond_init(&reg->cond, NULL);
-    atomic_store(&reg->watchers, 0);
-    if (grpc_register_route(app, "grpc.health.v1.Health", "Check", 0, grpc_health_check, NULL,
-                            reg) != 0 ||
-        grpc_register_route(app, "grpc.health.v1.Health", "Watch", 1, NULL, grpc_health_watch,
-                            reg) != 0) {
-        pthread_mutex_destroy(&reg->mu);
-        pthread_cond_destroy(&reg->cond);
-        cwist_free(reg);
-        return -1;
-    }
-    cwist_grpc_route *route = grpc_find_route(app, "/grpc.health.v1.Health/Check");
-    if (route) route->builtin = 1;
-    route = grpc_find_route(app, "/grpc.health.v1.Health/Watch");
-    if (route) route->builtin = 2;
-    return 0;
-}
-
-/** @brief Set or update the serving status of a named service.
- *
- * Records the status in the health registry and wakes all active Watch
- * streams.  Thread-safe; takes the registry lock internally.
- *
- * @param app App whose health service was registered with
- *        cwist_app_grpc_health().
- * @param service Service name to update.
- * @param serving Non-zero for SERVING, zero for NOT_SERVING.
- * @retval 0 Status recorded.
- * @retval -1 No health service registered, NULL arguments, or allocation
- *         failure. */
-int cwist_app_grpc_health_set_status(cwist_app *app, const char *service, int serving) {
-    cwist_grpc_route *route = grpc_find_route(app, "/grpc.health.v1.Health/Check");
-    if (!route || !route->user_ctx || !service) return -1;
-    cwist_grpc_health_registry *reg = route->user_ctx;
-    pthread_mutex_lock(&reg->mu);
-    for (cwist_grpc_health_state *it = reg->states; it; it = it->next)
-        if (it->service && strcmp(it->service, service) == 0) {
-            it->serving = !!serving;
-            reg->generation++;
-            pthread_cond_broadcast(&reg->cond);
-            pthread_mutex_unlock(&reg->mu);
-            return 0;
-        }
-    cwist_grpc_health_state *item = cwist_alloc(sizeof(*item));
-    if (!item) {
-        pthread_mutex_unlock(&reg->mu);
-        return -1;
-    }
-    item->service = cwist_alloc(strlen(service) + 1);
-    if (!item->service) {
-        pthread_mutex_unlock(&reg->mu);
-        cwist_free(item);
-        return -1;
-    }
-    strcpy(item->service, service);
-    item->serving = !!serving;
-    item->next = reg->states;
-    reg->states = item;
-    reg->generation++;
-    pthread_cond_broadcast(&reg->cond);
-    pthread_mutex_unlock(&reg->mu);
-    return 0;
-}
-
-/** @brief Count currently active Health/Watch streams.
- *
- * @param app App whose health service was registered.
- * @return Number of active watchers (atomic snapshot).
- * @retval -1 No health Watch route registered on @p app. */
-int cwist_app_grpc_health_watchers(cwist_app *app) {
-    cwist_grpc_route *route = grpc_find_route(app, "/grpc.health.v1.Health/Watch");
-    if (!route || !route->user_ctx) return -1;
-    cwist_grpc_health_registry *reg = route->user_ctx;
-    return atomic_load(&reg->watchers);
-}
-
-/** @brief Append one service entry to a ServerReflectionResponse writer.
- *
- * Builds the nested ServiceResponse/ServiceResponse.name structure (field 6)
- * for @p service.
- *
- * @retval 0 Entry appended.
- * @retval -1 Protobuf writer failure. */
-static int grpc_reflection_append_service(cwist_pb_writer *response, const char *service) {
-    cwist_pb_writer item, list;
-    cwist_pb_writer_init(&item);
-    cwist_pb_writer_init(&list);
-    int rc = cwist_pb_write_string_field(&item, 1, service) ||
-             cwist_pb_write_bytes_field(&list, 1, item.data, item.len) ||
-             cwist_pb_write_bytes_field(response, 6, list.data, list.len);
-    cwist_pb_writer_free(&item);
-    cwist_pb_writer_free(&list);
-    return rc ? -1 : 0;
-}
-
-/** @brief Streaming handler for ServerReflectionInfo (list_services).
- *
- * Walks the app's registered gRPC routes, derives each service name from its
- * "/service/method" path, and streams a single ServerReflectionResponse
- * listing them.  On allocation/encoding failure the stream status is set
- * accordingly and nothing further is sent.
- *
- * @param stream Open reflection stream.
- * @param ctx Unused. */
-static void grpc_reflection_info(cwist_grpc_stream *stream, void *ctx) {
-    (void)ctx;
-    cwist_pb_writer response;
-    cwist_pb_writer_init(&response);
-    cwist_grpc_route *route = (cwist_grpc_route *)stream->req->app->grpc_routes;
-    for (; route; route = route->next) {
-        if (!route->path || route->path[0] != '/') continue;
-        const char *slash = strrchr(route->path + 1, '/');
-        if (!slash) continue;
-        size_t len = (size_t)(slash - route->path - 1);
-        cwist_scratch_t service_s CWIST_SCRATCH_DEFER = {0};
-        char *service = cwist_scratch_alloc(&service_s, len + 1);
-        if (!service) {
-            stream->status = CWIST_GRPC_RESOURCE_EXHAUSTED;
-            break;
-        }
-        memcpy(service, route->path + 1, len);
-        service[len] = '\0';
-        if (grpc_reflection_append_service(&response, service) != 0)
-            stream->status = CWIST_GRPC_INTERNAL;
-        if (stream->status != CWIST_GRPC_OK) break;
-    }
-    if (stream->status == CWIST_GRPC_OK)
-        cwist_grpc_stream_send(stream, response.data, response.len);
-    cwist_pb_writer_free(&response);
-}
-
-/** @brief Register the built-in gRPC server reflection service on an app.
- *
- * Installs the streaming ServerReflectionInfo route.
- *
- * @param app Application to register on.
- * @retval 0 Route registered.
- * @retval -1 Route registration failed. */
-int cwist_app_grpc_reflection(cwist_app *app) {
-    if (grpc_register_route(app, "grpc.reflection.v1alpha.ServerReflection", "ServerReflectionInfo",
-                            1, NULL, grpc_reflection_info, NULL) != 0)
-        return -1;
-    cwist_grpc_route *route =
-        grpc_find_route(app, "/grpc.reflection.v1alpha.ServerReflection/ServerReflectionInfo");
-    if (route) route->builtin = 3;
-    return 0;
-}
-
-/** @brief Register a gRPC route and its HTTP POST dispatch handler.
- *
- * Builds the "/service/method" path, replaces an existing route with the same
- * path in place, or prepends a new route and posts it to the app's route
- * table.  Route memory is owned by the app and released by
- * cwist_grpc_routes_destroy().
- *
- * @param app Application to register on.
- * @param service gRPC service name, e.g. "grpc.health.v1.Health".
- * @param method gRPC method name.
- * @param streaming Non-zero for a streaming (client-streaming) handler.
- * @param unary_handler Handler for unary routes; NULL for streaming routes.
- * @param stream_handler Handler for streaming routes; NULL for unary routes.
- * @param user_ctx Opaque pointer passed to the handler.
- * @retval 0 Route registered or replaced.
- * @retval -1 NULL/empty arguments or allocation failure. */
-static int grpc_register_route(cwist_app *app, const char *service, const char *method,
-                               int streaming, cwist_grpc_unary_handler_func unary_handler,
-                               cwist_grpc_stream_handler_func stream_handler, void *user_ctx) {
+static int grpc_register_route(cwist_app *app,
+                               const char *service,
+                               const char *method,
+                               int streaming,
+                               cwist_grpc_unary_handler_func unary_handler,
+                               cwist_grpc_stream_handler_func stream_handler,
+                               void *user_ctx) {
     if (!app || !service || !method) return -1;
     if ((!streaming && !unary_handler) || (streaming && !stream_handler)) return -1;
     size_t service_len = strlen(service);
@@ -1345,40 +814,22 @@ static int grpc_register_route(cwist_app *app, const char *service, const char *
     return 0;
 }
 
-/** @brief Register a unary gRPC method on an app.
- *
- * @param app Application to register on.
- * @param service gRPC service name.
- * @param method Method name.
- * @param handler Unary handler invoked per request.
- * @param user_ctx Opaque pointer passed to @p handler.
- * @retval 0 Registered.
- * @retval -1 See grpc_register_route(). */
-int cwist_app_grpc_unary(cwist_app *app, const char *service, const char *method,
-                         cwist_grpc_unary_handler_func handler, void *user_ctx) {
+int cwist_app_grpc_unary(cwist_app *app,
+                         const char *service,
+                         const char *method,
+                         cwist_grpc_unary_handler_func handler,
+                         void *user_ctx) {
     return grpc_register_route(app, service, method, 0, handler, NULL, user_ctx);
 }
 
-/** @brief Register a client-streaming gRPC method on an app.
- *
- * @param app Application to register on.
- * @param service gRPC service name.
- * @param method Method name.
- * @param handler Streaming handler invoked once per call with the stream.
- * @param user_ctx Opaque pointer passed to @p handler.
- * @retval 0 Registered.
- * @retval -1 See grpc_register_route(). */
-int cwist_app_grpc_stream(cwist_app *app, const char *service, const char *method,
-                          cwist_grpc_stream_handler_func handler, void *user_ctx) {
+int cwist_app_grpc_stream(cwist_app *app,
+                          const char *service,
+                          const char *method,
+                          cwist_grpc_stream_handler_func handler,
+                          void *user_ctx) {
     return grpc_register_route(app, service, method, 1, NULL, handler, user_ctx);
 }
 
-/** @brief Free all gRPC routes and per-route resources on an app.
- *
- * Also tears down the health registry owned by the built-in health Check
- * route (states, mutex, condvar).  Leaves app->grpc_routes NULL.
- *
- * @param app App to clean up; may be NULL (no-op). */
 void cwist_grpc_routes_destroy(cwist_app *app) {
     if (!app) return;
     cwist_grpc_route *route = (cwist_grpc_route *)app->grpc_routes;
@@ -1448,10 +899,12 @@ int cwist_grpc_routes_clone(cwist_app *dst, const cwist_app *src) {
         memcpy(service, path + 1, service_len);
         service[service_len] = '\0';
 
-        int rc = route->streaming ? cwist_app_grpc_stream(dst, service, method_sep + 1,
-                                                          route->stream_handler, route->user_ctx)
-                                  : cwist_app_grpc_unary(dst, service, method_sep + 1,
-                                                         route->handler, route->user_ctx);
+        int rc = route->streaming
+            ? cwist_app_grpc_stream(dst, service, method_sep + 1,
+                                    route->stream_handler, route->user_ctx)
+            : cwist_app_grpc_unary(dst, service, method_sep + 1,
+                                   route->handler, route->user_ctx);
+        cwist_free(service);
         if (rc != 0) return -1;
         route = route->next;
     }
