@@ -11,6 +11,7 @@
 #include <cwist/core/db/sql.h>
 #include <cwist/core/db/pool.h>
 #include <cwist/net/redis/cwist_redis.h>
+#include <cwist/net/grpc/grpc.h>
 #include <cwist/sys/job/scheduler.h>
 #include <cwist/sys/err/cwist_err.h>
 #include <cwist/core/macros.h>
@@ -173,9 +174,6 @@ typedef struct cwist_app {
 
     /** @brief Unary gRPC route registry. */
     void *grpc_routes;
-
-    /** @brief Content-hashed in-memory assets (see <cwist/sys/app/assets.h>). */
-    void *assets;
 } cwist_app;
 
 // --- Memory Management ---

@@ -15,11 +15,43 @@
 
 ---
 
+## Section Progress Summary
+
+```
+[P0: Critical]      ████████████████████ 100% (Completed)
+[P1: Production]     ████████████████████ 100% (Multiport hardening complete)
+[P2: DevEx]          ████████░░░░░░░░░░░░  40% (Config loader, test tooling, and wire helpers done)
+[P3: Deep Protocols] ███████████████░░░░░  75% (HTTP/3 extension specs and io_uring backend done)
+[P4: Ecosystem]      ██████░░░░░░░░░░░░░░  30% (Unary gRPC and Protobuf wire helpers done)
+```
+
+### 1) Transport Layer
+
+* **Native protocols ready**: HTTP/1.1 through HTTP/3 (QUIC via `lsquic`), WebTransport, and WebSocket are all implemented in-tree. Low-level socket controls (ECN, 0-RTT, connection migration) are complete.
+* **HTTP/3 browser hardening**: Response header emission now normalizes field names to lowercase and rejects CR/LF-bearing values, covering login/logout cookie and redirect paths in strict browsers such as Firefox.
+* **Async I/O optimization (`io_uring`)**: `io_uring_backend.c`, SQE/CQE synchronization, demolition safety, and focused tests are complete.
+* **Multiport HTTP/3 fan-out**: The `cwist_multiport_t` facade now creates per-port UDP contexts and copies global HTTP/3 settings unless a port is detached into a sub-app.
+
+### 2) Application Layer
+
+* **High-performance router & middleware**: Deterministic resource management with parameterized routes (`/user/:id`), compression (Gzip via zlib), CORS, and rate limiting (libttak token bucket) are integrated.
+* **Observability**: Prometheus `/metrics` and a probe-registry health-check system are operational.
+* **Per-port sub-applications**: Lifecycle and exception handling for `cwist_multiport_get_app(&app, port)` are hardened; detached ports are separately tunable sub-applications.
+* **Unary gRPC services**: Applications can register unary gRPC handlers over HTTP/2 with `cwist_app_grpc_unary()`, decode the gRPC message envelope, and return `application/grpc` responses with explicit gRPC status metadata.
+
+### 3) Security & Data Layer
+
+* **Security specs**: BoringSSL-based TLS 1.3 and hybrid post-quantum KEM (`X25519MLKEM768`) are implemented ahead of time. CSRF and automatic secure-header injection remain planned (`⏳`).
+* **Data-layer integrity**: SQLite3 embedded integration, migration system, and a `_Generic` macro-based type-dispatched ORM/query builder are in the build stream. The lock-free work queue (`cwist_io_queue`) and scheduler-backed background jobs are implemented.
+* **Protobuf wire helpers**: A lightweight Protobuf runtime supports varint keys, unsigned/signed/bool fields, length-delimited bytes/strings, reader iteration, and ZigZag helpers for hand-written services.
+
+---
+
 ## Current Snapshot
 
 - Core HTTP/1.1, HTTP/2, HTTP/3, WebSocket, routing, middleware, validation, metrics, health checks, static-file caching, and graceful shutdown are already implemented in-tree.
-- The application layer is being extended with a multiport facade: `cwist_multiport_t` converts normal C port arrays into counted descriptors, and `cwist_multiport_get_app(&app, port)` is intended to detach an additional port into a tunable sub-application.
-- Current multiport work builds as part of `libcwist.a`, but still needs focused tests, API docs, and protocol parity hardening before it should be marked stable.
+- **P0 (must-have) is 100 % complete**: the framework’s core architecture and protocol stack are locked.
+- We are now in the **P2–P4 tooling and ecosystem phase**. Completed multiport, scheduler, test-client, `io_uring`, unary gRPC, and Protobuf wire-format work remain covered by focused regression tests.
 
 ---
 
@@ -129,10 +161,10 @@
 
 | Feature | Status | Notes |
 |---------|--------|-------|
-| **gRPC over HTTP/2** | ✅ | Unary/stream registration, split-frame incremental decoder and output sink, standard health/reflection service registration, gRPC metadata, and test-client coverage |
+| **gRPC over HTTP/2** | ✅ | Unary server registration via `cwist_app_grpc_unary`, gRPC frame decode/encode, gRPC status metadata, and test-client coverage |
 | **Protobuf Runtime Helpers** | ✅ | Wire-format reader/writer for varint, bool, bytes/string, signed integer casting, and ZigZag helpers |
-| **GraphQL** | ✅ | Full query/mutation engine, field arguments, variables, aliases, nested selection sets, error envelope, and HTTP adapter |
-| **OpenAPI / Swagger Generation** | ✅ | OpenAPI 3.1 JSON generated from Doxygen `@openapi.*` annotations on route declarations |
+| **GraphQL** | ⏳ | No GraphQL parser or executor |
+| **OpenAPI / Swagger Generation** | ⏳ | No automatic spec generation from route definitions |
 | **Background Jobs / Scheduler** | ✅ | `cwist_scheduler` worker pool with immediate and delayed job execution |
 | **WebRTC** | 🔮 | Real-time media; requires separate data channel stack |
 | **Serverless / WASM Runtime** | 🔮 | Edge deployment target; WASI 0.3 component pipeline replaces the Emscripten browser bundle once the 0.3 world stabilizes (wasi-sdk / wasmtime / jco); see the v3.7 Phase 1 experiment and the tracked issue |
@@ -160,369 +192,31 @@ it is additive. Scope does not grow; anything not ready slips.
 | **3 — HTTP/3 close correctness** | Re-pin lsquic when upstream fixes land; add CONNECTION_CLOSE interop gate | Deferred indefinitely | On hold until upstream lsquic ships WebTransport client support; no separate cutoff |
 | **4 — v4.0 scope confirmation** | Enact v3.7 Phase 5 decisions and record v4.0 fate for every experimental item | Done | v3.7 Phase 5 enacted; GraphQL subscriptions, durable queue, Redis RESP2/NATS borrow promoted to supported; WASM component pipeline ships experimental at v4.0 with promotion re-evaluated at v4.1; WebTransport experimental until v4.1; docs audit done |
 
-### Phase 1 — Performance
-
-Every item lands with before/after numbers from the CI benchmark or a checked-in
-microbenchmark, or with a recorded negative result.
-
-| Work Item | Result | Decision |
-|-----------|--------|----------|
-| Reactor vs Classic vs Axum latency gap | CWIST C1M already leads Axum on a single CI run (291k vs 237k RPS, 1.46 ms vs 1.65 ms avg); queue delay dominates the tail | Done for v3.8; further gains need architectural tail-hardening, not tuning |
-| #166 tail-latency successor | Opened #293; `CWIST_LATENCY_PROBE` shows callback time is tiny and queue delay drives the tail | Done for v3.8 |
-| Batch/yield matrix | Default `(16, 16)` is near-optimal; `(16, 4)` and `(16, 32)` are marginally better on P99 but RPS is flat | Done; no default change |
-| RX-uring pipelining (#179) | **Negative**: `CWIST_RX_URING=1` is ~14% slower than `=0` on a 16-depth pipeline workload | **Drop** from v3.8 scope; keep the learn flag |
-| HTTPS handshake shards | **Real but niche**: `CWIST_HTTPS_HS_SHARDS=1` is a clear bottleneck (3.1k RPS / 27 ms); 4+ shards saturate (~3.6k RPS / ~13 ms) | **Raise default floor to 4 and MAX to 16** (#294); explicit override still available |
-| Worker ttak calibration warmup | **No cold-start drift**: RPS varies <5% from second 1 to second 10 across three cold starts | **Drop** from v3.8 scope |
-| Measurement discipline | Compare within one runner-CPU column, or use checked-in microbenchmark | Ongoing |
-
-### Phase 2 — Rust FFI
-
-Layout: an in-tree `bindings/rust/` workspace with `cwist-sys` (bindgen output
-that links `libcwist.a` through `cwist.pc`) and `cwist` (the safe wrapper).
-
-| Work Item | What Changes | C-Side Impact |
-|-----------|--------------|---------------|
-| Per-route user context | Additive `_ex` registration functions that carry `void *user_ctx` + optional destructor | New symbols only; existing signatures unchanged |
-| `static inline` helpers | Export wrappers (or use bindgen `--wrap-static-fns`) so bindgen can see them | New symbols only |
-| Struct layout | Decide per field between accessor and bindgen layout access; add layout assertion tests | New layout tests; existing structs unchanged |
-| Safe wrapper scope | App lifecycle, routing with closures, request/response access, middleware, graceful shutdown, deferred async | None |
-| Memory model | Rust allocations stay outside `cwist_alloc`; full GC and `CWIST_INTERCEPT_MALLOC` do not apply to Rust code | Documentation only |
-| CI and measurement | `cargo test` on Linux/macOS, `example/rust-hello/`, FFI overhead measured vs C equivalent | New CI job |
-
-Status at the v3.8 cut: experimental, crate version 0.x, not yet published to
-crates.io. The v4.0 decision (publish, or keep in-tree) is recorded before v4.0
-cuts.
-
-### Phase 3 — HTTP/3 Connection-Close Correctness
-
-The CWIST-side half is done. The three lsquic fixes are open upstream as
-#688 (triggering frame type), #687 (close packet number space selection), and
-#693 (pre-handshake fallback); all three are mergeable.
-
-| Work Item | Deadline | Fallback |
-|-----------|----------|----------|
-| Re-pin `lib/lsquic` to upstream release containing #688, #687, #693 | 2026-10-09 | Mark affected gate cases expected-fail; move re-pin to v4.0 RC |
-| Build h3spec-style CONNECTION_CLOSE interop gate | v3.8 | N/A |
-| Keep `test_http3` Test 12 pinning peer-abort close path | v3.8 | N/A |
-| Add CI gate that fails if pinned lsquic commit lacks required fixes | v3.8 | N/A |
-
-### Phase 4 — v4.0 Scope Confirmation
-
-| Decision Source | Action |
-|-----------------|--------|
-| v3.7 Phase 5 | **Done** — full GC and malloc interception promoted to *supported opt-in* (`docs/GC.md` updated, defaults unchanged: full-GC off); `CWIST_PROFILE` matrix stays the v4.0 default story; latency probe stays hidden opt-in; HTTP batch-shed counter stays always-on |
-| Experimental items | **Promoted to supported in v3.8** — GraphQL subscriptions (`graphql_ws.h`), durable job queue (`durable_queue.h`), Redis RESP2 reply tree, and NATS connection borrow (`cwist_nats_native()`). **Decided for v4.0 (2026-10-10)** — WASM component pipeline (#203) ships v4.0 experimental and outside the guarantee; promotion re-evaluated at v4.1 (gated on WASI 0.3 / unflagged JSPI); WebTransport stays experimental until v4.1 |
-| WebTransport tutorial | Keep experimental until v4.1 |
-| Docs | Audit stale experimental caveats |
-
-### Release Criteria for v3.8
-
-- Every Phase 1 item has before/after numbers or a recorded negative result.
-- `bindings/rust` builds and passes tests in CI on Linux and macOS, the Rust
-  example serves requests, and the FFI overhead is measured.
-- The C API additions for FFI are additive only; no existing symbol changes.
-- The HTTP/3 connection-close gate exists, passing or expected-fail per the
-  cutoff rule.
-- Every experimental item has a recorded v4.0 decision, and the v3.7 Phase 5
-  decisions are enacted in code and docs.
-- CI is green on the exact release commit.
-
+* Extend gRPC from unary handlers to server streaming, client streaming, and bidirectional streaming.
+* Add generated-code bindings from `.proto` descriptors once the runtime ABI settles.
+* Add gRPC reflection, health checking, deadlines, cancellation propagation, metadata normalization, and trailer-frame emission.
+* Add GraphQL and OpenAPI generation.
+* Evaluate persistent job backends separately from the in-process queue/scheduler.
 
 ### gRPC / Protobuf Status
 
 Completed:
 
 * `cwist_app_grpc_unary(app, service, method, handler, user_ctx)` registers `POST /Service/Method` routes for HTTP/2 gRPC unary calls.
-* `cwist_app_grpc_stream(app, service, method, handler, user_ctx)` registers buffered streaming handlers that can consume multiple request messages and append multiple response messages in order.
 * `cwist_grpc_decode_message()` and `cwist_grpc_encode_message()` implement the gRPC 5-byte message envelope (`compressed` flag + big-endian payload length).
-* `cwist_grpc_decode_next_message()` iterates concatenated gRPC message envelopes for client-streaming and bidi-style buffered request bodies.
-* `cwist_grpc_stream_send()` and `cwist_grpc_stream_close()` build ordered multi-message gRPC responses with final status metadata.
-* `cwist_grpc_decoder_feed()` recovers gRPC envelopes split across arbitrary DATA payload boundaries; `cwist_grpc_stream_set_writer()` permits immediate transport-frame output.
-* `cwist_app_grpc_health()` and `cwist_app_grpc_health_set_status()` register and control `grpc.health.v1.Health`; `cwist_app_grpc_reflection()` registers the v1alpha reflection stream.
-* `cwist proto input.proto` generates scalar proto3 C models, encoder helpers, and gRPC method-path constants.
 * `cwist_grpc_set_response()` and `cwist_grpc_set_error()` produce `application/grpc` responses and explicit `grpc-status` / `grpc-message` metadata.
 * `cwist_pb_writer` supports varint keys, uint64/int64/bool fields, bytes fields, string fields, and dynamic buffer growth.
 * `cwist_pb_reader` iterates Protobuf fields and exposes wire type, field number, varint value, and length-delimited payload slices.
 * `cwist_pb_zigzag_encode()` / `cwist_pb_zigzag_decode()` cover signed integer mappings used by `sint32` / `sint64` style fields.
-* `test_grpc` verifies Protobuf request construction, gRPC frame handling, unary dispatch, buffered streaming dispatch, multi-message response parsing, invalid content type handling, and malformed frame rejection.
+* `test_grpc` verifies Protobuf request construction, gRPC frame handling, unary dispatch, Protobuf response parsing, invalid content type handling, and malformed frame rejection.
 
 Known limits:
 
-* Server-side response compression is not implemented (requests only).
-* The proto generator covers scalar, enum, nested message, and repeated packed-numeric proto3 fields plus service paths; `oneof`, `map`, fixed-width types, and descriptor-set input remain (v3.4).
-* The builtin health `Watch` route stays on the buffered dispatch path.
-* No gRPC client, retry policy, or load-balancing policy exists yet.
-
----
-
-## v3.4 Milestone (Planned)
-
-Theme: gRPC client side and codegen completeness. v3.3 (re-tagged to include the sanitizer/interop test fixes) shipped the wire-level streaming server (DATA-frame wiring, trailers, deadlines, gzip) plus the first proto codegen extension (enums, nested message fields, repeated packed numerics); v3.4 finishes the story.
-
-* **`cwist proto` completion**: ~~`oneof`, `map`, fixed-width types (`fixed32/64`, `sfixed32/64`, `double`), and `protoc --descriptor_set_out` input bindings~~ (all done). CLI-only work (`tools/cli/cwist`), no library ABI impact.
-* **gRPC client**: ~~h2/h2c client with unary/streaming calls, retry policy, and client-side load balancing~~ (all done: `cwist_grpc_client_*` with deadlines and cancellation, plus `cwist_grpc_channel_*` with resolver, `pick_first`/`round_robin` LB, and the gRFC A6 retry engine).
-* **gRPC server leftovers**: ~~moving health `Watch` onto the streaming dispatch path~~ (done).
-* **Distribution**: ~~publish the Homebrew formula~~ (done: `brew tap c4punks/cwist`, `brew install c4punks/cwist/cwist`, verified end-to-end on Linuxbrew). vcpkg stays an in-tree draft under `packaging/vcpkg/`; upstream submission postponed.
-* **WASM client-side support**: bring CWIST handlers into the browser WASM ecosystem.
-  * ~~In-memory HTTP dispatcher~~ ✅ (`cwist_app_dispatch_memory()`): run `cwist_app` routing and handlers directly on request/response memory buffers, with no sockets — so the same C handlers run inside a Service Worker or a JS fetch-interception layer.
-  * ~~`libcwist_wasm.a` target~~ ✅ (`make wasm`): an Emscripten build that excludes the native transport (sockets, TLS, QUIC) and ships the socket-independent core — app dispatch, mux/middleware, HTTP/1 parser/serializer, query map, cJSON, memory utilities.
-  * ~~`cwist_db` in-memory/blob abstraction~~ ✅ (`cwist_db_open_memory()` / `cwist_db_serialize()`): official API over `sqlite3_deserialize`-style memory buffers, so WASM apps don't need to parse custom binary blobs.
-  * ~~TypedArray zero-copy serialization helpers~~ ✅ (`<cwist/wasm/typedarray.h>`): Emscripten-side macros/headers that map C struct arrays directly onto `HEAP` TypedArrays instead of round-tripping through `snprintf` JSON.
-
----
-
-## v3.5 Milestone (Planned)
-
-Theme: **Full GC — automatic resource reclamation**. Today CWIST relies on explicit destroy-family calls (`cwist_app_destroy`, connection/session teardown, `cwist_free`) paired with arena discipline. v3.5 makes cleanup automatic where it matters: threads and processes ending must close connections, and `cwist_alloc` objects must evaporate without manual frees. Design document: `docs/GC.md`.
-
-* **`cwist_full_gc(bool)` global toggle**: ~~when enabled, connections are closed automatically on worker-thread exit and process exit even without explicit destroy calls; when disabled (default), the current explicit model runs unchanged at zero cost~~ (done — `src/core/mem/gc.c`, see Tutorial 30).
-* **Connection reclamation via libttak epoch GC** (`ttak_epoch_gc`, already wrapped by `src/core/mem/gc.c`): ~~per-thread connection registration with epoch-deferred teardown, so a connection swept at thread exit can never UAF a thread still referencing it~~ (done — `test_conn_registry`, `test_gc_ebr_release`, `test_full_gc_sweep`).
-* **`cwist_alloc` registration**: ~~allocations route into the full-GC context (internal changes to `src/core/mem/alloc.c`) so objects are reclaimed by epoch rotation instead of manual `cwist_free` calls~~ (done — gated on `cwist_full_gc_enabled()`, registered via `cwist_reg_ptr_sized`).
-* **Pseudo-RAII**: ~~scoped guards via GCC/Clang `__attribute__((cleanup))` for handle-like locals, plus raw borrowing of LibTTAK RAII primitives~~ (done — `CWIST_DEFER_FREE`/`CWIST_SCRATCH_DEFER` in `include/cwist/core/mem/alloc.h`, used in tutorials 07/28).
-* **Transparent `malloc` interception**: ~~users will habitually write `malloc`, not `cwist_alloc` — so handler-thread `malloc` calls should evaporate the same way `cwist_alloc()` calls do~~ (done — `include/cwist/core/mem/intercept.h`, opt-in per translation unit via `#define CWIST_INTERCEPT_MALLOC` before including it). Header-scoped `#define malloc cwist_malloc_shim` (never `-Wl,--wrap=malloc` — link-level wrapping was considered and rejected, since it would also intercept vendored dependencies like BoringSSL/lsquic that never include CWIST headers and have no reason to expect a non-libc allocator underneath them, e.g. BoringSSL's `OPENSSL_cleanse()`-then-free assumes plain heap semantics). Covers `calloc`/`realloc`/`free` consistently from the same seam (`src/core/mem/alloc.c`); reclaim cadence reuses the existing `cwist_gc_scope_track`/`cwist_gc_scope_flush` pipeline unchanged; cross-thread handoff reuses the existing `cwist_gc_scope_disown()` escape hatch. Measured overhead (`tests/bench_malloc_intercept.c`): the measured overhead lives in `docs/GC.md` section 5 (table and methodology, refreshed when the mechanism changes).
-* **Thread/process exit sweeps**: ~~thread-local connection registry with pthread TLS destructors for worker exit, and an `atexit` sweep for process exit~~ (done — `test_io_queue_full_gc`, `test_full_gc_ownership_handoff`).
-* **Evaluate a `mimalloc` backend for `cwist_alloc`/the epoch-GC heap** (tracked in #25): ~~evaluate via `LD_PRELOAD` A/B against jemalloc and tcmalloc, then vendor mimalloc if the data holds up~~ (done, result: **negative** — real CI A/B (PR #34) showed mimalloc regressing every metric on CWIST's prefork C1M model: RPS −1.8%, P99.999 +97%, RSS +120%, root-caused to mimalloc's eager per-process arena reservation being a poor fit for many short-lived low-allocation forked processes. `mallopt(M_ARENA_MAX, 1)` (`CWIST_MALLOC_ARENA_MAX`, PR #35, merged) targets the same "N processes × M arenas" mechanism without mimalloc's reservation cost and won on every metric instead — see issue #25 for the full writeup. Note: the P99.999-vs-Axum gap that originally motivated this item was measured via the-benchmarker's public `percentile99999` field, which turned out to be mislabeled P99.99, not true P99.999 (found during PR #48's validation, also on #25) — the qualitative direction (Axum ahead on tail latency) likely still holds, but the "2.8–3.6x" figure specifically should not be cited as P99.999 going forward).
-* ~~**Full-GC malloc interception overhead** (tracked in #65)~~ (done: the pending-sweep list was scanned linearly on every free, so a free cost time proportional to the blocks the thread held; it is now a per-thread hash set reached through a thread-local pointer, flat across live-set sizes. Measurements and method in `docs/GC.md`, "Known performance caveat"; `tests/bench_full_gc_tracking.c` reproduces them).
-
----
-
-## v3.6 Milestone (In Progress)
-
-Theme: **WASM client-side support**. v3.4 shipped the gRPC client wave; v3.5 shipped full GC; v3.6 takes the WASM client-side support wave from "in-tree target" to "usable from JavaScript". Tracked in issue #93.
-
-* **Phase 1: in-tree WASM correctness** (issue #93 gaps 1-4, PR #176) — ~~done~~ (merged 2026-09-17):
-  * ~~`cwist_db` in the WASM build (`src/core/db/db.c` + `lib/sqlite3/sqlite3.c` in `WASM_SRCS`), so `cwist_db_open_memory()` / `cwist_db_serialize()` work under Emscripten as the roadmap has long claimed~~ (done).
-  * ~~Fix the EM_JS corruption from the tree-wide clang-format pass (`=>` rewritten to `= >` inside brace-block JS bodies); `clang-format off/on` guards plus `make format-check` coverage so it cannot recur~~ (done).
-  * ~~Emscripten build + smoke test as a CI gate (`.github/workflows/wasm.yml`)~~ (done; scoped to the wasm files after runner clang-format version skew produced false tree-wide failures).
-  * ~~`docs/api/wasm.md`: build, scope, the `dispatch_memory` pattern, TypedArray helpers, the db round trip, session caveats~~ (done).
-* **Phase 2: JavaScript consumption** (issues #183/#184, PR #185) — ~~done~~ (merged 2026-09-18; both issues auto-closed):
-  * ~~npm/release packaging for `libcwist_wasm.a` and the smoke-tested artifact~~ (done — `wasm/npm/` publishes the `cwist-wasm` package: `index.js` fetch-style API, `index.d.ts`, README; `make wasm-dist` builds the tarball, CI verifies a clean install).
-  * ~~First-party JS wrapper exposing the `dispatch_memory` request path and TypedArray views without requiring consumers to write Emscripten glue~~ (done — `include/cwist/wasm/wasm_entry.h` `CWIST_WASM_DEFINE_ENTRY`, plus the `_main` export pitfall documented: without it the linker dead-code-eliminates `main`).
-* **Phase 3: streaming + session model** (done on `feat/wasm-phase3`):
-  * ~~WASI target evaluation~~ (done — decision and prerequisites in
-    `docs/api/wasi.md`: a separate `wasm-wasi` workstream, blocked on
-    libttak `__wasi__` compat, sqlite header hygiene, and sysroot
-    hermeticity; not a v3.6 deliverable).
-  * ~~Streaming request/response bodies through the WASM boundary~~ (done:
-    `cwist_app_dispatch_stream` + `cwist_stream_req_begin/feed/end` in
-    app.h/app.c; boundary streaming, not a chunked-producer handler API.
-    The `CWIST_WASM_DEFINE_ENTRY` macro exports
-    `_cwist_wasm_dispatch_stream`, pumping chunks through a
-    `Module.cwistStreamChunk` JS hook).
-  * ~~Session persistence model for WASM apps~~ (done and measured: the
-    model is "pin the signing secret, let the signed client-side cookie
-    carry the state" - instance lifetime is irrelevant. The WASM build now
-    actually links sessions via a bundled header-only SHA-256/HMAC
-    (`include/cwist/core/crypto/sha256.h`; OpenSSL is not in WASM_SRCS, so
-    pre-Phase-3 session.o could never link), with a
-    `crypto.getRandomValues` entropy fallback when /dev/urandom is absent.
-    Verified across app instances in `tests/test_wasm_stream.c` and the
-    Emscripten smoke test; documented in `docs/api/wasm.md`).
-* **Phase 4: reach** (remaining):
-  * End-to-end example app (Service Worker or fetch-interception layer).
-
-Landeds alongside the WASM wave, also in scope for v3.6:
-
-* **Per-event latency probe** (issue #166, PR #186, merged): `CWIST_LATENCY_PROBE=1` records arm-to-dispatch queue delay and callback runtime histograms per reactor, dumped at destroy. First measurement at the CI operating point: queue delay p99 = 10 ms while callback p50 = 25 us — the tail lives before dispatch.
-* **RX-uring receive path** (issue #179, PR #187, merged): one `IORING_OP_RECV` SQE replaces the POLL_ADD + recv() pair on the C1M async path (Linux io_uring reactors only; `CWIST_RX_URING=0` restores legacy byte-identically). A per-connection learn flag keeps non-pipelining clients at the legacy op count (measured neutral: 342.4k vs 341.7k rps, t12 c400); the pipelining win case is unproven pending a pipelining workload.
-* **WebSocket non-blocking I/O** (issue #181, PR #182, merged): reactor-driven WebSocket on C1M (classic mode keeps blocking I/O), callback-style API, `CWIST_WS_ASYNC_IDLE_TIMEOUT_SEC` (default 300 s).
-* **SQPOLL evaluation** (closed, negative): kernel SQ-thread wakeup discipline on 6.12 makes producer-side SQPOLL at best equal to the polled ring and at worst a multi-ms stall source; SQ_AFF stabilizes it but never beats the plain submit-enter (issue #179 comments).
-
-Known limits going in (from PR #176 review), updated:
-
-* ~~Bundle size impact of pulling SQLite into `libcwist_wasm.a` is unmeasured~~ — now measured (Phase 2 bundle report in `docs/api/wasm.md`): `libcwist_wasm.a` 328,518 -> 1,703,706 B (5.2x), `wasm_smoke.wasm` 67,267 -> 1,052,405 B (15.7x). The future opt-out or split build decision now has data; it remains open.
-* ~~Session behavior under the WASM dispatch model is documented but not yet measured; Phase 3 needs observed behavior, not the current caveats list~~ — now measured (Phase 3: cross-instance verify/reject in `tests/test_wasm_stream.c` and the Emscripten smoke test; model documented in `docs/api/wasm.md`).
-
----
-
-## v3.7 Milestone (In Progress)
-
-Theme: **Edge deployment and QUIC completion**. v3.6 took WASM from "in-tree target" to "usable from JavaScript"; v3.7 takes it to "deployable on edge runtimes" (WASI), brings WebTransport to the stable line once its upstream dependency lands, folds the HTTP/3 connection-close correctness wave into the release pin, and lands three ecosystem items — gRPC server compression, GraphQL subscriptions, and persistent job backends — as experimental support. Tracked in issue #201.
-
-* **Phase 1: WASI edge deployment** (from 🔮 "Serverless / WASM Runtime"):
-  * ~~Promote the WASI 0.2 (`wasm32-wasip2`) socket server from experimental to supported: CI gate (build + wasmtime `wasi:sockets` smoke, mirroring `wasip2-smoke`), and reframe `docs/api/wasi.md` from evaluation to reference documentation~~ (done — `wasip2` job in `.github/workflows/wasm.yml`; `docs/api/wasi.md` reframed to reference).
-  * Edge persistence pattern: `cwist_db_serialize()` / `cwist_db_open_memory()` round trip against a host KV-style store, with an example app.
-  * Deployment examples and guides for at least one edge runtime (Cloudflare Workers or a wasmtime appliance setup).
-  * WASM streaming producer API: response bodies generated chunk-by-chunk inside handlers — the "not covered (yet)" item from `docs/api/wasm.md` (boundary streaming shipped in v3.6 buffers the body in the app; this closes the gap).
-  * Component experiment (toward replacing the Emscripten bundle, tracked separately): define the WIT world for the JS dispatch boundary (`wit/`), validate it in CI, and spike a jco-transpiled browser bundle running the existing wasm smoke suite alongside the Emscripten build. Emscripten stays the supported browser path for the whole of v3.7; the swap happens only after the WASI 0.3 world stabilizes.
-  * Retire the WASI preview1 target (`wasi-smoke`): 0.2 covers its use, and three flavors cost more than they earn.
-* **Phase 2: WebTransport on the stable line** (conditional on upstream, issue #17):
-  * Trigger condition: LSQUIC PR #629 (WebTransport) merges to upstream lsquic master.  If it has not merged by the release window, this phase slips — v3.7 ships without WebTransport rather than pinning `main` to a topic branch again.
-  * Re-pin `lib/lsquic` to upstream master with WebTransport included; port the dev-branch WebTransport server and native C client to `main` with interop and soak coverage.
-* **Phase 3: HTTP/3 client correctness**:
-  * Track the lsquic connection-close fixes upstream (triggering-frame-type population, connection-close packet number space selection and pre-handshake fallback) and fold them into the release-line `lib/lsquic` pin at the next re-pin.
-  * Add connection-close interop coverage on the CWIST side so the behavior stays pinned by tests.
-* **Phase 4: ecosystem experimental support** (shipped behind flags, documented as experimental):
-  * ~~gRPC server-side response compression~~ (done 2026-09-07 in `31b44d6f`, pre-v3.7; marked here so Phase 4 tracks only what remains).
-  * ~~GraphQL subscriptions over the v3.6 non-blocking WebSocket transport~~ (done — graphql-transport-ws subprotocol in `cwist/graphql_ws.h` with a topic broker (`cwist_graphql_publish`) and reactor-thread-safe fanout; `test_graphql_subscriptions` covers the close-code matrix, streaming, and teardown purge).
-  * ~~Persistent job backends: a durable queue over the existing Redis/NATS clients, separate from the in-process scheduler queue~~ (done — `cwist/sys/job/durable_queue.h`: at-least-once queues, Redis streams+consumer groups (XAUTOCLAIM visibility, Lua nack/dead-letter) and NATS JetStream pull consumers; `test_durable_queue` runs against live Redis and skips NATS cleanly without a server).
-* **Phase 5: pre-v4 experimental promotion** (new under this retheme — give the dev-only experiments a release-line soak so v4.0 can decide their fate with data):
-  * Memory management: full-GC (`CWIST_DEFER_FREE`, EBR path, thread/process-exit sweep) and header-scoped malloc interception (`CWIST_INTERCEPT_MALLOC`) documented as one experimental support tier, with a named v4.0 decision per item (default-on, opt-in, or removed). **Decision (2026-09-24): opt-in, both items.** The overhead of enabling the safety net is real (measured in `tests/bench_malloc_intercept.c`, table and methodology in `docs/GC.md` §5) — it is priced for handler authors who want it, not a tax every stable-line deployment should pay. The revert path is "do not define the macro", so promoting it to *supported opt-in* at v4.0 (out of experimental) carries no API risk. Decision recorded here per the entry criteria; revisit only if the soak turns up correctness regressions.
-  * `CWIST_PROFILE` presets and the C1M baseline work: confirm the preset matrix is the v4.0 default story or trim it. **Decision (2026-09-24): keep the matrix as the v4.0 default story, no trim.** The four presets (`performance`/`lowmem`/`lowlat`/`default`) are thin setenv overlays with per-variable escapes (overwrite=0), so the surface is already minimal. On the default: issue #166's tail analysis attributes the extreme-tail gap to neither dispatch model, so C1M-on + drain-chunk 8 remains the defensible throughput-oriented default, with `CWIST_PROFILE=lowlat` as the documented escape for latency-first deployments. `docs/cooperative-queuing.md` documents the matrix for every profile.
-  * The env-gated per-event latency probe and HTTP batch shed metrics: promote, hide, or drop. **Decisions (2026-09-24), one per item:**
-    * *Latency probe (`CWIST_LATENCY_PROBE=1`, issue #166 tooling):* **hide — stays opt-in.** Disabled cost is one cached atomic load and a branch per arm/record (the `clock_gettime` calls are guarded and never run when off); enabled cost is two clock reads plus a histogram update per request. Its job — attributing the extreme tail between queue and service time — is a diagnostic activity, not steady-state observability; steady-state belongs to the always-on Prometheus metrics. No default-on, and no sampling mode is planned for v4.0 unless #166 (or its successor) asks for one.
-    * *HTTP batch shed metric (`cwist_http_continuation_shed_total`):* **promote — already de-facto stable, keep always-on with no gate.** The counter increments only when a pipelined continuation is shed because the reactor post queue is full — a pathological path where the connection is closed anyway. Gating it would add a branch on a path that executes roughly never. It already ships ungated in the Prometheus exposition, so "promote" here means the v4.0 line keeps it unconditional rather than hiding it behind a knob.
-  * Each item needs: experimental docs, a revert path, and the promotion decision recorded here before v4.0 cuts. (All three items now have their decision recorded above; the docs and revert paths were already in place.)
-
----
-
-## v3.8 Release Criteria and v4.0 Preview
-
-The detailed plan for v3.8 lives in the [CWIST v3.8 Roadmap](#cwist-v38-roadmap-in-progress) section above. This section keeps the release gate and the v4.0 transition note in one place.
-
-**Release criteria for v3.8:**
-- Every Phase 1 item has before/after numbers or a recorded negative result.
-- `bindings/rust` builds and passes tests in CI on Linux and macOS, the Rust
-  example serves requests, and the FFI overhead is measured.
-- The C API additions for FFI are additive only; no existing symbol changes.
-- The HTTP/3 connection-close gate exists, passing or expected-fail per the
-  cutoff rule.
-- Every experimental item has a recorded v4.0 decision, and the v3.7 Phase 5
-  decisions are enacted in code and docs.
-- CI is green on the exact release commit.
-
-**v4.0 preview:** v4.0 starts the API stability guarantee. From v4.0 on,
-existing public API is not changed, and new features keep being implemented
-as new API in any release. Deprecated APIs and flags are resolved (promoted or removed) before the cut.
-The v4.0 cycle itself focuses on correctness, soak, docs, and the promotion
-decisions, so that expansion can resume in v4.1 on a stable base. See "API stability from v4.0" under the versioning
-rules.
-
----
-
-## CWIST v3.9 Roadmap (Released 2026-10-05)
-
-v3.8 spends its cycle on performance, Rust FFI, and v4.0 scope confirmation.
-The follow-up TLS investigation for issue #306 (PR #307 shipped the
-TCP_QUICKACK handshake fix; shard/teardown/buffer follow-ups all measured
-no-gain) leaves one clear gap: **TLS observability & performance
-governance**. There is no way today to see handshake health in production
-or to stop a TLS regression from landing silently. v3.9 closes that, and
-also brings WebRTC DataChannel support into the release scope.
-
-### v3.9 Status at a Glance
-
-| Goal | Status | Notes |
-|------|--------|-------|
-| (a) CI TLS performance gates (HTTPS churn / keep-alive / large-transfer / RTT) | ✅ Done | Gates landed in #309 but never passed: the absolute backstops came from fast CPUs and healthy code failed on the EPYC 7763 runner, so no history accumulated either. Recalibrated on https/http ratios plus same-CPU history; disabling the #307 fix fails the RTT gate (0.08 → 43 ms) on any CPU. The churn-ratio backstop had to be loosened after the first Intel runner (healthy at 0.071 vs 0.11-0.13 on AMD). Green on `dev` at 610fe55b (https://github.com/c4punks/CWIST/actions/runs/37303818384). Tracked in #306 |
-| (b) TLS observability in Prometheus `/metrics` (handshake counts, TLS version/cipher counters, resumption vs full-handshake ratio) | ✅ Done | `cwist_tls_handshakes_total`, `cwist_tls_handshakes_resumed_total`, `cwist_tls_connections_active`, `cwist_tls_handshakes_tls12_total`, `cwist_tls_handshakes_tls13_total`, `cwist_tls_ciphers_{aes128_gcm,aes256_gcm,chacha20,other}_total`; covered by `test_https_metrics` |
-| (c) Settle issue #294 with measured data | ✅ Done | #294 closed as completed. An earlier comment there claimed `cwist_app_listen` never uses the sharded handshake shepherds; that was wrong (it confused `cwist_app_multiport`'s inline path with `cwist_app_listen`). Measured: `cwist_app_listen` adds one thread per `CWIST_HTTPS_HS_SHARDS` shard on the first HTTPS request, in both C1M and classic mode. The default floor of 4 shards / cap of 16 is already on dev, and #294's data shows no gain beyond 4 |
-| (d) WebRTC DataChannel support | ✅ Done | #310: SDP offer/answer, ICE-lite, DTLS (vendored BoringSSL), SCTP DataChannels (`lib/usrsctp`) on the cwist reactor. Echo verified against headless Chromium (`make test_webrtc_browser`); Firefox not yet tested |
-
-Entry criteria for v3.9: every item must move a measured metric (handshake
-throughput, resumption ratio, connection-churn latency, or regression
-detection latency) or retire a mismeasured premise. New public API is
-additive only, matching the v3.8 rule.
-
-Exit criteria for v3.9:
-
-- The CI TLS gate PR (#306) is green on the release commit and fails on a
-  re-introduced #307-class regression (measured by the churn benchmark).
-- `/metrics` exposes the full TLS counter set above on a live app, and the
-  resumption-vs-full ratio is observable across prefork workers.
-- #294 is closed with measured data (done: closed as completed; the
-  shepherds do serve `cwist_app_listen`, and the shipped default needs no
-  change).
-
----
-
-## CWIST v4.0 Readiness
-
-v4.0 starts the API stability guarantee described under "API stability from
-v4.0" in the versioning rules below. This section lists what is still open
-before the v4.0 cut, as checked on `dev` at 4cd05e21 (2026-10-07). It records
-open work and pending decisions, not results.
-
-### API surface decisions
-
-After v4.0 an existing public API can no longer change, so each item below
-needs a recorded decision before the cut.
-
-| Item | Current state | Decision needed |
-|------|---------------|-----------------|
-| WASM component pipeline (#203) | Experimental; gated on WASI 0.3 / unflagged JSPI | **Decided (2026-10-10):** ship v4.0 with it experimental and outside the guarantee; promotion re-evaluated at v4.1 |
-| `cwist_http3_set_stream_priority()` | `@deprecated` in `http3.h`; kept for ABI compatibility; always logs a warning and returns -1 | **Decided (2026-10-10):** kept with the always-refuse behavior as its permanent contract for v4.0 |
-| `cwist_http_stringify_response()` | Declared in `http.h`; covered by `test_http_stringify` | **Decided (2026-10-10):** revived as supported API; deprecated comment dropped from `http.c` |
-| WebTransport client API (`http3_client.h`) | Marked experimental (LSQUIC PR #629) | None for v4.0: stays experimental and outside the guarantee until v4.1 |
-| Public API baseline | No recorded list of public symbols and public struct layouts exists | Record the v4.0 baseline. Possible follow-up: a CI check that diffs headers against it |
-
-The guarantee as written covers the C public API. The Rust crates
-(`cwist-sys`, `cwist`, 0.1.0, documented as experimental in Phase 2 above)
-and the Zig bindings (`bindings/zig`, 0.1.0) are versioned separately.
-
-### Performance target (#319)
-
-* Target: at least 1.05x Actix-web throughput and a lower P99.999 than
-  Actix-web on every CI runner architecture (AMD EPYC, Intel Xeon).
-* Done: Actix-web is in the CI webserver benchmark matrix and charts, and
-  the measurement contract is in `docs/webserver-benchmark.md`.
-* Open: #297 (syscall and serialization reduction: io_uring multishot
-  accept with a fallback for kernels without it, SQE batching, per-accept
-  `setsockopt`, time caching), #293 (tail latency; queue delay drives the
-  tail), and #322 (libttak v3.4.0 benchmark comparison). Each item lands
-  with an A/B measurement or a recorded negative result.
-
-### Carry-over and housekeeping
-
-| Item | State on `dev` at 4cd05e21 | Remaining |
-|------|----------------------------|-----------|
-| #306 TLS performance | Fixed by #307; v3.9 HTTPS gates green on `dev` | Close the issue |
-| #286 raw-allocator gate | `https.c` parked-connection allocations use `cwist_alloc`/`cwist_free`; `cwist audit --gate` passes | Close the issue |
-| Soak testing | Named in the v4.0 preview; no soak job or plan exists in the tree | Define the soak run and its pass criteria |
-| Docs good first issues | #272 landed in #320; PRs open for #273 (#324) and #275 (#325, #326); #271 open | Review and merge |
-
-### Not in v4.0 scope
-
-* WASM component pipeline (#203): stays experimental and outside the
-  guarantee; promotion re-evaluated at v4.1 (decided 2026-10-10).
-* WebTransport (#17) and the lsquic re-pin: v4.1, see below.
-
-### Exit criteria for v4.0
-
-- Every API surface decision above is recorded and enacted in code and
-  docs; deprecated APIs and flags are resolved (promoted or removed).
-- The #319 performance target holds on the CI benchmark on every runner
-  architecture.
-- The soak run is defined and passes on the release commit.
-- The release rules in `CONTRIBUTING.md` hold on the release commit (every
-  CI workflow green; `make dist` archive builds and tests clean).
-
----
-
-## v4.1 (Planned): expansion resumes, starting with WebTransport
-
-v4.1 is where expansion resumes after the v4.0 stabilization cycle. The
-first item is WebTransport, moved from v3.8 on 2026-09-25 (issue #17). It
-arrives as new API; nothing that exists at v4.0 changes.
-
-* Precondition: LSQUIC PR #629 (or its successor) is merged upstream; then
-  re-pin `lib/lsquic` to an upstream release. No topic-branch pin.
-* Port the dev-branch WebTransport server API (`cwist_http3_transport_*`,
-  stream accept/read/write), the native C client, and
-  `example/webtransport/`.
-* `test_webtransport`: session negotiation, bidirectional streams, datagrams
-  if enabled, and graceful teardown.
-* Soak against at least one other peer (`aioquic` or Chromium) before the
-  experimental flag is removed.
-
----
-
-## Release Line & Codenames
-
-* The 3.x line is stabilization work on the road to v4.0: release intervals are deliberately long, and each release lands a small number of large, well-tested changes rather than frequent small ones. Expect wide gaps between 3.x tags.
-* The first 100% production-compatible stable release is planned as **v4.0**. Until then, minor releases may adjust public APIs (see the versioning note in the README).
-* Starting with the stable line (v4.0 onward), each release receives a codename in the form **adjective + color** (e.g. "Steady Amber"). Codenames are assigned at release time and recorded here.
-
-### Versioning rules (as practiced)
-
-The tag history (`v0.1` → `v3.3`) settles into this convention from v3 onward, and it is the rule going forward:
-
-* **Tags**: `v<major>.<minor>` for feature releases (`v3`, `v3.1`, `v3.2`, `v3.3`). Urgent fixes to a released tag get a patch level, `v<major>.<minor>.<patch>` (`v2.5.1`, `v2.4.1`) — patches are for hotfixes only, never for features.
-* **Major** (`v2` → `v3`): a generational milestone — a broad capability jump (e.g. v3 = first reliable release, HTTP/2 stabilization). Majors are rare.
-* **Minor** (`v3.2` → `v3.3`): one coherent feature theme (v3.2: HTTP/3 standards compliance + security hardening; v3.3: gRPC streaming + deferred async handlers). A minor is cut when its theme is complete, not on a calendar.
-* **Release title**: `CWIST vX.Y` followed by an em-dash summary of the headline theme ("CWIST v3.3 — gRPC streaming, deferred async handlers, and stability hardening"). Pre-v3 releases used freeform subtitles ("Firefox Compatibility"); the em-dash form is the standard now.
-* **Release body**: "Highlights since vX.(Y−1)" or "Major changes compared to vX.(Y−1)", grouped into numbered/sectioned items with commit references where useful.
-* The 0.x line was pre-1.0 experimentation; the 1.x–2.x lines were feature accretion with themed minors. None of that constrains the 3.x rules above.
+* Only unary server handlers are implemented; streaming RPCs remain planned.
+* Compressed gRPC messages are rejected with `UNIMPLEMENTED`; compression negotiation is not wired yet.
+* Protobuf support is a runtime wire helper, not a `.proto` compiler or generated binding layer.
+* HTTP/2 response trailers are represented as gRPC metadata headers for now; dedicated trailer-frame emission is a follow-up.
+* No gRPC client, reflection service, health service, deadline propagation, retry policy, or load-balancing policy exists yet.
 
 ---
 
@@ -557,9 +251,11 @@ The tag history (`v0.1` → `v3.3`) settles into this convention from v3 onward,
 20. **Multiport HTTP/3 parity** ⏳: per-port UDP contexts and global setting propagation to non-detached ports
 
 ### P4 — Ecosystem
-21. **gRPC** support
-22. **GraphQL** executor
-23. **OpenAPI** generator
+23. ~~**gRPC unary server support**~~ ✅
+24. **GraphQL** executor
+25. **OpenAPI** generator
+26. ~~**Background Jobs / Scheduler**~~ ✅
+27. **gRPC streaming, reflection, health checks, and `.proto` codegen**
 
 ---
 
