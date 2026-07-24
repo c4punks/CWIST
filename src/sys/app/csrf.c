@@ -40,13 +40,15 @@ static char *generate_token(void) {
     return token;
 }
 
-static const char *get_submitted_token(cwist_http_request *req) {
-    const char *header = cwist_http_header_get(req->headers, "X-CSRF-Token");
-    if (header) return header;
-
-    if (req->query_params) {
-        const char *q = cwist_query_map_get(req->query_params, "csrf_token");
-        if (q) return q;
+static bool csrf_equal(const char *a, const char *b) {
+    if (!a || !b) return false;
+    size_t alen = strlen(a), blen = strlen(b);
+    size_t diff = alen ^ blen;
+    size_t limit = alen > blen ? alen : blen;
+    for (size_t i = 0; i < limit; ++i) {
+        unsigned char ac = i < alen ? (unsigned char)a[i] : 0;
+        unsigned char bc = i < blen ? (unsigned char)b[i] : 0;
+        diff |= (size_t)(ac ^ bc);
     }
 
     if (req->body && req->body->data && req->body->size > 0) {
