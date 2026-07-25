@@ -1287,8 +1287,51 @@ static void cwist_h3_on_read(lsquic_stream_t *stream, lsquic_stream_ctx_t *st_h)
     unsigned char buf[8192];
     ssize_t nread;
 
-    h3_process_stream_headers(stream, st);
-    if (st->malformed) return;
+    if (!st->headers_done) {
+        void *hset = lsquic_stream_get_hset(stream);
+        if (hset) {
+            cwist_h3_hset_t *hs = hset;
+            size_t i;
+            for (i = 0; i < hs->count; ++i) {
+                const struct lsxpack_header *xhdr = &hs->headers[i];
+                const char *raw_name  = lsxpack_header_get_name(xhdr);
+                const char *raw_value = lsxpack_header_get_value(xhdr);
+                size_t name_len = xhdr->name_len;
+                size_t value_len = xhdr->val_len;
+                if (raw_name && raw_value && name_len > 0 &&
+                    name_len <= 1024 && value_len <= H3_DECODE_BUF_SIZE - 1) {
+                    /* lsxpack exposes counted slices, not C strings.  A later
+                     * header may immediately follow either slice in the shared
+                     * QPACK output buffer, so strcmp()/header storage must never
+                     * consume them directly. */
+                    char *name = malloc(name_len + 1);
+                    char *value = malloc(value_len + 1);
+                    if (!name || !value) {
+                        free(name);
+                        free(value);
+                        lsquic_stream_close(stream);
+                        return;
+                    }
+                    memcpy(name, raw_name, name_len);
+                    name[name_len] = '\0';
+                    memcpy(value, raw_value, value_len);
+                    value[value_len] = '\0';
+                    h3_apply_header(st->req, name, value);
+#ifdef CWIST_WEBTRANSPORT
+                    if (strcmp(name, ":protocol") == 0 && strcmp(value, "webtransport") == 0) {
+                        /* WebTransport requires CONNECT method per RFC 9114 */
+                        if (st->req && st->req->method == CWIST_HTTP_CONNECT) {
+                            st->is_webtransport = 1;
+                        }
+                    }
+#endif
+                    free(value);
+                    free(name);
+                }
+            }
+            st->headers_done = 1;
+        }
+    }
 
     while ((nread = lsquic_stream_read(stream, buf, sizeof(buf))) > 0) {
         if (st->sequenced_data) {
