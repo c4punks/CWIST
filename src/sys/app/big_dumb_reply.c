@@ -666,11 +666,39 @@ void cwist_bdr_unpin(bdr_blob_t *pin) {
  * @param out_len Receives the reply length on a hit (may be NULL).
  * @return Reply bytes (unpinned), or NULL on miss/invalid input.
  */
-const void *cwist_bdr_get(cwist_bdr_t *bdr, const char *method, const char *path, size_t *out_len) {
-    if (!bdr || !method || !path || bdr->is_disk_mode) return NULL;
-    uint64_t req_h = bdr_hash(method, path);
-    size_t idx = req_h % bdr->bucket_count;
-    bdr_entry_t *curr = __atomic_load_n(&bdr->buckets[idx], __ATOMIC_ACQUIRE);
+static const void *bdr_get_locked(cwist_bdr_t *bdr, const char *method, const char *path, size_t *out_len) {
+
+    if (!bdr || !method || !path) return NULL;
+
+    if (strcmp(method, "GET") != 0) return NULL;
+
+
+
+    uint64_t h = bdr_hash(method, path);
+
+
+
+    // Disk Mode
+
+    if (bdr->is_disk_mode) {
+
+        // Disk mode logic remains same (Fail-safe: return NULL or implement read)
+
+        // For now, we stick to "Write-only" on disk for safety as per previous step.
+
+        return NULL; 
+
+    }
+
+
+
+    // Memory Mode
+
+    size_t idx = h % bdr->bucket_count;
+
+    bdr_entry_t *prev = NULL;
+    bdr_entry_t *curr = bdr->buckets[idx];
+
     while (curr) {
         if (curr->request_hash == req_h) {
             if (curr->is_stable && curr->response_blob) {
@@ -713,6 +741,31 @@ void *cwist_bdr_copy_get(cwist_bdr_t *bdr, const char *method, const char *path,
     return copy;
 }
 
+const void *cwist_bdr_get(cwist_bdr_t *bdr, const char *method, const char *path, size_t *out_len) {
+    if (!bdr) return NULL;
+    pthread_mutex_lock(&bdr->lock);
+    const void *blob = bdr_get_locked(bdr, method, path, out_len);
+    pthread_mutex_unlock(&bdr->lock);
+    return blob;
+}
+
+void *cwist_bdr_copy_get(cwist_bdr_t *bdr, const char *method, const char *path, size_t *out_len) {
+    if (!bdr) return NULL;
+    pthread_mutex_lock(&bdr->lock);
+    size_t len = 0;
+    const void *blob = bdr_get_locked(bdr, method, path, &len);
+    void *copy = NULL;
+    if (blob && len > 0) {
+        copy = cwist_alloc(len);
+        if (copy) {
+            memcpy(copy, blob, len);
+            if (out_len) *out_len = len;
+        }
+    }
+    pthread_mutex_unlock(&bdr->lock);
+    return copy;
+}
+
 
 /**
  * @brief Write a reply into the SQLite fallback database (disk mode).
@@ -726,6 +779,8 @@ void *cwist_bdr_copy_get(cwist_bdr_t *bdr, const char *method, const char *path,
  * @param len Length of @p data in bytes.
  */
 static void cwist_bdr_put_disk(cwist_bdr_t *bdr, uint64_t req_h, const void *data, size_t len) {
+    pthread_mutex_lock(&bdr->lock);
+
     pthread_mutex_lock(&bdr->lock);
 
 
@@ -893,184 +948,7 @@ static void cwist_bdr_put_disk(cwist_bdr_t *bdr, uint64_t req_h, const void *dat
     bdr_guardrails(bdr);
 
     pthread_mutex_unlock(&bdr->lock);
-}
 
-/**
- * @brief Learn a reply observation into the cache (lock-free fast path).
- *
- * Only GET replies are tracked.  An entry stabilizes once the same response
- * bytes are seen twice in a row; a content change under a stable entry demotes
- * it back to candidate.  In disk mode the observation is written to SQLite
- * instead.  Triggers the janitor tick periodically.
- *
- * @param bdr Cache instance.
- * @param method HTTP method; must be "GET".
- * @param path NUL-terminated request path.
- * @param data Observed response bytes.
- * @param len Length of @p data in bytes.
- */
-void cwist_bdr_put(cwist_bdr_t *bdr, const char *method, const char *path, const void *data,
-                   size_t len) {
-    if (!bdr || !method || !path || !data || len == 0) return;
-    if (strcmp(method, "GET") != 0) return;
-
-    pthread_mutex_lock(&bdr->lock);
-    bdr_check_ram(bdr);
-
-    uint64_t req_h = bdr_hash(method, path);
-    uint64_t res_h = bdr_hash_data(data, len);
-
-    if (bdr->is_disk_mode) {
-        sqlite3_stmt *stmt;
-        sqlite3_prepare_v2(bdr->disk_db, "INSERT OR REPLACE INTO bdr (hash, blob) VALUES (?, ?);", -1, &stmt, NULL);
-        sqlite3_bind_int64(stmt, 1, req_h);
-        sqlite3_bind_blob(stmt, 2, data, len, SQLITE_STATIC);
-        sqlite3_step(stmt);
-        sqlite3_finalize(stmt);
-        bdr_guardrails(bdr);
-        pthread_mutex_unlock(&bdr->lock);
-        return;
-    }
-
-    size_t idx = req_h % bdr->bucket_count;
-    bdr_entry_t *curr = bdr->buckets[idx];
-    while (curr) {
-        if (curr->request_hash == req_h) {
-            void *blob = cwist_alloc(len);
-            if (blob) {
-                memcpy(blob, data, len);
-                bdr_release_blob(bdr, curr);
-                curr->response_blob = blob;
-                curr->len = len;
-                curr->response_hash = res_h;
-                curr->is_stable = true;
-                curr->hits = 0;
-                curr->created_at = time(NULL);
-                bdr->current_bytes += len;
-                bdr_guardrails(bdr);
-            }
-            pthread_mutex_unlock(&bdr->lock);
-            return;
-        }
-        curr = curr->next;
-    }
-
-    bdr_janitor_tick(bdr);
-}
-
-/**
- * @brief Publish a reply as immediately stable, bypassing the learning phase.
- *
- * For responses that are known to be constant; stores the bytes and marks the
- * entry stable in one shot.  In disk mode the observation is written to
- * SQLite instead.  Triggers the janitor tick periodically.
- *
- * @param bdr Cache instance.
- * @param method HTTP method; must be "GET".
- * @param path NUL-terminated request path.
- * @param data Response bytes to cache.
- * @param len Length of @p data in bytes.
- */
-void cwist_bdr_put_fixed(cwist_bdr_t *bdr, const char *method, const char *path, const void *data,
-                         size_t len) {
-    if (!bdr || !method || !path || !data || len == 0) return;
-    if (strcmp(method, "GET") != 0) return;
-
-    uint64_t req_h = bdr_hash(method, path);
-
-    if (atomic_load_explicit(&bdr->is_disk_mode, memory_order_acquire)) {
-        cwist_bdr_put_disk(bdr, req_h, data, len);
-        return;
-    }
-
-    bdr_entry_t *entry = bdr_find_or_insert(bdr, req_h);
-    if (!entry) return;
-
-    bdr_blob_t *blob = bdr_blob_learn(data, len);
-    if (!blob) return;
-    atomic_store_explicit(&entry->response_hash, bdr_hash_data(data, len), memory_order_release);
-    bdr_entry_publish(bdr, entry, blob);
-    atomic_store_explicit(&entry->is_stable, true, memory_order_release);
-    atomic_store_explicit(&entry->hits, 0, memory_order_relaxed);
-    atomic_store_explicit(&entry->created_at, (int64_t)time(NULL), memory_order_relaxed);
-
-    bdr_janitor_tick(bdr);
-}
-
-/**
- * @brief Publish a stable reply together with a hit-time revalidation hook.
- *
- * On every subsequent hit the hook is invoked and, if it reports fresh
- * bytes, the entry's blob is swapped to the callback-provided buffer through
- * one pointer exchange.  The hook is published before the blob so a reader
- * never observes a revalidatable blob without its hook.  In disk mode the
- * observation is written to SQLite instead (hook not persisted).  Triggers
- * the janitor tick periodically.
- *
- * @param bdr Cache instance.
- * @param method HTTP method; must be "GET".
- * @param path NUL-terminated request path.
- * @param data Response bytes to cache.
- * @param len Length of @p data in bytes.
- * @param fn Revalidation callback invoked on hits.
- * @param arg Opaque argument passed to @p fn.
- */
-void cwist_bdr_put_revalidatable(cwist_bdr_t *bdr, const char *method, const char *path,
-                                 const void *data, size_t len, cwist_bdr_revalidate_fn fn,
-                                 void *arg) {
-    if (!bdr || !method || !path || !data || len == 0 || !fn) return;
-    if (strcmp(method, "GET") != 0) return;
-
-    uint64_t req_h = bdr_hash(method, path);
-
-    if (atomic_load_explicit(&bdr->is_disk_mode, memory_order_acquire)) {
-        cwist_bdr_put_disk(bdr, req_h, data, len);
-        return;
-    }
-    memcpy(blob, data, len);
-
-    entry->request_hash = req_h;
-    entry->response_hash = res_h;
-    entry->is_stable = true;
-    entry->response_blob = blob;
-    entry->len = len;
-    entry->hits = 0;
-    entry->created_at = time(NULL);
-    bdr->current_bytes += len;
-
-    entry->next = __atomic_load_n(&bdr->buckets[idx], __ATOMIC_RELAXED);
-    __atomic_store_n(&bdr->buckets[idx], entry, __ATOMIC_RELEASE);
-
-    bdr_blob_t *blob = bdr_blob_learn(data, len);
-    if (!blob) return;
-    atomic_store_explicit(&entry->response_hash, bdr_hash_data(data, len), memory_order_release);
-    bdr_entry_publish(bdr, entry, blob);
-    atomic_store_explicit(&entry->is_stable, true, memory_order_release);
-    atomic_store_explicit(&entry->hits, 0, memory_order_relaxed);
-    atomic_store_explicit(&entry->created_at, (int64_t)time(NULL), memory_order_relaxed);
-
-    bdr_janitor_tick(bdr);
-}
-
-/**
- * @brief Update cache limits; zero arguments leave the corresponding limit unchanged.
- *
- * Takes the context mutex so the new limits are not torn against a running
- * janitor tick.
- *
- * @param bdr Cache instance.
- * @param max_bytes New byte budget; 0 keeps the current value.
- * @param max_entry_age_sec New entry TTL in seconds; 0 keeps the current value.
- * @param revalidate_hits New stability hit threshold; 0 keeps the current value.
- */
-void cwist_bdr_set_limits(cwist_bdr_t *bdr, size_t max_bytes, time_t max_entry_age_sec,
-                          uint64_t revalidate_hits) {
-    if (!bdr) return;
-    pthread_mutex_lock(&bdr->lock);
-    if (max_bytes > 0) bdr->max_bytes = max_bytes;
-    if (max_entry_age_sec > 0) bdr->max_entry_age_sec = max_entry_age_sec;
-    if (revalidate_hits > 0) bdr->revalidate_hits = revalidate_hits;
-    pthread_mutex_unlock(&bdr->lock);
 }
 
 void cwist_bdr_set_limits(cwist_bdr_t *bdr, size_t max_bytes, time_t max_entry_age_sec, uint64_t revalidate_hits) {
