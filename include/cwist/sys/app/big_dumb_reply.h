@@ -92,42 +92,6 @@ void cwist_bdr_destroy(cwist_bdr_t *bdr);
 const void *cwist_bdr_get(cwist_bdr_t *bdr, const char *method, const char *path, size_t *out_len);
 
 /**
- * @brief Find a cached response and pin it for the duration of the serve.
- *
- * The pin is an EBR epoch: the blob stays valid until cwist_bdr_unpin(),
- * even if a concurrent learn or revalidation swaps it out.  Runs the
- * entry's revalidation hook first when one is registered.
- *
- * @param bdr Context.
- * @param method HTTP Method (only GET supported).
- * @param path Request path.
- * @param out_len [out] Length of the found blob.
- * @param out_pin [out] Opaque pin handle for cwist_bdr_unpin().
- * @return Pointer to the blob bytes if found, NULL otherwise.
- */
-const void *cwist_bdr_get_pinned(cwist_bdr_t *bdr, const char *method, const char *path,
-                                 size_t *out_len, bdr_blob_t **out_pin);
-
-/**
- * @brief cwist_bdr_get_pinned() with a per-connection fast path.
- *
- * Identical semantics to cwist_bdr_get_pinned() (same epoch pin, same
- * revalidation hook, same stability checks), but when @p cursor remembers
- * the same path the SipHash and bucket walk are skipped: the cached entry
- * pointer is re-validated under the epoch instead.  Falls back to the full
- * lookup on any mismatch and refreshes the cursor on success.  @p path_len
- * must be the exact path length in bytes (no strlen is performed).
- */
-const void *cwist_bdr_get_pinned_cursor(cwist_bdr_t *bdr, const char *method, const char *path,
-                                        size_t path_len, size_t *out_len, bdr_blob_t **out_pin,
-                                        cwist_bdr_cursor_t *cursor);
-
-/**
- * @brief Release a pin acquired by cwist_bdr_get_pinned().
- */
-void cwist_bdr_unpin(bdr_blob_t *pin);
-
-/**
  * @brief Copy a stable response from the cache for concurrent server use.
  *
  * The caller owns the returned buffer and must release it with cwist_free().
