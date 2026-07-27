@@ -193,17 +193,6 @@ cwist_seq_assembler_t *cwist_seq_assembler_create(void) {
     return cwist_seq_assembler_create_limited(0);
 }
 
-/**
- * @brief Create an assembler with a reassembled-size limit.
- *
- * Allocates an empty assembler state; buffers are allocated lazily on the
- * first cwist_seq_assembler_feed() call. Destroy with
- * cwist_seq_assembler_destroy().
- *
- * @param max_data_len Maximum accepted reassembled size in bytes, or 0 to use
- *                     the CWIST_SEQ_MAX_REASSEMBLED_SIZE default.
- * @return New assembler, or NULL on allocation failure.
- */
 cwist_seq_assembler_t *cwist_seq_assembler_create_limited(size_t max_data_len) {
     cwist_seq_assembler_t *a = (cwist_seq_assembler_t *)cwist_alloc(sizeof(*a));
     if (!a) return NULL;
@@ -278,8 +267,7 @@ bool cwist_seq_assembler_feed(cwist_seq_assembler_t *a, const cwist_seq_chunk_t 
          * false protocol errors on reordered HTTP/2/3-adjacent transports. */
         if ((size_t)chunk->total > SIZE_MAX / (size_t)chunk->chunk_size) return false;
         a->data_cap = (size_t)chunk->total * chunk->chunk_size;
-        size_t ceiling = a->max_data_len ? a->max_data_len : CWIST_SEQ_MAX_REASSEMBLED_SIZE;
-        if (a->data_cap > ceiling) {
+        if (a->max_data_len && a->data_cap > a->max_data_len) {
             a->data_cap = 0;
             return false;
         }
@@ -303,10 +291,8 @@ bool cwist_seq_assembler_feed(cwist_seq_assembler_t *a, const cwist_seq_chunk_t 
     if (a->received[index]) {
         /* Safe duplicates are idempotent.  A different duplicate is data
          * corruption, not a retry, and must never overwrite good bytes. */
-        bool identical = a->payload_lens[index] == chunk->payload_len &&
-                         memcmp(a->data + offset, chunk->payload, chunk->payload_len) == 0;
-        if (!identical) a->contaminated = true;
-        return identical;
+        return a->payload_lens[index] == chunk->payload_len &&
+               memcmp(a->data + offset, chunk->payload, chunk->payload_len) == 0;
     }
 
     if (offset > a->data_cap || chunk->payload_len > a->data_cap - offset) return false;
@@ -333,8 +319,23 @@ bool cwist_seq_assembler_feed(cwist_seq_assembler_t *a, const cwist_seq_chunk_t 
  * @retval false Not complete, or @p a is NULL.
  */
 bool cwist_seq_assembler_is_complete(const cwist_seq_assembler_t *a) {
-    return a && a->have_state && !a->contaminated && a->received_count == a->total &&
+    return a && a->have_state && a->received_count == a->total &&
            a->received[a->total - 1] && a->total_len > 0;
+}
+
+size_t cwist_seq_assembler_recovery_targets(const cwist_seq_assembler_t *a,
+                                            uint16_t *out,
+                                            size_t out_cap) {
+    if (!a || !a->have_state || cwist_seq_assembler_is_complete(a)) return 0;
+
+    size_t missing = 0;
+    for (uint16_t i = 0; i < a->total; ++i) {
+        if (!a->received[i]) {
+            if (out && missing < out_cap) out[missing] = (uint16_t)(i + 1);
+            missing++;
+        }
+    }
+    return missing;
 }
 
 /**
