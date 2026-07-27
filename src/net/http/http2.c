@@ -469,23 +469,10 @@ static void h2_conn_init(h2_conn *hc, cwist_https_connection *conn) {
     cwist_http2_flow_control_init(&hc->fc, 0, CWIST_HTTP2_MAX_WINDOW);
     hc->fc.send_window = 65535;
     hc->cont_end_stream = false;
-    hc->last_activity = h2_now_ms();
-    hc->rst_budget = h2_max_rst_burst();
-    hc->rst_last_refill_ms = hc->last_activity;
-    hc->ping_budget = CWIST_HTTP2_DEFAULT_PING_BURST;
-    hc->ping_last_refill_ms = hc->last_activity;
-    hc->cont_frame_count = 0;
     /* The extension carries application bodies and must not be enabled over
      * h2c: its ordering metadata is not an integrity mechanism.  HTTPS/TLS
      * supplies authenticated transport protection against on-path mutation. */
     hc->sequenced_data = conn && conn->ssl && conn->http2_sequenced_data;
-    hc->hpack_capacity = CWIST_HTTP2_HEADER_TABLE_SIZE;
-    hc->out_mu_init = (pthread_mutex_init(&hc->out_mu, NULL) == 0);
-    hc->fc_mu_init = (pthread_mutex_init(&hc->fc_mu, NULL) == 0);
-    if (hc->fc_mu_init && pthread_cond_init(&hc->fc_cond, NULL) != 0) {
-        pthread_mutex_destroy(&hc->fc_mu);
-        hc->fc_mu_init = false;
-    }
 }
 
 /**
@@ -3458,7 +3445,7 @@ cwist_error_t cwist_http2_serve_connection_ex(cwist_https_connection *conn, void
                                  * retransmission.  Refuse the stream without
                                  * exposing a mixed body to the application. */
                                 uint8_t rst[4] = {0, 0, 0, H2_ERR_PROTOCOL_ERROR};
-                                h2_write_frame(&hc, CWIST_HTTP2_FRAME_RST_STREAM,
+                                h2_write_frame(hc.conn, CWIST_HTTP2_FRAME_RST_STREAM,
                                                0, stream_id, rst, sizeof(rst));
                                 h2_stream_remove(&hc, stream_id);
                                 break;
@@ -3477,9 +3464,7 @@ cwist_error_t cwist_http2_serve_connection_ex(cwist_https_connection *conn, void
                     }
                 }
                 if (flags & CWIST_HTTP2_FLAG_END_STREAM) {
-                    /* No assembler means no sequenced chunks ever arrived;
-                     * an empty DATA END_STREAM is a complete empty body. */
-                    bool sequence_complete = !hc.sequenced_data || !s->body_assembler;
+                    bool sequence_complete = !hc.sequenced_data;
                     if (hc.sequenced_data && s->body_assembler) {
                         const uint8_t *assembled = NULL;
                         size_t assembled_len = 0;
@@ -3498,16 +3483,12 @@ cwist_error_t cwist_http2_serve_connection_ex(cwist_https_connection *conn, void
                          * with REFUSED_STREAM.  Never call the handler with a
                          * partial sequenced body. */
                         uint8_t rst[4] = {0, 0, 0, H2_ERR_REFUSED_STREAM};
-                        h2_write_frame(&hc, CWIST_HTTP2_FRAME_RST_STREAM,
+                        h2_write_frame(hc.conn, CWIST_HTTP2_FRAME_RST_STREAM,
                                        0, stream_id, rst, sizeof(rst));
                         h2_auto_window_update(&hc, s);
                         h2_stream_remove(&hc, stream_id);
                         break;
                     }
-                    s->recv_xor ^= h2_xor_bytes(payload, len);
-                    cwist_sstring_append_len(s->req->body, (const char *)payload, len);
-                }
-                if (flags & CWIST_HTTP2_FLAG_END_STREAM) {
                     cwist_http_response *res = cwist_http_response_create();
                     if (res) {
                         handler(user_ctx, s->req, res);

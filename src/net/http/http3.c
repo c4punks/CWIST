@@ -173,6 +173,11 @@ typedef struct h3_stream_ctx {
     size_t body_sent;
     uint8_t recv_xor; /* running XOR of received body bytes */
     uint8_t send_xor; /* running XOR of sent body bytes */
+    int sequenced_data; /* X-CWIST-Sequenced-Data: 1 request body */
+    unsigned char *seq_buf;
+    size_t seq_len;
+    size_t seq_cap;
+    cwist_seq_assembler_t *body_assembler;
 #ifdef CWIST_WEBTRANSPORT
     int is_webtransport;
     int wt_taken;
@@ -1107,19 +1112,12 @@ static void h3_apply_header(cwist_http_request *req,
     }
 }
 
-/**
- * @brief Append one wire chunk to the sequenced-body buffer and feed every
- *        complete TASFA chunk to the ARQ assembler.
- * @retval 0 Chunk buffered and/or consumed; possibly no complete chunk yet.
- * @retval -1 Length overflow, assembler-capacity breach, OOM, or a chunk
- *            that fails to parse/feed; the caller resets the stream.
- *
- * HTTP/3 delivers an ordered QUIC byte stream, but an application-level
- * sequenced body can be split at arbitrary read boundaries.  Only one wire
- * chunk is buffered at a time; complete chunks are handed to the common
- * TASFA-style ARQ assembler.
- */
-static int h3_seq_append_and_feed(h3_stream_ctx_t *st, const unsigned char *data, size_t len) {
+/* HTTP/3 delivers an ordered QUIC byte stream, but an application-level
+ * sequenced body can be split at arbitrary read boundaries.  Buffer just one
+ * wire chunk, then hand complete chunks to the common TASFA-style ARQ
+ * assembler. */
+static int h3_seq_append_and_feed(h3_stream_ctx_t *st,
+                                  const unsigned char *data, size_t len) {
     if (len > SIZE_MAX - st->seq_len) return -1;
     size_t need = st->seq_len + len;
     if (need > st->seq_cap) {
@@ -1157,186 +1155,6 @@ static int h3_seq_append_and_feed(h3_stream_ctx_t *st, const unsigned char *data
     return 0;
 }
 
-/**
- * @brief Reject a request whose header block violates RFC 9114 Section 4.3.1.
- *
- * lsquic exposes no stream-reset API in this baseline, so enforcement is a
- * 400 response followed by closing both stream directions (mirrors the
- * existing 413 path), and the request is never dispatched to the handler.
- */
-static void h3_reject_malformed_request(lsquic_stream_t *stream, h3_stream_ctx_t *st) {
-    st->malformed = 1;
-    st->headers_done = 1;
-    if (!st->res) st->res = cwist_http_response_create();
-    if (st->res) {
-        st->res->status_code = CWIST_HTTP_BAD_REQUEST;
-        if (st->res->body) {
-            cwist_sstring_assign(st->res->body,
-                "{\"error\":\"malformed request\"}");
-        }
-        if (st->res->headers) {
-            cwist_http_header_add(&st->res->headers,
-                                  "Content-Type", "application/json");
-        }
-    }
-    st->response_ready = 1;
-    lsquic_stream_wantread(stream, 0);
-    lsquic_stream_shutdown(stream, 0);
-    lsquic_stream_wantwrite(stream, 1);
-}
-
-/**
- * @brief Decode the request header set and enforce RFC 9114 Section 4.3.1.
- * @retval true Header block complete and valid; st->req is populated and
- *         st->headers_done is set.  Also returns true (idempotently) when
- *         headers were already processed.
- * @retval false Headers not yet available, or the block is malformed and a
- *         400 response has been staged (st->malformed).
- *
- * Checks pseudo-header ordering/uniqueness, the CONNECT vs extended-CONNECT
- * completeness rules, mandatory :method/:scheme/:path for normal requests,
- * and the OPTIONS-only asterisk-form exception for an empty :path.
- */
-static bool h3_process_stream_headers(lsquic_stream_t *stream, h3_stream_ctx_t *st) {
-    if (st->headers_done) return true;
-    void *hset = lsquic_stream_get_hset(stream);
-    if (!hset) return false;
-    cwist_h3_hset_t *hs = (cwist_h3_hset_t *)hset;
-    for (size_t i = 0; i < hs->count; ++i) {
-        const struct lsxpack_header *xhdr = &hs->headers[i];
-        const char *raw_name  = lsxpack_header_get_name(xhdr);
-        const char *raw_value = lsxpack_header_get_value(xhdr);
-        size_t name_len = xhdr->name_len;
-        size_t value_len = xhdr->val_len;
-        if (raw_name && raw_value && name_len > 0 &&
-            name_len <= 1024 && value_len <= H3_DECODE_BUF_SIZE - 1) {
-            /* lsxpack exposes counted slices, not C strings. */
-            char *name = malloc(name_len + 1);
-            char *value = malloc(value_len + 1);
-            if (!name || !value) {
-                free(name);
-                free(value);
-                lsquic_stream_close(stream);
-                return false;
-            }
-            memcpy(name, raw_name, name_len);
-            name[name_len] = '\0';
-            memcpy(value, raw_value, value_len);
-            value[value_len] = '\0';
-            if (name[0] == ':') {
-                /* RFC 9114 Section 4.3.1: pseudo-headers precede regular
-                 * headers, appear at most once, and only the defined set is
-                 * valid in requests. */
-                unsigned bit = 0;
-                if (strcmp(name, ":method") == 0) bit = H3_PSEUDO_METHOD;
-                else if (strcmp(name, ":scheme") == 0) bit = H3_PSEUDO_SCHEME;
-                else if (strcmp(name, ":path") == 0) bit = H3_PSEUDO_PATH;
-                else if (strcmp(name, ":authority") == 0) bit = H3_PSEUDO_AUTHORITY;
-                else if (strcmp(name, ":protocol") == 0) bit = H3_PSEUDO_PROTOCOL;
-                if (bit == 0 || st->seen_regular_header ||
-                    (st->pseudo_seen & bit)) {
-                    free(value);
-                    free(name);
-                    h3_reject_malformed_request(stream, st);
-                    return false;
-                }
-                st->pseudo_seen |= bit;
-                if (bit == H3_PSEUDO_METHOD && strcmp(value, "CONNECT") == 0) {
-                    st->is_connect = 1;
-                }
-                if (bit == H3_PSEUDO_PATH && value_len == 0) {
-                    st->saw_empty_path = 1;
-                }
-            } else {
-                st->seen_regular_header = 1;
-            }
-            h3_apply_header(st->req, name, value);
-#ifdef CWIST_WEBTRANSPORT
-            if (strcmp(name, ":protocol") == 0 && strcmp(value, "webtransport") == 0) {
-                if (st->req && st->req->method == CWIST_HTTP_CONNECT) {
-                    st->is_webtransport = 1;
-                }
-            }
-#endif
-            free(value);
-            free(name);
-        }
-    }
-    /* RFC 9114 Section 4.3.1 completeness rules, evaluated once the whole
-     * header block has been seen. */
-    if (st->is_connect && !(st->pseudo_seen & H3_PSEUDO_PROTOCOL)) {
-        /* Plain CONNECT: :scheme and :path MUST be omitted, :authority is
-         * required. */
-        if ((st->pseudo_seen & (H3_PSEUDO_SCHEME | H3_PSEUDO_PATH)) ||
-            !(st->pseudo_seen & H3_PSEUDO_AUTHORITY)) {
-            h3_reject_malformed_request(stream, st);
-            return false;
-        }
-    } else if (st->is_connect) {
-        /* Extended CONNECT (RFC 9220, e.g. WebTransport): :scheme, :path and
-         * :authority are all required. */
-        if (!(st->pseudo_seen & H3_PSEUDO_SCHEME) ||
-            !(st->pseudo_seen & H3_PSEUDO_PATH) ||
-            !(st->pseudo_seen & H3_PSEUDO_AUTHORITY)) {
-            h3_reject_malformed_request(stream, st);
-            return false;
-        }
-    } else {
-        /* Normal request: :method, :scheme and :path are mandatory,
-         * :authority (or an equivalent Host header) is required for https,
-         * and :protocol is only legal on extended CONNECT. */
-        if (!(st->pseudo_seen & H3_PSEUDO_METHOD) ||
-            !(st->pseudo_seen & H3_PSEUDO_SCHEME) ||
-            !(st->pseudo_seen & H3_PSEUDO_PATH) ||
-            (st->pseudo_seen & H3_PSEUDO_PROTOCOL) ||
-            (!(st->pseudo_seen & H3_PSEUDO_AUTHORITY) &&
-             !cwist_http_header_get(st->req->headers, "host"))) {
-            h3_reject_malformed_request(stream, st);
-            return false;
-        }
-        /* An empty :path is only legal for OPTIONS (asterisk-form). */
-        if (st->saw_empty_path &&
-            (!st->req || st->req->method != CWIST_HTTP_OPTIONS)) {
-            h3_reject_malformed_request(stream, st);
-            return false;
-        }
-    }
-    st->headers_done = 1;
-    char *seq_header = cwist_http_header_get(st->req->headers,
-                                              "x-cwist-sequenced-data");
-    st->sequenced_data = seq_header &&
-        (strcmp(seq_header, "1") == 0 || strcasecmp(seq_header, "true") == 0);
-    return true;
-}
-
-/**
- * @brief Whether a method is idempotent (RFC 9110) and thus acceptable for
- *        0-RTT replay.
- */
-static bool h3_method_is_idempotent(cwist_http_method_t method) {
-    switch (method) {
-    case CWIST_HTTP_GET:
-    case CWIST_HTTP_HEAD:
-    case CWIST_HTTP_PUT:
-    case CWIST_HTTP_DELETE:
-    case CWIST_HTTP_OPTIONS:
-        return true;
-    default:
-        return false;
-    }
-}
-
-/**
- * @brief on_read callback: consume the request and dispatch it.
- *
- * Bodies are accumulated up to CWIST_HTTP_MAX_BODY_SIZE (413 beyond that);
- * sequenced bodies go through h3_seq_append_and_feed() and are only
- * dispatched when the assembler produces a complete payload.  On FIN the
- * request handler runs (with the 0-RTT replay guard for non-idempotent
- * methods while the handshake is in progress), then the response is armed
- * for writing.  Malformed requests get an inline 400 without dispatch.
- * Fatal read/allocation errors reset the stream.
- */
 static void cwist_h3_on_read(lsquic_stream_t *stream, lsquic_stream_ctx_t *st_h) {
     h3_stream_ctx_t *st = (h3_stream_ctx_t *)st_h;
     if (!st) return;
@@ -1387,6 +1205,10 @@ static void cwist_h3_on_read(lsquic_stream_t *stream, lsquic_stream_ctx_t *st_h)
                 }
             }
             st->headers_done = 1;
+            char *seq_header = cwist_http_header_get(st->req->headers,
+                                                      "x-cwist-sequenced-data");
+            st->sequenced_data = seq_header &&
+                (strcmp(seq_header, "1") == 0 || strcasecmp(seq_header, "true") == 0);
         }
     }
 
@@ -1467,7 +1289,9 @@ static void cwist_h3_on_read(lsquic_stream_t *stream, lsquic_stream_ctx_t *st_h)
             size_t assembled_len = 0;
             if (st->seq_len != 0 || !st->body_assembler ||
                 !cwist_seq_assembler_get_data(st->body_assembler, &assembled, &assembled_len)) {
-                /* Do not dispatch a partial request. */
+                /* Do not dispatch a partial request.  QUIC already repairs
+                 * transport loss; this catches application fragmentation loss
+                 * and lets the client resend the idempotent request. */
                 st->res = cwist_http_response_create();
                 if (st->res) {
                     st->res->status_code = CWIST_HTTP_BAD_REQUEST;
@@ -1475,7 +1299,6 @@ static void cwist_h3_on_read(lsquic_stream_t *stream, lsquic_stream_ctx_t *st_h)
                 }
                 st->response_ready = 1;
                 lsquic_stream_wantread(stream, 0);
-                lsquic_stream_shutdown(stream, 0);
                 lsquic_stream_wantwrite(stream, 1);
                 return;
             }
