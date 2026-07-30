@@ -573,25 +573,6 @@ def main() -> None:
     proto = sub.add_parser("proto", help="generate C protobuf models and gRPC method paths from proto3")
     proto.add_argument("source", type=Path)
     proto.add_argument("--output", type=Path)
-    proto.add_argument("--descriptor-set", action="store_true",
-                       help="treat input as a binary FileDescriptorSet (protoc --descriptor_set_out); auto-detected otherwise")
-    audit = sub.add_parser("audit", help="list allocation/pthread call sites by convention (cwist / gnu / bsd)")
-    audit.add_argument("target", nargs="?", default=None,
-                       help='a file/directory to scan (relative, absolute, or ~), recursively -- '
-                            'OR a query string \'style:bsd;folder:./src/net\' (an optional leading '
-                            '"open=" is accepted verbatim). Query keys: style, category (cat), '
-                            'folder (path), json. Default: src')
-    audit.add_argument("--category", choices=["all", *AUDIT_PATTERNS.keys()], default="all")
-    audit.add_argument("--style", choices=["all", *AUDIT_STYLES], default="all")
-    audit.add_argument("--json", action="store_true")
-    audit.add_argument("--gate", action="store_true",
-                       help="CI gate: fail if there's a raw allocator call under <target>/src "
-                            "not already in --baseline (replaces scripts/ci/malloc_lint.sh)")
-    audit.add_argument("--update-baseline", action="store_true",
-                       help="regenerate --baseline from <target>/src's current raw allocator calls")
-    audit.add_argument("--baseline", type=Path, default=None,
-                       help="baseline file for --gate/--update-baseline "
-                            "(default: <target>/scripts/ci/malloc-baseline.txt)")
     describe = sub.add_parser("describe", help="print a .cwpro manifest")
     describe.add_argument("--project")
     watch = sub.add_parser("watcher", help="watch, incrementally rebuild, and hot-restart the development process")
@@ -603,33 +584,7 @@ def main() -> None:
     if args.command == "new": write_new_project(args.name, args.directory)
     elif args.command == "proto":
         output = args.output or args.source.with_suffix(".cwist.pb.h")
-        generate_proto(args.source, output,
-                       True if args.descriptor_set else None)
-    elif args.command == "audit":
-        if args.gate or args.update_baseline:
-            root = Path(args.target) if (args.target and not looks_like_audit_query(args.target)) else Path.cwd()
-            root = root.expanduser().resolve()
-            baseline = (args.baseline or (root / "scripts" / "ci" / "malloc-baseline.txt")).expanduser().resolve()
-            if args.update_baseline:
-                audit_update_baseline(root, baseline)
-            if args.gate:
-                raise SystemExit(audit_gate(root, baseline))
-        else:
-            path, category, style, as_json = Path("src"), args.category, args.style, args.json
-            if args.target is not None:
-                if looks_like_audit_query(args.target):
-                    q = parse_audit_query(args.target)
-                    if "path" in q: path = Path(q["path"])
-                    if "category" in q:
-                        if q["category"] not in ("all", *AUDIT_PATTERNS.keys()): fail(f"unknown category: {q['category']}")
-                        category = q["category"]
-                    if "style" in q:
-                        if q["style"] not in ("all", *AUDIT_STYLES): fail(f"unknown style: {q['style']}")
-                        style = q["style"]
-                    if "json" in q: as_json = q["json"].strip().lower() in ("1", "true", "yes")
-                else:
-                    path = Path(args.target)
-            run_audit(path, category, style, as_json)
+        generate_proto(args.source, output)
     elif args.command == "describe": print(json.dumps(json.loads(project_file(args.project).read_text()), indent=2))
     elif args.command == "watcher":
         if args.interval <= 0: fail("--interval must be positive")

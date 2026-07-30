@@ -22,7 +22,7 @@
 [P1: Production]     ████████████████████ 100% (Multiport hardening complete)
 [P2: DevEx]          ████████░░░░░░░░░░░░  40% (Config loader, test tooling, and wire helpers done)
 [P3: Deep Protocols] ███████████████░░░░░  75% (HTTP/3 extension specs and io_uring backend done)
-[P4: Ecosystem]      ██████░░░░░░░░░░░░░░  30% (Unary gRPC and Protobuf wire helpers done)
+[P4: Ecosystem]      ████████████░░░░░░░░  60% (gRPC framing, health, reflection, and proto codegen done)
 ```
 
 ### 1) Transport Layer
@@ -37,7 +37,7 @@
 * **High-performance router & middleware**: Deterministic resource management with parameterized routes (`/user/:id`), compression (Gzip via zlib), CORS, and rate limiting (libttak token bucket) are integrated.
 * **Observability**: Prometheus `/metrics` and a probe-registry health-check system are operational.
 * **Per-port sub-applications**: Lifecycle and exception handling for `cwist_multiport_get_app(&app, port)` are hardened; detached ports are separately tunable sub-applications.
-* **Unary gRPC services**: Applications can register unary gRPC handlers over HTTP/2 with `cwist_app_grpc_unary()`, decode the gRPC message envelope, and return `application/grpc` responses with explicit gRPC status metadata.
+* **gRPC services**: Applications can register unary and streaming handlers, incrementally decode arbitrarily split gRPC frames, attach transport output sinks, expose standard health/reflection services, and generate C models/method paths with `cwist proto`.
 
 ### 3) Security & Data Layer
 
@@ -159,7 +159,7 @@
 
 | Feature | Status | Notes |
 |---------|--------|-------|
-| **gRPC over HTTP/2** | ✅ | Unary server registration via `cwist_app_grpc_unary`, gRPC frame decode/encode, gRPC status metadata, and test-client coverage |
+| **gRPC over HTTP/2** | ✅ | Unary/stream registration, split-frame incremental decoder and output sink, standard health/reflection service registration, gRPC metadata, and test-client coverage |
 | **Protobuf Runtime Helpers** | ✅ | Wire-format reader/writer for varint, bool, bytes/string, signed integer casting, and ZigZag helpers |
 | **GraphQL** | ✅ | Bounded top-level Query executor, resolver registry, variables, error envelope, and HTTP adapter |
 | **OpenAPI / Swagger Generation** | ✅ | OpenAPI 3.1 JSON generated from Doxygen `@openapi.*` annotations on route declarations |
@@ -190,9 +190,9 @@ it is additive. Scope does not grow; anything not ready slips.
 | **3 — HTTP/3 close correctness** | Re-pin lsquic when upstream fixes land; add CONNECTION_CLOSE interop gate | Deferred indefinitely | On hold until upstream lsquic ships WebTransport client support; no separate cutoff |
 | **4 — v4.0 scope confirmation** | Enact v3.7 Phase 5 decisions and record v4.0 fate for every experimental item | Done | v3.7 Phase 5 enacted; GraphQL subscriptions, durable queue, Redis RESP2/NATS borrow promoted to supported; WASM component pipeline ships experimental at v4.0 with promotion re-evaluated at v4.1; WebTransport experimental until v4.1; docs audit done |
 
-* Extend gRPC from unary handlers to server streaming, client streaming, and bidirectional streaming.
-* Add generated-code bindings from `.proto` descriptors once the runtime ABI settles.
-* Add gRPC reflection, health checking, deadlines, cancellation propagation, metadata normalization, and trailer-frame emission.
+* Wire the incremental gRPC output sink directly to HTTP/2 DATA-frame flushing and dedicated trailers.
+* Extend `cwist proto` beyond scalar proto3 models to repeated, nested, enum, and descriptor-set bindings.
+* Add gRPC deadlines, cancellation propagation, metadata normalization, retry policy, and load balancing.
 * Extend the GraphQL subset with schema validation, mutations, nested selections, and subscriptions.
 * Add a native C WebTransport client after adopting a QUIC dependency with client-session support.
 * Evaluate persistent job backends separately from the in-process queue/scheduler.
@@ -203,6 +203,11 @@ Completed:
 
 * `cwist_app_grpc_unary(app, service, method, handler, user_ctx)` registers `POST /Service/Method` routes for HTTP/2 gRPC unary calls.
 * `cwist_grpc_decode_message()` and `cwist_grpc_encode_message()` implement the gRPC 5-byte message envelope (`compressed` flag + big-endian payload length).
+* `cwist_grpc_decode_next_message()` iterates concatenated gRPC message envelopes for client-streaming and bidi-style buffered request bodies.
+* `cwist_grpc_stream_send()` and `cwist_grpc_stream_close()` build ordered multi-message gRPC responses with final status metadata.
+* `cwist_grpc_decoder_feed()` recovers gRPC envelopes split across arbitrary DATA payload boundaries; `cwist_grpc_stream_set_writer()` permits immediate transport-frame output.
+* `cwist_app_grpc_health()` and `cwist_app_grpc_health_set_status()` register and control `grpc.health.v1.Health`; `cwist_app_grpc_reflection()` registers the v1alpha reflection stream.
+* `cwist proto input.proto` generates scalar proto3 C models, encoder helpers, and gRPC method-path constants.
 * `cwist_grpc_set_response()` and `cwist_grpc_set_error()` produce `application/grpc` responses and explicit `grpc-status` / `grpc-message` metadata.
 * `cwist_pb_writer` supports varint keys, uint64/int64/bool fields, bytes fields, string fields, and dynamic buffer growth.
 * `cwist_pb_reader` iterates Protobuf fields and exposes wire type, field number, varint value, and length-delimited payload slices.
@@ -211,11 +216,11 @@ Completed:
 
 Known limits:
 
-* Only unary server handlers are implemented; streaming RPCs remain planned.
+* The incremental decoder and output sink are available now; the current HTTP/2 dispatcher still buffers inbound bodies and needs direct DATA-frame sink wiring for end-to-end low-latency flushing.
 * Compressed gRPC messages are rejected with `UNIMPLEMENTED`; compression negotiation is not wired yet.
-* Protobuf support is a runtime wire helper, not a `.proto` compiler or generated binding layer.
+* The proto generator currently supports scalar proto3 model encoders and service paths, not repeated/nested/enum/descriptor-set bindings.
 * HTTP/2 response trailers are represented as gRPC metadata headers for now; dedicated trailer-frame emission is a follow-up.
-* No gRPC client, reflection service, health service, deadline propagation, retry policy, or load-balancing policy exists yet.
+* No gRPC client, deadline propagation, retry policy, or load-balancing policy exists yet.
 
 ---
 
@@ -254,7 +259,7 @@ Known limits:
 24. ~~**GraphQL** bounded Query executor~~ ✅
 25. ~~**OpenAPI** generator~~ ✅
 26. ~~**Background Jobs / Scheduler**~~ ✅
-27. **gRPC streaming, reflection, health checks, and `.proto` codegen**
+27. ~~**Incremental gRPC framing, reflection, health checks, and `.proto` codegen**~~ ✅
 
 ---
 
