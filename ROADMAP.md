@@ -27,7 +27,7 @@
 
 ### 1) Transport Layer
 
-* **Native protocols ready**: HTTP/1.1 through HTTP/3 (QUIC via `lsquic`), WebTransport, and WebSocket are all implemented in-tree. Low-level socket controls (ECN, 0-RTT, connection migration) are complete.
+* **Native protocols ready**: HTTP/1.1 through HTTP/3 (QUIC via `lsquic`), WebTransport server support, WebSocket, SSE, and a bounded GraphQL query layer are implemented in-tree. Low-level socket controls (ECN, 0-RTT, connection migration) are complete.
 * **HTTP/3 browser hardening**: Response header emission now normalizes field names to lowercase and rejects CR/LF-bearing values, covering login/logout cookie and redirect paths in strict browsers such as Firefox.
 * **Async I/O optimization (`io_uring`)**: `io_uring_backend.c`, SQE/CQE synchronization, demolition safety, and focused tests are complete.
 * **Multiport HTTP/3 fan-out**: The `cwist_multiport_t` facade now creates per-port UDP contexts and copies global HTTP/3 settings unless a port is detached into a sub-app.
@@ -70,7 +70,7 @@
 | **io_uring Backend** | ⏳ | Linux-only; `epoll` done, io_uring needs `liburing` or raw syscalls |
 | **kqueue Backend** | ⏳ | BSD/macOS; blocked on non-Linux test environment |
 | HTTP/2 Server Push | ✅ | `cwist_http2_push_resource` with PUSH_PROMISE frame, HPACK encoding, server-initiated even stream IDs |
-| **WebTransport** | ✅ | Basic server handler (`:protocol=webtransport` detection via HTTP/3 CONNECT) |
+| **WebTransport** | 🔄 | Server sessions, streams, and datagrams are implemented with a browser example; native C client sessions await a client-capable QUIC dependency |
 | HTTP/3 Datagram Extension | ✅ | `send_datagram`, callbacks, `es_datagrams` enabled |
 | ECN (Explicit Congestion Notification) | ✅ | UDP socket with `IP_RECVTOS` / `IPV6_RECVTCLASS` |
 | Connection Migration | ✅ | `es_allow_migration` enabled |
@@ -96,7 +96,7 @@
 | **Caching Layer** | ✅ | ETag, Last-Modified, Cache-Control, 304 Not Modified for static files |
 | **Rate Limiting** | ✅ | Per-IP token bucket via libttak; parameter respected |
 | **CORS** | ✅ | Permissive CORS + preflight handler implemented |
-| **SSE (Server-Sent Events)** | ⏳ | No structured SSE stream API |
+| **SSE (Server-Sent Events)** | ✅ | Buffered and live structured events, IDs, retry directives, multiline data, comments, and convenience macros |
 | **Access Logging** | ✅ | Common, Combined, and JSON formats implemented |
 | **Request ID / Tracing** | ✅ | X-Request-Id middleware injects and propagates request IDs |
 | Graceful Shutdown | ✅ | Unified atomic `running` flag + SIGTERM/SIGINT handlers across HTTP/1.1, HTTP/2, HTTP/3 loops |
@@ -147,11 +147,11 @@
 | README / API Reference | ✅ | Markdown docs in `docs/` |
 | **Tutorial & Examples** | ⏳ | Few examples; no step-by-step tutorial |
 | **CLI Scaffolding** | ✅ | `cwist new project`, `.cwpro` manifests, OpenAPI generation, and include-aware incremental watcher |
-| **Hot Reload (Dev Mode)** | ✅ | `cwist watcher` uses inotify/kqueue with snapshot/poll fallback, debounces changes, exports include-graph recompilation scope, preserves the prior process on build failure, and gracefully restarts successful builds |
+| **Hot Reload (Dev Mode)** | ⏳ | No file watcher + auto-recompile |
 | **Configuration Management** | ✅ | `.env` file + environment variable loader via `cwist_config` |
 | **Testing Utilities** | ✅ | In-process test client (`cwist_test_client_get/post/request_ex`), cookie jar, multipart helper, and regression targets wired in Makefile |
-| **Benchmark Suite** | ⏳ | No `wrk`/`oha`/`h2load` benchmark automation |
-| **Fuzzing / Hardening** | 🔄 | `fuzz_seq` libFuzzer target covers sequenced and authenticated fragment parsing; HTTP parser and QUIC paths remain planned |
+| **Benchmark Suite** | ✅ | GitHub Actions Linux/macOS measurements publish CPU, throughput, RSS, memory-recovery drift, and context-switch SVG trends |
+| **Fuzzing / Hardening** | ✅ | Stateful sequence/auth libFuzzer coverage plus bounded reassembly and strict HTTP chunk framing checks |
 
 ---
 
@@ -161,8 +161,8 @@
 |---------|--------|-------|
 | **gRPC over HTTP/2** | ✅ | Unary server registration via `cwist_app_grpc_unary`, gRPC frame decode/encode, gRPC status metadata, and test-client coverage |
 | **Protobuf Runtime Helpers** | ✅ | Wire-format reader/writer for varint, bool, bytes/string, signed integer casting, and ZigZag helpers |
-| **GraphQL** | ⏳ | No GraphQL parser or executor |
-| **OpenAPI / Swagger Generation** | ⏳ | No automatic spec generation from route definitions |
+| **GraphQL** | ✅ | Bounded top-level Query executor, resolver registry, variables, error envelope, and HTTP adapter |
+| **OpenAPI / Swagger Generation** | ✅ | OpenAPI 3.1 JSON generated from Doxygen `@openapi.*` annotations on route declarations |
 | **Background Jobs / Scheduler** | ✅ | `cwist_scheduler` worker pool with immediate and delayed job execution |
 | **WebRTC** | 🔮 | Real-time media; requires separate data channel stack |
 | **Serverless / WASM Runtime** | 🔮 | Edge deployment target; WASI 0.3 component pipeline replaces the Emscripten browser bundle once the 0.3 world stabilizes (wasi-sdk / wasmtime / jco); see the v3.7 Phase 1 experiment and the tracked issue |
@@ -193,7 +193,8 @@ it is additive. Scope does not grow; anything not ready slips.
 * Extend gRPC from unary handlers to server streaming, client streaming, and bidirectional streaming.
 * Add generated-code bindings from `.proto` descriptors once the runtime ABI settles.
 * Add gRPC reflection, health checking, deadlines, cancellation propagation, metadata normalization, and trailer-frame emission.
-* Add GraphQL and OpenAPI generation.
+* Extend the GraphQL subset with schema validation, mutations, nested selections, and subscriptions.
+* Add a native C WebTransport client after adopting a QUIC dependency with client-session support.
 * Evaluate persistent job backends separately from the in-process queue/scheduler.
 
 ### gRPC / Protobuf Status
@@ -236,22 +237,22 @@ Known limits:
 11. **Multiport facade hardening** 🔄: counted port descriptor, per-port sub-app lifecycle, duplicate/default-port validation, and smoke tests
 
 ### P2 — Developer Velocity
-12. **Hot Reload** for development
-13. **CLI Tooling** (project scaffold, route generator)
-14. ~~**Configuration** loader (`.env`, `.toml`)~~ ✅
-15. **Test Harness** with HTTP mock client 🔄
+14. **Hot Reload** for development
+15. ~~**CLI Tooling** (project scaffold, route generator, watcher)~~ ✅
+16. ~~**Configuration** loader (`.env`, `.toml`)~~ ✅
+17. ~~**Test Harness** with HTTP mock client~~ ✅
 
 ### P3 — Advanced Protocols
-16. ~~**WebTransport** server + client~~ ✅ (basic server handler)
-17. ~~**HTTP/2 Server Push**~~ ✅
-18. **io_uring** UDP packet loop for HTTP/3 🔄
-19. **kqueue** backend for macOS/BSD
-20. **Multiport HTTP/3 parity** ⏳: per-port UDP contexts and global setting propagation to non-detached ports
+18. **Native C WebTransport client** (server and browser example are available)
+19. ~~**HTTP/2 Server Push**~~ ✅
+20. ~~**io_uring** UDP packet loop for HTTP/3~~ ✅
+21. **kqueue** backend for macOS/BSD
+22. ~~**Multiport HTTP/3 parity**: per-port UDP contexts and global setting propagation to non-detached ports~~ ✅
 
 ### P4 — Ecosystem
-23. ~~**gRPC unary server support**~~ ✅
-24. **GraphQL** executor
-25. **OpenAPI** generator
+23. ~~**gRPC unary and buffered streaming server support**~~ ✅
+24. ~~**GraphQL** bounded Query executor~~ ✅
+25. ~~**OpenAPI** generator~~ ✅
 26. ~~**Background Jobs / Scheduler**~~ ✅
 27. **gRPC streaming, reflection, health checks, and `.proto` codegen**
 
