@@ -1,64 +1,29 @@
-/** @file graphql.h @brief Full-featured, production-ready GraphQL query & mutation execution
- * engine. */
+/** @file graphql.h @brief Small, bounded GraphQL query execution API. */
 #ifndef CWIST_NET_GRAPHQL_H
 #define CWIST_NET_GRAPHQL_H
 
 #include <cwist/net/http/http.h>
 #include <cjson/cJSON.h>
-#include <stdbool.h>
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
 typedef struct cwist_graphql_schema cwist_graphql_schema_t;
-#define CWIST_GRAPHQL_MAX_QUERY_SIZE (64U * 1024U)
-#define CWIST_GRAPHQL_MAX_FIELDS 128U
-#define CWIST_GRAPHQL_MAX_DEPTH 16U
+#define CWIST_GRAPHQL_MAX_QUERY_SIZE (16U * 1024U)
+#define CWIST_GRAPHQL_MAX_TOP_LEVEL_FIELDS 128U
+/** Return a newly allocated cJSON value; CWIST takes ownership on success. */
+typedef cJSON *(*cwist_graphql_resolver_fn)(const cJSON *variables, void *ctx);
 
-/**
- * Resolver function signature.
- * @param args Parsed field arguments (cJSON Object) or NULL if none.
- * @param variables Parsed request variables (cJSON Object) or NULL if none.
- * @param ctx Opaque user context.
- * @return Return a newly allocated cJSON value; CWIST takes ownership on success.
- */
-typedef cJSON *(*cwist_graphql_resolver_fn)(const cJSON *args, const cJSON *variables, void *ctx);
-
-/** Create a new GraphQL schema instance. */
 cwist_graphql_schema_t *cwist_graphql_schema_create(void);
-
-/** Destroy a GraphQL schema instance and free all registered resolvers. */
 void cwist_graphql_schema_destroy(cwist_graphql_schema_t *schema);
-
-/** Register or replace a top-level Query resolver. */
+/** Register or replace a top-level Query field. Field names are ASCII GraphQL names. */
 bool cwist_graphql_add_query(cwist_graphql_schema_t *schema, const char *field,
                              cwist_graphql_resolver_fn resolver, void *ctx);
-
-/** Register or replace a top-level Mutation resolver. */
-bool cwist_graphql_add_mutation(cwist_graphql_schema_t *schema, const char *field,
-                                cwist_graphql_resolver_fn resolver, void *ctx);
-
-/** Execute a JSON request body containing `query`, optional `operationName`, and optional
- * `variables`. */
+/** Execute a JSON request body containing `query` and optional `variables`. */
 cwist_error_t cwist_graphql_execute(cwist_graphql_schema_t *schema, const char *request_json,
                                     cwist_sstring **out_json);
-
-/** Extract the root field name and parsed arguments of a `subscription` operation.
- * Used by the graphql-ws subscription layer (graphql_ws.h); not part of the
- * query/mutation execute path.
- * @param query GraphQL source starting with the `subscription` keyword.
- * @param variables Request variables for `$var` argument references (may be NULL).
- * @param field_out Buffer receiving the root field name.
- * @param field_cap Capacity of @p field_out.
- * @param args_out Receives a newly allocated cJSON object with parsed arguments, or NULL
- *                 when the field carries none; the caller takes ownership.
- * @return true when a subscription root field was parsed. */
-bool cwist_graphql_parse_subscription(const char *query, const cJSON *variables, char *field_out,
-                                      size_t field_cap, cJSON **args_out);
-
-/** HTTP handler adapter for CWIST POST routes. Supports both application/json and GraphQL requests.
- */
+/** HTTP handler adapter. Register it in a normal CWIST POST route. */
 void cwist_graphql_serve(cwist_graphql_schema_t *schema, cwist_http_request *req,
                          cwist_http_response *res);
 
