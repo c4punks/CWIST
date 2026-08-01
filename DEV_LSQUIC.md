@@ -26,10 +26,8 @@ now exports the expected `lsquic_wt_*` symbols.
 
 ## Platform Portability
 
-The HTTP/3 server loop (`cwist_http3_server_loop`) forces its UDP socket into
-non-blocking mode with `fcntl(O_NONBLOCK)` (idempotent if the caller already
-set it), and the native client configures its UDP socket non-blocking before
-lsquic sends packets. The Linux server loop uses `epoll`; macOS and BSD
+The HTTP/3 server and native client configure their UDP sockets as non-blocking
+before lsquic sends packets. The Linux server loop uses `epoll`; macOS and BSD
 use the portable polling path. BSD-derived socket interfaces do not all expose
 `MSG_DONTWAIT`, ECN receive options, or ancillary-data macros, so CWIST treats
 those as optional capabilities. HTTP/3 continues to build and run without ECN
