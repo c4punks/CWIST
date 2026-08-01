@@ -8,15 +8,6 @@
 
 #include <cwist/core/siphash/siphash.h>
 
-/** @brief Store a flash entry on the request.
- *
- * Creates the request's flash query map on first use. A NULL value is
- * stored as an empty string.
- *
- * @param req Request to attach the flash entry to; ignored if NULL.
- * @param key Entry key; ignored if NULL.
- * @param value Entry value; NULL is stored as "".
- */
 void cwist_flash_set(cwist_http_request *req, const char *key, const char *value) {
     if (!req || !key) return;
     if (!req->flash) {
@@ -53,7 +44,7 @@ const char *cwist_flash_peek(cwist_http_request *req, const char *key) {
  *         req/key are NULL, the flash map is empty, or the key is missing.
  */
 const char *cwist_flash_get(cwist_http_request *req, const char *key) {
-    if (!req || !key || !req->flash || !req->flash->buckets || req->flash->size == 0) return NULL;
+    if (!req || !key || !req->flash) return NULL;
     uint64_t hash = siphash24(key, strlen(key), req->flash->seed);
     size_t idx = hash % req->flash->size;
 
@@ -63,7 +54,7 @@ const char *cwist_flash_get(cwist_http_request *req, const char *key) {
         if (strcmp(curr->key, key) == 0) {
             *prev = curr->next;
             cwist_free(curr->key);
-            /* ownership of value transfers to the caller, who must free it */
+            /* value 포인터 소유권을 호출자에게 이전 - 호출자가 free 책임 */
             char *ret_val = curr->value;
             cwist_free(curr);
             return ret_val;

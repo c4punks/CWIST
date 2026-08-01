@@ -21,8 +21,7 @@
 static int mock_next_called = 0;
 
 static void mock_next(cwist_http_request *req, cwist_http_response *res) {
-    (void)req;
-    (void)res;
+    (void)req; (void)res;
     mock_next_called = 1;
 }
 
@@ -87,7 +86,7 @@ static void test_session_and_flash(void) {
     const char *msg2 = cwist_flash_get(req, "notice");
     assert(msg2 == NULL);
 
-    /* cwist_http_request_destroy owns req->session; no separate destroy */
+    /* cwist_http_request_destroy가 req->session을 소유하므로 별도 destroy 불필요 */
     cwist_http_response_destroy(res);
     cwist_http_request_destroy(req);
     cwist_app_destroy(app);
