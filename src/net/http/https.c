@@ -23,12 +23,21 @@
 #include <fcntl.h>
 #include <sys/socket.h>
 #include <arpa/inet.h>
+#include <netinet/tcp.h>
 #include <stdint.h>
 #include <pthread.h>
 #include <stdbool.h>
+#include <time.h>
 
 /* Forward declaration: PQC layer applied inside TLS bootstrap */
 bool cwist_tls_apply_pqc_layer(cwist_app *app, SSL_CTX *ctx);
+
+/* Monotonic clock in milliseconds, for connection deadlines. */
+static uint64_t cwist_https_now_ms(void) {
+    struct timespec ts;
+    clock_gettime(CLOCK_MONOTONIC, &ts);
+    return (uint64_t)ts.tv_sec * 1000 + (uint64_t)ts.tv_nsec / 1000000;
+}
 
 /**
  * @brief Poll the socket for the direction OpenSSL is waiting on.
@@ -488,11 +497,23 @@ cwist_error_t cwist_https_accept(cwist_https_context *ctx, int client_fd,
     SSL_set_fd(ssl, client_fd);
     cwist_tcp_quickack(client_fd);
 
+    /* Bound the whole handshake so a client dribbling bytes cannot pin a
+     * pool worker forever. */
+    uint64_t handshake_deadline = cwist_https_now_ms() + CWIST_HTTPS_HANDSHAKE_TIMEOUT_MS;
     int rc;
     while ((rc = SSL_accept(ssl)) <= 0) {
         int ssl_err = SSL_get_error(ssl, rc);
         if (ssl_err == SSL_ERROR_WANT_READ || ssl_err == SSL_ERROR_WANT_WRITE) {
-            if (cwist_ssl_wait(client_fd, ssl_err, CWIST_HTTP_TIMEOUT_MS) != 0) {
+            uint64_t now = cwist_https_now_ms();
+            if (now >= handshake_deadline) {
+                cwist_error_t err_obj = make_ssl_error("SSL handshake timed out");
+                SSL_free(ssl);
+                return err_obj;
+            }
+            int wait_ms = CWIST_HTTP_TIMEOUT_MS;
+            uint64_t remaining = handshake_deadline - now;
+            if (remaining < (uint64_t)wait_ms) wait_ms = (int)remaining;
+            if (cwist_ssl_wait(client_fd, ssl_err, wait_ms) != 0) {
                 cwist_error_t err_obj = make_ssl_error("SSL handshake timed out or socket error");
                 SSL_free(ssl);
                 return err_obj;
@@ -604,50 +625,23 @@ cwist_http_request *cwist_https_receive_request(cwist_https_connection *conn) {
     /* Total deadline for assembling the request headers. */
     uint64_t headers_deadline = cwist_https_now_ms() + CWIST_HTTP_HEADERS_TIMEOUT_MS;
 
-    /* Rescanning from offset 0 on every read is O(n^2) over dribbled
-     * headers; resume 3 bytes back so a terminator split across two reads
-     * is still found. */
-    size_t scan_from = 0;
-    bool deadline_grace_used = false;
-
-    while (1) {
-        header_end = strstr(conn->read_buf + scan_from, "\r\n\r\n");
-        if (header_end) break;
-        scan_from = total_received > 3 ? total_received - 3 : 0;
-
+    while (!(header_end = strstr(conn->read_buf, "\r\n\r\n"))) {
         if (total_received >= CWIST_HTTP_READ_BUFFER_SIZE - 1) {
             return NULL;
         }
 
-        if (SSL_pending(conn->ssl) == 0) {
-            uint64_t now = cwist_https_now_ms();
-            if (now >= headers_deadline) {
-                /* A request may have landed just as the idle deadline
-                 * expired; dropping it here makes strict clients surface a
-                 * network protocol error where lenient ones silently retry.
-                 * Give the wire one non-blocking chance before closing.
-                 * Bounded to a single retry so a dribbling peer cannot pin
-                 * the worker past the deadline. */
-                bool readable = false;
-                if (!deadline_grace_used) {
-                    deadline_grace_used = true;
-                    struct pollfd gfd = {.fd = conn->fd, .events = POLLIN};
-                    readable = (poll(&gfd, 1, 0) > 0 && (gfd.revents & POLLIN));
-                }
-                if (!readable) {
-                    return NULL;
-                }
-            } else {
-                int wait_ms = CWIST_HTTP_TIMEOUT_MS;
-                uint64_t remaining = headers_deadline - now;
-                if (remaining < (uint64_t)wait_ms) wait_ms = (int)remaining;
+        uint64_t now = cwist_https_now_ms();
+        if (now >= headers_deadline) {
+            return NULL;
+        }
+        int wait_ms = CWIST_HTTP_TIMEOUT_MS;
+        uint64_t remaining = headers_deadline - now;
+        if (remaining < (uint64_t)wait_ms) wait_ms = (int)remaining;
 
-                struct pollfd pfd = {.fd = conn->fd, .events = POLLIN};
-                int pret = poll(&pfd, 1, wait_ms);
-                if (pret <= 0) {
-                    return NULL;
-                }
-            }
+        struct pollfd pfd = { .fd = conn->fd, .events = POLLIN };
+        int pret = poll(&pfd, 1, wait_ms);
+        if (pret <= 0) {
+            return NULL;
         }
 
         int bytes = SSL_read(conn->ssl, conn->read_buf + total_received,
@@ -696,24 +690,22 @@ cwist_http_request *cwist_https_receive_request(cwist_https_connection *conn) {
         uint64_t body_idle_start = cwist_https_now_ms();
 
         while (current_body_len < req->content_length) {
-            if (SSL_pending(conn->ssl) == 0) {
-                uint64_t now = cwist_https_now_ms();
-                if (now - body_idle_start >= CWIST_HTTP_BODY_IDLE_TIMEOUT_MS) {
-                    cwist_free(body);
-                    cwist_http_request_destroy(req);
-                    return NULL;
-                }
-                int wait_ms = CWIST_HTTP_TIMEOUT_MS;
-                uint64_t idle_left = CWIST_HTTP_BODY_IDLE_TIMEOUT_MS - (now - body_idle_start);
-                if (idle_left < (uint64_t)wait_ms) wait_ms = (int)idle_left;
+            uint64_t now = cwist_https_now_ms();
+            if (now - body_idle_start >= CWIST_HTTP_BODY_IDLE_TIMEOUT_MS) {
+                cwist_free(body);
+                cwist_http_request_destroy(req);
+                return NULL;
+            }
+            int wait_ms = CWIST_HTTP_TIMEOUT_MS;
+            uint64_t idle_left = CWIST_HTTP_BODY_IDLE_TIMEOUT_MS - (now - body_idle_start);
+            if (idle_left < (uint64_t)wait_ms) wait_ms = (int)idle_left;
 
-                struct pollfd pfd = {.fd = conn->fd, .events = POLLIN};
-                int pret = poll(&pfd, 1, wait_ms);
-                if (pret <= 0) {
-                    cwist_free(body);
-                    cwist_http_request_destroy(req);
-                    return NULL;
-                }
+            struct pollfd pfd = { .fd = conn->fd, .events = POLLIN };
+            int pret = poll(&pfd, 1, wait_ms);
+            if (pret <= 0) {
+                cwist_free(body);
+                cwist_http_request_destroy(req);
+                return NULL;
             }
 
             int bytes = SSL_read(conn->ssl, body + current_body_len,
@@ -914,21 +906,26 @@ cwist_error_t cwist_https_server_loop(int server_fd, cwist_https_context *ctx, v
             continue;
         }
 
-        pthread_t thread;
-        struct https_thread_payload *payload = malloc(sizeof(*payload));
-        if (!payload) {
-            close(client_fd);
-            continue;
+        /* Reap vanished peers within ~2 minutes instead of the ~2h kernel
+         * default, so dead connections cannot park pool workers forever. */
+        {
+            int one = 1;
+            setsockopt(client_fd, SOL_SOCKET, SO_KEEPALIVE, &one, sizeof(one));
+#ifdef TCP_KEEPIDLE
+            int keepidle = 60;
+            setsockopt(client_fd, IPPROTO_TCP, TCP_KEEPIDLE, &keepidle, sizeof(keepidle));
+#endif
+#ifdef TCP_KEEPINTVL
+            int keepintvl = 10;
+            setsockopt(client_fd, IPPROTO_TCP, TCP_KEEPINTVL, &keepintvl, sizeof(keepintvl));
+#endif
+#ifdef TCP_KEEPCNT
+            int keepcnt = 6;
+            setsockopt(client_fd, IPPROTO_TCP, TCP_KEEPCNT, &keepcnt, sizeof(keepcnt));
+#endif
         }
 
-        if (pthread_create(&thread, NULL, https_thread_handler, payload) == 0) {
-            pthread_detach(thread);
-        } else {
-            free(payload);
-            close(client_fd);
-        }
-
-        cwist_https_dispatch(client_fd, ctx, handler, user_ctx);
+        https_pool_submit(client_fd, ctx, handler, user_ctx);
     }
 
     https_pool_destroy();

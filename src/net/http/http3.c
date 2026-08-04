@@ -3001,8 +3001,13 @@ cwist_error_t cwist_http3_server_loop(int udp_fd,
     settings.es_optimistic_nat = 1;
 
     while (ctx && ctx->running && atomic_load(&g_cwist_running)) {
-        int diff = 1000; /* default 1 ms; let earliest_adv_tick drive it */
-        if (lsquic_engine_earliest_adv_tick(engine, &diff)) {
+        /* With no active QUIC connections lsquic has no earlier deadline.
+         * Sleeping for only 1 ms in that state turns an otherwise idle
+         * listener into a permanent polling loop.  Active connections still
+         * replace this with their precise earliest timer below. */
+        int diff = 100000; /* default 100 ms (microseconds) */
+        bool has_engine_tick = lsquic_engine_earliest_adv_tick(engine, &diff);
+        if (has_engine_tick) {
             /* Enforce a small floor so pacing timers or back-to-back zero
              * ticks cannot turn this loop into a busy-wait. */
             if (diff < 1000)
@@ -3011,7 +3016,24 @@ cwist_error_t cwist_http3_server_loop(int udp_fd,
                 diff = 1000000;
         }
 
-        SSL_set_fd(quic_conn, udp_fd);
+        bool received_packet = false;
+#ifdef __linux__
+        struct epoll_event events[1];
+        int pret = epoll_wait(epoll_fd, events, 1, diff / 1000);
+        if (pret < 0) {
+            if (errno == EINTR)
+                continue;
+            break;
+        }
+        if (pret > 0 && (events[0].events & (EPOLLERR | EPOLLHUP))) {
+            fprintf(stderr, "[HTTP/3] UDP socket error, exiting loop.\n");
+            break;
+        }
+        if (pret > 0 && (events[0].events & EPOLLIN)) {
+            received_packet = true;
+#else
+        struct pollfd pfd = { .fd = udp_fd, .events = POLLIN };
+        int pret = poll(&pfd, 1, diff / 1000);
 
         if (SSL_accept(quic_conn) <= 0) {
             SSL_free(quic_conn);
@@ -3083,7 +3105,10 @@ cwist_error_t cwist_http3_server_loop(int udp_fd,
         }
 #endif
 
-        lsquic_engine_process_conns(engine);
+        /* Do not run lsquic's connection sweep for an empty engine.  With no
+         * packet and no advertised timer this is pure idle CPU work. */
+        if (received_packet || has_engine_tick)
+            lsquic_engine_process_conns(engine);
     }
 
     err.error.err_i16 = 0;
