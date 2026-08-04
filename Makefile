@@ -551,6 +551,22 @@ test_redis: $(LIB_NAME) tests/test_redis.c
 	$(CC) $(CFLAGS) -o test_redis tests/test_redis.c $(LIB_NAME) $(LIBS)
 	./test_redis
 
+test_sse: $(LIB_NAME) tests/test_sse.c
+	$(CC) $(CFLAGS) -o test_sse tests/test_sse.c $(LIB_NAME) $(LIBS)
+	./test_sse
+
+test_graphql: $(LIB_NAME) tests/test_graphql.c
+	$(CC) $(CFLAGS) -o test_graphql tests/test_graphql.c $(LIB_NAME) $(LIBS)
+	./test_graphql
+
+test_core_hardening: $(LIB_NAME) tests/test_core_hardening.c
+	$(CC) $(CFLAGS) -o test_core_hardening tests/test_core_hardening.c $(LIB_NAME) $(LIBS)
+	./test_core_hardening
+
+cli:
+	chmod +x tools/cli/cwist
+	@echo "CLI ready: ./tools/cli/cwist"
+
 test_scheduler: $(LIB_NAME) tests/test_scheduler.c
 	$(CC) $(CFLAGS) -o test_scheduler tests/test_scheduler.c $(LIB_NAME) $(LIBS)
 	./test_scheduler
