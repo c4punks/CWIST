@@ -58,7 +58,6 @@ typedef enum cwist_http_status_t {
 #define CWIST_HTTP_HEADERS_TIMEOUT_MS    60000  /* Total header read budget */
 #define CWIST_HTTP_BODY_IDLE_TIMEOUT_MS  30000  /* Abort body read after this much silence */
 #define CWIST_HTTP2_IDLE_TIMEOUT_MS      300000 /* Default h2 idle budget (env overridable) */
-#define CWIST_HTTP_KEEP_ALIVE_TIMEOUT_SEC 15    /* Default keep-alive idle connection timeout in seconds */
 
 /** --- Structures --- */
 

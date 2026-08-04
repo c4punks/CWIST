@@ -12,9 +12,178 @@
 #include <poll.h>
 #include <sys/socket.h>
 #include <arpa/inet.h>
+#include <netinet/tcp.h>
+#include <stdint.h>
+#include <pthread.h>
+#include <stdbool.h>
+#include <time.h>
 
 /* --- Internal Error Helpers --- */
 
+/* Monotonic clock in milliseconds, for connection deadlines. */
+static uint64_t cwist_https_now_ms(void) {
+    struct timespec ts;
+    clock_gettime(CLOCK_MONOTONIC, &ts);
+    return (uint64_t)ts.tv_sec * 1000 + (uint64_t)ts.tv_nsec / 1000000;
+}
+
+/**
+ * @brief Poll the socket for the direction OpenSSL is waiting on.
+ * @return 0 if the requested event is ready, -1 on timeout/error.
+ */
+static int cwist_ssl_wait(int fd, int ssl_error, int timeout_ms) {
+    struct pollfd pfd = { .fd = fd, .events = 0 };
+    if (ssl_error == SSL_ERROR_WANT_READ) {
+        pfd.events = POLLIN;
+    } else if (ssl_error == SSL_ERROR_WANT_WRITE) {
+        pfd.events = POLLOUT;
+    } else {
+        return -1;
+    }
+
+    int ret = poll(&pfd, 1, timeout_ms);
+    if (ret <= 0) return -1;
+    if (pfd.revents & (POLLERR | POLLHUP | POLLNVAL)) return -1;
+    return 0;
+}
+
+struct https_thread_payload {
+    int client_fd;
+    cwist_https_context *ctx;
+    void (*handler)(cwist_https_connection *, void *);
+    void *user_ctx;
+};
+
+/* --- Thread Pool for HTTPS --- */
+#define HTTPS_TASK_QUEUE_SIZE 2097152
+
+typedef struct {
+    int client_fd;
+    cwist_https_context *ctx;
+    void (*handler)(cwist_https_connection *, void *);
+    void *user_ctx;
+} https_pool_task_t;
+
+typedef struct {
+    pthread_t threads[2048];
+    size_t    threads_size;
+    https_pool_task_t queue[HTTPS_TASK_QUEUE_SIZE];
+    size_t head;
+    size_t tail;
+    size_t count;
+    pthread_mutex_t mutex;
+    pthread_cond_t cond_not_empty;
+    pthread_cond_t cond_not_full;
+    int shutdown;
+} https_thread_pool_t;
+
+static https_thread_pool_t g_https_pool;
+static bool g_https_pool_initialized = false;
+
+// Forward declaration of existing https_thread_handler
+static void *https_thread_handler(void *arg);
+
+static void *https_pool_worker(void *arg) {
+    (void)arg;
+    while (1) {
+        pthread_mutex_lock(&g_https_pool.mutex);
+        while (g_https_pool.count == 0 && !g_https_pool.shutdown) {
+            pthread_cond_wait(&g_https_pool.cond_not_empty, &g_https_pool.mutex);
+        }
+        if (g_https_pool.shutdown) {
+            pthread_mutex_unlock(&g_https_pool.mutex);
+            break;
+        }
+        https_pool_task_t task = g_https_pool.queue[g_https_pool.head];
+        g_https_pool.head = (g_https_pool.head + 1) % HTTPS_TASK_QUEUE_SIZE;
+        g_https_pool.count--;
+        pthread_cond_signal(&g_https_pool.cond_not_full);
+        pthread_mutex_unlock(&g_https_pool.mutex);
+
+        // We can reuse the existing https_thread_handler logic by wrapping the task
+        struct https_thread_payload *payload = malloc(sizeof(*payload));
+        if (payload) {
+            payload->client_fd = task.client_fd;
+            payload->ctx = task.ctx;
+            payload->handler = task.handler;
+            payload->user_ctx = task.user_ctx;
+            https_thread_handler(payload);
+        } else {
+            close(task.client_fd);
+        }
+    }
+    return NULL;
+}
+
+int https_pool_init(void) {
+    if (g_https_pool_initialized) return 0;
+    memset(&g_https_pool, 0, sizeof(g_https_pool));
+    pthread_mutex_init(&g_https_pool.mutex, NULL);
+    pthread_cond_init(&g_https_pool.cond_not_empty, NULL);
+    pthread_cond_init(&g_https_pool.cond_not_full, NULL);
+    for (int i = 0; i < get_optimal_thread_count(); i++) {
+        if (pthread_create(&g_https_pool.threads[i], NULL, https_pool_worker, NULL) != 0) {
+            return -1;
+        }
+    }
+    g_https_pool_initialized = true;
+    return 0;
+}
+
+void https_pool_submit(int client_fd, cwist_https_context *ctx, void (*handler)(cwist_https_connection *, void *), void *user_ctx) {
+    pthread_mutex_lock(&g_https_pool.mutex);
+    while (g_https_pool.count >= HTTPS_TASK_QUEUE_SIZE && !g_https_pool.shutdown) {
+        pthread_cond_wait(&g_https_pool.cond_not_full, &g_https_pool.mutex);
+    }
+    if (g_https_pool.shutdown) {
+        pthread_mutex_unlock(&g_https_pool.mutex);
+        close(client_fd);
+        return;
+    }
+    g_https_pool.queue[g_https_pool.tail].client_fd = client_fd;
+    g_https_pool.queue[g_https_pool.tail].ctx = ctx;
+    g_https_pool.queue[g_https_pool.tail].handler = handler;
+    g_https_pool.queue[g_https_pool.tail].user_ctx = user_ctx;
+    g_https_pool.tail = (g_https_pool.tail + 1) % HTTPS_TASK_QUEUE_SIZE;
+    g_https_pool.count++;
+    pthread_cond_signal(&g_https_pool.cond_not_empty);
+    pthread_mutex_unlock(&g_https_pool.mutex);
+}
+
+void https_pool_destroy(void) {
+    if (!g_https_pool_initialized) return;
+    pthread_mutex_lock(&g_https_pool.mutex);
+    g_https_pool.shutdown = 1;
+    pthread_cond_broadcast(&g_https_pool.cond_not_empty);
+    pthread_mutex_unlock(&g_https_pool.mutex);
+    for (int i = 0; i < get_optimal_thread_count(); i++) {
+        pthread_join(g_https_pool.threads[i], NULL);
+    }
+    pthread_mutex_destroy(&g_https_pool.mutex);
+    pthread_cond_destroy(&g_https_pool.cond_not_empty);
+    pthread_cond_destroy(&g_https_pool.cond_not_full);
+
+    g_https_pool_initialized = false;
+}
+/* --- End Thread Pool --- */
+
+#define CWIST_ALPN_HTTP11       ((const unsigned char *)"\x08http/1.1")
+#define CWIST_ALPN_H2_HTTP11    ((const unsigned char *)"\x02h2\x08http/1.1")
+#define CWIST_ALPN_H3_H2_HTTP11 ((const unsigned char *)"\x02h3\x02h2\x08http/1.1")
+#define CWIST_ALPN_HTTP11_LEN       9
+#define CWIST_ALPN_H2_HTTP11_LEN    12
+#define CWIST_ALPN_H3_H2_HTTP11_LEN 15
+
+/**
+ * @file https.c
+ * @brief OpenSSL-backed HTTPS accept, receive, send, and server-loop helpers.
+ */
+
+/**
+ * @brief Build a JSON-rich cwist_error_t from the latest OpenSSL error state.
+ * @param msg Human-readable message describing the failing HTTPS step.
+ * @return Error object with module, message, and OpenSSL error string fields.
+ */
 static cwist_error_t make_ssl_error(const char *msg) {
     cwist_error_t err = make_error(CWIST_ERR_JSON);
     err.error.err_json = cJSON_CreateObject();
@@ -106,10 +275,30 @@ cwist_error_t cwist_https_accept(cwist_https_context *ctx, int client_fd, cwist_
 
     SSL_set_fd(ssl, client_fd);
 
-    if (SSL_accept(ssl) <= 0) {
-        // Handshake failed
-        // We capture the error before freeing
-        cwist_error_t ssl_err = make_ssl_error("SSL handshake failed");
+    /* Bound the whole handshake so a client dribbling bytes cannot pin a
+     * pool worker forever. */
+    uint64_t handshake_deadline = cwist_https_now_ms() + CWIST_HTTPS_HANDSHAKE_TIMEOUT_MS;
+    int rc;
+    while ((rc = SSL_accept(ssl)) <= 0) {
+        int ssl_err = SSL_get_error(ssl, rc);
+        if (ssl_err == SSL_ERROR_WANT_READ || ssl_err == SSL_ERROR_WANT_WRITE) {
+            uint64_t now = cwist_https_now_ms();
+            if (now >= handshake_deadline) {
+                cwist_error_t err_obj = make_ssl_error("SSL handshake timed out");
+                SSL_free(ssl);
+                return err_obj;
+            }
+            int wait_ms = CWIST_HTTP_TIMEOUT_MS;
+            uint64_t remaining = handshake_deadline - now;
+            if (remaining < (uint64_t)wait_ms) wait_ms = (int)remaining;
+            if (cwist_ssl_wait(client_fd, ssl_err, wait_ms) != 0) {
+                cwist_error_t err_obj = make_ssl_error("SSL handshake timed out or socket error");
+                SSL_free(ssl);
+                return err_obj;
+            }
+            continue;
+        }
+        cwist_error_t err_obj = make_ssl_error("SSL handshake failed");
         SSL_free(ssl);
         return ssl_err;
     }
@@ -160,13 +349,24 @@ cwist_http_request *cwist_https_receive_request(cwist_https_connection *conn) {
     size_t total_received = conn->buf_len;
     char *header_end = NULL;
 
+    /* Total deadline for assembling the request headers. */
+    uint64_t headers_deadline = cwist_https_now_ms() + CWIST_HTTP_HEADERS_TIMEOUT_MS;
+
     while (!(header_end = strstr(conn->read_buf, "\r\n\r\n"))) {
         if (total_received >= CWIST_HTTP_READ_BUFFER_SIZE - 1) {
             return NULL;
         }
 
+        uint64_t now = cwist_https_now_ms();
+        if (now >= headers_deadline) {
+            return NULL;
+        }
+        int wait_ms = CWIST_HTTP_TIMEOUT_MS;
+        uint64_t remaining = headers_deadline - now;
+        if (remaining < (uint64_t)wait_ms) wait_ms = (int)remaining;
+
         struct pollfd pfd = { .fd = conn->fd, .events = POLLIN };
-        int pret = poll(&pfd, 1, CWIST_HTTP_TIMEOUT_MS);
+        int pret = poll(&pfd, 1, wait_ms);
         if (pret <= 0) {
             return NULL;
         }
@@ -208,9 +408,24 @@ cwist_http_request *cwist_https_receive_request(cwist_https_connection *conn) {
         memcpy(body, header_end + 4, to_copy);
         size_t current_body_len = to_copy;
 
+        /* No total cap (slow 1 GiB uploads must keep working); abort only
+         * when no bytes arrive for a cumulative idle span.  Any successful
+         * read resets the idle clock. */
+        uint64_t body_idle_start = cwist_https_now_ms();
+
         while (current_body_len < req->content_length) {
+            uint64_t now = cwist_https_now_ms();
+            if (now - body_idle_start >= CWIST_HTTP_BODY_IDLE_TIMEOUT_MS) {
+                cwist_free(body);
+                cwist_http_request_destroy(req);
+                return NULL;
+            }
+            int wait_ms = CWIST_HTTP_TIMEOUT_MS;
+            uint64_t idle_left = CWIST_HTTP_BODY_IDLE_TIMEOUT_MS - (now - body_idle_start);
+            if (idle_left < (uint64_t)wait_ms) wait_ms = (int)idle_left;
+
             struct pollfd pfd = { .fd = conn->fd, .events = POLLIN };
-            int pret = poll(&pfd, 1, CWIST_HTTP_TIMEOUT_MS);
+            int pret = poll(&pfd, 1, wait_ms);
             if (pret <= 0) {
                 free(body);
                 cwist_http_request_destroy(req);
@@ -228,6 +443,7 @@ cwist_http_request *cwist_https_receive_request(cwist_https_connection *conn) {
                 return NULL;
             }
             current_body_len += (size_t)bytes;
+            body_idle_start = cwist_https_now_ms();
         }
         body[req->content_length] = '\0';
         cwist_sstring_assign_len(req->body, body, req->content_length);
@@ -337,23 +553,26 @@ cwist_error_t cwist_https_server_loop(int server_fd, cwist_https_context *ctx, v
             continue; 
         }
 
-        pthread_t thread;
-        struct https_thread_payload *payload = malloc(sizeof(*payload));
-        if (!payload) {
-            close(client_fd);
-            continue;
+        /* Reap vanished peers within ~2 minutes instead of the ~2h kernel
+         * default, so dead connections cannot park pool workers forever. */
+        {
+            int one = 1;
+            setsockopt(client_fd, SOL_SOCKET, SO_KEEPALIVE, &one, sizeof(one));
+#ifdef TCP_KEEPIDLE
+            int keepidle = 60;
+            setsockopt(client_fd, IPPROTO_TCP, TCP_KEEPIDLE, &keepidle, sizeof(keepidle));
+#endif
+#ifdef TCP_KEEPINTVL
+            int keepintvl = 10;
+            setsockopt(client_fd, IPPROTO_TCP, TCP_KEEPINTVL, &keepintvl, sizeof(keepintvl));
+#endif
+#ifdef TCP_KEEPCNT
+            int keepcnt = 6;
+            setsockopt(client_fd, IPPROTO_TCP, TCP_KEEPCNT, &keepcnt, sizeof(keepcnt));
+#endif
         }
-        payload->client_fd = client_fd;
-        payload->ctx = ctx;
-        payload->handler = handler;
-        payload->user_ctx = user_ctx;
 
-        if (pthread_create(&thread, NULL, https_thread_handler, payload) == 0) {
-            pthread_detach(thread);
-        } else {
-            free(payload);
-            close(client_fd);
-        }
+        https_pool_submit(client_fd, ctx, handler, user_ctx);
     }
     
     return err;

@@ -177,6 +177,25 @@ static uint32_t h2_max_rst_rate(void) {
     return val;
 }
 
+/* Monotonic clock in milliseconds, for the connection idle deadline. */
+static uint64_t h2_now_ms(void) {
+    struct timespec ts;
+    clock_gettime(CLOCK_MONOTONIC, &ts);
+    return (uint64_t)ts.tv_sec * 1000 + (uint64_t)ts.tv_nsec / 1000000;
+}
+
+/* Idle deadline for a connection with no complete frame arriving.  Defaults
+ * to CWIST_HTTP2_IDLE_TIMEOUT_MS, overridable via the env var of the same
+ * name (read once at first use). */
+static int h2_idle_timeout_ms(void) {
+    static int timeout_ms = 0;
+    if (timeout_ms == 0) {
+        const char *env = getenv("CWIST_HTTP2_IDLE_TIMEOUT_MS");
+        timeout_ms = (env && atoi(env) > 0) ? atoi(env) : CWIST_HTTP2_IDLE_TIMEOUT_MS;
+    }
+    return timeout_ms;
+}
+
 /* --- Stream & Connection State --- */
 
 typedef struct h2_stream {
@@ -408,45 +427,6 @@ typedef struct h2_conn {
     bool sequenced_data;   /* CWIST extension: DATA frames carry seq chunks */
     uint32_t last_processed_stream_id;
     uint64_t last_activity; /* monotonic ms of the last complete frame read */
-    /* Frames the send-window wait loop had to read off the wire but must not
-     * dispatch (HEADERS/SETTINGS of other streams, etc.). The main loop
-     * drains these before touching the socket again. */
-    h2_deferred_frame *deferred_head;
-    h2_deferred_frame *deferred_tail;
-    /* HPACK decoder dynamic table state (RFC 7541 section 4). */
-    h2_hpack_entry *hpack_head;
-    uint32_t hpack_size;
-    uint32_t hpack_capacity;
-    /* Number of currently open streams; enforced against
-     * CWIST_HTTP2_MAX_CONCURRENT_STREAMS on new-stream HEADERS (section 5.1.2). */
-    uint32_t active_streams;
-    /* True when a header block was refused (stream limit) but its
-     * CONTINUATION frames must still be consumed and discarded. */
-    bool cont_discard;
-    uint32_t cont_frame_count;
-    /* Token bucket budget for Rapid Reset (CVE-2023-44487) and control frames */
-    uint32_t rst_budget;
-    uint64_t rst_last_refill_ms;
-    uint32_t ping_budget;
-    uint64_t ping_last_refill_ms;
-    /* Optional stream hooks (gRPC incremental delivery).  hook_ctx is the
-     * per-connection context from hooks->on_conn_open (or user_ctx). */
-    const cwist_http2_stream_hooks *hooks;
-    void *hook_ctx;
-    /* Serializes the outbound batch buffer between the dispatcher loop and
-     * hook-taken stream handler threads that emit frames directly. */
-    pthread_mutex_t out_mu;
-    bool out_mu_init;
-    /* Send-credit rendezvous for hook-taken handler threads: the dispatcher
-     * owns socket reads, so a handler thread that runs out of send window
-     * parks on fc_cond and is woken when the dispatcher applies WINDOW_UPDATE
-     * credit or when the stream/connection goes away. */
-    pthread_mutex_t fc_mu;
-    pthread_cond_t fc_cond;
-    bool fc_mu_init;
-    /* Completed deferred responses, fed by async worker threads and drained
-     * by this connection thread (see cwist_h2_async_queue). */
-    cwist_h2_async_queue *async_q;
 } h2_conn;
 
 /**
@@ -469,6 +449,7 @@ static void h2_conn_init(h2_conn *hc, cwist_https_connection *conn) {
     cwist_http2_flow_control_init(&hc->fc, 0, CWIST_HTTP2_MAX_WINDOW);
     hc->fc.send_window = 65535;
     hc->cont_end_stream = false;
+    hc->last_activity = h2_now_ms();
     /* The extension carries application bodies and must not be enabled over
      * h2c: its ordering metadata is not an integrity mechanism.  HTTPS/TLS
      * supplies authenticated transport protection against on-path mutation. */
@@ -836,6 +817,25 @@ static int h2_wait_socket(cwist_https_connection *conn, int ssl_error, int timeo
     int ret = poll(&pfd, 1, timeout_ms);
     if (ret <= 0) return -1;
     if (pfd.revents & (POLLERR | POLLHUP | POLLNVAL)) return -1;
+    return 0;
+}
+
+/* Poll until frame bytes can be read or the connection idle deadline
+ * expires.  Skips the poll when decrypted bytes are already buffered.
+ * Returns 0 when readable, -1 on idle timeout or socket error. */
+static int h2_wait_readable(h2_conn *hc) {
+    while (hc->conn->ssl ? (SSL_pending(hc->conn->ssl) <= 0) : true) {
+        uint64_t idle_ms = (uint64_t)h2_idle_timeout_ms();
+        uint64_t now = h2_now_ms();
+        if (now - hc->last_activity >= idle_ms) return -1;
+        uint64_t idle_left = idle_ms - (now - hc->last_activity);
+        int wait_ms = CWIST_HTTP_TIMEOUT_MS;
+        if (idle_left < (uint64_t)wait_ms) wait_ms = (int)idle_left;
+        struct pollfd pfd = { .fd = hc->conn->fd, .events = POLLIN };
+        int pret = poll(&pfd, 1, wait_ms);
+        if (pret < 0) return -1;
+        if (pret > 0) return 0;
+    }
     return 0;
 }
 
@@ -2001,37 +2001,20 @@ static int h2_send_response_raw(cwist_https_connection *conn, uint32_t stream_id
     return h2_send_seq_data_frames(NULL, conn, stream_id, body_data, body_len, max_frame_size, NULL);
 }
 
-/**
- * @brief Read exactly @p len bytes from the connection.
- * Thin wrapper over h2_read_full for code paths that treat any short read as
- * fatal.
- * @param hc Connection to read from.
- * @param buf Destination buffer.
- * @param len Number of bytes to read.
- * @return @p len on success, -1 on EOF, timeout, or socket error.
- */
-static int h2_read_all(h2_conn *hc, void *buf, int len) {
-    /* h2_read_full tolerates WANT_READ on the non-blocking TLS sockets;
-     * 0/EOF and real errors stay fatal. */
-    if (h2_read_full(hc, buf, (size_t)len) != 0) return -1;
-    return len;
+static int h2_read_all(cwist_https_connection *conn, void *buf, int len) {
+    int total = 0;
+    while (total < len) {
+        int n = h2_read(conn, (char *)buf + total, len - total);
+        /* 0 is EOF on these blocking sockets (peer shutdown); retrying it
+         * would spin forever, so treat it as a read failure. */
+        if (n <= 0) return -1;
+        total += n;
+    }
+    return total;
 }
 
-/* Returns 0 normally, -1 when the peer vanished mid-frame (EOF/error).
- *
- * Two traps are handled here:
- * 1. poll(fd, 0) alone misses WINDOW_UPDATEs sitting in OpenSSL's internal
- *    buffer (a whole TLS record is decrypted per SSL_read, so leftover
- *    frames have zero bytes pending on the socket). Without the
- *    SSL_pending check the window wait loop never sees the update and the
- *    connection is torn down mid-body - the "some chunks arrive, then
- *    stuck" symptom.
- * 2. Frames this loop is not responsible for (HEADERS/SETTINGS of other
- *    streams, etc.) used to be read and discarded. They are now queued so
- *    the main frame loop can dispatch them. */
+/* Returns 0 normally, -1 when the peer vanished mid-frame (EOF/error). */
 static int h2_process_incoming_frames_nonblocking(h2_conn *hc, h2_stream *s) {
-    /* Never wait on the peer with unflushed frames in the batch buffer. */
-    if (h2_out_flush(hc) != 0) return -1;
     struct pollfd pfd;
     pfd.fd = hc->conn->fd;
     pfd.events = POLLIN;
@@ -2044,7 +2027,7 @@ static int h2_process_incoming_frames_nonblocking(h2_conn *hc, h2_stream *s) {
     while ((poll(&pfd, 1, 0) > 0 && (pfd.revents & POLLIN)) ||
            (hc->conn->ssl && SSL_pending(hc->conn->ssl) > 0)) {
         unsigned char hdr[9];
-        int n = h2_read_all(hc, hdr, 9);
+        int n = h2_read_all(hc->conn, hdr, 9);
         if (n != 9) return -1;
 
         uint32_t len = ((uint32_t)hdr[0] << 16) | ((uint32_t)hdr[1] << 8) | hdr[2];
@@ -2059,7 +2042,7 @@ static int h2_process_incoming_frames_nonblocking(h2_conn *hc, h2_stream *s) {
         if (len > 0) {
             payload = (unsigned char *)cwist_alloc(len);
             if (!payload) return -1;
-            int r = h2_read_all(hc, payload, len);
+            int r = h2_read_all(hc->conn, payload, len);
             if (r != (int)len) {
                 cwist_free(payload);
                 return -1;
@@ -2147,10 +2130,10 @@ static int h2_send_seq_file_body(h2_conn *hc, h2_stream *s, uint32_t stream_id,
     off_t cur_offset = offset;
 
     for (uint32_t i = 0; i < total_chunks && remaining > 0; i++) {
-        while (hc->fc.send_window == 0 || (s && s->fc.send_window == 0)) {
+        while (hc->conn_send_window <= 0 || (s && s->send_window <= 0)) {
             if (h2_process_incoming_frames_nonblocking(hc, s) != 0) return -1;
-            if (s && s->send_aborted) return -1;
-            if (hc->fc.send_window == 0 || (s && s->fc.send_window == 0)) {
+            if (s && s->send_window == -999) return -1;
+            if (hc->conn_send_window <= 0 || (s && s->send_window <= 0)) {
                 /* Give up if no frame arrived within the idle deadline. */
                 if (h2_now_ms() - hc->last_activity >= (uint64_t)h2_idle_timeout_ms()) return -1;
                 struct timespec ts = {0, 2000000};
@@ -2203,10 +2186,10 @@ static int h2_send_seq_memory_body(h2_conn *hc, h2_stream *s, uint32_t stream_id
     if (!cwist_seq_split(body_data, body_len, chunk_payload, &msg)) return -1;
 
     for (size_t i = 0; i < msg.count; i++) {
-        while (hc->fc.send_window == 0 || (s && s->fc.send_window == 0)) {
+        while (hc->conn_send_window <= 0 || (s && s->send_window <= 0)) {
             if (h2_process_incoming_frames_nonblocking(hc, s) != 0) return -1;
-            if (s && s->send_aborted) return -1;
-            if (hc->fc.send_window == 0 || (s && s->fc.send_window == 0)) {
+            if (s && s->send_window == -999) return -1;
+            if (hc->conn_send_window <= 0 || (s && s->send_window <= 0)) {
                 /* Give up if no frame arrived within the idle deadline. */
                 if (h2_now_ms() - hc->last_activity >= (uint64_t)h2_idle_timeout_ms()) return -1;
                 struct timespec ts = {0, 2000000};
@@ -2215,7 +2198,8 @@ static int h2_send_seq_memory_body(h2_conn *hc, h2_stream *s, uint32_t stream_id
         }
 
         size_t chunk_len = msg.chunk_lens[i];
-        if (h2_send_allowance(hc, s, (uint32_t)chunk_len) < chunk_len) {
+        if ((int32_t)chunk_len > hc->conn_send_window ||
+            (s && (int32_t)chunk_len > s->send_window)) {
             /* Window too small for a full sequenced chunk; wait for update. */
             if (h2_process_incoming_frames_nonblocking(hc, s) != 0) return -1;
             if (h2_now_ms() - hc->last_activity >= (uint64_t)h2_idle_timeout_ms()) return -1;
@@ -2541,10 +2525,10 @@ static int h2_send_response_hc(h2_conn *hc, uint32_t stream_id, cwist_http_respo
         off_t offset = res->file_stream_offset;
         size_t remaining = res->file_stream_len;
         while (remaining > 0) {
-            while (hc->fc.send_window == 0 || (s && s->fc.send_window == 0)) {
+            while (hc->conn_send_window <= 0 || (s && s->send_window <= 0)) {
                 if (h2_process_incoming_frames_nonblocking(hc, s) != 0) return -1;
-                if (s && s->send_aborted) return -1;
-                if (hc->fc.send_window == 0 || (s && s->fc.send_window == 0)) {
+                if (s && s->send_window == -999) return -1;
+                if (hc->conn_send_window <= 0 || (s && s->send_window <= 0)) {
                     /* Give up if no frame arrived within the idle deadline. */
                     if (h2_now_ms() - hc->last_activity >= (uint64_t)h2_idle_timeout_ms()) return -1;
                     struct timespec ts = {0, 2000000};
@@ -2580,10 +2564,10 @@ static int h2_send_response_hc(h2_conn *hc, uint32_t stream_id, cwist_http_respo
     } else {
         size_t sent = 0;
         while (sent < body_len) {
-            while (hc->fc.send_window == 0 || (s && s->fc.send_window == 0)) {
+            while (hc->conn_send_window <= 0 || (s && s->send_window <= 0)) {
                 if (h2_process_incoming_frames_nonblocking(hc, s) != 0) return -1;
-                if (s && s->send_aborted) return -1;
-                if (hc->fc.send_window == 0 || (s && s->fc.send_window == 0)) {
+                if (s && s->send_window == -999) return -1;
+                if (hc->conn_send_window <= 0 || (s && s->send_window <= 0)) {
                     /* Give up if no frame arrived within the idle deadline. */
                     if (h2_now_ms() - hc->last_activity >= (uint64_t)h2_idle_timeout_ms()) return -1;
                     struct timespec ts = {0, 2000000};
@@ -3178,40 +3162,11 @@ cwist_error_t cwist_http2_serve_connection_ex(cwist_https_connection *conn, void
     bool sent_goaway = false;
     while (connected && atomic_load(&g_cwist_running)) {
         unsigned char hdr[9];
-        unsigned char *payload = NULL;
-
-        /* Frames the send-window wait loop pulled off the wire but could not
-         * dispatch are served first; only then touch the socket. */
-        h2_deferred_frame *df = hc.deferred_head;
-        if (df) {
-            hc.deferred_head = df->next;
-            if (!hc.deferred_head) hc.deferred_tail = NULL;
-            memcpy(hdr, df->hdr, 9);
-            payload = df->payload;
-            cwist_free(df);
-        } else {
-            /* Bound the wait for the next frame with the idle deadline so an
-             * idle connection cannot monopolize a pool worker forever.  A
-             * hook-provided deadline (gRPC timeout) tightens the wait. */
-            uint64_t wait_deadline = sent_goaway ? goaway_close_at : 0;
-            if (hooks && hooks->next_deadline_ms) {
-                uint64_t gd = hooks->next_deadline_ms(hc.hook_ctx);
-                if (gd && (!wait_deadline || gd < wait_deadline)) wait_deadline = gd;
-            }
-            int wait_rc = h2_wait_readable(&hc, wait_deadline);
-            if (wait_rc > 0) {
-                /* Async defer completions: send them before reading more. */
-                if (h2_async_drain(&hc) != 0) { connected = false; break; }
-                continue;
-            }
-            if (wait_rc != 0) {
-                uint64_t now = h2_now_ms();
-                /* A hook deadline expiring is not a connection error: the
-                 * poll sweep at the loop top expires the stream. */
-                if (hooks && hooks->next_deadline_ms) {
-                    uint64_t gd = hooks->next_deadline_ms(hc.hook_ctx);
-                    if (gd && now >= gd) continue;
-                }
+        int offset = 0;
+        while (offset < 9) {
+            /* Bound each blocking read with the idle deadline so an idle
+             * connection cannot monopolize a pool worker forever. */
+            if (h2_wait_readable(&hc) != 0) {
                 if (!sent_goaway &&
                     h2_now_ms() - hc.last_activity >= (uint64_t)h2_idle_timeout_ms()) {
                     h2_send_goaway(&hc, hc.last_processed_stream_id, H2_ERR_NO_ERROR);
@@ -3220,10 +3175,9 @@ cwist_error_t cwist_http2_serve_connection_ex(cwist_https_connection *conn, void
                 connected = false;
                 break;
             }
-            /* Frame bytes already in flight may still straddle TLS records or
-             * TCP segments; h2_read_full waits out WANT_READ instead of
-             * treating it as a dropped connection. */
-            if (h2_read_full(&hc, hdr, 9) != 0) { connected = false; break; }
+            int n = h2_read(conn, hdr + offset, 9 - offset);
+            if (n <= 0) { connected = false; break; }
+            offset += n;
         }
 
         uint32_t len = ((uint32_t)hdr[0] << 16) | ((uint32_t)hdr[1] << 8) | hdr[2];
@@ -3257,6 +3211,8 @@ cwist_error_t cwist_http2_serve_connection_ex(cwist_https_connection *conn, void
             cwist_sstring_assign(req->version, "HTTP/2");
             req->stream_id = stream_id;
             req->private_data = conn;
+
+        hc.last_activity = h2_now_ms();
 
         hc.last_activity = h2_now_ms();
 
