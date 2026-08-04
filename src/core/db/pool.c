@@ -91,7 +91,6 @@ cwist_db_pool_t *cwist_db_pool_create(const char *path, size_t max_conns) {
         pool->available[i] = true;
     }
 
-<<<<<<< HEAD
     pthread_mutex_init(&pool->mtx, NULL);
 #if defined(__FreeBSD__) || defined(__NetBSD__) || defined(__OpenBSD__) || defined(__APPLE__)
     pthread_cond_init(&pool->cond, NULL);
