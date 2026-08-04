@@ -92,7 +92,6 @@ cwist_db_pool_t *cwist_db_pool_create(const char *path, size_t max_conns) {
         pthread_cond_init(&pool->cond, NULL);
     }
 #endif
->>>>>>> b81b3744 (compat(bsd): remove pthread_condattr_setclock from BSD build)
     return pool;
 
 fail:
