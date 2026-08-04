@@ -1147,6 +1147,130 @@ ssize_t cwist_http3_client_recv_datagram(cwist_http3_client *client,
 }
 
 /* ------------------------------------------------------------------ */
+/* WebTransport client (LSQUIC proposal API)                          */
+/* ------------------------------------------------------------------ */
+
+cwist_error_t
+cwist_http3_client_webtransport_connect(cwist_http3_client *client,
+                                         const char *path, const char *origin,
+                                         cwist_webtransport_client_session **out_session) {
+    cwist_error_t err = make_error(CWIST_ERR_INT16);
+    err.error.err_i16 = -1;
+    if (!client || !path || !out_session) return err;
+    *out_session = NULL;
+#ifndef CWIST_WEBTRANSPORT
+    (void)origin;
+    return err;
+#else
+    if (client->wt_connecting && client->wt_connecting->open) return err;
+
+    cwist_webtransport_client_session *session = calloc(1, sizeof(*session));
+    if (!session) return err;
+    session->client = client;
+    client->wt_connecting = session;
+
+    cwist_http_header_node *headers = NULL;
+    if (cwist_http_header_add(&headers, ":protocol", "webtransport").error.err_i16 != 0 ||
+        (origin && cwist_http_header_add(&headers, "origin", origin).error.err_i16 != 0)) {
+        cwist_http_header_free_all(headers);
+        free(session);
+        client->wt_connecting = NULL;
+        return err;
+    }
+
+    cwist_http_response *response = NULL;
+    err = cwist_http3_client_request(client, path, CWIST_HTTP_CONNECT,
+                                     headers, NULL, 0, &response);
+    cwist_http_header_free_all(headers);
+    if (response) cwist_http_response_destroy(response);
+    if (err.error.err_i16 != 0 || !session->open || !session->native) {
+        if (client->wt_connecting == session) client->wt_connecting = NULL;
+        free(session);
+        err.error.err_i16 = -1;
+        return err;
+    }
+    *out_session = session;
+    return err;
+#endif
+}
+
+int cwist_webtransport_client_poll(cwist_http3_client *client, int timeout_ms) {
+    if (!client || !client->engine || client->udp_fd < 0) return -1;
+    h3c_process_io(client, timeout_ms > 0 ? timeout_ms : 1);
+    return 0;
+}
+
+int cwist_webtransport_client_is_open(const cwist_webtransport_client_session *session) {
+#ifdef CWIST_WEBTRANSPORT
+    return session && session->open && session->native;
+#else
+    (void)session;
+    return 0;
+#endif
+}
+
+void *cwist_webtransport_client_open_bidi(cwist_webtransport_client_session *session) {
+#ifdef CWIST_WEBTRANSPORT
+    return cwist_webtransport_client_is_open(session)
+        ? lsquic_wt_open_bidi(session->native) : NULL;
+#else
+    (void)session;
+    return NULL;
+#endif
+}
+
+void *cwist_webtransport_client_open_uni(cwist_webtransport_client_session *session) {
+#ifdef CWIST_WEBTRANSPORT
+    return cwist_webtransport_client_is_open(session)
+        ? lsquic_wt_open_uni(session->native) : NULL;
+#else
+    (void)session;
+    return NULL;
+#endif
+}
+
+ssize_t cwist_webtransport_client_stream_read(void *stream, void *buf, size_t len) {
+    return stream && buf && len ? lsquic_stream_read((lsquic_stream_t *)stream, buf, len) : -1;
+}
+
+ssize_t cwist_webtransport_client_stream_write(void *stream, const void *buf, size_t len) {
+    return stream && buf && len ? lsquic_stream_write((lsquic_stream_t *)stream, buf, len) : -1;
+}
+
+int cwist_webtransport_client_stream_flush(void *stream) {
+    return stream ? lsquic_stream_flush((lsquic_stream_t *)stream) : -1;
+}
+
+int cwist_webtransport_client_stream_close(void *stream) {
+    if (!stream) return -1;
+    lsquic_stream_close((lsquic_stream_t *)stream);
+    return 0;
+}
+
+ssize_t cwist_webtransport_client_send_datagram(cwist_webtransport_client_session *session,
+                                                const void *data, size_t len) {
+#ifdef CWIST_WEBTRANSPORT
+    return cwist_webtransport_client_is_open(session) && data && len
+        ? lsquic_wt_send_datagram(session->native, data, len) : -1;
+#else
+    (void)session; (void)data; (void)len;
+    return -1;
+#endif
+}
+
+int cwist_webtransport_client_close(cwist_webtransport_client_session *session,
+                                    uint64_t code, const char *reason) {
+#ifdef CWIST_WEBTRANSPORT
+    if (!cwist_webtransport_client_is_open(session)) return -1;
+    return lsquic_wt_close(session->native, code, reason,
+                           reason ? strlen(reason) : 0);
+#else
+    (void)session; (void)code; (void)reason;
+    return -1;
+#endif
+}
+
+/* ------------------------------------------------------------------ */
 /* Resilience knobs                                                   */
 /* ------------------------------------------------------------------ */
 
