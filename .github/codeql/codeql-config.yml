@@ -5,6 +5,3 @@ name: "CWIST CodeQL config"
 paths-ignore:
   - lib/**
   - docs/doxygen/**
-  - scripts/**
-  - tests/**
-  - example/**
