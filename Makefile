@@ -77,11 +77,14 @@ SQLITE_DIR = lib/sqlite3
 # Detect OS
 UNAME_S := $(shell uname -s)
 IO_SRC = src/sys/io/io_select.c # Default fallback
+PLATFORM_SRC =
 
 ifeq ($(UNAME_S),Linux)
     CFLAGS += -DCWIST_OS_LINUX
     # Check for io_uring headers? For now assume available or user manages env.
     IO_SRC = src/sys/io/io_uring.c
+    # io_uring_backend.c includes <linux/io_uring.h>; Linux-only.
+    PLATFORM_SRC = src/sys/io/io_uring_backend.c
 endif
 ifeq ($(UNAME_S),Darwin)
     CFLAGS += -DCWIST_OS_BSD
@@ -153,7 +156,7 @@ SRCS = src/core/sstring/sstring.c \
        src/net/nats/cwist_nats.c \
        src/net/redis/cwist_redis.c \
        src/core/validation/bind.c \
-       src/sys/io/io_uring_backend.c \
+       $(PLATFORM_SRC) \
        src/sys/io/reactor.c \
        src/sys/job/scheduler.c \
        src/sys/metrics/metrics.c \
@@ -292,8 +295,6 @@ TEST_TARGETS = test_sstring \
                nuke_missing_user_test \
                test_bind \
                test_metrics \
-               test_io_uring \
-               test_io_uring_demolition \
                test_access_log \
                test_rate_limit \
                test_cache \
@@ -309,6 +310,11 @@ TEST_TARGETS = test_sstring \
                test_scheduler \
                test_test_client \
                test_multiport
+
+# io_uring backend is Linux-only (linux/io_uring.h), as are its tests.
+ifeq ($(UNAME_S),Linux)
+TEST_TARGETS += test_io_uring test_io_uring_demolition
+endif
 
 .PHONY: all test $(TEST_TARGETS) fuzz_seq install uninstall clean rebuild examples clean-examples
 
