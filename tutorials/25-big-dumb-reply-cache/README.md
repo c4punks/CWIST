@@ -3,8 +3,7 @@
 Bypass heavy application allocation for static responses using the Big Dumb Reply zero-copy response engine.
 
 ## Key Concepts
-- Storing a pre-serialized HTTP response with `cwist_bdr_put()` and
-  retrieving it zero-copy with `cwist_bdr_get()`.
+- Returning pre-cached static buffers with `cwist_bdr_respond_static_ok`.
 
 ## Build and Run
 

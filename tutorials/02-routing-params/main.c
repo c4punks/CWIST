@@ -1,7 +1,7 @@
 #include <cwist/app.h>
 
 static void handle_user(cwist_http_request *req, cwist_http_response *res) {
-    const char *id = (req && req->path_params) ? cwist_query_map_get(req->path_params, "id") : NULL;
+    const char *id = cwist_http_request_param(req, "id");
     if (id) {
         cwist_sstring_assign(res->body, "User Profile ID: ");
         cwist_sstring_append(res->body, id);

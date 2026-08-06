@@ -3,7 +3,7 @@
 Expose Prometheus-compatible operational metrics for CPU, memory, and HTTP request throughput.
 
 ## Key Concepts
-- Enabling the Prometheus `/metrics` endpoint with `cwist_app_enable_metrics(app)`.
+- Exposing text-formatted metrics at `/metrics`.
 
 ## Build and Run
 
