@@ -8,17 +8,13 @@ static void my_background_job(void *arg) {
 }
 
 int main(void) {
-    cwist_scheduler_t *sched = cwist_scheduler_create(2, 64);
-    if (sched) {
-        cwist_scheduler_schedule(sched, my_background_job, NULL, 1000);
-    }
+    cwist_scheduler_init();
+    cwist_scheduler_schedule_once(my_background_job, NULL, 1);
 
     cwist_app *app = cwist_app_create();
     cwist_app_listen(app, 8089);
 
     cwist_app_destroy(app);
-    if (sched) {
-        cwist_scheduler_destroy(sched);
-    }
+    cwist_scheduler_shutdown();
     return 0;
 }

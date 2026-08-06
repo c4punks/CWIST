@@ -3,7 +3,7 @@
 Expose `/healthz` endpoints for Kubernetes probes and load balancer health checks.
 
 ## Key Concepts
-- Enabling the `/healthz` endpoint with `cwist_app_enable_healthz(app)`, which returns JSON health status for infrastructure probes.
+- Returning structured JSON health status for infrastructure probes.
 
 ## Build and Run
 
