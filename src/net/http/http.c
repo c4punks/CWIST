@@ -462,12 +462,41 @@ static bool header_key_is_connection(const char *key) {
     return strcasecmp(key, "connection") == 0;
 }
 
+static bool headers_have_date(cwist_http_header_node *head) {
+    cwist_http_header_node *curr = head;
+    while (curr) {
+        if (curr->key && curr->key->data && curr->key->size == 4 && strcasecmp(curr->key->data, "date") == 0) {
+            return true;
+        }
+        curr = curr->next;
+    }
+    return false;
+}
 
-/**
- * @brief Detect whether the current header list already contains a Connection header.
- * @param head Head of the header linked list.
- * @return true when a Connection header is present.
- */
+static void cwist_get_cached_date_header(char out_buf[36]) {
+    static _Atomic time_t g_last_sec = 0;
+    static char g_date_str[36] = {0};
+    static pthread_mutex_t g_date_lock = PTHREAD_MUTEX_INITIALIZER;
+
+    time_t now = time(NULL);
+    time_t last = atomic_load_explicit(&g_last_sec, memory_order_relaxed);
+    if (now != last) {
+        pthread_mutex_lock(&g_date_lock);
+        if (now != atomic_load_explicit(&g_last_sec, memory_order_relaxed)) {
+            struct tm gmt;
+#if defined(_WIN32)
+            gmtime_s(&gmt, &now);
+#else
+            gmtime_r(&now, &gmt);
+#endif
+            strftime(g_date_str, sizeof(g_date_str), "%a, %d %b %Y %H:%M:%S GMT", &gmt);
+            atomic_store_explicit(&g_last_sec, now, memory_order_release);
+        }
+        pthread_mutex_unlock(&g_date_lock);
+    }
+    memcpy(out_buf, g_date_str, 30);
+    out_buf[29] = '\0';
+}
 static bool headers_have_connection(cwist_http_header_node *head) {
     cwist_http_header_node *curr = head;
     while (curr) {
@@ -801,6 +830,18 @@ static size_t serialize_headers(cwist_http_response *res, char *buf, size_t buf_
             }
         }
         curr = curr->next;
+    }
+
+    if (!headers_have_date(res->headers)) {
+        char date_str[36];
+        cwist_get_cached_date_header(date_str);
+        if (offset < buf_size) {
+            int n = snprintf(buf + offset, buf_size - offset, "Date: %s\r\n", date_str);
+            if (n > 0) {
+                offset += n;
+                if (offset > buf_size) offset = buf_size;
+            }
+        }
     }
 
     if (!headers_have_content_length(res->headers)) {
