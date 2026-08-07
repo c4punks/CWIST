@@ -22,6 +22,7 @@
 #include <sys/wait.h>
 #include <signal.h>
 #include <arpa/inet.h>
+#include <netinet/tcp.h>
 #include <dirent.h>
 #include <sys/stat.h>
 #include <time.h>

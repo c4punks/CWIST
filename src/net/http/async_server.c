@@ -15,9 +15,6 @@
 #include <sys/socket.h>
 #include <arpa/inet.h>
 #include <netinet/tcp.h>
-#if defined(__linux__)
-#include <cwist/sys/io/uring_sqpoll.h>
-#endif
 
 static cwist_reactor_t *g_reactor = NULL;
 
@@ -37,6 +34,8 @@ static void async_accept_cb(int fd, void *ctx) {
         int fl = fcntl(client_fd, F_GETFL, 0);
         if (fl >= 0) fcntl(client_fd, F_SETFL, fl | O_NONBLOCK);
 #endif
+        int nodelay = 1;
+        setsockopt(client_fd, IPPROTO_TCP, TCP_NODELAY, &nodelay, sizeof(nodelay));
 
         if (app_use_https(app)) {
             https_pool_submit(client_fd, app->ssl_ctx, app->https_request_handler, app);
