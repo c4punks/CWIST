@@ -13,14 +13,9 @@ CWIST is a modern, lightweight C web framework designed for building secure and 
 - Static Assets & DB Sharing: Serve directories with `cwist_app_static` and reuse SQLite handles via `cwist_app_use_db`.
 - Secure by Design: Built-in integration with Monocypher.
 
-== QUICK START ==
-
-1. Installation:
-$ git clone [https://github.com/your/cwist.git](https://github.com/your/cwist.git)
-$ cd cwist
-$ make install
-
-2. Hello World (main.c):
+<!-- WEBSERVER_BENCHMARKS:START -->
+*Benchmark results are dynamically rendered here during CI runs.*
+<!-- WEBSERVER_BENCHMARKS:END -->
 
 ====================================== code ===================================
 | #include <cwist/app.h>                                                      |

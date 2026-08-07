@@ -13,6 +13,12 @@ Post-Quantum TLS, and zero-copy I/O—to systems programming without sacrificing
 
 [Heavy Benchmark on CWIST APP](https://github.com/gg582/fly.board/blob/main/README.md)
 
+<!-- WEBSERVER_BENCHMARKS:START -->
+*Benchmark results are dynamically rendered here during CI runs.*
+<!-- WEBSERVER_BENCHMARKS:END -->
+
+_Methodology, JVM options, and fairness settings: [docs/webserver-benchmark.md](docs/webserver-benchmark.md)_
+
 ---
 
 ## Why CWIST?
