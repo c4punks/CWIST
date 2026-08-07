@@ -27,6 +27,211 @@
 #include <sys/event.h>
 #endif
 
+#if defined(_WIN32) || defined(_WIN64)
+    #include <windows.h>
+#elif defined(__FreeBSD__) || defined(__OpenBSD__) || defined(__NetBSD__) || defined(__DragonFly__)
+    #include <sys/types.h>
+    #include <sys/sysctl.h>
+#else
+    #include <unistd.h>
+#endif
+
+long get_cpu_cores(void) {
+#if defined(_WIN32) || defined(_WIN64)
+    /* Windows Environment */
+    SYSTEM_INFO sysinfo;
+    GetSystemInfo(&sysinfo);
+    return (long)sysinfo.dwNumberOfProcessors;
+
+#elif defined(__FreeBSD__) || defined(__OpenBSD__) || defined(__NetBSD__) || defined(__DragonFly__)
+    /* BSD Variant - Query kernel MIB tree directly via sysctl */
+    int mib[2];
+    int nproc = 0;
+    size_t len = sizeof(nproc);
+
+    mib[0] = CTL_HW;
+#if defined(HW_NCPUONLINE)
+    /* OpenBSD/FreeBSD preferred: returns counts of actual online cores */
+    mib[1] = HW_NCPUONLINE;
+#else
+    /* Fallback for older BSD kernels */
+    mib[1] = HW_NCPU;
+#endif
+
+    if (sysctl(mib, 2, &nproc, &len, NULL, 0) == 0) {
+        return (long)nproc;
+    }
+    return 4;
+
+#elif defined(_SC_NPROCESSORS_ONLN)
+    /* Linux / Unix POSIX standard */
+    long nproc = sysconf(_SC_NPROCESSORS_ONLN);
+    return (nproc >= 4) ? nproc : 4;
+
+#else
+    /* Fallback value for undetermined architecture */
+    return 4;
+#endif
+}
+
+long get_optimal_thread_count(void) {
+    const char *env = getenv("CWIST_WORKER_THREADS");
+    if (env && env[0]) {
+        long override = atol(env);
+        if (override > 0) return override;
+    }
+    long cores = get_cpu_cores();
+    long count = cores;
+    if (count < 4) count = 4;
+    if (count > 32) count = 32;
+    return count;
+}
+
+#define HTTP_TASKS_PER_THREAD 32768
+
+typedef struct {
+    int client_fd;
+    void (*handler_func)(int, void *);
+    void *ctx;
+} http_pool_task_t;
+
+typedef struct {
+    pthread_t thread;
+    http_pool_task_t *queue;
+    size_t head;
+    size_t tail;
+    size_t count;
+    pthread_mutex_t mutex;
+    pthread_cond_t cond_not_empty;
+    pthread_cond_t cond_not_full;
+    int shutdown;
+    uint32_t worker_id;
+} http_thread_worker_t;
+
+static size_t g_rr_index = 0;
+static long g_http_thread_count;
+static http_thread_worker_t *g_workers = NULL;
+
+static void *http_pool_worker(void *arg) {
+    http_thread_worker_t *w = (http_thread_worker_t *)arg;
+    ttak_net_lattice_set_worker_id(w->worker_id);
+
+    http_pool_task_t batch[16];
+
+    while (1) {
+        size_t batch_count = 0;
+        pthread_mutex_lock(&w->mutex);
+        while (w->count == 0 && !w->shutdown) {
+            pthread_cond_wait(&w->cond_not_empty, &w->mutex);
+        }
+        if (w->shutdown && w->count == 0) {
+            pthread_mutex_unlock(&w->mutex);
+            break;
+        }
+
+        while (w->count > 0 && batch_count < 16) {
+            batch[batch_count++] = w->queue[w->head];
+            w->head = (w->head + 1) % HTTP_TASKS_PER_THREAD;
+            w->count--;
+        }
+        if (batch_count > 0) {
+            pthread_cond_signal(&w->cond_not_full);
+        }
+        pthread_mutex_unlock(&w->mutex);
+
+        for (size_t i = 0; i < batch_count; i++) {
+            batch[i].handler_func(batch[i].client_fd, batch[i].ctx);
+        }
+    }
+    return NULL;
+}
+
+int cwist_http_pool_init(void) {
+    g_http_thread_count = get_optimal_thread_count();
+    g_workers = cwist_alloc(g_http_thread_count * sizeof(http_thread_worker_t));
+    g_rr_index = 0;
+    memset(g_workers, 0, g_http_thread_count * sizeof(http_thread_worker_t));
+    for (int i = 0; i < get_optimal_thread_count(); i++) {
+        g_workers[i].queue = cwist_alloc(HTTP_TASKS_PER_THREAD * sizeof(http_pool_task_t));
+        if (!g_workers[i].queue) return -1;
+        
+        pthread_mutex_init(&g_workers[i].mutex, NULL);
+        pthread_cond_init(&g_workers[i].cond_not_empty, NULL);
+        pthread_cond_init(&g_workers[i].cond_not_full, NULL);
+        g_workers[i].worker_id = (uint32_t)i;
+        if (pthread_create(&g_workers[i].thread, NULL, http_pool_worker, &g_workers[i]) != 0) {
+            return -1;
+        }
+    }
+    return 0;
+}
+
+void cwist_http_pool_submit(int client_fd, void (*handler)(int, void *), void *ctx) {
+    /* Deterministic worker selection using Choi Seok-jeong's MOLS to minimize cache bouncing. */
+    uint16_t node_id = (uint16_t)(client_fd % TTAK_MOLS_NODE_COUNT);
+    uint32_t mixed = ttak_apply_mols_control(node_id, (uint32_t)g_rr_index);
+    size_t worker_idx = mixed % get_optimal_thread_count();
+
+    g_rr_index = (g_rr_index + 1) % get_optimal_thread_count();
+    
+    http_thread_worker_t *w = &g_workers[worker_idx];
+
+    pthread_mutex_lock(&w->mutex);
+    while (w->count >= HTTP_TASKS_PER_THREAD && !w->shutdown) {
+        pthread_cond_wait(&w->cond_not_full, &w->mutex);
+    }
+    if (w->shutdown) {
+        pthread_mutex_unlock(&w->mutex);
+        close(client_fd);
+        return;
+    }
+    w->queue[w->tail].client_fd = client_fd;
+    w->queue[w->tail].handler_func = handler;
+    w->queue[w->tail].ctx = ctx;
+    w->tail = (w->tail + 1) % HTTP_TASKS_PER_THREAD;
+    w->count++;
+    pthread_cond_signal(&w->cond_not_empty);
+    pthread_mutex_unlock(&w->mutex);
+}
+void cwist_http_pool_destroy(void) {
+    for (int i = 0; i < get_optimal_thread_count(); i++) {
+        pthread_mutex_lock(&g_workers[i].mutex);
+        g_workers[i].shutdown = 1;
+        pthread_cond_broadcast(&g_workers[i].cond_not_empty);
+        pthread_mutex_unlock(&g_workers[i].mutex);
+    }
+    for (int i = 0; i < get_optimal_thread_count(); i++) {
+#if defined(__linux__)
+        struct timespec ts;
+        clock_gettime(CLOCK_REALTIME, &ts);
+        ts.tv_sec += g_cwist_drain_timeout_sec;
+        int rc = pthread_timedjoin_np(g_workers[i].thread, NULL, &ts);
+        if (rc == ETIMEDOUT) {
+            pthread_cancel(g_workers[i].thread);
+            pthread_join(g_workers[i].thread, NULL);
+        }
+#else
+        pthread_join(g_workers[i].thread, NULL);
+#endif
+        pthread_mutex_destroy(&g_workers[i].mutex);
+        pthread_cond_destroy(&g_workers[i].cond_not_empty);
+        pthread_cond_destroy(&g_workers[i].cond_not_full);
+        if (g_workers[i].queue) {
+            cwist_free(g_workers[i].queue);
+        }
+    }
+
+    cwist_free(g_workers);
+    g_workers = nullptr;
+    g_http_thread_count = 0;
+}
+/* --- End Thread Pool --- */
+
+/**
+ * @file http.c
+ * @brief Core HTTP request/response allocation, serialization, socket, and server-loop helpers.
+ */
+
 const int CWIST_CREATE_SOCKET_FAILED     = -1;
 const int CWIST_HTTP_UNAVAILABLE_ADDRESS = -2;
 const int CWIST_HTTP_BIND_FAILED         = -3;
