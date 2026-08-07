@@ -280,14 +280,26 @@ const char *cwist_http_method_to_string(cwist_http_method_t method) {
  * @param method_str Raw method token from the request line.
  * @return Parsed enum value, or CWIST_HTTP_UNKNOWN when unsupported.
  */
-cwist_http_method_t cwist_http_string_to_method(const char *method_str) {
-    if (strcmp(method_str, "GET") == 0) return CWIST_HTTP_GET;
-    if (strcmp(method_str, "POST") == 0) return CWIST_HTTP_POST;
-    if (strcmp(method_str, "PUT") == 0) return CWIST_HTTP_PUT;
-    if (strcmp(method_str, "DELETE") == 0) return CWIST_HTTP_DELETE;
-    if (strcmp(method_str, "PATCH") == 0) return CWIST_HTTP_PATCH;
-    if (strcmp(method_str, "HEAD") == 0) return CWIST_HTTP_HEAD;
-    if (strcmp(method_str, "OPTIONS") == 0) return CWIST_HTTP_OPTIONS;
+cwist_http_method_t cwist_http_string_to_method_len(const char *str, size_t len) {
+    if (!str || len == 0) return CWIST_HTTP_UNKNOWN;
+    if (len == 3) {
+        /* "GET" -> 0x00544547 (Little Endian) or 0x474554 */
+        uint32_t v = 0;
+        memcpy(&v, str, 3);
+        if ((v & 0x00FFFFFF) == 0x00544547) return CWIST_HTTP_GET;
+        if ((v & 0x00FFFFFF) == 0x00545550) return CWIST_HTTP_PUT; /* "PUT" */
+    } else if (len == 4) {
+        uint32_t v = 0;
+        memcpy(&v, str, 4);
+        if (v == 0x54534F50) return CWIST_HTTP_POST; /* "POST" */
+        if (v == 0x44414548) return CWIST_HTTP_HEAD; /* "HEAD" */
+    } else if (len == 5) {
+        if (memcmp(str, "PATCH", 5) == 0) return CWIST_HTTP_PATCH;
+    } else if (len == 6) {
+        if (memcmp(str, "DELETE", 6) == 0) return CWIST_HTTP_DELETE;
+    } else if (len == 7) {
+        if (memcmp(str, "OPTIONS", 7) == 0) return CWIST_HTTP_OPTIONS;
+    }
     return CWIST_HTTP_UNKNOWN;
 }
 
