@@ -104,19 +104,15 @@ long get_cpu_cores(void) {
 }
 
 long get_optimal_thread_count(void) {
-    /* Scale with cores but cap at a sane default.  C1M mode historically
-     * used cores*32, which exhausts resources on modest hardware and adds
-     * scheduling overhead without improving throughput.  Allow explicit
-     * override via CWIST_WORKER_THREADS. */
     const char *env = getenv("CWIST_WORKER_THREADS");
     if (env && env[0]) {
         long override = atol(env);
         if (override > 0) return override;
     }
     long cores = get_cpu_cores();
-    long count = cores * 4;
-    if (count < 16) count = 16;
-    if (count > 128) count = 128;
+    long count = cores;
+    if (count < 4) count = 4;
+    if (count > 32) count = 32;
     return count;
 }
 
@@ -488,11 +484,11 @@ cwist_http_request *cwist_http_request_create(void) {
     }
 
     req->method = CWIST_HTTP_GET; // Default
-    req->path = cwist_http_sstring_create(arena);
-    req->query = cwist_http_sstring_create(arena);
+    req->path = cwist_sstring_create();
+    req->query = cwist_sstring_create();
     req->query_params = NULL;
     req->path_params = NULL;
-    req->version = cwist_http_sstring_create(arena);
+    req->version = cwist_sstring_create();
     req->headers = NULL;
     req->body = cwist_http_sstring_create(arena);
     req->keep_alive = true;
@@ -1059,18 +1055,16 @@ cwist_http_request *cwist_http_parse_request(const char *raw_request) {
     char *path_str = strtok_r(NULL, " ", &next_ptr);
     char *version_str = strtok_r(NULL, " ", &next_ptr);
     
-    if (method_str) req->method = cwist_http_string_to_method(method_str);
-    if (path_str) {
-      char *query = strchr(path_str, '?');
-      if(query) {
-        *query = '\0';
-        cwist_sstring_assign(req->path, path_str);
-        cwist_sstring_assign(req->query, query + 1); // exclude ? mark
-        cwist_query_map_parse(req->query_params, req->query->data);
-      } else {
-        cwist_sstring_assign(req->path, path_str);
-        cwist_sstring_assign(req->query, "");
-      }
+    if (query_sep) {
+        cwist_sstring_assign_len(req->path, path_start, query_sep - path_start);
+        cwist_sstring_assign_len(req->query, query_sep + 1, path_end - (query_sep + 1));
+        req->query_params = cwist_query_map_create();
+        if (req->query_params) {
+            cwist_query_map_parse(req->query_params, req->query->data);
+        }
+    } else {
+        cwist_sstring_assign_len(req->path, path_start, path_end - path_start);
+        cwist_sstring_assign_len(req->query, "", 0);
     }
 
     if (version_str) {
