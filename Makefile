@@ -59,13 +59,17 @@ CURL_LIBS := $(shell pkg-config --libs libcurl 2>/dev/null)
 NGHTTP2_LIBS := $(shell pkg-config --libs libnghttp2 2>/dev/null)
 BROTLI_LIBS := $(shell pkg-config --libs libbrotlienc libbrotlicommon libbrotlidec 2>/dev/null)
 
-LIBS = -pthread -ldl -lm -lstdc++ -lz \
+LIBS = $(CNATS_LIB) \
+       $(LIBTTAK_LIB) \
+       $(CJSON_LIB) \
+       $(URIPARSER_LIB) \
        $(LSQUIC_LIB) \
        $(BORINGSSL_SSL_LIB) \
        $(BORINGSSL_CRYPTO_LIB) \
        $(CURL_LIBS) \
        $(NGHTTP2_LIBS) \
-       $(BROTLI_LIBS)
+       $(BROTLI_LIBS) \
+       -pthread -ldl -lm -lstdc++ -lz $(ZSTD_LIBS)
 
 # SQLite Automation
 SQLITE_YEAR = 2024
@@ -124,9 +128,30 @@ SRCS = src/core/sstring/sstring.c \
 OBJS = $(SRCS:.c=.o)
 LIB_NAME = libcwist.a
 
+# Installation Paths
+#
+# libcwist.a is deliberately a thin archive: it contains CWIST objects only.
+# Third-party static archives are installed side-by-side in DEPSDIR so a
+# packaged installation neither duplicates their objects nor hides updates to
+# individual dependencies.
 PREFIX ?= /usr/local
-LIBDIR = $(PREFIX)/lib
-INCLUDEDIR = $(PREFIX)/include
+LIBDIR ?= $(PREFIX)/lib
+INCLUDEDIR ?= $(PREFIX)/include
+DEPSDIR ?= $(LIBDIR)/cwist
+VENDOR_INCLUDEDIR ?= $(INCLUDEDIR)/cwist/vendor
+
+INSTALL_LIBDIR = $(DESTDIR)$(LIBDIR)
+INSTALL_INCLUDEDIR = $(DESTDIR)$(INCLUDEDIR)
+INSTALL_DEPSDIR = $(DESTDIR)$(DEPSDIR)
+INSTALL_VENDOR_INCLUDEDIR = $(DESTDIR)$(VENDOR_INCLUDEDIR)
+
+EXTERNAL_LIBS = $(URIPARSER_LIB) \
+                $(CJSON_LIB) \
+                $(LIBTTAK_LIB) \
+                $(CNATS_LIB) \
+                $(LSQUIC_LIB) \
+                $(BORINGSSL_SSL_LIB) \
+                $(BORINGSSL_CRYPTO_LIB)
 
 all: $(LIB_NAME)
 
@@ -139,7 +164,7 @@ $(SQLITE_DIR)/sqlite3.c:
 	@mkdir -p $(SQLITE_DIR)
 	@wget -q $(SQLITE_URL) -O $(SQLITE_DIR)/$(SQLITE_ZIP)
 	@echo "Extracting SQLite..."
-	@unzip -q -j $(SQLITE_DIR)/$(SQLITE_ZIP) -d $(SQLITE_DIR)
+	@unzip -q -o -j $(SQLITE_DIR)/$(SQLITE_ZIP) -d $(SQLITE_DIR)
 	@rm $(SQLITE_DIR)/$(SQLITE_ZIP)
 	@echo "SQLite Ready."
 
@@ -152,20 +177,10 @@ lib/lsquic/include/lsquic.h:
 		git submodule update --init --recursive $(LSQUIC_DIR); \
 	fi
 
-$(LIB_NAME): $(URIPARSER_LIB) $(CJSON_LIB) $(LIBTTAK_LIB) $(CNATS_LIB) $(BORINGSSL_SSL_LIB) $(BORINGSSL_CRYPTO_LIB) $(LSQUIC_LIB) $(OBJS)
-	@echo "Creating static library..."
-	@rm -rf .lib_merge_tmp
-	@mkdir -p .lib_merge_tmp
-	@cd .lib_merge_tmp && \
-		ar x $(abspath $(URIPARSER_LIB)) && \
-		ar x $(abspath $(CJSON_LIB)) && \
-		ar x $(abspath $(LIBTTAK_LIB)) && \
-		ar x $(abspath $(CNATS_LIB)) && \
-		ar x $(abspath $(LSQUIC_LIB)) && \
-		ar x $(abspath $(BORINGSSL_SSL_LIB)) && \
-		ar x $(abspath $(BORINGSSL_CRYPTO_LIB))
-	ar rcs $@ $(OBJS) .lib_merge_tmp/*.o
-	@rm -rf .lib_merge_tmp
+$(LIB_NAME): $(EXTERNAL_LIBS) $(OBJS)
+	@echo "Creating thin static library..."
+	@rm -f $@
+	ar rcs $@ $(OBJS)
 
 $(LIBTTAK_LIB):
 	@echo "Building libttak..."
@@ -375,16 +390,39 @@ test_bdr: $(LIB_NAME) tests/test_bdr.c
 	./test_bdr
 
 install: $(LIB_NAME)
-	install -d $(LIBDIR)
-	install -d $(INCLUDEDIR)/cwist
-	install -d $(INCLUDEDIR)/cwist/err
-	install -m 644 $(LIB_NAME) $(LIBDIR)
-	install -m 644 include/cwist/*.h $(INCLUDEDIR)/cwist
-	install -m 644 include/cwist/err/*.h $(INCLUDEDIR)/cwist/err
+	@echo "Installing CWIST library to $(LIBDIR)..."
+	install -d $(INSTALL_LIBDIR)
+	install -m 644 $(LIB_NAME) $(INSTALL_LIBDIR)/
+	@echo "Installing external archives to $(DEPSDIR)..."
+	install -d $(INSTALL_DEPSDIR)
+	install -m 644 $(EXTERNAL_LIBS) $(INSTALL_DEPSDIR)/
+	@echo "Installing CWIST headers to $(INCLUDEDIR)/cwist..."
+	install -d $(INSTALL_INCLUDEDIR)/cwist
+	cp -R include/cwist/. $(INSTALL_INCLUDEDIR)/cwist/
+	install -d $(INSTALL_INCLUDEDIR)/wasm
+	cp -R include/wasm/. $(INSTALL_INCLUDEDIR)/wasm/
+	find $(INSTALL_INCLUDEDIR)/cwist -type d -exec chmod 755 {} \;
+	find $(INSTALL_INCLUDEDIR)/cwist -type f -exec chmod 644 {} \;
+	@echo "Installing bundled dependency headers to $(VENDOR_INCLUDEDIR)..."
+	install -d $(INSTALL_VENDOR_INCLUDEDIR)/cjson $(INSTALL_VENDOR_INCLUDEDIR)/ttak $(INSTALL_VENDOR_INCLUDEDIR)/openssl $(INSTALL_VENDOR_INCLUDEDIR)/lsquic $(INSTALL_VENDOR_INCLUDEDIR)/uriparser
+	install -m 644 $(CJSON_DIR)/cJSON.h $(INSTALL_VENDOR_INCLUDEDIR)/cjson/
+	cp -R $(LIBTTAK_DIR)/include/ttak/. $(INSTALL_VENDOR_INCLUDEDIR)/ttak/
+	cp -R $(BORINGSSL_DIR)/include/openssl/. $(INSTALL_VENDOR_INCLUDEDIR)/openssl/
+	install -m 644 $(LSQUIC_DIR)/include/lsquic.h $(INSTALL_VENDOR_INCLUDEDIR)/lsquic/
+	cp -R $(URIPARSER_DIR)/include/uriparser/. $(INSTALL_VENDOR_INCLUDEDIR)/uriparser/
+	install -m 644 $(SQLITE_DIR)/sqlite3.h $(SQLITE_DIR)/sqlite3ext.h $(INSTALL_VENDOR_INCLUDEDIR)/
+	find $(INSTALL_VENDOR_INCLUDEDIR) -type d -exec chmod 755 {} \;
+	find $(INSTALL_VENDOR_INCLUDEDIR) -type f -exec chmod 644 {} \;
+	@echo "Installation complete.  Link with -L$(LIBDIR) -L$(DEPSDIR) -lcwist."
 
 uninstall:
-	rm -f $(LIBDIR)/$(LIB_NAME)
-	rm -rf $(INCLUDEDIR)/cwist
+	@echo "Uninstalling cwist..."
+	rm -f $(DESTDIR)$(LIBDIR)/$(LIB_NAME)
+	rm -f $(DESTDIR)$(DEPSDIR)/liburiparser.a $(DESTDIR)$(DEPSDIR)/libcjson.a $(DESTDIR)$(DEPSDIR)/libttak.a $(DESTDIR)$(DEPSDIR)/libnats_static.a $(DESTDIR)$(DEPSDIR)/liblsquic.a $(DESTDIR)$(DEPSDIR)/libssl.a $(DESTDIR)$(DEPSDIR)/libcrypto.a
+	rmdir $(DESTDIR)$(DEPSDIR) 2>/dev/null || true
+	rm -rf $(DESTDIR)$(INCLUDEDIR)/cwist
+	rm -rf $(DESTDIR)$(INCLUDEDIR)/wasm
+	@echo "Uninstallation complete."
 
 clean:
 	@echo "Cleaning up build artifacts..."
@@ -393,7 +431,6 @@ clean:
 	rm -f $(TEST_TARGETS)
 	rm -f $(CJSON_DIR)/cJSON.o $(CJSON_LIB)
 	rm -rf $(URIPARSER_BUILD_DIR)
-	rm -rf .lib_merge_tmp
 	@rm -rf $(CNATS_DIR)/build
 	@rm -rf $(BORINGSSL_BUILD_DIR)
 	@rm -rf $(LSQUIC_BUILD_DIR)
