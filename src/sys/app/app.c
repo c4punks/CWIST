@@ -964,17 +964,64 @@ static void internal_route_handler(cwist_app *app, cwist_http_request *req, cwis
 
 static void static_ssl_handler(cwist_https_connection *conn, void *ctx) {
     cwist_app *app = (cwist_app *)ctx;
-    cwist_http_request *req = cwist_https_receive_request(conn);
-    if (!req) return;
-    req->app = app;
-    req->db = app->db;
-    
-    cwist_http_response *res = cwist_http_response_create();
-    internal_route_handler(app, req, res);
-    
-    cwist_https_send_response(conn, res);
-    cwist_http_response_destroy(res);
-    cwist_http_request_destroy(req);
+    if (!app || !conn) return;
+
+    if (cwist_https_connection_uses_http2(conn)) {
+        static_ssl_http2_handler(conn, ctx);
+        return;
+    }
+
+    static_ssl_http1_handler(conn, ctx);
+}
+
+/* Optional hook for applications that need to take ownership of a
+ * TLS-upgraded connection (e.g. reverse-session hijacking). The no-op
+ * default lives in src/net/http/https_upgrade_hook.c and is overridden by
+ * any strong definition from the embedding application at static link
+ * time. Return true to detach the fd/ssl from cwist so they are not closed
+ * after the response is sent. */
+bool cwist_https_upgrade_handler(cwist_https_connection *conn, cwist_http_request *req, cwist_http_response *res);
+
+static void static_ssl_http1_handler(cwist_https_connection *conn, void *ctx) {
+    cwist_app *app = (cwist_app *)ctx;
+
+    /* HTTP/1.1 keep-alive loop: previously every request paid a full TCP
+     * accept + TLS handshake + teardown because the connection closed after
+     * a single response. cwist_https_receive_request bounds each header read
+     * with CWIST_HTTP_HEADERS_TIMEOUT_MS, so idle keep-alive connections are
+     * reaped automatically. */
+    while (true) {
+        cwist_http_request *req = cwist_https_receive_request(conn);
+        if (!req) return;
+        req->app = app;
+        req->db = app->db;
+
+        cwist_http_response *res = cwist_http_response_create();
+        if (!res) {
+            cwist_http_request_destroy(req);
+            return;
+        }
+        internal_route_handler(app, req, res);
+
+        bool keep_alive = req->keep_alive && res->keep_alive;
+        bool upgraded = req->upgraded;
+
+        cwist_https_send_response(conn, res);
+
+        bool detached = false;
+        if (upgraded) {
+            detached = cwist_https_upgrade_handler(conn, req, res);
+            if (detached) {
+                conn->ssl = NULL;
+                conn->fd = -1;
+            }
+        }
+
+        cwist_http_response_destroy(res);
+        cwist_http_request_destroy(req);
+
+        if (!keep_alive || upgraded) return;
+    }
 }
 
 static void static_http_handler(int client_fd, void *ctx) {
@@ -1626,6 +1673,100 @@ int cwist_app_listen(cwist_app *app, int port) {
         perror("Failed to bind port");
         return -1;
     }
+    g_cwist_listen_fd = server_fd;
+
+    /* Bind the HTTP/3 UDP socket before forking as well.  The thread that
+     * services it is started per-process after the fork. */
+    int udp_fd = -1;
+    if (app->h3_ctx && (app->use_http3 || app->use_https3)) {
+        udp_fd = socket(AF_INET, SOCK_DGRAM, 0);
+        if (udp_fd >= 0) {
+            struct sockaddr_in udp_addr;
+            memset(&udp_addr, 0, sizeof(udp_addr));
+            udp_addr.sin_family = AF_INET;
+            udp_addr.sin_addr.s_addr = inet_addr("0.0.0.0");
+            udp_addr.sin_port = htons(port);
+
+            int opt = 1;
+            setsockopt(udp_fd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt));
+    #ifdef SO_REUSEPORT
+            setsockopt(udp_fd, SOL_SOCKET, SO_REUSEPORT, &opt, sizeof(opt));
+    #endif
+            int rcvbuf = 2 * 1024 * 1024;
+            int sndbuf = 2 * 1024 * 1024;
+            setsockopt(udp_fd, SOL_SOCKET, SO_RCVBUF, &rcvbuf, sizeof(rcvbuf));
+            setsockopt(udp_fd, SOL_SOCKET, SO_SNDBUF, &sndbuf, sizeof(sndbuf));
+
+            if (bind(udp_fd, (struct sockaddr *)&udp_addr, sizeof(udp_addr)) != 0) {
+                perror("Failed to bind UDP port for HTTP/3");
+                close(udp_fd);
+                udp_fd = -1;
+            }
+        }
+    }
+
+    // Fork worker processes before any threads are created.
+    int workers = 1;
+    const char *workers_env = getenv("CWIST_WORKERS");
+    if (workers_env) {
+        if (strcmp(workers_env, "auto") == 0) {
+            long cores = get_cpu_cores();
+            workers = (cores > 0) ? (int)cores : 1;
+        } else {
+            workers = atoi(workers_env);
+        }
+    } else {
+        // Default to auto (number of online CPU cores) to maximize performance on multi-core systems out of the box.
+        long cores = get_cpu_cores();
+        workers = (cores > 0) ? (int)cores : 1;
+    }
+    if (workers < 1) workers = 1;
+    bool is_worker_child = false;
+    pid_t worker_pids[workers > 1 ? workers - 1 : 1];
+    size_t worker_count = 0;
+    for (int i = 1; i < workers; i++) {
+        pid_t pid = fork();
+        if (pid == 0) {
+            is_worker_child = true;
+            break;
+        } else if (pid < 0) {
+            perror("fork worker failed");
+            break;
+        } else {
+            worker_pids[worker_count++] = pid;
+        }
+    }
+
+    // Per-process threads start here.  Each worker gets its own watcher and
+    // HTTP/3 thread, so fork-after-thread deadlock is avoided.
+    if (app->mem_manager) {
+        app->mem_manager->watcher_running = true;
+        pthread_create(&app->mem_manager->watcher_thread, NULL, cwist_mem_watcher, app);
+    }
+
+    if (udp_fd >= 0) {
+        struct h3_thread_payload *h3_p = malloc(sizeof(*h3_p));
+        if (h3_p) {
+            h3_p->udp_fd = udp_fd;
+            h3_p->app = app;
+            pthread_t h3_tid;
+            if (pthread_create(&h3_tid, NULL, h3_server_thread_func, h3_p) == 0) {
+                pthread_detach(h3_tid);
+                g_cwist_udp_fd = udp_fd;
+                printf("HTTP/3 (QUIC) enabled on UDP port %d\n", port);
+            } else {
+                free(h3_p);
+                close(udp_fd);
+                udp_fd = -1;
+            }
+        } else {
+            close(udp_fd);
+            udp_fd = -1;
+        }
+    }
+
+    printf("CWIST App running on port %d (SSL: %s) [Event-driven, workers=%d, pid=%d]\n",
+           port, app->use_ssl ? "On" : "Off", workers, (int)getpid());
     
     printf("CWIST App running on port %d (SSL: %s)\n", port, app->use_ssl ? "On" : "Off");
     
@@ -1639,6 +1780,39 @@ int cwist_app_listen(cwist_app *app, int port) {
         cwist_server_config config = { .use_forking = false, .use_threading = true, .use_epoll = false };
         cwist_http_server_loop(server_fd, &config, static_http_handler, app);
     }
-    
+
+    /* Graceful shutdown cleanup */
+    g_cwist_listen_fd = -1;
+    g_cwist_udp_fd = -1;
+
+    if (app->h3_ctx) {
+        app->h3_ctx->running = 0;
+    }
+
+    if (app->mem_manager) {
+        app->mem_manager->watcher_running = false;
+    }
+
+    printf("[CWIST] Draining connections for %d seconds...\n", g_cwist_drain_timeout_sec);
+    if (is_worker_child || workers == 1) {
+        sleep(g_cwist_drain_timeout_sec);
+    }
+
+    /* Parent process reaps worker children so they do not become zombies. */
+    if (!is_worker_child && workers > 1) {
+        /* SIGTERM is delivered to the supervisor only.  Ask every worker to
+         * leave its inherited accept loop before waiting for it; otherwise a
+         * supervisor shutdown can block indefinitely. */
+        for (size_t i = 0; i < worker_count; i++) {
+            kill(worker_pids[i], SIGTERM);
+        }
+        for (size_t i = 0; i < worker_count; i++) {
+            int status;
+            wait(&status);
+        }
+    }
+
+    printf("[CWIST] Shutdown complete.\n");
+
     return 0;
 }

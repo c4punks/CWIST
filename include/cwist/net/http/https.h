@@ -26,6 +26,7 @@ typedef struct cwist_https_context {
     SSL_CTX *ctx;
     bool http2_enabled;
     bool http3_enabled;
+    void *ticket_key; ///< Shared session-ticket key material (forked workers inherit it)
 } cwist_https_context;
 
 typedef struct cwist_https_connection {

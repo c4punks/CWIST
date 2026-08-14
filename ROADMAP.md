@@ -29,6 +29,8 @@
 
 * **Native protocols ready**: HTTP/1.1 through HTTP/3 (QUIC via `lsquic`), WebTransport server support, WebSocket, SSE, and a bounded GraphQL query layer are implemented in-tree. Low-level socket controls (ECN, 0-RTT, connection migration) are complete.
 * **HTTP/3 browser hardening**: Response header emission now normalizes field names to lowercase and rejects CR/LF-bearing values, covering login/logout cookie and redirect paths in strict browsers such as Firefox.
+* **HTTPS hot-path optimization**: HTTP/1.1 connections now remain alive across requests, TLS writes stream headers and bodies separately without an intermediate response blob, and prefork workers share session-ticket keys for cross-worker resumption.
+* **Request-memory optimization**: Parsed request strings and static response headers use arena-backed or borrowed storage with copy-on-write detachment, while received bodies can transfer ownership without a second copy.
 * **Async I/O optimization (`io_uring`)**: `io_uring_backend.c`, SQE/CQE synchronization, demolition safety, and focused tests are complete.
 * **Multiport HTTP/3 fan-out**: The `cwist_multiport_t` facade now creates per-port UDP contexts and copies global HTTP/3 settings unless a port is detached into a sub-app.
 
@@ -38,6 +40,7 @@
 * **Observability**: Prometheus `/metrics` and a probe-registry health-check system are operational.
 * **Per-port sub-applications**: Lifecycle and exception handling for `cwist_multiport_get_app(&app, port)` are hardened; detached ports are separately tunable sub-applications.
 * **gRPC services**: Applications can register unary and streaming handlers, incrementally decode arbitrarily split gRPC frames, attach transport output sinks, expose standard health/reflection services, and generate C models/method paths with `cwist proto`.
+* **Packaging**: `libcwist.a` is a CWIST-only static archive; bundled dependency archives and public headers install side-by-side with `PREFIX`/`DESTDIR` staging support.
 
 ### 3) Security & Data Layer
 
@@ -149,7 +152,9 @@
 | **CLI Scaffolding** | ✅ | `cwist new project`, `.cwpro` manifests, OpenAPI generation, and include-aware incremental watcher |
 | **Hot Reload (Dev Mode)** | ✅ | `cwist watcher` uses inotify/kqueue with snapshot/poll fallback, debounces changes, exports include-graph recompilation scope, preserves the prior process on build failure, and gracefully restarts successful builds |
 | **Configuration Management** | ✅ | `.env` file + environment variable loader via `cwist_config` |
-| **Testing Utilities** | ✅ | In-process test client (`cwist_test_client_get/post/request_ex`), cookie jar, multipart helper, and regression targets wired in Makefile |
+| **Static Library Packaging** | ✅ | CWIST-only archive plus separately installed bundled libraries/headers, deterministic static-link order, and `PREFIX`/`DESTDIR` staging |
+| **Testing Utilities** | ✅ | In-process test client (`cwist_test_client`), cookie jar, multipart helper, and BDD-style fluent assertions (`CWIST_ASSERT_STATUS`, `CWIST_ASSERT_HEADER`, `CWIST_ASSERT_BODY_CONTAINS`) |
+| **Interactive API Documentation** | ✅ | Embedded Swagger UI interactive documentation page (`cwist_app_enable_swagger`) serving `/docs` and `/openapi.json` |
 | **Benchmark Suite** | ✅ | GitHub Actions Linux/macOS measurements publish CPU, throughput, RSS, memory-recovery drift, and context-switch SVG trends |
 | **Fuzzing / Hardening** | ✅ | Stateful sequence/auth libFuzzer coverage plus bounded reassembly and strict HTTP chunk framing checks |
 
