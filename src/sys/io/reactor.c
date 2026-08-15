@@ -205,75 +205,23 @@ typedef struct reactor_slot_chunk {
 struct cwist_reactor {
     reactor_impl_t impl;
     bool running;
-    /* Foreign-thread completion stack (Treiber MPSC) plus the self-pipe that
-     * wakes a parked run thread: producers push a node and write a byte to
-     * wake_wr; the run thread drains the stack on the wake event (and once
-     * per loop iteration as a backstop). */
-    _Atomic(cwist_reactor_post_t *) post_head;
-    int wake_fd;   /* Read side registered with the poller. */
-    int wake_wr;   /* Write side (same fd as wake_fd for eventfd). */
-    /* Dynamically grown slot chunks: a fixed pool (formerly 4096 slots)
-     * capped every reactor at 4096 live connections, which is what shed
-     * requests en masse past ~500k concurrent connections.  Chunks are never
-     * freed until destroy because slot pointers sit in in-flight CQEs. */
-    reactor_slot_chunk_t *chunks;
-    reactor_event_ctx_t *free_head;  /* Free list threaded through slots. */
-    pthread_mutex_t pool_lock;
-    /* Armed one-shot timers, min-heap on deadline_ns.  Run thread only. */
-    cwist_reactor_timer_t **timer_heap;
-    uint32_t timer_n;
-    uint32_t timer_cap;
-#ifdef __linux__
-    /* Deferred SQE batching: submissions made by the reactor's own run thread
-     * while it dispatches a CQE batch (overwhelmingly connection re-arms, one
-     * per served request) are queued here and flushed with a single
-     * io_uring_enter after the batch, instead of paying one enter syscall per
-     * event.  Cross-thread submissions (accept thread -> worker reactor) keep
-     * the immediate path so sleeping workers still wake. */
-    struct io_uring_sqe deferred_sqes[1024];
-    reactor_event_ctx_t *deferred_ctxs[1024];
-    uint32_t deferred_n;
-    /* SQEs parked in the SQ by queue_deferred, covered by the next wait
-     * enter's to_submit.  Only touched by the run thread. */
-    uint32_t sq_unsubmitted;
-    pthread_t owner;
-    bool dispatching;
-    /* RX-uring completion handler for tagged (low-bit set) RECV SQEs;
-     * registered by the HTTP layer once per worker reactor. */
-    cwist_rx_cb_t rx_cb;
-    /* Per-request latency probe recorder (issue #166). Owner-thread only, so
-     * plain counters suffice. Two histograms: time from (re-)arm to dispatch
-     * (queue_delay) and callback runtime (svc). */
-#define LATENCY_PROBE_BUCKETS 18
-    struct {
-        uint64_t buckets[LATENCY_PROBE_BUCKETS];
-        uint64_t count;
-        uint64_t sum_us;
-        uint64_t max_us;
-        uint64_t over_5ms; /* samples beyond 5000 us */
-    } probe[2];
-#endif
+    reactor_event_ctx_t event_pool[MAX_REACTOR_EVENTS];
+    uint32_t pool_cursor;
 };
 
-/* Microsecond bucket boundaries for the latency probe histograms: 18 buckets
- * spanning [0,10) us up to [1e6,+inf) us. */
-#ifdef __linux__
-static const uint32_t latency_probe_bounds_us[LATENCY_PROBE_BUCKETS - 1] = {
-    10,    25,    50,    100,    250,    500,    1000,    2500,   5000,
-    10000, 25000, 50000, 100000, 250000, 500000, 1000000, 2500000};
-
-/** @brief Whether the per-request latency probe is enabled (CWIST_LATENCY_PROBE=1).
- *
- * Cached after the first read like the other env knobs in this file -- the
- * racy recompute is benign (same result every time).
- * @return true when the probe is enabled. */
-static bool latency_probe_enabled(void) {
-    static _Atomic int cached = -1;
-    int v = atomic_load_explicit(&cached, memory_order_relaxed);
-    if (v < 0) {
-        const char *s = getenv("CWIST_LATENCY_PROBE");
-        v = (s && strcmp(s, "1") == 0) ? 1 : 0;
-        atomic_store_explicit(&cached, v, memory_order_relaxed);
+static reactor_event_ctx_t *alloc_reactor_ctx(cwist_reactor_t *r, int fd, cwist_reactor_cb_t cb, void *ctx) {
+    if (!r) return NULL;
+    uint32_t start = r->pool_cursor;
+    for (uint32_t i = 0; i < MAX_REACTOR_EVENTS; i++) {
+        uint32_t idx = (start + i) % MAX_REACTOR_EVENTS;
+        if (!r->event_pool[idx].in_use) {
+            r->event_pool[idx].fd = fd;
+            r->event_pool[idx].cb = cb;
+            r->event_pool[idx].ctx = ctx;
+            r->event_pool[idx].in_use = true;
+            r->pool_cursor = (idx + 1) % MAX_REACTOR_EVENTS;
+            return &r->event_pool[idx];
+        }
     }
     return v == 1;
 }
@@ -970,9 +918,6 @@ void cwist_reactor_run(cwist_reactor_t *reactor) {
             uint32_t head = __atomic_load_n(reactor->impl.cq_head, __ATOMIC_ACQUIRE);
             uint32_t tail = *reactor->impl.cq_tail;
             if (head == tail) {
-                /* Spurious wakeup or no event ready. Sleep briefly instead of
-                 * tight-looping back into the syscall. */
-                usleep(1000);
                 continue;
             }
             while (head != tail) {
