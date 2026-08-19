@@ -3,7 +3,7 @@
  * @brief Readiness multiplexer (io_uring / epoll / kqueue) driving CWIST's
  * synchronous callback model.
  *
- * Design note - why readiness notification + synchronous completion is kept:
+ * Design note — why readiness notification + synchronous completion is kept:
  * 1. No queues: a request passes through no queue at all; the woken worker
  *    finishes it immediately. This is the source of the 0.0x ms latency.
  *    A completion model pushes each request through a ring 3-4 times and
@@ -34,10 +34,6 @@
 #include <errno.h>
 #include <poll.h>
 #include <pthread.h>
-#include <stdatomic.h>
-#include <fcntl.h>
-#include <limits.h>
-#include <time.h>
 
 #ifdef __linux__
 #include <sys/syscall.h>
@@ -138,6 +134,20 @@ static size_t cq_ring_size(struct io_uring_params *p) {
     return p->cq_off.cqes + p->cq_entries * sizeof(struct io_uring_cqe);
 }
 
+/* Ring setup helpers absorbed from the retired io_uring_backend.c. */
+static void *mmap_ring(int fd, size_t sz, off_t off) {
+    void *p = mmap(NULL, sz, PROT_READ | PROT_WRITE, MAP_SHARED | MAP_POPULATE, fd, off);
+    return (p == MAP_FAILED) ? NULL : p;
+}
+
+static size_t sq_ring_size(struct io_uring_params *p) {
+    return p->sq_off.array + p->sq_entries * sizeof(uint32_t);
+}
+
+static size_t cq_ring_size(struct io_uring_params *p) {
+    return p->cq_off.cqes + p->cq_entries * sizeof(struct io_uring_cqe);
+}
+
 typedef struct {
     int ring_fd;
     /* Serializes SQ producers: the accept thread (reactor_add) and worker
@@ -151,7 +161,7 @@ typedef struct {
     uint32_t *cq_head, *cq_tail, *cq_ring_mask;
     uint32_t sq_entries;
     uint32_t cq_entries;
-    size_t sq_ring_sz, cq_ring_sz;
+    size_t sq_ring_sz, cq_ring_sz, sqes_sz;
     bool active;
 
     // epoll fallback
@@ -176,18 +186,6 @@ typedef struct {
     int fd;
     cwist_reactor_cb_t cb;
     void *ctx;
-#ifdef __linux__
-    /* CLOCK_MONOTONIC timestamp taken in reactor_add_common right before the
-     * POLL_ADD submit/defer decision; approximates when the fd started
-     * waiting for readiness. Only set when CWIST_LATENCY_PROBE is enabled;
-     * zero means "armed before the probe was enabled" (defensive, see the
-     * dispatch loop). */
-    uint64_t armed_ns;
-#endif
-    /* Inline caller payload; ctx always points here. Zeroed on checkout so
-     * reuse across events cannot leak stale fields (calloc semantics
-     * without the heap). */
-    unsigned char payload[CWIST_REACTOR_PAYLOAD_SIZE];
 } reactor_event_ctx_t;
 
 /* Slot chunks grow on demand (see struct cwist_reactor below); 512 slots per
@@ -204,522 +202,49 @@ typedef struct reactor_slot_chunk {
 struct cwist_reactor {
     reactor_impl_t impl;
     bool running;
-    /* Dynamically grown slot chunks: a fixed pool (formerly 4096 slots)
-     * capped every reactor at 4096 live connections, which is what shed
-     * requests en masse past ~500k concurrent connections.  Chunks are never
-     * freed until destroy because slot pointers sit in in-flight CQEs. */
-    reactor_slot_chunk_t *chunks;
-    reactor_event_ctx_t *free_head;  /* Free list threaded through slots. */
+    reactor_event_ctx_t event_pool[MAX_REACTOR_EVENTS];
+    /* Free-stack over event_pool (pattern absorbed from io_uring_backend.c's
+     * stream table): O(1) slot acquire/release instead of a linear scan. */
+    uint32_t free_stack[MAX_REACTOR_EVENTS];
+    uint32_t free_top;
     pthread_mutex_t pool_lock;
-    /* Armed one-shot timers, min-heap on deadline_ns.  Run thread only. */
-    cwist_reactor_timer_t **timer_heap;
-    uint32_t timer_n;
-    uint32_t timer_cap;
-#ifdef __linux__
-    /* Deferred SQE batching: submissions made by the reactor's own run thread
-     * while it dispatches a CQE batch (overwhelmingly connection re-arms, one
-     * per served request) are queued here and flushed with a single
-     * io_uring_enter after the batch, instead of paying one enter syscall per
-     * event.  Cross-thread submissions (accept thread -> worker reactor) keep
-     * the immediate path so sleeping workers still wake. */
-    struct io_uring_sqe deferred_sqes[1024];
-    reactor_event_ctx_t *deferred_ctxs[1024];
-    uint32_t deferred_n;
-    /* SQEs parked in the SQ by queue_deferred, covered by the next wait
-     * enter's to_submit.  Only touched by the run thread. */
-    uint32_t sq_unsubmitted;
-    pthread_t owner;
-    bool dispatching;
-    /* Per-request latency probe recorder (issue #166). Owner-thread only, so
-     * plain counters suffice. Two histograms: time from (re-)arm to dispatch
-     * (queue_delay) and callback runtime (svc). */
-#define LATENCY_PROBE_BUCKETS 18
-    struct {
-        uint64_t buckets[LATENCY_PROBE_BUCKETS];
-        uint64_t count;
-        uint64_t sum_us;
-        uint64_t max_us;
-        uint64_t over_5ms; /* samples beyond 5000 us */
-    } probe[2];
-#endif
 };
 
-/* Microsecond bucket boundaries for the latency probe histograms: 18 buckets
- * spanning [0,10) us up to [1e6,+inf) us. */
-#ifdef __linux__
-static const uint32_t latency_probe_bounds_us[LATENCY_PROBE_BUCKETS - 1] = {
-    10,    25,    50,    100,    250,    500,    1000,    2500,   5000,
-    10000, 25000, 50000, 100000, 250000, 500000, 1000000, 2500000};
-
-/** @brief Whether the per-request latency probe is enabled (CWIST_LATENCY_PROBE=1).
- *
- * Cached after the first read like the other env knobs in this file -- the
- * racy recompute is benign (same result every time).
- * @return true when the probe is enabled. */
-static bool latency_probe_enabled(void) {
-    static _Atomic int cached = -1;
-    int v = atomic_load_explicit(&cached, memory_order_relaxed);
-    if (v < 0) {
-        const char *s = getenv("CWIST_LATENCY_PROBE");
-        v = (s && strcmp(s, "1") == 0) ? 1 : 0;
-        atomic_store_explicit(&cached, v, memory_order_relaxed);
-    }
-    return v == 1;
-}
-
-/** @brief Record one latency sample (microseconds) into a probe histogram.
- *
- * Binary-searches the bucket whose upper bound first exceeds the sample,
- * then updates the bucket, count, running sum, max, and over-5ms counters.
- * @param buckets Histogram bucket array (LATENCY_PROBE_BUCKETS entries).
- * @param count In/out total sample count.
- * @param sum_us In/out running sum of samples.
- * @param max_us In/out running maximum.
- * @param over_5ms In/out count of samples beyond 5000 us.
- * @param sample_us The sample value in microseconds. */
-static void latency_probe_record(uint64_t *buckets, uint64_t *count, uint64_t *sum_us,
-                                 uint64_t *max_us, uint64_t *over_5ms, uint64_t sample_us) {
-    int lo = 0, hi = LATENCY_PROBE_BUCKETS - 1;
-    while (lo < hi) { /* first bucket whose upper bound exceeds the sample */
-        int mid = (lo + hi) / 2;
-        if (sample_us < latency_probe_bounds_us[mid])
-            hi = mid;
-        else
-            lo = mid + 1;
-    }
-    buckets[lo]++;
-    (*count)++;
-    *sum_us += sample_us;
-    if (sample_us > *max_us) *max_us = sample_us;
-    if (sample_us > 5000) (*over_5ms)++;
-}
-
-enum { LATENCY_PROBE_QUEUE = 0, LATENCY_PROBE_SVC = 1 };
-
-/** @brief Approximate percentile from a histogram: smallest bucket upper
- *         bound whose cumulative count reaches pct (in per-mille) of total.
- *  @param buckets Histogram bucket array.
- *  @param count Total sample count.
- *  @param pct_mille Percentile in per-mille (500 = p50, 999 = p99.9).
- *  @return Bucket upper bound in microseconds, or UINT64_MAX for the
- *          open-ended top bucket. */
-static uint64_t latency_probe_percentile(const uint64_t *buckets, uint64_t count,
-                                         uint64_t pct_mille) {
-    uint64_t target = (count * pct_mille + 999) / 1000;
-    uint64_t cumulative = 0;
-    for (int i = 0; i < LATENCY_PROBE_BUCKETS; i++) {
-        cumulative += buckets[i];
-        if (cumulative >= target)
-            return i + 1 < LATENCY_PROBE_BUCKETS ? latency_probe_bounds_us[i] : UINT64_MAX;
-    }
-    return UINT64_MAX;
-}
-
-static void latency_probe_dump(const cwist_reactor_t *reactor) {
-    if (!latency_probe_enabled()) return;
-    for (int phase = 0; phase < 2; phase++) {
-        const uint64_t *b = reactor->probe[phase].buckets;
-        uint64_t count = reactor->probe[phase].count;
-        if (count == 0) continue;
-        const char *name = phase == LATENCY_PROBE_QUEUE ? "queue_delay" : "svc";
-        fprintf(stderr, "[latency-probe] pid=%d %-12s count=%llu\n", (int)getpid(), name,
-                (unsigned long long)count);
-        fprintf(stderr,
-                "[latency-probe] pid=%d %-12s p50=%llu p90=%llu p99=%llu p999=%llu max=%llu us\n",
-                (int)getpid(), name, (unsigned long long)latency_probe_percentile(b, count, 500),
-                (unsigned long long)latency_probe_percentile(b, count, 900),
-                (unsigned long long)latency_probe_percentile(b, count, 990),
-                (unsigned long long)latency_probe_percentile(b, count, 999),
-                (unsigned long long)reactor->probe[phase].max_us);
-        fprintf(stderr, "[latency-probe] pid=%d %-12s mean=%llu us over_5ms=%llu\n", (int)getpid(),
-                name, (unsigned long long)(reactor->probe[phase].sum_us / count),
-                (unsigned long long)reactor->probe[phase].over_5ms);
-        for (int i = 0; i < LATENCY_PROBE_BUCKETS; i++) {
-            if (!b[i]) continue;
-            if (i + 1 < LATENCY_PROBE_BUCKETS)
-                fprintf(stderr, "[latency-probe] pid=%d %-12s [%-8u,%-8u) us : %llu\n",
-                        (int)getpid(), name, i == 0 ? 0 : latency_probe_bounds_us[i - 1],
-                        latency_probe_bounds_us[i], (unsigned long long)b[i]);
-            else
-                fprintf(stderr, "[latency-probe] pid=%d %-12s [1000000, +inf) us : %llu\n",
-                        (int)getpid(), name, (unsigned long long)b[i]);
-        }
-    }
-}
-#endif
-
-static reactor_event_ctx_t *alloc_reactor_ctx(cwist_reactor_t *r, int fd, cwist_reactor_cb_t cb,
-                                              const void *payload, size_t payload_size) {
-    if (!r || payload_size > CWIST_REACTOR_PAYLOAD_SIZE) return NULL;
+static reactor_event_ctx_t *alloc_reactor_ctx(cwist_reactor_t *r, int fd, cwist_reactor_cb_t cb, void *ctx) {
+    if (!r) return NULL;
     pthread_mutex_lock(&r->pool_lock);
     if (r->free_top == 0) {
         pthread_mutex_unlock(&r->pool_lock);
         return NULL;
     }
-    return v == 1;
-}
-
-/** @brief Record one latency sample (microseconds) into a probe histogram.
- *
- * Binary-searches the bucket whose upper bound first exceeds the sample,
- * then updates the bucket, count, running sum, max, and over-5ms counters.
- * @param buckets Histogram bucket array (LATENCY_PROBE_BUCKETS entries).
- * @param count In/out total sample count.
- * @param sum_us In/out running sum of samples.
- * @param max_us In/out running maximum.
- * @param over_5ms In/out count of samples beyond 5000 us.
- * @param sample_us The sample value in microseconds. */
-static void latency_probe_record(uint64_t *buckets, uint64_t *count, uint64_t *sum_us,
-                                 uint64_t *max_us, uint64_t *over_5ms, uint64_t sample_us) {
-    int lo = 0, hi = LATENCY_PROBE_BUCKETS - 1;
-    while (lo < hi) { /* first bucket whose upper bound exceeds the sample */
-        int mid = (lo + hi) / 2;
-        if (sample_us < latency_probe_bounds_us[mid])
-            hi = mid;
-        else
-            lo = mid + 1;
-    }
-    buckets[lo]++;
-    (*count)++;
-    *sum_us += sample_us;
-    if (sample_us > *max_us) *max_us = sample_us;
-    if (sample_us > 5000) (*over_5ms)++;
-}
-
-enum { LATENCY_PROBE_QUEUE = 0, LATENCY_PROBE_SVC = 1 };
-
-/** @brief Approximate percentile from a histogram: smallest bucket upper
- *         bound whose cumulative count reaches pct (in per-mille) of total.
- *  @param buckets Histogram bucket array.
- *  @param count Total sample count.
- *  @param pct_mille Percentile in per-mille (500 = p50, 999 = p99.9).
- *  @return Bucket upper bound in microseconds, or UINT64_MAX for the
- *          open-ended top bucket. */
-static uint64_t latency_probe_percentile(const uint64_t *buckets, uint64_t count,
-                                         uint64_t pct_mille) {
-    uint64_t target = (count * pct_mille + 999) / 1000;
-    uint64_t cumulative = 0;
-    for (int i = 0; i < LATENCY_PROBE_BUCKETS; i++) {
-        cumulative += buckets[i];
-        if (cumulative >= target)
-            return i + 1 < LATENCY_PROBE_BUCKETS ? latency_probe_bounds_us[i] : UINT64_MAX;
-    }
-    return UINT64_MAX;
-}
-
-static void latency_probe_dump(const cwist_reactor_t *reactor) {
-    if (!latency_probe_enabled()) return;
-    for (int phase = 0; phase < 2; phase++) {
-        const uint64_t *b = reactor->probe[phase].buckets;
-        uint64_t count = reactor->probe[phase].count;
-        if (count == 0) continue;
-        const char *name = phase == LATENCY_PROBE_QUEUE ? "queue_delay" : "svc";
-        fprintf(stderr, "[latency-probe] pid=%d %-12s count=%llu\n", (int)getpid(), name,
-                (unsigned long long)count);
-        fprintf(stderr,
-                "[latency-probe] pid=%d %-12s p50=%llu p90=%llu p99=%llu p999=%llu max=%llu us\n",
-                (int)getpid(), name, (unsigned long long)latency_probe_percentile(b, count, 500),
-                (unsigned long long)latency_probe_percentile(b, count, 900),
-                (unsigned long long)latency_probe_percentile(b, count, 990),
-                (unsigned long long)latency_probe_percentile(b, count, 999),
-                (unsigned long long)reactor->probe[phase].max_us);
-        fprintf(stderr, "[latency-probe] pid=%d %-12s mean=%llu us over_5ms=%llu\n", (int)getpid(),
-                name, (unsigned long long)(reactor->probe[phase].sum_us / count),
-                (unsigned long long)reactor->probe[phase].over_5ms);
-        for (int i = 0; i < LATENCY_PROBE_BUCKETS; i++) {
-            if (!b[i]) continue;
-            if (i + 1 < LATENCY_PROBE_BUCKETS)
-                fprintf(stderr, "[latency-probe] pid=%d %-12s [%-8u,%-8u) us : %llu\n",
-                        (int)getpid(), name, i == 0 ? 0 : latency_probe_bounds_us[i - 1],
-                        latency_probe_bounds_us[i], (unsigned long long)b[i]);
-            else
-                fprintf(stderr, "[latency-probe] pid=%d %-12s [1000000, +inf) us : %llu\n",
-                        (int)getpid(), name, (unsigned long long)b[i]);
-        }
-    }
-}
-
-/* --- RX-uring receive path (issue #179) ------------------------------------
- * CWIST_RX_URING: unset = auto (enabled whenever the reactor has a real
- * io_uring ring), "1" = force attempt, "0" = force off (legacy POLL path).
- * Cached after the first read like the other env knobs in this file. */
-static bool uring_submit(cwist_reactor_t *reactor, struct io_uring_sqe *out_sqe);
-
-bool cwist_rx_uring_env_enabled(void) {
-    static _Atomic int cached = -1;
-    int v = atomic_load_explicit(&cached, memory_order_relaxed);
-    if (v < 0) {
-        const char *s = getenv("CWIST_RX_URING");
-        v = (s && strcmp(s, "0") == 0) ? 0 : 1;
-        atomic_store_explicit(&cached, v, memory_order_relaxed);
-    }
-    return v == 1;
-}
-
-bool cwist_reactor_rx_supported(const cwist_reactor_t *reactor) {
-    return reactor && !reactor->impl.use_epoll && cwist_rx_uring_env_enabled();
-}
-
-void cwist_reactor_set_rx_cb(cwist_reactor_t *reactor, cwist_rx_cb_t cb) {
-    if (reactor) reactor->rx_cb = cb;
-}
-
-bool cwist_reactor_recv_arm(cwist_reactor_t *reactor, int fd, void *buf, unsigned len, void *conn,
-                            uint64_t *armed_ns) {
-    if (!reactor || fd < 0 || !buf || len == 0 || !conn) return false;
-    if (!cwist_reactor_rx_supported(reactor)) return false;
-    /* Tag-bit discipline: ev_ctx pointers come from cwist_alloc (malloc
-     * backed, at least max_align_t aligned), so the low bit is always zero
-     * there and one here.  Refuse a misaligned connection pointer rather
-     * than aliasing into the ev_ctx namespace. */
-    if (((uintptr_t)conn & 1u) != 0) return false;
-
-    struct io_uring_sqe sqe;
-    memset(&sqe, 0, sizeof(sqe));
-    sqe.opcode = IORING_OP_RECV;
-    sqe.fd = fd;
-    sqe.addr = (uint64_t)(uintptr_t)buf;
-    sqe.len = len;
-    sqe.user_data = (uint64_t)(uintptr_t)conn | 1u;
-    if (armed_ns && latency_probe_enabled()) {
-        struct timespec ts;
-        clock_gettime(CLOCK_MONOTONIC, &ts);
-        *armed_ns = (uint64_t)ts.tv_sec * 1000000000ull + (uint64_t)ts.tv_nsec;
-    }
-
-    /* Run-thread re-arms defer into the batch flush; everything else
-     * submits immediately so remote workers wake.  Data SQEs carry no ev_ctx
-     * slot, so deferred_ctxs[] holds NULL for them and flush_deferred knows
-     * the connection pointer rides in the tagged user_data. */
-    if (reactor->dispatching && pthread_equal(pthread_self(), reactor->owner) &&
-        reactor->deferred_n <
-            (uint32_t)(sizeof(reactor->deferred_sqes) / sizeof(reactor->deferred_sqes[0]))) {
-        uint32_t slot = reactor->deferred_n++;
-        reactor->deferred_sqes[slot] = sqe;
-        reactor->deferred_ctxs[slot] = NULL;
-        return true;
-    }
-    return uring_submit(reactor, &sqe);
-}
-
-void cwist_reactor_probe_record(cwist_reactor_t *reactor, bool queue, uint64_t sample_us) {
-    if (!reactor || !latency_probe_enabled()) return;
-    int phase = queue ? LATENCY_PROBE_QUEUE : LATENCY_PROBE_SVC;
-    latency_probe_record(reactor->probe[phase].buckets, &reactor->probe[phase].count,
-                         &reactor->probe[phase].sum_us, &reactor->probe[phase].max_us,
-                         &reactor->probe[phase].over_5ms, sample_us);
-}
-#endif
-
-static reactor_event_ctx_t *alloc_reactor_ctx(cwist_reactor_t *r, int fd, cwist_reactor_cb_t cb,
-                                              const void *payload, size_t payload_size) {
-    if (!r || payload_size > CWIST_REACTOR_PAYLOAD_SIZE) return NULL;
-    pthread_mutex_lock(&r->pool_lock);
-    reactor_event_ctx_t *ev_ctx = r->free_head;
-    if (ev_ctx) r->free_head = (reactor_event_ctx_t *)ev_ctx->ctx;
+    uint32_t idx = r->free_stack[--r->free_top];
     pthread_mutex_unlock(&r->pool_lock);
 
     reactor_event_ctx_t *ev_ctx = &r->event_pool[idx];
-    memset(ev_ctx, 0, sizeof(*ev_ctx));
     ev_ctx->fd = fd;
     ev_ctx->cb = cb;
-    ev_ctx->ctx = ev_ctx->payload;
-    if (payload && payload_size > 0) {
-        memcpy(ev_ctx->payload, payload, payload_size);
-    }
+    ev_ctx->ctx = ctx;
     return ev_ctx;
 }
 
 static void free_reactor_ctx(cwist_reactor_t *r, reactor_event_ctx_t *ev_ctx) {
     if (!r || !ev_ctx) return;
+    uint32_t idx = (uint32_t)(ev_ctx - r->event_pool);
     pthread_mutex_lock(&r->pool_lock);
-    ev_ctx->ctx = r->free_head;
-    r->free_head = ev_ctx;
+    r->free_stack[r->free_top++] = idx;
     pthread_mutex_unlock(&r->pool_lock);
-}
-
-bool cwist_reactor_post(cwist_reactor_t *r, cwist_reactor_post_t *node) {
-    if (!r || !node || !node->cb) return false;
-    cwist_reactor_post_t *head = atomic_load_explicit(&r->post_head, memory_order_relaxed);
-    do {
-        node->next = head;
-    } while (!atomic_compare_exchange_weak_explicit(&r->post_head, &head, node,
-                                                    memory_order_release, memory_order_relaxed));
-    /* Wake only on the first post of a pending batch. A non-empty stack
-     * already has a wake pending; another write would be redundant. */
-    if (head == NULL && r->wake_wr >= 0) {
-        uint64_t one = 1;
-        ssize_t ign = write(r->wake_wr, &one, sizeof(one));
-        (void)ign; /* EAGAIN means the run thread is already awake. */
-    }
-    return true;
-}
-
-/* Pop the whole MPSC stack and run the callbacks oldest-first.  Only ever
- * called by the reactor's run thread (or destroy, after it has stopped). */
-static void reactor_drain_posts(cwist_reactor_t *r) {
-    cwist_reactor_post_t *list =
-        atomic_exchange_explicit(&r->post_head, NULL, memory_order_acquire);
-    cwist_reactor_post_t *rev = NULL;
-    while (list) {
-        cwist_reactor_post_t *next = list->next;
-        list->next = rev;
-        rev = list;
-        list = next;
-    }
-    while (rev) {
-        cwist_reactor_post_t *next = rev->next;
-        rev->cb(rev->ctx);
-        rev = next;
-    }
-}
-
-/* run flag: cleared by cwist_reactor_stop() from any thread. */
-static bool reactor_running(cwist_reactor_t *r) {
-    return __atomic_load_n(&r->running, __ATOMIC_ACQUIRE) && atomic_load(&g_cwist_running);
-}
-
-/* ---- one-shot timers (min-heap, run thread only) ---- */
-
-/* Upper bound on any poll wait, timers or not: the shutdown flags are only
- * re-checked between waits (see cwist_reactor_run). */
-#define REACTOR_IDLE_WAIT_NS 100000000ull
-
-static uint64_t reactor_now_ns(void) {
-    struct timespec ts;
-    clock_gettime(CLOCK_MONOTONIC, &ts);
-    return (uint64_t)ts.tv_sec * 1000000000ull + (uint64_t)ts.tv_nsec;
-}
-
-static void timer_heap_place(cwist_reactor_t *r, uint32_t i, cwist_reactor_timer_t *t) {
-    r->timer_heap[i] = t;
-    t->heap_slot = i + 1;
-}
-
-static void timer_heap_up(cwist_reactor_t *r, uint32_t i) {
-    cwist_reactor_timer_t *t = r->timer_heap[i];
-    while (i > 0) {
-        uint32_t parent = (i - 1) / 2;
-        if (r->timer_heap[parent]->deadline_ns <= t->deadline_ns) break;
-        timer_heap_place(r, i, r->timer_heap[parent]);
-        i = parent;
-    }
-    timer_heap_place(r, i, t);
-}
-
-static void timer_heap_down(cwist_reactor_t *r, uint32_t i) {
-    cwist_reactor_timer_t *t = r->timer_heap[i];
-    for (;;) {
-        uint32_t child = 2 * i + 1;
-        if (child >= r->timer_n) break;
-        if (child + 1 < r->timer_n &&
-            r->timer_heap[child + 1]->deadline_ns < r->timer_heap[child]->deadline_ns)
-            child++;
-        if (t->deadline_ns <= r->timer_heap[child]->deadline_ns) break;
-        timer_heap_place(r, i, r->timer_heap[child]);
-        i = child;
-    }
-    timer_heap_place(r, i, t);
-}
-
-static void timer_heap_remove(cwist_reactor_t *r, cwist_reactor_timer_t *t) {
-    uint32_t i = t->heap_slot - 1;
-    t->heap_slot = 0;
-    cwist_reactor_timer_t *last = r->timer_heap[--r->timer_n];
-    if (i == r->timer_n) return;
-    timer_heap_place(r, i, last);
-    if (i > 0 && r->timer_heap[(i - 1) / 2]->deadline_ns > last->deadline_ns)
-        timer_heap_up(r, i);
-    else
-        timer_heap_down(r, i);
-}
-
-void cwist_reactor_timer_init(cwist_reactor_timer_t *timer, void (*cb)(void *ctx), void *ctx) {
-    if (!timer) return;
-    timer->deadline_ns = 0;
-    timer->heap_slot = 0;
-    timer->cb = cb;
-    timer->ctx = ctx;
-}
-
-bool cwist_reactor_timer_arm(cwist_reactor_t *r, cwist_reactor_timer_t *timer, uint64_t delay_us) {
-    if (!r || !timer || !timer->cb) return false;
-    if (timer->heap_slot) timer_heap_remove(r, timer);
-    if (r->timer_n == r->timer_cap) {
-        uint32_t cap = r->timer_cap ? r->timer_cap * 2 : 64;
-        cwist_reactor_timer_t **heap = cwist_alloc(cap * sizeof(*heap));
-        if (!heap) return false;
-        if (r->timer_n) memcpy(heap, r->timer_heap, r->timer_n * sizeof(*heap));
-        cwist_free(r->timer_heap);
-        r->timer_heap = heap;
-        r->timer_cap = cap;
-    }
-    timer->deadline_ns = reactor_now_ns() + delay_us * 1000ull;
-    r->timer_n++;
-    timer_heap_place(r, r->timer_n - 1, timer);
-    timer_heap_up(r, r->timer_n - 1);
-    return true;
-}
-
-void cwist_reactor_timer_cancel(cwist_reactor_t *r, cwist_reactor_timer_t *timer) {
-    if (!r || !timer || !timer->heap_slot) return;
-    timer_heap_remove(r, timer);
-}
-
-bool cwist_reactor_timer_armed(const cwist_reactor_timer_t *timer) {
-    return timer && timer->heap_slot != 0;
-}
-
-/* Fire every timer whose deadline has passed.  At most the timers armed on
- * entry run, so a callback that re-arms itself with a zero delay waits for
- * the next round instead of spinning here. */
-static void reactor_run_timers(cwist_reactor_t *r) {
-    if (r->timer_n == 0) return;
-    uint64_t now = reactor_now_ns();
-    uint32_t budget = r->timer_n;
-    while (budget-- > 0 && r->timer_n > 0 && r->timer_heap[0]->deadline_ns <= now) {
-        cwist_reactor_timer_t *t = r->timer_heap[0];
-        timer_heap_remove(r, t);
-        t->cb(t->ctx);
-    }
-}
-
-/* Poll wait for this round: the time to the earliest timer, capped at the
- * idle wait. */
-static uint64_t reactor_wait_ns(const cwist_reactor_t *r) {
-    if (r->timer_n == 0) return REACTOR_IDLE_WAIT_NS;
-    uint64_t now = reactor_now_ns();
-    uint64_t deadline = r->timer_heap[0]->deadline_ns;
-    if (deadline <= now) return 0;
-    uint64_t wait = deadline - now;
-    return wait < REACTOR_IDLE_WAIT_NS ? wait : REACTOR_IDLE_WAIT_NS;
-}
-
-static void reactor_wake_cb(int fd, void *ctx) {
-    cwist_reactor_t *r = *(cwist_reactor_t *const *)ctx;
-    uint64_t buf[8];
-    while (read(fd, buf, sizeof(buf)) > 0) {
-    }
-    reactor_drain_posts(r);
-    /* One-shot slots are recycled after firing: re-arm for the next post. */
-    if (!cwist_reactor_add(r, fd, reactor_wake_cb, &r, sizeof(r))) {
-        int wr = r->wake_wr;
-        r->wake_fd = -1;
-        r->wake_wr = -1;
-        close(fd);
-        if (wr >= 0 && wr != fd) close(wr);
-    }
 }
 
 cwist_reactor_t *cwist_reactor_create(void) {
     cwist_reactor_t *r = cwist_alloc(sizeof(cwist_reactor_t));
     if (!r) return NULL;
     memset(r, 0, sizeof(cwist_reactor_t));
-    __atomic_store_n(&r->running, false, __ATOMIC_RELEASE);
+    r->running = false;
     pthread_mutex_init(&r->pool_lock, NULL);
-#ifdef __linux__
-    pthread_mutex_init(&r->impl.sq_lock, NULL);
-#endif
+    for (uint32_t i = 0; i < MAX_REACTOR_EVENTS; i++) {
+        r->free_stack[i] = (MAX_REACTOR_EVENTS - 1) - i;
+    }
+    r->free_top = MAX_REACTOR_EVENTS;
 
 #ifdef __linux__
     r->impl.use_epoll = false;
@@ -734,21 +259,22 @@ cwist_reactor_t *cwist_reactor_create(void) {
     int fd = r->impl.use_epoll ? -1 : sys_io_uring_setup(4096, &p);
     if (fd >= 0) {
         r->impl.ring_fd = fd;
-        r->impl.sq_ring_sz = p.sq_off.array + p.sq_entries * sizeof(uint32_t);
-        r->impl.cq_ring_sz = p.cq_off.cqes + p.cq_entries * sizeof(struct io_uring_cqe);
-        
-        void *sq_ptr = mmap(NULL, r->impl.sq_ring_sz, PROT_READ | PROT_WRITE, MAP_SHARED | MAP_POPULATE, fd, IORING_OFF_SQ_RING);
-        void *cq_ptr = mmap(NULL, r->impl.cq_ring_sz, PROT_READ | PROT_WRITE, MAP_SHARED | MAP_POPULATE, fd, IORING_OFF_CQ_RING);
-        void *sqes_ptr = mmap(NULL, p.sq_entries * sizeof(struct io_uring_sqe), PROT_READ | PROT_WRITE, MAP_SHARED | MAP_POPULATE, fd, IORING_OFF_SQES);
-        
-        if (sq_ptr != MAP_FAILED && cq_ptr != MAP_FAILED && sqes_ptr != MAP_FAILED) {
+        r->impl.sq_ring_sz = sq_ring_size(&p);
+        r->impl.cq_ring_sz = cq_ring_size(&p);
+        r->impl.sqes_sz = p.sq_entries * sizeof(struct io_uring_sqe);
+
+        void *sq_ptr = mmap_ring(fd, r->impl.sq_ring_sz, IORING_OFF_SQ_RING);
+        void *cq_ptr = mmap_ring(fd, r->impl.cq_ring_sz, IORING_OFF_CQ_RING);
+        void *sqes_ptr = mmap_ring(fd, r->impl.sqes_sz, IORING_OFF_SQES);
+
+        if (sq_ptr && cq_ptr && sqes_ptr) {
             r->impl.sq_head         = (uint32_t *)((char *)sq_ptr + p.sq_off.head);
             r->impl.sq_tail         = (uint32_t *)((char *)sq_ptr + p.sq_off.tail);
             r->impl.sq_ring_mask    = (uint32_t *)((char *)sq_ptr + p.sq_off.ring_mask);
             r->impl.sq_array        = (uint32_t *)((char *)sq_ptr + p.sq_off.array);
             r->impl.sqes            = sqes_ptr;
             r->impl.sq_entries      = p.sq_entries;
-            
+
             r->impl.cq_head         = (uint32_t *)((char *)cq_ptr + p.cq_off.head);
             r->impl.cq_tail         = (uint32_t *)((char *)cq_ptr + p.cq_off.tail);
             r->impl.cq_ring_mask    = (uint32_t *)((char *)cq_ptr + p.cq_off.ring_mask);
@@ -760,9 +286,9 @@ cwist_reactor_t *cwist_reactor_create(void) {
              * once here instead of rewriting sq_array on every submission. */
             for (uint32_t i = 0; i < p.sq_entries; i++) r->impl.sq_array[i] = i;
         } else {
-            if (sq_ptr != MAP_FAILED) munmap(sq_ptr, r->impl.sq_ring_sz);
-            if (cq_ptr != MAP_FAILED) munmap(cq_ptr, r->impl.cq_ring_sz);
-            if (sqes_ptr != MAP_FAILED) munmap(sqes_ptr, p.sq_entries * sizeof(struct io_uring_sqe));
+            if (sq_ptr) munmap(sq_ptr, r->impl.sq_ring_sz);
+            if (cq_ptr) munmap(cq_ptr, r->impl.cq_ring_sz);
+            if (sqes_ptr) munmap(sqes_ptr, r->impl.sqes_sz);
             close(fd);
             r->impl.use_epoll = true;
         }
@@ -773,7 +299,6 @@ cwist_reactor_t *cwist_reactor_create(void) {
     if (r->impl.use_epoll) {
         r->impl.epoll_fd = epoll_create1(0);
         if (r->impl.epoll_fd < 0) {
-            pthread_mutex_destroy(&r->impl.sq_lock);
             pthread_mutex_destroy(&r->pool_lock);
             cwist_free(r);
             return NULL;
@@ -834,14 +359,13 @@ void cwist_reactor_destroy(cwist_reactor_t *reactor) {
         /* Teardown absorbed from io_uring_backend.c: unmap all three rings. */
         if (reactor->impl.sqes) munmap(reactor->impl.sqes, reactor->impl.sqes_sz);
         if (reactor->impl.cqes) {
-            munmap((char *)reactor->impl.cqes -
-                       (reactor->impl.cq_ring_sz -
-                        reactor->impl.cq_entries * sizeof(struct io_uring_cqe)),
+            munmap((char *)reactor->impl.cqes - (reactor->impl.cq_ring_sz -
+                   reactor->impl.cq_entries * sizeof(struct io_uring_cqe)),
                    reactor->impl.cq_ring_sz);
         }
         if (reactor->impl.sq_array) {
-            munmap((char *)reactor->impl.sq_array -
-                       (reactor->impl.sq_ring_sz - reactor->impl.sq_entries * sizeof(uint32_t)),
+            munmap((char *)reactor->impl.sq_array - (reactor->impl.sq_ring_sz -
+                   reactor->impl.sq_entries * sizeof(uint32_t)),
                    reactor->impl.sq_ring_sz);
         }
         close(reactor->impl.ring_fd);
@@ -852,16 +376,6 @@ void cwist_reactor_destroy(cwist_reactor_t *reactor) {
     close(reactor->impl.kq_fd);
 #endif
     pthread_mutex_destroy(&reactor->pool_lock);
-#ifdef __linux__
-    pthread_mutex_destroy(&reactor->impl.sq_lock);
-#endif
-    cwist_free(reactor->timer_heap);
-    reactor_slot_chunk_t *chunk = reactor->chunks;
-    while (chunk) {
-        reactor_slot_chunk_t *next = chunk->next;
-        cwist_free(chunk);
-        chunk = next;
-    }
     cwist_free(reactor);
 }
 
@@ -869,25 +383,25 @@ void cwist_reactor_destroy(cwist_reactor_t *reactor) {
 /* Submit one SQE immediately: the reactor never batches or defers submission,
  * so a woken worker always sees the event on its next wait. */
 static bool uring_submit(cwist_reactor_t *reactor, struct io_uring_sqe *out_sqe) {
-    bool ok = false;
-    pthread_mutex_lock(&reactor->impl.sq_lock);
     uint32_t tail = *reactor->impl.sq_tail;
     uint32_t head = __atomic_load_n(reactor->impl.sq_head, __ATOMIC_ACQUIRE);
-    if (tail - head < reactor->impl.sq_entries) {
-        uint32_t index = tail & *reactor->impl.sq_ring_mask;
-        struct io_uring_sqe *sqe = &reactor->impl.sqes[index];
-        memcpy(sqe, out_sqe, sizeof(*sqe));
-        __atomic_store_n(reactor->impl.sq_tail, tail + 1, __ATOMIC_RELEASE);
-        if (sys_io_uring_enter(reactor->impl.ring_fd, 1, 0, 0, NULL) < 0) {
-            __atomic_store_n(reactor->impl.sq_tail, tail, __ATOMIC_RELEASE);
-        } else {
-            ok = true;
-        }
+    if (tail - head >= reactor->impl.sq_entries) return false;
+    uint32_t index = tail & *reactor->impl.sq_ring_mask;
+    struct io_uring_sqe *sqe = &reactor->impl.sqes[index];
+    memcpy(sqe, out_sqe, sizeof(*sqe));
+    __atomic_store_n(reactor->impl.sq_tail, tail + 1, __ATOMIC_RELEASE);
+    if (sys_io_uring_enter(reactor->impl.ring_fd, 1, 0, 0, NULL) < 0) {
+        __atomic_store_n(reactor->impl.sq_tail, tail, __ATOMIC_RELEASE);
+        return false;
     }
-    pthread_mutex_unlock(&reactor->impl.sq_lock);
-    return ok;
+    return true;
 }
 #endif
+
+bool cwist_reactor_add(cwist_reactor_t *reactor, int fd, cwist_reactor_cb_t cb, void *ctx) {
+    if (!reactor || fd < 0) return false;
+    reactor_event_ctx_t *ev_ctx = alloc_reactor_ctx(reactor, fd, cb, ctx);
+    if (!ev_ctx) return false;
 
 #ifdef __linux__
 /* Flush the deferred SQE queue with a single io_uring_enter for the whole
@@ -982,33 +496,19 @@ static bool reactor_add_common(cwist_reactor_t *reactor, int fd, cwist_reactor_c
     }
     if (!reactor->impl.use_epoll) {
         /* One-shot POLL_ADD: multishot (IORING_POLL_ADD_MULTI) was rejected
-         * because the slot is recycled after firing, so a persistent poll
-         * would re-dispatch into a recycled slot. */
+         * because the callback owns ctx and frees it after firing, so a
+         * persistent poll would re-dispatch into a recycled slot. */
         struct io_uring_sqe sqe;
         memset(&sqe, 0, sizeof(sqe));
         sqe.opcode = IORING_OP_POLL_ADD;
         sqe.fd = fd;
-        sqe.poll_events = for_write ? POLLOUT : POLLIN;
+        sqe.poll_events = POLLIN;
         sqe.user_data = (uint64_t)ev_ctx;
         if (uring_submit(reactor, &sqe)) {
             return true;
         }
-        uint32_t index = tail & *reactor->impl.sq_ring_mask;
-        struct io_uring_sqe *sqe = &reactor->impl.sqes[index];
-        memset(sqe, 0, sizeof(*sqe));
-        sqe->opcode = IORING_OP_POLL_ADD;
-        sqe->fd = fd;
-        sqe->poll_events = POLLIN;
-        sqe->user_data = (uint64_t)ev_ctx;
-        
-        reactor->impl.sq_array[index] = index;
-        __atomic_store_n(reactor->impl.sq_tail, tail + 1, __ATOMIC_RELEASE);
-        if (sys_io_uring_enter(reactor->impl.ring_fd, 1, 0, 0, NULL) < 0) {
-            __atomic_store_n(reactor->impl.sq_tail, tail, __ATOMIC_RELEASE);
-            cwist_free(ev_ctx);
-            return false;
-        }
-        return true;
+        free_reactor_ctx(reactor, ev_ctx);
+        return false;
     } else {
         struct epoll_event ev;
         ev.events = (for_write ? EPOLLOUT : EPOLLIN) | EPOLLET | EPOLLONESHOT;
@@ -1021,7 +521,7 @@ static bool reactor_add_common(cwist_reactor_t *reactor, int fd, cwist_reactor_c
                 return true;
             }
         }
-        cwist_free(ev_ctx);
+        free_reactor_ctx(reactor, ev_ctx);
         return false;
     }
 #elif defined(__APPLE__) || defined(__FreeBSD__) || defined(__NetBSD__) || defined(__OpenBSD__)
@@ -1059,28 +559,17 @@ bool cwist_reactor_mod(cwist_reactor_t *reactor, int fd, cwist_reactor_cb_t cb,
 
 #ifdef __linux__
     if (!reactor->impl.use_epoll) {
-        uint32_t tail = *reactor->impl.sq_tail;
-        uint32_t head = __atomic_load_n(reactor->impl.sq_head, __ATOMIC_ACQUIRE);
-        if (tail - head >= reactor->impl.sq_entries) {
-            cwist_free(ev_ctx);
-            return false;
+        struct io_uring_sqe sqe;
+        memset(&sqe, 0, sizeof(sqe));
+        sqe.opcode = IORING_OP_POLL_ADD;
+        sqe.fd = fd;
+        sqe.poll_events = POLLIN;
+        sqe.user_data = (uint64_t)ev_ctx;
+        if (uring_submit(reactor, &sqe)) {
+            return true;
         }
-        uint32_t index = tail & *reactor->impl.sq_ring_mask;
-        struct io_uring_sqe *sqe = &reactor->impl.sqes[index];
-        memset(sqe, 0, sizeof(*sqe));
-        sqe->opcode = IORING_OP_POLL_ADD;
-        sqe->fd = fd;
-        sqe->poll_events = POLLIN;
-        sqe->user_data = (uint64_t)ev_ctx;
-        
-        reactor->impl.sq_array[index] = index;
-        __atomic_store_n(reactor->impl.sq_tail, tail + 1, __ATOMIC_RELEASE);
-        if (sys_io_uring_enter(reactor->impl.ring_fd, 1, 0, 0, NULL) < 0) {
-            __atomic_store_n(reactor->impl.sq_tail, tail, __ATOMIC_RELEASE);
-            cwist_free(ev_ctx);
-            return false;
-        }
-        return true;
+        free_reactor_ctx(reactor, ev_ctx);
+        return false;
     } else {
         struct epoll_event ev;
         ev.events = EPOLLIN | EPOLLET | EPOLLONESHOT;
@@ -1088,14 +577,19 @@ bool cwist_reactor_mod(cwist_reactor_t *reactor, int fd, cwist_reactor_cb_t cb,
         if (epoll_ctl(reactor->impl.epoll_fd, EPOLL_CTL_MOD, fd, &ev) == 0) {
             return true;
         }
-        cwist_free(ev_ctx);
+        free_reactor_ctx(reactor, ev_ctx);
         return false;
     }
 #elif defined(__APPLE__) || defined(__FreeBSD__) || defined(__NetBSD__) || defined(__OpenBSD__)
     struct kevent change;
     EV_SET(&change, fd, EVFILT_READ, EV_ADD | EV_CLEAR | EV_ONESHOT, 0, 0, ev_ctx);
-    return kevent(reactor->impl.kq_fd, &change, 1, NULL, 0, NULL) == 0;
+    if (kevent(reactor->impl.kq_fd, &change, 1, NULL, 0, NULL) == 0) {
+        return true;
+    }
+    free_reactor_ctx(reactor, ev_ctx);
+    return false;
 #endif
+    free_reactor_ctx(reactor, ev_ctx);
     return false;
 }
 
@@ -1104,25 +598,13 @@ bool cwist_reactor_del(cwist_reactor_t *reactor, int fd) {
 
 #ifdef __linux__
     if (!reactor->impl.use_epoll) {
-        /* Cancel any pending poll request for this fd.  The original
-         * request's CQE (with -ECANCELED) will free the ev_ctx. */
-        uint32_t tail = *reactor->impl.sq_tail;
-        uint32_t head = __atomic_load_n(reactor->impl.sq_head, __ATOMIC_ACQUIRE);
-        if (tail - head >= reactor->impl.sq_entries) return false;
-        uint32_t index = tail & *reactor->impl.sq_ring_mask;
-        struct io_uring_sqe *sqe = &reactor->impl.sqes[index];
-        memset(sqe, 0, sizeof(*sqe));
-        sqe->opcode = IORING_OP_ASYNC_CANCEL;
-        sqe->addr = (unsigned long)fd;
-        sqe->cancel_flags = IORING_ASYNC_CANCEL_FD | IORING_ASYNC_CANCEL_ALL;
-        sqe->user_data = 0;
-        reactor->impl.sq_array[index] = index;
-        __atomic_store_n(reactor->impl.sq_tail, tail + 1, __ATOMIC_RELEASE);
-        if (sys_io_uring_enter(reactor->impl.ring_fd, 1, 0, 0, NULL) < 0) {
-            __atomic_store_n(reactor->impl.sq_tail, tail, __ATOMIC_RELEASE);
-            return false;
-        }
-        return true;
+        struct io_uring_sqe sqe;
+        memset(&sqe, 0, sizeof(sqe));
+        sqe.opcode = IORING_OP_ASYNC_CANCEL;
+        sqe.addr = (unsigned long)fd;
+        sqe.cancel_flags = IORING_ASYNC_CANCEL_FD | IORING_ASYNC_CANCEL_ALL;
+        sqe.user_data = 0;
+        return uring_submit(reactor, &sqe);
     } else {
         struct epoll_event ev;
         return epoll_ctl(reactor->impl.epoll_fd, EPOLL_CTL_DEL, fd, &ev) == 0;
@@ -1331,6 +813,7 @@ void cwist_reactor_run(cwist_reactor_t *reactor) {
                             ev_ctx->cb(ev_ctx->fd, ev_ctx->ctx);
                         }
                     }
+                    free_reactor_ctx(reactor, ev_ctx);
                 }
                 head++;
                 if (drain_chunk && ++since_drain >= drain_chunk && head != tail) {
