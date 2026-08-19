@@ -15,6 +15,8 @@
 #include <sys/types.h>
 #include <unistd.h>
 #include <sys/wait.h>
+#include <pthread.h>
+#include <stdatomic.h>
 #include <arpa/inet.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
@@ -112,6 +114,36 @@ static size_t g_rr_index = 0;
 static long g_http_thread_count;
 static http_thread_worker_t *g_workers = NULL;
 
+/* Saturation backpressure: track in-flight connections and shed load once
+ * every worker thread could be parked on a connection many times over.
+ * Past the limit there is no throughput left to win — new arrivals would
+ * only inflate tail latency for traffic already being served. Shedding is
+ * a single fixed 503 write + close, so it adds no latency to others. */
+static _Atomic long g_http_inflight = 0;
+#define CWIST_HTTP_INFLIGHT_PER_THREAD 32
+
+static const char CWIST_HTTP_503[] =
+    "HTTP/1.1 503 Service Unavailable\r\nContent-Length: 0\r\nConnection: close\r\n\r\n";
+
+typedef struct {
+    int client_fd;
+    void (*handler_func)(int, void *);
+    void *ctx;
+    cwist_reactor_t *reactor;
+} http_conn_ctx_t;
+
+static void http_conn_event_cb(int fd, void *ctx) {
+    http_conn_ctx_t *c = (http_conn_ctx_t *)ctx;
+    void (*handler)(int, void *) = c->handler_func;
+    void *user_ctx = c->ctx;
+
+    handler(fd, user_ctx);
+    atomic_fetch_sub_explicit(&g_http_inflight, 1, memory_order_release);
+    cwist_free(c);
+}
+
+static _Thread_local http_thread_worker_t *t_current_worker = NULL;
+
 static void *http_pool_worker(void *arg) {
     http_thread_worker_t *w = (http_thread_worker_t *)arg;
     ttak_net_lattice_set_worker_id(w->worker_id);
@@ -167,6 +199,17 @@ int cwist_http_pool_init(void) {
 }
 
 void cwist_http_pool_submit(int client_fd, void (*handler)(int, void *), void *ctx) {
+    /* Backpressure gate: shed before doing any routing/allocation work when
+     * saturated. In-flight = queued + actively served connections. */
+    long limit = g_http_thread_count * CWIST_HTTP_INFLIGHT_PER_THREAD;
+    long inflight = atomic_fetch_add_explicit(&g_http_inflight, 1, memory_order_acq_rel) + 1;
+    if (inflight > limit) {
+        atomic_fetch_sub_explicit(&g_http_inflight, 1, memory_order_release);
+        send(client_fd, CWIST_HTTP_503, sizeof(CWIST_HTTP_503) - 1, MSG_NOSIGNAL | MSG_DONTWAIT);
+        close(client_fd);
+        return;
+    }
+
     /* Deterministic worker selection using Choi Seok-jeong's MOLS to minimize cache bouncing. */
     uint16_t node_id = (uint16_t)(client_fd % TTAK_MOLS_NODE_COUNT);
     uint32_t mixed = ttak_apply_mols_control(node_id, (uint32_t)g_rr_index);
@@ -176,22 +219,22 @@ void cwist_http_pool_submit(int client_fd, void (*handler)(int, void *), void *c
     
     http_thread_worker_t *w = &g_workers[worker_idx];
 
-    pthread_mutex_lock(&w->mutex);
-    while (w->count >= HTTP_TASKS_PER_THREAD && !w->shutdown) {
-        pthread_cond_wait(&w->cond_not_full, &w->mutex);
-    }
-    if (w->shutdown) {
-        pthread_mutex_unlock(&w->mutex);
+    http_conn_ctx_t *c = cwist_alloc(sizeof(http_conn_ctx_t));
+    if (!c) {
+        atomic_fetch_sub_explicit(&g_http_inflight, 1, memory_order_release);
         close(client_fd);
         return;
     }
-    w->queue[w->tail].client_fd = client_fd;
-    w->queue[w->tail].handler_func = handler;
-    w->queue[w->tail].ctx = ctx;
-    w->tail = (w->tail + 1) % HTTP_TASKS_PER_THREAD;
-    w->count++;
-    pthread_cond_signal(&w->cond_not_empty);
-    pthread_mutex_unlock(&w->mutex);
+    c->client_fd = client_fd;
+    c->handler_func = handler;
+    c->ctx = ctx;
+    c->reactor = w->reactor;
+
+    if (!cwist_reactor_add(w->reactor, client_fd, http_conn_event_cb, c)) {
+        atomic_fetch_sub_explicit(&g_http_inflight, 1, memory_order_release);
+        close(client_fd);
+        cwist_free(c);
+    }
 }
 void cwist_http_pool_destroy(void) {
     for (int i = 0; i < get_optimal_thread_count(); i++) {

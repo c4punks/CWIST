@@ -84,8 +84,8 @@ IO_SRC = src/sys/io/io_select.c # Default fallback
 
 ifeq ($(UNAME_S),Linux)
     CFLAGS += -DCWIST_OS_LINUX
-    # Check for io_uring headers? For now assume available or user manages env.
-    IO_SRC = src/sys/io/io_uring.c
+    # io_queue.c is a lock-free job queue (unrelated to io_uring despite the history).
+    IO_SRC = src/sys/io/io_queue.c
 endif
 ifeq ($(UNAME_S),Darwin)
     CFLAGS += -DCWIST_OS_BSD
@@ -123,7 +123,37 @@ SRCS = src/core/sstring/sstring.c \
        src/net/websocket/websocket.c \
        src/net/websocket/ws_utils.c \
        src/core/utils/json_builder.c \
-       src/sys/app/middleware.c
+       src/core/utils/json_heal.c \
+       src/core/utils/zod.c \
+       src/sys/app/middleware.c \
+       src/sys/app/config.c \
+       src/sys/app/logger.c \
+       src/sys/app/shutdown.c \
+       src/sys/app/compress.c \
+       src/sys/app/test_client.c \
+       src/core/log/log.c \
+       src/sys/session/flash.c \
+       src/core/template/template.c \
+       src/core/html/builder.c \
+       src/core/html/css_composer.c \
+       src/sys/app/big_dumb_reply.c \
+       src/sys/sys_info.c \
+       src/core/mem/alloc.c \
+       src/core/mem/arena.c \
+       src/core/mem/gc.c \
+       lib/sqlite3/sqlite3.c \
+       src/security/jwt/jwt.c \
+       src/security/db_crypt/db_crypt.c \
+       src/security/tls/ech.c \
+       src/net/db_sync/db_sync.c \
+       src/net/nats/cwist_nats.c \
+       src/net/redis/cwist_redis.c \
+       src/core/validation/bind.c \
+       src/sys/io/reactor.c \
+       src/sys/job/scheduler.c \
+       src/sys/metrics/metrics.c \
+       src/sys/health/healthz.c \
+       $(IO_SRC)
 
 OBJS = $(SRCS:.c=.o)
 LIB_NAME = libcwist.a
@@ -370,8 +400,33 @@ test_cors: $(LIB_NAME) tests/test_cors.c
 	$(CC) $(CFLAGS) -o test_cors tests/test_cors.c $(LIB_NAME) $(LIBS)
 	./test_cors
 
-%.o: %.c
-	$(CC) $(CFLAGS) -c $< -o $@
+test_websocket: $(LIB_NAME) tests/test_websocket.c
+	$(CC) $(CFLAGS) -o test_websocket tests/test_websocket.c $(LIB_NAME) $(LIBS)
+	./test_websocket
+
+test_shutdown: $(LIB_NAME) tests/test_shutdown.c
+	$(CC) $(CFLAGS) -o test_shutdown tests/test_shutdown.c $(LIB_NAME) $(LIBS)
+	./test_shutdown
+
+test_compress: $(LIB_NAME) tests/test_compress.c
+	$(CC) $(CFLAGS) -o test_compress tests/test_compress.c $(LIB_NAME) $(LIBS)
+	./test_compress
+
+test_log: $(LIB_NAME) tests/test_log.c
+	$(CC) $(CFLAGS) -o test_log tests/test_log.c $(LIB_NAME) $(LIBS)
+	./test_log
+
+nuke_missing_user_test: $(LIB_NAME) tests/nuke_missing_user_test.c
+	$(CC) $(CFLAGS) -o nuke_missing_user_test tests/nuke_missing_user_test.c $(LIB_NAME) $(LIBS)
+	./nuke_missing_user_test
+
+test_bind: $(LIB_NAME) tests/test_bind.c
+	$(CC) $(CFLAGS) -o test_bind tests/test_bind.c $(LIB_NAME) $(LIBS)
+	./test_bind
+
+test_metrics: $(LIB_NAME) tests/test_metrics.c
+	$(CC) $(CFLAGS) -o test_metrics tests/test_metrics.c $(LIB_NAME) $(LIBS)
+	./test_metrics
 
 test_access_log: $(LIB_NAME) tests/test_access_log.c
 	$(CC) $(CFLAGS) -o test_access_log tests/test_access_log.c $(LIB_NAME) $(LIBS)
