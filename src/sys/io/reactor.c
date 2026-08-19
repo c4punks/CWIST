@@ -148,6 +148,20 @@ static size_t cq_ring_size(struct io_uring_params *p) {
     return p->cq_off.cqes + p->cq_entries * sizeof(struct io_uring_cqe);
 }
 
+/* Ring setup helpers absorbed from the retired io_uring_backend.c. */
+static void *mmap_ring(int fd, size_t sz, off_t off) {
+    void *p = mmap(NULL, sz, PROT_READ | PROT_WRITE, MAP_SHARED | MAP_POPULATE, fd, off);
+    return (p == MAP_FAILED) ? NULL : p;
+}
+
+static size_t sq_ring_size(struct io_uring_params *p) {
+    return p->sq_off.array + p->sq_entries * sizeof(uint32_t);
+}
+
+static size_t cq_ring_size(struct io_uring_params *p) {
+    return p->cq_off.cqes + p->cq_entries * sizeof(struct io_uring_cqe);
+}
+
 typedef struct {
     int ring_fd;
     /* Serializes SQ producers: the accept thread (reactor_add) and worker
@@ -404,96 +418,6 @@ bool cwist_reactor_add(cwist_reactor_t *reactor, int fd, cwist_reactor_cb_t cb, 
     if (!ev_ctx) return false;
 
 #ifdef __linux__
-/* Flush the deferred SQE queue with a single io_uring_enter for the whole
- * batch.  On batch failure (SQ momentarily full from concurrent cross-thread
- * submissions) fall back to per-SQE submits with a short retry; a final
- * failure closes the connection and recycles its slot, matching every
- * caller's add-failure path. */
-static bool uring_submit_batch(cwist_reactor_t *reactor, struct io_uring_sqe *batch, uint32_t n) {
-    bool ok = false;
-    pthread_mutex_lock(&reactor->impl.sq_lock);
-    uint32_t tail = *reactor->impl.sq_tail;
-    uint32_t head = __atomic_load_n(reactor->impl.sq_head, __ATOMIC_ACQUIRE);
-    if (tail - head + n <= reactor->impl.sq_entries) {
-        for (uint32_t i = 0; i < n; i++) {
-            uint32_t index = (tail + i) & *reactor->impl.sq_ring_mask;
-            memcpy(&reactor->impl.sqes[index], &batch[i], sizeof(batch[i]));
-        }
-        __atomic_store_n(reactor->impl.sq_tail, tail + n, __ATOMIC_RELEASE);
-        if (sys_io_uring_enter(reactor->impl.ring_fd, n, 0, 0, NULL) >= 0) {
-            ok = true;
-        } else {
-            __atomic_store_n(reactor->impl.sq_tail, tail, __ATOMIC_RELEASE);
-        }
-    }
-    pthread_mutex_unlock(&reactor->impl.sq_lock);
-    return ok;
-}
-
-static void flush_deferred(cwist_reactor_t *reactor) {
-    uint32_t n = reactor->deferred_n;
-    reactor->deferred_n = 0;
-    if (n == 0) return;
-    if (uring_submit_batch(reactor, reactor->deferred_sqes, n)) return;
-    for (uint32_t i = 0; i < n; i++) {
-        struct io_uring_sqe *sqe = &reactor->deferred_sqes[i];
-        reactor_event_ctx_t *ev_ctx = reactor->deferred_ctxs[i];
-        int attempt;
-        for (attempt = 0; attempt < 100; attempt++) {
-            if (uring_submit(reactor, sqe)) break;
-            struct timespec ts = { .tv_sec = 0, .tv_nsec = 1000 * 1000 };
-            nanosleep(&ts, NULL); /* SQ drains without our help; wait it out */
-        }
-        if (attempt == 100) {
-            if (getenv("CWIST_ASYNC_DEBUG")) {
-                fprintf(stderr, "[reactor] deferred submit failed fd=%d; closing\n", (int)sqe->fd);
-            }
-            close((int)sqe->fd);
-            free_reactor_ctx(reactor, ev_ctx);
-        }
-    }
-}
-
-/* Copy the deferred SQEs into the SQ without an io_uring_enter: the run
- * loop's next wait enter carries to_submit, so a dispatch round costs one
- * enter total instead of wait-enter + flush-enter.  On SQ contention fall
- * back to the immediate flush so re-arms never stall. */
-static void queue_deferred(cwist_reactor_t *reactor) {
-    uint32_t n = reactor->deferred_n;
-    if (n == 0) return;
-    pthread_mutex_lock(&reactor->impl.sq_lock);
-    uint32_t tail = *reactor->impl.sq_tail;
-    uint32_t head = __atomic_load_n(reactor->impl.sq_head, __ATOMIC_ACQUIRE);
-    if (tail - head + n <= reactor->impl.sq_entries) {
-        for (uint32_t i = 0; i < n; i++) {
-            uint32_t index = (tail + i) & *reactor->impl.sq_ring_mask;
-            memcpy(&reactor->impl.sqes[index], &reactor->deferred_sqes[i],
-                   sizeof(reactor->deferred_sqes[i]));
-        }
-        __atomic_store_n(reactor->impl.sq_tail, tail + n, __ATOMIC_RELEASE);
-        reactor->deferred_n = 0;
-        reactor->sq_unsubmitted += n;
-    }
-    pthread_mutex_unlock(&reactor->impl.sq_lock);
-    if (reactor->deferred_n) flush_deferred(reactor);
-}
-#endif
-
-static bool reactor_add_common(cwist_reactor_t *reactor, int fd, cwist_reactor_cb_t cb,
-                               const void *payload, size_t payload_size, bool for_write) {
-    if (!reactor || fd < 0) return false;
-    reactor_event_ctx_t *ev_ctx = alloc_reactor_ctx(reactor, fd, cb, payload, payload_size);
-    if (!ev_ctx) return false;
-    ev_ctx->fd = fd;
-    ev_ctx->cb = cb;
-    ev_ctx->ctx = ctx;
-
-#ifdef __linux__
-    if (latency_probe_enabled()) {
-        struct timespec ts;
-        clock_gettime(CLOCK_MONOTONIC, &ts);
-        ev_ctx->armed_ns = (uint64_t)ts.tv_sec * 1000000000ull + (uint64_t)ts.tv_nsec;
-    }
     if (!reactor->impl.use_epoll) {
         /* One-shot POLL_ADD: multishot (IORING_POLL_ADD_MULTI) was rejected
          * because the callback owns ctx and frees it after firing, so a
