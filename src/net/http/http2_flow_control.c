@@ -302,33 +302,15 @@ void cwist_http2_stream_flow_control_consume(cwist_http2_stream_flow_control *fl
     }
 }
 
-/** @brief Retune the receive target toward 2x the measured bandwidth-delay
- * product.
- *
- * Projects the bytes consumed since the previous update over one SRTT.
- * Each retune moves at most a 2x/0.5x step away from the current target, so a
- * micro-interval jitter sample cannot slam the window between its floor and
- * ceiling (oscillation under bursty load).
- *
- * @param pending_update Bytes consumed since the previous window update.
- * @param srtt_us Smoothed round-trip time in microseconds.
- * @param interval_us Elapsed time since the previous update in microseconds.
- * @param current_target Window target currently in effect.
- * @param minimum Lower bound for the returned target.
- * @param maximum Upper bound for the returned target.
- * @return New target window, clamped to [minimum, maximum] and bounded to a
- *         2x grow / 0.5x shrink step from @p current_target; the current
- *         target when @p interval_us is zero.
- */
-static uint32_t cwist_http2_flow_control_retune_target(uint32_t pending_update, uint64_t srtt_us,
-                                                       uint64_t interval_us,
-                                                       uint32_t current_target, uint32_t minimum,
-                                                       uint32_t maximum) {
-    uint64_t bdp2;
-    uint64_t grow_cap;
-    uint64_t shrink_floor;
-    uint32_t target;
-
+/* Retune the receive target toward 2x the measured bandwidth-delay product:
+ * bytes consumed since the previous update, projected over one SRTT. */
+static uint32_t
+cwist_http2_flow_control_retune_target(uint32_t pending_update,
+                                       uint64_t srtt_us,
+                                       uint64_t interval_us,
+                                       uint32_t minimum,
+                                       uint32_t maximum)
+{
     if (interval_us == 0) {
         return minimum;
     }
@@ -336,46 +318,22 @@ static uint32_t cwist_http2_flow_control_retune_target(uint32_t pending_update, 
     return cwist_http2_window_clamp(bdp2, minimum, maximum);
 }
 
-/** @brief Compute the WINDOW_UPDATE credit to hand back to the peer.
- *
- * Tops the window up to the target, but never refunds less than what the
- * application has actually consumed.
- *
- * @param pending_update Bytes consumed by the application awaiting refund.
- * @param receive_window Current receive window.
- * @param target_window Desired steady-state window.
- * @return The larger of @p pending_update and the top-up from
- *         @p receive_window to @p target_window.
- */
-static uint32_t cwist_http2_flow_control_increment(uint32_t pending_update, uint32_t receive_window,
-                                                   uint32_t target_window) {
+/* Credit to hand back to the peer: top the window up to the target, but
+ * never refund less than what the application has actually consumed. */
+static uint32_t
+cwist_http2_flow_control_increment(uint32_t pending_update,
+                                   uint32_t receive_window,
+                                   uint32_t target_window)
+{
     uint32_t top_up = receive_window < target_window ? target_window - receive_window : 0U;
     return pending_update > top_up ? pending_update : top_up;
 }
 
-/** @brief Emit a connection-level WINDOW_UPDATE when enough credit is due.
- *
- * Does nothing until at least half the target window has been consumed
- * (unless @p force), then retunes the target against the measured
- * bandwidth-delay product and serializes a WINDOW_UPDATE for stream 0 into
- * the caller's buffer.  On success the receive window is credited with the
- * increment (saturating at CWIST_HTTP2_MAX_WINDOW), the pending accumulator
- * is cleared, and the update timestamp is advanced.
- *
- * @param flow_control Connection flow-control state.
- * @param buffer Destination buffer for the serialized frame.
- * @param buffer_len Available bytes in @p buffer (at least 13 required).
- * @param written Set to 0 when no frame is emitted, to 13 on success.
- * @param now_us Current time in microseconds; drives retuning.
- * @param force Emit the update even when less than half the target window
- *        is pending.
- * @return 1 when a WINDOW_UPDATE frame was written, 0 when no update is due
- *         or @p flow_control is NULL, -1 when the frame could not be
- *         serialized.
- */
-int cwist_http2_flow_control_maybe_window_update(cwist_http2_flow_control *flow_control,
-                                                 uint8_t *buffer, size_t buffer_len,
-                                                 size_t *written, uint64_t now_us, bool force) {
+int
+cwist_http2_flow_control_maybe_window_update(cwist_http2_flow_control *flow_control,
+                                             uint8_t *buffer, size_t buffer_len,
+                                             size_t *written, uint64_t now_us, bool force)
+{
     uint32_t increment;
 
     if (written != NULL) {
@@ -409,34 +367,12 @@ int cwist_http2_flow_control_maybe_window_update(cwist_http2_flow_control *flow_
     return 1;
 }
 
-/** @brief Emit a stream-level WINDOW_UPDATE when enough credit is due.
- *
- * Server-side only client-initiated (odd, non-zero) streams may receive a
- * stream-level WINDOW_UPDATE; other stream IDs return 0 without emitting
- * anything.  Requires at least half the target window in pending credit
- * unless @p force.  When due, the stream target is retuned against the
- * connection's RTT estimate and a WINDOW_UPDATE for the stream is
- * serialized; the stream receive window is credited (saturating at
- * CWIST_HTTP2_MAX_WINDOW), the pending accumulator is cleared, and the
- * update timestamp is advanced.
- *
- * @param connection_flow_control Connection flow-control state supplying the
- *        RTT estimate.
- * @param stream_flow_control Stream flow-control state to update.
- * @param buffer Destination buffer for the serialized frame.
- * @param buffer_len Available bytes in @p buffer (at least 13 required).
- * @param written Set to 0 when no frame is emitted, to 13 on success.
- * @param now_us Current time in microseconds; drives retuning.
- * @param force Emit the update even when less than half the target window
- *        is pending.
- * @return 1 when a WINDOW_UPDATE frame was written, 0 when the stream is
- *         ineligible or no update is due, -1 when @p flow_control arguments
- *         are NULL or the frame could not be serialized.
- */
-int cwist_http2_stream_flow_control_maybe_window_update(
-    cwist_http2_flow_control *connection_flow_control,
-    cwist_http2_stream_flow_control *stream_flow_control, uint8_t *buffer, size_t buffer_len,
-    size_t *written, uint64_t now_us, bool force) {
+int
+cwist_http2_stream_flow_control_maybe_window_update(cwist_http2_flow_control *connection_flow_control,
+                                                    cwist_http2_stream_flow_control *stream_flow_control,
+                                                    uint8_t *buffer, size_t buffer_len,
+                                                    size_t *written, uint64_t now_us, bool force)
+{
     uint32_t increment;
 
     if (written != NULL) {
@@ -480,15 +416,10 @@ int cwist_http2_stream_flow_control_maybe_window_update(
     return 1;
 }
 
-/** @brief Credit the connection send window from a WINDOW_UPDATE frame.
- *
- * Saturating add: credit is capped at CWIST_HTTP2_MAX_WINDOW.
- *
- * @param flow_control Connection flow-control state.
- * @param increment Send-window increment from the peer.
- */
-void cwist_http2_flow_control_add_send_window(cwist_http2_flow_control *flow_control,
-                                              uint32_t increment) {
+void
+cwist_http2_flow_control_add_send_window(cwist_http2_flow_control *flow_control,
+                                         uint32_t increment)
+{
     if (flow_control != NULL) {
         /* Saturating add: credit is capped at the protocol maximum. */
         flow_control->send_window =
@@ -498,15 +429,10 @@ void cwist_http2_flow_control_add_send_window(cwist_http2_flow_control *flow_con
     }
 }
 
-/** @brief Credit a stream send window from a WINDOW_UPDATE frame.
- *
- * Saturating add: credit is capped at CWIST_HTTP2_MAX_WINDOW.
- *
- * @param flow_control Stream flow-control state.
- * @param increment Send-window increment from the peer.
- */
-void cwist_http2_stream_flow_control_add_send_window(cwist_http2_stream_flow_control *flow_control,
-                                                     uint32_t increment) {
+void
+cwist_http2_stream_flow_control_add_send_window(cwist_http2_stream_flow_control *flow_control,
+                                                uint32_t increment)
+{
     if (flow_control != NULL) {
         flow_control->send_window =
             increment > CWIST_HTTP2_MAX_WINDOW - flow_control->send_window

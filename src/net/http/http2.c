@@ -24,9 +24,7 @@
 
 #include <cwist/net/http/http2.h>
 #include <cwist/net/http/http2_flow_control.h>
-#include <cwist/net/http/async.h>
 #include <cwist/core/mem/alloc.h>
-#include <cwist/core/mem/gc.h>
 #include <cwist/core/log.h>
 #include <cwist/sys/metrics/metrics.h>
 #include <cwist/core/seq/seq.h>
@@ -184,6 +182,13 @@ static uint64_t h2_now_ms(void) {
     return (uint64_t)ts.tv_sec * 1000 + (uint64_t)ts.tv_nsec / 1000000;
 }
 
+/* Monotonic clock in microseconds, for flow-control RTT samples/pacing. */
+static uint64_t h2_now_us(void) {
+    struct timespec ts;
+    clock_gettime(CLOCK_MONOTONIC, &ts);
+    return (uint64_t)ts.tv_sec * 1000000 + (uint64_t)ts.tv_nsec / 1000;
+}
+
 /* Idle deadline for a connection with no complete frame arriving.  Defaults
  * to CWIST_HTTP2_IDLE_TIMEOUT_MS, overridable via the env var of the same
  * name (read once at first use). */
@@ -201,21 +206,14 @@ static int h2_idle_timeout_ms(void) {
 typedef struct h2_stream {
     uint32_t stream_id;
     cwist_http_request *req;
-    int32_t send_window;   /* peer-advertised; bytes we may send */
-    int32_t recv_window;   /* our window; bytes peer may send */
+    /* Adaptive flow control (send: peer-advertised credit; receive: our
+     * advertised credit).  Replaces the old hand-rolled window ints. */
+    cwist_http2_stream_flow_control fc;
+    bool send_aborted;       /* RST_STREAM received while sending */
     uint8_t recv_xor;      /* running XOR of received DATA payload bytes */
     uint8_t send_xor;      /* running XOR of sent DATA payload bytes */
     struct h2_stream *next;
 } h2_stream;
-
-/* HPACK dynamic table entry (RFC 7541 section 4).  Entries are chained newest-first;
- * dynamic index 62 addresses the head (most recently inserted). */
-typedef struct h2_hpack_entry {
-    char *name;
-    char *value;
-    size_t size; /* name_len + value_len + 32 (RFC 7541 section 4.1) */
-    struct h2_hpack_entry *next;
-} h2_hpack_entry;
 
 typedef struct h2_deferred_frame {
     unsigned char hdr[9];
@@ -223,182 +221,7 @@ typedef struct h2_deferred_frame {
     struct h2_deferred_frame *next;
 } h2_deferred_frame;
 
-/* --- Async defer completion queue ---
- *
- * Plan B for deferred responses: the worker thread that completes an async
- * job only enqueues the finished (stream_id, req, res) node and pokes the
- * wake fd; the connection thread drains the queue and does HPACK encoding +
- * frame writes itself, preserving single-threaded HPACK dynamic table and
- * flow-control integrity.  refs: one held by the connection, one per
- * in-flight cwist_async handle (acquired in cwist_async_defer). */
-typedef struct h2_async_node {
-    uint32_t stream_id;
-    cwist_http_request *req;
-    cwist_http_response *send;      /* response to transmit (final_res) */
-    cwist_http_response *res;       /* handler's response (request arena) */
-    bool send_owned;                /* send came from respond_with */
-    struct h2_async_node *next;
-} h2_async_node;
-
-struct cwist_h2_async_queue {
-    int wake_rd;            /* read side: eventfd (Linux) or pipe */
-    int wake_wr;            /* write side (same as wake_rd for eventfd) */
-    pthread_mutex_t mu;
-    h2_async_node *head;
-    h2_async_node *tail;
-    bool closed;            /* connection tore down: enqueue discards */
-    _Atomic int refs;
-};
-
-/**
- * @brief Destroy a deferred-response queue node and everything it owns.
- * Frees the send response (when separately owned), the handler response, and
- * the request, then the node itself.  Thread-safe: only called when no other
- * party holds the node.
- * @param n Node to discard; must not be on a queue.
- */
-static void h2_async_node_discard(h2_async_node *n) {
-    if (n->send_owned && n->send && n->send != n->res)
-        cwist_http_response_destroy(n->send);
-    if (n->res) cwist_http_response_destroy(n->res);
-    if (n->req) cwist_http_request_destroy(n->req);
-    cwist_free(n);
-}
-
-/**
- * @brief Create the deferred-response completion queue.
- * Allocates the queue and its wake descriptor (eventfd on Linux, a pipe
- * elsewhere), both non-blocking.  The queue is born with one reference held
- * by the connection.
- * @return Newly allocated queue, or NULL on allocation or descriptor failure.
- */
-static cwist_h2_async_queue *cwist_h2_async_queue_create(void) {
-    cwist_h2_async_queue *q = (cwist_h2_async_queue *)cwist_alloc(sizeof(*q));
-    if (!q) return NULL;
-    memset(q, 0, sizeof(*q));
-    q->wake_rd = -1;
-    q->wake_wr = -1;
-    pthread_mutex_init(&q->mu, NULL);
-    atomic_init(&q->refs, 1);
-#ifdef __linux__
-    q->wake_rd = eventfd(0, EFD_NONBLOCK | EFD_CLOEXEC);
-    q->wake_wr = q->wake_rd;
-#else
-    int pfds[2];
-    if (pipe(pfds) == 0) {
-        for (int i = 0; i < 2; i++) {
-            int fl = fcntl(pfds[i], F_GETFL, 0);
-            if (fl >= 0) fcntl(pfds[i], F_SETFL, fl | O_NONBLOCK);
-        }
-        q->wake_rd = pfds[0];
-        q->wake_wr = pfds[1];
-    }
-#endif
-    /* Explicit queue refs can outlive the connection thread's TLS GC. */
-    if (cwist_full_gc_enabled()) cwist_gc_scope_disown(q);
-    return q;
-}
-
-/**
- * @brief Take an additional reference on the queue (for an in-flight
- * cwist_async handle).
- * @param q Queue to retain; NULL is tolerated.
- * @return @p q.
- */
-cwist_h2_async_queue *cwist_h2_async_queue_acquire(cwist_h2_async_queue *q) {
-    if (q) atomic_fetch_add_explicit(&q->refs, 1, memory_order_relaxed);
-    return q;
-}
-
-/**
- * @brief Drop a reference on the queue.
- * On the last reference: closes the wake descriptors, destroys the mutex, and
- * frees the queue.  Callers must not enqueue after close().
- * @param q Queue to release; NULL is tolerated.
- */
-void cwist_h2_async_queue_release(cwist_h2_async_queue *q) {
-    if (!q) return;
-    if (atomic_fetch_sub_explicit(&q->refs, 1, memory_order_acq_rel) != 1) return;
-    if (q->wake_rd >= 0) close(q->wake_rd);
-    if (q->wake_wr >= 0 && q->wake_wr != q->wake_rd) close(q->wake_wr);
-    pthread_mutex_destroy(&q->mu);
-    cwist_free(q);
-}
-
-/* Worker-thread entry point: enqueue the finished exchange and wake the
- * connection thread.  After connection teardown (closed) the node is
- * discarded without sending. */
-int cwist_h2_async_queue_enqueue(cwist_h2_async_queue *q, uint32_t stream_id,
-                                 cwist_http_request *req,
-                                 cwist_http_response *send,
-                                 cwist_http_response *res,
-                                 bool send_owned) {
-    if (!q) return -1;
-    h2_async_node *n = (h2_async_node *)cwist_alloc(sizeof(*n));
-    if (!n) {
-        /* Enqueue consumes the exchange even when staging fails. Its
-         * producer already relinquished ownership before calling us. */
-        if (send_owned && send && send != res) cwist_http_response_destroy(send);
-        cwist_http_response_destroy(res);
-        cwist_http_request_destroy(req);
-        return -1;
-    }
-    n->stream_id = stream_id;
-    n->req = req;
-    n->send = send;
-    n->res = res;
-    n->send_owned = send_owned;
-    n->next = NULL;
-    pthread_mutex_lock(&q->mu);
-    if (q->closed) {
-        pthread_mutex_unlock(&q->mu);
-        h2_async_node_discard(n);
-        return -1;
-    }
-    /* The connection may drain immediately after the mutex is released;
-     * producer TLS sweeping must no longer own this published node. */
-    if (cwist_full_gc_enabled()) cwist_gc_scope_disown(n);
-    if (q->tail)
-        q->tail->next = n;
-    else
-        q->head = n;
-    q->tail = n;
-    /* Wake while holding mu: after close()+release the fds may be recycled,
-     * and closed is flipped under the same mutex before fds are closed. */
-    if (q->wake_wr >= 0) {
-        uint64_t one = 1;
-        ssize_t w = write(q->wake_wr, &one, sizeof(one));
-        (void)w; /* EAGAIN: counter already non-zero, fd stays readable */
-    }
-    pthread_mutex_unlock(&q->mu);
-    return 0;
-}
-
-/**
- * @brief Wake descriptor to poll from the connection's event loop.
- * @param q Queue to query.
- * @return Read side of the wake fd, or -1 when @p q is NULL or has none.
- */
-static int cwist_h2_async_queue_fd(const cwist_h2_async_queue *q) {
-    return q ? q->wake_rd : -1;
-}
-
-/* Connection teardown: stop accepting completions and discard everything
- * still queued (the worker already gave up ownership of req/res). */
-static void cwist_h2_async_queue_close(cwist_h2_async_queue *q) {
-    pthread_mutex_lock(&q->mu);
-    q->closed = true;
-    h2_async_node *list = q->head;
-    q->head = q->tail = NULL;
-    pthread_mutex_unlock(&q->mu);
-    while (list) {
-        h2_async_node *next = list->next;
-        h2_async_node_discard(list);
-        list = next;
-    }
-}
-
-typedef struct h2_conn {
+typedef struct {
     cwist_https_connection *conn;
     h2_stream *streams;
     uint32_t peer_max_frame_size;
@@ -412,12 +235,6 @@ typedef struct h2_conn {
     uint64_t ping_sent_us;
     unsigned char ping_payload[8];
     bool ping_outstanding;
-    /* Userspace frame batching: outgoing frames accumulate here and flush on
-     * size threshold or before any blocking wait, cutting per-frame write /
-     * SSL_write syscalls for both h2c and TLS. */
-    unsigned char *out_buf;
-    size_t out_len;
-    size_t out_cap;
     unsigned char *cont_buf;
     size_t cont_len;
     size_t cont_cap;
@@ -427,6 +244,11 @@ typedef struct h2_conn {
     bool sequenced_data;   /* CWIST extension: DATA frames carry seq chunks */
     uint32_t last_processed_stream_id;
     uint64_t last_activity; /* monotonic ms of the last complete frame read */
+    /* Frames the send-window wait loop had to read off the wire but must not
+     * dispatch (HEADERS/SETTINGS of other streams, etc.). The main loop
+     * drains these before touching the socket again. */
+    h2_deferred_frame *deferred_head;
+    h2_deferred_frame *deferred_tail;
 } h2_conn;
 
 /**
@@ -513,36 +335,12 @@ static void h2_conn_destroy(h2_conn *hc) {
         s = next;
     }
     cwist_free(hc->cont_buf);
-    cwist_free(hc->out_buf);
-    h2_hpack_entry *he = hc->hpack_head;
-    while (he) {
-        h2_hpack_entry *next = he->next;
-        cwist_free(he->name);
-        cwist_free(he->value);
-        cwist_free(he);
-        he = next;
-    }
-    hc->hpack_head = NULL;
-    hc->hpack_size = 0;
     h2_deferred_frame *df = hc->deferred_head;
     while (df) {
         h2_deferred_frame *next = df->next;
         cwist_free(df->payload);
         cwist_free(df);
         df = next;
-    }
-    if (hc->out_mu_init) pthread_mutex_destroy(&hc->out_mu);
-    if (hc->fc_mu_init) {
-        pthread_cond_destroy(&hc->fc_cond);
-        pthread_mutex_destroy(&hc->fc_mu);
-    }
-    if (hc->async_q) {
-        /* Pending completions are discarded; completions arriving after the
-         * close hit queue->closed and discard themselves.  The handle-held
-         * references keep the queue alive until the last worker releases. */
-        cwist_h2_async_queue_close(hc->async_q);
-        cwist_h2_async_queue_release(hc->async_q);
-        hc->async_q = NULL;
     }
 }
 
@@ -976,7 +774,7 @@ static int h2_auto_window_update(h2_conn *hc, h2_stream *s) {
                                                          sizeof(frame_buf), &written,
                                                          now, false);
     if (r < 0) return -1;
-    if (r > 0 && h2_out_append(hc, frame_buf, written) != 0) return -1;
+    if (r > 0 && h2_write_all(hc->conn, frame_buf, written) != 0) return -1;
 
     if (s) {
         written = 0;
@@ -984,7 +782,7 @@ static int h2_auto_window_update(h2_conn *hc, h2_stream *s) {
                                                                 frame_buf, sizeof(frame_buf),
                                                                 &written, now, false);
         if (r < 0) return -1;
-        if (r > 0 && h2_out_append(hc, frame_buf, written) != 0) return -1;
+        if (r > 0 && h2_write_all(hc->conn, frame_buf, written) != 0) return -1;
     }
     return 0;
 }
@@ -1014,42 +812,13 @@ static void h2_commit_send(h2_conn *hc, h2_stream *s, uint32_t bytes) {
     if (s) s->fc.send_window -= bytes;
 }
 
-/* Park a hook-taken handler thread until send credit may be available again,
- * the stream is aborted/detached, or no frame has arrived for a full idle
- * deadline.  The dispatcher thread owns socket reads and applies WINDOW_UPDATE
- * credit, then signals fc_cond; the caller must NOT hold out_mu (the
- * dispatcher may need it to flush its own frames while we wait).
- * Returns 0 when credit may be available, -1 on abort, teardown, or stall
- * timeout. */
-static int h2_fc_wait_credit(h2_conn *hc, h2_stream *s) {
-    if (!hc->fc_mu_init) return -1;
-    pthread_mutex_lock(&hc->fc_mu);
-    s->fc_waiters++;
-    int rc = -1;
-    for (;;) {
-        if (s->send_aborted || s->fc_detached) break;
-        if (h2_send_allowance(hc, s, 1) > 0) { rc = 0; break; }
-        if (h2_now_ms() - hc->last_activity >= (uint64_t)h2_idle_timeout_ms()) break;
-        struct timespec ts;
-        clock_gettime(CLOCK_REALTIME, &ts);
-        ts.tv_nsec += 100000000L; /* 100ms recheck: covers pacing-token refill */
-        if (ts.tv_nsec >= 1000000000L) { ts.tv_sec++; ts.tv_nsec -= 1000000000L; }
-        pthread_cond_timedwait(&hc->fc_cond, &hc->fc_mu, &ts);
-    }
-    s->fc_waiters--;
-    /* Wake h2_stream_drain_waiters if it is waiting for us to leave. */
-    pthread_cond_broadcast(&hc->fc_cond);
-    pthread_mutex_unlock(&hc->fc_mu);
-    return rc;
-}
-
 /* Send a PING carrying a monotonic timestamp; the matching ACK yields an
  * RTT sample that feeds the adaptive window/pacing tuning. */
 static int h2_send_ping(h2_conn *hc) {
     uint64_t now = h2_now_us();
     unsigned char p[8];
     for (int i = 0; i < 8; i++) p[i] = (unsigned char)(now >> (56 - 8 * i));
-    if (h2_write_frame(hc, CWIST_HTTP2_FRAME_PING, 0, 0, p, 8) != 0) return -1;
+    if (h2_write_frame(hc->conn, CWIST_HTTP2_FRAME_PING, 0, 0, p, 8) != 0) return -1;
     memcpy(hc->ping_payload, p, 8);
     hc->ping_sent_us = now;
     hc->ping_outstanding = true;
@@ -1611,17 +1380,14 @@ static void h2_decode_header_block(cwist_http_request *req, const unsigned char 
             if (h2_decode_integer(payload, len, &pos, 7, &index) != 0) return H2_DECODE_COMPRESSION_ERROR;
             const cwist_http2_static_header *entry = h2_static_header(index);
             if (entry && entry->name) {
-                if (h2_apply_header(req, entry->name, entry->value, &st) != 0)
-                    return H2_DECODE_STREAM_ERROR;
-                continue;
+                h2_apply_header(req, entry->name, entry->value);
+            } else {
+                /* Client referenced the HPACK dynamic table despite
+                 * SETTINGS_HEADER_TABLE_SIZE=0: the header is lost, so make
+                 * the loss observable instead of a silent session break. */
+                cwist_metric_inc(cwist_metrics_registry(), CWIST_METRIC_H2_HEADERS_DROPPED);
+                CWIST_LOG_WARN("[h2] dropping header field: indexed name/value index=%u beyond static table", index);
             }
-            const h2_hpack_entry *dyn = h2_hpack_dynamic_get(hc, index);
-            if (!dyn) {
-                CWIST_LOG_WARN("[h2] header field index=%u beyond static+dynamic tables", index);
-                return H2_DECODE_COMPRESSION_ERROR;
-            }
-            if (h2_apply_header(req, dyn->name, dyn->value, &st) != 0)
-                return H2_DECODE_STREAM_ERROR;
             continue;
         }
 
@@ -1650,15 +1416,14 @@ static void h2_decode_header_block(cwist_http_request *req, const unsigned char 
 
         if (name_index > 0) {
             const cwist_http2_static_header *entry = h2_static_header(name_index);
-            if (entry && entry->name) {
-                name = cwist_strdup(entry->name);
-            } else {
-                const h2_hpack_entry *dyn = h2_hpack_dynamic_get(hc, name_index);
-                if (dyn) name = cwist_strdup(dyn->name);
-            }
-            if (!name) {
-                CWIST_LOG_WARN("[h2] literal field name index=%u beyond static+dynamic tables", name_index);
-                return H2_DECODE_COMPRESSION_ERROR;
+            if (!entry || !entry->name) {
+                /* Same dynamic-table reference case as above, on the name
+                 * side of a literal field. */
+                cwist_metric_inc(cwist_metrics_registry(), CWIST_METRIC_H2_HEADERS_DROPPED);
+                CWIST_LOG_WARN("[h2] dropping header field: literal with name index=%u beyond static table", name_index);
+                char *discard = h2_decode_string(payload, len, &pos);
+                cwist_free(discard);
+                continue;
             }
         } else {
             name = h2_decode_string(payload, len, &pos);
@@ -2013,16 +1778,22 @@ static int h2_read_all(cwist_https_connection *conn, void *buf, int len) {
     return total;
 }
 
-/* Returns 0 normally, -1 when the peer vanished mid-frame (EOF/error). */
+/* Returns 0 normally, -1 when the peer vanished mid-frame (EOF/error).
+ *
+ * Two traps are handled here:
+ * 1. poll(fd, 0) alone misses WINDOW_UPDATEs sitting in OpenSSL's internal
+ *    buffer (a whole TLS record is decrypted per SSL_read, so leftover
+ *    frames have zero bytes pending on the socket). Without the
+ *    SSL_pending check the window wait loop never sees the update and the
+ *    connection is torn down mid-body — the "some chunks arrive, then
+ *    stuck" symptom.
+ * 2. Frames this loop is not responsible for (HEADERS/SETTINGS of other
+ *    streams, etc.) used to be read and discarded. They are now queued so
+ *    the main frame loop can dispatch them. */
 static int h2_process_incoming_frames_nonblocking(h2_conn *hc, h2_stream *s) {
     struct pollfd pfd;
     pfd.fd = hc->conn->fd;
     pfd.events = POLLIN;
-
-    int pr = poll(&pfd, 1, 0);
-    if (pr > 0 && (pfd.revents & (POLLHUP | POLLERR)) && !(pfd.revents & POLLIN)) {
-        if (!hc->conn->ssl || SSL_pending(hc->conn->ssl) == 0) return -1;
-    }
 
     while ((poll(&pfd, 1, 0) > 0 && (pfd.revents & POLLIN)) ||
            (hc->conn->ssl && SSL_pending(hc->conn->ssl) > 0)) {
@@ -2078,10 +1849,6 @@ static int h2_process_incoming_frames_nonblocking(h2_conn *hc, h2_stream *s) {
                 h2_write_frame(hc, 0x06, 0x01, 0, payload, 8);
             }
         } else if (type == 0x03) { // RST_STREAM
-            if (!h2_conn_consume_rst_budget(hc)) {
-                cwist_free(payload);
-                return -1;
-            }
             if (s && stream_id == s->stream_id) {
                 s->send_aborted = true;
             }
@@ -2130,10 +1897,10 @@ static int h2_send_seq_file_body(h2_conn *hc, h2_stream *s, uint32_t stream_id,
     off_t cur_offset = offset;
 
     for (uint32_t i = 0; i < total_chunks && remaining > 0; i++) {
-        while (hc->conn_send_window <= 0 || (s && s->send_window <= 0)) {
+        while (hc->fc.send_window == 0 || (s && s->fc.send_window == 0)) {
             if (h2_process_incoming_frames_nonblocking(hc, s) != 0) return -1;
-            if (s && s->send_window == -999) return -1;
-            if (hc->conn_send_window <= 0 || (s && s->send_window <= 0)) {
+            if (s && s->send_aborted) return -1;
+            if (hc->fc.send_window == 0 || (s && s->fc.send_window == 0)) {
                 /* Give up if no frame arrived within the idle deadline. */
                 if (h2_now_ms() - hc->last_activity >= (uint64_t)h2_idle_timeout_ms()) return -1;
                 struct timespec ts = {0, 2000000};
@@ -2186,10 +1953,10 @@ static int h2_send_seq_memory_body(h2_conn *hc, h2_stream *s, uint32_t stream_id
     if (!cwist_seq_split(body_data, body_len, chunk_payload, &msg)) return -1;
 
     for (size_t i = 0; i < msg.count; i++) {
-        while (hc->conn_send_window <= 0 || (s && s->send_window <= 0)) {
+        while (hc->fc.send_window == 0 || (s && s->fc.send_window == 0)) {
             if (h2_process_incoming_frames_nonblocking(hc, s) != 0) return -1;
-            if (s && s->send_window == -999) return -1;
-            if (hc->conn_send_window <= 0 || (s && s->send_window <= 0)) {
+            if (s && s->send_aborted) return -1;
+            if (hc->fc.send_window == 0 || (s && s->fc.send_window == 0)) {
                 /* Give up if no frame arrived within the idle deadline. */
                 if (h2_now_ms() - hc->last_activity >= (uint64_t)h2_idle_timeout_ms()) return -1;
                 struct timespec ts = {0, 2000000};
@@ -2198,8 +1965,7 @@ static int h2_send_seq_memory_body(h2_conn *hc, h2_stream *s, uint32_t stream_id
         }
 
         size_t chunk_len = msg.chunk_lens[i];
-        if ((int32_t)chunk_len > hc->conn_send_window ||
-            (s && (int32_t)chunk_len > s->send_window)) {
+        if (h2_send_allowance(hc, s, (uint32_t)chunk_len) < chunk_len) {
             /* Window too small for a full sequenced chunk; wait for update. */
             if (h2_process_incoming_frames_nonblocking(hc, s) != 0) return -1;
             if (h2_now_ms() - hc->last_activity >= (uint64_t)h2_idle_timeout_ms()) return -1;
@@ -2525,10 +2291,10 @@ static int h2_send_response_hc(h2_conn *hc, uint32_t stream_id, cwist_http_respo
         off_t offset = res->file_stream_offset;
         size_t remaining = res->file_stream_len;
         while (remaining > 0) {
-            while (hc->conn_send_window <= 0 || (s && s->send_window <= 0)) {
+            while (hc->fc.send_window == 0 || (s && s->fc.send_window == 0)) {
                 if (h2_process_incoming_frames_nonblocking(hc, s) != 0) return -1;
-                if (s && s->send_window == -999) return -1;
-                if (hc->conn_send_window <= 0 || (s && s->send_window <= 0)) {
+                if (s && s->send_aborted) return -1;
+                if (hc->fc.send_window == 0 || (s && s->fc.send_window == 0)) {
                     /* Give up if no frame arrived within the idle deadline. */
                     if (h2_now_ms() - hc->last_activity >= (uint64_t)h2_idle_timeout_ms()) return -1;
                     struct timespec ts = {0, 2000000};
@@ -2539,8 +2305,7 @@ static int h2_send_response_hc(h2_conn *hc, uint32_t stream_id, cwist_http_respo
             uint32_t chunk = (uint32_t)(remaining > max_frame ? max_frame : remaining);
             uint32_t allowed = h2_send_allowance(hc, s, chunk);
             if (allowed == 0) {
-                /* Pacing throttled us below one byte; flush and wait. */
-                if (h2_out_flush(hc) != 0) return -1;
+                /* Pacing throttled us below one byte; wait briefly. */
                 struct timespec ts = {0, 2000000};
                 nanosleep(&ts, NULL);
                 continue;
@@ -2551,23 +2316,22 @@ static int h2_send_response_hc(h2_conn *hc, uint32_t stream_id, cwist_http_respo
             ssize_t r = pread(res->file_stream_fd, chunk_buf, allowed, offset);
             if (r <= 0) { cwist_free(chunk_buf); return -1; }
             uint8_t flags = (remaining == (size_t)r) ? CWIST_HTTP2_FLAG_END_STREAM : 0;
-            if (h2_write_frame(hc, CWIST_HTTP2_FRAME_DATA, flags, stream_id, chunk_buf, (uint32_t)r) != 0) {
+            if (h2_write_frame(hc->conn, CWIST_HTTP2_FRAME_DATA, flags, stream_id, chunk_buf, (uint32_t)r) != 0) {
                 cwist_free(chunk_buf); return -1;
             }
             if (s) s->send_xor ^= h2_xor_bytes(chunk_buf, (size_t)r);
-            free(chunk_buf);
-            hc->conn_send_window -= (int32_t)r;
-            if (s) s->send_window -= (int32_t)r;
+            cwist_free(chunk_buf);
+            h2_commit_send(hc, s, (uint32_t)r);
             offset += r;
             remaining -= (size_t)r;
         }
     } else {
         size_t sent = 0;
         while (sent < body_len) {
-            while (hc->conn_send_window <= 0 || (s && s->send_window <= 0)) {
+            while (hc->fc.send_window == 0 || (s && s->fc.send_window == 0)) {
                 if (h2_process_incoming_frames_nonblocking(hc, s) != 0) return -1;
-                if (s && s->send_window == -999) return -1;
-                if (hc->conn_send_window <= 0 || (s && s->send_window <= 0)) {
+                if (s && s->send_aborted) return -1;
+                if (hc->fc.send_window == 0 || (s && s->fc.send_window == 0)) {
                     /* Give up if no frame arrived within the idle deadline. */
                     if (h2_now_ms() - hc->last_activity >= (uint64_t)h2_idle_timeout_ms()) return -1;
                     struct timespec ts = {0, 2000000};
@@ -2579,8 +2343,7 @@ static int h2_send_response_hc(h2_conn *hc, uint32_t stream_id, cwist_http_respo
             uint32_t chunk = (uint32_t)(remaining > max_frame ? max_frame : remaining);
             uint32_t allowed = h2_send_allowance(hc, s, chunk);
             if (allowed == 0) {
-                /* Pacing throttled us below one byte; flush and wait. */
-                if (h2_out_flush(hc) != 0) return -1;
+                /* Pacing throttled us below one byte; wait briefly. */
                 struct timespec ts = {0, 2000000};
                 nanosleep(&ts, NULL);
                 continue;
@@ -2592,8 +2355,7 @@ static int h2_send_response_hc(h2_conn *hc, uint32_t stream_id, cwist_http_respo
                 return -1;
             }
             if (s) s->send_xor ^= h2_xor_bytes(body_data + sent, allowed);
-            hc->conn_send_window -= (int32_t)allowed;
-            if (s) s->send_window -= (int32_t)allowed;
+            h2_commit_send(hc, s, allowed);
             sent += allowed;
         }
     }
@@ -3162,10 +2924,20 @@ cwist_error_t cwist_http2_serve_connection_ex(cwist_https_connection *conn, void
     bool sent_goaway = false;
     while (connected && atomic_load(&g_cwist_running)) {
         unsigned char hdr[9];
-        int offset = 0;
-        while (offset < 9) {
-            /* Bound each blocking read with the idle deadline so an idle
-             * connection cannot monopolize a pool worker forever. */
+        unsigned char *payload = NULL;
+
+        /* Frames the send-window wait loop pulled off the wire but could not
+         * dispatch are served first; only then touch the socket. */
+        h2_deferred_frame *df = hc.deferred_head;
+        if (df) {
+            hc.deferred_head = df->next;
+            if (!hc.deferred_head) hc.deferred_tail = NULL;
+            memcpy(hdr, df->hdr, 9);
+            payload = df->payload;
+            cwist_free(df);
+        } else {
+            /* Bound the wait for the next frame with the idle deadline so an
+             * idle connection cannot monopolize a pool worker forever. */
             if (h2_wait_readable(&hc) != 0) {
                 if (!sent_goaway &&
                     h2_now_ms() - hc.last_activity >= (uint64_t)h2_idle_timeout_ms()) {
@@ -3175,9 +2947,10 @@ cwist_error_t cwist_http2_serve_connection_ex(cwist_https_connection *conn, void
                 connected = false;
                 break;
             }
-            int n = h2_read(conn, hdr + offset, 9 - offset);
-            if (n <= 0) { connected = false; break; }
-            offset += n;
+            /* Frame bytes already in flight may still straddle TLS records or
+             * TCP segments; h2_read_full waits out WANT_READ instead of
+             * treating it as a dropped connection. */
+            if (h2_read_full(&hc, hdr, 9) != 0) { connected = false; break; }
         }
 
         uint32_t len = ((uint32_t)hdr[0] << 16) | ((uint32_t)hdr[1] << 8) | hdr[2];
@@ -3201,18 +2974,12 @@ cwist_error_t cwist_http2_serve_connection_ex(cwist_https_connection *conn, void
             }
         }
 
-        if (type == CWIST_HTTP2_FRAME_SETTINGS) {
-            if ((hdr[4] & CWIST_HTTP2_FLAG_ACK) == 0) {
-                h2_write_frame(conn, CWIST_HTTP2_FRAME_SETTINGS, CWIST_HTTP2_FLAG_ACK, 0, NULL, 0);
-            }
-        } else if (type == CWIST_HTTP2_FRAME_HEADERS && stream_id != 0) {
-            cwist_http_request *req = cwist_http_request_create();
-            if (!req) { free(payload); break; }
-            cwist_sstring_assign(req->version, "HTTP/2");
-            req->stream_id = stream_id;
-            req->private_data = conn;
-
-        hc.last_activity = h2_now_ms();
+        if (!df && len > 0) {
+            payload = (unsigned char *)cwist_alloc(len);
+            if (!payload) { connected = false; break; }
+            if (h2_read_full(&hc, payload, len) != 0) connected = false;
+            if (!connected) { cwist_free(payload); break; }
+        }
 
         hc.last_activity = h2_now_ms();
 
