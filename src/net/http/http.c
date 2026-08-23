@@ -1068,6 +1068,49 @@ static void cwist_tcp_cork_flush(int fd) {
 bool cwist_tcp_cork_enabled(void) { return false; }
 #endif
 
+/* --- Optional TCP_CORK coalescing layer (cleartext HTTP/1.1) -------------
+ * Enabled at runtime with CWIST_USE_TCP_CORK=1, no source changes needed.
+ * While corked, headers + body + file bytes accumulate into full segments;
+ * instead of flushing everything in one giant clump, the file path flushes
+ * every CWIST_TCP_CORK_BURST bytes (default 256 KiB), which is what keeps
+ * high-RTT links fed without head-of-queue clumping. TLS is unaffected
+ * (records are sealed above the TCP layer, so cork buys nothing there). */
+#if defined(__linux__) && defined(TCP_CORK)
+#define CWIST_TCP_CORK_DEFAULT_BURST (256 * 1024)
+
+bool cwist_tcp_cork_enabled(void) {
+    static int enabled = -1; /* benign idempotent race on first use */
+    if (enabled < 0) {
+        const char *env = getenv("CWIST_USE_TCP_CORK");
+        enabled = (env && atoi(env) > 0) ? 1 : 0;
+    }
+    return enabled == 1;
+}
+
+static size_t cwist_tcp_cork_burst(void) {
+    static size_t burst = 0;
+    if (burst == 0) {
+        const char *env = getenv("CWIST_TCP_CORK_BURST");
+        long v = (env && *env) ? atol(env) : 0;
+        burst = (v >= 16384) ? (size_t)v : (size_t)CWIST_TCP_CORK_DEFAULT_BURST;
+    }
+    return burst;
+}
+
+static int cwist_tcp_cork_set(int fd, bool on) {
+    int v = on ? 1 : 0;
+    return setsockopt(fd, IPPROTO_TCP, TCP_CORK, &v, sizeof(v));
+}
+
+/* Flush pending corked bytes, then re-cork: a burst boundary. */
+static void cwist_tcp_cork_flush(int fd) {
+    cwist_tcp_cork_set(fd, false);
+    cwist_tcp_cork_set(fd, true);
+}
+#else
+bool cwist_tcp_cork_enabled(void) { return false; }
+#endif
+
 /**
  * @brief Send an entire iovec over a (possibly non-blocking) socket.
  * Handles EINTR, EAGAIN/EWOULDBLOCK with POLLOUT polling, and partial writes.
