@@ -176,18 +176,9 @@ typedef struct {
     int fd;
     cwist_reactor_cb_t cb;
     void *ctx;
-#ifdef __linux__
-    /* CLOCK_MONOTONIC timestamp taken in reactor_add_common right before the
-     * POLL_ADD submit/defer decision; approximates when the fd started
-     * waiting for readiness. Only set when CWIST_LATENCY_PROBE is enabled;
-     * zero means "armed before the probe was enabled" (defensive, see the
-     * dispatch loop). */
-    uint64_t armed_ns;
-#endif
     /* Inline caller payload; ctx always points here. Zeroed on checkout so
      * reuse across events cannot leak stale fields (calloc semantics
-     * without the heap).  While the slot sits on the free list, ctx is
-     * borrowed as the next-free link. */
+     * without the heap). */
     unsigned char payload[CWIST_REACTOR_PAYLOAD_SIZE];
 } reactor_event_ctx_t;
 
@@ -209,19 +200,13 @@ struct cwist_reactor {
     uint32_t pool_cursor;
 };
 
-static reactor_event_ctx_t *alloc_reactor_ctx(cwist_reactor_t *r, int fd, cwist_reactor_cb_t cb, void *ctx) {
-    if (!r) return NULL;
-    uint32_t start = r->pool_cursor;
-    for (uint32_t i = 0; i < MAX_REACTOR_EVENTS; i++) {
-        uint32_t idx = (start + i) % MAX_REACTOR_EVENTS;
-        if (!r->event_pool[idx].in_use) {
-            r->event_pool[idx].fd = fd;
-            r->event_pool[idx].cb = cb;
-            r->event_pool[idx].ctx = ctx;
-            r->event_pool[idx].in_use = true;
-            r->pool_cursor = (idx + 1) % MAX_REACTOR_EVENTS;
-            return &r->event_pool[idx];
-        }
+static reactor_event_ctx_t *alloc_reactor_ctx(cwist_reactor_t *r, int fd, cwist_reactor_cb_t cb,
+                                              const void *payload, size_t payload_size) {
+    if (!r || payload_size > CWIST_REACTOR_PAYLOAD_SIZE) return NULL;
+    pthread_mutex_lock(&r->pool_lock);
+    if (r->free_top == 0) {
+        pthread_mutex_unlock(&r->pool_lock);
+        return NULL;
     }
     return v == 1;
 }
@@ -386,31 +371,7 @@ static reactor_event_ctx_t *alloc_reactor_ctx(cwist_reactor_t *r, int fd, cwist_
     if (ev_ctx) r->free_head = (reactor_event_ctx_t *)ev_ctx->ctx;
     pthread_mutex_unlock(&r->pool_lock);
 
-    if (!ev_ctx) {
-        /* Free list empty: grow a chunk. Allocate and link it outside the
-         * lock so the ~40 KiB setup does not serialize every other submitter
-         * on this reactor; under the lock the chunk is pushed onto the free
-         * list wholesale and one slot popped. Chunks are never freed until
-         * destroy, so a race with another grower only means two chunks. */
-        reactor_slot_chunk_t *chunk =
-            cwist_alloc(sizeof(*chunk) + REACTOR_CHUNK_EVENTS * sizeof(reactor_event_ctx_t));
-        if (!chunk) return NULL;
-        for (uint32_t i = 0; i + 1 < REACTOR_CHUNK_EVENTS; i++) {
-            chunk->slots[i].ctx = &chunk->slots[i + 1];
-        }
-        chunk->slots[REACTOR_CHUNK_EVENTS - 1].ctx = NULL;
-
-        pthread_mutex_lock(&r->pool_lock);
-        chunk->next = r->chunks;
-        r->chunks = chunk;
-        chunk->slots[REACTOR_CHUNK_EVENTS - 1].ctx = r->free_head;
-        r->free_head = &chunk->slots[0];
-        ev_ctx = r->free_head;
-        r->free_head = (reactor_event_ctx_t *)ev_ctx->ctx;
-        pthread_mutex_unlock(&r->pool_lock);
-    }
-    if (!ev_ctx) return NULL;
-
+    reactor_event_ctx_t *ev_ctx = &r->event_pool[idx];
     memset(ev_ctx, 0, sizeof(*ev_ctx));
     ev_ctx->fd = fd;
     ev_ctx->cb = cb;
@@ -756,9 +717,34 @@ void cwist_reactor_destroy(cwist_reactor_t *reactor) {
     cwist_free(reactor);
 }
 
-bool cwist_reactor_add(cwist_reactor_t *reactor, int fd, cwist_reactor_cb_t cb, void *ctx) {
+#ifdef __linux__
+/* Submit one SQE immediately: the reactor never batches or defers submission,
+ * so a woken worker always sees the event on its next wait. */
+static bool uring_submit(cwist_reactor_t *reactor, struct io_uring_sqe *out_sqe) {
+    bool ok = false;
+    pthread_mutex_lock(&reactor->impl.sq_lock);
+    uint32_t tail = *reactor->impl.sq_tail;
+    uint32_t head = __atomic_load_n(reactor->impl.sq_head, __ATOMIC_ACQUIRE);
+    if (tail - head < reactor->impl.sq_entries) {
+        uint32_t index = tail & *reactor->impl.sq_ring_mask;
+        struct io_uring_sqe *sqe = &reactor->impl.sqes[index];
+        memcpy(sqe, out_sqe, sizeof(*sqe));
+        __atomic_store_n(reactor->impl.sq_tail, tail + 1, __ATOMIC_RELEASE);
+        if (sys_io_uring_enter(reactor->impl.ring_fd, 1, 0, 0, NULL) < 0) {
+            __atomic_store_n(reactor->impl.sq_tail, tail, __ATOMIC_RELEASE);
+        } else {
+            ok = true;
+        }
+    }
+    pthread_mutex_unlock(&reactor->impl.sq_lock);
+    return ok;
+}
+#endif
+
+bool cwist_reactor_add(cwist_reactor_t *reactor, int fd, cwist_reactor_cb_t cb,
+                       const void *payload, size_t payload_size) {
     if (!reactor || fd < 0) return false;
-    reactor_event_ctx_t *ev_ctx = cwist_alloc(sizeof(reactor_event_ctx_t));
+    reactor_event_ctx_t *ev_ctx = alloc_reactor_ctx(reactor, fd, cb, payload, payload_size);
     if (!ev_ctx) return false;
     ev_ctx->fd = fd;
     ev_ctx->cb = cb;
@@ -766,11 +752,17 @@ bool cwist_reactor_add(cwist_reactor_t *reactor, int fd, cwist_reactor_cb_t cb, 
 
 #ifdef __linux__
     if (!reactor->impl.use_epoll) {
-        uint32_t tail = *reactor->impl.sq_tail;
-        uint32_t head = __atomic_load_n(reactor->impl.sq_head, __ATOMIC_ACQUIRE);
-        if (tail - head >= reactor->impl.sq_entries) {
-            cwist_free(ev_ctx);
-            return false;
+        /* One-shot POLL_ADD: multishot (IORING_POLL_ADD_MULTI) was rejected
+         * because the slot is recycled after firing, so a persistent poll
+         * would re-dispatch into a recycled slot. */
+        struct io_uring_sqe sqe;
+        memset(&sqe, 0, sizeof(sqe));
+        sqe.opcode = IORING_OP_POLL_ADD;
+        sqe.fd = fd;
+        sqe.poll_events = POLLIN;
+        sqe.user_data = (uint64_t)ev_ctx;
+        if (uring_submit(reactor, &sqe)) {
+            return true;
         }
         uint32_t index = tail & *reactor->impl.sq_ring_mask;
         struct io_uring_sqe *sqe = &reactor->impl.sqes[index];
@@ -816,9 +808,10 @@ bool cwist_reactor_add(cwist_reactor_t *reactor, int fd, cwist_reactor_cb_t cb, 
     return false;
 }
 
-bool cwist_reactor_mod(cwist_reactor_t *reactor, int fd, cwist_reactor_cb_t cb, void *ctx) {
+bool cwist_reactor_mod(cwist_reactor_t *reactor, int fd, cwist_reactor_cb_t cb,
+                       const void *payload, size_t payload_size) {
     if (!reactor || fd < 0) return false;
-    reactor_event_ctx_t *ev_ctx = cwist_alloc(sizeof(reactor_event_ctx_t));
+    reactor_event_ctx_t *ev_ctx = alloc_reactor_ctx(reactor, fd, cb, payload, payload_size);
     if (!ev_ctx) return false;
     ev_ctx->fd = fd;
     ev_ctx->cb = cb;

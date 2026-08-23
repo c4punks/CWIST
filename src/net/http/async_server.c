@@ -23,7 +23,8 @@ static bool app_use_https(const cwist_app *app) {
 }
 
 static void async_accept_cb(int fd, void *ctx) {
-    cwist_app *app = (cwist_app *)ctx;
+    /* ctx is the reactor slot's inline payload holding the app pointer. */
+    cwist_app *app = *(cwist_app **)ctx;
     int client_fd;
 #if defined(__linux__)
     while ((client_fd = accept4(fd, NULL, NULL, SOCK_CLOEXEC)) >= 0) {
@@ -55,7 +56,11 @@ static void async_accept_cb(int fd, void *ctx) {
 
     /* Re-arm the listening socket so we can accept the next batch. */
     if (g_reactor) {
-        cwist_reactor_add(g_reactor, fd, async_accept_cb, ctx);
+        if (atomic_load(&g_cwist_running)) {
+            cwist_reactor_add(g_reactor, fd, async_accept_cb, &app, sizeof(app));
+        } else {
+            cwist_reactor_stop(g_reactor);
+        }
     }
 }
 
@@ -121,13 +126,6 @@ cwist_error_t cwist_async_server_loop(int server_fd, cwist_app *app) {
     }
 
     cwist_reactor_add(g_reactor, server_fd, async_accept_cb, &app, sizeof(app));
-#if defined(__linux__)
-    cwist_sqpoll_ring_t sq_probe;
-    if (cwist_io_uring_init_sqpoll(&sq_probe, 64, 1000) == 0) {
-        printf("[io_uring/SQPOLL] Kernel submission poller verified (0-syscall I/O enabled).\n");
-        cwist_io_uring_destroy_sqpoll(&sq_probe);
-    }
-#endif
     printf("[io_uring/kqueue/epoll] Reactor started for C1M scale.\n");
 
     cwist_reactor_run(g_reactor);
