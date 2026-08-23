@@ -33,7 +33,7 @@ cwist_middleware_func cwist_mw_rate_limit_ip(int requests_per_minute);
  * On failure responds with 401 Unauthorized and short-circuits the chain.
  *
  * @param secret HMAC-SHA256 signing secret (null-terminated, must outlive the
- *               middleware invocations — typically a static/global string).
+ *               middleware invocations - typically a static/global string).
  * @return Middleware function pointer.
  */
 cwist_middleware_func cwist_mw_jwt_auth(const char *secret);
