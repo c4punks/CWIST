@@ -329,7 +329,61 @@ These variables are read directly by the framework runtime (no prefix required):
 | `CWIST_WORKERS` | integer | `1` | Number of worker processes to fork before entering the event loop. |
 | `CWIST_C1M_MODE` | boolean | `true` | Enables the high-concurrency C1M async server loop. Set to `0` or `false` to fall back to a blocking accept loop. |
 
-**C1M Mode's value is theorically ready for C1M Server loop. However, a benchmark failed with file descriptor exhaution. This is theorically calculated. The real benchmark will handle C300K connections.**
+**C1M mode is now measured, not theoretical.** With the event-driven one-shot
+connection path (connections live in the io_uring/epoll reactor instead of
+parking a worker thread each), a single cwist process on loopback served:
+
+| Scale | Result | Wall time |
+|-------|--------|-----------|
+| C10K | 10,000 / 10,000 established + responded (100%) | ~0.5 s |
+| C100K | 100,000 / 100,000 responded (100%) | ~9 s |
+| C1M (8×125K) | 1,000,000 / 1,000,000 responded (100%) | ~20 s per client process |
+
+Benchmark environment:
+
+- CPU: AMD Ryzen 5 5600X (6 cores / 12 threads)
+- RAM: 62 GB
+- Kernel: Linux 6.12.101 (Debian 13), GCC 14.2.0
+- Network: loopback (127.0.0.0/8 source-IP spreading on the client side)
+
+Measured with `tests/bench_cxm.c` (multi-process epoll load client,
+deterministic source-port allocation round-robined over multiple 127.0.0.x
+addresses, `SO_REUSEADDR` on every client socket so reruns within the
+TIME_WAIT window do not collide with themselves). Kernel prerequisites
+for C100K and above:
+
+- `ulimit -n 1050000` (and `fs.file-max` ≥ 8M for C1M: each connection costs
+  one file descriptor on client and server side alike)
+- `net.netfilter.nf_conntrack_max=4194304` — loopback traffic is conntracked
+  too, and the default 262144 caps you near ~263K connections
+- `net.ipv4.ip_local_port_range="1024 65535"` on the client side
+
+Known limits of the current async path: cleartext HTTP/1.x only (HTTPS still
+uses the thread-pool model for the request phase), a handler that writes
+faster than the socket drains waits inside the reactor thread (bounded by
+`CWIST_HTTP_TIMEOUT_MS`), and idle keep-alive connections are not yet reaped
+by a timer.
+
+**HTTPS churn experiment (handshake shepherd).** HTTPS accepts go through
+`cwist_https_dispatch()`: a single non-blocking `SSL_accept` attempt, with
+incomplete handshakes parked in a private epoll set owned by one shepherd
+thread (Linux-only; other platforms fall back to the blocking pool path).
+Parked handshakes are reaped after `CWIST_HTTPS_HANDSHAKE_TIMEOUT_MS`
+(45 s, compile-time). This replaced a synchronous in-worker handshake that stalled the accept loop
+under churn (accept-queue overflow, silently dropped handshakes, "phantom"
+ESTABLISHED clients). Measured on the benchmark machine above (fly.board,
+TLS 1.3, loopback, same kernel/sysctl tuning):
+
+- Load: 20 `h2load` processes x `-c 5000 -n 50000 -r 1000 -T 30` against
+  `https://127.0.0.$i:8888/` (1,000,000 requests total).
+- Before the fix: deadlocked within minutes (0 completed requests, hundreds
+  of phantom connections).
+- After the fix: completes in ~7 min, 756,610 / 1,000,000 requests (75.7%),
+  zero phantom connections. The remaining ~24% are slow handshakes reclaimed
+  by h2load's `-T 30` timeout while queued behind the single shepherd
+  thread; multi-shepherd scaling is the next performance candidate.
+- Regression check: `h2load -c 1000 -n 10000` passes at 100%
+  (~1,780 req/s), and `make test_https` passes.
 
 Some example applications (e.g. `example/othello-web`) also read the standard
 `PORT` variable when no explicit port is given.
