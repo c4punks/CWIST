@@ -102,6 +102,14 @@ SRCS = src/core/sstring/sstring.c \
        src/core/seq/seq_auth.c \
        src/sys/err/error.c \
        src/net/http/http.c \
+       src/net/http/sse.c \
+       src/net/graphql/graphql.c \
+       src/net/http/http2.c \
+       src/net/http/http2_flow_control.c \
+       src/net/http/http3.c \
+       src/net/http/curl_global.c \
+       src/net/http/http_client.c \
+       src/net/http/http3_client.c \
        src/net/http/https.c \
        src/net/http/tls_chain.c \
        src/net/grpc/grpc.c \
