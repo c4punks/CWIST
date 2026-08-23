@@ -110,8 +110,29 @@ cwist_error_t cwist_https_server_loop(int server_fd, cwist_https_context *ctx,
                                       void (*handler)(cwist_https_connection *conn, void *),
                                       void *user_ctx);
 
-/* --- Error Codes --- */
-// Defined as constants to be used with cwist_error_t (err_i16) or err_json
-// We will use standard errno-like negative values or specific error codes.
+/**
+ * Thread pool helpers for hybrid async-accept + threaded-process mode.
+ */
+int https_pool_init(void);
+void https_pool_submit(int client_fd, cwist_https_context *ctx, void (*handler)(cwist_https_connection *, void *), void *user_ctx);
+void https_pool_destroy(void);
+
+/**
+ * @brief Accept a TLS connection without parking a worker on the handshake.
+ * Completes the handshake inline when the ClientHello is already pending,
+ * otherwise parks the connection with the handshake shepherd thread and
+ * returns immediately.  Established sessions are submitted to the HTTPS
+ * worker pool.  Safe to call from reactor callbacks.
+ */
+void cwist_https_dispatch(int client_fd, cwist_https_context *ctx, void (*handler)(cwist_https_connection *, void *), void *user_ctx);
+
+/** @brief Number of TLS handshakes currently parked in the shepherd. */
+long cwist_https_pending_handshakes(void);
+
+/** --- Error Codes --- */
+/**
+ * @brief Defined as errno-like constants used with `cwist_error_t` fields.
+ * Values are declared elsewhere alongside their implementations.
+ */
 
 #endif
