@@ -164,49 +164,143 @@ static void *http_pool_worker(void *arg) {
 
     http_pool_task_t batch[16];
 
-    while (1) {
-        size_t batch_count = 0;
-        pthread_mutex_lock(&w->mutex);
-        while (w->count == 0 && !w->shutdown) {
-            pthread_cond_wait(&w->cond_not_empty, &w->mutex);
+/* Dynamic Thread Pool for Classic Mode
+ * Combines pre-allocated idle worker threads with fast job queue and
+ * on-demand scaling to eliminate starvation on compute/keepalive workloads
+ * while avoiding per-connection pthread_create overhead. */
+#define CWIST_POOL_STACK_SIZE (256 * 1024)
+
+typedef struct http_pool_task {
+    int client_fd;
+    void (*handler_func)(int, void *);
+    void *ctx;
+    struct http_pool_task *next;
+} http_pool_task_t;
+
+typedef struct {
+    http_pool_task_t *head;
+    http_pool_task_t *tail;
+    atomic_long pending_tasks;
+    atomic_long active_workers;
+    atomic_long idle_workers;
+    atomic_long max_workers;
+    atomic_bool running;
+    pthread_mutex_t lock;
+    pthread_cond_t cond;
+} http_dynamic_pool_t;
+
+static http_dynamic_pool_t g_dyn_pool;
+
+static void *http_dynamic_worker_thread(void *arg) {
+    (void)arg;
+    while (atomic_load_explicit(&g_dyn_pool.running, memory_order_acquire)) {
+        http_pool_task_t *task = NULL;
+
+        pthread_mutex_lock(&g_dyn_pool.lock);
+        while (atomic_load_explicit(&g_dyn_pool.running, memory_order_acquire) && !g_dyn_pool.head) {
+            atomic_fetch_add_explicit(&g_dyn_pool.idle_workers, 1, memory_order_relaxed);
+            struct timespec ts;
+            clock_gettime(CLOCK_REALTIME, &ts);
+            ts.tv_sec += 2; /* 2 second idle timeout */
+            int rc = pthread_cond_timedwait(&g_dyn_pool.cond, &g_dyn_pool.lock, &ts);
+            atomic_fetch_sub_explicit(&g_dyn_pool.idle_workers, 1, memory_order_relaxed);
+            if (rc == ETIMEDOUT && !g_dyn_pool.head) {
+                /* Scale down if idle and above base worker threshold */
+                long current = atomic_load_explicit(&g_dyn_pool.active_workers, memory_order_relaxed);
+                if (current > g_http_thread_count) {
+                    atomic_fetch_sub_explicit(&g_dyn_pool.active_workers, 1, memory_order_relaxed);
+                    pthread_mutex_unlock(&g_dyn_pool.lock);
+                    return NULL;
+                }
+            }
         }
-        if (w->shutdown && w->count == 0) {
-            pthread_mutex_unlock(&w->mutex);
+
+        if (!atomic_load_explicit(&g_dyn_pool.running, memory_order_acquire)) {
+            pthread_mutex_unlock(&g_dyn_pool.lock);
             break;
         }
 
-        while (w->count > 0 && batch_count < 16) {
-            batch[batch_count++] = w->queue[w->head];
-            w->head = (w->head + 1) % HTTP_TASKS_PER_THREAD;
-            w->count--;
+        task = g_dyn_pool.head;
+        if (task) {
+            g_dyn_pool.head = task->next;
+            if (!g_dyn_pool.head) g_dyn_pool.tail = NULL;
+            atomic_fetch_sub_explicit(&g_dyn_pool.pending_tasks, 1, memory_order_release);
         }
-        if (batch_count > 0) {
-            pthread_cond_signal(&w->cond_not_full);
-        }
-        pthread_mutex_unlock(&w->mutex);
+        pthread_mutex_unlock(&g_dyn_pool.lock);
 
-        for (size_t i = 0; i < batch_count; i++) {
-            batch[i].handler_func(batch[i].client_fd, batch[i].ctx);
+        if (task) {
+            int fd = task->client_fd;
+            void (*handler)(int, void *) = task->handler_func;
+            void *ctx = task->ctx;
+            cwist_free(task);
+
+            ttak_net_lattice_set_worker_id((uint32_t)(uintptr_t)pthread_self());
+            if (handler) handler(fd, ctx);
+            atomic_fetch_sub_explicit(&g_http_inflight, 1, memory_order_release);
         }
     }
     return NULL;
 }
 
+static bool http_spawn_worker(void) {
+    pthread_attr_t attr;
+    pthread_attr_init(&attr);
+    pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_DETACHED);
+    pthread_t tid;
+    atomic_fetch_add_explicit(&g_dyn_pool.active_workers, 1, memory_order_relaxed);
+    int rc = pthread_create(&tid, &attr, http_dynamic_worker_thread, NULL);
+    pthread_attr_destroy(&attr);
+    if (rc != 0) {
+        atomic_fetch_sub_explicit(&g_dyn_pool.active_workers, 1, memory_order_relaxed);
+        return false;
+    }
+    return true;
+}
+
 int cwist_http_pool_init(void) {
+    const char *c1m = getenv("CWIST_C1M_MODE");
+    bool use_c1m = true;
+    if (c1m) {
+        if (c1m[0] == '0' || strcmp(c1m, "false") == 0) {
+            use_c1m = false;
+        }
+    }
+
     g_http_thread_count = get_optimal_thread_count();
-    g_workers = cwist_alloc(g_http_thread_count * sizeof(http_thread_worker_t));
-    g_rr_index = 0;
-    memset(g_workers, 0, g_http_thread_count * sizeof(http_thread_worker_t));
-    for (int i = 0; i < get_optimal_thread_count(); i++) {
-        g_workers[i].queue = cwist_alloc(HTTP_TASKS_PER_THREAD * sizeof(http_pool_task_t));
-        if (!g_workers[i].queue) return -1;
-        
-        pthread_mutex_init(&g_workers[i].mutex, NULL);
-        pthread_cond_init(&g_workers[i].cond_not_empty, NULL);
-        pthread_cond_init(&g_workers[i].cond_not_full, NULL);
-        g_workers[i].worker_id = (uint32_t)i;
-        if (pthread_create(&g_workers[i].thread, NULL, http_pool_worker, &g_workers[i]) != 0) {
-            return -1;
+
+    if (use_c1m) {
+        /* Pre-allocate reactor workers for async path (CWIST_C1M_MODE=1) */
+        g_workers = cwist_alloc(g_http_thread_count * sizeof(http_thread_worker_t));
+        if (!g_workers) return -1;
+        g_rr_index = 0;
+        memset(g_workers, 0, g_http_thread_count * sizeof(http_thread_worker_t));
+
+        for (int i = 0; i < g_http_thread_count; i++) {
+            g_workers[i].reactor = cwist_reactor_create();
+            if (!g_workers[i].reactor) return -1;
+            g_workers[i].worker_id = (uint32_t)i;
+            if (pthread_create(&g_workers[i].thread, NULL, http_pool_worker, &g_workers[i]) != 0) {
+                return -1;
+            }
+        }
+    } else {
+        /* Initialize dynamic worker pool for classic path (CWIST_C1M_MODE=0) */
+        g_dyn_pool.head = NULL;
+        g_dyn_pool.tail = NULL;
+        atomic_init(&g_dyn_pool.pending_tasks, 0);
+        atomic_init(&g_dyn_pool.active_workers, 0);
+        atomic_init(&g_dyn_pool.idle_workers, 0);
+        atomic_init(&g_dyn_pool.max_workers, 65536);
+        atomic_init(&g_dyn_pool.running, true);
+
+        pthread_mutex_init(&g_dyn_pool.lock, NULL);
+        pthread_cond_init(&g_dyn_pool.cond, NULL);
+
+        /* Pre-warm core worker threads */
+        for (int i = 0; i < g_http_thread_count; i++) {
+            if (!http_spawn_worker()) {
+                return -1;
+            }
         }
     }
     return 0;
@@ -243,6 +337,30 @@ void cwist_http_pool_submit(int client_fd, void (*handler)(int, void *), void *c
     if (!cwist_reactor_add(w->reactor, client_fd, http_conn_event_cb, &c, sizeof(c))) {
         atomic_fetch_sub_explicit(&g_http_inflight, 1, memory_order_release);
         close(client_fd);
+        return;
+    }
+    node->client_fd = client_fd;
+    node->handler_func = handler;
+    node->ctx = ctx;
+    node->next = NULL;
+
+    pthread_mutex_lock(&g_dyn_pool.lock);
+    if (!g_dyn_pool.tail) {
+        g_dyn_pool.head = node;
+        g_dyn_pool.tail = node;
+    } else {
+        g_dyn_pool.tail->next = node;
+        g_dyn_pool.tail = node;
+    }
+    atomic_fetch_add_explicit(&g_dyn_pool.pending_tasks, 1, memory_order_release);
+    pthread_cond_signal(&g_dyn_pool.cond);
+    pthread_mutex_unlock(&g_dyn_pool.lock);
+
+    long current = atomic_load_explicit(&g_dyn_pool.active_workers, memory_order_relaxed);
+    long idle = atomic_load_explicit(&g_dyn_pool.idle_workers, memory_order_relaxed);
+    long max_w = atomic_load_explicit(&g_dyn_pool.max_workers, memory_order_relaxed);
+    if (idle == 0 && current < max_w) {
+        http_spawn_worker();
     }
 }
 
@@ -260,20 +378,34 @@ bool cwist_http_pool_rearm_current(int client_fd, void (*handler)(int, void *), 
 }
 
 void cwist_http_pool_destroy(void) {
-    for (int i = 0; i < get_optimal_thread_count(); i++) {
-        pthread_mutex_lock(&g_workers[i].mutex);
-        g_workers[i].shutdown = 1;
-        pthread_cond_broadcast(&g_workers[i].cond_not_empty);
-        pthread_mutex_unlock(&g_workers[i].mutex);
+    atomic_store_explicit(&g_dyn_pool.running, false, memory_order_release);
+    pthread_mutex_lock(&g_dyn_pool.lock);
+    pthread_cond_broadcast(&g_dyn_pool.cond);
+    pthread_mutex_unlock(&g_dyn_pool.lock);
+
+    /* Drain tasks */
+    pthread_mutex_lock(&g_dyn_pool.lock);
+    http_pool_task_t *node = g_dyn_pool.head;
+    g_dyn_pool.head = NULL;
+    g_dyn_pool.tail = NULL;
+    while (node) {
+        http_pool_task_t *next = node->next;
+        if (node->client_fd >= 0) close(node->client_fd);
+        cwist_free(node);
+        node = next;
     }
-    for (int i = 0; i < get_optimal_thread_count(); i++) {
-#if defined(__linux__)
-        struct timespec ts;
-        clock_gettime(CLOCK_REALTIME, &ts);
-        ts.tv_sec += g_cwist_drain_timeout_sec;
-        int rc = pthread_timedjoin_np(g_workers[i].thread, NULL, &ts);
-        if (rc == ETIMEDOUT) {
-            pthread_cancel(g_workers[i].thread);
+    pthread_mutex_unlock(&g_dyn_pool.lock);
+
+    pthread_cond_destroy(&g_dyn_pool.cond);
+    pthread_mutex_destroy(&g_dyn_pool.lock);
+
+    if (g_workers) {
+        for (int i = 0; i < g_http_thread_count; i++) {
+            if (g_workers[i].reactor) {
+                cwist_reactor_stop(g_workers[i].reactor);
+            }
+        }
+        for (int i = 0; i < g_http_thread_count; i++) {
             pthread_join(g_workers[i].thread, NULL);
         }
 #else
@@ -1828,9 +1960,14 @@ cwist_error_t cwist_http_server_loop(int server_fd, cwist_server_config *config,
         while (true) {
             int client_fd = accept(server_fd, NULL, NULL);
             if (client_fd < 0) {
-                if (errno == EINTR) continue;
-                err.error.err_i16 = -1;
-                return err;
+                int accept_err = errno;
+                if (accept_err == EINTR) continue;
+                if (accept_err == EBADF || accept_err == EINVAL || accept_err == ENOTSOCK) break;
+                if (cwist_accept_error_should_retry(accept_err)) {
+                    cwist_accept_error_backoff(accept_err);
+                    continue;
+                }
+                continue;
             }
             pthread_t thread;
             struct thread_payload *payload = malloc(sizeof(*payload));
@@ -1848,6 +1985,9 @@ cwist_error_t cwist_http_server_loop(int server_fd, cwist_server_config *config,
                 close(client_fd);
             }
         }
+        cwist_http_pool_destroy();
+        err.error.err_i16 = 0;
+        return err;
     }
 
 #ifdef __linux__
