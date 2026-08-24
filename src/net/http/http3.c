@@ -1528,12 +1528,17 @@ static void cwist_h3_on_write(lsquic_stream_t *stream, lsquic_stream_ctx_t *st_h
             .count = (unsigned)hdr_count,
             .headers = headers_arr,
         };
-        if (lsquic_stream_send_headers(stream, &headers, 0) != 0) {
+        if (lsquic_stream_send_headers(stream, &headers, eos) != 0) {
             if (errno == EAGAIN || errno == EWOULDBLOCK) {
                 lsquic_stream_wantwrite(stream, 1);
                 return;
             }
             lsquic_stream_close(stream);
+            return;
+        }
+        if (eos) {
+            st->write_state = 2;
+            lsquic_stream_wantread(stream, 1);
             return;
         }
         st->write_state = 1;
