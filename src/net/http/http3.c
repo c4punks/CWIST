@@ -1422,7 +1422,13 @@ static void cwist_h3_on_write(lsquic_stream_t *stream, lsquic_stream_ctx_t *st_h
         else if (st->res->is_ptr_body) body_len = st->res->ptr_body ? st->res->ptr_body_len : 0;
         else if (st->res->body) body_len = st->res->body->size;
 
-        if (body_len > 0 && hdr_count < H3_MAX_RESPONSE_HEADERS) {
+        const char *user_cl = st->res->headers
+            ? cwist_http_header_get(st->res->headers, "content-length") : NULL;
+
+        if (!bodyless && (body_len > 0 || is_head) && hdr_count < H3_MAX_RESPONSE_HEADERS) {
+            /* For HEAD, content-length describes the would-be GET body: keep
+             * the handler-provided value when present (e.g. static file size
+             * with an empty body), otherwise compute it like a GET. */
             char cl_str[32];
             const char *cl_val = user_cl;
             if (!cl_val) {
