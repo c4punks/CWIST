@@ -31,6 +31,41 @@ Latest automated benchmark: **Linux** — 2.72 M leases/s, 184.01% CPU, 42476 Ki
  WHY CWIST?
 ==================================================================
 
+* "Why not just use Axum (Rust) or Gin (Go)?" -- CWIST's True Niche
+  At first glance, one might ask: Why use a C-based web framework
+  when modern memory-safe languages with massive ecosystems exist?
+
+  The answer lies in Ultra-Low Latency, Extreme Container Density,
+  Zero Jitter, and Zero-Friction FFI:
+
+  1. Low Latency & High Throughput:
+     Under heavy concurrency (wrk -t12 -c400), CWIST Classic Pool delivers
+     2.16ms average latency (P90 4.45ms, P99 8.80ms) and ~111k req/s,
+     and C1M Reactor delivers 2.41ms (versus 3.52ms for Axum, 7.18ms for
+     Gin, and 9.11ms for Spring Boot). In tuned low-latency profiles,
+     CWIST averages 0.59ms latency (P50 0.46ms, P90 1.12ms).
+
+  2. Predictable Memory & Container Density:
+     CWIST operates with a compact memory footprint (~15.9MB RSS in
+     C1M Reactor mode, ~21.7MB in Classic Pool mode), compared to
+     ~29.5MB for Gin and ~1.34GB for Spring Boot. In containerized
+     deployments with thousands of replicas, this preserves significant
+     memory resources.
+
+  3. Zero GC Pauses & Predictable Tail Latency:
+     With generational arenas, EBR GC, and deterministic worker
+     scheduling, CWIST avoids GC pause spikes and work-stealing jitter.
+
+  4. Zero-Friction C/C++ Integration:
+     Existing C/C++ libraries and native engines link directly at
+     compile-time with 0% FFI translation penalty.
+
+  5. Instantaneous Cold Starts:
+     Without JVM warmup or runtime bootstrap overhead, CWIST boots
+     instantly and handles requests at full capacity from the first packet.
+
+------------------------------------------------------------------
+
 Most C web frameworks stop at HTTP/1.1 and leave TLS, protocol
 upgrades, and memory management as exercises for the user. CWIST
 ships with the entire stack:
