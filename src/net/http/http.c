@@ -231,6 +231,11 @@ void cwist_http_pool_submit(int client_fd, void (*handler)(int, void *), void *c
     uint32_t mixed = ttak_apply_mols_control(node_id, (uint32_t)g_rr_index);
     size_t worker_idx = mixed % (size_t)g_http_thread_count;
 
+    /* Deterministic worker selection using Choi Seok-jeong's MOLS to minimize cache bouncing. */
+    uint16_t node_id = (uint16_t)(client_fd % TTAK_MOLS_NODE_COUNT);
+    uint32_t mixed = ttak_apply_mols_control(node_id, (uint32_t)g_rr_index);
+    size_t worker_idx = mixed % (size_t)g_http_thread_count;
+
     g_rr_index = (g_rr_index + 1) % (size_t)g_http_thread_count;
 
     http_thread_worker_t *w = &g_workers[worker_idx];
