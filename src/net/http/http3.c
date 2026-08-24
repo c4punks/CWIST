@@ -2402,31 +2402,16 @@ cwist_error_t cwist_http3_server_loop(int udp_fd, cwist_http3_context *ctx,
     ctx->user_ctx = user_ctx;
     ctx->running = 1;
 
-    /* The receive loop relies on MSG_DONTWAIT, which some platforms lack
-     * (it degrades to 0).  Guarantee non-blocking semantics at the socket
-     * level instead; idempotent if the caller already set O_NONBLOCK. */
-    int fl = fcntl(udp_fd, F_GETFL, 0);
-    if (fl >= 0 && !(fl & O_NONBLOCK)) {
-        fcntl(udp_fd, F_SETFL, fl | O_NONBLOCK);
-    }
-
     struct sockaddr_storage local_addr;
     socklen_t local_addr_len = sizeof(local_addr);
     if (getsockname(udp_fd, (struct sockaddr *)&local_addr, &local_addr_len) != 0) {
         local_addr_len = 0;
     }
 
-    /* Make socket non-blocking for polling */
-    int flags = fcntl(udp_fd, F_GETFL, 0);
-    if (flags >= 0) fcntl(udp_fd, F_SETFL, flags | O_NONBLOCK);
-
-    /* Enlarge socket buffers to handle packet bursts without OS drops */
-    int buf_size = 4 * 1024 * 1024;
-    setsockopt(udp_fd, SOL_SOCKET, SO_RCVBUF, &buf_size, sizeof(buf_size));
-    setsockopt(udp_fd, SOL_SOCKET, SO_SNDBUF, &buf_size, sizeof(buf_size));
-
-    /* Enable ECN & PKTINFO reception for congestion feedback & precise source IP routing */
-    int on = 1;
+#ifdef IP_PKTINFO
+    int opt_pktinfo = 1;
+    setsockopt(udp_fd, IPPROTO_IP, IP_PKTINFO, &opt_pktinfo, sizeof(opt_pktinfo));
+#endif
 #ifdef IP_RECVTOS
     int opt_tos = 1;
     setsockopt(udp_fd, IPPROTO_IP, IP_RECVTOS, &opt_tos, sizeof(opt_tos));
@@ -2435,17 +2420,9 @@ cwist_error_t cwist_http3_server_loop(int udp_fd, cwist_http3_context *ctx,
     int opt_pktinfo6 = 1;
     setsockopt(udp_fd, IPPROTO_IPV6, IPV6_RECVPKTINFO, &opt_pktinfo6, sizeof(opt_pktinfo6));
 #endif
-#ifdef IP_PKTINFO
-    setsockopt(udp_fd, IPPROTO_IP, IP_PKTINFO, &on, sizeof(on));
-#endif
 #ifdef IPV6_RECVTCLASS
     int opt_tclass = 1;
     setsockopt(udp_fd, IPPROTO_IPV6, IPV6_RECVTCLASS, &opt_tclass, sizeof(opt_tclass));
-#endif
-#ifdef IPV6_RECVPKTINFO
-    setsockopt(udp_fd, IPPROTO_IPV6, IPV6_RECVPKTINFO, &on, sizeof(on));
-#elif defined(IPV6_PKTINFO)
-    setsockopt(udp_fd, IPPROTO_IPV6, IPV6_PKTINFO, &on, sizeof(on));
 #endif
 
     unsigned char *pkt_buf = malloc(65535);
@@ -2490,15 +2467,20 @@ cwist_error_t cwist_http3_server_loop(int udp_fd, cwist_http3_context *ctx,
 
     while (ctx && ctx->running && atomic_load(&g_cwist_running)) {
         int diff = 100000;
-        int timeout_ms = 100;
+        int timeout_ms = 50;
         bool has_tick = lsquic_engine_earliest_adv_tick(engine, &diff);
         if (has_tick) {
-            if (diff < 1000)
-                timeout_ms = 1;
+            if (diff <= 0)
+                timeout_ms = 0;
+            else if (diff < 1000)
+                timeout_ms = 0;
             else if (diff > 1000000)
                 timeout_ms = 1000;
             else
                 timeout_ms = (diff + 999) / 1000;
+        }
+        if (lsquic_engine_has_unsent_packets(engine)) {
+            timeout_ms = 0;
         }
 
 #ifdef __linux__
@@ -2535,6 +2517,99 @@ cwist_error_t cwist_http3_server_loop(int udp_fd, cwist_http3_context *ctx,
         bool can_read = (pret > 0 && (pfd.revents & POLLIN));
 #endif
 
+#if defined(__linux__) && defined(_GNU_SOURCE)
+#define H3_RECV_BATCH 32
+        if (can_read) {
+            static __thread unsigned char batch_bufs[H3_RECV_BATCH][65535];
+            static __thread struct sockaddr_storage batch_peers[H3_RECV_BATCH];
+            static __thread char batch_cmsgs[H3_RECV_BATCH][512];
+            static __thread struct iovec batch_iovs[H3_RECV_BATCH];
+            static __thread struct mmsghdr batch_msgs[H3_RECV_BATCH];
+
+            while (1) {
+                for (int b = 0; b < H3_RECV_BATCH; b++) {
+                    batch_iovs[b].iov_base = batch_bufs[b];
+                    batch_iovs[b].iov_len = sizeof(batch_bufs[b]);
+                    memset(&batch_msgs[b], 0, sizeof(batch_msgs[b]));
+                    batch_msgs[b].msg_hdr.msg_name = &batch_peers[b];
+                    batch_msgs[b].msg_hdr.msg_namelen = sizeof(batch_peers[b]);
+                    batch_msgs[b].msg_hdr.msg_iov = &batch_iovs[b];
+                    batch_msgs[b].msg_hdr.msg_iovlen = 1;
+                    batch_msgs[b].msg_hdr.msg_control = batch_cmsgs[b];
+                    batch_msgs[b].msg_hdr.msg_controllen = sizeof(batch_cmsgs[b]);
+                }
+
+                int nmsgs = recvmmsg(udp_fd, batch_msgs, H3_RECV_BATCH, MSG_DONTWAIT, NULL);
+                if (nmsgs <= 0) {
+                    if (nmsgs < 0 && errno != EAGAIN && errno != EWOULDBLOCK) {
+                        if (errno == ECONNREFUSED || errno == ENETUNREACH || errno == EHOSTUNREACH)
+                            continue;
+                        if (errno == EBADF) break;
+                    }
+                    break;
+                }
+
+                for (int b = 0; b < nmsgs; b++) {
+                    size_t nr = (size_t)batch_msgs[b].msg_len;
+                    if (nr == 0) continue;
+
+                    struct sockaddr_storage cur_local_addr;
+                    socklen_t cur_local_len = local_addr_len;
+                    if (local_addr_len) memcpy(&cur_local_addr, &local_addr, local_addr_len);
+
+                    int ecn = 0;
+                    for (struct cmsghdr *cmsg = CMSG_FIRSTHDR(&batch_msgs[b].msg_hdr); cmsg != NULL; cmsg = CMSG_NXTHDR(&batch_msgs[b].msg_hdr, cmsg)) {
+                        if (cmsg->cmsg_level == IPPROTO_IP) {
+#ifdef IP_PKTINFO
+                            if (cmsg->cmsg_type == IP_PKTINFO) {
+                                struct in_pktinfo *pi = (struct in_pktinfo *)CMSG_DATA(cmsg);
+                                if (pi->ipi_addr.s_addr != INADDR_ANY) {
+                                    struct sockaddr_in *sin = (struct sockaddr_in *)&cur_local_addr;
+                                    sin->sin_family = AF_INET;
+                                    sin->sin_addr = pi->ipi_addr;
+                                    if (local_addr_len >= sizeof(struct sockaddr_in)) {
+                                        sin->sin_port = ((struct sockaddr_in *)&local_addr)->sin_port;
+                                    }
+                                    cur_local_len = sizeof(struct sockaddr_in);
+                                }
+                            }
+#endif
+#ifdef IP_TOS
+                            if (cmsg->cmsg_type == IP_TOS) {
+                                ecn = *(int *)CMSG_DATA(cmsg) & 0x3;
+                            }
+#endif
+                        } else if (cmsg->cmsg_level == IPPROTO_IPV6) {
+#ifdef IPV6_PKTINFO
+                            if (cmsg->cmsg_type == IPV6_PKTINFO) {
+                                struct in6_pktinfo *pi6 = (struct in6_pktinfo *)CMSG_DATA(cmsg);
+                                if (memcmp(&pi6->ipi6_addr, &in6addr_any, sizeof(struct in6_addr)) != 0) {
+                                    struct sockaddr_in6 *sin6 = (struct sockaddr_in6 *)&cur_local_addr;
+                                    sin6->sin6_family = AF_INET6;
+                                    sin6->sin6_addr = pi6->ipi6_addr;
+                                    if (local_addr_len >= sizeof(struct sockaddr_in6)) {
+                                        sin6->sin6_port = ((struct sockaddr_in6 *)&local_addr)->sin6_port;
+                                    }
+                                    cur_local_len = sizeof(struct sockaddr_in6);
+                                }
+                            }
+#endif
+#ifdef IPV6_TCLASS
+                            if (cmsg->cmsg_type == IPV6_TCLASS) {
+                                ecn = *(int *)CMSG_DATA(cmsg) & 0x3;
+                            }
+#endif
+                        }
+                    }
+
+                    lsquic_engine_packet_in(engine, batch_bufs[b], nr,
+                                            cur_local_len ? (struct sockaddr *)&cur_local_addr : NULL,
+                                            (struct sockaddr *)&batch_peers[b],
+                                            ctx, ecn);
+                }
+            }
+        }
+#else
         if (can_read) {
             while (1) {
                 struct sockaddr_storage peer_addr;
@@ -2619,6 +2694,7 @@ cwist_error_t cwist_http3_server_loop(int udp_fd, cwist_http3_context *ctx,
                                         ctx, ecn);
             }
         }
+#endif
 
         lsquic_engine_process_conns(engine);
         if (lsquic_engine_has_unsent_packets(engine)) {
