@@ -1474,15 +1474,13 @@ static void cwist_h3_on_write(lsquic_stream_t *stream, lsquic_stream_ctx_t *st_h
         const char *user_cl = st->res->headers
             ? cwist_http_header_get(st->res->headers, "content-length") : NULL;
 
-        if (!bodyless && hdr_count < H3_MAX_RESPONSE_HEADERS) {
+        if (!bodyless && (body_len > 0 || is_head) && hdr_count < H3_MAX_RESPONSE_HEADERS) {
             /* For HEAD, content-length describes the would-be GET body: keep
              * the handler-provided value when present (e.g. static file size
              * with an empty body), otherwise compute it like a GET. */
             char cl_str[32];
-            const char *cl_val = NULL;
-            if (is_head && user_cl) {
-                cl_val = user_cl;
-            } else if (body_len > 0 || (is_head && body_len == 0)) {
+            const char *cl_val = user_cl;
+            if (!cl_val) {
                 snprintf(cl_str, sizeof(cl_str), "%zu", body_len);
                 cl_val = cl_str;
             }
@@ -1501,8 +1499,8 @@ static void cwist_h3_on_write(lsquic_stream_t *stream, lsquic_stream_ctx_t *st_h
             }
         }
 
-        /* content-type (if present) */
-        if (st->res->headers) {
+        /* content-type (if body is present or HEAD request) */
+        if (st->res->headers && (body_len > 0 || is_head)) {
             char *ct = cwist_http_header_get(st->res->headers, "content-type");
             if (ct && ct[0] != '\0' && hdr_count < H3_MAX_RESPONSE_HEADERS) {
                 size_t klen = 12;
