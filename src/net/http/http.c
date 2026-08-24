@@ -449,6 +449,166 @@ void cwist_http_pool_destroy(void) {
 }
 /* --- End Thread Pool --- */
 
+/* --- Async (one-shot, event-driven) connection path ------------------------
+ * See include/cwist/net/http/http.h for the model overview.  The connection
+ * shell lives across events; the recv stash is allocated lazily and released
+ * whenever it drains to empty, so an idle keep-alive connection costs only
+ * the shell plus its reactor slot. */
+
+typedef struct {
+    int client_fd;
+    cwist_async_handler_t handler;
+    void *ctx;
+    cwist_reactor_t *reactor;
+    cwist_http_async_conn_t *conn;
+} http_async_ctx_t;
+
+static void http_async_conn_release(cwist_http_async_conn_t *conn) {
+    if (!conn) return;
+    cwist_free(conn->rbuf);
+    cwist_free(conn);
+    atomic_fetch_sub_explicit(&g_http_inflight, 1, memory_order_release);
+}
+
+static void http_async_event_cb(int fd, void *ctx) {
+    http_async_ctx_t *c = (http_async_ctx_t *)ctx;
+    cwist_http_async_conn_t *conn = c->conn;
+    cwist_async_handler_t handler = c->handler;
+
+    cwist_async_action_t action = handler(fd, conn);
+
+    if (action == CWIST_ASYNC_DETACH) {
+        /* The handler owns fd now (h2c preface, protocol upgrade).  Free the
+         * shell but never touch the fd. */
+        cwist_free(conn->rbuf);
+        cwist_free(conn);
+        atomic_fetch_sub_explicit(&g_http_inflight, 1, memory_order_release);
+        return;
+    }
+    if (action == CWIST_ASYNC_CLOSE) {
+        close(fd);
+        http_async_conn_release(conn);
+        return;
+    }
+
+    /* CWIST_ASYNC_REARM: shrink the stash once it has fully drained so idle
+     * keep-alive connections do not pin a 16 KiB buffer each. */
+    if (conn->len == 0 && conn->rbuf) {
+        cwist_free(conn->rbuf);
+        conn->rbuf = NULL;
+        conn->cap = 0;
+    }
+
+    http_async_ctx_t next = {
+        .client_fd = fd,
+        .handler = handler,
+        .ctx = c->ctx,
+        .reactor = c->reactor,
+        .conn = conn,
+    };
+    if (!cwist_reactor_add(c->reactor, fd, http_async_event_cb, &next, sizeof(next))) {
+        if (getenv("CWIST_ASYNC_DEBUG")) {
+            static _Atomic long dbg_rearm_fail;
+            long n = atomic_fetch_add(&dbg_rearm_fail, 1) + 1;
+            if (n <= 5 || n % 10000 == 0)
+                fprintf(stderr, "[async] rearm failed fd=%d total=%ld\n", fd, n);
+        }
+        close(fd);
+        http_async_conn_release(conn);
+    }
+}
+
+bool cwist_http_pool_submit_async(int client_fd, cwist_async_handler_t handler, void *ctx) {
+    long limit = cwist_http_inflight_limit();
+    long inflight = atomic_fetch_add_explicit(&g_http_inflight, 1, memory_order_acq_rel) + 1;
+    if (inflight > limit) {
+        atomic_fetch_sub_explicit(&g_http_inflight, 1, memory_order_release);
+        send(client_fd, CWIST_HTTP_503, sizeof(CWIST_HTTP_503) - 1, MSG_NOSIGNAL | MSG_DONTWAIT);
+        close(client_fd);
+        return false;
+    }
+
+    /* The one-shot path must never park the reactor on a blocking recv. */
+    int fl = fcntl(client_fd, F_GETFL, 0);
+    if (fl >= 0) fcntl(client_fd, F_SETFL, fl | O_NONBLOCK);
+
+    cwist_http_async_conn_t *conn = cwist_alloc(sizeof(*conn));
+    if (!conn) {
+        atomic_fetch_sub_explicit(&g_http_inflight, 1, memory_order_release);
+        close(client_fd);
+        return false;
+    }
+    memset(conn, 0, sizeof(*conn));
+    conn->fd = client_fd;
+    conn->user_ctx = ctx;
+    conn->virgin = true;
+
+    /* Round-robin worker selection: perfectly even by construction, which the
+     * dynamically grown reactor slots rely on.  (MOLS hashing deviates up to
+     * ±15% per reactor and overflowed the old fixed 4096-slot pool.) */
+    size_t worker_idx = g_rr_index;
+    g_rr_index = (g_rr_index + 1) % (size_t)g_http_thread_count;
+    http_thread_worker_t *w = &g_workers[worker_idx];
+
+    http_async_ctx_t c = {
+        .client_fd = client_fd,
+        .handler = handler,
+        .ctx = ctx,
+        .reactor = w->reactor,
+        .conn = conn,
+    };
+    if (!cwist_reactor_add(w->reactor, client_fd, http_async_event_cb, &c, sizeof(c))) {
+        if (getenv("CWIST_ASYNC_DEBUG")) {
+            static _Atomic long dbg_submit_fail;
+            long n = atomic_fetch_add(&dbg_submit_fail, 1) + 1;
+            if (n <= 5 || n % 10000 == 0)
+                fprintf(stderr, "[async] submit-add failed fd=%d total=%ld worker=%zu\n",
+                        client_fd, n, worker_idx);
+        }
+        http_async_conn_release(conn);
+        close(client_fd);
+        return false;
+    }
+    return true;
+}
+
+void cwist_http_pool_destroy(void) {
+    atomic_store_explicit(&g_dyn_pool.running, false, memory_order_release);
+    pthread_mutex_lock(&g_dyn_pool.lock);
+    pthread_cond_broadcast(&g_dyn_pool.cond);
+    pthread_mutex_unlock(&g_dyn_pool.lock);
+
+    /* Drain tasks */
+    http_pool_task_t *node = atomic_load_explicit(&g_dyn_pool.head, memory_order_acquire);
+    while (node) {
+        http_pool_task_t *next = atomic_load_explicit(&node->next, memory_order_acquire);
+        if (node->client_fd >= 0) close(node->client_fd);
+        cwist_free(node);
+        node = next;
+    }
+
+    pthread_cond_destroy(&g_dyn_pool.cond);
+    pthread_mutex_destroy(&g_dyn_pool.lock);
+
+    if (g_workers) {
+        for (int i = 0; i < g_http_thread_count; i++) {
+            if (g_workers[i].reactor) {
+                cwist_reactor_stop(g_workers[i].reactor);
+            }
+        }
+        for (int i = 0; i < g_http_thread_count; i++) {
+            pthread_join(g_workers[i].thread, NULL);
+            if (g_workers[i].reactor) {
+                cwist_reactor_destroy(g_workers[i].reactor);
+                g_workers[i].reactor = NULL;
+            }
+        }
+        cwist_free(g_workers);
+        g_workers = NULL;
+    }
+}
+/* --- End Thread Pool --- */
+
 /**
  * @file http.c
  * @brief Core HTTP request/response allocation, serialization, socket, and server-loop helpers.
