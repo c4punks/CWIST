@@ -2008,6 +2008,210 @@ cwist_http_request *cwist_http_receive_request(int client_fd, char *read_buf, si
     return req;
 }
 
+/* --- Non-blocking request assembly for the async (C1M) path --------------- */
+
+#define CWIST_ASYNC_STASH_MAX (CWIST_HTTP_READ_BUFFER_SIZE + CWIST_HTTP_MAX_BODY_SIZE)
+
+/* Grow the recv stash.  Returns false when the hard cap is reached. */
+static bool http_async_stash_grow(cwist_http_async_conn_t *conn, size_t need) {
+    if (need > CWIST_ASYNC_STASH_MAX) return false;
+    if (conn->cap >= need) return true;
+    size_t cap = conn->cap ? conn->cap : CWIST_HTTP_READ_BUFFER_SIZE;
+    while (cap < need) {
+        if (cap > CWIST_ASYNC_STASH_MAX / 2) { cap = CWIST_ASYNC_STASH_MAX; break; }
+        cap *= 2;
+    }
+    if (cap > CWIST_ASYNC_STASH_MAX) cap = CWIST_ASYNC_STASH_MAX;
+    if (cap == conn->cap) return false;
+    char *nb = cwist_realloc(conn->rbuf, cap);
+    if (!nb) return false;
+    conn->rbuf = nb;
+    conn->cap = cap;
+    return true;
+}
+
+/**
+ * @brief Drain the socket into the connection stash.
+ * Stops at EAGAIN, and also after a short read: poll is level-triggered, so
+ * if bytes remain after a short recv the one-shot re-arm fires again
+ * immediately.  This skips the guaranteed-EAGAIN second recv that otherwise
+ * costs one wasted syscall per request on non-pipelined keep-alive traffic.
+ * @return 0 on success (EAGAIN or data), -1 on orderly close or fatal error.
+ */
+int cwist_http_async_conn_fill(cwist_http_async_conn_t *conn) {
+    for (;;) {
+        if (conn->len + 1 >= conn->cap && !http_async_stash_grow(conn, conn->len + 4096)) {
+            return -1;
+        }
+        size_t avail = conn->cap - 1 - conn->len;
+        ssize_t n = recv(conn->fd, conn->rbuf + conn->len, avail, 0);
+        if (n > 0) {
+            conn->len += (size_t)n;
+            conn->rbuf[conn->len] = '\0';
+            conn->virgin = false;
+            if ((size_t)n < avail) return 0; /* short read: drained for now */
+            continue;
+        }
+        if (n == 0) return -1;
+        if (errno == EINTR) continue;
+        if (errno == EAGAIN || errno == EWOULDBLOCK) return 0;
+        return -1;
+    }
+}
+
+/**
+ * @brief Walk a chunked transfer coding and tell whether a full message sits
+ * in the stash.  Strict size-line parsing is shared with the blocking path.
+ * @return 1 complete, 0 need more bytes, -1 malformed.
+ */
+static int http_chunked_scan(const char *buf, size_t avail, size_t *consumed, cwist_sstring *assemble) {
+    size_t pos = 0;
+    for (;;) {
+        char *crlf = memmem(buf + pos, avail - pos, "\r\n", 2);
+        if (!crlf) return avail > CWIST_ASYNC_STASH_MAX ? -1 : 0;
+        size_t line_len = (size_t)(crlf - (buf + pos));
+        size_t chunk_size = 0;
+        if (http_parse_chunk_size(buf + pos, line_len, &chunk_size) != 0) return -1;
+        pos += line_len + 2;
+
+        if (chunk_size == 0) {
+            /* Trailers until an empty line. */
+            for (;;) {
+                if (avail - pos < 2) return 0;
+                if (buf[pos] == '\r' && buf[pos + 1] == '\n') {
+                    *consumed = pos + 2;
+                    return 1;
+                }
+                char *tcrlf = memmem(buf + pos, avail - pos, "\r\n", 2);
+                if (!tcrlf) return 0;
+                pos = (size_t)(tcrlf - buf) + 2;
+            }
+        }
+
+        if (chunk_size > CWIST_HTTP_MAX_BODY_SIZE) return -1;
+        if (avail - pos < chunk_size + 2) return 0;
+        if (buf[pos + chunk_size] != '\r' || buf[pos + chunk_size + 1] != '\n') return -1;
+        if (assemble) {
+            if (assemble->size + chunk_size > CWIST_HTTP_MAX_BODY_SIZE) return -1;
+            if (cwist_sstring_append_len(assemble, (char *)buf + pos, chunk_size).error.err_i8 != 0) return -1;
+        }
+        pos += chunk_size + 2;
+    }
+}
+
+/**
+ * @brief Try to assemble one complete request from the stash without any
+ * blocking IO.  On CWIST_RECV_OK the consumed bytes are removed from the
+ * stash and *out holds a fully parsed request.
+ */
+cwist_recv_status_t cwist_http_receive_request_nb(cwist_http_async_conn_t *conn, cwist_http_request **out, cwist_http_parse_error_t *err_out) {
+    *out = NULL;
+    if (err_out) *err_out = CWIST_HTTP_PARSE_OK;
+    if (!conn->rbuf || conn->len == 0) return CWIST_RECV_NEED_MORE;
+
+    char *header_end = (char *)cwist_simd_find_crlfcrlf(conn->rbuf, conn->len);
+    if (!header_end) {
+        if (conn->len >= CWIST_HTTP_READ_BUFFER_SIZE - 1) {
+            cwist_metric_inc(cwist_metrics_registry(), CWIST_METRIC_HTTP_HEADER_OVERFLOW);
+            CWIST_LOG_WARN("[http] dropping async connection: headers exceed %d-byte read buffer",
+                           CWIST_HTTP_READ_BUFFER_SIZE);
+            if (err_out) *err_out = CWIST_HTTP_PARSE_HEADER_OVERFLOW;
+            return CWIST_RECV_FATAL;
+        }
+        return CWIST_RECV_NEED_MORE;
+    }
+
+    cwist_http_request *req = cwist_http_parse_request_with_header_end(conn->rbuf, header_end, err_out);
+    if (!req) return CWIST_RECV_FATAL;
+
+    size_t header_len = (size_t)(header_end + 4 - conn->rbuf);
+    size_t body_received = conn->len - header_len;
+    size_t consumed = header_len;
+
+    /* RFC 9110 §10.1.1: answer a validated Expect: 100-continue once, before
+     * the stash accumulates the full body. */
+    const char *te = cwist_http_header_get(req->headers, "Transfer-Encoding");
+    const char *expect = cwist_http_header_get(req->headers, "Expect");
+    if (expect && !conn->expect_continue_sent &&
+        ((size_t)req->content_length > body_received || (te && req->content_length == 0))) {
+        http_send_100_continue(conn->fd);
+        conn->expect_continue_sent = true;
+    }
+
+    if (req->content_length > 0) {
+        if (req->content_length > CWIST_HTTP_MAX_BODY_SIZE) {
+            cwist_http_request_destroy(req);
+            if (err_out) *err_out = CWIST_HTTP_PARSE_BODY_TOO_LARGE;
+            return CWIST_RECV_FATAL;
+        }
+        if (body_received < (size_t)req->content_length) {
+            /* Not all here yet; make sure the stash can hold the full message. */
+            if (!http_async_stash_grow(conn, header_len + (size_t)req->content_length + 1)) {
+                cwist_http_request_destroy(req);
+                if (err_out) *err_out = CWIST_HTTP_PARSE_EOF;
+                return CWIST_RECV_FATAL;
+            }
+            cwist_http_request_destroy(req);
+            return CWIST_RECV_NEED_MORE;
+        }
+        char *body = cwist_alloc((size_t)req->content_length + 1);
+        if (!body) {
+            cwist_http_request_destroy(req);
+            if (err_out) *err_out = CWIST_HTTP_PARSE_EOF;
+            return CWIST_RECV_FATAL;
+        }
+        memcpy(body, conn->rbuf + header_len, (size_t)req->content_length);
+        body[req->content_length] = '\0';
+        cwist_sstring_adopt_len(req->body, body, (size_t)req->content_length);
+        consumed += (size_t)req->content_length;
+    } else {
+        /* Presence of TE implies parser-validated chunked framing. */
+        if (te) {
+            cwist_sstring *assembled = cwist_sstring_create();
+            if (!assembled) {
+                cwist_http_request_destroy(req);
+                if (err_out) *err_out = CWIST_HTTP_PARSE_EOF;
+                return CWIST_RECV_FATAL;
+            }
+            size_t chunk_bytes = 0;
+            int scan = http_chunked_scan(conn->rbuf + header_len, body_received, &chunk_bytes, assembled);
+            if (scan <= 0) {
+                cwist_sstring_destroy(assembled);
+                cwist_http_request_destroy(req);
+                if (scan == 0) {
+                    if (!http_async_stash_grow(conn, conn->len + 4096)) {
+                        if (err_out) *err_out = CWIST_HTTP_PARSE_EOF;
+                        return CWIST_RECV_FATAL;
+                    }
+                    return CWIST_RECV_NEED_MORE;
+                }
+                if (err_out) *err_out = CWIST_HTTP_PARSE_MALFORMED;
+                return CWIST_RECV_FATAL;
+            }
+            char *data = assembled->data;
+            size_t dlen = assembled->size;
+            assembled->data = NULL;
+            assembled->size = 0;
+            cwist_sstring_destroy(assembled);
+            cwist_sstring_adopt_len(req->body, data, dlen);
+            consumed += chunk_bytes;
+        }
+    }
+
+    /* Shift the leftover (pipelined bytes) to the stash head. */
+    size_t leftover = conn->len - consumed;
+    if (leftover > 0) memmove(conn->rbuf, conn->rbuf + consumed, leftover);
+    conn->len = leftover;
+    conn->rbuf[leftover] = '\0';
+    conn->expect_continue_sent = false;
+
+    req->client_fd = conn->fd;
+    *out = req;
+    return CWIST_RECV_OK;
+}
+
+/* --- End Non-blocking Request Assembly --- */
+
 typedef struct {
     const char *ext;
     const char *mime;
