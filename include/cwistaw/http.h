@@ -42,6 +42,17 @@ typedef enum cwist_http_status_t {
 #define CWIST_HTTP_READ_BUFFER_SIZE (16 * 1024)
 #define CWIST_HTTP_TIMEOUT_MS      30000
 
+/** @brief Failure reason reported by the request receive APIs. */
+typedef enum cwist_http_parse_error_t {
+    CWIST_HTTP_PARSE_OK = 0,
+    CWIST_HTTP_PARSE_EOF,
+    CWIST_HTTP_PARSE_MALFORMED,
+    CWIST_HTTP_PARSE_HEADER_OVERFLOW,
+    CWIST_HTTP_PARSE_BODY_TOO_LARGE,
+    CWIST_HTTP_PARSE_TE_UNSUPPORTED,
+    CWIST_HTTP_PARSE_EXPECT_FAILED
+} cwist_http_parse_error_t;
+
 /** --- Structures --- */
 
 /// Linked list for headers to handle multiple headers easily
@@ -101,7 +112,12 @@ cwist_http_request *cwist_http_parse_request(const char *raw_request);
 /**
  * @brief Receive and parse an HTTP request from a socket.
  */
-cwist_http_request *cwist_http_receive_request(int client_fd, char *read_buf, size_t buf_size, size_t *buf_len);
+cwist_http_request *cwist_http_receive_request(int client_fd, char *read_buf, size_t buf_size, size_t *buf_len, cwist_http_parse_error_t *err_out);
+
+/**
+ * @brief Send a minimal error response (Connection: close) for a failed request.
+ */
+void cwist_http_send_error_response(int fd, int status, const char *msg);
 
 /** @} */
 
@@ -128,6 +144,11 @@ cwist_sstring *cwist_http_stringify_response(cwist_http_response *res);
  */
 cwist_error_t cwist_http_send_response(int client_fd, cwist_http_response *res);
 cwist_error_t cwist_http_response_send_file(cwist_http_response *res, const char *file_path, const char *content_type_hint, size_t *out_size);
+
+/**
+ * @brief Send only the status line and headers (HEAD replies).
+ */
+cwist_error_t cwist_http_send_response_head(int client_fd, cwist_http_response *res);
 
 /**
  * @brief Serialize only the status line and headers into a caller buffer.

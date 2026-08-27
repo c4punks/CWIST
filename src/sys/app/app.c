@@ -396,33 +396,75 @@ static void cwist_static_handler(cwist_http_request *req, cwist_http_response *r
             cwist_http_header_add(&res->headers, "Last-Modified", last_mod_buf);
             cwist_http_header_add(&res->headers, "Cache-Control", "public, max-age=3600");
             cwist_sstring_assign(res->body, "");
-        } else if (req->method == CWIST_HTTP_HEAD) {
-            char len_buf[32];
-            snprintf(len_buf, sizeof(len_buf), "%zu", file->size);
-            cwist_http_header_add(&res->headers, "Content-Length", len_buf);
-            cwist_http_header_add(&res->headers, "Content-Type", mime);
-            cwist_http_header_add(&res->headers, "ETag", etag);
-            cwist_http_header_add(&res->headers, "Last-Modified", last_mod_buf);
-            cwist_http_header_add(&res->headers, "Cache-Control", "public, max-age=3600");
-            cwist_sstring_assign(res->body, "");
-        } else if (file->data && file->node) {
-            // ZERO COPY
-            ttak_mem_node_acquire(file->node);
-            cwist_http_response_set_body_ptr_managed(res, file->data, file->size, cwist_static_release_body, file->node);
-            
-            char len_buf[32];
-            snprintf(len_buf, sizeof(len_buf), "%zu", file->size);
-            cwist_http_header_add(&res->headers, "Content-Length", len_buf);
-            cwist_http_header_add(&res->headers, "Content-Type", mime);
-            cwist_http_header_add(&res->headers, "ETag", etag);
-            cwist_http_header_add(&res->headers, "Last-Modified", last_mod_buf);
-            cwist_http_header_add(&res->headers, "Cache-Control", "public, max-age=3600");
         } else {
-            res->status_code = CWIST_HTTP_INTERNAL_ERROR;
-            cwist_sstring_assign(res->body, "Static buffer missing");
-        }
-        if (!not_modified) {
-            res->status_code = CWIST_HTTP_OK;
+            /* HEAD falls through here: app_serve_parsed_request suppresses the
+             * body at send time for every route, so only the headers matter. */
+            size_t send_offset = 0;
+            size_t send_len = file->size;
+
+            /* --- Range Request Handling --- */
+            const char *range_hdr = cwist_http_header_get(req->headers, "Range");
+            if (range_hdr && strncmp(range_hdr, "bytes=", 6) == 0) {
+                const char *p = range_hdr + 6;
+                size_t range_start = 0, range_end = file->size - 1;
+                bool range_valid = true;
+
+                if (p[0] == '-') {
+                    size_t suffix = (size_t)atoi(p + 1);
+                    range_start = (file->size > suffix) ? file->size - suffix : 0;
+                    range_end = file->size - 1;
+                } else {
+                    range_start = (size_t)atoi(p);
+                    char *dash = strchr(p, '-');
+                    if (dash && dash[1] != '\0') {
+                        range_end = (size_t)atoi(dash + 1);
+                    } else {
+                        range_end = file->size - 1;
+                    }
+                }
+
+                if (range_start > range_end || range_start >= file->size) {
+                    (void)range_valid;
+                    res->status_code = CWIST_HTTP_RANGE_NOT_SATISFIABLE;
+                    char cr[128];
+                    snprintf(cr, sizeof(cr), "bytes */%zu", file->size);
+                    cwist_http_header_add(&res->headers, "Content-Range", cr);
+                    cwist_sstring_assign(res->body, "");
+                } else {
+                    if (range_end >= file->size) range_end = file->size - 1;
+                    send_offset = range_start;
+                    send_len = range_end - range_start + 1;
+                    res->status_code = CWIST_HTTP_PARTIAL_CONTENT;
+                    char cr[128];
+                    snprintf(cr, sizeof(cr), "bytes %zu-%zu/%zu", range_start, range_end, file->size);
+                    cwist_http_header_add(&res->headers, "Content-Range", cr);
+                }
+            }
+
+            if (res->status_code != CWIST_HTTP_RANGE_NOT_SATISFIABLE) {
+                if (file->data && file->node) {
+                    ttak_mem_node_acquire(file->node);
+                    cwist_http_response_set_body_ptr_managed(res, (char *)file->data + send_offset, send_len, cwist_static_release_body, file->node);
+                } else {
+                    res->status_code = CWIST_HTTP_INTERNAL_ERROR;
+                    cwist_sstring_assign(res->body, "Static buffer missing");
+                }
+            }
+
+            if (res->status_code != CWIST_HTTP_INTERNAL_ERROR && res->status_code != CWIST_HTTP_RANGE_NOT_SATISFIABLE) {
+                const char *cc = info->mapping->cache_control ? info->mapping->cache_control : "public, max-age=3600";
+                char len_buf[32];
+                snprintf(len_buf, sizeof(len_buf), "%zu", send_len);
+                cwist_http_header_add(&res->headers, "Content-Length", len_buf);
+                cwist_http_header_add(&res->headers, "Content-Type", mime);
+                cwist_http_header_add(&res->headers, "ETag", etag);
+                cwist_http_header_add(&res->headers, "Last-Modified", last_mod_buf);
+                cwist_http_header_add(&res->headers, "Cache-Control", cc);
+                cwist_http_header_add(&res->headers, "Accept-Ranges", "bytes");
+                if (res->status_code != CWIST_HTTP_PARTIAL_CONTENT) {
+                    res->status_code = CWIST_HTTP_OK;
+                }
+            }
         }
     } else {
         res->status_code = CWIST_HTTP_NOT_FOUND;
@@ -1031,12 +1073,277 @@ static void static_http_handler(int client_fd, void *ctx) {
         close(client_fd);
         return;
     }
+
+    cwist_error_t err = cwist_http2_serve_connection(conn, app, static_http2_route_bridge);
+    if (err.errtype == CWIST_ERR_JSON && err.error.err_json) {
+        cJSON_Delete(err.error.err_json);
+    }
+}
+
+/**
+ * @brief Map a request parse failure to the RFC 9110/9112 error status the
+ * client must see before close; 0 means close quietly (EOF/OOM).
+ */
+static int app_parse_error_status(cwist_http_parse_error_t perr) {
+    switch (perr) {
+        case CWIST_HTTP_PARSE_MALFORMED:       return 400;
+        case CWIST_HTTP_PARSE_BODY_TOO_LARGE:  return 413;
+        case CWIST_HTTP_PARSE_EXPECT_FAILED:   return 417;
+        case CWIST_HTTP_PARSE_HEADER_OVERFLOW: return 431;
+        case CWIST_HTTP_PARSE_TE_UNSUPPORTED:  return 501;
+        default:                               return 0;
+    }
+}
+
+static void app_maybe_send_parse_error(int client_fd, cwist_http_parse_error_t perr) {
+    int status = app_parse_error_status(perr);
+    if (status > 0) {
+        cwist_http_send_error_response(client_fd, status, NULL);
+    }
+}
+
+/**
+ * @brief Route and respond to one fully parsed HTTP/1.1 request.
+ * Shared by the blocking keep-alive loop and the event-driven async path.
+ * @return true when the connection stays open (keep-alive), false to close.
+ */
+static bool app_serve_parsed_request(cwist_app *app, int client_fd, cwist_http_request *req, uint32_t priority_weight) {
+    // --- Big Dumb Reply (Read) ---
+    if (app->bdr_ctx && req->method == CWIST_HTTP_GET) {
+        size_t cached_len = 0;
+        const void *cached_blob = cwist_bdr_get(app->bdr_ctx, "GET", req->path->data, &cached_len);
+        if (cached_blob && cached_len > 0) {
+            send(client_fd, cached_blob, cached_len, MSG_NOSIGNAL);
+            bool keep_alive = req->keep_alive;
+            cwist_http_request_destroy(req);
+            return keep_alive;
+        }
+    }
+    // -----------------------------
+
+    cwist_http_response *res = cwist_http_response_create();
+    if (!res) {
+        cwist_http_request_destroy(req);
+        return false;
+    }
+
+    bool endpoint_fixed = cwist_endpoint_has(req->endpoint_opts, CWIST_ENDPOINT_FIXED);
+    struct timespec start, end;
+    uint64_t duration_ms = 0;
+    if (app->bdr_ctx && !endpoint_fixed) {
+        clock_gettime(CLOCK_MONOTONIC, &start);
+    }
+
+    internal_route_handler(app, req, res);
+
+    if (app->bdr_ctx && !endpoint_fixed) {
+        clock_gettime(CLOCK_MONOTONIC, &end);
+        duration_ms = (end.tv_sec - start.tv_sec) * 1000 + (end.tv_nsec - start.tv_nsec) / 1000000;
+    }
+
+    bool keep_alive = req->keep_alive && res->keep_alive;
+    bool upgraded = req->upgraded;
+
+    if (!upgraded) {
+        /* RFC 9110 §9.3.2: HEAD replies carry the GET headers (Content-Length
+         * included) but no body bytes, for every route. */
+        cwist_error_t send_err = (req->method == CWIST_HTTP_HEAD)
+            ? cwist_http_send_response_head(client_fd, res)
+            : cwist_http_send_response(client_fd, res);
+        if (send_err.error.err_i16 < 0) {
+            cwist_http_response_destroy(res);
+            cwist_http_request_destroy(req);
+            return false;
+        }
+
+        // --- Big Dumb Reply (Learn) ---
+        if (app->bdr_ctx) {
+            bool endpoint_file = cwist_endpoint_has(req->endpoint_opts, CWIST_ENDPOINT_FILE);
+
+            uint64_t scaled_threshold = (uint64_t)app->bdr_ctx->latency_threshold_ms;
+            if (priority_weight > 50) {
+                scaled_threshold = scaled_threshold * (100 - priority_weight) / 100;
+            }
+
+            if (req->method == CWIST_HTTP_GET && !endpoint_file) {
+                if (endpoint_fixed) {
+                    cwist_sstring *serialized = cwist_http_stringify_response(res);
+                    if (serialized) {
+                        cwist_bdr_put_fixed(app->bdr_ctx, "GET", req->path->data, serialized->data, serialized->size);
+                        cwist_sstring_destroy(serialized);
+                    }
+                } else if (duration_ms > scaled_threshold) {
+                    cwist_sstring *serialized = cwist_http_stringify_response(res);
+                    if (serialized) {
+                        cwist_bdr_put(app->bdr_ctx, "GET", req->path->data, serialized->data, serialized->size);
+                        cwist_sstring_destroy(serialized);
+                    }
+                }
+            }
+        }
+        // ------------------------------
+    }
+
+    cwist_http_response_destroy(res);
+    cwist_http_request_destroy(req);
+
+    return keep_alive && !upgraded;
+}
+
+/**
+ * @brief Event-driven HTTP/1.1 handler for the C1M reactor path.
+ * Drains the socket without blocking, serves every complete request in the
+ * stash, then tells the pool whether to rearm, close, or detach the fd.
+ */
+cwist_async_action_t cwist_app_http_handler_async(int client_fd, cwist_http_async_conn_t *conn) {
+    cwist_app *app = (cwist_app *)conn->user_ctx;
+    static _Atomic long dbg_fill_fail, dbg_fatal, dbg_serve_close;
+    const bool dbg = getenv("CWIST_ASYNC_DEBUG") != NULL;
+
+    if (cwist_http_async_conn_fill(conn) != 0) {
+        if (dbg) {
+            long n = atomic_fetch_add(&dbg_fill_fail, 1) + 1;
+            if (n <= 5 || n % 10000 == 0)
+                fprintf(stderr, "[async] fill-fail fd=%d total=%ld fatal=%ld serve=%ld errno=%d len=%zu\n",
+                        client_fd, n, atomic_load(&dbg_fatal), atomic_load(&dbg_serve_close), errno, conn->len);
+        }
+        return CWIST_ASYNC_CLOSE;
+    }
+
+    /* h2c preface: hand the whole connection to the blocking HTTP/2 server,
+     * which owns and closes the fd from here on. */
+    if (app->use_http2 && conn->len >= 24 &&
+        memcmp(conn->rbuf, "PRI * HTTP/2.0\r\n\r\nSM\r\n\r\n", 24) == 0) {
+        cwist_https_connection h2c = { .fd = client_fd, .ssl = NULL, .negotiated_http2 = true, .negotiated_protocol = CWIST_HTTPS_PROTOCOL_HTTP2 };
+        /* The h2 stack does its own reads; drop the sniffed bytes so the
+         * preface is still available on the socket... it is not: the stash
+         * already consumed them.  Replay by parsing is not supported, so only
+         * take this branch when the stash holds exactly the preface. */
+        if (conn->len == 24) {
+            cwist_http2_serve_connection(&h2c, app, static_http2_route_bridge);
+            close(client_fd);
+            return CWIST_ASYNC_DETACH;
+        }
+    }
+
+    /* Apply Choi Seok-jeong's Lattice (Sanpan) for priority scaling. */
+    uint32_t tid = ttak_net_lattice_get_worker_id();
+    uint16_t node_id = (uint16_t)(client_fd % TTAK_MOLS_NODE_COUNT);
+    uint32_t mixed_seed = ttak_apply_mols_control(node_id, tid);
+
+    /* Jeungseung Gaebang Scaling for priority weighting. */
+    uint32_t priority_weight = ((mixed_seed * 16777619U) >> 8) % 100;
+
+    for (;;) {
+        cwist_http_request *req = NULL;
+        cwist_http_parse_error_t perr = CWIST_HTTP_PARSE_OK;
+        cwist_recv_status_t st = cwist_http_receive_request_nb(conn, &req, &perr);
+        if (st == CWIST_RECV_NEED_MORE) return CWIST_ASYNC_REARM;
+        if (st == CWIST_RECV_FATAL) {
+            app_maybe_send_parse_error(client_fd, perr);
+            if (dbg) {
+                long n = atomic_fetch_add(&dbg_fatal, 1) + 1;
+                if (n <= 5 || n % 10000 == 0)
+                    fprintf(stderr, "[async] recv-fatal fd=%d total=%ld len=%zu\n", client_fd, n, conn->len);
+            }
+            return CWIST_ASYNC_CLOSE;
+        }
+        req->app = app;
+        req->db = app->db;
+        if (!app_serve_parsed_request(app, client_fd, req, priority_weight)) {
+            if (dbg) {
+                long n = atomic_fetch_add(&dbg_serve_close, 1) + 1;
+                if (n <= 5 || n % 10000 == 0)
+                    fprintf(stderr, "[async] serve-close fd=%d total=%ld\n", client_fd, n);
+            }
+            return CWIST_ASYNC_CLOSE;
+        }
+    }
+}
+
+void cwist_app_http_handler(int client_fd, void *ctx) {
+    cwist_app *app = (cwist_app *)ctx;
+    
+    if (app->use_http2) {
+        char peek_buf[24];
+        ssize_t peeked = recv(client_fd, peek_buf, 24, MSG_PEEK);
+        if (peeked >= 24 && memcmp(peek_buf, "PRI * HTTP/2.0\r\n\r\nSM\r\n\r\n", 24) == 0) {
+            cwist_https_connection conn = { .fd = client_fd, .ssl = NULL, .negotiated_http2 = true, .negotiated_protocol = CWIST_HTTPS_PROTOCOL_HTTP2 };
+            cwist_http2_serve_connection(&conn, app, static_http2_route_bridge);
+            close(client_fd);
+            return;
+        }
+    }
+
+    /* Apply Choi Seok-jeong's Lattice (Sanpan) for priority scaling. */
+    uint32_t tid = ttak_net_lattice_get_worker_id();
+    uint16_t node_id = (uint16_t)(client_fd % TTAK_MOLS_NODE_COUNT);
+    uint32_t mixed_seed = ttak_apply_mols_control(node_id, tid);
+    
+    /* Jeungseung Gaebang Scaling for priority weighting. */
+    uint32_t priority_weight = ((mixed_seed * 16777619U) >> 8) % 100;
+
+    /* Use stack-allocated buffer for zero-allocation ingress path.
+     * Aligned to cache line to optimize lattice-friendly access and prevent buffer loss. */
+    _Alignas(64) char read_buf[CWIST_HTTP_READ_BUFFER_SIZE];
     size_t buf_len = 0;
     read_buf[0] = '\0';
 
     while (true) {
-        cwist_http_request *req = cwist_http_receive_request(client_fd, read_buf, CWIST_HTTP_READ_BUFFER_SIZE, &buf_len);
+        // --- Zero-Alloc Ingress Fast-Path for Cached / Fixed BDR Endpoints ---
+        if (app->bdr_ctx) {
+            while (true) {
+                if (buf_len == 0) {
+                    ssize_t bytes = recv(client_fd, read_buf, sizeof(read_buf) - 1, 0);
+                    if (bytes <= 0) {
+                        if (bytes < 0 && errno == EINTR) continue;
+                        close(client_fd);
+                        return;
+                    }
+                    buf_len = (size_t)bytes;
+                    read_buf[buf_len] = '\0';
+                }
+
+                char *hdr_end = (char *)cwist_simd_find_crlfcrlf(read_buf, buf_len);
+                if (hdr_end && (read_buf[0] == 'G' && read_buf[1] == 'E' && read_buf[2] == 'T' && read_buf[3] == ' ')) {
+                    const char *path_start = read_buf + 4;
+                    const char *path_end = (const char *)memchr(path_start, ' ', (size_t)(hdr_end - path_start));
+                    if (path_end) {
+                        char path_tmp[256];
+                        size_t plen = (size_t)(path_end - path_start);
+                        if (plen < sizeof(path_tmp)) {
+                            memcpy(path_tmp, path_start, plen);
+                            path_tmp[plen] = '\0';
+                            size_t cached_len = 0;
+                            const void *cached_blob = cwist_bdr_get(app->bdr_ctx, "GET", path_tmp, &cached_len);
+                            if (cached_blob && cached_len > 0) {
+                                ssize_t sret = send(client_fd, cached_blob, cached_len, MSG_NOSIGNAL);
+                                if (sret <= 0) {
+                                    close(client_fd);
+                                    return;
+                                }
+                                size_t consumed = (size_t)(hdr_end + 4 - read_buf);
+                                if (buf_len > consumed) {
+                                    memmove(read_buf, read_buf + consumed, buf_len - consumed);
+                                    buf_len -= consumed;
+                                    read_buf[buf_len] = '\0';
+                                } else {
+                                    buf_len = 0;
+                                    read_buf[0] = '\0';
+                                }
+                                continue;
+                            }
+                        }
+                    }
+                }
+                break;
+            }
+        }
+
+        cwist_http_parse_error_t perr = CWIST_HTTP_PARSE_OK;
+        cwist_http_request *req = cwist_http_receive_request(client_fd, read_buf, sizeof(read_buf), &buf_len, &perr);
         if (!req) {
+            app_maybe_send_parse_error(client_fd, perr);
             break;
         }
         req->client_fd = client_fd;
