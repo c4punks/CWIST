@@ -27,7 +27,36 @@ TCC_STACK_FLAGS = -O3 -g \
                   -fno-math-errno
 
 PERF_WARNINGS = -Wextra
-PERF_STACK_FLAGS = -O3 -g
+
+# Clang-specific aggressive optimizations (Apple Clang and LLVM Clang compatible)
+CLANG_STACK_FLAGS = -O3 -ffast-math -g \
+                    -falign-functions=32 \
+                    -fomit-frame-pointer \
+                    -finline-functions \
+                    -fvectorize \
+                    -fslp-vectorize \
+                    -fstrict-aliasing \
+                    -funroll-loops
+ifeq ($(UNAME_S),Linux)
+    CLANG_STACK_FLAGS += -fno-plt -fno-semantic-interposition
+endif
+
+# GCC-specific aggressive optimizations
+# -flto=auto lets the final link inline across TUs (event loop <-> handlers);
+# -ffat-lto-objects keeps plain code in the objects so a link without -flto
+# (or a consumer that just unpacks libcwist.a) still works unchanged.
+GCC_STACK_FLAGS = -Ofast -g \
+                  -flto=auto -ffat-lto-objects \
+                  -fno-plt \
+                  -falign-functions=32 \
+                  -falign-loops=32 \
+                  -falign-jumps=32 \
+                  -falign-labels=32 \
+                  -fno-semantic-interposition \
+                  -fomit-frame-pointer \
+                  -finline-functions \
+                  -fstrict-aliasing \
+                  -funroll-loops
 
 ifeq ($(BUILD_PROFILE),tcc)
     CFLAGS = $(COMMON_CFLAGS) $(TCC_STACK_FLAGS) -ftls-model=global-dynamic
