@@ -394,7 +394,8 @@ static void cwist_static_handler(cwist_http_request *req, cwist_http_response *r
             res->status_code = CWIST_HTTP_NOT_MODIFIED; // 304
             cwist_http_header_add(&res->headers, "ETag", etag);
             cwist_http_header_add(&res->headers, "Last-Modified", last_mod_buf);
-            cwist_http_header_add(&res->headers, "Cache-Control", "public, max-age=3600");
+            const char *cc = info->mapping->cache_control ? info->mapping->cache_control : "public, max-age=3600";
+            cwist_http_header_add(&res->headers, "Cache-Control", cc);
             cwist_sstring_assign(res->body, "");
         } else {
             /* HEAD falls through here: app_serve_parsed_request suppresses the

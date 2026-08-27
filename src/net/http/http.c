@@ -1334,6 +1334,37 @@ cwist_error_t cwist_http_send_response_head(int client_fd, cwist_http_response *
 }
 
 /**
+ * @brief Send only the status line and headers of a response (RFC 9110 §9.3.2
+ * HEAD semantics): Content-Length reflects the would-be body, but no body
+ * bytes are written. Body resources are released as in the full send path.
+ */
+cwist_error_t cwist_http_send_response_head(int client_fd, cwist_http_response *res) {
+    cwist_error_t err = make_error(CWIST_ERR_INT16);
+    if (client_fd < 0 || !res) {
+        err.error.err_i16 = -1;
+        return err;
+    }
+
+    char header_buf[CWIST_HTTP_MAX_HEADER_SIZE];
+    size_t header_len = serialize_headers(res, header_buf, sizeof(header_buf));
+
+    struct iovec iov = { .iov_base = header_buf, .iov_len = header_len };
+    int flags = 0;
+    #if defined(MSG_NOSIGNAL)
+    flags |= MSG_NOSIGNAL;
+    #endif
+    #if defined(MSG_DONTWAIT)
+    flags |= MSG_DONTWAIT;
+    #endif
+
+    err.error.err_i16 = (cwist_http_sendmsg_all(client_fd, &iov, 1, flags) == 0) ? 0 : -1;
+
+    cwist_http_response_release_ptr_body(res);
+    cwist_http_response_release_file_stream(res);
+    return err;
+}
+
+/**
  * @brief Send a minimal error response with Connection: close, used to answer
  * malformed requests (400/413/417/431/501) before the connection is dropped.
  * @param fd Connected client socket descriptor.

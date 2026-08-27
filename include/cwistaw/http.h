@@ -151,6 +151,11 @@ cwist_error_t cwist_http_response_send_file(cwist_http_response *res, const char
 cwist_error_t cwist_http_send_response_head(int client_fd, cwist_http_response *res);
 
 /**
+ * @brief Send only the status line and headers (HEAD replies).
+ */
+cwist_error_t cwist_http_send_response_head(int client_fd, cwist_http_response *res);
+
+/**
  * @brief Serialize only the status line and headers into a caller buffer.
  * @return Number of bytes written.
  */
