@@ -22,6 +22,7 @@ int cwist_http3_normalize_response_header_name(const char *name,
                                                char *out,
                                                size_t out_len);
 int cwist_http3_response_header_value_is_safe(const char *value);
+int cwist_http3_method_is_idempotent(const char *method_str);
 
 int cwist_http3_normalize_response_header_name(const char *name,
                                                char *out,
@@ -101,6 +102,11 @@ int main(void) {
     assert(fl >= 0 && (fl & O_NONBLOCK));
     printf("[PASS] HTTP/3 server_loop sets O_NONBLOCK on the UDP socket.\n");
 
+    /* The server loop must force the UDP socket into non-blocking mode */
+    int fl = fcntl(udp_fd, F_GETFL, 0);
+    assert(fl >= 0 && (fl & O_NONBLOCK));
+    printf("[PASS] HTTP/3 server_loop sets O_NONBLOCK on the UDP socket.\n");
+
     /* Stop the server */
     ctx->running = 0;
 
@@ -113,26 +119,6 @@ int main(void) {
     assert(ctx == NULL);
     printf("HTTP/3 QUIC support unavailable in this OpenSSL build; TCP HTTP/1.1 fallback remains available.\n");
 #endif
-
-    /* --- Test 7: response header normalization for browser strictness --- */
-    char h3_name[64];
-    assert(cwist_http3_normalize_response_header_name("Set-Cookie",
-                                                       h3_name,
-                                                       sizeof(h3_name)) == 0);
-    assert(strcmp(h3_name, "set-cookie") == 0);
-    assert(cwist_http3_normalize_response_header_name("Location",
-                                                       h3_name,
-                                                       sizeof(h3_name)) == 0);
-    assert(strcmp(h3_name, "location") == 0);
-    assert(cwist_http3_normalize_response_header_name(":bad",
-                                                       h3_name,
-                                                       sizeof(h3_name)) == -1);
-    assert(cwist_http3_normalize_response_header_name("Bad Header",
-                                                       h3_name,
-                                                       sizeof(h3_name)) == -1);
-    assert(cwist_http3_response_header_value_is_safe("sid=gone; Path=/; Max-Age=0"));
-    assert(!cwist_http3_response_header_value_is_safe("ok\r\nbad: value"));
-    printf("[PASS] HTTP/3 response headers are lowercased and CRLF-safe.\n");
 
     /* --- Test 7: response header normalization for browser strictness --- */
     char h3_name[64];
