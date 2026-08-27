@@ -27,6 +27,7 @@ int cwist_http3_normalize_response_header_name(const char *name,
                                                char *out,
                                                size_t out_len);
 int cwist_http3_response_header_value_is_safe(const char *value);
+int cwist_http3_method_is_idempotent(const char *method_str);
 
 static volatile int g_handler_called = 0;
 
@@ -100,6 +101,9 @@ int main(void) {
     assert(fl >= 0 && (fl & O_NONBLOCK));
     printf("[PASS] HTTP/3 server_loop sets O_NONBLOCK on the UDP socket.\n");
 
+    /* Stop the server */
+    ctx->running = 0;
+
     usleep(100000);
     close(udp_fd);
 
@@ -149,6 +153,52 @@ int main(void) {
     assert(cwist_http3_response_header_value_is_safe("sid=gone; Path=/; Max-Age=0"));
     assert(!cwist_http3_response_header_value_is_safe("ok\r\nbad: value"));
     printf("[PASS] HTTP/3 response headers are lowercased and CRLF-safe.\n");
+
+    /* --- Test 8: 0-RTT early data setter (opt-in, default OFF) --- */
+    ctx = NULL;
+    err = cwist_http3_init_context_ephemeral(&ctx);
+    assert(err.error.err_i16 == 0);
+    assert(ctx->early_data_enabled == 0);
+    assert(ctx->early_data_guard == 0);
+
+    cwist_http3_set_early_data(ctx, true);
+    assert(ctx->early_data_enabled == 1);
+    /* Guard defaults ON when early data is enabled */
+    assert(ctx->early_data_guard == 1);
+
+    cwist_http3_set_early_data_guard(ctx, 0);
+    assert(ctx->early_data_guard == 0);
+    cwist_http3_set_early_data_guard(ctx, 1);
+    assert(ctx->early_data_guard == 1);
+
+    cwist_http3_set_early_data(ctx, false);
+    assert(ctx->early_data_enabled == 0);
+    cwist_http3_destroy_context(ctx);
+    printf("[PASS] HTTP/3 0-RTT early data setter and replay guard defaults.\n");
+
+    /* Same behavior on the certificate-based init path */
+    ctx = NULL;
+    err = cwist_http3_init_context(&ctx, TEST_CERT, TEST_KEY);
+    assert(err.error.err_i16 == 0);
+    assert(ctx->early_data_enabled == 0);
+    cwist_http3_set_early_data(ctx, true);
+    assert(ctx->early_data_enabled == 1 && ctx->early_data_guard == 1);
+    cwist_http3_destroy_context(ctx);
+    printf("[PASS] HTTP/3 0-RTT setter works on certificate-based context.\n");
+
+    /* --- Test 9: replay guard method classification --- */
+    assert(cwist_http3_method_is_idempotent("GET") == 1);
+    assert(cwist_http3_method_is_idempotent("HEAD") == 1);
+    assert(cwist_http3_method_is_idempotent("OPTIONS") == 1);
+    assert(cwist_http3_method_is_idempotent("PUT") == 1);
+    assert(cwist_http3_method_is_idempotent("DELETE") == 1);
+    assert(cwist_http3_method_is_idempotent("TRACE") == 1);
+    assert(cwist_http3_method_is_idempotent("POST") == 0);
+    assert(cwist_http3_method_is_idempotent("PATCH") == 0);
+    assert(cwist_http3_method_is_idempotent("CONNECT") == 0);
+    assert(cwist_http3_method_is_idempotent(NULL) == 0);
+    assert(cwist_http3_method_is_idempotent("garbage") == 0);
+    printf("[PASS] HTTP/3 replay guard method classification.\n");
 
     printf("All HTTP/3 infrastructure tests passed!\n");
     return 0;
