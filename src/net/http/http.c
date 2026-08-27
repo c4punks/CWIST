@@ -1951,14 +1951,32 @@ int headers_have_content_length(cwist_http_header_node *headers) {
     return 0;
 }
 
-
-cwist_sstring *cwist_http_stringify_response(cwist_http_response *res) {
-    if (!res) return NULL;
-
-    cwist_sstring *response_str = cwist_sstring_create();
-    size_t body_len = 0;
-    if (res->body) {
-        body_len = res->body->size;
+/**
+ * @brief Drain the socket into the connection stash.
+ * Stops at EAGAIN, and also after a short read: poll is level-triggered, so
+ * if bytes remain after a short recv the one-shot re-arm fires again
+ * immediately.  This skips the guaranteed-EAGAIN second recv that otherwise
+ * costs one wasted syscall per request on non-pipelined keep-alive traffic.
+ * @return 0 on success (EAGAIN or data), -1 on orderly close or fatal error.
+ */
+int cwist_http_async_conn_fill(cwist_http_async_conn_t *conn) {
+    for (;;) {
+        if (conn->len + 1 >= conn->cap && !http_async_stash_grow(conn, conn->len + 4096)) {
+            return -1;
+        }
+        size_t avail = conn->cap - 1 - conn->len;
+        ssize_t n = recv(conn->fd, conn->rbuf + conn->len, avail, 0);
+        if (n > 0) {
+            conn->len += (size_t)n;
+            conn->rbuf[conn->len] = '\0';
+            conn->virgin = false;
+            if ((size_t)n < avail) return 0; /* short read: drained for now */
+            continue;
+        }
+        if (n == 0) return -1;
+        if (errno == EINTR) continue;
+        if (errno == EAGAIN || errno == EWOULDBLOCK) return 0;
+        return -1;
     }
 
     // Status Line

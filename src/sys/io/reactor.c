@@ -230,6 +230,22 @@ struct cwist_reactor {
     uint32_t free_stack[MAX_REACTOR_EVENTS];
     uint32_t free_top;
     pthread_mutex_t pool_lock;
+#ifdef __linux__
+    /* Deferred SQE batching: submissions made by the reactor's own run thread
+     * while it dispatches a CQE batch (overwhelmingly connection re-arms, one
+     * per served request) are queued here and flushed with a single
+     * io_uring_enter after the batch, instead of paying one enter syscall per
+     * event.  Cross-thread submissions (accept thread -> worker reactor) keep
+     * the immediate path so sleeping workers still wake. */
+    struct io_uring_sqe deferred_sqes[1024];
+    reactor_event_ctx_t *deferred_ctxs[1024];
+    uint32_t deferred_n;
+    /* SQEs parked in the SQ by queue_deferred, covered by the next wait
+     * enter's to_submit.  Only touched by the run thread. */
+    uint32_t sq_unsubmitted;
+    pthread_t owner;
+    bool dispatching;
+#endif
 };
 
 static reactor_event_ctx_t *alloc_reactor_ctx(cwist_reactor_t *r, int fd, cwist_reactor_cb_t cb,
@@ -423,6 +439,30 @@ static bool uring_submit(cwist_reactor_t *reactor, struct io_uring_sqe *out_sqe)
     }
     return true;
 }
+
+/* Copy the deferred SQEs into the SQ without an io_uring_enter: the run
+ * loop's next wait enter carries to_submit, so a dispatch round costs one
+ * enter total instead of wait-enter + flush-enter.  On SQ contention fall
+ * back to the immediate flush so re-arms never stall. */
+static void queue_deferred(cwist_reactor_t *reactor) {
+    uint32_t n = reactor->deferred_n;
+    if (n == 0) return;
+    pthread_mutex_lock(&reactor->impl.sq_lock);
+    uint32_t tail = *reactor->impl.sq_tail;
+    uint32_t head = __atomic_load_n(reactor->impl.sq_head, __ATOMIC_ACQUIRE);
+    if (tail - head + n <= reactor->impl.sq_entries) {
+        for (uint32_t i = 0; i < n; i++) {
+            uint32_t index = (tail + i) & *reactor->impl.sq_ring_mask;
+            memcpy(&reactor->impl.sqes[index], &reactor->deferred_sqes[i],
+                   sizeof(reactor->deferred_sqes[i]));
+        }
+        __atomic_store_n(reactor->impl.sq_tail, tail + n, __ATOMIC_RELEASE);
+        reactor->deferred_n = 0;
+        reactor->sq_unsubmitted += n;
+    }
+    pthread_mutex_unlock(&reactor->impl.sq_lock);
+    if (reactor->deferred_n) flush_deferred(reactor);
+}
 #endif
 
 bool cwist_reactor_add(cwist_reactor_t *reactor, int fd, cwist_reactor_cb_t cb,
@@ -604,89 +644,16 @@ void cwist_reactor_run(cwist_reactor_t *reactor) {
 #ifdef __linux__
     if (!reactor->impl.use_epoll) {
         reactor->owner = pthread_self();
-        const uint64_t cq_grace_ns = reactor_cq_grace_ns();
-        while (reactor_running(reactor)) {
-            reactor_drain_posts(reactor);
-            reactor_run_timers(reactor);
-            /* Submit the re-arms queued by the previous dispatch batch under
-             * the SQ lock, then wait in a separate call.  The submit enter
-             * MUST hold the lock: uring_submit/uring_submit_batch roll the
-             * SQ tail back when their own enter fails, and a concurrent
-             * unlocked enter here could consume that SQE first, leaving
-             * sq_tail behind sq_head.  tail < head reads as a permanently
-             * full SQ to every later submit (tail - head underflows past
-             * sq_entries), so the reactor goes deaf: no re-arm, no accept,
-             * no completions - the server stops answering while every thread
-             * looks idle.  With all SQ consumers under the lock, a failed
-             * enter means the SQE was definitely not consumed and the
-             * rollback is exact.
-             *
-             * The wait is bounded (like the epoll path's 100 ms poll)
-             * because the shutdown handler runs with SA_RESTART: an
-             * unbounded enter would be restarted after SIGTERM and hang an
-             * idle reactor forever.  It passes to_submit=0, so it consumes
-             * nothing and needs no lock. */
-            /* CQ grace: completions that land while the previous batch is
-             * dispatching would otherwise force a fresh wake. After the
-             * locked submit enter below, peek the CQ ring from userspace for
-             * a bounded window; completions caught in time are dispatched in
-             * the current round and the wait enter is skipped. Re-arms are
-             * safe either way: the submit enter above already flushed them.
-             * The deadline bounds the spin; on expiry (or when disabled) the
-             * code falls through to the bounded wait below. */
-            bool cq_pending = false;
-            if (cq_grace_ns > 0) {
-                uint32_t ph =
-                    __atomic_load_n(reactor->impl.cq_head, __ATOMIC_ACQUIRE);
-                if (ph == *reactor->impl.cq_tail) {
-                    struct timespec gs;
-                    clock_gettime(CLOCK_MONOTONIC, &gs);
-                    uint64_t g_end = (uint64_t)gs.tv_sec * 1000000000ull +
-                                     (uint64_t)gs.tv_nsec + cq_grace_ns;
-                    uint32_t spins = 0;
-                    while (ph == *reactor->impl.cq_tail) {
-                        reactor_cpu_relax();
-                        if (((++spins) & 31u) == 0) {
-                            clock_gettime(CLOCK_MONOTONIC, &gs);
-                            uint64_t now = (uint64_t)gs.tv_sec * 1000000000ull +
-                                           (uint64_t)gs.tv_nsec;
-                            if (now >= g_end) break;
-                        }
-                        ph = __atomic_load_n(reactor->impl.cq_head, __ATOMIC_ACQUIRE);
-                    }
-                    cq_pending = (ph != *reactor->impl.cq_tail);
-                }
-            }
-
-            /* Bounded by the idle wait, shortened to the next timer. */
-            const uint64_t wait_ns = reactor_wait_ns(reactor);
-            const struct __kernel_timespec idle_ts = {
-                .tv_sec = (long long)(wait_ns / 1000000000ull),
-                .tv_nsec = (long long)(wait_ns % 1000000000ull)};
+        while (reactor->running && atomic_load(&g_cwist_running)) {
+            /* One enter per round: submit the re-arms queued by the previous
+             * dispatch batch and wait for the next event in the same call. */
             uint32_t to_submit = reactor->sq_unsubmitted;
+            int ret = sys_io_uring_enter(reactor->impl.ring_fd, to_submit, 1, IORING_ENTER_GETEVENTS, NULL);
+            if (ret < 0) {
+                if (errno == EINTR) continue; /* sq_unsubmitted kept, retried */
+                break;
+            }
             reactor->sq_unsubmitted = 0;
-            if (to_submit > 0) {
-                pthread_mutex_lock(&reactor->impl.sq_lock);
-                int sret = sys_io_uring_enter(reactor->impl.ring_fd, to_submit, 0, 0, NULL);
-                pthread_mutex_unlock(&reactor->impl.sq_lock);
-                if (sret < 0) {
-                    /* Submission state is unknown on EINTR; anything else
-                     * failed before consuming.  Either way the SQEs are
-                     * still in the SQ (the kernel caps resubmission at what
-                     * is actually there), so restore the count and let the
-                     * next round retry. */
-                    reactor->sq_unsubmitted += to_submit;
-                }
-            }
-            if (!cq_pending) {
-                int ret = sys_io_uring_enter_timeout(reactor->impl.ring_fd, 0, 1,
-                                                     IORING_ENTER_GETEVENTS, &idle_ts);
-                if (ret < 0) {
-                    if (errno == EINTR) continue;
-                    if (errno == ETIME) continue;
-                    break;
-                }
-            }
             uint32_t head = __atomic_load_n(reactor->impl.cq_head, __ATOMIC_ACQUIRE);
             uint32_t tail = *reactor->impl.cq_tail;
             if (head == tail) {
