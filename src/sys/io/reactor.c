@@ -120,6 +120,10 @@ static inline int sys_io_uring_enter_timeout(int ring_fd, unsigned to_submit, un
  * @param off Region selector (IORING_OFF_*).
  * @return Mapped pointer, or NULL on failure (caller munmaps and falls back). */
 static void *mmap_ring(int fd, size_t sz, off_t off) {
+    /* No MAP_POPULATE: with one ring per worker thread the pre-faulted pages
+     * dominate idle RSS (~400 KiB per reactor) while a worker under real
+     * load only ever touches the head of each ring.  On-demand paging keeps
+     * RSS proportional to actual concurrency. */
     void *p = mmap(NULL, sz, PROT_READ | PROT_WRITE, MAP_SHARED, fd, off);
     return (p == MAP_FAILED) ? NULL : p;
 }
