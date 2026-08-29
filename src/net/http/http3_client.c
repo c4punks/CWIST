@@ -853,6 +853,17 @@ static SSL_CTX *h3c_get_ssl_ctx(void *peer_ctx, const struct sockaddr *local) {
 }
 
 /* ------------------------------------------------------------------ */
+/* SSL context callback: hand lsquic the client SSL_CTX so the        */
+/* handshake honors its trust store and verify mode.                  */
+/* ------------------------------------------------------------------ */
+
+static SSL_CTX *h3c_get_ssl_ctx(void *peer_ctx, const struct sockaddr *local) {
+    (void)local;
+    cwist_http3_client *client = peer_ctx;
+    return client ? client->ssl_ctx : NULL;
+}
+
+/* ------------------------------------------------------------------ */
 /* Client API                                                         */
 /* ------------------------------------------------------------------ */
 
