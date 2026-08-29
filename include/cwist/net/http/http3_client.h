@@ -65,6 +65,17 @@ int cwist_http3_client_set_ca_bundle(cwist_http3_client *client, const char *ca_
 void cwist_http3_client_set_insecure(cwist_http3_client *client, int enabled);
 
 /**
+ * @brief Disable or re-enable TLS certificate verification.
+ *
+ * Verification is ON by default.  Opt out explicitly for self-signed
+ * development setups; opting out trusts any server certificate.
+ *
+ * @param client Client handle.
+ * @param enabled Non-zero to disable verification (default: 0).
+ */
+void cwist_http3_client_set_insecure(cwist_http3_client *client, int enabled);
+
+/**
  * @brief Set request timeout in milliseconds.
  * @param client Client handle.
  * @param timeout_ms Timeout, 0 for default (30000).
