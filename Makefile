@@ -113,6 +113,11 @@ IO_SRC = src/sys/io/io_select.c # Default fallback
 
 ifeq ($(UNAME_S),Linux)
     CFLAGS += -DCWIST_OS_LINUX
+    # Hardening: stack canaries on risky frames, libc call checking, and
+    # full RELRO + PIE on linked executables.  -U first so toolchains that
+    # predefine _FORTIFY_SOURCE do not warn about the redefinition.
+    CFLAGS += -fstack-protector-strong -U_FORTIFY_SOURCE -D_FORTIFY_SOURCE=2
+    LIBS += -Wl,-z,relro,-z,now -pie
     # io_queue.c is a lock-free job queue (unrelated to io_uring despite the history).
     IO_SRC = src/sys/io/io_queue.c
 endif
@@ -124,6 +129,23 @@ ifeq ($(UNAME_S),FreeBSD)
     CFLAGS += -DCWIST_OS_BSD
     IO_SRC = src/sys/io/kqueue.c
 endif
+
+# Sanitizer toggle: `make SANITIZE=address,undefined test check` builds the
+# library and every test with the given sanitizers.  -fno-lto must come last
+# so it wins over the LTO flags baked into the optimization profiles.
+ifdef SANITIZE
+    CFLAGS += -fsanitize=$(SANITIZE) -fno-lto -fno-omit-frame-pointer
+    LIBS += -fsanitize=$(SANITIZE)
+endif
+
+# Werror toggle for CI: `make WERROR=1` turns every warning into an error.
+# Vendored sources (multipart-parser-c) are exempt; they are not our code.
+ifdef WERROR
+    CFLAGS += -Werror
+endif
+
+lib/multipart-parser-c/multipart_parser.o: CFLAGS := $(filter-out -Werror,$(CFLAGS))
+lib/sqlite3/sqlite3.o: CFLAGS := $(filter-out -Werror,$(CFLAGS))
 
 # Source Files
 SRCS = src/core/sstring/sstring.c \
@@ -202,6 +224,7 @@ LIB_NAME = libcwist.a
 # packaged installation neither duplicates their objects nor hides updates to
 # individual dependencies.
 PREFIX ?= /usr/local
+BINDIR ?= $(PREFIX)/bin
 LIBDIR ?= $(PREFIX)/lib
 INCLUDEDIR ?= $(PREFIX)/include
 DEPSDIR ?= $(LIBDIR)/cwist
@@ -417,6 +440,11 @@ test_http2: $(LIB_NAME) tests/test_http2.c
 	$(CC) $(CFLAGS) -o test_http2 tests/test_http2.c $(LIB_NAME) $(LIBS)
 	./test_http2
 
+# Standalone h2c server for external conformance tools (h2spec); build-only,
+# executed by the interop CI job, not by `make test`.
+h2c-server: $(LIB_NAME) tests/h2c_server.c
+	$(CC) $(CFLAGS) -o h2c-server tests/h2c_server.c $(LIB_NAME) $(LIBS)
+
 test_http3: $(LIB_NAME) tests/test_http3.c
 	$(CC) $(CFLAGS) -o test_http3 tests/test_http3.c $(LIB_NAME) $(LIBS)
 	./test_http3
@@ -505,7 +533,16 @@ install: $(LIB_NAME)
 	install -m 644 $(SQLITE_DIR)/sqlite3.h $(SQLITE_DIR)/sqlite3ext.h $(INSTALL_VENDOR_INCLUDEDIR)/
 	find $(INSTALL_VENDOR_INCLUDEDIR) -type d -exec chmod 755 {} \;
 	find $(INSTALL_VENDOR_INCLUDEDIR) -type f -exec chmod 644 {} \;
-	@echo "Installation complete.  Link with -L$(LIBDIR) -L$(DEPSDIR) -lcwist."
+	@echo "Installing pkg-config file to $(PCDIR)..."
+	install -d $(INSTALL_PCDIR)
+	install -m 644 $(PC_FILE) $(INSTALL_PCDIR)/
+	@echo "Installing cwist CLI to $(BINDIR)..."
+	install -d $(DESTDIR)$(BINDIR)
+	install -m 755 tools/cli/cwist $(DESTDIR)$(BINDIR)/cwist
+	@echo "Installation complete.  Compile with: pkg-config --cflags --libs cwist"
+
+$(PC_FILE): cwist.pc.in
+	sed -e 's|@PREFIX@|$(PREFIX)|g' -e 's|@VERSION@|$(VERSION)|g' cwist.pc.in > $@
 
 uninstall:
 	@echo "Uninstalling cwist..."
@@ -513,7 +550,8 @@ uninstall:
 	rm -f $(DESTDIR)$(DEPSDIR)/liburiparser.a $(DESTDIR)$(DEPSDIR)/libcjson.a $(DESTDIR)$(DEPSDIR)/libttak.a $(DESTDIR)$(DEPSDIR)/libnats_static.a $(DESTDIR)$(DEPSDIR)/liblsquic.a $(DESTDIR)$(DEPSDIR)/libssl.a $(DESTDIR)$(DEPSDIR)/libcrypto.a
 	rmdir $(DESTDIR)$(DEPSDIR) 2>/dev/null || true
 	rm -rf $(DESTDIR)$(INCLUDEDIR)/cwist
-	rm -rf $(DESTDIR)$(INCLUDEDIR)/wasm
+	rm -f $(INSTALL_PCDIR)/$(PC_FILE)
+	rm -f $(DESTDIR)$(BINDIR)/cwist
 	@echo "Uninstallation complete."
 
 clean:

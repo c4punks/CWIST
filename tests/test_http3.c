@@ -441,5 +441,6 @@ int main(void) {
     close(udp_fd);
 
     printf("All HTTP/3 infrastructure tests passed!\n");
+    lsquic_global_cleanup();
     return 0;
 }
