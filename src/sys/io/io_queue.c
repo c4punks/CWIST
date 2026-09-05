@@ -1,6 +1,5 @@
 #include <cwist/sys/io/cwist_io.h>
 #include <cwist/core/mem/alloc.h>
-#include <cwist/core/mem/gc.h>
 #include <ttak/mem/epoch.h>
 #include <pthread.h>
 #include <stdatomic.h>
@@ -89,11 +88,6 @@ static void cwist_queue_defer_free(cwist_io_queue *q, job_node_t *node) {
     pthread_mutex_unlock(&q->retire_lock);
 }
 
-/**
- * @brief Epoch-retire callback that frees a retired queue node.
- * Called by ttak once no thread can hold a reference to the node.
- * @param ptr Node pointer staged via cwist_queue_defer_free().
- */
 static void cwist_job_node_free_cb(void *ptr) {
     cwist_free(ptr);
 }

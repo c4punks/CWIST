@@ -9,8 +9,10 @@
 CWIST is a C17 web framework and application server with built-in HTTP/1.1, HTTP/2,
 HTTP/3 (QUIC), WebSocket, and WebTransport support, hybrid post-quantum TLS
 (X25519MLKEM768), an embedded SQLite ORM, and a synchronous io_uring/epoll/kqueue
-reactor. It is written in plain C, links statically, and serves ~110k req/s at
-sub-0.2ms average latency in ~14MB of RSS.
+reactor. It is written in plain C, links statically, and serves ~152k req/s at
+1.59ms average latency in ~9.1MB of RSS (CI: `wrk -t12 -c400 -d10s` after warmup,
+C1M reactor mode — see the benchmark block below; a tuned `wrk -t4 -c100` profile
+reaches 0.41ms average at ~155k req/s).
 </p>
 
 [Heavy Benchmark on CWIST APP](https://github.com/gg582/fly.board/blob/main/README.md)
@@ -124,8 +126,8 @@ memory management to the user. CWIST ships the whole stack:
 
 The benchmark results above demonstrate the advantages in latency, memory footprint, and determinism:
 
-1. **Latency & Throughput.** Under 400 concurrency (`wrk -t12 -c400`), CWIST Classic Pool delivers 2.16ms average latency and ~111k req/s, and C1M Reactor delivers 2.41ms (versus 3.52ms for Axum, 7.18ms for Gin, and 9.11ms for Spring Boot). In tuned low-latency configurations (`wrk -t4 -c100`), CWIST achieves 0.59ms average latency (P50 0.46ms, P90 1.12ms) at ~108k req/s.
-2. **Memory Efficiency.** CWIST maintains a lean memory footprint (~15.9MB RSS in C1M mode, ~21.7MB in Classic Pool), compared to ~29.5MB for Gin and ~1.34GB for Spring Boot. In high-density container environments, this significantly reduces memory consumption across thousands of instances.
+1. **Latency & Throughput.** Under 400 concurrency (`wrk -t12 -c400`, CI run above), CWIST Classic Pool delivers 1.52ms average latency at ~151k req/s, and C1M Reactor delivers 1.59ms at ~153k req/s (versus 2.55ms for Axum, 4.64ms for Gin, and 5.91ms for Spring Boot in the same run). In the tuned low-latency profile (`wrk -t4 -c100`), CWIST achieves 0.41ms average latency (P50 0.34ms, P90 0.69ms) at ~155k req/s.
+2. **Memory Efficiency.** CWIST maintains a lean memory footprint (~9.1MB RSS in C1M mode, ~15.4MB in Classic Pool, same CI run), compared to ~29.8MB for Gin and ~1.29GB for Spring Boot. In high-density container environments, this significantly reduces memory consumption across thousands of instances.
 3. **Tail Latency & Predictability.** Zero-copy framing, thread-pinned worker execution, and generational arena allocators minimize latency variance and GC pauses.
 4. **Zero-Overhead FFI.** Production libraries in finance, game servers, machine learning, and systems software written in C/C++ link directly into CWIST with zero FFI conversion or runtime bridge penalty.
 5. **Instant Cold Start.** With no runtime VM warmup or GC initialization required, CWIST starts in milliseconds and immediately serves requests at full capacity.
@@ -294,11 +296,49 @@ These variables are read directly by the framework runtime (no prefix required):
 connection path (connections live in the io_uring/epoll reactor instead of
 parking a worker thread each), a single cwist process on loopback served:
 
-| Scale | Result | Wall time |
-|-------|--------|-----------|
-| C10K | 10,000 / 10,000 established + responded (100%) | ~0.5 s |
-| C100K | 100,000 / 100,000 responded (100%) | ~9 s |
-| C1M (8×125K) | 1,000,000 / 1,000,000 responded (100%) | ~20 s per client process |
+| Scale | Result | Wall time | Server peak RSS |
+|-------|--------|-----------|-----------------|
+| C10K | 10,000 / 10,000 established + responded (100%) | ~0.7 s | ~111 MB |
+| C100K | 100,000 / 100,000 responded (100%) | ~8.7 s | ~124 MB |
+| C1M (8×125K) | 1,000,000 / 1,000,000 responded (100%) | ~14–16 s per client process | ~244 MB |
+
+Peak RSS is the summed `VmHWM` high-water mark across the 12 forked
+worker processes (the server defaults to one worker per core); the arena
+bump allocator with a shared per-request arena keeps a million held
+connections inside a quarter gigabyte of resident memory.
+
+The classic thread-per-connection path (`CWIST_C1M_MODE=0`) is no longer
+capped at `cores*8` held connections either: every accepted connection gets
+its own on-demand detached thread with a 256 KiB stack, so held connections
+scale with the task budget instead of parking a fixed worker pool. Measured
+on the same machine, same client:
+
+| Scale | Result | Wall time | Server peak RSS |
+|-------|--------|-----------|-----------------|
+| C10K | 10,000 / 10,000 responded (100%) | ~0.8 s | ~950 MB |
+| C100K | 100,000 / 100,000 responded (100%) | ~9.6 s | ~9.2 GB |
+
+C100K classic needs task-count headroom (one thread per held connection:
+`pids.max` / `TasksMax` above 100K — desktop app scopes often cap this near
+76K — and `kernel.threads-max` is fine by default) and roughly 26 GB of
+virtual commit budget for 100K x 256 KiB stacks (about 9.2 GB of that
+actually resident; raise `vm.overcommit_ratio` when RAMxratio + swap is
+tight). C1M is out of reach
+for this model — a million threads exceeds `threads-max` — which is exactly
+what the reactor path is for.
+
+**Which mode should you pick?** Most HTTP workloads are request bursts,
+not held connections: APIs behind a reverse proxy, web pages, webhooks.
+There the classic path is the right default — a dedicated thread per active
+connection gives the kernel scheduler direct per-connection fairness with
+no reactor round trip, which is where cwist's sub-millisecond latency comes
+from in the tuned profile (0.41ms average at ~155k req/s with `wrk -t4 -c100`;
+the shared-core CI run at `wrk -t12 -c400` lands at 1.52ms / ~151k req/s — see
+the benchmark block above). Flip C1M mode on when you must *hold* very large numbers of
+simultaneously open, mostly idle connections — SSE fan-out, websocket-scale
+chat, long-polling — or when you genuinely target C1M. Giving up C1M for
+the classic path costs you nothing until your workload is dominated by
+hundreds of thousands of idle open sockets.
 
 Benchmark environment:
 
