@@ -693,7 +693,13 @@ static void mw_next_wrapper(cwist_http_request *req, cwist_http_response *res) {
 static void execute_chain(cwist_app *app, cwist_http_request *req, cwist_http_response *res, cwist_handler_func final_handler, void *handler_data) {
     mw_executor_ctx ctx = { app->middlewares, final_handler, handler_data };
     req->private_data = &ctx;
-    mw_next_wrapper(req, res);
+    if (__builtin_expect(!app->middlewares, 1)) {
+        /* No middleware: still expose the executor ctx so final handlers
+         * (e.g. the static-file handler) can reach handler_data. */
+        if (final_handler) final_handler(req, res);
+    } else {
+        mw_next_wrapper(req, res);
+    }
     req->private_data = NULL;
 }
 
@@ -1220,19 +1226,24 @@ cwist_async_action_t cwist_app_http_handler_async(int client_fd, cwist_http_asyn
     }
 
     /* h2c preface: hand the whole connection to the blocking HTTP/2 server,
-     * which owns and closes the fd from here on. */
+     * which owns and closes the fd from here on.  The sniff stash already
+     * consumed the preface (and often the first pipelined frames) from the
+     * socket, so replay those bytes through the connection's prebuffer. */
     if (app->use_http2 && conn->len >= 24 &&
         memcmp(conn->rbuf, "PRI * HTTP/2.0\r\n\r\nSM\r\n\r\n", 24) == 0) {
-        cwist_https_connection h2c = { .fd = client_fd, .ssl = NULL, .negotiated_http2 = true, .negotiated_protocol = CWIST_HTTPS_PROTOCOL_HTTP2 };
-        /* The h2 stack does its own reads; drop the sniffed bytes so the
-         * preface is still available on the socket... it is not: the stash
-         * already consumed them.  Replay by parsing is not supported, so only
-         * take this branch when the stash holds exactly the preface. */
-        if (conn->len == 24) {
-            cwist_http2_serve_connection(&h2c, app, static_http2_route_bridge);
-            close(client_fd);
-            return CWIST_ASYNC_DETACH;
+        char *replay = cwist_alloc(conn->len);
+        if (replay) {
+            memcpy(replay, conn->rbuf, conn->len);
+            cwist_https_connection h2c = { .fd = client_fd, .ssl = NULL,
+                                           .read_buf = replay, .buf_len = conn->len,
+                                           .negotiated_http2 = true,
+                                           .negotiated_protocol = CWIST_HTTPS_PROTOCOL_HTTP2 };
+            cwist_http2_serve_connection_ex(&h2c, app, static_http2_route_bridge,
+                                        cwist_grpc_http2_hooks());
+            cwist_free(replay);
         }
+        close(client_fd);
+        return CWIST_ASYNC_DETACH;
     }
 
     /* Apply Choi Seok-jeong's Lattice (Sanpan) for priority scaling. */
@@ -2131,4 +2142,61 @@ int cwist_app_listen(cwist_app *app, int port) {
     printf("[CWIST] Shutdown complete.\n");
 
     return 0;
+}
+
+static char cwist_swagger_json_path[512] = "openapi.json";
+
+static void cwist_swagger_html_handler(cwist_http_request *req, cwist_http_response *res) {
+    (void)req;
+    static const char html[] =
+        "<!DOCTYPE html>\n<html>\n<head>\n"
+        "<title>CWIST Swagger UI</title>\n"
+        "<link rel=\"stylesheet\" href=\"https://unpkg.com/swagger-ui-dist@5/swagger-ui.css\" />\n"
+        "</head>\n<body>\n"
+        "<div id=\"swagger-ui\"></div>\n"
+        "<script src=\"https://unpkg.com/swagger-ui-dist@5/swagger-ui-bundle.js\"></script>\n"
+        "<script>\n"
+        "window.onload = () => {\n"
+        "  SwaggerUIBundle({\n"
+        "    url: '/openapi.json',\n"
+        "    dom_id: '#swagger-ui',\n"
+        "  });\n"
+        "};\n"
+        "</script>\n"
+        "</body>\n</html>\n";
+    cwist_sstring_assign(res->body, (char *)html);
+    cwist_http_header_add(&res->headers, "Content-Type", "text/html; charset=utf-8");
+}
+
+static void cwist_swagger_json_handler(cwist_http_request *req, cwist_http_response *res) {
+    (void)req;
+    FILE *f = fopen(cwist_swagger_json_path, "rb");
+    if (!f) {
+        res->status_code = 404;
+        cwist_sstring_assign(res->body, (char *)"{\"error\":\"openapi.json not found\"}");
+        cwist_http_header_add(&res->headers, "Content-Type", "application/json");
+        return;
+    }
+    fseek(f, 0, SEEK_END);
+    long sz = ftell(f);
+    fseek(f, 0, SEEK_SET);
+    char *buf = (char *)malloc((size_t)sz + 1);
+    if (buf) {
+        size_t rd = fread(buf, 1, (size_t)sz, f);
+        buf[rd] = '\0';
+        cwist_sstring_assign(res->body, buf);
+        free(buf);
+    }
+    fclose(f);
+    cwist_http_header_add(&res->headers, "Content-Type", "application/json");
+}
+
+void cwist_app_enable_swagger(cwist_app *app, const char *mount_path, const char *openapi_json_path) {
+    if (!app) return;
+    if (openapi_json_path) {
+        snprintf(cwist_swagger_json_path, sizeof(cwist_swagger_json_path), "%s", openapi_json_path);
+    }
+    const char *mp = mount_path ? mount_path : "/docs";
+    cwist_app_get(app, mp, cwist_swagger_html_handler);
+    cwist_app_get(app, "/openapi.json", cwist_swagger_json_handler);
 }
