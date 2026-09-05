@@ -258,6 +258,37 @@ the watcher and generators: entry point, include paths, dev debounce/stop
 timeouts, and route discovery scope all live there, so builds stay reproducible
 across machines without extra configuration.
 
+## Managing a project with the cwist CLI
+
+`make install` also installs the `cwist` command line tool into `$(PREFIX)/bin`.
+
+```sh
+# Scaffold a project: src/main.c, Makefile, and a demo.cwpro manifest
+cwist new project demo --directory ~/src
+cd ~/src/demo
+
+# Build and run like the generated Makefile does
+make            # cc src/main.c -lcwist -lpthread  (needs CWIST installed)
+./bin/demo
+
+# Develop with hot reload (incremental rebuild + zero-downtime restart)
+cwist watcher
+
+# Generate OpenAPI 3.1 from Doxygen @openapi.* route annotations
+cwist openapi
+
+# Generate C models and gRPC method paths from proto3 definitions
+cwist proto api.proto
+
+# Inspect the project manifest and detected routes
+cwist describe
+```
+
+The `.cwpro` manifest (`cwist-project/v1`) is the single source of truth for
+the watcher and generators: entry point, include paths, dev debounce/stop
+timeouts, and route discovery scope all live there, so builds stay reproducible
+across machines without extra configuration.
+
 ## Linking
 
 CWIST's `libcwist.a` is a **thin static archive**: it contains only CWIST
