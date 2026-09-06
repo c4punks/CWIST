@@ -24,6 +24,7 @@
 
 #include <cwist/net/http/http2.h>
 #include <cwist/net/http/http2_flow_control.h>
+#include <cwist/net/http/async.h>
 #include <cwist/core/mem/alloc.h>
 #include <cwist/core/log.h>
 #include <cwist/sys/metrics/metrics.h>
@@ -230,7 +231,137 @@ typedef struct h2_deferred_frame {
     struct h2_deferred_frame *next;
 } h2_deferred_frame;
 
-typedef struct {
+/* --- Async defer completion queue ---
+ *
+ * Plan B for deferred responses: the worker thread that completes an async
+ * job only enqueues the finished (stream_id, req, res) node and pokes the
+ * wake fd; the connection thread drains the queue and does HPACK encoding +
+ * frame writes itself, preserving single-threaded HPACK dynamic table and
+ * flow-control integrity.  refs: one held by the connection, one per
+ * in-flight cwist_async handle (acquired in cwist_async_defer). */
+typedef struct h2_async_node {
+    uint32_t stream_id;
+    cwist_http_request *req;
+    cwist_http_response *send;      /* response to transmit (final_res) */
+    cwist_http_response *res;       /* handler's response (request arena) */
+    bool send_owned;                /* send came from respond_with */
+    struct h2_async_node *next;
+} h2_async_node;
+
+struct cwist_h2_async_queue {
+    int wake_rd;            /* read side: eventfd (Linux) or pipe */
+    int wake_wr;            /* write side (same as wake_rd for eventfd) */
+    pthread_mutex_t mu;
+    h2_async_node *head;
+    h2_async_node *tail;
+    bool closed;            /* connection tore down: enqueue discards */
+    _Atomic int refs;
+};
+
+static void h2_async_node_discard(h2_async_node *n) {
+    if (n->send_owned && n->send && n->send != n->res)
+        cwist_http_response_destroy(n->send);
+    if (n->res) cwist_http_response_destroy(n->res);
+    if (n->req) cwist_http_request_destroy(n->req);
+    cwist_free(n);
+}
+
+static cwist_h2_async_queue *cwist_h2_async_queue_create(void) {
+    cwist_h2_async_queue *q = (cwist_h2_async_queue *)cwist_alloc(sizeof(*q));
+    if (!q) return NULL;
+    memset(q, 0, sizeof(*q));
+    q->wake_rd = -1;
+    q->wake_wr = -1;
+    pthread_mutex_init(&q->mu, NULL);
+    atomic_init(&q->refs, 1);
+#ifdef __linux__
+    q->wake_rd = eventfd(0, EFD_NONBLOCK | EFD_CLOEXEC);
+    q->wake_wr = q->wake_rd;
+#else
+    int pfds[2];
+    if (pipe(pfds) == 0) {
+        for (int i = 0; i < 2; i++) {
+            int fl = fcntl(pfds[i], F_GETFL, 0);
+            if (fl >= 0) fcntl(pfds[i], F_SETFL, fl | O_NONBLOCK);
+        }
+        q->wake_rd = pfds[0];
+        q->wake_wr = pfds[1];
+    }
+#endif
+    return q;
+}
+
+cwist_h2_async_queue *cwist_h2_async_queue_acquire(cwist_h2_async_queue *q) {
+    if (q) atomic_fetch_add_explicit(&q->refs, 1, memory_order_relaxed);
+    return q;
+}
+
+void cwist_h2_async_queue_release(cwist_h2_async_queue *q) {
+    if (!q) return;
+    if (atomic_fetch_sub_explicit(&q->refs, 1, memory_order_acq_rel) != 1) return;
+    if (q->wake_rd >= 0) close(q->wake_rd);
+    if (q->wake_wr >= 0 && q->wake_wr != q->wake_rd) close(q->wake_wr);
+    pthread_mutex_destroy(&q->mu);
+    cwist_free(q);
+}
+
+/* Worker-thread entry point: enqueue the finished exchange and wake the
+ * connection thread.  After connection teardown (closed) the node is
+ * discarded without sending. */
+int cwist_h2_async_queue_enqueue(cwist_h2_async_queue *q, uint32_t stream_id,
+                                 cwist_http_request *req,
+                                 cwist_http_response *send,
+                                 cwist_http_response *res,
+                                 bool send_owned) {
+    if (!q) return -1;
+    h2_async_node *n = (h2_async_node *)cwist_alloc(sizeof(*n));
+    if (!n) return -1;
+    n->stream_id = stream_id;
+    n->req = req;
+    n->send = send;
+    n->res = res;
+    n->send_owned = send_owned;
+    n->next = NULL;
+    pthread_mutex_lock(&q->mu);
+    if (q->closed) {
+        pthread_mutex_unlock(&q->mu);
+        h2_async_node_discard(n);
+        return -1;
+    }
+    if (q->tail) q->tail->next = n;
+    else q->head = n;
+    q->tail = n;
+    /* Wake while holding mu: after close()+release the fds may be recycled,
+     * and closed is flipped under the same mutex before fds are closed. */
+    if (q->wake_wr >= 0) {
+        uint64_t one = 1;
+        ssize_t w = write(q->wake_wr, &one, sizeof(one));
+        (void)w; /* EAGAIN: counter already non-zero, fd stays readable */
+    }
+    pthread_mutex_unlock(&q->mu);
+    return 0;
+}
+
+static int cwist_h2_async_queue_fd(const cwist_h2_async_queue *q) {
+    return q ? q->wake_rd : -1;
+}
+
+/* Connection teardown: stop accepting completions and discard everything
+ * still queued (the worker already gave up ownership of req/res). */
+static void cwist_h2_async_queue_close(cwist_h2_async_queue *q) {
+    pthread_mutex_lock(&q->mu);
+    q->closed = true;
+    h2_async_node *list = q->head;
+    q->head = q->tail = NULL;
+    pthread_mutex_unlock(&q->mu);
+    while (list) {
+        h2_async_node *next = list->next;
+        h2_async_node_discard(list);
+        list = next;
+    }
+}
+
+typedef struct h2_conn {
     cwist_https_connection *conn;
     h2_stream *streams;
     uint32_t peer_max_frame_size;
@@ -268,6 +399,23 @@ typedef struct {
     /* True when a header block was refused (stream limit) but its
      * CONTINUATION frames must still be consumed and discarded. */
     bool cont_discard;
+    uint32_t cont_frame_count;
+    /* Token bucket budget for Rapid Reset (CVE-2023-44487) and control frames */
+    uint32_t rst_budget;
+    uint64_t rst_last_refill_ms;
+    uint32_t ping_budget;
+    uint64_t ping_last_refill_ms;
+    /* Optional stream hooks (gRPC incremental delivery).  hook_ctx is the
+     * per-connection context from hooks->on_conn_open (or user_ctx). */
+    const cwist_http2_stream_hooks *hooks;
+    void *hook_ctx;
+    /* Serializes the outbound batch buffer between the dispatcher loop and
+     * hook-taken stream handler threads that emit frames directly. */
+    pthread_mutex_t out_mu;
+    bool out_mu_init;
+    /* Completed deferred responses, fed by async worker threads and drained
+     * by this connection thread (see cwist_h2_async_queue). */
+    cwist_h2_async_queue *async_q;
 } h2_conn;
 
 /**
@@ -372,6 +520,15 @@ static void h2_conn_destroy(h2_conn *hc) {
         cwist_free(df->payload);
         cwist_free(df);
         df = next;
+    }
+    if (hc->out_mu_init) pthread_mutex_destroy(&hc->out_mu);
+    if (hc->async_q) {
+        /* Pending completions are discarded; completions arriving after the
+         * close hit queue->closed and discard themselves.  The handle-held
+         * references keep the queue alive until the last worker releases. */
+        cwist_h2_async_queue_close(hc->async_q);
+        cwist_h2_async_queue_release(hc->async_q);
+        hc->async_q = NULL;
     }
 }
 
@@ -656,10 +813,19 @@ static int h2_wait_socket(cwist_https_connection *conn, int ssl_error, int timeo
     return 0;
 }
 
-/* Poll until frame bytes can be read or the connection idle deadline
- * expires.  Skips the poll when decrypted bytes are already buffered.
- * Returns 0 when readable, -1 on idle timeout or socket error. */
-static int h2_wait_readable(h2_conn *hc) {
+/* Poll until frame bytes can be read, an async defer completion lands on the
+ * connection queue, or the connection idle deadline expires.  Skips the poll
+ * when decrypted bytes are already buffered.
+ * @p deadline_ms optionally bounds the wait to an absolute monotonic
+ * timestamp (used for the post-GOAWAY grace window); 0 disables it.
+ * Returns 0 when readable, 1 when the async queue woke the wait, -1 on idle
+ * timeout, deadline expiry, or socket error. */
+static int h2_out_flush(h2_conn *hc);
+
+static int h2_wait_readable(h2_conn *hc, uint64_t deadline_ms) {
+    /* Never block with unflushed frames in the batch buffer. */
+    if (h2_out_flush(hc) != 0) return -1;
+    int afd = cwist_h2_async_queue_fd(hc->async_q);
     while (hc->conn->ssl ? (SSL_pending(hc->conn->ssl) <= 0) : true) {
         uint64_t idle_ms = (uint64_t)h2_idle_timeout_ms();
         uint64_t now = h2_now_ms();
@@ -667,10 +833,24 @@ static int h2_wait_readable(h2_conn *hc) {
         uint64_t idle_left = idle_ms - (now - hc->last_activity);
         int wait_ms = CWIST_HTTP_TIMEOUT_MS;
         if (idle_left < (uint64_t)wait_ms) wait_ms = (int)idle_left;
-        struct pollfd pfd = { .fd = hc->conn->fd, .events = POLLIN };
-        int pret = poll(&pfd, 1, wait_ms);
+        struct pollfd pfd[2];
+        nfds_t nfd = 1;
+        pfd[0].fd = hc->conn->fd;
+        pfd[0].events = POLLIN;
+        pfd[0].revents = 0;
+        if (afd >= 0) {
+            pfd[1].fd = afd;
+            pfd[1].events = POLLIN;
+            pfd[1].revents = 0;
+            nfd = 2;
+        }
+        int pret = poll(pfd, nfd, wait_ms);
         if (pret < 0) return -1;
-        if (pret > 0) return 0;
+        if (pret > 0) {
+            if (pfd[0].revents & POLLIN) return 0;
+            if (nfd == 2 && (pfd[1].revents & POLLIN)) return 1;
+            return 0; /* error/hup on the socket: let the read path report it */
+        }
     }
     return 0;
 }
@@ -2473,6 +2653,7 @@ static h2_stream *h2_request_stream_create(h2_conn *hc, uint32_t stream_id, bool
     cwist_sstring_assign(s->req->version, "HTTP/2");
     s->req->stream_id = stream_id;
     s->req->private_data = hc->conn;
+    s->req->h2_queue = hc->async_q; /* async defer completions route here */
     return s;
 }
 
@@ -2972,8 +3153,27 @@ cwist_error_t cwist_http2_serve_connection_ex(cwist_https_connection *conn, void
             cwist_free(df);
         } else {
             /* Bound the wait for the next frame with the idle deadline so an
-             * idle connection cannot monopolize a pool worker forever. */
-            if (h2_wait_readable(&hc) != 0) {
+             * idle connection cannot monopolize a pool worker forever.  A
+             * hook-provided deadline (gRPC timeout) tightens the wait. */
+            uint64_t wait_deadline = sent_goaway ? goaway_close_at : 0;
+            if (hooks && hooks->next_deadline_ms) {
+                uint64_t gd = hooks->next_deadline_ms(hc.hook_ctx);
+                if (gd && (!wait_deadline || gd < wait_deadline)) wait_deadline = gd;
+            }
+            int wait_rc = h2_wait_readable(&hc, wait_deadline);
+            if (wait_rc > 0) {
+                /* Async defer completions: send them before reading more. */
+                if (h2_async_drain(&hc) != 0) { connected = false; break; }
+                continue;
+            }
+            if (wait_rc != 0) {
+                uint64_t now = h2_now_ms();
+                /* A hook deadline expiring is not a connection error: the
+                 * poll sweep at the loop top expires the stream. */
+                if (hooks && hooks->next_deadline_ms) {
+                    uint64_t gd = hooks->next_deadline_ms(hc.hook_ctx);
+                    if (gd && now >= gd) continue;
+                }
                 if (!sent_goaway &&
                     h2_now_ms() - hc.last_activity >= (uint64_t)h2_idle_timeout_ms()) {
                     h2_send_goaway(&hc, hc.last_processed_stream_id, H2_ERR_NO_ERROR);
