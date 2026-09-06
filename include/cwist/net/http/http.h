@@ -58,6 +58,7 @@ typedef enum cwist_http_status_t {
 #define CWIST_HTTP_HEADERS_TIMEOUT_MS    60000  /* Total header read budget */
 #define CWIST_HTTP_BODY_IDLE_TIMEOUT_MS  30000  /* Abort body read after this much silence */
 #define CWIST_HTTP2_IDLE_TIMEOUT_MS      300000 /* Default h2 idle budget (env overridable) */
+#define CWIST_HTTP_KEEP_ALIVE_TIMEOUT_SEC 15    /* Default keep-alive idle connection timeout in seconds */
 
 /** --- Structures --- */
 
@@ -295,6 +296,56 @@ void cwist_http_pool_limit_core(unsigned int limit);
 void cwist_http_pool_submit(int client_fd, void (*handler)(int, void *), void *ctx);
 bool cwist_http_pool_rearm_current(int client_fd, void (*handler)(int, void *), void *ctx);
 void cwist_http_pool_destroy(void);
+
+/* --- Event-driven (one-shot) connection path for the C1M reactor ---------
+ * The classic pool handler parks a worker thread on each keep-alive
+ * connection, capping concurrent connections at the thread count.  The async
+ * path below never blocks on a read: the callback drains whatever arrived,
+ * serves every complete request, and rearms the fd, so one thread can hold
+ * hundreds of thousands of mostly-idle connections.
+ *
+ * Writes still use the bounded poll wait inside cwist_http_send_response
+ * (CWIST_HTTP_TIMEOUT_MS), so a slow client can occupy a reactor thread for
+ * that budget; true EPOLLOUT write resumption is future work. */
+typedef enum {
+    CWIST_ASYNC_CLOSE = 0,  /* Close fd and release the connection. */
+    CWIST_ASYNC_REARM,      /* Keep the connection; wait for more reads. */
+    CWIST_ASYNC_DETACH,     /* Handler took ownership of fd (h2c, upgrades). */
+    CWIST_ASYNC_DEFER       /* Response deferred (cwist_async); leave fd and conn untouched. */
+} cwist_async_action_t;
+
+typedef cwist_async_action_t (*cwist_async_handler_t)(int fd, struct cwist_http_async_conn *conn);
+
+typedef struct cwist_http_async_conn {
+    int fd;
+    void *user_ctx;                       /* Owning app context. */
+    char *rbuf;                           /* Lazy recv stash; freed while empty. */
+    size_t cap;
+    size_t len;
+    bool virgin;                          /* No bytes seen yet (h2c preface sniff). */
+    bool expect_continue_sent;            /* 100 Continue already emitted for the pending request. */
+    uint32_t last_active_sec;             /* Monotonic timestamp of last activity (for idle reaping). */
+    uint32_t worker_id;                   /* Assigned worker thread index for load tracking. */
+    cwist_reactor_t *reactor;             /* Owning reactor (deferred-response completion target). */
+    cwist_async_handler_t handler;        /* Connection handler, reused for re-arm after a defer. */
+} cwist_http_async_conn_t;
+
+/* Re-arm a connection after a deferred response completed on the reactor
+ * thread (keep-alive), reusing the same one-shot event slot model as
+ * http_async_event_cb.  On failure the fd is closed and conn released.
+ * cwist_http_async_close closes the fd and releases the connection shell. */
+bool cwist_http_async_rearm(int client_fd, cwist_reactor_t *reactor, cwist_http_async_conn_t *conn);
+void cwist_http_async_close(int client_fd, cwist_http_async_conn_t *conn);
+
+typedef enum {
+    CWIST_RECV_OK = 0,
+    CWIST_RECV_NEED_MORE,   /* Partial request; rearm and wait. */
+    CWIST_RECV_FATAL        /* Protocol error / overflow; close. */
+} cwist_recv_status_t;
+
+bool cwist_http_pool_submit_async(int client_fd, cwist_async_handler_t handler, void *ctx);
+int cwist_http_async_conn_fill(cwist_http_async_conn_t *conn);
+cwist_recv_status_t cwist_http_receive_request_nb(cwist_http_async_conn_t *conn, cwist_http_request **out, cwist_http_parse_error_t *err_out);
 
 extern const int CWIST_CREATE_SOCKET_FAILED;
 extern const int CWIST_HTTP_UNAVAILABLE_ADDRESS;

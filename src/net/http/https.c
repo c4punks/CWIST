@@ -1,6 +1,7 @@
 #define _POSIX_C_SOURCE 200809L
 
 #include <cwist/net/http/https.h>
+#include <cwist/net/http/writer_fast.h>
 #include <cwist/core/sstring/sstring.h>
 #include <cwist/sys/err/cwist_err.h>
 #include <cwist/core/mem/alloc.h>
@@ -227,13 +228,16 @@ typedef struct https_hs_pending {
     struct https_hs_pending *next;
 } https_hs_pending_t;
 
-static int g_hs_epoll_fd = -1;
-static int g_hs_wakeup_rd = -1, g_hs_wakeup_wr = -1;
-static pthread_t g_hs_thread;
-static bool g_hs_running = false;
-static pthread_mutex_t g_hs_lock = PTHREAD_MUTEX_INITIALIZER;
-static https_hs_pending_t *g_hs_head = NULL;
-static _Atomic long g_hs_pending_count = 0;
+typedef struct https_hs_shard {
+    int epoll_fd;
+    int wakeup_rd;
+    int wakeup_wr;
+    pthread_t thread;
+    bool running;
+    pthread_mutex_t lock;
+    https_hs_pending_t *head;
+    _Atomic uint32_t pending;
+} https_hs_shard_t;
 
 static void https_hs_forget_locked(https_hs_pending_t *prev, https_hs_pending_t *p) {
     if (prev) prev->next = p->next;
@@ -420,9 +424,10 @@ long cwist_https_pending_handshakes(void) {
 }
 
 /**
- * @brief Non-blocking TLS accept: complete the handshake inline when the
- * ClientHello is already here (the common case — the kernel ACKed it while
- * the connection waited in queue), otherwise park it with the shepherd.
+ * @brief Non-blocking TLS accept: offload the handshake immediately to
+ * shepherd shards without blocking the accept thread with synchronous crypto.
+ * Uses Power of Two Choices (P2C) to distribute pending handshakes evenly
+ * across shards without lock contention or thread migration overhead.
  * Safe to call from any thread, including reactor callbacks.
  */
 void cwist_https_dispatch(int client_fd, cwist_https_context *ctx, void (*handler)(cwist_https_connection *, void *), void *user_ctx) {
@@ -446,20 +451,6 @@ void cwist_https_dispatch(int client_fd, cwist_https_context *ctx, void (*handle
     }
     SSL_set_fd(ssl, client_fd);
 
-    int rc = SSL_accept(ssl);
-    if (rc > 0) {
-        int flags = fcntl(client_fd, F_GETFL, 0);
-        if (flags >= 0) fcntl(client_fd, F_SETFL, flags & ~O_NONBLOCK);
-        https_pool_submit_ready(client_fd, ssl, ctx, handler, user_ctx);
-        return;
-    }
-    int ssl_err = SSL_get_error(ssl, rc);
-    if (ssl_err != SSL_ERROR_WANT_READ && ssl_err != SSL_ERROR_WANT_WRITE) {
-        SSL_free(ssl);
-        close(client_fd);
-        return;
-    }
-
     https_hs_pending_t *p = cwist_alloc(sizeof(*p));
     if (!p) {
         SSL_free(ssl);
@@ -473,18 +464,32 @@ void cwist_https_dispatch(int client_fd, cwist_https_context *ctx, void (*handle
     p->user_ctx = user_ctx;
     p->deadline_ms = cwist_https_now_ms() + CWIST_HTTPS_HANDSHAKE_TIMEOUT_MS;
 
+    /* P2C (Power of Two Choices) Shard Selection:
+     * Samples two shepherd shards and assigns to the one with lower pending count. */
+    unsigned shard_idx = 0;
+    if (g_hs_shard_count > 1) {
+        _Atomic uint32_t pending_arr[CWIST_HTTPS_HS_MAX_SHARDS];
+        for (long i = 0; i < g_hs_shard_count; i++) {
+            atomic_init(&pending_arr[i], atomic_load_explicit(&g_hs_shards[i].pending, memory_order_relaxed));
+        }
+        shard_idx = (unsigned)cwist_sched_p2c_select_worker(pending_arr, (uint32_t)g_hs_shard_count);
+    }
+
+    https_hs_shard_t *sh = &g_hs_shards[shard_idx];
     struct epoll_event ev = {
-        .events = (ssl_err == SSL_ERROR_WANT_WRITE ? EPOLLOUT : EPOLLIN) | EPOLLRDHUP,
+        .events = EPOLLIN | EPOLLOUT | EPOLLRDHUP | EPOLLET,
         .data.ptr = p,
     };
-    pthread_mutex_lock(&g_hs_lock);
-    p->next = g_hs_head;
-    g_hs_head = p;
-    atomic_fetch_add_explicit(&g_hs_pending_count, 1, memory_order_release);
-    pthread_mutex_unlock(&g_hs_lock);
-    if (epoll_ctl(g_hs_epoll_fd, EPOLL_CTL_ADD, client_fd, &ev) != 0) {
-        pthread_mutex_lock(&g_hs_lock);
-        https_hs_pending_t *prev = NULL, *cur = g_hs_head;
+
+    pthread_mutex_lock(&sh->lock);
+    p->next = sh->head;
+    sh->head = p;
+    atomic_fetch_add_explicit(&sh->pending, 1, memory_order_release);
+    pthread_mutex_unlock(&sh->lock);
+
+    if (epoll_ctl(sh->epoll_fd, EPOLL_CTL_ADD, client_fd, &ev) != 0) {
+        pthread_mutex_lock(&sh->lock);
+        https_hs_pending_t *prev = NULL, *cur = sh->head;
         while (cur) {
             if (cur == p) { https_hs_forget_locked(prev, cur); break; }
             prev = cur; cur = cur->next;
@@ -495,7 +500,7 @@ void cwist_https_dispatch(int client_fd, cwist_https_context *ctx, void (*handle
         cwist_free(p);
         return;
     }
-    /* Wake the shepherd so near-expiry deadlines are honored promptly. */
+    /* Wake the shepherd so pending handshakes are processed promptly. */
     char b = 1;
     if (write(g_hs_wakeup_wr, &b, 1) < 0) { /* non-fatal */ }
 }
