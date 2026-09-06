@@ -1725,6 +1725,319 @@ cwist_error_t cwist_http_send_response(int client_fd, cwist_http_response *res) 
 }
 
 /**
+ * @brief Send only the status line and headers of a response (RFC 9110 §9.3.2
+ * HEAD semantics): Content-Length reflects the would-be body, but no body
+ * bytes are written. Body resources are released as in the full send path.
+ */
+cwist_error_t cwist_http_send_response_head(int client_fd, cwist_http_response *res) {
+    cwist_error_t err = make_error(CWIST_ERR_INT16);
+    if (client_fd < 0 || !res) {
+        err.error.err_i16 = -1;
+        return err;
+    }
+
+    char header_buf[CWIST_HTTP_MAX_HEADER_SIZE];
+    size_t header_len = serialize_headers(res, header_buf, sizeof(header_buf));
+
+    struct iovec iov = { .iov_base = header_buf, .iov_len = header_len };
+    int flags = 0;
+    #if defined(MSG_NOSIGNAL)
+    flags |= MSG_NOSIGNAL;
+    #endif
+    #if defined(MSG_DONTWAIT)
+    flags |= MSG_DONTWAIT;
+    #endif
+
+    err.error.err_i16 = (cwist_http_sendmsg_all(client_fd, &iov, 1, flags) == 0) ? 0 : -1;
+
+    cwist_http_response_release_ptr_body(res);
+    cwist_http_response_release_file_stream(res);
+    return err;
+}
+
+/* --- Parked (POLLOUT-resumable) deferred-response writer --------------------
+ * A deferred completion on the reactor path must never block the reactor
+ * thread in the poll(POLLOUT) fallback of cwist_http_sendmsg_all.  When the
+ * speculative sendmsg cannot drain the whole response, the unsent remainder
+ * is deep-copied into an owned buffer (req/res/the arena are freed right
+ * after the handoff) and parked on a one-shot write-readiness slot; each
+ * POLLOUT event resumes the send, and the final event re-arms keep-alive or
+ * closes exactly like the synchronous completion.  The slot payload carries
+ * everything the callback needs, so no extra heap struct is required. */
+
+typedef struct {
+    cwist_reactor_t *reactor;
+    cwist_http_async_conn_t *conn;
+    char *buf;                    /* Owned copy of the unsent bytes. */
+    size_t off;
+    size_t len;
+    uint32_t deadline_sec;        /* Absolute write deadline (monotonic sec). */
+    bool keep_alive;
+} http_parked_write_t;
+
+_Static_assert(sizeof(http_parked_write_t) <= CWIST_REACTOR_PAYLOAD_SIZE,
+               "parked write state must fit a reactor slot payload");
+
+static uint32_t http_parked_write_deadline(void) {
+    return cwist_fast_monotonic_sec() + cwist_http_keep_alive_timeout_sec();
+}
+
+static void http_parked_write_finish(int fd, http_parked_write_t *w) {
+    cwist_reactor_t *reactor = w->reactor;
+    cwist_http_async_conn_t *conn = w->conn;
+    bool keep = w->keep_alive && w->off == w->len && atomic_load(&g_cwist_running);
+    cwist_free(w->buf);
+    if (keep) {
+        cwist_http_async_rearm(fd, reactor, conn);
+    } else {
+        cwist_http_async_close(fd, conn);
+    }
+}
+
+static void http_parked_write_cb(int fd, void *ctx) {
+    http_parked_write_t *w = (http_parked_write_t *)ctx;
+    int flags = 0;
+#if defined(MSG_NOSIGNAL)
+    flags |= MSG_NOSIGNAL;
+#endif
+#if defined(MSG_DONTWAIT)
+    flags |= MSG_DONTWAIT;
+#endif
+    while (w->off < w->len) {
+        ssize_t n = send(fd, w->buf + w->off, w->len - w->off, flags);
+        if (n > 0) {
+            w->off += (size_t)n;
+            /* Progress resets the budget so a slow-but-alive client can
+             * drain a large body; a silent peer hits the absolute deadline. */
+            w->deadline_sec = http_parked_write_deadline();
+            continue;
+        }
+        if (n < 0 && errno == EINTR) continue;
+        if (n < 0 && (errno == EAGAIN || errno == EWOULDBLOCK) &&
+            cwist_fast_monotonic_sec() <= w->deadline_sec &&
+            cwist_reactor_add_out(w->reactor, fd, http_parked_write_cb, w, sizeof(*w))) {
+            /* Payload copied into the new slot; buf ownership moves with it. */
+            return;
+        }
+        break; /* Fatal error, timeout, or re-arm failure. */
+    }
+    http_parked_write_finish(fd, w);
+}
+
+void cwist_http_async_send_response(int client_fd, cwist_http_response *res,
+                                    cwist_reactor_t *reactor, cwist_http_async_conn_t *conn,
+                                    bool keep_alive, bool head_only) {
+    if (client_fd < 0 || !res || !reactor || !conn) {
+        cwist_http_async_close(client_fd, conn);
+        return;
+    }
+
+    /* File streams keep the existing bounded-blocking send path: their body
+     * is not resident in memory, so it cannot be deep-copied for parking
+     * without buffering the whole file. */
+    if (!head_only && res->use_file_stream) {
+        cwist_error_t err = cwist_http_send_response(client_fd, res);
+        if (keep_alive && err.error.err_i16 == 0) {
+            cwist_http_async_rearm(client_fd, reactor, conn);
+        } else {
+            cwist_http_async_close(client_fd, conn);
+        }
+        return;
+    }
+
+    char header_buf[CWIST_HTTP_MAX_HEADER_SIZE];
+    size_t header_len = serialize_headers(res, header_buf, sizeof(header_buf));
+
+    const void *body_ptr = NULL;
+    size_t body_len = 0;
+    if (!head_only) {
+        if (res->is_ptr_body) {
+            body_ptr = res->ptr_body;
+            body_len = res->ptr_body_len;
+        } else if (res->body && res->body->data) {
+            body_ptr = res->body->data;
+            body_len = res->body->size;
+        }
+    }
+
+    struct iovec iov[2];
+    int iov_cnt = 1;
+    iov[0].iov_base = header_buf;
+    iov[0].iov_len = header_len;
+    if (body_len > 0 && body_ptr) {
+        iov[1].iov_base = (void *)body_ptr;
+        iov[1].iov_len = body_len;
+        iov_cnt = 2;
+    }
+
+    int flags = 0;
+#if defined(MSG_NOSIGNAL)
+    flags |= MSG_NOSIGNAL;
+#endif
+#if defined(MSG_DONTWAIT)
+    flags |= MSG_DONTWAIT;
+#endif
+
+    size_t sent = 0;
+    cwist_write_status_t st = cwist_http_sendmsg_speculative(client_fd, iov, iov_cnt, flags, &sent);
+
+    if (st == CWIST_WRITE_PENDING) {
+        /* Deep-copy the unsent remainder before releasing the body: the
+         * completion frees req/res (and the arena) right after we return. */
+        size_t total = header_len + body_len;
+        size_t left = total - sent;
+        http_parked_write_t w = {
+            .reactor = reactor,
+            .conn = conn,
+            .buf = cwist_alloc(left),
+            .off = 0,
+            .len = left,
+            .deadline_sec = http_parked_write_deadline(),
+            .keep_alive = keep_alive,
+        };
+        if (w.buf) {
+            size_t hd_off = sent < header_len ? sent : header_len;
+            size_t hd_left = header_len - hd_off;
+            memcpy(w.buf, header_buf + hd_off, hd_left);
+            if (left > hd_left) {
+                size_t body_off = sent > header_len ? sent - header_len : 0;
+                memcpy(w.buf + hd_left, (const char *)body_ptr + body_off, left - hd_left);
+            }
+        }
+        cwist_http_response_release_ptr_body(res);
+        cwist_http_response_release_file_stream(res);
+        if (w.buf && cwist_reactor_add_out(reactor, client_fd, http_parked_write_cb, &w, sizeof(w))) {
+            return;
+        }
+        cwist_free(w.buf);
+        cwist_http_async_close(client_fd, conn);
+        return;
+    }
+
+    cwist_http_response_release_ptr_body(res);
+    cwist_http_response_release_file_stream(res);
+    if (st == CWIST_WRITE_DONE && keep_alive && atomic_load(&g_cwist_running)) {
+        cwist_http_async_rearm(client_fd, reactor, conn);
+    } else {
+        cwist_http_async_close(client_fd, conn);
+    }
+}
+
+const char *cwist_http_status_reason(int status) {
+    switch (status) {
+        case 100: return "Continue";
+        case 101: return "Switching Protocols";
+        case 102: return "Processing";
+        case 103: return "Early Hints";
+        case 200: return "OK";
+        case 201: return "Created";
+        case 202: return "Accepted";
+        case 203: return "Non-Authoritative Information";
+        case 204: return "No Content";
+        case 205: return "Reset Content";
+        case 206: return "Partial Content";
+        case 207: return "Multi-Status";
+        case 208: return "Already Reported";
+        case 226: return "IM Used";
+        case 300: return "Multiple Choices";
+        case 301: return "Moved Permanently";
+        case 302: return "Found";
+        case 303: return "See Other";
+        case 304: return "Not Modified";
+        case 305: return "Use Proxy";
+        case 307: return "Temporary Redirect";
+        case 308: return "Permanent Redirect";
+        case 400: return "Bad Request";
+        case 401: return "Unauthorized";
+        case 402: return "Payment Required";
+        case 403: return "Forbidden";
+        case 404: return "Not Found";
+        case 405: return "Method Not Allowed";
+        case 406: return "Not Acceptable";
+        case 407: return "Proxy Authentication Required";
+        case 408: return "Request Timeout";
+        case 409: return "Conflict";
+        case 410: return "Gone";
+        case 411: return "Length Required";
+        case 412: return "Precondition Failed";
+        case 413: return "Content Too Large";
+        case 414: return "URI Too Long";
+        case 415: return "Unsupported Media Type";
+        case 416: return "Range Not Satisfiable";
+        case 417: return "Expectation Failed";
+        case 418: return "I'm a Teapot";
+        case 421: return "Misdirected Request";
+        case 422: return "Unprocessable Content";
+        case 423: return "Locked";
+        case 424: return "Failed Dependency";
+        case 425: return "Too Early";
+        case 426: return "Upgrade Required";
+        case 428: return "Precondition Required";
+        case 429: return "Too Many Requests";
+        case 431: return "Request Header Fields Too Large";
+        case 451: return "Unavailable For Legal Reasons";
+        case 500: return "Internal Server Error";
+        case 501: return "Not Implemented";
+        case 502: return "Bad Gateway";
+        case 503: return "Service Unavailable";
+        case 504: return "Gateway Timeout";
+        case 505: return "HTTP Version Not Supported";
+        case 506: return "Variant Also Negotiates";
+        case 507: return "Insufficient Storage";
+        case 508: return "Loop Detected";
+        case 510: return "Not Extended";
+        case 511: return "Network Authentication Required";
+        default:  return NULL;
+    }
+}
+
+/**
+ * @brief Send a minimal error response with Connection: close, used to answer
+ * malformed requests (400/413/417/431/501) before the connection is dropped.
+ * @param fd Connected client socket descriptor.
+ * @param status HTTP status code (reason phrase is derived from it).
+ * @param msg Plain-text body; NULL falls back to the reason phrase.
+ */
+void cwist_http_send_error_response(int fd, int status, const char *msg) {
+    if (fd < 0) return;
+
+    const char *reason = cwist_http_status_reason(status);
+    if (!reason) reason = "Error";
+    if (!msg) msg = reason;
+
+    char buf[512];
+    int n = snprintf(buf, sizeof(buf),
+                     "HTTP/1.1 %d %s\r\nContent-Type: text/plain\r\nContent-Length: %zu\r\nConnection: close\r\n\r\n%s",
+                     status, reason, strlen(msg), msg);
+    if (n <= 0) return;
+    size_t len = (size_t)n < sizeof(buf) ? (size_t)n : sizeof(buf) - 1;
+
+    struct iovec iov = { .iov_base = buf, .iov_len = len };
+    int flags = 0;
+    #if defined(MSG_NOSIGNAL)
+    flags |= MSG_NOSIGNAL;
+    #endif
+    #if defined(MSG_DONTWAIT)
+    flags |= MSG_DONTWAIT;
+    #endif
+    (void)cwist_http_sendmsg_all(fd, &iov, 1, flags);
+}
+
+/**
+ * @brief Emit the interim 100 Continue response (RFC 9110 §10.1.1) before the
+ * request body is read. Best effort: a failed write surfaces on the next recv.
+ */
+static void http_send_100_continue(int fd) {
+    static const char k_continue[] = "HTTP/1.1 100 Continue\r\n\r\n";
+    struct iovec iov = { .iov_base = (void *)k_continue, .iov_len = sizeof(k_continue) - 1 };
+    int flags = 0;
+    #if defined(MSG_NOSIGNAL)
+    flags |= MSG_NOSIGNAL;
+    #endif
+    (void)cwist_http_sendmsg_all(fd, &iov, 1, flags);
+}
+
+/**
  * @brief Materialize an HTTP response into a contiguous string for debugging or TLS writes.
  * @param res Response object to stringify.
  * @return Heap-allocated response string, or NULL on invalid input.

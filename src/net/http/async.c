@@ -200,8 +200,8 @@ static void cwist_async_complete(cwist_async *a) {
         /* Resumable write: on a partial send the remainder is parked on a
          * POLLOUT slot and the reactor thread is freed immediately; the
          * parked callback performs the rearm/close when the drain ends. */
-        cwist_http_async_send_response(a->client_fd, res, a->reactor, a->conn, keep,
-                                       a->req && a->req->method == CWIST_HTTP_HEAD);
+        cwist_http_async_send_response(a->client_fd, res, a->reactor, a->conn,
+                                       keep, a->req && a->req->method == CWIST_HTTP_HEAD);
     } else {
         cwist_error_t err = (a->req && a->req->method == CWIST_HTTP_HEAD)
                                 ? cwist_http_send_response_head(a->client_fd, res)
