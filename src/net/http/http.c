@@ -487,6 +487,16 @@ static void http_async_event_cb(int fd, void *ctx) {
 
     cwist_async_action_t action = handler(fd, conn);
 
+    /* Idle connection reaper: close keep-alive sockets that exceeded timeout */
+    if (conn->last_active_sec > 0 && (now - conn->last_active_sec) > timeout_sec) {
+        close(fd);
+        http_async_conn_release(conn);
+        return;
+    }
+    conn->last_active_sec = now;
+
+    cwist_async_action_t action = handler(fd, conn);
+
     if (action == CWIST_ASYNC_DETACH) {
         /* The handler owns fd now (h2c preface, protocol upgrade).  Free the
          * shell but never touch the fd. */
