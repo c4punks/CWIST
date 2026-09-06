@@ -52,14 +52,6 @@ struct cwist_http3_context {
     int ping_period_ms;        /**< 0 = use lsquic default (server: none) */
     int noprogress_timeout_ms; /**< 0 = use lsquic default (60s server) */
     void *hsets; /**< Head of tracked cwist_h3_hset list (internal; swept on engine destroy) */
-    /* Last CONNECTION_CLOSE frame received from a peer by any connection of
-     * this context. Written on the engine thread from lsquic's close-frame
-     * callback; read via cwist_http3_last_close_error() for post-serve
-     * diagnostics (call after the serve loop has stopped). */
-    volatile int last_close_received; /**< Non-zero once a close frame was recorded */
-    int last_close_app_error;         /**< 0 transport, 1 application, -1 unknown */
-    uint64_t last_close_code;         /**< QUIC transport or H3 application error code */
-    char last_close_reason[256];      /**< Peer reason phrase, NUL-terminated */
 };
 
 /**
