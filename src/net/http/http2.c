@@ -161,6 +161,8 @@ typedef struct h2_stream {
      * advertised credit).  Replaces the old hand-rolled window ints. */
     cwist_http2_stream_flow_control fc;
     bool send_aborted;       /* RST_STREAM received while sending */
+    int fc_waiters;          /* handler threads parked in h2_fc_wait_credit */
+    bool fc_detached;        /* stream removed / connection tearing down */
     uint8_t recv_xor;      /* running XOR of received DATA payload bytes */
     uint8_t send_xor;      /* running XOR of sent DATA payload bytes */
     cwist_seq_assembler_t *body_assembler; /* reorders sequenced DATA chunks */
@@ -370,6 +372,13 @@ typedef struct h2_conn {
      * hook-taken stream handler threads that emit frames directly. */
     pthread_mutex_t out_mu;
     bool out_mu_init;
+    /* Send-credit rendezvous for hook-taken handler threads: the dispatcher
+     * owns socket reads, so a handler thread that runs out of send window
+     * parks on fc_cond and is woken when the dispatcher applies WINDOW_UPDATE
+     * credit or when the stream/connection goes away. */
+    pthread_mutex_t fc_mu;
+    pthread_cond_t fc_cond;
+    bool fc_mu_init;
     /* Completed deferred responses, fed by async worker threads and drained
      * by this connection thread (see cwist_h2_async_queue). */
     cwist_h2_async_queue *async_q;
@@ -397,12 +406,46 @@ static void h2_conn_init(h2_conn *hc, cwist_https_connection *conn) {
      * supplies authenticated transport protection against on-path mutation. */
     hc->sequenced_data = conn && conn->ssl && conn->http2_sequenced_data;
     hc->hpack_capacity = CWIST_HTTP2_HEADER_TABLE_SIZE;
+    hc->out_mu_init = (pthread_mutex_init(&hc->out_mu, NULL) == 0);
+    hc->fc_mu_init = (pthread_mutex_init(&hc->fc_mu, NULL) == 0);
+    if (hc->fc_mu_init && pthread_cond_init(&hc->fc_cond, NULL) != 0) {
+        pthread_mutex_destroy(&hc->fc_mu);
+        hc->fc_mu_init = false;
+    }
+}
+
+/* Wake handler threads parked waiting for send-window credit.  Call after
+ * any update that may have restored credit (WINDOW_UPDATE applied, SETTINGS
+ * initial-window delta, stream abort/detach). */
+static void h2_fc_credit_signal(h2_conn *hc) {
+    if (!hc->fc_mu_init) return;
+    pthread_mutex_lock(&hc->fc_mu);
+    pthread_cond_broadcast(&hc->fc_cond);
+    pthread_mutex_unlock(&hc->fc_mu);
+}
+
+/* Detach @p s from send-credit waiters and block until none remain, so the
+ * stream can be freed without a parked handler thread waking up on a
+ * dangling pointer. */
+static void h2_stream_drain_waiters(h2_conn *hc, h2_stream *s) {
+    if (!hc->fc_mu_init) return;
+    pthread_mutex_lock(&hc->fc_mu);
+    s->fc_detached = true;
+    pthread_cond_broadcast(&hc->fc_cond);
+    while (s->fc_waiters > 0)
+        pthread_cond_wait(&hc->fc_cond, &hc->fc_mu);
+    pthread_mutex_unlock(&hc->fc_mu);
 }
 
 static void h2_conn_destroy(h2_conn *hc) {
     h2_stream *s = hc->streams;
     while (s) {
         h2_stream *next = s->next;
+        /* Drain before on_close: a handler thread parked in a send holds its
+         * session write mutex, which on_close needs to detach. */
+        h2_stream_drain_waiters(hc, s);
+        if (s->hook_ctx && hc->hooks && hc->hooks->on_close)
+            hc->hooks->on_close(hc->hook_ctx, s->hook_ctx);
         if (s->req) cwist_http_request_destroy(s->req);
         cwist_seq_assembler_destroy(s->body_assembler);
         cwist_free(s);
@@ -428,6 +471,10 @@ static void h2_conn_destroy(h2_conn *hc) {
         df = next;
     }
     if (hc->out_mu_init) pthread_mutex_destroy(&hc->out_mu);
+    if (hc->fc_mu_init) {
+        pthread_cond_destroy(&hc->fc_cond);
+        pthread_mutex_destroy(&hc->fc_mu);
+    }
     if (hc->async_q) {
         /* Pending completions are discarded; completions arriving after the
          * close hit queue->closed and discard themselves.  The handle-held
@@ -518,6 +565,9 @@ static void h2_stream_remove(h2_conn *hc, uint32_t stream_id) {
         if (s->stream_id == stream_id) {
             *pp = s->next;
             if (hc->active_streams > 0) hc->active_streams--;
+            h2_stream_drain_waiters(hc, s);
+            if (s->hook_ctx && hc->hooks && hc->hooks->on_close)
+                hc->hooks->on_close(hc->hook_ctx, s->hook_ctx);
             if (s->req) cwist_http_request_destroy(s->req);
             cwist_seq_assembler_destroy(s->body_assembler);
             cwist_free(s);
@@ -932,6 +982,35 @@ static void h2_commit_send(h2_conn *hc, h2_stream *s, uint32_t bytes) {
     }
     hc->fc.send_window -= bytes;
     if (s) s->fc.send_window -= bytes;
+}
+
+/* Park a hook-taken handler thread until send credit may be available again,
+ * the stream is aborted/detached, or no frame has arrived for a full idle
+ * deadline.  The dispatcher thread owns socket reads and applies WINDOW_UPDATE
+ * credit, then signals fc_cond; the caller must NOT hold out_mu (the
+ * dispatcher may need it to flush its own frames while we wait).
+ * Returns 0 when credit may be available, -1 on abort, teardown, or stall
+ * timeout. */
+static int h2_fc_wait_credit(h2_conn *hc, h2_stream *s) {
+    if (!hc->fc_mu_init) return -1;
+    pthread_mutex_lock(&hc->fc_mu);
+    s->fc_waiters++;
+    int rc = -1;
+    for (;;) {
+        if (s->send_aborted || s->fc_detached) break;
+        if (h2_send_allowance(hc, s, 1) > 0) { rc = 0; break; }
+        if (h2_now_ms() - hc->last_activity >= (uint64_t)h2_idle_timeout_ms()) break;
+        struct timespec ts;
+        clock_gettime(CLOCK_REALTIME, &ts);
+        ts.tv_nsec += 100000000L; /* 100ms recheck: covers pacing-token refill */
+        if (ts.tv_nsec >= 1000000000L) { ts.tv_sec++; ts.tv_nsec -= 1000000000L; }
+        pthread_cond_timedwait(&hc->fc_cond, &hc->fc_mu, &ts);
+    }
+    s->fc_waiters--;
+    /* Wake h2_stream_drain_waiters if it is waiting for us to leave. */
+    pthread_cond_broadcast(&hc->fc_cond);
+    pthread_mutex_unlock(&hc->fc_mu);
+    return rc;
 }
 
 /* Send a PING carrying a monotonic timestamp; the matching ACK yields an
@@ -1975,6 +2054,7 @@ static int h2_process_incoming_frames_nonblocking(h2_conn *hc, h2_stream *s) {
                         h2_stream *other = h2_stream_find(hc, stream_id);
                         if (other) cwist_http2_stream_flow_control_add_send_window(&other->fc, (uint32_t)increment);
                     }
+                    h2_fc_credit_signal(hc);
                 }
             }
         } else if (type == 0x06) { // PING
@@ -2128,6 +2208,226 @@ static int h2_send_seq_memory_body(h2_conn *hc, h2_stream *s, uint32_t stream_id
 
     cwist_seq_message_free(&msg);
     return 0;
+
+fail:
+    cwist_seq_message_free(&msg);
+    return -1;
+}
+
+/* --- Hook-driven stream senders (public API) ---
+ *
+ * Called from hook-taken stream handler threads; frames are appended under
+ * out_mu (so a whole frame never interleaves with dispatcher writes) and
+ * flushed immediately for low-latency streaming. */
+
+static void h2_out_lock(h2_conn *hc) {
+    if (hc->out_mu_init) pthread_mutex_lock(&hc->out_mu);
+}
+
+static void h2_out_unlock(h2_conn *hc) {
+    if (hc->out_mu_init) pthread_mutex_unlock(&hc->out_mu);
+}
+
+/* Caller holds out_mu. */
+static int h2_stream_write_frame_locked(h2_conn *hc, uint8_t type, uint8_t flags,
+                                        uint32_t stream_id,
+                                        const unsigned char *payload, uint32_t len) {
+    unsigned char frame[CWIST_HTTP2_FRAME_HEADER_SIZE];
+    h2_make_frame_header(frame, len, type, flags, stream_id);
+    if (h2_out_append_raw(hc, frame, sizeof(frame)) != 0) return -1;
+    if (len > 0 && payload) return h2_out_append_raw(hc, payload, len);
+    return 0;
+}
+
+/* Caller holds out_mu.  Encode :status plus literal header pairs into a
+ * heap block (doubling until it fits, capped at 1 MiB). */
+static unsigned char *h2_encode_stream_block_locked(int status,
+                                                    const cwist_http2_header *pairs,
+                                                    size_t count, size_t *out_len) {
+    size_t cap = 1024;
+    unsigned char *buf = NULL;
+    while (cap <= (1u << 20)) {
+        unsigned char *nb = (unsigned char *)cwist_realloc(buf, cap);
+        if (!nb) {
+            cwist_free(buf);
+            return NULL;
+        }
+        buf = nb;
+        size_t pos = 0;
+        if (status == 200) {
+            buf[pos++] = 0x88;
+        } else {
+            char status_str[16];
+            snprintf(status_str, sizeof(status_str), "%d", status);
+            buf[pos] = 0x00;
+            size_t n = h2_encode_integer(buf + pos, cap - pos, 0, 4);
+            if (n == 0) goto grow;
+            pos += n;
+            n = h2_encode_string(buf + pos, cap - pos, ":status");
+            if (n == 0) goto grow;
+            pos += n;
+            n = h2_encode_string(buf + pos, cap - pos, status_str);
+            if (n == 0) goto grow;
+            pos += n;
+        }
+        {
+            size_t n = h2_encode_header_pairs(buf + pos, cap - pos, pairs, count);
+            if (n == 0 && count > 0) goto grow;
+            pos += n;
+        }
+        *out_len = pos;
+        return buf;
+grow:
+        cap *= 2;
+    }
+    cwist_free(buf);
+    return NULL;
+}
+
+int cwist_http2_stream_send_headers(cwist_h2_stream *stream, int status,
+                                    const cwist_http2_header *headers, size_t header_count,
+                                    int end_stream) {
+    if (!stream || !stream->hc) return -1;
+    h2_conn *hc = stream->hc;
+    h2_out_lock(hc);
+    size_t block_len = 0;
+    unsigned char *block = h2_encode_stream_block_locked(status, headers, header_count, &block_len);
+    if (!block) {
+        h2_out_unlock(hc);
+        return -1;
+    }
+    uint8_t flags = CWIST_HTTP2_FLAG_END_HEADERS | (end_stream ? CWIST_HTTP2_FLAG_END_STREAM : 0);
+    int rc = h2_stream_write_frame_locked(hc, CWIST_HTTP2_FRAME_HEADERS, flags,
+                                          stream->stream_id, block, (uint32_t)block_len);
+    cwist_free(block);
+    if (rc == 0) rc = h2_out_flush_raw(hc);
+    h2_out_unlock(hc);
+    return rc;
+}
+
+int cwist_http2_stream_send_data(cwist_h2_stream *stream,
+                                 const unsigned char *data, size_t len) {
+    if (!stream || !stream->hc) return -1;
+    h2_conn *hc = stream->hc;
+    uint32_t max_frame = hc->peer_max_frame_size;
+    if (max_frame == 0) max_frame = CWIST_HTTP2_MAX_FRAME_SIZE;
+
+    size_t sent = 0;
+    int rc = 0;
+    while (sent < len) {
+        uint32_t chunk = (uint32_t)((len - sent) > max_frame ? max_frame : (len - sent));
+        if (h2_send_allowance(hc, stream, chunk) == 0) {
+            /* No peer credit: the handler thread must not read the socket
+             * (the dispatcher owns reads), so flush whatever is batched and
+             * wait for the dispatcher to apply WINDOW_UPDATE credit. */
+            if (h2_out_flush(hc) != 0) { rc = -1; break; }
+            if (h2_fc_wait_credit(hc, stream) != 0) { rc = -1; break; }
+        }
+        h2_out_lock(hc);
+        /* Recheck under out_mu: another handler thread may have consumed the
+         * credit between our wait and the lock. */
+        uint32_t allowed = h2_send_allowance(hc, stream, chunk);
+        if (allowed == 0) {
+            h2_out_unlock(hc);
+            continue;
+        }
+        if (h2_stream_write_frame_locked(hc, CWIST_HTTP2_FRAME_DATA, 0,
+                                         stream->stream_id, data + sent, allowed) != 0) {
+            h2_out_unlock(hc);
+            rc = -1;
+            break;
+        }
+        h2_commit_send(hc, stream, allowed);
+        sent += allowed;
+        if (sent >= len) rc = h2_out_flush_raw(hc);
+        h2_out_unlock(hc);
+        if (rc != 0) break;
+    }
+    return rc;
+}
+
+int cwist_http2_stream_send_trailers(cwist_h2_stream *stream,
+                                     const cwist_http2_header *trailers, size_t trailer_count) {
+    if (!stream || !stream->hc) return -1;
+    h2_conn *hc = stream->hc;
+    unsigned char stack_block[1024];
+    size_t block_len = h2_encode_header_pairs(stack_block, sizeof(stack_block),
+                                              trailers, trailer_count);
+    unsigned char *block = stack_block;
+    if (block_len == 0 && trailer_count > 0) {
+        /* Oversized trailer set: grow on the heap. */
+        size_t cap = 4096;
+        block = NULL;
+        while (cap <= (1u << 20)) {
+            unsigned char *nb = (unsigned char *)cwist_realloc(block, cap);
+            if (!nb) {
+                cwist_free(block);
+                return -1;
+            }
+            block = nb;
+            block_len = h2_encode_header_pairs(block, cap, trailers, trailer_count);
+            if (block_len > 0) break;
+            cap *= 2;
+        }
+        if (block_len == 0) {
+            cwist_free(block);
+            return -1;
+        }
+    }
+    h2_out_lock(hc);
+    int rc = h2_stream_write_frame_locked(hc, CWIST_HTTP2_FRAME_HEADERS,
+                                          CWIST_HTTP2_FLAG_END_HEADERS | CWIST_HTTP2_FLAG_END_STREAM,
+                                          stream->stream_id, block, (uint32_t)block_len);
+    if (rc == 0) rc = h2_out_flush_raw(hc);
+    h2_out_unlock(hc);
+    if (block != stack_block) cwist_free(block);
+    return rc;
+}
+
+/* Offer a newly completed request header block to the stream hooks.  On
+ * takeover the hook assumes ownership of the request object. */
+static void h2_hook_offer(h2_conn *hc, h2_stream *s) {
+    if (!s || s->hook_offered || !hc->hooks || !hc->hooks->on_headers || !s->req) return;
+    s->hook_offered = true;
+    void *hctx = hc->hooks->on_headers(hc->hook_ctx, s->req, s);
+    if (hctx) {
+        s->hook_ctx = hctx;
+        s->req = NULL; /* ownership moved to the hook session */
+    }
+}
+
+static bool h2_response_is_grpc(cwist_http_response *res) {
+    const char *ct = cwist_http_header_get(res->headers, "content-type");
+    if (!ct) ct = cwist_http_header_get(res->headers, "Content-Type");
+    return ct && strncmp(ct, "application/grpc", 16) == 0;
+}
+
+/* Emit the gRPC trailer block (grpc-status/grpc-message, last write wins)
+ * as a dedicated HEADERS frame with END_STREAM. */
+static int h2_send_grpc_trailers(h2_conn *hc, uint32_t stream_id,
+                                 cwist_http_response *res, uint32_t max_frame) {
+    const char *status = NULL;
+    const char *message = NULL;
+    for (cwist_http_header_node *h = res->headers; h; h = h->next) {
+        if (!h->key || !h->key->data || !h->value || !h->value->data) continue;
+        if (strcasecmp(h->key->data, "grpc-status") == 0) status = h->value->data;
+        else if (strcasecmp(h->key->data, "grpc-message") == 0) message = h->value->data;
+    }
+    cwist_http2_header pairs[2];
+    size_t count = 0;
+    pairs[count].name = "grpc-status";
+    pairs[count].value = status ? status : "0";
+    count++;
+    if (message) {
+        pairs[count].name = "grpc-message";
+        pairs[count].value = message;
+        count++;
+    }
+    unsigned char block[1024];
+    size_t block_len = h2_encode_header_pairs(block, sizeof(block), pairs, count);
+    if (block_len == 0) return -1;
+    return h2_send_header_block(hc, hc->conn, stream_id, block, block_len,
+                                max_frame, CWIST_HTTP2_FLAG_END_STREAM);
 }
 
 static int h2_send_response_hc(h2_conn *hc, uint32_t stream_id, cwist_http_response *res) {
@@ -2491,6 +2791,7 @@ static int h2_handle_settings(h2_conn *hc, const unsigned char *payload, size_t 
                         }
                         s = s->next;
                     }
+                    h2_fc_credit_signal(hc);
                 }
                 break;
             case 0x5: /* SETTINGS_MAX_FRAME_SIZE */
@@ -2531,6 +2832,7 @@ static int h2_handle_window_update(h2_conn *hc, uint32_t stream_id,
         if ((uint64_t)s->fc.send_window + (uint32_t)increment > CWIST_HTTP2_MAX_WINDOW) return -1;
         s->fc.send_window += (uint32_t)increment;
     }
+    h2_fc_credit_signal(hc);
     return 0;
 }
 
