@@ -316,9 +316,21 @@ void cwist_http_pool_destroy(void);
  * serves every complete request, and rearms the fd, so one thread can hold
  * hundreds of thousands of mostly-idle connections.
  *
- * Writes still use the bounded poll wait inside cwist_http_send_response
- * (CWIST_HTTP_TIMEOUT_MS), so a slow client can occupy a reactor thread for
- * that budget; true EPOLLOUT write resumption is future work. */
+ * Writes on the deferred-completion path are resumable: when a slow client
+ * saturates the socket, cwist_http_async_send_response deep-copies the unsent
+ * remainder and parks it on a one-shot POLLOUT slot instead of blocking the
+ * reactor thread in a poll() wait.  Synchronous (non-deferred) responses
+ * still use the bounded poll wait inside cwist_http_send_response
+ * (CWIST_HTTP_TIMEOUT_MS). */
+typedef enum {
+    CWIST_ASYNC_CLOSE = 0,  /* Close fd and release the connection. */
+    CWIST_ASYNC_REARM,      /* Keep the connection; wait for more reads. */
+    CWIST_ASYNC_DETACH,     /* Handler took ownership of fd (h2c, upgrades). */
+    CWIST_ASYNC_DEFER       /* Response deferred (cwist_async); leave fd and conn untouched. */
+} cwist_async_action_t;
+
+typedef cwist_async_action_t (*cwist_async_handler_t)(int fd, struct cwist_http_async_conn *conn);
+
 typedef struct cwist_http_async_conn {
     int fd;
     void *user_ctx;                       /* Owning app context. */
@@ -336,6 +348,17 @@ typedef enum {
 } cwist_async_action_t;
 
 typedef cwist_async_action_t (*cwist_async_handler_t)(int fd, cwist_http_async_conn_t *conn);
+
+/* Send a deferred completion's response on the reactor path without ever
+ * blocking the reactor thread: speculative non-blocking write first; on a
+ * partial write the unsent remainder is deep-copied into an owned buffer and
+ * parked on a one-shot POLLOUT slot, which resumes the send and then re-arms
+ * (keep_alive) or closes exactly like the synchronous completion.  File-stream
+ * bodies keep the existing bounded-blocking send path.  Takes over rearm/close
+ * of (client_fd, conn) in all outcomes. */
+void cwist_http_async_send_response(int client_fd, cwist_http_response *res,
+                                    cwist_reactor_t *reactor, cwist_http_async_conn_t *conn,
+                                    bool keep_alive, bool head_only);
 
 typedef enum {
     CWIST_RECV_OK = 0,
