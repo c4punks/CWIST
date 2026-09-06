@@ -164,11 +164,19 @@ static void cwist_async_complete(cwist_async *a) {
     bool keep = a->keep_alive && atomic_load(&g_cwist_running);
     res->keep_alive = keep;
 
-    /* Async v2: The socket is non-blocking (O_NONBLOCK).
-     * Send speculatively without touching fcntl flags or blocking the thread with SO_SNDTIMEO.
-     * cwist_http_send_response uses cwist_http_sendmsg_speculative on the fast path. */
-    cwist_error_t err = cwist_http_send_response(a->client_fd, res);
-    bool ok = err.error.err_i16 == 0;
+    if (a->h2_queue) {
+        /* Plan B handoff: never write frames from a worker thread.  Enqueue
+         * the finished exchange and poke the connection's wake fd; the
+         * connection thread drains the queue, HPACK-encodes, and sends.
+         * Wait for the dispatch ack first: enqueueing transfers req/res
+         * ownership, which is only legal once dispatch observed the defer. */
+        while (!atomic_load_explicit(&a->ack, memory_order_acquire)) sched_yield();
+        cwist_h2_async_queue_enqueue(a->h2_queue, a->h2_stream_id, a->req,
+                                     a->final_res, a->res, a->final_res_owned);
+        cwist_h2_async_queue_release(a->h2_queue);
+        cwist_free(a);
+        return;
+    }
 
     if (a->https_conn) {
         cwist_https_connection *conn = (cwist_https_connection *)a->https_conn;
