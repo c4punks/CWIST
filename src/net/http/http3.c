@@ -375,9 +375,42 @@ typedef struct cwist_h3_hset {
     size_t decode_off;
 } cwist_h3_hset_t;
 
+/* The engine loop is single-threaded and all hsi callbacks fire from it (or
+ * from engine destroy after the loop has exited), so the list needs no
+ * locking. */
+static void cwist_h3_hset_track(cwist_http3_context *ctx, cwist_h3_hset_t *hset) {
+    if (!ctx || !hset) return;
+    hset->owner = ctx;
+    hset->next = (cwist_h3_hset_t *)ctx->hsets;
+    hset->prev = (cwist_h3_hset_t **)&ctx->hsets;
+    if (hset->next) hset->next->prev = &hset->next;
+    ctx->hsets = hset;
+}
+
+static void cwist_h3_hset_untrack(cwist_h3_hset_t *hset) {
+    if (!hset || !hset->owner) return;
+    *hset->prev = hset->next;
+    if (hset->next) hset->next->prev = hset->prev;
+    hset->next = NULL;
+    hset->prev = NULL;
+    hset->owner = NULL;
+}
+
+/* lsquic never calls hsi_discard_header_set for streams that are still open
+ * when the engine is destroyed; free whatever is still tracked.  Must run
+ * after lsquic_engine_destroy() so a discard issued during destroy has
+ * already untracked its hset (no double-free). */
+static void cwist_h3_hset_sweep(cwist_http3_context *ctx) {
+    if (!ctx) return;
+    while (ctx->hsets) {
+        cwist_h3_hset_t *hset = (cwist_h3_hset_t *)ctx->hsets;
+        cwist_h3_hset_untrack(hset);
+        free(hset);
+    }
+}
+
 static void *cwist_h3_hsi_create(void *hsi_ctx, lsquic_stream_t *stream,
                                  int is_push_promise) {
-    (void)hsi_ctx;
     (void)is_push_promise;
     cwist_h3_hset_t *hset = calloc(1, sizeof(*hset));
     if (!hset) return NULL;
