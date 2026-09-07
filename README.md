@@ -28,9 +28,8 @@ Latest Web Server Benchmark (wrk -t12 -c400 -d10s (after 10s warmup, warmup disc
 **Spring runtime environment**
 
 - **JDK:** `openjdk version "25.0.4.1" 2026-08-18 LTS`
-- **Spring Boot:** 3.2.3 (Spring WebFlux + Reactor Netty on native epoll)
-- **Garbage collector:** G1GC
-- **AOT:** JDK 25 Leyden AOT (JEP 483 + JEP 514 single-step AOT)
+- **Spring Boot:** 3.2.3
+- **Stack:** Spring WebFlux + Reactor Netty on native epoll (G1GC, JDK 25 Leyden AOT, virtual threads disabled)
 - **Virtual threads:** disabled
 
 **JVM options**
@@ -53,13 +52,12 @@ Latest Web Server Benchmark (wrk -t12 -c400 -d10s (after 10s warmup, warmup disc
 -Dreactor.netty.ioWorkerCount=4
 -Xlog:gc*:file=/tmp/spring_gc.log:time,uptime,level,tags
 -XX:+AOTClassLinking
--XX:AOTCache=/tmp/spring_bench/app.aot
+-XX:AOTCache=/tmp/spring_bench/app.aot (JEP 483 + JEP 514 single-step AOT)
 ```
 
 **Warmup/profile**
 
-- **Warmup:** 10s (discarded from the results)
-- **Measurement:** `wrk -t12 -c400 -d10s`
+wrk -t12 -c400 -d10s (after 10s warmup, warmup discarded)
 
 ![Web Server Benchmark Trends](docs/webserver-benchmark-trends.svg)
 <!-- WEBSERVER_BENCHMARKS:END -->
