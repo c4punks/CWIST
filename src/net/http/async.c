@@ -174,7 +174,7 @@ static void cwist_async_complete(cwist_async *a) {
         cwist_h2_async_queue_enqueue(a->h2_queue, a->h2_stream_id, a->req,
                                      a->final_res, a->res, a->final_res_owned);
         cwist_h2_async_queue_release(a->h2_queue);
-        cwist_free(a);
+        cwist_async_release(a);
         return;
     }
 
