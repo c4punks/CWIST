@@ -346,7 +346,13 @@ cwist_error_t smartstring_change_size(smartstring *str, size_t new_size, bool bl
    return err;
 }
 
-cwist_error_t smartstring_assign(smartstring *str, char *data) {
+/**
+ * @brief Replace the string contents with a NUL-terminated C string.
+ * @param str Target string object.
+ * @param data Source string, or NULL to clear the value.
+ * @return ERR_SSTRING_OKAY on success, or an error payload describing the failure.
+ */
+cwist_error_t cwist_sstring_assign(cwist_sstring *str, const char *data) {
     if (!str) {
       cwist_error_t err = make_error(CWIST_ERR_INT8);
       err.error.err_i8 = ERR_SMARTSTRING_NULL_STRING;

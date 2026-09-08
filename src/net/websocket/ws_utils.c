@@ -30,7 +30,12 @@ typedef struct {
     uint8_t buffer[64];
 } SHA1_CTX;
 
-static void SHA1Transform(uint32_t state[5], const uint8_t buffer[64]) {
+/**
+ * @brief Execute one 64-byte SHA-1 compression round.
+ * @param state Rolling 160-bit digest state.
+ * @param buffer Input block to compress.
+ */
+static void SHA1Transform(uint32_t state[5], const uint8_t *buffer) {
     uint32_t a, b, c, d, e;
     typedef union {
         uint8_t c[64];
