@@ -95,10 +95,48 @@ long get_optimal_thread_count(void) {
         if (override > 0) return override;
     }
     long cores = get_cpu_cores();
-    long count = cores;
-    if (count < 4) count = 4;
-    if (count > 32) count = 32;
-    return count;
+    if (cores < 1) cores = 1;
+
+    long workers = cores;
+    const char *w_env = getenv("CWIST_WORKERS");
+    if (w_env && w_env[0]) {
+        if (strcmp(w_env, "auto") != 0) {
+            long parsed = atol(w_env);
+            if (parsed > 0) workers = parsed;
+        }
+    }
+
+    const char *c1m = getenv("CWIST_C1M_MODE");
+    bool is_c1m = !c1m || (c1m[0] != '0' && strcmp(c1m, "false") != 0);
+
+    if (is_c1m) {
+        /* In event-driven C1M mode, each reactor thread multiplexes I/O asynchronously.
+         * When multiple worker processes are forked (workers > 1), each worker process
+         * needs only cores / workers reactor threads so total reactor threads equals CPU cores.
+         * In single process mode (workers == 1), allocate cores reactor threads. */
+        if (workers > 1) {
+            long count = cores / workers;
+            return count > 0 ? count : 1;
+        }
+        return cores > 0 ? cores : 1;
+    }
+
+    if (workers == 1) {
+        /* Keep-alive handlers park on their connection, so the pool must
+         * cover many more concurrent connections than there are cores.
+         * Blocked threads are nearly free (futex sleep); undersizing the
+         * pool caps throughput at threads x per-conn rate. */
+        long count = cores * 8;
+        if (count < 32) count = 32;
+        if (count > 256) count = 256;
+        return count;
+    }
+
+    /* Dynamic thread downscaling: distribute thread budget proportionally across forked worker processes */
+    long threads_per_worker = (cores * 8) / workers;
+    if (threads_per_worker < 8) threads_per_worker = 8;
+    if (threads_per_worker > 64) threads_per_worker = 64;
+    return threads_per_worker;
 }
 
 #define HTTP_TASKS_PER_THREAD 32768
@@ -424,6 +462,210 @@ void cwist_http_pool_destroy(void) {
     g_http_thread_count = 0;
 }
 /* --- End Thread Pool --- */
+
+/* --- Async (one-shot, event-driven) connection path ------------------------
+ * See include/cwist/net/http/http.h for the model overview.  The connection
+ * shell lives across events; the recv stash is allocated lazily and released
+ * whenever it drains to empty, so an idle keep-alive connection costs only
+ * the shell plus its reactor slot. */
+
+typedef struct {
+    int client_fd;
+    cwist_async_handler_t handler;
+    void *ctx;
+    cwist_reactor_t *reactor;
+    cwist_http_async_conn_t *conn;
+} http_async_ctx_t;
+
+static uint32_t cwist_http_keep_alive_timeout_sec(void) {
+    static int cached_timeout = -1;
+    if (cached_timeout < 0) {
+        const char *env = getenv("CWIST_HTTP_KEEP_ALIVE_TIMEOUT");
+        int val = (env && *env) ? atoi(env) : 0;
+        cached_timeout = (val > 0) ? val : CWIST_HTTP_KEEP_ALIVE_TIMEOUT_SEC;
+    }
+    return (uint32_t)cached_timeout;
+}
+
+static void http_async_conn_release(cwist_http_async_conn_t *conn) {
+    if (!conn) return;
+    if (g_worker_loads && conn->worker_id < (uint32_t)g_http_thread_count) {
+        atomic_fetch_sub_explicit(&g_worker_loads[conn->worker_id], 1, memory_order_relaxed);
+    }
+    cwist_free(conn->rbuf);
+    cwist_free(conn);
+    atomic_fetch_sub_explicit(&g_http_inflight, 1, memory_order_release);
+}
+
+static void http_async_event_cb(int fd, void *ctx) {
+    http_async_ctx_t *c = (http_async_ctx_t *)ctx;
+    cwist_http_async_conn_t *conn = c->conn;
+    cwist_async_handler_t handler = c->handler;
+
+    uint32_t now = cwist_fast_monotonic_sec();
+    uint32_t timeout_sec = cwist_http_keep_alive_timeout_sec();
+
+    /* Idle connection reaper: close keep-alive sockets that exceeded timeout */
+    if (conn->last_active_sec > 0 && (now - conn->last_active_sec) > timeout_sec) {
+        close(fd);
+        http_async_conn_release(conn);
+        return;
+    }
+    conn->last_active_sec = now;
+
+    cwist_async_action_t action = handler(fd, conn);
+
+    if (action == CWIST_ASYNC_DEFER) {
+        /* The handler parked the request on a cwist_async; the completion
+         * path owns fd and conn now and re-arms or closes when done. */
+        return;
+    }
+    if (action == CWIST_ASYNC_DETACH) {
+        /* The handler owns fd now (h2c preface, protocol upgrade).  Free the
+         * shell but never touch the fd. */
+        cwist_free(conn->rbuf);
+        cwist_free(conn);
+        atomic_fetch_sub_explicit(&g_http_inflight, 1, memory_order_release);
+        return;
+    }
+    if (action == CWIST_ASYNC_CLOSE) {
+        close(fd);
+        http_async_conn_release(conn);
+        return;
+    }
+
+    /* CWIST_ASYNC_REARM: keep stash buffer allocated across keep-alive requests
+     * to eliminate 16 KiB heap allocation/free churn per request. Only shrink
+     * if the buffer grew excessively large. */
+    if (conn->len == 0 && conn->cap > 65536) {
+        cwist_free(conn->rbuf);
+        conn->rbuf = NULL;
+        conn->cap = 0;
+    }
+
+    http_async_ctx_t next = {
+        .client_fd = fd,
+        .handler = handler,
+        .ctx = c->ctx,
+        .reactor = c->reactor,
+        .conn = conn,
+    };
+    if (!cwist_reactor_add(c->reactor, fd, http_async_event_cb, &next, sizeof(next))) {
+        if (getenv("CWIST_ASYNC_DEBUG")) {
+            static _Atomic long dbg_rearm_fail;
+            long n = atomic_fetch_add(&dbg_rearm_fail, 1) + 1;
+            if (n <= 5 || n % 10000 == 0)
+                fprintf(stderr, "[async] rearm failed fd=%d total=%ld\n", fd, n);
+        }
+        close(fd);
+        http_async_conn_release(conn);
+    }
+}
+
+bool cwist_http_async_rearm(int client_fd, cwist_reactor_t *reactor, cwist_http_async_conn_t *conn) {
+    if (client_fd < 0 || !reactor || !conn) return false;
+    conn->last_active_sec = cwist_fast_monotonic_sec();
+    http_async_ctx_t next = {
+        .client_fd = client_fd,
+        .handler = conn->handler,
+        .ctx = conn->user_ctx,
+        .reactor = reactor,
+        .conn = conn,
+    };
+    if (conn->len > 0) {
+        /* Pipelined bytes already sit in the stash: waiting for POLLIN would
+         * hang, so dispatch the pending data as if a read event had fired. */
+        http_async_event_cb(client_fd, &next);
+        return true;
+    }
+    /* Same stash shrink as the REARM path in http_async_event_cb. */
+    if (conn->len == 0 && conn->cap > 65536) {
+        cwist_free(conn->rbuf);
+        conn->rbuf = NULL;
+        conn->cap = 0;
+    }
+    if (!cwist_reactor_add(reactor, client_fd, http_async_event_cb, &next, sizeof(next))) {
+        close(client_fd);
+        http_async_conn_release(conn);
+        return false;
+    }
+    return true;
+}
+
+void cwist_http_async_close(int client_fd, cwist_http_async_conn_t *conn) {
+    if (client_fd >= 0) close(client_fd);
+    http_async_conn_release(conn);
+}
+
+bool cwist_http_pool_submit_async(int client_fd, cwist_async_handler_t handler, void *ctx) {
+    long limit = cwist_http_inflight_limit();
+    long inflight = atomic_fetch_add_explicit(&g_http_inflight, 1, memory_order_acq_rel) + 1;
+    if (inflight > limit) {
+        atomic_fetch_sub_explicit(&g_http_inflight, 1, memory_order_release);
+        send(client_fd, CWIST_HTTP_503, sizeof(CWIST_HTTP_503) - 1, MSG_NOSIGNAL | MSG_DONTWAIT);
+        close(client_fd);
+        return false;
+    }
+
+#if !defined(__linux__)
+    /* The one-shot path must never park the reactor on a blocking recv. */
+    int fl = fcntl(client_fd, F_GETFL, 0);
+    if (fl >= 0) fcntl(client_fd, F_SETFL, fl | O_NONBLOCK);
+#endif
+
+    cwist_http_async_conn_t *conn = cwist_alloc(sizeof(*conn));
+    if (!conn) {
+        atomic_fetch_sub_explicit(&g_http_inflight, 1, memory_order_release);
+        close(client_fd);
+        return false;
+    }
+    memset(conn, 0, sizeof(*conn));
+    conn->fd = client_fd;
+    conn->user_ctx = ctx;
+    conn->virgin = true;
+    conn->last_active_sec = cwist_fast_monotonic_sec();
+
+    /* Worker selection: Power of Two Random Choices (P2C) load balancing
+     * to eliminate queue skew without cache-bouncing work stealing. */
+    size_t worker_idx;
+    if (g_worker_loads && g_http_thread_count > 1) {
+        worker_idx = cwist_sched_p2c_select_worker(g_worker_loads, (uint32_t)g_http_thread_count);
+    } else {
+        worker_idx = g_rr_index;
+        g_rr_index = (g_rr_index + 1) % (size_t)g_http_thread_count;
+    }
+    http_thread_worker_t *w = &g_workers[worker_idx];
+
+    conn->worker_id = (uint32_t)worker_idx;
+    if (g_worker_loads) {
+        atomic_fetch_add_explicit(&g_worker_loads[worker_idx], 1, memory_order_relaxed);
+    }
+    conn->reactor = w->reactor;
+    conn->handler = handler;
+
+    http_async_ctx_t c = {
+        .client_fd = client_fd,
+        .handler = handler,
+        .ctx = ctx,
+        .reactor = w->reactor,
+        .conn = conn,
+    };
+    if (!cwist_reactor_add(w->reactor, client_fd, http_async_event_cb, &c, sizeof(c))) {
+        if (getenv("CWIST_ASYNC_DEBUG")) {
+            static _Atomic long dbg_submit_fail;
+            long n = atomic_fetch_add(&dbg_submit_fail, 1) + 1;
+            if (n <= 5 || n % 10000 == 0)
+                fprintf(stderr, "[async] submit-add failed fd=%d total=%ld worker=%zu\n",
+                        client_fd, n, worker_idx);
+        }
+        http_async_conn_release(conn);
+        close(client_fd);
+        return false;
+    }
+    return true;
+}
+
+/* --- End Async Connection Path --- */
 
 /**
  * @file http.c
@@ -1138,7 +1380,9 @@ static int cwist_http_sendmsg_all(int fd, struct iovec *iov, int iovcnt, int fla
             if (errno == EINTR) continue;
             if (errno == EAGAIN || errno == EWOULDBLOCK) {
                 struct pollfd pfd = { .fd = fd, .events = POLLOUT };
-                int ret = poll(&pfd, 1, CWIST_HTTP_TIMEOUT_MS);
+                int timeout_ms = (flags & MSG_DONTWAIT) ? 0 : 50;
+                if (timeout_ms == 0) return -1;
+                int ret = poll(&pfd, 1, timeout_ms);
                 if (ret <= 0) return -1;
                 if (pfd.revents & (POLLERR | POLLHUP | POLLNVAL)) return -1;
                 continue;
@@ -1500,6 +1744,92 @@ void cwist_http_async_send_response(int client_fd, cwist_http_response *res,
     } else {
         cwist_http_async_close(client_fd, conn);
     }
+}
+
+cwist_async_send_status_t cwist_http_send_response_async(int client_fd, cwist_http_response *res,
+                                                        cwist_http_async_conn_t *conn,
+                                                        bool keep_alive, bool head_only) {
+    if (client_fd < 0 || !res || !conn) return CWIST_ASYNC_SEND_CLOSE;
+
+    if (!head_only && res->use_file_stream) {
+        cwist_error_t err = cwist_http_send_response(client_fd, res);
+        return (keep_alive && err.error.err_i16 == 0) ? CWIST_ASYNC_SEND_KEEPALIVE : CWIST_ASYNC_SEND_CLOSE;
+    }
+
+    char header_buf[CWIST_HTTP_MAX_HEADER_SIZE];
+    size_t header_len = serialize_headers(res, header_buf, sizeof(header_buf));
+
+    const void *body_ptr = NULL;
+    size_t body_len = 0;
+    if (!head_only) {
+        if (res->is_ptr_body) {
+            body_ptr = res->ptr_body;
+            body_len = res->ptr_body_len;
+        } else if (res->body && res->body->data) {
+            body_ptr = res->body->data;
+            body_len = res->body->size;
+        }
+    }
+
+    struct iovec iov[2];
+    int iov_cnt = 1;
+    iov[0].iov_base = header_buf;
+    iov[0].iov_len = header_len;
+    if (body_len > 0 && body_ptr) {
+        iov[1].iov_base = (void *)body_ptr;
+        iov[1].iov_len = body_len;
+        iov_cnt = 2;
+    }
+
+    int flags = 0;
+#if defined(MSG_NOSIGNAL)
+    flags |= MSG_NOSIGNAL;
+#endif
+#if defined(MSG_DONTWAIT)
+    flags |= MSG_DONTWAIT;
+#endif
+
+    size_t sent = 0;
+    cwist_write_status_t st = cwist_http_sendmsg_speculative(client_fd, iov, iov_cnt, flags, &sent);
+
+    if (st == CWIST_WRITE_PENDING) {
+        size_t total = header_len + body_len;
+        size_t left = total - sent;
+        http_parked_write_t w = {
+            .reactor = conn->reactor,
+            .conn = conn,
+            .buf = cwist_alloc(left),
+            .off = 0,
+            .len = left,
+            .deadline_sec = http_parked_write_deadline(),
+            .keep_alive = keep_alive,
+        };
+        if (w.buf) {
+            size_t hd_off = sent < header_len ? sent : header_len;
+            size_t hd_left = header_len - hd_off;
+            memcpy(w.buf, header_buf + hd_off, hd_left);
+            if (left > hd_left) {
+                size_t body_off = sent > header_len ? sent - header_len : 0;
+                memcpy(w.buf + hd_left, (const char *)body_ptr + body_off, left - hd_left);
+            }
+            if (cwist_reactor_add_out(conn->reactor, client_fd, http_parked_write_cb, &w, sizeof(w))) {
+                cwist_http_response_release_ptr_body(res);
+                cwist_http_response_release_file_stream(res);
+                return CWIST_ASYNC_SEND_DEFERRED;
+            }
+            cwist_free(w.buf);
+        }
+        cwist_http_response_release_ptr_body(res);
+        cwist_http_response_release_file_stream(res);
+        return CWIST_ASYNC_SEND_CLOSE;
+    }
+
+    cwist_http_response_release_ptr_body(res);
+    cwist_http_response_release_file_stream(res);
+    if (st == CWIST_WRITE_DONE) {
+        return keep_alive ? CWIST_ASYNC_SEND_KEEPALIVE : CWIST_ASYNC_SEND_CLOSE;
+    }
+    return CWIST_ASYNC_SEND_CLOSE;
 }
 
 const char *cwist_http_status_reason(int status) {
@@ -2576,6 +2906,22 @@ int cwist_make_socket_ipv4(struct sockaddr_in *sockv4, const char *address, uint
 
     return CWIST_HTTP_SETSOCKOPT_FAILED;  
   }
+
+#ifdef SO_REUSEPORT
+  setsockopt(server_fd, SOL_SOCKET, SO_REUSEPORT, &opt, sizeof(opt));
+#endif
+
+#if defined(__linux__) && defined(TCP_DEFER_ACCEPT)
+  int defer = 1;
+  setsockopt(server_fd, IPPROTO_TCP, TCP_DEFER_ACCEPT, &defer, sizeof(defer));
+#endif
+
+#if defined(__APPLE__) || defined(__FreeBSD__)
+#ifdef SO_NOSIGPIPE
+  int no_sig_pipe = 1;
+  setsockopt(server_fd, SOL_SOCKET, SO_NOSIGPIPE, &no_sig_pipe, sizeof(no_sig_pipe));
+#endif
+#endif
 
   sockv4->sin_family = AF_INET;
   sockv4->sin_addr.s_addr = addr;
