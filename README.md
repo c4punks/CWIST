@@ -7,8 +7,13 @@
 **Implementations powered by lsquic/BoringSSL/OpenSSL without context contamination.**
 
 <p align="center">
-A high-performance, C17 web framework that brings modern ergonomics—HTTP/3, WebTransport,
-Post-Quantum TLS, and zero-copy I/O—to systems programming without sacrificing control.
+CWIST is a C17 web framework and application server with built-in HTTP/1.1, HTTP/2,
+HTTP/3 (QUIC), WebSocket, and WebTransport support, hybrid post-quantum TLS
+(X25519MLKEM768), an embedded SQLite ORM, and a synchronous io_uring/epoll/kqueue
+reactor. It is written in plain C, links statically, and serves ~152k req/s at
+1.59ms average latency in ~9.1MB of RSS (CI: `wrk -t12 -c400 -d10s` after warmup,
+C1M reactor mode — see the benchmark block below; a tuned `wrk -t4 -c100` profile
+reaches 0.41ms average at ~155k req/s).
 </p>
 
 [Heavy Benchmark on CWIST APP](https://github.com/gg582/fly.board/blob/main/README.md)
