@@ -58,8 +58,8 @@ static int delayed_wait(pthread_cond_t *cond, pthread_mutex_t *mutex) {
     return pthread_cond_wait(cond, mutex);
 }
 
-static int joinable_create(pthread_t *thread, const pthread_attr_t *attr, void *(*start)(void *),
-                           void *arg) {
+static int joinable_create(pthread_t *thread, const pthread_attr_t *attr,
+                           void *(*start)(void *), void *arg) {
     pthread_mutex_lock(&gate_mu);
     if (fail_creates) {
         fail_creates--;
@@ -131,13 +131,10 @@ int main(int argc, char **argv) {
     for (int i = 0; i < JOBS; i++) {
         ids[i] = i;
         /* The handler owns no transport in this queue-only regression. */
-        if (capped)
-            assert(pthread_create(&submitters[i], NULL, submit_one, &ids[i]) == 0);
-        else
-            submit_one(&ids[i]);
+        if (capped) assert(pthread_create(&submitters[i], NULL, submit_one, &ids[i]) == 0);
+        else submit_one(&ids[i]);
     }
-    if (capped)
-        for (int i = 0; i < JOBS; i++) assert(pthread_join(submitters[i], NULL) == 0);
+    if (capped) for (int i = 0; i < JOBS; i++) assert(pthread_join(submitters[i], NULL) == 0);
     pthread_mutex_lock(&gate_mu);
     release_initial = true;
     pthread_cond_broadcast(&gate_cv);
