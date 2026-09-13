@@ -248,14 +248,13 @@ src/net/http/tls_chain.c:295:        free(url);
 src/net/http/tls_chain.c:306:    free(buf.data);
 src/net/http/tls_chain.c:335:        free(url);
 src/net/http/tls_chain.c:61:        uint8_t *tmp = (uint8_t *)realloc(buf->data, new_cap);
-src/security/db_crypt/db_crypt.c:105:    unsigned char *ct = (unsigned char *)malloc(ct_max);
-src/security/db_crypt/db_crypt.c:110:        free(ct);
-src/security/db_crypt/db_crypt.c:122:    unsigned char *blob = (unsigned char *)malloc(total);
-src/security/db_crypt/db_crypt.c:124:        free(ct);
-src/security/db_crypt/db_crypt.c:144:    free(ct);
-src/security/db_crypt/db_crypt.c:206:    unsigned char *pt = (unsigned char *)malloc(ct_len + 1); /* extra for safety */
-src/security/db_crypt/db_crypt.c:211:        free(pt);
-src/security/jwt/jwt.c:200:        free(final_payload_json);
+src/security/db_crypt/db_crypt.c:112:    unsigned char *ct = (unsigned char *)malloc(ct_max);
+src/security/db_crypt/db_crypt.c:123:        free(ct);
+src/security/db_crypt/db_crypt.c:135:    unsigned char *blob = (unsigned char *)malloc(total);
+src/security/db_crypt/db_crypt.c:137:        free(ct);
+src/security/db_crypt/db_crypt.c:157:    free(ct);
+src/security/db_crypt/db_crypt.c:219:    unsigned char *pt = (unsigned char *)malloc(ct_len + 1); /* extra for safety */
+src/security/db_crypt/db_crypt.c:225:        free(pt);
 src/sys/app/app.c:3192:    free(client);
 src/sys/app/app.c:3224:    cwist_multiport_http_client *payload = malloc(sizeof(*payload));
 src/sys/app/app.c:3236:        free(payload);
