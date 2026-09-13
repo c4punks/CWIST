@@ -1,6 +1,7 @@
 #include <cwist/security/db_crypt/db_crypt.h>
 
 #include <openssl/evp.h>
+#include <openssl/mem.h>
 #include <openssl/rand.h>
 
 #include <stdio.h>
