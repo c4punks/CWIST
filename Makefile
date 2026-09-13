@@ -455,6 +455,7 @@ $(CNATS_LIB):
 TEST_TARGETS = test_app_resource_limits \
                test_reactor_wake \
                test_classic_pool_scaling \
+               test_reactor_drain_chunk \
                test_sstring \
                test_seq \
                test_seq_auth \
@@ -550,6 +551,17 @@ test_classic_pool_scaling: $(LIB_NAME) tests/test_classic_pool_scaling.c
 	./$@ multi
 	./$@ cap
 	./$@ failure
+
+# Cooperative-queuing correctness test (issue #25): CWIST_REACTOR_DRAIN_CHUNK
+# interleaves foreign-thread post draining into a big CQE batch instead of
+# only at the batch's end. See tests/bench_cooperative_queuing.c for the
+# full before/after latency measurement.
+test_reactor_drain_chunk: tests/test_reactor_drain_chunk.c src/sys/io/reactor.c
+	$(CC) $(CFLAGS) -o $@ tests/test_reactor_drain_chunk.c -pthread
+	./$@
+
+bench_cooperative_queuing: tests/bench_cooperative_queuing.c src/sys/io/reactor.c
+	$(CC) $(CFLAGS) -o $@ tests/bench_cooperative_queuing.c -pthread
 
 test_sstring: $(LIB_NAME) tests/test_sstring.c
 	$(CC) $(CFLAGS) -o test_sstring tests/test_sstring.c $(LIB_NAME) $(LIBS)

@@ -35,6 +35,7 @@
 #include <pthread.h>
 #include <stdatomic.h>
 #include <fcntl.h>
+#include <limits.h>
 
 #ifdef __linux__
 #include <sys/syscall.h>
@@ -658,6 +659,25 @@ bool cwist_reactor_del(cwist_reactor_t *reactor, int fd) {
 #endif
 }
 
+#ifdef __linux__
+/* CWIST_REACTOR_DRAIN_CHUNK: opt-in cooperative-queuing knob (see the
+ * comment at its call site). 0 (default, or unset/invalid) preserves the
+ * legacy behavior of draining a whole CQE batch before servicing foreign-
+ * thread posts. Cached after the first read like the other env knobs in
+ * this file -- the racy recompute is benign (same result every time). */
+static uint32_t reactor_drain_chunk(void) {
+    static _Atomic int cached = -1;
+    int v = atomic_load_explicit(&cached, memory_order_relaxed);
+    if (v < 0) {
+        const char *s = getenv("CWIST_REACTOR_DRAIN_CHUNK");
+        long parsed = s ? strtol(s, NULL, 10) : 0;
+        v = (parsed > 0 && parsed < INT_MAX) ? (int)parsed : 0;
+        atomic_store_explicit(&cached, v, memory_order_relaxed);
+    }
+    return (uint32_t)v;
+}
+#endif
+
 void cwist_reactor_run(cwist_reactor_t *reactor) {
     if (!reactor) return;
     reactor->running = true;
@@ -695,6 +715,20 @@ void cwist_reactor_run(cwist_reactor_t *reactor) {
                 continue;
             }
             reactor->dispatching = true;
+            /* Cooperative queuing: a busy round can carry hundreds of ready
+             * connections in one CQE batch (the ring is 4096 deep). Foreign-
+             * thread completions (cwist_async_defer, background jobs) queue
+             * onto post_head via cwist_reactor_post() and used to wait for
+             * reactor_drain_posts() at the *top* of the next round -- i.e.
+             * behind this entire batch, even if the post arrived while we
+             * were only a few callbacks in. CWIST_REACTOR_DRAIN_CHUNK bounds
+             * how many connection callbacks run before posts are drained, so
+             * a foreign-thread completion's own tail latency stops scaling
+             * with how many *other* connections happened to be ready in the
+             * same wake. 0 (default) keeps the legacy single-drain-at-end
+             * behavior byte-for-byte. */
+            uint32_t drain_chunk = reactor_drain_chunk();
+            uint32_t since_drain = 0;
             while (head != tail) {
                 struct io_uring_cqe *cqe = &reactor->impl.cqes[head & *reactor->impl.cq_ring_mask];
                 reactor_event_ctx_t *ev_ctx = (reactor_event_ctx_t *)cqe->user_data;
@@ -705,6 +739,11 @@ void cwist_reactor_run(cwist_reactor_t *reactor) {
                     free_reactor_ctx(reactor, ev_ctx);
                 }
                 head++;
+                if (drain_chunk && ++since_drain >= drain_chunk && head != tail) {
+                    since_drain = 0;
+                    __atomic_store_n(reactor->impl.cq_head, head, __ATOMIC_RELEASE);
+                    reactor_drain_posts(reactor);
+                }
             }
             reactor->dispatching = false;
             __atomic_store_n(reactor->impl.cq_head, head, __ATOMIC_RELEASE);
