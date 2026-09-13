@@ -40,6 +40,33 @@
 #define CWIST_ROUTE_BUCKETS 127
 #define CWIST_STATIC_RETIRE_NS TT_SECOND(5)
 
+#ifndef __EMSCRIPTEN__
+/**
+ * @brief Tune system resource limits to handle high concurrency loads.
+ */
+static void cwist_app_tune_system(void) {
+    struct rlimit rl;
+    if (getrlimit(RLIMIT_NOFILE, &rl) != 0) {
+        fprintf(stderr, "[CWIST] Cannot read file limits: %s\n", strerror(errno));
+        return;
+    }
+    /* Keep the hard limit. Increase the soft limit only. */
+    rlim_t target = 1050000;
+    if (rl.rlim_max != RLIM_INFINITY && target > rl.rlim_max) {
+        target = rl.rlim_max;
+    }
+    if (rl.rlim_cur < target) {
+        rl.rlim_cur = target;
+        if (setrlimit(RLIMIT_NOFILE, &rl) != 0) {
+            fprintf(stderr, "[CWIST] Cannot increase file limit: %s\n", strerror(errno));
+            return;
+        }
+    }
+    printf("[CWIST] Open file soft limit: %llu\n", (unsigned long long)rl.rlim_cur);
+}
+#endif
+
+#ifndef __EMSCRIPTEN__
 /**
  * @brief Read the current libttak tick count used for static-file retirement deadlines.
  * @return Monotonic tick value compatible with libttak memory APIs.
