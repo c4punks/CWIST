@@ -3784,8 +3784,11 @@ int cwist_app_listen(cwist_app *app, int port) {
      * region that adds directly to RSS. CWIST_MALLOC_ARENA_MAX=1 forces
      * every worker down to its single main arena regardless of how many
      * threads it spins up afterward. Unset by default: preserves today's
-     * behavior exactly. Not yet measured against the mimalloc A/B in that
-     * issue - this is the next experiment, not a default change. */
+     * behavior exactly. Measured against the mimalloc A/B in that issue
+     * and adopted (PR #35, merged) after winning on every metric - the CI
+     * benchmark job keeps confirming that decision on every run, this is
+     * not an open question anymore, just still opt-in rather than a
+     * default so existing deployments' behavior never changes silently. */
     const char *arena_max_env = getenv("CWIST_MALLOC_ARENA_MAX");
     if (arena_max_env && arena_max_env[0]) {
         char *end = NULL;

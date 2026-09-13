@@ -53,8 +53,9 @@ WEBSERVER_LATENCY_SVG = ROOT / "docs" / "webserver-latency-distribution.svg"
 # Servers compared in the KDE-style latency distribution chart: only the ones
 # run under the identical wrk -t12 -c400 profile every CI cycle (the
 # *_tuned entries use a different, lower-concurrency profile and aren't
-# comparable here; cwist_c1m_arena1/cwist_sharded are opt-in experimental
-# A/Bs, not part of the standing comparison set).
+# comparable here; cwist_c1m_arena1/cwist_c1m_drainchunk/cwist_sharded are
+# targeted A/B legs against the plain cwist_c1m row, not part of the
+# standing cross-framework comparison set).
 _LATENCY_KDE_SERVERS = [
     ("CWIST (classic)", "cwist", "#22c55e"),
     ("CWIST (C1M)", "cwist_c1m", "#10b981"),
@@ -335,6 +336,7 @@ def render() -> None:
     cwist_lat_part = get_lat_part("cwist")
     cwist_c1m_lat_part = get_lat_part("cwist_c1m")
     cwist_c1m_arena1_lat_part = get_lat_part("cwist_c1m_arena1")
+    cwist_c1m_drainchunk_lat_part = get_lat_part("cwist_c1m_drainchunk")
     axum_lat_part = get_lat_part("axum")
     gin_lat_part = get_lat_part("gin")
     spring_lat_part = get_lat_part("spring")
@@ -343,7 +345,8 @@ def render() -> None:
         f"Latest Web Server Benchmark ({ws_latest.get('wrk_profile','wrk 12t 400c')}):\n"
         f"- **CWIST (classic pool)**: {ws_latest.get('cwist_rps',0):.0f} req/s | Latency {ws_latest.get('cwist_lat_ms',0):.2f}ms{cwist_lat_part} | RSS {ws_latest.get('cwist_rss_kib',0):.0f}KiB | Csw {ws_latest.get('cwist_csw',0):.0f}\n"
         f"- **CWIST (C1M reactor)**: {ws_latest.get('cwist_c1m_rps',0):.0f} req/s | Latency {ws_latest.get('cwist_c1m_lat_ms',0):.2f}ms{cwist_c1m_lat_part} | RSS {ws_latest.get('cwist_c1m_rss_kib',0):.0f}KiB | Csw {ws_latest.get('cwist_c1m_csw',0):.0f}\n"
-        f"- **CWIST (C1M reactor, arena_max=1)** — experimental, see issue #25: {ws_latest.get('cwist_c1m_arena1_rps',0):.0f} req/s | Latency {ws_latest.get('cwist_c1m_arena1_lat_ms',0):.2f}ms{cwist_c1m_arena1_lat_part} | RSS {ws_latest.get('cwist_c1m_arena1_rss_kib',0):.0f}KiB | Csw {ws_latest.get('cwist_c1m_arena1_csw',0):.0f}\n"
+        f"- **CWIST (C1M reactor, arena_max=1)** — glibc arena cap adopted in PR #35 after mimalloc was tried and refuted (issue #25); this line confirms the decision on every run: {ws_latest.get('cwist_c1m_arena1_rps',0):.0f} req/s | Latency {ws_latest.get('cwist_c1m_arena1_lat_ms',0):.2f}ms{cwist_c1m_arena1_lat_part} | RSS {ws_latest.get('cwist_c1m_arena1_rss_kib',0):.0f}KiB | Csw {ws_latest.get('cwist_c1m_arena1_csw',0):.0f}\n"
+        f"- **CWIST (C1M reactor, drain_chunk=8)** — cooperative queuing for cwist_async_defer completions within a big io_uring batch (issue #25, docs/cooperative-queuing.md); this workload has no cwist_async_defer traffic to interleave, so parity with the plain C1M row above is the expected result, not a null finding — the tail-latency win is isolated directly in tests/bench_cooperative_queuing.c: {ws_latest.get('cwist_c1m_drainchunk_rps',0):.0f} req/s | Latency {ws_latest.get('cwist_c1m_drainchunk_lat_ms',0):.2f}ms{cwist_c1m_drainchunk_lat_part} | RSS {ws_latest.get('cwist_c1m_drainchunk_rss_kib',0):.0f}KiB | Csw {ws_latest.get('cwist_c1m_drainchunk_csw',0):.0f}\n"
         f"- **Axum**: {ws_latest.get('axum_rps',0):.0f} req/s | Latency {ws_latest.get('axum_lat_ms',0):.2f}ms{axum_lat_part} | RSS {ws_latest.get('axum_rss_kib',0):.0f}KiB | Csw {ws_latest.get('axum_csw',0):.0f}\n"
         f"- **Gin (Go)**: {ws_latest.get('gin_rps',0):.0f} req/s | Latency {ws_latest.get('gin_lat_ms',0):.2f}ms{gin_lat_part} | RSS {ws_latest.get('gin_rss_kib',0):.0f}KiB | Csw {ws_latest.get('gin_csw',0):.0f}\n"
         f"- **Spring Boot**: {ws_latest.get('spring_rps',0):.0f} req/s | Latency {ws_latest.get('spring_lat_ms',0):.2f}ms{spring_lat_part} | RSS {ws_latest.get('spring_rss_kib',0):.0f}KiB | Csw {ws_latest.get('spring_csw',0):.0f}\n"

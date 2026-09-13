@@ -313,14 +313,30 @@ jobs:
           run_bench "CWIST (classic)" "env CWIST_C1M_MODE=0 /tmp/cwist_server" 9091 "/tmp/cwist.txt" "/tmp/cwist_stat.txt" 10
           run_bench "CWIST C1M" "env CWIST_C1M_MODE=1 /tmp/cwist_server" 9091 "/tmp/cwist_c1m.txt" "/tmp/cwist_c1m_stat.txt" 10
 
-          # Experimental: cap glibc's per-process malloc arena count to 1
-          # before the fork loop (src/sys/app/app.c), inherited by every
-          # worker (see issue #25's mimalloc writeup - this targets the same
-          # "N processes x M arenas" RSS/tail-latency multiplication mimalloc
-          # tried to fix, without mimalloc's eager per-process reservation).
+          # CWIST_MALLOC_ARENA_MAX=1 caps glibc's per-process malloc arena
+          # count to 1 before the fork loop (src/sys/app/app.c), inherited
+          # by every worker. This is not an open experiment: PR #35 (merged)
+          # already adopted it after mimalloc was tried and refuted on real
+          # CI data (RPS -1.8%, P99.999 +97%, RSS +120% - eager per-process
+          # arena reservation is a bad fit for CWIST's short-lived, low-
+          # allocation prefork workers; see issue #25). This leg exists to
+          # keep confirming that decision on every run, not to re-decide it.
           # Same binary/config as "CWIST C1M" above; the env var is the only
           # variable, so this is a direct A/B, not a new configuration.
           run_bench "CWIST C1M (arena_max=1)" "env CWIST_C1M_MODE=1 CWIST_MALLOC_ARENA_MAX=1 /tmp/cwist_server" 9091 "/tmp/cwist_c1m_arena1.txt" "/tmp/cwist_c1m_arena1_stat.txt" 10
+
+          # CWIST_REACTOR_DRAIN_CHUNK=8: cooperative queuing for foreign-
+          # thread posts (cwist_async_defer completions) within a big io_uring
+          # CQE batch (issue #25, docs/cooperative-queuing.md). Same C1M
+          # binary/config as "CWIST C1M" above, one env var changed - a
+          # direct A/B, not a separate experimental configuration. Note:
+          # this workload's handler never calls cwist_async_defer, so it
+          # cannot exercise the path this knob affects; the leg is here to
+          # confirm no regression on the plain request path under real CI
+          # conditions, not to show the tail-latency win (that's measured
+          # directly in tests/bench_cooperative_queuing.c, which isolates
+          # the mechanism this workload can't reach).
+          run_bench "CWIST C1M (drain_chunk=8)" "env CWIST_C1M_MODE=1 CWIST_REACTOR_DRAIN_CHUNK=8 /tmp/cwist_server" 9091 "/tmp/cwist_c1m_drainchunk.txt" "/tmp/cwist_c1m_drainchunk_stat.txt" 10
 
           # Tuned low-latency profile (CWIST classic only): lower connection
           # pressure (c100, 4 wrk threads) so the per-request latency floor is
@@ -529,6 +545,9 @@ jobs:
           cwist_c1m_arena1_wrk = parse_wrk("/tmp/cwist_c1m_arena1.txt")
           cwist_c1m_arena1_rss, cwist_c1m_arena1_csw = parse_stat("/tmp/cwist_c1m_arena1_stat.txt")
 
+          cwist_c1m_drainchunk_wrk = parse_wrk("/tmp/cwist_c1m_drainchunk.txt")
+          cwist_c1m_drainchunk_rss, cwist_c1m_drainchunk_csw = parse_stat("/tmp/cwist_c1m_drainchunk_stat.txt")
+
           cwist_tuned_wrk = parse_wrk("/tmp/cwist_tuned.txt")
 
           axum_wrk = parse_wrk("/tmp/axum.txt")
@@ -549,6 +568,12 @@ jobs:
               # Same C1M binary/config as cwist_c1m_* above, CWIST_MALLOC_ARENA_MAX=1 -
               # only variable is the env var, direct A/B (see issue #25).
               **server_fields("cwist_c1m_arena1", cwist_c1m_arena1_wrk, cwist_c1m_arena1_rss, cwist_c1m_arena1_csw),
+              # Same C1M binary/config as cwist_c1m_* above, CWIST_REACTOR_DRAIN_CHUNK=8 -
+              # only variable is the env var, direct A/B (see issue #25,
+              # docs/cooperative-queuing.md). This workload never calls
+              # cwist_async_defer, so parity with cwist_c1m_* here is the
+              # expected, desired result, not a null finding.
+              **server_fields("cwist_c1m_drainchunk", cwist_c1m_drainchunk_wrk, cwist_c1m_drainchunk_rss, cwist_c1m_drainchunk_csw),
               **server_fields("cwist_tuned", cwist_tuned_wrk),
               **server_fields("axum", axum_wrk, axum_rss, axum_csw),
               **server_fields("gin", gin_wrk, gin_rss, gin_csw),
@@ -580,7 +605,7 @@ jobs:
       - name: Copy raw benchmark output
         run: |
           mkdir -p raw_logs
-          cp /tmp/cwist.txt /tmp/cwist_stat.txt /tmp/cwist_c1m.txt /tmp/cwist_c1m_stat.txt /tmp/cwist_c1m_arena1.txt /tmp/cwist_c1m_arena1_stat.txt /tmp/cwist_tuned.txt /tmp/axum.txt /tmp/axum_stat.txt /tmp/gin.txt /tmp/gin_stat.txt /tmp/spring.txt /tmp/spring_stat.txt /tmp/spring_tuned.txt /tmp/spring_gc.log raw_logs/ 2>/dev/null || true
+          cp /tmp/cwist.txt /tmp/cwist_stat.txt /tmp/cwist_c1m.txt /tmp/cwist_c1m_stat.txt /tmp/cwist_c1m_arena1.txt /tmp/cwist_c1m_arena1_stat.txt /tmp/cwist_c1m_drainchunk.txt /tmp/cwist_c1m_drainchunk_stat.txt /tmp/cwist_tuned.txt /tmp/axum.txt /tmp/axum_stat.txt /tmp/gin.txt /tmp/gin_stat.txt /tmp/spring.txt /tmp/spring_stat.txt /tmp/spring_tuned.txt /tmp/spring_gc.log raw_logs/ 2>/dev/null || true
       - uses: actions/upload-artifact@v4
         with:
           name: webserver-result
