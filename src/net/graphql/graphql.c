@@ -178,6 +178,11 @@ static const char *parse_arguments(const char *p, const cJSON *variables, cJSON 
                 if (*p == '\\' && *(p + 1)) p += 2;
                 else p++;
             }
+            if (*p != '"') {
+                gql_add_error(errors, "Unterminated string in argument");
+                cJSON_Delete(args);
+                return p;
+            }
             size_t str_len = (size_t)(p - str_start);
             cwist_scratch_t str_val_s CWIST_SCRATCH_DEFER = {0};
             char *str_val = cwist_scratch_alloc(&str_val_s, str_len + 1);
@@ -186,7 +191,7 @@ static const char *parse_arguments(const char *p, const cJSON *variables, cJSON 
                 str_val[str_len] = '\0';
                 val = cJSON_CreateString(str_val);
             }
-            if (*p == '"') p++;
+            p++; /* skip closing '"' */
         } else if (*p == '$') { /* Variable reference */
             p++;
             const char *var_start = p;
@@ -374,8 +379,12 @@ cwist_error_t cwist_graphql_execute(cwist_graphql_schema_t *schema, const char *
             while (*p && *p != '{') p++;
         }
 
-        graphql_field_t *target_schema = (op_type == GQL_OP_MUTATION) ? schema->mutations : schema->queries;
-        parse_selection_set(p, target_schema, variables, data, errors, 1);
+        if (*p != '{') {
+            gql_add_error(errors, "Expected '{' to begin selection set");
+        } else {
+            graphql_field_t *target_schema = (op_type == GQL_OP_MUTATION) ? schema->mutations : schema->queries;
+            parse_selection_set(p, target_schema, variables, data, errors, 1);
+        }
     }
 
     if (cJSON_GetArraySize(errors) == 0) {

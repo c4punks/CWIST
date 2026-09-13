@@ -62,6 +62,18 @@ int main(void) {
     assert(strstr(out->data, "\"greet\":\"hello charlie\""));
     cwist_sstring_destroy(out);
 
+    /* Test 5: Unterminated string argument */
+    out = NULL;
+    assert(cwist_graphql_execute(schema, "{\"query\":\"{ greet(name: \\\"unterminated) }\"}", &out).error.err_i16 == 0);
+    assert(strstr(out->data, "Unterminated string in argument"));
+    cwist_sstring_destroy(out);
+
+    /* Test 6: Missing selection set brace */
+    out = NULL;
+    assert(cwist_graphql_execute(schema, "{\"query\":\"query Foo\"}", &out).error.err_i16 == 0);
+    assert(strstr(out->data, "Expected '{' to begin selection set"));
+    cwist_sstring_destroy(out);
+
     cwist_graphql_schema_destroy(schema);
     puts("All GraphQL advanced tests passed successfully.");
     return 0;
