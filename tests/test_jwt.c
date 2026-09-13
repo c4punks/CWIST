@@ -107,6 +107,31 @@ static void test_no_exp(void) {
     printf("  Passed no-exp token.\n");
 }
 
+static void test_nbf_token(void) {
+    printf("Testing JWT nbf validation...\n");
+
+    time_t now = time(NULL);
+    /* Far future nbf (> now + 300) must be rejected */
+    char payload_future[128];
+    snprintf(payload_future, sizeof(payload_future), "{\"sub\":\"future\",\"nbf\":%ld}", (long)(now + 3600));
+    char *tok_future = cwist_jwt_sign(payload_future, "secret", 0);
+    assert(tok_future != NULL);
+    cwist_jwt_claims *claims_future = cwist_jwt_verify(tok_future, "secret");
+    assert(claims_future == NULL);
+    cwist_free(tok_future);
+
+    /* Past nbf (e.g. 100 seconds past epoch) must NOT underflow and must be accepted */
+    const char *payload_past = "{\"sub\":\"valid_nbf\",\"nbf\":100}";
+    char *tok_past = cwist_jwt_sign(payload_past, "secret", 0);
+    assert(tok_past != NULL);
+    cwist_jwt_claims *claims_past = cwist_jwt_verify(tok_past, "secret");
+    assert(claims_past != NULL);
+    cwist_jwt_claims_destroy(claims_past);
+    cwist_free(tok_past);
+
+    printf("  Passed nbf token tests.\n");
+}
+
 static void test_sequenced_chunks(void) {
     printf("Testing JWT sequenced chunks...\n");
 
@@ -242,6 +267,7 @@ int main(void) {
     test_tampered_payload();
     test_expired_token();
     test_no_exp();
+    test_nbf_token();
     test_sequenced_chunks();
     test_sign_verify_chunks();
     test_malformed_b64url_remainder();

@@ -197,13 +197,13 @@ char *cwist_jwt_sign(const char *payload_json, const char *secret, long exp_seco
     char *hdr_enc CWIST_DEFER_FREE = (char *)cwist_alloc(hdr_enc_len);
     char *pay_enc CWIST_DEFER_FREE = (char *)cwist_alloc(pay_enc_len);
     if (!hdr_enc || !pay_enc) {
-        free(final_payload_json);
+        cJSON_free(final_payload_json);
         return NULL;
     }
 
     b64url_encode((const unsigned char *)HEADER_JSON, strlen(HEADER_JSON), hdr_enc);
     b64url_encode((const unsigned char *)final_payload_json, strlen(final_payload_json), pay_enc);
-    cwist_free(final_payload_json);
+    cJSON_free(final_payload_json);
 
     /* --- Build "header.payload" signing input using sstring --------------- */
     cwist_sstring *signing_input = cwist_sstring_create();
@@ -327,14 +327,16 @@ cwist_jwt_claims *cwist_jwt_verify(const char *token, const char *secret) {
     time_t now = time(NULL);
     cJSON *exp_item = cJSON_GetObjectItemCaseSensitive(json, "exp");
     if (exp_item && cJSON_IsNumber(exp_item)) {
-        if ((time_t)exp_item->valuedouble + CWIST_JWT_TIME_LEEWAY < now) {
+        time_t exp_time = (time_t)exp_item->valuedouble;
+        if (now > CWIST_JWT_TIME_LEEWAY && exp_time < now - CWIST_JWT_TIME_LEEWAY) {
             cJSON_Delete(json);
             return NULL; /* token expired */
         }
     }
     cJSON *nbf_item = cJSON_GetObjectItemCaseSensitive(json, "nbf");
     if (nbf_item && cJSON_IsNumber(nbf_item)) {
-        if ((time_t)nbf_item->valuedouble - CWIST_JWT_TIME_LEEWAY > now) {
+        time_t nbf_time = (time_t)nbf_item->valuedouble;
+        if (nbf_time > now && (nbf_time - now) > CWIST_JWT_TIME_LEEWAY) {
             cJSON_Delete(json);
             return NULL; /* token not yet valid */
         }
