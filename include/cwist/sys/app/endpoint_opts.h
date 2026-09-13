@@ -19,7 +19,16 @@ typedef uint32_t cwist_endpoint_opt_t;
 
 /** Immediate execution with no special tuning (default). */
 #define CWIST_DYNAMIC         (1u << 0)
-/** Cache the response in RAM and reply instantly after the first hit. */
+/**
+ * Hint that the route's response is request-invariant.
+ *
+ * Note: as of the current revision this flag does NOT activate an
+ * automatic response cache. Every request is dispatched to the handler
+ * through ordinary routing in both classic and C1M modes. The intended
+ * caching contract is restored only via the proposed
+ * CWIST_ENDPOINT_PUBLIC_FIXED opt-in (see docs/fixed-cache-status.md and
+ * ADR-0001, draft PR #85). The flag is retained for source compatibility.
+ */
 #define CWIST_ENDPOINT_FIXED  (1u << 1)
 /** Serve large files using OS-specific zero-copy fast paths. */
 #define CWIST_ENDPOINT_FILE   (1u << 2)
