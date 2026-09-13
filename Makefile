@@ -355,7 +355,22 @@ TEST_TARGETS = test_app_resource_limits \
                test_redis \
                test_scheduler \
                test_test_client \
-               test_multiport
+               test_multiport \
+               test_grpc \
+               test_grpc_stream \
+               test_grpc_client \
+               test_grpc_channel \
+               test_dispatch_memory \
+               test_gc_ebr_release \
+               test_full_gc_toggle_hardening \
+               test_conn_registry \
+               test_full_gc_sweep \
+               test_io_queue_full_gc \
+               test_full_gc_ownership_handoff \
+               test_defer_free \
+               test_proto_gen \
+               test_proto_desc \
+               test_css_composer
 
 # io_uring backend is Linux-only (linux/io_uring.h), as are its tests.
 ifeq ($(UNAME_S),Linux)
@@ -723,3 +738,76 @@ test_test_client: $(LIB_NAME) tests/test_test_client.c
 test_multiport: $(LIB_NAME) tests/test_multiport.c
 	$(CC) $(CFLAGS) -o test_multiport tests/test_multiport.c $(LIB_NAME) $(LIBS)
 	./test_multiport
+
+test_grpc: $(LIB_NAME) tests/test_grpc.c
+	$(CC) $(CFLAGS) -o test_grpc tests/test_grpc.c $(LIB_NAME) $(LIBS)
+	./test_grpc
+
+test_grpc_stream: $(LIB_NAME) tests/test_grpc_stream.c
+	$(CC) $(CFLAGS) -o test_grpc_stream tests/test_grpc_stream.c $(LIB_NAME) $(LIBS)
+	./test_grpc_stream
+
+test_grpc_client: $(LIB_NAME) tests/test_grpc_client.c
+	$(CC) $(CFLAGS) -o test_grpc_client tests/test_grpc_client.c $(LIB_NAME) $(LIBS)
+	./test_grpc_client
+
+test_grpc_channel: $(LIB_NAME) tests/test_grpc_channel.c
+	$(CC) $(CFLAGS) -o test_grpc_channel tests/test_grpc_channel.c $(LIB_NAME) $(LIBS)
+	./test_grpc_channel
+
+test_dispatch_memory: $(LIB_NAME) tests/test_dispatch_memory.c
+	$(CC) $(CFLAGS) -o test_dispatch_memory tests/test_dispatch_memory.c $(LIB_NAME) $(LIBS)
+	./test_dispatch_memory
+
+test_gc_ebr_release: $(LIB_NAME) tests/test_gc_ebr_release.c
+	$(CC) $(CFLAGS) -o test_gc_ebr_release tests/test_gc_ebr_release.c $(LIB_NAME) $(LIBS)
+	./test_gc_ebr_release
+
+test_full_gc_toggle_hardening: $(LIB_NAME) tests/test_full_gc_toggle_hardening.c
+	$(CC) $(CFLAGS) -o test_full_gc_toggle_hardening tests/test_full_gc_toggle_hardening.c $(LIB_NAME) $(LIBS)
+	./test_full_gc_toggle_hardening
+
+test_conn_registry: $(LIB_NAME) tests/test_conn_registry.c
+	$(CC) $(CFLAGS) -o test_conn_registry tests/test_conn_registry.c $(LIB_NAME) $(LIBS)
+	./test_conn_registry
+
+test_https_full_gc: $(LIB_NAME) tests/test_https_full_gc.c
+	$(CC) $(CFLAGS) -o test_https_full_gc tests/test_https_full_gc.c $(LIB_NAME) $(LIBS)
+	./test_https_full_gc
+
+test_full_gc_sweep: $(LIB_NAME) tests/test_full_gc_sweep.c
+	$(CC) $(CFLAGS) -o test_full_gc_sweep tests/test_full_gc_sweep.c $(LIB_NAME) $(LIBS)
+	./test_full_gc_sweep
+
+test_io_queue_full_gc: $(LIB_NAME) tests/test_io_queue_full_gc.c
+	$(CC) $(CFLAGS) -o test_io_queue_full_gc tests/test_io_queue_full_gc.c $(LIB_NAME) $(LIBS)
+	./test_io_queue_full_gc
+
+test_full_gc_ownership_handoff: $(LIB_NAME) tests/test_full_gc_ownership_handoff.c
+	$(CC) $(CFLAGS) -o test_full_gc_ownership_handoff tests/test_full_gc_ownership_handoff.c $(LIB_NAME) $(LIBS)
+	./test_full_gc_ownership_handoff
+
+test_defer_free: $(LIB_NAME) tests/test_defer_free.c
+	$(CC) $(CFLAGS) -o test_defer_free tests/test_defer_free.c $(LIB_NAME) $(LIBS)
+	./test_defer_free
+
+test_proto_gen: $(LIB_NAME) tests/test_proto_gen.c tests/test_proto_gen_sample.proto
+	./tools/cli/cwist proto tests/test_proto_gen_sample.proto --output tests/test_proto_gen_sample.cwist.pb.h
+	$(CC) $(CFLAGS) -Itests -o test_proto_gen tests/test_proto_gen.c $(LIB_NAME) $(LIBS)
+	./test_proto_gen
+
+# Descriptor-set input: hand-encode a FileDescriptorSet (no protoc needed in
+# CI), generate from it, and prove byte-identical output against the text path
+# plus a full encode/decode round trip of the generated code.
+test_proto_desc: $(LIB_NAME) tests/test_proto_gen.c tests/make_sample_descriptor.py
+	python3 tests/make_sample_descriptor.py tests/test_proto_gen_sample.pb
+	./tools/cli/cwist proto tests/test_proto_gen_sample.pb --output tests/test_proto_gen_desc_sample.cwist.pb.h
+	./tools/cli/cwist proto tests/test_proto_gen_sample.proto --output tests/test_proto_gen_sample.cwist.pb.h
+	diff tests/test_proto_gen_sample.cwist.pb.h tests/test_proto_gen_desc_sample.cwist.pb.h
+	$(CC) $(CFLAGS) -Itests -DPROTO_GEN_SAMPLE_HEADER='"test_proto_gen_desc_sample.cwist.pb.h"' -o test_proto_desc tests/test_proto_gen.c $(LIB_NAME) $(LIBS)
+	./test_proto_desc
+
+test_css_composer: $(LIB_NAME) tests/test_css_composer.c
+	$(CC) $(CFLAGS) -o test_css_composer tests/test_css_composer.c $(LIB_NAME) $(LIBS)
+	./test_css_composer
+
