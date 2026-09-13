@@ -192,13 +192,13 @@ static char *l1_heal(const char *input, char *log, size_t log_sz) {
     }
     if (stripped) log_append(log, log_sz, "[L1] removed line comment(s); ");
 
-    /* 3. Fix trailing commas */
+    /* 3. Balance brackets */
+    balance_brackets(&b, log, log_sz);
+
+    /* 4. Fix trailing commas (including before newly balanced closers) */
     size_t old_len = b.len;
     remove_trailing_commas(&b);
     if (b.len != old_len) log_append(log, log_sz, "[L1] removed trailing comma(s); ");
-
-    /* 4. Balance brackets */
-    balance_brackets(&b, log, log_sz);
 
     /* 5. Try to parse */
     cJSON *test = cJSON_Parse(b.data);
@@ -287,15 +287,15 @@ int cwist_json_schema_align(cJSON *obj, const cwist_schema_t *schema,
         /* ---- Rename to canonical name if needed ---- */
         if (strcmp(found_as, fd->name) != 0) {
             cJSON *clone = cJSON_Duplicate(item, 1);
-            cJSON_DeleteItemFromObjectCaseSensitive(obj, (char *)found_as);
             if (clone) {
+                cJSON_DeleteItemFromObjectCaseSensitive(obj, (char *)found_as);
                 cJSON_AddItemToObject(obj, fd->name, clone);
                 item = clone;
+                char msg[128];
+                snprintf(msg, sizeof(msg), "[L2] '%s'→'%s'; ", found_as, fd->name);
+                log_append(log, log_sz, msg);
+                changes++;
             }
-            char msg[128];
-            snprintf(msg, sizeof(msg), "[L2] '%s'→'%s'; ", found_as, fd->name);
-            log_append(log, log_sz, msg);
-            changes++;
         }
 
         /* ---- Type coercion ---- */
@@ -316,7 +316,7 @@ int cwist_json_schema_align(cJSON *obj, const cwist_schema_t *schema,
 
         /* String → Number */
         if ((fd->type == CWIST_FIELD_INT || fd->type == CWIST_FIELD_FLOAT)
-            && cJSON_IsString(item)) {
+            && cJSON_IsString(item) && item->valuestring) {
             char *end = NULL;
             double v  = strtod(item->valuestring, &end);
             if (end && *end == '\0') {
@@ -342,7 +342,7 @@ int cwist_json_schema_align(cJSON *obj, const cwist_schema_t *schema,
             }
         }
         /* String "true"/"false"/"1"/"0" → Bool */
-        else if (fd->type == CWIST_FIELD_BOOL && cJSON_IsString(item)) {
+        else if (fd->type == CWIST_FIELD_BOOL && cJSON_IsString(item) && item->valuestring) {
             int bval = -1;
             if (strcasecmp(item->valuestring, "true")  == 0 ||
                 strcmp   (item->valuestring, "1")      == 0) bval = 1;

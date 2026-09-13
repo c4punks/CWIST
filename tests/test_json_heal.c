@@ -108,6 +108,25 @@ static void test_l1_missing_closers(void) {
     printf("  Passed.\n");
 }
 
+static void test_l1_missing_closers_with_trailing_comma(void) {
+    printf("L1: missing closing brace and bracket with trailing comma...\n");
+    const char *input = "{\"items\":[1,2,3,";
+    cwist_heal_result_t r = cwist_json_heal(input, NULL);
+    assert(r.json   != NULL);
+    assert(r.healed == true);
+    assert(r.level  == 1);
+
+    cJSON *parsed = cJSON_Parse(r.json);
+    assert(parsed != NULL);
+    cJSON *items = cJSON_GetObjectItem(parsed, "items");
+    assert(items && cJSON_IsArray(items));
+    assert(cJSON_GetArraySize(items) == 3);
+    cJSON_Delete(parsed);
+
+    cwist_heal_result_free(&r);
+    printf("  Passed.\n");
+}
+
 static void test_l1_line_comment(void) {
     printf("L1: JavaScript-style // comment stripped...\n");
     const char *input = "{\"x\":42 // this is a comment\n}";
@@ -464,6 +483,7 @@ int main(void) {
     test_l1_trailing_comma();
     test_l1_string_with_comma_and_closer();
     test_l1_missing_closers();
+    test_l1_missing_closers_with_trailing_comma();
     test_l1_line_comment();
     test_l1_bom();
 
