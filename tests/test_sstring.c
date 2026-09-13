@@ -112,6 +112,17 @@ void test_compare() {
     assert(cwist_sstring_compare(s, "world") != 0);
     assert(cwist_sstring_compare(s, "he") > 0);
     assert(cwist_sstring_compare(s, "hello world") < 0);
+    
+    /* Empty sstring comparisons */
+    cwist_sstring *empty_new = cwist_sstring_create();
+    cwist_sstring *empty_assigned = cwist_sstring_create();
+    cwist_sstring_assign(empty_assigned, "");
+    assert(cwist_sstring_compare_sstring(empty_new, empty_assigned) == 0);
+    assert(cwist_sstring_compare(empty_new, "") == 0);
+    assert(cwist_sstring_compare(empty_new, NULL) == 0);
+    assert(cwist_sstring_compare(empty_assigned, NULL) == 0);
+    cwist_sstring_destroy(empty_new);
+    cwist_sstring_destroy(empty_assigned);
 
     cwist_sstring_destroy(s);
     printf("Passed compare.\n");
@@ -132,6 +143,12 @@ void test_substr() {
     assert(strcmp(sub->data, "89") == 0);
     cwist_sstring_destroy(sub);
 
+    /* Test INT_MAX length safely capped without signed integer overflow */
+    sub = cwist_sstring_substr(s, 2, 2147483647);
+    assert(sub != NULL);
+    assert(strcmp(sub->data, "23456789") == 0);
+    cwist_sstring_destroy(sub);
+    
     sub = cwist_sstring_substr(s, 10, 1); // Out of bounds
     assert(sub == NULL);
 
