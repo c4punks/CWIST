@@ -460,6 +460,7 @@ TEST_TARGETS = test_app_resource_limits \
                test_seq \
                test_seq_auth \
                test_http \
+               test_http_stringify \
                test_siphash \
                test_mux \
                test_mux_param \
@@ -579,6 +580,10 @@ test_seq_auth: $(LIB_NAME) tests/test_seq_auth.c
 test_http: $(LIB_NAME) tests/test_http.c
 	$(CC) $(CFLAGS) -o test_http tests/test_http.c $(LIB_NAME) $(LIBS)
 	./test_http
+
+test_http_stringify: $(LIB_NAME) tests/test_http_stringify.c
+	$(CC) $(CFLAGS) -o test_http_stringify tests/test_http_stringify.c $(LIB_NAME) $(LIBS)
+	./test_http_stringify
 
 test_siphash: $(LIB_NAME) tests/test_siphash.c
 	$(CC) $(CFLAGS) -o test_siphash tests/test_siphash.c $(LIB_NAME) $(LIBS)
