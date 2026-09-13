@@ -40,9 +40,38 @@
 #ifdef __linux__
 #include <sys/syscall.h>
 #include <linux/io_uring.h>
+#if defined(__has_include)
+#if __has_include(<linux/time_types.h>)
+#include <linux/time_types.h>
+#endif
+#endif
 #include <sys/mman.h>
 #include <sys/epoll.h>
 #include <sys/eventfd.h>
+
+#ifndef IORING_ENTER_EXT_ARG
+#define IORING_ENTER_EXT_ARG (1U << 3)
+struct io_uring_getevents_arg {
+    uint64_t sigmask;
+    uint32_t sigmask_sz;
+    uint32_t pad;
+    uint64_t ts;
+};
+#endif
+
+#ifndef IORING_ASYNC_CANCEL_ALL
+#define IORING_ASYNC_CANCEL_ALL (1U << 0)
+#endif
+
+#ifndef IORING_ASYNC_CANCEL_FD
+#define IORING_ASYNC_CANCEL_FD (1U << 1)
+#endif
+
+#ifndef IORING_ASYNC_CANCEL_ANY
+#define IORING_ASYNC_CANCEL_ANY (1U << 2)
+#endif
+
+struct __kernel_timespec;
 
 static inline int sys_io_uring_setup(unsigned entries, struct io_uring_params *p) {
     return (int)syscall(__NR_io_uring_setup, entries, p);
@@ -321,6 +350,7 @@ cwist_reactor_t *cwist_reactor_create(void) {
     if (r->impl.use_epoll) {
         r->impl.epoll_fd = epoll_create1(0);
         if (r->impl.epoll_fd < 0) {
+            pthread_mutex_destroy(&r->impl.sq_lock);
             pthread_mutex_destroy(&r->pool_lock);
             cwist_free(r);
             return NULL;
