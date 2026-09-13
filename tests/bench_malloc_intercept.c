@@ -1,163 +1,90 @@
-/* bench_malloc_intercept.c — per-call overhead of cwist_alloc/cwist_free
- * with full-GC mode on vs off (issue #65).
+/* Manual throughput probe for CWIST_INTERCEPT_MALLOC (see
+ * include/cwist/core/mem/intercept.h and docs/GC.md section 5). Not part
+ * of `make test` - built and run on demand to answer one question: is the
+ * "zero cost when full-GC is off" claim actually true, and how much does
+ * a shimmed malloc/free cost when full-GC is on?
  *
- * Measures three configurations:
- *   baseline  — plain malloc/free, no CWIST shim
- *   shim-off  — cwist_alloc/cwist_free, full_gc disabled
- *   shim-on   — cwist_alloc/cwist_free, full_gc enabled
+ * Three configurations, same workload (alloc/write/free a small block in
+ * a tight loop, single-threaded so the numbers are about per-call
+ * overhead, not lock contention):
+ *   1. baseline  - plain malloc/free, no shim at all (this file compiled
+ *                  without CWIST_INTERCEPT_MALLOC in a second pass - see
+ *                  the Makefile target, which builds it once with the
+ *                  macro and once without via BASELINE).
+ *   2. shim, full-GC off (default) - shim active, cwist_full_gc() never
+ *                  called. Every call pays the shim's relaxed atomic
+ *                  load (cwist_full_gc_enabled()) and one extra function
+ *                  call versus calling libc directly, nothing else.
+ *   3. shim, full-GC on - shim active, cwist_full_gc(true) called once at
+ *                  startup. Every malloc registers with the pending-sweep
+ *                  list and every free (of a still-tracked pointer)
+ *                  removes it - this is the real cost of the safety net.
  *
- * And two concurrency shapes (single-threaded and multi-threaded) to see
- * whether the pending-sweep list in gc.c becomes a contention bottleneck
- * under concurrent load -- step 2 of the suggested profiling plan in #65.
- *
- * Build:
- *   cc -O2 -std=c17 -pthread \
- *       -I include \
- *       -I lib/libttak/include \
- *       tests/bench_malloc_intercept.c \
- *       src/core/mem/alloc.c src/core/mem/gc.c src/core/mem/arena.c \
- *       -L lib/libttak -lttak -o bench_malloc_intercept
- *
- * Run:
- *   ./bench_malloc_intercept
+ * Usage: ./bench_malloc_intercept <iterations>
+ *        (run once as bench_malloc_intercept_baseline, once as
+ *        bench_malloc_intercept - see the Makefile targets)
  */
+#ifndef BASELINE
+#define CWIST_INTERCEPT_MALLOC
+#include <cwist/core/mem/intercept.h>
+#include <cwist/core/mem/gc.h>
+#endif
 
-#define _POSIX_C_SOURCE 200809L
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <stdint.h>
 #include <time.h>
-#include <pthread.h>
 
-#include <cwist/core/mem/alloc.h>
-#include <cwist/core/mem/gc.h>
-
-/* ---------- timing ---------- */
-
-static uint64_t now_ns(void) {
+static double now_sec(void) {
     struct timespec ts;
     clock_gettime(CLOCK_MONOTONIC, &ts);
-    return (uint64_t)ts.tv_sec * 1000000000ULL + (uint64_t)ts.tv_nsec;
+    return (double)ts.tv_sec + (double)ts.tv_nsec / 1e9;
 }
 
-/* ---------- allocation mix ----------
- * Mixed sizes loosely representative of a real handler: small metadata
- * structs (16–64 bytes), mid-sized buffers (128–512 bytes), and the
- * occasional realloc. */
+/* Small, mixed-size allocations mimicking a request/response handler's
+ * typical scratch buffers - not one fixed size, so the allocator's
+ * size-class handling isn't the only thing exercised. */
+static size_t pick_size(long i) {
+    static const size_t sizes[] = { 16, 64, 128, 256, 512 };
+    return sizes[i % (long)(sizeof(sizes) / sizeof(sizes[0]))];
+}
 
-enum {
-    ITERS      = 1000000,  /* allocations per thread per run */
-    NUM_THREADS = 8,       /* concurrent threads for the MT run */
-    REALLOC_EVERY = 20,    /* do a realloc every N iterations */
-};
-
-static const size_t SIZES[] = { 16, 24, 32, 48, 64, 96, 128, 256, 512 };
-#define NSIZE (sizeof(SIZES)/sizeof(SIZES[0]))
-
-/* Single-threaded baseline: plain malloc/free */
-static double run_baseline_st(void) {
-    uint64_t t0 = now_ns();
-    for (int i = 0; i < ITERS; i++) {
-        size_t sz = SIZES[i % NSIZE];
-        void *p = malloc(sz);
-        if (!p) abort();
-        if (i % REALLOC_EVERY == 0) {
-            void *p2 = realloc(p, sz * 2);
-            if (!p2) { free(p); continue; }
-            p = p2;
+static double run_iterations(long n) {
+    double t0 = now_sec();
+    for (long i = 0; i < n; i++) {
+        size_t sz = pick_size(i);
+        char *p = malloc(sz);
+        if (!p) { fprintf(stderr, "alloc failed at %ld\n", i); exit(1); }
+        memset(p, (int)(i & 0xff), sz);
+        /* Occasionally realloc, like a growing response buffer would. */
+        if ((i & 7) == 0) {
+            p = realloc(p, sz * 2);
+            if (!p) { fprintf(stderr, "realloc failed at %ld\n", i); exit(1); }
         }
         free(p);
     }
-    return (double)(now_ns() - t0) / ITERS;
+    return now_sec() - t0;
 }
 
-/* Single-threaded cwist_alloc/cwist_free */
-static double run_cwist_st(void) {
-    uint64_t t0 = now_ns();
-    for (int i = 0; i < ITERS; i++) {
-        size_t sz = SIZES[i % NSIZE];
-        void *p = cwist_alloc(sz);
-        if (!p) abort();
-        if (i % REALLOC_EVERY == 0) {
-            void *p2 = cwist_realloc(p, sz * 2);
-            if (p2) p = p2;
-        }
-        cwist_free(p);
+int main(int argc, char **argv) {
+    long n = argc > 1 ? atol(argv[1]) : 2000000;
+
+#ifndef BASELINE
+    const char *mode = getenv("CWIST_FULL_GC_ON");
+    const char *label = "shim, full-GC off";
+    if (mode && mode[0] == '1') {
+        cwist_full_gc(true);
+        label = "shim, full-GC on";
     }
-    return (double)(now_ns() - t0) / ITERS;
-}
+#else
+    const char *label = "baseline (no shim)";
+#endif
 
-/* ---------- multi-threaded variant ---------- */
+    /* Warmup: let the allocator settle into steady state before timing. */
+    run_iterations(n / 10 < 10000 ? 10000 : n / 10);
 
-typedef struct {
-    double ns_per_op;
-} thread_result_t;
-
-static void *thread_fn(void *arg) {
-    thread_result_t *r = arg;
-    r->ns_per_op = run_cwist_st();
-    return NULL;
-}
-
-static double run_cwist_mt(int nthreads) {
-    pthread_t threads[NUM_THREADS];
-    thread_result_t results[NUM_THREADS];
-    memset(results, 0, sizeof(results));
-
-    int n = nthreads < NUM_THREADS ? nthreads : NUM_THREADS;
-    for (int i = 0; i < n; i++)
-        pthread_create(&threads[i], NULL, thread_fn, &results[i]);
-    for (int i = 0; i < n; i++)
-        pthread_join(threads[i], NULL);
-
-    /* report the average ns/op across threads — each thread does ITERS ops */
-    double total = 0.0;
-    for (int i = 0; i < n; i++) total += results[i].ns_per_op;
-    return total / n;
-}
-
-/* ---------- main ---------- */
-
-static void print_row(const char *label, double ns_per_op, double baseline) {
-    double overhead_pct = (ns_per_op - baseline) / baseline * 100.0;
-    printf("  %-40s  %6.1f ns/op   %+5.0f%%\n", label, ns_per_op, overhead_pct);
-}
-
-int main(void) {
-    puts("bench_malloc_intercept — cwist_alloc full-GC overhead (issue #65)");
-    puts("====================================================================");
-    printf("  iters per thread: %d    threads (MT run): %d\n\n", ITERS, NUM_THREADS);
-
-    /* --- single-threaded --- */
-    puts("Single-threaded:");
-
-    double baseline_ns = run_baseline_st();
-    printf("  %-40s  %6.1f ns/op  (baseline)\n", "plain malloc/free", baseline_ns);
-
-    /* shim on / full_gc off */
-    double st_off = run_cwist_st();
-    print_row("cwist_alloc/free  full_gc=off", st_off, baseline_ns);
-
-    /* shim on / full_gc on */
-    cwist_full_gc(true);
-    double st_on = run_cwist_st();
-    print_row("cwist_alloc/free  full_gc=on", st_on, baseline_ns);
-
-    puts("");
-
-    /* --- multi-threaded (full_gc still on from above) --- */
-    printf("Multi-threaded (%d threads, full_gc=on):\n", NUM_THREADS);
-    double mt_on = run_cwist_mt(NUM_THREADS);
-    print_row("cwist_alloc/free  full_gc=on", mt_on, baseline_ns);
-
-    puts("");
-    puts("Interpretation guide:");
-    puts("  full_gc=off overhead  should be ~3% (one relaxed atomic load).");
-    puts("  full_gc=on  overhead  tracks the pending-sweep list cost.");
-    puts("  MT vs ST gap         reveals per-thread vs shared-list contention.");
-    puts("  See issue #65 for the original single-threaded measurements and");
-    puts("  suggested next steps (perf profiling, contention analysis).");
-
+    double elapsed = run_iterations(n);
+    printf("%-20s iterations=%-9ld elapsed=%.4fs %.0f ops/s (%.1f ns/op)\n",
+           label, n, elapsed, (double)n / elapsed, elapsed * 1e9 / (double)n);
     return 0;
 }
