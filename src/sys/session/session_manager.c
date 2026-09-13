@@ -29,8 +29,9 @@ void session_arena_init(struct session_arena *arena, uint8_t *buffer, size_t cap
  */
 void *session_arena_alloc(struct session_arena *arena, size_t size) {
     if (!arena || !arena->buffer) return NULL;
+    if (size > SIZE_MAX - 7u) return NULL;
     size = (size + 7u) & ~7u;
-    if (arena->offset + size > arena->capacity) {
+    if (size > arena->capacity - arena->offset) {
         return NULL;
     }
     void *ptr = arena->buffer + arena->offset;
@@ -65,6 +66,7 @@ void session_rc_init(struct session_rc_header *header, void (*destructor)(void *
  * @return Zeroed payload pointer, or NULL when allocation fails.
  */
 void *session_shared_alloc(size_t payload_size, void (*destructor)(void *)) {
+    if (payload_size > SIZE_MAX - sizeof(struct session_rc_header)) return NULL;
     size_t total = sizeof(struct session_rc_header) + payload_size;
     uint8_t *raw = (uint8_t *)cwist_alloc(total);
     if (!raw) return NULL;
@@ -82,6 +84,7 @@ void *session_shared_alloc(size_t payload_size, void (*destructor)(void *)) {
 void session_shared_inc(void *payload) {
     if (!payload) return;
     struct session_rc_header *header = (struct session_rc_header *)((uint8_t *)payload - sizeof(struct session_rc_header));
+    if (header->ref_count == 0 || header->ref_count == UINT32_MAX) return;
     header->ref_count += 1;
 }
 
