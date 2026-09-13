@@ -671,6 +671,12 @@ static int h2_read(cwist_https_connection *conn, void *buf, int len) {
     return read(conn->fd, buf, len);
 }
 
+/* Match h2_read: TLS owns its plaintext buffer; h2c uses sniffed bytes. */
+static bool h2_has_buffered_input(const cwist_https_connection *conn) {
+    if (conn->ssl) return SSL_pending(conn->ssl) > 0;
+    return conn->read_buf && conn->buf_len > 0;
+}
+
 static int h2_write(cwist_https_connection *conn, const void *buf, int len) {
     if (conn->ssl) return SSL_write(conn->ssl, buf, len);
     return write(conn->fd, buf, len);
@@ -717,7 +723,7 @@ static int h2_wait_readable(h2_conn *hc, uint64_t deadline_ms) {
     /* Never block with unflushed frames in the batch buffer. */
     if (h2_out_flush(hc) != 0) return -1;
     int afd = cwist_h2_async_queue_fd(hc->async_q);
-    while (hc->conn->ssl ? (SSL_pending(hc->conn->ssl) <= 0) : true) {
+    while (!h2_has_buffered_input(hc->conn)) {
         uint64_t idle_ms = (uint64_t)h2_idle_timeout_ms();
         uint64_t now = h2_now_ms();
         if (now - hc->last_activity >= idle_ms) return -1;
@@ -2167,10 +2173,9 @@ static int h2_read_all(h2_conn *hc, void *buf, int len) {
 /* Returns 0 normally, -1 when the peer vanished mid-frame (EOF/error).
  *
  * Two traps are handled here:
- * 1. poll(fd, 0) alone misses WINDOW_UPDATEs sitting in OpenSSL's internal
- *    buffer (a whole TLS record is decrypted per SSL_read, so leftover
- *    frames have zero bytes pending on the socket). Without the
- *    SSL_pending check the window wait loop never sees the update and the
+ * 1. poll(fd, 0) alone misses WINDOW_UPDATEs in the TLS or h2c replay
+ *    buffer. These frames can remain after all socket bytes were read.
+ *    Without the buffered-input check, the window wait loop misses them and the
  *    connection is torn down mid-body - the "some chunks arrive, then
  *    stuck" symptom.
  * 2. Frames this loop is not responsible for (HEADERS/SETTINGS of other
@@ -2185,11 +2190,11 @@ static int h2_process_incoming_frames_nonblocking(h2_conn *hc, h2_stream *s) {
 
     int pr = poll(&pfd, 1, 0);
     if (pr > 0 && (pfd.revents & (POLLHUP | POLLERR)) && !(pfd.revents & POLLIN)) {
-        if (!hc->conn->ssl || SSL_pending(hc->conn->ssl) == 0) return -1;
+        if (!h2_has_buffered_input(hc->conn)) return -1;
     }
 
-    while ((poll(&pfd, 1, 0) > 0 && (pfd.revents & POLLIN)) ||
-           (hc->conn->ssl && SSL_pending(hc->conn->ssl) > 0)) {
+    while (h2_has_buffered_input(hc->conn) ||
+           (poll(&pfd, 1, 0) > 0 && (pfd.revents & POLLIN))) {
         unsigned char hdr[9];
         int n = h2_read_all(hc, hdr, 9);
         if (n != 9) return -1;

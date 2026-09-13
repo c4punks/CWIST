@@ -472,6 +472,7 @@ TEST_TARGETS = test_app_resource_limits \
                test_json_heal \
                test_https \
                test_http2 \
+               test_http2_prebuffer \
                test_http3 \
                test_shutdown \
                test_compress \
@@ -610,6 +611,10 @@ test_https: $(LIB_NAME) tests/test_https.c
 test_http2: $(LIB_NAME) tests/test_http2.c
 	$(CC) $(CFLAGS) -o test_http2 tests/test_http2.c $(LIB_NAME) $(LIBS)
 	./test_http2
+
+test_http2_prebuffer: $(LIB_NAME) tests/test_http2_prebuffer.c
+	$(CC) $(CFLAGS) -o test_http2_prebuffer tests/test_http2_prebuffer.c $(LIB_NAME) $(LIBS)
+	./test_http2_prebuffer
 
 # Standalone h2c server for external conformance tools (h2spec); build-only,
 # executed by the interop CI job, not by `make test`.
