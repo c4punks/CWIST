@@ -96,6 +96,7 @@ cwist_websocket *cwist_websocket_upgrade(cwist_http_request *req, int client_fd)
     req->upgraded = true;
 
     cwist_websocket *ws = (cwist_websocket *)cwist_alloc(sizeof(cwist_websocket));
+    if (!ws) return NULL;
     ws->fd = client_fd;
     ws->is_closed = false;
     return ws;
@@ -188,6 +189,10 @@ cwist_ws_frame *cwist_websocket_receive(cwist_websocket *ws) {
     }
 
     cwist_ws_frame *frame = (cwist_ws_frame *)cwist_alloc(sizeof(cwist_ws_frame));
+    if (!frame) {
+        if (payload) cwist_free(payload);
+        return NULL;
+    }
     frame->fin = fin;
     frame->opcode = opcode;
     frame->payload = payload;
@@ -205,7 +210,7 @@ cwist_ws_frame *cwist_websocket_receive(cwist_websocket *ws) {
  * @return 0 on success, or -1 when the socket write fails.
  */
 int cwist_websocket_send(cwist_websocket *ws, cwist_ws_opcode_t opcode, const uint8_t *data, size_t len) {
-    if (!ws || ws->is_closed) return -1;
+    if (!ws || ws->is_closed || (!data && len > 0)) return -1;
 
     uint8_t head[10]; // Max header size (2 + 8)
     size_t head_len = 2;
