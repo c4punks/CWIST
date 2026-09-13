@@ -517,6 +517,11 @@ jobs:
               "wrk_profile": os.environ.get("WRK_PROFILE", ""),
               "tuned_profile": os.environ.get("TUNED_PROFILE", ""),
               "runner_hw": os.environ.get("RUNNER_HW", ""),
+              "proc_telemetry": {
+                  "sidecars": "raw_logs/<profile>.txt.proc-{before,after,summary}.json",
+                  "legacy_csw_reliable": False,
+                  "note": "Use sidecar availability and stable task identities; missing/disabled counters are null. RSS sums count shared pages per process."
+              },
               "go_env": {
                   "go_version": os.environ.get("GO_VERSION_RECORDED", ""),
                   "framework": os.environ.get("GIN_FRAMEWORK", "")
@@ -535,10 +540,20 @@ jobs:
               json.dump(data, f)
           PY
       - name: Copy raw benchmark output
+        if: always()
         run: |
           mkdir -p raw_logs
+          # Fixed metadata must survive failure before webserver-result.json exists.
+          printf '%s\n' '{"schema_version":1,"legacy_csw_reliable":false,"note":"Read proc sidecar completeness; missing or disabled counters are null. RSS sums count shared pages per process."}' > raw_logs/proc-telemetry-metadata.json
           cp /tmp/cwist.txt /tmp/cwist_stat.txt /tmp/cwist_c1m.txt /tmp/cwist_c1m_stat.txt /tmp/cwist_c1m_arena1.txt /tmp/cwist_c1m_arena1_stat.txt /tmp/cwist_tuned.txt /tmp/axum.txt /tmp/axum_stat.txt /tmp/gin.txt /tmp/gin_stat.txt /tmp/spring.txt /tmp/spring_stat.txt /tmp/spring_tuned.txt /tmp/spring_gc.log raw_logs/ 2>/dev/null || true
+          for profile in cwist cwist_c1m cwist_c1m_arena1 cwist_tuned axum gin spring spring_tuned; do
+            for phase in before after summary; do
+              source="/tmp/$profile.txt.proc-$phase.json"
+              if [ -f "$source" ]; then cp "$source" raw_logs/; fi
+            done
+          done
       - uses: actions/upload-artifact@v4
+        if: always()
         with:
           name: webserver-result
           path: |
