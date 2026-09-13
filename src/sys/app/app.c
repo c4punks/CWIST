@@ -4,6 +4,9 @@
 #define _POSIX_C_SOURCE 200809L
 #define _DEFAULT_SOURCE
 #include <sched.h>
+#if defined(__linux__) && defined(_GNU_SOURCE)
+#include "worker_affinity.h"
+#endif
 #include <cwist/sys/app/app.h>
 #include <cwist/sys/app/config.h>
 #include <cwist/sys/app/logger.h>
@@ -3818,14 +3821,10 @@ int cwist_app_listen(cwist_app *app, int port) {
     }
 
 #if defined(__linux__) && defined(_GNU_SOURCE)
-    /* Pin worker processes to CPU cores to prevent scheduler migration jitter */
-    if (workers > 1) {
-        long core_count = get_cpu_cores();
-        if (core_count < 1) core_count = 1;
-        cpu_set_t cpuset;
-        CPU_ZERO(&cpuset);
-        CPU_SET((size_t)(is_worker_child ? child_idx : 0) % (size_t)core_count, &cpuset);
-        sched_setaffinity(0, sizeof(cpuset), &cpuset);
+    /* Keep each worker inside its inherited affinity mask (including sparse IDs). */
+    if (workers > 1 && cwist_app_pin_worker((size_t)(is_worker_child ? child_idx : 0)) < 0) {
+        /* On failure, retain the inherited mask rather than guessing a CPU ID. */
+        perror("worker CPU affinity");
     }
 #endif
 

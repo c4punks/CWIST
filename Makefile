@@ -452,7 +452,8 @@ $(CNATS_LIB):
 
 # --- Test Targets ---
 
-TEST_TARGETS = test_app_resource_limits \
+TEST_TARGETS = test_worker_affinity \
+               test_app_resource_limits \
                test_reactor_wake \
                test_classic_pool_scaling \
                test_reactor_drain_chunk \
@@ -537,7 +538,13 @@ bench_security_pool: $(LIB_NAME) tests/bench_security_pool.c
 
 test: $(TEST_TARGETS)
 
-test_app_resource_limits: $(LIB_NAME) tests/test_app_resource_limits.c
+src/sys/app/app.o: src/sys/app/worker_affinity.h
+
+test_worker_affinity: tests/test_worker_affinity.c src/sys/app/worker_affinity.h
+	$(CC) $(CFLAGS) -Isrc/sys/app -o $@ tests/test_worker_affinity.c
+	./$@
+
+test_app_resource_limits: $(LIB_NAME) tests/test_app_resource_limits.c src/sys/app/worker_affinity.h
 	$(CC) $(CFLAGS) -o $@ tests/test_app_resource_limits.c $(LIB_NAME) $(LIBS)
 	./$@
 
