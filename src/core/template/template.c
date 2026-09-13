@@ -120,8 +120,10 @@ static const cJSON* get_value_from_context(const cJSON *context, const char *key
     }
 
     char *key_copy = cwist_strdup(key);
+    if (!key_copy) return NULL;
     char *ptr_to_free = key_copy;
-    char *token = strtok(key_copy, ".");
+    char *saveptr = NULL;
+    char *token = strtok_r(key_copy, ".", &saveptr);
     const cJSON *current = context;
 
     while (token != NULL) {
@@ -131,7 +133,7 @@ static const cJSON* get_value_from_context(const cJSON *context, const char *key
         }
         current = cJSON_GetObjectItem(current, token);
         if (!current) break;
-        token = strtok(NULL, ".");
+        token = strtok_r(NULL, ".", &saveptr);
     }
 
     cwist_free(ptr_to_free);
@@ -231,7 +233,8 @@ static cwist_sstring* render_internal(const char **template_str, const cJSON *co
                 if (tag_len >= sizeof(tag)) tag_len = sizeof(tag) - 1;
                 memcpy(tag, tag_start, tag_len);
 
-                char *cmd = strtok(tag, " \t\n");
+                char *tag_saveptr = NULL;
+                char *cmd = strtok_r(tag, " \t\n", &tag_saveptr);
                 if (!cmd) {
                     p += 2;
                     start = p;
@@ -239,11 +242,11 @@ static cwist_sstring* render_internal(const char **template_str, const cJSON *co
                 }
 
                 if (strcmp(cmd, "if") == 0) {
-                    char *tok = strtok(NULL, " \t\n");
+                    char *tok = strtok_r(NULL, " \t\n", &tag_saveptr);
                     bool negate = false;
                     if (tok && strcmp(tok, "not") == 0) {
                         negate = true;
-                        tok = strtok(NULL, " \t\n");
+                        tok = strtok_r(NULL, " \t\n", &tag_saveptr);
                     }
                     const cJSON *val = tok ? get_value_from_context(context, tok) : NULL;
                     bool cond = false;
@@ -307,16 +310,16 @@ static cwist_sstring* render_internal(const char **template_str, const cJSON *co
                     start = p;
 
                 } else if (strcmp(cmd, "for") == 0) {
-                    char *item_name = strtok(NULL, " \t\n");
-                    strtok(NULL, " \t\n"); /* "in" */
-                    char *array_name = strtok(NULL, " \t\n");
+                    char *item_name = strtok_r(NULL, " \t\n", &tag_saveptr);
+                    strtok_r(NULL, " \t\n", &tag_saveptr); /* "in" */
+                    char *array_name = strtok_r(NULL, " \t\n", &tag_saveptr);
 
-                    const cJSON *array = get_value_from_context(context, array_name);
+                    const cJSON *array = (array_name && context) ? get_value_from_context(context, array_name) : NULL;
 
                     const char *block_start = p + 2;
                     const char *block_end = strstr(block_start, "{% endfor %}");
 
-                    if (cJSON_IsArray(array)) {
+                    if (item_name && cJSON_IsArray(array)) {
                         cJSON *item;
                         cJSON_ArrayForEach(item, array) {
                             cJSON *loop_context = cJSON_Duplicate(context, 1);
@@ -395,6 +398,7 @@ cwist_sstring* cwist_template_render(const char *template_str, const cJSON *cont
  * @return Heap-allocated rendered output, or NULL when file IO or rendering fails.
  */
 cwist_sstring* cwist_template_render_file(const char *file_path, const cJSON *context) {
+    if (!file_path) return NULL;
     FILE *f = fopen(file_path, "rb");
     if (!f) {
         perror("Failed to open template file");
@@ -404,8 +408,12 @@ cwist_sstring* cwist_template_render_file(const char *file_path, const cJSON *co
     fseek(f, 0, SEEK_END);
     long len = ftell(f);
     fseek(f, 0, SEEK_SET);
+    if (len < 0) {
+        fclose(f);
+        return NULL;
+    }
 
-    char *template_str CWIST_DEFER_FREE = cwist_alloc(len + 1);
+    char *template_str CWIST_DEFER_FREE = cwist_alloc((size_t)len + 1);
     if (!template_str) {
         fclose(f);
         return NULL;
