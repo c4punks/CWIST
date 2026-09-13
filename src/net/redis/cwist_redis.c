@@ -320,10 +320,17 @@ fail:
 
 cwist_error_t cwist_redis_auth(cwist_redis_t *r, const char *username, const char *password) {
     if (!r || !password) return make_error(CWIST_ERR_INT16);
-    const void *args[3] = { "AUTH", username, password };
-    size_t lengths[3] = { 4, username ? strlen(username) : 0, strlen(password) };
     char *reply = NULL;
-    cwist_error_t err = cwist_redis_command_argv(r, username ? 3 : 2, args, lengths, &reply, NULL);
+    cwist_error_t err;
+    if (username) {
+        const void *args[3] = { "AUTH", username, password };
+        size_t lengths[3] = { 4, strlen(username), strlen(password) };
+        err = cwist_redis_command_argv(r, 3, args, lengths, &reply, NULL);
+    } else {
+        const void *args[2] = { "AUTH", password };
+        size_t lengths[2] = { 4, strlen(password) };
+        err = cwist_redis_command_argv(r, 2, args, lengths, &reply, NULL);
+    }
     cwist_free(reply);
     return err;
 }
