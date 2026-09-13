@@ -153,8 +153,8 @@ src/net/db_sync/db_sync.c:226:    unsigned char *blob = (unsigned char *)malloc(
 src/net/db_sync/db_sync.c:234:        free(blob);
 src/net/db_sync/db_sync.c:243:    free(blob);
 src/net/db_sync/db_sync.c:96:        free(blob);
-src/net/graphql/graphql.c:393:        free(printed);
-src/net/graphql/graphql.c:397:    free(printed);
+src/net/graphql/graphql.c:402:        free(printed);
+src/net/graphql/graphql.c:406:    free(printed);
 src/net/http/http.c:1510:        res->alt_svc = strdup(alt_svc);
 src/net/http/http3.c:1194:            char *tmp = realloc(st->body, new_cap);
 src/net/http/http3.c:1261:                free(st->body);
