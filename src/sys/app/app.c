@@ -3,6 +3,10 @@
 #endif
 #define _POSIX_C_SOURCE 200809L
 #define _DEFAULT_SOURCE
+#include <sched.h>
+#if defined(__linux__) && defined(_GNU_SOURCE)
+#include "worker_affinity.h"
+#endif
 #include <cwist/sys/app/app.h>
 #include <cwist/sys/app/config.h>
 #include <cwist/sys/app/logger.h>
@@ -4426,6 +4430,14 @@ int cwist_app_listen(cwist_app *app, int port) {
             break;
         }
     }
+
+#if defined(__linux__) && defined(_GNU_SOURCE)
+    /* Keep each worker inside its inherited affinity mask (including sparse IDs). */
+    if (workers > 1 && cwist_app_pin_worker((size_t)(is_worker_child ? child_idx : 0)) < 0) {
+        /* On failure, retain the inherited mask rather than guessing a CPU ID. */
+        perror("worker CPU affinity");
+    }
+#endif
 
     if (is_worker_child) {
         close(server_fd);
