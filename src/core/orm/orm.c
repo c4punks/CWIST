@@ -286,6 +286,7 @@ cwist_error_t cwist_orm_query(cwist_orm_t *orm, const char *sql,
  */
 static char *cwist_orm_escape_sqlite(const char *src)
 {
+    if (!src) return NULL;
     size_t len = strlen(src);
     size_t extra = 0;
     for (size_t i = 0; i < len; i++) {
@@ -321,7 +322,7 @@ static char *cwist_orm_escape_sqlite(const char *src)
  */
 static char *cwist_orm_quote_identifier(const cwist_orm_t *orm, const char *id)
 {
-    if (!id) return NULL;
+    if (!orm || !id) return NULL;
     char quote_ch = '\0';
     char escape_ch = '\0';
     switch (orm->dialect) {
@@ -365,7 +366,7 @@ static char *cwist_orm_json_to_sql_literal(const cwist_orm_t *orm, const cJSON *
         return strdup("NULL");
     }
     if (cJSON_IsBool(node)) {
-        if (orm->dialect == CWIST_ORM_POSTGRES) {
+        if (orm && orm->dialect == CWIST_ORM_POSTGRES) {
             return strdup(cJSON_IsTrue(node) ? "TRUE" : "FALSE");
         }
         return strdup(cJSON_IsTrue(node) ? "1" : "0");
@@ -376,6 +377,7 @@ static char *cwist_orm_json_to_sql_literal(const cwist_orm_t *orm, const cJSON *
         return strdup(buf);
     }
     if (cJSON_IsString(node)) {
+        if (!node->valuestring) return strdup("''");
         char *escaped = cwist_orm_escape_sqlite(node->valuestring);
         if (!escaped) return NULL;
         size_t elen = strlen(escaped);
@@ -602,6 +604,13 @@ cwist_error_t cwist_orm_update(cwist_orm_t *orm, const char *table,
         free(literal);
         free(qid);
         idx++;
+    }
+
+    if (idx == 0) {
+        free(qtable);
+        free(set_clause);
+        err.error.err_i16 = CWIST_ERROR_INVALID_PARAM;
+        return err;
     }
 
     size_t sql_len = strlen(qtable) + strlen(set_clause) + 32 +
