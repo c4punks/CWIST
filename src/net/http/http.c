@@ -1164,6 +1164,16 @@ void cwist_http_response_add_security_headers(cwist_http_response *res) {
     if (!cwist_http_header_get(res->headers, "Strict-Transport-Security")) {
         cwist_http_header_add_static(&res->headers, arena, "Strict-Transport-Security", "max-age=31536000; includeSubDomains");
     }
+    /* Permissions-Policy (formerly Feature-Policy) disables sensitive browser
+     * APIs that a response from this server almost never needs.  Callers that
+     * do require a specific feature should add the header themselves before
+     * calling cwist_http_response_add_security_headers(), which skips headers
+     * already present. */
+    if (!cwist_http_header_get(res->headers, "Permissions-Policy")) {
+        cwist_http_header_add_static(&res->headers, arena, "Permissions-Policy",
+            "camera=(), microphone=(), geolocation=(), payment=(), "
+            "usb=(), interest-cohort=()");
+    }
 }
 
 /**
