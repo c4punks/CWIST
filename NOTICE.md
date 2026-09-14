@@ -15,7 +15,6 @@ license file.
 | cnats | `lib/cnats` | Apache-2.0 | NATS client |
 | uriparser | `lib/uriparser` | BSD-3-Clause | URI parsing; only the library is built/linked — its test suite (LGPL-2.1-or-later) and fuzzing code (Apache-2.0) are not |
 | multipart-parser-c | `lib/multipart-parser-c` | MIT | `multipart/form-data` parsing |
-| Monocypher | `lib/monocypher` | BSD-2-Clause OR CC0-1.0 (dual, your choice) | Crypto primitives |
 
 When distributing `libcwist.a` or linked binaries, review the linked set:
 static linking propagates the license obligations of every component above

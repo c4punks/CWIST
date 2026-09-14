@@ -13,9 +13,8 @@ class Cwist < Formula
   # The framework itself is MIT; the vendored components it statically links
   # are Apache-2.0 (BoringSSL, cnats), MIT (lsquic, cJSON,
   # multipart-parser-c), BSD-3-Clause (libttak, uriparser, lsquic's Chromium
-  # portions), BSD-2-Clause (Monocypher; dual-licensed, BSD-2-Clause chosen
-  # over CC0-1.0), and SQLite (public domain, SPDX "blessing").
-  license all_of: ["MIT", "Apache-2.0", "BSD-2-Clause", "BSD-3-Clause", :public_domain]
+  # portions), and SQLite (public domain, SPDX "blessing").
+  license all_of: ["MIT", "Apache-2.0", "BSD-3-Clause", :public_domain]
 
   depends_on "cmake" => :build
   depends_on "pkg-config" => :build
