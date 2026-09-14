@@ -754,8 +754,42 @@ static int cwist_https_alpn_select_cb(SSL *ssl,
  * ticket-key callback; every forked worker inherits identical key material
  * and tickets resume regardless of which worker accepts the connection.
  *
- * Trade-off: the key lives for the process lifetime (no rotation), which is
- * the standard pre-fork server model (same as a fixed nginx ticket key).
+ * Security trade-off — process-lifetime STEK (tracked in issue #98):
+ *
+ * The key lives for the process lifetime (no rotation), the same design
+ * nginx uses with a static `ssl_session_ticket_key` file.  That is a
+ * deliberate choice: rotation in a pre-fork model requires either a shared
+ * mmap region with locking (cross-process visibility) or a control socket
+ * from a parent/daemon process — significant complexity for a server that
+ * is typically restarted nightly anyway.
+ *
+ * Actual exposure with the current codebase:
+ *
+ * 1. 0-RTT / early-data replay does NOT apply here.  CWIST never calls
+ *    SSL_CTX_set_max_early_data() or equivalent, so early data is
+ *    disabled at the library level and TLS 1.3 0-RTT is never offered.
+ *
+ * 2. What remains is the blast-radius argument: if the STEK leaks (memory
+ *    disclosure, core dump, cold-boot) an attacker can decrypt any
+ *    session ticket issued by this process for the rest of its uptime.
+ *    Rotation would cap the valid window to the rotation interval.
+ *
+ * Mitigations short of full rotation:
+ *   - Enable perfect forward secrecy by preferring ECDHE cipher suites
+ *     (already the default here via BoringSSL's suite ordering) so that
+ *     bulk traffic keys are independent of the STEK even if the STEK leaks.
+ *   - Restart the server on a short cadence (e.g. daily) if the uptime
+ *     window is a concern for your threat model; a new process generates a
+ *     fresh STEK via RAND_bytes() in cwist_tls_setup_shared_ticket_key().
+ *   - Disable ticket resumption entirely (SSL_CTX_set_options with
+ *     SSL_OP_NO_TICKET) to opt into full handshakes on every connection.
+ *
+ * If in-process periodic rotation is ever added, the right approach is:
+ *   a) Generate a new key on a timer (e.g. every hour).
+ *   b) Keep the *previous* key for one rotation interval so in-flight
+ *      tickets from the overlap window can still decrypt.
+ *   c) Use an atomic pointer swap or reader-writer lock to avoid a
+ *      race between the rotate timer and cwist_tls_ticket_key_cb().
  * ------------------------------------------------------------------------- */
 typedef struct cwist_tls_ticket_key {
     unsigned char name[16];     /* key_name sent in the ticket */

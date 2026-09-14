@@ -399,6 +399,12 @@ typedef struct h2_conn {
     uint64_t rst_last_refill_ms;
     uint32_t ping_budget;
     uint64_t ping_last_refill_ms;
+    /* Token bucket for *outbound* server-initiated RST_STREAM ("Made You Reset"
+     * mitigation, issue #97).  Mirrors the inbound rst_budget so an attacker
+     * who holds 100 concurrent streams open and floods HEADERS can't drive
+     * unbounded RST_STREAM writes from the server. */
+    uint32_t out_rst_budget;
+    uint64_t out_rst_last_refill_ms;
     /* Optional stream hooks (gRPC incremental delivery).  hook_ctx is the
      * per-connection context from hooks->on_conn_open (or user_ctx). */
     const cwist_http2_stream_hooks *hooks;
@@ -435,6 +441,8 @@ static void h2_conn_init(h2_conn *hc, cwist_https_connection *conn) {
     hc->rst_last_refill_ms = hc->last_activity;
     hc->ping_budget = CWIST_HTTP2_DEFAULT_PING_BURST;
     hc->ping_last_refill_ms = hc->last_activity;
+    hc->out_rst_budget = h2_max_rst_burst();
+    hc->out_rst_last_refill_ms = hc->last_activity;
     hc->cont_frame_count = 0;
     /* The extension carries application bodies and must not be enabled over
      * h2c: its ordering metadata is not an integrity mechanism.  HTTPS/TLS
@@ -543,6 +551,29 @@ static bool h2_conn_consume_rst_budget(h2_conn *hc) {
         return false;
     }
     hc->rst_budget--;
+    return true;
+}
+
+/* Consume one outbound RST_STREAM credit (issue #97: "Made You Reset").
+ * Returns false when the budget is depleted — caller must send GOAWAY. */
+static bool h2_conn_consume_out_rst_budget(h2_conn *hc) {
+    uint64_t now = h2_now_ms();
+    uint64_t elapsed = (now > hc->out_rst_last_refill_ms)
+                       ? (now - hc->out_rst_last_refill_ms) : 0;
+    if (elapsed >= 1000) {
+        hc->out_rst_budget = h2_max_rst_burst();
+        hc->out_rst_last_refill_ms = now;
+    } else if (elapsed > 0) {
+        uint32_t add = (uint32_t)((elapsed * h2_max_rst_rate()) / 1000);
+        if (add > 0) {
+            hc->out_rst_budget += add;
+            if (hc->out_rst_budget > h2_max_rst_burst())
+                hc->out_rst_budget = h2_max_rst_burst();
+            hc->out_rst_last_refill_ms = now;
+        }
+    }
+    if (hc->out_rst_budget == 0) return false;
+    hc->out_rst_budget--;
     return true;
 }
 
@@ -994,7 +1025,23 @@ static int h2_send_goaway(h2_conn *hc, uint32_t last_stream_id, uint32_t error_c
     return h2_write_frame(hc, CWIST_HTTP2_FRAME_GOAWAY, 0, 0, payload, 8);
 }
 
+/* Send RST_STREAM for stream_id with error_code.
+ * Returns  0 on success,
+ *         -1 on write error,
+ *         -2 when the outbound RST budget is depleted (GOAWAY/ENHANCE_YOUR_CALM
+ *            already sent; caller must close the connection).
+ * The -2 path implements the "Made You Reset" mitigation (issue #97): once
+ * the server has sent as many RST_STREAMs in a rolling window as it accepts
+ * from the client (h2_max_rst_burst/h2_max_rst_rate), it switches to GOAWAY
+ * so a client flooding new streams past the concurrency cap can't drive
+ * unbounded frame writes from the server. */
 static int h2_send_rst_stream(h2_conn *hc, uint32_t stream_id, uint32_t error_code) {
+    if (!h2_conn_consume_out_rst_budget(hc)) {
+        CWIST_LOG_WARN("[h2] outbound RST_STREAM budget exhausted on stream %u "
+                       "(Made You Reset / issue #97 mitigation triggered)", stream_id);
+        h2_send_goaway(hc, hc->last_processed_stream_id, H2_ERR_ENHANCE_YOUR_CALM);
+        return -2;
+    }
     unsigned char payload[4];
     payload[0] = (unsigned char)((error_code >> 24) & 0xff);
     payload[1] = (unsigned char)((error_code >> 16) & 0xff);
@@ -2911,13 +2958,18 @@ static int h2_send_response_hc(h2_conn *hc, uint32_t stream_id, cwist_http_respo
 /* Create a stream for an incoming request header block, enforcing
  * CWIST_HTTP2_MAX_CONCURRENT_STREAMS (RFC 7540 §5.1.2).
  * Returns the stream, or NULL with *refused set when the peer exceeded the
- * limit (RST_STREAM/REFUSED_STREAM already queued). */
-static h2_stream *h2_request_stream_create(h2_conn *hc, uint32_t stream_id, bool *refused) {
+ * limit (RST_STREAM/REFUSED_STREAM already queued).
+ * *goaway_sent is set when the outbound RST budget was exhausted and GOAWAY
+ * was sent instead; the caller must close the connection. */
+static h2_stream *h2_request_stream_create(h2_conn *hc, uint32_t stream_id,
+                                           bool *refused, bool *goaway_sent) {
     *refused = false;
+    *goaway_sent = false;
     if (hc->active_streams >= CWIST_HTTP2_MAX_CONCURRENT_STREAMS) {
         CWIST_LOG_WARN("[h2] refusing stream %u: concurrent stream limit %u reached",
                        stream_id, (unsigned)CWIST_HTTP2_MAX_CONCURRENT_STREAMS);
-        h2_send_rst_stream(hc, stream_id, H2_ERR_REFUSED_STREAM);
+        int rst_rc = h2_send_rst_stream(hc, stream_id, H2_ERR_REFUSED_STREAM);
+        if (rst_rc == -2) { *goaway_sent = true; return NULL; }
         *refused = true;
         return NULL;
     }
@@ -2944,9 +2996,10 @@ static int h2_decode_stream_headers(h2_conn *hc, h2_stream *s,
     int rc = h2_decode_header_block(hc, s->req, block, block_len, is_request);
     if (rc == H2_DECODE_COMPRESSION_ERROR) return -1;
     if (rc == H2_DECODE_STREAM_ERROR) {
-        h2_send_rst_stream(hc, s->stream_id, H2_ERR_PROTOCOL_ERROR);
+        int rst_rc = h2_send_rst_stream(hc, s->stream_id, H2_ERR_PROTOCOL_ERROR);
         h2_stream_remove(hc, s->stream_id);
-        return 1;
+        /* rst_rc == -2: outbound budget exhausted, GOAWAY already sent. */
+        return (rst_rc == -2) ? -1 : 1;
     }
     return 0;
 }
@@ -2966,18 +3019,18 @@ static int h2_begin_headers(h2_conn *hc, uint32_t stream_id,
     if (end_headers) {
         h2_stream *s = h2_stream_find(hc, stream_id);
         if (!s) {
-            bool refused = false;
-            s = h2_request_stream_create(hc, stream_id, &refused);
-            if (!s) return refused ? 1 : -1;
+            bool refused = false, goaway_sent = false;
+            s = h2_request_stream_create(hc, stream_id, &refused, &goaway_sent);
+            if (!s) return goaway_sent ? -2 : (refused ? 1 : -1);
         }
         if (payload && block_len > 0) {
             return h2_decode_stream_headers(hc, s, payload + block_offset, block_len, is_new);
         }
         /* An empty request header block still owes :method and :path. */
         if (is_new) {
-            h2_send_rst_stream(hc, stream_id, H2_ERR_PROTOCOL_ERROR);
+            int rst_rc = h2_send_rst_stream(hc, stream_id, H2_ERR_PROTOCOL_ERROR);
             h2_stream_remove(hc, stream_id);
-            return 1;
+            return (rst_rc == -2) ? -2 : 1;
         }
         return 0;
     }
@@ -2994,7 +3047,8 @@ static int h2_begin_headers(h2_conn *hc, uint32_t stream_id,
     if (is_new && hc->active_streams >= CWIST_HTTP2_MAX_CONCURRENT_STREAMS) {
         CWIST_LOG_WARN("[h2] refusing stream %u: concurrent stream limit %u reached",
                        stream_id, (unsigned)CWIST_HTTP2_MAX_CONCURRENT_STREAMS);
-        h2_send_rst_stream(hc, stream_id, H2_ERR_REFUSED_STREAM);
+        int rst_rc = h2_send_rst_stream(hc, stream_id, H2_ERR_REFUSED_STREAM);
+        if (rst_rc == -2) return -2; /* outbound budget gone, GOAWAY already sent */
         hc->expecting_continuation = true;
         hc->cont_stream_id = stream_id;
         hc->cont_end_stream = end_stream;
@@ -3073,17 +3127,17 @@ static int h2_handle_continuation(h2_conn *hc, uint32_t stream_id,
         bool is_new = (s == NULL);
         int rc = 0;
         if (!s) {
-            bool refused = false;
-            s = h2_request_stream_create(hc, hc->cont_stream_id, &refused);
-            if (!s) rc = refused ? 1 : -1;
+            bool refused = false, goaway_sent = false;
+            s = h2_request_stream_create(hc, hc->cont_stream_id, &refused, &goaway_sent);
+            if (!s) rc = goaway_sent ? -2 : (refused ? 1 : -1);
         }
         if (s && hc->cont_buf && hc->cont_len > 0) {
             rc = h2_decode_stream_headers(hc, s, hc->cont_buf, hc->cont_len, is_new);
         } else if (s && is_new) {
             /* Empty request header block: mandatory pseudo-headers missing. */
-            h2_send_rst_stream(hc, s->stream_id, H2_ERR_PROTOCOL_ERROR);
+            int rst_rc = h2_send_rst_stream(hc, s->stream_id, H2_ERR_PROTOCOL_ERROR);
             h2_stream_remove(hc, s->stream_id);
-            rc = 1;
+            rc = (rst_rc == -2) ? -2 : 1;
         }
         hc->expecting_continuation = false;
         hc->cont_len = 0;
