@@ -48,6 +48,11 @@ Legacy records remain in history but are not pooled into this measurement contra
 Spring environment: `{'java_version': 'openjdk version "25.0.4.1" 2026-08-18 LTS', 'spring_boot_version': '3.2.3', 'stack': 'Spring WebFlux + Reactor Netty on native epoll (G1GC, JDK 25 Leyden AOT, virtual threads disabled)', 'jvm_opts': '-Xms1024m -Xmx1024m   -XX:+UseG1GC -XX:GCTimeRatio=99 -XX:G1HeapRegionSize=1m   -XX:+AlwaysPreTouch   -XX:CompileThreshold=1500 -XX:CICompilerCount=4   -Djava.security.egd=file:/dev/urandom   -Djava.net.preferIPv4Stack=true   -Dio.netty.allocator.type=pooled   -Dio.netty.leakDetection.level=disabled   -Dio.netty.buffer.checkBounds=false   -Dio.netty.buffer.checkAccessible=false   -Dreactor.netty.ioWorkerCount=4   -Xlog:gc*:file=/tmp/spring_gc.log:time,uptime,level,tags -XX:+AOTClassLinking -XX:AOTCache=/tmp/spring_bench/app.aot (JEP 483 + JEP 514 single-step AOT)', 'virtual_threads': False, 'aot_cache': 'JDK 25 Leyden AOT (-XX:AOTCache; trained before measurement)'}`
 
 [Measurement contract](docs/webserver-benchmark.md) · [History](benchmarks/webserver.json)
+![Web Server Benchmark Trends](docs/webserver-benchmark-trends.svg)
+
+Latency distribution (density curve reconstructed from each server's percentiles - shows the shape of the tail, not just its P99.999 number):
+
+![Web Server Latency Distribution](docs/webserver-latency-distribution.svg)
 <!-- WEBSERVER_BENCHMARKS:END -->
 
 _Methodology, JVM options, and fairness settings: [docs/webserver-benchmark.md](docs/webserver-benchmark.md)_

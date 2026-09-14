@@ -385,7 +385,21 @@ def render() -> None:
     spring_lat_part = get_lat_part("spring")
 
     if ws_latest.get('schema_version') == 2:
+        # webserver_summary() renders the isolated-http1-wrk-corrected-v2
+        # measurement-contract table only -- it predates the chart images
+        # below and never appended them, which silently dropped the
+        # benchmark visualization from README once schema_version:2 rows
+        # started landing (docs/webserver-benchmark.md). Keep the
+        # reproducibility-contract table but still attach the same charts
+        # the pre-contract branch below has always shipped.
         ws_summary = webserver_summary(ws_latest)
+        ws_summary += f"\n![Web Server Benchmark Trends](docs/webserver-benchmark-trends.svg)"
+        ws_summary += (
+            f"\n\nLatency distribution (density curve reconstructed from each "
+            f"server's percentiles - shows the shape of the tail, not just its "
+            f"P99.999 number):\n\n"
+            f"![Web Server Latency Distribution](docs/webserver-latency-distribution.svg)"
+        )
     else:
         ws_summary = (
             f"Latest Web Server Benchmark ({ws_latest.get('wrk_profile','wrk 12t 400c')}):\n"
