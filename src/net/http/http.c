@@ -1142,6 +1142,12 @@ size_t cwist_http_header_remove(cwist_http_header_node **head, const char *key) 
 
 /**
  * @brief Add default security headers to an HTTP response if not already present.
+ *
+ * Safe to call for both HTTP and HTTPS responses.  HSTS is intentionally
+ * omitted here because RFC 6797 §7.2 forbids sending it over plain HTTP;
+ * browsers ignore it on non-TLS connections anyway.  Use
+ * cwist_http_response_add_hsts() from your HTTPS handler to add it there.
+ *
  * @param res Response object to populate.
  */
 void cwist_http_response_add_security_headers(cwist_http_response *res) {
@@ -1176,8 +1182,32 @@ void cwist_http_response_add_security_headers(cwist_http_response *res) {
     if (!cwist_http_header_get(res->headers, "Cross-Origin-Resource-Policy")) {
         cwist_http_header_add_static(&res->headers, arena, "Cross-Origin-Resource-Policy", "same-origin");
     }
+    /* Permissions-Policy (W3C Permissions Policy Level 2) — deny access to
+     * sensitive browser APIs that CWIST apps almost never need.  Callers that
+     * require a specific feature can set the header before calling this
+     * function; the existing-header check below will skip the default. */
+    if (!cwist_http_header_get(res->headers, "Permissions-Policy")) {
+        cwist_http_header_add_static(&res->headers, arena, "Permissions-Policy",
+            "camera=(), microphone=(), geolocation=(), payment=(), "
+            "usb=(), interest-cohort=()");
+    }
+}
+
+/**
+ * @brief Add Strict-Transport-Security to a TLS response (HTTPS only).
+ *
+ * RFC 6797 §7.2 prohibits HSTS over plain HTTP.  Call this only from an
+ * HTTPS handler, after cwist_http_response_add_security_headers().
+ * No-op when the header is already present.
+ *
+ * @param res Response object to populate.
+ */
+void cwist_http_response_add_hsts(cwist_http_response *res) {
+    if (!res) return;
+    cwist_arena_t *arena = (cwist_arena_t *)res->arena;
     if (!cwist_http_header_get(res->headers, "Strict-Transport-Security")) {
-        cwist_http_header_add_static(&res->headers, arena, "Strict-Transport-Security", "max-age=31536000; includeSubDomains");
+        cwist_http_header_add_static(&res->headers, arena,
+            "Strict-Transport-Security", "max-age=31536000; includeSubDomains");
     }
 }
 
