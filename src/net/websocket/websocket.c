@@ -99,6 +99,10 @@ cwist_websocket *cwist_websocket_upgrade(cwist_http_request *req, int client_fd)
     if (!ws) return NULL;
     ws->fd = client_fd;
     ws->is_closed = false;
+    ws->frag_buf    = NULL;
+    ws->frag_len    = 0;
+    ws->frag_cap    = 0;
+    ws->frag_opcode = CWIST_WS_FRAME_CONTINUATION;
     return ws;
 }
 
@@ -119,12 +123,37 @@ static ssize_t read_exact(int fd, void *buf, size_t len) {
     return total;
 }
 
+/* Append len bytes of src to ws->frag_buf, growing it as needed.
+ * Returns false on allocation failure. */
+static bool ws_frag_append(cwist_websocket *ws, const uint8_t *src, size_t len) {
+    if (len == 0) return true;
+    size_t need = ws->frag_len + len + 1; /* +1 for null terminator */
+    if (need > ws->frag_cap) {
+        size_t new_cap = ws->frag_cap ? ws->frag_cap * 2 : 4096;
+        if (new_cap < need) new_cap = need;
+        uint8_t *nb = (uint8_t *)cwist_alloc(new_cap);
+        if (!nb) return false;
+        if (ws->frag_len) memcpy(nb, ws->frag_buf, ws->frag_len);
+        cwist_free(ws->frag_buf);
+        ws->frag_buf = nb;
+        ws->frag_cap = new_cap;
+    }
+    memcpy(ws->frag_buf + ws->frag_len, src, len);
+    ws->frag_len += len;
+    return true;
+}
+
 /**
- * @brief Receive the next WebSocket frame from a connected client.
+ * @brief Receive the next complete WebSocket message from a connected client.
  *
- * Client frames are required to be masked by RFC 6455, so unmasked payloads are
- * rejected. Payload data is copied into a heap buffer and null-terminated for
- * convenience when the caller interprets a text frame as a C string.
+ * Transparently reassembles fragmented messages (RFC 6455 §5.4): frames with
+ * FIN=0 are buffered internally and the function blocks until the final
+ * FIN=1 frame arrives, at which point the fully-assembled payload is returned
+ * as a single frame.  Control frames (CLOSE, PING, PONG) are always FIN=1 and
+ * are delivered immediately even when a fragmented data message is in progress.
+ *
+ * Client frames are required to be masked by RFC 6455, so unmasked payloads
+ * are rejected.  The returned payload is null-terminated for convenience.
  *
  * @param ws WebSocket connection wrapper returned by cwist_websocket_upgrade().
  * @return Newly allocated frame, or NULL when the connection is closed or invalid.
@@ -132,79 +161,108 @@ static ssize_t read_exact(int fd, void *buf, size_t len) {
 cwist_ws_frame *cwist_websocket_receive(cwist_websocket *ws) {
     if (!ws || ws->is_closed) return NULL;
 
-    uint8_t head[2];
-    if (read_exact(ws->fd, head, 2) < 0) return NULL;
+    while (1) {
+        uint8_t head[2];
+        if (read_exact(ws->fd, head, 2) < 0) return NULL;
 
-    bool fin = (head[0] & 0x80) != 0;
-    cwist_ws_opcode_t opcode = head[0] & 0x0F;
-    bool masked = (head[1] & 0x80) != 0;
-    uint64_t payload_len = head[1] & 0x7F;
+        bool fin = (head[0] & 0x80) != 0;
+        cwist_ws_opcode_t opcode = head[0] & 0x0F;
+        bool masked = (head[1] & 0x80) != 0;
+        uint64_t payload_len = head[1] & 0x7F;
 
-    if (!masked) {
-        // Client-to-server frames must be masked per spec
-        // We can choose to strict close or allow. Strict is better.
-        // For now, let's just return error.
-        return NULL;
-    }
+        /* Client-to-server frames must be masked per RFC 6455 §5.3. */
+        if (!masked) return NULL;
 
-    if (payload_len == 126) {
-        uint16_t len16;
-        if (read_exact(ws->fd, &len16, 2) < 0) return NULL;
-        payload_len = ntohs(len16);
-    } else if (payload_len == 127) {
-        uint64_t len64;
-        if (read_exact(ws->fd, &len64, 8) < 0) return NULL;
-        // manually swap if no be64toh
-        // assuming be64toh or similar exists, or manual
-        // Linux usually has be64toh in <endian.h>
-        // Let's implement manual swap to be portable
-        uint8_t *p = (uint8_t *)&len64;
-        payload_len = ((uint64_t)p[0] << 56) | ((uint64_t)p[1] << 48) |
-                      ((uint64_t)p[2] << 40) | ((uint64_t)p[3] << 32) |
-                      ((uint64_t)p[4] << 24) | ((uint64_t)p[5] << 16) |
-                      ((uint64_t)p[6] << 8)  | ((uint64_t)p[7]);
-    }
+        if (payload_len == 126) {
+            uint16_t len16;
+            if (read_exact(ws->fd, &len16, 2) < 0) return NULL;
+            payload_len = ntohs(len16);
+        } else if (payload_len == 127) {
+            uint64_t len64;
+            if (read_exact(ws->fd, &len64, 8) < 0) return NULL;
+            uint8_t *p = (uint8_t *)&len64;
+            payload_len = ((uint64_t)p[0] << 56) | ((uint64_t)p[1] << 48) |
+                          ((uint64_t)p[2] << 40) | ((uint64_t)p[3] << 32) |
+                          ((uint64_t)p[4] << 24) | ((uint64_t)p[5] << 16) |
+                          ((uint64_t)p[6] << 8)  | ((uint64_t)p[7]);
+        }
 
-    uint8_t masking_key[4];
-    if (read_exact(ws->fd, masking_key, 4) < 0) return NULL;
+        uint8_t masking_key[4];
+        if (read_exact(ws->fd, masking_key, 4) < 0) return NULL;
 
-    uint8_t *payload = NULL;
-    if (payload_len > 0) {
-        payload = (uint8_t *)cwist_alloc(payload_len + 1); // +1 for safety null term if text
-        if (!payload) return NULL;
-        if (read_exact(ws->fd, payload, payload_len) < 0) {
+        uint8_t *payload = NULL;
+        if (payload_len > 0) {
+            payload = (uint8_t *)cwist_alloc(payload_len + 1);
+            if (!payload) return NULL;
+            if (read_exact(ws->fd, payload, payload_len) < 0) {
+                cwist_free(payload);
+                return NULL;
+            }
+            for (uint64_t i = 0; i < payload_len; i++)
+                payload[i] ^= masking_key[i % 4];
+            payload[payload_len] = '\0';
+        }
+
+        /* --- Fragmented-message reassembly (RFC 6455 §5.4) -------------- */
+
+        /* Control frames (CLOSE/PING/PONG) are never fragmented: deliver
+         * immediately, even when a data message fragmentation is underway. */
+        bool is_control = (opcode >= 0x8);
+
+        if (!is_control && !fin) {
+            /* Fragment with FIN=0: start or continue reassembly. */
+            if (opcode != CWIST_WS_FRAME_CONTINUATION) {
+                /* First fragment: save opcode (text vs binary). */
+                ws->frag_opcode = opcode;
+            }
+            if (!ws_frag_append(ws, payload, (size_t)payload_len)) {
+                cwist_free(payload);
+                return NULL;
+            }
+            cwist_free(payload);
+            continue; /* read the next frame */
+        }
+
+        /* FIN=1 data frame: may be the last fragment of a multi-frame message. */
+        if (!is_control && ws->frag_len > 0) {
+            /* Final CONTINUATION frame: flush the reassembly buffer. */
+            if (!ws_frag_append(ws, payload, (size_t)payload_len)) {
+                cwist_free(payload);
+                cwist_free(ws->frag_buf); ws->frag_buf = NULL;
+                ws->frag_len = ws->frag_cap = 0;
+                return NULL;
+            }
+            cwist_free(payload);
+
+            /* Hand ownership of frag_buf to the returned frame. */
+            payload     = ws->frag_buf;
+            payload_len = ws->frag_len;
+            opcode      = ws->frag_opcode;
+
+            ws->frag_buf = NULL;
+            ws->frag_len = ws->frag_cap = 0;
+        }
+
+        /* --- Deliver the complete frame ---------------------------------- */
+
+        if (opcode == CWIST_WS_FRAME_CLOSE) {
+            /* RFC 6455 §5.5.1: echo CLOSE before marking closed. */
+            cwist_websocket_send(ws, CWIST_WS_FRAME_CLOSE,
+                                 payload, (payload_len >= 2) ? 2 : 0);
+            ws->is_closed = true;
+        }
+
+        cwist_ws_frame *frame = (cwist_ws_frame *)cwist_alloc(sizeof(cwist_ws_frame));
+        if (!frame) {
             cwist_free(payload);
             return NULL;
         }
-
-        // Unmask
-        for (uint64_t i = 0; i < payload_len; i++) {
-            payload[i] ^= masking_key[i % 4];
-        }
-        payload[payload_len] = '\0'; // Null terminate for convenience if text
+        frame->fin        = fin;
+        frame->opcode     = opcode;
+        frame->payload    = payload;
+        frame->payload_len = (size_t)payload_len;
+        return frame;
     }
-
-    if (opcode == CWIST_WS_FRAME_CLOSE) {
-        /* RFC 6455 §5.5.1: upon receiving a CLOSE frame the endpoint MUST
-         * send a CLOSE frame in response before closing the connection.
-         * Mirror the first two bytes of the payload (the status code) if
-         * present; send an empty body otherwise. */
-        cwist_websocket_send(ws, CWIST_WS_FRAME_CLOSE,
-                             payload, (payload_len >= 2) ? 2 : 0);
-        ws->is_closed = true;
-    }
-
-    cwist_ws_frame *frame = (cwist_ws_frame *)cwist_alloc(sizeof(cwist_ws_frame));
-    if (!frame) {
-        if (payload) cwist_free(payload);
-        return NULL;
-    }
-    frame->fin = fin;
-    frame->opcode = opcode;
-    frame->payload = payload;
-    frame->payload_len = payload_len;
-
-    return frame;
 }
 
 /**
@@ -342,9 +400,7 @@ void cwist_websocket_close(cwist_websocket *ws) {
  */
 void cwist_websocket_destroy(cwist_websocket *ws) {
     if (ws) {
-        // We don't own fd in terms of closing it immediately if the app wants to, 
-        // but typically destroying WS wrapper implies we are done.
-        // The App handler owns the FD usually.
+        cwist_free(ws->frag_buf);
         cwist_free(ws);
     }
 }

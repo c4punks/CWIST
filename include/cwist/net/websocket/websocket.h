@@ -10,11 +10,6 @@
 #include <stdint.h>
 #include <stdbool.h>
 
-typedef struct cwist_websocket {
-    int fd;
-    bool is_closed;
-} cwist_websocket;
-
 typedef enum {
     CWIST_WS_FRAME_CONTINUATION = 0x0,
     CWIST_WS_FRAME_TEXT = 0x1,
@@ -23,6 +18,19 @@ typedef enum {
     CWIST_WS_FRAME_PING = 0x9,
     CWIST_WS_FRAME_PONG = 0xA
 } cwist_ws_opcode_t;
+
+typedef struct cwist_websocket {
+    int fd;
+    bool is_closed;
+    /* Fragmented-message reassembly state (RFC 6455 §5.4).
+     * frag_buf accumulates payload bytes across FIN=0 frames; frag_opcode
+     * preserves the first fragment's opcode so the assembled frame reports
+     * the correct type (text vs binary). */
+    uint8_t          *frag_buf;
+    size_t            frag_len;
+    size_t            frag_cap;
+    cwist_ws_opcode_t frag_opcode;
+} cwist_websocket;
 
 typedef struct cwist_ws_frame {
     bool fin;
