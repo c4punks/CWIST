@@ -83,8 +83,8 @@ def main(argv=None):
             try:
                 connection.request('GET', '/')
                 response = connection.getresponse()
-                ready = response.status == 200
                 response.read()
+                ready = response.status == 200
             except (OSError, http.client.HTTPException):
                 pass
             finally:

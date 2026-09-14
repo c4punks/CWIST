@@ -18,6 +18,8 @@ class HandoffTests(unittest.TestCase):
             connection = Mock()
             connection.getresponse.return_value.status = 200
             connection.getresponse.return_value.read.return_value = b'ok'
+            if mode == 'read-error':
+                connection.getresponse.return_value.read.side_effect = OSError('synthetic read failure')
             rows = [{'pid': 500, 'start': '42', 'tasks': [], 'rss_kib': 10}]
 
             def execute(command, stdout, **kwargs):
@@ -34,14 +36,15 @@ class HandoffTests(unittest.TestCase):
             with patch.dict(os.environ, {'BENCHMARK_SERVER_PID': '500'}), \
                  patch('benchmark_workload.snapshot_group', return_value=rows), \
                  patch('http.client.HTTPConnection', return_value=connection), \
-                 patch('subprocess.run', side_effect=execute):
+                 patch('subprocess.run', side_effect=execute), \
+                 patch('time.monotonic', side_effect=[0, 2, 12]):
                 if mode == 'ok':
                     self.assertEqual(benchmark_workload.main(args), 0)
                 else:
-                    with self.assertRaises((ValueError, subprocess.CalledProcessError)):
+                    with self.assertRaises((ValueError, subprocess.CalledProcessError, RuntimeError)):
                         benchmark_workload.main(args)
             telemetry = json.loads((root/'stat.json').read_text())
-            metrics = parse_wrk_text(output(sample()))
+            metrics = parse_wrk_text((root/'load.txt').read_text() if mode == 'ok' else output(sample()))
             receipt = {'complete': True, 'cleanup_ok': True, 'survivors': []}
             if mode == 'ok':
                 validate_case(metrics, receipt, telemetry)
@@ -55,6 +58,12 @@ class HandoffTests(unittest.TestCase):
     def test_actual_successful_handoff(self):
         data = self.run_case('ok')
         self.assertEqual(data['measurement_exit'], 0)
+
+    def test_read_failure_is_not_ready(self):
+        data = self.run_case('read-error')
+        self.assertFalse(data['ready'])
+        self.assertFalse(data['warmup_ok'])
+        self.assertIsNone(data['measurement_exit'])
 
     def test_warm_failure_has_no_measurement(self):
         data = self.run_case('warm-error')
