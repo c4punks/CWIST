@@ -73,6 +73,10 @@ cwist_websocket *cwist_websocket_upgrade(cwist_http_request *req, int client_fd)
     if (ws_strcasestr(connection, "Upgrade") == NULL) return NULL;
     if (strcasecmp(upgrade, "websocket") != 0) return NULL;
 
+    /* RFC 6455 §4.2.1: the client MUST include Sec-WebSocket-Version: 13. */
+    char *ws_version = cwist_http_header_get(req->headers, "Sec-WebSocket-Version");
+    if (!ws_version || strcmp(ws_version, "13") != 0) return NULL;
+
     // Handshake Key Generation
     char combined_key[512];
     snprintf(combined_key, sizeof(combined_key), "%s%s", key, WS_GUID);
@@ -86,6 +90,7 @@ cwist_websocket *cwist_websocket_upgrade(cwist_http_request *req, int client_fd)
 
     // Send Response
     cwist_http_response *res = cwist_http_response_create();
+    if (!res) { cwist_free(accept_key); return NULL; }
     res->status_code = 101;
     cwist_sstring_assign(res->status_text, "Switching Protocols");
     cwist_http_header_add(&res->headers, "Upgrade", "websocket");
