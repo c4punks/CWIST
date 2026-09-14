@@ -3774,7 +3774,10 @@ int cwist_app_listen(cwist_app *app, int port) {
             long cores = get_cpu_cores();
             workers = (cores > 0) ? (int)cores : 1;
         } else {
-            workers = atoi(workers_env);
+            char *end = NULL;
+            long v = strtol(workers_env, &end, 10);
+            workers = (end != workers_env && *end == '\0' && v >= 1 && v <= INT_MAX)
+                      ? (int)v : 1;
         }
     } else {
         // Default to auto (number of online CPU cores) to maximize performance on multi-core systems out of the box.

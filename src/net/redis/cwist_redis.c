@@ -21,6 +21,9 @@
 
 #define CWIST_REDIS_BUF_SIZE 65536
 #define CWIST_REDIS_LINE_MAX 8192
+/* Maximum accepted bulk-string byte count (512 MiB). Redis's own protocol
+ * limit is 512 MiB; cap here so a rogue server can't force a huge alloc. */
+#define CWIST_REDIS_MAX_BULK_BYTES ((long long)(512 * 1024 * 1024))
 
 struct cwist_redis {
     int fd;
@@ -173,11 +176,16 @@ static cwist_error_t read_reply(cwist_redis_t *r, char **out_value, size_t *out_
             return (cwist_error_t){.errtype = CWIST_ERR_INT16, .error.err_i16 = 0};
 
         case '$': { /* bulk string */
-            long long blen = atoll(line + 1);
+            char *end = NULL;
+            long long blen = strtoll(line + 1, &end, 10);
+            if (end == line + 1 || *end != '\0') return make_error(CWIST_ERR_INT16);
             if (blen < 0) {
                 if (out_value) *out_value = NULL;
                 return (cwist_error_t){.errtype = CWIST_ERR_INT16, .error.err_i16 = 0};
             }
+            /* Guard against a rogue/malicious server advertising a huge bulk
+             * string that would exhaust memory before we read a single byte. */
+            if (blen > CWIST_REDIS_MAX_BULK_BYTES) return make_error(CWIST_ERR_INT16);
             char *buf = cwist_alloc((size_t)blen + 1);
             if (!buf) return make_error(CWIST_ERR_INT16);
             if (redis_recv_bytes(r, buf, (size_t)blen) != 0) {
@@ -198,7 +206,9 @@ static cwist_error_t read_reply(cwist_redis_t *r, char **out_value, size_t *out_
         }
 
         case '*': { /* array - skip for simple client */
-            long long count = atoll(line + 1);
+            char *end = NULL;
+            long long count = strtoll(line + 1, &end, 10);
+            if (end == line + 1 || *end != '\0' || count < 0) return make_error(CWIST_ERR_INT16);
             for (long long i = 0; i < count; i++) {
                 char *tmp = NULL;
                 cwist_error_t e = read_reply(r, &tmp, NULL, NULL);
@@ -473,7 +483,9 @@ cwist_error_t cwist_redis_subscribe(cwist_redis_t *r,
         char line[CWIST_REDIS_LINE_MAX];
         if (redis_recv_line(r, line, sizeof(line)) != 0) break;
         if (line[0] != '*') continue;
-        long long arr_count = atoll(line + 1);
+        char *arr_end = NULL;
+        long long arr_count = strtoll(line + 1, &arr_end, 10);
+        if (arr_end == line + 1 || *arr_end != '\0') continue;
         if (arr_count < 3) continue;
 
         char *type = NULL;

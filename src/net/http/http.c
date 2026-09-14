@@ -118,8 +118,9 @@ long get_optimal_thread_count(void) {
     }
     const char *env = getenv("CWIST_WORKER_THREADS");
     if (env && env[0]) {
-        long override = atol(env);
-        if (override > 0) return override;
+        char *end = NULL;
+        long override = strtol(env, &end, 10);
+        if (end != env && *end == '\0' && override > 0) return override;
     }
 
     long cores = get_cpu_cores();
@@ -129,8 +130,9 @@ long get_optimal_thread_count(void) {
     const char *w_env = getenv("CWIST_WORKERS");
     if (w_env && w_env[0]) {
         if (strcmp(w_env, "auto") != 0) {
-            long parsed = atol(w_env);
-            if (parsed > 0) workers = parsed;
+            char *end = NULL;
+            long parsed = strtol(w_env, &end, 10);
+            if (end != w_env && *end == '\0' && parsed > 0) workers = parsed;
         }
     }
 
@@ -262,7 +264,13 @@ static void *http_dynamic_worker_thread(void *arg) {
             long ms = atomic_load_explicit(&idle_timeout_ms, memory_order_relaxed);
             if (ms < 0) {
                 const char *env = getenv("CWIST_POOL_IDLE_TIMEOUT_MS");
-                ms = env ? atol(env) : 2000;
+                if (env && *env) {
+                    char *end = NULL;
+                    long v = strtol(env, &end, 10);
+                    ms = (end != env && *end == '\0') ? v : 2000;
+                } else {
+                    ms = 2000;
+                }
                 if (ms < 0) ms = 2000;
                 atomic_store_explicit(&idle_timeout_ms, ms, memory_order_relaxed);
             }
@@ -397,8 +405,10 @@ int cwist_http_pool_init(void) {
          * connection ramp. */
         long prewarm = g_http_thread_count;
         const char *pw = getenv("CWIST_POOL_PREWARM");
-        if (pw) {
-            long parsed = atol(pw);
+        if (pw && *pw) {
+            char *end = NULL;
+            long parsed = strtol(pw, &end, 10);
+            if (end == pw || *end != '\0') parsed = 0;
             if (parsed > prewarm) prewarm = parsed;
         }
         long max_w = atomic_load_explicit(&g_dyn_pool.max_workers, memory_order_relaxed);
@@ -528,7 +538,12 @@ static uint32_t cwist_http_keep_alive_timeout_sec(void) {
     static int cached_timeout = -1;
     if (cached_timeout < 0) {
         const char *env = getenv("CWIST_HTTP_KEEP_ALIVE_TIMEOUT");
-        int val = (env && *env) ? atoi(env) : 0;
+        int val = 0;
+        if (env && *env) {
+            char *end = NULL;
+            long v = strtol(env, &end, 10);
+            if (end != env && *end == '\0' && v > 0 && v <= INT_MAX) val = (int)v;
+        }
         cached_timeout = (val > 0) ? val : CWIST_HTTP_KEEP_ALIVE_TIMEOUT_SEC;
     }
     return (uint32_t)cached_timeout;
@@ -1724,7 +1739,13 @@ bool cwist_tcp_cork_enabled(void) {
     static int enabled = -1; /* benign idempotent race on first use */
     if (enabled < 0) {
         const char *env = getenv("CWIST_USE_TCP_CORK");
-        enabled = (env && atoi(env) > 0) ? 1 : 0;
+        if (env && *env) {
+            char *end = NULL;
+            long v = strtol(env, &end, 10);
+            enabled = (end != env && *end == '\0' && v > 0) ? 1 : 0;
+        } else {
+            enabled = 0;
+        }
     }
     return enabled == 1;
 }
@@ -1733,7 +1754,12 @@ static size_t cwist_tcp_cork_burst(void) {
     static size_t burst = 0;
     if (burst == 0) {
         const char *env = getenv("CWIST_TCP_CORK_BURST");
-        long v = (env && *env) ? atol(env) : 0;
+        long v = 0;
+        if (env && *env) {
+            char *end = NULL;
+            long tmp = strtol(env, &end, 10);
+            if (end != env && *end == '\0') v = tmp;
+        }
         burst = (v >= 16384) ? (size_t)v : (size_t)CWIST_TCP_CORK_DEFAULT_BURST;
     }
     return burst;
