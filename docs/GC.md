@@ -152,3 +152,5 @@ in `tests/bench_malloc_intercept.c`.
 service, profile your allocation hot path first.  The overhead is only
 active when `cwist_full_gc(true)` has been called; all default builds
 (full-GC off) are unaffected.
+
+<!-- auto-redirect-workflow-verification-marker: safe to remove -->
