@@ -998,21 +998,34 @@ static void cwist_static_handler(cwist_http_request *req, cwist_http_response *r
                 bool range_valid = true;
 
                 if (p[0] == '-') {
-                    size_t suffix = (size_t)atoi(p + 1);
-                    range_start = (file->size > suffix) ? file->size - suffix : 0;
-                    range_end = file->size - 1;
-                } else {
-                    range_start = (size_t)atoi(p);
-                    char *dash = strchr(p, '-');
-                    if (dash && dash[1] != '\0') {
-                        range_end = (size_t)atoi(dash + 1);
+                    /* suffix-range: bytes=-N means the last N bytes */
+                    char *end = NULL;
+                    unsigned long long sv = strtoull(p + 1, &end, 10);
+                    if (end == p + 1 || *end != '\0') {
+                        range_valid = false;
                     } else {
+                        range_start = (file->size > (size_t)sv) ? file->size - (size_t)sv : 0;
                         range_end = file->size - 1;
+                    }
+                } else {
+                    /* first-byte-pos [ "-" [ last-byte-pos ] ] */
+                    char *end = NULL;
+                    unsigned long long rs = strtoull(p, &end, 10);
+                    if (end == p) {
+                        range_valid = false;
+                    } else {
+                        range_start = (size_t)rs;
+                        char *dash = strchr(p, '-');
+                        if (dash && dash[1] != '\0') {
+                            unsigned long long re = strtoull(dash + 1, &end, 10);
+                            range_end = (end != dash + 1) ? (size_t)re : file->size - 1;
+                        } else {
+                            range_end = file->size - 1;
+                        }
                     }
                 }
 
-                if (range_start > range_end || range_start >= file->size) {
-                    (void)range_valid;
+                if (!range_valid || range_start > range_end || range_start >= file->size) {
                     res->status_code = CWIST_HTTP_RANGE_NOT_SATISFIABLE;
                     char cr[128];
                     snprintf(cr, sizeof(cr), "bytes */%zu", file->size);
