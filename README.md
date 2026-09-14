@@ -19,29 +19,29 @@ results are not universal throughput, memory, or latency guarantees.
 <!-- WEBSERVER_BENCHMARKS:START -->
 ## Latest isolated HTTP benchmark
 
-Measured commit: `9c3d3fc2e33c350093bb0b8d41ae60735c73c741`. Release tag: `not recorded; identify this run by commit`.
-Run: https://github.com/c4punks/CWIST/actions/runs/34854363253. Timestamp: `2026-09-14T14:26:10.235369+00:00`.
+Measured commit: `cc8fbe888953d20f88a84597f6cf1a743766b2c4`. Release tag: `not recorded; identify this run by commit`.
+Run: https://github.com/c4punks/CWIST/actions/runs/34857709719. Timestamp: `2026-09-14T14:57:14.300682+00:00`.
 
-Latency columns use the **wrk corrected distribution**. RSS is a **process-group end sample**, not a peak or unique physical memory. Context switches cover matching thread identities only; N/A means unavailable.
+Latency columns use the **wrk corrected distribution**. Both memory columns are process-group end samples, not peaks. Group RSS sums each process's RSS, so a page shared between worker processes is counted once per process; Group PSS divides each shared page by its mapper count, so it is the column to compare against a single-process server. Context switches cover matching thread identities only; N/A means unavailable.
 
-| Profile | Req/s | Mean ms | P99.999 ms | Group RSS MiB | Context-switch delta |
-|---|---:|---:|---:|---:|---:|
-| CWIST classic | 119,663 | 1.907 | 18.138 | 62.13 | N/A |
-| CWIST C1M | 143,350 | 3.060 | 24.446 | 32.06 | 309,967 |
-| CWIST C1M arena_max=1 | 142,161 | 3.056 | 23.840 | 37.69 | 313,756 |
-| CWIST C1M drain_chunk=8 | 146,475 | 3.030 | 25.978 | 40.53 | 312,535 |
-| CWIST C1M PUBLIC_FIXED (opt-in) | 143,445 | 3.042 | 25.117 | 29.72 | 308,329 |
-| Axum | 120,400 | 3.264 | 18.497 | 16.11 | 190,985 |
-| Gin | 91,085 | 5.743 | 63.863 | 29.28 | 340,853 |
-| Spring Boot | 58,702 | 6.765 | 62.339 | 1,268.07 | N/A |
+| Profile | Req/s | Mean ms | P99.999 ms | Group PSS MiB | Group RSS MiB | Context-switch delta |
+|---|---:|---:|---:|---:|---:|---:|
+| CWIST classic | 169,755 | 1.414 | 25.644 | 51.00 | 61.59 | N/A |
+| CWIST C1M | 215,668 | 2.366 | 24.217 | 18.39 | 32.06 | 460,319 |
+| CWIST C1M arena_max=1 | 212,468 | 2.202 | 25.646 | 24.14 | 37.32 | 405,865 |
+| CWIST C1M drain_chunk=8 | 209,934 | 2.326 | 24.977 | 19.35 | 33.07 | 432,220 |
+| CWIST C1M PUBLIC_FIXED (opt-in) | 211,491 | 2.325 | 25.909 | 16.86 | 30.15 | 440,374 |
+| Axum | 158,648 | 2.507 | 12.671 | 12.99 | 15.22 | 339,682 |
+| Gin | 108,888 | 6.748 | 103.300 | 26.85 | 28.40 | 634,186 |
+| Spring Boot | 75,934 | 5.216 | 41.630 | 1,253.14 | 1,256.02 | N/A |
 
 Main profile: `wrk -t12 -c400 -d10s`, after a discarded 10s warmup.
 
 ### Separate tuned profile
 
 `wrk -t4 -c100 -d10s`, after a discarded 10s warmup. Do not compare these rows as equal-load results against the main table.
-- CWIST classic: 122,890 req/s; mean 0.501 ms; corrected P99.999 10.045 ms.
-- Spring Boot: 59,158 req/s; mean 1.743 ms; corrected P99.999 21.471 ms.
+- CWIST classic: 178,196 req/s; mean 0.356 ms; corrected P99.999 8.586 ms.
+- Spring Boot: 75,897 req/s; mean 1.417 ms; corrected P99.999 20.378 ms.
 
 Legacy records remain in history but are not pooled into this measurement contract. A 10-second tail screen is not a universal SLO or a statistically established speedup.
 
@@ -60,8 +60,8 @@ _Methodology, JVM options, and fairness settings: [docs/webserver-benchmark.md](
 <!-- TUNED_BENCHMARK:START -->
 **Tuned low-latency run (wrk -t4 -c100 -d10s (after 10s warmup, warmup discarded)), CWIST vs Spring Boot on identical concurrency:**
 
-- **CWIST**: 122,890 req/s at 0.50ms average latency (P50 0.41ms, P90 0.89ms, P99 2.14ms)
-- **Spring Boot**: 59,158 req/s at 1.74ms average latency (P50 1.49ms, P90 3.04ms, P99 6.17ms), same trained AOT cache as the main run above
+- **CWIST**: 178,196 req/s at 0.36ms average latency (P50 0.28ms, P90 0.59ms, P99 1.94ms)
+- **Spring Boot**: 75,897 req/s at 1.42ms average latency (P50 1.18ms, P90 2.75ms, P99 5.44ms), same trained AOT cache as the main run above
 
 These runs use a different concurrency budget from the main table. They do not establish a causal scheduling explanation or a universal tail-latency improvement.
 <!-- TUNED_BENCHMARK:END -->
