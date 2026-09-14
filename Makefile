@@ -589,10 +589,52 @@ test_bdr: $(LIB_NAME) tests/test_bdr.c
 	$(CC) $(CFLAGS) -o test_bdr tests/test_bdr.c $(LIB_NAME) $(LIBS)
 	./test_bdr
 
-install: $(LIB_NAME)
-	@echo "Installing library to $(LIBDIR)..."
-	install -d $(LIBDIR)
-	install -m 644 $(LIB_NAME) $(LIBDIR)
+install: $(LIB_NAME) $(PC_FILE)
+	@echo "Installing CWIST library to $(LIBDIR)..."
+	install -d $(INSTALL_LIBDIR)
+	install -m 644 $(LIB_NAME) $(INSTALL_LIBDIR)/
+	@echo "Installing external archives to $(DEPSDIR)..."
+	install -d $(INSTALL_DEPSDIR)
+	install -m 644 $(EXTERNAL_LIBS) $(INSTALL_DEPSDIR)/
+	@echo "Installing CWIST headers to $(INCLUDEDIR)/cwist..."
+	install -d $(INSTALL_INCLUDEDIR)/cwist
+	cp -R include/cwist/. $(INSTALL_INCLUDEDIR)/cwist/
+	find $(INSTALL_INCLUDEDIR)/cwist -type d -exec chmod 755 {} \;
+	find $(INSTALL_INCLUDEDIR)/cwist -type f -exec chmod 644 {} \;
+	@echo "Installing bundled dependency headers to $(VENDOR_INCLUDEDIR)..."
+	install -d $(INSTALL_VENDOR_INCLUDEDIR)/cjson $(INSTALL_VENDOR_INCLUDEDIR)/ttak $(INSTALL_VENDOR_INCLUDEDIR)/openssl $(INSTALL_VENDOR_INCLUDEDIR)/lsquic $(INSTALL_VENDOR_INCLUDEDIR)/uriparser
+	install -m 644 $(CJSON_DIR)/cJSON.h $(INSTALL_VENDOR_INCLUDEDIR)/cjson/
+	cp -R $(LIBTTAK_DIR)/include/ttak/. $(INSTALL_VENDOR_INCLUDEDIR)/ttak/
+	cp -R $(BORINGSSL_DIR)/include/openssl/. $(INSTALL_VENDOR_INCLUDEDIR)/openssl/
+	install -m 644 $(LSQUIC_DIR)/include/lsquic.h $(INSTALL_VENDOR_INCLUDEDIR)/lsquic/
+	cp -R $(URIPARSER_DIR)/include/uriparser/. $(INSTALL_VENDOR_INCLUDEDIR)/uriparser/
+	install -m 644 $(SQLITE_DIR)/sqlite3.h $(SQLITE_DIR)/sqlite3ext.h $(INSTALL_VENDOR_INCLUDEDIR)/
+	find $(INSTALL_VENDOR_INCLUDEDIR) -type d -exec chmod 755 {} \;
+	find $(INSTALL_VENDOR_INCLUDEDIR) -type f -exec chmod 644 {} \;
+	@echo "Installing pkg-config file to $(PCDIR)..."
+	install -d $(INSTALL_PCDIR)
+	install -m 644 $(PC_FILE) $(INSTALL_PCDIR)/
+	@echo "Installing license documentation to $(PREFIX)/share/doc/cwist..."
+	install -d $(DESTDIR)$(PREFIX)/share/doc/cwist/licenses
+	install -m 644 LICENSE NOTICE.md $(DESTDIR)$(PREFIX)/share/doc/cwist/
+	@set -e; for spec in \
+		"$(BORINGSSL_DIR)/LICENSE:boringssl:LICENSE" \
+		"$(LSQUIC_DIR)/LICENSE:lsquic:LICENSE" \
+		"$(LSQUIC_DIR)/LICENSE.chrome:lsquic:LICENSE.chrome" \
+		"$(LIBTTAK_DIR)/LICENSE:libttak:LICENSE" \
+		"$(CJSON_DIR)/LICENSE:cjson:LICENSE" \
+		"lib/cnats/LICENSE:cnats:LICENSE" \
+		"$(URIPARSER_DIR)/COPYING.BSD-3-Clause:uriparser:COPYING.BSD-3-Clause"; do \
+		src="$${spec%%:*}"; rest="$${spec#*:}"; comp="$${rest%%:*}"; \
+		if [ -f "$$src" ]; then \
+			install -d $(DESTDIR)$(PREFIX)/share/doc/cwist/licenses/$$comp; \
+			install -m 644 "$$src" $(DESTDIR)$(PREFIX)/share/doc/cwist/licenses/$$comp/; \
+		fi; \
+	done
+	@echo "Installing cwist CLI to $(BINDIR)..."
+	install -d $(DESTDIR)$(BINDIR)
+	install -m 755 tools/cli/cwist $(DESTDIR)$(BINDIR)/cwist
+	@echo "Installation complete.  Compile with: pkg-config --cflags --libs cwist"
 
 	@echo "Installing headers to $(INCLUDEDIR)/cwist..."
 	install -d $(INCLUDEDIR)/cwist
