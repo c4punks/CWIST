@@ -55,7 +55,7 @@ jobs:
         with:
           name: cwist-source-${{ github.sha }}
           path: |
-            dist/cwist-3.4.1.tar.gz
+            dist/cwist-${{ env.RELEASE_VERSION }}.tar.gz
             dist/SHA256SUMS
             dist/SOURCE_COMMIT
             dist/SOURCE_TREE
