@@ -730,7 +730,6 @@ install: $(LIB_NAME) $(PC_FILE)
 		"$(LSQUIC_DIR)/LICENSE:lsquic:LICENSE" \
 		"$(LSQUIC_DIR)/LICENSE.chrome:lsquic:LICENSE.chrome" \
 		"lib/nghttp3/COPYING:nghttp3:COPYING" \
-		"lib/ngtcp2/COPYING:ngtcp2:COPYING" \
 		"$(LIBTTAK_DIR)/LICENSE:libttak:LICENSE" \
 		"$(CJSON_DIR)/LICENSE:cjson:LICENSE" \
 		"lib/cnats/LICENSE:cnats:LICENSE" \

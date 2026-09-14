@@ -10,7 +10,6 @@ license file.
 | BoringSSL | `lib/boringssl` | Apache-2.0 | TLS 1.3, ECH, hybrid PQC KEM |
 | lsquic | `lib/lsquic` | MIT | QUIC / HTTP/3 engine; some proto-quic-derived parts are BSD-3-Clause (Chromium Authors, see `LICENSE.chrome`) |
 | nghttp3 | `lib/nghttp3` | MIT | HTTP/3 framing (submodule) |
-| ngtcp2 | `lib/ngtcp2` | MIT | QUIC transport helpers (submodule) |
 | libttak | `lib/libttak` | BSD-3-Clause | Memory/epoch/token-bucket utilities |
 | SQLite | `lib/sqlite3` | Public Domain | Embedded database; author disclaims copyright |
 | cJSON | `lib/cjson` | MIT | JSON parsing |
