@@ -30,7 +30,3 @@
 	path = lib/multipart-parser-c
 	url = https://github.com/iafonov/multipart-parser-c.git
 	branch = main
-[submodule "lib/nghttp3"]
-	path = lib/nghttp3
-	url = https://github.com/ngtcp2/nghttp3.git
-	branch = main
