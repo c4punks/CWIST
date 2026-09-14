@@ -19,29 +19,29 @@ results are not universal throughput, memory, or latency guarantees.
 <!-- WEBSERVER_BENCHMARKS:START -->
 ## Latest isolated HTTP benchmark
 
-Measured commit: `635b65480da6dcc6170c5e7c025146e2a0aaf793`. Release tag: `not recorded; identify this run by commit`.
-Run: https://github.com/c4punks/CWIST/actions/runs/34852894296. Timestamp: `2026-09-14T14:13:34.099420+00:00`.
+Measured commit: `9c3d3fc2e33c350093bb0b8d41ae60735c73c741`. Release tag: `not recorded; identify this run by commit`.
+Run: https://github.com/c4punks/CWIST/actions/runs/34854363253. Timestamp: `2026-09-14T14:26:10.235369+00:00`.
 
 Latency columns use the **wrk corrected distribution**. RSS is a **process-group end sample**, not a peak or unique physical memory. Context switches cover matching thread identities only; N/A means unavailable.
 
 | Profile | Req/s | Mean ms | P99.999 ms | Group RSS MiB | Context-switch delta |
 |---|---:|---:|---:|---:|---:|
-| CWIST classic | 110,171 | 2.082 | 26.232 | 61.82 | N/A |
-| CWIST C1M | 138,577 | 3.164 | 24.602 | 32.68 | 282,734 |
-| CWIST C1M arena_max=1 | 140,406 | 3.049 | 32.534 | 38.05 | 271,415 |
-| CWIST C1M drain_chunk=8 | 141,020 | 3.003 | 22.948 | 33.66 | 264,845 |
-| CWIST C1M PUBLIC_FIXED (opt-in) | 138,806 | 3.030 | 24.500 | 30.08 | 261,035 |
-| Axum | 112,264 | 3.497 | 17.228 | 15.49 | 185,589 |
-| Gin | 79,626 | 6.863 | 86.865 | 28.96 | 326,025 |
-| Spring Boot | 43,131 | 9.204 | 60.533 | 1,265.11 | N/A |
+| CWIST classic | 119,663 | 1.907 | 18.138 | 62.13 | N/A |
+| CWIST C1M | 143,350 | 3.060 | 24.446 | 32.06 | 309,967 |
+| CWIST C1M arena_max=1 | 142,161 | 3.056 | 23.840 | 37.69 | 313,756 |
+| CWIST C1M drain_chunk=8 | 146,475 | 3.030 | 25.978 | 40.53 | 312,535 |
+| CWIST C1M PUBLIC_FIXED (opt-in) | 143,445 | 3.042 | 25.117 | 29.72 | 308,329 |
+| Axum | 120,400 | 3.264 | 18.497 | 16.11 | 190,985 |
+| Gin | 91,085 | 5.743 | 63.863 | 29.28 | 340,853 |
+| Spring Boot | 58,702 | 6.765 | 62.339 | 1,268.07 | N/A |
 
 Main profile: `wrk -t12 -c400 -d10s`, after a discarded 10s warmup.
 
 ### Separate tuned profile
 
 `wrk -t4 -c100 -d10s`, after a discarded 10s warmup. Do not compare these rows as equal-load results against the main table.
-- CWIST classic: 114,536 req/s; mean 0.531 ms; corrected P99.999 7.962 ms.
-- Spring Boot: 43,302 req/s; mean 2.372 ms; corrected P99.999 30.746 ms.
+- CWIST classic: 122,890 req/s; mean 0.501 ms; corrected P99.999 10.045 ms.
+- Spring Boot: 59,158 req/s; mean 1.743 ms; corrected P99.999 21.471 ms.
 
 Legacy records remain in history but are not pooled into this measurement contract. A 10-second tail screen is not a universal SLO or a statistically established speedup.
 
@@ -60,8 +60,8 @@ _Methodology, JVM options, and fairness settings: [docs/webserver-benchmark.md](
 <!-- TUNED_BENCHMARK:START -->
 **Tuned low-latency run (wrk -t4 -c100 -d10s (after 10s warmup, warmup discarded)), CWIST vs Spring Boot on identical concurrency:**
 
-- **CWIST**: 114,536 req/s at 0.53ms average latency (P50 0.44ms, P90 0.93ms, P99 2.21ms)
-- **Spring Boot**: 43,302 req/s at 2.37ms average latency (P50 2.08ms, P90 4.02ms, P99 7.96ms), same trained AOT cache as the main run above
+- **CWIST**: 122,890 req/s at 0.50ms average latency (P50 0.41ms, P90 0.89ms, P99 2.14ms)
+- **Spring Boot**: 59,158 req/s at 1.74ms average latency (P50 1.49ms, P90 3.04ms, P99 6.17ms), same trained AOT cache as the main run above
 
 These runs use a different concurrency budget from the main table. They do not establish a causal scheduling explanation or a universal tail-latency improvement.
 <!-- TUNED_BENCHMARK:END -->
