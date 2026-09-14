@@ -144,8 +144,38 @@ long get_optimal_thread_count(void) {
          * Keep at least 4 threads per worker so synchronous handoffs (e.g. h2c)
          * or heavy requests do not stall the worker's event loop. */
         if (workers > 1) {
+            /* `cores` is this process's own CPU budget, not the machine's:
+             * get_cpu_cores() reads sched_getaffinity(), and with workers > 1
+             * every worker has already been pinned to a single CPU by
+             * cwist_app_pin_worker() before the pool is built. So in the
+             * default deployment (workers == CPU count) cores is 1 here, the
+             * arithmetic below yields 0, and the floor of 4 used to win --
+             * leaving 4 reactor event loops timesharing one CPU.
+             *
+             * Extra loops on a single CPU add no parallelism, only scheduler
+             * queueing, and it lands squarely on the tail. Measured on a
+             * 4-core box, 4 workers, wrk -t8 -c400, server pinned to cores
+             * 0-3 and the load generator to 4-11:
+             *
+             *   loops/worker   rps     avg      p90       p99
+             *   4 (old)        358k    3.17ms   10.06ms   16.65ms
+             *   2              373k    1.45ms    3.92ms    6.38ms
+             *   1 (this)       388k    0.99ms    1.17ms    2.10ms
+             *
+             * Monotonic in loop count and reproducible across runs, and
+             * throughput improves too, so it is not a latency/throughput
+             * trade. Cap the floor at the CPUs this worker may actually run
+             * on: a worker pinned to one CPU gets one loop.
+             *
+             * The h2c/heavy-request concern the floor was protecting against
+             * is real but is not solved by extra loops on a single CPU: they
+             * cannot run concurrently there either. A blocking handler now
+             * stalls its own worker's connections until it yields, while the
+             * other workers (other CPUs, shared listener) keep serving. */
+            long floor = cores < 4 ? cores : 4;
             long count = (cores * 4) / workers;
-            if (count < 4) count = 4;
+            if (count < floor) count = floor;
+            if (count < 1) count = 1;
             if (count > 32) count = 32;
             return count;
         }
