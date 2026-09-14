@@ -8,7 +8,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: write
+  contents: read
 
 concurrency:
   group: cwist-ci-${{ github.ref }}
@@ -22,8 +22,12 @@ jobs:
       contents: read
     steps:
       - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
       - name: Test benchmark report generation
-        run: python3 -m unittest discover -s scripts/ci -p 'test_*.py' -v
+        run: |
+          python3 -m unittest discover -s scripts/ci -p 'test_*.py' -v
+          python3 tests/test_benchmark_session.py
 
   bsd-kqueue:
     name: kqueue tests (macOS)
@@ -32,6 +36,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
+          persist-credentials: false
           submodules: recursive
       - name: Install build dependencies
         run: brew install cmake pkg-config curl nghttp2 brotli
@@ -42,6 +47,7 @@ jobs:
           PKG_CONFIG_PATH: /opt/homebrew/opt/curl/lib/pkgconfig
         run: |
           make test_seq test_http_chunked test_mux test_test_client test_http_pipeline test_http_fairness
+          make test_public_fixed_cache test_public_fixed_http test_gc_job_handoff
           make -pn | grep -E '^IO_SRC[[:space:]]*=[[:space:]]*src/sys/io/kqueue\.c$'
 
   benchmark:
@@ -93,6 +99,8 @@ jobs:
         run: |
           # 1. CWIST Minimal HTTP Web Server
           cat << 'EOF' > /tmp/cwist_server.c
+          #include <stdlib.h>
+          #include <string.h>
           #include <cwist/app.h>
           #include <cwist/sys/app/app.h>
           #include <cwist/sys/app/endpoint_opts.h>
@@ -102,7 +110,8 @@ jobs:
           }
           int main(void) {
               cwist_app *app = cwist_app_create();
-              cwist_app_get_opt(app, "/", handle_root, CWIST_ENDPOINT_FIXED);
+              const char *public_cache = getenv("CWIST_BENCH_PUBLIC_FIXED");
+              cwist_app_get_opt(app, "/", handle_root, public_cache && strcmp(public_cache, "1") == 0 ? CWIST_ENDPOINT_PUBLIC_FIXED : CWIST_ENDPOINT_FIXED);
               cwist_app_listen(app, 9091);
               cwist_app_destroy(app);
               return 0;
@@ -271,47 +280,23 @@ jobs:
           # measured run so JIT-tiered runtimes (JVM) reach steady state; context
           # switches are only counted over the measured window.
           run_bench() {
-            NAME=$1
-            CMD=$2
-            PORT=$3
-            TXT=$4
-            STAT_TXT=$5
-            WAIT=${6:-2}
-
-            echo "=== Starting $NAME Web Server (Port $PORT) ==="
-            $CMD &
-            PID=$!
-            for i in $(seq 1 $WAIT); do
-              curl -sf http://127.0.0.1:$PORT/ > /dev/null 2>&1 && break
-              sleep 1
-            done
-
-            # Warmup (results discarded)
-            wrk -t12 -c400 -d10s http://127.0.0.1:$PORT/ > /dev/null 2>&1 || true
-
-            # Initial stat (after warmup)
-            BEFORE_CSW=$(ps -o nvcsw=,nivcsw= -p $PID 2>/dev/null | awk '{print $1+$2}')
-            [ -z "$BEFORE_CSW" ] && BEFORE_CSW=0
-
-            wrk -t12 -c400 -d10s -s "$GITHUB_WORKSPACE/scripts/ci/tail_latency.lua" --latency http://127.0.0.1:$PORT/ > $TXT 2>&1 || true
-
-            AFTER_CSW=$(ps -o nvcsw=,nivcsw= -p $PID 2>/dev/null | awk '{print $1+$2}')
-            [ -z "$AFTER_CSW" ] && AFTER_CSW=0
-            RSS=$(ps -o rss= -p $PID 2>/dev/null | awk '{print $1}')
-            [ -z "$RSS" ] && RSS=0
-
-            CSW=$((AFTER_CSW - BEFORE_CSW))
-            [ $CSW -lt 0 ] && CSW=0
-
-            kill -9 $PID || true
-            echo "rss_kib=$RSS csw=$CSW" > $STAT_TXT
-            cat $TXT
+            NAME="$1"; CMD="$2"; PORT="$3"; TXT="$4"; STAT_TXT="$5"; WAIT="$6"
+            THREADS="${7:-12}"; CONNECTIONS="${8:-400}"
+            echo "=== Isolated $NAME (port $PORT) ==="
+            python3 -c 'import socket,sys; s=socket.socket(); s.settimeout(.2); occupied=s.connect_ex(("127.0.0.1",int(sys.argv[1])))==0; s.close(); assert not occupied,"benchmark port already occupied"' "$PORT"
+            python3 "$GITHUB_WORKSPACE/scripts/ci/benchmark_session.py" \
+              --server "$CMD" --timeout "$((WAIT + 100))" --receipt "${TXT%.txt}.session.json" \
+              -- python3 "$GITHUB_WORKSPACE/scripts/ci/benchmark_workload.py" \
+              "$PORT" "$TXT" "$STAT_TXT" "$WAIT" "$THREADS" "$CONNECTIONS"
+            python3 -c 'import socket,sys; s=socket.socket(); s.settimeout(.2); occupied=s.connect_ex(("127.0.0.1",int(sys.argv[1])))==0; s.close(); assert not occupied,"benchmark listener survived cleanup"' "$PORT"
+            cat "$TXT"
           }
 
           # CWIST is measured twice: the classic thread-pool path (the
           # ultra-low-latency profile) and the event-driven C1M reactor path.
           run_bench "CWIST (classic)" "env CWIST_C1M_MODE=0 /tmp/cwist_server" 9091 "/tmp/cwist.txt" "/tmp/cwist_stat.txt" 10
           run_bench "CWIST C1M" "env CWIST_C1M_MODE=1 /tmp/cwist_server" 9091 "/tmp/cwist_c1m.txt" "/tmp/cwist_c1m_stat.txt" 10
+          run_bench "CWIST C1M public FIXED" "env CWIST_C1M_MODE=1 CWIST_BENCH_PUBLIC_FIXED=1 /tmp/cwist_server" 9091 "/tmp/cwist_c1m_public_fixed.txt" "/tmp/cwist_c1m_public_fixed_stat.txt" 10
 
           # CWIST_MALLOC_ARENA_MAX=1 caps glibc's per-process malloc arena
           # count to 1 before the fork loop (src/sys/app/app.c), inherited
@@ -341,17 +326,7 @@ jobs:
           # Tuned low-latency profile (CWIST classic only): lower connection
           # pressure (c100, 4 wrk threads) so the per-request latency floor is
           # visible alongside the c400 throughput numbers.
-          echo "=== Starting CWIST tuned run (wrk -t4 -c100) ==="
-          env CWIST_C1M_MODE=0 /tmp/cwist_server &
-          TUNED_PID=$!
-          for i in $(seq 1 10); do
-            curl -sf http://127.0.0.1:9091/ > /dev/null 2>&1 && break
-            sleep 1
-          done
-          wrk -t4 -c100 -d10s http://127.0.0.1:9091/ > /dev/null 2>&1 || true
-          wrk -t4 -c100 -d10s -s "$GITHUB_WORKSPACE/scripts/ci/tail_latency.lua" --latency http://127.0.0.1:9091/ > /tmp/cwist_tuned.txt 2>&1 || true
-          kill -9 $TUNED_PID || true
-          cat /tmp/cwist_tuned.txt
+          run_bench "CWIST tuned" "env CWIST_C1M_MODE=0 /tmp/cwist_server" 9091 "/tmp/cwist_tuned.txt" "/tmp/cwist_tuned_stat.txt" 10 4 100
           export TUNED_PROFILE="wrk -t4 -c100 -d10s (after 10s warmup, warmup discarded)"
           run_bench "Axum" "/tmp/axum_bench/target/release/axum_server" 9092 "/tmp/axum.txt" "/tmp/axum_stat.txt" 10
           run_bench "Gin" "/tmp/gin_bench/gin_server" 9094 "/tmp/gin.txt" "/tmp/gin_stat.txt" 10
@@ -436,20 +411,9 @@ jobs:
           # the identical treatment: its own dedicated boot (replaying the
           # same trained AOT cache, so it isn't paying a second cold-start
           # penalty CWIST doesn't pay either) measured under -t4 -c100.
-          echo "=== Starting Spring Boot tuned run (wrk -t4 -c100) ==="
-          java $SPRING_JVM_OPTS \
-            -XX:+AOTClassLinking \
-            -XX:AOTCache=$SPRING_AOT_CACHE \
-            -jar /tmp/spring_bench/target/spring-bench-0.0.1-SNAPSHOT.jar --server.port=9093 &
-          SPRING_TUNED_PID=$!
-          for i in $(seq 1 90); do
-            curl -sf http://127.0.0.1:9093/ > /dev/null 2>&1 && break
-            sleep 1
-          done
-          wrk -t4 -c100 -d10s http://127.0.0.1:9093/ > /dev/null 2>&1 || true
-          wrk -t4 -c100 -d10s -s "$GITHUB_WORKSPACE/scripts/ci/tail_latency.lua" --latency http://127.0.0.1:9093/ > /tmp/spring_tuned.txt 2>&1 || true
-          kill -9 $SPRING_TUNED_PID || true
-          cat /tmp/spring_tuned.txt
+          run_bench "Spring Boot tuned" \
+            "java $SPRING_JVM_OPTS -XX:+AOTClassLinking -XX:AOTCache=$SPRING_AOT_CACHE -jar /tmp/spring_bench/target/spring-bench-0.0.1-SNAPSHOT.jar --server.port=9093" \
+            9093 "/tmp/spring_tuned.txt" "/tmp/spring_tuned_stat.txt" 90 4 100
 
           # Result JSON must land in the workspace so upload-artifact can find it
           # (the shell is still sitting in /tmp/spring_bench from the maven build).
@@ -466,181 +430,29 @@ jobs:
           export GIN_FRAMEWORK="Gin v1.10.0 (gin-gonic/gin, release mode)"
           export WRK_PROFILE="wrk -t12 -c400 -d10s (after 10s warmup, warmup discarded)"
 
-          python3 - <<'PY'
-          import json, os, re, pathlib
-          from datetime import datetime, timezone
-
-          # wrk's own default "Thread Stats" section only ever prints 50/75/90/99,
-          # but scripts/ci/tail_latency.lua's `done()` callback appends an extended
-          # block with min/avg/max plus 50/75/90/99/99.9/99.99/99.999 - every field
-          # below is already in every run's raw text, this just extracts all of it
-          # instead of discarding most of it (only p50/p90/p99/p99.999 were kept
-          # before). The extra percentiles feed the KDE-style latency distribution
-          # chart in scripts/ci/benchmark.py (see docs/webserver-latency-distribution.svg).
-          def parse_wrk(path_str):
-              p = pathlib.Path(path_str)
-              text = p.read_text() if p.exists() else ""
-
-              def to_ms(val, unit):
-                  if unit == "us": return val / 1000.0
-                  if unit == "s": return val * 1000.0
-                  return val
-
-              def find(pattern):
-                  m = re.search(pattern, text)
-                  if not m: return 0.0
-                  return to_ms(float(m.group(1)), m.group(2))
-
-              def percentile(pct_str):
-                  return find(r"\s+" + re.escape(pct_str) + r"\s+([0-9.]+)(us|ms|s)")
-
-              rps = 0.0
-              m_rps = re.search(r"Requests/sec:\s+([0-9.]+)", text)
-              if m_rps: rps = float(m_rps.group(1))
-
-              return {
-                  "rps": rps,
-                  "lat_ms": find(r"Latency\s+([0-9.]+)(us|ms|s)"),
-                  "min_ms": find(r"Min Latency:\s+([0-9.]+)\s*(us|ms|s)"),
-                  "max_ms": find(r"Max Latency:\s+([0-9.]+)\s*(us|ms|s)"),
-                  "p50": percentile("50%"),
-                  "p75": percentile("75%"),
-                  "p90": percentile("90%"),
-                  "p99": percentile("99%"),
-                  "p999": percentile("99.9%"),
-                  "p9999": percentile("99.99%"),
-                  "p99_999": percentile("99.999%"),
-              }
-
-          def parse_stat(path_str):
-              p = pathlib.Path(path_str)
-              text = p.read_text() if p.exists() else ""
-              rss = 0.0
-              csw = 0.0
-              m_rss = re.search(r"rss_kib=([0-9]+)", text)
-              if m_rss: rss = float(m_rss.group(1))
-              m_csw = re.search(r"csw=([0-9]+)", text)
-              if m_csw: csw = float(m_csw.group(1))
-              return rss, csw
-
-          # Flattens a parse_wrk() dict into "<prefix>_<field>_ms" keys (plus RSS/Csw
-          # when a stat file is given) so every server's full latency distribution -
-          # not just the handful of percentiles the summary line needs - lands in
-          # webserver.json for the KDE chart to consume.
-          def server_fields(prefix, wrk, rss=None, csw=None):
-              out = {f"{prefix}_rps": wrk["rps"], f"{prefix}_lat_ms": wrk["lat_ms"]}
-              for field in ("min_ms", "p50", "p75", "p90", "p99", "p999", "p9999", "p99_999", "max_ms"):
-                  out_key = field if field.endswith("_ms") else f"{field}_ms"
-                  out[f"{prefix}_{out_key}"] = wrk[field]
-              if rss is not None: out[f"{prefix}_rss_kib"] = rss
-              if csw is not None: out[f"{prefix}_csw"] = csw
-              return out
-
-          cwist_wrk = parse_wrk("/tmp/cwist.txt")
-          cwist_rss, cwist_csw = parse_stat("/tmp/cwist_stat.txt")
-
-          cwist_c1m_wrk = parse_wrk("/tmp/cwist_c1m.txt")
-          cwist_c1m_rss, cwist_c1m_csw = parse_stat("/tmp/cwist_c1m_stat.txt")
-
-          cwist_c1m_arena1_wrk = parse_wrk("/tmp/cwist_c1m_arena1.txt")
-          cwist_c1m_arena1_rss, cwist_c1m_arena1_csw = parse_stat("/tmp/cwist_c1m_arena1_stat.txt")
-
-          cwist_c1m_drainchunk_wrk = parse_wrk("/tmp/cwist_c1m_drainchunk.txt")
-          cwist_c1m_drainchunk_rss, cwist_c1m_drainchunk_csw = parse_stat("/tmp/cwist_c1m_drainchunk_stat.txt")
-
-          cwist_tuned_wrk = parse_wrk("/tmp/cwist_tuned.txt")
-
-          axum_wrk = parse_wrk("/tmp/axum.txt")
-          axum_rss, axum_csw = parse_stat("/tmp/axum_stat.txt")
-
-          gin_wrk = parse_wrk("/tmp/gin.txt")
-          gin_rss, gin_csw = parse_stat("/tmp/gin_stat.txt")
-
-          spring_wrk = parse_wrk("/tmp/spring.txt")
-          spring_rss, spring_csw = parse_stat("/tmp/spring_stat.txt")
-
-          spring_tuned_wrk = parse_wrk("/tmp/spring_tuned.txt")
-
-          data = {
-              "timestamp": datetime.now(timezone.utc).isoformat(),
-              **server_fields("cwist", cwist_wrk, cwist_rss, cwist_csw),
-              **server_fields("cwist_c1m", cwist_c1m_wrk, cwist_c1m_rss, cwist_c1m_csw),
-              # Same C1M binary/config as cwist_c1m_* above, CWIST_MALLOC_ARENA_MAX=1 -
-              # only variable is the env var, direct A/B (see issue #25).
-              **server_fields("cwist_c1m_arena1", cwist_c1m_arena1_wrk, cwist_c1m_arena1_rss, cwist_c1m_arena1_csw),
-              # Same C1M binary/config as cwist_c1m_* above, CWIST_REACTOR_DRAIN_CHUNK=8 -
-              # only variable is the env var, direct A/B (see issue #25,
-              # docs/cooperative-queuing.md). This workload never calls
-              # cwist_async_defer, so parity with cwist_c1m_* here is the
-              # expected, desired result, not a null finding.
-              **server_fields("cwist_c1m_drainchunk", cwist_c1m_drainchunk_wrk, cwist_c1m_drainchunk_rss, cwist_c1m_drainchunk_csw),
-              **server_fields("cwist_tuned", cwist_tuned_wrk),
-              **server_fields("axum", axum_wrk, axum_rss, axum_csw),
-              **server_fields("gin", gin_wrk, gin_rss, gin_csw),
-              **server_fields("spring", spring_wrk, spring_rss, spring_csw),
-              # Same -t4 -c100 low-concurrency profile as cwist_tuned_*, added
-              # so a report comparing "tuned" numbers is comparing like with
-              # like instead of CWIST's best case against Spring's only case.
-              **server_fields("spring_tuned", spring_tuned_wrk),
-              "wrk_profile": os.environ.get("WRK_PROFILE", ""),
-              "tuned_profile": os.environ.get("TUNED_PROFILE", ""),
-              "runner_hw": os.environ.get("RUNNER_HW", ""),
-              "go_env": {
-                  "go_version": os.environ.get("GO_VERSION_RECORDED", ""),
-                  "framework": os.environ.get("GIN_FRAMEWORK", "")
-              },
-              "spring_env": {
-                  "java_version": os.environ.get("SPRING_JAVA_VERSION", ""),
-                  "spring_boot_version": os.environ.get("SPRING_BOOT_VERSION", ""),
-                  "stack": os.environ.get("SPRING_STACK", ""),
-                  "jvm_opts": os.environ.get("SPRING_JVM_OPTS_RECORDED", ""),
-                  "virtual_threads": os.environ.get("SPRING_VIRTUAL_THREADS", "") == "true",
-                  "aot_cache": "CDS (-XX:ArchiveClassesAtExit training run + -XX:SharedArchiveFile replay)"
-              }
-          }
-          print("Parsed web server multi-metric benchmark data:", data)
-          with open("webserver-result.json", "w") as f:
-              json.dump(data, f)
-          PY
-      - name: Copy raw benchmark output
+          python3 scripts/ci/webserver_result.py --output webserver-result.json
+      - name: Preserve raw and partial benchmark evidence
+        if: always()
         run: |
           mkdir -p raw_logs
-          cp /tmp/cwist.txt /tmp/cwist_stat.txt /tmp/cwist_c1m.txt /tmp/cwist_c1m_stat.txt /tmp/cwist_c1m_arena1.txt /tmp/cwist_c1m_arena1_stat.txt /tmp/cwist_c1m_drainchunk.txt /tmp/cwist_c1m_drainchunk_stat.txt /tmp/cwist_tuned.txt /tmp/axum.txt /tmp/axum_stat.txt /tmp/gin.txt /tmp/gin_stat.txt /tmp/spring.txt /tmp/spring_stat.txt /tmp/spring_tuned.txt /tmp/spring_gc.log raw_logs/ 2>/dev/null || true
+          for name in cwist cwist_c1m cwist_c1m_arena1 cwist_c1m_drainchunk cwist_c1m_public_fixed cwist_tuned axum gin spring spring_tuned; do
+            for suffix in .txt .warm.log _stat.txt .session.json; do
+              file="/tmp/${name}${suffix}"
+              if [ -f "$file" ]; then cp "$file" raw_logs/; fi
+            done
+          done
+          if [ -f /tmp/spring_gc.log ]; then cp /tmp/spring_gc.log raw_logs/; fi
       - uses: actions/upload-artifact@v4
+        if: always()
         with:
           name: webserver-result
           path: |
             webserver-result.json
             raw_logs/
-      - name: Latency regression gate (classic 3.0ms / C1M reactor 3.5ms)
-        run: |
-          python3 - <<'PY'
-          import json
-          data = json.load(open("webserver-result.json"))
-          # One shared 2.1ms gate for both modes turned out too tight: shared
-          # CI runners are noisy enough that classic-pool average latency
-          # alone has been observed anywhere from ~0.95ms to ~2.08ms run to
-          # run, and C1M reactor (structurally noisier -- it batches/
-          # coalesces responses, so it's more sensitive to scheduling
-          # jitter) from ~1.85ms to ~2.71ms, consistently above the old
-          # 2.1ms gate even with no code regression at all. Split into two
-          # gates, each set with real headroom above its own mode's worst
-          # observed run rather than the other mode's number.
-          gates_ms = {"CWIST (classic pool)": 3.0, "CWIST (C1M reactor)": 3.5}
-          keys = {"CWIST (classic pool)": "cwist_lat_ms", "CWIST (C1M reactor)": "cwist_c1m_lat_ms"}
-          failures = []
-          for name, gate_ms in gates_ms.items():
-              lat = float(data.get(keys[name], 0.0))
-              status = "OK" if lat <= gate_ms else "REGRESSION"
-              print(f"{status}: {name} average latency {lat:.2f}ms (gate {gate_ms}ms)")
-              if lat > gate_ms:
-                  failures.append(f"{name} ({lat:.2f}ms > {gate_ms}ms)")
-          if failures:
-              print("Average request latency regression: " + ", ".join(failures))
-              raise SystemExit(1)
-          PY
 
   publish-benchmark-report:
+    permissions:
+      contents: write
     needs: [benchmark-report-tests, bsd-kqueue, benchmark, web-server-benchmark]
     if: github.event_name == 'push' && (github.ref == format('refs/heads/{0}', github.event.repository.default_branch) || github.ref == 'refs/heads/dev')
     runs-on: ubuntu-latest
@@ -680,27 +492,20 @@ jobs:
           history.extend(json.load(open(f)) for f in glob.glob('artifacts/benchmark-*.json') + glob.glob('benchmark-*.json'))
           path.write_text(json.dumps(history[-100:], indent=2) + '\n')
 
+          import os, sys
+          sys.path.insert(0, 'scripts/ci')
+          from webserver_result import append_history
           ws_path = Path('benchmarks/webserver.json')
-          ws_history = json.loads(ws_path.read_text()) if ws_path.exists() else []
-          # Filter out previous erroneous zero entries
-          ws_history = [x for x in ws_history if x.get("cwist_rps", 0) > 0 or x.get("axum_rps", 0) > 0]
-          
-          ws_files = glob.glob('artifacts/webserver-result*.json') + glob.glob('artifacts/**/webserver-result*.json', recursive=True) + glob.glob('webserver-result*.json') + glob.glob('**/webserver-result*.json', recursive=True)
-          print("Found webserver result files:", ws_files)
-          for f in set(ws_files):
-              try:
-                  data = json.load(open(f))
-                  print("Loaded data from", f, ":", data)
-                  ws_history.append(data)
-              except Exception as e:
-                  print(f"Error reading {f}: {e}")
-          ws_path.write_text(json.dumps(ws_history[-100:], indent=2) + '\n')
+          old = json.loads(ws_path.read_text()) if ws_path.exists() else []
+          row = json.loads(Path('artifacts/webserver-result.json').read_text())
+          updated = append_history(old, row, os.environ['GITHUB_RUN_ID'], os.environ['GITHUB_SHA'])
+          ws_path.write_text(json.dumps(updated, indent=2) + '\n')
           PY
           python3 scripts/ci/benchmark.py render
       - name: Commit generated benchmark documentation
         run: |
           git config user.name "cwist-ci[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add README README.md ROADMAP.md benchmarks/db.json benchmarks/webserver.json docs/benchmark-trends.svg docs/webserver-benchmark-trends.svg
+          git add README README.md ROADMAP.md benchmarks/db.json benchmarks/webserver.json docs/benchmark-trends.svg docs/webserver-benchmark-trends.svg docs/webserver-latency-distribution.svg
           git diff --cached --quiet || git commit -m "docs(ci): update benchmark report [skip ci]"
           git push

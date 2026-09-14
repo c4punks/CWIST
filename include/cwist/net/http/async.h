@@ -53,6 +53,13 @@ typedef struct cwist_async cwist_async;
  * Call from inside a route handler and return immediately afterwards; the
  * handler must not touch @p req or @p res after this call.  Ownership of
  * both objects transfers to the returned handle.
+ * Framework middleware may finish its synchronous posthandler work before
+ * dispatch acknowledges the transfer. A foreign producer waits for that
+ * acknowledgement before mutating or sending the exchange. Do not join or
+ * otherwise wait for a completing producer from the handler/middleware.
+ * Inline completion claims and records the response, but sending and cleanup
+ * wait until dispatch/middleware unwind. This also permits inline abort when
+ * scheduling a producer fails, without another allocation or scheduler.
  * @return Handle to complete later, or NULL on allocation failure (the
  * framework falls back to answering whatever the handler wrote).
  */
@@ -84,12 +91,18 @@ void cwist_async_set_timeout(cwist_async *a, uint64_t ms);
  * @brief Complete the exchange with a simple body response.
  * Thread-safe and one-shot: the first of respond/respond_with/abort wins,
  * later calls return false.  @p body is copied.
+ * A winning foreign call may wait for dispatch/middleware to return.
  */
 bool cwist_async_respond(cwist_async *a, cwist_http_status_t status, const char *content_type, const void *body, size_t len);
 
 /**
  * @brief Complete the exchange with a caller-built response.
  * On success the framework takes ownership of @p res (destroyed after send).
+ * On false the caller retains ownership. Build the response on the calling
+ * producer thread, or explicitly disown its GC-tracked owned allocations on
+ * their allocating thread before passing it to this producer. Borrowed data
+ * and opaque cleanup-context dependencies must remain live until destruction;
+ * the framework transfers a managed payload but cannot traverse its context.
  */
 bool cwist_async_respond_with(cwist_async *a, cwist_http_response *res);
 
@@ -98,7 +111,9 @@ bool cwist_async_respond_with(cwist_async *a, cwist_http_response *res);
  */
 bool cwist_async_abort(cwist_async *a, cwist_http_status_t status);
 
-/** @brief Internal: acknowledge the dispatch-side handoff (app.c only). */
+/** @brief Internal: on the dispatch thread, after all middleware has unwound.
+ * Call exactly once; do not touch the exchange after this release-publication.
+ */
 void cwist_async_dispatch_ack(cwist_async *a);
 
 #ifdef __cplusplus

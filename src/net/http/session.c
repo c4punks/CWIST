@@ -6,6 +6,7 @@
 #include <cwist/net/http/session.h>
 #include <cwist/net/http/cookie.h>
 #include <cwist/core/mem/alloc.h>
+#include "async_gc.h"
 #include <cjson/cJSON.h>
 #include <openssl/hmac.h>
 #include <openssl/evp.h>
@@ -265,6 +266,13 @@ void cwist_session_destroy(cwist_session_t *session) {
     if (!session) return;
     cwist_query_map_destroy(session->data);
     cwist_free(session);
+}
+
+void cwist_http_async_disown_session(cwist_session_t *session) {
+    if (!session || !cwist_full_gc_enabled()) return;
+    cwist_http_async_disown_map(session->data);
+    cwist_gc_scope_disown(session);
+    /* app and req are backreferences, not session-owned allocations. */
 }
 
 int cwist_session_commit(cwist_session_t *session, cwist_http_response *res) {

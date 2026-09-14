@@ -27,6 +27,7 @@
 #include <cwist/net/http/http2_flow_control.h>
 #include <cwist/net/http/async.h>
 #include <cwist/core/mem/alloc.h>
+#include <cwist/core/mem/gc.h>
 #include <cwist/core/log.h>
 #include <cwist/sys/metrics/metrics.h>
 #include <cwist/core/seq/seq.h>
@@ -276,6 +277,8 @@ static cwist_h2_async_queue *cwist_h2_async_queue_create(void) {
         q->wake_wr = pfds[1];
     }
 #endif
+    /* Explicit queue refs can outlive the connection thread's TLS GC. */
+    if (cwist_full_gc_enabled()) cwist_gc_scope_disown(q);
     return q;
 }
 
@@ -303,7 +306,14 @@ int cwist_h2_async_queue_enqueue(cwist_h2_async_queue *q, uint32_t stream_id,
                                  bool send_owned) {
     if (!q) return -1;
     h2_async_node *n = (h2_async_node *)cwist_alloc(sizeof(*n));
-    if (!n) return -1;
+    if (!n) {
+        /* Enqueue consumes the exchange even when staging fails. Its
+         * producer already relinquished ownership before calling us. */
+        if (send_owned && send && send != res) cwist_http_response_destroy(send);
+        cwist_http_response_destroy(res);
+        cwist_http_request_destroy(req);
+        return -1;
+    }
     n->stream_id = stream_id;
     n->req = req;
     n->send = send;
@@ -316,6 +326,9 @@ int cwist_h2_async_queue_enqueue(cwist_h2_async_queue *q, uint32_t stream_id,
         h2_async_node_discard(n);
         return -1;
     }
+    /* The connection may drain immediately after the mutex is released;
+     * producer TLS sweeping must no longer own this published node. */
+    if (cwist_full_gc_enabled()) cwist_gc_scope_disown(n);
     if (q->tail) q->tail->next = n;
     else q->head = n;
     q->tail = n;

@@ -10,6 +10,7 @@
 #define _POSIX_C_SOURCE 200809L
 #include <cwist/sys/job/scheduler.h>
 #include <cwist/core/mem/alloc.h>
+#include <cwist/core/mem/gc.h>
 #include <pthread.h>
 #include <time.h>
 #include <stdlib.h>
@@ -164,6 +165,9 @@ cwist_scheduler_t *cwist_scheduler_create(size_t worker_count, size_t queue_capa
 
     cwist_scheduler_t *s = (cwist_scheduler_t *)cwist_alloc(sizeof(*s));
     if (!s) return NULL;
+    /* Explicit destroy owns the scheduler, not its creator's TLS scope.
+     * Detach on the allocating thread before publishing to workers. */
+    if (cwist_full_gc_enabled()) cwist_gc_scope_disown(s);
     memset(s, 0, sizeof(*s));
 
     s->queue = cwist_io_queue_create(queue_capacity);

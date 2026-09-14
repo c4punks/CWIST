@@ -216,6 +216,7 @@ SRCS = src/core/sstring/sstring.c \
        src/core/orm/orm_socket.c \
        src/core/orm/rdbms_auto_mount.c \
        src/sys/app/app.c \
+       src/sys/app/public_fixed_cache.c \
        src/net/websocket/websocket.c \
        src/net/websocket/ws_utils.c \
        src/core/utils/json_builder.c \
@@ -275,6 +276,7 @@ WASM_SRCS = src/core/sstring/sstring.c \
        src/net/http/cookie.c \
        src/net/http/session.c \
        src/sys/app/app.c \
+       src/sys/app/public_fixed_cache.c \
        src/sys/app/middleware.c \
        src/sys/app/config.c \
        src/sys/app/logger.c \
@@ -452,7 +454,9 @@ $(CNATS_LIB):
 
 # --- Test Targets ---
 
-TEST_TARGETS = test_worker_affinity \
+TEST_TARGETS = test_public_fixed_cache \
+               test_public_fixed_http \
+               test_worker_affinity \
                test_app_resource_limits \
                test_reactor_wake \
                test_classic_pool_scaling \
@@ -497,6 +501,7 @@ TEST_TARGETS = test_worker_affinity \
                test_db_memory \
                test_redis \
                test_scheduler \
+               test_gc_job_handoff \
                test_async_defer \
                test_http_fairness \
                test_http_pipeline \
@@ -538,7 +543,40 @@ bench_security_pool: $(LIB_NAME) tests/bench_security_pool.c
 
 test: $(TEST_TARGETS)
 
-src/sys/app/app.o: src/sys/app/worker_affinity.h
+src/sys/app/app.o: src/sys/app/worker_affinity.h src/sys/app/public_fixed_cache.h
+
+# The unit suite uses real HTTP layouts and only opaque DB/cJSON declarations;
+# no vendor builds, parser mocks, or duplicate cache implementation.
+PFC_UNIT_FLAGS = -std=c17 -D_POSIX_C_SOURCE=200809L -Wall -Wextra -Werror -pthread -Itests/support -Iinclude -include tests/support/pfc_opaque_db.h
+PFC_UNIT_SRCS = tests/test_public_fixed_cache.c src/sys/app/public_fixed_cache.c
+test_public_fixed_cache: $(PFC_UNIT_SRCS) src/sys/app/public_fixed_cache.h
+	$(CC) $(PFC_UNIT_FLAGS) -o $@ $(PFC_UNIT_SRCS)
+	./$@
+	$(CC) $(PFC_UNIT_FLAGS) -DNDEBUG -o $@ $(PFC_UNIT_SRCS)
+	./$@
+
+.PHONY: test_public_fixed_cache_sanitize
+test_public_fixed_cache_sanitize:
+	$(CC) $(PFC_UNIT_FLAGS) -g -fsanitize=address,undefined -fno-omit-frame-pointer -o test_public_fixed_cache_asan $(PFC_UNIT_SRCS)
+	./test_public_fixed_cache_asan
+
+test_public_fixed_http: $(LIB_NAME) tests/test_public_fixed_http.c
+	$(CC) $(CFLAGS) -DCWIST_PFC_TESTING -o $@ tests/test_public_fixed_http.c src/sys/app/app.c $(LIB_NAME) $(LIBS)
+	./$@ classic nogc
+	./$@ classic gc
+	./$@ c1m nogc
+	./$@ c1m gc
+	$(CC) $(CFLAGS) -DNDEBUG -DCWIST_PFC_TESTING -o $@ tests/test_public_fixed_http.c src/sys/app/app.c $(LIB_NAME) $(LIBS)
+	./$@ classic nogc
+	./$@ classic gc
+	./$@ c1m nogc
+	./$@ c1m gc
+
+# Force an instrumented library rebuild too; a sanitizer-only harness linked
+# to stale uninstrumented objects is insufficient. Parent CI runs this target.
+.PHONY: test_public_fixed_http_sanitize
+test_public_fixed_http_sanitize:
+	$(MAKE) -B test_public_fixed_http CFLAGS='$(CFLAGS) -g -fsanitize=address,undefined -fno-omit-frame-pointer' LIBS='$(LIBS) -fsanitize=address,undefined'
 
 test_worker_affinity: tests/test_worker_affinity.c src/sys/app/worker_affinity.h
 	$(CC) $(CFLAGS) -Isrc/sys/app -o $@ tests/test_worker_affinity.c
@@ -969,6 +1007,14 @@ cli:
 test_scheduler: $(LIB_NAME) tests/test_scheduler.c
 	$(CC) $(CFLAGS) -o test_scheduler tests/test_scheduler.c $(LIB_NAME) $(LIBS)
 	./test_scheduler
+
+test_gc_job_handoff: $(LIB_NAME) tests/test_gc_job_handoff.c
+	$(CC) $(CFLAGS) -o $@ tests/test_gc_job_handoff.c $(LIB_NAME) $(LIBS)
+	./$@
+	./$@ nogc
+	$(CC) $(CFLAGS) -DNDEBUG -o $@ tests/test_gc_job_handoff.c $(LIB_NAME) $(LIBS)
+	./$@
+	./$@ nogc
 
 test_http_pipeline: $(LIB_NAME) tests/test_http_pipeline.c
 	$(CC) $(CFLAGS) -o $@ tests/test_http_pipeline.c $(LIB_NAME) $(LIBS)
