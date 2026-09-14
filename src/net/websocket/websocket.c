@@ -23,6 +23,12 @@
 
 #define WS_GUID "258EAFA5-E914-47DA-95CA-C5AB0DC85B11"
 
+/* Maximum accepted payload per frame (16 MiB).  RFC 6455 allows up to
+ * 2^63-1 bytes, but accepting multi-GB frames before reading a byte of
+ * payload exposes the server to an OOM DoS from any connected client.
+ * Applications that need larger transfers should use message fragmentation. */
+#define CWIST_WS_MAX_PAYLOAD_BYTES ((uint64_t)(16u * 1024u * 1024u))
+
 /**
  * @brief Portable case-insensitive substring search.
  *
@@ -168,9 +174,11 @@ cwist_ws_frame *cwist_websocket_receive(cwist_websocket *ws) {
     uint8_t masking_key[4];
     if (read_exact(ws->fd, masking_key, 4) < 0) return NULL;
 
+    if (payload_len > CWIST_WS_MAX_PAYLOAD_BYTES) return NULL;
+
     uint8_t *payload = NULL;
     if (payload_len > 0) {
-        payload = (uint8_t *)cwist_alloc(payload_len + 1); // +1 for safety null term if text
+        payload = (uint8_t *)cwist_alloc(payload_len + 1); /* +1: null-terminator for text frames */
         if (!payload) return NULL;
         if (read_exact(ws->fd, payload, payload_len) < 0) {
             cwist_free(payload);
