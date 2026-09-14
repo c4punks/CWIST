@@ -10,4 +10,15 @@ class PresentationTests(unittest.TestCase):
   svg=render_webserver_svg([self.row()]);self.assertIn('N/A',svg);self.assertNotIn('Peak RSS',svg)
  def test_resource_sample_not_peak(self):
   text=webserver_summary(self.row());self.assertIn('end sample',text);self.assertNotIn('Peak RSS',text)
+ def test_pss_column_rendered_and_distinguished_from_rss(self):
+  # A page shared between worker processes is counted once per process by
+  # RSS and once total by PSS, so the table has to carry both and say which
+  # one compares against a single-process server (issue #150).
+  row=dict(self.row(),cwist_rss_kib=30176,cwist_pss_kib=16836)
+  text=webserver_summary(row)
+  self.assertIn('Group PSS MiB',text);self.assertIn('Group RSS MiB',text)
+  self.assertIn('29.47',text)  # 30176 KiB RSS
+  self.assertIn('16.44',text)  # 16836 KiB PSS
+ def test_pss_missing_marked_unavailable(self):
+  self.assertIn('N/A',webserver_summary(dict(self.row(),cwist_rss_kib=30176)))
 if __name__=='__main__':unittest.main()

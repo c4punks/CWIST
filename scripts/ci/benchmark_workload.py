@@ -37,9 +37,30 @@ def snapshot_group(pgid, proc=Path('/proc')):
             except PermissionError:
                 fds = None
             rss = status.get('VmRSS')
+            # VmRSS counts every page mapped into this process, including
+            # pages shared with the other processes in the same pgid (the
+            # binary's own .text, shared libraries). Summing rss_kib across
+            # a multi-process server counts each such page once per process
+            # instead of once total, inflating the group's real memory use
+            # (issue #150). Pss (proportional set size, from smaps_rollup)
+            # divides a shared page's cost by how many mappers share it, so
+            # summing pss_kib across the group gives the group's actual
+            # unique memory footprint. Not available on every kernel/
+            # permission setup, so this stays optional (None on failure)
+            # alongside rss_kib rather than replacing it.
+            pss_kib = None
+            try:
+                rollup = (path / 'smaps_rollup').read_text()
+                for line in rollup.splitlines():
+                    if line.startswith('Pss:'):
+                        pss_kib = int(line.split()[1])
+                        break
+            except (FileNotFoundError, ProcessLookupError, PermissionError, ValueError):
+                pass
             rows.append({'pid': int(path.name), 'start': fields[19], 'tasks': tasks, 'tasks_complete': tasks_complete,
                          'cpus': status.get('Cpus_allowed_list', '').strip(),
                          'rss_kib': int(rss.split()[0]) if rss is not None else None,
+                         'pss_kib': pss_kib,
                          'nofile': [line for line in (path / 'limits').read_text().splitlines()
                                     if line.startswith('Max open files')], 'fds': fds})
         except (FileNotFoundError, ProcessLookupError):

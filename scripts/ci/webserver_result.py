@@ -80,6 +80,17 @@ def summarize_resources(before, after):
     rss = None
     if after and all(type(p.get('rss_kib')) is int and p['rss_kib'] >= 0 for p in after):
         rss = sum(p['rss_kib'] for p in after)
+    # pss_kib (issue #150): summing rss_kib across a multi-process server's
+    # workers counts each page shared between them (the binary's own .text,
+    # shared libraries) once per process, overstating the group's real
+    # memory use relative to a single-process competitor whose rss_kib
+    # already reflects reality. Pss divides a shared page's cost by however
+    # many processes map it, so summing pss_kib across the group gives its
+    # actual unique footprint. Only available when snapshot_group() could
+    # read smaps_rollup for every process.
+    pss = None
+    if after and all(type(p.get('pss_kib')) is int and p['pss_kib'] >= 0 for p in after):
+        pss = sum(p['pss_kib'] for p in after)
     def counters(rows):
         values = {}
         for process in rows:
@@ -98,7 +109,9 @@ def summarize_resources(before, after):
             csw = sum(last[k] - first[k] for k in first)
     except (KeyError, TypeError, ValueError):
         pass
-    return {'rss_kib': rss, 'csw': csw, 'rss_kind': 'process-group end sample',
+    return {'rss_kib': rss, 'pss_kib': pss, 'csw': csw, 'rss_kind': 'process-group end sample',
+            'pss_kind': 'process-group end sample, shared pages divided by mapper count'
+                        if pss is not None else 'unavailable: smaps_rollup unreadable',
             'csw_kind': 'same-TID counter delta' if csw is not None else 'unavailable: task churn or missing counters'}
 
 
@@ -122,9 +135,10 @@ def build_result(cases, metadata):
         for target in keys.values():
             result[name+'_'+target+'_ms'] = raw[target]
         result[name+'_rss_kib'] = resources['rss_kib']
+        result[name+'_pss_kib'] = resources['pss_kib']
         result[name+'_csw'] = resources['csw']
         result['measurements'][name] = {'requests':raw['requests'], 'errors':raw['errors'],
-            'duration_us':raw['duration_us'], 'resource_unavailable':{'rss': 'missing counters' if resources['rss_kib'] is None else None, 'csw': resources['csw_kind'] if resources['csw'] is None else None},
+            'duration_us':raw['duration_us'], 'resource_unavailable':{'rss': 'missing counters' if resources['rss_kib'] is None else None, 'pss': resources['pss_kind'] if resources['pss_kib'] is None else None, 'csw': resources['csw_kind'] if resources['csw'] is None else None},
             'expected_count_above_p99_999':raw['requests'] * .00001,
             'profile':'tuned' if name.endswith('_tuned') else 'main',
             'server_pgid':telemetry.get('server_pgid'), 'before':telemetry['before'], 'after':telemetry['after'],

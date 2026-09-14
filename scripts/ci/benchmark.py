@@ -329,16 +329,16 @@ def webserver_summary(row):
     lines = ['## Latest isolated HTTP benchmark', '',
              f"Measured commit: `{commit}`. Release tag: `{release}`.",
              f"Run: {run}. Timestamp: `{row.get('timestamp', 'not recorded')}`.",
-             '', 'Latency columns use the **wrk corrected distribution**. RSS is a **process-group end sample**, not a peak or unique physical memory. Context switches cover matching thread identities only; N/A means unavailable.',
-             '', '| Profile | Req/s | Mean ms | P99.999 ms | Group RSS MiB | Context-switch delta |',
-             '|---|---:|---:|---:|---:|---:|']
+             '', 'Latency columns use the **wrk corrected distribution**. Both memory columns are process-group end samples, not peaks. Group RSS sums each process\'s RSS, so a page shared between worker processes is counted once per process; Group PSS divides each shared page by its mapper count, so it is the column to compare against a single-process server. Context switches cover matching thread identities only; N/A means unavailable.',
+             '', '| Profile | Req/s | Mean ms | P99.999 ms | Group PSS MiB | Group RSS MiB | Context-switch delta |',
+             '|---|---:|---:|---:|---:|---:|---:|']
     names = [('cwist','CWIST classic'), ('cwist_c1m','CWIST C1M'),
              ('cwist_c1m_arena1','CWIST C1M arena_max=1'),
              ('cwist_c1m_drainchunk','CWIST C1M drain_chunk=8'),
              ('cwist_c1m_public_fixed','CWIST C1M PUBLIC_FIXED (opt-in)'),
              ('axum','Axum'), ('gin','Gin'), ('spring','Spring Boot')]
     for key, name in names:
-        lines.append(f"| {name} | {metric(key+'_rps',0)} | {metric(key+'_lat_ms')} | {metric(key+'_p99_999_ms')} | {metric(key+'_rss_kib',2,1024)} | {metric(key+'_csw',0)} |")
+        lines.append(f"| {name} | {metric(key+'_rps',0)} | {metric(key+'_lat_ms')} | {metric(key+'_p99_999_ms')} | {metric(key+'_pss_kib',2,1024)} | {metric(key+'_rss_kib',2,1024)} | {metric(key+'_csw',0)} |")
     lines += ['', 'Main profile: `wrk -t12 -c400 -d10s`, after a discarded 10s warmup.',
               '', '### Separate tuned profile', '', '`wrk -t4 -c100 -d10s`, after a discarded 10s warmup. Do not compare these rows as equal-load results against the main table.']
     for key, name in [('cwist_tuned','CWIST classic'), ('spring_tuned','Spring Boot')]:
