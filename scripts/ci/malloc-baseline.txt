@@ -155,7 +155,7 @@ src/net/db_sync/db_sync.c:243:    free(blob);
 src/net/db_sync/db_sync.c:96:        free(blob);
 src/net/graphql/graphql.c:402:        free(printed);
 src/net/graphql/graphql.c:406:    free(printed);
-src/net/http/http.c:1510:        res->alt_svc = strdup(alt_svc);
+src/net/http/http.c:1520:        res->alt_svc = strdup(alt_svc);
 src/net/http/http3.c:1194:            char *tmp = realloc(st->body, new_cap);
 src/net/http/http3.c:1261:                free(st->body);
 src/net/http/http3.c:1266:                st->body = realloc(st->body, assembled_len);
