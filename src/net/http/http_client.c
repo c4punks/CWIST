@@ -30,6 +30,7 @@ typedef struct {
 typedef struct {
     cwist_http_header_node *headers;
     long status_code;
+    int header_count;
 } response_headers_t;
 
 static size_t write_callback(void *contents, size_t size, size_t nmemb, void *userp) {
@@ -65,6 +66,9 @@ static size_t header_callback(char *ptr, size_t size, size_t nmemb, void *userp)
         rh->status_code = strtol(p, NULL, 10);
         return total;
     }
+
+    /* Guard against header-count exhaustion attacks. */
+    if (rh->header_count >= 200) return 0;
 
     /* Find colon separator */
     char *colon = memchr(ptr, ':', total);
@@ -113,6 +117,7 @@ static size_t header_callback(char *ptr, size_t size, size_t nmemb, void *userp)
         cwist_sstring_assign(node->value, val);
         node->next = rh->headers;
         rh->headers = node;
+        rh->header_count++;
     }
 
     return total;
