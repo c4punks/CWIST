@@ -157,7 +157,15 @@ static void exchange(cwist_app *app,const char *path,const char *host,const char
     if(require_park&&c1m){for(int i=0;i<2000&&!atomic_load(&parks);i++)nanosleep(&pause,NULL);CHECK(atomic_load(&parks)>0);}
     if(shutdown_after)count=shutdown_after;
     size_t capacity=(size_t)count*(sizeof(payload)+4096);unsigned char *wire=malloc(capacity);CHECK(wire);
-    used=0;for(;;){CHECK(used<capacity);ssize_t n=recv(client,wire+used,capacity-used,0);if(n<0&&errno==EINTR)continue;CHECK(n>=0);if(!n)break;used+=(size_t)n;}
+    used=0;
+    for(;;){
+        CHECK(used<capacity);
+        ssize_t n=recv(client,wire+used,capacity-used,0);
+        if(n<0&&errno==EINTR)continue;
+        if(n<0)fprintf(stderr,"TCP recv failed: errno=%d mode=%s gc=%d path=%s count=%d bytes=%zu payload_len=%zu raw=%d extra_len=%zu park=%d deferred=%d inline_abort=%d calls=%d hits=%d parks=%d\n",
+            errno,c1m?"c1m":"classic",cwist_full_gc_enabled(),path,count,used,payload_len,raw_requests!=NULL,strlen(extra),require_park,complete_deferred,inline_abort_case,atomic_load(&calls),atomic_load(&hits),atomic_load(&parks));
+        CHECK(n>=0);if(!n)break;used+=(size_t)n;
+    }
     close(client);
     if(c1m){atomic_store(&g_cwist_running,false);cwist_reactor_t *r=atomic_load(&reactor);CHECK(r);cwist_reactor_post_t p={.cb=wake};CHECK(cwist_reactor_post(r,&p));cwist_http_pool_destroy();}
     else if(!joined)CHECK(pthread_join(thread,NULL)==0);

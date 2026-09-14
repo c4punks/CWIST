@@ -77,17 +77,46 @@ producer has relinquished ownership.
 
 ## Verification and limits
 
-This document records source-level ownership reasoning, not runtime GREEN.
-Parent-owned tests/CI must verify creator exit or scope flush before completion,
-heap headers/maps/session/adopted buffers and exhausted-arena fallback, producer
-exit before reactor/HTTP2 drain, middleware posthandler allocations, losing
-`respond_with`, timeout/abort races, and exactly-once managed cleanup. Local
-vendor headers are missing; no build or runtime test was performed for this
-implementation.
+The initial implementation was source-reviewed before runtime testing. On commit
+`5b128f1178df374ee5bc3db1aba8f921a6af7d68`, Linux ASan/UBSan CI passed the
+real TCP classic/C1M matrix with GC on/off, repeated under NDEBUG. This is not
+cross-platform acceptance by itself. The macOS receive-timeout regression was
+then reproduced against the full native library: shutdown had already stopped
+the reactor, but the coalesced batch parked its remaining bytes. A flush that
+observes shutdown now finishes that batch through the existing send helper.
+The native TCP matrix passed in all eight modes after this change. This is not
+an absolute shutdown deadline or a guarantee about already-parked callbacks;
+the helper retains its per-poll timeout. Final integrated CI remains required.
 
-A separate source-level lifetime risk remains in the existing lazily created
-shared timeout scheduler: `cwist_scheduler_create` allocates its scheduler shell
-and worker array in the caller's TLS scope without explicit ownership transfer.
-This exchange-graph patch does not redesign shared scheduler/IO-queue lifecycle.
-Do not interpret coverage of timeout-generated response allocations as proof
-that first-time scheduler creation on a short-lived worker is GC-safe.
+The verification boundary includes creator exit or scope flush before completion,
+heap headers/maps/session/adopted buffers and exhausted-arena fallback, producer
+exit before reactor/HTTP2 drain, middleware posthandlers, losing completion,
+timeout/abort races, and exactly-once managed cleanup. Do not infer unexecuted
+coverage from the ownership inventory.
+
+## Scheduler and IO queue ownership
+
+The scheduler shell, IO queue shell, and sentinel/submitted nodes now leave the
+allocating thread's GC scope before publication. Existing explicit destruction
+and epoch-retirement paths remain their owners. Opaque callback arguments are
+not traversed or transferred by the queue. The caller must transfer a tracked
+payload itself before its receiving callback can use or free it.
+
+Unlike `cwist_alloc`, `cwist_alloc_array` uses untracked `cwist_malloc`; the
+scheduler worker array already has explicit lifetime. The delayed heap uses
+untracked `cwist_realloc`, including initial allocation. Neither needs a new
+disown operation.
+
+The macOS/BSD build selects a separate `kqueue.c` job queue. Its queue shell
+and kevent job wrappers also leave the creator/donor scope before publication.
+The regression waits for its callback before stopping the queue; it does not
+assume every backend drains jobs submitted before a stop request. Creator/donor
+exit ordering and strict GC scope checks remain unchanged.
+
+`test_gc_job_handoff` exercises creator exit before use/destruction and donor
+exit with the consumer paused, for both queues and schedulers. It also checks
+opaque payload ownership and delayed-heap growth. Both the common and kqueue
+implementations passed normal/NDEBUG/ASan with GC on/off (12 component runs).
+The selected macOS backend also passed the full-library normal/NDEBUG target.
+Native ASan used leak detection disabled; this is not leak proof or a guarantee
+about queued callbacks discarded on shutdown. Integrated CI remains required.

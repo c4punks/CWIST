@@ -2300,6 +2300,14 @@ cwist_coalesce_flush_status_t cwist_http_coalesce_flush(int client_fd, cwist_htt
     flags |= MSG_DONTWAIT;
 #endif
 
+    if (!atomic_load(&g_cwist_running)) {
+        /* Shutdown stops the reactor loop: finish this already-built batch
+         * here instead of parking bytes on a callback that cannot run. */
+        int rc = cwist_http_sendmsg_all(client_fd, &iov, 1, flags);
+        conn->olen = 0;
+        return rc == 0 ? CWIST_COALESCE_FLUSH_DONE : CWIST_COALESCE_FLUSH_ERROR;
+    }
+
     size_t sent = 0;
     cwist_write_status_t st = cwist_http_sendmsg_speculative(client_fd, &iov, 1, flags, &sent);
     if (st == CWIST_WRITE_DONE) {

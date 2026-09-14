@@ -2,6 +2,11 @@
 
 Status: candidate work in PR #91. Not released.
 
+**Release hold:** a separate CVE-fix PR must be included in v3.5.0 and its
+associated issue resolved before publication. This is an additional required
+gate even if PR #91 and its CI pass. The issue/PR identifiers are pending
+confirmation; do not treat the missing identifiers as permission to release.
+
 The release target is v3.5.0, not v3.4.2. This release adds an explicit public
 FIXED cache and changes the public API. It also includes HTTP correctness fixes
 and benchmark controls. See the [maintainer proposal](https://github.com/c4punks/CWIST/pull/91#issuecomment-5660861288)

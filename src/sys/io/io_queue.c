@@ -57,6 +57,10 @@ struct cwist_io_queue {
 static job_node_t *cwist_job_node_create(cwist_job_func func, void *arg) {
     job_node_t *node = cwist_alloc(sizeof(*node));
     if (!node) return NULL;
+    /* Sentinels and submitted nodes belong to the queue's retirement /
+     * destroy lifecycle, even after their allocating thread exits.
+     * The callback argument remains opaque and caller-owned. */
+    if (cwist_full_gc_enabled()) cwist_gc_scope_disown(node);
     node->func = func;
     node->arg = arg;
     atomic_store_explicit(&node->next, NULL, memory_order_relaxed);
@@ -218,6 +222,8 @@ cwist_io_queue *cwist_io_queue_create(size_t capacity) {
     (void)capacity;
     cwist_io_queue *q = cwist_alloc(sizeof(*q));
     if (!q) return NULL;
+    /* A returned queue can outlive its creator; destroy owns its shell. */
+    if (cwist_full_gc_enabled()) cwist_gc_scope_disown(q);
 
     job_node_t *stub = cwist_job_node_create(NULL, NULL);
     if (!stub) {

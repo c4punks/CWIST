@@ -501,6 +501,7 @@ TEST_TARGETS = test_public_fixed_cache \
                test_db_memory \
                test_redis \
                test_scheduler \
+               test_gc_job_handoff \
                test_async_defer \
                test_http_fairness \
                test_http_pipeline \
@@ -1009,6 +1010,14 @@ cli:
 test_scheduler: $(LIB_NAME) tests/test_scheduler.c
 	$(CC) $(CFLAGS) -o test_scheduler tests/test_scheduler.c $(LIB_NAME) $(LIBS)
 	./test_scheduler
+
+test_gc_job_handoff: $(LIB_NAME) tests/test_gc_job_handoff.c
+	$(CC) $(CFLAGS) -o $@ tests/test_gc_job_handoff.c $(LIB_NAME) $(LIBS)
+	./$@
+	./$@ nogc
+	$(CC) $(CFLAGS) -DNDEBUG -o $@ tests/test_gc_job_handoff.c $(LIB_NAME) $(LIBS)
+	./$@
+	./$@ nogc
 
 test_http_pipeline: $(LIB_NAME) tests/test_http_pipeline.c
 	$(CC) $(CFLAGS) -o $@ tests/test_http_pipeline.c $(LIB_NAME) $(LIBS)

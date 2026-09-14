@@ -47,7 +47,7 @@ jobs:
           PKG_CONFIG_PATH: /opt/homebrew/opt/curl/lib/pkgconfig
         run: |
           make test_seq test_http_chunked test_mux test_test_client test_http_pipeline test_http_fairness
-          make test_public_fixed_cache test_public_fixed_http
+          make test_public_fixed_cache test_public_fixed_http test_gc_job_handoff
           make -pn | grep -E '^IO_SRC[[:space:]]*=[[:space:]]*src/sys/io/kqueue\.c$'
 
   benchmark:
