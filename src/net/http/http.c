@@ -3047,10 +3047,12 @@ cwist_http_request *cwist_http_receive_request(int client_fd, char *read_buf, si
         read_buf[total_received] = '\0';
     }
 
-    cwist_http_request *req = cwist_http_parse_request_with_header_end(read_buf, total_received, header_end, err_out);
+    /* Like the nonblocking receiver, parse only this header block. Framing
+     * below owns body assembly; subsequent pipelined requests are not a body. */
+    size_t header_len = (size_t)(header_end + 4 - read_buf);
+    cwist_http_request *req = cwist_http_parse_request_with_header_end(read_buf, header_len, header_end, err_out);
     if (!req) return NULL;
 
-    size_t header_len = (size_t)(header_end + 4 - read_buf);
     size_t body_received = total_received - header_len;
 
     /* RFC 9110 §10.1.1: the parser already validated that any Expect value is

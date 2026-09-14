@@ -1,11 +1,38 @@
 /** Request bodies must not include subsequent pipelined messages (#25). */
 #include <cwist/net/http/http.h>
 #include <cwist/core/mem/alloc.h>
+#ifdef NDEBUG
+#undef NDEBUG /* Test operations must also run in release builds. */
+#endif
 #include <assert.h>
 #include <stdio.h>
 #include <string.h>
 
+static void check_blocking_pipeline(const char *first, const char *body) {
+    const char next[] = "GET /next HTTP/1.1\r\nHost: x\r\n\r\n";
+    char buf[4096];
+    size_t first_len = strlen(first);
+    assert(first_len + sizeof(next) <= sizeof(buf));
+    memcpy(buf, first, first_len);
+    memcpy(buf + first_len, next, sizeof(next));
+    size_t len = first_len + sizeof(next) - 1;
+    cwist_http_parse_error_t err;
+    /* Complete messages are prebuffered; fd=-1 rejects accidental socket I/O. */
+    cwist_http_request *req = cwist_http_receive_request(-1, buf, sizeof(buf), &len, &err);
+    assert(req && err == CWIST_HTTP_PARSE_OK);
+    assert(req->body && req->body->size == strlen(body));
+    if (*body) assert(memcmp(req->body->data, body, strlen(body)) == 0);
+    assert(len == sizeof(next) - 1 && memcmp(buf, next, sizeof(next)) == 0);
+    cwist_http_request_destroy(req);
+    req = cwist_http_receive_request(-1, buf, sizeof(buf), &len, &err);
+    assert(req && err == CWIST_HTTP_PARSE_OK);
+    assert(strcmp(req->path->data, "/next") == 0);
+    assert(req->body->size == 0 && len == 0);
+    cwist_http_request_destroy(req);
+}
+
 static void check_pipeline(const char *first, const char *body) {
+    check_blocking_pipeline(first, body);
     const char next[] = "GET /next HTTP/1.1\r\nHost: x\r\n\r\n";
     size_t first_len = strlen(first);
     cwist_http_async_conn_t conn = { .fd = -1 };
