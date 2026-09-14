@@ -11,7 +11,7 @@ permissions:
   contents: read
 
 env:
-  RELEASE_VERSION: 3.4.1
+  RELEASE_VERSION: 3.4.2
 
 jobs:
   source-dist:

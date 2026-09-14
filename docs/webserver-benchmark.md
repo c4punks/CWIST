@@ -1,147 +1,114 @@
 # Web Server Benchmark Methodology
 
-This document describes exactly how the CWIST vs Axum vs Gin vs Spring Boot comparison in
-`benchmarks/webserver.json` (rendered into `docs/webserver-benchmark-trends.svg`) is
-produced, so every published number can be reproduced and audited.
+The `web-server-benchmark` job in `.github/workflows/bsd-kqueue-benchmarks.yml`
+builds the checked-out source and runs minimal `GET / -> Hello, World!` servers.
+This is CWIST's own GitHub Actions comparison, not the separate
+`the-benchmarker/web-frameworks` suite. A release build passing its correctness
+suite does not establish a latency SLO.
 
-The suite runs in GitHub Actions (`web-server-benchmark` job in
-`.github/workflows/bsd-kqueue-benchmarks.yml`) on `ubuntu-latest`. All four servers are
-minimal `GET / -> "Hello, World!"` applications generated inline by the workflow; no
-framework-specific tuning is applied beyond what is documented here.
+## Measurement contract v2
 
-## Load profile
+New results use `schema_version: 2` and
+`benchmark_contract: isolated-http1-wrk-corrected-v2`.
+Each measured server runs in a private Linux process group owned by
+`benchmark_session.py`. Its workload uses a separate private group. Leaders
+remain unreaped until group cleanup finishes, preventing PGID reuse while
+signals are sent. The next case refuses an already-listening port. Cleanup
+covers descendants, including early-exiting leaders, failure, timeout and
+cancellation. This is supervision of trusted benchmark commands, not a sandbox
+against a program deliberately escaping its session.
 
-| Phase | Command | Purpose |
-|---|---|---|
-| Warmup | `wrk -t12 -c400 -d10s http://127.0.0.1:$PORT/` | Discarded. Lets JIT-tiered runtimes (JVM) reach steady state. Applied identically to all four servers. |
-| Measurement | `wrk -t12 -c400 -d10s http://127.0.0.1:$PORT/` | Recorded: `Requests/sec`, avg `Latency`. |
+Cases run sequentially. Readiness must return HTTP 200 within the recorded
+startup budget; warmup must exit successfully, complete requests and report no
+request errors. A failed warmup or measurement stops the job. Partial raw logs
+remain artifacts but cannot be published as successful measurements.
 
-**CPU budget:** every server and the load generator see the full runner CPU set — no pinning, no per-runtime thread caps. Each runtime uses its own default/auto worker sizing (CWIST `CWIST_WORKERS=auto`, Tokio `available_parallelism`, Go `GOMAXPROCS=default`, Netty `ioWorkerCount=nproc`). This keeps the comparison fair: no framework gets a hand-tuned advantage the others do not get.
+- Main profile: `wrk -t12 -c400 -d10s`, after a discarded 10-second warmup.
+- Separate tuned profile: `wrk -t4 -c100 -d10s`, also after a discarded
+  10-second warmup. CWIST classic and Spring each get a fresh server process.
+- The main cases are CWIST classic, C1M, C1M with `arena_max=1`, C1M with
+  `drain_chunk=8`, explicit C1M `PUBLIC_FIXED`, Axum, Gin and Spring.
+- The PUBLIC_FIXED leg sets only `CWIST_BENCH_PUBLIC_FIXED=1` in the benchmark
+  fixture to select explicit public-cache registration. Other legs retain bare
+  FIXED registration. This is a configuration screen, not proof of a universal
+  cache speedup. The plain handler does not exercise asynchronous completion
+  posting, so the drain-chunk leg cannot demonstrate that mechanism's benefit.
+- Clients and servers share the visible runner CPU budget. Runtime worker
+  sizing differs: CWIST has its own worker affinity, Tokio/Go use their runtime
+  defaults, and Netty's worker count is explicitly set to the visible CPU count.
+  The runner model and CPU count are recorded; there is no isolated-CPU claim.
 
-- Server startup wait is a readiness loop (`curl` poll, up to 90s for the JVM), not a fixed sleep.
-- **Peak RSS** is sampled from `ps -o rss=` immediately after the measured run.
-- **Context switches** (`nvcsw + nivcsw` from `ps`) are counted only over the measured
-  window — the counter baseline is taken *after* warmup.
+## Admission and latency semantics
 
-### Tuned low-latency run
+`tail_latency.lua` emits one structured `CWIST_METRICS` record containing
+requests, duration, all five wrk error counters, min/mean/max and seven
+percentiles. `webserver_result.py` rejects absent, duplicate or malformed
+records, empty measurements, invalid/nonfinite numbers, request errors,
+missing percentiles, inconsistent ordering and unproven cleanup. It never
+turns missing data into a zero-latency success. The complete ten-case matrix is
+required before publication.
 
-CWIST and Spring Boot are each measured a second time under `wrk -t4 -c100 -d10s`
-(lower concurrency than the main `-t12 -c400` profile above), each in its own
-dedicated process — for Spring Boot this is a fresh boot replaying the same
-trained AOT cache used for its main run, so it isn't paying a second cold-start
-penalty CWIST doesn't pay either. This is CWIST's own published low-latency
-profile; giving Spring Boot the identical treatment keeps the "tuned" numbers
-comparable instead of showing CWIST's best case next to a number Spring was
-never measured at. Axum and Gin are not yet included in this second pass.
+These latency values are **wrk's corrected latency distribution**. P99.999 is
+a direct `latency:percentile(99.999)` call, not an average of other percentiles.
+They are not an uncorrected per-request histogram or wrk2's fixed-rate
+planned-arrival histogram. Request count is retained; the approximate number
+of original requests in the top 0.001% is only a resolution aid, not a
+confidence interval or the corrected histogram's sample count.
 
-## CWIST
+The existing mean-latency gates remain 3.0 ms for classic and 3.5 ms for C1M.
+Finite/ordered tail values and request/error counts are validated, but there
+is no universal P99.999 SLO gate. A short, shared-runner screen cannot supply
+that guarantee. Raw and corrected histogram instrumentation is separately
+available in [the opt-in tool](performance/wrk-dual-histogram.md); its mere
+presence does not mean every default CI run captured both histograms.
 
-- Built from the checked-out commit: `make`, then the bench server linked against
-  `libcwist.a` with `gcc -O3`.
-- Listens on port `9091`.
+## Resource measurements
 
-## Axum
+Snapshots bracket the measured interval, after warmup. They include only the
+supervised server process group, with PID/start-time identities and per-thread
+identity, affinity and context-switch counters from Linux `/proc`.
 
-- `axum = "0.7"`, `tokio = "1"` (`full` features), `cargo build --release`.
-- Listens on port `9092`.
+- **Group RSS end sample:** sum of available process RSS readings at the end.
+  This is not a peak, PSS or unique physical memory; shared pages can be counted
+  more than once. If a required reading is missing, the value is unavailable.
+- **Context-switch delta:** sum of voluntary plus involuntary deltas for an
+  identical set of PID/start-time and TID/start-time identities. Task churn,
+  missing readings or counter regression produces **N/A**, never a fabricated
+  zero. This excludes the load-generator group.
+- Process identity changes during a case stop acceptance. The cleanup receipt
+  binds the workload's server PGID and confirms no live group survivors before
+  the leader is reaped.
 
-## Gin (Go)
+## Runtime configuration
 
-- `github.com/gin-gonic/gin` **v1.10.0** on the Go toolchain provisioned by
-  `actions/setup-go` (Go **1.22**), `go build` with `gin.ReleaseMode` and the
-  default `net/http` server underneath.
-- Listens on port `9094`.
+CWIST uses the checked-out source and generated constant-body fixture.
+Axum uses `axum = 0.7` and Tokio; Gin uses v1.10.0 and Go 1.22.
+Spring uses Spring Boot 3.2.3 WebFlux/Reactor Netty on JDK 25, native epoll,
+virtual threads **disabled**, and a fixed **1024 MiB** initial/maximum heap.
+Its recorded JVM arguments include G1GC and the actual runtime tuning flags.
 
-## Spring Boot (JVM fairness configuration)
+Spring's separate preparation boot generates a Leyden AOT cache with
+`-XX:+AOTClassLinking -XX:AOTCacheOutput=...`; measured boots use
+`-XX:+AOTClassLinking -XX:AOTCache=...`. This is not the former JDK 21 CDS
+`ArchiveClassesAtExit`/`SharedArchiveFile` configuration. Do not infer that all
+JIT warmup has disappeared. Both Spring profiles use the same prepared cache.
 
-The JVM is not a measure-once runtime: tiered JIT compilation, heap resizing, and class
-loading dominate short runs. The suite therefore fixes and *records* the following.
+## Provenance, presentation and legacy results
 
-The benchmarked stack is **Spring WebFlux on Reactor Netty** — Spring's reactive,
-event-loop server — rather than Spring MVC on the thread-per-request Tomcat servlet
-container. Netty's event loop is the appropriate Java comparison point for the async
-CWIST (io_uring/epoll) and Axum (tokio) servers. On top of the event loop,
-**virtual threads are enabled** (`spring.threads.virtual.enabled=true`, Project Loom)
-so that any work dispatched off the Netty event loop runs on Loom virtual threads
-instead of a bounded platform-thread pool.
+Every new result records the measured commit, GitHub run ID/attempt/link,
+ref, tag when running a tag, server artifact and wrk SHA-256 values, wrk
+version, profiles, runtime facts, per-case request/error counts, snapshots and
+cleanup receipts. A moving branch result is identified by its commit; it is
+not silently labeled as the latest release.
 
-| Setting | Value |
-|---|---|
-| Java | Temurin **21** (`actions/setup-java`) |
-| Spring Boot | **3.2.3** (`spring-boot-starter-webflux`) |
-| Server | **Reactor Netty** (event loop, non-blocking I/O) |
-| Virtual threads | **enabled** — `spring.threads.virtual.enabled=true` (Project Loom) |
-| JVM options | `-Xms512m -Xmx512m` (fixed heap, no resize noise during measurement) |
-| AOT cache | **CDS** — training run with `-XX:ArchiveClassesAtExit=app.jsa` (clean shutdown via SIGTERM), measured run replays `-XX:SharedArchiveFile=app.jsa` |
-| Warmup | 10s `wrk` run, discarded (see above) |
-| Port | `9093` |
+Raw measurements, warmup logs, resource JSON and cleanup receipts are retained
+as artifacts, including partial failures. Successful schema-v2 records alone
+enter the new report contract. Old rows remain historical evidence; their
+missing provenance, zero-default parsing and incomplete process cleanup are
+not retroactively repaired. Different contracts are not pooled into a trend.
 
-The full Spring run command is:
-
-```
-java -Xms512m -Xmx512m -XX:SharedArchiveFile=app.jsa -jar spring-bench-0.0.1-SNAPSHOT.jar
-```
-
-## Recorded metadata
-
-Every measurement appended to `benchmarks/webserver.json` carries the runtime facts next
-to the numbers, so a result is never an isolated req/s figure:
-
-```json
-{
-  "wrk_profile": "wrk -t12 -c400 -d10s (after 10s warmup, warmup discarded)",
-  "go_env": {
-    "go_version": "go version go1.22.x linux/amd64",
-    "framework": "Gin v1.10.0 (gin-gonic/gin, release mode)"
-  },
-  "spring_env": {
-    "java_version": "openjdk version \"21.x\" ... (Temurin)",
-    "spring_boot_version": "3.2.3",
-    "stack": "Spring WebFlux + Reactor Netty (event loop, virtual threads enabled)",
-    "jvm_opts": "-Xms512m -Xmx512m -XX:SharedArchiveFile=... (CDS AOT cache)",
-    "virtual_threads": true,
-    "aot_cache": "CDS (-XX:ArchiveClassesAtExit training run + -XX:SharedArchiveFile replay)"
-  }
-}
-```
-
-`scripts/ci/benchmark.py render` prints this environment block as the SVG footer and in
-the README benchmark summary.
-
-## Latency distribution chart
-
-`docs/webserver-latency-distribution.svg` (linked in the README right below the
-bar-chart trends SVG) plots each server's latency distribution as a density
-curve, so the *shape* of the tail is visible at a glance instead of only its
-P99.999 number. It compares the same five servers as the summary table above
-(`cwist`, `cwist_c1m`, `axum`, `gin`, `spring`) — the `_tuned` entries (different,
-lower-concurrency load profile) and the opt-in experimental A/Bs
-(`cwist_c1m_arena1`, `cwist_sharded`) are excluded so the chart only ever compares
-runs made under the identical `wrk -t12 -c400 -d10s` profile.
-
-This is **reconstructed, not raw**: wrk only ever reports percentiles
-(min/p50/p75/p90/p99/p99.9/p99.99/p99.999/max — all now captured by the
-workflow's `parse_wrk()`, see `.github/workflows/bsd-kqueue-benchmarks.yml`),
-never the underlying per-request samples. `scripts/ci/benchmark.py`
-(`_inverse_cdf_samples`) linearly interpolates the inverse CDF between those
-known percentile points to synthesize a representative sample set, then runs a
-standard Gaussian KDE (`_gaussian_kde`, Silverman's rule of thumb for
-bandwidth) over it. The x-axis uses `log1p(ms)` so a long tail (Gin, Spring
-Boot) doesn't compress the tighter CWIST/Axum curves into an unreadable spike
-at the left edge. Treat the curve shapes as representative, not exact — a
-server with sparser percentile data (an older history row missing the newer
-p75/p999/p9999/min/max fields) still renders, just with fewer anchor points to
-interpolate between.
-
-## Known limitations
-
-- GitHub-hosted runners are shared, noisy **4-vCPU** machines; treat absolute numbers as
-  trend data, not lab-grade measurements. Each entry records `runner_hw` (vCPU count and
-  CPU model) precisely so that entries from different machines are never compared
-  directly — e.g. CWIST measures ~170k-185k req/s on a local 12-thread Ryzen 5600X but
-  ~89k req/s on the 4-vCPU CI runner under the identical wrk profile. A drop between
-  entries with different `runner_hw` reflects the machine, not the code.
-- RSS for the JVM includes its reserved heap by design (`-Xms512m`); this is a real
-  cost of the runtime model and is reported as-is.
-- The workload measures plain-text routing throughput only — no TLS, JSON
-  serialization, or database access.
+The README values are generated from JSON rather than duplicated in fixed
+marketing prose. Resource N/A stays N/A in tables and SVGs. The latency density
+SVG is reconstructed by interpolating reported percentiles and applying KDE;
+it is **not a measured request histogram**. It must not be used to invent
+sub-percentile detail, confidence intervals or a causal explanation of jitter.

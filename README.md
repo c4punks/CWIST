@@ -9,10 +9,9 @@
 CWIST is a C17 web framework and application server with built-in HTTP/1.1, HTTP/2,
 HTTP/3 (QUIC), WebSocket, and WebTransport support, hybrid post-quantum TLS
 (X25519MLKEM768), an embedded SQLite ORM, and a synchronous io_uring/epoll/kqueue
-reactor. It is written in plain C, links statically, and serves ~152k req/s at
-1.59ms average latency in ~9.1MB of RSS (CI: `wrk -t12 -c400 -d10s` after warmup,
-C1M reactor mode — see the benchmark block below; a tuned `wrk -t4 -c100` profile
-reaches 0.41ms average at ~155k req/s).
+reactor. It is written in plain C and links statically. The generated benchmark
+block below records a specific commit, load profile, and CI environment; those
+results are not universal throughput, memory, or latency guarantees.
 </p>
 
 [Heavy Benchmark on CWIST APP](https://github.com/gg582/fly.board/blob/main/README.md)
@@ -202,11 +201,11 @@ memory management to the user. CWIST ships the whole stack:
 
 ## Why C, when Axum and Gin exist?
 
-The benchmark results above demonstrate the advantages in latency, memory footprint, and determinism:
+The generated results describe the recorded workload, not a universal ranking:
 
-1. **Latency & Throughput.** Under 400 concurrency (`wrk -t12 -c400`, CI run above), CWIST Classic Pool delivers 1.52ms average latency at ~151k req/s, and C1M Reactor delivers 1.59ms at ~153k req/s (versus 2.55ms for Axum, 4.64ms for Gin, and 5.91ms for Spring Boot in the same run). In the tuned low-latency profile (`wrk -t4 -c100`), CWIST achieves 0.41ms average latency (P50 0.34ms, P90 0.69ms) at ~155k req/s.
-2. **Memory Efficiency.** CWIST maintains a lean memory footprint (~9.1MB RSS in C1M mode, ~15.4MB in Classic Pool, same CI run), compared to ~29.8MB for Gin and ~1.29GB for Spring Boot. In high-density container environments, this significantly reduces memory consumption across thousands of instances.
-3. **Tail Latency & Predictability.** Zero-copy framing, thread-pinned worker execution, and generational arena allocators minimize latency variance and GC pauses.
+1. **Latency and throughput.** Use the generated block and its exact CI run. The main and tuned profiles use different concurrency and must not be mixed.
+2. **Memory.** New measurements report a summed process-group RSS end sample, not peak RSS, PSS, or a fleet-wide memory saving.
+3. **Tail latency.** The table uses wrk's corrected distribution. Short-run extreme percentiles and reconstructed density plots do not prove determinism or a production SLO.
 4. **Zero-Overhead FFI.** Production libraries in finance, game servers, machine learning, and systems software written in C/C++ link directly into CWIST with zero FFI conversion or runtime bridge penalty.
 5. **Instant Cold Start.** With no runtime VM warmup or GC initialization required, CWIST starts in milliseconds and immediately serves requests at full capacity.
 

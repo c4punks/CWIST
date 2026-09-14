@@ -217,14 +217,14 @@ src/security/db_crypt/db_crypt.c:137:        free(ct);
 src/security/db_crypt/db_crypt.c:157:    free(ct);
 src/security/db_crypt/db_crypt.c:219:    unsigned char *pt = (unsigned char *)malloc(ct_len + 1); /* extra for safety */
 src/security/db_crypt/db_crypt.c:225:        free(pt);
-src/sys/app/app.c:3195:    free(client);
-src/sys/app/app.c:3227:    cwist_multiport_http_client *payload = malloc(sizeof(*payload));
-src/sys/app/app.c:3239:        free(payload);
-src/sys/app/app.c:3671:    free(payload);
-src/sys/app/app.c:3856:        struct h3_thread_payload *h3_p = malloc(sizeof(*h3_p));
-src/sys/app/app.c:3866:                free(h3_p);
-src/sys/app/app.c:3988:    char *buf = (char *)malloc((size_t)sz + 1);
-src/sys/app/app.c:3993:        free(buf);
+src/sys/app/app.c:3133:    free(client);
+src/sys/app/app.c:3165:    cwist_multiport_http_client *payload = malloc(sizeof(*payload));
+src/sys/app/app.c:3177:        free(payload);
+src/sys/app/app.c:3609:    free(payload);
+src/sys/app/app.c:3795:        struct h3_thread_payload *h3_p = malloc(sizeof(*h3_p));
+src/sys/app/app.c:3805:                free(h3_p);
+src/sys/app/app.c:3927:    char *buf = (char *)malloc((size_t)sz + 1);
+src/sys/app/app.c:3932:        free(buf);
 src/sys/app/compress.c:136:    cwist_brotli_state_t *bs = (cwist_brotli_state_t *)calloc(1, sizeof(*bs));
 src/sys/app/compress.c:148:        char *tmp = (char *)realloc(bs->accum, new_cap);
 src/sys/app/compress.c:178:        merged = (uint8_t *)malloc(total_in_len);
@@ -256,6 +256,9 @@ src/sys/app/compress.c:39:        free(zs);
 src/sys/app/compress.c:47:    z_stream *zs = (z_stream *)calloc(1, sizeof(z_stream));
 src/sys/app/compress.c:50:        free(zs);
 src/sys/app/compress.c:96:        free(zs);
+src/sys/app/public_fixed_cache.c:144:    process_bytes-=e->cost; --process_count; free(e);
+src/sys/app/public_fixed_cache.c:154:    cwist_pfc_clear(c); free(c);
+src/sys/app/public_fixed_cache.c:220:void cwist_pfc_snapshot_free(cwist_pfc_snapshot *s) { free(s); }
 src/sys/metrics/metrics.c:128:    char *buf = malloc(cap);
 src/sys/metrics/metrics.c:149:        if (need < 0) { free(buf); return NULL; }
 src/sys/metrics/metrics.c:155:            char *nb = realloc(buf, new_cap);
