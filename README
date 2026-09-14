@@ -16,20 +16,20 @@ to systems programming without sacrificing control.
 Powered by BoringSSL, lsquic, OpenSSL without context contamination.
 
 <!-- BENCHMARKS:START -->
-Latest automated benchmark: **Darwin** — 12.96 M leases/s, 137.2% CPU, 692864 KiB RSS.
+Latest automated benchmark: **Darwin** — 11.87 M leases/s, 142.27% CPU, 641856 KiB RSS.
 
 ![CWIST benchmark trends](docs/benchmark-trends.svg)
 <!-- BENCHMARKS:END -->
 
 <!-- WEBSERVER_BENCHMARKS:START -->
 Latest Web Server Benchmark (wrk -t12 -c400 -d10s (after 10s warmup, warmup discarded)):
-- **CWIST (classic pool)**: 116406 req/s | Latency 1.99ms (P90 4.07ms, P99 8.30ms, P99.999 41.84ms) | RSS 18224KiB | Csw 0
-- **CWIST (C1M reactor)**: 125504 req/s | Latency 2.63ms (P90 6.87ms, P99 16.61ms, P99.999 28.90ms) | RSS 10040KiB | Csw 0
-- **CWIST (C1M reactor, arena_max=1)** — glibc arena cap adopted in PR #35 after mimalloc was tried and refuted (issue #25); this line confirms the decision on every run: 123317 req/s | Latency 2.49ms (P90 6.19ms, P99 14.90ms, P99.999 30.53ms) | RSS 7696KiB | Csw 0
-- **CWIST (C1M reactor, drain_chunk=8)** — cooperative queuing for cwist_async_defer completions within a big io_uring batch (issue #25, docs/cooperative-queuing.md); this workload has no cwist_async_defer traffic to interleave, so parity with the plain C1M row above is the expected result, not a null finding — the tail-latency win is isolated directly in tests/bench_cooperative_queuing.c: 122579 req/s | Latency 2.59ms (P90 6.34ms, P99 16.54ms, P99.999 32.52ms) | RSS 7980KiB | Csw 0
-- **Axum**: 120104 req/s | Latency 3.26ms (P90 5.52ms, P99 8.16ms, P99.999 20.95ms) | RSS 16128KiB | Csw 0
-- **Gin (Go)**: 90945 req/s | Latency 5.61ms (P90 13.27ms, P99 27.76ms, P99.999 74.42ms) | RSS 30276KiB | Csw 0
-- **Spring Boot**: 56007 req/s | Latency 7.14ms (P90 9.29ms, P99 15.36ms, P99.999 83.94ms) | RSS 1300852KiB | Csw 0
+- **CWIST (classic pool)**: 109153 req/s | Latency 2.12ms (P90 4.44ms, P99 7.90ms, P99.999 24.33ms) | RSS 16984KiB | Csw 0
+- **CWIST (C1M reactor)**: 117690 req/s | Latency 2.90ms (P90 7.77ms, P99 17.70ms, P99.999 30.89ms) | RSS 10344KiB | Csw 0
+- **CWIST (C1M reactor, arena_max=1)** — glibc arena cap adopted in PR #35 after mimalloc was tried and refuted (issue #25); this line confirms the decision on every run: 115179 req/s | Latency 2.68ms (P90 6.66ms, P99 14.88ms, P99.999 27.00ms) | RSS 9632KiB | Csw 0
+- **CWIST (C1M reactor, drain_chunk=8)** — cooperative queuing for cwist_async_defer completions within a big io_uring batch (issue #25, docs/cooperative-queuing.md); this workload has no cwist_async_defer traffic to interleave, so parity with the plain C1M row above is the expected result, not a null finding — the tail-latency win is isolated directly in tests/bench_cooperative_queuing.c: 112844 req/s | Latency 2.66ms (P90 6.48ms, P99 14.46ms, P99.999 31.25ms) | RSS 8448KiB | Csw 0
+- **Axum**: 105624 req/s | Latency 3.69ms (P90 6.21ms, P99 9.17ms, P99.999 17.26ms) | RSS 14396KiB | Csw 0
+- **Gin (Go)**: 71899 req/s | Latency 7.64ms (P90 18.73ms, P99 41.74ms, P99.999 91.17ms) | RSS 29508KiB | Csw 0
+- **Spring Boot**: 41610 req/s | Latency 9.59ms (P90 12.55ms, P99 20.14ms, P99.999 77.06ms) | RSS 1309984KiB | Csw 0
 
 **Spring runtime environment**
 
