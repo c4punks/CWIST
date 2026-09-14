@@ -70,6 +70,14 @@ static int heap_grow(cwist_scheduler_t *s) {
     size_t new_cap = s->heap_capacity ? s->heap_capacity * 2 : CWIST_SCHEDULER_HEAP_INIT;
     scheduled_job_t *new_heap = cwist_realloc(s->heap, new_cap * sizeof(scheduled_job_t));
     if (!new_heap) return -1;
+    /* s->heap is owned by the scheduler for its whole lifetime, not by
+     * whichever caller thread happens to trigger a resize -- cwist_realloc()
+     * tracks it on that thread's full-GC pending-sweep list (matching
+     * cwist_alloc()'s tracking of a fresh NULL-in allocation). Left tracked
+     * there, that thread exiting would have the sweep free this array out
+     * from under a scheduler that's still using it. Disown it immediately;
+     * cwist_scheduler_destroy() is what actually releases it. */
+    if (cwist_full_gc_enabled()) cwist_gc_scope_disown(new_heap);
     s->heap = new_heap;
     s->heap_capacity = new_cap;
     return 0;

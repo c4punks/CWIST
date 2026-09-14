@@ -165,8 +165,10 @@ static void *submit_donor(void *arg) {
     CHECK(owned != NULL);
     pending("donor own allocation", full_gc ? 1 : 0);
     if (f->scheduler) {
-        /* Grow the delayed heap beyond its initial 16 slots. It is allocated
-         * by cwist_realloc, which is deliberately not scope-tracked. Jobs
+        /* Grow the delayed heap beyond its initial 16 slots. heap_grow()
+         * disowns the array from whichever thread's scope grew it (the
+         * scheduler owns it for its whole lifetime, not the caller) --
+         * this thread's own pending count is unaffected either way. Jobs
          * remain pending until destroy; no test depends on timer sleeps. */
         for (unsigned i = 0; i < 33; ++i)
             CHECK(cwist_scheduler_schedule(f->scheduler, count_job, f, 86400000));
