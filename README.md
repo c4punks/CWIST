@@ -6,6 +6,10 @@
 <p align="center"><strong>C Web development Is Still Trustworthy</strong></p>
 
 <p align="center">
+  <a href="https://discord.gg/6F8HDmNAPg"><img src="https://img.shields.io/badge/Discord-Join%20chat-5865F2?logo=discord&logoColor=white" alt="Discord"></a>
+</p>
+
+<p align="center">
 CWIST is a C17 web framework and application server with built-in HTTP/1.1, HTTP/2,
 HTTP/3 (QUIC), WebSocket, and WebTransport support, hybrid post-quantum TLS
 (X25519MLKEM768), an embedded SQLite ORM, and a synchronous io_uring/epoll/kqueue
@@ -599,6 +603,11 @@ See [NOTICE.md](NOTICE.md) for the license summary of every vendored component.
   `-Werror`, plus an h2spec HTTP/2 conformance diff against a pinned baseline
   (`scripts/ci/h2spec-baseline.txt`); regressions fail the build. Known
   conformance gaps are tracked in that baseline file.
+
+## Community
+
+The official CWIST Discord server: **https://discord.gg/6F8HDmNAPg** — questions,
+design discussion, and contribution coordination happen there.
 
 ## Documentation
 
