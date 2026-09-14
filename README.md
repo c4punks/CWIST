@@ -17,54 +17,37 @@ results are not universal throughput, memory, or latency guarantees.
 [Heavy Benchmark on CWIST APP](https://github.com/gg582/fly.board/blob/main/README.md)
 
 <!-- WEBSERVER_BENCHMARKS:START -->
-Latest Web Server Benchmark (wrk -t12 -c400 -d10s (after 10s warmup, warmup discarded)):
-- **CWIST (classic pool)**: 111725 req/s | Latency 2.14ms (P90 4.86ms, P99 9.88ms, P99.999 33.00ms) | RSS 17760KiB | Csw 0
-- **CWIST (C1M reactor)**: 120941 req/s | Latency 2.77ms (P90 7.05ms, P99 16.88ms, P99.999 31.70ms) | RSS 10364KiB | Csw 0
-- **CWIST (C1M reactor, arena_max=1)** — glibc arena cap adopted in PR #35 after mimalloc was tried and refuted (issue #25); this line confirms the decision on every run: 118436 req/s | Latency 2.59ms (P90 6.38ms, P99 14.59ms, P99.999 31.53ms) | RSS 8368KiB | Csw 0
-- **CWIST (C1M reactor, drain_chunk=8)** — cooperative queuing for cwist_async_defer completions within a big io_uring batch (issue #25, docs/cooperative-queuing.md); this workload has no cwist_async_defer traffic to interleave, so parity with the plain C1M row above is the expected result, not a null finding — the tail-latency win is isolated directly in tests/bench_cooperative_queuing.c: 115898 req/s | Latency 2.72ms (P90 6.91ms, P99 15.49ms, P99.999 25.68ms) | RSS 8516KiB | Csw 0
-- **Axum**: 112161 req/s | Latency 3.50ms (P90 5.91ms, P99 8.83ms, P99.999 17.60ms) | RSS 16156KiB | Csw 0
-- **Gin (Go)**: 78716 req/s | Latency 6.93ms (P90 17.04ms, P99 36.78ms, P99.999 87.14ms) | RSS 29408KiB | Csw 0
-- **Spring Boot**: 43976 req/s | Latency 9.05ms (P90 11.63ms, P99 18.31ms, P99.999 76.90ms) | RSS 1316976KiB | Csw 0
+## Latest isolated HTTP benchmark
 
-**Spring runtime environment**
+Measured commit: `f2404f468f5c865f865813c1e910709c10e877fb`. Release tag: `not recorded; identify this run by commit`.
+Run: https://github.com/c4punks/CWIST/actions/runs/34849903835. Timestamp: `2026-09-14T13:44:22.387142+00:00`.
 
-- **JDK:** `openjdk version "25.0.4.1" 2026-08-18 LTS`
-- **Spring Boot:** 3.2.3
-- **Stack:** Spring WebFlux + Reactor Netty on native epoll (G1GC, JDK 25 Leyden AOT, virtual threads disabled)
-- **Virtual threads:** disabled
+Latency columns use the **wrk corrected distribution**. RSS is a **process-group end sample**, not a peak or unique physical memory. Context switches cover matching thread identities only; N/A means unavailable.
 
-**JVM options**
+| Profile | Req/s | Mean ms | P99.999 ms | Group RSS MiB | Context-switch delta |
+|---|---:|---:|---:|---:|---:|
+| CWIST classic | 115,692 | 2.024 | 22.692 | 62.61 | N/A |
+| CWIST C1M | 139,267 | 3.124 | 28.272 | 32.16 | 286,596 |
+| CWIST C1M arena_max=1 | 139,973 | 3.009 | 24.687 | 37.87 | 273,171 |
+| CWIST C1M drain_chunk=8 | 138,579 | 3.138 | 23.689 | 33.39 | 281,871 |
+| CWIST C1M PUBLIC_FIXED (opt-in) | 137,830 | 3.099 | 25.578 | 29.75 | 273,520 |
+| Axum | 111,942 | 3.511 | 18.851 | 16.25 | 195,721 |
+| Gin | 79,371 | 6.563 | 75.985 | 29.31 | 288,787 |
+| Spring Boot | 43,909 | 9.041 | 74.566 | 1,275.36 | N/A |
 
-```text
--Xms1024m
--Xmx1024m
--XX:+UseG1GC
--XX:GCTimeRatio=99
--XX:G1HeapRegionSize=1m
--XX:+AlwaysPreTouch
--XX:CompileThreshold=1500
--XX:CICompilerCount=4
--Djava.security.egd=file:/dev/urandom
--Djava.net.preferIPv4Stack=true
--Dio.netty.allocator.type=pooled
--Dio.netty.leakDetection.level=disabled
--Dio.netty.buffer.checkBounds=false
--Dio.netty.buffer.checkAccessible=false
--Dreactor.netty.ioWorkerCount=4
--Xlog:gc*:file=/tmp/spring_gc.log:time,uptime,level,tags
--XX:+AOTClassLinking
--XX:AOTCache=/tmp/spring_bench/app.aot (JEP 483 + JEP 514 single-step AOT)
-```
+Main profile: `wrk -t12 -c400 -d10s`, after a discarded 10s warmup.
 
-**Warmup/profile**
+### Separate tuned profile
 
-wrk -t12 -c400 -d10s (after 10s warmup, warmup discarded)
+`wrk -t4 -c100 -d10s`, after a discarded 10s warmup. Do not compare these rows as equal-load results against the main table.
+- CWIST classic: 113,988 req/s; mean 0.535 ms; corrected P99.999 9.139 ms.
+- Spring Boot: 45,083 req/s; mean 2.280 ms; corrected P99.999 28.753 ms.
 
-![Web Server Benchmark Trends](docs/webserver-benchmark-trends.svg)
+Legacy records remain in history but are not pooled into this measurement contract. A 10-second tail screen is not a universal SLO or a statistically established speedup.
 
-Latency distribution (density curve reconstructed from each server's percentiles - shows the shape of the tail, not just its P99.999 number):
+Spring environment: `{'java_version': 'openjdk version "25.0.4.1" 2026-08-18 LTS', 'spring_boot_version': '3.2.3', 'stack': 'Spring WebFlux + Reactor Netty on native epoll (G1GC, JDK 25 Leyden AOT, virtual threads disabled)', 'jvm_opts': '-Xms1024m -Xmx1024m   -XX:+UseG1GC -XX:GCTimeRatio=99 -XX:G1HeapRegionSize=1m   -XX:+AlwaysPreTouch   -XX:CompileThreshold=1500 -XX:CICompilerCount=4   -Djava.security.egd=file:/dev/urandom   -Djava.net.preferIPv4Stack=true   -Dio.netty.allocator.type=pooled   -Dio.netty.leakDetection.level=disabled   -Dio.netty.buffer.checkBounds=false   -Dio.netty.buffer.checkAccessible=false   -Dreactor.netty.ioWorkerCount=4   -Xlog:gc*:file=/tmp/spring_gc.log:time,uptime,level,tags -XX:+AOTClassLinking -XX:AOTCache=/tmp/spring_bench/app.aot (JEP 483 + JEP 514 single-step AOT)', 'virtual_threads': False, 'aot_cache': 'JDK 25 Leyden AOT (-XX:AOTCache; trained before measurement)'}`
 
-![Web Server Latency Distribution](docs/webserver-latency-distribution.svg)
+[Measurement contract](docs/webserver-benchmark.md) · [History](benchmarks/webserver.json)
 <!-- WEBSERVER_BENCHMARKS:END -->
 
 _Methodology, JVM options, and fairness settings: [docs/webserver-benchmark.md](docs/webserver-benchmark.md)_
@@ -72,10 +55,10 @@ _Methodology, JVM options, and fairness settings: [docs/webserver-benchmark.md](
 <!-- TUNED_BENCHMARK:START -->
 **Tuned low-latency run (wrk -t4 -c100 -d10s (after 10s warmup, warmup discarded)), CWIST vs Spring Boot on identical concurrency:**
 
-- **CWIST**: 107,991 req/s at 0.64ms average latency (P50 0.40ms, P90 1.48ms, P99 3.14ms)
-- **Spring Boot**: 45,652 req/s at 2.23ms average latency (P50 1.99ms, P90 3.76ms, P99 7.03ms), same trained AOT cache as the main run above
+- **CWIST**: 113,988 req/s at 0.54ms average latency (P50 0.43ms, P90 0.97ms, P99 2.21ms)
+- **Spring Boot**: 45,083 req/s at 2.28ms average latency (P50 2.02ms, P90 3.73ms, P99 8.07ms), same trained AOT cache as the main run above
 
-Leaving headroom between server workers and load-generator threads keeps the latency tail flat — oversubscribing the same cores shows a multi-ms average from scheduling jitter alone at similar throughput.
+These runs use a different concurrency budget from the main table. They do not establish a causal scheduling explanation or a universal tail-latency improvement.
 <!-- TUNED_BENCHMARK:END -->
 
 ---
