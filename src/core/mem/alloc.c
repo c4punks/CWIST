@@ -322,10 +322,29 @@ void *cwist_alloc_array(size_t count, size_t elem_size) {
 void *cwist_realloc(void *ptr, size_t new_size) {
     size_t actual = new_size ? new_size : 1;
     if (!ptr) {
-        return cwist_malloc(actual);
+        void *fresh = cwist_malloc(actual);
+        if (fresh && cwist_full_gc_enabled()) {
+            cwist_gc_scope_track(fresh);
+        }
+        return fresh;
     }
+    /* realloc() (or the owner-guarded equivalent below) is free to move the
+     * block to a new address; if @p ptr was on this thread's full-GC
+     * pending-sweep list under its old address, leaving that stale entry
+     * in place means the thread-exit sweep would later free() an address
+     * that's already back in general circulation -- a real double-free,
+     * not a hypothetical one (reproduced via bench_malloc_intercept_concurrent).
+     * Untrack the old address up front and track whatever address the
+     * (re)allocation actually returns; on failure the original block is
+     * still valid per realloc()'s contract, so restore its tracking. */
+    bool was_tracked = cwist_full_gc_enabled() && cwist_gc_scope_untrack(ptr);
     if (!g_owner_enabled) {
         void *res = realloc(ptr, actual);
+        if (!res) {
+            if (was_tracked) cwist_gc_scope_track(ptr);
+            return NULL;
+        }
+        if (was_tracked) cwist_gc_scope_track(res);
         return res;
     }
     cwist_owner_realloc_args_t args = {
@@ -333,9 +352,11 @@ void *cwist_realloc(void *ptr, size_t new_size) {
         .size = actual,
         .result = NULL
     };
-    if (!cwist_owner_call(CWIST_OWNER_REALLOC_FUNC, &args)) {
+    if (!cwist_owner_call(CWIST_OWNER_REALLOC_FUNC, &args) || !args.result) {
+        if (was_tracked) cwist_gc_scope_track(ptr);
         return NULL;
     }
+    if (was_tracked) cwist_gc_scope_track(args.result);
     return args.result;
 }
 
