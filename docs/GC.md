@@ -214,49 +214,23 @@ remains correct and simply unregisters the block early.
 
 ## Known performance caveat
 
-With `cwist_full_gc(true)`, every `cwist_alloc()` inserts the block into
-the calling thread's pending set and every `cwist_free()` removes it (or
-looks it up and misses, for blocks that were never tracked, such as
-`cwist_strdup()` results). The set is an open-addressing hash table, so
-both operations are O(1) on average no matter how many blocks the thread
-holds, and the thread's set is found through one thread-local load. Each
-thread has its own set; there is no shared lock.
+Enabling `cwist_full_gc(true)` currently adds roughly **~86% per-call
+overhead** to every `cwist_alloc()` / `cwist_free()` pair — approximately
+10 ns per operation on a typical workstation — due to
+`cwist_gc_scope_track()` / `cwist_gc_scope_untrack()` maintaining a
+per-thread pending-sweep list on every allocation and release
+(`src/core/mem/gc.c`).
 
-`tests/bench_full_gc_tracking.c` (`make bench_full_gc_tracking`) measures
-this with N tracked blocks kept alive on the thread. GitHub Actions
-`ubuntu-latest` (AMD EPYC 7763, 4 vCPUs), 200000 pairs per measurement,
-median of 3 runs, ns per `cwist_alloc()` + `cwist_free()` pair:
+The overhead breakdown and concurrent-load behaviour are tracked in
+[issue #65](https://github.com/c4punks/CWIST/issues/65). Two benchmark
+harnesses measure it from different angles: `tests/bench_malloc_intercept.c`
+covers the `CWIST_INTERCEPT_MALLOC` header shim, single-threaded;
+`tests/bench_malloc_intercept_concurrent.c` calls `cwist_alloc()`/
+`cwist_free()` directly and adds both single-threaded and multi-threaded
+runs, to check whether the pending-sweep list in `gc.c` becomes a
+contention bottleneck under concurrent load.
 
-| live tracked blocks | full-GC off | full-GC on |
-|---|---:|---:|
-| 0 | 31.2 | 38.6 |
-| 64 | 31.3 | 40.7 |
-| 1024 | 19.2 | 32.2 |
-| 16384 | 19.2 | 34.1 |
-
-A `cwist_strdup()` + `cwist_free()` pair (the free's lookup misses) costs
-22.4-23.5 ns with full-GC on against 16.6-17.2 ns with it off, again flat
-across the same live-set sizes. With 1024 live blocks per thread, per-thread
-cost with 1/2/4/8 threads churning at once is 34.0/33.2/65.5/104.1 ns with
-full-GC on and 25.6/24.9/49.6/79.8 ns with it off; the growth past two
-threads appears with full-GC off too (the allocator, and 8 threads on 4
-vCPUs), not in the pending sets.
-
-Before issue #65 the set was a list scanned on every removal, so each free
-cost time proportional to the blocks the thread held: on the same runner,
-288.6 ns per pair at 1024 live blocks and 3853.9 ns at 16384.
-
-**Practical guidance**:
-
-- Use full-GC mode for **rapid prototyping** and convenience-first code where
-  manual `cwist_free()` bookkeeping would slow you down. It is the safe
-  default for experiments, internal tools, and workloads where raw throughput
-  is not the primary concern.
-- Keep the **default explicit mode** for **high-throughput production
-  services** where every nanosecond of allocation overhead matters. The
-  explicit `cwist_alloc()` / `cwist_free()` model has zero tracking cost and
-  remains fully supported.
-- If you opt into full-GC mode on a high-throughput service, profile your
-  allocation hot path first. The overhead is only active when
-  `cwist_full_gc(true)` has been called; all default builds (full-GC off) are
-  unaffected.
+**Practical guidance**: if you opt into full-GC mode on a high-throughput
+service, profile your allocation hot path first.  The overhead is only
+active when `cwist_full_gc(true)` has been called; all default builds
+(full-GC off) are unaffected.
