@@ -23,6 +23,12 @@
 
 #define WS_GUID "258EAFA5-E914-47DA-95CA-C5AB0DC85B11"
 
+/* Per-frame payload size cap (16 MiB).  RFC 6455 allows up to 2^63 bytes per
+ * frame, but allocating that blindly gives any connected client a trivial OOM
+ * DoS vector.  Applications that need larger transfers should use WebSocket
+ * message fragmentation (RFC 6455 §5.4) with frames within this cap. */
+#define CWIST_WS_MAX_PAYLOAD_BYTES ((uint64_t)(16u * 1024u * 1024u))
+
 /**
  * @brief Portable case-insensitive substring search.
  *
@@ -186,6 +192,11 @@ cwist_ws_frame *cwist_websocket_receive(cwist_websocket *ws) {
                           ((uint64_t)p[4] << 24) | ((uint64_t)p[5] << 16) |
                           ((uint64_t)p[6] << 8)  | ((uint64_t)p[7]);
         }
+
+        /* Reject frames that would force a huge allocation before any payload
+         * is read.  A single malicious frame with length=4 GiB costs only
+         * ~14 bytes on the wire but would OOM-kill the server otherwise. */
+        if (payload_len > CWIST_WS_MAX_PAYLOAD_BYTES) return NULL;
 
         uint8_t masking_key[4];
         if (read_exact(ws->fd, masking_key, 4) < 0) return NULL;
