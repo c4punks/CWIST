@@ -2,7 +2,7 @@
 
 ## Branch your work off `dev`, not `main`
 
-`dev` is the integration branch: this is where feature work, fixes, and
+`dev` is the integration branch — this is where feature work, fixes, and
 most day-to-day changes land. `main` is the release branch: it only
 receives changes via a maintainer cherry-picking specific, already-reviewed
 commits over from `dev`.
@@ -11,7 +11,7 @@ commits over from `dev`.
 directly, even for something that looks like a small, obviously-correct
 fix.
 
-This isn't just a style preference: `main` and `dev` have diverged to the
+This isn't just a style preference — `main` and `dev` have diverged to the
 point of sharing **no common git history** (no merge-base between them).
 That has a concrete consequence: once a PR is opened against the wrong
 base, GitHub cannot simply change its base branch afterward. Attempting to
@@ -19,7 +19,7 @@ retarget a `main`-rooted PR onto `dev` silently **closes the PR** instead
 of moving it, because there's no shared ancestry for the two branches to
 be diffed against. Recovering from this means recreating the PR's commits
 from scratch against `dev` (`git cherry-pick`, preserving the original
-author) and opening a new PR: extra work for both the contributor and
+author) and opening a new PR — extra work for both the contributor and
 whoever reviews it, entirely avoidable by branching from the right place
 the first time.
 
@@ -44,99 +44,16 @@ git checkout -b your-branch-name dev
 
 - Build and run the tests that touch what you changed at minimum;
   `make test` runs the full suite (a `SANITIZE=address,undefined` build is
-  also worth running for anything touching memory or concurrency:
+  also worth running for anything touching memory or concurrency —
   `make SANITIZE=address,undefined test`).
-- Match the existing commit style: `type(scope): short description`. See
+- Match the existing commit style: `type(scope): short description` — see
   `git log` for examples (`fix(http2): ...`, `docs(gc): ...`,
   `chore(deps): ...`).
 - Reference the issue number your change addresses, if there is one.
-- Follow the writing rules below for issues, PRs, and docs.
-
-## Writing rules for issues, PRs, and docs
-
-These apply to anything a reviewer or user will read: issue bodies, PR
-descriptions, commit messages, and files under `docs/`.
-
-**Plain text, ASCII first.** No em dashes: use a plain `-` between
-spaces or restructure the sentence. Write RFC references as
-`RFC 6455 section 5.4`, not with a section sign. Avoid other non-ASCII
-punctuation (smart quotes, arrows, ellipsis characters) and non-ASCII
-characters in prose unless there is a concrete reason; source code
-identifiers stay as they are.
-
-**Match the artifact to what it describes.**
-- An issue describes the problem: observed behavior, how to reproduce
-  it, and what you expected instead.
-- A PR describes the change: what it does, how it was verified
-  (commands run, numbers measured), and what it deliberately does not
-  do.
-- A doc page describes the current state of the code as it exists in
-  the tree it ships with, not the state it may reach later.
-
-**No speculation presented as fact.** Do not fill an issue, PR, or doc
-with hypotheses about root causes, future performance, or planned work
-that has not been done and measured. If a hypothesis is worth recording,
-label it as one ("unverified hypothesis: ...", "possible follow-up:
-...") and keep it clearly separated from what was observed. Anything
-stated as a result must come from an actual run, test, or build that
-anyone can repeat.
-
-An example of the bar to hit: "c=512, wrk t4, 3 runs, p99.999 went
-from 60.4 ms to 26.2 ms, zero errors on both sides" is a PR sentence.
-"This should improve tail latency under load" is not, until the runs
-exist.
-
-## A closed PR is not always a rejected one
-
-Some accepted changes land by cherry-pick rather than the merge button.
-GitHub then marks the PR **Closed**, not Merged, because the commit that
-shipped has a different hash from the one on your branch.
-
-This happens when `dev` has moved since you branched and your change needs
-a conflict resolution the merge button cannot perform on its own. Cherry-
-picking keeps you as the commit author, which a squash merge in that
-situation would not do as cleanly.
-
-When it happens you get:
-
-- a comment naming the commit on both `dev` and `main`,
-- the `merged-via-cherry-pick` label, so these are searchable,
-- a note of anything that was changed while resolving, so you are not
-  surprised by a difference between your patch and what shipped.
-
-If a PR of yours is closed without that comment and label, it was not
-taken. Ask in the issue or on Discord if it is unclear which happened.
-
-## Releases and patch releases
-
-- Milestone releases (`vX.Y`) follow `ROADMAP.md`.
-- Patch releases (`vX.Y.Z`) are cut from `main`. `main` only receives
-  reviewed changes cherry-picked from `dev`, so a patch release carries
-  everything merged since the previous tag: bug fixes, and any experimental
-  work already on `main`.
-- **Emergency patch:** a serious bug in a released version is fixed and
-  released from `main` right away instead of waiting for the next milestone.
-  Serious means any of: a crash or hang in the default configuration, data
-  loss or corruption, a security vulnerability, a build that produces a
-  broken binary, or a severe availability regression (for example, a server
-  that stops serving connections under normal load). The fix lands on `dev`
-  and `main` as usual.
-- A release is tagged only when:
-  - every CI workflow on the commit to be tagged has passed, and
-  - the source archive builds and tests clean without Git metadata:
-    `make dist VERSION=X.Y.Z` from a checkout whose submodules match the
-    recorded gitlinks, then `make WERROR=1` and `make WERROR=1 test` in the
-    unpacked tree.
-- Release notes list every change since the previous tag: each fix with its
-  impact and the affected versions, every new API or knob, and every
-  feature included, marked experimental when it is. A release that carries
-  features is not described as bug-fix-only.
-- After publishing, re-pin `packaging/homebrew/cwist.rb` and the tap
-  (`c4punks/homebrew-cwist`) to the released archive.
 
 ## Reporting a vulnerability
 
 Open an issue titled `[CVE/<component>]` describing the finding (see
-existing issues tagged that way for the expected level of detail -
+existing issues tagged that way for the expected level of detail —
 affected file/line, reproduction, suggested fix), or reach out in the
 [Discord](https://discord.gg/6F8HDmNAPg).
