@@ -191,7 +191,7 @@ memory management to the user. CWIST ships the whole stack:
 | Layer | What you get |
 |-------|-------------|
 | **Protocols** | HTTP/1.1, HTTP/2 (h2/h2c), HTTP/3 (QUIC), WebSocket, WebTransport |
-| **TLS / Security** | BoringSSL, PQC hybrid groups, ECH, JWT, DB Crypt, Monocypher |
+| **TLS / Security** | BoringSSL, PQC hybrid groups, ECH, JWT, DB Crypt |
 | **Database** | SQLite3 + ORM, Nuke DB (in-memory + WAL sync), RDBMS auto-detection |
 | **Routing** | Express-style `:param` routes, Mux router, chainable middleware |
 | **Performance** | Zero-copy I/O, generational arenas, EBR GC, lock-free queues, Big Dumb Reply cache |
@@ -324,8 +324,6 @@ The order above matters for static linking: CWIST first, then its dependencies.
 | Flag | When required |
 |------|---------------|
 | `-lnghttp2` | HTTP/2 support |
-| `-lngtcp2 -lngtcp2_crypto_quictls` | HTTP/3 / QUIC |
-| `-lnghttp3` | HTTP/3 QPACK |
 | `-lcurl` | RDBMS auto-mount wire probing |
 
 ### pkg-config (installed since v3.2)
@@ -350,8 +348,6 @@ CWIST_LIBS := -lcwist \
 
 # Append optional libs if present on the build host
 CWIST_LIBS += $(shell pkg-config --libs libnghttp2  2>/dev/null)
-CWIST_LIBS += $(shell pkg-config --libs libngtcp2   2>/dev/null)
-CWIST_LIBS += $(shell pkg-config --libs libnghttp3  2>/dev/null)
 CWIST_LIBS += $(shell pkg-config --libs libcurl     2>/dev/null || echo -lcurl)
 
 your_target: your_source.c
@@ -583,7 +579,6 @@ MySQL Handshake initiation packet to classify the server.
 - SQLite3 (in-tree)
 - cJSON
 - uriparser
-- Monocypher
 - zlib
 - Brotli (`libbrotlienc`, `libbrotlicommon`)
 - Zstandard (`libzstd`)
@@ -636,12 +631,11 @@ submodule's license file):
 |-----------|---------|
 | BoringSSL | Apache-2.0 |
 | lsquic | MIT (some Chromium-derived parts BSD-3-Clause) |
-| nghttp3, ngtcp2, cJSON, multipart-parser-c | MIT |
+| cJSON, multipart-parser-c | MIT |
 | libttak | BSD-3-Clause |
 | SQLite | Public Domain |
 | cnats | Apache-2.0 |
 | uriparser | BSD-3-Clause (library only; its test suite is LGPL-2.1-or-later and is not linked) |
-| Monocypher | BSD-2-Clause OR CC0-1.0 (dual) |
 
 Static linking propagates each component's license obligations to linked
 binaries; review [NOTICE.md](NOTICE.md) when distributing.
