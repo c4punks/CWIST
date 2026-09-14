@@ -11,7 +11,7 @@ class Cwist < Formula
   url "https://github.com/c4punks/CWIST/releases/download/v3.4/cwist-3.4.tar.gz"
   sha256 "d5dc239b5a59f995a7d32cca60636a40921077861c2618a33e4582035cf33a89"
   # The framework itself is MIT; the vendored components it statically links
-  # are Apache-2.0 (BoringSSL, cnats), MIT (lsquic, nghttp3, cJSON,
+  # are Apache-2.0 (BoringSSL, cnats), MIT (lsquic, cJSON,
   # multipart-parser-c), BSD-3-Clause (libttak, uriparser, lsquic's Chromium
   # portions), BSD-2-Clause (Monocypher; dual-licensed, BSD-2-Clause chosen
   # over CC0-1.0), and SQLite (public domain, SPDX "blessing").
