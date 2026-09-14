@@ -42,11 +42,26 @@ class MetricsTests(unittest.TestCase):
    with self.subTest(k=k),self.assertRaises(ValueError):validate_case(m,r,dict(t,**{k:v}))
   with self.assertRaises(ValueError):validate_case(m,dict(r,survivors=[12]),t)
  def test_resources(self):
-  def p(pid,start,rss,csw):return {'pid':pid,'start':start,'rss_kib':rss,'tasks':[{'tid':pid,'start':start,'csw':csw}]}
+  def p(pid,start,rss,csw,pss=None):return {'pid':pid,'start':start,'rss_kib':rss,'pss_kib':pss,'tasks':[{'tid':pid,'start':start,'csw':csw}]}
   b=[p(1,'10',20,5),p(2,'20',30,10)];a=[p(1,'10',22,8),p(2,'20',33,17)]
-  self.assertEqual(summarize_resources(b,a),{'rss_kib':55,'csw':10,'rss_kind':'process-group end sample','csw_kind':'same-TID counter delta'})
+  self.assertEqual(summarize_resources(b,a),{'rss_kib':55,'pss_kib':None,'csw':10,'rss_kind':'process-group end sample','pss_kind':'unavailable: smaps_rollup unreadable','csw_kind':'same-TID counter delta'})
   a[1]['start']='21';self.assertIsNone(summarize_resources(b,a)['csw'])
   a[1]['rss_kib']=None;self.assertIsNone(summarize_resources(b,a)['rss_kib'])
+ def test_pss_summed_when_every_process_reports_it(self):
+  # Each worker's pss_kib is its share of the pages it maps, so the group's
+  # real footprint is their sum -- unlike rss_kib, which counts a page shared
+  # by both workers twice (issue #150).
+  def p(pid,start,rss,pss):return {'pid':pid,'start':start,'rss_kib':rss,'pss_kib':pss,'tasks':[{'tid':pid,'start':start,'csw':1}]}
+  b=[p(1,'10',9304,4394),p(2,'20',6980,4170)];a=[p(1,'10',9304,4394),p(2,'20',6980,4170)]
+  value=summarize_resources(b,a)
+  self.assertEqual(value['rss_kib'],16284)
+  self.assertEqual(value['pss_kib'],8564)
+  self.assertEqual(value['pss_kind'],'process-group end sample, shared pages divided by mapper count')
+  # One unreadable smaps_rollup makes the whole group's pss unusable rather
+  # than silently reporting a partial sum.
+  a[1]['pss_kib']=None
+  self.assertIsNone(summarize_resources(b,a)['pss_kib'])
+  self.assertEqual(summarize_resources(b,a)['rss_kib'],16284)
 class AggregateTests(unittest.TestCase):
  def cases(self):
   return {key:(parse_wrk_text(output(sample())),{'complete':True,'cleanup_ok':True,'survivors':[]},{'before':[],'after':[],'ready':True,'warmup_ok':True,'measurement_exit':0}) for key in CASES}
