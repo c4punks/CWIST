@@ -261,6 +261,11 @@ cwist_ws_frame *cwist_websocket_receive(cwist_websocket *ws) {
             cwist_websocket_send(ws, CWIST_WS_FRAME_CLOSE,
                                  payload, (payload_len >= 2) ? 2 : 0);
             ws->is_closed = true;
+        } else if (opcode == CWIST_WS_FRAME_PING) {
+            /* RFC 6455 §5.5.3: respond to every PING with a PONG carrying
+             * the same payload (up to 125 bytes per §5.5). */
+            cwist_websocket_send(ws, CWIST_WS_FRAME_PONG,
+                                 payload, payload_len);
         }
 
         cwist_ws_frame *frame = (cwist_ws_frame *)cwist_alloc(sizeof(cwist_ws_frame));
