@@ -185,6 +185,12 @@ cwist_ws_frame *cwist_websocket_receive(cwist_websocket *ws) {
     }
 
     if (opcode == CWIST_WS_FRAME_CLOSE) {
+        /* RFC 6455 §5.5.1: upon receiving a CLOSE frame the endpoint MUST
+         * send a CLOSE frame in response before closing the connection.
+         * Mirror the first two bytes of the payload (the status code) if
+         * present; send an empty body otherwise. */
+        cwist_websocket_send(ws, CWIST_WS_FRAME_CLOSE,
+                             payload, (payload_len >= 2) ? 2 : 0);
         ws->is_closed = true;
     }
 
