@@ -50,6 +50,7 @@ void test_handshake_key_generation() {
     cwist_http_header_add(&req->headers, "Connection", "Upgrade");
     cwist_http_header_add(&req->headers, "Upgrade", "websocket");
     cwist_http_header_add(&req->headers, "Sec-WebSocket-Key", "dGhlIHNhbXBsZSBub25jZQ==");
+    cwist_http_header_add(&req->headers, "Sec-WebSocket-Version", "13");
 
     cwist_websocket *ws = cwist_websocket_upgrade(req, sv[0]);
     assert(ws != NULL);
@@ -74,6 +75,38 @@ void test_handshake_key_generation() {
     close(sv[1]);
 
     printf("Handshake Test Passed.\n");
+}
+
+/* RFC 6455 §4.2.1: the client MUST include Sec-WebSocket-Version: 13.
+ * Proves the rejection side of the fix, not just that a well-formed
+ * request still works. */
+void test_handshake_rejects_bad_version() {
+    printf("Testing handshake rejects missing/wrong Sec-WebSocket-Version...\n");
+
+    int sv[2];
+    assert(socketpair(AF_UNIX, SOCK_STREAM, 0, sv) == 0);
+    cwist_http_request *req = cwist_http_request_create();
+    cwist_http_header_add(&req->headers, "Connection", "Upgrade");
+    cwist_http_header_add(&req->headers, "Upgrade", "websocket");
+    cwist_http_header_add(&req->headers, "Sec-WebSocket-Key", "dGhlIHNhbXBsZSBub25jZQ==");
+    /* No Sec-WebSocket-Version header at all. */
+    assert(cwist_websocket_upgrade(req, sv[0]) == NULL);
+    cwist_http_request_destroy(req);
+    close(sv[0]);
+    close(sv[1]);
+
+    assert(socketpair(AF_UNIX, SOCK_STREAM, 0, sv) == 0);
+    req = cwist_http_request_create();
+    cwist_http_header_add(&req->headers, "Connection", "Upgrade");
+    cwist_http_header_add(&req->headers, "Upgrade", "websocket");
+    cwist_http_header_add(&req->headers, "Sec-WebSocket-Key", "dGhlIHNhbXBsZSBub25jZQ==");
+    cwist_http_header_add(&req->headers, "Sec-WebSocket-Version", "8"); /* pre-RFC6455 draft version */
+    assert(cwist_websocket_upgrade(req, sv[0]) == NULL);
+    cwist_http_request_destroy(req);
+    close(sv[0]);
+    close(sv[1]);
+
+    printf("Passed version rejection.\n");
 }
 
 static void send_masked_binary_frame(int fd, const uint8_t *payload, size_t len) {
@@ -101,6 +134,7 @@ static void test_websocket_sequenced(void) {
     cwist_http_header_add(&req->headers, "Connection", "Upgrade");
     cwist_http_header_add(&req->headers, "Upgrade", "websocket");
     cwist_http_header_add(&req->headers, "Sec-WebSocket-Key", "dGhlIHNhbXBsZSBub25jZQ==");
+    cwist_http_header_add(&req->headers, "Sec-WebSocket-Version", "13");
 
     cwist_websocket *ws = cwist_websocket_upgrade(req, sv[0]);
     assert(ws != NULL);
@@ -159,6 +193,7 @@ static void test_websocket_sequenced(void) {
 
 int main() {
     test_handshake_key_generation();
+    test_handshake_rejects_bad_version();
     test_websocket_sequenced();
     return 0;
 }
