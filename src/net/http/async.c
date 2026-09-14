@@ -23,6 +23,7 @@
 #include <cwist/sys/app/shutdown.h>
 #include <cwist/sys/job/scheduler.h>
 #include <cwist/core/mem/alloc.h>
+#include <cwist/core/mem/gc.h>
 #include <stdatomic.h>
 #include <fcntl.h>
 #include <sched.h>
@@ -110,6 +111,8 @@ cwist_async *cwist_async_defer(cwist_http_request *req, cwist_http_response *res
     a->post.cb = cwist_async_reactor_complete;
     a->post.ctx = a;
     res->async = a;
+    /* Explicit async refs, not the creator's TLS GC sweep, own this handle. */
+    if (cwist_full_gc_enabled()) cwist_gc_scope_disown(a);
     res->deferred = true;
     return a;
 }

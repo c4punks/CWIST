@@ -54,7 +54,23 @@ static void private_response(cwist_http_request *q,cwist_http_response *r){fixed
 static void private_context(cwist_http_request *q,cwist_http_response *r){static int context;fixed(q,r);q->private_data=&context;}
 static void error_response(cwist_http_request *q,cwist_http_response *r){fixed(q,r);r->status_code=500;}
 static void after_handler(cwist_http_request *q,cwist_http_response *r,cwist_handler_func next){atomic_fetch_add(&middleware_calls,1);next(q,r);atomic_fetch_add(&post_calls,1);cwist_http_header_add(&r->headers,"X-Post","ran");}
-static void deferred_response(cwist_http_request *q,cwist_http_response *r){atomic_fetch_add(&deferred_calls,1);cwist_async *a=cwist_async_defer(q,r);CHECK(a);atomic_store(&pending_deferred,a);}
+static void deferred_response(cwist_http_request *q,cwist_http_response *r){
+    atomic_fetch_add(&deferred_calls,1);
+    cwist_error_t e=cwist_http_header_add(&r->headers,"X-Before-Defer","v");CHECK(cwist_error_is_ok(&e));
+    e=cwist_http_header_add(&q->headers,"X-Owned-Request","v");CHECK(cwist_error_is_ok(&e));
+    if(!q->query_params){q->query_params=cwist_query_map_create();}CHECK(q->query_params);
+    cwist_query_map_set(q->query_params,"owned","query");
+    if(!q->path_params){q->path_params=cwist_query_map_create();}CHECK(q->path_params);
+    cwist_query_map_set(q->path_params,"owned","path");
+    if(!q->flash){q->flash=cwist_query_map_create();}CHECK(q->flash);
+    cwist_query_map_set(q->flash,"owned","flash");
+    /* Exercise real heap-backed sstrings, including adopted cwist_alloc data. */
+    cwist_sstring_destroy(q->body);q->body=cwist_sstring_create();CHECK(q->body);
+    char *body=cwist_alloc(4);CHECK(body);memcpy(body,"abc",4);
+    cwist_sstring_adopt_len(q->body,body,3);
+    cwist_sstring_destroy(r->body);r->body=cwist_sstring_create();CHECK(r->body);
+    cwist_async *a=cwist_async_defer(q,r);CHECK(a);atomic_store(&pending_deferred,a);
+}
 static void file_response(cwist_http_request *q,cwist_http_response *r){
     (void)q;atomic_fetch_add(&file_calls,1);
     char path[]="/tmp/cwist-pfc-XXXXXX";int fd=mkstemp(path);CHECK(fd>=0);CHECK(!unlink(path));
@@ -94,12 +110,14 @@ static void exchange(cwist_app *app,const char *path,const char *host,const char
         CHECK(n>0&&(size_t)n<sizeof(requests)-used);used+=(size_t)n;
     }
     if(raw_requests)write_all(client,raw_requests,strlen(raw_requests));else write_all(client,requests,used);
-    struct job job={server,app};pthread_t thread;
+    struct job job={server,app};pthread_t thread;bool joined=false;
     if(c1m){CHECK(cwist_http_pool_init()==0);CHECK(cwist_http_pool_submit_async(server,dispatch,app));}
     else CHECK(pthread_create(&thread,NULL,classic,&job)==0);
     struct timespec pause={.tv_nsec=1000000};
     if(complete_deferred){
         cwist_async *a=NULL;for(int i=0;i<2000&&!a;i++){a=atomic_exchange(&pending_deferred,NULL);if(!a)nanosleep(&pause,NULL);}CHECK(a);
+        /* Completion must survive creator-thread TLS/GC destruction. */
+        if(!c1m){CHECK(pthread_join(thread,NULL)==0);joined=true;}
         cwist_http_response *r=cwist_http_response_create();CHECK(r);fixed(NULL,r);CHECK(cwist_async_respond_with(a,r));
     }
     /* Positive proof, not a sleep asserted to be a partial write. */
@@ -109,7 +127,7 @@ static void exchange(cwist_app *app,const char *path,const char *host,const char
     used=0;for(;;){CHECK(used<capacity);ssize_t n=recv(client,wire+used,capacity-used,0);if(n<0&&errno==EINTR)continue;CHECK(n>=0);if(!n)break;used+=(size_t)n;}
     close(client);
     if(c1m){atomic_store(&g_cwist_running,false);cwist_reactor_t *r=atomic_load(&reactor);CHECK(r);cwist_reactor_post_t p={.cb=wake};CHECK(cwist_reactor_post(r,&p));cwist_http_pool_destroy();}
-    else CHECK(pthread_join(thread,NULL)==0);
+    else if(!joined)CHECK(pthread_join(thread,NULL)==0);
     size_t offset=0;
     for(int i=0;i<count;i++){
         size_t end=offset;while(end+3<used&&memcmp(wire+end,"\r\n\r\n",4))end++;
