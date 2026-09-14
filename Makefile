@@ -124,8 +124,8 @@ LIBS = $(CNATS_LIB) \
        -pthread -ldl -lm -lstdc++ -lz $(ZSTD_LIBS)
 
 # SQLite Automation
-SQLITE_YEAR = 2024
-SQLITE_VER = 3450100
+SQLITE_YEAR = 2026
+SQLITE_VER = 3530400
 SQLITE_ZIP = sqlite-amalgamation-$(SQLITE_VER).zip
 SQLITE_URL = https://www.sqlite.org/$(SQLITE_YEAR)/$(SQLITE_ZIP)
 SQLITE_DIR = lib/sqlite3
