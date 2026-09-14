@@ -617,9 +617,20 @@ typedef struct grpc_client_headers_ctx {
 static void grpc_client_on_header(void *ctx, const char *name, const char *value) {
     grpc_client_headers_ctx *hc = ctx;
     if (strcmp(name, ":status") == 0) {
-        hc->http_status = atoi(value);
+        /* HTTP status is a 3-digit decimal; reject anything that doesn't
+         * parse cleanly rather than silently treating garbage as 0. */
+        char *end = NULL;
+        long v = strtol(value, &end, 10);
+        hc->http_status = (end != value && *end == '\0' && v >= 100 && v <= 599)
+                          ? (int)v : 0;
     } else if (strcmp(name, "grpc-status") == 0) {
-        hc->call->status = (cwist_grpc_status_t)atoi(value);
+        /* gRPC status codes are small non-negative integers (0–16 today).
+         * Use strtol so a malformed trailer produces status 2 (UNKNOWN)
+         * instead of silently returning 0 (OK). */
+        char *end = NULL;
+        long v = strtol(value, &end, 10);
+        hc->call->status = (end != value && *end == '\0' && v >= 0 && v <= 0x7fffffff)
+                           ? (cwist_grpc_status_t)v : CWIST_GRPC_UNKNOWN;
         hc->call->status_seen = 1;
     } else if (strcmp(name, "grpc-message") == 0) {
         cwist_free(hc->call->status_message);
