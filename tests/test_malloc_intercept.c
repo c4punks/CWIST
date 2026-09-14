@@ -84,8 +84,13 @@ static int test_tracked_and_swept_when_gc_on(void) {
 
 /* --- realloc tracking follows the incoming pointer, not the toggle at
  * call time: a pointer allocated while GC was off and later realloc'd
- * while GC is on stays untracked (matching cwist_realloc()'s existing
- * behavior of never opting a pointer into tracking on its own). --- */
+ * while GC is on stays untracked. This is the CWIST_INTERCEPT_MALLOC
+ * shim's behavior (cwist_realloc_shim() in alloc.c); plain cwist_realloc()
+ * now implements the same untrack-old/track-new rule, just against the
+ * pointer's actual tracked state rather than an unconditional "never
+ * track" -- the two were briefly inconsistent (cwist_realloc() didn't
+ * track at all, which was the double-free reproduced by
+ * bench_malloc_intercept_concurrent.c) before that was fixed. --- */
 static int test_realloc_tracking_follows_pointer(void) {
     /* Note: full-GC is already on from the previous test and is a
      * one-shot, non-reversible toggle (cwist_full_gc_locked()) - so this
