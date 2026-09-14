@@ -1,0 +1,110 @@
+name: Redirect main-targeted PRs to dev
+
+# CWIST's contribution flow lands work on `dev` first (see CONTRIBUTING.md);
+# `main` only receives cherry-picks from dev. A PR opened directly against
+# `main` needs to become a PR against `dev` instead -- but `main` and `dev`
+# share no common git history (confirmed: no merge-base between them), so
+# GitHub can never just change a PR's base branch after the fact; attempting
+# that silently closes the PR instead of moving it. The only way to actually
+# redirect one is a same-content recreation: cherry-pick the PR's own commits
+# onto a fresh branch off `dev` and open a new PR there.
+#
+# This must live on the `main` branch: pull_request_target resolves the
+# workflow file from the PR's base branch, not from `dev` or the PR head.
+on:
+  pull_request_target:
+    types: [opened, reopened]
+    branches:
+      - main
+
+permissions:
+  contents: write
+  pull-requests: write
+  issues: write
+
+concurrency:
+  group: redirect-pr-${{ github.event.pull_request.number }}
+  cancel-in-progress: false
+
+jobs:
+  redirect:
+    if: >
+      github.event.pull_request.base.ref == 'main' &&
+      !contains(github.event.pull_request.labels.*.name, 'redirected-to-dev') &&
+      !contains(github.event.pull_request.labels.*.name, 'needs-manual-dev-redirect')
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout dev
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: dev
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Configure git identity for the redirect machinery
+        run: |
+          git config user.name "cwist-pr-redirect[bot]"
+          git config user.email "cwist-pr-redirect-bot@users.noreply.github.com"
+
+      - name: Fetch the PR head and both long-lived branches
+        env:
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: |
+          git fetch origin "pull/${PR_NUMBER}/head:pr-${PR_NUMBER}-head"
+          git fetch origin main dev
+
+      - name: Attempt automatic redirect onto dev
+        id: redirect
+        env:
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: |
+          set -e
+          BRANCH="auto-redirect/pr-${PR_NUMBER}-to-dev"
+          git checkout -b "$BRANCH" origin/dev
+
+          BASE="$(git merge-base origin/main "pr-${PR_NUMBER}-head")"
+
+          # cherry-pick -x: keeps a "(cherry picked from commit ...)"
+          # trailer for traceability, and -- the actual point -- preserves
+          # each original commit's Author unchanged. Only the *committer*
+          # becomes this workflow's bot identity; GitHub still credits the
+          # real author on the recreated PR.
+          if git cherry-pick -x "${BASE}..pr-${PR_NUMBER}-head"; then
+            git push origin "$BRANCH"
+            echo "ok=true" >> "$GITHUB_OUTPUT"
+            echo "branch=$BRANCH" >> "$GITHUB_OUTPUT"
+          else
+            git cherry-pick --abort || true
+            echo "ok=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Open the redirected PR against dev, close the original
+        if: steps.redirect.outputs.ok == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          PR_TITLE: ${{ github.event.pull_request.title }}
+          PR_AUTHOR: ${{ github.event.pull_request.user.login }}
+          BRANCH: ${{ steps.redirect.outputs.branch }}
+        run: |
+          NEW_URL=$(gh pr create --repo "${GITHUB_REPOSITORY}" --base dev --head "$BRANCH" \
+            --title "$PR_TITLE" \
+            --body "Automatic redirect of #${PR_NUMBER} by @${PR_AUTHOR}: CWIST's contribution flow lands work on \`dev\` first (see CONTRIBUTING.md). \`main\` and \`dev\` share no common git history, so a PR's base branch can never be changed after opening -- retargeting silently closes it instead of moving it. This is a same-content recreation via \`git cherry-pick\`; original commit authorship is preserved.
+
+          Closes #${PR_NUMBER}.")
+          gh pr edit "$PR_NUMBER" --repo "${GITHUB_REPOSITORY}" --add-label "redirected-to-dev" || true
+          gh pr comment "$PR_NUMBER" --repo "${GITHUB_REPOSITORY}" --body "Auto-redirected to \`dev\`: ${NEW_URL}
+
+          CWIST's contribution flow lands work on \`dev\` first -- see CONTRIBUTING.md. This PR is superseded by the one above (same commits, same authorship, different base) and is being closed automatically." || true
+          gh pr close "$PR_NUMBER" --repo "${GITHUB_REPOSITORY}" || true
+
+      - name: Automatic redirect failed -- flag for a maintainer
+        if: steps.redirect.outputs.ok == 'false'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: |
+          gh pr edit "$PR_NUMBER" --repo "${GITHUB_REPOSITORY}" --add-label "needs-manual-dev-redirect" || true
+          gh pr comment "$PR_NUMBER" --repo "${GITHUB_REPOSITORY}" --body "This PR targets \`main\`, but CWIST's contribution flow lands work on \`dev\` first (see CONTRIBUTING.md). Automatic redirect onto \`dev\` failed -- the commits didn't cherry-pick cleanly (likely a real content conflict against \`dev\`'s current state, not just a base-branch mismatch).
+
+          A maintainer needs to recreate this PR's commits against \`dev\` by hand (\`git cherry-pick\`, preserving authorship) and close this one in favor of the recreation. Labeled \`needs-manual-dev-redirect\` for visibility." || true
