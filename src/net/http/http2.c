@@ -115,7 +115,14 @@ static int h2_idle_timeout_ms(void) {
     static int timeout_ms = 0;
     if (timeout_ms == 0) {
         const char *env = getenv("CWIST_HTTP2_IDLE_TIMEOUT_MS");
-        timeout_ms = (env && atoi(env) > 0) ? atoi(env) : CWIST_HTTP2_IDLE_TIMEOUT_MS;
+        if (env && *env) {
+            char *end = NULL;
+            long v = strtol(env, &end, 10);
+            timeout_ms = (end != env && *end == '\0' && v > 0) ? (int)v
+                         : CWIST_HTTP2_IDLE_TIMEOUT_MS;
+        } else {
+            timeout_ms = CWIST_HTTP2_IDLE_TIMEOUT_MS;
+        }
     }
     return timeout_ms;
 }
@@ -131,7 +138,14 @@ static int h2_goaway_grace_ms(void) {
     static int grace_ms = -1;
     if (grace_ms < 0) {
         const char *env = getenv("CWIST_HTTP2_GOAWAY_GRACE_MS");
-        grace_ms = (env && atoi(env) >= 0) ? atoi(env) : CWIST_HTTP2_GOAWAY_GRACE_MS_DEFAULT;
+        if (env && *env) {
+            char *end = NULL;
+            long v = strtol(env, &end, 10);
+            grace_ms = (end != env && *end == '\0' && v >= 0) ? (int)v
+                       : CWIST_HTTP2_GOAWAY_GRACE_MS_DEFAULT;
+        } else {
+            grace_ms = CWIST_HTTP2_GOAWAY_GRACE_MS_DEFAULT;
+        }
     }
     return grace_ms;
 }
@@ -140,7 +154,14 @@ static uint32_t h2_max_rst_burst(void) {
     static uint32_t val = 0;
     if (val == 0) {
         const char *env = getenv("CWIST_HTTP2_MAX_RST_BURST");
-        val = (env && atoi(env) > 0) ? (uint32_t)atoi(env) : CWIST_HTTP2_DEFAULT_RST_BURST;
+        if (env && *env) {
+            char *end = NULL;
+            long v = strtol(env, &end, 10);
+            val = (end != env && *end == '\0' && v > 0) ? (uint32_t)v
+                  : CWIST_HTTP2_DEFAULT_RST_BURST;
+        } else {
+            val = CWIST_HTTP2_DEFAULT_RST_BURST;
+        }
     }
     return val;
 }
@@ -149,7 +170,14 @@ static uint32_t h2_max_rst_rate(void) {
     static uint32_t val = 0;
     if (val == 0) {
         const char *env = getenv("CWIST_HTTP2_MAX_RST_RATE");
-        val = (env && atoi(env) > 0) ? (uint32_t)atoi(env) : CWIST_HTTP2_DEFAULT_RST_RATE;
+        if (env && *env) {
+            char *end = NULL;
+            long v = strtol(env, &end, 10);
+            val = (end != env && *end == '\0' && v > 0) ? (uint32_t)v
+                  : CWIST_HTTP2_DEFAULT_RST_RATE;
+        } else {
+            val = CWIST_HTTP2_DEFAULT_RST_RATE;
+        }
     }
     return val;
 }
@@ -862,7 +890,12 @@ static size_t h2_batch_threshold(void) {
     static size_t threshold = 0;
     if (threshold == 0) {
         const char *env = getenv("CWIST_H2_BATCH_BYTES");
-        long v = (env && *env) ? atol(env) : 0;
+        long v = 0;
+        if (env && *env) {
+            char *end = NULL;
+            v = strtol(env, &end, 10);
+            if (end == env || *end != '\0') v = 0;
+        }
         threshold = (v >= 4096) ? (size_t)v : (size_t)CWIST_H2_BATCH_DEFAULT_BYTES;
     }
     return threshold;
