@@ -176,6 +176,10 @@ cwist_ws_frame *cwist_websocket_receive(cwist_websocket *ws) {
         bool masked = (head[1] & 0x80) != 0;
         uint64_t payload_len = head[1] & 0x7F;
 
+        /* RFC 6455 §5.2: RSV1/RSV2/RSV3 MUST be 0 unless an extension
+         * defines their meaning.  CWIST has no such extension. */
+        if (head[0] & 0x70) return NULL;
+
         /* Client-to-server frames must be masked per RFC 6455 §5.3. */
         if (!masked) return NULL;
 
