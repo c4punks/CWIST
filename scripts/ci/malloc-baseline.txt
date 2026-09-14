@@ -203,7 +203,7 @@ src/net/http/http_client.c:315:        free(resp_body.data);
 src/net/http/http_client.c:324:        free(resp_body.data);
 src/net/http/http_client.c:353:    free(resp_body.data);
 src/net/http/http_client.c:42:        char *tmp = realloc(body->data, new_cap);
-src/net/http/session.c:288:    free(raw);
+src/net/http/session.c:296:    free(raw);
 src/net/http/tls_chain.c:107:        free(out->data);
 src/net/http/tls_chain.c:289:    char *url = (char *)malloc((size_t)uri_len + 1);
 src/net/http/tls_chain.c:295:        free(url);

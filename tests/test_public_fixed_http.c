@@ -6,6 +6,7 @@
 #include <cwist/core/mem/alloc.h>
 #include <cwist/sys/io/reactor.h>
 #include <cwist/net/http/async.h>
+#include <cwist/net/http/session.h>
 #include <fcntl.h>
 #include <arpa/inet.h>
 #include <errno.h>
@@ -28,7 +29,7 @@ static size_t payload_len=2048; /* Coalesces; 64 KiB boundary tested separately.
 static atomic_int parks, hits, reconstruction_failures, body_calls, chunked_calls;
 static atomic_bool fail_reconstruction;
 static int shutdown_after;
-static bool require_park, complete_deferred, expect_post;
+static bool require_park, complete_deferred, expect_post, inline_abort_case;
 static const char *raw_requests;
 static atomic_int file_calls, deferred_calls, post_calls;
 static int last_file_fd=-1;
@@ -64,6 +65,9 @@ static void deferred_response(cwist_http_request *q,cwist_http_response *r){
     cwist_query_map_set(q->path_params,"owned","path");
     if(!q->flash){q->flash=cwist_query_map_create();}CHECK(q->flash);
     cwist_query_map_set(q->flash,"owned","flash");
+    cwist_session_t *session=cwist_session_start(q->app,q,r);CHECK(session);
+    CHECK(cwist_session_set(session,"owned","session")==0);
+    CHECK(!q->csrf_token);q->csrf_token=cwist_alloc(4);CHECK(q->csrf_token);memcpy(q->csrf_token,"abc",4);
     /* Exercise real heap-backed sstrings, including adopted cwist_alloc data. */
     cwist_sstring_destroy(q->body);q->body=cwist_sstring_create();CHECK(q->body);
     char *body=cwist_alloc(4);CHECK(body);memcpy(body,"abc",4);
@@ -71,6 +75,7 @@ static void deferred_response(cwist_http_request *q,cwist_http_response *r){
     cwist_sstring_destroy(r->body);r->body=cwist_sstring_create();CHECK(r->body);
     cwist_async *a=cwist_async_defer(q,r);CHECK(a);atomic_store(&pending_deferred,a);
 }
+static void inline_abort_response(cwist_http_request *q,cwist_http_response *r){cwist_async *a=cwist_async_defer(q,r);CHECK(a);CHECK(cwist_async_abort(a,CWIST_HTTP_INTERNAL_ERROR));}
 static void file_response(cwist_http_request *q,cwist_http_response *r){
     (void)q;atomic_fetch_add(&file_calls,1);
     char path[]="/tmp/cwist-pfc-XXXXXX";int fd=mkstemp(path);CHECK(fd>=0);CHECK(!unlink(path));
@@ -86,12 +91,30 @@ static cwist_async_action_t dispatch(int fd,cwist_http_async_conn_t *conn){
     atomic_store(&reactor,conn->reactor);return cwist_app_http_handler_async(fd,conn);
 }
 static void wake(void *ctx){(void)ctx;}
+struct completion_gate{atomic_bool entered,release;};
+static void hold_reactor(void *ctx){
+    struct completion_gate *g=ctx;atomic_store(&g->entered,true);
+    struct timespec pause={.tv_nsec=1000000};
+    for(int i=0;i<5000&&!atomic_load(&g->release);i++)nanosleep(&pause,NULL);
+    CHECK(atomic_load(&g->release));
+}
+static void *produce_response(void *ctx){
+    size_t pending=cwist_gc_scope_pending_count();
+    cwist_http_response *r=cwist_http_response_create();CHECK(r);fixed(NULL,r);
+    cwist_error_t e=cwist_http_header_add(&r->headers,"X-Producer","owned");CHECK(cwist_error_is_ok(&e));
+    CHECK(cwist_async_respond_with(ctx,r));
+    /* The reactor has not consumed it: producer TLS must no longer own it. */
+    if(cwist_full_gc_enabled())CHECK(cwist_gc_scope_pending_count()==pending);
+    return NULL;
+}
 struct job{int fd;cwist_app *app;};
 static void *classic(void *p){struct job *j=p;cwist_app_http_handler(j->fd,j->app);return NULL;}
 static void write_all(int fd,const char *p,size_t n){while(n){ssize_t k=send(fd,p,n,0);if(k<0&&errno==EINTR)continue;CHECK(k>0);p+=k;n-=(size_t)k;}}
 /* Each exchange joins its workers: cache entries must survive worker-GC teardown,
  * and any following reconfiguration is genuinely quiescent, not a route race. */
 static void exchange(cwist_app *app,const char *path,const char *host,const char *extra,int count,int status){
+    struct completion_gate gate={0};
+    cwist_reactor_post_t gate_post={.cb=hold_reactor,.ctx=&gate};
     atomic_store(&g_cwist_running,true);atomic_store(&reactor,NULL);
     atomic_store(&parks,0);atomic_store(&hits,0);
     int listener=socket(AF_INET,SOCK_STREAM,0);CHECK(listener>=0);
@@ -106,7 +129,7 @@ static void exchange(cwist_app *app,const char *path,const char *host,const char
     struct timeval timeout={.tv_sec=15};CHECK(setsockopt(client,SOL_SOCKET,SO_RCVTIMEO,&timeout,sizeof(timeout))==0);
     char requests[16000];size_t used=0;
     for(int i=0;i<count;i++){
-        int n=snprintf(requests+used,sizeof(requests)-used,"GET %s HTTP/1.1\r\nHost: %s\r\n%sConnection: %s\r\n\r\n",path,host,extra,i==count-1?"close":"keep-alive");
+        int n=snprintf(requests+used,sizeof(requests)-used,"GET %s HTTP/1.1\r\nHost: %s\r\n%sConnection: %s\r\n\r\n",path,host,extra,i==count-1&&!inline_abort_case?"close":"keep-alive");
         CHECK(n>0&&(size_t)n<sizeof(requests)-used);used+=(size_t)n;
     }
     if(raw_requests)write_all(client,raw_requests,strlen(raw_requests));else write_all(client,requests,used);
@@ -118,7 +141,17 @@ static void exchange(cwist_app *app,const char *path,const char *host,const char
         cwist_async *a=NULL;for(int i=0;i<2000&&!a;i++){a=atomic_exchange(&pending_deferred,NULL);if(!a)nanosleep(&pause,NULL);}CHECK(a);
         /* Completion must survive creator-thread TLS/GC destruction. */
         if(!c1m){CHECK(pthread_join(thread,NULL)==0);joined=true;}
-        cwist_http_response *r=cwist_http_response_create();CHECK(r);fixed(NULL,r);CHECK(cwist_async_respond_with(a,r));
+        if(c1m){
+            cwist_reactor_t *owner=atomic_load(&reactor);CHECK(owner);
+            CHECK(cwist_reactor_post(owner,&gate_post));
+            for(int i=0;i<2000&&!atomic_load(&gate.entered);i++)nanosleep(&pause,NULL);
+            CHECK(atomic_load(&gate.entered));
+            pthread_t producer;CHECK(pthread_create(&producer,NULL,produce_response,a)==0);
+            CHECK(pthread_join(producer,NULL)==0);
+            atomic_store(&gate.release,true);
+        }else{
+            cwist_http_response *r=cwist_http_response_create();CHECK(r);fixed(NULL,r);CHECK(cwist_async_respond_with(a,r));
+        }
     }
     /* Positive proof, not a sleep asserted to be a partial write. */
     if(require_park&&c1m){for(int i=0;i<2000&&!atomic_load(&parks);i++)nanosleep(&pause,NULL);CHECK(atomic_load(&parks)>0);}
@@ -135,9 +168,11 @@ static void exchange(cwist_app *app,const char *path,const char *host,const char
         char expected[32];snprintf(expected,sizeof(expected),"HTTP/1.1 %d ",status);CHECK(!strncmp(headers,expected,strlen(expected)));
         char *cl=strstr(headers,"Content-Length: ");CHECK(cl);size_t length=(size_t)strtoul(cl+16,NULL,10);
         if(expect_post)CHECK(strstr(headers,"X-Post: ran"));
+        if(complete_deferred&&c1m)CHECK(strstr(headers,"X-Producer: owned"));
         CHECK(strstr(headers,i==count-1?"Connection: close":"Connection: keep-alive"));
         offset=end+4;CHECK(length<=used-offset);
-        if(status!=401){CHECK(length==payload_len);CHECK(!memcmp(wire+offset,payload,length));}
+        if(inline_abort_case){const char *error="Internal Server Error";CHECK(length==strlen(error)&&!memcmp(wire+offset,error,length));}
+        else if(status!=401){CHECK(length==payload_len);CHECK(!memcmp(wire+offset,payload,length));}
         else {CHECK(length==6&&!memcmp(wire+offset,"DENIED",6));}
         offset+=length;
     }
@@ -148,9 +183,11 @@ int main(int argc,char **argv){
     alarm(300);signal(SIGPIPE,SIG_IGN);setenv("CWIST_C1M_MODE",c1m?"1":"0",1);setenv("CWIST_WORKER_THREADS","1",1);setenv("CWIST_WORKERS","1",1);
     for(size_t i=0;i<sizeof(payload);i++)payload[i]=(unsigned char)(i%251); /* includes NUL */
     cwist_app *app=cwist_app_create();CHECK(app);
+    CHECK(cwist_app_use_session(app,NULL)==0); /* Ephemeral test config, never logged. */
     cwist_pfc_destroy(app->public_fixed_cache);
     app->public_fixed_cache=cwist_pfc_create_with(test_clock,test_alloc);CHECK(app->public_fixed_cache);
     cwist_app_get_opt(app,"/public",fixed,CWIST_ENDPOINT_PUBLIC_FIXED);
+    cwist_app_get_opt(app,"/inline-abort",inline_abort_response,CWIST_ENDPOINT_PUBLIC_FIXED);
     cwist_app_get_opt(app,"/bare",fixed,CWIST_ENDPOINT_FIXED);cwist_app_get(app,"/dynamic",fixed);
     cwist_app_get_opt(app,"/private",private_response,CWIST_ENDPOINT_PUBLIC_FIXED);
     cwist_app_get_opt(app,"/context",private_context,CWIST_ENDPOINT_PUBLIC_FIXED);
@@ -188,6 +225,7 @@ int main(int argc,char **argv){
     CHECK(atomic_load(&calls)==before+3&&cwist_pfc_count(app->public_fixed_cache)==entries);
     before=atomic_load(&calls);exchange(app,"/error","one.test","",2,500);CHECK(atomic_load(&calls)==before+2);
     for(int i=0;i<2;i++){exchange(app,"/file","one.test","",1,200);CHECK(fcntl(last_file_fd,F_GETFD)==-1&&errno==EBADF);}CHECK(atomic_load(&file_calls)==2);
+    inline_abort_case=true;exchange(app,"/inline-abort","one.test","",1,500);inline_abort_case=false;
     complete_deferred=true;
     for(int i=0;i<2;i++)exchange(app,"/deferred","one.test","",1,200);
     complete_deferred=false;CHECK(atomic_load(&deferred_calls)==2);CHECK(cwist_pfc_count(app->public_fixed_cache)==entries);
@@ -210,7 +248,14 @@ int main(int argc,char **argv){
     before=atomic_load(&calls);exchange(app,"/public","boundary.test","",2,200);CHECK(atomic_load(&calls)==before+1);
     payload_len=2048;cwist_app_clear_public_fixed_cache(app);
     cwist_app *post=cwist_app_create();CHECK(post);cwist_app_get_opt(post,"/public",fixed,CWIST_ENDPOINT_PUBLIC_FIXED);cwist_app_use(post,after_handler);
-    expect_post=true;before=atomic_load(&calls);exchange(post,"/public","one.test","",2,200);expect_post=false;CHECK(atomic_load(&calls)==before+2&&atomic_load(&post_calls)==2&&cwist_pfc_count(post->public_fixed_cache)==0);cwist_app_destroy(post);
+    expect_post=true;before=atomic_load(&calls);exchange(post,"/public","one.test","",2,200);expect_post=false;CHECK(atomic_load(&calls)==before+2&&atomic_load(&post_calls)==2&&cwist_pfc_count(post->public_fixed_cache)==0);
+    CHECK(cwist_app_use_session(post,NULL)==0);
+    cwist_app_get_opt(post,"/defer",deferred_response,CWIST_ENDPOINT_PUBLIC_FIXED);
+    complete_deferred=true;exchange(post,"/defer","one.test","",1,200);complete_deferred=false;
+    CHECK(atomic_load(&post_calls)==3);
+    cwist_app_get_opt(post,"/inline-abort",inline_abort_response,CWIST_ENDPOINT_PUBLIC_FIXED);
+    inline_abort_case=true;expect_post=true;exchange(post,"/inline-abort","one.test","",1,500);inline_abort_case=false;expect_post=false;
+    CHECK(atomic_load(&post_calls)==4);cwist_app_destroy(post);
     atomic_store(&middleware_calls,0);
     cwist_app_use(app,deny);before=atomic_load(&calls);exchange(app,"/public","one.test","",2,401);CHECK(atomic_load(&calls)==before&&atomic_load(&middleware_calls)==2);
     CHECK(atomic_load(&calls)==atomic_load(&releases));cwist_app_destroy(app);

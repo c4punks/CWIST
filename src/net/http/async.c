@@ -9,10 +9,9 @@
  *
  * Lifetime race: a foreign thread may complete (and thus want to free
  * req/res/the handle) before the dispatch thread has observed res->deferred.
- * Completion therefore spins on a->ack, which the dispatch path sets while
- * the objects are still guaranteed alive; only afterwards are they freed.
- * On the C1M path the completion always runs on the same reactor thread that
- * dispatched, so the spin never actually waits there.
+ * A winning producer therefore waits for a->ack before touching the graph.
+ * Dispatch first detaches middleware posthandler allocations from its TLS GC,
+ * then release-publishes ack. Producer allocations are detached before post.
  */
 
 #define _POSIX_C_SOURCE 200809L
@@ -24,6 +23,8 @@
 #include <cwist/sys/job/scheduler.h>
 #include <cwist/core/mem/alloc.h>
 #include <cwist/core/mem/gc.h>
+#include "async_gc.h"
+#include <pthread.h>
 #include <stdatomic.h>
 #include <fcntl.h>
 #include <sched.h>
@@ -40,6 +41,8 @@ struct cwist_async {
     _Atomic size_t refs;          /* Completion plus retained producers/timers. */
     _Atomic int state;
     _Atomic bool ack;             /* Dispatch path observed the handoff. */
+    pthread_t dispatch_thread;
+    bool finish_on_ack; /* Creator-only completion pending dispatch unwind. */
     cwist_http_request *req;
     cwist_http_response *res;     /* Handler's response (request arena). */
     cwist_http_response *final_res;
@@ -57,6 +60,7 @@ struct cwist_async {
 
 
 static void cwist_async_reactor_complete(void *ctx);
+static void cwist_async_finish(cwist_async *a);
 
 static const char *cwist_async_reason(cwist_http_status_t status) {
     switch (status) {
@@ -86,6 +90,7 @@ cwist_async *cwist_async_defer(cwist_http_request *req, cwist_http_response *res
     atomic_init(&a->refs, 1);
     atomic_init(&a->state, CWIST_ASYNC_ST_PENDING);
     atomic_init(&a->ack, false);
+    a->dispatch_thread = pthread_self();
     a->req = req;
     a->res = res;
     a->final_res = res;
@@ -110,9 +115,11 @@ cwist_async *cwist_async_defer(cwist_http_request *req, cwist_http_response *res
     }
     a->post.cb = cwist_async_reactor_complete;
     a->post.ctx = a;
-    res->async = a;
     /* Explicit async refs, not the creator's TLS GC sweep, own this handle. */
     if (cwist_full_gc_enabled()) cwist_gc_scope_disown(a);
+    cwist_http_async_disown_request(req);
+    cwist_http_async_disown_response(res);
+    res->async = a;
     res->deferred = true;
     return a;
 }
@@ -129,15 +136,30 @@ void cwist_async_release(cwist_async *a) {
 }
 
 void cwist_async_dispatch_ack(cwist_async *a) {
-    if (a) atomic_store_explicit(&a->ack, true, memory_order_release);
+    if (!a) return;
+    /* Middleware may allocate after next() returns. No producer may mutate
+     * or destroy this graph until the release/acquire acknowledgement. */
+    cwist_http_async_disown_request(a->req);
+    cwist_http_async_disown_response(a->res);
+    a->keep_alive = a->keep_alive && a->req->keep_alive && a->res->keep_alive;
+    bool finish = a->finish_on_ack;
+    atomic_store_explicit(&a->ack, true, memory_order_release);
+    /* Foreign completion may free a after ack. Only a creator-claimed
+     * pending completion permits this access after publication. */
+    if (finish) cwist_async_finish(a);
 }
 
 static bool cwist_async_claim(cwist_async *a) {
     int expected = CWIST_ASYNC_ST_PENDING;
-    return atomic_compare_exchange_strong_explicit(&a->state, &expected,
+    if (!atomic_compare_exchange_strong_explicit(&a->state, &expected,
                                                    CWIST_ASYNC_ST_CLAIMED,
                                                    memory_order_acq_rel,
-                                                   memory_order_acquire);
+                                                   memory_order_acquire)) return false;
+    while (!atomic_load_explicit(&a->ack, memory_order_acquire)) {
+        if (pthread_equal(pthread_self(), a->dispatch_thread)) return true;
+        sched_yield();
+    }
+    return true;
 }
 
 static void cwist_async_reactor_complete(void *ctx);
@@ -209,6 +231,15 @@ static void cwist_async_reactor_complete(void *ctx) {
 }
 
 static void cwist_async_finish(cwist_async *a) {
+    /* Runs on the producer, before a reactor/H2 consumer can see or free
+     * newly allocated body/header/string state (also timeout and abort). */
+    cwist_http_async_disown_response(a->final_res);
+    if (!atomic_load_explicit(&a->ack, memory_order_acquire)) {
+        /* Creator-side abort must work even if scheduling failed. Dispatch
+         * owns this completion until unwind; no allocation is required. */
+        a->finish_on_ack = true;
+        return;
+    }
     if (a->reactor) {
         if (cwist_reactor_post(a->reactor, &a->post)) return;
         /* Reactor already gone (shutdown): fall through to inline close-out. */
@@ -271,7 +302,7 @@ bool cwist_async_respond(cwist_async *a, cwist_http_status_t status,
 bool cwist_async_respond_with(cwist_async *a, cwist_http_response *res) {
     if (!a || !res || !cwist_async_claim(a)) return false;
     a->final_res = res;
-    a->final_res_owned = true;
+    a->final_res_owned = res != a->res;
     cwist_async_finish(a);
     return true;
 }

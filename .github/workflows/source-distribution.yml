@@ -11,7 +11,7 @@ permissions:
   contents: read
 
 env:
-  RELEASE_VERSION: 3.4.2
+  RELEASE_VERSION: 3.5.0
 
 jobs:
   source-dist:
@@ -38,7 +38,7 @@ jobs:
           fi
           make dist VERSION="$RELEASE_VERSION"
           git rev-parse HEAD > dist/SOURCE_COMMIT
-          git rev-parse HEAD^{tree} > dist/SOURCE_TREE
+          git rev-parse 'HEAD^{tree}' > dist/SOURCE_TREE
           cp "$RUNNER_TEMP/submodules.txt" dist/SUBMODULES
           (cd dist && sha256sum "cwist-$RELEASE_VERSION.tar.gz" > SHA256SUMS)
       - name: Build and test unpacked source without Git metadata
