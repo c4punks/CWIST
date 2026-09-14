@@ -452,7 +452,8 @@ $(CNATS_LIB):
 
 # --- Test Targets ---
 
-TEST_TARGETS = test_app_resource_limits \
+TEST_TARGETS = test_worker_affinity \
+               test_app_resource_limits \
                test_reactor_wake \
                test_classic_pool_scaling \
                test_reactor_drain_chunk \
@@ -460,6 +461,7 @@ TEST_TARGETS = test_app_resource_limits \
                test_seq \
                test_seq_auth \
                test_http \
+               test_http_stringify \
                test_siphash \
                test_mux \
                test_mux_param \
@@ -536,7 +538,13 @@ bench_security_pool: $(LIB_NAME) tests/bench_security_pool.c
 
 test: $(TEST_TARGETS)
 
-test_app_resource_limits: $(LIB_NAME) tests/test_app_resource_limits.c
+src/sys/app/app.o: src/sys/app/worker_affinity.h
+
+test_worker_affinity: tests/test_worker_affinity.c src/sys/app/worker_affinity.h
+	$(CC) $(CFLAGS) -Isrc/sys/app -o $@ tests/test_worker_affinity.c
+	./$@
+
+test_app_resource_limits: $(LIB_NAME) tests/test_app_resource_limits.c src/sys/app/worker_affinity.h
 	$(CC) $(CFLAGS) -o $@ tests/test_app_resource_limits.c $(LIB_NAME) $(LIBS)
 	./$@
 
@@ -579,6 +587,10 @@ test_seq_auth: $(LIB_NAME) tests/test_seq_auth.c
 test_http: $(LIB_NAME) tests/test_http.c
 	$(CC) $(CFLAGS) -o test_http tests/test_http.c $(LIB_NAME) $(LIBS)
 	./test_http
+
+test_http_stringify: $(LIB_NAME) tests/test_http_stringify.c
+	$(CC) $(CFLAGS) -o test_http_stringify tests/test_http_stringify.c $(LIB_NAME) $(LIBS)
+	./test_http_stringify
 
 test_siphash: $(LIB_NAME) tests/test_siphash.c
 	$(CC) $(CFLAGS) -o test_siphash tests/test_siphash.c $(LIB_NAME) $(LIBS)

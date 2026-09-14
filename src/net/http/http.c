@@ -2592,9 +2592,11 @@ cwist_sstring *cwist_http_stringify_response(cwist_http_response *res) {
     // Deprecated / Debug only
     if (!res) return NULL;
     cwist_sstring *s = cwist_sstring_create();
+    if (!s) return NULL;
     char header_buf[CWIST_HTTP_MAX_HEADER_SIZE];
-    serialize_headers(res, header_buf, sizeof(header_buf));
-    cwist_sstring_assign(s, header_buf);
+    /* serialize_headers returns a byte span, not a NUL-terminated string. */
+    size_t header_len = serialize_headers(res, header_buf, sizeof(header_buf));
+    cwist_sstring_assign_len(s, header_buf, header_len);
     if (res->is_ptr_body && res->ptr_body) {
         cwist_sstring_append_len(s, (char*)res->ptr_body, res->ptr_body_len);
     } else if (res->body) {

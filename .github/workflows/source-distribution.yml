@@ -1,0 +1,64 @@
+name: Source distribution
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  RELEASE_VERSION: 3.4.1
+
+jobs:
+  source-dist:
+    name: Build and test source distribution
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+      - name: Install build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y cmake pkg-config libcurl4-openssl-dev libnghttp2-dev libbrotli-dev libzstd-dev
+      - name: Package exact checkout with vendored sources
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -z "$(git status --porcelain --untracked-files=no)"
+          git submodule status --recursive > "$RUNNER_TEMP/submodules.txt"
+          if grep -Eq '^[+U-]' "$RUNNER_TEMP/submodules.txt"; then
+            echo 'Submodule checkout does not match recorded gitlinks' >&2
+            exit 1
+          fi
+          make dist VERSION="$RELEASE_VERSION"
+          git rev-parse HEAD > dist/SOURCE_COMMIT
+          git rev-parse HEAD^{tree} > dist/SOURCE_TREE
+          cp "$RUNNER_TEMP/submodules.txt" dist/SUBMODULES
+          (cd dist && sha256sum "cwist-$RELEASE_VERSION.tar.gz" > SHA256SUMS)
+      - name: Build and test unpacked source without Git metadata
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir "$RUNNER_TEMP/cwist-release-test"
+          tar xzf "dist/cwist-$RELEASE_VERSION.tar.gz" -C "$RUNNER_TEMP/cwist-release-test"
+          cd "$RUNNER_TEMP/cwist-release-test/cwist-$RELEASE_VERSION"
+          test ! -e .git
+          make -j2 VERSION="$RELEASE_VERSION" WERROR=1
+          make VERSION="$RELEASE_VERSION" WERROR=1 test
+      - uses: actions/upload-artifact@v4
+        with:
+          name: cwist-source-${{ github.sha }}
+          path: |
+            dist/cwist-3.4.1.tar.gz
+            dist/SHA256SUMS
+            dist/SOURCE_COMMIT
+            dist/SOURCE_TREE
+            dist/SUBMODULES
+          if-no-files-found: error
+          retention-days: 30
