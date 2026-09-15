@@ -64,6 +64,14 @@ wrk -t12 -c400 -d10s (after 10s warmup, warmup discarded)
 
 _Methodology, JVM options, and fairness settings: [docs/webserver-benchmark.md](docs/webserver-benchmark.md)_
 
+<!-- TUNED_BENCHMARK:START -->
+**Tuned low-latency run (wrk -t4 -c100 -d10s (after 10s warmup, warmup discarded)), CWIST vs Axum on identical concurrency:**
+
+- **CWIST**: 119,262 req/s at 0.50ms average latency (P50 0.43ms, P90 0.85ms, P99 2.04ms)
+
+Leaving headroom between server workers and load-generator threads keeps the latency tail flat. Oversubscribing the same cores shows a multi-ms average from scheduling jitter alone at similar throughput.
+<!-- TUNED_BENCHMARK:END -->
+
 ---
 
 ## Install
