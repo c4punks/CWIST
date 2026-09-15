@@ -9,10 +9,43 @@
 CWIST is a C17 web framework and application server with built-in HTTP/1.1, HTTP/2,
 HTTP/3 (QUIC), WebSocket, and WebTransport support, hybrid post-quantum TLS
 (X25519MLKEM768), an embedded SQLite ORM, and a synchronous io_uring/epoll/kqueue
-reactor. It is written in plain C and links statically. The generated benchmark
-block below records a specific commit, load profile, and CI environment; those
-results are not universal throughput, memory, or latency guarantees.
+reactor. It is written in plain C and links statically.
 </p>
+
+## Two server modes, and why you would pick each
+
+CWIST ships two request paths and they are tuned for opposite things. Pick per
+workload; the mode is one environment variable.
+
+**C1M reactor** takes the throughput. It multiplexes many connections per event
+loop, so connection count is decoupled from thread count and a connection costs
+a reactor slot rather than a parked thread. On the run recorded below it serves
+**224,610 req/s against Axum's 188,666, 19% more**, in 19.4 MiB of PSS.
+
+**Classic pool** takes the latency. Every connection gets its own thread, so no
+request waits behind another in a batch. It answers the **median request in
+0.93ms against Axum's 1.87ms, less than half**, and stays ahead through p99.
+
+### The distribution is the point, not the average
+
+An average hides which requests were slow. From the same run:
+
+| | p50 | p90 | p99 | p99.9 | p99.999 |
+|---|---:|---:|---:|---:|---:|
+| **CWIST classic** | **0.93ms** | **2.66ms** | **5.69ms** | 11.03ms | 23.72ms |
+| **CWIST C1M** | 1.07ms | 6.48ms | 13.51ms | 17.87ms | 23.76ms |
+| Axum | 1.87ms | 3.85ms | 6.04ms | **8.11ms** | **12.48ms** |
+
+Classic pool is ahead of Axum for the first 99% of requests and both CWIST
+modes answer the median faster. The crossover is at p99.9: past that point
+Axum's extreme tail is tighter, and closing that gap is open work rather than
+something to spin. The density chart further down draws the whole shape, which
+is what these five numbers are sampled from.
+
+The generated benchmark block below records a specific commit, load profile,
+and CI environment. Those results are not universal throughput, memory, or
+latency guarantees, and the runner CPU model changes between runs, which moves
+them more than most code changes do; the per-CPU table shows that spread.
 
 [Heavy Benchmark on CWIST APP](https://github.com/gg582/fly.board/blob/main/README.md)
 
@@ -357,7 +390,7 @@ your_target: your_source.c
 	$(CC) -o $@ $< $(CWIST_LIBS)
 ```
 
-> **Note** — `brotlienc` and `brotlicommon` ship as **`libbrotli-dev`** on
+> **Note**: `brotlienc` and `brotlicommon` ship as **`libbrotli-dev`** on
 > Debian/Ubuntu and **`brotli-devel`** on Fedora/RHEL. `zstd` ships as
 > **`libzstd-dev`** / **`libzstd-devel`**.
 
@@ -439,24 +472,24 @@ on the same machine, same client:
 | C100K | 100,000 / 100,000 responded (100%) | ~9.6 s | ~9.2 GB |
 
 C100K classic needs task-count headroom (one thread per held connection:
-`pids.max` / `TasksMax` above 100K — desktop app scopes often cap this near
-76K — and `kernel.threads-max` is fine by default) and roughly 26 GB of
+`pids.max` / `TasksMax` above 100K, desktop app scopes often cap this near
+76K, and `kernel.threads-max` is fine by default) and roughly 26 GB of
 virtual commit budget for 100K x 256 KiB stacks (about 9.2 GB of that
 actually resident; raise `vm.overcommit_ratio` when RAMxratio + swap is
 tight). C1M is out of reach
-for this model — a million threads exceeds `threads-max` — which is exactly
+for this model, a million threads exceeds `threads-max`, which is exactly
 what the reactor path is for.
 
 **Which mode should you pick?** Most HTTP workloads are request bursts,
 not held connections: APIs behind a reverse proxy, web pages, webhooks.
-There the classic path is the right default — a dedicated thread per active
+There the classic path is the right default, a dedicated thread per active
 connection gives the kernel scheduler direct per-connection fairness with
 no reactor round trip, which is where cwist's sub-millisecond latency comes
 from in the tuned profile (0.41ms average at ~155k req/s with `wrk -t4 -c100`;
-the shared-core CI run at `wrk -t12 -c400` lands at 1.52ms / ~151k req/s — see
+the shared-core CI run at `wrk -t12 -c400` lands at 1.52ms / ~151k req/s, see
 the benchmark block above). Flip C1M mode on when you must *hold* very large numbers of
-simultaneously open, mostly idle connections — SSE fan-out, websocket-scale
-chat, long-polling — or when you genuinely target C1M. Giving up C1M for
+simultaneously open, mostly idle connections, SSE fan-out, websocket-scale
+chat, long-polling, or when you genuinely target C1M. Giving up C1M for
 the classic path costs you nothing until your workload is dominated by
 hundreds of thousands of idle open sockets.
 
@@ -475,7 +508,7 @@ for C100K and above:
 
 - `ulimit -n 1050000` (and `fs.file-max` ≥ 8M for C1M: each connection costs
   one file descriptor on client and server side alike)
-- `net.netfilter.nf_conntrack_max=4194304` — loopback traffic is conntracked
+- `net.netfilter.nf_conntrack_max=4194304`, loopback traffic is conntracked
   too, and the default 262144 caps you near ~263K connections
 - `net.ipv4.ip_local_port_range="1024 65535"` on the client side
 
@@ -604,14 +637,14 @@ See [NOTICE.md](NOTICE.md) for the license summary of every vendored component.
 The full documentation map lives in [docs/README.md](docs/README.md). The short
 version, in suggested reading order:
 
-- **[Tutorials](tutorials/README.md)** — 30 hands-on modules (`tutorials/01..30`),
+- **[Tutorials](tutorials/README.md)**: 30 hands-on modules (`tutorials/01..30`),
   each with a runnable `main.c`, a `CMakeLists.txt`, and a guided README.
-- **[Guides](docs/tutorials/)** — task-oriented walkthroughs: [CRUD blog](docs/tutorials/blog-crud.md),
+- **[Guides](docs/tutorials/)**: task-oriented walkthroughs: [CRUD blog](docs/tutorials/blog-crud.md),
   [NATS integration](docs/tutorials/nats-integration.md), [WebTransport server](docs/tutorials/webtransport-server.md).
-- **[API reference](docs/API.md)** — per-module docs under `docs/api/`, plus the
+- **[API reference](docs/API.md)**: per-module docs under `docs/api/`, plus the
   [flat quick reference](docs/api-quickref.md) and generated
   [Doxygen HTML](https://c4punks.github.io/CWIST/).
-- **[ROADMAP.md](ROADMAP.md)** — feature status and milestone planning.
+- **[ROADMAP.md](ROADMAP.md)**: feature status and milestone planning.
 
 ## Examples
 

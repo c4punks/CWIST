@@ -11,12 +11,34 @@
 +------------------------------------------------------------------+
 
 A high-performance, C17 web framework that brings modern ergonomics
--- HTTP/3, WebTransport, Post-Quantum TLS, and zero-copy I/O --
-to systems programming without sacrificing control.
+(HTTP/3, WebTransport, Post-Quantum TLS, zero-copy I/O) to systems
+programming without sacrificing control.
 Powered by BoringSSL, lsquic, OpenSSL without context contamination.
 
+Two server modes, tuned for opposite things; pick per workload.
+
+  C1M reactor   takes the throughput. Many connections per event loop,
+                so a connection costs a reactor slot, not a parked
+                thread. On the run below: 224,610 req/s against Axum's
+                188,666, 19% more, in 19.4 MiB of PSS.
+
+  Classic pool  takes the latency. A thread per connection, so no
+                request waits behind another in a batch. Median 0.93ms
+                against Axum's 1.87ms, and ahead through p99.
+
+The distribution, not the average, is the point:
+
+                    p50      p90      p99    p99.9  p99.999
+  CWIST classic   0.93ms   2.66ms   5.69ms  11.03ms  23.72ms
+  CWIST C1M       1.07ms   6.48ms  13.51ms  17.87ms  23.76ms
+  Axum            1.87ms   3.85ms   6.04ms   8.11ms  12.48ms
+
+Classic pool leads for the first 99% of requests and both modes answer
+the median faster. The crossover is at p99.9, where Axum's extreme tail
+is tighter; closing that is open work.
+
 <!-- BENCHMARKS:START -->
-Latest automated benchmark: **Darwin** — 14.31 M leases/s, 127.5% CPU, 730400 KiB RSS.
+Latest automated benchmark: **Darwin**: 14.31 M leases/s, 127.5% CPU, 730400 KiB RSS.
 
 ![CWIST benchmark trends](docs/benchmark-trends.svg)
 <!-- BENCHMARKS:END -->
