@@ -26,8 +26,15 @@
 /* Per-frame payload size cap (16 MiB).  RFC 6455 allows up to 2^63 bytes per
  * frame, but allocating that blindly gives any connected client a trivial OOM
  * DoS vector.  Applications that need larger transfers should use WebSocket
- * message fragmentation (RFC 6455 section 5.4) with frames within this cap. */
+ * message fragmentation (RFC 6455 section 5.4) with frames within this cap,
+ * bounded in total by CWIST_WS_MAX_MESSAGE_BYTES below. */
 #define CWIST_WS_MAX_PAYLOAD_BYTES ((uint64_t)(16u * 1024u * 1024u))
+
+/* Reassembled-message size cap (64 MiB).  Each individual fragment is bounded
+ * by CWIST_WS_MAX_PAYLOAD_BYTES, but a client can send many frames to grow the
+ * reassembly buffer without limit.  64 MiB is a generous ceiling that stops
+ * multi-fragment OOM attacks while accommodating large real-world messages. */
+#define CWIST_WS_MAX_MESSAGE_BYTES ((size_t)(64u * 1024u * 1024u))
 
 /**
  * @brief Portable case-insensitive substring search.
@@ -138,6 +145,9 @@ static ssize_t read_exact(int fd, void *buf, size_t len) {
  * Returns false on allocation failure. */
 static bool ws_frag_append(cwist_websocket *ws, const uint8_t *src, size_t len) {
     if (len == 0) return true;
+    /* Reject a reassembled message that exceeds the total-message cap, even
+     * though each individual frame already passed the per-frame check. */
+    if (ws->frag_len + len > CWIST_WS_MAX_MESSAGE_BYTES) return false;
     size_t need = ws->frag_len + len + 1; /* +1 for null terminator */
     if (need > ws->frag_cap) {
         size_t new_cap = ws->frag_cap ? ws->frag_cap * 2 : 4096;
