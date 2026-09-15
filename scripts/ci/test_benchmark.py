@@ -34,6 +34,9 @@ class BenchmarkRenderTests(unittest.TestCase):
         script = self.root / "scripts/ci/benchmark.py"
         script.parent.mkdir(parents=True)
         shutil.copyfile(SCRIPT, script)
+        # benchmark.py imports runner_baseline; the copied tree needs it too.
+        shutil.copyfile(SCRIPT.parent / "runner_baseline.py",
+                        script.parent / "runner_baseline.py")
         (self.root / "benchmarks").mkdir()
         (self.root / "benchmarks/db.json").write_text("[]\n")
         block = f"{START}\nold report\n{END}\n"

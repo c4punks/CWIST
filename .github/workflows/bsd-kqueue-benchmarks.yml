@@ -481,6 +481,37 @@ jobs:
           path: |
             webserver-result.json
             raw_logs/
+      - name: Latency regression gate (same-CPU baseline, absolute ceiling)
+        run: |
+          python3 - <<'PY'
+          import json, sys
+          sys.path.insert(0, "scripts/ci")
+          from runner_baseline import evaluate
+
+          row = json.load(open("webserver-result.json"))
+          try:
+              history = json.load(open("benchmarks/webserver.json"))
+          except (OSError, ValueError):
+              history = []
+
+          # Allowances come from the measured run-to-run noise of each
+          # metric against its own CPU's median; see runner_baseline.py.
+          # The ceilings are the previous absolute gates, kept as a backstop
+          # for a CPU with no history and for a regression that is wrong on
+          # any hardware.
+          checks = [
+              ("cwist_lat_ms", 3.0, 1.25),
+              ("cwist_c1m_lat_ms", 3.5, 1.55),
+          ]
+          failures = []
+          for metric, ceiling, allowance in checks:
+              ok, detail = evaluate(history, row, metric, ceiling, allowance=allowance)
+              print(("OK: " if ok else "REGRESSION: ") + detail)
+              if not ok:
+                  failures.append(detail)
+          if failures:
+              raise SystemExit(1)
+          PY
 
   publish-benchmark-report:
     needs: [benchmark-report-tests, bsd-kqueue, benchmark, web-server-benchmark]
