@@ -269,6 +269,19 @@ cwist_jwt_claims *cwist_jwt_verify(const char *token, const char *secret) {
     if (!dot2) { cwist_free(tok_copy); return NULL; }
     *dot2 = '\0';
 
+    /* --- Validate the header: must declare alg=HS256 (RFC 8725 §3.1) ----- */
+    size_t hdr_json_len = 0;
+    unsigned char *hdr_json = b64url_decode(tok_copy, strlen(tok_copy), &hdr_json_len);
+    if (!hdr_json) { cwist_free(tok_copy); return NULL; }
+    cJSON *hdr = cJSON_ParseWithLength((const char *)hdr_json, hdr_json_len);
+    cwist_free(hdr_json);
+    if (!hdr) { cwist_free(tok_copy); return NULL; }
+    cJSON *alg_item = cJSON_GetObjectItemCaseSensitive(hdr, "alg");
+    bool alg_ok = alg_item && cJSON_IsString(alg_item) &&
+                  strcmp(alg_item->valuestring, "HS256") == 0;
+    cJSON_Delete(hdr);
+    if (!alg_ok) { cwist_free(tok_copy); return NULL; }
+
     const char *pay_enc  = dot1 + 1;
     const char *sig_enc  = dot2 + 1;
 
