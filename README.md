@@ -9,21 +9,54 @@
 CWIST is a C17 web framework and application server with built-in HTTP/1.1, HTTP/2,
 HTTP/3 (QUIC), WebSocket, and WebTransport support, hybrid post-quantum TLS
 (X25519MLKEM768), an embedded SQLite ORM, and a synchronous io_uring/epoll/kqueue
-reactor. It is written in plain C, links statically, and serves ~152k req/s at
-1.59ms average latency in ~9.1MB of RSS (CI: `wrk -t12 -c400 -d10s` after warmup,
-C1M reactor mode — see the benchmark block below; a tuned `wrk -t4 -c100` profile
-reaches 0.41ms average at ~155k req/s).
+reactor. It is written in plain C and links statically.
 </p>
+
+## Two server modes, and why you would pick each
+
+CWIST ships two request paths and they are tuned for opposite things. Pick per
+workload; the mode is one environment variable.
+
+**C1M reactor** takes the throughput. It multiplexes many connections per event
+loop, so connection count is decoupled from thread count and a connection costs
+a reactor slot rather than a parked thread. On the run recorded below it serves
+**142,258 req/s against Axum's 114,649, 24% more**.
+
+**Classic pool** takes the latency. Every connection gets its own thread, so no
+request waits behind another in a batch. It answers the **median request in
+1.55ms against Axum's 3.21ms, less than half**, and stays ahead through p99.
+
+### The distribution is the point, not the average
+
+An average hides which requests were slow. From the same run:
+
+| | p50 | p90 | p99 | p99.9 | p99.999 |
+|---|---:|---:|---:|---:|---:|
+| **CWIST classic** | **1.55ms** | **4.12ms** | **7.35ms** | 13.30ms | 29.39ms |
+| **CWIST C1M** | 1.99ms | 7.86ms | 15.06ms | 19.58ms | 25.82ms |
+| Axum | 3.21ms | 5.78ms | 8.61ms | **11.57ms** | **18.09ms** |
+
+Classic pool is ahead of Axum for the first 99% of requests and both CWIST
+modes answer the median faster. The crossover is at p99.9: past that point
+Axum's extreme tail is tighter, and closing that gap is open work rather than
+something to spin. The density chart further down draws the whole shape, which
+is what these five numbers are sampled from.
+
+These figures come from one commit, load profile, and CI environment, and the
+runner CPU model changes between runs, which moves them more than most code
+changes do. They are not universal guarantees.
 
 [Heavy Benchmark on CWIST APP](https://github.com/gg582/fly.board/blob/main/README.md)
 
 <!-- WEBSERVER_BENCHMARKS:START -->
 Latest Web Server Benchmark (wrk -t12 -c400 -d10s (after 10s warmup, warmup discarded)):
-- **CWIST (classic pool)**: 233018 req/s | Latency 1.04ms (P90 2.12ms, P99 6.02ms) | RSS 16656KiB | Csw 0
-- **CWIST (C1M reactor)**: 224060 req/s | Latency 1.17ms (P90 2.40ms, P99 7.73ms) | RSS 10512KiB | Csw 0
-- **Axum**: 222660 req/s | Latency 1.78ms (P90 3.19ms, P99 5.02ms) | RSS 16656KiB | Csw 0
-- **Gin (Go)**: 165688 req/s | Latency 4.29ms (P90 11.56ms, P99 26.56ms) | RSS 28684KiB | Csw 0
-- **Spring Boot**: 111330 req/s | Latency 3.57ms (P90 4.97ms, P99 7.59ms) | RSS 1330420KiB | Csw 0
+- **CWIST (classic pool)**: 117950 req/s | Latency 1.97ms (P90 4.12ms, P99 7.35ms, P99.999 29.39ms) | RSS 16324KiB | Csw 0
+- **CWIST (C1M reactor)**: 142258 req/s | Latency 3.07ms (P90 7.86ms, P99 15.06ms, P99.999 25.82ms) | RSS 10376KiB | Csw 0
+- **CWIST (C1M reactor, arena_max=1)**: glibc arena cap adopted in PR #35 after mimalloc was tried and refuted (issue #25); this line confirms the decision on every run: 139882 req/s | Latency 3.10ms (P90 7.86ms, P99 14.94ms, P99.999 24.12ms) | RSS 11940KiB | Csw 0
+- **CWIST (C1M reactor, drain_chunk=8)**: cooperative queuing for cwist_async_defer completions within a big io_uring batch (issue #25, docs/cooperative-queuing.md); this workload has no cwist_async_defer traffic to interleave, so parity with the plain C1M row above is the expected result, not a null finding, the tail-latency win is isolated directly in tests/bench_cooperative_queuing.c: 140501 req/s | Latency 3.01ms (P90 7.42ms, P99 14.20ms, P99.999 23.27ms) | RSS 10260KiB | Csw 0
+- **Axum**: 114649 req/s | Latency 3.41ms (P90 5.78ms, P99 8.61ms, P99.999 18.09ms) | RSS 17504KiB | Csw 0
+- **Gin (Go)**: 79513 req/s | Latency 6.66ms (P90 15.89ms, P99 36.27ms, P99.999 75.30ms) | RSS 29716KiB | Csw 0
+- **Spring Boot**: 45321 req/s | Latency 8.80ms (P90 11.69ms, P99 18.89ms, P99.999 71.38ms) | RSS 1307828KiB | Csw 0
 
 **Spring runtime environment**
 
@@ -306,7 +339,7 @@ your_target: your_source.c
 	$(CC) -o $@ $< $(CWIST_LIBS)
 ```
 
-> **Note** — `brotlienc` and `brotlicommon` ship as **`libbrotli-dev`** on
+> **Note**: `brotlienc` and `brotlicommon` ship as **`libbrotli-dev`** on
 > Debian/Ubuntu and **`brotli-devel`** on Fedora/RHEL. `zstd` ships as
 > **`libzstd-dev`** / **`libzstd-devel`**.
 
@@ -385,24 +418,24 @@ on the same machine, same client:
 | C100K | 100,000 / 100,000 responded (100%) | ~9.6 s | ~9.2 GB |
 
 C100K classic needs task-count headroom (one thread per held connection:
-`pids.max` / `TasksMax` above 100K — desktop app scopes often cap this near
-76K — and `kernel.threads-max` is fine by default) and roughly 26 GB of
+`pids.max` / `TasksMax` above 100K, desktop app scopes often cap this near
+76K, and `kernel.threads-max` is fine by default) and roughly 26 GB of
 virtual commit budget for 100K x 256 KiB stacks (about 9.2 GB of that
 actually resident; raise `vm.overcommit_ratio` when RAMxratio + swap is
 tight). C1M is out of reach
-for this model — a million threads exceeds `threads-max` — which is exactly
+for this model, a million threads exceeds `threads-max`, which is exactly
 what the reactor path is for.
 
 **Which mode should you pick?** Most HTTP workloads are request bursts,
 not held connections: APIs behind a reverse proxy, web pages, webhooks.
-There the classic path is the right default — a dedicated thread per active
+There the classic path is the right default, a dedicated thread per active
 connection gives the kernel scheduler direct per-connection fairness with
 no reactor round trip, which is where cwist's sub-millisecond latency comes
 from in the tuned profile (0.41ms average at ~155k req/s with `wrk -t4 -c100`;
-the shared-core CI run at `wrk -t12 -c400` lands at 1.52ms / ~151k req/s — see
+the shared-core CI run at `wrk -t12 -c400` lands at 1.52ms / ~151k req/s, see
 the benchmark block above). Flip C1M mode on when you must *hold* very large numbers of
-simultaneously open, mostly idle connections — SSE fan-out, websocket-scale
-chat, long-polling — or when you genuinely target C1M. Giving up C1M for
+simultaneously open, mostly idle connections, SSE fan-out, websocket-scale
+chat, long-polling, or when you genuinely target C1M. Giving up C1M for
 the classic path costs you nothing until your workload is dominated by
 hundreds of thousands of idle open sockets.
 
@@ -421,7 +454,7 @@ for C100K and above:
 
 - `ulimit -n 1050000` (and `fs.file-max` ≥ 8M for C1M: each connection costs
   one file descriptor on client and server side alike)
-- `net.netfilter.nf_conntrack_max=4194304` — loopback traffic is conntracked
+- `net.netfilter.nf_conntrack_max=4194304`, loopback traffic is conntracked
   too, and the default 262144 caps you near ~263K connections
 - `net.ipv4.ip_local_port_range="1024 65535"` on the client side
 
@@ -530,8 +563,65 @@ MySQL Handshake initiation packet to classify the server.
 - Brotli (`libbrotlienc`, `libbrotlicommon`)
 - Zstandard (`libzstd`)
 
+See [NOTICE.md](NOTICE.md) for the license summary of every vendored component.
+
+## Stability & conformance
+
+- **Versioning**: until CWIST 4.0, minor releases may adjust public APIs; pin
+  an exact tag in production. Draft-level features cycle through `dev` and
+  may appear/disappear between tags without a stability guarantee.
+- **Conformance gates**: every push runs the test suite under ASan/UBSan with
+  `-Werror`, plus an h2spec HTTP/2 conformance diff against a pinned baseline
+  (`scripts/ci/h2spec-baseline.txt`); regressions fail the build. Known
+  conformance gaps are tracked in that baseline file.
+
+## Community
+
+The official CWIST Discord server: **https://discord.gg/6F8HDmNAPg**: questions,
+design discussion, and contribution coordination happen there.
+
 ## Documentation
 
-- [API Reference](https://religiya-serdtsa.github.io/CWIST/)
-- `docs/` — tutorials and Doxygen sources
-- `example/` — runnable demos including `rps-showcase` and `othello-web`
+The full documentation map lives in [docs/README.md](docs/README.md). The short
+version, in suggested reading order:
+
+- **[Tutorials](tutorials/README.md)**: 30 hands-on modules (`tutorials/01..30`),
+  each with a runnable `main.c`, a `CMakeLists.txt`, and a guided README.
+- **[Guides](docs/tutorials/)**: task-oriented walkthroughs: [CRUD blog](docs/tutorials/blog-crud.md),
+  [NATS integration](docs/tutorials/nats-integration.md), [WebTransport server](docs/tutorials/webtransport-server.md).
+- **[API reference](docs/API.md)**: per-module docs under `docs/api/`, plus the
+  [flat quick reference](docs/api-quickref.md) and generated
+  [Doxygen HTML](https://c4punks.github.io/CWIST/).
+- **[ROADMAP.md](ROADMAP.md)**: feature status and milestone planning.
+
+## Examples
+
+Runnable demos under [example/](example/): a [minimal server](example/simple-server),
+[step-by-step HTTP](example/http), [SQLite](example/db) and
+[encrypted-column DB](example/db-crypt), [JWT auth](example/jwt), a
+[WebSocket Othello game](example/othello-web), the [rps-showcase](example/rps-showcase)
+throughput demo, rendering helpers ([json-builder](example/json-builder),
+[html](example/html), [template](example/template)), and the experimental
+[WebTransport](example/webtransport) app. See the
+[examples table](docs/README.md#4-runnable-examples) for the full list.
+
+A production deployment built on CWIST: [fly.board](https://github.com/gg582/fly.board).
+
+## Third-Party Licenses
+
+CWIST vendors its dependencies under `lib/`; each retains its own license
+(full summary in [NOTICE.md](NOTICE.md), authoritative text in each
+submodule's license file):
+
+| Component | License |
+|-----------|---------|
+| BoringSSL | Apache-2.0 |
+| lsquic | MIT (some Chromium-derived parts BSD-3-Clause) |
+| cJSON, multipart-parser-c | MIT |
+| libttak | BSD-3-Clause |
+| SQLite | Public Domain |
+| cnats | Apache-2.0 |
+| uriparser | BSD-3-Clause (library only; its test suite is LGPL-2.1-or-later and is not linked) |
+
+Static linking propagates each component's license obligations to linked
+binaries; review [NOTICE.md](NOTICE.md) when distributing.
