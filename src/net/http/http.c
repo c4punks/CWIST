@@ -979,6 +979,9 @@ void cwist_http_response_add_security_headers(cwist_http_response *res) {
             "camera=(), microphone=(), geolocation=(), payment=(), "
             "usb=(), interest-cohort=()");
     }
+    if (!cwist_http_header_get(res->headers, "Cross-Origin-Opener-Policy")) {
+        cwist_http_header_add_static(&res->headers, arena, "Cross-Origin-Opener-Policy", "same-origin");
+    }
 }
 
 /**
