@@ -329,6 +329,13 @@ jobs:
           run_bench "CWIST tuned" "env CWIST_C1M_MODE=0 /tmp/cwist_server" 9091 "/tmp/cwist_tuned.txt" "/tmp/cwist_tuned_stat.txt" 10 4 100
           export TUNED_PROFILE="wrk -t4 -c100 -d10s (after 10s warmup, warmup discarded)"
           run_bench "Axum" "/tmp/axum_bench/target/release/axum_server" 9092 "/tmp/axum.txt" "/tmp/axum_stat.txt" 10
+          # Same -t4 -c100 profile as "CWIST tuned" above. The tuned section
+          # used to report CWIST against Spring Boot only, which compares a
+          # statically linked C server against a JVM one and says little about
+          # CWIST's own latency floor. Axum is the closest peer in the matrix
+          # (compiled, async, no managed runtime), so measure it at the tuned
+          # profile too and report that pairing instead.
+          run_bench "Axum tuned" "/tmp/axum_bench/target/release/axum_server" 9092 "/tmp/axum_tuned.txt" "/tmp/axum_tuned_stat.txt" 10 4 100
           run_bench "Gin" "/tmp/gin_bench/gin_server" 9094 "/tmp/gin.txt" "/tmp/gin_stat.txt" 10
 
           # Spring Boot JVM tuning (JDK 25):
@@ -435,7 +442,7 @@ jobs:
         if: always()
         run: |
           mkdir -p raw_logs
-          for name in cwist cwist_c1m cwist_c1m_arena1 cwist_c1m_drainchunk cwist_c1m_public_fixed cwist_tuned axum gin spring spring_tuned; do
+          for name in cwist cwist_c1m cwist_c1m_arena1 cwist_c1m_drainchunk cwist_c1m_public_fixed cwist_tuned axum axum_tuned gin spring spring_tuned; do
             for suffix in .txt .warm.log _stat.txt .session.json; do
               file="/tmp/${name}${suffix}"
               if [ -f "$file" ]; then cp "$file" raw_logs/; fi

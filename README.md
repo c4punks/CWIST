@@ -41,6 +41,7 @@ Main profile: `wrk -t12 -c400 -d10s`, after a discarded 10s warmup.
 
 `wrk -t4 -c100 -d10s`, after a discarded 10s warmup. Do not compare these rows as equal-load results against the main table.
 - CWIST classic: 178,196 req/s; mean 0.356 ms; corrected P99.999 8.586 ms.
+- Axum: N/A req/s; mean N/A ms; corrected P99.999 N/A ms.
 - Spring Boot: 75,897 req/s; mean 1.417 ms; corrected P99.999 20.378 ms.
 
 Legacy records remain in history but are not pooled into this measurement contract. A 10-second tail screen is not a universal SLO or a statistically established speedup.
@@ -58,10 +59,9 @@ Latency distribution (density curve reconstructed from each server's percentiles
 _Methodology, JVM options, and fairness settings: [docs/webserver-benchmark.md](docs/webserver-benchmark.md)_
 
 <!-- TUNED_BENCHMARK:START -->
-**Tuned low-latency run (wrk -t4 -c100 -d10s (after 10s warmup, warmup discarded)), CWIST vs Spring Boot on identical concurrency:**
+**Tuned low-latency run (wrk -t4 -c100 -d10s (after 10s warmup, warmup discarded)), CWIST vs Axum on identical concurrency:**
 
 - **CWIST**: 178,196 req/s at 0.36ms average latency (P50 0.28ms, P90 0.59ms, P99 1.94ms)
-- **Spring Boot**: 75,897 req/s at 1.42ms average latency (P50 1.18ms, P90 2.75ms, P99 5.44ms), same trained AOT cache as the main run above
 
 These runs use a different concurrency budget from the main table. They do not establish a causal scheduling explanation or a universal tail-latency improvement.
 <!-- TUNED_BENCHMARK:END -->

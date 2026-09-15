@@ -116,7 +116,8 @@ def summarize_resources(before, after):
 
 
 CASES = ('cwist', 'cwist_c1m', 'cwist_c1m_arena1', 'cwist_c1m_drainchunk',
-         'cwist_c1m_public_fixed', 'cwist_tuned', 'axum', 'gin', 'spring', 'spring_tuned')
+         'cwist_c1m_public_fixed', 'cwist_tuned', 'axum', 'axum_tuned', 'gin',
+         'spring', 'spring_tuned')
 
 
 def build_result(cases, metadata):

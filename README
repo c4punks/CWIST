@@ -46,6 +46,7 @@ Main profile: `wrk -t12 -c400 -d10s`, after a discarded 10s warmup.
 
 `wrk -t4 -c100 -d10s`, after a discarded 10s warmup. Do not compare these rows as equal-load results against the main table.
 - CWIST classic: 178,196 req/s; mean 0.356 ms; corrected P99.999 8.586 ms.
+- Axum: N/A req/s; mean N/A ms; corrected P99.999 N/A ms.
 - Spring Boot: 75,897 req/s; mean 1.417 ms; corrected P99.999 20.378 ms.
 
 Legacy records remain in history but are not pooled into this measurement contract. A 10-second tail screen is not a universal SLO or a statistically established speedup.

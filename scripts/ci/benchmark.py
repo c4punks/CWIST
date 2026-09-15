@@ -341,7 +341,7 @@ def webserver_summary(row):
         lines.append(f"| {name} | {metric(key+'_rps',0)} | {metric(key+'_lat_ms')} | {metric(key+'_p99_999_ms')} | {metric(key+'_pss_kib',2,1024)} | {metric(key+'_rss_kib',2,1024)} | {metric(key+'_csw',0)} |")
     lines += ['', 'Main profile: `wrk -t12 -c400 -d10s`, after a discarded 10s warmup.',
               '', '### Separate tuned profile', '', '`wrk -t4 -c100 -d10s`, after a discarded 10s warmup. Do not compare these rows as equal-load results against the main table.']
-    for key, name in [('cwist_tuned','CWIST classic'), ('spring_tuned','Spring Boot')]:
+    for key, name in [('cwist_tuned','CWIST classic'), ('axum_tuned','Axum'), ('spring_tuned','Spring Boot')]:
         lines.append(f"- {name}: {metric(key+'_rps',0)} req/s; mean {metric(key+'_lat_ms')} ms; corrected P99.999 {metric(key+'_p99_999_ms')} ms.")
     lines += ['', 'Legacy records remain in history but are not pooled into this measurement contract. A 10-second tail screen is not a universal SLO or a statistically established speedup.', '',
               'Spring environment: `' + str(row.get('spring_env', {})).replace('`','') + '`',
@@ -445,24 +445,25 @@ def render() -> None:
     if README_MD.exists(): replace(README_MD, "<!-- WEBSERVER_BENCHMARKS:START -->", "<!-- WEBSERVER_BENCHMARKS:END -->", ws_summary)
 
     tuned_rps = ws_latest.get("cwist_tuned_rps")
-    spring_tuned_rps = ws_latest.get("spring_tuned_rps")
+    axum_tuned_rps = ws_latest.get("axum_tuned_rps")
     if tuned_rps and README_MD.exists() and "<!-- TUNED_BENCHMARK:START -->" in README_MD.read_text():
         tuned_profile = ws_latest.get("tuned_profile") or "wrk -t4 -c100 -d10s"
-        # Spring Boot gets the identical -t4 -c100 profile below (same
-        # trained AOT cache, same reduced concurrency) so this line compares
-        # like with like instead of showing only CWIST's best case next to
-        # Spring's single -c400 number in the table above.
+        # Pair the tuned run with Axum, not Spring Boot. Both are compiled
+        # servers with no managed runtime, so the comparison says something
+        # about CWIST's own latency floor; beating a JVM server on latency and
+        # memory is not informative about that. Axum runs the identical
+        # -t4 -c100 profile (see the workflow's "Axum tuned" leg).
         tuned_line = (
-            f"**Tuned low-latency run ({tuned_profile}), CWIST vs Spring Boot on identical concurrency:**\n\n"
+            f"**Tuned low-latency run ({tuned_profile}), CWIST vs Axum on identical concurrency:**\n\n"
             f"- **CWIST**: {tuned_rps:,.0f} req/s at {ws_latest.get('cwist_tuned_lat_ms',0):.2f}ms average latency "
             f"(P50 {ws_latest.get('cwist_tuned_p50_ms',0):.2f}ms, P90 {ws_latest.get('cwist_tuned_p90_ms',0):.2f}ms, "
             f"P99 {ws_latest.get('cwist_tuned_p99_ms',0):.2f}ms)\n"
         )
-        if spring_tuned_rps:
+        if axum_tuned_rps:
             tuned_line += (
-                f"- **Spring Boot**: {spring_tuned_rps:,.0f} req/s at {ws_latest.get('spring_tuned_lat_ms',0):.2f}ms average latency "
-                f"(P50 {ws_latest.get('spring_tuned_p50_ms',0):.2f}ms, P90 {ws_latest.get('spring_tuned_p90_ms',0):.2f}ms, "
-                f"P99 {ws_latest.get('spring_tuned_p99_ms',0):.2f}ms), same trained AOT cache as the main run above\n"
+                f"- **Axum**: {axum_tuned_rps:,.0f} req/s at {ws_latest.get('axum_tuned_lat_ms',0):.2f}ms average latency "
+                f"(P50 {ws_latest.get('axum_tuned_p50_ms',0):.2f}ms, P90 {ws_latest.get('axum_tuned_p90_ms',0):.2f}ms, "
+                f"P99 {ws_latest.get('axum_tuned_p99_ms',0):.2f}ms), same binary as the main run above\n"
             )
         tuned_line += (
             f"\nThese runs use a different concurrency budget from the main table. "

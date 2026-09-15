@@ -67,7 +67,7 @@ class AggregateTests(unittest.TestCase):
   return {key:(parse_wrk_text(output(sample())),{'complete':True,'cleanup_ok':True,'survivors':[]},{'before':[],'after':[],'ready':True,'warmup_ok':True,'measurement_exit':0}) for key in CASES}
  def meta(self):return {'commit':'a'*40,'run_id':'12','run_attempt':'1','binary_sha256':{'cwist':'b'*64},'wrk_version':'wrk 4.2.0'}
  def test_bound_complete_matrix(self):
-  value=build_result(self.cases(),self.meta());self.assertEqual(value['schema_version'],2);self.assertEqual(len(value['measurements']),10);self.assertEqual(value['cwist_p99_999_ms'],8)
+  value=build_result(self.cases(),self.meta());self.assertEqual(value['schema_version'],2);self.assertEqual(len(value['measurements']),len(CASES));self.assertEqual(value['cwist_p99_999_ms'],8)
  def test_history_binding(self):
   row=build_result(self.cases(),self.meta());old=[{'cwist_rps':0}]
   result=append_history(old,row,'12','a'*40);self.assertEqual(result[:-1],old);self.assertEqual(old,[{'cwist_rps':0}])
