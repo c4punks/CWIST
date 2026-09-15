@@ -60,6 +60,23 @@ Latest Web Server Benchmark (wrk -t12 -c400 -d10s (after 10s warmup, warmup disc
 wrk -t12 -c400 -d10s (after 10s warmup, warmup discarded)
 
 ![Web Server Benchmark Trends](docs/webserver-benchmark-trends.svg)
+
+Latency distribution (density curve reconstructed from each server's percentiles - shows the shape of the tail, not just its P99.999 number):
+
+![Web Server Latency Distribution](docs/webserver-latency-distribution.svg)
+
+### Per runner CPU
+
+GitHub hands out a different CPU model per run, which moves these numbers more than most code changes do. Medians of every recorded run, split by the CPU it landed on, so rows are only comparable down a column:
+
+| Runner CPU | Runs | CWIST classic ms | CWIST C1M ms | Axum ms | CWIST C1M req/s | Axum req/s |
+|---|---:|---:|---:|---:|---:|---:|
+| AMD EPYC 7763 64-Core Processor | 42 | 2.01 | 2.52 | 3.51 | 118,502 | 111,248 |
+| AMD EPYC 9V74 80-Core Processor | 33 | 1.89 | 2.21 | 3.24 | 126,238 | 120,629 |
+| INTEL(R) XEON(R) PLATINUM 8573C | 12 | 1.08 | 1.78 | 1.84 | 228,301 | 216,302 |
+| Intel(R) Xeon(R) 6973P-C | 6 | 0.97 | 1.73 | 1.62 | 271,113 | 242,008 |
+| Intel(R) Xeon(R) Platinum 8370C CPU @ 2.80GHz | 4 | 1.36 | 2.05 | 2.34 | 188,196 | 168,259 |
+| AMD EPYC 9V45 96-Core Processor | 3 | 1.31 | 2.32 | 2.02 | 218,335 | 196,379 |
 <!-- WEBSERVER_BENCHMARKS:END -->
 
 _Methodology, JVM options, and fairness settings: [docs/webserver-benchmark.md](docs/webserver-benchmark.md)_
