@@ -207,6 +207,10 @@ cwist_ws_frame *cwist_websocket_receive(cwist_websocket *ws) {
          * ~14 bytes on the wire but would OOM-kill the server otherwise. */
         if (payload_len > CWIST_WS_MAX_PAYLOAD_BYTES) return NULL;
 
+        /* RFC 6455 section 5.5: control frames MUST NOT carry more than 125 bytes. */
+        bool is_control_early = (opcode >= 0x8);
+        if (is_control_early && payload_len > 125) return NULL;
+
         uint8_t masking_key[4];
         if (read_exact(ws->fd, masking_key, 4) < 0) return NULL;
 
@@ -231,7 +235,11 @@ cwist_ws_frame *cwist_websocket_receive(cwist_websocket *ws) {
 
         if (!is_control && !fin) {
             /* Fragment with FIN=0: start or continue reassembly. */
-            if (opcode != CWIST_WS_FRAME_CONTINUATION) {
+            if (opcode == CWIST_WS_FRAME_CONTINUATION) {
+                /* RFC 6455 section 5.4: CONTINUATION is only valid when a fragmented
+                 * message is already in progress. */
+                if (ws->frag_len == 0) { cwist_free(payload); return NULL; }
+            } else {
                 /* First fragment: save opcode (text vs binary). */
                 ws->frag_opcode = opcode;
             }
@@ -266,7 +274,9 @@ cwist_ws_frame *cwist_websocket_receive(cwist_websocket *ws) {
         /* --- Deliver the complete frame ---------------------------------- */
 
         if (opcode == CWIST_WS_FRAME_CLOSE) {
-            /* RFC 6455 section 5.5.1: echo CLOSE before marking closed. */
+            /* RFC 6455 section 5.5.1: a CLOSE body, if present, MUST be >= 2 bytes. */
+            if (payload_len == 1) { cwist_free(payload); return NULL; }
+            /* Echo the status code (first 2 bytes) back before closing. */
             cwist_websocket_send(ws, CWIST_WS_FRAME_CLOSE,
                                  payload, (payload_len >= 2) ? 2 : 0);
             ws->is_closed = true;
