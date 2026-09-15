@@ -245,7 +245,11 @@ char *cwist_http_header_get(cwist_http_header_node *head, const char *key);
 void cwist_http_response_add_security_headers(cwist_http_response *res);
 
 /**
- * @brief Free all headers.
+ * @brief Add Strict-Transport-Security to a TLS response (HTTPS only).
+ *
+ * RFC 6797 section 7.2 prohibits HSTS over plain HTTP.  Call this from HTTPS
+ * handlers after cwist_http_response_add_security_headers(). No-op when
+ * the header is already present.
  */
 void cwist_http_header_free_all(cwist_http_header_node *head);
 

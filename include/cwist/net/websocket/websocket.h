@@ -22,6 +22,19 @@ typedef enum {
     CWIST_WS_FRAME_PONG = 0xA
 } cwist_ws_opcode_t;
 
+typedef struct cwist_websocket {
+    int fd;
+    bool is_closed;
+    /* Fragmented-message reassembly state (RFC 6455 section 5.4).
+     * frag_buf accumulates payload bytes across FIN=0 frames; frag_opcode
+     * preserves the first fragment's opcode so the assembled frame reports
+     * the correct type (text vs binary). */
+    uint8_t          *frag_buf;
+    size_t            frag_len;
+    size_t            frag_cap;
+    cwist_ws_opcode_t frag_opcode;
+} cwist_websocket;
+
 typedef struct cwist_ws_frame {
     bool fin;
     cwist_ws_opcode_t opcode;

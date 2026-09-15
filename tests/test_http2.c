@@ -924,7 +924,7 @@ static void test_http2_missing_pseudo_header(void) {
     static const unsigned char settings_frame[] = {
         0x00, 0x00, 0x00, 0x04, 0x00, 0x00, 0x00, 0x00, 0x00
     };
-    /* :method GET + :scheme https, but no :path: RFC 7540 §8.1.2.3 violation. */
+    /* :method GET + :scheme https, but no :path: RFC 7540 section 8.1.2.3 violation. */
     static const unsigned char headers_bad[] = {
         0x00, 0x00, 0x02, 0x01, 0x05,
         0x00, 0x00, 0x00, 0x01,
@@ -1136,7 +1136,7 @@ static void test_http2_rapid_reset(void) {
 }
 
 static void test_http2_idle_stream_rst(void) {
-    printf("Testing HTTP/2 idle stream RST_STREAM rejection (RFC 7540 §5.1)...\n");
+    printf("Testing HTTP/2 idle stream RST_STREAM rejection (RFC 7540 section 5.1)...\n");
     int sv[2];
     assert(socketpair(AF_UNIX, SOCK_STREAM, 0, sv) == 0);
 
@@ -1195,7 +1195,7 @@ static void test_http2_idle_stream_rst(void) {
     }
 
     assert(saw_goaway);
-    assert(goaway_err == 0x1); /* PROTOCOL_ERROR per RFC 7540 §5.1 */
+    assert(goaway_err == 0x1); /* PROTOCOL_ERROR per RFC 7540 section 5.1 */
 
     SSL_shutdown(client);
     SSL_free(client);
@@ -1203,7 +1203,7 @@ static void test_http2_idle_stream_rst(void) {
     close(sv[1]);
 
     pthread_join(tid, NULL);
-    printf("Passed HTTP/2 idle stream RST_STREAM rejection (RFC 7540 §5.1).\n");
+    printf("Passed HTTP/2 idle stream RST_STREAM rejection (RFC 7540 section 5.1).\n");
 }
 
 static void test_http2_continuation_flood(void) {
