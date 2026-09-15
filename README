@@ -16,7 +16,7 @@ to systems programming without sacrificing control.
 Powered by BoringSSL, lsquic, OpenSSL without context contamination.
 
 <!-- BENCHMARKS:START -->
-Latest automated benchmark: **Darwin** — 12.66 M leases/s, 129.83% CPU, 749232 KiB RSS.
+Latest automated benchmark: **Darwin** — 14.31 M leases/s, 127.5% CPU, 730400 KiB RSS.
 
 ![CWIST benchmark trends](docs/benchmark-trends.svg)
 <!-- BENCHMARKS:END -->
@@ -24,30 +24,30 @@ Latest automated benchmark: **Darwin** — 12.66 M leases/s, 129.83% CPU, 749232
 <!-- WEBSERVER_BENCHMARKS:START -->
 ## Latest isolated HTTP benchmark
 
-Measured commit: `0b590e45d4dbd6a7114de4d96826c55b07a001a4`. Release tag: `not recorded; identify this run by commit`.
-Run: https://github.com/c4punks/CWIST/actions/runs/34947921936. Timestamp: `2026-09-15T08:48:24.753159+00:00`.
+Measured commit: `8b444351b60f09f741fb07949759a12b6cbefc6b`. Release tag: `not recorded; identify this run by commit`.
+Run: https://github.com/c4punks/CWIST/actions/runs/34952229938. Timestamp: `2026-09-15T09:33:23.118264+00:00`.
 
 Latency columns use the **wrk corrected distribution**. Both memory columns are process-group end samples, not peaks. Group RSS sums each process's RSS, so a page shared between worker processes is counted once per process; Group PSS divides each shared page by its mapper count, so it is the column to compare against a single-process server. Context switches cover matching thread identities only; N/A means unavailable.
 
 | Profile | Req/s | Mean ms | P99.999 ms | Group PSS MiB | Group RSS MiB | Context-switch delta |
 |---|---:|---:|---:|---:|---:|---:|
-| CWIST classic | 106,080 | 2.178 | 26.469 | 49.55 | 59.86 | N/A |
-| CWIST C1M | 138,292 | 3.135 | 24.513 | 19.87 | 33.22 | 284,924 |
-| CWIST C1M arena_max=1 | 138,551 | 3.041 | 24.331 | 26.21 | 38.99 | 272,667 |
-| CWIST C1M drain_chunk=8 | 134,691 | 3.158 | 25.061 | 19.11 | 32.47 | 271,980 |
-| CWIST C1M PUBLIC_FIXED (opt-in) | 137,088 | 3.161 | 32.297 | 16.85 | 29.71 | 273,936 |
-| Axum | 109,153 | 3.585 | 15.527 | 13.41 | 15.56 | 193,478 |
-| Gin | 77,932 | 6.790 | 89.052 | 27.36 | 28.79 | 291,262 |
-| Spring Boot | 43,455 | 9.181 | 93.641 | 1,259.57 | 1,262.44 | N/A |
+| CWIST classic | 189,348 | 1.258 | 23.723 | 50.26 | 61.45 | N/A |
+| CWIST C1M | 224,610 | 2.338 | 23.760 | 19.41 | 33.14 | 523,831 |
+| CWIST C1M arena_max=1 | 220,722 | 2.353 | 24.227 | 26.31 | 39.88 | 518,908 |
+| CWIST C1M drain_chunk=8 | 219,221 | 2.308 | 23.337 | 19.72 | 33.14 | 487,375 |
+| CWIST C1M PUBLIC_FIXED (opt-in) | 223,899 | 2.278 | 22.243 | 16.86 | 30.00 | 487,961 |
+| Axum | 188,666 | 2.115 | 12.484 | 14.87 | 17.06 | 323,809 |
+| Gin | 136,446 | 3.934 | 45.614 | 27.45 | 29.00 | N/A |
+| Spring Boot | 113,764 | 3.497 | 21.521 | 1,276.27 | 1,279.15 | N/A |
 
 Main profile: `wrk -t12 -c400 -d10s`, after a discarded 10s warmup.
 
 ### Separate tuned profile
 
 `wrk -t4 -c100 -d10s`, after a discarded 10s warmup. Do not compare these rows as equal-load results against the main table.
-- CWIST classic: 115,803 req/s; mean 0.528 ms; corrected P99.999 5.765 ms.
-- Axum: 119,947 req/s; mean 0.787 ms; corrected P99.999 5.325 ms.
-- Spring Boot: 44,470 req/s; mean 2.382 ms; corrected P99.999 50.213 ms.
+- CWIST classic: 184,574 req/s; mean 0.332 ms; corrected P99.999 4.258 ms.
+- Axum: 194,508 req/s; mean 0.524 ms; corrected P99.999 6.854 ms.
+- Spring Boot: 124,161 req/s; mean 0.913 ms; corrected P99.999 26.011 ms.
 
 Legacy records remain in history but are not pooled into this measurement contract. A 10-second tail screen is not a universal SLO or a statistically established speedup.
 
@@ -68,6 +68,7 @@ GitHub hands out a different CPU model per run, which moves these numbers more t
 |---|---:|---:|---:|---:|---:|---:|
 | AMD EPYC 7763 64-Core Processor | 5 | 2.08 | 3.12 | 3.51 | 139,267 | 112,113 |
 | AMD EPYC 9V74 80-Core Processor | 2 | 1.90 | 3.07 | 3.25 | 143,914 | 120,587 |
+| AMD EPYC 9V45 96-Core Processor | 1 | 1.26 | 2.34 | 2.11 | 224,610 | 188,666 |
 | Intel(R) Xeon(R) Platinum 8370C CPU @ 2.80GHz | 1 | 1.41 | 2.37 | 2.51 | 215,668 | 158,648 |
 <!-- WEBSERVER_BENCHMARKS:END -->
 
