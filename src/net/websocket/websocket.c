@@ -26,7 +26,7 @@
 /* Per-frame payload size cap (16 MiB).  RFC 6455 allows up to 2^63 bytes per
  * frame, but allocating that blindly gives any connected client a trivial OOM
  * DoS vector.  Applications that need larger transfers should use WebSocket
- * message fragmentation (RFC 6455 §5.4) with frames within this cap. */
+ * message fragmentation (RFC 6455 section 5.4) with frames within this cap. */
 #define CWIST_WS_MAX_PAYLOAD_BYTES ((uint64_t)(16u * 1024u * 1024u))
 
 /**
@@ -73,7 +73,7 @@ cwist_websocket *cwist_websocket_upgrade(cwist_http_request *req, int client_fd)
     if (ws_strcasestr(connection, "Upgrade") == NULL) return NULL;
     if (strcasecmp(upgrade, "websocket") != 0) return NULL;
 
-    /* RFC 6455 §4.2.1: the client MUST include Sec-WebSocket-Version: 13. */
+    /* RFC 6455 section 4.2.1: the client MUST include Sec-WebSocket-Version: 13. */
     char *ws_version = cwist_http_header_get(req->headers, "Sec-WebSocket-Version");
     if (!ws_version || strcmp(ws_version, "13") != 0) return NULL;
 
@@ -157,7 +157,7 @@ static bool ws_frag_append(cwist_websocket *ws, const uint8_t *src, size_t len) 
 /**
  * @brief Receive the next complete WebSocket message from a connected client.
  *
- * Transparently reassembles fragmented messages (RFC 6455 §5.4): frames with
+ * Transparently reassembles fragmented messages (RFC 6455 section 5.4): frames with
  * FIN=0 are buffered internally and the function blocks until the final
  * FIN=1 frame arrives, at which point the fully-assembled payload is returned
  * as a single frame.  Control frames (CLOSE, PING, PONG) are always FIN=1 and
@@ -181,11 +181,11 @@ cwist_ws_frame *cwist_websocket_receive(cwist_websocket *ws) {
         bool masked = (head[1] & 0x80) != 0;
         uint64_t payload_len = head[1] & 0x7F;
 
-        /* RFC 6455 §5.2: RSV1/RSV2/RSV3 MUST be 0 unless an extension
+        /* RFC 6455 section 5.2: RSV1/RSV2/RSV3 MUST be 0 unless an extension
          * defines their meaning.  CWIST has no such extension. */
         if (head[0] & 0x70) return NULL;
 
-        /* Client-to-server frames must be masked per RFC 6455 §5.3. */
+        /* Client-to-server frames must be masked per RFC 6455 section 5.3. */
         if (!masked) return NULL;
 
         if (payload_len == 126) {
@@ -223,7 +223,7 @@ cwist_ws_frame *cwist_websocket_receive(cwist_websocket *ws) {
             payload[payload_len] = '\0';
         }
 
-        /* --- Fragmented-message reassembly (RFC 6455 §5.4) -------------- */
+        /* --- Fragmented-message reassembly (RFC 6455 section 5.4) -------------- */
 
         /* Control frames (CLOSE/PING/PONG) are never fragmented: deliver
          * immediately, even when a data message fragmentation is underway. */
@@ -266,13 +266,13 @@ cwist_ws_frame *cwist_websocket_receive(cwist_websocket *ws) {
         /* --- Deliver the complete frame ---------------------------------- */
 
         if (opcode == CWIST_WS_FRAME_CLOSE) {
-            /* RFC 6455 §5.5.1: echo CLOSE before marking closed. */
+            /* RFC 6455 section 5.5.1: echo CLOSE before marking closed. */
             cwist_websocket_send(ws, CWIST_WS_FRAME_CLOSE,
                                  payload, (payload_len >= 2) ? 2 : 0);
             ws->is_closed = true;
         } else if (opcode == CWIST_WS_FRAME_PING) {
-            /* RFC 6455 §5.5.3: respond to every PING with a PONG carrying
-             * the same payload (up to 125 bytes per §5.5). */
+            /* RFC 6455 section 5.5.3: respond to every PING with a PONG carrying
+             * the same payload (up to 125 bytes per section 5.5). */
             cwist_websocket_send(ws, CWIST_WS_FRAME_PONG,
                                  payload, payload_len);
         }

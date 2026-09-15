@@ -1530,7 +1530,7 @@ static void cwist_h3_on_write(lsquic_stream_t *stream, lsquic_stream_ctx_t *st_h
                     node = node->next;
                     continue;
                 }
-                /* RFC 9114 §4.2: connection-specific fields are malformed in
+                /* RFC 9114 section 4.2: connection-specific fields are malformed in
                  * HTTP/3; te is only allowed with the value "trailers". */
                 if (strcmp(h3_name, "connection") == 0 ||
                     strcmp(h3_name, "keep-alive") == 0 ||

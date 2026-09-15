@@ -48,7 +48,7 @@
 #define CWIST_HTTP2_MAX_FRAME_SIZE 16384
 #define CWIST_HTTP2_MAX_CONCURRENT_STREAMS 100
 /* HPACK dynamic table capacity advertised via SETTINGS_HEADER_TABLE_SIZE
- * (RFC 7541 §4.2 default). */
+ * (RFC 7541 section 4.2 default). */
 #define CWIST_HTTP2_HEADER_TABLE_SIZE 4096
 
 #define CWIST_HTTP2_FLAG_END_STREAM 0x01
@@ -205,12 +205,12 @@ typedef struct cwist_h2_stream {
     struct cwist_h2_stream *next;
 } h2_stream;
 
-/* HPACK dynamic table entry (RFC 7541 §4).  Entries are chained newest-first;
+/* HPACK dynamic table entry (RFC 7541 section 4).  Entries are chained newest-first;
  * dynamic index 62 addresses the head (most recently inserted). */
 typedef struct h2_hpack_entry {
     char *name;
     char *value;
-    size_t size; /* name_len + value_len + 32 (RFC 7541 §4.1) */
+    size_t size; /* name_len + value_len + 32 (RFC 7541 section 4.1) */
     struct h2_hpack_entry *next;
 } h2_hpack_entry;
 
@@ -396,12 +396,12 @@ typedef struct h2_conn {
      * drains these before touching the socket again. */
     h2_deferred_frame *deferred_head;
     h2_deferred_frame *deferred_tail;
-    /* HPACK decoder dynamic table state (RFC 7541 §4). */
+    /* HPACK decoder dynamic table state (RFC 7541 section 4). */
     h2_hpack_entry *hpack_head;
     uint32_t hpack_size;
     uint32_t hpack_capacity;
     /* Number of currently open streams; enforced against
-     * CWIST_HTTP2_MAX_CONCURRENT_STREAMS on new-stream HEADERS (§5.1.2). */
+     * CWIST_HTTP2_MAX_CONCURRENT_STREAMS on new-stream HEADERS (section 5.1.2). */
     uint32_t active_streams;
     /* True when a header block was refused (stream limit) but its
      * CONTINUATION frames must still be consumed and discarded. */
@@ -1642,7 +1642,7 @@ const cwist_http2_static_header *h2_static_header(uint32_t index) {
     return &cwist_http2_static_table[index];
 }
 
-/* --- HPACK Dynamic Table (RFC 7541 §4) --- */
+/* --- HPACK Dynamic Table (RFC 7541 section 4) --- */
 
 /* Evict the oldest entries (list tail) until the table fits within limit. */
 static void h2_hpack_evict_to(h2_conn *hc, uint32_t limit) {
@@ -1670,7 +1670,7 @@ static const h2_hpack_entry *h2_hpack_dynamic_get(const h2_conn *hc, uint32_t in
 
 /* Insert a name/value pair at the head of the dynamic table, evicting as
  * needed.  An entry larger than the capacity empties the table and is not
- * added (RFC 7541 §4.4). */
+ * added (RFC 7541 section 4.4). */
 static int h2_hpack_insert(h2_conn *hc, const char *name, const char *value) {
     size_t entry_size = strlen(name) + strlen(value) + 32;
     if (entry_size > hc->hpack_capacity) {
@@ -1724,7 +1724,7 @@ static void h2_parse_path(cwist_http_request *req, const char *path) {
 }
 
 /* Per-header-block decode state for pseudo-header validation
- * (RFC 7540 §8.1.2.3). */
+ * (RFC 7540 section 8.1.2.3). */
 typedef struct h2_header_state {
     bool seen_method;
     bool seen_path;
@@ -1768,7 +1768,7 @@ static int h2_apply_header(cwist_http_request *req, const char *name, const char
     }
 
     st->seen_regular = true;
-    /* HTTP/2 field names are lowercase by mandate (RFC 9113 §8.2.1);
+    /* HTTP/2 field names are lowercase by mandate (RFC 9113 section 8.2.1);
      * normalize lenient peers so lookups (e.g. gRPC metadata) are uniform. */
     char lower_buf[256];
     if (strcmp(name, "host") != 0) {
@@ -1905,7 +1905,7 @@ static int h2_decode_header_block(h2_conn *hc, cwist_http_request *req,
 
     if (stream_error) return H2_DECODE_STREAM_ERROR;
 
-    /* RFC 7540 §8.1.2.3: request header blocks must carry :method and :path. */
+    /* RFC 7540 section 8.1.2.3: request header blocks must carry :method and :path. */
     if (is_request && (!st.seen_method || !st.seen_path)) {
         CWIST_LOG_WARN("[h2] request header block missing :method or :path");
         return H2_DECODE_STREAM_ERROR;
@@ -1953,7 +1953,7 @@ static int h2_static_table_find_name(const char *name) {
     return 0;
 }
 
-/* RFC 9113 §8.1.1: responses with 1xx/204/304 status carry no content, and
+/* RFC 9113 section 8.1.1: responses with 1xx/204/304 status carry no content, and
  * content-length is forbidden on 1xx/204 (and meaningless on 304 here). */
 static bool h2_status_forbids_body(int status_code) {
     return (status_code >= 100 && status_code < 200) ||
@@ -2028,7 +2028,7 @@ static size_t h2_encode_response_headers(cwist_http_response *res,
             curr = curr->next;
             continue;
         }
-        /* RFC 9113 §8.2.2: connection-specific fields are malformed in
+        /* RFC 9113 section 8.2.2: connection-specific fields are malformed in
          * HTTP/2; te is only allowed with the value "trailers". */
         if (strcasecmp(curr->key->data, "connection") == 0 ||
             strcasecmp(curr->key->data, "keep-alive") == 0 ||
@@ -2969,7 +2969,7 @@ static int h2_send_response_hc(h2_conn *hc, uint32_t stream_id, cwist_http_respo
 /* --- CONTINUATION & Header Assembly --- */
 
 /* Create a stream for an incoming request header block, enforcing
- * CWIST_HTTP2_MAX_CONCURRENT_STREAMS (RFC 7540 §5.1.2).
+ * CWIST_HTTP2_MAX_CONCURRENT_STREAMS (RFC 7540 section 5.1.2).
  * Returns the stream, or NULL with *refused set when the peer exceeded the
  * limit (RST_STREAM/REFUSED_STREAM already queued).
  * *goaway_sent is set when the outbound RST budget was exhausted and GOAWAY
@@ -3805,7 +3805,7 @@ cwist_error_t cwist_http2_serve_connection_ex(
                     break;
                 }
                 if (stream_id > hc.last_processed_stream_id) {
-                    /* RFC 7540 §5.1: RST_STREAM frames MUST NOT be sent for a
+                    /* RFC 7540 section 5.1: RST_STREAM frames MUST NOT be sent for a
                      * stream in the "idle" state. Connection error of type
                      * PROTOCOL_ERROR. */
                     CWIST_LOG_WARN("[h2] RST_STREAM received for idle stream %u > last_processed %u",

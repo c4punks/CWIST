@@ -77,7 +77,7 @@ void test_handshake_key_generation() {
     printf("Handshake Test Passed.\n");
 }
 
-/* RFC 6455 §4.2.1: the client MUST include Sec-WebSocket-Version: 13.
+/* RFC 6455 section 4.2.1: the client MUST include Sec-WebSocket-Version: 13.
  * Proves the rejection side of the fix, not just that a well-formed
  * request still works. */
 void test_handshake_rejects_bad_version() {

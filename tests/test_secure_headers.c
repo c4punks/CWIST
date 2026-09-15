@@ -26,7 +26,7 @@ void test_security_headers_present(void) {
 
     assert(cwist_http_header_get(res->headers, "Permissions-Policy") != NULL);
 
-    // RFC 6797 §7.2: HSTS must not be sent over plain HTTP. This function is
+    // RFC 6797 section 7.2: HSTS must not be sent over plain HTTP. This function is
     // transport-agnostic (safe for both HTTP and HTTPS responses), so it
     // must NOT set HSTS itself -- that's cwist_http_response_add_hsts()'s
     // job, called only from an HTTPS-specific path (see below).

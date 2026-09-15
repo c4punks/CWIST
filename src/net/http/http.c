@@ -1174,7 +1174,7 @@ size_t cwist_http_header_remove(cwist_http_header_node **head, const char *key) 
  * @brief Add default security headers to an HTTP response if not already present.
  *
  * Safe to call for both HTTP and HTTPS responses.  HSTS is intentionally
- * omitted here because RFC 6797 §7.2 forbids sending it over plain HTTP;
+ * omitted here because RFC 6797 section 7.2 forbids sending it over plain HTTP;
  * browsers ignore it on non-TLS connections anyway.  Use
  * cwist_http_response_add_hsts() from your HTTPS handler to add it there.
  *
@@ -1226,7 +1226,7 @@ void cwist_http_response_add_security_headers(cwist_http_response *res) {
 /**
  * @brief Add Strict-Transport-Security to a TLS response (HTTPS only).
  *
- * RFC 6797 §7.2 prohibits HSTS over plain HTTP.  Call this only from an
+ * RFC 6797 section 7.2 prohibits HSTS over plain HTTP.  Call this only from an
  * HTTPS handler, after cwist_http_response_add_security_headers().
  * No-op when the header is already present.
  *
@@ -2061,7 +2061,7 @@ cwist_error_t cwist_http_send_response(int client_fd, cwist_http_response *res) 
 }
 
 /**
- * @brief Send only the status line and headers of a response (RFC 9110 §9.3.2
+ * @brief Send only the status line and headers of a response (RFC 9110 section 9.3.2
  * HEAD semantics): Content-Length reflects the would-be body, but no body
  * bytes are written. Body resources are released as in the full send path.
  */
@@ -2664,7 +2664,7 @@ void cwist_http_send_error_response(int fd, int status, const char *msg) {
 }
 
 /**
- * @brief Emit the interim 100 Continue response (RFC 9110 §10.1.1) before the
+ * @brief Emit the interim 100 Continue response (RFC 9110 section 10.1.1) before the
  * request body is read. Best effort: a failed write surfaces on the next recv.
  */
 static void http_send_100_continue(int fd) {
@@ -2705,7 +2705,7 @@ cwist_sstring *cwist_http_stringify_response(cwist_http_response *res) {
  * @return Parsed request object, or NULL on malformed input.
  */
 /**
- * @brief Validate the combined Transfer-Encoding header list (RFC 9112 §6.1).
+ * @brief Validate the combined Transfer-Encoding header list (RFC 9112 section 6.1).
  * Headers are prepended during parsing, so the first TE node found is the
  * last one on the wire and carries the final coding.
  * @return 0 valid, 1 when the final coding is not chunked, 2 when an
@@ -2849,7 +2849,7 @@ static cwist_http_request *cwist_http_parse_request_with_header_end(const char *
                 }
             } else if (key_len == 14 && (k0 == 'C' || k0 == 'c')) {
                 if (strncasecmp(line_start, "Content-Length", 14) == 0) {
-                    /* RFC 9112 §6.3: strict digits-only parse; duplicate CL is
+                    /* RFC 9112 section 6.3: strict digits-only parse; duplicate CL is
                      * idempotent only when every value matches. */
                     size_t vlen = val_len;
                     while (vlen > 0 && (val_start[vlen - 1] == ' ' || val_start[vlen - 1] == '\t')) vlen--;
@@ -2889,7 +2889,7 @@ static cwist_http_request *cwist_http_parse_request_with_header_end(const char *
                 if (strncasecmp(line_start, "Transfer-Encoding", 17) == 0) te_seen = true;
             } else if (key_len == 6 && (k0 == 'E' || k0 == 'e')) {
                 if (strncasecmp(line_start, "Expect", 6) == 0) {
-                    /* RFC 9110 §10.1.1: only the 100-continue expectation is
+                    /* RFC 9110 section 10.1.1: only the 100-continue expectation is
                      * supported; record it here so the receive paths need no
                      * second header walk. */
                     size_t vlen = val_len;
@@ -2905,7 +2905,7 @@ static cwist_http_request *cwist_http_parse_request_with_header_end(const char *
         line_start = line_end + 2;
     }
 
-    /* RFC 9112 §3.2: HTTP/1.1 requests must carry exactly one non-empty Host. */
+    /* RFC 9112 section 3.2: HTTP/1.1 requests must carry exactly one non-empty Host. */
     if (is_http11 && (!has_host || host_dup || host_empty)) {
         cwist_http_request_destroy(req);
         if (err_out) *err_out = CWIST_HTTP_PARSE_MALFORMED;
@@ -2917,7 +2917,7 @@ static cwist_http_request *cwist_http_parse_request_with_header_end(const char *
         return NULL;
     }
     if (te_seen) {
-        /* RFC 9112 §6.3: TE and CL together are a request-smuggling vector. */
+        /* RFC 9112 section 6.3: TE and CL together are a request-smuggling vector. */
         if (cl_seen) {
             cwist_http_request_destroy(req);
             if (err_out) *err_out = CWIST_HTTP_PARSE_MALFORMED;
@@ -2931,7 +2931,7 @@ static cwist_http_request *cwist_http_parse_request_with_header_end(const char *
             return NULL;
         }
     }
-    /* RFC 9110 §10.1.1: only the 100-continue expectation is supported. */
+    /* RFC 9110 section 10.1.1: only the 100-continue expectation is supported. */
     if (expect_bad) {
         cwist_http_request_destroy(req);
         if (err_out) *err_out = CWIST_HTTP_PARSE_EXPECT_FAILED;
@@ -3149,7 +3149,7 @@ cwist_http_request *cwist_http_receive_request(int client_fd, char *read_buf, si
 
     size_t body_received = total_received - header_len;
 
-    /* RFC 9110 §10.1.1: the parser already validated that any Expect value is
+    /* RFC 9110 section 10.1.1: the parser already validated that any Expect value is
      * exactly "100-continue"; answer it before waiting on the body. Flags were
      * recorded during the header pass — no second walk needed. */
     const bool te = req->te_chunked_seen;
@@ -3388,7 +3388,7 @@ cwist_recv_status_t cwist_http_receive_request_nb(cwist_http_async_conn_t *conn,
     size_t body_received = conn->len - header_len;
     size_t consumed = header_len;
 
-    /* RFC 9110 §10.1.1: answer a validated Expect: 100-continue once, before
+    /* RFC 9110 section 10.1.1: answer a validated Expect: 100-continue once, before
      * the stash accumulates the full body. Flags come from the header pass. */
     const bool te = req->te_chunked_seen;
     const bool expect = req->expect_100_seen;
