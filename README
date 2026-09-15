@@ -11,23 +11,47 @@
 +------------------------------------------------------------------+
 
 A high-performance, C17 web framework that brings modern ergonomics
--- HTTP/3, WebTransport, Post-Quantum TLS, and zero-copy I/O --
-to systems programming without sacrificing control.
+(HTTP/3, WebTransport, Post-Quantum TLS, zero-copy I/O) to systems
+programming without sacrificing control.
 Powered by BoringSSL, lsquic, OpenSSL without context contamination.
 
+Two server modes, tuned for opposite things; pick per workload.
+
+  C1M reactor   takes the throughput. Many connections per event loop,
+                so a connection costs a reactor slot, not a parked
+                thread. On the run below: 142,258 req/s against Axum's
+                114,649, 24% more.
+
+  Classic pool  takes the latency. A thread per connection, so no
+                request waits behind another in a batch. Median 1.55ms
+                against Axum's 3.21ms, and ahead through p99.
+
+The distribution, not the average, is the point:
+
+                    p50      p90      p99    p99.9  p99.999
+  CWIST classic   1.55ms   4.12ms   7.35ms  13.30ms  29.39ms
+  CWIST C1M       1.99ms   7.86ms  15.06ms  19.58ms  25.82ms
+  Axum            3.21ms   5.78ms   8.61ms  11.57ms  18.09ms
+
+Classic pool leads for the first 99% of requests and both modes answer
+the median faster. The crossover is at p99.9, where Axum's extreme tail
+is tighter; closing that is open work.
+
 <!-- BENCHMARKS:START -->
-Latest automated benchmark: **Linux** — 2.72 M leases/s, 184.01% CPU, 42476 KiB RSS.
+Latest automated benchmark: **Darwin**: 15.22 M leases/s, 132.2% CPU, 717104 KiB RSS.
 
 ![CWIST benchmark trends](docs/benchmark-trends.svg)
 <!-- BENCHMARKS:END -->
 
 <!-- WEBSERVER_BENCHMARKS:START -->
 Latest Web Server Benchmark (wrk -t12 -c400 -d10s (after 10s warmup, warmup discarded)):
-- **CWIST (classic pool)**: 195499 req/s | Latency 1.18ms (P90 2.44ms, P99 6.40ms) | RSS 16548KiB | Csw 0
-- **CWIST (C1M reactor)**: 196433 req/s | Latency 1.25ms (P90 2.58ms, P99 7.18ms) | RSS 8360KiB | Csw 0
-- **Axum**: 198145 req/s | Latency 2.00ms (P90 3.54ms, P99 5.50ms) | RSS 16512KiB | Csw 0
-- **Gin (Go)**: 147097 req/s | Latency 4.75ms (P90 12.66ms, P99 30.51ms) | RSS 29680KiB | Csw 0
-- **Spring Boot**: 100637 req/s | Latency 3.93ms (P90 5.56ms, P99 8.85ms) | RSS 1311800KiB | Csw 0
+- **CWIST (classic pool)**: 117950 req/s | Latency 1.97ms (P90 4.12ms, P99 7.35ms, P99.999 29.39ms) | RSS 16324KiB | Csw 0
+- **CWIST (C1M reactor)**: 142258 req/s | Latency 3.07ms (P90 7.86ms, P99 15.06ms, P99.999 25.82ms) | RSS 10376KiB | Csw 0
+- **CWIST (C1M reactor, arena_max=1)**: glibc arena cap adopted in PR #35 after mimalloc was tried and refuted (issue #25); this line confirms the decision on every run: 139882 req/s | Latency 3.10ms (P90 7.86ms, P99 14.94ms, P99.999 24.12ms) | RSS 11940KiB | Csw 0
+- **CWIST (C1M reactor, drain_chunk=8)**: cooperative queuing for cwist_async_defer completions within a big io_uring batch (issue #25, docs/cooperative-queuing.md); this workload has no cwist_async_defer traffic to interleave, so parity with the plain C1M row above is the expected result, not a null finding, the tail-latency win is isolated directly in tests/bench_cooperative_queuing.c: 140501 req/s | Latency 3.01ms (P90 7.42ms, P99 14.20ms, P99.999 23.27ms) | RSS 10260KiB | Csw 0
+- **Axum**: 114649 req/s | Latency 3.41ms (P90 5.78ms, P99 8.61ms, P99.999 18.09ms) | RSS 17504KiB | Csw 0
+- **Gin (Go)**: 79513 req/s | Latency 6.66ms (P90 15.89ms, P99 36.27ms, P99.999 75.30ms) | RSS 29716KiB | Csw 0
+- **Spring Boot**: 45321 req/s | Latency 8.80ms (P90 11.69ms, P99 18.89ms, P99.999 71.38ms) | RSS 1307828KiB | Csw 0
 
 **Spring runtime environment**
 
