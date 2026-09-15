@@ -118,6 +118,11 @@ static unsigned char *b64url_decode(const char *src, size_t src_len, size_t *out
         if (a < 0 || b < 0 || c < 0) { cwist_free(out); return NULL; }
         out[j++] = (unsigned char)((a << 2) | (b >> 4));
         out[j++] = (unsigned char)((b << 4) | (c >> 2));
+    } else if (rem == 1) {
+        /* RFC 4648 section 4: 1 base64 character (6 bits) cannot encode a whole byte.
+         * A remainder of 1 is malformed and must be rejected. */
+        cwist_free(out);
+        return NULL;
     }
 
     out[j] = '\0';

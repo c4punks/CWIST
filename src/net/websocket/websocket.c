@@ -26,8 +26,7 @@
 /* Per-frame payload size cap (16 MiB).  RFC 6455 allows up to 2^63 bytes per
  * frame, but allocating that blindly gives any connected client a trivial OOM
  * DoS vector.  Applications that need larger transfers should use WebSocket
- * message fragmentation (RFC 6455 section 5.4) with frames within this cap,
- * bounded in total by CWIST_WS_MAX_MESSAGE_BYTES below. */
+ * message fragmentation (RFC 6455 section 5.4) with frames within this cap. */
 #define CWIST_WS_MAX_PAYLOAD_BYTES ((uint64_t)(16u * 1024u * 1024u))
 
 /* Reassembled-message size cap (64 MiB).  Each individual fragment is bounded
@@ -148,6 +147,10 @@ cwist_websocket *cwist_websocket_upgrade(cwist_http_request *req, int client_fd)
     if (!connection || !upgrade || !key) return NULL;
     if (ws_strcasestr(connection, "Upgrade") == NULL) return NULL;
     if (strcasecmp(upgrade, "websocket") != 0) return NULL;
+
+    /* RFC 6455 section 4.2.1: the client MUST include Sec-WebSocket-Version: 13. */
+    char *ws_version = cwist_http_header_get(req->headers, "Sec-WebSocket-Version");
+    if (!ws_version || strcmp(ws_version, "13") != 0) return NULL;
 
     // Handshake Key Generation
     char combined_key[512];
@@ -373,18 +376,15 @@ cwist_ws_frame *cwist_websocket_receive(cwist_websocket *ws) {
         /* --- Deliver the complete frame ---------------------------------- */
 
         if (opcode == CWIST_WS_FRAME_CLOSE) {
-            /* RFC 6455 section 5.5.1: a CLOSE body, if present, MUST be >= 2 bytes. */
-            if (payload_len == 1) {
-                cwist_free(payload);
-                return NULL;
-            }
-            /* Echo the status code (first 2 bytes) back before closing. */
-            cwist_websocket_send(ws, CWIST_WS_FRAME_CLOSE, payload, (payload_len >= 2) ? 2 : 0);
+            /* RFC 6455 section 5.5.1: echo CLOSE before marking closed. */
+            cwist_websocket_send(ws, CWIST_WS_FRAME_CLOSE,
+                                 payload, (payload_len >= 2) ? 2 : 0);
             ws->is_closed = true;
         } else if (opcode == CWIST_WS_FRAME_PING) {
             /* RFC 6455 section 5.5.3: respond to every PING with a PONG carrying
              * the same payload (up to 125 bytes per section 5.5). */
-            cwist_websocket_send(ws, CWIST_WS_FRAME_PONG, payload, payload_len);
+            cwist_websocket_send(ws, CWIST_WS_FRAME_PONG,
+                                 payload, payload_len);
         }
 
         cwist_ws_frame *frame = (cwist_ws_frame *)cwist_alloc(sizeof(cwist_ws_frame));

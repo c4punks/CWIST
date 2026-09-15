@@ -933,6 +933,12 @@ char *cwist_http_header_get(cwist_http_header_node *head, const char *key) {
 
 /**
  * @brief Add default security headers to an HTTP response if not already present.
+ *
+ * Safe to call for both HTTP and HTTPS responses.  HSTS is intentionally
+ * omitted here because RFC 6797 section 7.2 forbids sending it over plain HTTP;
+ * browsers ignore it on non-TLS connections anyway.  Use
+ * cwist_http_response_add_hsts() from your HTTPS handler to add it there.
+ *
  * @param res Response object to populate.
  */
 void cwist_http_response_add_security_headers(cwist_http_response *res) {
@@ -964,6 +970,29 @@ void cwist_http_response_add_security_headers(cwist_http_response *res) {
     if (!cwist_http_header_get(res->headers, "Cross-Origin-Resource-Policy")) {
         cwist_http_header_add_ex(&res->headers, arena, "Cross-Origin-Resource-Policy", "same-origin");
     }
+    /* Permissions-Policy (W3C Permissions Policy Level 2) — deny access to
+     * sensitive browser APIs that CWIST apps almost never need.  Callers that
+     * require a specific feature can set the header before calling this
+     * function; the existing-header check below will skip the default. */
+    if (!cwist_http_header_get(res->headers, "Permissions-Policy")) {
+        cwist_http_header_add_static(&res->headers, arena, "Permissions-Policy",
+            "camera=(), microphone=(), geolocation=(), payment=(), "
+            "usb=(), interest-cohort=()");
+    }
+}
+
+/**
+ * @brief Add Strict-Transport-Security to a TLS response (HTTPS only).
+ *
+ * RFC 6797 section 7.2 prohibits HSTS over plain HTTP.  Call this only from an
+ * HTTPS handler, after cwist_http_response_add_security_headers().
+ * No-op when the header is already present.
+ *
+ * @param res Response object to populate.
+ */
+void cwist_http_response_add_hsts(cwist_http_response *res) {
+    if (!res) return;
+    cwist_arena_t *arena = (cwist_arena_t *)res->arena;
     if (!cwist_http_header_get(res->headers, "Strict-Transport-Security")) {
         cwist_http_header_add_ex(&res->headers, arena, "Strict-Transport-Security", "max-age=31536000; includeSubDomains");
     }
@@ -1725,7 +1754,7 @@ cwist_error_t cwist_http_send_response(int client_fd, cwist_http_response *res) 
 }
 
 /**
- * @brief Send only the status line and headers of a response (RFC 9110 §9.3.2
+ * @brief Send only the status line and headers of a response (RFC 9110 section 9.3.2
  * HEAD semantics): Content-Length reflects the would-be body, but no body
  * bytes are written. Body resources are released as in the full send path.
  */
@@ -2024,7 +2053,7 @@ void cwist_http_send_error_response(int fd, int status, const char *msg) {
 }
 
 /**
- * @brief Emit the interim 100 Continue response (RFC 9110 §10.1.1) before the
+ * @brief Emit the interim 100 Continue response (RFC 9110 section 10.1.1) before the
  * request body is read. Best effort: a failed write surfaces on the next recv.
  */
 static void http_send_100_continue(int fd) {
@@ -2064,6 +2093,46 @@ cwist_sstring *cwist_http_stringify_response(cwist_http_response *res) {
  * @param raw_request NUL-terminated request buffer containing headers and optional body.
  * @return Parsed request object, or NULL on malformed input.
  */
+/**
+ * @brief Validate the combined Transfer-Encoding header list (RFC 9112 section 6.1).
+ * Headers are prepended during parsing, so the first TE node found is the
+ * last one on the wire and carries the final coding.
+ * @return 0 valid, 1 when the final coding is not chunked, 2 when an
+ *         unsupported transfer coding is present.
+ */
+static int http_validate_transfer_encoding(cwist_http_header_node *headers) {
+    bool seen = false;
+    bool final_is_chunked = false;
+    bool bad_coding = false;
+    for (cwist_http_header_node *n = headers; n; n = n->next) {
+        if (!n->key || !n->key->data || strcasecmp(n->key->data, "Transfer-Encoding") != 0) continue;
+        const char *p = (n->value && n->value->data) ? n->value->data : "";
+        bool any_token = false;
+        bool last_chunked = false;
+        while (*p) {
+            while (*p == ' ' || *p == '\t' || *p == ',') p++;
+            const char *tok = p;
+            while (*p && *p != ',') p++;
+            const char *end = p;
+            while (end > tok && (end[-1] == ' ' || end[-1] == '\t')) end--;
+            if (*p) p++;
+            if (end == tok) continue;
+            any_token = true;
+            /* A token with parameters (e.g. "chunked;x=1") is not chunked. */
+            last_chunked = ((size_t)(end - tok) == 7 && strncasecmp(tok, "chunked", 7) == 0);
+            if (!last_chunked) bad_coding = true;
+        }
+        if (!seen) {
+            final_is_chunked = any_token && last_chunked;
+            seen = true;
+        }
+    }
+    if (!seen) return 0;
+    if (!final_is_chunked) return 1;
+    if (bad_coding) return 2;
+    return 0;
+}
+
 /**
  * @brief Internal helper to parse request when header_end is already known.
  */
@@ -2157,15 +2226,53 @@ static cwist_http_request *cwist_http_parse_request_with_header_end(const char *
                 }
             } else if (key_len == 14 && (k0 == 'C' || k0 == 'c')) {
                 if (strncasecmp(line_start, "Content-Length", 14) == 0) {
-                    size_t len = 0;
-                    for (size_t i = 0; i < val_len; i++) {
-                        if (val_start[i] >= '0' && val_start[i] <= '9') {
-                            len = len * 10 + (val_start[i] - '0');
+                    /* RFC 9112 section 6.3: strict digits-only parse; duplicate CL is
+                     * idempotent only when every value matches. */
+                    size_t vlen = val_len;
+                    while (vlen > 0 && (val_start[vlen - 1] == ' ' || val_start[vlen - 1] == '\t')) vlen--;
+                    if (vlen == 0) {
+                        cl_bad = true;
+                    } else {
+                        size_t len = 0;
+                        bool valid = true;
+                        for (size_t i = 0; i < vlen; i++) {
+                            if (val_start[i] >= '0' && val_start[i] <= '9') {
+                                if (len > (SIZE_MAX - 9) / 10) { valid = false; break; }
+                                len = len * 10 + (size_t)(val_start[i] - '0');
+                            } else {
+                                valid = false;
+                                break;
+                            }
+                        }
+                        if (!valid) {
+                            cl_bad = true;
                         } else {
                             break;
                         }
                     }
-                    req->content_length = len;
+                }
+            } else if (key_len == 4 && (k0 == 'H' || k0 == 'h')) {
+                if (strncasecmp(line_start, "Host", 4) == 0) {
+                    if (has_host) host_dup = true;
+                    has_host = true;
+                    size_t vlen = val_len;
+                    while (vlen > 0 && (val_start[vlen - 1] == ' ' || val_start[vlen - 1] == '\t')) vlen--;
+                    if (vlen == 0) host_empty = true;
+                }
+            } else if (key_len == 17 && (k0 == 'T' || k0 == 't')) {
+                if (strncasecmp(line_start, "Transfer-Encoding", 17) == 0) te_seen = true;
+            } else if (key_len == 6 && (k0 == 'E' || k0 == 'e')) {
+                if (strncasecmp(line_start, "Expect", 6) == 0) {
+                    /* RFC 9110 section 10.1.1: only the 100-continue expectation is
+                     * supported; record it here so the receive paths need no
+                     * second header walk. */
+                    size_t vlen = val_len;
+                    while (vlen > 0 && (val_start[vlen - 1] == ' ' || val_start[vlen - 1] == '\t')) vlen--;
+                    if (vlen == 12 && strncasecmp(val_start, "100-continue", 12) == 0) {
+                        expect_100 = true;
+                    } else {
+                        expect_bad = true;
+                    }
                 }
             }
             free(header_line);
@@ -2173,6 +2280,41 @@ static cwist_http_request *cwist_http_parse_request_with_header_end(const char *
         
         line_start = line_end + 2;
     }
+
+    /* RFC 9112 section 3.2: HTTP/1.1 requests must carry exactly one non-empty Host. */
+    if (is_http11 && (!has_host || host_dup || host_empty)) {
+        cwist_http_request_destroy(req);
+        if (err_out) *err_out = CWIST_HTTP_PARSE_MALFORMED;
+        return NULL;
+    }
+    if (cl_bad) {
+        cwist_http_request_destroy(req);
+        if (err_out) *err_out = CWIST_HTTP_PARSE_MALFORMED;
+        return NULL;
+    }
+    if (te_seen) {
+        /* RFC 9112 section 6.3: TE and CL together are a request-smuggling vector. */
+        if (cl_seen) {
+            cwist_http_request_destroy(req);
+            if (err_out) *err_out = CWIST_HTTP_PARSE_MALFORMED;
+            return NULL;
+        }
+        int tev = http_validate_transfer_encoding(req->headers);
+        if (tev != 0) {
+            cwist_http_request_destroy(req);
+            if (err_out) *err_out = (tev == 1) ? CWIST_HTTP_PARSE_MALFORMED
+                                               : CWIST_HTTP_PARSE_TE_UNSUPPORTED;
+            return NULL;
+        }
+    }
+    /* RFC 9110 section 10.1.1: only the 100-continue expectation is supported. */
+    if (expect_bad) {
+        cwist_http_request_destroy(req);
+        if (err_out) *err_out = CWIST_HTTP_PARSE_EXPECT_FAILED;
+        return NULL;
+    }
+    req->te_chunked_seen = te_seen;
+    req->expect_100_seen = expect_100;
 
     const char *body_start = header_end + 4;
     if (*body_start != '\0') {
@@ -2343,6 +2485,15 @@ cwist_http_request *cwist_http_receive_request(int client_fd, char *read_buf, si
 
     size_t header_len = (size_t)(header_end + 4 - read_buf);
     size_t body_received = total_received - header_len;
+
+    /* RFC 9110 section 10.1.1: the parser already validated that any Expect value is
+     * exactly "100-continue"; answer it before waiting on the body. Flags were
+     * recorded during the header pass — no second walk needed. */
+    const bool te = req->te_chunked_seen;
+    const bool expect = req->expect_100_seen;
+    if (expect && ((size_t)req->content_length > body_received || (te && req->content_length == 0))) {
+        http_send_100_continue(client_fd);
+    }
 
     // 2. Read body based on Content-Length or Transfer-Encoding
     if (req->content_length > 0) {
@@ -2555,10 +2706,10 @@ cwist_recv_status_t cwist_http_receive_request_nb(cwist_http_async_conn_t *conn,
     size_t body_received = conn->len - header_len;
     size_t consumed = header_len;
 
-    /* RFC 9110 §10.1.1: answer a validated Expect: 100-continue once, before
-     * the stash accumulates the full body. */
-    const char *te = cwist_http_header_get(req->headers, "Transfer-Encoding");
-    const char *expect = cwist_http_header_get(req->headers, "Expect");
+    /* RFC 9110 section 10.1.1: answer a validated Expect: 100-continue once, before
+     * the stash accumulates the full body. Flags come from the header pass. */
+    const bool te = req->te_chunked_seen;
+    const bool expect = req->expect_100_seen;
     if (expect && !conn->expect_continue_sent &&
         ((size_t)req->content_length > body_received || (te && req->content_length == 0))) {
         http_send_100_continue(conn->fd);
