@@ -269,7 +269,7 @@ cwist_jwt_claims *cwist_jwt_verify(const char *token, const char *secret) {
     if (!dot2) { cwist_free(tok_copy); return NULL; }
     *dot2 = '\0';
 
-    /* --- Validate the header: must declare alg=HS256 (RFC 8725 §3.1) ----- */
+    /* --- Validate the header: must declare alg=HS256 (RFC 8725 section 3.1) ----- */
     size_t hdr_json_len = 0;
     unsigned char *hdr_json = b64url_decode(tok_copy, strlen(tok_copy), &hdr_json_len);
     if (!hdr_json) { cwist_free(tok_copy); return NULL; }
