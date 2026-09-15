@@ -2,6 +2,11 @@
 import json
 import math
 import re
+import sys
+from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from runner_baseline import evaluate
 
 
 def validate_warmup_text(text):
@@ -120,7 +125,7 @@ CASES = ('cwist', 'cwist_c1m', 'cwist_c1m_arena1', 'cwist_c1m_drainchunk',
          'spring', 'spring_tuned')
 
 
-def build_result(cases, metadata):
+def build_result(cases, metadata, history=None):
     require(set(cases) == set(CASES), 'incomplete or unknown benchmark matrix')
     require(re.fullmatch(r'[0-9a-f]{40}', metadata.get('commit', '')) is not None, 'source commit')
     require(metadata.get('run_id') and metadata.get('run_attempt') and metadata.get('binary_sha256') and metadata.get('wrk_version'), 'source provenance')
@@ -144,8 +149,18 @@ def build_result(cases, metadata):
             'profile':'tuned' if name.endswith('_tuned') else 'main',
             'server_pgid':telemetry.get('server_pgid'), 'before':telemetry['before'], 'after':telemetry['after'],
             'command':telemetry.get('command'), 'cleanup':receipt}
-    for name, gate in [('cwist',3.0), ('cwist_c1m',3.5)]:
-        require(result[name+'_lat_ms'] <= gate, name+' average latency regression')
+    # Latency gate. A single absolute number is a lottery here: the runner
+    # CPU model changes run to run and moves these numbers more than most
+    # code changes do, so the same build sits at 87% of a 3.5ms limit on one
+    # CPU and 54% on another. Compare against earlier runs on the same CPU
+    # when that history is available, keeping the absolute number as the
+    # backstop. Allowances are the measured p99 of each metric's own
+    # run-to-run noise; see runner_baseline.py.
+    for name, ceiling, allowance in [('cwist', 3.0, 1.25), ('cwist_c1m', 3.5, 1.55)]:
+        metric = name + '_lat_ms'
+        ok, detail = evaluate(history or [], result, metric, ceiling,
+                              allowance=allowance)
+        require(ok, detail)
     return result
 
 
@@ -212,7 +227,20 @@ def main():
         require(type(telemetry.get('server_pgid')) is int and telemetry['server_pgid']==receipt.get('server_pgid'), 'group binding')
         require(telemetry['before'] and telemetry['after'], 'missing topology')
         cases[name] = raw,receipt,telemetry
-    result = build_result(cases,metadata)
+    history_path = args.root.parent / 'benchmarks' / 'webserver.json'
+    if not history_path.exists():
+        history_path = Path('benchmarks/webserver.json')
+    try:
+        history = json.loads(history_path.read_text())
+    except (OSError, ValueError):
+        history = []
+    # Only rows measured under the current contract are comparable; a row
+    # from an older measurement definition is as misleading a baseline as a
+    # row from a different CPU.
+    history = [r for r in history
+               if isinstance(r, dict)
+               and r.get('benchmark_contract') == 'isolated-http1-wrk-corrected-v2']
+    result = build_result(cases,metadata,history)
     args.output.write_text(json.dumps(result,indent=2)+'\n')
     print('Accepted',len(cases),'isolated cases;',sum(x[0]['requests'] for x in cases.values()),'requests; reported errors 0')
 

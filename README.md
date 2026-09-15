@@ -54,6 +54,16 @@ Spring environment: `{'java_version': 'openjdk version "25.0.4.1" 2026-08-18 LTS
 Latency distribution (density curve reconstructed from each server's percentiles - shows the shape of the tail, not just its P99.999 number):
 
 ![Web Server Latency Distribution](docs/webserver-latency-distribution.svg)
+
+### Per runner CPU
+
+GitHub hands out a different CPU model per run, which moves these numbers more than most code changes do. Medians of every recorded run, split by the CPU it landed on, so rows are only comparable down a column:
+
+| Runner CPU | Runs | CWIST classic ms | CWIST C1M ms | Axum ms | CWIST C1M req/s | Axum req/s |
+|---|---:|---:|---:|---:|---:|---:|
+| AMD EPYC 7763 64-Core Processor | 4 | 2.05 | 3.06 | 3.50 | 139,751 | 112,188 |
+| AMD EPYC 9V74 80-Core Processor | 2 | 1.90 | 3.07 | 3.25 | 143,914 | 120,587 |
+| Intel(R) Xeon(R) Platinum 8370C CPU @ 2.80GHz | 1 | 1.41 | 2.37 | 2.51 | 215,668 | 158,648 |
 <!-- WEBSERVER_BENCHMARKS:END -->
 
 _Methodology, JVM options, and fairness settings: [docs/webserver-benchmark.md](docs/webserver-benchmark.md)_
