@@ -131,3 +131,8 @@ wasm_smoke.js
 wasm_smoke.wasm
 tests/test_proto_gen_sample.pb
 tests/test_proto_gen_desc_sample.cwist.pb.h
+
+# Python bytecode. scripts/ci/__pycache__ was tracked for a while, which put
+# compiled bytecode in the source distribution.
+__pycache__/
+*.pyc
