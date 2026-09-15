@@ -1303,6 +1303,23 @@ void cwist_http_response_set_body_ptr_managed(cwist_http_response *res, const vo
     res->ptr_body_cleanup_ctx = ctx;
 }
 
+/**
+ * @brief Set the Alt-Svc header value for HTTP/3 upgrade advertisement.
+ * @param res Response object to modify.
+ * @param alt_svc Alt-Svc header value (e.g., `h3=":443"; ma=86400`).
+ *        Pass NULL to clear any previously set value.
+ */
+void cwist_http_response_set_alt_svc(cwist_http_response *res, const char *alt_svc) {
+    if (!res) return;
+    if (res->alt_svc) {
+        cwist_free(res->alt_svc);
+        res->alt_svc = NULL;
+    }
+    if (alt_svc) {
+        res->alt_svc = cwist_strdup(alt_svc);
+    }
+}
+
 // ... (request parsing omitted) ...
 
 /**
