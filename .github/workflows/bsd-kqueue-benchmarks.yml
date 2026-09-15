@@ -513,6 +513,21 @@ jobs:
         run: |
           git config user.name "cwist-ci[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add README README.md ROADMAP.md benchmarks/db.json benchmarks/webserver.json docs/benchmark-trends.svg docs/webserver-benchmark-trends.svg docs/webserver-latency-distribution.svg
+          # Every artifact benchmark.py render() writes. Keep this list in
+          # sync with that function: a chart left out here is regenerated on
+          # every run and then silently thrown away, which is what happened to
+          # webserver-latency-distribution.svg on dev.
+          generated="README README.md ROADMAP.md \
+            benchmarks/db.json benchmarks/webserver.json \
+            docs/benchmark-trends.svg \
+            docs/webserver-benchmark-trends.svg \
+            docs/webserver-latency-distribution.svg"
+          missing=""
+          for f in $generated; do [ -e "$f" ] || missing="$missing $f"; done
+          if [ -n "$missing" ]; then
+            echo "::error::render() did not produce:$missing"
+            exit 1
+          fi
+          git add $generated
           git diff --cached --quiet || git commit -m "docs(ci): update benchmark report [skip ci]"
           git push
