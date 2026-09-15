@@ -16,7 +16,7 @@ to systems programming without sacrificing control.
 Powered by BoringSSL, lsquic, OpenSSL without context contamination.
 
 <!-- BENCHMARKS:START -->
-Latest automated benchmark: **Darwin** — 14.44 M leases/s, 130.25% CPU, 761072 KiB RSS.
+Latest automated benchmark: **Darwin** — 14.63 M leases/s, 118.4% CPU, 674240 KiB RSS.
 
 ![CWIST benchmark trends](docs/benchmark-trends.svg)
 <!-- BENCHMARKS:END -->
@@ -24,30 +24,30 @@ Latest automated benchmark: **Darwin** — 14.44 M leases/s, 130.25% CPU, 761072
 <!-- WEBSERVER_BENCHMARKS:START -->
 ## Latest isolated HTTP benchmark
 
-Measured commit: `e734d0842e7b7a007a4219caf1b24c54007b59a1`. Release tag: `not recorded; identify this run by commit`.
-Run: https://github.com/c4punks/CWIST/actions/runs/34915461507. Timestamp: `2026-09-15T01:12:21.453466+00:00`.
+Measured commit: `037c24d210ca016579fecc63d32771768b3e11ac`. Release tag: `not recorded; identify this run by commit`.
+Run: https://github.com/c4punks/CWIST/actions/runs/34917953859. Timestamp: `2026-09-15T01:48:29.164611+00:00`.
 
 Latency columns use the **wrk corrected distribution**. Both memory columns are process-group end samples, not peaks. Group RSS sums each process's RSS, so a page shared between worker processes is counted once per process; Group PSS divides each shared page by its mapper count, so it is the column to compare against a single-process server. Context switches cover matching thread identities only; N/A means unavailable.
 
 | Profile | Req/s | Mean ms | P99.999 ms | Group PSS MiB | Group RSS MiB | Context-switch delta |
 |---|---:|---:|---:|---:|---:|---:|
-| CWIST classic | 114,025 | 2.007 | 25.633 | 50.90 | 61.55 | N/A |
-| CWIST C1M | 140,235 | 2.993 | 23.760 | 19.75 | 32.86 | 257,746 |
-| CWIST C1M arena_max=1 | 140,152 | 3.038 | 24.976 | 25.28 | 38.64 | 280,210 |
-| CWIST C1M drain_chunk=8 | 134,430 | 3.207 | 28.309 | 20.98 | 40.00 | 268,516 |
-| CWIST C1M PUBLIC_FIXED (opt-in) | 138,155 | 3.064 | 63.428 | 16.71 | 29.55 | 269,562 |
-| Axum | 112,486 | 3.489 | 18.947 | 14.67 | 16.75 | 183,559 |
-| Gin | 79,676 | 6.539 | 69.612 | 27.64 | 29.06 | 283,194 |
-| Spring Boot | 39,548 | 10.190 | 111.315 | 1,298.94 | 1,301.81 | N/A |
+| CWIST classic | 121,168 | 1.891 | 18.173 | 49.88 | 60.84 | N/A |
+| CWIST C1M | 144,478 | 3.077 | 26.353 | 27.01 | 40.16 | 309,482 |
+| CWIST C1M arena_max=1 | 145,010 | 3.022 | 24.135 | 24.46 | 37.39 | 300,898 |
+| CWIST C1M drain_chunk=8 | 143,952 | 3.051 | 38.040 | 19.47 | 33.02 | 321,238 |
+| CWIST C1M PUBLIC_FIXED (opt-in) | 143,541 | 3.104 | 27.308 | 17.00 | 30.32 | 304,919 |
+| Axum | 120,775 | 3.238 | 16.252 | 13.69 | 15.82 | 194,290 |
+| Gin | 92,056 | 5.459 | 51.092 | 28.18 | 29.61 | 307,312 |
+| Spring Boot | 58,813 | 6.757 | 52.506 | 1,257.53 | 1,260.39 | N/A |
 
 Main profile: `wrk -t12 -c400 -d10s`, after a discarded 10s warmup.
 
 ### Separate tuned profile
 
 `wrk -t4 -c100 -d10s`, after a discarded 10s warmup. Do not compare these rows as equal-load results against the main table.
-- CWIST classic: 117,346 req/s; mean 0.530 ms; corrected P99.999 5.010 ms.
-- Axum: 120,359 req/s; mean 0.784 ms; corrected P99.999 7.006 ms.
-- Spring Boot: 44,692 req/s; mean 2.319 ms; corrected P99.999 38.135 ms.
+- CWIST classic: 121,703 req/s; mean 0.497 ms; corrected P99.999 5.139 ms.
+- Axum: 126,290 req/s; mean 0.750 ms; corrected P99.999 6.997 ms.
+- Spring Boot: 57,797 req/s; mean 1.802 ms; corrected P99.999 30.621 ms.
 
 Legacy records remain in history but are not pooled into this measurement contract. A 10-second tail screen is not a universal SLO or a statistically established speedup.
 
