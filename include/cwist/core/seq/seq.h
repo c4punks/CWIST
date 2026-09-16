@@ -85,11 +85,8 @@ bool cwist_seq_chunk_parse(const uint8_t *data, size_t len, cwist_seq_chunk_t *o
  * @param payload_len Payload length in this chunk.
  * @param chunk_size Full chunk payload size.
  */
-void cwist_seq_chunk_build_header(uint8_t out[CWIST_SEQ_HEADER_SIZE],
-                                  uint16_t seq,
-                                  uint16_t total,
-                                  uint16_t payload_len,
-                                  uint16_t chunk_size);
+void cwist_seq_chunk_build_header(uint8_t out[CWIST_SEQ_HEADER_SIZE], uint16_t seq, uint16_t total,
+                                  uint16_t payload_len, uint16_t chunk_size);
 
 /**
  * @brief Split @p data into sequenced chunks.
@@ -101,9 +98,7 @@ void cwist_seq_chunk_build_header(uint8_t out[CWIST_SEQ_HEADER_SIZE],
  *            cwist_seq_message_free().
  * @return true on success, false on bad arguments or allocation failure.
  */
-bool cwist_seq_split(const uint8_t *data,
-                     size_t len,
-                     uint16_t chunk_payload_size,
+bool cwist_seq_split(const uint8_t *data, size_t len, uint16_t chunk_payload_size,
                      cwist_seq_message_t *out);
 
 /**
@@ -161,8 +156,7 @@ bool cwist_seq_assembler_is_complete(const cwist_seq_assembler_t *a);
  * @param out_cap Number of entries available in @p out.
  * @return Number of missing chunks.
  */
-size_t cwist_seq_assembler_recovery_targets(const cwist_seq_assembler_t *a,
-                                            uint16_t *out,
+size_t cwist_seq_assembler_recovery_targets(const cwist_seq_assembler_t *a, uint16_t *out,
                                             size_t out_cap);
 
 /**
@@ -175,8 +169,7 @@ size_t cwist_seq_assembler_recovery_targets(const cwist_seq_assembler_t *a,
  * @param out_len Receives assembled length.
  * @return true when the message is complete and outputs were written.
  */
-bool cwist_seq_assembler_get_data(cwist_seq_assembler_t *a,
-                                  const uint8_t **out_data,
+bool cwist_seq_assembler_get_data(cwist_seq_assembler_t *a, const uint8_t **out_data,
                                   size_t *out_len);
 
 /**

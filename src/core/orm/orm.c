@@ -30,7 +30,7 @@
  * @brief ORM session state.
  */
 struct cwist_orm {
-    int  sock_fd;          /**< Connected Unix socket descriptor. */
+    int sock_fd;          /**< Connected Unix socket descriptor. */
     bool auto_commit;      /**< Mirrored immediate-commit flag. */
     cwist_orm_dialect_t dialect; /**< SQL dialect for query generation. */
 };
@@ -46,8 +46,7 @@ static volatile bool g_immediate_commit = false;
  * @brief Receive exactly @p n bytes from @p fd.
  * @return 0 on success, -1 on EOF or transport error.
  */
-static int orm_recv_all(int fd, void *buf, size_t n)
-{
+static int orm_recv_all(int fd, void *buf, size_t n) {
     size_t total = 0;
     char *p = (char *)buf;
     while (total < n) {
@@ -62,8 +61,7 @@ static int orm_recv_all(int fd, void *buf, size_t n)
  * @brief Send exactly @p n bytes to @p fd.
  * @return 0 on success, -1 on transport error.
  */
-static int orm_send_all(int fd, const void *buf, size_t n)
-{
+static int orm_send_all(int fd, const void *buf, size_t n) {
     size_t total = 0;
     const char *p = (const char *)buf;
     while (total < n) {
@@ -86,8 +84,7 @@ static int orm_send_all(int fd, const void *buf, size_t n)
  * @param out_payload [out] Receives the JSON response string.
  * @return 0 on success, -1 on I/O or protocol failure.
  */
-static int orm_exchange(cwist_orm_t *orm, const char *sql, char **out_payload)
-{
+static int orm_exchange(cwist_orm_t *orm, const char *sql, char **out_payload) {
     *out_payload = NULL;
     if (!orm || orm->sock_fd < 0 || !sql) return -1;
 
@@ -99,15 +96,13 @@ static int orm_exchange(cwist_orm_t *orm, const char *sql, char **out_payload)
     if (orm_send_all(orm->sock_fd, sql, sql_len) != 0) return -1;
 
     uint32_t net_payload = 0;
-    if (orm_recv_all(orm->sock_fd, &net_payload, sizeof(net_payload)) != 0)
-        return -1;
+    if (orm_recv_all(orm->sock_fd, &net_payload, sizeof(net_payload)) != 0) return -1;
     uint32_t payload_len = ntohl(net_payload);
     if (payload_len > 64 * 1024 * 1024) return -1; /* sanity ceiling */
 
     char *payload = (char *)malloc(payload_len + 1);
     if (!payload) return -1;
-    if (payload_len > 0 &&
-        orm_recv_all(orm->sock_fd, payload, payload_len) != 0) {
+    if (payload_len > 0 && orm_recv_all(orm->sock_fd, payload, payload_len) != 0) {
         free(payload);
         return -1;
     }
@@ -122,8 +117,7 @@ static int orm_exchange(cwist_orm_t *orm, const char *sql, char **out_payload)
  * @param payload Response string (must be valid JSON).
  * @return The integer status code, or -1 if parsing fails.
  */
-static int orm_parse_status(const char *payload)
-{
+static int orm_parse_status(const char *payload) {
     if (!payload) return -1;
     cJSON *root = cJSON_Parse(payload);
     if (!root) return -1;
@@ -137,20 +131,9 @@ static int orm_parse_status(const char *payload)
 /* Lifecycle                                                                 */
 /* ------------------------------------------------------------------------- */
 
-/**
- * @brief Wrap a connected socket descriptor in an ORM session.
- *
- * Takes ownership of @p socket_fd: the descriptor is closed by
- * cwist_orm_close_socket().  The session inherits the current global
- * immediate-commit default and defaults to the SQLite dialect.
- *
- * @param socket_fd Connected socket descriptor (must be >= 0).
- * @return New ORM handle, or NULL on invalid descriptor or allocation failure.
- */
 cwist_orm_t *cwist_orm_open_socket(int socket_fd) {
     if (socket_fd < 0) return NULL;
-    cwist_orm_t *orm =
-        (cwist_orm_t *)calloc(1, sizeof(*orm));
+    cwist_orm_t *orm = (cwist_orm_t *)calloc(1, sizeof(*orm));
     if (!orm) return NULL;
     orm->sock_fd = socket_fd;
     orm->auto_commit = g_immediate_commit;
@@ -158,14 +141,6 @@ cwist_orm_t *cwist_orm_open_socket(int socket_fd) {
     return orm;
 }
 
-/**
- * @brief Close an ORM session and release its socket.
- *
- * Issues a best-effort ROLLBACK to discard any dangling transaction, then
- * closes the socket descriptor and frees the handle.  Safe to call with NULL.
- *
- * @param orm Session to close (may be NULL).
- */
 void cwist_orm_close_socket(cwist_orm_t *orm) {
     if (!orm) return;
     if (orm->sock_fd >= 0) {
@@ -182,48 +157,18 @@ void cwist_orm_close_socket(cwist_orm_t *orm) {
 /* Transaction control                                                       */
 /* ------------------------------------------------------------------------- */
 
-/**
- * @brief Set the global immediate-commit default for new ORM sessions.
- *
- * Sessions opened afterwards inherit this value; existing sessions are not
- * affected.  When enabled, INSERT/UPDATE/DELETE statements executed through
- * cwist_orm_exec() are followed by an automatic COMMIT.
- *
- * @param enable true to enable immediate commit, false to disable.
- */
 void cwist_orm_immediate_commit(bool enable) {
     g_immediate_commit = enable;
 }
 
-/**
- * @brief Select the SQL dialect used for query generation.
- *
- * Affects identifier quoting and dialect-specific statements generated by
- * the high-level helpers.  Does nothing if @p orm is NULL.
- *
- * @param orm     Session to configure.
- * @param dialect Dialect to use (e.g. CWIST_ORM_SQLITE).
- */
 void cwist_orm_use_dialect(cwist_orm_t *orm, cwist_orm_dialect_t dialect) {
     if (orm) orm->dialect = dialect;
 }
 
-/**
- * @brief Commit the current transaction.
- *
- * @param orm Active session.
- * @return CWIST_SUCCESS on success, otherwise an error code.
- */
 cwist_error_t cwist_orm_commit(cwist_orm_t *orm) {
     return cwist_orm_exec(orm, "COMMIT;");
 }
 
-/**
- * @brief Roll back the current transaction.
- *
- * @param orm Active session.
- * @return CWIST_SUCCESS on success, otherwise an error code.
- */
 cwist_error_t cwist_orm_rollback(cwist_orm_t *orm) {
     return cwist_orm_exec(orm, "ROLLBACK;");
 }
@@ -232,18 +177,6 @@ cwist_error_t cwist_orm_rollback(cwist_orm_t *orm) {
 /* Low-level SQL                                                             */
 /* ------------------------------------------------------------------------- */
 
-/**
- * @brief Execute a single SQL statement, discarding any result rows.
- *
- * If immediate-commit mode is enabled, an INSERT/UPDATE/DELETE statement is
- * followed by an automatic COMMIT.
- *
- * @param orm Active session.
- * @param sql Null-terminated SQL statement.
- * @return CWIST_SUCCESS on success; CWIST_ERROR_INVALID_PARAM for NULL
- *         arguments, CWIST_ERROR_IO on transport failure, or
- *         CWIST_ERROR_PROTOCOL when the backend reports an error.
- */
 cwist_error_t cwist_orm_exec(cwist_orm_t *orm, const char *sql) {
     cwist_error_t err = make_error(CWIST_ERR_INT16);
     if (!orm || !sql) {
@@ -269,8 +202,7 @@ cwist_error_t cwist_orm_exec(cwist_orm_t *orm, const char *sql) {
     if (g_immediate_commit) {
         const char *upper = sql;
         while (*upper && *upper <= ' ') upper++;
-        if ((strncasecmp(upper, "INSERT", 6) == 0) ||
-            (strncasecmp(upper, "UPDATE", 6) == 0) ||
+        if ((strncasecmp(upper, "INSERT", 6) == 0) || (strncasecmp(upper, "UPDATE", 6) == 0) ||
             (strncasecmp(upper, "DELETE", 6) == 0)) {
             char *commit_payload = NULL;
             (void)orm_exchange(orm, "COMMIT;", &commit_payload);
@@ -282,19 +214,6 @@ cwist_error_t cwist_orm_exec(cwist_orm_t *orm, const char *sql) {
     return err;
 }
 
-/**
- * @brief Execute a SELECT-style query and return the result rows.
- *
- * On success @p *result receives a cJSON array of row objects (empty array
- * if no rows) that the caller must release with cJSON_Delete().
- *
- * @param orm    Active session.
- * @param sql    Null-terminated SQL query.
- * @param result [out] Receives the rows array.
- * @return CWIST_SUCCESS on success; CWIST_ERROR_INVALID_PARAM for NULL
- *         arguments, CWIST_ERROR_IO on transport failure, or
- *         CWIST_ERROR_PROTOCOL on backend error or malformed response.
- */
 cwist_error_t cwist_orm_query(cwist_orm_t *orm, const char *sql, cJSON **result) {
     cwist_error_t err = make_error(CWIST_ERR_INT16);
     *result = NULL;
@@ -347,8 +266,8 @@ cwist_error_t cwist_orm_query(cwist_orm_t *orm, const char *sql, cJSON **result)
  * @param src Raw input string (must not be NULL).
  * @return Heap-allocated escaped string.  Caller must free().
  */
-static char *cwist_orm_escape_sqlite(const char *src)
-{
+static char *cwist_orm_escape_sqlite(const char *src) {
+    if (!src) return NULL;
     size_t len = strlen(src);
     size_t extra = 0;
     for (size_t i = 0; i < len; i++) {
@@ -374,9 +293,8 @@ static char *cwist_orm_escape_sqlite(const char *src)
  * @param id  Raw identifier string.
  * @return Heap-allocated quoted identifier, or NULL on failure.
  */
-static char *cwist_orm_quote_identifier(const cwist_orm_t *orm, const char *id)
-{
-    if (!id) return NULL;
+static char *cwist_orm_quote_identifier(const cwist_orm_t *orm, const char *id) {
+    if (!orm || !id) return NULL;
     char quote_ch = '\0';
     char escape_ch = '\0';
     switch (orm->dialect) {
@@ -390,8 +308,7 @@ static char *cwist_orm_quote_identifier(const cwist_orm_t *orm, const char *id)
             quote_ch = '`';
             escape_ch = '`';
             break;
-        default:
-            return strdup(id);
+        default: return strdup(id);
     }
 
     size_t len = strlen(id);
@@ -412,18 +329,6 @@ static char *cwist_orm_quote_identifier(const cwist_orm_t *orm, const char *id)
     return out;
 }
 
-/**
- * @brief Convert a single cJSON node into an SQL literal fragment.
- *
- * Maps cJSON types to SQL literals (NULL, booleans as TRUE/FALSE or 1/0 by
- * dialect, numbers via %g, strings single-quoted with quote doubling, and
- * arrays/objects as single-quoted JSON text).  The returned string is
- * heap-allocated and must be freed by the caller.
- *
- * @param orm  Session (determines boolean rendering; may be NULL).
- * @param node cJSON value node (may be NULL, treated as SQL NULL).
- * @return SQL literal string, or NULL on allocation failure.
- */
 static char *cwist_orm_json_to_sql_literal(const cwist_orm_t *orm, const cJSON *node) {
     if (!node) return strdup("NULL");
 
@@ -490,10 +395,7 @@ static char *cwist_orm_json_to_sql_literal(const cwist_orm_t *orm, const cJSON *
  *
  * @return Heap-allocated SQL string, or NULL on error.
  */
-static char *orm_build_insert_sql(const cwist_orm_t *orm,
-                                  const char *table,
-                                  const cJSON *data)
-{
+static char *orm_build_insert_sql(const cwist_orm_t *orm, const char *table, const cJSON *data) {
     if (!table || !data || !cJSON_IsObject(data)) return NULL;
 
     int col_count = 0;
@@ -502,14 +404,14 @@ static char *orm_build_insert_sql(const cwist_orm_t *orm,
     if (col_count == 0) return NULL;
 
     char *columns = (char *)malloc(1);
-    char *values  = (char *)malloc(1);
+    char *values = (char *)malloc(1);
     if (!columns || !values) {
         free(columns);
         free(values);
         return NULL;
     }
     columns[0] = '\0';
-    values[0]  = '\0';
+    values[0] = '\0';
 
     char *qtable = cwist_orm_quote_identifier(orm, table);
     if (!qtable) {
@@ -574,27 +476,13 @@ static char *orm_build_insert_sql(const cwist_orm_t *orm,
         free(values);
         return NULL;
     }
-    snprintf(sql, sql_len, "INSERT INTO %s (%s) VALUES (%s)",
-             qtable, columns, values);
+    snprintf(sql, sql_len, "INSERT INTO %s (%s) VALUES (%s)", qtable, columns, values);
     free(qtable);
     free(columns);
     free(values);
     return sql;
 }
 
-/**
- * @brief Insert a JSON object into a table.
- *
- * Column names and values are taken from the object's keys/values and
- * rendered according to the session dialect.
- *
- * @param orm   Active session.
- * @param table Table name.
- * @param data  JSON object with column names as keys.
- * @return CWIST_SUCCESS on success; CWIST_ERROR_INVALID_PARAM for NULL
- *         arguments or a non-object @p data, CWIST_ERROR_NOMEM on
- *         allocation failure, otherwise the error from cwist_orm_exec().
- */
 cwist_error_t cwist_orm_insert(cwist_orm_t *orm, const char *table, const cJSON *data) {
     cwist_error_t err = make_error(CWIST_ERR_INT16);
     if (!orm || !table || !data || !cJSON_IsObject(data)) {
@@ -623,21 +511,6 @@ cwist_error_t cwist_orm_insert(cwist_orm_t *orm, const char *table, const cJSON 
     return err;
 }
 
-/**
- * @brief Update rows of a table with values from a JSON object.
- *
- * Builds UPDATE table SET key=value,... from the object's entries; an empty
- * object is rejected.  If @p where_clause is non-empty it is appended as a
- * WHERE clause (a NULL or empty clause updates all rows).
- *
- * @param orm         Active session.
- * @param table       Table name.
- * @param data        JSON object with column names as keys (must be non-empty).
- * @param where_clause Optional raw SQL WHERE condition (not escaped).
- * @return CWIST_SUCCESS on success; CWIST_ERROR_INVALID_PARAM for NULL
- *         arguments or an empty object, CWIST_ERROR_NOMEM on allocation
- *         failure, otherwise the error from cwist_orm_exec().
- */
 cwist_error_t cwist_orm_update(cwist_orm_t *orm, const char *table, const cJSON *data,
                                const char *where_clause) {
     cwist_error_t err = make_error(CWIST_ERR_INT16);
@@ -673,8 +546,7 @@ cwist_error_t cwist_orm_update(cwist_orm_t *orm, const char *table, const cJSON 
             err.error.err_i16 = CWIST_ERROR_NOMEM;
             return err;
         }
-        size_t need = strlen(set_clause) + strlen(qid) +
-                      strlen(literal) + 4;
+        size_t need = strlen(set_clause) + strlen(qid) + strlen(literal) + 4;
         char *new_set = (char *)realloc(set_clause, need);
         if (!new_set) {
             free(literal);
@@ -694,8 +566,15 @@ cwist_error_t cwist_orm_update(cwist_orm_t *orm, const char *table, const cJSON 
         idx++;
     }
 
-    size_t sql_len = strlen(qtable) + strlen(set_clause) + 32 +
-                     (where_clause ? strlen(where_clause) : 0);
+    if (idx == 0) {
+        free(qtable);
+        free(set_clause);
+        err.error.err_i16 = CWIST_ERROR_INVALID_PARAM;
+        return err;
+    }
+
+    size_t sql_len =
+        strlen(qtable) + strlen(set_clause) + 32 + (where_clause ? strlen(where_clause) : 0);
     char *sql = (char *)malloc(sql_len);
     if (!sql) {
         free(qtable);
@@ -705,8 +584,7 @@ cwist_error_t cwist_orm_update(cwist_orm_t *orm, const char *table, const cJSON 
     }
 
     if (where_clause && *where_clause) {
-        snprintf(sql, sql_len, "UPDATE %s SET %s WHERE %s;",
-                 qtable, set_clause, where_clause);
+        snprintf(sql, sql_len, "UPDATE %s SET %s WHERE %s;", qtable, set_clause, where_clause);
     } else {
         snprintf(sql, sql_len, "UPDATE %s SET %s;", qtable, set_clause);
     }
@@ -718,19 +596,6 @@ cwist_error_t cwist_orm_update(cwist_orm_t *orm, const char *table, const cJSON 
     return err;
 }
 
-/**
- * @brief Delete rows from a table.
- *
- * If @p where_clause is non-empty it is appended as a WHERE clause; a NULL
- * or empty clause deletes all rows.
- *
- * @param orm          Active session.
- * @param table        Table name.
- * @param where_clause Optional raw SQL WHERE condition (not escaped).
- * @return CWIST_SUCCESS on success; CWIST_ERROR_INVALID_PARAM for NULL
- *         arguments, CWIST_ERROR_NOMEM on allocation failure, otherwise
- *         the error from cwist_orm_exec().
- */
 cwist_error_t cwist_orm_delete(cwist_orm_t *orm, const char *table, const char *where_clause) {
     cwist_error_t err = make_error(CWIST_ERR_INT16);
     if (!orm || !table) {
@@ -744,8 +609,7 @@ cwist_error_t cwist_orm_delete(cwist_orm_t *orm, const char *table, const char *
         return err;
     }
 
-    size_t sql_len = strlen(qtable) + 32 +
-                     (where_clause ? strlen(where_clause) : 0);
+    size_t sql_len = strlen(qtable) + 32 + (where_clause ? strlen(where_clause) : 0);
     char *sql = (char *)malloc(sql_len);
     if (!sql) {
         free(qtable);
@@ -754,8 +618,7 @@ cwist_error_t cwist_orm_delete(cwist_orm_t *orm, const char *table, const char *
     }
 
     if (where_clause && *where_clause) {
-        snprintf(sql, sql_len, "DELETE FROM %s WHERE %s;",
-                 qtable, where_clause);
+        snprintf(sql, sql_len, "DELETE FROM %s WHERE %s;", qtable, where_clause);
     } else {
         snprintf(sql, sql_len, "DELETE FROM %s;", qtable);
     }
@@ -766,19 +629,6 @@ cwist_error_t cwist_orm_delete(cwist_orm_t *orm, const char *table, const char *
     return err;
 }
 
-/**
- * @brief Select rows from a table.
- *
- * @param orm          Active session.
- * @param table        Table name.
- * @param columns      Raw comma-separated column list (not escaped).
- * @param where_clause Optional raw SQL WHERE condition (not escaped).
- * @param result       [out] Receives a cJSON array of row objects; caller
- *                     must release with cJSON_Delete().
- * @return CWIST_SUCCESS on success; CWIST_ERROR_INVALID_PARAM for NULL
- *         arguments, CWIST_ERROR_NOMEM on allocation failure, otherwise
- *         the error from cwist_orm_query().
- */
 cwist_error_t cwist_orm_select(cwist_orm_t *orm, const char *table, const char *columns,
                                const char *where_clause, cJSON **result) {
     cwist_error_t err = make_error(CWIST_ERR_INT16);
@@ -794,8 +644,8 @@ cwist_error_t cwist_orm_select(cwist_orm_t *orm, const char *table, const char *
         return err;
     }
 
-    size_t sql_len = strlen(columns) + strlen(qtable) + 32 +
-                     (where_clause ? strlen(where_clause) : 0);
+    size_t sql_len =
+        strlen(columns) + strlen(qtable) + 32 + (where_clause ? strlen(where_clause) : 0);
     char *sql = (char *)malloc(sql_len);
     if (!sql) {
         free(qtable);
@@ -804,8 +654,7 @@ cwist_error_t cwist_orm_select(cwist_orm_t *orm, const char *table, const char *
     }
 
     if (where_clause && *where_clause) {
-        snprintf(sql, sql_len, "SELECT %s FROM %s WHERE %s;",
-                 columns, qtable, where_clause);
+        snprintf(sql, sql_len, "SELECT %s FROM %s WHERE %s;", columns, qtable, where_clause);
     } else {
         snprintf(sql, sql_len, "SELECT %s FROM %s;", columns, qtable);
     }
@@ -820,25 +669,6 @@ cwist_error_t cwist_orm_select(cwist_orm_t *orm, const char *table, const char *
 /* _Generic helpers: RETURNING INSERT                                */
 /* ------------------------------------------------------------------ */
 
-/**
- * @brief Insert a row and return a JSON value from the new row.
- *
- * Appends a dialect-specific RETURNING clause (or an equivalent
- * last-insert-id follow-up query) to the INSERT built from @p data, then
- * extracts the @p returning_col value from the first result row. For
- * MySQL/SQLite the returned value is the last insert id, not an arbitrary
- * column.
- *
- * @param orm           Active session.
- * @param table         Table name.
- * @param data          cJSON object with the column values to insert.
- * @param returning_col Column (or alias) of the value to return.
- * @param out           [out] Receives a duplicated cJSON value; caller must
- *                      release with cJSON_Delete().
- * @return CWIST_SUCCESS on success; CWIST_ERROR_INVALID_PARAM for NULL
- *         arguments, CWIST_ERROR_NOMEM on allocation failure,
- *         CWIST_ERROR_PROTOCOL when the value is missing from the result.
- */
 cwist_error_t cwist_orm_insert_returning_json(cwist_orm_t *orm, const char *table,
                                               const cJSON *data, const char *returning_col,
                                               cJSON **out) {
@@ -872,16 +702,12 @@ cwist_error_t cwist_orm_insert_returning_json(cwist_orm_t *orm, const char *tabl
     }
     switch (orm->dialect) {
         case CWIST_ORM_POSTGRES:
-        case CWIST_ORM_MARIADB:
-            snprintf(sql, sql_len, "%s RETURNING %s;", base, qret);
-            break;
+        case CWIST_ORM_MARIADB: snprintf(sql, sql_len, "%s RETURNING %s;", base, qret); break;
         case CWIST_ORM_MYSQL:
             snprintf(sql, sql_len, "%s; SELECT LAST_INSERT_ID() AS %s;", base, qret);
             break;
         case CWIST_ORM_SQLITE:
-        default:
-            snprintf(sql, sql_len, "%s; SELECT last_insert_rowid() AS %s;", base, qret);
-            break;
+        default: snprintf(sql, sql_len, "%s; SELECT last_insert_rowid() AS %s;", base, qret); break;
     }
     free(base);
     free(qret);
@@ -918,23 +744,10 @@ cwist_error_t cwist_orm_insert_returning_json(cwist_orm_t *orm, const char *tabl
     return err;
 }
 
-/**
- * @brief Insert a row and return a column value as an int.
- *
- * @param orm           Active session.
- * @param table         Table name.
- * @param data          cJSON object with the column values to insert.
- * @param returning_col Column (or alias) of the value to return.
- * @param out           [out] Receives the value as an int.
- * @return CWIST_SUCCESS on success; otherwise the error from
- *         cwist_orm_insert_returning_json() or CWIST_ERROR_PROTOCOL when
- *         the returned value is not a number.
- */
 cwist_error_t cwist_orm_insert_returning_int(cwist_orm_t *orm, const char *table, const cJSON *data,
                                              const char *returning_col, int *out) {
     cJSON *val = NULL;
-    cwist_error_t err = cwist_orm_insert_returning_json(orm, table, data,
-                                                         returning_col, &val);
+    cwist_error_t err = cwist_orm_insert_returning_json(orm, table, data, returning_col, &val);
     if (err.error.err_i16 != 0) return err;
     if (cJSON_IsNumber(val)) {
         *out = (int)val->valuedouble;
@@ -945,24 +758,11 @@ cwist_error_t cwist_orm_insert_returning_int(cwist_orm_t *orm, const char *table
     return err;
 }
 
-/**
- * @brief Insert a row and return a column value as a long.
- *
- * @param orm           Active session.
- * @param table         Table name.
- * @param data          cJSON object with the column values to insert.
- * @param returning_col Column (or alias) of the value to return.
- * @param out           [out] Receives the value as a long.
- * @return CWIST_SUCCESS on success; otherwise the error from
- *         cwist_orm_insert_returning_json() or CWIST_ERROR_PROTOCOL when
- *         the returned value is not a number.
- */
 cwist_error_t cwist_orm_insert_returning_long(cwist_orm_t *orm, const char *table,
                                               const cJSON *data, const char *returning_col,
                                               long *out) {
     cJSON *val = NULL;
-    cwist_error_t err = cwist_orm_insert_returning_json(orm, table, data,
-                                                         returning_col, &val);
+    cwist_error_t err = cwist_orm_insert_returning_json(orm, table, data, returning_col, &val);
     if (err.error.err_i16 != 0) return err;
     if (cJSON_IsNumber(val)) {
         *out = (long)val->valuedouble;
@@ -973,24 +773,11 @@ cwist_error_t cwist_orm_insert_returning_long(cwist_orm_t *orm, const char *tabl
     return err;
 }
 
-/**
- * @brief Insert a row and return a column value as a long long.
- *
- * @param orm           Active session.
- * @param table         Table name.
- * @param data          cJSON object with the column values to insert.
- * @param returning_col Column (or alias) of the value to return.
- * @param out           [out] Receives the value as a long long.
- * @return CWIST_SUCCESS on success; otherwise the error from
- *         cwist_orm_insert_returning_json() or CWIST_ERROR_PROTOCOL when
- *         the returned value is not a number.
- */
 cwist_error_t cwist_orm_insert_returning_llong(cwist_orm_t *orm, const char *table,
                                                const cJSON *data, const char *returning_col,
                                                long long *out) {
     cJSON *val = NULL;
-    cwist_error_t err = cwist_orm_insert_returning_json(orm, table, data,
-                                                         returning_col, &val);
+    cwist_error_t err = cwist_orm_insert_returning_json(orm, table, data, returning_col, &val);
     if (err.error.err_i16 != 0) return err;
     if (cJSON_IsNumber(val)) {
         *out = (long long)val->valuedouble;
@@ -1005,22 +792,6 @@ cwist_error_t cwist_orm_insert_returning_llong(cwist_orm_t *orm, const char *tab
 /* _Generic helpers: SELECT single scalar                            */
 /* ------------------------------------------------------------------ */
 
-/**
- * @brief Select a single column value from the first matching row as JSON.
- *
- * Runs a `SELECT column FROM table [WHERE ...] LIMIT 1` query and
- * duplicates the column value from the first result row.
- *
- * @param orm          Active session.
- * @param table        Table name.
- * @param column       Column name.
- * @param where_clause Optional raw SQL WHERE condition (not escaped).
- * @param out          [out] Receives a duplicated cJSON value; caller must
- *                     release with cJSON_Delete().
- * @return CWIST_SUCCESS on success; CWIST_ERROR_INVALID_PARAM for NULL
- *         arguments, CWIST_ERROR_NOMEM on allocation failure,
- *         CWIST_ERROR_PROTOCOL when no row or column value is returned.
- */
 cwist_error_t cwist_orm_select_one_json(cwist_orm_t *orm, const char *table, const char *column,
                                         const char *where_clause, cJSON **out) {
     cwist_error_t err = make_error(CWIST_ERR_INT16);
@@ -1031,7 +802,7 @@ cwist_error_t cwist_orm_select_one_json(cwist_orm_t *orm, const char *table, con
     }
 
     char *qtable = cwist_orm_quote_identifier(orm, table);
-    char *qcol   = cwist_orm_quote_identifier(orm, column);
+    char *qcol = cwist_orm_quote_identifier(orm, column);
     if (!qtable || !qcol) {
         free(qtable);
         free(qcol);
@@ -1039,8 +810,7 @@ cwist_error_t cwist_orm_select_one_json(cwist_orm_t *orm, const char *table, con
         return err;
     }
 
-    size_t sql_len = strlen(qcol) + strlen(qtable) + 48 +
-                     (where_clause ? strlen(where_clause) : 0);
+    size_t sql_len = strlen(qcol) + strlen(qtable) + 48 + (where_clause ? strlen(where_clause) : 0);
     char *sql = (char *)malloc(sql_len);
     if (!sql) {
         free(qtable);
@@ -1050,8 +820,7 @@ cwist_error_t cwist_orm_select_one_json(cwist_orm_t *orm, const char *table, con
     }
 
     if (where_clause && *where_clause) {
-        snprintf(sql, sql_len, "SELECT %s FROM %s WHERE %s LIMIT 1;",
-                 qcol, qtable, where_clause);
+        snprintf(sql, sql_len, "SELECT %s FROM %s WHERE %s LIMIT 1;", qcol, qtable, where_clause);
     } else {
         snprintf(sql, sql_len, "SELECT %s FROM %s LIMIT 1;", qcol, qtable);
     }
@@ -1090,23 +859,10 @@ cwist_error_t cwist_orm_select_one_json(cwist_orm_t *orm, const char *table, con
     return err;
 }
 
-/**
- * @brief Select a single column value from the first matching row as an int.
- *
- * @param orm          Active session.
- * @param table        Table name.
- * @param column       Column name.
- * @param where_clause Optional raw SQL WHERE condition (not escaped).
- * @param out          [out] Receives the value as an int.
- * @return CWIST_SUCCESS on success; otherwise the error from
- *         cwist_orm_select_one_json() or CWIST_ERROR_PROTOCOL when the
- *         returned value is not a number.
- */
 cwist_error_t cwist_orm_select_one_int(cwist_orm_t *orm, const char *table, const char *column,
                                        const char *where_clause, int *out) {
     cJSON *val = NULL;
-    cwist_error_t err = cwist_orm_select_one_json(orm, table, column,
-                                                     where_clause, &val);
+    cwist_error_t err = cwist_orm_select_one_json(orm, table, column, where_clause, &val);
     if (err.error.err_i16 != 0) return err;
     if (cJSON_IsNumber(val)) {
         *out = (int)val->valuedouble;
@@ -1117,23 +873,10 @@ cwist_error_t cwist_orm_select_one_int(cwist_orm_t *orm, const char *table, cons
     return err;
 }
 
-/**
- * @brief Select a single column value from the first matching row as a long.
- *
- * @param orm          Active session.
- * @param table        Table name.
- * @param column       Column name.
- * @param where_clause Optional raw SQL WHERE condition (not escaped).
- * @param out          [out] Receives the value as a long.
- * @return CWIST_SUCCESS on success; otherwise the error from
- *         cwist_orm_select_one_json() or CWIST_ERROR_PROTOCOL when the
- *         returned value is not a number.
- */
 cwist_error_t cwist_orm_select_one_long(cwist_orm_t *orm, const char *table, const char *column,
                                         const char *where_clause, long *out) {
     cJSON *val = NULL;
-    cwist_error_t err = cwist_orm_select_one_json(orm, table, column,
-                                                     where_clause, &val);
+    cwist_error_t err = cwist_orm_select_one_json(orm, table, column, where_clause, &val);
     if (err.error.err_i16 != 0) return err;
     if (cJSON_IsNumber(val)) {
         *out = (long)val->valuedouble;
@@ -1144,23 +887,10 @@ cwist_error_t cwist_orm_select_one_long(cwist_orm_t *orm, const char *table, con
     return err;
 }
 
-/**
- * @brief Select a single column value from the first matching row as a long long.
- *
- * @param orm          Active session.
- * @param table        Table name.
- * @param column       Column name.
- * @param where_clause Optional raw SQL WHERE condition (not escaped).
- * @param out          [out] Receives the value as a long long.
- * @return CWIST_SUCCESS on success; otherwise the error from
- *         cwist_orm_select_one_json() or CWIST_ERROR_PROTOCOL when the
- *         returned value is not a number.
- */
 cwist_error_t cwist_orm_select_one_llong(cwist_orm_t *orm, const char *table, const char *column,
                                          const char *where_clause, long long *out) {
     cJSON *val = NULL;
-    cwist_error_t err = cwist_orm_select_one_json(orm, table, column,
-                                                     where_clause, &val);
+    cwist_error_t err = cwist_orm_select_one_json(orm, table, column, where_clause, &val);
     if (err.error.err_i16 != 0) return err;
     if (cJSON_IsNumber(val)) {
         *out = (long long)val->valuedouble;
@@ -1171,23 +901,10 @@ cwist_error_t cwist_orm_select_one_llong(cwist_orm_t *orm, const char *table, co
     return err;
 }
 
-/**
- * @brief Select a single column value from the first matching row as a double.
- *
- * @param orm          Active session.
- * @param table        Table name.
- * @param column       Column name.
- * @param where_clause Optional raw SQL WHERE condition (not escaped).
- * @param out          [out] Receives the value as a double.
- * @return CWIST_SUCCESS on success; otherwise the error from
- *         cwist_orm_select_one_json() or CWIST_ERROR_PROTOCOL when the
- *         returned value is not a number.
- */
 cwist_error_t cwist_orm_select_one_double(cwist_orm_t *orm, const char *table, const char *column,
                                           const char *where_clause, double *out) {
     cJSON *val = NULL;
-    cwist_error_t err = cwist_orm_select_one_json(orm, table, column,
-                                                     where_clause, &val);
+    cwist_error_t err = cwist_orm_select_one_json(orm, table, column, where_clause, &val);
     if (err.error.err_i16 != 0) return err;
     if (cJSON_IsNumber(val)) {
         *out = val->valuedouble;
@@ -1198,25 +915,10 @@ cwist_error_t cwist_orm_select_one_double(cwist_orm_t *orm, const char *table, c
     return err;
 }
 
-/**
- * @brief Select a single column value from the first matching row as a string.
- *
- * @param orm          Active session.
- * @param table        Table name.
- * @param column       Column name.
- * @param where_clause Optional raw SQL WHERE condition (not escaped).
- * @param out          [out] Receives a heap-allocated copy of the string;
- *                     caller must release with free().
- * @return CWIST_SUCCESS on success; otherwise the error from
- *         cwist_orm_select_one_json(), CWIST_ERROR_PROTOCOL when the
- *         returned value is not a string, or CWIST_ERROR_NOMEM when the
- *         string copy cannot be allocated.
- */
 cwist_error_t cwist_orm_select_one_string(cwist_orm_t *orm, const char *table, const char *column,
                                           const char *where_clause, char **out) {
     cJSON *val = NULL;
-    cwist_error_t err = cwist_orm_select_one_json(orm, table, column,
-                                                     where_clause, &val);
+    cwist_error_t err = cwist_orm_select_one_json(orm, table, column, where_clause, &val);
     if (err.error.err_i16 != 0) return err;
     if (cJSON_IsString(val)) {
         *out = strdup(val->valuestring);

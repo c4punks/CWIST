@@ -10,10 +10,13 @@
 #include <sys/wait.h>
 #include <unistd.h>
 
-#define REQUIRE(c) do { if (!(c)) { \
-    fprintf(stderr, "affinity check failed at line %d: %s\n", __LINE__, #c); \
-    exit(1); \
-} } while (0)
+#define REQUIRE(c)                                                                   \
+    do {                                                                             \
+        if (!(c)) {                                                                  \
+            fprintf(stderr, "affinity check failed at line %d: %s\n", __LINE__, #c); \
+            exit(1);                                                                 \
+        }                                                                            \
+    } while (0)
 
 static bool mock_mode = true, fail_read, fail_write;
 static cpu_set_t current;
@@ -21,7 +24,10 @@ static int writes;
 static int read_mask(pid_t pid, size_t size, cpu_set_t *mask) {
     if (!mock_mode) return sched_getaffinity(pid, size, mask);
     REQUIRE(pid == 0 && size == sizeof(*mask));
-    if (fail_read) { errno = EIO; return -1; }
+    if (fail_read) {
+        errno = EIO;
+        return -1;
+    }
     *mask = current;
     return 0;
 }
@@ -29,7 +35,10 @@ static int write_mask(pid_t pid, size_t size, const cpu_set_t *mask) {
     if (!mock_mode) return sched_setaffinity(pid, size, mask);
     REQUIRE(pid == 0 && size == sizeof(*mask));
     writes++;
-    if (fail_write) { errno = EPERM; return -1; }
+    if (fail_write) {
+        errno = EPERM;
+        return -1;
+    }
     current = *mask;
     return 0;
 }
@@ -49,15 +58,20 @@ static void check_pair(int first, int second, size_t index, int expected) {
     REQUIRE(CPU_COUNT(&current) == 1 && CPU_ISSET(expected, &current));
 }
 static void check_errors(void) {
-    CPU_ZERO(&current); CPU_SET(3, &current);
+    CPU_ZERO(&current);
+    CPU_SET(3, &current);
     cpu_set_t before = current;
-    writes = 0; fail_read = true;
+    writes = 0;
+    fail_read = true;
     REQUIRE(cwist_app_pin_worker(0) == -1 && errno == EIO);
     REQUIRE(writes == 0 && CPU_EQUAL(&before, &current));
-    fail_read = false; fail_write = true;
+    fail_read = false;
+    fail_write = true;
     REQUIRE(cwist_app_pin_worker(0) == -1 && errno == EPERM);
     REQUIRE(writes == 1 && CPU_EQUAL(&before, &current));
-    fail_write = false; writes = 0; CPU_ZERO(&current);
+    fail_write = false;
+    writes = 0;
+    CPU_ZERO(&current);
     REQUIRE(cwist_app_pin_worker(0) == -1 && errno == EINVAL);
     REQUIRE(writes == 0 && CPU_COUNT(&current) == 0);
 }
@@ -68,18 +82,24 @@ static void check_real_child(void) {
     for (int cpu = 0; cpu < CPU_SETSIZE; cpu++)
         if (CPU_ISSET(cpu, &before)) last = cpu;
     REQUIRE(last >= 0);
-    pid_t child = fork(); REQUIRE(child >= 0);
+    pid_t child = fork();
+    REQUIRE(child >= 0);
     if (child == 0) {
         mock_mode = false;
-        cpu_set_t one; CPU_ZERO(&one); CPU_SET(last, &one);
+        cpu_set_t one;
+        CPU_ZERO(&one);
+        CPU_SET(last, &one);
         REQUIRE(sched_setaffinity(0, sizeof(one), &one) == 0);
         REQUIRE(cwist_app_pin_worker(7) == 0);
         REQUIRE(sched_getaffinity(0, sizeof(after), &after) == 0);
         REQUIRE(CPU_EQUAL(&one, &after));
         _exit(0);
     }
-    int status; pid_t waited;
-    do { waited = waitpid(child, &status, 0); } while (waited < 0 && errno == EINTR);
+    int status;
+    pid_t waited;
+    do {
+        waited = waitpid(child, &status, 0);
+    } while (waited < 0 && errno == EINTR);
     REQUIRE(waited == child && WIFEXITED(status) && WEXITSTATUS(status) == 0);
     REQUIRE(sched_getaffinity(0, sizeof(after), &after) == 0);
     REQUIRE(CPU_EQUAL(&before, &after));
@@ -98,5 +118,8 @@ int main(void) {
     return 0;
 }
 #else
-int main(void) { puts("Worker affinity tests skipped: Linux only."); return 0; }
+int main(void) {
+    puts("Worker affinity tests skipped: Linux only.");
+    return 0;
+}
 #endif

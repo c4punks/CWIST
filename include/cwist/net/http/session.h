@@ -47,8 +47,7 @@ void cwist_app_set_session_max_age(cwist_app *app, int seconds);
  * Usually called automatically by the session middleware. Handlers can call
  * this if they need session access without the middleware.
  */
-cwist_session_t *cwist_session_start(cwist_app *app,
-                                     cwist_http_request *req,
+cwist_session_t *cwist_session_start(cwist_app *app, cwist_http_request *req,
                                      cwist_http_response *res);
 
 /**

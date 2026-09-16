@@ -65,28 +65,6 @@ int cwist_http3_client_set_ca_bundle(cwist_http3_client *client, const char *ca_
 void cwist_http3_client_set_insecure(cwist_http3_client *client, int enabled);
 
 /**
- * @brief Disable or re-enable TLS certificate verification.
- *
- * Verification is ON by default.  Opt out explicitly for self-signed
- * development setups; opting out trusts any server certificate.
- *
- * @param client Client handle.
- * @param enabled Non-zero to disable verification (default: 0).
- */
-void cwist_http3_client_set_insecure(cwist_http3_client *client, int enabled);
-
-/**
- * @brief Disable or re-enable TLS certificate verification.
- *
- * Verification is ON by default.  Opt out explicitly for self-signed
- * development setups; opting out trusts any server certificate.
- *
- * @param client Client handle.
- * @param enabled Non-zero to disable verification (default: 0).
- */
-void cwist_http3_client_set_insecure(cwist_http3_client *client, int enabled);
-
-/**
  * @brief Set request timeout in milliseconds.
  * @param client Client handle.
  * @param timeout_ms Timeout, 0 for default (30000).
@@ -149,43 +127,6 @@ void cwist_http3_client_set_retry_delay_ms(cwist_http3_client *client, int delay
  */
 void cwist_http3_client_set_conn_timeout_ms(cwist_http3_client *client, int timeout_ms);
 
-/**
- * @brief Set the maximum number of request retries on transient failure.
- *
- * When a request fails due to timeout or connection loss, the client
- * will retry up to @p max_retries times with exponential backoff.
- * Default is 0 (no retries).
- *
- * @param client     Client handle.
- * @param max_retries Maximum retry count (0 to disable).
- */
-void cwist_http3_client_set_max_retries(cwist_http3_client *client,
-                                        int max_retries);
-
-/**
- * @brief Set the base delay between retries in milliseconds.
- *
- * The actual delay is doubled on each retry (1x, 2x, 4x, ...).
- * Default is 1000 ms.
- *
- * @param client   Client handle.
- * @param delay_ms Base delay in milliseconds.
- */
-void cwist_http3_client_set_retry_delay_ms(cwist_http3_client *client,
-                                           int delay_ms);
-
-/**
- * @brief Set the connection establishment / stream creation timeout.
- *
- * This controls how long the client waits for the QUIC handshake and
- * stream creation before giving up.  Default is 5000 ms.
- *
- * @param client     Client handle.
- * @param timeout_ms Timeout in milliseconds.
- */
-void cwist_http3_client_set_conn_timeout_ms(cwist_http3_client *client,
-                                            int timeout_ms);
-
 /** @} */
 
 /** @name Resilience */
@@ -270,41 +211,31 @@ ssize_t cwist_http3_client_recv_datagram(cwist_http3_client *client, void *buf, 
  * @param out_response  Output pointer for parsed response.
  * @return CWIST error, err_i16 == 0 on success.
  */
-cwist_error_t cwist_http3_client_request(cwist_http3_client *client, const char *path,
-                                         cwist_http_method_t method,
-                                         cwist_http_header_node *headers, const char *body,
-                                         size_t body_len, cwist_http_response **out_response);
+cwist_error_t
+cwist_http3_client_webtransport_connect(cwist_http3_client *client, const char *path,
+                                        const char *origin,
+                                        cwist_webtransport_client_session **out_session);
 
 /** @} */
 
-/** @name Datagrams (RFC 9221) */
-/** @{ */
+/** Return non-zero while the peer has not closed the session. */
+int cwist_webtransport_client_is_open(const cwist_webtransport_client_session *session);
 
-/**
- * @brief Send an unreliable QUIC datagram.
- *
- * Requires datagrams to be enabled.  The datagram is delivered on a
- * best-effort basis and may be silently dropped by the network.
- *
- * @param client Client handle.
- * @param data   Datagram payload.
- * @param len    Payload length.
- * @return 0 on success, -1 on failure.
- */
-int cwist_http3_client_send_datagram(cwist_http3_client *client, const void *data, size_t len);
+/** Open a client-initiated bidirectional WebTransport data stream. */
+void *cwist_webtransport_client_open_bidi(cwist_webtransport_client_session *session);
 
-/**
- * @brief Receive an unreliable QUIC datagram.
- *
- * Non-blocking.  If no datagram is available, returns -1 with errno
- * set to EAGAIN.
- *
- * @param client Client handle.
- * @param buf    Buffer to store payload.
- * @param len    Buffer capacity.
- * @return Number of bytes received, or -1 on error.
- */
-ssize_t cwist_http3_client_recv_datagram(cwist_http3_client *client, void *buf, size_t len);
+/** Open a client-initiated unidirectional WebTransport data stream. */
+void *cwist_webtransport_client_open_uni(cwist_webtransport_client_session *session);
+
+/** @} */
+
+/** Send an unreliable datagram in this WebTransport session. */
+ssize_t cwist_webtransport_client_send_datagram(cwist_webtransport_client_session *session,
+                                                const void *data, size_t len);
+
+/** Close the session; its storage is released with the owning HTTP/3 client. */
+int cwist_webtransport_client_close(cwist_webtransport_client_session *session, uint64_t code,
+                                    const char *reason);
 
 /** @} */
 
@@ -316,20 +247,6 @@ void cwist_http3_client_set_max_retries(cwist_http3_client *client, int max_retr
 void cwist_http3_client_set_retry_delay_ms(cwist_http3_client *client, int delay_ms);
 
 void cwist_http3_client_set_conn_timeout_ms(cwist_http3_client *client, int timeout_ms);
-
-/** @} */
-
-/** @name Resilience */
-/** @{ */
-
-void cwist_http3_client_set_max_retries(cwist_http3_client *client,
-                                        int max_retries);
-
-void cwist_http3_client_set_retry_delay_ms(cwist_http3_client *client,
-                                           int delay_ms);
-
-void cwist_http3_client_set_conn_timeout_ms(cwist_http3_client *client,
-                                            int timeout_ms);
 
 /** @} */
 

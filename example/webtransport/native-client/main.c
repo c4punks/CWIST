@@ -17,8 +17,7 @@ int main(int argc, char **argv) {
     cwist_http3_client_set_insecure(client, 1);
 
     cwist_webtransport_client_session *session = NULL;
-    cwist_error_t result = cwist_http3_client_webtransport_connect(
-        client, path, NULL, &session);
+    cwist_error_t result = cwist_http3_client_webtransport_connect(client, path, NULL, &session);
     if (result.error.err_i16 != 0) {
         fprintf(stderr, "WebTransport CONNECT failed\n");
         cwist_http3_client_destroy(client);
@@ -26,8 +25,7 @@ int main(int argc, char **argv) {
     }
 
     const char message[] = "hello from CWIST native WebTransport client";
-    if (cwist_webtransport_client_send_datagram(session, message,
-                                                sizeof(message) - 1) < 0)
+    if (cwist_webtransport_client_send_datagram(session, message, sizeof(message) - 1) < 0)
         fprintf(stderr, "datagram was not queued\n");
 
     for (int i = 0; i < 20 && cwist_webtransport_client_is_open(session); ++i)

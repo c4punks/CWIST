@@ -44,10 +44,8 @@ typedef struct quic_stream_fc {
     uint64_t stream_window_size;
 } quic_stream_fc_t;
 
-void quic_flow_control_init(quic_conn_fc_t *fc,
-                            uint64_t initial_conn_window,
-                            uint64_t initial_stream_window,
-                            uint64_t max_conn_window,
+void quic_flow_control_init(quic_conn_fc_t *fc, uint64_t initial_conn_window,
+                            uint64_t initial_stream_window, uint64_t max_conn_window,
                             uint64_t max_stream_window);
 
 void quic_stream_fc_init(quic_stream_fc_t *sfc, uint64_t stream_id, uint64_t initial_stream_window);
@@ -62,18 +60,12 @@ void quic_flow_control_consume_conn(quic_conn_fc_t *fc, uint64_t bytes);
 
 void quic_flow_control_consume_stream(quic_conn_fc_t *fc, quic_stream_fc_t *sfc, uint64_t bytes);
 
-int quic_flow_control_maybe_send_max_data(quic_conn_fc_t *fc,
-                                           uint8_t *buf,
-                                           size_t buf_len,
-                                           size_t *written,
-                                           bool force);
+int quic_flow_control_maybe_send_max_data(quic_conn_fc_t *fc, uint8_t *buf, size_t buf_len,
+                                          size_t *written, bool force);
 
-int quic_flow_control_maybe_send_max_stream_data(quic_conn_fc_t *fc,
-                                                  quic_stream_fc_t *sfc,
-                                                  uint8_t *buf,
-                                                  size_t buf_len,
-                                                  size_t *written,
-                                                  bool force);
+int quic_flow_control_maybe_send_max_stream_data(quic_conn_fc_t *fc, quic_stream_fc_t *sfc,
+                                                 uint8_t *buf, size_t buf_len, size_t *written,
+                                                 bool force);
 
 #ifdef __cplusplus
 }

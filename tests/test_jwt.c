@@ -107,11 +107,38 @@ static void test_no_exp(void) {
     printf("  Passed no-exp token.\n");
 }
 
+static void test_nbf_token(void) {
+    printf("Testing JWT nbf validation...\n");
+
+    time_t now = time(NULL);
+    /* Far future nbf (> now + 300) must be rejected */
+    char payload_future[128];
+    snprintf(payload_future, sizeof(payload_future), "{\"sub\":\"future\",\"nbf\":%ld}",
+             (long)(now + 3600));
+    char *tok_future = cwist_jwt_sign(payload_future, "secret", 0);
+    assert(tok_future != NULL);
+    cwist_jwt_claims *claims_future = cwist_jwt_verify(tok_future, "secret");
+    assert(claims_future == NULL);
+    cwist_free(tok_future);
+
+    /* Past nbf (e.g. 100 seconds past epoch) must NOT underflow and must be accepted */
+    const char *payload_past = "{\"sub\":\"valid_nbf\",\"nbf\":100}";
+    char *tok_past = cwist_jwt_sign(payload_past, "secret", 0);
+    assert(tok_past != NULL);
+    cwist_jwt_claims *claims_past = cwist_jwt_verify(tok_past, "secret");
+    assert(claims_past != NULL);
+    cwist_jwt_claims_destroy(claims_past);
+    cwist_free(tok_past);
+
+    printf("  Passed nbf token tests.\n");
+}
+
 static void test_sequenced_chunks(void) {
     printf("Testing JWT sequenced chunks...\n");
 
     const char *secret = "chunk-secret";
-    const char *payload = "{\"sub\":\"user99\",\"role\":\"user\",\"data\":\"CWIST-sequenced-chunk-test\"}";
+    const char *payload =
+        "{\"sub\":\"user99\",\"role\":\"user\",\"data\":\"CWIST-sequenced-chunk-test\"}";
     char *token = cwist_jwt_sign(payload, secret, 3600);
     assert(token != NULL);
 
@@ -121,7 +148,8 @@ static void test_sequenced_chunks(void) {
     assert(count >= 3);
 
     /* Reassemble out of order. */
-    cwist_jwt_chunk_t *shuffled = (cwist_jwt_chunk_t *)cwist_alloc_array(count, sizeof(cwist_jwt_chunk_t));
+    cwist_jwt_chunk_t *shuffled =
+        (cwist_jwt_chunk_t *)cwist_alloc_array(count, sizeof(cwist_jwt_chunk_t));
     assert(shuffled != NULL);
     for (size_t i = 0; i < count; i++) {
         shuffled[i].data = chunks[i].data;
@@ -161,7 +189,8 @@ static void test_sign_verify_chunks(void) {
     assert(count >= 3);
 
     /* Shuffle chunks to simulate out-of-order network arrival. */
-    cwist_jwt_chunk_t *shuffled = (cwist_jwt_chunk_t *)cwist_alloc_array(count, sizeof(cwist_jwt_chunk_t));
+    cwist_jwt_chunk_t *shuffled =
+        (cwist_jwt_chunk_t *)cwist_alloc_array(count, sizeof(cwist_jwt_chunk_t));
     assert(shuffled != NULL);
     for (size_t i = 0; i < count; i++) {
         shuffled[i].data = chunks[i].data;
@@ -187,6 +216,52 @@ static void test_sign_verify_chunks(void) {
     cwist_free(shuffled);
     cwist_jwt_chunks_free(chunks, count);
     printf("  Passed sign/verify chunks.\n");
+}
+
+static void test_malformed_b64url_remainder(void) {
+    printf("Testing JWT reject malformed base64 remainder (rem == 1)...\n");
+
+    const char *secret = "secret";
+    char *token = cwist_jwt_sign("{\"sub\":\"test\"}", secret, 3600);
+    assert(token != NULL);
+
+    /* Construct an invalid token by appending a single character to the payload (length % 4 == 1)
+     */
+    char malformed[512];
+    char *dot1 = strchr(token, '.');
+    char *dot2 = dot1 ? strchr(dot1 + 1, '.') : NULL;
+    assert(dot1 && dot2);
+
+    size_t header_len = (size_t)(dot1 - token);
+    size_t payload_len = (size_t)(dot2 - dot1 - 1);
+    /* Make payload section length % 4 == 1 */
+    size_t new_payload_len = ((payload_len / 4) * 4) + 1;
+    snprintf(malformed, sizeof(malformed), "%.*s.%.*s.%s", (int)header_len, token,
+             (int)new_payload_len, dot1 + 1, dot2 + 1);
+
+    cwist_jwt_claims *claims = cwist_jwt_verify(malformed, secret);
+    assert(claims == NULL); /* Must be rejected */
+
+    cwist_free(token);
+    printf("  Passed malformed base64 remainder rejection.\n");
+}
+
+static void test_corrupt_chunk_feed(void) {
+    printf("Testing JWT join chunks failure handling on feed error...\n");
+
+    /* Single chunk with corrupted seq total (e.g. index > total) */
+    cwist_jwt_chunk_t corrupt_chunk;
+    corrupt_chunk.data = (uint8_t *)cwist_alloc(16);
+    assert(corrupt_chunk.data != NULL);
+    /* Manually craft chunk with chunk index 5 of 2 (invalid) */
+    snprintf((char *)corrupt_chunk.data, 16, "[5/2]test");
+    corrupt_chunk.len = strlen((char *)corrupt_chunk.data);
+
+    char *joined = cwist_jwt_join_chunks(&corrupt_chunk, 1);
+    assert(joined == NULL);
+
+    cwist_free(corrupt_chunk.data);
+    printf("  Passed corrupt chunk feed rejection.\n");
 }
 
 int main(void) {

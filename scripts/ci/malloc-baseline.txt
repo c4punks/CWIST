@@ -1,5 +1,5 @@
 1	src/core/db/db.c:free(serialised);
-2	src/core/db/migrate.c:cwist_migration_t *sorted = (cwist_migration_t *)malloc(
+2	src/core/db/migrate.c:(cwist_migration_t *)malloc(sizeof(cwist_migration_t) * (size_t)count);
 4	src/core/db/migrate.c:free(sorted);
 3	src/core/mem/alloc.c:free(ptr);
 1	src/core/mem/alloc.c:return calloc(1, size ? size : 1);
@@ -24,7 +24,7 @@
 1	src/core/mem/gc.c:free(slots);
 1	src/core/mem/gc.c:pending = (cwist_conn_pending_t *)calloc(1, sizeof(*pending));
 1	src/core/mem/gc.c:pending = (cwist_gc_pending_t *)calloc(1, sizeof(*pending));
-1	src/core/mem/gc.c:void **slots = (void **)calloc(new_cap, sizeof(void *));
+1	src/core/mem/gc.c:void **grown = (void **)realloc(pending->items, new_cap * sizeof(void *));
 1	src/core/orm/orm.c:char *columns = (char *)malloc(1);
 1	src/core/orm/orm.c:char *dst = (char *)malloc(len + extra + 1);
 1	src/core/orm/orm.c:char *final = (char *)realloc(sql, len + 2);
@@ -36,7 +36,9 @@
 2	src/core/orm/orm.c:char *quoted = (char *)malloc(elen + 3);
 1	src/core/orm/orm.c:char *set_clause = (char *)malloc(1);
 6	src/core/orm/orm.c:char *sql = (char *)malloc(sql_len);
-1	src/core/orm/orm.c:char *values  = (char *)malloc(1);
+1	src/core/orm/orm.c:char *values = (char *)malloc(1);
+1	src/core/orm/orm.c:cwist_orm_t *orm = (cwist_orm_t *)calloc(1, sizeof(*orm));
+1	src/core/orm/orm.c:default: return strdup(id);
 3	src/core/orm/orm.c:free(base);
 7	src/core/orm/orm.c:free(columns);
 1	src/core/orm/orm.c:free(commit_payload);
@@ -61,14 +63,13 @@
 1	src/core/orm/orm.c:return strdup(buf);
 1	src/core/orm/orm.c:return strdup(cJSON_IsTrue(node) ? "1" : "0");
 1	src/core/orm/orm.c:return strdup(cJSON_IsTrue(node) ? "TRUE" : "FALSE");
-1	src/core/orm/orm.c:return strdup(id);
 1	src/core/utils/json_heal.c:free(r->json);
 1	src/core/utils/json_heal.c:free(recovered); /* SLLM callback uses plain malloc per contract */
 9	src/net/db_sync/db_sync.c:free(blob);
 1	src/net/db_sync/db_sync.c:unsigned char *blob = (unsigned char *)malloc(blob_len);
 2	src/net/graphql/graphql.c:free(printed);
-1	src/net/http/http3.c:char (*batch_cmsgs)[512] = malloc(sizeof(*batch_cmsgs) * H3_RECV_BATCH);
 1	src/net/http/http3.c:char *tmp = realloc(st->body, new_cap);
+1	src/net/http/http3.c:char(*batch_cmsgs)[512] = malloc(sizeof(*batch_cmsgs) * H3_RECV_BATCH);
 1	src/net/http/http3.c:cwist_h3_hset_t *hset = calloc(1, sizeof(*hset));
 1	src/net/http/http3.c:cwist_wt_handle_t *handle = calloc(1, sizeof(*handle));
 2	src/net/http/http3.c:free(batch_bufs);
@@ -96,9 +97,9 @@
 1	src/net/http/http3.c:struct iovec *batch_iovs = malloc(sizeof(*batch_iovs) * H3_RECV_BATCH);
 1	src/net/http/http3.c:struct mmsghdr *batch_msgs = malloc(sizeof(*batch_msgs) * H3_RECV_BATCH);
 1	src/net/http/http3.c:struct sockaddr_storage *batch_peers = malloc(sizeof(*batch_peers) * H3_RECV_BATCH);
-1	src/net/http/http3.c:unsigned char (*batch_bufs)[65535] = malloc(sizeof(*batch_bufs) * H3_RECV_BATCH);
 1	src/net/http/http3.c:unsigned char *pkt_buf = malloc(65535);
 1	src/net/http/http3.c:unsigned char *tmp = realloc(st->seq_buf, cap);
+1	src/net/http/http3.c:unsigned char(*batch_bufs)[65535] = malloc(sizeof(*batch_bufs) * H3_RECV_BATCH);
 1	src/net/http/http3_client.c:char *name = malloc(name_len + 1);
 1	src/net/http/http3_client.c:char *tmp = realloc(st->resp_body, new_cap);
 1	src/net/http/http3_client.c:char *value = malloc(value_len + 1);
@@ -158,20 +159,15 @@
 2	src/sys/app/compress.c:free(bs->out);
 1	src/sys/app/compress.c:free(encoded);
 4	src/sys/app/compress.c:free(merged);
-1	src/sys/app/compress.c:free(total_in);
-4	src/sys/app/compress.c:free(zs);
+1	src/sys/app/compress.c:free(out_buf);
+2	src/sys/app/compress.c:free(total_in);
+6	src/sys/app/compress.c:free(zs);
 1	src/sys/app/compress.c:free(zs->accum);
 2	src/sys/app/compress.c:free(zs->out);
-1	src/sys/app/compress.c:if (!out_buf) { free(total_in); return -1; }
-1	src/sys/app/compress.c:if (!zs->cstream) { free(zs); return -1; }
-1	src/sys/app/compress.c:if (ZSTD_isError(rc)) { ZSTD_freeCStream(zs->cstream); free(zs); return -1; }
-1	src/sys/app/compress.c:if (ZSTD_isError(rc)) { free(out_buf); return -1; }
 1	src/sys/app/compress.c:merged = (uint8_t *)malloc(total_in_len);
 1	src/sys/app/compress.c:uint8_t *encoded = (uint8_t *)malloc(encoded_size);
 2	src/sys/app/compress.c:z_stream *zs = (z_stream *)calloc(1, sizeof(z_stream));
 1	src/sys/metrics/metrics.c:char *buf = malloc(cap);
 1	src/sys/metrics/metrics.c:char *nb = realloc(buf, new_cap);
+3	src/sys/metrics/metrics.c:free(buf);
 1	src/sys/metrics/metrics.c:free(text);
-1	src/sys/metrics/metrics.c:if (!nb) { free(buf); return NULL; }
-1	src/sys/metrics/metrics.c:if (need < 0) { free(buf); return NULL; }
-1	src/sys/metrics/metrics.c:if (written < 0 || (size_t)written >= cap - len) { free(buf); return NULL; }

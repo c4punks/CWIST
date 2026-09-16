@@ -108,8 +108,7 @@ static void test_brotli(void) {
     unsigned char decompressed[8192];
     size_t decompressed_len = sizeof(decompressed);
     BrotliDecoderResult result = BrotliDecoderDecompress(
-        res->body->size, (const uint8_t *)res->body->data,
-        &decompressed_len, decompressed);
+        res->body->size, (const uint8_t *)res->body->data, &decompressed_len, decompressed);
     assert(result == BROTLI_DECODER_RESULT_SUCCESS);
     verify_original(decompressed, decompressed_len);
 

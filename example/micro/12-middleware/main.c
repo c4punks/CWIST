@@ -6,10 +6,8 @@
 #include <cwist/app.h>
 #include <stdio.h>
 
-static void logger(cwist_http_request *req, cwist_http_response *res,
-                   cwist_handler_func next) {
-    printf("[LOG] %s %s\n", cwist_http_method_to_string(req->method),
-           req->path->data);
+static void logger(cwist_http_request *req, cwist_http_response *res, cwist_handler_func next) {
+    printf("[LOG] %s %s\n", cwist_http_method_to_string(req->method), req->path->data);
     next(req, res);
 }
 

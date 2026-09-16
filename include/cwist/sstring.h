@@ -10,15 +10,17 @@
 #include <cwist/err/cwist_err.h>
 
 typedef struct cwist_sstring {
-  char   *data;  ///< please access this data if raw handling is necessary
-  bool   is_fixed;
-  bool   owns_storage;
-  bool   borrows_buffer; ///< data is borrowed (static/arena); never freed, detached on mutation
-  size_t size;
-  size_t (*get_size)(struct cwist_sstring *str);
-  int     (*compare )(struct cwist_sstring *left, const struct cwist_sstring *right); ///< should mimic strcmp, internally use strncmp
-  cwist_error_t (*copy  )(struct cwist_sstring *str, const struct cwist_sstring *from);
-  cwist_error_t (*append)(struct cwist_sstring *str, const struct cwist_sstring *from);
+    char *data;  ///< please access this data if raw handling is necessary
+    bool is_fixed;
+    bool owns_storage;
+    bool borrows_buffer; ///< data is borrowed (static/arena); never freed, detached on mutation
+    size_t size;
+    size_t (*get_size)(struct cwist_sstring *str);
+    int (*compare)(
+        struct cwist_sstring *left,
+        const struct cwist_sstring *right); ///< should mimic strcmp, internally use strncmp
+    cwist_error_t (*copy)(struct cwist_sstring *str, const struct cwist_sstring *from);
+    cwist_error_t (*append)(struct cwist_sstring *str, const struct cwist_sstring *from);
                                    /// @brief returns 1 on success, returns 0 on failure
                                    /// @note should be used in this form:
                                    /// @code
@@ -61,7 +63,7 @@ cwist_error_t cwist_sstring_adopt_len(cwist_sstring *str, char *buf, size_t len)
 /**
  * @brief Initialize an sstring.
  */
-cwist_error_t cwist_sstring_init (cwist_sstring *str);
+cwist_error_t cwist_sstring_init(cwist_sstring *str);
 
 /**
  * @brief Left-trim whitespace.
@@ -136,13 +138,13 @@ cwist_sstring *cwist_sstring_substr(cwist_sstring *str, int start, int length);
 /** @} */
 
 enum cwist_sstring_error_t {
-  ERR_SSTRING_OKAY,
-  ERR_SSTRING_ZERO_LENGTH,
-  ERR_SSTRING_NULL_STRING,
-  ERR_SSTRING_CONSTANT,
-  ERR_SSTRING_RESIZE_TOO_SMALL,
-  ERR_SSTRING_RESIZE_TOO_LARGE,
-  ERR_SSTRING_OUTOFBOUND,
+    ERR_SSTRING_OKAY,
+    ERR_SSTRING_ZERO_LENGTH,
+    ERR_SSTRING_NULL_STRING,
+    ERR_SSTRING_CONSTANT,
+    ERR_SSTRING_RESIZE_TOO_SMALL,
+    ERR_SSTRING_RESIZE_TOO_LARGE,
+    ERR_SSTRING_OUTOFBOUND,
 };
 
 #endif

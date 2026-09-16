@@ -109,8 +109,7 @@ cwist_zod_result_t cwist_zod_validate(const cJSON *json, const cwist_schema_t *s
  * @param out Optional output pointer that receives the parsed cJSON object on success.
  * @return Validation result containing success flag and collected errors.
  */
-cwist_zod_result_t cwist_zod_parse(const char *raw, const cwist_schema_t *schema,
-                                    cJSON **out) {
+cwist_zod_result_t cwist_zod_parse(const char *raw, const cwist_schema_t *schema, cJSON **out) {
     cwist_zod_result_t r;
     memset(&r, 0, sizeof(r));
     r.valid = false;

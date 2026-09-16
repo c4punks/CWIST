@@ -9,7 +9,7 @@
 
 /*
  * Simple JSON String Builder
- * 
+ *
  * Usage:
  * cwist_json_builder *jb = cwist_json_builder_create();
  * cwist_json_begin_object(jb);

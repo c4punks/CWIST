@@ -30,8 +30,12 @@
 #include <unistd.h>
 #include "../src/sys/io/reactor.c"
 
-void *cwist_alloc(size_t size) { return calloc(1, size); }
-void cwist_free(void *ptr) { free(ptr); }
+void *cwist_alloc(size_t size) {
+    return calloc(1, size);
+}
+void cwist_free(void *ptr) {
+    free(ptr);
+}
 atomic_int g_cwist_running = 1;
 
 enum { BATCH = 512, FAKE_HANDLER_US = 80, POST_AFTER = 64 };
@@ -49,8 +53,7 @@ static void spin_us(int us) {
     clock_gettime(CLOCK_MONOTONIC, &start);
     do {
         clock_gettime(CLOCK_MONOTONIC, &now);
-    } while ((now.tv_sec - start.tv_sec) * 1000000L +
-             (now.tv_nsec - start.tv_nsec) / 1000L < us);
+    } while ((now.tv_sec - start.tv_sec) * 1000000L + (now.tv_nsec - start.tv_nsec) / 1000L < us);
 }
 
 static double ms_between(struct timespec a, struct timespec b) {

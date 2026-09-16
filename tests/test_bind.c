@@ -33,7 +33,8 @@ static const cwist_bind_schema_t user_schema = CWIST_BIND_SCHEMA(user_t, user_fi
 
 void test_bind_success(void) {
     printf("test_bind_success...\n");
-    const char *json = "{\"email\":\"alice@example.com\",\"age\":30,\"name\":\"Alice\",\"score\":95.5}";
+    const char *json =
+        "{\"email\":\"alice@example.com\",\"age\":30,\"name\":\"Alice\",\"score\":95.5}";
     cwist_http_request *req = cwist_http_request_create();
     cwist_sstring_assign(req->body, (char *)json);
 
@@ -150,7 +151,9 @@ void test_bind_form_data(void) {
 
 void test_bind_regex(void) {
     printf("test_bind_regex...\n");
-    typedef struct { char code[16]; } code_t;
+    typedef struct {
+        char code[16];
+    } code_t;
     CWIST_BIND_RULES(code_rules, CWIST_RULE_REQUIRED(), CWIST_RULE_REGEX("^[A-Z]{3}[0-9]{4}$"));
     static const cwist_bind_field_t code_fields[] = {
         CWIST_BIND_FIELD(code_t, code, "code", code_rules),
@@ -180,7 +183,8 @@ void test_bind_regex(void) {
 void test_bind_null_guards_and_numeric_validation(void) {
     printf("test_bind_null_guards_and_numeric_validation...\n");
     /* 1. Non-numeric value for numeric rule */
-    const char *json_nan = "{\"email\":\"test@example.com\",\"age\":\"notanumber\",\"name\":\"Test\",\"score\":50.0}";
+    const char *json_nan =
+        "{\"email\":\"test@example.com\",\"age\":\"notanumber\",\"name\":\"Test\",\"score\":50.0}";
     cwist_http_request *req = cwist_http_request_create();
     cwist_sstring_assign(req->body, (char *)json_nan);
     user_t out;
@@ -192,7 +196,9 @@ void test_bind_null_guards_and_numeric_validation(void) {
     cwist_http_request_destroy(req);
 
     /* 2. NULL pattern regex rule safety */
-    typedef struct { char val[16]; } null_re_t;
+    typedef struct {
+        char val[16];
+    } null_re_t;
     CWIST_BIND_RULES(null_re_rules, CWIST_RULE_REGEX(NULL));
     static const cwist_bind_field_t null_re_fields[] = {
         CWIST_BIND_FIELD(null_re_t, val, "val", null_re_rules),
@@ -207,12 +213,15 @@ void test_bind_null_guards_and_numeric_validation(void) {
     cwist_http_request_destroy(req);
 
     /* 3. NULL custom callback rule safety */
-    typedef struct { char val[16]; } null_custom_t;
+    typedef struct {
+        char val[16];
+    } null_custom_t;
     CWIST_BIND_RULES(null_custom_rules, CWIST_RULE_CUSTOM(NULL, NULL));
     static const cwist_bind_field_t null_custom_fields[] = {
         CWIST_BIND_FIELD(null_custom_t, val, "val", null_custom_rules),
     };
-    static const cwist_bind_schema_t null_custom_schema = CWIST_BIND_SCHEMA(null_custom_t, null_custom_fields);
+    static const cwist_bind_schema_t null_custom_schema =
+        CWIST_BIND_SCHEMA(null_custom_t, null_custom_fields);
     req = cwist_http_request_create();
     cwist_sstring_assign(req->body, "{\"val\":\"abc\"}");
     null_custom_t out_custom;
@@ -236,4 +245,3 @@ int main(void) {
     printf("All bind tests passed.\n");
     return 0;
 }
-

@@ -19,7 +19,7 @@
  * @brief Static SipHash key used to bucket request and response fingerprints.
  */
 static const uint8_t BDR_KEY[16] = {0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07,
-                                     0x08, 0x09, 0x0a, 0x0b, 0x0c, 0x0d, 0x0e, 0x0f};
+                                    0x08, 0x09, 0x0a, 0x0b, 0x0c, 0x0d, 0x0e, 0x0f};
 
 /* --- Blob lifetime -------------------------------------------------------- */
 
@@ -186,7 +186,8 @@ static bool bdr_entry_should_decay(const cwist_bdr_t *bdr, const bdr_entry_t *en
             return true;
         }
     }
-    if (entry->is_stable && bdr->revalidate_hits > 0 && entry->hits >= bdr->revalidate_hits) {
+    if (atomic_load_explicit(&entry->is_stable, memory_order_relaxed) && bdr->revalidate_hits > 0 &&
+        atomic_load_explicit(&entry->hits, memory_order_relaxed) >= bdr->revalidate_hits) {
         return true;
     }
     return false;
@@ -486,8 +487,10 @@ void cwist_bdr_destroy(cwist_bdr_t *bdr) {
         bdr_entry_t *curr = bdr->buckets[i];
         while (curr) {
             bdr_entry_t *next = curr->next;
-            free(curr->response_blob);
-            free(curr);
+            if (curr == NULL) break;
+            if (curr->blob != NULL)
+                bdr_blob_free_cb(atomic_load_explicit(&curr->blob, memory_order_relaxed));
+            cwist_free(curr);
             curr = next;
         }
     }
@@ -780,16 +783,20 @@ void *cwist_bdr_copy_get(cwist_bdr_t *bdr, const char *method, const char *path,
  */
 static void cwist_bdr_put_disk(cwist_bdr_t *bdr, uint64_t req_h, const void *data, size_t len) {
     pthread_mutex_lock(&bdr->lock);
+    sqlite3_stmt *stmt;
+    sqlite3_prepare_v2(bdr->disk_db, "INSERT OR REPLACE INTO bdr (hash, blob) VALUES (?, ?);", -1,
+                       &stmt, NULL);
+    sqlite3_bind_int64(stmt, 1, (sqlite3_int64)req_h);
+    sqlite3_bind_blob(stmt, 2, data, (int)len, SQLITE_STATIC);
+    sqlite3_step(stmt);
+    sqlite3_finalize(stmt);
+    pthread_mutex_unlock(&bdr->lock);
+}
 
-    pthread_mutex_lock(&bdr->lock);
-
-
-
-    // Check RAM health before adding
-
-    bdr_check_ram(bdr);
-
-
+void cwist_bdr_put(cwist_bdr_t *bdr, const char *method, const char *path, const void *data,
+                   size_t len) {
+    if (!bdr || !method || !path || !data || len == 0) return;
+    if (strcmp(method, "GET") != 0) return;
 
     uint64_t req_h = bdr_hash(method, path);
 
@@ -827,81 +834,29 @@ static void cwist_bdr_put_disk(cwist_bdr_t *bdr, uint64_t req_h, const void *dat
     }
 
 
-
-    size_t idx = req_h % bdr->bucket_count;
-
-    
-
-    // Check exist
-
-    bdr_entry_t *curr = bdr->buckets[idx];
-
-    while (curr) {
-
-        if (curr->request_hash == req_h) {
-
-            // Entry exists. Check stability.
-
-            if (curr->is_stable) {
-
-                // Already stable. 
-
-                // Optional: Re-verify occasionally? For now, assume "Big Dumb" means permanent.
-
-                // If we want to detect changes:
-
-                if (curr->response_hash != res_h) {
-
-                    // Changed! Invalidated.
-
-                    // Downgrade to unstable? Or update immediately?
-
-                    // "Only cache if totally matching".
-
-                    // If it changed, it's not dumb-cacheable.
-
-                    // Evict it.
-
-                    curr->is_stable = false;
-
-                    free(curr->response_blob);
-
-                    curr->response_blob = NULL;
-
-                    curr->response_hash = res_h; // New candidate
-
-                }
-
-            } else {
-
-                // Was unstable/candidate. Check if matches candidate.
-
-                if (curr->response_hash == res_h) {
-
-                    // Match! Stabilize.
-
-                    curr->response_blob = malloc(len);
-
-                    if (curr->response_blob) {
-
-                        memcpy(curr->response_blob, data, len);
-
-                        curr->len = len;
-
-                        curr->is_stable = true;
-
-                        // printf("[BDR] Stabilized: %s\n", path);
-
-                    }
-
-                } else {
-
-                    // Mismatch. Keep unstable, update candidate.
-
-                    curr->response_hash = res_h;
-
-                }
-
+    if (atomic_load_explicit(&entry->is_stable, memory_order_acquire)) {
+        /* Content changed under a stable entry: demote to candidate. */
+        if (atomic_load_explicit(&entry->response_hash, memory_order_relaxed) != res_h) {
+            bdr_entry_publish(bdr, entry, NULL);
+            atomic_store_explicit(&entry->response_hash, res_h, memory_order_release);
+            atomic_store_explicit(&entry->is_stable, false, memory_order_release);
+            atomic_store_explicit(&entry->hits, 0, memory_order_relaxed);
+            atomic_store_explicit(&entry->created_at, (int64_t)time(NULL), memory_order_relaxed);
+        }
+    } else {
+        uint64_t expect = res_h;
+        if (atomic_compare_exchange_strong_explicit(&entry->response_hash, &expect, res_h,
+                                                    memory_order_acq_rel, memory_order_relaxed)) {
+            /* Candidate reproduced the same bytes: stabilize.  A concurrent
+             * stabilizer publishes an identical blob; the loser's duplicate
+             * comes back from the exchange and is retired unused. */
+            bdr_blob_t *blob = bdr_blob_learn(data, len);
+            if (blob) {
+                bdr_entry_publish(bdr, entry, blob);
+                atomic_store_explicit(&entry->is_stable, true, memory_order_release);
+                atomic_store_explicit(&entry->hits, 0, memory_order_relaxed);
+                atomic_store_explicit(&entry->created_at, (int64_t)time(NULL),
+                                      memory_order_relaxed);
             }
 
             pthread_mutex_unlock(&bdr->lock);
@@ -915,7 +870,10 @@ static void cwist_bdr_put_disk(cwist_bdr_t *bdr, uint64_t req_h, const void *dat
 
     
 
-    // New Entry (Candidate)
+void cwist_bdr_put_fixed(cwist_bdr_t *bdr, const char *method, const char *path, const void *data,
+                         size_t len) {
+    if (!bdr || !method || !path || !data || len == 0) return;
+    if (strcmp(method, "GET") != 0) return;
 
     bdr_entry_t *entry = malloc(sizeof(bdr_entry_t));
 
@@ -928,7 +886,11 @@ static void cwist_bdr_put_disk(cwist_bdr_t *bdr, uint64_t req_h, const void *dat
 
     entry->request_hash = req_h;
 
-    entry->response_hash = res_h;
+void cwist_bdr_put_revalidatable(cwist_bdr_t *bdr, const char *method, const char *path,
+                                 const void *data, size_t len, cwist_bdr_revalidate_fn fn,
+                                 void *arg) {
+    if (!bdr || !method || !path || !data || len == 0 || !fn) return;
+    if (strcmp(method, "GET") != 0) return;
 
     entry->is_stable = false; // Start as candidate
 
@@ -951,8 +913,8 @@ static void cwist_bdr_put_disk(cwist_bdr_t *bdr, uint64_t req_h, const void *dat
 
 }
 
-void cwist_bdr_set_limits(cwist_bdr_t *bdr, size_t max_bytes, time_t max_entry_age_sec, uint64_t revalidate_hits) {
-
+void cwist_bdr_set_limits(cwist_bdr_t *bdr, size_t max_bytes, time_t max_entry_age_sec,
+                          uint64_t revalidate_hits) {
     if (!bdr) return;
 
     pthread_mutex_lock(&bdr->lock);

@@ -67,10 +67,8 @@ void cwist_healthz_unregister(const char *name);
  * @param out_overall    [out] OK only if every probe is OK; FAIL if any probe is FAIL;
  *                       otherwise DEGRADED.
  */
-void cwist_healthz_run(cwist_health_probe_t *out_probes,
-                        size_t max_probes,
-                        size_t *out_count,
-                        cwist_health_status_t *out_overall);
+void cwist_healthz_run(cwist_health_probe_t *out_probes, size_t max_probes, size_t *out_count,
+                       cwist_health_status_t *out_overall);
 
 /* -------------------------------------------------------------------------
  * HTTP integration

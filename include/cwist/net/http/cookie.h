@@ -60,9 +60,7 @@ typedef struct cwist_cookie_options {
  * @param opts     Optional attributes. May be NULL for defaults.
  * @return 0 on success, -1 on failure.
  */
-int cwist_cookie_set(cwist_http_response *res,
-                     const char *name,
-                     const char *value,
+int cwist_cookie_set(cwist_http_response *res, const char *name, const char *value,
                      const cwist_cookie_options *opts);
 
 /**

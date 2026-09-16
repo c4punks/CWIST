@@ -23,7 +23,7 @@ typedef struct cwist_html_element {
 /**
  * @brief Create a new HTML element.
  */
-cwist_html_element_t* cwist_html_element_create(const char *tag);
+cwist_html_element_t *cwist_html_element_create(const char *tag);
 
 /**
  * @brief Destroy an HTML element and its children.
@@ -73,7 +73,7 @@ void cwist_html_element_add_child(cwist_html_element_t *el, cwist_html_element_t
 /**
  * @brief Render the element tree to an HTML string.
  */
-cwist_sstring* cwist_html_render(cwist_html_element_t *el);
+cwist_sstring *cwist_html_render(cwist_html_element_t *el);
 
 /** @} */
 

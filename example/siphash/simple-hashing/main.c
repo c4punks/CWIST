@@ -13,7 +13,7 @@ int main() {
 
     // Print key for demonstration
     printf("Key: ");
-    for(int i=0; i<16; i++) {
+    for (int i = 0; i < 16; i++) {
         printf("%02x", key[i]);
     }
     printf("\n");
@@ -30,4 +30,3 @@ int main() {
 
     return 0;
 }
-

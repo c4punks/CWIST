@@ -43,7 +43,8 @@ void cwist_mux_router_destroy(cwist_mux_router *router);
 /**
  * @brief Register a route handler.
  */
-void cwist_mux_handle(cwist_mux_router *router, cwist_http_method_t method, const char *path, cwist_http_handler_func handler);
+void cwist_mux_handle(cwist_mux_router *router, cwist_http_method_t method, const char *path,
+                      cwist_http_handler_func handler);
 
 /** @} */
 

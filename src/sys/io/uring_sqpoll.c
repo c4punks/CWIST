@@ -20,19 +20,6 @@ static inline int sys_io_uring_setup(unsigned entries, struct io_uring_params *p
     return (int)syscall(__NR_io_uring_setup, entries, p);
 }
 
-/**
- * @brief Initialize an SQPOLL io_uring ring for submission-only send operations.
- *
- * Creates the ring with IORING_SETUP_SQPOLL so a kernel thread polls the
- * submission queue, and mmaps the SQ ring and SQE array as shared memory.
- *
- * @param r                 Ring state to initialize; zeroed before use.
- * @param entries           Requested submission queue size (must be non-zero).
- * @param sq_thread_idle_ms Idle timeout for the kernel SQ thread; 0 selects
- *                          the default of 2000 ms.
- * @return 0 on success, -1 on failure (invalid arguments, or the ring file
- *         descriptor or either mmap failed; all resources are released).
- */
 int cwist_io_uring_init_sqpoll(cwist_sqpoll_ring_t *r, unsigned entries,
                                unsigned sq_thread_idle_ms) {
     if (!r || entries == 0) return -1;
@@ -52,7 +39,8 @@ int cwist_io_uring_init_sqpoll(cwist_sqpoll_ring_t *r, unsigned entries,
     r->entries = p.sq_entries;
 
     size_t sq_sz = p.sq_off.array + p.sq_entries * sizeof(uint32_t);
-    void *sq_ptr = mmap(NULL, sq_sz, PROT_READ | PROT_WRITE, MAP_SHARED | MAP_POPULATE, fd, IORING_OFF_SQ_RING);
+    void *sq_ptr = mmap(NULL, sq_sz, PROT_READ | PROT_WRITE, MAP_SHARED | MAP_POPULATE, fd,
+                        IORING_OFF_SQ_RING);
     if (sq_ptr == MAP_FAILED) {
         close(fd);
         return -1;
@@ -65,7 +53,8 @@ int cwist_io_uring_init_sqpoll(cwist_sqpoll_ring_t *r, unsigned entries,
     r->sq_array = (uint32_t *)((uint8_t *)sq_ptr + p.sq_off.array);
 
     size_t sqes_sz = p.sq_entries * sizeof(struct io_uring_sqe);
-    void *sqes_ptr = mmap(NULL, sqes_sz, PROT_READ | PROT_WRITE, MAP_SHARED | MAP_POPULATE, fd, IORING_OFF_SQES);
+    void *sqes_ptr =
+        mmap(NULL, sqes_sz, PROT_READ | PROT_WRITE, MAP_SHARED | MAP_POPULATE, fd, IORING_OFF_SQES);
     if (sqes_ptr == MAP_FAILED) {
         munmap(sq_ptr, sq_sz);
         close(fd);
@@ -78,20 +67,6 @@ int cwist_io_uring_init_sqpoll(cwist_sqpoll_ring_t *r, unsigned entries,
     return 0;
 }
 
-/**
- * @brief Queue a SEND operation on the SQPOLL submission ring.
- *
- * Not thread-safe: the caller must serialize submissions. Non-blocking: if
- * the submission queue is full, no SQE is posted.
- *
- * @param r         Active ring initialized by cwist_io_uring_init_sqpoll().
- * @param fd        Socket file descriptor to send on.
- * @param buf       Buffer to send; must remain valid until the operation completes.
- * @param len       Number of bytes to send.
- * @param user_data Value carried through to the completion for this operation.
- * @retval true  The SQE was posted to the submission queue.
- * @retval false The ring is NULL or inactive, or the submission queue is full.
- */
 bool cwist_io_uring_sqpoll_send(cwist_sqpoll_ring_t *r, int fd, const void *buf, size_t len,
                                 uint64_t user_data) {
     if (!r || !r->active) return false;

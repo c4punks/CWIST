@@ -10,8 +10,7 @@
 static int header_contains(cwist_http_header_node *headers, const char *key, const char *value) {
     cwist_http_header_node *curr = headers;
     while (curr) {
-        if (curr->key && curr->value &&
-            strcasecmp(curr->key->data, key) == 0 &&
+        if (curr->key && curr->value && strcasecmp(curr->key->data, key) == 0 &&
             strstr(curr->value->data, value) != NULL) {
             return 1;
         }
@@ -101,8 +100,7 @@ static void test_session_invalid_signature(void) {
 
     cwist_http_request *req = cwist_http_request_create();
     cwist_http_response *res = cwist_http_response_create();
-    cwist_http_header_add(&req->headers, "Cookie",
-                          "cwist_session=ZW1wdHk.invalidsig");
+    cwist_http_header_add(&req->headers, "Cookie", "cwist_session=ZW1wdHk.invalidsig");
 
     cwist_session_t *session = cwist_session_start(app, req, res);
     assert(cwist_session_get(session, "x") == NULL);

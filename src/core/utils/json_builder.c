@@ -24,6 +24,64 @@ static void append_comma_if_needed(cwist_json_builder *b) {
     }
 }
 
+static void append_json_escaped_str(cwist_sstring *buf, const char *str) {
+    if (!str) return;
+    cwist_sstring_append(buf, "\"");
+    const char *start = str;
+    const char *p = str;
+    while (*p) {
+        const char *esc = NULL;
+        char ucode[8];
+        switch (*p) {
+            case '"': esc = "\\\""; break;
+            case '\\': esc = "\\\\"; break;
+            case '\b': esc = "\\b"; break;
+            case '\f': esc = "\\f"; break;
+            case '\n': esc = "\\n"; break;
+            case '\r': esc = "\\r"; break;
+            case '\t': esc = "\\t"; break;
+            default:
+                if ((unsigned char)*p < 0x20) {
+                    snprintf(ucode, sizeof(ucode), "\\u%04x", (unsigned char)*p);
+                    esc = ucode;
+                }
+                break;
+        }
+        if (esc) {
+            if (p > start) {
+                char tmp[4096];
+                size_t seg_len = (size_t)(p - start);
+                while (seg_len > 0) {
+                    size_t chunk = seg_len < sizeof(tmp) - 1 ? seg_len : sizeof(tmp) - 1;
+                    memcpy(tmp, start, chunk);
+                    tmp[chunk] = '\0';
+                    cwist_sstring_append(buf, tmp);
+                    start += chunk;
+                    seg_len -= chunk;
+                }
+            }
+            cwist_sstring_append(buf, esc);
+            start = p + 1;
+        }
+        p++;
+    }
+    if (p > start) {
+        cwist_sstring_append(buf, start);
+    }
+    cwist_sstring_append(buf, "\"");
+}
+
+static void append_key_if_present(cwist_json_builder *b, const char *key) {
+    if (key) {
+        append_json_escaped_str(b->buffer, key);
+        cwist_sstring_append(b->buffer, ":");
+    }
+}
+
+/**
+ * @brief Begin a JSON object in the current builder context.
+ * @param b Builder to update. NULL is ignored.
+ */
 void cwist_json_begin_object(cwist_json_builder *b) {
     if (!b) return;
     append_comma_if_needed(b);

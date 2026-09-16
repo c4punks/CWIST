@@ -17,8 +17,7 @@ static void test_next(cwist_http_request *req, cwist_http_response *res) {
 static int response_has_set_cookie(cwist_http_response *res, const char *name) {
     cwist_http_header_node *curr = res->headers;
     while (curr) {
-        if (curr->key && curr->value &&
-            strcasecmp(curr->key->data, "Set-Cookie") == 0 &&
+        if (curr->key && curr->value && strcasecmp(curr->key->data, "Set-Cookie") == 0 &&
             strncmp(curr->value->data, name, strlen(name)) == 0) {
             return 1;
         }
@@ -112,21 +111,35 @@ static void test_csrf_url_encoded_header_and_rejection(void) {
     cwist_middleware_func mw = cwist_mw_csrf(app);
     cwist_http_request *seed = cwist_http_request_create();
     cwist_http_response *seed_res = cwist_http_response_create();
-    seed->method = CWIST_HTTP_GET; mw(seed, seed_res, test_next);
-    const char *token = cwist_csrf_token(seed); assert(token && strlen(token) == 64);
+    seed->method = CWIST_HTTP_GET;
+    mw(seed, seed_res, test_next);
+    const char *token = cwist_csrf_token(seed);
+    assert(token && strlen(token) == 64);
     cwist_http_request *post = cwist_http_request_create();
     cwist_http_response *post_res = cwist_http_response_create();
     post->method = CWIST_HTTP_POST;
-    char cookie[96]; snprintf(cookie, sizeof(cookie), "csrf_token=%s", token);
+    char cookie[96];
+    snprintf(cookie, sizeof(cookie), "csrf_token=%s", token);
     cwist_http_header_add(&post->headers, "Cookie", cookie);
     cwist_http_header_add(&post->headers, "X-CSRF-Token", token);
-    next_called = 0; mw(post, post_res, test_next); assert(next_called == 1);
-    cwist_http_response_destroy(post_res); cwist_http_request_destroy(post);
-    post = cwist_http_request_create(); post_res = cwist_http_response_create(); post->method = CWIST_HTTP_POST;
-    cwist_http_header_add(&post->headers, "Cookie", cookie); cwist_sstring_assign(post->body, "_csrf=wrong");
-    next_called = 0; mw(post, post_res, test_next); assert(next_called == 0 && post_res->status_code == CWIST_HTTP_FORBIDDEN);
-    cwist_http_response_destroy(post_res); cwist_http_request_destroy(post);
-    cwist_http_response_destroy(seed_res); cwist_http_request_destroy(seed); cwist_app_destroy(app);
+    next_called = 0;
+    mw(post, post_res, test_next);
+    assert(next_called == 1);
+    cwist_http_response_destroy(post_res);
+    cwist_http_request_destroy(post);
+    post = cwist_http_request_create();
+    post_res = cwist_http_response_create();
+    post->method = CWIST_HTTP_POST;
+    cwist_http_header_add(&post->headers, "Cookie", cookie);
+    cwist_sstring_assign(post->body, "_csrf=wrong");
+    next_called = 0;
+    mw(post, post_res, test_next);
+    assert(next_called == 0 && post_res->status_code == CWIST_HTTP_FORBIDDEN);
+    cwist_http_response_destroy(post_res);
+    cwist_http_request_destroy(post);
+    cwist_http_response_destroy(seed_res);
+    cwist_http_request_destroy(seed);
+    cwist_app_destroy(app);
 }
 
 int main(void) {

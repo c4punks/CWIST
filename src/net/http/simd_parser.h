@@ -7,33 +7,36 @@
 #include <string.h>
 
 #if defined(__x86_64__) || defined(_M_X64) || defined(__i386__) || defined(_M_IX86)
-  #if defined(__AVX2__)
-    #include <immintrin.h>
-    #define CWIST_SIMD_AVX2 1
-  #endif
-  #if defined(__SSE4_2__)
-    #include <nmmintrin.h>
-    #define CWIST_SIMD_SSE42 1
-  #endif
-  #if defined(__SSE2__) || defined(_M_AMD64) || defined(_M_X64)
-    #include <emmintrin.h>
-    #define CWIST_SIMD_SSE2 1
-  #endif
+#if defined(__AVX2__)
+#include <immintrin.h>
+#define CWIST_SIMD_AVX2 1
+#endif
+#if defined(__SSE4_2__)
+#include <nmmintrin.h>
+#define CWIST_SIMD_SSE42 1
+#endif
+#if defined(__SSE2__) || defined(_M_AMD64) || defined(_M_X64)
+#include <emmintrin.h>
+#define CWIST_SIMD_SSE2 1
+#endif
 #elif defined(__ARM_NEON) || defined(__ARM_NEON__) || defined(__aarch64__)
-  #include <arm_neon.h>
-  #define CWIST_SIMD_NEON 1
+#include <arm_neon.h>
+#define CWIST_SIMD_NEON 1
 #elif (defined(__riscv) || defined(__riscv__)) && defined(__riscv_vector)
-  #include <riscv_vector.h>
-  #define CWIST_SIMD_RISCV_VECTOR 1
-#elif (defined(__powerpc__) || defined(__ppc__) || defined(__PPC__) || defined(__PPC64__) || defined(__ppc64le__) || defined(_ARCH_PPC)) && (defined(__ALTIVEC__) || defined(__VSX__))
-  #include <altivec.h>
-  #undef vector
-  #undef pixel
-  #undef bool
-  #define CWIST_SIMD_PPC_ALTIVEC 1
-#elif (defined(__mips__) || defined(__mips64) || defined(__mips64__) || defined(__mips_msa)) && defined(__mips_msa)
-  #include <msa.h>
-  #define CWIST_SIMD_MIPS_MSA 1
+#include <riscv_vector.h>
+#define CWIST_SIMD_RISCV_VECTOR 1
+#elif (defined(__powerpc__) || defined(__ppc__) || defined(__PPC__) || defined(__PPC64__) || \
+       defined(__ppc64le__) || defined(_ARCH_PPC)) &&                                        \
+    (defined(__ALTIVEC__) || defined(__VSX__))
+#include <altivec.h>
+#undef vector
+#undef pixel
+#undef bool
+#define CWIST_SIMD_PPC_ALTIVEC 1
+#elif (defined(__mips__) || defined(__mips64) || defined(__mips64__) || defined(__mips_msa)) && \
+    defined(__mips_msa)
+#include <msa.h>
+#define CWIST_SIMD_MIPS_MSA 1
 #endif
 
 /**

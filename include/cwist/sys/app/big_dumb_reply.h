@@ -13,6 +13,36 @@
 #include <pthread.h>
 
 /**
+ * @brief Refcount-free cached response blob, reclaimed via libttak EBR.
+ *
+ * Readers hold the blob between cwist_bdr_get_pinned() and
+ * cwist_bdr_unpin(); writers replace it with a single atomic exchange and
+ * retire the predecessor across an epoch boundary, so a swapped-out blob is
+ * never freed while a reader still serves it.  @p mem is the backing
+ * allocation released with @p free_fn (cwist_free for internally learned
+ * blobs, a user-supplied releaser for callback-provided buffers).
+ */
+typedef struct bdr_blob_t {
+    void *mem;               ///< Backing allocation (this object for learned blobs).
+    void (*free_fn)(void *); ///< Releaser for @p mem.
+    size_t len;              ///< Length of @p data in bytes.
+    const unsigned char *data; ///< Serialized HTTP response (headers + body).
+} bdr_blob_t;
+
+/**
+ * @brief Revalidation callback attached to a cache entry.
+ *
+ * Invoked on cache hits for entries registered through
+ * cwist_bdr_put_revalidatable().  Return false to keep serving the cached
+ * blob.  Return true when the underlying value changed: @p *out_data must
+ * then point to the freshly serialized response (ownership moves to the
+ * cache — zero copy, only the pointer is swung), @p *out_len to its length,
+ * and @p *out_free to the releaser for that buffer (NULL means cwist_free).
+ */
+typedef bool (*cwist_bdr_revalidate_fn)(void *arg, void **out_data, size_t *out_len,
+                                        void (**out_free)(void *));
+
+/**
  * @brief Big Dumb Reply Entry.
  * Stores a completely serialized HTTP response blob.
  */
@@ -106,12 +136,27 @@ void *cwist_bdr_copy_get(cwist_bdr_t *bdr, const char *method, const char *path,
  * @param data Serialized response data.
  * @param len Length of data.
  */
-void cwist_bdr_put(cwist_bdr_t *bdr, const char *method, const char *path, const void *data, size_t len);
+void cwist_bdr_put(cwist_bdr_t *bdr, const char *method, const char *path, const void *data,
+                   size_t len);
 
 /**
  * @brief Immediately cache a fixed static response on request 1.
  */
-void cwist_bdr_put_fixed(cwist_bdr_t *bdr, const char *method, const char *path, const void *data, size_t len);
+void cwist_bdr_put_fixed(cwist_bdr_t *bdr, const char *method, const char *path, const void *data,
+                         size_t len);
+
+/**
+ * @brief Cache a response whose backing value may change over time.
+ *
+ * Behaves like cwist_bdr_put_fixed() (stable from the first request) but
+ * attaches @p fn to the entry.  Every cache hit invokes @p fn first; when it
+ * reports a change, the new buffer it supplies is published with a single
+ * pointer exchange — no memcpy, no global lock — and the old blob is
+ * retired across an epoch boundary.
+ */
+void cwist_bdr_put_revalidatable(cwist_bdr_t *bdr, const char *method, const char *path,
+                                 const void *data, size_t len, cwist_bdr_revalidate_fn fn,
+                                 void *arg);
 
 /**
  * @brief Adjusts guard-rail policies for the in-memory cache.
@@ -120,6 +165,7 @@ void cwist_bdr_put_fixed(cwist_bdr_t *bdr, const char *method, const char *path,
  * @param max_entry_age_sec Time-to-live for cached entries (<=0 keeps default).
  * @param revalidate_hits Force relearning after this many hits (0 keeps default).
  */
-void cwist_bdr_set_limits(cwist_bdr_t *bdr, size_t max_bytes, time_t max_entry_age_sec, uint64_t revalidate_hits);
+void cwist_bdr_set_limits(cwist_bdr_t *bdr, size_t max_bytes, time_t max_entry_age_sec,
+                          uint64_t revalidate_hits);
 
 #endif

@@ -47,11 +47,8 @@ static bool is_email_like(const char *s, size_t len) {
  * @brief Run a single rule against a string value.
  * @return true when the rule passes.
  */
-static bool check_rule(const cwist_bind_rule_t *rule,
-                       const char *value,
-                       size_t len,
-                       cwist_bind_result_t *r,
-                       const char *key) {
+static bool check_rule(const cwist_bind_rule_t *rule, const char *value, size_t len,
+                       cwist_bind_result_t *r, const char *key) {
     char buf[CWIST_BIND_MSG_MAX];
 
     switch (rule->type) {
@@ -67,8 +64,7 @@ static bool check_rule(const cwist_bind_rule_t *rule,
         case CWIST_BIND_RULE_MIN_LEN:
             if (!value || len < rule->u.min_len) {
                 snprintf(buf, sizeof(buf), "%s: minimum length is %zu",
-                         rule->error_message ? rule->error_message : "too short",
-                         rule->u.min_len);
+                         rule->error_message ? rule->error_message : "too short", rule->u.min_len);
                 bind_add_error(r, key, buf);
                 return false;
             }
@@ -77,8 +73,7 @@ static bool check_rule(const cwist_bind_rule_t *rule,
         case CWIST_BIND_RULE_MAX_LEN:
             if (value && len > rule->u.max_len) {
                 snprintf(buf, sizeof(buf), "%s: maximum length is %zu",
-                         rule->error_message ? rule->error_message : "too long",
-                         rule->u.max_len);
+                         rule->error_message ? rule->error_message : "too long", rule->u.max_len);
                 bind_add_error(r, key, buf);
                 return false;
             }
@@ -91,7 +86,8 @@ static bool check_rule(const cwist_bind_rule_t *rule,
                 errno = 0;
                 v = strtold(value, &end);
             }
-            if (!value || !end || end == value || *end != '\0' || errno == ERANGE || v < rule->u.min_val) {
+            if (!value || !end || end == value || *end != '\0' || errno == ERANGE ||
+                v < rule->u.min_val) {
                 snprintf(buf, sizeof(buf), "%s: minimum value is %Lg",
                          rule->error_message ? rule->error_message : "value too small",
                          rule->u.min_val);
@@ -108,7 +104,8 @@ static bool check_rule(const cwist_bind_rule_t *rule,
                 errno = 0;
                 v = strtold(value, &end);
             }
-            if (!value || !end || end == value || *end != '\0' || errno == ERANGE || v > rule->u.max_val) {
+            if (!value || !end || end == value || *end != '\0' || errno == ERANGE ||
+                v > rule->u.max_val) {
                 snprintf(buf, sizeof(buf), "%s: maximum value is %Lg",
                          rule->error_message ? rule->error_message : "value too large",
                          rule->u.max_val);
@@ -137,7 +134,8 @@ static bool check_rule(const cwist_bind_rule_t *rule,
             regfree(&re);
             if (rc != 0) {
                 snprintf(buf, sizeof(buf), "%s",
-                         rule->error_message ? rule->error_message : "value does not match pattern");
+                         rule->error_message ? rule->error_message
+                                             : "value does not match pattern");
                 bind_add_error(r, key, buf);
                 return false;
             }
@@ -154,7 +152,8 @@ static bool check_rule(const cwist_bind_rule_t *rule,
             break;
 
         case CWIST_BIND_RULE_CUSTOM:
-            if (!rule->u.custom.fn || !value || !rule->u.custom.fn(value, len, rule->u.custom.ctx)) {
+            if (!rule->u.custom.fn || !value ||
+                !rule->u.custom.fn(value, len, rule->u.custom.ctx)) {
                 snprintf(buf, sizeof(buf), "%s",
                          rule->error_message ? rule->error_message : "custom validation failed");
                 bind_add_error(r, key, buf);
@@ -162,8 +161,7 @@ static bool check_rule(const cwist_bind_rule_t *rule,
             }
             break;
 
-        default:
-            break;
+        default: break;
     }
     return true;
 }
@@ -171,16 +169,13 @@ static bool check_rule(const cwist_bind_rule_t *rule,
 /**
  * @brief Run all rules for a field against a string value.
  */
-static bool run_rules(const cwist_bind_field_t *f,
-                      const char *value,
-                      size_t len,
+static bool run_rules(const cwist_bind_field_t *f, const char *value, size_t len,
                       cwist_bind_result_t *r) {
     if (!f->rules) return true;
     bool all_ok = true;
     for (size_t i = 0; i < CWIST_BIND_MAX_ERRORS; ++i) {
         if (f->rules[i].type == (cwist_bind_rule_type_t)-1) break;
-        if (!check_rule(&f->rules[i], value, len, r, f->json_key))
-            all_ok = false;
+        if (!check_rule(&f->rules[i], value, len, r, f->json_key)) all_ok = false;
     }
     return all_ok;
 }
@@ -188,9 +183,7 @@ static bool run_rules(const cwist_bind_field_t *f,
 /**
  * @brief Write a typed value from a string into the struct at the given offset.
  */
-static bool write_value(const cwist_bind_field_t *f,
-                        const char *value,
-                        void *out,
+static bool write_value(const cwist_bind_field_t *f, const char *value, void *out,
                         cwist_bind_result_t *r) {
     void *dest = (char *)out + f->target_offset;
 
@@ -198,9 +191,14 @@ static bool write_value(const cwist_bind_field_t *f,
         case CWIST_BIND_BOOL: {
             bool v = false;
             if (value) {
-                if (strcmp(value, "true") == 0 || strcmp(value, "1") == 0) v = true;
-                else if (strcmp(value, "false") == 0 || strcmp(value, "0") == 0) v = false;
-                else { bind_add_error(r, f->json_key, "expected boolean"); return false; }
+                if (strcmp(value, "true") == 0 || strcmp(value, "1") == 0)
+                    v = true;
+                else if (strcmp(value, "false") == 0 || strcmp(value, "0") == 0)
+                    v = false;
+                else {
+                    bind_add_error(r, f->json_key, "expected boolean");
+                    return false;
+                }
             }
             memcpy(dest, &v, sizeof(v));
             break;
@@ -280,8 +278,10 @@ static bool write_value(const cwist_bind_field_t *f,
                 bind_add_error(r, f->json_key, "null sstring target");
                 return false;
             }
-            if (value) cwist_sstring_assign(ss, (char *)value);
-            else cwist_sstring_assign(ss, "");
+            if (value)
+                cwist_sstring_assign(ss, (char *)value);
+            else
+                cwist_sstring_assign(ss, "");
             break;
         }
         case CWIST_BIND_JSON_OBJECT: {
@@ -290,7 +290,10 @@ static bool write_value(const cwist_bind_field_t *f,
                 bind_add_error(r, f->json_key, "null cJSON target");
                 return false;
             }
-            if (*pp) { cJSON_Delete(*pp); *pp = NULL; }
+            if (*pp) {
+                cJSON_Delete(*pp);
+                *pp = NULL;
+            }
             if (value) {
                 *pp = cJSON_Parse(value);
                 if (!*pp) {
@@ -300,9 +303,7 @@ static bool write_value(const cwist_bind_field_t *f,
             }
             break;
         }
-        default:
-            bind_add_error(r, f->json_key, "unsupported bind target type");
-            return false;
+        default: bind_add_error(r, f->json_key, "unsupported bind target type"); return false;
     }
     return true;
 }
@@ -310,11 +311,8 @@ static bool write_value(const cwist_bind_field_t *f,
 /**
  * @brief Core binding logic shared between JSON and Form parsers.
  */
-static bool cwist_bind_generic(const cwist_bind_schema_t *schema,
-                               const char *payload,
-                               bool is_json,
-                               void *out,
-                               cwist_bind_result_t *result) {
+static bool cwist_bind_generic(const cwist_bind_schema_t *schema, const char *payload, bool is_json,
+                               void *out, cwist_bind_result_t *result) {
     if (!schema || !out || !result) return false;
     memset(result, 0, sizeof(*result));
     result->ok = true;
@@ -419,59 +417,18 @@ static bool cwist_bind_generic(const cwist_bind_schema_t *schema,
  * Public implementation
  * ---------------------------------------------------------------------- */
 
-/**
- * @brief Validate and bind a JSON request body into a struct per the schema.
- *
- * Each schema field is looked up in the parsed JSON body, validated against
- * its rules, and converted into the struct field at @p f->target_offset.
- * The output struct is written even for fields with no matching key (zero
- * values are written for missing fields).
- *
- * @param req HTTP request whose body contains JSON text; may be NULL.
- * @param schema Declarative field schema; must not be NULL.
- * @param out Destination struct; must not be NULL.
- * @param result Accumulator for validation errors; reset at start.
- * @return true when every field passed validation, false otherwise.
- * @retval true Result is valid and @p out is fully written.
- * @retval false @p result contains one or more field errors.
- */
 bool cwist_app_req_bind_json(cwist_http_request *req, const cwist_bind_schema_t *schema, void *out,
                              cwist_bind_result_t *result) {
     const char *payload = (req && req->body && req->body->data) ? req->body->data : NULL;
     return cwist_bind_generic(schema, payload, true, out, result);
 }
 
-/**
- * @brief Validate and bind a form-encoded (key=value) request body into a struct per the schema.
- *
- * Uses a simple key=value scan of the body without URL unescaping; values are
- * bounded to an internal buffer before validation.
- *
- * @param req HTTP request whose body contains form text; may be NULL.
- * @param schema Declarative field schema; must not be NULL.
- * @param out Destination struct; must not be NULL.
- * @param result Accumulator for validation errors; reset at start.
- * @return true when every field passed validation, false otherwise.
- * @retval true Result is valid and @p out is fully written.
- * @retval false @p result contains one or more field errors.
- */
 bool cwist_app_req_bind_form(cwist_http_request *req, const cwist_bind_schema_t *schema, void *out,
                              cwist_bind_result_t *result) {
     const char *payload = (req && req->body && req->body->data) ? req->body->data : NULL;
     return cwist_bind_generic(schema, payload, false, out, result);
 }
 
-/**
- * @brief Write a 400 Bad Request JSON error response from a bind result.
- *
- * Serializes the accumulated field errors as a JSON object
- * `{ "success": false, "errors": [ { "field", "message" }, ... ] }`,
- * sets the response status and Content-Type, and takes ownership of freeing
- * the temporary JSON builder.
- *
- * @param res Response to fill in; ignored when NULL.
- * @param result Bind result containing the errors; ignored when NULL.
- */
 void cwist_bind_write_error_response(cwist_http_response *res, const cwist_bind_result_t *result) {
     if (!res || !result) return;
     res->status_code = CWIST_HTTP_BAD_REQUEST;
@@ -496,21 +453,6 @@ void cwist_bind_write_error_response(cwist_http_response *res, const cwist_bind_
     cwist_json_builder_destroy(jb);
 }
 
-/**
- * @brief Bind a JSON request body, writing a 400 error response on failure.
- *
- * Convenience wrapper around cwist_app_req_bind_json() and
- * cwist_bind_write_error_response() for handlers that want automatic
- * error replies.
- *
- * @param req HTTP request whose body contains JSON text; may be NULL.
- * @param res Response receiving the error payload when binding fails.
- * @param schema Declarative field schema; must not be NULL.
- * @param out Destination struct; must not be NULL.
- * @return true when binding succeeded; false when an error response was written.
- * @retval true @p out is fully written, @p res untouched.
- * @retval false A 400 error response was written to @p res.
- */
 bool cwist_app_req_bind_json_or_400(cwist_http_request *req, cwist_http_response *res,
                                     const cwist_bind_schema_t *schema, void *out) {
     cwist_bind_result_t result;

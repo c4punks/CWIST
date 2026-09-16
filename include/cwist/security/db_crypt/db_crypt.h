@@ -30,17 +30,17 @@
 #include <stdint.h>
 
 /** @brief Return codes. */
-#define CWIST_DB_CRYPT_OK           0
-#define CWIST_DB_CRYPT_ERR_ARGS    (-1)
-#define CWIST_DB_CRYPT_ERR_CRYPTO  (-2)
-#define CWIST_DB_CRYPT_ERR_FORMAT  (-3)
-#define CWIST_DB_CRYPT_ERR_MEM     (-4)
+#define CWIST_DB_CRYPT_OK 0
+#define CWIST_DB_CRYPT_ERR_ARGS (-1)
+#define CWIST_DB_CRYPT_ERR_CRYPTO (-2)
+#define CWIST_DB_CRYPT_ERR_FORMAT (-3)
+#define CWIST_DB_CRYPT_ERR_MEM (-4)
 
 /** Size constants (bytes). */
-#define CWIST_DB_CRYPT_KEY_LEN   32   /**< AES-256 key length. */
-#define CWIST_DB_CRYPT_IV_LEN    16   /**< AES block / IV size. */
+#define CWIST_DB_CRYPT_KEY_LEN 32   /**< AES-256 key length. */
+#define CWIST_DB_CRYPT_IV_LEN 16   /**< AES block / IV size. */
 /** Header overhead: magic(4)+ver(1)+kek_iv(16)+enc_dek(64)+dek_iv(16)+ptlen(8) */
-#define CWIST_DB_CRYPT_HDR_LEN   109
+#define CWIST_DB_CRYPT_HDR_LEN 109
 
 /**
  * @brief Caller-managed key pair.
@@ -69,8 +69,7 @@ typedef struct cwist_db_crypt_ctx_t {
  *         the returned pointer.
  */
 unsigned char *cwist_db_crypt_seal(const cwist_db_crypt_ctx_t *ctx,
-                                   const unsigned char *sqlite_bytes,
-                                   size_t sqlite_len,
+                                   const unsigned char *sqlite_bytes, size_t sqlite_len,
                                    size_t *out_len);
 
 /**
@@ -85,9 +84,7 @@ unsigned char *cwist_db_crypt_seal(const cwist_db_crypt_ctx_t *ctx,
  * @param[out] out_len Length of the returned plaintext.
  * @return Heap-allocated SQLite bytes, or NULL on error.  Caller must free().
  */
-unsigned char *cwist_db_crypt_open(const cwist_db_crypt_ctx_t *ctx,
-                                   const unsigned char *blob,
-                                   size_t blob_len,
-                                   size_t *out_len);
+unsigned char *cwist_db_crypt_open(const cwist_db_crypt_ctx_t *ctx, const unsigned char *blob,
+                                   size_t blob_len, size_t *out_len);
 
 #endif /* __CWIST_DB_CRYPT_H__ */

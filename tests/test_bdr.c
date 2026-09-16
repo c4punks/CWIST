@@ -53,8 +53,8 @@ int main(void) {
 
     assert(cwist_bdr_copy_get(bdr, "GET", "/missing", &len) == NULL);
 
-    bdr_worker_args left = { bdr, "/left", "left response" };
-    bdr_worker_args right = { bdr, "/right", "right response" };
+    bdr_worker_args left = {bdr, "/left", "left response"};
+    bdr_worker_args right = {bdr, "/right", "right response"};
     pthread_t left_thread;
     pthread_t right_thread;
     assert(pthread_create(&left_thread, NULL, bdr_worker, &left) == 0);

@@ -45,8 +45,8 @@ typedef enum cwist_bind_rule_type {
 typedef struct cwist_bind_rule {
     cwist_bind_rule_type_t type;
     union {
-        size_t      min_len;    ///< For MIN_LEN.
-        size_t      max_len;    ///< For MAX_LEN.
+        size_t min_len;    ///< For MIN_LEN.
+        size_t max_len;    ///< For MAX_LEN.
         long double min_val;    ///< For MIN_VAL.
         long double max_val;    ///< For MAX_VAL.
         const char *pattern;    ///< For REGEX (static string, compiled once).
@@ -72,19 +72,19 @@ typedef enum cwist_bind_field_type {
 
 /** @brief Per-field binding descriptor. */
 typedef struct cwist_bind_field {
-    const char              *json_key;      ///< Source key in JSON/Form payload.
-    cwist_bind_field_type_t  target_type;   ///< Destination C type.
-    size_t                   target_offset; ///< Byte offset inside the user struct.
-    size_t                   target_size;   ///< sizeof(destination) for bounds checking.
+    const char *json_key;      ///< Source key in JSON/Form payload.
+    cwist_bind_field_type_t target_type;   ///< Destination C type.
+    size_t target_offset; ///< Byte offset inside the user struct.
+    size_t target_size;   ///< sizeof(destination) for bounds checking.
     const cwist_bind_rule_t *rules;         ///< Array of rules (NULL-terminated by type == -1).
-    size_t                   rule_count;    ///< Number of rules (optional, for static arrays).
+    size_t rule_count;    ///< Number of rules (optional, for static arrays).
 } cwist_bind_field_t;
 
 /** @brief Complete schema descriptor for a struct. */
 typedef struct cwist_bind_schema {
     const cwist_bind_field_t *fields;
-    size_t                    field_count;
-    size_t                    struct_size;  ///< sizeof(user_struct) for bounds checking.
+    size_t field_count;
+    size_t struct_size;  ///< sizeof(user_struct) for bounds checking.
 } cwist_bind_schema_t;
 
 /* -------------------------------------------------------------------------
@@ -92,8 +92,8 @@ typedef struct cwist_bind_schema {
  * ---------------------------------------------------------------------- */
 
 #define CWIST_BIND_MAX_ERRORS 32
-#define CWIST_BIND_MSG_MAX    256
-#define CWIST_BIND_KEY_MAX    64
+#define CWIST_BIND_MSG_MAX 256
+#define CWIST_BIND_KEY_MAX 64
 
 /** @brief A single bind/validation failure. */
 typedef struct cwist_bind_error {
@@ -103,9 +103,9 @@ typedef struct cwist_bind_error {
 
 /** @brief Result of a bind operation. */
 typedef struct cwist_bind_result {
-    bool               ok;
+    bool ok;
     cwist_bind_error_t errors[CWIST_BIND_MAX_ERRORS];
-    size_t             error_count;
+    size_t error_count;
 } cwist_bind_result_t;
 
 /* -------------------------------------------------------------------------
@@ -128,10 +128,8 @@ typedef struct cwist_bind_result {
  * @param result [out] Detailed validation result.
  * @return true when every field passes validation and the struct is filled.
  */
-bool cwist_app_req_bind_json(cwist_http_request *req,
-                              const cwist_bind_schema_t *schema,
-                              void *out,
-                              cwist_bind_result_t *result);
+bool cwist_app_req_bind_json(cwist_http_request *req, const cwist_bind_schema_t *schema, void *out,
+                             cwist_bind_result_t *result);
 
 /**
  * @brief Bind URL-encoded form data to a user struct.
@@ -144,10 +142,8 @@ bool cwist_app_req_bind_json(cwist_http_request *req,
  * @param result [out] Detailed validation result.
  * @return true when every field passes validation and the struct is filled.
  */
-bool cwist_app_req_bind_form(cwist_http_request *req,
-                              const cwist_bind_schema_t *schema,
-                              void *out,
-                              cwist_bind_result_t *result);
+bool cwist_app_req_bind_form(cwist_http_request *req, const cwist_bind_schema_t *schema, void *out,
+                             cwist_bind_result_t *result);
 
 /**
  * @brief Populate a response with 400 Bad Request and a JSON error payload.
@@ -160,8 +156,7 @@ bool cwist_app_req_bind_form(cwist_http_request *req,
  * @param res    Response object to populate.
  * @param result Validation result produced by a failed bind call.
  */
-void cwist_bind_write_error_response(cwist_http_response *res,
-                                      const cwist_bind_result_t *result);
+void cwist_bind_write_error_response(cwist_http_response *res, const cwist_bind_result_t *result);
 
 /**
  * @brief Convenience wrapper: bind JSON and auto-respond 400 on failure.
@@ -176,10 +171,8 @@ void cwist_bind_write_error_response(cwist_http_response *res,
  * @param out    Pointer to the user struct to populate.
  * @return true on success; false when res has been prepped with 400 errors.
  */
-bool cwist_app_req_bind_json_or_400(cwist_http_request *req,
-                                     cwist_http_response *res,
-                                     const cwist_bind_schema_t *schema,
-                                     void *out);
+bool cwist_app_req_bind_json_or_400(cwist_http_request *req, cwist_http_response *res,
+                                    const cwist_bind_schema_t *schema, void *out);
 
 /* -------------------------------------------------------------------------
  * _Generic type-safe dispatch macros
@@ -191,23 +184,23 @@ bool cwist_app_req_bind_json_or_400(cwist_http_request *req,
  * Uses C11 _Generic to map common C types to the binding enum.  This is the
  * core mechanism that makes the macro API type-safe.
  */
-#define CWIST_BIND_TYPEOF(x) _Generic((x), \
-    bool:               CWIST_BIND_BOOL,      \
-    char *:             CWIST_BIND_STRING,    \
-    const char *:       CWIST_BIND_STRING,    \
-    int:                CWIST_BIND_INT,       \
-    unsigned int:       CWIST_BIND_UINT,      \
-    long:               CWIST_BIND_INT,       \
-    unsigned long:      CWIST_BIND_UINT,      \
-    long long:          CWIST_BIND_INT,       \
-    unsigned long long: CWIST_BIND_UINT,      \
-    float:              CWIST_BIND_FLOAT,     \
-    double:             CWIST_BIND_DOUBLE,    \
-    long double:        CWIST_BIND_DOUBLE,    \
-    cwist_sstring *:    CWIST_BIND_SSTRING,   \
-    cJSON *:            CWIST_BIND_JSON_OBJECT, \
-    default:            CWIST_BIND_STRING     \
-)
+#define CWIST_BIND_TYPEOF(x)                 \
+    _Generic((x),                            \
+        bool: CWIST_BIND_BOOL,               \
+        char *: CWIST_BIND_STRING,           \
+        const char *: CWIST_BIND_STRING,     \
+        int: CWIST_BIND_INT,                 \
+        unsigned int: CWIST_BIND_UINT,       \
+        long: CWIST_BIND_INT,                \
+        unsigned long: CWIST_BIND_UINT,      \
+        long long: CWIST_BIND_INT,           \
+        unsigned long long: CWIST_BIND_UINT, \
+        float: CWIST_BIND_FLOAT,             \
+        double: CWIST_BIND_DOUBLE,           \
+        long double: CWIST_BIND_DOUBLE,      \
+        cwist_sstring *: CWIST_BIND_SSTRING, \
+        cJSON *: CWIST_BIND_JSON_OBJECT,     \
+        default: CWIST_BIND_STRING)
 
 /**
  * @brief Compute the byte offset of a member inside a struct type.
@@ -233,7 +226,7 @@ bool cwist_app_req_bind_json_or_400(cwist_http_request *req,
  * @endcode
  */
 #define CWIST_BIND_RULES(name, ...) \
-    static const cwist_bind_rule_t name[] = { __VA_ARGS__, {-1, {0}, NULL} }
+    static const cwist_bind_rule_t name[] = {__VA_ARGS__, {-1, {0}, NULL}}
 
 /**
  * @brief Helper to declare a field descriptor with automatic type inference.
@@ -258,51 +251,64 @@ bool cwist_app_req_bind_json_or_400(cwist_http_request *req,
  * @endcode
  */
 #define CWIST_BIND_FIELD(StructType, MemberName, JsonKey, RulesArray) \
-    { \
-        .json_key      = (JsonKey), \
-        .target_type   = CWIST_BIND_TYPEOF(((StructType *)0)->MemberName), \
-        .target_offset = CWIST_BIND_OFFSET(StructType, MemberName), \
-        .target_size   = CWIST_BIND_SIZEOF(StructType, MemberName), \
-        .rules         = (RulesArray) \
-    }
+    {.json_key = (JsonKey),                                           \
+     .target_type = CWIST_BIND_TYPEOF(((StructType *)0)->MemberName), \
+     .target_offset = CWIST_BIND_OFFSET(StructType, MemberName),      \
+     .target_size = CWIST_BIND_SIZEOF(StructType, MemberName),        \
+     .rules = (RulesArray)}
 
 /**
  * @brief Build a schema descriptor from an array of field descriptors.
  */
-#define CWIST_BIND_SCHEMA(StructType, FieldArray) \
-    (cwist_bind_schema_t){ \
-        .fields      = (FieldArray), \
-        .field_count = sizeof(FieldArray) / sizeof((FieldArray)[0]), \
-        .struct_size = sizeof(StructType) \
+#define CWIST_BIND_SCHEMA(StructType, FieldArray)                                            \
+    (cwist_bind_schema_t) {                                                                  \
+        .fields = (FieldArray), .field_count = sizeof(FieldArray) / sizeof((FieldArray)[0]), \
+        .struct_size = sizeof(StructType)                                                    \
     }
 
 /* -------------------------------------------------------------------------
  * Rule construction helpers
  * ---------------------------------------------------------------------- */
 
-#define CWIST_RULE_REQUIRED() \
-    (cwist_bind_rule_t){CWIST_BIND_RULE_REQUIRED, {0}, NULL}
+#define CWIST_RULE_REQUIRED()               \
+    (cwist_bind_rule_t) {                   \
+        CWIST_BIND_RULE_REQUIRED, {0}, NULL \
+    }
 
-#define CWIST_RULE_MIN_LEN(n) \
-    (cwist_bind_rule_t){CWIST_BIND_RULE_MIN_LEN, {.min_len = (n)}, NULL}
+#define CWIST_RULE_MIN_LEN(n)                           \
+    (cwist_bind_rule_t) {                               \
+        CWIST_BIND_RULE_MIN_LEN, {.min_len = (n)}, NULL \
+    }
 
-#define CWIST_RULE_MAX_LEN(n) \
-    (cwist_bind_rule_t){CWIST_BIND_RULE_MAX_LEN, {.max_len = (n)}, NULL}
+#define CWIST_RULE_MAX_LEN(n)                           \
+    (cwist_bind_rule_t) {                               \
+        CWIST_BIND_RULE_MAX_LEN, {.max_len = (n)}, NULL \
+    }
 
-#define CWIST_RULE_MIN_VAL(v) \
-    (cwist_bind_rule_t){CWIST_BIND_RULE_MIN_VAL, {.min_val = (v)}, NULL}
+#define CWIST_RULE_MIN_VAL(v)                           \
+    (cwist_bind_rule_t) {                               \
+        CWIST_BIND_RULE_MIN_VAL, {.min_val = (v)}, NULL \
+    }
 
-#define CWIST_RULE_MAX_VAL(v) \
-    (cwist_bind_rule_t){CWIST_BIND_RULE_MAX_VAL, {.max_val = (v)}, NULL}
+#define CWIST_RULE_MAX_VAL(v)                           \
+    (cwist_bind_rule_t) {                               \
+        CWIST_BIND_RULE_MAX_VAL, {.max_val = (v)}, NULL \
+    }
 
-#define CWIST_RULE_REGEX(pat) \
-    (cwist_bind_rule_t){CWIST_BIND_RULE_REGEX, {.pattern = (pat)}, NULL}
+#define CWIST_RULE_REGEX(pat)                           \
+    (cwist_bind_rule_t) {                               \
+        CWIST_BIND_RULE_REGEX, {.pattern = (pat)}, NULL \
+    }
 
-#define CWIST_RULE_EMAIL() \
-    (cwist_bind_rule_t){CWIST_BIND_RULE_EMAIL, {0}, NULL}
+#define CWIST_RULE_EMAIL()               \
+    (cwist_bind_rule_t) {                \
+        CWIST_BIND_RULE_EMAIL, {0}, NULL \
+    }
 
-#define CWIST_RULE_CUSTOM(fn_ptr, ctx_ptr) \
-    (cwist_bind_rule_t){CWIST_BIND_RULE_CUSTOM, {.custom = {.fn = (fn_ptr), .ctx = (ctx_ptr)}}, NULL}
+#define CWIST_RULE_CUSTOM(fn_ptr, ctx_ptr)                                           \
+    (cwist_bind_rule_t) {                                                            \
+        CWIST_BIND_RULE_CUSTOM, {.custom = {.fn = (fn_ptr), .ctx = (ctx_ptr)}}, NULL \
+    }
 
 #ifdef __cplusplus
 }

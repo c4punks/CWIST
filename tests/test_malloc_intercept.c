@@ -13,12 +13,13 @@
 #include <string.h>
 #include <stdio.h>
 
-#define REQUIRE(expr) do { \
-    if (!(expr)) { \
-        fprintf(stderr, "Check failed at %s:%d: %s\n", __FILE__, __LINE__, #expr); \
-        return 1; \
-    } \
-} while (0)
+#define REQUIRE(expr)                                                                  \
+    do {                                                                               \
+        if (!(expr)) {                                                                 \
+            fprintf(stderr, "Check failed at %s:%d: %s\n", __FILE__, __LINE__, #expr); \
+            return 1;                                                                  \
+        }                                                                              \
+    } while (0)
 
 /* --- Behaves like real malloc/calloc/realloc/free when full-GC is off --- */
 static int test_passthrough_when_gc_off(void) {

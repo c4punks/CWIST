@@ -44,7 +44,8 @@ cwist_ws_frame *cwist_websocket_receive(cwist_websocket *ws);
 /**
  * @brief Send a frame.
  */
-int cwist_websocket_send(cwist_websocket *ws, cwist_ws_opcode_t opcode, const uint8_t *data, size_t len);
+int cwist_websocket_send(cwist_websocket *ws, cwist_ws_opcode_t opcode, const uint8_t *data,
+                         size_t len);
 
 /**
  * @brief Destroy a frame.

@@ -68,17 +68,17 @@ void test_metrics_http_response(void) {
 
 static cwist_health_probe_t dummy_probe_ok(void *ctx) {
     (void)ctx;
-    return (cwist_health_probe_t){ "dummy", CWIST_HEALTH_OK, "all good" };
+    return (cwist_health_probe_t){"dummy", CWIST_HEALTH_OK, "all good"};
 }
 
 static cwist_health_probe_t dummy_probe_fail(void *ctx) {
     (void)ctx;
-    return (cwist_health_probe_t){ "dummy", CWIST_HEALTH_FAIL, "down" };
+    return (cwist_health_probe_t){"dummy", CWIST_HEALTH_FAIL, "down"};
 }
 
 static cwist_health_probe_t dummy_probe_degraded(void *ctx) {
     (void)ctx;
-    return (cwist_health_probe_t){ "dummy", CWIST_HEALTH_DEGRADED, "slow" };
+    return (cwist_health_probe_t){"dummy", CWIST_HEALTH_DEGRADED, "slow"};
 }
 
 void test_healthz_ok(void) {

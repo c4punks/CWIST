@@ -28,6 +28,29 @@ void cwist_gc_rotate(cwist_gc_t *gc) {
     ttak_epoch_gc_rotate(&gc->impl);
 }
 
+/**
+ * @brief Enable auto-rotation of epoch GC.
+ * @param gc GC context to enable auto-rotation.
+ */
+void cwist_gc_auto_rotate(cwist_gc_t *gc, bool enabled) {
+    if (!gc || !gc->initialized) return;
+    bool gc_status = atomic_load(&gc->auto_rotated);
+    while (!atomic_compare_exchange_weak(&gc->auto_rotated, &gc_status, enabled));
+}
+
+/**
+ * @brief Return if epoch GC is auto-rotated.
+ * @ param gc GC context to get status.
+ */
+bool cwist_gc_auto_rotated(cwist_gc_t *gc) {
+    return atomic_load(&gc->auto_rotated);
+}
+
+/**
+ * @brief Register a pointer with zero-size accounting metadata.
+ * @param gc GC context that tracks the pointer.
+ * @param ptr Pointer to retire through the epoch GC.
+ */
 void cwist_reg_ptr(cwist_gc_t *gc, void *ptr) {
     cwist_reg_ptr_sized(gc, ptr, 0);
 }

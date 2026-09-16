@@ -59,9 +59,9 @@ cwist_error_t cwist_https_init_context(cwist_https_context **ctx, const char *ce
  * Application request handling remains HTTP/1.1 unless a frame engine is added.
  */
 cwist_error_t cwist_https_init_context_with_options(cwist_https_context **ctx,
-                                                    const char *cert_path,
-                                                    const char *key_path,
-                                                    const cwist_https_options *options);
+                                                    const char *cert_path, const char *key_path,
+                                                    const cwist_https_options *options,
+                                                    cwist_app *app);
 
 /**
  * Destroy the HTTPS context and cleanup OpenSSL.
@@ -102,6 +102,8 @@ cwist_http_request *cwist_https_receive_request(cwist_https_connection *conn);
  * serialization blob) and supports pointer bodies and file streams.
  */
 cwist_error_t cwist_https_send_response(cwist_https_connection *conn, cwist_http_response *res);
+cwist_error_t cwist_https_send_response_head(cwist_https_connection *conn,
+                                             cwist_http_response *res);
 
 /**
  * Helper to start a simple HTTPS server loop.
@@ -115,7 +117,10 @@ cwist_error_t cwist_https_server_loop(int server_fd, cwist_https_context *ctx,
  * Thread pool helpers for hybrid async-accept + threaded-process mode.
  */
 int https_pool_init(void);
-void https_pool_submit(int client_fd, cwist_https_context *ctx, void (*handler)(cwist_https_connection *, void *), void *user_ctx);
+void https_pool_submit(int client_fd, cwist_https_context *ctx,
+                       void (*handler)(cwist_https_connection *, void *), void *user_ctx);
+void https_pool_submit_conn(cwist_https_connection *conn, cwist_https_context *ctx,
+                            void (*handler)(cwist_https_connection *, void *), void *user_ctx);
 void https_pool_destroy(void);
 
 /**
@@ -125,7 +130,8 @@ void https_pool_destroy(void);
  * returns immediately.  Established sessions are submitted to the HTTPS
  * worker pool.  Safe to call from reactor callbacks.
  */
-void cwist_https_dispatch(int client_fd, cwist_https_context *ctx, void (*handler)(cwist_https_connection *, void *), void *user_ctx);
+void cwist_https_dispatch(int client_fd, cwist_https_context *ctx,
+                          void (*handler)(cwist_https_connection *, void *), void *user_ctx);
 
 /** @brief Number of TLS handshakes currently parked in the shepherd. */
 long cwist_https_pending_handshakes(void);

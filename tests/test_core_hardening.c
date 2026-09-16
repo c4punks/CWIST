@@ -21,7 +21,8 @@
 static int mock_next_called = 0;
 
 static void mock_next(cwist_http_request *req, cwist_http_response *res) {
-    (void)req; (void)res;
+    (void)req;
+    (void)res;
     mock_next_called = 1;
 }
 

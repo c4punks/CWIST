@@ -12,10 +12,10 @@
 
 /**
  * @brief Get the available (free + reclaimable) system RAM in bytes.
- * 
+ *
  * Uses /proc/meminfo on Linux.
  * Uses sysctl on BSD/macOS.
- * 
+ *
  * @return Available RAM in bytes, or 0 if detection fails.
  */
 uint64_t cwist_get_available_ram(void);

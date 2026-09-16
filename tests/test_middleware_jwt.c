@@ -16,7 +16,9 @@
 #include <assert.h>
 
 /* Minimal stubs for unused handlers in middleware.c */
-cwist_metrics_registry_t *cwist_metrics_registry(void) { return NULL; }
+cwist_metrics_registry_t *cwist_metrics_registry(void) {
+    return NULL;
+}
 void cwist_metric_inc(cwist_metrics_registry_t *reg, cwist_metric_id_t id) {
     (void)reg;
     (void)id;
@@ -26,8 +28,14 @@ void cwist_metric_add(cwist_metrics_registry_t *reg, cwist_metric_id_t id, uintm
     (void)id;
     (void)delta;
 }
-cwist_sstring *cwist_get_client_ip_from_fd(int fd) { (void)fd; return NULL; }
-const char *cwist_http_method_to_string(cwist_http_method_t m) { (void)m; return "GET"; }
+cwist_sstring *cwist_get_client_ip_from_fd(int fd) {
+    (void)fd;
+    return NULL;
+}
+const char *cwist_http_method_to_string(cwist_http_method_t m) {
+    (void)m;
+    return "GET";
+}
 
 /* Minimal HTTP header / request / response helpers */
 cwist_error_t cwist_http_header_add(cwist_http_header_node **head, const char *key,

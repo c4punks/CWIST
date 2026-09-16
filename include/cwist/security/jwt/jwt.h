@@ -94,8 +94,7 @@ typedef struct cwist_jwt_chunk {
  * @return Array of chunk objects, or NULL on error.  Caller must free with
  *         cwist_jwt_chunks_free().
  */
-cwist_jwt_chunk_t *cwist_jwt_split_chunks(const char *token,
-                                          uint16_t chunk_payload_size,
+cwist_jwt_chunk_t *cwist_jwt_split_chunks(const char *token, uint16_t chunk_payload_size,
                                           size_t *out_count);
 
 /**
@@ -131,10 +130,8 @@ char *cwist_jwt_join_chunks(const cwist_jwt_chunk_t *chunks, size_t count);
  * @return Array of chunk objects, or NULL on error.  Caller must free with
  *         cwist_jwt_chunks_free().
  */
-cwist_jwt_chunk_t *cwist_jwt_sign_chunks(const char *payload_json,
-                                         const char *secret,
-                                         long exp_seconds,
-                                         uint16_t chunk_payload_size,
+cwist_jwt_chunk_t *cwist_jwt_sign_chunks(const char *payload_json, const char *secret,
+                                         long exp_seconds, uint16_t chunk_payload_size,
                                          size_t *out_count);
 
 /**
@@ -149,8 +146,7 @@ cwist_jwt_chunk_t *cwist_jwt_sign_chunks(const char *payload_json,
  * @return Claims object on success, NULL when reassembly or verification fails.
  *         Caller must free with cwist_jwt_claims_destroy().
  */
-cwist_jwt_claims *cwist_jwt_verify_chunks(const cwist_jwt_chunk_t *chunks,
-                                          size_t count,
+cwist_jwt_claims *cwist_jwt_verify_chunks(const cwist_jwt_chunk_t *chunks, size_t count,
                                           const char *secret);
 
 #ifdef __cplusplus

@@ -22,7 +22,8 @@ void test_security_headers_present(void) {
     assert(cwist_http_header_get(res->headers, "Content-Security-Policy") != NULL);
 
     assert(cwist_http_header_get(res->headers, "Cross-Origin-Resource-Policy") != NULL);
-    assert(strcmp(cwist_http_header_get(res->headers, "Cross-Origin-Resource-Policy"), "same-origin") == 0);
+    assert(strcmp(cwist_http_header_get(res->headers, "Cross-Origin-Resource-Policy"),
+                  "same-origin") == 0);
 
     assert(cwist_http_header_get(res->headers, "Permissions-Policy") != NULL);
 
