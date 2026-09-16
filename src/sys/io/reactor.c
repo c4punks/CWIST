@@ -171,6 +171,8 @@ struct cwist_reactor {
     _Atomic(cwist_reactor_post_t *) post_head;
     int wake_fd;   /* Read side registered with the poller. */
     int wake_wr;   /* Write side (same fd as wake_fd for eventfd). */
+    cwist_reactor_drain_end_cb_t drain_end_cb; /* NULL until registered. */
+    void *drain_end_ctx;
     /* Dynamically grown slot chunks: a fixed pool (formerly 4096 slots)
      * capped every reactor at 4096 live connections, which is what shed
      * requests en masse past ~500k concurrent connections.  Chunks are never
@@ -267,11 +269,21 @@ static void reactor_drain_posts(cwist_reactor_t *r) {
         rev = list;
         list = next;
     }
+    if (!rev) return;
     while (rev) {
         cwist_reactor_post_t *next = rev->next;
         rev->cb(rev->ctx);
         rev = next;
     }
+    /* The batch produced at least one completion: let the embedder flush any
+     * per-batch state it accumulated while the callbacks ran. */
+    if (r->drain_end_cb) r->drain_end_cb(r->drain_end_ctx);
+}
+
+void cwist_reactor_set_drain_end(cwist_reactor_t *r, cwist_reactor_drain_end_cb_t cb, void *ctx) {
+    if (!r) return;
+    r->drain_end_cb = cb;
+    r->drain_end_ctx = ctx;
 }
 
 static void reactor_wake_cb(int fd, void *ctx) {

@@ -51,6 +51,15 @@ typedef struct cwist_reactor_post {
 
 bool cwist_reactor_post(cwist_reactor_t *reactor, cwist_reactor_post_t *node);
 
+/* Drain-end hook: called on the reactor's run thread after a post batch (one
+ * or more nodes) has been fully drained -- including the final drain inside
+ * cwist_reactor_destroy. Embedders use it to batch per-drain side effects
+ * (e.g. flushing coalesced output of completed work). Only the most recent
+ * registration wins; pass a NULL cb to disable. */
+typedef void (*cwist_reactor_drain_end_cb_t)(void *ctx);
+void cwist_reactor_set_drain_end(cwist_reactor_t *reactor, cwist_reactor_drain_end_cb_t cb,
+                                 void *ctx);
+
 #ifdef __cplusplus
 }
 #endif

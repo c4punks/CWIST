@@ -227,6 +227,129 @@ static _Atomic long g_http_continuation_shed = 0;
 long cwist_http_continuation_shed_count(void) {
     return atomic_load_explicit(&g_http_continuation_shed, memory_order_relaxed);
 }
+
+/* --- C1M deferred-completion queue (proposal #173) --------------------------
+ * In C1M mode, responses of deferred (foreign-thread) completions used to be
+ * sent inline from the reactor's post-drain callback: one speculative write
+ * plus re-arm per completion.  The completion queue instead appends each
+ * response to the connection's existing coalescing stash (conn->obuf) while
+ * the drain callbacks run and flushes every touched connection exactly once,
+ * at the end of the drain turn.  That preserves obuf byte order per
+ * connection (appends happen in callback order) and turns N completions on N
+ * connections into N batched writes instead of interleaved send/re-arm pairs.
+ *
+ * Bounds: at most CWIST_HTTP_CQ_MAX connections are deferred per drain turn;
+ * a completion that arrives when the list is full flushes only its own
+ * connection immediately.  The stash itself stays capped by
+ * CWIST_HTTP_COALESCE_MAX; overflow falls back to the legacy immediate send.
+ * Queuing is skipped while the pool is stopping, so reactor_destroy's final
+ * drain cannot orphan a connection through a pending-flush entry (issue #166
+ * tracks the classic-path counterpart; see #173 for the design discussion).
+ *
+ * Kill switch: CWIST_C1M_CQ=0 disables queueing and keeps the legacy
+ * immediate send path.  The hook is registered per worker reactor; each
+ * reactor owns one queue, touched only by its run thread. */
+
+#define CWIST_HTTP_CQ_MAX 64
+
+typedef struct {
+    cwist_http_async_conn_t *conn;
+    bool keep_alive;
+} http_cq_entry_t;
+
+typedef struct {
+    http_cq_entry_t entries[CWIST_HTTP_CQ_MAX];
+    size_t len;
+    bool enabled;
+} http_cq_t;
+
+typedef struct {
+    cwist_reactor_t *reactor;
+    http_cq_t *cq;
+} http_cq_binding_t;
+
+static http_cq_binding_t g_http_cq_registry[64];
+static size_t g_http_cq_registry_len = 0;
+
+static http_cq_t *http_cq_lookup(cwist_reactor_t *reactor) {
+    for (size_t i = 0; i < g_http_cq_registry_len; i++) {
+        if (g_http_cq_registry[i].reactor == reactor) return g_http_cq_registry[i].cq;
+    }
+    return NULL;
+}
+
+/* Flush one queued connection with the same post-logic as the immediate
+ * path: a parked remainder owns fd/conn (its POLLOUT callback re-arms or
+ * closes), a clean flush re-arms, anything else closes. */
+static void http_cq_flush_entry(int client_fd, cwist_http_async_conn_t *conn, bool keep_alive) {
+    cwist_coalesce_flush_status_t st = cwist_http_coalesce_flush(client_fd, conn, keep_alive);
+    if (st == CWIST_COALESCE_FLUSH_PARKED) return;
+    if (st == CWIST_COALESCE_FLUSH_DONE && keep_alive && atomic_load(&g_cwist_running)) {
+        cwist_http_async_rearm(client_fd, conn->reactor, conn);
+    } else {
+        cwist_http_async_close(client_fd, conn);
+    }
+}
+
+static void http_cq_enqueue(http_cq_t *cq, int client_fd, cwist_http_async_conn_t *conn,
+                            bool keep_alive) {
+    for (size_t i = 0; i < cq->len; i++) {
+        if (cq->entries[i].conn == conn) {
+            cq->entries[i].keep_alive = keep_alive;
+            return;
+        }
+    }
+    if (cq->len == CWIST_HTTP_CQ_MAX) {
+        /* Turn budget spent: flush only this connection, keep the rest
+         * queued for the drain-end pass. */
+        http_cq_flush_entry(client_fd, conn, keep_alive);
+        return;
+    }
+    cq->entries[cq->len++] = (http_cq_entry_t){conn, keep_alive};
+}
+
+/* Drain-end hook: one batched flush per touched connection, then clear. */
+static void http_cq_drain_end(void *ctx) {
+    http_cq_t *cq = (http_cq_t *)ctx;
+    size_t len = cq->len;
+    cq->len = 0;
+    for (size_t i = 0; i < len; i++) {
+        http_cq_entry_t *e = &cq->entries[i];
+        http_cq_flush_entry(e->conn->fd, e->conn, e->keep_alive);
+    }
+}
+
+/* Bind a completion queue to a reactor created for C1M service.  enabled is
+ * the caller's C1M mode flag; CWIST_C1M_CQ=0 forces the queue off so the
+ * legacy immediate send path stays available for A/B measurement.  Queues
+ * live for the process lifetime, matching the worker reactors they serve. */
+static void http_cq_bind(cwist_reactor_t *reactor, bool enabled) {
+    if (!reactor || g_http_cq_registry_len >= 64) return;
+    if (enabled) {
+        const char *env = getenv("CWIST_C1M_CQ");
+        if (env && (env[0] == '0' || strcmp(env, "false") == 0)) enabled = false;
+    }
+    http_cq_t *cq = cwist_alloc(sizeof(*cq));
+    if (!cq) return;
+    memset(cq, 0, sizeof(*cq));
+    cq->enabled = enabled;
+    g_http_cq_registry[g_http_cq_registry_len++] = (http_cq_binding_t){reactor, cq};
+    cwist_reactor_set_drain_end(reactor, http_cq_drain_end, cq);
+}
+
+/* Remove a reactor's queue.  cwist_http_pool_init/destroy may cycle (tests do
+ * it per exchange), and a fresh reactor can land on a recycled address: a
+ * stale registry entry would divert queued completions into a dead queue. */
+static void http_cq_unbind(cwist_reactor_t *reactor) {
+    for (size_t i = 0; i < g_http_cq_registry_len; i++) {
+        if (g_http_cq_registry[i].reactor == reactor) {
+            cwist_free(g_http_cq_registry[i].cq);
+            g_http_cq_registry[i] = g_http_cq_registry[--g_http_cq_registry_len];
+            i--;
+        }
+    }
+}
+
 #define CWIST_HTTP_INFLIGHT_PER_THREAD 32
 #define CWIST_HTTP_INFLIGHT_FD_RESERVE 4096
 
@@ -422,6 +545,7 @@ int cwist_http_pool_init(void) {
         for (int i = 0; i < g_http_thread_count; i++) {
             g_workers[i].reactor = cwist_reactor_create();
             if (!g_workers[i].reactor) return -1;
+            http_cq_bind(g_workers[i].reactor, use_c1m);
             g_workers[i].worker_id = (uint32_t)i;
             if (pthread_create(&g_workers[i].thread, NULL, http_pool_worker, &g_workers[i]) != 0) {
                 return -1;
@@ -548,6 +672,7 @@ void cwist_http_pool_destroy(void) {
         for (int i = 0; i < g_http_thread_count; i++) {
             pthread_join(g_workers[i].thread, NULL);
             if (g_workers[i].reactor) {
+                http_cq_unbind(g_workers[i].reactor);
                 cwist_reactor_destroy(g_workers[i].reactor);
                 g_workers[i].reactor = NULL;
             }
@@ -2239,6 +2364,26 @@ void cwist_http_async_send_response(int client_fd, cwist_http_response *res,
         iov_cnt = 2;
     }
 
+    /* C1M completion queue: while a post drain is being processed (and the
+     * pool is not stopping), append to the connection's coalescing stash and
+     * defer the single flush to the drain-end hook instead of sending now.
+     * g_http_pool_stopping also covers reactor_destroy's final drain, where
+     * no new pending-flush entry may be enqueued. */
+    http_cq_t *cq = http_cq_lookup(reactor);
+    if (cq && cq->enabled && !atomic_load(&g_http_pool_stopping)) {
+        if (conn->olen + header_len + body_len <= CWIST_HTTP_COALESCE_MAX &&
+            cwist_http_coalesce_append(conn, header_buf, header_len) == 0 &&
+            (body_len == 0 || cwist_http_coalesce_append(conn, body_ptr, body_len) == 0)) {
+            http_cq_enqueue(cq, client_fd, conn, keep_alive);
+            cwist_http_response_release_ptr_body(res);
+            cwist_http_response_release_file_stream(res);
+            return;
+        }
+        /* Stash cap reached: drain it (bounded blocking) so this response
+         * can still go out through the immediate path in order. */
+        cwist_http_coalesce_flush_blocking(client_fd, conn);
+    }
+
     int flags = 0;
 #if defined(MSG_NOSIGNAL)
     flags |= MSG_NOSIGNAL;
@@ -2251,8 +2396,6 @@ void cwist_http_async_send_response(int client_fd, cwist_http_response *res,
     cwist_write_status_t st = cwist_http_sendmsg_speculative(client_fd, iov, iov_cnt, flags, &sent);
 
     if (st == CWIST_WRITE_PENDING) {
-        /* Deep-copy the unsent remainder before releasing the body: the
-         * completion frees req/res (and the arena) right after we return. */
         size_t total = header_len + body_len;
         size_t left = total - sent;
         http_parked_write_t w = {
