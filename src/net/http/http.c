@@ -672,8 +672,10 @@ void cwist_http_pool_destroy(void) {
         for (int i = 0; i < g_http_thread_count; i++) {
             pthread_join(g_workers[i].thread, NULL);
             if (g_workers[i].reactor) {
-                http_cq_unbind(g_workers[i].reactor);
+                /* Destroy first: its final drain runs the drain-end hook,
+                 * which must still see a live completion queue. */
                 cwist_reactor_destroy(g_workers[i].reactor);
+                http_cq_unbind(g_workers[i].reactor);
                 g_workers[i].reactor = NULL;
             }
         }
