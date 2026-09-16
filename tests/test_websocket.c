@@ -108,11 +108,11 @@ void test_handshake_rejects_bad_version() {
     printf("Passed version rejection.\n");
 }
 
-static void send_masked_binary_frame(int fd, const uint8_t *payload, size_t len) {
+static void send_masked_frame(int fd, uint8_t head0, const uint8_t *payload, size_t len) {
     assert(len < 126);
     uint8_t frame[140];
     size_t pos = 0;
-    frame[pos++] = 0x82; /* FIN=1, BINARY */
+    frame[pos++] = head0;
     frame[pos++] = (uint8_t)(0x80 | len);
     uint8_t mask[4] = {0x12, 0x34, 0x56, 0x78};
     memcpy(frame + pos, mask, 4);
@@ -121,6 +121,96 @@ static void send_masked_binary_frame(int fd, const uint8_t *payload, size_t len)
         frame[pos++] = payload[i] ^ mask[i % 4];
     }
     assert(write(fd, frame, pos) == (ssize_t)pos);
+}
+
+static void send_masked_binary_frame(int fd, const uint8_t *payload, size_t len) {
+    send_masked_frame(fd, 0x82, payload, len); /* FIN=1, BINARY */
+}
+
+/* RFC 6455 section 5.4: a CONTINUATION frame outside an active fragmented
+ * message is a protocol error and the connection must be failed, whether
+ * FIN is set or not (issue #158). */
+static void test_orphan_continuation_rejected(void) {
+    printf("Testing orphan CONTINUATION rejection...\n");
+
+    const uint8_t payload[] = {'x'};
+
+    /* FIN=1 orphan CONTINUATION must be rejected. */
+    {
+        int sv[2];
+        assert(socketpair(AF_UNIX, SOCK_STREAM, 0, sv) == 0);
+        cwist_http_request *req = cwist_http_request_create();
+        cwist_http_header_add(&req->headers, "Connection", "Upgrade");
+        cwist_http_header_add(&req->headers, "Upgrade", "websocket");
+        cwist_http_header_add(&req->headers, "Sec-WebSocket-Key", "dGhlIHNhbXBsZSBub25jZQ==");
+        cwist_http_header_add(&req->headers, "Sec-WebSocket-Version", "13");
+        cwist_websocket *ws = cwist_websocket_upgrade(req, sv[0]);
+        assert(ws != NULL);
+        char buf[1024];
+        assert(read(sv[1], buf, sizeof(buf)) > 0);
+
+        send_masked_frame(sv[1], 0x80, payload, 1); /* FIN=1, CONTINUATION */
+        assert(cwist_websocket_receive(ws) == NULL);
+
+        cwist_websocket_destroy(ws);
+        cwist_http_request_destroy(req);
+        close(sv[0]);
+        close(sv[1]);
+    }
+
+    /* FIN=0 orphan CONTINUATION must be rejected. */
+    {
+        int sv[2];
+        assert(socketpair(AF_UNIX, SOCK_STREAM, 0, sv) == 0);
+        cwist_http_request *req = cwist_http_request_create();
+        cwist_http_header_add(&req->headers, "Connection", "Upgrade");
+        cwist_http_header_add(&req->headers, "Upgrade", "websocket");
+        cwist_http_header_add(&req->headers, "Sec-WebSocket-Key", "dGhlIHNhbXBsZSBub25jZQ==");
+        cwist_http_header_add(&req->headers, "Sec-WebSocket-Version", "13");
+        cwist_websocket *ws = cwist_websocket_upgrade(req, sv[0]);
+        assert(ws != NULL);
+        char buf[1024];
+        assert(read(sv[1], buf, sizeof(buf)) > 0);
+
+        send_masked_frame(sv[1], 0x00, payload, 1); /* FIN=0, CONTINUATION */
+        assert(cwist_websocket_receive(ws) == NULL);
+
+        cwist_websocket_destroy(ws);
+        cwist_http_request_destroy(req);
+        close(sv[0]);
+        close(sv[1]);
+    }
+
+    /* A well-formed fragmented message still reassembles correctly. */
+    {
+        int sv[2];
+        assert(socketpair(AF_UNIX, SOCK_STREAM, 0, sv) == 0);
+        cwist_http_request *req = cwist_http_request_create();
+        cwist_http_header_add(&req->headers, "Connection", "Upgrade");
+        cwist_http_header_add(&req->headers, "Upgrade", "websocket");
+        cwist_http_header_add(&req->headers, "Sec-WebSocket-Key", "dGhlIHNhbXBsZSBub25jZQ==");
+        cwist_http_header_add(&req->headers, "Sec-WebSocket-Version", "13");
+        cwist_websocket *ws = cwist_websocket_upgrade(req, sv[0]);
+        assert(ws != NULL);
+        char buf[1024];
+        assert(read(sv[1], buf, sizeof(buf)) > 0);
+
+        send_masked_frame(sv[1], 0x01, (const uint8_t *)"he", 2); /* FIN=0 TEXT */
+        send_masked_frame(sv[1], 0x80, (const uint8_t *)"llo", 3); /* FIN=1 CONTINUATION */
+        cwist_ws_frame *frame = cwist_websocket_receive(ws);
+        assert(frame != NULL);
+        assert(frame->opcode == CWIST_WS_FRAME_TEXT);
+        assert(frame->payload_len == 5);
+        assert(memcmp(frame->payload, "hello", 5) == 0);
+        cwist_websocket_frame_destroy(frame);
+
+        cwist_websocket_destroy(ws);
+        cwist_http_request_destroy(req);
+        close(sv[0]);
+        close(sv[1]);
+    }
+
+    printf("Orphan CONTINUATION rejection test passed.\n");
 }
 
 static void test_websocket_sequenced(void) {
@@ -194,5 +284,6 @@ int main() {
     test_handshake_key_generation();
     test_handshake_rejects_bad_version();
     test_websocket_sequenced();
+    test_orphan_continuation_rejected();
     return 0;
 }

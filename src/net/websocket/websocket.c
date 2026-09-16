@@ -264,6 +264,16 @@ cwist_ws_frame *cwist_websocket_receive(cwist_websocket *ws) {
             continue; /* read the next frame */
         }
 
+        /* RFC 6455 section 5.4: a CONTINUATION frame is only valid inside an
+         * active fragmented-message sequence.  The FIN=0 case is rejected in
+         * the reassembly branch above; without this check an orphan
+         * CONTINUATION with FIN=1 would fall through and be delivered as a
+         * complete message. */
+        if (!is_control && opcode == CWIST_WS_FRAME_CONTINUATION && ws->frag_len == 0) {
+            cwist_free(payload);
+            return NULL;
+        }
+
         /* FIN=1 data frame: may be the last fragment of a multi-frame message. */
         if (!is_control && ws->frag_len > 0) {
             /* Final CONTINUATION frame: flush the reassembly buffer. */
