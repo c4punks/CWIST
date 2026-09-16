@@ -253,20 +253,6 @@ static int mp_on_part_data_end(multipart_parser *p) {
     return 0;
 }
 
-/**
- * @brief Parse a multipart/form-data body into a field list.
- *
- * Runs the multipart-parser-c state machine over @p body with @p boundary
- * (the boundary without leading dashes). On malformed or truncated input the
- * parser stops early and NULL is returned, with all intermediate state freed.
- *
- * @param body Raw body bytes; must not be NULL.
- * @param body_len Length of @p body in bytes.
- * @param boundary MIME boundary string, without the leading "--".
- * @return Newly allocated cwist_multipart_result on success (caller owns it,
- *         release with cwist_multipart_result_destroy), NULL on invalid
- *         arguments, malformed input, or allocation failure.
- */
 cwist_multipart_result *cwist_multipart_parse(const char *body, size_t body_len,
                                               const char *boundary) {
     if (!body || body_len == 0 || !boundary) return NULL;

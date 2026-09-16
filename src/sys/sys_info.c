@@ -42,7 +42,7 @@ uint64_t cwist_get_available_ram(void) {
         }
         fclose(fp);
     }
-    
+
     return 0; // Unknown
 }
 
@@ -56,12 +56,12 @@ uint64_t cwist_get_available_ram(void) {
  */
 uint64_t cwist_get_available_ram(void) {
     // macOS/BSD Logic
-    // Getting strict "Available" like Linux is harder. 
+    // Getting strict "Available" like Linux is harder.
     // We can get page size * free pages.
-    
+
     int mib[2];
     mib[0] = CTL_HW;
-    
+
 #ifdef __APPLE__
     // Roughly estimate using page size and free count is tricky portably.
     // Let's rely on a simpler 'usermem' or just fail-safe to "High Enough" if we can't detect,
@@ -73,11 +73,11 @@ uint64_t cwist_get_available_ram(void) {
     u_int page_size;
     u_int free_count;
     size_t len = sizeof(page_size);
-    
+
     if (sysctlbyname("vm.stats.vm.v_page_size", &page_size, &len, NULL, 0) == -1) return 0;
     len = sizeof(free_count);
     if (sysctlbyname("vm.stats.vm.v_free_count", &free_count, &len, NULL, 0) == -1) return 0;
-    
+
     return (uint64_t)page_size * (uint64_t)free_count;
 #endif
 }

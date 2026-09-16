@@ -1,7 +1,7 @@
 /**
  * @file nuke_db.h
  * @brief High-Performance Read-Optimal Persistent Store using SQLite.
- * 
+ *
  * Concept:
  * - Reads: Always from In-Memory DB (Extreme speed).
  * - Writes: Immediately synchronized to Disk DB via WAL (Durability).
@@ -24,10 +24,10 @@
 
 /**
  * @brief Nuke DB Context.
- * 
+ *
  * Logic:
  * 1. Init: Load disk DB into Memory DB. Enables WAL mode on disk.
- * 2. Runtime: 
+ * 2. Runtime:
  *    - SELECTs happen in Memory.
  *    - INSERT/UPDATE/DELETE trigger immediate background sync to Disk on COMMIT.
  * 3. Periodic: Background thread also performs periodic sync as a fail-safe.
@@ -39,18 +39,18 @@ typedef struct cwist_nuke_db_t {
     char *disk_path;     ///< Path to the disk database file
     bool auto_sync;      ///< Whether auto-sync is enabled
     int sync_interval_ms;///< Sync interval in milliseconds
-    
+
     bool is_disk_mode;   ///< True if running in low-memory disk fallback mode
     bool load_successful; ///< True if initial load from disk was successful
 } cwist_nuke_db_t;
 
 /**
  * @brief Initialize Nuke DB.
- * 
+ *
  * Loads the disk database into memory (if it exists).
  * Sets up signal handlers for safe exit (SIGINT, SIGTERM).
  * Starts a background thread for auto-sync if interval > 0.
- * 
+ *
  * @param disk_path Path to the persistent database file.
  * @param sync_interval_ms Auto-sync interval in ms (0 to disable).
  * @return 0 on success, negative on failure (see CWIST_NUKE_ERR_* codes).

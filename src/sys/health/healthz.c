@@ -54,9 +54,19 @@ bool cwist_healthz_register(const char *name, cwist_health_probe_fn fn, void *ct
         }
     }
 
-    g_entries[g_entry_count].name   = name;
-    g_entries[g_entry_count].fn     = fn;
-    g_entries[g_entry_count].ctx    = ctx;
+    if (first_free_slot != -1) {
+        g_entries[first_free_slot].name = name;
+        g_entries[first_free_slot].fn = fn;
+        g_entries[first_free_slot].ctx = ctx;
+        g_entries[first_free_slot].active = true;
+        return true;
+    }
+
+    if (g_entry_count >= CWIST_HEALTHZ_MAX_PROBES) return false;
+
+    g_entries[g_entry_count].name = name;
+    g_entries[g_entry_count].fn = fn;
+    g_entries[g_entry_count].ctx = ctx;
     g_entries[g_entry_count].active = true;
     g_entry_count++;
     return true;
@@ -92,27 +102,13 @@ void cwist_healthz_unregister(const char *name) {
  */
 static const char *status_str(cwist_health_status_t s) {
     switch (s) {
-        case CWIST_HEALTH_OK:       return "ok";
+        case CWIST_HEALTH_OK: return "ok";
         case CWIST_HEALTH_DEGRADED: return "degraded";
-        case CWIST_HEALTH_FAIL:     return "fail";
-        default:                    return "unknown";
+        case CWIST_HEALTH_FAIL: return "fail";
+        default: return "unknown";
     }
 }
 
-/**
- * @brief Run all active probes and aggregate their results.
- *
- * Probes are evaluated in registration order. The overall status is FAIL if
- * any probe reports FAIL, DEGRADED if at least one reports DEGRADED and none
- * report FAIL, and OK otherwise.
- *
- * @param out_probes Optional array receiving per-probe results; at most
- *        @p max_probes entries are written.
- * @param max_probes Capacity of @p out_probes.
- * @param out_count Optional output receiving the number of active probes
- *        evaluated.
- * @param out_overall Optional output receiving the aggregated status.
- */
 void cwist_healthz_run(cwist_health_probe_t *out_probes, size_t max_probes, size_t *out_count,
                        cwist_health_status_t *out_overall) {
     size_t count = 0;
@@ -121,8 +117,14 @@ void cwist_healthz_run(cwist_health_probe_t *out_probes, size_t max_probes, size
     for (int i = 0; i < g_entry_count && count < max_probes; ++i) {
         if (!g_entries[i].active) continue;
         cwist_health_probe_t r = g_entries[i].fn(g_entries[i].ctx);
-        out_probes[count++] = r;
-        if (r.status == CWIST_HEALTH_FAIL) overall = CWIST_HEALTH_FAIL;
+        if (out_probes && count < max_probes) {
+            out_probes[count] = r;
+        }
+        if (!out_probes || count < max_probes) {
+            count++;
+        }
+        if (r.status == CWIST_HEALTH_FAIL)
+            overall = CWIST_HEALTH_FAIL;
         else if (r.status == CWIST_HEALTH_DEGRADED && overall == CWIST_HEALTH_OK)
             overall = CWIST_HEALTH_DEGRADED;
     }
@@ -174,9 +176,10 @@ void cwist_app_healthz(cwist_http_response *res) {
     cwist_http_header_add(&res->headers, "Content-Type", "application/json");
 
     switch (overall) {
-        case CWIST_HEALTH_OK:       res->status_code = CWIST_HTTP_OK; break;
+        case CWIST_HEALTH_OK: res->status_code = CWIST_HTTP_OK; break;
         case CWIST_HEALTH_DEGRADED: res->status_code = CWIST_HTTP_SERVICE_UNAVAILABLE; break;
-        case CWIST_HEALTH_FAIL:     res->status_code = CWIST_HTTP_SERVICE_UNAVAILABLE; break;
+        case CWIST_HEALTH_FAIL: res->status_code = CWIST_HTTP_SERVICE_UNAVAILABLE; break;
+        default: res->status_code = CWIST_HTTP_SERVICE_UNAVAILABLE; break;
     }
     cwist_json_builder_destroy(jb);
 }

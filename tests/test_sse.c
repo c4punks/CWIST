@@ -13,8 +13,13 @@ int main(void) {
     assert(cwist_sse_response_comment(res, "heartbeat").error.err_i16 == 0);
     cwist_sse_event_t typed = CWIST_SSE_NAMED("typed", "payload");
     assert(cwist_sse_response_write(res, &typed).error.err_i16 == 0);
-    assert(strcmp(cwist_http_header_get(res->headers, "Content-Type"), "text/event-stream; charset=utf-8") == 0);
-    assert(strcmp(res->body->data, "id:42\nevent:update\nretry:1500\ndata:first\ndata:second\n\n:heartbeat\n\nevent:typed\ndata:payload\n\n") == 0);
+    assert(strcmp(cwist_http_header_get(res->headers, "Content-Type"),
+                  "text/event-stream; charset=utf-8") == 0);
+    assert(
+        strcmp(
+            res->body->data,
+            "id:42\nevent:update\nretry:1500\ndata:first\ndata:second\n\n:heartbeat\n\nevent:typed\ndata:payload\n\n") ==
+        0);
     cwist_http_response_destroy(res);
 
     int pair[2];
@@ -33,7 +38,8 @@ int main(void) {
     assert(cwist_sse_stream_write(stream, &live_event).error.err_i16 == 0);
     cwist_sse_stream_close(stream);
     cwist_http_request_destroy(req);
-    close(pair[0]); close(pair[1]);
+    close(pair[0]);
+    close(pair[1]);
     puts("All SSE tests passed.");
     return 0;
 }

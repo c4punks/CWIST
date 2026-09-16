@@ -175,10 +175,6 @@ static void channel_throttle_success(cwist_grpc_channel *ch) {
     pthread_mutex_unlock(&ch->tmu);
 }
 
-/** @brief End-of-call throttle accounting (gRFC A6): refund on success,
- * charge one token for a retryable-coded failure (or a do-not-retry
- * pushback) under a retry policy.
- */
 static void channel_account(cwist_grpc_channel *ch, cwist_grpc_status_t status, int has_policy,
                             uint32_t mask) {
     if (status == CWIST_GRPC_OK) {
@@ -424,11 +420,8 @@ static cwist_grpc_channel_call *channel_synthetic(cwist_grpc_channel *ch,
     return cc;
 }
 
-/** @brief Hand a live attempt call over to the user.
- *
- * On allocation failure the attempt is torn down (call destroyed, subchannel
- * released) and NULL is returned.
- */
+/* Hand a live attempt call over to the user.  On allocation failure the
+ * attempt is torn down and the subchannel released. */
 static cwist_grpc_channel_call *channel_wrap(cwist_grpc_channel *ch, cwist_grpc_subchannel *sub,
                                              cwist_grpc_call *call, uint32_t attempts,
                                              int has_policy, uint32_t mask, int accounted) {
@@ -447,22 +440,6 @@ static cwist_grpc_channel_call *channel_wrap(cwist_grpc_channel *ch, cwist_grpc_
 
 /* --- retry engine --- */
 
-/** @brief Start a unary RPC through the channel, running the gRFC A6 retry
- * engine transparently across attempts.
- *
- * Applies the most specific JSON method config (retry policy, waitForReady,
- * timeout), clamps attempts to GRPC_CHANNEL_MAX_ATTEMPTS_CAP, and retries
- * only while the request fits the per-RPC buffer limit.  Blocks until the
- * RPC is committed (Response-Headers or final result), fails with
- * CWIST_GRPC_DEADLINE_EXCEEDED past the deadline, or waits instead of
- * failing when waitForReady is set and no subchannel is ready.
- *
- * @param method "/package.Service/Method" path
- * @param request,request_len serialized request (may be NULL when 0)
- * @param timeout_ms per-call deadline, 0 for none (a method-config timeout
- *                   may shorten it)
- * @return channel call handle, or NULL on invalid arguments/allocation failure
- */
 cwist_grpc_channel_call *cwist_grpc_channel_call_start(cwist_grpc_channel *ch, const char *method,
                                                        const void *request, size_t request_len,
                                                        uint64_t timeout_ms) {
@@ -686,17 +663,6 @@ uint32_t cwist_grpc_channel_call_attempts(const cwist_grpc_channel_call *cc) {
     return cc ? cc->attempts : 0;
 }
 
-/** @brief Convenience blocking unary RPC: start, read one response, finish.
- *
- * On CWIST_GRPC_OK the first response message is copied into @p response
- * (caller-owned; freed with cwist_free) with its length in @p response_len;
- * extra messages are discarded.  On any other status the response is freed
- * and NULL/0 is returned.  Output pointers may be NULL to discard the
- * corresponding value.  @p status_message, when non-NULL on entry, receives
- * an allocated copy of the server status message.
- *
- * @return the final gRPC status (CWIST_GRPC_INTERNAL if the call could not start)
- */
 cwist_grpc_status_t cwist_grpc_channel_unary(cwist_grpc_channel *ch, const char *method,
                                              const void *request, size_t request_len,
                                              uint64_t timeout_ms, uint8_t **response,
@@ -737,16 +703,8 @@ cwist_grpc_status_t cwist_grpc_channel_unary(cwist_grpc_channel *ch, const char 
 
 /* --- name resolution (doc/naming.md) --- */
 
-/** @brief Split "host[:port]" or "[v6][:port]" into host and port.
- *
- * A bare multi-colon name is an IPv6 literal without a port.  The default
- * port is 443 (naming.md).
- *
- * @param[out] host NUL-terminated host, must hold at least @p host_cap bytes
- * @param[out] port parsed port (443 when absent)
- * @retval 0 parsed
- * @retval -1 malformed name or host buffer too small
- */
+/* Split "host[:port]" or "[v6][:port]"; bare multi-colon names are IPv6
+ * literals without a port.  Default port 443 (naming.md). */
 static int channel_split_host_port(const char *s, size_t len, char *host, size_t host_cap,
                                    uint16_t *port) {
     *port = 443;
@@ -852,15 +810,6 @@ static int channel_resolve_dns(cwist_grpc_channel *ch, const char *name) {
     return rc;
 }
 
-/** @brief Resolve a comma-separated ipv4:/ipv6: literal address list.
- *
- * Unparseable entries are skipped.  On success the first added address
- * becomes the TLS SNI name and :authority when those are not already set.
- *
- * @param v6 parse tokens as IPv6 (ipv6: scheme) instead of IPv4
- * @retval 0 at least one address was added
- * @retval -1 nothing parsed
- */
 static int channel_resolve_literal(cwist_grpc_channel *ch, const char *list, int v6) {
     char *copy = channel_strdup(list);
     if (!copy) return -1;

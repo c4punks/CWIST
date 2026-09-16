@@ -26,12 +26,12 @@
 #define CWIST_DB_SYNC_DEFAULT_PORT 9877
 
 /** @brief Return codes. */
-#define CWIST_DB_SYNC_OK           0
-#define CWIST_DB_SYNC_ERR_ARGS    (-1)
-#define CWIST_DB_SYNC_ERR_NET     (-2)
-#define CWIST_DB_SYNC_ERR_CRYPTO  (-3)
-#define CWIST_DB_SYNC_ERR_MEM     (-4)
-#define CWIST_DB_SYNC_ERR_PROTO   (-5)
+#define CWIST_DB_SYNC_OK 0
+#define CWIST_DB_SYNC_ERR_ARGS (-1)
+#define CWIST_DB_SYNC_ERR_NET (-2)
+#define CWIST_DB_SYNC_ERR_CRYPTO (-3)
+#define CWIST_DB_SYNC_ERR_MEM (-4)
+#define CWIST_DB_SYNC_ERR_PROTO (-5)
 
 /**
  * @brief Serve the database once: accept one connection, send the sealed blob,
@@ -63,8 +63,7 @@ int cwist_db_sync_serve(sqlite3 *db, const cwist_db_crypt_ctx_t *ctx, int port);
  * @param[out] out_len   Length of @p out_bytes.
  * @return CWIST_DB_SYNC_OK on success, negative on failure.
  */
-int cwist_db_sync_pull(const char *host, int port,
-                       const cwist_db_crypt_ctx_t *ctx,
+int cwist_db_sync_pull(const char *host, int port, const cwist_db_crypt_ctx_t *ctx,
                        unsigned char **out_bytes, size_t *out_len);
 
 #endif /* __CWIST_DB_SYNC_H__ */

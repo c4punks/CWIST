@@ -3,9 +3,13 @@
 #include <stdlib.h>
 #include <string.h>
 
-#define REQUIRE(c) do { if (!(c)) { \
-    fprintf(stderr, "%s:%d: %s\n", __FILE__, __LINE__, #c); exit(1); \
-} } while (0)
+#define REQUIRE(c)                                                  \
+    do {                                                            \
+        if (!(c)) {                                                 \
+            fprintf(stderr, "%s:%d: %s\n", __FILE__, __LINE__, #c); \
+            exit(1);                                                \
+        }                                                           \
+    } while (0)
 
 static void require_ok(cwist_error_t err) {
     int ok = cwist_error_is_ok(&err);
@@ -54,8 +58,8 @@ static void check_response(int custom, int pointer, int keep_alive, size_t body_
     if (!custom) {
         char expected[128];
         int n = snprintf(expected, sizeof(expected),
-            "HTTP/1.1 200 OK\r\nContent-Length: %zu\r\nConnection: %s\r\n\r\n",
-            body_len, keep_alive ? "keep-alive" : "close");
+                         "HTTP/1.1 200 OK\r\nContent-Length: %zu\r\nConnection: %s\r\n\r\n",
+                         body_len, keep_alive ? "keep-alive" : "close");
         REQUIRE(n > 0 && (size_t)n < sizeof(expected));
         REQUIRE(header_len == (size_t)n);
         REQUIRE(memcmp(wire->data, expected, header_len) == 0);

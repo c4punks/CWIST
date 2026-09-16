@@ -22,8 +22,7 @@
  * @param sock Connected socket.
  * @return true if server responds with an AuthenticationRequest ('R').
  */
-static bool probe_postgresql(int sock)
-{
+static bool probe_postgresql(int sock) {
     char startup[64];
     memset(startup, 0, sizeof(startup));
 
@@ -41,8 +40,7 @@ static bool probe_postgresql(int sock)
     /* trailing null already present from memset */
 
     size_t total = 8 + payload;
-    if (send(sock, startup, total, 0) != (ssize_t)total)
-        return false;
+    if (send(sock, startup, total, 0) != (ssize_t)total) return false;
 
     char resp = 0;
     ssize_t n = recv(sock, &resp, 1, 0);
@@ -56,36 +54,19 @@ static bool probe_postgresql(int sock)
  * @param len  Number of valid bytes in @p buf.
  * @return Detected provider (MYSQL or MARIADB) or UNKNOWN.
  */
-static cwist_rdbms_provider_t classify_mysql(const char *buf, size_t len)
-{
-    if (len < 5)
-        return CWIST_RDBMS_NONE;
+static cwist_rdbms_provider_t classify_mysql(const char *buf, size_t len) {
+    if (len < 5) return CWIST_RDBMS_NONE;
 
     unsigned char protocol = (unsigned char)buf[4];
-    if (protocol != 0x0a)
-        return CWIST_RDBMS_NONE;
+    if (protocol != 0x0a) return CWIST_RDBMS_NONE;
 
     /* Look for "MariaDB" in the server version string that follows */
     for (size_t i = 5; i + 6 < len; ++i) {
-        if (memcmp(&buf[i], "MariaDB", 7) == 0)
-            return CWIST_RDBMS_MARIADB;
+        if (memcmp(&buf[i], "MariaDB", 7) == 0) return CWIST_RDBMS_MARIADB;
     }
     return CWIST_RDBMS_MYSQL;
 }
 
-/**
- * @brief Probe a TCP port on 127.0.0.1 to detect the RDBMS provider.
- *
- * Connects to the given port with a 2-second send/recv timeout, inspects
- * any unsolicited handshake bytes as a MySQL/MariaDB handshake, and if that
- * does not match, sends a PostgreSQL StartupMessage and waits for an
- * AuthenticationRequest response.
- *
- * @param port TCP port on localhost to probe.
- * @return Detected provider (@c CWIST_RDBMS_MYSQL, @c CWIST_RDBMS_MARIADB,
- *         or @c CWIST_RDBMS_POSTGRES) or @c CWIST_RDBMS_NONE if detection
- *         fails. The socket is always closed before returning.
- */
 cwist_rdbms_provider_t cwist_rdbms_probe_port(int port) {
     int sock = socket(AF_INET, SOCK_STREAM, 0);
     if (sock < 0) {
@@ -123,8 +104,7 @@ cwist_rdbms_provider_t cwist_rdbms_probe_port(int port) {
          * Close and re-probe as PostgreSQL below. */
         close(sock);
         sock = socket(AF_INET, SOCK_STREAM, 0);
-        if (sock < 0)
-            return CWIST_RDBMS_NONE;
+        if (sock < 0) return CWIST_RDBMS_NONE;
         setsockopt(sock, SOL_SOCKET, SO_SNDTIMEO, &tv, sizeof(tv));
         setsockopt(sock, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv));
         if (connect(sock, (struct sockaddr *)&addr, sizeof(addr)) < 0) {
@@ -147,18 +127,6 @@ cwist_rdbms_provider_t cwist_rdbms_probe_port(int port) {
     return CWIST_RDBMS_NONE;
 }
 
-/**
- * @brief Allocate and attach an RDBMS runtime record to an app.
- *
- * Idempotent: if @p app already has an RDBMS runtime mounted, this returns
- * true without allocating. On success the new runtime is stored in
- * @c app->rdbms with @c ready set to true.
- *
- * @param app     App to attach the runtime to; must not be NULL.
- * @param provider Detected provider stored in the runtime.
- * @param port    Port the provider was detected on.
- * @return true if a runtime is mounted, false on NULL app or allocation failure.
- */
 bool cwist_rdbms_mount_runtime(cwist_app *app, cwist_rdbms_provider_t provider, int port) {
     if (!app) return false;
 
@@ -167,7 +135,8 @@ bool cwist_rdbms_mount_runtime(cwist_app *app, cwist_rdbms_provider_t provider, 
         return true;
     }
 
-    struct cwist_rdbms_runtime *rt = (struct cwist_rdbms_runtime *)cwist_alloc_array(1, sizeof(*rt));
+    struct cwist_rdbms_runtime *rt =
+        (struct cwist_rdbms_runtime *)cwist_alloc_array(1, sizeof(*rt));
     if (!rt) {
         CWIST_LOG_ERROR("RDBMS mount: out of memory");
         return false;
@@ -182,16 +151,6 @@ bool cwist_rdbms_mount_runtime(cwist_app *app, cwist_rdbms_provider_t provider, 
     return true;
 }
 
-/**
- * @brief Auto-detect an RDBMS on a local port and mount its runtime on an app.
- *
- * Probes @p port via cwist_rdbms_probe_port(); on success the detected
- * provider's runtime is mounted with cwist_rdbms_mount_runtime().
- *
- * @param app  App to attach the runtime to; must not be NULL.
- * @param port TCP port on localhost to probe.
- * @return true if detection and mounting succeed, false otherwise.
- */
 bool cwist_app_auto_rdbms(cwist_app *app, int port) {
     if (!app) {
         CWIST_LOG_ERROR("RDBMS auto-mount: app is NULL");

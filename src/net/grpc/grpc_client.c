@@ -181,13 +181,6 @@ static ssize_t grpc_client_read_some(cwist_grpc_client *c, void *buf, size_t len
     }
 }
 
-/**
- * @brief Read exactly len bytes from the connection.
- * @param buf Destination buffer, fully filled on success.
- * @param deadline_ms Monotonic deadline in ms; 0 means no timeout.
- * @retval 0 All bytes were read.
- * @retval -1 EOF, error, or deadline reached.
- */
 static int grpc_client_read_all(cwist_grpc_client *c, void *buf, size_t len, uint64_t deadline_ms) {
     uint8_t *p = buf;
     size_t got = 0;
@@ -330,14 +323,6 @@ static void grpc_client_hpack_evict_to(cwist_grpc_client *c, size_t limit) {
     }
 }
 
-/**
- * @brief Insert a header into the HPACK dynamic table (front), evicting as needed.
- * @param c Client owning the dynamic table.
- * @param name Header name (copied).
- * @param value Header value (copied).
- * @retval 0 Entry inserted, or entry too large for the table (table emptied, nothing inserted).
- * @retval -1 Allocation failure.
- */
 static int grpc_client_hpack_insert(cwist_grpc_client *c, const char *name, const char *value) {
     size_t size = strlen(name) + strlen(value) + 32;
     if (size > c->hpack_cap) {
@@ -364,16 +349,8 @@ static int grpc_client_hpack_insert(cwist_grpc_client *c, const char *name, cons
     return 0;
 }
 
-/**
- * @brief Resolve a full HPACK index: 1..61 static, then dynamic (62 = newest).
- * @param c Client owning the dynamic table.
- * @param index 1-based HPACK index (static table first, then dynamic newest-first).
- * @param name Set to the resolved header name.
- * @param value Set to the resolved header value.
- * @retval 0 Found.
- * @retval -1 Index out of range.
- * @note Returned pointers are borrowed; do not free.
- */
+/* Resolve a full HPACK index: 1..61 static, then dynamic (62 = newest).
+ * Returned pointers are borrowed. */
 static int grpc_client_hpack_get(cwist_grpc_client *c, uint32_t index, const char **name,
                                  const char **value) {
     const cwist_http2_static_header *st = h2_static_header(index);
@@ -475,15 +452,6 @@ static int grpc_client_hpack_decode(cwist_grpc_client *c, const uint8_t *buf, si
 
 /* --- request header block encoding (literal, never-indexed) --- */
 
-/**
- * @brief Encode one literal-without-indexing header field into a header block.
- * @param dst Destination buffer.
- * @param cap Capacity of dst in bytes.
- * @param name_index Static/dynamic name index, or 0 to send the name literally.
- * @param name Header name, used only when name_index is 0.
- * @param value Header value.
- * @return Encoded byte count, or 0 if dst is too small.
- */
 static size_t grpc_client_enc_literal(uint8_t *dst, size_t cap, uint32_t name_index,
                                       const char *name, const char *value) {
     size_t pos = 0;
@@ -531,15 +499,6 @@ static int grpc_client_tcp_connect(const char *host, uint16_t port) {
     return fd;
 }
 
-/**
- * @brief Set up TLS on the connected socket and perform the handshake.
- * @param c Client; c->fd must already be connected.
- * @param host Server name for SNI.
- * @param verify_peer Nonzero to verify the peer certificate against default paths.
- * @param deadline_ms Monotonic handshake deadline in ms.
- * @retval 0 Handshake done and ALPN negotiated "h2".
- * @retval -1 Setup, handshake, or ALPN negotiation failure.
- */
 static int grpc_client_tls_setup(cwist_grpc_client *c, const char *host, int verify_peer,
                                  uint64_t deadline_ms) {
     c->ssl_ctx = SSL_CTX_new(TLS_client_method());
@@ -575,14 +534,7 @@ static int grpc_client_tls_setup(cwist_grpc_client *c, const char *host, int ver
     return 0;
 }
 
-/**
- * @brief Apply one server SETTINGS payload; answers with a SETTINGS ACK.
- * @param payload SETTINGS payload; must be a multiple of 6 bytes.
- * @param len Payload length in bytes.
- * @param deadline_ms Monotonic deadline for the ACK write.
- * @retval 0 Settings applied and ACK written.
- * @retval -1 Malformed or unsupported setting value, or ACK write failure.
- */
+/* Apply one server SETTINGS payload; answers with an ACK. */
 static int grpc_client_apply_settings(cwist_grpc_client *c, const uint8_t *payload, uint32_t len,
                                       uint64_t deadline_ms) {
     if (len % 6 != 0) return -1;
@@ -1040,19 +992,8 @@ transport_fail:
     return -1;
 }
 
-/**
- * @brief Send the framed request message, honouring flow control coarsely.
- *
- * Writes DATA frames up to the minimum of the connection and stream send
- * windows; while the windows are too small, pumps inbound frames so the peer
- * can open them.
- *
- * @param call The active call.
- * @param frame Encoded gRPC message frame (not owned).
- * @param frame_len Frame length in bytes.
- * @retval 0 Entire frame sent (final DATA frame carries END_STREAM).
- * @retval -1 Write error, deadline, or the stream ended while blocked.
- */
+/* Send the framed request message, honouring flow control coarsely: pump
+ * inbound frames while the peer's windows are too small. */
 static int grpc_client_send_request(cwist_grpc_call *call, const uint8_t *frame, size_t frame_len) {
     cwist_grpc_client *c = call->client;
     size_t sent = 0;

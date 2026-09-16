@@ -189,7 +189,7 @@ static void balance_brackets(strbuf_t *b, char *log, size_t log_sz) {
         else if (c == '[')
             stack[top++] = ']';
         else if (c == '}' || c == ']') {
-            if (top > 0 && stack[top-1] == c) top--;
+            if (top > 0 && stack[top - 1] == c) top--;
             /* mismatched closer - ignore; cJSON will flag remaining issues */
         }
     }
@@ -341,20 +341,6 @@ static cJSON *find_fuzzy(cJSON *obj, const char *name, const char **found_key) {
     return NULL;
 }
 
-/**
- * @brief Align a parsed JSON object with a schema in place (L2 stage).
- *
- * For each schema field, locates the corresponding object member by canonical
- * name, explicit alias, or fuzzy match; renames it to the canonical name when
- * found under another key, and coerces its value to the schema's declared type
- * (string/number/bool conversions). All edits and descriptions of each edit
- * are applied directly to @p obj and @p log.
- * @param obj cJSON object to align; must be an object node.
- * @param schema Field schema to enforce.
- * @param log Optional recovery log (NULL-safe).
- * @param log_sz Size of @p log in bytes.
- * @return Number of changes (renames + coercions) applied; negative on invalid arguments.
- */
 int cwist_json_schema_align(cJSON *obj, const cwist_schema_t *schema, char *log, size_t log_sz) {
     if (!obj || !schema || !cJSON_IsObject(obj)) return -1;
 

@@ -299,49 +299,6 @@ static int test_retained_completion(void) {
     return failures;
 }
 
-/* Synchronous completion destroys req/res before the losing calls run. */
-static int test_retained_completion(void) {
-    int failures = 0;
-    int sockets[2];
-    if (socketpair(AF_UNIX, SOCK_STREAM, 0, sockets) < 0) return 1;
-    cwist_http_request *req = cwist_http_request_create();
-    cwist_http_response *res = cwist_http_response_create();
-    if (!req || !res) {
-        cwist_http_request_destroy(req);
-        cwist_http_response_destroy(res);
-        close(sockets[0]);
-        close(sockets[1]);
-        return 1;
-    }
-    req->client_fd = sockets[0];
-    req->keep_alive = false;
-    cwist_async *a = cwist_async_defer(req, res);
-    if (!a) {
-        cwist_http_request_destroy(req);
-        cwist_http_response_destroy(res);
-        close(sockets[0]);
-        close(sockets[1]);
-        return 1;
-    }
-    CHECK(cwist_async_retain(a) == a, "retain returns the live handle");
-    cwist_async_dispatch_ack(a);
-    CHECK(cwist_async_respond(a, CWIST_HTTP_OK, "text/plain", "ok", 2),
-          "first synchronous completion wins");
-    CHECK(!cwist_async_respond(a, CWIST_HTTP_OK, NULL, NULL, 0),
-          "late respond safely loses after completion");
-    CHECK(!cwist_async_abort(a, CWIST_HTTP_INTERNAL_ERROR),
-          "late abort safely loses after completion");
-    cwist_http_response *loser = cwist_http_response_create();
-    CHECK(loser != NULL, "allocate losing caller-owned response");
-    if (loser) {
-        CHECK(!cwist_async_respond_with(a, loser), "late respond_with safely loses");
-        cwist_http_response_destroy(loser);
-    }
-    cwist_async_release(a);
-    close(sockets[1]);
-    return failures;
-}
-
 int main(void) {
     printf("Testing deferred responses (async handlers)...\n");
 
@@ -380,7 +337,9 @@ int main(void) {
         /* Every producer must have finished, and exactly the response queued
          * after its timeout must have lost the completion race. */
         _exit(rc == 0 && wins == 1 && done == 2 && jobs == responses_done &&
-              responses_won == jobs - 1 ? 0 : 1);
+                      responses_won == jobs - 1
+                  ? 0
+                  : 1);
     }
 
     usleep(400000);
@@ -450,14 +409,15 @@ int main(void) {
 
     /* Check both timeout/response orderings, including each late callback. */
     {
-        const char *paths[] = { "/response-before-timeout", "/timeout-before-response" };
-        const char *codes[] = { "200", "504" };
+        const char *paths[] = {"/response-before-timeout", "/timeout-before-response"};
+        const char *codes[] = {"200", "504"};
         for (size_t i = 0; i < 2; i++) {
-            struct client_conn c = { .fd = connect_to_server(), .pending_len = 0 };
+            struct client_conn c = {.fd = connect_to_server(), .pending_len = 0};
             CHECK(c.fd >= 0, "connect for response/timeout competition");
             if (c.fd < 0) continue;
             char request[256];
-            snprintf(request, sizeof(request), "GET %s HTTP/1.1\r\nHost: localhost\r\n\r\n", paths[i]);
+            snprintf(request, sizeof(request), "GET %s HTTP/1.1\r\nHost: localhost\r\n\r\n",
+                     paths[i]);
             send_all(c.fd, request);
             int n = read_one_response(&c, buf, sizeof(buf));
             CHECK(n > 0 && has_code(buf, codes[i]), "expected response/timeout winner");
@@ -554,7 +514,7 @@ int main(void) {
                   "parked writer delivers the full body intact");
 
             /* Keep-alive rearm after the parked writer drains. */
-            struct client_conn c = { .fd = fd, .pending_len = 0 };
+            struct client_conn c = {.fd = fd, .pending_len = 0};
             send_all(fd, "GET /hello HTTP/1.1\r\nHost: localhost\r\n\r\n");
             int n = read_one_response(&c, buf, sizeof(buf));
             CHECK(n > 0 && has_code(buf, "200") && strstr(buf, "second-ok"),

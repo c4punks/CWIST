@@ -151,14 +151,8 @@ void cwist_async_dispatch_ack(cwist_async *a) {
 
 static bool cwist_async_claim(cwist_async *a) {
     int expected = CWIST_ASYNC_ST_PENDING;
-    if (!atomic_compare_exchange_strong_explicit(&a->state, &expected, CWIST_ASYNC_ST_CLAIMED,
-                                                 memory_order_acq_rel, memory_order_acquire))
-        return false;
-    while (!atomic_load_explicit(&a->ack, memory_order_acquire)) {
-        if (pthread_equal(pthread_self(), a->dispatch_thread)) return true;
-        sched_yield();
-    }
-    return true;
+    return atomic_compare_exchange_strong_explicit(&a->state, &expected, CWIST_ASYNC_ST_CLAIMED,
+                                                   memory_order_acq_rel, memory_order_acquire);
 }
 
 static void cwist_async_reactor_complete(void *ctx);
@@ -177,8 +171,8 @@ static void cwist_async_complete(cwist_async *a) {
          * Wait for the dispatch ack first: enqueueing transfers req/res
          * ownership, which is only legal once dispatch observed the defer. */
         while (!atomic_load_explicit(&a->ack, memory_order_acquire)) sched_yield();
-        cwist_h2_async_queue_enqueue(a->h2_queue, a->h2_stream_id, a->req,
-                                     a->final_res, a->res, a->final_res_owned);
+        cwist_h2_async_queue_enqueue(a->h2_queue, a->h2_stream_id, a->req, a->final_res, a->res,
+                                     a->final_res_owned);
         cwist_h2_async_queue_release(a->h2_queue);
         cwist_free(a);
         return;
@@ -206,8 +200,8 @@ static void cwist_async_complete(cwist_async *a) {
         /* Resumable write: on a partial send the remainder is parked on a
          * POLLOUT slot and the reactor thread is freed immediately; the
          * parked callback performs the rearm/close when the drain ends. */
-        cwist_http_async_send_response(a->client_fd, res, a->reactor, a->conn,
-                                       keep, a->req && a->req->method == CWIST_HTTP_HEAD);
+        cwist_http_async_send_response(a->client_fd, res, a->reactor, a->conn, keep,
+                                       a->req && a->req->method == CWIST_HTTP_HEAD);
     } else {
         cwist_error_t err = (a->req && a->req->method == CWIST_HTTP_HEAD)
                                 ? cwist_http_send_response_head(a->client_fd, res)

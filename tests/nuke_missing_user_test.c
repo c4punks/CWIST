@@ -53,7 +53,8 @@ int main(void) {
 
     sqlite3 *setup = NULL;
     if (sqlite3_open(db_path, &setup) == SQLITE_OK) {
-        sqlite3_exec(setup, "CREATE TABLE IF NOT EXISTS users(id INT, username TEXT);", NULL, NULL, NULL);
+        sqlite3_exec(setup, "CREATE TABLE IF NOT EXISTS users(id INT, username TEXT);", NULL, NULL,
+                     NULL);
         sqlite3_close(setup);
     } else {
         fprintf(stderr, "Failed to create test DB\n");

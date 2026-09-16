@@ -23,9 +23,8 @@ typedef struct cwist_http3_context cwist_http3_context;
  * @param res HTTP response object to be populated (e.g., 200 OK to accept).
  * @param stream Opaque CWIST WebTransport session handle.
  */
-typedef void (*cwist_webtransport_handler_func)(cwist_http_request *req,
-                                                 cwist_http_response *res,
-                                                 void *stream);
+typedef void (*cwist_webtransport_handler_func)(cwist_http_request *req, cwist_http_response *res,
+                                                void *stream);
 
 /** --- HTTP/3 Structures --- */
 
@@ -46,7 +45,10 @@ struct cwist_http3_context {
     int datagram_enabled; /**< QUIC datagram extension enabled */
     void (*datagram_cb)(const void *data, size_t len, void *user_ctx);
     void *datagram_user_ctx;
-    cwist_webtransport_handler_func wt_handler;
+    cwist_webtransport_handler_func wt_handler; /**< WebTransport session handler */
+    void (*wt_new_stream_handler)(void *stream,
+                                  void *user_ctx); /**< Callback for new WT data streams */
+    void *wt_new_stream_ctx; /**< User context for wt_new_stream_handler */
     int idle_timeout_ms;       /**< 0 = use lsquic default (30s) */
     int handshake_timeout_ms;  /**< 0 = use lsquic default (10s) */
     int ping_period_ms;        /**< 0 = use lsquic default (server: none) */
@@ -76,8 +78,7 @@ typedef void (*cwist_http3_request_handler_func)(void *user_ctx, cwist_http_requ
 /**
  * @brief Initialize an HTTP/3 context with a certificate.
  */
-cwist_error_t cwist_http3_init_context(cwist_http3_context **ctx,
-                                       const char *cert_path,
+cwist_error_t cwist_http3_init_context(cwist_http3_context **ctx, const char *cert_path,
                                        const char *key_path);
 
 /**
@@ -100,10 +101,8 @@ cwist_error_t cwist_http3_serve_connection(cwist_http3_connection *conn,
 /**
  * @brief Run the HTTP/3 server event loop.
  */
-cwist_error_t cwist_http3_server_loop(int udp_fd,
-                                      cwist_http3_context *ctx,
-                                      cwist_http3_request_handler_func handler,
-                                      void *user_ctx);
+cwist_error_t cwist_http3_server_loop(int udp_fd, cwist_http3_context *ctx,
+                                      cwist_http3_request_handler_func handler, void *user_ctx);
 
 /** --- Advanced Features --- */
 

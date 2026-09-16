@@ -54,13 +54,13 @@ static uint64_t now_ns(void) {
  * occasional realloc. */
 
 enum {
-    ITERS      = 1000000,  /* allocations per thread per run */
+    ITERS = 1000000,  /* allocations per thread per run */
     NUM_THREADS = 8,       /* concurrent threads for the MT run */
     REALLOC_EVERY = 20,    /* do a realloc every N iterations */
 };
 
-static const size_t SIZES[] = { 16, 24, 32, 48, 64, 96, 128, 256, 512 };
-#define NSIZE (sizeof(SIZES)/sizeof(SIZES[0]))
+static const size_t SIZES[] = {16, 24, 32, 48, 64, 96, 128, 256, 512};
+#define NSIZE (sizeof(SIZES) / sizeof(SIZES[0]))
 
 /* Single-threaded baseline: plain malloc/free */
 static double run_baseline_st(void) {
@@ -71,7 +71,10 @@ static double run_baseline_st(void) {
         if (!p) abort();
         if (i % REALLOC_EVERY == 0) {
             void *p2 = realloc(p, sz * 2);
-            if (!p2) { free(p); continue; }
+            if (!p2) {
+                free(p);
+                continue;
+            }
             p = p2;
         }
         free(p);
@@ -113,10 +116,8 @@ static double run_cwist_mt(int nthreads) {
     memset(results, 0, sizeof(results));
 
     int n = nthreads < NUM_THREADS ? nthreads : NUM_THREADS;
-    for (int i = 0; i < n; i++)
-        pthread_create(&threads[i], NULL, thread_fn, &results[i]);
-    for (int i = 0; i < n; i++)
-        pthread_join(threads[i], NULL);
+    for (int i = 0; i < n; i++) pthread_create(&threads[i], NULL, thread_fn, &results[i]);
+    for (int i = 0; i < n; i++) pthread_join(threads[i], NULL);
 
     /* report the average ns/op across threads — each thread does ITERS ops */
     double total = 0.0;

@@ -14,9 +14,7 @@
 static volatile int g_wt_handler_called = 0;
 static volatile int g_new_stream_called = 0;
 
-static void wt_test_handler(cwist_http_request *req,
-                            cwist_http_response *res,
-                            void *stream) {
+static void wt_test_handler(cwist_http_request *req, cwist_http_response *res, void *stream) {
     (void)req;
     (void)stream;
     g_wt_handler_called = 1;

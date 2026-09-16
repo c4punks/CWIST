@@ -31,9 +31,9 @@ typedef struct cwist_websocket {
      * frag_buf accumulates payload bytes across FIN=0 frames; frag_opcode
      * preserves the first fragment's opcode so the assembled frame reports
      * the correct type (text vs binary). */
-    uint8_t          *frag_buf;
-    size_t            frag_len;
-    size_t            frag_cap;
+    uint8_t *frag_buf;
+    size_t frag_len;
+    size_t frag_cap;
     cwist_ws_opcode_t frag_opcode;
 } cwist_websocket;
 
@@ -73,7 +73,38 @@ cwist_ws_frame *cwist_websocket_receive(cwist_websocket *ws);
 /**
  * @brief Send a frame with the specified opcode and payload.
  */
-int cwist_websocket_send(cwist_websocket *ws, cwist_ws_opcode_t opcode, const uint8_t *data, size_t len);
+int cwist_websocket_send(cwist_websocket *ws, cwist_ws_opcode_t opcode, const uint8_t *data,
+                         size_t len);
+
+/**
+ * @brief Send a large payload as sequenced binary frames.
+ *
+ * Splits @p data into chunks of @p chunk_payload_size (or smaller for the
+ * final chunk), prefixes each chunk with the CWIST sequence header, and sends
+ * every chunk as an independent binary frame.  The peer can reassemble the
+ * original payload even when frames arrive out of order.
+ *
+ * @param ws WebSocket connection.
+ * @param data Payload bytes.
+ * @param len Payload length.
+ * @param chunk_payload_size Maximum payload bytes per chunk (must be > 0).
+ * @return 0 on success, -1 on failure.
+ */
+int cwist_websocket_send_sequenced(cwist_websocket *ws, const uint8_t *data, size_t len,
+                                   uint16_t chunk_payload_size);
+
+/**
+ * @brief Receive and reassemble a sequenced binary message.
+ *
+ * Reads binary frames until every chunk of one sequenced message has arrived,
+ * discarding duplicates and reordering out-of-order chunks.  The returned
+ * buffer is heap-allocated and must be freed with cwist_free().
+ *
+ * @param ws WebSocket connection.
+ * @param out_len Receives the length of the reassembled payload.
+ * @return Newly allocated payload buffer, or NULL on error/incomplete message.
+ */
+uint8_t *cwist_websocket_receive_sequenced(cwist_websocket *ws, size_t *out_len);
 
 /**
  * @brief Destroy a frame.

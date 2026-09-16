@@ -28,6 +28,290 @@
 #include <arpa/inet.h>
 
 #define CWIST_ROUTE_BUCKETS 127
+#define CWIST_STATIC_RETIRE_NS TT_SECOND(5)
+
+#ifndef __EMSCRIPTEN__
+/* Default open-file soft-limit target: covers C1M's one-fd-per-connection
+ * budget with headroom. Overridable via CWIST_FD_LIMIT_TARGET for
+ * deployments that need a different budget (a smaller container quota, or a
+ * larger one for a workload with more fds-per-connection than plain HTTP -
+ * e.g. proxying, or per-connection log/temp files). */
+#define CWIST_DEFAULT_FD_LIMIT_TARGET ((rlim_t)1050000)
+
+/**
+ * @brief Tune system resource limits to handle high concurrency loads.
+ */
+static void cwist_app_tune_system(void) {
+    struct rlimit rl;
+    if (getrlimit(RLIMIT_NOFILE, &rl) != 0) {
+        fprintf(stderr, "[CWIST] Cannot read file limits: %s\n", strerror(errno));
+        return;
+    }
+    /* Keep the hard limit. Increase the soft limit only, up to a tunable
+     * target - CWIST_FD_LIMIT_TARGET overrides the default when set to a
+     * valid positive integer; any other value (unset, empty, non-numeric,
+     * trailing garbage, zero or negative) falls back to the default rather
+     * than silently using 0 or a partially-parsed number. */
+    rlim_t target = CWIST_DEFAULT_FD_LIMIT_TARGET;
+    const char *fd_limit_env = getenv("CWIST_FD_LIMIT_TARGET");
+    if (fd_limit_env && fd_limit_env[0]) {
+        char *end = NULL;
+        errno = 0;
+        long parsed = strtol(fd_limit_env, &end, 10);
+        if (errno == 0 && end && *end == '\0' && parsed > 0) {
+            target = (rlim_t)parsed;
+        } else {
+            fprintf(stderr,
+                    "[CWIST] Ignoring invalid CWIST_FD_LIMIT_TARGET=\"%s\" (using default %llu)\n",
+                    fd_limit_env, (unsigned long long)CWIST_DEFAULT_FD_LIMIT_TARGET);
+        }
+    }
+    if (rl.rlim_max != RLIM_INFINITY && target > rl.rlim_max) {
+        target = rl.rlim_max;
+    }
+    if (rl.rlim_cur < target) {
+        rl.rlim_cur = target;
+        if (setrlimit(RLIMIT_NOFILE, &rl) != 0) {
+            fprintf(stderr, "[CWIST] Cannot increase file limit: %s\n", strerror(errno));
+            return;
+        }
+    }
+    printf("[CWIST] Open file soft limit: %llu\n", (unsigned long long)rl.rlim_cur);
+}
+#endif
+
+#ifndef __EMSCRIPTEN__
+/**
+ * @brief Read the current libttak tick count used for static-file retirement deadlines.
+ * @return Monotonic tick value compatible with libttak memory APIs.
+ */
+static inline uint64_t cwist_mem_now(void) {
+    return ttak_get_tick_count();
+}
+#endif
+
+#ifndef __EMSCRIPTEN__
+/* The static-file memory cache rides on libttak's mem tree and a watcher
+ * thread; WASM hosts get neither (cwist_prepare_static() always declines). */
+/**
+ * @brief Check whether the static-file memory cache can admit a payload after reclamation.
+ * @param mem Static-file memory manager.
+ * @param incoming Size of the candidate payload.
+ * @param reclaimable Bytes that could be reclaimed from an existing entry.
+ * @return true when the projected usage fits inside the configured capacity.
+ */
+static bool cwist_mem_has_capacity(cwist_fix_server_mem *mem, size_t incoming, size_t reclaimable) {
+    if (!mem || mem->total_capacity == 0) {
+        return true;
+    }
+    if (incoming > mem->total_capacity) {
+        return false;
+    }
+    size_t used = mem->current_used;
+    if (reclaimable > used) {
+        reclaimable = used;
+    }
+    size_t projected = used - reclaimable + incoming;
+    return projected <= mem->total_capacity;
+}
+
+/**
+ * @brief Reserve one metadata slot in the static-file registry, growing the array when needed.
+ * @param mem Static-file memory manager.
+ * @return Pointer to the claimed entry slot, or NULL on allocation failure.
+ */
+static cwist_file_t *cwist_mem_claim_entry(cwist_fix_server_mem *mem) {
+    if (!mem) return NULL;
+    if (mem->file_count >= mem->files_capacity) {
+        size_t new_cap = mem->files_capacity == 0 ? 16 : mem->files_capacity * 2;
+        cwist_file_t *new_files = cwist_realloc(mem->files, new_cap * sizeof(cwist_file_t));
+        if (!new_files) {
+            return NULL;
+        }
+        mem->files = new_files;
+        mem->files_capacity = new_cap;
+    }
+    cwist_file_t *entry = &mem->files[mem->file_count];
+    memset(entry, 0, sizeof(*entry));
+    mem->file_count++;
+    return entry;
+}
+
+/**
+ * @brief Load a filesystem object into libttak-managed memory and track its tree node.
+ * @param mem Static-file memory manager.
+ * @param fs_path Filesystem path to read.
+ * @param size Number of bytes to load.
+ * @param data_out Output pointer receiving the allocated payload.
+ * @param node_out Output pointer receiving the libttak tree node.
+ * @return true when the payload was loaded and registered successfully.
+ */
+static bool cwist_mem_create_payload(cwist_fix_server_mem *mem, const char *fs_path, size_t size,
+                                     void **data_out, ttak_mem_node_t **node_out) {
+    if (!mem || !fs_path || !data_out || !node_out) return false;
+
+    void *buffer = ttak_mem_alloc_safe(size ? size : 1, __TTAK_UNSAFE_MEM_FOREVER__,
+                                       cwist_mem_now(), true, false, true, true, TTAK_MEM_DEFAULT);
+    if (!buffer) {
+        fprintf(stderr, "[StaticMem] Failed to allocate %zu bytes via libttak for %s\n", size,
+                fs_path);
+        return false;
+    }
+
+    FILE *f = fopen(fs_path, "rb");
+    if (!f) {
+        fprintf(stderr, "[StaticMem] Failed to open %s\n", fs_path);
+        ttak_mem_free(buffer);
+        return false;
+    }
+
+    size_t to_read = size;
+    if (to_read > 0) {
+        size_t read = fread(buffer, 1, to_read, f);
+        if (read != to_read) {
+            fprintf(stderr, "[StaticMem] Short read for %s (expected %zu, got %zu)\n", fs_path,
+                    to_read, read);
+            fclose(f);
+            ttak_mem_free(buffer);
+            return false;
+        }
+    }
+    fclose(f);
+
+    ttak_mem_node_t *node = ttak_mem_tree_add(&mem->file_tree, buffer, size ? size : 1,
+                                              __TTAK_UNSAFE_MEM_FOREVER__, true);
+    if (!node) {
+        ttak_mem_free(buffer);
+        return false;
+    }
+
+    *data_out = buffer;
+    *node_out = node;
+    return true;
+}
+
+/**
+ * @brief Retire an old static-file node after a grace period so in-flight reads can finish.
+ * @param mem Static-file memory manager.
+ * @param node Previous libttak node to release.
+ */
+static void cwist_mem_release_node_delayed(cwist_fix_server_mem *mem, ttak_mem_node_t *node) {
+    if (!mem || !node) return;
+    uint64_t now = cwist_mem_now();
+    pthread_mutex_lock(&node->lock);
+    node->expires_tick = now + mem->retire_grace_ns;
+    pthread_mutex_unlock(&node->lock);
+    ttak_mem_node_release(node);
+}
+
+/**
+ * @brief Populate a registry entry with a freshly loaded static-file payload.
+ * @param mem Static-file memory manager.
+ * @param entry Registry entry to fill.
+ * @param fs_path Filesystem path associated with the payload.
+ * @param st Stat information for the file.
+ * @param data Loaded file bytes.
+ * @param node Libttak node tracking the payload.
+ * @return true when the entry was attached successfully.
+ */
+static bool cwist_mem_attach_entry(cwist_fix_server_mem *mem, cwist_file_t *entry,
+                                   const char *fs_path, const struct stat *st, void *data,
+                                   ttak_mem_node_t *node) {
+    if (!mem || !entry || !fs_path || !st) return false;
+    char *path_copy = cwist_strdup(fs_path);
+    if (!path_copy) {
+        ttak_mem_tree_remove(&mem->file_tree, node);
+        return false;
+    }
+
+    entry->path = NULL;
+    entry->fs_path = path_copy;
+    entry->data = data;
+    entry->size = st->st_size;
+    entry->last_mod = st->st_mtime;
+    entry->node = node;
+
+    mem->current_used += st->st_size;
+    return true;
+}
+
+/**
+ * @brief Register a new static file in the fixed-memory cache.
+ * @param mem Static-file memory manager.
+ * @param fs_path Filesystem path to cache.
+ * @param st Stat information describing the file.
+ * @return true when the file was admitted to the cache.
+ */
+static bool cwist_mem_register_file(cwist_fix_server_mem *mem, const char *fs_path,
+                                    const struct stat *st) {
+    if (!mem || !fs_path || !st) return false;
+    if (!cwist_mem_has_capacity(mem, st->st_size, 0)) {
+        fprintf(stderr, "[StaticMem] Skipping %s (size %zu exceeds capacity)\n", fs_path,
+                st->st_size);
+        return false;
+    }
+    cwist_file_t *entry = cwist_mem_claim_entry(mem);
+    if (!entry) {
+        fprintf(stderr, "[StaticMem] Failed to allocate metadata entry for %s\n", fs_path);
+        return false;
+    }
+    void *data = NULL;
+    ttak_mem_node_t *node = NULL;
+    if (!cwist_mem_create_payload(mem, fs_path, st->st_size, &data, &node)) {
+        mem->file_count--;
+        return false;
+    }
+    if (!cwist_mem_attach_entry(mem, entry, fs_path, st, data, node)) {
+        mem->file_count--;
+        return false;
+    }
+    return true;
+}
+
+/**
+ * @brief Reload a cached static file after detecting a modification on disk.
+ * @param mem Static-file memory manager.
+ * @param entry Existing cache entry to refresh.
+ * @param st Updated stat information for the file.
+ * @return true when the file was refreshed successfully.
+ */
+static bool cwist_mem_refresh_file(cwist_fix_server_mem *mem, cwist_file_t *entry,
+                                   const struct stat *st) {
+    if (!mem || !entry || !st) return false;
+    size_t reclaimable = entry->size;
+    if (!cwist_mem_has_capacity(mem, st->st_size, reclaimable)) {
+        fprintf(stderr, "[StaticMem] OOM reloading %s (%zu bytes)\n", entry->fs_path,
+                (size_t)st->st_size);
+        return false;
+    }
+
+    void *data = NULL;
+    ttak_mem_node_t *node = NULL;
+    if (!cwist_mem_create_payload(mem, entry->fs_path, st->st_size, &data, &node)) {
+        return false;
+    }
+
+    ttak_mem_node_t *old_node = entry->node;
+    size_t old_size = entry->size;
+
+    entry->data = data;
+    entry->node = node;
+    entry->size = st->st_size;
+    entry->last_mod = st->st_mtime;
+
+    if (mem->current_used >= old_size) {
+        mem->current_used -= old_size;
+    } else {
+        mem->current_used = 0;
+    }
+    mem->current_used += st->st_size;
+
+    if (old_node) {
+        cwist_mem_release_node_delayed(mem, old_node);
+    }
+    return true;
+}
+#endif /* __EMSCRIPTEN__ */
 
 typedef struct cwist_route_entry {
     char *path;
@@ -64,15 +348,23 @@ typedef struct {
 
 static cwist_route_table *cwist_route_table_create(void);
 static void cwist_route_table_destroy(cwist_route_table *table);
-static void cwist_route_table_insert(cwist_route_table *table, const char *path, cwist_http_method_t method, cwist_handler_func handler, cwist_ws_handler_func ws_handler);
-static cwist_route_entry *cwist_route_table_lookup(cwist_route_table *table, cwist_http_method_t method, const char *path);
-static cwist_route_entry *cwist_route_table_match_params(cwist_route_table *table, cwist_http_request *req);
+static void cwist_route_table_insert(cwist_route_table *table, const char *path, const char *name,
+                                     cwist_http_method_t method, cwist_handler_func handler,
+                                     cwist_ws_handler_func ws_handler, cwist_endpoint_opt_t opts);
+static cwist_route_entry *cwist_route_table_lookup(cwist_route_table *table,
+                                                   cwist_http_method_t method, const char *path);
+static cwist_route_entry *cwist_route_table_match_params(cwist_route_table *table,
+                                                         cwist_http_request *req);
 static bool match_path(const char *pattern, const char *actual, cwist_query_map *params);
-static void execute_chain(cwist_app *app, cwist_http_request *req, cwist_http_response *res, cwist_handler_func final_handler, void *handler_data);
-static bool cwist_prepare_static(cwist_app *app, cwist_http_request *req, cwist_static_request_info *info);
+static void execute_chain(cwist_app *app, cwist_http_request *req, cwist_http_response *res,
+                          cwist_handler_func final_handler, void *handler_data);
+static bool cwist_prepare_static(cwist_app *app, cwist_http_request *req,
+                                 cwist_static_request_info *info);
 static void cwist_static_handler(cwist_http_request *req, cwist_http_response *res);
 static void cwist_multiport_destroy_owned_subapps(cwist_app *root);
 static void cwist_multiport_unlink_app(cwist_app *app);
+static void cwist_multiport_h3_copy_tunables(cwist_http3_context *dst,
+                                             const cwist_http3_context *src);
 
 static bool route_has_params(const char *path) {
     if (!path) return false;
@@ -91,8 +383,12 @@ static size_t cwist_route_hash(cwist_http_method_t method, const char *path, siz
     return (size_t)(hash % bucket_count);
 }
 
-static cwist_route_entry *cwist_route_entry_create(const char *path, cwist_http_method_t method, cwist_handler_func handler, cwist_ws_handler_func ws_handler) {
-    cwist_route_entry *entry = (cwist_route_entry *)malloc(sizeof(cwist_route_entry));
+static cwist_route_entry *cwist_route_entry_create(const char *path, const char *name,
+                                                   cwist_http_method_t method,
+                                                   cwist_handler_func handler,
+                                                   cwist_ws_handler_func ws_handler,
+                                                   cwist_endpoint_opt_t opts) {
+    cwist_route_entry *entry = (cwist_route_entry *)cwist_alloc(sizeof(cwist_route_entry));
     if (!entry) return NULL;
     entry->path = strdup(path ? path : "/");
     entry->method = method;
@@ -113,7 +409,8 @@ static cwist_route_table *cwist_route_table_create(void) {
     cwist_route_table *table = (cwist_route_table *)malloc(sizeof(cwist_route_table));
     if (!table) return NULL;
     table->bucket_count = CWIST_ROUTE_BUCKETS;
-    table->buckets = (cwist_route_entry **)calloc(table->bucket_count, sizeof(cwist_route_entry *));
+    table->buckets =
+        (cwist_route_entry **)cwist_alloc_array(table->bucket_count, sizeof(cwist_route_entry *));
     if (!table->buckets) {
         free(table);
         return NULL;
@@ -143,9 +440,12 @@ static void cwist_route_table_destroy(cwist_route_table *table) {
     free(table);
 }
 
-static void cwist_route_table_insert(cwist_route_table *table, const char *path, cwist_http_method_t method, cwist_handler_func handler, cwist_ws_handler_func ws_handler) {
+static void cwist_route_table_insert(cwist_route_table *table, const char *path, const char *name,
+                                     cwist_http_method_t method, cwist_handler_func handler,
+                                     cwist_ws_handler_func ws_handler, cwist_endpoint_opt_t opts) {
     if (!table || !path) return;
-    cwist_route_entry *entry = cwist_route_entry_create(path, method, handler, ws_handler);
+    cwist_route_entry *entry =
+        cwist_route_entry_create(path, name, method, handler, ws_handler, opts);
     if (!entry) return;
 
     if (entry->has_params) {
@@ -171,20 +471,47 @@ static void cwist_route_table_insert(cwist_route_table *table, const char *path,
     *bucket = entry;
 }
 
-static cwist_route_entry *cwist_route_table_lookup(cwist_route_table *table, cwist_http_method_t method, const char *path) {
+static cwist_route_entry *cwist_route_table_lookup(cwist_route_table *table,
+                                                   cwist_http_method_t method, const char *path) {
     if (!table || !path) return NULL;
     size_t idx = cwist_route_hash(method, path, table->bucket_count);
     cwist_route_entry *curr = table->buckets[idx];
+
+    // Tiny string optimization: if length <= 8, cast to uint64 and compare in one shot
+    // Note: We need to handle potential access beyond string end safely.
+    // However, simplest heuristic is checking length first.
+    // Actually, we can just check length.
+
+    size_t path_len = strlen(path);
+    uint64_t path_u64 = 0;
+    bool use_fast_path = (path_len <= 8);
+    if (use_fast_path) {
+        memcpy(&path_u64, path, path_len); // Safe copy
+    }
+
     while (curr) {
-        if (curr->method == method && strcmp(curr->path, path) == 0) {
-            return curr;
+        if (curr->method == method) {
+            if (use_fast_path) {
+                 // Fast path check
+                size_t curr_len = strlen(curr->path);
+                if (curr_len == path_len) {
+                    uint64_t curr_u64 = 0;
+                    memcpy(&curr_u64, curr->path, curr_len);
+                    if (path_u64 == curr_u64) return curr;
+                }
+            } else {
+                if (strcmp(curr->path, path) == 0) {
+                    return curr;
+                }
+            }
         }
         curr = curr->next;
     }
     return NULL;
 }
 
-static cwist_route_entry *cwist_route_table_match_params(cwist_route_table *table, cwist_http_request *req) {
+static cwist_route_entry *cwist_route_table_match_params(cwist_route_table *table,
+                                                         cwist_http_request *req) {
     if (!table || !req || !req->path || !req->path->data) return NULL;
     cwist_route_entry *curr = table->param_routes;
     while (curr) {
@@ -198,6 +525,34 @@ static cwist_route_entry *cwist_route_table_match_params(cwist_route_table *tabl
     return NULL;
 }
 
+/**
+ * @brief Decode percent-encoded URL components in-place into dst.
+ * @return Number of bytes written to dst (excluding NUL).
+ */
+static size_t cwist_url_decode(const char *src, char *dst, size_t dst_size) {
+    size_t i = 0, j = 0;
+    while (src[i] && j + 1 < dst_size) {
+        if (src[i] == '%' && isxdigit((unsigned char)src[i + 1]) &&
+            isxdigit((unsigned char)src[i + 2])) {
+            char hex[3] = {src[i + 1], src[i + 2], '\0'};
+            dst[j++] = (char)strtol(hex, NULL, 16);
+            i += 3;
+        } else if (src[i] == '+') {
+            dst[j++] = ' ';
+            i++;
+        } else {
+            dst[j++] = src[i++];
+        }
+    }
+    dst[j] = '\0';
+    return j;
+}
+
+/**
+ * @brief Reject static-file paths that attempt parent-directory traversal.
+ * @param path Relative path component derived from the request.
+ * @return true when the path contains `..` traversal segments.
+ */
 static bool cwist_path_has_parent_ref(const char *path) {
     if (!path) return false;
     const char *cursor = path;
@@ -215,7 +570,16 @@ static bool cwist_path_has_parent_ref(const char *path) {
     return false;
 }
 
-static bool cwist_static_match_entry(const cwist_static_dir *entry, const char *req_path, const char **relative_ptr, bool *use_index) {
+/**
+ * @brief Match a request path against one configured static-directory mapping.
+ * @param entry Static-directory mapping candidate.
+ * @param req_path Request path to inspect.
+ * @param relative_ptr Output pointer receiving the unmatched suffix inside the mapping.
+ * @param use_index Output flag indicating whether an index file should be served.
+ * @return true when the request is covered by the mapping.
+ */
+static bool cwist_static_match_entry(const cwist_static_dir *entry, const char *req_path,
+                                     const char **relative_ptr, bool *use_index) {
     if (!entry || !req_path || req_path[0] == '\0') return false;
     size_t prefix_len = strlen(entry->url_prefix);
     if (prefix_len == 0) return false;
@@ -249,7 +613,22 @@ static bool cwist_static_match_entry(const cwist_static_dir *entry, const char *
     return true;
 }
 
-static bool cwist_prepare_static(cwist_app *app, cwist_http_request *req, cwist_static_request_info *info) {
+/**
+ * @brief Resolve a request path to one configured static directory before routing.
+ * @param app Application that owns the static mappings.
+ * @param req Incoming request to inspect.
+ * @param info Output structure receiving the resolved mapping details.
+ * @return true when the request should be served by the static-file handler.
+ */
+static bool cwist_prepare_static(cwist_app *app, cwist_http_request *req,
+                                 cwist_static_request_info *info) {
+#ifdef __EMSCRIPTEN__
+    /* No filesystem-backed static cache in WASM hosts. */
+    (void)app;
+    (void)req;
+    (void)info;
+    return false;
+#else
     if (!app || !req || !req->path || !req->path->data) return false;
     if (!app->static_dirs) return false;
     if (req->method != CWIST_HTTP_GET && req->method != CWIST_HTTP_HEAD) return false;
@@ -271,6 +650,120 @@ static bool cwist_prepare_static(cwist_app *app, cwist_http_request *req, cwist_
     }
     return false;
 }
+
+#ifndef __EMSCRIPTEN__
+/**
+ * @brief Recursively scan a static root directory to size or populate the fixed-memory cache.
+ * @param fs_root Filesystem directory to scan.
+ * @param total_size Running byte total accumulated during the scan.
+ * @param mem Static-file memory manager to populate when not in dry-run mode.
+ * @param dry_run When true, only compute the required capacity.
+ */
+static void cwist_scan_recursive(const char *fs_root, size_t *total_size, cwist_fix_server_mem *mem,
+                                 bool dry_run) {
+    DIR *d = opendir(fs_root);
+    if (!d) return;
+
+    struct dirent *dir;
+    char full_path[PATH_MAX];
+    struct stat st;
+
+    while ((dir = readdir(d)) != NULL) {
+        if (strcmp(dir->d_name, ".") == 0 || strcmp(dir->d_name, "..") == 0) continue;
+
+        snprintf(full_path, sizeof(full_path), "%s/%s", fs_root, dir->d_name);
+        if (stat(full_path, &st) == -1) continue;
+
+        if (S_ISDIR(st.st_mode)) {
+            cwist_scan_recursive(full_path, total_size, mem, dry_run);
+        } else if (S_ISREG(st.st_mode)) {
+            if (dry_run) {
+                if (total_size) *total_size += st.st_size;
+            } else if (mem) {
+                if (!cwist_mem_register_file(mem, full_path, &st)) {
+                    fprintf(stderr, "[StaticMem] Failed to load %s\n", full_path);
+                }
+            }
+        }
+    }
+    closedir(d);
+}
+
+/**
+ * @brief Initialize the static-file fixed-memory cache based on configured directories.
+ * @param app Application whose static mappings should be scanned and cached.
+ */
+static void cwist_mem_init(cwist_app *app) {
+    if (!app || !app->static_dirs) return;
+
+    app->mem_manager = cwist_alloc(sizeof(cwist_fix_server_mem));
+    app->mem_manager->check_interval_ms = 2000;
+    pthread_mutex_init(&app->mem_manager->lock, NULL);
+    app->mem_manager->retire_grace_ns = CWIST_STATIC_RETIRE_NS;
+    ttak_mem_tree_init(&app->mem_manager->file_tree);
+
+    size_t total_size = 0;
+    cwist_static_dir *curr = app->static_dirs;
+    while (curr) {
+        cwist_scan_recursive(curr->fs_root, &total_size, NULL, true);
+        curr = curr->next;
+    }
+
+    if (app->max_mem_space > 0) {
+        app->mem_manager->total_capacity = app->max_mem_space;
+    } else {
+        if (total_size == 0) total_size = CWIST_MIB(1);
+        app->mem_manager->total_capacity = total_size * 2;
+    }
+
+    app->mem_manager->current_used = 0;
+
+    // Load files
+    curr = app->static_dirs;
+    while (curr) {
+        cwist_scan_recursive(curr->fs_root, NULL, app->mem_manager, false);
+        curr = curr->next;
+    }
+
+    printf("Server Memory Initialized: %zu used / %zu total bytes (%zu files)\n",
+           app->mem_manager->current_used, app->mem_manager->total_capacity,
+           app->mem_manager->file_count);
+}
+
+static void *cwist_mem_watcher(void *arg) {
+    cwist_app *app = (cwist_app *)arg;
+    cwist_fix_server_mem *mem = app->mem_manager;
+
+    while (mem->watcher_running) {
+        usleep(mem->check_interval_ms * 1000);
+
+        pthread_mutex_lock(&mem->lock);
+        for (size_t i = 0; i < mem->file_count; i++) {
+            cwist_file_t *f = &mem->files[i];
+            struct stat st;
+            if (stat(f->fs_path, &st) == 0) {
+                if (st.st_mtime > f->last_mod) {
+                    if (cwist_mem_refresh_file(mem, f, &st)) {
+                        printf("[Hot Reload] Updated: %s\n", f->fs_path);
+                    }
+                }
+            }
+        }
+        pthread_mutex_unlock(&mem->lock);
+    }
+    return NULL;
+}
+
+static cwist_file_t *cwist_mem_get_file(cwist_fix_server_mem *mem, const char *fs_path) {
+    if (!mem || !fs_path) return NULL;
+    for (size_t i = 0; i < mem->file_count; i++) {
+        if (strcmp(mem->files[i].fs_path, fs_path) == 0) {
+            return &mem->files[i];
+        }
+    }
+    return NULL;
+}
+#endif /* __EMSCRIPTEN__ */
 
 static char *cwist_normalize_prefix(const char *prefix) {
     if (!prefix || prefix[0] == '\0') {
@@ -339,7 +832,8 @@ static void cwist_static_handler(cwist_http_request *req, cwist_http_response *r
     }
 
     char fs_path[PATH_MAX];
-    int written = snprintf(fs_path, sizeof(fs_path), "%s/%s", info->mapping->fs_root, relative_buf);
+    int written =
+        snprintf(fs_path, sizeof(fs_path), "%s/%s", info->mapping->fs_root, decoded_relative);
     if (written < 0 || written >= (int)sizeof(fs_path)) {
         res->status_code = CWIST_HTTP_BAD_REQUEST;
         cwist_sstring_assign(res->body, "Static path too long");
@@ -348,9 +842,9 @@ static void cwist_static_handler(cwist_http_request *req, cwist_http_response *r
 
     cwist_app *app = req->app;
     if (!app || !app->mem_manager) {
-         res->status_code = CWIST_HTTP_INTERNAL_ERROR;
-         cwist_sstring_assign(res->body, "Server memory not initialized");
-         return;
+        res->status_code = CWIST_HTTP_INTERNAL_ERROR;
+        cwist_sstring_assign(res->body, "Server memory not initialized");
+        return;
     }
 
     cwist_fix_server_mem *mem = app->mem_manager;
@@ -362,20 +856,30 @@ static void cwist_static_handler(cwist_http_request *req, cwist_http_response *r
         const char *dot = strrchr(fs_path, '.');
         const char *mime = "application/octet-stream";
         if (dot) {
-            if (strcasecmp(dot, ".html") == 0) mime = "text/html; charset=utf-8";
-            else if (strcasecmp(dot, ".css") == 0) mime = "text/css; charset=utf-8";
-            else if (strcasecmp(dot, ".js") == 0) mime = "application/javascript";
-            else if (strcasecmp(dot, ".json") == 0) mime = "application/json";
-            else if (strcasecmp(dot, ".png") == 0) mime = "image/png";
-            else if (strcasecmp(dot, ".jpg") == 0 || strcasecmp(dot, ".jpeg") == 0) mime = "image/jpeg";
-            else if (strcasecmp(dot, ".gif") == 0) mime = "image/gif";
-            else if (strcasecmp(dot, ".svg") == 0) mime = "image/svg+xml";
-            else if (strcasecmp(dot, ".txt") == 0) mime = "text/plain; charset=utf-8";
+            if (strcasecmp(dot, ".html") == 0)
+                mime = "text/html; charset=utf-8";
+            else if (strcasecmp(dot, ".css") == 0)
+                mime = "text/css; charset=utf-8";
+            else if (strcasecmp(dot, ".js") == 0)
+                mime = "application/javascript";
+            else if (strcasecmp(dot, ".json") == 0)
+                mime = "application/json";
+            else if (strcasecmp(dot, ".png") == 0)
+                mime = "image/png";
+            else if (strcasecmp(dot, ".jpg") == 0 || strcasecmp(dot, ".jpeg") == 0)
+                mime = "image/jpeg";
+            else if (strcasecmp(dot, ".gif") == 0)
+                mime = "image/gif";
+            else if (strcasecmp(dot, ".svg") == 0)
+                mime = "image/svg+xml";
+            else if (strcasecmp(dot, ".txt") == 0)
+                mime = "text/plain; charset=utf-8";
         }
 
         // Generate cache headers
         char etag[64];
-        snprintf(etag, sizeof(etag), "\"%lx-%lx\"", (unsigned long)file->last_mod, (unsigned long)file->size);
+        snprintf(etag, sizeof(etag), "\"%lx-%lx\"", (unsigned long)file->last_mod,
+                 (unsigned long)file->size);
         char last_mod_buf[64];
         cwist_http_format_date(file->last_mod, last_mod_buf, sizeof(last_mod_buf));
 
@@ -385,7 +889,8 @@ static void cwist_static_handler(cwist_http_request *req, cwist_http_response *r
         if (if_none_match && strcmp(if_none_match, etag) == 0) {
             not_modified = true;
         } else {
-            const char *if_modified_since = cwist_http_header_get(req->headers, "If-Modified-Since");
+            const char *if_modified_since =
+                cwist_http_header_get(req->headers, "If-Modified-Since");
             if (if_modified_since) {
                 time_t ims = cwist_http_parse_date(if_modified_since);
                 if (ims != (time_t)-1 && file->last_mod <= ims) {
@@ -398,7 +903,8 @@ static void cwist_static_handler(cwist_http_request *req, cwist_http_response *r
             res->status_code = CWIST_HTTP_NOT_MODIFIED; // 304
             cwist_http_header_add(&res->headers, "ETag", etag);
             cwist_http_header_add(&res->headers, "Last-Modified", last_mod_buf);
-            const char *cc = info->mapping->cache_control ? info->mapping->cache_control : "public, max-age=3600";
+            const char *cc = info->mapping->cache_control ? info->mapping->cache_control
+                                                          : "public, max-age=3600";
             cwist_http_header_add(&res->headers, "Cache-Control", cc);
             cwist_sstring_assign(res->body, "");
         } else {
@@ -441,7 +947,8 @@ static void cwist_static_handler(cwist_http_request *req, cwist_http_response *r
                     send_len = range_end - range_start + 1;
                     res->status_code = CWIST_HTTP_PARTIAL_CONTENT;
                     char cr[128];
-                    snprintf(cr, sizeof(cr), "bytes %zu-%zu/%zu", range_start, range_end, file->size);
+                    snprintf(cr, sizeof(cr), "bytes %zu-%zu/%zu", range_start, range_end,
+                             file->size);
                     cwist_http_header_add(&res->headers, "Content-Range", cr);
                 }
             }
@@ -449,15 +956,19 @@ static void cwist_static_handler(cwist_http_request *req, cwist_http_response *r
             if (res->status_code != CWIST_HTTP_RANGE_NOT_SATISFIABLE) {
                 if (file->data && file->node) {
                     ttak_mem_node_acquire(file->node);
-                    cwist_http_response_set_body_ptr_managed(res, (char *)file->data + send_offset, send_len, cwist_static_release_body, file->node);
+                    cwist_http_response_set_body_ptr_managed(res, (char *)file->data + send_offset,
+                                                             send_len, cwist_static_release_body,
+                                                             file->node);
                 } else {
                     res->status_code = CWIST_HTTP_INTERNAL_ERROR;
                     cwist_sstring_assign(res->body, "Static buffer missing");
                 }
             }
 
-            if (res->status_code != CWIST_HTTP_INTERNAL_ERROR && res->status_code != CWIST_HTTP_RANGE_NOT_SATISFIABLE) {
-                const char *cc = info->mapping->cache_control ? info->mapping->cache_control : "public, max-age=3600";
+            if (res->status_code != CWIST_HTTP_INTERNAL_ERROR &&
+                res->status_code != CWIST_HTTP_RANGE_NOT_SATISFIABLE) {
+                const char *cc = info->mapping->cache_control ? info->mapping->cache_control
+                                                              : "public, max-age=3600";
                 char len_buf[32];
                 snprintf(len_buf, sizeof(len_buf), "%zu", send_len);
                 cwist_http_header_add(&res->headers, "Content-Length", len_buf);
@@ -504,15 +1015,10 @@ static cwist_error_t cwist_app_refresh_https_context(cwist_app *app) {
         app->ssl_ctx = NULL;
     }
 
-    cwist_https_options options = {
-        .enable_http2 = app->use_https2,
-        .enable_http3 = app->use_https3
-    };
-    return cwist_https_init_context_with_options(&app->ssl_ctx,
-                                                 app->cert_path,
-                                                 app->key_path,
-                                                 &options,
-                                                 app);
+    cwist_https_options options = {.enable_http2 = app->use_https2,
+                                   .enable_http3 = app->use_https3};
+    return cwist_https_init_context_with_options(&app->ssl_ctx, app->cert_path, app->key_path,
+                                                 &options, app);
 }
 
 static void static_ssl_http1_handler(cwist_https_connection *conn, void *ctx);
@@ -520,7 +1026,8 @@ static void static_ssl_http2_handler(cwist_https_connection *conn, void *ctx);
 
 static void cwist_app_refresh_https_request_handler(cwist_app *app) {
     if (!app) return;
-    app->https_request_handler = app->use_https2 ? static_ssl_http2_handler : static_ssl_http1_handler;
+    app->https_request_handler =
+        app->use_https2 ? static_ssl_http2_handler : static_ssl_http1_handler;
 }
 
 /**
@@ -558,7 +1065,7 @@ static cwist_error_t cwist_app_refresh_http3_context(cwist_app *app) {
 cwist_app *cwist_app_create(void) {
     cwist_app *app = (cwist_app *)malloc(sizeof(cwist_app));
     if (!app) return NULL;
-    
+
     app->port = 8080;
     app->use_ssl = false;
     app->cert_path = NULL;
@@ -614,6 +1121,55 @@ void cwist_app_set_error_handler(cwist_app *app, cwist_error_handler_func handle
     if (app) app->error_handler = handler;
 }
 
+void cwist_app_register_error_handler(cwist_app *app, cwist_http_status_t status,
+                                      cwist_error_handler_func handler) {
+    if (!app || !handler) return;
+    cwist_error_handler_entry *curr = app->error_handlers;
+    while (curr) {
+        if (curr->status_code == status) {
+            curr->handler = handler;
+            return;
+        }
+        curr = curr->next;
+    }
+    cwist_error_handler_entry *entry =
+        (cwist_error_handler_entry *)cwist_alloc(sizeof(cwist_error_handler_entry));
+    entry->status_code = status;
+    entry->handler = handler;
+    entry->next = app->error_handlers;
+    app->error_handlers = entry;
+}
+
+static cwist_error_handler_func cwist_app_find_error_handler(cwist_app *app,
+                                                             cwist_http_status_t status) {
+    if (!app) return NULL;
+    cwist_error_handler_entry *curr = app->error_handlers;
+    while (curr) {
+        if (curr->status_code == status) {
+            return curr->handler;
+        }
+        curr = curr->next;
+    }
+    return app->error_handler;
+}
+
+/**
+ * @brief Configure the Big Dumb Reply cache thresholds for the application.
+ * @param app Application whose BDR context should be tuned.
+ * @param max_bytes Maximum total cache footprint.
+ * @param max_entry_age_sec Maximum age for cached entries.
+ * @param revalidate_hits Hit count that forces revalidation.
+ */
+void cwist_app_configure_bdr(cwist_app *app, size_t max_bytes, time_t max_entry_age_sec,
+                             uint64_t revalidate_hits) {
+    if (!app || !app->bdr_ctx) return;
+    cwist_bdr_set_limits(app->bdr_ctx, max_bytes, max_entry_age_sec, revalidate_hits);
+}
+
+/**
+ * @brief Release every resource owned by the application object.
+ * @param app Application instance to destroy.
+ */
 void cwist_app_destroy(cwist_app *app) {
     if (!app) return;
     cwist_multiport_destroy_owned_subapps(app);
@@ -656,8 +1212,56 @@ void cwist_app_destroy(cwist_app *app) {
         curr_s = next;
     }
 
+#ifndef __EMSCRIPTEN__
+    if (app->mem_manager) {
+        app->mem_manager->watcher_running = false;
+        // If thread was started, join it.
+        // Note: In simple destroy we might not have started it or might be crashing, but try join.
+        if (app->mem_manager->watcher_thread) {
+            pthread_join(app->mem_manager->watcher_thread, NULL);
+        }
+        pthread_mutex_destroy(&app->mem_manager->lock);
+
+        for (size_t i = 0; i < app->mem_manager->file_count; i++) {
+            cwist_free(app->mem_manager->files[i].path);
+            cwist_free(app->mem_manager->files[i].fs_path);
+        }
+        for (size_t i = 0; i < app->mem_manager->file_count; i++) {
+            if (app->mem_manager->files[i].node) {
+                ttak_mem_tree_remove(&app->mem_manager->file_tree, app->mem_manager->files[i].node);
+                app->mem_manager->files[i].node = NULL;
+            }
+        }
+        cwist_free(app->mem_manager->files);
+        ttak_mem_tree_destroy(&app->mem_manager->file_tree);
+        cwist_free(app->mem_manager);
+    }
+#endif /* __EMSCRIPTEN__ */
+
+    if (app->bdr_ctx) {
+        cwist_bdr_destroy(app->bdr_ctx);
+    }
+
+#ifndef __EMSCRIPTEN__
+    if (app->nuke_enabled) {
+        cwist_nuke_close();
+    }
+
     if (app->db) {
-        cwist_db_close(app->db);
+        // If nuke was used, app->db->conn was shared with nuke.
+        // But nuke_close already closed its handles.
+        // However, cwist_db_close will try to close it again if we are not careful.
+        // Actually, NukeDB is a global singleton currently, so it's a bit messy.
+        // If nuke_enabled is true, we should probably NOT call cwist_db_close(app->db)
+        // OR we should make sure it's safe.
+        // Based on cwist_db_close implementation, it calls sqlite3_close.
+        if (app->nuke_enabled) {
+            // Just free the wrapper, don't close the conn as Nuke already did it.
+            ttak_mem_free(app->db);
+        } else {
+            cwist_db_close(app->db);
+        }
+        app->db = NULL;
     }
     if (app->db_path) {
         free(app->db_path);
@@ -694,8 +1298,17 @@ static void mw_next_wrapper(cwist_http_request *req, cwist_http_response *res) {
     }
 }
 
-static void execute_chain(cwist_app *app, cwist_http_request *req, cwist_http_response *res, cwist_handler_func final_handler, void *handler_data) {
-    mw_executor_ctx ctx = { app->middlewares, final_handler, handler_data };
+/**
+ * @brief Execute the application's middleware list around one final route handler.
+ * @param app Application whose middleware chain should run.
+ * @param req Active request object.
+ * @param res Active response object.
+ * @param final_handler Route handler to invoke after middleware.
+ * @param handler_data Reserved handler payload slot.
+ */
+static void execute_chain(cwist_app *app, cwist_http_request *req, cwist_http_response *res,
+                          cwist_handler_func final_handler, void *handler_data) {
+    mw_executor_ctx ctx = {app->middlewares, final_handler, handler_data};
     req->private_data = &ctx;
     if (__builtin_expect(!app->middlewares, 1)) {
         /* No middleware: still expose the executor ctx so final handlers
@@ -708,6 +1321,14 @@ static void execute_chain(cwist_app *app, cwist_http_request *req, cwist_http_re
 }
 
 cwist_error_t cwist_app_use_https(cwist_app *app, const char *cert_path, const char *key_path) {
+#ifdef __EMSCRIPTEN__
+    (void)cert_path;
+    (void)key_path;
+    cwist_error_t err = make_error(CWIST_ERR_INT16);
+    err.error.err_i16 = -1; /* TLS needs BoringSSL sockets; native builds only */
+    (void)app;
+    return err;
+#else
     cwist_error_t err = make_error(CWIST_ERR_INT16);
     if (!app || !cert_path || !key_path) {
         err.error.err_i16 = -1;
@@ -721,14 +1342,12 @@ cwist_error_t cwist_app_use_https(cwist_app *app, const char *cert_path, const c
     return cwist_https_init_context(&app->ssl_ctx, cert_path, key_path);
 }
 
-void cwist_app_use_pqc_layer(cwist_app *app, bool enabled)
-{
+void cwist_app_use_pqc_layer(cwist_app *app, bool enabled) {
     if (!app) return;
     app->pqc_layer_enabled = enabled;
 }
 
-void cwist_app_set_tls_groups(cwist_app *app, const char *groups)
-{
+void cwist_app_set_tls_groups(cwist_app *app, const char *groups) {
     if (!app) return;
     if (app->tls_groups) {
         cwist_free(app->tls_groups);
@@ -799,8 +1418,7 @@ cwist_error_t cwist_app_use_http3(cwist_app *app, bool enabled) {
     return cwist_app_refresh_http3_context(app);
 }
 
-void cwist_app_use_webtransport(cwist_app *app, cwist_webtransport_handler_func handler)
-{
+void cwist_app_use_webtransport(cwist_app *app, cwist_webtransport_handler_func handler) {
     if (!app) return;
     app->wt_handler = handler;
     if (app->h3_ctx) {
@@ -839,11 +1457,173 @@ cwist_error_t cwist_app_use_db(cwist_app *app, const char *db_path) {
     return err;
 }
 
+/**
+ * @brief Enable NUKE DB and fall back to standard SQLite when RAM bootstrap fails.
+ * @param app Application being configured.
+ * @param db_path On-disk database file to mirror into memory.
+ * @param sync_interval_ms Synchronization interval forwarded to NUKE DB.
+ * @return Tagged CWIST error describing success or failure.
+ */
+cwist_error_t cwist_app_use_nuke_db(cwist_app *app, const char *db_path, int sync_interval_ms) {
+    cwist_error_t err = make_error(CWIST_ERR_INT16);
+    if (!app || !db_path) {
+        err.error.err_i16 = -1;
+        return err;
+    }
+
+#ifdef __EMSCRIPTEN__
+    (void)sync_interval_ms;
+    err.error.err_i16 = -1; /* NUKE DB needs native libttak memory */
+    return err;
+#else
+    int nuke_rc = cwist_nuke_init(db_path, sync_interval_ms);
+    if (nuke_rc == CWIST_NUKE_ERR_LOW_MEMORY) {
+        fprintf(
+            stderr,
+            "[CWIST] Nuke DB disabled for '%s' (insufficient RAM). Falling back to standard SQLite.\n",
+            db_path);
+        return cwist_app_use_db(app, db_path);
+    } else if (nuke_rc != CWIST_NUKE_OK) {
+        err.error.err_i16 = -1;
+        return err;
+    }
+
+    if (app->db) {
+        if (app->nuke_enabled)
+            ttak_mem_free(app->db);
+        else
+            cwist_db_close(app->db);
+        app->db = NULL;
+    }
+    if (app->db_path) {
+        cwist_free(app->db_path);
+    }
+
+    app->db = (cwist_db *)ttak_mem_alloc_safe(sizeof(cwist_db), __TTAK_UNSAFE_MEM_FOREVER__,
+                                              cwist_mem_now(), false, false, true, true,
+                                              TTAK_MEM_DEFAULT);
+    if (!app->db) {
+        cwist_nuke_close();
+        err.error.err_i16 = -1;
+        return err;
+    }
+    app->db->conn = cwist_nuke_get_db();
+    app->db_path = cwist_strdup(db_path);
+    app->nuke_enabled = true;
+
+    err.error.err_i16 = 0;
+    return err;
+#endif
+}
+
+/**
+ * @brief Return the active shared database wrapper for the application.
+ * @param app Application whose database handle should be queried.
+ * @return Database wrapper, or NULL when no database is configured.
+ */
 cwist_db *cwist_app_get_db(cwist_app *app) {
     if (!app) return NULL;
     return app->db;
 }
 
+cwist_error_t cwist_app_use_db_pool(cwist_app *app, const char *db_path, size_t max_conns) {
+    cwist_error_t err = make_error(CWIST_ERR_INT16);
+    if (!app || !db_path || max_conns == 0) {
+        err.error.err_i16 = -1;
+        return err;
+    }
+#ifdef __EMSCRIPTEN__
+    (void)db_path;
+    (void)max_conns;
+    err.error.err_i16 = -1; /* connection pools need native sockets/threads */
+    return err;
+#else
+    if (app->db_pool) {
+        cwist_db_pool_destroy((cwist_db_pool_t *)app->db_pool);
+    }
+    app->db_pool = cwist_db_pool_create(db_path, max_conns);
+    if (!app->db_pool) {
+        err.error.err_i16 = -1;
+        return err;
+    }
+    err.error.err_i16 = 0;
+    return err;
+#endif
+}
+
+cwist_db_pool_t *cwist_app_get_db_pool(cwist_app *app) {
+    if (!app) return NULL;
+    return (cwist_db_pool_t *)app->db_pool;
+}
+
+cwist_error_t cwist_app_use_redis(cwist_app *app, const char *host, int port, size_t max_conns) {
+    cwist_error_t err = make_error(CWIST_ERR_INT16);
+    if (!app || !host || port <= 0 || max_conns == 0) {
+        err.error.err_i16 = -1;
+        return err;
+    }
+#ifdef __EMSCRIPTEN__
+    (void)host;
+    (void)port;
+    (void)max_conns;
+    err.error.err_i16 = -1; /* Redis needs native sockets */
+    return err;
+#else
+    if (app->redis_pool) {
+        cwist_redis_pool_destroy((cwist_redis_pool_t *)app->redis_pool);
+    }
+    app->redis_pool = cwist_redis_pool_create(host, port, max_conns);
+    if (!app->redis_pool) {
+        err.error.err_i16 = -1;
+        return err;
+    }
+    err.error.err_i16 = 0;
+    return err;
+#endif
+}
+
+cwist_redis_pool_t *cwist_app_get_redis_pool(cwist_app *app) {
+    if (!app) return NULL;
+    return (cwist_redis_pool_t *)app->redis_pool;
+}
+
+cwist_error_t cwist_app_use_scheduler(cwist_app *app, size_t worker_count, size_t queue_capacity) {
+    cwist_error_t err = make_error(CWIST_ERR_INT16);
+    if (!app || worker_count == 0) {
+        err.error.err_i16 = -1;
+        return err;
+    }
+#ifdef __EMSCRIPTEN__
+    (void)worker_count;
+    (void)queue_capacity;
+    err.error.err_i16 = -1; /* worker pools need native threads */
+    return err;
+#else
+    if (app->scheduler) {
+        cwist_scheduler_destroy((cwist_scheduler_t *)app->scheduler);
+    }
+    app->scheduler = cwist_scheduler_create(worker_count, queue_capacity);
+    if (!app->scheduler) {
+        err.error.err_i16 = -1;
+        return err;
+    }
+    err.error.err_i16 = 0;
+    return err;
+#endif
+}
+
+cwist_scheduler_t *cwist_app_get_scheduler(cwist_app *app) {
+    if (!app) return NULL;
+    return (cwist_scheduler_t *)app->scheduler;
+}
+
+/**
+ * @brief Register a filesystem directory to be served beneath a URL prefix.
+ * @param app Application being configured.
+ * @param url_prefix Request-path prefix such as "/static".
+ * @param directory Filesystem directory that backs the mapping.
+ * @return Tagged CWIST error describing success or failure.
+ */
 cwist_error_t cwist_app_static(cwist_app *app, const char *url_prefix, const char *directory) {
     cwist_error_t err = make_error(CWIST_ERR_INT16);
     if (!app || !url_prefix || !directory) {
@@ -881,11 +1661,78 @@ cwist_error_t cwist_app_static(cwist_app *app, const char *url_prefix, const cha
     return err;
 }
 
-static void add_route(cwist_app *app, const char *path, cwist_http_method_t method, cwist_handler_func handler) {
+/**
+ * @brief Register a filesystem directory with a custom Cache-Control header.
+ * @param app Application being configured.
+ * @param url_prefix Request-path prefix such as "/static".
+ * @param directory Filesystem directory that backs the mapping.
+ * @param cache_control Value for the Cache-Control header (e.g. "public, max-age=86400").
+ * @return Tagged CWIST error describing success or failure.
+ */
+cwist_error_t cwist_app_static_with_cache(cwist_app *app, const char *url_prefix,
+                                          const char *directory, const char *cache_control) {
+    cwist_error_t err = make_error(CWIST_ERR_INT16);
+    if (!app || !url_prefix || !directory || !cache_control) {
+        err.error.err_i16 = -1;
+        return err;
+    }
+
+    char *normalized = cwist_normalize_prefix(url_prefix);
+    if (!normalized) {
+        err.error.err_i16 = -1;
+        return err;
+    }
+
+    char *resolved = cwist_normalize_directory(directory);
+    if (!resolved) {
+        cwist_free(normalized);
+        err.error.err_i16 = -1;
+        return err;
+    }
+
+    cwist_static_dir *entry = (cwist_static_dir *)cwist_alloc(sizeof(cwist_static_dir));
+    if (!entry) {
+        cwist_free(normalized);
+        cwist_free(resolved);
+        err.error.err_i16 = -1;
+        return err;
+    }
+
+    entry->url_prefix = normalized;
+    entry->fs_root = resolved;
+    entry->cache_control = cwist_strdup(cache_control);
+    if (!entry->cache_control) {
+        cwist_free(normalized);
+        cwist_free(resolved);
+        cwist_free(entry);
+        err.error.err_i16 = -1;
+        return err;
+    }
+    entry->next = app->static_dirs;
+    app->static_dirs = entry;
+
+    err.error.err_i16 = 0;
+    return err;
+}
+
+static void add_route_named(cwist_app *app, const char *path, const char *name,
+                            cwist_http_method_t method, cwist_handler_func handler,
+                            cwist_endpoint_opt_t opts) {
     if (!app || !app->router || !path) return;
     cwist_route_table_insert(app->router, path, method, handler, NULL);
 }
 
+static void add_route(cwist_app *app, const char *path, cwist_http_method_t method,
+                      cwist_handler_func handler, cwist_endpoint_opt_t opts) {
+    add_route_named(app, path, NULL, method, handler, opts);
+}
+
+/**
+ * @brief Register a GET handler with default endpoint options.
+ * @param app Application being configured.
+ * @param path Exact route path.
+ * @param handler HTTP handler invoked for matching requests.
+ */
 void cwist_app_get(cwist_app *app, const char *path, cwist_handler_func handler) {
     add_route(app, path, CWIST_HTTP_GET, handler);
 }
@@ -922,7 +1769,8 @@ void cwist_app_enable_healthz(cwist_app *app) {
     cwist_app_get(app, "/ready", cwist_readiness_route_handler);
 }
 
-void cwist_app_get_named(cwist_app *app, const char *path, const char *name, cwist_handler_func handler) {
+void cwist_app_get_named(cwist_app *app, const char *path, const char *name,
+                         cwist_handler_func handler) {
     add_route_named(app, path, name, CWIST_HTTP_GET, handler, CWIST_ENDPOINT_DEFAULT);
 }
 
@@ -936,9 +1784,103 @@ void cwist_app_post(cwist_app *app, const char *path, cwist_handler_func handler
     add_route(app, path, CWIST_HTTP_POST, handler);
 }
 
+void cwist_app_put(cwist_app *app, const char *path, cwist_handler_func handler) {
+    add_route(app, path, CWIST_HTTP_PUT, handler, CWIST_ENDPOINT_DEFAULT);
+}
+
+void cwist_app_delete(cwist_app *app, const char *path, cwist_handler_func handler) {
+    add_route(app, path, CWIST_HTTP_DELETE, handler, CWIST_ENDPOINT_DEFAULT);
+}
+
+void cwist_app_patch(cwist_app *app, const char *path, cwist_handler_func handler) {
+    add_route(app, path, CWIST_HTTP_PATCH, handler, CWIST_ENDPOINT_DEFAULT);
+}
+
+void cwist_app_post_named(cwist_app *app, const char *path, const char *name,
+                          cwist_handler_func handler) {
+    add_route_named(app, path, name, CWIST_HTTP_POST, handler, CWIST_ENDPOINT_DEFAULT);
+}
+
+void cwist_app_put_named(cwist_app *app, const char *path, const char *name,
+                         cwist_handler_func handler) {
+    add_route_named(app, path, name, CWIST_HTTP_PUT, handler, CWIST_ENDPOINT_DEFAULT);
+}
+
+void cwist_app_delete_named(cwist_app *app, const char *path, const char *name,
+                            cwist_handler_func handler) {
+    add_route_named(app, path, name, CWIST_HTTP_DELETE, handler, CWIST_ENDPOINT_DEFAULT);
+}
+
+void cwist_app_patch_named(cwist_app *app, const char *path, const char *name,
+                           cwist_handler_func handler) {
+    add_route_named(app, path, name, CWIST_HTTP_PATCH, handler, CWIST_ENDPOINT_DEFAULT);
+}
+
+/**
+ * @brief Register a WebSocket upgrade endpoint with default options.
+ * @param app Application being configured.
+ * @param path Exact GET route that should upgrade to WebSocket.
+ * @param handler WebSocket handler invoked after a successful upgrade.
+ */
 void cwist_app_ws(cwist_app *app, const char *path, cwist_ws_handler_func handler) {
     if (!app || !app->router || !path) return;
-    cwist_route_table_insert(app->router, path, CWIST_HTTP_GET, NULL, handler);
+    cwist_route_table_insert(app->router, path, NULL, CWIST_HTTP_GET, NULL, handler,
+                             CWIST_ENDPOINT_DEFAULT);
+}
+
+/**
+ * @brief Register a GET handler with explicit endpoint options.
+ * @param app Application being configured.
+ * @param path Exact route path.
+ * @param handler HTTP handler invoked for matching requests.
+ * @param opts Endpoint flags controlling cache and transport behavior.
+ */
+void cwist_app_get_opt(cwist_app *app, const char *path, cwist_handler_func handler,
+                       cwist_endpoint_opt_t opts) {
+    add_route(app, path, CWIST_HTTP_GET, handler, opts);
+}
+
+/**
+ * @brief Register a POST handler with explicit endpoint options.
+ * @param app Application being configured.
+ * @param path Exact route path.
+ * @param handler HTTP handler invoked for matching requests.
+ * @param opts Endpoint flags controlling cache and transport behavior.
+ */
+void cwist_app_post_opt(cwist_app *app, const char *path, cwist_handler_func handler,
+                        cwist_endpoint_opt_t opts) {
+    add_route(app, path, CWIST_HTTP_POST, handler, opts);
+}
+
+void cwist_app_put_opt(cwist_app *app, const char *path, cwist_handler_func handler,
+                       cwist_endpoint_opt_t opts) {
+    add_route(app, path, CWIST_HTTP_PUT, handler, opts);
+}
+
+void cwist_app_delete_opt(cwist_app *app, const char *path, cwist_handler_func handler,
+                          cwist_endpoint_opt_t opts) {
+    add_route(app, path, CWIST_HTTP_DELETE, handler, opts);
+}
+
+void cwist_app_patch_opt(cwist_app *app, const char *path, cwist_handler_func handler,
+                         cwist_endpoint_opt_t opts) {
+    add_route(app, path, CWIST_HTTP_PATCH, handler, opts);
+}
+
+/**
+ * @brief Register a WebSocket route with explicit endpoint options.
+ * @param app Application being configured.
+ * @param path Exact GET route that should upgrade to WebSocket.
+ * @param handler WebSocket handler invoked after a successful upgrade.
+ * @param opts Endpoint flags associated with the route.
+ */
+void cwist_app_ws_opt(cwist_app *app, const char *path, cwist_ws_handler_func handler,
+                      cwist_endpoint_opt_t opts) {
+    if (!app || !app->router || !path) return;
+    if (opts == 0) {
+        opts = CWIST_ENDPOINT_DEFAULT;
+    }
+    cwist_route_table_insert(app->router, path, NULL, CWIST_HTTP_GET, NULL, handler, opts);
 }
 
 static bool match_path(const char *pattern, const char *actual, cwist_query_map *params) {
@@ -969,8 +1911,99 @@ static bool match_path(const char *pattern, const char *actual, cwist_query_map 
     return tok_p == NULL && tok_a == NULL;
 }
 
+static cwist_route_entry *cwist_route_table_find_by_name(cwist_route_table *table,
+                                                         const char *name) {
+    if (!table || !name) return NULL;
+    for (size_t i = 0; i < table->bucket_count; i++) {
+        cwist_route_entry *curr = table->buckets[i];
+        while (curr) {
+            if (curr->name && strcmp(curr->name, name) == 0) return curr;
+            curr = curr->next;
+        }
+    }
+    cwist_route_entry *curr = table->param_routes;
+    while (curr) {
+        if (curr->name && strcmp(curr->name, name) == 0) return curr;
+        curr = curr->next;
+    }
+    return NULL;
+}
+
+char *cwist_url_for(cwist_app *app, const char *name, cwist_query_map *params) {
+    if (!app || !app->router || !name) return NULL;
+    cwist_route_entry *entry = cwist_route_table_find_by_name(app->router, name);
+    if (!entry) return NULL;
+    const char *path = entry->path;
+    if (!params || !entry->has_params) {
+        return cwist_strdup(path);
+    }
+    // Build URL by replacing :param segments
+    cwist_sstring *result = cwist_sstring_create();
+    if (!result) return NULL;
+    char path_copy[512];
+    strncpy(path_copy, path, sizeof(path_copy) - 1);
+    path_copy[sizeof(path_copy) - 1] = '\0';
+    char *saveptr;
+    char *tok = strtok_r(path_copy, "/", &saveptr);
+    int first = 1;
+    while (tok) {
+        if (!first) cwist_sstring_append(result, "/");
+        first = 0;
+        if (tok[0] == ':') {
+            const char *val = cwist_query_map_get(params, tok + 1);
+            if (val) {
+                cwist_sstring_append(result, val);
+            } else {
+                cwist_sstring_append(result, tok);
+            }
+        } else {
+            cwist_sstring_append(result, tok);
+        }
+        tok = strtok_r(NULL, "/", &saveptr);
+    }
+    char *out = cwist_strdup(result->data);
+    cwist_sstring_destroy(result);
+    return out;
+}
+
+// Forward declaration
+static void internal_route_handler(cwist_app *app, cwist_http_request *req,
+                                   cwist_http_response *res);
+
+void cwist_app_dispatch(cwist_app *app, cwist_http_request *req, cwist_http_response *res) {
+    if (!app || !req || !res) return;
+    req->app = app;
+    req->db = app->db;
+    internal_route_handler(app, req, res);
+}
+
+int cwist_app_dispatch_memory(cwist_app *app, const char *req_buf, size_t req_len, char **res_buf,
+                              size_t *res_len) {
+    if (!app || !req_buf || !res_buf || !res_len) return -1;
+    *res_buf = NULL;
+    *res_len = 0;
+
+    cwist_http_request *req = cwist_http_parse_request_len(req_buf, req_len);
+    if (!req) return -1;
+
+    cwist_http_response *res = cwist_http_response_create();
+    if (!res) {
+        cwist_http_request_destroy(req);
+        return -1;
+    }
+    cwist_app_dispatch(app, req, res);
+    cwist_http_request_destroy(req);
+
+    /* One-shot buffer exchange: Connection: close semantics. */
+    res->keep_alive = false;
+    int rc = cwist_http_response_serialize(res, res_buf, res_len);
+    cwist_http_response_destroy(res);
+    return rc;
+}
+
 // Internal Router Logic
-static void internal_route_handler(cwist_app *app, cwist_http_request *req, cwist_http_response *res) {
+static void internal_route_handler(cwist_app *app, cwist_http_request *req,
+                                   cwist_http_response *res) {
     if (!req || !app || !app->router) return;
 
     cwist_static_request_info static_info = {0};
@@ -1015,6 +2048,27 @@ static void internal_route_handler(cwist_app *app, cwist_http_request *req, cwis
     }
 }
 
+#ifndef __EMSCRIPTEN__
+/* Everything below up to the multiport section is socket serving machinery:
+ * TLS/plain connection handlers, h2/h3 bridges, async flush paths. */
+static void static_http2_route_bridge(void *user_ctx, cwist_http_request *req,
+                                      cwist_http_response *res) {
+    cwist_app *app = (cwist_app *)user_ctx;
+    if (!app || !req || !res) return;
+    req->app = app;
+    req->db = app->db;
+    internal_route_handler(app, req, res);
+}
+
+static void static_http3_route_bridge(void *user_ctx, cwist_http_request *req,
+                                      cwist_http_response *res) {
+    cwist_app *app = (cwist_app *)user_ctx;
+    if (!app || !req || !res) return;
+    req->app = app;
+    req->db = app->db;
+    internal_route_handler(app, req, res);
+}
+
 static void static_ssl_handler(cwist_https_connection *conn, void *ctx) {
     cwist_app *app = (cwist_app *)ctx;
     if (!app || !conn) return;
@@ -1033,7 +2087,8 @@ static void static_ssl_handler(cwist_https_connection *conn, void *ctx) {
  * any strong definition from the embedding application at static link
  * time. Return true to detach the fd/ssl from cwist so they are not closed
  * after the response is sent. */
-bool cwist_https_upgrade_handler(cwist_https_connection *conn, cwist_http_request *req, cwist_http_response *res);
+bool cwist_https_upgrade_handler(cwist_https_connection *conn, cwist_http_request *req,
+                                 cwist_http_response *res);
 
 static void static_ssl_http1_handler(cwist_https_connection *conn, void *ctx) {
     cwist_app *app = (cwist_app *)ctx;
@@ -1085,7 +2140,8 @@ static void static_http_handler(int client_fd, void *ctx) {
         return;
     }
 
-    cwist_error_t err = cwist_http2_serve_connection(conn, app, static_http2_route_bridge);
+    cwist_error_t err = cwist_http2_serve_connection_ex(conn, app, static_http2_route_bridge,
+                                                        cwist_grpc_http2_hooks());
     if (err.errtype == CWIST_ERR_JSON && err.error.err_json) {
         cJSON_Delete(err.error.err_json);
     }
@@ -1097,12 +2153,12 @@ static void static_http_handler(int client_fd, void *ctx) {
  */
 static int app_parse_error_status(cwist_http_parse_error_t perr) {
     switch (perr) {
-        case CWIST_HTTP_PARSE_MALFORMED:       return 400;
-        case CWIST_HTTP_PARSE_BODY_TOO_LARGE:  return 413;
-        case CWIST_HTTP_PARSE_EXPECT_FAILED:   return 417;
+        case CWIST_HTTP_PARSE_MALFORMED: return 400;
+        case CWIST_HTTP_PARSE_BODY_TOO_LARGE: return 413;
+        case CWIST_HTTP_PARSE_EXPECT_FAILED: return 417;
         case CWIST_HTTP_PARSE_HEADER_OVERFLOW: return 431;
-        case CWIST_HTTP_PARSE_TE_UNSUPPORTED:  return 501;
-        default:                               return 0;
+        case CWIST_HTTP_PARSE_TE_UNSUPPORTED: return 501;
+        default: return 0;
     }
 }
 
@@ -1113,16 +2169,61 @@ static void app_maybe_send_parse_error(int client_fd, cwist_http_parse_error_t p
     }
 }
 
+/* Async variant: the error goes through the coalescing stash so it cannot
+ * overtake responses buffered earlier in the same batch turn. */
+static void app_maybe_send_parse_error_async(cwist_http_async_conn_t *conn,
+                                             cwist_http_parse_error_t perr) {
+    int status = app_parse_error_status(perr);
+    if (status > 0) {
+        (void)cwist_http_coalesce_error_response(conn, status);
+    }
+}
+
+/* Flush the coalescing stash at a batch-turn exit.  A parked remainder owns
+ * fd/conn from here (it re-arms or closes after draining), so the caller
+ * must leave both untouched. */
+static cwist_async_action_t app_async_flush_exit(int client_fd, cwist_http_async_conn_t *conn,
+                                                 cwist_async_action_t action, bool keep_alive) {
+    static _Atomic long dbg_parked;
+    static _Atomic int dbg_cached = -1;
+    int d = atomic_load_explicit(&dbg_cached, memory_order_relaxed);
+    if (d < 0) {
+        d = getenv("CWIST_ASYNC_DEBUG") != NULL;
+        atomic_store_explicit(&dbg_cached, d, memory_order_relaxed);
+    }
+    cwist_coalesce_flush_status_t fs = cwist_http_coalesce_flush(client_fd, conn, keep_alive);
+    if (fs == CWIST_COALESCE_FLUSH_PARKED) {
+        if (d) {
+            long n = atomic_fetch_add(&dbg_parked, 1) + 1;
+            if (n <= 5 || n % 10000 == 0)
+                fprintf(stderr, "[async] flush-parked fd=%d total=%ld\n", client_fd, n);
+        }
+        return CWIST_ASYNC_DEFER;
+    }
+    if (fs == CWIST_COALESCE_FLUSH_ERROR) return CWIST_ASYNC_CLOSE;
+    return action;
+}
+
 /**
  * @brief Route and respond to one fully parsed HTTP/1.1 request.
  * Shared by the blocking keep-alive loop and the event-driven async path.
  * @return true when the connection stays open (keep-alive), false to close.
  */
-static bool app_serve_parsed_request(cwist_app *app, int client_fd, cwist_http_request *req, uint32_t priority_weight) {
+typedef enum {
+    APP_SERVE_CLOSE = 0, /* Close the connection. */
+    APP_SERVE_KEEPALIVE, /* Connection stays open. */
+    APP_SERVE_DEFERRED /* Handler deferred via cwist_async_defer; skip everything. */
+} app_serve_result_t;
+
+static app_serve_result_t app_serve_parsed_request(cwist_app *app, int client_fd,
+                                                   cwist_http_request *req,
+                                                   uint32_t priority_weight) {
     // --- Big Dumb Reply (Read) ---
     if (app->bdr_ctx && req->method == CWIST_HTTP_GET) {
         size_t cached_len = 0;
-        const void *cached_blob = cwist_bdr_get(app->bdr_ctx, "GET", req->path->data, &cached_len);
+        bdr_blob_t *bdr_pin = NULL;
+        const void *cached_blob =
+            cwist_bdr_get_pinned(app->bdr_ctx, "GET", req->path->data, &cached_len, &bdr_pin);
         if (cached_blob && cached_len > 0) {
             send(client_fd, cached_blob, cached_len, MSG_NOSIGNAL);
             bool keep_alive = req->keep_alive;
@@ -1169,8 +2270,8 @@ static bool app_serve_parsed_request(cwist_app *app, int client_fd, cwist_http_r
         /* RFC 9110 §9.3.2: HEAD replies carry the GET headers (Content-Length
          * included) but no body bytes, for every route. */
         cwist_error_t send_err = (req->method == CWIST_HTTP_HEAD)
-            ? cwist_http_send_response_head(client_fd, res)
-            : cwist_http_send_response(client_fd, res);
+                                     ? cwist_http_send_response_head(client_fd, res)
+                                     : cwist_http_send_response(client_fd, res);
         if (send_err.error.err_i16 < 0) {
             cwist_http_response_destroy(res);
             cwist_http_request_destroy(req);
@@ -1190,13 +2291,15 @@ static bool app_serve_parsed_request(cwist_app *app, int client_fd, cwist_http_r
                 if (endpoint_fixed) {
                     cwist_sstring *serialized = cwist_http_stringify_response(res);
                     if (serialized) {
-                        cwist_bdr_put_fixed(app->bdr_ctx, "GET", req->path->data, serialized->data, serialized->size);
+                        cwist_bdr_put_fixed(app->bdr_ctx, "GET", req->path->data, serialized->data,
+                                            serialized->size);
                         cwist_sstring_destroy(serialized);
                     }
                 } else if (duration_ms > scaled_threshold) {
                     cwist_sstring *serialized = cwist_http_stringify_response(res);
                     if (serialized) {
-                        cwist_bdr_put(app->bdr_ctx, "GET", req->path->data, serialized->data, serialized->size);
+                        cwist_bdr_put(app->bdr_ctx, "GET", req->path->data, serialized->data,
+                                      serialized->size);
                         cwist_sstring_destroy(serialized);
                     }
                 }
@@ -1233,8 +2336,10 @@ cwist_async_action_t cwist_app_http_handler_async(int client_fd, cwist_http_asyn
         if (dbg) {
             long n = atomic_fetch_add(&dbg_fill_fail, 1) + 1;
             if (n <= 5 || n % 10000 == 0)
-                fprintf(stderr, "[async] fill-fail fd=%d total=%ld fatal=%ld serve=%ld errno=%d len=%zu\n",
-                        client_fd, n, atomic_load(&dbg_fatal), atomic_load(&dbg_serve_close), errno, conn->len);
+                fprintf(stderr,
+                        "[async] fill-fail fd=%d total=%ld fatal=%ld serve=%ld errno=%d len=%zu\n",
+                        client_fd, n, atomic_load(&dbg_fatal), atomic_load(&dbg_serve_close), errno,
+                        conn->len);
         }
         return CWIST_ASYNC_CLOSE;
     }
@@ -1248,12 +2353,14 @@ cwist_async_action_t cwist_app_http_handler_async(int client_fd, cwist_http_asyn
         char *replay = cwist_alloc(conn->len);
         if (replay) {
             memcpy(replay, conn->rbuf, conn->len);
-            cwist_https_connection h2c = { .fd = client_fd, .ssl = NULL,
-                                           .read_buf = replay, .buf_len = conn->len,
-                                           .negotiated_http2 = true,
-                                           .negotiated_protocol = CWIST_HTTPS_PROTOCOL_HTTP2 };
+            cwist_https_connection h2c = {.fd = client_fd,
+                                          .ssl = NULL,
+                                          .read_buf = replay,
+                                          .buf_len = conn->len,
+                                          .negotiated_http2 = true,
+                                          .negotiated_protocol = CWIST_HTTPS_PROTOCOL_HTTP2};
             cwist_http2_serve_connection_ex(&h2c, app, static_http2_route_bridge,
-                                        cwist_grpc_http2_hooks());
+                                            cwist_grpc_http2_hooks());
             cwist_free(replay);
         }
         close(client_fd);
@@ -1278,7 +2385,8 @@ cwist_async_action_t cwist_app_http_handler_async(int client_fd, cwist_http_asyn
             if (dbg) {
                 long n = atomic_fetch_add(&dbg_fatal, 1) + 1;
                 if (n <= 5 || n % 10000 == 0)
-                    fprintf(stderr, "[async] recv-fatal fd=%d total=%ld len=%zu\n", client_fd, n, conn->len);
+                    fprintf(stderr, "[async] recv-fatal fd=%d total=%ld len=%zu\n", client_fd, n,
+                            conn->len);
             }
             return CWIST_ASYNC_CLOSE;
         }
@@ -1293,17 +2401,33 @@ cwist_async_action_t cwist_app_http_handler_async(int client_fd, cwist_http_asyn
             return CWIST_ASYNC_CLOSE;
         }
     }
+    if (conn->len > 0) {
+        /* Buffered work cannot wait for another read event. The continuation
+         * owns fd/conn on success; rearm closes both on failure.  A parked
+         * flush owns them instead and re-arms after draining. */
+        cwist_coalesce_flush_status_t fs = cwist_http_coalesce_flush(client_fd, conn, true);
+        if (fs == CWIST_COALESCE_FLUSH_ERROR) return CWIST_ASYNC_CLOSE;
+        if (fs == CWIST_COALESCE_FLUSH_PARKED) return CWIST_ASYNC_DEFER;
+        cwist_http_async_rearm(client_fd, conn->reactor, conn);
+        return CWIST_ASYNC_DEFER;
+    }
+    return app_async_flush_exit(
+        client_fd, conn, conn->peer_eof ? CWIST_ASYNC_CLOSE : CWIST_ASYNC_REARM, !conn->peer_eof);
 }
 
 void cwist_app_http_handler(int client_fd, void *ctx) {
     cwist_app *app = (cwist_app *)ctx;
-    
+
     if (app->use_http2) {
         char peek_buf[24];
         ssize_t peeked = recv(client_fd, peek_buf, 24, MSG_PEEK);
         if (peeked >= 24 && memcmp(peek_buf, "PRI * HTTP/2.0\r\n\r\nSM\r\n\r\n", 24) == 0) {
-            cwist_https_connection conn = { .fd = client_fd, .ssl = NULL, .negotiated_http2 = true, .negotiated_protocol = CWIST_HTTPS_PROTOCOL_HTTP2 };
-            cwist_http2_serve_connection(&conn, app, static_http2_route_bridge);
+            cwist_https_connection conn = {.fd = client_fd,
+                                           .ssl = NULL,
+                                           .negotiated_http2 = true,
+                                           .negotiated_protocol = CWIST_HTTPS_PROTOCOL_HTTP2};
+            cwist_http2_serve_connection_ex(&conn, app, static_http2_route_bridge,
+                                            cwist_grpc_http2_hooks());
             close(client_fd);
             return;
         }
@@ -1313,7 +2437,7 @@ void cwist_app_http_handler(int client_fd, void *ctx) {
     uint32_t tid = ttak_net_lattice_get_worker_id();
     uint16_t node_id = (uint16_t)(client_fd % TTAK_MOLS_NODE_COUNT);
     uint32_t mixed_seed = ttak_apply_mols_control(node_id, tid);
-    
+
     /* Jeungseung Gaebang Scaling for priority weighting. */
     uint32_t priority_weight = ((mixed_seed * 16777619U) >> 8) % 100;
 
@@ -1339,9 +2463,11 @@ void cwist_app_http_handler(int client_fd, void *ctx) {
                 }
 
                 char *hdr_end = (char *)cwist_simd_find_crlfcrlf(read_buf, buf_len);
-                if (hdr_end && (read_buf[0] == 'G' && read_buf[1] == 'E' && read_buf[2] == 'T' && read_buf[3] == ' ')) {
+                if (hdr_end && (read_buf[0] == 'G' && read_buf[1] == 'E' && read_buf[2] == 'T' &&
+                                read_buf[3] == ' ')) {
                     const char *path_start = read_buf + 4;
-                    const char *path_end = (const char *)memchr(path_start, ' ', (size_t)(hdr_end - path_start));
+                    const char *path_end =
+                        (const char *)memchr(path_start, ' ', (size_t)(hdr_end - path_start));
                     if (path_end) {
                         char path_tmp[256];
                         size_t plen = (size_t)(path_end - path_start);
@@ -1349,9 +2475,11 @@ void cwist_app_http_handler(int client_fd, void *ctx) {
                             memcpy(path_tmp, path_start, plen);
                             path_tmp[plen] = '\0';
                             size_t cached_len = 0;
-                            const void *cached_blob = cwist_bdr_get(app->bdr_ctx, "GET", path_tmp, &cached_len);
+                            const void *cached_blob =
+                                cwist_bdr_get(app->bdr_ctx, "GET", path_tmp, &cached_len);
                             if (cached_blob && cached_len > 0) {
-                                ssize_t sret = send(client_fd, cached_blob, cached_len, MSG_NOSIGNAL);
+                                ssize_t sret =
+                                    send(client_fd, cached_blob, cached_len, MSG_NOSIGNAL);
                                 if (sret <= 0) {
                                     close(client_fd);
                                     return;
@@ -1375,7 +2503,8 @@ void cwist_app_http_handler(int client_fd, void *ctx) {
         }
 
         cwist_http_parse_error_t perr = CWIST_HTTP_PARSE_OK;
-        cwist_http_request *req = cwist_http_receive_request(client_fd, read_buf, sizeof(read_buf), &buf_len, &perr);
+        cwist_http_request *req =
+            cwist_http_receive_request(client_fd, read_buf, sizeof(read_buf), &buf_len, &perr);
         if (!req) {
             app_maybe_send_parse_error(client_fd, perr);
             break;
@@ -1520,7 +2649,8 @@ static cwist_multiport_group *cwist_multiport_get_group(cwist_app *root) {
  * @param port TCP port to match.
  * @return Matching slot, or NULL.
  */
-static cwist_multiport_slot *cwist_multiport_find_slot(cwist_multiport_group *group, unsigned short port) {
+static cwist_multiport_slot *cwist_multiport_find_slot(cwist_multiport_group *group,
+                                                       unsigned short port) {
     if (!group) return NULL;
     cwist_multiport_slot *slot = group->slots;
     while (slot) {
@@ -1596,11 +2726,13 @@ static cwist_route_table *cwist_route_table_clone(cwist_route_table *src) {
 
     for (size_t i = 0; i < src->bucket_count; i++) {
         for (cwist_route_entry *entry = src->buckets[i]; entry; entry = entry->next) {
-            cwist_route_table_insert(dst, entry->path, entry->name, entry->method, entry->handler, entry->ws_handler, entry->opts);
+            cwist_route_table_insert(dst, entry->path, entry->name, entry->method, entry->handler,
+                                     entry->ws_handler, entry->opts);
         }
     }
     for (cwist_route_entry *entry = src->param_routes; entry; entry = entry->next) {
-        cwist_route_table_insert(dst, entry->path, entry->name, entry->method, entry->handler, entry->ws_handler, entry->opts);
+        cwist_route_table_insert(dst, entry->path, entry->name, entry->method, entry->handler,
+                                 entry->ws_handler, entry->opts);
     }
     return dst;
 }
@@ -1661,7 +2793,8 @@ static cwist_static_dir *cwist_static_dirs_clone(cwist_static_dir *src) {
         entry->fs_root = cwist_strdup(src->fs_root);
         entry->cache_control = src->cache_control ? cwist_strdup(src->cache_control) : NULL;
         entry->next = NULL;
-        if (!entry->url_prefix || !entry->fs_root || (src->cache_control && !entry->cache_control)) {
+        if (!entry->url_prefix || !entry->fs_root ||
+            (src->cache_control && !entry->cache_control)) {
             cwist_free(entry->url_prefix);
             cwist_free(entry->fs_root);
             cwist_free(entry->cache_control);
@@ -1844,12 +2977,233 @@ static bool cwist_multiport_contains(cwist_multiport_t ports, unsigned short por
  * @param port Bound TCP port.
  * @return Detached sub-app for the port, or root when not detached.
  */
-static cwist_app *cwist_multiport_bound_app(cwist_multiport_group *group, cwist_app *root, unsigned short port) {
+static cwist_app *cwist_multiport_bound_app(cwist_multiport_group *group, cwist_app *root,
+                                            unsigned short port) {
     cwist_multiport_slot *slot = cwist_multiport_find_slot(group, port);
     if (slot && slot->detached && slot->app) {
         return slot->app;
     }
     return root;
+}
+
+/**
+ * @brief Copy HTTP/3 tunables from one context into another fresh context.
+ * @param dst Destination runtime context.
+ * @param src Source template context.
+ */
+static void cwist_multiport_h3_copy_tunables(cwist_http3_context *dst,
+                                             const cwist_http3_context *src) {
+    if (!dst || !src) return;
+    dst->push_enabled = src->push_enabled;
+    dst->early_data_enabled = src->early_data_enabled;
+    dst->allow_migration = src->allow_migration;
+    dst->datagram_enabled = src->datagram_enabled;
+    dst->datagram_cb = src->datagram_cb;
+    dst->datagram_user_ctx = src->datagram_user_ctx;
+    dst->wt_handler = src->wt_handler;
+    dst->idle_timeout_ms = src->idle_timeout_ms;
+    dst->handshake_timeout_ms = src->handshake_timeout_ms;
+    dst->ping_period_ms = src->ping_period_ms;
+    dst->noprogress_timeout_ms = src->noprogress_timeout_ms;
+}
+
+/**
+ * @brief Create a fresh HTTP/3 context for one multiport UDP listener.
+ * @param app Application whose protocol settings should be copied.
+ * @param out Receives the newly allocated HTTP/3 context.
+ * @return Tagged CWIST error describing success or failure.
+ */
+static cwist_error_t cwist_multiport_h3_context_create(cwist_app *app, cwist_http3_context **out) {
+    cwist_error_t err = make_error(CWIST_ERR_INT16);
+    if (!app || !out) {
+        err.error.err_i16 = -1;
+        return err;
+    }
+    *out = NULL;
+
+    if (app->use_https3) {
+        if (!app->cert_path || !app->key_path) {
+            err.error.err_i16 = -1;
+            return err;
+        }
+        err = cwist_http3_init_context(out, app->cert_path, app->key_path);
+    } else if (app->use_http3) {
+        err = cwist_http3_init_context_ephemeral(out);
+    } else {
+        err.error.err_i16 = 0;
+        return err;
+    }
+
+    if (err.error.err_i16 == 0 && app->h3_ctx && *out) {
+        cwist_multiport_h3_copy_tunables(*out, app->h3_ctx);
+    }
+    return err;
+}
+
+/**
+ * @brief Bind a UDP socket for one HTTP/3 multiport listener.
+ * @param port UDP port to bind.
+ * @return UDP socket fd on success, or -1 on failure.
+ */
+static int cwist_multiport_bind_udp(unsigned short port) {
+    int udp_fd = socket(AF_INET, SOCK_DGRAM, 0);
+    if (udp_fd < 0) return -1;
+
+    struct sockaddr_in udp_addr;
+    memset(&udp_addr, 0, sizeof(udp_addr));
+    udp_addr.sin_family = AF_INET;
+    udp_addr.sin_addr.s_addr = inet_addr("0.0.0.0");
+    udp_addr.sin_port = htons(port);
+
+    int opt = 1;
+    setsockopt(udp_fd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt));
+#ifdef SO_REUSEPORT
+    setsockopt(udp_fd, SOL_SOCKET, SO_REUSEPORT, &opt, sizeof(opt));
+#endif
+    int rcvbuf = 2 * 1024 * 1024;
+    int sndbuf = 2 * 1024 * 1024;
+    setsockopt(udp_fd, SOL_SOCKET, SO_RCVBUF, &rcvbuf, sizeof(rcvbuf));
+    setsockopt(udp_fd, SOL_SOCKET, SO_SNDBUF, &sndbuf, sizeof(sndbuf));
+
+    if (bind(udp_fd, (struct sockaddr *)&udp_addr, sizeof(udp_addr)) != 0) {
+        close(udp_fd);
+        return -1;
+    }
+    return udp_fd;
+}
+
+/**
+ * @brief Run one HTTP/3 multiport listener thread.
+ * @param arg Pointer to cwist_multiport_h3_listener.
+ * @return Always NULL.
+ */
+static void *cwist_multiport_h3_thread(void *arg) {
+    cwist_multiport_h3_listener *listener = (cwist_multiport_h3_listener *)arg;
+    if (!listener || !listener->ctx || !listener->app) return NULL;
+    cwist_http3_server_loop(listener->udp_fd, listener->ctx, static_http3_route_bridge,
+                            listener->app);
+    listener->running = false;
+    return NULL;
+}
+
+/**
+ * @brief Start one HTTP/3 UDP fan-out listener for a bound port.
+ * @param group Multiport group that owns the listener slot.
+ * @param app Application assigned to the port.
+ * @param port UDP/TCP port number.
+ * @return 0 on success, or -1 on failure.
+ */
+static int cwist_multiport_h3_start_one(cwist_multiport_group *group, cwist_app *app,
+                                        unsigned short port) {
+    if (!group || !app || (!app->use_http3 && !app->use_https3)) return 0;
+    if (group->h3_listener_count >= CWIST_MULTIPORT_MAX_PORTS) return -1;
+
+    cwist_multiport_h3_listener *listener = &group->h3_listeners[group->h3_listener_count];
+    memset(listener, 0, sizeof(*listener));
+    listener->port = port;
+    listener->udp_fd = -1;
+    listener->app = app;
+
+    cwist_error_t err = cwist_multiport_h3_context_create(app, &listener->ctx);
+    if (err.error.err_i16 < 0 || !listener->ctx) {
+        return -1;
+    }
+
+    listener->udp_fd = cwist_multiport_bind_udp(port);
+    if (listener->udp_fd < 0) {
+        cwist_http3_destroy_context(listener->ctx);
+        listener->ctx = NULL;
+        return -1;
+    }
+
+    if (pthread_create(&listener->thread, NULL, cwist_multiport_h3_thread, listener) != 0) {
+        close(listener->udp_fd);
+        listener->udp_fd = -1;
+        cwist_http3_destroy_context(listener->ctx);
+        listener->ctx = NULL;
+        return -1;
+    }
+
+    listener->thread_started = true;
+    listener->running = true;
+    group->h3_listener_count++;
+    if (g_cwist_udp_fd < 0) {
+        g_cwist_udp_fd = listener->udp_fd;
+    }
+    printf("CWIST multiport HTTP/3 fan-out listening on UDP port %hu\n", port);
+    return 0;
+}
+
+/**
+ * @brief Start HTTP/3 UDP fan-out listeners for every bound multiport app.
+ * @param group Multiport group.
+ * @param root Root application.
+ * @param bind_ports Bound TCP port list.
+ * @param port_count Number of entries in bind_ports.
+ * @return 0 on success, or -1 on any listener failure.
+ */
+static int cwist_multiport_h3_start_all(cwist_multiport_group *group, cwist_app *root,
+                                        const unsigned short *bind_ports, size_t port_count) {
+    if (!group || !root || !bind_ports) return -1;
+    cwist_multiport_h3_stop_group(group);
+    for (size_t i = 0; i < port_count; i++) {
+        cwist_app *port_app = cwist_multiport_bound_app(group, root, bind_ports[i]);
+        if (cwist_multiport_h3_start_one(group, port_app, bind_ports[i]) != 0) {
+            cwist_multiport_h3_stop_group(group);
+            return -1;
+        }
+    }
+    return 0;
+}
+
+/**
+ * @brief Validate protocol combinations for a port-bound application.
+ * @param app Application assigned to the port.
+ * @param port Port number used for diagnostics.
+ * @return 0 when valid, or -1 when invalid.
+ */
+static int cwist_multiport_validate_port_app(cwist_app *app, unsigned short port) {
+    if (!app) return -1;
+    if (app->use_ssl && app->use_http2) {
+        fprintf(stderr, "Port %hu invalid: cleartext HTTP/2 cannot share a TLS listener.\n", port);
+        return -1;
+    }
+    if (!app->use_ssl && app->use_https2) {
+        fprintf(stderr, "Port %hu invalid: HTTPS/2 requires cwist_app_use_https.\n", port);
+        return -1;
+    }
+    if (app->use_ssl && !app->ssl_ctx) {
+        fprintf(stderr, "Port %hu invalid: SSL enabled but context not initialized.\n", port);
+        return -1;
+    }
+    if (app->use_http3 && app->use_https3) {
+        fprintf(stderr,
+                "Port %hu invalid: ephemeral HTTP/3 and TLS HTTP/3 cannot both be enabled.\n",
+                port);
+        return -1;
+    }
+    if (app->use_https3 && (!app->cert_path || !app->key_path)) {
+        fprintf(stderr, "Port %hu invalid: HTTPS/3 requires certificate and key paths.\n", port);
+        return -1;
+    }
+    return 0;
+}
+
+/**
+ * @brief Check whether any bound app needs the HTTPS worker pool.
+ * @param group Multiport group.
+ * @param root Root application.
+ * @param bind_ports Bound port list.
+ * @param port_count Number of entries in bind_ports.
+ * @return true when at least one assigned app uses TLS over TCP.
+ */
+static bool cwist_multiport_needs_https_pool(cwist_multiport_group *group, cwist_app *root,
+                                             const unsigned short *bind_ports, size_t port_count) {
+    for (size_t i = 0; i < port_count; i++) {
+        cwist_app *port_app = cwist_multiport_bound_app(group, root, bind_ports[i]);
+        if (port_app && port_app->use_ssl) return true;
+    }
+    return false;
 }
 
 /**
@@ -1873,21 +3227,28 @@ int cwist_app_multiport(cwist_app **app_ref, unsigned short public_port, cwist_m
 
     for (cwist_multiport_slot *slot = group->slots; slot; slot = slot->next) {
         if (slot->detached && slot->port == public_port) {
-            fprintf(stderr, "cwist_multiport_get_app cannot detach the public/default port %hu.\n", public_port);
+            fprintf(stderr, "cwist_multiport_get_app cannot detach the public/default port %hu.\n",
+                    public_port);
             return -1;
         }
         if (slot->detached && !cwist_multiport_contains(ports, slot->port)) {
-            fprintf(stderr, "Detached multiport sub-app port %hu is not present in the multiport descriptor.\n", slot->port);
+            fprintf(
+                stderr,
+                "Detached multiport sub-app port %hu is not present in the multiport descriptor.\n",
+                slot->port);
             return -1;
         }
     }
 
     if (app->use_ssl && app->use_http2) {
-        fprintf(stderr, "Assertion failed: Cannot use cleartext HTTP/2 and HTTPS on the same port.\n");
+        fprintf(stderr,
+                "Assertion failed: Cannot use cleartext HTTP/2 and HTTPS on the same port.\n");
         return -1;
     }
     if (!app->use_ssl && app->use_https2) {
-        fprintf(stderr, "Assertion failed: Cannot use HTTPS/2 without configuring SSL via cwist_app_use_https.\n");
+        fprintf(
+            stderr,
+            "Assertion failed: Cannot use HTTPS/2 without configuring SSL via cwist_app_use_https.\n");
         return -1;
     }
     if (app->use_ssl && !app->ssl_ctx) {
@@ -1910,7 +3271,8 @@ int cwist_app_multiport(cwist_app **app_ref, unsigned short public_port, cwist_m
     }
     for (size_t i = 0; i < ports.count; i++) {
         if (cwist_multiport_add_port(bind_ports, &port_count, ports.ports[i]) != 0) {
-            fprintf(stderr, "cwist_app_multiport supports up to %d total ports.\n", CWIST_MULTIPORT_MAX_PORTS);
+            fprintf(stderr, "cwist_app_multiport supports up to %d total ports.\n",
+                    CWIST_MULTIPORT_MAX_PORTS);
             return -1;
         }
     }
@@ -1947,8 +3309,8 @@ int cwist_app_multiport(cwist_app **app_ref, unsigned short public_port, cwist_m
     }
 
     g_cwist_listen_fd = pfds[0].fd;
-    printf("CWIST App running on %zu TCP ports via multiport facade (SSL: %s)\n",
-           port_count, app->use_ssl ? "On" : "Off");
+    printf("CWIST App running on %zu TCP ports via multiport facade (SSL: %s)\n", port_count,
+           app->use_ssl ? "On" : "Off");
 
     while (atomic_load(&g_cwist_running)) {
         int ready = poll(pfds, (nfds_t)port_count, 1000);
@@ -1968,7 +3330,8 @@ int cwist_app_multiport(cwist_app **app_ref, unsigned short public_port, cwist_m
                 int client_fd = accept(pfds[i].fd, (struct sockaddr *)&peer, &peer_len);
                 if (client_fd < 0) {
                     int accept_err = errno;
-                    if (accept_err == EAGAIN || accept_err == EWOULDBLOCK || accept_err == EINTR) break;
+                    if (accept_err == EAGAIN || accept_err == EWOULDBLOCK || accept_err == EINTR)
+                        break;
                     if (accept_err == EBADF || accept_err == EINVAL || accept_err == ENOTSOCK) {
                         atomic_store(&g_cwist_running, 0);
                         break;
@@ -2004,10 +3367,53 @@ struct h3_thread_payload {
     cwist_app *app;
 };
 
+static void *h3_server_thread_func(void *arg) {
+    struct h3_thread_payload *payload = arg;
+    cwist_http3_server_loop(payload->udp_fd, payload->app->h3_ctx, static_http3_route_bridge,
+                            payload->app);
+    free(payload);
+    return NULL;
+}
+#endif /* __EMSCRIPTEN__ */
+
+/**
+ * @brief Initialize runtime services and enter the HTTP or HTTPS server loop.
+ * @param app Application instance to run.
+ * @param port TCP port to bind.
+ * @return 0 on success, or -1 when initialization, bind, or worker shutdown fails.
+ */
 int cwist_app_listen(cwist_app *app, int port) {
     if (!app) return -1;
     app->port = port;
-    
+
+    // Validate protocol combinations for the same port
+    if (app->use_ssl) {
+        if (app->use_http2) {
+            fprintf(stderr,
+                    "Assertion failed: Cannot use cleartext HTTP/2 and HTTPS on the same port.\n");
+            abort();
+        }
+    } else {
+        if (app->use_https2) {
+            fprintf(
+                stderr,
+                "Assertion failed: Cannot use HTTPS/2 without configuring SSL via cwist_app_use_https.\n");
+            abort();
+        }
+    }
+
+    if (app->use_http3 && app->use_https3) {
+        fprintf(
+            stderr,
+            "Assertion failed: Cannot use both ephemeral HTTP/3 and TLS HTTP/3 simultaneously on the same port.\n");
+        abort();
+    }
+
+    /* Create the shared TCP listen socket before forking workers.
+     * With SO_REUSEPORT each worker process gets its own accept queue and the
+     * kernel load-balances incoming connections.  Creating it here avoids the
+     * previous anti-pattern where workers forked before binding and inherited
+     * threads that do not exist in the child. */
     struct sockaddr_in addr;
     int server_fd = cwist_make_socket_ipv4(&addr, "0.0.0.0", port, 128);
     if (server_fd < 0) {
@@ -2030,9 +3436,9 @@ int cwist_app_listen(cwist_app *app, int port) {
 
             int opt = 1;
             setsockopt(udp_fd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt));
-    #ifdef SO_REUSEPORT
+#ifdef SO_REUSEPORT
             setsockopt(udp_fd, SOL_SOCKET, SO_REUSEPORT, &opt, sizeof(opt));
-    #endif
+#endif
             int rcvbuf = 2 * 1024 * 1024;
             int sndbuf = 2 * 1024 * 1024;
             setsockopt(udp_fd, SOL_SOCKET, SO_RCVBUF, &rcvbuf, sizeof(rcvbuf));
@@ -2054,10 +3460,13 @@ int cwist_app_listen(cwist_app *app, int port) {
             long cores = get_cpu_cores();
             workers = (cores > 0) ? (int)cores : 1;
         } else {
-            workers = atoi(workers_env);
+            char *end = NULL;
+            long v = strtol(workers_env, &end, 10);
+            workers = (end != workers_env && *end == '\0' && v >= 1 && v <= INT_MAX) ? (int)v : 1;
         }
     } else {
-        // Default to auto (number of online CPU cores) to maximize performance on multi-core systems out of the box.
+        // Default to auto (number of online CPU cores) to maximize performance on multi-core
+        // systems out of the box.
         long cores = get_cpu_cores();
         workers = (cores > 0) ? (int)cores : 1;
     }
@@ -2130,20 +3539,30 @@ int cwist_app_listen(cwist_app *app, int port) {
         }
     }
 
-    printf("CWIST App running on port %d (SSL: %s) [Event-driven, workers=%d, pid=%d]\n",
-           port, app->use_ssl ? "On" : "Off", workers, (int)getpid());
-    
-    printf("CWIST App running on port %d (SSL: %s)\n", port, app->use_ssl ? "On" : "Off");
-    
-    if (app->use_ssl) {
-        if (!app->ssl_ctx) {
-            fprintf(stderr, "SSL enabled but context not initialized.\n");
-            return -1;
+    printf("CWIST App running on port %d (SSL: %s) [Event-driven, workers=%d, pid=%d]\n", port,
+           app->use_ssl ? "On" : "Off", workers, (int)getpid());
+
+    // Check config for non-blocking scale mode (default enabled)
+    const char *c1m = getenv("CWIST_C1M_MODE");
+    bool use_c1m = true;
+    if (c1m) {
+        if (c1m[0] == '0' || strcmp(c1m, "false") == 0) {
+            use_c1m = false;
         }
         cwist_https_server_loop(server_fd, app->ssl_ctx, static_ssl_handler, app);
     } else {
-        cwist_server_config config = { .use_forking = false, .use_threading = true, .use_epoll = false };
-        cwist_http_server_loop(server_fd, &config, static_http_handler, app);
+        if (app->use_ssl) {
+            if (!app->ssl_ctx) {
+                fprintf(stderr, "SSL enabled but context not initialized.\n");
+                g_cwist_listen_fd = -1;
+                return -1;
+            }
+            cwist_https_server_loop(server_fd, app->ssl_ctx, static_ssl_handler, app);
+        } else {
+            cwist_server_config config = {
+                .use_forking = false, .use_threading = true, .use_epoll = false};
+            cwist_http_server_loop(server_fd, &config, cwist_app_http_handler, app);
+        }
     }
 
     /* Graceful shutdown cleanup */
@@ -2173,7 +3592,18 @@ int cwist_app_listen(cwist_app *app, int port) {
         }
         for (size_t i = 0; i < worker_count; i++) {
             int status;
-            wait(&status);
+            pid_t reaped;
+            do {
+                reaped = waitpid(worker_pids[i], &status, 0);
+            } while (reaped < 0 && errno == EINTR);
+            if (reaped < 0) {
+                perror("waitpid worker");
+                worker_result = -1;
+            } else if (!WIFEXITED(status) || WEXITSTATUS(status) != 0) {
+                fprintf(stderr, "Worker %d exited abnormally (status=%d)\n", (int)worker_pids[i],
+                        status);
+                worker_result = -1;
+            }
         }
     }
 
@@ -2229,7 +3659,8 @@ static void cwist_swagger_json_handler(cwist_http_request *req, cwist_http_respo
     cwist_http_header_add(&res->headers, "Content-Type", "application/json");
 }
 
-void cwist_app_enable_swagger(cwist_app *app, const char *mount_path, const char *openapi_json_path) {
+void cwist_app_enable_swagger(cwist_app *app, const char *mount_path,
+                              const char *openapi_json_path) {
     if (!app) return;
     if (openapi_json_path) {
         snprintf(cwist_swagger_json_path, sizeof(cwist_swagger_json_path), "%s", openapi_json_path);

@@ -70,7 +70,7 @@ void test_resize() {
     assert(err.errtype == CWIST_ERR_INT8); // Success
     assert(s->size == 5);
     assert(strcmp(s->data, "12345") == 0);
-    
+
     // Shrink safely
     err = cwist_sstring_change_size(s, 5, false); // "12345" fits in 5
     assert(err.errtype == CWIST_ERR_INT8);
@@ -112,7 +112,7 @@ void test_compare() {
     assert(cwist_sstring_compare(s, "world") != 0);
     assert(cwist_sstring_compare(s, "he") > 0);
     assert(cwist_sstring_compare(s, "hello world") < 0);
-    
+
     /* Empty sstring comparisons */
     cwist_sstring *empty_new = cwist_sstring_create();
     cwist_sstring *empty_assigned = cwist_sstring_create();
@@ -148,7 +148,7 @@ void test_substr() {
     assert(sub != NULL);
     assert(strcmp(sub->data, "23456789") == 0);
     cwist_sstring_destroy(sub);
-    
+
     sub = cwist_sstring_substr(s, 10, 1); // Out of bounds
     assert(sub == NULL);
 

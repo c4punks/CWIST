@@ -11,7 +11,8 @@
 #ifndef _DARWIN_C_SOURCE
 #define _DARWIN_C_SOURCE
 #endif
-#elif !defined(__FreeBSD__) && !defined(__NetBSD__) && !defined(__OpenBSD__) && !defined(__DragonFly__)
+#elif !defined(__FreeBSD__) && !defined(__NetBSD__) && !defined(__OpenBSD__) && \
+    !defined(__DragonFly__)
 #define _POSIX_C_SOURCE 200809L
 #endif
 #include <cwist/net/http/http3.h>
@@ -70,54 +71,8 @@
 /* Globals                                                            */
 /* ------------------------------------------------------------------ */
 
-static const struct {
-    const char *name;
-    const char *value;
-} qpack_static_table[] = {
-    {":authority", ""}, {":path", "/"}, {"age", "0"},
-    {"content-disposition", ""}, {"content-length", "0"}, {"cookie", ""},
-    {"date", ""}, {"etag", ""}, {"if-modified-since", ""},
-    {"if-none-match", ""}, {"last-modified", ""}, {"link", ""},
-    {"location", ""}, {"referer", ""}, {"set-cookie", ""},
-    {":method", "CONNECT"}, {":method", "DELETE"}, {":method", "GET"},
-    {":method", "HEAD"}, {":method", "OPTIONS"}, {":method", "POST"},
-    {":method", "PUT"}, {":scheme", "http"}, {":scheme", "https"},
-    {":status", "103"}, {":status", "200"}, {":status", "304"},
-    {":status", "404"}, {":status", "503"}, {"accept", "*/*"},
-    {"accept", "application/dns-message"}, {"accept-encoding", "gzip, deflate, br"},
-    {"accept-ranges", "bytes"}, {"access-control-allow-headers", "cache-control"},
-    {"access-control-allow-headers", "content-type"}, {"access-control-allow-origin", "*"},
-    {"cache-control", "max-age=0"}, {"cache-control", "max-age=2592000"},
-    {"cache-control", "max-age=604800"}, {"cache-control", "no-cache"},
-    {"cache-control", "no-store"}, {"cache-control", "public, max-age=31536000"},
-    {"content-encoding", "br"}, {"content-encoding", "gzip"},
-    {"content-type", "application/dns-message"}, {"content-type", "application/javascript"},
-    {"content-type", "application/json"}, {"content-type", "application/x-www-form-urlencoded"},
-    {"content-type", "image/gif"}, {"content-type", "image/jpeg"},
-    {"content-type", "image/png"}, {"content-type", "text/css"},
-    {"content-type", "text/html; charset=utf-8"}, {"content-type", "text/plain"},
-    {"content-type", "text/plain;charset=utf-8"}, {"range", "bytes=0-"},
-    {"strict-transport-security", "max-age=31536000"},
-    {"strict-transport-security", "max-age=31536000; includesubdomains"},
-    {"strict-transport-security", "max-age=31536000; includesubdomains; preload"},
-    {"vary", "accept-encoding"}, {"vary", "origin"},
-    {"x-content-type-options", "nosniff"}, {"x-xss-protection", "1; mode=block"},
-    {":status", "100"}, {":status", "204"}, {":status", "206"},
-    {":status", "302"}, {":status", "400"}, {":status", "403"},
-    {":status", "421"}, {":status", "425"}, {":status", "500"},
-    {"accept-language", ""}, {"access-control-allow-credentials", "FALSE"},
-    {"access-control-allow-credentials", "TRUE"}, {"access-control-allow-headers", "*"},
-    {"access-control-allow-methods", "get"}, {"access-control-allow-methods", "get, post, options"},
-    {"access-control-allow-methods", "options"}, {"access-control-expose-headers", "content-length"},
-    {"access-control-request-headers", "content-type"}, {"access-control-request-method", "get"},
-    {"access-control-request-method", "post"}, {"alt-svc", "clear"},
-    {"authorization", ""}, {"content-security-policy", "script-src 'none'; object-src 'none'; base-uri 'none'"},
-    {"early-data", "1"}, {"expect-ct", ""}, {"forwarded", ""},
-    {"if-range", ""}, {"origin", ""}, {"purpose", "prefetch"},
-    {"server", ""}, {"timing-allow-origin", "*"}, {"upgrade-insecure-requests", "1"},
-    {"user-agent", ""}, {"x-forwarded-for", ""}, {"x-frame-options", "deny"},
-    {"x-frame-options", "sameorigin"}
-};
+static pthread_mutex_t g_h3_global_mtx = PTHREAD_MUTEX_INITIALIZER;
+static int g_h3_global_ref = 0;
 
 /**
  * @brief Take a process-wide reference on the lsquic global state.
@@ -154,11 +109,11 @@ static void h3_global_cleanup(void) {
 /* ------------------------------------------------------------------ */
 
 /* RFC 9114 Section 4.3.1 request pseudo-header tracking (bitmask) */
-#define H3_PSEUDO_METHOD    0x01u
-#define H3_PSEUDO_SCHEME    0x02u
-#define H3_PSEUDO_PATH      0x04u
+#define H3_PSEUDO_METHOD 0x01u
+#define H3_PSEUDO_SCHEME 0x02u
+#define H3_PSEUDO_PATH 0x04u
 #define H3_PSEUDO_AUTHORITY 0x08u
-#define H3_PSEUDO_PROTOCOL  0x10u
+#define H3_PSEUDO_PROTOCOL 0x10u
 
 typedef struct h3_stream_ctx {
     lsquic_stream_t *stream;
@@ -250,12 +205,6 @@ typedef struct cwist_wt_handle {
 #define CWIST_WT_HANDLE_MAGIC UINT64_C(0x4357495354575431)
 #define CWIST_WT_HANDLE_VERSION 1
 
-/**
- * @brief Allocate a new typed WebTransport handle wrapping @p ptr.
- * @param kind Handle kind tag (session or stream).
- * @param ptr Underlying lsquic object to wrap; must not be NULL.
- * @return The new handle, or NULL if @p ptr is NULL or allocation fails.
- */
 static cwist_wt_handle_t *cwist_wt_handle_new(cwist_wt_handle_kind_t kind, void *ptr) {
     if (!ptr) return NULL;
     cwist_wt_handle_t *handle = calloc(1, sizeof(*handle));
@@ -303,10 +252,6 @@ static void cwist_wt_handle_free(cwist_wt_handle_t *handle) {
     free(handle);
 }
 
-/**
- * @brief Link @p child into @p parent's child list.
- * The child is inserted at the head of the list.  No-op if either is NULL.
- */
 static void cwist_wt_handle_attach(cwist_wt_handle_t *parent, cwist_wt_handle_t *child) {
     if (!parent || !child) return;
     child->parent = parent;
@@ -314,13 +259,6 @@ static void cwist_wt_handle_attach(cwist_wt_handle_t *parent, cwist_wt_handle_t 
     parent->first_child = child;
 }
 
-/**
- * @brief Validate an opaque pointer and cast it to a typed handle.
- * Checks the magic, version, kind tag, and wrapped pointer.
- * @param handle Opaque pointer supplied by the application.
- * @param kind Expected handle kind.
- * @return The typed handle, or NULL if any validation check fails.
- */
 static cwist_wt_handle_t *cwist_wt_handle_cast(void *handle, cwist_wt_handle_kind_t kind) {
     cwist_wt_handle_t *h = (cwist_wt_handle_t *)handle;
     if (!h || h->magic != CWIST_WT_HANDLE_MAGIC || h->version != CWIST_WT_HANDLE_VERSION ||
@@ -409,8 +347,7 @@ static void cwist_h3_hset_sweep(cwist_http3_context *ctx) {
     }
 }
 
-static void *cwist_h3_hsi_create(void *hsi_ctx, lsquic_stream_t *stream,
-                                 int is_push_promise) {
+static void *cwist_h3_hsi_create(void *hsi_ctx, lsquic_stream_t *stream, int is_push_promise) {
     (void)is_push_promise;
     cwist_h3_hset_t *hset = calloc(1, sizeof(*hset));
     if (!hset) return NULL;
@@ -419,19 +356,6 @@ static void *cwist_h3_hsi_create(void *hsi_ctx, lsquic_stream_t *stream,
     return hset;
 }
 
-/**
- * @brief hsi_prepare_decode callback: reserve decode storage for a header.
- * @param hset_p Header set.
- * @param xhdr Previous header when lsquic retries with a larger value
- *             requirement, NULL for a fresh slot.
- * @param req_space Required value capacity in bytes.
- * @return The (possibly resized) header slot, or NULL if the request exceeds
- *         the slot count, per-string, or decode-buffer limits.
- *
- * When @p xhdr is non-NULL the previously decoded name must be preserved:
- * only the value capacity is grown.  Reinitializing the slot here loses
- * :path/Cookie.
- */
 static struct lsxpack_header *cwist_h3_hsi_prepare(void *hset_p, struct lsxpack_header *xhdr,
                                                    size_t req_space) {
     cwist_h3_hset_t *hset = hset_p;
@@ -444,7 +368,8 @@ static struct lsxpack_header *cwist_h3_hsi_prepare(void *hset_p, struct lsxpack_
         if (req_space > LSXPACK_MAX_STRLEN || xhdr->name_offset < 0 ||
             (size_t)xhdr->name_offset >= sizeof(hset->decode_buf) ||
             req_space > sizeof(hset->decode_buf) - (size_t)xhdr->name_offset) {
-            fprintf(stderr, "[HTTP/3] Rejecting oversized QPACK header resize (space=%zu, offset=%d)\n",
+            fprintf(stderr,
+                    "[HTTP/3] Rejecting oversized QPACK header resize (space=%zu, offset=%d)\n",
                     req_space, (int)xhdr->name_offset);
             return NULL;
         }
@@ -452,12 +377,9 @@ static struct lsxpack_header *cwist_h3_hsi_prepare(void *hset_p, struct lsxpack_
         return xhdr;
     }
 
-    if (hset->count >= H3_MAX_HEADERS)
-        return NULL;
-    if (req_space > sizeof(hset->decode_buf) - hset->decode_off)
-        return NULL;
-    lsxpack_header_prepare_decode(&hset->headers[hset->count],
-                                  hset->decode_buf, hset->decode_off,
+    if (hset->count >= H3_MAX_HEADERS) return NULL;
+    if (req_space > sizeof(hset->decode_buf) - hset->decode_off) return NULL;
+    lsxpack_header_prepare_decode(&hset->headers[hset->count], hset->decode_buf, hset->decode_off,
                                   sizeof(hset->decode_buf) - hset->decode_off);
     return &hset->headers[hset->count];
 }
@@ -473,15 +395,14 @@ static struct lsxpack_header *cwist_h3_hsi_prepare(void *hset_p, struct lsxpack_
 static int cwist_h3_hsi_process_header(void *hset_p, struct lsxpack_header *xhdr) {
     cwist_h3_hset_t *hset = hset_p;
     /* A NULL header marks the end of a header block. */
-    if (!hset || !xhdr)
-        return 0;
+    if (!hset || !xhdr) return 0;
 
     /* The QPACK decoder exposes the exact storage used by this completed
      * header. */
     size_t total = lsxpack_header_get_dec_size(xhdr);
     if (total > sizeof(hset->decode_buf) - hset->decode_off) {
-        fprintf(stderr, "[HTTP/3] Rejecting oversized QPACK header (size=%zu, used=%zu)\n",
-                total, hset->decode_off);
+        fprintf(stderr, "[HTTP/3] Rejecting oversized QPACK header (size=%zu, used=%zu)\n", total,
+                hset->decode_off);
         return -1;
     }
     hset->decode_off += total;
@@ -513,23 +434,7 @@ static const struct lsquic_webtransport_if cwist_h3_wt_if;
 /* SSL context callback                                               */
 /* ------------------------------------------------------------------ */
 
-/**
- * @brief ea_get_ssl_ctx callback: pick the server SSL_CTX for a connection.
- * @param peer_ctx The cwist_http3_context registered as stream_if ctx.
- * @return Its SSL_CTX, or NULL if @p peer_ctx is NULL.
- */
 static SSL_CTX *cwist_h3_get_ssl_ctx(void *peer_ctx, const struct sockaddr *local) {
-    (void)local;
-    cwist_http3_context *h3_ctx = (cwist_http3_context *)peer_ctx;
-    return h3_ctx ? h3_ctx->ssl_ctx : NULL;
-}
-
-/* ------------------------------------------------------------------ */
-/* SSL context callback                                               */
-/* ------------------------------------------------------------------ */
-
-static SSL_CTX *cwist_h3_get_ssl_ctx(void *peer_ctx,
-                                      const struct sockaddr *local) {
     (void)local;
     cwist_http3_context *h3_ctx = (cwist_http3_context *)peer_ctx;
     return h3_ctx ? h3_ctx->ssl_ctx : NULL;
@@ -582,7 +487,8 @@ static void h3_setup_cmsg(struct msghdr *msg, char *cbuf, size_t cbuf_sz,
 #endif
             }
         } else if (spec->dest_sa->sa_family == AF_INET6 && spec->local_sa->sa_family == AF_INET6) {
-            const struct in6_addr *addr6 = &((const struct sockaddr_in6 *)spec->local_sa)->sin6_addr;
+            const struct in6_addr *addr6 =
+                &((const struct sockaddr_in6 *)spec->local_sa)->sin6_addr;
             if (memcmp(addr6, &in6addr_any, sizeof(struct in6_addr)) != 0) {
 #if defined(IPV6_PKTINFO)
                 struct cmsghdr *cmsg = (struct cmsghdr *)(cbuf + ctl_len);
@@ -634,8 +540,8 @@ static int h3_send_one(int udp_fd, const struct lsquic_out_spec *spec) {
     struct msghdr msg = {0};
     msg.msg_name = (void *)spec->dest_sa;
     msg.msg_namelen = (spec->dest_sa && spec->dest_sa->sa_family == AF_INET)
-                      ? sizeof(struct sockaddr_in)
-                      : sizeof(struct sockaddr_in6);
+                          ? sizeof(struct sockaddr_in)
+                          : sizeof(struct sockaddr_in6);
     msg.msg_iov = (struct iovec *)spec->iov;
     msg.msg_iovlen = spec->iovlen;
     h3_setup_cmsg(&msg, ctrl, sizeof(ctrl), spec, 0);
@@ -674,11 +580,14 @@ static bool h3_same_dest(const struct lsquic_out_spec *a, const struct lsquic_ou
         if (a->local_sa->sa_family == AF_INET) {
             const struct sockaddr_in *x = (const struct sockaddr_in *)a->local_sa;
             const struct sockaddr_in *y = (const struct sockaddr_in *)b->local_sa;
-            if (x->sin_port != y->sin_port || x->sin_addr.s_addr != y->sin_addr.s_addr) return false;
+            if (x->sin_port != y->sin_port || x->sin_addr.s_addr != y->sin_addr.s_addr)
+                return false;
         } else {
             const struct sockaddr_in6 *x = (const struct sockaddr_in6 *)a->local_sa;
             const struct sockaddr_in6 *y = (const struct sockaddr_in6 *)b->local_sa;
-            if (x->sin6_port != y->sin6_port || memcmp(&x->sin6_addr, &y->sin6_addr, sizeof(x->sin6_addr)) != 0) return false;
+            if (x->sin6_port != y->sin6_port ||
+                memcmp(&x->sin6_addr, &y->sin6_addr, sizeof(x->sin6_addr)) != 0)
+                return false;
         }
     }
     if (a->dest_sa->sa_family == AF_INET) {
@@ -699,9 +608,8 @@ static bool h3_same_dest(const struct lsquic_out_spec *a, const struct lsquic_ou
  * 0 means GSO is confirmed working. */
 static int h3_gso_state = -1; /* -1 = unknown, 0 = enabled, 1 = disabled */
 
-static int h3_sendmmsg_batch(int udp_fd,
-                              const struct lsquic_out_spec *specs,
-                              unsigned i, unsigned n_specs) {
+static int h3_sendmmsg_batch(int udp_fd, const struct lsquic_out_spec *specs, unsigned i,
+                             unsigned n_specs) {
     struct mmsghdr msgs[64];
     char ctrl_bufs[64][256];
 
@@ -715,8 +623,8 @@ static int h3_sendmmsg_batch(int udp_fd,
             memset(msg, 0, sizeof(*msg));
             msg->msg_name = (void *)spec->dest_sa;
             msg->msg_namelen = (spec->dest_sa && spec->dest_sa->sa_family == AF_INET)
-                              ? sizeof(struct sockaddr_in)
-                              : sizeof(struct sockaddr_in6);
+                                   ? sizeof(struct sockaddr_in)
+                                   : sizeof(struct sockaddr_in6);
             msg->msg_iov = (struct iovec *)spec->iov;
             msg->msg_iovlen = spec->iovlen;
             h3_setup_cmsg(msg, ctrl_bufs[k], sizeof(ctrl_bufs[k]), spec, 0);
@@ -733,7 +641,10 @@ static int h3_sendmmsg_batch(int udp_fd,
             if (errno == EAGAIN || errno == EWOULDBLOCK) break;
             if (i > 0) return (int)i;
             int nw = h3_send_one(udp_fd, &specs[i]);
-            if (nw >= 0) { i++; continue; }
+            if (nw >= 0) {
+                i++;
+                continue;
+            }
             if (errno == EAGAIN || errno == EWOULDBLOCK) break;
             return -1;
         }
@@ -742,9 +653,7 @@ static int h3_sendmmsg_batch(int udp_fd,
     return (int)i;
 }
 
-static int cwist_h3_packets_out(void *ctx,
-                                  const struct lsquic_out_spec *specs,
-                                  unsigned n_specs) {
+static int cwist_h3_packets_out(void *ctx, const struct lsquic_out_spec *specs, unsigned n_specs) {
     int udp_fd = *(int *)ctx;
 #if defined(__linux__)
     /* One-time GSO probe: check env var on first call. */
@@ -764,11 +673,9 @@ static int cwist_h3_packets_out(void *ctx,
             if (seg > 0 && seg <= 65535) {
                 unsigned max_segs = (unsigned)(65536 / seg);
                 if (max_segs > 48) max_segs = 48;
-                while (i + run < n_specs && run < max_segs &&
-                       specs[i + run].ecn == specs[i].ecn &&
+                while (i + run < n_specs && run < max_segs && specs[i + run].ecn == specs[i].ecn &&
                        h3_same_dest(&specs[i], &specs[i + run]) &&
-                       h3_spec_len(&specs[i + run]) == seg &&
-                       niov + specs[i + run].iovlen <= 128) {
+                       h3_spec_len(&specs[i + run]) == seg && niov + specs[i + run].iovlen <= 128) {
                     niov += specs[i + run].iovlen;
                     run++;
                 }
@@ -784,8 +691,8 @@ static int cwist_h3_packets_out(void *ctx,
                 struct msghdr msg = {0};
                 msg.msg_name = (void *)specs[i].dest_sa;
                 msg.msg_namelen = (specs[i].dest_sa && specs[i].dest_sa->sa_family == AF_INET)
-                                  ? sizeof(struct sockaddr_in)
-                                  : sizeof(struct sockaddr_in6);
+                                      ? sizeof(struct sockaddr_in)
+                                      : sizeof(struct sockaddr_in6);
                 msg.msg_iov = iov;
                 msg.msg_iovlen = n;
                 h3_setup_cmsg(&msg, ctrl, sizeof(ctrl), &specs[i], (uint16_t)seg);
@@ -795,8 +702,7 @@ static int cwist_h3_packets_out(void *ctx,
                     i += run;
                     continue;
                 }
-                if (errno == EAGAIN || errno == EWOULDBLOCK)
-                    break;
+                if (errno == EAGAIN || errno == EWOULDBLOCK) break;
                 /* GSO rejected: permanently disable and fall back to sendmmsg. */
                 h3_gso_state = 1;
                 return h3_sendmmsg_batch(udp_fd, specs, i, n_specs);
@@ -804,10 +710,9 @@ static int cwist_h3_packets_out(void *ctx,
             /* Single packet: send directly. */
             int nw = h3_send_one(udp_fd, &specs[i]);
             if (nw < 0) {
-                if (errno == EAGAIN || errno == EWOULDBLOCK)
-                    return (int)i;
-                if (errno == ECONNREFUSED || errno == ENETUNREACH ||
-                    errno == EHOSTUNREACH || errno == EMSGSIZE) {
+                if (errno == EAGAIN || errno == EWOULDBLOCK) return (int)i;
+                if (errno == ECONNREFUSED || errno == ENETUNREACH || errno == EHOSTUNREACH ||
+                    errno == EMSGSIZE) {
                     i++;
                     continue;
                 }
@@ -825,10 +730,9 @@ static int cwist_h3_packets_out(void *ctx,
     for (; i < n_specs; ++i) {
         int nw = h3_send_one(udp_fd, &specs[i]);
         if (nw < 0) {
-            if (errno == EAGAIN || errno == EWOULDBLOCK)
-                return (int)i;
-            if (errno == ECONNREFUSED || errno == ENETUNREACH ||
-                errno == EHOSTUNREACH || errno == EMSGSIZE)
+            if (errno == EAGAIN || errno == EWOULDBLOCK) return (int)i;
+            if (errno == ECONNREFUSED || errno == ENETUNREACH || errno == EHOSTUNREACH ||
+                errno == EMSGSIZE)
                 continue;
             return (i > 0) ? (int)i : -1;
         }
@@ -885,16 +789,6 @@ static int cwist_h3_log_stderr(void *ctx, const char *buf, size_t len) {
     return (int)fwrite(buf, 1, len, stderr);
 }
 
-/**
- * @brief on_new_conn callback: allocate and install the per-connection ctx.
- * @param stream_if_ctx The shared cwist_http3_context.
- * @return New h3_conn_ctx_t (stored on the connection), or NULL on OOM.
- *
- * On OOM the connection proceeds with a NULL ctx: every consumer tolerates
- * that, but the connection gets no request dispatch or datagram support.
- * The wrapper carries the shared config plus this connection's own
- * mutex-guarded datagram queue.
- */
 static lsquic_conn_ctx_t *cwist_h3_on_new_conn(void *stream_if_ctx, lsquic_conn_t *conn) {
     cwist_http3_context *h3_ctx = stream_if_ctx;
     h3_conn_ctx_t *cc = (h3_conn_ctx_t *)calloc(1, sizeof(*cc));
@@ -928,10 +822,16 @@ static void cwist_h3_on_conn_closed(lsquic_conn_t *conn) {
     enum LSQUIC_CONN_STATUS status = lsquic_conn_status(conn, errbuf, sizeof(errbuf));
     fprintf(stderr, "[HTTP/3] Conn close status=%d msg=%s\n", (int)status,
             errbuf[0] ? errbuf : "(none)");
-    /* No lsquic_conn_get_info() here: it lazily allocates the bandwidth
-     * sampler (lsquic_send_ctl_get_bw) even while the connection is being
-     * destroyed, leaking it under LSAN.  Stats would have to be collected
-     * while the connection is alive. */
+    struct lsquic_conn_info info;
+    if (lsquic_conn_get_info(conn, &info) == 0) {
+        fprintf(stderr,
+                "[HTTP/3] Conn closed rtt=%u rttvar=%u "
+                "pkts_sent=%" PRIu64 " pkts_lost=%" PRIu64 " "
+                "pkts_retx=%" PRIu64 " cwnd=%u\n",
+                info.lci_rtt, info.lci_rttvar, info.lci_pkts_sent, info.lci_pkts_lost,
+                info.lci_pkts_retx, info.lci_cwnd);
+    }
+
     h3_conn_ctx_t *cc = (h3_conn_ctx_t *)lsquic_conn_get_ctx(conn);
     if (cc) {
         pthread_mutex_lock(&cc->dgram_lock);
@@ -949,44 +849,6 @@ static void cwist_h3_on_conn_closed(lsquic_conn_t *conn) {
     }
 }
 
-/**
- * @brief on_conncloseframe_received callback: a CONNECTION_CLOSE frame
- *        arrived from the peer.
- *
- * Record it on the shared context so post-serve diagnostics can see why the
- * peer went away without scraping the CWIST_H3_DEBUG journal.  Runs on the
- * engine thread; the last_close_* fields are published to readers that call
- * cwist_http3_last_close_error() after the serve loop has stopped.
- */
-static void cwist_h3_on_conncloseframe_received(lsquic_conn_t *conn, int app_error,
-                                                uint64_t error_code, const char *reason,
-                                                int reason_len) {
-    cwist_http3_context *h3_ctx = h3_shared_ctx(conn);
-    if (!h3_ctx) return;
-    h3_ctx->last_close_app_error = app_error;
-    h3_ctx->last_close_code = error_code;
-    if (reason && reason_len > 0) {
-        size_t n = (size_t)reason_len >= sizeof(h3_ctx->last_close_reason)
-                     ? sizeof(h3_ctx->last_close_reason) - 1 : (size_t)reason_len;
-        memcpy(h3_ctx->last_close_reason, reason, n);
-        h3_ctx->last_close_reason[n] = '\0';
-    } else {
-        h3_ctx->last_close_reason[0] = '\0';
-    }
-    h3_ctx->last_close_received = 1;
-}
-
-/**
- * @brief on_new_stream callback: allocate the per-request stream context.
- * @return New stream ctx with an empty cwist_http_request ("HTTP/3"), or
- *         NULL on OOM (the stream then fails to open).
- *
- * Server-pushed streams (only possible when push is enabled) are processed
- * the same way as client-initiated ones.  Per RFC 9218 Section 6 a server
- * MUST NOT send PRIORITY_UPDATE for a request stream, so the default
- * scheduling priority is kept and lsquic_stream_set_priority() is never
- * called here.
- */
 static lsquic_stream_ctx_t *cwist_h3_on_new_stream(void *stream_if_ctx, lsquic_stream_t *stream) {
     cwist_http3_context *h3_ctx = (cwist_http3_context *)stream_if_ctx;
     h3_stream_ctx_t *st = calloc(1, sizeof(*st));
@@ -1052,8 +914,38 @@ static uint8_t h3_xor_bytes(const unsigned char *buf, size_t len) {
     return x;
 }
 
-static void h3_apply_header(cwist_http_request *req,
-                            const char *name, const char *value) {
+static int h3_header_name_char_is_valid(unsigned char c) {
+    return (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9') || c == '!' ||
+           c == '#' || c == '$' || c == '%' || c == '&' || c == '\'' || c == '*' || c == '+' ||
+           c == '-' || c == '.' || c == '^' || c == '_' || c == '`' || c == '|' || c == '~';
+}
+
+int cwist_http3_normalize_response_header_name(const char *name, char *out, size_t out_len) {
+    if (!name || !out || out_len == 0) return -1;
+
+    size_t len = strlen(name);
+    if (len == 0 || len >= out_len || name[0] == ':') return -1;
+
+    for (size_t i = 0; i < len; i++) {
+        unsigned char c = (unsigned char)name[i];
+        if (!h3_header_name_char_is_valid(c)) return -1;
+        out[i] = (char)tolower(c);
+    }
+    out[len] = '\0';
+    return 0;
+}
+
+int cwist_http3_response_header_value_is_safe(const char *value) {
+    if (!value) return 0;
+    for (const unsigned char *p = (const unsigned char *)value; *p; p++) {
+        /* RFC 9113/9114 field-value grammar: no CTLs (incl. CR/LF) or DEL;
+         * clients reject such responses as malformed. */
+        if (*p < 0x20 || *p == 0x7f) return 0;
+    }
+    return 1;
+}
+
+static void h3_apply_header(cwist_http_request *req, const char *name, const char *value) {
     if (strcmp(name, ":method") == 0) {
         req->method = cwist_http_string_to_method(value);
     } else if (strcmp(name, ":path") == 0) {
@@ -1108,8 +1000,7 @@ static void h3_apply_header(cwist_http_request *req,
  * sequenced body can be split at arbitrary read boundaries.  Buffer just one
  * wire chunk, then hand complete chunks to the common TASFA-style ARQ
  * assembler. */
-static int h3_seq_append_and_feed(h3_stream_ctx_t *st,
-                                  const unsigned char *data, size_t len) {
+static int h3_seq_append_and_feed(h3_stream_ctx_t *st, const unsigned char *data, size_t len) {
     if (len > SIZE_MAX - st->seq_len) return -1;
     size_t need = st->seq_len + len;
     if (need > st->seq_cap) {
@@ -1151,20 +1042,17 @@ static int h3_seq_append_and_feed(h3_stream_ctx_t *st,
  * lsquic exposes no stream-reset API in this baseline, so enforcement is a
  * 400 response followed by closing both stream directions (mirrors the
  * existing 413 path), and the request is never dispatched to the handler. */
-static void h3_reject_malformed_request(lsquic_stream_t *stream,
-                                        h3_stream_ctx_t *st) {
+static void h3_reject_malformed_request(lsquic_stream_t *stream, h3_stream_ctx_t *st) {
     st->malformed = 1;
     st->headers_done = 1;
     if (!st->res) st->res = cwist_http_response_create();
     if (st->res) {
         st->res->status_code = CWIST_HTTP_BAD_REQUEST;
         if (st->res->body) {
-            cwist_sstring_assign(st->res->body,
-                "{\"error\":\"malformed request\"}");
+            cwist_sstring_assign(st->res->body, "{\"error\":\"malformed request\"}");
         }
         if (st->res->headers) {
-            cwist_http_header_add(&st->res->headers,
-                                  "Content-Type", "application/json");
+            cwist_http_header_add(&st->res->headers, "Content-Type", "application/json");
         }
     }
     st->response_ready = 1;
@@ -1180,21 +1068,14 @@ static bool h3_process_stream_headers(lsquic_stream_t *stream, h3_stream_ctx_t *
     cwist_h3_hset_t *hs = (cwist_h3_hset_t *)hset;
     for (size_t i = 0; i < hs->count; ++i) {
         const struct lsxpack_header *xhdr = &hs->headers[i];
-        const char *raw_name  = lsxpack_header_get_name(xhdr);
+        const char *raw_name = lsxpack_header_get_name(xhdr);
         const char *raw_value = lsxpack_header_get_value(xhdr);
         size_t name_len = xhdr->name_len;
         size_t value_len = xhdr->val_len;
-        if (raw_name && raw_value && name_len > 0 &&
-            name_len <= 1024 && value_len <= H3_DECODE_BUF_SIZE - 1) {
-            /* lsxpack exposes counted slices, not C strings. */
-            char *name = malloc(name_len + 1);
-            char *value = malloc(value_len + 1);
-            if (!name || !value) {
-                free(name);
-                free(value);
-                lsquic_stream_close(stream);
-                return false;
-            }
+        if (raw_name && raw_value && name_len > 0 && name_len <= 1024 &&
+            value_len <= H3_DECODE_BUF_SIZE - 1) {
+            char *name = name_scratch;
+            char *value = value_scratch;
             memcpy(name, raw_name, name_len);
             name[name_len] = '\0';
             memcpy(value, raw_value, value_len);
@@ -1204,15 +1085,17 @@ static bool h3_process_stream_headers(lsquic_stream_t *stream, h3_stream_ctx_t *
                  * headers, appear at most once, and only the defined set is
                  * valid in requests. */
                 unsigned bit = 0;
-                if (strcmp(name, ":method") == 0) bit = H3_PSEUDO_METHOD;
-                else if (strcmp(name, ":scheme") == 0) bit = H3_PSEUDO_SCHEME;
-                else if (strcmp(name, ":path") == 0) bit = H3_PSEUDO_PATH;
-                else if (strcmp(name, ":authority") == 0) bit = H3_PSEUDO_AUTHORITY;
-                else if (strcmp(name, ":protocol") == 0) bit = H3_PSEUDO_PROTOCOL;
-                if (bit == 0 || st->seen_regular_header ||
-                    (st->pseudo_seen & bit)) {
-                    free(value);
-                    free(name);
+                if (strcmp(name, ":method") == 0)
+                    bit = H3_PSEUDO_METHOD;
+                else if (strcmp(name, ":scheme") == 0)
+                    bit = H3_PSEUDO_SCHEME;
+                else if (strcmp(name, ":path") == 0)
+                    bit = H3_PSEUDO_PATH;
+                else if (strcmp(name, ":authority") == 0)
+                    bit = H3_PSEUDO_AUTHORITY;
+                else if (strcmp(name, ":protocol") == 0)
+                    bit = H3_PSEUDO_PROTOCOL;
+                if (bit == 0 || st->seen_regular_header || (st->pseudo_seen & bit)) {
                     h3_reject_malformed_request(stream, st);
                     return false;
                 }
@@ -1251,8 +1134,7 @@ static bool h3_process_stream_headers(lsquic_stream_t *stream, h3_stream_ctx_t *
     } else if (st->is_connect) {
         /* Extended CONNECT (RFC 9220, e.g. WebTransport): :scheme, :path and
          * :authority are all required. */
-        if (!(st->pseudo_seen & H3_PSEUDO_SCHEME) ||
-            !(st->pseudo_seen & H3_PSEUDO_PATH) ||
+        if (!(st->pseudo_seen & H3_PSEUDO_SCHEME) || !(st->pseudo_seen & H3_PSEUDO_PATH) ||
             !(st->pseudo_seen & H3_PSEUDO_AUTHORITY)) {
             h3_reject_malformed_request(stream, st);
             return false;
@@ -1261,28 +1143,37 @@ static bool h3_process_stream_headers(lsquic_stream_t *stream, h3_stream_ctx_t *
         /* Normal request: :method, :scheme and :path are mandatory,
          * :authority (or an equivalent Host header) is required for https,
          * and :protocol is only legal on extended CONNECT. */
-        if (!(st->pseudo_seen & H3_PSEUDO_METHOD) ||
-            !(st->pseudo_seen & H3_PSEUDO_SCHEME) ||
-            !(st->pseudo_seen & H3_PSEUDO_PATH) ||
-            (st->pseudo_seen & H3_PSEUDO_PROTOCOL) ||
+        if (!(st->pseudo_seen & H3_PSEUDO_METHOD) || !(st->pseudo_seen & H3_PSEUDO_SCHEME) ||
+            !(st->pseudo_seen & H3_PSEUDO_PATH) || (st->pseudo_seen & H3_PSEUDO_PROTOCOL) ||
             (!(st->pseudo_seen & H3_PSEUDO_AUTHORITY) &&
              !cwist_http_header_get(st->req->headers, "host"))) {
             h3_reject_malformed_request(stream, st);
             return false;
         }
         /* An empty :path is only legal for OPTIONS (asterisk-form). */
-        if (st->saw_empty_path &&
-            (!st->req || st->req->method != CWIST_HTTP_OPTIONS)) {
+        if (st->saw_empty_path && (!st->req || st->req->method != CWIST_HTTP_OPTIONS)) {
             h3_reject_malformed_request(stream, st);
             return false;
         }
     }
     st->headers_done = 1;
-    char *seq_header = cwist_http_header_get(st->req->headers,
-                                              "x-cwist-sequenced-data");
-    st->sequenced_data = seq_header &&
-        (strcmp(seq_header, "1") == 0 || strcasecmp(seq_header, "true") == 0);
+    char *seq_header = cwist_http_header_get(st->req->headers, "x-cwist-sequenced-data");
+    st->sequenced_data =
+        seq_header && (strcmp(seq_header, "1") == 0 || strcasecmp(seq_header, "true") == 0);
     return true;
+}
+
+/* RFC 9110: methods with the idempotent property are safe to replay, which
+ * makes them acceptable for 0-RTT delivery. */
+static bool h3_method_is_idempotent(cwist_http_method_t method) {
+    switch (method) {
+        case CWIST_HTTP_GET:
+        case CWIST_HTTP_HEAD:
+        case CWIST_HTTP_PUT:
+        case CWIST_HTTP_DELETE:
+        case CWIST_HTTP_OPTIONS: return true;
+        default: return false;
+    }
 }
 
 static void cwist_h3_on_read(lsquic_stream_t *stream, lsquic_stream_ctx_t *st_h) {
@@ -1377,6 +1268,11 @@ static void cwist_h3_on_read(lsquic_stream_t *stream, lsquic_stream_ctx_t *st_h)
                 if (st->res) {
                     st->res->status_code = CWIST_HTTP_BAD_REQUEST;
                     cwist_http_header_add(&st->res->headers, "x-cwist-retry", "1");
+                    if (st->res->body) {
+                        cwist_sstring_assign(st->res->body,
+                                             "{\"error\":\"incomplete sequenced body, retry\"}");
+                    }
+                    cwist_http_header_add(&st->res->headers, "Content-Type", "application/json");
                 }
                 st->response_ready = 1;
                 lsquic_stream_wantread(stream, 0);
@@ -1439,21 +1335,27 @@ static void cwist_h3_on_read(lsquic_stream_t *stream, lsquic_stream_ctx_t *st_h)
                 }
             } else
 #endif
-            if (h3_ctx && h3_ctx->handler) {
+                if (h3_ctx && h3_ctx->handler) {
                 /* 0-RTT replay guard: requests delivered while the QUIC
                  * handshake is still in progress arrived as early data.
                  * lsquic (this baseline) exposes no
                  * lsquic_conn_is_early_data_accepted()-style query, so the
                  * guard uses the public lsquic_conn_status() instead. */
-                bool is_early_data = h3_ctx->early_data_enabled &&
-                    h3_ctx->early_data_guard &&
-                    lsquic_conn_status(lsquic_stream_conn(stream), NULL, 0)
-                        == LSCONN_ST_HSK_IN_PROGRESS;
-                if (is_early_data && st->req &&
-                    !h3_method_is_idempotent(st->req->method)) {
+                bool is_early_data = h3_ctx->early_data_enabled && h3_ctx->early_data_guard &&
+                                     lsquic_conn_status(lsquic_stream_conn(stream), NULL, 0) ==
+                                         LSCONN_ST_HSK_IN_PROGRESS;
+                if (is_early_data && st->req && !h3_method_is_idempotent(st->req->method)) {
                     /* RFC 8470: refuse replayable non-idempotent early data
                      * so the client retries after the handshake. */
                     st->res->status_code = 425; /* Too Early */
+                    if (st->res->body) {
+                        cwist_sstring_assign(st->res->body,
+                                             "{\"error\":\"too early, retry after handshake\"}");
+                    }
+                    if (st->res->headers) {
+                        cwist_http_header_add(&st->res->headers, "Content-Type",
+                                              "application/json");
+                    }
                 } else {
                     h3_ctx->handler(h3_ctx->user_ctx, st->req, st->res);
                 }
@@ -1488,8 +1390,7 @@ static bool h3_content_length_is_valid(const char *cl) {
  *        malformed at connection level.
  */
 static bool h3_status_forbids_body(int status_code) {
-    return (status_code >= 100 && status_code < 200) ||
-           status_code == 204 || status_code == 304;
+    return (status_code >= 100 && status_code < 200) || status_code == 204 || status_code == 304;
 }
 
 /**
@@ -1524,12 +1425,42 @@ static void cwist_h3_on_write(lsquic_stream_t *stream, lsquic_stream_ctx_t *st_h
         bool bodyless = h3_status_forbids_body(st->res->status_code);
         bool is_head = st->req && st->req->method == CWIST_HTTP_HEAD;
 
+        /* Handler attached a body source that cannot produce bytes
+         * (NULL pointer body / invalid file fd with a non-zero length).
+         * Sending HEADERS would announce (or imply) a body we cannot
+         * deliver; close the stream so the client sees an explicit error
+         * instead of a silent empty 200. */
+        if (!bodyless && !is_head &&
+            ((st->res->is_ptr_body && !st->res->ptr_body && st->res->ptr_body_len > 0) ||
+             (st->res->use_file_stream && st->res->file_stream_fd < 0 &&
+              st->res->file_stream_len > 0))) {
+            CWIST_LOG_WARN("[HTTP/3] unusable response body source; resetting stream");
+            lsquic_stream_close(stream);
+            return;
+        }
+
         /* :status */
-        int status_code = (st->res->status_code > 0) ? st->res->status_code : 200;
+        if (st->res->status_code < 200 || st->res->status_code > 999) {
+            /* RFC 9110 Section 15: a final response needs a status in
+             * 200-999 (RFC 9114 Section 4.1.2 requires three digits).
+             * A handler that leaves the status unset, picks 1xx (an
+             * interim response, illegal as the complete answer), or an
+             * out-of-range value gets coerced to 500 instead of putting
+             * a malformed :status on the wire. */
+            CWIST_LOG_WARN("[HTTP/3] invalid status %d; coercing to 500", st->res->status_code);
+            st->res->status_code = CWIST_HTTP_INTERNAL_ERROR;
+            bodyless = false;
+            if (!is_head && st->res->body && st->res->body->size == 0 && !st->res->is_ptr_body &&
+                !st->res->use_file_stream) {
+                cwist_sstring_assign(st->res->body, "{\"error\":\"internal server error\"}");
+            }
+        }
+        int status_code = st->res->status_code;
         char status_str[16];
         snprintf(status_str, sizeof(status_str), "%d", status_code);
         size_t slen = strlen(status_str);
-        if (hdr_count < H3_MAX_RESPONSE_HEADERS && hbuf_off + 7 + 2 + slen <= sizeof(hbuf)) {
+        if (hdr_count < H3_MAX_RESPONSE_HEADERS && slen > 0 &&
+            hbuf_off + 7 + 2 + slen <= sizeof(hbuf)) {
             memcpy(hbuf + hbuf_off, ":status", 7);
             memcpy(hbuf + hbuf_off + 9, status_str, slen);
             lsxpack_header_set_offset2(&headers_arr[hdr_count], hbuf + hbuf_off, 0, 7, 9, slen);
@@ -1541,32 +1472,42 @@ static void cwist_h3_on_write(lsquic_stream_t *stream, lsquic_stream_ctx_t *st_h
         size_t body_len = 0;
         if (st->res->use_file_stream) {
             if (st->res->file_stream_fd >= 0) body_len = st->res->file_stream_len;
-        }
-        else if (st->res->is_ptr_body) body_len = st->res->ptr_body ? st->res->ptr_body_len : 0;
-        else if (st->res->body) body_len = st->res->body->size;
+        } else if (st->res->is_ptr_body)
+            body_len = st->res->ptr_body ? st->res->ptr_body_len : 0;
+        else if (st->res->body)
+            body_len = st->res->body->size;
 
-        const char *user_cl = st->res->headers
-            ? cwist_http_header_get(st->res->headers, "content-length") : NULL;
+        const char *user_cl =
+            st->res->headers ? cwist_http_header_get(st->res->headers, "content-length") : NULL;
 
         if (!bodyless && (body_len > 0 || is_head) && hdr_count < H3_MAX_RESPONSE_HEADERS) {
             /* For HEAD, content-length describes the would-be GET body: keep
              * the handler-provided value when present (e.g. static file size
              * with an empty body), otherwise compute it like a GET. */
             char cl_str[32];
-            const char *cl_val = user_cl;
+            const char *cl_val = NULL;
+            if (is_head && user_cl) {
+                if (h3_content_length_is_valid(user_cl)) {
+                    cl_val = user_cl;
+                } else {
+                    /* Malformed handler content-length must not reach the
+                     * wire; fall back to the computed body length. */
+                    CWIST_LOG_WARN("[HTTP/3] dropping invalid HEAD content-length '%s'", user_cl);
+                }
+            }
             if (!cl_val) {
                 snprintf(cl_str, sizeof(cl_str), "%zu", body_len);
                 cl_val = cl_str;
             }
             if (cl_val && cl_val[0] != '\0') {
                 size_t cl_name_len = 14;
-                size_t cl_val_len  = strlen(cl_val);
+                size_t cl_val_len = strlen(cl_val);
                 size_t total = cl_name_len + 2 + cl_val_len;
                 if (cl_val_len > 0 && hbuf_off + total <= sizeof(hbuf)) {
                     memcpy(hbuf + hbuf_off, "content-length", cl_name_len);
                     memcpy(hbuf + hbuf_off + cl_name_len + 2, cl_val, cl_val_len);
-                    lsxpack_header_set_offset2(&headers_arr[hdr_count], hbuf + hbuf_off,
-                                               0, cl_name_len, cl_name_len + 2, cl_val_len);
+                    lsxpack_header_set_offset2(&headers_arr[hdr_count], hbuf + hbuf_off, 0,
+                                               cl_name_len, cl_name_len + 2, cl_val_len);
                     hbuf_off += total;
                     hdr_count++;
                 }
@@ -1593,13 +1534,12 @@ static void cwist_h3_on_write(lsquic_stream_t *stream, lsquic_stream_ctx_t *st_h
         /* user headers (skip content-length/content-type already handled) */
         cwist_http_header_node *node = st->res->headers;
         while (node && hdr_count < H3_MAX_RESPONSE_HEADERS) {
-            if (node->key && node->key->data && node->value && node->value->data) {
+            if (node->key && node->key->data && node->key->size > 0 && node->value &&
+                node->value->data) {
                 char h3_name[256];
-                if (cwist_http3_normalize_response_header_name(node->key->data,
-                                                               h3_name,
+                if (cwist_http3_normalize_response_header_name(node->key->data, h3_name,
                                                                sizeof(h3_name)) != 0 ||
-                    h3_name[0] == '\0' ||
-                    strlen(node->value->data) != node->value->size ||
+                    h3_name[0] == '\0' || strlen(node->value->data) != node->value->size ||
                     !cwist_http3_response_header_value_is_safe(node->value->data)) {
                     node = node->next;
                     continue;
@@ -1612,11 +1552,9 @@ static void cwist_h3_on_write(lsquic_stream_t *stream, lsquic_stream_ctx_t *st_h
                 }
                 /* RFC 9114 section 4.2: connection-specific fields are malformed in
                  * HTTP/3; te is only allowed with the value "trailers". */
-                if (strcmp(h3_name, "connection") == 0 ||
-                    strcmp(h3_name, "keep-alive") == 0 ||
+                if (strcmp(h3_name, "connection") == 0 || strcmp(h3_name, "keep-alive") == 0 ||
                     strcmp(h3_name, "proxy-connection") == 0 ||
-                    strcmp(h3_name, "transfer-encoding") == 0 ||
-                    strcmp(h3_name, "upgrade") == 0 ||
+                    strcmp(h3_name, "transfer-encoding") == 0 || strcmp(h3_name, "upgrade") == 0 ||
                     (strcmp(h3_name, "te") == 0 &&
                      strcasecmp(node->value->data, "trailers") != 0)) {
                     node = node->next;
@@ -1635,6 +1573,13 @@ static void cwist_h3_on_write(lsquic_stream_t *stream, lsquic_stream_ctx_t *st_h
                 }
             }
             node = node->next;
+        }
+
+        if (status_code == CWIST_HTTP_OK && !bodyless && !is_head && body_len == 0) {
+            /* Legal per RFC 9110, but a 200 with no body and no
+             * content-length usually means a handler forgot to assign one;
+             * make it diagnosable in the logs. */
+            CWIST_LOG_WARN("[HTTP/3] handler produced 200 with empty body");
         }
 
         size_t initial_body_len = 0;
@@ -1715,8 +1660,8 @@ static void cwist_h3_on_write(lsquic_stream_t *stream, lsquic_stream_ctx_t *st_h
                     return;
                 }
             }
-            if (st->res->file_stream_fd >= 0)
-                body_len = st->res->file_stream_len;
+#undef H3_FILE_CHUNKS_PER_TICK
+            if (st->res->file_stream_fd >= 0) body_len = st->res->file_stream_len;
         } else if (st->res->is_ptr_body) {
             if (!st->res->ptr_body && st->res->ptr_body_len > 0) {
                 /* Announced a body we cannot produce; spinning here with
@@ -1862,10 +1807,6 @@ cwist_h3_wt_on_session_open(void *ctx, lsquic_wt_session_t *sess,
     return NULL;
 }
 
-/**
- * @brief wti_on_session_rejected callback: the peer rejected the session.
- * Intentionally a no-op; rejection details are not surfaced to the app.
- */
 static void cwist_h3_wt_on_session_rejected(void *ctx, const struct lsquic_wt_connect_info *info,
                                             unsigned status, const char *reason,
                                             size_t reason_len) {
@@ -1886,7 +1827,7 @@ static void cwist_h3_wt_on_session_rejected(void *ctx, const struct lsquic_wt_co
  * to uint32_t.
  */
 static void cwist_h3_wt_on_session_close(lsquic_wt_session_t *sess,
-                                         lsquic_wt_session_ctx_t *sess_ctx, uint64_t code,
+                                         lsquic_wt_session_ctx_t *sess_ctx, uint32_t code,
                                          const char *reason, size_t reason_len) {
     (void)sess;
     (void)code;
@@ -1895,15 +1836,6 @@ static void cwist_h3_wt_on_session_close(lsquic_wt_session_t *sess,
     cwist_wt_handle_free((cwist_wt_handle_t *)sess_ctx);
 }
 
-/**
- * @brief Open-callback helper shared by the uni- and bidi-stream callbacks:
- *        wrap the stream in a stream-kind handle and notify the app.
- * @return Stream ctx (a stream-kind handle), or NULL only if handle
- *         allocation fails while a new-stream handler is registered.
- *
- * When no new-stream handler is registered the stream is still wrapped so it
- * stays readable; the app can take it over later.
- */
 static lsquic_stream_ctx_t *cwist_h3_wt_on_stream(lsquic_wt_session_t *sess,
                                                   lsquic_stream_t *stream) {
     cwist_http3_context *ctx = NULL;
@@ -1924,28 +1856,16 @@ static lsquic_stream_ctx_t *cwist_h3_wt_on_stream(lsquic_wt_session_t *sess,
     return (lsquic_stream_ctx_t *)cwist_wt_handle_new(CWIST_WT_HANDLE_STREAM, stream);
 }
 
-/**
- * @brief wti_on_uni_stream callback: peer opened a unidirectional stream.
- * Delegates to cwist_h3_wt_on_stream().
- */
 static lsquic_stream_ctx_t *cwist_h3_wt_on_uni_stream(lsquic_wt_session_t *sess,
                                                       lsquic_stream_t *stream) {
     return cwist_h3_wt_on_stream(sess, stream);
 }
 
-/**
- * @brief wti_on_bidi_stream callback: peer opened a bidirectional stream.
- * Delegates to cwist_h3_wt_on_stream().
- */
 static lsquic_stream_ctx_t *cwist_h3_wt_on_bidi_stream(lsquic_wt_session_t *sess,
                                                        lsquic_stream_t *stream) {
     return cwist_h3_wt_on_stream(sess, stream);
 }
 
-/**
- * @brief wti_on_stream_read callback: first data on a WT stream; notifies
- *        the app's new-stream handler with the stream handle.
- */
 static void cwist_h3_wt_on_stream_read(lsquic_stream_t *stream, lsquic_stream_ctx_t *st_h) {
     cwist_wt_handle_t *stream_handle = (cwist_wt_handle_t *)st_h;
     lsquic_wt_session_t *sess = lsquic_wt_session_from_stream(stream);
@@ -1957,37 +1877,22 @@ static void cwist_h3_wt_on_stream_read(lsquic_stream_t *stream, lsquic_stream_ct
     }
 }
 
-/**
- * @brief wti_on_stream_write callback: nothing to write from the server
- *        side for WT streams; no-op.
- */
 static void cwist_h3_wt_on_stream_write(lsquic_stream_t *stream, lsquic_stream_ctx_t *st_h) {
     (void)stream;
     (void)st_h;
 }
 
-/**
- * @brief wti_on_stream_close callback: free the stream handle.
- */
 static void cwist_h3_wt_on_stream_close(lsquic_stream_t *stream, lsquic_stream_ctx_t *st_h) {
     (void)stream;
     cwist_wt_handle_free((cwist_wt_handle_t *)st_h);
 }
 
-/**
- * @brief wti_on_stream_ss_code callback: application error code to send when
- *        this stream is reset.  Returns 0 (no specific code).
- */
 static uint32_t cwist_h3_wt_on_stream_ss_code(lsquic_stream_t *stream, lsquic_stream_ctx_t *st_h) {
     (void)stream;
     (void)st_h;
     return 0;
 }
 
-/**
- * @brief WT datagram-read callback: deliver the payload to the app's
- *        registered datagram callback, if any.
- */
 static void cwist_h3_wt_on_datagram_read(lsquic_wt_session_t *sess, const void *buf, size_t len) {
     lsquic_conn_t *conn = lsquic_wt_session_conn(sess);
     cwist_http3_context *ctx = h3_shared_ctx(conn);
@@ -1996,10 +1901,6 @@ static void cwist_h3_wt_on_datagram_read(lsquic_wt_session_t *sess, const void *
     }
 }
 
-/**
- * @brief WT datagram-write callback: nothing queued from the server side;
- *        returns 0 (no datagram to send).
- */
 static int cwist_h3_wt_on_datagram_write(lsquic_wt_session_t *sess, size_t max_datagram_size) {
     (void)sess;
     (void)max_datagram_size;
@@ -2025,7 +1926,6 @@ static const struct lsquic_webtransport_if cwist_h3_wt_if = {
 static const struct lsquic_stream_if cwist_h3_stream_if = {
     .on_new_conn = cwist_h3_on_new_conn,
     .on_conn_closed = cwist_h3_on_conn_closed,
-    .on_conncloseframe_received = cwist_h3_on_conncloseframe_received,
     .on_new_stream = cwist_h3_on_new_stream,
     .on_read = cwist_h3_on_read,
     .on_write = cwist_h3_on_write,
@@ -2047,8 +1947,8 @@ static const struct lsquic_stream_if cwist_h3_stream_if = {
  * connections across workers).  The key lives for the process lifetime.
  * ------------------------------------------------------------------------- */
 typedef struct cwist_h3_ticket_key {
-    unsigned char name[16];     /* key_name sent in the ticket */
-    unsigned char aes_key[32];  /* AES-256-CBC encryption key  */
+    unsigned char name[16]; /* key_name sent in the ticket */
+    unsigned char aes_key[32]; /* AES-256-CBC encryption key  */
     unsigned char hmac_key[32]; /* HMAC-SHA-256 MAC key        */
 } cwist_h3_ticket_key;
 
@@ -2063,22 +1963,13 @@ static void cwist_h3_ticket_key_ex_data_init(void) {
     g_h3_ticket_key_ex_data_idx = SSL_CTX_get_ex_new_index(0, NULL, NULL, NULL, NULL);
 }
 
-/**
- * @brief BoringSSL session-ticket key callback (shared ticket-key scheme).
- * @param encrypt Non-zero when producing a new ticket, zero when resuming.
- * @retval 1 Key applied; proceed with the ticket.
- * @retval 0 Decline the ticket (unknown key name, missing key, or crypto
- *         setup failure); a full handshake results.
- *
- * One random key is generated per cwist_http3_context and installed here, so
- * tickets issued by one SO_REUSEPORT worker resume on any other.
- */
 static int cwist_h3_ticket_key_cb(SSL *ssl, uint8_t *key_name, uint8_t *iv, EVP_CIPHER_CTX *ectx,
                                   HMAC_CTX *hctx, int encrypt) {
     SSL_CTX *ssl_ctx = ssl ? SSL_get_SSL_CTX(ssl) : NULL;
     const cwist_h3_ticket_key *key = NULL;
     if (ssl_ctx && g_h3_ticket_key_ex_data_idx >= 0) {
-        key = (const cwist_h3_ticket_key *)SSL_CTX_get_ex_data(ssl_ctx, g_h3_ticket_key_ex_data_idx);
+        key =
+            (const cwist_h3_ticket_key *)SSL_CTX_get_ex_data(ssl_ctx, g_h3_ticket_key_ex_data_idx);
     }
     if (!key) return 0;
 
@@ -2086,7 +1977,8 @@ static int cwist_h3_ticket_key_cb(SSL *ssl, uint8_t *key_name, uint8_t *iv, EVP_
         memcpy(key_name, key->name, sizeof(key->name));
         if (RAND_bytes(iv, 16) != 1) return 0;
         if (EVP_EncryptInit_ex(ectx, EVP_aes_256_cbc(), NULL, key->aes_key, iv) != 1) return 0;
-        if (HMAC_Init_ex(hctx, key->hmac_key, sizeof(key->hmac_key), EVP_sha256(), NULL) != 1) return 0;
+        if (HMAC_Init_ex(hctx, key->hmac_key, sizeof(key->hmac_key), EVP_sha256(), NULL) != 1)
+            return 0;
         return 1;
     }
 
@@ -2161,18 +2053,6 @@ static int cwist_h3_ssl_ctx_init(SSL_CTX *ssl_ctx, int early_data) {
     return 0;
 }
 
-/**
- * @brief Create an HTTP/3 server context from a certificate/key pair.
- * @param ctx Receives the new context.
- * @param cert_path PEM file with the certificate chain.
- * @param key_path PEM file with the private key.
- * @return err.error.err_i16 == 0 on success; -1 on bad arguments, TLS setup
- *         failure, or OOM.  On failure all partial state is unwound and
- *         *ctx is untouched.
- *
- * Takes a process-wide lsquic reference (released by
- * cwist_http3_destroy_context()).
- */
 cwist_error_t cwist_http3_init_context(cwist_http3_context **ctx, const char *cert_path,
                                        const char *key_path) {
     cwist_error_t err = make_error(CWIST_ERR_INT16);
@@ -2421,25 +2301,6 @@ int cwist_http3_last_close_error(const cwist_http3_context *ctx, bool *app_error
 /* Server loop                                                        */
 /* ------------------------------------------------------------------ */
 
-/**
- * @brief Run the blocking HTTP/3 server loop on a UDP socket.
- * @param udp_fd Bound UDP socket; forced non-blocking here (idempotent).
- * @param ctx Context with an initialized SSL_CTX.
- * @param handler Request handler invoked per request (required).
- * @param user_ctx Passed through to @p handler.
- * @return err.error.err_i16 == 0 when the loop exits cleanly (ctx->running
- *         cleared or process shutdown); -1 on invalid arguments or setup
- *         failure (socket flags, epoll, memory).
- *
- * Configures lsquic engine settings from the context's knobs (push,
- * WebTransport, datagrams, flow-control windows, timeout set), then polls
- * the socket (epoll on Linux, poll elsewhere; recvmmsg batching when
- * available), feeds packets to the engine, and processes connections until
- * shutdown.  Linux receive batches and the packet buffer are heap-allocated
- * so the loop does not require an oversized thread stack.  On exit the
- * engine is gracefully stopped and destroyed.  CWIST_H3_DEBUG=1 routes
- * lsquic's logger to stderr.
- */
 cwist_error_t cwist_http3_server_loop(int udp_fd, cwist_http3_context *ctx,
                                       cwist_http3_request_handler_func handler, void *user_ctx) {
     cwist_error_t err = make_error(CWIST_ERR_INT16);
@@ -2482,29 +2343,27 @@ cwist_error_t cwist_http3_server_loop(int udp_fd, cwist_http3_context *ctx,
         settings.es_idle_timeout = (unsigned)(ctx->idle_timeout_ms / 1000);
     if (ctx->handshake_timeout_ms > 0)
         settings.es_handshake_to = (unsigned long)ctx->handshake_timeout_ms * 1000UL;
-    if (ctx->ping_period_ms > 0)
-        settings.es_ping_period = (unsigned)(ctx->ping_period_ms / 1000);
+    if (ctx->ping_period_ms > 0) settings.es_ping_period = (unsigned)(ctx->ping_period_ms / 1000);
     if (ctx->noprogress_timeout_ms > 0)
         settings.es_noprogress_timeout = (unsigned)(ctx->noprogress_timeout_ms / 1000);
 
     char err_buf[256];
-    if (lsquic_engine_check_settings(&settings, LSENG_HTTP_SERVER,
-                                     err_buf, sizeof(err_buf)) != 0) {
+    if (lsquic_engine_check_settings(&settings, LSENG_HTTP_SERVER, err_buf, sizeof(err_buf)) != 0) {
         fprintf(stderr, "[HTTP/3] Invalid engine settings: %s\n", err_buf);
         err.error.err_i16 = -1;
         return err;
     }
 
     struct lsquic_engine_api api = {
-        .ea_stream_if        = &cwist_h3_stream_if,
-        .ea_stream_if_ctx    = ctx,
-        .ea_packets_out      = cwist_h3_packets_out,
-        .ea_packets_out_ctx  = &udp_fd,
-        .ea_get_ssl_ctx      = cwist_h3_get_ssl_ctx,
-        .ea_hsi_if           = &cwist_h3_hset_if,
-        .ea_hsi_ctx          = ctx,
-        .ea_settings         = &settings,
-        .ea_alpn             = "h3",
+        .ea_stream_if = &cwist_h3_stream_if,
+        .ea_stream_if_ctx = ctx,
+        .ea_packets_out = cwist_h3_packets_out,
+        .ea_packets_out_ctx = &ctx->udp_fd,
+        .ea_get_ssl_ctx = cwist_h3_get_ssl_ctx,
+        .ea_hsi_if = &cwist_h3_hset_if,
+        .ea_hsi_ctx = ctx,
+        .ea_settings = &settings,
+        .ea_alpn = "h3",
     };
 
     lsquic_engine_t *engine = lsquic_engine_new(LSENG_HTTP_SERVER, &api);
@@ -2583,16 +2442,42 @@ cwist_error_t cwist_http3_server_loop(int udp_fd, cwist_http3_context *ctx,
         return err;
     }
 #endif
-    settings.es_max_cfcw = 16 * 1024 * 1024;
-    settings.es_max_sfcw = 8 * 1024 * 1024;
-    settings.es_init_max_data = 16 * 1024 * 1024;
-    settings.es_init_max_stream_data_bidi_remote = 8 * 1024 * 1024;
-    settings.es_init_max_stream_data_bidi_local = 8 * 1024 * 1024;
-    settings.es_init_max_stream_data_uni = 8 * 1024 * 1024;
-    settings.es_init_max_streams_bidi = 256;
-    settings.es_ecn = 1;
-    settings.es_pace_packets = 1;
-    settings.es_optimistic_nat = 1;
+
+#if defined(__linux__) && defined(_GNU_SOURCE)
+#define H3_RECV_BATCH 32
+    /* recvmmsg() batch scratch space: was 5 fixed-size arrays declared on
+     * the stack inside the loop below (2.1MB total, dominated by
+     * batch_bufs[32][65535]). That only worked because this loop is known
+     * to run on a dedicated thread with the default ~8MB stack - the
+     * comment used to live right above the arrays explaining that TLS
+     * (.tbss) had been tried and rejected for the same reason (it forces
+     * every explicit pthread stack size below ~2.2MB to fail). Heap
+     * allocation removes that "must have a big-stack thread" requirement
+     * entirely without reintroducing the TLS problem (this was never
+     * about a thread-local instance, just about not using the stack),
+     * paying one extra pointer indirection per packet in exchange. Sized
+     * once here, freed once after the loop below (same place pkt_buf is),
+     * since this whole function's body has exactly one path out of the
+     * loop (break/continue only, no returns inside it). */
+    unsigned char(*batch_bufs)[65535] = malloc(sizeof(*batch_bufs) * H3_RECV_BATCH);
+    struct sockaddr_storage *batch_peers = malloc(sizeof(*batch_peers) * H3_RECV_BATCH);
+    char(*batch_cmsgs)[512] = malloc(sizeof(*batch_cmsgs) * H3_RECV_BATCH);
+    struct iovec *batch_iovs = malloc(sizeof(*batch_iovs) * H3_RECV_BATCH);
+    struct mmsghdr *batch_msgs = malloc(sizeof(*batch_msgs) * H3_RECV_BATCH);
+    if (!batch_bufs || !batch_peers || !batch_cmsgs || !batch_iovs || !batch_msgs) {
+        free(batch_bufs);
+        free(batch_peers);
+        free(batch_cmsgs);
+        free(batch_iovs);
+        free(batch_msgs);
+        free(pkt_buf);
+        close(epoll_fd);
+        err.error.err_i16 = -1;
+        lsquic_engine_destroy(engine);
+        ctx->engine = NULL;
+        return err;
+    }
+#endif
 
     while (ctx && ctx->running && atomic_load(&g_cwist_running)) {
         int diff = 100000;
@@ -2616,8 +2501,7 @@ cwist_error_t cwist_http3_server_loop(int udp_fd, cwist_http3_context *ctx,
         struct epoll_event events[1];
         int pret = epoll_wait(epoll_fd, events, 1, timeout_ms);
         if (pret < 0) {
-            if (errno == EINTR)
-                continue;
+            if (errno == EINTR) continue;
             break;
         }
         if (pret > 0 && (events[0].events & (EPOLLERR | EPOLLHUP))) {
@@ -2626,12 +2510,11 @@ cwist_error_t cwist_http3_server_loop(int udp_fd, cwist_http3_context *ctx,
         }
         bool can_read = (pret > 0 && (events[0].events & EPOLLIN));
 #else
-        struct pollfd pfd = { .fd = udp_fd, .events = POLLIN };
+        struct pollfd pfd = {.fd = udp_fd, .events = POLLIN};
         int pret = poll(&pfd, 1, timeout_ms);
 
         if (pret < 0) {
-            if (errno == EINTR)
-                continue;
+            if (errno == EINTR) continue;
             if (errno == EBADF) {
                 fprintf(stderr, "[HTTP/3] UDP socket closed, exiting loop.\n");
                 break;
@@ -2687,7 +2570,8 @@ cwist_error_t cwist_http3_server_loop(int udp_fd, cwist_http3_context *ctx,
                     if (local_addr_len) memcpy(&cur_local_addr, &local_addr, local_addr_len);
 
                     int ecn = 0;
-                    for (struct cmsghdr *cmsg = CMSG_FIRSTHDR(&batch_msgs[b].msg_hdr); cmsg != NULL; cmsg = CMSG_NXTHDR(&batch_msgs[b].msg_hdr, cmsg)) {
+                    for (struct cmsghdr *cmsg = CMSG_FIRSTHDR(&batch_msgs[b].msg_hdr); cmsg != NULL;
+                         cmsg = CMSG_NXTHDR(&batch_msgs[b].msg_hdr, cmsg)) {
                         if (cmsg->cmsg_level == IPPROTO_IP) {
 #ifdef IP_PKTINFO
                             if (cmsg->cmsg_type == IP_PKTINFO) {
@@ -2697,7 +2581,8 @@ cwist_error_t cwist_http3_server_loop(int udp_fd, cwist_http3_context *ctx,
                                     sin->sin_family = AF_INET;
                                     sin->sin_addr = pi->ipi_addr;
                                     if (local_addr_len >= sizeof(struct sockaddr_in)) {
-                                        sin->sin_port = ((struct sockaddr_in *)&local_addr)->sin_port;
+                                        sin->sin_port =
+                                            ((struct sockaddr_in *)&local_addr)->sin_port;
                                     }
                                     cur_local_len = sizeof(struct sockaddr_in);
                                 }
@@ -2712,12 +2597,15 @@ cwist_error_t cwist_http3_server_loop(int udp_fd, cwist_http3_context *ctx,
 #ifdef IPV6_PKTINFO
                             if (cmsg->cmsg_type == IPV6_PKTINFO) {
                                 struct in6_pktinfo *pi6 = (struct in6_pktinfo *)CMSG_DATA(cmsg);
-                                if (memcmp(&pi6->ipi6_addr, &in6addr_any, sizeof(struct in6_addr)) != 0) {
-                                    struct sockaddr_in6 *sin6 = (struct sockaddr_in6 *)&cur_local_addr;
+                                if (memcmp(&pi6->ipi6_addr, &in6addr_any,
+                                           sizeof(struct in6_addr)) != 0) {
+                                    struct sockaddr_in6 *sin6 =
+                                        (struct sockaddr_in6 *)&cur_local_addr;
                                     sin6->sin6_family = AF_INET6;
                                     sin6->sin6_addr = pi6->ipi6_addr;
                                     if (local_addr_len >= sizeof(struct sockaddr_in6)) {
-                                        sin6->sin6_port = ((struct sockaddr_in6 *)&local_addr)->sin6_port;
+                                        sin6->sin6_port =
+                                            ((struct sockaddr_in6 *)&local_addr)->sin6_port;
                                     }
                                     cur_local_len = sizeof(struct sockaddr_in6);
                                 }
@@ -2732,9 +2620,9 @@ cwist_error_t cwist_http3_server_loop(int udp_fd, cwist_http3_context *ctx,
                     }
 
                     lsquic_engine_packet_in(engine, batch_bufs[b], nr,
-                                            cur_local_len ? (struct sockaddr *)&cur_local_addr : NULL,
-                                            (struct sockaddr *)&batch_peers[b],
-                                            ctx, ecn);
+                                            cur_local_len ? (struct sockaddr *)&cur_local_addr
+                                                          : NULL,
+                                            (struct sockaddr *)&batch_peers[b], ctx, ecn);
                 }
             }
         }
@@ -2748,7 +2636,7 @@ cwist_error_t cwist_http3_server_loop(int udp_fd, cwist_http3_context *ctx,
                 if (local_addr_len) memcpy(&cur_local_addr, &local_addr, local_addr_len);
 
                 struct msghdr msg = {0};
-                struct iovec iov = { pkt_buf, 65535 };
+                struct iovec iov = {pkt_buf, 65535};
                 msg.msg_name = &peer_addr;
                 msg.msg_namelen = peer_addr_len;
                 msg.msg_iov = &iov;
@@ -2761,7 +2649,8 @@ cwist_error_t cwist_http3_server_loop(int udp_fd, cwist_http3_context *ctx,
                 ssize_t nr = recvmsg(udp_fd, &msg, MSG_DONTWAIT);
                 if (nr <= 0) {
                     if (nr < 0 && errno != EAGAIN && errno != EWOULDBLOCK) {
-                        if (errno == ECONNREFUSED || errno == ENETUNREACH || errno == EHOSTUNREACH) {
+                        if (errno == ECONNREFUSED || errno == ENETUNREACH ||
+                            errno == EHOSTUNREACH) {
                             continue;
                         }
                         if (errno == EBADF) {
@@ -2773,7 +2662,8 @@ cwist_error_t cwist_http3_server_loop(int udp_fd, cwist_http3_context *ctx,
                 }
 
                 int ecn = 0;
-                for (struct cmsghdr *cmsg = CMSG_FIRSTHDR(&msg); cmsg != NULL; cmsg = CMSG_NXTHDR(&msg, cmsg)) {
+                for (struct cmsghdr *cmsg = CMSG_FIRSTHDR(&msg); cmsg != NULL;
+                     cmsg = CMSG_NXTHDR(&msg, cmsg)) {
                     if (cmsg->cmsg_level == IPPROTO_IP) {
 #ifdef IP_PKTINFO
                         if (cmsg->cmsg_type == IP_PKTINFO) {
@@ -2798,12 +2688,14 @@ cwist_error_t cwist_http3_server_loop(int udp_fd, cwist_http3_context *ctx,
 #ifdef IPV6_PKTINFO
                         if (cmsg->cmsg_type == IPV6_PKTINFO) {
                             struct in6_pktinfo *pi6 = (struct in6_pktinfo *)CMSG_DATA(cmsg);
-                            if (memcmp(&pi6->ipi6_addr, &in6addr_any, sizeof(struct in6_addr)) != 0) {
+                            if (memcmp(&pi6->ipi6_addr, &in6addr_any, sizeof(struct in6_addr)) !=
+                                0) {
                                 struct sockaddr_in6 *sin6 = (struct sockaddr_in6 *)&cur_local_addr;
                                 sin6->sin6_family = AF_INET6;
                                 sin6->sin6_addr = pi6->ipi6_addr;
                                 if (local_addr_len >= sizeof(struct sockaddr_in6)) {
-                                    sin6->sin6_port = ((struct sockaddr_in6 *)&local_addr)->sin6_port;
+                                    sin6->sin6_port =
+                                        ((struct sockaddr_in6 *)&local_addr)->sin6_port;
                                 }
                                 cur_local_len = sizeof(struct sockaddr_in6);
                             }
@@ -2819,8 +2711,7 @@ cwist_error_t cwist_http3_server_loop(int udp_fd, cwist_http3_context *ctx,
 
                 lsquic_engine_packet_in(engine, pkt_buf, (size_t)nr,
                                         cur_local_len ? (struct sockaddr *)&cur_local_addr : NULL,
-                                        (struct sockaddr *)&peer_addr,
-                                        ctx, ecn);
+                                        (struct sockaddr *)&peer_addr, ctx, ecn);
             }
         }
 #endif
@@ -2900,20 +2791,6 @@ int cwist_http3_method_is_idempotent(const char *method_str) {
     return h3_method_is_idempotent(cwist_http_string_to_method(method_str)) ? 1 : 0;
 }
 
-/**
- * @brief Promise a pushed resource from inside a request handler.
- * @param req Request whose stream anchors the push (must carry the lsquic
- *            stream in private_data).
- * @param path Request path for the pushed resource.
- * @param content_type Ignored; a response field, not valid in a push
- *                     request set.
- * @retval 0 Push stream created.
- * @retval -1 Bad arguments, no connection, or push not negotiated.
- *
- * Builds a request header set (:method GET, :scheme https, :path from
- * @p path, :authority copied from the original request's Host or
- * "localhost").
- */
 int cwist_http3_push_resource(cwist_http_request *req, const char *path, const char *content_type) {
     if (!req || !req->private_data || !path) return -1;
     lsquic_stream_t *stream = (lsquic_stream_t *)req->private_data;
@@ -2934,8 +2811,7 @@ int cwist_http3_push_resource(cwist_http_request *req, const char *path, const c
     if (hbuf_off + 7 + 2 + mlen <= sizeof(hbuf)) {
         memcpy(hbuf + hbuf_off, ":method", 7);
         memcpy(hbuf + hbuf_off + 9, method, mlen);
-        lsxpack_header_set_offset2(&headers_arr[hdr_count], hbuf + hbuf_off,
-                                   0, 7, 9, mlen);
+        lsxpack_header_set_offset2(&headers_arr[hdr_count], hbuf + hbuf_off, 0, 7, 9, mlen);
         hbuf_off += 9 + mlen;
         hdr_count++;
     }
@@ -2946,8 +2822,7 @@ int cwist_http3_push_resource(cwist_http_request *req, const char *path, const c
     if (hbuf_off + 7 + 2 + sclen <= sizeof(hbuf)) {
         memcpy(hbuf + hbuf_off, ":scheme", 7);
         memcpy(hbuf + hbuf_off + 9, scheme, sclen);
-        lsxpack_header_set_offset2(&headers_arr[hdr_count], hbuf + hbuf_off,
-                                   0, 7, 9, sclen);
+        lsxpack_header_set_offset2(&headers_arr[hdr_count], hbuf + hbuf_off, 0, 7, 9, sclen);
         hbuf_off += 9 + sclen;
         hdr_count++;
     }
@@ -2957,8 +2832,7 @@ int cwist_http3_push_resource(cwist_http_request *req, const char *path, const c
     if (hbuf_off + 5 + 2 + plen <= sizeof(hbuf)) {
         memcpy(hbuf + hbuf_off, ":path", 5);
         memcpy(hbuf + hbuf_off + 7, path, plen);
-        lsxpack_header_set_offset2(&headers_arr[hdr_count], hbuf + hbuf_off,
-                                   0, 5, 7, plen);
+        lsxpack_header_set_offset2(&headers_arr[hdr_count], hbuf + hbuf_off, 0, 5, 7, plen);
         hbuf_off += 7 + plen;
         hdr_count++;
     }
@@ -2970,8 +2844,7 @@ int cwist_http3_push_resource(cwist_http_request *req, const char *path, const c
     if (hbuf_off + 10 + 2 + alen <= sizeof(hbuf)) {
         memcpy(hbuf + hbuf_off, ":authority", 10);
         memcpy(hbuf + hbuf_off + 12, authority, alen);
-        lsxpack_header_set_offset2(&headers_arr[hdr_count], hbuf + hbuf_off,
-                                   0, 10, 12, alen);
+        lsxpack_header_set_offset2(&headers_arr[hdr_count], hbuf + hbuf_off, 0, 10, 12, alen);
         hbuf_off += 12 + alen;
         hdr_count++;
     }
@@ -2995,6 +2868,12 @@ int cwist_http3_push_resource(cwist_http_request *req, const char *path, const c
  * include/cwist/net/http/http3.h.
  */
 int cwist_http3_set_stream_priority(cwist_http_request *req, unsigned priority) {
+    /* Refused on purpose: lsquic_stream_set_priority() on a request stream
+     * emits a PRIORITY_UPDATE frame on the control stream, which violates
+     * RFC 9218 (PRIORITY_UPDATE may only reference client-opened streams).
+     * Strict stacks (Firefox/neqo) then kill the connection with
+     * H3_FRAME_UNEXPECTED. Use the RFC 9218 `Priority` header instead.
+     * See the deprecation note in include/cwist/net/http/http3.h. */
     (void)req;
     (void)priority;
     CWIST_LOG_WARN("[HTTP/3] cwist_http3_set_stream_priority() is deprecated "
@@ -3292,13 +3171,6 @@ int cwist_http3_send_datagram(void *conn, const void *data, size_t len) {
 
 #ifdef CWIST_WEBTRANSPORT
 
-/**
- * @brief Send a datagram on a WebTransport session (CWIST_WEBTRANSPORT
- *        build).
- * @param session Session handle (opaque cwist_wt_handle_t).
- * @return lsquic_wt_send_datagram() result, or -1 on bad arguments/invalid
- *         handle.
- */
 ssize_t cwist_webtransport_send_datagram(void *session, const void *data, size_t len) {
     if (!session || !data || len == 0) return -1;
     lsquic_wt_session_t *sess = cwist_wt_handle_session(session);
@@ -3319,28 +3191,15 @@ size_t cwist_webtransport_max_datagram_size(void *session) {
     return lsquic_wt_max_datagram_size(sess);
 }
 
-/**
- * @brief Close a WebTransport session with an application error code
- *        (CWIST_WEBTRANSPORT build).
- * @param session Session handle (opaque cwist_wt_handle_t).
- * @param code 32-bit WebTransport application error code.
- * @param reason Human-readable reason; may be NULL.
- * @retval 0 Close frame sent.
- * @retval -1 Bad arguments or invalid handle.
- */
 int cwist_webtransport_close_session(void *session, uint64_t code, const char *reason) {
     if (!session) return -1;
     lsquic_wt_session_t *sess = cwist_wt_handle_session(session);
     if (!sess) return -1;
-    return lsquic_wt_close(sess, code, reason,
-                           reason ? strlen(reason) : 0);
+    return lsquic_wt_close(sess, code, reason, reason ? strlen(reason) : 0);
 }
 
 #else /* CWIST_WEBTRANSPORT */
 
-/**
- * @brief Stub used when CWIST_WEBTRANSPORT is not compiled in: always -1.
- */
 ssize_t cwist_webtransport_send_datagram(void *session, const void *data, size_t len) {
     (void)session;
     (void)data;
@@ -3356,9 +3215,6 @@ size_t cwist_webtransport_max_datagram_size(void *session) {
     return 0;
 }
 
-/**
- * @brief Stub used when CWIST_WEBTRANSPORT is not compiled in: always -1.
- */
 int cwist_webtransport_close_session(void *session, uint64_t code, const char *reason) {
     (void)session;
     (void)code;

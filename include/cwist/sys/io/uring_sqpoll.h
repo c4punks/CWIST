@@ -42,7 +42,8 @@ typedef struct {
  * @param sq_thread_idle_ms Idle timeout in ms before the kernel thread sleeps.
  * @return 0 on success, -1 on failure (e.g. insufficient privileges or kernel support).
  */
-int cwist_io_uring_init_sqpoll(cwist_sqpoll_ring_t *r, unsigned entries, unsigned sq_thread_idle_ms);
+int cwist_io_uring_init_sqpoll(cwist_sqpoll_ring_t *r, unsigned entries,
+                               unsigned sq_thread_idle_ms);
 
 /**
  * @brief Enqueue a SEND operation into SQPOLL ring.
@@ -56,7 +57,8 @@ int cwist_io_uring_init_sqpoll(cwist_sqpoll_ring_t *r, unsigned entries, unsigne
  * @param user_data User tracking tag.
  * @return true if submitted to the ring, false if queue is saturated.
  */
-bool cwist_io_uring_sqpoll_send(cwist_sqpoll_ring_t *r, int fd, const void *buf, size_t len, uint64_t user_data);
+bool cwist_io_uring_sqpoll_send(cwist_sqpoll_ring_t *r, int fd, const void *buf, size_t len,
+                                uint64_t user_data);
 
 /**
  * @brief Destroy SQPOLL ring and unmap shared ring memory.

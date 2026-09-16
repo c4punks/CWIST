@@ -1,4 +1,5 @@
-/** @file graphql.h @brief Full-featured, production-ready GraphQL query & mutation execution engine. */
+/** @file graphql.h @brief Full-featured, production-ready GraphQL query & mutation execution
+ * engine. */
 #ifndef CWIST_NET_GRAPHQL_H
 #define CWIST_NET_GRAPHQL_H
 
@@ -38,27 +39,15 @@ bool cwist_graphql_add_query(cwist_graphql_schema_t *schema, const char *field,
 bool cwist_graphql_add_mutation(cwist_graphql_schema_t *schema, const char *field,
                                 cwist_graphql_resolver_fn resolver, void *ctx);
 
-/** Execute a JSON request body containing `query`, optional `operationName`, and optional `variables`. */
+/** Execute a JSON request body containing `query`, optional `operationName`, and optional
+ * `variables`. */
 cwist_error_t cwist_graphql_execute(cwist_graphql_schema_t *schema, const char *request_json,
-                                     cwist_sstring **out_json);
-
-/** Extract the root field name and parsed arguments of a `subscription` operation.
- * Experimental (v3.7 Phase 4): used by the WS subscription layer; not part of the
- * query/mutation execute path.
- * @param query GraphQL source starting with the `subscription` keyword.
- * @param variables Request variables for `$var` argument references (may be NULL).
- * @param field_out Buffer receiving the root field name.
- * @param field_cap Capacity of @p field_out.
- * @param args_out Receives a newly allocated cJSON object with parsed arguments, or NULL
- *                 when the field carries none; the caller takes ownership.
- * @return true when a subscription root field was parsed. */
-bool cwist_graphql_parse_subscription(const char *query, const cJSON *variables, char *field_out,
-                                      size_t field_cap, cJSON **args_out);
+                                    cwist_sstring **out_json);
 
 /** HTTP handler adapter for CWIST POST routes. Supports both application/json and GraphQL requests.
  */
 void cwist_graphql_serve(cwist_graphql_schema_t *schema, cwist_http_request *req,
-                          cwist_http_response *res);
+                         cwist_http_response *res);
 
 #ifdef __cplusplus
 }

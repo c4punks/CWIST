@@ -14,8 +14,7 @@ static void ws_handler(cwist_websocket *ws) {
         if (frame->opcode == CWIST_WS_FRAME_TEXT) {
             char echo[256];
             snprintf(echo, sizeof(echo), "Echo: %s", frame->payload);
-            cwist_websocket_send(ws, CWIST_WS_FRAME_TEXT,
-                                 (uint8_t *)echo, strlen(echo));
+            cwist_websocket_send(ws, CWIST_WS_FRAME_TEXT, (uint8_t *)echo, strlen(echo));
         }
         cwist_websocket_frame_destroy(frame);
     }

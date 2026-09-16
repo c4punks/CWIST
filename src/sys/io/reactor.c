@@ -78,13 +78,6 @@ struct __kernel_timespec;
 static inline int sys_io_uring_setup(unsigned entries, struct io_uring_params *p) {
     return (int)syscall(__NR_io_uring_setup, entries, p);
 }
-/** @brief Raw io_uring_enter(2) syscall wrapper.
- *  @param ring_fd Ring file descriptor.
- *  @param to_submit Number of queued SQEs to submit.
- *  @param min_complete Minimum completions to wait for (with GETEVENTS).
- *  @param flags IORING_ENTER_* flags.
- *  @param sig Signal mask to apply during the wait, or NULL.
- *  @return 0 or number of completions on success, -1 with errno set on failure. */
 static inline int sys_io_uring_enter(int ring_fd, unsigned to_submit, unsigned min_complete,
                                      unsigned flags, sigset_t *sig) {
     return (int)syscall(__NR_io_uring_enter, ring_fd, to_submit, min_complete, flags, sig);
@@ -252,9 +245,22 @@ static reactor_event_ctx_t *alloc_reactor_ctx(cwist_reactor_t *r, int fd, cwist_
                                               const void *payload, size_t payload_size) {
     if (!r || payload_size > CWIST_REACTOR_PAYLOAD_SIZE) return NULL;
     pthread_mutex_lock(&r->pool_lock);
-    if (r->free_top == 0) {
-        pthread_mutex_unlock(&r->pool_lock);
-        return NULL;
+    if (!r->free_head) {
+        reactor_slot_chunk_t *chunk =
+            cwist_alloc(sizeof(*chunk) + REACTOR_CHUNK_EVENTS * sizeof(reactor_event_ctx_t));
+        if (chunk) {
+            chunk->next = r->chunks;
+            r->chunks = chunk;
+            for (uint32_t i = 0; i + 1 < REACTOR_CHUNK_EVENTS; i++) {
+                chunk->slots[i].ctx = &chunk->slots[i + 1];
+            }
+            chunk->slots[REACTOR_CHUNK_EVENTS - 1].ctx = NULL;
+            r->free_head = &chunk->slots[0];
+        }
+    }
+    reactor_event_ctx_t *ev_ctx = r->free_head;
+    if (ev_ctx) {
+        r->free_head = (reactor_event_ctx_t *)ev_ctx->ctx;
     }
     uint32_t idx = r->free_stack[--r->free_top];
     pthread_mutex_unlock(&r->pool_lock);
@@ -276,6 +282,58 @@ static void free_reactor_ctx(cwist_reactor_t *r, reactor_event_ctx_t *ev_ctx) {
     pthread_mutex_lock(&r->pool_lock);
     r->free_stack[r->free_top++] = idx;
     pthread_mutex_unlock(&r->pool_lock);
+}
+
+bool cwist_reactor_post(cwist_reactor_t *r, cwist_reactor_post_t *node) {
+    if (!r || !node || !node->cb) return false;
+    cwist_reactor_post_t *head = atomic_load_explicit(&r->post_head, memory_order_relaxed);
+    do {
+        node->next = head;
+    } while (!atomic_compare_exchange_weak_explicit(&r->post_head, &head, node,
+                                                    memory_order_release, memory_order_relaxed));
+    /* Wake only on the first post of a pending batch. A non-empty stack
+     * already has a wake pending; another write would be redundant. */
+    if (head == NULL && r->wake_wr >= 0) {
+        uint64_t one = 1;
+        ssize_t ign = write(r->wake_wr, &one, sizeof(one));
+        (void)ign; /* EAGAIN means the run thread is already awake. */
+    }
+    return true;
+}
+
+/* Pop the whole MPSC stack and run the callbacks oldest-first.  Only ever
+ * called by the reactor's run thread (or destroy, after it has stopped). */
+static void reactor_drain_posts(cwist_reactor_t *r) {
+    cwist_reactor_post_t *list =
+        atomic_exchange_explicit(&r->post_head, NULL, memory_order_acquire);
+    cwist_reactor_post_t *rev = NULL;
+    while (list) {
+        cwist_reactor_post_t *next = list->next;
+        list->next = rev;
+        rev = list;
+        list = next;
+    }
+    while (rev) {
+        cwist_reactor_post_t *next = rev->next;
+        rev->cb(rev->ctx);
+        rev = next;
+    }
+}
+
+static void reactor_wake_cb(int fd, void *ctx) {
+    cwist_reactor_t *r = *(cwist_reactor_t *const *)ctx;
+    uint64_t buf[8];
+    while (read(fd, buf, sizeof(buf)) > 0) {
+    }
+    reactor_drain_posts(r);
+    /* One-shot slots are recycled after firing: re-arm for the next post. */
+    if (!cwist_reactor_add(r, fd, reactor_wake_cb, &r, sizeof(r))) {
+        int wr = r->wake_wr;
+        r->wake_fd = -1;
+        r->wake_wr = -1;
+        close(fd);
+        if (wr >= 0 && wr != fd) close(wr);
+    }
 }
 
 cwist_reactor_t *cwist_reactor_create(void) {
@@ -311,18 +369,18 @@ cwist_reactor_t *cwist_reactor_create(void) {
         void *sqes_ptr = mmap_ring(fd, r->impl.sqes_sz, IORING_OFF_SQES);
 
         if (sq_ptr && cq_ptr && sqes_ptr) {
-            r->impl.sq_head         = (uint32_t *)((char *)sq_ptr + p.sq_off.head);
-            r->impl.sq_tail         = (uint32_t *)((char *)sq_ptr + p.sq_off.tail);
-            r->impl.sq_ring_mask    = (uint32_t *)((char *)sq_ptr + p.sq_off.ring_mask);
-            r->impl.sq_array        = (uint32_t *)((char *)sq_ptr + p.sq_off.array);
-            r->impl.sqes            = sqes_ptr;
-            r->impl.sq_entries      = p.sq_entries;
+            r->impl.sq_head = (uint32_t *)((char *)sq_ptr + p.sq_off.head);
+            r->impl.sq_tail = (uint32_t *)((char *)sq_ptr + p.sq_off.tail);
+            r->impl.sq_ring_mask = (uint32_t *)((char *)sq_ptr + p.sq_off.ring_mask);
+            r->impl.sq_array = (uint32_t *)((char *)sq_ptr + p.sq_off.array);
+            r->impl.sqes = sqes_ptr;
+            r->impl.sq_entries = p.sq_entries;
 
-            r->impl.cq_head         = (uint32_t *)((char *)cq_ptr + p.cq_off.head);
-            r->impl.cq_tail         = (uint32_t *)((char *)cq_ptr + p.cq_off.tail);
-            r->impl.cq_ring_mask    = (uint32_t *)((char *)cq_ptr + p.cq_off.ring_mask);
-            r->impl.cqes            = (struct io_uring_cqe *)((char *)cq_ptr + p.cq_off.cqes);
-            r->impl.cq_entries      = p.cq_entries;
+            r->impl.cq_head = (uint32_t *)((char *)cq_ptr + p.cq_off.head);
+            r->impl.cq_tail = (uint32_t *)((char *)cq_ptr + p.cq_off.tail);
+            r->impl.cq_ring_mask = (uint32_t *)((char *)cq_ptr + p.cq_off.ring_mask);
+            r->impl.cqes = (struct io_uring_cqe *)((char *)cq_ptr + p.cq_off.cqes);
+            r->impl.cq_entries = p.cq_entries;
             r->impl.active = true;
 
             /* Identity SQE mapping is fixed for the ring's lifetime; fill it
@@ -402,13 +460,14 @@ void cwist_reactor_destroy(cwist_reactor_t *reactor) {
         /* Teardown absorbed from io_uring_backend.c: unmap all three rings. */
         if (reactor->impl.sqes) munmap(reactor->impl.sqes, reactor->impl.sqes_sz);
         if (reactor->impl.cqes) {
-            munmap((char *)reactor->impl.cqes - (reactor->impl.cq_ring_sz -
-                   reactor->impl.cq_entries * sizeof(struct io_uring_cqe)),
+            munmap((char *)reactor->impl.cqes -
+                       (reactor->impl.cq_ring_sz -
+                        reactor->impl.cq_entries * sizeof(struct io_uring_cqe)),
                    reactor->impl.cq_ring_sz);
         }
         if (reactor->impl.sq_array) {
-            munmap((char *)reactor->impl.sq_array - (reactor->impl.sq_ring_sz -
-                   reactor->impl.sq_entries * sizeof(uint32_t)),
+            munmap((char *)reactor->impl.sq_array -
+                       (reactor->impl.sq_ring_sz - reactor->impl.sq_entries * sizeof(uint32_t)),
                    reactor->impl.sq_ring_sz);
         }
         close(reactor->impl.ring_fd);
@@ -428,14 +487,85 @@ void cwist_reactor_destroy(cwist_reactor_t *reactor) {
 static bool uring_submit(cwist_reactor_t *reactor, struct io_uring_sqe *out_sqe) {
     uint32_t tail = *reactor->impl.sq_tail;
     uint32_t head = __atomic_load_n(reactor->impl.sq_head, __ATOMIC_ACQUIRE);
-    if (tail - head >= reactor->impl.sq_entries) return false;
-    uint32_t index = tail & *reactor->impl.sq_ring_mask;
-    struct io_uring_sqe *sqe = &reactor->impl.sqes[index];
-    memcpy(sqe, out_sqe, sizeof(*sqe));
-    __atomic_store_n(reactor->impl.sq_tail, tail + 1, __ATOMIC_RELEASE);
-    if (sys_io_uring_enter(reactor->impl.ring_fd, 1, 0, 0, NULL) < 0) {
-        __atomic_store_n(reactor->impl.sq_tail, tail, __ATOMIC_RELEASE);
-        return false;
+    if (tail - head < reactor->impl.sq_entries) {
+        uint32_t index = tail & *reactor->impl.sq_ring_mask;
+        struct io_uring_sqe *sqe = &reactor->impl.sqes[index];
+        memcpy(sqe, out_sqe, sizeof(*sqe));
+        __atomic_store_n(reactor->impl.sq_tail, tail + 1, __ATOMIC_RELEASE);
+        if (sys_io_uring_enter(reactor->impl.ring_fd, 1, 0, 0, NULL) < 0) {
+            if (getenv("CWIST_ASYNC_DEBUG")) {
+                static _Atomic long dbg_enter_fail;
+                long n = atomic_fetch_add(&dbg_enter_fail, 1) + 1;
+                if (n <= 5 || n % 10000 == 0)
+                    fprintf(stderr,
+                            "[reactor] uring enter failed fd=%d errno=%d(%s) sq=%u/%u total=%ld\n",
+                            out_sqe->fd, errno, strerror(errno), tail - head,
+                            reactor->impl.sq_entries, n);
+            }
+            __atomic_store_n(reactor->impl.sq_tail, tail, __ATOMIC_RELEASE);
+        } else {
+            ok = true;
+        }
+    } else if (getenv("CWIST_ASYNC_DEBUG")) {
+        static _Atomic long dbg_sq_full;
+        long n = atomic_fetch_add(&dbg_sq_full, 1) + 1;
+        if (n <= 5 || n % 10000 == 0)
+            fprintf(stderr, "[reactor] SQ full fd=%d depth=%u/%u total=%ld\n", out_sqe->fd,
+                    tail - head, reactor->impl.sq_entries, n);
+    }
+    pthread_mutex_unlock(&reactor->impl.sq_lock);
+    return ok;
+}
+#endif
+
+#ifdef __linux__
+/* Flush the deferred SQE queue with a single io_uring_enter for the whole
+ * batch.  On batch failure (SQ momentarily full from concurrent cross-thread
+ * submissions) fall back to per-SQE submits with a short retry; a final
+ * failure closes the connection and recycles its slot, matching every
+ * caller's add-failure path. */
+static bool uring_submit_batch(cwist_reactor_t *reactor, struct io_uring_sqe *batch, uint32_t n) {
+    bool ok = false;
+    pthread_mutex_lock(&reactor->impl.sq_lock);
+    uint32_t tail = *reactor->impl.sq_tail;
+    uint32_t head = __atomic_load_n(reactor->impl.sq_head, __ATOMIC_ACQUIRE);
+    if (tail - head + n <= reactor->impl.sq_entries) {
+        for (uint32_t i = 0; i < n; i++) {
+            uint32_t index = (tail + i) & *reactor->impl.sq_ring_mask;
+            memcpy(&reactor->impl.sqes[index], &batch[i], sizeof(batch[i]));
+        }
+        __atomic_store_n(reactor->impl.sq_tail, tail + n, __ATOMIC_RELEASE);
+        if (sys_io_uring_enter(reactor->impl.ring_fd, n, 0, 0, NULL) >= 0) {
+            ok = true;
+        } else {
+            __atomic_store_n(reactor->impl.sq_tail, tail, __ATOMIC_RELEASE);
+        }
+    }
+    pthread_mutex_unlock(&reactor->impl.sq_lock);
+    return ok;
+}
+
+static void flush_deferred(cwist_reactor_t *reactor) {
+    uint32_t n = reactor->deferred_n;
+    reactor->deferred_n = 0;
+    if (n == 0) return;
+    if (uring_submit_batch(reactor, reactor->deferred_sqes, n)) return;
+    for (uint32_t i = 0; i < n; i++) {
+        struct io_uring_sqe *sqe = &reactor->deferred_sqes[i];
+        reactor_event_ctx_t *ev_ctx = reactor->deferred_ctxs[i];
+        int attempt;
+        for (attempt = 0; attempt < 100; attempt++) {
+            if (uring_submit(reactor, sqe)) break;
+            struct timespec ts = {.tv_sec = 0, .tv_nsec = 1000 * 1000};
+            nanosleep(&ts, NULL); /* SQ drains without our help; wait it out */
+        }
+        if (attempt == 100) {
+            if (getenv("CWIST_ASYNC_DEBUG")) {
+                fprintf(stderr, "[reactor] deferred submit failed fd=%d; closing\n", (int)sqe->fd);
+            }
+            close((int)sqe->fd);
+            free_reactor_ctx(reactor, ev_ctx);
+        }
     }
     return true;
 }
@@ -482,6 +612,16 @@ static bool reactor_add_common(cwist_reactor_t *reactor, int fd, cwist_reactor_c
         sqe.fd = fd;
         sqe.poll_events = for_write ? POLLOUT : POLLIN;
         sqe.user_data = (uint64_t)ev_ctx;
+        /* Run-thread re-arms defer to the batch flush; everything else
+         * submits immediately so remote workers wake from their wait. */
+        if (reactor->dispatching && pthread_equal(pthread_self(), reactor->owner) &&
+            reactor->deferred_n <
+                (uint32_t)(sizeof(reactor->deferred_sqes) / sizeof(reactor->deferred_sqes[0]))) {
+            uint32_t slot = reactor->deferred_n++;
+            reactor->deferred_sqes[slot] = sqe;
+            reactor->deferred_ctxs[slot] = ev_ctx;
+            return true;
+        }
         if (uring_submit(reactor, &sqe)) {
             return true;
         }
@@ -504,8 +644,8 @@ static bool reactor_add_common(cwist_reactor_t *reactor, int fd, cwist_reactor_c
     }
 #elif defined(__APPLE__) || defined(__FreeBSD__) || defined(__NetBSD__) || defined(__OpenBSD__)
     struct kevent change;
-    EV_SET(&change, fd, for_write ? EVFILT_WRITE : EVFILT_READ,
-           EV_ADD | EV_CLEAR | EV_ONESHOT, 0, 0, ev_ctx);
+    EV_SET(&change, fd, for_write ? EVFILT_WRITE : EVFILT_READ, EV_ADD | EV_CLEAR | EV_ONESHOT, 0,
+           0, ev_ctx);
     if (kevent(reactor->impl.kq_fd, &change, 1, NULL, 0, NULL) == 0) {
         return true;
     }
@@ -516,8 +656,8 @@ static bool reactor_add_common(cwist_reactor_t *reactor, int fd, cwist_reactor_c
     return false;
 }
 
-bool cwist_reactor_add(cwist_reactor_t *reactor, int fd, cwist_reactor_cb_t cb,
-                       const void *payload, size_t payload_size) {
+bool cwist_reactor_add(cwist_reactor_t *reactor, int fd, cwist_reactor_cb_t cb, const void *payload,
+                       size_t payload_size) {
     return reactor_add_common(reactor, fd, cb, payload, payload_size, false);
 }
 
@@ -526,8 +666,8 @@ bool cwist_reactor_add_out(cwist_reactor_t *reactor, int fd, cwist_reactor_cb_t 
     return reactor_add_common(reactor, fd, cb, payload, payload_size, true);
 }
 
-bool cwist_reactor_mod(cwist_reactor_t *reactor, int fd, cwist_reactor_cb_t cb,
-                       const void *payload, size_t payload_size) {
+bool cwist_reactor_mod(cwist_reactor_t *reactor, int fd, cwist_reactor_cb_t cb, const void *payload,
+                       size_t payload_size) {
     if (!reactor || fd < 0) return false;
     reactor_event_ctx_t *ev_ctx = alloc_reactor_ctx(reactor, fd, cb, payload, payload_size);
     if (!ev_ctx) return false;
@@ -656,7 +796,12 @@ void cwist_reactor_run(cwist_reactor_t *reactor) {
         reactor->owner = pthread_self();
         while (reactor->running && atomic_load(&g_cwist_running)) {
             /* One enter per round: submit the re-arms queued by the previous
-             * dispatch batch and wait for the next event in the same call. */
+             * dispatch batch and wait for the next event in the same call.
+             * The wait is bounded (like the epoll path's 100 ms poll) because
+             * the shutdown handler runs with SA_RESTART: an unbounded enter
+             * would be restarted after SIGTERM and hang an idle reactor
+             * forever. */
+            static const struct __kernel_timespec idle_ts = {.tv_sec = 0, .tv_nsec = 100000000};
             uint32_t to_submit = reactor->sq_unsubmitted;
             int ret = sys_io_uring_enter(reactor->impl.ring_fd, to_submit, 1, IORING_ENTER_GETEVENTS, NULL);
             if (ret < 0) {

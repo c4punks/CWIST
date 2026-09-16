@@ -19,8 +19,12 @@
 #include <sys/wait.h>
 #include "../src/sys/io/reactor.c"
 
-void *cwist_alloc(size_t size) { return calloc(1, size); }
-void cwist_free(void *ptr) { free(ptr); }
+void *cwist_alloc(size_t size) {
+    return calloc(1, size);
+}
+void cwist_free(void *ptr) {
+    free(ptr);
+}
 atomic_int g_cwist_running = 1;
 
 enum { BATCH = 256, FAKE_HANDLER_US = 100 };
@@ -37,8 +41,7 @@ static void spin_us(int us) {
     clock_gettime(CLOCK_MONOTONIC, &start);
     do {
         clock_gettime(CLOCK_MONOTONIC, &now);
-    } while ((now.tv_sec - start.tv_sec) * 1000000L +
-             (now.tv_nsec - start.tv_nsec) / 1000L < us);
+    } while ((now.tv_sec - start.tv_sec) * 1000000L + (now.tv_nsec - start.tv_nsec) / 1000L < us);
 }
 
 static double ms_between(struct timespec a, struct timespec b) {
@@ -118,8 +121,10 @@ static double run_batch_in_child(const char *drain_chunk_env) {
     assert(pid >= 0);
     if (pid == 0) {
         close(fds[0]);
-        if (drain_chunk_env) setenv("CWIST_REACTOR_DRAIN_CHUNK", drain_chunk_env, 1);
-        else unsetenv("CWIST_REACTOR_DRAIN_CHUNK");
+        if (drain_chunk_env)
+            setenv("CWIST_REACTOR_DRAIN_CHUNK", drain_chunk_env, 1);
+        else
+            unsetenv("CWIST_REACTOR_DRAIN_CHUNK");
         double ms = run_batch();
         ssize_t w = write(fds[1], &ms, sizeof(ms));
         (void)w;
@@ -148,8 +153,8 @@ int main(void) {
         printf("SKIP: io_uring unavailable on this host\n");
         return 0;
     }
-    printf("legacy (unset): post latency = %.3fms (whole batch ~%.3fms)\n",
-           legacy_ms, whole_batch_ms);
+    printf("legacy (unset): post latency = %.3fms (whole batch ~%.3fms)\n", legacy_ms,
+           whole_batch_ms);
 
     /* Chunked: the post must be serviced well before the whole batch would
      * have finished draining -- this is the actual fix under test. Half the
