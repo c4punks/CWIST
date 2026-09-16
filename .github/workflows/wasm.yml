@@ -1,0 +1,40 @@
+name: "WASM"
+
+on:
+  push:
+    branches: [main, master, dev]
+  pull_request:
+    branches: [main, master, dev]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  wasm:
+    name: Emscripten build + smoke test
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      with:
+        submodules: recursive
+
+    # lib/cjson (a WASM_SRCS member) is a submodule; the wasm archive does
+    # not build without it.
+    - name: Install Emscripten
+      uses: mymindstorm/setup-emsdk@v14
+      with:
+        version: 5.0.0
+        actions-cache-folder: emsdk-cache
+
+    # wasm-smoke compiles and runs the smoke binary under node, so this is
+    # build + run. Catches WASM-only regressions that native CI cannot see
+    # (issue #93 gap 2) - e.g. clang-format corrupting EM_JS bodies.
+    - name: Build libcwist_wasm.a and run smoke test
+      shell: bash
+      run: |
+        emcc --version
+        make -j$(nproc) wasm
+        make wasm-smoke
