@@ -52,30 +52,30 @@ them more than most code changes do; the per-CPU table shows that spread.
 <!-- WEBSERVER_BENCHMARKS:START -->
 ## Latest isolated HTTP benchmark
 
-Measured commit: `8391897cbf932082894d748370cc4ff41beebeff`. Release tag: `not recorded; identify this run by commit`.
-Run: https://github.com/c4punks/CWIST/actions/runs/35052654519. Timestamp: `2026-09-16T03:52:20.545629+00:00`.
+Measured commit: `eee90ea9f64732b0c4a8fe551253605878cc447b`. Release tag: `not recorded; identify this run by commit`.
+Run: https://github.com/c4punks/CWIST/actions/runs/35054083589. Timestamp: `2026-09-16T04:14:38.074893+00:00`.
 
 Latency columns use the **wrk corrected distribution**. Both memory columns are process-group end samples, not peaks. Group RSS sums each process's RSS, so a page shared between worker processes is counted once per process; Group PSS divides each shared page by its mapper count, so it is the column to compare against a single-process server. Context switches cover matching thread identities only; N/A means unavailable.
 
 | Profile | Req/s | Mean ms | P99.999 ms | Group PSS MiB | Group RSS MiB | Context-switch delta |
 |---|---:|---:|---:|---:|---:|---:|
-| CWIST classic | 117,437 | 1.991 | 41.844 | 51.93 | 62.79 | N/A |
-| CWIST C1M | 143,581 | 3.048 | 32.102 | 19.66 | 33.18 | 311,359 |
-| CWIST C1M arena_max=1 | 142,883 | 3.032 | 25.543 | 26.26 | 45.19 | 316,297 |
-| CWIST C1M drain_chunk=8 | 143,645 | 2.987 | 24.061 | 18.96 | 31.99 | 303,114 |
-| CWIST C1M PUBLIC_FIXED (opt-in) | 142,163 | 3.101 | 26.958 | 16.72 | 29.57 | 318,756 |
-| Axum | 120,594 | 3.251 | 16.444 | 15.70 | 17.78 | 195,335 |
-| Gin | 88,696 | 5.824 | 74.044 | 27.42 | 28.84 | 305,395 |
-| Spring Boot | 59,386 | 6.691 | 68.179 | 1,275.28 | 1,278.14 | N/A |
+| CWIST classic | 114,535 | 2.070 | 27.674 | 50.08 | 60.77 | N/A |
+| CWIST C1M | 140,867 | 3.048 | 26.220 | 27.10 | 40.39 | 283,308 |
+| CWIST C1M arena_max=1 | 140,787 | 2.993 | 24.141 | 24.69 | 37.60 | 278,612 |
+| CWIST C1M drain_chunk=8 | 137,733 | 3.120 | 34.896 | 19.95 | 33.50 | 305,011 |
+| CWIST C1M PUBLIC_FIXED (opt-in) | 142,207 | 2.937 | 24.263 | 16.87 | 29.80 | 259,677 |
+| Axum | 112,153 | 3.505 | 17.196 | 14.14 | 16.23 | 193,329 |
+| Gin | 79,004 | 6.511 | 83.622 | 28.10 | 29.53 | N/A |
+| Spring Boot | 44,016 | 9.088 | 99.468 | 1,310.19 | 1,313.06 | N/A |
 
 Main profile: `wrk -t12 -c400 -d10s`, after a discarded 10s warmup.
 
 ### Separate tuned profile
 
 `wrk -t4 -c100 -d10s`, after a discarded 10s warmup. Do not compare these rows as equal-load results against the main table.
-- CWIST classic: 122,816 req/s; mean 0.499 ms; corrected P99.999 4.840 ms.
-- Axum: 126,208 req/s; mean 0.747 ms; corrected P99.999 6.094 ms.
-- Spring Boot: 59,079 req/s; mean 1.785 ms; corrected P99.999 47.009 ms.
+- CWIST classic: 118,973 req/s; mean 0.518 ms; corrected P99.999 5.156 ms.
+- Axum: 121,449 req/s; mean 0.776 ms; corrected P99.999 5.669 ms.
+- Spring Boot: 44,630 req/s; mean 2.284 ms; corrected P99.999 21.201 ms.
 
 Legacy records remain in history but are not pooled into this measurement contract. A 10-second tail screen is not a universal SLO or a statistically established speedup.
 
@@ -94,7 +94,7 @@ GitHub hands out a different CPU model per run, which moves these numbers more t
 
 | Runner CPU | Runs | CWIST classic ms | CWIST C1M ms | Axum ms | CWIST C1M req/s | Axum req/s |
 |---|---:|---:|---:|---:|---:|---:|
-| AMD EPYC 7763 64-Core Processor | 5 | 2.08 | 3.12 | 3.51 | 139,267 | 112,113 |
+| AMD EPYC 7763 64-Core Processor | 6 | 2.08 | 3.09 | 3.51 | 139,751 | 112,133 |
 | AMD EPYC 9V74 80-Core Processor | 4 | 1.90 | 3.05 | 3.24 | 144,030 | 120,685 |
 | AMD EPYC 9V45 96-Core Processor | 1 | 1.26 | 2.34 | 2.11 | 224,610 | 188,666 |
 | Intel(R) Xeon(R) Platinum 8370C CPU @ 2.80GHz | 1 | 1.41 | 2.37 | 2.51 | 215,668 | 158,648 |
@@ -105,8 +105,8 @@ _Methodology, JVM options, and fairness settings: [docs/webserver-benchmark.md](
 <!-- TUNED_BENCHMARK:START -->
 **Tuned low-latency run (wrk -t4 -c100 -d10s (after 10s warmup, warmup discarded)), CWIST vs Axum on identical concurrency:**
 
-- **CWIST**: 122,816 req/s at 0.50ms average latency (P50 0.39ms, P90 0.90ms, P99 2.14ms)
-- **Axum**: 126,208 req/s at 0.75ms average latency (P50 0.67ms, P90 1.30ms, P99 2.39ms), same binary as the main run above
+- **CWIST**: 118,973 req/s at 0.52ms average latency (P50 0.44ms, P90 0.90ms, P99 2.19ms)
+- **Axum**: 121,449 req/s at 0.78ms average latency (P50 0.68ms, P90 1.42ms, P99 2.52ms), same binary as the main run above
 
 These runs use a different concurrency budget from the main table. They do not establish a causal scheduling explanation or a universal tail-latency improvement.
 <!-- TUNED_BENCHMARK:END -->
