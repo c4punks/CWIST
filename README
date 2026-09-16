@@ -38,7 +38,7 @@ the median faster. The crossover is at p99.9, where Axum's extreme tail
 is tighter; closing that is open work.
 
 <!-- BENCHMARKS:START -->
-Latest automated benchmark: **Darwin**: 12.54 M leases/s, 134.48% CPU, 721856 KiB RSS.
+Latest automated benchmark: **Darwin**: 16.93 M leases/s, 109.87% CPU, 758992 KiB RSS.
 
 ![CWIST benchmark trends](docs/benchmark-trends.svg)
 <!-- BENCHMARKS:END -->
@@ -46,30 +46,30 @@ Latest automated benchmark: **Darwin**: 12.54 M leases/s, 134.48% CPU, 721856 Ki
 <!-- WEBSERVER_BENCHMARKS:START -->
 ## Latest isolated HTTP benchmark
 
-Measured commit: `f1011a264e5d8373f51226e3ca447bea143c38a0`. Release tag: `not recorded; identify this run by commit`.
-Run: https://github.com/c4punks/CWIST/actions/runs/34954811540. Timestamp: `2026-09-15T10:01:33.455222+00:00`.
+Measured commit: `8391897cbf932082894d748370cc4ff41beebeff`. Release tag: `not recorded; identify this run by commit`.
+Run: https://github.com/c4punks/CWIST/actions/runs/35052654519. Timestamp: `2026-09-16T03:52:20.545629+00:00`.
 
 Latency columns use the **wrk corrected distribution**. Both memory columns are process-group end samples, not peaks. Group RSS sums each process's RSS, so a page shared between worker processes is counted once per process; Group PSS divides each shared page by its mapper count, so it is the column to compare against a single-process server. Context switches cover matching thread identities only; N/A means unavailable.
 
 | Profile | Req/s | Mean ms | P99.999 ms | Group PSS MiB | Group RSS MiB | Context-switch delta |
 |---|---:|---:|---:|---:|---:|---:|
-| CWIST classic | 149,791 | 1.551 | 32.728 | 50.37 | 61.08 | N/A |
-| CWIST C1M | 184,583 | 2.571 | 24.239 | 19.78 | 33.35 | 415,001 |
-| CWIST C1M arena_max=1 | 184,833 | 2.651 | 23.871 | 25.88 | 39.45 | 418,149 |
-| CWIST C1M drain_chunk=8 | 185,021 | 2.531 | 23.424 | 19.30 | 32.71 | 408,307 |
-| CWIST C1M PUBLIC_FIXED (opt-in) | 181,277 | 2.640 | 24.329 | 16.72 | 30.29 | 405,433 |
-| Axum | 156,004 | 2.524 | 12.942 | 13.26 | 15.53 | 233,039 |
-| Gin | 115,693 | 4.456 | 56.616 | 27.37 | 28.91 | N/A |
-| Spring Boot | 76,607 | 5.168 | 48.493 | 1,270.05 | 1,272.93 | N/A |
+| CWIST classic | 117,437 | 1.991 | 41.844 | 51.93 | 62.79 | N/A |
+| CWIST C1M | 143,581 | 3.048 | 32.102 | 19.66 | 33.18 | 311,359 |
+| CWIST C1M arena_max=1 | 142,883 | 3.032 | 25.543 | 26.26 | 45.19 | 316,297 |
+| CWIST C1M drain_chunk=8 | 143,645 | 2.987 | 24.061 | 18.96 | 31.99 | 303,114 |
+| CWIST C1M PUBLIC_FIXED (opt-in) | 142,163 | 3.101 | 26.958 | 16.72 | 29.57 | 318,756 |
+| Axum | 120,594 | 3.251 | 16.444 | 15.70 | 17.78 | 195,335 |
+| Gin | 88,696 | 5.824 | 74.044 | 27.42 | 28.84 | 305,395 |
+| Spring Boot | 59,386 | 6.691 | 68.179 | 1,275.28 | 1,278.14 | N/A |
 
 Main profile: `wrk -t12 -c400 -d10s`, after a discarded 10s warmup.
 
 ### Separate tuned profile
 
 `wrk -t4 -c100 -d10s`, after a discarded 10s warmup. Do not compare these rows as equal-load results against the main table.
-- CWIST classic: 153,978 req/s; mean 0.395 ms; corrected P99.999 4.853 ms.
-- Axum: 160,811 req/s; mean 0.596 ms; corrected P99.999 5.023 ms.
-- Spring Boot: 76,689 req/s; mean 1.380 ms; corrected P99.999 21.396 ms.
+- CWIST classic: 122,816 req/s; mean 0.499 ms; corrected P99.999 4.840 ms.
+- Axum: 126,208 req/s; mean 0.747 ms; corrected P99.999 6.094 ms.
+- Spring Boot: 59,079 req/s; mean 1.785 ms; corrected P99.999 47.009 ms.
 
 Legacy records remain in history but are not pooled into this measurement contract. A 10-second tail screen is not a universal SLO or a statistically established speedup.
 
@@ -89,7 +89,7 @@ GitHub hands out a different CPU model per run, which moves these numbers more t
 | Runner CPU | Runs | CWIST classic ms | CWIST C1M ms | Axum ms | CWIST C1M req/s | Axum req/s |
 |---|---:|---:|---:|---:|---:|---:|
 | AMD EPYC 7763 64-Core Processor | 5 | 2.08 | 3.12 | 3.51 | 139,267 | 112,113 |
-| AMD EPYC 9V74 80-Core Processor | 3 | 1.89 | 3.06 | 3.24 | 144,478 | 120,775 |
+| AMD EPYC 9V74 80-Core Processor | 4 | 1.90 | 3.05 | 3.24 | 144,030 | 120,685 |
 | AMD EPYC 9V45 96-Core Processor | 1 | 1.26 | 2.34 | 2.11 | 224,610 | 188,666 |
 | Intel(R) Xeon(R) Platinum 8370C CPU @ 2.80GHz | 1 | 1.41 | 2.37 | 2.51 | 215,668 | 158,648 |
 <!-- WEBSERVER_BENCHMARKS:END -->
