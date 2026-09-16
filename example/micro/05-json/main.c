@@ -15,7 +15,7 @@ static void echo(cwist_http_request *req, cwist_http_response *res) {
     if (in) {
         cJSON *name = cJSON_GetObjectItem(in, "name");
         cwist_json_add_string(jb, "received",
-            (name && cJSON_IsString(name)) ? name->valuestring : "?");
+                              (name && cJSON_IsString(name)) ? name->valuestring : "?");
         cJSON_Delete(in);
     } else {
         cwist_json_add_string(jb, "error", "bad json");

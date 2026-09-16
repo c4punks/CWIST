@@ -39,7 +39,8 @@ typedef void (*cwist_ws_handler_func)(cwist_websocket *ws);
 /**
  * @brief Function pointer type for error handlers.
  */
-typedef void (*cwist_error_handler_func)(cwist_http_request *req, cwist_http_response *res, cwist_http_status_t status);
+typedef void (*cwist_error_handler_func)(cwist_http_request *req, cwist_http_response *res,
+                                         cwist_http_status_t status);
 
 /**
  * @brief Callback function type for handling WebTransport sessions over HTTP/3.
@@ -48,9 +49,8 @@ typedef void (*cwist_error_handler_func)(cwist_http_request *req, cwist_http_res
  * @param res    HTTP response object to be populated (e.g., 200 OK to accept).
  * @param stream Opaque CWIST WebTransport session handle.
  */
-typedef void (*cwist_webtransport_handler_func)(cwist_http_request *req,
-                                                 cwist_http_response *res,
-                                                 void *stream);
+typedef void (*cwist_webtransport_handler_func)(cwist_http_request *req, cwist_http_response *res,
+                                                void *stream);
 
 typedef struct cwist_error_handler_entry {
     cwist_http_status_t status_code;
@@ -93,7 +93,8 @@ bool cwist_rdbms_mount_runtime(cwist_app *app, cwist_rdbms_provider_t provider, 
 /**
  * @brief Middleware type that receives req/res pair and the next stage in the chain.
  */
-typedef void (*cwist_middleware_func)(cwist_http_request *req, cwist_http_response *res, cwist_handler_func next);
+typedef void (*cwist_middleware_func)(cwist_http_request *req, cwist_http_response *res,
+                                      cwist_handler_func next);
 typedef void (*cwist_https_request_handler_func)(cwist_https_connection *conn, void *ctx);
 
 /**
@@ -111,7 +112,7 @@ typedef struct cwist_logger cwist_logger;
 
 /**
  * @brief Main Application Context.
- * 
+ *
  * Manages routing, middleware, database connections, memory pools,
  * and caching strategies (BDR).
  */
@@ -125,12 +126,12 @@ typedef struct cwist_app {
     char *cert_path;
     char *key_path;
     cwist_https_request_handler_func https_request_handler;
-    
+
     cwist_middleware_node *middlewares; ///< Head of the middleware chain.
 
     cwist_route_table *router; ///< Router definition.
     cwist_static_dir *static_dirs; ///< Static directory mappings.
-    
+
     cwist_error_handler_func error_handler; ///< Global fallback error handler.
     cwist_error_handler_entry *error_handlers; ///< Per-status-code error handlers.
 
@@ -147,7 +148,7 @@ typedef struct cwist_app {
     size_t max_mem_space;
     /** @brief Memory manager for static asset caching and hot-reloading */
     struct cwist_fix_server_mem *mem_manager;
-    
+
     /** @brief Legacy standalone BDR storage; never replayed by HTTP dispatch. */
     cwist_bdr_t *bdr_ctx;
 
@@ -201,14 +202,14 @@ typedef struct cwist_file_t {
 
 /**
  * @brief Fixed Server Memory Manager.
- * 
+ *
  * Pre-allocates a large contiguous block of memory to serve static files
  * via Zero-Copy pointer passing. Supports hot-reloading on file change.
  */
 typedef struct cwist_fix_server_mem {
     size_t total_capacity;     ///< Total capacity (defaults to sum of files * 2)
     size_t current_used;       ///< Bytes accounted for by active files
-    
+
     cwist_file_t *files;       ///< Array of tracked files
     size_t file_count;
     size_t files_capacity;     ///< Capacity of the files array
@@ -236,7 +237,8 @@ cwist_app *cwist_app_create(void);
  * @param mount_path URL route path to serve Swagger UI (e.g. "/swagger" or "/docs").
  * @param openapi_json_path Path to the generated openapi.json file on disk.
  */
-void cwist_app_enable_swagger(cwist_app *app, const char *mount_path, const char *openapi_json_path);
+void cwist_app_enable_swagger(cwist_app *app, const char *mount_path,
+                              const char *openapi_json_path);
 
 /**
  * @brief Destroys the application and frees all resources.
@@ -263,7 +265,8 @@ void cwist_app_use(cwist_app *app, cwist_middleware_func mw);
 /** @name Error Handling Configuration */
 /** @{ */
 void cwist_app_set_error_handler(cwist_app *app, cwist_error_handler_func handler);
-void cwist_app_register_error_handler(cwist_app *app, cwist_http_status_t status, cwist_error_handler_func handler);
+void cwist_app_register_error_handler(cwist_app *app, cwist_http_status_t status,
+                                      cwist_error_handler_func handler);
 /** @} */
 
 /**
@@ -273,7 +276,8 @@ void cwist_app_register_error_handler(cwist_app *app, cwist_http_status_t status
  * @param max_entry_age_sec Retire cached replies older than this (<=0 keeps default).
  * @param revalidate_hits Force refresh after this many hits (0 = keep default).
  */
-void cwist_app_configure_bdr(cwist_app *app, size_t max_bytes, time_t max_entry_age_sec, uint64_t revalidate_hits);
+void cwist_app_configure_bdr(cwist_app *app, size_t max_bytes, time_t max_entry_age_sec,
+                             uint64_t revalidate_hits);
 
 cwist_error_t cwist_app_use_https(cwist_app *app, const char *cert_path, const char *key_path);
 cwist_error_t cwist_app_use_https2(cwist_app *app, bool enabled);
@@ -395,21 +399,32 @@ void cwist_app_put(cwist_app *app, const char *path, cwist_handler_func handler)
 void cwist_app_delete(cwist_app *app, const char *path, cwist_handler_func handler);
 void cwist_app_patch(cwist_app *app, const char *path, cwist_handler_func handler);
 void cwist_app_ws(cwist_app *app, const char *path, cwist_ws_handler_func handler);
-void cwist_app_get_opt(cwist_app *app, const char *path, cwist_handler_func handler, cwist_endpoint_opt_t opts);
-void cwist_app_post_opt(cwist_app *app, const char *path, cwist_handler_func handler, cwist_endpoint_opt_t opts);
-void cwist_app_put_opt(cwist_app *app, const char *path, cwist_handler_func handler, cwist_endpoint_opt_t opts);
-void cwist_app_delete_opt(cwist_app *app, const char *path, cwist_handler_func handler, cwist_endpoint_opt_t opts);
-void cwist_app_patch_opt(cwist_app *app, const char *path, cwist_handler_func handler, cwist_endpoint_opt_t opts);
-void cwist_app_ws_opt(cwist_app *app, const char *path, cwist_ws_handler_func handler, cwist_endpoint_opt_t opts);
+void cwist_app_get_opt(cwist_app *app, const char *path, cwist_handler_func handler,
+                       cwist_endpoint_opt_t opts);
+void cwist_app_post_opt(cwist_app *app, const char *path, cwist_handler_func handler,
+                        cwist_endpoint_opt_t opts);
+void cwist_app_put_opt(cwist_app *app, const char *path, cwist_handler_func handler,
+                       cwist_endpoint_opt_t opts);
+void cwist_app_delete_opt(cwist_app *app, const char *path, cwist_handler_func handler,
+                          cwist_endpoint_opt_t opts);
+void cwist_app_patch_opt(cwist_app *app, const char *path, cwist_handler_func handler,
+                         cwist_endpoint_opt_t opts);
+void cwist_app_ws_opt(cwist_app *app, const char *path, cwist_ws_handler_func handler,
+                      cwist_endpoint_opt_t opts);
 
 void cwist_app_enable_metrics(cwist_app *app);
 void cwist_app_enable_healthz(cwist_app *app);
 
-void cwist_app_get_named(cwist_app *app, const char *path, const char *name, cwist_handler_func handler);
-void cwist_app_post_named(cwist_app *app, const char *path, const char *name, cwist_handler_func handler);
-void cwist_app_put_named(cwist_app *app, const char *path, const char *name, cwist_handler_func handler);
-void cwist_app_delete_named(cwist_app *app, const char *path, const char *name, cwist_handler_func handler);
-void cwist_app_patch_named(cwist_app *app, const char *path, const char *name, cwist_handler_func handler);
+void cwist_app_get_named(cwist_app *app, const char *path, const char *name,
+                         cwist_handler_func handler);
+void cwist_app_post_named(cwist_app *app, const char *path, const char *name,
+                          cwist_handler_func handler);
+void cwist_app_put_named(cwist_app *app, const char *path, const char *name,
+                         cwist_handler_func handler);
+void cwist_app_delete_named(cwist_app *app, const char *path, const char *name,
+                            cwist_handler_func handler);
+void cwist_app_patch_named(cwist_app *app, const char *path, const char *name,
+                           cwist_handler_func handler);
 char *cwist_url_for(cwist_app *app, const char *name, cwist_query_map *params);
 
 /**
@@ -428,10 +443,11 @@ cwist_error_t cwist_app_static(cwist_app *app, const char *url_prefix, const cha
  * @param app Pointer to the app.
  * @param url_prefix URL prefix (e.g., "/static").
  * @param directory Local filesystem path.
- * @param cache_control Cache-Control directive string (e.g., "public, max-age=31536000, immutable").
- *        Pass NULL to use the default "public, max-age=3600".
+ * @param cache_control Cache-Control directive string (e.g., "public, max-age=31536000,
+ * immutable"). Pass NULL to use the default "public, max-age=3600".
  */
-cwist_error_t cwist_app_static_with_cache(cwist_app *app, const char *url_prefix, const char *directory, const char *cache_control);
+cwist_error_t cwist_app_static_with_cache(cwist_app *app, const char *url_prefix,
+                                          const char *directory, const char *cache_control);
 /** @} */
 
 /** @name Startup */
@@ -462,7 +478,8 @@ cwist_multiport_t cwist_create_multiport_from_array(const unsigned short *ports,
  * @brief Create a counted multiport descriptor from a real C array.
  * @param ports Real C array, not a decayed pointer.
  */
-#define cwist_create_multiport(ports) cwist_create_multiport_from_array((ports), sizeof(ports) / sizeof((ports)[0]))
+#define cwist_create_multiport(ports) \
+    cwist_create_multiport_from_array((ports), sizeof(ports) / sizeof((ports)[0]))
 
 void cwist_app_http_handler(int client_fd, void *ctx);
 cwist_async_action_t cwist_app_http_handler_async(int client_fd, cwist_http_async_conn_t *conn);
@@ -480,7 +497,8 @@ int cwist_app_multiport(cwist_app **app_ref, unsigned short public_port, cwist_m
 /**
  * @brief Detach one additional multiport port into its own tunable application.
  * @param app_ref Address of the root cwist_app pointer.
- * @param port Additional port to detach. The public/default port is rejected by cwist_app_multiport().
+ * @param port Additional port to detach. The public/default port is rejected by
+ * cwist_app_multiport().
  * @return Detached sub-application for per-port tuning, or NULL on allocation failure.
  */
 cwist_app *cwist_multiport_get_app(cwist_app **app_ref, unsigned short port);
@@ -504,7 +522,7 @@ void cwist_app_dispatch(cwist_app *app, cwist_http_request *req, cwist_http_resp
  * @return 0 on success; -1 when the request is malformed or the response
  * cannot be serialized (e.g. a file-streaming body).
  */
-int cwist_app_dispatch_memory(cwist_app *app, const char *req_buf, size_t req_len,
-                              char **res_buf, size_t *res_len);
+int cwist_app_dispatch_memory(cwist_app *app, const char *req_buf, size_t req_len, char **res_buf,
+                              size_t *res_len);
 
 #endif

@@ -77,20 +77,21 @@ void test_response_lifecycle() {
 
 void test_parse_request() {
     printf("Testing Request Parsing...\n");
-    const char *raw = "POST /api/users HTTP/1.1\r\nHost: localhost\r\nConnection: close\r\nContent-Type: application/json\r\n\r\n{\"name\":\"test\"}";
-    
+    const char *raw =
+        "POST /api/users HTTP/1.1\r\nHost: localhost\r\nConnection: close\r\nContent-Type: application/json\r\n\r\n{\"name\":\"test\"}";
+
     cwist_http_request *req = cwist_http_parse_request(raw);
     assert(req != NULL);
     assert(req->method == CWIST_HTTP_POST);
     assert(strcmp(req->path->data, "/api/users") == 0);
     assert(strcmp(req->version->data, "HTTP/1.1") == 0);
-    
+
     assert(strcmp(cwist_http_header_get(req->headers, "Host"), "localhost") == 0);
     assert(strcmp(cwist_http_header_get(req->headers, "Content-Type"), "application/json") == 0);
-    
+
     assert(strcmp(req->body->data, "{\"name\":\"test\"}") == 0);
     assert(req->keep_alive == false);
-    
+
     cwist_http_request_destroy(req);
     printf("Passed Request Parsing.\n");
 }
@@ -111,12 +112,13 @@ void test_send_response() {
     res->keep_alive = false;
 
     cwist_http_send_response(sv[0], res);
-    
+
     char buffer[1024];
     ssize_t len = recv(sv[1], buffer, sizeof(buffer) - 1, 0);
     buffer[len] = '\0';
-    
-    // Check key parts (order of headers might vary if implementation changes, but currently it's a stack)
+
+    // Check key parts (order of headers might vary if implementation changes, but currently it's a
+    // stack)
     assert(strstr(buffer, "HTTP/1.1 200 OK\r\n") != NULL);
     assert(strstr(buffer, "Content-Type: text/plain\r\n") != NULL);
     assert(strstr(buffer, "Connection: close\r\n") != NULL);
@@ -133,7 +135,8 @@ void test_send_response() {
 /* Feed a raw request through cwist_http_receive_request over a socketpair and
  * assert it is rejected with the expected parse error, then verify the error
  * response blob the app layer would send before closing. */
-static void expect_parse_rejection(const char *raw, cwist_http_parse_error_t want_err, int want_status) {
+static void expect_parse_rejection(const char *raw, cwist_http_parse_error_t want_err,
+                                   int want_status) {
     int sv[2];
     assert(socketpair(AF_UNIX, SOCK_STREAM, 0, sv) == 0);
     assert(write(sv[1], raw, strlen(raw)) == (ssize_t)strlen(raw));
@@ -192,8 +195,7 @@ void test_host_header_rules() {
     expect_parse_rejection("GET / HTTP/1.1\r\nHost: a.example\r\nHost: b.example\r\n\r\n",
                            CWIST_HTTP_PARSE_MALFORMED, 400);
     /* Empty Host value -> 400 */
-    expect_parse_rejection("GET / HTTP/1.1\r\nHost:\r\n\r\n",
-                           CWIST_HTTP_PARSE_MALFORMED, 400);
+    expect_parse_rejection("GET / HTTP/1.1\r\nHost:\r\n\r\n", CWIST_HTTP_PARSE_MALFORMED, 400);
     /* HTTP/1.0 without Host -> accepted */
     cwist_http_request *req = expect_parse_success("GET / HTTP/1.0\r\n\r\n");
     assert(strcmp(req->version->data, "HTTP/1.0") == 0);
@@ -207,23 +209,28 @@ void test_cl_te_smuggling_rules() {
     printf("Testing CL/TE interaction rules (RFC 9112 6.1/6.3)...\n");
 
     /* TE + CL together -> 400 */
-    expect_parse_rejection("POST /x HTTP/1.1\r\nHost: h\r\nContent-Length: 4\r\nTransfer-Encoding: chunked\r\n\r\n",
-                           CWIST_HTTP_PARSE_MALFORMED, 400);
+    expect_parse_rejection(
+        "POST /x HTTP/1.1\r\nHost: h\r\nContent-Length: 4\r\nTransfer-Encoding: chunked\r\n\r\n",
+        CWIST_HTTP_PARSE_MALFORMED, 400);
     /* Duplicate CL with mismatching values -> 400 */
-    expect_parse_rejection("POST /x HTTP/1.1\r\nHost: h\r\nContent-Length: 4\r\nContent-Length: 5\r\n\r\n",
-                           CWIST_HTTP_PARSE_MALFORMED, 400);
+    expect_parse_rejection(
+        "POST /x HTTP/1.1\r\nHost: h\r\nContent-Length: 4\r\nContent-Length: 5\r\n\r\n",
+        CWIST_HTTP_PARSE_MALFORMED, 400);
     /* Non-numeric CL -> 400 */
     expect_parse_rejection("POST /x HTTP/1.1\r\nHost: h\r\nContent-Length: 4x\r\n\r\n",
                            CWIST_HTTP_PARSE_MALFORMED, 400);
     /* TE whose final coding is not chunked -> 400 */
-    expect_parse_rejection("POST /x HTTP/1.1\r\nHost: h\r\nTransfer-Encoding: chunked, gzip\r\n\r\n",
-                           CWIST_HTTP_PARSE_MALFORMED, 400);
+    expect_parse_rejection(
+        "POST /x HTTP/1.1\r\nHost: h\r\nTransfer-Encoding: chunked, gzip\r\n\r\n",
+        CWIST_HTTP_PARSE_MALFORMED, 400);
     /* Unsupported transfer coding alongside a final chunked -> 501 */
-    expect_parse_rejection("POST /x HTTP/1.1\r\nHost: h\r\nTransfer-Encoding: gzip, chunked\r\n\r\n",
-                           CWIST_HTTP_PARSE_TE_UNSUPPORTED, 501);
+    expect_parse_rejection(
+        "POST /x HTTP/1.1\r\nHost: h\r\nTransfer-Encoding: gzip, chunked\r\n\r\n",
+        CWIST_HTTP_PARSE_TE_UNSUPPORTED, 501);
     /* Unsupported Expect value -> 417 */
-    expect_parse_rejection("POST /x HTTP/1.1\r\nHost: h\r\nExpect: bananas\r\nContent-Length: 1\r\n\r\n",
-                           CWIST_HTTP_PARSE_EXPECT_FAILED, 417);
+    expect_parse_rejection(
+        "POST /x HTTP/1.1\r\nHost: h\r\nExpect: bananas\r\nContent-Length: 1\r\n\r\n",
+        CWIST_HTTP_PARSE_EXPECT_FAILED, 417);
 
     /* Duplicate CL with identical values -> idempotent accept */
     cwist_http_request *req = expect_parse_success(
@@ -237,10 +244,9 @@ void test_cl_te_smuggling_rules() {
 
 void test_malformed_request_line() {
     printf("Testing malformed request-line -> 400...\n");
-    expect_parse_rejection("GARBAGE-NO-SPACES\r\nHost: h\r\n\r\n",
-                           CWIST_HTTP_PARSE_MALFORMED, 400);
-    expect_parse_rejection("GET /missing-version\r\nHost: h\r\n\r\n",
-                           CWIST_HTTP_PARSE_MALFORMED, 400);
+    expect_parse_rejection("GARBAGE-NO-SPACES\r\nHost: h\r\n\r\n", CWIST_HTTP_PARSE_MALFORMED, 400);
+    expect_parse_rejection("GET /missing-version\r\nHost: h\r\n\r\n", CWIST_HTTP_PARSE_MALFORMED,
+                           400);
     printf("Passed malformed request-line.\n");
 }
 
@@ -272,12 +278,11 @@ void test_expect_100_continue_flow() {
     pthread_t tid;
     assert(pthread_create(&tid, NULL, expect_recv_thread, &ctx) == 0);
 
-    const char *headers =
-        "POST /upload HTTP/1.1\r\n"
-        "Host: localhost\r\n"
-        "Expect: 100-continue\r\n"
-        "Content-Length: 5\r\n"
-        "\r\n";
+    const char *headers = "POST /upload HTTP/1.1\r\n"
+                          "Host: localhost\r\n"
+                          "Expect: 100-continue\r\n"
+                          "Content-Length: 5\r\n"
+                          "\r\n";
     assert(write(sv[1], headers, strlen(headers)) == (ssize_t)strlen(headers));
 
     /* The server must emit the interim 100 Continue before the body arrives. */

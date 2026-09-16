@@ -40,8 +40,8 @@ typedef struct bdr_blob_t {
  * cache — zero copy, only the pointer is swung), @p *out_len to its length,
  * and @p *out_free to the releaser for that buffer (NULL means cwist_free).
  */
-typedef bool (*cwist_bdr_revalidate_fn)(void *arg, void **out_data,
-                                        size_t *out_len, void (**out_free)(void *));
+typedef bool (*cwist_bdr_revalidate_fn)(void *arg, void **out_data, size_t *out_len,
+                                        void (**out_free)(void *));
 
 /**
  * @brief Big Dumb Reply Entry.
@@ -155,12 +155,14 @@ void *cwist_bdr_copy_get(cwist_bdr_t *bdr, const char *method, const char *path,
  * @param data Serialized response data.
  * @param len Length of data.
  */
-void cwist_bdr_put(cwist_bdr_t *bdr, const char *method, const char *path, const void *data, size_t len);
+void cwist_bdr_put(cwist_bdr_t *bdr, const char *method, const char *path, const void *data,
+                   size_t len);
 
 /**
  * @brief Immediately cache a fixed static response on request 1.
  */
-void cwist_bdr_put_fixed(cwist_bdr_t *bdr, const char *method, const char *path, const void *data, size_t len);
+void cwist_bdr_put_fixed(cwist_bdr_t *bdr, const char *method, const char *path, const void *data,
+                         size_t len);
 
 /**
  * @brief Cache a response whose backing value may change over time.
@@ -172,8 +174,8 @@ void cwist_bdr_put_fixed(cwist_bdr_t *bdr, const char *method, const char *path,
  * retired across an epoch boundary.
  */
 void cwist_bdr_put_revalidatable(cwist_bdr_t *bdr, const char *method, const char *path,
-                                 const void *data, size_t len,
-                                 cwist_bdr_revalidate_fn fn, void *arg);
+                                 const void *data, size_t len, cwist_bdr_revalidate_fn fn,
+                                 void *arg);
 
 /**
  * @brief Adjusts guard-rail policies for the in-memory cache.
@@ -182,6 +184,7 @@ void cwist_bdr_put_revalidatable(cwist_bdr_t *bdr, const char *method, const cha
  * @param max_entry_age_sec Time-to-live for cached entries (<=0 keeps default).
  * @param revalidate_hits Force relearning after this many hits (0 keeps default).
  */
-void cwist_bdr_set_limits(cwist_bdr_t *bdr, size_t max_bytes, time_t max_entry_age_sec, uint64_t revalidate_hits);
+void cwist_bdr_set_limits(cwist_bdr_t *bdr, size_t max_bytes, time_t max_entry_age_sec,
+                          uint64_t revalidate_hits);
 
 #endif

@@ -28,7 +28,7 @@ int main() {
     /* 3. String duplication */
     printf("\n[cwist_strdup / cwist_strndup]\n");
     const char *original = "Duplicate me!";
-    char *dup  = cwist_strdup(original);
+    char *dup = cwist_strdup(original);
     char *ndup = cwist_strndup(original, 9); /* "Duplicate" */
     printf("strdup:  '%s'\n", dup);
     printf("strndup: '%s'\n", ndup);

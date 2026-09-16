@@ -57,14 +57,14 @@ void test_resize() {
     printf("Testing resize...\n");
     cwist_sstring *s = cwist_sstring_create();
     cwist_sstring_assign(s, "12345");
-    assert(s->size == 5); 
+    assert(s->size == 5);
 
     // Grow
     cwist_error_t err = cwist_sstring_change_size(s, 10, false);
     assert(err.errtype == CWIST_ERR_INT8); // Success
     assert(s->size == 5);
     assert(strcmp(s->data, "12345") == 0);
-    
+
     // Shrink safely
     err = cwist_sstring_change_size(s, 5, false); // "12345" fits in 5
     assert(err.errtype == CWIST_ERR_INT8);
@@ -77,7 +77,7 @@ void test_resize() {
     // Shrink with blow_data
     err = cwist_sstring_change_size(s, 2, true);
     assert(err.errtype == CWIST_ERR_INT8);
-    
+
     assert(strcmp(s->data, "12") == 0);
 
     cwist_sstring_destroy(s);
@@ -88,11 +88,11 @@ void test_seek() {
     printf("Testing seek...\n");
     cwist_sstring *s = cwist_sstring_create();
     cwist_sstring_assign(s, "abcdef");
-    
+
     char buffer[10];
     cwist_sstring_seek(s, buffer, 2);
     assert(strcmp(buffer, "cdef") == 0);
-    
+
     cwist_sstring_destroy(s);
     printf("Passed seek.\n");
 }
@@ -101,12 +101,12 @@ void test_compare() {
     printf("Testing compare...\n");
     cwist_sstring *s = cwist_sstring_create();
     cwist_sstring_assign(s, "hello");
-    
+
     assert(cwist_sstring_compare(s, "hello") == 0);
     assert(cwist_sstring_compare(s, "world") != 0);
     assert(cwist_sstring_compare(s, "he") > 0);
     assert(cwist_sstring_compare(s, "hello world") < 0);
-    
+
     cwist_sstring_destroy(s);
     printf("Passed compare.\n");
 }
@@ -115,20 +115,20 @@ void test_substr() {
     printf("Testing substr...\n");
     cwist_sstring *s = cwist_sstring_create();
     cwist_sstring_assign(s, "0123456789");
-    
+
     cwist_sstring *sub = cwist_sstring_substr(s, 2, 3); // "234"
     assert(sub != NULL);
     assert(strcmp(sub->data, "234") == 0);
     cwist_sstring_destroy(sub);
-    
+
     sub = cwist_sstring_substr(s, 8, 5); // "89" (capped)
     assert(sub != NULL);
     assert(strcmp(sub->data, "89") == 0);
     cwist_sstring_destroy(sub);
-    
+
     sub = cwist_sstring_substr(s, 10, 1); // Out of bounds
     assert(sub == NULL);
-    
+
     cwist_sstring_destroy(s);
     printf("Passed substr.\n");
 }
@@ -164,10 +164,17 @@ void test_html_escape() {
     cwist_sstring *s = cwist_sstring_create();
     assert(s != NULL);
 
-    cwist_error_t err = cwist_sstring_append_escaped(s, "<div class=\"alert\">Bob & Alice's test > 0</div>");
+    cwist_error_t err =
+        cwist_sstring_append_escaped(s, "<div class=\"alert\">Bob & Alice's test > 0</div>");
     assert(err.errtype == CWIST_ERR_INT8 && err.error.err_i8 == ERR_SSTRING_OKAY);
-    assert(strcmp(s->data, "&lt;div class=&quot;alert&quot;&gt;Bob &amp; Alice&#39;s test &gt; 0&lt;/div&gt;") == 0);
-    assert(cwist_sstring_get_size(s) == strlen("&lt;div class=&quot;alert&quot;&gt;Bob &amp; Alice&#39;s test &gt; 0&lt;/div&gt;"));
+    assert(
+        strcmp(
+            s->data,
+            "&lt;div class=&quot;alert&quot;&gt;Bob &amp; Alice&#39;s test &gt; 0&lt;/div&gt;") ==
+        0);
+    assert(
+        cwist_sstring_get_size(s) ==
+        strlen("&lt;div class=&quot;alert&quot;&gt;Bob &amp; Alice&#39;s test &gt; 0&lt;/div&gt;"));
 
     /* Test NULL string and NULL data safety */
     err = cwist_sstring_append_escaped(NULL, "test");
@@ -198,4 +205,3 @@ int main() {
     printf("All tests passed!\n");
     return 0;
 }
-

@@ -12,18 +12,15 @@
 #include <fcntl.h>
 
 #define TEST_CERT "example/othello-web/server.crt"
-#define TEST_KEY  "example/othello-web/server.key"
+#define TEST_KEY "example/othello-web/server.key"
 
-int cwist_http3_normalize_response_header_name(const char *name,
-                                               char *out,
-                                               size_t out_len);
+int cwist_http3_normalize_response_header_name(const char *name, char *out, size_t out_len);
 int cwist_http3_response_header_value_is_safe(const char *value);
 int cwist_http3_method_is_idempotent(const char *method_str);
 
 static volatile int g_handler_called = 0;
 
-static void http3_test_handler(void *user_ctx, cwist_http_request *req,
-                               cwist_http_response *res) {
+static void http3_test_handler(void *user_ctx, cwist_http_request *req, cwist_http_response *res) {
     (void)user_ctx;
     (void)req;
     (void)res;
@@ -55,8 +52,7 @@ int main(void) {
 
     /* --- Test 2: init_context with missing cert --- */
     ctx = NULL;
-    err = cwist_http3_init_context(&ctx, "/nonexistent/cert.pem",
-                                   "/nonexistent/key.pem");
+    err = cwist_http3_init_context(&ctx, "/nonexistent/cert.pem", "/nonexistent/key.pem");
     assert(err.error.err_i16 == -1);
     assert(ctx == NULL);
     printf("[PASS] HTTP/3 context fails gracefully with missing PEM files.\n");
@@ -90,7 +86,7 @@ int main(void) {
     printf("[PASS] HTTP/3 server_loop rejects NULL handler.\n");
 
     /* --- Test 5: server_loop runs and stops gracefully --- */
-    server_thread_args_t args = { .udp_fd = udp_fd, .ctx = ctx };
+    server_thread_args_t args = {.udp_fd = udp_fd, .ctx = ctx};
     pthread_t tid;
     int rc = pthread_create(&tid, NULL, http3_server_thread, &args);
     assert(rc == 0);
@@ -133,20 +129,13 @@ int main(void) {
 
     /* --- Test 7: response header normalization for browser strictness --- */
     char h3_name[64];
-    assert(cwist_http3_normalize_response_header_name("Set-Cookie",
-                                                       h3_name,
-                                                       sizeof(h3_name)) == 0);
+    assert(cwist_http3_normalize_response_header_name("Set-Cookie", h3_name, sizeof(h3_name)) == 0);
     assert(strcmp(h3_name, "set-cookie") == 0);
-    assert(cwist_http3_normalize_response_header_name("Location",
-                                                       h3_name,
-                                                       sizeof(h3_name)) == 0);
+    assert(cwist_http3_normalize_response_header_name("Location", h3_name, sizeof(h3_name)) == 0);
     assert(strcmp(h3_name, "location") == 0);
-    assert(cwist_http3_normalize_response_header_name(":bad",
-                                                       h3_name,
-                                                       sizeof(h3_name)) == -1);
-    assert(cwist_http3_normalize_response_header_name("Bad Header",
-                                                       h3_name,
-                                                       sizeof(h3_name)) == -1);
+    assert(cwist_http3_normalize_response_header_name(":bad", h3_name, sizeof(h3_name)) == -1);
+    assert(cwist_http3_normalize_response_header_name("Bad Header", h3_name, sizeof(h3_name)) ==
+           -1);
     assert(cwist_http3_response_header_value_is_safe("sid=gone; Path=/; Max-Age=0"));
     assert(!cwist_http3_response_header_value_is_safe("ok\r\nbad: value"));
     printf("[PASS] HTTP/3 response headers are lowercased and CRLF-safe.\n");

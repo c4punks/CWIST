@@ -32,8 +32,8 @@ typedef struct {
     state_t st;
     size_t sent;      /* bytes of request sent */
     size_t got;       /* response bytes seen */
-    int   hdr_done;   /* saw end of headers */
-    long  content_len;
+    int hdr_done;   /* saw end of headers */
+    long content_len;
     size_t body_got;
 } conn_t;
 
@@ -52,7 +52,8 @@ static int set_nonblock(int fd) {
 
 int main(int argc, char **argv) {
     if (argc < 6) {
-        fprintf(stderr, "usage: %s <ip> <port> <count> <ip_base> <ip_count> [hold_secs]\n", argv[0]);
+        fprintf(stderr, "usage: %s <ip> <port> <count> <ip_base> <ip_count> [hold_secs]\n",
+                argv[0]);
         return 2;
     }
     const char *ip = argv[1];
@@ -65,10 +66,16 @@ int main(int argc, char **argv) {
     signal(SIGPIPE, SIG_IGN);
 
     conn_t *conns = calloc((size_t)count, sizeof(conn_t));
-    if (!conns) { perror("calloc"); return 1; }
+    if (!conns) {
+        perror("calloc");
+        return 1;
+    }
 
     int ep = epoll_create1(0);
-    if (ep < 0) { perror("epoll_create1"); return 1; }
+    if (ep < 0) {
+        perror("epoll_create1");
+        return 1;
+    }
 
     struct sockaddr_in dst = {0};
     dst.sin_family = AF_INET;
@@ -104,7 +111,10 @@ int main(int argc, char **argv) {
         int last_errno = 0;
         for (int attempt = 0; attempt < 64 && !connected; attempt++) {
             fd = socket(AF_INET, SOCK_STREAM | SOCK_NONBLOCK | SOCK_CLOEXEC, 0);
-            if (fd < 0) { last_errno = errno; break; }
+            if (fd < 0) {
+                last_errno = errno;
+                break;
+            }
             int one = 1;
             setsockopt(fd, IPPROTO_TCP, TCP_NODELAY, &one, sizeof(one));
             /* Deterministic port reuse across runs requires SO_REUSEADDR:
@@ -120,7 +130,8 @@ int main(int argc, char **argv) {
             src.sin_port = htons((uint16_t)p);
             if (bind(fd, (struct sockaddr *)&src, sizeof(src)) != 0) {
                 last_errno = errno;
-                close(fd); fd = -1;
+                close(fd);
+                fd = -1;
                 continue;
             }
             int rc = connect(fd, (struct sockaddr *)&dst, sizeof(dst));
@@ -128,74 +139,103 @@ int main(int argc, char **argv) {
                 connected = 1;
             } else {
                 last_errno = errno;
-                close(fd); fd = -1;
+                close(fd);
+                fd = -1;
                 if (errno != EADDRNOTAVAIL && errno != EADDRINUSE) break; /* fatal */
             }
         }
         if (!connected) {
-            fprintf(stderr, "connect fail i=%ld errno=%d (%s)\n", i, last_errno, strerror(last_errno));
-            failed++; conns[i].st = ST_FAILED; continue;
+            fprintf(stderr, "connect fail i=%ld errno=%d (%s)\n", i, last_errno,
+                    strerror(last_errno));
+            failed++;
+            conns[i].st = ST_FAILED;
+            continue;
         }
         conns[i].fd = fd;
         conns[i].st = ST_CONNECTING;
         conns[i].content_len = -1;
-        struct epoll_event ev = { .events = EPOLLOUT | EPOLLERR | EPOLLHUP, .data.u32 = (uint32_t)i };
+        struct epoll_event ev = {.events = EPOLLOUT | EPOLLERR | EPOLLHUP, .data.u32 = (uint32_t)i};
         if (epoll_ctl(ep, EPOLL_CTL_ADD, fd, &ev) != 0) {
-            perror("epoll_ctl"); close(fd); failed++; conns[i].st = ST_FAILED; continue;
+            perror("epoll_ctl");
+            close(fd);
+            failed++;
+            conns[i].st = ST_FAILED;
+            continue;
         }
         launched++;
     }
 
-    fprintf(stderr, "[bench_cxm] launched=%ld initial_fail=%ld (%.1fs)\n",
-            launched, failed, (now_ms() - t0) / 1000.0);
+    fprintf(stderr, "[bench_cxm] launched=%ld initial_fail=%ld (%.1fs)\n", launched, failed,
+            (now_ms() - t0) / 1000.0);
 
     struct epoll_event *events = malloc(65536 * sizeof(*events));
     char buf[8192];
 
     while (responded + failed < count) {
         int n = epoll_wait(ep, events, 65536, 1000);
-        if (n < 0) { if (errno == EINTR) continue; perror("epoll_wait"); break; }
+        if (n < 0) {
+            if (errno == EINTR) continue;
+            perror("epoll_wait");
+            break;
+        }
         for (int e = 0; e < n; e++) {
             uint32_t i = events[e].data.u32;
             conn_t *c = &conns[i];
             if (c->st == ST_DONE || c->st == ST_FAILED) continue;
 
             if (events[e].events & (EPOLLERR | EPOLLHUP)) {
-                int err = 0; socklen_t l = sizeof(err);
+                int err = 0;
+                socklen_t l = sizeof(err);
                 getsockopt(c->fd, SOL_SOCKET, SO_ERROR, &err, &l);
                 static long e_log[512];
                 int slot = err >= 0 && err < 512 ? err : 0;
                 if (e_log[slot]++ < 3)
                     fprintf(stderr, "[bench_cxm] HUP/ERR i=%u st=%d so_error=%d(%s) revents=0x%x\n",
                             i, c->st, err, strerror(err), events[e].events);
-                close(c->fd); c->st = ST_FAILED; failed++;
+                close(c->fd);
+                c->st = ST_FAILED;
+                failed++;
                 continue;
             }
 
             if (c->st == ST_CONNECTING && (events[e].events & EPOLLOUT)) {
-                int err = 0; socklen_t l = sizeof(err);
+                int err = 0;
+                socklen_t l = sizeof(err);
                 getsockopt(c->fd, SOL_SOCKET, SO_ERROR, &err, &l);
                 if (err != 0) {
-                    if (failed < 10) fprintf(stderr, "connect err i=%u err=%d (%s)\n", i, err, strerror(err));
-                    close(c->fd); c->st = ST_FAILED; failed++; continue;
+                    if (failed < 10)
+                        fprintf(stderr, "connect err i=%u err=%d (%s)\n", i, err, strerror(err));
+                    close(c->fd);
+                    c->st = ST_FAILED;
+                    failed++;
+                    continue;
                 }
                 established++;
                 c->st = ST_SENDING;
-                struct epoll_event ev = { .events = EPOLLOUT | EPOLLERR | EPOLLHUP, .data.u32 = i };
+                struct epoll_event ev = {.events = EPOLLOUT | EPOLLERR | EPOLLHUP, .data.u32 = i};
                 epoll_ctl(ep, EPOLL_CTL_MOD, c->fd, &ev);
             }
 
             if (c->st == ST_SENDING && (events[e].events & EPOLLOUT)) {
                 while (c->sent < sizeof(REQ) - 1) {
                     ssize_t w = send(c->fd, REQ + c->sent, sizeof(REQ) - 1 - c->sent, MSG_NOSIGNAL);
-                    if (w > 0) c->sent += (size_t)w;
-                    else if (w < 0 && (errno == EAGAIN || errno == EWOULDBLOCK)) break;
-                    else if (w < 0 && errno == EINTR) continue;
-                    else { close(c->fd); c->st = ST_FAILED; failed++; goto next; }
+                    if (w > 0)
+                        c->sent += (size_t)w;
+                    else if (w < 0 && (errno == EAGAIN || errno == EWOULDBLOCK))
+                        break;
+                    else if (w < 0 && errno == EINTR)
+                        continue;
+                    else {
+                        close(c->fd);
+                        c->st = ST_FAILED;
+                        failed++;
+                        goto next;
+                    }
                 }
                 if (c->sent == sizeof(REQ) - 1) {
                     c->st = ST_READING;
-                    struct epoll_event ev = { .events = EPOLLIN | EPOLLERR | EPOLLHUP, .data.u32 = i };
+                    struct epoll_event ev = {.events = EPOLLIN | EPOLLERR | EPOLLHUP,
+                                             .data.u32 = i};
                     epoll_ctl(ep, EPOLL_CTL_MOD, c->fd, &ev);
                 }
             }
@@ -213,20 +253,25 @@ int main(int argc, char **argv) {
                         /* simple completion heuristic: response fully read when we
                          * saw header terminator and connection stays open; for the
                          * bench payload (<4KB, no chunked) one read usually suffices. */
-                        if (memchr(buf, '\n', (size_t)r) != NULL) { /* progress only */ }
-                        c->st = ST_DONE;  /* response received (hello-world is single-packet) */
+                        if (memchr(buf, '\n', (size_t)r) != NULL) { /* progress only */
+                        }
+                        c->st = ST_DONE; /* response received (hello-world is single-packet) */
                         responded++;
                         break;
                     } else if (r == 0) {
                         static long z_log;
                         if (z_log++ < 5)
                             fprintf(stderr, "[bench_cxm] EOF i=%u got=%zu\n", i, c->got);
-                        close(c->fd); c->st = ST_FAILED; failed++;
+                        close(c->fd);
+                        c->st = ST_FAILED;
+                        failed++;
                         break;
                     } else {
                         if (errno == EAGAIN || errno == EWOULDBLOCK) break;
                         if (errno == EINTR) continue;
-                        close(c->fd); c->st = ST_FAILED; failed++;
+                        close(c->fd);
+                        c->st = ST_FAILED;
+                        failed++;
                         break;
                     }
                 }
@@ -236,8 +281,10 @@ int main(int argc, char **argv) {
         uint64_t now = now_ms();
         if (now - last_report > 5000) {
             last_report = now;
-            fprintf(stderr, "[bench_cxm] t=%.0fs established=%ld responded=%ld failed=%ld pending=%ld\n",
-                    (now - t0) / 1000.0, established, responded, failed, count - established - failed);
+            fprintf(stderr,
+                    "[bench_cxm] t=%.0fs established=%ld responded=%ld failed=%ld pending=%ld\n",
+                    (now - t0) / 1000.0, established, responded, failed,
+                    count - established - failed);
         }
         /* stall detector */
         if (n == 0 && responded + failed < count) {
@@ -255,14 +302,16 @@ int main(int argc, char **argv) {
             established, responded, failed, (t1 - t0) / 1000.0);
 
     /* hold phase: keep connections open to prove concurrency */
-    fprintf(stderr, "[bench_cxm] holding %ld connections for %lds...\n", established - failed, hold_secs);
+    fprintf(stderr, "[bench_cxm] holding %ld connections for %lds...\n", established - failed,
+            hold_secs);
     sleep((unsigned)hold_secs);
 
     /* verify a sample is still alive */
     long alive = 0;
     for (long i = 0; i < count; i += (count / 1000 + 1)) {
         if (conns[i].st == ST_DONE) {
-            int err = 0; socklen_t l = sizeof(err);
+            int err = 0;
+            socklen_t l = sizeof(err);
             if (getsockopt(conns[i].fd, SOL_SOCKET, SO_ERROR, &err, &l) == 0 && err == 0) alive++;
         }
     }

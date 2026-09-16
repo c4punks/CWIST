@@ -59,8 +59,8 @@ int cwist_pb_write_varint(cwist_pb_writer *w, uint64_t value) {
 
 int cwist_pb_write_key(cwist_pb_writer *w, uint32_t field_number, cwist_pb_wire_type_t wire_type) {
     if (!w || field_number == 0) return -1;
-    if (wire_type != CWIST_PB_VARINT && wire_type != CWIST_PB_64BIT &&
-        wire_type != CWIST_PB_LEN && wire_type != CWIST_PB_32BIT) {
+    if (wire_type != CWIST_PB_VARINT && wire_type != CWIST_PB_64BIT && wire_type != CWIST_PB_LEN &&
+        wire_type != CWIST_PB_32BIT) {
         return -1;
     }
     uint64_t key = ((uint64_t)field_number << 3) | (uint64_t)wire_type;
@@ -93,8 +93,7 @@ int cwist_pb_write_raw32(cwist_pb_writer *w, uint32_t value) {
 int cwist_pb_write_raw64(cwist_pb_writer *w, uint64_t value) {
     if (!w) return -1;
     if (cwist_pb_writer_reserve(w, 8) != 0) return -1;
-    for (unsigned i = 0; i < 8; i++)
-        w->data[w->len++] = (uint8_t)(value >> (i * 8));
+    for (unsigned i = 0; i < 8; i++) w->data[w->len++] = (uint8_t)(value >> (i * 8));
     return 0;
 }
 
@@ -116,7 +115,8 @@ int cwist_pb_write_double_field(cwist_pb_writer *w, uint32_t field_number, doubl
     return cwist_pb_write_fixed64_field(w, field_number, cwist_pb_double_bits(value));
 }
 
-int cwist_pb_write_bytes_field(cwist_pb_writer *w, uint32_t field_number, const void *data, size_t len) {
+int cwist_pb_write_bytes_field(cwist_pb_writer *w, uint32_t field_number, const void *data,
+                               size_t len) {
     if (!w || (len > 0 && !data)) return -1;
     if (cwist_pb_write_key(w, field_number, CWIST_PB_LEN) != 0) return -1;
     if (cwist_pb_write_varint(w, (uint64_t)len) != 0) return -1;
@@ -189,8 +189,7 @@ int cwist_pb_read_field(cwist_pb_reader *r, cwist_pb_field *field) {
             field->len = 8;
             r->pos += 8;
             return 1;
-        default:
-            return -1;
+        default: return -1;
     }
 }
 

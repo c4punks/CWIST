@@ -88,8 +88,7 @@ static void mp_parse_headers(mp_parse_ctx *ctx) {
         }
     } else if (strcasecmp(ctx->header_field, "Content-Type") == 0) {
         size_t vlen = strlen(ctx->header_value);
-        if (vlen < sizeof(ctx->content_type))
-            strcpy(ctx->content_type, ctx->header_value);
+        if (vlen < sizeof(ctx->content_type)) strcpy(ctx->content_type, ctx->header_value);
     }
 
     ctx->header_field_len = 0;
@@ -143,7 +142,8 @@ static int mp_on_part_data(multipart_parser *p, const char *at, size_t len) {
 
 static int mp_on_part_data_end(multipart_parser *p) {
     mp_parse_ctx *ctx = (mp_parse_ctx *)multipart_parser_get_data(p);
-    cwist_multipart_field *field = (cwist_multipart_field *)cwist_alloc(sizeof(cwist_multipart_field));
+    cwist_multipart_field *field =
+        (cwist_multipart_field *)cwist_alloc(sizeof(cwist_multipart_field));
     if (!field) return 1;
     memset(field, 0, sizeof(*field));
 
@@ -170,10 +170,12 @@ static int mp_on_part_data_end(multipart_parser *p) {
     return 0;
 }
 
-cwist_multipart_result *cwist_multipart_parse(const char *body, size_t body_len, const char *boundary) {
+cwist_multipart_result *cwist_multipart_parse(const char *body, size_t body_len,
+                                              const char *boundary) {
     if (!body || body_len == 0 || !boundary) return NULL;
 
-    cwist_multipart_result *result = (cwist_multipart_result *)cwist_alloc(sizeof(cwist_multipart_result));
+    cwist_multipart_result *result =
+        (cwist_multipart_result *)cwist_alloc(sizeof(cwist_multipart_result));
     if (!result) return NULL;
     result->fields = NULL;
 
@@ -181,12 +183,12 @@ cwist_multipart_result *cwist_multipart_parse(const char *body, size_t body_len,
     ctx.result = result;
 
     multipart_parser_settings settings = {
-        .on_header_field    = mp_on_header_field,
-        .on_header_value    = mp_on_header_value,
-        .on_headers_complete= mp_on_headers_complete,
+        .on_header_field = mp_on_header_field,
+        .on_header_value = mp_on_header_value,
+        .on_headers_complete = mp_on_headers_complete,
         .on_part_data_begin = mp_on_part_data_begin,
-        .on_part_data       = mp_on_part_data,
-        .on_part_data_end   = mp_on_part_data_end,
+        .on_part_data = mp_on_part_data,
+        .on_part_data_end = mp_on_part_data_end,
     };
 
     /* multipart-parser-c expects the leading dashes in the boundary. */

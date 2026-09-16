@@ -35,7 +35,7 @@ static void check_pipeline(const char *first, const char *body) {
     check_blocking_pipeline(first, body);
     const char next[] = "GET /next HTTP/1.1\r\nHost: x\r\n\r\n";
     size_t first_len = strlen(first);
-    cwist_http_async_conn_t conn = { .fd = -1 };
+    cwist_http_async_conn_t conn = {.fd = -1};
     conn.cap = first_len + sizeof(next);
     conn.rbuf = cwist_alloc(conn.cap);
     assert(conn.rbuf);
@@ -62,7 +62,9 @@ int main(void) {
     check_pipeline("GET /first HTTP/1.1\r\nHost: x\r\n\r\n", "");
     check_pipeline("POST /first HTTP/1.1\r\nHost: x\r\nContent-Length: 0\r\n\r\n", "");
     check_pipeline("POST /first HTTP/1.1\r\nHost: x\r\nContent-Length: 4\r\n\r\nbody", "body");
-    check_pipeline("POST /first HTTP/1.1\r\nHost: x\r\nTransfer-Encoding: chunked\r\n\r\n4\r\nbody\r\n0\r\n\r\n", "body");
+    check_pipeline(
+        "POST /first HTTP/1.1\r\nHost: x\r\nTransfer-Encoding: chunked\r\n\r\n4\r\nbody\r\n0\r\n\r\n",
+        "body");
     puts("HTTP pipeline body isolation tests passed");
     return 0;
 }

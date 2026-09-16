@@ -38,8 +38,7 @@ static void forget_job(void *arg) {
     size_t prev = atomic_load_explicit(&g_max_pending, memory_order_relaxed);
     while (pending > prev &&
            !atomic_compare_exchange_weak_explicit(&g_max_pending, &prev, pending,
-                                                   memory_order_relaxed,
-                                                   memory_order_relaxed)) {
+                                                  memory_order_relaxed, memory_order_relaxed)) {
         /* retry with updated prev */
     }
     atomic_fetch_add_explicit(&g_jobs_done, 1, memory_order_release);

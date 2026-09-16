@@ -24,12 +24,16 @@ static proto_gen_sample_Outer build_sample(void) {
         .name = "outer",
         .id = 9001,
         .active = 1,
-        .ids = ids, .ids_count = 3,
-        .tags = tags, .tags_count = 3,
+        .ids = ids,
+        .ids_count = 3,
+        .tags = tags,
+        .tags_count = 3,
         .inner = &inner,
-        .items = items, .items_count = 2,
+        .items = items,
+        .items_count = 2,
         .color = proto_gen_sample_Color_COLOR_GREEN,
-        .shades = shades, .shades_count = 2,
+        .shades = shades,
+        .shades_count = 2,
     };
     return m;
 }
@@ -139,12 +143,16 @@ static void test_gadget_round_trip(void) {
         .sf64 = -9876543210LL,
         .ratio = 3.141592653589793,
         .score = 2.5f,
-        .ids64 = ids64, .ids64_count = 3,
-        .weights = weights, .weights_count = 3,
+        .ids64 = ids64,
+        .ids64_count = 3,
+        .weights = weights,
+        .weights_count = 3,
         .payload_case = proto_gen_sample_Gadget_payload_CASE_code,
         .payload = {.code = -99},
-        .counts = counts, .counts_count = 2,
-        .labels = labels, .labels_count = 2,
+        .counts = counts,
+        .counts_count = 2,
+        .labels = labels,
+        .labels_count = 2,
         .maybe = 42,
     };
 
@@ -272,8 +280,8 @@ int main(void) {
     test_gadget_round_trip();
     test_gadget_oneof_arms();
     test_gadget_unpacked_fixed();
-    assert(strcmp(proto_gen_sample_Greeter_SayHello_PATH,
-                  "/proto_gen_sample.Greeter/SayHello") == 0);
+    assert(strcmp(proto_gen_sample_Greeter_SayHello_PATH, "/proto_gen_sample.Greeter/SayHello") ==
+           0);
     puts("test_proto_gen: all tests passed");
     return 0;
 }

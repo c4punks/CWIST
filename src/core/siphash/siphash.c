@@ -20,10 +20,20 @@
  * it performs ARX (Addition-Rotation-XOR) operations to scramble the internal state.
  */
 static void sipround(uint64_t *v0, uint64_t *v1, uint64_t *v2, uint64_t *v3) {
-    *v0 += *v1; *v1 = ROTL(*v1, 13); *v1 ^= *v0; *v0 = ROTL(*v0, 32);
-    *v2 += *v3; *v3 = ROTL(*v3, 16); *v3 ^= *v2;
-    *v0 += *v3; *v3 = ROTL(*v3, 21); *v3 ^= *v0;
-    *v2 += *v1; *v1 = ROTL(*v1, 17); *v1 ^= *v2; *v2 = ROTL(*v2, 32);
+    *v0 += *v1;
+    *v1 = ROTL(*v1, 13);
+    *v1 ^= *v0;
+    *v0 = ROTL(*v0, 32);
+    *v2 += *v3;
+    *v3 = ROTL(*v3, 16);
+    *v3 ^= *v2;
+    *v0 += *v3;
+    *v3 = ROTL(*v3, 21);
+    *v3 ^= *v0;
+    *v2 += *v1;
+    *v1 = ROTL(*v1, 17);
+    *v1 ^= *v2;
+    *v2 = ROTL(*v2, 32);
 }
 
 /**
@@ -36,7 +46,7 @@ static void sipround(uint64_t *v0, uint64_t *v1, uint64_t *v2, uint64_t *v3) {
 uint64_t siphash24(const void *src, size_t len, const uint8_t key[16]) {
     const uint8_t *m = (const uint8_t *)src;
     uint64_t k0, k1;
-    
+
     /* Load the 16-byte key into two 64-bit integers */
     memcpy(&k0, key, 8);
     memcpy(&k1, key + 8, 8);
@@ -78,7 +88,7 @@ uint64_t siphash24(const void *src, size_t len, const uint8_t key[16]) {
         /* fall through */
         case 1: t |= ((uint64_t)m[0]);
     }
-    
+
     /* Mix length and final partial block into the state */
     v3 ^= (b | t);
     sipround(&v0, &v1, &v2, &v3);
@@ -93,18 +103,10 @@ uint64_t siphash24(const void *src, size_t len, const uint8_t key[16]) {
 }
 
 static const uint8_t CHOE_ORTHO_PRIMARY[4][4] = {
-    {0, 1, 2, 3},
-    {1, 0, 3, 2},
-    {2, 3, 0, 1},
-    {3, 2, 1, 0}
-};
+    {0, 1, 2, 3}, {1, 0, 3, 2}, {2, 3, 0, 1}, {3, 2, 1, 0}};
 
 static const uint8_t CHOE_ORTHO_SECONDARY[4][4] = {
-    {0, 1, 2, 3},
-    {2, 3, 0, 1},
-    {3, 2, 1, 0},
-    {1, 0, 3, 2}
-};
+    {0, 1, 2, 3}, {2, 3, 0, 1}, {3, 2, 1, 0}, {1, 0, 3, 2}};
 
 /**
  * @brief Rotate a 64-bit value left by the requested amount.
@@ -114,7 +116,7 @@ static const uint8_t CHOE_ORTHO_SECONDARY[4][4] = {
  */
 static inline uint64_t rotl64(uint64_t v, unsigned int r) {
     r &= 63U;
-    return (v << r) | (v >> ((64U - r)  & 63U));
+    return (v << r) | (v >> ((64U - r) & 63U));
 }
 
 /**
@@ -136,10 +138,8 @@ static void cwist_entropy_fill(uint8_t *buf, size_t len) {
     if (filled < len) {
         struct timespec ts = {0};
         clock_gettime(CLOCK_MONOTONIC, &ts);
-        uint64_t fallbacks[2] = {
-            (uint64_t)ts.tv_nsec ^ (uint64_t)getpid(),
-            (uint64_t)ts.tv_sec ^ (uint64_t)getppid()
-        };
+        uint64_t fallbacks[2] = {(uint64_t)ts.tv_nsec ^ (uint64_t)getpid(),
+                                 (uint64_t)ts.tv_sec ^ (uint64_t)getppid()};
         srand((unsigned int)(fallbacks[0] ^ fallbacks[1]));
         size_t idx = 0;
         while (filled + idx < len) {
@@ -180,10 +180,8 @@ static void gusuryak_mix(const uint8_t in[16], uint8_t out[16]) {
             uint8_t base = in[idx];
             uint8_t partner = in[((col + 1) % 4) + ((row + 1) % 4) * 4];
             uint8_t orth = gusuryak_cell(base, partner);
-            uint64_t delta = ((uint64_t)base << 32) |
-                             ((uint64_t)orth << 24) |
-                             ((uint64_t)row << 12) |
-                             ((uint64_t)col << 4) |
+            uint64_t delta = ((uint64_t)base << 32) | ((uint64_t)orth << 24) |
+                             ((uint64_t)row << 12) | ((uint64_t)col << 4) |
                              (uint64_t)gusuryak_cell(partner, base);
             hi ^= rotl64(delta ^ hi, (unsigned int)((row * 13 + col * 7) & 63));
             lo += rotl64(delta + lo, (unsigned int)((row * 11 + col * 5) & 63));

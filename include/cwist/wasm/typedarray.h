@@ -39,23 +39,23 @@
  * The typed aliases only document the intended JS view type; the C side is
  * always an opaque (ptr, len) pair.
  */
-#define CWIST_WASM_EXPOSE_ARRAY(name, arr, count)                          \
-    CWIST_WASM_EXPORT const void *name##_ptr(void) {                       \
-        return (const void *)(arr);                                        \
-    }                                                                      \
-    CWIST_WASM_EXPORT size_t name##_len(void) {                            \
-        return (size_t)(count);                                            \
+#define CWIST_WASM_EXPOSE_ARRAY(name, arr, count)    \
+    CWIST_WASM_EXPORT const void *name##_ptr(void) { \
+        return (const void *)(arr);                  \
+    }                                                \
+    CWIST_WASM_EXPORT size_t name##_len(void) {      \
+        return (size_t)(count);                      \
     }
 #define CWIST_WASM_EXPOSE_I32(name, arr, count) CWIST_WASM_EXPOSE_ARRAY(name, arr, count)
 #define CWIST_WASM_EXPOSE_F64(name, arr, count) CWIST_WASM_EXPOSE_ARRAY(name, arr, count)
-#define CWIST_WASM_EXPOSE_U8(name, arr, count)  CWIST_WASM_EXPOSE_ARRAY(name, arr, count)
+#define CWIST_WASM_EXPOSE_U8(name, arr, count) CWIST_WASM_EXPOSE_ARRAY(name, arr, count)
 
 /**
  * Define cwist_wasm_install_views(), which registers Module.cwistView on the
  * JS side.  Expand once in a single translation unit (EM_JS emits a JS
  * function definition), then call it early from main().
  */
-#define CWIST_WASM_INSTALL_VIEWS()                                          \
+#define CWIST_WASM_INSTALL_VIEWS()                                            \
     EM_JS(void, cwist_wasm_install_views, (void), {                         \
         /* HEAP* bindings are in scope inside EM_JS-generated code. */      \
         if (typeof Module !== "undefined" && !Module.cwistView) {           \
@@ -69,8 +69,8 @@
                 f64: function (p, n) {                                      \
                     return new Float64Array(HEAPF64.buffer, p, n);          \
                 },                                                          \
-            };                                                              \
-        }                                                                   \
+            };                                                                \
+    }                                                                         \
     })
 
 /**
@@ -80,15 +80,12 @@
  * Free the returned buffer with cwist_wasm_free() (from C) once JS is done.
  * Returns NULL on dispatch failure.
  */
-static inline const char *cwist_wasm_dispatch_memory(cwist_app *app,
-                                                     const char *req_buf,
-                                                     size_t req_len,
-                                                     size_t *res_len) {
+static inline const char *cwist_wasm_dispatch_memory(cwist_app *app, const char *req_buf,
+                                                     size_t req_len, size_t *res_len) {
     if (!res_len) return NULL;
     *res_len = 0;
     char *res_buf = NULL;
-    if (cwist_app_dispatch_memory(app, req_buf, req_len, &res_buf, res_len) != 0)
-        return NULL;
+    if (cwist_app_dispatch_memory(app, req_buf, req_len, &res_buf, res_len) != 0) return NULL;
     return res_buf;
 }
 

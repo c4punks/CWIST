@@ -29,7 +29,8 @@ typedef struct cwist_multipart_result {
  * @param boundary   Boundary string (without leading hyphens).
  * @return Parsed result, or NULL on allocation failure or malformed input.
  */
-cwist_multipart_result *cwist_multipart_parse(const char *body, size_t body_len, const char *boundary);
+cwist_multipart_result *cwist_multipart_parse(const char *body, size_t body_len,
+                                              const char *boundary);
 
 /**
  * @brief Free all memory associated with a multipart parse result.

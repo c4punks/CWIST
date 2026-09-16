@@ -170,18 +170,11 @@ cwist_sstring *cwist_css_generate_variables(const cwist_css_config *cfg) {
              "  --space-4: %.1fpx;\n"
              "  --space-8: %.1fpx;\n"
              "}\n",
-             p_hex, p_hover, p_active,
-             s_hex, s_hover, s_active,
-             cfg->is_dark_mode ? "#121212" : "#FFFFFF",
-             cfg->is_dark_mode ? "#1E1E1E" : "#F3F4F6",
-             cfg->is_dark_mode ? "#F9FAFB" : "#111827",
-             cfg->is_dark_mode ? "#9CA3AF" : "#6B7280",
-             cfg->roundness_px * 0.5f,
-             cfg->roundness_px,
-             cfg->roundness_px * 1.5f,
-             cfg->spacing_base_px,
-             cfg->spacing_base_px * 2.0f,
-             cfg->spacing_base_px * 4.0f,
+             p_hex, p_hover, p_active, s_hex, s_hover, s_active,
+             cfg->is_dark_mode ? "#121212" : "#FFFFFF", cfg->is_dark_mode ? "#1E1E1E" : "#F3F4F6",
+             cfg->is_dark_mode ? "#F9FAFB" : "#111827", cfg->is_dark_mode ? "#9CA3AF" : "#6B7280",
+             cfg->roundness_px * 0.5f, cfg->roundness_px, cfg->roundness_px * 1.5f,
+             cfg->spacing_base_px, cfg->spacing_base_px * 2.0f, cfg->spacing_base_px * 4.0f,
              cfg->spacing_base_px * 8.0f);
 
     cwist_sstring_append(css, buf);
@@ -192,38 +185,37 @@ cwist_sstring *cwist_css_generate_utility_classes(const cwist_css_config *cfg) {
     (void)cfg; // Currently relying on generated variables
     cwist_sstring *css = cwist_sstring_create();
 
-    const char *utils = 
-        "/* Typography */\n"
-        ".text-primary { color: var(--color-primary); }\n"
-        ".text-main { color: var(--text-main); }\n"
-        ".text-muted { color: var(--text-muted); }\n"
-        "\n"
-        "/* Backgrounds & Surfaces */\n"
-        ".bg-body { background-color: var(--bg-body); }\n"
-        ".bg-surface { background-color: var(--bg-surface); }\n"
-        ".bg-primary { background-color: var(--color-primary); color: #fff; }\n"
-        ".bg-primary:hover { background-color: var(--color-primary-hover); }\n"
-        ".bg-primary:active { background-color: var(--color-primary-active); }\n"
-        "\n"
-        "/* Components */\n"
-        ".btn {\n"
-        "  display: inline-flex;\n"
-        "  align-items: center;\n"
-        "  justify-content: center;\n"
-        "  padding: var(--space-2) var(--space-4);\n"
-        "  border-radius: var(--radius-md);\n"
-        "  font-weight: 500;\n"
-        "  transition: background-color 0.2s, color 0.2s;\n"
-        "  cursor: pointer;\n"
-        "  border: none;\n"
-        "}\n"
-        "\n"
-        ".card {\n"
-        "  background-color: var(--bg-surface);\n"
-        "  border-radius: var(--radius-lg);\n"
-        "  padding: var(--space-4);\n"
-        "  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);\n"
-        "}\n";
+    const char *utils = "/* Typography */\n"
+                        ".text-primary { color: var(--color-primary); }\n"
+                        ".text-main { color: var(--text-main); }\n"
+                        ".text-muted { color: var(--text-muted); }\n"
+                        "\n"
+                        "/* Backgrounds & Surfaces */\n"
+                        ".bg-body { background-color: var(--bg-body); }\n"
+                        ".bg-surface { background-color: var(--bg-surface); }\n"
+                        ".bg-primary { background-color: var(--color-primary); color: #fff; }\n"
+                        ".bg-primary:hover { background-color: var(--color-primary-hover); }\n"
+                        ".bg-primary:active { background-color: var(--color-primary-active); }\n"
+                        "\n"
+                        "/* Components */\n"
+                        ".btn {\n"
+                        "  display: inline-flex;\n"
+                        "  align-items: center;\n"
+                        "  justify-content: center;\n"
+                        "  padding: var(--space-2) var(--space-4);\n"
+                        "  border-radius: var(--radius-md);\n"
+                        "  font-weight: 500;\n"
+                        "  transition: background-color 0.2s, color 0.2s;\n"
+                        "  cursor: pointer;\n"
+                        "  border: none;\n"
+                        "}\n"
+                        "\n"
+                        ".card {\n"
+                        "  background-color: var(--bg-surface);\n"
+                        "  border-radius: var(--radius-lg);\n"
+                        "  padding: var(--space-4);\n"
+                        "  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);\n"
+                        "}\n";
 
     cwist_sstring_append(css, utils);
     return css;
@@ -232,7 +224,7 @@ cwist_sstring *cwist_css_generate_utility_classes(const cwist_css_config *cfg) {
 cwist_sstring *cwist_css_generate_stylesheet(const cwist_css_config *cfg) {
     if (!cfg) return NULL;
     cwist_sstring *final_css = cwist_sstring_create();
-    
+
     cwist_sstring *vars = cwist_css_generate_variables(cfg);
     cwist_sstring *utils = cwist_css_generate_utility_classes(cfg);
 

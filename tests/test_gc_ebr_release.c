@@ -80,11 +80,11 @@ int main(void) {
     assert(shared != NULL);
     *(int *)shared = 42;
 
-    dual_ref_t holder = { .ref_a = shared, .ref_b = shared };
+    dual_ref_t holder = {.ref_a = shared, .ref_b = shared};
     cwist_release_guard_init(&guard);
 
-    racer_arg_t arg_a = { &holder, &guard, &release_count };
-    racer_arg_t arg_b = { &holder, &guard, &release_count };
+    racer_arg_t arg_a = {&holder, &guard, &release_count};
+    racer_arg_t arg_b = {&holder, &guard, &release_count};
 
     pthread_t reader, racer_a, racer_b;
     assert(pthread_create(&reader, NULL, reader_main, &holder) == 0);

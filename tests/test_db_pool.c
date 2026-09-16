@@ -10,12 +10,11 @@ int main(void) {
     cwist_db_pool_t *pool = cwist_db_pool_create(":memory:", 3);
     assert(pool != NULL);
 
-    cwist_error_t err = cwist_db_pool_exec(pool,
-        "CREATE TABLE users (id INTEGER PRIMARY KEY, name TEXT);");
+    cwist_error_t err =
+        cwist_db_pool_exec(pool, "CREATE TABLE users (id INTEGER PRIMARY KEY, name TEXT);");
     assert(err.error.err_i16 == 0);
 
-    err = cwist_db_pool_exec(pool,
-        "INSERT INTO users (name) VALUES ('alice'), ('bob');");
+    err = cwist_db_pool_exec(pool, "INSERT INTO users (name) VALUES ('alice'), ('bob');");
     assert(err.error.err_i16 == 0);
 
     cJSON *result = NULL;
@@ -49,7 +48,9 @@ int main(void) {
     assert(one && two && three);
     assert(cwist_db_pool_in_use(pool) == 3);
     assert(cwist_db_pool_acquire_timeout(pool, 5) == NULL);
-    cwist_db_pool_release(pool, one); cwist_db_pool_release(pool, two); cwist_db_pool_release(pool, three);
+    cwist_db_pool_release(pool, one);
+    cwist_db_pool_release(pool, two);
+    cwist_db_pool_release(pool, three);
 
     /* An orphaned lease must not make shutdown wait forever.  Timed shutdown
      * closes the pool to new borrowers, preserves the leased handle, and can

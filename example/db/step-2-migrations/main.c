@@ -9,31 +9,20 @@
 #include <cwist/core/db/migrate.h>
 
 static const cwist_migration_t migrations[] = {
-    {
-        1,
-        "create_users",
-        "CREATE TABLE users ("
-        "  id   INTEGER PRIMARY KEY AUTOINCREMENT,"
-        "  name TEXT NOT NULL"
-        ");",
-        "DROP TABLE users;"
-    },
-    {
-        2,
-        "add_email_to_users",
-        "ALTER TABLE users ADD COLUMN email TEXT;",
-        NULL
-    },
-    {
-        3,
-        "create_posts",
-        "CREATE TABLE posts ("
-        "  id      INTEGER PRIMARY KEY AUTOINCREMENT,"
-        "  user_id INTEGER NOT NULL,"
-        "  title   TEXT NOT NULL"
-        ");",
-        "DROP TABLE posts;"
-    },
+    {1, "create_users",
+     "CREATE TABLE users ("
+     "  id   INTEGER PRIMARY KEY AUTOINCREMENT,"
+     "  name TEXT NOT NULL"
+     ");",
+     "DROP TABLE users;"},
+    {2, "add_email_to_users", "ALTER TABLE users ADD COLUMN email TEXT;", NULL},
+    {3, "create_posts",
+     "CREATE TABLE posts ("
+     "  id      INTEGER PRIMARY KEY AUTOINCREMENT,"
+     "  user_id INTEGER NOT NULL,"
+     "  title   TEXT NOT NULL"
+     ");",
+     "DROP TABLE posts;"},
 };
 
 static const int N = (int)(sizeof(migrations) / sizeof(migrations[0]));

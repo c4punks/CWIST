@@ -22,11 +22,11 @@ int main(void) {
     printf("Testing Gorilla/Mux style Parametric Router...\n");
 
     cwist_mux_router *router = cwist_mux_router_create();
-    
+
     // Register exact and parameterized routes
     cwist_mux_handle(router, CWIST_HTTP_GET, "/users", dummy_handler);
     cwist_mux_handle(router, CWIST_HTTP_GET, "/users/:id/posts/:post_id", parameterized_handler);
-    
+
     // Test Exact Match
     cwist_http_request *req1 = cwist_http_request_create();
     req1->method = CWIST_HTTP_GET;

@@ -60,7 +60,8 @@ static void test_page_hardening(void) {
     assert(sig == SIGSEGV || sig == SIGBUS);
 
     printf("test_full_gc_toggle_hardening: page-hardening ok "
-           "(direct write crashed with signal %d, as expected)\n", sig);
+           "(direct write crashed with signal %d, as expected)\n",
+           sig);
 }
 
 int main(void) {

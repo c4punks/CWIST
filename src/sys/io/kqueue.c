@@ -64,8 +64,9 @@ bool cwist_io_queue_submit(cwist_io_queue *q, cwist_job_func func, void *arg) {
     struct kevent kev;
     // We use EVFILT_USER to trigger a custom event.
     // Ident = pointer to job (unique ID)
-    EV_SET(&kev, (uintptr_t)job, EVFILT_USER, EV_ADD | EV_ENABLE | EV_ONESHOT, NOTE_TRIGGER, 0, job);
-    
+    EV_SET(&kev, (uintptr_t)job, EVFILT_USER, EV_ADD | EV_ENABLE | EV_ONESHOT, NOTE_TRIGGER, 0,
+           job);
+
     if (kevent(q->kq_fd, &kev, 1, NULL, 0, NULL) < 0) {
         perror("kevent submit");
         cwist_free(job);

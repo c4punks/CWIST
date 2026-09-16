@@ -8,7 +8,8 @@
 #include <unistd.h>
 #include <time.h>
 
-cwist_write_status_t cwist_http_send_speculative(int fd, const void *buf, size_t len, size_t *sent_out) {
+cwist_write_status_t cwist_http_send_speculative(int fd, const void *buf, size_t len,
+                                                 size_t *sent_out) {
     if (!buf || len == 0) {
         if (sent_out) *sent_out = 0;
         return CWIST_WRITE_DONE;
@@ -40,7 +41,8 @@ cwist_write_status_t cwist_http_send_speculative(int fd, const void *buf, size_t
     return CWIST_WRITE_ERR;
 }
 
-cwist_write_status_t cwist_http_sendmsg_speculative(int fd, struct iovec *iov, int iovcnt, int flags, size_t *total_sent) {
+cwist_write_status_t cwist_http_sendmsg_speculative(int fd, struct iovec *iov, int iovcnt,
+                                                    int flags, size_t *total_sent) {
     if (!iov || iovcnt <= 0) {
         if (total_sent) *total_sent = 0;
         return CWIST_WRITE_DONE;
@@ -51,10 +53,7 @@ cwist_write_status_t cwist_http_sendmsg_speculative(int fd, struct iovec *iov, i
     send_flags |= MSG_NOSIGNAL;
 #endif
 
-    struct msghdr msg = {
-        .msg_iov = iov,
-        .msg_iovlen = (size_t)iovcnt
-    };
+    struct msghdr msg = {.msg_iov = iov, .msg_iovlen = (size_t)iovcnt};
 
     ssize_t n;
     do {

@@ -33,9 +33,7 @@ typedef struct cwist_cert_fetch_buffer {
 } cwist_cert_fetch_buffer;
 
 static bool cwist_url_has_http_scheme(const char *url) {
-    return url &&
-           (strncasecmp(url, "http://", 7) == 0 ||
-            strncasecmp(url, "https://", 8) == 0);
+    return url && (strncasecmp(url, "http://", 7) == 0 || strncasecmp(url, "https://", 8) == 0);
 }
 
 static size_t cwist_cert_fetch_write_cb(void *ptr, size_t size, size_t nmemb, void *userdata) {
@@ -112,7 +110,7 @@ static bool cwist_fetch_cert_url(const char *url, cwist_cert_fetch_buffer *out) 
     return true;
 }
 
-static STACK_OF(X509) *cwist_parse_der_x509(const uint8_t *data, size_t len) {
+static STACK_OF(X509) * cwist_parse_der_x509(const uint8_t *data, size_t len) {
     if (!data || len == 0 || len > LONG_MAX) return NULL;
 
     const uint8_t *p = data;
@@ -131,7 +129,7 @@ static STACK_OF(X509) *cwist_parse_der_x509(const uint8_t *data, size_t len) {
     return certs;
 }
 
-static STACK_OF(X509) *cwist_parse_pem_x509(const uint8_t *data, size_t len) {
+static STACK_OF(X509) * cwist_parse_pem_x509(const uint8_t *data, size_t len) {
     if (!data || len == 0 || len > INT_MAX) return NULL;
 
     BIO *bio = BIO_new_mem_buf(data, (int)len);
@@ -162,7 +160,7 @@ static STACK_OF(X509) *cwist_parse_pem_x509(const uint8_t *data, size_t len) {
     return certs;
 }
 
-static STACK_OF(X509) *cwist_parse_der_pkcs7(const uint8_t *data, size_t len) {
+static STACK_OF(X509) * cwist_parse_der_pkcs7(const uint8_t *data, size_t len) {
     if (!data || len == 0) return NULL;
 
     STACK_OF(X509) *certs = sk_X509_new_null();
@@ -179,7 +177,7 @@ static STACK_OF(X509) *cwist_parse_der_pkcs7(const uint8_t *data, size_t len) {
     return certs;
 }
 
-static STACK_OF(X509) *cwist_parse_pem_pkcs7(const uint8_t *data, size_t len) {
+static STACK_OF(X509) * cwist_parse_pem_pkcs7(const uint8_t *data, size_t len) {
     if (!data || len == 0 || len > INT_MAX) return NULL;
 
     BIO *bio = BIO_new_mem_buf(data, (int)len);
@@ -202,7 +200,7 @@ static STACK_OF(X509) *cwist_parse_pem_pkcs7(const uint8_t *data, size_t len) {
     return certs;
 }
 
-static STACK_OF(X509) *cwist_parse_certificates(const uint8_t *data, size_t len) {
+static STACK_OF(X509) * cwist_parse_certificates(const uint8_t *data, size_t len) {
     STACK_OF(X509) *certs = cwist_parse_der_x509(data, len);
     if (certs) return certs;
 
@@ -224,7 +222,7 @@ static bool cwist_x509_is_valid_issuer(X509 *issuer, X509 *subject) {
     return issuer_key && X509_verify(subject, issuer_key) == 1;
 }
 
-static X509 *cwist_find_issuer(X509 *subject, STACK_OF(X509) *candidates) {
+static X509 *cwist_find_issuer(X509 *subject, STACK_OF(X509) * candidates) {
     if (!subject || !candidates) return NULL;
 
     for (size_t i = 0; i < sk_X509_num(candidates); i++) {

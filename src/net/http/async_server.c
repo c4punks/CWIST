@@ -34,7 +34,7 @@ static void async_accept_cb(int fd, void *ctx) {
 #else
     struct sockaddr_in addr;
     socklen_t len = sizeof(addr);
-    while ((client_fd = accept(fd, (struct sockaddr*)&addr, &len)) >= 0) {
+    while ((client_fd = accept(fd, (struct sockaddr *)&addr, &len)) >= 0) {
 #endif
         int nodelay = 1;
         setsockopt(client_fd, IPPROTO_TCP, TCP_NODELAY, &nodelay, sizeof(nodelay));
@@ -48,11 +48,11 @@ static void async_accept_cb(int fd, void *ctx) {
         } else if (app && !app->use_ssl) {
             cwist_http_pool_submit_async(client_fd, cwist_app_http_handler_async, app);
         } else {
-            fprintf(stderr, "[async] SSL request accepted but HTTPS not ready (use_ssl=%d ssl_ctx=%p handler=%p), closing fd=%d\n",
-                    app ? app->use_ssl : -1,
-                    app ? (void*)app->ssl_ctx : NULL,
-                    app ? (void*)app->https_request_handler : NULL,
-                    client_fd);
+            fprintf(
+                stderr,
+                "[async] SSL request accepted but HTTPS not ready (use_ssl=%d ssl_ctx=%p handler=%p), closing fd=%d\n",
+                app ? app->use_ssl : -1, app ? (void *)app->ssl_ctx : NULL,
+                app ? (void *)app->https_request_handler : NULL, client_fd);
             close(client_fd);
         }
     }
@@ -67,10 +67,12 @@ static void async_accept_cb(int fd, void *ctx) {
                 if (cwist_reactor_add(g_reactor, fd, async_accept_cb, &app, sizeof(app))) {
                     return;
                 }
-                struct timespec ts = { .tv_sec = 0, .tv_nsec = 10 * 1000 * 1000 };
+                struct timespec ts = {.tv_sec = 0, .tv_nsec = 10 * 1000 * 1000};
                 nanosleep(&ts, NULL);
             }
-            fprintf(stderr, "[async] FATAL: listen socket re-arm failed 1000x; this worker stopped accepting\n");
+            fprintf(
+                stderr,
+                "[async] FATAL: listen socket re-arm failed 1000x; this worker stopped accepting\n");
         } else {
             cwist_reactor_stop(g_reactor);
         }
@@ -99,8 +101,10 @@ cwist_error_t cwist_async_server_loop(int server_fd, cwist_app *app) {
     int flags = fcntl(server_fd, F_GETFL, 0);
     if (flags < 0 || fcntl(server_fd, F_SETFL, flags | O_NONBLOCK) < 0) {
         perror("[async] Failed to set server socket non-blocking");
-        if (use_https) https_pool_destroy();
-        else cwist_http_pool_destroy();
+        if (use_https)
+            https_pool_destroy();
+        else
+            cwist_http_pool_destroy();
         return err;
     }
 
@@ -114,8 +118,10 @@ cwist_error_t cwist_async_server_loop(int server_fd, cwist_app *app) {
     g_reactor = cwist_reactor_create();
     if (!g_reactor) {
         fprintf(stderr, "[async] Failed to create reactor\n");
-        if (use_https) https_pool_destroy();
-        else cwist_http_pool_destroy();
+        if (use_https)
+            https_pool_destroy();
+        else
+            cwist_http_pool_destroy();
         return err;
     }
 

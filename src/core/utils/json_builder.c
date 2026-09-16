@@ -58,13 +58,13 @@ static void append_json_escaped_str(cwist_sstring *buf, const char *str) {
         const char *esc = NULL;
         char ucode[8];
         switch (*p) {
-            case '"':  esc = "\\\""; break;
+            case '"': esc = "\\\""; break;
             case '\\': esc = "\\\\"; break;
-            case '\b': esc = "\\b";  break;
-            case '\f': esc = "\\f";  break;
-            case '\n': esc = "\\n";  break;
-            case '\r': esc = "\\r";  break;
-            case '\t': esc = "\\t";  break;
+            case '\b': esc = "\\b"; break;
+            case '\f': esc = "\\f"; break;
+            case '\n': esc = "\\n"; break;
+            case '\r': esc = "\\r"; break;
+            case '\t': esc = "\\t"; break;
             default:
                 if ((unsigned char)*p < 0x20) {
                     snprintf(ucode, sizeof(ucode), "\\u%04x", (unsigned char)*p);

@@ -31,7 +31,7 @@
  * @brief ORM session state.
  */
 struct cwist_orm {
-    int  sock_fd;          /**< Connected Unix socket descriptor. */
+    int sock_fd;          /**< Connected Unix socket descriptor. */
     bool auto_commit;      /**< Mirrored immediate-commit flag. */
     cwist_orm_dialect_t dialect; /**< SQL dialect for query generation. */
 };
@@ -47,8 +47,7 @@ static volatile bool g_immediate_commit = false;
  * @brief Receive exactly @p n bytes from @p fd.
  * @return 0 on success, -1 on EOF or transport error.
  */
-static int orm_recv_all(int fd, void *buf, size_t n)
-{
+static int orm_recv_all(int fd, void *buf, size_t n) {
     size_t total = 0;
     char *p = (char *)buf;
     while (total < n) {
@@ -63,8 +62,7 @@ static int orm_recv_all(int fd, void *buf, size_t n)
  * @brief Send exactly @p n bytes to @p fd.
  * @return 0 on success, -1 on transport error.
  */
-static int orm_send_all(int fd, const void *buf, size_t n)
-{
+static int orm_send_all(int fd, const void *buf, size_t n) {
     size_t total = 0;
     const char *p = (const char *)buf;
     while (total < n) {
@@ -87,8 +85,7 @@ static int orm_send_all(int fd, const void *buf, size_t n)
  * @param out_payload [out] Receives the JSON response string.
  * @return 0 on success, -1 on I/O or protocol failure.
  */
-static int orm_exchange(cwist_orm_t *orm, const char *sql, char **out_payload)
-{
+static int orm_exchange(cwist_orm_t *orm, const char *sql, char **out_payload) {
     *out_payload = NULL;
     if (!orm || orm->sock_fd < 0 || !sql) return -1;
 
@@ -100,15 +97,13 @@ static int orm_exchange(cwist_orm_t *orm, const char *sql, char **out_payload)
     if (orm_send_all(orm->sock_fd, sql, sql_len) != 0) return -1;
 
     uint32_t net_payload = 0;
-    if (orm_recv_all(orm->sock_fd, &net_payload, sizeof(net_payload)) != 0)
-        return -1;
+    if (orm_recv_all(orm->sock_fd, &net_payload, sizeof(net_payload)) != 0) return -1;
     uint32_t payload_len = ntohl(net_payload);
     if (payload_len > 64 * 1024 * 1024) return -1; /* sanity ceiling */
 
     char *payload = (char *)malloc(payload_len + 1);
     if (!payload) return -1;
-    if (payload_len > 0 &&
-        orm_recv_all(orm->sock_fd, payload, payload_len) != 0) {
+    if (payload_len > 0 && orm_recv_all(orm->sock_fd, payload, payload_len) != 0) {
         free(payload);
         return -1;
     }
@@ -123,8 +118,7 @@ static int orm_exchange(cwist_orm_t *orm, const char *sql, char **out_payload)
  * @param payload Response string (must be valid JSON).
  * @return The integer status code, or -1 if parsing fails.
  */
-static int orm_parse_status(const char *payload)
-{
+static int orm_parse_status(const char *payload) {
     if (!payload) return -1;
     cJSON *root = cJSON_Parse(payload);
     if (!root) return -1;
@@ -138,11 +132,9 @@ static int orm_parse_status(const char *payload)
 /* Lifecycle                                                                 */
 /* ------------------------------------------------------------------------- */
 
-cwist_orm_t *cwist_orm_open_socket(int socket_fd)
-{
+cwist_orm_t *cwist_orm_open_socket(int socket_fd) {
     if (socket_fd < 0) return NULL;
-    cwist_orm_t *orm =
-        (cwist_orm_t *)calloc(1, sizeof(*orm));
+    cwist_orm_t *orm = (cwist_orm_t *)calloc(1, sizeof(*orm));
     if (!orm) return NULL;
     orm->sock_fd = socket_fd;
     orm->auto_commit = g_immediate_commit;
@@ -150,8 +142,7 @@ cwist_orm_t *cwist_orm_open_socket(int socket_fd)
     return orm;
 }
 
-void cwist_orm_close_socket(cwist_orm_t *orm)
-{
+void cwist_orm_close_socket(cwist_orm_t *orm) {
     if (!orm) return;
     if (orm->sock_fd >= 0) {
         /* Best-effort rollback of any dangling transaction. */
@@ -167,23 +158,19 @@ void cwist_orm_close_socket(cwist_orm_t *orm)
 /* Transaction control                                                       */
 /* ------------------------------------------------------------------------- */
 
-void cwist_orm_immediate_commit(bool enable)
-{
+void cwist_orm_immediate_commit(bool enable) {
     g_immediate_commit = enable;
 }
 
-void cwist_orm_use_dialect(cwist_orm_t *orm, cwist_orm_dialect_t dialect)
-{
+void cwist_orm_use_dialect(cwist_orm_t *orm, cwist_orm_dialect_t dialect) {
     if (orm) orm->dialect = dialect;
 }
 
-cwist_error_t cwist_orm_commit(cwist_orm_t *orm)
-{
+cwist_error_t cwist_orm_commit(cwist_orm_t *orm) {
     return cwist_orm_exec(orm, "COMMIT;");
 }
 
-cwist_error_t cwist_orm_rollback(cwist_orm_t *orm)
-{
+cwist_error_t cwist_orm_rollback(cwist_orm_t *orm) {
     return cwist_orm_exec(orm, "ROLLBACK;");
 }
 
@@ -191,8 +178,7 @@ cwist_error_t cwist_orm_rollback(cwist_orm_t *orm)
 /* Low-level SQL                                                             */
 /* ------------------------------------------------------------------------- */
 
-cwist_error_t cwist_orm_exec(cwist_orm_t *orm, const char *sql)
-{
+cwist_error_t cwist_orm_exec(cwist_orm_t *orm, const char *sql) {
     cwist_error_t err = make_error(CWIST_ERR_INT16);
     if (!orm || !sql) {
         err.error.err_i16 = CWIST_ERROR_INVALID_PARAM;
@@ -217,8 +203,7 @@ cwist_error_t cwist_orm_exec(cwist_orm_t *orm, const char *sql)
     if (g_immediate_commit) {
         const char *upper = sql;
         while (*upper && *upper <= ' ') upper++;
-        if ((strncasecmp(upper, "INSERT", 6) == 0) ||
-            (strncasecmp(upper, "UPDATE", 6) == 0) ||
+        if ((strncasecmp(upper, "INSERT", 6) == 0) || (strncasecmp(upper, "UPDATE", 6) == 0) ||
             (strncasecmp(upper, "DELETE", 6) == 0)) {
             char *commit_payload = NULL;
             (void)orm_exchange(orm, "COMMIT;", &commit_payload);
@@ -230,9 +215,7 @@ cwist_error_t cwist_orm_exec(cwist_orm_t *orm, const char *sql)
     return err;
 }
 
-cwist_error_t cwist_orm_query(cwist_orm_t *orm, const char *sql,
-                              cJSON **result)
-{
+cwist_error_t cwist_orm_query(cwist_orm_t *orm, const char *sql, cJSON **result) {
     cwist_error_t err = make_error(CWIST_ERR_INT16);
     *result = NULL;
     if (!orm || !sql || !result) {
@@ -284,8 +267,7 @@ cwist_error_t cwist_orm_query(cwist_orm_t *orm, const char *sql,
  * @param src Raw input string (must not be NULL).
  * @return Heap-allocated escaped string.  Caller must free().
  */
-static char *cwist_orm_escape_sqlite(const char *src)
-{
+static char *cwist_orm_escape_sqlite(const char *src) {
     if (!src) return NULL;
     size_t len = strlen(src);
     size_t extra = 0;
@@ -320,8 +302,7 @@ static char *cwist_orm_escape_sqlite(const char *src)
  * @param id  Raw identifier string.
  * @return Heap-allocated quoted identifier, or NULL on failure.
  */
-static char *cwist_orm_quote_identifier(const cwist_orm_t *orm, const char *id)
-{
+static char *cwist_orm_quote_identifier(const cwist_orm_t *orm, const char *id) {
     if (!orm || !id) return NULL;
     char quote_ch = '\0';
     char escape_ch = '\0';
@@ -336,8 +317,7 @@ static char *cwist_orm_quote_identifier(const cwist_orm_t *orm, const char *id)
             quote_ch = '`';
             escape_ch = '`';
             break;
-        default:
-            return strdup(id);
+        default: return strdup(id);
     }
 
     size_t len = strlen(id);
@@ -358,8 +338,7 @@ static char *cwist_orm_quote_identifier(const cwist_orm_t *orm, const char *id)
     return out;
 }
 
-static char *cwist_orm_json_to_sql_literal(const cwist_orm_t *orm, const cJSON *node)
-{
+static char *cwist_orm_json_to_sql_literal(const cwist_orm_t *orm, const cJSON *node) {
     if (!node) return strdup("NULL");
 
     if (cJSON_IsNull(node)) {
@@ -426,10 +405,7 @@ static char *cwist_orm_json_to_sql_literal(const cwist_orm_t *orm, const cJSON *
  *
  * @return Heap-allocated SQL string, or NULL on error.
  */
-static char *orm_build_insert_sql(const cwist_orm_t *orm,
-                                  const char *table,
-                                  const cJSON *data)
-{
+static char *orm_build_insert_sql(const cwist_orm_t *orm, const char *table, const cJSON *data) {
     if (!table || !data || !cJSON_IsObject(data)) return NULL;
 
     int col_count = 0;
@@ -438,14 +414,14 @@ static char *orm_build_insert_sql(const cwist_orm_t *orm,
     if (col_count == 0) return NULL;
 
     char *columns = (char *)malloc(1);
-    char *values  = (char *)malloc(1);
+    char *values = (char *)malloc(1);
     if (!columns || !values) {
         free(columns);
         free(values);
         return NULL;
     }
     columns[0] = '\0';
-    values[0]  = '\0';
+    values[0] = '\0';
 
     char *qtable = cwist_orm_quote_identifier(orm, table);
     if (!qtable) {
@@ -510,17 +486,14 @@ static char *orm_build_insert_sql(const cwist_orm_t *orm,
         free(values);
         return NULL;
     }
-    snprintf(sql, sql_len, "INSERT INTO %s (%s) VALUES (%s)",
-             qtable, columns, values);
+    snprintf(sql, sql_len, "INSERT INTO %s (%s) VALUES (%s)", qtable, columns, values);
     free(qtable);
     free(columns);
     free(values);
     return sql;
 }
 
-cwist_error_t cwist_orm_insert(cwist_orm_t *orm, const char *table,
-                               const cJSON *data)
-{
+cwist_error_t cwist_orm_insert(cwist_orm_t *orm, const char *table, const cJSON *data) {
     cwist_error_t err = make_error(CWIST_ERR_INT16);
     if (!orm || !table || !data || !cJSON_IsObject(data)) {
         err.error.err_i16 = CWIST_ERROR_INVALID_PARAM;
@@ -548,10 +521,8 @@ cwist_error_t cwist_orm_insert(cwist_orm_t *orm, const char *table,
     return err;
 }
 
-cwist_error_t cwist_orm_update(cwist_orm_t *orm, const char *table,
-                               const cJSON *data,
-                               const char *where_clause)
-{
+cwist_error_t cwist_orm_update(cwist_orm_t *orm, const char *table, const cJSON *data,
+                               const char *where_clause) {
     cwist_error_t err = make_error(CWIST_ERR_INT16);
     if (!orm || !table || !data || !cJSON_IsObject(data)) {
         err.error.err_i16 = CWIST_ERROR_INVALID_PARAM;
@@ -585,8 +556,7 @@ cwist_error_t cwist_orm_update(cwist_orm_t *orm, const char *table,
             err.error.err_i16 = CWIST_ERROR_NOMEM;
             return err;
         }
-        size_t need = strlen(set_clause) + strlen(qid) +
-                      strlen(literal) + 4;
+        size_t need = strlen(set_clause) + strlen(qid) + strlen(literal) + 4;
         char *new_set = (char *)realloc(set_clause, need);
         if (!new_set) {
             free(literal);
@@ -613,8 +583,8 @@ cwist_error_t cwist_orm_update(cwist_orm_t *orm, const char *table,
         return err;
     }
 
-    size_t sql_len = strlen(qtable) + strlen(set_clause) + 32 +
-                     (where_clause ? strlen(where_clause) : 0);
+    size_t sql_len =
+        strlen(qtable) + strlen(set_clause) + 32 + (where_clause ? strlen(where_clause) : 0);
     char *sql = (char *)malloc(sql_len);
     if (!sql) {
         free(qtable);
@@ -624,8 +594,7 @@ cwist_error_t cwist_orm_update(cwist_orm_t *orm, const char *table,
     }
 
     if (where_clause && *where_clause) {
-        snprintf(sql, sql_len, "UPDATE %s SET %s WHERE %s;",
-                 qtable, set_clause, where_clause);
+        snprintf(sql, sql_len, "UPDATE %s SET %s WHERE %s;", qtable, set_clause, where_clause);
     } else {
         snprintf(sql, sql_len, "UPDATE %s SET %s;", qtable, set_clause);
     }
@@ -637,9 +606,7 @@ cwist_error_t cwist_orm_update(cwist_orm_t *orm, const char *table,
     return err;
 }
 
-cwist_error_t cwist_orm_delete(cwist_orm_t *orm, const char *table,
-                               const char *where_clause)
-{
+cwist_error_t cwist_orm_delete(cwist_orm_t *orm, const char *table, const char *where_clause) {
     cwist_error_t err = make_error(CWIST_ERR_INT16);
     if (!orm || !table) {
         err.error.err_i16 = CWIST_ERROR_INVALID_PARAM;
@@ -652,8 +619,7 @@ cwist_error_t cwist_orm_delete(cwist_orm_t *orm, const char *table,
         return err;
     }
 
-    size_t sql_len = strlen(qtable) + 32 +
-                     (where_clause ? strlen(where_clause) : 0);
+    size_t sql_len = strlen(qtable) + 32 + (where_clause ? strlen(where_clause) : 0);
     char *sql = (char *)malloc(sql_len);
     if (!sql) {
         free(qtable);
@@ -662,8 +628,7 @@ cwist_error_t cwist_orm_delete(cwist_orm_t *orm, const char *table,
     }
 
     if (where_clause && *where_clause) {
-        snprintf(sql, sql_len, "DELETE FROM %s WHERE %s;",
-                 qtable, where_clause);
+        snprintf(sql, sql_len, "DELETE FROM %s WHERE %s;", qtable, where_clause);
     } else {
         snprintf(sql, sql_len, "DELETE FROM %s;", qtable);
     }
@@ -674,11 +639,8 @@ cwist_error_t cwist_orm_delete(cwist_orm_t *orm, const char *table,
     return err;
 }
 
-cwist_error_t cwist_orm_select(cwist_orm_t *orm, const char *table,
-                               const char *columns,
-                               const char *where_clause,
-                               cJSON **result)
-{
+cwist_error_t cwist_orm_select(cwist_orm_t *orm, const char *table, const char *columns,
+                               const char *where_clause, cJSON **result) {
     cwist_error_t err = make_error(CWIST_ERR_INT16);
     *result = NULL;
     if (!orm || !table || !columns) {
@@ -692,8 +654,8 @@ cwist_error_t cwist_orm_select(cwist_orm_t *orm, const char *table,
         return err;
     }
 
-    size_t sql_len = strlen(columns) + strlen(qtable) + 32 +
-                     (where_clause ? strlen(where_clause) : 0);
+    size_t sql_len =
+        strlen(columns) + strlen(qtable) + 32 + (where_clause ? strlen(where_clause) : 0);
     char *sql = (char *)malloc(sql_len);
     if (!sql) {
         free(qtable);
@@ -702,8 +664,7 @@ cwist_error_t cwist_orm_select(cwist_orm_t *orm, const char *table,
     }
 
     if (where_clause && *where_clause) {
-        snprintf(sql, sql_len, "SELECT %s FROM %s WHERE %s;",
-                 columns, qtable, where_clause);
+        snprintf(sql, sql_len, "SELECT %s FROM %s WHERE %s;", columns, qtable, where_clause);
     } else {
         snprintf(sql, sql_len, "SELECT %s FROM %s;", columns, qtable);
     }
@@ -718,12 +679,9 @@ cwist_error_t cwist_orm_select(cwist_orm_t *orm, const char *table,
 /* _Generic helpers: RETURNING INSERT                                */
 /* ------------------------------------------------------------------ */
 
-cwist_error_t cwist_orm_insert_returning_json(cwist_orm_t *orm,
-                                               const char *table,
-                                               const cJSON *data,
-                                               const char *returning_col,
-                                               cJSON **out)
-{
+cwist_error_t cwist_orm_insert_returning_json(cwist_orm_t *orm, const char *table,
+                                              const cJSON *data, const char *returning_col,
+                                              cJSON **out) {
     cwist_error_t err = make_error(CWIST_ERR_INT16);
     *out = NULL;
     if (!orm || !table || !data || !returning_col || !out) {
@@ -754,16 +712,12 @@ cwist_error_t cwist_orm_insert_returning_json(cwist_orm_t *orm,
     }
     switch (orm->dialect) {
         case CWIST_ORM_POSTGRES:
-        case CWIST_ORM_MARIADB:
-            snprintf(sql, sql_len, "%s RETURNING %s;", base, qret);
-            break;
+        case CWIST_ORM_MARIADB: snprintf(sql, sql_len, "%s RETURNING %s;", base, qret); break;
         case CWIST_ORM_MYSQL:
             snprintf(sql, sql_len, "%s; SELECT LAST_INSERT_ID() AS %s;", base, qret);
             break;
         case CWIST_ORM_SQLITE:
-        default:
-            snprintf(sql, sql_len, "%s; SELECT last_insert_rowid() AS %s;", base, qret);
-            break;
+        default: snprintf(sql, sql_len, "%s; SELECT last_insert_rowid() AS %s;", base, qret); break;
     }
     free(base);
     free(qret);
@@ -800,15 +754,10 @@ cwist_error_t cwist_orm_insert_returning_json(cwist_orm_t *orm,
     return err;
 }
 
-cwist_error_t cwist_orm_insert_returning_int(cwist_orm_t *orm,
-                                              const char *table,
-                                              const cJSON *data,
-                                              const char *returning_col,
-                                              int *out)
-{
+cwist_error_t cwist_orm_insert_returning_int(cwist_orm_t *orm, const char *table, const cJSON *data,
+                                             const char *returning_col, int *out) {
     cJSON *val = NULL;
-    cwist_error_t err = cwist_orm_insert_returning_json(orm, table, data,
-                                                         returning_col, &val);
+    cwist_error_t err = cwist_orm_insert_returning_json(orm, table, data, returning_col, &val);
     if (err.error.err_i16 != 0) return err;
     if (cJSON_IsNumber(val)) {
         *out = (int)val->valuedouble;
@@ -819,15 +768,11 @@ cwist_error_t cwist_orm_insert_returning_int(cwist_orm_t *orm,
     return err;
 }
 
-cwist_error_t cwist_orm_insert_returning_long(cwist_orm_t *orm,
-                                               const char *table,
-                                               const cJSON *data,
-                                               const char *returning_col,
-                                               long *out)
-{
+cwist_error_t cwist_orm_insert_returning_long(cwist_orm_t *orm, const char *table,
+                                              const cJSON *data, const char *returning_col,
+                                              long *out) {
     cJSON *val = NULL;
-    cwist_error_t err = cwist_orm_insert_returning_json(orm, table, data,
-                                                         returning_col, &val);
+    cwist_error_t err = cwist_orm_insert_returning_json(orm, table, data, returning_col, &val);
     if (err.error.err_i16 != 0) return err;
     if (cJSON_IsNumber(val)) {
         *out = (long)val->valuedouble;
@@ -838,15 +783,11 @@ cwist_error_t cwist_orm_insert_returning_long(cwist_orm_t *orm,
     return err;
 }
 
-cwist_error_t cwist_orm_insert_returning_llong(cwist_orm_t *orm,
-                                                const char *table,
-                                                const cJSON *data,
-                                                const char *returning_col,
-                                                long long *out)
-{
+cwist_error_t cwist_orm_insert_returning_llong(cwist_orm_t *orm, const char *table,
+                                               const cJSON *data, const char *returning_col,
+                                               long long *out) {
     cJSON *val = NULL;
-    cwist_error_t err = cwist_orm_insert_returning_json(orm, table, data,
-                                                         returning_col, &val);
+    cwist_error_t err = cwist_orm_insert_returning_json(orm, table, data, returning_col, &val);
     if (err.error.err_i16 != 0) return err;
     if (cJSON_IsNumber(val)) {
         *out = (long long)val->valuedouble;
@@ -861,12 +802,8 @@ cwist_error_t cwist_orm_insert_returning_llong(cwist_orm_t *orm,
 /* _Generic helpers: SELECT single scalar                            */
 /* ------------------------------------------------------------------ */
 
-cwist_error_t cwist_orm_select_one_json(cwist_orm_t *orm,
-                                        const char *table,
-                                        const char *column,
-                                        const char *where_clause,
-                                        cJSON **out)
-{
+cwist_error_t cwist_orm_select_one_json(cwist_orm_t *orm, const char *table, const char *column,
+                                        const char *where_clause, cJSON **out) {
     cwist_error_t err = make_error(CWIST_ERR_INT16);
     *out = NULL;
     if (!orm || !table || !column || !out) {
@@ -875,7 +812,7 @@ cwist_error_t cwist_orm_select_one_json(cwist_orm_t *orm,
     }
 
     char *qtable = cwist_orm_quote_identifier(orm, table);
-    char *qcol   = cwist_orm_quote_identifier(orm, column);
+    char *qcol = cwist_orm_quote_identifier(orm, column);
     if (!qtable || !qcol) {
         free(qtable);
         free(qcol);
@@ -883,8 +820,7 @@ cwist_error_t cwist_orm_select_one_json(cwist_orm_t *orm,
         return err;
     }
 
-    size_t sql_len = strlen(qcol) + strlen(qtable) + 48 +
-                     (where_clause ? strlen(where_clause) : 0);
+    size_t sql_len = strlen(qcol) + strlen(qtable) + 48 + (where_clause ? strlen(where_clause) : 0);
     char *sql = (char *)malloc(sql_len);
     if (!sql) {
         free(qtable);
@@ -894,8 +830,7 @@ cwist_error_t cwist_orm_select_one_json(cwist_orm_t *orm,
     }
 
     if (where_clause && *where_clause) {
-        snprintf(sql, sql_len, "SELECT %s FROM %s WHERE %s LIMIT 1;",
-                 qcol, qtable, where_clause);
+        snprintf(sql, sql_len, "SELECT %s FROM %s WHERE %s LIMIT 1;", qcol, qtable, where_clause);
     } else {
         snprintf(sql, sql_len, "SELECT %s FROM %s LIMIT 1;", qcol, qtable);
     }
@@ -934,15 +869,10 @@ cwist_error_t cwist_orm_select_one_json(cwist_orm_t *orm,
     return err;
 }
 
-cwist_error_t cwist_orm_select_one_int(cwist_orm_t *orm,
-                                       const char *table,
-                                       const char *column,
-                                       const char *where_clause,
-                                       int *out)
-{
+cwist_error_t cwist_orm_select_one_int(cwist_orm_t *orm, const char *table, const char *column,
+                                       const char *where_clause, int *out) {
     cJSON *val = NULL;
-    cwist_error_t err = cwist_orm_select_one_json(orm, table, column,
-                                                     where_clause, &val);
+    cwist_error_t err = cwist_orm_select_one_json(orm, table, column, where_clause, &val);
     if (err.error.err_i16 != 0) return err;
     if (cJSON_IsNumber(val)) {
         *out = (int)val->valuedouble;
@@ -953,15 +883,10 @@ cwist_error_t cwist_orm_select_one_int(cwist_orm_t *orm,
     return err;
 }
 
-cwist_error_t cwist_orm_select_one_long(cwist_orm_t *orm,
-                                        const char *table,
-                                        const char *column,
-                                        const char *where_clause,
-                                        long *out)
-{
+cwist_error_t cwist_orm_select_one_long(cwist_orm_t *orm, const char *table, const char *column,
+                                        const char *where_clause, long *out) {
     cJSON *val = NULL;
-    cwist_error_t err = cwist_orm_select_one_json(orm, table, column,
-                                                     where_clause, &val);
+    cwist_error_t err = cwist_orm_select_one_json(orm, table, column, where_clause, &val);
     if (err.error.err_i16 != 0) return err;
     if (cJSON_IsNumber(val)) {
         *out = (long)val->valuedouble;
@@ -972,15 +897,10 @@ cwist_error_t cwist_orm_select_one_long(cwist_orm_t *orm,
     return err;
 }
 
-cwist_error_t cwist_orm_select_one_llong(cwist_orm_t *orm,
-                                         const char *table,
-                                         const char *column,
-                                         const char *where_clause,
-                                         long long *out)
-{
+cwist_error_t cwist_orm_select_one_llong(cwist_orm_t *orm, const char *table, const char *column,
+                                         const char *where_clause, long long *out) {
     cJSON *val = NULL;
-    cwist_error_t err = cwist_orm_select_one_json(orm, table, column,
-                                                     where_clause, &val);
+    cwist_error_t err = cwist_orm_select_one_json(orm, table, column, where_clause, &val);
     if (err.error.err_i16 != 0) return err;
     if (cJSON_IsNumber(val)) {
         *out = (long long)val->valuedouble;
@@ -991,15 +911,10 @@ cwist_error_t cwist_orm_select_one_llong(cwist_orm_t *orm,
     return err;
 }
 
-cwist_error_t cwist_orm_select_one_double(cwist_orm_t *orm,
-                                          const char *table,
-                                          const char *column,
-                                          const char *where_clause,
-                                          double *out)
-{
+cwist_error_t cwist_orm_select_one_double(cwist_orm_t *orm, const char *table, const char *column,
+                                          const char *where_clause, double *out) {
     cJSON *val = NULL;
-    cwist_error_t err = cwist_orm_select_one_json(orm, table, column,
-                                                     where_clause, &val);
+    cwist_error_t err = cwist_orm_select_one_json(orm, table, column, where_clause, &val);
     if (err.error.err_i16 != 0) return err;
     if (cJSON_IsNumber(val)) {
         *out = val->valuedouble;
@@ -1010,15 +925,10 @@ cwist_error_t cwist_orm_select_one_double(cwist_orm_t *orm,
     return err;
 }
 
-cwist_error_t cwist_orm_select_one_string(cwist_orm_t *orm,
-                                          const char *table,
-                                          const char *column,
-                                          const char *where_clause,
-                                          char **out)
-{
+cwist_error_t cwist_orm_select_one_string(cwist_orm_t *orm, const char *table, const char *column,
+                                          const char *where_clause, char **out) {
     cJSON *val = NULL;
-    cwist_error_t err = cwist_orm_select_one_json(orm, table, column,
-                                                     where_clause, &val);
+    cwist_error_t err = cwist_orm_select_one_json(orm, table, column, where_clause, &val);
     if (err.error.err_i16 != 0) return err;
     if (cJSON_IsString(val)) {
         *out = strdup(val->valuestring);

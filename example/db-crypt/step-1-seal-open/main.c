@@ -20,19 +20,17 @@ int main() {
     /* 3. Seal (encrypt) */
     printf("\n[Seal]\n");
     size_t sealed_len = 0;
-    unsigned char *sealed = cwist_db_crypt_seal(&ctx,
-        (const unsigned char *)fake_db, db_len, &sealed_len);
+    unsigned char *sealed =
+        cwist_db_crypt_seal(&ctx, (const unsigned char *)fake_db, db_len, &sealed_len);
     if (!sealed) {
         fprintf(stderr, "Sealing failed\n");
         return 1;
     }
-    printf("Sealed blob: %zu bytes (header=%d + ciphertext)\n",
-           sealed_len, CWIST_DB_CRYPT_HDR_LEN);
+    printf("Sealed blob: %zu bytes (header=%d + ciphertext)\n", sealed_len, CWIST_DB_CRYPT_HDR_LEN);
 
     /* Print first 16 bytes of sealed blob as hex */
     printf("First 16 bytes: ");
-    for (size_t i = 0; i < 16 && i < sealed_len; i++)
-        printf("%02x", sealed[i]);
+    for (size_t i = 0; i < 16 && i < sealed_len; i++) printf("%02x", sealed[i]);
     printf(" ...\n");
 
     /* 4. Open (decrypt) */

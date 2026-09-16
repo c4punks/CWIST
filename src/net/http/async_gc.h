@@ -67,8 +67,7 @@ static inline void cwist_http_async_disown_response(cwist_http_response *res) {
     cwist_gc_scope_disown(res->alt_svc);
     /* Cleanup, not GC, owns a managed payload. Do not inspect the opaque
      * context or change the callback; caller transfers its dependencies. */
-    if (res->is_ptr_body && res->ptr_body_cleanup)
-        cwist_gc_scope_disown((void *)res->ptr_body);
+    if (res->is_ptr_body && res->ptr_body_cleanup) cwist_gc_scope_disown((void *)res->ptr_body);
     if (!res->arena || !cwist_arena_owns(res->arena, res)) cwist_gc_scope_disown(res);
 }
 

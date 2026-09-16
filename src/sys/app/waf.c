@@ -22,11 +22,19 @@ typedef struct {
     size_t length;
 } waf_signature;
 
-static const waf_signature waf_signatures[] = {
-    { "<script", 7 }, { "</script", 8 }, { "javascript:", 11 }, { "vbscript:", 9 },
-    { "union select", 12 }, { "drop table", 10 }, { "insert into", 11 }, { "delete from", 11 },
-    { " or 1=1", 7 }, { " and 1=1", 8 }, { "--", 2 }, { "/*", 2 }, { "*/", 2 }
-};
+static const waf_signature waf_signatures[] = {{"<script", 7},
+                                               {"</script", 8},
+                                               {"javascript:", 11},
+                                               {"vbscript:", 9},
+                                               {"union select", 12},
+                                               {"drop table", 10},
+                                               {"insert into", 11},
+                                               {"delete from", 11},
+                                               {" or 1=1", 7},
+                                               {" and 1=1", 8},
+                                               {"--", 2},
+                                               {"/*", 2},
+                                               {"*/", 2}};
 
 #define WAF_MAX_PATTERNS 64
 #define WAF_MAX_TEXT 4096
@@ -101,7 +109,14 @@ char *cwist_sanitize_html(const char *input) {
     if (!input) return NULL;
     size_t length = strlen(input), extra = 0;
     for (size_t i = 0; i < length; ++i) {
-        switch (input[i]) { case '&': extra += 4; break; case '<': case '>': extra += 3; break; case '"': extra += 5; break; case '\'': extra += 4; break; default: break; }
+        switch (input[i]) {
+            case '&': extra += 4; break;
+            case '<':
+            case '>': extra += 3; break;
+            case '"': extra += 5; break;
+            case '\'': extra += 4; break;
+            default: break;
+        }
     }
     if (length > SIZE_MAX - extra - 1) return NULL;
     char *output = cwist_alloc(length + extra + 1);
@@ -109,9 +124,20 @@ char *cwist_sanitize_html(const char *input) {
     size_t out = 0;
     for (size_t i = 0; i < length; ++i) {
         const char *replacement = NULL;
-        switch (input[i]) { case '&': replacement = "&amp;"; break; case '<': replacement = "&lt;"; break; case '>': replacement = "&gt;"; break; case '"': replacement = "&quot;"; break; case '\'': replacement = "&#39;"; break; default: break; }
-        if (replacement) { size_t n = strlen(replacement); memcpy(output + out, replacement, n); out += n; }
-        else output[out++] = input[i];
+        switch (input[i]) {
+            case '&': replacement = "&amp;"; break;
+            case '<': replacement = "&lt;"; break;
+            case '>': replacement = "&gt;"; break;
+            case '"': replacement = "&quot;"; break;
+            case '\'': replacement = "&#39;"; break;
+            default: break;
+        }
+        if (replacement) {
+            size_t n = strlen(replacement);
+            memcpy(output + out, replacement, n);
+            out += n;
+        } else
+            output[out++] = input[i];
     }
     output[out] = '\0';
     return output;
@@ -120,19 +146,26 @@ char *cwist_sanitize_html(const char *input) {
 static bool waf_headers_safe(const cwist_http_header_node *header) {
     for (; header; header = header->next) {
         if ((header->key && !cwist_waf_is_safe(header->key->data, header->key->size)) ||
-            (header->value && !cwist_waf_is_safe(header->value->data, header->value->size))) return false;
+            (header->value && !cwist_waf_is_safe(header->value->data, header->value->size)))
+            return false;
     }
     return true;
 }
 
-static void waf_handler(cwist_http_request *req, cwist_http_response *res, cwist_handler_func next) {
-    bool safe = req &&
-        (!req->path || cwist_waf_is_safe(req->path->data, req->path->size)) &&
-        (!req->query || cwist_waf_is_safe(req->query->data, req->query->size)) &&
-        (!req->body || cwist_waf_is_safe(req->body->data, req->body->size)) &&
-        waf_headers_safe(req ? req->headers : NULL);
-    if (!safe) { res->status_code = CWIST_HTTP_BAD_REQUEST; cwist_sstring_assign(res->body, "Request rejected by WAF"); return; }
+static void waf_handler(cwist_http_request *req, cwist_http_response *res,
+                        cwist_handler_func next) {
+    bool safe = req && (!req->path || cwist_waf_is_safe(req->path->data, req->path->size)) &&
+                (!req->query || cwist_waf_is_safe(req->query->data, req->query->size)) &&
+                (!req->body || cwist_waf_is_safe(req->body->data, req->body->size)) &&
+                waf_headers_safe(req ? req->headers : NULL);
+    if (!safe) {
+        res->status_code = CWIST_HTTP_BAD_REQUEST;
+        cwist_sstring_assign(res->body, "Request rejected by WAF");
+        return;
+    }
     next(req, res);
 }
 
-cwist_middleware_func cwist_mw_waf_lite(void) { return waf_handler; }
+cwist_middleware_func cwist_mw_waf_lite(void) {
+    return waf_handler;
+}

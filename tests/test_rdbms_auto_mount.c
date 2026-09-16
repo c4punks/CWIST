@@ -9,15 +9,13 @@
 
 #include <cwist/sys/app/app.h>
 
-static void test_null_app(void)
-{
+static void test_null_app(void) {
     bool ok = cwist_app_auto_rdbms(NULL, 5432);
     assert(!ok);
     printf("PASS: null app returns false\n");
 }
 
-static void test_unbound_port(void)
-{
+static void test_unbound_port(void) {
     cwist_app *app = cwist_app_create();
     assert(app != NULL);
 
@@ -30,15 +28,13 @@ static void test_unbound_port(void)
     printf("PASS: unbound port returns false and leaves rdbms NULL\n");
 }
 
-static void test_probe_unbound_port(void)
-{
+static void test_probe_unbound_port(void) {
     cwist_rdbms_provider_t p = cwist_rdbms_probe_port(54320);
     assert(p == CWIST_RDBMS_NONE);
     printf("PASS: probe on unbound port returns NONE\n");
 }
 
-static void test_double_mount(void)
-{
+static void test_double_mount(void) {
     cwist_app *app = cwist_app_create();
     assert(app != NULL);
 
@@ -61,8 +57,7 @@ static void test_double_mount(void)
     printf("PASS: double mount is idempotent\n");
 }
 
-static void test_public_api_declaration(void)
-{
+static void test_public_api_declaration(void) {
     /* Ensure the public header declares the function and the struct field */
     cwist_app *app = cwist_app_create();
     assert(app != NULL);
@@ -71,8 +66,7 @@ static void test_public_api_declaration(void)
     printf("PASS: public API field accessible\n");
 }
 
-int main(void)
-{
+int main(void) {
     test_null_app();
     test_unbound_port();
     test_probe_unbound_port();

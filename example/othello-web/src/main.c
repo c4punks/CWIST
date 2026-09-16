@@ -16,7 +16,7 @@
 #define PORT 31744
 void *cleanup_thread(void *arg) {
     cwist_db *db = (cwist_db *)arg;
-    while(1) {
+    while (1) {
         sleep(60);
         cleanup_stale_rooms(db);
     }
@@ -50,9 +50,9 @@ int main(int argc, char **argv) {
     }
 
     cwist_app_use_db(app, "othello.db");
-    
+
     cwist_db *db = cwist_app_get_db(app);
-    init_db(db); 
+    init_db(db);
 
     pthread_t tid;
     pthread_create(&tid, NULL, cleanup_thread, db);
@@ -68,6 +68,6 @@ int main(int argc, char **argv) {
     cwist_app_post(app, "/move", move_handler);
 
     printf("Starting %s Othello Server on port %d...\n", use_https ? "HTTPS" : "HTTP", port);
-    
+
     return cwist_app_listen(app, port);
 }

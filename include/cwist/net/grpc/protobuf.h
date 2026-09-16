@@ -55,12 +55,12 @@ int cwist_pb_write_fixed32_field(cwist_pb_writer *w, uint32_t field_number, uint
 int cwist_pb_write_fixed64_field(cwist_pb_writer *w, uint32_t field_number, uint64_t value);
 int cwist_pb_write_float_field(cwist_pb_writer *w, uint32_t field_number, float value);
 int cwist_pb_write_double_field(cwist_pb_writer *w, uint32_t field_number, double value);
-int cwist_pb_write_bytes_field(cwist_pb_writer *w, uint32_t field_number, const void *data, size_t len);
+int cwist_pb_write_bytes_field(cwist_pb_writer *w, uint32_t field_number, const void *data,
+                               size_t len);
 int cwist_pb_write_string_field(cwist_pb_writer *w, uint32_t field_number, const char *value);
 
 static inline uint32_t cwist_pb_load32_le(const uint8_t *p) {
-    return (uint32_t)p[0] | ((uint32_t)p[1] << 8) |
-           ((uint32_t)p[2] << 16) | ((uint32_t)p[3] << 24);
+    return (uint32_t)p[0] | ((uint32_t)p[1] << 8) | ((uint32_t)p[2] << 16) | ((uint32_t)p[3] << 24);
 }
 
 static inline uint64_t cwist_pb_load64_le(const uint8_t *p) {

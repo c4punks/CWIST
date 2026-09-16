@@ -49,9 +49,9 @@ void cwist_gc_rotate(cwist_gc_t *gc) {
  * @param gc GC context to enable auto-rotation.
  */
 void cwist_gc_auto_rotate(cwist_gc_t *gc, bool enabled) {
-    if(!gc || !gc->initialized) return;
+    if (!gc || !gc->initialized) return;
     bool gc_status = atomic_load(&gc->auto_rotated);
-    while(!atomic_compare_exchange_weak(&gc->auto_rotated, &gc_status, enabled));
+    while (!atomic_compare_exchange_weak(&gc->auto_rotated, &gc_status, enabled));
 }
 
 /**
@@ -145,9 +145,8 @@ void cwist_release_guard_init(cwist_release_guard_t *guard) {
 bool cwist_release_guard_acquire(cwist_release_guard_t *guard) {
     if (!guard) return false;
     bool expected = false;
-    return atomic_compare_exchange_strong_explicit(guard, &expected, true,
-                                                    memory_order_acq_rel,
-                                                    memory_order_relaxed);
+    return atomic_compare_exchange_strong_explicit(guard, &expected, true, memory_order_acq_rel,
+                                                   memory_order_relaxed);
 }
 
 /* --- Full-GC mode: process-wide toggle + per-thread pending-sweep list --- */
@@ -189,12 +188,11 @@ static cwist_full_gc_guard_t *g_full_gc_guard = NULL;
  * pthread_once/lazy-init check on its hot path (that check itself
  * regressed the C1M reactor latency gate in CI once already).
  */
-__attribute__((constructor))
-static void cwist_full_gc_guard_init(void) {
+__attribute__((constructor)) static void cwist_full_gc_guard_init(void) {
     long page_size = sysconf(_SC_PAGESIZE);
     if (page_size <= 0) page_size = 4096;
-    void *page = mmap(NULL, (size_t)page_size, PROT_READ | PROT_WRITE,
-                      MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
+    void *page =
+        mmap(NULL, (size_t)page_size, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
     if (page == MAP_FAILED) return;
     cwist_full_gc_guard_t *guard = (cwist_full_gc_guard_t *)page;
     atomic_init(&guard->enabled, false);
@@ -497,7 +495,8 @@ void cwist_conn_registry_track(void *handle, cwist_conn_close_fn close_fn) {
         }
     }
     if (pending->count < pending->cap) {
-        pending->items[pending->count++] = (cwist_conn_entry_t){.handle = handle, .close_fn = close_fn};
+        pending->items[pending->count++] =
+            (cwist_conn_entry_t){.handle = handle, .close_fn = close_fn};
     }
     pthread_mutex_unlock(&pending->lock);
 }

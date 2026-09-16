@@ -26,7 +26,8 @@ typedef struct {
  * @param path Route path to normalise and hash. NULL is treated as the root.
  * @return Two-lane signature suitable for bucket selection and fast equality checks.
  */
-static cwist_mux_signature cwist_mux_signature_from_path(cwist_http_method_t method, const char *path) {
+static cwist_mux_signature cwist_mux_signature_from_path(cwist_http_method_t method,
+                                                         const char *path) {
     uint64_t hi = 14695981039346656037ULL;
     uint64_t lo = 0xcbf29ce484222325ULL;
 
@@ -80,7 +81,7 @@ static cwist_mux_signature cwist_mux_signature_from_path(cwist_http_method_t met
         lo = (lo ^ '/') * prime_lo;
     }
 
-    return (cwist_mux_signature) { .hi = hi, .lo = lo };
+    return (cwist_mux_signature){.hi = hi, .lo = lo};
 }
 
 /**
@@ -89,7 +90,8 @@ static cwist_mux_signature cwist_mux_signature_from_path(cwist_http_method_t met
  * @param sig Signature produced for the route or request path.
  * @return Stable bucket index in the router's fixed bucket array.
  */
-static size_t cwist_mux_bucket_index(const cwist_mux_router *router, const cwist_mux_signature *sig) {
+static size_t cwist_mux_bucket_index(const cwist_mux_router *router,
+                                     const cwist_mux_signature *sig) {
     uint64_t hash = sig->hi ^ (sig->lo + 0x9e3779b97f4a7c15ULL);
 
     /* SplitMix64-style finalizer to maximize avalanche effect. */
@@ -112,7 +114,8 @@ cwist_mux_router *cwist_mux_router_create(void) {
     cwist_mux_router *router = (cwist_mux_router *)cwist_alloc(sizeof(cwist_mux_router));
     if (!router) return NULL;
     router->bucket_count = CWIST_MUX_DEFAULT_BUCKETS;
-    router->buckets = (cwist_mux_route **)cwist_alloc_array(router->bucket_count, sizeof(cwist_mux_route *));
+    router->buckets =
+        (cwist_mux_route **)cwist_alloc_array(router->bucket_count, sizeof(cwist_mux_route *));
     if (!router->buckets) {
         cwist_free(router);
         return NULL;
@@ -154,7 +157,8 @@ void cwist_mux_router_destroy(cwist_mux_router *router) {
  * @param path Exact request path to dispatch.
  * @param handler Callback to invoke for a matching request.
  */
-void cwist_mux_handle(cwist_mux_router *router, cwist_http_method_t method, const char *path, cwist_http_handler_func handler) {
+void cwist_mux_handle(cwist_mux_router *router, cwist_http_method_t method, const char *path,
+                      cwist_http_handler_func handler) {
     if (!router || !path || !handler) return;
 
     cwist_mux_route *route = (cwist_mux_route *)cwist_alloc(sizeof(cwist_mux_route));
@@ -192,7 +196,8 @@ void cwist_mux_handle(cwist_mux_router *router, cwist_http_method_t method, cons
     }
 }
 
-static bool match_parametric_route(const char *route_tmpl, const char *req_path, cwist_query_map **out_params) {
+static bool match_parametric_route(const char *route_tmpl, const char *req_path,
+                                   cwist_query_map **out_params) {
     const char *t = route_tmpl;
     const char *p = req_path;
     cwist_query_map *params = NULL;
@@ -261,27 +266,27 @@ static void mux_chain_next(cwist_http_request *req, cwist_http_response *res) {
     }
 }
 
-static void run_middleware_chain(cwist_mux_middleware_node *mw, cwist_http_request *req, cwist_http_response *res, cwist_http_handler_func handler) {
+static void run_middleware_chain(cwist_mux_middleware_node *mw, cwist_http_request *req,
+                                 cwist_http_response *res, cwist_http_handler_func handler) {
     typedef struct {
         cwist_mux_middleware_node *current;
         cwist_http_handler_func handler;
     } mux_chain_state;
-    mux_chain_state state = { .current = mw, .handler = handler };
+    mux_chain_state state = {.current = mw, .handler = handler};
     req->route_middleware_state = &state;
     mux_chain_next(req, res);
     req->route_middleware_state = NULL;
 }
 
-cwist_mux_route *cwist_mux_find_route(cwist_mux_router *router, cwist_http_method_t method, const char *path) {
+cwist_mux_route *cwist_mux_find_route(cwist_mux_router *router, cwist_http_method_t method,
+                                      const char *path) {
     if (!router || !path) return NULL;
     cwist_mux_signature signature = cwist_mux_signature_from_path(method, path);
     size_t idx = cwist_mux_bucket_index(router, &signature);
     cwist_mux_route *curr = router->buckets[idx];
     while (curr) {
-        if (curr->method == method &&
-            curr->signature_hi == signature.hi &&
-            curr->signature_lo == signature.lo &&
-            curr->path && curr->path->data &&
+        if (curr->method == method && curr->signature_hi == signature.hi &&
+            curr->signature_lo == signature.lo && curr->path && curr->path->data &&
             strcmp(curr->path->data, path) == 0) {
             return curr;
         }
@@ -323,7 +328,8 @@ void cwist_mux_group_destroy(cwist_mux_group *group) {
     cwist_free(group);
 }
 
-void cwist_mux_group_handle(cwist_mux_group *group, cwist_http_method_t method, const char *path, cwist_http_handler_func handler) {
+void cwist_mux_group_handle(cwist_mux_group *group, cwist_http_method_t method, const char *path,
+                            cwist_http_handler_func handler) {
     if (!group || !group->router || !path || !handler) return;
     size_t prefix_len = strlen(group->prefix);
     size_t path_len = strlen(path);
@@ -339,7 +345,8 @@ void cwist_mux_group_handle(cwist_mux_group *group, cwist_http_method_t method, 
 
 void cwist_mux_route_use(cwist_mux_route *route, cwist_middleware_func mw) {
     if (!route || !mw) return;
-    cwist_mux_middleware_node *node = (cwist_mux_middleware_node *)cwist_alloc(sizeof(cwist_mux_middleware_node));
+    cwist_mux_middleware_node *node =
+        (cwist_mux_middleware_node *)cwist_alloc(sizeof(cwist_mux_middleware_node));
     if (!node) return;
     node->func = mw;
     node->next = route->middleware;
@@ -360,13 +367,11 @@ bool cwist_mux_serve(cwist_mux_router *router, cwist_http_request *req, cwist_ht
     cwist_mux_signature signature = cwist_mux_signature_from_path(req->method, path);
     size_t idx = cwist_mux_bucket_index(router, &signature);
     cwist_mux_route *curr = router->buckets[idx];
-    
+
     // 1. Try exact match (O(1))
     while (curr) {
-        if (curr->method == req->method &&
-            curr->signature_hi == signature.hi &&
-            curr->signature_lo == signature.lo &&
-            curr->path && curr->path->data &&
+        if (curr->method == req->method && curr->signature_hi == signature.hi &&
+            curr->signature_lo == signature.lo && curr->path && curr->path->data &&
             strcmp(curr->path->data, path) == 0) {
             if (curr->middleware) {
                 run_middleware_chain(curr->middleware, req, res, curr->handler);

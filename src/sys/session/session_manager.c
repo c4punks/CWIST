@@ -83,7 +83,8 @@ void *session_shared_alloc(size_t payload_size, void (*destructor)(void *)) {
  */
 void session_shared_inc(void *payload) {
     if (!payload) return;
-    struct session_rc_header *header = (struct session_rc_header *)((uint8_t *)payload - sizeof(struct session_rc_header));
+    struct session_rc_header *header =
+        (struct session_rc_header *)((uint8_t *)payload - sizeof(struct session_rc_header));
     if (header->ref_count == 0 || header->ref_count == UINT32_MAX) return;
     header->ref_count += 1;
 }
@@ -94,7 +95,8 @@ void session_shared_inc(void *payload) {
  */
 void session_shared_dec(void *payload) {
     if (!payload) return;
-    struct session_rc_header *header = (struct session_rc_header *)((uint8_t *)payload - sizeof(struct session_rc_header));
+    struct session_rc_header *header =
+        (struct session_rc_header *)((uint8_t *)payload - sizeof(struct session_rc_header));
     if (header->ref_count == 0) return;
     header->ref_count -= 1;
     if (header->ref_count == 0) {

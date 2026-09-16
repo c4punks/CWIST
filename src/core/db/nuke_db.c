@@ -2,7 +2,7 @@
 #define _DEFAULT_SOURCE
 #if defined(__APPLE__)
 /* Keep kqueue/kevent visible: strict _POSIX_C_SOURCE hides them on macOS. */
-#  define _DARWIN_C_SOURCE
+#define _DARWIN_C_SOURCE
 #endif
 #include <cwist/core/db/nuke_db.h>
 #include <cwist/core/macros.h>
@@ -24,7 +24,7 @@
 #include <fcntl.h>
 
 #if defined(__FreeBSD__) || defined(__OpenBSD__) || defined(__NetBSD__) || defined(__APPLE__)
-#  include <sys/event.h>
+#include <sys/event.h>
 #endif
 
 /**
@@ -33,13 +33,13 @@
  */
 
 #ifndef NSIG
-#  if defined(_NSIG)
-#    define NSIG _NSIG
-#  elif defined(SIGRTMAX)
-#    define NSIG (SIGRTMAX + 1)
-#  else
-#    define NSIG 32
-#  endif
+#if defined(_NSIG)
+#define NSIG _NSIG
+#elif defined(SIGRTMAX)
+#define NSIG (SIGRTMAX + 1)
+#else
+#define NSIG 32
+#endif
 #endif
 
 static cwist_nuke_db_t g_nuke = {0};
@@ -50,7 +50,8 @@ static sigset_t g_sigset;
 
 #if defined(__FreeBSD__) || defined(__OpenBSD__) || defined(__NetBSD__) || defined(__APPLE__)
 // @brief bsd compatible sigtimedwait
-static inline int bsd_sigtimedwait(const sigset_t *set, siginfo_t *info, const struct timespec *timeout) {
+static inline int bsd_sigtimedwait(const sigset_t *set, siginfo_t *info,
+                                   const struct timespec *timeout) {
     int kq = kqueue();
     if (kq < 0) {
         return -1;
@@ -61,7 +62,8 @@ static inline int bsd_sigtimedwait(const sigset_t *set, siginfo_t *info, const s
 
     for (int sig = 1; sig < NSIG; sig++) {
         if (sigismember(set, sig)) {
-            EV_SET(&changes[nchanges], sig, EVFILT_SIGNAL, EV_ADD | EV_ENABLE | EV_ONESHOT, 0, 0, NULL);
+            EV_SET(&changes[nchanges], sig, EVFILT_SIGNAL, EV_ADD | EV_ENABLE | EV_ONESHOT, 0, 0,
+                   NULL);
             nchanges++;
         }
     }
@@ -99,7 +101,6 @@ static inline int bsd_sigtimedwait(const sigset_t *set, siginfo_t *info, const s
 }
 #endif
 
-
 /**
  * @brief Estimate the RAM budget needed to mirror a disk database into memory.
  * @param disk_path Path to the on-disk SQLite database.
@@ -128,10 +129,7 @@ static bool nuke_disk_has_tables(sqlite3 *db) {
     if (!db) return true;
     sqlite3_stmt *stmt = NULL;
     bool has_tables = true;
-    if (sqlite3_prepare_v2(db,
-                           "SELECT count(*) FROM sqlite_master WHERE type='table';",
-                           -1,
-                           &stmt,
+    if (sqlite3_prepare_v2(db, "SELECT count(*) FROM sqlite_master WHERE type='table';", -1, &stmt,
                            NULL) == SQLITE_OK) {
         if (sqlite3_step(stmt) == SQLITE_ROW) {
             has_tables = sqlite3_column_int(stmt, 0) > 0;
@@ -190,18 +188,19 @@ static int nuke_backup(sqlite3 *dest, sqlite3 *source) {
 static void nuke_switch_to_disk(void) {
     if (g_nuke.is_disk_mode) return;
 
-    printf("[NukeDB] CRITICAL: Low RAM detected (%zu bytes). Switching to Disk DB.\n", (size_t)cwist_get_available_ram());
-    
+    printf("[NukeDB] CRITICAL: Low RAM detected (%zu bytes). Switching to Disk DB.\n",
+           (size_t)cwist_get_available_ram());
+
     pthread_mutex_lock(&g_nuke_lock);
-    
+
     // 1. Flush Memory -> Disk
     nuke_backup(g_nuke.disk_db, g_nuke.mem_db);
-    
+
     // 2. Set mode flag
-    sqlite3_db_release_memory(g_nuke.mem_db); 
-    
+    sqlite3_db_release_memory(g_nuke.mem_db);
+
     g_nuke.is_disk_mode = true;
-    
+
     pthread_mutex_unlock(&g_nuke_lock);
 }
 
@@ -226,10 +225,11 @@ static int nuke_commit_hook(void *arg) {
  */
 int cwist_nuke_sync(void) {
     pthread_mutex_lock(&g_nuke_lock);
-    
+
     if (g_nuke.is_disk_mode) {
         if (g_nuke.disk_db) {
-            sqlite3_wal_checkpoint_v2(g_nuke.disk_db, "main", SQLITE_CHECKPOINT_PASSIVE, NULL, NULL);
+            sqlite3_wal_checkpoint_v2(g_nuke.disk_db, "main", SQLITE_CHECKPOINT_PASSIVE, NULL,
+                                      NULL);
             pthread_mutex_unlock(&g_nuke_lock);
             return 0;
         }
@@ -242,12 +242,12 @@ int cwist_nuke_sync(void) {
         pthread_mutex_unlock(&g_nuke_lock);
         return -1;
     }
-    
+
     if (!g_nuke.mem_db || !g_nuke.disk_db) {
         pthread_mutex_unlock(&g_nuke_lock);
         return -1;
     }
-    
+
     int rc = nuke_backup(g_nuke.disk_db, g_nuke.mem_db);
     pthread_mutex_unlock(&g_nuke_lock);
     return rc;
@@ -259,7 +259,7 @@ int cwist_nuke_sync(void) {
  */
 static void nuke_cleanup_internal(void) {
     pthread_mutex_lock(&g_nuke_lock);
-    
+
     // Close Memory DB
     if (g_nuke.mem_db) {
         sqlite3_close(g_nuke.mem_db);
@@ -321,7 +321,7 @@ static void *sync_thread_func(void *arg) {
 #if defined(__FreeBSD__) || defined(__OpenBSD__) || defined(__NetBSD__) || defined(__APPLE__)
 #define sigtimedwait bsd_sigtimedwait
 #endif
-        
+
         signum = sigtimedwait(&g_sigset, NULL, &timeout);
 
         if (signum > 0) {
@@ -335,10 +335,10 @@ static void *sync_thread_func(void *arg) {
                 cwist_nuke_sync();
                 continue;
             }
-            
+
             // Handle termination signals (SIGINT, SIGTERM)
             printf("\n[NukeDB] Intercepted Signal %d. Saving data...\n", signum);
-            
+
             cwist_nuke_sync();
             nuke_cleanup_internal();
             g_running = false;
@@ -348,7 +348,7 @@ static void *sync_thread_func(void *arg) {
             sigemptyset(&s);
             sigaddset(&s, signum);
             pthread_sigmask(SIG_UNBLOCK, &s, NULL);
-            
+
             // Restore default handler and re-raise
             signal(signum, SIG_DFL);
             raise(signum);
@@ -381,8 +381,7 @@ int cwist_nuke_init(const char *disk_path, int sync_interval_ms) {
     if (available_ram > 0 && available_ram < required_ram) {
         fprintf(stderr,
                 "[NukeDB] Insufficient RAM for in-memory mode (have %zu bytes, need ~%zu bytes).\n",
-                (size_t)available_ram,
-                (size_t)required_ram);
+                (size_t)available_ram, (size_t)required_ram);
         return CWIST_NUKE_ERR_LOW_MEMORY;
     }
 
@@ -404,7 +403,8 @@ int cwist_nuke_init(const char *disk_path, int sync_interval_ms) {
     }
 
     if (!nuke_integrity_ok(g_nuke.disk_db)) {
-        fprintf(stderr, "[NukeDB] Integrity check failed for '%s'. Aborting in-memory mode.\n", disk_path);
+        fprintf(stderr, "[NukeDB] Integrity check failed for '%s'. Aborting in-memory mode.\n",
+                disk_path);
         nuke_cleanup_internal();
         return CWIST_NUKE_ERR_GENERIC;
     }
@@ -422,7 +422,7 @@ int cwist_nuke_init(const char *disk_path, int sync_interval_ms) {
 
     // 3. Load Disk -> Memory
     pthread_mutex_lock(&g_nuke_lock);
-    
+
     // Use sqlite3_backup as it is safer than raw deserialize for WAL/mode transitions
     int backup_rc = nuke_backup(g_nuke.mem_db, g_nuke.disk_db);
     if (backup_rc == 0) {
@@ -430,7 +430,8 @@ int cwist_nuke_init(const char *disk_path, int sync_interval_ms) {
     } else if (!nuke_disk_has_tables(g_nuke.disk_db)) {
         g_nuke.load_successful = true;
     } else {
-        fprintf(stderr, "[NukeDB] Initial disk->memory load failed. Falling back to disk-only mode.\n");
+        fprintf(stderr,
+                "[NukeDB] Initial disk->memory load failed. Falling back to disk-only mode.\n");
         g_nuke.is_disk_mode = true;
         sqlite3_close(g_nuke.mem_db);
         g_nuke.mem_db = NULL;
@@ -450,7 +451,7 @@ int cwist_nuke_init(const char *disk_path, int sync_interval_ms) {
     sigaddset(&g_sigset, SIGTERM);
     sigaddset(&g_sigset, SIGUSR1);
     sigaddset(&g_sigset, SIGUSR2);
-    
+
     pthread_sigmask(SIG_BLOCK, &g_sigset, NULL);
 
     // 5. Start Sync/Signal Thread
@@ -505,10 +506,8 @@ int cwist_nuke_deserialize(unsigned char *data, sqlite3_int64 data_len) {
     /* SQLITE_DESERIALIZE_FREEONCLOSE: SQLite will free the buffer when the
      * database connection is closed.
      * SQLITE_DESERIALIZE_RESIZABLE: allows the in-memory DB to grow. */
-    int rc = sqlite3_deserialize(g_nuke.mem_db, "main",
-                                 data, data_len, data_len,
-                                 SQLITE_DESERIALIZE_FREEONCLOSE |
-                                 SQLITE_DESERIALIZE_RESIZEABLE);
+    int rc = sqlite3_deserialize(g_nuke.mem_db, "main", data, data_len, data_len,
+                                 SQLITE_DESERIALIZE_FREEONCLOSE | SQLITE_DESERIALIZE_RESIZEABLE);
     pthread_mutex_unlock(&g_nuke_lock);
     return (rc == SQLITE_OK) ? 0 : -1;
 }

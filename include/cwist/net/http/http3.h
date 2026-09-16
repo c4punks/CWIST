@@ -23,9 +23,8 @@ typedef struct cwist_http3_context cwist_http3_context;
  * @param res HTTP response object to be populated (e.g., 200 OK to accept).
  * @param stream Opaque CWIST WebTransport session handle.
  */
-typedef void (*cwist_webtransport_handler_func)(cwist_http_request *req,
-                                                 cwist_http_response *res,
-                                                 void *stream);
+typedef void (*cwist_webtransport_handler_func)(cwist_http_request *req, cwist_http_response *res,
+                                                void *stream);
 
 /** --- HTTP/3 Structures --- */
 
@@ -47,7 +46,8 @@ struct cwist_http3_context {
     void (*datagram_cb)(const void *data, size_t len, void *user_ctx);
     void *datagram_user_ctx;
     cwist_webtransport_handler_func wt_handler; /**< WebTransport session handler */
-    void (*wt_new_stream_handler)(void *stream, void *user_ctx); /**< Callback for new WT data streams */
+    void (*wt_new_stream_handler)(void *stream,
+                                  void *user_ctx); /**< Callback for new WT data streams */
     void *wt_new_stream_ctx; /**< User context for wt_new_stream_handler */
     int idle_timeout_ms;       /**< 0 = use lsquic default (30s) */
     int handshake_timeout_ms;  /**< 0 = use lsquic default (10s) */
@@ -63,8 +63,7 @@ struct cwist_http3_context {
  * @param req Parsed HTTP request object.
  * @param res HTTP response object to be populated by the handler.
  */
-typedef void (*cwist_http3_request_handler_func)(void *user_ctx,
-                                                 cwist_http_request *req,
+typedef void (*cwist_http3_request_handler_func)(void *user_ctx, cwist_http_request *req,
                                                  cwist_http_response *res);
 
 /**
@@ -79,8 +78,7 @@ typedef void (*cwist_http3_request_handler_func)(void *user_ctx,
 /**
  * @brief Initialize an HTTP/3 context with a certificate.
  */
-cwist_error_t cwist_http3_init_context(cwist_http3_context **ctx,
-                                       const char *cert_path,
+cwist_error_t cwist_http3_init_context(cwist_http3_context **ctx, const char *cert_path,
                                        const char *key_path);
 
 /**
@@ -96,10 +94,8 @@ void cwist_http3_destroy_context(cwist_http3_context *ctx);
 /**
  * @brief Run the HTTP/3 server event loop.
  */
-cwist_error_t cwist_http3_server_loop(int udp_fd,
-                                      cwist_http3_context *ctx,
-                                      cwist_http3_request_handler_func handler,
-                                      void *user_ctx);
+cwist_error_t cwist_http3_server_loop(int udp_fd, cwist_http3_context *ctx,
+                                      cwist_http3_request_handler_func handler, void *user_ctx);
 
 /** --- Advanced Features --- */
 
@@ -159,9 +155,7 @@ void cwist_http3_set_push_enabled(cwist_http3_context *ctx, int enabled);
  * @param content_type  Optional Content-Type header value (may be NULL).
  * @return 0 on success, -1 on failure.
  */
-int cwist_http3_push_resource(cwist_http_request *req,
-                              const char *path,
-                              const char *content_type);
+int cwist_http3_push_resource(cwist_http_request *req, const char *path, const char *content_type);
 
 /**
  * @brief Set stream priority for the current response.
@@ -312,8 +306,7 @@ int cwist_webtransport_open_uni_stream(void *session);
  * @param len     Payload length in bytes.
  * @return Number of bytes queued, or -1 on error.
  */
-ssize_t cwist_webtransport_send_datagram(void *session,
-                                         const void *data, size_t len);
+ssize_t cwist_webtransport_send_datagram(void *session, const void *data, size_t len);
 
 /**
  * @brief Return the current maximum WebTransport datagram payload size.
@@ -323,9 +316,7 @@ size_t cwist_webtransport_max_datagram_size(void *session);
 /**
  * @brief Close a WebTransport session with an application error code.
  */
-int cwist_webtransport_close_session(void *session,
-                                     uint64_t code,
-                                     const char *reason);
+int cwist_webtransport_close_session(void *session, uint64_t code, const char *reason);
 
 /** @} */
 

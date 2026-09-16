@@ -20,4 +20,3 @@ uint64_t siphash24(const void *src, size_t len, const uint8_t key[16]);
 // uint64_t hash = siphash24(src, len, key);
 void cwist_generate_hash_seed(uint8_t key[16]);
 #endif
-

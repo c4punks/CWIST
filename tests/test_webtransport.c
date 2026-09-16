@@ -9,14 +9,12 @@
 #include <pthread.h>
 
 #define TEST_CERT "example/othello-web/server.crt"
-#define TEST_KEY  "example/othello-web/server.key"
+#define TEST_KEY "example/othello-web/server.key"
 
 static volatile int g_wt_handler_called = 0;
 static volatile int g_new_stream_called = 0;
 
-static void wt_test_handler(cwist_http_request *req,
-                            cwist_http_response *res,
-                            void *stream) {
+static void wt_test_handler(cwist_http_request *req, cwist_http_response *res, void *stream) {
     (void)stream;
     g_wt_handler_called = 1;
     /* Accept the session */
@@ -35,8 +33,7 @@ typedef struct {
     cwist_http3_context *ctx;
 } server_thread_args_t;
 
-static void dummy_http3_handler(void *user_ctx, cwist_http_request *req,
-                                  cwist_http_response *res) {
+static void dummy_http3_handler(void *user_ctx, cwist_http_request *req, cwist_http_response *res) {
     (void)user_ctx;
     (void)req;
     (void)res;
@@ -82,7 +79,7 @@ int main(void) {
     addr.sin_port = htons(0);
     assert(bind(udp_fd, (struct sockaddr *)&addr, sizeof(addr)) == 0);
 
-    server_thread_args_t args = { .udp_fd = udp_fd, .ctx = ctx };
+    server_thread_args_t args = {.udp_fd = udp_fd, .ctx = ctx};
     pthread_t tid;
     int rc = pthread_create(&tid, NULL, wt_server_thread, &args);
     assert(rc == 0);

@@ -14,7 +14,8 @@
 
 /**
  * @file middleware.c
- * @brief Built-in middleware implementations for request IDs, logging, rate limits, CORS, and JWT auth.
+ * @brief Built-in middleware implementations for request IDs, logging, rate limits, CORS, and JWT
+ * auth.
  */
 
 static pthread_mutex_t rid_mutex = PTHREAD_MUTEX_INITIALIZER;
@@ -27,7 +28,7 @@ static unsigned int rid_seed = 0;
 static char *generate_request_id() {
     static const char charset[] = "abcdefghijklmnopqrstuvwxyz0123456789";
     char *id = cwist_alloc(17);
-    
+
     pthread_mutex_lock(&rid_mutex);
     if (rid_seed == 0) rid_seed = (unsigned int)time(NULL) ^ (unsigned int)pthread_self();
     unsigned int seed = rid_seed++;
@@ -46,7 +47,8 @@ static char *generate_request_id() {
  * @param res Outgoing HTTP response.
  * @param next Next middleware or final handler in the chain.
  */
-void cwist_mw_request_id_handler(cwist_http_request *req, cwist_http_response *res, cwist_handler_func next) {
+void cwist_mw_request_id_handler(cwist_http_request *req, cwist_http_response *res,
+                                 cwist_handler_func next) {
     const char *header_name = "X-Request-Id";
     char *existing = cwist_http_header_get(req->headers, header_name);
     char *rid;
@@ -96,7 +98,8 @@ static void format_iso8601_time(char *buf, size_t len, const struct timeval *tv)
     snprintf(buf + pos, len - pos, ".%03ldZ", tv->tv_usec / 1000);
 }
 
-static void cwist_mw_access_log_common_handler(cwist_http_request *req, cwist_http_response *res, cwist_handler_func next) {
+static void cwist_mw_access_log_common_handler(cwist_http_request *req, cwist_http_response *res,
+                                               cwist_handler_func next) {
     struct timeval start, end;
     gettimeofday(&start, NULL);
     next(req, res);
@@ -112,18 +115,16 @@ static void cwist_mw_access_log_common_handler(cwist_http_request *req, cwist_ht
     size_t res_bytes = res->body ? res->body->size : 0;
 
     pthread_mutex_lock(&log_mutex);
-    printf("%s - %s [%s] \"%s %s %s\" %d %zu\n",
-           ip_str, rid ? rid : "-", time_buf,
-           cwist_http_method_to_string(req->method),
-           req->path->data,
-           req->version ? req->version->data : "HTTP/1.1",
-           res->status_code, res_bytes);
+    printf("%s - %s [%s] \"%s %s %s\" %d %zu\n", ip_str, rid ? rid : "-", time_buf,
+           cwist_http_method_to_string(req->method), req->path->data,
+           req->version ? req->version->data : "HTTP/1.1", res->status_code, res_bytes);
     pthread_mutex_unlock(&log_mutex);
 
     if (ip) cwist_sstring_destroy(ip);
 }
 
-static void cwist_mw_access_log_combined_handler(cwist_http_request *req, cwist_http_response *res, cwist_handler_func next) {
+static void cwist_mw_access_log_combined_handler(cwist_http_request *req, cwist_http_response *res,
+                                                 cwist_handler_func next) {
     struct timeval start, end;
     gettimeofday(&start, NULL);
     next(req, res);
@@ -141,20 +142,17 @@ static void cwist_mw_access_log_combined_handler(cwist_http_request *req, cwist_
     size_t res_bytes = res->body ? res->body->size : 0;
 
     pthread_mutex_lock(&log_mutex);
-    printf("%s - %s [%s] \"%s %s %s\" %d %zu \"%s\" \"%s\"\n",
-           ip_str, rid ? rid : "-", time_buf,
-           cwist_http_method_to_string(req->method),
-           req->path->data,
-           req->version ? req->version->data : "HTTP/1.1",
-           res->status_code, res_bytes,
-           referer ? referer : "-",
-           user_agent ? user_agent : "-");
+    printf("%s - %s [%s] \"%s %s %s\" %d %zu \"%s\" \"%s\"\n", ip_str, rid ? rid : "-", time_buf,
+           cwist_http_method_to_string(req->method), req->path->data,
+           req->version ? req->version->data : "HTTP/1.1", res->status_code, res_bytes,
+           referer ? referer : "-", user_agent ? user_agent : "-");
     pthread_mutex_unlock(&log_mutex);
 
     if (ip) cwist_sstring_destroy(ip);
 }
 
-static void cwist_mw_access_log_json_handler(cwist_http_request *req, cwist_http_response *res, cwist_handler_func next) {
+static void cwist_mw_access_log_json_handler(cwist_http_request *req, cwist_http_response *res,
+                                             cwist_handler_func next) {
     struct timeval start, end;
     gettimeofday(&start, NULL);
     next(req, res);
@@ -172,12 +170,11 @@ static void cwist_mw_access_log_json_handler(cwist_http_request *req, cwist_http
     size_t res_bytes = res->body ? res->body->size : 0;
 
     pthread_mutex_lock(&log_mutex);
-    printf("{\"time\":\"%s\",\"client\":\"%s\",\"rid\":\"%s\",\"method\":\"%s\",\"path\":\"%s\",\"protocol\":\"%s\",\"status\":%d,\"duration_ms\":%ld,\"req_bytes\":%zu,\"res_bytes\":%zu}\n",
-           time_buf, ip_str, rid ? rid : "-",
-           cwist_http_method_to_string(req->method),
-           req->path->data,
-           req->version ? req->version->data : "HTTP/1.1",
-           res->status_code, msec, req_bytes, res_bytes);
+    printf(
+        "{\"time\":\"%s\",\"client\":\"%s\",\"rid\":\"%s\",\"method\":\"%s\",\"path\":\"%s\",\"protocol\":\"%s\",\"status\":%d,\"duration_ms\":%ld,\"req_bytes\":%zu,\"res_bytes\":%zu}\n",
+        time_buf, ip_str, rid ? rid : "-", cwist_http_method_to_string(req->method),
+        req->path->data, req->version ? req->version->data : "HTTP/1.1", res->status_code, msec,
+        req_bytes, res_bytes);
     pthread_mutex_unlock(&log_mutex);
 
     if (ip) cwist_sstring_destroy(ip);
@@ -207,7 +204,8 @@ cwist_middleware_func cwist_mw_access_log(cwist_log_format_t format) {
  * @param res Outgoing HTTP response.
  * @param next Next middleware or final handler in the chain.
  */
-void cwist_mw_metrics_handler(cwist_http_request *req, cwist_http_response *res, cwist_handler_func next) {
+void cwist_mw_metrics_handler(cwist_http_request *req, cwist_http_response *res,
+                              cwist_handler_func next) {
     struct timespec start, end;
     clock_gettime(CLOCK_MONOTONIC, &start);
     next(req, res);
@@ -247,7 +245,8 @@ typedef struct {
     int rpm;
 } rate_limit_ctx_t;
 
-static void cwist_mw_rate_limit_ip_handler(cwist_http_request *req, cwist_http_response *res, cwist_handler_func next) {
+static void cwist_mw_rate_limit_ip_handler(cwist_http_request *req, cwist_http_response *res,
+                                           cwist_handler_func next) {
     rate_limit_ctx_t *ctx = (rate_limit_ctx_t *)req->private_data;
     int rpm = (ctx && ctx->rpm > 0) ? ctx->rpm : 60;
 
@@ -304,14 +303,15 @@ static rate_limit_cfg_t s_rate_cfgs[CWIST_RATE_LIMIT_MAX_CFGS];
 static int s_rate_cfg_count = 0;
 static pthread_mutex_t s_rate_cfg_mutex = PTHREAD_MUTEX_INITIALIZER;
 
-#define CWIST_RATE_LIMIT_DEFINE_WRAPPER(N) \
-static void cwist_mw_rate_limit_wrap_##N(cwist_http_request *req, cwist_http_response *res, cwist_handler_func next) { \
-    rate_limit_ctx_t ctx = { .rpm = s_rate_cfgs[N].rpm }; \
-    void *prev = req->private_data; \
-    req->private_data = &ctx; \
-    cwist_mw_rate_limit_ip_handler(req, res, next); \
-    req->private_data = prev; \
-}
+#define CWIST_RATE_LIMIT_DEFINE_WRAPPER(N)                                                      \
+    static void cwist_mw_rate_limit_wrap_##N(cwist_http_request *req, cwist_http_response *res, \
+                                             cwist_handler_func next) {                         \
+        rate_limit_ctx_t ctx = {.rpm = s_rate_cfgs[N].rpm};                                     \
+        void *prev = req->private_data;                                                         \
+        req->private_data = &ctx;                                                               \
+        cwist_mw_rate_limit_ip_handler(req, res, next);                                         \
+        req->private_data = prev;                                                               \
+    }
 
 CWIST_RATE_LIMIT_DEFINE_WRAPPER(0)
 CWIST_RATE_LIMIT_DEFINE_WRAPPER(1)
@@ -323,8 +323,9 @@ CWIST_RATE_LIMIT_DEFINE_WRAPPER(6)
 CWIST_RATE_LIMIT_DEFINE_WRAPPER(7)
 
 static cwist_middleware_func s_rate_wrappers[CWIST_RATE_LIMIT_MAX_CFGS] = {
-    cwist_mw_rate_limit_wrap_0, cwist_mw_rate_limit_wrap_1, cwist_mw_rate_limit_wrap_2, cwist_mw_rate_limit_wrap_3,
-    cwist_mw_rate_limit_wrap_4, cwist_mw_rate_limit_wrap_5, cwist_mw_rate_limit_wrap_6, cwist_mw_rate_limit_wrap_7,
+    cwist_mw_rate_limit_wrap_0, cwist_mw_rate_limit_wrap_1, cwist_mw_rate_limit_wrap_2,
+    cwist_mw_rate_limit_wrap_3, cwist_mw_rate_limit_wrap_4, cwist_mw_rate_limit_wrap_5,
+    cwist_mw_rate_limit_wrap_6, cwist_mw_rate_limit_wrap_7,
 };
 
 /**
@@ -371,14 +372,17 @@ cwist_middleware_func cwist_mw_rate_limit_ip(int requests_per_minute) {
  * @param res Outgoing HTTP response.
  * @param next Next middleware or final handler in the chain.
  */
-void cwist_mw_cors_handler(cwist_http_request *req, cwist_http_response *res, cwist_handler_func next) {
+void cwist_mw_cors_handler(cwist_http_request *req, cwist_http_response *res,
+                           cwist_handler_func next) {
     // Add standard CORS headers
     cwist_http_header_add(&res->headers, "Access-Control-Allow-Origin", "*");
 
     // Handle Preflight (OPTIONS)
     if (req->method == CWIST_HTTP_OPTIONS) {
-        cwist_http_header_add(&res->headers, "Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, PATCH, OPTIONS, HEAD");
-        cwist_http_header_add(&res->headers, "Access-Control-Allow-Headers", "Content-Type, Authorization, X-Request-Id");
+        cwist_http_header_add(&res->headers, "Access-Control-Allow-Methods",
+                              "GET, POST, PUT, DELETE, PATCH, OPTIONS, HEAD");
+        cwist_http_header_add(&res->headers, "Access-Control-Allow-Headers",
+                              "Content-Type, Authorization, X-Request-Id");
         cwist_http_header_add(&res->headers, "Access-Control-Max-Age", "86400"); // 24 hours
 
         res->status_code = CWIST_HTTP_NO_CONTENT; // 204 No Content
@@ -425,7 +429,8 @@ typedef struct {
  * @param res Outgoing HTTP response.
  * @param next Next middleware or final handler in the chain.
  */
-void cwist_mw_jwt_auth_handler(cwist_http_request *req, cwist_http_response *res, cwist_handler_func next) {
+void cwist_mw_jwt_auth_handler(cwist_http_request *req, cwist_http_response *res,
+                               cwist_handler_func next) {
     /* Retrieve the secret stored in the context tag */
     cwist_jwt_ctx_t *ctx = (cwist_jwt_ctx_t *)req->private_data;
     if (!ctx) {
@@ -502,18 +507,17 @@ static pthread_mutex_t s_jwt_cfg_mutex = PTHREAD_MUTEX_INITIALIZER;
 
 /* One wrapper function per registered secret slot.
  * The ctx is stack-allocated; its lifetime is confined to this function frame. */
-#define CWIST_JWT_DEFINE_WRAPPER(N) \
-static void cwist_mw_jwt_wrap_##N(cwist_http_request *req, cwist_http_response *res, cwist_handler_func next) { \
-    cwist_jwt_ctx_t ctx = { \
-        .magic = CWIST_JWT_CTX_MAGIC, \
-        .secret = s_jwt_cfgs[N].secret, \
-        .claims = NULL, \
-        .prev_private_data = req->private_data \
-    }; \
-    req->private_data = &ctx; \
-    cwist_mw_jwt_auth_handler(req, res, next); \
-    req->private_data = ctx.prev_private_data; \
-}
+#define CWIST_JWT_DEFINE_WRAPPER(N)                                                      \
+    static void cwist_mw_jwt_wrap_##N(cwist_http_request *req, cwist_http_response *res, \
+                                      cwist_handler_func next) {                         \
+        cwist_jwt_ctx_t ctx = {.magic = CWIST_JWT_CTX_MAGIC,                             \
+                               .secret = s_jwt_cfgs[N].secret,                           \
+                               .claims = NULL,                                           \
+                               .prev_private_data = req->private_data};                  \
+        req->private_data = &ctx;                                                        \
+        cwist_mw_jwt_auth_handler(req, res, next);                                       \
+        req->private_data = ctx.prev_private_data;                                       \
+    }
 
 CWIST_JWT_DEFINE_WRAPPER(0)
 CWIST_JWT_DEFINE_WRAPPER(1)

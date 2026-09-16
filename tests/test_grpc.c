@@ -8,10 +8,8 @@
 #include <string.h>
 #include <zlib.h>
 
-static void echo_unary(cwist_http_request *req,
-                       cwist_http_response *res,
-                       const cwist_grpc_message *message,
-                       void *user_ctx) {
+static void echo_unary(cwist_http_request *req, cwist_http_response *res,
+                       const cwist_grpc_message *message, void *user_ctx) {
     (void)req;
     const char *prefix = (const char *)user_ctx;
     cwist_pb_reader reader;
@@ -28,10 +26,7 @@ static void echo_unary(cwist_http_request *req,
     assert(input != NULL);
 
     char out[128];
-    int n = snprintf(out, sizeof(out), "%s:%.*s",
-                     prefix ? prefix : "echo",
-                     (int)input_len,
-                     input);
+    int n = snprintf(out, sizeof(out), "%s:%.*s", prefix ? prefix : "echo", (int)input_len, input);
     assert(n > 0);
 
     cwist_pb_writer writer;
@@ -59,11 +54,8 @@ static void echo_stream(cwist_grpc_stream *stream, void *user_ctx) {
         assert(input != NULL);
 
         char out[128];
-        int n = snprintf(out, sizeof(out), "%s-%zu:%.*s",
-                         prefix ? prefix : "stream",
-                         i + 1,
-                         (int)input_len,
-                         input);
+        int n = snprintf(out, sizeof(out), "%s-%zu:%.*s", prefix ? prefix : "stream", i + 1,
+                         (int)input_len, input);
         assert(n > 0);
 
         cwist_pb_writer writer;
@@ -75,10 +67,8 @@ static void echo_stream(cwist_grpc_stream *stream, void *user_ctx) {
     cwist_grpc_stream_close(stream, CWIST_GRPC_OK, NULL);
 }
 
-static void meta_unary(cwist_http_request *req,
-                       cwist_http_response *res,
-                       const cwist_grpc_message *message,
-                       void *user_ctx) {
+static void meta_unary(cwist_http_request *req, cwist_http_response *res,
+                       const cwist_grpc_message *message, void *user_ctx) {
     (void)message;
     (void)user_ctx;
     /* Metadata normalization: case-insensitive textual lookup, and a
@@ -133,12 +123,11 @@ static void recv_stream(cwist_grpc_stream *stream, void *user_ctx) {
 }
 
 /* gzip-compress with zlib (client side of the compression test). */
-static void gzip_compress(const uint8_t *in, size_t in_len,
-                          uint8_t **out, size_t *out_len) {
+static void gzip_compress(const uint8_t *in, size_t in_len, uint8_t **out, size_t *out_len) {
     z_stream zs;
     memset(&zs, 0, sizeof(zs));
-    assert(deflateInit2(&zs, Z_DEFAULT_COMPRESSION, Z_DEFLATED,
-                        16 + MAX_WBITS, 8, Z_DEFAULT_STRATEGY) == Z_OK);
+    assert(deflateInit2(&zs, Z_DEFAULT_COMPRESSION, Z_DEFLATED, 16 + MAX_WBITS, 8,
+                        Z_DEFAULT_STRATEGY) == Z_OK);
     size_t cap = deflateBound(&zs, in_len) + 32;
     uint8_t *buf = cwist_alloc(cap);
     assert(buf != NULL);
@@ -152,8 +141,7 @@ static void gzip_compress(const uint8_t *in, size_t in_len,
     deflateEnd(&zs);
 }
 
-static void test_gzip_inflate(const uint8_t *in, size_t in_len,
-                              uint8_t **out, size_t *out_len) {
+static void test_gzip_inflate(const uint8_t *in, size_t in_len, uint8_t **out, size_t *out_len) {
     z_stream zs;
     memset(&zs, 0, sizeof(zs));
     assert(inflateInit2(&zs, 16 + MAX_WBITS) == Z_OK);
@@ -247,8 +235,7 @@ static void append_grpc_string_frame(cwist_sstring *body, const char *value) {
     cwist_pb_writer_free(&pb);
 }
 
-static void assert_stream_response(cwist_http_response *res,
-                                   const char **expected,
+static void assert_stream_response(cwist_http_response *res, const char **expected,
                                    size_t expected_count) {
     assert(res != NULL);
     assert(strcmp(cwist_http_header_get(res->headers, "grpc-status"), "0") == 0);
@@ -257,8 +244,8 @@ static void assert_stream_response(cwist_http_response *res,
     size_t seen = 0;
     while (offset < res->body->size) {
         cwist_grpc_message msg;
-        assert(cwist_grpc_decode_next_message(res->body->data, res->body->size,
-                                              &offset, &msg) == 0);
+        assert(cwist_grpc_decode_next_message(res->body->data, res->body->size, &offset, &msg) ==
+               0);
         assert(seen < expected_count);
         cwist_pb_reader reader;
         cwist_pb_reader_init(&reader, msg.data, msg.len);
@@ -306,7 +293,8 @@ int main(void) {
     cwist_grpc_decoder_init(&decoder, 1024);
     size_t decoded_count = 0;
     assert(cwist_grpc_decoder_feed(&decoder, frame, 2, decoder_count, &decoded_count) == 0);
-    assert(cwist_grpc_decoder_feed(&decoder, frame + 2, frame_len - 2, decoder_count, &decoded_count) == 0);
+    assert(cwist_grpc_decoder_feed(&decoder, frame + 2, frame_len - 2, decoder_count,
+                                   &decoded_count) == 0);
     assert(decoded_count == 1);
     cwist_grpc_decoder_destroy(&decoder);
 
@@ -328,16 +316,13 @@ int main(void) {
         .body_len = frame_len,
         .content_type = "application/grpc",
     };
-    cwist_http_response *res = cwist_test_client_request_ex(client, CWIST_HTTP_POST,
-                                                            "/cwist.test.Echo/Say",
-                                                            &opts);
+    cwist_http_response *res =
+        cwist_test_client_request_ex(client, CWIST_HTTP_POST, "/cwist.test.Echo/Say", &opts);
     decode_response(res, "reply:ping");
     cwist_http_response_destroy(res);
 
     opts.content_type = "application/octet-stream";
-    res = cwist_test_client_request_ex(client, CWIST_HTTP_POST,
-                                       "/cwist.test.Echo/Say",
-                                       &opts);
+    res = cwist_test_client_request_ex(client, CWIST_HTTP_POST, "/cwist.test.Echo/Say", &opts);
     assert(res != NULL);
     assert(strcmp(cwist_http_header_get(res->headers, "grpc-status"), "3") == 0);
     cwist_http_response_destroy(res);
@@ -350,10 +335,8 @@ int main(void) {
     opts.body = stream_body->data;
     opts.body_len = stream_body->size;
     opts.content_type = "application/grpc";
-    res = cwist_test_client_request_ex(client, CWIST_HTTP_POST,
-                                       "/cwist.test.Echo/Chat",
-                                       &opts);
-    const char *expected_stream[] = { "chunk-1:one", "chunk-2:two" };
+    res = cwist_test_client_request_ex(client, CWIST_HTTP_POST, "/cwist.test.Echo/Chat", &opts);
+    const char *expected_stream[] = {"chunk-1:one", "chunk-2:two"};
     assert_stream_response(res, expected_stream, 2);
     cwist_http_response_destroy(res);
     cwist_sstring_destroy(stream_body);
@@ -363,8 +346,8 @@ int main(void) {
     assert(cwist_grpc_encode_message(NULL, 0, 0, &empty_frame, &empty_frame_len) == 0);
     opts.body = (const char *)empty_frame;
     opts.body_len = empty_frame_len;
-    res = cwist_test_client_request_ex(client, CWIST_HTTP_POST,
-                                       "/grpc.health.v1.Health/Check", &opts);
+    res = cwist_test_client_request_ex(client, CWIST_HTTP_POST, "/grpc.health.v1.Health/Check",
+                                       &opts);
     cwist_grpc_message health_message;
     assert(cwist_grpc_decode_message(res->body->data, res->body->size, &health_message) == 0);
     cwist_pb_reader health_reader;
@@ -383,19 +366,18 @@ int main(void) {
         assert(cwist_pb_write_string_field(&watch_req, 1, "cwist.test.Echo") == 0);
         uint8_t *wframe = NULL;
         size_t wframe_len = 0;
-        assert(cwist_grpc_encode_message(watch_req.data, watch_req.len, 0,
-                                         &wframe, &wframe_len) == 0);
+        assert(cwist_grpc_encode_message(watch_req.data, watch_req.len, 0, &wframe, &wframe_len) ==
+               0);
         opts.body = (const char *)wframe;
         opts.body_len = wframe_len;
         opts.content_type = "application/grpc";
-        res = cwist_test_client_request_ex(client, CWIST_HTTP_POST,
-                                           "/grpc.health.v1.Health/Watch", &opts);
+        res = cwist_test_client_request_ex(client, CWIST_HTTP_POST, "/grpc.health.v1.Health/Watch",
+                                           &opts);
         assert(res != NULL);
         assert(strcmp(cwist_http_header_get(res->headers, "grpc-status"), "0") == 0);
         size_t woff = 0;
         cwist_grpc_message wmsg;
-        assert(cwist_grpc_decode_next_message(res->body->data, res->body->size,
-                                              &woff, &wmsg) == 0);
+        assert(cwist_grpc_decode_next_message(res->body->data, res->body->size, &woff, &wmsg) == 0);
         cwist_pb_reader wr;
         cwist_pb_reader_init(&wr, wmsg.data, wmsg.len);
         cwist_pb_field wf;
@@ -408,27 +390,24 @@ int main(void) {
     }
 
     opts.content_type = "application/grpc";
-    static const unsigned char malformed[] = { 0, 0, 0, 0, 5, 'b', 'a', 'd' };
+    static const unsigned char malformed[] = {0, 0, 0, 0, 5, 'b', 'a', 'd'};
     opts.body = (const char *)malformed;
     opts.body_len = sizeof(malformed);
-    res = cwist_test_client_request_ex(client, CWIST_HTTP_POST,
-                                       "/cwist.test.Echo/Say",
-                                       &opts);
+    res = cwist_test_client_request_ex(client, CWIST_HTTP_POST, "/cwist.test.Echo/Say", &opts);
     assert(res != NULL);
     assert(strcmp(cwist_http_header_get(res->headers, "grpc-status"), "3") == 0);
     cwist_http_response_destroy(res);
 
     /* Metadata normalization over the buffered path. */
     static const cwist_test_client_kv meta_headers[] = {
-        { "X-Meta-Echo", "hello-meta" },  /* case-insensitive lookup */
-        { "trace-bin", "AQID" },          /* base64 of 0x01 0x02 0x03 */
+        {"X-Meta-Echo", "hello-meta"},  /* case-insensitive lookup */
+        {"trace-bin", "AQID"},          /* base64 of 0x01 0x02 0x03 */
     };
     opts.body = (const char *)frame;
     opts.body_len = frame_len;
     opts.headers = meta_headers;
     opts.header_count = 2;
-    res = cwist_test_client_request_ex(client, CWIST_HTTP_POST,
-                                       "/cwist.test.Echo/Meta", &opts);
+    res = cwist_test_client_request_ex(client, CWIST_HTTP_POST, "/cwist.test.Echo/Meta", &opts);
     assert(res != NULL);
     assert(strcmp(cwist_http_header_get(res->headers, "grpc-status"), "0") == 0);
     {
@@ -459,16 +438,16 @@ int main(void) {
         assert(cwist_grpc_encode_message(zipped, zipped_len, 1, &zframe, &zframe_len) == 0);
 
         static const cwist_test_client_kv gzip_headers[] = {
-            { "grpc-encoding", "gzip" },
+            {"grpc-encoding", "gzip"},
         };
         opts.body = (const char *)zframe;
         opts.body_len = zframe_len;
         opts.headers = gzip_headers;
         opts.header_count = 1;
-        res = cwist_test_client_request_ex(client, CWIST_HTTP_POST,
-                                           "/cwist.test.Echo/Say", &opts);
+        res = cwist_test_client_request_ex(client, CWIST_HTTP_POST, "/cwist.test.Echo/Say", &opts);
         assert(res != NULL);
-        assert(strcmp(cwist_http_header_get(res->headers, "grpc-accept-encoding"), "gzip, identity") == 0);
+        assert(strcmp(cwist_http_header_get(res->headers, "grpc-accept-encoding"),
+                      "gzip, identity") == 0);
         decode_response(res, "reply:ping");
         cwist_http_response_destroy(res);
         opts.headers = NULL;
@@ -481,14 +460,13 @@ int main(void) {
     /* Client sending grpc-accept-encoding: gzip receives a compressed response. */
     {
         static const cwist_test_client_kv accept_gzip[] = {
-            { "grpc-accept-encoding", "gzip, identity" },
+            {"grpc-accept-encoding", "gzip, identity"},
         };
         opts.body = (const char *)frame;
         opts.body_len = frame_len;
         opts.headers = accept_gzip;
         opts.header_count = 1;
-        res = cwist_test_client_request_ex(client, CWIST_HTTP_POST,
-                                           "/cwist.test.Echo/Say", &opts);
+        res = cwist_test_client_request_ex(client, CWIST_HTTP_POST, "/cwist.test.Echo/Say", &opts);
         assert(res != NULL);
         decode_compressed_response(res, "reply:ping");
         cwist_http_response_destroy(res);
@@ -499,14 +477,13 @@ int main(void) {
     /* Unsupported grpc-encoding is rejected with UNIMPLEMENTED. */
     {
         static const cwist_test_client_kv bad_enc[] = {
-            { "grpc-encoding", "deflate" },
+            {"grpc-encoding", "deflate"},
         };
         opts.body = (const char *)frame;
         opts.body_len = frame_len;
         opts.headers = bad_enc;
         opts.header_count = 1;
-        res = cwist_test_client_request_ex(client, CWIST_HTTP_POST,
-                                           "/cwist.test.Echo/Say", &opts);
+        res = cwist_test_client_request_ex(client, CWIST_HTTP_POST, "/cwist.test.Echo/Say", &opts);
         assert(res != NULL);
         assert(strcmp(cwist_http_header_get(res->headers, "grpc-status"), "12") == 0);
         cwist_http_response_destroy(res);
@@ -518,12 +495,11 @@ int main(void) {
     {
         uint8_t *cframe = NULL;
         size_t cframe_len = 0;
-        assert(cwist_grpc_encode_message(request_pb.data, request_pb.len, 1,
-                                         &cframe, &cframe_len) == 0);
+        assert(cwist_grpc_encode_message(request_pb.data, request_pb.len, 1, &cframe,
+                                         &cframe_len) == 0);
         opts.body = (const char *)cframe;
         opts.body_len = cframe_len;
-        res = cwist_test_client_request_ex(client, CWIST_HTTP_POST,
-                                           "/cwist.test.Echo/Say", &opts);
+        res = cwist_test_client_request_ex(client, CWIST_HTTP_POST, "/cwist.test.Echo/Say", &opts);
         assert(res != NULL);
         assert(strcmp(cwist_http_header_get(res->headers, "grpc-status"), "12") == 0);
         cwist_http_response_destroy(res);
@@ -539,9 +515,8 @@ int main(void) {
         append_grpc_string_frame(recv_body, "ccc");
         opts.body = recv_body->data;
         opts.body_len = recv_body->size;
-        res = cwist_test_client_request_ex(client, CWIST_HTTP_POST,
-                                           "/cwist.test.Echo/Recv", &opts);
-        const char *expected_recv[] = { "recv-1:aaa", "recv-2:bbb", "recv-3:ccc" };
+        res = cwist_test_client_request_ex(client, CWIST_HTTP_POST, "/cwist.test.Echo/Recv", &opts);
+        const char *expected_recv[] = {"recv-1:aaa", "recv-2:bbb", "recv-3:ccc"};
         assert_stream_response(res, expected_recv, 3);
         cwist_http_response_destroy(res);
         cwist_sstring_destroy(recv_body);

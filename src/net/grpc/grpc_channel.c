@@ -110,7 +110,7 @@ static uint64_t channel_now_ms(void) {
 
 static void channel_sleep_ms(uint64_t ms) {
     if (!ms) return;
-    struct timespec ts = { (time_t)(ms / 1000), (long)((ms % 1000) * 1000000L) };
+    struct timespec ts = {(time_t)(ms / 1000), (long)((ms % 1000) * 1000000L)};
     nanosleep(&ts, NULL);
 }
 
@@ -157,8 +157,8 @@ static void channel_throttle_success(cwist_grpc_channel *ch) {
     pthread_mutex_unlock(&ch->tmu);
 }
 
-static void channel_account(cwist_grpc_channel *ch, cwist_grpc_status_t status,
-                            int has_policy, uint32_t mask) {
+static void channel_account(cwist_grpc_channel *ch, cwist_grpc_status_t status, int has_policy,
+                            uint32_t mask) {
     if (status == CWIST_GRPC_OK) {
         channel_throttle_success(ch);
     } else if (has_policy && (mask & CWIST_GRPC_STATUS_BIT(status))) {
@@ -221,8 +221,7 @@ static cwist_grpc_subchannel *channel_pick_locked(cwist_grpc_channel *ch) {
     /* pick_first: stick to the connected subchannel (doc/load-balancing.md). */
     if (ch->pf_index < ch->nsubs) {
         cwist_grpc_subchannel *s = &ch->subs[ch->pf_index];
-        if (s->client && !s->inflight && !cwist_grpc_client_dead(s->client))
-            return s;
+        if (s->client && !s->inflight && !cwist_grpc_client_dead(s->client)) return s;
     }
     return NULL;
 }
@@ -309,8 +308,7 @@ static const grpc_method_config *channel_find_mc(cwist_grpc_channel *ch, const c
             if (!wild_match) wild_match = mc;
             continue;
         }
-        if (strlen(mc->service) != service_len ||
-            memcmp(mc->service, service, service_len) != 0)
+        if (strlen(mc->service) != service_len || memcmp(mc->service, service, service_len) != 0)
             continue;
         if (!mc->method) {
             if (!service_match) service_match = mc;
@@ -344,10 +342,9 @@ static char *channel_strdup(const char *s) {
 }
 
 static cwist_grpc_channel_call *channel_synthetic(cwist_grpc_channel *ch,
-                                                  cwist_grpc_status_t status,
-                                                  const char *message,
-                                                  uint32_t attempts,
-                                                  int has_policy, uint32_t mask) {
+                                                  cwist_grpc_status_t status, const char *message,
+                                                  uint32_t attempts, int has_policy,
+                                                  uint32_t mask) {
     cwist_grpc_channel_call *cc = cwist_alloc(sizeof(*cc));
     if (!cc) return NULL;
     memset(cc, 0, sizeof(*cc));
@@ -362,12 +359,9 @@ static cwist_grpc_channel_call *channel_synthetic(cwist_grpc_channel *ch,
 
 /* Hand a live attempt call over to the user.  On allocation failure the
  * attempt is torn down and the subchannel released. */
-static cwist_grpc_channel_call *channel_wrap(cwist_grpc_channel *ch,
-                                             cwist_grpc_subchannel *sub,
-                                             cwist_grpc_call *call,
-                                             uint32_t attempts,
-                                             int has_policy, uint32_t mask,
-                                             int accounted) {
+static cwist_grpc_channel_call *channel_wrap(cwist_grpc_channel *ch, cwist_grpc_subchannel *sub,
+                                             cwist_grpc_call *call, uint32_t attempts,
+                                             int has_policy, uint32_t mask, int accounted) {
     cwist_grpc_channel_call *cc =
         channel_synthetic(ch, CWIST_GRPC_OK, NULL, attempts, has_policy, mask);
     if (!cc) {
@@ -383,10 +377,8 @@ static cwist_grpc_channel_call *channel_wrap(cwist_grpc_channel *ch,
 
 /* --- retry engine --- */
 
-cwist_grpc_channel_call *cwist_grpc_channel_call_start(cwist_grpc_channel *ch,
-                                                       const char *method,
-                                                       const void *request,
-                                                       size_t request_len,
+cwist_grpc_channel_call *cwist_grpc_channel_call_start(cwist_grpc_channel *ch, const char *method,
+                                                       const void *request, size_t request_len,
                                                        uint64_t timeout_ms) {
     if (!ch || !method || (request_len && !request)) return NULL;
 
@@ -421,9 +413,8 @@ cwist_grpc_channel_call *cwist_grpc_channel_call_start(cwist_grpc_channel *ch,
     for (;;) {
         uint64_t now = channel_now_ms();
         if (deadline && now >= deadline)
-            return channel_synthetic(ch, CWIST_GRPC_DEADLINE_EXCEEDED,
-                                     "deadline exceeded", policy_attempts,
-                                     has_policy, mask);
+            return channel_synthetic(ch, CWIST_GRPC_DEADLINE_EXCEEDED, "deadline exceeded",
+                                     policy_attempts, has_policy, mask);
 
         cwist_grpc_subchannel *sub = channel_acquire(ch);
         if (!sub) {
@@ -435,8 +426,8 @@ cwist_grpc_channel_call *cwist_grpc_channel_call_start(cwist_grpc_channel *ch,
             policy_attempts++;
             int coded = (mask & CWIST_GRPC_STATUS_BIT(CWIST_GRPC_UNAVAILABLE)) != 0;
             if (coded) channel_throttle_failure(ch); /* failed attempt (A6) */
-            if (has_policy && buffer_ok && coded &&
-                policy_attempts < max_attempts && channel_throttle_allows(ch)) {
+            if (has_policy && buffer_ok && coded && policy_attempts < max_attempts &&
+                channel_throttle_allows(ch)) {
                 uint64_t delay = (uint64_t)(backoff * channel_jitter(ch));
                 backoff *= policy->backoff_multiplier;
                 if (backoff > (double)policy->max_backoff_ms)
@@ -449,9 +440,8 @@ cwist_grpc_channel_call *cwist_grpc_channel_call_start(cwist_grpc_channel *ch,
                 continue;
             }
             cwist_grpc_channel_call *cc =
-                channel_synthetic(ch, CWIST_GRPC_UNAVAILABLE,
-                                  "no ready subchannel", policy_attempts,
-                                  has_policy, mask);
+                channel_synthetic(ch, CWIST_GRPC_UNAVAILABLE, "no ready subchannel",
+                                  policy_attempts, has_policy, mask);
             if (cc) cc->accounted = 1; /* per-attempt accounting already done */
             return cc;
         }
@@ -463,10 +453,8 @@ cwist_grpc_channel_call *cwist_grpc_channel_call_start(cwist_grpc_channel *ch,
             now = channel_now_ms();
             remaining = now < deadline ? deadline - now : 1;
         }
-        cwist_grpc_call *call = cwist_grpc_call_start_ex(sub->client, method,
-                                                         request, request_len,
-                                                         remaining,
-                                                         wire_attempts - 1);
+        cwist_grpc_call *call = cwist_grpc_call_start_ex(sub->client, method, request, request_len,
+                                                         remaining, wire_attempts - 1);
         if (!call) {
             /* A6 case 2: the RPC never left the client.  Transparent retry,
              * uncounted, until the deadline passes. */
@@ -506,16 +494,15 @@ cwist_grpc_channel_call *cwist_grpc_channel_call_start(cwist_grpc_channel *ch,
         int has_pushback = cwist_grpc_call_retry_pushback_ms(call, &pushback);
         int coded_retryable = (mask & CWIST_GRPC_STATUS_BIT(status)) != 0;
         /* Throttle bookkeeping for this failed attempt (A6). */
-        if (coded_retryable || (has_pushback && pushback < 0))
-            channel_throttle_failure(ch);
+        if (coded_retryable || (has_pushback && pushback < 0)) channel_throttle_failure(ch);
 
         if (has_pushback && pushback < 0) {
             /* Pushback: do not retry. */
             return channel_wrap(ch, sub, call, policy_attempts, has_policy, mask, 1);
         }
 
-        if (!has_policy || !buffer_ok || !coded_retryable ||
-            policy_attempts >= max_attempts || !channel_throttle_allows(ch)) {
+        if (!has_policy || !buffer_ok || !coded_retryable || policy_attempts >= max_attempts ||
+            !channel_throttle_allows(ch)) {
             return channel_wrap(ch, sub, call, policy_attempts, has_policy, mask, 1);
         }
 
@@ -528,8 +515,7 @@ cwist_grpc_channel_call *cwist_grpc_channel_call_start(cwist_grpc_channel *ch,
         } else {
             delay = (uint64_t)(backoff * channel_jitter(ch));
             backoff *= policy->backoff_multiplier;
-            if (backoff > (double)policy->max_backoff_ms)
-                backoff = (double)policy->max_backoff_ms;
+            if (backoff > (double)policy->max_backoff_ms) backoff = (double)policy->max_backoff_ms;
         }
         cwist_grpc_call_destroy(call);
         channel_release(ch, sub);
@@ -574,8 +560,7 @@ void cwist_grpc_channel_call_cancel(cwist_grpc_channel_call *cc) {
 void cwist_grpc_channel_call_destroy(cwist_grpc_channel_call *cc) {
     if (!cc) return;
     if (!cc->accounted) {
-        cwist_grpc_status_t status = cc->call ? cwist_grpc_call_status(cc->call)
-                                              : cc->syn_status;
+        cwist_grpc_status_t status = cc->call ? cwist_grpc_call_status(cc->call) : cc->syn_status;
         channel_account(cc->ch, status, cc->acct_has_policy, cc->acct_mask);
         cc->accounted = 1;
     }
@@ -592,12 +577,10 @@ uint32_t cwist_grpc_channel_call_attempts(const cwist_grpc_channel_call *cc) {
     return cc ? cc->attempts : 0;
 }
 
-cwist_grpc_status_t cwist_grpc_channel_unary(cwist_grpc_channel *ch,
-                                             const char *method,
+cwist_grpc_status_t cwist_grpc_channel_unary(cwist_grpc_channel *ch, const char *method,
                                              const void *request, size_t request_len,
-                                             uint64_t timeout_ms,
-                                             uint8_t **response, size_t *response_len,
-                                             char **status_message) {
+                                             uint64_t timeout_ms, uint8_t **response,
+                                             size_t *response_len, char **status_message) {
     if (response) *response = NULL;
     if (response_len) *response_len = 0;
     if (status_message) *status_message = NULL;
@@ -612,8 +595,7 @@ cwist_grpc_status_t cwist_grpc_channel_unary(cwist_grpc_channel *ch,
         copy = cwist_alloc(msg.len ? msg.len : 1);
         if (copy && msg.len) memcpy(copy, msg.data, msg.len);
         copy_len = copy ? msg.len : 0;
-        while (cwist_grpc_channel_call_recv(cc, &msg) == 1)
-            ; /* unary: ignore trailing messages */
+        while (cwist_grpc_channel_call_recv(cc, &msg) == 1); /* unary: ignore trailing messages */
     }
     const char *sm = NULL;
     cwist_grpc_status_t status = cwist_grpc_channel_call_finish(cc, &sm);
@@ -625,8 +607,10 @@ cwist_grpc_status_t cwist_grpc_channel_unary(cwist_grpc_channel *ch,
         copy = NULL;
         copy_len = 0;
     }
-    if (response) *response = copy;
-    else cwist_free(copy);
+    if (response)
+        *response = copy;
+    else
+        cwist_free(copy);
     if (response_len) *response_len = copy_len;
     return status;
 }
@@ -635,8 +619,8 @@ cwist_grpc_status_t cwist_grpc_channel_unary(cwist_grpc_channel *ch,
 
 /* Split "host[:port]" or "[v6][:port]"; bare multi-colon names are IPv6
  * literals without a port.  Default port 443 (naming.md). */
-static int channel_split_host_port(const char *s, size_t len,
-                                   char *host, size_t host_cap, uint16_t *port) {
+static int channel_split_host_port(const char *s, size_t len, char *host, size_t host_cap,
+                                   uint16_t *port) {
     *port = 443;
     if (!s || !len) return -1;
     if (s[0] == '[') {
@@ -700,8 +684,7 @@ static int channel_add_addr(cwist_grpc_channel *ch, const char *host, uint16_t p
 static int channel_resolve_dns(cwist_grpc_channel *ch, const char *name) {
     char host[256];
     uint16_t port;
-    if (channel_split_host_port(name, strlen(name), host, sizeof(host), &port) != 0)
-        return -1;
+    if (channel_split_host_port(name, strlen(name), host, sizeof(host), &port) != 0) return -1;
     char port_str[8];
     snprintf(port_str, sizeof(port_str), "%u", (unsigned)port);
     struct addrinfo hints;
@@ -713,8 +696,8 @@ static int channel_resolve_dns(cwist_grpc_channel *ch, const char *name) {
     int rc = -1;
     for (struct addrinfo *it = res; it; it = it->ai_next) {
         char numeric[INET6_ADDRSTRLEN];
-        if (getnameinfo(it->ai_addr, it->ai_addrlen, numeric, sizeof(numeric),
-                        NULL, 0, NI_NUMERICHOST) != 0)
+        if (getnameinfo(it->ai_addr, it->ai_addrlen, numeric, sizeof(numeric), NULL, 0,
+                        NI_NUMERICHOST) != 0)
             continue;
         if (channel_add_addr(ch, numeric, port) == 0) rc = 0;
     }
@@ -728,8 +711,7 @@ static int channel_resolve_dns(cwist_grpc_channel *ch, const char *name) {
     return rc;
 }
 
-static int channel_resolve_literal(cwist_grpc_channel *ch, const char *list,
-                                   int v6) {
+static int channel_resolve_literal(cwist_grpc_channel *ch, const char *list, int v6) {
     char *copy = channel_strdup(list);
     if (!copy) return -1;
     int rc = -1;
@@ -737,22 +719,17 @@ static int channel_resolve_literal(cwist_grpc_channel *ch, const char *list,
     for (char *tok = strtok_r(copy, ",", &save); tok; tok = strtok_r(NULL, ",", &save)) {
         char host[256];
         uint16_t port;
-        if (channel_split_host_port(tok, strlen(tok), host, sizeof(host), &port) != 0)
-            continue;
+        if (channel_split_host_port(tok, strlen(tok), host, sizeof(host), &port) != 0) continue;
         struct in_addr a4;
         struct in6_addr a6;
-        if (v6 ? inet_pton(AF_INET6, host, &a6) != 1
-               : inet_pton(AF_INET, host, &a4) != 1)
-            continue;
+        if (v6 ? inet_pton(AF_INET6, host, &a6) != 1 : inet_pton(AF_INET, host, &a4) != 1) continue;
         if (channel_add_addr(ch, host, port) == 0) rc = 0;
     }
     cwist_free(copy);
-    if (rc == 0 && !ch->tls_name && ch->nsubs)
-        ch->tls_name = channel_strdup(ch->subs[0].host);
+    if (rc == 0 && !ch->tls_name && ch->nsubs) ch->tls_name = channel_strdup(ch->subs[0].host);
     if (rc == 0 && !ch->authority && ch->nsubs) {
         char buf[300];
-        snprintf(buf, sizeof(buf), "%s:%u", ch->subs[0].host,
-                 (unsigned)ch->subs[0].port);
+        snprintf(buf, sizeof(buf), "%s:%u", ch->subs[0].host, (unsigned)ch->subs[0].port);
         ch->authority = channel_strdup(buf);
     }
     return rc;
@@ -783,9 +760,8 @@ cwist_grpc_channel *cwist_grpc_channel_connect(const char *target,
         ch->has_throttle = 1;
         ch->tokens = ch->throttle.max_tokens; /* starts at maxTokens (A6) */
     }
-    ch->buffer_limit = options && options->per_rpc_buffer_limit
-                           ? options->per_rpc_buffer_limit
-                           : GRPC_CHANNEL_DEFAULT_BUFFER_LIMIT;
+    ch->buffer_limit = options && options->per_rpc_buffer_limit ? options->per_rpc_buffer_limit
+                                                                : GRPC_CHANNEL_DEFAULT_BUFFER_LIMIT;
     ch->wait_for_ready = options ? options->wait_for_ready : 0;
     if (options) {
         ch->copt.use_tls = options->use_tls;
@@ -793,8 +769,7 @@ cwist_grpc_channel *cwist_grpc_channel_connect(const char *target,
         ch->copt.connect_timeout_ms = options->connect_timeout_ms;
         if (options->authority) ch->authority = channel_strdup(options->authority);
     }
-    ch->rng = (uint64_t)channel_now_ms() ^ ((uintptr_t)ch >> 4) ^
-              ((uint64_t)getpid() << 32);
+    ch->rng = (uint64_t)channel_now_ms() ^ ((uintptr_t)ch >> 4) ^ ((uint64_t)getpid() << 32);
     if (!ch->rng) ch->rng = 0x9e3779b97f4a7c15ULL;
 
     int rc;
@@ -813,8 +788,7 @@ cwist_grpc_channel *cwist_grpc_channel_connect(const char *target,
         rc = channel_resolve_literal(ch, target + 5, 0);
     } else if (strncmp(target, "ipv6:", 5) == 0) {
         rc = channel_resolve_literal(ch, target + 5, 1);
-    } else if (strncmp(target, "unix:", 5) == 0 ||
-               strncmp(target, "unix-abstract:", 14) == 0 ||
+    } else if (strncmp(target, "unix:", 5) == 0 || strncmp(target, "unix-abstract:", 14) == 0 ||
                strncmp(target, "vsock:", 6) == 0) {
         goto fail; /* transports the client does not implement */
     } else {
@@ -827,8 +801,7 @@ cwist_grpc_channel *cwist_grpc_channel_connect(const char *target,
      * them (load-balancing.md); pick_first stays IDLE until the first RPC. */
     if (ch->lb == CWIST_GRPC_LB_ROUND_ROBIN) {
         pthread_mutex_lock(&ch->mu);
-        for (size_t i = 0; i < ch->nsubs; i++)
-            (void)sub_ensure_connected(ch, &ch->subs[i]);
+        for (size_t i = 0; i < ch->nsubs; i++) (void)sub_ensure_connected(ch, &ch->subs[i]);
         pthread_mutex_unlock(&ch->mu);
     }
     return ch;
@@ -878,11 +851,10 @@ cwist_grpc_channel_state cwist_grpc_channel_get_state(cwist_grpc_channel *ch) {
 /* --- JSON service config (doc/service_config.md subset, gRFC A6) --- */
 
 static const char *const grpc_status_names[] = {
-    "OK", "CANCELLED", "UNKNOWN", "INVALID_ARGUMENT", "DEADLINE_EXCEEDED",
-    "NOT_FOUND", "ALREADY_EXISTS", "PERMISSION_DENIED", "RESOURCE_EXHAUSTED",
-    "FAILED_PRECONDITION", "ABORTED", "OUT_OF_RANGE", "UNIMPLEMENTED",
-    "INTERNAL", "UNAVAILABLE", "DATA_LOSS", "UNAUTHENTICATED"
-};
+    "OK",        "CANCELLED",      "UNKNOWN",           "INVALID_ARGUMENT",   "DEADLINE_EXCEEDED",
+    "NOT_FOUND", "ALREADY_EXISTS", "PERMISSION_DENIED", "RESOURCE_EXHAUSTED", "FAILED_PRECONDITION",
+    "ABORTED",   "OUT_OF_RANGE",   "UNIMPLEMENTED",     "INTERNAL",           "UNAVAILABLE",
+    "DATA_LOSS", "UNAUTHENTICATED"};
 
 static int grpc_status_from_json(const cJSON *item, uint32_t *bit) {
     if (cJSON_IsNumber(item)) {
@@ -1013,8 +985,7 @@ int cwist_grpc_channel_apply_service_config_json(cwist_grpc_channel *ch, const c
         const cJSON *max_tokens = cJSON_GetObjectItemCaseSensitive(rt, "maxTokens");
         const cJSON *ratio = cJSON_GetObjectItemCaseSensitive(rt, "tokenRatio");
         if (!cJSON_IsNumber(max_tokens) || max_tokens->valuedouble <= 0 ||
-            max_tokens->valuedouble > 1000 ||
-            !cJSON_IsNumber(ratio) || ratio->valuedouble <= 0)
+            max_tokens->valuedouble > 1000 || !cJSON_IsNumber(ratio) || ratio->valuedouble <= 0)
             goto invalid;
         throttle.max_tokens = max_tokens->valuedouble;
         /* A6: decimal places beyond 3 are ignored */
@@ -1029,8 +1000,7 @@ int cwist_grpc_channel_apply_service_config_json(cwist_grpc_channel *ch, const c
         cJSON_ArrayForEach(entry, mc_array) {
             if (!cJSON_IsObject(entry)) goto invalid;
             const cJSON *names = cJSON_GetObjectItemCaseSensitive(entry, "name");
-            if (!cJSON_IsArray(names) || cJSON_GetArraySize((cJSON *)names) == 0)
-                goto invalid;
+            if (!cJSON_IsArray(names) || cJSON_GetArraySize((cJSON *)names) == 0) goto invalid;
 
             int has_policy = 0;
             cwist_grpc_retry_policy policy;
@@ -1099,8 +1069,7 @@ int cwist_grpc_channel_apply_service_config_json(cwist_grpc_channel *ch, const c
     if (ch->lb == CWIST_GRPC_LB_ROUND_ROBIN) {
         /* round_robin watches every subchannel (load-balancing.md): dial
          * them all so the READY set rotates strictly. */
-        for (size_t i = 0; i < ch->nsubs; i++)
-            (void)sub_ensure_connected(ch, &ch->subs[i]);
+        for (size_t i = 0; i < ch->nsubs; i++) (void)sub_ensure_connected(ch, &ch->subs[i]);
     }
     pthread_mutex_unlock(&ch->mu);
     if (throttle_set) {

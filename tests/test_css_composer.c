@@ -66,7 +66,8 @@ void test_hex_parsing_invalid(void) {
 void test_css_generation(void) {
     cwist_css_config cfg;
     cwist_css_config_init(&cfg);
-    assert(cfg.primary_color.r == 0x3B && cfg.primary_color.g == 0x82 && cfg.primary_color.b == 0xF6);
+    assert(cfg.primary_color.r == 0x3B && cfg.primary_color.g == 0x82 &&
+           cfg.primary_color.b == 0xF6);
 
     cwist_sstring *stylesheet = cwist_css_generate_stylesheet(&cfg);
     assert(stylesheet != NULL && stylesheet->data != NULL);

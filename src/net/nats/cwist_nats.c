@@ -17,7 +17,8 @@ struct cwist_nats {
     void *user_ctx;
 };
 
-static void cwist_nats_adapter(natsConnection *nc, natsSubscription *sub, natsMsg *msg, void *closure) {
+static void cwist_nats_adapter(natsConnection *nc, natsSubscription *sub, natsMsg *msg,
+                               void *closure) {
     (void)nc;
     (void)sub;
     cwist_nats_t *nats = (cwist_nats_t *)closure;
@@ -53,7 +54,8 @@ cwist_error_t cwist_nats_connect(cwist_nats_t **nats, const char *url) {
     return err;
 }
 
-cwist_error_t cwist_nats_subscribe(cwist_nats_t *nats, const char *subject, cwist_nats_msg_cb cb, void *ctx) {
+cwist_error_t cwist_nats_subscribe(cwist_nats_t *nats, const char *subject, cwist_nats_msg_cb cb,
+                                   void *ctx) {
     cwist_error_t err = make_error(CWIST_ERR_INT16);
     if (!nats || !nats->conn || !subject) {
         err.error.err_i16 = CWIST_ERROR_INVALID_PARAM;
@@ -65,7 +67,8 @@ cwist_error_t cwist_nats_subscribe(cwist_nats_t *nats, const char *subject, cwis
     }
     nats->user_cb = cb;
     nats->user_ctx = ctx;
-    natsStatus s = natsConnection_Subscribe(&nats->sub, nats->conn, subject, cwist_nats_adapter, nats);
+    natsStatus s =
+        natsConnection_Subscribe(&nats->sub, nats->conn, subject, cwist_nats_adapter, nats);
     if (s != NATS_OK) {
         err.error.err_i16 = (int16_t)s;
         return err;

@@ -77,48 +77,30 @@ typedef struct cwist_grpc_decoder {
     size_t max_message_size;
 } cwist_grpc_decoder;
 
-typedef int (*cwist_grpc_message_callback)(void *ctx,
-                                           const cwist_grpc_message *message);
+typedef int (*cwist_grpc_message_callback)(void *ctx, const cwist_grpc_message *message);
 
-typedef void (*cwist_grpc_unary_handler_func)(cwist_http_request *req,
-                                               cwist_http_response *res,
-                                               const cwist_grpc_message *message,
-                                               void *user_ctx);
+typedef void (*cwist_grpc_unary_handler_func)(cwist_http_request *req, cwist_http_response *res,
+                                              const cwist_grpc_message *message, void *user_ctx);
 
-typedef void (*cwist_grpc_stream_handler_func)(cwist_grpc_stream *stream,
-                                                void *user_ctx);
+typedef void (*cwist_grpc_stream_handler_func)(cwist_grpc_stream *stream, void *user_ctx);
 
-int cwist_grpc_decode_message(const void *frame,
-                              size_t frame_len,
-                              cwist_grpc_message *out);
+int cwist_grpc_decode_message(const void *frame, size_t frame_len, cwist_grpc_message *out);
 
-int cwist_grpc_decode_next_message(const void *frames,
-                                   size_t frames_len,
-                                   size_t *offset,
+int cwist_grpc_decode_next_message(const void *frames, size_t frames_len, size_t *offset,
                                    cwist_grpc_message *out);
 
-int cwist_grpc_encode_message(const void *payload,
-                              size_t payload_len,
-                              uint8_t compressed,
-                              uint8_t **out,
-                              size_t *out_len);
+int cwist_grpc_encode_message(const void *payload, size_t payload_len, uint8_t compressed,
+                              uint8_t **out, size_t *out_len);
 
-void cwist_grpc_set_response(cwist_http_response *res,
-                             cwist_grpc_status_t status,
-                             const char *message,
-                             const void *payload,
-                             size_t payload_len);
+void cwist_grpc_set_response(cwist_http_response *res, cwist_grpc_status_t status,
+                             const char *message, const void *payload, size_t payload_len);
 
-void cwist_grpc_set_error(cwist_http_response *res,
-                          cwist_grpc_status_t status,
+void cwist_grpc_set_error(cwist_http_response *res, cwist_grpc_status_t status,
                           const char *message);
 
-int cwist_grpc_stream_send(cwist_grpc_stream *stream,
-                           const void *payload,
-                           size_t payload_len);
+int cwist_grpc_stream_send(cwist_grpc_stream *stream, const void *payload, size_t payload_len);
 
-void cwist_grpc_stream_close(cwist_grpc_stream *stream,
-                             cwist_grpc_status_t status,
+void cwist_grpc_stream_close(cwist_grpc_stream *stream, cwist_grpc_status_t status,
                              const char *message);
 
 /**
@@ -163,8 +145,8 @@ const char *cwist_grpc_metadata_get(cwist_http_request *req, const char *key);
  * Returns 0 on success, -1 when absent/undecodable, -2 when @p out_cap is
  * too small (required size reported in @p out_len).
  */
-int cwist_grpc_metadata_get_binary(cwist_http_request *req, const char *key,
-                                   uint8_t *out, size_t out_cap, size_t *out_len);
+int cwist_grpc_metadata_get_binary(cwist_http_request *req, const char *key, uint8_t *out,
+                                   size_t out_cap, size_t *out_len);
 
 /** Parse a grpc-timeout header value ("100m", "2S", ...) into milliseconds.
  * Returns 0 on success, -1 on malformed input. */
@@ -178,25 +160,18 @@ int cwist_grpc_decoder_feed(cwist_grpc_decoder *decoder, const void *data, size_
 
 /** Register the standard grpc.health.v1.Health Check and Watch methods. */
 int cwist_app_grpc_health(struct cwist_app *app);
-int cwist_app_grpc_health_set_status(struct cwist_app *app, const char *service,
-                                     int serving);
+int cwist_app_grpc_health_set_status(struct cwist_app *app, const char *service, int serving);
 /** Number of active streaming Watch calls; -1 when health is not registered. */
 int cwist_app_grpc_health_watchers(struct cwist_app *app);
 
 /** Register the grpc.reflection.v1alpha.ServerReflection service. */
 int cwist_app_grpc_reflection(struct cwist_app *app);
 
-int cwist_app_grpc_unary(struct cwist_app *app,
-                         const char *service,
-                         const char *method,
-                         cwist_grpc_unary_handler_func handler,
-                         void *user_ctx);
+int cwist_app_grpc_unary(struct cwist_app *app, const char *service, const char *method,
+                         cwist_grpc_unary_handler_func handler, void *user_ctx);
 
-int cwist_app_grpc_stream(struct cwist_app *app,
-                          const char *service,
-                          const char *method,
-                          cwist_grpc_stream_handler_func handler,
-                          void *user_ctx);
+int cwist_app_grpc_stream(struct cwist_app *app, const char *service, const char *method,
+                          cwist_grpc_stream_handler_func handler, void *user_ctx);
 
 /**
  * HTTP/2 stream hooks that route gRPC streaming calls through the

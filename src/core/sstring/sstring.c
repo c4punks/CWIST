@@ -8,7 +8,8 @@
 
 /**
  * @file sstring.c
- * @brief Mutable string helpers used throughout CWIST for request/response and utility text handling.
+ * @brief Mutable string helpers used throughout CWIST for request/response and utility text
+ * handling.
  */
 
 /** @brief Forward declaration for the method-table size callback. */
@@ -56,17 +57,17 @@ static char *cwist_sstring_reserve(cwist_sstring *str, size_t needed, size_t pre
  */
 cwist_error_t cwist_sstring_assign_len(cwist_sstring *str, const char *data, size_t len) {
     if (!str) {
-      cwist_error_t err = make_error(CWIST_ERR_INT8);
-      err.error.err_i8 = ERR_SSTRING_NULL_STRING;
-      return err;
+        cwist_error_t err = make_error(CWIST_ERR_INT8);
+        err.error.err_i8 = ERR_SSTRING_NULL_STRING;
+        return err;
     }
 
     char *new_data = cwist_sstring_reserve(str, len, 0);
     if (!new_data && len > 0) {
-      cwist_error_t err = make_error(CWIST_ERR_JSON);
-      err.error.err_json = cJSON_CreateObject();
-      cJSON_AddStringToObject(err.error.err_json, "err", "cannot assign string: memory is full");
-      return err;
+        cwist_error_t err = make_error(CWIST_ERR_JSON);
+        err.error.err_json = cJSON_CreateObject();
+        cJSON_AddStringToObject(err.error.err_json, "err", "cannot assign string: memory is full");
+        return err;
     }
     str->data = new_data;
     str->borrows_buffer = false;
@@ -91,12 +92,12 @@ cwist_error_t cwist_sstring_assign_len(cwist_sstring *str, const char *data, siz
 cwist_error_t cwist_sstring_borrow(cwist_sstring *str, const char *data, size_t len) {
     cwist_error_t err = make_error(CWIST_ERR_INT8);
     if (!str) {
-      err.error.err_i8 = ERR_SSTRING_NULL_STRING;
-      return err;
+        err.error.err_i8 = ERR_SSTRING_NULL_STRING;
+        return err;
     }
 
     if (str->data && !str->borrows_buffer) {
-      cwist_free(str->data);
+        cwist_free(str->data);
     }
     str->data = (char *)(data ? data : "");
     str->size = data ? len : 0;
@@ -118,12 +119,12 @@ cwist_error_t cwist_sstring_borrow(cwist_sstring *str, const char *data, size_t 
 cwist_error_t cwist_sstring_adopt_len(cwist_sstring *str, char *buf, size_t len) {
     cwist_error_t err = make_error(CWIST_ERR_INT8);
     if (!str) {
-      err.error.err_i8 = ERR_SSTRING_NULL_STRING;
-      return err;
+        err.error.err_i8 = ERR_SSTRING_NULL_STRING;
+        return err;
     }
 
     if (str->data && !str->borrows_buffer) {
-      cwist_free(str->data);
+        cwist_free(str->data);
     }
     str->data = buf;
     str->size = buf ? len : 0;
@@ -158,10 +159,10 @@ cwist_error_t cwist_sstring_append_len(cwist_sstring *str, const char *data, siz
 
     char *new_data = cwist_sstring_reserve(str, new_size, current_len);
     if (!new_data) {
-         cwist_error_t err = make_error(CWIST_ERR_JSON);
-         err.error.err_json = cJSON_CreateObject();
-         cJSON_AddStringToObject(err.error.err_json, "err", "Cannot append: memory full");
-         return err;
+        cwist_error_t err = make_error(CWIST_ERR_JSON);
+        err.error.err_json = cJSON_CreateObject();
+        cJSON_AddStringToObject(err.error.err_json, "err", "Cannot append: memory full");
+        return err;
     }
     str->data = new_data;
     str->borrows_buffer = false;
@@ -278,11 +279,11 @@ cwist_error_t cwist_sstring_ltrim(cwist_sstring *str) {
         } else {
             memmove(str->data, str->data + start, len - start + 1);
         }
-        str->size = len - start; 
+        str->size = len - start;
     }
 
     err.error.err_i8 = ERR_SSTRING_OKAY;
-    return err;                              
+    return err;
 }
 
 /**
@@ -293,18 +294,17 @@ cwist_error_t cwist_sstring_ltrim(cwist_sstring *str) {
 cwist_error_t cwist_sstring_rtrim(cwist_sstring *str) {
     cwist_error_t err = make_error(CWIST_ERR_INT8);
     err.error.err_i8 = ERR_SSTRING_NULL_STRING;
-    if (!str || !str->data) return err; 
+    if (!str || !str->data) return err;
 
     size_t len = strlen(str->data);
-    
+
     if (len == 0) {
-      err.error.err_i8 = ERR_SSTRING_ZERO_LENGTH;
-      return err;
+        err.error.err_i8 = ERR_SSTRING_ZERO_LENGTH;
+        return err;
     }
 
     size_t end = len - 1;
-    while (end < len && 
-        isspace((unsigned char)str->data[end])) { 
+    while (end < len && isspace((unsigned char)str->data[end])) {
         end--;
     }
 
@@ -317,10 +317,10 @@ cwist_error_t cwist_sstring_rtrim(cwist_sstring *str) {
         str->data = new_data;
         str->borrows_buffer = false;
     }
-    
+
     str->data[end + 1] = '\0';
     str->size = end + 1;
-    
+
     err.error.err_i8 = ERR_SSTRING_OKAY;
     return err;
 }
@@ -332,7 +332,7 @@ cwist_error_t cwist_sstring_rtrim(cwist_sstring *str) {
  */
 cwist_error_t cwist_sstring_trim(cwist_sstring *str) {
     cwist_error_t err = cwist_sstring_rtrim(str);
-    if(err.error.err_i8 != ERR_SSTRING_OKAY) return err;
+    if (err.error.err_i8 != ERR_SSTRING_OKAY) return err;
     return cwist_sstring_ltrim(str);
 }
 
@@ -347,13 +347,13 @@ cwist_error_t cwist_sstring_change_size(cwist_sstring *str, size_t new_size, boo
     cwist_error_t err = make_error(CWIST_ERR_INT8);
 
     if (!str) {
-      err.error.err_i8 = ERR_SSTRING_NULL_STRING;
-      return err;
+        err.error.err_i8 = ERR_SSTRING_NULL_STRING;
+        return err;
     }
 
     if (str->is_fixed) {
-      err.error.err_i8 = ERR_SSTRING_CONSTANT;
-      return err;
+        err.error.err_i8 = ERR_SSTRING_CONSTANT;
+        return err;
     }
 
     size_t current_len = str->data ? strlen(str->data) : 0;
@@ -361,7 +361,9 @@ cwist_error_t cwist_sstring_change_size(cwist_sstring *str, size_t new_size, boo
     if (new_size < current_len && !blow_data) {
         err = make_error(CWIST_ERR_JSON);
         err.error.err_json = cJSON_CreateObject();
-        cJSON_AddStringToObject(err.error.err_json, "err", "New size is smaller than current data length and blow_data is false.");
+        cJSON_AddStringToObject(
+            err.error.err_json, "err",
+            "New size is smaller than current data length and blow_data is false.");
         return err;
     }
 
@@ -382,13 +384,13 @@ cwist_error_t cwist_sstring_change_size(cwist_sstring *str, size_t new_size, boo
     } else {
         if (current_len == 0 || was_borrowed) {
              /* Detached buffers carry no NUL past the preserved payload. */
-             str->data[current_len] = '\0';
+            str->data[current_len] = '\0';
         }
         // str->size remains current_len (existing data preserved)
     }
 
-   err.error.err_i8 = ERR_SSTRING_OKAY;
-   return err;
+    err.error.err_i8 = ERR_SSTRING_OKAY;
+    return err;
 }
 
 /**
@@ -399,11 +401,11 @@ cwist_error_t cwist_sstring_change_size(cwist_sstring *str, size_t new_size, boo
  */
 cwist_error_t cwist_sstring_assign(cwist_sstring *str, const char *data) {
     if (!str) {
-      cwist_error_t err = make_error(CWIST_ERR_INT8);
-      err.error.err_i8 = ERR_SSTRING_NULL_STRING;
-      return err;
+        cwist_error_t err = make_error(CWIST_ERR_INT8);
+        err.error.err_i8 = ERR_SSTRING_NULL_STRING;
+        return err;
     }
-    
+
     cwist_error_t err = make_error(CWIST_ERR_JSON);
     err.error.err_json = cJSON_CreateObject();
 
@@ -411,31 +413,34 @@ cwist_error_t cwist_sstring_assign(cwist_sstring *str, const char *data) {
 
     if (str->is_fixed) {
         if (data_len > str->size) {
-          cJSON_AddStringToObject(err.error.err_json, "err", "string's assigned size is smaller than given data");
+            cJSON_AddStringToObject(err.error.err_json, "err",
+                                    "string's assigned size is smaller than given data");
 
-          
-          cwist_error_t err_resize = cwist_sstring_change_size(str, strlen(str->data), false);
-          if(err_resize.error.err_i8 == ERR_SSTRING_OKAY) {
-            return err_resize;
-          } else {
-            return err;
-          }
+            cwist_error_t err_resize = cwist_sstring_change_size(str, strlen(str->data), false);
+            if (err_resize.error.err_i8 == ERR_SSTRING_OKAY) {
+                return err_resize;
+            } else {
+                return err;
+            }
         }
         if (str->data) strcpy(str->data, data ? data : "");
     } else {
         char *new_data = cwist_sstring_reserve(str, data_len, 0);
         if (!new_data) {
-          cJSON_AddStringToObject(err.error.err_json, "err", "cannot assign string: memory is full");
-          return err;
+            cJSON_AddStringToObject(err.error.err_json, "err",
+                                    "cannot assign string: memory is full");
+            return err;
         }
         str->data = new_data;
         str->borrows_buffer = false;
         str->size = data_len;
-        if (data) strcpy(str->data, data);
-        else str->data[0] = '\0';
+        if (data)
+            strcpy(str->data, data);
+        else
+            str->data[0] = '\0';
     }
 
-    cJSON_Delete(err.error.err_json); 
+    cJSON_Delete(err.error.err_json);
     err = make_error(CWIST_ERR_INT8);
     err.error.err_i8 = ERR_SSTRING_OKAY;
 
@@ -470,14 +475,15 @@ cwist_error_t cwist_sstring_append(cwist_sstring *str, const char *data) {
 
     if (str->is_fixed) {
         if (new_size > str->size) {
-            cJSON_AddStringToObject(err.error.err_json, "err", "Cannot append: would exceed fixed size");
+            cJSON_AddStringToObject(err.error.err_json, "err",
+                                    "Cannot append: would exceed fixed size");
             return err;
         }
     } else {
         char *new_data = cwist_sstring_reserve(str, new_size, current_len);
         if (!new_data) {
-             cJSON_AddStringToObject(err.error.err_json, "err", "Cannot append: memory full");
-             return err;
+            cJSON_AddStringToObject(err.error.err_json, "err", "Cannot append: memory full");
+            return err;
         }
         str->data = new_data;
         str->borrows_buffer = false;
@@ -525,7 +531,8 @@ cwist_error_t cwist_sstring_append_escaped(cwist_sstring *str, const char *data)
             cwist_error_t err = make_error(CWIST_ERR_JSON);
             err.error.err_json = cJSON_CreateObject();
             if (err.error.err_json) {
-                cJSON_AddStringToObject(err.error.err_json, "err", "Cannot append: would exceed fixed size");
+                cJSON_AddStringToObject(err.error.err_json, "err",
+                                        "Cannot append: would exceed fixed size");
             }
             return err;
         }
@@ -546,7 +553,7 @@ cwist_error_t cwist_sstring_append_escaped(cwist_sstring *str, const char *data)
 
     char *ptr = str->data + current_len;
     for (size_t i = 0; i < input_len; i++) {
-        switch(data[i]) {
+        switch (data[i]) {
             case '<':
                 memcpy(ptr, "&lt;", 4);
                 ptr += 4;
@@ -567,14 +574,12 @@ cwist_error_t cwist_sstring_append_escaped(cwist_sstring *str, const char *data)
                 memcpy(ptr, "&#39;", 5);
                 ptr += 5;
                 break;
-            default:
-                *ptr++ = data[i];
-                break;   
+            default: *ptr++ = data[i]; break;
         }
     }
 
     *ptr = '\0';
-    str->size = (size_t) (ptr - str->data);
+    str->size = (size_t)(ptr - str->data);
 
     cwist_error_t err = make_error(CWIST_ERR_INT8);
     err.error.err_i8 = ERR_SSTRING_OKAY;
@@ -608,12 +613,12 @@ cwist_error_t cwist_sstring_append_sstring(cwist_sstring *str, const cwist_sstri
  * @return ERR_SSTRING_OKAY on success, or an error describing invalid input.
  */
 cwist_error_t cwist_sstring_append_sstring_escaped(cwist_sstring *str, const cwist_sstring *from) {
-    if(!str) {
+    if (!str) {
         cwist_error_t err = make_error(CWIST_ERR_INT8);
         err.error.err_i8 = ERR_SSTRING_NULL_STRING;
         return err;
     }
-    if(!from) {
+    if (!from) {
         cwist_error_t err = make_error(CWIST_ERR_INT8);
         err.error.err_i8 = ERR_SSTRING_OKAY;
         return err;
@@ -631,18 +636,18 @@ cwist_error_t cwist_sstring_append_sstring_escaped(cwist_sstring *str, const cwi
 cwist_error_t cwist_sstring_seek(cwist_sstring *str, char *substr, int location) {
     cwist_error_t err = make_error(CWIST_ERR_INT8);
     if (!str || !str->data || !substr) {
-      err.error.err_i8 = ERR_SSTRING_NULL_STRING;
-      return err;
+        err.error.err_i8 = ERR_SSTRING_NULL_STRING;
+        return err;
     }
-    
+
     size_t len = strlen(str->data);
     if (location < 0 || (size_t)location >= len) {
-      err.error.err_i8 = ERR_SSTRING_OUTOFBOUND;
-      return err;
+        err.error.err_i8 = ERR_SSTRING_OUTOFBOUND;
+        return err;
     }
 
     strcpy(substr, str->data + location);
-    
+
     err.error.err_i8 = ERR_SSTRING_OKAY;
     return err;
 }
@@ -657,12 +662,12 @@ cwist_error_t cwist_sstring_copy(cwist_sstring *origin, char *destination) {
 
     cwist_error_t err = make_error(CWIST_ERR_INT8);
     if (!origin || !origin->data || !destination) {
-      err.error.err_i8 = ERR_SSTRING_NULL_STRING;
-      return err;
+        err.error.err_i8 = ERR_SSTRING_NULL_STRING;
+        return err;
     }
-    
+
     strcpy(destination, origin->data);
-    
+
     err.error.err_i8 = ERR_SSTRING_OKAY;
     return err;
 }
@@ -750,27 +755,27 @@ int cwist_sstring_compare(cwist_sstring *str, const char *compare_to) {
  */
 cwist_sstring *cwist_sstring_substr(cwist_sstring *str, int start, int length) {
     if (!str || !str->data || start < 0 || length < 0) return NULL;
-    
+
     size_t current_len = strlen(str->data);
     if ((size_t)start >= current_len) return NULL;
-    
+
     // Adjust length if it goes beyond end
     if ((size_t)length > current_len - (size_t)start) {
         length = (int)(current_len - (size_t)start);
     }
-    
+
     cwist_sstring *sub = cwist_sstring_create();
     if (!sub) return NULL;
-    
+
     sub->data = (char *)cwist_alloc(length + 1);
     if (!sub->data) {
         cwist_sstring_destroy(sub);
         return NULL;
     }
     sub->size = length;
-    
+
     memcpy(sub->data, str->data + start, length);
     sub->data[length] = '\0';
-    
+
     return sub;
 }

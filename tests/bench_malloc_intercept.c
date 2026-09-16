@@ -45,7 +45,7 @@ static double now_sec(void) {
  * typical scratch buffers - not one fixed size, so the allocator's
  * size-class handling isn't the only thing exercised. */
 static size_t pick_size(long i) {
-    static const size_t sizes[] = { 16, 64, 128, 256, 512 };
+    static const size_t sizes[] = {16, 64, 128, 256, 512};
     return sizes[i % (long)(sizeof(sizes) / sizeof(sizes[0]))];
 }
 
@@ -54,12 +54,18 @@ static double run_iterations(long n) {
     for (long i = 0; i < n; i++) {
         size_t sz = pick_size(i);
         char *p = malloc(sz);
-        if (!p) { fprintf(stderr, "alloc failed at %ld\n", i); exit(1); }
+        if (!p) {
+            fprintf(stderr, "alloc failed at %ld\n", i);
+            exit(1);
+        }
         memset(p, (int)(i & 0xff), sz);
         /* Occasionally realloc, like a growing response buffer would. */
         if ((i & 7) == 0) {
             p = realloc(p, sz * 2);
-            if (!p) { fprintf(stderr, "realloc failed at %ld\n", i); exit(1); }
+            if (!p) {
+                fprintf(stderr, "realloc failed at %ld\n", i);
+                exit(1);
+            }
         }
         free(p);
     }
@@ -84,7 +90,7 @@ int main(int argc, char **argv) {
     run_iterations(n / 10 < 10000 ? 10000 : n / 10);
 
     double elapsed = run_iterations(n);
-    printf("%-20s iterations=%-9ld elapsed=%.4fs %.0f ops/s (%.1f ns/op)\n",
-           label, n, elapsed, (double)n / elapsed, elapsed * 1e9 / (double)n);
+    printf("%-20s iterations=%-9ld elapsed=%.4fs %.0f ops/s (%.1f ns/op)\n", label, n, elapsed,
+           (double)n / elapsed, elapsed * 1e9 / (double)n);
     return 0;
 }

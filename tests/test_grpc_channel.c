@@ -43,8 +43,7 @@ typedef struct {
     pthread_mutex_t conn_mu;
 } test_backend;
 
-static void bk_success(cwist_http_request *req, cwist_http_response *res,
-                       backend_state *bs) {
+static void bk_success(cwist_http_request *req, cwist_http_response *res, backend_state *bs) {
     const char *pa = cwist_grpc_metadata_get(req, "grpc-previous-rpc-attempts");
     char text[64];
     snprintf(text, sizeof(text), "%c:%s", bs->id, pa ? pa : "0");
@@ -107,8 +106,7 @@ static void bk_pushback(cwist_http_request *req, cwist_http_response *res,
     bk_success(req, res, bs);
 }
 
-static void bk_bridge(void *user_ctx, cwist_http_request *req,
-                      cwist_http_response *res) {
+static void bk_bridge(void *user_ctx, cwist_http_request *req, cwist_http_response *res) {
     cwist_app *app = user_ctx;
     req->app = app;
     cwist_app_dispatch(app, req, res);
@@ -124,17 +122,14 @@ static void *bk_conn_thread(void *arg) {
     test_backend *bk = ca->bk;
     int fd = ca->fd;
     cwist_free(ca);
-    cwist_https_connection conn = {
-        .fd = fd,
-        .ssl = NULL,
-        .read_buf = NULL,
-        .buf_len = 0,
-        .negotiated_http2 = true,
-        .negotiated_protocol = CWIST_HTTPS_PROTOCOL_HTTP2,
-        .http2_sequenced_data = false
-    };
-    cwist_http2_serve_connection_ex(&conn, bk->app, bk_bridge,
-                                    cwist_grpc_http2_hooks());
+    cwist_https_connection conn = {.fd = fd,
+                                   .ssl = NULL,
+                                   .read_buf = NULL,
+                                   .buf_len = 0,
+                                   .negotiated_http2 = true,
+                                   .negotiated_protocol = CWIST_HTTPS_PROTOCOL_HTTP2,
+                                   .http2_sequenced_data = false};
+    cwist_http2_serve_connection_ex(&conn, bk->app, bk_bridge, cwist_grpc_http2_hooks());
     close(fd);
     return NULL;
 }
@@ -169,7 +164,8 @@ static uint16_t start_backend(test_backend *bk, char id) {
     assert(cwist_app_grpc_unary(bk->app, "cwist.test.Bk", "Flaky", bk_flaky, &bk->state) == 0);
     assert(cwist_app_grpc_unary(bk->app, "cwist.test.Bk", "Fail", bk_fail, &bk->state) == 0);
     assert(cwist_app_grpc_unary(bk->app, "cwist.test.Bk", "Always", bk_always, &bk->state) == 0);
-    assert(cwist_app_grpc_unary(bk->app, "cwist.test.Bk", "Pushback", bk_pushback, &bk->state) == 0);
+    assert(cwist_app_grpc_unary(bk->app, "cwist.test.Bk", "Pushback", bk_pushback, &bk->state) ==
+           0);
 
     bk->listen_fd = socket(AF_INET, SOCK_STREAM, 0);
     assert(bk->listen_fd >= 0);
@@ -249,12 +245,15 @@ static int fake_write_all(int fd, const void *buf, size_t len) {
 
 static void fake_send_frame(int fd, uint8_t type, uint8_t flags, uint32_t stream_id,
                             const void *payload, uint32_t len) {
-    uint8_t hdr[9] = {
-        (uint8_t)((len >> 16) & 0xff), (uint8_t)((len >> 8) & 0xff), (uint8_t)(len & 0xff),
-        type, flags,
-        (uint8_t)((stream_id >> 24) & 0x7f), (uint8_t)((stream_id >> 16) & 0xff),
-        (uint8_t)((stream_id >> 8) & 0xff), (uint8_t)(stream_id & 0xff)
-    };
+    uint8_t hdr[9] = {(uint8_t)((len >> 16) & 0xff),
+                      (uint8_t)((len >> 8) & 0xff),
+                      (uint8_t)(len & 0xff),
+                      type,
+                      flags,
+                      (uint8_t)((stream_id >> 24) & 0x7f),
+                      (uint8_t)((stream_id >> 16) & 0xff),
+                      (uint8_t)((stream_id >> 8) & 0xff),
+                      (uint8_t)(stream_id & 0xff)};
     fake_write_all(fd, hdr, sizeof(hdr));
     if (len) fake_write_all(fd, payload, len);
 }
@@ -263,7 +262,7 @@ static void *goaway_fake_thread(void *arg) {
     goaway_fake *fake = arg;
     int fd = accept(fake->listen_fd, NULL, NULL);
     if (fd < 0) return NULL;
-    struct timeval tv = { .tv_sec = 5, .tv_usec = 0 };
+    struct timeval tv = {.tv_sec = 5, .tv_usec = 0};
     setsockopt(fd, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv));
     atomic_fetch_add(&fake->served, 1);
 
@@ -292,9 +291,9 @@ static void *goaway_fake_thread(void *arg) {
         if (saw_headers && saw_end_stream) {
             /* GOAWAY with last_stream_id 0: stream 1 was never seen by any
              * server application logic. */
-            uint8_t goaway[8] = { 0, 0, 0, 0, 0, 0, 0, 0 };
+            uint8_t goaway[8] = {0, 0, 0, 0, 0, 0, 0, 0};
             fake_send_frame(fd, 0x07, 0, 0, goaway, sizeof(goaway));
-            struct timespec ts = { 0, 100000000L };
+            struct timespec ts = {0, 100000000L};
             nanosleep(&ts, NULL); /* let the client read GOAWAY before FIN */
             goto out;
         }
@@ -350,12 +349,11 @@ static uint8_t *build_request(const char *text, size_t *out_len) {
 }
 
 /* Unary Who/Flaky-style call; decodes the "X:N" payload into buf. */
-static cwist_grpc_status_t channel_who(cwist_grpc_channel *ch, const char *method,
-                                       char *buf, size_t buf_cap, uint32_t *attempts) {
+static cwist_grpc_status_t channel_who(cwist_grpc_channel *ch, const char *method, char *buf,
+                                       size_t buf_cap, uint32_t *attempts) {
     size_t req_len;
     uint8_t *req = build_request("hi", &req_len);
-    cwist_grpc_channel_call *cc =
-        cwist_grpc_channel_call_start(ch, method, req, req_len, 0);
+    cwist_grpc_channel_call *cc = cwist_grpc_channel_call_start(ch, method, req, req_len, 0);
     assert(cc != NULL);
     if (attempts) *attempts = cwist_grpc_channel_call_attempts(cc);
     cwist_grpc_message msg;
@@ -389,16 +387,15 @@ static const cwist_grpc_retry_policy RETRY_UNAVAIL = {
 static void test_pick_first_basic(uint16_t port_a, uint16_t port_b) {
     printf("  pick_first: sticky backend, channel state...\n");
     char target[128];
-    snprintf(target, sizeof(target), "ipv4:127.0.0.1:%u,127.0.0.1:%u",
-             (unsigned)port_a, (unsigned)port_b);
+    snprintf(target, sizeof(target), "ipv4:127.0.0.1:%u,127.0.0.1:%u", (unsigned)port_a,
+             (unsigned)port_b);
     cwist_grpc_channel *ch = cwist_grpc_channel_connect(target, NULL);
     assert(ch != NULL);
     assert(cwist_grpc_channel_get_state(ch) == CWIST_GRPC_CHANNEL_IDLE);
 
     char buf[64];
     for (int i = 0; i < 3; i++) {
-        assert(channel_who(ch, "/cwist.test.Bk/Who", buf, sizeof(buf), NULL) ==
-               CWIST_GRPC_OK);
+        assert(channel_who(ch, "/cwist.test.Bk/Who", buf, sizeof(buf), NULL) == CWIST_GRPC_OK);
         assert(strcmp(buf, "A:0") == 0); /* sticky on the first address */
     }
     assert(cwist_grpc_channel_get_state(ch) == CWIST_GRPC_CHANNEL_READY);
@@ -409,18 +406,16 @@ static void test_pick_first_failover(uint16_t port_b) {
     printf("  pick_first: failover to the next address...\n");
     uint16_t dead = closed_port();
     char target[128];
-    snprintf(target, sizeof(target), "ipv4:127.0.0.1:%u,127.0.0.1:%u",
-             (unsigned)dead, (unsigned)port_b);
+    snprintf(target, sizeof(target), "ipv4:127.0.0.1:%u,127.0.0.1:%u", (unsigned)dead,
+             (unsigned)port_b);
     cwist_grpc_channel *ch = cwist_grpc_channel_connect(target, NULL);
     assert(ch != NULL);
 
     char buf[64];
-    assert(channel_who(ch, "/cwist.test.Bk/Who", buf, sizeof(buf), NULL) ==
-           CWIST_GRPC_OK);
+    assert(channel_who(ch, "/cwist.test.Bk/Who", buf, sizeof(buf), NULL) == CWIST_GRPC_OK);
     assert(strcmp(buf, "B:0") == 0);
     /* and it stays on B */
-    assert(channel_who(ch, "/cwist.test.Bk/Who", buf, sizeof(buf), NULL) ==
-           CWIST_GRPC_OK);
+    assert(channel_who(ch, "/cwist.test.Bk/Who", buf, sizeof(buf), NULL) == CWIST_GRPC_OK);
     assert(strcmp(buf, "B:0") == 0);
     cwist_grpc_channel_close(ch);
 }
@@ -428,19 +423,18 @@ static void test_pick_first_failover(uint16_t port_b) {
 static void test_round_robin(uint16_t port_a, uint16_t port_b) {
     printf("  round_robin: successive calls rotate over READY backends...\n");
     char target[128];
-    snprintf(target, sizeof(target), "ipv4:127.0.0.1:%u,127.0.0.1:%u",
-             (unsigned)port_a, (unsigned)port_b);
-    cwist_grpc_channel_options opts = { 0 };
+    snprintf(target, sizeof(target), "ipv4:127.0.0.1:%u,127.0.0.1:%u", (unsigned)port_a,
+             (unsigned)port_b);
+    cwist_grpc_channel_options opts = {0};
     opts.lb_policy = CWIST_GRPC_LB_ROUND_ROBIN;
     cwist_grpc_channel *ch = cwist_grpc_channel_connect(target, &opts);
     assert(ch != NULL);
     assert(cwist_grpc_channel_get_state(ch) == CWIST_GRPC_CHANNEL_READY);
 
-    const char *expect[] = { "A:0", "B:0", "A:0", "B:0", "A:0", "B:0" };
+    const char *expect[] = {"A:0", "B:0", "A:0", "B:0", "A:0", "B:0"};
     for (int i = 0; i < 6; i++) {
         char buf[64];
-        assert(channel_who(ch, "/cwist.test.Bk/Who", buf, sizeof(buf), NULL) ==
-               CWIST_GRPC_OK);
+        assert(channel_who(ch, "/cwist.test.Bk/Who", buf, sizeof(buf), NULL) == CWIST_GRPC_OK);
         assert(strcmp(buf, expect[i]) == 0);
     }
     cwist_grpc_channel_close(ch);
@@ -452,15 +446,14 @@ static void test_retry_on_unavailable(test_backend *a, uint16_t port_a) {
     int before = atomic_load(&a->state.calls);
     char target[96];
     snprintf(target, sizeof(target), "ipv4:127.0.0.1:%u", (unsigned)port_a);
-    cwist_grpc_channel_options opts = { 0 };
+    cwist_grpc_channel_options opts = {0};
     opts.retry_policy = &RETRY_UNAVAIL;
     cwist_grpc_channel *ch = cwist_grpc_channel_connect(target, &opts);
     assert(ch != NULL);
 
     char buf[64];
     uint32_t attempts = 0;
-    assert(channel_who(ch, "/cwist.test.Bk/Flaky", buf, sizeof(buf), &attempts) ==
-           CWIST_GRPC_OK);
+    assert(channel_who(ch, "/cwist.test.Bk/Flaky", buf, sizeof(buf), &attempts) == CWIST_GRPC_OK);
     assert(attempts == 3);
     /* the winning attempt carried grpc-previous-rpc-attempts = 2 */
     assert(strcmp(buf, "A:2") == 0);
@@ -472,7 +465,7 @@ static void test_non_retryable(uint16_t port_a) {
     printf("  retry: status outside retryableStatusCodes is not retried...\n");
     char target[96];
     snprintf(target, sizeof(target), "ipv4:127.0.0.1:%u", (unsigned)port_a);
-    cwist_grpc_channel_options opts = { 0 };
+    cwist_grpc_channel_options opts = {0};
     opts.retry_policy = &RETRY_UNAVAIL;
     cwist_grpc_channel *ch = cwist_grpc_channel_connect(target, &opts);
     assert(ch != NULL);
@@ -490,7 +483,7 @@ static void test_retry_exhaustion(test_backend *a, uint16_t port_a) {
     int before = atomic_load(&a->state.calls);
     char target[96];
     snprintf(target, sizeof(target), "ipv4:127.0.0.1:%u", (unsigned)port_a);
-    cwist_grpc_channel_options opts = { 0 };
+    cwist_grpc_channel_options opts = {0};
     opts.retry_policy = &RETRY_UNAVAIL; /* max_attempts = 3 */
     cwist_grpc_channel *ch = cwist_grpc_channel_connect(target, &opts);
     assert(ch != NULL);
@@ -510,7 +503,7 @@ static void test_pushback_no_retry(test_backend *a, uint16_t port_a) {
     a->state.pushback_ms = -1;
     char target[96];
     snprintf(target, sizeof(target), "ipv4:127.0.0.1:%u", (unsigned)port_a);
-    cwist_grpc_channel_options opts = { 0 };
+    cwist_grpc_channel_options opts = {0};
     opts.retry_policy = &RETRY_UNAVAIL;
     cwist_grpc_channel *ch = cwist_grpc_channel_connect(target, &opts);
     assert(ch != NULL);
@@ -529,7 +522,7 @@ static void test_pushback_delay(test_backend *a, uint16_t port_a) {
     a->state.pushback_ms = 100;
     char target[96];
     snprintf(target, sizeof(target), "ipv4:127.0.0.1:%u", (unsigned)port_a);
-    cwist_grpc_channel_options opts = { 0 };
+    cwist_grpc_channel_options opts = {0};
     opts.retry_policy = &RETRY_UNAVAIL;
     cwist_grpc_channel *ch = cwist_grpc_channel_connect(target, &opts);
     assert(ch != NULL);
@@ -562,7 +555,7 @@ static void test_throttle(test_backend *a, uint16_t port_a) {
         .max_tokens = 3,
         .token_ratio = 0.1,
     };
-    cwist_grpc_channel_options opts = { 0 };
+    cwist_grpc_channel_options opts = {0};
     opts.retry_policy = &policy5;
     opts.retry_throttle = &throttle;
     cwist_grpc_channel *ch = cwist_grpc_channel_connect(target, &opts);
@@ -590,7 +583,7 @@ static void test_deadline_across_attempts(uint16_t port_a) {
         .backoff_multiplier = 1.0,
         .retryable_status_mask = CWIST_GRPC_STATUS_BIT(CWIST_GRPC_UNAVAILABLE),
     };
-    cwist_grpc_channel_options opts = { 0 };
+    cwist_grpc_channel_options opts = {0};
     opts.retry_policy = &slow;
     cwist_grpc_channel *ch = cwist_grpc_channel_connect(target, &opts);
     assert(ch != NULL);
@@ -600,9 +593,8 @@ static void test_deadline_across_attempts(uint16_t port_a) {
     uint8_t *resp = NULL;
     size_t resp_len = 0;
     uint64_t start = test_now_ms();
-    cwist_grpc_status_t status =
-        cwist_grpc_channel_unary(ch, "/cwist.test.Bk/Always", req, req_len, 150,
-                                 &resp, &resp_len, NULL);
+    cwist_grpc_status_t status = cwist_grpc_channel_unary(ch, "/cwist.test.Bk/Always", req, req_len,
+                                                          150, &resp, &resp_len, NULL);
     uint64_t elapsed = test_now_ms() - start;
     assert(status == CWIST_GRPC_DEADLINE_EXCEEDED);
     assert(resp == NULL);
@@ -611,12 +603,12 @@ static void test_deadline_across_attempts(uint16_t port_a) {
     cwist_grpc_channel_close(ch);
 }
 
-static void test_json_service_config(test_backend *a, test_backend *b,
-                                     uint16_t port_a, uint16_t port_b) {
+static void test_json_service_config(test_backend *a, test_backend *b, uint16_t port_a,
+                                     uint16_t port_b) {
     printf("  service config JSON: retryPolicy + loadBalancingConfig...\n");
     char target[128];
-    snprintf(target, sizeof(target), "ipv4:127.0.0.1:%u,127.0.0.1:%u",
-             (unsigned)port_a, (unsigned)port_b);
+    snprintf(target, sizeof(target), "ipv4:127.0.0.1:%u,127.0.0.1:%u", (unsigned)port_a,
+             (unsigned)port_b);
     cwist_grpc_channel *ch = cwist_grpc_channel_connect(target, NULL);
     assert(ch != NULL);
 
@@ -643,8 +635,7 @@ static void test_json_service_config(test_backend *a, test_backend *b,
     atomic_store(&b->state.flaky_failures, 1);
     char buf[64];
     uint32_t attempts = 0;
-    assert(channel_who(ch, "/cwist.test.Bk/Flaky", buf, sizeof(buf), &attempts) ==
-           CWIST_GRPC_OK);
+    assert(channel_who(ch, "/cwist.test.Bk/Flaky", buf, sizeof(buf), &attempts) == CWIST_GRPC_OK);
     assert(attempts == 3);
     assert(strcmp(buf, "A:2") == 0);
 
@@ -656,25 +647,22 @@ static void test_json_service_config(test_backend *a, test_backend *b,
     assert(attempts == 1);
 
     /* A6 validation: maxAttempts must be an integer greater than 1. */
-    static const char bad1[] =
-        "{\"methodConfig\":[{\"name\":[{\"service\":\"s\"}],"
-        "\"retryPolicy\":{\"maxAttempts\":1,\"initialBackoff\":\"0.1s\","
-        "\"maxBackoff\":\"1s\",\"backoffMultiplier\":2,"
-        "\"retryableStatusCodes\":[\"UNAVAILABLE\"]}}]}";
+    static const char bad1[] = "{\"methodConfig\":[{\"name\":[{\"service\":\"s\"}],"
+                               "\"retryPolicy\":{\"maxAttempts\":1,\"initialBackoff\":\"0.1s\","
+                               "\"maxBackoff\":\"1s\",\"backoffMultiplier\":2,"
+                               "\"retryableStatusCodes\":[\"UNAVAILABLE\"]}}]}";
     assert(cwist_grpc_channel_apply_service_config_json(ch, bad1) == -1);
     /* Empty retryableStatusCodes is a validation error. */
-    static const char bad2[] =
-        "{\"methodConfig\":[{\"name\":[{\"service\":\"s\"}],"
-        "\"retryPolicy\":{\"maxAttempts\":2,\"initialBackoff\":\"0.1s\","
-        "\"maxBackoff\":\"1s\",\"backoffMultiplier\":2,"
-        "\"retryableStatusCodes\":[]}}]}";
+    static const char bad2[] = "{\"methodConfig\":[{\"name\":[{\"service\":\"s\"}],"
+                               "\"retryPolicy\":{\"maxAttempts\":2,\"initialBackoff\":\"0.1s\","
+                               "\"maxBackoff\":\"1s\",\"backoffMultiplier\":2,"
+                               "\"retryableStatusCodes\":[]}}]}";
     assert(cwist_grpc_channel_apply_service_config_json(ch, bad2) == -1);
     /* Malformed duration. */
-    static const char bad3[] =
-        "{\"methodConfig\":[{\"name\":[{\"service\":\"s\"}],"
-        "\"retryPolicy\":{\"maxAttempts\":2,\"initialBackoff\":\"100ms\","
-        "\"maxBackoff\":\"1s\",\"backoffMultiplier\":2,"
-        "\"retryableStatusCodes\":[\"UNAVAILABLE\"]}}]}";
+    static const char bad3[] = "{\"methodConfig\":[{\"name\":[{\"service\":\"s\"}],"
+                               "\"retryPolicy\":{\"maxAttempts\":2,\"initialBackoff\":\"100ms\","
+                               "\"maxBackoff\":\"1s\",\"backoffMultiplier\":2,"
+                               "\"retryableStatusCodes\":[\"UNAVAILABLE\"]}}]}";
     assert(cwist_grpc_channel_apply_service_config_json(ch, bad3) == -1);
 
     cwist_grpc_channel_close(ch);
@@ -686,17 +674,16 @@ static void test_transparent_retry_goaway(uint16_t port_b) {
     uint16_t fake_port = start_goaway_fake(&fake);
 
     char target[128];
-    snprintf(target, sizeof(target), "ipv4:127.0.0.1:%u,127.0.0.1:%u",
-             (unsigned)fake_port, (unsigned)port_b);
-    cwist_grpc_channel_options opts = { 0 };
+    snprintf(target, sizeof(target), "ipv4:127.0.0.1:%u,127.0.0.1:%u", (unsigned)fake_port,
+             (unsigned)port_b);
+    cwist_grpc_channel_options opts = {0};
     opts.retry_policy = &RETRY_UNAVAIL;
     cwist_grpc_channel *ch = cwist_grpc_channel_connect(target, &opts);
     assert(ch != NULL);
 
     char buf[64];
     uint32_t attempts = 0;
-    assert(channel_who(ch, "/cwist.test.Bk/Who", buf, sizeof(buf), &attempts) ==
-           CWIST_GRPC_OK);
+    assert(channel_who(ch, "/cwist.test.Bk/Who", buf, sizeof(buf), &attempts) == CWIST_GRPC_OK);
     /* The fake refused the first wire attempt before server application
      * logic: one transparent retry (not counted against maxAttempts, gRFC
      * A6) lands on backend B, which reports grpc-previous-rpc-attempts = 1. */
@@ -717,8 +704,7 @@ static void test_target_schemes(uint16_t port_a) {
     cwist_grpc_channel *ch = cwist_grpc_channel_connect(target, NULL);
     assert(ch != NULL);
     char buf[64];
-    assert(channel_who(ch, "/cwist.test.Bk/Who", buf, sizeof(buf), NULL) ==
-           CWIST_GRPC_OK);
+    assert(channel_who(ch, "/cwist.test.Bk/Who", buf, sizeof(buf), NULL) == CWIST_GRPC_OK);
     cwist_grpc_channel_close(ch);
 
     /* explicit dns:/// form */

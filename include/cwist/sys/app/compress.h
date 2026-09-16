@@ -36,8 +36,8 @@ typedef struct cwist_compress_backend {
      * @param flush   Non-zero on final chunk.
      * @return 0 on success, -1 on error.
      */
-    int (*compress)(void *state, const char *in, size_t in_len,
-                    char *out, size_t *out_len, int flush);
+    int (*compress)(void *state, const char *in, size_t in_len, char *out, size_t *out_len,
+                    int flush);
 
     /**
      * @brief Finish compression and write any trailing bytes.

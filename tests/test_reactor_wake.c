@@ -15,8 +15,12 @@
 #include <time.h>
 #include "../src/sys/io/reactor.c"
 
-void *cwist_alloc(size_t size) { return calloc(1, size); }
-void cwist_free(void *ptr) { free(ptr); }
+void *cwist_alloc(size_t size) {
+    return calloc(1, size);
+}
+void cwist_free(void *ptr) {
+    free(ptr);
+}
 atomic_int g_cwist_running = 1;
 
 enum { ROUNDS = 64, BATCH = 128 };
@@ -35,7 +39,9 @@ static double milliseconds(struct timespec a, struct timespec b) {
     return (b.tv_sec - a.tv_sec) * 1000.0 + (b.tv_nsec - a.tv_nsec) / 1e6;
 }
 
-static void noop(void *ctx) { (void)ctx; }
+static void noop(void *ctx) {
+    (void)ctx;
+}
 
 static void request_next(int index) {
     assert(pthread_mutex_lock(&mu) == 0);
@@ -66,8 +72,7 @@ static void *producer(void *unused) {
     (void)unused;
     for (;;) {
         assert(pthread_mutex_lock(&mu) == 0);
-        while (requested < 0 && !quitting)
-            assert(pthread_cond_wait(&cv, &mu) == 0);
+        while (requested < 0 && !quitting) assert(pthread_cond_wait(&cv, &mu) == 0);
         if (quitting) {
             assert(pthread_mutex_unlock(&mu) == 0);
             return NULL;
@@ -112,11 +117,11 @@ static void check_uring_wake(void) {
         delivered = 0;
         assert(pthread_create(&thread, NULL, burst_producer, nodes) == 0);
         assert(pthread_join(thread, NULL) == 0);
-        const struct __kernel_timespec deadline = { .tv_sec = 1 };
+        const struct __kernel_timespec deadline = {.tv_sec = 1};
         int ret;
         do {
-            ret = sys_io_uring_enter_timeout(loop->impl.ring_fd,
-                        loop->sq_unsubmitted, 1, IORING_ENTER_GETEVENTS, &deadline);
+            ret = sys_io_uring_enter_timeout(loop->impl.ring_fd, loop->sq_unsubmitted, 1,
+                                             IORING_ENTER_GETEVENTS, &deadline);
         } while (ret < 0 && errno == EINTR);
         if (ret < 0) {
             perror("posted wake did not generate a completion");
@@ -132,9 +137,9 @@ static void check_uring_wake(void) {
     }
     /* The drained input poll must be idle. Retaining output registration on
      * the same fd could otherwise feed completions back into themselves. */
-    const struct __kernel_timespec idle = { .tv_nsec = 10000000 };
-    (void)sys_io_uring_enter_timeout(loop->impl.ring_fd,
-                    loop->sq_unsubmitted, 1, IORING_ENTER_GETEVENTS, &idle);
+    const struct __kernel_timespec idle = {.tv_nsec = 10000000};
+    (void)sys_io_uring_enter_timeout(loop->impl.ring_fd, loop->sq_unsubmitted, 1,
+                                     IORING_ENTER_GETEVENTS, &idle);
     loop->sq_unsubmitted = 0;
     assert(__atomic_load_n(loop->impl.cq_tail, __ATOMIC_ACQUIRE) ==
            __atomic_load_n(loop->impl.cq_head, __ATOMIC_ACQUIRE));

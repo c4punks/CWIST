@@ -18,7 +18,7 @@
  * ======================================================================== */
 
 typedef struct {
-    char  *data;
+    char *data;
     size_t len;
     size_t cap;
 } strbuf_t;
@@ -26,22 +26,22 @@ typedef struct {
 static bool strbuf_init(strbuf_t *b, size_t init_cap) {
     b->data = (char *)cwist_alloc(init_cap + 1);
     if (!b->data) return false;
-    b->len       = 0;
-    b->cap       = init_cap;
-    b->data[0]   = '\0';
+    b->len = 0;
+    b->cap = init_cap;
+    b->data[0] = '\0';
     return true;
 }
 
 static bool strbuf_push(strbuf_t *b, char c) {
     if (b->len >= b->cap) {
         size_t new_cap = b->cap * 2 + 64;
-        char  *nd      = (char *)cwist_realloc(b->data, new_cap + 1);
+        char *nd = (char *)cwist_realloc(b->data, new_cap + 1);
         if (!nd) return false;
         b->data = nd;
-        b->cap  = new_cap;
+        b->cap = new_cap;
     }
     b->data[b->len++] = c;
-    b->data[b->len]   = '\0';
+    b->data[b->len] = '\0';
     return true;
 }
 
@@ -77,7 +77,7 @@ static void log_append(char *log, size_t log_sz, const char *msg) {
 
 /* Remove trailing commas: ",]" → "]"  /  ",}" → "}" */
 static void remove_trailing_commas(strbuf_t *b) {
-    char  *d   = b->data;
+    char *d = b->data;
     size_t len = b->len;
     bool in_str = false;
     bool esc = false;
@@ -100,12 +100,12 @@ static void remove_trailing_commas(strbuf_t *b) {
         if (c == ']' || c == '}') {
             /* find last non-whitespace before i */
             size_t j = i;
-            while (j > 0 && (d[j-1] == ' ' || d[j-1] == '\t' ||
-                              d[j-1] == '\r' || d[j-1] == '\n')) {
+            while (j > 0 &&
+                   (d[j - 1] == ' ' || d[j - 1] == '\t' || d[j - 1] == '\r' || d[j - 1] == '\n')) {
                 j--;
             }
-            if (j > 0 && d[j-1] == ',') {
-                memmove(&d[j-1], &d[j], len - j + 1);
+            if (j > 0 && d[j - 1] == ',') {
+                memmove(&d[j - 1], &d[j], len - j + 1);
                 len--;
                 b->len = len;
                 i--; /* re-examine the same position */
@@ -117,29 +117,40 @@ static void remove_trailing_commas(strbuf_t *b) {
 /* Append missing closing brackets / braces at the end of the buffer. */
 static void balance_brackets(strbuf_t *b, char *log, size_t log_sz) {
     cwist_scratch_t stack_s CWIST_SCRATCH_DEFER = {0};
-    char  *stack = (char *)cwist_scratch_alloc(&stack_s, b->len + 1);
+    char *stack = (char *)cwist_scratch_alloc(&stack_s, b->len + 1);
     if (!stack) {
         log_append(log, log_sz, "[L1] bracket-balance skipped (alloc failure); ");
         return;
     }
-    int    top       = 0;
-    bool   in_string = false;
-    bool   escaped   = false;
+    int top = 0;
+    bool in_string = false;
+    bool escaped = false;
 
-    const char *d   = b->data;
-    size_t      len = b->len;
+    const char *d = b->data;
+    size_t len = b->len;
 
     for (size_t i = 0; i < len; i++) {
         char c = d[i];
-        if (escaped)                  { escaped = false; continue; }
-        if (c == '\\' && in_string)   { escaped = true;  continue; }
-        if (c == '"')                 { in_string = !in_string; continue; }
-        if (in_string)                continue;
+        if (escaped) {
+            escaped = false;
+            continue;
+        }
+        if (c == '\\' && in_string) {
+            escaped = true;
+            continue;
+        }
+        if (c == '"') {
+            in_string = !in_string;
+            continue;
+        }
+        if (in_string) continue;
 
-        if      (c == '{')            stack[top++] = '}';
-        else if (c == '[')            stack[top++] = ']';
+        if (c == '{')
+            stack[top++] = '}';
+        else if (c == '[')
+            stack[top++] = ']';
         else if (c == '}' || c == ']') {
-            if (top > 0 && stack[top-1] == c) top--;
+            if (top > 0 && stack[top - 1] == c) top--;
             /* mismatched closer - ignore; cJSON will flag remaining issues */
         }
     }
@@ -164,24 +175,37 @@ static char *l1_heal(const char *input, char *log, size_t log_sz) {
     const char *p = input;
 
     /* 1. Strip UTF-8 BOM */
-    if (in_len >= 3 &&
-        (unsigned char)p[0] == 0xEF &&
-        (unsigned char)p[1] == 0xBB &&
+    if (in_len >= 3 && (unsigned char)p[0] == 0xEF && (unsigned char)p[1] == 0xBB &&
         (unsigned char)p[2] == 0xBF) {
         p += 3;
         log_append(log, log_sz, "[L1] stripped BOM; ");
     }
 
     /* 2. Copy, stripping // line-comments outside strings */
-    bool in_str   = false;
-    bool esc      = false;
+    bool in_str = false;
+    bool esc = false;
     bool stripped = false;
 
     while (*p) {
         char c = *p;
-        if (esc)                       { esc = false; strbuf_push(&b, c); p++; continue; }
-        if (c == '\\' && in_str)       { esc = true;  strbuf_push(&b, c); p++; continue; }
-        if (c == '"')                  { in_str = !in_str; strbuf_push(&b, c); p++; continue; }
+        if (esc) {
+            esc = false;
+            strbuf_push(&b, c);
+            p++;
+            continue;
+        }
+        if (c == '\\' && in_str) {
+            esc = true;
+            strbuf_push(&b, c);
+            p++;
+            continue;
+        }
+        if (c == '"') {
+            in_str = !in_str;
+            strbuf_push(&b, c);
+            p++;
+            continue;
+        }
         if (!in_str && c == '/' && p[1] == '/') {
             while (*p && *p != '\n') p++;
             stripped = true;
@@ -245,8 +269,7 @@ static cJSON *find_fuzzy(cJSON *obj, const char *name, const char **found_key) {
     return NULL;
 }
 
-int cwist_json_schema_align(cJSON *obj, const cwist_schema_t *schema,
-                             char *log, size_t log_sz) {
+int cwist_json_schema_align(cJSON *obj, const cwist_schema_t *schema, char *log, size_t log_sz) {
     if (!obj || !schema || !cJSON_IsObject(obj)) return -1;
 
     int changes = 0;
@@ -255,23 +278,31 @@ int cwist_json_schema_align(cJSON *obj, const cwist_schema_t *schema,
         const cwist_schema_field_t *fd = &schema->fields[fi];
 
         /* ---- Locate the field in the JSON object ---- */
-        cJSON      *item     = NULL;
+        cJSON *item = NULL;
         const char *found_as = NULL;
 
         /* Try canonical name first */
         item = cJSON_GetObjectItemCaseSensitive(obj, fd->name);
-        if (item) { found_as = fd->name; }
+        if (item) {
+            found_as = fd->name;
+        }
 
         /* Try explicit aliases */
         if (!item) {
             for (int ai = 0; ai < CWIST_SCHEMA_MAX_ALIASES; ai++) {
                 if (!fd->aliases[ai]) break;
                 item = cJSON_GetObjectItemCaseSensitive(obj, fd->aliases[ai]);
-                if (item) { found_as = fd->aliases[ai]; break; }
+                if (item) {
+                    found_as = fd->aliases[ai];
+                    break;
+                }
                 /* fuzzy alias match */
                 const char *fk = NULL;
                 item = find_fuzzy(obj, fd->aliases[ai], &fk);
-                if (item) { found_as = fk; break; }
+                if (item) {
+                    found_as = fk;
+                    break;
+                }
             }
         }
 
@@ -303,11 +334,11 @@ int cwist_json_schema_align(cJSON *obj, const cwist_schema_t *schema,
         switch (fd->type) {
             case CWIST_FIELD_STRING: type_ok = cJSON_IsString(item); break;
             case CWIST_FIELD_INT:
-            case CWIST_FIELD_FLOAT:  type_ok = cJSON_IsNumber(item); break;
-            case CWIST_FIELD_BOOL:   type_ok = cJSON_IsBool(item);   break;
+            case CWIST_FIELD_FLOAT: type_ok = cJSON_IsNumber(item); break;
+            case CWIST_FIELD_BOOL: type_ok = cJSON_IsBool(item); break;
             case CWIST_FIELD_OBJECT: type_ok = cJSON_IsObject(item); break;
-            case CWIST_FIELD_ARRAY:  type_ok = cJSON_IsArray(item);  break;
-            default:                 type_ok = true;                 break;
+            case CWIST_FIELD_ARRAY: type_ok = cJSON_IsArray(item); break;
+            default: type_ok = true; break;
         }
 
         if (type_ok) continue;
@@ -315,10 +346,10 @@ int cwist_json_schema_align(cJSON *obj, const cwist_schema_t *schema,
         char msg[128];
 
         /* String → Number */
-        if ((fd->type == CWIST_FIELD_INT || fd->type == CWIST_FIELD_FLOAT)
-            && cJSON_IsString(item) && item->valuestring) {
+        if ((fd->type == CWIST_FIELD_INT || fd->type == CWIST_FIELD_FLOAT) &&
+            cJSON_IsString(item) && item->valuestring) {
             char *end = NULL;
-            double v  = strtod(item->valuestring, &end);
+            double v = strtod(item->valuestring, &end);
             if (end && *end == '\0') {
                 cJSON *num = cJSON_CreateNumber(v);
                 if (num) {
@@ -344,10 +375,10 @@ int cwist_json_schema_align(cJSON *obj, const cwist_schema_t *schema,
         /* String "true"/"false"/"1"/"0" → Bool */
         else if (fd->type == CWIST_FIELD_BOOL && cJSON_IsString(item) && item->valuestring) {
             int bval = -1;
-            if (strcasecmp(item->valuestring, "true")  == 0 ||
-                strcmp   (item->valuestring, "1")      == 0) bval = 1;
-            if (strcasecmp(item->valuestring, "false") == 0 ||
-                strcmp   (item->valuestring, "0")      == 0) bval = 0;
+            if (strcasecmp(item->valuestring, "true") == 0 || strcmp(item->valuestring, "1") == 0)
+                bval = 1;
+            if (strcasecmp(item->valuestring, "false") == 0 || strcmp(item->valuestring, "0") == 0)
+                bval = 0;
             if (bval >= 0) {
                 cJSON *bj = bval ? cJSON_CreateTrue() : cJSON_CreateFalse();
                 if (bj) {
@@ -360,8 +391,7 @@ int cwist_json_schema_align(cJSON *obj, const cwist_schema_t *schema,
         }
         /* Number 0/1 → Bool */
         else if (fd->type == CWIST_FIELD_BOOL && cJSON_IsNumber(item)) {
-            cJSON *bj = (item->valuedouble != 0.0) ? cJSON_CreateTrue()
-                                                   : cJSON_CreateFalse();
+            cJSON *bj = (item->valuedouble != 0.0) ? cJSON_CreateTrue() : cJSON_CreateFalse();
             if (bj) {
                 cJSON_ReplaceItemInObjectCaseSensitive(obj, fd->name, bj);
                 snprintf(msg, sizeof(msg), "[L2] '%s': num→bool; ", fd->name);
@@ -402,15 +432,15 @@ cwist_heal_result_t cwist_json_heal(const char *input, const cwist_heal_config_t
     cJSON *parsed = cJSON_Parse(input);
     if (parsed) {
         if (cfg && cfg->schema) {
-            int changes = cwist_json_schema_align(parsed, cfg->schema,
-                                                  result.log, CWIST_HEAL_LOG_MAX);
+            int changes =
+                cwist_json_schema_align(parsed, cfg->schema, result.log, CWIST_HEAL_LOG_MAX);
             if (changes > 0) {
-                result.healed     = true;
-                result.level      = 2;
+                result.healed = true;
+                result.level = 2;
                 result.confidence = 1.0;
             }
         }
-        result.json       = cJSON_PrintUnformatted(parsed);
+        result.json = cJSON_PrintUnformatted(parsed);
         if (!result.healed) result.confidence = 1.0;
         cJSON_Delete(parsed);
         return result;
@@ -422,18 +452,17 @@ cwist_heal_result_t cwist_json_heal(const char *input, const cwist_heal_config_t
         parsed = cJSON_Parse(fixed);
         cwist_free(fixed);
         if (parsed) {
-            result.level      = 1;
-            result.healed     = true;
+            result.level = 1;
+            result.healed = true;
             result.confidence = 0.9;
 
             if (cfg && cfg->schema) {
-                int ch = cwist_json_schema_align(parsed, cfg->schema,
-                                                 result.log, CWIST_HEAL_LOG_MAX);
+                int ch =
+                    cwist_json_schema_align(parsed, cfg->schema, result.log, CWIST_HEAL_LOG_MAX);
                 if (ch > 0) result.level = 2;
             }
 
-            if (result.confidence >= threshold)
-                result.json = cJSON_PrintUnformatted(parsed);
+            if (result.confidence >= threshold) result.json = cJSON_PrintUnformatted(parsed);
 
             cJSON_Delete(parsed);
             return result;
@@ -447,13 +476,12 @@ cwist_heal_result_t cwist_json_heal(const char *input, const cwist_heal_config_t
             parsed = cJSON_Parse(recovered);
             free(recovered); /* SLLM callback uses plain malloc per contract */
             if (parsed) {
-                result.level      = 3;
-                result.healed     = true;
+                result.level = 3;
+                result.healed = true;
                 result.confidence = 0.7; /* heuristic */
                 log_append(result.log, CWIST_HEAL_LOG_MAX, "[L3] SLLM recovery; ");
 
-                if (result.confidence >= threshold)
-                    result.json = cJSON_PrintUnformatted(parsed);
+                if (result.confidence >= threshold) result.json = cJSON_PrintUnformatted(parsed);
 
                 cJSON_Delete(parsed);
             }

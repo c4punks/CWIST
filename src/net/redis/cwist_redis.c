@@ -105,8 +105,8 @@ static int redis_recv_line(cwist_redis_t *r, char *line, size_t line_len) {
             }
             if (i >= line_len - 1) return -1;
         }
-        ssize_t n = recv(r->fd, r->recv_buf + r->recv_len,
-                         CWIST_REDIS_BUF_SIZE - r->recv_len - 1, 0);
+        ssize_t n =
+            recv(r->fd, r->recv_buf + r->recv_len, CWIST_REDIS_BUF_SIZE - r->recv_len - 1, 0);
         if (n < 0) {
             if (errno == EINTR) continue;
             return -1;
@@ -127,8 +127,8 @@ static int redis_recv_bytes(cwist_redis_t *r, char *out, size_t len) {
             got += take;
             continue;
         }
-        ssize_t n = recv(r->fd, r->recv_buf + r->recv_len,
-                         CWIST_REDIS_BUF_SIZE - r->recv_len - 1, 0);
+        ssize_t n =
+            recv(r->fd, r->recv_buf + r->recv_len, CWIST_REDIS_BUF_SIZE - r->recv_len - 1, 0);
         if (n < 0) {
             if (errno == EINTR) continue;
             return -1;
@@ -151,7 +151,8 @@ static int write_bulk_string(cwist_sstring *out, const char *s) {
     return 0;
 }
 
-static cwist_error_t read_reply(cwist_redis_t *r, char **out_value, size_t *out_len, char *out_type) {
+static cwist_error_t read_reply(cwist_redis_t *r, char **out_value, size_t *out_len,
+                                char *out_type) {
     char line[CWIST_REDIS_LINE_MAX];
     if (out_len) *out_len = 0;
     if (redis_recv_line(r, line, sizeof(line)) != 0) return make_error(CWIST_ERR_INT16);
@@ -168,7 +169,9 @@ static cwist_error_t read_reply(cwist_redis_t *r, char **out_value, size_t *out_
                     *out_value = NULL;
                 }
             }
-            return (line[0] == '-') ? make_error(CWIST_ERR_INT16) : (cwist_error_t){.errtype = CWIST_ERR_INT16, .error.err_i16 = 0};
+            return (line[0] == '-')
+                       ? make_error(CWIST_ERR_INT16)
+                       : (cwist_error_t){.errtype = CWIST_ERR_INT16, .error.err_i16 = 0};
 
         case ':': /* integer */
             if (out_value) *out_value = cwist_strdup(line + 1);
@@ -199,8 +202,10 @@ static cwist_error_t read_reply(cwist_redis_t *r, char **out_value, size_t *out_
                 cwist_free(buf);
                 return make_error(CWIST_ERR_INT16);
             }
-            if (out_value) *out_value = buf;
-            else cwist_free(buf);
+            if (out_value)
+                *out_value = buf;
+            else
+                cwist_free(buf);
             if (out_len) *out_len = (size_t)blen;
             return (cwist_error_t){.errtype = CWIST_ERR_INT16, .error.err_i16 = 0};
         }
@@ -219,8 +224,7 @@ static cwist_error_t read_reply(cwist_redis_t *r, char **out_value, size_t *out_
             return (cwist_error_t){.errtype = CWIST_ERR_INT16, .error.err_i16 = 0};
         }
 
-        default:
-            return make_error(CWIST_ERR_INT16);
+        default: return make_error(CWIST_ERR_INT16);
     }
 }
 
@@ -233,7 +237,8 @@ static cwist_error_t redis_command_frame(cwist_redis_t *r, const char *frame, si
      * replies on the same connection. */
     pthread_mutex_lock(&r->mtx);
     cwist_error_t err = redis_send_all(r->fd, frame, frame_len) == 0
-        ? read_reply(r, out_value, out_len, NULL) : make_error(CWIST_ERR_INT16);
+                            ? read_reply(r, out_value, out_len, NULL)
+                            : make_error(CWIST_ERR_INT16);
     pthread_mutex_unlock(&r->mtx);
     return err;
 }
@@ -285,8 +290,8 @@ static cwist_error_t recv_reply(cwist_redis_t *r, char **out_value) {
 static cwist_error_t send_command(cwist_redis_t *r, const char *cmd) {
     pthread_mutex_lock(&r->mtx);
     cwist_error_t err = redis_send_all(r->fd, cmd, strlen(cmd)) == 0
-        ? (cwist_error_t){.errtype = CWIST_ERR_INT16, .error.err_i16 = 0}
-        : make_error(CWIST_ERR_INT16);
+                            ? (cwist_error_t){.errtype = CWIST_ERR_INT16, .error.err_i16 = 0}
+                            : make_error(CWIST_ERR_INT16);
     pthread_mutex_unlock(&r->mtx);
     return err;
 }
@@ -295,13 +300,15 @@ cwist_error_t cwist_redis_command(cwist_redis_t *r, const char *cmd, char **out)
     if (!r || !cmd) return make_error(CWIST_ERR_INT16);
     char *value = NULL;
     cwist_error_t err = redis_command_frame(r, cmd, strlen(cmd), &value, NULL);
-    if (out) *out = value; else cwist_free(value);
+    if (out)
+        *out = value;
+    else
+        cwist_free(value);
     return err;
 }
 
-cwist_error_t cwist_redis_command_argv(cwist_redis_t *r, size_t argc,
-                                       const void *const *argv, const size_t *argv_lens,
-                                       char **out, size_t *out_len) {
+cwist_error_t cwist_redis_command_argv(cwist_redis_t *r, size_t argc, const void *const *argv,
+                                       const size_t *argv_lens, char **out, size_t *out_len) {
     if (!r || !argc || !argv || !argv_lens) return make_error(CWIST_ERR_INT16);
     if (out) *out = NULL;
     if (out_len) *out_len = 0;
@@ -316,12 +323,16 @@ cwist_error_t cwist_redis_command_argv(cwist_redis_t *r, size_t argc,
         snprintf(len, sizeof(len), "$%zu\r\n", argv_lens[i]);
         if (cwist_sstring_append_len(frame, len, strlen(len)).error.err_i8 ||
             (argv_lens[i] && cwist_sstring_append_len(frame, argv[i], argv_lens[i]).error.err_i8) ||
-            cwist_sstring_append_len(frame, "\r\n", 2).error.err_i8) goto fail;
+            cwist_sstring_append_len(frame, "\r\n", 2).error.err_i8)
+            goto fail;
     }
     char *value = NULL;
     cwist_error_t err = redis_command_frame(r, frame->data, frame->size, &value, out_len);
     cwist_sstring_destroy(frame);
-    if (out) *out = value; else cwist_free(value);
+    if (out)
+        *out = value;
+    else
+        cwist_free(value);
     return err;
 fail:
     cwist_sstring_destroy(frame);
@@ -333,12 +344,12 @@ cwist_error_t cwist_redis_auth(cwist_redis_t *r, const char *username, const cha
     char *reply = NULL;
     cwist_error_t err;
     if (username) {
-        const void *args[3] = { "AUTH", username, password };
-        size_t lengths[3] = { 4, strlen(username), strlen(password) };
+        const void *args[3] = {"AUTH", username, password};
+        size_t lengths[3] = {4, strlen(username), strlen(password)};
         err = cwist_redis_command_argv(r, 3, args, lengths, &reply, NULL);
     } else {
-        const void *args[2] = { "AUTH", password };
-        size_t lengths[2] = { 4, strlen(password) };
+        const void *args[2] = {"AUTH", password};
+        size_t lengths[2] = {4, strlen(password)};
         err = cwist_redis_command_argv(r, 2, args, lengths, &reply, NULL);
     }
     cwist_free(reply);
@@ -348,8 +359,8 @@ cwist_error_t cwist_redis_auth(cwist_redis_t *r, const char *username, const cha
 cwist_error_t cwist_redis_select(cwist_redis_t *r, unsigned int database) {
     char db[16];
     snprintf(db, sizeof(db), "%u", database);
-    const void *args[] = { "SELECT", db };
-    size_t lengths[] = { 6, strlen(db) };
+    const void *args[] = {"SELECT", db};
+    size_t lengths[] = {6, strlen(db)};
     char *reply = NULL;
     cwist_error_t err = cwist_redis_command_argv(r, 2, args, lengths, &reply, NULL);
     cwist_free(reply);
@@ -449,9 +460,7 @@ cwist_error_t cwist_redis_publish(cwist_redis_t *r, const char *channel, const c
 
 /* --- Pub/Sub ------------------------------------------------------------ */
 
-cwist_error_t cwist_redis_subscribe(cwist_redis_t *r,
-                                    const char **channels,
-                                    cwist_redis_msg_cb cb,
+cwist_error_t cwist_redis_subscribe(cwist_redis_t *r, const char **channels, cwist_redis_msg_cb cb,
                                     void *ctx) {
     if (!r || !channels || !channels[0] || !cb) return make_error(CWIST_ERR_INT16);
 
@@ -610,7 +619,8 @@ cwist_error_t cwist_redis_pool_set(cwist_redis_pool_t *pool, const char *key, co
     return err;
 }
 
-cwist_error_t cwist_redis_pool_setex(cwist_redis_pool_t *pool, const char *key, const char *value, int seconds) {
+cwist_error_t cwist_redis_pool_setex(cwist_redis_pool_t *pool, const char *key, const char *value,
+                                     int seconds) {
     cwist_redis_t *r = redis_pool_acquire(pool);
     if (!r) return make_error(CWIST_ERR_INT16);
     cwist_error_t err = cwist_redis_setex(r, key, value, seconds);
@@ -626,7 +636,8 @@ cwist_error_t cwist_redis_pool_del(cwist_redis_pool_t *pool, const char *key) {
     return err;
 }
 
-cwist_error_t cwist_redis_pool_publish(cwist_redis_pool_t *pool, const char *channel, const char *message) {
+cwist_error_t cwist_redis_pool_publish(cwist_redis_pool_t *pool, const char *channel,
+                                       const char *message) {
     cwist_redis_t *r = redis_pool_acquire(pool);
     if (!r) return make_error(CWIST_ERR_INT16);
     cwist_error_t err = cwist_redis_publish(r, channel, message);

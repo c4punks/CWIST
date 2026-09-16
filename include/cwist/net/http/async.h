@@ -93,7 +93,8 @@ void cwist_async_set_timeout(cwist_async *a, uint64_t ms);
  * later calls return false.  @p body is copied.
  * A winning foreign call may wait for dispatch/middleware to return.
  */
-bool cwist_async_respond(cwist_async *a, cwist_http_status_t status, const char *content_type, const void *body, size_t len);
+bool cwist_async_respond(cwist_async *a, cwist_http_status_t status, const char *content_type,
+                         const void *body, size_t len);
 
 /**
  * @brief Complete the exchange with a caller-built response.

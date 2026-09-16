@@ -68,12 +68,14 @@ void cwist_mux_router_destroy(cwist_mux_router *router);
 /**
  * @brief Register a route handler.
  */
-void cwist_mux_handle(cwist_mux_router *router, cwist_http_method_t method, const char *path, cwist_http_handler_func handler);
+void cwist_mux_handle(cwist_mux_router *router, cwist_http_method_t method, const char *path,
+                      cwist_http_handler_func handler);
 
 /**
  * @brief Find a matching route.
  */
-cwist_mux_route *cwist_mux_find_route(cwist_mux_router *router, cwist_http_method_t method, const char *path);
+cwist_mux_route *cwist_mux_find_route(cwist_mux_router *router, cwist_http_method_t method,
+                                      const char *path);
 
 /** @} */
 
@@ -93,7 +95,8 @@ void cwist_mux_group_destroy(cwist_mux_group *group);
 /**
  * @brief Register a handler inside a group.
  */
-void cwist_mux_group_handle(cwist_mux_group *group, cwist_http_method_t method, const char *path, cwist_http_handler_func handler);
+void cwist_mux_group_handle(cwist_mux_group *group, cwist_http_method_t method, const char *path,
+                            cwist_http_handler_func handler);
 
 /** @} */
 

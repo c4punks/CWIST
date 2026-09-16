@@ -60,12 +60,8 @@ static void cwist_cjson_free(void *ptr) {
     cwist_free(ptr);
 }
 
-__attribute__((constructor))
-static void cwist_install_cjson_hooks(void) {
-    cJSON_Hooks hooks = {
-        .malloc_fn = cwist_cjson_malloc,
-        .free_fn = cwist_cjson_free
-    };
+__attribute__((constructor)) static void cwist_install_cjson_hooks(void) {
+    cJSON_Hooks hooks = {.malloc_fn = cwist_cjson_malloc, .free_fn = cwist_cjson_free};
     cJSON_InitHooks(&hooks);
 }
 #else
@@ -129,9 +125,7 @@ static atomic_bool g_owner_lock_ready = false;
 static atomic_bool g_owner_lock_ready = ATOMIC_VAR_INIT(false);
 #endif
 static ttak_owner_t *g_owner = NULL;
-static cwist_owner_policy_t g_owner_policy = {
-    .flags = TTAK_MEM_DEFAULT | TTAK_MEM_STRICT_CHECK
-};
+static cwist_owner_policy_t g_owner_policy = {.flags = TTAK_MEM_DEFAULT | TTAK_MEM_STRICT_CHECK};
 static bool g_owner_enabled = false;
 
 /**
@@ -163,14 +157,8 @@ static void cwist_owner_alloc(void *ctx, void *args) {
     if (!req) return;
     size_t actual = req->size ? req->size : 1;
     ttak_mem_flags_t flags = policy ? policy->flags : TTAK_MEM_DEFAULT;
-    req->result = ttak_mem_alloc_safe(actual,
-                                      __TTAK_UNSAFE_MEM_FOREVER__,
-                                      cwist_mem_now(),
-                                      false,
-                                      false,
-                                      true,
-                                      true,
-                                      flags);
+    req->result = ttak_mem_alloc_safe(actual, __TTAK_UNSAFE_MEM_FOREVER__, cwist_mem_now(), false,
+                                      false, true, true, flags);
 }
 
 /**
@@ -197,12 +185,8 @@ static void cwist_owner_realloc(void *ctx, void *args) {
     if (!req) return;
     size_t actual = req->size ? req->size : 1;
     ttak_mem_flags_t flags = policy ? policy->flags : TTAK_MEM_DEFAULT;
-    req->result = ttak_mem_realloc_safe(req->ptr,
-                                        actual,
-                                        __TTAK_UNSAFE_MEM_FOREVER__,
-                                        cwist_mem_now(),
-                                        true,
-                                        flags);
+    req->result = ttak_mem_realloc_safe(req->ptr, actual, __TTAK_UNSAFE_MEM_FOREVER__,
+                                        cwist_mem_now(), true, flags);
 }
 
 /**
@@ -213,7 +197,8 @@ ttak_owner_t *cwist_create_owner(void) {
     cwist_owner_lock_init();
     ttak_mutex_lock(&g_owner_lock);
     if (!g_owner) {
-        ttak_owner_t *owner = ttak_owner_create(TTAK_OWNER_SAFE_DEFAULT | TTAK_OWNER_DENY_DANGEROUS_MEM);
+        ttak_owner_t *owner =
+            ttak_owner_create(TTAK_OWNER_SAFE_DEFAULT | TTAK_OWNER_DENY_DANGEROUS_MEM);
         if (owner) {
             bool ok = true;
             ok &= ttak_owner_register_resource(owner, CWIST_OWNER_RESOURCE, &g_owner_policy);
@@ -259,7 +244,8 @@ static bool cwist_owner_call(const char *func_name, void *args) {
  * @param func_name Function name that could not be executed safely.
  */
 static void cwist_owner_abort(const char *func_name) {
-    fprintf(stderr, "[CWIST] Unable to honor %s; aborting to prevent unsafe memory access\n", func_name);
+    fprintf(stderr, "[CWIST] Unable to honor %s; aborting to prevent unsafe memory access\n",
+            func_name);
     abort();
 }
 
@@ -274,10 +260,7 @@ void *cwist_malloc(size_t size) {
         void *ptr = calloc(1, actual);
         return ptr;
     }
-    cwist_owner_alloc_args_t args = {
-        .size = actual,
-        .result = NULL
-    };
+    cwist_owner_alloc_args_t args = {.size = actual, .result = NULL};
     if (!cwist_owner_call(CWIST_OWNER_ALLOC_FUNC, &args)) {
         return NULL;
     }
@@ -347,11 +330,7 @@ void *cwist_realloc(void *ptr, size_t new_size) {
         if (was_tracked) cwist_gc_scope_track(res);
         return res;
     }
-    cwist_owner_realloc_args_t args = {
-        .ptr = ptr,
-        .size = actual,
-        .result = NULL
-    };
+    cwist_owner_realloc_args_t args = {.ptr = ptr, .size = actual, .result = NULL};
     if (!cwist_owner_call(CWIST_OWNER_REALLOC_FUNC, &args) || !args.result) {
         if (was_tracked) cwist_gc_scope_track(ptr);
         return NULL;
@@ -510,12 +489,8 @@ static void cwist_cjson_free(void *ptr) {
 /**
  * @brief Install cJSON hooks so JSON allocations share CWIST's memory strategy.
  */
-__attribute__((constructor))
-static void cwist_install_cjson_hooks(void) {
-    cJSON_Hooks hooks = {
-        .malloc_fn = cwist_cjson_malloc,
-        .free_fn = cwist_cjson_free
-    };
+__attribute__((constructor)) static void cwist_install_cjson_hooks(void) {
+    cJSON_Hooks hooks = {.malloc_fn = cwist_cjson_malloc, .free_fn = cwist_cjson_free};
     cJSON_InitHooks(&hooks);
 }
 
@@ -537,8 +512,7 @@ static void cwist_destroy_owner(void) {
 /**
  * @brief Destructor hook that releases the shared owner context on process exit.
  */
-__attribute__((destructor))
-static void cwist_owner_cleanup(void) {
+__attribute__((destructor)) static void cwist_owner_cleanup(void) {
     cwist_destroy_owner();
 }
 #endif /* __EMSCRIPTEN__ */

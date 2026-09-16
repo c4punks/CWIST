@@ -41,8 +41,7 @@ cwist_error_t cwist_db_open(cwist_db **db, const char *path);
  * @param readonly Non-zero opens the image read-only (writes fail with
  *                 SQLITE_READONLY); zero allows the in-memory db to grow.
  */
-cwist_error_t cwist_db_open_memory(cwist_db **db, const void *buf, size_t len,
-                                   int readonly);
+cwist_error_t cwist_db_open_memory(cwist_db **db, const void *buf, size_t len, int readonly);
 
 /**
  * Serialize the database image into a freshly allocated buffer, suitable for
@@ -88,10 +87,9 @@ cwist_error_t cwist_db_query(cwist_db *db, const char *sql, cJSON **result);
  * @param heal_cfg Healing configuration (may be NULL for defaults).
  * @return         cwist_error_t; err_i16 == 0 on success.
  */
-cwist_error_t cwist_db_insert_healed(cwist_db *db, const char *table,
-                                      const char *json_str,
-                                      const cwist_schema_t  *schema,
-                                      const cwist_heal_config_t *heal_cfg);
+cwist_error_t cwist_db_insert_healed(cwist_db *db, const char *table, const char *json_str,
+                                     const cwist_schema_t *schema,
+                                     const cwist_heal_config_t *heal_cfg);
 
 /**
  * @brief Execute a SELECT query and strictly validate each result row.
@@ -106,6 +104,6 @@ cwist_error_t cwist_db_insert_healed(cwist_db *db, const char *table,
  * @return       cwist_error_t; err_i16 == 0 on success.
  */
 cwist_error_t cwist_db_query_strict(cwist_db *db, const char *sql, cJSON **result,
-                                     const cwist_schema_t *schema);
+                                    const cwist_schema_t *schema);
 
 #endif

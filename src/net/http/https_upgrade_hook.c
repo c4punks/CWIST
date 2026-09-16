@@ -15,7 +15,9 @@
  */
 #include <cwist/net/http/https.h>
 
-__attribute__((weak)) bool cwist_https_upgrade_handler(cwist_https_connection *conn, cwist_http_request *req, cwist_http_response *res) {
+__attribute__((weak)) bool cwist_https_upgrade_handler(cwist_https_connection *conn,
+                                                       cwist_http_request *req,
+                                                       cwist_http_response *res) {
     (void)conn;
     (void)req;
     (void)res;

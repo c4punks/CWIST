@@ -31,7 +31,7 @@
  * @return A new cwist_sstring containing the rendered output. The caller is
  *         responsible for destroying the returned string. Returns NULL on failure.
  */
-cwist_sstring* cwist_template_render(const char *template_str, const cJSON *context);
+cwist_sstring *cwist_template_render(const char *template_str, const cJSON *context);
 
 /**
  * @brief Renders a template from a file with the given cJSON context.
@@ -45,6 +45,6 @@ cwist_sstring* cwist_template_render(const char *template_str, const cJSON *cont
  *         responsible for destroying the returned string. Returns NULL if the
  *         file cannot be read or on rendering failure.
  */
-cwist_sstring* cwist_template_render_file(const char *file_path, const cJSON *context);
+cwist_sstring *cwist_template_render_file(const char *file_path, const cJSON *context);
 
 #endif

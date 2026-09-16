@@ -53,10 +53,8 @@ static void rps_payload_refresh(void) {
 
     const size_t cap = 96;
     uint64_t now = ttak_get_tick_count();
-    char *buffer = (char *)ttak_mem_alloc_safe(
-        cap, __TTAK_UNSAFE_MEM_FOREVER__, now,
-        true, false, true, true, TTAK_MEM_CACHE_ALIGNED
-    );
+    char *buffer = (char *)ttak_mem_alloc_safe(cap, __TTAK_UNSAFE_MEM_FOREVER__, now, true, false,
+                                               true, true, TTAK_MEM_CACHE_ALIGNED);
     if (!buffer) {
         pthread_mutex_unlock(&g_payload_lock);
         return;

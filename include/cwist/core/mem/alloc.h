@@ -59,9 +59,9 @@ void cwist_free(void *ptr);
  * lib/libttak/include/ttak/types/ttak_compiler.h.
  */
 #if defined(__GNUC__) || defined(__clang__)
-#  define CWIST_ATTRIBUTE_CLEANUP(func) __attribute__((cleanup(func)))
+#define CWIST_ATTRIBUTE_CLEANUP(func) __attribute__((cleanup(func)))
 #else
-#  define CWIST_ATTRIBUTE_CLEANUP(func)
+#define CWIST_ATTRIBUTE_CLEANUP(func)
 #endif
 
 /**
@@ -113,7 +113,7 @@ static inline void cwist_defer_free_cb(void *pp) {
  *   // name is cwist_free()'d automatically here
  * @endcode
  */
-#define cwist_alloc_scoped(var, cast, size) \
+#define cwist_alloc_scoped(var, cast, size)                         \
     void *_cwist_scoped_##var CWIST_DEFER_FREE = cwist_alloc(size); \
     cast var = (cast)_cwist_scoped_##var
 

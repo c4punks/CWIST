@@ -13,7 +13,8 @@ static inline int sys_io_uring_setup(unsigned entries, struct io_uring_params *p
     return (int)syscall(__NR_io_uring_setup, entries, p);
 }
 
-int cwist_io_uring_init_sqpoll(cwist_sqpoll_ring_t *r, unsigned entries, unsigned sq_thread_idle_ms) {
+int cwist_io_uring_init_sqpoll(cwist_sqpoll_ring_t *r, unsigned entries,
+                               unsigned sq_thread_idle_ms) {
     if (!r || entries == 0) return -1;
     memset(r, 0, sizeof(*r));
 
@@ -31,7 +32,8 @@ int cwist_io_uring_init_sqpoll(cwist_sqpoll_ring_t *r, unsigned entries, unsigne
     r->entries = p.sq_entries;
 
     size_t sq_sz = p.sq_off.array + p.sq_entries * sizeof(uint32_t);
-    void *sq_ptr = mmap(NULL, sq_sz, PROT_READ | PROT_WRITE, MAP_SHARED | MAP_POPULATE, fd, IORING_OFF_SQ_RING);
+    void *sq_ptr = mmap(NULL, sq_sz, PROT_READ | PROT_WRITE, MAP_SHARED | MAP_POPULATE, fd,
+                        IORING_OFF_SQ_RING);
     if (sq_ptr == MAP_FAILED) {
         close(fd);
         return -1;
@@ -44,7 +46,8 @@ int cwist_io_uring_init_sqpoll(cwist_sqpoll_ring_t *r, unsigned entries, unsigne
     r->sq_array = (uint32_t *)((uint8_t *)sq_ptr + p.sq_off.array);
 
     size_t sqes_sz = p.sq_entries * sizeof(struct io_uring_sqe);
-    void *sqes_ptr = mmap(NULL, sqes_sz, PROT_READ | PROT_WRITE, MAP_SHARED | MAP_POPULATE, fd, IORING_OFF_SQES);
+    void *sqes_ptr =
+        mmap(NULL, sqes_sz, PROT_READ | PROT_WRITE, MAP_SHARED | MAP_POPULATE, fd, IORING_OFF_SQES);
     if (sqes_ptr == MAP_FAILED) {
         munmap(sq_ptr, sq_sz);
         close(fd);
@@ -57,7 +60,8 @@ int cwist_io_uring_init_sqpoll(cwist_sqpoll_ring_t *r, unsigned entries, unsigne
     return 0;
 }
 
-bool cwist_io_uring_sqpoll_send(cwist_sqpoll_ring_t *r, int fd, const void *buf, size_t len, uint64_t user_data) {
+bool cwist_io_uring_sqpoll_send(cwist_sqpoll_ring_t *r, int fd, const void *buf, size_t len,
+                                uint64_t user_data) {
     if (!r || !r->active) return false;
 
     uint32_t tail = atomic_load_explicit(r->sq_tail, memory_order_relaxed);

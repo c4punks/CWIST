@@ -76,15 +76,16 @@ static void test_https_defaults(void) {
 
 static void test_https_alpn_negotiates_h2_and_http11_fallback(void) {
     printf("Testing HTTPS ALPN negotiation and HTTP/1.1 fallback...\n");
-    cwist_https_options options = { .enable_http2 = true };
+    cwist_https_options options = {.enable_http2 = true};
     cwist_https_context *ctx = NULL;
-    cwist_error_t err = cwist_https_init_context_with_options(&ctx, TEST_CERT, TEST_KEY, &options, NULL);
+    cwist_error_t err =
+        cwist_https_init_context_with_options(&ctx, TEST_CERT, TEST_KEY, &options, NULL);
     assert(err.errtype == CWIST_ERR_INT16);
     assert(err.error.err_i16 == 0);
 
     int sv[2];
     assert(socketpair(AF_UNIX, SOCK_STREAM, 0, sv) == 0);
-    alpn_server_ctx h2_server = { .fd = sv[0], .ctx = ctx, .protocol = CWIST_HTTPS_PROTOCOL_NONE };
+    alpn_server_ctx h2_server = {.fd = sv[0], .ctx = ctx, .protocol = CWIST_HTTPS_PROTOCOL_NONE};
     pthread_t tid;
     assert(pthread_create(&tid, NULL, alpn_server_thread, &h2_server) == 0);
     static const unsigned char h2_client_alpn[] = "\x02h2\x08http/1.1";
@@ -93,7 +94,8 @@ static void test_https_alpn_negotiates_h2_and_http11_fallback(void) {
     assert(h2_server.protocol == CWIST_HTTPS_PROTOCOL_HTTP2);
 
     assert(socketpair(AF_UNIX, SOCK_STREAM, 0, sv) == 0);
-    alpn_server_ctx http11_server = { .fd = sv[0], .ctx = ctx, .protocol = CWIST_HTTPS_PROTOCOL_NONE };
+    alpn_server_ctx http11_server = {
+        .fd = sv[0], .ctx = ctx, .protocol = CWIST_HTTPS_PROTOCOL_NONE};
     assert(pthread_create(&tid, NULL, alpn_server_thread, &http11_server) == 0);
     static const unsigned char http11_client_alpn[] = "\x08http/1.1";
     run_alpn_client(sv[1], http11_client_alpn, sizeof(http11_client_alpn) - 1);
@@ -196,7 +198,7 @@ static bool create_aia_listener(int *out_fd, unsigned short *out_port) {
 
 static void *aia_cert_server_thread(void *arg) {
     aia_server_ctx *server = arg;
-    struct pollfd pfd = { .fd = server->listen_fd, .events = POLLIN };
+    struct pollfd pfd = {.fd = server->listen_fd, .events = POLLIN};
     if (poll(&pfd, 1, 5000) <= 0) {
         close(server->listen_fd);
         return NULL;
@@ -265,14 +267,9 @@ static void *aia_cert_server_thread(void *arg) {
     return NULL;
 }
 
-static bool generate_aia_chain_fixture(char *dir,
-                                       size_t dir_len,
-                                       const char *leaf_aia_url,
-                                       char *leaf_cert,
-                                       size_t leaf_cert_len,
-                                       char *leaf_key,
-                                       size_t leaf_key_len,
-                                       char *intermediate_cert,
+static bool generate_aia_chain_fixture(char *dir, size_t dir_len, const char *leaf_aia_url,
+                                       char *leaf_cert, size_t leaf_cert_len, char *leaf_key,
+                                       size_t leaf_key_len, char *intermediate_cert,
                                        size_t intermediate_cert_len) {
     char template[] = "/tmp/cwist_tls_chain_XXXXXX";
     char *tmp = mkdtemp(template);
@@ -295,11 +292,10 @@ static bool generate_aia_chain_fixture(char *dir,
         return false;
     }
 
-    const char *int_ext_data =
-        "basicConstraints=critical,CA:TRUE,pathlen:0\n"
-        "keyUsage=critical,keyCertSign,cRLSign\n"
-        "subjectKeyIdentifier=hash\n"
-        "authorityKeyIdentifier=keyid,issuer\n";
+    const char *int_ext_data = "basicConstraints=critical,CA:TRUE,pathlen:0\n"
+                               "keyUsage=critical,keyCertSign,cRLSign\n"
+                               "subjectKeyIdentifier=hash\n"
+                               "authorityKeyIdentifier=keyid,issuer\n";
     if (!write_text_file(int_ext, int_ext_data)) return false;
 
     char leaf_ext_data[1024];
@@ -362,22 +358,13 @@ static void test_https_autoloads_aia_intermediate(void) {
     snprintf(aia_url, sizeof(aia_url), "http://127.0.0.1:%u/intermediate.crt", port);
 
     char tmp_dir[PATH_MAX], leaf_cert[PATH_MAX], leaf_key[PATH_MAX], intermediate_cert[PATH_MAX];
-    bool generated = generate_aia_chain_fixture(tmp_dir,
-                                                sizeof(tmp_dir),
-                                                aia_url,
-                                                leaf_cert,
-                                                sizeof(leaf_cert),
-                                                leaf_key,
-                                                sizeof(leaf_key),
-                                                intermediate_cert,
-                                                sizeof(intermediate_cert));
+    bool generated = generate_aia_chain_fixture(tmp_dir, sizeof(tmp_dir), aia_url, leaf_cert,
+                                                sizeof(leaf_cert), leaf_key, sizeof(leaf_key),
+                                                intermediate_cert, sizeof(intermediate_cert));
     assert(generated);
 
     aia_server_ctx server = {
-        .listen_fd = listen_fd,
-        .cert_path = intermediate_cert,
-        .served = false
-    };
+        .listen_fd = listen_fd, .cert_path = intermediate_cert, .served = false};
     pthread_t tid;
     assert(pthread_create(&tid, NULL, aia_cert_server_thread, &server) == 0);
 
@@ -394,7 +381,8 @@ static void test_https_autoloads_aia_intermediate(void) {
     assert(SSL_CTX_get0_chain_certs(ctx->ctx, &chain) == 1);
     assert(chain != NULL);
     assert(sk_X509_num(chain) >= 1);
-    assert(X509_check_issued(sk_X509_value(chain, 0), SSL_CTX_get0_certificate(ctx->ctx)) == X509_V_OK);
+    assert(X509_check_issued(sk_X509_value(chain, 0), SSL_CTX_get0_certificate(ctx->ctx)) ==
+           X509_V_OK);
 
     cwist_https_destroy_context(ctx);
     remove_tree(tmp_dir);

@@ -35,7 +35,7 @@ static cwist_test_client_cookie *find_cookie(cwist_test_client_cookie *head, con
 }
 
 static void cookie_jar_apply(cwist_test_client *client, cwist_http_request *req,
-                              const cwist_test_client_kv *adhoc, size_t adhoc_count) {
+                             const cwist_test_client_kv *adhoc, size_t adhoc_count) {
     if (!client || !req) return;
     size_t jar_count = 0;
     for (cwist_test_client_cookie *c = client->cookies; c; c = c->next) {
@@ -49,8 +49,7 @@ static void cookie_jar_apply(cwist_test_client *client, cwist_http_request *req,
 
     size_t buf_len = 0;
     for (cwist_test_client_cookie *c = client->cookies; c; c = c->next) {
-        if (c->name && c->value)
-            buf_len += strlen(c->name) + 1 + strlen(c->value) + 2;
+        if (c->name && c->value) buf_len += strlen(c->name) + 1 + strlen(c->value) + 2;
     }
     for (size_t i = 0; i < adhoc_count; i++) {
         if (adhoc && adhoc[i].key && adhoc[i].value)
@@ -72,8 +71,8 @@ static void cookie_jar_apply(cwist_test_client *client, cwist_http_request *req,
         if (!adhoc || !adhoc[i].key || !adhoc[i].value) continue;
         if (pos > 0) cookie_header[pos++] = ';';
         if (pos > 0) cookie_header[pos++] = ' ';
-        pos += (size_t)snprintf(cookie_header + pos, buf_len + 1 - pos, "%s=%s",
-                                 adhoc[i].key, adhoc[i].value);
+        pos += (size_t)snprintf(cookie_header + pos, buf_len + 1 - pos, "%s=%s", adhoc[i].key,
+                                adhoc[i].value);
     }
     cwist_http_header_add(&req->headers, "Cookie", cookie_header);
 }
@@ -93,10 +92,16 @@ static void cookie_jar_update(cwist_test_client *client, cwist_http_response *re
         if (!buf) continue;
         char *saveptr = NULL;
         char *name_val = strtok_r(buf, ";", &saveptr);
-        if (!name_val) { cwist_free(buf); continue; }
+        if (!name_val) {
+            cwist_free(buf);
+            continue;
+        }
         name_val = trim(name_val);
         char *eq = strchr(name_val, '=');
-        if (!eq) { cwist_free(buf); continue; }
+        if (!eq) {
+            cwist_free(buf);
+            continue;
+        }
         *eq = '\0';
         char *name = clone_str(trim(name_val));
         char *value = clone_str(trim(eq + 1));
@@ -120,8 +125,12 @@ static void cookie_jar_update(cwist_test_client *client, cwist_http_response *re
         if (c) {
             cwist_free(c->value);
             c->value = value;
-            if (path) { cwist_free(c->path); c->path = path; }
-            else { cwist_free(path); }
+            if (path) {
+                cwist_free(c->path);
+                c->path = path;
+            } else {
+                cwist_free(path);
+            }
             cwist_free(name);
         } else {
             c = (cwist_test_client_cookie *)cwist_alloc(sizeof(*c));
@@ -157,7 +166,8 @@ void cwist_test_client_destroy(cwist_test_client *client) {
 }
 
 static cwist_http_response *do_request(cwist_test_client *client, cwist_http_method_t method,
-                                        const char *path, const cwist_test_client_request_options *opts) {
+                                       const char *path,
+                                       const cwist_test_client_request_options *opts) {
     if (!client || !client->app || !path) return NULL;
     cwist_http_request *req = cwist_http_request_create();
     if (!req) return NULL;
@@ -168,7 +178,10 @@ static cwist_http_response *do_request(cwist_test_client *client, cwist_http_met
     if (hash) {
         size_t path_len = (size_t)(hash - path);
         char *path_only CWIST_DEFER_FREE = (char *)cwist_alloc(path_len + 1);
-        if (!path_only) { cwist_http_request_destroy(req); return NULL; }
+        if (!path_only) {
+            cwist_http_request_destroy(req);
+            return NULL;
+        }
         memcpy(path_only, path, path_len);
         path_only[path_len] = '\0';
         cwist_sstring_assign(req->path, path_only);
@@ -216,9 +229,8 @@ static cwist_http_response *do_request(cwist_test_client *client, cwist_http_met
 }
 
 cwist_http_response *cwist_test_client_request_ex(cwist_test_client *client,
-                                                   cwist_http_method_t method,
-                                                   const char *path,
-                                                   const cwist_test_client_request_options *opts) {
+                                                  cwist_http_method_t method, const char *path,
+                                                  const cwist_test_client_request_options *opts) {
     return do_request(client, method, path, opts);
 }
 
@@ -226,20 +238,23 @@ cwist_http_response *cwist_test_client_get(cwist_test_client *client, const char
     return do_request(client, CWIST_HTTP_GET, path, NULL);
 }
 
-cwist_http_response *cwist_test_client_post(cwist_test_client *client, const char *path, const char *body) {
+cwist_http_response *cwist_test_client_post(cwist_test_client *client, const char *path,
+                                            const char *body) {
     cwist_test_client_request_options opts = {0};
     opts.body = body;
     return do_request(client, CWIST_HTTP_POST, path, &opts);
 }
 
-cwist_http_response *cwist_test_client_post_json(cwist_test_client *client, const char *path, const char *json_body) {
+cwist_http_response *cwist_test_client_post_json(cwist_test_client *client, const char *path,
+                                                 const char *json_body) {
     cwist_test_client_request_options opts = {0};
     opts.body = json_body;
     opts.content_type = "application/json";
     return do_request(client, CWIST_HTTP_POST, path, &opts);
 }
 
-cwist_http_response *cwist_test_client_put(cwist_test_client *client, const char *path, const char *body) {
+cwist_http_response *cwist_test_client_put(cwist_test_client *client, const char *path,
+                                           const char *body) {
     cwist_test_client_request_options opts = {0};
     opts.body = body;
     return do_request(client, CWIST_HTTP_PUT, path, &opts);
@@ -249,27 +264,24 @@ cwist_http_response *cwist_test_client_delete(cwist_test_client *client, const c
     return do_request(client, CWIST_HTTP_DELETE, path, NULL);
 }
 
-cwist_http_response *cwist_test_client_patch(cwist_test_client *client, const char *path, const char *body) {
+cwist_http_response *cwist_test_client_patch(cwist_test_client *client, const char *path,
+                                             const char *body) {
     cwist_test_client_request_options opts = {0};
     opts.body = body;
     return do_request(client, CWIST_HTTP_PATCH, path, &opts);
 }
 
-cwist_http_response *cwist_test_client_post_multipart(cwist_test_client *client,
-                                                       const char *path,
-                                                       const char *field_name,
-                                                       const char *file_name,
-                                                       const char *content_type,
-                                                       const char *data,
-                                                       size_t data_len) {
-    if (!client || !client->app || !path || !field_name || !file_name || !content_type || !data) return NULL;
+cwist_http_response *cwist_test_client_post_multipart(cwist_test_client *client, const char *path,
+                                                      const char *field_name, const char *file_name,
+                                                      const char *content_type, const char *data,
+                                                      size_t data_len) {
+    if (!client || !client->app || !path || !field_name || !file_name || !content_type || !data)
+        return NULL;
     const char *boundary = "CWISTTestClientBoundary7MA4YWxkTrZu0gW";
     size_t boundary_len = strlen(boundary);
 
-    size_t body_len = 2 + boundary_len + 2 +
-                      38 + strlen(field_name) + 25 + strlen(file_name) + 16 + strlen(content_type) + 4 +
-                      data_len +
-                      2 + boundary_len + 2 + 2;
+    size_t body_len = 2 + boundary_len + 2 + 38 + strlen(field_name) + 25 + strlen(file_name) + 16 +
+                      strlen(content_type) + 4 + data_len + 2 + boundary_len + 2 + 2;
     char *body = (char *)cwist_alloc(body_len + 1);
     if (!body) return NULL;
 
@@ -278,7 +290,8 @@ cwist_http_response *cwist_test_client_post_multipart(cwist_test_client *client,
     pos += (size_t)snprintf(body + pos, body_len + 1 - pos,
                             "Content-Disposition: form-data; name=\"%s\"; filename=\"%s\"\r\n",
                             field_name, file_name);
-    pos += (size_t)snprintf(body + pos, body_len + 1 - pos, "Content-Type: %s\r\n\r\n", content_type);
+    pos +=
+        (size_t)snprintf(body + pos, body_len + 1 - pos, "Content-Type: %s\r\n\r\n", content_type);
     memcpy(body + pos, data, data_len);
     pos += data_len;
     pos += (size_t)snprintf(body + pos, body_len + 1 - pos, "\r\n--%s--\r\n", boundary);
@@ -296,16 +309,17 @@ cwist_http_response *cwist_test_client_post_multipart(cwist_test_client *client,
     return res;
 }
 
-void cwist_test_client_set_cookie(cwist_test_client *client,
-                                   const char *name,
-                                   const char *value,
-                                   const char *path) {
+void cwist_test_client_set_cookie(cwist_test_client *client, const char *name, const char *value,
+                                  const char *path) {
     if (!client || !name) return;
     cwist_test_client_cookie *c = find_cookie(client->cookies, name);
     if (c) {
         cwist_free(c->value);
         c->value = value ? clone_str(value) : NULL;
-        if (path) { cwist_free(c->path); c->path = clone_str(path); }
+        if (path) {
+            cwist_free(c->path);
+            c->path = clone_str(path);
+        }
     } else {
         c = (cwist_test_client_cookie *)cwist_alloc(sizeof(*c));
         if (!c) return;

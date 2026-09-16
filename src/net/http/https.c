@@ -47,7 +47,7 @@ static uint64_t cwist_https_now_ms(void) {
  * @return 0 if the requested event is ready, -1 on timeout/error.
  */
 static int cwist_ssl_wait(int fd, int ssl_error, int timeout_ms) {
-    struct pollfd pfd = { .fd = fd, .events = 0 };
+    struct pollfd pfd = {.fd = fd, .events = 0};
     if (ssl_error == SSL_ERROR_WANT_READ) {
         pfd.events = POLLIN;
     } else if (ssl_error == SSL_ERROR_WANT_WRITE) {
@@ -85,7 +85,7 @@ typedef struct {
 
 typedef struct {
     pthread_t threads[2048];
-    size_t    threads_size;
+    size_t threads_size;
     https_pool_task_t queue[HTTPS_TASK_QUEUE_SIZE];
     size_t head;
     size_t tail;
@@ -101,8 +101,10 @@ static bool g_https_pool_initialized = false;
 
 // Forward declaration of existing https_thread_handler
 static void *https_thread_handler(void *arg);
-void https_pool_submit_ready(int client_fd, SSL *pres_ssl, cwist_https_context *ctx, void (*handler)(cwist_https_connection *, void *), void *user_ctx);
-static cwist_error_t https_wrap_established(cwist_https_context *ctx, int client_fd, SSL *ssl, cwist_https_connection **conn);
+void https_pool_submit_ready(int client_fd, SSL *pres_ssl, cwist_https_context *ctx,
+                             void (*handler)(cwist_https_connection *, void *), void *user_ctx);
+static cwist_error_t https_wrap_established(cwist_https_context *ctx, int client_fd, SSL *ssl,
+                                            cwist_https_connection **conn);
 int https_hs_shepherd_start(void);
 void https_hs_shepherd_stop(void);
 static void https_close_conn_cb(void *handle);
@@ -160,12 +162,14 @@ int https_pool_init(void) {
     return 0;
 }
 
-void https_pool_submit(int client_fd, cwist_https_context *ctx, void (*handler)(cwist_https_connection *, void *), void *user_ctx) {
+void https_pool_submit(int client_fd, cwist_https_context *ctx,
+                       void (*handler)(cwist_https_connection *, void *), void *user_ctx) {
     https_pool_submit_ready(client_fd, NULL, ctx, handler, user_ctx);
 }
 
 /* Submit a connection whose TLS handshake already completed (pres_ssl). */
-void https_pool_submit_ready(int client_fd, SSL *pres_ssl, cwist_https_context *ctx, void (*handler)(cwist_https_connection *, void *), void *user_ctx) {
+void https_pool_submit_ready(int client_fd, SSL *pres_ssl, cwist_https_context *ctx,
+                             void (*handler)(cwist_https_connection *, void *), void *user_ctx) {
     pthread_mutex_lock(&g_https_pool.mutex);
     while (g_https_pool.count >= HTTPS_TASK_QUEUE_SIZE && !g_https_pool.shutdown) {
         pthread_cond_wait(&g_https_pool.cond_not_full, &g_https_pool.mutex);
@@ -188,8 +192,10 @@ void https_pool_submit_ready(int client_fd, SSL *pres_ssl, cwist_https_context *
     pthread_mutex_unlock(&g_https_pool.mutex);
 }
 
-/* Submit an established connection back to the worker pool (e.g. keep-alive re-arm after async defer). */
-void https_pool_submit_conn(cwist_https_connection *conn, cwist_https_context *ctx, void (*handler)(cwist_https_connection *, void *), void *user_ctx) {
+/* Submit an established connection back to the worker pool (e.g. keep-alive re-arm after async
+ * defer). */
+void https_pool_submit_conn(cwist_https_connection *conn, cwist_https_context *ctx,
+                            void (*handler)(cwist_https_connection *, void *), void *user_ctx) {
     if (!conn) return;
     pthread_mutex_lock(&g_https_pool.mutex);
     while (g_https_pool.count >= HTTPS_TASK_QUEUE_SIZE && !g_https_pool.shutdown) {
@@ -299,9 +305,12 @@ static https_hs_shard_t g_hs_shards[CWIST_HTTPS_HS_MAX_SHARDS];
 static long g_hs_shard_count = 0;
 static pthread_mutex_t g_hs_start_lock = PTHREAD_MUTEX_INITIALIZER;
 
-static void https_hs_forget_locked(https_hs_shard_t *sh, https_hs_pending_t *prev, https_hs_pending_t *p) {
-    if (prev) prev->next = p->next;
-    else sh->head = p->next;
+static void https_hs_forget_locked(https_hs_shard_t *sh, https_hs_pending_t *prev,
+                                   https_hs_pending_t *p) {
+    if (prev)
+        prev->next = p->next;
+    else
+        sh->head = p->next;
     atomic_fetch_sub_explicit(&sh->pending, 1, memory_order_release);
 }
 
@@ -337,7 +346,8 @@ static void *https_hs_shepherd(void *arg) {
             if (events[i].data.ptr == NULL) {
                 /* wakeup pipe: drain so writers never block */
                 char drain[256];
-                while (read(sh->wakeup_rd, drain, sizeof(drain)) > 0) { /* discard */ }
+                while (read(sh->wakeup_rd, drain, sizeof(drain)) > 0) { /* discard */
+                }
                 continue;
             }
             https_hs_pending_t *p = events[i].data.ptr;
@@ -348,8 +358,13 @@ static void *https_hs_shepherd(void *arg) {
             https_hs_pending_t *prev = NULL, *cur = sh->head;
             bool found = false;
             while (cur) {
-                if (cur == p) { https_hs_forget_locked(sh, prev, cur); found = true; break; }
-                prev = cur; cur = cur->next;
+                if (cur == p) {
+                    https_hs_forget_locked(sh, prev, cur);
+                    found = true;
+                    break;
+                }
+                prev = cur;
+                cur = cur->next;
             }
             pthread_mutex_unlock(&sh->lock);
             if (!found) continue; /* already reaped by the sweeper */
@@ -380,10 +395,15 @@ static void *https_hs_shepherd(void *arg) {
                 if (epoll_ctl(sh->epoll_fd, EPOLL_CTL_MOD, p->fd, &ev) != 0 &&
                     epoll_ctl(sh->epoll_fd, EPOLL_CTL_ADD, p->fd, &ev) != 0) {
                     pthread_mutex_lock(&sh->lock);
-                    prev = NULL; cur = sh->head;
+                    prev = NULL;
+                    cur = sh->head;
                     while (cur) {
-                        if (cur == p) { https_hs_forget_locked(sh, prev, cur); break; }
-                        prev = cur; cur = cur->next;
+                        if (cur == p) {
+                            https_hs_forget_locked(sh, prev, cur);
+                            break;
+                        }
+                        prev = cur;
+                        cur = cur->next;
                     }
                     pthread_mutex_unlock(&sh->lock);
                     https_hs_abort(sh, p);
@@ -424,7 +444,8 @@ static void https_hs_shard_stop(https_hs_shard_t *sh) {
     sh->running = false;
     if (sh->wakeup_wr >= 0) {
         char b = 1;
-        if (write(sh->wakeup_wr, &b, 1) < 0) { /* shutdown path */ }
+        if (write(sh->wakeup_wr, &b, 1) < 0) { /* shutdown path */
+        }
     }
     pthread_mutex_unlock(&sh->lock);
     pthread_join(sh->thread, NULL);
@@ -490,7 +511,7 @@ int https_hs_shepherd_start(void) {
         sh->wakeup_wr = pfd[1];
         fcntl(sh->wakeup_rd, F_SETFL, O_NONBLOCK);
         fcntl(sh->wakeup_wr, F_SETFL, O_NONBLOCK);
-        struct epoll_event ev = { .events = EPOLLIN, .data.ptr = NULL };
+        struct epoll_event ev = {.events = EPOLLIN, .data.ptr = NULL};
         epoll_ctl(sh->epoll_fd, EPOLL_CTL_ADD, sh->wakeup_rd, &ev);
         sh->running = true;
         if (pthread_create(&sh->thread, NULL, https_hs_shepherd, sh) != 0) {
@@ -538,7 +559,8 @@ long cwist_https_pending_handshakes(void) {
  * across shards without lock contention or thread migration overhead.
  * Safe to call from any thread, including reactor callbacks.
  */
-void cwist_https_dispatch(int client_fd, cwist_https_context *ctx, void (*handler)(cwist_https_connection *, void *), void *user_ctx) {
+void cwist_https_dispatch(int client_fd, cwist_https_context *ctx,
+                          void (*handler)(cwist_https_connection *, void *), void *user_ctx) {
     if (!ctx || !ctx->ctx || client_fd < 0) {
         if (client_fd >= 0) close(client_fd);
         return;
@@ -578,9 +600,11 @@ void cwist_https_dispatch(int client_fd, cwist_https_context *ctx, void (*handle
     if (g_hs_shard_count > 1) {
         _Atomic uint32_t pending_arr[CWIST_HTTPS_HS_MAX_SHARDS];
         for (long i = 0; i < g_hs_shard_count; i++) {
-            atomic_init(&pending_arr[i], atomic_load_explicit(&g_hs_shards[i].pending, memory_order_relaxed));
+            atomic_init(&pending_arr[i],
+                        atomic_load_explicit(&g_hs_shards[i].pending, memory_order_relaxed));
         }
-        shard_idx = (unsigned)cwist_sched_p2c_select_worker(pending_arr, (uint32_t)g_hs_shard_count);
+        shard_idx =
+            (unsigned)cwist_sched_p2c_select_worker(pending_arr, (uint32_t)g_hs_shard_count);
     }
 
     https_hs_shard_t *sh = &g_hs_shards[shard_idx];
@@ -599,8 +623,12 @@ void cwist_https_dispatch(int client_fd, cwist_https_context *ctx, void (*handle
         pthread_mutex_lock(&sh->lock);
         https_hs_pending_t *prev = NULL, *cur = sh->head;
         while (cur) {
-            if (cur == p) { https_hs_forget_locked(sh, prev, cur); break; }
-            prev = cur; cur = cur->next;
+            if (cur == p) {
+                https_hs_forget_locked(sh, prev, cur);
+                break;
+            }
+            prev = cur;
+            cur = cur->next;
         }
         pthread_mutex_unlock(&sh->lock);
         SSL_free(ssl);
@@ -610,18 +638,24 @@ void cwist_https_dispatch(int client_fd, cwist_https_context *ctx, void (*handle
     }
     /* Wake the shepherd so pending handshakes are processed promptly. */
     char b = 1;
-    if (write(sh->wakeup_wr, &b, 1) < 0) { /* non-fatal */ }
+    if (write(sh->wakeup_wr, &b, 1) < 0) { /* non-fatal */
+    }
 }
 
 #else /* !__linux__ */
 
-int https_hs_shepherd_start(void) { return -1; }
+int https_hs_shepherd_start(void) {
+    return -1;
+}
 void https_hs_shepherd_stop(void) {}
 
-long cwist_https_pending_handshakes(void) { return 0; }
+long cwist_https_pending_handshakes(void) {
+    return 0;
+}
 
 /* Non-Linux fallback: no epoll shepherd, use the legacy blocking pool path. */
-void cwist_https_dispatch(int client_fd, cwist_https_context *ctx, void (*handler)(cwist_https_connection *, void *), void *user_ctx) {
+void cwist_https_dispatch(int client_fd, cwist_https_context *ctx,
+                          void (*handler)(cwist_https_connection *, void *), void *user_ctx) {
     if (!ctx || !ctx->ctx || client_fd < 0) {
         if (client_fd >= 0) close(client_fd);
         return;
@@ -631,11 +665,11 @@ void cwist_https_dispatch(int client_fd, cwist_https_context *ctx, void (*handle
 
 #endif /* __linux__ */
 
-#define CWIST_ALPN_HTTP11       ((const unsigned char *)"\x08http/1.1")
-#define CWIST_ALPN_H2_HTTP11    ((const unsigned char *)"\x02h2\x08http/1.1")
+#define CWIST_ALPN_HTTP11 ((const unsigned char *)"\x08http/1.1")
+#define CWIST_ALPN_H2_HTTP11 ((const unsigned char *)"\x02h2\x08http/1.1")
 #define CWIST_ALPN_H3_H2_HTTP11 ((const unsigned char *)"\x02h3\x02h2\x08http/1.1")
-#define CWIST_ALPN_HTTP11_LEN       9
-#define CWIST_ALPN_H2_HTTP11_LEN    12
+#define CWIST_ALPN_HTTP11_LEN 9
+#define CWIST_ALPN_H2_HTTP11_LEN 12
 #define CWIST_ALPN_H3_H2_HTTP11_LEN 15
 
 /**
@@ -651,15 +685,15 @@ void cwist_https_dispatch(int client_fd, cwist_https_context *ctx, void (*handle
 static cwist_error_t make_ssl_error(const char *msg) {
     cwist_error_t err = make_error(CWIST_ERR_JSON);
     err.error.err_json = cJSON_CreateObject();
-    
+
     unsigned long ssl_err = ERR_get_error();
     char buf[256];
     ERR_error_string_n(ssl_err, buf, sizeof(buf));
-    
+
     cJSON_AddStringToObject(err.error.err_json, "module", "https");
     cJSON_AddStringToObject(err.error.err_json, "message", msg);
     cJSON_AddStringToObject(err.error.err_json, "openssl_error", buf);
-    
+
     return err;
 }
 
@@ -689,20 +723,18 @@ static void cwist_https_apply_base_tls_defaults(SSL_CTX *ssl_ctx) {
 
 static cwist_error_t cwist_https_apply_http2_tls_profile(SSL_CTX *ssl_ctx) {
     cwist_error_t err = make_error(CWIST_ERR_INT16);
-    if (SSL_CTX_set_cipher_list(ssl_ctx,
-                                "ECDHE-ECDSA-AES128-GCM-SHA256:"
-                                "ECDHE-RSA-AES128-GCM-SHA256:"
-                                "ECDHE-ECDSA-AES256-GCM-SHA384:"
-                                "ECDHE-RSA-AES256-GCM-SHA384:"
-                                "ECDHE-ECDSA-CHACHA20-POLY1305:"
-                                "ECDHE-RSA-CHACHA20-POLY1305") != 1) {
+    if (SSL_CTX_set_cipher_list(ssl_ctx, "ECDHE-ECDSA-AES128-GCM-SHA256:"
+                                         "ECDHE-RSA-AES128-GCM-SHA256:"
+                                         "ECDHE-ECDSA-AES256-GCM-SHA384:"
+                                         "ECDHE-RSA-AES256-GCM-SHA384:"
+                                         "ECDHE-ECDSA-CHACHA20-POLY1305:"
+                                         "ECDHE-RSA-CHACHA20-POLY1305") != 1) {
         return make_ssl_error("Unable to apply HTTP/2-compatible TLS 1.2 cipher profile");
     }
 #ifdef SSL_CTX_set_ciphersuites
-    if (SSL_CTX_set_ciphersuites(ssl_ctx,
-                                 "TLS_AES_128_GCM_SHA256:"
-                                 "TLS_AES_256_GCM_SHA384:"
-                                 "TLS_CHACHA20_POLY1305_SHA256") != 1) {
+    if (SSL_CTX_set_ciphersuites(ssl_ctx, "TLS_AES_128_GCM_SHA256:"
+                                          "TLS_AES_256_GCM_SHA384:"
+                                          "TLS_CHACHA20_POLY1305_SHA256") != 1) {
         return make_ssl_error("Unable to apply HTTP/2-compatible TLS 1.3 cipher suites");
     }
 #endif
@@ -711,12 +743,8 @@ static cwist_error_t cwist_https_apply_http2_tls_profile(SSL_CTX *ssl_ctx) {
     return err;
 }
 
-static int cwist_https_alpn_select_cb(SSL *ssl,
-                                      const unsigned char **out,
-                                      unsigned char *outlen,
-                                      const unsigned char *in,
-                                      unsigned int inlen,
-                                      void *arg) {
+static int cwist_https_alpn_select_cb(SSL *ssl, const unsigned char **out, unsigned char *outlen,
+                                      const unsigned char *in, unsigned int inlen, void *arg) {
     (void)ssl;
     const cwist_https_context *hctx = (const cwist_https_context *)arg;
     bool enable_http2 = hctx && hctx->http2_enabled;
@@ -732,12 +760,8 @@ static int cwist_https_alpn_select_cb(SSL *ssl,
         supported_len = CWIST_ALPN_HTTP11_LEN;
     }
 
-    if (SSL_select_next_proto((unsigned char **)out,
-                              outlen,
-                              supported,
-                              supported_len,
-                              in,
-                              inlen) == OPENSSL_NPN_NEGOTIATED) {
+    if (SSL_select_next_proto((unsigned char **)out, outlen, supported, supported_len, in, inlen) ==
+        OPENSSL_NPN_NEGOTIATED) {
         return SSL_TLSEXT_ERR_OK;
     }
 
@@ -806,8 +830,8 @@ static void cwist_tls_ticket_key_ex_data_init(void) {
     g_ticket_key_ex_data_idx = SSL_CTX_get_ex_new_index(0, NULL, NULL, NULL, NULL);
 }
 
-static int cwist_tls_ticket_key_cb(SSL *ssl, uint8_t *key_name, uint8_t *iv,
-                                   EVP_CIPHER_CTX *ectx, HMAC_CTX *hctx, int encrypt) {
+static int cwist_tls_ticket_key_cb(SSL *ssl, uint8_t *key_name, uint8_t *iv, EVP_CIPHER_CTX *ectx,
+                                   HMAC_CTX *hctx, int encrypt) {
     SSL_CTX *ssl_ctx = ssl ? SSL_get_SSL_CTX(ssl) : NULL;
     const cwist_tls_ticket_key *key = NULL;
     if (ssl_ctx && g_ticket_key_ex_data_idx >= 0) {
@@ -819,7 +843,8 @@ static int cwist_tls_ticket_key_cb(SSL *ssl, uint8_t *key_name, uint8_t *iv,
         memcpy(key_name, key->name, sizeof(key->name));
         if (RAND_bytes(iv, 16) != 1) return 0;
         if (EVP_EncryptInit_ex(ectx, EVP_aes_256_cbc(), NULL, key->aes_key, iv) != 1) return 0;
-        if (HMAC_Init_ex(hctx, key->hmac_key, sizeof(key->hmac_key), EVP_sha256(), NULL) != 1) return 0;
+        if (HMAC_Init_ex(hctx, key->hmac_key, sizeof(key->hmac_key), EVP_sha256(), NULL) != 1)
+            return 0;
         return 1;
     }
 
@@ -852,19 +877,19 @@ static void cwist_tls_setup_shared_ticket_key(SSL_CTX *ssl_ctx, void **out_key) 
     *out_key = key;
 }
 
-cwist_error_t cwist_https_init_context(cwist_https_context **ctx, const char *cert_path, const char *key_path) {
+cwist_error_t cwist_https_init_context(cwist_https_context **ctx, const char *cert_path,
+                                       const char *key_path) {
     return cwist_https_init_context_with_options(ctx, cert_path, key_path, NULL, NULL);
 }
 
 cwist_error_t cwist_https_init_context_with_options(cwist_https_context **ctx,
-                                                    const char *cert_path,
-                                                    const char *key_path,
+                                                    const char *cert_path, const char *key_path,
                                                     const cwist_https_options *options,
                                                     cwist_app *app) {
     cwist_error_t err = make_error(CWIST_ERR_INT16);
     bool enable_http3 = options && options->enable_http3;
     bool enable_http2 = options && (options->enable_http2 || enable_http3);
-    
+
     if (!ctx || !cert_path || !key_path) {
         err.error.err_i16 = -1;
         return err;
@@ -921,7 +946,7 @@ cwist_error_t cwist_https_init_context_with_options(cwist_https_context **ctx,
         return make_ssl_error("Private key does not match certificate");
     }
 
-    *ctx = (cwist_https_context*)cwist_alloc(sizeof(cwist_https_context));
+    *ctx = (cwist_https_context *)cwist_alloc(sizeof(cwist_https_context));
     if (!*ctx) {
         SSL_CTX_free(ssl_ctx);
         err.error.err_i16 = -1;
@@ -936,9 +961,7 @@ cwist_error_t cwist_https_init_context_with_options(cwist_https_context **ctx,
      * issued by any other worker. Must run before workers are forked. */
     cwist_tls_setup_shared_ticket_key(ssl_ctx, &(*ctx)->ticket_key);
 
-    SSL_CTX_set_alpn_select_cb(ssl_ctx,
-                               cwist_https_alpn_select_cb,
-                               (void *)*ctx);
+    SSL_CTX_set_alpn_select_cb(ssl_ctx, cwist_https_alpn_select_cb, (void *)*ctx);
 
     err.error.err_i16 = 0; // Success
     return err;
@@ -974,10 +997,11 @@ void cwist_https_destroy_context(cwist_https_context *ctx) {
 /* Build the connection wrapper around an already-established TLS session.
  * Shared by the blocking cwist_https_accept path and the shepherd's
  * non-blocking dispatch path. */
-static cwist_error_t https_wrap_established(cwist_https_context *ctx, int client_fd, SSL *ssl, cwist_https_connection **conn) {
+static cwist_error_t https_wrap_established(cwist_https_context *ctx, int client_fd, SSL *ssl,
+                                            cwist_https_connection **conn) {
     cwist_error_t err = make_error(CWIST_ERR_INT16);
 
-    *conn = (cwist_https_connection*)cwist_alloc(sizeof(cwist_https_connection));
+    *conn = (cwist_https_connection *)cwist_alloc(sizeof(cwist_https_connection));
     if (!*conn) {
         err.error.err_i16 = -1;
         return err;
@@ -1051,7 +1075,8 @@ static void https_close_conn_cb(void *handle) {
     https_connection_teardown((cwist_https_connection *)handle);
 }
 
-cwist_error_t cwist_https_accept(cwist_https_context *ctx, int client_fd, cwist_https_connection **conn) {
+cwist_error_t cwist_https_accept(cwist_https_context *ctx, int client_fd,
+                                 cwist_https_connection **conn) {
     cwist_error_t err = make_error(CWIST_ERR_INT16);
 
     if (!ctx || !ctx->ctx || client_fd < 0) {
@@ -1188,7 +1213,7 @@ cwist_http_request *cwist_https_receive_request(cwist_https_connection *conn) {
                 bool readable = false;
                 if (!deadline_grace_used) {
                     deadline_grace_used = true;
-                    struct pollfd gfd = { .fd = conn->fd, .events = POLLIN };
+                    struct pollfd gfd = {.fd = conn->fd, .events = POLLIN};
                     readable = (poll(&gfd, 1, 0) > 0 && (gfd.revents & POLLIN));
                 }
                 if (!readable) {
@@ -1199,7 +1224,7 @@ cwist_http_request *cwist_https_receive_request(cwist_https_connection *conn) {
                 uint64_t remaining = headers_deadline - now;
                 if (remaining < (uint64_t)wait_ms) wait_ms = (int)remaining;
 
-                struct pollfd pfd = { .fd = conn->fd, .events = POLLIN };
+                struct pollfd pfd = {.fd = conn->fd, .events = POLLIN};
                 int pret = poll(&pfd, 1, wait_ms);
                 if (pret <= 0) {
                     return NULL;
@@ -1207,7 +1232,8 @@ cwist_http_request *cwist_https_receive_request(cwist_https_connection *conn) {
             }
         }
 
-        int bytes = SSL_read(conn->ssl, conn->read_buf + total_received, (int)(CWIST_HTTP_READ_BUFFER_SIZE - 1 - total_received));
+        int bytes = SSL_read(conn->ssl, conn->read_buf + total_received,
+                             (int)(CWIST_HTTP_READ_BUFFER_SIZE - 1 - total_received));
         if (bytes <= 0) {
             int ssl_err = SSL_get_error(conn->ssl, bytes);
             if (ssl_err == SSL_ERROR_WANT_READ || ssl_err == SSL_ERROR_WANT_WRITE) {
@@ -1263,7 +1289,7 @@ cwist_http_request *cwist_https_receive_request(cwist_https_connection *conn) {
                 uint64_t idle_left = CWIST_HTTP_BODY_IDLE_TIMEOUT_MS - (now - body_idle_start);
                 if (idle_left < (uint64_t)wait_ms) wait_ms = (int)idle_left;
 
-                struct pollfd pfd = { .fd = conn->fd, .events = POLLIN };
+                struct pollfd pfd = {.fd = conn->fd, .events = POLLIN};
                 int pret = poll(&pfd, 1, wait_ms);
                 if (pret <= 0) {
                     cwist_free(body);
@@ -1272,7 +1298,8 @@ cwist_http_request *cwist_https_receive_request(cwist_https_connection *conn) {
                 }
             }
 
-            int bytes = SSL_read(conn->ssl, body + current_body_len, (int)(req->content_length - current_body_len));
+            int bytes = SSL_read(conn->ssl, body + current_body_len,
+                                 (int)(req->content_length - current_body_len));
             if (bytes <= 0) {
                 int ssl_err = SSL_get_error(conn->ssl, bytes);
                 if (ssl_err == SSL_ERROR_WANT_READ || ssl_err == SSL_ERROR_WANT_WRITE) {
@@ -1430,7 +1457,8 @@ cwist_error_t cwist_https_send_response(cwist_https_connection *conn, cwist_http
     return err;
 }
 
-cwist_error_t cwist_https_send_response_head(cwist_https_connection *conn, cwist_http_response *res) {
+cwist_error_t cwist_https_send_response_head(cwist_https_connection *conn,
+                                             cwist_http_response *res) {
     cwist_error_t err = make_error(CWIST_ERR_INT16);
 
     if (!conn || !conn->ssl || !res) {
@@ -1516,7 +1544,9 @@ static void *https_thread_handler(void *arg) {
  * @param user_ctx Opaque pointer forwarded to the handler.
  * @return Tagged CWIST error describing success or failure.
  */
-cwist_error_t cwist_https_server_loop(int server_fd, cwist_https_context *ctx, void (*handler)(cwist_https_connection *, void *), void *user_ctx) {
+cwist_error_t cwist_https_server_loop(int server_fd, cwist_https_context *ctx,
+                                      void (*handler)(cwist_https_connection *, void *),
+                                      void *user_ctx) {
     cwist_error_t err = make_error(CWIST_ERR_INT16);
     if (server_fd < 0 || !ctx || !handler) {
         err.error.err_i16 = -1;
@@ -1531,7 +1561,7 @@ cwist_error_t cwist_https_server_loop(int server_fd, cwist_https_context *ctx, v
     while (atomic_load(&g_cwist_running)) {
         struct sockaddr_in addr;
         socklen_t len = sizeof(addr);
-        int client_fd = accept(server_fd, (struct sockaddr*)&addr, &len);
+        int client_fd = accept(server_fd, (struct sockaddr *)&addr, &len);
 
         if (client_fd < 0) {
             if (errno == EINTR) continue;
@@ -1560,7 +1590,7 @@ cwist_error_t cwist_https_server_loop(int server_fd, cwist_https_context *ctx, v
 
         cwist_https_dispatch(client_fd, ctx, handler, user_ctx);
     }
-    
+
     https_pool_destroy();
     return err;
 }

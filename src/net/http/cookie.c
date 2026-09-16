@@ -12,10 +12,8 @@
 
 /* URL-safe cookie characters: unreserved + !#$%&'()*+-./:<>?@[]^_`{|}~ */
 static int needs_url_encode(char c) {
-    if ((c >= 'A' && c <= 'Z') ||
-        (c >= 'a' && c <= 'z') ||
-        (c >= '0' && c <= '9') ||
-        c == '-' || c == '_' || c == '.' || c == '~') {
+    if ((c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z') || (c >= '0' && c <= '9') || c == '-' ||
+        c == '_' || c == '.' || c == '~') {
         return 0;
     }
     return 1;
@@ -47,8 +45,7 @@ int cwist_cookie_decode(const char *in, char *out, size_t out_len) {
     size_t j = 0;
     for (size_t i = 0; i < len; i++) {
         if (j >= out_len - 1) return -1;
-        if (in[i] == '%' && i + 2 < len &&
-            isxdigit((unsigned char)in[i + 1]) &&
+        if (in[i] == '%' && i + 2 < len && isxdigit((unsigned char)in[i + 1]) &&
             isxdigit((unsigned char)in[i + 2])) {
             unsigned int hex;
             if (sscanf(in + i + 1, "%2x", &hex) != 1) {
@@ -106,9 +103,7 @@ const char *cwist_cookie_get(cwist_query_map *map, const char *name) {
     return cwist_query_map_get(map, name);
 }
 
-int cwist_cookie_set(cwist_http_response *res,
-                     const char *name,
-                     const char *value,
+int cwist_cookie_set(cwist_http_response *res, const char *name, const char *value,
                      const cwist_cookie_options *opts) {
     if (!res || !name) return -1;
 

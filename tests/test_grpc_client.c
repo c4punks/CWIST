@@ -62,19 +62,17 @@ static void cli_lots(cwist_grpc_stream *stream, void *user_ctx) {
 static void cli_block(cwist_grpc_stream *stream, void *user_ctx) {
     (void)user_ctx;
     cwist_grpc_message msg;
-    while (cwist_grpc_stream_recv(stream, &msg) == 1)
-        ;
+    while (cwist_grpc_stream_recv(stream, &msg) == 1);
     /* Never answer on its own; only the deadline/cancel ends the call.
      * Bounded so the handler thread always winds down. */
     for (int i = 0; i < 1000 && !cwist_grpc_stream_cancelled(stream); i++) {
-        struct timespec ts = { 0, 10000000L };
+        struct timespec ts = {0, 10000000L};
         nanosleep(&ts, NULL);
     }
     cwist_grpc_stream_close(stream, stream->status, stream->status_message);
 }
 
-static void cli_bridge(void *user_ctx, cwist_http_request *req,
-                       cwist_http_response *res) {
+static void cli_bridge(void *user_ctx, cwist_http_request *req, cwist_http_response *res) {
     cwist_app *app = user_ctx;
     req->app = app;
     cwist_app_dispatch(app, req, res);
@@ -83,17 +81,14 @@ static void cli_bridge(void *user_ctx, cwist_http_request *req,
 static void *serve_one(void *arg) {
     int fd = *(int *)arg;
     cwist_free(arg);
-    cwist_https_connection conn = {
-        .fd = fd,
-        .ssl = NULL,
-        .read_buf = NULL,
-        .buf_len = 0,
-        .negotiated_http2 = true,
-        .negotiated_protocol = CWIST_HTTPS_PROTOCOL_HTTP2,
-        .http2_sequenced_data = false
-    };
-    cwist_http2_serve_connection_ex(&conn, g_app, cli_bridge,
-                                    cwist_grpc_http2_hooks());
+    cwist_https_connection conn = {.fd = fd,
+                                   .ssl = NULL,
+                                   .read_buf = NULL,
+                                   .buf_len = 0,
+                                   .negotiated_http2 = true,
+                                   .negotiated_protocol = CWIST_HTTPS_PROTOCOL_HTTP2,
+                                   .http2_sequenced_data = false};
+    cwist_http2_serve_connection_ex(&conn, g_app, cli_bridge, cwist_grpc_http2_hooks());
     close(fd);
     return NULL;
 }
@@ -175,8 +170,7 @@ static void test_unary(uint16_t port) {
 
     size_t req_len;
     uint8_t *req = build_echo_request("ping", &req_len);
-    cwist_grpc_call *call = cwist_grpc_call_start(client, "/cwist.test.Cli/Echo",
-                                                  req, req_len, 0);
+    cwist_grpc_call *call = cwist_grpc_call_start(client, "/cwist.test.Cli/Echo", req, req_len, 0);
     assert(call != NULL);
 
     cwist_grpc_message msg;
@@ -197,8 +191,7 @@ static void test_server_streaming(uint16_t port) {
     cwist_grpc_client *client = cwist_grpc_client_connect("127.0.0.1", port, NULL);
     assert(client != NULL);
 
-    cwist_grpc_call *call = cwist_grpc_call_start(client, "/cwist.test.Cli/Lots",
-                                                  NULL, 0, 0);
+    cwist_grpc_call *call = cwist_grpc_call_start(client, "/cwist.test.Cli/Lots", NULL, 0, 0);
     assert(call != NULL);
 
     cwist_grpc_message msg;
@@ -225,14 +218,13 @@ static void test_error_status(uint16_t port) {
     cwist_grpc_client *client = cwist_grpc_client_connect("127.0.0.1", port, NULL);
     assert(client != NULL);
 
-    cwist_grpc_call *call = cwist_grpc_call_start(client, "/cwist.test.Cli/Fail",
-                                                  NULL, 0, 0);
+    cwist_grpc_call *call = cwist_grpc_call_start(client, "/cwist.test.Cli/Fail", NULL, 0, 0);
     assert(call != NULL);
 
     cwist_grpc_message msg;
     int rc;
-    while ((rc = cwist_grpc_call_recv(call, &msg)) == 1)
-        ; /* error responses are Trailers-Only: no message, status in trailers */
+    while ((rc = cwist_grpc_call_recv(call, &msg)) ==
+           1); /* error responses are Trailers-Only: no message, status in trailers */
     assert(rc == 0);
     const char *status_message = NULL;
     cwist_grpc_status_t status = cwist_grpc_call_finish(call, &status_message);
@@ -251,8 +243,7 @@ static void test_deadline(uint16_t port) {
 
     /* The server never answers within 150 ms; the deadline is enforced
      * either server-side (trailers) or client-side (local RST_STREAM). */
-    cwist_grpc_call *call = cwist_grpc_call_start(client, "/cwist.test.Cli/Block",
-                                                  NULL, 0, 150);
+    cwist_grpc_call *call = cwist_grpc_call_start(client, "/cwist.test.Cli/Block", NULL, 0, 150);
     assert(call != NULL);
 
     cwist_grpc_message msg;
@@ -266,7 +257,7 @@ static void test_deadline(uint16_t port) {
 
     /* Let the cancelled server-side handler thread wind down so the
      * session (and its request arena) is released before app teardown. */
-    struct timespec settle = { 0, 300000000L };
+    struct timespec settle = {0, 300000000L};
     nanosleep(&settle, NULL);
 }
 

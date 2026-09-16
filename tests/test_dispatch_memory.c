@@ -26,15 +26,13 @@ static void json_handler(cwist_http_request *req, cwist_http_response *res) {
     res->status_code = CWIST_HTTP_CREATED;
 }
 
-static void mw_marker(cwist_http_request *req, cwist_http_response *res,
-                      cwist_handler_func next) {
+static void mw_marker(cwist_http_request *req, cwist_http_response *res, cwist_handler_func next) {
     cwist_http_header_add(&res->headers, "X-Mw", "seen");
     next(req, res);
 }
 
 static void assert_dispatches(cwist_app *app, const char *req, size_t req_len,
-                              const char *status_line, const char *header,
-                              const char *body) {
+                              const char *status_line, const char *header, const char *body) {
     char *res_buf = NULL;
     size_t res_len = 0;
     assert(cwist_app_dispatch_memory(app, req, req_len, &res_buf, &res_len) == 0);
@@ -62,10 +60,9 @@ int main(void) {
     cwist_app_post(app, "/json", json_handler);
 
     /* Static string route through the middleware chain. */
-    static const char get_req[] =
-        "GET /hello HTTP/1.1\r\nHost: localhost\r\n\r\n";
-    assert_dispatches(app, get_req, sizeof(get_req) - 1,
-                      "HTTP/1.1 200 OK\r\n", "X-Mw: seen", "hello-memory");
+    static const char get_req[] = "GET /hello HTTP/1.1\r\nHost: localhost\r\n\r\n";
+    assert_dispatches(app, get_req, sizeof(get_req) - 1, "HTTP/1.1 200 OK\r\n", "X-Mw: seen",
+                      "hello-memory");
 
     /* POST with a binary-safe body (contains a NUL) via Content-Length. */
     static const char post_head[] =
@@ -74,24 +71,20 @@ int main(void) {
     char post_req[sizeof(post_head) + 5];
     memcpy(post_req, post_head, sizeof(post_head) - 1);
     memcpy(post_req + sizeof(post_head) - 1, "a\0bcd", 5);
-    assert_dispatches(app, post_req, sizeof(post_head) - 1 + 5,
-                      "HTTP/1.1 201 Created\r\n", "Content-Type: application/json",
-                      "{\"method\":\"POST\",\"body_len\":5}");
+    assert_dispatches(app, post_req, sizeof(post_head) - 1 + 5, "HTTP/1.1 201 Created\r\n",
+                      "Content-Type: application/json", "{\"method\":\"POST\",\"body_len\":5}");
 
     /* Unknown path hits the 404 error path (which bypasses route middleware,
      * matching the socket transport behavior). */
-    static const char missing_req[] =
-        "GET /nope HTTP/1.1\r\nHost: localhost\r\n\r\n";
-    assert_dispatches(app, missing_req, sizeof(missing_req) - 1,
-                      "HTTP/1.1 404", NULL, NULL);
+    static const char missing_req[] = "GET /nope HTTP/1.1\r\nHost: localhost\r\n\r\n";
+    assert_dispatches(app, missing_req, sizeof(missing_req) - 1, "HTTP/1.1 404", NULL, NULL);
 
     /* Malformed request is rejected without a response buffer. */
     char *res_buf = NULL;
     size_t res_len = 0;
     assert(cwist_app_dispatch_memory(app, "garbage", 7, &res_buf, &res_len) == -1);
     assert(res_buf == NULL && res_len == 0);
-    assert(cwist_app_dispatch_memory(NULL, get_req, sizeof(get_req) - 1,
-                                     &res_buf, &res_len) == -1);
+    assert(cwist_app_dispatch_memory(NULL, get_req, sizeof(get_req) - 1, &res_buf, &res_len) == -1);
 
     cwist_app_destroy(app);
     printf("test_dispatch_memory: OK\n");

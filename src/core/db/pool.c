@@ -23,7 +23,11 @@ struct cwist_db_pool {
 
 static atomic_ulong pool_sequence = 1;
 
-static cwist_error_t pool_error(void) { cwist_error_t err = make_error(CWIST_ERR_INT16); err.error.err_i16 = -1; return err; }
+static cwist_error_t pool_error(void) {
+    cwist_error_t err = make_error(CWIST_ERR_INT16);
+    err.error.err_i16 = -1;
+    return err;
+}
 
 static clockid_t pool_cond_clock(void) {
 #if defined(__FreeBSD__) || defined(__NetBSD__) || defined(__OpenBSD__) || defined(__APPLE__)
@@ -60,7 +64,8 @@ static char *pool_open_path(const char *path) {
     if (strcmp(path, ":memory:") != 0) return cwist_strdup(path);
     unsigned long seq = atomic_fetch_add_explicit(&pool_sequence, 1, memory_order_relaxed);
     char buffer[96];
-    int written = snprintf(buffer, sizeof(buffer), "file:cwist-pool-%lu?mode=memory&cache=shared", seq);
+    int written =
+        snprintf(buffer, sizeof(buffer), "file:cwist-pool-%lu?mode=memory&cache=shared", seq);
     return written > 0 && (size_t)written < sizeof(buffer) ? cwist_strdup(buffer) : NULL;
 }
 
@@ -76,7 +81,8 @@ cwist_db_pool_t *cwist_db_pool_create(const char *path, size_t max_conns) {
     pool->leased = cwist_alloc_array(max_conns, sizeof(*pool->leased));
     bool mutex_ready = false;
     bool cond_ready = false;
-    if (!pool->path || !pool->open_path || !pool->conns || !pool->idle_slots || !pool->leased) goto fail;
+    if (!pool->path || !pool->open_path || !pool->conns || !pool->idle_slots || !pool->leased)
+        goto fail;
     if (pthread_mutex_init(&pool->mtx, NULL) != 0) goto fail;
     mutex_ready = true;
     if (!pool_cond_init(&pool->cond)) goto fail;
@@ -104,10 +110,16 @@ cwist_db_pool_t *cwist_db_pool_create(const char *path, size_t max_conns) {
 #endif
     return pool;
 fail:
-    if (pool->conns) for (size_t i = 0; i < max_conns; ++i) cwist_db_close(pool->conns[i]);
+    if (pool->conns)
+        for (size_t i = 0; i < max_conns; ++i) cwist_db_close(pool->conns[i]);
     if (cond_ready) pthread_cond_destroy(&pool->cond);
     if (mutex_ready) pthread_mutex_destroy(&pool->mtx);
-    cwist_free(pool->leased); cwist_free(pool->idle_slots); cwist_free(pool->conns); cwist_free(pool->open_path); cwist_free(pool->path); cwist_free(pool);
+    cwist_free(pool->leased);
+    cwist_free(pool->idle_slots);
+    cwist_free(pool->conns);
+    cwist_free(pool->open_path);
+    cwist_free(pool->path);
+    cwist_free(pool);
     return NULL;
 }
 
@@ -156,7 +168,9 @@ void cwist_db_pool_release(cwist_db_pool_t *pool, cwist_db *conn) {
 
 size_t cwist_db_pool_in_use(cwist_db_pool_t *pool) {
     if (!pool) return 0;
-    pthread_mutex_lock(&pool->mtx); size_t count = pool->in_use; pthread_mutex_unlock(&pool->mtx);
+    pthread_mutex_lock(&pool->mtx);
+    size_t count = pool->in_use;
+    pthread_mutex_unlock(&pool->mtx);
     return count;
 }
 
@@ -180,8 +194,14 @@ bool cwist_db_pool_destroy_timeout(cwist_db_pool_t *pool, int timeout_ms) {
     }
     pthread_mutex_unlock(&pool->mtx);
     for (size_t i = 0; i < pool->max_conns; ++i) cwist_db_close(pool->conns[i]);
-    pthread_cond_destroy(&pool->cond); pthread_mutex_destroy(&pool->mtx);
-    cwist_free(pool->leased); cwist_free(pool->idle_slots); cwist_free(pool->conns); cwist_free(pool->open_path); cwist_free(pool->path); cwist_free(pool);
+    pthread_cond_destroy(&pool->cond);
+    pthread_mutex_destroy(&pool->mtx);
+    cwist_free(pool->leased);
+    cwist_free(pool->idle_slots);
+    cwist_free(pool->conns);
+    cwist_free(pool->open_path);
+    cwist_free(pool->path);
+    cwist_free(pool);
     return true;
 }
 
@@ -190,11 +210,17 @@ void cwist_db_pool_destroy(cwist_db_pool_t *pool) {
 }
 
 cwist_error_t cwist_db_pool_exec(cwist_db_pool_t *pool, const char *sql) {
-    cwist_db *db = cwist_db_pool_acquire(pool); if (!db) return pool_error();
-    cwist_error_t err = cwist_db_exec(db, sql); cwist_db_pool_release(pool, db); return err;
+    cwist_db *db = cwist_db_pool_acquire(pool);
+    if (!db) return pool_error();
+    cwist_error_t err = cwist_db_exec(db, sql);
+    cwist_db_pool_release(pool, db);
+    return err;
 }
 
 cwist_error_t cwist_db_pool_query(cwist_db_pool_t *pool, const char *sql, cJSON **result) {
-    cwist_db *db = cwist_db_pool_acquire(pool); if (!db) return pool_error();
-    cwist_error_t err = cwist_db_query(db, sql, result); cwist_db_pool_release(pool, db); return err;
+    cwist_db *db = cwist_db_pool_acquire(pool);
+    if (!db) return pool_error();
+    cwist_error_t err = cwist_db_query(db, sql, result);
+    cwist_db_pool_release(pool, db);
+    return err;
 }

@@ -47,18 +47,18 @@ bool cwist_healthz_register(const char *name, cwist_health_probe_fn fn, void *ct
     }
 
     if (first_free_slot != -1) {
-        g_entries[first_free_slot].name   = name;
-        g_entries[first_free_slot].fn     = fn;
-        g_entries[first_free_slot].ctx    = ctx;
+        g_entries[first_free_slot].name = name;
+        g_entries[first_free_slot].fn = fn;
+        g_entries[first_free_slot].ctx = ctx;
         g_entries[first_free_slot].active = true;
         return true;
     }
 
     if (g_entry_count >= CWIST_HEALTHZ_MAX_PROBES) return false;
 
-    g_entries[g_entry_count].name   = name;
-    g_entries[g_entry_count].fn     = fn;
-    g_entries[g_entry_count].ctx    = ctx;
+    g_entries[g_entry_count].name = name;
+    g_entries[g_entry_count].fn = fn;
+    g_entries[g_entry_count].ctx = ctx;
     g_entries[g_entry_count].active = true;
     g_entry_count++;
     return true;
@@ -79,17 +79,15 @@ void cwist_healthz_unregister(const char *name) {
 
 static const char *status_str(cwist_health_status_t s) {
     switch (s) {
-        case CWIST_HEALTH_OK:       return "ok";
+        case CWIST_HEALTH_OK: return "ok";
         case CWIST_HEALTH_DEGRADED: return "degraded";
-        case CWIST_HEALTH_FAIL:     return "fail";
-        default:                    return "unknown";
+        case CWIST_HEALTH_FAIL: return "fail";
+        default: return "unknown";
     }
 }
 
-void cwist_healthz_run(cwist_health_probe_t *out_probes,
-                        size_t max_probes,
-                        size_t *out_count,
-                        cwist_health_status_t *out_overall) {
+void cwist_healthz_run(cwist_health_probe_t *out_probes, size_t max_probes, size_t *out_count,
+                       cwist_health_status_t *out_overall) {
     size_t count = 0;
     cwist_health_status_t overall = CWIST_HEALTH_OK;
 
@@ -102,7 +100,8 @@ void cwist_healthz_run(cwist_health_probe_t *out_probes,
         if (!out_probes || count < max_probes) {
             count++;
         }
-        if (r.status == CWIST_HEALTH_FAIL) overall = CWIST_HEALTH_FAIL;
+        if (r.status == CWIST_HEALTH_FAIL)
+            overall = CWIST_HEALTH_FAIL;
         else if (r.status == CWIST_HEALTH_DEGRADED && overall == CWIST_HEALTH_OK)
             overall = CWIST_HEALTH_DEGRADED;
     }
@@ -144,10 +143,10 @@ void cwist_app_healthz(cwist_http_response *res) {
     cwist_http_header_add(&res->headers, "Content-Type", "application/json");
 
     switch (overall) {
-        case CWIST_HEALTH_OK:       res->status_code = CWIST_HTTP_OK; break;
+        case CWIST_HEALTH_OK: res->status_code = CWIST_HTTP_OK; break;
         case CWIST_HEALTH_DEGRADED: res->status_code = CWIST_HTTP_SERVICE_UNAVAILABLE; break;
-        case CWIST_HEALTH_FAIL:     res->status_code = CWIST_HTTP_SERVICE_UNAVAILABLE; break;
-        default:                    res->status_code = CWIST_HTTP_SERVICE_UNAVAILABLE; break;
+        case CWIST_HEALTH_FAIL: res->status_code = CWIST_HTTP_SERVICE_UNAVAILABLE; break;
+        default: res->status_code = CWIST_HTTP_SERVICE_UNAVAILABLE; break;
     }
     cwist_json_builder_destroy(jb);
 }

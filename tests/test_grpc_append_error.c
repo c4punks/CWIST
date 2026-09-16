@@ -5,12 +5,13 @@
 #include <stdlib.h>
 #include <string.h>
 
-#define REQUIRE(expr) do { \
-    if (!(expr)) { \
-        fprintf(stderr, "Check failed at %s:%d: %s\n", __FILE__, __LINE__, #expr); \
-        exit(1); \
-    } \
-} while (0)
+#define REQUIRE(expr)                                                                  \
+    do {                                                                               \
+        if (!(expr)) {                                                                 \
+            fprintf(stderr, "Check failed at %s:%d: %s\n", __FILE__, __LINE__, #expr); \
+            exit(1);                                                                   \
+        }                                                                              \
+    } while (0)
 
 static int fail_append;
 static int allocation_failures;
@@ -19,7 +20,7 @@ static void *body_pointer;
 static size_t failed_size;
 
 static cwist_error_t test_make_error(cwist_errtype_t type) {
-    cwist_error_t err = { .errtype = type };
+    cwist_error_t err = {.errtype = type};
     /* Only the producer's active field has meaning. */
     err.error.err_i16 = fail_append ? 0 : 17;
     return err;
@@ -54,14 +55,11 @@ static void check_success(void) {
     fail_append = 0;
     cwist_sstring *body = cwist_sstring_create();
     REQUIRE(body != NULL);
-    cwist_http_response response = { .body = body };
-    cwist_grpc_stream stream = { .res = &response, .status = CWIST_GRPC_OK };
-    const unsigned char payload[] = { 'a', 0, 'b' };
-    const unsigned char expected[] = {
-        0, 0, 0, 0, 3, 'a', 0, 'b',
-        0, 0, 0, 0, 1, 'z',
-        0, 0, 0, 0, 0
-    };
+    cwist_http_response response = {.body = body};
+    cwist_grpc_stream stream = {.res = &response, .status = CWIST_GRPC_OK};
+    const unsigned char payload[] = {'a', 0, 'b'};
+    const unsigned char expected[] = {0, 0, 0, 0,   3, 'a', 0, 'b', 0, 0,
+                                      0, 0, 1, 'z', 0, 0,   0, 0,   0};
     int rc = cwist_grpc_stream_send(&stream, payload, sizeof(payload));
     REQUIRE(rc == 0);
     REQUIRE(cwist_grpc_stream_send(&stream, "z", 1) == 0);
@@ -80,8 +78,8 @@ static void check_append_failure(void) {
     REQUIRE(body != NULL);
     cwist_error_t initial = cwist_sstring_append_len(body, "old", 3);
     REQUIRE(cwist_error_is_ok(&initial));
-    cwist_http_response response = { .body = body };
-    cwist_grpc_stream stream = { .res = &response, .status = CWIST_GRPC_OK };
+    cwist_http_response response = {.body = body};
+    cwist_grpc_stream stream = {.res = &response, .status = CWIST_GRPC_OK};
     body_pointer = body->data;
     failed_size = body->size + 5 + 3 + 1;
     fail_append = 1;

@@ -19,7 +19,7 @@ int main() {
     printf("1. Testing Query Parsing... ");
     cwist_query_map *map = cwist_query_map_create();
     cwist_query_map_parse(map, "name=yjlee&role=admin&active");
-    
+
     const char *val_name = cwist_query_map_get(map, "name");
     const char *val_role = cwist_query_map_get(map, "role");
     const char *val_active = cwist_query_map_get(map, "active");
@@ -44,7 +44,7 @@ int main() {
     cwist_sstring_assign(req1->path, "/test");
 
     cwist_http_response *res1 = cwist_http_response_create();
-    
+
     bool handled1 = cwist_mux_serve(router, req1, res1);
     assert(handled1 == true);
     assert(res1->status_code == CWIST_HTTP_OK);
@@ -80,11 +80,11 @@ int main() {
     printf("3. Testing Integration... ");
     const char *raw_req = "GET /api?foo=bar&baz=123 HTTP/1.1\r\nHost: localhost\r\n\r\n";
     cwist_http_request *parsed_req = cwist_http_parse_request(raw_req);
-    
+
     assert(parsed_req != NULL);
     assert(strcmp(parsed_req->path->data, "/api") == 0);
     assert(strcmp(parsed_req->query->data, "foo=bar&baz=123") == 0);
-    
+
     const char *q_foo = cwist_query_map_get(parsed_req->query_params, "foo");
     const char *q_baz = cwist_query_map_get(parsed_req->query_params, "baz");
 

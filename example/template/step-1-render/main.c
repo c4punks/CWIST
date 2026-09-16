@@ -22,12 +22,11 @@ int main() {
     /* ---- 2. Conditional block ---- */
     printf("\n[Conditional block]\n");
     ctx = cJSON_CreateObject();
-    cJSON_AddTrueToObject(ctx,  "logged_in");
+    cJSON_AddTrueToObject(ctx, "logged_in");
     cJSON_AddStringToObject(ctx, "user", "Alice");
 
-    const char *tmpl2 =
-        "{% if logged_in %}Welcome back, {{ user }}!{% endif %}"
-        "{% if guest %}Please log in.{% endif %}";
+    const char *tmpl2 = "{% if logged_in %}Welcome back, {{ user }}!{% endif %}"
+                        "{% if guest %}Please log in.{% endif %}";
     out = cwist_template_render(tmpl2, ctx);
     if (out) {
         printf("Output: %s\n", out->data);
@@ -39,18 +38,20 @@ int main() {
     printf("\n[Loop over array]\n");
     ctx = cJSON_CreateObject();
     cJSON *items = cJSON_AddArrayToObject(ctx, "fruits");
-    cJSON *f1 = cJSON_CreateObject(); cJSON_AddStringToObject(f1, "name", "Apple");
-    cJSON *f2 = cJSON_CreateObject(); cJSON_AddStringToObject(f2, "name", "Banana");
-    cJSON *f3 = cJSON_CreateObject(); cJSON_AddStringToObject(f3, "name", "Cherry");
+    cJSON *f1 = cJSON_CreateObject();
+    cJSON_AddStringToObject(f1, "name", "Apple");
+    cJSON *f2 = cJSON_CreateObject();
+    cJSON_AddStringToObject(f2, "name", "Banana");
+    cJSON *f3 = cJSON_CreateObject();
+    cJSON_AddStringToObject(f3, "name", "Cherry");
     cJSON_AddItemToArray(items, f1);
     cJSON_AddItemToArray(items, f2);
     cJSON_AddItemToArray(items, f3);
 
-    const char *tmpl3 =
-        "Fruit list:\n"
-        "{% for fruit in fruits %}"
-        "  - {{ fruit.name }}\n"
-        "{% endfor %}";
+    const char *tmpl3 = "Fruit list:\n"
+                        "{% for fruit in fruits %}"
+                        "  - {{ fruit.name }}\n"
+                        "{% endfor %}";
     out = cwist_template_render(tmpl3, ctx);
     if (out) {
         printf("Output:\n%s\n", out->data);

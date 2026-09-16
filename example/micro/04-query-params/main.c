@@ -8,11 +8,10 @@
 #include <stdio.h>
 
 static void index_handler(cwist_http_request *req, cwist_http_response *res) {
-    const char *page  = cwist_query_map_get(req->query_params, "page");
+    const char *page = cwist_query_map_get(req->query_params, "page");
     const char *limit = cwist_query_map_get(req->query_params, "limit");
     char buf[128];
-    snprintf(buf, sizeof(buf), "page=%s  limit=%s",
-             page ? page : "1", limit ? limit : "10");
+    snprintf(buf, sizeof(buf), "page=%s  limit=%s", page ? page : "1", limit ? limit : "10");
     cwist_sstring_assign(res->body, buf);
 }
 

@@ -24,7 +24,7 @@ static void root_only_handler(cwist_http_request *req, cwist_http_response *res)
 }
 
 int main(void) {
-    unsigned short additional[] = { 18081, 18082 };
+    unsigned short additional[] = {18081, 18082};
     cwist_multiport_t ports = cwist_create_multiport(additional);
     assert(ports.valid);
     assert(ports.count == 2);

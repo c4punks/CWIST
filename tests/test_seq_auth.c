@@ -15,8 +15,8 @@ int main(void) {
     assert(cwist_seq_split((const uint8_t *)"secure", 6, 16, &split));
     uint8_t *wire = NULL;
     size_t wire_len = 0;
-    assert(cwist_seq_auth_wrap(ctx, message_id, nonce, split.chunks[0], split.chunk_lens[0],
-                               &wire, &wire_len));
+    assert(cwist_seq_auth_wrap(ctx, message_id, nonce, split.chunks[0], split.chunk_lens[0], &wire,
+                               &wire_len));
     cwist_seq_auth_metadata_t meta;
     cwist_seq_chunk_t chunk;
     assert(cwist_seq_auth_unwrap(ctx, wire, wire_len, &meta, &chunk));
@@ -37,7 +37,9 @@ int main(void) {
     assert(cwist_seq_auth_wrap(ctx, message_id, nonce3, split.chunks[0], split.chunk_lens[0],
                                &replay, &replay_len));
     assert(!cwist_seq_auth_unwrap(ctx, replay, replay_len, &meta, &chunk));
-    cwist_free(wire); cwist_free(tampered); cwist_free(replay);
+    cwist_free(wire);
+    cwist_free(tampered);
+    cwist_free(replay);
     cwist_seq_message_free(&split);
     cwist_seq_auth_context_destroy(ctx);
     puts("Authenticated sequence tests passed.");

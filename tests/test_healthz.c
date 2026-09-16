@@ -11,8 +11,11 @@
 #include <assert.h>
 
 /* Stub for cwist_http_header_add to avoid linking full net/http subsystem */
-cwist_error_t cwist_http_header_add(cwist_http_header_node **head, const char *key, const char *value) {
-    (void)head; (void)key; (void)value;
+cwist_error_t cwist_http_header_add(cwist_http_header_node **head, const char *key,
+                                    const char *value) {
+    (void)head;
+    (void)key;
+    (void)value;
     cwist_error_t err;
     memset(&err, 0, sizeof(err));
     err.errtype = CWIST_ERR_INT16;
@@ -22,19 +25,13 @@ cwist_error_t cwist_http_header_add(cwist_http_header_node **head, const char *k
 static cwist_health_probe_t probe_ok(void *ctx) {
     (void)ctx;
     return (cwist_health_probe_t){
-        .name = "probe_ok",
-        .status = CWIST_HEALTH_OK,
-        .message = "All good"
-    };
+        .name = "probe_ok", .status = CWIST_HEALTH_OK, .message = "All good"};
 }
 
 static cwist_health_probe_t probe_fail(void *ctx) {
     (void)ctx;
     return (cwist_health_probe_t){
-        .name = "probe_fail",
-        .status = CWIST_HEALTH_FAIL,
-        .message = "Disk full"
-    };
+        .name = "probe_fail", .status = CWIST_HEALTH_FAIL, .message = "Disk full"};
 }
 
 static void test_healthz_basic_and_slot_reuse(void) {

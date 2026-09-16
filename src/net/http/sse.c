@@ -8,10 +8,14 @@
 #include <string.h>
 #include <sys/socket.h>
 
-struct cwist_sse_stream { int fd; int closed; pthread_mutex_t mutex; };
+struct cwist_sse_stream {
+    int fd;
+    int closed;
+    pthread_mutex_t mutex;
+};
 
 static cwist_error_t sse_error(int value) {
-    return (cwist_error_t){ .errtype = CWIST_ERR_INT16, .error.err_i16 = value };
+    return (cwist_error_t){.errtype = CWIST_ERR_INT16, .error.err_i16 = value};
 }
 
 static int append_field(cwist_sstring *out, const char *name, const char *value) {
@@ -23,7 +27,8 @@ static int append_field(cwist_sstring *out, const char *name, const char *value)
         if (cwist_sstring_append(out, name).error.err_i16 ||
             cwist_sstring_append(out, ":").error.err_i16 ||
             (len && cwist_sstring_append_len(out, line, len).error.err_i16) ||
-            cwist_sstring_append(out, "\n").error.err_i16) return -1;
+            cwist_sstring_append(out, "\n").error.err_i16)
+            return -1;
         line = end ? end + 1 : NULL;
     } while (line);
     return 0;
@@ -50,15 +55,18 @@ static cwist_sstring *format_event(const char *event, const char *id, int retry_
 }
 
 cwist_error_t cwist_sse_response_init(cwist_http_response *res) {
-    if (!res || cwist_http_header_add(&res->headers, "Content-Type", "text/event-stream; charset=utf-8").error.err_i16 ||
+    if (!res ||
+        cwist_http_header_add(&res->headers, "Content-Type", "text/event-stream; charset=utf-8")
+            .error.err_i16 ||
         cwist_http_header_add(&res->headers, "Cache-Control", "no-cache").error.err_i16 ||
-        cwist_http_header_add(&res->headers, "X-Accel-Buffering", "no").error.err_i16) return sse_error(-1);
+        cwist_http_header_add(&res->headers, "X-Accel-Buffering", "no").error.err_i16)
+        return sse_error(-1);
     res->keep_alive = true;
     return sse_error(0);
 }
 
-cwist_error_t cwist_sse_response_event(cwist_http_response *res, const char *event,
-                                       const char *id, int retry_ms, const char *data) {
+cwist_error_t cwist_sse_response_event(cwist_http_response *res, const char *event, const char *id,
+                                       int retry_ms, const char *data) {
     if (!res || retry_ms < -1) return sse_error(-1);
     cwist_sstring *frame = format_event(event, id, retry_ms, data, 0);
     if (!frame) return sse_error(-1);
@@ -86,24 +94,29 @@ static int send_all(int fd, const char *data, size_t len) {
         ssize_t n = send(fd, data, len, MSG_NOSIGNAL);
         if (n < 0 && errno == EINTR) continue;
         if (n <= 0) return -1;
-        data += n; len -= (size_t)n;
+        data += n;
+        len -= (size_t)n;
     }
     return 0;
 }
 
 cwist_sse_stream_t *cwist_sse_stream_open(cwist_http_request *req) {
-    static const char headers[] = "HTTP/1.1 200 OK\r\nContent-Type: text/event-stream; charset=utf-8\r\nCache-Control: no-cache\r\nX-Accel-Buffering: no\r\nConnection: keep-alive\r\n\r\n";
-    if (!req || req->client_fd < 0 || req->upgraded || send_all(req->client_fd, headers, sizeof(headers) - 1)) return NULL;
+    static const char headers[] =
+        "HTTP/1.1 200 OK\r\nContent-Type: text/event-stream; charset=utf-8\r\nCache-Control: no-cache\r\nX-Accel-Buffering: no\r\nConnection: keep-alive\r\n\r\n";
+    if (!req || req->client_fd < 0 || req->upgraded ||
+        send_all(req->client_fd, headers, sizeof(headers) - 1))
+        return NULL;
     cwist_sse_stream_t *stream = cwist_alloc(sizeof(*stream));
     if (!stream) return NULL;
-    stream->fd = req->client_fd; stream->closed = 0;
+    stream->fd = req->client_fd;
+    stream->closed = 0;
     pthread_mutex_init(&stream->mutex, NULL);
     req->upgraded = true;
     return stream;
 }
 
-cwist_error_t cwist_sse_stream_send(cwist_sse_stream_t *stream, const char *event,
-                                    const char *id, int retry_ms, const char *data) {
+cwist_error_t cwist_sse_stream_send(cwist_sse_stream_t *stream, const char *event, const char *id,
+                                    int retry_ms, const char *data) {
     if (!stream || retry_ms < -1) return sse_error(-1);
     cwist_sstring *frame = format_event(event, id, retry_ms, data, 0);
     if (!frame) return sse_error(-1);

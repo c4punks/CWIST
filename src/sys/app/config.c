@@ -15,8 +15,7 @@
 static size_t cwist_config_hash(const char *key) {
     size_t hash = 5381;
     int c;
-    while ((c = *key++))
-        hash = ((hash << 5) + hash) + c;
+    while ((c = *key++)) hash = ((hash << 5) + hash) + c;
     return hash;
 }
 
@@ -24,7 +23,8 @@ cwist_config *cwist_config_create(void) {
     cwist_config *cfg = (cwist_config *)cwist_alloc(sizeof(cwist_config));
     if (!cfg) return NULL;
     cfg->bucket_count = CWIST_CONFIG_BUCKETS;
-    cfg->buckets = (cwist_config_bucket **)cwist_alloc_array(cfg->bucket_count, sizeof(cwist_config_bucket *));
+    cfg->buckets =
+        (cwist_config_bucket **)cwist_alloc_array(cfg->bucket_count, sizeof(cwist_config_bucket *));
     if (!cfg->buckets) {
         cwist_free(cfg);
         return NULL;
@@ -108,8 +108,7 @@ void cwist_config_load_env(cwist_config *cfg, const char *prefix) {
         if (!eq) continue;
         size_t key_len = (size_t)(eq - *env);
         if (prefix_len > 0) {
-            if (key_len < prefix_len || strncmp(*env, prefix, prefix_len) != 0)
-                continue;
+            if (key_len < prefix_len || strncmp(*env, prefix, prefix_len) != 0) continue;
         }
         char *key CWIST_DEFER_FREE = (char *)cwist_alloc(key_len + 1);
         memcpy(key, *env, key_len);

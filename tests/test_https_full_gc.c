@@ -115,10 +115,10 @@ static void test_thread_exit_sweep(void) {
 
 int main(void) {
     signal(SIGPIPE, SIG_IGN); /* the client side of the test closes its fd
-                                * right after SSL_shutdown(); the server's
-                                * own SSL_shutdown() write can then race a
-                                * SIGPIPE, same as the real app -- see
-                                * src/sys/app/app.c's own SIG_IGN. */
+                               * right after SSL_shutdown(); the server's
+                               * own SSL_shutdown() write can then race a
+                               * SIGPIPE, same as the real app -- see
+                               * src/sys/app/app.c's own SIG_IGN. */
     cwist_full_gc(true);
     test_explicit_close();
     test_thread_exit_sweep();

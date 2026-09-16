@@ -69,7 +69,7 @@ static void bulk_handler(cwist_http_request *req, cwist_http_response *res) {
     }
     if (delay_us > 0) {
         struct timespec delay = {.tv_sec = delay_us / 1000000,
-                                .tv_nsec = (delay_us % 1000000) * 1000};
+                                 .tv_nsec = (delay_us % 1000000) * 1000};
         nanosleep(&delay, NULL);
     }
     char body[32];
@@ -220,8 +220,7 @@ int main(void) {
     pthread_cond_signal(&gate_cv);
     pthread_mutex_unlock(&gate_lock);
 
-    struct pollfd fds[2] = {{.fd = bulk[1], .events = POLLIN},
-                           {.fd = probe[1], .events = POLLIN}};
+    struct pollfd fds[2] = {{.fd = bulk[1], .events = POLLIN}, {.fd = probe[1], .events = POLLIN}};
     char *responses[2] = {calloc(1, RESPONSE_CAP), calloc(1, RESPONSE_CAP)};
     assert(responses[0] && responses[1]);
     size_t used[2] = {0, 0};
@@ -253,14 +252,14 @@ int main(void) {
     }
     atomic_store(&g_cwist_running, false);
     /* Wake kqueue too: its idle wait does not have the Linux timeout. */
-    cwist_reactor_post_t wake = { .cb = wake_for_shutdown };
+    cwist_reactor_post_t wake = {.cb = wake_for_shutdown};
     assert(cwist_reactor_post(reactor, &wake));
     cwist_http_pool_destroy();
     check_responses(responses[0], used[0]);
     assert(strstr(responses[1], "\r\n\r\nprobe"));
     assert(bulk_count == REQUESTS);
-    printf("pipeline=%d probe_after=%d probe_ms=%.3f delay_us=%ld\n",
-           bulk_count, probe_at, probe_ms, delay_us);
+    printf("pipeline=%d probe_after=%d probe_ms=%.3f delay_us=%ld\n", bulk_count, probe_at,
+           probe_ms, delay_us);
     fflush(stdout);
     free(responses[0]);
     free(responses[1]);

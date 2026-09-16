@@ -31,8 +31,7 @@ struct cwist_session {
 
 /* --- Base64 helpers (RFC 4648) ------------------------------------------ */
 
-static const char b64[] =
-    "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+static const char b64[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
 
 static char *base64_encode(const uint8_t *data, size_t len) {
     size_t out_len = 4 * ((len + 2) / 3);
@@ -42,7 +41,7 @@ static char *base64_encode(const uint8_t *data, size_t len) {
         uint32_t v = ((uint32_t)data[i]) << 16;
         if (i + 1 < len) v |= ((uint32_t)data[i + 1]) << 8;
         if (i + 2 < len) v |= ((uint32_t)data[i + 2]);
-        out[j]     = b64[(v >> 18) & 0x3F];
+        out[j] = b64[(v >> 18) & 0x3F];
         out[j + 1] = b64[(v >> 12) & 0x3F];
         out[j + 2] = (i + 1 < len) ? b64[(v >> 6) & 0x3F] : '=';
         out[j + 3] = (i + 2 < len) ? b64[v & 0x3F] : '=';
@@ -83,14 +82,11 @@ static int base64_decode(const char *in, uint8_t *out, size_t out_len) {
 
 /* --- HMAC-SHA256 -------------------------------------------------------- */
 
-static bool hmac_sha256(const char *key, size_t key_len,
-                        const char *msg, size_t msg_len,
+static bool hmac_sha256(const char *key, size_t key_len, const char *msg, size_t msg_len,
                         uint8_t out[32]) {
     unsigned int len = 32;
-    unsigned char *r = HMAC(EVP_sha256(),
-                            key, (int)key_len,
-                            (const unsigned char *)msg, msg_len,
-                            out, &len);
+    unsigned char *r =
+        HMAC(EVP_sha256(), key, (int)key_len, (const unsigned char *)msg, msg_len, out, &len);
     return r != NULL && len == 32;
 }
 
@@ -118,7 +114,7 @@ static char *generate_secret(size_t len) {
     }
     static const char hex[] = "0123456789abcdef";
     for (size_t i = 0; i < len; i++) {
-        secret[i * 2]     = hex[buf[i] >> 4];
+        secret[i * 2] = hex[buf[i] >> 4];
         secret[i * 2 + 1] = hex[buf[i] & 0x0F];
     }
     secret[len * 2] = '\0';
@@ -167,8 +163,8 @@ static bool verify_signature(cwist_app *app, const char *payload_b64, const char
     uint8_t sig[32];
     if (base64_decode(sig_b64, sig, sizeof(sig)) != 32) return false;
     uint8_t expected[32];
-    if (!hmac_sha256(app->session_secret, strlen(app->session_secret),
-                     payload_b64, strlen(payload_b64), expected)) {
+    if (!hmac_sha256(app->session_secret, strlen(app->session_secret), payload_b64,
+                     strlen(payload_b64), expected)) {
         return false;
     }
     return memcmp(sig, expected, 32) == 0;
@@ -196,8 +192,7 @@ static cwist_query_map *parse_payload(const char *payload_b64) {
     return map;
 }
 
-cwist_session_t *cwist_session_start(cwist_app *app,
-                                     cwist_http_request *req,
+cwist_session_t *cwist_session_start(cwist_app *app, cwist_http_request *req,
                                      cwist_http_response *res) {
     if (!app || !req || !res) return NULL;
     if (!app->session_secret && cwist_app_use_session(app, NULL) != 0) return NULL;
@@ -325,8 +320,7 @@ int cwist_session_commit(cwist_session_t *session, cwist_http_response *res) {
 
 /* Middleware ------------------------------------------------------------- */
 
-static void cwist_mw_session_handler(cwist_http_request *req,
-                                     cwist_http_response *res,
+static void cwist_mw_session_handler(cwist_http_request *req, cwist_http_response *res,
                                      cwist_handler_func next) {
     cwist_app *app = req->app;
     if (!app) {

@@ -25,7 +25,8 @@ cwist_error_t cwist_nats_connect(cwist_nats_t **nats, const char *url);
 /**
  * @brief Subscribe to a subject.
  */
-cwist_error_t cwist_nats_subscribe(cwist_nats_t *nats, const char *subject, cwist_nats_msg_cb cb, void *ctx);
+cwist_error_t cwist_nats_subscribe(cwist_nats_t *nats, const char *subject, cwist_nats_msg_cb cb,
+                                   void *ctx);
 
 /**
  * @brief Publish a string message.

@@ -5,7 +5,8 @@
 #include <string.h>
 
 static cJSON *hello_resolver(const cJSON *args, const cJSON *variables, void *ctx) {
-    (void)variables; (void)ctx;
+    (void)variables;
+    (void)ctx;
     const char *name = "world";
     if (args) {
         cJSON *name_arg = cJSON_GetObjectItemCaseSensitive(args, "name");
@@ -19,7 +20,8 @@ static cJSON *hello_resolver(const cJSON *args, const cJSON *variables, void *ct
 }
 
 static cJSON *create_user_mutation(const cJSON *args, const cJSON *variables, void *ctx) {
-    (void)variables; (void)ctx;
+    (void)variables;
+    (void)ctx;
     cJSON *res = cJSON_CreateObject();
     cJSON_AddNumberToObject(res, "id", 42);
     if (args) {
@@ -40,31 +42,42 @@ int main(void) {
 
     /* Test 1: Query with field argument */
     cwist_sstring *out = NULL;
-    assert(cwist_graphql_execute(schema, "{\"query\":\"{ greet(name: \\\"alice\\\") }\"}", &out).error.err_i16 == 0);
+    assert(cwist_graphql_execute(schema, "{\"query\":\"{ greet(name: \\\"alice\\\") }\"}", &out)
+               .error.err_i16 == 0);
     assert(strstr(out->data, "\"greet\":\"hello alice\""));
     cwist_sstring_destroy(out);
 
     /* Test 2: Query with Field Alias */
     out = NULL;
-    assert(cwist_graphql_execute(schema, "{\"query\":\"{ myAlias: greet }\"}", &out).error.err_i16 == 0);
+    assert(
+        cwist_graphql_execute(schema, "{\"query\":\"{ myAlias: greet }\"}", &out).error.err_i16 ==
+        0);
     assert(strstr(out->data, "\"myAlias\":\"hello world\""));
     cwist_sstring_destroy(out);
 
     /* Test 3: Mutation execution */
     out = NULL;
-    assert(cwist_graphql_execute(schema, "{\"query\":\"mutation { createUser(name: \\\"bob\\\") }\"}", &out).error.err_i16 == 0);
+    assert(cwist_graphql_execute(schema,
+                                 "{\"query\":\"mutation { createUser(name: \\\"bob\\\") }\"}", &out)
+               .error.err_i16 == 0);
     assert(strstr(out->data, "\"createUser\":{\"id\":42,\"name\":\"bob\"}"));
     cwist_sstring_destroy(out);
 
     /* Test 4: Variable replacement in arguments */
     out = NULL;
-    assert(cwist_graphql_execute(schema, "{\"query\":\"{ greet(name: $userName) }\", \"variables\": {\"userName\": \"charlie\"}}", &out).error.err_i16 == 0);
+    assert(
+        cwist_graphql_execute(
+            schema,
+            "{\"query\":\"{ greet(name: $userName) }\", \"variables\": {\"userName\": \"charlie\"}}",
+            &out)
+            .error.err_i16 == 0);
     assert(strstr(out->data, "\"greet\":\"hello charlie\""));
     cwist_sstring_destroy(out);
 
     /* Test 5: Unterminated string argument */
     out = NULL;
-    assert(cwist_graphql_execute(schema, "{\"query\":\"{ greet(name: \\\"unterminated) }\"}", &out).error.err_i16 == 0);
+    assert(cwist_graphql_execute(schema, "{\"query\":\"{ greet(name: \\\"unterminated) }\"}", &out)
+               .error.err_i16 == 0);
     assert(strstr(out->data, "Unterminated string in argument"));
     cwist_sstring_destroy(out);
 

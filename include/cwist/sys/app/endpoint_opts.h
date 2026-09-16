@@ -18,7 +18,7 @@
 typedef uint32_t cwist_endpoint_opt_t;
 
 /** Immediate execution with no special tuning (default). */
-#define CWIST_DYNAMIC         (1u << 0)
+#define CWIST_DYNAMIC (1u << 0)
 /**
  * Hint that the route's response is request-invariant.
  *
@@ -27,13 +27,13 @@ typedef uint32_t cwist_endpoint_opt_t;
  * CWIST_ENDPOINT_PUBLIC_FIXED assertion admits the restricted representation
  * cache (see docs/fixed-cache-status.md).
  */
-#define CWIST_ENDPOINT_FIXED  (1u << 1)
+#define CWIST_ENDPOINT_FIXED (1u << 1)
 /** Explicit public invariant representation assertion; independent of FIXED.
  * No auth/personalization or required per-request side effects. See
  * docs/fixed-cache-status.md for the restricted HTTP/1.1 admission profile. */
 #define CWIST_ENDPOINT_PUBLIC_FIXED (1u << 3)
 /** Serve large files using OS-specific zero-copy fast paths. */
-#define CWIST_ENDPOINT_FILE   (1u << 2)
+#define CWIST_ENDPOINT_FILE (1u << 2)
 
 /** @brief Default option for new endpoints. */
 #define CWIST_ENDPOINT_DEFAULT (CWIST_DYNAMIC)

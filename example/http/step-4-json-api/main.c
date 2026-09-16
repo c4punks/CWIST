@@ -46,7 +46,7 @@ static void create_user(cwist_http_request *req, cwist_http_response *res) {
             cJSON *name = cJSON_GetObjectItem(parsed, "name");
             cwist_json_add_string(jb, "status", "created");
             cwist_json_add_string(jb, "name",
-                (name && cJSON_IsString(name)) ? name->valuestring : "unknown");
+                                  (name && cJSON_IsString(name)) ? name->valuestring : "unknown");
             cJSON_Delete(parsed);
         } else {
             cwist_json_add_string(jb, "status", "error");

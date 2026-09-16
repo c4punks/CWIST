@@ -14,10 +14,10 @@
 #include <sqlite3.h>
 
 /** @brief Return codes. */
-#define CWIST_MIGRATE_OK           0
+#define CWIST_MIGRATE_OK 0
 #define CWIST_MIGRATE_ERR_GENERIC (-1)
-#define CWIST_MIGRATE_ERR_SQL     (-2)
-#define CWIST_MIGRATE_ERR_ARGS    (-3)
+#define CWIST_MIGRATE_ERR_SQL (-2)
+#define CWIST_MIGRATE_ERR_ARGS (-3)
 
 /**
  * @brief A single migration step.
@@ -29,7 +29,7 @@
  * - down_sql: SQL executed when rolling back; NULL means irreversible
  */
 typedef struct cwist_migration_t {
-    int         version;
+    int version;
     const char *name;
     const char *up_sql;
     const char *down_sql; /**< May be NULL for irreversible migrations. */
@@ -61,8 +61,7 @@ int cwist_migrate_up(sqlite3 *db, const cwist_migration_t *migrations, int count
  * @param steps      Number of versions to roll back (0 = all applied).
  * @return CWIST_MIGRATE_OK on success, negative on failure.
  */
-int cwist_migrate_down(sqlite3 *db, const cwist_migration_t *migrations,
-                       int count, int steps);
+int cwist_migrate_down(sqlite3 *db, const cwist_migration_t *migrations, int count, int steps);
 
 /**
  * @brief Return the highest version number that has been applied.

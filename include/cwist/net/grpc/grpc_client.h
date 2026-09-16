@@ -25,8 +25,8 @@ typedef struct cwist_grpc_client_options {
     int verify_peer;              /* TLS only: verify server certificate (default 1) */
     uint64_t connect_timeout_ms;  /* 0 = 10000 */
     const char *tls_server_name;  /* TLS only: SNI hostname; defaults to the
-                                   * connect host (channels set this to the
-                                   * original dns name, not the resolved IP) */
+                                  * connect host (channels set this to the
+                                  * original dns name, not the resolved IP) */
 } cwist_grpc_client_options;
 
 /**
@@ -47,8 +47,7 @@ void cwist_grpc_client_close(cwist_grpc_client *client);
  * ends with CWIST_GRPC_DEADLINE_EXCEEDED.  Returns NULL on failure
  * (including when another call on this client is still active).
  */
-cwist_grpc_call *cwist_grpc_call_start(cwist_grpc_client *client,
-                                       const char *method,
+cwist_grpc_call *cwist_grpc_call_start(cwist_grpc_client *client, const char *method,
                                        const void *request, size_t request_len,
                                        uint64_t timeout_ms);
 
@@ -58,11 +57,9 @@ cwist_grpc_call *cwist_grpc_call_start(cwist_grpc_client *client,
  * is non-zero.  Used by the channel retry engine; plain callers want
  * cwist_grpc_call_start().
  */
-cwist_grpc_call *cwist_grpc_call_start_ex(cwist_grpc_client *client,
-                                          const char *method,
+cwist_grpc_call *cwist_grpc_call_start_ex(cwist_grpc_client *client, const char *method,
                                           const void *request, size_t request_len,
-                                          uint64_t timeout_ms,
-                                          uint32_t previous_attempts);
+                                          uint64_t timeout_ms, uint32_t previous_attempts);
 
 /**
  * Pump until the call's response headers arrive or the stream ends.

@@ -134,17 +134,14 @@ static void cwist_queue_push(cwist_io_queue *q, job_node_t *node) {
         job_node_t *next = atomic_load_explicit(&tail->next, memory_order_acquire);
         if (tail == atomic_load_explicit(&q->tail, memory_order_acquire)) {
             if (!next) {
-                if (atomic_compare_exchange_weak_explicit(&tail->next, &next, node,
-                                                          memory_order_release,
-                                                          memory_order_relaxed)) {
-                    atomic_compare_exchange_strong_explicit(&q->tail, &tail, node,
-                                                            memory_order_release,
-                                                            memory_order_relaxed);
+                if (atomic_compare_exchange_weak_explicit(
+                        &tail->next, &next, node, memory_order_release, memory_order_relaxed)) {
+                    atomic_compare_exchange_strong_explicit(
+                        &q->tail, &tail, node, memory_order_release, memory_order_relaxed);
                     break;
                 }
             } else {
-                atomic_compare_exchange_weak_explicit(&q->tail, &tail, next,
-                                                      memory_order_release,
+                atomic_compare_exchange_weak_explicit(&q->tail, &tail, next, memory_order_release,
                                                       memory_order_relaxed);
             }
         }
@@ -175,13 +172,11 @@ static job_node_t *cwist_queue_pop(cwist_io_queue *q) {
             break;
         }
         if (head == tail) {
-            atomic_compare_exchange_weak_explicit(&q->tail, &tail, next,
-                                                  memory_order_release,
+            atomic_compare_exchange_weak_explicit(&q->tail, &tail, next, memory_order_release,
                                                   memory_order_relaxed);
             continue;
         }
-        if (atomic_compare_exchange_weak_explicit(&q->head, &head, next,
-                                                  memory_order_acq_rel,
+        if (atomic_compare_exchange_weak_explicit(&q->head, &head, next, memory_order_acq_rel,
                                                   memory_order_relaxed)) {
             /* head is now unreachable from the queue, but a preempted
              * producer may still hold it; defer the free across an epoch
@@ -206,9 +201,8 @@ static bool cwist_queue_wait(cwist_io_queue *q) {
            atomic_load_explicit(&q->running, memory_order_acquire)) {
         pthread_cond_wait(&q->sleep_cond, &q->sleep_lock);
     }
-    bool should_continue =
-        atomic_load_explicit(&q->running, memory_order_acquire) ||
-        atomic_load_explicit(&q->pending_jobs, memory_order_acquire) > 0;
+    bool should_continue = atomic_load_explicit(&q->running, memory_order_acquire) ||
+                           atomic_load_explicit(&q->pending_jobs, memory_order_acquire) > 0;
     pthread_mutex_unlock(&q->sleep_lock);
     return should_continue;
 }

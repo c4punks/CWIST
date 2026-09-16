@@ -65,8 +65,8 @@ static void fd_write_all(int fd, const void *buf, size_t len) {
     }
 }
 
-static void fd_send_frame(int fd, uint8_t type, uint8_t flags,
-                          uint32_t stream_id, const void *payload, uint32_t len) {
+static void fd_send_frame(int fd, uint8_t type, uint8_t flags, uint32_t stream_id,
+                          const void *payload, uint32_t len) {
     uint8_t hdr[9];
     hdr[0] = (uint8_t)((len >> 16) & 0xff);
     hdr[1] = (uint8_t)((len >> 8) & 0xff);
@@ -91,7 +91,7 @@ typedef struct {
 
 /* Read one frame; returns 0 on success, -1 on timeout/EOF. */
 static int fd_read_frame(int fd, test_frame *f, int timeout_ms) {
-    struct pollfd pfd = { .fd = fd, .events = POLLIN };
+    struct pollfd pfd = {.fd = fd, .events = POLLIN};
     int pr = poll(&pfd, 1, timeout_ms);
     if (pr <= 0) return -1;
     uint8_t hdr[9];
@@ -126,8 +126,8 @@ static int frame_payload_contains(const test_frame *f, const char *needle) {
 
 /* Read until a frame matching type+stream arrives (skipping connection
  * frames); NULL type filter reads anything. */
-static int fd_read_stream_frame(int fd, test_frame *f, uint8_t want_type,
-                                uint32_t stream_id, int timeout_ms) {
+static int fd_read_stream_frame(int fd, test_frame *f, uint8_t want_type, uint32_t stream_id,
+                                int timeout_ms) {
     for (;;) {
         if (fd_read_frame(fd, f, timeout_ms) != 0) return -1;
         if (f->type == 0x06 && !(f->flags & 0x01)) {
@@ -162,8 +162,8 @@ static void wire_live(cwist_grpc_stream *stream, void *user_ctx) {
         assert(meta && strcmp(meta, "live-meta") == 0);
         uint8_t bin[8];
         size_t bin_len = 0;
-        assert(cwist_grpc_metadata_get_binary(stream->req, "trace-bin",
-                                              bin, sizeof(bin), &bin_len) == 0);
+        assert(cwist_grpc_metadata_get_binary(stream->req, "trace-bin", bin, sizeof(bin),
+                                              &bin_len) == 0);
         assert(bin_len == 2 && bin[0] == 0xaa && bin[1] == 0xbb);
     }
     cwist_grpc_message msg;
@@ -171,23 +171,19 @@ static void wire_live(cwist_grpc_stream *stream, void *user_ctx) {
         atomic_fetch_add(&st->messages_seen, 1);
         assert(cwist_grpc_stream_send(stream, msg.data, msg.len) == 0);
     }
-    if (cwist_grpc_stream_cancelled(stream))
-        atomic_store(&st->cancelled_seen, 1);
+    if (cwist_grpc_stream_cancelled(stream)) atomic_store(&st->cancelled_seen, 1);
     cwist_grpc_stream_close(stream, stream->status, stream->status_message);
 }
 
 static void wire_block(cwist_grpc_stream *stream, void *user_ctx) {
     live_state *st = user_ctx;
     cwist_grpc_message msg;
-    while (cwist_grpc_stream_recv(stream, &msg) == 1)
-        ;
-    if (cwist_grpc_stream_cancelled(stream))
-        atomic_store(&st->cancelled_seen, 1);
+    while (cwist_grpc_stream_recv(stream, &msg) == 1);
+    if (cwist_grpc_stream_cancelled(stream)) atomic_store(&st->cancelled_seen, 1);
     cwist_grpc_stream_close(stream, stream->status, stream->status_message);
 }
 
-static void h2_test_bridge(void *user_ctx, cwist_http_request *req,
-                           cwist_http_response *res) {
+static void h2_test_bridge(void *user_ctx, cwist_http_request *req, cwist_http_response *res) {
     cwist_app *app = user_ctx;
     req->app = app;
     cwist_app_dispatch(app, req, res);
@@ -201,17 +197,15 @@ typedef struct {
 
 static void *h2_test_server(void *arg) {
     server_ctx *ctx = arg;
-    cwist_https_connection conn = {
-        .fd = ctx->fd,
-        .ssl = NULL,
-        .read_buf = NULL,
-        .buf_len = 0,
-        .negotiated_http2 = true,
-        .negotiated_protocol = CWIST_HTTPS_PROTOCOL_HTTP2,
-        .http2_sequenced_data = false
-    };
-    ctx->result = cwist_http2_serve_connection_ex(&conn, ctx->app, h2_test_bridge,
-                                                  cwist_grpc_http2_hooks());
+    cwist_https_connection conn = {.fd = ctx->fd,
+                                   .ssl = NULL,
+                                   .read_buf = NULL,
+                                   .buf_len = 0,
+                                   .negotiated_http2 = true,
+                                   .negotiated_protocol = CWIST_HTTPS_PROTOCOL_HTTP2,
+                                   .http2_sequenced_data = false};
+    ctx->result =
+        cwist_http2_serve_connection_ex(&conn, ctx->app, h2_test_bridge, cwist_grpc_http2_hooks());
     close(ctx->fd);
     return NULL;
 }
@@ -232,8 +226,7 @@ static int start_server(cwist_app *app, server_ctx *ctx, pthread_t *tid) {
     test_frame f;
     for (;;) {
         assert(fd_read_frame(cfd, &f, 5000) == 0);
-        if (f.type == 0x06 && !(f.flags & 0x01))
-            fd_send_frame(cfd, 0x06, 0x01, 0, f.payload, 8);
+        if (f.type == 0x06 && !(f.flags & 0x01)) fd_send_frame(cfd, 0x06, 0x01, 0, f.payload, 8);
         if (f.type == 0x04 && (f.flags & 0x01)) break; /* SETTINGS ACK */
     }
     return cfd;
@@ -247,8 +240,8 @@ static void stop_server(int cfd, server_ctx *ctx, pthread_t tid) {
 }
 
 /* Build a request header block; extra headers appended as literal pairs. */
-static size_t build_request_block(uint8_t *dst, const char *path,
-                                  const char *extra[][2], size_t extra_count) {
+static size_t build_request_block(uint8_t *dst, const char *path, const char *extra[][2],
+                                  size_t extra_count) {
     size_t pos = 0;
     dst[pos++] = 0x83; /* :method POST */
     dst[pos++] = 0x86; /* :scheme http */
@@ -256,13 +249,12 @@ static size_t build_request_block(uint8_t *dst, const char *path,
     pos += te_header(dst + pos, ":authority", "localhost");
     pos += te_header(dst + pos, "content-type", "application/grpc");
     pos += te_header(dst + pos, "te", "trailers");
-    for (size_t i = 0; i < extra_count; i++)
-        pos += te_header(dst + pos, extra[i][0], extra[i][1]);
+    for (size_t i = 0; i < extra_count; i++) pos += te_header(dst + pos, extra[i][0], extra[i][1]);
     return pos;
 }
 
-static void make_pb_frame(uint8_t *out, size_t *out_len, const char *text,
-                          int compressed, const uint8_t *payload, size_t payload_len) {
+static void make_pb_frame(uint8_t *out, size_t *out_len, const char *text, int compressed,
+                          const uint8_t *payload, size_t payload_len) {
     (void)text;
     out[0] = compressed ? 1 : 0;
     out[1] = (uint8_t)((payload_len >> 24) & 0xff);
@@ -279,8 +271,7 @@ static void decode_echo_payload(const test_frame *data_frame, const uint8_t **ms
     assert(data_frame->len >= 5);
     uint32_t len = ((uint32_t)data_frame->payload[1] << 24) |
                    ((uint32_t)data_frame->payload[2] << 16) |
-                   ((uint32_t)data_frame->payload[3] << 8) |
-                   data_frame->payload[4];
+                   ((uint32_t)data_frame->payload[3] << 8) | data_frame->payload[4];
     assert((uint32_t)(len + 5) <= data_frame->len);
     *msg = data_frame->payload + 5;
     *msg_len = len;
@@ -333,8 +324,8 @@ static void test_streaming_incremental(cwist_app *app, live_state *st) {
     int cfd = start_server(app, &ctx, &tid);
 
     const char *extra[][2] = {
-        { "X-Meta-Echo", "live-meta" }, /* mixed case on purpose */
-        { "trace-bin", "qrs=" },        /* base64 of 0xaa 0xbb */
+        {"X-Meta-Echo", "live-meta"}, /* mixed case on purpose */
+        {"trace-bin", "qrs="},        /* base64 of 0xaa 0xbb */
     };
     uint8_t block[4096];
     size_t blen = build_request_block(block, "/cwist.test.Wire/Live", extra, 2);
@@ -393,7 +384,7 @@ static void test_deadline(cwist_app *app, live_state *st) {
     pthread_t tid;
     int cfd = start_server(app, &ctx, &tid);
 
-    const char *extra[][2] = { { "grpc-timeout", "80m" } };
+    const char *extra[][2] = {{"grpc-timeout", "80m"}};
     uint8_t block[4096];
     size_t blen = build_request_block(block, "/cwist.test.Wire/Block", extra, 1);
     fd_send_frame(cfd, 0x01, 0x04, 1, block, (uint32_t)blen);
@@ -422,12 +413,12 @@ static void test_cancellation(cwist_app *app, live_state *st) {
     fd_send_frame(cfd, 0x01, 0x04, 1, block, (uint32_t)blen);
 
     /* The server stays silent until the handler speaks; cancel immediately. */
-    uint8_t rst[4] = { 0, 0, 0, 0x08 }; /* CANCEL */
+    uint8_t rst[4] = {0, 0, 0, 0x08}; /* CANCEL */
     fd_send_frame(cfd, 0x03, 0, 1, rst, 4); /* RST_STREAM */
 
     /* The handler thread must observe cancellation; give it a moment. */
     for (int i = 0; i < 200 && !atomic_load(&st->cancelled_seen); i++) {
-        struct timespec ts = { 0, 10000000 };
+        struct timespec ts = {0, 10000000};
         nanosleep(&ts, NULL);
     }
     assert(atomic_load(&st->cancelled_seen) == 1);
@@ -442,7 +433,7 @@ static void test_gzip(cwist_app *app, live_state *st) {
     pthread_t tid;
     int cfd = start_server(app, &ctx, &tid);
 
-    const char *extra[][2] = { { "grpc-encoding", "gzip" } };
+    const char *extra[][2] = {{"grpc-encoding", "gzip"}};
     uint8_t block[4096];
     size_t blen = build_request_block(block, "/cwist.test.Wire/Live", extra, 1);
     fd_send_frame(cfd, 0x01, 0x04, 1, block, (uint32_t)blen);
@@ -451,8 +442,8 @@ static void test_gzip(cwist_app *app, live_state *st) {
     uint8_t zipped[256];
     z_stream zs;
     memset(&zs, 0, sizeof(zs));
-    assert(deflateInit2(&zs, Z_DEFAULT_COMPRESSION, Z_DEFLATED,
-                        16 + MAX_WBITS, 8, Z_DEFAULT_STRATEGY) == Z_OK);
+    assert(deflateInit2(&zs, Z_DEFAULT_COMPRESSION, Z_DEFLATED, 16 + MAX_WBITS, 8,
+                        Z_DEFAULT_STRATEGY) == Z_OK);
     zs.next_in = (Bytef *)p1;
     zs.avail_in = (uInt)strlen(p1);
     zs.next_out = zipped;
@@ -495,7 +486,7 @@ static void test_response_gzip(cwist_app *app, live_state *st) {
     pthread_t tid;
     int cfd = start_server(app, &ctx, &tid);
 
-    const char *extra[][2] = { { "grpc-accept-encoding", "gzip, identity" } };
+    const char *extra[][2] = {{"grpc-accept-encoding", "gzip, identity"}};
     uint8_t block[4096];
     size_t blen = build_request_block(block, "/cwist.test.Wire/Live", extra, 1);
     fd_send_frame(cfd, 0x01, 0x04, 1, block, (uint32_t)blen);
@@ -516,10 +507,8 @@ static void test_response_gzip(cwist_app *app, live_state *st) {
     assert(fd_read_stream_frame(cfd, &f, 0x00, 1, 5000) == 0);
     assert(f.len >= 5);
     assert(f.payload[0] == 1); /* compressed flag */
-    uint32_t clen = ((uint32_t)f.payload[1] << 24) |
-                    ((uint32_t)f.payload[2] << 16) |
-                    ((uint32_t)f.payload[3] << 8) |
-                    f.payload[4];
+    uint32_t clen = ((uint32_t)f.payload[1] << 24) | ((uint32_t)f.payload[2] << 16) |
+                    ((uint32_t)f.payload[3] << 8) | f.payload[4];
     assert((uint32_t)(clen + 5) <= f.len);
 
     /* Inflate response payload and check matches p1 */
@@ -551,7 +540,7 @@ static void test_unsupported_encoding(cwist_app *app) {
     pthread_t tid;
     int cfd = start_server(app, &ctx, &tid);
 
-    const char *extra[][2] = { { "grpc-encoding", "snappy" } };
+    const char *extra[][2] = {{"grpc-encoding", "snappy"}};
     uint8_t block[4096];
     size_t blen = build_request_block(block, "/cwist.test.Wire/Live", extra, 1);
     fd_send_frame(cfd, 0x01, 0x04, 1, block, (uint32_t)blen);
@@ -579,8 +568,7 @@ static int decode_health_status(const uint8_t *msg, uint32_t msg_len) {
     cwist_pb_reader_init(&r, msg, msg_len);
     cwist_pb_field field;
     while (cwist_pb_read_field(&r, &field) > 0)
-        if (field.number == 1 && field.wire_type == CWIST_PB_VARINT)
-            return (int)field.varint;
+        if (field.number == 1 && field.wire_type == CWIST_PB_VARINT) return (int)field.varint;
     return -1;
 }
 
@@ -621,7 +609,7 @@ static void test_health_watch(cwist_app *app) {
     /* The watcher registered itself. */
     int i;
     for (i = 0; i < 200 && cwist_app_grpc_health_watchers(app) != 1; i++) {
-        struct timespec ts = { 0, 10000000 };
+        struct timespec ts = {0, 10000000};
         nanosleep(&ts, NULL);
     }
     assert(cwist_app_grpc_health_watchers(app) == 1);
@@ -633,10 +621,10 @@ static void test_health_watch(cwist_app *app) {
     assert(decode_health_status(msg, msg_len) == 2); /* NOT_SERVING */
 
     /* RST_STREAM cancels the watch; the watcher must be reaped. */
-    uint8_t rst[4] = { 0, 0, 0, 0x08 }; /* CANCEL */
+    uint8_t rst[4] = {0, 0, 0, 0x08}; /* CANCEL */
     fd_send_frame(cfd, 0x03, 0, 1, rst, 4);
     for (i = 0; i < 200 && cwist_app_grpc_health_watchers(app) != 0; i++) {
-        struct timespec ts = { 0, 10000000 };
+        struct timespec ts = {0, 10000000};
         nanosleep(&ts, NULL);
     }
     assert(cwist_app_grpc_health_watchers(app) == 0);

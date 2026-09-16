@@ -27,7 +27,7 @@ int main() {
     char buffer[64];
     // Let's skip "Hello, " (7 chars) to get "SString!"
     cwist_error_t seek_err = cwist_sstring_seek(s, buffer, 7);
-    if (seek_err.errtype == CWIST_ERR_INT8 && seek_err.error.err_i8 == ERR_SSTRING_OKAY) { 
+    if (seek_err.errtype == CWIST_ERR_INT8 && seek_err.error.err_i8 == ERR_SSTRING_OKAY) {
         printf("Seek(7):       '%s'\n", buffer);
     } else {
         printf("Seek failed!\n");
@@ -36,7 +36,7 @@ int main() {
     // 5. Change size (safe resize)
     printf("\n[Change Size]\n");
     printf("Current size: %zu\n", s->size);
-    
+
     // Resize to a smaller size (truncate)
     // Warning: Data loss expected if new size < current length
     cwist_error_t err = cwist_sstring_change_size(s, 5, true); // true = allow blow data

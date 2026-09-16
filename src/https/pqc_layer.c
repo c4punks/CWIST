@@ -16,13 +16,10 @@
  * @param ctx OpenSSL/BoringSSL SSL_CTX to mutate.
  * @return true when PQC was applied or not needed; false on failure.
  */
-bool cwist_tls_apply_pqc_layer(cwist_app *app, SSL_CTX *ctx)
-{
-    if (!ctx)
-        return false;
+bool cwist_tls_apply_pqc_layer(cwist_app *app, SSL_CTX *ctx) {
+    if (!ctx) return false;
 
-    if (!app || !app->pqc_layer_enabled)
-        return true;
+    if (!app || !app->pqc_layer_enabled) return true;
 
     const char *groups = app->tls_groups;
     if (!groups) {
@@ -39,16 +36,9 @@ bool cwist_tls_apply_pqc_layer(cwist_app *app, SSL_CTX *ctx)
         return false;
     }
 
-    SSL_CTX_set_options(ctx,
-        SSL_OP_NO_TLSv1 |
-        SSL_OP_NO_TLSv1_1 |
-        SSL_OP_NO_TLSv1_2
-    );
+    SSL_CTX_set_options(ctx, SSL_OP_NO_TLSv1 | SSL_OP_NO_TLSv1_1 | SSL_OP_NO_TLSv1_2);
 
-    CWIST_LOG_INFO(
-        "PQC Layer enabled: groups=%s protocol=TLS1.3",
-        groups
-    );
+    CWIST_LOG_INFO("PQC Layer enabled: groups=%s protocol=TLS1.3", groups);
 
     return true;
 }

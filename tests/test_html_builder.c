@@ -33,7 +33,8 @@ void test_attribute_escaping(void) {
     cwist_sstring *rendered = cwist_html_render(input);
     assert(rendered != NULL && rendered->data != NULL);
     /* Should NOT contain raw unescaped quotes inside value */
-    assert(strstr(rendered->data, "attack&quot; onclick=&quot;evil()&quot; &amp; &#39;more&#39;") != NULL);
+    assert(strstr(rendered->data, "attack&quot; onclick=&quot;evil()&quot; &amp; &#39;more&#39;") !=
+           NULL);
 
     cwist_sstring_destroy(rendered);
     cwist_html_element_destroy(input);

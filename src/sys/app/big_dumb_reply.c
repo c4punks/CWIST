@@ -36,7 +36,7 @@
  * @brief Static SipHash key used to bucket request and response fingerprints.
  */
 static const uint8_t BDR_KEY[16] = {0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07,
-                                     0x08, 0x09, 0x0a, 0x0b, 0x0c, 0x0d, 0x0e, 0x0f};
+                                    0x08, 0x09, 0x0a, 0x0b, 0x0c, 0x0d, 0x0e, 0x0f};
 
 /* --- Blob lifetime -------------------------------------------------------- */
 
@@ -108,7 +108,7 @@ static void bdr_entry_publish(cwist_bdr_t *bdr, bdr_entry_t *entry, bdr_blob_t *
 /* --- Lookup helpers ------------------------------------------------------- */
 
 static uint64_t bdr_hash(const char *method, const char *path) {
-    uint64_t h = siphash24((const void*)path, strlen(path), BDR_KEY);
+    uint64_t h = siphash24((const void *)path, strlen(path), BDR_KEY);
     h ^= (uint64_t)(method[0]);
     return h;
 }
@@ -123,8 +123,7 @@ static bool bdr_entry_should_decay(const cwist_bdr_t *bdr, const bdr_entry_t *en
     if (bdr->max_entry_age_sec > 0 && created > 0) {
         if (now - (time_t)created > bdr->max_entry_age_sec) return true;
     }
-    if (atomic_load_explicit(&entry->is_stable, memory_order_relaxed) &&
-        bdr->revalidate_hits > 0 &&
+    if (atomic_load_explicit(&entry->is_stable, memory_order_relaxed) && bdr->revalidate_hits > 0 &&
         atomic_load_explicit(&entry->hits, memory_order_relaxed) >= bdr->revalidate_hits) {
         return true;
     }
@@ -188,7 +187,8 @@ static void bdr_retire_entry(cwist_bdr_t *bdr, size_t idx, bdr_entry_t *prev, bd
         atomic_store_explicit(&prev->next, atomic_load_explicit(&entry->next, memory_order_acquire),
                               memory_order_release);
     } else {
-        atomic_store_explicit(&bdr->buckets[idx], atomic_load_explicit(&entry->next, memory_order_acquire),
+        atomic_store_explicit(&bdr->buckets[idx],
+                              atomic_load_explicit(&entry->next, memory_order_acquire),
                               memory_order_release);
     }
     bdr_entry_publish(bdr, entry, NULL);
@@ -258,12 +258,14 @@ static void bdr_check_ram(cwist_bdr_t *bdr) {
     if (cwist_is_ram_critical(CWIST_MIB(64))) {
         printf("[BDR] Low RAM. Switching to Disk Cache.\n");
         if (sqlite3_open("cwist_bdr_fallback.db", &bdr->disk_db) == SQLITE_OK) {
-             char *err = NULL;
-             sqlite3_exec(bdr->disk_db, "CREATE TABLE IF NOT EXISTS bdr (hash INTEGER PRIMARY KEY, blob BLOB);", NULL, NULL, &err);
-             if (err) sqlite3_free(err);
+            char *err = NULL;
+            sqlite3_exec(bdr->disk_db,
+                         "CREATE TABLE IF NOT EXISTS bdr (hash INTEGER PRIMARY KEY, blob BLOB);",
+                         NULL, NULL, &err);
+            if (err) sqlite3_free(err);
 
-             sqlite3_exec(bdr->disk_db, "BEGIN TRANSACTION;", NULL, NULL, NULL);
-             for (size_t i = 0; i < bdr->bucket_count; i++) {
+            sqlite3_exec(bdr->disk_db, "BEGIN TRANSACTION;", NULL, NULL, NULL);
+            for (size_t i = 0; i < bdr->bucket_count; i++) {
                 bdr_entry_t *curr = atomic_load_explicit(&bdr->buckets[i], memory_order_acquire);
                 while (curr) {
                     bdr_entry_t *next = atomic_load_explicit(&curr->next, memory_order_acquire);
@@ -272,7 +274,9 @@ static void bdr_check_ram(cwist_bdr_t *bdr) {
                         bdr_blob_t *blob = atomic_load_explicit(&curr->blob, memory_order_acquire);
                         if (blob) {
                             sqlite3_stmt *stmt;
-                            sqlite3_prepare_v2(bdr->disk_db, "INSERT INTO bdr (hash, blob) VALUES (?, ?);", -1, &stmt, NULL);
+                            sqlite3_prepare_v2(bdr->disk_db,
+                                               "INSERT INTO bdr (hash, blob) VALUES (?, ?);", -1,
+                                               &stmt, NULL);
                             sqlite3_bind_int64(stmt, 1, curr->request_hash);
                             sqlite3_bind_blob(stmt, 2, blob->data, (int)blob->len, SQLITE_STATIC);
                             sqlite3_step(stmt);
@@ -288,9 +292,9 @@ static void bdr_check_ram(cwist_bdr_t *bdr) {
                     curr = next;
                 }
                 atomic_store_explicit(&bdr->buckets[i], NULL, memory_order_release);
-             }
-             sqlite3_exec(bdr->disk_db, "COMMIT;", NULL, NULL, NULL);
-             atomic_store_explicit(&bdr->is_disk_mode, true, memory_order_release);
+            }
+            sqlite3_exec(bdr->disk_db, "COMMIT;", NULL, NULL, NULL);
+            atomic_store_explicit(&bdr->is_disk_mode, true, memory_order_release);
         }
     }
 #endif
@@ -348,7 +352,8 @@ void cwist_bdr_destroy(cwist_bdr_t *bdr) {
         while (curr) {
             bdr_entry_t *next = curr->next;
             if (curr == NULL) break;
-            if(curr->blob != NULL) bdr_blob_free_cb(atomic_load_explicit(&curr->blob, memory_order_relaxed));
+            if (curr->blob != NULL)
+                bdr_blob_free_cb(atomic_load_explicit(&curr->blob, memory_order_relaxed));
             cwist_free(curr);
             curr = next;
         }
@@ -396,7 +401,8 @@ const void *cwist_bdr_get_pinned(cwist_bdr_t *bdr, const char *method, const cha
         void *fresh = NULL;
         size_t fresh_len = 0;
         void (*fresh_free)(void *) = NULL;
-        if (hook(entry->revalidate_arg, &fresh, &fresh_len, &fresh_free) && fresh && fresh_len > 0) {
+        if (hook(entry->revalidate_arg, &fresh, &fresh_len, &fresh_free) && fresh &&
+            fresh_len > 0) {
             bdr_blob_t *nb = bdr_blob_wrap(fresh, fresh_len, fresh_free);
             if (nb) {
                 bdr_entry_publish(bdr, entry, nb);
@@ -449,7 +455,8 @@ void *cwist_bdr_copy_get(cwist_bdr_t *bdr, const char *method, const char *path,
 static void cwist_bdr_put_disk(cwist_bdr_t *bdr, uint64_t req_h, const void *data, size_t len) {
     pthread_mutex_lock(&bdr->lock);
     sqlite3_stmt *stmt;
-    sqlite3_prepare_v2(bdr->disk_db, "INSERT OR REPLACE INTO bdr (hash, blob) VALUES (?, ?);", -1, &stmt, NULL);
+    sqlite3_prepare_v2(bdr->disk_db, "INSERT OR REPLACE INTO bdr (hash, blob) VALUES (?, ?);", -1,
+                       &stmt, NULL);
     sqlite3_bind_int64(stmt, 1, (sqlite3_int64)req_h);
     sqlite3_bind_blob(stmt, 2, data, (int)len, SQLITE_STATIC);
     sqlite3_step(stmt);
@@ -457,7 +464,8 @@ static void cwist_bdr_put_disk(cwist_bdr_t *bdr, uint64_t req_h, const void *dat
     pthread_mutex_unlock(&bdr->lock);
 }
 
-void cwist_bdr_put(cwist_bdr_t *bdr, const char *method, const char *path, const void *data, size_t len) {
+void cwist_bdr_put(cwist_bdr_t *bdr, const char *method, const char *path, const void *data,
+                   size_t len) {
     if (!bdr || !method || !path || !data || len == 0) return;
     if (strcmp(method, "GET") != 0) return;
 
@@ -493,7 +501,8 @@ void cwist_bdr_put(cwist_bdr_t *bdr, const char *method, const char *path, const
                 bdr_entry_publish(bdr, entry, blob);
                 atomic_store_explicit(&entry->is_stable, true, memory_order_release);
                 atomic_store_explicit(&entry->hits, 0, memory_order_relaxed);
-                atomic_store_explicit(&entry->created_at, (int64_t)time(NULL), memory_order_relaxed);
+                atomic_store_explicit(&entry->created_at, (int64_t)time(NULL),
+                                      memory_order_relaxed);
             }
         } else {
             /* Different bytes: the entry now tracks the new candidate hash. */
@@ -504,7 +513,8 @@ void cwist_bdr_put(cwist_bdr_t *bdr, const char *method, const char *path, const
     bdr_janitor_tick(bdr);
 }
 
-void cwist_bdr_put_fixed(cwist_bdr_t *bdr, const char *method, const char *path, const void *data, size_t len) {
+void cwist_bdr_put_fixed(cwist_bdr_t *bdr, const char *method, const char *path, const void *data,
+                         size_t len) {
     if (!bdr || !method || !path || !data || len == 0) return;
     if (strcmp(method, "GET") != 0) return;
 
@@ -530,8 +540,8 @@ void cwist_bdr_put_fixed(cwist_bdr_t *bdr, const char *method, const char *path,
 }
 
 void cwist_bdr_put_revalidatable(cwist_bdr_t *bdr, const char *method, const char *path,
-                                 const void *data, size_t len,
-                                 cwist_bdr_revalidate_fn fn, void *arg) {
+                                 const void *data, size_t len, cwist_bdr_revalidate_fn fn,
+                                 void *arg) {
     if (!bdr || !method || !path || !data || len == 0 || !fn) return;
     if (strcmp(method, "GET") != 0) return;
 
@@ -562,7 +572,8 @@ void cwist_bdr_put_revalidatable(cwist_bdr_t *bdr, const char *method, const cha
     bdr_janitor_tick(bdr);
 }
 
-void cwist_bdr_set_limits(cwist_bdr_t *bdr, size_t max_bytes, time_t max_entry_age_sec, uint64_t revalidate_hits) {
+void cwist_bdr_set_limits(cwist_bdr_t *bdr, size_t max_bytes, time_t max_entry_age_sec,
+                          uint64_t revalidate_hits) {
     if (!bdr) return;
     pthread_mutex_lock(&bdr->lock);
     if (max_bytes > 0) bdr->max_bytes = max_bytes;

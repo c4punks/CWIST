@@ -45,7 +45,9 @@ bool cwist_seq_chunk_parse(const uint8_t *data, size_t len, cwist_seq_chunk_t *o
     out->payload = data + CWIST_SEQ_HEADER_SIZE;
 
     /* Reject missing or malformed sequence pairs. */
-    if (out->seq == 0 || out->total == 0 || out->total > CWIST_SEQ_MAX_CHUNKS || out->seq > out->total) return false;
+    if (out->seq == 0 || out->total == 0 || out->total > CWIST_SEQ_MAX_CHUNKS ||
+        out->seq > out->total)
+        return false;
     if (out->payload_len == 0 || out->chunk_size == 0) return false;
     if (out->payload_len > out->chunk_size) return false;
     if (out->seq != out->total && out->payload_len != out->chunk_size) return false;
@@ -54,11 +56,8 @@ bool cwist_seq_chunk_parse(const uint8_t *data, size_t len, cwist_seq_chunk_t *o
     return true;
 }
 
-void cwist_seq_chunk_build_header(uint8_t out[CWIST_SEQ_HEADER_SIZE],
-                                  uint16_t seq,
-                                  uint16_t total,
-                                  uint16_t payload_len,
-                                  uint16_t chunk_size) {
+void cwist_seq_chunk_build_header(uint8_t out[CWIST_SEQ_HEADER_SIZE], uint16_t seq, uint16_t total,
+                                  uint16_t payload_len, uint16_t chunk_size) {
     seq_write_u16(out + 0, seq);
     seq_write_u16(out + 2, total);
     seq_write_u16(out + 4, payload_len);
@@ -69,15 +68,15 @@ void cwist_seq_chunk_build_header(uint8_t out[CWIST_SEQ_HEADER_SIZE],
 /* Message splitter                                                           */
 /* -------------------------------------------------------------------------- */
 
-bool cwist_seq_split(const uint8_t *data,
-                     size_t len,
-                     uint16_t chunk_payload_size,
+bool cwist_seq_split(const uint8_t *data, size_t len, uint16_t chunk_payload_size,
                      cwist_seq_message_t *out) {
     if (!data || len == 0 || chunk_payload_size == 0 || !out) return false;
     memset(out, 0, sizeof(*out));
 
     uint32_t total32 = (uint32_t)((len + chunk_payload_size - 1) / chunk_payload_size);
-    if (total32 == 0 || total32 > UINT16_MAX || total32 > CWIST_SEQ_MAX_CHUNKS || len > CWIST_SEQ_MAX_REASSEMBLED_SIZE) return false;
+    if (total32 == 0 || total32 > UINT16_MAX || total32 > CWIST_SEQ_MAX_CHUNKS ||
+        len > CWIST_SEQ_MAX_REASSEMBLED_SIZE)
+        return false;
     uint16_t total = (uint16_t)total32;
 
     out->chunks = (uint8_t **)cwist_alloc_array(total, sizeof(uint8_t *));
@@ -162,7 +161,9 @@ bool cwist_seq_assembler_feed(cwist_seq_assembler_t *a, const cwist_seq_chunk_t 
     if (!a || !chunk) return false;
 
     /* Validate sequence pair. */
-    if (chunk->seq == 0 || chunk->total == 0 || chunk->total > CWIST_SEQ_MAX_CHUNKS || chunk->seq > chunk->total) return false;
+    if (chunk->seq == 0 || chunk->total == 0 || chunk->total > CWIST_SEQ_MAX_CHUNKS ||
+        chunk->seq > chunk->total)
+        return false;
     if (chunk->payload_len == 0 || chunk->chunk_size == 0) return false;
     if (chunk->payload_len > chunk->chunk_size) return false;
     if (chunk->seq != chunk->total && chunk->payload_len != chunk->chunk_size) return false;
@@ -225,8 +226,7 @@ bool cwist_seq_assembler_is_complete(const cwist_seq_assembler_t *a) {
            a->received[a->total - 1] && a->total_len > 0;
 }
 
-size_t cwist_seq_assembler_recovery_targets(const cwist_seq_assembler_t *a,
-                                            uint16_t *out,
+size_t cwist_seq_assembler_recovery_targets(const cwist_seq_assembler_t *a, uint16_t *out,
                                             size_t out_cap) {
     if (!a || !a->have_state || cwist_seq_assembler_is_complete(a)) return 0;
 
@@ -240,8 +240,7 @@ size_t cwist_seq_assembler_recovery_targets(const cwist_seq_assembler_t *a,
     return missing;
 }
 
-bool cwist_seq_assembler_get_data(cwist_seq_assembler_t *a,
-                                  const uint8_t **out_data,
+bool cwist_seq_assembler_get_data(cwist_seq_assembler_t *a, const uint8_t **out_data,
                                   size_t *out_len) {
     if (!cwist_seq_assembler_is_complete(a) || !out_data || !out_len) return false;
     *out_data = a->data;

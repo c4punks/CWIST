@@ -32,8 +32,11 @@ int main(void) {
     /* Build a source image in a scratch in-memory db. */
     cwist_db *src = NULL;
     assert(cwist_db_open(&src, ":memory:").error.err_i16 == 0);
-    assert(cwist_db_exec(src, "CREATE TABLE t (id INTEGER PRIMARY KEY, name TEXT);").error.err_i16 == 0);
-    assert(cwist_db_exec(src, "INSERT INTO t (name) VALUES ('alpha'), ('beta');").error.err_i16 == 0);
+    assert(
+        cwist_db_exec(src, "CREATE TABLE t (id INTEGER PRIMARY KEY, name TEXT);").error.err_i16 ==
+        0);
+    assert(cwist_db_exec(src, "INSERT INTO t (name) VALUES ('alpha'), ('beta');").error.err_i16 ==
+           0);
 
     void *blob = NULL;
     size_t blob_len = 0;

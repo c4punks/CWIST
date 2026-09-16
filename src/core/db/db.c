@@ -12,7 +12,8 @@
 
 /**
  * @file db.c
- * @brief SQLite convenience wrappers plus lightweight heuristics for query execution and JSON healing.
+ * @brief SQLite convenience wrappers plus lightweight heuristics for query execution and JSON
+ * healing.
  */
 
 typedef struct {
@@ -88,8 +89,10 @@ static cwist_db_plan_hint cwist_db_analyze_sql(const char *sql) {
         char upper = (char)toupper((unsigned char)sql[i]);
         accum ^= (uint64_t)upper;
         accum *= 0x100000001b3ULL;
-        if (upper == '(') depth++;
-        else if (upper == ')' && depth > 0) depth--;
+        if (upper == '(')
+            depth++;
+        else if (upper == ')' && depth > 0)
+            depth--;
 
         if (upper == 'J' && cwist_db_match_keyword(sql, i, "JOIN")) {
             hint.join_count++;
@@ -112,8 +115,7 @@ static cwist_db_plan_hint cwist_db_analyze_sql(const char *sql) {
  */
 static void cwist_db_apply_hint(sqlite3 *conn, const cwist_db_plan_hint *hint) {
     if (!conn || !hint) return;
-    uint64_t complexity = hint->symbolic_weight +
-                          ((uint64_t)hint->join_count * 131ULL) +
+    uint64_t complexity = hint->symbolic_weight + ((uint64_t)hint->join_count * 131ULL) +
                           ((uint64_t)hint->predicate_count * 53ULL) + 1ULL;
     uint64_t root = cwist_db_integer_root(complexity);
     int busy_ms = 50 + (int)(root % 350);
@@ -151,7 +153,7 @@ static cwist_error_t make_sqlite_error(int rc, char *msg) {
  */
 cwist_error_t cwist_db_open(cwist_db **db, const char *path) {
     cwist_error_t err = make_error(CWIST_ERR_INT16);
-    
+
     // if there's no db or path, return -1
     if (!db || !path) {
         err.error.err_i16 = -1;
@@ -159,7 +161,7 @@ cwist_error_t cwist_db_open(cwist_db **db, const char *path) {
     }
 
     // if malloc fails, return -1
-    *db = (cwist_db*)cwist_alloc(sizeof(cwist_db));
+    *db = (cwist_db *)cwist_alloc(sizeof(cwist_db));
     if (!*db) {
         err.error.err_i16 = -1;
         return err;
@@ -169,7 +171,7 @@ cwist_error_t cwist_db_open(cwist_db **db, const char *path) {
     if (strncmp(path, "file:", 5) == 0) flags |= SQLITE_OPEN_URI;
     int rc = sqlite3_open_v2(path, &(*db)->conn, flags, NULL);
     if (rc) {
-        cwist_error_t sql_err = make_sqlite_error(rc, (char*)sqlite3_errmsg((*db)->conn));
+        cwist_error_t sql_err = make_sqlite_error(rc, (char *)sqlite3_errmsg((*db)->conn));
         sqlite3_close((*db)->conn);
         cwist_free(*db);
         *db = NULL;
@@ -193,8 +195,7 @@ cwist_error_t cwist_db_open(cwist_db **db, const char *path) {
  * @param readonly Non-zero opens the image read-only; zero allows growth.
  * @return Tagged CWIST error describing success or failure.
  */
-cwist_error_t cwist_db_open_memory(cwist_db **db, const void *buf, size_t len,
-                                   int readonly) {
+cwist_error_t cwist_db_open_memory(cwist_db **db, const void *buf, size_t len, int readonly) {
     cwist_error_t err = make_error(CWIST_ERR_INT16);
     if (!db || !buf || len == 0) {
         err.error.err_i16 = -1;
@@ -207,9 +208,9 @@ cwist_error_t cwist_db_open_memory(cwist_db **db, const void *buf, size_t len,
         return err;
     }
 
-    int rc = sqlite3_open_v2(":memory:", &(*db)->conn,
-                             SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE | SQLITE_OPEN_FULLMUTEX,
-                             NULL);
+    int rc =
+        sqlite3_open_v2(":memory:", &(*db)->conn,
+                        SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE | SQLITE_OPEN_FULLMUTEX, NULL);
     if (rc) {
         cwist_error_t sql_err = make_sqlite_error(rc, (char *)sqlite3_errmsg((*db)->conn));
         sqlite3_close((*db)->conn);
@@ -231,10 +232,9 @@ cwist_error_t cwist_db_open_memory(cwist_db **db, const void *buf, size_t len,
     memcpy(image, buf, len);
 
     unsigned flags = SQLITE_DESERIALIZE_FREEONCLOSE |
-                     (readonly ? SQLITE_DESERIALIZE_READONLY
-                               : SQLITE_DESERIALIZE_RESIZEABLE);
-    rc = sqlite3_deserialize((*db)->conn, "main", image, (sqlite3_int64)len,
-                             (sqlite3_int64)len, flags);
+                     (readonly ? SQLITE_DESERIALIZE_READONLY : SQLITE_DESERIALIZE_RESIZEABLE);
+    rc = sqlite3_deserialize((*db)->conn, "main", image, (sqlite3_int64)len, (sqlite3_int64)len,
+                             flags);
     if (rc != SQLITE_OK) {
         cwist_error_t sql_err = make_sqlite_error(rc, (char *)sqlite3_errmsg((*db)->conn));
         sqlite3_close((*db)->conn);
@@ -292,7 +292,8 @@ cwist_error_t cwist_db_serialize(cwist_db *db, void **out, size_t *out_len) {
  * @brief Close a CWIST database wrapper and its underlying SQLite connection.
  * @param db Database wrapper to close.
  */
-void cwist_db_close(cwist_db *db) {    if (db) {
+void cwist_db_close(cwist_db *db) {
+    if (db) {
         if (db->conn) {
             sqlite3_close(db->conn);
         }
@@ -319,7 +320,7 @@ cwist_error_t cwist_db_exec(cwist_db *db, const char *sql) {
     cwist_db_plan_hint hint = cwist_db_analyze_sql(sql);
     cwist_db_apply_hint(db->conn, &hint);
     int rc = sqlite3_exec(db->conn, sql, 0, 0, &zErrMsg);
-    
+
     if (rc != SQLITE_OK) {
         cwist_error_t err = make_sqlite_error(rc, zErrMsg);
         sqlite3_free(zErrMsg);
@@ -346,7 +347,7 @@ typedef struct {
 static int query_callback(void *data, int argc, char **argv, char **azColName) {
     query_context *ctx = (query_context *)data;
     cJSON *row = cJSON_CreateObject();
-    
+
     for (int i = 0; i < argc; i++) {
         // SQLite returns everything as char* by default in exec callback
         // For simplicity, we treat everything as string or try to guess types if needed.
@@ -357,7 +358,7 @@ static int query_callback(void *data, int argc, char **argv, char **azColName) {
             cJSON_AddNullToObject(row, azColName[i]);
         }
     }
-    
+
     cJSON_AddItemToArray(ctx->rows, row);
     return 0;
 }
@@ -385,12 +386,12 @@ cwist_error_t cwist_db_query(cwist_db *db, const char *sql, cJSON **result) {
 
     query_context ctx;
     ctx.rows = cJSON_CreateArray();
-    
+
     char *zErrMsg = 0;
     cwist_db_plan_hint hint = cwist_db_analyze_sql(sql);
     cwist_db_apply_hint(db->conn, &hint);
     int rc = sqlite3_exec(db->conn, sql, query_callback, &ctx, &zErrMsg);
-    
+
     if (rc != SQLITE_OK) {
         cJSON_Delete(ctx.rows);
         cwist_error_t err = make_sqlite_error(rc, zErrMsg);
@@ -399,7 +400,7 @@ cwist_error_t cwist_db_query(cwist_db *db, const char *sql, cJSON **result) {
     }
 
     *result = ctx.rows;
-    
+
     cwist_error_t err = make_error(CWIST_ERR_INT16);
     err.error.err_i16 = 0;
     return err;
@@ -426,7 +427,7 @@ cwist_error_t cwist_db_query(cwist_db *db, const char *sql, cJSON **result) {
  */
 static char *build_insert_sql(const char *table, const cJSON *obj) {
     /* Collect column/value fragments. */
-    int    count   = cJSON_GetArraySize((cJSON *)obj);
+    int count = cJSON_GetArraySize((cJSON *)obj);
     if (count <= 0) return NULL;
 
     /* Worst-case sizes – we'll sqlite3_mprintf each fragment individually. */
@@ -445,21 +446,17 @@ static char *build_insert_sql(const char *table, const cJSON *obj) {
     while (child) {
         /* Column name – double-quoted for safety */
         char col_frag[128];
-        snprintf(col_frag, sizeof(col_frag),
-                 first ? "\"%s\"" : ",\"%s\"", child->string);
-        size_t cols_cap  = (size_t)(count * 64 + 16);
+        snprintf(col_frag, sizeof(col_frag), first ? "\"%s\"" : ",\"%s\"", child->string);
+        size_t cols_cap = (size_t)(count * 64 + 16);
         size_t cols_used = strlen(cols_buf);
-        if (cols_used < cols_cap - 1)
-            strncat(cols_buf, col_frag, cols_cap - 1 - cols_used);
+        if (cols_used < cols_cap - 1) strncat(cols_buf, col_frag, cols_cap - 1 - cols_used);
 
         /* Value */
         char *val_frag = NULL;
         if (cJSON_IsString(child)) {
-            val_frag = sqlite3_mprintf(first ? "%Q" : ",%Q",
-                                       child->valuestring);
+            val_frag = sqlite3_mprintf(first ? "%Q" : ",%Q", child->valuestring);
         } else if (cJSON_IsNumber(child)) {
-            val_frag = sqlite3_mprintf(first ? "%g" : ",%g",
-                                       child->valuedouble);
+            val_frag = sqlite3_mprintf(first ? "%g" : ",%g", child->valuedouble);
         } else if (cJSON_IsTrue(child)) {
             val_frag = sqlite3_mprintf(first ? "1" : ",1");
         } else if (cJSON_IsFalse(child)) {
@@ -480,18 +477,16 @@ static char *build_insert_sql(const char *table, const cJSON *obj) {
             sqlite3_free(vals_buf);
             return NULL;
         }
-        size_t vals_cap  = (size_t)(count * 256 + 16);
+        size_t vals_cap = (size_t)(count * 256 + 16);
         size_t vals_used = strlen(vals_buf);
-        if (vals_used < vals_cap - 1)
-            strncat(vals_buf, val_frag, vals_cap - 1 - vals_used);
+        if (vals_used < vals_cap - 1) strncat(vals_buf, val_frag, vals_cap - 1 - vals_used);
         sqlite3_free(val_frag);
 
         first = false;
         child = child->next;
     }
 
-    char *sql = sqlite3_mprintf("INSERT INTO \"%s\" (%s) VALUES (%s);",
-                                 table, cols_buf, vals_buf);
+    char *sql = sqlite3_mprintf("INSERT INTO \"%s\" (%s) VALUES (%s);", table, cols_buf, vals_buf);
     sqlite3_free(cols_buf);
     sqlite3_free(vals_buf);
     return sql;
@@ -506,10 +501,9 @@ static char *build_insert_sql(const char *table, const cJSON *obj) {
  * @param heal_cfg Optional healing configuration overrides.
  * @return Tagged CWIST error describing success or failure.
  */
-cwist_error_t cwist_db_insert_healed(cwist_db *db, const char *table,
-                                      const char *json_str,
-                                      const cwist_schema_t  *schema,
-                                      const cwist_heal_config_t *heal_cfg) {
+cwist_error_t cwist_db_insert_healed(cwist_db *db, const char *table, const char *json_str,
+                                     const cwist_schema_t *schema,
+                                     const cwist_heal_config_t *heal_cfg) {
     cwist_error_t err = make_error(CWIST_ERR_INT16);
     err.error.err_i16 = -1;
 
@@ -528,8 +522,7 @@ cwist_error_t cwist_db_insert_healed(cwist_db *db, const char *table,
     /* Step 1: heal the JSON. */
     cwist_heal_result_t healed = cwist_json_heal(json_str, &effective_cfg);
     if (!healed.json) {
-        fprintf(stderr, "[CWIST-DB] insert_healed: healing failed for table '%s'\n",
-                table);
+        fprintf(stderr, "[CWIST-DB] insert_healed: healing failed for table '%s'\n", table);
         cwist_heal_result_free(&healed);
         return err;
     }
@@ -539,8 +532,7 @@ cwist_error_t cwist_db_insert_healed(cwist_db *db, const char *table,
         cJSON *validated = NULL;
         cwist_zod_result_t zod = cwist_zod_parse(healed.json, schema, &validated);
         if (!zod.valid) {
-            fprintf(stderr,
-                    "[CWIST-DB] insert_healed: Zod validation failed for table '%s':\n",
+            fprintf(stderr, "[CWIST-DB] insert_healed: Zod validation failed for table '%s':\n",
                     table);
             cwist_zod_print_errors(&zod);
             cwist_heal_result_free(&healed);
@@ -580,7 +572,7 @@ cwist_error_t cwist_db_insert_healed(cwist_db *db, const char *table,
  * @return Tagged CWIST error describing success or validation failure.
  */
 cwist_error_t cwist_db_query_strict(cwist_db *db, const char *sql, cJSON **result,
-                                     const cwist_schema_t *schema) {
+                                    const cwist_schema_t *schema) {
     /* When no schema is given, behave identically to cwist_db_query(). */
     if (!schema) return cwist_db_query(db, sql, result);
 

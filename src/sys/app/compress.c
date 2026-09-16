@@ -35,7 +35,8 @@ void cwist_compress_unregister_all(void) {
 static int zlib_gzip_init(void **state) {
     z_stream *zs = (z_stream *)calloc(1, sizeof(z_stream));
     if (!zs) return -1;
-    if (deflateInit2(zs, Z_DEFAULT_COMPRESSION, Z_DEFLATED, 15 + 16, 8, Z_DEFAULT_STRATEGY) != Z_OK) {
+    if (deflateInit2(zs, Z_DEFAULT_COMPRESSION, Z_DEFLATED, 15 + 16, 8, Z_DEFAULT_STRATEGY) !=
+        Z_OK) {
         free(zs);
         return -1;
     }
@@ -54,8 +55,8 @@ static int zlib_deflate_init(void **state) {
     return 0;
 }
 
-static int zlib_compress(void *state, const char *in, size_t in_len,
-                         char *out, size_t *out_len, int flush) {
+static int zlib_compress(void *state, const char *in, size_t in_len, char *out, size_t *out_len,
+                         int flush) {
     z_stream *zs = (z_stream *)state;
     zs->next_in = (Bytef *)in;
     zs->avail_in = (uInt)in_len;
@@ -153,8 +154,8 @@ static int brotli_ensure_accum(cwist_brotli_state_t *bs, size_t need) {
     return 0;
 }
 
-static int brotli_compress(void *state, const char *in, size_t in_len,
-                           char *out, size_t *out_len, int flush) {
+static int brotli_compress(void *state, const char *in, size_t in_len, char *out, size_t *out_len,
+                           int flush) {
     cwist_brotli_state_t *bs = (cwist_brotli_state_t *)state;
     if (!bs || !out || !out_len) return -1;
 
@@ -196,9 +197,8 @@ static int brotli_compress(void *state, const char *in, size_t in_len,
         return -1;
     }
 
-    if (!BrotliEncoderCompress(BROTLI_DEFAULT_QUALITY, BROTLI_DEFAULT_WINDOW,
-                               BROTLI_DEFAULT_MODE, total_in_len, total_in,
-                               &encoded_size, encoded)) {
+    if (!BrotliEncoderCompress(BROTLI_DEFAULT_QUALITY, BROTLI_DEFAULT_WINDOW, BROTLI_DEFAULT_MODE,
+                               total_in_len, total_in, &encoded_size, encoded)) {
         free(encoded);
         free(merged);
         return -1;
@@ -257,21 +257,28 @@ const cwist_compress_backend *cwist_compress_backend_brotli(void) {
 
 typedef struct {
     ZSTD_CStream *cstream;
-    char         *accum;
-    size_t        accum_len;
-    size_t        accum_cap;
-    char         *out;
-    size_t        out_len;
-    size_t        out_pos;
+    char *accum;
+    size_t accum_len;
+    size_t accum_cap;
+    char *out;
+    size_t out_len;
+    size_t out_pos;
 } cwist_zstd_state_t;
 
 static int zstd_init(void **state) {
     cwist_zstd_state_t *zs = (cwist_zstd_state_t *)calloc(1, sizeof(*zs));
     if (!zs) return -1;
     zs->cstream = ZSTD_createCStream();
-    if (!zs->cstream) { free(zs); return -1; }
+    if (!zs->cstream) {
+        free(zs);
+        return -1;
+    }
     size_t rc = ZSTD_initCStream(zs->cstream, ZSTD_CLEVEL_DEFAULT);
-    if (ZSTD_isError(rc)) { ZSTD_freeCStream(zs->cstream); free(zs); return -1; }
+    if (ZSTD_isError(rc)) {
+        ZSTD_freeCStream(zs->cstream);
+        free(zs);
+        return -1;
+    }
     *state = zs;
     return 0;
 }
@@ -289,13 +296,16 @@ static int zstd_ensure_accum(cwist_zstd_state_t *zs, size_t need) {
     return 0;
 }
 
-static int zstd_compress(void *state, const char *in, size_t in_len,
-                         char *out, size_t *out_len, int flush) {
+static int zstd_compress(void *state, const char *in, size_t in_len, char *out, size_t *out_len,
+                         int flush) {
     cwist_zstd_state_t *zs = (cwist_zstd_state_t *)state;
     if (!zs || !out || !out_len) return -1;
 
     if (!flush) {
-        if (in_len == 0) { *out_len = 0; return 0; }
+        if (in_len == 0) {
+            *out_len = 0;
+            return 0;
+        }
         if (zstd_ensure_accum(zs, in_len) != 0) return -1;
         memcpy(zs->accum + zs->accum_len, in, in_len);
         zs->accum_len += in_len;
@@ -311,14 +321,20 @@ static int zstd_compress(void *state, const char *in, size_t in_len,
 
     size_t out_cap = ZSTD_compressBound(total_in_len);
     char *out_buf = (char *)malloc(out_cap);
-    if (!out_buf) { free(total_in); return -1; }
+    if (!out_buf) {
+        free(total_in);
+        return -1;
+    }
 
-    ZSTD_inBuffer  ib = { total_in, total_in_len, 0 };
-    ZSTD_outBuffer ob = { out_buf, out_cap, 0 };
+    ZSTD_inBuffer ib = {total_in, total_in_len, 0};
+    ZSTD_outBuffer ob = {out_buf, out_cap, 0};
 
     size_t rc = ZSTD_compressStream2(zs->cstream, &ob, &ib, ZSTD_e_end);
     free(total_in);
-    if (ZSTD_isError(rc)) { free(out_buf); return -1; }
+    if (ZSTD_isError(rc)) {
+        free(out_buf);
+        return -1;
+    }
 
     zs->accum_len = 0;
     free(zs->out);
@@ -355,10 +371,10 @@ static void zstd_cleanup(void *state) {
 
 static const cwist_compress_backend cwist_backend_zstd = {
     .encoding_name = "zstd",
-    .init     = zstd_init,
+    .init = zstd_init,
     .compress = zstd_compress,
-    .finish   = zstd_finish,
-    .cleanup  = zstd_cleanup,
+    .finish = zstd_finish,
+    .cleanup = zstd_cleanup,
 };
 
 const cwist_compress_backend *cwist_compress_backend_zstd(void) {
@@ -414,7 +430,8 @@ static void remove_header(cwist_http_header_node **head, const char *key) {
     }
 }
 
-static void cwist_mw_compress_handler(cwist_http_request *req, cwist_http_response *res, cwist_handler_func next) {
+static void cwist_mw_compress_handler(cwist_http_request *req, cwist_http_response *res,
+                                      cwist_handler_func next) {
     const char *accept = cwist_http_header_get(req->headers, "Accept-Encoding");
     const cwist_compress_backend *backend = select_backend(accept);
 
@@ -448,15 +465,18 @@ static void cwist_mw_compress_handler(cwist_http_request *req, cwist_http_respon
             /* Grow output buffer */
             size_t new_cap = out_cap * 2;
             char *new_buf = (char *)cwist_realloc(out_buf, new_cap);
-            if (!new_buf) { ok = 0; break; }
+            if (!new_buf) {
+                ok = 0;
+                break;
+            }
             out_buf = new_buf;
             out_cap = new_cap;
             chunk_out = out_cap - total_out;
         }
         int flush = (in_offset + chunk_in >= res->body->size) ? 1 : 0;
         size_t written = chunk_out;
-        if (backend->compress(state, res->body->data + in_offset, chunk_in,
-                              out_buf + total_out, &written, flush) != 0) {
+        if (backend->compress(state, res->body->data + in_offset, chunk_in, out_buf + total_out,
+                              &written, flush) != 0) {
             ok = 0;
             break;
         }
@@ -473,7 +493,10 @@ static void cwist_mw_compress_handler(cwist_http_request *req, cwist_http_respon
             if (tail == 0) {
                 size_t new_cap = out_cap * 2;
                 char *new_buf = (char *)cwist_realloc(out_buf, new_cap);
-                if (!new_buf) { ok = 0; break; }
+                if (!new_buf) {
+                    ok = 0;
+                    break;
+                }
                 out_buf = new_buf;
                 out_cap = new_cap;
                 continue;

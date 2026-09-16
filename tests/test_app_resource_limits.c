@@ -16,12 +16,13 @@ static int test_setrlimit(int, const struct rlimit *);
 #undef getrlimit
 #undef setrlimit
 
-#define TEST_REQUIRE(condition) do { \
-    if (!(condition)) { \
-        fprintf(stderr, "Check failed at %s:%d\n", __FILE__, __LINE__); \
-        abort(); \
-    } \
-} while (0)
+#define TEST_REQUIRE(condition)                                             \
+    do {                                                                    \
+        if (!(condition)) {                                                 \
+            fprintf(stderr, "Check failed at %s:%d\n", __FILE__, __LINE__); \
+            abort();                                                        \
+        }                                                                   \
+    } while (0)
 
 static bool mock_mode, read_error, write_error;
 static struct rlimit current_limit;
@@ -31,7 +32,10 @@ static int test_getrlimit(int resource, struct rlimit *out) {
     if (!mock_mode) return getrlimit(resource, out);
     TEST_REQUIRE(resource == RLIMIT_NOFILE);
     reads++;
-    if (read_error) { errno = EIO; return -1; }
+    if (read_error) {
+        errno = EIO;
+        return -1;
+    }
     *out = current_limit;
     return 0;
 }
@@ -44,13 +48,16 @@ static int test_setrlimit(int resource, const struct rlimit *in) {
         errno = EPERM;
         return -1;
     }
-    if (in->rlim_cur > in->rlim_max) { errno = EINVAL; return -1; }
+    if (in->rlim_cur > in->rlim_max) {
+        errno = EINVAL;
+        return -1;
+    }
     current_limit = *in;
     return 0;
 }
 
-static void check_mock(rlim_t soft, rlim_t hard, rlim_t want, int calls,
-                       bool fail_read, bool fail_write) {
+static void check_mock(rlim_t soft, rlim_t hard, rlim_t want, int calls, bool fail_read,
+                       bool fail_write) {
     mock_mode = true;
     read_error = fail_read;
     write_error = fail_write;
@@ -65,8 +72,8 @@ static void check_mock(rlim_t soft, rlim_t hard, rlim_t want, int calls,
 /* CWIST_FD_LIMIT_TARGET override: same mocked getrlimit/setrlimit as
  * check_mock, plus the env var set for the duration of the call. NULL means
  * unset (falsy checks that clearing it restores default behavior). */
-static void check_mock_env(const char *env_value, rlim_t soft, rlim_t hard,
-                           rlim_t want, int calls) {
+static void check_mock_env(const char *env_value, rlim_t soft, rlim_t hard, rlim_t want,
+                           int calls) {
     if (env_value) {
         TEST_REQUIRE(setenv("CWIST_FD_LIMIT_TARGET", env_value, 1) == 0);
     } else {

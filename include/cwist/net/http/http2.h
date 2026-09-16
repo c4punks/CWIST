@@ -16,8 +16,7 @@
  * @param req Parsed HTTP request object.
  * @param res HTTP response object to be populated by the handler.
  */
-typedef void (*cwist_http2_request_handler_func)(void *user_ctx,
-                                                 cwist_http_request *req,
+typedef void (*cwist_http2_request_handler_func)(void *user_ctx, cwist_http_request *req,
                                                  cwist_http_response *res);
 
 /** Opaque per-stream handle for hook-driven (e.g. gRPC streaming) I/O. */
@@ -45,8 +44,8 @@ typedef struct cwist_http2_stream_hooks {
     void *(*on_headers)(void *conn_ctx, cwist_http_request *req, cwist_h2_stream *stream);
     /** Feed an inbound DATA payload; end_stream marks the client's final
      * frame.  Return non-zero to tear the stream down. */
-    int (*on_data)(void *conn_ctx, void *stream_ctx,
-                   const unsigned char *data, size_t len, int end_stream);
+    int (*on_data)(void *conn_ctx, void *stream_ctx, const unsigned char *data, size_t len,
+                   int end_stream);
     /** Peer sent RST_STREAM (cancellation). */
     void (*on_cancel)(void *conn_ctx, void *stream_ctx);
     /** Called on every dispatcher iteration; enforce deadlines here.
@@ -59,8 +58,7 @@ typedef struct cwist_http2_stream_hooks {
     void (*on_close)(void *conn_ctx, void *stream_ctx);
 } cwist_http2_stream_hooks;
 
-cwist_error_t cwist_http2_serve_connection_ex(cwist_https_connection *conn,
-                                              void *user_ctx,
+cwist_error_t cwist_http2_serve_connection_ex(cwist_https_connection *conn, void *user_ctx,
                                               cwist_http2_request_handler_func handler,
                                               const cwist_http2_stream_hooks *hooks);
 
@@ -72,8 +70,7 @@ cwist_error_t cwist_http2_serve_connection_ex(cwist_https_connection *conn,
  * @param handler Function to call when an HTTP/2 stream issues a request.
  * @return cwist_error_t Indicates success or connection error.
  */
-cwist_error_t cwist_http2_serve_connection(cwist_https_connection *conn,
-                                           void *user_ctx,
+cwist_error_t cwist_http2_serve_connection(cwist_https_connection *conn, void *user_ctx,
                                            cwist_http2_request_handler_func handler);
 
 /**
@@ -92,11 +89,8 @@ cwist_error_t cwist_http2_serve_connection(cwist_https_connection *conn,
  * @param data_len       Length of @p data.
  * @return 0 on success, -1 on failure.
  */
-int cwist_http2_push_resource(cwist_http_request *req,
-                              const char *path,
-                              const char *content_type,
-                              const unsigned char *data,
-                              size_t data_len);
+int cwist_http2_push_resource(cwist_http_request *req, const char *path, const char *content_type,
+                              const unsigned char *data, size_t data_len);
 
 /**
  * Immediate outbound writes for hook-taken streams.  Safe to call from the
@@ -112,10 +106,9 @@ int cwist_http2_push_resource(cwist_http_request *req,
 int cwist_http2_stream_send_headers(cwist_h2_stream *stream, int status,
                                     const cwist_http2_header *headers, size_t header_count,
                                     int end_stream);
-int cwist_http2_stream_send_data(cwist_h2_stream *stream,
-                                 const unsigned char *data, size_t len);
-int cwist_http2_stream_send_trailers(cwist_h2_stream *stream,
-                                     const cwist_http2_header *trailers, size_t trailer_count);
+int cwist_http2_stream_send_data(cwist_h2_stream *stream, const unsigned char *data, size_t len);
+int cwist_http2_stream_send_trailers(cwist_h2_stream *stream, const cwist_http2_header *trailers,
+                                     size_t trailer_count);
 
 /* --- Async defer completion queue (internal; used by net/http/async.c) ---
  *
@@ -132,10 +125,8 @@ typedef struct cwist_h2_async_queue cwist_h2_async_queue;
 cwist_h2_async_queue *cwist_h2_async_queue_acquire(cwist_h2_async_queue *q);
 void cwist_h2_async_queue_release(cwist_h2_async_queue *q);
 int cwist_h2_async_queue_enqueue(cwist_h2_async_queue *q, uint32_t stream_id,
-                                 cwist_http_request *req,
-                                 cwist_http_response *send,
-                                 cwist_http_response *res,
-                                 bool send_owned);
+                                 cwist_http_request *req, cwist_http_response *send,
+                                 cwist_http_response *res, bool send_owned);
 
 #ifdef __cplusplus
 extern "C" {
@@ -144,7 +135,8 @@ extern "C" {
 /**
  * @brief Decode an HPACK integer.
  */
-int h2_decode_integer(const unsigned char *buf, size_t len, size_t *pos, uint8_t prefix_bits, uint32_t *value);
+int h2_decode_integer(const unsigned char *buf, size_t len, size_t *pos, uint8_t prefix_bits,
+                      uint32_t *value);
 
 /**
  * @brief Decode an HPACK huffman-encoded string.

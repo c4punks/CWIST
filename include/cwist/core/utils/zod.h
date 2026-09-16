@@ -34,8 +34,8 @@
  * ---------------------------------------------------------------------- */
 
 #define CWIST_ZOD_MAX_ERRORS 32
-#define CWIST_ZOD_FIELD_MAX  64
-#define CWIST_ZOD_MSG_MAX    256
+#define CWIST_ZOD_FIELD_MAX 64
+#define CWIST_ZOD_MSG_MAX 256
 
 /** @brief A single validation failure. */
 typedef struct cwist_zod_error {
@@ -45,9 +45,9 @@ typedef struct cwist_zod_error {
 
 /** @brief Result returned by cwist_zod_validate() / cwist_zod_parse(). */
 typedef struct cwist_zod_result {
-    bool              valid;
+    bool valid;
     cwist_zod_error_t errors[CWIST_ZOD_MAX_ERRORS];
-    int               error_count;
+    int error_count;
 } cwist_zod_result_t;
 
 /* -------------------------------------------------------------------------
@@ -81,8 +81,7 @@ cwist_zod_result_t cwist_zod_validate(const cJSON *json, const cwist_schema_t *s
  * @param out     [out] Parsed cJSON tree on success, NULL otherwise.
  * @return        Validation result.  Check result.valid AND *out != NULL.
  */
-cwist_zod_result_t cwist_zod_parse(const char *raw, const cwist_schema_t *schema,
-                                    cJSON **out);
+cwist_zod_result_t cwist_zod_parse(const char *raw, const cwist_schema_t *schema, cJSON **out);
 
 /**
  * @brief Print all validation errors to stderr.

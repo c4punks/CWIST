@@ -44,7 +44,8 @@ int main() {
     // Run ab command
     printf("Running ab stress test...\n");
     // ab -k -n 20000 -c 64 -p payload.json -T application/json http://127.0.0.1:31744/api
-    int ret = system("ab -k -n 20000 -c 64 -p payload.json -T application/json http://127.0.0.1:31744/api");
+    int ret = system(
+        "ab -k -n 20000 -c 64 -p payload.json -T application/json http://127.0.0.1:31744/api");
 
     if (ret != 0) {
         fprintf(stderr, "ab test failed with return code %d\n", ret);
@@ -55,9 +56,9 @@ int main() {
 
     // Clean up
     unlink("payload.json");
-    
-    // In a real test we might want to kill the server thread, but since this is a one-off test script,
-    // exiting main is fine if we are done.
-    
+
+    // In a real test we might want to kill the server thread, but since this is a one-off test
+    // script, exiting main is fine if we are done.
+
     return 0;
 }

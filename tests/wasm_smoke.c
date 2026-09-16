@@ -13,7 +13,7 @@
 #include <stdio.h>
 #include <string.h>
 
-static const int32_t g_samples[] = { 10, -20, 30, 40 };
+static const int32_t g_samples[] = {10, -20, 30, 40};
 CWIST_WASM_EXPOSE_I32(samples, g_samples, 4)
 CWIST_WASM_INSTALL_VIEWS()
 
@@ -26,12 +26,12 @@ EM_JS(void, js_verify, (const char *res_ptr, int res_len), {
         throw new Error("bad response via TypedArray: " + JSON.stringify(text));
     }
     const samples = Module.cwistView.i32(_samples_ptr(), _samples_len());
-    const total = Array.from(samples).reduce((a, b) => a + b, 0);
-    if (total !== 60 || samples.length !== 4) {
+    const total = Array.from(samples).reduce((a, b) = > a + b, 0);
+    if (total != = 60 || samples.length != = 4) {
         throw new Error("bad i32 view: " + Array.from(samples).join(","));
     }
-    console.log("wasm_smoke: JS TypedArray views verified (" +
-                res_len + " response bytes, samples sum " + total + ")");
+    console.log("wasm_smoke: JS TypedArray views verified (" + res_len +
+                " response bytes, samples sum " + total + ")");
 });
 
 static void hello_handler(cwist_http_request *req, cwist_http_response *res) {
@@ -48,8 +48,7 @@ int main(void) {
 
     static const char req[] = "GET /hello HTTP/1.1\r\nHost: wasm\r\n\r\n";
     size_t res_len = 0;
-    const char *res_buf = cwist_wasm_dispatch_memory(app, req, sizeof(req) - 1,
-                                                     &res_len);
+    const char *res_buf = cwist_wasm_dispatch_memory(app, req, sizeof(req) - 1, &res_len);
     if (!res_buf) {
         fprintf(stderr, "wasm_smoke: dispatch failed\n");
         cwist_app_destroy(app);
@@ -57,8 +56,7 @@ int main(void) {
     }
 
     int ok = strncmp(res_buf, "HTTP/1.1 200 OK\r\n", 17) == 0 &&
-             strstr(res_buf, "Content-Type: text/plain") != NULL &&
-             res_len >= 10 &&
+             strstr(res_buf, "Content-Type: text/plain") != NULL && res_len >= 10 &&
              memcmp(res_buf + res_len - 10, "hello-wasm", 10) == 0;
     if (!ok) {
         fprintf(stderr, "wasm_smoke: bad response:\n%.*s\n", (int)res_len, res_buf);

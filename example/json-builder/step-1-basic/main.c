@@ -8,10 +8,10 @@ int main() {
     printf("\n[Flat object]\n");
     cwist_json_builder *jb = cwist_json_builder_create();
     cwist_json_begin_object(jb);
-    cwist_json_add_string(jb, "name",    "Alice");
-    cwist_json_add_int   (jb, "age",     30);
-    cwist_json_add_bool  (jb, "active",  true);
-    cwist_json_add_null  (jb, "note");
+    cwist_json_add_string(jb, "name", "Alice");
+    cwist_json_add_int(jb, "age", 30);
+    cwist_json_add_bool(jb, "active", true);
+    cwist_json_add_null(jb, "note");
     cwist_json_end_object(jb);
     printf("%s\n", cwist_json_get_raw(jb));
     cwist_json_builder_destroy(jb);
@@ -21,7 +21,7 @@ int main() {
     jb = cwist_json_builder_create();
     cwist_json_begin_object(jb);
     cwist_json_add_string(jb, "status", "ok");
-    cwist_json_add_int   (jb, "code",   200);
+    cwist_json_add_int(jb, "code", 200);
     /* Manually embed a nested object as a raw string field */
     cwist_sstring_append(jb->buffer, ",\"data\":{\"id\":1,\"value\":42}");
     cwist_json_end_object(jb);

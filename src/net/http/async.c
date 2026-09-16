@@ -32,10 +32,7 @@
 #include <sys/socket.h>
 #include <unistd.h>
 
-enum cwist_async_state {
-    CWIST_ASYNC_ST_PENDING = 0,
-    CWIST_ASYNC_ST_CLAIMED
-};
+enum cwist_async_state { CWIST_ASYNC_ST_PENDING = 0, CWIST_ASYNC_ST_CLAIMED };
 
 struct cwist_async {
     _Atomic size_t refs;          /* Completion plus retained producers/timers. */
@@ -58,27 +55,26 @@ struct cwist_async {
     cwist_reactor_post_t post;
 };
 
-
 static void cwist_async_reactor_complete(void *ctx);
 static void cwist_async_finish(cwist_async *a);
 
 static const char *cwist_async_reason(cwist_http_status_t status) {
     switch (status) {
-        case CWIST_HTTP_OK:                  return "OK";
-        case CWIST_HTTP_CREATED:             return "Created";
-        case CWIST_HTTP_NO_CONTENT:          return "No Content";
-        case CWIST_HTTP_PARTIAL_CONTENT:     return "Partial Content";
-        case CWIST_HTTP_NOT_MODIFIED:        return "Not Modified";
-        case CWIST_HTTP_BAD_REQUEST:         return "Bad Request";
-        case CWIST_HTTP_UNAUTHORIZED:        return "Unauthorized";
-        case CWIST_HTTP_FORBIDDEN:           return "Forbidden";
-        case CWIST_HTTP_NOT_FOUND:           return "Not Found";
+        case CWIST_HTTP_OK: return "OK";
+        case CWIST_HTTP_CREATED: return "Created";
+        case CWIST_HTTP_NO_CONTENT: return "No Content";
+        case CWIST_HTTP_PARTIAL_CONTENT: return "Partial Content";
+        case CWIST_HTTP_NOT_MODIFIED: return "Not Modified";
+        case CWIST_HTTP_BAD_REQUEST: return "Bad Request";
+        case CWIST_HTTP_UNAUTHORIZED: return "Unauthorized";
+        case CWIST_HTTP_FORBIDDEN: return "Forbidden";
+        case CWIST_HTTP_NOT_FOUND: return "Not Found";
         case CWIST_HTTP_RANGE_NOT_SATISFIABLE: return "Range Not Satisfiable";
-        case CWIST_HTTP_INTERNAL_ERROR:      return "Internal Server Error";
-        case CWIST_HTTP_NOT_IMPLEMENTED:     return "Not Implemented";
+        case CWIST_HTTP_INTERNAL_ERROR: return "Internal Server Error";
+        case CWIST_HTTP_NOT_IMPLEMENTED: return "Not Implemented";
         case CWIST_HTTP_SERVICE_UNAVAILABLE: return "Service Unavailable";
-        case CWIST_HTTP_GATEWAY_TIMEOUT:     return "Gateway Timeout";
-        default:                             return "Status";
+        case CWIST_HTTP_GATEWAY_TIMEOUT: return "Gateway Timeout";
+        default: return "Status";
     }
 }
 
@@ -151,10 +147,9 @@ void cwist_async_dispatch_ack(cwist_async *a) {
 
 static bool cwist_async_claim(cwist_async *a) {
     int expected = CWIST_ASYNC_ST_PENDING;
-    if (!atomic_compare_exchange_strong_explicit(&a->state, &expected,
-                                                   CWIST_ASYNC_ST_CLAIMED,
-                                                   memory_order_acq_rel,
-                                                   memory_order_acquire)) return false;
+    if (!atomic_compare_exchange_strong_explicit(&a->state, &expected, CWIST_ASYNC_ST_CLAIMED,
+                                                 memory_order_acq_rel, memory_order_acquire))
+        return false;
     while (!atomic_load_explicit(&a->ack, memory_order_acquire)) {
         if (pthread_equal(pthread_self(), a->dispatch_thread)) return true;
         sched_yield();
@@ -178,8 +173,8 @@ static void cwist_async_complete(cwist_async *a) {
          * Wait for the dispatch ack first: enqueueing transfers req/res
          * ownership, which is only legal once dispatch observed the defer. */
         while (!atomic_load_explicit(&a->ack, memory_order_acquire)) sched_yield();
-        cwist_h2_async_queue_enqueue(a->h2_queue, a->h2_stream_id, a->req,
-                                     a->final_res, a->res, a->final_res_owned);
+        cwist_h2_async_queue_enqueue(a->h2_queue, a->h2_stream_id, a->req, a->final_res, a->res,
+                                     a->final_res_owned);
         cwist_h2_async_queue_release(a->h2_queue);
         cwist_async_release(a);
         return;
@@ -188,8 +183,8 @@ static void cwist_async_complete(cwist_async *a) {
     if (a->https_conn) {
         cwist_https_connection *conn = (cwist_https_connection *)a->https_conn;
         cwist_error_t err = (a->req && a->req->method == CWIST_HTTP_HEAD)
-            ? cwist_https_send_response_head(conn, res)
-            : cwist_https_send_response(conn, res);
+                                ? cwist_https_send_response_head(conn, res)
+                                : cwist_https_send_response(conn, res);
         bool ok = cwist_error_is_ok(&err);
 
         if (keep && ok && a->app && a->app->ssl_ctx && a->app->https_request_handler) {
@@ -202,12 +197,12 @@ static void cwist_async_complete(cwist_async *a) {
         /* Resumable write: on a partial send the remainder is parked on a
          * POLLOUT slot and the reactor thread is freed immediately; the
          * parked callback performs the rearm/close when the drain ends. */
-        cwist_http_async_send_response(a->client_fd, res, a->reactor, a->conn,
-                                       keep, a->req && a->req->method == CWIST_HTTP_HEAD);
+        cwist_http_async_send_response(a->client_fd, res, a->reactor, a->conn, keep,
+                                       a->req && a->req->method == CWIST_HTTP_HEAD);
     } else {
         cwist_error_t err = (a->req && a->req->method == CWIST_HTTP_HEAD)
-            ? cwist_http_send_response_head(a->client_fd, res)
-            : cwist_http_send_response(a->client_fd, res);
+                                ? cwist_http_send_response_head(a->client_fd, res)
+                                : cwist_http_send_response(a->client_fd, res);
         bool ok = err.error.err_i16 == 0;
 
         if (keep && ok && a->app) {
@@ -283,8 +278,8 @@ void cwist_async_set_timeout(cwist_async *a, uint64_t ms) {
 
 /* --- Completion API ------------------------------------------------------ */
 
-bool cwist_async_respond(cwist_async *a, cwist_http_status_t status,
-                         const char *content_type, const void *body, size_t len) {
+bool cwist_async_respond(cwist_async *a, cwist_http_status_t status, const char *content_type,
+                         const void *body, size_t len) {
     if (!a || !cwist_async_claim(a)) return false;
     cwist_http_response *res = a->res;
     res->status_code = status;

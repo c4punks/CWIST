@@ -28,8 +28,7 @@ static const char *test_strcasestr(const char *haystack, const char *needle) {
     for (; *haystack; haystack++) {
         const char *h = haystack;
         const char *n = needle;
-        while (*h && *n &&
-               tolower((unsigned char)*h) == tolower((unsigned char)*n)) {
+        while (*h && *n && tolower((unsigned char)*h) == tolower((unsigned char)*n)) {
             h++;
             n++;
         }
@@ -140,8 +139,7 @@ int main(void) {
     if (pid == 0) {
         /* Exercise static-cache creation and teardown across a worker fork,
          * regardless of the runner's CPU count or inherited environment. */
-        if (setenv("CWIST_WORKERS", "2", 1) != 0 ||
-            setenv("CWIST_C1M_MODE", "false", 1) != 0) {
+        if (setenv("CWIST_WORKERS", "2", 1) != 0 || setenv("CWIST_C1M_MODE", "false", 1) != 0) {
             perror("setenv");
             _exit(1);
         }
@@ -200,7 +198,8 @@ int main(void) {
     /* Test 3: URL-encoded path traversal */
     fd = connect_to_server();
     if (fd >= 0) {
-        send_request(fd, "GET /static/%2e%2e/%2e%2e/secret.txt HTTP/1.1\r\nHost: localhost\r\n\r\n");
+        send_request(fd,
+                     "GET /static/%2e%2e/%2e%2e/secret.txt HTTP/1.1\r\nHost: localhost\r\n\r\n");
         read_response(fd, buf, sizeof(buf));
         if (!response_has_code(buf, "403")) {
             fprintf(stderr, "FAIL: Expected 403 for URL-encoded traversal, got:\n%s\n", buf);
@@ -215,7 +214,8 @@ int main(void) {
     /* Test 4: Range request */
     fd = connect_to_server();
     if (fd >= 0) {
-        send_request(fd, "GET /static/index.html HTTP/1.1\r\nHost: localhost\r\nRange: bytes=0-4\r\n\r\n");
+        send_request(
+            fd, "GET /static/index.html HTTP/1.1\r\nHost: localhost\r\nRange: bytes=0-4\r\n\r\n");
         read_response(fd, buf, sizeof(buf));
         if (!response_has_code(buf, "206")) {
             fprintf(stderr, "FAIL: Expected 206 for range request, got:\n%s\n", buf);
@@ -236,7 +236,8 @@ int main(void) {
     /* Test 5: Suffix range request (last 5 bytes) */
     fd = connect_to_server();
     if (fd >= 0) {
-        send_request(fd, "GET /static/index.html HTTP/1.1\r\nHost: localhost\r\nRange: bytes=-5\r\n\r\n");
+        send_request(
+            fd, "GET /static/index.html HTTP/1.1\r\nHost: localhost\r\nRange: bytes=-5\r\n\r\n");
         read_response(fd, buf, sizeof(buf));
         if (!response_has_code(buf, "206")) {
             fprintf(stderr, "FAIL: Expected 206 for suffix range request, got:\n%s\n", buf);

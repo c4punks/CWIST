@@ -26,9 +26,9 @@ typedef struct cwist_websocket {
      * frag_buf accumulates payload bytes across FIN=0 frames; frag_opcode
      * preserves the first fragment's opcode so the assembled frame reports
      * the correct type (text vs binary). */
-    uint8_t          *frag_buf;
-    size_t            frag_len;
-    size_t            frag_cap;
+    uint8_t *frag_buf;
+    size_t frag_len;
+    size_t frag_cap;
     cwist_ws_opcode_t frag_opcode;
 } cwist_websocket;
 
@@ -54,7 +54,8 @@ cwist_ws_frame *cwist_websocket_receive(cwist_websocket *ws);
 /**
  * @brief Send a frame with the specified opcode and payload.
  */
-int cwist_websocket_send(cwist_websocket *ws, cwist_ws_opcode_t opcode, const uint8_t *data, size_t len);
+int cwist_websocket_send(cwist_websocket *ws, cwist_ws_opcode_t opcode, const uint8_t *data,
+                         size_t len);
 
 /**
  * @brief Send a large payload as sequenced binary frames.
@@ -70,9 +71,7 @@ int cwist_websocket_send(cwist_websocket *ws, cwist_ws_opcode_t opcode, const ui
  * @param chunk_payload_size Maximum payload bytes per chunk (must be > 0).
  * @return 0 on success, -1 on failure.
  */
-int cwist_websocket_send_sequenced(cwist_websocket *ws,
-                                   const uint8_t *data,
-                                   size_t len,
+int cwist_websocket_send_sequenced(cwist_websocket *ws, const uint8_t *data, size_t len,
                                    uint16_t chunk_payload_size);
 
 /**

@@ -7,7 +7,13 @@
 #include <stdlib.h>
 #include <assert.h>
 
-#define FAIL_IF(cond, msg) do { if (cond) { fprintf(stderr, "FAIL: %s\n", msg); return 1; } } while (0)
+#define FAIL_IF(cond, msg)                      \
+    do {                                        \
+        if (cond) {                             \
+            fprintf(stderr, "FAIL: %s\n", msg); \
+            return 1;                           \
+        }                                       \
+    } while (0)
 
 static void hello_handler(cwist_http_request *req, cwist_http_response *res) {
     (void)req;
@@ -47,26 +53,39 @@ static void set_cookie_handler(cwist_http_request *req, cwist_http_response *res
 
 static void get_cookie_handler(cwist_http_request *req, cwist_http_response *res) {
     const char *cookie = cwist_http_header_get(req->headers, "Cookie");
-    if (cookie) cwist_sstring_assign_len(res->body, cookie, strlen(cookie));
-    else cwist_sstring_assign(res->body, "none");
+    if (cookie)
+        cwist_sstring_assign_len(res->body, cookie, strlen(cookie));
+    else
+        cwist_sstring_assign(res->body, "none");
     res->status_code = CWIST_HTTP_OK;
 }
 
 static void query_handler(cwist_http_request *req, cwist_http_response *res) {
     const char *q = cwist_query_map_get(req->query_params, "q");
-    if (q) cwist_sstring_assign_len(res->body, q, strlen(q));
-    else cwist_sstring_assign(res->body, "missing");
+    if (q)
+        cwist_sstring_assign_len(res->body, q, strlen(q));
+    else
+        cwist_sstring_assign(res->body, "missing");
     res->status_code = CWIST_HTTP_OK;
 }
 
 static void upload_handler(cwist_http_request *req, cwist_http_response *res) {
     const char *ct = cwist_http_header_get(req->headers, "Content-Type");
-    if (!ct) { res->status_code = CWIST_HTTP_BAD_REQUEST; return; }
+    if (!ct) {
+        res->status_code = CWIST_HTTP_BAD_REQUEST;
+        return;
+    }
     char *boundary = cwist_multipart_extract_boundary(ct);
-    if (!boundary) { res->status_code = CWIST_HTTP_BAD_REQUEST; return; }
+    if (!boundary) {
+        res->status_code = CWIST_HTTP_BAD_REQUEST;
+        return;
+    }
     cwist_multipart_result *mr = cwist_multipart_parse(req->body->data, req->body->size, boundary);
     free(boundary);
-    if (!mr || !mr->fields) { res->status_code = CWIST_HTTP_BAD_REQUEST; return; }
+    if (!mr || !mr->fields) {
+        res->status_code = CWIST_HTTP_BAD_REQUEST;
+        return;
+    }
     cwist_sstring_assign(res->body, mr->fields->filename ? mr->fields->filename : "no-filename");
     cwist_sstring_append(res->body, "=");
     if (mr->fields->data) cwist_sstring_append(res->body, mr->fields->data);
@@ -128,15 +147,13 @@ int main(void) {
     cwist_http_response_destroy(res);
 
     /* request_ex with headers, query, ad-hoc cookies */
-    cwist_test_client_kv headers[] = { {"X-Custom", "abc"} };
-    cwist_test_client_kv cookies[] = { {"adhoc", "123"} };
-    cwist_test_client_request_options opts = {
-        .headers = headers,
-        .header_count = 1,
-        .cookies = cookies,
-        .cookie_count = 1,
-        .query_string = "q=search"
-    };
+    cwist_test_client_kv headers[] = {{"X-Custom", "abc"}};
+    cwist_test_client_kv cookies[] = {{"adhoc", "123"}};
+    cwist_test_client_request_options opts = {.headers = headers,
+                                              .header_count = 1,
+                                              .cookies = cookies,
+                                              .cookie_count = 1,
+                                              .query_string = "q=search"};
     res = cwist_test_client_request_ex(client, CWIST_HTTP_GET, "/query", &opts);
     FAIL_IF(!res || !res->body, "request_ex res");
     FAIL_IF(strcmp(res->body->data, "search") != 0, "query body");
@@ -148,7 +165,8 @@ int main(void) {
     FAIL_IF(cwist_test_client_get_cookie(client, NULL) != NULL, "get null cookie");
 
     res = cwist_test_client_get(client, "/set-cookie");
-    FAIL_IF(!res || strcmp(cwist_test_client_get_cookie(client, "tc"), "jarvalue") != 0, "jar cookie");
+    FAIL_IF(!res || strcmp(cwist_test_client_get_cookie(client, "tc"), "jarvalue") != 0,
+            "jar cookie");
     cwist_http_response_destroy(res);
 
     res = cwist_test_client_get(client, "/get-cookie");
@@ -158,19 +176,16 @@ int main(void) {
     cwist_http_response_destroy(res);
 
     /* Test adhoc cookies with NULL key/value safety */
-    cwist_test_client_kv safe_cookies[] = { {NULL, "none"}, {"valid", "val"}, {"nullval", NULL} };
-    cwist_test_client_request_options safe_opts = {
-        .cookies = safe_cookies,
-        .cookie_count = 3
-    };
+    cwist_test_client_kv safe_cookies[] = {{NULL, "none"}, {"valid", "val"}, {"nullval", NULL}};
+    cwist_test_client_request_options safe_opts = {.cookies = safe_cookies, .cookie_count = 3};
     res = cwist_test_client_request_ex(client, CWIST_HTTP_GET, "/get-cookie", &safe_opts);
     FAIL_IF(!res || !res->body, "safe cookies res");
     FAIL_IF(strstr(res->body->data, "valid=val") == NULL, "safe adhoc cookie sent");
     cwist_http_response_destroy(res);
 
     /* Multipart upload */
-    res = cwist_test_client_post_multipart(client, "/upload", "file", "test.txt",
-                                            "text/plain", "hello file", 10);
+    res = cwist_test_client_post_multipart(client, "/upload", "file", "test.txt", "text/plain",
+                                           "hello file", 10);
     FAIL_IF(!res || !res->body, "multipart res");
     if (!res->body->data) {
         fprintf(stderr, "multipart body->data is NULL, status=%d\n", res->status_code);

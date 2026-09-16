@@ -49,12 +49,12 @@ typedef enum cwist_grpc_channel_state {
  */
 typedef struct cwist_grpc_retry_policy {
     uint32_t max_attempts;         /* RPC attempts incl. the original; >= 2,
-                                    * clamped to the client-side maximum of 5 */
+                            * clamped to the client-side maximum of 5 */
     uint64_t initial_backoff_ms;   /* > 0; first retry after
-                                    * initial_backoff * random(0.8, 1.2) */
+                                  * initial_backoff * random(0.8, 1.2) */
     uint64_t max_backoff_ms;       /* > 0 */
     double backoff_multiplier;     /* > 0; nth retry waits
-                                    * min(initial*mult^(n-1), max) * random(0.8,1.2) */
+                                * min(initial*mult^(n-1), max) * random(0.8,1.2) */
     uint32_t retryable_status_mask; /* CWIST_GRPC_STATUS_BIT() per retryable code */
 } cwist_grpc_retry_policy;
 
@@ -70,13 +70,13 @@ typedef struct cwist_grpc_channel_options {
     int verify_peer;              /* TLS only: verify server certificate (default 1) */
     uint64_t connect_timeout_ms;  /* 0 = 10000 */
     cwist_grpc_lb_policy lb_policy;                      /* default pick_first */
-    const cwist_grpc_retry_policy *retry_policy;         /* NULL = retries disabled (A6 default) */
-    const cwist_grpc_retry_throttle *retry_throttle;     /* NULL = no throttling */
+    const cwist_grpc_retry_policy *retry_policy; /* NULL = retries disabled (A6 default) */
+    const cwist_grpc_retry_throttle *retry_throttle; /* NULL = no throttling */
     uint64_t per_rpc_buffer_limit; /* 0 = 256 KiB; requests larger than this
                                     * are sent but never retried (A6 buffering) */
-    int wait_for_ready;           /* 0 = fail fast UNAVAILABLE while no
-                                   * subchannel is READY; 1 = wait until the
-                                   * call deadline */
+    int wait_for_ready; /* 0 = fail fast UNAVAILABLE while no
+                         * subchannel is READY; 1 = wait until the
+                         * call deadline */
 } cwist_grpc_channel_options;
 
 /**
@@ -109,8 +109,7 @@ cwist_grpc_channel_state cwist_grpc_channel_get_state(cwist_grpc_channel *channe
  * maxTokens in (0,1000], tokenRatio > 0).  Returns 0 on success, -1 on a
  * validation error (channel configuration is left unchanged).
  */
-int cwist_grpc_channel_apply_service_config_json(cwist_grpc_channel *channel,
-                                                 const char *json);
+int cwist_grpc_channel_apply_service_config_json(cwist_grpc_channel *channel, const char *json);
 
 /**
  * Start a call through the channel: picks a subchannel per attempt and
@@ -121,10 +120,8 @@ int cwist_grpc_channel_apply_service_config_json(cwist_grpc_channel *channel,
  * each attempt's grpc-timeout header carries the remaining time.
  */
 cwist_grpc_channel_call *cwist_grpc_channel_call_start(cwist_grpc_channel *channel,
-                                                       const char *method,
-                                                       const void *request,
-                                                       size_t request_len,
-                                                       uint64_t timeout_ms);
+                                                       const char *method, const void *request,
+                                                       size_t request_len, uint64_t timeout_ms);
 
 int cwist_grpc_channel_call_recv(cwist_grpc_channel_call *call, cwist_grpc_message *out);
 cwist_grpc_status_t cwist_grpc_channel_call_finish(cwist_grpc_channel_call *call,
@@ -141,12 +138,10 @@ uint32_t cwist_grpc_channel_call_attempts(const cwist_grpc_channel_call *call);
  * carried none) and returns the final grpc-status.  @p status_message
  * receives an owned copy of grpc-message (caller frees; may be NULL).
  */
-cwist_grpc_status_t cwist_grpc_channel_unary(cwist_grpc_channel *channel,
-                                             const char *method,
+cwist_grpc_status_t cwist_grpc_channel_unary(cwist_grpc_channel *channel, const char *method,
                                              const void *request, size_t request_len,
-                                             uint64_t timeout_ms,
-                                             uint8_t **response, size_t *response_len,
-                                             char **status_message);
+                                             uint64_t timeout_ms, uint8_t **response,
+                                             size_t *response_len, char **status_message);
 
 #ifdef __cplusplus
 }

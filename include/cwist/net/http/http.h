@@ -133,14 +133,15 @@ typedef enum cwist_http_parse_error_t {
 
 /** --- Constants and Limits --- */
 #define CWIST_HTTP_MAX_HEADER_SIZE (8 * 1024)
-#define CWIST_HTTP_MAX_BODY_SIZE   (10 * 1024 * 1024)
+#define CWIST_HTTP_MAX_BODY_SIZE (10 * 1024 * 1024)
 #define CWIST_HTTP_READ_BUFFER_SIZE (16 * 1024)
-#define CWIST_HTTP_TIMEOUT_MS      30000
+#define CWIST_HTTP_TIMEOUT_MS 30000
 #define CWIST_HTTPS_HANDSHAKE_TIMEOUT_MS 45000  /* Total TLS handshake budget */
-#define CWIST_HTTP_HEADERS_TIMEOUT_MS    120000 /* Total header read budget */
-#define CWIST_HTTP_BODY_IDLE_TIMEOUT_MS  60000  /* Abort body read after this much silence */
-#define CWIST_HTTP2_IDLE_TIMEOUT_MS      300000 /* Default h2 idle budget (env overridable) */
-#define CWIST_HTTP_KEEP_ALIVE_TIMEOUT_SEC 15    /* Default keep-alive idle connection timeout in seconds */
+#define CWIST_HTTP_HEADERS_TIMEOUT_MS 120000 /* Total header read budget */
+#define CWIST_HTTP_BODY_IDLE_TIMEOUT_MS 60000  /* Abort body read after this much silence */
+#define CWIST_HTTP2_IDLE_TIMEOUT_MS 300000 /* Default h2 idle budget (env overridable) */
+#define CWIST_HTTP_KEEP_ALIVE_TIMEOUT_SEC \
+    15    /* Default keep-alive idle connection timeout in seconds */
 
 /** --- Structures --- */
 
@@ -195,7 +196,7 @@ typedef struct cwist_http_response {
     cwist_http_header_node *headers;
     cwist_sstring *body;
     cwist_endpoint_opt_t endpoint_opts; ///< Mirrors req->endpoint_opts.
-    
+
     /// Zero-Copy Pointer Body
     bool is_ptr_body;        ///< If true, body data is read from ptr_body
     const void *ptr_body;    ///< Pointer to external data (e.g., mmap region)
@@ -209,14 +210,15 @@ typedef struct cwist_http_response {
     size_t file_stream_len;      ///< Total bytes to stream.
     off_t file_stream_offset;    ///< Current offset for sendfile loop.
     bool file_stream_auto_close; ///< Close fd after streaming.
-    
+
     bool keep_alive;
-    
+
     /// Alt-Svc header for HTTP/3 upgrade advertisement
     char *alt_svc;
 
     void *arena;            ///< Per-response arena for bump-allocated structs (internal).
-    bool arena_borrowed;    ///< True when arena is shared (e.g. the request's) and must not be destroyed here.
+    bool arena_borrowed;    ///< True when arena is shared (e.g. the request's) and must not be
+                            ///< destroyed here.
 
     /// Deferred-response handoff (internal; see net/http/async.h)
     bool deferred;          ///< Handler deferred the response via cwist_async_defer.
@@ -229,7 +231,7 @@ typedef struct cwist_http_response {
 /** @{ */
 cwist_http_request *cwist_http_request_create(void);
 void cwist_http_request_destroy(cwist_http_request *req);
-cwist_http_request *cwist_http_parse_request(const char *raw_request); 
+cwist_http_request *cwist_http_parse_request(const char *raw_request);
 /**
  * @brief Parse an HTTP/1.x request held in a memory buffer (length-based;
  * the buffer may contain a binary body and need not be NUL-terminated).
@@ -242,7 +244,8 @@ cwist_http_request *cwist_http_parse_request_len(const char *buf, size_t len);
  * @return 0 on success, -1 on failure.
  */
 int cwist_http_response_serialize(cwist_http_response *res, char **out, size_t *out_len);
-cwist_http_request *cwist_http_receive_request(int client_fd, char *read_buf, size_t buf_size, size_t *buf_len, cwist_http_parse_error_t *err_out);
+cwist_http_request *cwist_http_receive_request(int client_fd, char *read_buf, size_t buf_size,
+                                               size_t *buf_len, cwist_http_parse_error_t *err_out);
 /**
  * @brief Send a minimal HTTP/1.x error response (Connection: close) on a
  * socket, used to answer malformed requests before dropping them.
@@ -253,7 +256,7 @@ void cwist_http_send_error_response(int fd, int status, const char *msg);
 
 /** @name Request Data Processing */
 /** @{ */
-cwist_sstring* cwist_get_client_ip_from_fd(int fd);
+cwist_sstring *cwist_get_client_ip_from_fd(int fd);
 
 /**
  * @brief Format a time_t as an HTTP-date (RFC 7231).
@@ -284,7 +287,8 @@ void cwist_http_response_destroy(cwist_http_response *res);
  * The pointer must remain valid until the response is sent.
  */
 void cwist_http_response_set_body_ptr(cwist_http_response *res, const void *ptr, size_t len);
-void cwist_http_response_set_body_ptr_managed(cwist_http_response *res, const void *ptr, size_t len, cwist_http_body_cleanup_fn cleanup, void *ctx);
+void cwist_http_response_set_body_ptr_managed(cwist_http_response *res, const void *ptr, size_t len,
+                                              cwist_http_body_cleanup_fn cleanup, void *ctx);
 void cwist_http_response_set_alt_svc(cwist_http_response *res, const char *alt_svc);
 
 cwist_sstring *cwist_http_stringify_response(cwist_http_response *res);
@@ -307,12 +311,14 @@ bool cwist_tcp_cork_enabled(void);
  * @return Number of bytes written.
  */
 size_t cwist_http_serialize_headers(cwist_http_response *res, char *buf, size_t buf_size);
-cwist_error_t cwist_http_response_send_file(cwist_http_response *res, const char *file_path, const char *content_type_hint, size_t *out_size);
+cwist_error_t cwist_http_response_send_file(cwist_http_response *res, const char *file_path,
+                                            const char *content_type_hint, size_t *out_size);
 /** @} */
 
 /** @name Header Manipulation */
 /** @{ */
-cwist_error_t cwist_http_header_add(cwist_http_header_node **head, const char *key, const char *value);
+cwist_error_t cwist_http_header_add(cwist_http_header_node **head, const char *key,
+                                    const char *value);
 /**
  * @brief Finds a header value by key.
  * @return Raw C-string pointer (NULL if not found).
@@ -354,9 +360,11 @@ cwist_http_method_t cwist_http_string_to_method_len(const char *str, size_t len)
 /** @name TCP Socket Helpers */
 /** @{ */
 /** @brief Create an IPv4 socket and perform bind/listen. */
-int cwist_make_socket_ipv4(struct sockaddr_in *sockv4, const char *address, uint16_t port, uint16_t backlog);
+int cwist_make_socket_ipv4(struct sockaddr_in *sockv4, const char *address, uint16_t port,
+                           uint16_t backlog);
 /** @brief Accept sockets and invoke a handler callback. */
-cwist_error_t cwist_accept_socket(int server_fd, struct sockaddr *sockv4, void (*handler_func)(int client_fd, void *ctx), void *ctx);
+cwist_error_t cwist_accept_socket(int server_fd, struct sockaddr *sockv4,
+                                  void (*handler_func)(int client_fd, void *ctx), void *ctx);
 /** @} */
 
 typedef struct cwist_server_config {
@@ -365,7 +373,8 @@ typedef struct cwist_server_config {
     bool use_epoll;       ///< Use epoll for accepting.
 } cwist_server_config;
 
-cwist_error_t cwist_http_server_loop(int server_fd, cwist_server_config *config, void (*handler)(int, void *), void *ctx);
+cwist_error_t cwist_http_server_loop(int server_fd, cwist_server_config *config,
+                                     void (*handler)(int, void *), void *ctx);
 int headers_have_content_length(cwist_http_header_node *headers);
 
 int cwist_http_pool_init(void);
@@ -402,16 +411,16 @@ typedef struct cwist_http_async_conn {
     char *rbuf;                           /* Lazy recv stash; freed while empty. */
     size_t cap;
     size_t len;
-    char *obuf;                           /* Coalesced output stash (C1M async batch); reused across turns. */
+    char *obuf; /* Coalesced output stash (C1M async batch); reused across turns. */
     size_t ocap;
     size_t olen;
-    bool virgin;                          /* No bytes seen yet (h2c preface sniff). */
-    bool expect_continue_sent;            /* 100 Continue already emitted for the pending request. */
-    uint32_t last_active_sec;             /* Monotonic timestamp of last activity (for idle reaping). */
-    uint32_t worker_id;                   /* Assigned worker thread index for load tracking. */
-    cwist_reactor_t *reactor;             /* Owning reactor (deferred-response completion target). */
-    cwist_async_handler_t handler;        /* Connection handler, reused for re-arm after a defer. */
-    bool peer_eof;                       /* Read side closed; drain complete buffered requests. */
+    bool virgin; /* No bytes seen yet (h2c preface sniff). */
+    bool expect_continue_sent; /* 100 Continue already emitted for the pending request. */
+    uint32_t last_active_sec; /* Monotonic timestamp of last activity (for idle reaping). */
+    uint32_t worker_id; /* Assigned worker thread index for load tracking. */
+    cwist_reactor_t *reactor; /* Owning reactor (deferred-response completion target). */
+    cwist_async_handler_t handler; /* Connection handler, reused for re-arm after a defer. */
+    bool peer_eof; /* Read side closed; drain complete buffered requests. */
 } cwist_http_async_conn_t;
 
 /* Re-arm a connection after a deferred response completed on the reactor
@@ -443,8 +452,8 @@ typedef enum {
 } cwist_async_send_status_t;
 
 cwist_async_send_status_t cwist_http_send_response_async(int client_fd, cwist_http_response *res,
-                                                        cwist_http_async_conn_t *conn,
-                                                        bool keep_alive, bool head_only);
+                                                         cwist_http_async_conn_t *conn,
+                                                         bool keep_alive, bool head_only);
 
 /* Response write coalescing on the cleartext C1M async batch path: responses
  * served within one reactor turn accumulate in conn->obuf (capped at
@@ -458,30 +467,34 @@ cwist_async_send_status_t cwist_http_send_response_async(int client_fd, cwist_ht
 #define CWIST_HTTP_COALESCE_MAX (256 * 1024)
 
 typedef enum {
-    CWIST_COALESCE_FLUSH_DONE = 0,  /* Stash fully written (or empty). */
-    CWIST_COALESCE_FLUSH_PARKED,    /* Remainder parked on POLLOUT; slot owns fd/conn. */
-    CWIST_COALESCE_FLUSH_ERROR      /* Fatal; caller closes. */
+    CWIST_COALESCE_FLUSH_DONE = 0, /* Stash fully written (or empty). */
+    CWIST_COALESCE_FLUSH_PARKED, /* Remainder parked on POLLOUT; slot owns fd/conn. */
+    CWIST_COALESCE_FLUSH_ERROR /* Fatal; caller closes. */
 } cwist_coalesce_flush_status_t;
 
 int cwist_http_coalesce_append(cwist_http_async_conn_t *conn, const void *data, size_t len);
-cwist_coalesce_flush_status_t cwist_http_coalesce_flush(int client_fd, cwist_http_async_conn_t *conn, bool keep_alive);
+cwist_coalesce_flush_status_t
+cwist_http_coalesce_flush(int client_fd, cwist_http_async_conn_t *conn, bool keep_alive);
 int cwist_http_coalesce_flush_blocking(int client_fd, cwist_http_async_conn_t *conn);
 int cwist_http_coalesce_error_response(cwist_http_async_conn_t *conn, int status);
-cwist_async_send_status_t cwist_http_send_response_coalesced(int client_fd, cwist_http_response *res,
+cwist_async_send_status_t cwist_http_send_response_coalesced(int client_fd,
+                                                             cwist_http_response *res,
                                                              cwist_http_async_conn_t *conn,
                                                              bool keep_alive, bool head_only);
 
 typedef enum {
     CWIST_RECV_OK = 0,
-    CWIST_RECV_NEED_MORE,   /* Partial request; rearm and wait. */
-    CWIST_RECV_FATAL        /* Protocol error / overflow; close. */
+    CWIST_RECV_NEED_MORE, /* Partial request; rearm and wait. */
+    CWIST_RECV_FATAL /* Protocol error / overflow; close. */
 } cwist_recv_status_t;
 
 bool cwist_http_pool_submit_async(int client_fd, cwist_async_handler_t handler, void *ctx);
 /* Returns 0 on data/EAGAIN/EOF, -1 on fatal error. EOF sets peer_eof;
  * drain complete buffered requests, then close instead of waiting for input. */
 int cwist_http_async_conn_fill(cwist_http_async_conn_t *conn);
-cwist_recv_status_t cwist_http_receive_request_nb(cwist_http_async_conn_t *conn, cwist_http_request **out, cwist_http_parse_error_t *err_out);
+cwist_recv_status_t cwist_http_receive_request_nb(cwist_http_async_conn_t *conn,
+                                                  cwist_http_request **out,
+                                                  cwist_http_parse_error_t *err_out);
 
 extern const int CWIST_CREATE_SOCKET_FAILED;
 extern const int CWIST_HTTP_UNAVAILABLE_ADDRESS;

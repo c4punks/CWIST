@@ -12,66 +12,66 @@ struct cwist_sstring;
 
 typedef enum cwist_errtype_t {
   /// @name signed int errcodes
-  CWIST_ERR_INT8, ///< mostly used to check a char
-  CWIST_ERR_INT16, ///< used when checking common errcodes in Unix/Linux
-  CWIST_ERR_INT32,
+    CWIST_ERR_INT8, ///< mostly used to check a char
+    CWIST_ERR_INT16, ///< used when checking common errcodes in Unix/Linux
+    CWIST_ERR_INT32,
   /// big, signed errcodes
   /// WARN: mostly unused
-  CWIST_ERR_INT64,
-# if defined(__clang__) || defined(__GNUC__) && defined(USE_128BIT_ERRCODE)
-  CWIST_ERR_INT128,
+    CWIST_ERR_INT64,
+#if defined(__clang__) || defined(__GNUC__) && defined(USE_128BIT_ERRCODE)
+    CWIST_ERR_INT128,
 #endif
   /// @name unsigned int errcodes
-  CWIST_ERR_UINT8, ///< mostly used as 'byte'
-  CWIST_ERR_UINT16,
-  CWIST_ERR_UINT32,
+    CWIST_ERR_UINT8, ///< mostly used as 'byte'
+    CWIST_ERR_UINT16,
+    CWIST_ERR_UINT32,
   /// big, unsigned errcodes
   /// WARN: mostly unused
-  CWIST_ERR_UINT64,
-# if defined(__clang__) || defined(__GNUC__) && defined(USE_128BIT_ERRCODE)
-  CWIST_ERR_UINT128,
+    CWIST_ERR_UINT64,
+#if defined(__clang__) || defined(__GNUC__) && defined(USE_128BIT_ERRCODE)
+    CWIST_ERR_UINT128,
 #endif
 
   /// string types
-  CWIST_ERR_STRING,
-  CWIST_ERR_JSON,
+    CWIST_ERR_STRING,
+    CWIST_ERR_JSON,
   /// float types
   /// WARN: mostly unused
-  CWIST_ERR_FLOAT,
-  CWIST_ERR_DOUBLE,
+    CWIST_ERR_FLOAT,
+    CWIST_ERR_DOUBLE,
 } cwist_errtype_t;
 
 typedef struct __prim_cwist_error_t {
   /* These types are widely used when handling internal errcodes.
-   * User-oriented errors are beautified as JSON.
-   */
-  int8_t   err_i8;
-  int16_t  err_i16;
-  int32_t  err_i32;
-  int64_t  err_i64;
+     * User-oriented errors are beautified as JSON.
+     */
+    int8_t err_i8;
+    int16_t err_i16;
+    int32_t err_i32;
+    int64_t err_i64;
 #if (defined(__clang__) || defined(__GNUC__)) && defined(USE_128BIT_ERRCODE)
-  int64_t err_i128;
+    int64_t err_i128;
 #endif
 
   /* Unsigned error types. These types are often utilised when handling raw bytes;
-   * in many cases, these kinds of errors are hard to find on modern web development.
-   */
-  uint8_t   err_u8;
-  uint16_t  err_u16;
-  uint32_t  err_u32;
-  uint64_t  err_u64;
+     * in many cases, these kinds of errors are hard to find on modern web development.
+     */
+    uint8_t err_u8;
+    uint16_t err_u16;
+    uint32_t err_u32;
+    uint64_t err_u64;
 
 #if (defined(__clang__) || defined(__GNUC__)) && defined(USE_128BIT_ERRCODE)
-  int64_t err_i128;
+    int64_t err_i128;
 #endif
-  struct cwist_sstring *err_string;
-  cJSON       *err_json;
+    struct cwist_sstring *err_string;
+    cJSON *err_json;
 
 } __prim_cwist_error_t;
 
 typedef struct cwist_error_t {
-  cwist_errtype_t errtype;
-__prim_cwist_error_t error;
+    cwist_errtype_t errtype;
+    __prim_cwist_error_t error;
 } cwist_error_t;
 
 /**
@@ -87,17 +87,17 @@ __prim_cwist_error_t error;
 static inline bool cwist_error_is_ok(const cwist_error_t *err) {
     if (!err) return true;
     switch (err->errtype) {
-        case CWIST_ERR_INT8:   return err->error.err_i8 == 0;
-        case CWIST_ERR_INT16:  return err->error.err_i16 == 0;
-        case CWIST_ERR_INT32:  return err->error.err_i32 == 0;
-        case CWIST_ERR_INT64:  return err->error.err_i64 == 0;
-        case CWIST_ERR_UINT8:  return err->error.err_u8 == 0;
+        case CWIST_ERR_INT8: return err->error.err_i8 == 0;
+        case CWIST_ERR_INT16: return err->error.err_i16 == 0;
+        case CWIST_ERR_INT32: return err->error.err_i32 == 0;
+        case CWIST_ERR_INT64: return err->error.err_i64 == 0;
+        case CWIST_ERR_UINT8: return err->error.err_u8 == 0;
         case CWIST_ERR_UINT16: return err->error.err_u16 == 0;
         case CWIST_ERR_UINT32: return err->error.err_u32 == 0;
         case CWIST_ERR_UINT64: return err->error.err_u64 == 0;
         case CWIST_ERR_STRING: return err->error.err_string == NULL;
-        case CWIST_ERR_JSON:   return err->error.err_json == NULL;
-        default:               return false;
+        case CWIST_ERR_JSON: return err->error.err_json == NULL;
+        default: return false;
     }
 }
 

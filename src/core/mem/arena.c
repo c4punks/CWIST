@@ -31,8 +31,7 @@ struct cwist_arena {
 cwist_arena_t *cwist_arena_create(size_t generation_bytes) {
     cwist_arena_t *arena = (cwist_arena_t *)calloc(1, sizeof(cwist_arena_t));
     if (!arena) return NULL;
-    arena->capacity = generation_bytes ? generation_bytes
-                                       : CWIST_ARENA_DEFAULT_GENERATION_BYTES;
+    arena->capacity = generation_bytes ? generation_bytes : CWIST_ARENA_DEFAULT_GENERATION_BYTES;
     arena->base = (uint8_t *)malloc(arena->capacity);
     if (!arena->base) {
         free(arena);
@@ -108,7 +107,8 @@ static pthread_once_t g_arena_tls_once = PTHREAD_ONCE_INIT;
 static void cwist_arena_tls_destroy(void *ptr) {
     cwist_arena_tls_t *tls = (cwist_arena_tls_t *)ptr;
     if (!tls) return;
-#if (defined(__STDC_VERSION__) && __STDC_VERSION__ >= 201112L) || defined(__GNUC__) || defined(__clang__)
+#if (defined(__STDC_VERSION__) && __STDC_VERSION__ >= 201112L) || defined(__GNUC__) || \
+    defined(__clang__)
     t_arena_tls = NULL;
 #endif
     for (size_t i = 0; i < tls->buf_count; i++) {
@@ -130,7 +130,8 @@ static void cwist_arena_tls_key_init(void) {
  * @return Thread-local state, or NULL on allocation/setup failure.
  */
 static inline cwist_arena_tls_t *cwist_arena_tls_get(void) {
-#if (defined(__STDC_VERSION__) && __STDC_VERSION__ >= 201112L) || defined(__GNUC__) || defined(__clang__)
+#if (defined(__STDC_VERSION__) && __STDC_VERSION__ >= 201112L) || defined(__GNUC__) || \
+    defined(__clang__)
     if (__builtin_expect(t_arena_tls != NULL, 1)) {
         return t_arena_tls;
     }
@@ -141,7 +142,8 @@ static inline cwist_arena_tls_t *cwist_arena_tls_get(void) {
     }
     cwist_arena_tls_t *tls = (cwist_arena_tls_t *)pthread_getspecific(g_arena_tls_key);
     if (tls) {
-#if (defined(__STDC_VERSION__) && __STDC_VERSION__ >= 201112L) || defined(__GNUC__) || defined(__clang__)
+#if (defined(__STDC_VERSION__) && __STDC_VERSION__ >= 201112L) || defined(__GNUC__) || \
+    defined(__clang__)
         t_arena_tls = tls;
 #endif
         return tls;
@@ -162,7 +164,8 @@ static inline cwist_arena_tls_t *cwist_arena_tls_get(void) {
         free(tls);
         return NULL;
     }
-#if (defined(__STDC_VERSION__) && __STDC_VERSION__ >= 201112L) || defined(__GNUC__) || defined(__clang__)
+#if (defined(__STDC_VERSION__) && __STDC_VERSION__ >= 201112L) || defined(__GNUC__) || \
+    defined(__clang__)
     t_arena_tls = tls;
 #endif
     return tls;
@@ -172,8 +175,7 @@ cwist_arena_t *cwist_arena_create(size_t generation_bytes) {
     cwist_arena_tls_t *tls = cwist_arena_tls_get();
     if (!tls) return NULL;
 
-    size_t bytes = generation_bytes ? generation_bytes
-                                    : CWIST_ARENA_DEFAULT_GENERATION_BYTES;
+    size_t bytes = generation_bytes ? generation_bytes : CWIST_ARENA_DEFAULT_GENERATION_BYTES;
 
     /* Only default-sized buffers participate in the recycle cache. */
     void *buffer = NULL;
@@ -181,16 +183,14 @@ cwist_arena_t *cwist_arena_create(size_t generation_bytes) {
         buffer = tls->bufs[--tls->buf_count];
     }
     if (!buffer) {
-        buffer = ttak_mem_alloc_with_flags_raw(bytes,
-                                               __TTAK_UNSAFE_MEM_FOREVER__,
-                                               ttak_get_tick_count(),
-                                               tls->env.config.alloc_flags);
+        buffer = ttak_mem_alloc_with_flags_raw(bytes, __TTAK_UNSAFE_MEM_FOREVER__,
+                                               ttak_get_tick_count(), tls->env.config.alloc_flags);
         if (!buffer) return NULL;
     }
 
     cwist_arena_t *arena = tls->struct_count > 0
-        ? tls->structs[--tls->struct_count]
-        : (cwist_arena_t *)calloc(1, sizeof(cwist_arena_t));
+                               ? tls->structs[--tls->struct_count]
+                               : (cwist_arena_t *)calloc(1, sizeof(cwist_arena_t));
     if (!arena) {
         if (bytes == CWIST_ARENA_DEFAULT_GENERATION_BYTES &&
             tls->buf_count < CWIST_ARENA_CACHE_MAX) {
@@ -250,8 +250,7 @@ void cwist_arena_destroy(cwist_arena_t *arena) {
     }
 
     if (!buffer) return;
-    if (tls && default_sized &&
-        tls->buf_count < CWIST_ARENA_CACHE_MAX) {
+    if (tls && default_sized && tls->buf_count < CWIST_ARENA_CACHE_MAX) {
         /* Recycle: the next request reuses this buffer with zero GC work. */
         tls->bufs[tls->buf_count++] = buffer;
     } else {

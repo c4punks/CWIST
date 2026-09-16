@@ -60,7 +60,8 @@ static void test_cookie_parse_and_get(void) {
     cwist_query_map *map = cwist_query_map_create();
     assert(map != NULL);
 
-    const char *header = "session_id=s%20123; user=alice; theme=dark; ; =empty;   spaced   =value  ";
+    const char *header =
+        "session_id=s%20123; user=alice; theme=dark; ; =empty;   spaced   =value  ";
     cwist_cookie_parse(map, header);
 
     const char *session = cwist_cookie_get(map, "session_id");

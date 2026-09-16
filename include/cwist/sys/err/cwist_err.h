@@ -51,16 +51,16 @@ typedef enum cwist_errtype_t {
  */
 typedef struct __prim_cwist_error_t {
     /* Signed representations */
-    int8_t   err_i8;   /**< 8-bit signed error value */
-    int16_t  err_i16;  /**< 16-bit signed error value */
-    int32_t  err_i32;  /**< 32-bit signed error value */
-    int64_t  err_i64;  /**< 64-bit signed error value */
+    int8_t err_i8;   /**< 8-bit signed error value */
+    int16_t err_i16;  /**< 16-bit signed error value */
+    int32_t err_i32;  /**< 32-bit signed error value */
+    int64_t err_i64;  /**< 64-bit signed error value */
 #if (defined(__clang__) || defined(__GNUC__)) && defined(USE_128BIT_ERRCODE)
     __int128 err_i128; /**< 128-bit signed error value */
 #endif
 
     /* Unsigned representations */
-    uint8_t  err_u8;   /**< 8-bit unsigned error value */
+    uint8_t err_u8;   /**< 8-bit unsigned error value */
     uint16_t err_u16;  /**< 16-bit unsigned error value */
     uint32_t err_u32;  /**< 32-bit unsigned error value */
     uint64_t err_u64;  /**< 64-bit unsigned error value */
@@ -94,14 +94,14 @@ typedef struct cwist_error_t {
 static inline bool cwist_error_is_ok(const cwist_error_t *err) {
     if (!err) return true;
     switch (err->errtype) {
-        case CWIST_ERR_INT8:   return err->error.err_i8 == 0;
-        case CWIST_ERR_INT16:  return err->error.err_i16 == 0;
-        case CWIST_ERR_INT32:  return err->error.err_i32 == 0;
-        case CWIST_ERR_INT64:  return err->error.err_i64 == 0;
+        case CWIST_ERR_INT8: return err->error.err_i8 == 0;
+        case CWIST_ERR_INT16: return err->error.err_i16 == 0;
+        case CWIST_ERR_INT32: return err->error.err_i32 == 0;
+        case CWIST_ERR_INT64: return err->error.err_i64 == 0;
 #if (defined(__clang__) || defined(__GNUC__)) && defined(USE_128BIT_ERRCODE)
         case CWIST_ERR_INT128: return err->error.err_i128 == 0;
 #endif
-        case CWIST_ERR_UINT8:  return err->error.err_u8 == 0;
+        case CWIST_ERR_UINT8: return err->error.err_u8 == 0;
         case CWIST_ERR_UINT16: return err->error.err_u16 == 0;
         case CWIST_ERR_UINT32: return err->error.err_u32 == 0;
         case CWIST_ERR_UINT64: return err->error.err_u64 == 0;
@@ -109,8 +109,8 @@ static inline bool cwist_error_is_ok(const cwist_error_t *err) {
         case CWIST_ERR_UINT128: return err->error.err_u128 == 0;
 #endif
         case CWIST_ERR_STRING: return err->error.err_string == NULL;
-        case CWIST_ERR_JSON:   return err->error.err_json == NULL;
-        default:               return false;
+        case CWIST_ERR_JSON: return err->error.err_json == NULL;
+        default: return false;
     }
 }
 
@@ -135,13 +135,13 @@ void cwist_error_dispose(cwist_error_t *err);
 /** @name Common Status Codes
  * @{
  */
-#define CWIST_SUCCESS                0  /**< Success (Standard OK) */
-#define CWIST_FAILURE               -1  /**< Generic failure */
-#define CWIST_ERROR_IO              -2  /**< I/O or Network level error (inc. SSL) */
-#define CWIST_ERROR_NOMEM           -3  /**< Memory allocation or resource exhaustion */
-#define CWIST_ERROR_INVALID_PARAM   -4  /**< Invalid argument passed to function */
-#define CWIST_ERROR_PROTOCOL        -5  /**< Protocol-specific violation (HTTP/2, etc.) */
-#define CWIST_ERROR_TIMEOUT         -6  /**< Operation timed out */
+#define CWIST_SUCCESS 0  /**< Success (Standard OK) */
+#define CWIST_FAILURE -1  /**< Generic failure */
+#define CWIST_ERROR_IO -2  /**< I/O or Network level error (inc. SSL) */
+#define CWIST_ERROR_NOMEM -3  /**< Memory allocation or resource exhaustion */
+#define CWIST_ERROR_INVALID_PARAM -4  /**< Invalid argument passed to function */
+#define CWIST_ERROR_PROTOCOL -5  /**< Protocol-specific violation (HTTP/2, etc.) */
+#define CWIST_ERROR_TIMEOUT -6  /**< Operation timed out */
 /** @} */
 
 #endif /* __CWIST_ERR_H__ */

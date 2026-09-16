@@ -9,8 +9,8 @@
 #include <string.h>
 #include <time.h>
 
-static const char *level_strings[] = { "DEBUG", "INFO", "WARN", "ERROR" };
-static const char *level_colors[]  = { "\033[36m", "\033[32m", "\033[33m", "\033[31m" };
+static const char *level_strings[] = {"DEBUG", "INFO", "WARN", "ERROR"};
+static const char *level_colors[] = {"\033[36m", "\033[32m", "\033[33m", "\033[31m"};
 static const char *color_reset = "\033[0m";
 
 static FILE *level_file(cwist_log_level_t level) {
@@ -48,7 +48,8 @@ void cwist_logger_log(cwist_logger *log, cwist_log_level_t level, const char *fm
     char time_buf[32];
     strftime(time_buf, sizeof(time_buf), "%Y-%m-%d %H:%M:%S", tm_info);
     if (log->use_colors) {
-        fprintf(out, "%s[%s]%s [%s] %s: ", level_colors[level], time_buf, color_reset, level_strings[level], log->name);
+        fprintf(out, "%s[%s]%s [%s] %s: ", level_colors[level], time_buf, color_reset,
+                level_strings[level], log->name);
     } else {
         fprintf(out, "[%s] [%s] %s: ", time_buf, level_strings[level], log->name);
     }
@@ -81,7 +82,8 @@ void cwist_logger_info(cwist_logger *log, const char *fmt, ...) {
     char time_buf[32];
     strftime(time_buf, sizeof(time_buf), "%Y-%m-%d %H:%M:%S", tm_info);
     if (log->use_colors) {
-        fprintf(out, "%s[%s]%s [INFO] %s: ", level_colors[CWIST_LOG_INFO], time_buf, color_reset, log->name);
+        fprintf(out, "%s[%s]%s [INFO] %s: ", level_colors[CWIST_LOG_INFO], time_buf, color_reset,
+                log->name);
     } else {
         fprintf(out, "[%s] [INFO] %s: ", time_buf, log->name);
     }
@@ -101,7 +103,8 @@ void cwist_logger_warn(cwist_logger *log, const char *fmt, ...) {
     char time_buf[32];
     strftime(time_buf, sizeof(time_buf), "%Y-%m-%d %H:%M:%S", tm_info);
     if (log->use_colors) {
-        fprintf(out, "%s[%s]%s [WARN] %s: ", level_colors[CWIST_LOG_WARN], time_buf, color_reset, log->name);
+        fprintf(out, "%s[%s]%s [WARN] %s: ", level_colors[CWIST_LOG_WARN], time_buf, color_reset,
+                log->name);
     } else {
         fprintf(out, "[%s] [WARN] %s: ", time_buf, log->name);
     }
@@ -121,7 +124,8 @@ void cwist_logger_error(cwist_logger *log, const char *fmt, ...) {
     char time_buf[32];
     strftime(time_buf, sizeof(time_buf), "%Y-%m-%d %H:%M:%S", tm_info);
     if (log->use_colors) {
-        fprintf(out, "%s[%s]%s [ERROR] %s: ", level_colors[CWIST_LOG_ERROR], time_buf, color_reset, log->name);
+        fprintf(out, "%s[%s]%s [ERROR] %s: ", level_colors[CWIST_LOG_ERROR], time_buf, color_reset,
+                log->name);
     } else {
         fprintf(out, "[%s] [ERROR] %s: ", time_buf, log->name);
     }

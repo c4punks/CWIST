@@ -68,8 +68,10 @@ static void test_json_builder_escaping(void) {
 
     cJSON *parsed = cJSON_Parse(raw);
     assert(parsed != NULL);
-    assert(strcmp(cJSON_GetObjectItem(parsed, "quote_and_slash")->valuestring, "He said \"hello\" \\ world") == 0);
-    assert(strcmp(cJSON_GetObjectItem(parsed, "whitespace")->valuestring, "Line1\nLine2\r\tTabbed\b\f") == 0);
+    assert(strcmp(cJSON_GetObjectItem(parsed, "quote_and_slash")->valuestring,
+                  "He said \"hello\" \\ world") == 0);
+    assert(strcmp(cJSON_GetObjectItem(parsed, "whitespace")->valuestring,
+                  "Line1\nLine2\r\tTabbed\b\f") == 0);
     assert(cJSON_GetObjectItem(parsed, "control")->valuestring[0] == 0x01);
     assert((unsigned char)cJSON_GetObjectItem(parsed, "control")->valuestring[1] == 0x1f);
     cJSON_Delete(parsed);

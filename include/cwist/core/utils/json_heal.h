@@ -56,16 +56,16 @@ typedef enum {
  * separator-stripped) matching is applied when exact aliases do not match.
  */
 typedef struct cwist_schema_field {
-    const char        *name;                             ///< Canonical field name.
-    const char        *aliases[CWIST_SCHEMA_MAX_ALIASES];///< Alternative names (NULL-terminated).
+    const char *name;                             ///< Canonical field name.
+    const char *aliases[CWIST_SCHEMA_MAX_ALIASES];///< Alternative names (NULL-terminated).
     cwist_field_type_t type;                             ///< Expected value type.
-    bool               required;                         ///< Must be present?
+    bool required;                         ///< Must be present?
 } cwist_schema_field_t;
 
 /** @brief A complete schema: array of field descriptors + count. */
 typedef struct cwist_schema {
     const cwist_schema_field_t *fields;
-    int                         field_count;
+    int field_count;
 } cwist_schema_t;
 
 /* -------------------------------------------------------------------------
@@ -86,9 +86,8 @@ typedef struct cwist_schema {
  * @param userdata     Opaque pointer from cwist_heal_config_t.
  * @return Heap-allocated recovered JSON string, or NULL.
  */
-typedef char *(*cwist_sllm_heal_fn)(const char        *broken_json,
-                                     const cwist_schema_t *schema,
-                                     void              *userdata);
+typedef char *(*cwist_sllm_heal_fn)(const char *broken_json, const cwist_schema_t *schema,
+                                    void *userdata);
 
 /* -------------------------------------------------------------------------
  * Healing configuration
@@ -96,10 +95,10 @@ typedef char *(*cwist_sllm_heal_fn)(const char        *broken_json,
 
 /** @brief Configuration passed to cwist_json_heal(). */
 typedef struct cwist_heal_config {
-    double               threshold;     ///< Min confidence (0.0–1.0) to accept recovery. Default: 0.8.
+    double threshold;     ///< Min confidence (0.0–1.0) to accept recovery. Default: 0.8.
     const cwist_schema_t *schema;       ///< Schema for L2 alignment (may be NULL).
-    cwist_sllm_heal_fn   sllm_fn;       ///< Optional L3 deep-recovery callback.
-    void                *sllm_userdata; ///< Passed verbatim to sllm_fn.
+    cwist_sllm_heal_fn sllm_fn;       ///< Optional L3 deep-recovery callback.
+    void *sllm_userdata; ///< Passed verbatim to sllm_fn.
 } cwist_heal_config_t;
 
 /* -------------------------------------------------------------------------
@@ -110,11 +109,11 @@ typedef struct cwist_heal_config {
 
 /** @brief Result of a healing attempt. */
 typedef struct cwist_heal_result {
-    char   *json;                    ///< Healed JSON string (free with cwist_heal_result_free). NULL on failure.
-    bool    healed;                  ///< True if any modification was made.
-    int     level;                   ///< Recovery level reached: 0=none, 1=L1, 2=L2, 3=L3.
-    double  confidence;              ///< Estimated confidence in the recovery (0.0–1.0).
-    char    log[CWIST_HEAL_LOG_MAX]; ///< Human-readable description of changes made.
+    char *json; ///< Healed JSON string (free with cwist_heal_result_free). NULL on failure.
+    bool healed; ///< True if any modification was made.
+    int level; ///< Recovery level reached: 0=none, 1=L1, 2=L2, 3=L3.
+    double confidence; ///< Estimated confidence in the recovery (0.0–1.0).
+    char log[CWIST_HEAL_LOG_MAX]; ///< Human-readable description of changes made.
 } cwist_heal_result_t;
 
 /* -------------------------------------------------------------------------
@@ -147,8 +146,7 @@ cwist_heal_result_t cwist_json_heal(const char *input, const cwist_heal_config_t
  * @param log_sz  Size of log buffer.
  * @return        Number of fields modified, or -1 on error.
  */
-int cwist_json_schema_align(cJSON *obj, const cwist_schema_t *schema,
-                             char *log, size_t log_sz);
+int cwist_json_schema_align(cJSON *obj, const cwist_schema_t *schema, char *log, size_t log_sz);
 
 /**
  * @brief Free resources owned by a cwist_heal_result_t.

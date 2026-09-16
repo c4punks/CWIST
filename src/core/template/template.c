@@ -12,7 +12,7 @@
  */
 
 /** @brief Forward declaration for recursive block rendering. */
-static cwist_sstring* render_internal(const char **template_str, const cJSON *context, int depth);
+static cwist_sstring *render_internal(const char **template_str, const cJSON *context, int depth);
 
 /** @brief Maximum nesting depth for includes/control structures. */
 #define CWIST_TEMPLATE_MAX_DEPTH 32
@@ -68,7 +68,10 @@ static void apply_filter(const char *value, const char *filter, char *out, size_
     } else if (strcmp(filter, "escape") == 0 || strcmp(filter, "e") == 0) {
         html_escape(value, out, out_len);
     } else if (strcmp(filter, "trim") == 0) {
-        if (!value) { out[0] = '\0'; return; }
+        if (!value) {
+            out[0] = '\0';
+            return;
+        }
         const char *s = value;
         while (isspace((unsigned char)*s)) s++;
         const char *e = value + strlen(value) - 1;
@@ -111,7 +114,7 @@ static void apply_filter(const char *value, const char *filter, char *out, size_
  * @param key Dot-separated key path, or "." for the current loop item.
  * @return Matching cJSON node, or NULL when the path cannot be resolved.
  */
-static const cJSON* get_value_from_context(const cJSON *context, const char *key) {
+static const cJSON *get_value_from_context(const cJSON *context, const char *key) {
     if (!context || !key) return NULL;
 
     // Handle the special case of "." referring to the current context in a loop
@@ -140,14 +143,13 @@ static const cJSON* get_value_from_context(const cJSON *context, const char *key
     return current;
 }
 
-
 /**
  * @brief Recursively render a template string until the current control block ends.
  * @param template_str Cursor into the template source; advanced as tags are consumed.
  * @param context JSON context used for variable lookups and loop bindings.
  * @return Newly allocated rendered string fragment, or NULL on invalid input.
  */
-static cwist_sstring* render_internal(const char **template_str, const cJSON *context, int depth) {
+static cwist_sstring *render_internal(const char **template_str, const cJSON *context, int depth) {
     if (!template_str || !*template_str || depth > CWIST_TEMPLATE_MAX_DEPTH) return NULL;
 
     cwist_sstring *output = cwist_sstring_create();
@@ -268,7 +270,8 @@ static cwist_sstring* render_internal(const char **template_str, const cJSON *co
                         if (scan[0] == '{' && scan[1] == '%') {
                             const char *inner = scan + 2;
                             while (*inner == ' ' || *inner == '\t' || *inner == '\n') inner++;
-                            if (strncmp(inner, "if ", 3) == 0 || strncmp(inner, "if\t", 3) == 0 || strncmp(inner, "if\n", 3) == 0) {
+                            if (strncmp(inner, "if ", 3) == 0 || strncmp(inner, "if\t", 3) == 0 ||
+                                strncmp(inner, "if\n", 3) == 0) {
                                 nested++;
                             } else if (strncmp(inner, "endif", 5) == 0) {
                                 if (nested == 0) {
@@ -277,7 +280,8 @@ static cwist_sstring* render_internal(const char **template_str, const cJSON *co
                                 }
                                 nested--;
                             } else if (!else_pos && nested == 0 && strncmp(inner, "else", 4) == 0 &&
-                                       (inner[4] == ' ' || inner[4] == '\t' || inner[4] == '\n' || inner[4] == '%')) {
+                                       (inner[4] == ' ' || inner[4] == '\t' || inner[4] == '\n' ||
+                                        inner[4] == '%')) {
                                 else_pos = scan;
                             }
                         }
@@ -286,15 +290,18 @@ static cwist_sstring* render_internal(const char **template_str, const cJSON *co
 
                     if (cond) {
                         const char *block_p = block_start;
-                        cwist_sstring *rendered_block = render_internal(&block_p, context, depth + 1);
+                        cwist_sstring *rendered_block =
+                            render_internal(&block_p, context, depth + 1);
                         if (rendered_block) {
                             cwist_sstring_append(output, rendered_block->data);
                             cwist_sstring_destroy(rendered_block);
                         }
                     } else if (else_pos) {
                         const char *else_close = strstr(else_pos, "%}");
-                        const char *else_p = else_close ? else_close + 2 : else_pos + strlen("{% else %}");
-                        cwist_sstring *rendered_block = render_internal(&else_p, context, depth + 1);
+                        const char *else_p =
+                            else_close ? else_close + 2 : else_pos + strlen("{% else %}");
+                        cwist_sstring *rendered_block =
+                            render_internal(&else_p, context, depth + 1);
                         if (rendered_block) {
                             cwist_sstring_append(output, rendered_block->data);
                             cwist_sstring_destroy(rendered_block);
@@ -314,7 +321,9 @@ static cwist_sstring* render_internal(const char **template_str, const cJSON *co
                     strtok_r(NULL, " \t\n", &tag_saveptr); /* "in" */
                     char *array_name = strtok_r(NULL, " \t\n", &tag_saveptr);
 
-                    const cJSON *array = (array_name && context) ? get_value_from_context(context, array_name) : NULL;
+                    const cJSON *array = (array_name && context)
+                                             ? get_value_from_context(context, array_name)
+                                             : NULL;
 
                     const char *block_start = p + 2;
                     const char *block_end = strstr(block_start, "{% endfor %}");
@@ -324,10 +333,12 @@ static cwist_sstring* render_internal(const char **template_str, const cJSON *co
                         cJSON_ArrayForEach(item, array) {
                             cJSON *loop_context = cJSON_Duplicate(context, 1);
                             if (!loop_context) continue;
-                            cJSON_AddItemToObject(loop_context, item_name, cJSON_Duplicate(item, 1));
+                            cJSON_AddItemToObject(loop_context, item_name,
+                                                  cJSON_Duplicate(item, 1));
 
                             const char *loop_p = block_start;
-                            cwist_sstring *rendered_block = render_internal(&loop_p, loop_context, depth + 1);
+                            cwist_sstring *rendered_block =
+                                render_internal(&loop_p, loop_context, depth + 1);
                             if (rendered_block) {
                                 cwist_sstring_append(output, rendered_block->data);
                                 cwist_sstring_destroy(rendered_block);
@@ -349,7 +360,9 @@ static cwist_sstring* render_internal(const char **template_str, const cJSON *co
                     if (path) {
                         while (*path == ' ' || *path == '\t' || *path == '\n') path++;
                         char *end = path + strlen(path) - 1;
-                        while (end > path && (*end == ' ' || *end == '\t' || *end == '\n' || *end == '"')) *end-- = '\0';
+                        while (end > path &&
+                               (*end == ' ' || *end == '\t' || *end == '\n' || *end == '"'))
+                            *end-- = '\0';
                         if (path[0] == '"') path++;
                         if (path[0]) {
                             cwist_sstring *included = cwist_template_render_file(path, context);
@@ -362,12 +375,13 @@ static cwist_sstring* render_internal(const char **template_str, const cJSON *co
                     p += 2;
                     start = p;
 
-                } else if (strcmp(cmd, "endif") == 0 || strcmp(cmd, "endfor") == 0 || strcmp(cmd, "else") == 0) {
+                } else if (strcmp(cmd, "endif") == 0 || strcmp(cmd, "endfor") == 0 ||
+                           strcmp(cmd, "else") == 0) {
                     *template_str = p + 2;
                     return output;
                 } else {
-                     p += 2;
-                     start = p;
+                    p += 2;
+                    start = p;
                 }
             }
         } else {
@@ -386,7 +400,7 @@ static cwist_sstring* render_internal(const char **template_str, const cJSON *co
  * @param context JSON object supplying values for substitutions and control flow.
  * @return Heap-allocated rendered output, or NULL on failure.
  */
-cwist_sstring* cwist_template_render(const char *template_str, const cJSON *context) {
+cwist_sstring *cwist_template_render(const char *template_str, const cJSON *context) {
     const char *p = template_str;
     return render_internal(&p, context, 0);
 }
@@ -397,7 +411,7 @@ cwist_sstring* cwist_template_render(const char *template_str, const cJSON *cont
  * @param context JSON object supplying values for substitutions and control flow.
  * @return Heap-allocated rendered output, or NULL when file IO or rendering fails.
  */
-cwist_sstring* cwist_template_render_file(const char *file_path, const cJSON *context) {
+cwist_sstring *cwist_template_render_file(const char *file_path, const cJSON *context) {
     if (!file_path) return NULL;
     FILE *f = fopen(file_path, "rb");
     if (!f) {

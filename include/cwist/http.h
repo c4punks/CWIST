@@ -38,9 +38,9 @@ typedef enum cwist_http_status_t {
 
 /** --- Constants and Limits --- */
 #define CWIST_HTTP_MAX_HEADER_SIZE (8 * 1024)
-#define CWIST_HTTP_MAX_BODY_SIZE   (10 * 1024 * 1024)
+#define CWIST_HTTP_MAX_BODY_SIZE (10 * 1024 * 1024)
 #define CWIST_HTTP_READ_BUFFER_SIZE (16 * 1024)
-#define CWIST_HTTP_TIMEOUT_MS      30000
+#define CWIST_HTTP_TIMEOUT_MS 30000
 
 /** @brief Failure reason reported by the request receive APIs. */
 typedef enum cwist_http_parse_error_t {
@@ -111,7 +111,8 @@ cwist_http_request *cwist_http_parse_request(const char *raw_request);
 /**
  * @brief Receive and parse an HTTP request from a socket.
  */
-cwist_http_request *cwist_http_receive_request(int client_fd, char *read_buf, size_t buf_size, size_t *buf_len, cwist_http_parse_error_t *err_out);
+cwist_http_request *cwist_http_receive_request(int client_fd, char *read_buf, size_t buf_size,
+                                               size_t *buf_len, cwist_http_parse_error_t *err_out);
 
 /**
  * @brief Send a minimal error response (Connection: close) for a failed request.
@@ -162,7 +163,8 @@ size_t cwist_http_serialize_headers(cwist_http_response *res, char *buf, size_t 
 /**
  * @brief Add a header to the list.
  */
-cwist_error_t cwist_http_header_add(cwist_http_header_node **head, const char *key, const char *value);
+cwist_error_t cwist_http_header_add(cwist_http_header_node **head, const char *key,
+                                    const char *value);
 
 /**
  * @brief Find a header value by key.
@@ -203,12 +205,14 @@ cwist_http_method_t cwist_http_string_to_method(const char *method_str);
 /**
  * @brief Create an IPv4 socket and bind/listen.
  */
-int cwist_make_socket_ipv4(struct sockaddr_in *sockv4, const char *address, uint16_t port, uint16_t backlog);
+int cwist_make_socket_ipv4(struct sockaddr_in *sockv4, const char *address, uint16_t port,
+                           uint16_t backlog);
 
 /**
  * @brief Accept sockets and invoke a handler callback.
  */
-cwist_error_t cwist_accept_socket(int server_fd, struct sockaddr *sockv4, void (*handler_func)(int client_fd, void *ctx), void *ctx);
+cwist_error_t cwist_accept_socket(int server_fd, struct sockaddr *sockv4,
+                                  void (*handler_func)(int client_fd, void *ctx), void *ctx);
 
 typedef struct cwist_server_config {
     bool use_forking;     ///< Process per request
@@ -216,7 +220,8 @@ typedef struct cwist_server_config {
     bool use_epoll;       ///< Use epoll for accepting
 } cwist_server_config;
 
-cwist_error_t cwist_http_server_loop(int server_fd, cwist_server_config *config, void (*handler)(int, void *), void *ctx);
+cwist_error_t cwist_http_server_loop(int server_fd, cwist_server_config *config,
+                                     void (*handler)(int, void *), void *ctx);
 int headers_have_content_length(cwist_http_header_node *headers);
 
 extern const int CWIST_CREATE_SOCKET_FAILED;

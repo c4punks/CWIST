@@ -17,11 +17,7 @@
 cwist_middleware_func cwist_mw_request_id(const char *header_name);
 
 /** @brief Access log middleware output formats. */
-typedef enum {
-    CWIST_LOG_COMMON,
-    CWIST_LOG_COMBINED,
-    CWIST_LOG_JSON
-} cwist_log_format_t;
+typedef enum { CWIST_LOG_COMMON, CWIST_LOG_COMBINED, CWIST_LOG_JSON } cwist_log_format_t;
 
 /** @brief Access log middleware factory. */
 cwist_middleware_func cwist_mw_access_log(cwist_log_format_t format);

@@ -214,7 +214,8 @@ static int read_one_response(struct client_conn *c, char *buf, size_t buf_size) 
     buf[0] = '\0';
     for (;;) {
         if (!parsed && c->pending_len > 0) {
-            size_t copy = c->pending_len < buf_size - 1 - total ? c->pending_len : buf_size - 1 - total;
+            size_t copy =
+                c->pending_len < buf_size - 1 - total ? c->pending_len : buf_size - 1 - total;
             memcpy(buf + total, c->pending, copy);
             total += copy;
             memmove(c->pending, c->pending + copy, c->pending_len - copy);
@@ -254,9 +255,13 @@ static bool has_code(const char *buf, const char *code) {
     return strstr(buf, prefix) != NULL;
 }
 
-#define CHECK(cond, msg) do { \
-    if (!(cond)) { fprintf(stderr, "FAIL: %s\n", msg); failures++; } \
-} while (0)
+#define CHECK(cond, msg)                        \
+    do {                                        \
+        if (!(cond)) {                          \
+            fprintf(stderr, "FAIL: %s\n", msg); \
+            failures++;                         \
+        }                                       \
+    } while (0)
 
 /* Synchronous completion destroys req/res before the losing calls run. */
 static int test_retained_completion(void) {
@@ -339,7 +344,9 @@ int main(void) {
         /* Every producer must have finished, and exactly the response queued
          * after its timeout must have lost the completion race. */
         _exit(rc == 0 && wins == 1 && done == 2 && jobs == responses_done &&
-              responses_won == jobs - 1 ? 0 : 1);
+                      responses_won == jobs - 1
+                  ? 0
+                  : 1);
     }
 
     usleep(400000);
@@ -348,7 +355,7 @@ int main(void) {
 
     /* 1. Basic deferred response. */
     {
-        struct client_conn c = { .fd = connect_to_server(), .pending_len = 0 };
+        struct client_conn c = {.fd = connect_to_server(), .pending_len = 0};
         CHECK(c.fd >= 0, "connect for basic defer");
         if (c.fd >= 0) {
             send_all(c.fd, "GET /defer200 HTTP/1.1\r\nHost: localhost\r\n\r\n");
@@ -361,9 +368,9 @@ int main(void) {
 
     /* 2. Reactor/pool not blocked while a request is deferred. */
     {
-        struct client_conn slow = { .fd = connect_to_server(), .pending_len = 0 };
+        struct client_conn slow = {.fd = connect_to_server(), .pending_len = 0};
         CHECK(slow.fd >= 0, "connect for concurrency (slow)");
-        struct client_conn fast = { .fd = connect_to_server(), .pending_len = 0 };
+        struct client_conn fast = {.fd = connect_to_server(), .pending_len = 0};
         CHECK(fast.fd >= 0, "connect for concurrency (fast)");
         if (slow.fd >= 0 && fast.fd >= 0) {
             send_all(slow.fd, "GET /slow250 HTTP/1.1\r\nHost: localhost\r\n\r\n");
@@ -381,7 +388,7 @@ int main(void) {
 
     /* 3. Keep-alive: second request on the same connection after a defer. */
     {
-        struct client_conn c = { .fd = connect_to_server(), .pending_len = 0 };
+        struct client_conn c = {.fd = connect_to_server(), .pending_len = 0};
         CHECK(c.fd >= 0, "connect for keep-alive");
         if (c.fd >= 0) {
             send_all(c.fd, "GET /defer200 HTTP/1.1\r\nHost: localhost\r\n\r\n");
@@ -397,7 +404,7 @@ int main(void) {
 
     /* 4. Timeout: never-responded defer answers 504. */
     {
-        struct client_conn c = { .fd = connect_to_server(), .pending_len = 0 };
+        struct client_conn c = {.fd = connect_to_server(), .pending_len = 0};
         CHECK(c.fd >= 0, "connect for timeout");
         if (c.fd >= 0) {
             send_all(c.fd, "GET /timeout HTTP/1.1\r\nHost: localhost\r\n\r\n");
@@ -409,14 +416,15 @@ int main(void) {
 
     /* Check both timeout/response orderings, including each late callback. */
     {
-        const char *paths[] = { "/response-before-timeout", "/timeout-before-response" };
-        const char *codes[] = { "200", "504" };
+        const char *paths[] = {"/response-before-timeout", "/timeout-before-response"};
+        const char *codes[] = {"200", "504"};
         for (size_t i = 0; i < 2; i++) {
-            struct client_conn c = { .fd = connect_to_server(), .pending_len = 0 };
+            struct client_conn c = {.fd = connect_to_server(), .pending_len = 0};
             CHECK(c.fd >= 0, "connect for response/timeout competition");
             if (c.fd < 0) continue;
             char request[256];
-            snprintf(request, sizeof(request), "GET %s HTTP/1.1\r\nHost: localhost\r\n\r\n", paths[i]);
+            snprintf(request, sizeof(request), "GET %s HTTP/1.1\r\nHost: localhost\r\n\r\n",
+                     paths[i]);
             send_all(c.fd, request);
             int n = read_one_response(&c, buf, sizeof(buf));
             CHECK(n > 0 && has_code(buf, codes[i]), "expected response/timeout winner");
@@ -430,7 +438,7 @@ int main(void) {
 
     /* 5. One-shot race: two threads respond; exactly one response arrives. */
     {
-        struct client_conn c = { .fd = connect_to_server(), .pending_len = 0 };
+        struct client_conn c = {.fd = connect_to_server(), .pending_len = 0};
         CHECK(c.fd >= 0, "connect for race");
         if (c.fd >= 0) {
             send_all(c.fd, "GET /race HTTP/1.1\r\nHost: localhost\r\n\r\n");
@@ -448,18 +456,16 @@ int main(void) {
     const char *c1m_env = getenv("CWIST_C1M_MODE");
     bool c1m = !(c1m_env && (c1m_env[0] == '0' || strcmp(c1m_env, "false") == 0));
     if (c1m) {
-        struct client_conn c = { .fd = connect_to_server(), .pending_len = 0 };
+        struct client_conn c = {.fd = connect_to_server(), .pending_len = 0};
         CHECK(c.fd >= 0, "connect for pipelining");
         if (c.fd >= 0) {
-            send_all(c.fd,
-                     "GET /defer200 HTTP/1.1\r\nHost: localhost\r\n\r\n"
-                     "GET /hello HTTP/1.1\r\nHost: localhost\r\nConnection: close\r\n\r\n");
+            send_all(c.fd, "GET /defer200 HTTP/1.1\r\nHost: localhost\r\n\r\n"
+                           "GET /hello HTTP/1.1\r\nHost: localhost\r\nConnection: close\r\n\r\n");
             int n = read_one_response(&c, buf, sizeof(buf));
             CHECK(n > 0 && strstr(buf, "deferred-body") != NULL,
                   "pipelined first response is the deferred one");
             n = read_one_response(&c, buf, sizeof(buf));
-            CHECK(n > 0 && strstr(buf, "second-ok") != NULL,
-                  "pipelined second response in order");
+            CHECK(n > 0 && strstr(buf, "second-ok") != NULL, "pipelined second response in order");
             close(c.fd);
         }
     }
@@ -513,7 +519,7 @@ int main(void) {
                   "parked writer delivers the full body intact");
 
             /* Keep-alive rearm after the parked writer drains. */
-            struct client_conn c = { .fd = fd, .pending_len = 0 };
+            struct client_conn c = {.fd = fd, .pending_len = 0};
             send_all(fd, "GET /hello HTTP/1.1\r\nHost: localhost\r\n\r\n");
             int n = read_one_response(&c, buf, sizeof(buf));
             CHECK(n > 0 && has_code(buf, "200") && strstr(buf, "second-ok"),

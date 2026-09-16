@@ -112,12 +112,9 @@ void cwist_http_client_set_altsvc_db(cwist_http_client *client, const char *path
  *                      must destroy with cwist_http_response_destroy().
  * @return CWIST error, err_i16 == 0 on success.
  */
-cwist_error_t cwist_http_client_request(cwist_http_client *client,
-                                        const char *url,
-                                        cwist_http_method_t method,
-                                        cwist_http_header_node *headers,
-                                        const char *body,
-                                        size_t body_len,
+cwist_error_t cwist_http_client_request(cwist_http_client *client, const char *url,
+                                        cwist_http_method_t method, cwist_http_header_node *headers,
+                                        const char *body, size_t body_len,
                                         cwist_http_response **out_response);
 
 /** @} */

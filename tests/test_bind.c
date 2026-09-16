@@ -33,7 +33,8 @@ static const cwist_bind_schema_t user_schema = CWIST_BIND_SCHEMA(user_t, user_fi
 
 void test_bind_success(void) {
     printf("test_bind_success...\n");
-    const char *json = "{\"email\":\"alice@example.com\",\"age\":30,\"name\":\"Alice\",\"score\":95.5}";
+    const char *json =
+        "{\"email\":\"alice@example.com\",\"age\":30,\"name\":\"Alice\",\"score\":95.5}";
     cwist_http_request *req = cwist_http_request_create();
     cwist_sstring_assign(req->body, (char *)json);
 
@@ -150,7 +151,9 @@ void test_bind_form_data(void) {
 
 void test_bind_regex(void) {
     printf("test_bind_regex...\n");
-    typedef struct { char code[16]; } code_t;
+    typedef struct {
+        char code[16];
+    } code_t;
     CWIST_BIND_RULES(code_rules, CWIST_RULE_REQUIRED(), CWIST_RULE_REGEX("^[A-Z]{3}[0-9]{4}$"));
     static const cwist_bind_field_t code_fields[] = {
         CWIST_BIND_FIELD(code_t, code, "code", code_rules),

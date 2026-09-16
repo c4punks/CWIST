@@ -10,10 +10,13 @@
 #include <unistd.h>
 
 /* No assert(): test operations and checks must survive -DNDEBUG. */
-#define CHECK(expr) do { if (!(expr)) { \
-    fprintf(stderr, "FAIL %s:%d: %s\n", __FILE__, __LINE__, #expr); \
-    abort(); \
-} } while (0)
+#define CHECK(expr)                                                         \
+    do {                                                                    \
+        if (!(expr)) {                                                      \
+            fprintf(stderr, "FAIL %s:%d: %s\n", __FILE__, __LINE__, #expr); \
+            abort();                                                        \
+        }                                                                   \
+    } while (0)
 
 enum { JOBS = 160 };
 static bool runtime_only;
@@ -176,11 +179,15 @@ static void *submit_donor(void *arg) {
     }
     *(fixture **)owned = f;
     for (unsigned i = 0; i < JOBS - 1; ++i) {
-        if (f->scheduler) CHECK(cwist_scheduler_submit(f->scheduler, count_job, f));
-        else CHECK(cwist_io_queue_submit(f->queue, count_job, f));
+        if (f->scheduler)
+            CHECK(cwist_scheduler_submit(f->scheduler, count_job, f));
+        else
+            CHECK(cwist_io_queue_submit(f->queue, count_job, f));
     }
-    if (f->scheduler) CHECK(cwist_scheduler_submit(f->scheduler, owned_job, owned));
-    else CHECK(cwist_io_queue_submit(f->queue, owned_job, owned));
+    if (f->scheduler)
+        CHECK(cwist_scheduler_submit(f->scheduler, owned_job, owned));
+    else
+        CHECK(cwist_io_queue_submit(f->queue, owned_job, owned));
     pending("donor after publication", full_gc ? 1 : 0);
     /* The submit APIs must leave this opaque argument in our scope; only
      * its allocating caller can authorize the payload ownership transfer. */

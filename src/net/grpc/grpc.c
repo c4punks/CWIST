@@ -81,8 +81,7 @@ struct cwist_grpc_session {
     struct cwist_grpc_session *next;
 };
 
-static void grpc_session_send_trailers(cwist_grpc_session *session,
-                                       cwist_grpc_status_t status,
+static void grpc_session_send_trailers(cwist_grpc_session *session, cwist_grpc_status_t status,
                                        const char *message);
 
 static int grpc_content_type_is_grpc(const char *content_type) {
@@ -127,8 +126,14 @@ int cwist_grpc_parse_timeout(const char *value, uint64_t *out_ms) {
         case 'M': to_ms_num = 60000; break;
         case 'S': to_ms_num = 1000; break;
         case 'm': to_ms_num = 1; break;
-        case 'u': to_ms_num = 1; to_ms_den = 1000; break;
-        case 'n': to_ms_num = 1; to_ms_den = 1000000; break;
+        case 'u':
+            to_ms_num = 1;
+            to_ms_den = 1000;
+            break;
+        case 'n':
+            to_ms_num = 1;
+            to_ms_den = 1000000;
+            break;
         default: return -1;
     }
     uint64_t v = 0;
@@ -166,12 +171,11 @@ static int grpc_client_accepts_gzip(cwist_http_request *req) {
     return 0;
 }
 
-static int grpc_gzip_deflate(const uint8_t *in, size_t in_len,
-                             uint8_t **out, size_t *out_len) {
+static int grpc_gzip_deflate(const uint8_t *in, size_t in_len, uint8_t **out, size_t *out_len) {
     z_stream zs;
     memset(&zs, 0, sizeof(zs));
-    if (deflateInit2(&zs, Z_DEFAULT_COMPRESSION, Z_DEFLATED,
-                     16 + MAX_WBITS, 8, Z_DEFAULT_STRATEGY) != Z_OK)
+    if (deflateInit2(&zs, Z_DEFAULT_COMPRESSION, Z_DEFLATED, 16 + MAX_WBITS, 8,
+                     Z_DEFAULT_STRATEGY) != Z_OK)
         return -1;
     size_t cap = deflateBound(&zs, (uLong)in_len) + 32;
     if (cap < 64) cap = 64;
@@ -196,8 +200,7 @@ static int grpc_gzip_deflate(const uint8_t *in, size_t in_len,
     return 0;
 }
 
-static int grpc_gzip_inflate(const uint8_t *in, size_t in_len,
-                             uint8_t **out, size_t *out_len) {
+static int grpc_gzip_inflate(const uint8_t *in, size_t in_len, uint8_t **out, size_t *out_len) {
     z_stream zs;
     memset(&zs, 0, sizeof(zs));
     if (inflateInit2(&zs, 16 + MAX_WBITS) != Z_OK) return -1;
@@ -249,8 +252,7 @@ static int grpc_message_inflate(cwist_http_request *req, cwist_grpc_message *mes
     if (grpc_request_encoding(req) != 1) return -1;
     uint8_t *plain = NULL;
     size_t plain_len = 0;
-    if (grpc_gzip_inflate(message->data, message->len, &plain, &plain_len) != 0)
-        return -1;
+    if (grpc_gzip_inflate(message->data, message->len, &plain, &plain_len) != 0) return -1;
     message->data = plain;
     message->len = plain_len;
     message->compressed = 0;
@@ -267,8 +269,8 @@ static int grpc_b64_val(int c) {
     return -1;
 }
 
-static int grpc_base64_decode(const char *in, size_t in_len,
-                              uint8_t *out, size_t out_cap, size_t *out_len) {
+static int grpc_base64_decode(const char *in, size_t in_len, uint8_t *out, size_t out_cap,
+                              size_t *out_len) {
     uint32_t acc = 0;
     int bits = 0;
     size_t used = 0;
@@ -292,8 +294,8 @@ const char *cwist_grpc_metadata_get(cwist_http_request *req, const char *key) {
     return grpc_header_get(req, key);
 }
 
-int cwist_grpc_metadata_get_binary(cwist_http_request *req, const char *key,
-                                   uint8_t *out, size_t out_cap, size_t *out_len) {
+int cwist_grpc_metadata_get_binary(cwist_http_request *req, const char *key, uint8_t *out,
+                                   size_t out_cap, size_t *out_len) {
     if (!req || !key || !out_len) return -1;
     size_t key_len = strlen(key);
     if (key_len < 4 || strcmp(key + key_len - 4, "-bin") != 0) return -1;
@@ -316,7 +318,8 @@ static void grpc_dispatch_unary(cwist_http_request *req, cwist_http_response *re
         ct = cwist_http_header_get(req->headers, "Content-Type");
     }
     if (!grpc_content_type_is_grpc(ct)) {
-        cwist_grpc_set_error(res, CWIST_GRPC_INVALID_ARGUMENT, "content-type must be application/grpc");
+        cwist_grpc_set_error(res, CWIST_GRPC_INVALID_ARGUMENT,
+                             "content-type must be application/grpc");
         return;
     }
 
@@ -370,7 +373,8 @@ static int grpc_validate_request(cwist_http_request *req, cwist_http_response *r
         ct = cwist_http_header_get(req->headers, "Content-Type");
     }
     if (!grpc_content_type_is_grpc(ct)) {
-        cwist_grpc_set_error(res, CWIST_GRPC_INVALID_ARGUMENT, "content-type must be application/grpc");
+        cwist_grpc_set_error(res, CWIST_GRPC_INVALID_ARGUMENT,
+                             "content-type must be application/grpc");
         return -1;
     }
     if (!req->body || !req->body->data) {
@@ -399,23 +403,26 @@ static void grpc_dispatch_stream(cwist_http_request *req, cwist_http_response *r
     size_t count = 0;
     cwist_grpc_message *messages = (cwist_grpc_message *)cwist_alloc(cap * sizeof(*messages));
     if (!messages) {
-        cwist_grpc_set_error(res, CWIST_GRPC_RESOURCE_EXHAUSTED, "failed to allocate gRPC stream messages");
+        cwist_grpc_set_error(res, CWIST_GRPC_RESOURCE_EXHAUSTED,
+                             "failed to allocate gRPC stream messages");
         return;
     }
 
     while (offset < req->body->size) {
         if (count == cap) {
             cap *= 2;
-            cwist_grpc_message *next = (cwist_grpc_message *)cwist_realloc(messages, cap * sizeof(*messages));
+            cwist_grpc_message *next =
+                (cwist_grpc_message *)cwist_realloc(messages, cap * sizeof(*messages));
             if (!next) {
                 cwist_free(messages);
-                cwist_grpc_set_error(res, CWIST_GRPC_RESOURCE_EXHAUSTED, "failed to grow gRPC stream messages");
+                cwist_grpc_set_error(res, CWIST_GRPC_RESOURCE_EXHAUSTED,
+                                     "failed to grow gRPC stream messages");
                 return;
             }
             messages = next;
         }
-        if (cwist_grpc_decode_next_message(req->body->data, req->body->size,
-                                           &offset, &messages[count]) != 0) {
+        if (cwist_grpc_decode_next_message(req->body->data, req->body->size, &offset,
+                                           &messages[count]) != 0) {
             cwist_free(messages);
             cwist_grpc_set_error(res, CWIST_GRPC_INVALID_ARGUMENT, "malformed gRPC stream frame");
             return;
@@ -427,12 +434,16 @@ static void grpc_dispatch_stream(cwist_http_request *req, cwist_http_response *r
     uint8_t **owned CWIST_DEFER_FREE = NULL;
     int has_compressed = 0;
     for (size_t i = 0; i < count; i++)
-        if (messages[i].compressed) { has_compressed = 1; break; }
+        if (messages[i].compressed) {
+            has_compressed = 1;
+            break;
+        }
     if (has_compressed) {
         owned = (uint8_t **)cwist_alloc(count * sizeof(*owned));
         if (!owned) {
             cwist_free(messages);
-            cwist_grpc_set_error(res, CWIST_GRPC_RESOURCE_EXHAUSTED, "failed to allocate inflate state");
+            cwist_grpc_set_error(res, CWIST_GRPC_RESOURCE_EXHAUSTED,
+                                 "failed to allocate inflate state");
             return;
         }
         memset(owned, 0, count * sizeof(*owned));
@@ -440,7 +451,8 @@ static void grpc_dispatch_stream(cwist_http_request *req, cwist_http_response *r
             if (grpc_message_inflate(req, &messages[i], &owned[i]) != 0) {
                 for (size_t j = 0; j < count; j++) cwist_free(owned[j]);
                 cwist_free(messages);
-                cwist_grpc_set_error(res, CWIST_GRPC_UNIMPLEMENTED, "unsupported compressed gRPC message");
+                cwist_grpc_set_error(res, CWIST_GRPC_UNIMPLEMENTED,
+                                     "unsupported compressed gRPC message");
                 return;
             }
         }
@@ -482,15 +494,11 @@ static void grpc_dispatch_stream(cwist_http_request *req, cwist_http_response *r
     cwist_free(messages);
 }
 
-int cwist_grpc_decode_message(const void *frame,
-                              size_t frame_len,
-                              cwist_grpc_message *out) {
+int cwist_grpc_decode_message(const void *frame, size_t frame_len, cwist_grpc_message *out) {
     if (!frame || !out || frame_len < 5) return -1;
     const uint8_t *p = (const uint8_t *)frame;
-    uint32_t len = ((uint32_t)p[1] << 24) |
-                   ((uint32_t)p[2] << 16) |
-                   ((uint32_t)p[3] << 8) |
-                   (uint32_t)p[4];
+    uint32_t len =
+        ((uint32_t)p[1] << 24) | ((uint32_t)p[2] << 16) | ((uint32_t)p[3] << 8) | (uint32_t)p[4];
     if ((size_t)len > frame_len - 5) return -1;
     if ((size_t)len != frame_len - 5) return -1;
 
@@ -500,19 +508,15 @@ int cwist_grpc_decode_message(const void *frame,
     return 0;
 }
 
-int cwist_grpc_decode_next_message(const void *frames,
-                                   size_t frames_len,
-                                   size_t *offset,
+int cwist_grpc_decode_next_message(const void *frames, size_t frames_len, size_t *offset,
                                    cwist_grpc_message *out) {
     if (!frames || !offset || !out || *offset > frames_len) return -1;
     size_t pos = *offset;
     if (frames_len - pos < 5) return -1;
 
     const uint8_t *p = (const uint8_t *)frames + pos;
-    uint32_t len = ((uint32_t)p[1] << 24) |
-                   ((uint32_t)p[2] << 16) |
-                   ((uint32_t)p[3] << 8) |
-                   (uint32_t)p[4];
+    uint32_t len =
+        ((uint32_t)p[1] << 24) | ((uint32_t)p[2] << 16) | ((uint32_t)p[3] << 8) | (uint32_t)p[4];
     if ((size_t)len > frames_len - pos - 5) return -1;
 
     out->compressed = p[0];
@@ -522,11 +526,8 @@ int cwist_grpc_decode_next_message(const void *frames,
     return 0;
 }
 
-int cwist_grpc_encode_message(const void *payload,
-                              size_t payload_len,
-                              uint8_t compressed,
-                              uint8_t **out,
-                              size_t *out_len) {
+int cwist_grpc_encode_message(const void *payload, size_t payload_len, uint8_t compressed,
+                              uint8_t **out, size_t *out_len) {
     if (!out || !out_len || (payload_len > 0 && !payload)) return -1;
     if (payload_len > UINT32_MAX) return -1;
 
@@ -572,8 +573,7 @@ int cwist_grpc_decoder_feed(cwist_grpc_decoder *decoder, const void *data, size_
             decoder->compressed = decoder->header[0];
             decoder->payload_len = ((size_t)decoder->header[1] << 24) |
                                    ((size_t)decoder->header[2] << 16) |
-                                   ((size_t)decoder->header[3] << 8) |
-                                   (size_t)decoder->header[4];
+                                   ((size_t)decoder->header[3] << 8) | (size_t)decoder->header[4];
             if (decoder->compressed > 1 || decoder->payload_len > decoder->max_message_size)
                 return -1;
             if (decoder->payload_len) {
@@ -588,7 +588,7 @@ int cwist_grpc_decoder_feed(cwist_grpc_decoder *decoder, const void *data, size_
         input += take;
         len -= take;
         if (decoder->payload_used != decoder->payload_len) continue;
-        cwist_grpc_message message = { decoder->compressed, decoder->payload, decoder->payload_len };
+        cwist_grpc_message message = {decoder->compressed, decoder->payload, decoder->payload_len};
         if (callback(ctx, &message) != 0) return -1;
         cwist_free(decoder->payload);
         decoder->payload = NULL;
@@ -597,11 +597,8 @@ int cwist_grpc_decoder_feed(cwist_grpc_decoder *decoder, const void *data, size_
     return 0;
 }
 
-void cwist_grpc_set_response(cwist_http_response *res,
-                             cwist_grpc_status_t status,
-                             const char *message,
-                             const void *payload,
-                             size_t payload_len) {
+void cwist_grpc_set_response(cwist_http_response *res, cwist_grpc_status_t status,
+                             const char *message, const void *payload, size_t payload_len) {
     if (!res) return;
 
     res->status_code = CWIST_HTTP_OK;
@@ -628,15 +625,12 @@ void cwist_grpc_set_response(cwist_http_response *res,
     }
 }
 
-void cwist_grpc_set_error(cwist_http_response *res,
-                          cwist_grpc_status_t status,
+void cwist_grpc_set_error(cwist_http_response *res, cwist_grpc_status_t status,
                           const char *message) {
     cwist_grpc_set_response(res, status, message, NULL, 0);
 }
 
-int cwist_grpc_stream_send(cwist_grpc_stream *stream,
-                           const void *payload,
-                           size_t payload_len) {
+int cwist_grpc_stream_send(cwist_grpc_stream *stream, const void *payload, size_t payload_len) {
     if (!stream) return -1;
     int use_gzip = 0;
     if (stream->session) {
@@ -688,7 +682,8 @@ int cwist_grpc_stream_send(cwist_grpc_stream *stream,
         cwist_free(frame);
         return -1;
     }
-    if (stream->write_frame && stream->write_frame(stream->write_frame_ctx, frame, frame_len, 0) != 0) {
+    if (stream->write_frame &&
+        stream->write_frame(stream->write_frame_ctx, frame, frame_len, 0) != 0) {
         cwist_free(frame);
         stream->status = CWIST_GRPC_UNAVAILABLE;
         stream->status_message = "failed to write gRPC DATA frame";
@@ -714,8 +709,7 @@ void cwist_grpc_stream_set_writer(cwist_grpc_stream *stream,
     stream->write_frame_ctx = ctx;
 }
 
-void cwist_grpc_stream_close(cwist_grpc_stream *stream,
-                             cwist_grpc_status_t status,
+void cwist_grpc_stream_close(cwist_grpc_stream *stream, cwist_grpc_status_t status,
                              const char *message) {
     if (!stream) return;
     if (stream->closed) return;
@@ -796,8 +790,7 @@ static void grpc_health_check(cwist_http_request *req, cwist_http_response *res,
     grpc_health_reply(res, ctx, message);
 }
 
-static int grpc_health_send_status(cwist_grpc_stream *stream,
-                                   cwist_grpc_health_registry *reg,
+static int grpc_health_send_status(cwist_grpc_stream *stream, cwist_grpc_health_registry *reg,
                                    const char *service) {
     pthread_mutex_lock(&reg->mu);
     int status = grpc_health_status_locked(reg, service);
@@ -825,7 +818,7 @@ static void grpc_health_watch(cwist_grpc_stream *stream, void *ctx) {
         if (rc < 0) return; /* cancelled before the request arrived */
         if (rc > 0) service = grpc_health_service_copy(&msg);
     } else {
-        cwist_grpc_message empty = { 0, NULL, 0 };
+        cwist_grpc_message empty = {0, NULL, 0};
         const cwist_grpc_message *message = stream->message_count ? &stream->messages[0] : &empty;
         service = grpc_health_service_copy(message);
     }
@@ -839,15 +832,17 @@ static void grpc_health_watch(cwist_grpc_stream *stream, void *ctx) {
         int changed = 0;
         pthread_mutex_lock(&reg->mu);
         uint64_t gen = reg->generation;
-        while (reg->generation == gen &&
-               !cwist_grpc_stream_cancelled(stream) &&
+        while (reg->generation == gen && !cwist_grpc_stream_cancelled(stream) &&
                cwist_grpc_stream_deadline_remaining_ms(stream) > 0) {
             /* Poll cancellation/deadline on a short tick; status changes
              * wake us immediately through the registry condvar. */
             struct timespec ts;
             clock_gettime(CLOCK_REALTIME, &ts);
             ts.tv_nsec += 100000000L;
-            if (ts.tv_nsec >= 1000000000L) { ts.tv_sec++; ts.tv_nsec -= 1000000000L; }
+            if (ts.tv_nsec >= 1000000000L) {
+                ts.tv_sec++;
+                ts.tv_nsec -= 1000000000L;
+            }
             pthread_cond_timedwait(&reg->cond, &reg->mu, &ts);
         }
         changed = reg->generation != gen;
@@ -868,10 +863,10 @@ int cwist_app_grpc_health(cwist_app *app) {
     pthread_mutex_init(&reg->mu, NULL);
     pthread_cond_init(&reg->cond, NULL);
     atomic_store(&reg->watchers, 0);
-    if (grpc_register_route(app, "grpc.health.v1.Health", "Check", 0,
-                            grpc_health_check, NULL, reg) != 0 ||
-        grpc_register_route(app, "grpc.health.v1.Health", "Watch", 1,
-                            NULL, grpc_health_watch, reg) != 0) {
+    if (grpc_register_route(app, "grpc.health.v1.Health", "Check", 0, grpc_health_check, NULL,
+                            reg) != 0 ||
+        grpc_register_route(app, "grpc.health.v1.Health", "Watch", 1, NULL, grpc_health_watch,
+                            reg) != 0) {
         pthread_mutex_destroy(&reg->mu);
         pthread_cond_destroy(&reg->cond);
         cwist_free(reg);
@@ -898,9 +893,16 @@ int cwist_app_grpc_health_set_status(cwist_app *app, const char *service, int se
             return 0;
         }
     cwist_grpc_health_state *item = cwist_alloc(sizeof(*item));
-    if (!item) { pthread_mutex_unlock(&reg->mu); return -1; }
+    if (!item) {
+        pthread_mutex_unlock(&reg->mu);
+        return -1;
+    }
     item->service = cwist_alloc(strlen(service) + 1);
-    if (!item->service) { pthread_mutex_unlock(&reg->mu); cwist_free(item); return -1; }
+    if (!item->service) {
+        pthread_mutex_unlock(&reg->mu);
+        cwist_free(item);
+        return -1;
+    }
     strcpy(item->service, service);
     item->serving = !!serving;
     item->next = reg->states;
@@ -920,11 +922,13 @@ int cwist_app_grpc_health_watchers(cwist_app *app) {
 
 static int grpc_reflection_append_service(cwist_pb_writer *response, const char *service) {
     cwist_pb_writer item, list;
-    cwist_pb_writer_init(&item); cwist_pb_writer_init(&list);
+    cwist_pb_writer_init(&item);
+    cwist_pb_writer_init(&list);
     int rc = cwist_pb_write_string_field(&item, 1, service) ||
              cwist_pb_write_bytes_field(&list, 1, item.data, item.len) ||
              cwist_pb_write_bytes_field(response, 6, list.data, list.len);
-    cwist_pb_writer_free(&item); cwist_pb_writer_free(&list);
+    cwist_pb_writer_free(&item);
+    cwist_pb_writer_free(&list);
     return rc ? -1 : 0;
 }
 
@@ -940,31 +944,34 @@ static void grpc_reflection_info(cwist_grpc_stream *stream, void *ctx) {
         size_t len = (size_t)(slash - route->path - 1);
         cwist_scratch_t service_s CWIST_SCRATCH_DEFER = {0};
         char *service = cwist_scratch_alloc(&service_s, len + 1);
-        if (!service) { stream->status = CWIST_GRPC_RESOURCE_EXHAUSTED; break; }
-        memcpy(service, route->path + 1, len); service[len] = '\0';
-        if (grpc_reflection_append_service(&response, service) != 0) stream->status = CWIST_GRPC_INTERNAL;
+        if (!service) {
+            stream->status = CWIST_GRPC_RESOURCE_EXHAUSTED;
+            break;
+        }
+        memcpy(service, route->path + 1, len);
+        service[len] = '\0';
+        if (grpc_reflection_append_service(&response, service) != 0)
+            stream->status = CWIST_GRPC_INTERNAL;
         if (stream->status != CWIST_GRPC_OK) break;
     }
-    if (stream->status == CWIST_GRPC_OK) cwist_grpc_stream_send(stream, response.data, response.len);
+    if (stream->status == CWIST_GRPC_OK)
+        cwist_grpc_stream_send(stream, response.data, response.len);
     cwist_pb_writer_free(&response);
 }
 
 int cwist_app_grpc_reflection(cwist_app *app) {
     if (grpc_register_route(app, "grpc.reflection.v1alpha.ServerReflection", "ServerReflectionInfo",
-                            1, NULL, grpc_reflection_info, NULL) != 0) return -1;
-    cwist_grpc_route *route = grpc_find_route(app,
-        "/grpc.reflection.v1alpha.ServerReflection/ServerReflectionInfo");
+                            1, NULL, grpc_reflection_info, NULL) != 0)
+        return -1;
+    cwist_grpc_route *route =
+        grpc_find_route(app, "/grpc.reflection.v1alpha.ServerReflection/ServerReflectionInfo");
     if (route) route->builtin = 3;
     return 0;
 }
 
-static int grpc_register_route(cwist_app *app,
-                               const char *service,
-                               const char *method,
-                               int streaming,
-                               cwist_grpc_unary_handler_func unary_handler,
-                               cwist_grpc_stream_handler_func stream_handler,
-                               void *user_ctx) {
+static int grpc_register_route(cwist_app *app, const char *service, const char *method,
+                               int streaming, cwist_grpc_unary_handler_func unary_handler,
+                               cwist_grpc_stream_handler_func stream_handler, void *user_ctx) {
     if (!app || !service || !method) return -1;
     if ((!streaming && !unary_handler) || (streaming && !stream_handler)) return -1;
     size_t service_len = strlen(service);
@@ -1003,19 +1010,13 @@ static int grpc_register_route(cwist_app *app,
     return 0;
 }
 
-int cwist_app_grpc_unary(cwist_app *app,
-                         const char *service,
-                         const char *method,
-                         cwist_grpc_unary_handler_func handler,
-                         void *user_ctx) {
+int cwist_app_grpc_unary(cwist_app *app, const char *service, const char *method,
+                         cwist_grpc_unary_handler_func handler, void *user_ctx) {
     return grpc_register_route(app, service, method, 0, handler, NULL, user_ctx);
 }
 
-int cwist_app_grpc_stream(cwist_app *app,
-                          const char *service,
-                          const char *method,
-                          cwist_grpc_stream_handler_func handler,
-                          void *user_ctx) {
+int cwist_app_grpc_stream(cwist_app *app, const char *service, const char *method,
+                          cwist_grpc_stream_handler_func handler, void *user_ctx) {
     return grpc_register_route(app, service, method, 1, NULL, handler, user_ctx);
 }
 
@@ -1052,12 +1053,16 @@ int cwist_grpc_routes_clone(cwist_app *dst, const cwist_app *src) {
             if (cwist_app_grpc_health(dst) != 0) return -1;
             const cwist_grpc_health_registry *reg = route->user_ctx;
             for (const cwist_grpc_health_state *it = reg->states; it; it = it->next)
-                if (it->service && cwist_app_grpc_health_set_status(dst, it->service, it->serving) != 0)
+                if (it->service &&
+                    cwist_app_grpc_health_set_status(dst, it->service, it->serving) != 0)
                     return -1;
             route = route->next;
             continue;
         }
-        if (route->builtin == 2) { route = route->next; continue; }
+        if (route->builtin == 2) {
+            route = route->next;
+            continue;
+        }
         if (route->builtin == 3) {
             if (cwist_app_grpc_reflection(dst) != 0) return -1;
             route = route->next;
@@ -1074,11 +1079,10 @@ int cwist_grpc_routes_clone(cwist_app *dst, const cwist_app *src) {
         memcpy(service, path + 1, service_len);
         service[service_len] = '\0';
 
-        int rc = route->streaming
-            ? cwist_app_grpc_stream(dst, service, method_sep + 1,
-                                    route->stream_handler, route->user_ctx)
-            : cwist_app_grpc_unary(dst, service, method_sep + 1,
-                                   route->handler, route->user_ctx);
+        int rc = route->streaming ? cwist_app_grpc_stream(dst, service, method_sep + 1,
+                                                          route->stream_handler, route->user_ctx)
+                                  : cwist_app_grpc_unary(dst, service, method_sep + 1,
+                                                         route->handler, route->user_ctx);
         if (rc != 0) return -1;
         route = route->next;
     }
@@ -1146,8 +1150,10 @@ static int grpc_session_push(cwist_grpc_session *session, uint8_t *data, size_t 
         cwist_free(node);
         return -1;
     }
-    if (session->qtail) session->qtail->next = node;
-    else session->qhead = node;
+    if (session->qtail)
+        session->qtail->next = node;
+    else
+        session->qhead = node;
     session->qtail = node;
     pthread_cond_signal(&session->cond);
     pthread_mutex_unlock(&session->mu);
@@ -1160,8 +1166,7 @@ static int grpc_session_decoded(void *ctx, const cwist_grpc_message *message) {
     size_t len;
     if (message->compressed) {
         if (session->encoding != 1) return -1; /* rejected by on_data */
-        if (grpc_gzip_inflate(message->data, message->len, &copy, &len) != 0)
-            return -1;
+        if (grpc_gzip_inflate(message->data, message->len, &copy, &len) != 0) return -1;
     } else {
         copy = (uint8_t *)cwist_alloc(message->len ? message->len : 1);
         if (!copy) return -1;
@@ -1173,8 +1178,7 @@ static int grpc_session_decoded(void *ctx, const cwist_grpc_message *message) {
 }
 
 /* Fail the call: cancel the handler and emit error trailers. */
-static void grpc_session_fail(cwist_grpc_session *session,
-                              cwist_grpc_status_t status,
+static void grpc_session_fail(cwist_grpc_session *session, cwist_grpc_status_t status,
                               const char *message) {
     pthread_mutex_lock(&session->mu);
     session->cancelled = 1;
@@ -1193,25 +1197,21 @@ static int grpc_session_send_headers_locked(cwist_grpc_session *session) {
     if (!session->h2s) return -1;
     cwist_http2_header hdrs[3];
     size_t count = 0;
-    hdrs[count++] = (cwist_http2_header){ "content-type", "application/grpc" };
-    hdrs[count++] = (cwist_http2_header){ "grpc-accept-encoding", "gzip, identity" };
-    if (session->resp_encoding == 1)
-        hdrs[count++] = (cwist_http2_header){ "grpc-encoding", "gzip" };
-    if (cwist_http2_stream_send_headers(session->h2s, 200, hdrs, count, 0) != 0)
-        return -1;
+    hdrs[count++] = (cwist_http2_header){"content-type", "application/grpc"};
+    hdrs[count++] = (cwist_http2_header){"grpc-accept-encoding", "gzip, identity"};
+    if (session->resp_encoding == 1) hdrs[count++] = (cwist_http2_header){"grpc-encoding", "gzip"};
+    if (cwist_http2_stream_send_headers(session->h2s, 200, hdrs, count, 0) != 0) return -1;
     session->headers_sent = 1;
     return 0;
 }
 
-static void grpc_session_send_trailers(cwist_grpc_session *session,
-                                       cwist_grpc_status_t status,
+static void grpc_session_send_trailers(cwist_grpc_session *session, cwist_grpc_status_t status,
                                        const char *message) {
     char status_buf[16];
     snprintf(status_buf, sizeof(status_buf), "%d", (int)status);
     char pushback_buf[20];
     if (session->stream.retry_pushback_set)
-        snprintf(pushback_buf, sizeof(pushback_buf), "%d",
-                 (int)session->stream.retry_pushback_ms);
+        snprintf(pushback_buf, sizeof(pushback_buf), "%d", (int)session->stream.retry_pushback_ms);
     pthread_mutex_lock(&session->wmu);
     if (session->h2s && !session->trailers_sent) {
         if (!session->headers_sent && status != CWIST_GRPC_OK) {
@@ -1220,13 +1220,12 @@ static void grpc_session_send_trailers(cwist_grpc_session *session,
              * out, so the RPC stays retryable for conforming clients. */
             cwist_http2_header hdrs[6];
             size_t count = 0;
-            hdrs[count++] = (cwist_http2_header){ "content-type", "application/grpc" };
-            hdrs[count++] = (cwist_http2_header){ "grpc-accept-encoding", "gzip, identity" };
-            hdrs[count++] = (cwist_http2_header){ "grpc-status", status_buf };
-            if (message)
-                hdrs[count++] = (cwist_http2_header){ "grpc-message", message };
+            hdrs[count++] = (cwist_http2_header){"content-type", "application/grpc"};
+            hdrs[count++] = (cwist_http2_header){"grpc-accept-encoding", "gzip, identity"};
+            hdrs[count++] = (cwist_http2_header){"grpc-status", status_buf};
+            if (message) hdrs[count++] = (cwist_http2_header){"grpc-message", message};
             if (session->stream.retry_pushback_set)
-                hdrs[count++] = (cwist_http2_header){ "grpc-retry-pushback-ms", pushback_buf };
+                hdrs[count++] = (cwist_http2_header){"grpc-retry-pushback-ms", pushback_buf};
             if (cwist_http2_stream_send_headers(session->h2s, 200, hdrs, count, 1) == 0)
                 session->headers_sent = 1;
             session->trailers_sent = 1;
@@ -1255,14 +1254,13 @@ static void grpc_session_send_trailers(cwist_grpc_session *session,
     pthread_mutex_unlock(&session->wmu);
 }
 
-static int grpc_session_write_frame(void *ctx, const uint8_t *frame,
-                                    size_t frame_len, int end_stream) {
+static int grpc_session_write_frame(void *ctx, const uint8_t *frame, size_t frame_len,
+                                    int end_stream) {
     (void)end_stream;
     cwist_grpc_session *session = ctx;
     pthread_mutex_lock(&session->wmu);
     int rc = -1;
-    if (session->h2s && !session->trailers_sent &&
-        grpc_session_send_headers_locked(session) == 0)
+    if (session->h2s && !session->trailers_sent && grpc_session_send_headers_locked(session) == 0)
         rc = cwist_http2_stream_send_data(session->h2s, frame, frame_len);
     pthread_mutex_unlock(&session->wmu);
     return rc;
@@ -1272,8 +1270,7 @@ static void *grpc_session_thread(void *arg) {
     cwist_grpc_session *session = arg;
     session->handler(&session->stream, session->user_ctx);
     if (!session->stream.closed) {
-        cwist_grpc_stream_close(&session->stream,
-                                session->stream.status,
+        cwist_grpc_stream_close(&session->stream, session->stream.status,
                                 session->stream.status_message);
     }
     grpc_session_release(session);
@@ -1382,16 +1379,14 @@ static void grpc_h2_on_conn_close(void *conn_ctx) {
     if (conn_ctx) grpc_conn_ctx_release(conn_ctx);
 }
 
-static void *grpc_h2_on_headers(void *conn_ctx, cwist_http_request *req,
-                                cwist_h2_stream *stream) {
+static void *grpc_h2_on_headers(void *conn_ctx, cwist_http_request *req, cwist_h2_stream *stream) {
     cwist_grpc_h2_conn_ctx *ctx = conn_ctx;
     if (!ctx || !ctx->app || !req || !req->path || !req->path->data) return NULL;
 
     cwist_grpc_route *route = grpc_find_route(ctx->app, req->path->data);
     /* Unary-only builtins (health Check) and reflection stay on the buffered
      * dispatch path; the health Watch builtin streams live. */
-    if (!route || !route->stream_handler ||
-        (route->builtin && route->builtin != 2)) return NULL;
+    if (!route || !route->stream_handler || (route->builtin && route->builtin != 2)) return NULL;
 
     const char *ct = grpc_header_get(req, "content-type");
     if (!grpc_content_type_is_grpc(ct)) return NULL;
@@ -1462,15 +1457,15 @@ static void *grpc_h2_on_headers(void *conn_ctx, cwist_http_request *req,
     return session;
 }
 
-static int grpc_h2_on_data(void *conn_ctx, void *stream_ctx,
-                           const unsigned char *data, size_t len, int end_stream) {
+static int grpc_h2_on_data(void *conn_ctx, void *stream_ctx, const unsigned char *data, size_t len,
+                           int end_stream) {
     (void)conn_ctx;
     cwist_grpc_session *session = stream_ctx;
     if (!session) return 1;
 
     if (data && len > 0) {
-        if (cwist_grpc_decoder_feed(&session->decoder, data, len,
-                                    grpc_session_decoded, session) != 0) {
+        if (cwist_grpc_decoder_feed(&session->decoder, data, len, grpc_session_decoded, session) !=
+            0) {
             if (session->encoding != 1) {
                 /* Compressed flag set without grpc-encoding: gzip. */
                 grpc_session_fail(session, CWIST_GRPC_UNIMPLEMENTED,
@@ -1516,8 +1511,7 @@ static int grpc_h2_on_poll(void *conn_ctx, void *stream_ctx) {
         session->stream.cancelled = 1;
         pthread_cond_broadcast(&session->cond);
         pthread_mutex_unlock(&session->mu);
-        grpc_session_send_trailers(session, CWIST_GRPC_DEADLINE_EXCEEDED,
-                                   "deadline exceeded");
+        grpc_session_send_trailers(session, CWIST_GRPC_DEADLINE_EXCEEDED, "deadline exceeded");
     }
     return session->trailers_sent;
 }
@@ -1529,8 +1523,7 @@ static uint64_t grpc_h2_next_deadline_ms(void *conn_ctx) {
     pthread_mutex_lock(&ctx->mu);
     for (cwist_grpc_session *s = ctx->sessions; s; s = s->next) {
         if (s->trailers_sent || !s->stream.deadline_ms) continue;
-        if (!nearest || s->stream.deadline_ms < nearest)
-            nearest = s->stream.deadline_ms;
+        if (!nearest || s->stream.deadline_ms < nearest) nearest = s->stream.deadline_ms;
     }
     pthread_mutex_unlock(&ctx->mu);
     return nearest;

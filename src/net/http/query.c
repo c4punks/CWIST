@@ -51,9 +51,11 @@ cwist_query_map *cwist_query_map_create_in_arena(void *arena) {
 
     map->size = CWIST_QUERY_MAP_DEFAULT_SIZE;
     if (arena) {
-        map->buckets = (cwist_query_bucket **)cwist_arena_alloc((cwist_arena_t *)arena, map->size * sizeof(cwist_query_bucket *));
+        map->buckets = (cwist_query_bucket **)cwist_arena_alloc(
+            (cwist_arena_t *)arena, map->size * sizeof(cwist_query_bucket *));
     } else {
-        map->buckets = (cwist_query_bucket **)cwist_alloc_array(map->size, sizeof(cwist_query_bucket *));
+        map->buckets =
+            (cwist_query_bucket **)cwist_alloc_array(map->size, sizeof(cwist_query_bucket *));
     }
     if (!map->buckets) {
         if (!arena) {
@@ -133,7 +135,8 @@ void cwist_query_map_set(cwist_query_map *map, const char *key, const char *valu
     // Insert new
     cwist_query_bucket *node;
     if (map->arena) {
-        node = (cwist_query_bucket *)cwist_arena_alloc((cwist_arena_t *)map->arena, sizeof(cwist_query_bucket));
+        node = (cwist_query_bucket *)cwist_arena_alloc((cwist_arena_t *)map->arena,
+                                                       sizeof(cwist_query_bucket));
     } else {
         node = (cwist_query_bucket *)cwist_alloc(sizeof(cwist_query_bucket));
     }
@@ -169,7 +172,8 @@ const char *cwist_query_map_get(cwist_query_map *map, const char *key) {
 void cwist_query_map_delete(cwist_query_map *map, const char *key) {
     if (!map || !key) return;
     if (map->arena) {
-        /* In an arena-managed map, deletion is handled as a no-op or lazy nullification to prevent manual frees. */
+        /* In an arena-managed map, deletion is handled as a no-op or lazy nullification to prevent
+         * manual frees. */
         uint64_t hash = siphash24(key, strlen(key), map->seed);
         size_t index = hash % map->size;
         cwist_query_bucket *curr = map->buckets[index];
@@ -242,9 +246,8 @@ static char *url_decode(void *arena, const char *src) {
 
     size_t j = 0;
     for (size_t i = 0; i < len; i++) {
-        if (src[i] == '%' && i + 2 < len
-            && isxdigit((unsigned char)src[i + 1])
-            && isxdigit((unsigned char)src[i + 2])) {
+        if (src[i] == '%' && i + 2 < len && isxdigit((unsigned char)src[i + 1]) &&
+            isxdigit((unsigned char)src[i + 2])) {
             unsigned int byte;
             sscanf(src + i + 1, "%2x", &byte);
             out[j++] = (char)byte;

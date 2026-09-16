@@ -33,9 +33,12 @@ void root_handler(cwist_http_request *req, cwist_http_response *res) {
     cJSON_AddStringToObject(context, "status", status);
 
     char turn_str[16];
-    if (turn == 1) strcpy(turn_str, "Black");
-    else if (turn == 2) strcpy(turn_str, "White");
-    else strcpy(turn_str, "None");
+    if (turn == 1)
+        strcpy(turn_str, "Black");
+    else if (turn == 2)
+        strcpy(turn_str, "White");
+    else
+        strcpy(turn_str, "None");
     cJSON_AddStringToObject(context, "turn", turn_str);
 
     cJSON *board_json = cJSON_CreateArray();
@@ -49,7 +52,7 @@ void root_handler(cwist_http_request *req, cwist_http_response *res) {
     }
     cJSON_AddItemToObject(context, "board", board_json);
 
-    cwist_sstring* rendered_html = cwist_template_render_file("public/index.html.tmpl", context);
+    cwist_sstring *rendered_html = cwist_template_render_file("public/index.html.tmpl", context);
     if (rendered_html) {
         cwist_sstring_assign(res->body, rendered_html->data);
         cwist_sstring_destroy(rendered_html);
@@ -71,8 +74,10 @@ static int is_valid_move(int board[SIZE][SIZE], int r, int c, int p) {
         int nr = r + dr[i];
         int nc = c + dc[i];
         int count = 0;
-        while(nr >= 0 && nr < SIZE && nc >= 0 && nc < SIZE && board[nr][nc] == opponent) {
-            nr += dr[i]; nc += dc[i]; count++;
+        while (nr >= 0 && nr < SIZE && nc >= 0 && nc < SIZE && board[nr][nc] == opponent) {
+            nr += dr[i];
+            nc += dc[i];
+            count++;
         }
         if (count > 0 && nr >= 0 && nr < SIZE && nc >= 0 && nc < SIZE && board[nr][nc] == p) {
             return 1;
@@ -82,9 +87,9 @@ static int is_valid_move(int board[SIZE][SIZE], int r, int c, int p) {
 }
 
 static int has_valid_moves(int board[SIZE][SIZE], int p) {
-    for(int r=0; r<SIZE; r++) {
-        for(int c=0; c<SIZE; c++) {
-            if(is_valid_move(board, r, c, p)) return 1;
+    for (int r = 0; r < SIZE; r++) {
+        for (int c = 0; c < SIZE; c++) {
+            if (is_valid_move(board, r, c, p)) return 1;
         }
     }
     return 0;
@@ -92,9 +97,9 @@ static int has_valid_moves(int board[SIZE][SIZE], int p) {
 
 static int count_pieces(int board[SIZE][SIZE]) {
     int count = 0;
-    for(int r=0; r<SIZE; r++)
-        for(int c=0; c<SIZE; c++)
-            if(board[r][c] != 0) count++;
+    for (int r = 0; r < SIZE; r++)
+        for (int c = 0; c < SIZE; c++)
+            if (board[r][c] != 0) count++;
     return count;
 }
 
@@ -114,21 +119,21 @@ void join_handler(cwist_http_request *req, cwist_http_response *res) {
     const char *requested_mode = cwist_query_map_get(req->query_params, "mode");
 
     if (db_join_game(req->db, room_id, requested_mode, &pid, mode) < 0) {
-         res->status_code = CWIST_HTTP_FORBIDDEN;
-         cwist_sstring_assign(res->body, "{\"error\": \"Room full\"}");
-         return;
+        res->status_code = CWIST_HTTP_FORBIDDEN;
+        cwist_sstring_assign(res->body, "{\"error\": \"Room full\"}");
+        return;
     }
 
     cJSON *json = cJSON_CreateObject();
     cJSON_AddNumberToObject(json, "player_id", pid);
     cJSON_AddNumberToObject(json, "room_id", room_id);
     cJSON_AddStringToObject(json, "mode", mode);
-    
+
     char *str = cJSON_PrintUnformatted(json);
     cwist_sstring_assign(res->body, str);
     cwist_free(str);
     cJSON_Delete(json);
-    
+
     cwist_http_header_add(&res->headers, "Content-Type", "application/json");
 }
 
@@ -145,17 +150,17 @@ void state_handler(cwist_http_request *req, cwist_http_response *res) {
     cJSON_AddNumberToObject(json, "turn", turn);
     cJSON_AddStringToObject(json, "mode", mode);
     cJSON_AddNumberToObject(json, "room_id", room_id);
-    
+
     cJSON *board_arr = cJSON_CreateArray();
-    for(int r=0; r<SIZE; r++) {
+    for (int r = 0; r < SIZE; r++) {
         cJSON *row_arr = cJSON_CreateArray();
-        for(int c=0; c<SIZE; c++) {
+        for (int c = 0; c < SIZE; c++) {
             cJSON_AddItemToArray(row_arr, cJSON_CreateNumber(board[r][c]));
         }
         cJSON_AddItemToArray(board_arr, row_arr);
     }
     cJSON_AddItemToObject(json, "board", board_arr);
-    
+
     char *str = cJSON_PrintUnformatted(json);
     cwist_sstring_assign(res->body, str);
     cwist_free(str);
@@ -174,7 +179,7 @@ void move_handler(cwist_http_request *req, cwist_http_response *res) {
     int r = cJSON_GetObjectItem(json, "r")->valueint;
     int c = cJSON_GetObjectItem(json, "c")->valueint;
     int p = cJSON_GetObjectItem(json, "player")->valueint;
-    
+
     int board[SIZE][SIZE];
     int turn, players;
     char status[32];
@@ -184,7 +189,7 @@ void move_handler(cwist_http_request *req, cwist_http_response *res) {
     if (strcmp(status, "active") == 0 && p == turn) {
         int pieces = count_pieces(board);
         int is_reversi_setup = (strcmp(mode, "reversi") == 0 && pieces < 4);
-        
+
         if (is_reversi_setup) {
             if (r < 3 || r > 4 || c < 3 || c > 4 || board[r][c] != 0) {
                 res->status_code = CWIST_HTTP_BAD_REQUEST;
@@ -200,25 +205,30 @@ void move_handler(cwist_http_request *req, cwist_http_response *res) {
         // Apply Move
         board[r][c] = p;
         int opponent = (p == BLACK) ? WHITE : BLACK;
-        
+
         if (!is_reversi_setup) {
             int dr[] = {-1, -1, -1, 0, 0, 1, 1, 1};
             int dc[] = {-1, 0, 1, -1, 1, -1, 0, 1};
             for (int i = 0; i < 8; i++) {
                 int nr = r + dr[i], nc = c + dc[i];
                 int r_temp = nr, c_temp = nc, count = 0;
-                while(r_temp >= 0 && r_temp < SIZE && c_temp >= 0 && c_temp < SIZE && board[r_temp][c_temp] == opponent) {
-                    r_temp += dr[i]; c_temp += dc[i]; count++;
+                while (r_temp >= 0 && r_temp < SIZE && c_temp >= 0 && c_temp < SIZE &&
+                       board[r_temp][c_temp] == opponent) {
+                    r_temp += dr[i];
+                    c_temp += dc[i];
+                    count++;
                 }
                 if (count > 0 && r_temp >= 0 && r_temp < SIZE && board[r_temp][c_temp] == p) {
                     int rr = r + dr[i], cc = c + dc[i];
-                    while(board[rr][cc] == opponent) {
-                        board[rr][cc] = p; rr += dr[i]; cc += dc[i];
+                    while (board[rr][cc] == opponent) {
+                        board[rr][cc] = p;
+                        rr += dr[i];
+                        cc += dc[i];
                     }
                 }
             }
         }
-        
+
         // Determine next turn
         if (is_reversi_setup && count_pieces(board) < 4) {
             turn = opponent;
@@ -233,7 +243,7 @@ void move_handler(cwist_http_request *req, cwist_http_response *res) {
         update_game_state(req->db, room_id, board, turn, status, players, mode);
         cwist_sstring_assign(res->body, "{\"status\":\"ok\"}");
     } else {
-         res->status_code = CWIST_HTTP_FORBIDDEN;
+        res->status_code = CWIST_HTTP_FORBIDDEN;
     }
     cJSON_Delete(json);
 }

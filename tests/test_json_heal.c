@@ -18,12 +18,12 @@
  * ------------------------------------------------------------------------ */
 
 static const cwist_schema_field_t s_fields[] = {
-    { "user_id", {"userId",  "uid",  NULL}, CWIST_FIELD_INT,    true  },
-    { "name",    {NULL},                    CWIST_FIELD_STRING, true  },
-    { "active",  {"is_active", NULL},       CWIST_FIELD_BOOL,   false },
-    { "score",   {"Score",    NULL},        CWIST_FIELD_FLOAT,  false },
+    {"user_id", {"userId", "uid", NULL}, CWIST_FIELD_INT, true},
+    {"name", {NULL}, CWIST_FIELD_STRING, true},
+    {"active", {"is_active", NULL}, CWIST_FIELD_BOOL, false},
+    {"score", {"Score", NULL}, CWIST_FIELD_FLOAT, false},
 };
-static const cwist_schema_t s_schema = { s_fields, 4 };
+static const cwist_schema_t s_schema = {s_fields, 4};
 
 /* ==========================================================================
  * L1 Syntax healing tests
@@ -35,7 +35,7 @@ static void test_l1_already_valid(void) {
     cwist_heal_result_t r = cwist_json_heal(input, NULL);
     assert(r.json != NULL);
     assert(r.healed == false);
-    assert(r.level  == 0);
+    assert(r.level == 0);
     assert(r.confidence == 1.0);
 
     /* Verify it round-trips through cJSON */
@@ -51,9 +51,9 @@ static void test_l1_trailing_comma(void) {
     printf("L1: trailing comma before }...\n");
     const char *input = "{\"a\":1,\"b\":2,}";
     cwist_heal_result_t r = cwist_json_heal(input, NULL);
-    assert(r.json   != NULL);
+    assert(r.json != NULL);
     assert(r.healed == true);
-    assert(r.level  == 1);
+    assert(r.level == 1);
 
     cJSON *parsed = cJSON_Parse(r.json);
     assert(parsed != NULL);
@@ -69,9 +69,9 @@ static void test_l1_string_with_comma_and_closer(void) {
     printf("L1: comma followed by closer inside string literal preserved...\n");
     const char *input = "{\"query\":\"SELECT a, } FROM t\",\"items\":[\"x, ]\", 1,]}";
     cwist_heal_result_t r = cwist_json_heal(input, NULL);
-    assert(r.json   != NULL);
+    assert(r.json != NULL);
     assert(r.healed == true);
-    assert(r.level  == 1);
+    assert(r.level == 1);
 
     cJSON *parsed = cJSON_Parse(r.json);
     assert(parsed != NULL);
@@ -93,9 +93,9 @@ static void test_l1_missing_closers(void) {
     printf("L1: missing closing brace and bracket...\n");
     const char *input = "{\"items\":[1,2,3";
     cwist_heal_result_t r = cwist_json_heal(input, NULL);
-    assert(r.json   != NULL);
+    assert(r.json != NULL);
     assert(r.healed == true);
-    assert(r.level  == 1);
+    assert(r.level == 1);
 
     cJSON *parsed = cJSON_Parse(r.json);
     assert(parsed != NULL);
@@ -112,9 +112,9 @@ static void test_l1_missing_closers_with_trailing_comma(void) {
     printf("L1: missing closing brace and bracket with trailing comma...\n");
     const char *input = "{\"items\":[1,2,3,";
     cwist_heal_result_t r = cwist_json_heal(input, NULL);
-    assert(r.json   != NULL);
+    assert(r.json != NULL);
     assert(r.healed == true);
-    assert(r.level  == 1);
+    assert(r.level == 1);
 
     cJSON *parsed = cJSON_Parse(r.json);
     assert(parsed != NULL);
@@ -131,7 +131,7 @@ static void test_l1_line_comment(void) {
     printf("L1: JavaScript-style // comment stripped...\n");
     const char *input = "{\"x\":42 // this is a comment\n}";
     cwist_heal_result_t r = cwist_json_heal(input, NULL);
-    assert(r.json   != NULL);
+    assert(r.json != NULL);
     assert(r.healed == true);
 
     cJSON *parsed = cJSON_Parse(r.json);
@@ -149,13 +149,15 @@ static void test_l1_bom(void) {
     /* Combine BOM with a trailing-comma error so L1 is definitely needed
      * even if cJSON happens to silently skip the BOM itself. */
     char input[64];
-    input[0] = (char)0xEF; input[1] = (char)0xBB; input[2] = (char)0xBF;
+    input[0] = (char)0xEF;
+    input[1] = (char)0xBB;
+    input[2] = (char)0xBF;
     strcpy(input + 3, "{\"ok\":true,}");   /* trailing comma makes it invalid */
 
     cwist_heal_result_t r = cwist_json_heal(input, NULL);
-    assert(r.json   != NULL);
+    assert(r.json != NULL);
     assert(r.healed == true);
-    assert(r.level  == 1);
+    assert(r.level == 1);
 
     cJSON *parsed = cJSON_Parse(r.json);
     assert(parsed != NULL);
@@ -173,12 +175,12 @@ static void test_l2_field_rename(void) {
     printf("L2: field alias 'userId' renamed to 'user_id'...\n");
     /* userId instead of canonical user_id */
     const char *input = "{\"userId\":7,\"name\":\"Bob\"}";
-    cwist_heal_config_t cfg = { .threshold = 0.8, .schema = &s_schema };
+    cwist_heal_config_t cfg = {.threshold = 0.8, .schema = &s_schema};
 
     cwist_heal_result_t r = cwist_json_heal(input, &cfg);
-    assert(r.json   != NULL);
+    assert(r.json != NULL);
     assert(r.healed == true);
-    assert(r.level  == 2);
+    assert(r.level == 2);
 
     cJSON *parsed = cJSON_Parse(r.json);
     assert(parsed != NULL);
@@ -195,12 +197,12 @@ static void test_l2_field_rename(void) {
 static void test_l2_type_coercion_str_to_int(void) {
     printf("L2: string '42' coerced to number for user_id...\n");
     const char *input = "{\"user_id\":\"42\",\"name\":\"Carol\"}";
-    cwist_heal_config_t cfg = { .threshold = 0.8, .schema = &s_schema };
+    cwist_heal_config_t cfg = {.threshold = 0.8, .schema = &s_schema};
 
     cwist_heal_result_t r = cwist_json_heal(input, &cfg);
-    assert(r.json   != NULL);
+    assert(r.json != NULL);
     assert(r.healed == true);
-    assert(r.level  == 2);
+    assert(r.level == 2);
 
     cJSON *parsed = cJSON_Parse(r.json);
     assert(parsed != NULL);
@@ -216,10 +218,10 @@ static void test_l2_type_coercion_str_to_int(void) {
 static void test_l2_type_coercion_str_to_bool(void) {
     printf("L2: string 'true' coerced to bool for active...\n");
     const char *input = "{\"user_id\":1,\"name\":\"Dan\",\"active\":\"true\"}";
-    cwist_heal_config_t cfg = { .threshold = 0.8, .schema = &s_schema };
+    cwist_heal_config_t cfg = {.threshold = 0.8, .schema = &s_schema};
 
     cwist_heal_result_t r = cwist_json_heal(input, &cfg);
-    assert(r.json   != NULL);
+    assert(r.json != NULL);
     assert(r.healed == true);
 
     cJSON *parsed = cJSON_Parse(r.json);
@@ -235,10 +237,10 @@ static void test_l2_type_coercion_str_to_bool(void) {
 static void test_l2_fuzzy_match(void) {
     printf("L2: fuzzy 'is_active' matches 'active' schema field...\n");
     const char *input = "{\"user_id\":2,\"name\":\"Eve\",\"is_active\":false}";
-    cwist_heal_config_t cfg = { .threshold = 0.8, .schema = &s_schema };
+    cwist_heal_config_t cfg = {.threshold = 0.8, .schema = &s_schema};
 
     cwist_heal_result_t r = cwist_json_heal(input, &cfg);
-    assert(r.json   != NULL);
+    assert(r.json != NULL);
     assert(r.healed == true);
 
     cJSON *parsed = cJSON_Parse(r.json);
@@ -255,9 +257,10 @@ static void test_l2_fuzzy_match(void) {
  * L3 SLLM callback test
  * ======================================================================== */
 
-static char *mock_sllm(const char *broken_json, const cwist_schema_t *schema,
-                        void *userdata) {
-    (void)broken_json; (void)schema; (void)userdata;
+static char *mock_sllm(const char *broken_json, const cwist_schema_t *schema, void *userdata) {
+    (void)broken_json;
+    (void)schema;
+    (void)userdata;
     /* Simulate SLLM returning a repaired object */
     return strdup("{\"user_id\":99,\"name\":\"SLLM-recovered\"}");
 }
@@ -268,16 +271,16 @@ static void test_l3_sllm_callback(void) {
     const char *input = "<<<garbage that no parser can fix>>>";
 
     cwist_heal_config_t cfg = {
-        .threshold     = 0.5,      /* below L3 confidence (0.7) → accepted */
-        .schema        = NULL,
-        .sllm_fn       = mock_sllm,
+        .threshold = 0.5,      /* below L3 confidence (0.7) → accepted */
+        .schema = NULL,
+        .sllm_fn = mock_sllm,
         .sllm_userdata = NULL,
     };
 
     cwist_heal_result_t r = cwist_json_heal(input, &cfg);
-    assert(r.json   != NULL);
+    assert(r.json != NULL);
     assert(r.healed == true);
-    assert(r.level  == 3);
+    assert(r.level == 3);
 
     cJSON *parsed = cJSON_Parse(r.json);
     assert(parsed != NULL);
@@ -298,9 +301,9 @@ static void test_threshold_rejects_low_confidence(void) {
     const char *input = "not json at all";
 
     cwist_heal_config_t cfg = {
-        .threshold     = 0.9,      /* L3 confidence (0.7) is below this */
-        .schema        = NULL,
-        .sllm_fn       = mock_sllm,
+        .threshold = 0.9,      /* L3 confidence (0.7) is below this */
+        .schema = NULL,
+        .sllm_fn = mock_sllm,
         .sllm_userdata = NULL,
     };
 
@@ -321,7 +324,7 @@ static void test_zod_valid_object(void) {
     const char *raw = "{\"user_id\":1,\"name\":\"Alice\",\"active\":true}";
     cJSON *out = NULL;
     cwist_zod_result_t r = cwist_zod_parse(raw, &s_schema, &out);
-    assert(r.valid    == true);
+    assert(r.valid == true);
     assert(r.error_count == 0);
     assert(out != NULL);
     cJSON_Delete(out);
@@ -339,7 +342,10 @@ static void test_zod_missing_required(void) {
 
     bool found = false;
     for (int i = 0; i < r.error_count; i++) {
-        if (strcmp(r.errors[i].field, "name") == 0) { found = true; break; }
+        if (strcmp(r.errors[i].field, "name") == 0) {
+            found = true;
+            break;
+        }
     }
     assert(found);
     printf("  Passed.\n");
@@ -355,7 +361,10 @@ static void test_zod_wrong_type(void) {
 
     bool found = false;
     for (int i = 0; i < r.error_count; i++) {
-        if (strcmp(r.errors[i].field, "user_id") == 0) { found = true; break; }
+        if (strcmp(r.errors[i].field, "user_id") == 0) {
+            found = true;
+            break;
+        }
     }
     assert(found);
     printf("  Passed.\n");
@@ -383,14 +392,13 @@ static void test_db_insert_healed(void) {
     cwist_error_t err = cwist_db_open(&db, ":memory:");
     assert(err.error.err_i16 == 0 && db != NULL);
 
-    err = cwist_db_exec(db,
-        "CREATE TABLE users "
-        "(user_id INTEGER, name TEXT, active INTEGER, score REAL);");
+    err = cwist_db_exec(db, "CREATE TABLE users "
+                            "(user_id INTEGER, name TEXT, active INTEGER, score REAL);");
     assert(err.error.err_i16 == 0);
 
     /* Broken: missing closer, userId alias, active as string */
     const char *broken = "{\"userId\":5,\"name\":\"Healed\",\"active\":\"true\"";
-    cwist_heal_config_t cfg = { .threshold = 0.8, .schema = &s_schema };
+    cwist_heal_config_t cfg = {.threshold = 0.8, .schema = &s_schema};
 
     err = cwist_db_insert_healed(db, "users", broken, &s_schema, &cfg);
     assert(err.error.err_i16 == 0);
@@ -400,10 +408,10 @@ static void test_db_insert_healed(void) {
     assert(err.error.err_i16 == 0 && rows != NULL);
     assert(cJSON_GetArraySize(rows) == 1);
 
-    cJSON *row  = cJSON_GetArrayItem(rows, 0);
-    cJSON *uid  = cJSON_GetObjectItem(row, "user_id");
+    cJSON *row = cJSON_GetArrayItem(rows, 0);
+    cJSON *uid = cJSON_GetObjectItem(row, "user_id");
     cJSON *name = cJSON_GetObjectItem(row, "name");
-    assert(uid  && strcmp(uid->valuestring,  "5")      == 0);
+    assert(uid && strcmp(uid->valuestring, "5") == 0);
     assert(name && strcmp(name->valuestring, "Healed") == 0);
 
     cJSON_Delete(rows);
@@ -436,18 +444,17 @@ static void test_db_query_strict(void) {
     cwist_error_t err = cwist_db_open(&db, ":memory:");
     assert(err.error.err_i16 == 0);
 
-    err = cwist_db_exec(db,
-        "CREATE TABLE users (user_id INTEGER, name TEXT);"
-        "INSERT INTO users VALUES (1, 'Alice');"
-        "INSERT INTO users VALUES (2, 'Bob');");
+    err = cwist_db_exec(db, "CREATE TABLE users (user_id INTEGER, name TEXT);"
+                            "INSERT INTO users VALUES (1, 'Alice');"
+                            "INSERT INTO users VALUES (2, 'Bob');");
     assert(err.error.err_i16 == 0);
 
     /* Schema: user_id (INT, required) + name (STRING, required) */
     static const cwist_schema_field_t qfields[] = {
-        { "user_id", {NULL}, CWIST_FIELD_INT,    true },
-        { "name",    {NULL}, CWIST_FIELD_STRING, true },
+        {"user_id", {NULL}, CWIST_FIELD_INT, true},
+        {"name", {NULL}, CWIST_FIELD_STRING, true},
     };
-    static const cwist_schema_t qschema = { qfields, 2 };
+    static const cwist_schema_t qschema = {qfields, 2};
 
     cJSON *rows = NULL;
     /* SQLite returns numbers as strings via exec callback, so all fields will
@@ -462,8 +469,7 @@ static void test_db_query_strict(void) {
     /* With strict schema (user_id must be INT) the sqlite exec callback
      * returns user_id as a STRING, so both rows are filtered out. */
     cJSON *strict_rows = NULL;
-    err = cwist_db_query_strict(db, "SELECT user_id, name FROM users;",
-                                 &strict_rows, &qschema);
+    err = cwist_db_query_strict(db, "SELECT user_id, name FROM users;", &strict_rows, &qschema);
     assert(err.error.err_i16 == 0);
     /* exec callback gives all values as strings → user_id type mismatch */
     assert(cJSON_GetArraySize(strict_rows) == 0);

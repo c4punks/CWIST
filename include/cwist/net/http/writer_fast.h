@@ -17,8 +17,10 @@ extern "C" {
 #endif
 
 typedef enum {
-    CWIST_WRITE_DONE = 0,    /**< Complete buffer was written on the first pass (0 latency overhead). */
-    CWIST_WRITE_PENDING = 1, /**< Socket buffer saturated (EAGAIN/EWOULDBLOCK) - hand off to reactor. */
+    CWIST_WRITE_DONE =
+        0,    /**< Complete buffer was written on the first pass (0 latency overhead). */
+    CWIST_WRITE_PENDING =
+        1, /**< Socket buffer saturated (EAGAIN/EWOULDBLOCK) - hand off to reactor. */
     CWIST_WRITE_ERR = -1     /**< Fatal socket error or connection reset. */
 } cwist_write_status_t;
 
@@ -35,7 +37,8 @@ typedef enum {
  * @param sent_out Optional pointer to store the number of bytes successfully sent.
  * @return cwist_write_status_t status indicating completion, pending state, or fatal error.
  */
-cwist_write_status_t cwist_http_send_speculative(int fd, const void *buf, size_t len, size_t *sent_out);
+cwist_write_status_t cwist_http_send_speculative(int fd, const void *buf, size_t len,
+                                                 size_t *sent_out);
 
 /**
  * @brief Speculative scatter/gather sendmsg without blocking poll().
@@ -43,7 +46,8 @@ cwist_write_status_t cwist_http_send_speculative(int fd, const void *buf, size_t
  * Attempts an immediate sendmsg with MSG_DONTWAIT. If the socket cannot accept all data,
  * returns CWIST_WRITE_PENDING or advances iov cursor without blocking the reactor.
  */
-cwist_write_status_t cwist_http_sendmsg_speculative(int fd, struct iovec *iov, int iovcnt, int flags, size_t *total_sent);
+cwist_write_status_t cwist_http_sendmsg_speculative(int fd, struct iovec *iov, int iovcnt,
+                                                    int flags, size_t *total_sent);
 
 /**
  * @brief Select worker using Power of Two Random Choices (P2C).

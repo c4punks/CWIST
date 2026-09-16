@@ -15,11 +15,11 @@
 #include <cjson/cJSON.h>
 
 static const cwist_schema_field_t event_fields[] = {
-    { "title",    {NULL},                   CWIST_FIELD_STRING, true  },
-    { "category", {"cat", "type"},          CWIST_FIELD_STRING, false },
-    { "score",    {"points", "rating"},     CWIST_FIELD_INT,    false },
+    {"title", {NULL}, CWIST_FIELD_STRING, true},
+    {"category", {"cat", "type"}, CWIST_FIELD_STRING, false},
+    {"score", {"points", "rating"}, CWIST_FIELD_INT, false},
 };
-static const cwist_schema_t event_schema = { event_fields, 3 };
+static const cwist_schema_t event_schema = {event_fields, 3};
 
 static void try_insert(cwist_orm_t *orm, const char *label, const char *json) {
     printf("\n[%s]\n  input: %s\n", label, json);
@@ -44,26 +44,24 @@ int main(void) {
     cwist_orm_t *orm = cwist_orm_open_socket(sock);
     cwist_orm_immediate_commit(true);
 
-    cwist_orm_exec(orm,
-        "CREATE TABLE events ("
-        "  id       INTEGER PRIMARY KEY AUTOINCREMENT,"
-        "  title    TEXT NOT NULL,"
-        "  category TEXT,"
-        "  score    INTEGER"
-        ");");
+    cwist_orm_exec(orm, "CREATE TABLE events ("
+                        "  id       INTEGER PRIMARY KEY AUTOINCREMENT,"
+                        "  title    TEXT NOT NULL,"
+                        "  category TEXT,"
+                        "  score    INTEGER"
+                        ");");
     printf("Table 'events' ready\n");
 
     try_insert(orm, "clean JSON",
-        "{\"title\":\"Launch Party\",\"category\":\"social\",\"score\":95}");
+               "{\"title\":\"Launch Party\",\"category\":\"social\",\"score\":95}");
 
     try_insert(orm, "trailing comma (L1 fix)",
-        "{\"title\":\"Team Standup\",\"category\":\"work\",\"score\":80,}");
+               "{\"title\":\"Team Standup\",\"category\":\"work\",\"score\":80,}");
 
     try_insert(orm, "aliased field (L2 fix)",
-        "{\"title\":\"Hackathon\",\"cat\":\"tech\",\"points\":90}");
+               "{\"title\":\"Hackathon\",\"cat\":\"tech\",\"points\":90}");
 
-    try_insert(orm, "malformed (should fail)",
-        "not json at all!!!");
+    try_insert(orm, "malformed (should fail)", "not json at all!!!");
 
     printf("\n[SELECT all events]\n");
     cJSON *rows = NULL;
@@ -71,16 +69,15 @@ int main(void) {
     if (rows) {
         int n = cJSON_GetArraySize(rows);
         for (int i = 0; i < n; i++) {
-            cJSON *row  = cJSON_GetArrayItem(rows, i);
-            cJSON *id   = cJSON_GetObjectItem(row, "id");
-            cJSON *title= cJSON_GetObjectItem(row, "title");
-            cJSON *cat  = cJSON_GetObjectItem(row, "category");
-            cJSON *score= cJSON_GetObjectItem(row, "score");
-            printf("  %-3s | %-20s | %-10s | %s\n",
-                (id    && id->valuestring)    ? id->valuestring    : "?",
-                (title && title->valuestring) ? title->valuestring : "?",
-                (cat   && cat->valuestring)   ? cat->valuestring   : "NULL",
-                (score && score->valuestring) ? score->valuestring : "NULL");
+            cJSON *row = cJSON_GetArrayItem(rows, i);
+            cJSON *id = cJSON_GetObjectItem(row, "id");
+            cJSON *title = cJSON_GetObjectItem(row, "title");
+            cJSON *cat = cJSON_GetObjectItem(row, "category");
+            cJSON *score = cJSON_GetObjectItem(row, "score");
+            printf("  %-3s | %-20s | %-10s | %s\n", (id && id->valuestring) ? id->valuestring : "?",
+                   (title && title->valuestring) ? title->valuestring : "?",
+                   (cat && cat->valuestring) ? cat->valuestring : "NULL",
+                   (score && score->valuestring) ? score->valuestring : "NULL");
         }
         cJSON_Delete(rows);
     }

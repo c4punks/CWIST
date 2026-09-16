@@ -6,10 +6,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 
-typedef enum {
-    GQL_OP_QUERY,
-    GQL_OP_MUTATION
-} gql_op_type_t;
+typedef enum { GQL_OP_QUERY, GQL_OP_MUTATION } gql_op_type_t;
 
 typedef struct graphql_field {
     char *name;
@@ -24,7 +21,7 @@ struct cwist_graphql_schema {
 };
 
 static cwist_error_t gql_error(int code) {
-    return (cwist_error_t){ .errtype = CWIST_ERR_INT16, .error.err_i16 = code };
+    return (cwist_error_t){.errtype = CWIST_ERR_INT16, .error.err_i16 = code};
 }
 
 static bool gql_name_char(char c, bool first) {
@@ -73,7 +70,8 @@ void cwist_graphql_schema_destroy(cwist_graphql_schema_t *schema) {
     cwist_free(schema);
 }
 
-static bool add_field(graphql_field_t **head, const char *field, cwist_graphql_resolver_fn resolver, void *ctx) {
+static bool add_field(graphql_field_t **head, const char *field, cwist_graphql_resolver_fn resolver,
+                      void *ctx) {
     if (!head || !gql_name_valid(field) || !resolver) return false;
     for (graphql_field_t *f = *head; f; f = f->next) {
         if (strcmp(f->name, field) == 0) {
@@ -96,12 +94,14 @@ static bool add_field(graphql_field_t **head, const char *field, cwist_graphql_r
     return true;
 }
 
-bool cwist_graphql_add_query(cwist_graphql_schema_t *schema, const char *field, cwist_graphql_resolver_fn resolver, void *ctx) {
+bool cwist_graphql_add_query(cwist_graphql_schema_t *schema, const char *field,
+                             cwist_graphql_resolver_fn resolver, void *ctx) {
     if (!schema) return false;
     return add_field(&schema->queries, field, resolver, ctx);
 }
 
-bool cwist_graphql_add_mutation(cwist_graphql_schema_t *schema, const char *field, cwist_graphql_resolver_fn resolver, void *ctx) {
+bool cwist_graphql_add_mutation(cwist_graphql_schema_t *schema, const char *field,
+                                cwist_graphql_resolver_fn resolver, void *ctx) {
     if (!schema) return false;
     return add_field(&schema->mutations, field, resolver, ctx);
 }
@@ -127,12 +127,13 @@ static const char *skip_ws_comments(const char *p) {
 }
 
 /* Parse GraphQL arguments: ( arg1: "val", arg2: 123, arg3: $varName ) */
-static const char *parse_arguments(const char *p, const cJSON *variables, cJSON **out_args, cJSON *errors) {
+static const char *parse_arguments(const char *p, const cJSON *variables, cJSON **out_args,
+                                   cJSON *errors) {
     *out_args = NULL;
     p = skip_ws_comments(p);
     if (*p != '(') return p;
     p++; /* skip '(' */
-    
+
     cJSON *args = cJSON_CreateObject();
     if (!args) {
         gql_add_error(errors, "Internal memory error parsing arguments");
@@ -175,8 +176,10 @@ static const char *parse_arguments(const char *p, const cJSON *variables, cJSON 
             p++;
             const char *str_start = p;
             while (*p && *p != '"') {
-                if (*p == '\\' && *(p + 1)) p += 2;
-                else p++;
+                if (*p == '\\' && *(p + 1))
+                    p += 2;
+                else
+                    p++;
             }
             if (*p != '"') {
                 gql_add_error(errors, "Unterminated string in argument");
@@ -237,7 +240,9 @@ static const char *parse_arguments(const char *p, const cJSON *variables, cJSON 
 }
 
 /* Parse and execute field selections recursively */
-static const char *parse_selection_set(const char *p, graphql_field_t *schema_fields, const cJSON *variables, cJSON *parent_data, cJSON *errors, unsigned int depth) {
+static const char *parse_selection_set(const char *p, graphql_field_t *schema_fields,
+                                       const cJSON *variables, cJSON *parent_data, cJSON *errors,
+                                       unsigned int depth) {
     if (depth > CWIST_GRAPHQL_MAX_DEPTH) {
         gql_add_error(errors, "Query selection depth exceeds maximum allowed");
         return p;
@@ -323,10 +328,14 @@ static const char *parse_selection_set(const char *p, graphql_field_t *schema_fi
                 /* Skip sub-selection if non-object or null */
                 int brace_count = 0;
                 while (*p) {
-                    if (*p == '{') brace_count++;
+                    if (*p == '{')
+                        brace_count++;
                     else if (*p == '}') {
                         brace_count--;
-                        if (brace_count == 0) { p++; break; }
+                        if (brace_count == 0) {
+                            p++;
+                            break;
+                        }
                     }
                     p++;
                 }
@@ -339,7 +348,8 @@ static const char *parse_selection_set(const char *p, graphql_field_t *schema_fi
     return p;
 }
 
-cwist_error_t cwist_graphql_execute(cwist_graphql_schema_t *schema, const char *request_json, cwist_sstring **out_json) {
+cwist_error_t cwist_graphql_execute(cwist_graphql_schema_t *schema, const char *request_json,
+                                    cwist_sstring **out_json) {
     if (!schema || !request_json || !out_json) return gql_error(-1);
     *out_json = NULL;
 
@@ -349,7 +359,10 @@ cwist_error_t cwist_graphql_execute(cwist_graphql_schema_t *schema, const char *
     cJSON *errors = cJSON_CreateArray();
 
     if (!request || !root || !data || !errors) {
-        cJSON_Delete(request); cJSON_Delete(root); cJSON_Delete(data); cJSON_Delete(errors);
+        cJSON_Delete(request);
+        cJSON_Delete(root);
+        cJSON_Delete(data);
+        cJSON_Delete(errors);
         return gql_error(-1);
     }
     cJSON_AddItemToObject(root, "data", data);
@@ -382,7 +395,8 @@ cwist_error_t cwist_graphql_execute(cwist_graphql_schema_t *schema, const char *
         if (*p != '{') {
             gql_add_error(errors, "Expected '{' to begin selection set");
         } else {
-            graphql_field_t *target_schema = (op_type == GQL_OP_MUTATION) ? schema->mutations : schema->queries;
+            graphql_field_t *target_schema =
+                (op_type == GQL_OP_MUTATION) ? schema->mutations : schema->queries;
             parse_selection_set(p, target_schema, variables, data, errors, 1);
         }
     }
@@ -408,7 +422,8 @@ cwist_error_t cwist_graphql_execute(cwist_graphql_schema_t *schema, const char *
     return gql_error(0);
 }
 
-void cwist_graphql_serve(cwist_graphql_schema_t *schema, cwist_http_request *req, cwist_http_response *res) {
+void cwist_graphql_serve(cwist_graphql_schema_t *schema, cwist_http_request *req,
+                         cwist_http_response *res) {
     if (!schema || !req || !res || req->method != CWIST_HTTP_POST) {
         if (res) res->status_code = CWIST_HTTP_BAD_REQUEST;
         return;

@@ -16,17 +16,17 @@
  * @param tag Tag name to copy into the node, such as "div" or "span".
  * @return Newly allocated element, or NULL when allocation fails.
  */
-cwist_html_element_t* cwist_html_element_create(const char *tag) {
+cwist_html_element_t *cwist_html_element_create(const char *tag) {
     cwist_html_element_t *el = (cwist_html_element_t *)cwist_alloc(sizeof(cwist_html_element_t));
     if (!el) return NULL;
-    
+
     el->tag = cwist_sstring_create();
     cwist_sstring_assign(el->tag, tag ? tag : "");
     el->attributes = cJSON_CreateObject();
     el->children = NULL;
     el->child_count = 0;
     el->inner_text = NULL;
-    
+
     return el;
 }
 
@@ -36,19 +36,19 @@ cwist_html_element_t* cwist_html_element_create(const char *tag) {
  */
 void cwist_html_element_destroy(cwist_html_element_t *el) {
     if (!el) return;
-    
+
     if (el->tag) cwist_sstring_destroy(el->tag);
     if (el->attributes) cJSON_Delete(el->attributes);
-    
+
     if (el->children) {
         for (int i = 0; i < el->child_count; i++) {
             cwist_html_element_destroy(el->children[i]);
         }
         cwist_free(el->children);
     }
-    
+
     if (el->inner_text) cwist_sstring_destroy(el->inner_text);
-    
+
     cwist_free(el);
 }
 
@@ -60,7 +60,7 @@ void cwist_html_element_destroy(cwist_html_element_t *el) {
  */
 void cwist_html_element_add_attr(cwist_html_element_t *el, const char *key, const char *value) {
     if (!el || !key || !value || !el->attributes) return;
-    
+
     if (cJSON_HasObjectItem(el->attributes, key)) {
         cJSON_ReplaceItemInObject(el->attributes, key, cJSON_CreateString(value));
     } else {
@@ -84,7 +84,7 @@ void cwist_html_element_set_id(cwist_html_element_t *el, const char *id) {
  */
 void cwist_html_element_add_class(cwist_html_element_t *el, const char *class_name) {
     if (!el || !class_name || !el->attributes) return;
-    
+
     cJSON *cls = cJSON_GetObjectItem(el->attributes, "class");
     if (cls && cls->valuestring && *cls->valuestring) {
         // Append to existing class
@@ -92,7 +92,8 @@ void cwist_html_element_add_class(cwist_html_element_t *el, const char *class_na
         cwist_sstring_assign(s, cls->valuestring);
         cwist_sstring_append(s, " ");
         cwist_sstring_append(s, class_name);
-        cJSON_ReplaceItemInObject(el->attributes, "class", cJSON_CreateString(s->data ? s->data : ""));
+        cJSON_ReplaceItemInObject(el->attributes, "class",
+                                  cJSON_CreateString(s->data ? s->data : ""));
         cwist_sstring_destroy(s);
     } else {
         cwist_html_element_add_attr(el, "class", class_name);
@@ -122,12 +123,13 @@ void cwist_html_element_set_text(cwist_html_element_t *el, const char *text) {
  */
 void cwist_html_element_add_child(cwist_html_element_t *el, cwist_html_element_t *child) {
     if (!el || !child) return;
-    
+
     el->child_count++;
-    cwist_html_element_t **new_children = (cwist_html_element_t **)cwist_realloc(el->children, sizeof(cwist_html_element_t*) * el->child_count);
+    cwist_html_element_t **new_children = (cwist_html_element_t **)cwist_realloc(
+        el->children, sizeof(cwist_html_element_t *) * el->child_count);
     if (!new_children) {
         el->child_count--;
-        return; 
+        return;
     }
     el->children = new_children;
     el->children[el->child_count - 1] = child;
@@ -140,7 +142,7 @@ void cwist_html_element_add_child(cwist_html_element_t *el, cwist_html_element_t
  */
 static void render_element(cwist_html_element_t *el, cwist_sstring *out) {
     if (!el || !out) return;
-    
+
     if (el->tag && el->tag->data && *el->tag->data) {
         cwist_sstring_append(out, "<");
         cwist_sstring_append(out, el->tag->data);
@@ -167,17 +169,17 @@ static void render_element(cwist_html_element_t *el, cwist_sstring *out) {
             }
         }
         cwist_sstring_append(out, ">");
-        
+
         if (el->inner_text && el->inner_text->data) {
             cwist_sstring_append_escaped(out, el->inner_text->data);
         }
-        
+
         if (el->children) {
             for (int i = 0; i < el->child_count; i++) {
                 render_element(el->children[i], out);
             }
         }
-        
+
         cwist_sstring_append(out, "</");
         cwist_sstring_append(out, el->tag->data);
         cwist_sstring_append(out, ">");
@@ -192,7 +194,7 @@ static void render_element(cwist_html_element_t *el, cwist_sstring *out) {
  * @param el Root element to serialise.
  * @return Rendered HTML buffer, or NULL when the root is invalid.
  */
-cwist_sstring* cwist_html_render(cwist_html_element_t *el) {
+cwist_sstring *cwist_html_render(cwist_html_element_t *el) {
     if (!el) return NULL;
     cwist_sstring *out = cwist_sstring_create();
     cwist_sstring_assign(out, "");

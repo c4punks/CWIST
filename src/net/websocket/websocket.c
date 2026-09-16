@@ -47,8 +47,7 @@ static char *ws_strcasestr(const char *haystack, const char *needle) {
     for (; *haystack; haystack++) {
         const char *h = haystack;
         const char *n = needle;
-        while (*h && *n &&
-               tolower((unsigned char)*h) == tolower((unsigned char)*n)) {
+        while (*h && *n && tolower((unsigned char)*h) == tolower((unsigned char)*n)) {
             h++;
             n++;
         }
@@ -97,7 +96,10 @@ cwist_websocket *cwist_websocket_upgrade(cwist_http_request *req, int client_fd)
 
     // Send Response
     cwist_http_response *res = cwist_http_response_create();
-    if (!res) { cwist_free(accept_key); return NULL; }
+    if (!res) {
+        cwist_free(accept_key);
+        return NULL;
+    }
     res->status_code = 101;
     cwist_sstring_assign(res->status_text, "Switching Protocols");
     cwist_http_header_add(&res->headers, "Upgrade", "websocket");
@@ -105,7 +107,7 @@ cwist_websocket *cwist_websocket_upgrade(cwist_http_request *req, int client_fd)
     cwist_http_header_add(&res->headers, "Sec-WebSocket-Accept", accept_key);
 
     cwist_error_t err = cwist_http_send_response(client_fd, res);
-    
+
     cwist_http_response_destroy(res);
     cwist_free(accept_key);
 
@@ -117,9 +119,9 @@ cwist_websocket *cwist_websocket_upgrade(cwist_http_request *req, int client_fd)
     if (!ws) return NULL;
     ws->fd = client_fd;
     ws->is_closed = false;
-    ws->frag_buf    = NULL;
-    ws->frag_len    = 0;
-    ws->frag_cap    = 0;
+    ws->frag_buf = NULL;
+    ws->frag_len = 0;
+    ws->frag_cap = 0;
     ws->frag_opcode = CWIST_WS_FRAME_CONTINUATION;
     return ws;
 }
@@ -206,10 +208,9 @@ cwist_ws_frame *cwist_websocket_receive(cwist_websocket *ws) {
             uint64_t len64;
             if (read_exact(ws->fd, &len64, 8) < 0) return NULL;
             uint8_t *p = (uint8_t *)&len64;
-            payload_len = ((uint64_t)p[0] << 56) | ((uint64_t)p[1] << 48) |
-                          ((uint64_t)p[2] << 40) | ((uint64_t)p[3] << 32) |
-                          ((uint64_t)p[4] << 24) | ((uint64_t)p[5] << 16) |
-                          ((uint64_t)p[6] << 8)  | ((uint64_t)p[7]);
+            payload_len = ((uint64_t)p[0] << 56) | ((uint64_t)p[1] << 48) | ((uint64_t)p[2] << 40) |
+                          ((uint64_t)p[3] << 32) | ((uint64_t)p[4] << 24) | ((uint64_t)p[5] << 16) |
+                          ((uint64_t)p[6] << 8) | ((uint64_t)p[7]);
         }
 
         /* Reject frames that would force a huge allocation before any payload
@@ -232,8 +233,7 @@ cwist_ws_frame *cwist_websocket_receive(cwist_websocket *ws) {
                 cwist_free(payload);
                 return NULL;
             }
-            for (uint64_t i = 0; i < payload_len; i++)
-                payload[i] ^= masking_key[i % 4];
+            for (uint64_t i = 0; i < payload_len; i++) payload[i] ^= masking_key[i % 4];
             payload[payload_len] = '\0';
         }
 
@@ -248,7 +248,10 @@ cwist_ws_frame *cwist_websocket_receive(cwist_websocket *ws) {
             if (opcode == CWIST_WS_FRAME_CONTINUATION) {
                 /* RFC 6455 section 5.4: CONTINUATION is only valid when a fragmented
                  * message is already in progress. */
-                if (ws->frag_len == 0) { cwist_free(payload); return NULL; }
+                if (ws->frag_len == 0) {
+                    cwist_free(payload);
+                    return NULL;
+                }
             } else {
                 /* First fragment: save opcode (text vs binary). */
                 ws->frag_opcode = opcode;
@@ -266,16 +269,17 @@ cwist_ws_frame *cwist_websocket_receive(cwist_websocket *ws) {
             /* Final CONTINUATION frame: flush the reassembly buffer. */
             if (!ws_frag_append(ws, payload, (size_t)payload_len)) {
                 cwist_free(payload);
-                cwist_free(ws->frag_buf); ws->frag_buf = NULL;
+                cwist_free(ws->frag_buf);
+                ws->frag_buf = NULL;
                 ws->frag_len = ws->frag_cap = 0;
                 return NULL;
             }
             cwist_free(payload);
 
             /* Hand ownership of frag_buf to the returned frame. */
-            payload     = ws->frag_buf;
+            payload = ws->frag_buf;
             payload_len = ws->frag_len;
-            opcode      = ws->frag_opcode;
+            opcode = ws->frag_opcode;
 
             ws->frag_buf = NULL;
             ws->frag_len = ws->frag_cap = 0;
@@ -285,16 +289,17 @@ cwist_ws_frame *cwist_websocket_receive(cwist_websocket *ws) {
 
         if (opcode == CWIST_WS_FRAME_CLOSE) {
             /* RFC 6455 section 5.5.1: a CLOSE body, if present, MUST be >= 2 bytes. */
-            if (payload_len == 1) { cwist_free(payload); return NULL; }
+            if (payload_len == 1) {
+                cwist_free(payload);
+                return NULL;
+            }
             /* Echo the status code (first 2 bytes) back before closing. */
-            cwist_websocket_send(ws, CWIST_WS_FRAME_CLOSE,
-                                 payload, (payload_len >= 2) ? 2 : 0);
+            cwist_websocket_send(ws, CWIST_WS_FRAME_CLOSE, payload, (payload_len >= 2) ? 2 : 0);
             ws->is_closed = true;
         } else if (opcode == CWIST_WS_FRAME_PING) {
             /* RFC 6455 section 5.5.3: respond to every PING with a PONG carrying
              * the same payload (up to 125 bytes per section 5.5). */
-            cwist_websocket_send(ws, CWIST_WS_FRAME_PONG,
-                                 payload, payload_len);
+            cwist_websocket_send(ws, CWIST_WS_FRAME_PONG, payload, payload_len);
         }
 
         cwist_ws_frame *frame = (cwist_ws_frame *)cwist_alloc(sizeof(cwist_ws_frame));
@@ -302,9 +307,9 @@ cwist_ws_frame *cwist_websocket_receive(cwist_websocket *ws) {
             cwist_free(payload);
             return NULL;
         }
-        frame->fin        = fin;
-        frame->opcode     = opcode;
-        frame->payload    = payload;
+        frame->fin = fin;
+        frame->opcode = opcode;
+        frame->payload = payload;
         frame->payload_len = (size_t)payload_len;
         return frame;
     }
@@ -318,7 +323,8 @@ cwist_ws_frame *cwist_websocket_receive(cwist_websocket *ws) {
  * @param len Number of payload bytes to transmit.
  * @return 0 on success, or -1 when the socket write fails.
  */
-int cwist_websocket_send(cwist_websocket *ws, cwist_ws_opcode_t opcode, const uint8_t *data, size_t len) {
+int cwist_websocket_send(cwist_websocket *ws, cwist_ws_opcode_t opcode, const uint8_t *data,
+                         size_t len) {
     if (!ws || ws->is_closed || (!data && len > 0)) return -1;
 
     uint8_t head[10]; // Max header size (2 + 8)
@@ -365,9 +371,7 @@ void cwist_websocket_frame_destroy(cwist_ws_frame *frame) {
 /**
  * @brief Send a large payload as sequenced binary frames.
  */
-int cwist_websocket_send_sequenced(cwist_websocket *ws,
-                                   const uint8_t *data,
-                                   size_t len,
+int cwist_websocket_send_sequenced(cwist_websocket *ws, const uint8_t *data, size_t len,
                                    uint16_t chunk_payload_size) {
     if (!ws || ws->is_closed || !data || len == 0 || chunk_payload_size == 0) return -1;
 
@@ -376,7 +380,8 @@ int cwist_websocket_send_sequenced(cwist_websocket *ws,
 
     int rc = 0;
     for (size_t i = 0; i < msg.count && rc == 0; i++) {
-        if (cwist_websocket_send(ws, CWIST_WS_FRAME_BINARY, msg.chunks[i], msg.chunk_lens[i]) != 0) {
+        if (cwist_websocket_send(ws, CWIST_WS_FRAME_BINARY, msg.chunks[i], msg.chunk_lens[i]) !=
+            0) {
             rc = -1;
         }
     }

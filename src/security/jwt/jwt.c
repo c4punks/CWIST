@@ -29,26 +29,25 @@ static size_t b64url_encoded_len(size_t input_len) {
 
 /** Encode @p src_len bytes of @p src into @p dst (null-terminated). */
 static void b64url_encode(const unsigned char *src, size_t src_len, char *dst) {
-    static const char tbl[] =
-        "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_";
+    static const char tbl[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_";
     size_t i = 0, j = 0;
     while (i + 2 < src_len) {
-        uint32_t v = ((uint32_t)src[i] << 16) | ((uint32_t)src[i+1] << 8) | src[i+2];
+        uint32_t v = ((uint32_t)src[i] << 16) | ((uint32_t)src[i + 1] << 8) | src[i + 2];
         dst[j++] = tbl[(v >> 18) & 0x3F];
         dst[j++] = tbl[(v >> 12) & 0x3F];
-        dst[j++] = tbl[(v >>  6) & 0x3F];
-        dst[j++] = tbl[ v        & 0x3F];
+        dst[j++] = tbl[(v >> 6) & 0x3F];
+        dst[j++] = tbl[v & 0x3F];
         i += 3;
     }
     if (i + 1 == src_len) {
         uint32_t v = (uint32_t)src[i] << 4;
         dst[j++] = tbl[(v >> 6) & 0x3F];
-        dst[j++] = tbl[ v       & 0x3F];
+        dst[j++] = tbl[v & 0x3F];
     } else if (i + 2 == src_len) {
-        uint32_t v = ((uint32_t)src[i] << 10) | ((uint32_t)src[i+1] << 2);
+        uint32_t v = ((uint32_t)src[i] << 10) | ((uint32_t)src[i + 1] << 2);
         dst[j++] = tbl[(v >> 12) & 0x3F];
-        dst[j++] = tbl[(v >>  6) & 0x3F];
-        dst[j++] = tbl[ v        & 0x3F];
+        dst[j++] = tbl[(v >> 6) & 0x3F];
+        dst[j++] = tbl[v & 0x3F];
     }
     dst[j] = '\0';
 }
@@ -61,22 +60,20 @@ static void b64url_encode(const unsigned char *src, size_t src_len, char *dst) {
 static unsigned char *b64url_decode(const char *src, size_t src_len, size_t *out_len) {
     /* Accept either standard or url-safe alphabet; strip '=' padding. */
     static const signed char lut[256] = {
-        -1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,
-        -1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,
-        -1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,62,-1,62,-1,63, /* '+' -> 62, '-' -> 62, '/' & '_' -> 63 */
-        52,53,54,55,56,57,58,59,60,61,-1,-1,-1, 0,-1,-1, /* '0'-'9', '=' -> 0 */
-        -1, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9,10,11,12,13,14, /* 'A'-'O' */
-        15,16,17,18,19,20,21,22,23,24,25,-1,-1,-1,-1,63, /* 'P'-'Z', '_' -> 63 */
-        -1,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40, /* 'a'-'o' */
-        41,42,43,44,45,46,47,48,49,50,51,-1,-1,-1,-1,-1, /* 'p'-'z' */
-        -1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,
-        -1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,
-        -1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,
-        -1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,
-        -1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,
-        -1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,
-        -1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,
-        -1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,
+        -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+        -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 62,
+        -1, 62, -1, 63, /* '+' -> 62, '-' -> 62, '/' & '_' -> 63 */
+        52, 53, 54, 55, 56, 57, 58, 59, 60, 61, -1, -1, -1, 0,  -1, -1, /* '0'-'9', '=' -> 0 */
+        -1, 0,  1,  2,  3,  4,  5,  6,  7,  8,  9,  10, 11, 12, 13, 14, /* 'A'-'O' */
+        15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, -1, -1, -1, -1, 63, /* 'P'-'Z', '_' -> 63 */
+        -1, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, /* 'a'-'o' */
+        41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, -1, -1, -1, -1, -1, /* 'p'-'z' */
+        -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+        -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+        -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+        -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+        -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+        -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
     };
 
     /* Calculate how many padding chars to expect */
@@ -92,30 +89,36 @@ static unsigned char *b64url_decode(const char *src, size_t src_len, size_t *out
     size_t i = 0, j = 0;
     while (i + 3 < padded_len) {
         signed char a = lut[(unsigned char)src[i]];
-        signed char b = lut[(unsigned char)src[i+1]];
-        signed char c = lut[(unsigned char)src[i+2]];
-        signed char d = lut[(unsigned char)src[i+3]];
+        signed char b = lut[(unsigned char)src[i + 1]];
+        signed char c = lut[(unsigned char)src[i + 2]];
+        signed char d = lut[(unsigned char)src[i + 3]];
         if (a < 0 || b < 0 || c < 0 || d < 0) {
             cwist_free(out);
             return NULL;
         }
         out[j++] = (unsigned char)((a << 2) | (b >> 4));
         out[j++] = (unsigned char)((b << 4) | (c >> 2));
-        out[j++] = (unsigned char)((c << 6) |  d);
+        out[j++] = (unsigned char)((c << 6) | d);
         i += 4;
     }
 
     size_t rem = padded_len - i;
     if (rem == 2) {
         signed char a = lut[(unsigned char)src[i]];
-        signed char b = lut[(unsigned char)src[i+1]];
-        if (a < 0 || b < 0) { cwist_free(out); return NULL; }
+        signed char b = lut[(unsigned char)src[i + 1]];
+        if (a < 0 || b < 0) {
+            cwist_free(out);
+            return NULL;
+        }
         out[j++] = (unsigned char)((a << 2) | (b >> 4));
     } else if (rem == 3) {
         signed char a = lut[(unsigned char)src[i]];
-        signed char b = lut[(unsigned char)src[i+1]];
-        signed char c = lut[(unsigned char)src[i+2]];
-        if (a < 0 || b < 0 || c < 0) { cwist_free(out); return NULL; }
+        signed char b = lut[(unsigned char)src[i + 1]];
+        signed char c = lut[(unsigned char)src[i + 2]];
+        if (a < 0 || b < 0 || c < 0) {
+            cwist_free(out);
+            return NULL;
+        }
         out[j++] = (unsigned char)((a << 2) | (b >> 4));
         out[j++] = (unsigned char)((b << 4) | (c >> 2));
     } else if (rem == 1) {
@@ -135,14 +138,11 @@ static unsigned char *b64url_decode(const char *src, size_t src_len, size_t *out
  * -------------------------------------------------------------------------- */
 
 /** Compute HMAC-SHA256 of @p msg using @p key; writes to @p out (32 bytes). */
-static bool hmac_sha256(const char *key, size_t key_len,
-                        const char *msg, size_t msg_len,
+static bool hmac_sha256(const char *key, size_t key_len, const char *msg, size_t msg_len,
                         unsigned char out[32]) {
     unsigned int out_len = 0;
-    unsigned char *r = HMAC(EVP_sha256(),
-                            key, (int)key_len,
-                            (const unsigned char *)msg, msg_len,
-                            out, &out_len);
+    unsigned char *r =
+        HMAC(EVP_sha256(), key, (int)key_len, (const unsigned char *)msg, msg_len, out, &out_len);
     return r != NULL && out_len == 32;
 }
 
@@ -262,40 +262,59 @@ cwist_jwt_claims *cwist_jwt_verify(const char *token, const char *secret) {
     if (!tok_copy) return NULL;
 
     char *dot1 = strchr(tok_copy, '.');
-    if (!dot1) { cwist_free(tok_copy); return NULL; }
+    if (!dot1) {
+        cwist_free(tok_copy);
+        return NULL;
+    }
     *dot1 = '\0';
 
     char *dot2 = strchr(dot1 + 1, '.');
-    if (!dot2) { cwist_free(tok_copy); return NULL; }
+    if (!dot2) {
+        cwist_free(tok_copy);
+        return NULL;
+    }
     *dot2 = '\0';
 
     /* --- Validate the header: must declare alg=HS256 (RFC 8725 section 3.1) ----- */
     size_t hdr_json_len = 0;
     unsigned char *hdr_json = b64url_decode(tok_copy, strlen(tok_copy), &hdr_json_len);
-    if (!hdr_json) { cwist_free(tok_copy); return NULL; }
+    if (!hdr_json) {
+        cwist_free(tok_copy);
+        return NULL;
+    }
     cJSON *hdr = cJSON_ParseWithLength((const char *)hdr_json, hdr_json_len);
     cwist_free(hdr_json);
-    if (!hdr) { cwist_free(tok_copy); return NULL; }
+    if (!hdr) {
+        cwist_free(tok_copy);
+        return NULL;
+    }
     cJSON *alg_item = cJSON_GetObjectItemCaseSensitive(hdr, "alg");
-    bool alg_ok = alg_item && cJSON_IsString(alg_item) &&
-                  strcmp(alg_item->valuestring, "HS256") == 0;
+    bool alg_ok =
+        alg_item && cJSON_IsString(alg_item) && strcmp(alg_item->valuestring, "HS256") == 0;
     cJSON_Delete(hdr);
-    if (!alg_ok) { cwist_free(tok_copy); return NULL; }
+    if (!alg_ok) {
+        cwist_free(tok_copy);
+        return NULL;
+    }
 
-    const char *pay_enc  = dot1 + 1;
-    const char *sig_enc  = dot2 + 1;
+    const char *pay_enc = dot1 + 1;
+    const char *sig_enc = dot2 + 1;
 
     /* --- Re-build the signing input from the original token --------------- */
     /* signing_input = original "hdr_enc.pay_enc" (up to the second dot) */
     size_t first_two_len = (size_t)(dot2 - tok_copy);
     /* dot2 points inside tok_copy which is already modified; use original */
     cwist_sstring *signing_input = cwist_sstring_create();
-    if (!signing_input) { cwist_free(tok_copy); return NULL; }
+    if (!signing_input) {
+        cwist_free(tok_copy);
+        return NULL;
+    }
     cwist_sstring_assign_len(signing_input, token, first_two_len);
 
     /* --- Recompute expected signature ------------------------------------- */
     unsigned char expected_sig[32];
-    if (!hmac_sha256(secret, strlen(secret), signing_input->data, signing_input->size, expected_sig)) {
+    if (!hmac_sha256(secret, strlen(secret), signing_input->data, signing_input->size,
+                     expected_sig)) {
         cwist_sstring_destroy(signing_input);
         cwist_free(tok_copy);
         return NULL;
@@ -336,7 +355,7 @@ cwist_jwt_claims *cwist_jwt_verify(const char *token, const char *secret) {
     if (!json) return NULL;
 
     /* --- Validate "exp" and "nbf" claims with leeway for clock skew/high-RTT --- */
-    #define CWIST_JWT_TIME_LEEWAY 300
+#define CWIST_JWT_TIME_LEEWAY 300
     time_t now = time(NULL);
     cJSON *exp_item = cJSON_GetObjectItemCaseSensitive(json, "exp");
     if (exp_item && cJSON_IsNumber(exp_item)) {
@@ -394,8 +413,7 @@ void cwist_jwt_claims_destroy(cwist_jwt_claims *claims) {
  * Sequenced JWT transport helpers
  * -------------------------------------------------------------------------- */
 
-cwist_jwt_chunk_t *cwist_jwt_split_chunks(const char *token,
-                                          uint16_t chunk_payload_size,
+cwist_jwt_chunk_t *cwist_jwt_split_chunks(const char *token, uint16_t chunk_payload_size,
                                           size_t *out_count) {
     if (!token || chunk_payload_size == 0 || !out_count) return NULL;
     *out_count = 0;
@@ -408,7 +426,8 @@ cwist_jwt_chunk_t *cwist_jwt_split_chunks(const char *token,
         return NULL;
     }
 
-    cwist_jwt_chunk_t *chunks = (cwist_jwt_chunk_t *)cwist_alloc_array(msg.count, sizeof(cwist_jwt_chunk_t));
+    cwist_jwt_chunk_t *chunks =
+        (cwist_jwt_chunk_t *)cwist_alloc_array(msg.count, sizeof(cwist_jwt_chunk_t));
     if (!chunks) {
         cwist_seq_message_free(&msg);
         return NULL;
@@ -466,10 +485,8 @@ char *cwist_jwt_join_chunks(const cwist_jwt_chunk_t *chunks, size_t count) {
     return token;
 }
 
-cwist_jwt_chunk_t *cwist_jwt_sign_chunks(const char *payload_json,
-                                         const char *secret,
-                                         long exp_seconds,
-                                         uint16_t chunk_payload_size,
+cwist_jwt_chunk_t *cwist_jwt_sign_chunks(const char *payload_json, const char *secret,
+                                         long exp_seconds, uint16_t chunk_payload_size,
                                          size_t *out_count) {
     if (!payload_json || !secret || chunk_payload_size == 0 || !out_count) return NULL;
     *out_count = 0;
@@ -482,8 +499,7 @@ cwist_jwt_chunk_t *cwist_jwt_sign_chunks(const char *payload_json,
     return chunks;
 }
 
-cwist_jwt_claims *cwist_jwt_verify_chunks(const cwist_jwt_chunk_t *chunks,
-                                          size_t count,
+cwist_jwt_claims *cwist_jwt_verify_chunks(const cwist_jwt_chunk_t *chunks, size_t count,
                                           const char *secret) {
     if (!chunks || count == 0 || !secret) return NULL;
     char *token = cwist_jwt_join_chunks(chunks, count);

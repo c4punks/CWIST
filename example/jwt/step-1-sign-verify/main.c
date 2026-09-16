@@ -27,10 +27,10 @@ int main() {
     }
 
     /* 3. Read individual claims */
-    printf("sub  : %s\n", cwist_jwt_claims_get(claims, "sub")  ?: "(null)");
+    printf("sub  : %s\n", cwist_jwt_claims_get(claims, "sub") ?: "(null)");
     printf("name : %s\n", cwist_jwt_claims_get(claims, "name") ?: "(null)");
     printf("role : %s\n", cwist_jwt_claims_get(claims, "role") ?: "(null)");
-    printf("exp  : %s\n", cwist_jwt_claims_get(claims, "exp")  ?: "(null)");
+    printf("exp  : %s\n", cwist_jwt_claims_get(claims, "exp") ?: "(null)");
 
     /* 4. Tampered token should fail */
     printf("\n[Tampered token]\n");

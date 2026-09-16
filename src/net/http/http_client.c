@@ -202,7 +202,7 @@ void cwist_http_client_enable_altsvc(cwist_http_client *client, int enabled) {
     if (!client) return;
     client->altsvc_enabled = enabled;
     curl_easy_setopt(client->curl, CURLOPT_ALTSVC_CTRL,
-                      enabled ? (long)(CURLALTSVC_H1 | CURLALTSVC_H2 | CURLALTSVC_H3) : 0L);
+                     enabled ? (long)(CURLALTSVC_H1 | CURLALTSVC_H2 | CURLALTSVC_H3) : 0L);
 }
 
 void cwist_http_client_set_altsvc_db(cwist_http_client *client, const char *path) {
@@ -216,12 +216,9 @@ void cwist_http_client_set_altsvc_db(cwist_http_client *client, const char *path
 /* Request execution                                                  */
 /* ------------------------------------------------------------------ */
 
-cwist_error_t cwist_http_client_request(cwist_http_client *client,
-                                        const char *url,
-                                        cwist_http_method_t method,
-                                        cwist_http_header_node *headers,
-                                        const char *body,
-                                        size_t body_len,
+cwist_error_t cwist_http_client_request(cwist_http_client *client, const char *url,
+                                        cwist_http_method_t method, cwist_http_header_node *headers,
+                                        const char *body, size_t body_len,
                                         cwist_http_response **out_response) {
     cwist_error_t err = make_error(CWIST_ERR_INT16);
     if (!client || !client->curl || !url || !out_response) {
@@ -281,8 +278,8 @@ cwist_error_t cwist_http_client_request(cwist_http_client *client,
     while (node) {
         if (node->key && node->key->data && node->value && node->value->data) {
             char header_line[4096];
-            int n = snprintf(header_line, sizeof(header_line), "%s: %s",
-                             node->key->data, node->value->data);
+            int n = snprintf(header_line, sizeof(header_line), "%s: %s", node->key->data,
+                             node->value->data);
             if (n > 0 && (size_t)n < sizeof(header_line)) {
                 curl_headers = curl_slist_append(curl_headers, header_line);
             }
@@ -345,17 +342,29 @@ cwist_error_t cwist_http_client_request(cwist_http_client *client,
 
     /* Populate status text based on code */
     switch (response->status_code) {
-        case CWIST_HTTP_OK:                  cwist_sstring_assign(response->status_text, "OK"); break;
-        case CWIST_HTTP_CREATED:             cwist_sstring_assign(response->status_text, "Created"); break;
-        case CWIST_HTTP_NO_CONTENT:          cwist_sstring_assign(response->status_text, "No Content"); break;
-        case CWIST_HTTP_BAD_REQUEST:         cwist_sstring_assign(response->status_text, "Bad Request"); break;
-        case CWIST_HTTP_UNAUTHORIZED:        cwist_sstring_assign(response->status_text, "Unauthorized"); break;
-        case CWIST_HTTP_FORBIDDEN:           cwist_sstring_assign(response->status_text, "Forbidden"); break;
-        case CWIST_HTTP_NOT_FOUND:           cwist_sstring_assign(response->status_text, "Not Found"); break;
-        case CWIST_HTTP_INTERNAL_ERROR:      cwist_sstring_assign(response->status_text, "Internal Server Error"); break;
-        case CWIST_HTTP_NOT_IMPLEMENTED:     cwist_sstring_assign(response->status_text, "Not Implemented"); break;
-        case CWIST_HTTP_SERVICE_UNAVAILABLE: cwist_sstring_assign(response->status_text, "Service Unavailable"); break;
-        default:                             cwist_sstring_assign(response->status_text, ""); break;
+        case CWIST_HTTP_OK: cwist_sstring_assign(response->status_text, "OK"); break;
+        case CWIST_HTTP_CREATED: cwist_sstring_assign(response->status_text, "Created"); break;
+        case CWIST_HTTP_NO_CONTENT:
+            cwist_sstring_assign(response->status_text, "No Content");
+            break;
+        case CWIST_HTTP_BAD_REQUEST:
+            cwist_sstring_assign(response->status_text, "Bad Request");
+            break;
+        case CWIST_HTTP_UNAUTHORIZED:
+            cwist_sstring_assign(response->status_text, "Unauthorized");
+            break;
+        case CWIST_HTTP_FORBIDDEN: cwist_sstring_assign(response->status_text, "Forbidden"); break;
+        case CWIST_HTTP_NOT_FOUND: cwist_sstring_assign(response->status_text, "Not Found"); break;
+        case CWIST_HTTP_INTERNAL_ERROR:
+            cwist_sstring_assign(response->status_text, "Internal Server Error");
+            break;
+        case CWIST_HTTP_NOT_IMPLEMENTED:
+            cwist_sstring_assign(response->status_text, "Not Implemented");
+            break;
+        case CWIST_HTTP_SERVICE_UNAVAILABLE:
+            cwist_sstring_assign(response->status_text, "Service Unavailable");
+            break;
+        default: cwist_sstring_assign(response->status_text, ""); break;
     }
 
     free(resp_body.data);
