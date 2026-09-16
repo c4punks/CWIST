@@ -29,6 +29,12 @@ jobs:
         version: 5.0.0
         actions-cache-folder: emsdk-cache
 
+    # actions/cache restores the cached emsdk without the executable bit on
+    # its bundled node, which makes `node wasm_smoke.js` fail with
+    # "Permission denied" on cache hits.
+    - name: Restore exec bit on cached emsdk node
+      run: chmod -R a+x emsdk-cache/node 2>/dev/null || true
+
     # wasm-smoke compiles and runs the smoke binary under node, so this is
     # build + run. Catches WASM-only regressions that native CI cannot see
     # (issue #93 gap 2) - e.g. clang-format corrupting EM_JS bodies.
