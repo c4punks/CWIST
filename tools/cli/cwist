@@ -13,6 +13,7 @@ import signal
 import subprocess
 import sys
 import time
+from collections import Counter
 from pathlib import Path
 
 FORMAT = "cwist-project/v1"
@@ -210,64 +211,110 @@ def display_path(path: str) -> str:
 
 AUDIT_STYLES = sorted({sty for styles in AUDIT_PATTERNS.values() for sty in styles})
 
-# Mirrors scripts/ci/malloc_lint.sh exactly (same regex, same comment
-# filter, same "path:line:content" line format) so `cwist audit --gate`
-# can replace that script without touching scripts/ci/malloc-baseline.txt's
-# existing format/content.
+# Mirrors scripts/ci/malloc_lint.sh's scan (same regex, same comment
+# filter) so `cwist audit --gate` can replace that script.
+#
+# A call site is keyed on its file plus its source text -- deliberately
+# NOT its line number.  The old `path:line:code` baseline made every
+# entry below an edit look like a brand-new allocation: adding three
+# lines to a security-header helper in http.c rewrote the pinned line of
+# an unrelated strdup 360 lines further down and failed CI on a file the
+# PR never touched.  Keying on the code itself means only a real change
+# to the call site moves it.
+#
+# Identical text can legitimately appear many times in one file (orm.c
+# frees `qtable` in seven different error paths), so the baseline is a
+# COUNTED multiset rather than a set: a seventh `free(blob);` in a file
+# that was pinned at six is still a new call site and still fails.
 _GATE_RAW_RE = re.compile(r"(?:^|[^a-zA-Z0-9_])(?:malloc|calloc|realloc|free|strdup|strndup)\s*\(")
 _GATE_CWIST_RE = re.compile(r"cwist_(?:malloc|calloc|realloc|free|strdup|strndup|alloc)")
 
+# `<count>\t<path>:<code>`; anything else is the retired line-pinned format.
+_BASELINE_RE = re.compile(r"^(\d+)\t(.+)$")
 
-def raw_alloc_lines(root: Path) -> list[str]:
-    """`path:line:content` for every raw malloc/calloc/realloc/free/strdup/
-    strndup call under `root`/src, excluding cwist_-prefixed names and
-    comment lines -- the exact set scripts/ci/malloc-baseline.txt pins."""
+
+def raw_alloc_sites(root: Path) -> Counter[str]:
+    """Count every raw malloc/calloc/realloc/free/strdup/strndup call
+    under `root`/src, excluding cwist_-prefixed names and comment lines,
+    keyed `path:code` with the code whitespace-normalised."""
     root = root.expanduser().resolve()
-    out: list[str] = []
+    sites: Counter[str] = Counter()
     for file in sorted((root / "src").rglob("*.c")):
-        rel = file.relative_to(root)
+        rel = file.relative_to(root).as_posix()
         try:
             lines = file.read_text(encoding="utf-8", errors="replace").splitlines()
         except OSError:
             continue
-        for lineno, line in enumerate(lines, start=1):
+        for line in lines:
             if not _GATE_RAW_RE.search(line) or _GATE_CWIST_RE.search(line):
                 continue
-            if line.strip().startswith(("//", "*", "/*")):
+            code = line.strip()
+            if code.startswith(("//", "*", "/*")):
                 continue
-            out.append(f"{rel}:{lineno}:{line}")
-    return sorted(set(out))
+            sites[f"{rel}:{code}"] += 1
+    return sites
+
+
+def parse_baseline(baseline_path: Path) -> tuple[Counter[str], list[str]]:
+    """(counts, unparsable lines).  Blank lines are skipped."""
+    counts: Counter[str] = Counter()
+    malformed: list[str] = []
+    if not baseline_path.exists():
+        return counts, malformed
+    for raw in baseline_path.read_text(encoding="utf-8").splitlines():
+        if not raw.strip():
+            continue
+        match = _BASELINE_RE.match(raw)
+        if match:
+            counts[match.group(2)] += int(match.group(1))
+        else:
+            malformed.append(raw)
+    return counts, malformed
+
+
+def format_baseline(sites: Counter[str]) -> str:
+    return "".join(f"{sites[key]}\t{key}\n" for key in sorted(sites))
 
 
 def audit_gate(root: Path, baseline_path: Path) -> int:
-    """Like scripts/ci/malloc_lint.sh: fail (return 1) only on raw
-    allocator call sites not already in the baseline; report any baseline
-    entries that no longer exist (candidates to tighten the baseline)."""
-    current = raw_alloc_lines(root)
-    baseline = sorted(set(baseline_path.read_text(encoding="utf-8").splitlines())) \
-        if baseline_path.exists() else []
-    baseline_set, current_set = set(baseline), set(current)
-    new = [l for l in current if l not in baseline_set]
-    fixed = [l for l in baseline if l not in current_set]
+    """Fail (return 1) only on raw allocator call sites beyond what the
+    baseline already allows; report shrinkage as a tighten candidate."""
+    current = raw_alloc_sites(root)
+    baseline, malformed = parse_baseline(baseline_path)
+    if malformed:
+        print(f"{baseline_path} is not in the `<count><tab><path>:<code>` format.")
+        print("The line-pinned `<path>:<line>:<code>` format was retired because an")
+        print("edit anywhere above a call site rewrote every entry below it.")
+        print(f"Regenerate it:  cwist audit --update-baseline {root} --baseline {baseline_path}")
+        for line in malformed[:3]:
+            print(f"  unparsed: {line}")
+        if len(malformed) > 3:
+            print(f"  ... and {len(malformed) - 3} more")
+        return 1
+    new = sorted(key for key in current if current[key] > baseline[key])
+    fixed = sorted(key for key in baseline if baseline[key] > current[key])
     if new:
         print("NEW raw allocator call(s) in src/ -- use cwist_alloc()/cwist_free()")
         print("or CWIST_DEFER_FREE instead so cwist_full_gc() can see them. If")
         print("this call site genuinely needs the raw allocator (add a comment")
-        print(f"explaining why), add its line to {baseline_path}:")
-        for l in new:
-            print(l)
+        print(f"explaining why), record it in {baseline_path}:")
+        for key in new:
+            was, now = baseline[key], current[key]
+            print(f"{key}" if not was else f"{key}   [{was} -> {now} in this file]")
     if fixed:
         print(f"NOTE: baseline entries no longer present (tighten {baseline_path}):")
-        for l in fixed:
-            print(l)
+        for key in fixed:
+            was, now = baseline[key], current[key]
+            print(f"{key}" if not now else f"{key}   [{was} -> {now} in this file]")
     return 1 if new else 0
 
 
 def audit_update_baseline(root: Path, baseline_path: Path) -> None:
-    lines = raw_alloc_lines(root)
+    sites = raw_alloc_sites(root)
     baseline_path.parent.mkdir(parents=True, exist_ok=True)
-    baseline_path.write_text("\n".join(lines) + ("\n" if lines else ""), encoding="utf-8")
-    print(f"wrote {len(lines)} entries to {baseline_path}")
+    baseline_path.write_text(format_baseline(sites), encoding="utf-8")
+    print(f"wrote {len(sites)} entries ({sum(sites.values())} call sites) "
+          f"to {baseline_path}")
 
 
 def run_audit(source: Path, category: str, style: str, as_json: bool) -> None:
