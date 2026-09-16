@@ -1,0 +1,5 @@
+# lib/ is vendored third-party source (sqlite3, multipart-parser-c, and the
+# submodules): 322k lines that upstream owns.  Formatting them would bury our
+# diffs and conflict on every vendor bump.
+DisableFormat: true
+SortIncludes: Never

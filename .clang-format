@@ -1,0 +1,76 @@
+# CWIST C style.
+#
+# Every value below was measured against the tree it formats (src/, include/,
+# tests/, example/, benchmarks/ -- 318 files, ~70k lines) rather than adopted
+# from a house style.  The counts in each comment are what the code actually
+# did when this file was written, so a future change can be argued against the
+# same evidence.  Vendored code under lib/ is excluded by lib/.clang-format.
+#
+# Re-measure and reformat with:  make format   (check-only: make format-check)
+Language: Cpp
+BasedOnStyle: LLVM
+
+# Indentation: no tabs anywhere (0 files), 4-space levels dominate the
+# leading-whitespace histogram (24609 x4, 9502 x8, 3872 x12, 1651 x16).
+IndentWidth: 4
+TabWidth: 4
+UseTab: Never
+ContinuationIndentWidth: 4
+
+# p95 line length is 80 and p99 is 99, so 100 is the limit the code already
+# respects: only 642 of 70625 lines exceed it, against 3396 over 80.
+ColumnLimit: 100
+
+# `char *p`, not `char* p` (6285 vs 41).
+PointerAlignment: Right
+DerivePointerAlignment: false
+
+# `void f(void) {` and `} else {` (1865 vs 86, 492 vs 81).
+BreakBeforeBraces: Attach
+
+# `if (` with a space (5819 vs 23).
+SpaceBeforeParens: ControlStatements
+
+# `case` sits one level inside `switch` (33 vs 1).
+IndentCaseLabels: true
+
+# The codebase leans hard on single-line guard clauses -- `if (!p) return -1;`
+# appears 1873 times, one-line loops 83, one-line case bodies 190.  Without
+# these three the diff would explode into ~2100 three-line blocks.
+AllowShortIfStatementsOnASingleLine: WithoutElse
+AllowShortLoopsOnASingleLine: true
+AllowShortCaseLabelsOnASingleLine: true
+
+# Braced blocks are the other way round: 3458 control blocks open a brace and
+# break, against 105 written as `if (c) { a; b; }`.  Collapsing is the far
+# more destructive error here, so the 105 get expanded instead.
+AllowShortBlocksOnASingleLine: Never
+AllowShortFunctionsOnASingleLine: Empty
+
+# Includes are ordered by dependency and sit behind platform feature-test
+# macros (_DARWIN_C_SOURCE / _POSIX_C_SOURCE in http.c and friends).
+# Alphabetising them would reorder those blocks and break the build.
+SortIncludes: Never
+
+# Column-aligned assignments are a local device, not a convention: only 46 of
+# 6995 assignments pad before `=`.  Leave trailing comments where the author
+# put them rather than re-flowing 424 of them to a computed column.
+AlignConsecutiveAssignments: None
+AlignConsecutiveDeclarations: None
+AlignTrailingComments:
+  Kind: Leave
+  OverEmptyLines: 0
+
+# Macro continuations sit one space after the last token (130 vs 36 padded).
+AlignEscapedNewlines: Left
+
+# Nested #if/#define stay at column 0 (1371 vs 30).
+IndentPPDirectives: None
+
+# Splitting a long literal into adjacent chunks is semantically free in C but
+# costs grep: `Cache-Control: no-cache` in sse.c and the Rapid Reset log line
+# in http2.c both stopped being findable in the source.  Leave literals alone.
+BreakStringLiterals: false
+
+MaxEmptyLinesToKeep: 1
+InsertNewlineAtEOF: true
