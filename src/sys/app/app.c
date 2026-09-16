@@ -2477,9 +2477,6 @@ static cwist_async_action_t app_async_flush_exit(int client_fd, cwist_http_async
     }
     cwist_coalesce_flush_status_t fs = cwist_http_coalesce_flush(client_fd, conn, keep_alive);
     if (fs == CWIST_COALESCE_FLUSH_PARKED) {
-#ifdef CWIST_PFC_TESTING
-        cwist_pfc_test_parked();
-#endif
         if (d) {
             long n = atomic_fetch_add(&dbg_parked, 1) + 1;
             if (n <= 5 || n % 10000 == 0)
@@ -2756,7 +2753,14 @@ cwist_async_action_t cwist_app_http_handler_async(int client_fd, cwist_http_asyn
          * flush owns them instead and re-arms after draining. */
         cwist_coalesce_flush_status_t fs = cwist_http_coalesce_flush(client_fd, conn, true);
         if (fs == CWIST_COALESCE_FLUSH_ERROR) return CWIST_ASYNC_CLOSE;
-        if (fs == CWIST_COALESCE_FLUSH_PARKED) return CWIST_ASYNC_DEFER;
+        if (fs == CWIST_COALESCE_FLUSH_PARKED) {
+#ifdef CWIST_PFC_TESTING
+            /* Same park counter as app_async_flush_exit: this continuation
+             * flush can produce PARKED too (issue #172). */
+            cwist_pfc_test_parked();
+#endif
+            return CWIST_ASYNC_DEFER;
+        }
         cwist_http_async_rearm(client_fd, conn->reactor, conn);
         return CWIST_ASYNC_DEFER;
     }
