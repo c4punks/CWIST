@@ -302,6 +302,8 @@ WASM_SRCS = src/core/sstring/sstring.c \
        src/core/validation/bind.c \
        src/core/mem/alloc.c \
        src/core/mem/arena.c \
+       src/core/db/db.c \
+       lib/sqlite3/sqlite3.c \
        lib/cjson/cJSON.c
 WASM_OBJS = $(WASM_SRCS:%.c=$(WASM_BUILD_DIR)/%.o)
 # Host pkg-config -I paths (curl/nghttp2/...) must NOT leak into the
