@@ -13,6 +13,13 @@
 # (scripts/ci/malloc-baseline.txt) and fails only on NEW raw allocator
 # calls. Same shape as scripts/ci/h2spec_gate.sh's baseline diff.
 #
+# The baseline records `<count><tab><path>:<code>` -- how many times a
+# given line of code appears in a given file, with no line numbers.  An
+# edit above a call site must not look like a new allocation, and an
+# extra copy of an already-pinned line must still fail; see
+# scripts/ci/test_malloc_gate.py.  Regenerate after an intentional
+# change with `cwist audit --update-baseline`.
+#
 # The actual scan/diff logic now lives in `cwist audit --gate` (kept in
 # one place instead of duplicated between a shell script and the CLI);
 # this stays as a thin, stable entry point for anything (CI, docs, muscle
