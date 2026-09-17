@@ -2502,9 +2502,6 @@ cwist_async_send_status_t cwist_http_send_response_coalesced(int client_fd,
                                                       : CWIST_ASYNC_SEND_CLOSE;
     }
 
-    char header_buf[CWIST_HTTP_MAX_HEADER_SIZE];
-    size_t header_len = serialize_headers(res, header_buf, sizeof(header_buf));
-
     const void *body_ptr = NULL;
     size_t body_len = 0;
     if (!head_only) {
@@ -2517,8 +2514,11 @@ cwist_async_send_status_t cwist_http_send_response_coalesced(int client_fd,
         }
     }
 
-    size_t total = header_len + body_len;
-    if (total > CWIST_HTTP_COALESCE_MAX || conn->olen + total > CWIST_HTTP_COALESCE_MAX) {
+    /* Cap pressure is judged against the worst-case header size so the
+     * header can be serialized directly into the coalesce buffer below,
+     * skipping the stack-to-obuf copy on the common path. */
+    size_t upper = CWIST_HTTP_MAX_HEADER_SIZE + body_len;
+    if (upper > CWIST_HTTP_COALESCE_MAX || conn->olen + upper > CWIST_HTTP_COALESCE_MAX) {
         if (cwist_http_coalesce_flush_blocking(client_fd, conn) != 0) {
             cwist_http_response_release_ptr_body(res);
             cwist_http_response_release_file_stream(res);
@@ -2526,9 +2526,13 @@ cwist_async_send_status_t cwist_http_send_response_coalesced(int client_fd,
         }
     }
 
-    /* Oversized single response: keep the legacy speculative send with a
-     * parked remainder rather than bouncing through the capped stash. */
-    if (total > CWIST_HTTP_COALESCE_MAX) {
+    /* Oversized single response: serialize into a stack buffer and keep
+     * the legacy speculative send with a parked remainder rather than
+     * bouncing through the capped stash. */
+    if (upper > CWIST_HTTP_COALESCE_MAX) {
+        char header_buf[CWIST_HTTP_MAX_HEADER_SIZE];
+        size_t header_len = serialize_headers(res, header_buf, sizeof(header_buf));
+        size_t total = header_len + body_len;
         struct iovec iov[2];
         int iov_cnt = 1;
         iov[0].iov_base = header_buf;
@@ -2590,11 +2594,31 @@ cwist_async_send_status_t cwist_http_send_response_coalesced(int client_fd,
         return CWIST_ASYNC_SEND_CLOSE;
     }
 
-    if (cwist_http_coalesce_append(conn, header_buf, header_len) != 0 ||
-        (body_len > 0 && body_ptr && cwist_http_coalesce_append(conn, body_ptr, body_len) != 0)) {
-        cwist_http_response_release_ptr_body(res);
-        cwist_http_response_release_file_stream(res);
-        return CWIST_ASYNC_SEND_CLOSE;
+    /* Common path: serialize the header straight into the stash buffer and
+     * copy the body behind it.  The cap check above guarantees
+     * olen + MAX_HEADER_SIZE + body_len fits CWIST_HTTP_COALESCE_MAX, so the
+     * single growth step below replaces the old serialize-to-stack then
+     * memcpy-into-obuf sequence with one direct serialization. */
+    if (conn->olen + upper > conn->ocap) {
+        size_t ncap = conn->ocap ? conn->ocap : 16384;
+        while (ncap < conn->olen + upper) ncap *= 2;
+        char *nb = cwist_alloc(ncap);
+        if (!nb) {
+            cwist_http_response_release_ptr_body(res);
+            cwist_http_response_release_file_stream(res);
+            return CWIST_ASYNC_SEND_CLOSE;
+        }
+        if (conn->olen > 0) memcpy(nb, conn->obuf, conn->olen);
+        cwist_free(conn->obuf);
+        conn->obuf = nb;
+        conn->ocap = ncap;
+    }
+    size_t header_len =
+        serialize_headers(res, conn->obuf + conn->olen, CWIST_HTTP_MAX_HEADER_SIZE);
+    conn->olen += header_len;
+    if (body_len > 0 && body_ptr) {
+        memcpy(conn->obuf + conn->olen, body_ptr, body_len);
+        conn->olen += body_len;
     }
 
     cwist_http_response_release_ptr_body(res);
