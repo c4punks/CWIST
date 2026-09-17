@@ -349,8 +349,7 @@ def webserver_summary(row):
               '', '### Separate tuned profile', '', '`wrk -t4 -c100 -d10s`, after a discarded 10s warmup. Do not compare these rows as equal-load results against the main table.']
     for key, name in [('cwist_tuned','CWIST classic'), ('axum_tuned','Axum'), ('spring_tuned','Spring Boot')]:
         lines.append(f"- {name}: {metric(key+'_rps',0)} req/s; mean {metric(key+'_lat_ms')} ms; corrected P99.999 {metric(key+'_p99_999_ms')} ms.")
-    lines += ['', 'Legacy records remain in history but are not pooled into this measurement contract. A 10-second tail screen is not a universal SLO or a statistically established speedup.', '',
-              'Spring environment: `' + str(row.get('spring_env', {})).replace('`','') + '`',
+    lines += ['', 'Spring environment: `' + str(row.get('spring_env', {})).replace('`','') + '`',
               '', '[Measurement contract](docs/webserver-benchmark.md) · [History](benchmarks/webserver.json)']
     return '\n'.join(lines)
 
