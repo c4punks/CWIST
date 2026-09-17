@@ -695,18 +695,24 @@ bool cwist_reactor_del(cwist_reactor_t *reactor, int fd) {
 }
 
 #ifdef __linux__
-/* CWIST_REACTOR_DRAIN_CHUNK: opt-in cooperative-queuing knob (see the
- * comment at its call site). 0 (default, or unset/invalid) preserves the
- * legacy behavior of draining a whole CQE batch before servicing foreign-
- * thread posts. Cached after the first read like the other env knobs in
- * this file -- the racy recompute is benign (same result every time). */
+/* CWIST_REACTOR_DRAIN_CHUNK: cooperative-queuing knob (see the comment at
+ * its call site). Values > 0 bound how many connection callbacks run before
+ * foreign-thread posts are drained. 0 disables the mid-batch drain (legacy
+ * behavior). Unset or invalid defaults to 64 so a foreign-thread completion
+ * does not queue behind a full CQE batch by default. Cached after the first
+ * read like the other env knobs in this file -- the racy recompute is benign
+ * (same result every time). */
 static uint32_t reactor_drain_chunk(void) {
     static _Atomic int cached = -1;
     int v = atomic_load_explicit(&cached, memory_order_relaxed);
     if (v < 0) {
         const char *s = getenv("CWIST_REACTOR_DRAIN_CHUNK");
-        long parsed = s ? strtol(s, NULL, 10) : 0;
-        v = (parsed > 0 && parsed < INT_MAX) ? (int)parsed : 0;
+        if (s) {
+            long parsed = strtol(s, NULL, 10);
+            v = (parsed >= 0 && parsed < INT_MAX) ? (int)parsed : 64;
+        } else {
+            v = 64;
+        }
         atomic_store_explicit(&cached, v, memory_order_relaxed);
     }
     return (uint32_t)v;
@@ -760,8 +766,8 @@ void cwist_reactor_run(cwist_reactor_t *reactor) {
              * how many connection callbacks run before posts are drained, so
              * a foreign-thread completion's own tail latency stops scaling
              * with how many *other* connections happened to be ready in the
-             * same wake. 0 (default) keeps the legacy single-drain-at-end
-             * behavior byte-for-byte. */
+             * same wake. The default (64) applies the bound out of the box;
+             * 0 restores the legacy single-drain-at-end behavior. */
             uint32_t drain_chunk = reactor_drain_chunk();
             uint32_t since_drain = 0;
             while (head != tail) {
