@@ -50,9 +50,41 @@ git checkout -b your-branch-name dev
   `git log` for examples (`fix(http2): ...`, `docs(gc): ...`,
   `chore(deps): ...`).
 - Reference the issue number your change addresses, if there is one.
-- Keep comments and documentation ASCII. Write RFC references as
-  `RFC 6455 section 5.4`, not with a section sign, and use a plain `-` or
-  a restructured sentence instead of an em dash.
+- Follow the writing rules below for issues, PRs, and docs.
+
+## Writing rules for issues, PRs, and docs
+
+These apply to anything a reviewer or user will read: issue bodies, PR
+descriptions, commit messages, and files under `docs/`.
+
+**Plain text, ASCII first.** No em dashes: use a plain `-` between
+spaces or restructure the sentence. Write RFC references as
+`RFC 6455 section 5.4`, not with a section sign. Avoid other non-ASCII
+punctuation (smart quotes, arrows, ellipsis characters) and non-ASCII
+characters in prose unless there is a concrete reason; source code
+identifiers stay as they are.
+
+**Match the artifact to what it describes.**
+- An issue describes the problem: observed behavior, how to reproduce
+  it, and what you expected instead.
+- A PR describes the change: what it does, how it was verified
+  (commands run, numbers measured), and what it deliberately does not
+  do.
+- A doc page describes the current state of the code as it exists in
+  the tree it ships with, not the state it may reach later.
+
+**No speculation presented as fact.** Do not fill an issue, PR, or doc
+with hypotheses about root causes, future performance, or planned work
+that has not been done and measured. If a hypothesis is worth recording,
+label it as one ("unverified hypothesis: ...", "possible follow-up:
+...") and keep it clearly separated from what was observed. Anything
+stated as a result must come from an actual run, test, or build that
+anyone can repeat.
+
+An example of the bar to hit: "c=512, wrk t4, 3 runs, p99.999 went
+from 60.4 ms to 26.2 ms, zero errors on both sides" is a PR sentence.
+"This should improve tail latency under load" is not, until the runs
+exist.
 
 ## A closed PR is not always a rejected one
 
