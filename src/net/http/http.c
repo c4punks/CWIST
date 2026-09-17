@@ -1249,6 +1249,9 @@ void cwist_http_response_add_security_headers(cwist_http_response *res) {
                                      "camera=(), microphone=(), geolocation=(), payment=(), "
                                      "usb=(), interest-cohort=()");
     }
+    if (!cwist_http_header_get(res->headers, "Cross-Origin-Opener-Policy")) {
+        cwist_http_header_add_static(&res->headers, arena, "Cross-Origin-Opener-Policy", "same-origin");
+    }
 }
 
 /**
@@ -1614,7 +1617,7 @@ void cwist_http_response_set_alt_svc(cwist_http_response *res, const char *alt_s
         res->alt_svc = NULL;
     }
     if (alt_svc) {
-        res->alt_svc = strdup(alt_svc);
+        res->alt_svc = cwist_strdup(alt_svc);
     }
 }
 
