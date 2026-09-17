@@ -170,7 +170,7 @@ Automated OS benchmark history is published in `docs/benchmark-trends.svg`. Late
 | **Static Library Packaging** | ✅ | CWIST-only archive plus separately installed bundled libraries/headers, deterministic static-link order, `PREFIX`/`DESTDIR` staging, `cwist.pc` pkg-config file, versioned dist tarball, and Homebrew/vcpkg packaging drafts |
 | **Testing Utilities** | ✅ | In-process test client (`cwist_test_client`), cookie jar, multipart helper, and BDD-style fluent assertions (`CWIST_ASSERT_STATUS`, `CWIST_ASSERT_HEADER`, `CWIST_ASSERT_BODY_CONTAINS`) |
 | **Interactive API Documentation** | ✅ | Embedded Swagger UI interactive documentation page (`cwist_app_enable_swagger`) serving `/docs` and `/openapi.json` |
-| **Benchmark Suite** | ✅ | GitHub Actions Linux/macOS measurements publish CPU, throughput, RSS, memory-recovery drift, and context-switch SVG trends; `benchmarks/web-frameworks/` contract app pinned to `v3.2` for the-benchmarker harness |
+| **Benchmark Suite** | ✅ | GitHub Actions Linux/macOS measurements publish CPU, throughput, RSS, memory-recovery drift, and context-switch SVG trends; `benchmarks/web-frameworks/` contract app pinned to the `v3.3` tag for the-benchmarker harness |
 | **Interop Gate** | ✅ | h2spec HTTP/2 conformance diff against a pinned baseline (`scripts/ci/h2spec_gate.sh`); new failures break the build. Builds run with `-Werror`, stack protector, `_FORTIFY_SOURCE=2`, PIE, and full RELRO on Linux |
 | **Fuzzing / Hardening** | ✅ | Stateful sequence/auth libFuzzer coverage plus bounded reassembly and strict HTTP chunk framing checks |
 
@@ -256,7 +256,7 @@ Completed:
 
 ---
 
-## v3.4 Milestone (Planned)
+## v3.4 Milestone (Released 2026-09-12, hotfix v3.4.1 on 2026-09-14)
 
 Theme: gRPC client side, codegen completeness, and the first WASM client-side support wave. v3.3 shipped the wire-level streaming server (DATA-frame wiring, trailers, deadlines, gzip) plus the first proto codegen extension (enums, nested message fields, repeated packed numerics); v3.4 finishes the story instead of moving the already-pushed v3.3 tag.
 
@@ -272,7 +272,7 @@ Theme: gRPC client side, codegen completeness, and the first WASM client-side su
 
 ---
 
-## v3.5 Milestone (Planned)
+## v3.5 Milestone (Released 2026-09-15)
 
 Theme: **Full GC — automatic resource reclamation**. Today CWIST relies on explicit destroy-family calls (`cwist_app_destroy`, connection/session teardown, `cwist_free`) paired with arena discipline. v3.5 makes cleanup automatic where it matters: threads and processes ending must close connections, and `cwist_alloc` objects must evaporate without manual frees. Design document: `docs/GC.md`.
 
@@ -283,6 +283,32 @@ Theme: **Full GC — automatic resource reclamation**. Today CWIST relies on exp
 * **Transparent `malloc` interception**: ~~users will habitually write `malloc`, not `cwist_alloc` — so handler-thread `malloc` calls should evaporate the same way `cwist_alloc()` calls do~~ (done — `include/cwist/core/mem/intercept.h`, opt-in per translation unit via `#define CWIST_INTERCEPT_MALLOC` before including it). Header-scoped `#define malloc cwist_malloc_shim` (never `-Wl,--wrap=malloc` — link-level wrapping was considered and rejected, since it would also intercept vendored dependencies like BoringSSL/lsquic that never include CWIST headers and have no reason to expect a non-libc allocator underneath them, e.g. BoringSSL's `OPENSSL_cleanse()`-then-free assumes plain heap semantics). Covers `calloc`/`realloc`/`free` consistently from the same seam (`src/core/mem/alloc.c`); reclaim cadence reuses the existing `cwist_gc_scope_track`/`cwist_gc_scope_flush` pipeline unchanged; cross-thread handoff reuses the existing `cwist_gc_scope_disown()` escape hatch. Measured overhead (`tests/bench_malloc_intercept.c`): ~+3% when full-GC is off (default), ~+86% when on (the real cost of the tracking safety net) — see `docs/GC.md` section 5 for the full table and methodology.
 * **Thread/process exit sweeps**: ~~thread-local connection registry with pthread TLS destructors for worker exit, and an `atexit` sweep for process exit~~ (done — `test_io_queue_full_gc`, `test_full_gc_ownership_handoff`).
 * **Evaluate a `mimalloc` backend for `cwist_alloc`/the epoch-GC heap** (tracked in #25): ~~evaluate via `LD_PRELOAD` A/B against jemalloc and tcmalloc, then vendor mimalloc if the data holds up~~ (done, result: **negative** — real CI A/B (PR #34) showed mimalloc regressing every metric on CWIST's prefork C1M model: RPS −1.8%, P99.999 +97%, RSS +120%, root-caused to mimalloc's eager per-process arena reservation being a poor fit for many short-lived low-allocation forked processes. `mallopt(M_ARENA_MAX, 1)` (`CWIST_MALLOC_ARENA_MAX`, PR #35, merged) targets the same "N processes × M arenas" mechanism without mimalloc's reservation cost and won on every metric instead — see issue #25 for the full writeup. Note: the P99.999-vs-Axum gap that originally motivated this item was measured via the-benchmarker's public `percentile99999` field, which turned out to be mislabeled P99.99, not true P99.999 (found during PR #48's validation, also on #25) — the qualitative direction (Axum ahead on tail latency) likely still holds, but the "2.8–3.6x" figure specifically should not be cited as P99.999 going forward).
+* **Full-GC malloc interception overhead** (tracked in #65): the ~+86% full-GC-on overhead measured above is real but unprofiled; reducing it is follow-up work, not a v3.5 blocker.
+
+---
+
+## v3.6 Milestone (Planned)
+
+Theme: **WASM client-side support**. v3.4 shipped the gRPC client wave; v3.5 shipped full GC; v3.6 takes the WASM client-side support wave from "in-tree target" to "usable from JavaScript". Tracked in issue #93.
+
+* **Phase 1: in-tree WASM correctness** (issue #93 gaps 1-4, PR #176 in review):
+  * `cwist_db` in the WASM build (`src/core/db/db.c` + `lib/sqlite3/sqlite3.c` in `WASM_SRCS`), so `cwist_db_open_memory()` / `cwist_db_serialize()` work under Emscripten as the roadmap has long claimed.
+  * Fix the EM_JS corruption from the tree-wide clang-format pass (`=>` rewritten to `= >` inside brace-block JS bodies); `clang-format off/on` guards plus `make format-check` coverage so it cannot recur.
+  * Emscripten build + smoke test as a CI gate (`.github/workflows/wasm.yml`).
+  * `docs/api/wasm.md`: build, scope, the `dispatch_memory` pattern, TypedArray helpers, the db round trip, session caveats.
+* **Phase 2: JavaScript consumption**:
+  * npm/release packaging for `libcwist_wasm.a` and the smoke-tested artifact.
+  * First-party JS wrapper exposing the `dispatch_memory` request path and TypedArray views without requiring consumers to write Emscripten glue.
+* **Phase 3-4: reach**:
+  * WASI target evaluation.
+  * Streaming request/response bodies through the WASM boundary.
+  * Session persistence model for WASM apps (the caveats documented in Phase 1 become a design input).
+  * End-to-end example app (Service Worker or fetch-interception layer).
+
+Known limits going in (from PR #176 review):
+
+* Bundle size impact of pulling SQLite into `libcwist_wasm.a` is unmeasured; the Phase 1 follow-up asks for a before/after size report to decide on a future opt-out or split build.
+* Session behavior under the WASM dispatch model is documented but not yet measured; Phase 3 needs observed behavior, not the current caveats list.
 
 ---
 
