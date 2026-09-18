@@ -211,6 +211,16 @@ int main(void) {
     assert(read(conn_a[1], payload, sizeof(payload)) == 0); /* EOF */
     printf("4. close echo + connection closed: ok\n");
 
+    /* Connection B is still attached; close it cleanly so its async state
+     * (stash buffers) is freed before the reactor goes away. ASan counts
+     * anything still allocated at reactor_destroy as a leak. */
+    write_masked(conn_b[1], 0x88, code, 2);
+    read_server_frame(conn_b[1], &opcode, payload, &len);
+    assert(opcode == CWIST_WS_FRAME_CLOSE);
+    pfd.fd = conn_b[1];
+    assert(poll(&pfd, 1, TIMEOUT_MS) == 1);
+    assert(read(conn_b[1], payload, sizeof(payload)) == 0); /* EOF */
+
     /* Stop the reactor thread via a posted callback (wakes the poller). */
     cwist_reactor_post_t stop_node = {.cb = stop_cb, .ctx = reactor};
     assert(cwist_reactor_post(reactor, &stop_node));
@@ -218,8 +228,10 @@ int main(void) {
 
     cwist_reactor_destroy(reactor);
     close(conn_a[1]);
-    close(conn_b[0]);
     close(conn_b[1]);
+    /* conn_a[0]/conn_b[0] were owned and closed by the WS async layer when
+     * each connection terminated; closing them here again would be a double
+     * close on a possibly-reused fd. */
 
     printf("websocket async (C1M) test passed\n");
     return 0;
