@@ -9,7 +9,7 @@ class Cwist < Formula
   desc "C17 web framework and application server (HTTP/1.1, HTTP/2, HTTP/3, WebSocket, PQC TLS)"
   homepage "https://github.com/c4punks/CWIST"
   url "https://github.com/c4punks/CWIST/releases/download/v3.4/cwist-3.4.tar.gz"
-  sha256 "d5dc239b5a59f995a7d32cca60636a40921077861c2618a33e4582035cf33a89"
+  sha256 "c49533ec4c7758de6c2facab7c4ed7171c07b54a16aec29baf2224e4a01dc6d0"
   # The framework itself is MIT; the vendored components it statically links
   # are Apache-2.0 (BoringSSL, cnats), MIT (lsquic, cJSON,
   # multipart-parser-c), BSD-3-Clause (libttak, uriparser, lsquic's Chromium
