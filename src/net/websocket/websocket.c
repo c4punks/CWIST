@@ -326,6 +326,35 @@ cwist_ws_frame *cwist_websocket_receive(cwist_websocket *ws) {
 }
 
 /**
+ * @brief Write the full buffer to the socket, looping over short writes.
+ * @return 0 when every byte was accepted by the kernel, -1 on error.
+ *
+ * Blocking-model note (issue #181): this loops on partial writes so a frame
+ * is never silently truncated, but it still blocks the calling thread while
+ * the socket buffer is full. The reactor-driven rewrite will replace this
+ * with the parked-write mechanism; until then this is strictly better than
+ * the previous single-send() version, which could report success after a
+ * short write.
+ */
+static int ws_send_all(int fd, const uint8_t *buf, size_t len) {
+    size_t off = 0;
+    while (off < len) {
+#ifdef MSG_NOSIGNAL
+        ssize_t n = send(fd, buf + off, len - off, MSG_NOSIGNAL);
+#else
+        ssize_t n = send(fd, buf + off, len - off, 0);
+#endif
+        if (n < 0) {
+            if (errno == EINTR) continue;
+            return -1;
+        }
+        if (n == 0) return -1;
+        off += (size_t)n;
+    }
+    return 0;
+}
+
+/**
  * @brief Send a single FIN-terminated WebSocket frame to the peer.
  * @param ws Active WebSocket connection wrapper.
  * @param opcode WebSocket opcode describing the payload semantics.
@@ -359,9 +388,9 @@ int cwist_websocket_send(cwist_websocket *ws, cwist_ws_opcode_t opcode, const ui
 
     // Server does not mask frames
 
-    if (send(ws->fd, head, head_len, 0) < 0) return -1;
+    if (ws_send_all(ws->fd, head, head_len) != 0) return -1;
     if (len > 0) {
-        if (send(ws->fd, data, len, 0) < 0) return -1;
+        if (ws_send_all(ws->fd, data, len) != 0) return -1;
     }
 
     return 0;
