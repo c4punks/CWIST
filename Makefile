@@ -219,6 +219,7 @@ SRCS = src/core/sstring/sstring.c \
        src/sys/app/app.c \
        src/sys/app/public_fixed_cache.c \
        src/net/websocket/websocket.c \
+       src/net/websocket/websocket_async.c \
        src/net/websocket/ws_utils.c \
        src/core/utils/json_builder.c \
        src/core/utils/json_heal.c \
@@ -507,6 +508,7 @@ TEST_TARGETS = test_public_fixed_cache \
                stress_test \
                test_cors \
                test_websocket \
+               test_websocket_async \
                test_jwt \
                test_migrate \
                test_json_heal \
@@ -745,6 +747,10 @@ test_cors: $(LIB_NAME) tests/test_cors.c
 test_websocket: $(LIB_NAME) tests/test_websocket.c
 	$(CC) $(CFLAGS) -o test_websocket tests/test_websocket.c $(LIB_NAME) $(LIBS)
 	./test_websocket
+
+test_websocket_async: $(LIB_NAME) tests/test_websocket_async.c
+	$(CC) $(CFLAGS) -o test_websocket_async tests/test_websocket_async.c $(LIB_NAME) $(LIBS)
+	./test_websocket_async
 
 test_shutdown: $(LIB_NAME) tests/test_shutdown.c
 	$(CC) $(CFLAGS) -o test_shutdown tests/test_shutdown.c $(LIB_NAME) $(LIBS)
