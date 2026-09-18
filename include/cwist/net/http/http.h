@@ -90,6 +90,10 @@ typedef struct cwist_http_request {
     void *session;          ///< cwist_session_t pointer set by session middleware.
     char *csrf_token;       ///< CSRF token populated by csrf middleware.
     void *arena;            ///< Per-request arena for bump-allocated structs (internal).
+    void *async_conn;       ///< C1M connection shell when on the reactor path (internal).
+    bool ws_async_handoff;  ///< WebSocket async path took fd ownership; C1M layer must detach.
+    void *https_conn;       ///< HTTPS connection wrapper when on TLS path (internal).
+    void *h2_queue;         ///< HTTP/2 async queue when on H2 path (internal).
 } cwist_http_request;
 
 typedef void (*cwist_http_body_cleanup_fn)(const void *ptr, size_t len, void *ctx);
