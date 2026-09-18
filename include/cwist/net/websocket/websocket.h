@@ -40,6 +40,20 @@ typedef struct cwist_ws_frame {
 } cwist_ws_frame;
 
 /**
+ * @brief Validate the upgrade request and fill a 101 Switching Protocols response.
+ *
+ * Computes the Sec-WebSocket-Accept key (sha1 + base64), sets status 101 and
+ * the Upgrade/Connection/Sec-WebSocket-Accept headers on @p res, but does NOT
+ * send anything.  Shared by the blocking cwist_websocket_upgrade() and the
+ * C1M reactor path, which sends the 101 through the coalesced HTTP writer.
+ *
+ * @param req Parsed upgrade request to validate.
+ * @param res Response object to fill (must be empty).
+ * @return true when the handshake is valid and @p res carries the 101 reply.
+ */
+bool cwist_websocket_upgrade_response(cwist_http_request *req, cwist_http_response *res);
+
+/**
  * @brief Upgrade a standard HTTP request to a WebSocket connection.
  * @return `NULL` if the handshake fails or the request is invalid, otherwise the upgraded context.
  */

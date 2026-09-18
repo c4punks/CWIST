@@ -19,6 +19,7 @@
 #include <ttak/mem_tree/mem_tree.h>
 
 #include <cwist/net/websocket/websocket.h>
+#include <cwist/net/websocket/websocket_async.h>
 
 /* Forward declaration for auto-mounted RDBMS runtime */
 struct cwist_rdbms_runtime;
@@ -392,6 +393,17 @@ void cwist_app_put(cwist_app *app, const char *path, cwist_handler_func handler)
 void cwist_app_delete(cwist_app *app, const char *path, cwist_handler_func handler);
 void cwist_app_patch(cwist_app *app, const char *path, cwist_handler_func handler);
 void cwist_app_ws(cwist_app *app, const char *path, cwist_ws_handler_func handler);
+
+/**
+ * @brief Register a callback-shaped non-blocking WebSocket endpoint (C1M mode).
+ *
+ * On the C1M reactor path each complete message is delivered through
+ * on_message without blocking the worker.  In classic mode (thread pool) a
+ * route registered only through this function answers 501 Not Implemented;
+ * use cwist_app_ws() for the blocking handler API there.
+ */
+void cwist_app_ws_async(cwist_app *app, const char *path, cwist_ws_on_message_t on_message,
+                        void *user_data);
 void cwist_app_get_opt(cwist_app *app, const char *path, cwist_handler_func handler,
                        cwist_endpoint_opt_t opts);
 void cwist_app_post_opt(cwist_app *app, const char *path, cwist_handler_func handler,
