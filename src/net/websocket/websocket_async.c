@@ -30,7 +30,7 @@
 #include <stdbool.h>
 #include <stdlib.h>
 #include <string.h>
-#include <sys/timerfd.h>
+#include <time.h>
 #include <unistd.h>
 
 /* Same caps as websocket.c: per-frame 16 MiB, reassembled message 64 MiB. */
@@ -90,15 +90,16 @@ struct cwist_websocket_async {
 static void ws_async_read_ready(int fd, void *ctx);
 static void ws_async_write_ready(int fd, void *ctx);
 
-/* One periodic timerfd per reactor drives the idle sweep; see the comment
+/* One watchdog thread per reactor drives the idle sweep; see the comment
  * above ws_async_sweep_get.  Connections link into their reactor's sweep
  * list intrusively. */
 struct ws_async_sweep {
     cwist_reactor_t *reactor;
-    int timerfd;
     uint32_t interval_sec;
     cwist_websocket_async *head; /* Guarded by lock. */
-    bool dead;                   /* Destruction decided; no new connections. */
+    bool dead;                 /* Destruction decided; no new connections. */
+    unsigned int posts;        /* Posted sweeps not yet consumed. */
+    cwist_reactor_post_t node; /* Embedded post node (watchdog -> reactor). */
     pthread_mutex_t lock;
     ws_async_sweep_t *next; /* Global registry. */
 };
@@ -106,24 +107,21 @@ struct ws_async_sweep {
 static ws_async_sweep_t *g_ws_sweeps;
 static pthread_mutex_t g_ws_sweeps_lock = PTHREAD_MUTEX_INITIALIZER;
 
-static void ws_async_sweep_destroy(ws_async_sweep_t *sweep);
-static void ws_async_sweep_cb(int fd, void *ctx);
+static void ws_async_sweep_watchdog_free(ws_async_sweep_t *sweep);
+static void ws_async_sweep_post_cb(void *ctx);
+static void *ws_async_sweep_watchdog(void *arg);
 
-/* Mark a sweep context dead exactly once; returns true when the caller must
- * destroy it (outside all locks).  Lock order is always g_ws_sweeps_lock ->
- * sweep->lock, so a foreign-thread attach cannot push a new connection onto
- * a sweep whose destruction was already decided. */
-static bool ws_async_sweep_mark_dead(ws_async_sweep_t *sweep) {
-    bool decided = false;
+/* Mark a sweep context dead exactly once.  Lock order is always
+ * g_ws_sweeps_lock -> sweep->lock, so a foreign-thread attach cannot push a
+ * new connection onto a sweep whose destruction was already decided.  The
+ * context itself is released by the watchdog thread once it has exited and
+ * no posted sweep can still reference it. */
+static void ws_async_sweep_mark_dead(ws_async_sweep_t *sweep) {
     pthread_mutex_lock(&g_ws_sweeps_lock);
     pthread_mutex_lock(&sweep->lock);
-    if (!sweep->dead) {
-        sweep->dead = true;
-        decided = true;
-    }
+    sweep->dead = true;
     pthread_mutex_unlock(&sweep->lock);
     pthread_mutex_unlock(&g_ws_sweeps_lock);
-    return decided;
 }
 
 /* ------------------------------------------------------------------ */
@@ -161,8 +159,9 @@ static void ws_async_teardown(cwist_websocket_async *ws) {
 static void ws_async_terminate(cwist_websocket_async *ws) {
     if (!ws) return;
     if (ws->sweep) {
-        /* Unlink from the reactor's sweep list; drop the sweep context when
-         * its last connection is gone (also cancels the timerfd slot). */
+        /* Unlink from the reactor's sweep list; when the last connection is
+         * gone the sweep context is marked dead and its watchdog frees it
+         * once the last posted sweep has drained. */
         ws_async_sweep_t *sweep = ws->sweep;
         pthread_mutex_lock(&sweep->lock);
         cwist_websocket_async **pp = &sweep->head;
@@ -171,7 +170,7 @@ static void ws_async_terminate(cwist_websocket_async *ws) {
         bool empty = (sweep->head == NULL);
         pthread_mutex_unlock(&sweep->lock);
         ws->sweep = NULL;
-        if (empty && ws_async_sweep_mark_dead(sweep)) ws_async_sweep_destroy(sweep);
+        if (empty) ws_async_sweep_mark_dead(sweep);
     }
     bool parked = ws->park_len > ws->park_off;
     if (ws->read_armed || parked) {
@@ -241,19 +240,30 @@ static bool ws_async_idle_reap(cwist_websocket_async *ws) {
 }
 
 /* ------------------------------------------------------------------ */
-/* Periodic idle sweep (one timerfd per reactor)                       */
+/* Periodic idle sweep (one watchdog thread per reactor)                */
 /* ------------------------------------------------------------------ */
 
 /* Lazy per-event reaping (the HTTP keep-alive precedent) cannot reap a
  * totally silent connection: the one-shot slot model gives each fd at most
  * one read + one POLLOUT slot, so an idle fd fires no event.  Instead each
- * reactor that owns WS async connections gets ONE periodic timerfd registered
- * through the public reactor API — the generic reactor is untouched — and
- * its expiry sweeps the reactor's WS connections, terminating the ones idle
- * past the configured timeout.  The per-event reaper still runs at every
- * read/write event, so the sweep cadence only affects how late a silent
- * connection is reaped, not whether.  The sweep context is destroyed when
- * its connection list empties, so an idle reactor carries no extra fds. */
+ * reactor that owns WS async connections gets ONE watchdog thread (plain
+ * pthreads + nanosleep — portable across io_uring, epoll, and kqueue, with
+ * no Linux-only timerfd).  The thread sleeps the sweep interval, then hands
+ * the sweep to the reactor thread via cwist_reactor_post(); the posted
+ * callback runs the same conn-list walk + terminate as the per-event reaper,
+ * so all list mutation stays on the reactor thread.  The per-event reaper
+ * still runs at every read/write event, so the sweep cadence only affects
+ * how late a silent connection is reaped, not whether.
+ *
+ * Lifetime: the context is marked dead when its connection list empties
+ * (terminate) or the walk finds it empty.  The watchdog notices the dead
+ * flag within one 100 ms sleep slice, stops posting, and exits; the context
+ * is freed by the watchdog thread alone after it exits its posting loop and
+ * observes posts == 0: the callback only ever decrements the posts counter
+ * (as its last touch of the context), so the watchdog can never reference
+ * freed memory.  The posts counter covers the window where a post is in
+ * flight while the context is being torn down; cwist_reactor_destroy()
+ * drains pending posts, so the wait always terminates. */
 
 /* Sweep cadence: half the timeout, clamped to [1, 60]s, so a silent
  * connection is reaped within roughly timeout + interval. */
@@ -264,18 +274,97 @@ static uint32_t ws_async_sweep_interval(uint32_t timeout_sec) {
     return interval;
 }
 
-static void ws_async_sweep_destroy(ws_async_sweep_t *sweep) {
-    /* No locks held; the sweep must already be marked dead.  Runs on the
-     * reactor thread (the timerfd slot is canceled before the fd is closed). */
+/* Release the context from the watchdog thread after it has exited its
+ * posting loop: wait (in short slices) for any posted sweep still queued on
+ * the reactor to drain, then unlink and free.  The context is never freed
+ * from the reactor thread, so the watchdog can never touch freed memory.
+ * cwist_reactor_destroy() drains pending posts, so queued callbacks always
+ * run and the wait terminates. */
+static void ws_async_sweep_watchdog_free(ws_async_sweep_t *sweep) {
+    const struct timespec slice = {.tv_sec = 0, .tv_nsec = 100000000L};
+    for (;;) {
+        pthread_mutex_lock(&sweep->lock);
+        bool drained = (sweep->posts == 0);
+        pthread_mutex_unlock(&sweep->lock);
+        if (drained) break;
+        nanosleep(&slice, NULL);
+    }
+
     pthread_mutex_lock(&g_ws_sweeps_lock);
     ws_async_sweep_t **pp = &g_ws_sweeps;
     while (*pp && *pp != sweep) pp = &(*pp)->next;
     if (*pp) *pp = sweep->next;
     pthread_mutex_unlock(&g_ws_sweeps_lock);
-    cwist_reactor_del(sweep->reactor, sweep->timerfd);
-    close(sweep->timerfd);
     pthread_mutex_destroy(&sweep->lock);
     cwist_free(sweep);
+}
+
+/* Runs on the reactor thread, delivered by cwist_reactor_post(). */
+static void ws_async_sweep_post_cb(void *ctx) {
+    ws_async_sweep_t *sweep = (ws_async_sweep_t *)ctx;
+
+    uint32_t timeout_sec = ws_async_idle_timeout_sec();
+    if (timeout_sec > 0) {
+        uint32_t now = cwist_fast_monotonic_sec();
+        /* Reap at most one victim per tick: ws_async_terminate unlinks the
+         * connection (and marks the sweep dead when the list empties), so
+         * the next posted sweep restarts from the head.  Sweeps are small
+         * and ticks are ~interval apart, so the pace is fine. */
+        pthread_mutex_lock(&sweep->lock);
+        cwist_websocket_async *victim = NULL;
+        for (cwist_websocket_async *ws = sweep->head; ws; ws = ws->sweep_next) {
+            if (ws->last_active_sec > 0 && (now - ws->last_active_sec) > timeout_sec) {
+                victim = ws;
+                break;
+            }
+        }
+        pthread_mutex_unlock(&sweep->lock);
+        if (victim) ws_async_terminate(victim);
+    }
+
+    /* posts-- is the last touch of the context: the watchdog frees it only
+     * after observing posts == 0. */
+    pthread_mutex_lock(&sweep->lock);
+    bool empty = (sweep->head == NULL);
+    if (sweep->posts > 0) sweep->posts--;
+    pthread_mutex_unlock(&sweep->lock);
+    if (empty) ws_async_sweep_mark_dead(sweep);
+}
+
+/* Sleep the interval in 100 ms slices so dead-flag shutdown latency stays
+ * low without a condvar; nanosleep is EINTR-tolerant. */
+#define WS_ASYNC_SWEEP_SLICE_MS 100u
+
+static void *ws_async_sweep_watchdog(void *arg) {
+    ws_async_sweep_t *sweep = (ws_async_sweep_t *)arg;
+    const struct timespec slice = {.tv_sec = 0, .tv_nsec = 100000000L};
+    uint32_t slices = sweep->interval_sec * (1000u / WS_ASYNC_SWEEP_SLICE_MS);
+
+    for (;;) {
+        for (uint32_t i = 0; i < slices; i++) {
+            nanosleep(&slice, NULL);
+            pthread_mutex_lock(&sweep->lock);
+            bool dead = sweep->dead;
+            pthread_mutex_unlock(&sweep->lock);
+            if (dead) goto out;
+        }
+        pthread_mutex_lock(&sweep->lock);
+        bool dead = sweep->dead;
+        if (!dead) sweep->posts++;
+        pthread_mutex_unlock(&sweep->lock);
+        if (dead) goto out;
+        if (!cwist_reactor_post(sweep->reactor, &sweep->node)) {
+            pthread_mutex_lock(&sweep->lock);
+            sweep->posts--;
+            pthread_mutex_unlock(&sweep->lock);
+        }
+    }
+
+out:
+    /* Sole freer of the context: the watchdog is done with it, and any
+     * posted sweep still queued must drain before the memory is released. */
+    ws_async_sweep_watchdog_free(sweep);
+    return NULL;
 }
 
 /* Find or create the sweep context for @p reactor.  Returns NULL when idle
@@ -287,7 +376,10 @@ static ws_async_sweep_t *ws_async_sweep_get(cwist_reactor_t *reactor) {
 
     pthread_mutex_lock(&g_ws_sweeps_lock);
     for (ws_async_sweep_t *s = g_ws_sweeps; s; s = s->next) {
-        if (s->reactor == reactor) {
+        /* A dead context awaiting teardown is unowned: a fresh one is
+         * created so the new connection is swept.  dead is only written
+         * under g_ws_sweeps_lock (mark_dead), so this read is safe. */
+        if (s->reactor == reactor && !s->dead) {
             pthread_mutex_unlock(&g_ws_sweeps_lock);
             return s;
         }
@@ -300,76 +392,25 @@ static ws_async_sweep_t *ws_async_sweep_get(cwist_reactor_t *reactor) {
     sweep->interval_sec = ws_async_sweep_interval(timeout_sec);
     sweep->head = NULL;
     sweep->dead = false;
+    sweep->posts = 0;
+    sweep->node.cb = ws_async_sweep_post_cb;
+    sweep->node.ctx = sweep;
     sweep->next = NULL;
     pthread_mutex_init(&sweep->lock, NULL);
 
-    sweep->timerfd = timerfd_create(CLOCK_MONOTONIC, TFD_NONBLOCK | TFD_CLOEXEC);
-    if (sweep->timerfd < 0) goto fail;
-    struct itimerspec its;
-    memset(&its, 0, sizeof(its));
-    its.it_value.tv_sec = sweep->interval_sec;
-    its.it_interval.tv_sec = sweep->interval_sec;
-    if (timerfd_settime(sweep->timerfd, 0, &its, NULL) != 0) goto fail;
-    if (!cwist_reactor_add(reactor, sweep->timerfd, ws_async_sweep_cb, &sweep, sizeof(sweep)))
-        goto fail;
+    pthread_t thread;
+    if (pthread_create(&thread, NULL, ws_async_sweep_watchdog, sweep) != 0) {
+        pthread_mutex_destroy(&sweep->lock);
+        cwist_free(sweep);
+        return NULL;
+    }
+    pthread_detach(thread);
 
     pthread_mutex_lock(&g_ws_sweeps_lock);
     sweep->next = g_ws_sweeps;
     g_ws_sweeps = sweep;
     pthread_mutex_unlock(&g_ws_sweeps_lock);
     return sweep;
-
-fail:
-    close(sweep->timerfd);
-    pthread_mutex_destroy(&sweep->lock);
-    cwist_free(sweep);
-    return NULL;
-}
-
-static void ws_async_sweep_cb(int fd, void *ctx) {
-    ws_async_sweep_t *sweep = *(ws_async_sweep_t **)ctx;
-    uint64_t expirations;
-    /* Drain the timerfd; the absolute last_active comparison below is what
-     * actually decides reaping, so a missed wake only delays it. */
-    while (read(fd, &expirations, sizeof(expirations)) > 0) {
-    }
-
-    uint32_t timeout_sec = ws_async_idle_timeout_sec();
-    if (timeout_sec > 0) {
-        uint32_t now = cwist_fast_monotonic_sec();
-        /* Reap at most one victim per tick: ws_async_terminate unlinks the
-         * connection (and may destroy this sweep when the list empties), so
-         * the walk restarts from the head after each termination.  Sweeps
-         * are small and ticks are ~1s, so the pace is fine. */
-        pthread_mutex_lock(&sweep->lock);
-        cwist_websocket_async *victim = NULL;
-        for (cwist_websocket_async *ws = sweep->head; ws; ws = ws->sweep_next) {
-            if (ws->last_active_sec > 0 && (now - ws->last_active_sec) > timeout_sec) {
-                victim = ws;
-                break;
-            }
-        }
-        /* When the victim is the list's only connection, terminate destroys
-         * the sweep context; otherwise the timerfd slot is re-armed below. */
-        bool solo = victim && sweep->head == victim && victim->sweep_next == NULL;
-        pthread_mutex_unlock(&sweep->lock);
-        if (victim) {
-            ws_async_terminate(victim);
-            if (solo) return;
-        }
-    }
-
-    pthread_mutex_lock(&sweep->lock);
-    bool dead = (sweep->head == NULL);
-    pthread_mutex_unlock(&sweep->lock);
-    if (dead) {
-        if (ws_async_sweep_mark_dead(sweep)) ws_async_sweep_destroy(sweep);
-        return;
-    }
-    /* One-shot slot consumed: re-arm for the next expiry. */
-    if (!cwist_reactor_add(sweep->reactor, fd, ws_async_sweep_cb, &sweep, sizeof(sweep)) &&
-        ws_async_sweep_mark_dead(sweep))
-        ws_async_sweep_destroy(sweep);
 }
 
 /* ------------------------------------------------------------------ */
