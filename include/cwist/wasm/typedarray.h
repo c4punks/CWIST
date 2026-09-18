@@ -54,9 +54,14 @@
  * Define cwist_wasm_install_views(), which registers Module.cwistView on the
  * JS side.  Expand once in a single translation unit (EM_JS emits a JS
  * function definition), then call it early from main().
+ *
+ * The body is a string literal, not an EM_JS brace block: clang-format
+ * rewrites brace blocks as C code and corrupts JS tokens such as `=>`,
+ * which silently broke the WASM smoke build after the tree-wide format.
  */
 #define CWIST_WASM_INSTALL_VIEWS()                                            \
     EM_JS(void, cwist_wasm_install_views, (void), {                         \
+        /* clang-format off - JS body, not C: `=>` etc. must survive make format */ \
         /* HEAP* bindings are in scope inside EM_JS-generated code. */      \
         if (typeof Module !== "undefined" && !Module.cwistView) {           \
             Module.cwistView = {                                            \
@@ -71,6 +76,7 @@
                 },                                                          \
             };                                                                \
     }                                                                         \
+        /* clang-format on */                                                     \
     })
 
 /**

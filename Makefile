@@ -266,6 +266,7 @@ SRCS = src/core/sstring/sstring.c \
 
 EMCC ?= emcc
 EMAR ?= emar
+NODE ?= node
 WASM_BUILD_DIR = .wasm-build
 WASM_SRCS = src/core/sstring/sstring.c \
        src/core/seq/seq.c \
@@ -294,6 +295,8 @@ WASM_SRCS = src/core/sstring/sstring.c \
        src/core/validation/bind.c \
        src/core/mem/alloc.c \
        src/core/mem/arena.c \
+       src/core/db/db.c \
+       lib/sqlite3/sqlite3.c \
        lib/cjson/cJSON.c
 WASM_OBJS = $(WASM_SRCS:%.c=$(WASM_BUILD_DIR)/%.o)
 # Host pkg-config -I paths (curl/nghttp2/...) must NOT leak into the
@@ -311,10 +314,11 @@ libcwist_wasm.a: $(WASM_OBJS)
 wasm: libcwist_wasm.a
 
 # Manual smoke test (requires Emscripten + node; intentionally not part of
-# `make test` since CI has no Emscripten toolchain).
+# `make test` since CI has no Emscripten toolchain). NODE is overridable so
+# CI can point at a specific node binary.
 wasm-smoke: libcwist_wasm.a
 	$(EMCC) $(WASM_CFLAGS) -o wasm_smoke.js tests/wasm_smoke.c libcwist_wasm.a
-	node wasm_smoke.js
+	$(NODE) wasm_smoke.js
 
 clean-wasm:
 	rm -rf $(WASM_BUILD_DIR) libcwist_wasm.a wasm_smoke.js wasm_smoke.wasm
