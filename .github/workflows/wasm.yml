@@ -57,9 +57,16 @@ jobs:
     # Phase 2a done-when (issue #183): the packed tarball must install and
     # load in a clean directory, i.e. `npm install` replaces the from-source
     # flow. Pack, install into a temp dir outside the repo, load it there.
+    # NODE is resolved the same way as the other steps: emsdk's node can be
+    # restored from cache without its exec bit, so never call bare `node`.
     - name: Pack cwist-wasm and verify clean-directory install
       run: |
-        make wasm-dist
+        NODE_BIN="$(command -v node || true)"
+        if [ -n "$NODE_BIN" ] && [ -x "$NODE_BIN" ]; then
+          make wasm-dist NODE="$NODE_BIN"
+        else
+          make wasm-dist NODE="$(command -v nodejs || echo /usr/bin/node)"
+        fi
         TGZ="$(ls dist/cwist-wasm-*.tgz | head -1)"
         INSTALL_DIR="$(mktemp -d)"
         cd "$INSTALL_DIR"
