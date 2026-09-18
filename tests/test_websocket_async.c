@@ -12,13 +12,17 @@
  * exchange on connection B completes while connection A sits idle.
  */
 #include <assert.h>
+#include <errno.h>
+#include <fcntl.h>
 #include <pthread.h>
 #include <stdatomic.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
 #include <poll.h>
 #include <sys/socket.h>
+#include <sys/wait.h>
 
 #include <cwist/net/websocket/websocket.h>
 #include <cwist/net/websocket/websocket_async.h>
@@ -84,7 +88,9 @@ static void write_masked(int fd, uint8_t head0, const uint8_t *payload, size_t l
     memcpy(frame + pos, mask, 4);
     pos += 4;
     for (size_t i = 0; i < len; i++) frame[pos++] = payload[i] ^ mask[i % 4];
-    assert(write(fd, frame, pos) == (ssize_t)pos);
+    /* MSG_NOSIGNAL: a frame can race a server-side reap (EOF observed in the
+     * idle test), and SIGPIPE must not kill the test process. */
+    assert(send(fd, frame, pos, MSG_NOSIGNAL) == (ssize_t)pos);
 }
 
 /* Read one server frame (never masked) with a poll timeout. */
@@ -121,7 +127,99 @@ static void stop_cb(void *ctx) {
     cwist_reactor_stop((cwist_reactor_t *)ctx);
 }
 
+/* Idle-timeout scenarios in a forked child: the knob is cached once per
+ * process, so the short timeout must be set before the first ws attach in
+ * that process — the same fork pattern as tests/test_reactor_drain_chunk.c. */
+static void run_idle_timeout_child(void) {
+    setenv("CWIST_WS_ASYNC_IDLE_TIMEOUT_SEC", "2", 1);
+
+    cwist_reactor_t *reactor = cwist_reactor_create();
+    assert(reactor);
+    pthread_t rt;
+    assert(pthread_create(&rt, NULL, reactor_thread, reactor) == 0);
+
+    /* Scenario 1: a totally silent connection is reaped by the periodic
+     * sweep within roughly timeout + sweep interval (2s + 1s), well under
+     * the 5s poll budget. */
+    int idle_fd[2];
+    assert(socketpair(AF_UNIX, SOCK_STREAM, 0, idle_fd) == 0);
+    assert(cwist_websocket_async_attach(idle_fd[0], reactor, on_message, NULL, NULL, 0));
+    struct pollfd pfd = {.fd = idle_fd[1], .events = POLLIN};
+    assert(poll(&pfd, 1, TIMEOUT_MS) == 1);
+    uint8_t b;
+    assert(read(idle_fd[1], &b, 1) == 0); /* EOF: the server closed the fd */
+    close(idle_fd[1]);
+    printf("7. idle connection reaped: ok\n");
+
+    /* Scenario 2: activity resets the clock.  timeout=2s, sweep=1s.
+     * t=0 frame A (delivered, last_active=0); t=1 frame B (gap 1s < 2s, so
+     * it survives and last_active=1); t=2.5 frame C (gap 1.5s < 2s thanks to
+     * the reset — a stale clock would measure 2.5s and reap it). */
+    int active_fd[2];
+    assert(socketpair(AF_UNIX, SOCK_STREAM, 0, active_fd) == 0);
+    assert(cwist_websocket_async_attach(active_fd[0], reactor, on_message, NULL, NULL, 0));
+    recorded_msg_t msg;
+    write_masked(active_fd[1], 0x81, (const uint8_t *)"A", 1);
+    wait_for_message(&msg);
+    sleep(1);
+    write_masked(active_fd[1], 0x81, (const uint8_t *)"B", 1);
+    wait_for_message(&msg);
+    usleep(1500000);
+    write_masked(active_fd[1], 0x81, (const uint8_t *)"C", 1);
+    wait_for_message(&msg);
+    assert(msg.opcode == CWIST_WS_FRAME_TEXT);
+    assert(msg.len == 1 && msg.payload[0] == 'C');
+    printf("8. activity resets the idle clock: ok\n");
+
+    /* Clean shutdown: close the active connection so its async state and the
+     * sweep context are freed before the reactor goes away (ASan counts
+     * anything still allocated at reactor_destroy as a leak). */
+    uint8_t code[2] = {0x03, 0xE8}; /* 1000 */
+    write_masked(active_fd[1], 0x88, code, 2);
+    uint8_t opcode, payload[8];
+    size_t len;
+    read_server_frame(active_fd[1], &opcode, payload, &len);
+    assert(opcode == CWIST_WS_FRAME_CLOSE);
+    pfd.fd = active_fd[1];
+    assert(poll(&pfd, 1, TIMEOUT_MS) == 1);
+    assert(read(active_fd[1], payload, sizeof(payload)) == 0); /* EOF */
+    close(active_fd[1]);
+
+    cwist_reactor_post_t stop_node = {.cb = stop_cb, .ctx = reactor};
+    assert(cwist_reactor_post(reactor, &stop_node));
+    assert(pthread_join(rt, NULL) == 0);
+    cwist_reactor_destroy(reactor);
+}
+
+static void test_idle_timeout(void) {
+    int fds[2];
+    assert(pipe(fds) == 0);
+    pid_t pid = fork();
+    assert(pid >= 0);
+    if (pid == 0) {
+        close(fds[0]);
+        run_idle_timeout_child();
+        ssize_t w = write(fds[1], "0", 1);
+        (void)w;
+        close(fds[1]);
+        _exit(0);
+    }
+    close(fds[1]);
+    char result = '?';
+    ssize_t r = read(fds[0], &result, 1);
+    close(fds[0]);
+    int status;
+    assert(waitpid(pid, &status, 0) == pid);
+    assert(WIFEXITED(status) && WEXITSTATUS(status) == 0);
+    assert(r == 1 && result == '0');
+    printf("idle timeout (CWIST_WS_ASYNC_IDLE_TIMEOUT_SEC) test passed\n");
+}
+
 int main(void) {
+    /* Forked first: the child sets the 2s idle timeout, which is cached
+     * once per process, before any WebSocket state exists. */
+    test_idle_timeout();
+
     cwist_reactor_t *reactor = cwist_reactor_create();
     assert(reactor);
 
