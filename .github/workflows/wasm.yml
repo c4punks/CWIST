@@ -56,3 +56,10 @@ jobs:
           # the runner's system node for the smoke run.
           make wasm-smoke NODE="$(command -v nodejs || echo /usr/bin/node)"
         fi
+
+    # The EM_JS `=>` corruption this PR fixes recurs silently the next time
+    # anyone runs `make format`. format-check verifies the clang-format
+    # off/on guards, so a formatter regression fails here instead of
+    # breaking the WASM build on a later, unrelated change.
+    - name: Verify clang-format guards (format-check)
+      run: make format-check

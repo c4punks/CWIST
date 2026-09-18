@@ -91,6 +91,21 @@ either serialize back to the host or open a read-only copy of the host's
 image. `cwist_db_query()` returns rows as a cJSON array of objects with all
 values as strings (SQLite `exec` callback semantics).
 
+## Bundle size impact of `cwist_db`
+
+Adding `src/core/db/db.c` + `lib/sqlite3/sqlite3.c` pulls all of SQLite into
+the archive. Measured with Emscripten 5.0.0, this branch vs the pre-db tree:
+
+| artifact | before | after | ratio |
+|---|---|---|---|
+| `libcwist_wasm.a` | 328,518 B | 1,703,706 B | 5.2x |
+| linked `wasm_smoke.wasm` | 67,267 B | 1,052,405 B | 15.7x |
+
+The archive grows 5x but the linked smoke binary 16x because the db round
+trip also pulls cJSON query-result building into the link. If this is too
+heavy for db-less consumers, the future opt-out/split build decision (issue
+#93 Phase 3) has these numbers as its input.
+
 ## Sessions and cookies
 
 `cookie.c` and `session.c` are compiled in, but persistence across requests
