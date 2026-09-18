@@ -1,0 +1,16 @@
+{
+  "name": "cwist-wasm",
+  "version": "3",
+  "description": "First-party JS wrapper over CWIST's WASM dispatch_memory path. Pairs with a consumer-built Emscripten module compiled from libcwist_wasm.a.",
+  "license": "MIT",
+  "main": "index.js",
+  "types": "index.d.ts",
+  "files": [
+    "index.js",
+    "index.d.ts",
+    "README.md"
+  ],
+  "engines": {
+    "node": ">=18"
+  }
+}
