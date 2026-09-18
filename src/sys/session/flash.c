@@ -34,7 +34,7 @@ const char *cwist_flash_get(cwist_http_request *req, const char *key) {
         if (strcmp(curr->key, key) == 0) {
             *prev = curr->next;
             cwist_free(curr->key);
-            /* value 포인터 소유권을 호출자에게 이전 - 호출자가 free 책임 */
+            /* ownership of value transfers to the caller, who must free it */
             char *ret_val = curr->value;
             cwist_free(curr);
             return ret_val;
