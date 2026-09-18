@@ -2620,8 +2620,7 @@ cwist_async_send_status_t cwist_http_send_response_coalesced(int client_fd,
         conn->obuf = nb;
         conn->ocap = ncap;
     }
-    size_t header_len =
-        serialize_headers(res, conn->obuf + conn->olen, CWIST_HTTP_MAX_HEADER_SIZE);
+    size_t header_len = serialize_headers(res, conn->obuf + conn->olen, CWIST_HTTP_MAX_HEADER_SIZE);
     conn->olen += header_len;
     if (body_len > 0 && body_ptr) {
         memcpy(conn->obuf + conn->olen, body_ptr, body_len);
