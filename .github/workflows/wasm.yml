@@ -58,8 +58,13 @@ jobs:
         fi
 
     # The EM_JS `=>` corruption this PR fixes recurs silently the next time
-    # anyone runs `make format`. format-check verifies the clang-format
-    # off/on guards, so a formatter regression fails here instead of
-    # breaking the WASM build on a later, unrelated change.
+    # anyone runs `make format`. Guard exactly the files carrying EM_JS /
+    # CWIST_WASM_INSTALL_VIEWS bodies with clang-format --dry-run --Werror:
+    # scoped to those two files on purpose, because the tree-wide
+    # `make format-check` compares against one pinned clang-format version
+    # while runners ship different ones, and an unrelated grpc/protobuf.c
+    # formatting drift would fail this job without touching WASM at all.
     - name: Verify clang-format guards (format-check)
-      run: make format-check
+      run: |
+        clang-format --dry-run --Werror \
+          tests/wasm_smoke.c include/cwist/wasm/typedarray.h
