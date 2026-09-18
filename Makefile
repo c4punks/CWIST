@@ -328,8 +328,32 @@ wasm-smoke: libcwist_wasm.a
 	$(EMCC) $(WASM_CFLAGS) -o wasm_smoke.js tests/wasm_smoke.c libcwist_wasm.a
 	$(NODE) wasm_smoke.js
 
+# Integration test for the cwist-wasm JS wrapper (wasm/npm): builds a
+# consumer-style module through include/cwist/wasm/wasm_entry.h, then drives
+# it from node via the wrapper with no Emscripten glue on the JS side.
+# Requires Emscripten + node, same as wasm-smoke.
+# _main is in EXPORTED_FUNCTIONS on purpose: without it the linker dead-code
+# eliminates main() (nothing else references it), and the app would never be
+# created - dispatch would return NULL on every call.
+wasm-wrapper-test: libcwist_wasm.a
+	$(EMCC) $(WASM_CFLAGS) -o wrapper_test.js tests/wasm_wrapper_test.c libcwist_wasm.a \
+	    -sEXPORTED_FUNCTIONS=_main,_cwist_wasm_dispatch,_cwist_wasm_dispose,_malloc,_free \
+	    -sEXPORTED_RUNTIME_METHODS=HEAPU8,HEAPU32 -sMODULARIZE -sEXPORT_NAME=createCwistModule
+	$(NODE) tests/wasm_wrapper_test.js
+
+# Versioned npm-package tarball for the cwist-wasm JS wrapper (issue #93
+# Phase 2a). Packs wasm/npm into dist/cwist-wasm-<version>.tgz; CI installs
+# the tarball into a clean directory to prove it stands alone.
+wasm-dist: wasm-wrapper-test
+	mkdir -p dist
+	npm --prefix wasm/npm pkg set version=$(VERSION) >/dev/null
+	npm pack ./wasm/npm --pack-destination dist >/dev/null
+	git checkout -- wasm/npm/package.json 2>/dev/null || true
+	@echo "dist/$$(ls dist | grep cwist-wasm | tail -1)"
+
 clean-wasm:
-	rm -rf $(WASM_BUILD_DIR) libcwist_wasm.a wasm_smoke.js wasm_smoke.wasm
+	rm -rf $(WASM_BUILD_DIR) libcwist_wasm.a wasm_smoke.js wasm_smoke.wasm \
+	    wrapper_test.js wrapper_test.wasm dist
 
 # Object Files and Target
 OBJS = $(SRCS:.c=.o)
