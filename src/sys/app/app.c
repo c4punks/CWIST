@@ -19,6 +19,7 @@
 #include <cwist/net/http/http3.h>
 #include <cwist/net/http/async_server.h>
 #include "../../net/http/simd_parser.h"
+#include "../../net/websocket/ws_async_internal.h"
 #include <cwist/sys/health/healthz.h>
 #include <cwist/net/http/https.h>
 #include <cwist/core/sstring/sstring.h>
@@ -301,6 +302,8 @@ typedef struct cwist_route_entry {
      *  or a multiport clone sharing the root app's context). */
     cwist_handler_ctx_destroy_func ctx_destroy;
     cwist_ws_handler_func ws_handler;
+    cwist_ws_on_message_t ws_async_on_message;
+    void *ws_async_user_data;
     cwist_endpoint_opt_t opts;
     struct cwist_route_entry *next;
 } cwist_route_entry;
@@ -408,6 +411,8 @@ static cwist_route_entry *cwist_route_entry_create(const char *path,
     entry->method = method;
     entry->handler = handler;
     entry->ws_handler = ws_handler;
+    entry->ws_async_on_message = NULL;
+    entry->ws_async_user_data = NULL;
     entry->opts = opts;
     entry->has_params = route_has_params(entry->path);
     entry->next = NULL;
@@ -488,6 +493,8 @@ static void cwist_route_table_insert(cwist_route_table *table,
         if (!curr->has_params && curr->method == method && strcmp(curr->path, entry->path) == 0) {
             curr->handler = handler;
             curr->ws_handler = ws_handler;
+            curr->ws_async_on_message = NULL;
+            curr->ws_async_user_data = NULL;
             curr->opts = opts;
             cwist_route_entry_free(entry);
             return true;
@@ -2000,7 +2007,34 @@ void cwist_app_ws(cwist_app *app, const char *path, cwist_ws_handler_func handle
     cwist_route_table_insert(app->router, path, CWIST_HTTP_GET, NULL, handler, CWIST_ENDPOINT_DEFAULT);
 }
 
-void cwist_app_get_opt(cwist_app *app, const char *path, cwist_handler_func handler, cwist_endpoint_opt_t opts) {
+/**
+ * @brief Register a callback-shaped non-blocking WebSocket endpoint (C1M mode).
+ * @param app Application being configured.
+ * @param path Exact GET route that should upgrade to WebSocket.
+ * @param on_message Callback invoked per complete message on the reactor path.
+ * @param user_data Opaque pointer forwarded to the callback.
+ */
+void cwist_app_ws_async(cwist_app *app, const char *path, cwist_ws_on_message_t on_message,
+                        void *user_data) {
+    if (!app || !app->router || !path || !on_message) return;
+    cwist_route_table_insert(app->router, path, NULL, CWIST_HTTP_GET, NULL, NULL,
+                             CWIST_ENDPOINT_DEFAULT);
+    cwist_route_entry *entry = cwist_route_table_lookup(app->router, CWIST_HTTP_GET, path);
+    if (entry) {
+        entry->ws_async_on_message = on_message;
+        entry->ws_async_user_data = user_data;
+    }
+}
+
+/**
+ * @brief Register a GET handler with explicit endpoint options.
+ * @param app Application being configured.
+ * @param path Exact route path.
+ * @param handler HTTP handler invoked for matching requests.
+ * @param opts Endpoint flags controlling cache and transport behavior.
+ */
+void cwist_app_get_opt(cwist_app *app, const char *path, cwist_handler_func handler,
+                       cwist_endpoint_opt_t opts) {
     add_route(app, path, CWIST_HTTP_GET, handler, opts);
 }
 
@@ -2404,7 +2438,48 @@ static void internal_route_handler(cwist_app *app, cwist_http_request *req,
     if (found_route) {
         req->endpoint_opts = found_route->opts ? found_route->opts : CWIST_ENDPOINT_DEFAULT;
         if (res) res->endpoint_opts = req->endpoint_opts;
-        if (found_route->ws_handler) {
+        if (found_route->ws_async_on_message && req->async_conn) {
+#ifndef __EMSCRIPTEN__
+            /* C1M path (issue #181): the route handler runs on the reactor
+             * thread, so invoking a blocking ws_handler here would park the
+             * whole worker in recv().  Complete the upgrade, send the 101
+             * through the coalesced writer, then hand the fd to the
+             * reactor-driven callback-shaped WebSocket path. */
+            if (cwist_websocket_upgrade_response(req, res)) {
+                cwist_http_async_conn_t *aconn = (cwist_http_async_conn_t *)req->async_conn;
+                req->upgraded = true;
+                res->keep_alive = true;
+                cwist_http_send_response_coalesced(req->client_fd, res, aconn, false, false);
+                cwist_http_coalesce_flush_blocking(req->client_fd, aconn);
+                if (cwist_websocket_async_attach(req->client_fd, aconn->reactor,
+                                                 found_route->ws_async_on_message,
+                                                 found_route->ws_async_user_data,
+                                                 (const uint8_t *)aconn->rbuf, aconn->len)) {
+                    /* Bytes already read past the upgrade request were
+                     * copied into the WS stash by attach.  The HTTP layer
+                     * releases the connection shell (without closing the fd)
+                     * when the C1M loop reports CWIST_ASYNC_DETACH on
+                     * req->ws_async_handoff; the WS async state owns the fd
+                     * from here on. */
+                    req->async_conn = NULL;
+                    req->ws_async_handoff = true;
+                } else {
+                    /* 101 already sent and attach closed the fd; detach so
+                     * the HTTP layer only releases the connection shell. */
+                    req->async_conn = NULL;
+                    req->ws_async_handoff = true;
+                }
+            } else {
+                res->status_code = CWIST_HTTP_BAD_REQUEST;
+                cwist_sstring_assign(res->body, "WebSocket Upgrade Failed");
+            }
+#endif
+        } else if (found_route->ws_handler) {
+#ifdef __EMSCRIPTEN__
+            /* WebSocket upgrades need a live socket; in-memory dispatch has none. */
+            res->status_code = CWIST_HTTP_BAD_REQUEST;
+            cwist_sstring_assign(res->body, "WebSocket Upgrade Failed");
+#else
             if (req->client_fd >= 0) {
                 cwist_websocket *ws = cwist_websocket_upgrade(req, req->client_fd);
                 if (ws) {

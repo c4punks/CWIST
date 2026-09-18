@@ -105,27 +105,6 @@ bool cwist_websocket_upgrade_response(cwist_http_request *req, cwist_http_respon
 }
 
 /**
- * @brief Portable case-insensitive substring search.
- *
- * strcasestr() is a GNU extension that does not exist on macOS, so keep a
- * small ASCII-only variant for header validation.
- */
-static char *ws_strcasestr(const char *haystack, const char *needle) {
-    if (!*needle) return (char *)haystack;
-    for (; *haystack; haystack++) {
-        const char *h = haystack;
-        const char *n = needle;
-        while (*h && *n &&
-               tolower((unsigned char)*h) == tolower((unsigned char)*n)) {
-            h++;
-            n++;
-        }
-        if (!*n) return (char *)haystack;
-    }
-    return NULL;
-}
-
-/**
  * @brief Upgrade an HTTP request to a WebSocket connection.
  *
  * The function validates the required upgrade headers, computes the
@@ -139,31 +118,6 @@ static char *ws_strcasestr(const char *haystack, const char *needle) {
 cwist_websocket *cwist_websocket_upgrade(cwist_http_request *req, int client_fd) {
     if (!req || client_fd < 0) return NULL;
 
-    // Validate Headers
-    char *connection = cwist_http_header_get(req->headers, "Connection");
-    char *upgrade = cwist_http_header_get(req->headers, "Upgrade");
-    char *key = cwist_http_header_get(req->headers, "Sec-WebSocket-Key");
-
-    if (!connection || !upgrade || !key) return NULL;
-    if (ws_strcasestr(connection, "Upgrade") == NULL) return NULL;
-    if (strcasecmp(upgrade, "websocket") != 0) return NULL;
-
-    /* RFC 6455 section 4.2.1: the client MUST include Sec-WebSocket-Version: 13. */
-    char *ws_version = cwist_http_header_get(req->headers, "Sec-WebSocket-Version");
-    if (!ws_version || strcmp(ws_version, "13") != 0) return NULL;
-
-    // Handshake Key Generation
-    char combined_key[512];
-    snprintf(combined_key, sizeof(combined_key), "%s%s", key, WS_GUID);
-
-    uint8_t hash[20];
-    sha1((uint8_t *)combined_key, strlen(combined_key), hash);
-
-    size_t accept_len;
-    char *accept_key = base64_encode(hash, 20, &accept_len);
-    if (!accept_key) return NULL;
-
-    // Send Response
     cwist_http_response *res = cwist_http_response_create();
     if (!res) return NULL;
 
