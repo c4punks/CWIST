@@ -1,8 +1,8 @@
 # Cooperative queuing in the C1M reactor's CQE drain (issue #25)
 
-Status: **implemented, opt-in** (`CWIST_REACTOR_DRAIN_CHUNK`,
-`src/sys/io/reactor.c`). Default (unset) is byte-for-byte the legacy
-behavior; setting the env var enables the fix.
+Status: **implemented, on by default** (`CWIST_REACTOR_DRAIN_CHUNK`,
+`src/sys/io/reactor.c`). Unset defaults to 64; set to `0` to restore
+legacy behavior (no mid-batch drain).
 
 ## Background
 
@@ -62,8 +62,9 @@ if (drain_chunk && ++since_drain >= drain_chunk && head != tail) {
 }
 ```
 
-`0` (unset, the default) skips this entirely -- the loop is identical to
-before. This only ever reorders *when* a foreign-thread post is drained
+`0` skips this entirely, restoring legacy behavior -- the loop is identical
+to before the fix. Unset defaults to 64. This only ever reorders *when* a
+foreign-thread post is drained
 relative to the rest of the batch; it does not change how many
 connections get served, how requests within one connection are ordered,
 or classic-pool behavior at all (io_uring-branch-only, matching where the
@@ -115,9 +116,16 @@ latency).
 
 ## Tuning
 
-Not yet given a default nonzero value pending a real the-benchmarker-style
-CI run with an `cwist_async_defer`-using workload (the plain empty-handler
-benchmark this repo's CI already runs cannot exercise this path at all).
-Recommended starting point for anyone enabling it today: a small chunk
-size (8-32) on deployments that make real use of `cwist_async_defer` for
-background work.
+The default is 64, set unconditionally after the header-serialization and
+response-coalescing work landed (PR #180). At chunk=64 the interleaved
+drain fires at most 8 times per 512-connection batch -- a small number of
+cheap atomic ops against tens of milliseconds of handler work. The plain
+benchmark workload the CI runs does not use `cwist_async_defer`, so it is
+not exercised there; the improvement is visible only on deployments that
+actually use background jobs or deferred responses.
+
+Set `CWIST_REACTOR_DRAIN_CHUNK=0` to disable the mid-batch drain entirely
+and restore legacy behavior. A smaller value (8-32) tightens the
+foreign-thread post latency further at the cost of more atomic ops per
+round; 8 reduces the worst-case wait from ~41ms (whole batch) to ~0.38ms
+in the bench above.
