@@ -109,3 +109,29 @@ Low-level accept loop wrapper.
 long cwist_http_continuation_shed_count(void);
 ```
 Monotonic counter of pipelined HTTP/1.1 continuations dropped (and whose connections were closed) because the reactor post queue was full. Also exposed via Prometheus `/metrics` as `cwist_http_continuation_shed_total`. Useful for backpressure and shed-rate alerting.
+
+## Security Headers
+
+### `cwist_http_response_add_security_headers`
+```c
+void cwist_http_response_add_security_headers(cwist_http_response *res);
+```
+Injects a default set of hardening headers into the response if each is not already present (first-one-wins, so a handler can pre-set a header to override the default). Safe to call on both HTTP and HTTPS responses. Does **not** set `Strict-Transport-Security`; use `cwist_http_response_add_hsts()` for that.
+
+Headers set by this function:
+
+| Header | Default value |
+|---|---|
+| `X-Frame-Options` | `DENY` |
+| `X-Content-Type-Options` | `nosniff` |
+| `Referrer-Policy` | `strict-origin-when-cross-origin` |
+| `Content-Security-Policy` | restricted default-src/script-src/style-src/font-src/img-src policy |
+| `Cross-Origin-Resource-Policy` | `same-origin` |
+| `Permissions-Policy` | camera/microphone/geolocation/payment/usb/interest-cohort all denied |
+| `Cross-Origin-Opener-Policy` | `same-origin` |
+
+### `cwist_http_response_add_hsts`
+```c
+void cwist_http_response_add_hsts(cwist_http_response *res);
+```
+Adds `Strict-Transport-Security: max-age=31536000; includeSubDomains` to a TLS response. No-op when the header is already present. Per RFC 6797 section 7.2, call this only from an HTTPS handler; never call it on a plain-HTTP response.
