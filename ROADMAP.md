@@ -287,27 +287,34 @@ Theme: **Full GC — automatic resource reclamation**. Today CWIST relies on exp
 
 ---
 
-## v3.6 Milestone (Planned)
+## v3.6 Milestone (In Progress)
 
 Theme: **WASM client-side support**. v3.4 shipped the gRPC client wave; v3.5 shipped full GC; v3.6 takes the WASM client-side support wave from "in-tree target" to "usable from JavaScript". Tracked in issue #93.
 
-* **Phase 1: in-tree WASM correctness** (issue #93 gaps 1-4, PR #176 in review):
-  * `cwist_db` in the WASM build (`src/core/db/db.c` + `lib/sqlite3/sqlite3.c` in `WASM_SRCS`), so `cwist_db_open_memory()` / `cwist_db_serialize()` work under Emscripten as the roadmap has long claimed.
-  * Fix the EM_JS corruption from the tree-wide clang-format pass (`=>` rewritten to `= >` inside brace-block JS bodies); `clang-format off/on` guards plus `make format-check` coverage so it cannot recur.
-  * Emscripten build + smoke test as a CI gate (`.github/workflows/wasm.yml`).
-  * `docs/api/wasm.md`: build, scope, the `dispatch_memory` pattern, TypedArray helpers, the db round trip, session caveats.
-* **Phase 2: JavaScript consumption**:
-  * npm/release packaging for `libcwist_wasm.a` and the smoke-tested artifact.
-  * First-party JS wrapper exposing the `dispatch_memory` request path and TypedArray views without requiring consumers to write Emscripten glue.
-* **Phase 3-4: reach**:
+* **Phase 1: in-tree WASM correctness** (issue #93 gaps 1-4, PR #176) — ~~done~~ (merged 2026-09-17):
+  * ~~`cwist_db` in the WASM build (`src/core/db/db.c` + `lib/sqlite3/sqlite3.c` in `WASM_SRCS`), so `cwist_db_open_memory()` / `cwist_db_serialize()` work under Emscripten as the roadmap has long claimed~~ (done).
+  * ~~Fix the EM_JS corruption from the tree-wide clang-format pass (`=>` rewritten to `= >` inside brace-block JS bodies); `clang-format off/on` guards plus `make format-check` coverage so it cannot recur~~ (done).
+  * ~~Emscripten build + smoke test as a CI gate (`.github/workflows/wasm.yml`)~~ (done; scoped to the wasm files after runner clang-format version skew produced false tree-wide failures).
+  * ~~`docs/api/wasm.md`: build, scope, the `dispatch_memory` pattern, TypedArray helpers, the db round trip, session caveats~~ (done).
+* **Phase 2: JavaScript consumption** (issues #183/#184, PR #185) — ~~done~~ (merged 2026-09-18; both issues auto-closed):
+  * ~~npm/release packaging for `libcwist_wasm.a` and the smoke-tested artifact~~ (done — `wasm/npm/` publishes the `cwist-wasm` package: `index.js` fetch-style API, `index.d.ts`, README; `make wasm-dist` builds the tarball, CI verifies a clean install).
+  * ~~First-party JS wrapper exposing the `dispatch_memory` request path and TypedArray views without requiring consumers to write Emscripten glue~~ (done — `include/cwist/wasm/wasm_entry.h` `CWIST_WASM_DEFINE_ENTRY`, plus the `_main` export pitfall documented: without it the linker dead-code-eliminates `main`).
+* **Phase 3-4: reach** (remaining):
   * WASI target evaluation.
   * Streaming request/response bodies through the WASM boundary.
   * Session persistence model for WASM apps (the caveats documented in Phase 1 become a design input).
   * End-to-end example app (Service Worker or fetch-interception layer).
 
-Known limits going in (from PR #176 review):
+Landeds alongside the WASM wave, also in scope for v3.6:
 
-* Bundle size impact of pulling SQLite into `libcwist_wasm.a` is unmeasured; the Phase 1 follow-up asks for a before/after size report to decide on a future opt-out or split build.
+* **Per-event latency probe** (issue #166, PR #186, merged): `CWIST_LATENCY_PROBE=1` records arm-to-dispatch queue delay and callback runtime histograms per reactor, dumped at destroy. First measurement at the CI operating point: queue delay p99 = 10 ms while callback p50 = 25 us — the tail lives before dispatch.
+* **RX-uring receive path** (issue #179, PR #187, merged): one `IORING_OP_RECV` SQE replaces the POLL_ADD + recv() pair on the C1M async path (Linux io_uring reactors only; `CWIST_RX_URING=0` restores legacy byte-identically). A per-connection learn flag keeps non-pipelining clients at the legacy op count (measured neutral: 342.4k vs 341.7k rps, t12 c400); the pipelining win case is unproven pending a pipelining workload.
+* **WebSocket non-blocking I/O** (issue #181, PR #182, merged): reactor-driven WebSocket on C1M (classic mode keeps blocking I/O), callback-style API, `CWIST_WS_ASYNC_IDLE_TIMEOUT_SEC` (default 300 s).
+* **SQPOLL evaluation** (closed, negative): kernel SQ-thread wakeup discipline on 6.12 makes producer-side SQPOLL at best equal to the polled ring and at worst a multi-ms stall source; SQ_AFF stabilizes it but never beats the plain submit-enter (issue #179 comments).
+
+Known limits going in (from PR #176 review), updated:
+
+* ~~Bundle size impact of pulling SQLite into `libcwist_wasm.a` is unmeasured~~ — now measured (Phase 2 bundle report in `docs/api/wasm.md`): `libcwist_wasm.a` 328,518 -> 1,703,706 B (5.2x), `wasm_smoke.wasm` 67,267 -> 1,052,405 B (15.7x). The future opt-out or split build decision now has data; it remains open.
 * Session behavior under the WASM dispatch model is documented but not yet measured; Phase 3 needs observed behavior, not the current caveats list.
 
 ---
