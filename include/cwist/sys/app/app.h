@@ -495,6 +495,18 @@ cwist_multiport_t cwist_create_multiport_from_array(const unsigned short *ports,
 
 void cwist_app_http_handler(int client_fd, void *ctx);
 cwist_async_action_t cwist_app_http_handler_async(int client_fd, cwist_http_async_conn_t *conn);
+
+/**
+ * @brief Apply CWIST_PROFILE preset env-var defaults.
+ *
+ * Reads CWIST_PROFILE and uses setenv(overwrite=0) to fill in defaults for
+ * the relevant tuning variables before cwist_app_listen() reads them.
+ * Recognized values: "performance", "lowmem", "lowlat", "default" (no-op).
+ * Called automatically by cwist_app_listen(); exposed here so tests and
+ * tools can invoke it directly before any env-var caches are populated.
+ */
+void cwist_apply_profile(void);
+
 int cwist_app_listen(cwist_app *app, int port);
 
 /**

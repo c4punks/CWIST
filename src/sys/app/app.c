@@ -3796,6 +3796,41 @@ static void *h3_server_thread_func(void *arg) {
 #endif /* __EMSCRIPTEN__ */
 
 /**
+ * @brief Apply a CWIST_PROFILE preset before the per-variable env reads in
+ * cwist_app_listen().  Each setenv() call uses overwrite=0 so any variable
+ * already present in the caller's environment takes precedence.
+ *
+ * Profiles:
+ *   performance - maximize request throughput: C1M enabled, glibc arena cap,
+ *                 tighter reactor drain chunk (8 events between post drains).
+ *   lowmem      - minimize resident memory: C1M enabled, glibc arena capped.
+ *   lowlat      - minimize per-request latency: classic thread-pool mode,
+ *                 sub-millisecond median at moderate concurrency.
+ *   default     - no-op; leaves every env var at its built-in default.
+ */
+void cwist_apply_profile(void) {
+    const char *profile = getenv("CWIST_PROFILE");
+    if (!profile || profile[0] == '\0' || strcmp(profile, "default") == 0)
+        return;
+
+    if (strcmp(profile, "performance") == 0) {
+        setenv("CWIST_C1M_MODE", "1", 0);
+        setenv("CWIST_MALLOC_ARENA_MAX", "1", 0);
+        setenv("CWIST_REACTOR_DRAIN_CHUNK", "8", 0);
+        printf("[CWIST] profile: performance\n");
+    } else if (strcmp(profile, "lowmem") == 0) {
+        setenv("CWIST_C1M_MODE", "1", 0);
+        setenv("CWIST_MALLOC_ARENA_MAX", "1", 0);
+        printf("[CWIST] profile: lowmem\n");
+    } else if (strcmp(profile, "lowlat") == 0) {
+        setenv("CWIST_C1M_MODE", "0", 0);
+        printf("[CWIST] profile: lowlat\n");
+    } else {
+        fprintf(stderr, "[CWIST] unknown CWIST_PROFILE value \"%s\"; using defaults\n", profile);
+    }
+}
+
+/**
  * @brief Initialize runtime services and enter the HTTP or HTTPS server loop.
  * @param app Application instance to run.
  * @param port TCP port to bind.
@@ -3811,6 +3846,7 @@ int cwist_app_listen(cwist_app *app, int port) {
     signal(SIGPIPE, SIG_IGN);
     cwist_shutdown_install_handlers();
     cwist_app_tune_system();
+    cwist_apply_profile();
     if (!app) return -1;
     cwist_pfc_clear(app->public_fixed_cache); /* Restart/reconfiguration boundary. */
     app->port = port;
