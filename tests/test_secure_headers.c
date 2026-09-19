@@ -27,6 +27,10 @@ void test_security_headers_present(void) {
 
     assert(cwist_http_header_get(res->headers, "Permissions-Policy") != NULL);
 
+    assert(cwist_http_header_get(res->headers, "Cross-Origin-Opener-Policy") != NULL);
+    assert(strcmp(cwist_http_header_get(res->headers, "Cross-Origin-Opener-Policy"),
+                  "same-origin") == 0);
+
     // RFC 6797 section 7.2: HSTS must not be sent over plain HTTP. This function is
     // transport-agnostic (safe for both HTTP and HTTPS responses), so it
     // must NOT set HSTS itself -- that's cwist_http_response_add_hsts()'s
@@ -71,14 +75,17 @@ void test_security_headers_not_duplicated(void) {
     cwist_http_response *res = cwist_http_response_create();
     assert(res != NULL);
 
-    // Manually add an existing header with a different value
+    // Manually add existing headers with different values
     cwist_http_header_add(&res->headers, "X-Frame-Options", "SAMEORIGIN");
+    cwist_http_header_add(&res->headers, "Cross-Origin-Opener-Policy", "same-origin-allow-popups");
 
     // Re-run security header injection
     cwist_http_response_add_security_headers(res);
 
-    // The manually-added value should remain (first one wins)
+    // The manually-added values should remain (first one wins)
     assert(strcmp(cwist_http_header_get(res->headers, "X-Frame-Options"), "SAMEORIGIN") == 0);
+    assert(strcmp(cwist_http_header_get(res->headers, "Cross-Origin-Opener-Policy"),
+                  "same-origin-allow-popups") == 0);
 
     cwist_http_response_destroy(res);
     printf("Passed deduplication.\n");
