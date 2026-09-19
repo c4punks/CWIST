@@ -44,3 +44,51 @@ void my_ws_handler(cwist_websocket *ws) {
 
 cwist_app_ws(app, "/chat", my_ws_handler);
 ```
+
+## Async (C1M) WebSocket API
+
+*Header:* `<cwist/net/websocket/websocket_async.h>`
+
+In C1M mode (`CWIST_C1M_MODE=1`) the reactor watches sockets and delivers
+each complete message through a callback instead of blocking in
+`cwist_websocket_receive`. Use `cwist_app_ws_async` to register a route on
+this path.
+
+### `cwist_app_ws_async`
+```c
+void cwist_app_ws_async(cwist_app *app, const char *path,
+                        cwist_ws_on_message_t on_message, void *user_data);
+```
+Registers a reactor-driven WebSocket route. For each complete message the
+reactor invokes `on_message(ws, frame, user_data)` on the reactor thread.
+`user_data` is an opaque pointer passed through unchanged; use it for
+per-handler state (broadcast list, room context, etc.).
+
+### `cwist_ws_on_message_t`
+```c
+typedef void (*cwist_ws_on_message_t)(cwist_websocket_async *ws,
+                                      cwist_ws_frame *frame,
+                                      void *user_data);
+```
+Callback invoked once per complete message. The callback **must** release
+`frame` with `cwist_websocket_frame_destroy()`. It is safe to call
+`cwist_websocket_async_send()` and `cwist_websocket_async_close()` from
+inside this callback.
+
+### `cwist_websocket_async_send`
+```c
+int cwist_websocket_async_send(cwist_websocket_async *ws,
+                               cwist_ws_opcode_t opcode,
+                               const uint8_t *data, size_t len);
+```
+Sends one FIN-terminated frame without blocking. On `EAGAIN` or a short
+write the remainder is parked on a one-shot reactor write slot and drained
+when the socket becomes writable. Returns `0` on success, `-1` on failure.
+
+### `cwist_websocket_async_close`
+```c
+void cwist_websocket_async_close(cwist_websocket_async *ws);
+```
+Initiates the close handshake without blocking. Queues a CLOSE frame and
+schedules connection cleanup. Safe to call from inside the `on_message`
+callback; `NULL` is ignored.
