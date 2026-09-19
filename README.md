@@ -253,12 +253,12 @@ blocks an HTTP/3 build.
 
 CWIST provides two operational execution models tailored for different workload profiles:
 
-1. **C1M Reactor Mode (`CWIST_C1M_MODE=1`, default)**: An event-driven asynchronous reactor designed for massive concurrent connections (`epoll` on Linux, `kqueue` on macOS/BSD). It uses non-blocking I/O multiplexing and cooperative scheduling with lock-free coordination to maintain low latency under high concurrency without per-connection thread overhead.
+1. **C1M Reactor Mode (`CWIST_C1M_MODE=1`, default)**: An event-driven asynchronous reactor designed for massive concurrent connections (`io_uring` on Linux, `kqueue` on macOS/BSD). It uses non-blocking I/O multiplexing and cooperative scheduling with lock-free coordination to maintain low latency under high concurrency without per-connection thread overhead.
 2. **Classic Pool Mode (`CWIST_C1M_MODE=0`)**: A worker thread pool model designed for low-jitter, predictable throughput on compute-bound workloads. In this mode, incoming requests are assigned to worker threads using thread-pinned queues and executed to completion inline on the worker stack.
 
 ### Readiness multiplexing vs full completion rings
 
-On Linux, CWIST uses `io_uring` (raw syscalls, no liburing dependency) strictly as a readiness multiplexer, replacing `epoll_wait` in `src/sys/io/reactor.c`. The reactor arms one-shot `IORING_OP_POLL_ADD` requests. When a completion arrives, the woken worker performs inline I/O operations directly. If io_uring setup fails, the reactor falls back to epoll (kqueue on macOS/BSD) with identical behavior.
+On Linux, CWIST uses `io_uring` (raw syscalls, no liburing dependency) as the event engine, replacing `epoll_wait` in `src/sys/io/reactor.c`. By default the reactor arms one-shot `IORING_OP_POLL_ADD` requests and the woken worker performs inline I/O directly. On reactors with a real io_uring ring the async HTTP receive wait can instead be a single `IORING_OP_RECV` whose completion stages the bytes, replacing the POLL+recv pair (issue #179, PR #187); a per-connection learn flag keeps non-pipelining clients at the legacy op count. `CWIST_RX_URING=0` restores the POLL path, `CWIST_LATENCY_PROBE=1` records arm-to-dispatch and callback-time histograms per reactor (issue #166). If io_uring setup fails, the reactor falls back to epoll (kqueue on macOS/BSD) with identical behavior.
 
 - **Direct readiness handling.** When a readiness notification arrives, the worker processes the event directly rather than routing multiple intermediate completion steps through userspace ring buffers on every tick.
 - **Structural backpressure.** Work cannot unboundedly accumulate; per-worker concurrency limits allow the server to shed excess load under saturation rather than inflating tail latency.
