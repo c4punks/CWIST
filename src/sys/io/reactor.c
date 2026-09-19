@@ -143,6 +143,14 @@ typedef struct {
     int fd;
     cwist_reactor_cb_t cb;
     void *ctx;
+#ifdef __linux__
+    /* CLOCK_MONOTONIC timestamp taken in reactor_add_common right before the
+     * POLL_ADD submit/defer decision; approximates when the fd started
+     * waiting for readiness. Only set when CWIST_LATENCY_PROBE is enabled;
+     * zero means "armed before the probe was enabled" (defensive, see the
+     * dispatch loop). */
+    uint64_t armed_ns;
+#endif
     /* Inline caller payload; ctx always points here. Zeroed on checkout so
      * reuse across events cannot leak stale fields (calloc semantics
      * without the heap).  While the slot sits on the free list, ctx is
@@ -193,8 +201,106 @@ struct cwist_reactor {
     uint32_t sq_unsubmitted;
     pthread_t owner;
     bool dispatching;
+    /* Per-request latency probe recorder (issue #166). Owner-thread only, so
+     * plain counters suffice. Two histograms: time from (re-)arm to dispatch
+     * (queue_delay) and callback runtime (svc). */
+#define LATENCY_PROBE_BUCKETS 18
+    struct {
+        uint64_t buckets[LATENCY_PROBE_BUCKETS];
+        uint64_t count;
+        uint64_t sum_us;
+        uint64_t max_us;
+        uint64_t over_5ms; /* samples beyond 5000 us */
+    } probe[2];
 #endif
 };
+
+/* Microsecond bucket boundaries for the latency probe histograms: 18 buckets
+ * spanning [0,10) us up to [1e6,+inf) us. */
+#ifdef __linux__
+static const uint32_t latency_probe_bounds_us[LATENCY_PROBE_BUCKETS - 1] = {
+    10,    25,    50,    100,    250,    500,    1000,    2500,   5000,
+    10000, 25000, 50000, 100000, 250000, 500000, 1000000, 2500000};
+
+/* CWIST_LATENCY_PROBE=1 enables the per-request latency probe. Cached after
+ * the first read like the other env knobs in this file -- the racy recompute
+ * is benign (same result every time). */
+static bool latency_probe_enabled(void) {
+    static _Atomic int cached = -1;
+    int v = atomic_load_explicit(&cached, memory_order_relaxed);
+    if (v < 0) {
+        const char *s = getenv("CWIST_LATENCY_PROBE");
+        v = (s && strcmp(s, "1") == 0) ? 1 : 0;
+        atomic_store_explicit(&cached, v, memory_order_relaxed);
+    }
+    return v == 1;
+}
+
+static void latency_probe_record(uint64_t *buckets, uint64_t *count, uint64_t *sum_us,
+                                 uint64_t *max_us, uint64_t *over_5ms, uint64_t sample_us) {
+    int lo = 0, hi = LATENCY_PROBE_BUCKETS - 1;
+    while (lo < hi) { /* first bucket whose upper bound exceeds the sample */
+        int mid = (lo + hi) / 2;
+        if (sample_us < latency_probe_bounds_us[mid])
+            hi = mid;
+        else
+            lo = mid + 1;
+    }
+    buckets[lo]++;
+    (*count)++;
+    *sum_us += sample_us;
+    if (sample_us > *max_us) *max_us = sample_us;
+    if (sample_us > 5000) (*over_5ms)++;
+}
+
+enum { LATENCY_PROBE_QUEUE = 0, LATENCY_PROBE_SVC = 1 };
+
+/* Approximate percentile from a histogram: smallest bucket upper bound whose
+ * cumulative count reaches pct (in per-mille) of total. Returns micros. */
+static uint64_t latency_probe_percentile(const uint64_t *buckets, uint64_t count,
+                                         uint64_t pct_mille) {
+    uint64_t target = (count * pct_mille + 999) / 1000;
+    uint64_t cumulative = 0;
+    for (int i = 0; i < LATENCY_PROBE_BUCKETS; i++) {
+        cumulative += buckets[i];
+        if (cumulative >= target)
+            return i + 1 < LATENCY_PROBE_BUCKETS ? latency_probe_bounds_us[i] : UINT64_MAX;
+    }
+    return UINT64_MAX;
+}
+
+static void latency_probe_dump(const cwist_reactor_t *reactor) {
+    if (!latency_probe_enabled()) return;
+    for (int phase = 0; phase < 2; phase++) {
+        const uint64_t *b = reactor->probe[phase].buckets;
+        uint64_t count = reactor->probe[phase].count;
+        if (count == 0) continue;
+        const char *name = phase == LATENCY_PROBE_QUEUE ? "queue_delay" : "svc";
+        fprintf(stderr, "[latency-probe] pid=%d %-12s count=%llu\n", (int)getpid(), name,
+                (unsigned long long)count);
+        fprintf(stderr,
+                "[latency-probe] pid=%d %-12s p50=%llu p90=%llu p99=%llu p999=%llu max=%llu us\n",
+                (int)getpid(), name, (unsigned long long)latency_probe_percentile(b, count, 500),
+                (unsigned long long)latency_probe_percentile(b, count, 900),
+                (unsigned long long)latency_probe_percentile(b, count, 990),
+                (unsigned long long)latency_probe_percentile(b, count, 999),
+                (unsigned long long)reactor->probe[phase].max_us);
+        fprintf(stderr, "[latency-probe] pid=%d %-12s mean=%llu us over_5ms=%llu\n", (int)getpid(),
+                name, (unsigned long long)(reactor->probe[phase].sum_us / count),
+                (unsigned long long)reactor->probe[phase].over_5ms);
+        for (int i = 0; i < LATENCY_PROBE_BUCKETS; i++) {
+            if (!b[i]) continue;
+            if (i + 1 < LATENCY_PROBE_BUCKETS)
+                fprintf(stderr, "[latency-probe] pid=%d %-12s [%-8u,%-8u) us : %llu\n",
+                        (int)getpid(), name, i == 0 ? 0 : latency_probe_bounds_us[i - 1],
+                        latency_probe_bounds_us[i], (unsigned long long)b[i]);
+            else
+                fprintf(stderr, "[latency-probe] pid=%d %-12s [1000000, +inf) us : %llu\n",
+                        (int)getpid(), name, (unsigned long long)b[i]);
+        }
+    }
+}
+#endif
 
 static reactor_event_ctx_t *alloc_reactor_ctx(cwist_reactor_t *r, int fd, cwist_reactor_cb_t cb,
                                               const void *payload, size_t payload_size) {
@@ -402,6 +508,9 @@ cwist_reactor_t *cwist_reactor_create(void) {
 
 void cwist_reactor_destroy(cwist_reactor_t *reactor) {
     if (!reactor) return;
+#ifdef __linux__
+    latency_probe_dump(reactor);
+#endif
     /* Run any completions posted after the run thread parked for good. */
     reactor_drain_posts(reactor);
     if (reactor->wake_fd >= 0) close(reactor->wake_fd);
@@ -563,6 +672,11 @@ static bool reactor_add_common(cwist_reactor_t *reactor, int fd, cwist_reactor_c
     if (!ev_ctx) return false;
 
 #ifdef __linux__
+    if (latency_probe_enabled()) {
+        struct timespec ts;
+        clock_gettime(CLOCK_MONOTONIC, &ts);
+        ev_ctx->armed_ns = (uint64_t)ts.tv_sec * 1000000000ull + (uint64_t)ts.tv_nsec;
+    }
     if (!reactor->impl.use_epoll) {
         /* One-shot POLL_ADD: multishot (IORING_POLL_ADD_MULTI) was rejected
          * because the slot is recycled after firing, so a persistent poll
@@ -775,7 +889,34 @@ void cwist_reactor_run(cwist_reactor_t *reactor) {
                 reactor_event_ctx_t *ev_ctx = (reactor_event_ctx_t *)cqe->user_data;
                 if (ev_ctx) {
                     if (cqe->res >= 0) {
-                        ev_ctx->cb(ev_ctx->fd, ev_ctx->ctx);
+                        if (latency_probe_enabled()) {
+                            struct timespec ts;
+                            clock_gettime(CLOCK_MONOTONIC, &ts);
+                            uint64_t t0 =
+                                (uint64_t)ts.tv_sec * 1000000000ull + (uint64_t)ts.tv_nsec;
+                            /* armed_ns == 0 means the slot was armed before
+                             * the probe was enabled; fold it into the first
+                             * bucket rather than producing a garbage delay. */
+                            uint64_t delay_ns = ev_ctx->armed_ns ? t0 - ev_ctx->armed_ns : 0;
+                            ev_ctx->cb(ev_ctx->fd, ev_ctx->ctx);
+                            clock_gettime(CLOCK_MONOTONIC, &ts);
+                            uint64_t t1 =
+                                (uint64_t)ts.tv_sec * 1000000000ull + (uint64_t)ts.tv_nsec;
+                            latency_probe_record(reactor->probe[LATENCY_PROBE_QUEUE].buckets,
+                                                 &reactor->probe[LATENCY_PROBE_QUEUE].count,
+                                                 &reactor->probe[LATENCY_PROBE_QUEUE].sum_us,
+                                                 &reactor->probe[LATENCY_PROBE_QUEUE].max_us,
+                                                 &reactor->probe[LATENCY_PROBE_QUEUE].over_5ms,
+                                                 delay_ns / 1000);
+                            latency_probe_record(reactor->probe[LATENCY_PROBE_SVC].buckets,
+                                                 &reactor->probe[LATENCY_PROBE_SVC].count,
+                                                 &reactor->probe[LATENCY_PROBE_SVC].sum_us,
+                                                 &reactor->probe[LATENCY_PROBE_SVC].max_us,
+                                                 &reactor->probe[LATENCY_PROBE_SVC].over_5ms,
+                                                 (t1 - t0) / 1000);
+                        } else {
+                            ev_ctx->cb(ev_ctx->fd, ev_ctx->ctx);
+                        }
                     }
                     free_reactor_ctx(reactor, ev_ctx);
                 }

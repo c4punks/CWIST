@@ -508,6 +508,7 @@ TEST_TARGETS = test_worker_affinity \
                test_classic_pool_scaling \
                test_reactor_wake \
                test_reactor_drain_chunk \
+               test_latency_probe \
                test_sstring \
                test_seq \
                test_seq_auth \
@@ -636,6 +637,14 @@ test_reactor_wake: tests/test_reactor_wake.c src/sys/io/reactor.c
 # full before/after latency measurement.
 test_reactor_drain_chunk: tests/test_reactor_drain_chunk.c src/sys/io/reactor.c
 	$(CC) $(CFLAGS) -o $@ tests/test_reactor_drain_chunk.c -pthread
+	./$@
+
+# Latency probe test (issue #166): run twice per build, with the probe
+# enabled (recorder must accumulate samples) and disabled (recorder must
+# stay at zero). CWIST_LATENCY_PROBE must be set before reactor creation.
+test_latency_probe: tests/test_latency_probe.c src/sys/io/reactor.c
+	$(CC) $(CFLAGS) -o $@ tests/test_latency_probe.c -pthread
+	CWIST_LATENCY_PROBE=1 ./$@
 	./$@
 
 bench_cooperative_queuing: tests/bench_cooperative_queuing.c src/sys/io/reactor.c
