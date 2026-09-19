@@ -2,9 +2,7 @@
 
 static void handle_secure_page(cwist_http_request *req, cwist_http_response *res) {
     (void)req;
-    cwist_http_header_add(&res->headers, "X-Frame-Options", "DENY");
-    cwist_http_header_add(&res->headers, "X-Content-Type-Options", "nosniff");
-    cwist_http_header_add(&res->headers, "X-XSS-Protection", "1; mode=block");
+    cwist_http_response_add_security_headers(res);
     cwist_sstring_assign(res->body, "<html><body><h1>Hardened Security Headers</h1></body></html>");
 }
 
