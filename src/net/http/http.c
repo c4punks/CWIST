@@ -745,9 +745,11 @@ static void http_rx_recv_cb(void *conn_ptr, int res) {
 
     /* Latency probe: rx_armed_ns is only written while the probe is enabled,
      * so a zero value means the probe is off and both clock reads below are
-     * skipped. */
+     * skipped.  Snapshot it now: the serve path re-arms the next RECV and
+     * would overwrite conn->rx_armed_ns before the queue delay is computed. */
     uint64_t t0 = 0;
-    if (conn->rx_armed_ns) {
+    uint64_t armed_ns = conn->rx_armed_ns;
+    if (armed_ns) {
         struct timespec ts;
         clock_gettime(CLOCK_MONOTONIC, &ts);
         t0 = (uint64_t)ts.tv_sec * 1000000000ull + (uint64_t)ts.tv_nsec;
@@ -789,8 +791,8 @@ static void http_rx_recv_cb(void *conn_ptr, int res) {
     conn->rx_prefers_poll = false;
     http_async_dispatch(conn->fd, conn, conn->handler, conn->user_ctx, conn->reactor);
 
-    if (conn->rx_armed_ns) {
-        uint64_t queue_us = (t0 - conn->rx_armed_ns) / 1000;
+    if (armed_ns) {
+        uint64_t queue_us = (t0 - armed_ns) / 1000;
         struct timespec ts;
         clock_gettime(CLOCK_MONOTONIC, &ts);
         uint64_t t1 = (uint64_t)ts.tv_sec * 1000000000ull + (uint64_t)ts.tv_nsec;
