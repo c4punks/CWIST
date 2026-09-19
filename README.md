@@ -145,30 +145,30 @@ int main(void) {
 <!-- WEBSERVER_BENCHMARKS:START -->
 ## Latest isolated HTTP benchmark
 
-Measured commit: `37274223ea23aa657e40d5ebfb8d9e9c9bc4064c`. Release tag: `not recorded; identify this run by commit`.
-Run: https://github.com/c4punks/CWIST/actions/runs/35344221742. Timestamp: `2026-09-18T12:33:32.076013+00:00`.
+Measured commit: `34060415046315d3c0915789dfea0450a0111015`. Release tag: `not recorded; identify this run by commit`.
+Run: https://github.com/c4punks/CWIST/actions/runs/35411348870. Timestamp: `2026-09-19T01:13:16.843679+00:00`.
 
 Latency columns use the **wrk corrected distribution**. Both memory columns are process-group end samples, not peaks. Group RSS sums each process's RSS, so a page shared between worker processes is counted once per process; Group PSS divides each shared page by its mapper count, so it is the column to compare against a single-process server. Context switches cover matching thread identities only; N/A means unavailable.
 
 | Profile | Req/s | Mean ms | P99.999 ms | Group PSS MiB | Group RSS MiB | Context-switch delta |
 |---|---:|---:|---:|---:|---:|---:|
-| CWIST classic | 124,152 | 1.845 | 16.762 | 50.27 | 60.55 | N/A |
-| CWIST C1M | 143,838 | 3.034 | 24.913 | 19.80 | 33.19 | 320,622 |
-| CWIST C1M arena_max=1 | 144,301 | 3.038 | 24.896 | 26.26 | 39.20 | 315,657 |
-| CWIST C1M drain_chunk=8 | 143,910 | 3.065 | 23.947 | 19.64 | 32.62 | 318,063 |
-| CWIST C1M PUBLIC_FIXED (opt-in) | 143,600 | 2.943 | 23.226 | 16.72 | 29.45 | 282,744 |
-| Axum | 120,726 | 3.245 | 16.524 | 14.06 | 16.14 | 190,227 |
-| Gin | 91,579 | 5.491 | 61.177 | 27.57 | 28.99 | 300,927 |
-| Spring Boot | 58,026 | 6.830 | 58.317 | 1,299.51 | 1,302.38 | N/A |
+| CWIST classic | 128,067 | 1.784 | 21.421 | 47.20 | 58.31 | N/A |
+| CWIST C1M | 152,929 | 2.863 | 24.546 | 19.07 | 32.07 | 325,218 |
+| CWIST C1M arena_max=1 | 155,070 | 2.869 | 26.994 | 24.28 | 37.21 | 326,293 |
+| CWIST C1M drain_chunk=8 | 154,099 | 2.861 | 24.652 | 19.73 | 33.21 | 326,728 |
+| CWIST C1M PUBLIC_FIXED (opt-in) | 151,570 | 2.966 | 24.749 | 16.86 | 30.33 | 330,508 |
+| Axum | 130,129 | 3.011 | 13.836 | 14.03 | 16.34 | 202,276 |
+| Gin | 95,255 | 5.411 | 68.606 | 27.33 | 28.88 | N/A |
+| Spring Boot | 62,641 | 6.308 | 54.617 | 1,282.99 | 1,285.87 | N/A |
 
 Main profile: `wrk -t12 -c400 -d10s`, after a discarded 10s warmup.
 
 ### Separate tuned profile
 
 `wrk -t4 -c100 -d10s`, after a discarded 10s warmup. Do not compare these rows as equal-load results against the main table.
-- CWIST classic: 116,556 req/s; mean 0.530 ms; corrected P99.999 8.169 ms.
-- Axum: 125,931 req/s; mean 0.751 ms; corrected P99.999 6.578 ms.
-- Spring Boot: 56,889 req/s; mean 1.820 ms; corrected P99.999 23.451 ms.
+- CWIST classic: 126,956 req/s; mean 0.495 ms; corrected P99.999 6.657 ms.
+- Axum: 136,050 req/s; mean 0.692 ms; corrected P99.999 5.163 ms.
+- Spring Boot: 63,332 req/s; mean 1.644 ms; corrected P99.999 28.145 ms.
 
 Spring environment: `{'java_version': 'openjdk version "25.0.4.1" 2026-08-18 LTS', 'spring_boot_version': '3.2.3', 'stack': 'Spring WebFlux + Reactor Netty on native epoll (G1GC, JDK 25 Leyden AOT, virtual threads disabled)', 'jvm_opts': '-Xms1024m -Xmx1024m   -XX:+UseG1GC -XX:GCTimeRatio=99 -XX:G1HeapRegionSize=1m   -XX:+AlwaysPreTouch   -XX:CompileThreshold=1500 -XX:CICompilerCount=4   -Djava.security.egd=file:/dev/urandom   -Djava.net.preferIPv4Stack=true   -Dio.netty.allocator.type=pooled   -Dio.netty.leakDetection.level=disabled   -Dio.netty.buffer.checkBounds=false   -Dio.netty.buffer.checkAccessible=false   -Dreactor.netty.ioWorkerCount=4   -Xlog:gc*:file=/tmp/spring_gc.log:time,uptime,level,tags -XX:+AOTClassLinking -XX:AOTCache=/tmp/spring_bench/app.aot (JEP 483 + JEP 514 single-step AOT)', 'virtual_threads': False, 'aot_cache': 'JDK 25 Leyden AOT (-XX:AOTCache; trained before measurement)'}`
 
@@ -186,7 +186,7 @@ GitHub hands out a different CPU model per run, which moves these numbers more t
 | Runner CPU | Runs | CWIST classic ms | CWIST C1M ms | Axum ms | CWIST C1M req/s | Axum req/s |
 |---|---:|---:|---:|---:|---:|---:|
 | AMD EPYC 7763 64-Core Processor | 8 | 2.05 | 3.07 | 3.51 | 139,721 | 112,028 |
-| AMD EPYC 9V74 80-Core Processor | 6 | 1.88 | 3.04 | 3.25 | 144,158 | 120,660 |
+| AMD EPYC 9V74 80-Core Processor | 7 | 1.87 | 3.03 | 3.24 | 144,478 | 120,726 |
 | AMD EPYC 9V45 96-Core Processor | 2 | 1.27 | 2.35 | 2.17 | 220,563 | 183,794 |
 | INTEL(R) XEON(R) PLATINUM 8573C | 1 | 1.20 | 2.21 | 2.03 | 239,798 | 194,668 |
 | Intel(R) Xeon(R) 6973P-C | 1 | 0.98 | 1.91 | 1.62 | 308,152 | 245,568 |
@@ -198,8 +198,8 @@ _Methodology, JVM options, and fairness settings: [docs/webserver-benchmark.md](
 <!-- TUNED_BENCHMARK:START -->
 **Tuned low-latency run (wrk -t4 -c100 -d10s (after 10s warmup, warmup discarded)), CWIST vs Axum on identical concurrency:**
 
-- **CWIST**: 116,556 req/s at 0.53ms average latency (P50 0.41ms, P90 0.98ms, P99 2.36ms)
-- **Axum**: 125,931 req/s at 0.75ms average latency (P50 0.69ms, P90 1.27ms, P99 2.38ms), same binary as the main run above
+- **CWIST**: 126,956 req/s at 0.49ms average latency (P50 0.38ms, P90 0.90ms, P99 2.38ms)
+- **Axum**: 136,050 req/s at 0.69ms average latency (P50 0.61ms, P90 1.23ms, P99 2.31ms), same binary as the main run above
 
 These runs use a different concurrency budget from the main table. They do not establish a causal scheduling explanation or a universal tail-latency improvement.
 <!-- TUNED_BENCHMARK:END -->
