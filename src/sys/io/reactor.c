@@ -24,6 +24,7 @@
 
 #define _POSIX_C_SOURCE 200809L
 #include <cwist/sys/io/reactor.h>
+#include "reactor_rx.h"
 #include <cwist/core/mem/alloc.h>
 #include <cwist/sys/app/shutdown.h>
 #include <unistd.h>
@@ -201,6 +202,9 @@ struct cwist_reactor {
     uint32_t sq_unsubmitted;
     pthread_t owner;
     bool dispatching;
+    /* RX-uring completion handler for tagged (low-bit set) RECV SQEs;
+     * registered by the HTTP layer once per worker reactor. */
+    cwist_rx_cb_t rx_cb;
     /* Per-request latency probe recorder (issue #166). Owner-thread only, so
      * plain counters suffice. Two histograms: time from (re-)arm to dispatch
      * (queue_delay) and callback runtime (svc). */
@@ -299,6 +303,77 @@ static void latency_probe_dump(const cwist_reactor_t *reactor) {
                         (int)getpid(), name, (unsigned long long)b[i]);
         }
     }
+}
+
+/* --- RX-uring receive path (issue #179) ------------------------------------
+ * CWIST_RX_URING: unset = auto (enabled whenever the reactor has a real
+ * io_uring ring), "1" = force attempt, "0" = force off (legacy POLL path).
+ * Cached after the first read like the other env knobs in this file. */
+static bool uring_submit(cwist_reactor_t *reactor, struct io_uring_sqe *out_sqe);
+
+bool cwist_rx_uring_env_enabled(void) {
+    static _Atomic int cached = -1;
+    int v = atomic_load_explicit(&cached, memory_order_relaxed);
+    if (v < 0) {
+        const char *s = getenv("CWIST_RX_URING");
+        v = (s && strcmp(s, "0") == 0) ? 0 : 1;
+        atomic_store_explicit(&cached, v, memory_order_relaxed);
+    }
+    return v == 1;
+}
+
+bool cwist_reactor_rx_supported(const cwist_reactor_t *reactor) {
+    return reactor && !reactor->impl.use_epoll && cwist_rx_uring_env_enabled();
+}
+
+void cwist_reactor_set_rx_cb(cwist_reactor_t *reactor, cwist_rx_cb_t cb) {
+    if (reactor) reactor->rx_cb = cb;
+}
+
+bool cwist_reactor_recv_arm(cwist_reactor_t *reactor, int fd, void *buf, unsigned len, void *conn,
+                            uint64_t *armed_ns) {
+    if (!reactor || fd < 0 || !buf || len == 0 || !conn) return false;
+    if (!cwist_reactor_rx_supported(reactor)) return false;
+    /* Tag-bit discipline: ev_ctx pointers come from cwist_alloc (malloc
+     * backed, at least max_align_t aligned), so the low bit is always zero
+     * there and one here.  Refuse a misaligned connection pointer rather
+     * than aliasing into the ev_ctx namespace. */
+    if (((uintptr_t)conn & 1u) != 0) return false;
+
+    struct io_uring_sqe sqe;
+    memset(&sqe, 0, sizeof(sqe));
+    sqe.opcode = IORING_OP_RECV;
+    sqe.fd = fd;
+    sqe.addr = (uint64_t)(uintptr_t)buf;
+    sqe.len = len;
+    sqe.user_data = (uint64_t)(uintptr_t)conn | 1u;
+    if (armed_ns && latency_probe_enabled()) {
+        struct timespec ts;
+        clock_gettime(CLOCK_MONOTONIC, &ts);
+        *armed_ns = (uint64_t)ts.tv_sec * 1000000000ull + (uint64_t)ts.tv_nsec;
+    }
+
+    /* Run-thread re-arms defer into the batch flush; everything else
+     * submits immediately so remote workers wake.  Data SQEs carry no ev_ctx
+     * slot, so deferred_ctxs[] holds NULL for them and flush_deferred knows
+     * the connection pointer rides in the tagged user_data. */
+    if (reactor->dispatching && pthread_equal(pthread_self(), reactor->owner) &&
+        reactor->deferred_n <
+            (uint32_t)(sizeof(reactor->deferred_sqes) / sizeof(reactor->deferred_sqes[0]))) {
+        uint32_t slot = reactor->deferred_n++;
+        reactor->deferred_sqes[slot] = sqe;
+        reactor->deferred_ctxs[slot] = NULL;
+        return true;
+    }
+    return uring_submit(reactor, &sqe);
+}
+
+void cwist_reactor_probe_record(cwist_reactor_t *reactor, bool queue, uint64_t sample_us) {
+    if (!reactor || !latency_probe_enabled()) return;
+    int phase = queue ? LATENCY_PROBE_QUEUE : LATENCY_PROBE_SVC;
+    latency_probe_record(reactor->probe[phase].buckets, &reactor->probe[phase].count,
+                         &reactor->probe[phase].sum_us, &reactor->probe[phase].max_us,
+                         &reactor->probe[phase].over_5ms, sample_us);
 }
 #endif
 
@@ -634,8 +709,14 @@ static void flush_deferred(cwist_reactor_t *reactor) {
             if (getenv("CWIST_ASYNC_DEBUG")) {
                 fprintf(stderr, "[reactor] deferred submit failed fd=%d; closing\n", (int)sqe->fd);
             }
-            close((int)sqe->fd);
-            free_reactor_ctx(reactor, ev_ctx);
+            if (ev_ctx) {
+                close((int)sqe->fd);
+                free_reactor_ctx(reactor, ev_ctx);
+            } else if (reactor->rx_cb) {
+                /* Tagged RECV SQE: the connection owns the fd and shell, so
+                 * report the cancellation and let its handler clean up. */
+                reactor->rx_cb((void *)(sqe->user_data & ~(uint64_t)1u), -ECANCELED);
+            }
         }
     }
 }
@@ -886,39 +967,52 @@ void cwist_reactor_run(cwist_reactor_t *reactor) {
             uint32_t since_drain = 0;
             while (head != tail) {
                 struct io_uring_cqe *cqe = &reactor->impl.cqes[head & *reactor->impl.cq_ring_mask];
-                reactor_event_ctx_t *ev_ctx = (reactor_event_ctx_t *)cqe->user_data;
-                if (ev_ctx) {
-                    if (cqe->res >= 0) {
-                        if (latency_probe_enabled()) {
-                            struct timespec ts;
-                            clock_gettime(CLOCK_MONOTONIC, &ts);
-                            uint64_t t0 =
-                                (uint64_t)ts.tv_sec * 1000000000ull + (uint64_t)ts.tv_nsec;
-                            /* armed_ns == 0 means the slot was armed before
-                             * the probe was enabled; fold it into the first
-                             * bucket rather than producing a garbage delay. */
-                            uint64_t delay_ns = ev_ctx->armed_ns ? t0 - ev_ctx->armed_ns : 0;
-                            ev_ctx->cb(ev_ctx->fd, ev_ctx->ctx);
-                            clock_gettime(CLOCK_MONOTONIC, &ts);
-                            uint64_t t1 =
-                                (uint64_t)ts.tv_sec * 1000000000ull + (uint64_t)ts.tv_nsec;
-                            latency_probe_record(reactor->probe[LATENCY_PROBE_QUEUE].buckets,
-                                                 &reactor->probe[LATENCY_PROBE_QUEUE].count,
-                                                 &reactor->probe[LATENCY_PROBE_QUEUE].sum_us,
-                                                 &reactor->probe[LATENCY_PROBE_QUEUE].max_us,
-                                                 &reactor->probe[LATENCY_PROBE_QUEUE].over_5ms,
-                                                 delay_ns / 1000);
-                            latency_probe_record(reactor->probe[LATENCY_PROBE_SVC].buckets,
-                                                 &reactor->probe[LATENCY_PROBE_SVC].count,
-                                                 &reactor->probe[LATENCY_PROBE_SVC].sum_us,
-                                                 &reactor->probe[LATENCY_PROBE_SVC].max_us,
-                                                 &reactor->probe[LATENCY_PROBE_SVC].over_5ms,
-                                                 (t1 - t0) / 1000);
-                        } else {
-                            ev_ctx->cb(ev_ctx->fd, ev_ctx->ctx);
-                        }
+                uint64_t user_data = cqe->user_data;
+                if (user_data & 1u) {
+                    /* Tagged data-path SQE (RX-uring RECV): the connection
+                     * pointer rides in the remaining bits.  Dispatch on any
+                     * res, including negative ones: -EAGAIN is the POLL
+                     * fallback signal and 0 is EOF.  Latency probe samples
+                     * are recorded by the handler itself (it owns the arm
+                     * timestamp), not by the ev_ctx wrapper below. */
+                    if (reactor->rx_cb) {
+                        reactor->rx_cb((void *)(user_data & ~(uint64_t)1u), cqe->res);
                     }
-                    free_reactor_ctx(reactor, ev_ctx);
+                } else {
+                    reactor_event_ctx_t *ev_ctx = (reactor_event_ctx_t *)user_data;
+                    if (ev_ctx) {
+                        if (cqe->res >= 0) {
+                            if (latency_probe_enabled()) {
+                                struct timespec ts;
+                                clock_gettime(CLOCK_MONOTONIC, &ts);
+                                uint64_t t0 =
+                                    (uint64_t)ts.tv_sec * 1000000000ull + (uint64_t)ts.tv_nsec;
+                                /* armed_ns == 0 means the slot was armed before
+                                 * the probe was enabled; fold it into the first
+                                 * bucket rather than producing a garbage delay. */
+                                uint64_t delay_ns = ev_ctx->armed_ns ? t0 - ev_ctx->armed_ns : 0;
+                                ev_ctx->cb(ev_ctx->fd, ev_ctx->ctx);
+                                clock_gettime(CLOCK_MONOTONIC, &ts);
+                                uint64_t t1 =
+                                    (uint64_t)ts.tv_sec * 1000000000ull + (uint64_t)ts.tv_nsec;
+                                latency_probe_record(reactor->probe[LATENCY_PROBE_QUEUE].buckets,
+                                                     &reactor->probe[LATENCY_PROBE_QUEUE].count,
+                                                     &reactor->probe[LATENCY_PROBE_QUEUE].sum_us,
+                                                     &reactor->probe[LATENCY_PROBE_QUEUE].max_us,
+                                                     &reactor->probe[LATENCY_PROBE_QUEUE].over_5ms,
+                                                     delay_ns / 1000);
+                                latency_probe_record(reactor->probe[LATENCY_PROBE_SVC].buckets,
+                                                     &reactor->probe[LATENCY_PROBE_SVC].count,
+                                                     &reactor->probe[LATENCY_PROBE_SVC].sum_us,
+                                                     &reactor->probe[LATENCY_PROBE_SVC].max_us,
+                                                     &reactor->probe[LATENCY_PROBE_SVC].over_5ms,
+                                                     (t1 - t0) / 1000);
+                            } else {
+                                ev_ctx->cb(ev_ctx->fd, ev_ctx->ctx);
+                            }
+                        }
+                        free_reactor_ctx(reactor, ev_ctx);
+                    }
                 }
                 head++;
                 if (drain_chunk && ++since_drain >= drain_chunk && head != tail) {

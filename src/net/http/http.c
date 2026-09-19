@@ -14,6 +14,7 @@
 #include <cwist/core/mem/arena.h>
 #include <cwist/sys/app/shutdown.h>
 #include <cwist/sys/io/reactor.h>
+#include "../../sys/io/reactor_rx.h"
 #include <cwist/net/http/writer_fast.h>
 #include <cwist/core/log.h>
 #include <cwist/sys/metrics/metrics.h>
@@ -282,6 +283,11 @@ typedef struct {
 
 static http_dynamic_pool_t g_dyn_pool;
 
+/* RX-uring RECV completion entry for the async connection path; defined
+ * with the async helpers below.  Registered as the reactor's rx_cb in
+ * cwist_http_pool_init. */
+static void http_rx_recv_cb(void *conn_ptr, int res);
+
 static void *http_dynamic_worker_thread(void *arg) {
     (void)arg;
     while (atomic_load_explicit(&g_dyn_pool.running, memory_order_acquire)) {
@@ -422,6 +428,9 @@ int cwist_http_pool_init(void) {
         for (int i = 0; i < g_http_thread_count; i++) {
             g_workers[i].reactor = cwist_reactor_create();
             if (!g_workers[i].reactor) return -1;
+            /* RX-uring receive path: route tagged RECV completions into the
+             * HTTP connection state machine (no-op where unsupported). */
+            cwist_reactor_set_rx_cb(g_workers[i].reactor, http_rx_recv_cb);
             g_workers[i].worker_id = (uint32_t)i;
             if (pthread_create(&g_workers[i].thread, NULL, http_pool_worker, &g_workers[i]) != 0) {
                 return -1;
@@ -576,6 +585,10 @@ typedef struct {
     cwist_http_async_conn_t *conn;
 } http_async_ctx_t;
 
+/* Defined below; referenced earlier by the RX-uring helpers. */
+static void http_async_event_cb(int fd, void *ctx);
+static bool http_async_stash_grow(cwist_http_async_conn_t *conn, size_t need);
+
 static uint32_t cwist_http_keep_alive_timeout_sec(void) {
     static int cached_timeout = -1;
     if (cached_timeout < 0) {
@@ -602,22 +615,56 @@ static void http_async_conn_release(cwist_http_async_conn_t *conn) {
     atomic_fetch_sub_explicit(&g_http_inflight, 1, memory_order_release);
 }
 
-static void http_async_event_cb(int fd, void *ctx) {
-    http_async_ctx_t *c = (http_async_ctx_t *)ctx;
-    cwist_http_async_conn_t *conn = c->conn;
-    cwist_async_handler_t handler = c->handler;
+/* Minimum free stash bytes required before arming a RECV SQE.  Below this
+ * floor the legacy POLL + recv-drain path runs the stash growth instead. */
+#define CWIST_RX_REARM_MIN_AVAIL 1024
 
-    uint32_t now = cwist_fast_monotonic_sec();
-    uint32_t timeout_sec = cwist_http_keep_alive_timeout_sec();
-
-    /* Idle connection reaper: close keep-alive sockets that exceeded timeout */
-    if (conn->last_active_sec > 0 && (now - conn->last_active_sec) > timeout_sec) {
-        close(fd);
-        http_async_conn_release(conn);
-        return;
+/* Arm the connection's next receive wait.  RX-uring first when the reactor
+ * has a real io_uring ring: one RECV SQE into rbuf + len whose completion
+ * drives the state machine, replacing the one-shot POLL + recv() pair.
+ * Falls back to the legacy one-shot POLL on unsupported reactors, low stash
+ * headroom, or submission failure (byte-identical legacy behavior).
+ *
+ * Wait-state invariant (owner thread only): at most one RECV SQE per
+ * connection at a time, and a POLL is armed only when no RECV is in flight,
+ * so the two can never double-dispatch.  The stash buffer never moves or is
+ * consumed while a RECV referencing it is in flight; growth and compaction
+ * happen only after the completion lands (rx_recv_inflight == false). */
+static bool http_async_arm_wait(int fd, cwist_http_async_conn_t *conn,
+                                cwist_async_handler_t handler, void *ctx,
+                                cwist_reactor_t *reactor) {
+    http_async_ctx_t next = {
+        .client_fd = fd,
+        .handler = handler,
+        .ctx = ctx,
+        .reactor = reactor,
+        .conn = conn,
+    };
+    if (cwist_reactor_rx_supported(reactor) && !conn->peer_eof && !conn->rx_recv_inflight &&
+        !conn->rx_prefers_poll) {
+        if (conn->cap == 0 && !http_async_stash_grow(conn, CWIST_HTTP_READ_BUFFER_SIZE)) {
+            /* Stash allocation failed: the legacy fill path retries growth
+             * when POLL fires and closes on failure, matching today. */
+        } else if (conn->cap > 0) {
+            size_t avail = conn->cap - 1 - conn->len;
+            if (avail >= CWIST_RX_REARM_MIN_AVAIL &&
+                cwist_reactor_recv_arm(reactor, fd, conn->rbuf + conn->len, (unsigned)avail, conn,
+                                       &conn->rx_armed_ns)) {
+                conn->rx_recv_inflight = true;
+                return true;
+            }
+        }
+        /* Low headroom or arm failure: fall through to the POLL wait. */
     }
-    conn->last_active_sec = now;
+    return cwist_reactor_add(reactor, fd, http_async_event_cb, &next, sizeof(next));
+}
 
+/* Run the connection handler and act on its verdict.  Shared by the POLL
+ * entry (http_async_event_cb) and the RX-uring RECV completion entry
+ * (http_rx_recv_cb).  Takes over fd/conn ownership in every outcome. */
+static void http_async_dispatch(int fd, cwist_http_async_conn_t *conn,
+                                cwist_async_handler_t handler, void *ctx,
+                                cwist_reactor_t *reactor) {
     cwist_async_action_t action = handler(fd, conn);
 
     if (action == CWIST_ASYNC_DEFER) {
@@ -652,14 +699,7 @@ static void http_async_event_cb(int fd, void *ctx) {
         conn->cap = 0;
     }
 
-    http_async_ctx_t next = {
-        .client_fd = fd,
-        .handler = handler,
-        .ctx = c->ctx,
-        .reactor = c->reactor,
-        .conn = conn,
-    };
-    if (!cwist_reactor_add(c->reactor, fd, http_async_event_cb, &next, sizeof(next))) {
+    if (!http_async_arm_wait(fd, conn, handler, ctx, reactor)) {
         if (getenv("CWIST_ASYNC_DEBUG")) {
             static _Atomic long dbg_rearm_fail;
             long n = atomic_fetch_add(&dbg_rearm_fail, 1) + 1;
@@ -669,6 +709,125 @@ static void http_async_event_cb(int fd, void *ctx) {
         close(fd);
         http_async_conn_release(conn);
     }
+}
+
+/* RX-uring RECV completion entry (see reactor_rx.h for the SQE namespace).
+ * The completion IS the readiness signal: positive res staged bytes into the
+ * stash, -EAGAIN means the POLL fallback takes over the wait, 0 is EOF, and
+ * any other negative res is a recv error.  Runs on the reactor owner thread
+ * while dispatching, so re-arms made here join the deferred SQE batch. */
+static void http_rx_recv_cb(void *conn_ptr, int res) {
+    cwist_http_async_conn_t *conn = (cwist_http_async_conn_t *)conn_ptr;
+    conn->rx_recv_inflight = false;
+
+    if (res == -ECANCELED) {
+        /* The deferred submission failed (SQ wedged) or the ring tore down;
+         * legacy arm-failure semantics: close fd and release the shell. */
+        close(conn->fd);
+        http_async_conn_release(conn);
+        return;
+    }
+    if (res == 0) {
+        /* EOF: do not re-arm; the handler drains complete buffered requests
+         * and then closes through the existing peer_eof path. */
+        conn->peer_eof = true;
+    } else if (res < 0 && res != -EAGAIN) {
+        close(conn->fd);
+        http_async_conn_release(conn);
+        return;
+    } else if (res > 0) {
+        conn->len += (size_t)res;
+        conn->rbuf[conn->len] = '\0';
+        conn->virgin = false;
+    }
+    /* res == -EAGAIN: nothing staged; the POLL fallback below resumes the
+     * wait without running the handler on an empty stash. */
+
+    /* Latency probe: rx_armed_ns is only written while the probe is enabled,
+     * so a zero value means the probe is off and both clock reads below are
+     * skipped. */
+    uint64_t t0 = 0;
+    if (conn->rx_armed_ns) {
+        struct timespec ts;
+        clock_gettime(CLOCK_MONOTONIC, &ts);
+        t0 = (uint64_t)ts.tv_sec * 1000000000ull + (uint64_t)ts.tv_nsec;
+    }
+    conn->last_active_sec = cwist_fast_monotonic_sec();
+
+    if (res == -EAGAIN) {
+        /* Data not ready: hand the wait to the legacy one-shot POLL.  Arm
+         * POLL directly (NOT http_async_arm_wait, which is RECV-first and
+         * would immediately re-arm a RECV, livelocking on -EAGAIN).  When
+         * POLL fires, http_async_event_cb re-arms a RECV and the completion
+         * drives from there.
+         *
+         * Learn: this client sends one request per idle period (wrk-style
+         * keepalive), so an armed RECV just burns an SQE before the POLL
+         * fallback every round.  Prefer POLL until a RECV actually stages
+         * bytes again (pipelining detected), keeping the steady-state op
+         * count identical to the legacy path. */
+        conn->rx_prefers_poll = true;
+        http_async_ctx_t next = {
+            .client_fd = conn->fd,
+            .handler = conn->handler,
+            .ctx = conn->user_ctx,
+            .reactor = conn->reactor,
+            .conn = conn,
+        };
+        if (!cwist_reactor_add(conn->reactor, conn->fd, http_async_event_cb, &next, sizeof(next))) {
+            close(conn->fd);
+            http_async_conn_release(conn);
+        }
+        return;
+    }
+
+    /* rx_data_ready tells cwist_http_async_conn_fill the bytes are already
+     * in the stash (or EOF is already recorded); never recv() on top of a
+     * RECV completion.  Bytes flowed: a pipelining client gets the SQE
+     * path again. */
+    conn->rx_data_ready = true;
+    conn->rx_prefers_poll = false;
+    http_async_dispatch(conn->fd, conn, conn->handler, conn->user_ctx, conn->reactor);
+
+    if (conn->rx_armed_ns) {
+        uint64_t queue_us = (t0 - conn->rx_armed_ns) / 1000;
+        struct timespec ts;
+        clock_gettime(CLOCK_MONOTONIC, &ts);
+        uint64_t t1 = (uint64_t)ts.tv_sec * 1000000000ull + (uint64_t)ts.tv_nsec;
+        cwist_reactor_probe_record(conn->reactor, true, queue_us);
+        cwist_reactor_probe_record(conn->reactor, false, (t1 - t0) / 1000);
+    }
+}
+
+static void http_async_event_cb(int fd, void *ctx) {
+    http_async_ctx_t *c = (http_async_ctx_t *)ctx;
+    cwist_http_async_conn_t *conn = c->conn;
+    cwist_async_handler_t handler = c->handler;
+
+    uint32_t now = cwist_fast_monotonic_sec();
+    uint32_t timeout_sec = cwist_http_keep_alive_timeout_sec();
+
+    /* Idle connection reaper: close keep-alive sockets that exceeded timeout */
+    if (conn->last_active_sec > 0 && (now - conn->last_active_sec) > timeout_sec) {
+        close(fd);
+        http_async_conn_release(conn);
+        return;
+    }
+    conn->last_active_sec = now;
+
+    if (cwist_reactor_rx_supported(c->reactor) && !conn->rx_recv_inflight && !conn->peer_eof &&
+        conn->len == 0 && !conn->rx_prefers_poll) {
+        /* POLL is only a readiness trigger on the RX path: with an empty
+         * stash the wait moves to a RECV SQE whose completion drives the
+         * state machine.  (POLL gets armed only by the -EAGAIN and
+         * low-headroom fallbacks.)  Buffered bytes (continuation posts,
+         * parked-writer resumes) must be served, not waited on, so they
+         * fall through to the legacy dispatch below.  If the arm fails,
+         * fall through to the legacy inline drain. */
+        if (http_async_arm_wait(fd, conn, handler, c->ctx, c->reactor)) return;
+    }
+
+    http_async_dispatch(fd, conn, handler, c->ctx, c->reactor);
 }
 
 typedef struct {
@@ -740,7 +899,11 @@ bool cwist_http_async_rearm(int client_fd, cwist_reactor_t *reactor,
         conn->rbuf = NULL;
         conn->cap = 0;
     }
-    if (!cwist_reactor_add(reactor, client_fd, http_async_event_cb, &next, sizeof(next))) {
+    /* RX-uring: RECV-first re-arm when the ring supports it (peer_eof was
+     * handled above, so the wait is a plain receive wait).  arm_wait falls
+     * back to the legacy one-shot POLL on unsupported reactors or arm
+     * failure. */
+    if (!http_async_arm_wait(client_fd, conn, conn->handler, conn->user_ctx, reactor)) {
         close(client_fd);
         http_async_conn_release(conn);
         return false;
@@ -797,26 +960,22 @@ bool cwist_http_pool_submit_async(int client_fd, cwist_async_handler_t handler, 
     conn->reactor = w->reactor;
     conn->handler = handler;
 
-    http_async_ctx_t c = {
-        .client_fd = client_fd,
-        .handler = handler,
-        .ctx = ctx,
-        .reactor = w->reactor,
-        .conn = conn,
-    };
-    if (!cwist_reactor_add(w->reactor, client_fd, http_async_event_cb, &c, sizeof(c))) {
-        if (getenv("CWIST_ASYNC_DEBUG")) {
-            static _Atomic long dbg_submit_fail;
-            long n = atomic_fetch_add(&dbg_submit_fail, 1) + 1;
-            if (n <= 5 || n % 10000 == 0)
-                fprintf(stderr, "[async] submit-add failed fd=%d total=%ld worker=%zu\n", client_fd,
-                        n, worker_idx);
-        }
-        http_async_conn_release(conn);
-        close(client_fd);
-        return false;
+    /* RX-uring: when the worker reactor has a real io_uring ring, the first
+     * receive wait is a RECV SQE into the (freshly grown) stash whose
+     * completion drives the state machine; on any arm failure the legacy
+     * one-shot POLL is armed instead. */
+    if (http_async_arm_wait(client_fd, conn, handler, ctx, w->reactor)) return true;
+
+    if (getenv("CWIST_ASYNC_DEBUG")) {
+        static _Atomic long dbg_submit_fail;
+        long n = atomic_fetch_add(&dbg_submit_fail, 1) + 1;
+        if (n <= 5 || n % 10000 == 0)
+            fprintf(stderr, "[async] submit-add failed fd=%d total=%ld worker=%zu\n", client_fd, n,
+                    worker_idx);
     }
-    return true;
+    http_async_conn_release(conn);
+    close(client_fd);
+    return false;
 }
 
 /* --- End Async Connection Path --- */
@@ -3368,6 +3527,11 @@ cwist_http_request *cwist_http_receive_request(int client_fd, char *read_buf, si
 
 /* Grow the recv stash.  Returns false when the hard cap is reached. */
 static bool http_async_stash_grow(cwist_http_async_conn_t *conn, size_t need) {
+    /* RX-uring invariant: the stash buffer must not move while a RECV SQE
+     * references it.  Growth only happens while serving (in-flight RECV
+     * cleared), so this is defensive: fail closed rather than relocate the
+     * buffer under the kernel's DMA. */
+    if (conn->rx_recv_inflight) return false;
     if (need > CWIST_ASYNC_STASH_MAX) return false;
     if (conn->cap >= need) return true;
     size_t cap = conn->cap ? conn->cap : CWIST_HTTP_READ_BUFFER_SIZE;
@@ -3397,6 +3561,13 @@ static bool http_async_stash_grow(cwist_http_async_conn_t *conn, size_t need) {
  */
 int cwist_http_async_conn_fill(cwist_http_async_conn_t *conn) {
     if (conn->peer_eof) return 0;
+    if (conn->rx_recv_inflight || conn->rx_data_ready) {
+        /* RX-uring path: the in-flight RECV SQE owns the socket read (never
+         * recv() on top of it), and a completed RECV already staged its bytes
+         * (or recorded EOF) into the stash.  Nothing to drain here. */
+        conn->rx_data_ready = false;
+        return 0;
+    }
     for (;;) {
         if (conn->len + 1 >= conn->cap && !http_async_stash_grow(conn, conn->len + 4096)) {
             return -1;

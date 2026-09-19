@@ -422,6 +422,22 @@ typedef struct cwist_http_async_conn {
     cwist_reactor_t *reactor; /* Owning reactor (deferred-response completion target). */
     cwist_async_handler_t handler; /* Connection handler, reused for re-arm after a defer. */
     bool peer_eof; /* Read side closed; drain complete buffered requests. */
+    /* RX-uring receive path (Linux reactors with a real io_uring ring only;
+     * unused elsewhere).  Wait-state discipline, all transitions on the
+     * reactor owner thread: at most one of {RECV SQE in flight, one-shot
+     * POLL armed} at any time, or NONE while buffered work is served.
+     * While rx_recv_inflight is true the stash buffer must not move or be
+     * consumed: the in-flight SQE references rbuf + len. */
+    bool rx_recv_inflight; /* RECV SQE armed on the reactor ring. */
+    bool rx_data_ready;    /* RECV completion already staged bytes into the stash. */
+    /* Learned mode: set when an armed RECV completed -EAGAIN (the client
+     * sends one request per idle period, so arming RECV first just burns an
+     * SQE before the POLL fallback).  Cleared whenever a RECV stages bytes,
+     * so pipelining clients keep the SQE path.  While set, waits go straight
+     * to the legacy POLL, making the steady-state op count identical to the
+     * legacy path for non-pipelining clients. */
+    bool rx_prefers_poll;
+    uint64_t rx_armed_ns;  /* Latency-probe arm timestamp of the in-flight RECV. */
 } cwist_http_async_conn_t;
 
 /* Re-arm a connection after a deferred response completed on the reactor
