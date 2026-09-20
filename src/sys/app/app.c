@@ -3802,31 +3802,44 @@ static void *h3_server_thread_func(void *arg) {
  *
  * Profiles:
  *   performance - maximize request throughput: C1M enabled, glibc arena cap,
- *                 tighter reactor drain chunk (8 events between post drains).
- *   lowmem      - minimize resident memory: C1M enabled, glibc arena capped.
+ *                 tighter reactor drain chunk (8 events between post drains),
+ *                 larger per-turn HTTP batch so a hot connection yields less.
+ *   lowmem      - minimize resident memory: C1M enabled, glibc arena capped,
+ *                 worker count capped at 2 so total RSS scales with fewer
+ *                 processes (throughput trades off against memory).
  *   lowlat      - minimize per-request latency: classic thread-pool mode,
  *                 sub-millisecond median at moderate concurrency.
- *   default     - no-op; leaves every env var at its built-in default.
+ *   default     - C1M enabled with reactor drain chunk 8; also applied when
+ *                 CWIST_PROFILE is unset, so the built-in app baseline uses
+ *                 the tighter drain chunk instead of the reactor's 64-event
+ *                 fallback. Explicit env vars still win (overwrite=0).
  */
 void cwist_apply_profile(void) {
     const char *profile = getenv("CWIST_PROFILE");
-    if (!profile || profile[0] == '\0' || strcmp(profile, "default") == 0)
+    if (!profile || profile[0] == '\0' || strcmp(profile, "default") == 0) {
+        setenv("CWIST_C1M_MODE", "1", 0);
+        setenv("CWIST_REACTOR_DRAIN_CHUNK", "8", 0);
         return;
+    }
 
     if (strcmp(profile, "performance") == 0) {
         setenv("CWIST_C1M_MODE", "1", 0);
         setenv("CWIST_MALLOC_ARENA_MAX", "1", 0);
         setenv("CWIST_REACTOR_DRAIN_CHUNK", "8", 0);
+        setenv("CWIST_HTTP_BATCH", "64", 0);
         printf("[CWIST] profile: performance\n");
     } else if (strcmp(profile, "lowmem") == 0) {
         setenv("CWIST_C1M_MODE", "1", 0);
         setenv("CWIST_MALLOC_ARENA_MAX", "1", 0);
+        setenv("CWIST_WORKERS", "2", 0);
         printf("[CWIST] profile: lowmem\n");
     } else if (strcmp(profile, "lowlat") == 0) {
         setenv("CWIST_C1M_MODE", "0", 0);
         printf("[CWIST] profile: lowlat\n");
     } else {
         fprintf(stderr, "[CWIST] unknown CWIST_PROFILE value \"%s\"; using defaults\n", profile);
+        setenv("CWIST_C1M_MODE", "1", 0);
+        setenv("CWIST_REACTOR_DRAIN_CHUNK", "8", 0);
     }
 }
 

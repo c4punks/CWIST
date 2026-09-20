@@ -1,8 +1,11 @@
 # Cooperative queuing in the C1M reactor's CQE drain (issue #25)
 
 Status: **implemented, on by default** (`CWIST_REACTOR_DRAIN_CHUNK`,
-`src/sys/io/reactor.c`). Unset defaults to 64; set to `0` to restore
-legacy behavior (no mid-batch drain).
+`src/sys/io/reactor.c`). The reactor's built-in fallback is 64 when the
+variable is unset, but `cwist_apply_profile()` (called from
+`cwist_app_listen()` for every `CWIST_PROFILE`, including the default)
+sets it to 8, so app-level defaults use the tighter chunk. Set to `0` to
+restore legacy behavior (no mid-batch drain).
 
 ## Background
 
