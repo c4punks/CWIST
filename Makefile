@@ -210,7 +210,9 @@ SRCS = src/core/sstring/sstring.c \
        src/net/http/writer_fast.c \
        src/sys/io/uring_sqpoll.c \
        src/net/http/async_server.c \
-       src/net/http/async.c \
+       src/net/http/async.c lib/libttak/src/mem/epoch.c src/sys/sys_info.c \
+    lib/libttak/src/mem/mem.c lib/libttak/src/mem/fastpath.c \
+    lib/libttak/src/mem/owner.c lib/libttak/src/mem/abstract.c \
        src/net/http/cookie.c \
        src/net/http/session.c \
        src/net/http/query.c \
@@ -239,7 +241,10 @@ SRCS = src/core/sstring/sstring.c \
        src/sys/app/shutdown.c \
        src/sys/app/compress.c \
        src/sys/app/test_client.c \
-       src/core/log/log.c \
+       src/core/log/log.c lib/libttak/src/net/mols_control.c \
+    src/net/http/async.c lib/libttak/src/mem/epoch.c src/sys/sys_info.c \
+    lib/libttak/src/mem/mem.c lib/libttak/src/mem/fastpath.c \
+    lib/libttak/src/mem/owner.c lib/libttak/src/mem/abstract.c \
        src/sys/session/flash.c \
        src/core/template/template.c \
        src/core/html/builder.c \
@@ -380,8 +385,62 @@ wasi-smoke: libcwist_wasi.a
 	    libcwist_wasi.a -lwasi-emulated-pthread -Wl,--gc-sections -Wl,--allow-undefined
 	$(WASMTIME) run wasi_smoke.wasm
 
+# --- WASI 0.2 (wasm32-wasip2) smoke ------------------------------------------------
+# Same sources plus the socket server runtime and the metrics/writer units.
+# Under wasip2 the sysroot exposes wasi:sockets through <sys/socket.h>, so the
+# guards key off CWIST_WASI_SOCKETS (see include/cwist/sys/wasi.h) and
+# cwist_app_listen() serves cleartext HTTP on a blocking accept loop. Requires
+# WASI_SDK with wasip2 support and WASMTIME with sockets enabled.
+WASIP2_TARGET = wasm32-wasip2
+WASIP2_BUILD_DIR = .wasip2-build
+WASIP2_CFLAGS = -std=c17 -O2 -Wall -fvisibility=hidden \
+	-D_WASI_EMULATED_GETPID \
+	$(WASM_INCLUDE_PATHS) $(COMMON_DEFINES)
+WASIP2_EXTRA_SRCS = src/sys/wasi/compat.c src/sys/metrics/metrics.c \
+    src/net/http/writer_fast.c lib/libttak/src/net/lattice.c \
+    lib/libttak/src/shared/shared.c lib/libttak/src/timing/deadline.c \
+    src/core/log/log.c lib/libttak/src/net/mols_control.c \
+    src/net/http/async.c lib/libttak/src/mem/epoch.c src/sys/sys_info.c \
+    lib/libttak/src/mem/mem.c lib/libttak/src/mem/fastpath.c \
+    lib/libttak/src/mem/owner.c lib/libttak/src/mem/abstract.c
+WASIP2_SRCS = $(WASM_SRCS) $(WASIP2_EXTRA_SRCS)
+WASIP2_OBJS = $(WASIP2_SRCS:%.c=$(WASIP2_BUILD_DIR)/%.o)
+WASIP2_PORT ?= 18099
+
+$(WASIP2_BUILD_DIR)/%.o: %.c
+	@mkdir -p $(dir $@)
+	$(WASI_SDK)/bin/clang --target=$(WASIP2_TARGET) $(WASIP2_CFLAGS) -c -o $@ $<
+
+libcwist_wasip2.a: $(WASIP2_OBJS)
+	$(WASI_SDK)/bin/ar rcs $@ $(WASIP2_OBJS)
+
+wasip2-smoke: libcwist_wasip2.a
+	$(WASI_SDK)/bin/clang --target=$(WASIP2_TARGET) $(WASIP2_CFLAGS) \
+	    -DWASIP2_SMOKE_PORT=$(WASIP2_PORT) -o wasip2_smoke.wasm tests/wasip2_smoke.c \
+	    libcwist_wasip2.a -lwasi-emulated-pthread -lwasi-emulated-getpid \
+	    -Wl,--gc-sections -Wl,--allow-undefined
+	@set -e; \
+	LOG=/tmp/cwist_wasip2_smoke.$$$$.log; \
+	$(WASMTIME) run -S preview2=y -S tcp=y -S inherit-network=y \
+	    --env CWIST_C1M_MODE=0 wasip2_smoke.wasm >$$LOG 2>&1 & \
+	WPID=$$!; \
+	trap "kill -9 $$WPID 2>/dev/null || true" EXIT; \
+	ok=0; \
+	for i in $$(seq 1 30); do \
+	    sleep 0.3; \
+	    body=$$(curl -s -m 2 http://127.0.0.1:$(WASIP2_PORT)/hello || true); \
+	    if [ "$$body" = "hello from WASI 0.2" ]; then ok=1; break; fi; \
+	done; \
+	cat $$LOG; rm -f $$LOG; \
+	if [ $$ok -ne 1 ]; then echo "wasip2-smoke: curl probe failed"; exit 1; fi; \
+	kill -9 $$WPID 2>/dev/null || true; \
+	echo "wasip2-smoke: PASS (socket server served /hello over wasi:sockets)"
+
 clean-wasi:
 	rm -rf $(WASI_BUILD_DIR) libcwist_wasi.a wasi_smoke.wasm
+
+clean-wasip2:
+	rm -rf $(WASIP2_BUILD_DIR) libcwist_wasip2.a wasip2_smoke.wasm
 
 # Object Files and Target
 OBJS = $(SRCS:.c=.o)
@@ -619,7 +678,7 @@ TEST_TARGETS = test_worker_affinity \
                test_proto_desc \
                test_css_composer
 
-.PHONY: all test $(TEST_TARGETS) fuzz_seq install uninstall dist clean rebuild examples clean-examples wasm wasm-smoke clean-wasm wasi-smoke clean-wasi
+.PHONY: all test $(TEST_TARGETS) fuzz_seq install uninstall dist clean rebuild examples clean-examples wasm wasm-smoke clean-wasm wasi-smoke clean-wasi wasip2-smoke clean-wasip2
 
 # Run with e.g. `make fuzz_seq FUZZ_RUNS=100000`.  The target intentionally
 # uses a dedicated clang/libFuzzer toolchain and is not part of `make test`.

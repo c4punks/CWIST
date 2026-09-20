@@ -11,6 +11,7 @@
 #include <cwist/sys/app/config.h>
 #include <cwist/sys/app/logger.h>
 #include <cwist/sys/app/shutdown.h>
+#include <cwist/sys/wasi.h>
 #include <cwist/sys/app/big_dumb_reply.h>
 #include <cwist/sys/app/app.h>
 #include <cwist/net/http/http.h>
@@ -67,7 +68,7 @@
 #define CWIST_ROUTE_BUCKETS 127
 #define CWIST_STATIC_RETIRE_NS TT_SECOND(5)
 
-#if !defined(__EMSCRIPTEN__) && !defined(__wasi__)
+#ifndef __EMSCRIPTEN__
 /* Default open-file soft-limit target: covers C1M's one-fd-per-connection
  * budget with headroom. Overridable via CWIST_FD_LIMIT_TARGET for
  * deployments that need a different budget (a smaller container quota, or a
@@ -2545,7 +2546,7 @@ static void internal_route_handler(cwist_app *app, cwist_http_request *req,
     }
 }
 
-#if !defined(__EMSCRIPTEN__) && !defined(__wasi__)
+#if !defined(__EMSCRIPTEN__) && !defined(CWIST_WASI_NO_SOCKETS)
 /* Everything below up to the multiport section is socket serving machinery:
  * TLS/plain connection handlers, h2/h3 bridges, async flush paths. */
 static void static_http2_route_bridge(void *user_ctx, cwist_http_request *req,
@@ -2566,6 +2567,10 @@ static void static_http3_route_bridge(void *user_ctx, cwist_http_request *req,
     internal_route_handler(app, req, res);
 }
 
+#ifndef __wasi__
+/* TLS connection handlers: BoringSSL is not linked on WASI, and the only
+ * call sites (cwist_app_listen's SSL branch, multiport) are compiled out
+ * there. */
 static void static_ssl_handler(cwist_https_connection *conn, void *ctx) {
     cwist_app *app = (cwist_app *)ctx;
     if (!app || !conn) return;
@@ -2660,6 +2665,7 @@ static void static_ssl_http2_handler(cwist_https_connection *conn, void *ctx) {
         cJSON_Delete(err.error.err_json);
     }
 }
+#endif /* __wasi__ (TLS handlers need BoringSSL) */
 
 /**
  * @brief Map a request parse failure to the RFC 9110/9112 error status the
@@ -2729,8 +2735,8 @@ typedef enum {
     APP_SERVE_DETACH /* Upgraded fd handed to another owner (WS async); do not close or re-arm. */
 } app_serve_result_t;
 
-#ifndef __wasi__
-/* Socket-server request serving: WASI hosts dispatch in memory instead. */
+#ifndef CWIST_WASI_NO_SOCKETS
+/* Socket-server request serving: preview1 hosts dispatch in memory instead. */
 static app_serve_result_t app_serve_parsed_request(cwist_app *app, int client_fd,
                                                    cwist_http_request *req,
                                                    uint32_t priority_weight) {
@@ -2932,7 +2938,7 @@ static unsigned int app_http_yield_batch(void) {
     return (unsigned int)v;
 }
 
-#ifndef __wasi__
+#ifndef CWIST_WASI_NO_SOCKETS
 cwist_async_action_t cwist_app_http_handler_async(int client_fd, cwist_http_async_conn_t *conn) {
     cwist_app *app = (cwist_app *)conn->user_ctx;
     static _Atomic long dbg_fill_fail, dbg_fatal, dbg_serve_close;
@@ -3064,9 +3070,9 @@ cwist_async_action_t cwist_app_http_handler_async(int client_fd, cwist_http_asyn
     return app_async_flush_exit(
         client_fd, conn, conn->peer_eof ? CWIST_ASYNC_CLOSE : CWIST_ASYNC_REARM, !conn->peer_eof);
 }
-#endif /* __wasi__ */
+#endif /* CWIST_WASI_NO_SOCKETS */
 
-#ifndef __wasi__
+#ifndef CWIST_WASI_NO_SOCKETS
 void cwist_app_http_handler(int client_fd, void *ctx) {
     cwist_app *app = (cwist_app *)ctx;
 
@@ -3178,7 +3184,7 @@ void cwist_app_http_handler(int client_fd, void *ctx) {
 
     close(client_fd);
 }
-#endif /* __wasi__ (socket serving machinery) */
+#endif /* CWIST_WASI_NO_SOCKETS (socket serving machinery) */
 #endif /* __EMSCRIPTEN__ (socket serving machinery) */
 
 #if !defined(__EMSCRIPTEN__) && !defined(__wasi__)
@@ -4121,13 +4127,15 @@ void cwist_apply_profile(void) {
  * @return 0 on success, or -1 when initialization, bind, or worker shutdown fails.
  */
 int cwist_app_listen(cwist_app *app, int port) {
-#if defined(__EMSCRIPTEN__) || defined(__wasi__)
+#if defined(__EMSCRIPTEN__) || defined(CWIST_WASI_NO_SOCKETS)
     (void)port;
     if (app) app->port = port;
     return -1; /* WASM hosts drive requests through cwist_app_dispatch_memory() */
 #else
+#ifndef __wasi__
     // Ignore SIGPIPE
     signal(SIGPIPE, SIG_IGN);
+#endif
     cwist_shutdown_install_handlers();
     cwist_app_tune_system();
     cwist_apply_profile();
@@ -4173,6 +4181,7 @@ int cwist_app_listen(cwist_app *app, int port) {
     /* Bind the HTTP/3 UDP socket before forking as well.  The thread that
      * services it is started per-process after the fork. */
     int udp_fd = -1;
+#ifndef __wasi__
     if (app->h3_ctx && (app->use_http3 || app->use_https3)) {
         udp_fd = socket(AF_INET, SOCK_DGRAM, 0);
         if (udp_fd >= 0) {
@@ -4199,6 +4208,7 @@ int cwist_app_listen(cwist_app *app, int port) {
             }
         }
     }
+#endif /* __wasi__ (no UDP/threads) */
 
     // Fork worker processes before any threads are created.
     int workers = 1;
@@ -4256,6 +4266,7 @@ int cwist_app_listen(cwist_app *app, int port) {
     pid_t worker_pids[workers > 1 ? workers - 1 : 1];
     size_t worker_count = 0;
     int child_idx = 0;
+#ifndef __wasi__
     for (int i = 1; i < workers; i++) {
         pid_t pid = fork();
         if (pid == 0) {
@@ -4289,10 +4300,14 @@ int cwist_app_listen(cwist_app *app, int port) {
             udp_fd = -1;
         }
     }
+#else
+    (void)addr;
+#endif /* __wasi__ (single process) */
 
     /* The static cache owns a libttak cleanup thread as well as the watcher.
      * Initialize it only after all worker forks so no child inherits mutexes
      * or a pthread handle whose owning thread exists only in the parent. */
+#ifndef __wasi__
     cwist_mem_init(app);
 
     // Per-process threads start here.  Each worker gets its own watcher and
@@ -4323,12 +4338,19 @@ int cwist_app_listen(cwist_app *app, int port) {
         }
     }
 
+#endif /* __wasi__ (no static-cache thread, watcher, or H3 thread) */
     printf("CWIST App running on port %d (SSL: %s) [Event-driven, workers=%d, pid=%d]\n", port,
            app->use_ssl ? "On" : "Off", workers, (int)getpid());
 
     // Check config for non-blocking scale mode (default enabled)
     const char *c1m = getenv("CWIST_C1M_MODE");
+#ifdef __wasi__
+    /* The C1M reactor is epoll/eventfd-based; WASI hosts run the blocking
+     * accept loop instead. */
+    bool use_c1m = false;
+#else
     bool use_c1m = true;
+#endif
     if (c1m) {
         if (c1m[0] == '0' || strcmp(c1m, "false") == 0) {
             use_c1m = false;
@@ -4337,6 +4359,19 @@ int cwist_app_listen(cwist_app *app, int port) {
     if (use_c1m) {
         cwist_async_server_loop(server_fd, app);
     } else {
+#ifdef __wasi__
+        if (app->use_ssl) {
+            fprintf(stderr, "TLS is not available on WASI (no BoringSSL); serve cleartext.\n");
+            g_cwist_listen_fd = -1;
+            return -1;
+        }
+        /* Single-threaded host: no pool, no epoll - the blocking accept
+         * fallback in cwist_http_server_loop() handles one connection at a
+         * time, which is what a WASM socket grant can drive anyway. */
+        cwist_server_config config = {
+            .use_forking = false, .use_threading = false, .use_epoll = false};
+        cwist_http_server_loop(server_fd, &config, cwist_app_http_handler, app);
+#else
         if (app->use_ssl) {
             if (!app->ssl_ctx) {
                 fprintf(stderr, "SSL enabled but context not initialized.\n");
@@ -4349,6 +4384,7 @@ int cwist_app_listen(cwist_app *app, int port) {
                 .use_forking = false, .use_threading = true, .use_epoll = false};
             cwist_http_server_loop(server_fd, &config, cwist_app_http_handler, app);
         }
+#endif
     }
 
     /* Graceful shutdown cleanup */
@@ -4370,6 +4406,7 @@ int cwist_app_listen(cwist_app *app, int port) {
 
     int worker_result = 0;
     /* Parent process reaps worker children so they do not become zombies. */
+#ifndef __wasi__
     if (!is_worker_child && workers > 1) {
         /* SIGTERM is delivered to the supervisor only.  Ask every worker to
          * leave its inherited accept loop before waiting for it; otherwise a
@@ -4393,6 +4430,10 @@ int cwist_app_listen(cwist_app *app, int port) {
             }
         }
     }
+#else
+    (void)worker_pids;
+    (void)worker_count;
+#endif /* __wasi__ (no child processes) */
 
     printf("[CWIST] Shutdown complete.\n");
 

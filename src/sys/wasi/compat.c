@@ -16,6 +16,7 @@
 
 #if defined(__wasi__)
 
+#include <cwist/sys/wasi.h>
 #include <cwist/sys/io/reactor.h>
 #include <cwist/sys/metrics/metrics.h>
 #include <cwist/net/http/writer_fast.h>
@@ -28,6 +29,30 @@
 #include <sys/uio.h>
 
 /* --- Reactor: no event loop exists outside the process runtime. --------- */
+
+cwist_reactor_t *cwist_reactor_create(void) {
+    return NULL;
+}
+
+bool cwist_reactor_mod(cwist_reactor_t *reactor, int fd, cwist_reactor_cb_t cb, const void *payload,
+                       size_t payload_size) {
+    (void)reactor;
+    (void)fd;
+    (void)cb;
+    (void)payload;
+    (void)payload_size;
+    return false;
+}
+
+bool cwist_reactor_del(cwist_reactor_t *reactor, int fd) {
+    (void)reactor;
+    (void)fd;
+    return false;
+}
+
+void cwist_reactor_run(cwist_reactor_t *reactor) {
+    (void)reactor;
+}
 
 bool cwist_reactor_add(cwist_reactor_t *reactor, int fd, cwist_reactor_cb_t cb, const void *payload,
                        size_t payload_size) {
@@ -63,8 +88,10 @@ void cwist_reactor_destroy(cwist_reactor_t *reactor) {
     (void)reactor;
 }
 
-/* --- Metrics: server counters are meaningless in a WASM host. ----------- */
-
+/* --- Metrics / parked-writer fast paths: under WASI 0.2 the real
+ * metrics.c and writer_fast.c join the build, so these stubs exist only
+ * for preview1 where those units cannot compile. ------------------------ */
+#ifndef CWIST_WASI_SOCKETS
 static cwist_metrics_registry_t *const g_wasi_metrics_sink =
     (cwist_metrics_registry_t *)(uintptr_t)1;
 
@@ -77,13 +104,9 @@ void cwist_metric_inc(cwist_metrics_registry_t *reg, cwist_metric_id_t id) {
     (void)id;
 }
 
-/* --- Timing: the parked-writer path is the only consumer. --------------- */
-
 uint32_t cwist_fast_monotonic_sec(void) {
     return 0;
 }
-
-/* --- HTTPS/HTTP-2 upgrade paths: no TLS or sockets in a WASM host. ------ */
 
 cwist_write_status_t cwist_http_sendmsg_speculative(int fd, struct iovec *iov, int iovcnt,
                                                     int flags, size_t *total_sent) {
@@ -94,6 +117,9 @@ cwist_write_status_t cwist_http_sendmsg_speculative(int fd, struct iovec *iov, i
     if (total_sent) *total_sent = 0;
     return CWIST_WRITE_ERR;
 }
+#endif /* !CWIST_WASI_SOCKETS */
+
+/* --- HTTPS/HTTP-2 upgrade paths: no TLS in a WASM host. ----------------- */
 
 bool cwist_https_connection_uses_http2(const cwist_https_connection *conn) {
     (void)conn;

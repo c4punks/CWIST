@@ -7,6 +7,7 @@
 #define _POSIX_C_SOURCE 200809L
 #endif
 #include <cwist/net/http/http.h>
+#include <cwist/sys/wasi.h>
 #include <cwist/net/http/session.h>
 #include <cwist/core/sstring/sstring.h>
 #include <cwist/sys/err/cwist_err.h>
@@ -1588,7 +1589,7 @@ cwist_sstring *cwist_get_client_ip_from_fd(int fd) {
     // If unavailable, return localhost
     if (fd <= 0) return s;
 
-#ifndef __wasi__
+#ifndef CWIST_WASI_NO_SOCKETS
     /* WASI preview1 has no socket peer addresses; the caller only needs a
      * placeholder when running under a WASM host. */
     struct sockaddr_storage addr;
@@ -2061,7 +2062,42 @@ bool cwist_tcp_cork_enabled(void) {
  * @return 0 on success, -1 on fatal error or timeout.
  */
 static int cwist_http_sendmsg_all(int fd, struct iovec *iov, int iovcnt, int flags) {
-#ifndef __wasi__
+#ifdef CWIST_WASI_SOCKETS
+    /* wasi:sockets (0.2) has no sendmsg(2): coalesce the iov into a single
+     * buffer and drive plain send(). Response iovs are small (headers + one
+     * body segment), so the copy is cheap. */
+    size_t total = 0;
+    for (int i = 0; i < iovcnt; i++) total += iov[i].iov_len;
+    char *buf = cwist_alloc(total ? total : 1);
+    if (!buf) return -1;
+    size_t off = 0;
+    for (int i = 0; i < iovcnt; i++) {
+        memcpy(buf + off, iov[i].iov_base, iov[i].iov_len);
+        off += iov[i].iov_len;
+    }
+    size_t sent = 0;
+    int rc = -1;
+    while (sent < total) {
+        ssize_t n = send(fd, buf + sent, total - sent, flags);
+        if (n < 0) {
+            if (errno == EINTR) continue;
+            if (errno == EAGAIN || errno == EWOULDBLOCK) {
+                struct pollfd pfd = {.fd = fd, .events = POLLOUT};
+                int pr = poll(&pfd, 1, CWIST_HTTP_TIMEOUT_MS);
+                if (pr <= 0) goto wasi_done;
+                if (pfd.revents & (POLLERR | POLLHUP | POLLNVAL)) goto wasi_done;
+                continue;
+            }
+            goto wasi_done;
+        }
+        if (n == 0) goto wasi_done;
+        sent += (size_t)n;
+    }
+    rc = 0;
+wasi_done:
+    cwist_free(buf);
+    return rc;
+#elif !defined(CWIST_WASI_NO_SOCKETS)
     /* Speculative zero-latency fast-path attempt:
      * Completes immediately for non-saturated sockets without entering poll() loops. */
     size_t fast_sent = 0;
@@ -3951,7 +3987,7 @@ const char CWIST_BLOB_500[] =
 /* Everything from here on is the socket server runtime: WASI preview1 has
  * no sockets, so the whole section compiles out there. WASM hosts drive
  * requests through cwist_app_dispatch_memory() instead. */
-#ifndef __wasi__
+#ifndef CWIST_WASI_NO_SOCKETS
 
 /**
  * @brief Create, configure, bind, and listen on an IPv4 TCP socket.
@@ -4087,6 +4123,7 @@ static void cwist_accept_error_backoff(int err) {
  * @param handler_func Request handler callback.
  * @param ctx Opaque callback context.
  */
+#if !defined(__wasi__)
 static void handle_client_forking(int client_fd, void (*handler_func)(int, void *), void *ctx) {
     pid_t pid = fork();
     if (pid == 0) {
@@ -4097,6 +4134,7 @@ static void handle_client_forking(int client_fd, void (*handler_func)(int, void 
         close(client_fd);
     }
 }
+#endif /* __wasi__ (no fork) */
 
 /**
  * @brief Accept one client connection and dispatch it according to the current server strategy.
@@ -4154,6 +4192,7 @@ cwist_error_t cwist_http_server_loop(int server_fd, cwist_server_config *config,
         return err;
     }
 
+#if !defined(__wasi__)
     if (config->use_forking) {
         while (atomic_load(&g_cwist_running)) {
             int client_fd = accept(server_fd, NULL, NULL);
@@ -4172,6 +4211,7 @@ cwist_error_t cwist_http_server_loop(int server_fd, cwist_server_config *config,
             handle_client_forking(client_fd, handler, ctx);
         }
     }
+#endif /* __wasi__ (no fork) */
 
     if (config->use_threading) {
         if (cwist_http_pool_init() != 0) {

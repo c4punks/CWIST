@@ -1,12 +1,15 @@
 #ifndef _GNU_SOURCE
 #define _GNU_SOURCE
 #endif
+#include <cwist/sys/wasi.h>
 #include <cwist/net/http/writer_fast.h>
 #include <sys/socket.h>
 #include <errno.h>
 #include <stdatomic.h>
 #include <unistd.h>
 #include <time.h>
+#include <stdlib.h>
+#include <string.h>
 
 cwist_write_status_t cwist_http_send_speculative(int fd, const void *buf, size_t len,
                                                  size_t *sent_out) {
@@ -53,12 +56,35 @@ cwist_write_status_t cwist_http_sendmsg_speculative(int fd, struct iovec *iov, i
     send_flags |= MSG_NOSIGNAL;
 #endif
 
+#ifdef CWIST_WASI_SOCKETS
+    /* wasi:sockets (0.2) has no sendmsg(2): coalesce and send once.
+     * This is the speculative path - the blocking drain in
+     * cwist_http_sendmsg_all() re-drives whatever is left. */
+    size_t expected_wasi = 0;
+    for (int i = 0; i < iovcnt; ++i) expected_wasi += iov[i].iov_len;
+    char *wasi_buf = malloc(expected_wasi ? expected_wasi : 1);
+    if (!wasi_buf) {
+        if (total_sent) *total_sent = 0;
+        return CWIST_WRITE_ERR;
+    }
+    size_t wasi_off = 0;
+    for (int i = 0; i < iovcnt; ++i) {
+        memcpy(wasi_buf + wasi_off, iov[i].iov_base, iov[i].iov_len);
+        wasi_off += iov[i].iov_len;
+    }
+    ssize_t n;
+    do {
+        n = send(fd, wasi_buf, expected_wasi, send_flags);
+    } while (n < 0 && errno == EINTR);
+    free(wasi_buf);
+#else
     struct msghdr msg = {.msg_iov = iov, .msg_iovlen = (size_t)iovcnt};
 
     ssize_t n;
     do {
         n = sendmsg(fd, &msg, send_flags);
     } while (n < 0 && errno == EINTR);
+#endif
 
     if (n >= 0) {
         if (total_sent) *total_sent = (size_t)n;
