@@ -113,6 +113,12 @@ static uint64_t bdr_hash(const char *method, const char *path) {
     return h;
 }
 
+static uint64_t bdr_hash_n(const char *method, const char *path, size_t path_len) {
+    uint64_t h = siphash24((const void *)path, path_len, BDR_KEY);
+    h ^= (uint64_t)(method[0]);
+    return h;
+}
+
 static uint64_t bdr_hash_data(const void *data, size_t len) {
     return siphash24(data, len, BDR_KEY);
 }
@@ -378,16 +384,21 @@ void cwist_bdr_destroy(cwist_bdr_t *bdr) {
 
 /* --- Read path ------------------------------------------------------------ */
 
-const void *cwist_bdr_get_pinned(cwist_bdr_t *bdr, const char *method, const char *path,
+/* Shared read core: epoch-protected hit validation for a precomputed
+ * request hash, optionally starting from a caller-cached entry hint.  The
+ * hint is re-validated (retirement + key match) under the epoch; a stale
+ * hint degrades to a full bucket walk, never to a wrong serve.  Returns the
+ * blob bytes with the pin held, or NULL with no pin held. */
+static const void *bdr_serve_hit(cwist_bdr_t *bdr, uint64_t req_h, bdr_entry_t *hint,
                                  size_t *out_len, bdr_blob_t **out_pin) {
-    if (!bdr || !method || !path || !out_pin) return NULL;
-    if (strcmp(method, "GET") != 0) return NULL;
-    if (atomic_load_explicit(&bdr->is_disk_mode, memory_order_acquire)) return NULL;
-
-    uint64_t req_h = bdr_hash(method, path);
-
     ttak_epoch_enter();
-    bdr_entry_t *entry = bdr_find(bdr, req_h);
+    bdr_entry_t *entry = hint;
+    if (entry &&
+        (atomic_load_explicit(&entry->retired, memory_order_acquire) ||
+         entry->request_hash != req_h)) {
+        entry = NULL;
+    }
+    if (!entry) entry = bdr_find(bdr, req_h);
     if (!entry) {
         ttak_epoch_exit();
         return NULL;
@@ -420,6 +431,56 @@ const void *cwist_bdr_get_pinned(cwist_bdr_t *bdr, const char *method, const cha
     if (out_len) *out_len = blob->len;
     *out_pin = blob;
     return blob->data;
+}
+
+const void *cwist_bdr_get_pinned(cwist_bdr_t *bdr, const char *method, const char *path,
+                                 size_t *out_len, bdr_blob_t **out_pin) {
+    if (!bdr || !method || !path || !out_pin) return NULL;
+    if (strcmp(method, "GET") != 0) return NULL;
+    if (atomic_load_explicit(&bdr->is_disk_mode, memory_order_acquire)) return NULL;
+
+    return bdr_serve_hit(bdr, bdr_hash(method, path), NULL, out_len, out_pin);
+}
+
+const void *cwist_bdr_get_pinned_cursor(cwist_bdr_t *bdr, const char *method, const char *path,
+                                        size_t path_len, size_t *out_len, bdr_blob_t **out_pin,
+                                        cwist_bdr_cursor_t *cursor) {
+    if (!bdr || !method || !path || !out_pin || !cursor) return NULL;
+    if (strcmp(method, "GET") != 0) return NULL;
+    if (atomic_load_explicit(&bdr->is_disk_mode, memory_order_acquire)) return NULL;
+
+    uint64_t req_h;
+    bdr_entry_t *hint = NULL;
+    if (cursor->entry && cursor->path_len == path_len &&
+        path_len < CWIST_BDR_CURSOR_PATH_MAX && cursor->req_hash != 0 &&
+        memcmp(cursor->path, path, path_len) == 0) {
+        hint = cursor->entry;
+        req_h = cursor->req_hash;
+    } else {
+        req_h = bdr_hash_n(method, path, path_len);
+    }
+
+    const void *data = bdr_serve_hit(bdr, req_h, hint, out_len, out_pin);
+    if (data && path_len < CWIST_BDR_CURSOR_PATH_MAX) {
+        bdr_entry_t *served = hint;
+        if (!served || atomic_load_explicit(&served->retired, memory_order_relaxed) ||
+            served->request_hash != req_h) {
+            /* The hint was stale (or absent): recover the served entry from
+             * the bucket chain so the cursor points at the live node. */
+            served = bdr_find(bdr, req_h);
+        }
+        if (served) {
+            cursor->entry = served;
+            cursor->req_hash = req_h;
+            cursor->path_len = path_len;
+            memcpy(cursor->path, path, path_len);
+        } else {
+            cursor->entry = NULL;
+        }
+    } else if (!data) {
+        cursor->entry = NULL;
+    }
+    return data;
 }
 
 void cwist_bdr_unpin(bdr_blob_t *pin) {

@@ -67,6 +67,28 @@ typedef struct bdr_entry_t {
 } bdr_entry_t;
 
 /**
+ * @brief Per-connection cursor that turns repeated hits of the same route
+ * into a content-compare instead of a SipHash + bucket walk.
+ *
+ * Keep-alive clients overwhelmingly repeat the same few routes; the cursor
+ * remembers the last served entry and its path, so the next lookup on the
+ * same connection only memcmps the path (usually a handful of bytes) and
+ * re-validates the entry state under the EBR epoch exactly like a full
+ * lookup.  It holds no ownership: entries are tombstoned rather than freed,
+ * and every use re-checks retirement/stability, so a stale cursor degrades
+ * to a normal miss, never to a wrong serve.
+ *
+ * Embed by value (zero-initialized) in per-connection state.
+ */
+#define CWIST_BDR_CURSOR_PATH_MAX 128
+typedef struct cwist_bdr_cursor {
+    bdr_entry_t *entry;   ///< Last served entry (not owned; validated per use)
+    uint64_t req_hash;    ///< request_hash of @p entry
+    size_t path_len;      ///< Length of @p path
+    char path[CWIST_BDR_CURSOR_PATH_MAX]; ///< Last served path bytes
+} cwist_bdr_cursor_t;
+
+/**
  * @brief Big Dumb Reply Context.
  * Lock-free read/learn paths; the mutex only serializes janitor work
  * (sweep/trim/disk spill) and the disk-fallback path.
@@ -134,6 +156,20 @@ const void *cwist_bdr_get(cwist_bdr_t *bdr, const char *method, const char *path
  */
 const void *cwist_bdr_get_pinned(cwist_bdr_t *bdr, const char *method, const char *path,
                                  size_t *out_len, bdr_blob_t **out_pin);
+
+/**
+ * @brief cwist_bdr_get_pinned() with a per-connection fast path.
+ *
+ * Identical semantics to cwist_bdr_get_pinned() (same epoch pin, same
+ * revalidation hook, same stability checks), but when @p cursor remembers
+ * the same path the SipHash and bucket walk are skipped: the cached entry
+ * pointer is re-validated under the epoch instead.  Falls back to the full
+ * lookup on any mismatch and refreshes the cursor on success.  @p path_len
+ * must be the exact path length in bytes (no strlen is performed).
+ */
+const void *cwist_bdr_get_pinned_cursor(cwist_bdr_t *bdr, const char *method, const char *path,
+                                        size_t path_len, size_t *out_len, bdr_blob_t **out_pin,
+                                        cwist_bdr_cursor_t *cursor);
 
 /**
  * @brief Release a pin acquired by cwist_bdr_get_pinned().

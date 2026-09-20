@@ -8,13 +8,6 @@
 #include "worker_affinity.h"
 #endif
 #include <cwist/sys/app/app.h>
-#include "public_fixed_cache.h"
-#ifdef CWIST_PFC_TESTING
-/* Linked only by the TCP fixture; absent from default production builds. */
-extern void cwist_pfc_test_parked(void);
-extern void cwist_pfc_test_hit(void);
-extern bool cwist_pfc_test_reconstruction_failed(void);
-#endif
 #include <cwist/sys/app/config.h>
 #include <cwist/sys/app/logger.h>
 #include <cwist/sys/app/shutdown.h>
@@ -401,7 +394,7 @@ static cwist_route_entry *cwist_route_table_lookup(cwist_route_table *table,
 static cwist_route_entry *cwist_route_table_match_params(cwist_route_table *table,
                                                          cwist_http_request *req);
 static bool match_path(const char *pattern, const char *actual, cwist_query_map *params);
-static bool execute_chain(cwist_app *app, cwist_http_request *req, cwist_http_response *res,
+static void execute_chain(cwist_app *app, cwist_http_request *req, cwist_http_response *res,
                           cwist_handler_func final_handler, void *handler_data);
 static bool cwist_prepare_static(cwist_app *app, cwist_http_request *req,
                                  cwist_static_request_info *info);
@@ -1224,7 +1217,6 @@ cwist_app *cwist_app_create(void) {
     app->max_mem_space = 0;
     app->mem_manager = NULL;
     app->bdr_ctx = cwist_bdr_create();
-    app->public_fixed_cache = cwist_pfc_create();
     app->pqc_layer_enabled = false;
     app->tls_groups = NULL;
     app->wt_handler = NULL;
@@ -1251,7 +1243,6 @@ cwist_app *cwist_app_create(void) {
  */
 void cwist_app_use(cwist_app *app, cwist_middleware_func mw) {
     if (!app || !mw) return;
-    cwist_pfc_clear(app->public_fixed_cache);
     cwist_middleware_node *node = cwist_alloc(sizeof(cwist_middleware_node));
     node->func = mw;
     node->next = NULL;
@@ -1325,7 +1316,6 @@ static cwist_error_handler_func cwist_app_find_error_handler(cwist_app *app,
 void cwist_app_configure_bdr(cwist_app *app, size_t max_bytes, time_t max_entry_age_sec,
                              uint64_t revalidate_hits) {
     if (!app || !app->bdr_ctx) return;
-    cwist_pfc_clear(app->public_fixed_cache);
     cwist_bdr_set_limits(app->bdr_ctx, max_bytes, max_entry_age_sec, revalidate_hits);
 }
 
@@ -1333,10 +1323,6 @@ void cwist_app_configure_bdr(cwist_app *app, size_t max_bytes, time_t max_entry_
  * @brief Release every resource owned by the application object.
  * @param app Application instance to destroy.
  */
-void cwist_app_clear_public_fixed_cache(cwist_app *app) {
-    if (app) cwist_pfc_clear(app->public_fixed_cache);
-}
-
 void cwist_app_destroy(cwist_app *app) {
     if (!app) return;
 #ifndef __EMSCRIPTEN__
@@ -1411,8 +1397,6 @@ void cwist_app_destroy(cwist_app *app) {
     }
 #endif /* __EMSCRIPTEN__ */
 
-    cwist_pfc_destroy(app->public_fixed_cache);
-    app->public_fixed_cache = NULL;
     if (app->bdr_ctx) {
         cwist_bdr_destroy(app->bdr_ctx);
     }
@@ -1489,7 +1473,7 @@ static void mw_next_wrapper(cwist_http_request *req, cwist_http_response *res) {
  * @param final_handler Route handler to invoke after middleware.
  * @param handler_data Reserved handler payload slot.
  */
-static bool execute_chain(cwist_app *app, cwist_http_request *req, cwist_http_response *res,
+static void execute_chain(cwist_app *app, cwist_http_request *req, cwist_http_response *res,
                           cwist_handler_func final_handler, void *handler_data) {
     mw_executor_ctx ctx = {app->middlewares, final_handler, handler_data};
     req->private_data = &ctx;
@@ -1500,11 +1484,7 @@ static bool execute_chain(cwist_app *app, cwist_http_request *req, cwist_http_re
     } else {
         mw_next_wrapper(req, res);
     }
-    /* Do not lose evidence of a handler-installed private context when the
-     * executor's stack context is removed. Never expose that stack pointer. */
-    bool cache_context_unchanged = req->private_data == &ctx;
     req->private_data = NULL;
-    return cache_context_unchanged;
 }
 
 /**
@@ -1896,7 +1876,6 @@ cwist_error_t cwist_app_static(cwist_app *app, const char *url_prefix, const cha
     entry->url_prefix = normalized;
     entry->fs_root = resolved;
     entry->cache_control = NULL;
-    cwist_pfc_clear(app->public_fixed_cache);
     entry->next = app->static_dirs;
     app->static_dirs = entry;
 
@@ -1951,7 +1930,6 @@ cwist_error_t cwist_app_static_with_cache(cwist_app *app, const char *url_prefix
         err.error.err_i16 = -1;
         return err;
     }
-    cwist_pfc_clear(app->public_fixed_cache);
     entry->next = app->static_dirs;
     app->static_dirs = entry;
 
@@ -1963,7 +1941,6 @@ static void add_route_named(cwist_app *app, const char *path, const char *name,
                             cwist_http_method_t method, cwist_handler_func handler,
                             cwist_endpoint_opt_t opts) {
     if (!app || !app->router || !path) return;
-    cwist_pfc_clear(app->public_fixed_cache);
     if (opts == 0) {
         opts = CWIST_ENDPOINT_DEFAULT;
     }
@@ -2076,7 +2053,6 @@ void cwist_app_patch_named(cwist_app *app, const char *path, const char *name,
  */
 void cwist_app_ws(cwist_app *app, const char *path, cwist_ws_handler_func handler) {
     if (!app || !app->router || !path) return;
-    cwist_pfc_clear(app->public_fixed_cache);
     cwist_route_table_insert(app->router, path, NULL, CWIST_HTTP_GET, NULL, handler,
                              CWIST_ENDPOINT_DEFAULT);
 }
@@ -2149,7 +2125,6 @@ void cwist_app_patch_opt(cwist_app *app, const char *path, cwist_handler_func ha
 void cwist_app_ws_opt(cwist_app *app, const char *path, cwist_ws_handler_func handler,
                       cwist_endpoint_opt_t opts) {
     if (!app || !app->router || !path) return;
-    cwist_pfc_clear(app->public_fixed_cache);
     if (opts == 0) {
         opts = CWIST_ENDPOINT_DEFAULT;
     }
@@ -2240,7 +2215,7 @@ char *cwist_url_for(cwist_app *app, const char *name, cwist_query_map *params) {
 }
 
 // Forward declaration
-static bool internal_route_handler(cwist_app *app, cwist_http_request *req,
+static void internal_route_handler(cwist_app *app, cwist_http_request *req,
                                    cwist_http_response *res);
 
 void cwist_app_dispatch(cwist_app *app, cwist_http_request *req, cwist_http_response *res) {
@@ -2275,9 +2250,9 @@ int cwist_app_dispatch_memory(cwist_app *app, const char *req_buf, size_t req_le
 }
 
 // Internal Router Logic
-static bool internal_route_handler(cwist_app *app, cwist_http_request *req,
+static void internal_route_handler(cwist_app *app, cwist_http_request *req,
                                    cwist_http_response *res) {
-    if (!req || !app || !app->router) return false;
+    if (!req || !app || !app->router) return;
 
     req->endpoint_opts = CWIST_ENDPOINT_DEFAULT;
     if (res) {
@@ -2350,9 +2325,9 @@ static bool internal_route_handler(cwist_app *app, cwist_http_request *req,
             cwist_sstring_assign(res->status_text, "Not Implemented");
             cwist_sstring_assign(res->body, "WebSocket async handler requires C1M mode");
         } else {
-            return execute_chain(app, req, res, found_route->handler, NULL);
+            execute_chain(app, req, res, found_route->handler, NULL);
         }
-        return false;
+        return;
     }
 
     if (!found_route) {
@@ -2362,15 +2337,16 @@ static bool internal_route_handler(cwist_app *app, cwist_http_request *req,
     if (found_route) {
         req->endpoint_opts = found_route->opts ? found_route->opts : CWIST_ENDPOINT_DEFAULT;
         if (res) res->endpoint_opts = req->endpoint_opts;
-        return execute_chain(app, req, res, found_route->handler, NULL);
+        execute_chain(app, req, res, found_route->handler, NULL);
+        return;
     }
 
     cwist_static_request_info static_info = {0};
     if (cwist_prepare_static(app, req, &static_info)) {
         req->endpoint_opts = CWIST_ENDPOINT_FILE;
         if (res) res->endpoint_opts = req->endpoint_opts;
-        (void)execute_chain(app, req, res, cwist_static_handler, &static_info);
-        return false;
+        execute_chain(app, req, res, cwist_static_handler, &static_info);
+        return;
     }
 
     cwist_error_handler_func eh = cwist_app_find_error_handler(app, CWIST_HTTP_NOT_FOUND);
@@ -2380,7 +2356,6 @@ static bool internal_route_handler(cwist_app *app, cwist_http_request *req,
         res->status_code = CWIST_HTTP_NOT_FOUND;
         cwist_sstring_assign(res->body, "404 Not Found");
     }
-    return false;
 }
 
 #ifndef __EMSCRIPTEN__
@@ -2567,83 +2542,79 @@ typedef enum {
     APP_SERVE_DETACH /* Upgraded fd handed to another owner (WS async); do not close or re-arm. */
 } app_serve_result_t;
 
-static void app_cached_body_release(const void *ptr, size_t len, void *ctx) {
-    (void)ptr;
-    (void)len;
-    cwist_pfc_snapshot_free(ctx);
-}
-
 static app_serve_result_t app_serve_parsed_request(cwist_app *app, int client_fd,
                                                    cwist_http_request *req,
                                                    uint32_t priority_weight) {
-    (void)priority_weight; /* Legacy latency-based automatic BDR learning removed. */
+    // --- Big Dumb Reply (Read) ---
+    if (app->bdr_ctx && req->method == CWIST_HTTP_GET) {
+        size_t cached_len = 0;
+        bdr_blob_t *bdr_pin = NULL;
+        const void *cached_blob;
+        if (req->async_conn) {
+            /* Keep-alive connections repeat the same route: the per-connection
+             * cursor turns the lookup into a content-compare + epoch-validated
+             * entry reuse instead of a SipHash + bucket walk per request. */
+            cwist_http_async_conn_t *aconn = req->async_conn;
+            cached_blob = cwist_bdr_get_pinned_cursor(app->bdr_ctx, "GET", req->path->data,
+                                                      req->path->size, &cached_len, &bdr_pin,
+                                                      &aconn->bdr_cursor);
+        } else {
+            cached_blob =
+                cwist_bdr_get_pinned(app->bdr_ctx, "GET", req->path->data, &cached_len, &bdr_pin);
+        }
+        if (cached_blob && cached_len > 0) {
+            bool keep_alive = req->keep_alive;
+            if (req->async_conn) {
+                cwist_http_async_conn_t *aconn = req->async_conn;
+                if (cached_len > CWIST_HTTP_COALESCE_MAX ||
+                    aconn->olen + cached_len > CWIST_HTTP_COALESCE_MAX) {
+                    if (cwist_http_coalesce_flush_blocking(client_fd, aconn) != 0) {
+                        cwist_bdr_unpin(bdr_pin);
+                        cwist_http_request_destroy(req);
+                        return APP_SERVE_CLOSE;
+                    }
+                }
+                if (cached_len > CWIST_HTTP_COALESCE_MAX) {
+                    send(client_fd, cached_blob, cached_len, MSG_NOSIGNAL);
+                } else if (cwist_http_coalesce_append(aconn, cached_blob, cached_len) != 0) {
+                    cwist_bdr_unpin(bdr_pin);
+                    cwist_http_request_destroy(req);
+                    return APP_SERVE_CLOSE;
+                }
+            } else {
+                send(client_fd, cached_blob, cached_len, MSG_NOSIGNAL);
+            }
+            cwist_bdr_unpin(bdr_pin);
+            cwist_http_request_destroy(req);
+            return keep_alive ? APP_SERVE_KEEPALIVE : APP_SERVE_CLOSE;
+        }
+        if (bdr_pin) cwist_bdr_unpin(bdr_pin);
+    }
+    // -----------------------------
+
+    /* Share the request arena: saves one arena create/destroy per request and
+     * the response is always destroyed just before the request below. */
     cwist_http_response *res = cwist_http_response_create_in_arena(req->arena);
     if (!res) {
         cwist_http_request_destroy(req);
         return APP_SERVE_CLOSE;
     }
-    /* Use exactly the same routing authority as ordinary dispatch. Parameter,
-     * websocket and fallback/static routes never acquire a cache identity. */
-    cwist_route_entry *route =
-        req->path && req->path->data
-            ? cwist_route_table_lookup(app->router, req->method, req->path->data)
-            : NULL;
-    cwist_pfc_key key;
-    bool eligible = route && !route->has_params && !route->ws_handler && route->handler &&
-                    route->method == CWIST_HTTP_GET && req->path->size == strlen(route->path) &&
-                    !memcmp(req->path->data, route->path, req->path->size) &&
-                    cwist_pfc_request(req, route, route->opts, app->middlewares != NULL, &key);
-    /* Retain pre-dispatch key bytes independently of mutable request strings. */
-    char accepted_host[1024];
-    if (eligible) {
-        memcpy(accepted_host, key.host, key.host_len);
-        key.host = accepted_host;
-        key.path = route->path;
+
+    bool endpoint_fixed = cwist_endpoint_has(req->endpoint_opts, CWIST_ENDPOINT_FIXED);
+    struct timespec start, end;
+    uint64_t duration_ms = 0;
+    if (app->bdr_ctx && !endpoint_fixed) {
+        clock_gettime(CLOCK_MONOTONIC, &start);
     }
-    cwist_pfc_snapshot *snapshot = NULL;
-    bool hit = eligible && cwist_pfc_get(app->public_fixed_cache, &key, &snapshot);
-    if (hit && snapshot->content_type[0]) {
-        cwist_error_t err =
-            cwist_http_header_add(&res->headers, "Content-Type", snapshot->content_type);
-        bool reconstruction_failed = !cwist_error_is_ok(&err);
-#ifdef CWIST_PFC_TESTING
-        reconstruction_failed |= cwist_pfc_test_reconstruction_failed();
-#endif
-        if (reconstruction_failed) {
-            cwist_pfc_snapshot_free(snapshot);
-            snapshot = NULL;
-            cwist_http_header_free_all(res->headers);
-            res->headers = NULL;
-            hit = false;
-        }
-    }
-    bool dispatch_cache_eligible = false;
-    if (hit) {
-#ifdef CWIST_PFC_TESTING
-        cwist_pfc_test_hit();
-#endif
-        req->endpoint_opts = route->opts;
-        res->endpoint_opts = route->opts;
-        cwist_http_response_set_body_ptr_managed(res, snapshot->body, snapshot->body_len,
-                                                 app_cached_body_release, snapshot);
-    } else {
-        dispatch_cache_eligible = internal_route_handler(app, req, res);
-    }
-    /* Deferred completion owns req/res. Never snapshot or touch after ack. */
+
+    internal_route_handler(app, req, res);
+
+    /* Deferred-response handoff: ownership of req/res (and the connection)
+     * moved to the cwist_async completion path.  Skip the send, BDR learning,
+     * and both destroys; ack before returning so the completion may free. */
     if (res->deferred) {
         cwist_async_dispatch_ack((cwist_async *)res->async);
         return APP_SERVE_DEFERRED;
-    }
-    if (eligible && !hit && dispatch_cache_eligible) {
-        cwist_pfc_key after;
-        /* A handler changing request/private context cannot publish under the
-         * pre-dispatch authority. Live concurrent router mutation is unsupported. */
-        if (cwist_pfc_request(req, route, route->opts, app->middlewares != NULL, &after) &&
-            key.method == after.method && key.path_len == after.path_len &&
-            key.host_len == after.host_len && !memcmp(key.path, after.path, key.path_len) &&
-            !memcmp(key.host, after.host, key.host_len)) {
-            (void)cwist_pfc_put(app->public_fixed_cache, &after, req, res);
-        }
     }
 
     /* WebSocket async handoff (issue #181): the 101 was sent and the fd was
@@ -2654,26 +2625,78 @@ static app_serve_result_t app_serve_parsed_request(cwist_app *app, int client_fd
         cwist_http_request_destroy(req);
         return APP_SERVE_DETACH;
     }
-    bool keep_alive = req->keep_alive && res->keep_alive && atomic_load(&g_cwist_running);
+
+    if (app->bdr_ctx && !endpoint_fixed) {
+        clock_gettime(CLOCK_MONOTONIC, &end);
+        duration_ms = (end.tv_sec - start.tv_sec) * 1000 + (end.tv_nsec - start.tv_nsec) / 1000000;
+    }
+
+    bool keep_alive = req->keep_alive && res->keep_alive;
     bool upgraded = req->upgraded;
-    res->keep_alive = keep_alive; /* Both normal senders frame THIS request. */
+
+    /* During shutdown, answer in flight but mark the connection as closing
+     * so the client does not race another request onto it. */
+    if (!atomic_load(&g_cwist_running)) {
+        res->keep_alive = false;
+        keep_alive = false;
+    }
+
     if (!upgraded) {
         if (req->async_conn) {
-            cwist_async_send_status_t st = cwist_http_send_response_coalesced(
+            cwist_async_send_status_t as_st = cwist_http_send_response_coalesced(
                 client_fd, res, req->async_conn, keep_alive, req->method == CWIST_HTTP_HEAD);
             cwist_http_response_destroy(res);
             cwist_http_request_destroy(req);
-            if (st == CWIST_ASYNC_SEND_DEFERRED) return APP_SERVE_DEFERRED;
-            return st == CWIST_ASYNC_SEND_KEEPALIVE ? APP_SERVE_KEEPALIVE : APP_SERVE_CLOSE;
+            if (as_st == CWIST_ASYNC_SEND_DEFERRED) return APP_SERVE_DEFERRED;
+            if (as_st == CWIST_ASYNC_SEND_KEEPALIVE) return APP_SERVE_KEEPALIVE;
+            return APP_SERVE_CLOSE;
         }
-        cwist_error_t err = req->method == CWIST_HTTP_HEAD
-                                ? cwist_http_send_response_head(client_fd, res)
-                                : cwist_http_send_response(client_fd, res);
-        if (err.error.err_i16 < 0) keep_alive = false;
+
+        /* RFC 9110 section 9.3.2: HEAD replies carry the GET headers (Content-Length
+         * included) but no body bytes, for every route. */
+        cwist_error_t send_err = (req->method == CWIST_HTTP_HEAD)
+                                     ? cwist_http_send_response_head(client_fd, res)
+                                     : cwist_http_send_response(client_fd, res);
+        if (send_err.error.err_i16 < 0) {
+            cwist_http_response_destroy(res);
+            cwist_http_request_destroy(req);
+            return APP_SERVE_CLOSE;
+        }
+
+        // --- Big Dumb Reply (Learn) ---
+        if (app->bdr_ctx) {
+            bool endpoint_file = cwist_endpoint_has(req->endpoint_opts, CWIST_ENDPOINT_FILE);
+
+            uint64_t scaled_threshold = (uint64_t)app->bdr_ctx->latency_threshold_ms;
+            if (priority_weight > 50) {
+                scaled_threshold = scaled_threshold * (100 - priority_weight) / 100;
+            }
+
+            if (req->method == CWIST_HTTP_GET && !endpoint_file) {
+                if (endpoint_fixed) {
+                    cwist_sstring *serialized = cwist_http_stringify_response(res);
+                    if (serialized) {
+                        cwist_bdr_put_fixed(app->bdr_ctx, "GET", req->path->data, serialized->data,
+                                            serialized->size);
+                        cwist_sstring_destroy(serialized);
+                    }
+                } else if (duration_ms > scaled_threshold) {
+                    cwist_sstring *serialized = cwist_http_stringify_response(res);
+                    if (serialized) {
+                        cwist_bdr_put(app->bdr_ctx, "GET", req->path->data, serialized->data,
+                                      serialized->size);
+                        cwist_sstring_destroy(serialized);
+                    }
+                }
+            }
+        }
+        // ------------------------------
     }
+
     cwist_http_response_destroy(res);
     cwist_http_request_destroy(req);
-    return keep_alive && !upgraded ? APP_SERVE_KEEPALIVE : APP_SERVE_CLOSE;
+
+    return (keep_alive && !upgraded) ? APP_SERVE_KEEPALIVE : APP_SERVE_CLOSE;
 }
 
 /**
@@ -2884,6 +2907,60 @@ void cwist_app_http_handler(int client_fd, void *ctx) {
     read_buf[0] = '\0';
 
     while (true) {
+        // --- Zero-Alloc Ingress Fast-Path for Cached / Fixed BDR Endpoints ---
+        if (app->bdr_ctx) {
+            while (true) {
+                if (buf_len == 0) {
+                    ssize_t bytes = recv(client_fd, read_buf, sizeof(read_buf) - 1, 0);
+                    if (bytes <= 0) {
+                        if (bytes < 0 && errno == EINTR) continue;
+                        close(client_fd);
+                        return;
+                    }
+                    buf_len = (size_t)bytes;
+                    read_buf[buf_len] = '\0';
+                }
+
+                char *hdr_end = (char *)cwist_simd_find_crlfcrlf(read_buf, buf_len);
+                if (hdr_end && (read_buf[0] == 'G' && read_buf[1] == 'E' && read_buf[2] == 'T' &&
+                                read_buf[3] == ' ')) {
+                    const char *path_start = read_buf + 4;
+                    const char *path_end =
+                        (const char *)memchr(path_start, ' ', (size_t)(hdr_end - path_start));
+                    if (path_end) {
+                        char path_tmp[256];
+                        size_t plen = (size_t)(path_end - path_start);
+                        if (plen < sizeof(path_tmp)) {
+                            memcpy(path_tmp, path_start, plen);
+                            path_tmp[plen] = '\0';
+                            size_t cached_len = 0;
+                            const void *cached_blob =
+                                cwist_bdr_get(app->bdr_ctx, "GET", path_tmp, &cached_len);
+                            if (cached_blob && cached_len > 0) {
+                                ssize_t sret =
+                                    send(client_fd, cached_blob, cached_len, MSG_NOSIGNAL);
+                                if (sret <= 0) {
+                                    close(client_fd);
+                                    return;
+                                }
+                                size_t consumed = (size_t)(hdr_end + 4 - read_buf);
+                                if (buf_len > consumed) {
+                                    memmove(read_buf, read_buf + consumed, buf_len - consumed);
+                                    buf_len -= consumed;
+                                    read_buf[buf_len] = '\0';
+                                } else {
+                                    buf_len = 0;
+                                    read_buf[0] = '\0';
+                                }
+                                continue;
+                            }
+                        }
+                    }
+                }
+                break;
+            }
+        }
+
         cwist_http_parse_error_t perr = CWIST_HTTP_PARSE_OK;
         cwist_http_request *req =
             cwist_http_receive_request(client_fd, read_buf, sizeof(read_buf), &buf_len, &perr);
@@ -3861,7 +3938,6 @@ int cwist_app_listen(cwist_app *app, int port) {
     cwist_app_tune_system();
     cwist_apply_profile();
     if (!app) return -1;
-    cwist_pfc_clear(app->public_fixed_cache); /* Restart/reconfiguration boundary. */
     app->port = port;
 
     // Validate protocol combinations for the same port
