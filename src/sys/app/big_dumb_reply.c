@@ -58,13 +58,24 @@ static void bdr_remove_entry(cwist_bdr_t *bdr, size_t idx, bdr_entry_t *prev, bd
     cwist_free(entry);
 }
 
-/**
- * @brief Determine whether a cache entry should be invalidated by age or hit count.
- * @param bdr Cache configuration and guardrail state.
- * @param entry Entry being evaluated.
- * @param now Current wall-clock time.
- * @return true when the entry should be evicted.
- */
+/* --- Lookup helpers ------------------------------------------------------- */
+
+static uint64_t bdr_hash(const char *method, const char *path) {
+    uint64_t h = siphash24((const void *)path, strlen(path), BDR_KEY);
+    h ^= (uint64_t)(method[0]);
+    return h;
+}
+
+static uint64_t bdr_hash_n(const char *method, const char *path, size_t path_len) {
+    uint64_t h = siphash24((const void *)path, path_len, BDR_KEY);
+    h ^= (uint64_t)(method[0]);
+    return h;
+}
+
+static uint64_t bdr_hash_data(const void *data, size_t len) {
+    return siphash24(data, len, BDR_KEY);
+}
+
 static bool bdr_entry_should_decay(const cwist_bdr_t *bdr, const bdr_entry_t *entry, time_t now) {
     if (!bdr || !entry) return false;
     if (bdr->max_entry_age_sec > 0 && entry->created_at > 0) {
@@ -202,140 +213,110 @@ void cwist_bdr_destroy(cwist_bdr_t *bdr) {
     cwist_free(bdr);
 }
 
-/**
- * @brief Hash a request method/path pair into the cache key space.
- * @param method HTTP method string.
- * @param path Canonical request path.
- * @return 64-bit bucket key for the request.
- */
-static uint64_t bdr_hash(const char *method, const char *path) {
-    uint64_t h = siphash24((const void*)path, strlen(path), BDR_KEY);
-    h ^= (uint64_t)(method[0]); 
-    return h;
-}
+/* --- Read path ------------------------------------------------------------ */
 
-/**
- * @brief Detect low-memory conditions and spill stable cache entries to SQLite.
- * @param bdr Cache instance to downgrade when RAM becomes critical.
- */
-static void bdr_check_ram(cwist_bdr_t *bdr) {
-    if (bdr->is_disk_mode) return;
-    
-    // Threshold: 64MB free (conservative)
-    if (cwist_is_ram_critical(CWIST_MIB(64))) {
-        printf("[BDR] Low RAM. Switching to Disk Cache.\n");
-        // Open Disk DB
-        if (sqlite3_open("cwist_bdr_fallback.db", &bdr->disk_db) == SQLITE_OK) {
-             char *err = NULL;
-             sqlite3_exec(bdr->disk_db, "CREATE TABLE IF NOT EXISTS bdr (hash INTEGER PRIMARY KEY, blob BLOB);", NULL, NULL, &err);
-             if (err) sqlite3_free(err);
-             
-             // Move existing memory items to disk
-             sqlite3_exec(bdr->disk_db, "BEGIN TRANSACTION;", NULL, NULL, NULL);
-             for (size_t i = 0; i < bdr->bucket_count; i++) {
-                bdr_entry_t *curr = bdr->buckets[i];
-                while (curr) {
-                    if (curr->is_stable) { // Only move stable items
-                        sqlite3_stmt *stmt;
-                        sqlite3_prepare_v2(bdr->disk_db, "INSERT INTO bdr (hash, blob) VALUES (?, ?);", -1, &stmt, NULL);
-                        sqlite3_bind_int64(stmt, 1, curr->request_hash);
-                        sqlite3_bind_blob(stmt, 2, curr->response_blob, curr->len, SQLITE_STATIC);
-                        sqlite3_step(stmt);
-                        sqlite3_finalize(stmt);
-                    }
-                    
-                    // Free memory
-                    bdr_entry_t *next = curr->next;
-                    free(curr->response_blob);
-                    free(curr);
-                    curr = next;
-                }
-                bdr->buckets[i] = NULL;
-             }
-             sqlite3_exec(bdr->disk_db, "COMMIT;", NULL, NULL, NULL);
-             bdr->is_disk_mode = true;
-        }
+/* Shared read core: epoch-protected hit validation for a precomputed
+ * request hash, optionally starting from a caller-cached entry hint.  The
+ * hint is re-validated (retirement + key match) under the epoch; a stale
+ * hint degrades to a full bucket walk, never to a wrong serve.  Returns the
+ * blob bytes with the pin held, or NULL with no pin held. */
+static const void *bdr_serve_hit(cwist_bdr_t *bdr, uint64_t req_h, bdr_entry_t *hint,
+                                 size_t *out_len, bdr_blob_t **out_pin) {
+    ttak_epoch_enter();
+    bdr_entry_t *entry = hint;
+    if (entry &&
+        (atomic_load_explicit(&entry->retired, memory_order_acquire) ||
+         entry->request_hash != req_h)) {
+        entry = NULL;
     }
-}
-
-/**
- * @brief Hash a serialized response blob for stability comparisons.
- * @param data Response bytes to hash.
- * @param len Number of bytes in the response blob.
- * @return 64-bit content hash.
- */
-static uint64_t bdr_hash_data(const void *data, size_t len) {
-
-    return siphash24(data, len, BDR_KEY);
-
-}
-
-
-
-/**
- * @brief Look up a previously stabilized GET response in the cache.
- * @param bdr Cache instance to query.
- * @param method HTTP method string.
- * @param path Canonical request path.
- * @param out_len Optional output pointer that receives the blob length.
- * @return Cached response blob, or NULL when absent/unstable/invalidated.
- */
-static const void *bdr_get_locked(cwist_bdr_t *bdr, const char *method, const char *path, size_t *out_len) {
-
-    if (!bdr || !method || !path) return NULL;
-
-    if (strcmp(method, "GET") != 0) return NULL;
-
-
-
-    uint64_t h = bdr_hash(method, path);
-
-
-
-    // Disk Mode
-
-    if (bdr->is_disk_mode) {
-
-        // Disk mode logic remains same (Fail-safe: return NULL or implement read)
-
-        // For now, we stick to "Write-only" on disk for safety as per previous step.
-
-        return NULL; 
-
+    if (!entry) entry = bdr_find(bdr, req_h);
+    if (!entry) {
+        ttak_epoch_exit();
+        return NULL;
     }
+    atomic_fetch_add_explicit(&entry->hits, 1, memory_order_relaxed);
 
-
-
-    // Memory Mode
-
-    size_t idx = h % bdr->bucket_count;
-
-    bdr_entry_t *curr = bdr->buckets[idx];
-
-    while (curr) {
-
-        if (curr->request_hash == h) {
-
-            curr->hits++;
-
-            if (curr->is_stable && curr->response_blob) {
-
-                if (out_len) *out_len = curr->len;
-
-                return curr->response_blob;
-
+    /* Hit-time revalidation: a true report swaps in the callback's buffer
+     * with one pointer exchange; the predecessor retires across an epoch. */
+    cwist_bdr_revalidate_fn hook = entry->revalidate;
+    if (hook) {
+        void *fresh = NULL;
+        size_t fresh_len = 0;
+        void (*fresh_free)(void *) = NULL;
+        if (hook(entry->revalidate_arg, &fresh, &fresh_len, &fresh_free) && fresh &&
+            fresh_len > 0) {
+            bdr_blob_t *nb = bdr_blob_wrap(fresh, fresh_len, fresh_free);
+            if (nb) {
+                bdr_entry_publish(bdr, entry, nb);
+            } else if (fresh_free) {
+                fresh_free(fresh);
             }
-
-            return NULL; // Found but not stable yet
-
         }
-
-        curr = curr->next;
-
     }
 
-    return NULL;
+    bdr_blob_t *blob = atomic_load_explicit(&entry->blob, memory_order_acquire);
+    if (!blob || !atomic_load_explicit(&entry->is_stable, memory_order_acquire)) {
+        ttak_epoch_exit();
+        return NULL;
+    }
+    if (out_len) *out_len = blob->len;
+    *out_pin = blob;
+    return blob->data;
+}
 
+const void *cwist_bdr_get_pinned(cwist_bdr_t *bdr, const char *method, const char *path,
+                                 size_t *out_len, bdr_blob_t **out_pin) {
+    if (!bdr || !method || !path || !out_pin) return NULL;
+    if (strcmp(method, "GET") != 0) return NULL;
+    if (atomic_load_explicit(&bdr->is_disk_mode, memory_order_acquire)) return NULL;
+
+    return bdr_serve_hit(bdr, bdr_hash(method, path), NULL, out_len, out_pin);
+}
+
+const void *cwist_bdr_get_pinned_cursor(cwist_bdr_t *bdr, const char *method, const char *path,
+                                        size_t path_len, size_t *out_len, bdr_blob_t **out_pin,
+                                        cwist_bdr_cursor_t *cursor) {
+    if (!bdr || !method || !path || !out_pin || !cursor) return NULL;
+    if (strcmp(method, "GET") != 0) return NULL;
+    if (atomic_load_explicit(&bdr->is_disk_mode, memory_order_acquire)) return NULL;
+
+    uint64_t req_h;
+    bdr_entry_t *hint = NULL;
+    if (cursor->entry && cursor->path_len == path_len &&
+        path_len < CWIST_BDR_CURSOR_PATH_MAX && cursor->req_hash != 0 &&
+        memcmp(cursor->path, path, path_len) == 0) {
+        hint = cursor->entry;
+        req_h = cursor->req_hash;
+    } else {
+        req_h = bdr_hash_n(method, path, path_len);
+    }
+
+    const void *data = bdr_serve_hit(bdr, req_h, hint, out_len, out_pin);
+    if (data && path_len < CWIST_BDR_CURSOR_PATH_MAX) {
+        bdr_entry_t *served = hint;
+        if (!served || atomic_load_explicit(&served->retired, memory_order_relaxed) ||
+            served->request_hash != req_h) {
+            /* The hint was stale (or absent): recover the served entry from
+             * the bucket chain so the cursor points at the live node. */
+            served = bdr_find(bdr, req_h);
+        }
+        if (served) {
+            cursor->entry = served;
+            cursor->req_hash = req_h;
+            cursor->path_len = path_len;
+            memcpy(cursor->path, path, path_len);
+        } else {
+            cursor->entry = NULL;
+        }
+    } else if (!data) {
+        cursor->entry = NULL;
+    }
+    return data;
+}
+
+void cwist_bdr_unpin(bdr_blob_t *pin) {
+    (void)pin; /* The pin is the epoch itself. */
+    ttak_epoch_exit();
 }
 
 const void *cwist_bdr_get(cwist_bdr_t *bdr, const char *method, const char *path, size_t *out_len) {
