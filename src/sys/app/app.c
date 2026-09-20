@@ -42,8 +42,10 @@
 #define PATH_MAX 4096
 #endif
 #include <unistd.h>
+#if !defined(__EMSCRIPTEN__) && !defined(__wasi__)
 #include <sys/wait.h>
 #include <signal.h>
+#endif
 #include <errno.h>
 #include <fcntl.h>
 #include <poll.h>
@@ -54,7 +56,9 @@
 #include <netinet/tcp.h>
 #include <dirent.h>
 #include <sys/stat.h>
+#ifndef __wasi__
 #include <sys/resource.h>
+#endif
 #include <time.h>
 #include <pthread.h>
 #include <ttak/mem/mem.h>
@@ -63,7 +67,7 @@
 #define CWIST_ROUTE_BUCKETS 127
 #define CWIST_STATIC_RETIRE_NS TT_SECOND(5)
 
-#ifndef __EMSCRIPTEN__
+#if !defined(__EMSCRIPTEN__) && !defined(__wasi__)
 /* Default open-file soft-limit target: covers C1M's one-fd-per-connection
  * budget with headroom. Overridable via CWIST_FD_LIMIT_TARGET for
  * deployments that need a different budget (a smaller container quota, or a
@@ -75,6 +79,9 @@
  * @brief Tune system resource limits to handle high concurrency loads.
  */
 static void cwist_app_tune_system(void) {
+#ifdef __wasi__
+    /* WASI preview1 has no rlimit; fd budgeting is the host's concern. */
+#else
     struct rlimit rl;
     if (getrlimit(RLIMIT_NOFILE, &rl) != 0) {
         fprintf(stderr, "[CWIST] Cannot read file limits: %s\n", strerror(errno));
@@ -110,10 +117,11 @@ static void cwist_app_tune_system(void) {
         }
     }
     printf("[CWIST] Open file soft limit: %llu\n", (unsigned long long)rl.rlim_cur);
+#endif
 }
 #endif
 
-#ifndef __EMSCRIPTEN__
+#if !defined(__EMSCRIPTEN__) && !defined(__wasi__)
 /**
  * @brief Read the current libttak tick count used for static-file retirement deadlines.
  * @return Monotonic tick value compatible with libttak memory APIs.
@@ -123,7 +131,7 @@ static inline uint64_t cwist_mem_now(void) {
 }
 #endif
 
-#ifndef __EMSCRIPTEN__
+#if !defined(__EMSCRIPTEN__) && !defined(__wasi__)
 /* The static-file memory cache rides on libttak's mem tree and a watcher
  * thread; WASM hosts get neither (cwist_prepare_static() always declines). */
 /**
@@ -691,7 +699,7 @@ static bool cwist_static_match_entry(const cwist_static_dir *entry, const char *
  */
 static bool cwist_prepare_static(cwist_app *app, cwist_http_request *req,
                                  cwist_static_request_info *info) {
-#ifdef __EMSCRIPTEN__
+#if defined(__EMSCRIPTEN__) || defined(__wasi__)
     /* No filesystem-backed static cache in WASM hosts. */
     (void)app;
     (void)req;
@@ -721,7 +729,7 @@ static bool cwist_prepare_static(cwist_app *app, cwist_http_request *req,
 #endif
 }
 
-#ifndef __EMSCRIPTEN__
+#if !defined(__EMSCRIPTEN__) && !defined(__wasi__)
 /**
  * @brief Recursively scan a static root directory to size or populate the fixed-memory cache.
  * @param fs_root Filesystem directory to scan.
@@ -883,7 +891,7 @@ static char *cwist_normalize_directory(const char *directory) {
     return copy;
 }
 
-#ifndef __EMSCRIPTEN__
+#if !defined(__EMSCRIPTEN__) && !defined(__wasi__)
 /**
  * @brief Cleanup hook used when a response borrows a static-file cache payload.
  * @param ptr Borrowed body pointer.
@@ -1120,7 +1128,7 @@ static void cwist_static_handler(cwist_http_request *req, cwist_http_response *r
 #include <limits.h>
 #include <errno.h>
 
-#ifndef __EMSCRIPTEN__
+#if !defined(__EMSCRIPTEN__) && !defined(__wasi__)
 /**
  * @brief Allocate and initialize the top-level CWIST application object.
  * @return Newly created application, or NULL when allocation fails.
@@ -1229,7 +1237,7 @@ cwist_app *cwist_app_create(void) {
     app->scheduler = NULL;
     app->grpc_routes = NULL;
 
-#ifndef __EMSCRIPTEN__
+#if !defined(__EMSCRIPTEN__) && !defined(__wasi__)
     cwist_app_refresh_https_request_handler(app);
 #endif
 
@@ -1325,14 +1333,14 @@ void cwist_app_configure_bdr(cwist_app *app, size_t max_bytes, time_t max_entry_
  */
 void cwist_app_destroy(cwist_app *app) {
     if (!app) return;
-#ifndef __EMSCRIPTEN__
+#if !defined(__EMSCRIPTEN__) && !defined(__wasi__)
     cwist_multiport_destroy_owned_subapps(app);
     cwist_multiport_unlink_app(app);
 #endif
     if (app->cert_path) cwist_free(app->cert_path);
     if (app->key_path) cwist_free(app->key_path);
     if (app->tls_groups) cwist_free(app->tls_groups);
-#ifndef __EMSCRIPTEN__
+#if !defined(__EMSCRIPTEN__) && !defined(__wasi__)
     if (app->ssl_ctx) cwist_https_destroy_context(app->ssl_ctx);
     if (app->h3_ctx) cwist_http3_destroy_context(app->h3_ctx);
 #endif
@@ -1371,7 +1379,7 @@ void cwist_app_destroy(cwist_app *app) {
         curr_s = next;
     }
 
-#ifndef __EMSCRIPTEN__
+#if !defined(__EMSCRIPTEN__) && !defined(__wasi__)
     if (app->mem_manager) {
         app->mem_manager->watcher_running = false;
         // If thread was started, join it.
@@ -1401,7 +1409,7 @@ void cwist_app_destroy(cwist_app *app) {
         cwist_bdr_destroy(app->bdr_ctx);
     }
 
-#ifndef __EMSCRIPTEN__
+#if !defined(__EMSCRIPTEN__) && !defined(__wasi__)
     if (app->nuke_enabled) {
         cwist_nuke_close();
     }
@@ -1430,7 +1438,7 @@ void cwist_app_destroy(cwist_app *app) {
     if (app->session_secret) cwist_free(app->session_secret);
     if (app->session_name) cwist_free(app->session_name);
 
-#ifndef __EMSCRIPTEN__
+#if !defined(__EMSCRIPTEN__) && !defined(__wasi__)
     if (app->db_pool) {
         cwist_db_pool_destroy((cwist_db_pool_t *)app->db_pool);
     }
@@ -1495,7 +1503,7 @@ static void execute_chain(cwist_app *app, cwist_http_request *req, cwist_http_re
  * @return Tagged CWIST error describing success or failure.
  */
 cwist_error_t cwist_app_use_https(cwist_app *app, const char *cert_path, const char *key_path) {
-#ifdef __EMSCRIPTEN__
+#if defined(__EMSCRIPTEN__) || defined(__wasi__)
     (void)cert_path;
     (void)key_path;
     cwist_error_t err = make_error(CWIST_ERR_INT16);
@@ -1559,7 +1567,7 @@ cwist_error_t cwist_app_use_https2(cwist_app *app, bool enabled) {
     }
 
     app->use_https2 = enabled;
-#ifdef __EMSCRIPTEN__
+#if defined(__EMSCRIPTEN__) || defined(__wasi__)
     err.error.err_i16 = -1; /* HTTP/2 transport is native-only */
     return err;
 #else
@@ -1582,7 +1590,7 @@ cwist_error_t cwist_app_use_https3(cwist_app *app, bool enabled) {
     }
 
     app->use_https3 = enabled;
-#ifdef __EMSCRIPTEN__
+#if defined(__EMSCRIPTEN__) || defined(__wasi__)
     err.error.err_i16 = -1; /* HTTP/3 transport is native-only */
     return err;
 #else
@@ -1617,7 +1625,7 @@ cwist_error_t cwist_app_use_http3(cwist_app *app, bool enabled) {
     }
 
     app->use_http3 = enabled;
-#ifdef __EMSCRIPTEN__
+#if defined(__EMSCRIPTEN__) || defined(__wasi__)
     err.error.err_i16 = -1; /* HTTP/3 transport is native-only */
     return err;
 #else
@@ -1629,7 +1637,7 @@ cwist_error_t cwist_app_use_http3(cwist_app *app, bool enabled) {
 void cwist_app_use_webtransport(cwist_app *app, cwist_webtransport_handler_func handler) {
     if (!app) return;
     app->wt_handler = handler;
-#ifndef __EMSCRIPTEN__
+#if !defined(__EMSCRIPTEN__) && !defined(__wasi__)
     if (app->h3_ctx) {
         cwist_http3_set_webtransport_handler(app->h3_ctx, handler);
     }
@@ -1649,7 +1657,7 @@ cwist_error_t cwist_app_use_db(cwist_app *app, const char *db_path) {
         return err;
     }
 
-#ifdef __EMSCRIPTEN__
+#if defined(__EMSCRIPTEN__) || defined(__wasi__)
     err.error.err_i16 = -1; /* SQLite lives outside the minimal WASM core */
     return err;
 #else
@@ -1687,7 +1695,7 @@ cwist_error_t cwist_app_use_nuke_db(cwist_app *app, const char *db_path, int syn
         return err;
     }
 
-#ifdef __EMSCRIPTEN__
+#if defined(__EMSCRIPTEN__) || defined(__wasi__)
     (void)sync_interval_ms;
     err.error.err_i16 = -1; /* NUKE DB needs native libttak memory */
     return err;
@@ -1739,7 +1747,7 @@ cwist_error_t cwist_app_use_nuke_db(cwist_app *app, const char *db_path, int syn
  */
 cwist_db *cwist_app_get_db(cwist_app *app) {
     if (!app) return NULL;
-#ifndef __EMSCRIPTEN__
+#if !defined(__EMSCRIPTEN__) && !defined(__wasi__)
     if (app->nuke_enabled) {
         app->db->conn = cwist_nuke_get_db();
     }
@@ -1753,7 +1761,7 @@ cwist_error_t cwist_app_use_db_pool(cwist_app *app, const char *db_path, size_t 
         err.error.err_i16 = -1;
         return err;
     }
-#ifdef __EMSCRIPTEN__
+#if defined(__EMSCRIPTEN__) || defined(__wasi__)
     (void)db_path;
     (void)max_conns;
     err.error.err_i16 = -1; /* connection pools need native sockets/threads */
@@ -1783,7 +1791,7 @@ cwist_error_t cwist_app_use_redis(cwist_app *app, const char *host, int port, si
         err.error.err_i16 = -1;
         return err;
     }
-#ifdef __EMSCRIPTEN__
+#if defined(__EMSCRIPTEN__) || defined(__wasi__)
     (void)host;
     (void)port;
     (void)max_conns;
@@ -1814,7 +1822,7 @@ cwist_error_t cwist_app_use_scheduler(cwist_app *app, size_t worker_count, size_
         err.error.err_i16 = -1;
         return err;
     }
-#ifdef __EMSCRIPTEN__
+#if defined(__EMSCRIPTEN__) || defined(__wasi__)
     (void)worker_count;
     (void)queue_capacity;
     err.error.err_i16 = -1; /* worker pools need native threads */
@@ -2438,7 +2446,7 @@ static void internal_route_handler(cwist_app *app, cwist_http_request *req,
         req->endpoint_opts = found_route->opts ? found_route->opts : CWIST_ENDPOINT_DEFAULT;
         if (res) res->endpoint_opts = req->endpoint_opts;
         if (found_route->ws_async_on_message && req->async_conn) {
-#ifndef __EMSCRIPTEN__
+#if !defined(__EMSCRIPTEN__) && !defined(__wasi__)
             /* C1M path (issue #181): the route handler runs on the reactor
              * thread, so invoking a blocking ws_handler here would park the
              * whole worker in recv().  Complete the upgrade, send the 101
@@ -2474,7 +2482,7 @@ static void internal_route_handler(cwist_app *app, cwist_http_request *req,
             }
 #endif
         } else if (found_route->ws_handler) {
-#ifdef __EMSCRIPTEN__
+#if defined(__EMSCRIPTEN__) || defined(__wasi__)
             /* WebSocket upgrades need a live socket; in-memory dispatch has none. */
             res->status_code = CWIST_HTTP_BAD_REQUEST;
             cwist_sstring_assign(res->body, "WebSocket Upgrade Failed");
@@ -2515,10 +2523,17 @@ static void internal_route_handler(cwist_app *app, cwist_http_request *req,
 
     cwist_static_request_info static_info = {0};
     if (cwist_prepare_static(app, req, &static_info)) {
+#if !defined(__EMSCRIPTEN__) && !defined(__wasi__)
         req->endpoint_opts = CWIST_ENDPOINT_FILE;
         if (res) res->endpoint_opts = req->endpoint_opts;
         execute_chain(app, req, res, cwist_static_handler, &static_info);
         return;
+#else
+        /* Unreachable: cwist_prepare_static() always declines on WASM hosts,
+         * and the filesystem-backed handler is not compiled in. Guarded so
+         * the native-only handler reference stays out of the WASM link. */
+        return;
+#endif
     }
 
     cwist_error_handler_func eh = cwist_app_find_error_handler(app, CWIST_HTTP_NOT_FOUND);
@@ -2530,7 +2545,7 @@ static void internal_route_handler(cwist_app *app, cwist_http_request *req,
     }
 }
 
-#ifndef __EMSCRIPTEN__
+#if !defined(__EMSCRIPTEN__) && !defined(__wasi__)
 /* Everything below up to the multiport section is socket serving machinery:
  * TLS/plain connection handlers, h2/h3 bridges, async flush paths. */
 static void static_http2_route_bridge(void *user_ctx, cwist_http_request *req,
@@ -2714,6 +2729,8 @@ typedef enum {
     APP_SERVE_DETACH /* Upgraded fd handed to another owner (WS async); do not close or re-arm. */
 } app_serve_result_t;
 
+#ifndef __wasi__
+/* Socket-server request serving: WASI hosts dispatch in memory instead. */
 static app_serve_result_t app_serve_parsed_request(cwist_app *app, int client_fd,
                                                    cwist_http_request *req,
                                                    uint32_t priority_weight) {
@@ -2870,6 +2887,7 @@ static app_serve_result_t app_serve_parsed_request(cwist_app *app, int client_fd
 
     return (keep_alive && !upgraded) ? APP_SERVE_KEEPALIVE : APP_SERVE_CLOSE;
 }
+#endif /* __wasi__ */
 
 /**
  * @brief Event-driven HTTP/1.1 handler for the C1M reactor path.
@@ -2914,6 +2932,7 @@ static unsigned int app_http_yield_batch(void) {
     return (unsigned int)v;
 }
 
+#ifndef __wasi__
 cwist_async_action_t cwist_app_http_handler_async(int client_fd, cwist_http_async_conn_t *conn) {
     cwist_app *app = (cwist_app *)conn->user_ctx;
     static _Atomic long dbg_fill_fail, dbg_fatal, dbg_serve_close;
@@ -3045,7 +3064,9 @@ cwist_async_action_t cwist_app_http_handler_async(int client_fd, cwist_http_asyn
     return app_async_flush_exit(
         client_fd, conn, conn->peer_eof ? CWIST_ASYNC_CLOSE : CWIST_ASYNC_REARM, !conn->peer_eof);
 }
+#endif /* __wasi__ */
 
+#ifndef __wasi__
 void cwist_app_http_handler(int client_fd, void *ctx) {
     cwist_app *app = (cwist_app *)ctx;
 
@@ -3157,9 +3178,10 @@ void cwist_app_http_handler(int client_fd, void *ctx) {
 
     close(client_fd);
 }
+#endif /* __wasi__ (socket serving machinery) */
 #endif /* __EMSCRIPTEN__ (socket serving machinery) */
 
-#ifndef __EMSCRIPTEN__
+#if !defined(__EMSCRIPTEN__) && !defined(__wasi__)
 /* Multiport listeners are socket/UDP machinery; WASM hosts never bind. */
 #ifndef CWIST_MULTIPORT_MAX_PORTS
 #define CWIST_MULTIPORT_MAX_PORTS 64
@@ -4029,7 +4051,7 @@ int cwist_app_multiport(cwist_app **app_ref, unsigned short public_port, cwist_m
 }
 #endif /* __EMSCRIPTEN__ (multiport) */
 
-#ifndef __EMSCRIPTEN__
+#if !defined(__EMSCRIPTEN__) && !defined(__wasi__)
 struct h3_thread_payload {
     int udp_fd;
     cwist_app *app;
@@ -4099,7 +4121,7 @@ void cwist_apply_profile(void) {
  * @return 0 on success, or -1 when initialization, bind, or worker shutdown fails.
  */
 int cwist_app_listen(cwist_app *app, int port) {
-#ifdef __EMSCRIPTEN__
+#if defined(__EMSCRIPTEN__) || defined(__wasi__)
     (void)port;
     if (app) app->port = port;
     return -1; /* WASM hosts drive requests through cwist_app_dispatch_memory() */

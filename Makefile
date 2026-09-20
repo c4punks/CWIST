@@ -356,6 +356,33 @@ clean-wasm:
 	rm -rf $(WASM_BUILD_DIR) libcwist_wasm.a wasm_smoke.js wasm_smoke.wasm \
 	    wrapper_test.js wrapper_test.wasm dist
 
+# --- WASI (wasm32-wasi preview1) smoke --------------------------------------
+# Same WASM_SRCS subset as the Emscripten target, built with wasi-sdk and run
+# under a WASI host (wasmtime). Proves the in-memory dispatch surface links
+# and executes without a browser. Requires WASI_SDK and WASMTIME.
+WASI_SDK ?= $(HOME)/toolchains/wasi-sdk-25.0-x86_64-linux
+WASMTIME ?= wasmtime
+WASI_BUILD_DIR = .wasi-build
+WASI_CFLAGS = --target=wasm32-wasi -std=c17 -O2 -Wall -fvisibility=hidden \
+	$(WASM_INCLUDE_PATHS) $(COMMON_DEFINES)
+WASI_SRCS = $(WASM_SRCS) src/sys/wasi/compat.c
+WASI_OBJS = $(WASI_SRCS:%.c=$(WASI_BUILD_DIR)/%.o)
+
+$(WASI_BUILD_DIR)/%.o: %.c
+	@mkdir -p $(dir $@)
+	$(WASI_SDK)/bin/clang $(WASI_CFLAGS) -c -o $@ $<
+
+libcwist_wasi.a: $(WASI_OBJS)
+	$(WASI_SDK)/bin/ar rcs $@ $(WASI_OBJS)
+
+wasi-smoke: libcwist_wasi.a
+	$(WASI_SDK)/bin/clang $(WASI_CFLAGS) -o wasi_smoke.wasm tests/wasi_smoke.c \
+	    libcwist_wasi.a -lwasi-emulated-pthread -Wl,--gc-sections -Wl,--allow-undefined
+	$(WASMTIME) run wasi_smoke.wasm
+
+clean-wasi:
+	rm -rf $(WASI_BUILD_DIR) libcwist_wasi.a wasi_smoke.wasm
+
 # Object Files and Target
 OBJS = $(SRCS:.c=.o)
 LIB_NAME = libcwist.a
@@ -592,7 +619,7 @@ TEST_TARGETS = test_worker_affinity \
                test_proto_desc \
                test_css_composer
 
-.PHONY: all test $(TEST_TARGETS) fuzz_seq install uninstall dist clean rebuild examples clean-examples wasm wasm-smoke clean-wasm
+.PHONY: all test $(TEST_TARGETS) fuzz_seq install uninstall dist clean rebuild examples clean-examples wasm wasm-smoke clean-wasm wasi-smoke clean-wasi
 
 # Run with e.g. `make fuzz_seq FUZZ_RUNS=100000`.  The target intentionally
 # uses a dedicated clang/libFuzzer toolchain and is not part of `make test`.

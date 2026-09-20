@@ -138,8 +138,16 @@ static void cwist_entropy_fill(uint8_t *buf, size_t len) {
     if (filled < len) {
         struct timespec ts = {0};
         clock_gettime(CLOCK_MONOTONIC, &ts);
+        /* WASI preview1 has no getppid(); the fallback entropy degrades to
+         * pid + clock only, which is acceptable for a last-resort mixer. */
+#if defined(__wasi__)
+/* WASI preview1 has no getpid(); the fallback entropy degrades to pure
+         * clock mixing, which is acceptable for a last-resort mixer. */
+        uint64_t fallbacks[2] = {(uint64_t)ts.tv_nsec, (uint64_t)ts.tv_sec ^ (uint64_t)ts.tv_nsec};
+#else
         uint64_t fallbacks[2] = {(uint64_t)ts.tv_nsec ^ (uint64_t)getpid(),
                                  (uint64_t)ts.tv_sec ^ (uint64_t)getppid()};
+#endif
         srand((unsigned int)(fallbacks[0] ^ fallbacks[1]));
         size_t idx = 0;
         while (filled + idx < len) {

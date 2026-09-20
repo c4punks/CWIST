@@ -15,7 +15,7 @@
 
 #include <cwist/core/mem/arena.h>
 
-#ifdef __EMSCRIPTEN__
+#if defined(__EMSCRIPTEN__) || defined(__wasi__)
 /* WASM hosts are single-threaded and lack libttak's epoch/GC machinery;
  * the arena degenerates to a plain malloc-backed bump buffer. */
 #include <stdbool.h>
@@ -257,4 +257,4 @@ void cwist_arena_destroy(cwist_arena_t *arena) {
         ttak_mem_free(buffer);
     }
 }
-#endif /* __EMSCRIPTEN__ */
+#endif /* __EMSCRIPTEN__ / __wasi__ */

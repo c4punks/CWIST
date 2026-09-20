@@ -31,12 +31,16 @@
 #include <strings.h>
 #include <errno.h>
 #include <poll.h>
+#ifndef __wasi__
 #include <signal.h>
+#endif
 #include <time.h>
 
 #include <sys/types.h>
 #include <unistd.h>
+#if !defined(__EMSCRIPTEN__) && !defined(__wasi__)
 #include <sys/wait.h>
+#endif
 #include <pthread.h>
 #include <stdatomic.h>
 #include <arpa/inet.h>
@@ -44,7 +48,9 @@
 #include <netinet/in.h>
 #include <netinet/tcp.h>
 #include <sys/stat.h>
+#ifndef __wasi__
 #include <sys/resource.h>
+#endif
 #include <fcntl.h>
 #ifdef __linux__
 #include <sys/epoll.h>
@@ -234,12 +240,17 @@ long cwist_http_continuation_shed_count(void) {
 static long cwist_http_inflight_limit(void) {
     long base = g_http_thread_count > 0 ? g_http_thread_count : get_optimal_thread_count();
     long floor = base * CWIST_HTTP_INFLIGHT_PER_THREAD;
+#ifndef __wasi__
     struct rlimit rl;
     if (getrlimit(RLIMIT_NOFILE, &rl) != 0) return floor;
     long budget = (rl.rlim_cur == RLIM_INFINITY)
                       ? (1024L * 1024L)
                       : (long)rl.rlim_cur - CWIST_HTTP_INFLIGHT_FD_RESERVE;
     return budget > floor ? budget : floor;
+#else
+    /* WASI preview1 has no rlimit; the thread-count floor is enough. */
+    return floor;
+#endif
 }
 
 static const char CWIST_HTTP_503[] =
@@ -477,7 +488,9 @@ void cwist_http_pool_submit(int client_fd, void (*handler)(int, void *), void *c
     long inflight = atomic_fetch_add_explicit(&g_http_inflight, 1, memory_order_acq_rel) + 1;
     if (inflight > limit) {
         atomic_fetch_sub_explicit(&g_http_inflight, 1, memory_order_release);
+#ifdef MSG_NOSIGNAL
         send(client_fd, CWIST_HTTP_503, sizeof(CWIST_HTTP_503) - 1, MSG_NOSIGNAL | MSG_DONTWAIT);
+#endif
         close(client_fd);
         return;
     }
@@ -923,7 +936,9 @@ bool cwist_http_pool_submit_async(int client_fd, cwist_async_handler_t handler, 
     long inflight = atomic_fetch_add_explicit(&g_http_inflight, 1, memory_order_acq_rel) + 1;
     if (inflight > limit) {
         atomic_fetch_sub_explicit(&g_http_inflight, 1, memory_order_release);
+#ifdef MSG_NOSIGNAL
         send(client_fd, CWIST_HTTP_503, sizeof(CWIST_HTTP_503) - 1, MSG_NOSIGNAL | MSG_DONTWAIT);
+#endif
         close(client_fd);
         return false;
     }
@@ -1573,6 +1588,9 @@ cwist_sstring *cwist_get_client_ip_from_fd(int fd) {
     // If unavailable, return localhost
     if (fd <= 0) return s;
 
+#ifndef __wasi__
+    /* WASI preview1 has no socket peer addresses; the caller only needs a
+     * placeholder when running under a WASM host. */
     struct sockaddr_storage addr;
     socklen_t len = sizeof(addr);
 
@@ -1594,6 +1612,7 @@ cwist_sstring *cwist_get_client_ip_from_fd(int fd) {
 
     // assign found ip as a value
     cwist_sstring_assign(s, ip);
+#endif
     return s;
 }
 
@@ -2042,6 +2061,7 @@ bool cwist_tcp_cork_enabled(void) {
  * @return 0 on success, -1 on fatal error or timeout.
  */
 static int cwist_http_sendmsg_all(int fd, struct iovec *iov, int iovcnt, int flags) {
+#ifndef __wasi__
     /* Speculative zero-latency fast-path attempt:
      * Completes immediately for non-saturated sockets without entering poll() loops. */
     size_t fast_sent = 0;
@@ -2096,6 +2116,15 @@ static int cwist_http_sendmsg_all(int fd, struct iovec *iov, int iovcnt, int fla
         }
     }
     return 0;
+#else
+    /* WASI preview1 has no sockets; sending is impossible. Callers treat
+     * this as a write error and tear the connection down. */
+    (void)fd;
+    (void)iov;
+    (void)iovcnt;
+    (void)flags;
+    return -1;
+#endif
 }
 
 /**
@@ -3919,6 +3948,10 @@ const char CWIST_BLOB_500[] =
     "HTTP/1.1 500 Internal Server Error\r\nContent-Length: 21\r\nConnection: close\r\n\r\nInternal Server Error";
 
 /* --- Socket Manipulation --- */
+/* Everything from here on is the socket server runtime: WASI preview1 has
+ * no sockets, so the whole section compiles out there. WASM hosts drive
+ * requests through cwist_app_dispatch_memory() instead. */
+#ifndef __wasi__
 
 /**
  * @brief Create, configure, bind, and listen on an IPv4 TCP socket.
@@ -4283,3 +4316,4 @@ cwist_error_t cwist_http_server_loop(int server_fd, cwist_server_config *config,
 
     return cwist_accept_socket(server_fd, NULL, handler, ctx);
 }
+#endif /* __wasi__ (socket server runtime) */

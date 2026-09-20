@@ -1,12 +1,52 @@
 #include <cwist/core/seq/seq_auth.h>
 #include <cwist/core/mem/alloc.h>
 
+#if defined(__EMSCRIPTEN__) || defined(__wasi__)
+/* WASM links no OpenSSL: HMAC-SHA256 comes from the bundled header-only
+ * implementation and entropy from the host (crypto.getRandomValues under
+ * Emscripten, getentropy/__wasi_random_get under WASI). */
+#include <cwist/core/crypto/sha256.h>
+#else
 #include <openssl/hmac.h>
 #include <openssl/mem.h>
 #include <openssl/rand.h>
+#endif
 #include <limits.h>
 #include <pthread.h>
 #include <string.h>
+#if defined(__EMSCRIPTEN__)
+#include <emscripten.h>
+#endif
+#if defined(__wasi__)
+#include <unistd.h> /* getentropy */
+#endif
+
+#if defined(__EMSCRIPTEN__) || defined(__wasi__)
+#define SEQ_AUTH_WASM_CRYPTO 1
+#define SEQ_AUTH_TAG_CAP CWIST_SHA256_DIGEST_LEN
+/* Constant-time compare + secure cleanse without OpenSSL. */
+static int seq_auth_memcmp(const uint8_t *a, const uint8_t *b, size_t len) {
+    uint8_t diff = 0;
+    for (size_t i = 0; i < len; i++) diff |= (uint8_t)(a[i] ^ b[i]);
+    return (int)diff;
+}
+#define SEQ_AUTH_MEMCMP(a, b, len) seq_auth_memcmp((a), (b), (len))
+#define SEQ_AUTH_CLEANSE(ptr, len) memset((ptr), 0, (len))
+#else
+#define SEQ_AUTH_TAG_CAP EVP_MAX_MD_SIZE
+#define SEQ_AUTH_MEMCMP(a, b, len) CRYPTO_memcmp((a), (b), (len))
+#define SEQ_AUTH_CLEANSE(ptr, len) OPENSSL_cleanse((ptr), (len))
+#endif
+
+#if defined(__EMSCRIPTEN__)
+EM_JS(int, seq_auth_random_js, (uint8_t *buf, int len), {
+    // clang-format off - JS body, not C: keep make format away from it
+    if (typeof crypto == = 'undefined' || !crypto.getRandomValues) return 0;
+    crypto.getRandomValues(new Uint8Array(Module.HEAPU8.buffer, buf, len));
+    return 1;
+    // clang-format on
+});
+#endif
 
 struct cwist_seq_auth_context {
     uint8_t key[CWIST_SEQ_AUTH_KEY_SIZE];
@@ -42,7 +82,35 @@ static bool seq_auth_chunk_valid(const uint8_t *data, size_t len, cwist_seq_chun
 
 static bool auth_tag(const cwist_seq_auth_context_t *ctx, const uint8_t *header_without_tag,
                      size_t header_len, const uint8_t *payload, size_t payload_len,
-                     uint8_t tag[EVP_MAX_MD_SIZE]) {
+                     uint8_t tag[SEQ_AUTH_TAG_CAP]) {
+#ifdef SEQ_AUTH_WASM_CRYPTO
+    /* Streaming HMAC-SHA256 (RFC 2104) over session_id || header || payload.
+     * The 32-byte key never exceeds the 64-byte block size, so no key
+     * pre-hashing is needed. */
+    uint8_t k[64] = {0};
+    memcpy(k, ctx->key, sizeof(ctx->key));
+    uint8_t ipad[64], opad[64];
+    for (size_t i = 0; i < 64; i++) {
+        ipad[i] = (uint8_t)(k[i] ^ 0x36);
+        opad[i] = (uint8_t)(k[i] ^ 0x5c);
+    }
+    cwist_sha256_ctx c;
+    uint8_t inner[CWIST_SHA256_DIGEST_LEN];
+    cwist_sha256_init(&c);
+    cwist_sha256_update(&c, ipad, sizeof(ipad));
+    cwist_sha256_update(&c, ctx->session_id, sizeof(ctx->session_id));
+    cwist_sha256_update(&c, header_without_tag, header_len);
+    cwist_sha256_update(&c, payload, payload_len);
+    cwist_sha256_final(&c, inner);
+    cwist_sha256_init(&c);
+    cwist_sha256_update(&c, opad, sizeof(opad));
+    cwist_sha256_update(&c, inner, sizeof(inner));
+    cwist_sha256_final(&c, tag);
+    SEQ_AUTH_CLEANSE(ipad, sizeof(ipad));
+    SEQ_AUTH_CLEANSE(opad, sizeof(opad));
+    SEQ_AUTH_CLEANSE(inner, sizeof(inner));
+    return true;
+#else
     HMAC_CTX *h = HMAC_CTX_new();
     unsigned int tag_len = 0;
     bool ok = h && HMAC_Init_ex(h, ctx->key, sizeof(ctx->key), EVP_sha256(), NULL) == 1 &&
@@ -52,11 +120,12 @@ static bool auth_tag(const cwist_seq_auth_context_t *ctx, const uint8_t *header_
               tag_len >= CWIST_SEQ_AUTH_TAG_SIZE;
     HMAC_CTX_free(h);
     return ok;
+#endif
 }
 
 static bool cache_contains(const uint8_t *cache, size_t count, size_t width, const uint8_t *value) {
     for (size_t i = 0; i < count; ++i)
-        if (CRYPTO_memcmp(cache + i * width, value, width) == 0) return true;
+        if (SEQ_AUTH_MEMCMP(cache + i * width, value, width) == 0) return true;
     return false;
 }
 
@@ -93,8 +162,8 @@ cwist_seq_auth_context_create(const uint8_t key[CWIST_SEQ_AUTH_KEY_SIZE],
 
 void cwist_seq_auth_context_destroy(cwist_seq_auth_context_t *ctx) {
     if (!ctx) return;
-    OPENSSL_cleanse(ctx->key, sizeof(ctx->key));
-    OPENSSL_cleanse(ctx->session_id, sizeof(ctx->session_id));
+    SEQ_AUTH_CLEANSE(ctx->key, sizeof(ctx->key));
+    SEQ_AUTH_CLEANSE(ctx->session_id, sizeof(ctx->session_id));
     pthread_mutex_destroy(&ctx->lock);
     cwist_free(ctx->nonces);
     cwist_free(ctx->completed_ids);
@@ -102,7 +171,14 @@ void cwist_seq_auth_context_destroy(cwist_seq_auth_context_t *ctx) {
 }
 
 bool cwist_seq_auth_random(uint8_t *out, size_t len) {
-    return out && len > 0 && len <= INT_MAX && RAND_bytes(out, (int)len) == 1;
+    if (!out || len == 0 || len > INT_MAX) return false;
+#if defined(__EMSCRIPTEN__)
+    return seq_auth_random_js(out, (int)len) == 1;
+#elif defined(__wasi__)
+    return getentropy(out, len) == 0;
+#else
+    return RAND_bytes(out, (int)len) == 1;
+#endif
 }
 
 bool cwist_seq_auth_wrap(const cwist_seq_auth_context_t *ctx,
@@ -121,7 +197,7 @@ bool cwist_seq_auth_wrap(const cwist_seq_auth_context_t *ctx,
     memcpy(wire + CWIST_SEQ_HEADER_SIZE + CWIST_SEQ_AUTH_MESSAGE_ID_SIZE, nonce,
            CWIST_SEQ_AUTH_NONCE_SIZE);
     memcpy(wire + CWIST_SEQ_AUTH_HEADER_SIZE, parsed.payload, parsed.payload_len);
-    uint8_t tag[EVP_MAX_MD_SIZE];
+    uint8_t tag[SEQ_AUTH_TAG_CAP];
     if (!auth_tag(ctx, wire,
                   CWIST_SEQ_HEADER_SIZE + CWIST_SEQ_AUTH_MESSAGE_ID_SIZE +
                       CWIST_SEQ_AUTH_NONCE_SIZE,
@@ -146,12 +222,12 @@ bool cwist_seq_auth_unwrap(cwist_seq_auth_context_t *ctx, const uint8_t *data, s
     const uint8_t *message_id = data + CWIST_SEQ_HEADER_SIZE;
     const uint8_t *nonce = message_id + CWIST_SEQ_AUTH_MESSAGE_ID_SIZE;
     const uint8_t *tag = nonce + CWIST_SEQ_AUTH_NONCE_SIZE;
-    uint8_t expected[EVP_MAX_MD_SIZE];
+    uint8_t expected[SEQ_AUTH_TAG_CAP];
     if (!auth_tag(ctx, data,
                   CWIST_SEQ_HEADER_SIZE + CWIST_SEQ_AUTH_MESSAGE_ID_SIZE +
                       CWIST_SEQ_AUTH_NONCE_SIZE,
                   parsed.payload, parsed.payload_len, expected) ||
-        CRYPTO_memcmp(tag, expected, CWIST_SEQ_AUTH_TAG_SIZE) != 0)
+        SEQ_AUTH_MEMCMP(tag, expected, CWIST_SEQ_AUTH_TAG_SIZE) != 0)
         return false;
     pthread_mutex_lock(&ctx->lock);
     bool replayed =

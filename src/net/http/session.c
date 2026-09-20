@@ -7,7 +7,7 @@
 #include <cwist/net/http/cookie.h>
 #include <cwist/core/mem/alloc.h>
 #include <cjson/cJSON.h>
-#ifdef __EMSCRIPTEN__
+#if defined(__EMSCRIPTEN__) || defined(__wasi__)
 /* WASM links no OpenSSL: verify cookie signatures with the bundled
  * header-only SHA-256/HMAC instead. */
 #include <cwist/core/crypto/sha256.h>
@@ -118,7 +118,7 @@ static int base64_decode(const char *in, uint8_t *out, size_t out_len) {
 
 static bool hmac_sha256(const char *key, size_t key_len, const char *msg, size_t msg_len,
                         uint8_t out[32]) {
-#ifdef __EMSCRIPTEN__
+#if defined(__EMSCRIPTEN__) || defined(__wasi__)
     return cwist_hmac_sha256((const uint8_t *)key, key_len, (const uint8_t *)msg, msg_len, out);
 #else
     unsigned int len = 32;
@@ -153,6 +153,20 @@ static char *generate_secret(size_t len) {
             return secret;
         }
     }
+#ifdef __wasi__
+    /* WASI preview1 has no /dev/urandom preopened by default, but
+     * wasi-libc maps getentropy() onto __wasi_random_get. */
+    unsigned char *wbuf CWIST_DEFER_FREE = cwist_alloc(len);
+    if (wbuf && getentropy(wbuf, len) == 0) {
+        static const char hex[] = "0123456789abcdef";
+        for (size_t i = 0; i < len; i++) {
+            secret[i * 2] = hex[wbuf[i] >> 4];
+            secret[i * 2 + 1] = hex[wbuf[i] & 0x0F];
+        }
+        secret[len * 2] = '\0';
+        return secret;
+    }
+#endif
 #ifdef __EMSCRIPTEN__
     if (fd < 0 && cwist_session_entropy_js(secret, (int)len) == 1) return secret;
 #endif

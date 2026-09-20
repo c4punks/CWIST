@@ -1,5 +1,5 @@
 #include <cwist/core/mem/alloc.h>
-#ifdef __EMSCRIPTEN__
+#if defined(__EMSCRIPTEN__) || defined(__wasi__)
 /* WASM hosts are single-threaded and lack libttak's mmap/pthread machinery;
  * allocations go straight to libc.  The owner-guard bridge is native-only. */
 #include <cjson/cJSON.h>
@@ -515,4 +515,4 @@ static void cwist_destroy_owner(void) {
 __attribute__((destructor)) static void cwist_owner_cleanup(void) {
     cwist_destroy_owner();
 }
-#endif /* __EMSCRIPTEN__ */
+#endif /* __EMSCRIPTEN__ / __wasi__ */
