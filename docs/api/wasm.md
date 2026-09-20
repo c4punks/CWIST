@@ -118,8 +118,16 @@ secret. The Phase 3 persistence model (issue #93):
   value stored in KV/localStorage fetched at startup). A generated-per-boot
   secret invalidates every session whenever the host recycles the module;
   auto-generation is a convenience for native servers with a persistent
-  process, and on WASM it falls back to `crypto.getRandomValues` when
-  `/dev/urandom` is absent - fine for demos, wrong for production.
+  process, and on WASM it falls back to `crypto.getRandomValues` /
+  `getentropy()` when `/dev/urandom` is absent - fine for demos, wrong for
+  production.
+- **JS injection points.** Modules built with `CWIST_WASM_DEFINE_ENTRY`
+  export `_cwist_wasm_use_session(secret)`. The npm wrapper exposes it as
+  `handle.useSession(secret)` (call before the first session-bearing
+  dispatch; pass `null` for the random dev-mode secret) and also applies a
+  declarative `Module.cwistSessionSecret` string once at binding time.
+  Rotating the secret invalidates every existing session, which is how
+  forced sign-out is implemented.
 - **Crypto is bundled.** The WASM build verifies cookie signatures with the
   header-only SHA-256/HMAC in `include/cwist/core/crypto/sha256.h` (OpenSSL
   is not linked into `libcwist_wasm.a`), so sessions now actually work
@@ -130,10 +138,11 @@ secret. The Phase 3 persistence model (issue #93):
   requests - the browser's document cookie jar does not feed fetch events
   handled by a SW automatically.
 
-Verified end to end by `tests/wasm_stream.c` (native) and the Emscripten
-smoke test: a session set on one app instance reads back on a second
-instance with the same pinned secret, and is rejected under a different
-secret.
+Verified end to end by `tests/wasm_stream.c` (native), the Emscripten
+smoke test, and `make wasm-wrapper-test` (JS-side `useSession` roundtrip +
+rotated-secret rejection): a session set on one app instance reads back on
+a second instance with the same pinned secret, and is rejected under a
+different secret.
 
 ## Streaming through the boundary
 

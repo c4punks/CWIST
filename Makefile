@@ -338,7 +338,7 @@ wasm-smoke: libcwist_wasm.a
 # created - dispatch would return NULL on every call.
 wasm-wrapper-test: libcwist_wasm.a
 	$(EMCC) $(WASM_CFLAGS) -o wrapper_test.js tests/wasm_wrapper_test.c libcwist_wasm.a \
-	    -sEXPORTED_FUNCTIONS=_main,_cwist_wasm_dispatch,_cwist_wasm_dispose,_malloc,_free \
+	    -sEXPORTED_FUNCTIONS=_main,_cwist_wasm_dispatch,_cwist_wasm_dispose,_cwist_wasm_use_session,_malloc,_free \
 	    -sEXPORTED_RUNTIME_METHODS=HEAPU8,HEAPU32 -sMODULARIZE -sEXPORT_NAME=createCwistModule
 	$(NODE) tests/wasm_wrapper_test.js
 

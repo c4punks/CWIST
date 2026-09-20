@@ -110,7 +110,39 @@ function createCwist(mod) {
     );
   }
 
-  return function handle(init) {
+  /* Session secret (issue #93): the module only exports the setter when it
+   * was built with a current-enough CWIST_WASM_DEFINE_ENTRY; treat it as
+   * optional so older modules keep working. */
+  const useSessionFn =
+    typeof mod._cwist_wasm_use_session === 'function' ? mod._cwist_wasm_use_session : null;
+
+  function useSession(secret) {
+    if (!useSessionFn) {
+      throw new Error(
+        'cwist-wasm: module does not export _cwist_wasm_use_session; rebuild with an up-to-date wasm_entry.h'
+      );
+    }
+    const bytes = ENCODER.encode(secret == null ? '' : String(secret));
+    const ptr = malloc(bytes.length + 1);
+    if (!ptr) throw new Error('cwist-wasm: malloc failed (session secret)');
+    try {
+      mod.HEAPU8.set(bytes, ptr);
+      mod.HEAPU8[ptr + bytes.length] = 0;
+      /* NULL/empty secret -> CWIST generates a per-instance random secret. */
+      const rc = useSessionFn(bytes.length > 0 ? ptr : 0);
+      if (rc !== 0) throw new Error('cwist-wasm: use_session failed (rc=' + rc + ')');
+    } finally {
+      free(ptr);
+    }
+  }
+
+  /* Declarative form: a Module.cwistSessionSecret string is applied once at
+   * binding time, before any dispatch. */
+  if (useSessionFn && typeof mod.cwistSessionSecret === 'string') {
+    useSession(mod.cwistSessionSecret);
+  }
+
+  function handle(init) {
     const reqBytes = buildRequestBytes(init || {});
     const reqPtr = malloc(reqBytes.length || 1);
     if (!reqPtr) throw new Error('cwist-wasm: malloc failed (' + reqBytes.length + ' bytes)');
@@ -130,7 +162,10 @@ function createCwist(mod) {
       if (outLenPtr) free(outLenPtr);
       free(reqPtr);
     }
-  };
+  }
+
+  handle.useSession = useSession;
+  return handle;
 }
 
 module.exports = { createCwist, buildRequestBytes, parseResponseBytes };

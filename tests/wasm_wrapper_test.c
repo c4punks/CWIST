@@ -8,6 +8,7 @@
  *
  * clang-format off regions: EM_JS bodies are JS, not C (see typedarray.h). */
 #include <cwist/sys/app/app.h>
+#include <cwist/net/http/session.h>
 #include <cwist/wasm/typedarray.h>
 #include <cwist/wasm/wasm_entry.h>
 #include <string.h>
@@ -31,6 +32,25 @@ static void echo_handler(cwist_http_request *req, cwist_http_response *res) {
     cwist_http_header_add(&res->headers, "Content-Type", "application/octet-stream");
 }
 
+static void session_set_handler(cwist_http_request *req, cwist_http_response *res) {
+    /* Write a session value; commit() emits the signed Set-Cookie. */
+    cwist_session_t *s = cwist_session_start(g_app, req, res);
+    if (!s) {
+        res->status_code = CWIST_HTTP_INTERNAL_ERROR;
+        return;
+    }
+    cwist_session_set(s, "user", "alice");
+    cwist_session_commit(s, res);
+    cwist_sstring_assign(res->body, "session-set");
+}
+
+static void session_get_handler(cwist_http_request *req, cwist_http_response *res) {
+    /* Read the session back from the request cookie. */
+    cwist_session_t *s = cwist_session_start(g_app, req, res);
+    const char *user = s ? cwist_session_get(s, "user") : NULL;
+    cwist_sstring_assign(res->body, user ? user : "anonymous");
+}
+
 /* File scope: the macro defines functions, which C does not allow inside
  * another function body. g_app is populated in main() before any dispatch. */
 CWIST_WASM_DEFINE_ENTRY(g_app)
@@ -40,6 +60,8 @@ int main(void) {
     if (!g_app) return 1;
     cwist_app_get(g_app, "/hello", hello_handler);
     cwist_app_post(g_app, "/echo", echo_handler);
+    cwist_app_get(g_app, "/session/set", session_set_handler);
+    cwist_app_get(g_app, "/session/get", session_get_handler);
     cwist_wasm_install_views();
     return 0;
 }
