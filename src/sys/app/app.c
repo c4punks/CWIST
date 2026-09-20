@@ -2249,6 +2249,178 @@ int cwist_app_dispatch_memory(cwist_app *app, const char *req_buf, size_t req_le
     return rc;
 }
 
+/* --- WASM boundary streaming (issue #93 Phase 3) -------------------------- */
+
+struct cwist_stream_req {
+    char *head;
+    size_t head_len;
+    size_t content_length; /* parsed from Content-Length; 0 when absent */
+    char *body;
+    size_t body_len;
+    size_t body_cap;
+    bool complete; /* set by a successful cwist_stream_req_end() */
+};
+
+/* Case-insensitive scan of the head block for a Content-Length header.
+ * Returns the declared length, 0 when absent, -1 on malformed values. */
+static long cwist_stream_parse_content_length(const char *head, size_t head_len) {
+    static const char cl_name[] = "content-length:";
+    const char *p = head;
+    const char *end = head + head_len;
+    while (p + sizeof(cl_name) - 1 <= end) {
+        size_t i = 0;
+        while (i < sizeof(cl_name) - 1 &&
+               (char)tolower((unsigned char)p[i]) == cl_name[i])
+            i++;
+        if (i == sizeof(cl_name) - 1) {
+            const char *v = p + i;
+            while (v < end && (*v == ' ' || *v == '\t')) v++;
+            errno = 0;
+            char *num_end = NULL;
+            long n = strtol(v, &num_end, 10);
+            if (errno != 0 || num_end == v || n < 0) return -1;
+            return n;
+        }
+        /* advance to the next header line */
+        while (p < end && *p != '\n') p++;
+        if (p < end) p++;
+    }
+    return 0;
+}
+
+cwist_stream_req_t *cwist_stream_req_begin(const char *head, size_t head_len) {
+    if (!head || head_len == 0) return NULL;
+    cwist_stream_req_t *r = cwist_alloc(sizeof(*r));
+    if (!r) return NULL;
+    r->head = cwist_alloc(head_len);
+    if (!r->head) {
+        cwist_free(r);
+        return NULL;
+    }
+    memcpy(r->head, head, head_len);
+    r->head_len = head_len;
+    long cl = cwist_stream_parse_content_length(head, head_len);
+    if (cl < 0) {
+        cwist_free(r->head);
+        cwist_free(r);
+        return NULL;
+    }
+    r->content_length = (size_t)cl;
+    r->body = NULL;
+    r->body_len = 0;
+    r->body_cap = 0;
+    r->complete = false;
+    return r;
+}
+
+int cwist_stream_req_feed(cwist_stream_req_t *r, const char *chunk, size_t len) {
+    if (!r || (!chunk && len > 0)) return -1;
+    if (len > r->content_length - r->body_len) return -1; /* overflow of declared length */
+    if (len == 0) return 0;
+    if (r->body_len + len > r->body_cap) {
+        size_t ncap = r->body_cap ? r->body_cap : 4096;
+        while (ncap < r->body_len + len) ncap *= 2;
+        char *nb = cwist_alloc(ncap);
+        if (!nb) return -1;
+        if (r->body_len > 0) memcpy(nb, r->body, r->body_len);
+        cwist_free(r->body);
+        r->body = nb;
+        r->body_cap = ncap;
+    }
+    memcpy(r->body + r->body_len, chunk, len);
+    r->body_len += len;
+    return 0;
+}
+
+int cwist_stream_req_end(cwist_stream_req_t *r) {
+    if (!r) return -1;
+    if (r->body_len != r->content_length) return -1;
+    r->complete = true;
+    return 0;
+}
+
+int cwist_stream_req_dispatch(cwist_stream_req_t *r, cwist_app *app,
+                              cwist_stream_write_fn write_fn, void *write_ctx) {
+    if (!r) return -1;
+    int rc;
+    if (!app || !write_fn || !r->complete) {
+        rc = -1;
+    } else {
+        size_t total = r->head_len + r->body_len;
+        char *wire = cwist_alloc(total ? total : 1);
+        if (!wire) {
+            rc = -1;
+        } else {
+            memcpy(wire, r->head, r->head_len);
+            if (r->body_len > 0) memcpy(wire + r->head_len, r->body, r->body_len);
+            rc = cwist_app_dispatch_stream(app, wire, total, write_fn, write_ctx);
+            cwist_free(wire);
+        }
+    }
+    cwist_free(r->head);
+    cwist_free(r->body);
+    cwist_free(r);
+    return rc;
+}
+
+int cwist_app_dispatch_stream(cwist_app *app, const char *req_buf, size_t req_len,
+                              cwist_stream_write_fn write_fn, void *write_ctx) {
+    if (!app || !req_buf || !write_fn) return -1;
+
+    cwist_http_request *req = cwist_http_parse_request_len(req_buf, req_len);
+    if (!req) return -1;
+
+    cwist_http_response *res = cwist_http_response_create();
+    if (!res) {
+        cwist_http_request_destroy(req);
+        return -1;
+    }
+    cwist_app_dispatch(app, req, res);
+    cwist_http_request_destroy(req);
+    res->keep_alive = false;
+
+    if (res->use_file_stream) {
+        /* File-stream bodies are not resident memory; the streaming boundary
+         * handles the same in-memory shapes as dispatch_memory. */
+        cwist_http_response_destroy(res);
+        return -1;
+    }
+
+    char head_buf[CWIST_HTTP_MAX_HEADER_SIZE];
+    size_t head_len = cwist_http_serialize_headers(res, head_buf, sizeof(head_buf));
+    if (head_len == 0 || head_len >= sizeof(head_buf)) {
+        cwist_http_response_destroy(res);
+        return -1;
+    }
+    if (write_fn(write_ctx, head_buf, head_len) != 0) {
+        cwist_http_response_destroy(res);
+        return -2;
+    }
+
+    const void *body_ptr = NULL;
+    size_t body_len = 0;
+    if (res->is_ptr_body) {
+        body_ptr = res->ptr_body;
+        body_len = res->ptr_body_len;
+    } else if (res->body && res->body->data) {
+        body_ptr = res->body->data;
+        body_len = res->body->size;
+    }
+    int rc = 0;
+    size_t off = 0;
+    while (off < body_len) {
+        size_t n = body_len - off;
+        if (n > CWIST_STREAM_CHUNK) n = CWIST_STREAM_CHUNK;
+        if (write_fn(write_ctx, (const char *)body_ptr + off, n) != 0) {
+            rc = -2;
+            break;
+        }
+        off += n;
+    }
+    cwist_http_response_destroy(res);
+    return rc;
+}
+
 // Internal Router Logic
 static void internal_route_handler(cwist_app *app, cwist_http_request *req,
                                    cwist_http_response *res) {

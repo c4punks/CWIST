@@ -7,17 +7,52 @@
 #include <cwist/net/http/cookie.h>
 #include <cwist/core/mem/alloc.h>
 #include <cjson/cJSON.h>
+#ifdef __EMSCRIPTEN__
+/* WASM links no OpenSSL: verify cookie signatures with the bundled
+ * header-only SHA-256/HMAC instead. */
+#include <cwist/core/crypto/sha256.h>
+#else
 #include <openssl/hmac.h>
 #include <openssl/evp.h>
+#endif
 #include <string.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <time.h>
 #include <unistd.h>
 #include <fcntl.h>
+#ifdef __EMSCRIPTEN__
+#include <emscripten.h>
+#endif
 
 #define CWIST_SESSION_DEFAULT_NAME "cwist_session"
 #define CWIST_SESSION_DEFAULT_MAX_AGE 86400
+
+#ifdef __EMSCRIPTEN__
+/* Browser/WASM hosts have no /dev/urandom: draw the session secret from
+ * the host CSPRNG instead (called by generate_secret as a fallback).
+ * Production WASM apps should still pin a secret with
+ * cwist_app_use_session(app, secret) stored in host-side persistence - a
+ * fresh random secret per instance invalidates every existing session
+ * whenever the host drops the WASM instance. */
+EM_JS(int, cwist_session_entropy_js, (char *hex_out, int nbytes), {
+    // clang-format off - JS body, not C: keep make format away from it
+    try {
+        var bytes = new Uint8Array(nbytes);
+        globalThis.crypto.getRandomValues(bytes);
+        var hex = "0123456789abcdef";
+        for (var i = 0; i < nbytes; i++) {
+            HEAPU8[hex_out + 2 * i] = hex.charCodeAt(bytes[i] >> 4);
+            HEAPU8[hex_out + 2 * i + 1] = hex.charCodeAt(bytes[i] & 15);
+        }
+        HEAPU8[hex_out + 2 * nbytes] = 0;
+        return 1;
+    } catch (e) {
+        return 0;
+    }
+    // clang-format on
+});
+#endif
 
 struct cwist_session {
     cwist_app *app;
@@ -83,10 +118,14 @@ static int base64_decode(const char *in, uint8_t *out, size_t out_len) {
 
 static bool hmac_sha256(const char *key, size_t key_len, const char *msg, size_t msg_len,
                         uint8_t out[32]) {
+#ifdef __EMSCRIPTEN__
+    return cwist_hmac_sha256((const uint8_t *)key, key_len, (const uint8_t *)msg, msg_len, out);
+#else
     unsigned int len = 32;
     unsigned char *r =
         HMAC(EVP_sha256(), key, (int)key_len, (const unsigned char *)msg, msg_len, out, &len);
     return r != NULL && len == 32;
+#endif
 }
 
 /* --- Secret management -------------------------------------------------- */
@@ -95,29 +134,30 @@ static char *generate_secret(size_t len) {
     char *secret = cwist_alloc(len * 2 + 1);
     if (!secret) return NULL;
     int fd = open("/dev/urandom", O_RDONLY);
-    if (fd < 0) {
-        cwist_free(secret);
-        return NULL;
-    }
-    unsigned char *buf CWIST_DEFER_FREE = cwist_alloc(len);
-    if (!buf) {
+    if (fd >= 0) {
+        unsigned char *buf CWIST_DEFER_FREE = cwist_alloc(len);
+        if (!buf) {
+            close(fd);
+            cwist_free(secret);
+            return NULL;
+        }
+        ssize_t n = read(fd, buf, len);
         close(fd);
-        cwist_free(secret);
-        return NULL;
+        if (n == (ssize_t)len) {
+            static const char hex[] = "0123456789abcdef";
+            for (size_t i = 0; i < len; i++) {
+                secret[i * 2] = hex[buf[i] >> 4];
+                secret[i * 2 + 1] = hex[buf[i] & 0x0F];
+            }
+            secret[len * 2] = '\0';
+            return secret;
+        }
     }
-    ssize_t n = read(fd, buf, len);
-    close(fd);
-    if (n != (ssize_t)len) {
-        cwist_free(secret);
-        return NULL;
-    }
-    static const char hex[] = "0123456789abcdef";
-    for (size_t i = 0; i < len; i++) {
-        secret[i * 2] = hex[buf[i] >> 4];
-        secret[i * 2 + 1] = hex[buf[i] & 0x0F];
-    }
-    secret[len * 2] = '\0';
-    return secret;
+#ifdef __EMSCRIPTEN__
+    if (fd < 0 && cwist_session_entropy_js(secret, (int)len) == 1) return secret;
+#endif
+    cwist_free(secret);
+    return NULL;
 }
 
 int cwist_app_use_session(cwist_app *app, const char *secret) {

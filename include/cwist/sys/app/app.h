@@ -544,4 +544,77 @@ void cwist_app_dispatch(cwist_app *app, cwist_http_request *req, cwist_http_resp
 int cwist_app_dispatch_memory(cwist_app *app, const char *req_buf, size_t req_len, char **res_buf,
                               size_t *res_len);
 
+/** --- WASM boundary streaming (issue #93 Phase 3) -------------------------
+ *
+ * Streaming here means the *boundary*, not a streaming handler API: the
+ * request body may be fed incrementally (large uploads without one giant
+ * contiguous host buffer) and the serialized response is delivered through
+ * a caller-supplied chunk callback instead of one returned buffer, so hosts
+ * can consume it incrementally (e.g. pipe it into a JS ReadableStream).
+ * The handler itself still builds the response body in memory; a true
+ * chunked producer API inside handlers is a separate, larger change.
+ */
+
+/** Chunk sink for cwist_app_dispatch_stream().  Receives the serialized
+ * response bytes in order: the head (status line + headers) first, then the
+ * body in slices of at most CWIST_STREAM_CHUNK bytes.  Return 0 to continue,
+ * nonzero to abort the dispatch (the remaining bytes are dropped and the
+ * dispatch returns -2). */
+typedef int (*cwist_stream_write_fn)(void *ctx, const char *data, size_t len);
+
+/** Maximum slice size passed to cwist_stream_write_fn() for the body. */
+#define CWIST_STREAM_CHUNK (64 * 1024)
+
+/**
+ * @brief Like cwist_app_dispatch_memory(), but streams the serialized
+ * response through @p write_fn instead of returning one buffer.
+ * @param app Application to dispatch against.
+ * @param req_buf Serialized HTTP/1.1 request (head + body, as the wire form).
+ * @param req_len Length of @p req_buf.
+ * @param write_fn Chunk sink; must not be NULL.
+ * @param write_ctx Opaque argument passed to every write_fn call.
+ * @return 0 when the full response was delivered; -1 on dispatch/serialize
+ * failure; -2 when the sink aborted.
+ */
+int cwist_app_dispatch_stream(cwist_app *app, const char *req_buf, size_t req_len,
+                              cwist_stream_write_fn write_fn, void *write_ctx);
+
+/** Opaque incremental request assembly handle.  Feeding a body chunk by
+ * chunk lets hosts avoid materializing one contiguous buffer for large
+ * uploads; the parts are reassembled internally before dispatch. */
+typedef struct cwist_stream_req cwist_stream_req_t;
+
+/**
+ * @brief Begin an incremental request: @p head is the serialized request
+ * line plus headers (everything up to and including the terminating CRLF
+ * of the header block).  The body length is taken from Content-Length
+ * (required for fed bodies; Transfer-Encoding: chunked is not reassembled).
+ * @return Handle on success, NULL on allocation failure.
+ */
+cwist_stream_req_t *cwist_stream_req_begin(const char *head, size_t head_len);
+
+/**
+ * @brief Feed one body chunk.  Chunks may be any size and may split
+ * anywhere; reassembly is the implementation's job.  Feeding more bytes
+ * than the declared Content-Length is an error.
+ * @return 0 on success, -1 on overflow/malformed state.
+ */
+int cwist_stream_req_feed(cwist_stream_req_t *req, const char *chunk, size_t len);
+
+/**
+ * @brief Declare the body complete.  The fed byte count must equal the
+ * declared Content-Length (or both be zero for a bodyless request).
+ * @return 0 on success, -1 on a short body.
+ */
+int cwist_stream_req_end(cwist_stream_req_t *req);
+
+/**
+ * @brief Dispatch a completed incremental request with a streaming
+ * response.  Takes ownership of @p req regardless of outcome.
+ * @return As cwist_app_dispatch_stream(); -1 also when cwist_stream_req_end()
+ * has not succeeded (the fed body is incomplete).
+ */
+int cwist_stream_req_dispatch(cwist_stream_req_t *req, cwist_app *app,
+                              cwist_stream_write_fn write_fn, void *write_ctx);
+
 #endif

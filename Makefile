@@ -514,6 +514,7 @@ TEST_TARGETS = test_worker_affinity \
                test_seq_auth \
                test_error \
                test_arena \
+               test_wasm_stream \
                test_healthz \
                test_json_builder \
                test_flash \
@@ -674,6 +675,10 @@ test_arena: $(LIB_NAME) tests/test_arena.c
 test_healthz: $(LIB_NAME) tests/test_healthz.c
 	$(CC) $(CFLAGS) -o test_healthz tests/test_healthz.c $(LIB_NAME) $(LIBS)
 	./test_healthz
+
+test_wasm_stream: $(LIB_NAME) tests/test_wasm_stream.c
+	$(CC) $(CFLAGS) -o test_wasm_stream tests/test_wasm_stream.c $(LIB_NAME) $(LIBS)
+	./test_wasm_stream
 
 test_json_builder: $(LIB_NAME) tests/test_json_builder.c
 	$(CC) $(CFLAGS) -o test_json_builder tests/test_json_builder.c $(LIB_NAME) $(LIBS)

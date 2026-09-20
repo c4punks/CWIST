@@ -108,17 +108,61 @@ heavy for db-less consumers, the future opt-out/split build decision (issue
 
 ## Sessions and cookies
 
-`cookie.c` and `session.c` are compiled in, but persistence across requests
-is the host's responsibility: if the host does not keep the same WASM
-instance (and heap) alive between requests, in-memory session state does not
-survive. Pass session data through signed cookies or serialize/deserialize
-explicitly until a documented story lands.
+Sessions are **client-side signed cookies** (HMAC-SHA256 over a base64 JSON
+payload), so session state travels with the request and instance lifetime
+is irrelevant - what must survive across WASM instances is only the signing
+secret. The Phase 3 persistence model (issue #93):
+
+- **Pin the secret.** Call `cwist_app_use_session(app, secret)` with a
+  host-persisted secret (e.g. a constant baked into the fetch layer, or a
+  value stored in KV/localStorage fetched at startup). A generated-per-boot
+  secret invalidates every session whenever the host recycles the module;
+  auto-generation is a convenience for native servers with a persistent
+  process, and on WASM it falls back to `crypto.getRandomValues` when
+  `/dev/urandom` is absent - fine for demos, wrong for production.
+- **Crypto is bundled.** The WASM build verifies cookie signatures with the
+  header-only SHA-256/HMAC in `include/cwist/core/crypto/sha256.h` (OpenSSL
+  is not linked into `libcwist_wasm.a`), so sessions now actually work
+  under Emscripten; before Phase 3 nothing could link them.
+- **The host carries the cookie.** A Service Worker or fetch-interception
+  host must copy the `Set-Cookie` header from the dispatch response into
+  its cookie store and send the stored `Cookie` header on subsequent
+  requests - the browser's document cookie jar does not feed fetch events
+  handled by a SW automatically.
+
+Verified end to end by `tests/wasm_stream.c` (native) and the Emscripten
+smoke test: a session set on one app instance reads back on a second
+instance with the same pinned secret, and is rejected under a different
+secret.
+
+## Streaming through the boundary
+
+`cwist_app_dispatch_memory()` is whole-request-in, whole-response-out.
+Phase 3 adds streaming at the **boundary** (the handler still builds the
+response body in memory; a chunked-producer handler API is a separate,
+larger change):
+
+- `cwist_app_dispatch_stream(app, req, req_len, write_fn, ctx)` delivers
+  the serialized response through a sink callback: the head (status line +
+  headers) first, then the body in slices of at most `CWIST_STREAM_CHUNK`
+  (64 KiB). Returning nonzero from the sink aborts the dispatch (-2).
+- `cwist_stream_req_begin/feed/end` assembles a request body incrementally
+  (large uploads without one contiguous host buffer); `Content-Length` is
+  required and enforced, then `cwist_stream_req_dispatch` dispatches with
+  a streaming response.
+
+For the standard entry macro, `CWIST_WASM_DEFINE_ENTRY` also exports
+`_cwist_wasm_dispatch_stream`, which pumps each chunk through
+`Module.cwistStreamChunk(ptr, len)` when the host defines it - assemble
+the chunks into a `ReadableStream` or accumulate them in JS.
 
 ## Not covered (yet)
 
 - WASI target for non-Emscripten edge runtimes (Cloudflare Workers, wasmtime,
   Fastly Compute) - everything here assumes an Emscripten `Module` host.
-- Streaming responses from `cwist_app_dispatch_memory()`.
+  See `docs/api/wasi.md` for the Phase 3 evaluation and its prerequisites.
+- A streaming *producer* API inside handlers (response body generated
+  chunk by chunk rather than buffered).
 - Published npm package / release artifact; today every consumer builds from
   source with `make wasm`.
 - WASM CI; `wasm-smoke` is a manual check, so run it before touching

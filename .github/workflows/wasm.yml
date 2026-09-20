@@ -105,4 +105,5 @@ jobs:
     - name: Verify clang-format guards (format-check)
       run: |
         clang-format --dry-run --Werror \
-          tests/wasm_smoke.c include/cwist/wasm/typedarray.h
+          tests/wasm_smoke.c include/cwist/wasm/typedarray.h \
+          include/cwist/wasm/wasm_entry.h src/net/http/session.c

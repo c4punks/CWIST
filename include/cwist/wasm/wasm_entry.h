@@ -56,6 +56,24 @@
     }                                                                          \
     CWIST_WASM_EXPORT void cwist_wasm_dispose(const void *ptr) {               \
         cwist_free((void *)ptr);                                               \
+    }                                                                          \
+    EM_JS(int, cwist_wasm_stream_chunk_js, (const char *chunk, size_t len), {  \
+        /* clang-format off - JS body, not C */                                 \
+        if (typeof Module !== "undefined" && typeof Module.cwistStreamChunk === \
+            "function") {                                                      \
+            return Module.cwistStreamChunk(chunk, len) ? 1 : 0;                \
+        }                                                                      \
+        return 0;                                                              \
+        /* clang-format on */                                                   \
+    });                                                                        \
+    static int cwist_wasm_stream_sink(void *ctx, const char *data, size_t len) { \
+        (void)ctx;                                                             \
+        return cwist_wasm_stream_chunk_js(data, len);                          \
+    }                                                                          \
+    CWIST_WASM_EXPORT int cwist_wasm_dispatch_stream(const char *req_buf,      \
+                                                     size_t req_len) {         \
+        return cwist_app_dispatch_stream((app_ptr), req_buf, req_len,          \
+                                         cwist_wasm_stream_sink, NULL);        \
     }
 // clang-format on
 
