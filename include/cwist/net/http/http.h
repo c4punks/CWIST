@@ -11,6 +11,7 @@
 #include <cwist/net/http/query.h>
 #include <cwist/core/db/sql.h>
 #include <cwist/sys/app/endpoint_opts.h>
+#include <cwist/sys/app/big_dumb_reply.h>
 #include <cwist/sys/io/reactor.h>
 #include <stdint.h>
 #include <netinet/in.h>
@@ -438,6 +439,15 @@ typedef struct cwist_http_async_conn {
      * legacy path for non-pipelining clients. */
     bool rx_prefers_poll;
     uint64_t rx_armed_ns;  /* Latency-probe arm timestamp of the in-flight RECV. */
+    /* Env-gated kernel-arrival probe (CWIST_KERN_TS=1, Linux only, experiment
+     * instrumentation for issue #153): monotonic time of the recvmsg that
+     * last delivered request bytes. Paired with SCM_TIMESTAMPNS at fill time. */
+    uint64_t kern_last_mono_ns;
+    bool kern_valid;
+    /* Last BDR hit on this connection: repeated routes skip the SipHash and
+     * bucket walk via a content-compare (validated under the EBR epoch on
+     * every use). Zero-initialized at connection setup. */
+    cwist_bdr_cursor_t bdr_cursor;
 } cwist_http_async_conn_t;
 
 /* Re-arm a connection after a deferred response completed on the reactor

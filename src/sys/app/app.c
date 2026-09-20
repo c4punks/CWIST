@@ -2549,8 +2549,19 @@ static app_serve_result_t app_serve_parsed_request(cwist_app *app, int client_fd
     if (app->bdr_ctx && req->method == CWIST_HTTP_GET) {
         size_t cached_len = 0;
         bdr_blob_t *bdr_pin = NULL;
-        const void *cached_blob =
-            cwist_bdr_get_pinned(app->bdr_ctx, "GET", req->path->data, &cached_len, &bdr_pin);
+        const void *cached_blob;
+        if (req->async_conn) {
+            /* Keep-alive connections repeat the same route: the per-connection
+             * cursor turns the lookup into a content-compare + epoch-validated
+             * entry reuse instead of a SipHash + bucket walk per request. */
+            cwist_http_async_conn_t *aconn = req->async_conn;
+            cached_blob = cwist_bdr_get_pinned_cursor(app->bdr_ctx, "GET", req->path->data,
+                                                      req->path->size, &cached_len, &bdr_pin,
+                                                      &aconn->bdr_cursor);
+        } else {
+            cached_blob =
+                cwist_bdr_get_pinned(app->bdr_ctx, "GET", req->path->data, &cached_len, &bdr_pin);
+        }
         if (cached_blob && cached_len > 0) {
             bool keep_alive = req->keep_alive;
             if (req->async_conn) {

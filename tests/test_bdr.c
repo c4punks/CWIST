@@ -62,6 +62,61 @@ int main(void) {
     assert(pthread_join(left_thread, NULL) == 0);
     assert(pthread_join(right_thread, NULL) == 0);
 
+    /* --- Per-connection cursor fast path --- */
+    cwist_bdr_cursor_t cursor = {0};
+    bdr_blob_t *pin = NULL;
+
+    /* Warm both routes through the plain API, then serve via the cursor. */
+    cwist_bdr_put(bdr, "GET", "/cursor-a", "alpha body", sizeof("alpha body"));
+    cwist_bdr_put(bdr, "GET", "/cursor-a", "alpha body", sizeof("alpha body"));
+    cwist_bdr_put(bdr, "GET", "/cursor-b", "bravo body", sizeof("bravo body"));
+    cwist_bdr_put(bdr, "GET", "/cursor-b", "bravo body", sizeof("bravo body"));
+
+    const void *data = cwist_bdr_get_pinned_cursor(bdr, "GET", "/cursor-a", 9, &len, &pin, &cursor);
+    assert(data != NULL && pin != NULL);
+    assert(len == sizeof("alpha body"));
+    assert(memcmp(data, "alpha body", len) == 0);
+    cwist_bdr_unpin(pin);
+
+    /* Repeated hit on the same connection: content-compare path. */
+    for (int i = 0; i < 100; ++i) {
+        data = cwist_bdr_get_pinned_cursor(bdr, "GET", "/cursor-a", 9, &len, &pin, &cursor);
+        assert(data != NULL && pin != NULL);
+        assert(len == sizeof("alpha body"));
+        assert(memcmp(data, "alpha body", len) == 0);
+        cwist_bdr_unpin(pin);
+    }
+
+    /* Different route on the same connection: cursor swaps, still correct. */
+    data = cwist_bdr_get_pinned_cursor(bdr, "GET", "/cursor-b", 9, &len, &pin, &cursor);
+    assert(data != NULL && pin != NULL);
+    assert(len == sizeof("bravo body"));
+    assert(memcmp(data, "bravo body", len) == 0);
+    cwist_bdr_unpin(pin);
+
+    /* Prefix collision guard: "/cursor" must not match the "/cursor-a" slot. */
+    pin = NULL;
+    assert(cwist_bdr_get_pinned_cursor(bdr, "GET", "/cursor", 7, &len, &pin, &cursor) == NULL);
+    assert(pin == NULL);
+
+    /* Content change under the cursor: the stale hint must miss, not serve
+     * the old bytes. Demote then restabilize with new content. */
+    cwist_bdr_put(bdr, "GET", "/cursor-b", "bravo CHANGED", sizeof("bravo CHANGED"));
+    pin = NULL;
+    assert(cwist_bdr_get_pinned_cursor(bdr, "GET", "/cursor-b", 9, &len, &pin, &cursor) == NULL);
+    cwist_bdr_put(bdr, "GET", "/cursor-b", "bravo CHANGED", sizeof("bravo CHANGED"));
+    data = cwist_bdr_get_pinned_cursor(bdr, "GET", "/cursor-b", 9, &len, &pin, &cursor);
+    assert(data != NULL && pin != NULL);
+    assert(len == sizeof("bravo CHANGED"));
+    assert(memcmp(data, "bravo CHANGED", len) == 0);
+    cwist_bdr_unpin(pin);
+
+    /* Non-GET and missing routes never hit. */
+    pin = NULL;
+    assert(cwist_bdr_get_pinned_cursor(bdr, "POST", "/cursor-b", 9, &len, &pin, &cursor) == NULL);
+    pin = NULL;
+    assert(cwist_bdr_get_pinned_cursor(bdr, "GET", "/nope", 5, &len, &pin, &cursor) == NULL);
+
     cwist_bdr_destroy(bdr);
     puts("test_bdr: OK");
     return 0;
