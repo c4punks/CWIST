@@ -360,6 +360,26 @@ wasip2-smoke: libcwist_wasip2.a
 clean-wasip2:
 	rm -rf $(WASIP2_BUILD_DIR) libcwist_wasip2.a wasip2_smoke.wasm
 
+# --- Component boundary (experimental, issue #203) --------------------------------
+# wit/cwist.wit is the component-model counterpart of wasm_entry.h. The check
+# runs wherever wit-bindgen is installed and is a loud no-op elsewhere; CI
+# pins the toolchain when this gate is promoted to a required job.
+wit-check:
+	@if command -v wit-bindgen > /dev/null 2>&1; then \
+	    rm -rf .wit-check && mkdir -p .wit-check && \
+	    wit-bindgen c wit/ --out-dir .wit-check > /dev/null && \
+	    rm -rf .wit-check && echo "wit-check: OK"; \
+	else \
+	    echo "wit-check: wit-bindgen not installed, skipping"; \
+	fi
+
+# Spike for the component browser bundle (issue #203, stage 2): transpile the
+# wasip2 guest component into JS with jco. Fetches @bytecodealliance/jco via
+# npm exec on first use. The output is generated, never committed.
+jco-transpile: wasip2-smoke
+	npm exec -y --package=@bytecodealliance/jco -- \
+	    jco transpile wasip2_smoke.wasm --out-dir .jco-out
+
 # Object Files and Target
 OBJS = $(SRCS:.c=.o)
 LIB_NAME = libcwist.a
@@ -550,7 +570,7 @@ TEST_TARGETS = test_worker_affinity \
                test_proto_desc \
                test_css_composer
 
-.PHONY: all test $(TEST_TARGETS) fuzz_seq install uninstall dist clean rebuild examples clean-examples wasm wasm-smoke clean-wasm wasip2-smoke clean-wasip2
+.PHONY: all test $(TEST_TARGETS) fuzz_seq install uninstall dist clean rebuild examples clean-examples wasm wasm-smoke clean-wasm wasip2-smoke clean-wasip2 wit-check jco-transpile
 
 # Run with e.g. `make fuzz_seq FUZZ_RUNS=100000`.  The target intentionally
 # uses a dedicated clang/libFuzzer toolchain and is not part of `make test`.
