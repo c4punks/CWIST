@@ -45,7 +45,8 @@ compression, and the DB pool/sync clients.
 
 `cwist_app_dispatch_memory()` runs one whole request through the app and
 returns the serialized HTTP response. It is whole-request-in,
-whole-response-out; there is no streaming entry point yet.
+whole-response-out. For streaming delivery see `cwist_app_dispatch_stream()`
+and `cwist_stream_req_begin/feed/end` below.
 
 ```c
 char *res_buf = NULL;
@@ -206,9 +207,9 @@ README.md for build and local serving instructions.
 
 ## Not covered (yet)
 
-- WASI target for non-Emscripten edge runtimes (Cloudflare Workers, wasmtime,
-  Fastly Compute) - everything here assumes an Emscripten `Module` host.
-  See `docs/api/wasi.md` for the Phase 3 evaluation and its prerequisites.
+- WASI 0.2 (`wasm32-wasip2`) is now supported and CI-gated; see
+  `docs/api/wasi.md`. Cloudflare Workers and Fastly Compute are not yet
+  evaluated — everything here still assumes an Emscripten `Module` host.
 - A streaming *producer* API inside handlers (response body generated
   chunk by chunk rather than buffered).
 - Published npm package / release artifact; today every consumer builds from
