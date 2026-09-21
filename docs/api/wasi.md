@@ -28,6 +28,10 @@ guards around the socket server runtime key off `CWIST_WASI_(NO_)SOCKETS`.
 
 ## WASI 0.2 socket server
 
+For a complete build, deployment, and restart walkthrough, see the
+[Wasmtime appliance guide](../deployment/wasmtime-appliance.md). It also
+explains the example's network and persistence limitations.
+
 `make wasip2-smoke` builds `libcwist_wasip2.a` — `WASM_SRCS` plus
 `src/sys/wasi/compat.c`, `metrics.c`, `writer_fast.c`, `async.c`,
 `src/core/log/log.c`, `src/sys/sys_info.c`, and the libttak units the

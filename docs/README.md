@@ -14,6 +14,8 @@ Everything you need to learn, use, and extend CWIST, in suggested reading order.
 
 Longer walkthroughs that combine several subsystems:
 
+* [Wasmtime appliance deployment](deployment/wasmtime-appliance.md) - build,
+  isolated state, restart verification, backup, and rollback of the WASI example.
 * [Build a CRUD blog with CWIST](tutorials/blog-crud.md) — routing + SQLite + JSON.
 * [NATS integration](tutorials/nats-integration.md) — messaging from handlers.
 * [WebTransport server](tutorials/webtransport-server.md) — experimental HTTP/3
