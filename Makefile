@@ -305,36 +305,13 @@ clean-wasm:
 	rm -rf $(WASM_BUILD_DIR) libcwist_wasm.a wasm_smoke.js wasm_smoke.wasm \
 	    wrapper_test.js wrapper_test.wasm dist
 
-# --- WASI (wasm32-wasi preview1) smoke --------------------------------------
+# --- WASI 0.2 (wasm32-wasip2) smoke ------------------------------------------------
 # Same WASM_SRCS subset as the Emscripten target, built with wasi-sdk and run
-# under a WASI host (wasmtime). Proves the in-memory dispatch surface links
-# and executes without a browser. Requires WASI_SDK and WASMTIME.
+# under a WASI host (wasmtime). The preview1 target was retired: 0.2 covers
+# its use, and three WASM flavors cost more than they earn (issue #203).
+# WASI_SDK / WASMTIME are shared with the component targets below.
 WASI_SDK ?= $(HOME)/toolchains/wasi-sdk-25.0-x86_64-linux
 WASMTIME ?= wasmtime
-WASI_BUILD_DIR = .wasi-build
-WASI_CFLAGS = --target=wasm32-wasi -std=c17 -O2 -Wall -fvisibility=hidden \
-	$(WASM_INCLUDE_PATHS) $(COMMON_DEFINES)
-WASI_SRCS = $(WASM_SRCS) src/sys/wasi/compat.c
-WASI_OBJS = $(WASI_SRCS:%.c=$(WASI_BUILD_DIR)/%.o)
-
-$(WASI_BUILD_DIR)/%.o: %.c
-	@mkdir -p $(dir $@)
-	$(WASI_SDK)/bin/clang $(WASI_CFLAGS) -c -o $@ $<
-
-libcwist_wasi.a: $(WASI_OBJS)
-	$(WASI_SDK)/bin/ar rcs $@ $(WASI_OBJS)
-
-wasi-smoke: libcwist_wasi.a
-	$(WASI_SDK)/bin/clang $(WASI_CFLAGS) -o wasi_smoke.wasm tests/wasi_smoke.c \
-	    libcwist_wasi.a -lwasi-emulated-pthread -Wl,--gc-sections -Wl,--allow-undefined
-	$(WASMTIME) run wasi_smoke.wasm
-
-# --- WASI 0.2 (wasm32-wasip2) smoke ------------------------------------------------
-# Same sources plus the socket server runtime and the metrics/writer units.
-# Under wasip2 the sysroot exposes wasi:sockets through <sys/socket.h>, so the
-# guards key off CWIST_WASI_SOCKETS (see include/cwist/sys/wasi.h) and
-# cwist_app_listen() serves cleartext HTTP on a blocking accept loop. Requires
-# WASI_SDK with wasip2 support and WASMTIME with sockets enabled.
 WASIP2_TARGET = wasm32-wasip2
 WASIP2_BUILD_DIR = .wasip2-build
 WASIP2_CFLAGS = -std=c17 -O2 -Wall -fvisibility=hidden \
@@ -379,9 +356,6 @@ wasip2-smoke: libcwist_wasip2.a
 	if [ $$ok -ne 1 ]; then echo "wasip2-smoke: curl probe failed"; exit 1; fi; \
 	kill -9 $$WPID 2>/dev/null || true; \
 	echo "wasip2-smoke: PASS (socket server served /hello over wasi:sockets)"
-
-clean-wasi:
-	rm -rf $(WASI_BUILD_DIR) libcwist_wasi.a wasi_smoke.wasm
 
 clean-wasip2:
 	rm -rf $(WASIP2_BUILD_DIR) libcwist_wasip2.a wasip2_smoke.wasm
@@ -576,7 +550,7 @@ TEST_TARGETS = test_worker_affinity \
                test_proto_desc \
                test_css_composer
 
-.PHONY: all test $(TEST_TARGETS) fuzz_seq install uninstall dist clean rebuild examples clean-examples wasm wasm-smoke clean-wasm wasi-smoke clean-wasi wasip2-smoke clean-wasip2
+.PHONY: all test $(TEST_TARGETS) fuzz_seq install uninstall dist clean rebuild examples clean-examples wasm wasm-smoke clean-wasm wasip2-smoke clean-wasip2
 
 # Run with e.g. `make fuzz_seq FUZZ_RUNS=100000`.  The target intentionally
 # uses a dedicated clang/libFuzzer toolchain and is not part of `make test`.
