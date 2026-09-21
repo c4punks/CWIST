@@ -133,4 +133,5 @@ jobs:
       run: |
         clang-format --dry-run --Werror \
           tests/wasm_smoke.c tests/wasi_smoke.c include/cwist/wasm/typedarray.h \
-          include/cwist/wasm/wasm_entry.h src/net/http/session.c src/sys/wasi/compat.c
+          include/cwist/wasm/wasm_entry.h src/net/http/session.c src/sys/wasi/compat.c \
+          example/wasm-service-worker/app.c
