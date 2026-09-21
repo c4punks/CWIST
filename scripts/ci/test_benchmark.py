@@ -65,60 +65,39 @@ class BenchmarkRenderTests(unittest.TestCase):
         self.assertEqual(self.block(readme), self.block(plain))
         self.assertTrue(readme.startswith("# Before\n\n" + START))
         self.assertTrue(readme.endswith(END + "\n\n# After\n"))
-        self.assertIn("**CWIST (classic pool)**: 12345 req/s", readme)
-        self.assertIn("**Spring Boot**: 6789 req/s", readme)
+        self.assertIn("| CWIST classic pool | 12,345 |", readme)
+        self.assertIn("| Spring Boot | 6,789 |", readme)
         return readme
 
     @staticmethod
     def block(text):
         return text.split(START, 1)[1].split(END, 1)[0]
 
-    def test_runtime_fields_and_profile_are_separate_markdown_sections(self):
+    def test_spring_env_is_a_single_footnote_line(self):
         readme = self.render()
-        self.assertIn("\n**Spring runtime environment**\n\n", readme)
-        self.assertIn(f"- **JDK:** `{ENV['java_version']}`\n", readme)
-        self.assertIn("- **Spring Boot:** 3.2.3\n", readme)
-        self.assertIn(f"- **Stack:** {ENV['stack']}\n", readme)
-        self.assertIn(f"\n**Warmup/profile**\n\n{PROFILE}\n", readme)
-        self.assertNotIn("Spring runtime env:", readme)
-
-    def test_jvm_options_have_individual_lines_without_losing_annotation(self):
-        readme = self.render()
-        expected = (
-            "\n**JVM options**\n\n```text\n"
-            "-Xms1024m\n-Xmx1024m\n-XX:+UseG1GC\n"
-            "-Xlog:gc*:file=/tmp/spring_gc.log:time,uptime,level,tags\n"
-            "-XX:AOTCache=/tmp/spring_bench/app.aot (JEP 483 + JEP 514 single-step AOT)\n"
-            "```\n"
-        )
-        self.assertIn(expected, readme)
-
-    def test_quoted_option_values_remain_intact(self):
-        options = '-Dlabel="value -with spaces"  -Dother=\'keep -this too\' -Xmx1024m'
-        readme = self.render({**ENV, "jvm_opts": options})
         self.assertIn(
-            '```text\n-Dlabel="value -with spaces"\n-Dother=\'keep -this too\'\n-Xmx1024m\n```',
-            readme,
-        )
+            f"- Spring Boot row: {ENV['java_version']}, Spring Boot "
+            f"{ENV['spring_boot_version']}, {ENV['stack']}.", readme)
+        self.assertIn("Full JVM options are recorded in benchmarks/webserver.json.", readme)
+        self.assertNotIn("**Spring runtime environment**", readme)
 
-    def test_virtual_threads_false_is_explicit(self):
-        self.assertIn("- **Virtual threads:** disabled\n", self.render())
-
-    def test_virtual_threads_true_is_explicit(self):
-        readme = self.render({**ENV, "virtual_threads": True})
-        self.assertIn("- **Virtual threads:** enabled\n", readme)
+    def test_jvm_options_are_not_dumped_into_the_readme(self):
+        # The full option list stays in benchmarks/webserver.json; the README
+        # only summarizes the runtime so the report section stays readable.
+        readme = self.render()
+        self.assertNotIn("-Xms1024m", readme)
+        self.assertNotIn("```text", readme)
 
     def test_missing_optional_fields_do_not_invent_runtime_settings(self):
         readme = self.render({"java_version": "test JDK"})
-        self.assertIn("- **Spring Boot:** n/a\n", readme)
-        self.assertIn("```text\nn/a\n```", readme)
-        self.assertNotIn("- **Stack:**", readme)
-        self.assertNotIn("- **Virtual threads:**", readme)
+        self.assertIn("test JDK", readme)
+        self.assertIn("Spring Boot n/a", readme)
+        self.assertNotIn("**Stack:**", readme)
 
     def test_no_environment_omits_runtime_section(self):
         for env in (None, {}):
             with self.subTest(env=env):
-                self.assertNotIn("**Spring runtime environment**", self.render(env))
+                self.assertNotIn("Spring Boot row:", self.render(env))
 
     def test_repeated_render_is_byte_identical(self):
         self.render()
