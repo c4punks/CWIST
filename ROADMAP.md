@@ -339,6 +339,28 @@ Known limits going in (from PR #176 review), updated:
 
 ---
 
+## v3.7 Milestone (In Progress)
+
+Theme: **Edge deployment and QUIC completion**. v3.6 took WASM from "in-tree target" to "usable from JavaScript"; v3.7 takes it to "deployable on edge runtimes" (WASI), brings WebTransport to the stable line once its upstream dependency lands, folds the HTTP/3 connection-close correctness wave into the release pin, and lands three ecosystem items — gRPC server compression, GraphQL subscriptions, and persistent job backends — as experimental support. Tracked in issue #201.
+
+* **Phase 1: WASI edge deployment** (from 🔮 "Serverless / WASM Runtime"):
+  * Promote the WASI 0.2 (`wasm32-wasip2`) socket server from experimental to supported: CI gate (build + wasmtime `wasi:sockets` smoke, mirroring `wasip2-smoke`), and reframe `docs/api/wasi.md` from evaluation to reference documentation.
+  * Edge persistence pattern: `cwist_db_serialize()` / `cwist_db_open_memory()` round trip against a host KV-style store, with an example app.
+  * Deployment examples and guides for at least one edge runtime (Cloudflare Workers or a wasmtime appliance setup).
+  * WASM streaming producer API: response bodies generated chunk-by-chunk inside handlers — the "not covered (yet)" item from `docs/api/wasm.md` (boundary streaming shipped in v3.6 buffers the body in the app; this closes the gap).
+* **Phase 2: WebTransport on the stable line** (conditional on upstream, issue #17):
+  * Trigger condition: LSQUIC PR #629 (WebTransport) merges to upstream lsquic master.  If it has not merged by the release window, this phase slips — v3.7 ships without WebTransport rather than pinning `main` to a topic branch again.
+  * Re-pin `lib/lsquic` to upstream master with WebTransport included; port the dev-branch WebTransport server and native C client to `main` with interop and soak coverage.
+* **Phase 3: HTTP/3 client correctness**:
+  * Track the lsquic connection-close fixes upstream (triggering-frame-type population, connection-close packet number space selection and pre-handshake fallback) and fold them into the release-line `lib/lsquic` pin at the next re-pin.
+  * Add connection-close interop coverage on the CWIST side so the behavior stays pinned by tests.
+* **Phase 4: ecosystem experimental support** (shipped behind flags, documented as experimental):
+  * gRPC server-side response compression.
+  * GraphQL subscriptions over the v3.6 non-blocking WebSocket transport.
+  * Persistent job backends: a durable queue over the existing Redis/NATS clients, separate from the in-process scheduler queue.
+
+---
+
 ## Release Line & Codenames
 
 * The 3.x line is stabilization work on the road to v4.0: release intervals are deliberately long, and each release lands a small number of large, well-tested changes rather than frequent small ones. Expect wide gaps between 3.x tags.
