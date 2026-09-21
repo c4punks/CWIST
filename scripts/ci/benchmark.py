@@ -341,7 +341,6 @@ def webserver_summary(row):
     names = [('cwist','CWIST classic'), ('cwist_c1m','CWIST C1M'),
              ('cwist_c1m_arena1','CWIST C1M arena_max=1'),
              ('cwist_c1m_drainchunk','CWIST C1M drain_chunk=8'),
-             ('cwist_c1m_public_fixed','CWIST C1M PUBLIC_FIXED (opt-in)'),
              ('axum','Axum'), ('gin','Gin'), ('spring','Spring Boot')]
     for key, name in names:
         lines.append(f"| {name} | {metric(key+'_rps',0)} | {metric(key+'_lat_ms')} | {metric(key+'_p99_999_ms')} | {metric(key+'_pss_kib',2,1024)} | {metric(key+'_rss_kib',2,1024)} | {metric(key+'_csw',0)} |")
