@@ -99,7 +99,6 @@ def summarize_resources(before, after):
     def counters(rows):
         values = {}
         for process in rows:
-            require(process.get('tasks_complete', True), 'task snapshot changed')
             for task in process['tasks']:
                 key = (process['pid'], process['start'], task['tid'], task['start'])
                 require(key not in values, 'duplicate task identity')
@@ -108,16 +107,22 @@ def summarize_resources(before, after):
     csw = None
     try:
         first, last = counters(before), counters(after)
-        if first and first.keys() == last.keys() and all(
-                type(first[k]) is int and type(last[k]) is int and last[k] >= first[k]
-                for k in first):
-            csw = sum(last[k] - first[k] for k in first)
+        # Threads come and go during a 10s run (JVM compiler threads, pool
+        # resizing), so demanding identical task sets made the delta
+        # unavailable for exactly the busiest servers. Delta over the
+        # threads present at both ends instead; a churned thread has no
+        # measurable delta and is skipped, not counted as zero.
+        common = [k for k in first.keys() & last.keys()
+                  if type(first[k]) is int and type(last[k]) is int and last[k] >= first[k]]
+        if common:
+            csw = sum(last[k] - first[k] for k in common)
     except (KeyError, TypeError, ValueError):
         pass
     return {'rss_kib': rss, 'pss_kib': pss, 'csw': csw, 'rss_kind': 'process-group end sample',
             'pss_kind': 'process-group end sample, shared pages divided by mapper count'
                         if pss is not None else 'unavailable: smaps_rollup unreadable',
-            'csw_kind': 'same-TID counter delta' if csw is not None else 'unavailable: task churn or missing counters'}
+            'csw_kind': 'same-TID counter delta over threads live at both ends'
+                        if csw is not None else 'unavailable: no thread persisted across the measurement window'}
 
 
 CASES = ('cwist', 'cwist_c1m', 'cwist_c1m_arena1', 'cwist_c1m_drainchunk',

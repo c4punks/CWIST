@@ -335,7 +335,7 @@ def webserver_summary(row):
     lines = ['## Latest isolated HTTP benchmark', '',
              f"Measured commit: `{commit}`. Release tag: `{release}`.",
              f"Run: {run}. Timestamp: `{row.get('timestamp', 'not recorded')}`.",
-             '', 'Latency columns use the **wrk corrected distribution**. Both memory columns are process-group end samples, not peaks. Group RSS sums each process\'s RSS, so a page shared between worker processes is counted once per process; Group PSS divides each shared page by its mapper count, so it is the column to compare against a single-process server. Context switches cover matching thread identities only; N/A means unavailable.',
+             '', 'Latency columns use the **wrk corrected distribution**. Memory columns are process-group end samples, not peaks: Group RSS counts a page shared between worker processes once per process, Group PSS divides it by its mapper count, so compare a single-process server against PSS. Context switches are same-thread counter deltas over threads live at both ends of the window; N/A means unavailable.',
              '', '| Profile | Req/s | Mean ms | P99.999 ms | Group PSS MiB | Group RSS MiB | Context-switch delta |',
              '|---|---:|---:|---:|---:|---:|---:|']
     names = [('cwist','CWIST classic'), ('cwist_c1m','CWIST C1M'),
@@ -348,8 +348,10 @@ def webserver_summary(row):
               '', '### Separate tuned profile', '', '`wrk -t4 -c100 -d10s`, after a discarded 10s warmup. Do not compare these rows as equal-load results against the main table.']
     for key, name in [('cwist_tuned','CWIST classic'), ('axum_tuned','Axum'), ('spring_tuned','Spring Boot')]:
         lines.append(f"- {name}: {metric(key+'_rps',0)} req/s; mean {metric(key+'_lat_ms')} ms; corrected P99.999 {metric(key+'_p99_999_ms')} ms.")
-    lines += ['', 'Spring environment: `' + str(row.get('spring_env', {})).replace('`','') + '`',
-              '', '[Measurement contract](docs/webserver-benchmark.md) · [History](benchmarks/webserver.json)']
+    spring = row.get('spring_env', {}) or {}
+    if spring:
+        lines += ['', f"Spring Boot row: {spring.get('java_version','n/a')}, Spring Boot {spring.get('spring_boot_version','n/a')}, {spring.get('stack','n/a')}. Full JVM options are recorded in `benchmarks/webserver.json`."]
+    lines += ['', '[Measurement contract](docs/webserver-benchmark.md) · [History](benchmarks/webserver.json)']
     return '\n'.join(lines)
 
 

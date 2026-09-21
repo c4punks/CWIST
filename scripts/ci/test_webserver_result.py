@@ -44,8 +44,16 @@ class MetricsTests(unittest.TestCase):
  def test_resources(self):
   def p(pid,start,rss,csw,pss=None):return {'pid':pid,'start':start,'rss_kib':rss,'pss_kib':pss,'tasks':[{'tid':pid,'start':start,'csw':csw}]}
   b=[p(1,'10',20,5),p(2,'20',30,10)];a=[p(1,'10',22,8),p(2,'20',33,17)]
-  self.assertEqual(summarize_resources(b,a),{'rss_kib':55,'pss_kib':None,'csw':10,'rss_kind':'process-group end sample','pss_kind':'unavailable: smaps_rollup unreadable','csw_kind':'same-TID counter delta'})
-  a[1]['start']='21';self.assertIsNone(summarize_resources(b,a)['csw'])
+  self.assertEqual(summarize_resources(b,a),{'rss_kib':55,'pss_kib':None,'csw':10,'rss_kind':'process-group end sample','pss_kind':'unavailable: smaps_rollup unreadable','csw_kind':'same-TID counter delta over threads live at both ends'})
+  # A worker replaced mid-run no longer voids the whole group: the delta
+  # covers the threads that persisted across both snapshots (pid 1 only).
+  a[1]['start']='21';self.assertEqual(summarize_resources(b,a)['csw'],3)
+  # A thread created mid-run has no before-counter and is skipped, not
+  # treated as a zero delta.
+  a[0]['tasks'].append({'tid':99,'start':'11','csw':4})
+  self.assertEqual(summarize_resources(b,a)['csw'],3)
+  # No thread in common at all -> no measurable delta.
+  self.assertIsNone(summarize_resources(b,[p(3,'30',1,1)])['csw'])
   a[1]['rss_kib']=None;self.assertIsNone(summarize_resources(b,a)['rss_kib'])
  def test_pss_summed_when_every_process_reports_it(self):
   # Each worker's pss_kib is its share of the pages it maps, so the group's
