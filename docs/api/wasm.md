@@ -101,10 +101,20 @@ the archive. Measured with Emscripten 5.0.0, this branch vs the pre-db tree:
 | `libcwist_wasm.a` | 328,518 B | 1,703,706 B | 5.2x |
 | linked `wasm_smoke.wasm` | 67,267 B | 1,052,405 B | 15.7x |
 
-The archive grows 5x but the linked smoke binary 16x because the db round
-trip also pulls cJSON query-result building into the link. If this is too
-heavy for db-less consumers, the future opt-out/split build decision (issue
-#93 Phase 3) has these numbers as its input.
+The archive grows 5x but the linked smoke binary 16x because the smoke test
+itself does the db round trip (which also pulls cJSON query-result building
+into the link). Measured consequence for consumers (2026-09-21): archive
+linking is per-object and no core WASM object references `cwist_db_*`, so a
+db-less app links ~64.8 KB — the pre-db size. Only apps that call
+`cwist_db_*` pull in the ~1 MB amalgamation, and that is SQLite's reachable
+core: `-ffunction-sections` + `--gc-sections` recover ~300 B because emcc
+-O2 already performs cross-module DCE.
+
+**Decision (issue #93): no opt-out/split build.** The linked-size cost
+falls only on db users, where it is inherent to SQLite, and a split archive
+would not reduce it — while making db consumers link two archives. If the
+~1 MB ever matters, the lever is `SQLITE_OMIT_*` feature omission, not
+packaging.
 
 ## Sessions and cookies
 

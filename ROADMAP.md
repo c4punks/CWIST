@@ -331,7 +331,7 @@ Landeds alongside the WASM wave, also in scope for v3.6:
 
 Known limits going in (from PR #176 review), updated:
 
-* ~~Bundle size impact of pulling SQLite into `libcwist_wasm.a` is unmeasured~~ — now measured (Phase 2 bundle report in `docs/api/wasm.md`): `libcwist_wasm.a` 328,518 -> 1,703,706 B (5.2x), `wasm_smoke.wasm` 67,267 -> 1,052,405 B (15.7x). The future opt-out or split build decision now has data; it remains open.
+* ~~Bundle size impact of pulling SQLite into `libcwist_wasm.a` is unmeasured~~ — measured and decided (2026-09-21): `libcwist_wasm.a` 328,518 -> 1,703,706 B (5.2x), but the linked-size cost is paid only by apps that reference `cwist_db_*` — a db-less app still links ~64.8 KB, the pre-db size — and for db users the ~1 MB is SQLite's reachable core (`-ffunction-sections`/`--gc-sections` recover ~0; emcc -O2 already DCEs cross-module). Decision: no opt-out/split build; the remaining lever if ever needed is `SQLITE_OMIT_*`, not packaging. Details in `docs/api/wasm.md`.
 * ~~Session behavior under the WASM dispatch model is documented but not yet measured; Phase 3 needs observed behavior, not the current caveats list~~ — now measured (Phase 3: cross-instance verify/reject in `tests/test_wasm_stream.c` and the Emscripten smoke test; model documented in `docs/api/wasm.md`).
 
 ---
