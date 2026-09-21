@@ -182,20 +182,20 @@ missing optional API does not prevent an HTTP/3 build.
   ./server
 
 <!-- BENCHMARKS:START -->
-Latest automated benchmark: **Darwin**: 13.13 M leases/s, 125.33% CPU, 763664 KiB RSS.
+Latest automated benchmark: **Darwin**: 12.42 M leases/s, 150.2% CPU, 704896 KiB RSS.
 
 ![CWIST benchmark trends](docs/benchmark-trends.svg)
 <!-- BENCHMARKS:END -->
 
 <!-- WEBSERVER_BENCHMARKS:START -->
 Latest Web Server Benchmark (wrk -t12 -c400 -d10s (after 10s warmup, warmup discarded)):
-- **CWIST (classic pool)**: 249488 req/s | Latency 0.97ms (P90 2.08ms, P99 4.86ms, P99.999 26.83ms) | RSS 17160KiB | Csw 0
-- **CWIST (C1M reactor)**: 314909 req/s | Latency 1.65ms (P90 4.43ms, P99 9.89ms, P99.999 19.68ms) | RSS 11688KiB | Csw 0
-- **CWIST (C1M reactor, arena_max=1)** — glibc arena cap adopted in PR #35 after mimalloc was tried and refuted (issue #25); this line confirms the decision on every run: 318711 req/s | Latency 1.62ms (P90 4.35ms, P99 9.78ms, P99.999 24.66ms) | RSS 10484KiB | Csw 0
-- **CWIST (C1M reactor, drain_chunk=8)** — cooperative queuing for cwist_async_defer completions within a big io_uring batch (issue #25, docs/cooperative-queuing.md); this workload has no cwist_async_defer traffic to interleave, so parity with the plain C1M row above is the expected result, not a null finding — the tail-latency win is isolated directly in tests/bench_cooperative_queuing.c: 299588 req/s | Latency 1.72ms (P90 4.61ms, P99 10.17ms, P99.999 20.14ms) | RSS 11680KiB | Csw 0
-- **Axum**: 233688 req/s | Latency 1.70ms (P90 2.97ms, P99 4.63ms, P99.999 12.73ms) | RSS 16564KiB | Csw 0
-- **Gin (Go)**: 191191 req/s | Latency 3.55ms (P90 9.49ms, P99 21.48ms, P99.999 46.40ms) | RSS 31384KiB | Csw 0
-- **Spring Boot**: 128525 req/s | Latency 3.10ms (P90 4.43ms, P99 7.03ms, P99.999 33.31ms) | RSS 1307824KiB | Csw 0
+- **CWIST (classic pool)**: 187586 req/s | Latency 1.26ms (P90 2.70ms, P99 5.98ms, P99.999 29.68ms) | RSS 16856KiB | Csw 0
+- **CWIST (C1M reactor)**: 211392 req/s | Latency 2.70ms (P90 7.59ms, P99 16.67ms, P99.999 35.36ms) | RSS 11792KiB | Csw 0
+- **CWIST (C1M reactor, arena_max=1)** — glibc arena cap adopted in PR #35 after mimalloc was tried and refuted (issue #25); this line confirms the decision on every run: 220366 req/s | Latency 2.34ms (P90 6.43ms, P99 13.35ms, P99.999 22.83ms) | RSS 14260KiB | Csw 0
+- **CWIST (C1M reactor, drain_chunk=8)** — cooperative queuing for cwist_async_defer completions within a big io_uring batch (issue #25, docs/cooperative-queuing.md); this workload has no cwist_async_defer traffic to interleave, so parity with the plain C1M row above is the expected result, not a null finding — the tail-latency win is isolated directly in tests/bench_cooperative_queuing.c: 225017 req/s | Latency 2.30ms (P90 6.30ms, P99 13.24ms, P99.999 23.51ms) | RSS 9560KiB | Csw 0
+- **Axum**: 194024 req/s | Latency 2.04ms (P90 3.67ms, P99 5.69ms, P99.999 11.93ms) | RSS 16344KiB | Csw 0
+- **Gin (Go)**: 148865 req/s | Latency 3.46ms (P90 8.34ms, P99 16.99ms, P99.999 37.87ms) | RSS 30420KiB | Csw 0
+- **Spring Boot**: 122456 req/s | Latency 3.27ms (P90 4.93ms, P99 7.83ms, P99.999 54.79ms) | RSS 1299628KiB | Csw 0
 
 **Spring runtime environment**
 
@@ -244,10 +244,10 @@ GitHub hands out a different CPU model per run, which moves these numbers more t
 | Runner CPU | Runs | CWIST classic ms | CWIST C1M ms | Axum ms | CWIST C1M req/s | Axum req/s |
 |---|---:|---:|---:|---:|---:|---:|
 | AMD EPYC 7763 64-Core Processor | 52 | 2.01 | 2.75 | 3.51 | 121,812 | 111,366 |
-| AMD EPYC 9V74 80-Core Processor | 24 | 1.88 | 2.38 | 3.24 | 134,945 | 120,676 |
+| AMD EPYC 9V74 80-Core Processor | 23 | 1.86 | 2.39 | 3.24 | 141,969 | 120,629 |
 | INTEL(R) XEON(R) PLATINUM 8573C | 9 | 1.09 | 1.86 | 1.85 | 236,565 | 216,218 |
 | Intel(R) Xeon(R) 6973P-C | 7 | 0.97 | 1.76 | 1.66 | 292,082 | 238,006 |
-| AMD EPYC 9V45 96-Core Processor | 5 | 1.28 | 2.32 | 2.02 | 218,335 | 196,379 |
+| AMD EPYC 9V45 96-Core Processor | 6 | 1.27 | 2.32 | 2.03 | 218,214 | 195,576 |
 | Intel(R) Xeon(R) Platinum 8370C CPU @ 2.80GHz | 3 | 1.38 | 2.15 | 2.37 | 188,309 | 166,717 |
 <!-- WEBSERVER_BENCHMARKS:END -->
 
