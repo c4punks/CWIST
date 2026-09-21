@@ -158,3 +158,60 @@ void my_handler(cwist_http_request *req, cwist_http_response *res) {
 int cwist_app_listen(cwist_app *app, int port);
 ```
 Starts the server loop on the specified port.
+
+## In-Memory Test Client
+
+*Header:* `<cwist/sys/app/test_client.h>`
+
+`cwist_test_client` dispatches synthetic HTTP requests directly through the
+app's router and middleware without opening a socket, so integration tests
+run in-process with no ports and no teardown race.
+
+### `cwist_test_client_create` / `cwist_test_client_destroy`
+```c
+cwist_test_client *cwist_test_client_create(cwist_app *app);
+void               cwist_test_client_destroy(cwist_test_client *client);
+```
+Creates and destroys a test client bound to `app`. The client keeps a
+per-instance cookie jar that is carried automatically on subsequent requests.
+
+### Request helpers
+```c
+cwist_http_response *cwist_test_client_get(cwist_test_client *client, const char *path);
+cwist_http_response *cwist_test_client_post(cwist_test_client *client, const char *path,
+                                            const char *body, const char *content_type);
+cwist_http_response *cwist_test_client_post_json(cwist_test_client *client, const char *path,
+                                                 const char *json_body);
+cwist_http_response *cwist_test_client_put(cwist_test_client *client, const char *path,
+                                           const char *body, const char *content_type);
+cwist_http_response *cwist_test_client_delete(cwist_test_client *client, const char *path);
+cwist_http_response *cwist_test_client_patch(cwist_test_client *client, const char *path,
+                                             const char *body, const char *content_type);
+```
+Each returns a `cwist_http_response *` owned by the caller; free with
+`cwist_http_response_destroy()`.
+
+For full control over headers, cookies, and query string use:
+```c
+cwist_http_response *cwist_test_client_request_ex(cwist_test_client *client,
+                                                  cwist_http_method_t method, const char *path,
+                                                  const cwist_test_client_request_options *opts);
+```
+
+### Cookie jar
+```c
+void        cwist_test_client_set_cookie(cwist_test_client *client,
+                                         const char *name, const char *value, const char *path);
+const char *cwist_test_client_get_cookie(cwist_test_client *client, const char *name);
+void        cwist_test_client_clear_cookies(cwist_test_client *client);
+```
+
+### Test assertion macros
+```c
+CWIST_ASSERT_STATUS(res, expected_status)
+CWIST_ASSERT_HEADER(res, header_name, expected_value)
+CWIST_ASSERT_BODY_CONTAINS(res, snippet)
+```
+Each macro prints a `[ASSERT FAIL]` message with file and line number and
+calls `exit(1)` on failure, matching the style of the framework's own test
+suite.
