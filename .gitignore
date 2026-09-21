@@ -136,3 +136,7 @@ tests/test_proto_gen_desc_sample.cwist.pb.h
 # which put compiled bytecode in the source distribution.
 __pycache__/
 *.pyc
+
+# WASM service-worker example artifacts (built by example/wasm-service-worker/build.sh)
+example/wasm-service-worker/app.js
+example/wasm-service-worker/app.wasm

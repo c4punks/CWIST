@@ -7,7 +7,8 @@ inside WASM, and the serialized HTTP response comes back as a zero-copy
 
 This page documents what is in scope, how to build it, and the two integration
 points (`cwist_app_dispatch_memory` and the TypedArray helpers). See
-`tests/wasm_smoke.c` for a complete, runnable example.
+`tests/wasm_smoke.c` for a complete, runnable low-level example and
+`example/wasm-service-worker/` for a full app behind a Service Worker host.
 
 ## Building
 
@@ -164,6 +165,34 @@ For the standard entry macro, `CWIST_WASM_DEFINE_ENTRY` also exports
 `_cwist_wasm_dispatch_stream`, which pumps each chunk through
 `Module.cwistStreamChunk(ptr, len)` when the host defines it - assemble
 the chunks into a `ReadableStream` or accumulate them in JS.
+
+## Runnable example: Service Worker app
+
+`example/wasm-service-worker/` (issue #93 Phase 4) is an end-to-end app
+that uses routing, zod validation, template rendering, `cwist_db`, and
+sessions together, behind a Service Worker fetch-interception host:
+
+- `app.c` - CWIST app compiled to `app.js`/`app.wasm` by `build.sh`:
+  `GET /` renders a template page with the session visit counter and the
+  item list, `POST /items` zod-validates a JSON body before inserting it
+  into an in-memory `cwist_db`, `GET /items` returns the rows as JSON,
+  `GET /items/image` returns the serialized SQLite image
+  (`cwist_db_serialize`, the blob an edge host would persist), and
+  unknown routes fall through to the router's 404.
+- `sw.js` - the host: intercepts same-origin GET/POST fetches, dispatches
+  them through the module's entry points (serialization mirrors
+  `wasm/npm/index.js`, inlined to stay self-contained), pins the session
+  secret via `_cwist_wasm_use_session`, and carries the session cookie
+  itself - a Service Worker does not see the document cookie jar, so
+  `Set-Cookie` from a dispatch response is captured into an in-memory jar
+  and replayed as the `Cookie` header on later requests.
+- `smoke.js` - node smoke over the same module through the cwist-wasm
+  wrapper; covers the 200/400/201/404 paths, the db image endpoint, and
+  session survival across module instances. The Service Worker itself is
+  verified manually in a browser (steps in the example's README).
+
+Built and run in CI (`.github/workflows/wasm.yml`). See the example's
+README.md for build and local serving instructions.
 
 ## Not covered (yet)
 
