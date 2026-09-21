@@ -78,6 +78,22 @@ jobs:
           if (r.status !== 200 || r.headers['Content-Type'] !== 'text/plain') process.exit(1); \
           console.log('clean-install verification passed');"
 
+    # Phase 4 (issue #93): the end-to-end example app - routing + zod +
+    # template + cwist_db + sessions behind a Service Worker host - must
+    # build, and its WASM logic is covered by a node smoke that dispatches
+    # through the cwist-wasm wrapper (the SW itself needs a browser).
+    - name: Build WASM service-worker example and run node smoke
+      shell: bash
+      run: |
+        make -j$(nproc) wasm
+        example/wasm-service-worker/build.sh
+        NODE_BIN="$(command -v node || true)"
+        if [ -n "$NODE_BIN" ] && [ -x "$NODE_BIN" ]; then
+          "$NODE_BIN" example/wasm-service-worker/smoke.js
+        else
+          "$(command -v nodejs || echo /usr/bin/node)" example/wasm-service-worker/smoke.js
+        fi
+
     # wasm-smoke compiles and runs the smoke binary under node, so this is
     # build + run. Catches WASM-only regressions that native CI cannot see
     # (issue #93 gap 2) - e.g. clang-format corrupting EM_JS bodies.
@@ -106,4 +122,5 @@ jobs:
       run: |
         clang-format --dry-run --Werror \
           tests/wasm_smoke.c tests/wasi_smoke.c include/cwist/wasm/typedarray.h \
-          include/cwist/wasm/wasm_entry.h src/net/http/session.c src/sys/wasi/compat.c
+          include/cwist/wasm/wasm_entry.h src/net/http/session.c src/sys/wasi/compat.c \
+          example/wasm-service-worker/app.c

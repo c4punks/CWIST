@@ -1,0 +1,42 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CWIST WASM Service Worker demo</title>
+<style>
+body{font-family:system-ui,sans-serif;max-width:42em;margin:2em auto;padding:0 1em;color:#222}
+code{background:#f4f4f4;padding:.1em .3em}
+</style>
+</head>
+<body>
+<h1>CWIST WASM Service Worker demo</h1>
+<p id="status">Registering service worker&hellip;</p>
+<p>Once the Service Worker takes control, every same-origin GET/POST (the page,
+the form, the JSON API) is dispatched into a CWIST app running in WebAssembly:
+routing, zod validation, template rendering, cwist_db, and signed-cookie
+sessions all run inside the worker. This static file is only the boot shell.</p>
+<script>
+(async () => {
+  const status = document.getElementById('status');
+  if (!('serviceWorker' in navigator)) {
+    status.textContent = 'This browser has no Service Worker support.';
+    return;
+  }
+  try {
+    await navigator.serviceWorker.register('/sw.js');
+    if (!navigator.serviceWorker.controller) {
+      /* First visit: the SW just installed and claimed. Reload so this
+       * navigation goes through the SW and CWIST serves "/". */
+      status.textContent = 'Service worker installed - loading the CWIST app…';
+      location.reload();
+      return;
+    }
+    status.textContent = 'Service worker active.';
+  } catch (err) {
+    status.textContent = 'Service worker registration failed: ' + err;
+  }
+})();
+</script>
+</body>
+</html>
