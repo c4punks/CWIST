@@ -156,37 +156,47 @@ def render() -> None:
     WEBSERVER_SVG.parent.mkdir(parents=True, exist_ok=True)
     WEBSERVER_SVG.write_text(render_webserver_svg(ws_history))
     ws_latest = ws_history[-1] if ws_history else {}
-    ws_summary = (
-        f"Latest Web Server Benchmark (wrk 12t 400c):\n"
-        f"- **CWIST**: {ws_latest.get('cwist_rps',0):.0f} req/s | Latency {ws_latest.get('cwist_lat_ms',0):.2f}ms | RSS {ws_latest.get('cwist_rss_kib',0):.0f}KiB | Csw {ws_latest.get('cwist_csw',0):.0f}\n"
-        f"- **Axum**: {ws_latest.get('axum_rps',0):.0f} req/s | Latency {ws_latest.get('axum_lat_ms',0):.2f}ms | RSS {ws_latest.get('axum_rss_kib',0):.0f}KiB | Csw {ws_latest.get('axum_csw',0):.0f}\n"
-        f"- **Gin (Go)**: {ws_latest.get('gin_rps',0):.0f} req/s | Latency {ws_latest.get('gin_lat_ms',0):.2f}ms | RSS {ws_latest.get('gin_rss_kib',0):.0f}KiB | Csw {ws_latest.get('gin_csw',0):.0f}\n"
-        f"- **Spring Boot**: {ws_latest.get('spring_rps',0):.0f} req/s | Latency {ws_latest.get('spring_lat_ms',0):.2f}ms | RSS {ws_latest.get('spring_rss_kib',0):.0f}KiB | Csw {ws_latest.get('spring_csw',0):.0f}\n"
-    )
+    WEBSERVER_LATENCY_SVG.parent.mkdir(parents=True, exist_ok=True)
+    WEBSERVER_LATENCY_SVG.write_text(render_latency_kde_svg(ws_latest))
+
+    def metric(key, digits=2):
+        value = ws_latest.get(key)
+        return f"{value:,.{digits}f}" if isinstance(value, (int, float)) else "N/A"
+
+    profiles = [
+        ("cwist", "CWIST classic pool"),
+        ("cwist_c1m", "CWIST C1M reactor"),
+        ("cwist_c1m_arena1", "CWIST C1M reactor (arena_max=1)"),
+        ("cwist_c1m_drainchunk", "CWIST C1M reactor (drain_chunk=8)"),
+        ("axum", "Axum"),
+        ("gin", "Gin (Go)"),
+        ("spring", "Spring Boot"),
+    ]
+    lines = [
+        f"Latest Web Server Benchmark ({ws_latest.get('wrk_profile','wrk 12t 400c')}):",
+        "",
+        "| Profile | Req/s | Mean ms | P90 ms | P99 ms | P99.999 ms | RSS KiB | Csw |",
+        "|---|---:|---:|---:|---:|---:|---:|---:|",
+    ]
+    for prefix, name in profiles:
+        lines.append(
+            f"| {name} | {metric(prefix+'_rps',0)} | {metric(prefix+'_lat_ms')} | "
+            f"{metric(prefix+'_p90_ms')} | {metric(prefix+'_p99_ms')} | {metric(prefix+'_p99_999_ms')} | "
+            f"{metric(prefix+'_rss_kib',0)} | {metric(prefix+'_csw',0)} |")
+    lines += [
+        "",
+        "- `arena_max=1`: glibc malloc arena cap adopted in PR #35 (issue #25); this row re-confirms that decision on every run.",
+        "- `drain_chunk=8`: cooperative queuing for `cwist_async_defer` completions (issue #25, docs/cooperative-queuing.md). This workload issues no async-defer traffic, so parity with the plain C1M row is expected; the mechanism itself is measured in tests/bench_cooperative_queuing.c.",
+        "- Csw is the context-switch delta over the measured window, summed across every thread of the server process group.",
+    ]
     ws_env = ws_latest.get("spring_env", {}) or {}
     if ws_env:
-        ws_summary += (
-            "\n**Spring runtime environment**\n\n"
-            f"- **JDK:** `{ws_env.get('java_version','n/a')}`\n"
-            f"- **Spring Boot:** {ws_env.get('spring_boot_version','n/a')}\n"
-        )
-        if ws_env.get('stack'):
-            ws_summary += f"- **Stack:** {ws_env['stack']}\n"
-        ws_vt = ws_env.get('virtual_threads')
-        if ws_vt is not None:
-            ws_summary += f"- **Virtual threads:** {'enabled' if ws_vt else 'disabled'}\n"
-        # Break before options, not within quoted values or historical AOT notes.
-        # This is display formatting only; retain the recorded option spelling.
-        jvm_opts = re.sub(
-            r'''("(?:\\.|[^"\\])*"|'[^']*')|\s+(?=-)''',
-            lambda match: match.group(1) if match.group(1) is not None else "\n",
-            ws_env.get('jvm_opts', 'n/a').strip(),
-        )
-        ws_summary += (
-            f"\n**JVM options**\n\n```text\n{jvm_opts}\n```\n"
-            f"\n**Warmup/profile**\n\n{ws_latest.get('wrk_profile','n/a')}\n"
-        )
-    ws_summary += f"\n![Web Server Benchmark Trends](docs/webserver-benchmark-trends.svg)"
+        lines.append(
+            f"- Spring Boot row: {ws_env.get('java_version','n/a')}, Spring Boot "
+            f"{ws_env.get('spring_boot_version','n/a')}, {ws_env.get('stack','n/a')}. "
+            f"Full JVM options are recorded in benchmarks/webserver.json.")
+    ws_summary = "\n".join(lines)
+    ws_summary += f"\n\n![Web Server Benchmark Trends](docs/webserver-benchmark-trends.svg)"
     ws_summary += (
         f"\n\nLatency distribution (density curve reconstructed from each "
         f"server's percentiles - shows the shape of the tail, not just its "
