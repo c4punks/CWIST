@@ -312,7 +312,15 @@ clean-wasm:
 # WASI_SDK / WASMTIME are shared with the component targets below.
 WASI_SDK ?= $(HOME)/toolchains/wasi-sdk-25.0-x86_64-linux
 WASMTIME ?= wasmtime
+# Overridable to wasm32-wasip3 for the WASI 0.3 pipeline (issue #203): the
+# whole section builds and links unchanged, and wasip3 runs under wasmtime
+# 48+. See docs/api/wasm-component.md for the current runtime caveats.
 WASIP2_TARGET = wasm32-wasip2
+# wasi-sdk ships libwasi-emulated-pthread only for the p1/p2 sysroots; the
+# wasip3 libc covers the pthread symbols itself (verified: no undefined
+# symbols with the library dropped).
+WASIP2_LDLIBS = $(if $(findstring wasip2,$(WASIP2_TARGET)),-lwasi-emulated-pthread,) \
+	-lwasi-emulated-getpid
 WASIP2_BUILD_DIR = .wasip2-build
 WASIP2_CFLAGS = -std=c17 -O2 -Wall -fvisibility=hidden \
 	-D_WASI_EMULATED_GETPID \
@@ -338,11 +346,12 @@ libcwist_wasip2.a: $(WASIP2_OBJS)
 wasip2-smoke: libcwist_wasip2.a
 	$(WASI_SDK)/bin/clang --target=$(WASIP2_TARGET) $(WASIP2_CFLAGS) \
 	    -DWASIP2_SMOKE_PORT=$(WASIP2_PORT) -o wasip2_smoke.wasm tests/wasip2_smoke.c \
-	    libcwist_wasip2.a -lwasi-emulated-pthread -lwasi-emulated-getpid \
+	    libcwist_wasip2.a $(WASIP2_LDLIBS) \
 	    -Wl,--gc-sections -Wl,--allow-undefined
 	@set -e; \
 	LOG=/tmp/cwist_wasip2_smoke.$$$$.log; \
-	$(WASMTIME) run -S preview2=y -S tcp=y -S inherit-network=y \
+	if [ "$(findstring wasip3,$(WASIP2_TARGET))" = "" ]; then PREVIEW2="-S preview2=y"; else PREVIEW2=""; fi; \
+	$(WASMTIME) run $$PREVIEW2 -S tcp=y -S inherit-network=y \
 	    --env CWIST_C1M_MODE=0 wasip2_smoke.wasm >$$LOG 2>&1 & \
 	WPID=$$!; \
 	trap "kill -9 $$WPID 2>/dev/null || true" EXIT; \
