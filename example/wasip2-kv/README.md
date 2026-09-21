@@ -16,9 +16,16 @@ single opaque blob — the same shape as a KV namespace on an edge runtime.
 - `cwist_db_open_memory(buf, len)` on boot = the KV `get`.
 - `cwist_db_serialize()` + `fwrite` after each mutation = the KV `put`.
 
-On wasmtime the "KV" is a file under a `--dir` preopen. On Cloudflare Workers
-the same two calls map to `KV.put(key, blob)` / `KV.get(key, "arrayBuffer")`
-from the host JS — the guest code is unchanged either way.
+On Wasmtime the "KV" is a file under a `--dir` preopen. This is not a
+Cloudflare Workers adapter: the guest directly uses WASI filesystem and
+socket APIs. A Workers port would need host JS persistence and a different
+request boundary; it cannot run this binary unchanged.
+
+For separate artifact/state directories, startup, backup, and rollback, see
+the [Wasmtime appliance deployment guide](../../docs/deployment/wasmtime-appliance.md).
+The example is unauthenticated, binds all IPv4 interfaces, and does not
+promise atomic or crash-durable blob writes. Use disposable data on an
+isolated host/network. `smoke.sh` deletes the example's `kv/cwist.db`.
 
 ## Files
 
