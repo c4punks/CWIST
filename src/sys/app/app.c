@@ -11,6 +11,7 @@
 #include <cwist/sys/app/config.h>
 #include <cwist/sys/app/logger.h>
 #include <cwist/sys/app/shutdown.h>
+#include <cwist/sys/wasi.h>
 #include <cwist/sys/app/big_dumb_reply.h>
 #include <cwist/sys/app/app.h>
 #include <cwist/net/http/http.h>
@@ -31,12 +32,23 @@
 #include <ctype.h>
 #include <strings.h>
 #include <unistd.h>
+#if !defined(__EMSCRIPTEN__) && !defined(__wasi__)
 #include <sys/wait.h>
 #include <signal.h>
+#endif
+#include <errno.h>
+#include <fcntl.h>
+#include <poll.h>
+#if defined(__GLIBC__)
+#include <malloc.h>
+#endif
 #include <arpa/inet.h>
 #include <netinet/tcp.h>
 #include <dirent.h>
 #include <sys/stat.h>
+#ifndef __wasi__
+#include <sys/resource.h>
+#endif
 #include <time.h>
 #include <pthread.h>
 #include <ttak/mem/mem.h>
@@ -50,6 +62,9 @@
  * @brief Tune system resource limits to handle high concurrency loads.
  */
 static void cwist_app_tune_system(void) {
+#ifdef __wasi__
+    /* WASI preview1 has no rlimit; fd budgeting is the host's concern. */
+#else
     struct rlimit rl;
     if (getrlimit(RLIMIT_NOFILE, &rl) != 0) {
         fprintf(stderr, "[CWIST] Cannot read file limits: %s\n", strerror(errno));
@@ -68,10 +83,11 @@ static void cwist_app_tune_system(void) {
         }
     }
     printf("[CWIST] Open file soft limit: %llu\n", (unsigned long long)rl.rlim_cur);
+#endif
 }
 #endif
 
-#ifndef __EMSCRIPTEN__
+#if !defined(__EMSCRIPTEN__) && !defined(__wasi__)
 /**
  * @brief Read the current libttak tick count used for static-file retirement deadlines.
  * @return Monotonic tick value compatible with libttak memory APIs.
@@ -80,6 +96,9 @@ static inline uint64_t cwist_mem_now(void) {
     return ttak_get_tick_count();
 }
 
+#if !defined(__EMSCRIPTEN__) && !defined(__wasi__)
+/* The static-file memory cache rides on libttak's mem tree and a watcher
+ * thread; WASM hosts get neither (cwist_prepare_static() always declines). */
 /**
  * @brief Check whether the static-file memory cache can admit a payload after reclamation.
  * @param mem Static-file memory manager.
@@ -665,7 +684,15 @@ static bool cwist_static_match_entry(const cwist_static_dir *entry, const char *
  * @param info Output structure receiving the resolved mapping details.
  * @return true when the request should be served by the static-file handler.
  */
-static bool cwist_prepare_static(cwist_app *app, cwist_http_request *req, cwist_static_request_info *info) {
+static bool cwist_prepare_static(cwist_app *app, cwist_http_request *req,
+                                 cwist_static_request_info *info) {
+#if defined(__EMSCRIPTEN__) || defined(__wasi__)
+    /* No filesystem-backed static cache in WASM hosts. */
+    (void)app;
+    (void)req;
+    (void)info;
+    return false;
+#else
     if (!app || !req || !req->path || !req->path->data) return false;
     if (!app->static_dirs) return false;
     if (req->method != CWIST_HTTP_GET && req->method != CWIST_HTTP_HEAD) return false;
@@ -689,6 +716,7 @@ static bool cwist_prepare_static(cwist_app *app, cwist_http_request *req, cwist_
 #endif
 }
 
+#if !defined(__EMSCRIPTEN__) && !defined(__wasi__)
 /**
  * @brief Recursively scan a static root directory to size or populate the fixed-memory cache.
  * @param fs_root Filesystem directory to scan.
@@ -847,6 +875,7 @@ static char *cwist_normalize_directory(const char *directory) {
     return copy;
 }
 
+#if !defined(__EMSCRIPTEN__) && !defined(__wasi__)
 /**
  * @brief Cleanup hook used when a response borrows a static-file cache payload.
  * @param ptr Borrowed body pointer.
@@ -1164,6 +1193,7 @@ cwist_app *cwist_app_create(void) {
     app->redis_pool = NULL;
     app->scheduler = NULL;
 
+#if !defined(__EMSCRIPTEN__) && !defined(__wasi__)
     cwist_app_refresh_https_request_handler(app);
 
     return app;
@@ -1303,6 +1333,7 @@ void cwist_app_destroy(cwist_app *app) {
         curr_s = next;
     }
 
+#if !defined(__EMSCRIPTEN__) && !defined(__wasi__)
     if (app->mem_manager) {
         app->mem_manager->watcher_running = false;
         // If thread was started, join it. 
@@ -1331,6 +1362,7 @@ void cwist_app_destroy(cwist_app *app) {
         cwist_bdr_destroy(app->bdr_ctx);
     }
 
+#if !defined(__EMSCRIPTEN__) && !defined(__wasi__)
     if (app->nuke_enabled) {
         cwist_nuke_close();
     }
@@ -1358,6 +1390,7 @@ void cwist_app_destroy(cwist_app *app) {
     if (app->session_secret) cwist_free(app->session_secret);
     if (app->session_name) cwist_free(app->session_name);
 
+#if !defined(__EMSCRIPTEN__) && !defined(__wasi__)
     if (app->db_pool) {
         cwist_db_pool_destroy((cwist_db_pool_t *)app->db_pool);
     }
@@ -1470,7 +1503,11 @@ cwist_error_t cwist_app_use_https2(cwist_app *app, bool enabled) {
         return err;
     }
 
-    app->use_http2 = enabled;
+    app->use_https2 = enabled;
+#if defined(__EMSCRIPTEN__) || defined(__wasi__)
+    err.error.err_i16 = -1; /* HTTP/2 transport is native-only */
+    return err;
+#else
     cwist_app_refresh_https_request_handler(app);
     err.error.err_i16 = 0;
 
@@ -1489,6 +1526,10 @@ cwist_error_t cwist_app_use_https3(cwist_app *app, bool enabled) {
     }
 
     app->use_https3 = enabled;
+#if defined(__EMSCRIPTEN__) || defined(__wasi__)
+    err.error.err_i16 = -1; /* HTTP/3 transport is native-only */
+    return err;
+#else
     err.error.err_i16 = 0;
 
     if (!app->use_ssl || !app->cert_path || !app->key_path) {
@@ -1519,8 +1560,23 @@ cwist_error_t cwist_app_use_http3(cwist_app *app, bool enabled) {
     }
 
     app->use_http3 = enabled;
+#if defined(__EMSCRIPTEN__) || defined(__wasi__)
+    err.error.err_i16 = -1; /* HTTP/3 transport is native-only */
+    return err;
+#else
     err.error.err_i16 = 0;
     return cwist_app_refresh_http3_context(app);
+#endif
+}
+
+void cwist_app_use_webtransport(cwist_app *app, cwist_webtransport_handler_func handler) {
+    if (!app) return;
+    app->wt_handler = handler;
+#if !defined(__EMSCRIPTEN__) && !defined(__wasi__)
+    if (app->h3_ctx) {
+        cwist_http3_set_webtransport_handler(app->h3_ctx, handler);
+    }
+#endif
 }
 
 /**
@@ -1659,6 +1715,7 @@ cwist_error_t cwist_app_use_nuke_db(cwist_app *app, const char *db_path, int syn
  */
 cwist_db *cwist_app_get_db(cwist_app *app) {
     if (!app) return NULL;
+#if !defined(__EMSCRIPTEN__) && !defined(__wasi__)
     if (app->nuke_enabled) {
         app->db->conn = cwist_nuke_get_db();
     }
@@ -1671,6 +1728,12 @@ cwist_error_t cwist_app_use_db_pool(cwist_app *app, const char *db_path, size_t 
         err.error.err_i16 = -1;
         return err;
     }
+#if defined(__EMSCRIPTEN__) || defined(__wasi__)
+    (void)db_path;
+    (void)max_conns;
+    err.error.err_i16 = -1; /* connection pools need native sockets/threads */
+    return err;
+#else
     if (app->db_pool) {
         cwist_db_pool_destroy((cwist_db_pool_t *)app->db_pool);
     }
@@ -1694,6 +1757,13 @@ cwist_error_t cwist_app_use_redis(cwist_app *app, const char *host, int port, si
         err.error.err_i16 = -1;
         return err;
     }
+#if defined(__EMSCRIPTEN__) || defined(__wasi__)
+    (void)host;
+    (void)port;
+    (void)max_conns;
+    err.error.err_i16 = -1; /* Redis needs native sockets */
+    return err;
+#else
     if (app->redis_pool) {
         cwist_redis_pool_destroy((cwist_redis_pool_t *)app->redis_pool);
     }
@@ -1717,6 +1787,12 @@ cwist_error_t cwist_app_use_scheduler(cwist_app *app, size_t worker_count, size_
         err.error.err_i16 = -1;
         return err;
     }
+#if defined(__EMSCRIPTEN__) || defined(__wasi__)
+    (void)worker_count;
+    (void)queue_capacity;
+    err.error.err_i16 = -1; /* worker pools need native threads */
+    return err;
+#else
     if (app->scheduler) {
         cwist_scheduler_destroy((cwist_scheduler_t *)app->scheduler);
     }
@@ -2202,20 +2278,13 @@ int cwist_app_dispatch_memory(cwist_app *app, const char *req_buf, size_t req_le
 
 /* --- WASM boundary streaming (issue #93 Phase 3) -------------------------- */
 
-/* Cap on the body bytes preallocated from the declared Content-Length.
- * Feeds beyond this grow the buffer on demand so a bogus huge declaration
- * cannot force a huge allocation at begin() time. */
-#define CWIST_STREAM_REQ_EAGER_MAX ((size_t)1 << 20)
-
 struct cwist_stream_req {
-    /* Head and body share one contiguous buffer: the head sits at
-     * [0, head_len) and fed body bytes are appended after it, so each
-     * chunk is copied exactly once into its final wire position. */
-    char *wire;
+    char *head;
     size_t head_len;
     size_t content_length; /* parsed from Content-Length; 0 when absent */
+    char *body;
     size_t body_len;
-    size_t wire_cap;
+    size_t body_cap;
     bool complete; /* set by a successful cwist_stream_req_end() */
 };
 
@@ -2227,12 +2296,9 @@ static long cwist_stream_parse_content_length(const char *head, size_t head_len)
     const char *end = head + head_len;
     while (p + sizeof(cl_name) - 1 <= end) {
         size_t i = 0;
-        while (i < sizeof(cl_name) - 1) {
-            unsigned char c = (unsigned char)p[i];
-            if (c >= 'A' && c <= 'Z') c = (unsigned char)(c + ('a' - 'A'));
-            if ((char)c != cl_name[i]) break;
+        while (i < sizeof(cl_name) - 1 &&
+               (char)tolower((unsigned char)p[i]) == cl_name[i])
             i++;
-        }
         if (i == sizeof(cl_name) - 1) {
             const char *v = p + i;
             while (v < end && (*v == ' ' || *v == '\t')) v++;
@@ -2253,24 +2319,23 @@ cwist_stream_req_t *cwist_stream_req_begin(const char *head, size_t head_len) {
     if (!head || head_len == 0) return NULL;
     cwist_stream_req_t *r = cwist_alloc(sizeof(*r));
     if (!r) return NULL;
+    r->head = cwist_alloc(head_len);
+    if (!r->head) {
+        cwist_free(r);
+        return NULL;
+    }
+    memcpy(r->head, head, head_len);
+    r->head_len = head_len;
     long cl = cwist_stream_parse_content_length(head, head_len);
     if (cl < 0) {
+        cwist_free(r->head);
         cwist_free(r);
         return NULL;
     }
-    r->head_len = head_len;
     r->content_length = (size_t)cl;
+    r->body = NULL;
     r->body_len = 0;
-    /* Eagerly reserve the declared body when it is modest; larger bodies
-     * grow on feed so a bogus Content-Length cannot force a big allocation. */
-    size_t eager = (size_t)cl < CWIST_STREAM_REQ_EAGER_MAX ? (size_t)cl : 0;
-    r->wire_cap = head_len + eager;
-    r->wire = cwist_alloc(r->wire_cap);
-    if (!r->wire) {
-        cwist_free(r);
-        return NULL;
-    }
-    memcpy(r->wire, head, head_len);
+    r->body_cap = 0;
     r->complete = false;
     return r;
 }
@@ -2279,18 +2344,17 @@ int cwist_stream_req_feed(cwist_stream_req_t *r, const char *chunk, size_t len) 
     if (!r || (!chunk && len > 0)) return -1;
     if (len > r->content_length - r->body_len) return -1; /* overflow of declared length */
     if (len == 0) return 0;
-    size_t used = r->head_len + r->body_len;
-    if (len > r->wire_cap - used) {
-        size_t ncap = r->wire_cap ? r->wire_cap : 4096;
-        while (ncap - r->head_len < r->body_len + len) ncap *= 2;
+    if (r->body_len + len > r->body_cap) {
+        size_t ncap = r->body_cap ? r->body_cap : 4096;
+        while (ncap < r->body_len + len) ncap *= 2;
         char *nb = cwist_alloc(ncap);
         if (!nb) return -1;
-        memcpy(nb, r->wire, used);
-        cwist_free(r->wire);
-        r->wire = nb;
-        r->wire_cap = ncap;
+        if (r->body_len > 0) memcpy(nb, r->body, r->body_len);
+        cwist_free(r->body);
+        r->body = nb;
+        r->body_cap = ncap;
     }
-    memcpy(r->wire + used, chunk, len);
+    memcpy(r->body + r->body_len, chunk, len);
     r->body_len += len;
     return 0;
 }
@@ -2302,17 +2366,26 @@ int cwist_stream_req_end(cwist_stream_req_t *r) {
     return 0;
 }
 
-int cwist_stream_req_dispatch(cwist_stream_req_t *r, cwist_app *app, cwist_stream_write_fn write_fn,
-                              void *write_ctx) {
+int cwist_stream_req_dispatch(cwist_stream_req_t *r, cwist_app *app,
+                              cwist_stream_write_fn write_fn, void *write_ctx) {
     if (!r) return -1;
     int rc;
     if (!app || !write_fn || !r->complete) {
         rc = -1;
     } else {
-        rc =
-            cwist_app_dispatch_stream(app, r->wire, r->head_len + r->body_len, write_fn, write_ctx);
+        size_t total = r->head_len + r->body_len;
+        char *wire = cwist_alloc(total ? total : 1);
+        if (!wire) {
+            rc = -1;
+        } else {
+            memcpy(wire, r->head, r->head_len);
+            if (r->body_len > 0) memcpy(wire + r->head_len, r->body, r->body_len);
+            rc = cwist_app_dispatch_stream(app, wire, total, write_fn, write_ctx);
+            cwist_free(wire);
+        }
     }
-    cwist_free(r->wire);
+    cwist_free(r->head);
+    cwist_free(r->body);
     cwist_free(r);
     return rc;
 }
@@ -2329,23 +2402,9 @@ int cwist_app_dispatch_stream(cwist_app *app, const char *req_buf, size_t req_le
         cwist_http_request_destroy(req);
         return -1;
     }
-    /* Attach the sink before dispatch: producer writes stream head-first
-     * and chunk-by-chunk while the handler is still running. */
-    res->stream_sink = write_fn;
-    res->stream_sink_ctx = write_ctx;
     cwist_app_dispatch(app, req, res);
     cwist_http_request_destroy(req);
     res->keep_alive = false;
-
-    if (res->stream_mode) {
-        /* Finalize an un-ended stream (flushes the terminator through the
-         * sink), then detach: everything already travelled to write_fn. */
-        if (!res->stream_ended) cwist_http_response_stream_end(res);
-        res->stream_sink = NULL;
-        cwist_http_response_destroy(res);
-        return res->stream_failed ? -2 : 0;
-    }
-    res->stream_sink = NULL;
 
     if (res->use_file_stream) {
         /* File-stream bodies are not resident memory; the streaming boundary
@@ -2439,7 +2498,7 @@ static void internal_route_handler(cwist_app *app, cwist_http_request *req,
         req->endpoint_opts = found_route->opts ? found_route->opts : CWIST_ENDPOINT_DEFAULT;
         if (res) res->endpoint_opts = req->endpoint_opts;
         if (found_route->ws_async_on_message && req->async_conn) {
-#ifndef __EMSCRIPTEN__
+#if !defined(__EMSCRIPTEN__) && !defined(__wasi__)
             /* C1M path (issue #181): the route handler runs on the reactor
              * thread, so invoking a blocking ws_handler here would park the
              * whole worker in recv().  Complete the upgrade, send the 101
@@ -2475,7 +2534,7 @@ static void internal_route_handler(cwist_app *app, cwist_http_request *req,
             }
 #endif
         } else if (found_route->ws_handler) {
-#ifdef __EMSCRIPTEN__
+#if defined(__EMSCRIPTEN__) || defined(__wasi__)
             /* WebSocket upgrades need a live socket; in-memory dispatch has none. */
             res->status_code = CWIST_HTTP_BAD_REQUEST;
             cwist_sstring_assign(res->body, "WebSocket Upgrade Failed");
@@ -3057,34 +3116,6 @@ static unsigned int app_http_yield_batch(void) {
 }
 
 #ifndef CWIST_WASI_NO_SOCKETS
-/* h2c connection handoff: the blocking HTTP/2 server runs on a detached
- * thread per connection so an abandoned connection's idle poll never pins
- * a reactor loop.  Owns the fd, the sniffed-byte replay, and the app. */
-#define CWIST_H2C_THREAD_STACK_SIZE (256 * 1024)
-
-typedef struct {
-    int fd;
-    char *replay;
-    size_t replay_len;
-    cwist_app *app;
-} h2c_handoff_t;
-
-static void *h2c_handoff_main(void *arg) {
-    h2c_handoff_t *h = (h2c_handoff_t *)arg;
-    cwist_https_connection h2c = {.fd = h->fd,
-                                  .ssl = NULL,
-                                  .read_buf = h->replay,
-                                  .buf_len = h->replay_len,
-                                  .negotiated_http2 = true,
-                                  .negotiated_protocol = CWIST_HTTPS_PROTOCOL_HTTP2};
-    cwist_http2_serve_connection_ex(&h2c, h->app, static_http2_route_bridge,
-                                    cwist_grpc_http2_hooks());
-    close(h->fd);
-    cwist_free(h->replay);
-    cwist_free(h);
-    return NULL;
-}
-
 cwist_async_action_t cwist_app_http_handler_async(int client_fd, cwist_http_async_conn_t *conn) {
     cwist_app *app = (cwist_app *)conn->user_ctx;
     static _Atomic long dbg_fill_fail, dbg_fatal, dbg_serve_close;
@@ -4369,8 +4400,15 @@ void cwist_apply_profile(void) {
  * @return 0 on success, or -1 when initialization, bind, or worker shutdown fails.
  */
 int cwist_app_listen(cwist_app *app, int port) {
+#if defined(__EMSCRIPTEN__) || defined(CWIST_WASI_NO_SOCKETS)
+    (void)port;
+    if (app) app->port = port;
+    return -1; /* WASM hosts drive requests through cwist_app_dispatch_memory() */
+#else
+#ifndef __wasi__
     // Ignore SIGPIPE
     signal(SIGPIPE, SIG_IGN);
+#endif
     cwist_shutdown_install_handlers();
     cwist_app_tune_system();
     cwist_apply_profile();
@@ -4411,6 +4449,7 @@ int cwist_app_listen(cwist_app *app, int port) {
     /* Bind the HTTP/3 UDP socket before forking as well.  The thread that
      * services it is started per-process after the fork. */
     int udp_fd = -1;
+#ifndef __wasi__
     if (app->h3_ctx && (app->use_http3 || app->use_https3)) {
         udp_fd = socket(AF_INET, SOCK_DGRAM, 0);
         if (udp_fd >= 0) {
@@ -4480,6 +4519,10 @@ int cwist_app_listen(cwist_app *app, int port) {
     }
     if (workers < 1) workers = 1;
     bool is_worker_child = false;
+    pid_t worker_pids[workers > 1 ? workers - 1 : 1];
+    size_t worker_count = 0;
+    int child_idx = 0;
+#ifndef __wasi__
     for (int i = 1; i < workers; i++) {
         pid_t pid = fork();
         if (pid == 0) {
@@ -4506,10 +4549,14 @@ int cwist_app_listen(cwist_app *app, int port) {
             g_cwist_listen_fd = server_fd;
         }
     }
+#else
+    (void)addr;
+#endif /* __wasi__ (single process) */
 
     /* The static cache owns a libttak cleanup thread as well as the watcher.
      * Initialize it only after all worker forks so no child inherits mutexes
      * or a pthread handle whose owning thread exists only in the parent. */
+#ifndef __wasi__
     cwist_mem_init(app);
 
     // Per-process threads start here.  Each worker gets its own watcher and
@@ -4540,12 +4587,19 @@ int cwist_app_listen(cwist_app *app, int port) {
         }
     }
 
-    printf("CWIST App running on port %d (SSL: %s) [Event-driven, workers=%d, pid=%d]\n",
-           port, app->use_ssl ? "On" : "Off", workers, (int)getpid());
-    
+#endif /* __wasi__ (no static-cache thread, watcher, or H3 thread) */
+    printf("CWIST App running on port %d (SSL: %s) [Event-driven, workers=%d, pid=%d]\n", port,
+           app->use_ssl ? "On" : "Off", workers, (int)getpid());
+
     // Check config for non-blocking scale mode (default enabled)
     const char *c1m = getenv("CWIST_C1M_MODE");
+#ifdef __wasi__
+    /* The C1M reactor is epoll/eventfd-based; WASI hosts run the blocking
+     * accept loop instead. */
+    bool use_c1m = false;
+#else
     bool use_c1m = true;
+#endif
     if (c1m) {
         if (c1m[0] == '0' || strcmp(c1m, "false") == 0) {
             use_c1m = false;
@@ -4554,6 +4608,19 @@ int cwist_app_listen(cwist_app *app, int port) {
     if (use_c1m) {
         cwist_async_server_loop(server_fd, app);
     } else {
+#ifdef __wasi__
+        if (app->use_ssl) {
+            fprintf(stderr, "TLS is not available on WASI (no BoringSSL); serve cleartext.\n");
+            g_cwist_listen_fd = -1;
+            return -1;
+        }
+        /* Single-threaded host: no pool, no epoll - the blocking accept
+         * fallback in cwist_http_server_loop() handles one connection at a
+         * time, which is what a WASM socket grant can drive anyway. */
+        cwist_server_config config = {
+            .use_forking = false, .use_threading = false, .use_epoll = false};
+        cwist_http_server_loop(server_fd, &config, cwist_app_http_handler, app);
+#else
         if (app->use_ssl) {
             if (!app->ssl_ctx) {
                 fprintf(stderr, "SSL enabled but context not initialized.\n");
@@ -4585,6 +4652,7 @@ int cwist_app_listen(cwist_app *app, int port) {
 
     int worker_result = 0;
     /* Parent process reaps worker children so they do not become zombies. */
+#ifndef __wasi__
     if (!is_worker_child && workers > 1) {
         for (int i = 1; i < workers; i++) {
             int status;
@@ -4602,6 +4670,10 @@ int cwist_app_listen(cwist_app *app, int port) {
             }
         }
     }
+#else
+    (void)worker_pids;
+    (void)worker_count;
+#endif /* __wasi__ (no child processes) */
 
     printf("[CWIST] Shutdown complete.\n");
 

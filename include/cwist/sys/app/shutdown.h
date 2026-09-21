@@ -10,7 +10,11 @@
 #define __CWIST_SHUTDOWN_H__
 
 #include <stdatomic.h>
+/* WASI preview1 has no signals (wasi-libc's <signal.h> is a hard #error
+ * without emulation); signal-based shutdown is compiled out there. */
+#ifndef __wasi__
 #include <signal.h>
+#endif
 
 #ifdef __cplusplus
 extern "C" {
