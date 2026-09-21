@@ -300,10 +300,13 @@ Theme: **WASM client-side support**. v3.4 shipped the gRPC client wave; v3.5 shi
   * ~~npm/release packaging for `libcwist_wasm.a` and the smoke-tested artifact~~ (done — `wasm/npm/` publishes the `cwist-wasm` package: `index.js` fetch-style API, `index.d.ts`, README; `make wasm-dist` builds the tarball, CI verifies a clean install).
   * ~~First-party JS wrapper exposing the `dispatch_memory` request path and TypedArray views without requiring consumers to write Emscripten glue~~ (done — `include/cwist/wasm/wasm_entry.h` `CWIST_WASM_DEFINE_ENTRY`, plus the `_main` export pitfall documented: without it the linker dead-code-eliminates `main`).
 * **Phase 3: streaming + session model** (done on `feat/wasm-phase3`):
-  * ~~WASI target evaluation~~ (done — decision and prerequisites in
-    `docs/api/wasi.md`: a separate `wasm-wasi` workstream, blocked on
-    libttak `__wasi__` compat, sqlite header hygiene, and sysroot
-    hermeticity; not a v3.6 deliverable).
+  * ~~WASI target evaluation~~ (done — the blockers recorded in
+    `docs/api/wasi.md` turned out to be CWIST-side quirks, so both WASI
+    flavours landed in-tree instead of staying a separate workstream:
+    preview1 (`wasm32-wasi`) runs the in-memory dispatch surface under
+    wasmtime, and WASI 0.2 (`wasm32-wasip2`) binds real sockets and serves
+    cleartext HTTP through `wasi:sockets`; experimental, see
+    `docs/api/wasi.md`).
   * ~~Streaming request/response bodies through the WASM boundary~~ (done:
     `cwist_app_dispatch_stream` + `cwist_stream_req_begin/feed/end` in
     app.h/app.c; boundary streaming, not a chunked-producer handler API.
