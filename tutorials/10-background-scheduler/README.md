@@ -3,8 +3,10 @@
 Schedule asynchronous one-shot or recurring tasks using the background worker thread pool.
 
 ## Key Concepts
-- Initialize worker pool with `cwist_scheduler_init()`.
-- Queue deferred execution callbacks via `cwist_scheduler_schedule_once(fn, arg, delay_sec)`.
+- Create a worker pool with `cwist_scheduler_create(worker_count, queue_capacity)`.
+- Submit an immediate job with `cwist_scheduler_submit(s, fn, arg)`.
+- Schedule a delayed or recurring job with `cwist_scheduler_schedule(s, fn, arg, delay_ms, interval_ms)`.
+- Shut down and free the pool with `cwist_scheduler_destroy(s)`.
 
 ## Build and Run
 
