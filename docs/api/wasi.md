@@ -67,14 +67,19 @@ CWIST-side quirk handling for wasip2:
   writer-fast stubs in that file are preview1-only since the real units
   join the wasip2 build.
 
-## WASI preview1 (in-memory dispatch)
+## WASI preview1 (retired)
 
-`make wasi-smoke` compiles the `WASM_SRCS` subset with wasi-sdk and runs a
-dispatch + session smoke under wasmtime. Requires `WASI_SDK` (default
+The preview1 target was removed in favor of WASI 0.2: the 0.2 build covers
+the same in-memory dispatch surface and adds the socket server, and three
+WASM flavors cost more than they earn (issue #203). The notes below record
+how the preview1 build behaved while it existed.
+
+`make wasi-smoke` compiled the `WASM_SRCS` subset with wasi-sdk and ran a
+dispatch + session smoke under wasmtime. It required `WASI_SDK` (default
 `~/toolchains/wasi-sdk-25.0-x86_64-linux`) and `WASMTIME` on PATH, plus
 `libwasi-emulated-pthread`.
 
-### What the preview1 build does differently
+### What the preview1 build did differently
 
 - **libttak** (upstream `c4punks/libttak` main): `ttak/compat/pthread.h`
   prefers the sysroot's own `<pthread.h>` when one exists and falls back to
@@ -94,7 +99,7 @@ dispatch + session smoke under wasmtime. Requires `WASI_SDK` (default
   same server-only references through its system stub libraries plus
   binaryen DCE.
 
-### Verification
+### Verification (historical)
 
 `make wasi-smoke` output (wasmtime):
 
