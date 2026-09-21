@@ -47,7 +47,7 @@ jobs:
           PKG_CONFIG_PATH: /opt/homebrew/opt/curl/lib/pkgconfig
         run: |
           make test_seq test_http_chunked test_mux test_test_client test_http_pipeline test_http_fairness
-          make test_public_fixed_cache test_public_fixed_http test_gc_job_handoff
+          make test_gc_job_handoff
           make -pn | grep -E '^IO_SRC[[:space:]]*=[[:space:]]*src/sys/io/kqueue\.c$'
 
   benchmark:
@@ -110,8 +110,7 @@ jobs:
           }
           int main(void) {
               cwist_app *app = cwist_app_create();
-              const char *public_cache = getenv("CWIST_BENCH_PUBLIC_FIXED");
-              cwist_app_get_opt(app, "/", handle_root, public_cache && strcmp(public_cache, "1") == 0 ? CWIST_ENDPOINT_PUBLIC_FIXED : CWIST_ENDPOINT_FIXED);
+              cwist_app_get_opt(app, "/", handle_root, CWIST_ENDPOINT_FIXED);
               cwist_app_listen(app, 9091);
               cwist_app_destroy(app);
               return 0;
@@ -296,7 +295,6 @@ jobs:
           # ultra-low-latency profile) and the event-driven C1M reactor path.
           run_bench "CWIST (classic)" "env CWIST_C1M_MODE=0 /tmp/cwist_server" 9091 "/tmp/cwist.txt" "/tmp/cwist_stat.txt" 10
           run_bench "CWIST C1M" "env CWIST_C1M_MODE=1 /tmp/cwist_server" 9091 "/tmp/cwist_c1m.txt" "/tmp/cwist_c1m_stat.txt" 10
-          run_bench "CWIST C1M public FIXED" "env CWIST_C1M_MODE=1 CWIST_BENCH_PUBLIC_FIXED=1 /tmp/cwist_server" 9091 "/tmp/cwist_c1m_public_fixed.txt" "/tmp/cwist_c1m_public_fixed_stat.txt" 10
 
           # CWIST_MALLOC_ARENA_MAX=1 caps glibc's per-process malloc arena
           # count to 1 before the fork loop (src/sys/app/app.c), inherited
@@ -442,7 +440,7 @@ jobs:
         if: always()
         run: |
           mkdir -p raw_logs
-          for name in cwist cwist_c1m cwist_c1m_arena1 cwist_c1m_drainchunk cwist_c1m_public_fixed cwist_tuned axum axum_tuned gin spring spring_tuned; do
+          for name in cwist cwist_c1m cwist_c1m_arena1 cwist_c1m_drainchunk cwist_tuned axum axum_tuned gin spring spring_tuned; do
             for suffix in .txt .warm.log _stat.txt .session.json; do
               file="/tmp/${name}${suffix}"
               if [ -f "$file" ]; then cp "$file" raw_logs/; fi

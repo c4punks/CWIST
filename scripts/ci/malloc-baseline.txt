@@ -164,9 +164,6 @@
 1	src/sys/app/compress.c:merged = (uint8_t *)malloc(total_in_len);
 1	src/sys/app/compress.c:uint8_t *encoded = (uint8_t *)malloc(encoded_size);
 2	src/sys/app/compress.c:z_stream *zs = (z_stream *)calloc(1, sizeof(z_stream));
-1	src/sys/app/public_fixed_cache.c:free(c);
-1	src/sys/app/public_fixed_cache.c:free(e);
-1	src/sys/app/public_fixed_cache.c:free(s);
 1	src/sys/metrics/metrics.c:char *buf = malloc(cap);
 1	src/sys/metrics/metrics.c:char *nb = realloc(buf, new_cap);
 3	src/sys/metrics/metrics.c:free(buf);

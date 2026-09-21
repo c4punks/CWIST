@@ -101,8 +101,7 @@ Each route can be annotated with a bitmask of behavioral flags:
 | Flag | Description |
 | ---- | ----------- |
 | `CWIST_DYNAMIC` | Default dynamic handler behavior. |
-| `CWIST_ENDPOINT_FIXED` | Compatibility hint only; alone it never activates automatic HTTP caching. |
-| `CWIST_ENDPOINT_PUBLIC_FIXED` | Explicit public constant-response assertion. Restricted cleartext HTTP/1.1 representation cache; see [admission and migration](../fixed-cache-status.md). |
+| `CWIST_ENDPOINT_FIXED` | Hint that the route's response is request-invariant. **Does not activate caching in the current revision** — every request is dispatched normally. See `docs/fixed-cache-status.md` and ADR-0001 (draft PR #85). |
 | `CWIST_ENDPOINT_FILE` | Hint that the endpoint streams files, enabling Linux/BSD `sendfile` fast paths. |
 
 Use the `_opt` helpers to set these flags:
@@ -115,12 +114,7 @@ cwist_app_get_opt(app,
                   CWIST_DYNAMIC | CWIST_ENDPOINT_FILE);
 ```
 
-PUBLIC_FIXED is an independent bit, not a composite of FIXED and DYNAMIC.
-Combining PUBLIC_FIXED with DYNAMIC, FILE or unknown bits disables admission.
-Automatic replay of legacy BDR wire blobs is removed; BDR storage APIs remain.
-Call `cwist_app_clear_public_fixed_cache(app)` after changing constant data, with
-workers quiescent. Stop/join workers before destroying the app. See the linked
-migration guide before opting in any existing route.
+Flags may be OR-ed together to combine behaviors (e.g., `fixed + file`).
 
 ## Static Assets
 

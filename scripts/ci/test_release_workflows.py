@@ -20,12 +20,12 @@ class ReleaseWorkflowTests(unittest.TestCase):
         for name in ('SHA256SUMS', 'SOURCE_COMMIT', 'SOURCE_TREE', 'SUBMODULES'):
             self.assertIn(f'dist/{name}', paths)
 
-    def test_native_kqueue_job_runs_cache_unit_and_tcp_contract(self):
+    def test_native_kqueue_job_runs_tcp_contract(self):
         text = (ROOT / '.github/workflows/bsd-kqueue-benchmarks.yml').read_text()
         job = text.split('  bsd-kqueue:\n', 1)[1].split('\n  benchmark:', 1)[0]
         commands = '\n'.join(line.strip() for line in job.splitlines()
                              if line.strip().startswith('make '))
-        for target in ('test_public_fixed_cache', 'test_public_fixed_http'):
+        for target in ('test_gc_job_handoff',):
             self.assertRegex(commands, rf'\b{target}\b')
 
 

@@ -182,9 +182,6 @@ typedef struct cwist_app {
 
     /** @brief Unary gRPC route registry. */
     void *grpc_routes;
-
-    /** @brief Private public-FIXED representation cache (opaque). */
-    struct cwist_pfc *public_fixed_cache;
 } cwist_app;
 
 /** --- Memory Management --- */
@@ -246,10 +243,6 @@ void cwist_app_enable_swagger(cwist_app *app, const char *mount_path,
  * @param app Pointer to the app to destroy.
  */
 void cwist_app_destroy(cwist_app *app);
-/** Invalidate every public-FIXED representation after changing constant data.
- * Reconfiguration requires quiescent workers; concurrent router mutation is
- * unsupported. Destroy the app only after its workers/connections have stopped. */
-void cwist_app_clear_public_fixed_cache(cwist_app *app);
 
 /**
  * @brief Sets the maximum memory space for the static file pool.

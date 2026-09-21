@@ -3059,10 +3059,10 @@ cwist_async_action_t cwist_app_http_handler_async(int client_fd, cwist_http_asyn
         if (fs == CWIST_COALESCE_FLUSH_PARKED) {
 #ifdef CWIST_PFC_TESTING
             /* Same park counter as app_async_flush_exit: this continuation
-             * flush can produce PARKED too (issue #172). The seam is defined
-             * by tests/test_public_fixed_http.c, which compiles this file
-             * with -DCWIST_PFC_TESTING but without the opaque-db forced
-             * include, so the prototype must live next to the call. */
+             * flush can produce PARKED too (issue #172). The seam has no
+             * in-tree caller; declare it so an external harness compiling
+             * this file with -DCWIST_PFC_TESTING does not rely on an
+             * implicit declaration. */
             extern void cwist_pfc_test_parked(void);
             cwist_pfc_test_parked();
 #endif

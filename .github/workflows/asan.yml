@@ -34,7 +34,6 @@ jobs:
         make clean
         make -j$(nproc) SANITIZE=address,undefined WERROR=1
         make SANITIZE=address,undefined WERROR=1 test
-        make test_public_fixed_cache_sanitize
         # Do not let an unavailable io_uring backend silently validate only
         # epoll: completion posting must wake the real ring without a timeout.
         CWIST_TEST_REQUIRE_IO_URING=1 make SANITIZE=address,undefined WERROR=1 test_reactor_wake

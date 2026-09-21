@@ -1,6 +1,6 @@
 # ADR-0001: Restore HTTP response caching through an explicit public FIXED contract
 
-- **Status:** Accepted. The implementation is the separate PUBLIC_FIXED API; release notes identify shipped versions. This ADR is not a performance or test-pass claim.
+- **Status:** Proposed for maintainer review; not implemented or released.
 - **Date:** 2026-09-13
 - **Scope:** Cleartext HTTP/1 in classic and C1M modes.
 - **Source baseline:** `7e19b461c5772f4e46e7d58fb96827bbb954cf97`.
@@ -22,7 +22,7 @@ Native backend/thread screening has not established a universal runtime default 
 
 ## Decision
 
-Introduce a separately named opt-in, `CWIST_ENDPOINT_PUBLIC_FIXED`, for a restricted public, request-invariant representation cache. The symbol is separate from legacy FIXED declarations. It uses its own single flag bit: the current `cwist_endpoint_has` helper tests whether **any** supplied bit is present, so a composite mask must not be mistaken for an all-bits requirement.
+Introduce a separately named opt-in, provisionally `CWIST_ENDPOINT_PUBLIC_FIXED`, for a restricted public, request-invariant representation cache. The symbol is a proposed API, not an existing one. It uses its own single flag bit: the current `cwist_endpoint_has` helper tests whether **any** supplied bit is present, so a composite mask must not be mistaken for an all-bits requirement.
 
 The opt-in is an application-author assertion that the handler performs no authorization, personalization, required per-request side effect, or request-dependent selection within the admitted profile. The framework cannot infer that assertion from a function pointer, absence of credentials, or a previously successful response. Existing FIXED declarations are not silently upgraded to this stronger contract.
 
