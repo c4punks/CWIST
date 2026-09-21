@@ -299,10 +299,27 @@ Theme: **WASM client-side support**. v3.4 shipped the gRPC client wave; v3.5 shi
 * **Phase 2: JavaScript consumption** (issues #183/#184, PR #185) — ~~done~~ (merged 2026-09-18; both issues auto-closed):
   * ~~npm/release packaging for `libcwist_wasm.a` and the smoke-tested artifact~~ (done — `wasm/npm/` publishes the `cwist-wasm` package: `index.js` fetch-style API, `index.d.ts`, README; `make wasm-dist` builds the tarball, CI verifies a clean install).
   * ~~First-party JS wrapper exposing the `dispatch_memory` request path and TypedArray views without requiring consumers to write Emscripten glue~~ (done — `include/cwist/wasm/wasm_entry.h` `CWIST_WASM_DEFINE_ENTRY`, plus the `_main` export pitfall documented: without it the linker dead-code-eliminates `main`).
-* **Phase 3-4: reach** (remaining):
-  * WASI target evaluation.
-  * Streaming request/response bodies through the WASM boundary.
-  * Session persistence model for WASM apps (the caveats documented in Phase 1 become a design input).
+* **Phase 3: streaming + session model** (done on `feat/wasm-phase3`):
+  * ~~WASI target evaluation~~ (done — decision and prerequisites in
+    `docs/api/wasi.md`: a separate `wasm-wasi` workstream, blocked on
+    libttak `__wasi__` compat, sqlite header hygiene, and sysroot
+    hermeticity; not a v3.6 deliverable).
+  * ~~Streaming request/response bodies through the WASM boundary~~ (done:
+    `cwist_app_dispatch_stream` + `cwist_stream_req_begin/feed/end` in
+    app.h/app.c; boundary streaming, not a chunked-producer handler API.
+    The `CWIST_WASM_DEFINE_ENTRY` macro exports
+    `_cwist_wasm_dispatch_stream`, pumping chunks through a
+    `Module.cwistStreamChunk` JS hook).
+  * ~~Session persistence model for WASM apps~~ (done and measured: the
+    model is "pin the signing secret, let the signed client-side cookie
+    carry the state" - instance lifetime is irrelevant. The WASM build now
+    actually links sessions via a bundled header-only SHA-256/HMAC
+    (`include/cwist/core/crypto/sha256.h`; OpenSSL is not in WASM_SRCS, so
+    pre-Phase-3 session.o could never link), with a
+    `crypto.getRandomValues` entropy fallback when /dev/urandom is absent.
+    Verified across app instances in `tests/test_wasm_stream.c` and the
+    Emscripten smoke test; documented in `docs/api/wasm.md`).
+* **Phase 4: reach** (remaining):
   * End-to-end example app (Service Worker or fetch-interception layer).
 
 Landeds alongside the WASM wave, also in scope for v3.6:
@@ -315,7 +332,7 @@ Landeds alongside the WASM wave, also in scope for v3.6:
 Known limits going in (from PR #176 review), updated:
 
 * ~~Bundle size impact of pulling SQLite into `libcwist_wasm.a` is unmeasured~~ — now measured (Phase 2 bundle report in `docs/api/wasm.md`): `libcwist_wasm.a` 328,518 -> 1,703,706 B (5.2x), `wasm_smoke.wasm` 67,267 -> 1,052,405 B (15.7x). The future opt-out or split build decision now has data; it remains open.
-* Session behavior under the WASM dispatch model is documented but not yet measured; Phase 3 needs observed behavior, not the current caveats list.
+* ~~Session behavior under the WASM dispatch model is documented but not yet measured; Phase 3 needs observed behavior, not the current caveats list~~ — now measured (Phase 3: cross-instance verify/reject in `tests/test_wasm_stream.c` and the Emscripten smoke test; model documented in `docs/api/wasm.md`).
 
 ---
 

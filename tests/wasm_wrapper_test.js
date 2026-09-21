@@ -43,7 +43,29 @@ if (new TextDecoder().decode(again.body) !== 'hello-from-wrapper-test') {
   throw new Error('body view aliasing detected');
 }
 
-console.log('wasm_wrapper_test: OK (GET, POST echo, body-copy isolation)');
+/* 4. Host-injected session secret (issue #93): pin the key from JS, then
+ * roundtrip a session value through the signed cookie. */
+handle.useSession('wrapper-test-secret-0123456789abcdef');
+const setRes = handle({ method: 'GET', path: '/session/set' });
+if (setRes.status !== 200) throw new Error('session/set status: ' + setRes.status);
+const setCookie = setRes.headers['Set-Cookie'];
+if (!setCookie || setCookie.indexOf('cwist_session=') !== 0) {
+  throw new Error('missing signed session cookie: ' + JSON.stringify(setRes.headers));
+}
+const cookiePair = setCookie.split(';')[0];
+const getRes = handle({ method: 'GET', path: '/session/get', headers: { Cookie: cookiePair } });
+if (new TextDecoder().decode(getRes.body) !== 'alice') {
+  throw new Error('session roundtrip: ' + new TextDecoder().decode(getRes.body));
+}
+
+/* 5. Same value, different secret -> signature must not verify. */
+handle.useSession('wrapper-test-secret-ROTATED-0123456789abcdef');
+const tampered = handle({ method: 'GET', path: '/session/get', headers: { Cookie: cookiePair } });
+if (new TextDecoder().decode(tampered.body) !== 'anonymous') {
+  throw new Error('rotated secret still verifies old cookie');
+}
+
+console.log('wasm_wrapper_test: OK (GET, POST echo, body-copy isolation, session secret)');
 })().catch((err) => {
   console.error(err);
   process.exit(1);
