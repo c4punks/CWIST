@@ -6,6 +6,7 @@
     !defined(__DragonFly__)
 #define _POSIX_C_SOURCE 200809L
 #include <cwist/net/http/http.h>
+#include <cwist/sys/wasi.h>
 #include <cwist/net/http/session.h>
 #include <cwist/core/sstring/sstring.h>
 #include <cwist/sys/err/cwist_err.h>
@@ -176,12 +177,17 @@ static _Atomic long g_http_inflight = 0;
 static long cwist_http_inflight_limit(void) {
     long base = g_http_thread_count > 0 ? g_http_thread_count : get_optimal_thread_count();
     long floor = base * CWIST_HTTP_INFLIGHT_PER_THREAD;
+#ifndef __wasi__
     struct rlimit rl;
     if (getrlimit(RLIMIT_NOFILE, &rl) != 0) return floor;
     long budget = (rl.rlim_cur == RLIM_INFINITY)
                       ? (1024L * 1024L)
                       : (long)rl.rlim_cur - CWIST_HTTP_INFLIGHT_FD_RESERVE;
     return budget > floor ? budget : floor;
+#else
+    /* WASI preview1 has no rlimit; the thread-count floor is enough. */
+    return floor;
+#endif
 }
 
 static const char CWIST_HTTP_503[] =
@@ -348,7 +354,9 @@ void cwist_http_pool_submit(int client_fd, void (*handler)(int, void *), void *c
     long inflight = atomic_fetch_add_explicit(&g_http_inflight, 1, memory_order_acq_rel) + 1;
     if (inflight > limit) {
         atomic_fetch_sub_explicit(&g_http_inflight, 1, memory_order_release);
+#ifdef MSG_NOSIGNAL
         send(client_fd, CWIST_HTTP_503, sizeof(CWIST_HTTP_503) - 1, MSG_NOSIGNAL | MSG_DONTWAIT);
+#endif
         close(client_fd);
         return;
     }
@@ -578,7 +586,9 @@ bool cwist_http_pool_submit_async(int client_fd, cwist_async_handler_t handler, 
     long inflight = atomic_fetch_add_explicit(&g_http_inflight, 1, memory_order_acq_rel) + 1;
     if (inflight > limit) {
         atomic_fetch_sub_explicit(&g_http_inflight, 1, memory_order_release);
+#ifdef MSG_NOSIGNAL
         send(client_fd, CWIST_HTTP_503, sizeof(CWIST_HTTP_503) - 1, MSG_NOSIGNAL | MSG_DONTWAIT);
+#endif
         close(client_fd);
         return false;
     }
@@ -1561,6 +1571,42 @@ bool cwist_tcp_cork_enabled(void) { return false; }
  * @return 0 on success, -1 on fatal error or timeout.
  */
 static int cwist_http_sendmsg_all(int fd, struct iovec *iov, int iovcnt, int flags) {
+#ifdef CWIST_WASI_SOCKETS
+    /* wasi:sockets (0.2) has no sendmsg(2): coalesce the iov into a single
+     * buffer and drive plain send(). Response iovs are small (headers + one
+     * body segment), so the copy is cheap. */
+    size_t total = 0;
+    for (int i = 0; i < iovcnt; i++) total += iov[i].iov_len;
+    char *buf = cwist_alloc(total ? total : 1);
+    if (!buf) return -1;
+    size_t off = 0;
+    for (int i = 0; i < iovcnt; i++) {
+        memcpy(buf + off, iov[i].iov_base, iov[i].iov_len);
+        off += iov[i].iov_len;
+    }
+    size_t sent = 0;
+    int rc = -1;
+    while (sent < total) {
+        ssize_t n = send(fd, buf + sent, total - sent, flags);
+        if (n < 0) {
+            if (errno == EINTR) continue;
+            if (errno == EAGAIN || errno == EWOULDBLOCK) {
+                struct pollfd pfd = {.fd = fd, .events = POLLOUT};
+                int pr = poll(&pfd, 1, CWIST_HTTP_TIMEOUT_MS);
+                if (pr <= 0) goto wasi_done;
+                if (pfd.revents & (POLLERR | POLLHUP | POLLNVAL)) goto wasi_done;
+                continue;
+            }
+            goto wasi_done;
+        }
+        if (n == 0) goto wasi_done;
+        sent += (size_t)n;
+    }
+    rc = 0;
+wasi_done:
+    cwist_free(buf);
+    return rc;
+#elif !defined(CWIST_WASI_NO_SOCKETS)
     /* Speculative zero-latency fast-path attempt:
      * Completes immediately for non-saturated sockets without entering poll() loops. */
     size_t fast_sent = 0;
@@ -1614,6 +1660,15 @@ static int cwist_http_sendmsg_all(int fd, struct iovec *iov, int iovcnt, int fla
         }
     }
     return 0;
+#else
+    /* WASI preview1 has no sockets; sending is impossible. Callers treat
+     * this as a write error and tear the connection down. */
+    (void)fd;
+    (void)iov;
+    (void)iovcnt;
+    (void)flags;
+    return -1;
+#endif
 }
 
 /**
@@ -3133,6 +3188,7 @@ static void *thread_handler(void *arg) {
  * @param handler_func Request handler callback.
  * @param ctx Opaque callback context.
  */
+#if !defined(__wasi__)
 static void handle_client_forking(int client_fd, void (*handler_func)(int, void *), void *ctx) {
     pid_t pid = fork();
     if (pid == 0) {

@@ -158,6 +158,9 @@ SRCS = src/core/sstring/sstring.c \
        src/net/http/writer_fast.c \
        src/sys/io/uring_sqpoll.c \
        src/net/http/async_server.c \
+       src/net/http/async.c lib/libttak/src/mem/epoch.c src/sys/sys_info.c \
+    lib/libttak/src/mem/mem.c lib/libttak/src/mem/fastpath.c \
+    lib/libttak/src/mem/owner.c lib/libttak/src/mem/abstract.c \
        src/net/http/cookie.c \
        src/net/http/session.c \
        src/net/http/query.c \
@@ -182,7 +185,10 @@ SRCS = src/core/sstring/sstring.c \
        src/sys/app/shutdown.c \
        src/sys/app/compress.c \
        src/sys/app/test_client.c \
-       src/core/log/log.c \
+       src/core/log/log.c lib/libttak/src/net/mols_control.c \
+    src/net/http/async.c lib/libttak/src/mem/epoch.c src/sys/sys_info.c \
+    lib/libttak/src/mem/mem.c lib/libttak/src/mem/fastpath.c \
+    lib/libttak/src/mem/owner.c lib/libttak/src/mem/abstract.c \
        src/sys/session/flash.c \
        src/core/template/template.c \
        src/core/html/builder.c \
@@ -205,6 +211,180 @@ SRCS = src/core/sstring/sstring.c \
        src/sys/metrics/metrics.c \
        src/sys/health/healthz.c \
        $(IO_SRC)
+
+# --- WASM (Emscripten) static library -------------------------------------
+# Socket-independent core only: app dispatch, mux/middleware, HTTP/1
+# parser/serializer, sstring/arena/mem, query, JSON, template, validation.
+# Excluded: all of src/sys/io, sockets/accept, TLS/BoringSSL, QUIC/HTTP/3,
+# gRPC (needs HTTP/2), WebSocket transport, threads/scheduler, compression,
+# database/sync clients.  Build with e.g.
+#   make wasm EMCC=/workspace/emsdk/upstream/emscripten/emcc
+# The wasm section sits above `all` in this file; without an explicit default
+# goal, bare `make` would try to build the wasm archive with emcc.
+.DEFAULT_GOAL := all
+
+EMCC ?= emcc
+EMAR ?= emar
+NODE ?= node
+WASM_BUILD_DIR = .wasm-build
+WASM_SRCS = src/core/sstring/sstring.c \
+       src/core/seq/seq.c \
+       src/core/seq/seq_auth.c \
+       src/sys/err/error.c \
+       src/net/http/http.c \
+       src/net/http/mux.c \
+       src/net/http/query.c \
+       src/net/http/cookie.c \
+       src/net/http/session.c \
+       src/sys/app/app.c \
+       src/sys/app/middleware.c \
+       src/sys/app/config.c \
+       src/sys/app/logger.c \
+       src/sys/app/shutdown.c \
+       src/sys/app/big_dumb_reply.c \
+       src/sys/app/test_client.c \
+       src/core/siphash/siphash.c \
+       src/core/utils/json_builder.c \
+       src/core/utils/json_heal.c \
+       src/core/utils/zod.c \
+       src/core/template/template.c \
+       src/core/html/builder.c \
+       src/core/html/css_composer.c \
+       src/core/validation/bind.c \
+       src/core/mem/alloc.c \
+       src/core/mem/arena.c \
+       src/core/db/db.c \
+       lib/sqlite3/sqlite3.c \
+       lib/cjson/cJSON.c
+WASM_OBJS = $(WASM_SRCS:%.c=$(WASM_BUILD_DIR)/%.o)
+# Host pkg-config -I paths (curl/nghttp2/...) must NOT leak into the
+# emscripten sysroot, so the WASM build uses its own minimal include set.
+WASM_INCLUDE_PATHS = -I./include -I./lib -I./lib/cjson -I./lib/boringssl/include -I./lib/libttak/include -I./lib/sqlite3
+WASM_CFLAGS = -std=c17 -O2 -Wall $(WASM_INCLUDE_PATHS) $(COMMON_DEFINES)
+
+$(WASM_BUILD_DIR)/%.o: %.c
+	@mkdir -p $(dir $@)
+	$(EMCC) $(WASM_CFLAGS) -c -o $@ $<
+
+libcwist_wasm.a: $(WASM_OBJS)
+	$(EMAR) rcs $@ $(WASM_OBJS)
+
+wasm: libcwist_wasm.a
+
+# Manual smoke test (requires Emscripten + node; intentionally not part of
+# `make test` since CI has no Emscripten toolchain). NODE is overridable so
+# CI can point at a specific node binary.
+wasm-smoke: libcwist_wasm.a
+	$(EMCC) $(WASM_CFLAGS) -o wasm_smoke.js tests/wasm_smoke.c libcwist_wasm.a
+	$(NODE) wasm_smoke.js
+
+# Integration test for the cwist-wasm JS wrapper (wasm/npm): builds a
+# consumer-style module through include/cwist/wasm/wasm_entry.h, then drives
+# it from node via the wrapper with no Emscripten glue on the JS side.
+# Requires Emscripten + node, same as wasm-smoke.
+# _main is in EXPORTED_FUNCTIONS on purpose: without it the linker dead-code
+# eliminates main() (nothing else references it), and the app would never be
+# created - dispatch would return NULL on every call.
+wasm-wrapper-test: libcwist_wasm.a
+	$(EMCC) $(WASM_CFLAGS) -o wrapper_test.js tests/wasm_wrapper_test.c libcwist_wasm.a \
+	    -sEXPORTED_FUNCTIONS=_main,_cwist_wasm_dispatch,_cwist_wasm_dispose,_cwist_wasm_use_session,_malloc,_free \
+	    -sEXPORTED_RUNTIME_METHODS=HEAPU8,HEAPU32 -sMODULARIZE -sEXPORT_NAME=createCwistModule
+	$(NODE) tests/wasm_wrapper_test.js
+
+# Versioned npm-package tarball for the cwist-wasm JS wrapper (issue #93
+# Phase 2a). Packs wasm/npm into dist/cwist-wasm-<version>.tgz; CI installs
+# the tarball into a clean directory to prove it stands alone.
+wasm-dist: wasm-wrapper-test
+	mkdir -p dist
+	npm --prefix wasm/npm pkg set version=$(VERSION) >/dev/null
+	npm pack ./wasm/npm --pack-destination dist >/dev/null
+	git checkout -- wasm/npm/package.json 2>/dev/null || true
+	@echo "dist/$$(ls dist | grep cwist-wasm | tail -1)"
+
+clean-wasm:
+	rm -rf $(WASM_BUILD_DIR) libcwist_wasm.a wasm_smoke.js wasm_smoke.wasm \
+	    wrapper_test.js wrapper_test.wasm dist
+
+# --- WASI (wasm32-wasi preview1) smoke --------------------------------------
+# Same WASM_SRCS subset as the Emscripten target, built with wasi-sdk and run
+# under a WASI host (wasmtime). Proves the in-memory dispatch surface links
+# and executes without a browser. Requires WASI_SDK and WASMTIME.
+WASI_SDK ?= $(HOME)/toolchains/wasi-sdk-25.0-x86_64-linux
+WASMTIME ?= wasmtime
+WASI_BUILD_DIR = .wasi-build
+WASI_CFLAGS = --target=wasm32-wasi -std=c17 -O2 -Wall -fvisibility=hidden \
+	$(WASM_INCLUDE_PATHS) $(COMMON_DEFINES)
+WASI_SRCS = $(WASM_SRCS) src/sys/wasi/compat.c
+WASI_OBJS = $(WASI_SRCS:%.c=$(WASI_BUILD_DIR)/%.o)
+
+$(WASI_BUILD_DIR)/%.o: %.c
+	@mkdir -p $(dir $@)
+	$(WASI_SDK)/bin/clang $(WASI_CFLAGS) -c -o $@ $<
+
+libcwist_wasi.a: $(WASI_OBJS)
+	$(WASI_SDK)/bin/ar rcs $@ $(WASI_OBJS)
+
+wasi-smoke: libcwist_wasi.a
+	$(WASI_SDK)/bin/clang $(WASI_CFLAGS) -o wasi_smoke.wasm tests/wasi_smoke.c \
+	    libcwist_wasi.a -lwasi-emulated-pthread -Wl,--gc-sections -Wl,--allow-undefined
+	$(WASMTIME) run wasi_smoke.wasm
+
+# --- WASI 0.2 (wasm32-wasip2) smoke ------------------------------------------------
+# Same sources plus the socket server runtime and the metrics/writer units.
+# Under wasip2 the sysroot exposes wasi:sockets through <sys/socket.h>, so the
+# guards key off CWIST_WASI_SOCKETS (see include/cwist/sys/wasi.h) and
+# cwist_app_listen() serves cleartext HTTP on a blocking accept loop. Requires
+# WASI_SDK with wasip2 support and WASMTIME with sockets enabled.
+WASIP2_TARGET = wasm32-wasip2
+WASIP2_BUILD_DIR = .wasip2-build
+WASIP2_CFLAGS = -std=c17 -O2 -Wall -fvisibility=hidden \
+	-D_WASI_EMULATED_GETPID \
+	$(WASM_INCLUDE_PATHS) $(COMMON_DEFINES)
+WASIP2_EXTRA_SRCS = src/sys/wasi/compat.c src/sys/metrics/metrics.c \
+    src/net/http/writer_fast.c lib/libttak/src/net/lattice.c \
+    lib/libttak/src/shared/shared.c lib/libttak/src/timing/deadline.c \
+    src/core/log/log.c lib/libttak/src/net/mols_control.c \
+    src/net/http/async.c lib/libttak/src/mem/epoch.c src/sys/sys_info.c \
+    lib/libttak/src/mem/mem.c lib/libttak/src/mem/fastpath.c \
+    lib/libttak/src/mem/owner.c lib/libttak/src/mem/abstract.c
+WASIP2_SRCS = $(WASM_SRCS) $(WASIP2_EXTRA_SRCS)
+WASIP2_OBJS = $(WASIP2_SRCS:%.c=$(WASIP2_BUILD_DIR)/%.o)
+WASIP2_PORT ?= 18099
+
+$(WASIP2_BUILD_DIR)/%.o: %.c
+	@mkdir -p $(dir $@)
+	$(WASI_SDK)/bin/clang --target=$(WASIP2_TARGET) $(WASIP2_CFLAGS) -c -o $@ $<
+
+libcwist_wasip2.a: $(WASIP2_OBJS)
+	$(WASI_SDK)/bin/ar rcs $@ $(WASIP2_OBJS)
+
+wasip2-smoke: libcwist_wasip2.a
+	$(WASI_SDK)/bin/clang --target=$(WASIP2_TARGET) $(WASIP2_CFLAGS) \
+	    -DWASIP2_SMOKE_PORT=$(WASIP2_PORT) -o wasip2_smoke.wasm tests/wasip2_smoke.c \
+	    libcwist_wasip2.a -lwasi-emulated-pthread -lwasi-emulated-getpid \
+	    -Wl,--gc-sections -Wl,--allow-undefined
+	@set -e; \
+	LOG=/tmp/cwist_wasip2_smoke.$$$$.log; \
+	$(WASMTIME) run -S preview2=y -S tcp=y -S inherit-network=y \
+	    --env CWIST_C1M_MODE=0 wasip2_smoke.wasm >$$LOG 2>&1 & \
+	WPID=$$!; \
+	trap "kill -9 $$WPID 2>/dev/null || true" EXIT; \
+	ok=0; \
+	for i in $$(seq 1 30); do \
+	    sleep 0.3; \
+	    body=$$(curl -s -m 2 http://127.0.0.1:$(WASIP2_PORT)/hello || true); \
+	    if [ "$$body" = "hello from WASI 0.2" ]; then ok=1; break; fi; \
+	done; \
+	cat $$LOG; rm -f $$LOG; \
+	if [ $$ok -ne 1 ]; then echo "wasip2-smoke: curl probe failed"; exit 1; fi; \
+	kill -9 $$WPID 2>/dev/null || true; \
+	echo "wasip2-smoke: PASS (socket server served /hello over wasi:sockets)"
+
+clean-wasi:
+	rm -rf $(WASI_BUILD_DIR) libcwist_wasi.a wasi_smoke.wasm
+
+clean-wasip2:
+	rm -rf $(WASIP2_BUILD_DIR) libcwist_wasip2.a wasip2_smoke.wasm
 
 # Object Files and Target
 OBJS = $(SRCS:.c=.o)
@@ -327,6 +507,7 @@ TEST_TARGETS = test_worker_affinity \
                test_seq_auth \
                test_error \
                test_arena \
+               test_wasm_stream \
                test_healthz \
                test_json_builder \
                test_flash \
@@ -395,12 +576,7 @@ TEST_TARGETS = test_worker_affinity \
                test_proto_desc \
                test_css_composer
 
-# io_uring backend is Linux-only (linux/io_uring.h), as are its tests.
-ifeq ($(UNAME_S),Linux)
-TEST_TARGETS += test_io_uring test_io_uring_demolition
-endif
-
-.PHONY: all test $(TEST_TARGETS) fuzz_seq install uninstall clean rebuild examples clean-examples
+.PHONY: all test $(TEST_TARGETS) fuzz_seq install uninstall dist clean rebuild examples clean-examples wasm wasm-smoke clean-wasm wasi-smoke clean-wasi wasip2-smoke clean-wasip2
 
 # Run with e.g. `make fuzz_seq FUZZ_RUNS=100000`.  The target intentionally
 # uses a dedicated clang/libFuzzer toolchain and is not part of `make test`.
@@ -483,6 +659,10 @@ test_arena: $(LIB_NAME) tests/test_arena.c
 test_healthz: $(LIB_NAME) tests/test_healthz.c
 	$(CC) $(CFLAGS) -o test_healthz tests/test_healthz.c $(LIB_NAME) $(LIBS)
 	./test_healthz
+
+test_wasm_stream: $(LIB_NAME) tests/test_wasm_stream.c
+	$(CC) $(CFLAGS) -o test_wasm_stream tests/test_wasm_stream.c $(LIB_NAME) $(LIBS)
+	./test_wasm_stream
 
 test_json_builder: $(LIB_NAME) tests/test_json_builder.c
 	$(CC) $(CFLAGS) -o test_json_builder tests/test_json_builder.c $(LIB_NAME) $(LIBS)

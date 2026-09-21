@@ -1,11 +1,9 @@
-# WASI targets
+# WASI targets (issue #93 Phase 3 follow-up)
 
-WASI 0.2 (`wasm32-wasip2`) is the supported WASI flavour: it binds real
-sockets and serves HTTP through `wasi:sockets`, gated in CI by the
-`wasip2` job in `.github/workflows/wasm.yml` (`make wasip2-smoke` under
-wasi-sdk 25 + wasmtime 25). Preview1 (`wasm32-wasi`) covers only the
-in-memory dispatch surface and has no socket runtime. Quirks are handled
-on the CWIST side (see below).
+Date: 2026-09-21 (updated). Verdict: **both WASI flavours work.** Preview1
+(`wasm32-wasi`) runs the in-memory dispatch surface under wasmtime, and
+**WASI 0.2 (`wasm32-wasip2`) binds real sockets and serves HTTP** through
+`wasi:sockets`. Quirks are handled on the CWIST side (see below).
 
 ## Flavour detection
 
@@ -27,10 +25,6 @@ Guards that exclude fork/signals/rlimits/threads stay on plain `__wasi__`;
 guards around the socket server runtime key off `CWIST_WASI_(NO_)SOCKETS`.
 
 ## WASI 0.2 socket server
-
-For a complete build, deployment, and restart walkthrough, see the
-[Wasmtime appliance guide](../deployment/wasmtime-appliance.md). It also
-explains the example's network and persistence limitations.
 
 `make wasip2-smoke` builds `libcwist_wasip2.a` — `WASM_SRCS` plus
 `src/sys/wasi/compat.c`, `metrics.c`, `writer_fast.c`, `async.c`,
@@ -73,19 +67,14 @@ CWIST-side quirk handling for wasip2:
   writer-fast stubs in that file are preview1-only since the real units
   join the wasip2 build.
 
-## WASI preview1 (retired)
+## WASI preview1 (in-memory dispatch)
 
-The preview1 target was removed in favor of WASI 0.2: the 0.2 build covers
-the same in-memory dispatch surface and adds the socket server, and three
-WASM flavors cost more than they earn (issue #203). The notes below record
-how the preview1 build behaved while it existed.
-
-`make wasi-smoke` compiled the `WASM_SRCS` subset with wasi-sdk and ran a
-dispatch + session smoke under wasmtime. It required `WASI_SDK` (default
+`make wasi-smoke` compiles the `WASM_SRCS` subset with wasi-sdk and runs a
+dispatch + session smoke under wasmtime. Requires `WASI_SDK` (default
 `~/toolchains/wasi-sdk-25.0-x86_64-linux`) and `WASMTIME` on PATH, plus
 `libwasi-emulated-pthread`.
 
-### What the preview1 build did differently
+### What the preview1 build does differently
 
 - **libttak** (upstream `c4punks/libttak` main): `ttak/compat/pthread.h`
   prefers the sysroot's own `<pthread.h>` when one exists and falls back to
@@ -105,7 +94,7 @@ dispatch + session smoke under wasmtime. It required `WASI_SDK` (default
   same server-only references through its system stub libraries plus
   binaryen DCE.
 
-### Verification (historical)
+### Verification
 
 `make wasi-smoke` output (wasmtime):
 
