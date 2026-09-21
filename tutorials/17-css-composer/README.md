@@ -3,7 +3,12 @@
 Generate and compose stylesheets programmatically with the CWIST CSS composer engine.
 
 ## Key Concepts
-- Generating CSS styles dynamically using `cwist_css_generate_stylesheet`.
+- Initializing a `cwist_css_config` struct with `cwist_css_config_init()` and
+  setting fields such as `primary_color`, `secondary_color`, and `is_dark_mode`.
+- Generating a complete stylesheet string with `cwist_css_generate_stylesheet()`;
+  also available as separate `cwist_css_generate_variables()` (CSS custom
+  properties only) and `cwist_css_generate_utility_classes()` (utility classes
+  only).
 
 ## Build and Run
 
