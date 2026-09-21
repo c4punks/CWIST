@@ -186,7 +186,7 @@ Automated OS benchmark history is published in `docs/benchmark-trends.svg`. Late
 | **OpenAPI / Swagger Generation** | ✅ | OpenAPI 3.1 JSON generated from Doxygen `@openapi.*` annotations on route declarations |
 | **Background Jobs / Scheduler** | ✅ | `cwist_scheduler` worker pool with immediate and delayed job execution |
 | **WebRTC** | 🔮 | Real-time media; requires separate data channel stack |
-| **Serverless / WASM Runtime** | 🔮 | Edge deployment target |
+| **Serverless / WASM Runtime** | 🔮 | Edge deployment target; WASI 0.3 component pipeline replaces the Emscripten browser bundle once the 0.3 world stabilizes (wasi-sdk / wasmtime / jco) — see the v3.7 Phase 1 experiment and the tracked issue |
 
 ---
 
@@ -348,6 +348,8 @@ Theme: **Edge deployment and QUIC completion**. v3.6 took WASM from "in-tree tar
   * Edge persistence pattern: `cwist_db_serialize()` / `cwist_db_open_memory()` round trip against a host KV-style store, with an example app.
   * Deployment examples and guides for at least one edge runtime (Cloudflare Workers or a wasmtime appliance setup).
   * WASM streaming producer API: response bodies generated chunk-by-chunk inside handlers — the "not covered (yet)" item from `docs/api/wasm.md` (boundary streaming shipped in v3.6 buffers the body in the app; this closes the gap).
+  * Component experiment (toward replacing the Emscripten bundle, tracked separately): define the WIT world for the JS dispatch boundary (`wit/`), validate it in CI, and spike a jco-transpiled browser bundle running the existing wasm smoke suite alongside the Emscripten build. Emscripten stays the supported browser path for the whole of v3.7; the swap happens only after the WASI 0.3 world stabilizes.
+  * Retire the WASI preview1 target (`wasi-smoke`): 0.2 covers its use, and three flavors cost more than they earn.
 * **Phase 2: WebTransport on the stable line** (conditional on upstream, issue #17):
   * Trigger condition: LSQUIC PR #629 (WebTransport) merges to upstream lsquic master.  If it has not merged by the release window, this phase slips — v3.7 ships without WebTransport rather than pinning `main` to a topic branch again.
   * Re-pin `lib/lsquic` to upstream master with WebTransport included; port the dev-branch WebTransport server and native C client to `main` with interop and soak coverage.
