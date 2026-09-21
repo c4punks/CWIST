@@ -287,7 +287,7 @@ Theme: **Full GC — automatic resource reclamation**. Today CWIST relies on exp
 
 ---
 
-## v3.6 Milestone (In Progress)
+## v3.6 Milestone (Released 2026-09-21)
 
 Theme: **WASM client-side support**. v3.4 shipped the gRPC client wave; v3.5 shipped full GC; v3.6 takes the WASM client-side support wave from "in-tree target" to "usable from JavaScript". Tracked in issue #93.
 
@@ -322,8 +322,8 @@ Theme: **WASM client-side support**. v3.4 shipped the gRPC client wave; v3.5 shi
     `crypto.getRandomValues` entropy fallback when /dev/urandom is absent.
     Verified across app instances in `tests/test_wasm_stream.c` and the
     Emscripten smoke test; documented in `docs/api/wasm.md`).
-* **Phase 4: reach** (remaining):
-  * End-to-end example app (Service Worker or fetch-interception layer).
+* **Phase 4: reach** (issue #93, PR #198) — ~~done~~ (merged 2026-09-21):
+  * ~~End-to-end example app (Service Worker or fetch-interception layer)~~ (done — `example/wasm-service-worker/`: a full CWIST app (routing + zod validation + template rendering + `cwist_db` + pinned-secret sessions) served by a Service Worker fetch-interception layer with its own cookie jar; CI-gated via the WASM job's example build + node smoke).
 
 Landeds alongside the WASM wave, also in scope for v3.6:
 
