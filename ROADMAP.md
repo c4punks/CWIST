@@ -344,7 +344,7 @@ Known limits going in (from PR #176 review), updated:
 Theme: **Edge deployment and QUIC completion**. v3.6 took WASM from "in-tree target" to "usable from JavaScript"; v3.7 takes it to "deployable on edge runtimes" (WASI), brings WebTransport to the stable line once its upstream dependency lands, folds the HTTP/3 connection-close correctness wave into the release pin, and lands three ecosystem items — gRPC server compression, GraphQL subscriptions, and persistent job backends — as experimental support. Tracked in issue #201.
 
 * **Phase 1: WASI edge deployment** (from 🔮 "Serverless / WASM Runtime"):
-  * Promote the WASI 0.2 (`wasm32-wasip2`) socket server from experimental to supported: CI gate (build + wasmtime `wasi:sockets` smoke, mirroring `wasip2-smoke`), and reframe `docs/api/wasi.md` from evaluation to reference documentation.
+  * ~~Promote the WASI 0.2 (`wasm32-wasip2`) socket server from experimental to supported: CI gate (build + wasmtime `wasi:sockets` smoke, mirroring `wasip2-smoke`), and reframe `docs/api/wasi.md` from evaluation to reference documentation~~ (done — `wasip2` job in `.github/workflows/wasm.yml`; `docs/api/wasi.md` reframed to reference).
   * Edge persistence pattern: `cwist_db_serialize()` / `cwist_db_open_memory()` round trip against a host KV-style store, with an example app.
   * Deployment examples and guides for at least one edge runtime (Cloudflare Workers or a wasmtime appliance setup).
   * WASM streaming producer API: response bodies generated chunk-by-chunk inside handlers — the "not covered (yet)" item from `docs/api/wasm.md` (boundary streaming shipped in v3.6 buffers the body in the app; this closes the gap).

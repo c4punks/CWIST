@@ -1,9 +1,11 @@
-# WASI targets (issue #93 Phase 3 follow-up)
+# WASI targets
 
-Date: 2026-09-21 (updated). Verdict: **both WASI flavours work.** Preview1
-(`wasm32-wasi`) runs the in-memory dispatch surface under wasmtime, and
-**WASI 0.2 (`wasm32-wasip2`) binds real sockets and serves HTTP** through
-`wasi:sockets`. Quirks are handled on the CWIST side (see below).
+WASI 0.2 (`wasm32-wasip2`) is the supported WASI flavour: it binds real
+sockets and serves HTTP through `wasi:sockets`, gated in CI by the
+`wasip2` job in `.github/workflows/wasm.yml` (`make wasip2-smoke` under
+wasi-sdk 25 + wasmtime 25). Preview1 (`wasm32-wasi`) covers only the
+in-memory dispatch surface and has no socket runtime. Quirks are handled
+on the CWIST side (see below).
 
 ## Flavour detection
 
