@@ -2,6 +2,7 @@
 #define _GNU_SOURCE
 #endif
 #include <cwist/sys/wasi.h>
+#include <cwist/core/mem/alloc.h>
 #include <cwist/net/http/writer_fast.h>
 #include <sys/socket.h>
 #include <errno.h>
@@ -62,7 +63,7 @@ cwist_write_status_t cwist_http_sendmsg_speculative(int fd, struct iovec *iov, i
      * cwist_http_sendmsg_all() re-drives whatever is left. */
     size_t expected_wasi = 0;
     for (int i = 0; i < iovcnt; ++i) expected_wasi += iov[i].iov_len;
-    char *wasi_buf = malloc(expected_wasi ? expected_wasi : 1);
+    char *wasi_buf = cwist_alloc(expected_wasi ? expected_wasi : 1);
     if (!wasi_buf) {
         if (total_sent) *total_sent = 0;
         return CWIST_WRITE_ERR;
@@ -76,7 +77,7 @@ cwist_write_status_t cwist_http_sendmsg_speculative(int fd, struct iovec *iov, i
     do {
         n = send(fd, wasi_buf, expected_wasi, send_flags);
     } while (n < 0 && errno == EINTR);
-    free(wasi_buf);
+    cwist_free(wasi_buf);
 #else
     struct msghdr msg = {.msg_iov = iov, .msg_iovlen = (size_t)iovcnt};
 

@@ -226,7 +226,8 @@ int main(void) {
         static const char set_req[] = "GET /sess?user=alice HTTP/1.1\r\nHost: wasm\r\n\r\n";
         size_t r1_len = 0;
         char *r1 = NULL;
-        if (cwist_app_dispatch_memory(app, set_req, sizeof(set_req) - 1, &r1, &r1_len) != 0 || !r1) {
+        if (cwist_app_dispatch_memory(app, set_req, sizeof(set_req) - 1, &r1, &r1_len) != 0 ||
+            !r1) {
             fprintf(stderr, "wasm_smoke: session set dispatch failed\n");
             return 12;
         }
