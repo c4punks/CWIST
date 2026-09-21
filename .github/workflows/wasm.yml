@@ -135,3 +135,36 @@ jobs:
           tests/wasm_smoke.c include/cwist/wasm/typedarray.h \
           include/cwist/wasm/wasm_entry.h src/net/http/session.c src/sys/wasi/compat.c \
           example/wasm-service-worker/app.c
+
+  # v3.7 Phase 1 (issue #201): the wasip2 socket server is only "supported"
+  # if CI builds it and proves wasi:sockets serving on every push. Mirrors
+  # the manual `make wasip2-smoke` gate; toolchain versions are pinned to
+  # the ones docs/api/wasi.md was verified against.
+  wasip2:
+    name: WASI 0.2 socket server smoke
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      with:
+        submodules: recursive
+
+    # Extracted under ~/toolchains so the Makefile's WASI_SDK default
+    # resolves with no env override.
+    - name: Install wasi-sdk 25.0
+      run: |
+        mkdir -p "$HOME/toolchains"
+        curl -sSL -o /tmp/wasi-sdk.tar.gz \
+          https://github.com/WebAssembly/wasi-sdk/releases/download/wasi-sdk-25/wasi-sdk-25.0-x86_64-linux.tar.gz
+        tar -xzf /tmp/wasi-sdk.tar.gz -C "$HOME/toolchains"
+
+    - name: Install wasmtime 25
+      run: |
+        curl -sSL -o /tmp/wasmtime.tar.xz \
+          https://github.com/bytecodealliance/wasmtime/releases/download/v25.0.0/wasmtime-v25.0.0-x86_64-linux.tar.xz
+        tar -xJf /tmp/wasmtime.tar.xz -C /tmp
+        echo "/tmp/wasmtime-v25.0.0-x86_64-linux" >> "$GITHUB_PATH"
+
+    - name: Run wasip2 smoke (build + wasi:sockets curl probe)
+      run: make wasip2-smoke
