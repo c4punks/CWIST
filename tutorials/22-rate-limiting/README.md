@@ -3,7 +3,8 @@
 Protect sensitive API endpoints from Denial-of-Service (DoS) flooding using rate-limiting middleware.
 
 ## Key Concepts
-- Attaching token bucket or window rate limiters via `cwist_middleware_rate_limit`.
+- Attaching a per-IP sliding-window rate limiter with `cwist_mw_rate_limit_ip(requests_per_minute)`.
+- The middleware responds with `429 Too Many Requests` when the limit is exceeded and short-circuits the handler chain.
 
 ## Build and Run
 
