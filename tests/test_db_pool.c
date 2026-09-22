@@ -7,19 +7,24 @@
 #include <time.h>
 
 int main(void) {
+    /* A path SQLite cannot open must fail cleanly: cwist_db_open reports the
+     * failure on the JSON error channel and leaves a NULL handle behind, and
+     * the cleanup path must only close slots that were actually opened. */
+    assert(cwist_db_pool_create("/cwist-no-such-dir/pool.db", 4) == NULL);
+
     cwist_db_pool_t *pool = cwist_db_pool_create(":memory:", 3);
     assert(pool != NULL);
 
     cwist_error_t err =
         cwist_db_pool_exec(pool, "CREATE TABLE users (id INTEGER PRIMARY KEY, name TEXT);");
-    assert(err.error.err_i16 == 0);
+    assert(cwist_error_is_ok(&err));
 
     err = cwist_db_pool_exec(pool, "INSERT INTO users (name) VALUES ('alice'), ('bob');");
-    assert(err.error.err_i16 == 0);
+    assert(cwist_error_is_ok(&err));
 
     cJSON *result = NULL;
     err = cwist_db_pool_query(pool, "SELECT * FROM users ORDER BY id;", &result);
-    assert(err.error.err_i16 == 0);
+    assert(cwist_error_is_ok(&err));
     assert(result != NULL);
     assert(cJSON_IsArray(result));
     assert(cJSON_GetArraySize(result) == 2);
@@ -35,6 +40,12 @@ int main(void) {
     cwist_db *conn = cwist_db_pool_acquire(pool);
     assert(conn != NULL);
     cwist_db_pool_release(pool, conn);
+
+    /* Releasing a handle that is not currently leased must be a no-op: the
+     * lease bitmap starts out zeroed, so a stale release cannot push the
+     * idle stack past its capacity or underflow the in-use count. */
+    cwist_db_pool_release(pool, conn);
+    assert(cwist_db_pool_in_use(pool) == 0);
 
     /* Every connection shares the :memory: database and timeout is bounded. */
     conn = cwist_db_pool_acquire(pool);

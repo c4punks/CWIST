@@ -83,31 +83,30 @@ cwist_db_pool_t *cwist_db_pool_create(const char *path, size_t max_conns) {
     bool cond_ready = false;
     if (!pool->path || !pool->open_path || !pool->conns || !pool->idle_slots || !pool->leased)
         goto fail;
+    /* cwist_alloc_array does not zero memory.  The slot arrays must start
+     * out cleared: `conns` so the failure path below only closes handles
+     * that were actually opened, and `leased` so the double-release guard
+     * in cwist_db_pool_release never sees a stale non-zero byte. */
+    memset(pool->conns, 0, max_conns * sizeof(*pool->conns));
+    memset(pool->idle_slots, 0, max_conns * sizeof(*pool->idle_slots));
+    memset(pool->leased, 0, max_conns * sizeof(*pool->leased));
     if (pthread_mutex_init(&pool->mtx, NULL) != 0) goto fail;
     mutex_ready = true;
     if (!pool_cond_init(&pool->cond)) goto fail;
     cond_ready = true;
     pool->max_conns = max_conns;
     for (size_t i = 0; i < max_conns; ++i) {
-        if (cwist_db_open(&pool->conns[i], pool->open_path).error.err_i16 != 0) goto fail;
+        /* cwist_db_open reports SQLite failures on the JSON channel, not the
+         * INT16 one, so the tagged helper is the only correct way to test it. */
+        cwist_error_t open_err = cwist_db_open(&pool->conns[i], pool->open_path);
+        if (!cwist_error_is_ok(&open_err)) {
+            cwist_error_dispose(&open_err);
+            goto fail;
+        }
         pool->conns[i]->pool_slot = i;
         sqlite3_busy_timeout(pool->conns[i]->conn, 5000);
         pool->idle_slots[pool->idle_count++] = i;
     }
-
-    pthread_mutex_init(&pool->mtx, NULL);
-#if defined(__FreeBSD__) || defined(__NetBSD__) || defined(__OpenBSD__) || defined(__APPLE__)
-    pthread_cond_init(&pool->cond, NULL);
-#else
-    pthread_condattr_t attr;
-    pthread_condattr_init(&attr);
-    bool ok = pthread_condattr_setclock(&attr, CLOCK_MONOTONIC) == 0 &&
-              pthread_cond_init(&pool->cond, &attr) == 0;
-    pthread_condattr_destroy(&attr);
-    if (!ok) {
-        pthread_cond_init(&pool->cond, NULL);
-    }
-#endif
     return pool;
 fail:
     if (pool->conns)
@@ -157,7 +156,8 @@ void cwist_db_pool_release(cwist_db_pool_t *pool, cwist_db *conn) {
     if (!pool || !conn) return;
     pthread_mutex_lock(&pool->mtx);
     size_t slot = conn->pool_slot;
-    if (slot < pool->max_conns && pool->conns[slot] == conn && pool->leased[slot]) {
+    if (slot < pool->max_conns && pool->conns[slot] == conn && pool->leased[slot] &&
+        pool->idle_count < pool->max_conns) {
         pool->leased[slot] = false;
         pool->idle_slots[pool->idle_count++] = slot;
         --pool->in_use;
