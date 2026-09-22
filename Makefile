@@ -585,7 +585,8 @@ TEST_TARGETS = test_worker_affinity \
                test_malloc_intercept \
                test_proto_gen \
                test_proto_desc \
-               test_css_composer
+               test_css_composer \
+               test_multipart
 
 .PHONY: all test $(TEST_TARGETS) fuzz_seq install uninstall dist clean rebuild examples clean-examples wasm wasm-smoke clean-wasm wasip2-smoke clean-wasip2 wit-check jco-transpile
 
@@ -1017,6 +1018,14 @@ test_session: $(LIB_NAME) tests/test_session.c
 test_csrf: $(LIB_NAME) tests/test_csrf.c
 	$(CC) $(CFLAGS) -o test_csrf tests/test_csrf.c $(LIB_NAME) $(LIBS)
 	./test_csrf
+
+test_cookie: $(LIB_NAME) tests/test_cookie.c
+	$(CC) $(CFLAGS) -o test_cookie tests/test_cookie.c $(LIB_NAME) $(LIBS)
+	./test_cookie
+
+test_multipart: $(LIB_NAME) tests/test_multipart.c
+	$(CC) $(CFLAGS) -o test_multipart tests/test_multipart.c $(LIB_NAME) $(LIBS)
+	./test_multipart
 
 test_waf: $(LIB_NAME) tests/test_waf.c
 	$(CC) $(CFLAGS) -o test_waf tests/test_waf.c $(LIB_NAME) $(LIBS)

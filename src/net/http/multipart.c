@@ -17,8 +17,9 @@ typedef struct {
     size_t header_field_len;
     char header_value[1024];
     size_t header_value_len;
-    /* Set once a value was delivered for the current header, even an empty
-     * one; header_value_len alone cannot express "seen but empty". */
+    /* Set once the parser has delivered a value for the current header, even
+     * an empty one.  header_value_len alone cannot express "seen but empty",
+     * and an empty header value must still terminate the current field. */
     bool have_value;
 
     char name[256];
@@ -36,7 +37,7 @@ static void mp_parse_headers(mp_parse_ctx *ctx);
 
 static int mp_on_header_field(multipart_parser *p, const char *at, size_t len) {
     mp_parse_ctx *ctx = (mp_parse_ctx *)multipart_parser_get_data(p);
-    if (ctx->header_value_len > 0) {
+    if (ctx->have_value) {
         /* Previous header value is complete, parse it before moving to next field. */
         mp_parse_headers(ctx);
     }
@@ -150,7 +151,7 @@ static int mp_on_headers_complete(multipart_parser *p) {
  */
 static int mp_on_part_data_begin(multipart_parser *p) {
     mp_parse_ctx *ctx = (mp_parse_ctx *)multipart_parser_get_data(p);
-    if (ctx->header_value_len > 0) {
+    if (ctx->have_value) {
         mp_parse_headers(ctx);
     }
     ctx->header_field_len = 0;
@@ -296,15 +297,18 @@ cwist_multipart_result *cwist_multipart_parse(const char *body, size_t body_len,
     size_t consumed = multipart_parser_execute(parser, body, body_len);
     multipart_parser_free(parser);
 
-    /* Truncated body: on_part_data_end never fired, so release the in-flight
-     * part buffer here. */
+    /* A body that ends before its closing boundary leaves the in-flight part
+     * buffer owned by ctx: on_part_data_end never fired, so nothing handed it
+     * to a field.  Release it instead of leaking it on every truncated body. */
     if (ctx.data) {
         cwist_free(ctx.data);
         ctx.data = NULL;
     }
 
-    /* The parser stops early on malformed input; report it as NULL per the
-     * documented contract. */
+    /* The parser stops early on syntactically invalid input (for example a
+     * byte that is not allowed in a header name).  Honour the documented
+     * contract and report malformed input as NULL rather than returning a
+     * result that silently omits everything after the error. */
     if (consumed != body_len) {
         cwist_multipart_result_destroy(result);
         return NULL;
