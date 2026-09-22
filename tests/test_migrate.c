@@ -119,8 +119,7 @@ static void test_migrate_down_all(void) {
     /* The irreversible v2 must still be recorded as applied. */
     assert(cwist_migrate_version(db) == 2);
 
-    /* Migrating up again must not re-run v2's up_sql (which would fail with
-     * "duplicate column name" if the history row had been deleted). */
+    /* Re-upping must not re-run v2's up_sql on the existing column. */
     assert(cwist_migrate_up(db, migrations, N_MIGRATIONS) == CWIST_MIGRATE_OK);
     assert(cwist_migrate_version(db) == 3);
 
@@ -137,8 +136,7 @@ static void test_migrate_down_steps_skip_irreversible(void) {
     assert(cwist_migrate_up(db, migrations, N_MIGRATIONS) == CWIST_MIGRATE_OK);
     assert(cwist_migrate_version(db) == 3);
 
-    /* Two steps: v3 is rolled back, v2 is irreversible and skipped, v1 is
-     * rolled back.  v2 stays in the history so the version remains 2. */
+    /* Two steps: v3 and v1 are rolled back; irreversible v2 is skipped. */
     assert(cwist_migrate_down(db, migrations, N_MIGRATIONS, 2) == CWIST_MIGRATE_OK);
     assert(cwist_migrate_version(db) == 2);
 
