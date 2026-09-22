@@ -397,6 +397,62 @@ jco-transpile: wasip2-smoke
 	npm exec -y --package=@bytecodealliance/jco -- \
 	    jco transpile wasip2_smoke.wasm --out-dir .jco-out
 
+# --- Component dispatch guest (issue #203, stage 2) -----------------------------
+# Same dispatch boundary as the Emscripten wrapper test, reached through the
+# cwist-guest world (wit/cwist.wit) instead of the pointer ABI: wit-bindgen
+# generates the canonical ABI shims, wasi-sdk compiles the guest core module
+# for wasm32-wasip2, wasm-tools componentizes it, jco transpiles it to JS,
+# and a node test drives it through wasm/npm/component.js.
+# All artifacts are generated, never committed.
+WIT_BINDINGS_DIR = .wit-bindings
+COMPONENT_BUILD_DIR = .component-build
+JCO_GUEST_DIR = .jco-guest
+
+wit-bindings:
+	@if command -v wit-bindgen > /dev/null 2>&1; then \
+	    rm -rf $(WIT_BINDINGS_DIR) && mkdir -p $(WIT_BINDINGS_DIR) && \
+	    wit-bindgen c wit/ --out-dir $(WIT_BINDINGS_DIR) > /dev/null && \
+	    echo "wit-bindings: OK"; \
+	else \
+	    echo "wit-bindings: wit-bindgen not installed, skipping"; \
+	fi
+
+$(COMPONENT_BUILD_DIR)/guest.o: tests/wasm_component_guest.c wit-bindings
+	@mkdir -p $(COMPONENT_BUILD_DIR)
+	$(WASI_SDK)/bin/clang --target=$(WASIP2_TARGET) $(WASIP2_CFLAGS) \
+	    -I$(WIT_BINDINGS_DIR) -c -o $@ $<
+
+$(COMPONENT_BUILD_DIR)/cwist_guest.o: wit-bindings
+	@mkdir -p $(COMPONENT_BUILD_DIR)
+	$(WASI_SDK)/bin/clang --target=$(WASIP2_TARGET) $(WASIP2_CFLAGS) \
+	    -I$(WIT_BINDINGS_DIR) -c -o $@ $(WIT_BINDINGS_DIR)/cwist_guest.c
+
+# component embed merges the cwist-guest world into wasi-sdk's component-type
+# section and emits the final component in one step (wasm-tools >= 1.25).
+$(COMPONENT_BUILD_DIR)/guest.component.wasm: $(COMPONENT_BUILD_DIR)/guest.o \
+                                              $(COMPONENT_BUILD_DIR)/cwist_guest.o \
+                                              libcwist_wasip2.a
+	$(WASI_SDK)/bin/clang --target=$(WASIP2_TARGET) $(WASIP2_CFLAGS) \
+	    -o $(COMPONENT_BUILD_DIR)/guest.core.wasm \
+	    $(COMPONENT_BUILD_DIR)/guest.o $(COMPONENT_BUILD_DIR)/cwist_guest.o \
+	    $(WIT_BINDINGS_DIR)/cwist_guest_component_type.o \
+	    libcwist_wasip2.a $(WASIP2_LDLIBS) \
+	    -Wl,--gc-sections -Wl,--allow-undefined
+	wasm-tools component embed wit/ $(COMPONENT_BUILD_DIR)/guest.core.wasm \
+	    -o $@
+
+component-guest: $(COMPONENT_BUILD_DIR)/guest.component.wasm
+
+component-smoke: component-guest
+	npm exec -y --package=@bytecodealliance/jco -- \
+	    jco transpile $(COMPONENT_BUILD_DIR)/guest.component.wasm --out-dir $(JCO_GUEST_DIR)
+	npm install --prefix $(JCO_GUEST_DIR) --no-save --no-fund --no-audit \
+	    --silent @bytecodealliance/preview2-shim
+	$(NODE) tests/wasm_component_test.js
+
+clean-component:
+	rm -rf $(WIT_BINDINGS_DIR) $(COMPONENT_BUILD_DIR) $(JCO_GUEST_DIR)
+
 # Object Files and Target
 OBJS = $(SRCS:.c=.o)
 LIB_NAME = libcwist.a
@@ -588,7 +644,7 @@ TEST_TARGETS = test_worker_affinity \
                test_css_composer \
                test_multipart
 
-.PHONY: all test $(TEST_TARGETS) fuzz_seq install uninstall dist clean rebuild examples clean-examples wasm wasm-smoke clean-wasm wasip2-smoke clean-wasip2 wit-check jco-transpile
+.PHONY: all test $(TEST_TARGETS) fuzz_seq install uninstall dist clean rebuild examples clean-examples wasm wasm-smoke clean-wasm wasip2-smoke clean-wasip2 wit-check jco-transpile wit-bindings component-guest component-smoke clean-component
 
 # Run with e.g. `make fuzz_seq FUZZ_RUNS=100000`.  The target intentionally
 # uses a dedicated clang/libFuzzer toolchain and is not part of `make test`.

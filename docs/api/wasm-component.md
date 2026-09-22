@@ -63,14 +63,37 @@ Needs a wasi-libc-side audit before the socket server can move to 0.3; the
 
 1. **WIT + validation (landed).** The world definition, `make wit-check`,
    `make jco-transpile`, and this document.
-2. **jco browser spike.** Transpile the wasip2 guest with jco, wrap it in
-   the existing `cwist-wasm` npm API, and pass the wasm smoke suite
-   alongside the Emscripten build. Emscripten stays supported regardless.
+2. **jco browser spike (landed for the pipeline; browser packaging
+   pending).** `tests/wasm_component_guest.c` is a dispatch guest exporting
+   the cwist-guest world through wit-bindgen's canonical ABI shims
+   (`include/cwist/wasm/wasm_component.h` holds the shared helpers);
+   `make component-smoke` builds it for wasm32-wasip2, componentizes with
+   `wasm-tools component embed`, transpiles with jco, and drives it from
+   node through the `createCwistFromComponent` adapter (`wasm/npm/component.js`)
+   against the same assertions as the Emscripten wrapper test, including the
+   signed-cookie session roundtrip and the dispatch-error variant. WASI
+   imports are satisfied by `@bytecodealliance/preview2-shim`. What remains
+   of this stage is packaging a browser bundle; the node spike proves the
+   pipeline end to end. Emscripten stays supported regardless.
 3. **0.3 cutover (conditional).** After the wasip3 socket runtime issue
    above is resolved (wasi-libc fix or newer wasi-sdk), evaluate jco
    `preview3-shim` for the browser bundle and native async for the
    streaming/SSE paths (the Asyncify replacement), then drop the
    Emscripten build from CI.
+
+## Measured while building stage 2
+
+- The WIT never passed wit-bindgen validation as written: the error
+  variants sat at package top level. They moved into the `guest`
+  interface; `make wit-check` now actually validates the world.
+- `wasm-tools component embed` (1.259) emits the final component in one
+  step: it merges the cwist-guest world into wasi-sdk's component-type
+  section, so no separate `component new` pass is needed.
+- wit-bindgen 0.62 lowers guest exports to plain C functions returning
+  bool (ok/err out-params). The returned `list<u8>` must be a libc
+  allocation because the generated `cabi_post` hook frees it; `cwist_alloc`
+  is libc-backed under `__wasi__`, so the dispatch response hands over
+  directly and the explicit dispose entry point disappears as designed.
 
 ## Non-goals
 
