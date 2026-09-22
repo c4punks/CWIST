@@ -83,10 +83,7 @@ cwist_db_pool_t *cwist_db_pool_create(const char *path, size_t max_conns) {
     bool cond_ready = false;
     if (!pool->path || !pool->open_path || !pool->conns || !pool->idle_slots || !pool->leased)
         goto fail;
-    /* cwist_alloc_array does not zero memory.  The slot arrays must start
-     * out cleared: `conns` so the failure path below only closes handles
-     * that were actually opened, and `leased` so the double-release guard
-     * in cwist_db_pool_release never sees a stale non-zero byte. */
+    /* cwist_alloc_array does not zero the slot arrays. */
     memset(pool->conns, 0, max_conns * sizeof(*pool->conns));
     memset(pool->idle_slots, 0, max_conns * sizeof(*pool->idle_slots));
     memset(pool->leased, 0, max_conns * sizeof(*pool->leased));
@@ -96,8 +93,7 @@ cwist_db_pool_t *cwist_db_pool_create(const char *path, size_t max_conns) {
     cond_ready = true;
     pool->max_conns = max_conns;
     for (size_t i = 0; i < max_conns; ++i) {
-        /* cwist_db_open reports SQLite failures on the JSON channel, not the
-         * INT16 one, so the tagged helper is the only correct way to test it. */
+        /* cwist_db_open reports failures on the JSON channel, not INT16. */
         cwist_error_t open_err = cwist_db_open(&pool->conns[i], pool->open_path);
         if (!cwist_error_is_ok(&open_err)) {
             cwist_error_dispose(&open_err);

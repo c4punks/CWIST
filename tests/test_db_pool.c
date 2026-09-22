@@ -7,9 +7,7 @@
 #include <time.h>
 
 int main(void) {
-    /* A path SQLite cannot open must fail cleanly: cwist_db_open reports the
-     * failure on the JSON error channel and leaves a NULL handle behind, and
-     * the cleanup path must only close slots that were actually opened. */
+    /* An unopenable path must fail cleanly instead of crashing. */
     assert(cwist_db_pool_create("/cwist-no-such-dir/pool.db", 4) == NULL);
 
     cwist_db_pool_t *pool = cwist_db_pool_create(":memory:", 3);
@@ -41,9 +39,7 @@ int main(void) {
     assert(conn != NULL);
     cwist_db_pool_release(pool, conn);
 
-    /* Releasing a handle that is not currently leased must be a no-op: the
-     * lease bitmap starts out zeroed, so a stale release cannot push the
-     * idle stack past its capacity or underflow the in-use count. */
+    /* A stale release must be a no-op. */
     cwist_db_pool_release(pool, conn);
     assert(cwist_db_pool_in_use(pool) == 0);
 
