@@ -47,17 +47,32 @@ counterpart of `include/cwist/wasm/wasm_entry.h`:
   `make jco-transpile`); 0.3 host bindings live in its `preview3-shim`
   package and need evaluation.
 
-## Known issue: socket request path under wasip3
+## Resolved: socket request path under wasip3 (audited 2026-09-22)
 
-The first HTTP request to a wasip3 socket server traps with an out-of-bounds
-read in `serialize_headers` (`res->version->data`, http.c:1885): response
-arena memory is corrupt by the time the response serializes. Reproduced
-with a DWARF backtrace under wasmtime 48; in-memory dispatch is unaffected,
-and the identical code passes on wasip2 and native, so this is not a CWIST
-regression. Prime suspect is the wasip3 socket shim in wasi-libc, which
-wasi-sdk 34 labels work in progress ("more work towards a wasip3 target").
-Needs a wasi-libc-side audit before the socket server can move to 0.3; the
-0.2 target remains the supported WASI build meanwhile.
+The first HTTP request to a wasip3 socket server used to trap with an
+out-of-bounds read in `serialize_headers` (`res->version->data`,
+http.c:1885) at a wild negative address (~`0xffff9c00`), with the response
+object intact right up to the send call. The audit (wasi-sdk 34,
+wasmtime 49, `-O1`/`-O2`, buffer sizes from 1 KiB/2 KiB to 8 KiB/16 KiB)
+established by elimination:
+
+- Not a CWIST memory bug: the response object is valid at the send call
+  site; the faulting access misbehaves only after the p3-switched socket
+  path runs.
+- Not buffer sizes: identical fault across a 16x range.
+- Codegen-sensitive (an entry print made it vanish once), which sent the
+  audit down a sibling-call-elimination dead end; that flag alone does
+  not fix `-O2`.
+- Root cause: **stack exhaustion.** wasm-ld's default 64 KiB stack is too
+  small for the socket-serving chain once p3's async lowering is in the
+  frame mix. `-z stack-size=131072` passes at `-O1` and `-O2`
+  deterministically; the Makefile sets 262144 for headroom whenever
+  `WASIP2_TARGET` is `wasm32-wasip3`.
+
+A plain BSD-socket minimal repro (accept/read/write, no CWIST) passes
+unchanged on the same toolchain, so small-frame guests are unaffected;
+CWIST's ~24 KiB of request/response stack buffers plus the p3 lowering
+overhead is what crosses the default limit.
 
 ## Stages
 
