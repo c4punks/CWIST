@@ -203,12 +203,16 @@ int cwist_migrate_down(sqlite3 *db, const cwist_migration_t *migrations, int cou
         }
         if (!found) continue;
 
-        if (sorted[i].down_sql) {
-            int rc = migrate_exec_sql(db, sorted[i].down_sql, sorted[i].version, "down");
-            if (rc != CWIST_MIGRATE_OK) {
-                free(sorted);
-                return rc;
-            }
+        /* A NULL down_sql marks an irreversible migration.  Its schema change
+         * cannot be undone, so it must also stay in the history table:
+         * deleting the row would make the next cwist_migrate_up re-run the
+         * up_sql against a database that already carries it. */
+        if (!sorted[i].down_sql) continue;
+
+        int rc = migrate_exec_sql(db, sorted[i].down_sql, sorted[i].version, "down");
+        if (rc != CWIST_MIGRATE_OK) {
+            free(sorted);
+            return rc;
         }
 
         /* Remove from history. */
