@@ -15,6 +15,7 @@
 #else
 #include <openssl/hmac.h>
 #include <openssl/evp.h>
+#include <openssl/crypto.h>
 #endif
 #include <string.h>
 #include <stdlib.h>
@@ -221,7 +222,14 @@ static bool verify_signature(cwist_app *app, const char *payload_b64, const char
                      strlen(payload_b64), expected)) {
         return false;
     }
-    return memcmp(sig, expected, 32) == 0;
+#if defined(__EMSCRIPTEN__) || defined(__wasi__)
+    /* No OpenSSL on WASM: use a portable constant-time loop. */
+    unsigned int diff = 0;
+    for (size_t i = 0; i < 32; i++) diff |= sig[i] ^ expected[i];
+    return diff == 0;
+#else
+    return CRYPTO_memcmp(sig, expected, 32) == 0;
+#endif
 }
 
 static cwist_query_map *parse_payload(const char *payload_b64) {
