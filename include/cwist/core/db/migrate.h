@@ -54,9 +54,9 @@ int cwist_migrate_up(sqlite3 *db, const cwist_migration_t *migrations, int count
  *
  * Runs each migration's down_sql inside a transaction and removes the entry
  * from the history table.  Irreversible migrations (down_sql == NULL) are
- * skipped entirely: they are neither executed nor removed from the history,
- * and they do not count towards @p steps, so a later cwist_migrate_up will
- * not re-apply them.
+ * skipped entirely: they stay in the history table, so a later
+ * cwist_migrate_up will not re-apply them, and they do not count towards
+ * @p steps.
  *
  * @param db         Open SQLite3 handle.
  * @param migrations Array of migrations (same array passed to cwist_migrate_up).
