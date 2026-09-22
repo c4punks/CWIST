@@ -14,19 +14,19 @@
 
 package c4punks:cwist@0.1.0;
 
-variant dispatch-error {
-    /// Routes were not registered before the first dispatch.
-    not-initialized,
-    /// The request failed to parse or no route matched.
-    invalid-request,
-}
-
-variant session-error {
-    /// The session store rejected the secret (rotation after first use).
-    rejected,
-}
-
 interface guest {
+    variant dispatch-error {
+        /// Routes were not registered before the first dispatch.
+        not-initialized,
+        /// The request failed to parse or no route matched.
+        invalid-request,
+    }
+
+    variant session-error {
+        /// The session store rejected the secret (rotation after first use).
+        rejected,
+    }
+
     /// Dispatch one serialized HTTP/1.1 request; returns the serialized
     /// response. Same contract as _cwist_wasm_dispatch.
     dispatch: func(request: list<u8>) -> result<list<u8>, dispatch-error>;
