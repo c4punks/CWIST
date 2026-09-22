@@ -321,6 +321,12 @@ WASIP2_TARGET = wasm32-wasip2
 # symbols with the library dropped).
 WASIP2_LDLIBS = $(if $(findstring wasip2,$(WASIP2_TARGET)),-lwasi-emulated-pthread,) \
 	-lwasi-emulated-getpid
+# WASI 0.3 (wasip3) runs blocking socket calls on switched stacks, and the
+# socket-serving chain needs more than wasm-ld's default 64 KiB stack
+# (audited 2026-09-22: first request after accept traps with an OOB read at a
+# wild negative SP; 128 KiB suffices, 256 KiB is the headroom margin).
+# See docs/api/wasm-component.md "Resolved: socket request path under wasip3".
+WASIP2_TARGET_LDFLAGS = $(if $(findstring wasip3,$(WASIP2_TARGET)),-z stack-size=262144,)
 WASIP2_BUILD_DIR = .wasip2-build
 WASIP2_CFLAGS = -std=c17 -O2 -Wall -fvisibility=hidden \
 	-D_WASI_EMULATED_GETPID \
@@ -350,8 +356,8 @@ libcwist_wasip2.a: $(WASIP2_OBJS)
 wasip2-smoke: libcwist_wasip2.a
 	$(WASI_SDK)/bin/clang --target=$(WASIP2_TARGET) $(WASIP2_CFLAGS) \
 	    -DWASIP2_SMOKE_PORT=$(WASIP2_PORT) -o wasip2_smoke.wasm tests/wasip2_smoke.c \
-	    libcwist_wasip2.a -lwasi-emulated-pthread -lwasi-emulated-getpid \
-	    -Wl,--gc-sections -Wl,--allow-undefined -Wl,-z,stack-size=$(WASIP2_STACK_BYTES)
+	    libcwist_wasip2.a $(WASIP2_LDLIBS) $(WASIP2_TARGET_LDFLAGS) \
+	    -Wl,--gc-sections -Wl,--allow-undefined
 	@set -e; \
 	LOG=/tmp/cwist_wasip2_smoke.$$$$.log; \
 	if [ "$(findstring wasip3,$(WASIP2_TARGET))" = "" ]; then PREVIEW2="-S preview2=y"; else PREVIEW2=""; fi; \
@@ -436,7 +442,7 @@ $(COMPONENT_BUILD_DIR)/guest.component.wasm: $(COMPONENT_BUILD_DIR)/guest.o \
 	    -o $(COMPONENT_BUILD_DIR)/guest.core.wasm \
 	    $(COMPONENT_BUILD_DIR)/guest.o $(COMPONENT_BUILD_DIR)/cwist_guest.o \
 	    $(WIT_BINDINGS_DIR)/cwist_guest_component_type.o \
-	    libcwist_wasip2.a $(WASIP2_LDLIBS) \
+	    libcwist_wasip2.a $(WASIP2_LDLIBS) $(WASIP2_TARGET_LDFLAGS) \
 	    -Wl,--gc-sections -Wl,--allow-undefined
 	wasm-tools component embed wit/ $(COMPONENT_BUILD_DIR)/guest.core.wasm \
 	    -o $@
