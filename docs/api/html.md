@@ -278,6 +278,34 @@ cwist_html_element_add_attr(link, "rel", "stylesheet");
 cwist_html_element_add_attr(link, "href", cwist_app_asset_url(app, "app.css"));
 ```
 
+## Rendering the same views in WASM
+
+The component, scoped CSS, page/fragment and asset code above is part of the
+WASM build (`libcwist_wasm.a`, and the WASI 0.2 archive built from the same
+source list). An app compiled to WASM renders through the same functions as
+the server, so there is one renderer, not two.
+
+`cwist_app_dispatch_memory()` takes raw request bytes and returns raw response
+bytes, and it is what `CWIST_WASM_DEFINE_ENTRY` exposes to JavaScript. That
+makes one set of view code usable in three places:
+
+- on the server, for the first page load;
+- in a Service Worker, which can answer the fragment requests a page makes
+  after that, with no round trip (see `example/wasm-service-worker`, route
+  `GET /items/list`);
+- in any other WASM host that forwards HTTP-shaped requests.
+
+Assets registered with `cwist_app_asset_add()` are served by the WASM app too,
+since they never touch the filesystem. `cwist_app_asset_add_file()` needs
+whatever filesystem the host provides.
+
+The parity is checked, not assumed. `tests/html_views_shared.h` defines a
+layout and a card component, a scoped stylesheet bundled into a hashed asset,
+and page, fragment, out-of-band and redirect routes, plus the exact response
+bytes each request must produce. `test_html_parity` runs those checks in the
+native build, and `make wasm-smoke` runs the same checks under Emscripten and
+node, including the SHA-256-derived asset URL and the FNV-1a scope suffix.
+
 ## Example
 
 ```c
