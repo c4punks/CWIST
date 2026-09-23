@@ -2901,7 +2901,11 @@ static app_serve_result_t app_serve_parsed_request(cwist_app *app, int client_fd
                 scaled_threshold = scaled_threshold * (100 - priority_weight) / 100;
             }
 
-            if (req->method == CWIST_HTTP_GET && !endpoint_file) {
+            /* A response that declares Vary differs by request headers the
+             * path-keyed cache cannot see (e.g. fragment vs full page), so
+             * replaying it for another request would be wrong. */
+            bool varies = cwist_http_header_get(res->headers, "Vary") != NULL;
+            if (req->method == CWIST_HTTP_GET && !endpoint_file && !varies) {
                 if (endpoint_fixed) {
                     cwist_sstring *serialized = cwist_http_stringify_response(res);
                     if (serialized) {
