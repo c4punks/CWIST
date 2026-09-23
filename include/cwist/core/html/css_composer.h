@@ -39,6 +39,23 @@ typedef struct cwist_css_config {
     bool is_dark_mode;               ///< Flag to trigger dark mode palette generation
 } cwist_css_config;
 
+struct cwist_css_scope_entry;
+
+/**
+ * @brief Component-scoped class names and the rules attached to them.
+ *
+ * Every class handed out by a scope carries the same suffix, derived from the
+ * component name with a fixed (unseeded) 32-bit FNV-1a hash, so "btn" in scope
+ * "card" is always "btn-<8 hex digits>" in every process and every run. Only
+ * the fields below are public; treat them as read-only.
+ */
+typedef struct cwist_css_scope {
+    char suffix[9];                        ///< 8 lowercase hex digits + NUL
+    struct cwist_css_scope_entry *entries; ///< Per-class state, private
+    size_t count;                          ///< Number of known base classes
+    size_t capacity;                       ///< Allocated entries
+} cwist_css_scope;
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -98,6 +115,64 @@ cwist_sstring *cwist_css_generate_utility_classes(const cwist_css_config *cfg);
  * @return A dynamically allocated string containing the full stylesheet.
  */
 cwist_sstring *cwist_css_generate_stylesheet(const cwist_css_config *cfg);
+
+/**
+ * @brief Initialise a scope for one component.
+ * @param scope Caller-owned storage to initialise. Release it with
+ *              cwist_css_scope_destroy().
+ * @param component_name Seed for the class suffix; NULL is treated as "".
+ */
+void cwist_css_scope_init(cwist_css_scope *scope, const char *component_name);
+
+/**
+ * @brief Map a base class to its scoped name ("btn" -> "btn-a1b2c3d4").
+ *
+ * Marks the class as used, so cwist_css_scope_generate_stylesheet() emits its
+ * rule. Repeated calls with the same base class return the same pointer.
+ *
+ * @param scope Initialised scope.
+ * @param base_class CSS identifier: starts with a letter, '_' or '-' followed
+ *                   by a letter or '_', then letters, digits, '_' or '-'.
+ * @return Scope-owned string valid until cwist_css_scope_destroy(), or NULL
+ *         for an invalid identifier or on allocation failure.
+ */
+const char *cwist_css_scope_class(cwist_css_scope *scope, const char *base_class);
+
+/**
+ * @brief Attach declarations to a base class, replacing any earlier ones.
+ *
+ * Registering a rule does not mark the class as used; a rule whose class is
+ * never requested through cwist_css_scope_class() is not emitted.
+ *
+ * @param scope Initialised scope.
+ * @param base_class CSS identifier, same rules as cwist_css_scope_class().
+ * @param declarations Declaration block body, e.g. "padding: 4px; color: red;".
+ *                     Must not contain '{', '}' or '<'.
+ * @return 0 on success, -1 on invalid arguments or allocation failure.
+ */
+int cwist_css_scope_add_rule(cwist_css_scope *scope, const char *base_class,
+                             const char *declarations);
+
+/**
+ * @brief Emit one rule per class that is both used and has declarations.
+ *
+ * Rules appear in the order their base classes were first seen by the scope.
+ *
+ * @param scope Initialised scope.
+ * @return A dynamically allocated string (empty when nothing qualifies), or
+ *         NULL when `scope` is NULL or allocation fails. Must be destroyed.
+ */
+cwist_sstring *cwist_css_scope_generate_stylesheet(const cwist_css_scope *scope);
+
+/**
+ * @brief Release everything the scope owns and reset it to an empty state.
+ *
+ * Pointers returned by cwist_css_scope_class() become invalid. Calling it
+ * again on the same scope is harmless.
+ *
+ * @param scope Scope to release. NULL is ignored.
+ */
+void cwist_css_scope_destroy(cwist_css_scope *scope);
 
 #ifdef __cplusplus
 }
