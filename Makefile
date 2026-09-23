@@ -379,13 +379,17 @@ clean-wasip2:
 	rm -rf .wasip2-build libcwist_wasip2_*.a wasip2_smoke.wasm
 
 # --- Component boundary (experimental, issue #203) --------------------------------
-# wit/cwist.wit is the component-model counterpart of wasm_entry.h. The check
-# runs wherever wit-bindgen is installed and is a loud no-op elsewhere; CI
-# pins the toolchain when this gate is promoted to a required job.
+# wit/cwist.wit is the component-model counterpart of wasm_entry.h. Both
+# worlds are validated wherever wit-bindgen is installed; a loud no-op
+# elsewhere. CI pins the toolchain when this gate is promoted to a required
+# job.
+CWIST_WORLDS = cwist-guest cwist-guest-stream
 wit-check:
 	@if command -v wit-bindgen > /dev/null 2>&1; then \
 	    rm -rf .wit-check && mkdir -p .wit-check && \
-	    wit-bindgen c wit/ --out-dir .wit-check > /dev/null && \
+	    for world in $(CWIST_WORLDS); do \
+	        wit-bindgen c wit/ --world $$world --out-dir .wit-check/$$world > /dev/null || exit 1; \
+	    done && \
 	    rm -rf .wit-check && echo "wit-check: OK"; \
 	else \
 	    echo "wit-check: wit-bindgen not installed, skipping"; \
@@ -415,10 +419,15 @@ JCO_SHIM ?= @bytecodealliance/preview2-shim
 # canonical-ABI async lowering); 0.2 guests link statically and pass nothing.
 NODE_FLAGS ?=
 
+# Bindings are generated per world (each world lowers its own imports; the
+# stream world adds the async host import). Generated files keep the world
+# name (cwist_guest.h/cwist_guest.c), so each world gets its own directory.
 wit-bindings:
 	@if command -v wit-bindgen > /dev/null 2>&1; then \
 	    rm -rf $(WIT_BINDINGS_DIR) && mkdir -p $(WIT_BINDINGS_DIR) && \
-	    wit-bindgen c wit/ --out-dir $(WIT_BINDINGS_DIR) > /dev/null && \
+	    for world in $(CWIST_WORLDS); do \
+	        wit-bindgen c wit/ --world $$world --out-dir $(WIT_BINDINGS_DIR)/$$world > /dev/null || exit 1; \
+	    done && \
 	    echo "wit-bindings: OK"; \
 	else \
 	    echo "wit-bindings: wit-bindgen not installed, skipping"; \
@@ -427,26 +436,27 @@ wit-bindings:
 $(COMPONENT_BUILD_DIR)/guest.o: tests/wasm_component_guest.c wit-bindings
 	@mkdir -p $(COMPONENT_BUILD_DIR)
 	$(WASI_SDK)/bin/clang --target=$(WASIP2_TARGET) $(WASIP2_CFLAGS) \
-	    -I$(WIT_BINDINGS_DIR) -c -o $@ $<
+	    -I$(WIT_BINDINGS_DIR)/cwist-guest -c -o $@ $<
 
 $(COMPONENT_BUILD_DIR)/cwist_guest.o: wit-bindings
 	@mkdir -p $(COMPONENT_BUILD_DIR)
 	$(WASI_SDK)/bin/clang --target=$(WASIP2_TARGET) $(WASIP2_CFLAGS) \
-	    -I$(WIT_BINDINGS_DIR) -c -o $@ $(WIT_BINDINGS_DIR)/cwist_guest.c
+	    -I$(WIT_BINDINGS_DIR)/cwist-guest -c -o $@ $(WIT_BINDINGS_DIR)/cwist-guest/cwist_guest.c
 
-# component embed merges the cwist-guest world into wasi-sdk's component-type
+# component embed merges the chosen world into wasi-sdk's component-type
 # section and emits the final component in one step (wasm-tools >= 1.25).
+# The world must be named explicitly once wit/ holds more than one.
 $(COMPONENT_BUILD_DIR)/guest.component.wasm: $(COMPONENT_BUILD_DIR)/guest.o \
                                               $(COMPONENT_BUILD_DIR)/cwist_guest.o \
                                               libcwist_wasip2_$(WASIP2_TARGET).a
 	$(WASI_SDK)/bin/clang --target=$(WASIP2_TARGET) $(WASIP2_CFLAGS) \
 	    -o $(COMPONENT_BUILD_DIR)/guest.core.wasm \
 	    $(COMPONENT_BUILD_DIR)/guest.o $(COMPONENT_BUILD_DIR)/cwist_guest.o \
-	    $(WIT_BINDINGS_DIR)/cwist_guest_component_type.o \
+	    $(WIT_BINDINGS_DIR)/cwist-guest/cwist_guest_component_type.o \
 	    $(WASIP2_ARCHIVE) $(WASIP2_LDLIBS) \
 	    -Wl,--gc-sections -Wl,--allow-undefined -Wl,-z,stack-size=$(WASIP2_STACK_BYTES)
-	wasm-tools component embed wit/ $(COMPONENT_BUILD_DIR)/guest.core.wasm \
-	    -o $@
+	wasm-tools component embed wit/ --world cwist-guest \
+	    $(COMPONENT_BUILD_DIR)/guest.core.wasm -o $@
 
 component-guest: $(COMPONENT_BUILD_DIR)/guest.component.wasm
 
@@ -471,8 +481,62 @@ component-smoke-p3:
 	$(MAKE) component-smoke WASIP2_TARGET=wasm32-wasip3 \
 	    JCO_SHIM=@bytecodealliance/preview3-shim NODE_FLAGS=--experimental-wasm-jspi
 
+# --- Streaming dispatch guest (issue #203, stage 3) ---------------------------
+# The cwist-guest-stream world adds the async host import send-chunk, which
+# 0.2 components cannot lower, so this guest only builds for wasm32-wasip3.
+# The node host supplies sendChunk through an esbuild alias, mirroring how a
+# bundler consumer wires the import.
+STREAM_JCO_DIR = .jco-guest-stream/$(WASIP2_TARGET)
+
+$(COMPONENT_BUILD_DIR)/stream_guest.o: tests/wasm_component_stream_guest.c wit-bindings
+	@mkdir -p $(COMPONENT_BUILD_DIR)
+	$(WASI_SDK)/bin/clang --target=$(WASIP2_TARGET) $(WASIP2_CFLAGS) \
+	    -I$(WIT_BINDINGS_DIR)/cwist-guest-stream -c -o $@ $<
+
+$(COMPONENT_BUILD_DIR)/cwist_guest_stream.o: wit-bindings
+	@mkdir -p $(COMPONENT_BUILD_DIR)
+	$(WASI_SDK)/bin/clang --target=$(WASIP2_TARGET) $(WASIP2_CFLAGS) \
+	    -I$(WIT_BINDINGS_DIR)/cwist-guest-stream -c -o $@ \
+	    $(WIT_BINDINGS_DIR)/cwist-guest-stream/cwist_guest_stream.c
+
+$(COMPONENT_BUILD_DIR)/stream_guest.component.wasm: $(COMPONENT_BUILD_DIR)/stream_guest.o \
+                                                    $(COMPONENT_BUILD_DIR)/cwist_guest_stream.o \
+                                                    libcwist_wasip2_$(WASIP2_TARGET).a
+	$(WASI_SDK)/bin/clang --target=$(WASIP2_TARGET) $(WASIP2_CFLAGS) \
+	    -o $(COMPONENT_BUILD_DIR)/stream_guest.core.wasm \
+	    $(COMPONENT_BUILD_DIR)/stream_guest.o $(COMPONENT_BUILD_DIR)/cwist_guest_stream.o \
+	    $(WIT_BINDINGS_DIR)/cwist-guest-stream/cwist_guest_stream_component_type.o \
+	    $(WASIP2_ARCHIVE) $(WASIP2_LDLIBS) \
+	    -Wl,--gc-sections -Wl,--allow-undefined -Wl,-z,stack-size=$(WASIP2_STACK_BYTES)
+	wasm-tools component embed wit/ --world cwist-guest-stream \
+	    $(COMPONENT_BUILD_DIR)/stream_guest.core.wasm -o $@
+
+component-stream-smoke: $(COMPONENT_BUILD_DIR)/stream_guest.component.wasm
+	npm exec -y --package=@bytecodealliance/jco -- \
+	    jco transpile $(COMPONENT_BUILD_DIR)/stream_guest.component.wasm --out-dir $(STREAM_JCO_DIR)
+	npm install --prefix $(STREAM_JCO_DIR) --no-save --no-fund --no-audit \
+	    --silent @bytecodealliance/preview3-shim
+	npm exec -y --package=esbuild -- \
+	    esbuild $(STREAM_JCO_DIR)/stream_guest.component.js \
+	    --bundle --platform=node --format=esm \
+	    --alias:c4punks:cwist/host=$(abspath tests/wasm_component_stream_host.js) \
+	    --external:@bytecodealliance/jco-node-fs* \
+	    --outfile=$(STREAM_JCO_DIR)/bundle.mjs
+	BUNDLE=$(abspath $(STREAM_JCO_DIR)/bundle.mjs) \
+	    $(NODE) --experimental-wasm-jspi tests/wasm_component_stream_test.js
+
+component-stream-smoke-p3:
+	@if ! printf 'int main(void){return 0;}\n' | \
+	    $(WASI_SDK)/bin/clang --target=wasm32-wasip3 -x c - -o /tmp/.cwist_p3_probe.wasm \
+	    > /dev/null 2>&1; then \
+	    echo "component-stream-smoke-p3: $(WASI_SDK) has no wasip3 sysroot (needs wasi-sdk >= 34)"; \
+	    exit 1; \
+	fi; \
+	rm -f /tmp/.cwist_p3_probe.wasm
+	$(MAKE) component-stream-smoke WASIP2_TARGET=wasm32-wasip3
+
 clean-component:
-	rm -rf $(WIT_BINDINGS_DIR) .component-build .jco-guest
+	rm -rf $(WIT_BINDINGS_DIR) .component-build .jco-guest .jco-guest-stream
 
 # Packaging gate for the browser bundle (issue #203, stage 2 remainder): the
 # transpiled component plus the cwist-wasm adapter must bundle for a browser
