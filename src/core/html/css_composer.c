@@ -4,6 +4,8 @@
  */
 
 #include <cwist/core/html/css_composer.h>
+#include <cwist/core/mem/alloc.h>
+#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -235,4 +237,139 @@ cwist_sstring *cwist_css_generate_stylesheet(const cwist_css_config *cfg) {
     if (utils) cwist_sstring_destroy(utils);
 
     return final_css;
+}
+
+struct cwist_css_scope_entry {
+    char *base_class;
+    char *scoped_class;
+    char *declarations; ///< NULL until cwist_css_scope_add_rule()
+    bool used;
+};
+
+static bool is_css_ident(const char *s) {
+    if (!s || !*s) return false;
+    const char *p = s;
+    if (*p == '-') p++;
+    if (!(isalpha((unsigned char)*p) || *p == '_')) return false;
+    for (p++; *p; p++) {
+        if (!(isalnum((unsigned char)*p) || *p == '_' || *p == '-')) return false;
+    }
+    return true;
+}
+
+static struct cwist_css_scope_entry *scope_find(const cwist_css_scope *scope,
+                                                const char *base_class) {
+    for (size_t i = 0; i < scope->count; i++) {
+        if (strcmp(scope->entries[i].base_class, base_class) == 0) return &scope->entries[i];
+    }
+    return NULL;
+}
+
+/**
+ * @brief Find the entry for `base_class`, creating it (with its scoped name)
+ *        when it does not exist yet.
+ */
+static struct cwist_css_scope_entry *scope_get_or_add(cwist_css_scope *scope,
+                                                      const char *base_class) {
+    struct cwist_css_scope_entry *entry = scope_find(scope, base_class);
+    if (entry) return entry;
+
+    if (scope->count == scope->capacity) {
+        size_t new_capacity = scope->capacity ? scope->capacity * 2 : 8;
+        struct cwist_css_scope_entry *grown = (struct cwist_css_scope_entry *)cwist_realloc(
+            scope->entries, new_capacity * sizeof(*grown));
+        if (!grown) return NULL;
+        scope->entries = grown;
+        scope->capacity = new_capacity;
+    }
+
+    size_t base_len = strlen(base_class);
+    size_t scoped_len = base_len + 1 + sizeof(scope->suffix);
+    char *base_copy = cwist_strdup(base_class);
+    char *scoped = (char *)cwist_alloc(scoped_len);
+    if (!base_copy || !scoped) {
+        cwist_free(base_copy);
+        cwist_free(scoped);
+        return NULL;
+    }
+    snprintf(scoped, scoped_len, "%s-%s", base_class, scope->suffix);
+
+    entry = &scope->entries[scope->count++];
+    entry->base_class = base_copy;
+    entry->scoped_class = scoped;
+    entry->declarations = NULL;
+    entry->used = false;
+    return entry;
+}
+
+void cwist_css_scope_init(cwist_css_scope *scope, const char *component_name) {
+    if (!scope) return;
+    const char *name = component_name ? component_name : "";
+
+    /* FNV-1a, 32-bit. Deliberately unseeded: markup and stylesheet may be
+     * produced by different worker processes and must agree on the suffix. */
+    uint32_t hash = 2166136261u;
+    for (const unsigned char *p = (const unsigned char *)name; *p; p++) {
+        hash ^= *p;
+        hash *= 16777619u;
+    }
+
+    snprintf(scope->suffix, sizeof(scope->suffix), "%08x", (unsigned int)hash);
+    scope->entries = NULL;
+    scope->count = 0;
+    scope->capacity = 0;
+}
+
+const char *cwist_css_scope_class(cwist_css_scope *scope, const char *base_class) {
+    if (!scope || !scope->suffix[0] || !is_css_ident(base_class)) return NULL;
+    struct cwist_css_scope_entry *entry = scope_get_or_add(scope, base_class);
+    if (!entry) return NULL;
+    entry->used = true;
+    return entry->scoped_class;
+}
+
+int cwist_css_scope_add_rule(cwist_css_scope *scope, const char *base_class,
+                             const char *declarations) {
+    if (!scope || !scope->suffix[0] || !is_css_ident(base_class) || !declarations) return -1;
+    if (strpbrk(declarations, "{}<")) return -1;
+
+    char *copy = cwist_strdup(declarations);
+    if (!copy) return -1;
+    struct cwist_css_scope_entry *entry = scope_get_or_add(scope, base_class);
+    if (!entry) {
+        cwist_free(copy);
+        return -1;
+    }
+    cwist_free(entry->declarations);
+    entry->declarations = copy;
+    return 0;
+}
+
+cwist_sstring *cwist_css_scope_generate_stylesheet(const cwist_css_scope *scope) {
+    if (!scope) return NULL;
+    cwist_sstring *css = cwist_sstring_create();
+    if (!css) return NULL;
+    cwist_sstring_assign(css, "");
+
+    for (size_t i = 0; i < scope->count; i++) {
+        const struct cwist_css_scope_entry *entry = &scope->entries[i];
+        if (!entry->used || !entry->declarations) continue;
+        cwist_sstring_append(css, ".");
+        cwist_sstring_append(css, entry->scoped_class);
+        cwist_sstring_append(css, " { ");
+        cwist_sstring_append(css, entry->declarations);
+        cwist_sstring_append(css, " }\n");
+    }
+    return css;
+}
+
+void cwist_css_scope_destroy(cwist_css_scope *scope) {
+    if (!scope) return;
+    for (size_t i = 0; i < scope->count; i++) {
+        cwist_free(scope->entries[i].base_class);
+        cwist_free(scope->entries[i].scoped_class);
+        cwist_free(scope->entries[i].declarations);
+    }
+    cwist_free(scope->entries);
+    memset(scope, 0, sizeof(*scope));
 }
