@@ -345,20 +345,32 @@ int cwist_css_scope_add_rule(cwist_css_scope *scope, const char *base_class,
     return 0;
 }
 
+static bool css_append(cwist_sstring *css, const char *text) {
+    cwist_error_t err = cwist_sstring_append(css, text);
+    bool ok = cwist_error_is_ok(&err);
+    cwist_error_dispose(&err);
+    return ok;
+}
+
 cwist_sstring *cwist_css_scope_generate_stylesheet(const cwist_css_scope *scope) {
     if (!scope) return NULL;
     cwist_sstring *css = cwist_sstring_create();
     if (!css) return NULL;
-    cwist_sstring_assign(css, "");
 
-    for (size_t i = 0; i < scope->count; i++) {
+    cwist_error_t err = cwist_sstring_assign(css, "");
+    bool ok = cwist_error_is_ok(&err);
+    cwist_error_dispose(&err);
+
+    for (size_t i = 0; ok && i < scope->count; i++) {
         const struct cwist_css_scope_entry *entry = &scope->entries[i];
         if (!entry->used || !entry->declarations) continue;
-        cwist_sstring_append(css, ".");
-        cwist_sstring_append(css, entry->scoped_class);
-        cwist_sstring_append(css, " { ");
-        cwist_sstring_append(css, entry->declarations);
-        cwist_sstring_append(css, " }\n");
+        ok = css_append(css, ".") && css_append(css, entry->scoped_class) &&
+             css_append(css, " { ") && css_append(css, entry->declarations) &&
+             css_append(css, " }\n");
+    }
+    if (!ok) {
+        cwist_sstring_destroy(css);
+        return NULL;
     }
     return css;
 }
