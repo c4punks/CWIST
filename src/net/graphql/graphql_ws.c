@@ -197,7 +197,7 @@ static void gql_ws_conn_ref(gql_ws_conn_t *conn) {
 /* Frees the connection state once the WS layer, the protocol layer, and all
  * in-flight flush nodes have released their references. */
 static void gql_ws_conn_free(gql_ws_conn_t *conn) {
-    for (size_t i = 0; i < conn->pending_count; i++) free(conn->pending[i]);
+    for (size_t i = 0; i < conn->pending_count; i++) cwist_free(conn->pending[i]);
     cwist_free(conn->pending);
     cwist_free(conn);
 }
@@ -248,7 +248,7 @@ static void gql_ws_send_json(cwist_websocket_async *ws, cJSON *msg) {
     if (cwist_websocket_async_send(ws, CWIST_WS_FRAME_TEXT, (const uint8_t *)printed,
                                    strlen(printed)) != 0)
         cwist_websocket_async_close(ws);
-    free(printed);
+    cwist_free(printed);
 }
 
 static void gql_ws_send_error(cwist_websocket_async *ws, const char *id, const char *message) {
@@ -343,7 +343,7 @@ static void gql_ws_flush_cb(void *ctx) {
                                        strlen(msgs[i])) != 0) {
             cwist_websocket_async_close(conn->ws);
         }
-        free(msgs[i]);
+        cwist_free(msgs[i]);
     }
     cwist_free(msgs);
 
@@ -378,7 +378,7 @@ size_t cwist_graphql_publish(const char *topic, const cJSON *payload) {
         char *msg = gql_ws_build_next(op, payload);
         if (!msg) continue;
         if (!gql_ws_pending_push(op->conn, msg)) {
-            free(msg);
+            cwist_free(msg);
             continue;
         }
         delivered++;
@@ -597,7 +597,7 @@ static void gql_ws_conn_dispose(gql_ws_conn_t *conn) {
     conn->dead = true;
     conn->ws = NULL;
     gql_ws_conn_purge_ops(conn);
-    for (size_t i = 0; i < conn->pending_count; i++) free(conn->pending[i]);
+    for (size_t i = 0; i < conn->pending_count; i++) cwist_free(conn->pending[i]);
     conn->pending_count = 0;
     pthread_mutex_unlock(&g_broker_lock);
     gql_ws_conn_unref(conn);
