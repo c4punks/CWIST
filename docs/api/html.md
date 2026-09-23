@@ -35,12 +35,19 @@ Runs the render function and returns its root element. The result is owned by
 the caller exactly like the result of `cwist_html_element_create()`: destroy it
 with `cwist_html_element_destroy()` or attach it to a parent.
 
-Ownership of every non-NULL element in `children` moves into this call, on
-success and on failure. The render function may attach children to the tree it
-returns (or return one of them as the root) but must not destroy them. Any
-child left unattached is destroyed before the call returns; if the render
-function returns NULL, or `comp` is NULL, all of them are. A pointer listed
-more than once is released once.
+The caller gives up every element in `children` when it calls this function
+and must not use them afterwards. They are handed to the render function, or
+destroyed here if `comp` is NULL. Each element must be listed once and must not
+already belong to another tree, including another entry's. `children` may be
+NULL only when `child_count` is 0; a NULL array with a non-zero count returns
+NULL without rendering or releasing anything. Individual entries may be NULL.
+
+The render function owns the children it receives. Each one must end up in the
+tree it returns (attached with `cwist_html_element_add_child()`, or returned as
+the root) or be destroyed by the render function, whether it succeeds or not.
+On failure, destroying a partially built tree also releases the children
+already attached to it, so only the unattached ones still need
+`cwist_html_element_destroy()`.
 
 `props` is passed through untouched, so a component defines its own props
 struct.
@@ -110,7 +117,11 @@ static cwist_html_element_t *card_render(const void *props, cwist_html_element_t
                                          size_t child_count) {
     const card_props *p = props;
     cwist_html_element_t *root = cwist_html_element_create("div");
-    if (!root) return NULL;
+    if (!root) {
+        /* The render function owns the children, including on failure. */
+        for (size_t i = 0; i < child_count; i++) cwist_html_element_destroy(children[i]);
+        return NULL;
+    }
     cwist_html_element_add_class(root, cwist_css_scope_class(p->css, "card"));
 
     cwist_html_element_t *h2 = cwist_html_element_create("h2");
