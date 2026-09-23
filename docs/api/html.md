@@ -110,6 +110,103 @@ an allocation fails, never a partial stylesheet.
 Only plain class selectors are generated; pseudo-classes, descendant selectors
 and media queries are not covered by the scope API.
 
+## HTML over the wire
+
+*Header:* `<cwist/net/http/html_response.h>`
+
+These helpers let one handler serve both a normal navigation and a fragment
+request for the same URL. Without client-side script every link and form works
+as a full page load; with a fragment-swapping client the same handler returns
+only the part that changes.
+
+A request is a fragment request when it carries `HX-Request: true` (htmx), except
+for htmx history restores (`HX-History-Restore-Request: true`), or a non-empty
+`Turbo-Frame` header (Hotwire Turbo frames). Neither library is required or
+bundled.
+
+### `cwist_http_request_wants_fragment` / `cwist_http_request_fragment_target`
+```c
+bool cwist_http_request_wants_fragment(const cwist_http_request *req);
+const char *cwist_http_request_fragment_target(const cwist_http_request *req);
+```
+The target is the `Turbo-Frame` value, else `HX-Target`, and NULL for requests
+that are not fragment requests.
+
+### `cwist_http_response_set_view`
+```c
+int cwist_http_response_set_view(const cwist_http_request *req, cwist_http_response *res,
+                                 cwist_html_element_t *content, cwist_html_component_t *layout,
+                                 const void *layout_props);
+```
+Fragment requests get `content` alone. Other requests get a full document,
+starting with `<!DOCTYPE html>`: `content` passed as the single child of the
+`layout` component, or `content` itself when `layout` is NULL. Both answers get
+`Content-Type: text/html; charset=utf-8` and `Vary: HX-Request,
+HX-History-Restore-Request, HX-Target, Turbo-Frame`, so HTTP caches keep the two
+representations apart. The in-process reply cache (Big Dumb Reply) does not
+learn responses that carry `Vary`, for the same reason. The status code is left
+as the handler set it.
+
+`content` is always consumed. On a full-page answer it goes to the layout's
+render function, which owns it under the usual component rules.
+
+### `cwist_http_response_set_html`
+```c
+int cwist_http_response_set_html(cwist_http_response *res, cwist_html_element_t *root,
+                                 bool document);
+```
+The lower-level step: renders `root` (always consumed) into the body, with a
+doctype when `document` is true, and sets the HTML content type. It refuses
+responses that already use a pointer, file or streamed body.
+
+### `cwist_http_response_add_oob`
+```c
+int cwist_http_response_add_oob(const cwist_http_request *req, cwist_http_response *res,
+                                cwist_html_element_t *el);
+```
+Adds a second region to a fragment answer, for example a counter or a
+notification elsewhere on the page. On a fragment request the element (which
+must have an `id`) is appended to the body with `hx-swap-oob="true"`, unless it
+already has an `hx-swap-oob` value. On a full-page request it is dropped,
+because the page already contains that region. htmx applies out-of-band
+elements; Turbo frames ignore them. Call it after setting the main content.
+
+### `cwist_http_response_html_redirect`
+```c
+int cwist_http_response_html_redirect(const cwist_http_request *req, cwist_http_response *res,
+                                      const char *location);
+```
+An htmx request gets `200` with `HX-Redirect: <location>`. A script-driven
+request follows a 3xx by itself, so a plain redirect would put the next page
+inside the fragment slot. Every other request, Turbo frames included, gets
+`303 See Other` with `Location`, which also turns a form POST into a GET. The
+body is emptied and `Vary: HX-Request` is added. A location containing control
+characters (CR and LF in particular) is refused with -1 and nothing is changed.
+
+### Handler example
+
+```c
+static cwist_html_component_t *layout; /* created once at startup */
+
+static void items(cwist_http_request *req, cwist_http_response *res) {
+    cwist_html_element_t *list = cwist_html_element_create("ul");
+    cwist_html_element_set_id(list, "items");
+    /* ... add <li> children ... */
+    if (cwist_http_response_set_view(req, res, list, layout, "Items") != 0) {
+        res->status_code = CWIST_HTTP_INTERNAL_ERROR;
+    }
+}
+
+static void add_item(cwist_http_request *req, cwist_http_response *res) {
+    /* ... store the item ... */
+    cwist_http_response_html_redirect(req, res, "/items");
+}
+```
+
+With `<a href="/items" hx-get="/items" hx-target="#items">`, a browser without
+htmx follows the link and receives the whole page, and htmx receives only the
+`<ul id="items">` fragment from the same handler.
+
 ## Example
 
 ```c
