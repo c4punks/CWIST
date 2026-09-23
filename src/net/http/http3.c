@@ -1086,16 +1086,52 @@ static lsquic_conn_ctx_t *cwist_h3_on_new_conn(void *stream_if_ctx, lsquic_conn_
  */
 static void cwist_h3_on_conn_closed(lsquic_conn_t *conn) {
     if (!conn) return;
-    struct lsquic_conn_info info;
-    if (lsquic_conn_get_info(conn, &info) == 0) {
-        fprintf(stderr,
-                "[HTTP/3] Conn closed rtt=%u rttvar=%u "
-                "pkts_sent=%" PRIu64 " pkts_lost=%" PRIu64 " "
-                "pkts_retx=%" PRIu64 " cwnd=%u\n",
-                info.lci_rtt, info.lci_rttvar,
-                info.lci_pkts_sent, info.lci_pkts_lost,
-                info.lci_pkts_retx, info.lci_cwnd);
+    char errbuf[256] = {0};
+    enum LSQUIC_CONN_STATUS status = lsquic_conn_status(conn, errbuf, sizeof(errbuf));
+    fprintf(stderr, "[HTTP/3] Conn close status=%d msg=%s\n", (int)status,
+            errbuf[0] ? errbuf : "(none)");
+    /* No lsquic_conn_get_info() here: it lazily allocates the bandwidth
+     * sampler (lsquic_send_ctl_get_bw) even while the connection is being
+     * destroyed, leaking it under LSAN.  Stats would have to be collected
+     * while the connection is alive. */
+    h3_conn_ctx_t *cc = (h3_conn_ctx_t *)lsquic_conn_get_ctx(conn);
+    if (cc) {
+        pthread_mutex_lock(&cc->dgram_lock);
+        h3_dgram_node_t *n = cc->dgram_head;
+        cc->dgram_head = cc->dgram_tail = NULL;
+        pthread_mutex_unlock(&cc->dgram_lock);
+        while (n) {
+            h3_dgram_node_t *next = n->next;
+            free(n->data);
+            free(n);
+            n = next;
+        }
+        pthread_mutex_destroy(&cc->dgram_lock);
+        free(cc);
     }
+}
+
+/* lsquic stream_if callback: a CONNECTION_CLOSE frame arrived from the peer.
+ * Record it on the shared context so post-serve diagnostics can see why the
+ * peer went away without scraping the CWIST_H3_DEBUG journal.  Runs on the
+ * engine thread; the last_close_* fields are published to readers that call
+ * cwist_http3_last_close_error() after the serve loop has stopped. */
+static void cwist_h3_on_conncloseframe_received(lsquic_conn_t *conn, int app_error,
+                                                uint64_t error_code, const char *reason,
+                                                int reason_len) {
+    cwist_http3_context *h3_ctx = h3_shared_ctx(conn);
+    if (!h3_ctx) return;
+    h3_ctx->last_close_app_error = app_error;
+    h3_ctx->last_close_code = error_code;
+    if (reason && reason_len > 0) {
+        size_t n = (size_t)reason_len >= sizeof(h3_ctx->last_close_reason)
+                     ? sizeof(h3_ctx->last_close_reason) - 1 : (size_t)reason_len;
+        memcpy(h3_ctx->last_close_reason, reason, n);
+        h3_ctx->last_close_reason[n] = '\0';
+    } else {
+        h3_ctx->last_close_reason[0] = '\0';
+    }
+    h3_ctx->last_close_received = 1;
 }
 
 static lsquic_stream_ctx_t *cwist_h3_on_new_stream(void *stream_if_ctx, lsquic_stream_t *stream) {
@@ -2143,6 +2179,7 @@ static const struct lsquic_webtransport_if cwist_h3_wt_if = {
 static const struct lsquic_stream_if cwist_h3_stream_if = {
     .on_new_conn = cwist_h3_on_new_conn,
     .on_conn_closed = cwist_h3_on_conn_closed,
+    .on_conncloseframe_received = cwist_h3_on_conncloseframe_received,
     .on_new_stream = cwist_h3_on_new_stream,
     .on_read = cwist_h3_on_read,
     .on_write = cwist_h3_on_write,
@@ -2474,6 +2511,23 @@ void cwist_http3_destroy_context(cwist_http3_context *ctx) {
     }
 }
 
+int cwist_http3_last_close_error(const cwist_http3_context *ctx, bool *app_error_out,
+                                 uint64_t *code_out, char *reason_buf, size_t buf_len) {
+    if (!ctx || !ctx->last_close_received) return -1;
+    if (app_error_out) *app_error_out = ctx->last_close_app_error == 1;
+    if (code_out) *code_out = ctx->last_close_code;
+    if (reason_buf && buf_len > 0) {
+        size_t n = strlen(ctx->last_close_reason);
+        if (n >= buf_len) n = buf_len - 1;
+        memcpy(reason_buf, ctx->last_close_reason, n);
+        reason_buf[n] = '\0';
+    }
+    return 0;
+}
+
+/* ------------------------------------------------------------------ */
+/* Server loop                                                        */
+/* ------------------------------------------------------------------ */
 
 
 #define CWIST_HTTP3_FRAME_DATA     0x00
@@ -3108,6 +3162,18 @@ cwist_error_t cwist_http3_server_loop(int udp_fd,
     if (!engine) {
         err.error.err_i16 = -1;
         return err;
+    }
+
+    /* Diagnostic hook: CWIST_H3_DEBUG=1 routes lsquic's internal logger to
+     * stderr so CONNECTION_CLOSE error codes become visible in the journal.
+     * The last received close frame is also recorded on the context for
+     * programmatic access via cwist_http3_last_close_error(). */
+    if (getenv("CWIST_H3_DEBUG")) {
+        static const struct lsquic_logger_if h3_log_if = {
+            .log_buf = cwist_h3_log_stderr,
+        };
+        lsquic_logger_init(&h3_log_if, NULL, LLTS_HHMMSSMS);
+        lsquic_logger_lopt("engine=debug,conn=debug,event=debug");
     }
 
     ctx->engine = engine;

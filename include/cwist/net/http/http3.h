@@ -52,6 +52,14 @@ struct cwist_http3_context {
     int ping_period_ms;        /**< 0 = use lsquic default (server: none) */
     int noprogress_timeout_ms; /**< 0 = use lsquic default (60s server) */
     void *hsets; /**< Head of tracked cwist_h3_hset list (internal; swept on engine destroy) */
+    /* Last CONNECTION_CLOSE frame received from a peer by any connection of
+     * this context. Written on the engine thread from lsquic's close-frame
+     * callback; read via cwist_http3_last_close_error() for post-serve
+     * diagnostics (call after the serve loop has stopped). */
+    volatile int last_close_received; /**< Non-zero once a close frame was recorded */
+    int last_close_app_error;         /**< 0 transport, 1 application, -1 unknown */
+    uint64_t last_close_code;         /**< QUIC transport or H3 application error code */
+    char last_close_reason[256];      /**< Peer reason phrase, NUL-terminated */
 };
 
 /**
@@ -218,6 +226,135 @@ int cwist_http3_send_datagram(void *conn, const void *data, size_t len);
  */
 void cwist_http3_set_webtransport_handler(cwist_http3_context *ctx,
                                           cwist_webtransport_handler_func handler);
+
+/** @name WebTransport I/O */
+/** @{ */
+
+/**
+ * @brief Read data from a WebTransport stream.
+ *
+ * Non-blocking.  Returns number of bytes read, 0 if no data is
+ * currently available, or -1 on error.
+ *
+ * @param stream  Opaque CWIST WebTransport stream handle.
+ * @param buf     Destination buffer.
+ * @param len     Buffer capacity in bytes.
+ * @return Number of bytes read, 0 if none available, or -1 on error.
+ */
+ssize_t cwist_webtransport_read(void *stream, void *buf, size_t len);
+
+/**
+ * @brief Write data to a WebTransport stream.
+ *
+ * Returns number of bytes accepted into the send buffer, or -1 on error.
+ *
+ * @param stream  Opaque CWIST WebTransport stream handle.
+ * @param data    Payload to write.
+ * @param len     Payload length in bytes.
+ * @return Number of bytes buffered, or -1 on error.
+ */
+ssize_t cwist_webtransport_write(void *stream, const void *data, size_t len);
+
+/**
+ * @brief Flush any buffered data on a WebTransport stream.
+ *
+ * @param stream  Opaque CWIST WebTransport stream handle.
+ * @return 0 on success, -1 on error.
+ */
+int cwist_webtransport_flush(void *stream);
+
+/**
+ * @brief Close a WebTransport stream.
+ *
+ * @param stream  Opaque CWIST WebTransport stream handle.
+ * @return 0 on success, -1 on error.
+ */
+int cwist_webtransport_close_stream(void *stream);
+
+/**
+ * @brief Register a callback for newly created WebTransport data streams.
+ *
+ * Invoked for both server-initiated and client-initiated streams.
+ *
+ * @param ctx       HTTP/3 context.
+ * @param handler   Callback invoked for each new data stream.
+ * @param user_ctx  Opaque pointer forwarded to @p handler.
+ */
+void cwist_webtransport_set_new_stream_handler(cwist_http3_context *ctx,
+                                               void (*handler)(void *stream, void *user_ctx),
+                                               void *user_ctx);
+
+/**
+ * @brief Request a new server-initiated bidirectional WebTransport stream.
+ *
+ * The actual stream is delivered asynchronously via the new-stream handler.
+ *
+ * @param session  Opaque CWIST WebTransport session handle.
+ * @return 0 on success, -1 on failure.
+ */
+int cwist_webtransport_open_bidi_stream(void *session);
+
+/**
+ * @brief Request a new server-initiated unidirectional WebTransport stream.
+ *
+ * The actual stream is delivered asynchronously via the new-stream handler.
+ *
+ * @param session  Opaque CWIST WebTransport session handle.
+ * @return 0 on success, -1 on failure.
+ */
+int cwist_webtransport_open_uni_stream(void *session);
+
+/**
+ * @brief Send an unreliable WebTransport datagram in session context.
+ *
+ * @param session Opaque CWIST WebTransport session handle.
+ * @param data    Datagram payload.
+ * @param len     Payload length in bytes.
+ * @return Number of bytes queued, or -1 on error.
+ */
+ssize_t cwist_webtransport_send_datagram(void *session, const void *data, size_t len);
+
+/**
+ * @brief Return the current maximum WebTransport datagram payload size.
+ */
+size_t cwist_webtransport_max_datagram_size(void *session);
+
+/**
+ * @brief Close a WebTransport session with an application error code.
+ */
+int cwist_webtransport_close_session(void *session, uint64_t code, const char *reason);
+
+/** @} */
+
+/** --- Diagnostics --- */
+
+/**
+ * @brief Return the last CONNECTION_CLOSE frame received by any connection
+ *        of this context.
+ *
+ * When the peer (or an intermediary-facing client) closes a QUIC connection,
+ * lsquic reports the frame's error class, code, and reason phrase here.  This
+ * is the programmatic counterpart to the CWIST_H3_DEBUG=1 journal hook and is
+ * meant for post-serve diagnostics: the callback runs on the engine thread,
+ * so call this after cwist_http3_server_loop() has returned (or the context
+ * was otherwise quiesced) — the same lifecycle guarantee as the rest of the
+ * context's teardown-time state.
+ *
+ * @param ctx          HTTP/3 context.
+ * @param app_error_out Optional; receives true for an application-level
+ *                     close (H3 CONNECTION_CLOSE, 0x1D), false for a
+ *                     transport-level close (0x1C).  An "unknown" class
+ *                     (lsquic reports -1) also yields false.
+ * @param code_out     Optional; receives the QUIC transport error code or
+ *                     the H3 application error code.
+ * @param reason_buf   Optional; receives the peer's reason phrase,
+ *                     NUL-terminated, truncated to @p buf_len - 1 bytes.
+ * @param buf_len      Capacity of @p reason_buf.
+ * @return 0 if a CONNECTION_CLOSE frame has been received, -1 otherwise
+ *         (nothing recorded yet, or @p ctx is NULL).
+ */
+int cwist_http3_last_close_error(const cwist_http3_context *ctx, bool *app_error_out,
+                                 uint64_t *code_out, char *reason_buf, size_t buf_len);
 
 /** --- Unstable-network resilience knobs --- */
 
