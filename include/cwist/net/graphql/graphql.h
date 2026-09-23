@@ -44,6 +44,19 @@ bool cwist_graphql_add_mutation(cwist_graphql_schema_t *schema, const char *fiel
 cwist_error_t cwist_graphql_execute(cwist_graphql_schema_t *schema, const char *request_json,
                                     cwist_sstring **out_json);
 
+/** Extract the root field name and parsed arguments of a `subscription` operation.
+ * Experimental (v3.7 Phase 4): used by the WS subscription layer; not part of the
+ * query/mutation execute path.
+ * @param query GraphQL source starting with the `subscription` keyword.
+ * @param variables Request variables for `$var` argument references (may be NULL).
+ * @param field_out Buffer receiving the root field name.
+ * @param field_cap Capacity of @p field_out.
+ * @param args_out Receives a newly allocated cJSON object with parsed arguments, or NULL
+ *                 when the field carries none; the caller takes ownership.
+ * @return true when a subscription root field was parsed. */
+bool cwist_graphql_parse_subscription(const char *query, const cJSON *variables, char *field_out,
+                                      size_t field_cap, cJSON **args_out);
+
 /** HTTP handler adapter for CWIST POST routes. Supports both application/json and GraphQL requests.
  */
 void cwist_graphql_serve(cwist_graphql_schema_t *schema, cwist_http_request *req,
