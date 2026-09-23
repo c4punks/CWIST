@@ -203,7 +203,7 @@ The completed P1-P3 hardening work is now under regression coverage. Current pri
 
 * Finish `cwist proto` for v3.4: ~~descriptor-set input~~ (`oneof`, `map`, fixed-width types, `double`, and `protoc --descriptor_set_out` input all done alongside scalar/enum/nested/repeated-packed).
 * ~~Add gRPC client-side support: h2/h2c client, retry policy, and load balancing.~~ (h2c/TLS client with unary + server-streaming calls, deadlines, and cancellation; channel with `pick_first`/`round_robin` LB over per-address subchannels; gRFC A6 retry policy with backoff, pushback, throttling, and transparent retries — all shipped)
-* Add gRPC server-side response compression.
+* ~~Add gRPC server-side response compression.~~ (gzip response messages with the compressed-frame flag when the client advertises `grpc-accept-encoding: gzip`; request decompression for `grpc-encoding: gzip`; covered by `test_grpc` and `test_grpc_stream`)
 * Extend the GraphQL subset with schema validation, mutations, nested selections, and subscriptions.
 * Stabilize the experimental native C WebTransport client after LSQUIC PR #629 merges upstream.
 * Evaluate persistent job backends separately from the in-process queue/scheduler.
@@ -372,9 +372,9 @@ delaying the cut.
   * Track the lsquic connection-close fixes upstream (triggering-frame-type population, connection-close packet number space selection and pre-handshake fallback) and fold them into the release-line `lib/lsquic` pin at the next re-pin. Status (2026-09-23): none of the three are in the pinned fork or in upstream master (v4.10.0) — blocked on lsquic, not CWIST.
   * ~~Add connection-close coverage on the CWIST side so the behavior stays pinned by tests~~ (CWIST-side half done — received CONNECTION_CLOSE is recorded via `on_conncloseframe_received` and exposed through `cwist_http3_last_close_error()`; `test_http3` Test 12 pins the peer-abort close path over a real QUIC handshake. An h3spec-style interop gate waits for the lsquic re-pin).
 * **Phase 4: ecosystem experimental support** (shipped behind flags, documented as experimental):
-  * gRPC server-side response compression.
-  * GraphQL subscriptions over the v3.6 non-blocking WebSocket transport.
-  * Persistent job backends: a durable queue over the existing Redis/NATS clients, separate from the in-process scheduler queue.
+  * ~~gRPC server-side response compression~~ (done 2026-09-07 in `31b44d6f`, pre-v3.7; marked here so Phase 4 tracks only what remains).
+  * ~~GraphQL subscriptions over the v3.6 non-blocking WebSocket transport~~ (done — graphql-transport-ws subprotocol in `cwist/graphql_ws.h` with a topic broker (`cwist_graphql_publish`) and reactor-thread-safe fanout; `test_graphql_subscriptions` covers the close-code matrix, streaming, and teardown purge).
+  * ~~Persistent job backends: a durable queue over the existing Redis/NATS clients, separate from the in-process scheduler queue~~ (done — `cwist/sys/job/durable_queue.h`: at-least-once queues, Redis streams+consumer groups (XAUTOCLAIM visibility, Lua nack/dead-letter) and NATS JetStream pull consumers; `test_durable_queue` runs against live Redis and skips NATS cleanly without a server).
 * **Phase 5: pre-v4 experimental promotion** (new under this retheme — give the dev-only experiments a release-line soak so v4.0 can decide their fate with data):
   * Memory management: full-GC (`CWIST_DEFER_FREE`, EBR path, thread/process-exit sweep) and header-scoped malloc interception (`CWIST_INTERCEPT_MALLOC`) documented as one experimental support tier, with a named v4.0 decision per item (default-on, opt-in, or removed).
   * `CWIST_PROFILE` presets and the C1M baseline work: confirm the preset matrix is the v4.0 default story or trim it.
