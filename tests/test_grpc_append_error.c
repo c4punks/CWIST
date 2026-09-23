@@ -17,7 +17,6 @@ static int fail_append;
 static int allocation_failures;
 static int disposed_json;
 static void *body_pointer;
-static size_t failed_size;
 
 static cwist_error_t test_make_error(cwist_errtype_t type) {
     cwist_error_t err = {.errtype = type};
@@ -27,7 +26,11 @@ static cwist_error_t test_make_error(cwist_errtype_t type) {
 }
 
 static void *test_realloc(void *pointer, size_t size) {
-    if (fail_append && pointer == body_pointer && size == failed_size) {
+    (void)size;
+    /* Geometric growth reserves headroom, so small appends never realloc.
+     * Intercept every realloc of the body buffer; the caller picks a
+     * payload large enough to force growth past the current capacity. */
+    if (fail_append && pointer == body_pointer) {
         allocation_failures++;
         return NULL;
     }
@@ -81,10 +84,17 @@ static void check_append_failure(void) {
     cwist_http_response response = {.body = body};
     cwist_grpc_stream stream = {.res = &response, .status = CWIST_GRPC_OK};
     body_pointer = body->data;
-    failed_size = body->size + 5 + 3 + 1;
+    /* Payload sized to exceed the reserved capacity, so the append must
+     * realloc (and the injected failure fires). One byte past capacity is
+     * enough: needed = size + 5-byte frame header + payload. */
+    size_t payload_len = body->capacity - 3 - 5 + 1;
+    unsigned char *payload = malloc(payload_len);
+    REQUIRE(payload != NULL);
+    memset(payload, 'x', payload_len);
     fail_append = 1;
-    int result = cwist_grpc_stream_send(&stream, "abc", 3);
+    int result = cwist_grpc_stream_send(&stream, payload, payload_len);
     fail_append = 0;
+    free(payload);
     REQUIRE(allocation_failures == 1);
     REQUIRE(result == -1);
     REQUIRE(stream.status == CWIST_GRPC_INTERNAL);

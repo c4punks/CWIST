@@ -1158,12 +1158,14 @@ static cwist_error_t cwist_http_sstring_assign_arena(cwist_sstring *str, cwist_a
         char *buf = (char *)cwist_arena_alloc(arena, len + 1);
         if (buf) {
             if (str->data && !str->borrows_buffer) {
-                cwist_free(str->data);
+                cwist_free(str->base ? str->base : str->data);
             }
             if (data && len > 0) memcpy(buf, data, len);
             buf[len] = '\0';
+            str->base = NULL;
             str->data = buf;
             str->size = len;
+            str->capacity = 0; ///< arena capacity is unknown until detach
             str->borrows_buffer = true;
             cwist_error_t err = make_error(CWIST_ERR_INT8);
             err.error.err_i8 = ERR_SSTRING_OKAY;
@@ -3711,6 +3713,11 @@ cwist_http_request *cwist_http_receive_request(int client_fd, char *read_buf, si
 
 #define CWIST_ASYNC_STASH_MAX (CWIST_HTTP_READ_BUFFER_SIZE + CWIST_HTTP_MAX_BODY_SIZE)
 
+/* Bodies at least this large transfer stash-buffer ownership to the request
+ * (zero-copy region view) instead of being copied out. Below the threshold
+ * the copy is cheaper than allocating the connection a fresh stash. */
+#define CWIST_HTTP_BODY_ZC_MIN (16 * 1024)
+
 /* Grow the recv stash.  Returns false when the hard cap is reached. */
 static bool http_async_stash_grow(cwist_http_async_conn_t *conn, size_t need) {
     /* RX-uring invariant: the stash buffer must not move while a RECV SQE
@@ -3883,16 +3890,38 @@ cwist_recv_status_t cwist_http_receive_request_nb(cwist_http_async_conn_t *conn,
             cwist_http_request_destroy(req);
             return CWIST_RECV_NEED_MORE;
         }
-        char *body = cwist_alloc((size_t)req->content_length + 1);
-        if (!body) {
-            cwist_http_request_destroy(req);
-            if (err_out) *err_out = CWIST_HTTP_PARSE_EOF;
-            return CWIST_RECV_FATAL;
+        /* Zero-copy handover: a large body ending exactly at the stash end
+         * moves buffer ownership to the request as a region view over the
+         * payload, and the connection starts on a fresh stash. Both fill
+         * paths keep rbuf[len] NUL-terminated, which is the adopted region's
+         * terminating slot. Pipelined leftovers and small bodies keep the
+         * copy path below. */
+        if (header_len + (size_t)req->content_length == conn->len &&
+            (size_t)req->content_length >= CWIST_HTTP_BODY_ZC_MIN) {
+            char *fresh = cwist_alloc(CWIST_HTTP_READ_BUFFER_SIZE);
+            if (fresh) {
+                fresh[0] = '\0';
+                conn->rbuf[conn->len] = '\0'; /* defensive: region NUL slot */
+                cwist_sstring_adopt_region(req->body, conn->rbuf, header_len,
+                                           (size_t)req->content_length);
+                conn->rbuf = fresh;
+                conn->cap = CWIST_HTTP_READ_BUFFER_SIZE;
+                conn->len = 0;
+                consumed = 0; /* nothing left to shift */
+            }
         }
-        memcpy(body, conn->rbuf + header_len, (size_t)req->content_length);
-        body[req->content_length] = '\0';
-        cwist_sstring_adopt_len(req->body, body, (size_t)req->content_length);
-        consumed += (size_t)req->content_length;
+        if (consumed > 0) {
+            char *body = cwist_alloc((size_t)req->content_length + 1);
+            if (!body) {
+                cwist_http_request_destroy(req);
+                if (err_out) *err_out = CWIST_HTTP_PARSE_EOF;
+                return CWIST_RECV_FATAL;
+            }
+            memcpy(body, conn->rbuf + header_len, (size_t)req->content_length);
+            body[req->content_length] = '\0';
+            cwist_sstring_adopt_len(req->body, body, (size_t)req->content_length);
+            consumed += (size_t)req->content_length;
+        }
     } else {
         /* Presence of TE implies parser-validated chunked framing. */
         if (te) {

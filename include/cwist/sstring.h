@@ -15,23 +15,28 @@ typedef struct cwist_sstring {
     bool owns_storage;
     bool borrows_buffer; ///< data is borrowed (static/arena); never freed, detached on mutation
     size_t size;
+    size_t capacity;     ///< Payload bytes the current data buffer can hold,
+                     ///< excluding the NUL; 0 means unknown, in which case
+                     ///< growth falls back to exact-fit reallocation.
+    char *base; ///< Allocation base when data views a region inside it
+                ///< (NULL means data is the base). Freed on destroy.
     size_t (*get_size)(struct cwist_sstring *str);
     int (*compare)(
         struct cwist_sstring *left,
         const struct cwist_sstring *right); ///< should mimic strcmp, internally use strncmp
     cwist_error_t (*copy)(struct cwist_sstring *str, const struct cwist_sstring *from);
     cwist_error_t (*append)(struct cwist_sstring *str, const struct cwist_sstring *from);
-                                   /// @brief returns 1 on success, returns 0 on failure
-                                   /// @note should be used in this form:
-                                   /// @code
-                                   /// cwist_sstring str1;
-                                   /// cwist_sstring str2;
-                                   /// cwist_sstring_init(&str);
-                                   /// cwist_sstring_init(&str2);
-                                   /// cwist_error_t err = str1.copy(&str1, &str2);
-                                   /// cwist_error_t err = str2.append(&str2, &str1);
-                                   /// ...
-                                   /// @endcode
+    /// @brief returns 1 on success, returns 0 on failure
+    /// @note should be used in this form:
+    /// @code
+    /// cwist_sstring str1;
+    /// cwist_sstring str2;
+    /// cwist_sstring_init(&str);
+    /// cwist_sstring_init(&str2);
+    /// cwist_error_t err = str1.copy(&str1, &str2);
+    /// cwist_error_t err = str2.append(&str2, &str1);
+    /// ...
+    /// @endcode
 } cwist_sstring;
 
 cwist_sstring *cwist_sstring_create(void);
@@ -59,6 +64,17 @@ cwist_error_t cwist_sstring_borrow(cwist_sstring *str, const char *data, size_t 
  * @brief Adopt a cwist_alloc'd heap buffer, taking ownership without copying.
  */
 cwist_error_t cwist_sstring_adopt_len(cwist_sstring *str, char *buf, size_t len);
+
+/**
+ * @brief Adopt a cwist_alloc'd heap buffer as a region view without copying.
+ * @param str Target string object; any owned buffer it holds is released.
+ * @param base Allocation base (cwist_alloc'd); ownership transfers to the string.
+ * @param offset Payload start relative to @p base.
+ * @param len Payload length in bytes.
+ * @note @p base must have room for a NUL at base[offset + len]. Growth
+ *       reallocs @p base and preserves the offset.
+ */
+cwist_error_t cwist_sstring_adopt_region(cwist_sstring *str, char *base, size_t offset, size_t len);
 
 /**
  * @brief Initialize an sstring.

@@ -26,26 +26,54 @@ cwist_error_t cwist_sstring_append_sstring_escaped(cwist_sstring *str, const cwi
 /**
  * @brief Ensure @p str owns a writable buffer with room for @p needed bytes (+NUL).
  *
- * Owned buffers are grown in place via cwist_realloc. Borrowed buffers
- * (static storage or arena chunks, see cwist_sstring_borrow) are detached:
- * a fresh heap buffer is allocated and the first @p preserve_len bytes are
- * carried over, leaving the borrowed source untouched.
+ * Owned buffers are grown in place via cwist_realloc with geometric headroom
+ * (doubling), so repeated appends amortize to O(total bytes) instead of the
+ * O(n^2) of exact-fit reallocation; the reserved capacity is cached in
+ * str->capacity. Region views (cwist_sstring_adopt_region) realloc the
+ * allocation base and keep data at its offset into it. When str->capacity
+ * is 0 (unknown, e.g. buffers assigned outside this module) growth falls
+ * back to exact-fit reallocation.
+ * Borrowed buffers (static storage or arena chunks, see cwist_sstring_borrow)
+ * are detached: a fresh heap buffer is allocated and the first @p preserve_len
+ * bytes are carried over, leaving the borrowed source untouched.
  *
  * @param str String object to prepare.
  * @param needed Required payload capacity in bytes (excluding the NUL).
  * @param preserve_len Leading bytes of the old contents to keep when detaching.
  * @return The (possibly new) buffer, or NULL on allocation failure with the
- *         string left unchanged. On success callers must clear borrows_buffer.
+ *         string left unchanged. On success the new capacity is recorded in
+ *         str->capacity; callers must clear borrows_buffer.
  */
 static char *cwist_sstring_reserve(cwist_sstring *str, size_t needed, size_t preserve_len) {
-    if (str->borrows_buffer) {
-        char *new_data = (char *)cwist_alloc(needed + 1);
-        if (new_data && str->data && preserve_len > 0) {
-            memcpy(new_data, str->data, preserve_len);
+    if (!str->borrows_buffer && str->data && str->capacity >= needed) return str->data;
+
+    size_t new_cap = str->capacity ? str->capacity : 16;
+    while (new_cap < needed) {
+        if (new_cap > (SIZE_MAX - 1) / 2) {
+            new_cap = needed;
+            break;
         }
-        return new_data;
+        new_cap *= 2;
     }
-    return (char *)cwist_realloc(str->data, needed + 1);
+
+    char *result;
+    if (str->borrows_buffer) {
+        result = (char *)cwist_alloc(new_cap + 1);
+        if (result) {
+            if (str->data && preserve_len > 0) memcpy(result, str->data, preserve_len);
+            str->base = result;
+            str->capacity = new_cap;
+        }
+        return result;
+    }
+
+    char *orig = str->base ? str->base : str->data;
+    const size_t lead = (str->base && str->data) ? (size_t)(str->data - str->base) : 0;
+    char *grown = (char *)cwist_realloc(orig, lead + new_cap + 1);
+    if (!grown) return NULL;
+    str->base = grown;
+    str->capacity = new_cap;
+    return grown + lead;
 }
 
 /**
@@ -97,10 +125,12 @@ cwist_error_t cwist_sstring_borrow(cwist_sstring *str, const char *data, size_t 
     }
 
     if (str->data && !str->borrows_buffer) {
-        cwist_free(str->data);
+        cwist_free(str->base ? str->base : str->data);
     }
+    str->base = NULL;
     str->data = (char *)(data ? data : "");
     str->size = data ? len : 0;
+    str->capacity = 0; ///< borrowed capacity is unknown until detach
     str->borrows_buffer = true;
     str->is_fixed = false;
 
@@ -124,12 +154,47 @@ cwist_error_t cwist_sstring_adopt_len(cwist_sstring *str, char *buf, size_t len)
     }
 
     if (str->data && !str->borrows_buffer) {
-        cwist_free(str->data);
+        cwist_free(str->base ? str->base : str->data);
     }
+    str->base = buf;
     str->data = buf;
     str->size = buf ? len : 0;
+    str->capacity = 0; ///< adopted buffer size is unknown beyond len + NUL
     str->borrows_buffer = false;
     if (buf) buf[len] = '\0';
+
+    err.error.err_i8 = ERR_SSTRING_OKAY;
+    return err;
+}
+
+/**
+ * @brief Adopt a heap buffer as a region view without copying.
+ * @param str Target string object; any owned buffer it holds is released.
+ * @param base cwist_alloc'd allocation base; ownership transfers to the
+ *        string (freed on destroy/reassign). NULL clears.
+ * @param offset Payload start relative to @p base.
+ * @param len Payload length in bytes; base[offset + len] must be the NUL slot.
+ * @return ERR_SSTRING_OKAY on success, or ERR_SSTRING_NULL_STRING for NULL input.
+ * @note Growth reallocs @p base and preserves the offset, so data keeps
+ *       viewing the same region.
+ */
+cwist_error_t cwist_sstring_adopt_region(cwist_sstring *str, char *base, size_t offset,
+                                         size_t len) {
+    cwist_error_t err = make_error(CWIST_ERR_INT8);
+    if (!str) {
+        err.error.err_i8 = ERR_SSTRING_NULL_STRING;
+        return err;
+    }
+
+    if (str->data && !str->borrows_buffer) {
+        cwist_free(str->base ? str->base : str->data);
+    }
+    str->base = base;
+    str->data = base ? base + offset : NULL;
+    str->size = base ? len : 0;
+    str->capacity = 0; ///< adopted region size is unknown beyond len + NUL
+    str->borrows_buffer = false;
+    if (base) base[offset + len] = '\0';
 
     err.error.err_i8 = ERR_SSTRING_OKAY;
     return err;
@@ -189,6 +254,8 @@ cwist_error_t cwist_sstring_init(cwist_sstring *str) {
 
     str->data = NULL;
     str->size = 0;
+    str->capacity = 0;
+    str->base = NULL;
     str->is_fixed = false;
     str->owns_storage = false;
     str->borrows_buffer = false;
@@ -215,6 +282,8 @@ cwist_error_t cwist_sstring_init_escaped(cwist_sstring *str) {
 
     str->data = NULL;
     str->size = 0;
+    str->capacity = 0;
+    str->base = NULL;
     str->is_fixed = false;
     str->owns_storage = false;
     str->borrows_buffer = false;
@@ -720,11 +789,13 @@ void cwist_sstring_destroy(cwist_sstring *str) {
 
     if (str->data) {
         if (!str->borrows_buffer) {
-            cwist_free(str->data);
+            cwist_free(str->base ? str->base : str->data);
         }
         str->data = NULL;
     }
+    str->base = NULL;
     str->size = 0;
+    str->capacity = 0;
 
     if (str->owns_storage) {
         cwist_free(str);
@@ -772,6 +843,8 @@ cwist_sstring *cwist_sstring_substr(cwist_sstring *str, int start, int length) {
         cwist_sstring_destroy(sub);
         return NULL;
     }
+    sub->base = sub->data;
+    sub->capacity = length;
     sub->size = length;
 
     memcpy(sub->data, str->data + start, length);
