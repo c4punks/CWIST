@@ -923,28 +923,47 @@ void cwist_reactor_run(cwist_reactor_t *reactor) {
         reactor->owner = pthread_self();
         while (reactor->running && atomic_load(&g_cwist_running)) {
             reactor_drain_posts(reactor);
-            /* One enter per round: submit the re-arms queued by the previous
-             * dispatch batch and wait for the next event in the same call.
-             * The wait is bounded (like the epoll path's 100 ms poll) because
-             * the shutdown handler runs with SA_RESTART: an unbounded enter
-             * would be restarted after SIGTERM and hang an idle reactor
-             * forever. */
+            /* Submit the re-arms queued by the previous dispatch batch under
+             * the SQ lock, then wait in a separate call.  The submit enter
+             * MUST hold the lock: uring_submit/uring_submit_batch roll the
+             * SQ tail back when their own enter fails, and a concurrent
+             * unlocked enter here could consume that SQE first, leaving
+             * sq_tail behind sq_head.  tail < head reads as a permanently
+             * full SQ to every later submit (tail - head underflows past
+             * sq_entries), so the reactor goes deaf: no re-arm, no accept,
+             * no completions - the server stops answering while every thread
+             * looks idle.  With all SQ consumers under the lock, a failed
+             * enter means the SQE was definitely not consumed and the
+             * rollback is exact.
+             *
+             * The wait is bounded (like the epoll path's 100 ms poll)
+             * because the shutdown handler runs with SA_RESTART: an
+             * unbounded enter would be restarted after SIGTERM and hang an
+             * idle reactor forever.  It passes to_submit=0, so it consumes
+             * nothing and needs no lock. */
             static const struct __kernel_timespec idle_ts = {.tv_sec = 0, .tv_nsec = 100000000};
             uint32_t to_submit = reactor->sq_unsubmitted;
-            int ret = sys_io_uring_enter_timeout(reactor->impl.ring_fd, to_submit, 1,
+            reactor->sq_unsubmitted = 0;
+            if (to_submit > 0) {
+                pthread_mutex_lock(&reactor->impl.sq_lock);
+                int sret = sys_io_uring_enter(reactor->impl.ring_fd, to_submit, 0, 0, NULL);
+                pthread_mutex_unlock(&reactor->impl.sq_lock);
+                if (sret < 0) {
+                    /* Submission state is unknown on EINTR; anything else
+                     * failed before consuming.  Either way the SQEs are
+                     * still in the SQ (the kernel caps resubmission at what
+                     * is actually there), so restore the count and let the
+                     * next round retry. */
+                    reactor->sq_unsubmitted += to_submit;
+                }
+            }
+            int ret = sys_io_uring_enter_timeout(reactor->impl.ring_fd, 0, 1,
                                                  IORING_ENTER_GETEVENTS, &idle_ts);
             if (ret < 0) {
-                if (errno == EINTR) continue; /* sq_unsubmitted kept, retried */
-                if (errno == ETIME) {
-                    /* Timed out with no completion: the SQEs were already
-                     * submitted before the wait, so drop the stale count
-                     * and re-check the shutdown flags. */
-                    reactor->sq_unsubmitted = 0;
-                    continue;
-                }
+                if (errno == EINTR) continue;
+                if (errno == ETIME) continue;
                 break;
             }
-            reactor->sq_unsubmitted = 0;
             uint32_t head = __atomic_load_n(reactor->impl.cq_head, __ATOMIC_ACQUIRE);
             uint32_t tail = *reactor->impl.cq_tail;
             if (head == tail) {
