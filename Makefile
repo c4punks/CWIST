@@ -244,6 +244,7 @@ SRCS = src/core/sstring/sstring.c \
        src/core/html/css_composer.c \
        src/core/html/component.c \
        src/net/http/html_response.c \
+       src/sys/app/assets.c \
        src/sys/app/big_dumb_reply.c \
        src/sys/sys_info.c \
        src/core/mem/alloc.c \
@@ -303,6 +304,7 @@ WASM_SRCS = src/core/sstring/sstring.c \
        src/core/html/css_composer.c \
        src/core/html/component.c \
        src/net/http/html_response.c \
+       src/sys/app/assets.c \
        src/core/validation/bind.c \
        src/core/mem/alloc.c \
        src/core/mem/arena.c \
@@ -763,7 +765,8 @@ TEST_TARGETS = test_worker_affinity \
                test_flash \
  \
                test_html_component \
-               test_html_response
+               test_html_response \
+               test_assets
 
                test_http \
                test_http_stringify \
@@ -1471,6 +1474,10 @@ test_html_component: $(LIB_NAME) tests/test_html_component.c
 test_html_response: $(LIB_NAME) tests/test_html_response.c
 	$(CC) $(CFLAGS) -o test_html_response tests/test_html_response.c $(LIB_NAME) $(LIBS)
 	./test_html_response
+
+test_assets: $(LIB_NAME) tests/test_assets.c
+	$(CC) $(CFLAGS) -o test_assets tests/test_assets.c $(LIB_NAME) $(LIBS)
+	./test_assets
 
 test_http2_flow_control: $(LIB_NAME) tests/test_http2_flow_control.c
 	$(CC) $(CFLAGS) -o test_http2_flow_control tests/test_http2_flow_control.c $(LIB_NAME) $(LIBS)

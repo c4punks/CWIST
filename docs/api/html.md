@@ -1,4 +1,4 @@
-# HTML Components and Scoped CSS
+# HTML Components, Scoped CSS, Fragments and Assets
 
 *Headers:* `<cwist/core/html/component.h>`, `<cwist/core/html/css_composer.h>`
 
@@ -206,6 +206,77 @@ static void add_item(cwist_http_request *req, cwist_http_response *res) {
 With `<a href="/items" hx-get="/items" hx-target="#items">`, a browser without
 htmx follows the link and receives the whole page, and htmx receives only the
 `<ul id="items">` fragment from the same handler.
+
+## Asset pipeline
+
+*Headers:* `<cwist/core/html/css_composer.h>`, `<cwist/sys/app/assets.h>`
+
+Stylesheets built at startup (from `cwist_css_config`, component scopes, or
+files) can be bundled, minified and served under a content-hashed URL, with no
+separate front-end build step.
+
+### `cwist_css_minify` / `cwist_css_bundle`
+```c
+cwist_sstring *cwist_css_minify(const char *css);
+cwist_sstring *cwist_css_bundle(const char *const *parts, size_t count, bool minify);
+```
+The minifier is deliberately conservative. It removes comments, except those
+starting with `!` (license notices), and drops whitespace only where CSS
+cannot need it: after `{ } ; , : > (` and before `{ } ; , > )`. It also drops
+the `;` before a `}`. Every other run of whitespace becomes one space, so
+`div :hover`, `and (min-width: ...)` and the spaces calc() needs around `+`
+and `-` survive. Strings, escapes such as `.md\:flex`, and unquoted `url(...)`
+arguments are copied verbatim. Removing a comment never joins two tokens.
+Running the minifier on its own output changes nothing.
+
+`cwist_css_bundle()` joins parts in order with a newline between them and can
+minify the result. It does not resolve `@import`.
+
+### `cwist_app_asset_add` / `cwist_app_asset_add_file` / `cwist_app_asset_url`
+```c
+cwist_error_t cwist_app_asset_prefix(cwist_app *app, const char *url_prefix);
+cwist_error_t cwist_app_asset_add(cwist_app *app, const char *name, const void *data,
+                                  size_t len, const char *content_type);
+cwist_error_t cwist_app_asset_add_file(cwist_app *app, const char *name, const char *path,
+                                       const char *content_type);
+const char *cwist_app_asset_url(cwist_app *app, const char *name);
+```
+An asset registered as `css/app.css` is served at
+`/assets/css/app.<16 hex digits>.css`, where the digits are the start of the
+SHA-256 of its bytes, with `ETag`, `Cache-Control: public, max-age=31536000,
+immutable`, and `304 Not Modified` for a matching `If-None-Match`. The same
+bytes always give the same URL, in every process and across restarts. New
+bytes give a new URL, and the previous URL keeps serving the previous bytes
+until the app is destroyed, so pages that are still cached somewhere keep
+loading their styles. The logical name (`/assets/css/app.css`) is served too,
+with `Cache-Control: no-cache`, for tools that cannot know the hash.
+
+Assets are answered on a route miss, before static directories, through the
+app's middleware chain. They need no filesystem, so they work in the WASM
+builds as well. The content type comes from the extension unless one is
+given. Names are restricted to letters, digits, `.`, `-`, `_`, `~` and `/`
+separated segments; `.` and `..` segments are rejected. Register assets
+before `cwist_app_listen()`: prefork workers see only what existed when they
+were forked. A port detached with `cwist_multiport_get_app()` gets a copy of
+the assets registered at that point. All functions return 0 or -1 on the
+`err_i16` channel.
+
+### Putting it together
+
+```c
+/* At startup, before cwist_app_listen(). */
+cwist_sstring *scoped = cwist_css_scope_generate_stylesheet(&card_css);
+const char *parts[] = {base_css, scoped->data};
+cwist_sstring *bundle = cwist_css_bundle(parts, 2, true);
+cwist_app_asset_add(app, "app.css", bundle->data, bundle->size, NULL);
+cwist_sstring_destroy(bundle);
+cwist_sstring_destroy(scoped);
+
+/* In the layout component's render function. */
+cwist_html_element_t *link = cwist_html_element_create("link");
+cwist_html_element_add_attr(link, "rel", "stylesheet");
+cwist_html_element_add_attr(link, "href", cwist_app_asset_url(app, "app.css"));
+```
 
 ## Example
 
