@@ -469,6 +469,11 @@ static void h3c_on_read(lsquic_stream_t *stream, lsquic_stream_ctx_t *st_h) {
                 free(value);
                 free(name);
             }
+            /* Ownership moved to us with lsquic_stream_get_hset(): lsquic
+             * no longer discards the header set on stream teardown, so it
+             * must be freed here (it is a ~68 KiB h3c_hset_t).  All header
+             * name/value slices were copied out of decode_buf above. */
+            h3c_hsi_discard(hset);
             st->headers_done = 1;
 #ifdef CWIST_WEBTRANSPORT
             if (st->is_webtransport_connect) {
@@ -885,6 +890,16 @@ cwist_http3_client *cwist_http3_client_create(void) {
 void cwist_http3_client_destroy(cwist_http3_client *client) {
     if (!client) return;
     if (client->engine) {
+        /* Orderly teardown: lsquic_engine_destroy() drops live connections
+         * without draining them, which leaks lsquic-internal per-connection
+         * state (QPACK decoder header-in buffers, bandwidth sampler).
+         * Close the connection first and pump until the engine reaps it so
+         * lsquic can release that state; h3c_on_conn_closed() NULLs
+         * client->conn once the connection is gone. */
+        if (client->conn) {
+            lsquic_conn_close(client->conn);
+            for (int i = 0; i < 100 && client->conn; ++i) h3c_process_io(client, 20);
+        }
         lsquic_engine_destroy(client->engine);
     }
     if (client->ssl_ctx) {
