@@ -766,7 +766,8 @@ TEST_TARGETS = test_worker_affinity \
  \
                test_html_component \
                test_html_response \
-               test_assets
+               test_assets \
+               test_html_parity
 
                test_http \
                test_http_stringify \
@@ -1478,6 +1479,10 @@ test_html_response: $(LIB_NAME) tests/test_html_response.c
 test_assets: $(LIB_NAME) tests/test_assets.c
 	$(CC) $(CFLAGS) -o test_assets tests/test_assets.c $(LIB_NAME) $(LIBS)
 	./test_assets
+
+test_html_parity: $(LIB_NAME) tests/test_html_parity.c tests/html_views_shared.h
+	$(CC) $(CFLAGS) -o test_html_parity tests/test_html_parity.c $(LIB_NAME) $(LIBS)
+	./test_html_parity
 
 test_http2_flow_control: $(LIB_NAME) tests/test_http2_flow_control.c
 	$(CC) $(CFLAGS) -o test_http2_flow_control tests/test_http2_flow_control.c $(LIB_NAME) $(LIBS)

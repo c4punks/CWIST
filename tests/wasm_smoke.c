@@ -12,6 +12,7 @@
 #include <cwist/core/db/sql.h>
 #include <cwist/net/http/session.h>
 #include <cwist/wasm/typedarray.h>
+#include "html_views_shared.h"
 #include <stdio.h>
 #include <string.h>
 
@@ -276,6 +277,24 @@ int main(void) {
         cwist_free(r2);
         cwist_app_destroy(app2);
         printf("wasm_smoke: session cookie verifies across WASM instances (pinned secret)\n");
+    }
+
+    /* Components, scoped CSS, page/fragment/redirect responses and a hashed
+     * asset, checked against the same bytes as the native test_html_parity. */
+    {
+        cwist_app *views = cwist_app_create();
+        if (!views || html_views_install(views) != 0) {
+            fprintf(stderr, "wasm_smoke: html views install failed\n");
+            return 20;
+        }
+        int failed = html_views_check(views);
+        html_views_teardown();
+        cwist_app_destroy(views);
+        if (failed) {
+            fprintf(stderr, "wasm_smoke: html view check %d failed\n", failed);
+            return 21;
+        }
+        printf("wasm_smoke: HTML views render the same bytes as the native build\n");
     }
 
     printf("wasm_smoke: OK\n");
