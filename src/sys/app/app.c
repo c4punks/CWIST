@@ -271,6 +271,9 @@ static bool cwist_mem_attach_entry(cwist_fix_server_mem *mem, cwist_file_t *entr
     entry->data = data;
     entry->size = st->st_size;
     entry->last_mod = st->st_mtime;
+    snprintf(entry->etag, sizeof(entry->etag), "\"%lx-%lx\"", (unsigned long)st->st_mtime,
+             (unsigned long)st->st_size);
+    cwist_http_format_date(st->st_mtime, entry->last_mod_hdr, sizeof(entry->last_mod_hdr));
     entry->node = node;
 
     mem->current_used += st->st_size;
@@ -340,6 +343,9 @@ static bool cwist_mem_refresh_file(cwist_fix_server_mem *mem, cwist_file_t *entr
     entry->node = node;
     entry->size = st->st_size;
     entry->last_mod = st->st_mtime;
+    snprintf(entry->etag, sizeof(entry->etag), "\"%lx-%lx\"", (unsigned long)st->st_mtime,
+             (unsigned long)st->st_size);
+    cwist_http_format_date(st->st_mtime, entry->last_mod_hdr, sizeof(entry->last_mod_hdr));
 
     if (mem->current_used >= old_size) {
         mem->current_used -= old_size;
@@ -357,6 +363,7 @@ static bool cwist_mem_refresh_file(cwist_fix_server_mem *mem, cwist_file_t *entr
 
 typedef struct cwist_route_entry {
     char *path;
+    size_t path_len;  ///< Cached strlen(path); immutable after insert.
     char *name;
     bool has_params;
     cwist_http_method_t method;
@@ -430,13 +437,14 @@ static bool route_has_params(const char *path) {
  * @param bucket_count Number of buckets in the route table.
  * @return Bucket index for the route.
  */
-static size_t cwist_route_hash(cwist_http_method_t method, const char *path, size_t bucket_count) {
+static size_t cwist_route_hash(cwist_http_method_t method, const char *path, size_t path_len,
+                               size_t bucket_count) {
     const unsigned long long FNV_OFFSET = 1469598103934665603ULL;
     const unsigned long long FNV_PRIME = 1099511628211ULL;
     unsigned long long hash = FNV_OFFSET ^ (unsigned long long)method;
     const unsigned char *ptr = (const unsigned char *)path;
-    while (ptr && *ptr) {
-        hash ^= (unsigned long long)(*ptr++);
+    for (size_t i = 0; i < path_len; i++) {
+        hash ^= (unsigned long long)ptr[i];
         hash *= FNV_PRIME;
     }
     return (size_t)(hash % bucket_count);
@@ -450,6 +458,7 @@ static cwist_route_entry *cwist_route_entry_create(const char *path, const char 
     cwist_route_entry *entry = (cwist_route_entry *)cwist_alloc(sizeof(cwist_route_entry));
     if (!entry) return NULL;
     entry->path = cwist_strdup(path ? path : "/");
+    entry->path_len = strlen(entry->path);
     entry->name = name ? cwist_strdup(name) : NULL;
     entry->method = method;
     entry->handler = handler;
@@ -526,7 +535,7 @@ static void cwist_route_table_insert(cwist_route_table *table, const char *path,
         return;
     }
 
-    size_t idx = cwist_route_hash(method, entry->path, table->bucket_count);
+    size_t idx = cwist_route_hash(method, entry->path, entry->path_len, table->bucket_count);
     cwist_route_entry **bucket = &table->buckets[idx];
     cwist_route_entry *curr = *bucket;
     while (curr) {
@@ -549,17 +558,13 @@ static void cwist_route_table_insert(cwist_route_table *table, const char *path,
 static cwist_route_entry *cwist_route_table_lookup(cwist_route_table *table,
                                                    cwist_http_method_t method, const char *path) {
     if (!table || !path) return NULL;
-    size_t idx = cwist_route_hash(method, path, table->bucket_count);
+    /* One scan of the path: length feeds both the hash and the compare. */
+    size_t path_len = strlen(path);
+    size_t idx = cwist_route_hash(method, path, path_len, table->bucket_count);
     cwist_route_entry *curr = table->buckets[idx];
 
-    // Tiny string optimization: if length <= 8, cast to uint64 and compare in one shot
-    // Note: We need to handle potential access beyond string end safely.
-    // However, simplest heuristic is checking length first.
-    // Actually, we can just check length.
-
-    size_t path_len = strlen(path);
     uint64_t path_u64 = 0;
-    bool use_fast_path = (path_len <= 8);
+    const bool use_fast_path = (path_len <= 8);
     if (use_fast_path) {
         memcpy(&path_u64, path, path_len); // Safe copy
     }
@@ -567,15 +572,14 @@ static cwist_route_entry *cwist_route_table_lookup(cwist_route_table *table,
     while (curr) {
         if (curr->method == method) {
             if (use_fast_path) {
-                 // Fast path check
-                size_t curr_len = strlen(curr->path);
-                if (curr_len == path_len) {
+                /* Length is cached on the entry; immutable after insert. */
+                if (curr->path_len == path_len) {
                     uint64_t curr_u64 = 0;
-                    memcpy(&curr_u64, curr->path, curr_len);
+                    memcpy(&curr_u64, curr->path, curr->path_len);
                     if (path_u64 == curr_u64) return curr;
                 }
             } else {
-                if (strcmp(curr->path, path) == 0) {
+                if (curr->path_len == path_len && memcmp(curr->path, path, path_len) == 0) {
                     return curr;
                 }
             }
@@ -1006,12 +1010,9 @@ static void cwist_static_handler(cwist_http_request *req, cwist_http_response *r
                 mime = "text/plain; charset=utf-8";
         }
 
-        // Generate cache headers
-        char etag[64];
-        snprintf(etag, sizeof(etag), "\"%lx-%lx\"", (unsigned long)file->last_mod,
-                 (unsigned long)file->size);
-        char last_mod_buf[64];
-        cwist_http_format_date(file->last_mod, last_mod_buf, sizeof(last_mod_buf));
+        // Cache headers are formatted once at load/reload time.
+        const char *etag = file->etag;
+        const char *last_mod_buf = file->last_mod_hdr;
 
         // Check conditional requests
         bool not_modified = false;

@@ -195,6 +195,8 @@ typedef struct cwist_file_t {
     void *data;       ///< Pointer to memory-tracked file contents
     size_t size;      ///< Size of the file in bytes
     time_t last_mod;  ///< Last modification time
+    char etag[40];          ///< Precomputed ETag for conditional requests
+    char last_mod_hdr[30];  ///< Precomputed HTTP-date (29 chars + NUL)
     ttak_mem_node_t *node; ///< Tracking node for libttak lifecycle
 } cwist_file_t;
 
