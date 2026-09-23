@@ -99,3 +99,7 @@ void cwist_nats_destroy(cwist_nats_t *nats) {
     }
     cwist_free(nats);
 }
+
+natsConnection *cwist_nats_native(cwist_nats_t *nats) {
+    return nats ? nats->conn : NULL;
+}
