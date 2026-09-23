@@ -341,25 +341,50 @@ Known limits going in (from PR #176 review), updated:
 
 ## v3.7 Milestone (In Progress)
 
-Theme: **Edge deployment and QUIC completion**. v3.6 took WASM from "in-tree target" to "usable from JavaScript"; v3.7 takes it to "deployable on edge runtimes" (WASI), brings WebTransport to the stable line once its upstream dependency lands, folds the HTTP/3 connection-close correctness wave into the release pin, and lands three ecosystem items — gRPC server compression, GraphQL subscriptions, and persistent job backends — as experimental support. Tracked in issue #201.
+Theme: **the last experimental train before v4 stabilization**. v3.6 took
+WASM from "in-tree target" to "usable from JavaScript"; v3.7 is the final
+3.x minor and the last release where new or experimental capability may
+land. Everything experimental rides here first — behind flags, documented
+as experimental — so v4.0 (the first stable, production-compatible line)
+can freeze features and spend its entire cycle on stabilization, semver
+commitments, and soak-driven promotion decisions instead of new surface.
+Broadening v3.7 is deliberate: v4.0 is the narrow one. Tracked in issue
+#201.
+
+Entry criteria for anything joining v3.7 after this retheme: shipped
+behind a flag or clearly marked experimental in the docs, revertible, and
+with a named v4.0 promotion decision (default-on, supported, or removed).
+The release-window rule is unchanged: v3.7 ships on schedule, and what is
+not ready slips — scope grows only by pulling validation forward, never by
+delaying the cut.
 
 * **Phase 1: WASI edge deployment** (from 🔮 "Serverless / WASM Runtime"):
   * ~~Promote the WASI 0.2 (`wasm32-wasip2`) socket server from experimental to supported: CI gate (build + wasmtime `wasi:sockets` smoke, mirroring `wasip2-smoke`), and reframe `docs/api/wasi.md` from evaluation to reference documentation~~ (done — `wasip2` job in `.github/workflows/wasm.yml`; `docs/api/wasi.md` reframed to reference).
   * ~~Edge persistence pattern: `cwist_db_serialize()` / `cwist_db_open_memory()` round trip against a host KV-style store, with an example app~~ (done — `example/wasip2-kv/` round-trips the blob through a preopened dir; `smoke.sh` proves it survives a wasmtime restart).
-  * ~~Deployment examples and guides for at least one edge runtime (Cloudflare Workers or a wasmtime appliance setup)~~ (done - [Wasmtime appliance guide](docs/deployment/wasmtime-appliance.md): isolated state, restart verification, backup, and rollback; production limitations documented).
-  * ~~WASM streaming producer API: response bodies generated chunk-by-chunk inside handlers — the "not covered (yet)" item from `docs/api/wasm.md` (boundary streaming shipped in v3.6 buffers the body in the app; this closes the gap)~~ (done — `cwist_http_response_stream_begin/write/end`; immediate per-chunk delivery under `cwist_app_dispatch_stream()`, buffered chunked serialization under `cwist_app_dispatch_memory()`; `test_stream_producer`).
-  * Component experiment (toward replacing the Emscripten bundle, tracked separately): define the WIT world for the JS dispatch boundary (`wit/`), validate it in CI, and spike a jco-transpiled browser bundle running the existing wasm smoke suite alongside the Emscripten build. Emscripten stays the supported browser path for the whole of v3.7; the swap happens only after the WASI 0.3 world stabilizes.
-  * Retire the WASI preview1 target (`wasi-smoke`): 0.2 covers its use, and three flavors cost more than they earn.
+  * ~~Deployment examples and guides for at least one edge runtime (Cloudflare Workers or a wasmtime appliance setup)~~ (done — [Wasmtime appliance guide](docs/deployment/wasmtime-appliance.md): isolated state, restart verification, backup, and rollback; production limitations documented).
+  * ~~WASM streaming producer API~~ (done — `cwist_http_response_stream_begin/write/end`; immediate per-chunk delivery under `cwist_app_dispatch_stream()`, buffered chunked serialization under `cwist_app_dispatch_memory()`; `test_stream_producer`).
+  * ~~Component experiment (toward replacing the Emscripten bundle)~~ (done, beyond the original ask — WIT world validated in CI, jco guests over preview2-shim and preview3-shim under JSPI, browser-bundle packaging gate, and the async `host.send-chunk` streaming world; see `docs/api/wasm-component.md`. The Emscripten swap itself remains gated on WASI 0.3 stabilization and unflagged JSPI — a v4.0 decision, not a v3.7 one).
+  * ~~Retire the WASI preview1 target (`wasi-smoke`)~~ (done — target, archive rule, smoke source, CI reference, and docs removed; 0.2 covers its use).
 * **Phase 2: WebTransport on the stable line** (conditional on upstream, issue #17):
-  * Trigger condition: LSQUIC PR #629 (WebTransport) merges to upstream lsquic master.  If it has not merged by the release window, this phase slips — v3.7 ships without WebTransport rather than pinning `main` to a topic branch again.
-  * Re-pin `lib/lsquic` to upstream master with WebTransport included; port the dev-branch WebTransport server and native C client to `main` with interop and soak coverage.
-* **Phase 3: HTTP/3 client correctness**:
-  * Track the lsquic connection-close fixes upstream (triggering-frame-type population, connection-close packet number space selection and pre-handshake fallback) and fold them into the release-line `lib/lsquic` pin at the next re-pin.
-  * Add connection-close interop coverage on the CWIST side so the behavior stays pinned by tests.
+  * Trigger condition: LSQUIC PR #629 (WebTransport) merges to upstream lsquic master. If it has not merged by the release window, this phase slips — v3.7 ships without WebTransport rather than pinning `main` to a topic branch again. The scope retheme does not relax this rule.
+  * Re-pin `lib/lsquic` to upstream master with WebTransport included; port the dev-branch WebTransport server and native C client to the release line with interop and soak coverage.
+* **Phase 3: HTTP/3 connection-close correctness**:
+  * Track the lsquic connection-close fixes upstream (triggering-frame-type population, connection-close packet number space selection and pre-handshake fallback) and fold them into the release-line `lib/lsquic` pin at the next re-pin. Status (2026-09-23): none of the three are in the pinned fork or in upstream master (v4.10.0) — blocked on lsquic, not CWIST.
+  * ~~Add connection-close coverage on the CWIST side so the behavior stays pinned by tests~~ (CWIST-side half done — received CONNECTION_CLOSE is recorded via `on_conncloseframe_received` and exposed through `cwist_http3_last_close_error()`; `test_http3` Test 12 pins the peer-abort close path over a real QUIC handshake. An h3spec-style interop gate waits for the lsquic re-pin).
 * **Phase 4: ecosystem experimental support** (shipped behind flags, documented as experimental):
   * gRPC server-side response compression.
   * GraphQL subscriptions over the v3.6 non-blocking WebSocket transport.
   * Persistent job backends: a durable queue over the existing Redis/NATS clients, separate from the in-process scheduler queue.
+* **Phase 5: pre-v4 experimental promotion** (new under this retheme — give the dev-only experiments a release-line soak so v4.0 can decide their fate with data):
+  * Memory management: full-GC (`CWIST_DEFER_FREE`, EBR path, thread/process-exit sweep) and header-scoped malloc interception (`CWIST_INTERCEPT_MALLOC`) documented as one experimental support tier, with a named v4.0 decision per item (default-on, opt-in, or removed).
+  * `CWIST_PROFILE` presets and the C1M baseline work: confirm the preset matrix is the v4.0 default story or trim it.
+  * The env-gated per-event latency probe and HTTP batch shed metrics: promote, hide, or drop.
+  * Each item needs: experimental docs, a revert path, and the promotion decision recorded here before v4.0 cuts.
+
+**v4.0 preview (what the narrowed release looks like):** feature freeze at
+cut; no new public API after v3.7; semver commitment begins; deprecated
+APIs and flags resolved (promoted or removed); stabilization-only —
+correctness, soak, docs, and the promotion decisions Phase 5 queued up.
 
 ---
 
