@@ -131,8 +131,10 @@ void cwist_css_scope_init(cwist_css_scope *scope, const char *component_name);
  * rule. Repeated calls with the same base class return the same pointer.
  *
  * @param scope Initialised scope.
- * @param base_class CSS identifier: starts with a letter, '_' or '-' followed
- *                   by a letter or '_', then letters, digits, '_' or '-'.
+ * @param base_class ASCII CSS identifier: a letter or '_', optionally after
+ *                   one leading '-', then letters, digits, '_' or '-'. This
+ *                   is a strict subset of the CSS grammar: escapes, non-ASCII
+ *                   characters and "--" custom-property names are rejected.
  * @return Scope-owned string valid until cwist_css_scope_destroy(), or NULL
  *         for an invalid identifier or on allocation failure.
  */
@@ -147,7 +149,12 @@ const char *cwist_css_scope_class(cwist_css_scope *scope, const char *base_class
  * @param scope Initialised scope.
  * @param base_class CSS identifier, same rules as cwist_css_scope_class().
  * @param declarations Declaration block body, e.g. "padding: 4px; color: red;".
- *                     Must not contain '{', '}' or '<'.
+ *                     Treated as trusted, application-authored CSS and
+ *                     emitted verbatim. '<' is rejected so the output can never
+ *                     end an enclosing <style> element; '{' and '}' are
+ *                     rejected to catch nested blocks. Nothing else is
+ *                     checked: an unterminated comment or string can still
+ *                     affect later rules, so do not pass untrusted input.
  * @return 0 on success, -1 on invalid arguments or allocation failure.
  */
 int cwist_css_scope_add_rule(cwist_css_scope *scope, const char *base_class,
@@ -168,7 +175,8 @@ cwist_sstring *cwist_css_scope_generate_stylesheet(const cwist_css_scope *scope)
  * @brief Release everything the scope owns and reset it to an empty state.
  *
  * Pointers returned by cwist_css_scope_class() become invalid. Calling it
- * again on the same scope is harmless.
+ * again on the same scope is harmless. A destroyed (or zero-initialised)
+ * scope rejects new classes and rules until cwist_css_scope_init() is called.
  *
  * @param scope Scope to release. NULL is ignored.
  */

@@ -3,8 +3,8 @@
 *Headers:* `<cwist/core/html/component.h>`, `<cwist/core/html/css_composer.h>`
 
 Components are named render functions over the element builder in
-`<cwist/core/html/builder.h>`. A CSS scope hands out collision-safe class names
-for one component and emits the rules for the classes that were actually used.
+`<cwist/core/html/builder.h>`. A CSS scope hands out class names specific to
+one component and emits the rules for the classes that were actually used.
 Both are plain C with no socket or thread dependencies and are part of the WASM
 build.
 
@@ -67,9 +67,9 @@ different prefork workers. It is not a security boundary, and two component
 names can in principle share a suffix.
 
 `cwist_css_scope_destroy()` frees everything, invalidates all returned class
-names, and leaves the scope empty; calling it twice is harmless. A destroyed or
-zero-initialised scope rejects new classes until `cwist_css_scope_init()` is
-called again.
+names, and leaves the scope empty. Calling it twice is harmless. A destroyed or
+zero-initialised scope rejects new classes and rules until
+`cwist_css_scope_init()` is called again.
 
 ### `cwist_css_scope_class`
 ```c
@@ -77,8 +77,10 @@ const char *cwist_css_scope_class(cwist_css_scope *scope, const char *base_class
 ```
 Returns the scoped name (`"btn"` -> `"btn-a1b2c3d4"`) and marks the class as
 used. The same base class always returns the same pointer, owned by the scope.
-`base_class` must be a simple CSS identifier: a letter or `_` (optionally after
-one leading `-`), then letters, digits, `_` or `-`. Anything else returns NULL.
+`base_class` must be a plain ASCII identifier: a letter or `_` (optionally after
+one leading `-`), then letters, digits, `_` or `-`. This is a deliberate subset
+of the CSS identifier grammar: escapes, non-ASCII characters and `--` names are
+rejected. Anything else returns NULL.
 
 ### `cwist_css_scope_add_rule`
 ```c
@@ -86,9 +88,14 @@ int cwist_css_scope_add_rule(cwist_css_scope *scope, const char *base_class,
                              const char *declarations);
 ```
 Attaches a declaration block body to a class, replacing any earlier one.
-Returns 0 on success, -1 on invalid input or allocation failure. Declarations
-containing `{`, `}` or `<` are rejected so a rule cannot close itself early or
-end an enclosing `<style>` element.
+Returns 0 on success, -1 on invalid input or allocation failure.
+
+Declarations are trusted, application-authored CSS and are emitted verbatim.
+Two characters are checked. `<` is rejected, so the generated stylesheet can
+never end an enclosing `<style>` element. `{` and `}` are rejected to catch
+nested blocks. Nothing else is validated: an unterminated comment or string
+can still affect the rules after it. Do not build declarations from untrusted
+input.
 
 ### `cwist_css_scope_generate_stylesheet`
 ```c
@@ -97,7 +104,8 @@ cwist_sstring *cwist_css_scope_generate_stylesheet(const cwist_css_scope *scope)
 Emits `.<scoped> { <declarations> }` for each class that was both requested with
 `cwist_css_scope_class()` and given a rule, in the order the scope first saw
 each class. Rules for classes that were never requested are left out. The
-caller destroys the returned string.
+caller destroys the returned string. NULL is returned when `scope` is NULL or
+an allocation fails, never a partial stylesheet.
 
 Only plain class selectors are generated; pseudo-classes, descendant selectors
 and media queries are not covered by the scope API.
