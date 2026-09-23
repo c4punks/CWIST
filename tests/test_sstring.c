@@ -194,6 +194,100 @@ void test_html_escape() {
     printf("Passed html escape.\n");
 }
 
+void test_growth() {
+    printf("Testing geometric growth...\n");
+    cwist_sstring *s = cwist_sstring_create();
+    assert(s != NULL);
+
+    /* Small appends keep amortized O(n): capacity must double, not exact-fit. */
+    cwist_error_t err = cwist_sstring_append(s, "abc");
+    assert(err.error.err_i8 == ERR_SSTRING_OKAY);
+    assert(s->size == 3);
+    size_t first_cap = s->capacity;
+    assert(first_cap >= 3);
+
+    err = cwist_sstring_append(s, "def");
+    assert(err.error.err_i8 == ERR_SSTRING_OKAY);
+    assert(strcmp(s->data, "abcdef") == 0);
+    assert(s->capacity >= first_cap); /* no shrink on append */
+
+    /* Chained appends must stay within the doubled buffer until it fills. */
+    char *before = s->data;
+    err = cwist_sstring_append(s, "ghi");
+    assert(err.error.err_i8 == ERR_SSTRING_OKAY);
+    assert(s->data == before); /* 9 bytes fit the initial capacity */
+    assert(strcmp(s->data, "abcdefghi") == 0);
+
+    /* Many small appends produce the exact concatenation. */
+    cwist_sstring *acc = cwist_sstring_create();
+    for (int i = 0; i < 1000; i++) {
+        err = cwist_sstring_append_len(acc, "x", 1);
+        assert(err.error.err_i8 == ERR_SSTRING_OKAY);
+    }
+    assert(acc->size == 1000);
+    assert(acc->capacity >= 1000);
+    assert(acc->data[999] == 'x' && acc->data[1000] == '\0');
+
+    /* Large single append grows past the current capacity in one realloc. */
+    char *big = malloc(5000);
+    memset(big, 'y', 5000);
+    err = cwist_sstring_append_len(acc, big, 5000);
+    assert(err.error.err_i8 == ERR_SSTRING_OKAY);
+    assert(acc->size == 6000);
+    assert(acc->data[999] == 'x' && acc->data[1000] == 'y' && acc->data[5999] == 'y');
+    free(big);
+
+    /* Assign replaces contents and the NUL stays in bounds. */
+    err = cwist_sstring_assign(acc, "short");
+    assert(err.error.err_i8 == ERR_SSTRING_OKAY);
+    assert(strcmp(acc->data, "short") == 0);
+
+    /* Borrowed buffers detach with geometric headroom on first mutation. */
+    cwist_sstring_borrow(acc, "borrowed", 8);
+    assert(acc->borrows_buffer == true);
+    assert(acc->capacity == 0);
+    err = cwist_sstring_append(acc, "!");
+    assert(err.error.err_i8 == ERR_SSTRING_OKAY);
+    assert(strcmp(acc->data, "borrowed!") == 0);
+    assert(acc->borrows_buffer == false);
+    assert(acc->capacity >= 9);
+
+    cwist_sstring_destroy(s);
+    cwist_sstring_destroy(acc);
+    printf("Passed geometric growth.\n");
+}
+
+void test_adopt_region() {
+    printf("Testing adopt_region...\n");
+    char *buf = cwist_alloc(64);
+    assert(buf != NULL);
+    memcpy(buf, "HEADERpayload", 13);
+    buf[13] = '\0';
+
+    cwist_sstring *s = cwist_sstring_create();
+    assert(s != NULL);
+    cwist_sstring_adopt_region(s, buf, 6, 7);
+    assert(strcmp(s->data, "payload") == 0);
+    assert(s->size == 7);
+
+    /* Growth must realloc the base and keep viewing the same region. */
+    for (int i = 0; i < 100; i++) {
+        cwist_error_t err = cwist_sstring_append_len(s, "0123456789", 10);
+        assert(err.error.err_i8 == ERR_SSTRING_OKAY);
+    }
+    assert(s->size == 1007);
+    assert(strncmp(s->data, "payload", 7) == 0);
+    assert(s->data[1006] == '9' && s->data[1007] == '\0');
+
+    /* Reassign releases the base exactly once. */
+    cwist_error_t err = cwist_sstring_assign(s, "done");
+    assert(err.error.err_i8 == ERR_SSTRING_OKAY);
+    assert(strcmp(s->data, "done") == 0);
+
+    cwist_sstring_destroy(s);
+    printf("Passed adopt_region.\n");
+}
+
 int main() {
     test_trim();
     test_resize();
@@ -202,6 +296,8 @@ int main() {
     test_substr();
     test_sstring_ops();
     test_html_escape();
+    test_growth();
+    test_adopt_region();
     printf("All tests passed!\n");
     return 0;
 }

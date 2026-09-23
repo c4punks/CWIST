@@ -588,13 +588,19 @@ static cwist_route_entry *cwist_route_table_lookup(cwist_route_table *table,
 static cwist_route_entry *cwist_route_table_match_params(cwist_route_table *table,
                                                          cwist_http_request *req) {
     if (!table || !req || !req->path || !req->path->data) return NULL;
-    if (!req->path_params) {
-        req->path_params = cwist_query_map_create();
-    }
     cwist_route_entry *curr = table->param_routes;
     while (curr) {
         if (curr->method == req->method) {
-            if (match_path(curr->path, req->path->data, req->path_params)) {
+            if (!req->path_params) {
+                /* Probe without capturing: no heap alloc, no map clearing per
+                 * candidate. Only a confirmed match pays for the params map. */
+                if (match_path(curr->path, req->path->data, NULL)) {
+                    req->path_params = cwist_query_map_create();
+                    if (!req->path_params) return NULL;
+                    match_path(curr->path, req->path->data, req->path_params);
+                    return curr;
+                }
+            } else if (match_path(curr->path, req->path->data, req->path_params)) {
                 return curr;
             }
         }
@@ -2141,31 +2147,40 @@ void cwist_app_ws_opt(cwist_app *app, const char *path, cwist_ws_handler_func ha
 }
 
 static bool match_path(const char *pattern, const char *actual, cwist_query_map *params) {
-    char p[256], a[256];
-    strncpy(p, pattern, 255);
-    strncpy(a, actual, 255);
-    p[255] = a[255] = '\0';
-
     if (params) {
         cwist_query_map_clear(params);
     }
 
-    char *saveptr_p, *saveptr_a;
-    char *tok_p = strtok_r(p, "/", &saveptr_p);
-    char *tok_a = strtok_r(a, "/", &saveptr_a);
+    const char *p = pattern;
+    const char *a = actual;
+    for (;;) {
+        while (*p == '/') p++;
+        while (*a == '/') a++;
+        if (*p == '\0' || *a == '\0') return *p == '\0' && *a == '\0';
 
-    while (tok_p && tok_a) {
-        if (tok_p[0] == ':') {
-            // Path Parameter
-            cwist_query_map_set(params, tok_p + 1, tok_a);
-        } else if (strcmp(tok_p, tok_a) != 0) {
+        const char *p_slash = strchr(p, '/');
+        const size_t p_len = p_slash ? (size_t)(p_slash - p) : strlen(p);
+        const char *a_slash = strchr(a, '/');
+        const size_t a_len = a_slash ? (size_t)(a_slash - a) : strlen(a);
+
+        if (p[0] == ':') {
+            if (params) {
+                char key[256], val[256];
+                const size_t klen = (p_len - 1 < 255) ? p_len - 1 : 255;
+                const size_t vlen = (a_len < 255) ? a_len : 255;
+                memcpy(key, p + 1, klen);
+                key[klen] = '\0';
+                memcpy(val, a, vlen);
+                val[vlen] = '\0';
+                cwist_query_map_set(params, key, val);
+            }
+        } else if (p_len != a_len || memcmp(p, a, p_len) != 0) {
             return false;
         }
-        tok_p = strtok_r(NULL, "/", &saveptr_p);
-        tok_a = strtok_r(NULL, "/", &saveptr_a);
-    }
 
-    return tok_p == NULL && tok_a == NULL;
+        p += p_len;
+        a += a_len;
+    }
 }
 
 static cwist_route_entry *cwist_route_table_find_by_name(cwist_route_table *table,
