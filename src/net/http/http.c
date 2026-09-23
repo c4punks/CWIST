@@ -1903,13 +1903,32 @@ static size_t serialize_headers(cwist_http_response *res, char *buf, size_t buf_
         if (reason) status_txt = reason;
     }
     if (!status_txt) status_txt = "OK";
-    if (offset < buf_size) {
-        int n = snprintf(buf + offset, buf_size - offset, "%s %d %s\r\n",
-                         res->version->data ? res->version->data : "HTTP/1.1", res->status_code,
-                         status_txt);
-        if (n > 0) {
-            offset += n;
-            if (offset > buf_size) offset = buf_size;
+    /* Hand-rolled status line (version SP code SP reason CRLF): snprintf
+     * here showed up hot because every non-fast-path response pays it. */
+    {
+        const char *version =
+            (res->version && res->version->data) ? res->version->data : "HTTP/1.1";
+        const size_t vlen = strlen(version);
+        const size_t rlen = strlen(status_txt);
+        unsigned int code = (unsigned int)res->status_code;
+        char code_buf[10];
+        char *cp = code_buf + sizeof(code_buf);
+        do {
+            *--cp = (char)('0' + (code % 10));
+            code /= 10;
+        } while (code > 0);
+        const size_t code_len = (size_t)(code_buf + sizeof(code_buf) - cp);
+        if (offset + vlen + 1 + code_len + 1 + rlen + 2 <= buf_size) {
+            memcpy(buf + offset, version, vlen);
+            offset += vlen;
+            buf[offset++] = ' ';
+            memcpy(buf + offset, cp, code_len);
+            offset += code_len;
+            buf[offset++] = ' ';
+            memcpy(buf + offset, status_txt, rlen);
+            offset += rlen;
+            buf[offset++] = '\r';
+            buf[offset++] = '\n';
         }
     }
 
