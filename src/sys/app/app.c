@@ -7,6 +7,7 @@
 #if defined(__linux__) && defined(_GNU_SOURCE)
 #include "worker_affinity.h"
 #endif
+#include "assets_internal.h"
 #include <cwist/sys/app/app.h>
 #include <cwist/sys/app/config.h>
 #include <cwist/sys/app/logger.h>
@@ -1416,6 +1417,8 @@ void cwist_app_destroy(cwist_app *app) {
     if (app->bdr_ctx) {
         cwist_bdr_destroy(app->bdr_ctx);
     }
+    cwist_assets_destroy(app->assets);
+    app->assets = NULL;
 
 #if !defined(__EMSCRIPTEN__) && !defined(__wasi__)
     if (app->nuke_enabled) {
@@ -2465,6 +2468,14 @@ int cwist_app_dispatch_stream(cwist_app *app, const char *req_buf, size_t req_le
 }
 
 // Internal Router Logic
+/**
+ * @brief Serve a content-hashed in-memory asset resolved by cwist_assets_match().
+ */
+static void cwist_asset_handler(cwist_http_request *req, cwist_http_response *res) {
+    mw_executor_ctx *ctx = (mw_executor_ctx *)req->private_data;
+    cwist_assets_respond(req, res, ctx ? (const cwist_asset_match *)ctx->handler_data : NULL);
+}
+
 static void internal_route_handler(cwist_app *app, cwist_http_request *req,
                                    cwist_http_response *res) {
     if (!req || !app || !app->router) return;
@@ -2553,6 +2564,16 @@ static void internal_route_handler(cwist_app *app, cwist_http_request *req,
         req->endpoint_opts = found_route->opts ? found_route->opts : CWIST_ENDPOINT_DEFAULT;
         if (res) res->endpoint_opts = req->endpoint_opts;
         execute_chain(app, req, res, found_route->handler, NULL);
+        return;
+    }
+
+    /* In-memory assets need no filesystem, so unlike static directories they
+     * are served on WASM hosts too. */
+    cwist_asset_match asset_match = {0};
+    if (cwist_assets_match(app, req, &asset_match)) {
+        req->endpoint_opts = CWIST_ENDPOINT_FILE;
+        if (res) res->endpoint_opts = req->endpoint_opts;
+        execute_chain(app, req, res, cwist_asset_handler, &asset_match);
         return;
     }
 
@@ -3554,6 +3575,10 @@ static cwist_app *cwist_app_clone_for_multiport(cwist_app *src) {
     dst->middlewares = cwist_middleware_clone(src->middlewares);
     dst->error_handlers = cwist_error_handlers_clone(src->error_handlers);
     dst->static_dirs = cwist_static_dirs_clone(src->static_dirs);
+    if (cwist_assets_clone(&dst->assets, src->assets) != 0) {
+        cwist_app_destroy(dst);
+        return NULL;
+    }
     if (cwist_grpc_routes_clone(dst, src) != 0) {
         cwist_app_destroy(dst);
         return NULL;
