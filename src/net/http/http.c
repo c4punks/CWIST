@@ -2680,6 +2680,20 @@ static cwist_file_begin_result_t cwist_http_file_begin(int client_fd, cwist_http
                                                        cwist_http_async_conn_t *conn,
                                                        bool keep_alive, bool defer,
                                                        cwist_async_send_status_t *status_out) {
+#if !defined(__linux__)
+    /* The non-blocking burst below relies on Linux sendfile(2) and dup(2).
+     * Elsewhere (macOS/BSD sendfile has a different signature; Emscripten and
+     * WASI have neither) nothing has been sent yet, so let the caller use the
+     * bounded-blocking path, like http_park_streamed_body() does. */
+    (void)client_fd;
+    (void)res;
+    (void)reactor;
+    (void)conn;
+    (void)keep_alive;
+    (void)defer;
+    (void)status_out;
+    return CWIST_FILE_BEGIN_FALLBACK;
+#else
     char header_buf[CWIST_HTTP_MAX_HEADER_SIZE];
     size_t header_len = serialize_headers(res, header_buf, sizeof(header_buf));
 
@@ -2783,6 +2797,7 @@ static cwist_file_begin_result_t cwist_http_file_begin(int client_fd, cwist_http
         }
     }
     return CWIST_FILE_BEGIN_HANDLED;
+#endif
 }
 
 void cwist_http_async_send_response(int client_fd, cwist_http_response *res,
