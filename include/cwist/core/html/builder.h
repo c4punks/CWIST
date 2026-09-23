@@ -72,6 +72,10 @@ void cwist_html_element_add_child(cwist_html_element_t *el, cwist_html_element_t
 
 /**
  * @brief Render the element tree to an HTML string.
+ *
+ * Void elements (area, base, br, col, embed, hr, img, input, link, meta,
+ * source, track, wbr; any letter case) are written as a start tag only: they
+ * get no end tag, and text or children attached to them are not rendered.
  */
 cwist_sstring *cwist_html_render(cwist_html_element_t *el);
 

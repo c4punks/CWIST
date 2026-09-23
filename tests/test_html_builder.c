@@ -88,11 +88,38 @@ void test_nested_children_and_null_safety(void) {
     printf("Passed test_nested_children_and_null_safety\n");
 }
 
+void test_void_elements(void) {
+    cwist_html_element_t *head = cwist_html_element_create("head");
+    cwist_html_element_t *meta = cwist_html_element_create("meta");
+    cwist_html_element_add_attr(meta, "charset", "utf-8");
+    cwist_html_element_add_child(head, meta);
+    cwist_html_element_t *link = cwist_html_element_create("LINK");
+    cwist_html_element_add_attr(link, "rel", "stylesheet");
+    /* Content given to a void element is not rendered (but still freed). */
+    cwist_html_element_set_text(link, "ignored");
+    cwist_html_element_add_child(link, cwist_html_element_create("span"));
+    cwist_html_element_add_child(head, link);
+    cwist_html_element_add_child(head, cwist_html_element_create("br"));
+    /* Names that merely start or end like a void element are normal. */
+    cwist_html_element_add_child(head, cwist_html_element_create("brx"));
+    cwist_html_element_add_child(head, cwist_html_element_create("imgs"));
+    cwist_html_element_add_child(head, cwist_html_element_create("b"));
+
+    cwist_sstring *rendered = cwist_html_render(head);
+    assert(rendered != NULL && rendered->data != NULL);
+    assert(strcmp(rendered->data, "<head><meta charset=\"utf-8\"><LINK rel=\"stylesheet\"><br>"
+                                  "<brx></brx><imgs></imgs><b></b></head>") == 0);
+    cwist_sstring_destroy(rendered);
+    cwist_html_element_destroy(head);
+    printf("Passed test_void_elements\n");
+}
+
 int main(void) {
     test_basic_element();
     test_attribute_escaping();
     test_boolean_and_numeric_attributes();
     test_nested_children_and_null_safety();
+    test_void_elements();
     printf("All HTML builder tests passed!\n");
     return 0;
 }
