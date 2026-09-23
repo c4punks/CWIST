@@ -7,6 +7,7 @@
 #if defined(__linux__) && defined(_GNU_SOURCE)
 #include "worker_affinity.h"
 #endif
+#include "assets_internal.h"
 #include <cwist/sys/app/app.h>
 #include <cwist/sys/app/config.h>
 #include <cwist/sys/app/logger.h>
@@ -1361,6 +1362,8 @@ void cwist_app_destroy(cwist_app *app) {
     if (app->bdr_ctx) {
         cwist_bdr_destroy(app->bdr_ctx);
     }
+    cwist_assets_destroy(app->assets);
+    app->assets = NULL;
 
 #if !defined(__EMSCRIPTEN__) && !defined(__wasi__)
     if (app->nuke_enabled) {
@@ -2457,23 +2460,6 @@ static void cwist_asset_handler(cwist_http_request *req, cwist_http_response *re
     cwist_assets_respond(req, res, ctx ? (const cwist_asset_match *)ctx->handler_data : NULL);
 }
 
-/* Final handler for cwist_app_*_ex() routes: execute_route() passes the route
- * entry as handler_data, which the middleware executor keeps reachable. */
-static void cwist_route_ex_handler(cwist_http_request *req, cwist_http_response *res) {
-    mw_executor_ctx *ctx = (mw_executor_ctx *)req->private_data;
-    cwist_route_entry *route = ctx ? (cwist_route_entry *)ctx->handler_data : NULL;
-    if (route && route->handler_ex) route->handler_ex(route->user_ctx, req, res);
-}
-
-static void execute_route(cwist_app *app, cwist_http_request *req, cwist_http_response *res,
-                          cwist_route_entry *route) {
-    if (route->handler_ex) {
-        execute_chain(app, req, res, cwist_route_ex_handler, route);
-    } else {
-        execute_chain(app, req, res, route->handler, NULL);
-    }
-}
-
 static void internal_route_handler(cwist_app *app, cwist_http_request *req,
                                    cwist_http_response *res) {
     if (!req || !app || !app->router) return;
@@ -2663,6 +2649,16 @@ void cwist_app_http_handler(int client_fd, void *ctx) {
         req->endpoint_opts = found_route->opts ? found_route->opts : CWIST_ENDPOINT_DEFAULT;
         if (res) res->endpoint_opts = req->endpoint_opts;
         execute_route(app, req, res, found_route);
+        return;
+    }
+
+    /* In-memory assets need no filesystem, so unlike static directories they
+     * are served on WASM hosts too. */
+    cwist_asset_match asset_match = {0};
+    if (cwist_assets_match(app, req, &asset_match)) {
+        req->endpoint_opts = CWIST_ENDPOINT_FILE;
+        if (res) res->endpoint_opts = req->endpoint_opts;
+        execute_chain(app, req, res, cwist_asset_handler, &asset_match);
         return;
     }
 
