@@ -184,6 +184,7 @@ SRCS = src/core/sstring/sstring.c \
        src/net/http/http.c \
        src/net/http/sse.c \
        src/net/graphql/graphql.c \
+       src/net/graphql/graphql_ws.c \
        src/net/http/http2.c \
        src/net/http/http2_flow_control.c \
        src/net/http/http3.c \
@@ -763,6 +764,7 @@ TEST_TARGETS = test_worker_affinity \
                test_healthz \
                test_json_builder \
                test_flash \
+               test_graphql_subscriptions \
                test_html_component \
                test_html_response \
                test_assets \
@@ -1336,6 +1338,10 @@ test_sse: $(LIB_NAME) tests/test_sse.c
 test_graphql: $(LIB_NAME) tests/test_graphql.c
 	$(CC) $(CFLAGS) -o test_graphql tests/test_graphql.c $(LIB_NAME) $(LIBS)
 	./test_graphql
+
+test_graphql_subscriptions: $(LIB_NAME) tests/test_graphql_subscriptions.c
+	$(CC) $(CFLAGS) -o test_graphql_subscriptions tests/test_graphql_subscriptions.c $(LIB_NAME) $(LIBS)
+	./test_graphql_subscriptions
 
 test_core_hardening: $(LIB_NAME) tests/test_core_hardening.c
 	$(CC) $(CFLAGS) -o test_core_hardening tests/test_core_hardening.c $(LIB_NAME) $(LIBS)

@@ -37,4 +37,25 @@ bool cwist_websocket_async_attach(int fd, cwist_reactor_t *reactor,
                                   cwist_ws_on_message_t on_message, void *user_data,
                                   const uint8_t *initial, size_t initial_len);
 
+/**
+ * @brief Attach variant that reports the connection handle and teardown.
+ *
+ * Identical to cwist_websocket_async_attach() plus an optional on_close hook
+ * invoked exactly once on the reactor thread at final teardown (before the
+ * connection state is freed), and a return value exposing the handle to the
+ * caller.
+ *
+ * @return Connection handle on success, NULL on failure (fd closed and all
+ *         state freed before returning).
+ */
+cwist_websocket_async *cwist_websocket_async_attach_ex(int fd, cwist_reactor_t *reactor,
+                                                       cwist_ws_on_message_t on_message,
+                                                       cwist_ws_on_close_t on_close,
+                                                       void *user_data, const uint8_t *initial,
+                                                       size_t initial_len);
+
+/** Close with a specific status code (e.g. graphql-ws 4400-4429 range) on the
+ *  wire, mirroring cwist_websocket_async_close() teardown semantics. */
+void cwist_websocket_async_close_code(cwist_websocket_async *ws, uint16_t code);
+
 #endif

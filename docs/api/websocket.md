@@ -92,3 +92,39 @@ void cwist_websocket_async_close(cwist_websocket_async *ws);
 Initiates the close handshake without blocking. Queues a CLOSE frame and
 schedules connection cleanup. Safe to call from inside the `on_message`
 callback; `NULL` is ignored.
+
+## GraphQL subscriptions (graphql-ws) — EXPERIMENTAL
+
+> v3.7 Phase 4 experimental feature. The API and wire behavior may change
+> without notice; the feature is opt-in only and changes no existing behavior
+> when unused.
+
+`cwist/graphql_ws.h` implements the `graphql-transport-ws` subprotocol on top
+of the non-blocking WebSocket transport:
+
+- `connection_init` -> `connection_ack`; `subscribe` before init closes the
+  socket with code `4429`.
+- `subscribe {id, payload:{query,variables,operationName}}` -> one
+  `next {id, payload:{data:{...}}}` per published event, `error {id, payload:[...]}`
+  when the operation fails to start, `complete {id}` when it ends.
+- `ping`/`pong` JSON keepalive after init. Malformed traffic closes with
+  `4400`/`4401`; duplicate operation ids close with `4409`.
+
+Subscription fields are registered on an endpoint with
+`cwist_graphql_ws_add_subscription()`; the resolver returns an event source
+(`cwist_graphql_event_source_create()` + `cwist_graphql_event_source_add_topic()`).
+Application code fans events out through the in-process, thread-safe topic
+broker `cwist_graphql_publish(topic, payload)` — delivery to the wire happens
+on the owning reactor thread, so publish may be called from any thread.
+
+```c
+cwist_graphql_ws_t *gws = cwist_graphql_ws_create(schema);
+cwist_graphql_ws_add_subscription(gws, "counter", counter_subscribe, NULL);
+cwist_graphql_ws_attach(gws, upgraded_fd, reactor, NULL, 0);
+/* elsewhere, any thread: */
+cwist_graphql_publish("counter", payload); /* -> next {data:{counter: payload}} */
+```
+
+Client `complete {id}` and socket close both tear the subscription down
+without leaking. See `tests/test_graphql_subscriptions.c` for an end-to-end
+example over a socketpair-driven reactor.

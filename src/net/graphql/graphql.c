@@ -422,6 +422,62 @@ cwist_error_t cwist_graphql_execute(cwist_graphql_schema_t *schema, const char *
     return gql_error(0);
 }
 
+/* Extract the root field name and parsed arguments of a `subscription`
+ * operation.  Used by the experimental WS subscription layer
+ * (cwist/net/graphql/graphql_ws.h); not part of the query/mutation execute
+ * path.  Only the first root field is reported, matching the single-stream
+ * model of the graphql-ws broker. */
+bool cwist_graphql_parse_subscription(const char *query, const cJSON *variables, char *field_out,
+                                      size_t field_cap, cJSON **args_out) {
+    if (!query || !field_out || field_cap == 0 || !args_out) return false;
+    *args_out = NULL;
+    field_out[0] = '\0';
+
+    const char *p = skip_ws_comments(query);
+    if (strncmp(p, "subscription", 12) != 0 || gql_name_char(p[12], false)) return false;
+    p += 12;
+    p = skip_ws_comments(p);
+    /* Skip optional operation name / variable definitions until '{' (same
+     * treatment as the query/mutation keyword in cwist_graphql_execute). */
+    while (*p && *p != '{') p++;
+    if (*p != '{') return false;
+    p++;
+    p = skip_ws_comments(p);
+    if (*p == '}' || !gql_name_char(*p, true)) return false;
+
+    char token[128];
+    const char *name_start = p;
+    while (*p && gql_name_char(*p, false)) p++;
+    size_t name_len = (size_t)(p - name_start);
+    if (name_len >= sizeof(token)) name_len = sizeof(token) - 1;
+    memcpy(token, name_start, name_len);
+    token[name_len] = '\0';
+
+    p = skip_ws_comments(p);
+    if (*p == ':') { /* Alias: the resolvable name follows the alias. */
+        p++;
+        p = skip_ws_comments(p);
+        name_start = p;
+        if (!gql_name_char(*p, true)) return false;
+        while (*p && gql_name_char(*p, false)) p++;
+        name_len = (size_t)(p - name_start);
+        if (name_len >= sizeof(token)) name_len = sizeof(token) - 1;
+        memcpy(token, name_start, name_len);
+        token[name_len] = '\0';
+    }
+
+    size_t out_len = strlen(token);
+    if (out_len >= field_cap) return false;
+    memcpy(field_out, token, out_len + 1);
+
+    cJSON *errors = cJSON_CreateArray();
+    if (!errors) return false;
+    parse_arguments(p, variables, args_out, errors);
+    cJSON_Delete(errors);
+    /* *args_out stays NULL when the field carries no arguments. */
+    return true;
+}
+
 void cwist_graphql_serve(cwist_graphql_schema_t *schema, cwist_http_request *req,
                          cwist_http_response *res) {
     if (!schema || !req || !res || req->method != CWIST_HTTP_POST) {
