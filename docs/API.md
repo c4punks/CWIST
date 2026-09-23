@@ -13,6 +13,7 @@ function signature.
 *   **[Query & URI](api/query.md)**: Query string parsing and URI utilities.
 *   **[SString](api/sstring.md)**: Safe dynamic string manipulation.
 *   **[JSON](api/json.md)**: JSON building and healing helpers.
+*   **[HTML Components](api/html.md)**: Reusable HTML render units and component-scoped CSS.
 *   **[Middleware](api/middleware.md)**: Middleware pipeline and built-ins.
 *   **[WebSocket](api/websocket.md)**: WebSocket upgrade and framing.
 

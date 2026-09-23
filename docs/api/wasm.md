@@ -33,7 +33,8 @@ Socket-independent subsystems only:
 - `sstring`, arena and allocator, siphash
 - JSON (`json_builder`, `json_heal`, cJSON)
 - Validation (`zod`, `validation/bind`)
-- Templates and HTML (`template`, `html/builder`, `html/css_composer`)
+- Templates and HTML (`template`, `html/builder`, `html/component`,
+  `html/css_composer`)
 - `cwist_db` (SQLite) including `cwist_db_open_memory()` and
   `cwist_db_serialize()` for blob-shaped databases
 
