@@ -136,6 +136,24 @@ void cwist_html_element_add_child(cwist_html_element_t *el, cwist_html_element_t
 }
 
 /**
+ * @brief Whether `tag` is an HTML void element, which has no end tag and no
+ *        content (HTML Living Standard, "void elements").
+ */
+static bool is_void_element(const char *tag) {
+    static const char *const void_tags[] = {"area",  "base", "br",   "col",    "embed", "hr", "img",
+                                            "input", "link", "meta", "source", "track", "wbr"};
+    for (size_t i = 0; i < sizeof(void_tags) / sizeof(void_tags[0]); i++) {
+        const char *a = tag, *b = void_tags[i];
+        while (*a && (*a | 0x20) == *b) {
+            a++;
+            b++;
+        }
+        if (*a == '\0' && *b == '\0') return true;
+    }
+    return false;
+}
+
+/**
  * @brief Serialise a node and its descendants into an output buffer.
  * @param el Current element being rendered.
  * @param out Destination buffer that receives generated markup.
@@ -169,6 +187,10 @@ static void render_element(cwist_html_element_t *el, cwist_sstring *out) {
             }
         }
         cwist_sstring_append(out, ">");
+
+        /* A void element cannot have content; an end tag like </br> would be
+         * parsed by browsers as a second element. */
+        if (is_void_element(el->tag->data)) return;
 
         if (el->inner_text && el->inner_text->data) {
             cwist_sstring_append_escaped(out, el->inner_text->data);
