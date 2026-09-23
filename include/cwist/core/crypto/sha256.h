@@ -121,7 +121,9 @@ static inline void cwist_sha256_final(cwist_sha256_ctx *ctx, uint8_t out[CWIST_S
     }
 
     ctx->bitlen += (uint64_t)ctx->datalen * 8;
-    for (int j = 7; j >= 0; j--) ctx->data[63 - (7 - j)] = (uint8_t)(ctx->bitlen >> (j * 8));
+    /* The bit length goes into the last 8 bytes big-endian (FIPS 180-4
+     * section 5.1.1): the least significant byte ends up in data[63]. */
+    for (int j = 7; j >= 0; j--) ctx->data[63 - j] = (uint8_t)(ctx->bitlen >> (j * 8));
     cwist_sha256_transform(ctx, ctx->data);
 
     for (i = 0; i < 8; i++) {

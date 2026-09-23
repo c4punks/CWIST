@@ -751,6 +751,7 @@ TEST_TARGETS = test_worker_affinity \
                test_sstring \
                test_seq \
                test_seq_auth \
+               test_sha256 \
                test_error \
                test_arena \
                test_wasm_stream \
@@ -900,6 +901,10 @@ test_seq: $(LIB_NAME) tests/test_seq.c
 test_seq_auth: $(LIB_NAME) tests/test_seq_auth.c
 	$(CC) $(CFLAGS) -o test_seq_auth tests/test_seq_auth.c $(LIB_NAME) $(LIBS)
 	./test_seq_auth
+
+test_sha256: tests/test_sha256.c include/cwist/core/crypto/sha256.h
+	$(CC) $(CFLAGS) -o $@ tests/test_sha256.c
+	./$@
 
 test_error: $(LIB_NAME) tests/test_error.c
 	$(CC) $(CFLAGS) -o test_error tests/test_error.c $(LIB_NAME) $(LIBS)
