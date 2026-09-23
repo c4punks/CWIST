@@ -34,7 +34,9 @@ Socket-independent subsystems only:
 - JSON (`json_builder`, `json_heal`, cJSON)
 - Validation (`zod`, `validation/bind`)
 - Templates and HTML (`template`, `html/builder`, `html/component`,
-  `html/css_composer`)
+  `html/css_composer`), page/fragment responses (`net/http/html_response`)
+  and content-hashed in-memory assets (`sys/app/assets`); see
+  [html.md](html.md#rendering-the-same-views-in-wasm)
 - `cwist_db` (SQLite) including `cwist_db_open_memory()` and
   `cwist_db_serialize()` for blob-shaped databases
 
