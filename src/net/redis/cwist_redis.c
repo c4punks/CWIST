@@ -24,6 +24,10 @@
 /* Maximum accepted bulk-string byte count (512 MiB). Redis's own protocol
  * limit is 512 MiB; cap here so a rogue server can't force a huge alloc. */
 #define CWIST_REDIS_MAX_BULK_BYTES ((long long)(512 * 1024 * 1024))
+/* Reply-tree guards: XREADGROUP-style replies nest ~4 levels; anything far
+ * beyond that (or an absurd element count) means a rogue server. */
+#define CWIST_REDIS_MAX_REPLY_DEPTH 16
+#define CWIST_REDIS_MAX_REPLY_ELEMENTS (1 << 20)
 
 struct cwist_redis {
     int fd;
@@ -141,6 +145,8 @@ static int redis_recv_bytes(cwist_redis_t *r, char *out, size_t len) {
 
 /* --- RESP2 helpers ------------------------------------------------------ */
 
+void cwist_redis_reply_free(cwist_redis_reply_t *reply);
+
 static int write_bulk_string(cwist_sstring *out, const char *s) {
     char prefix[32];
     size_t len = s ? strlen(s) : 0;
@@ -151,96 +157,224 @@ static int write_bulk_string(cwist_sstring *out, const char *s) {
     return 0;
 }
 
-static cwist_error_t read_reply(cwist_redis_t *r, char **out_value, size_t *out_len,
-                                char *out_type) {
-    char line[CWIST_REDIS_LINE_MAX];
+/** Flatten a reply tree into the legacy out_value/out_len contract. */
+static void flatten_reply(const cwist_redis_reply_t *tree, char **out_value, size_t *out_len) {
+    if (out_value) *out_value = NULL;
     if (out_len) *out_len = 0;
-    if (redis_recv_line(r, line, sizeof(line)) != 0) return make_error(CWIST_ERR_INT16);
-    if (out_type) *out_type = line[0];
+    if (!tree) return;
+    if (out_value) {
+        if ((tree->type == '+' || tree->type == ':') && tree->str) {
+            *out_value = cwist_strdup(tree->str);
+            if (out_len) *out_len = strlen(tree->str);
+        } else if (tree->type == '$' && tree->str) {
+            char *buf = cwist_alloc(tree->len + 1);
+            if (!buf) return; /* legacy contract: allocation failure yields NULL */
+            memcpy(buf, tree->str, tree->len);
+            buf[tree->len] = '\0';
+            *out_value = buf;
+            if (out_len) *out_len = tree->len;
+        }
+    } else if (out_len && tree->str) {
+        *out_len = tree->len;
+    }
+}
+
+/** Recursive RESP2 reply parser: builds a cwist_redis_reply_t tree. On any
+ * failure the partially built tree is freed and *@p out is NULL. */
+static cwist_error_t redis_read_resp(cwist_redis_t *r, int depth, cwist_redis_reply_t **out) {
+    char line[CWIST_REDIS_LINE_MAX];
+    cwist_redis_reply_t *node = cwist_alloc(sizeof(*node));
+    if (!node) return make_error(CWIST_ERR_INT16);
+    *out = node;
+    if (redis_recv_line(r, line, sizeof(line)) != 0) goto fail;
+    node->type = line[0];
 
     switch (line[0]) {
         case '+': /* simple string */
         case '-': /* error */
-            if (out_value) {
-                if (line[0] == '+') {
-                    *out_value = cwist_strdup(line + 1);
-                    if (out_len) *out_len = strlen(line + 1);
-                } else {
-                    *out_value = NULL;
-                }
-            }
+            node->str = cwist_strdup(line + 1);
+            if (!node->str) goto fail;
+            node->len = strlen(line + 1);
+            /* Legacy behavior: a '-' reply is signalled through the reply
+             * tree (type '-') with a zeroed error value. */
             return (line[0] == '-')
                        ? make_error(CWIST_ERR_INT16)
                        : (cwist_error_t){.errtype = CWIST_ERR_INT16, .error.err_i16 = 0};
 
-        case ':': /* integer */
-            if (out_value) *out_value = cwist_strdup(line + 1);
-            if (out_len) *out_len = strlen(line + 1);
+        case ':': { /* integer */
+            char *end = NULL;
+            long long v = strtoll(line + 1, &end, 10);
+            if (end == line + 1 || *end != '\0') goto fail;
+            node->str = cwist_strdup(line + 1);
+            if (!node->str) goto fail;
+            node->len = strlen(line + 1);
+            node->integer = v;
             return (cwist_error_t){.errtype = CWIST_ERR_INT16, .error.err_i16 = 0};
+        }
 
         case '$': { /* bulk string */
             char *end = NULL;
             long long blen = strtoll(line + 1, &end, 10);
-            if (end == line + 1 || *end != '\0') return make_error(CWIST_ERR_INT16);
-            if (blen < 0) {
-                if (out_value) *out_value = NULL;
-                return (cwist_error_t){.errtype = CWIST_ERR_INT16, .error.err_i16 = 0};
-            }
+            if (end == line + 1 || *end != '\0') goto fail;
+            if (blen < 0) return (cwist_error_t){.errtype = CWIST_ERR_INT16, .error.err_i16 = 0};
             /* Guard against a rogue/malicious server advertising a huge bulk
              * string that would exhaust memory before we read a single byte. */
-            if (blen > CWIST_REDIS_MAX_BULK_BYTES) return make_error(CWIST_ERR_INT16);
+            if (blen > CWIST_REDIS_MAX_BULK_BYTES) goto fail;
             char *buf = cwist_alloc((size_t)blen + 1);
-            if (!buf) return make_error(CWIST_ERR_INT16);
+            if (!buf) goto fail;
             if (redis_recv_bytes(r, buf, (size_t)blen) != 0) {
                 cwist_free(buf);
-                return make_error(CWIST_ERR_INT16);
+                goto fail;
             }
             buf[blen] = '\0';
             /* consume trailing \r\n */
             char crlf[2];
             if (redis_recv_bytes(r, crlf, 2) != 0) {
                 cwist_free(buf);
-                return make_error(CWIST_ERR_INT16);
+                goto fail;
             }
-            if (out_value)
-                *out_value = buf;
-            else
-                cwist_free(buf);
-            if (out_len) *out_len = (size_t)blen;
+            node->str = buf;
+            node->len = (size_t)blen;
+            node->integer = blen;
             return (cwist_error_t){.errtype = CWIST_ERR_INT16, .error.err_i16 = 0};
         }
 
-        case '*': { /* array - skip for simple client */
+        case '*': { /* array */
+            if (depth >= CWIST_REDIS_MAX_REPLY_DEPTH) goto fail;
             char *end = NULL;
             long long count = strtoll(line + 1, &end, 10);
-            if (end == line + 1 || *end != '\0' || count < 0) return make_error(CWIST_ERR_INT16);
-            for (long long i = 0; i < count; i++) {
-                char *tmp = NULL;
-                cwist_error_t e = read_reply(r, &tmp, NULL, NULL);
-                cwist_free(tmp);
-                if (e.error.err_i16 != 0) return e;
+            if (end == line + 1 || *end != '\0' || count < 0 ||
+                count > CWIST_REDIS_MAX_REPLY_ELEMENTS)
+                goto fail;
+            node->elements = (size_t)count;
+            if (count > 0) {
+                node->element = cwist_alloc_array((size_t)count, sizeof(*node->element));
+                if (!node->element) goto fail;
+                for (long long i = 0; i < count; i++) {
+                    node->element[i] = NULL;
+                    cwist_error_t e = redis_read_resp(r, depth + 1, &node->element[i]);
+                    if (e.error.err_i16 != 0) goto fail;
+                }
             }
-            if (out_value) *out_value = NULL;
             return (cwist_error_t){.errtype = CWIST_ERR_INT16, .error.err_i16 = 0};
         }
 
-        default: return make_error(CWIST_ERR_INT16);
+        default: goto fail;
     }
+
+fail:
+    cwist_redis_reply_free(*out);
+    *out = NULL;
+    return make_error(CWIST_ERR_INT16);
 }
 
-static cwist_error_t redis_command_frame(cwist_redis_t *r, const char *frame, size_t frame_len,
-                                         char **out_value, size_t *out_len) {
+/** Compatibility wrapper: flatten a reply tree into the legacy
+ * out_value/out_len contract (arrays and errors yield NULL, like before). */
+static cwist_error_t read_reply(cwist_redis_t *r, char **out_value, size_t *out_len,
+                                char *out_type) {
+    cwist_redis_reply_t *tree = NULL;
+    cwist_error_t err = redis_read_resp(r, 0, &tree);
+    if (out_type) *out_type = tree ? (char)tree->type : '\0';
+    if (err.error.err_i16 != 0 || !tree) {
+        cwist_redis_reply_free(tree);
+        return err;
+    }
+    char *value = NULL;
+    size_t len = 0;
+    flatten_reply(tree, &value, &len);
+    if (out_value) {
+        *out_value = value;
+        if (out_len) *out_len = len;
+    } else {
+        cwist_free(value);
+        if (out_len) *out_len = len;
+    }
+    cwist_redis_reply_free(tree);
+    return (cwist_error_t){.errtype = CWIST_ERR_INT16, .error.err_i16 = 0};
+}
+
+void cwist_redis_reply_free(cwist_redis_reply_t *reply) {
+    if (!reply) return;
+    if (reply->element) {
+        for (size_t i = 0; i < reply->elements; i++) {
+            cwist_redis_reply_free(reply->element[i]);
+        }
+        cwist_free(reply->element);
+    }
+    cwist_free(reply->str);
+    cwist_free(reply);
+}
+
+static cwist_error_t redis_command_frame_tree(cwist_redis_t *r, const char *frame, size_t frame_len,
+                                              cwist_redis_reply_t **out_tree) {
     if (!r || !frame) return make_error(CWIST_ERR_INT16);
-    if (out_value) *out_value = NULL;
+    if (out_tree) *out_tree = NULL;
     /* A request/reply pair must be serialized as one critical section.  Keeping
      * send and receive separate allows two callers to consume each other's
      * replies on the same connection. */
     pthread_mutex_lock(&r->mtx);
     cwist_error_t err = redis_send_all(r->fd, frame, frame_len) == 0
-                            ? read_reply(r, out_value, out_len, NULL)
+                            ? redis_read_resp(r, 0, out_tree)
                             : make_error(CWIST_ERR_INT16);
     pthread_mutex_unlock(&r->mtx);
     return err;
+}
+
+static cwist_error_t redis_command_frame(cwist_redis_t *r, const char *frame, size_t frame_len,
+                                         char **out_value, size_t *out_len) {
+    cwist_redis_reply_t *tree = NULL;
+    cwist_error_t err = redis_command_frame_tree(r, frame, frame_len, &tree);
+    if (err.error.err_i16 != 0 || !tree) {
+        cwist_redis_reply_free(tree);
+        if (out_value) *out_value = NULL;
+        if (out_len) *out_len = 0;
+        return err;
+    }
+    char *value = NULL;
+    size_t len = 0;
+    flatten_reply(tree, &value, &len);
+    if (out_value) {
+        *out_value = value;
+        if (out_len) *out_len = len;
+    } else {
+        cwist_free(value);
+        if (out_len) *out_len = len;
+    }
+    cwist_redis_reply_free(tree);
+    return (cwist_error_t){.errtype = CWIST_ERR_INT16, .error.err_i16 = 0};
+}
+
+cwist_error_t cwist_redis_command_argv_reply(cwist_redis_t *r, size_t argc, const void *const *argv,
+                                             const size_t *argv_lens, cwist_redis_reply_t **reply) {
+    if (!r || !argc || !argv || !argv_lens || !reply) return make_error(CWIST_ERR_INT16);
+    *reply = NULL;
+    cwist_sstring *frame = cwist_sstring_create();
+    if (!frame) return make_error(CWIST_ERR_INT16);
+    char count[32];
+    snprintf(count, sizeof(count), "*%zu\r\n", argc);
+    if (cwist_sstring_append_len(frame, count, strlen(count)).error.err_i8) goto fail;
+    for (size_t i = 0; i < argc; ++i) {
+        if (!argv[i] && argv_lens[i]) goto fail;
+        char len[32];
+        snprintf(len, sizeof(len), "$%zu\r\n", argv_lens[i]);
+        if (cwist_sstring_append_len(frame, len, strlen(len)).error.err_i8 ||
+            (argv_lens[i] && cwist_sstring_append_len(frame, argv[i], argv_lens[i]).error.err_i8) ||
+            cwist_sstring_append_len(frame, "\r\n", 2).error.err_i8)
+            goto fail;
+    }
+    cwist_error_t err = redis_command_frame_tree(r, frame->data, frame->size, reply);
+    cwist_sstring_destroy(frame);
+    /* Unlike the legacy string API, surface Redis '-' error replies as
+     * failure so callers can tell a server error from an empty array. */
+    if (cwist_error_is_ok(&err) && *reply && (*reply)->type == '-') {
+        cwist_redis_reply_free(*reply);
+        *reply = NULL;
+        return make_error(CWIST_ERR_INT16);
+    }
+    return err;
+fail:
+    cwist_sstring_destroy(frame);
+    return make_error(CWIST_ERR_INT16);
 }
 
 /* --- Connection lifecycle ----------------------------------------------- */

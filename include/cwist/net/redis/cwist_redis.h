@@ -68,6 +68,34 @@ cwist_error_t cwist_redis_command_argv(cwist_redis_t *r, size_t argc, const void
 cwist_error_t cwist_redis_auth(cwist_redis_t *r, const char *username, const char *password);
 cwist_error_t cwist_redis_select(cwist_redis_t *r, unsigned int database);
 
+/** Parsed RESP2 reply tree (experimental, v3.7).
+ *
+ * Returned by cwist_redis_command_argv_reply(). @p type is the RESP type
+ * byte: '+', '-', ':', '$', '*'. For '-', @p str holds the error text and
+ * the command reports failure. For ':' and '$', @p str is the textual value
+ * (always NUL-terminated; use @p len for exact bulk length) and @p integer
+ * holds the parsed number. For '*', @p element/@p elements hold children.
+ */
+typedef struct cwist_redis_reply {
+    int type;
+    char *str;
+    size_t len;
+    long long integer;
+    struct cwist_redis_reply **element;
+    size_t elements;
+} cwist_redis_reply_t;
+
+/** Execute a binary-safe command and return the full parsed reply tree.
+ * Experimental (v3.7): required for array-reply commands such as
+ * XREADGROUP/XAUTOCLAIM. On success *@p reply is set (free with
+ * cwist_redis_reply_free()); on a Redis '-' error the tree still describes
+ * the error but the returned error code is non-zero. */
+cwist_error_t cwist_redis_command_argv_reply(cwist_redis_t *r, size_t argc, const void *const *argv,
+                                             const size_t *argv_lens, cwist_redis_reply_t **reply);
+
+/** Release a reply tree returned by cwist_redis_command_argv_reply(). */
+void cwist_redis_reply_free(cwist_redis_reply_t *reply);
+
 /**
  * @brief Convenience commands.
  * @{ */

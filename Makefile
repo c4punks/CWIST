@@ -261,6 +261,7 @@ SRCS = src/core/sstring/sstring.c \
        src/core/validation/bind.c \
        src/sys/io/reactor.c \
        src/sys/job/scheduler.c \
+       src/sys/job/durable_queue.c \
        src/sys/metrics/metrics.c \
        src/sys/health/healthz.c \
        $(IO_SRC)
@@ -822,6 +823,7 @@ TEST_TARGETS = test_worker_affinity \
                test_grpc_client \
                test_grpc_channel \
                test_dispatch_memory \
+               test_durable_queue \
                test_gc_ebr_release \
                test_full_gc_toggle_hardening \
                test_conn_registry \
@@ -1362,6 +1364,11 @@ test_gc_job_handoff: $(LIB_NAME) tests/test_gc_job_handoff.c
 	$(CC) $(CFLAGS) -DNDEBUG -o $@ tests/test_gc_job_handoff.c $(LIB_NAME) $(LIBS)
 	./$@
 	./$@ nogc
+
+
+test_durable_queue: $(LIB_NAME) tests/test_durable_queue.c
+	$(CC) $(CFLAGS) -o test_durable_queue tests/test_durable_queue.c $(LIB_NAME) $(LIBS)
+	./test_durable_queue
 
 test_http_pipeline: $(LIB_NAME) tests/test_http_pipeline.c
 	$(CC) $(CFLAGS) -o $@ tests/test_http_pipeline.c $(LIB_NAME) $(LIBS)
