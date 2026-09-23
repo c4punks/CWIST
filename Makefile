@@ -242,6 +242,7 @@ SRCS = src/core/sstring/sstring.c \
        src/core/template/template.c \
        src/core/html/builder.c \
        src/core/html/css_composer.c \
+       src/core/html/component.c \
        src/sys/app/big_dumb_reply.c \
        src/sys/sys_info.c \
        src/core/mem/alloc.c \
@@ -299,6 +300,7 @@ WASM_SRCS = src/core/sstring/sstring.c \
        src/core/template/template.c \
        src/core/html/builder.c \
        src/core/html/css_composer.c \
+       src/core/html/component.c \
        src/core/validation/bind.c \
        src/core/mem/alloc.c \
        src/core/mem/arena.c \
@@ -756,6 +758,9 @@ TEST_TARGETS = test_worker_affinity \
                test_healthz \
                test_json_builder \
                test_flash \
+ \
+               test_html_component
+
                test_http \
                test_http_stringify \
                test_siphash \
@@ -1446,6 +1451,27 @@ test_html_builder: $(LIB_NAME) tests/test_html_builder.c
 test_css_composer: $(LIB_NAME) tests/test_css_composer.c
 	$(CC) $(CFLAGS) -o test_css_composer tests/test_css_composer.c $(LIB_NAME) $(LIBS)
 	./test_css_composer
+test_html_component: $(LIB_NAME) tests/test_html_component.c
+	$(CC) $(CFLAGS) -o test_html_component tests/test_html_component.c $(LIB_NAME) $(LIBS)
+	./test_html_component
+
+test_http2_flow_control: $(LIB_NAME) tests/test_http2_flow_control.c
+	$(CC) $(CFLAGS) -o test_http2_flow_control tests/test_http2_flow_control.c $(LIB_NAME) $(LIBS)
+	./test_http2_flow_control
+
+test_idle_reaper: $(LIB_NAME) tests/test_idle_reaper.c
+	$(CC) $(CFLAGS) -o test_idle_reaper tests/test_idle_reaper.c $(LIB_NAME) $(LIBS)
+	./test_idle_reaper
+
+test_linux_writer_fast: $(LIB_NAME) tests/test_linux_writer_fast.c
+	$(CC) $(CFLAGS) -o test_linux_writer_fast tests/test_linux_writer_fast.c $(LIB_NAME) $(LIBS)
+	./test_linux_writer_fast
+
+test_orm_socket: $(LIB_NAME) tests/test_orm_socket.c
+	$(CC) $(CFLAGS) -o test_orm_socket tests/test_orm_socket.c $(LIB_NAME) $(LIBS)
+	./test_orm_socket
+
+
 
 
 # ---------------------------------------------------------------------------
