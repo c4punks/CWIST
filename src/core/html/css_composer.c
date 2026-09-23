@@ -250,7 +250,7 @@ struct cwist_css_scope_entry {
  * @brief Append to an sstring, collapsing the cwist_error_t ceremony into a
  *        bool so construction sites can chain with &&.
  */
-static bool sstr_append(cwist_sstring *s, const char *text) {
+static bool append_ok(cwist_sstring *s, const char *text) {
     cwist_error_t err = cwist_sstring_append(s, text);
     bool ok = cwist_error_is_ok(&err);
     cwist_error_dispose(&err);
@@ -296,8 +296,8 @@ static struct cwist_css_scope_entry *scope_get_or_add(cwist_css_scope *scope,
 
     char *base_copy = cwist_strdup(base_class);
     cwist_sstring *scoped = cwist_sstring_create();
-    if (!base_copy || !scoped || !sstr_append(scoped, base_class) || !sstr_append(scoped, "-") ||
-        !sstr_append(scoped, scope->suffix)) {
+    if (!base_copy || !scoped || !append_ok(scoped, base_class) || !append_ok(scoped, "-") ||
+        !append_ok(scoped, scope->suffix)) {
         cwist_free(base_copy);
         cwist_sstring_destroy(scoped);
         return NULL;
@@ -366,9 +366,8 @@ cwist_sstring *cwist_css_scope_generate_stylesheet(const cwist_css_scope *scope)
     for (size_t i = 0; ok && i < scope->count; i++) {
         const struct cwist_css_scope_entry *entry = &scope->entries[i];
         if (!entry->used || !entry->declarations) continue;
-        ok = sstr_append(css, ".") && sstr_append(css, entry->scoped_class->data) &&
-             sstr_append(css, " { ") && sstr_append(css, entry->declarations) &&
-             sstr_append(css, " }\n");
+        ok = append_ok(css, ".") && append_ok(css, entry->scoped_class->data) &&
+             append_ok(css, " { ") && append_ok(css, entry->declarations) && append_ok(css, " }\n");
     }
     if (!ok) {
         cwist_sstring_destroy(css);
