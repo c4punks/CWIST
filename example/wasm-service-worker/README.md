@@ -37,6 +37,13 @@ compiled to WASM.
   with the per-field error list.
 - `GET /items` - item rows from `cwist_db` as JSON (values are strings -
   SQLite exec-callback semantics).
+- `GET /items/list` - the item list rendered from components with scoped CSS
+  (`cwist_html_component_t`, `cwist_css_scope`). A request with `HX-Request:
+  true` or `Turbo-Frame` gets only the `<ul id="item-list">` fragment. Any
+  other request gets a full page linking `/assets/list.<hash>.css`, a
+  bundled and minified stylesheet that the module serves itself
+  (`cwist_app_asset_add`), with an immutable cache lifetime. This is the same
+  code a native CWIST server runs; see docs/api/html.md.
 - `GET /items/image` - the serialized SQLite image (`cwist_db_serialize`):
   the blob an edge host would persist outside the instance and reopen with
   `cwist_db_open_memory`.
