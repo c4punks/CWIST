@@ -57,6 +57,7 @@ struct cwist_websocket_async {
     int fd;
     cwist_reactor_t *reactor;
     cwist_ws_on_message_t on_message;
+    cwist_ws_on_close_t on_close;
     void *user_data;
 
     /* Read stash: raw bytes not yet consumed by the incremental parser. */
@@ -133,6 +134,9 @@ static void ws_async_sweep_mark_dead(ws_async_sweep_t *sweep) {
  * been consumed, and any other pending slot was either canceled or is the
  * callback doing the teardown).  Runs on the reactor thread only. */
 static void ws_async_teardown(cwist_websocket_async *ws) {
+    /* Protocol layers (e.g. graphql-ws) release per-connection state here;
+     * runs before any memory is freed and exactly once per connection. */
+    if (ws->on_close) ws->on_close(ws, ws->user_data);
     if (ws->fd >= 0) {
         close(ws->fd);
         ws->fd = -1;
@@ -582,6 +586,21 @@ void cwist_websocket_async_close(cwist_websocket_async *ws) {
     /* Otherwise the parked-write completion terminates after draining. */
 }
 
+void cwist_websocket_async_close_code(cwist_websocket_async *ws, uint16_t code) {
+    if (!ws || ws->closed) return;
+    ws->closed = true;
+    uint8_t body[2] = {(uint8_t)(code >> 8), (uint8_t)(code & 0xFF)};
+    if (ws_async_queue_frame(ws, CWIST_WS_FRAME_CLOSE, body, sizeof(body)) != 0) {
+        ws->terminate_pending = true;
+        return;
+    }
+    if (ws->park_off == ws->park_len) {
+        /* CLOSE frame drained: the enclosing reactor turn performs the free
+         * via terminate_pending, mirroring cwist_websocket_async_close(). */
+        ws->terminate_pending = true;
+    }
+}
+
 /* ------------------------------------------------------------------ */
 /* Incremental frame parsing (mirrors cwist_websocket_receive)         */
 /* ------------------------------------------------------------------ */
@@ -854,19 +873,22 @@ static void ws_async_read_ready(int fd, void *ctx) {
     ws->read_armed = true;
 }
 
-bool cwist_websocket_async_attach(int fd, cwist_reactor_t *reactor,
-                                  cwist_ws_on_message_t on_message, void *user_data,
-                                  const uint8_t *initial, size_t initial_len) {
-    if (fd < 0 || !reactor || !on_message) return false;
+cwist_websocket_async *cwist_websocket_async_attach_ex(int fd, cwist_reactor_t *reactor,
+                                                       cwist_ws_on_message_t on_message,
+                                                       cwist_ws_on_close_t on_close,
+                                                       void *user_data, const uint8_t *initial,
+                                                       size_t initial_len) {
+    if (fd < 0 || !reactor || !on_message) return NULL;
 
     cwist_websocket_async *ws = (cwist_websocket_async *)cwist_alloc(sizeof(*ws));
     if (!ws) {
         close(fd);
-        return false;
+        return NULL;
     }
     ws->fd = fd;
     ws->reactor = reactor;
     ws->on_message = on_message;
+    ws->on_close = on_close;
     ws->user_data = user_data;
     ws->stash = NULL;
     ws->stash_len = ws->stash_cap = 0;
@@ -897,13 +919,15 @@ bool cwist_websocket_async_attach(int fd, cwist_reactor_t *reactor,
         if (!fail && ws_async_feed(ws) != 0) fail = true;
     }
     if (fail || ws->terminate_pending) {
-        /* No reactor slot was registered yet: nothing to cancel. */
+        /* No reactor slot was registered yet: nothing to cancel.  on_close
+         * does not fire here; attach failed, so the caller keeps ownership of
+         * any state installed during inline initial-bytes delivery. */
         close(fd);
         cwist_free(ws->stash);
         cwist_free(ws->frag_buf);
         cwist_free(ws->park_buf);
         cwist_free(ws);
-        return false;
+        return NULL;
     }
 
     ws_async_slot_t slot = {.ws = ws};
@@ -913,7 +937,7 @@ bool cwist_websocket_async_attach(int fd, cwist_reactor_t *reactor,
         cwist_free(ws->frag_buf);
         cwist_free(ws->park_buf);
         cwist_free(ws);
-        return false;
+        return NULL;
     }
     ws->read_armed = true;
 
@@ -933,5 +957,12 @@ bool cwist_websocket_async_attach(int fd, cwist_reactor_t *reactor,
         pthread_mutex_unlock(&sweep->lock);
         pthread_mutex_unlock(&g_ws_sweeps_lock);
     }
-    return true;
+    return ws;
+}
+
+bool cwist_websocket_async_attach(int fd, cwist_reactor_t *reactor,
+                                  cwist_ws_on_message_t on_message, void *user_data,
+                                  const uint8_t *initial, size_t initial_len) {
+    return cwist_websocket_async_attach_ex(fd, reactor, on_message, NULL, user_data, initial,
+                                           initial_len) != NULL;
 }

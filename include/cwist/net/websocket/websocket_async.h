@@ -33,6 +33,14 @@ typedef void (*cwist_ws_on_message_t)(cwist_websocket_async *ws, cwist_ws_frame 
                                       void *user_data);
 
 /**
+ * @brief Optional teardown hook for the callback-shaped WS path (see
+ *        cwist_websocket_async_attach_ex in ws_async_internal.h).
+ * @param ws Connection being torn down; do not send on it.
+ * @param user_data Opaque pointer registered at attach time.
+ */
+typedef void (*cwist_ws_on_close_t)(cwist_websocket_async *ws, void *user_data);
+
+/**
  * @brief Serialize and send one FIN-terminated frame without blocking.
  *
  * The header and payload are serialized into a single buffer and sent with
