@@ -15,6 +15,8 @@ extern "C" {
 
 typedef struct cwist_nats cwist_nats_t;
 
+typedef struct __natsConnection natsConnection;
+
 typedef void (*cwist_nats_msg_cb)(const char *subject, const char *data, size_t len, void *ctx);
 
 /**
@@ -42,6 +44,15 @@ void cwist_nats_dispatch(cwist_nats_t *nats);
  * @brief Disconnect and destroy the NATS handle.
  */
 void cwist_nats_destroy(cwist_nats_t *nats);
+
+/**
+ * @brief Borrow the underlying cnats connection (experimental, v3.7).
+ *
+ * Used by opt-in extensions built on top of the bundled cnats client (e.g.
+ * the durable job queue's JetStream backend). Ownership stays with the
+ * cwist_nats_t handle; do not destroy the returned connection.
+ */
+natsConnection *cwist_nats_native(cwist_nats_t *nats);
 
 #ifdef __cplusplus
 }
