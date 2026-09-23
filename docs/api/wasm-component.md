@@ -28,11 +28,10 @@ counterpart of `include/cwist/wasm/wasm_entry.h`:
 - Buffer disposal that today requires an explicit `_cwist_wasm_dispose`
   round-trip becomes implicit: the canonical ABI copies the result out of
   guest linear memory, and the guest frees its own buffer after return.
-- Streaming is intentionally absent for now. The Emscripten path pushes
-  chunks through an EM_JS callback; the component equivalent is a host
-  import plus an async guest export (`send-chunk`), which is now
-  evaluated end to end below. Adding a polling export now would bake in
-  the wrong shape.
+- Streaming lives in the separate `cwist-guest-stream` world (0.3 only):
+  `host.send-chunk` delivers chunks with backpressure, and
+  `dispatch-stream` mirrors `_cwist_wasm_dispatch_stream`. Landed and
+  smoke-tested; see below.
 
 ## Toolchain status (measured 2026-09-21)
 
@@ -65,26 +64,31 @@ assertions as the 0.2 smoke. PASS. Caveats, all host-side:
 - preview3-shim keeps the node event loop alive after completion, so the
   smoke exits explicitly.
 
-## Evaluated: native async for streaming/SSE (2026-09-23)
+## Landed: native async for streaming/SSE (2026-09-23)
 
 The 0.3 shape for the SSE path (today an EM_JS chunk callback on
-Emscripten) is a host import plus an async guest export, and the whole
-chain works end to end as a spike:
+Emscripten) is the `cwist-guest-stream` world in wit/cwist.wit: the async
+host import `host.send-chunk` plus the sync export `dispatch-stream`.
+`make component-stream-smoke-p3` proves it end to end: an SSE route
+(`/events`) dispatches through `cwist_app_dispatch_stream()`, each
+serialized chunk crosses to a JS host implementation of `sendChunk`, and
+the head-first chunk order is asserted.
 
-1. `async func` in WIT parses and validates; wit-bindgen 0.62 emits
-   waitable-set/callback C bindings for both imports and exports.
-2. The guest compiles for wasm32-wasip3 with wasi-sdk 34; an async
-   export that awaits an async host import builds, componentizes, and
-   transpiles, and the host receives the chunk payload in JS over JSPI.
-3. Custom host imports surface from jco as plain ESM imports, so the
-   adapter supplies them like any other dependency.
+The pump needed no continuation rewrite. The chunk sink initiates the
+async import and, unless it returns immediately, blocks on a waitable
+set: the export task suspends mid-pump and resumes when the host
+resolves the call, so the synchronous `write_fn` loop in
+`cwist_app_dispatch_stream()` runs unchanged. Backpressure falls out of
+the host delaying resolution. What the spike established before this
+landed: `async func` parses and validates in WIT; wit-bindgen 0.62 emits
+waitable-set/callback bindings that compile for wasm32-wasip3 with
+wasi-sdk 34; jco surfaces custom host imports as plain ESM imports, which
+is how the smoke (and any bundler consumer) wires `sendChunk`.
 
-Cost: the guest-side streaming pump must be written in continuation
-style (initiate the host call, return `CALLBACK_CODE_WAIT` on the
-waitable set, resume in the callback) instead of the current synchronous
-`write_fn` loop. That is a bounded rewrite of the SSE pump, deferred to
-the 0.3 cutover; the WIT shape is `host.send-chunk: async func(chunk:
-list<u8>) -> result` alongside the existing sync `dispatch`.
+Only wasm32-wasip3 builds this world: 0.2 components cannot lower async
+imports. Bindings are generated per world (`wit-bindgen --world`), and
+`wasm-tools component embed` picks the world explicitly
+(`--world cwist-guest[-stream]`).
 
 ## Resolved: socket request path under wasip3 (audited 2026-09-22)
 
@@ -133,12 +137,11 @@ overhead is what crosses the default limit.
    shards via fetch and is not executed in the smoke). The npm package
    exposes the adapter through an exports map (`cwist-wasm/component`).
    Emscripten stays supported regardless.
-3. **0.3 cutover (conditional).** Both preconditions are now evaluated
-   (see above): preview3-shim hosts the dispatch guest end to end, and
-   native async carries a chunk payload host-ward over JSPI. Remaining
-   before the cutover: rewrite the SSE pump in continuation style against
-   the `send-chunk` host import, and track JSPI shipping unflagged in
-   node and browsers. Only then does the Emscripten build leave CI.
+3. **0.3 cutover (conditional).** Both preconditions held up under
+   evaluation and the streaming boundary has landed in
+   `cwist-guest-stream`. Remaining before the cutover: track JSPI
+   shipping unflagged in node and browsers, and port the SSE examples
+   off the EM_JS callback. Only then does the Emscripten build leave CI.
 
 ## Measured while building stage 2
 
@@ -153,6 +156,10 @@ overhead is what crosses the default limit.
   allocation because the generated `cabi_post` hook frees it; `cwist_alloc`
   is libc-backed under `__wasi__`, so the dispatch response hands over
   directly and the explicit dispose entry point disappears as designed.
+- With two worlds in wit/, both wit-bindgen and `wasm-tools component
+  embed` require an explicit `--world`; bindings land in per-world
+  directories under .wit-bindings and each guest links its own
+  component-type object.
 
 ## Non-goals
 

@@ -52,6 +52,26 @@ static inline void cwist_wasm_component_dispose(void *ptr) {
     cwist_free(ptr);
 }
 
+/**
+ * Run the streaming dispatcher for one serialized HTTP/1.1 request:
+ * cwist_app_dispatch_stream() pumps the head first and then the body in
+ * slices through @p write_fn. On the cwist-guest-stream world the sink
+ * wraps the async host import host.send-chunk and blocks on the waitable
+ * set until the host resolves it (the export task suspends mid-pump, so
+ * the sync cwist_app_dispatch_stream() pump needs no continuation
+ * rewrite). Reference sink: tests/wasm_component_stream_guest.c (issue
+ * #203, stage 3).
+ *
+ * Returns 0 on full delivery, nonzero on dispatch failure or sink abort.
+ */
+static inline int cwist_wasm_component_dispatch_stream(cwist_app *app, const uint8_t *req_buf,
+                                                       size_t req_len,
+                                                       cwist_stream_write_fn write_fn,
+                                                       void *write_ctx) {
+    return cwist_app_dispatch_stream(app, (const char *)req_buf, req_len,
+                                     write_fn, write_ctx);
+}
+
 #else /* !__wasi__ */
 
 /* Non-WASI builds: this header intentionally provides nothing. */
