@@ -2,8 +2,8 @@
  * @file durable_queue.h
  * @brief Durable (persistent) job queue backends over Redis and NATS.
  *
- * Supported since v3.8: opt-in tier on top of the existing Redis and NATS
- * clients, separate from the in-process scheduler queue
+ * EXPERIMENTAL (v3.7 Phase 4): opt-in tier on top of the existing Redis and
+ * NATS clients, separate from the in-process scheduler queue
  * (cwist/sys/job/scheduler.h). Jobs survive process restarts; delivery is
  * at-least-once.
  *

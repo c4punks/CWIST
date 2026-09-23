@@ -124,14 +124,12 @@ struct cwist_job {
     uint32_t attempts;
 };
 
-/** @brief Wrap a raw int16 status code into a cwist_error_t (CWIST_ERR_INT16 carrier). */
 static cwist_error_t jq_err(int16_t code) {
     cwist_error_t e = make_error(CWIST_ERR_INT16);
     e.error.err_i16 = code;
     return e;
 }
 
-/** @brief Current CLOCK_MONOTONIC time in milliseconds; monotonic and unaffected by wall-clock changes. */
 static uint64_t jq_now_ms(void) {
     struct timespec ts;
     clock_gettime(CLOCK_MONOTONIC, &ts);
@@ -140,7 +138,6 @@ static uint64_t jq_now_ms(void) {
 
 static unsigned int jq_consumer_seq = 0;
 
-/** @brief Build an owned default consumer name "w<pid>-<seq>"; unique per process run. */
 static char *jq_default_consumer(void) {
     char buf[64];
     snprintf(buf, sizeof(buf), "w%d-%u", (int)getpid(), ++jq_consumer_seq);
@@ -161,11 +158,6 @@ static bool jq_opts_init(cwist_job_queue_t *q, const cwist_job_queue_opts_t *opt
     return true;
 }
 
-/**
- * @brief Free a job and all its owned resources.
- * @param job Job to release (NULL is a no-op). Also destroys the borrowed
- *            backend natsMsg, if any.
- */
 static void cwist_job_free(cwist_job_t *job) {
     if (!job) return;
     if (job->backend) natsMsg_Destroy((natsMsg *)job->backend);
@@ -175,12 +167,10 @@ static void cwist_job_free(cwist_job_t *job) {
     cwist_free(job);
 }
 
-/** @brief Public alias of cwist_job_free(); releases a job returned by claim. */
 void cwist_job_destroy(cwist_job_t *job) {
     cwist_job_free(job);
 }
 
-/** @brief Return the job payload pointer and store its length in @a len (0 on NULL job). */
 const void *cwist_job_payload(const cwist_job_t *job, size_t *len) {
     if (!job) {
         if (len) *len = 0;
@@ -190,24 +180,20 @@ const void *cwist_job_payload(const cwist_job_t *job, size_t *len) {
     return job->payload;
 }
 
-/** @brief Return the job type string, or NULL if none / NULL job. */
 const char *cwist_job_type(const cwist_job_t *job) {
     return job ? job->type : NULL;
 }
 
-/** @brief Return the backend entry id of the job, or NULL for a NULL job. */
 const char *cwist_job_id(const cwist_job_t *job) {
     return job ? job->id : NULL;
 }
 
-/** @brief Return the delivery attempt count of the job (0 for a NULL job). */
 uint32_t cwist_job_attempts(const cwist_job_t *job) {
     return job ? job->attempts : 0;
 }
 
 /* --- Redis backend ------------------------------------------------------ */
 
-/** @brief Allocate an owned Redis key "cwist:jq:<name>:<suffix>"; NULL on ENOMEM. */
 static char *jq_key(const char *name, const char *suffix) {
     size_t n = strlen(name) + strlen(suffix) + 16;
     char *key = cwist_alloc(n);
@@ -215,11 +201,6 @@ static char *jq_key(const char *name, const char *suffix) {
     return key;
 }
 
-/**
- * @brief Run an argv-style Redis command and keep only the reply.
- * @retval err 0 on success with *reply set; CWIST_FAILURE otherwise, with
- *         *reply freed and NULLed.
- */
 static cwist_error_t jq_redis_cmd(cwist_redis_t *conn, size_t argc, const void *const *argv,
                                   const size_t *argv_lens, cwist_redis_reply_t **reply) {
     cwist_error_t err = cwist_redis_command_argv_reply(conn, argc, argv, argv_lens, reply);
@@ -266,10 +247,6 @@ static char *jq_blob(const char *type, uint32_t attempts, const void *payload, s
     return blob;
 }
 
-/**
- * @brief Redis backend: append a job to the stream (XADD with type/payload fields).
- * @param type Optional job type (NULL stored as empty); payload may be binary.
- */
 static cwist_error_t jq_redis_enqueue(cwist_job_queue_t *q, const void *payload, size_t payload_len,
                                       const char *type) {
     jq_redis_t *rs = &q->u.redis;
@@ -294,10 +271,6 @@ static const cwist_redis_reply_t *jq_entry_field(const cwist_redis_reply_t *fiel
     return NULL;
 }
 
-/**
- * @brief Build an owned cwist_job_t from a [id, fields] stream entry reply.
- * @return New job, or NULL on malformed entry or allocation failure.
- */
 static cwist_job_t *jq_job_from_entry(cwist_job_queue_t *q, const cwist_redis_reply_t *entry) {
     if (!entry || entry->type != '*' || entry->elements != 2 || !entry->element[0] ||
         !entry->element[0]->str)
@@ -457,7 +430,6 @@ static cwist_job_t *jq_redis_readgroup(cwist_job_queue_t *q, uint64_t block_ms) 
     return job;
 }
 
-/** @brief Move delayed blobs whose due time passed back onto the stream (Lua, fire-and-forget). */
 static void jq_redis_reap_delay(cwist_job_queue_t *q) {
     jq_redis_t *rs = &q->u.redis;
     char now[32];
@@ -474,12 +446,6 @@ static void jq_redis_reap_delay(cwist_job_queue_t *q) {
     jq_redis_run(rs->conn, 7, argv, lens);
 }
 
-/**
- * @brief Redis backend: claim one job within timeout_ms.
- * @return 0 with *job set on success; CWIST_ERROR_TIMEOUT when the deadline
- *         passes with no job. Polls reaped delayed jobs, then stale pending
- *         entries, then blocks for new entries.
- */
 static cwist_error_t jq_redis_claim(cwist_job_queue_t *q, uint64_t timeout_ms, cwist_job_t **job) {
     uint64_t deadline = jq_now_ms() + timeout_ms;
     bool polled = false;
@@ -504,7 +470,6 @@ static cwist_error_t jq_redis_claim(cwist_job_queue_t *q, uint64_t timeout_ms, c
     }
 }
 
-/** @brief Redis backend: acknowledge a job (XACK) and drop its attempts hash entry. */
 static cwist_error_t jq_redis_ack(cwist_job_queue_t *q, cwist_job_t *job) {
     jq_redis_t *rs = &q->u.redis;
     const void *argv[] = {"XACK", rs->stream, CWIST_JQ_GROUP, job->id};
@@ -518,12 +483,6 @@ static cwist_error_t jq_redis_ack(cwist_job_queue_t *q, cwist_job_t *job) {
     return err;
 }
 
-/**
- * @brief Redis backend: negatively acknowledge a job via the JQ_NACK_SCRIPT
- *        Lua script, parking it in the delay zset or dead-lettering it once
- *        max_retries is exceeded.
- * @retval CWIST_ERROR_NOMEM if the delay blob cannot be allocated.
- */
 static cwist_error_t jq_redis_nack(cwist_job_queue_t *q, cwist_job_t *job) {
     jq_redis_t *rs = &q->u.redis;
     uint32_t next = job->attempts + 1;
@@ -559,7 +518,6 @@ static cwist_error_t jq_redis_nack(cwist_job_queue_t *q, cwist_job_t *job) {
     return err;
 }
 
-/** @brief Redis backend: store the length of the dead-letter list in *out_count. */
 static cwist_error_t jq_redis_dead_count(cwist_job_queue_t *q, uint64_t *out_count) {
     jq_redis_t *rs = &q->u.redis;
     const void *argv[] = {"LLEN", rs->dead};
@@ -570,12 +528,6 @@ static cwist_error_t jq_redis_dead_count(cwist_job_queue_t *q, uint64_t *out_cou
     return err;
 }
 
-/**
- * @brief Create a durable job queue backed by Redis streams.
- * @param conn Borrowed Redis connection (must outlive the queue).
- * @return New queue with consumer group ensured, or NULL on invalid opts,
- *         ENOMEM, or Redis error. Frees nothing on @a conn.
- */
 cwist_job_queue_t *cwist_job_queue_create_redis(cwist_redis_t *conn,
                                                 const cwist_job_queue_opts_t *opts) {
     if (!conn) return NULL;
@@ -634,10 +586,6 @@ static char *jq_sanitize(const char *name) {
     return out;
 }
 
-/**
- * @brief Create the JetStream stream if it does not already exist (file storage).
- * @retval 0 on success (already present or created); CWIST_FAILURE otherwise.
- */
 static cwist_error_t jq_nats_ensure_stream(jq_nats_t *ns, const char *stream, const char *subject) {
     jsErrCode jerr = 0;
     jsStreamInfo *si = NULL;
@@ -657,12 +605,6 @@ static cwist_error_t jq_nats_ensure_stream(jq_nats_t *ns, const char *stream, co
     return jq_err(0);
 }
 
-/**
- * @brief Create a durable job queue backed by NATS JetStream.
- * @param nats Borrowed cwist_nats wrapper; its native connection must outlive the queue.
- * @return New queue with streams and durable pull consumer ensured, or NULL
- *         on invalid opts, ENOMEM, or NATS error.
- */
 cwist_job_queue_t *cwist_job_queue_create_nats(cwist_nats_t *nats,
                                                const cwist_job_queue_opts_t *opts) {
     if (!nats) return NULL;
@@ -755,10 +697,6 @@ fail:
     return NULL;
 }
 
-/**
- * @brief NATS backend: publish a job message with an optional "Cwist-Type" header.
- * @retval CWIST_FAILURE on message creation or publish failure.
- */
 static cwist_error_t jq_nats_enqueue(cwist_job_queue_t *q, const void *payload, size_t payload_len,
                                      const char *type) {
     jq_nats_t *ns = &q->u.nats;
@@ -793,12 +731,6 @@ static void jq_nats_dead_letter(jq_nats_t *ns, natsMsg *msg) {
     natsMsg_Term(msg, NULL);
 }
 
-/**
- * @brief NATS backend: fetch one job within timeout_ms via the pull consumer.
- * @return 0 with *job set; CWIST_ERROR_TIMEOUT on deadline expiry,
- *         CWIST_FAILURE on fetch error, CWIST_ERROR_NOMEM on allocation
- *         failure. Exhausted deliveries are dead-lettered and skipped.
- */
 static cwist_error_t jq_nats_claim(cwist_job_queue_t *q, uint64_t timeout_ms, cwist_job_t **job) {
     jq_nats_t *ns = &q->u.nats;
     uint64_t deadline = jq_now_ms() + timeout_ms;
@@ -871,7 +803,6 @@ static cwist_error_t jq_nats_claim(cwist_job_queue_t *q, uint64_t timeout_ms, cw
     }
 }
 
-/** @brief NATS backend: ack the message and take over its destruction (job->backend is NULLed). */
 static cwist_error_t jq_nats_ack(cwist_job_queue_t *q, cwist_job_t *job) {
     (void)q;
     natsStatus s = natsMsg_Ack((natsMsg *)job->backend, NULL);
@@ -880,7 +811,6 @@ static cwist_error_t jq_nats_ack(cwist_job_queue_t *q, cwist_job_t *job) {
     return s == NATS_OK ? jq_err(0) : jq_err(CWIST_FAILURE);
 }
 
-/** @brief NATS backend: nak the message (with retry delay if configured) and destroy it; job->backend is NULLed. */
 static cwist_error_t jq_nats_nack(cwist_job_queue_t *q, cwist_job_t *job) {
     natsStatus s;
     if (q->retry_delay_ms)
@@ -892,7 +822,6 @@ static cwist_error_t jq_nats_nack(cwist_job_queue_t *q, cwist_job_t *job) {
     return s == NATS_OK ? jq_err(0) : jq_err(CWIST_FAILURE);
 }
 
-/** @brief NATS backend: store the message count of the dead-letter stream in *out_count. */
 static cwist_error_t jq_nats_dead_count(cwist_job_queue_t *q, uint64_t *out_count) {
     jq_nats_t *ns = &q->u.nats;
     jsErrCode jerr = 0;
@@ -906,7 +835,6 @@ static cwist_error_t jq_nats_dead_count(cwist_job_queue_t *q, uint64_t *out_coun
 
 /* --- Dispatch ----------------------------------------------------------- */
 
-/** @brief Destroy a queue and all backend resources it owns; NULL is a no-op. In-flight jobs are not touched. */
 void cwist_job_queue_destroy(cwist_job_queue_t *q) {
     if (!q) return;
     if (q->backend == 0) {
@@ -927,10 +855,6 @@ void cwist_job_queue_destroy(cwist_job_queue_t *q) {
     cwist_free(q);
 }
 
-/**
- * @brief Enqueue a job payload with an optional type.
- * @retval CWIST_ERROR_INVALID_PARAM on NULL queue or NULL payload with nonzero length.
- */
 cwist_error_t cwist_job_queue_enqueue(cwist_job_queue_t *q, const void *payload, size_t payload_len,
                                       const char *type) {
     if (!q || (!payload && payload_len)) return jq_err(CWIST_ERROR_INVALID_PARAM);
@@ -939,20 +863,12 @@ cwist_error_t cwist_job_queue_enqueue(cwist_job_queue_t *q, const void *payload,
                            : jq_nats_enqueue(q, payload, payload_len, type);
 }
 
-/**
- * @brief Claim one job, waiting up to timeout_ms.
- * @return 0 with *job set (NULL on parameter error); backend errors propagate.
- */
 cwist_error_t cwist_job_queue_claim(cwist_job_queue_t *q, uint64_t timeout_ms, cwist_job_t **job) {
     if (!q || !job) return jq_err(CWIST_ERROR_INVALID_PARAM);
     *job = NULL;
     return q->backend == 0 ? jq_redis_claim(q, timeout_ms, job) : jq_nats_claim(q, timeout_ms, job);
 }
 
-/**
- * @brief Acknowledge a claimed job and free it.
- * @retval CWIST_ERROR_INVALID_PARAM if the job does not belong to @a q.
- */
 cwist_error_t cwist_job_queue_ack(cwist_job_queue_t *q, cwist_job_t *job) {
     if (!q || !job || job->q != q) return jq_err(CWIST_ERROR_INVALID_PARAM);
     cwist_error_t err = q->backend == 0 ? jq_redis_ack(q, job) : jq_nats_ack(q, job);
@@ -960,10 +876,6 @@ cwist_error_t cwist_job_queue_ack(cwist_job_queue_t *q, cwist_job_t *job) {
     return err;
 }
 
-/**
- * @brief Negatively acknowledge a claimed job (retry or dead-letter) and free it.
- * @retval CWIST_ERROR_INVALID_PARAM if the job does not belong to @a q.
- */
 cwist_error_t cwist_job_queue_nack(cwist_job_queue_t *q, cwist_job_t *job) {
     if (!q || !job || job->q != q) return jq_err(CWIST_ERROR_INVALID_PARAM);
     cwist_error_t err = q->backend == 0 ? jq_redis_nack(q, job) : jq_nats_nack(q, job);
@@ -971,11 +883,6 @@ cwist_error_t cwist_job_queue_nack(cwist_job_queue_t *q, cwist_job_t *job) {
     return err;
 }
 
-/**
- * @brief Store the number of dead-lettered jobs in *out_count.
- * @retval CWIST_ERROR_INVALID_PARAM on NULL arguments; CWIST_FAILURE if the
- *         backend has no dead-count implementation.
- */
 cwist_error_t cwist_job_queue_dead_count(cwist_job_queue_t *q, uint64_t *out_count) {
     if (!q || !out_count) return jq_err(CWIST_ERROR_INVALID_PARAM);
     if (!q->dead_count) return jq_err(CWIST_FAILURE);
