@@ -5,20 +5,14 @@
 
 #include <cwist/core/html/component.h>
 #include <cwist/core/mem/alloc.h>
+#include <stdbool.h>
+#include <string.h>
 
 struct cwist_html_component {
     char *name;
     cwist_html_component_render_fn render_fn;
 };
 
-/**
- * @brief Create a named component wrapping a render function.
- * @param name Non-empty component name; copied into the new component.
- * @param render_fn Render function invoked by cwist_html_component_instantiate().
- * @return New component on success, NULL if arguments are invalid or
- *         allocation fails. Caller owns the returned component and must
- *         release it with cwist_html_component_destroy().
- */
 cwist_html_component_t *cwist_html_component_create(const char *name,
                                                     cwist_html_component_render_fn render_fn) {
     if (!name || !*name || !render_fn) return NULL;
@@ -36,49 +30,62 @@ cwist_html_component_t *cwist_html_component_create(const char *name,
     return comp;
 }
 
-/**
- * @brief Destroy a component and free its name.
- * @param comp Component to destroy; NULL is accepted and does nothing.
- *           Must not be used after this call.
- */
 void cwist_html_component_destroy(cwist_html_component_t *comp) {
     if (!comp) return;
     cwist_free(comp->name);
     cwist_free(comp);
 }
 
-/**
- * @brief Get the component's name.
- * @param comp Component to query; may be NULL.
- * @return The component's name, or NULL if @p comp is NULL.
- */
 const char *cwist_html_component_name(const cwist_html_component_t *comp) {
     return comp ? comp->name : NULL;
 }
 
 /**
- * @brief Run the component's render function to produce an element tree.
- * @param comp Component whose render function is invoked; may be NULL.
- * @param props Opaque props forwarded to the render function.
- * @param children Child elements forwarded to the render function. When
- *        @p comp is NULL they are destroyed here instead, since no render
- *        function takes ownership of them.
- * @param child_count Number of entries in @p children.
- * @return Rendered element tree, or NULL if arguments are invalid or the
- *         render function fails. Ownership follows the render function's
- *         contract.
+ * @brief Report whether `target` is `root` or one of its descendants.
  */
+static bool tree_contains(const cwist_html_element_t *root, const cwist_html_element_t *target) {
+    if (!root) return false;
+    if (root == target) return true;
+    for (int i = 0; i < root->child_count; i++) {
+        if (tree_contains(root->children[i], target)) return true;
+    }
+    return false;
+}
+
+/**
+ * @brief Destroy every child not reachable from `root` (all of them when
+ *        `root` is NULL), releasing a pointer listed twice only once.
+ */
+static void release_unattached(const cwist_html_element_t *root, cwist_html_element_t **children,
+                               size_t child_count) {
+    if (!children) return;
+    for (size_t i = 0; i < child_count; i++) {
+        cwist_html_element_t *child = children[i];
+        if (!child) continue;
+
+        bool seen = false;
+        for (size_t j = 0; j < i; j++) {
+            if (children[j] == child) {
+                seen = true;
+                break;
+            }
+        }
+        if (seen || tree_contains(root, child)) continue;
+        cwist_html_element_destroy(child);
+    }
+}
+
 cwist_html_element_t *cwist_html_component_instantiate(cwist_html_component_t *comp,
                                                        const void *props,
                                                        cwist_html_element_t **children,
                                                        size_t child_count) {
-    if (!children && child_count > 0) return NULL;
-    if (!comp) {
-        /* No render function will take the children, so release them here. */
-        for (size_t i = 0; i < child_count; i++) {
-            cwist_html_element_destroy(children[i]);
-        }
+    if (!children) child_count = 0;
+    if (!comp || !comp->render_fn) {
+        release_unattached(NULL, children, child_count);
         return NULL;
     }
-    return comp->render_fn(props, children, child_count);
+
+    cwist_html_element_t *root = comp->render_fn(props, children, child_count);
+    release_unattached(root, children, child_count);
+    return root;
 }
