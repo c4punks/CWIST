@@ -55,8 +55,8 @@ changes do. They are not universal guarantees.
 <!-- TUNED_BENCHMARK:START -->
 **Tuned low-latency run (wrk -t4 -c100 -d10s (after 10s warmup, warmup discarded)), CWIST vs Axum on identical concurrency:**
 
-- **CWIST**: 233,372 req/s at 0.29ms average latency (P50 0.21ms, P90 0.49ms, P99 1.89ms)
-- **Axum**: 223,625 req/s at 0.42ms average latency (P50 0.38ms, P90 0.73ms, P99 1.29ms), same binary as the main run above
+- **CWIST**: 181,923 req/s at 0.36ms average latency (P50 0.27ms, P90 0.64ms, P99 2.09ms)
+- **Axum**: 162,474 req/s at 0.58ms average latency (P50 0.51ms, P90 1.06ms, P99 1.85ms), same binary as the main run above
 
 These runs use a different concurrency budget from the main table. They do not establish a causal scheduling explanation or a universal tail-latency improvement.
 <!-- TUNED_BENCHMARK:END -->
@@ -159,29 +159,29 @@ int main(void) {
 <!-- WEBSERVER_BENCHMARKS:START -->
 ## Latest isolated HTTP benchmark
 
-Measured commit: `56cb324b44e78e49b45629f92d3afe62c229a3ae`. Release tag: `not recorded; identify this run by commit`.
-Run: https://github.com/c4punks/CWIST/actions/runs/35565281680. Timestamp: `2026-09-21T05:49:07.184657+00:00`.
+Measured commit: `0b87730a3d5cd3ef796c85a39c06d83d661a4803`. Release tag: `not recorded; identify this run by commit`.
+Run: https://github.com/c4punks/CWIST/actions/runs/35817538501. Timestamp: `2026-09-23T04:25:39.560156+00:00`.
 
 Latency columns use the **wrk corrected distribution**. Memory columns are process-group end samples, not peaks: Group RSS counts a page shared between worker processes once per process, Group PSS divides it by its mapper count, so compare a single-process server against PSS. Context switches are same-thread counter deltas over threads live at both ends of the window; N/A means unavailable.
 
 | Profile | Req/s | Mean ms | P99.999 ms | Group PSS MiB | Group RSS MiB | Context-switch delta |
 |---|---:|---:|---:|---:|---:|---:|
-| CWIST classic | 220,503 | 1.089 | 33.557 | 47.67 | 58.40 | 2,129,442 |
-| CWIST C1M | 262,140 | 2.332 | 23.561 | 24.04 | 37.24 | 618,136 |
-| CWIST C1M arena_max=1 | 271,225 | 2.231 | 31.136 | 25.36 | 38.84 | 603,734 |
-| CWIST C1M drain_chunk=8 | 266,335 | 2.290 | 29.725 | 24.31 | 37.58 | 613,507 |
-| Axum | 223,003 | 1.776 | 10.509 | 13.94 | 16.16 | 400,831 |
-| Gin | 168,629 | 4.141 | 64.141 | 26.41 | 27.96 | 878,228 |
-| Spring Boot | 117,113 | 3.357 | 19.810 | 1,296.22 | 1,299.09 | 551,708 |
+| CWIST classic | 170,307 | 1.392 | 21.763 | 46.32 | 57.05 | 1,713,437 |
+| CWIST C1M | 213,771 | 2.286 | 24.877 | 24.14 | 37.43 | 441,875 |
+| CWIST C1M arena_max=1 | 217,688 | 2.190 | 21.277 | 25.70 | 39.27 | 424,394 |
+| CWIST C1M drain_chunk=8 | 215,425 | 2.229 | 23.334 | 24.64 | 37.91 | 439,487 |
+| Axum | 156,146 | 2.545 | 12.830 | 14.56 | 16.73 | 282,472 |
+| Gin | 109,591 | 6.703 | 94.950 | 27.10 | 28.65 | 587,021 |
+| Spring Boot | 67,044 | 5.910 | 62.555 | 1,293.31 | 1,296.18 | 364,098 |
 
 Main profile: `wrk -t12 -c400 -d10s`, after a discarded 10s warmup.
 
 ### Separate tuned profile
 
 `wrk -t4 -c100 -d10s`, after a discarded 10s warmup. Do not compare these rows as equal-load results against the main table.
-- CWIST classic: 233,372 req/s; mean 0.291 ms; corrected P99.999 5.262 ms.
-- Axum: 223,625 req/s; mean 0.424 ms; corrected P99.999 3.415 ms.
-- Spring Boot: 116,092 req/s; mean 0.997 ms; corrected P99.999 13.736 ms.
+- CWIST classic: 181,923 req/s; mean 0.364 ms; corrected P99.999 9.896 ms.
+- Axum: 162,474 req/s; mean 0.584 ms; corrected P99.999 3.668 ms.
+- Spring Boot: 74,746 req/s; mean 1.425 ms; corrected P99.999 20.765 ms.
 
 Spring Boot row: openjdk version "25.0.4.1" 2026-08-18 LTS, Spring Boot 3.2.3, Spring WebFlux + Reactor Netty on native epoll (G1GC, JDK 25 Leyden AOT, virtual threads disabled). Full JVM options are recorded in `benchmarks/webserver.json`.
 
@@ -200,6 +200,7 @@ GitHub hands out a different CPU model per run, which moves these numbers more t
 |---|---:|---:|---:|---:|---:|---:|
 | AMD EPYC 7763 64-Core Processor | 1 | 2.12 | 3.32 | 3.60 | 131,671 | 108,991 |
 | INTEL(R) XEON(R) PLATINUM 8573C | 1 | 1.09 | 2.33 | 1.78 | 262,140 | 223,003 |
+| Intel(R) Xeon(R) Platinum 8370C CPU @ 2.80GHz | 1 | 1.39 | 2.29 | 2.54 | 213,771 | 156,146 |
 <!-- WEBSERVER_BENCHMARKS:END -->
 
 _Methodology, JVM options, and fairness settings: [docs/webserver-benchmark.md](docs/webserver-benchmark.md)_
