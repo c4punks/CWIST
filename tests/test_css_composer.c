@@ -169,6 +169,92 @@ void test_scope_stylesheet(void) {
     printf("Passed test_scope_stylesheet\n");
 }
 
+static void expect_minified(const char *in, const char *expected) {
+    cwist_sstring *out = cwist_css_minify(in);
+    assert(out != NULL && out->data != NULL);
+    if (strcmp(out->data, expected) != 0) {
+        fprintf(stderr, "minify(%s)\n  got      %s\n  expected %s\n", in, out->data, expected);
+        assert(0);
+    }
+    /* Minifying minified output changes nothing. */
+    cwist_sstring *again = cwist_css_minify(out->data);
+    assert(again != NULL && strcmp(again->data, out->data) == 0);
+    cwist_sstring_destroy(again);
+    cwist_sstring_destroy(out);
+}
+
+void test_minify(void) {
+    expect_minified(".card {\n  padding: 4px 8px;\n  margin: 0 auto;\n}\n",
+                    ".card{padding:4px 8px;margin:0 auto}");
+    expect_minified("/* note */a{b:c}/*! (c) keep me */", "a{b:c}/*! (c) keep me */");
+    /* Strings are copied as written, structural characters included. */
+    expect_minified("a::before { content: \"  ;  }  \" ; }", "a::before{content:\"  ;  }  \"}");
+    expect_minified("q{quotes:'\\'' \"\\\"\"}", "q{quotes:'\\'' \"\\\"\"}");
+    /* An unquoted url() argument may contain ';' and ','. */
+    expect_minified("a{background: url(data:image/png;base64,AA==) no-repeat;}",
+                    "a{background:url(data:image/png;base64,AA==) no-repeat}");
+    expect_minified("a{background:url( \"x y.png\" )}", "a{background:url(\"x y.png\")}");
+    /* calc() needs the spaces around + and -. */
+    expect_minified("a{width: calc(100% - 2 * 4px)}", "a{width:calc(100% - 2 * 4px)}");
+    expect_minified("@media screen and (min-width: 600px) { a { b: c; } }",
+                    "@media screen and (min-width:600px){a{b:c}}");
+    /* "div :hover" (descendant) is not "div:hover". */
+    expect_minified("div :hover {x:y}", "div :hover{x:y}");
+    expect_minified("ul > li + li ~ p , a {x:y}", "ul>li + li ~ p,a{x:y}");
+    /* Escaped characters are not structural. */
+    expect_minified(".md\\:flex { display:flex }", ".md\\:flex{display:flex}");
+    expect_minified(".a\\} .b{x:y}", ".a\\} .b{x:y}");
+    expect_minified(".a\\; }", ".a\\;}");
+    /* Dropping a comment never glues two tokens together. */
+    expect_minified("a/**/b{x:y}", "a b{x:y}");
+    expect_minified("a/**/{x:y}", "a{x:y}");
+    /* Unterminated input. */
+    expect_minified("a{x:y}/* dangling", "a{x:y}");
+    expect_minified("a{content:\"abc", "a{content:\"abc");
+    expect_minified("a{b:url(x", "a{b:url(x");
+    expect_minified("", "");
+    expect_minified(" \n\t ", "");
+    assert(cwist_css_minify(NULL) == NULL);
+    printf("Passed test_minify\n");
+}
+
+void test_bundle(void) {
+    const char *parts[] = {"a { x: y; }", NULL, "b{z:w}"};
+    cwist_sstring *plain = cwist_css_bundle(parts, 3, false);
+    assert(plain != NULL && strcmp(plain->data, "a { x: y; }\nb{z:w}\n") == 0);
+    cwist_sstring_destroy(plain);
+
+    cwist_sstring *min = cwist_css_bundle(parts, 3, true);
+    assert(min != NULL && strcmp(min->data, "a{x:y}b{z:w}") == 0);
+    cwist_sstring_destroy(min);
+
+    /* A part ending in an open comment cannot swallow the next part... */
+    const char *open_comment[] = {"a{x:y}/* no end", "b{z:w}"};
+    min = cwist_css_bundle(open_comment, 2, true);
+    assert(min != NULL && strcmp(min->data, "a{x:y}") == 0);
+    cwist_sstring_destroy(min);
+
+    /* ...only because CSS says an unterminated comment runs to the end; the
+     * scoped stylesheet from a cwist_css_scope bundles like any other part. */
+    cwist_css_scope scope;
+    cwist_css_scope_init(&scope, "card");
+    assert(cwist_css_scope_add_rule(&scope, "card", "padding: 8px;") == 0);
+    assert(cwist_css_scope_class(&scope, "card") != NULL);
+    cwist_sstring *scoped = cwist_css_scope_generate_stylesheet(&scope);
+    const char *app_parts[] = {"body { margin: 0; }", scoped->data};
+    min = cwist_css_bundle(app_parts, 2, true);
+    assert(min != NULL && strcmp(min->data, "body{margin:0}.card-8827595f{padding:8px}") == 0);
+    cwist_sstring_destroy(min);
+    cwist_sstring_destroy(scoped);
+    cwist_css_scope_destroy(&scope);
+
+    cwist_sstring *empty = cwist_css_bundle(NULL, 0, true);
+    assert(empty != NULL && strcmp(empty->data, "") == 0);
+    cwist_sstring_destroy(empty);
+    assert(cwist_css_bundle(NULL, 1, false) == NULL);
+    printf("Passed test_bundle\n");
+}
+
 int main(void) {
     test_hex_parsing_6digit();
     test_hex_parsing_3digit();
@@ -176,6 +262,8 @@ int main(void) {
     test_css_generation();
     test_scope_class_names();
     test_scope_stylesheet();
+    test_minify();
+    test_bundle();
     printf("All CSS composer tests passed!\n");
     return 0;
 }
