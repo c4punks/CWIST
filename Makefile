@@ -321,13 +321,8 @@ WASIP2_TARGET = wasm32-wasip2
 # symbols with the library dropped).
 WASIP2_LDLIBS = $(if $(findstring wasip2,$(WASIP2_TARGET)),-lwasi-emulated-pthread,) \
 	-lwasi-emulated-getpid
-# WASI 0.3 (wasip3) runs blocking socket calls on switched stacks, and the
-# socket-serving chain needs more than wasm-ld's default 64 KiB stack
-# (audited 2026-09-22: first request after accept traps with an OOB read at a
-# wild negative SP; 128 KiB suffices, 256 KiB is the headroom margin).
-# See docs/api/wasm-component.md "Resolved: socket request path under wasip3".
-WASIP2_TARGET_LDFLAGS = $(if $(findstring wasip3,$(WASIP2_TARGET)),-z stack-size=262144,)
-WASIP2_BUILD_DIR = .wasip2-build
+WASIP2_BUILD_DIR = .wasip2-build/$(WASIP2_TARGET)
+WASIP2_ARCHIVE = libcwist_wasip2_$(WASIP2_TARGET).a
 WASIP2_CFLAGS = -std=c17 -O2 -Wall -fvisibility=hidden \
 	-D_WASI_EMULATED_GETPID \
 	$(WASM_INCLUDE_PATHS) $(COMMON_DEFINES)
@@ -350,14 +345,14 @@ $(WASIP2_BUILD_DIR)/%.o: %.c
 	@mkdir -p $(dir $@)
 	$(WASI_SDK)/bin/clang --target=$(WASIP2_TARGET) $(WASIP2_CFLAGS) -c -o $@ $<
 
-libcwist_wasip2.a: $(WASIP2_OBJS)
+$(WASIP2_ARCHIVE): $(WASIP2_OBJS)
 	$(WASI_SDK)/bin/ar rcs $@ $(WASIP2_OBJS)
 
-wasip2-smoke: libcwist_wasip2.a
+wasip2-smoke: $(WASIP2_ARCHIVE)
 	$(WASI_SDK)/bin/clang --target=$(WASIP2_TARGET) $(WASIP2_CFLAGS) \
 	    -DWASIP2_SMOKE_PORT=$(WASIP2_PORT) -o wasip2_smoke.wasm tests/wasip2_smoke.c \
-	    libcwist_wasip2.a $(WASIP2_LDLIBS) $(WASIP2_TARGET_LDFLAGS) \
-	    -Wl,--gc-sections -Wl,--allow-undefined
+	    $(WASIP2_ARCHIVE) $(WASIP2_LDLIBS) \
+	    -Wl,--gc-sections -Wl,--allow-undefined -Wl,-z,stack-size=$(WASIP2_STACK_BYTES)
 	@set -e; \
 	LOG=/tmp/cwist_wasip2_smoke.$$$$.log; \
 	if [ "$(findstring wasip3,$(WASIP2_TARGET))" = "" ]; then PREVIEW2="-S preview2=y"; else PREVIEW2=""; fi; \
@@ -381,7 +376,7 @@ wasip2-smoke: libcwist_wasip2.a
 	echo "wasip2-smoke: PASS (socket server served /hello over wasi:sockets)"
 
 clean-wasip2:
-	rm -rf $(WASIP2_BUILD_DIR) libcwist_wasip2.a wasip2_smoke.wasm
+	rm -rf .wasip2-build libcwist_wasip2_*.a wasip2_smoke.wasm
 
 # --- Component boundary (experimental, issue #203) --------------------------------
 # wit/cwist.wit is the component-model counterpart of wasm_entry.h. The check
@@ -411,8 +406,14 @@ jco-transpile: wasip2-smoke
 # and a node test drives it through wasm/npm/component.js.
 # All artifacts are generated, never committed.
 WIT_BINDINGS_DIR = .wit-bindings
-COMPONENT_BUILD_DIR = .component-build
-JCO_GUEST_DIR = .jco-guest
+COMPONENT_BUILD_DIR = .component-build/$(WASIP2_TARGET)
+JCO_GUEST_DIR = .jco-guest/$(WASIP2_TARGET)
+# Host shim satisfying the guest's WASI imports: preview2-shim for wasip2
+# guests, preview3-shim for wasip3 (0.3) guests.
+JCO_SHIM ?= @bytecodealliance/preview2-shim
+# Node needs --experimental-wasm-jspi for 0.3 components (JSPI drives the
+# canonical-ABI async lowering); 0.2 guests link statically and pass nothing.
+NODE_FLAGS ?=
 
 wit-bindings:
 	@if command -v wit-bindgen > /dev/null 2>&1; then \
@@ -437,13 +438,13 @@ $(COMPONENT_BUILD_DIR)/cwist_guest.o: wit-bindings
 # section and emits the final component in one step (wasm-tools >= 1.25).
 $(COMPONENT_BUILD_DIR)/guest.component.wasm: $(COMPONENT_BUILD_DIR)/guest.o \
                                               $(COMPONENT_BUILD_DIR)/cwist_guest.o \
-                                              libcwist_wasip2.a
+                                              libcwist_wasip2_$(WASIP2_TARGET).a
 	$(WASI_SDK)/bin/clang --target=$(WASIP2_TARGET) $(WASIP2_CFLAGS) \
 	    -o $(COMPONENT_BUILD_DIR)/guest.core.wasm \
 	    $(COMPONENT_BUILD_DIR)/guest.o $(COMPONENT_BUILD_DIR)/cwist_guest.o \
 	    $(WIT_BINDINGS_DIR)/cwist_guest_component_type.o \
-	    libcwist_wasip2.a $(WASIP2_LDLIBS) $(WASIP2_TARGET_LDFLAGS) \
-	    -Wl,--gc-sections -Wl,--allow-undefined
+	    $(WASIP2_ARCHIVE) $(WASIP2_LDLIBS) \
+	    -Wl,--gc-sections -Wl,--allow-undefined -Wl,-z,stack-size=$(WASIP2_STACK_BYTES)
 	wasm-tools component embed wit/ $(COMPONENT_BUILD_DIR)/guest.core.wasm \
 	    -o $@
 
@@ -453,11 +454,43 @@ component-smoke: component-guest
 	npm exec -y --package=@bytecodealliance/jco -- \
 	    jco transpile $(COMPONENT_BUILD_DIR)/guest.component.wasm --out-dir $(JCO_GUEST_DIR)
 	npm install --prefix $(JCO_GUEST_DIR) --no-save --no-fund --no-audit \
-	    --silent @bytecodealliance/preview2-shim
-	$(NODE) tests/wasm_component_test.js
+	    --silent $(JCO_SHIM)
+	JCO_DIR=$(JCO_GUEST_DIR) $(NODE) $(NODE_FLAGS) tests/wasm_component_test.js
+
+# 0.3 variant of the component smoke (issue #203, stage 3 evaluation): same
+# guest and assertions, built for wasm32-wasip3, hosted by preview3-shim under
+# node's JSPI. Requires wasi-sdk >= 34; the probe fails loudly on older SDKs.
+component-smoke-p3:
+	@if ! printf 'int main(void){return 0;}\n' | \
+	    $(WASI_SDK)/bin/clang --target=wasm32-wasip3 -x c - -o /tmp/.cwist_p3_probe.wasm \
+	    > /dev/null 2>&1; then \
+	    echo "component-smoke-p3: $(WASI_SDK) has no wasip3 sysroot (needs wasi-sdk >= 34)"; \
+	    exit 1; \
+	fi; \
+	rm -f /tmp/.cwist_p3_probe.wasm
+	$(MAKE) component-smoke WASIP2_TARGET=wasm32-wasip3 \
+	    JCO_SHIM=@bytecodealliance/preview3-shim NODE_FLAGS=--experimental-wasm-jspi
 
 clean-component:
-	rm -rf $(WIT_BINDINGS_DIR) $(COMPONENT_BUILD_DIR) $(JCO_GUEST_DIR)
+	rm -rf $(WIT_BINDINGS_DIR) .component-build .jco-guest
+
+# Packaging gate for the browser bundle (issue #203, stage 2 remainder): the
+# transpiled component plus the cwist-wasm adapter must bundle for a browser
+# with no node-only imports. esbuild resolves the shim's browser exports via
+# --conditions=browser; --no-nodejs-compat makes jco emit pure browser-style
+# wasm loading (fetch), which is exactly what a bundler consumer gets. The
+# esbuild exit code is the assertion: the browser bundle cannot execute under
+# node (its loader fetches the wasm shards), so no runtime step here.
+component-browser-smoke: component-smoke
+	npm exec -y --package=@bytecodealliance/jco -- \
+	    jco transpile $(COMPONENT_BUILD_DIR)/guest.component.wasm \
+	    --out-dir $(JCO_GUEST_DIR)/browser --no-nodejs-compat
+	cp tests/wasm_component_browser_entry.js $(JCO_GUEST_DIR)/
+	npm exec -y --package=esbuild -- esbuild $(JCO_GUEST_DIR)/wasm_component_browser_entry.js \
+	    --bundle --platform=browser --format=esm --conditions=browser \
+	    --alias:cwist-guest-component=$(abspath $(JCO_GUEST_DIR)/browser/guest.component.js) \
+	    --outfile=$(JCO_GUEST_DIR)/browser_bundle.js
+	@echo "component-browser-smoke: PASS (esbuild bundled the guest + adapter for a browser with no node-only imports)" 
 
 # Object Files and Target
 OBJS = $(SRCS:.c=.o)

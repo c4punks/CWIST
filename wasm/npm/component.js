@@ -10,6 +10,7 @@
  *   const handle = createCwistFromComponent(component);
  *   const res = handle({ method: 'GET', path: '/hello' });
  *   // res.status, res.headers, res.body (Uint8Array) — same as createCwist()
+ *   // Against a 0.3 (wasip3) component handle() returns a Promise: await it.
  */
 'use strict';
 
@@ -31,12 +32,27 @@ function createCwistFromComponent(component) {
     );
   }
 
+  /* dispatch() returns the serialized response bytes; a dispatch-error
+   * variant surfaces as a thrown ComponentError from jco. jco lowers
+   * exports of 0.3 (wasip3) components to async functions, so handle()
+   * returns a Promise there; 0.2 exports are plain synchronous calls. */
+  const asyncExports = typeof component.dispatch === 'function' &&
+    component.dispatch[Symbol.toStringTag] === 'AsyncFunction';
+  let chain = Promise.resolve();
+
   function useSession(secret) {
     if (typeof component.useSession !== 'function') {
       throw new Error('cwist-wasm: component does not expose useSession');
     }
     /* null/undefined lets CWIST generate a per-instance random secret. */
-    component.useSession(secret == null ? null : String(secret));
+    const arg = secret == null ? null : String(secret);
+    if (asyncExports) {
+      /* Serialize against pending dispatches: the secret must be applied
+       * before any later dispatch runs. */
+      chain = chain.then(() => component.useSession(arg));
+      return;
+    }
+    component.useSession(arg);
   }
 
   /* Declarative form: component.cwistSessionSecret applied once at binding
@@ -47,10 +63,12 @@ function createCwistFromComponent(component) {
     useSession(component.cwistSessionSecret);
   }
 
-  /* dispatch() returns the serialized response bytes; a dispatch-error
-   * variant surfaces as a thrown ComponentError from jco. */
   function handle(init) {
-    return parseResponseBytes(component.dispatch(buildRequestBytes(init || {})));
+    const request = buildRequestBytes(init || {});
+    if (asyncExports) {
+      return chain.then(() => component.dispatch(request)).then(parseResponseBytes);
+    }
+    return parseResponseBytes(component.dispatch(request));
   }
 
   handle.useSession = useSession;

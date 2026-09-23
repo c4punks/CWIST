@@ -29,9 +29,10 @@ counterpart of `include/cwist/wasm/wasm_entry.h`:
   round-trip becomes implicit: the canonical ABI copies the result out of
   guest linear memory, and the guest frees its own buffer after return.
 - Streaming is intentionally absent for now. The Emscripten path pushes
-  chunks through an EM_JS callback; the component equivalent should be a
-  host import built on `wasi:io` streams, which lands with the 0.3 async
-  world. Adding a polling export now would bake in the wrong shape.
+  chunks through an EM_JS callback; the component equivalent is a host
+  import plus an async guest export (`send-chunk`), which is now
+  evaluated end to end below. Adding a polling export now would bake in
+  the wrong shape.
 
 ## Toolchain status (measured 2026-09-21)
 
@@ -43,9 +44,47 @@ counterpart of `include/cwist/wasm/wasm_entry.h`:
   wasip3 libc covers those symbols (the p1/p2 sysroots keep the library).
 - wasmtime 48: runs the resulting component. Startup, in-memory dispatch,
   and socket listen all work.
-- jco 1.34.0: transpiles the 0.2 component to a JS module today (see
-  `make jco-transpile`); 0.3 host bindings live in its `preview3-shim`
-  package and need evaluation.
+- jco 1.34.0: transpiles both 0.2 and 0.3 components to JS. 0.3 exports
+  lower to async functions; WASI 0.3 imports are satisfied by
+  `@bytecodealliance/preview3-shim` (evaluated below).
+
+## Evaluated: preview3-shim (2026-09-23)
+
+`make component-smoke-p3` runs the full dispatch guest as a 0.3 component:
+same guest C source, built for `wasm32-wasip3` with wasi-sdk >= 34,
+componentized with `wasm-tools component embed`, transpiled by jco 1.34,
+hosted in node by preview3-shim 0.6.1, and driven through the same five
+assertions as the 0.2 smoke. PASS. Caveats, all host-side:
+
+- node needs `--experimental-wasm-jspi` (JSPI drives the canonical-ABI
+  async lowering). The Makefile passes it; no browser flag decision is
+  baked in.
+- jco lowers every 0.3 export to an async function, so against a wasip3
+  guest `handle()` returns a Promise; `wasm/npm/component.js` detects
+  this and `await` works uniformly for both targets.
+- preview3-shim keeps the node event loop alive after completion, so the
+  smoke exits explicitly.
+
+## Evaluated: native async for streaming/SSE (2026-09-23)
+
+The 0.3 shape for the SSE path (today an EM_JS chunk callback on
+Emscripten) is a host import plus an async guest export, and the whole
+chain works end to end as a spike:
+
+1. `async func` in WIT parses and validates; wit-bindgen 0.62 emits
+   waitable-set/callback C bindings for both imports and exports.
+2. The guest compiles for wasm32-wasip3 with wasi-sdk 34; an async
+   export that awaits an async host import builds, componentizes, and
+   transpiles, and the host receives the chunk payload in JS over JSPI.
+3. Custom host imports surface from jco as plain ESM imports, so the
+   adapter supplies them like any other dependency.
+
+Cost: the guest-side streaming pump must be written in continuation
+style (initiate the host call, return `CALLBACK_CODE_WAIT` on the
+waitable set, resume in the callback) instead of the current synchronous
+`write_fn` loop. That is a bounded rewrite of the SSE pump, deferred to
+the 0.3 cutover; the WIT shape is `host.send-chunk: async func(chunk:
+list<u8>) -> result` alongside the existing sync `dispatch`.
 
 ## Resolved: socket request path under wasip3 (audited 2026-09-22)
 
@@ -78,8 +117,7 @@ overhead is what crosses the default limit.
 
 1. **WIT + validation (landed).** The world definition, `make wit-check`,
    `make jco-transpile`, and this document.
-2. **jco browser spike (landed for the pipeline; browser packaging
-   pending).** `tests/wasm_component_guest.c` is a dispatch guest exporting
+2. **jco browser spike (landed).** `tests/wasm_component_guest.c` is a dispatch guest exporting
    the cwist-guest world through wit-bindgen's canonical ABI shims
    (`include/cwist/wasm/wasm_component.h` holds the shared helpers);
    `make component-smoke` builds it for wasm32-wasip2, componentizes with
@@ -87,14 +125,20 @@ overhead is what crosses the default limit.
    node through the `createCwistFromComponent` adapter (`wasm/npm/component.js`)
    against the same assertions as the Emscripten wrapper test, including the
    signed-cookie session roundtrip and the dispatch-error variant. WASI
-   imports are satisfied by `@bytecodealliance/preview2-shim`. What remains
-   of this stage is packaging a browser bundle; the node spike proves the
-   pipeline end to end. Emscripten stays supported regardless.
-3. **0.3 cutover (conditional).** After the wasip3 socket runtime issue
-   above is resolved (wasi-libc fix or newer wasi-sdk), evaluate jco
-   `preview3-shim` for the browser bundle and native async for the
-   streaming/SSE paths (the Asyncify replacement), then drop the
-   Emscripten build from CI.
+   imports are satisfied by `@bytecodealliance/preview2-shim`. Browser
+   packaging is gated by `make component-browser-smoke`: a
+   `--no-nodejs-compat` re-transpile plus the adapter must bundle under
+   esbuild with `--platform=browser` and no node-only imports, which is
+   the property a bundler consumer needs (the bundle itself loads its wasm
+   shards via fetch and is not executed in the smoke). The npm package
+   exposes the adapter through an exports map (`cwist-wasm/component`).
+   Emscripten stays supported regardless.
+3. **0.3 cutover (conditional).** Both preconditions are now evaluated
+   (see above): preview3-shim hosts the dispatch guest end to end, and
+   native async carries a chunk payload host-ward over JSPI. Remaining
+   before the cutover: rewrite the SSE pump in continuation style against
+   the `send-chunk` host import, and track JSPI shipping unflagged in
+   node and browsers. Only then does the Emscripten build leave CI.
 
 ## Measured while building stage 2
 
