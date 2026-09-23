@@ -129,6 +129,15 @@ cwist.pc
 libcwist_wasm.a
 wasm_smoke.js
 wasm_smoke.wasm
+.wit-check/
+.wit-bindings/
+.component-build/
+.jco-guest/
+.jco-guest-stream/
+.jco-out/
+.wasip2-build/
+libcwist_wasip2_*.a
+wasip2_smoke.wasm
 tests/test_proto_gen_sample.pb
 tests/test_proto_gen_desc_sample.cwist.pb.h
 

@@ -121,6 +121,109 @@ jobs:
     - name: Verify clang-format guards (format-check)
       run: |
         clang-format --dry-run --Werror \
-          tests/wasm_smoke.c tests/wasi_smoke.c include/cwist/wasm/typedarray.h \
+          tests/wasm_smoke.c include/cwist/wasm/typedarray.h \
           include/cwist/wasm/wasm_entry.h src/net/http/session.c src/sys/wasi/compat.c \
           example/wasm-service-worker/app.c
+
+  # v3.7 Phase 1 (issue #201): the wasip2 socket server is only "supported"
+  # if CI builds it and proves wasi:sockets serving on every push. Mirrors
+  # the manual `make wasip2-smoke` gate; toolchain versions are pinned to
+  # the ones docs/api/wasi.md was verified against.
+  wasip2:
+    name: WASI 0.2 socket server smoke
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      with:
+        submodules: recursive
+
+    # Extracted under ~/toolchains so the Makefile's WASI_SDK default
+    # resolves with no env override.
+    - name: Install wasi-sdk 25.0
+      run: |
+        mkdir -p "$HOME/toolchains"
+        curl -sSL -o /tmp/wasi-sdk.tar.gz \
+          https://github.com/WebAssembly/wasi-sdk/releases/download/wasi-sdk-25/wasi-sdk-25.0-x86_64-linux.tar.gz
+        tar -xzf /tmp/wasi-sdk.tar.gz -C "$HOME/toolchains"
+
+    - name: Install wasmtime 25
+      run: |
+        curl -sSL -o /tmp/wasmtime.tar.xz \
+          https://github.com/bytecodealliance/wasmtime/releases/download/v25.0.0/wasmtime-v25.0.0-x86_64-linux.tar.xz
+        tar -xJf /tmp/wasmtime.tar.xz -C /tmp
+        echo "/tmp/wasmtime-v25.0.0-x86_64-linux" >> "$GITHUB_PATH"
+
+    - name: Run wasip2 smoke (build + wasi:sockets curl probe)
+      run: make wasip2-smoke
+
+  # v3.7 Phase 1 (issue #203): the component pipeline is only "real" if CI
+  # validates the WIT worlds and drives the jco-transpiled guests on every
+  # push. Mirrors make wit-check / component-smoke / component-smoke-p3 /
+  # component-browser-smoke / component-stream-smoke-p3; toolchain versions
+  # match docs/api/wasm-component.md.
+  component:
+    name: Component pipeline (WIT + jco guests)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      with:
+        submodules: recursive
+
+    # Node >= 22 provides --experimental-wasm-jspi, which the 0.3 guests
+    # need; the runner's default node is too old to rely on.
+    - name: Install node 24
+      uses: actions/setup-node@v4
+      with:
+        node-version: 24
+
+    # Extracted under ~/toolchains so the Makefile's WASI_SDK default
+    # resolves with no env override (wasip2 guests); 0.3 targets override
+    # WASI_SDK to 34 explicitly below.
+    - name: Install wasi-sdk 25.0
+      run: |
+        mkdir -p "$HOME/toolchains"
+        curl -sSL -o /tmp/wasi-sdk.tar.gz \
+          https://github.com/WebAssembly/wasi-sdk/releases/download/wasi-sdk-25/wasi-sdk-25.0-x86_64-linux.tar.gz
+        tar -xzf /tmp/wasi-sdk.tar.gz -C "$HOME/toolchains"
+
+    - name: Install wasi-sdk 34.0 (wasip3 sysroot)
+      run: |
+        curl -sSL -o /tmp/wasi-sdk-34.tar.gz \
+          https://github.com/WebAssembly/wasi-sdk/releases/download/wasi-sdk-34/wasi-sdk-34.0-x86_64-linux.tar.gz
+        tar -xzf /tmp/wasi-sdk-34.tar.gz -C "$HOME/toolchains"
+
+    - name: Install wasm-tools 1.259.0 and wit-bindgen 0.62.0
+      run: |
+        curl -sSL -o /tmp/wasm-tools.tar.gz \
+          https://github.com/bytecodealliance/wasm-tools/releases/download/v1.259.0/wasm-tools-1.259.0-x86_64-linux.tar.gz
+        tar -xzf /tmp/wasm-tools.tar.gz -C /tmp
+        curl -sSL -o /tmp/wit-bindgen.tar.gz \
+          https://github.com/bytecodealliance/wit-bindgen/releases/download/v0.62.0/wit-bindgen-0.62.0-x86_64-linux.tar.gz
+        tar -xzf /tmp/wit-bindgen.tar.gz -C /tmp
+        echo "/tmp/wasm-tools-1.259.0-x86_64-linux" >> "$GITHUB_PATH"
+        echo "/tmp/wit-bindgen-0.62.0-x86_64-linux" >> "$GITHUB_PATH"
+
+    - name: Validate WIT worlds (wit-check)
+      run: make wit-check
+
+    - name: Component smoke (0.2 guest over preview2-shim)
+      run: make component-smoke NODE="$(command -v node)"
+
+    - name: Component smoke 0.3 (wasip3 guest over preview3-shim + JSPI)
+      run: |
+        make component-smoke-p3 \
+          WASI_SDK="$HOME/toolchains/wasi-sdk-34.0-x86_64-linux" \
+          NODE="$(command -v node)"
+
+    - name: Browser bundle gate (esbuild, no node-only imports)
+      run: make component-browser-smoke NODE="$(command -v node)"
+
+    - name: Streaming dispatch smoke (async host send-chunk)
+      run: |
+        make component-stream-smoke-p3 \
+          WASI_SDK="$HOME/toolchains/wasi-sdk-34.0-x86_64-linux" \
+          NODE="$(command -v node)"

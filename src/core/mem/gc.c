@@ -3,7 +3,9 @@
 #include <ttak/mem/epoch.h>
 #include <pthread.h>
 #include <stdlib.h>
+#if !defined(__wasi__)
 #include <sys/mman.h>
+#endif
 #include <unistd.h>
 
 /**
@@ -189,6 +191,13 @@ static cwist_full_gc_guard_t *g_full_gc_guard = NULL;
  * regressed the C1M reactor latency gate in CI once already).
  */
 __attribute__((constructor)) static void cwist_full_gc_guard_init(void) {
+#if defined(__wasi__)
+    /* WASI has no mmap: leave the guard NULL so cwist_full_gc_enabled()
+     * reports full-GC as permanently unavailable (the same fail-safe the
+     * MAP_FAILED path reaches natively). */
+    (void)g_full_gc_guard;
+    return;
+#else
     long page_size = sysconf(_SC_PAGESIZE);
     if (page_size <= 0) page_size = 4096;
     void *page =
@@ -198,6 +207,7 @@ __attribute__((constructor)) static void cwist_full_gc_guard_init(void) {
     atomic_init(&guard->enabled, false);
     atomic_init(&guard->locked, false);
     g_full_gc_guard = guard;
+#endif
 }
 
 /** @brief Process-wide GC instance backing full-GC's epoch-retire pipeline. */
@@ -246,8 +256,12 @@ void cwist_full_gc(bool enable) {
      * the page yet, so it is still writable and we are its sole writer. */
     atomic_store_explicit(&g_full_gc_guard->enabled, enable, memory_order_relaxed);
     atomic_store_explicit(&g_full_gc_guard->locked, true, memory_order_release);
+#if !defined(__wasi__)
+    /* Unreachable under WASI (the guard is never mapped there), where
+     * mprotect does not exist. */
     long page_size = sysconf(_SC_PAGESIZE);
     mprotect(g_full_gc_guard, (size_t)(page_size > 0 ? page_size : 4096), PROT_READ);
+#endif
     pthread_mutex_unlock(&g_full_gc_claim_mu);
 
     cwist_gc_auto_rotate(cwist_full_gc_instance(), enable);

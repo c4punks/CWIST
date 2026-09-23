@@ -1,0 +1,72 @@
+// WIT world for the CWIST guest module, the component-model counterpart of
+// include/cwist/wasm/wasm_entry.h (issue #203).
+//
+// The wire format stays serialized HTTP/1.1: the same text requests and
+// responses wasm_entry.h dispatches today, so the app-side parser and the
+// cwist-wasm npm wrapper semantics carry over unchanged. Only the host
+// boundary moves from Emscripten's EXPORTED_FUNCTIONS pointer ABI to
+// canonical ABI lifting.
+//
+// Guest-side buffer ownership: dispatch returns a list<u8>, the canonical ABI
+// copies the bytes out of guest linear memory, and the guest frees its
+// internal buffer after the export returns. This replaces the explicit
+// _cwist_wasm_dispose round-trip the pointer ABI required.
+
+package c4punks:cwist@0.1.0;
+
+interface guest {
+    variant dispatch-error {
+        /// Routes were not registered before the first dispatch.
+        not-initialized,
+        /// The request failed to parse or no route matched.
+        invalid-request,
+    }
+
+    variant session-error {
+        /// The session store rejected the secret (rotation after first use).
+        rejected,
+    }
+
+    /// Dispatch one serialized HTTP/1.1 request; returns the serialized
+    /// response. Same contract as _cwist_wasm_dispatch.
+    dispatch: func(request: list<u8>) -> result<list<u8>, dispatch-error>;
+
+    /// Pin the session signing secret before the first dispatch so cookies
+    /// survive module restarts. `none` lets CWIST generate a per-instance
+    /// random secret. The string is copied; the host keeps ownership.
+    /// Same contract as _cwist_wasm_use_session.
+    use-session: func(secret: option<string>) -> result<_, session-error>;
+}
+
+// Streaming: the Emscripten path delivers chunks through an EM_JS host
+// callback; the component equivalent is the async host import below, shaped
+// so the host can apply backpressure (issue #203, stage 3). It lives in a
+// separate 0.3-only world: cwist-guest stays 0.2-compatible, and
+// wasm-tools component embed picks the world via --world.
+
+world cwist-guest {
+    export guest;
+}
+
+interface host {
+    /// Deliver one chunk of a streaming response (head first, then body
+    /// slices, exactly as cwist_app_dispatch_stream() pumps them). Awaited
+    /// by the guest, so the host may apply backpressure by delaying
+    /// resolution.
+    send-chunk: async func(chunk: list<u8>) -> result<_, string>;
+}
+
+interface guest-stream {
+    use guest.{dispatch-error};
+
+    /// Like dispatch, but the serialized response is delivered through
+    /// host.send-chunk as head-plus-body slices instead of being returned.
+    /// Same contract as _cwist_wasm_dispatch_stream.
+    dispatch-stream: func(request: list<u8>) -> result<_, dispatch-error>;
+}
+
+world cwist-guest-stream {
+    import host;
+    export guest;
+    export guest-stream;
+}

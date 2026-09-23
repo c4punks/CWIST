@@ -63,6 +63,19 @@ Request `body` may be a string or a `Uint8Array`. The response `body` is a
 copy, so it stays valid across subsequent calls even if the WASM heap is
 reused.
 
+## Component pipeline (experimental)
+
+`const { createCwistFromComponent } = require('cwist-wasm/component')` binds
+the same handler shape to a jco-transpiled `cwist-guest` component (issue
+#203) instead of an Emscripten module. `component` is the guest interface of
+the transpiled output: `{ dispatch(Uint8Array): Uint8Array, useSession(string|null) }`.
+The adapter and its dependencies are environment-neutral JS, so it bundles
+for browsers as-is (verified with esbuild in the CWIST repo,
+`make component-browser-smoke`). One asymmetry: jco lowers exports of 0.3
+(wasip3) components to async functions, so against a 0.3 guest `handle()`
+returns a Promise and `await` is required; 0.2 guests stay synchronous.
+See `docs/api/wasm-component.md` in the CWIST repo for building the guest.
+
 ## Scope
 
 This wrapper is intentionally thin: routing, middleware, validation, and

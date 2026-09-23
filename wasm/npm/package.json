@@ -1,13 +1,30 @@
 {
   "name": "cwist-wasm",
   "version": "3",
-  "description": "First-party JS wrapper over CWIST's WASM dispatch_memory path. Pairs with a consumer-built Emscripten module compiled from libcwist_wasm.a.",
+  "description": "First-party JS wrapper over CWIST's WASM dispatch paths: the Emscripten dispatch_memory module and the jco-transpiled cwist-guest component.",
   "license": "MIT",
   "main": "index.js",
   "types": "index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./index.d.ts",
+      "default": "./index.js"
+    },
+    "./component": {
+      "types": "./component.d.ts",
+      "default": "./component.js"
+    },
+    "./component.js": {
+      "types": "./component.d.ts",
+      "default": "./component.js"
+    },
+    "./package.json": "./package.json"
+  },
   "files": [
     "index.js",
     "index.d.ts",
+    "component.js",
+    "component.d.ts",
     "README.md"
   ],
   "engines": {
