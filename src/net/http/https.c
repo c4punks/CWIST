@@ -34,6 +34,10 @@
 /* Forward declaration: PQC layer applied inside TLS bootstrap */
 bool cwist_tls_apply_pqc_layer(cwist_app *app, SSL_CTX *ctx);
 
+/* Bodies up to this size are written in the same TLS record as the
+ * response headers; larger bodies amortize the per-record overhead. */
+#define CWIST_TLS_COALESCE_MAX (16 * 1024)
+
 /* Monotonic clock in milliseconds, for connection deadlines. */
 static uint64_t cwist_https_now_ms(void) {
     struct timespec ts;
@@ -1055,9 +1059,80 @@ cwist_error_t cwist_https_send_response(cwist_https_connection *conn, cwist_http
         cwist_http_header_add(&res->headers, "Alt-Svc", alt_svc);
     }
 
-    // 1. Serialize using existing HTTP logic
-    cwist_sstring *response_str = cwist_http_stringify_response(res);
-    if (!response_str) {
+    // 1+2. Headers onto a stack buffer; a small body rides in the same TLS
+    // record, saving one record's AEAD tag and one syscall on the common
+    // short-response path. Larger bodies keep the split writes (BoringSSL
+    // records a big SSL_write at 16 KiB internally).
+    char header_buf[CWIST_HTTP_MAX_HEADER_SIZE];
+    size_t header_len = cwist_http_serialize_headers(res, header_buf, sizeof(header_buf));
+
+    const char *body_ptr = NULL;
+    size_t body_len = 0;
+    if (res->is_ptr_body) {
+        body_ptr = (const char *)res->ptr_body;
+        body_len = res->ptr_body_len;
+    } else if (res->body && res->body->data) {
+        body_ptr = res->body->data;
+        body_len = res->body->size;
+    }
+
+    bool body_coalesced = false;
+    if (body_ptr && body_len > 0 && body_len <= CWIST_TLS_COALESCE_MAX) {
+        char *combined = (char *)cwist_alloc(header_len + body_len);
+        if (combined) {
+            memcpy(combined, header_buf, header_len);
+            memcpy(combined + header_len, body_ptr, body_len);
+            int rc = cwist_ssl_write_all(conn, combined, header_len + body_len);
+            cwist_free(combined);
+            if (rc != 0) {
+                return make_ssl_error("SSL coalesced write failed");
+            }
+            body_coalesced = true;
+        }
+        /* Allocation failure: fall through to the split writes. */
+    }
+    if (!body_coalesced) {
+        if (cwist_ssl_write_all(conn, header_buf, header_len) != 0) {
+            return make_ssl_error("SSL header write failed");
+        }
+        if (body_ptr && body_len > 0) {
+            if (cwist_ssl_write_all(conn, body_ptr, body_len) != 0) {
+                return make_ssl_error("SSL body write failed");
+            }
+        }
+    }
+
+    // 3. File streams cannot use sendfile() through userland TLS; chunk them
+    if (res->use_file_stream && res->file_stream_fd >= 0) {
+        char fbuf[65536];
+        size_t remaining = res->file_stream_len;
+        off_t offset = res->file_stream_offset;
+        while (remaining > 0) {
+            size_t to_read = remaining < sizeof(fbuf) ? remaining : sizeof(fbuf);
+            ssize_t n = pread(res->file_stream_fd, fbuf, to_read, offset);
+            if (n < 0) {
+                if (errno == EINTR) continue;
+                return make_ssl_error("file stream read failed");
+            }
+            if (n == 0) break;
+            if (cwist_ssl_write_all(conn, fbuf, (size_t)n) != 0) {
+                return make_ssl_error("SSL file stream write failed");
+            }
+            offset += n;
+            remaining -= (size_t)n;
+        }
+        res->file_stream_offset = offset;
+    }
+
+    err.error.err_i16 = 0;
+    return err;
+}
+
+cwist_error_t cwist_https_send_response_head(cwist_https_connection *conn,
+                                             cwist_http_response *res) {
+    cwist_error_t err = make_error(CWIST_ERR_INT16);
+
+    if (!conn || !conn->ssl || !res) {
         err.error.err_i16 = -1;
         return err;
     }
