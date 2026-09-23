@@ -2251,6 +2251,10 @@ int cwist_app_dispatch_memory(cwist_app *app, const char *req_buf, size_t req_le
     cwist_app_dispatch(app, req, res);
     cwist_http_request_destroy(req);
 
+    /* Producer streams finalize at dispatch return when the handler did not
+     * end them explicitly (terminator only; no sink is attached here). */
+    if (res->stream_mode && !res->stream_ended) cwist_http_response_stream_end(res);
+
     /* One-shot buffer exchange: Connection: close semantics. */
     res->keep_alive = false;
     int rc = cwist_http_response_serialize(res, res_buf, res_len);
@@ -2384,9 +2388,23 @@ int cwist_app_dispatch_stream(cwist_app *app, const char *req_buf, size_t req_le
         cwist_http_request_destroy(req);
         return -1;
     }
+    /* Attach the sink before dispatch: producer writes stream head-first
+     * and chunk-by-chunk while the handler is still running. */
+    res->stream_sink = write_fn;
+    res->stream_sink_ctx = write_ctx;
     cwist_app_dispatch(app, req, res);
     cwist_http_request_destroy(req);
     res->keep_alive = false;
+
+    if (res->stream_mode) {
+        /* Finalize an un-ended stream (flushes the terminator through the
+         * sink), then detach: everything already travelled to write_fn. */
+        if (!res->stream_ended) cwist_http_response_stream_end(res);
+        res->stream_sink = NULL;
+        cwist_http_response_destroy(res);
+        return res->stream_failed ? -2 : 0;
+    }
+    res->stream_sink = NULL;
 
     if (res->use_file_stream) {
         /* File-stream bodies are not resident memory; the streaming boundary

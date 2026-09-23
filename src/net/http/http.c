@@ -1712,6 +1712,14 @@ static cwist_http_response *cwist_http_response_create_impl(cwist_arena_t *arena
     res->file_stream_len = 0;
     res->file_stream_offset = 0;
     res->file_stream_auto_close = false;
+    res->stream_mode = false;
+    res->stream_ended = false;
+    res->stream_failed = false;
+    res->stream_buf = cwist_http_sstring_create(arena);
+    res->stream_flushed = 0;
+    res->stream_sink = NULL;
+    res->stream_sink_ctx = NULL;
+    res->stream_head_sent = false;
     res->arena = arena;
     res->arena_borrowed = arena_borrowed;
 
@@ -1749,6 +1757,7 @@ void cwist_http_response_destroy(cwist_http_response *res) {
         cwist_sstring_destroy(res->version);
         cwist_sstring_destroy(res->status_text);
         cwist_sstring_destroy(res->body);
+        cwist_sstring_destroy(res->stream_buf);
         cwist_http_header_free_all(res->headers);
         cwist_free(res->alt_svc);
         /* Snapshot before the possible free: when the arena was full the
@@ -1846,8 +1855,11 @@ static size_t serialize_headers(cwist_http_response *res, char *buf, size_t buf_
         body_len = res->body->size;
     }
 
-    /* Fast path for default HTTP/1.1 200 OK response with no custom headers */
-    if (res->status_code == 200 && !res->headers && !res->alt_svc && buf_size >= 128) {
+    /* Fast path for default HTTP/1.1 200 OK response with no custom headers.
+     * Streamed responses take the general path: chunked mode needs the
+     * Transfer-Encoding header the fast path cannot emit. */
+    if (res->status_code == 200 && !res->headers && !res->alt_svc && !res->stream_mode &&
+        buf_size >= 128) {
         /* Compact ring/line buffer optimization for high-throughput pipelining */
         static const char status_prefix[] = "HTTP/1.1 200 OK\r\nContent-Length: ";
         memcpy(buf, status_prefix, sizeof(status_prefix) - 1);
@@ -1902,7 +1914,7 @@ static size_t serialize_headers(cwist_http_response *res, char *buf, size_t buf_
     // Headers: memcpy with known sstring lengths (no snprintf/strlen overhead),
     // detecting Date/Content-Length/Connection in the same single pass with a
     // length + first-byte filter before falling back to strcasecmp.
-    bool have_date = false, have_clen = false, have_conn = false;
+    bool have_date = false, have_clen = false, have_conn = false, have_te = false;
     cwist_http_header_node *curr = res->headers;
     while (curr) {
         if (curr->key->data && curr->value->data) {
@@ -1924,6 +1936,8 @@ static size_t serialize_headers(cwist_http_response *res, char *buf, size_t buf_
                 if (strcasecmp(curr->key->data, "content-length") == 0) have_clen = true;
             } else if (klen == 10 && (k0 == 'C' || k0 == 'c')) {
                 if (strcasecmp(curr->key->data, "connection") == 0) have_conn = true;
+            } else if (klen == 17 && (k0 == 'T' || k0 == 't')) {
+                if (strcasecmp(curr->key->data, "transfer-encoding") == 0) have_te = true;
             }
         }
         curr = curr->next;
@@ -1939,7 +1953,15 @@ static size_t serialize_headers(cwist_http_response *res, char *buf, size_t buf_
         offset += 37;
     }
 
-    if (!have_clen) {
+    if (res->stream_mode && !have_te && !have_clen) {
+        static const char te_chunked[] = "Transfer-Encoding: chunked\r\n";
+        if (offset + sizeof(te_chunked) - 1 <= buf_size) {
+            memcpy(buf + offset, te_chunked, sizeof(te_chunked) - 1);
+            offset += sizeof(te_chunked) - 1;
+        }
+    }
+
+    if (!have_clen && !res->stream_mode) {
         /* Fast integer to ascii without snprintf overhead */
         char num_buf[20];
         char *p = num_buf + sizeof(num_buf);
@@ -3309,7 +3331,13 @@ int cwist_http_response_serialize(cwist_http_response *res, char **out, size_t *
 
     const void *body = NULL;
     size_t body_len = 0;
-    if (res->is_ptr_body) {
+    if (res->stream_mode) {
+        /* Chunked framing was appended at write time; auto-finalize so the
+         * terminator is present even when the handler skipped end(). */
+        if (!res->stream_ended) cwist_http_response_stream_end(res);
+        body = res->stream_buf ? res->stream_buf->data : NULL;
+        body_len = res->stream_buf ? res->stream_buf->size : 0;
+    } else if (res->is_ptr_body) {
         body = res->ptr_body;
         body_len = res->ptr_body_len;
     } else if (res->body && res->body->data) {
@@ -3324,6 +3352,79 @@ int cwist_http_response_serialize(cwist_http_response *res, char **out, size_t *
     buf[header_len + body_len] = '\0';
     *out = buf;
     *out_len = header_len + body_len;
+    return 0;
+}
+
+/* --- Streaming producer (issue #201 Phase 1) ------------------------------ */
+
+/* Push everything stream_buf holds past stream_flushed to the live sink,
+ * serializing the head first (with Transfer-Encoding: chunked) on the first
+ * call. Returns 0 on success, -1 when the sink rejects a write. */
+static int cwist_response_stream_flush(cwist_http_response *res) {
+    if (!res->stream_sink) return 0;
+    if (!res->stream_head_sent) {
+        char head_buf[CWIST_HTTP_MAX_HEADER_SIZE];
+        size_t head_len = serialize_headers(res, head_buf, sizeof(head_buf));
+        if (head_len == 0 || head_len >= sizeof(head_buf)) return -1;
+        if (res->stream_sink(res->stream_sink_ctx, head_buf, head_len) != 0) return -1;
+        res->stream_head_sent = true;
+    }
+    size_t pending = res->stream_buf ? res->stream_buf->size - res->stream_flushed : 0;
+    if (pending > 0) {
+        if (res->stream_sink(res->stream_sink_ctx, res->stream_buf->data + res->stream_flushed,
+                             pending) != 0)
+            return -1;
+        res->stream_flushed = res->stream_buf->size;
+    }
+    return 0;
+}
+
+int cwist_http_response_stream_begin(cwist_http_response *res) {
+    if (!res || res->stream_mode || res->is_ptr_body || res->use_file_stream) return -1;
+    res->stream_mode = true;
+    /* A body assigned before begin is discarded: chunked framing owns the
+     * payload from here on. */
+    if (res->body) res->body->size = 0; /* discard any body assigned before begin */
+    return 0;
+}
+
+int cwist_http_response_stream_write(cwist_http_response *res, const char *data, size_t len) {
+    if (!res || !res->stream_mode || res->stream_ended) return -1;
+    if (!data) return -1;
+    if (len == 0) return 0; /* an empty chunk is the terminator; never emit one mid-stream */
+    if (!res->stream_buf) {
+        res->stream_buf = cwist_http_sstring_create(res->arena);
+        if (!res->stream_buf) return -1;
+    }
+    char frame_hdr[24];
+    int frame_hdr_len = snprintf(frame_hdr, sizeof(frame_hdr), "%zx\r\n", len);
+    if (frame_hdr_len <= 0) return -1;
+    cwist_error_t append_err = cwist_sstring_append_len(res->stream_buf, frame_hdr, (size_t)frame_hdr_len);
+    if (cwist_error_is_ok(&append_err))
+        append_err = cwist_sstring_append_len(res->stream_buf, data, len);
+    if (cwist_error_is_ok(&append_err))
+        append_err = cwist_sstring_append_len(res->stream_buf, "\r\n", 2);
+    if (!cwist_error_is_ok(&append_err)) return -1;
+    if (cwist_response_stream_flush(res) != 0) {
+        res->stream_failed = true;
+        return -1;
+    }
+    return 0;
+}
+
+int cwist_http_response_stream_end(cwist_http_response *res) {
+    if (!res || !res->stream_mode || res->stream_ended) return -1;
+    if (!res->stream_buf) {
+        res->stream_buf = cwist_http_sstring_create(res->arena);
+        if (!res->stream_buf) return -1;
+    }
+    cwist_error_t end_err = cwist_sstring_append_len(res->stream_buf, "0\r\n\r\n", 5);
+    if (!cwist_error_is_ok(&end_err)) return -1;
+    if (cwist_response_stream_flush(res) != 0) {
+        res->stream_failed = true;
+        return -1;
+    }
+    res->stream_ended = true;
     return 0;
 }
 
