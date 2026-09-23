@@ -93,10 +93,11 @@ Initiates the close handshake without blocking. Queues a CLOSE frame and
 schedules connection cleanup. Safe to call from inside the `on_message`
 callback; `NULL` is ignored.
 
-## GraphQL subscriptions (graphql-ws)
+## GraphQL subscriptions (graphql-ws) — EXPERIMENTAL
 
-> Supported since v3.8. The feature is opt-in only and changes no existing
-> behavior when unused.
+> v3.7 Phase 4 experimental feature. The API and wire behavior may change
+> without notice; the feature is opt-in only and changes no existing behavior
+> when unused.
 
 `cwist/graphql_ws.h` implements the `graphql-transport-ws` subprotocol on top
 of the non-blocking WebSocket transport:
