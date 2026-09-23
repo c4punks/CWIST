@@ -170,6 +170,12 @@ typedef struct cwist_app {
 
     /** @brief Background job scheduler (when enabled). */
     void *scheduler;
+
+    /** @brief Unary gRPC route registry. */
+    void *grpc_routes;
+
+    /** @brief Content-hashed in-memory assets (see <cwist/sys/app/assets.h>). */
+    void *assets;
 } cwist_app;
 
 // --- Memory Management ---

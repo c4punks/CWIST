@@ -34,14 +34,12 @@ typedef struct cwist_asset_registry {
     _Atomic(struct cwist_asset *) head;
 } cwist_asset_registry;
 
-/** Build an error result holding an int16 status code. */
 static cwist_error_t asset_result(int16_t code) {
     cwist_error_t err = make_error(CWIST_ERR_INT16);
     err.error.err_i16 = code;
     return err;
 }
 
-/** Allocate and return the three-part concatenation of `a`, `b`, and `c`; NULL on OOM. */
 static char *join3(const char *a, const char *b, const char *c) {
     size_t la = strlen(a), lb = strlen(b), lc = strlen(c);
     char *out = (char *)cwist_alloc(la + lb + lc + 1);
@@ -52,7 +50,6 @@ static char *join3(const char *a, const char *b, const char *c) {
     return out;
 }
 
-/** Copy `url_prefix` into a normalized form (trailing '/' stripped); NULL if invalid. */
 static char *normalize_prefix(const char *url_prefix) {
     if (!url_prefix || url_prefix[0] != '/') return NULL;
     size_t len = strlen(url_prefix);
@@ -68,7 +65,6 @@ static char *normalize_prefix(const char *url_prefix) {
     return out;
 }
 
-/** Whether `name` is a non-empty relative path of safe segments (no ".", "..", or empty segments). */
 static bool name_is_valid(const char *name) {
     if (!name || !*name || name[0] == '/') return false;
     const char *seg = name;
@@ -99,7 +95,6 @@ static size_t extension_offset(const char *name) {
     return (size_t)(dot - name);
 }
 
-/** Guess a Content-Type from the file extension of `name` (case-insensitive). */
 static const char *guess_content_type(const char *name) {
     static const struct {
         const char *ext;
@@ -136,7 +131,6 @@ static const char *guess_content_type(const char *name) {
     return "application/octet-stream";
 }
 
-/** Write the hex of the first ASSET_HASH_HEX/2 bytes of the SHA-256 digest of `data` to `out`. */
 static void content_hash(const void *data, size_t len, char out[ASSET_HASH_HEX + 1]) {
     static const char hex[] = "0123456789abcdef";
     uint8_t digest[CWIST_SHA256_DIGEST_LEN];
@@ -151,7 +145,6 @@ static void content_hash(const void *data, size_t len, char out[ASSET_HASH_HEX +
     out[ASSET_HASH_HEX] = '\0';
 }
 
-/** Free an asset and all of its owned buffers. No-op for NULL. */
 static void asset_free(struct cwist_asset *asset) {
     if (!asset) return;
     cwist_free(asset->name);
@@ -162,7 +155,6 @@ static void asset_free(struct cwist_asset *asset) {
     cwist_free(asset);
 }
 
-/** Fetch the app's registry, creating it (with the default prefix) when `create` is set. */
 static cwist_asset_registry *registry_get(cwist_app *app, bool create) {
     if (app->assets || !create) return (cwist_asset_registry *)app->assets;
     cwist_asset_registry *reg = (cwist_asset_registry *)cwist_alloc(sizeof(*reg));
@@ -177,17 +169,6 @@ static cwist_asset_registry *registry_get(cwist_app *app, bool create) {
     return reg;
 }
 
-/**
- * @brief Set the URL prefix under which assets are served.
- *
- * Must be called before any asset is registered; fails once the registry is
- * non-empty.
- * @param app App instance; must not be NULL.
- * @param url_prefix Absolute path such as "/assets" (trailing '/' stripped),
- *                   or "/" for the root.
- * @return Error result with code 0 on success, -1 on failure (NULL app,
- *         invalid prefix, or assets already registered).
- */
 cwist_error_t cwist_app_asset_prefix(cwist_app *app, const char *url_prefix) {
     if (!app) return asset_result(-1);
     char *prefix = normalize_prefix(url_prefix);
@@ -237,7 +218,6 @@ static struct cwist_asset *asset_build(const cwist_asset_registry *reg, const ch
     return asset;
 }
 
-/** Whether `value` contains no control bytes, making it safe as an HTTP header value. */
 static bool header_value_is_valid(const char *value) {
     for (const unsigned char *p = (const unsigned char *)value; *p; p++) {
         if (*p < 0x20 || *p == 0x7f) return false;
@@ -283,20 +263,6 @@ static cwist_error_t asset_publish(cwist_app *app, const char *name, unsigned ch
     return asset_result(0);
 }
 
-/**
- * @brief Publish an in-memory buffer as an asset.
- *
- * Copies `data`; on success the asset is immutable and served under its
- * content-hashed name. Duplicate content is a no-op.
- * @param app App instance; must not be NULL.
- * @param name Logical asset name; must be a valid relative path.
- * @param data Asset bytes; may be NULL only when `len` is 0.
- * @param len Length of `data` in bytes.
- * @param content_type Optional Content-Type override; if NULL a type is
- *                     guessed from `name`.
- * @return Error result with code 0 on success, -1 on invalid arguments or
- *         allocation failure.
- */
 cwist_error_t cwist_app_asset_add(cwist_app *app, const char *name, const void *data, size_t len,
                                   const char *content_type) {
     if (!app || !name_is_valid(name) || (!data && len > 0)) return asset_result(-1);
@@ -309,19 +275,6 @@ cwist_error_t cwist_app_asset_add(cwist_app *app, const char *name, const void *
     return asset_publish(app, name, copy, len, content_type);
 }
 
-/**
- * @brief Read a file from disk and publish it as an asset.
- *
- * The file is read fully into memory; on success its content is served like
- * an asset added with cwist_app_asset_add().
- * @param app App instance; must not be NULL.
- * @param name Logical asset name; must be a valid relative path.
- * @param path Filesystem path to read; must not be NULL.
- * @param content_type Optional Content-Type override; if NULL a type is
- *                     guessed from `name`.
- * @return Error result with code 0 on success, -1 on invalid arguments, an
- *         unreadable file, or allocation failure.
- */
 cwist_error_t cwist_app_asset_add_file(cwist_app *app, const char *name, const char *path,
                                        const char *content_type) {
     if (!app || !name_is_valid(name) || !path) return asset_result(-1);
@@ -359,15 +312,6 @@ cwist_error_t cwist_app_asset_add_file(cwist_app *app, const char *name, const c
     return asset_publish(app, name, buf, len, content_type);
 }
 
-/**
- * @brief Return the URL of the newest asset registered under `name`.
- *
- * The returned string is owned by the asset registry and stays valid until
- * the app is destroyed.
- * @param app App instance; must not be NULL.
- * @param name Logical asset name.
- * @return Asset URL, or NULL if no such asset exists.
- */
 const char *cwist_app_asset_url(cwist_app *app, const char *name) {
     if (!app || !name) return NULL;
     cwist_asset_registry *reg = registry_get(app, false);
@@ -379,16 +323,6 @@ const char *cwist_app_asset_url(cwist_app *app, const char *name) {
     return NULL;
 }
 
-/**
- * @brief Match an HTTP request to a registered asset.
- *
- * Only GET and HEAD requests under the registry prefix are considered. A
- * request for a hashed (immutable) URL takes precedence over a logical name.
- * @param app App instance; must not be NULL.
- * @param req Request to match; path must be present.
- * @param out Filled with the matched asset and its immutability flag on match.
- * @return true on a match, false otherwise.
- */
 bool cwist_assets_match(cwist_app *app, const cwist_http_request *req, cwist_asset_match *out) {
     if (!app || !app->assets || !req || !req->path || !req->path->data) return false;
     if (req->method != CWIST_HTTP_GET && req->method != CWIST_HTTP_HEAD) return false;
@@ -433,7 +367,6 @@ static bool etag_matches(const char *if_none_match, const char *etag) {
     return false;
 }
 
-/** Add a header to a response, returning whether it was added (error disposed). */
 static bool add_header(cwist_http_response *res, const char *name, const char *value) {
     cwist_error_t err = cwist_http_header_add(&res->headers, name, value);
     bool ok = cwist_error_is_ok(&err);
@@ -441,17 +374,6 @@ static bool add_header(cwist_http_response *res, const char *name, const char *v
     return ok;
 }
 
-/**
- * @brief Fill a response for a matched asset.
- *
- * Always sets ETag and Cache-Control; honors If-None-Match with 304 and an
- * empty body. The body points directly at the asset data, which stays alive
- * until the app is destroyed.
- * @param req Request being answered.
- * @param res Response to fill.
- * @param match Match from cwist_assets_match(); if NULL or without an asset,
- *              the response status is set to 500.
- */
 void cwist_assets_respond(cwist_http_request *req, cwist_http_response *res,
                           const cwist_asset_match *match) {
     if (!req || !res) return;
@@ -482,15 +404,6 @@ void cwist_assets_respond(cwist_http_request *req, cwist_http_response *res,
     cwist_http_response_set_body_ptr(res, asset->data, asset->len);
 }
 
-/**
- * @brief Deep-copy a registry (used when an app is cloned).
- *
- * Copies the prefix and every asset, preserving newest-first order. On
- * failure *dst stays NULL and no partial registry is left behind.
- * @param dst Receives the new registry; set to NULL first.
- * @param src Registry to copy; may be NULL, which is treated as empty.
- * @return 0 on success, -1 on allocation failure.
- */
 int cwist_assets_clone(void **dst, const void *src) {
     *dst = NULL;
     if (!src) return 0;
@@ -537,7 +450,6 @@ int cwist_assets_clone(void **dst, const void *src) {
     return 0;
 }
 
-/** Free a registry and every asset in it. No-op for NULL. */
 void cwist_assets_destroy(void *registry) {
     cwist_asset_registry *reg = (cwist_asset_registry *)registry;
     if (!reg) return;
