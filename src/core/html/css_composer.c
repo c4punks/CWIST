@@ -386,3 +386,139 @@ void cwist_css_scope_destroy(cwist_css_scope *scope) {
     cwist_free(scope->entries);
     memset(scope, 0, sizeof(*scope));
 }
+
+static bool css_is_space(char c) {
+    return c == ' ' || c == '\t' || c == '\n' || c == '\r' || c == '\f';
+}
+
+static bool css_is_word(char c) {
+    return isalnum((unsigned char)c) || c == '-' || c == '_' || c == '%' || c == '.' || c == '#' ||
+           c == '\\' || (unsigned char)c >= 0x80;
+}
+
+static bool css_starts_url(const char *p) {
+    return (p[0] == 'u' || p[0] == 'U') && (p[1] == 'r' || p[1] == 'R') &&
+           (p[2] == 'l' || p[2] == 'L') && p[3] == '(';
+}
+
+cwist_sstring *cwist_css_minify(const char *css) {
+    if (!css) return NULL;
+    size_t n = strlen(css);
+    /* Every step copies or drops input bytes, so the output never grows. */
+    char *out = (char *)cwist_alloc(n + 1);
+    if (!out) return NULL;
+
+    size_t o = 0;
+    size_t verbatim_end = 0; /* out[0..verbatim_end) ends in copied, non-structural bytes */
+    bool pending_space = false;
+    size_t i = 0;
+    while (i < n) {
+        char c = css[i];
+
+        if (c == '/' && css[i + 1] == '*') {
+            const char *close = strstr(css + i + 2, "*/");
+            size_t stop = close ? (size_t)(close - css) + 2 : n;
+            if (css[i + 2] == '!') {
+                if (pending_space && o > 0) out[o++] = ' ';
+                pending_space = false;
+                memcpy(out + o, css + i, stop - i);
+                o += stop - i;
+                verbatim_end = o;
+            } else if (o > 0 && stop < n && css_is_word(out[o - 1]) && css_is_word(css[stop])) {
+                /* Removing the comment must not glue two tokens together. */
+                pending_space = true;
+            }
+            i = stop;
+            continue;
+        }
+        if (css_is_space(c)) {
+            pending_space = true;
+            i++;
+            continue;
+        }
+
+        if (pending_space) {
+            bool after_structural = o > 0 && o != verbatim_end && strchr("{};,:>(", out[o - 1]);
+            bool before_structural = strchr("{};,>)", c) != NULL;
+            if (o > 0 && !after_structural && !before_structural) out[o++] = ' ';
+            pending_space = false;
+        }
+
+        if (c == '"' || c == '\'') {
+            size_t j = i + 1;
+            while (j < n && css[j] != c) {
+                j += (css[j] == '\\' && j + 1 < n) ? 2 : 1;
+            }
+            size_t stop = j < n ? j + 1 : n;
+            memcpy(out + o, css + i, stop - i);
+            o += stop - i;
+            verbatim_end = o;
+            i = stop;
+            continue;
+        }
+        if (c == '\\') {
+            size_t stop = i + 1 < n ? i + 2 : n;
+            memcpy(out + o, css + i, stop - i);
+            o += stop - i;
+            verbatim_end = o;
+            i = stop;
+            continue;
+    }
+    if (css_starts_url(css + i) && (o == 0 || !css_is_word(out[o - 1]))) {
+        size_t j = i + 4;
+        while (j < n && css_is_space(css[j])) j++;
+        if (j < n && css[j] != '"' && css[j] != '\'') {
+                /* Unquoted url(): copy the whole argument as written. */
+            const char *close = strchr(css + j, ')');
+            size_t stop = close ? (size_t)(close - css) + 1 : n;
+            memcpy(out + o, css + i, stop - i);
+            o += stop - i;
+            verbatim_end = o;
+            i = stop;
+            continue;
+        }
+    }
+    if (c == '}' && o > 0 && o != verbatim_end && out[o - 1] == ';') o--;
+
+    out[o++] = c;
+    i++;
+}
+out[o] = '\0';
+
+cwist_sstring *result = cwist_sstring_create();
+bool ok = result != NULL;
+if (ok) {
+    cwist_error_t err = cwist_sstring_assign_len(result, out, o);
+    ok = cwist_error_is_ok(&err);
+    cwist_error_dispose(&err);
+}
+cwist_free(out);
+if (!ok) {
+    if (result) cwist_sstring_destroy(result);
+    return NULL;
+}
+return result;
+}
+
+cwist_sstring *cwist_css_bundle(const char *const *parts, size_t count, bool minify) {
+    if (!parts && count > 0) return NULL;
+    cwist_sstring *bundle = cwist_sstring_create();
+    if (!bundle) return NULL;
+
+    cwist_error_t err = cwist_sstring_assign(bundle, "");
+    bool ok = cwist_error_is_ok(&err);
+    cwist_error_dispose(&err);
+    for (size_t i = 0; ok && i < count; i++) {
+        if (!parts[i]) continue;
+        ok = append_ok(bundle, parts[i]) && append_ok(bundle, "\n");
+    }
+    if (!ok) {
+        cwist_sstring_destroy(bundle);
+        return NULL;
+    }
+    if (!minify) return bundle;
+
+    cwist_sstring *minified = cwist_css_minify(bundle->data ? bundle->data : "");
+    cwist_sstring_destroy(bundle);
+    return minified;
+}

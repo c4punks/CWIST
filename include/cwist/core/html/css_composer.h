@@ -117,6 +117,44 @@ cwist_sstring *cwist_css_generate_utility_classes(const cwist_css_config *cfg);
 cwist_sstring *cwist_css_generate_stylesheet(const cwist_css_config *cfg);
 
 /**
+ * @brief Minify a stylesheet without changing what it means.
+ *
+ * - Comments are removed, except those whose text starts with '!' (the usual
+ *   marker for license notices), which are kept as written.
+ * - Whitespace is dropped after `{`, `}`, `;`, `,`, `:`, `>` and `(`, and
+ *   before `{`, `}`, `;`, `,`, `>` and `)`. Any other run of whitespace
+ *   becomes a single space, so the space in a descendant selector such as
+ *   `a :hover`, before a media-query `(`, and around the `+` and `-` that
+ *   calc() needs is kept.
+ * - The `;` right before a `}` is dropped.
+ * - Strings and unquoted `url(...)` arguments are copied verbatim.
+ *
+ * Input that ends inside a string or `url(` is copied through; an
+ * unterminated comment runs to the end of the input, as CSS defines.
+ *
+ * @param css NUL-terminated stylesheet.
+ * @return A dynamically allocated string, or NULL when `css` is NULL or
+ *         allocation fails. Must be destroyed.
+ */
+cwist_sstring *cwist_css_minify(const char *css);
+
+/**
+ * @brief Concatenate stylesheets in order into one bundle, optionally minified.
+ *
+ * Parts are joined with a newline so the end of one part and the start of the
+ * next can never merge into one token. NULL entries are skipped. The
+ * bundle is a plain concatenation: `@import` rules are not resolved and an
+ * `@charset` or `@import` in a later part stays where it is.
+ *
+ * @param parts Stylesheets to join, in order.
+ * @param count Number of entries in `parts`; `parts` may be NULL only when 0.
+ * @param minify Run cwist_css_minify() over the result.
+ * @return A dynamically allocated string (empty for no parts), or NULL on
+ *         invalid arguments or allocation failure. Must be destroyed.
+ */
+cwist_sstring *cwist_css_bundle(const char *const *parts, size_t count, bool minify);
+
+/**
  * @brief Initialise a scope for one component.
  * @param scope Caller-owned storage to initialise. Release it with
  *              cwist_css_scope_destroy().
