@@ -661,11 +661,20 @@ static bool http_async_arm_wait(int fd, cwist_http_async_conn_t *conn,
              * when POLL fires and closes on failure, matching today. */
         } else if (conn->cap > 0) {
             size_t avail = conn->cap - 1 - conn->len;
-            if (avail >= CWIST_RX_REARM_MIN_AVAIL &&
-                cwist_reactor_recv_arm(reactor, fd, conn->rbuf + conn->len, (unsigned)avail, conn,
-                                       &conn->rx_armed_ns)) {
+            if (avail >= CWIST_RX_REARM_MIN_AVAIL) {
+                /* Mark the RECV in flight BEFORE submitting the SQE. The
+                 * acceptor thread is not this reactor's owner, so the kernel
+                 * can complete the SQE and the owner thread can dispatch the
+                 * connection to close (and free it) while this function is
+                 * still running; any conn write after submission is a
+                 * use-after-free. Roll back on submission failure so the
+                 * POLL fallback below sees the un-armed state. */
                 conn->rx_recv_inflight = true;
-                return true;
+                if (cwist_reactor_recv_arm(reactor, fd, conn->rbuf + conn->len, (unsigned)avail,
+                                           conn, &conn->rx_armed_ns)) {
+                    return true;
+                }
+                conn->rx_recv_inflight = false;
             }
         }
         /* Low headroom or arm failure: fall through to the POLL wait. */

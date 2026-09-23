@@ -1064,5 +1064,18 @@ void cwist_reactor_run(cwist_reactor_t *reactor) {
 }
 
 void cwist_reactor_stop(cwist_reactor_t *reactor) {
-    if (reactor) reactor->running = false;
+    if (!reactor) return;
+    reactor->running = false;
+    /* A run thread parked in io_uring_enter(GETEVENTS) on an idle SQPOLL
+     * ring sleeps until a CQE arrives: the kernel ignores the enter
+     * timeout for SQPOLL rings, so with no pending SQEs the wait never
+     * returns and the pthread_join() in the pool destroy path hangs the
+     * process (observed as a worker child surviving SIGTERM until SIGKILL,
+     * wedging the supervisor's shutdown waitpid). Nudge the registered
+     * wake fd so the run thread re-checks its shutdown flags. */
+    if (reactor->wake_wr >= 0) {
+        uint64_t one = 1;
+        ssize_t ign = write(reactor->wake_wr, &one, sizeof(one));
+        (void)ign; /* EAGAIN: a wake is already pending, which is fine. */
+    }
 }
