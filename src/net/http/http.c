@@ -2397,12 +2397,32 @@ cwist_error_t cwist_http_send_response_head(int client_fd, cwist_http_response *
  * everything the callback needs, so no extra heap struct is required. */
 
 typedef struct {
+    int file_fd;      /* sendfile source (Linux file mode). */
+    off_t file_off;
+    size_t file_left;
+    bool close_file_fd; /* file_fd is our dup() and must be closed. */
+    const char *body;   /* Referenced pointer body (BODYREF mode). */
+    size_t body_off;
+    size_t body_left;
+    cwist_http_body_cleanup_fn body_cleanup; /* Runs once at park finish. */
+    void *body_cleanup_ctx;
+} http_parked_write_state_t;
+
+enum {
+    HTTP_PARK_INLINE = 0, /* w.buf holds the full unsent remainder. */
+    HTTP_PARK_FILE,       /* w.buf holds unsent headers; state->file streams. */
+    HTTP_PARK_BODYREF,    /* w.buf holds unsent headers; state->body references. */
+};
+
+typedef struct {
     cwist_reactor_t *reactor;
     cwist_http_async_conn_t *conn;
-    char *buf;                    /* Owned copy of the unsent bytes. */
+    char *buf;      /* Owned copy of the unsent header bytes (all modes). */
     size_t off;
     size_t len;
-    uint32_t deadline_sec;        /* Absolute write deadline (monotonic sec). */
+    http_parked_write_state_t *state; /* Heap state for FILE/BODYREF modes. */
+    uint32_t deadline_sec;            /* Absolute write deadline (monotonic sec). */
+    uint8_t mode;
     bool keep_alive;
 } http_parked_write_t;
 
@@ -2413,11 +2433,30 @@ static uint32_t http_parked_write_deadline(void) {
     return cwist_fast_monotonic_sec() + cwist_http_keep_alive_timeout_sec();
 }
 
-static void http_parked_write_finish(int fd, http_parked_write_t *w) {
+static void http_parked_write_cb(int fd, void *ctx);
+
+/* Re-park on a fresh one-shot POLLOUT slot; the slot copies the payload and
+ * ownership of buf/state moves with it. False means the caller must finish. */
+static bool http_parked_rearm(int fd, http_parked_write_t *w) {
+    return cwist_fast_monotonic_sec() <= w->deadline_sec &&
+           cwist_reactor_add_out(w->reactor, fd, http_parked_write_cb, w, sizeof(*w));
+}
+
+static void http_parked_write_finish(int fd, http_parked_write_t *w, bool drained) {
     cwist_reactor_t *reactor = w->reactor;
     cwist_http_async_conn_t *conn = w->conn;
-    bool keep = w->keep_alive && w->off == w->len && atomic_load(&g_cwist_running);
+    bool keep = w->keep_alive && drained && atomic_load(&g_cwist_running);
     cwist_free(w->buf);
+    if (w->state) {
+#if defined(__linux__)
+        if (w->state->close_file_fd && w->state->file_fd >= 0) close(w->state->file_fd);
+#endif
+        if (w->state->body_cleanup && w->state->body) {
+            size_t total = w->state->body_off + w->state->body_left;
+            w->state->body_cleanup((void *)w->state->body, total, w->state->body_cleanup_ctx);
+        }
+        cwist_free(w->state);
+    }
     if (keep) {
         cwist_http_async_rearm(fd, reactor, conn);
     } else {
@@ -2434,6 +2473,8 @@ static void http_parked_write_cb(int fd, void *ctx) {
 #if defined(MSG_DONTWAIT)
     flags |= MSG_DONTWAIT;
 #endif
+
+    /* Unsent header bytes drain first in every mode. */
     while (w->off < w->len) {
         ssize_t n = send(fd, w->buf + w->off, w->len - w->off, flags);
         if (n > 0) {
@@ -2444,15 +2485,285 @@ static void http_parked_write_cb(int fd, void *ctx) {
             continue;
         }
         if (n < 0 && errno == EINTR) continue;
-        if (n < 0 && (errno == EAGAIN || errno == EWOULDBLOCK) &&
-            cwist_fast_monotonic_sec() <= w->deadline_sec &&
-            cwist_reactor_add_out(w->reactor, fd, http_parked_write_cb, w, sizeof(*w))) {
-            /* Payload copied into the new slot; buf ownership moves with it. */
+        if (n < 0 && (errno == EAGAIN || errno == EWOULDBLOCK) && http_parked_rearm(fd, w)) {
+            /* Payload copied into the new slot; buf/state ownership moves with it. */
             return;
         }
-        break; /* Fatal error, timeout, or re-arm failure. */
+        http_parked_write_finish(fd, w, false);
+        return;
     }
-    http_parked_write_finish(fd, w);
+    cwist_free(w->buf);
+    w->buf = NULL;
+
+    if (w->mode == HTTP_PARK_FILE) {
+#if defined(__linux__)
+        http_parked_write_state_t *f = w->state;
+        while (f && f->file_left > 0) {
+            ssize_t n = sendfile(fd, f->file_fd, &f->file_off, f->file_left);
+            if (n > 0) {
+                f->file_left -= (size_t)n;
+                w->deadline_sec = http_parked_write_deadline();
+                continue;
+            }
+            if (n < 0 && errno == EINTR) continue;
+            if (n < 0 && (errno == EAGAIN || errno == EWOULDBLOCK) && http_parked_rearm(fd, w)) {
+                return;
+            }
+            break;
+        }
+        http_parked_write_finish(fd, w, f && f->file_left == 0);
+#else
+        /* Non-Linux never parks FILE mode; defensive close. */
+        http_parked_write_finish(fd, w, false);
+#endif
+        return;
+    }
+
+    if (w->mode == HTTP_PARK_BODYREF) {
+        http_parked_write_state_t *s = w->state;
+        while (s && s->body_left > 0) {
+            ssize_t n = send(fd, s->body + s->body_off, s->body_left, flags);
+            if (n > 0) {
+                s->body_off += (size_t)n;
+                s->body_left -= (size_t)n;
+                w->deadline_sec = http_parked_write_deadline();
+                continue;
+            }
+            if (n < 0 && errno == EINTR) continue;
+            if (n < 0 && (errno == EAGAIN || errno == EWOULDBLOCK) && http_parked_rearm(fd, w)) {
+                return;
+            }
+            break;
+        }
+        http_parked_write_finish(fd, w, s && s->body_left == 0);
+        return;
+    }
+
+    http_parked_write_finish(fd, w, true);
+}
+
+/**
+ * @brief Park a response whose body must not be deep-copied: a file stream
+ * (FILE mode; body not resident in memory) or a pointer body (BODYREF mode;
+ * often multi-MiB). The unsent header remainder is copied into the payload
+ * and the body streams from heap state on resume.
+ *
+ * On success, BODYREF mode transfers pointer-body ownership (including the
+ * cleanup hook) to the park state; the caller's release calls become no-ops.
+ * On failure nothing is parked and body ownership stays with the caller,
+ * except that a BODYREF cleanup whose ownership already moved runs here so
+ * the body is still released exactly once.
+ *
+ * @return true when parked (conn handed to the reactor slot), false when
+ *         nothing was parked and the caller must finish another way.
+ */
+static bool http_park_streamed_body(int client_fd, cwist_reactor_t *reactor,
+                                    cwist_http_async_conn_t *conn, cwist_http_response *res,
+                                    const char *header_buf, size_t header_len, size_t header_sent,
+                                    const void *body_ptr, size_t body_len, bool keep_alive,
+                                    bool file_mode) {
+    http_parked_write_state_t *st = cwist_alloc(sizeof(*st));
+    if (!st) return false;
+    memset(st, 0, sizeof(*st));
+    if (file_mode) {
+#if defined(__linux__)
+        st->file_fd = res->file_stream_fd;
+        st->file_off = res->file_stream_offset;
+        st->file_left = res->file_stream_len;
+        if (res->file_stream_auto_close) {
+            int dupfd = dup(res->file_stream_fd);
+            if (dupfd < 0) {
+                cwist_free(st);
+                return false;
+            }
+            st->file_fd = dupfd;
+            st->close_file_fd = true;
+        }
+#else
+        cwist_free(st);
+        return false;
+#endif
+    } else {
+        size_t body_sent = header_sent > header_len ? header_sent - header_len : 0;
+        st->body = (const char *)body_ptr;
+        st->body_off = body_sent;
+        st->body_left = body_len - body_sent;
+        st->body_cleanup = res->ptr_body_cleanup;
+        st->body_cleanup_ctx = res->ptr_body_cleanup_ctx;
+        /* Ownership of the pointer body (and its cleanup hook) moves to the
+         * park state; the caller's release becomes a no-op. */
+        res->is_ptr_body = false;
+        res->ptr_body = NULL;
+        res->ptr_body_len = 0;
+        res->ptr_body_cleanup = NULL;
+        res->ptr_body_cleanup_ctx = NULL;
+    }
+
+    http_parked_write_t w = {
+        .reactor = reactor,
+        .conn = conn,
+        .buf = NULL,
+        .off = 0,
+        .len = 0,
+        .state = st,
+        .deadline_sec = http_parked_write_deadline(),
+        .mode = file_mode ? HTTP_PARK_FILE : HTTP_PARK_BODYREF,
+        .keep_alive = keep_alive,
+    };
+    size_t hd_left = header_sent < header_len ? header_len - header_sent : 0;
+    if (hd_left > 0) {
+        w.buf = cwist_alloc(hd_left);
+        if (!w.buf) goto fail;
+        memcpy(w.buf, header_buf + header_sent, hd_left);
+        w.len = hd_left;
+    }
+    if (cwist_reactor_add_out(reactor, client_fd, http_parked_write_cb, &w, sizeof(w))) return true;
+
+fail:
+    cwist_free(w.buf);
+#if defined(__linux__)
+    if (st->close_file_fd && st->file_fd >= 0) close(st->file_fd);
+#endif
+    if (!file_mode && st->body_cleanup && st->body) {
+        /* Park failed after ownership moved: run the cleanup here so the
+         * body is still released exactly once. */
+        st->body_cleanup((void *)st->body, st->body_off + st->body_left, st->body_cleanup_ctx);
+        res->is_ptr_body = false;
+        res->ptr_body = NULL;
+        res->ptr_body_len = 0;
+        res->ptr_body_cleanup = NULL;
+        res->ptr_body_cleanup_ctx = NULL;
+    }
+    cwist_free(st);
+    return false;
+}
+
+typedef enum {
+    CWIST_FILE_BEGIN_FALLBACK = 0, /* nothing sent; caller may use the legacy path */
+    CWIST_FILE_BEGIN_HANDLED,      /* finished, parked, or closed; conn handled */
+} cwist_file_begin_result_t;
+
+/**
+ * @brief Begin an async file-stream response without blocking a reactor
+ * thread: headers via the speculative fast path, the body through a
+ * non-blocking sendfile burst, and any EAGAIN parks the remaining
+ * {fd, offset} state on a one-shot POLLOUT slot.
+ * @param defer When false, completion rearms/closes the connection inline;
+ *              when true, the outcome is reported through status_out for the
+ *              caller to handle.
+ * @return CWIST_FILE_BEGIN_HANDLED when the response is fully handled here
+ *         (finished, parked, or the connection closed);
+ *         CWIST_FILE_BEGIN_FALLBACK when nothing was sent and the caller may
+ *         still use the legacy bounded-blocking path.
+ */
+static cwist_file_begin_result_t cwist_http_file_begin(int client_fd, cwist_http_response *res,
+                                                       cwist_reactor_t *reactor,
+                                                       cwist_http_async_conn_t *conn,
+                                                       bool keep_alive, bool defer,
+                                                       cwist_async_send_status_t *status_out) {
+    char header_buf[CWIST_HTTP_MAX_HEADER_SIZE];
+    size_t header_len = serialize_headers(res, header_buf, sizeof(header_buf));
+
+    int flags = 0;
+#if defined(MSG_NOSIGNAL)
+    flags |= MSG_NOSIGNAL;
+#endif
+#if defined(MSG_DONTWAIT)
+    flags |= MSG_DONTWAIT;
+#endif
+
+    struct iovec iov = {.iov_base = header_buf, .iov_len = header_len};
+    size_t sent = 0;
+    cwist_write_status_t hst = cwist_http_sendmsg_speculative(client_fd, &iov, 1, flags, &sent);
+
+    if (hst == CWIST_WRITE_PENDING) {
+        if (http_park_streamed_body(client_fd, reactor, conn, res, header_buf, header_len, sent,
+                                    NULL, 0, keep_alive, true)) {
+            cwist_http_response_release_file_stream(res);
+            if (defer && status_out) *status_out = CWIST_ASYNC_SEND_DEFERRED;
+            return CWIST_FILE_BEGIN_HANDLED;
+        }
+        return CWIST_FILE_BEGIN_FALLBACK;
+    }
+
+    /* Headers are on the wire (or failed fatally): from here the legacy path
+     * would resend them, so this function owns the outcome. */
+    http_parked_write_state_t *st = cwist_alloc(sizeof(*st));
+    if (!st) {
+        cwist_http_async_close(client_fd, conn);
+        if (defer && status_out) *status_out = CWIST_ASYNC_SEND_CLOSE;
+        return CWIST_FILE_BEGIN_HANDLED;
+    }
+    memset(st, 0, sizeof(*st));
+    st->file_fd = res->file_stream_fd;
+    st->file_off = res->file_stream_offset;
+    st->file_left = res->file_stream_len;
+    if (res->file_stream_auto_close) {
+        int dupfd = dup(res->file_stream_fd);
+        if (dupfd < 0) {
+            cwist_free(st);
+            cwist_http_async_close(client_fd, conn);
+            if (defer && status_out) *status_out = CWIST_ASYNC_SEND_CLOSE;
+            return CWIST_FILE_BEGIN_HANDLED;
+        }
+        st->file_fd = dupfd;
+        st->close_file_fd = true;
+    }
+    cwist_http_response_release_file_stream(res);
+
+    if (hst == CWIST_WRITE_ERR) {
+        if (st->close_file_fd) close(st->file_fd);
+        cwist_free(st);
+        cwist_http_async_close(client_fd, conn);
+        if (defer && status_out) *status_out = CWIST_ASYNC_SEND_CLOSE;
+        return CWIST_FILE_BEGIN_HANDLED;
+    }
+
+    while (st->file_left > 0) {
+        ssize_t n = sendfile(client_fd, st->file_fd, &st->file_off, st->file_left);
+        if (n > 0) {
+            st->file_left -= (size_t)n;
+            continue;
+        }
+        if (n < 0 && errno == EINTR) continue;
+        if (n < 0 && (errno == EAGAIN || errno == EWOULDBLOCK)) {
+            http_parked_write_t w = {
+                .reactor = reactor,
+                .conn = conn,
+                .buf = NULL,
+                .off = 0,
+                .len = 0,
+                .state = st,
+                .deadline_sec = http_parked_write_deadline(),
+                .mode = HTTP_PARK_FILE,
+                .keep_alive = keep_alive,
+            };
+            if (cwist_reactor_add_out(reactor, client_fd, http_parked_write_cb, &w, sizeof(w))) {
+                if (defer && status_out) *status_out = CWIST_ASYNC_SEND_DEFERRED;
+                return CWIST_FILE_BEGIN_HANDLED;
+            }
+            break;
+        }
+        break;
+    }
+
+    bool drained = st->file_left == 0;
+    if (st->close_file_fd) close(st->file_fd);
+    cwist_free(st);
+    if (drained && keep_alive && atomic_load(&g_cwist_running)) {
+        if (defer && status_out) {
+            *status_out = CWIST_ASYNC_SEND_KEEPALIVE;
+        } else {
+            cwist_http_async_rearm(client_fd, reactor, conn);
+        }
+    } else {
+        if (defer && status_out) {
+            *status_out = CWIST_ASYNC_SEND_CLOSE;
+        } else {
+            cwist_http_async_close(client_fd, conn);
+        }
+    }
+    return CWIST_FILE_BEGIN_HANDLED;
 }
 
 void cwist_http_async_send_response(int client_fd, cwist_http_response *res,
@@ -2463,10 +2774,17 @@ void cwist_http_async_send_response(int client_fd, cwist_http_response *res,
         return;
     }
 
-    /* File streams keep the existing bounded-blocking send path: their body
-     * is not resident in memory, so it cannot be deep-copied for parking
-     * without buffering the whole file. */
+    /* File streams: headers via the speculative path, body via non-blocking
+     * sendfile; EAGAIN parks {fd, offset} state instead of blocking a
+     * reactor thread in poll(). Falls back to the bounded-blocking path
+     * only when nothing has been sent yet. */
     if (!head_only && res->use_file_stream) {
+#if defined(__linux__)
+        if (cwist_http_file_begin(client_fd, res, reactor, conn, keep_alive, false, NULL) ==
+            CWIST_FILE_BEGIN_HANDLED) {
+            return;
+        }
+#endif
         cwist_error_t err = cwist_http_send_response(client_fd, res);
         if (keep_alive && err.error.err_i16 == 0) {
             cwist_http_async_rearm(client_fd, reactor, conn);
@@ -2513,6 +2831,15 @@ void cwist_http_async_send_response(int client_fd, cwist_http_response *res,
     cwist_write_status_t st = cwist_http_sendmsg_speculative(client_fd, iov, iov_cnt, flags, &sent);
 
     if (st == CWIST_WRITE_PENDING) {
+        /* A pointer body parks by reference: ownership (and the cleanup
+         * hook) moves to the park state instead of deep-copying the body. */
+        if (res->is_ptr_body && body_ptr && body_len > 0 &&
+            http_park_streamed_body(client_fd, reactor, conn, res, header_buf, header_len, sent,
+                                    body_ptr, body_len, keep_alive, false)) {
+            cwist_http_response_release_ptr_body(res); /* no-op: ownership moved */
+            cwist_http_response_release_file_stream(res);
+            return;
+        }
         /* Deep-copy the unsent remainder before releasing the body: the
          * completion frees req/res (and the arena) right after we return. */
         size_t total = header_len + body_len;
@@ -2561,6 +2888,13 @@ cwist_async_send_status_t cwist_http_send_response_async(int client_fd, cwist_ht
     if (client_fd < 0 || !res || !conn) return CWIST_ASYNC_SEND_CLOSE;
 
     if (!head_only && res->use_file_stream) {
+#if defined(__linux__)
+        cwist_async_send_status_t fstatus = CWIST_ASYNC_SEND_CLOSE;
+        if (cwist_http_file_begin(client_fd, res, conn->reactor, conn, keep_alive, true,
+                                  &fstatus) == CWIST_FILE_BEGIN_HANDLED) {
+            return fstatus;
+        }
+#endif
         cwist_error_t err = cwist_http_send_response(client_fd, res);
         return (keep_alive && err.error.err_i16 == 0) ? CWIST_ASYNC_SEND_KEEPALIVE
                                                       : CWIST_ASYNC_SEND_CLOSE;
@@ -2603,6 +2937,15 @@ cwist_async_send_status_t cwist_http_send_response_async(int client_fd, cwist_ht
     cwist_write_status_t st = cwist_http_sendmsg_speculative(client_fd, iov, iov_cnt, flags, &sent);
 
     if (st == CWIST_WRITE_PENDING) {
+        /* Pointer bodies park by reference (ownership moves to the park
+         * state); everything else keeps the deep-copy remainder path. */
+        if (res->is_ptr_body && body_ptr && body_len > 0 &&
+            http_park_streamed_body(client_fd, conn->reactor, conn, res, header_buf, header_len,
+                                    sent, body_ptr, body_len, keep_alive, false)) {
+            cwist_http_response_release_ptr_body(res); /* no-op: ownership moved */
+            cwist_http_response_release_file_stream(res);
+            return CWIST_ASYNC_SEND_DEFERRED;
+        }
         size_t total = header_len + body_len;
         size_t left = total - sent;
         http_parked_write_t w = {
@@ -2759,9 +3102,45 @@ cwist_async_send_status_t cwist_http_send_response_coalesced(int client_fd,
                                                              bool keep_alive, bool head_only) {
     if (client_fd < 0 || !res || !conn) return CWIST_ASYNC_SEND_CLOSE;
 
-    /* File streams keep the bounded-blocking send path; drain the stash
-     * first so their bytes cannot overtake buffered responses. */
+    /* File streams: drain any buffered responses ahead of the file without
+     * blocking the reactor (the obuf remainder parks as the file park's
+     * prefix bytes), then stream the file through the non-blocking path;
+     * EAGAIN parks {fd, offset} state. */
     if (!head_only && res->use_file_stream) {
+#if defined(__linux__)
+        int flags = 0;
+#if defined(MSG_NOSIGNAL)
+        flags |= MSG_NOSIGNAL;
+#endif
+#if defined(MSG_DONTWAIT)
+        flags |= MSG_DONTWAIT;
+#endif
+        size_t sent = 0;
+        cwist_write_status_t fst = CWIST_WRITE_DONE;
+        if (conn->olen > 0) {
+            struct iovec iov = {.iov_base = conn->obuf, .iov_len = conn->olen};
+            fst = cwist_http_sendmsg_speculative(client_fd, &iov, 1, flags, &sent);
+        }
+        if (fst == CWIST_WRITE_PENDING) {
+            /* The obuf remainder becomes the park's prefix; the file body
+             * resumes behind it, preserving byte order. */
+            if (http_park_streamed_body(client_fd, conn->reactor, conn, res, conn->obuf, conn->olen,
+                                        sent, NULL, 0, keep_alive, true)) {
+                conn->olen = 0;
+                cwist_http_response_release_file_stream(res);
+                return CWIST_ASYNC_SEND_DEFERRED;
+            }
+            conn->olen = 0;
+            return CWIST_ASYNC_SEND_CLOSE;
+        }
+        conn->olen = 0;
+        if (fst == CWIST_WRITE_ERR) return CWIST_ASYNC_SEND_CLOSE;
+        cwist_async_send_status_t fstatus = CWIST_ASYNC_SEND_CLOSE;
+        if (cwist_http_file_begin(client_fd, res, conn->reactor, conn, keep_alive, true,
+                                  &fstatus) == CWIST_FILE_BEGIN_HANDLED) {
+            return fstatus;
+        }
+#endif
         if (cwist_http_coalesce_flush_blocking(client_fd, conn) != 0) return CWIST_ASYNC_SEND_CLOSE;
         cwist_error_t err = cwist_http_send_response(client_fd, res);
         return (keep_alive && err.error.err_i16 == 0) ? CWIST_ASYNC_SEND_KEEPALIVE
@@ -2821,6 +3200,15 @@ cwist_async_send_status_t cwist_http_send_response_coalesced(int client_fd,
         cwist_write_status_t st =
             cwist_http_sendmsg_speculative(client_fd, iov, iov_cnt, flags, &sent);
         if (st == CWIST_WRITE_PENDING) {
+            /* Pointer bodies park by reference (ownership moves to the park
+             * state); everything else keeps the deep-copy remainder path. */
+            if (res->is_ptr_body && body_ptr && body_len > 0 &&
+                http_park_streamed_body(client_fd, conn->reactor, conn, res, header_buf, header_len,
+                                        sent, body_ptr, body_len, keep_alive, false)) {
+                cwist_http_response_release_ptr_body(res); /* no-op: ownership moved */
+                cwist_http_response_release_file_stream(res);
+                return CWIST_ASYNC_SEND_DEFERRED;
+            }
             size_t left = total - sent;
             http_parked_write_t w = {
                 .reactor = conn->reactor,
@@ -3401,7 +3789,8 @@ int cwist_http_response_stream_write(cwist_http_response *res, const char *data,
     char frame_hdr[24];
     int frame_hdr_len = snprintf(frame_hdr, sizeof(frame_hdr), "%zx\r\n", len);
     if (frame_hdr_len <= 0) return -1;
-    cwist_error_t append_err = cwist_sstring_append_len(res->stream_buf, frame_hdr, (size_t)frame_hdr_len);
+    cwist_error_t append_err =
+        cwist_sstring_append_len(res->stream_buf, frame_hdr, (size_t)frame_hdr_len);
     if (cwist_error_is_ok(&append_err))
         append_err = cwist_sstring_append_len(res->stream_buf, data, len);
     if (cwist_error_is_ok(&append_err))

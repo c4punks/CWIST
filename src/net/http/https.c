@@ -35,6 +35,10 @@
 /* Forward declaration: PQC layer applied inside TLS bootstrap */
 bool cwist_tls_apply_pqc_layer(cwist_app *app, SSL_CTX *ctx);
 
+/* Bodies up to this size are written in the same TLS record as the
+ * response headers; larger bodies amortize the per-record overhead. */
+#define CWIST_TLS_COALESCE_MAX (16 * 1024)
+
 /* Monotonic clock in milliseconds, for connection deadlines. */
 static uint64_t cwist_https_now_ms(void) {
     struct timespec ts;
@@ -1408,14 +1412,13 @@ cwist_error_t cwist_https_send_response(cwist_https_connection *conn, cwist_http
         cwist_http_header_add(&res->headers, "Alt-Svc", alt_svc);
     }
 
-    // 1. Headers onto a stack buffer, then straight onto the wire
+    // 1+2. Headers onto a stack buffer; a small body rides in the same TLS
+    // record, saving one record's AEAD tag and one syscall on the common
+    // short-response path. Larger bodies keep the split writes (BoringSSL
+    // records a big SSL_write at 16 KiB internally).
     char header_buf[CWIST_HTTP_MAX_HEADER_SIZE];
     size_t header_len = cwist_http_serialize_headers(res, header_buf, sizeof(header_buf));
-    if (cwist_ssl_write_all(conn, header_buf, header_len) != 0) {
-        return make_ssl_error("SSL header write failed");
-    }
 
-    // 2. Body streamed from its origin; no intermediate serialization
     const char *body_ptr = NULL;
     size_t body_len = 0;
     if (res->is_ptr_body) {
@@ -1425,9 +1428,30 @@ cwist_error_t cwist_https_send_response(cwist_https_connection *conn, cwist_http
         body_ptr = res->body->data;
         body_len = res->body->size;
     }
-    if (body_ptr && body_len > 0) {
-        if (cwist_ssl_write_all(conn, body_ptr, body_len) != 0) {
-            return make_ssl_error("SSL body write failed");
+
+    bool body_coalesced = false;
+    if (body_ptr && body_len > 0 && body_len <= CWIST_TLS_COALESCE_MAX) {
+        char *combined = (char *)cwist_alloc(header_len + body_len);
+        if (combined) {
+            memcpy(combined, header_buf, header_len);
+            memcpy(combined + header_len, body_ptr, body_len);
+            int rc = cwist_ssl_write_all(conn, combined, header_len + body_len);
+            cwist_free(combined);
+            if (rc != 0) {
+                return make_ssl_error("SSL coalesced write failed");
+            }
+            body_coalesced = true;
+        }
+        /* Allocation failure: fall through to the split writes. */
+    }
+    if (!body_coalesced) {
+        if (cwist_ssl_write_all(conn, header_buf, header_len) != 0) {
+            return make_ssl_error("SSL header write failed");
+        }
+        if (body_ptr && body_len > 0) {
+            if (cwist_ssl_write_all(conn, body_ptr, body_len) != 0) {
+                return make_ssl_error("SSL body write failed");
+            }
         }
     }
 
