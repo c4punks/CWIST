@@ -13,12 +13,6 @@ typedef struct {
 
 static int render_calls;
 
-static void destroy_children(cwist_html_element_t **children, size_t from, size_t count) {
-    for (size_t i = from; i < count; i++) {
-        cwist_html_element_destroy(children[i]);
-    }
-}
-
 /* <div class="card"><h2>title</h2>children...</div> */
 static cwist_html_element_t *card_render(const void *props, cwist_html_element_t **children,
                                          size_t child_count) {
@@ -26,10 +20,7 @@ static cwist_html_element_t *card_render(const void *props, cwist_html_element_t
     render_calls++;
 
     cwist_html_element_t *root = cwist_html_element_create("div");
-    if (!root) {
-        destroy_children(children, 0, child_count);
-        return NULL;
-    }
+    if (!root) return NULL;
     const char *cls = p && p->scope ? cwist_css_scope_class(p->scope, "card") : "card";
     cwist_html_element_add_class(root, cls);
 
@@ -43,30 +34,20 @@ static cwist_html_element_t *card_render(const void *props, cwist_html_element_t
     return root;
 }
 
-/* Keeps only the first child and destroys the rest, as the contract requires. */
+/* Keeps only the first child; the rest are left for instantiate() to release. */
 static cwist_html_element_t *first_only_render(const void *props, cwist_html_element_t **children,
                                                size_t child_count) {
     (void)props;
     cwist_html_element_t *root = cwist_html_element_create("section");
-    if (!root) {
-        destroy_children(children, 0, child_count);
-        return NULL;
-    }
-    if (child_count > 0) cwist_html_element_add_child(root, children[0]);
-    destroy_children(children, 1, child_count);
+    if (root && child_count > 0) cwist_html_element_add_child(root, children[0]);
     return root;
 }
 
-/* Fails after attaching the first child: destroying the partial tree releases
- * that child, and only the unattached rest need an explicit destroy. */
-static cwist_html_element_t *
-partial_failure_render(const void *props, cwist_html_element_t **children, size_t child_count) {
+static cwist_html_element_t *failing_render(const void *props, cwist_html_element_t **children,
+                                            size_t child_count) {
     (void)props;
-    render_calls++;
-    cwist_html_element_t *root = cwist_html_element_create("div");
-    if (root && child_count > 0) cwist_html_element_add_child(root, children[0]);
-    cwist_html_element_destroy(root);
-    destroy_children(children, root ? 1 : 0, child_count);
+    (void)children;
+    (void)child_count;
     return NULL;
 }
 
@@ -74,9 +55,7 @@ partial_failure_render(const void *props, cwist_html_element_t **children, size_
 static cwist_html_element_t *passthrough_render(const void *props, cwist_html_element_t **children,
                                                 size_t child_count) {
     (void)props;
-    if (child_count == 1) return children[0];
-    destroy_children(children, 0, child_count);
-    return NULL;
+    return child_count == 1 ? children[0] : NULL;
 }
 
 static cwist_html_element_t *text_el(const char *tag, const char *text) {
@@ -153,7 +132,7 @@ static void test_nested_instances(void) {
 
 /* The ownership cases below rely on the sanitizer build (LeakSanitizer and
  * double-free detection) to prove every child is released exactly once. */
-static void test_render_drops_children(void) {
+static void test_unattached_children_released(void) {
     cwist_html_component_t *comp = cwist_html_component_create("first", first_only_render);
     cwist_html_element_t *kids[3] = {text_el("p", "kept"), text_el("p", "dropped"), NULL};
     cwist_html_element_t *root = cwist_html_component_instantiate(comp, NULL, kids, 3);
@@ -163,30 +142,37 @@ static void test_render_drops_children(void) {
     assert(strcmp(html->data, "<section><p>kept</p></section>") == 0);
     cwist_sstring_destroy(html);
     cwist_html_element_destroy(root);
+
+    /* The same unattached pointer listed twice is destroyed once. */
+    cwist_html_element_t *twice = text_el("p", "twice");
+    cwist_html_element_t *dup_kids[3] = {text_el("p", "kept"), twice, twice};
+    root = cwist_html_component_instantiate(comp, NULL, dup_kids, 3);
+    assert(root != NULL);
+    cwist_html_element_destroy(root);
+
     cwist_html_component_destroy(comp);
-    printf("Passed test_render_drops_children\n");
+    printf("Passed test_unattached_children_released\n");
 }
 
-static void test_failure_paths(void) {
-    /* A render function that cleans up a partial tree must not be second-guessed. */
+static void test_failure_releases_children(void) {
+    cwist_html_component_t *comp = cwist_html_component_create("fail", failing_render);
+    cwist_html_element_t *kids[2] = {text_el("p", "a"), text_el("p", "b")};
+    assert(cwist_html_component_instantiate(comp, NULL, kids, 2) == NULL);
+
+    /* A NULL component still takes ownership of the children. */
+    cwist_html_element_t *more[1] = {text_el("p", "c")};
+    assert(cwist_html_component_instantiate(NULL, NULL, more, 1) == NULL);
+
+    /* A non-zero count with no array is treated as no children. */
     render_calls = 0;
-    cwist_html_component_t *comp = cwist_html_component_create("fail", partial_failure_render);
-    cwist_html_element_t *kids[3] = {text_el("p", "a"), text_el("p", "b"), text_el("p", "c")};
-    assert(cwist_html_component_instantiate(comp, NULL, kids, 3) == NULL);
-    assert(render_calls == 1);
+    cwist_html_component_t *card = cwist_html_component_create("card", card_render);
+    cwist_html_element_t *root = cwist_html_component_instantiate(card, NULL, NULL, 5);
+    assert(root != NULL && render_calls == 1);
+    cwist_html_element_destroy(root);
 
-    /* A NULL component still consumes the children. */
-    cwist_html_element_t *more[2] = {text_el("p", "d"), NULL};
-    assert(cwist_html_component_instantiate(NULL, NULL, more, 2) == NULL);
-
-    /* A non-zero count without an array is rejected before rendering. */
-    render_calls = 0;
-    assert(cwist_html_component_instantiate(comp, NULL, NULL, 5) == NULL);
-    assert(cwist_html_component_instantiate(NULL, NULL, NULL, 5) == NULL);
-    assert(render_calls == 0);
-
+    cwist_html_component_destroy(card);
     cwist_html_component_destroy(comp);
-    printf("Passed test_failure_paths\n");
+    printf("Passed test_failure_releases_children\n");
 }
 
 static void test_child_returned_as_root(void) {
@@ -231,8 +217,8 @@ int main(void) {
     test_create_validation();
     test_instantiate_with_children();
     test_nested_instances();
-    test_render_drops_children();
-    test_failure_paths();
+    test_unattached_children_released();
+    test_failure_releases_children();
     test_child_returned_as_root();
     test_component_with_scoped_css();
     printf("All HTML component tests passed!\n");
