@@ -22,7 +22,11 @@
  */
 
 #include <cwist/sys/app/app.h>
+#include <cwist/sys/app/assets.h>
 #include <cwist/core/db/sql.h>
+#include <cwist/core/html/component.h>
+#include <cwist/core/html/css_composer.h>
+#include <cwist/net/http/html_response.h>
 #include <cwist/core/template/template.h>
 #include <cwist/core/utils/zod.h>
 #include <cwist/net/http/session.h>
@@ -257,6 +261,100 @@ static void items_image_handler(cwist_http_request *req, cwist_http_response *re
     cwist_free(image);
 }
 
+/* --- Component-rendered item list (issue #94) -----------------------------
+ * The same component, scoped CSS and page/fragment code a native CWIST server
+ * would run, executing inside the Service Worker instead. */
+
+static cwist_css_scope g_list_css;
+static cwist_html_component_t *g_row;
+static cwist_html_component_t *g_page;
+
+typedef struct {
+    const char *name;
+    const char *qty;
+} row_props;
+
+static cwist_html_element_t *row_render(const void *props, cwist_html_element_t **children,
+                                        size_t child_count) {
+    const row_props *p = (const row_props *)props;
+    for (size_t i = 0; i < child_count; i++) cwist_html_element_destroy(children[i]);
+    cwist_html_element_t *li = cwist_html_element_create("li");
+    if (!li) return NULL;
+    char text[160];
+    snprintf(text, sizeof(text), "%s (%s)", p->name, p->qty);
+    cwist_html_element_add_class(li, cwist_css_scope_class(&g_list_css, "row"));
+    cwist_html_element_set_text(li, text);
+    return li;
+}
+
+/* Full-page wrapper for navigations that are not fragment requests. */
+static cwist_html_element_t *page_render(const void *props, cwist_html_element_t **children,
+                                         size_t child_count) {
+    (void)props;
+    cwist_html_element_t *html = cwist_html_element_create("html");
+    if (!html) {
+        for (size_t i = 0; i < child_count; i++) cwist_html_element_destroy(children[i]);
+        return NULL;
+    }
+    cwist_html_element_t *head = cwist_html_element_create("head");
+    cwist_html_element_t *link = cwist_html_element_create("link");
+    cwist_html_element_add_attr(link, "rel", "stylesheet");
+    cwist_html_element_add_attr(link, "href", cwist_app_asset_url(g_app, "list.css"));
+    cwist_html_element_add_child(head, link);
+    cwist_html_element_add_child(html, head);
+    cwist_html_element_t *body = cwist_html_element_create("body");
+    for (size_t i = 0; i < child_count; i++) cwist_html_element_add_child(body, children[i]);
+    cwist_html_element_add_child(html, body);
+    return html;
+}
+
+static void items_view_handler(cwist_http_request *req, cwist_http_response *res) {
+    cJSON *rows = NULL;
+    if (!g_db ||
+        cwist_db_query(g_db, "SELECT name, qty FROM items ORDER BY id", &rows).error.err_i16 != 0) {
+        res->status_code = CWIST_HTTP_INTERNAL_ERROR;
+        return;
+    }
+    cwist_html_element_t *ul = cwist_html_element_create("ul");
+    cwist_html_element_set_id(ul, "item-list");
+    const cJSON *row = NULL;
+    cJSON_ArrayForEach(row, rows) {
+        const cJSON *name = cJSON_GetObjectItem(row, "name");
+        const cJSON *qty = cJSON_GetObjectItem(row, "qty");
+        row_props props = {cJSON_IsString(name) ? name->valuestring : "",
+                           cJSON_IsString(qty) ? qty->valuestring : ""};
+        cwist_html_element_add_child(ul, cwist_html_component_instantiate(g_row, &props, NULL, 0));
+    }
+    cJSON_Delete(rows);
+    if (cwist_http_response_set_view(req, res, ul, g_page, NULL) != 0) {
+        res->status_code = CWIST_HTTP_INTERNAL_ERROR;
+    }
+}
+
+/* Scoped rules bundled and minified into one content-hashed stylesheet that
+ * this module serves itself; no separate front-end build step. */
+static int install_item_list(void) {
+    cwist_css_scope_init(&g_list_css, "item-list");
+    if (cwist_css_scope_add_rule(&g_list_css, "row", "padding: 4px 0; list-style: square;") != 0 ||
+        !cwist_css_scope_class(&g_list_css, "row")) {
+        return -1;
+    }
+    cwist_sstring *scoped = cwist_css_scope_generate_stylesheet(&g_list_css);
+    if (!scoped) return -1;
+    const char *parts[] = {"body { font-family: sans-serif; }", scoped->data};
+    cwist_sstring *bundle = cwist_css_bundle(parts, 2, true);
+    cwist_sstring_destroy(scoped);
+    if (!bundle) return -1;
+    cwist_error_t err = cwist_app_asset_add(g_app, "list.css", bundle->data, bundle->size, NULL);
+    int rc = cwist_error_is_ok(&err) ? 0 : -1;
+    cwist_error_dispose(&err);
+    cwist_sstring_destroy(bundle);
+
+    g_row = cwist_html_component_create("item-row", row_render);
+    g_page = cwist_html_component_create("page", page_render);
+    return (rc == 0 && g_row && g_page) ? 0 : -1;
+}
+
 /* File scope: the macro defines functions; g_app and g_db are populated in
  * main() before any dispatch runs. */
 CWIST_WASM_DEFINE_ENTRY(g_app)
@@ -278,6 +376,9 @@ int main(void) {
     cwist_app_post(g_app, "/items", items_create_handler);
     cwist_app_get(g_app, "/items", items_list_handler);
     cwist_app_get(g_app, "/items/image", items_image_handler);
+
+    if (install_item_list() != 0) return 4;
+    cwist_app_get(g_app, "/items/list", items_view_handler);
 
     /* The session secret is pinned by the host (_cwist_wasm_use_session) so
      * cookies survive module restarts; see docs/api/wasm.md. */
