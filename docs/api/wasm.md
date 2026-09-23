@@ -160,8 +160,9 @@ different secret.
 
 `cwist_app_dispatch_memory()` is whole-request-in, whole-response-out.
 Phase 3 adds streaming at the **boundary** (the handler still builds the
-response body in memory; a chunked-producer handler API is a separate,
-larger change):
+response body in memory; the chunked-producer handler API now exists as
+`cwist_http_response_stream_begin/write/end`, see "Streaming producer"
+below):
 
 - `cwist_app_dispatch_stream(app, req, req_len, write_fn, ctx)` delivers
   the serialized response through a sink callback: the head (status line +
@@ -210,9 +211,25 @@ README.md for build and local serving instructions.
 - WASI 0.2 (`wasm32-wasip2`) is now supported and CI-gated; see
   `docs/api/wasi.md`. Cloudflare Workers and Fastly Compute are not yet
   evaluated — everything here still assumes an Emscripten `Module` host.
-- A streaming *producer* API inside handlers (response body generated
-  chunk by chunk rather than buffered).
 - Published npm package / release artifact; today every consumer builds from
   source with `make wasm`.
 - WASM CI; `wasm-smoke` is a manual check, so run it before touching
   `WASM_SRCS`, `typedarray.h`, or anything under `EM_JS`.
+
+## Streaming producer (handlers generate the body chunk-by-chunk)
+
+`cwist_http_response_stream_begin/write/end()` (issue #201 Phase 1) close
+the buffered-producer gap: a handler switches the response to chunked
+mode, writes the body incrementally, and ends the stream.
+
+- Under `cwist_app_dispatch_memory()` the framed bytes buffer and
+  serialize like any other body (`Transfer-Encoding: chunked`, chunk
+  framing applied at write time).
+- Under `cwist_app_dispatch_stream()` each write reaches the host sink
+  immediately, head first (sent lazily on the first write), so SSE-style
+  handlers deliver chunks while still running; backpressure is the sink
+  rejecting a write (-2 from the dispatch).
+- A body assigned before `begin` is discarded; writes after `end` fail;
+  a handler that returns without `end` is finalized implicitly.
+- `cwist_http_response_stream_write(res, data, 0)` is a no-op (an empty
+  chunk is the chunked terminator, never emitted mid-stream).

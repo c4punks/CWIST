@@ -213,6 +213,18 @@ typedef struct cwist_http_response {
     off_t file_stream_offset;    ///< Current offset for sendfile loop.
     bool file_stream_auto_close; ///< Close fd after streaming.
 
+    /// Streaming producer (handlers generate the body chunk-by-chunk; issue
+    /// #201 Phase 1). Chunked framing is appended to stream_buf at write
+    /// time, so the memory and streaming boundaries emit identical bytes.
+    bool stream_mode;          ///< cwist_http_response_stream_begin() ran.
+    bool stream_ended;         ///< cwist_http_response_stream_end() ran.
+    bool stream_failed;        ///< A live sink rejected a chunk/head.
+    cwist_sstring *stream_buf; ///< Framed chunk payload (hex\r\ndata\r\n...).
+    size_t stream_flushed;     ///< stream_buf prefix already pushed to stream_sink.
+    int (*stream_sink)(void *ctx, const char *data, size_t len); ///< Live sink (streaming dispatch only).
+    void *stream_sink_ctx;
+    bool stream_head_sent;     ///< Head serialized and pushed to the sink.
+
     bool keep_alive;
 
     /// Alt-Svc header for HTTP/3 upgrade advertisement
@@ -246,6 +258,24 @@ cwist_http_request *cwist_http_parse_request_len(const char *buf, size_t len);
  * @return 0 on success, -1 on failure.
  */
 int cwist_http_response_serialize(cwist_http_response *res, char **out, size_t *out_len);
+
+/**
+ * @name Streaming producer (chunked response bodies from handlers)
+ *
+ * A handler switches the response to chunked mode, writes the body
+ * incrementally, and ends the stream. Under cwist_app_dispatch_stream() each
+ * write is pushed to the host sink immediately (head first, lazily on the
+ * first write), so SSE-style handlers deliver chunks while still running;
+ * under cwist_app_dispatch_memory() the framed bytes buffer and serialize
+ * like any other body. A body assigned before begin is discarded; writes
+ * after end fail. When the handler returns without end, dispatch finalizes
+ * the stream implicitly.
+ */
+/** @{ */
+int cwist_http_response_stream_begin(cwist_http_response *res);
+int cwist_http_response_stream_write(cwist_http_response *res, const char *data, size_t len);
+int cwist_http_response_stream_end(cwist_http_response *res);
+/** @} */
 cwist_http_request *cwist_http_receive_request(int client_fd, char *read_buf, size_t buf_size,
                                                size_t *buf_len, cwist_http_parse_error_t *err_out);
 /**
