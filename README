@@ -182,7 +182,7 @@ missing optional API does not prevent an HTTP/3 build.
   ./server
 
 <!-- BENCHMARKS:START -->
-Latest automated benchmark: **Darwin**: 13.86 M leases/s, 133.19% CPU, 709280 KiB RSS.
+Latest automated benchmark: **Darwin**: 10.87 M leases/s, 112.27% CPU, 756944 KiB RSS.
 
 ![CWIST benchmark trends](docs/benchmark-trends.svg)
 <!-- BENCHMARKS:END -->
@@ -190,29 +190,29 @@ Latest automated benchmark: **Darwin**: 13.86 M leases/s, 133.19% CPU, 709280 Ki
 <!-- WEBSERVER_BENCHMARKS:START -->
 ## Latest isolated HTTP benchmark
 
-Measured commit: `26bc314b42073b8e0f965ef437b8e46b73bbc539`. Release tag: `not recorded; identify this run by commit`.
-Run: https://github.com/c4punks/CWIST/actions/runs/35820509107. Timestamp: `2026-09-23T05:09:33.781972+00:00`.
+Measured commit: `0b5df81eb460775a9e2f82c15aa5c1a7ab6d5651`. Release tag: `not recorded; identify this run by commit`.
+Run: https://github.com/c4punks/CWIST/actions/runs/35967884009. Timestamp: `2026-09-24T07:17:48.530533+00:00`.
 
 Latency columns use the **wrk corrected distribution**. Memory columns are process-group end samples, not peaks: Group RSS counts a page shared between worker processes once per process, Group PSS divides it by its mapper count, so compare a single-process server against PSS. Context switches are same-thread counter deltas over threads live at both ends of the window; N/A means unavailable.
 
 | Profile | Req/s | Mean ms | P99.999 ms | Group PSS MiB | Group RSS MiB | Context-switch delta |
 |---|---:|---:|---:|---:|---:|---:|
-| CWIST classic | 235,317 | 1.001 | 25.460 | 48.02 | 58.73 | 2,252,861 |
-| CWIST C1M | 305,229 | 1.767 | 24.542 | 24.30 | 37.50 | 704,756 |
-| CWIST C1M arena_max=1 | 304,265 | 1.748 | 21.086 | 26.23 | 39.50 | 676,268 |
-| CWIST C1M drain_chunk=8 | 306,936 | 1.745 | 22.692 | 24.26 | 37.38 | 688,336 |
-| Axum | 246,479 | 1.608 | 8.953 | 14.21 | 16.51 | 465,864 |
-| Gin | 188,067 | 3.716 | 61.690 | 27.05 | 28.60 | 870,016 |
-| Spring Boot | 125,474 | 3.232 | 64.879 | 1,285.23 | 1,288.11 | 591,905 |
+| CWIST classic | 111,269 | 2.100 | 50.808 | 46.94 | 57.41 | 1,121,454 |
+| CWIST C1M | 142,868 | 2.808 | 27.481 | 14.23 | 25.55 | 110,282 |
+| CWIST C1M arena_max=1 | 143,690 | 2.750 | 13.008 | 18.34 | 30.11 | 108,810 |
+| CWIST C1M drain_chunk=8 | 143,652 | 2.736 | 13.802 | 14.24 | 25.77 | 101,847 |
+| Axum | 111,087 | 3.534 | 16.723 | 13.85 | 15.91 | 193,953 |
+| Gin | 79,176 | 6.761 | 82.845 | 27.29 | 28.71 | 307,327 |
+| Spring Boot | 42,815 | 9.349 | 95.400 | 1,257.95 | 1,260.81 | 215,062 |
 
 Main profile: `wrk -t12 -c400 -d10s`, after a discarded 10s warmup.
 
 ### Separate tuned profile
 
 `wrk -t4 -c100 -d10s`, after a discarded 10s warmup. Do not compare these rows as equal-load results against the main table.
-- CWIST classic: 248,393 req/s; mean 0.264 ms; corrected P99.999 5.648 ms.
-- Axum: 249,558 req/s; mean 0.380 ms; corrected P99.999 3.464 ms.
-- Spring Boot: 139,325 req/s; mean 0.867 ms; corrected P99.999 14.216 ms.
+- CWIST classic: 114,330 req/s; mean 0.542 ms; corrected P99.999 4.988 ms.
+- Axum: 119,674 req/s; mean 0.783 ms; corrected P99.999 5.455 ms.
+- Spring Boot: 43,854 req/s; mean 2.345 ms; corrected P99.999 28.664 ms.
 
 Spring Boot row: openjdk version "25.0.4.1" 2026-08-18 LTS, Spring Boot 3.2.3, Spring WebFlux + Reactor Netty on native epoll (G1GC, JDK 25 Leyden AOT, virtual threads disabled). Full JVM options are recorded in `benchmarks/webserver.json`.
 
@@ -229,7 +229,7 @@ GitHub hands out a different CPU model per run, which moves these numbers more t
 
 | Runner CPU | Runs | CWIST classic ms | CWIST C1M ms | Axum ms | CWIST C1M req/s | Axum req/s |
 |---|---:|---:|---:|---:|---:|---:|
-| AMD EPYC 7763 64-Core Processor | 1 | 2.12 | 3.32 | 3.60 | 131,671 | 108,991 |
+| AMD EPYC 7763 64-Core Processor | 2 | 2.11 | 3.06 | 3.57 | 137,269 | 110,039 |
 | INTEL(R) XEON(R) PLATINUM 8573C | 1 | 1.09 | 2.33 | 1.78 | 262,140 | 223,003 |
 | Intel(R) Xeon(R) 6973P-C | 1 | 1.00 | 1.77 | 1.61 | 305,229 | 246,479 |
 | Intel(R) Xeon(R) Platinum 8370C CPU @ 2.80GHz | 1 | 1.39 | 2.29 | 2.54 | 213,771 | 156,146 |
