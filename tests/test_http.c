@@ -341,6 +341,38 @@ void test_head_response_headers_only() {
     printf("Passed HEAD response suppression.\n");
 }
 
+/* A message longer than the internal header buffer must arrive in full, and
+ * Content-Length must match the bytes actually sent. */
+static void test_error_response_long_message(void) {
+    printf("Testing error response with a long message...\n");
+    char msg[2000];
+    memset(msg, 'e', sizeof(msg) - 1);
+    msg[sizeof(msg) - 1] = '\0';
+
+    int sv[2];
+    assert(socketpair(AF_UNIX, SOCK_STREAM, 0, sv) == 0);
+    cwist_http_send_error_response(sv[0], 400, msg);
+    close(sv[0]);
+
+    char rbuf[4096];
+    size_t total = 0;
+    ssize_t n;
+    while ((n = read(sv[1], rbuf + total, sizeof(rbuf) - 1 - total)) > 0) total += (size_t)n;
+    rbuf[total] = '\0';
+    close(sv[1]);
+
+    assert(strncmp(rbuf, "HTTP/1.1 400 ", 13) == 0);
+    char want[64];
+    snprintf(want, sizeof(want), "Content-Length: %zu\r\n", strlen(msg));
+    assert(strstr(rbuf, want) != NULL);
+    char *body = strstr(rbuf, "\r\n\r\n");
+    assert(body != NULL);
+    body += 4;
+    assert(strlen(body) == strlen(msg));
+    assert(strcmp(body, msg) == 0);
+    printf("Passed error response with a long message.\n");
+}
+
 int main() {
     test_methods();
     test_request_lifecycle();
@@ -353,6 +385,7 @@ int main() {
     test_malformed_request_line();
     test_expect_100_continue_flow();
     test_head_response_headers_only();
+    test_error_response_long_message();
     printf("All HTTP tests passed!\n");
     return 0;
 }
