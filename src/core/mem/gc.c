@@ -2,7 +2,9 @@
 #include <cwist/core/mem/alloc.h>
 #include <ttak/mem/epoch.h>
 #include <pthread.h>
+#include <stdint.h>
 #include <stdlib.h>
+#include <string.h>
 #if !defined(__wasi__)
 #include <sys/mman.h>
 #endif
@@ -281,35 +283,120 @@ void *cwist_full_gc_guard_page(void) {
     return g_full_gc_guard;
 }
 
-/** @brief One thread's list of cwist_alloc() blocks not yet cwist_free()'d. */
+/**
+ * @brief One thread's set of cwist_alloc() blocks not yet cwist_free()'d.
+ *
+ * An open-addressing hash set keyed by the block pointer: linear probing,
+ * a power-of-two capacity kept at most half full, and backward-shift
+ * deletion, so there are no tombstones and a lookup stops at the first
+ * empty slot. With full-GC on, cwist_free() untracks on every free,
+ * including frees of blocks that were never tracked (cwist_strdup(),
+ * cwist_realloc(), cJSON's hook allocations). A list had to be scanned end
+ * to end for every one of those, so each free cost time proportional to
+ * the number of blocks the thread still held; here a hit and a miss are
+ * both O(1) on average.
+ *
+ * The table itself uses the raw allocator: it is the tracker's own
+ * bookkeeping, and allocating it through cwist_alloc() would recurse into
+ * cwist_gc_scope_track().
+ */
 typedef struct {
-    void **items;
+    void **slots;
+    size_t cap; /* 0 or a power of two */
     size_t count;
-    size_t cap;
 } cwist_gc_pending_t;
 
+/** Initial table size. */
+#define CWIST_GC_PENDING_MIN_CAP 16
+/** A flush keeps a table up to this size for reuse and frees larger ones,
+ *  so one burst of allocations does not pin a big table to the thread. */
+#define CWIST_GC_PENDING_KEEP_CAP 1024
+
 /**
- * @brief Retire every pending block in @p pending and reset the list to empty.
- * @param pending List to drain; a no-op when NULL.
+ * @brief Home slot for @p ptr. Fibonacci hashing of the address without
+ *        its low bits, which malloc alignment keeps constant.
  */
-static void cwist_gc_pending_flush(cwist_gc_pending_t *pending) {
-    if (!pending) return;
-    for (size_t i = 0; i < pending->count; i++) {
-        cwist_ebr_free(pending->items[i]);
+static inline size_t cwist_gc_pending_slot(const void *ptr, size_t mask) {
+    uint64_t h = (uint64_t)((uintptr_t)ptr >> 4) * UINT64_C(0x9E3779B97F4A7C15);
+    return (size_t)(h >> 32) & mask;
+}
+
+/** @brief Double the table (or create it). false on allocation failure. */
+static bool cwist_gc_pending_grow(cwist_gc_pending_t *pending) {
+    size_t new_cap = pending->cap ? pending->cap * 2 : CWIST_GC_PENDING_MIN_CAP;
+    void **slots = (void **)calloc(new_cap, sizeof(void *));
+    if (!slots) return false;
+    size_t mask = new_cap - 1;
+    for (size_t i = 0; i < pending->cap; i++) {
+        void *key = pending->slots[i];
+        if (!key) continue;
+        size_t j = cwist_gc_pending_slot(key, mask);
+        while (slots[j]) j = (j + 1) & mask;
+        slots[j] = key;
     }
-    pending->count = 0;
+    free(pending->slots);
+    pending->slots = slots;
+    pending->cap = new_cap;
+    return true;
 }
 
 /**
- * @brief pthread TLS destructor: sweep whatever this thread never freed.
+ * @brief Retire every pending block and reset the set to empty.
+ *
+ * The table is detached before anything is retired: cwist_ebr_free() may
+ * run reclaim callbacks that end in cwist_free() -> cwist_gc_scope_untrack()
+ * on this same thread, and those must see an empty set rather than the one
+ * being walked.
+ *
+ * @param pending Set to drain; a no-op when NULL.
+ */
+static void cwist_gc_pending_flush(cwist_gc_pending_t *pending) {
+    if (!pending) return;
+    void **slots = pending->slots;
+    size_t cap = pending->cap;
+    size_t count = pending->count;
+    if (count == 0 && cap <= CWIST_GC_PENDING_KEEP_CAP) return;
+
+    pending->slots = NULL;
+    pending->cap = 0;
+    pending->count = 0;
+    for (size_t i = 0; i < cap && count > 0; i++) {
+        if (!slots[i]) continue;
+        cwist_ebr_free(slots[i]);
+        count--;
+    }
+    if (cap <= CWIST_GC_PENDING_KEEP_CAP && !pending->slots) {
+        memset(slots, 0, cap * sizeof(void *));
+        pending->slots = slots;
+        pending->cap = cap;
+    } else {
+        free(slots);
+    }
+}
+
+#if (defined(__STDC_VERSION__) && __STDC_VERSION__ >= 201112L)
+#define CWIST_GC_PENDING_TLS 1
+static _Thread_local cwist_gc_pending_t *t_gc_pending = NULL;
+#elif defined(__GNUC__) || defined(__clang__)
+#define CWIST_GC_PENDING_TLS 1
+static __thread cwist_gc_pending_t *t_gc_pending = NULL;
+#endif
+
+/**
+ * @brief pthread TSD destructor: flush and free a thread's pending set on exit.
  * @param arg Thread-local cwist_gc_pending_t allocated by cwist_gc_pending_get().
  */
 static void cwist_gc_pending_destroy(void *arg) {
     cwist_gc_pending_t *pending = (cwist_gc_pending_t *)arg;
     if (!pending) return;
+#ifdef CWIST_GC_PENDING_TLS
+    /* Destructors run on the exiting thread. Drop the cached pointer first,
+     * so an allocation made by a later destructor creates a fresh set (and
+     * re-registers it) instead of touching this one after it is freed. */
+    t_gc_pending = NULL;
+#endif
     cwist_gc_pending_flush(pending);
-    cwist_gc_pipeline_tick();
-    free(pending->items);
+    free(pending->slots);
     free(pending);
 }
 
@@ -320,14 +407,26 @@ static void cwist_gc_pending_key_init(void) {
     pthread_key_create(&g_pending_key, cwist_gc_pending_destroy);
 }
 
-/** @brief Lazily create (or return) this thread's pending-sweep list. */
+/**
+ * @brief Lazily create (or return) this thread's pending set.
+ *
+ * Hot path: one thread-local load. pthread_once() and pthread_getspecific()
+ * only run the first time a thread tracks something; the pthread key is
+ * still what runs the exit-time sweep.
+ */
 static cwist_gc_pending_t *cwist_gc_pending_get(void) {
+#ifdef CWIST_GC_PENDING_TLS
+    if (t_gc_pending) return t_gc_pending;
+#endif
     pthread_once(&g_pending_key_once, cwist_gc_pending_key_init);
     cwist_gc_pending_t *pending = (cwist_gc_pending_t *)pthread_getspecific(g_pending_key);
     if (!pending) {
         pending = (cwist_gc_pending_t *)calloc(1, sizeof(*pending));
         if (pending) pthread_setspecific(g_pending_key, pending);
     }
+#ifdef CWIST_GC_PENDING_TLS
+    t_gc_pending = pending;
+#endif
     return pending;
 }
 
@@ -335,27 +434,44 @@ void cwist_gc_scope_track(void *ptr) {
     if (!ptr) return;
     cwist_gc_pending_t *pending = cwist_gc_pending_get();
     if (!pending) return;
-    if (pending->count == pending->cap) {
-        size_t new_cap = pending->cap ? pending->cap * 2 : 8;
-        void **grown = (void **)realloc(pending->items, new_cap * sizeof(void *));
-        if (!grown) return; /* best-effort: leave ptr untracked rather than fail the alloc */
-        pending->items = grown;
-        pending->cap = new_cap;
+    /* Best-effort, as before: if the table cannot grow, leave ptr untracked
+     * rather than fail the allocation. */
+    if ((pending->count + 1) * 2 > pending->cap && !cwist_gc_pending_grow(pending)) return;
+    size_t mask = pending->cap - 1;
+    size_t i = cwist_gc_pending_slot(ptr, mask);
+    while (pending->slots[i]) {
+        if (pending->slots[i] == ptr) return; /* already tracked: keep one entry */
+        i = (i + 1) & mask;
     }
-    pending->items[pending->count++] = ptr;
+    pending->slots[i] = ptr;
+    pending->count++;
 }
 
 bool cwist_gc_scope_untrack(void *ptr) {
     if (!ptr) return false;
     cwist_gc_pending_t *pending = cwist_gc_pending_get();
-    if (!pending) return false;
-    for (size_t i = 0; i < pending->count; i++) {
-        if (pending->items[i] == ptr) {
-            pending->items[i] = pending->items[--pending->count];
-            return true;
+    if (!pending || pending->count == 0) return false;
+    size_t mask = pending->cap - 1;
+    size_t i = cwist_gc_pending_slot(ptr, mask);
+    while (pending->slots[i] != ptr) {
+        if (!pending->slots[i]) return false;
+        i = (i + 1) & mask;
+    }
+
+    /* Backward-shift deletion: pull each following entry of the probe run
+     * back into the hole unless the hole lies before that entry's home
+     * slot, so every remaining key stays reachable without tombstones. */
+    size_t hole = i;
+    for (size_t j = (i + 1) & mask; pending->slots[j]; j = (j + 1) & mask) {
+        size_t home = cwist_gc_pending_slot(pending->slots[j], mask);
+        if (((j - home) & mask) >= ((j - hole) & mask)) {
+            pending->slots[hole] = pending->slots[j];
+            hole = j;
         }
     }
-    return false;
+    pending->slots[hole] = NULL;
+    pending->count--;
+    return true;
 }
 
 bool cwist_gc_scope_disown(void *ptr) {
