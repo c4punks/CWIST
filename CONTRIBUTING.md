@@ -46,6 +46,10 @@ git checkout -b your-branch-name dev
   `make test` runs the full suite (a `SANITIZE=address,undefined` build is
   also worth running for anything touching memory or concurrency:
   `make SANITIZE=address,undefined test`).
+- If you change a public API, run `make tutorials-check`. It builds every
+  `tutorials/*/main.c` and compiles the code blocks in
+  `docs/tutorial/cwist_tutorial.md` (nothing is run), and CI fails when they
+  no longer build. Update the tutorials in the same PR.
 - Match the existing commit style: `type(scope): short description`. See
   `git log` for examples (`fix(http2): ...`, `docs(gc): ...`,
   `chore(deps): ...`).
