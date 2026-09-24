@@ -162,6 +162,8 @@ size_t cwist_http_serialize_headers(cwist_http_response *res, char *buf, size_t 
 
 /**
  * @brief Add a header to the list.
+ * @return INT16 0 on success; INT16 -1 when head is NULL or key/value contains
+ *         CR or LF (nothing is added); a JSON error on allocation failure.
  */
 cwist_error_t cwist_http_header_add(cwist_http_header_node **head, const char *key,
                                     const char *value);

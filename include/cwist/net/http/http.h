@@ -349,6 +349,12 @@ cwist_error_t cwist_http_response_send_file(cwist_http_response *res, const char
 
 /** @name Header Manipulation */
 /** @{ */
+/**
+ * @brief Prepend a header to the list.
+ * @return INT16 0 on success; INT16 -1 when head is NULL or key/value contains
+ *         CR or LF (nothing is added); a JSON error on allocation failure.
+ *         Check with cwist_error_is_ok().
+ */
 cwist_error_t cwist_http_header_add(cwist_http_header_node **head, const char *key,
                                     const char *value);
 /**

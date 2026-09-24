@@ -1190,8 +1190,27 @@ static cwist_error_t cwist_http_header_add_ex_len(cwist_http_header_node **head,
     node->value = cwist_http_sstring_create(arena);
     node->next = NULL;
 
-    cwist_http_sstring_assign_arena(node->key, arena, key, key_len);
-    cwist_http_sstring_assign_arena(node->value, arena, value, value_len);
+    bool ok = node->key && node->value;
+    if (ok) {
+        cwist_error_t kerr = cwist_http_sstring_assign_arena(node->key, arena, key, key_len);
+        ok = cwist_error_is_ok(&kerr);
+        cwist_error_dispose(&kerr);
+    }
+    if (ok) {
+        cwist_error_t verr = cwist_http_sstring_assign_arena(node->value, arena, value, value_len);
+        ok = cwist_error_is_ok(&verr);
+        cwist_error_dispose(&verr);
+    }
+    if (!ok) {
+        /* A half-built node would serialize as an empty or missing header;
+         * release it and report the failure instead. */
+        cwist_http_header_free_all(node);
+        err = make_error(CWIST_ERR_JSON);
+        err.error.err_json = cJSON_CreateObject();
+        cJSON_AddStringToObject(err.error.err_json, "http_error",
+                                "Failed to allocate header strings");
+        return err;
+    }
 
     node->next = *head;
     *head = node;
@@ -1210,40 +1229,8 @@ static cwist_error_t cwist_http_header_add_ex_len(cwist_http_header_node **head,
  */
 static cwist_error_t cwist_http_header_add_ex(cwist_http_header_node **head, cwist_arena_t *arena,
                                               const char *key, const char *value) {
-    cwist_error_t err = make_error(CWIST_ERR_INT16);
-
-    bool from_arena = false;
-    cwist_http_header_node *node = NULL;
-    if (arena) {
-        node = (cwist_http_header_node *)cwist_arena_alloc(arena, sizeof(cwist_http_header_node));
-        if (node) {
-            memset(node, 0, sizeof(cwist_http_header_node));
-            from_arena = true;
-        }
-    }
-    if (!node) {
-        node = (cwist_http_header_node *)cwist_alloc(sizeof(cwist_http_header_node));
-    }
-    if (!node) {
-        err = make_error(CWIST_ERR_JSON);
-        err.error.err_json = cJSON_CreateObject();
-        cJSON_AddStringToObject(err.error.err_json, "http_error", "Failed to allocate header");
-        return err;
-    }
-    node->arena_owned = from_arena;
-
-    node->key = cwist_http_sstring_create(arena);
-    node->value = cwist_http_sstring_create(arena);
-    node->next = NULL;
-
-    cwist_http_sstring_assign_arena(node->key, arena, key, key ? strlen(key) : 0);
-    cwist_http_sstring_assign_arena(node->value, arena, value, value ? strlen(value) : 0);
-
-    node->next = *head;
-    *head = node;
-
-    err.error.err_i16 = 0; // Success
-    return err;
+    return cwist_http_header_add_ex_len(head, arena, key, key ? strlen(key) : 0, value,
+                                        value ? strlen(value) : 0);
 }
 
 /**
@@ -1302,15 +1289,30 @@ static cwist_error_t cwist_http_header_add_static(cwist_http_header_node **head,
     return err;
 }
 
+/** @brief True when a header name or value contains no CR or LF. */
+static bool cwist_http_header_text_is_safe(const char *text) {
+    return !text || !strpbrk(text, "\r\n");
+}
+
 /**
  * @brief Prepend one header node to the linked-list header collection.
  * @param head Header-list head pointer to update.
  * @param key Header name to store.
  * @param value Header value to store.
- * @return Tagged CWIST error describing success or allocation failure.
+ * @return Tagged CWIST error: INT16 0 on success, INT16 -1 when head is NULL or
+ *         key/value contains CR or LF (nothing is added), or a JSON error on
+ *         allocation failure.
  */
 cwist_error_t cwist_http_header_add(cwist_http_header_node **head, const char *key,
                                     const char *value) {
+    /* The serializer writes key and value verbatim around ": " and CRLF, so a
+     * CR or LF here would let caller-supplied data end the header early and
+     * inject further headers or a body into the response. */
+    if (!head || !cwist_http_header_text_is_safe(key) || !cwist_http_header_text_is_safe(value)) {
+        cwist_error_t err = make_error(CWIST_ERR_INT16);
+        err.error.err_i16 = -1;
+        return err;
+    }
     return cwist_http_header_add_ex(head, NULL, key, value);
 }
 
@@ -3586,8 +3588,19 @@ cwist_http_parse_request_with_header_end(const char *raw_request, size_t raw_len
             while (val_start < line_end && *val_start == ' ') val_start++;
             size_t val_len = line_end - val_start;
 
-            cwist_http_header_add_ex_len(&req->headers, (cwist_arena_t *)req->arena, line_start,
-                                         key_len, val_start, val_len);
+            cwist_error_t herr =
+                cwist_http_header_add_ex_len(&req->headers, (cwist_arena_t *)req->arena, line_start,
+                                             key_len, val_start, val_len);
+            bool header_ok = cwist_error_is_ok(&herr);
+            cwist_error_dispose(&herr);
+            if (!header_ok) {
+                /* Out of memory: dropping the header could hide Host or
+                 * Content-Length from the checks below, so give up quietly as
+                 * cwist_http_request_create() failure does. */
+                cwist_http_request_destroy(req);
+                if (err_out) *err_out = CWIST_HTTP_PARSE_EOF;
+                return NULL;
+            }
 
             char k0 = line_start[0];
             if (key_len == 10 && (k0 == 'C' || k0 == 'c')) {
