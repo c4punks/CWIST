@@ -274,7 +274,11 @@ static void cwist_mw_rate_limit_ip_handler(cwist_http_request *req, cwist_http_r
         ttak_token_bucket_init(&found->bucket, rate, (double)rpm);
     }
 
-    bool allowed = false;
+    /* Fail-open: if the IP table is full we cannot track this client, so
+     * allow the request rather than permanently blocking unknown IPs (which
+     * would let an attacker exhaust the 1024 slots with spoofed addresses
+     * and then deny service to all legitimate users). */
+    bool allowed = (found == NULL);
     if (found) {
         allowed = ttak_token_bucket_consume(&found->bucket, 1.0);
     }
