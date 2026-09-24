@@ -3001,6 +3001,34 @@ static unsigned int app_http_yield_batch(void) {
 }
 
 #ifndef CWIST_WASI_NO_SOCKETS
+/* h2c connection handoff: the blocking HTTP/2 server runs on a detached
+ * thread per connection so an abandoned connection's idle poll never pins
+ * a reactor loop.  Owns the fd, the sniffed-byte replay, and the app. */
+#define CWIST_H2C_THREAD_STACK_SIZE (256 * 1024)
+
+typedef struct {
+    int fd;
+    char *replay;
+    size_t replay_len;
+    cwist_app *app;
+} h2c_handoff_t;
+
+static void *h2c_handoff_main(void *arg) {
+    h2c_handoff_t *h = (h2c_handoff_t *)arg;
+    cwist_https_connection h2c = {.fd = h->fd,
+                                  .ssl = NULL,
+                                  .read_buf = h->replay,
+                                  .buf_len = h->replay_len,
+                                  .negotiated_http2 = true,
+                                  .negotiated_protocol = CWIST_HTTPS_PROTOCOL_HTTP2};
+    cwist_http2_serve_connection_ex(&h2c, h->app, static_http2_route_bridge,
+                                    cwist_grpc_http2_hooks());
+    close(h->fd);
+    cwist_free(h->replay);
+    cwist_free(h);
+    return NULL;
+}
+
 cwist_async_action_t cwist_app_http_handler_async(int client_fd, cwist_http_async_conn_t *conn) {
     cwist_app *app = (cwist_app *)conn->user_ctx;
     static _Atomic long dbg_fill_fail, dbg_fatal, dbg_serve_close;
@@ -3026,13 +3054,40 @@ cwist_async_action_t cwist_app_http_handler_async(int client_fd, cwist_http_asyn
         return CWIST_ASYNC_CLOSE;
     }
 
-    /* h2c preface: hand the whole connection to the blocking HTTP/2 server,
-     * which owns and closes the fd from here on.  The sniff stash already
-     * consumed the preface (and often the first pipelined frames) from the
-     * socket, so replay those bytes through the connection's prebuffer. */
+    /* h2c preface: hand the whole connection to the blocking HTTP/2 server on
+     * a dedicated thread.  The h2 serve loop waits in poll() for up to the
+     * idle budget (300 s default) on a connection the peer has abandoned --
+     * running it inline here would pin this reactor for that long, and every
+     * other connection on the loop would stall behind it (surfaced as h2spec
+     * error-response timeouts cascading once a loop was pinned).  The thread
+     * owns fd and replay; the reactor never touches either again (DETACH). */
     if (app->use_http2 && conn->len >= 24 &&
         memcmp(conn->rbuf, "PRI * HTTP/2.0\r\n\r\nSM\r\n\r\n", 24) == 0) {
         char *replay = cwist_alloc(conn->len);
+        h2c_handoff_t *handoff = replay ? cwist_alloc(sizeof(*handoff)) : NULL;
+        if (handoff) {
+            pthread_t tid;
+            pthread_attr_t attr;
+            pthread_attr_init(&attr);
+            pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_DETACHED);
+            /* The h2 serve loop's stack need is shallow; cap the reservation
+             * like the classic pool does so a burst of h2c connections cannot
+             * reserve 8 MiB apiece. */
+            if (pthread_attr_setstacksize(&attr, CWIST_H2C_THREAD_STACK_SIZE) != 0)
+                pthread_attr_init(&attr);
+            int rc;
+            memcpy(replay, conn->rbuf, conn->len);
+            handoff->fd = client_fd;
+            handoff->replay = replay;
+            handoff->replay_len = conn->len;
+            handoff->app = app;
+            rc = pthread_create(&tid, &attr, h2c_handoff_main, handoff);
+            pthread_attr_destroy(&attr);
+            if (rc == 0) return CWIST_ASYNC_DETACH;
+            cwist_free(handoff);
+        }
+        /* Thread creation failed: preserve the old inline behavior rather
+         * than dropping the connection. */
         if (replay) {
             memcpy(replay, conn->rbuf, conn->len);
             cwist_https_connection h2c = {.fd = client_fd,
