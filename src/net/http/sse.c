@@ -18,16 +18,27 @@ static cwist_error_t sse_error(int value) {
     return (cwist_error_t){.errtype = CWIST_ERR_INT16, .error.err_i16 = value};
 }
 
+/* sstring calls report on the INT8 channel and a failed allocation on the
+ * JSON channel, so neither shows up in err_i16; check with
+ * cwist_error_is_ok() and release the error payload. */
+static bool sse_ok(cwist_error_t err) {
+    bool ok = cwist_error_is_ok(&err);
+    cwist_error_dispose(&err);
+    return ok;
+}
+
+static bool sse_append(cwist_sstring *out, const char *data, size_t len) {
+    return sse_ok(cwist_sstring_append_len(out, data, len));
+}
+
 static int append_field(cwist_sstring *out, const char *name, const char *value) {
     const char *line = value ? value : "";
     do {
         const char *end = strchr(line, '\n');
         size_t len = end ? (size_t)(end - line) : strlen(line);
         if (len && line[len - 1] == '\r') len--;
-        if (cwist_sstring_append(out, name).error.err_i16 ||
-            cwist_sstring_append(out, ":").error.err_i16 ||
-            (len && cwist_sstring_append_len(out, line, len).error.err_i16) ||
-            cwist_sstring_append(out, "\n").error.err_i16)
+        if (!sse_append(out, name, strlen(name)) || !sse_append(out, ":", 1) ||
+            (len && !sse_append(out, line, len)) || !sse_append(out, "\n", 1))
             return -1;
         line = end ? end + 1 : NULL;
     } while (line);
@@ -47,7 +58,7 @@ static cwist_sstring *format_event(const char *event, const char *id, int retry_
         failed |= append_field(frame, "retry", retry);
     }
     if (!is_comment) failed |= append_field(frame, "data", data);
-    if (failed || cwist_sstring_append(frame, "\n").error.err_i16) {
+    if (failed || !sse_append(frame, "\n", 1)) {
         cwist_sstring_destroy(frame);
         return NULL;
     }
@@ -56,10 +67,10 @@ static cwist_sstring *format_event(const char *event, const char *id, int retry_
 
 cwist_error_t cwist_sse_response_init(cwist_http_response *res) {
     if (!res ||
-        cwist_http_header_add(&res->headers, "Content-Type", "text/event-stream; charset=utf-8")
-            .error.err_i16 ||
-        cwist_http_header_add(&res->headers, "Cache-Control", "no-cache").error.err_i16 ||
-        cwist_http_header_add(&res->headers, "X-Accel-Buffering", "no").error.err_i16)
+        !sse_ok(cwist_http_header_add(&res->headers, "Content-Type",
+                                      "text/event-stream; charset=utf-8")) ||
+        !sse_ok(cwist_http_header_add(&res->headers, "Cache-Control", "no-cache")) ||
+        !sse_ok(cwist_http_header_add(&res->headers, "X-Accel-Buffering", "no")))
         return sse_error(-1);
     res->keep_alive = true;
     return sse_error(0);

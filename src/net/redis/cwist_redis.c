@@ -307,6 +307,19 @@ cwist_error_t cwist_redis_command(cwist_redis_t *r, const char *cmd, char **out)
     return err;
 }
 
+/**
+ * @brief Append to a RESP frame being built. A failed allocation is
+ *        reported on the JSON error channel, where err_i8 stays 0, so the
+ *        result is checked with cwist_error_is_ok() and then released;
+ *        otherwise a truncated command would be sent to the server.
+ */
+static bool redis_frame_append(cwist_sstring *frame, const void *data, size_t len) {
+    cwist_error_t err = cwist_sstring_append_len(frame, (const char *)data, len);
+    bool ok = cwist_error_is_ok(&err);
+    cwist_error_dispose(&err);
+    return ok;
+}
+
 cwist_error_t cwist_redis_command_argv(cwist_redis_t *r, size_t argc, const void *const *argv,
                                        const size_t *argv_lens, char **out, size_t *out_len) {
     if (!r || !argc || !argv || !argv_lens) return make_error(CWIST_ERR_INT16);
@@ -316,14 +329,14 @@ cwist_error_t cwist_redis_command_argv(cwist_redis_t *r, size_t argc, const void
     if (!frame) return make_error(CWIST_ERR_INT16);
     char count[32];
     snprintf(count, sizeof(count), "*%zu\r\n", argc);
-    if (cwist_sstring_append_len(frame, count, strlen(count)).error.err_i8) goto fail;
+    if (!redis_frame_append(frame, count, strlen(count))) goto fail;
     for (size_t i = 0; i < argc; ++i) {
         if (!argv[i] && argv_lens[i]) goto fail;
         char len[32];
         snprintf(len, sizeof(len), "$%zu\r\n", argv_lens[i]);
-        if (cwist_sstring_append_len(frame, len, strlen(len)).error.err_i8 ||
-            (argv_lens[i] && cwist_sstring_append_len(frame, argv[i], argv_lens[i]).error.err_i8) ||
-            cwist_sstring_append_len(frame, "\r\n", 2).error.err_i8)
+        if (!redis_frame_append(frame, len, strlen(len)) ||
+            (argv_lens[i] && !redis_frame_append(frame, argv[i], argv_lens[i])) ||
+            !redis_frame_append(frame, "\r\n", 2))
             goto fail;
     }
     char *value = NULL;
