@@ -65,7 +65,7 @@ class BenchmarkRenderTests(unittest.TestCase):
         self.assertEqual(self.block(readme), self.block(plain))
         self.assertTrue(readme.startswith("# Before\n\n" + START))
         self.assertTrue(readme.endswith(END + "\n\n# After\n"))
-        self.assertIn("| CWIST classic pool | 12,345 |", readme)
+        self.assertIn("| CWIST Classic pool | 12,345 |", readme)
         self.assertIn("| Spring Boot | 6,789 |", readme)
         return readme
 
@@ -106,6 +106,46 @@ class BenchmarkRenderTests(unittest.TestCase):
         first = {name: (self.root / name).read_bytes() for name in outputs}
         self.render()
         self.assertEqual(first, {name: (self.root / name).read_bytes() for name in outputs})
+
+    def test_latency_distribution_svg_is_generated_and_linked(self):
+        readme = self.render()
+        svg_path = self.root / "docs/webserver-latency-distribution.svg"
+        self.assertTrue(svg_path.exists())
+        svg = svg_path.read_text()
+        self.assertIn("<svg", svg)
+        self.assertIn("![Web Server Latency Distribution](docs/webserver-latency-distribution.svg)", readme)
+
+    def test_latency_distribution_survives_missing_percentile_fields(self):
+        # Older webserver.json rows only ever had avg/p90/p99/p99.999 (or, in
+        # this minimal case, nothing at all beyond rps) - render() must not
+        # crash on history predating the fuller percentile schema (see
+        # _percentile_anchors' graceful degradation).
+        row = {"cwist_rps": 100, "spring_rps": 50, "wrk_profile": PROFILE}
+        history = self.root / "benchmarks/webserver.json"
+        history.write_text(json.dumps([row]) + "\n")
+        subprocess.run(
+            [sys.executable, str(self.root / "scripts/ci/benchmark.py"), "render"],
+            check=True, capture_output=True, text=True,
+        )
+        svg = (self.root / "docs/webserver-latency-distribution.svg").read_text()
+        self.assertIn("<svg", svg)
+
+    def test_latency_distribution_uses_full_percentile_schema_when_present(self):
+        row = {
+            "cwist_rps": 100, "wrk_profile": PROFILE,
+            "cwist_min_ms": 0.02, "cwist_p50_ms": 1.5, "cwist_p75_ms": 2.5,
+            "cwist_p90_ms": 3.5, "cwist_p99_ms": 6.0, "cwist_p999_ms": 9.0,
+            "cwist_p9999_ms": 14.0, "cwist_p99_999_ms": 20.0, "cwist_max_ms": 25.0,
+        }
+        history = self.root / "benchmarks/webserver.json"
+        history.write_text(json.dumps([row]) + "\n")
+        subprocess.run(
+            [sys.executable, str(self.root / "scripts/ci/benchmark.py"), "render"],
+            check=True, capture_output=True, text=True,
+        )
+        svg = (self.root / "docs/webserver-latency-distribution.svg").read_text()
+        self.assertIn("CWIST Classic", svg)
+        self.assertIn("<polyline", svg)
 
 
 if __name__ == "__main__":

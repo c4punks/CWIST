@@ -17,20 +17,20 @@ Powered by BoringSSL, lsquic, OpenSSL without context contamination.
 
 Two server modes, tuned for opposite things; pick per workload.
 
-  C1M reactor   takes the throughput. Many connections per event loop,
-                so a connection costs a reactor slot, not a parked
-                thread. On the run below: 142,258 req/s against Axum's
-                114,649, 24% more.
+  CWIST reactor   takes the throughput. Many connections per event loop,
+                  so a connection costs a reactor slot, not a parked
+                  thread. On the run below: 142,258 req/s against Axum's
+                  114,649, 24% more.
 
-  Classic pool  takes the latency. A thread per connection, so no
-                request waits behind another in a batch. Median 1.55ms
-                against Axum's 3.21ms, and ahead through p99.
+  CWIST Classic pool  takes the latency. A thread per connection, so no
+                      request waits behind another in a batch. Median 1.55ms
+                      against Axum's 3.21ms, and ahead through p99.
 
 The distribution, not the average, is the point:
 
                     p50      p90      p99    p99.9  p99.999
-  CWIST classic   1.55ms   4.12ms   7.35ms  13.30ms  29.39ms
-  CWIST C1M       1.99ms   7.86ms  15.06ms  19.58ms  25.82ms
+  CWIST Classic   1.55ms   4.12ms   7.35ms  13.30ms  29.39ms
+  CWIST           1.99ms   7.86ms  15.06ms  19.58ms  25.82ms
   Axum            3.21ms   5.78ms   8.61ms  11.57ms  18.09ms
 
 Classic pool leads for the first 99% of requests and both modes answer
@@ -182,13 +182,13 @@ Latest Web Server Benchmark (wrk -t12 -c400 -d10s (after 10s warmup, warmup disc
 
 | Profile | Req/s | Mean ms | P90 ms | P99 ms | P99.999 ms | RSS KiB | Csw |
 |---|---:|---:|---:|---:|---:|---:|---:|
-| CWIST classic pool | 151,873 | 1.56 | 3.47 | 6.79 | 41.41 | 17,212 | 0 |
-| CWIST C1M reactor | 182,979 | 2.67 | 7.29 | 14.49 | 25.53 | 11,452 | 0 |
-| CWIST C1M reactor (arena_max=1) | 182,791 | 2.75 | 7.62 | 14.75 | 24.02 | 11,872 | 0 |
-| CWIST C1M reactor (drain_chunk=8) | 178,920 | 2.85 | 7.81 | 15.20 | 28.55 | 11,424 | 0 |
-| Axum | 150,456 | 2.62 | 4.54 | 6.89 | 14.77 | 17,068 | 0 |
-| Gin (Go) | 114,630 | 4.74 | 11.59 | 25.22 | 53.84 | 30,100 | 0 |
-| Spring Boot | 65,816 | 6.10 | 9.15 | 16.90 | 41.03 | 1,361,864 | 0 |
+| CWIST Classic pool | 171,119 | 1.34 | 2.75 | 5.67 | 21.00 | 16,388 | 1,720,692 |
+| CWIST reactor | 223,661 | 1.86 | 3.83 | 6.51 | 11.85 | 8,412 | 183,056 |
+| CWIST reactor (arena_max=1) | 228,897 | 1.84 | 3.82 | 6.59 | 18.48 | 9,260 | 183,558 |
+| CWIST reactor (drain_chunk=8) | 229,879 | 1.81 | 3.72 | 6.31 | 11.96 | 8,480 | 184,731 |
+| Axum | 195,977 | 2.03 | 3.69 | 5.77 | 12.39 | 17,408 | 324,786 |
+| Gin (Go) | 150,661 | 3.50 | 8.48 | 17.72 | 38.77 | 30,376 | 469,095 |
+| Spring Boot | 123,120 | 3.22 | 4.72 | 6.95 | 38.13 | 1,308,940 | 438,525 |
 
 - `arena_max=1`: glibc malloc arena cap adopted in PR #35 (issue #25); this row re-confirms that decision on every run.
 - `drain_chunk=8`: cooperative queuing for `cwist_async_defer` completions (issue #25, docs/cooperative-queuing.md). This workload issues no async-defer traffic, so parity with the plain C1M row is expected; the mechanism itself is measured in tests/bench_cooperative_queuing.c.
@@ -205,7 +205,7 @@ Latency distribution (density curve reconstructed from each server's percentiles
 
 GitHub hands out a different CPU model per run, which moves these numbers more than most code changes do. Medians of every recorded run, split by the CPU it landed on, so rows are only comparable down a column:
 
-| Runner CPU | Runs | CWIST classic ms | CWIST C1M ms | Axum ms | CWIST C1M req/s | Axum req/s |
+| Runner CPU | Runs | CWIST Classic ms | CWIST ms | Axum ms | CWIST req/s | Axum req/s |
 |---|---:|---:|---:|---:|---:|---:|
 | AMD EPYC 7763 64-Core Processor | 43 | 2.01 | 2.59 | 3.51 | 120,085 | 111,312 |
 | AMD EPYC 9V74 80-Core Processor | 30 | 1.88 | 2.27 | 3.24 | 126,674 | 120,618 |
