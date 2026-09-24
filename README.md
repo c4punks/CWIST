@@ -23,28 +23,20 @@ workload; the mode is one environment variable.
 
 **C1M reactor** takes the throughput. It multiplexes many connections per event
 loop, so connection count is decoupled from thread count and a connection costs
-a reactor slot rather than a parked thread. On the run recorded further down it serves
-**142,258 req/s against Axum's 114,649, 24% more**.
+a reactor slot rather than a parked thread. On the run recorded further down it
+leads the async row on throughput.
 
 **Classic pool** takes the latency. Every connection gets its own thread, so no
-request waits behind another in a batch. It answers the **median request in
-1.55ms against Axum's 3.21ms, less than half**, and stays ahead through p99.
+request waits behind another in a batch. It answers the median request in less
+than half of the Axum row's time, and stays ahead through p99.
 
 ### The distribution is the point, not the average
 
-An average hides which requests were slow. From the same run:
-
-| | p50 | p90 | p99 | p99.9 | p99.999 |
-|---|---:|---:|---:|---:|---:|
-| **CWIST classic** | **1.55ms** | **4.12ms** | **7.35ms** | 13.30ms | 29.39ms |
-| **CWIST C1M** | 1.99ms | 7.86ms | 15.06ms | 19.58ms | 25.82ms |
-| Axum | 3.21ms | 5.78ms | 8.61ms | **11.57ms** | **18.09ms** |
-
-Classic pool is ahead of Axum for the first 99% of requests and both CWIST
-modes answer the median faster. The crossover is at p99.9: past that point
-Axum's extreme tail is tighter, and closing that gap is open work rather than
-something to spin. The density chart further down draws the whole shape, which
-is what these five numbers are sampled from.
+An average hides which requests were slow. The benchmark block below samples
+the full distribution, and the density chart draws the whole shape. Read it as:
+classic pool leads through the median and p99; the crossover is at the extreme
+tail, where Axum's is tighter. Closing that gap is open work rather than
+something to spin.
 
 These figures come from one commit, load profile, and CI environment, and the
 runner CPU model changes between runs, which moves them more than most code
@@ -238,8 +230,8 @@ memory management to the user. CWIST ships the whole stack:
 
 The benchmark results above demonstrate the advantages in latency, memory footprint, and determinism:
 
-1. **Latency & Throughput.** Under 400 concurrency (`wrk -t12 -c400`, CI run above), CWIST Classic Pool delivers 1.52ms average latency at ~151k req/s, and C1M Reactor delivers 1.59ms at ~153k req/s (versus 2.55ms for Axum, 4.64ms for Gin, and 5.91ms for Spring Boot in the same run). In the tuned low-latency profile (`wrk -t4 -c100`), CWIST achieves 0.41ms average latency (P50 0.34ms, P90 0.69ms) at ~155k req/s.
-2. **Memory Efficiency.** CWIST maintains a lean memory footprint (~9.1MB RSS in C1M mode, ~15.4MB in Classic Pool, same CI run), compared to ~29.8MB for Gin and ~1.29GB for Spring Boot. In high-density container environments, this significantly reduces memory consumption across thousands of instances.
+1. **Latency & Throughput.** Under 400 concurrency (`wrk -t12 -c400`, CI run above), both CWIST paths deliver lower average latency and higher throughput than the Axum, Gin, and Spring Boot rows of the same run; the tuned low-latency profile (`wrk -t4 -c100`) shows the sub-millisecond median.
+2. **Memory Efficiency.** CWIST's resident footprint is a fraction of the Go row and orders of magnitude below the JVM row of the same CI run. In high-density container environments, this significantly reduces memory consumption across thousands of instances.
 3. **Tail Latency & Predictability.** Zero-copy framing, thread-pinned worker execution, and generational arena allocators minimize latency variance and GC pauses.
 4. **Zero-Overhead FFI.** Production libraries in finance, game servers, machine learning, and systems software written in C/C++ link directly into CWIST with zero FFI conversion or runtime bridge penalty.
 5. **Instant Cold Start.** With no runtime VM warmup or GC initialization required, CWIST starts in milliseconds and immediately serves requests at full capacity.
@@ -483,13 +475,12 @@ not held connections: APIs behind a reverse proxy, web pages, webhooks.
 There the classic path is the right default, a dedicated thread per active
 connection gives the kernel scheduler direct per-connection fairness with
 no reactor round trip, which is where cwist's sub-millisecond latency comes
-from in the tuned profile (0.41ms average at ~155k req/s with `wrk -t4 -c100`;
-the shared-core CI run at `wrk -t12 -c400` lands at 1.52ms / ~151k req/s, see
-the benchmark block above). Flip C1M mode on when you must *hold* very large numbers of
-simultaneously open, mostly idle connections, SSE fan-out, websocket-scale
-chat, long-polling, or when you genuinely target C1M. Giving up C1M for
-the classic path costs you nothing until your workload is dominated by
-hundreds of thousands of idle open sockets.
+from in the tuned profile (see the benchmark block above). Flip C1M mode on
+when you must *hold* very large numbers of simultaneously open, mostly idle
+connections, SSE fan-out, websocket-scale chat, long-polling, or when you
+genuinely target C1M. Giving up C1M for the classic path costs you nothing
+until your workload is dominated by hundreds of thousands of idle open
+sockets.
 
 Benchmark environment:
 
@@ -523,22 +514,14 @@ thread (Linux-only; other platforms fall back to the blocking pool path).
 Parked handshakes are reaped after `CWIST_HTTPS_HANDSHAKE_TIMEOUT_MS`
 (45 s, compile-time). This replaced a synchronous in-worker handshake that stalled the accept loop
 under churn (accept-queue overflow, silently dropped handshakes, "phantom"
-ESTABLISHED clients). Measured on the benchmark machine above (fly.board,
-TLS 1.3, loopback, same kernel/sysctl tuning):
-
-- Load: 20 `h2load` processes x `-c 5000 -n 50000 -r 1000 -T 30` against
-  `https://127.0.0.$i:8888/` (1,000,000 requests total).
-- Before the fix: deadlocked within minutes (0 completed requests, hundreds
-  of phantom connections).
-- After the fix: completes in ~7 min, 756,610 / 1,000,000 requests (75.7%),
-  zero phantom connections. The remaining ~24% are slow handshakes reclaimed
-  by h2load's `-T 30` timeout while queued behind the single shepherd
-  thread. The shepherd has since been sharded across
-  `CWIST_HTTPS_HS_MAX_SHARDS` threads (hashed by fd, default derived from the
-  request worker count); tuning `CWIST_HTTPS_HS_SHARDS` against connect-burst
-  workloads is the next performance candidate.
-- Regression check: `h2load -c 1000 -n 10000` passes at 100%
-  (~1,780 req/s), and `make test_https` passes.
+ESTABLISHED clients). Under a million-request loopback connect-burst load
+(h2load), the old path deadlocked within minutes while the shepherd path
+completes the run; the requests it drops are slow handshakes h2load reclaims
+with its own timeout while queued behind the shepherd. The shepherd has since
+been sharded across `CWIST_HTTPS_HS_MAX_SHARDS` threads (hashed by fd,
+default derived from the request worker count); tuning
+`CWIST_HTTPS_HS_SHARDS` against connect-burst workloads is the next
+performance candidate. `make test_https` covers the path.
 
 Some example applications (e.g. `example/othello-web`) also read the standard
 `PORT` variable when no explicit port is given.
