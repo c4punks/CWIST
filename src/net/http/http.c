@@ -3861,6 +3861,20 @@ static int http_parse_chunk_size(const char *line, size_t len, size_t *out_size)
     return 0;
 }
 
+/**
+ * @brief Append a decoded chunk to the body being assembled.
+ *
+ * cwist_sstring_append_len() reports a failed allocation on the JSON error
+ * channel, where err_i8 stays 0, so the result is checked with
+ * cwist_error_is_ok() and the error payload is released.
+ */
+static bool http_chunk_append(cwist_sstring *out, const char *data, size_t len) {
+    cwist_error_t err = cwist_sstring_append_len(out, data, len);
+    bool ok = cwist_error_is_ok(&err);
+    cwist_error_dispose(&err);
+    return ok;
+}
+
 static int http_read_chunked_body(int client_fd, char *buf, size_t *avail, size_t buf_cap,
                                   cwist_sstring *out) {
     size_t offset = 0;
@@ -3948,7 +3962,7 @@ static int http_read_chunked_body(int client_fd, char *buf, size_t *avail, size_
         }
 
         if (buf[offset + chunk_size] != '\r' || buf[offset + chunk_size + 1] != '\n') return -1;
-        if (cwist_sstring_append_len(out, buf + offset, chunk_size).error.err_i8 != 0) return -1;
+        if (!http_chunk_append(out, buf + offset, chunk_size)) return -1;
         offset += chunk_size + 2;
     }
 
@@ -4225,8 +4239,7 @@ static int http_chunked_scan(const char *buf, size_t avail, size_t *consumed,
         if (buf[pos + chunk_size] != '\r' || buf[pos + chunk_size + 1] != '\n') return -1;
         if (assemble) {
             if (assemble->size + chunk_size > CWIST_HTTP_MAX_BODY_SIZE) return -1;
-            if (cwist_sstring_append_len(assemble, (char *)buf + pos, chunk_size).error.err_i8 != 0)
-                return -1;
+            if (!http_chunk_append(assemble, (const char *)buf + pos, chunk_size)) return -1;
         }
         pos += chunk_size + 2;
     }

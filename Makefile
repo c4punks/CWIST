@@ -797,6 +797,7 @@ TEST_TARGETS = test_worker_affinity \
                test_secure_headers \
                test_profile \
                test_http_chunked \
+               test_http_chunked_alloc_failure \
                test_static_and_range \
                test_session \
                test_csrf \
@@ -1281,6 +1282,16 @@ clean-examples:
 test_http_chunked: $(LIB_NAME) tests/test_http_chunked.c
 	$(CC) $(CFLAGS) -o test_http_chunked tests/test_http_chunked.c $(LIB_NAME) $(LIBS)
 	./test_http_chunked
+
+# Fails one realloc() inside libcwist via the GNU linker's --wrap, so it needs
+# ld/lld (Linux); elsewhere the test is built unwrapped and reports a skip.
+# -fno-lto keeps LTO from resolving realloc() before the wrap applies.
+ifeq ($(UNAME_S),Linux)
+CHUNKED_ALLOC_WRAP = -fno-lto -DCWIST_TEST_WRAP_REALLOC -Wl,--wrap=realloc
+endif
+test_http_chunked_alloc_failure: $(LIB_NAME) tests/test_http_chunked_alloc_failure.c
+	$(CC) $(CFLAGS) $(CHUNKED_ALLOC_WRAP) -o test_http_chunked_alloc_failure tests/test_http_chunked_alloc_failure.c $(LIB_NAME) $(LIBS)
+	./test_http_chunked_alloc_failure
 
 test_static_and_range: $(LIB_NAME) tests/test_static_and_range.c
 	$(CC) $(CFLAGS) -o test_static_and_range tests/test_static_and_range.c $(LIB_NAME) $(LIBS)
