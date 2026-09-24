@@ -21,14 +21,16 @@ reactor. It is written in plain C and links statically.
 CWIST ships two request paths and they are tuned for opposite things. Pick per
 workload; the mode is one environment variable.
 
-**C1M reactor** takes the throughput. It multiplexes many connections per event
+**CWIST reactor (default)** takes the throughput. It multiplexes many connections per event
 loop, so connection count is decoupled from thread count and a connection costs
 a reactor slot rather than a parked thread. On the run recorded further down it
-leads the async row on throughput.
+leads the async row on throughput. This is the default mode; no extra environment
+variable is needed unless you want the other path.
 
-**Classic pool** takes the latency. Every connection gets its own thread, so no
-request waits behind another in a batch. It answers the median request in less
-than half of the Axum row's time, and stays ahead through p99.
+**CWIST Classic pool** is the opt-in thread-per-connection mode. Every connection gets
+its own thread, so no request waits behind another in a batch. It answers the
+median request in less than half of the Axum row's time, and stays ahead through
+p99. Enable it with `CWIST_C1M_MODE=0`.
 
 ### The distribution is the point, not the average
 
@@ -245,12 +247,12 @@ systems use the portable polling path. ECN metadata is enabled only when the
 host exposes the required socket options, so a missing optional API never
 blocks an HTTP/3 build.
 
-## Execution & I/O models: C1M Reactor and Classic Pool
+## Execution & I/O models: CWIST reactor (default) and CWIST Classic pool
 
 CWIST provides two operational execution models tailored for different workload profiles:
 
-1. **C1M Reactor Mode (`CWIST_C1M_MODE=1`, default)**: An event-driven asynchronous reactor designed for massive concurrent connections (`io_uring` on Linux, `kqueue` on macOS/BSD). It uses non-blocking I/O multiplexing and cooperative scheduling with lock-free coordination to maintain low latency under high concurrency without per-connection thread overhead.
-2. **Classic Pool Mode (`CWIST_C1M_MODE=0`)**: A worker thread pool model designed for low-jitter, predictable throughput on compute-bound workloads. In this mode, incoming requests are assigned to worker threads using thread-pinned queues and executed to completion inline on the worker stack.
+1. **CWIST reactor mode (`CWIST_C1M_MODE=1`, default)**: An event-driven asynchronous reactor designed for massive concurrent connections (`io_uring` on Linux, `kqueue` on macOS/BSD). It uses non-blocking I/O multiplexing and cooperative scheduling with lock-free coordination to maintain low latency under high concurrency without per-connection thread overhead. This is the default mode: if you do not set `CWIST_C1M_MODE`, you are running the CWIST reactor.
+2. **CWIST Classic pool mode (`CWIST_C1M_MODE=0`)**: A worker thread pool model designed for low-jitter, predictable throughput on compute-bound workloads. In this mode, incoming requests are assigned to worker threads using thread-pinned queues and executed to completion inline on the worker stack. Enable it explicitly when you want a thread per active connection instead of the reactor.
 
 ### Readiness multiplexing vs full completion rings
 
@@ -431,12 +433,12 @@ These variables are read directly by the framework runtime (no prefix required):
 | Variable | Type | Default | Description |
 |----------|------|---------|-------------|
 | `CWIST_WORKERS` | integer | `1` | Number of worker processes to fork before entering the event loop. |
-| `CWIST_C1M_MODE` | boolean | `true` | Enables the high-concurrency C1M async server loop. Set to `0` or `false` to fall back to a blocking accept loop. |
+| `CWIST_C1M_MODE` | boolean | `true` | Default server mode. `true`/`1` selects the CWIST reactor (C1M) and `false`/`0` selects CWIST Classic pool. The reactor is the default; only set this if you want the classic thread-per-connection path. |
 | `CWIST_HTTP_BATCH` | integer | `16` | Maximum pipelined HTTP/1.1 requests dispatched per event-loop turn (clamped to `[1, 1024]`). Excess requests are deferred via reactor continuations. |
 | `CWIST_HTTP_YIELD_BATCH` | integer | `16` (derived from batch) | Request dispatch yield granularity within a batch before re-posting connection to reactor queue. |
 | `CWIST_ASYNC_DEBUG` | boolean | unset | When set, the C1M async path and the reactor log rare failure events (rearm/submit/SQ failures) to stderr. No output in normal operation. |
 
-**C1M mode is now measured, not theoretical.** With the event-driven one-shot
+**CWIST reactor mode (C1M) is now measured, not theoretical.** With the event-driven one-shot
 connection path (connections live in the io_uring/epoll reactor instead of
 parking a worker thread each), a single cwist server on loopback served:
 
@@ -471,17 +473,9 @@ tight). C1M is out of reach
 for this model, a million threads exceeds `threads-max`, which is exactly
 what the reactor path is for.
 
-**Which mode should you pick?** Most HTTP workloads are request bursts,
-not held connections: APIs behind a reverse proxy, web pages, webhooks.
-There the classic path is the right default, a dedicated thread per active
-connection gives the kernel scheduler direct per-connection fairness with
-no reactor round trip, which is where cwist's sub-millisecond latency comes
-from in the tuned profile (see the benchmark block above). Flip C1M mode on
-when you must *hold* very large numbers of simultaneously open, mostly idle
-connections, SSE fan-out, websocket-scale chat, long-polling, or when you
-genuinely target C1M. Giving up C1M for the classic path costs you nothing
-until your workload is dominated by hundreds of thousands of idle open
-sockets.
+**Which mode should you pick?** The default is the CWIST reactor (`CWIST_C1M_MODE` unset or `1`). It is the right starting point for most workloads: APIs behind a reverse proxy, web pages, webhooks, and anything that must *hold* large numbers of simultaneously open, mostly idle connections, SSE fan-out, websocket-scale chat, long-polling, or genuine C1M targets. The reactor keeps connection count decoupled from thread count and avoids the scheduling overhead of a parked thread per connection.
+
+Switch to CWIST Classic pool (`CWIST_C1M_MODE=0`) only when your workload is dominated by short request bursts where the lowest possible median latency matters more than connection density, and you can tolerate one thread per active connection. That is where cwist's sub-millisecond tuned latency comes from (see the benchmark block above). Giving up the reactor for the classic path costs nothing until your workload is dominated by hundreds of thousands of idle open sockets.
 
 Benchmark environment:
 
