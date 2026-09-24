@@ -152,18 +152,8 @@ long get_optimal_thread_count(void) {
         /* In event-driven C1M mode each reactor thread multiplexes I/O
          * asynchronously. Target one event loop per CPU across the whole
          * deployment: extra loops on the same CPU add no parallelism, only
-         * scheduler queueing, and it lands squarely on the tail. Measured on
-         * a 4-core box, 4 workers, wrk -t8 -c400, server pinned to cores
-         * 0-3 and the load generator to 4-11:
-         *
-         *   loops/worker   rps     avg      p90       p99
-         *   4 (old)        358k    3.17ms   10.06ms   16.65ms
-         *   2              373k    1.45ms    3.92ms    6.38ms
-         *   1 (this)       388k    0.99ms    1.17ms    2.10ms
-         *
-         * Monotonic in loop count and reproducible across runs, and
-         * throughput improves too, so it is not a latency/throughput
-         * trade.
+         * scheduler queueing, and the queueing lands on the tail. The CI
+         * benchmark matrix tracks this configuration on every run.
          *
          * `cores` is this process's own CPU budget, not the machine's:
          * get_cpu_cores() reads sched_getaffinity(), and with workers > 1
@@ -172,17 +162,14 @@ long get_optimal_thread_count(void) {
          * default pinned deployment cores is 1 here and the division
          * below yields 0, clamped to 1 -- one loop per process. Unpinned
          * (e.g. the CI benchmark, which deliberately sees the whole
-         * runner), cores is the machine count and workers processes share
-         * it: 4 workers on 4 CPUs get 1 loop each, 4 total, instead of
-         * the legacy 4 loops per process (16 on 4 CPUs -- exactly the
-         * oversubscribed configuration the table above condemns).
+         * runner), cores is the machine count and the worker processes
+         * share it, so the division spreads the loops evenly across them.
          *
-         * The h2c/heavy-request concern a higher floor was protecting
-         * against is real but is not solved by extra loops on a shared
-         * CPU: they cannot run concurrently there either. A blocking
-         * handler stalls its own worker's connections until it yields,
-         * while the other workers (other CPUs, shared listener) keep
-         * serving. */
+         * A higher floor would protect synchronous handoffs (h2c) and
+         * blocking handlers, but extra loops on a shared CPU cannot run
+         * concurrently there either: a blocking handler stalls its own
+         * worker's connections until it yields, while the other workers
+         * (other CPUs, shared listener) keep serving. */
         long count = workers > 0 ? cores / workers : cores;
         if (count < 1) count = 1;
         if (count > 64) count = 64;
