@@ -84,6 +84,7 @@ wasm_smoke.wasm
 .wit-bindings/
 .component-build/
 .jco-guest/
+tests/browser/node_modules/
 .jco-guest-stream/
 .jco-out/
 .wasip2-build/
