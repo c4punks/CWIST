@@ -7,6 +7,7 @@
 #include <arpa/inet.h>
 #include <errno.h>
 #include <netdb.h>
+#include <inttypes.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -212,6 +213,17 @@ int cwist_db_sync_pull(const char *host, int port, const cwist_db_crypt_ctx_t *c
         return CWIST_DB_SYNC_ERR_PROTO;
     }
 
+    /* Reject unreasonably large blobs before allocating to prevent OOM from a
+     * rogue or malicious sync server.  4 GiB is well above any realistic
+     * SQLite snapshot; adjust CWIST_DB_SYNC_MAX_BLOB_SIZE if needed. */
+#ifndef CWIST_DB_SYNC_MAX_BLOB_SIZE
+#define CWIST_DB_SYNC_MAX_BLOB_SIZE ((uint64_t)4 * 1024 * 1024 * 1024)
+#endif
+    if (blob_len_u64 > CWIST_DB_SYNC_MAX_BLOB_SIZE) {
+        fprintf(stderr, "[db_sync] blob_len %" PRIu64 " exceeds limit\n", blob_len_u64);
+        close(fd);
+        return CWIST_DB_SYNC_ERR_PROTO;
+    }
     size_t blob_len = (size_t)blob_len_u64;
     unsigned char *blob = (unsigned char *)malloc(blob_len);
     if (!blob) {
