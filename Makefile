@@ -823,6 +823,7 @@ TEST_TARGETS = test_worker_affinity \
                test_full_gc_toggle_hardening \
                test_conn_registry \
                test_full_gc_sweep \
+               test_full_gc_tracking \
                test_io_queue_full_gc \
                test_full_gc_ownership_handoff \
                test_defer_free \
@@ -1416,6 +1417,10 @@ test_https_full_gc: $(LIB_NAME) tests/test_https_full_gc.c
 test_full_gc_sweep: $(LIB_NAME) tests/test_full_gc_sweep.c
 	$(CC) $(CFLAGS) -o test_full_gc_sweep tests/test_full_gc_sweep.c $(LIB_NAME) $(LIBS)
 	./test_full_gc_sweep
+
+test_full_gc_tracking: $(LIB_NAME) tests/test_full_gc_tracking.c
+	$(CC) $(CFLAGS) -o test_full_gc_tracking tests/test_full_gc_tracking.c $(LIB_NAME) $(LIBS)
+	./test_full_gc_tracking
 
 test_io_queue_full_gc: $(LIB_NAME) tests/test_io_queue_full_gc.c
 	$(CC) $(CFLAGS) -o test_io_queue_full_gc tests/test_io_queue_full_gc.c $(LIB_NAME) $(LIBS)

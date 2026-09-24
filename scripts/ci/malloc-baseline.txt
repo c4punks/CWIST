@@ -19,10 +19,12 @@
 1	src/core/mem/arena.c:tls = (cwist_arena_tls_t *)calloc(1, sizeof(cwist_arena_tls_t));
 1	src/core/mem/gc.c:(cwist_conn_entry_t *)realloc(pending->items, new_cap * sizeof(*grown));
 4	src/core/mem/gc.c:free(pending);
-2	src/core/mem/gc.c:free(pending->items);
+1	src/core/mem/gc.c:free(pending->items);
+2	src/core/mem/gc.c:free(pending->slots);
+1	src/core/mem/gc.c:free(slots);
 1	src/core/mem/gc.c:pending = (cwist_conn_pending_t *)calloc(1, sizeof(*pending));
 1	src/core/mem/gc.c:pending = (cwist_gc_pending_t *)calloc(1, sizeof(*pending));
-1	src/core/mem/gc.c:void **grown = (void **)realloc(pending->items, new_cap * sizeof(void *));
+1	src/core/mem/gc.c:void **slots = (void **)calloc(new_cap, sizeof(void *));
 1	src/core/orm/orm.c:char *columns = (char *)malloc(1);
 1	src/core/orm/orm.c:char *dst = (char *)malloc(len + extra + 1);
 1	src/core/orm/orm.c:char *final = (char *)realloc(sql, len + 2);
