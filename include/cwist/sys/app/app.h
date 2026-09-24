@@ -586,7 +586,8 @@ int cwist_app_dispatch_stream(cwist_app *app, const char *req_buf, size_t req_le
 
 /** Opaque incremental request assembly handle.  Feeding a body chunk by
  * chunk lets hosts avoid materializing one contiguous buffer for large
- * uploads; the parts are reassembled internally before dispatch. */
+ * uploads; chunks are copied once into the internally assembled wire
+ * buffer, which dispatch sends without a further reassembly copy. */
 typedef struct cwist_stream_req cwist_stream_req_t;
 
 /**

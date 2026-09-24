@@ -226,7 +226,36 @@ int main(void) {
     assert(cwist_stream_req_begin(bad_head, sizeof(bad_head) - 1) == NULL);
     printf("overflow/short/malformed incremental cases rejected\n");
 
-    /* 8. Session continuity across instances with a pinned secret. */
+    /* 8. Body beyond the eager reservation grows on feed and echoes back
+     * byte-for-byte (issue #237 item 10 grow path). */
+    const size_t big_len = ((size_t)1 << 20) + 64 * 1024; /* > CWIST_STREAM_REQ_EAGER_MAX */
+    char big_head[128];
+    int hl = snprintf(big_head, sizeof(big_head),
+                      "POST /echo HTTP/1.1\r\nHost: t\r\nContent-Length: %zu\r\n\r\n", big_len);
+    assert(hl > 0 && (size_t)hl < sizeof(big_head));
+    sr = cwist_stream_req_begin(big_head, (size_t)hl);
+    assert(sr != NULL);
+    char chunk[64 * 1024];
+    for (size_t off = 0; off < big_len;) {
+        size_t n = big_len - off;
+        if (n > sizeof(chunk)) n = sizeof(chunk);
+        /* stay in 1..255: the echo handler copies through sstring_assign,
+         * which measures with strlen, so a NUL would truncate the body */
+        for (size_t i = 0; i < n; i++) chunk[i] = (char)(1u + ((off + i) * 31u + 7u) % 255u);
+        assert(cwist_stream_req_feed(sr, chunk, n) == 0);
+        off += n;
+    }
+    assert(cwist_stream_req_end(sr) == 0);
+    sink = (sink_t){.abort_after = (size_t)-1};
+    assert(cwist_stream_req_dispatch(sr, app, sink_write, &sink) == 0);
+    assert(sink.len > big_len);
+    for (size_t i = 0; i < big_len; i++) {
+        assert(sink.buf[sink.len - big_len + i] == (char)(1u + (i * 31u + 7u) % 255u));
+    }
+    printf("body beyond eager reservation grows and echoes (%zu bytes)\n", big_len);
+    sink_free(&sink);
+
+    /* 9. Session continuity across instances with a pinned secret. */
     static const char sess_set[] = "GET /sess?user=alice HTTP/1.1\r\nHost: t\r\n\r\n";
     size_t r1_len = 0;
     char *r1 = NULL;
