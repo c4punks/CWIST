@@ -368,7 +368,7 @@ cwist_error_t cwist_sstring_rtrim(cwist_sstring *str) {
     size_t len = strlen(str->data);
 
     if (len == 0) {
-        err.error.err_i8 = ERR_SSTRING_ZERO_LENGTH;
+        err.error.err_i8 = ERR_SSTRING_OKAY;
         return err;
     }
 
