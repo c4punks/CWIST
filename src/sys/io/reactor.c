@@ -946,6 +946,36 @@ static uint64_t reactor_cq_grace_ns(void) {
     return (uint64_t)v;
 }
 
+/* Round budget: an io_uring dispatch round drains every CQE in the ring, and
+ * a busy round can hold hundreds of connections' callbacks. Callbacks re-arm
+ * their connections into the deferred SQE array, which only reaches the
+ * kernel when the round ends -- so a request that arrived right after its
+ * connection was re-armed waits out the whole batch, which is where the
+ * arm-to-dispatch tail comes from (issue #166). The budget bounds that wait
+ * without breaking the round: past it, parked re-arms are flushed to the
+ * kernel at the next check instead of at round end (one extra enter per
+ * check, only while a round is long). The round still runs to completion,
+ * so the stop-at-round-boundary contract is unchanged. The check rides its
+ * own cadence (every 64 callbacks), independent of CWIST_REACTOR_DRAIN_CHUNK.
+ * 0 disables the bound. CWIST_REACTOR_ROUND_BUDGET_US overrides the 2000 us
+ * default. */
+static uint64_t reactor_round_budget_us(void) {
+    static _Atomic long cached = -1;
+    long v = atomic_load_explicit(&cached, memory_order_relaxed);
+    if (v < 0) {
+        const char *s = getenv("CWIST_REACTOR_ROUND_BUDGET_US");
+        if (s && *s) {
+            char *end = NULL;
+            long parsed = strtol(s, &end, 10);
+            v = (end != s && parsed >= 0 && parsed < 3600000000L) ? parsed : 2000;
+        } else {
+            v = 2000;
+        }
+        atomic_store_explicit(&cached, v, memory_order_relaxed);
+    }
+    return (uint64_t)v;
+}
+
 #if defined(__x86_64__) || defined(__i386__)
 #define reactor_cpu_relax() __builtin_ia32_pause()
 #elif defined(__aarch64__)
@@ -1046,6 +1076,13 @@ void cwist_reactor_run(cwist_reactor_t *reactor) {
                 continue;
             }
             reactor->dispatching = true;
+            const uint64_t round_budget_us = reactor_round_budget_us();
+            uint64_t round_start_ns = 0;
+            if (round_budget_us) {
+                struct timespec ts;
+                clock_gettime(CLOCK_MONOTONIC, &ts);
+                round_start_ns = (uint64_t)ts.tv_sec * 1000000000ull + (uint64_t)ts.tv_nsec;
+            }
             /* Cooperative queuing: a busy round can carry hundreds of ready
              * connections in one CQE batch (the ring is 4096 deep). Foreign-
              * thread completions (cwist_async_defer, background jobs) queue
@@ -1060,6 +1097,7 @@ void cwist_reactor_run(cwist_reactor_t *reactor) {
              * 0 restores the legacy single-drain-at-end behavior. */
             uint32_t drain_chunk = reactor_drain_chunk();
             uint32_t since_drain = 0;
+            uint32_t since_budget_check = 0;
             while (head != tail) {
                 struct io_uring_cqe *cqe = &reactor->impl.cqes[head & *reactor->impl.cq_ring_mask];
                 uint64_t user_data = cqe->user_data;
@@ -1114,6 +1152,23 @@ void cwist_reactor_run(cwist_reactor_t *reactor) {
                     since_drain = 0;
                     __atomic_store_n(reactor->impl.cq_head, head, __ATOMIC_RELEASE);
                     reactor_drain_posts(reactor);
+                }
+                if (round_budget_us && head != tail &&
+                    (++since_budget_check & 63u) == 0) {
+                    /* The budget check rides its own cadence (every 64
+                     * callbacks), independent of CWIST_REACTOR_DRAIN_CHUNK,
+                     * so disabling the post drain does not disable the
+                     * round bound. */
+                    struct timespec ts;
+                    clock_gettime(CLOCK_MONOTONIC, &ts);
+                    uint64_t now_ns =
+                        (uint64_t)ts.tv_sec * 1000000000ull + (uint64_t)ts.tv_nsec;
+                    if (now_ns - round_start_ns >= round_budget_us * 1000ull) {
+                        /* Long round: flush the re-arms parked so far instead
+                         * of holding them to round end. The batch itself
+                         * still runs to completion. */
+                        flush_deferred(reactor);
+                    }
                 }
             }
             reactor->dispatching = false;
