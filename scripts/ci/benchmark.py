@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Run reproducible CWIST microbenchmarks and render tracked SVG trends."""
 from __future__ import annotations
-import json, os, platform, re, resource, subprocess, sys, time
+import json, math, platform, re, resource, subprocess, sys, time
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -229,7 +229,7 @@ def render_webserver_svg(history: list[dict]) -> str:
     metrics = [
         ("Throughput (req/s)", [("CWIST Classic", "cwist_rps", "#22c55e"), ("CWIST", "cwist_c1m_rps", "#10b981"), ("Axum", "axum_rps", "#3b82f6"), ("Gin", "gin_rps", "#06b6d4"), ("Spring", "spring_rps", "#ef4444")]),
         ("Avg Latency (ms)", [("CWIST Classic", "cwist_lat_ms", "#22c55e"), ("CWIST", "cwist_c1m_lat_ms", "#10b981"), ("Axum", "axum_lat_ms", "#3b82f6"), ("Gin", "gin_lat_ms", "#06b6d4"), ("Spring", "spring_lat_ms", "#ef4444")]),
-        ("Peak RSS (KiB)", [("CWIST Classic", "cwist_rss_kib", "#22c55e"), ("CWIST", "cwist_c1m_rss_kib", "#10b981"), ("Axum", "axum_rss_kib", "#3b82f6"), ("Gin", "gin_rss_kib", "#06b6d4"), ("Spring", "spring_rss_kib", "#ef4444")]),
+        ("Group RSS end sample (KiB)", [("CWIST Classic", "cwist_rss_kib", "#22c55e"), ("CWIST", "cwist_c1m_rss_kib", "#10b981"), ("Axum", "axum_rss_kib", "#3b82f6"), ("Gin", "gin_rss_kib", "#06b6d4"), ("Spring", "spring_rss_kib", "#ef4444")]),
         ("Context Switches", [("CWIST Classic", "cwist_csw", "#22c55e"), ("CWIST", "cwist_c1m_csw", "#10b981"), ("Axum", "axum_csw", "#3b82f6"), ("Gin", "gin_csw", "#06b6d4"), ("Spring", "spring_csw", "#ef4444")])
     ]
 
@@ -255,19 +255,22 @@ def render_webserver_svg(history: list[dict]) -> str:
         blocks.append(f'<rect x="{px}" y="{py}" width="{panel_w}" height="{panel_h}" fill="#1f2937" rx="6" stroke="#374151"/>')
         blocks.append(f'<text x="{px+15}" y="{py+28}" class="panel-title">{m_title}</text>')
         
-        vals = [float(ws_latest.get(key, 0)) for _, key, _ in series_list]
+        vals = [float(ws_latest[key]) for _, key, _ in series_list if type(ws_latest.get(key)) in (int, float) and math.isfinite(ws_latest[key])]
         max_val = max(vals, default=1.0)
         if max_val <= 0: max_val = 1.0
         
         bar_y_base = py + 55
         for s_idx, (label, key, color) in enumerate(series_list):
-            val = float(ws_latest.get(key, 0))
+            available = type(ws_latest.get(key)) in (int, float) and math.isfinite(ws_latest[key])
+            val = float(ws_latest[key]) if available else 0.0
             ratio = min(1.0, max(0.0, val / max_val))
             bar_len = int(ratio * 320)
             by = bar_y_base + s_idx * 27
-            
+
             # Format value label
-            if "ms" in m_title:
+            if not available:
+                val_str = "N/A"
+            elif "ms" in m_title:
                 val_str = f"{val:.2f} ms"
             elif "KiB" in m_title:
                 val_str = f"{val:,.0f} KiB"
@@ -275,7 +278,7 @@ def render_webserver_svg(history: list[dict]) -> str:
                 val_str = f"{val:,.0f} req/s"
             else:
                 val_str = f"{val:,.0f}"
-                
+
             blocks.append(f'<text x="{px+15}" y="{by+16}" class="bar-label">{label}</text>')
             blocks.append(f'<rect x="{px+120}" y="{by}" width="320" height="22" fill="#374151" rx="3"/>')
             if bar_len > 0:
@@ -313,6 +316,45 @@ def render_webserver_svg(history: list[dict]) -> str:
     )
     return f'<?xml version="1.0" encoding="UTF-8"?>\n<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="{width}" height="{height}" viewBox="0 0 {width} {height}">{svg_style}<rect width="100%" height="100%" fill="#111827"/>' + ''.join(blocks) + '</svg>\n'
 
+def compatible_history(history):
+    if not history:
+        return []
+    contract = history[-1].get('benchmark_contract')
+    return [row for row in history if row.get('benchmark_contract') == contract]
+
+
+def webserver_summary(row):
+    def metric(key, digits=3, scale=1):
+        value = row.get(key)
+        if type(value) not in (int, float) or not math.isfinite(value):
+            return 'N/A'
+        return f'{value / scale:,.{digits}f}'
+    commit = row.get('commit', 'not recorded')
+    run = row.get('run_url', 'not recorded')
+    release = row.get('release_tag') or 'not recorded; identify this run by commit'
+    lines = ['## Latest isolated HTTP benchmark', '',
+             f"Measured commit: `{commit}`. Release tag: `{release}`.",
+             f"Run: {run}. Timestamp: `{row.get('timestamp', 'not recorded')}`.",
+             '', 'Latency columns use the **wrk corrected distribution**. Memory columns are process-group end samples, not peaks: Group RSS counts a page shared between worker processes once per process, Group PSS divides it by its mapper count, so compare a single-process server against PSS. Context switches are same-thread counter deltas over threads live at both ends of the window; N/A means unavailable.',
+             '', '| Profile | Req/s | Mean ms | P99.999 ms | Group PSS MiB | Group RSS MiB | Context-switch delta |',
+             '|---|---:|---:|---:|---:|---:|---:|']
+    names = [('cwist','CWIST Classic'), ('cwist_c1m','CWIST'),
+             ('cwist_c1m_arena1','CWIST arena_max=1'),
+             ('cwist_c1m_drainchunk','CWIST drain_chunk=8'),
+             ('axum','Axum'), ('gin','Gin'), ('spring','Spring Boot')]
+    for key, name in names:
+        lines.append(f"| {name} | {metric(key+'_rps',0)} | {metric(key+'_lat_ms')} | {metric(key+'_p99_999_ms')} | {metric(key+'_pss_kib',2,1024)} | {metric(key+'_rss_kib',2,1024)} | {metric(key+'_csw',0)} |")
+    lines += ['', 'Main profile: `wrk -t12 -c400 -d10s`, after a discarded 10s warmup.',
+              '', '### Separate tuned profile', '', '`wrk -t4 -c100 -d10s`, after a discarded 10s warmup. Do not compare these rows as equal-load results against the main table.']
+    for key, name in [('cwist_tuned','CWIST Classic'), ('axum_tuned','Axum'), ('spring_tuned','Spring Boot')]:
+        lines.append(f"- {name}: {metric(key+'_rps',0)} req/s; mean {metric(key+'_lat_ms')} ms; corrected P99.999 {metric(key+'_p99_999_ms')} ms.")
+    spring = row.get('spring_env', {}) or {}
+    if spring:
+        lines += ['', f"Spring Boot row: {spring.get('java_version','n/a')}, Spring Boot {spring.get('spring_boot_version','n/a')}, {spring.get('stack','n/a')}. Full JVM options are recorded in `benchmarks/webserver.json`."]
+    lines += ['', '[Measurement contract](docs/webserver-benchmark.md) · [History](benchmarks/webserver.json)']
+    return '\n'.join(lines)
+
+
 def render() -> None:
     history = json.loads(HISTORY.read_text()) if HISTORY.exists() else []
     SVG.parent.mkdir(parents=True, exist_ok=True); SVG.write_text(svg(history))
@@ -323,54 +365,88 @@ def render() -> None:
     ws_history = json.loads(WEBSERVER_HISTORY.read_text()) if WEBSERVER_HISTORY.exists() else []
     WEBSERVER_SVG.parent.mkdir(parents=True, exist_ok=True)
     WEBSERVER_SVG.write_text(render_webserver_svg(ws_history))
+    ws_history = compatible_history(ws_history)
     ws_latest = ws_history[-1] if ws_history else {}
     WEBSERVER_LATENCY_SVG.parent.mkdir(parents=True, exist_ok=True)
     WEBSERVER_LATENCY_SVG.write_text(render_latency_kde_svg(ws_latest))
 
-    def metric(key, digits=2):
-        value = ws_latest.get(key)
-        return f"{value:,.{digits}f}" if isinstance(value, (int, float)) else "N/A"
+    def get_lat_part(prefix):
+        p90 = ws_latest.get(f"{prefix}_p90_ms")
+        p99 = ws_latest.get(f"{prefix}_p99_ms")
+        p99_999 = ws_latest.get(f"{prefix}_p99_999_ms")
+        if p90 is not None and p99 is not None:
+            tail = f" (P90 {p90:.2f}ms, P99 {p99:.2f}ms"
+            if p99_999 is not None:
+                tail += f", P99.999 {p99_999:.2f}ms"
+            tail += ")"
+            return tail
+        return ""
 
-    profiles = [
-        ("cwist", "CWIST Classic pool"),
-        ("cwist_c1m", "CWIST reactor"),
-        ("cwist_c1m_arena1", "CWIST reactor (arena_max=1)"),
-        ("cwist_c1m_drainchunk", "CWIST reactor (drain_chunk=8)"),
-        ("axum", "Axum"),
-        ("gin", "Gin (Go)"),
-        ("spring", "Spring Boot"),
-    ]
-    lines = [
-        f"Latest Web Server Benchmark ({ws_latest.get('wrk_profile','wrk 12t 400c')}):",
-        "",
-        "| Profile | Req/s | Mean ms | P90 ms | P99 ms | P99.999 ms | RSS KiB | Csw |",
-        "|---|---:|---:|---:|---:|---:|---:|---:|",
-    ]
-    for prefix, name in profiles:
-        lines.append(
-            f"| {name} | {metric(prefix+'_rps',0)} | {metric(prefix+'_lat_ms')} | "
-            f"{metric(prefix+'_p90_ms')} | {metric(prefix+'_p99_ms')} | {metric(prefix+'_p99_999_ms')} | "
-            f"{metric(prefix+'_rss_kib',0)} | {metric(prefix+'_csw',0)} |")
-    lines += [
-        "",
-        "- `arena_max=1`: glibc malloc arena cap adopted in PR #35 (issue #25); this row re-confirms that decision on every run.",
-        "- `drain_chunk=8`: cooperative queuing for `cwist_async_defer` completions (issue #25, docs/cooperative-queuing.md). This workload issues no async-defer traffic, so parity with the plain C1M row is expected; the mechanism itself is measured in tests/bench_cooperative_queuing.c.",
-        "- Csw is the context-switch delta over the measured window, summed across every thread of the server process group.",
-    ]
-    ws_env = ws_latest.get("spring_env", {}) or {}
-    if ws_env:
-        lines.append(
-            f"- Spring Boot row: {ws_env.get('java_version','n/a')}, Spring Boot "
-            f"{ws_env.get('spring_boot_version','n/a')}, {ws_env.get('stack','n/a')}. "
-            f"Full JVM options are recorded in benchmarks/webserver.json.")
-    ws_summary = "\n".join(lines)
-    ws_summary += f"\n\n![Web Server Benchmark Trends](docs/webserver-benchmark-trends.svg)"
-    ws_summary += (
-        f"\n\nLatency distribution (density curve reconstructed from each "
-        f"server's percentiles - shows the shape of the tail, not just its "
-        f"P99.999 number):\n\n"
-        f"![Web Server Latency Distribution](docs/webserver-latency-distribution.svg)"
-    )
+    cwist_lat_part = get_lat_part("cwist")
+    cwist_c1m_lat_part = get_lat_part("cwist_c1m")
+    cwist_c1m_arena1_lat_part = get_lat_part("cwist_c1m_arena1")
+    cwist_c1m_drainchunk_lat_part = get_lat_part("cwist_c1m_drainchunk")
+    axum_lat_part = get_lat_part("axum")
+    gin_lat_part = get_lat_part("gin")
+    spring_lat_part = get_lat_part("spring")
+
+    if ws_latest.get('schema_version') == 2:
+        # webserver_summary() renders the isolated-http1-wrk-corrected-v2
+        # measurement-contract table only -- it predates the chart images
+        # below and never appended them, which silently dropped the
+        # benchmark visualization from README once schema_version:2 rows
+        # started landing (docs/webserver-benchmark.md). Keep the
+        # reproducibility-contract table but still attach the same charts
+        # the pre-contract branch below has always shipped.
+        ws_summary = webserver_summary(ws_latest)
+        ws_summary += f"\n![Web Server Benchmark Trends](docs/webserver-benchmark-trends.svg)"
+        ws_summary += (
+            f"\n\nLatency distribution (density curve reconstructed from each "
+            f"server's percentiles - shows the shape of the tail, not just its "
+            f"P99.999 number):\n\n"
+            f"![Web Server Latency Distribution](docs/webserver-latency-distribution.svg)"
+        )
+    else:
+        ws_summary = (
+            f"Latest Web Server Benchmark ({ws_latest.get('wrk_profile','wrk 12t 400c')}):\n"
+            f"- **CWIST Classic pool**: {ws_latest.get('cwist_rps',0):.0f} req/s | Latency {ws_latest.get('cwist_lat_ms',0):.2f}ms{cwist_lat_part} | RSS {ws_latest.get('cwist_rss_kib',0):.0f}KiB | Csw {ws_latest.get('cwist_csw',0):.0f}\n"
+            f"- **CWIST reactor**: {ws_latest.get('cwist_c1m_rps',0):.0f} req/s | Latency {ws_latest.get('cwist_c1m_lat_ms',0):.2f}ms{cwist_c1m_lat_part} | RSS {ws_latest.get('cwist_c1m_rss_kib',0):.0f}KiB | Csw {ws_latest.get('cwist_c1m_csw',0):.0f}\n"
+            f"- **CWIST reactor (arena_max=1)** — glibc arena cap adopted in PR #35 after mimalloc was tried and refuted (issue #25); this line confirms the decision on every run: {ws_latest.get('cwist_c1m_arena1_rps',0):.0f} req/s | Latency {ws_latest.get('cwist_c1m_arena1_lat_ms',0):.2f}ms{cwist_c1m_arena1_lat_part} | RSS {ws_latest.get('cwist_c1m_arena1_rss_kib',0):.0f}KiB | Csw {ws_latest.get('cwist_c1m_arena1_csw',0):.0f}\n"
+            f"- **CWIST reactor (drain_chunk=8)** — cooperative queuing for cwist_async_defer completions within a big io_uring batch (issue #25, docs/cooperative-queuing.md); this workload has no cwist_async_defer traffic to interleave, so parity with the plain CWIST row above is the expected result, not a null finding — the tail-latency win is isolated directly in tests/bench_cooperative_queuing.c: {ws_latest.get('cwist_c1m_drainchunk_rps',0):.0f} req/s | Latency {ws_latest.get('cwist_c1m_drainchunk_lat_ms',0):.2f}ms{cwist_c1m_drainchunk_lat_part} | RSS {ws_latest.get('cwist_c1m_drainchunk_rss_kib',0):.0f}KiB | Csw {ws_latest.get('cwist_c1m_drainchunk_csw',0):.0f}\n"
+            f"- **Axum**: {ws_latest.get('axum_rps',0):.0f} req/s | Latency {ws_latest.get('axum_lat_ms',0):.2f}ms{axum_lat_part} | RSS {ws_latest.get('axum_rss_kib',0):.0f}KiB | Csw {ws_latest.get('axum_csw',0):.0f}\n"
+            f"- **Gin (Go)**: {ws_latest.get('gin_rps',0):.0f} req/s | Latency {ws_latest.get('gin_lat_ms',0):.2f}ms{gin_lat_part} | RSS {ws_latest.get('gin_rss_kib',0):.0f}KiB | Csw {ws_latest.get('gin_csw',0):.0f}\n"
+            f"- **Spring Boot**: {ws_latest.get('spring_rps',0):.0f} req/s | Latency {ws_latest.get('spring_lat_ms',0):.2f}ms{spring_lat_part} | RSS {ws_latest.get('spring_rss_kib',0):.0f}KiB | Csw {ws_latest.get('spring_csw',0):.0f}\n"
+        )
+        ws_env = ws_latest.get("spring_env", {}) or {}
+        if ws_env:
+            ws_summary += (
+                "\n**Spring runtime environment**\n\n"
+                f"- **JDK:** `{ws_env.get('java_version','n/a')}`\n"
+                f"- **Spring Boot:** {ws_env.get('spring_boot_version','n/a')}\n"
+            )
+            if ws_env.get('stack'):
+                ws_summary += f"- **Stack:** {ws_env['stack']}\n"
+            ws_vt = ws_env.get('virtual_threads')
+            if ws_vt is not None:
+                ws_summary += f"- **Virtual threads:** {'enabled' if ws_vt else 'disabled'}\n"
+            # Break before options, not within quoted values or historical AOT notes.
+            # This is display formatting only; retain the recorded option spelling.
+            jvm_opts = re.sub(
+                r'''("(?:\\.|[^"\\])*"|'[^']*')|\s+(?=-)''',
+                lambda match: match.group(1) if match.group(1) is not None else "\n",
+                ws_env.get('jvm_opts', 'n/a').strip(),
+            )
+            ws_summary += (
+                f"\n**JVM options**\n\n```text\n{jvm_opts}\n```\n"
+                f"\n**Warmup/profile**\n\n{ws_latest.get('wrk_profile','n/a')}\n"
+            )
+        ws_summary += f"\n![Web Server Benchmark Trends](docs/webserver-benchmark-trends.svg)"
+        ws_summary += (
+            f"\n\nLatency distribution (density curve reconstructed from each "
+            f"server's percentiles - shows the shape of the tail, not just its "
+            f"P99.999 number):\n\n"
+            f"![Web Server Latency Distribution](docs/webserver-latency-distribution.svg)"
+        )
     # The runner CPU model changes from run to run and moves these numbers
     # more than most code changes do, so the single latest row above cannot
     # be compared against the previous one. Break the history out per CPU
@@ -422,8 +498,8 @@ def render() -> None:
                 f"P99 {ws_latest.get('axum_tuned_p99_ms',0):.2f}ms), same binary as the main run above\n"
             )
         tuned_line += (
-            f"\nLeaving headroom between server workers and load-generator threads keeps the latency tail flat. "
-            f"Oversubscribing the same cores shows a multi-ms average from scheduling jitter alone at similar throughput."
+            f"\nThese runs use a different concurrency budget from the main table. "
+            f"They do not establish a causal scheduling explanation or a universal tail-latency improvement."
         )
         replace(README_MD, "<!-- TUNED_BENCHMARK:START -->", "<!-- TUNED_BENCHMARK:END -->", tuned_line)
 
