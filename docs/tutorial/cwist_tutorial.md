@@ -61,7 +61,7 @@ This section shows how to handle dynamic paths (path parameters) and query strin
 #include <cwist/app.h>
 #include <stdio.h>
 
-// Example: /users/:id?role=admin
+// 예: /users/:id?role=admin
 void user_profile_handler(cwist_http_request *req, cwist_http_response *res) {
     // Read the path parameter (:id)
     const char *user_id = cwist_query_map_get(req->path_params, "id");
@@ -260,7 +260,7 @@ void login_handler(cwist_http_request *req, cwist_http_response *res) {
     char *payload_json = cJSON_PrintUnformatted(payload);
     cJSON_Delete(payload);
 
-    // Create a token valid for 3600 seconds (1 hour); the exp claim is added automatically
+    // 3600초(1시간) 유효기간의 토큰 생성 (exp 클레임 자동 추가)
     char *token = cwist_jwt_sign(payload_json, SECRET_KEY, 3600);
     cJSON_free(payload_json);
 
@@ -272,22 +272,22 @@ void login_handler(cwist_http_request *req, cwist_http_response *res) {
     cwist_free(token);
 }
 
-// Middleware that verifies the JWT on API requests
+// API 요청 시 JWT 검증 미들웨어
 void auth_middleware(cwist_http_request *req, cwist_http_response *res, cwist_handler_func next) {
     const char *auth_header = cwist_http_header_get(req->headers, "Authorization");
 
     if (auth_header && strncmp(auth_header, "Bearer ", 7) == 0) {
-        // Returns a claims object if the signature and exp check out, NULL otherwise
+        // 서명과 exp 검증에 성공하면 클레임 객체, 실패하면 NULL
         cwist_jwt_claims *claims = cwist_jwt_verify(auth_header + 7, SECRET_KEY);
         if (claims) {
-            // Token is valid, let it through! (e.g. cwist_jwt_claims_get(claims, "role"))
+            // 토큰 유효함, 통과! (예: cwist_jwt_claims_get(claims, "role"))
             cwist_jwt_claims_destroy(claims);
             if (next) next(req, res);
             return;
         }
     }
 
-    // Respond 401 on failure (not calling next stops the chain)
+    // 실패 시 401 응답 (next를 호출하지 않으면 체인 중단)
     res->status_code = CWIST_HTTP_UNAUTHORIZED;
     cwist_sstring_assign(res->body, "{\"error\": \"Unauthorized\"}");
 }
