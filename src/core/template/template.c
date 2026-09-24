@@ -68,15 +68,18 @@ static void apply_filter(const char *value, const char *filter, char *out, size_
     } else if (strcmp(filter, "escape") == 0 || strcmp(filter, "e") == 0) {
         html_escape(value, out, out_len);
     } else if (strcmp(filter, "trim") == 0) {
-        if (!value) {
+        if (!value || value[0] == '\0') {
             out[0] = '\0';
             return;
         }
         const char *s = value;
         while (isspace((unsigned char)*s)) s++;
-        const char *e = value + strlen(value) - 1;
+        /* Guard against all-whitespace input: s may have advanced past the
+         * last character, making e = value + vlen - 1 < s. */
+        size_t vlen = strlen(value);
+        const char *e = value + vlen - 1;
         while (e > s && isspace((unsigned char)*e)) e--;
-        size_t len = (size_t)(e - s + 1);
+        size_t len = (s > e) ? 0 : (size_t)(e - s + 1);
         if (len >= out_len) len = out_len - 1;
         memcpy(out, s, len);
         out[len] = '\0';
