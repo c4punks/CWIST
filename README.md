@@ -45,7 +45,7 @@ changes do. They are not universal guarantees.
 
 - **CWIST**: 119,262 req/s at 0.50ms average latency (P50 0.43ms, P90 0.85ms, P99 2.04ms)
 
-Leaving headroom between server workers and load-generator threads keeps the latency tail flat. Oversubscribing the same cores shows a multi-ms average from scheduling jitter alone at similar throughput.
+These runs use a different concurrency budget from the main table. They do not establish a causal scheduling explanation or a universal tail-latency improvement.
 <!-- TUNED_BENCHMARK:END -->
 
 ---
@@ -124,21 +124,47 @@ int main(void) {
 
 <!-- WEBSERVER_BENCHMARKS:START -->
 Latest Web Server Benchmark (wrk -t12 -c400 -d10s (after 10s warmup, warmup discarded)):
+- **CWIST Classic pool**: 111345 req/s | Latency 2.07ms (P90 4.24ms, P99 7.66ms, P99.999 18.02ms) | RSS 16008KiB | Csw 1101320
+- **CWIST reactor**: 144109 req/s | Latency 2.76ms (P90 5.12ms, P99 8.11ms, P99.999 15.08ms) | RSS 8416KiB | Csw 117805
+- **CWIST reactor (arena_max=1)** — glibc arena cap adopted in PR #35 after mimalloc was tried and refuted (issue #25); this line confirms the decision on every run: 144450 req/s | Latency 2.72ms (P90 4.93ms, P99 7.70ms, P99.999 12.89ms) | RSS 9236KiB | Csw 112628
+- **CWIST reactor (drain_chunk=8)** — cooperative queuing for cwist_async_defer completions within a big io_uring batch (issue #25, docs/cooperative-queuing.md); this workload has no cwist_async_defer traffic to interleave, so parity with the plain CWIST row above is the expected result, not a null finding — the tail-latency win is isolated directly in tests/bench_cooperative_queuing.c: 143329 req/s | Latency 2.80ms (P90 5.03ms, P99 9.12ms, P99.999 24.02ms) | RSS 8372KiB | Csw 116676
+- **Axum**: 111820 req/s | Latency 3.51ms (P90 5.94ms, P99 8.82ms, P99.999 16.58ms) | RSS 16372KiB | Csw 183239
+- **Gin (Go)**: 77943 req/s | Latency 7.00ms (P90 16.67ms, P99 40.29ms, P99.999 83.64ms) | RSS 29880KiB | Csw 307864
+- **Spring Boot**: 44149 req/s | Latency 8.92ms (P90 12.24ms, P99 18.05ms, P99.999 66.80ms) | RSS 1295520KiB | Csw 224475
 
-| Profile | Req/s | Mean ms | P90 ms | P99 ms | P99.999 ms | RSS KiB | Csw |
-|---|---:|---:|---:|---:|---:|---:|---:|
-| CWIST Classic pool | 171,119 | 1.34 | 2.75 | 5.67 | 21.00 | 16,388 | 1,720,692 |
-| CWIST reactor | 223,661 | 1.86 | 3.83 | 6.51 | 11.85 | 8,412 | 183,056 |
-| CWIST reactor (arena_max=1) | 228,897 | 1.84 | 3.82 | 6.59 | 18.48 | 9,260 | 183,558 |
-| CWIST reactor (drain_chunk=8) | 229,879 | 1.81 | 3.72 | 6.31 | 11.96 | 8,480 | 184,731 |
-| Axum | 195,977 | 2.03 | 3.69 | 5.77 | 12.39 | 17,408 | 324,786 |
-| Gin (Go) | 150,661 | 3.50 | 8.48 | 17.72 | 38.77 | 30,376 | 469,095 |
-| Spring Boot | 123,120 | 3.22 | 4.72 | 6.95 | 38.13 | 1,308,940 | 438,525 |
+**Spring runtime environment**
 
-- `arena_max=1`: glibc malloc arena cap adopted in PR #35 (issue #25); this row re-confirms that decision on every run.
-- `drain_chunk=8`: cooperative queuing for `cwist_async_defer` completions (issue #25, docs/cooperative-queuing.md). This workload issues no async-defer traffic, so parity with the plain C1M row is expected; the mechanism itself is measured in tests/bench_cooperative_queuing.c.
-- Csw is the context-switch delta over the measured window, summed across every thread of the server process group.
-- Spring Boot row: openjdk version "25.0.4.1" 2026-08-18 LTS, Spring Boot 3.2.3, Spring WebFlux + Reactor Netty on native epoll (G1GC, JDK 25 Leyden AOT, virtual threads disabled). Full JVM options are recorded in benchmarks/webserver.json.
+- **JDK:** `openjdk version "25.0.4.1" 2026-08-18 LTS`
+- **Spring Boot:** 3.2.3
+- **Stack:** Spring WebFlux + Reactor Netty on native epoll (G1GC, JDK 25 Leyden AOT, virtual threads disabled)
+- **Virtual threads:** disabled
+
+**JVM options**
+
+```text
+-Xms1024m
+-Xmx1024m
+-XX:+UseG1GC
+-XX:GCTimeRatio=99
+-XX:G1HeapRegionSize=1m
+-XX:+AlwaysPreTouch
+-XX:CompileThreshold=1500
+-XX:CICompilerCount=4
+-Djava.security.egd=file:/dev/urandom
+-Djava.net.preferIPv4Stack=true
+-Dio.netty.allocator.type=pooled
+-Dio.netty.leakDetection.level=disabled
+-Dio.netty.buffer.checkBounds=false
+-Dio.netty.buffer.checkAccessible=false
+-Dreactor.netty.ioWorkerCount=4
+-Xlog:gc*:file=/tmp/spring_gc.log:time,uptime,level,tags
+-XX:+AOTClassLinking
+-XX:AOTCache=/tmp/spring_bench/app.aot (JEP 483 + JEP 514 single-step AOT)
+```
+
+**Warmup/profile**
+
+wrk -t12 -c400 -d10s (after 10s warmup, warmup discarded)
 
 ![Web Server Benchmark Trends](docs/webserver-benchmark-trends.svg)
 
