@@ -79,6 +79,28 @@ identity, affinity and context-switch counters from Linux `/proc`.
   binds the workload's server PGID and confirms no live group survivors before
   the leader is reaped.
 
+
+### Interpreting the context-switch column
+
+CWIST classic (`CWIST_C1M_MODE=0`) is the only blocking thread-per-connection server in
+the matrix; every other row multiplexes connections onto a small thread pool. That
+difference shows up almost entirely in this column, and it is a property of the
+concurrency model, not of wasted work:
+
+- Classic pays one voluntary switch per request — a worker blocked in `recv` wakes when
+  its connection's request arrives. That is the floor for the blocking model; nothing in
+  the serve path adds a second one (response sends use `MSG_DONTWAIT` with an inline
+  poll fallback that fires only when the client is genuinely slow).
+- CWIST C1M and the async runtimes batch many requests per wake, so their per-request
+  switch count is much lower.
+
+This was attributed by re-running the workload under a throttled CPU quota and splitting
+per-thread voluntary/non-voluntary counters: nearly all classic switches are voluntary
+recv wakeups (the model floor), and pool scaling reaches one worker per connection
+without spawn failures. Low-context-switch operation is what C1M — the default
+profile — is for; classic trades that for its latency behavior at low concurrency (the
+tuned `wrk -t4 -c100` run).
+
 ## Runtime configuration
 
 CWIST uses the checked-out source and generated constant-body fixture.
