@@ -763,12 +763,10 @@ TEST_TARGETS = test_worker_affinity \
                test_healthz \
                test_json_builder \
                test_flash \
- \
                test_html_component \
                test_html_response \
                test_assets \
-               test_html_parity
-
+               test_html_parity \
                test_http \
                test_http_stringify \
                test_siphash \
