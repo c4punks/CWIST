@@ -10,6 +10,19 @@
 #include <string.h>
 #include <ctype.h>
 
+/**
+ * @brief Add a Set-Cookie header. cwist_http_header_add() reports a failed
+ *        allocation on the JSON error channel (err_i16 stays 0), so the
+ *        result is checked with cwist_error_is_ok() and then released.
+ * @return 0 on success, -1 on failure.
+ */
+static int add_set_cookie(cwist_http_response *res, const char *value) {
+    cwist_error_t err = cwist_http_header_add(&res->headers, "Set-Cookie", value);
+    bool ok = cwist_error_is_ok(&err);
+    cwist_error_dispose(&err);
+    return ok ? 0 : -1;
+}
+
 /* URL-safe cookie characters: unreserved + !#$%&'()*+-./:<>?@[]^_`{|}~ */
 static int needs_url_encode(char c) {
     if ((c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z') || (c >= '0' && c <= '9') || c == '-' ||
@@ -146,9 +159,9 @@ int cwist_cookie_set(cwist_http_response *res, const char *name, const char *val
         }
     }
 
-    cwist_error_t err = cwist_http_header_add(&res->headers, "Set-Cookie", cookie->data);
+    int rc = add_set_cookie(res, cookie->data);
     cwist_sstring_destroy(cookie);
-    return err.error.err_i16 == 0 ? 0 : -1;
+    return rc;
 }
 
 int cwist_cookie_delete(cwist_http_response *res, const char *name) {
@@ -160,7 +173,7 @@ int cwist_cookie_delete(cwist_http_response *res, const char *name) {
     char buf[256];
     snprintf(buf, sizeof(buf), "%s=; Path=/; Max-Age=0", name);
     cwist_sstring_append(cookie, buf);
-    cwist_error_t err = cwist_http_header_add(&res->headers, "Set-Cookie", cookie->data);
+    int rc = add_set_cookie(res, cookie->data);
     cwist_sstring_destroy(cookie);
-    return err.error.err_i16 == 0 ? 0 : -1;
+    return rc;
 }
