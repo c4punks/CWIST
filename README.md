@@ -47,8 +47,8 @@ changes do. They are not universal guarantees.
 <!-- TUNED_BENCHMARK:START -->
 **Tuned low-latency run (wrk -t4 -c100 -d10s (after 10s warmup, warmup discarded)), CWIST vs Axum on identical concurrency:**
 
-- **CWIST**: 114,434 req/s at 0.55ms average latency (P50 0.40ms, P90 1.07ms, P99 2.44ms)
-- **Axum**: 120,182 req/s at 0.78ms average latency (P50 0.69ms, P90 1.43ms, P99 2.56ms), same binary as the main run above
+- **CWIST**: 117,765 req/s at 0.53ms average latency (P50 0.45ms, P90 0.93ms, P99 2.26ms)
+- **Axum**: 121,605 req/s at 0.78ms average latency (P50 0.68ms, P90 1.41ms, P99 2.51ms), same binary as the main run above
 
 These runs use a different concurrency budget from the main table. They do not establish a causal scheduling explanation or a universal tail-latency improvement.
 <!-- TUNED_BENCHMARK:END -->
@@ -151,29 +151,29 @@ int main(void) {
 <!-- WEBSERVER_BENCHMARKS:START -->
 ## Latest isolated HTTP benchmark
 
-Measured commit: `001be07a50a73d693664e130123c6766d705c42b`. Release tag: `not recorded; identify this run by commit`.
-Run: https://github.com/c4punks/CWIST/actions/runs/36005441236. Timestamp: `2026-09-24T13:35:55.510054+00:00`.
+Measured commit: `44e8d753a36be0c41779d213bca2661546bca501`. Release tag: `not recorded; identify this run by commit`.
+Run: https://github.com/c4punks/CWIST/actions/runs/36010453063. Timestamp: `2026-09-24T14:18:11.984467+00:00`.
 
 Latency columns use the **wrk corrected distribution**. Memory columns are process-group end samples, not peaks: Group RSS counts a page shared between worker processes once per process, Group PSS divides it by its mapper count, so compare a single-process server against PSS. Context switches are same-thread counter deltas over threads live at both ends of the window; N/A means unavailable.
 
 | Profile | Req/s | Mean ms | P99.999 ms | Group PSS MiB | Group RSS MiB | Context-switch delta |
 |---|---:|---:|---:|---:|---:|---:|
-| CWIST Classic | 107,260 | 2.264 | 59.566 | 46.31 | 56.62 | 1,106,652 |
-| CWIST | 142,028 | 2.899 | 33.881 | 14.25 | 25.85 | 126,366 |
-| CWIST arena_max=1 | 142,438 | 2.747 | 13.012 | 17.99 | 29.49 | 121,683 |
-| CWIST drain_chunk=8 | 142,794 | 2.766 | 14.788 | 14.21 | 25.50 | 111,946 |
-| Axum | 112,461 | 3.476 | 16.978 | 13.45 | 15.55 | 189,969 |
-| Gin | 79,602 | 6.730 | 82.484 | 27.94 | 29.36 | 303,052 |
-| Spring Boot | 43,686 | 9.124 | 91.609 | 1,283.71 | 1,286.58 | 221,909 |
+| CWIST Classic | 109,173 | 2.130 | 36.648 | 47.96 | 58.54 | 1,065,277 |
+| CWIST | 147,065 | 2.689 | 13.807 | 14.32 | 25.83 | 105,432 |
+| CWIST arena_max=1 | 146,772 | 2.691 | 24.767 | 18.58 | 30.25 | 108,091 |
+| CWIST drain_chunk=8 | 146,469 | 2.696 | 12.250 | 14.20 | 25.72 | 107,235 |
+| Axum | 113,606 | 3.458 | 17.305 | 13.83 | 15.98 | 187,803 |
+| Gin | 79,232 | 7.083 | 78.933 | 27.51 | 28.94 | 331,310 |
+| Spring Boot | 43,868 | 9.079 | 83.487 | 1,287.78 | 1,290.64 | 224,492 |
 
 Main profile: `wrk -t12 -c400 -d10s`, after a discarded 10s warmup.
 
 ### Separate tuned profile
 
 `wrk -t4 -c100 -d10s`, after a discarded 10s warmup. Do not compare these rows as equal-load results against the main table.
-- CWIST Classic: 114,434 req/s; mean 0.545 ms; corrected P99.999 5.535 ms.
-- Axum: 120,182 req/s; mean 0.785 ms; corrected P99.999 6.224 ms.
-- Spring Boot: 43,927 req/s; mean 2.313 ms; corrected P99.999 23.610 ms.
+- CWIST Classic: 117,765 req/s; mean 0.531 ms; corrected P99.999 4.936 ms.
+- Axum: 121,605 req/s; mean 0.776 ms; corrected P99.999 5.839 ms.
+- Spring Boot: 46,984 req/s; mean 2.193 ms; corrected P99.999 43.512 ms.
 
 Spring Boot row: openjdk version "25.0.4.1" 2026-08-18 LTS, Spring Boot 3.2.3, Spring WebFlux + Reactor Netty on native epoll (G1GC, JDK 25 Leyden AOT, virtual threads disabled). Full JVM options are recorded in `benchmarks/webserver.json`.
 
@@ -190,7 +190,7 @@ GitHub hands out a different CPU model per run, which moves these numbers more t
 
 | Runner CPU | Runs | CWIST Classic ms | CWIST ms | Axum ms | CWIST req/s | Axum req/s |
 |---|---:|---:|---:|---:|---:|---:|
-| AMD EPYC 7763 64-Core Processor | 6 | 2.14 | 2.77 | 3.51 | 143,466 | 111,445 |
+| AMD EPYC 7763 64-Core Processor | 7 | 2.13 | 2.73 | 3.50 | 144,063 | 111,804 |
 | AMD EPYC 9V74 80-Core Processor | 1 | 1.65 | 2.17 | 2.60 | 186,923 | 151,791 |
 | INTEL(R) XEON(R) PLATINUM 8573C | 1 | 1.09 | 2.33 | 1.78 | 262,140 | 223,003 |
 | Intel(R) Xeon(R) 6973P-C | 1 | 1.00 | 1.77 | 1.61 | 305,229 | 246,479 |
