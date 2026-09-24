@@ -1,4 +1,6 @@
+#ifndef _GNU_SOURCE
 #define _GNU_SOURCE
+#endif
 /* A failed allocation while assembling a chunked request body must reject
  * the request, not deliver a body with the chunk silently missing.
  *
