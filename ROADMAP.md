@@ -327,9 +327,38 @@ Theme: **Edge deployment and QUIC completion**. v3.6 took WASM from "in-tree tar
   * Track the lsquic connection-close fixes upstream (triggering-frame-type population, connection-close packet number space selection and pre-handshake fallback) and fold them into the release-line `lib/lsquic` pin at the next re-pin.
   * Add connection-close interop coverage on the CWIST side so the behavior stays pinned by tests.
 * **Phase 4: ecosystem experimental support** (shipped behind flags, documented as experimental):
-  * gRPC server-side response compression.
-  * GraphQL subscriptions over the v3.6 non-blocking WebSocket transport.
-  * Persistent job backends: a durable queue over the existing Redis/NATS clients, separate from the in-process scheduler queue.
+  * ~~gRPC server-side response compression~~ (done 2026-09-07 in `31b44d6f`, pre-v3.7; marked here so Phase 4 tracks only what remains).
+  * ~~GraphQL subscriptions over the v3.6 non-blocking WebSocket transport~~ (done — graphql-transport-ws subprotocol in `cwist/graphql_ws.h` with a topic broker (`cwist_graphql_publish`) and reactor-thread-safe fanout; `test_graphql_subscriptions` covers the close-code matrix, streaming, and teardown purge).
+  * ~~Persistent job backends: a durable queue over the existing Redis/NATS clients, separate from the in-process scheduler queue~~ (done — `cwist/sys/job/durable_queue.h`: at-least-once queues, Redis streams+consumer groups (XAUTOCLAIM visibility, Lua nack/dead-letter) and NATS JetStream pull consumers; `test_durable_queue` runs against live Redis and skips NATS cleanly without a server).
+* **Phase 5: pre-v4 experimental promotion** (new under this retheme — give the dev-only experiments a release-line soak so v4.0 can decide their fate with data):
+  * Memory management: full-GC (`CWIST_DEFER_FREE`, EBR path, thread/process-exit sweep) and header-scoped malloc interception (`CWIST_INTERCEPT_MALLOC`) documented as one experimental support tier, with a named v4.0 decision per item (default-on, opt-in, or removed). **Decision (2026-09-24): opt-in, both items.** The overhead of enabling the safety net is real (measured in `tests/bench_malloc_intercept.c`, table and methodology in `docs/GC.md` §5) — it is priced for handler authors who want it, not a tax every stable-line deployment should pay. The revert path is "do not define the macro", so promoting it to *supported opt-in* at v4.0 (out of experimental) carries no API risk. Decision recorded here per the entry criteria; revisit only if the soak turns up correctness regressions.
+  * `CWIST_PROFILE` presets and the C1M baseline work: confirm the preset matrix is the v4.0 default story or trim it. **Decision (2026-09-24): keep the matrix as the v4.0 default story, no trim.** The four presets (`performance`/`lowmem`/`lowlat`/`default`) are thin setenv overlays with per-variable escapes (overwrite=0), so the surface is already minimal. On the default: issue #166's tail analysis attributes the extreme-tail gap to neither dispatch model, so C1M-on + drain-chunk 8 remains the defensible throughput-oriented default, with `CWIST_PROFILE=lowlat` as the documented escape for latency-first deployments. `docs/cooperative-queuing.md` documents the matrix for every profile.
+  * The env-gated per-event latency probe and HTTP batch shed metrics: promote, hide, or drop. **Decisions (2026-09-24), one per item:**
+    * *Latency probe (`CWIST_LATENCY_PROBE=1`, issue #166 tooling):* **hide — stays opt-in.** Disabled cost is one cached atomic load and a branch per arm/record (the `clock_gettime` calls are guarded and never run when off); enabled cost is two clock reads plus a histogram update per request. Its job — attributing the extreme tail between queue and service time — is a diagnostic activity, not steady-state observability; steady-state belongs to the always-on Prometheus metrics. No default-on, and no sampling mode is planned for v4.0 unless #166 (or its successor) asks for one.
+    * *HTTP batch shed metric (`cwist_http_continuation_shed_total`):* **promote — already de-facto stable, keep always-on with no gate.** The counter increments only when a pipelined continuation is shed because the reactor post queue is full — a pathological path where the connection is closed anyway. Gating it would add a branch on a path that executes roughly never. It already ships ungated in the Prometheus exposition, so "promote" here means the v4.0 line keeps it unconditional rather than hiding it behind a knob.
+  * Each item needs: experimental docs, a revert path, and the promotion decision recorded here before v4.0 cuts. (All three items now have their decision recorded above; the docs and revert paths were already in place.)
+
+---
+
+## v3.8 Milestone (Queued)
+
+Theme: **QUIC completion**. v3.7 shipped the WASM edge story and the ecosystem
+experimental support; the QUIC work that was gated on upstream timing rather
+than CWIST code lands here. Both phases are blocked on lsquic, not on CWIST —
+v3.8 starts when the upstream merges land, and neither phase delays the v3.7
+cut. Tracked in issue #17 (WebTransport) and the connection-close notes below.
+
+* **Phase 2 (from v3.7): WebTransport on the stable line** (conditional on upstream, issue #17):
+  * Trigger condition: LSQUIC PR #629 (WebTransport) merges to upstream lsquic master.
+  * Re-pin `lib/lsquic` to upstream master with WebTransport included; port the dev-branch WebTransport server and native C client to the release line with interop and soak coverage.
+* **Phase 3 (from v3.7): HTTP/3 connection-close correctness**:
+  * Track the lsquic connection-close fixes upstream (triggering-frame-type population, connection-close packet number space selection and pre-handshake fallback) and fold them into the release-line `lib/lsquic` pin at the next re-pin. Status (2026-09-23): none of the three are in the pinned fork or in upstream master (v4.10.0) — blocked on lsquic, not CWIST.
+  * CWIST-side coverage (carried over from v3.7, done): received CONNECTION_CLOSE is recorded via `on_conncloseframe_received` and exposed through `cwist_http3_last_close_error()`; `test_http3` Test 12 pins the peer-abort close path over a real QUIC handshake. The h3spec-style interop gate waits for the lsquic re-pin.
+
+**v4.0 preview (what the narrowed release looks like):** feature freeze at
+cut; no new public API after v3.7; semver commitment begins; deprecated
+APIs and flags resolved (promoted or removed); stabilization-only —
+correctness, soak, docs, and the promotion decisions Phase 5 queued up.
 
 ---
 
