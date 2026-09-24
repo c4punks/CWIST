@@ -381,24 +381,33 @@ static reactor_event_ctx_t *alloc_reactor_ctx(cwist_reactor_t *r, int fd, cwist_
                                               const void *payload, size_t payload_size) {
     if (!r || payload_size > CWIST_REACTOR_PAYLOAD_SIZE) return NULL;
     pthread_mutex_lock(&r->pool_lock);
-    if (!r->free_head) {
+    reactor_event_ctx_t *ev_ctx = r->free_head;
+    if (ev_ctx) r->free_head = (reactor_event_ctx_t *)ev_ctx->ctx;
+    pthread_mutex_unlock(&r->pool_lock);
+
+    if (!ev_ctx) {
+        /* Free list empty: grow a chunk. Allocate and link it outside the
+         * lock so the ~40 KiB setup does not serialize every other submitter
+         * on this reactor; under the lock the chunk is pushed onto the free
+         * list wholesale and one slot popped. Chunks are never freed until
+         * destroy, so a race with another grower only means two chunks. */
         reactor_slot_chunk_t *chunk =
             cwist_alloc(sizeof(*chunk) + REACTOR_CHUNK_EVENTS * sizeof(reactor_event_ctx_t));
-        if (chunk) {
-            chunk->next = r->chunks;
-            r->chunks = chunk;
-            for (uint32_t i = 0; i + 1 < REACTOR_CHUNK_EVENTS; i++) {
-                chunk->slots[i].ctx = &chunk->slots[i + 1];
-            }
-            chunk->slots[REACTOR_CHUNK_EVENTS - 1].ctx = NULL;
-            r->free_head = &chunk->slots[0];
+        if (!chunk) return NULL;
+        for (uint32_t i = 0; i + 1 < REACTOR_CHUNK_EVENTS; i++) {
+            chunk->slots[i].ctx = &chunk->slots[i + 1];
         }
-    }
-    reactor_event_ctx_t *ev_ctx = r->free_head;
-    if (ev_ctx) {
+        chunk->slots[REACTOR_CHUNK_EVENTS - 1].ctx = NULL;
+
+        pthread_mutex_lock(&r->pool_lock);
+        chunk->next = r->chunks;
+        r->chunks = chunk;
+        chunk->slots[REACTOR_CHUNK_EVENTS - 1].ctx = r->free_head;
+        r->free_head = &chunk->slots[0];
+        ev_ctx = r->free_head;
         r->free_head = (reactor_event_ctx_t *)ev_ctx->ctx;
+        pthread_mutex_unlock(&r->pool_lock);
     }
-    pthread_mutex_unlock(&r->pool_lock);
     if (!ev_ctx) return NULL;
 
     memset(ev_ctx, 0, sizeof(*ev_ctx));
