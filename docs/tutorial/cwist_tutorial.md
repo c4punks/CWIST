@@ -26,7 +26,6 @@ CWIST의 핵심은 `cwist_app` 객체입니다. Spring의 `ApplicationContext`�
 
 ```c
 #include <cwist/sys/app/app.h>
-#include <cwist/net/http/mux.h>
 #include <cwist/core/sstring/sstring.h>
 
 // 요청 핸들러 (Spring의 @GetMapping)
@@ -40,13 +39,11 @@ int main() {
     cwist_app *app = cwist_app_create();
     
     // 2. 라우터 설정
-    cwist_mux *router = cwist_mux_create();
-    cwist_mux_add_route(router, CWIST_HTTP_GET, "/hello", hello_handler);
+    cwist_app_get(app, "/hello", hello_handler);
     
     // 3. 포트 8080에서 서버 실행 (블로킹)
-    cwist_app_start(app, router, 8080);
+    cwist_app_listen(app, 8080);
     
-    cwist_mux_destroy(router);
     cwist_app_destroy(app);
     return 0;
 }
