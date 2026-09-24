@@ -35,6 +35,13 @@ void test_trim() {
     assert(s->size == 0);
     assert(cwist_sstring_get_size(s) == 0);
 
+    /* Empty string is already trimmed: trim("") must succeed */
+    cwist_sstring_assign(s, "");
+    assert(cwist_sstring_rtrim(s).error.err_i8 == ERR_SSTRING_OKAY);
+    assert(cwist_sstring_trim(s).error.err_i8 == ERR_SSTRING_OKAY);
+    assert(strcmp(s->data, "") == 0);
+    assert(s->size == 0);
+
     /* Test trimming borrowed buffer safely detaches without mutating borrowed memory */
     const char *orig = "   borrowed text   ";
     char borrowed_copy[32];
