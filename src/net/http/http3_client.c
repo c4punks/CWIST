@@ -1198,6 +1198,20 @@ ssize_t cwist_http3_client_recv_datagram(cwist_http3_client *client,
 /* WebTransport client (LSQUIC proposal API)                          */
 /* ------------------------------------------------------------------ */
 
+#ifdef CWIST_WEBTRANSPORT
+/**
+ * @brief Add one request header. cwist_http_header_add() reports a failed
+ *        allocation on the JSON error channel (err_i16 stays 0), so the
+ *        result is checked with cwist_error_is_ok() and then released.
+ */
+static bool h3c_header_add(cwist_http_header_node **headers, const char *key, const char *value) {
+    cwist_error_t err = cwist_http_header_add(headers, key, value);
+    bool ok = cwist_error_is_ok(&err);
+    cwist_error_dispose(&err);
+    return ok;
+}
+#endif
+
 cwist_error_t
 cwist_http3_client_webtransport_connect(cwist_http3_client *client,
                                          const char *path, const char *origin,
@@ -1218,8 +1232,8 @@ cwist_http3_client_webtransport_connect(cwist_http3_client *client,
     client->wt_connecting = session;
 
     cwist_http_header_node *headers = NULL;
-    if (cwist_http_header_add(&headers, ":protocol", "webtransport").error.err_i16 != 0 ||
-        (origin && cwist_http_header_add(&headers, "origin", origin).error.err_i16 != 0)) {
+    if (!h3c_header_add(&headers, ":protocol", "webtransport") ||
+        (origin && !h3c_header_add(&headers, "origin", origin))) {
         cwist_http_header_free_all(headers);
         free(session);
         client->wt_connecting = NULL;
