@@ -1,10 +1,21 @@
 #include <cwist/app.h>
 #include <cwist/net/websocket/websocket.h>
 
-static void ws_on_message(cwist_websocket *ws, const char *msg, size_t len) {
-    (void)len;
-    cwist_websocket_send_text(ws, "Echo: ");
-    cwist_websocket_send_text(ws, msg);
+/* Called once per connection after the upgrade; the connection is closed and
+ * freed when this returns, so keep receiving until the client goes away. */
+static void ws_on_message(cwist_websocket *ws) {
+    cwist_ws_frame *frame;
+    while ((frame = cwist_websocket_receive(ws)) != NULL) {
+        if (frame->opcode == CWIST_WS_FRAME_CLOSE) {
+            cwist_websocket_frame_destroy(frame);
+            break;
+        }
+        if (frame->opcode == CWIST_WS_FRAME_TEXT) {
+            cwist_websocket_send(ws, CWIST_WS_FRAME_TEXT, (const uint8_t *)"Echo: ", 6);
+            cwist_websocket_send(ws, CWIST_WS_FRAME_TEXT, frame->payload, frame->payload_len);
+        }
+        cwist_websocket_frame_destroy(frame);
+    }
 }
 
 int main(void) {
