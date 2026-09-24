@@ -329,7 +329,32 @@ static cwist_sstring *render_internal(const char **template_str, const cJSON *co
                                              : NULL;
 
                     const char *block_start = p + 2;
-                    const char *block_end = strstr(block_start, "{% endfor %}");
+                    /* Scan for the matching endfor, counting nested for tags
+                     * so that {% for %}...{% for %}...{% endfor %}...{% endfor %}
+                     * is handled correctly. */
+                    const char *block_end = NULL;
+                    {
+                        const char *scan = block_start;
+                        int depth = 0;
+                        while (*scan) {
+                            if (scan[0] == '{' && scan[1] == '%') {
+                                const char *tag = scan + 2;
+                                while (*tag == ' ' || *tag == '\t' || *tag == '\n') tag++;
+                                if (strncmp(tag, "for ", 4) == 0 ||
+                                    strncmp(tag, "for\t", 4) == 0 ||
+                                    strncmp(tag, "for\n", 4) == 0) {
+                                    depth++;
+                                } else if (strncmp(tag, "endfor", 6) == 0) {
+                                    if (depth == 0) {
+                                        block_end = scan;
+                                        break;
+                                    }
+                                    depth--;
+                                }
+                            }
+                            scan++;
+                        }
+                    }
 
                     if (item_name && cJSON_IsArray(array)) {
                         cJSON *item;
