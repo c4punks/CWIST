@@ -6,6 +6,11 @@
  * 127.0.0.1:6379); skips cleanly when absent.
  * NATS: requires a JetStream-enabled server at CWIST_NATS_URL (default
  * nats://127.0.0.1:4222); skips cleanly when absent or not JetStream.
+ *
+ * Strict mode: CWIST_TEST_REQUIRE_DURABLE_QUEUE=1 turns every skip into a
+ * failure (missing Redis, missing NATS, NATS without JetStream, or any
+ * queue factory failure) and only passes when both backends execute all
+ * scenarios. Unset or 0 keeps the local optional behavior above.
  */
 #define _POSIX_C_SOURCE 200809L
 #include <cwist/net/nats/cwist_nats.h>
@@ -194,23 +199,47 @@ static cwist_job_queue_t *create_nats(void *ctx, const char *name,
     return cwist_job_queue_create_nats(((nats_ctx_t *)ctx)->nats, opts);
 }
 
+static int strict_required(void) {
+    const char *v = getenv("CWIST_TEST_REQUIRE_DURABLE_QUEUE");
+    return v && v[0] != '\0' && strcmp(v, "0") != 0;
+}
+
 int main(void) {
     int rc = 0;
+    int strict = strict_required();
+    int redis_ran = 0;
+    int nats_ran = 0;
 
     /* Redis backend. */
     const char *host = getenv("CWIST_REDIS_HOST") ? getenv("CWIST_REDIS_HOST") : "127.0.0.1";
     int port = getenv("CWIST_REDIS_PORT") ? atoi(getenv("CWIST_REDIS_PORT")) : 6379;
     cwist_redis_t *conn = cwist_redis_connect(host, port);
     if (!conn) {
-        printf("[durable_queue] No Redis server at %s:%d, skipping redis backend.\n", host, port);
+        if (strict) {
+            fprintf(stderr,
+                    "[durable_queue] REQUIRED: no Redis server at %s:%d "
+                    "(CWIST_TEST_REQUIRE_DURABLE_QUEUE=1).\n",
+                    host, port);
+            rc = 1;
+        } else {
+            printf("[durable_queue] No Redis server at %s:%d, skipping redis backend.\n", host,
+                   port);
+        }
     } else {
         redis_ctx_t ctx = {conn};
         int r = run_suite(create_redis, &ctx, "redis");
-        if (r != 0) {
+        if (r == -2 && strict) {
+            fprintf(stderr,
+                    "[durable_queue] REQUIRED: Redis queue factory failed at %s:%d "
+                    "(CWIST_TEST_REQUIRE_DURABLE_QUEUE=1).\n",
+                    host, port);
+            rc = 1;
+        } else if (r != 0) {
             fprintf(stderr, "[durable_queue] Redis backend tests failed (%d).\n", r);
             rc = 1;
         } else {
             printf("[durable_queue] Redis backend tests passed.\n");
+            redis_ran = 1;
         }
         cwist_redis_close(conn);
     }
@@ -220,20 +249,50 @@ int main(void) {
     cwist_nats_t *nats = NULL;
     cwist_error_t err = cwist_nats_connect(&nats, url);
     if (err.error.err_i16 != 0 || !nats) {
-        printf("[durable_queue] No NATS server at %s, skipping nats backend.\n", url);
+        if (strict) {
+            fprintf(stderr,
+                    "[durable_queue] REQUIRED: no NATS server at %s "
+                    "(CWIST_TEST_REQUIRE_DURABLE_QUEUE=1).\n",
+                    url);
+            rc = 1;
+        } else {
+            printf("[durable_queue] No NATS server at %s, skipping nats backend.\n", url);
+        }
     } else {
         nats_ctx_t ctx = {nats};
         int r = run_suite(create_nats, &ctx, "nats");
         if (r == -2) {
-            printf("[durable_queue] NATS server at %s has no JetStream, skipping nats backend.\n",
-                   url);
+            if (strict) {
+                fprintf(stderr,
+                        "[durable_queue] REQUIRED: NATS server at %s has no JetStream (or queue "
+                        "factory failed) (CWIST_TEST_REQUIRE_DURABLE_QUEUE=1).\n",
+                        url);
+                rc = 1;
+            } else {
+                printf(
+                    "[durable_queue] NATS server at %s has no JetStream, skipping nats backend.\n",
+                    url);
+            }
         } else if (r != 0) {
             fprintf(stderr, "[durable_queue] NATS backend tests failed (%d).\n", r);
             rc = 1;
         } else {
             printf("[durable_queue] NATS backend tests passed.\n");
+            nats_ran = 1;
         }
         cwist_nats_destroy(nats);
+    }
+
+    if (strict) {
+        if (rc == 0 && (!redis_ran || !nats_ran)) {
+            fprintf(stderr,
+                    "[durable_queue] REQUIRED: strict mode needs both backends executed "
+                    "(redis=%d nats=%d) (CWIST_TEST_REQUIRE_DURABLE_QUEUE=1).\n",
+                    redis_ran, nats_ran);
+            rc = 1;
+        }
+        if (rc == 0) printf("All durable queue tests passed (redis and nats backends executed).\n");
+        return rc;
     }
 
     if (rc == 0) printf("All durable queue tests passed (skipped backends logged above).\n");
