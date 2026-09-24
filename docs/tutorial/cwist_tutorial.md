@@ -376,7 +376,7 @@ int main() {
 
 ---
 
-## 9. 동적 CSS 합성기 (WASM 및 SSR)
+## 10. 동적 CSS 합성기 (WASM 및 SSR)
 
 CWIST는 단순 백엔드 역할을 넘어, C 언어의 강력한 수학적 연산력을 바탕으로 **디자인 시스템을 런타임에 합성해내는 CSS Composer** 기능을 내장하고 있습니다. 색상의 명도(Lightness)를 수학적으로 추론하여 Hover/Active 상태를 만들고, 곡률(Roundness)과 여백(Spacing)을 동적으로 계산합니다.
 
@@ -413,12 +413,12 @@ void theme_css_handler(cwist_http_request *req, cwist_http_response *res) {
 
 int main() {
     cwist_app *app = cwist_app_create();
-    cwist_mux *router = cwist_mux_create();
     
     // <link rel="stylesheet" href="/theme.css?color=ff5733&dark=1"> 로 접근 가능
-    cwist_mux_add_route(router, CWIST_HTTP_GET, "/theme.css", theme_css_handler);
+    cwist_app_get(app, "/theme.css", theme_css_handler);
     
-    cwist_app_start(app, router, 8080);
+    cwist_app_listen(app, 8080);
+    cwist_app_destroy(app);
     return 0;
 }
 ```
