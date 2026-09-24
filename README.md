@@ -158,10 +158,10 @@ Latency columns use the **wrk corrected distribution**. Memory columns are proce
 
 | Profile | Req/s | Mean ms | P99.999 ms | Group PSS MiB | Group RSS MiB | Context-switch delta |
 |---|---:|---:|---:|---:|---:|---:|
-| CWIST classic | 107,260 | 2.264 | 59.566 | 46.31 | 56.62 | 1,106,652 |
-| CWIST C1M | 142,028 | 2.899 | 33.881 | 14.25 | 25.85 | 126,366 |
-| CWIST C1M arena_max=1 | 142,438 | 2.747 | 13.012 | 17.99 | 29.49 | 121,683 |
-| CWIST C1M drain_chunk=8 | 142,794 | 2.766 | 14.788 | 14.21 | 25.50 | 111,946 |
+| CWIST Classic | 107,260 | 2.264 | 59.566 | 46.31 | 56.62 | 1,106,652 |
+| CWIST | 142,028 | 2.899 | 33.881 | 14.25 | 25.85 | 126,366 |
+| CWIST arena_max=1 | 142,438 | 2.747 | 13.012 | 17.99 | 29.49 | 121,683 |
+| CWIST drain_chunk=8 | 142,794 | 2.766 | 14.788 | 14.21 | 25.50 | 111,946 |
 | Axum | 112,461 | 3.476 | 16.978 | 13.45 | 15.55 | 189,969 |
 | Gin | 79,602 | 6.730 | 82.484 | 27.94 | 29.36 | 303,052 |
 | Spring Boot | 43,686 | 9.124 | 91.609 | 1,283.71 | 1,286.58 | 221,909 |
@@ -171,7 +171,7 @@ Main profile: `wrk -t12 -c400 -d10s`, after a discarded 10s warmup.
 ### Separate tuned profile
 
 `wrk -t4 -c100 -d10s`, after a discarded 10s warmup. Do not compare these rows as equal-load results against the main table.
-- CWIST classic: 114,434 req/s; mean 0.545 ms; corrected P99.999 5.535 ms.
+- CWIST Classic: 114,434 req/s; mean 0.545 ms; corrected P99.999 5.535 ms.
 - Axum: 120,182 req/s; mean 0.785 ms; corrected P99.999 6.224 ms.
 - Spring Boot: 43,927 req/s; mean 2.313 ms; corrected P99.999 23.610 ms.
 
@@ -188,7 +188,7 @@ Latency distribution (density curve reconstructed from each server's percentiles
 
 GitHub hands out a different CPU model per run, which moves these numbers more than most code changes do. Medians of every recorded run, split by the CPU it landed on, so rows are only comparable down a column:
 
-| Runner CPU | Runs | CWIST classic ms | CWIST C1M ms | Axum ms | CWIST C1M req/s | Axum req/s |
+| Runner CPU | Runs | CWIST Classic ms | CWIST ms | Axum ms | CWIST req/s | Axum req/s |
 |---|---:|---:|---:|---:|---:|---:|
 | AMD EPYC 7763 64-Core Processor | 6 | 2.14 | 2.77 | 3.51 | 143,466 | 111,445 |
 | AMD EPYC 9V74 80-Core Processor | 1 | 1.65 | 2.17 | 2.60 | 186,923 | 151,791 |
