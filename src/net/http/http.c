@@ -143,6 +143,37 @@ long get_optimal_thread_count(void) {
         }
     }
 
+    const char *c1m = getenv("CWIST_C1M_MODE");
+    bool is_c1m = !c1m || (c1m[0] != '0' && strcmp(c1m, "false") != 0);
+
+    if (is_c1m) {
+        /* In event-driven C1M mode each reactor thread multiplexes I/O
+         * asynchronously. Target one event loop per CPU across the whole
+         * deployment: extra loops on the same CPU add no parallelism, only
+         * scheduler queueing, and the queueing lands on the tail. The CI
+         * benchmark matrix tracks this configuration on every run.
+         *
+         * `cores` is this process's own CPU budget, not the machine's:
+         * get_cpu_cores() reads sched_getaffinity(), and with workers > 1
+         * every worker has already been pinned to a single CPU by
+         * cwist_app_pin_worker() before the pool is built. So in the
+         * default pinned deployment cores is 1 here and the division
+         * below yields 0, clamped to 1 -- one loop per process. Unpinned
+         * (e.g. the CI benchmark, which deliberately sees the whole
+         * runner), cores is the machine count and the worker processes
+         * share it, so the division spreads the loops evenly across them.
+         *
+         * A higher floor would protect synchronous handoffs (h2c) and
+         * blocking handlers, but extra loops on a shared CPU cannot run
+         * concurrently there either: a blocking handler stalls its own
+         * worker's connections until it yields, while the other workers
+         * (other CPUs, shared listener) keep serving. */
+        long count = workers > 0 ? cores / workers : cores;
+        if (count < 1) count = 1;
+        if (count > 64) count = 64;
+        return count;
+    }
+
     if (workers == 1) {
         long count = cores;
         if (count < 4) count = 4;

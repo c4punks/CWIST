@@ -32,15 +32,15 @@ concurrency model, not of wasted work:
   its connection's request arrives. That is the floor for the blocking model; nothing in
   the serve path adds a second one (response sends use `MSG_DONTWAIT` with an inline
   poll fallback that fires only when the client is genuinely slow).
-- CWIST C1M and the async runtimes batch many requests per wake, landing around
-  0.1–0.2 switches per request.
+- CWIST C1M and the async runtimes batch many requests per wake, so their per-request
+  switch count is much lower.
 
-Attribution on a CPU-throttled reproduction (cgroup `CPUQuota=400%`, matching the 4-vCPU
-runner: 136K RPS, 1.35M switches over 10s, matching CI's classic row): ~93% voluntary
-(recv wakeups, inherent), ~6% non-voluntary (quota preemption), pool scaling confirmed
-to ~1 worker per connection with zero spawn failures. Low-context-switch operation is
-what C1M — the default profile — is for; classic trades that for its sub-millisecond
-median at low concurrency (the tuned `wrk -t4 -c100` run).
+This was attributed by re-running the workload under a throttled CPU quota and splitting
+per-thread voluntary/non-voluntary counters: nearly all classic switches are voluntary
+recv wakeups (the model floor), and pool scaling reaches one worker per connection
+without spawn failures. Low-context-switch operation is what C1M — the default
+profile — is for; classic trades that for its latency behavior at low concurrency (the
+tuned `wrk -t4 -c100` run).
 
 ### Tuned low-latency run
 

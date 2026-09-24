@@ -1181,7 +1181,7 @@ void cwist_reactor_run(cwist_reactor_t *reactor) {
             reactor_drain_posts(reactor);
             /* CQ grace: if completions landed while the previous batch was
              * dispatching, loop back and serve them without entering the
-             * kernel -- each avoided enter is a avoided context switch on
+             * kernel -- each avoided enter is an avoided context switch on
              * the wait. The deadline bounds the spin; on expiry (or when
              * disabled) the code falls through to the bounded wait below. */
             if (cq_grace_ns > 0) {

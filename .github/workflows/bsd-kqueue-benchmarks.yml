@@ -259,13 +259,16 @@ jobs:
           run_bench "CWIST (classic)" "env CWIST_C1M_MODE=0 /tmp/cwist_server" 9091 "/tmp/cwist.txt" "/tmp/cwist_stat.txt" 10
           run_bench "CWIST C1M" "env CWIST_C1M_MODE=1 /tmp/cwist_server" 9091 "/tmp/cwist_c1m.txt" "/tmp/cwist_c1m_stat.txt" 10
 
-          # Experimental: cap glibc's per-process malloc arena count to 1
-          # before the fork loop (src/sys/app/app.c), inherited by every
-          # worker (see issue #25's mimalloc writeup - this targets the same
-          # "N processes x M arenas" RSS/tail-latency multiplication mimalloc
-          # tried to fix, without mimalloc's eager per-process reservation).
-          # Same binary/config as "CWIST C1M" above; the env var is the only
-          # variable, so this is a direct A/B, not a new configuration.
+          # CWIST_MALLOC_ARENA_MAX=1 caps glibc's per-process malloc arena
+          # count to 1 before the fork loop (src/sys/app/app.c), inherited
+          # by every worker. This is not an open experiment: PR #35 (merged)
+          # already adopted it after mimalloc was tried and refuted on real
+          # CI data (issue #25) -- eager per-process arena reservation is a
+          # bad fit for CWIST's short-lived, low-allocation prefork workers.
+          # This leg exists to keep confirming that decision on every run,
+          # not to re-decide it. Same binary/config as "CWIST C1M" above;
+          # the env var is the only variable, so this is a direct A/B, not a
+          # new configuration.
           run_bench "CWIST C1M (arena_max=1)" "env CWIST_C1M_MODE=1 CWIST_MALLOC_ARENA_MAX=1 /tmp/cwist_server" 9091 "/tmp/cwist_c1m_arena1.txt" "/tmp/cwist_c1m_arena1_stat.txt" 10
 
           # Tuned low-latency profile (CWIST classic only): lower connection
