@@ -912,6 +912,38 @@ static uint32_t reactor_drain_chunk(void) {
     }
     return (uint32_t)v;
 }
+
+/* CQ grace: how long a reactor loop peeks its completion ring (pure
+ * userspace, no syscall) before committing to the kernel wait. Completions
+ * that land while a dispatch batch is being processed -- the common shape
+ * under keep-alive load, where the peer's next request often arrives within
+ * microseconds of the response -- would otherwise force a fresh wake each;
+ * the grace folds them into the current one. 0 disables the spin.
+ * CWIST_REACTOR_CQ_GRACE_NS overrides the 20 us default. */
+static uint64_t reactor_cq_grace_ns(void) {
+    static _Atomic long cached = -1;
+    long v = atomic_load_explicit(&cached, memory_order_relaxed);
+    if (v < 0) {
+        const char *s = getenv("CWIST_REACTOR_CQ_GRACE_NS");
+        if (s && *s) {
+            char *end = NULL;
+            long parsed = strtol(s, &end, 10);
+            v = (end != s && parsed >= 0 && parsed < 1000000000L) ? parsed : 20000;
+        } else {
+            v = 20000;
+        }
+        atomic_store_explicit(&cached, v, memory_order_relaxed);
+    }
+    return (uint64_t)v;
+}
+
+#if defined(__x86_64__) || defined(__i386__)
+#define reactor_cpu_relax() __builtin_ia32_pause()
+#elif defined(__aarch64__)
+#define reactor_cpu_relax() __asm__ __volatile__("yield")
+#else
+#define reactor_cpu_relax() ((void)0)
+#endif
 #endif
 
 void cwist_reactor_run(cwist_reactor_t *reactor) {
@@ -921,6 +953,7 @@ void cwist_reactor_run(cwist_reactor_t *reactor) {
 #ifdef __linux__
     if (!reactor->impl.use_epoll) {
         reactor->owner = pthread_self();
+        const uint64_t cq_grace_ns = reactor_cq_grace_ns();
         while (reactor->running && atomic_load(&g_cwist_running)) {
             reactor_drain_posts(reactor);
             /* Submit the re-arms queued by the previous dispatch batch under
@@ -941,6 +974,38 @@ void cwist_reactor_run(cwist_reactor_t *reactor) {
              * unbounded enter would be restarted after SIGTERM and hang an
              * idle reactor forever.  It passes to_submit=0, so it consumes
              * nothing and needs no lock. */
+            /* CQ grace: completions that land while the previous batch is
+             * dispatching would otherwise force a fresh wake. After the
+             * locked submit enter below, peek the CQ ring from userspace for
+             * a bounded window; completions caught in time are dispatched in
+             * the current round and the wait enter is skipped. Re-arms are
+             * safe either way: the submit enter above already flushed them.
+             * The deadline bounds the spin; on expiry (or when disabled) the
+             * code falls through to the bounded wait below. */
+            bool cq_pending = false;
+            if (cq_grace_ns > 0) {
+                uint32_t ph =
+                    __atomic_load_n(reactor->impl.cq_head, __ATOMIC_ACQUIRE);
+                if (ph == *reactor->impl.cq_tail) {
+                    struct timespec gs;
+                    clock_gettime(CLOCK_MONOTONIC, &gs);
+                    uint64_t g_end = (uint64_t)gs.tv_sec * 1000000000ull +
+                                     (uint64_t)gs.tv_nsec + cq_grace_ns;
+                    uint32_t spins = 0;
+                    while (ph == *reactor->impl.cq_tail) {
+                        reactor_cpu_relax();
+                        if (((++spins) & 31u) == 0) {
+                            clock_gettime(CLOCK_MONOTONIC, &gs);
+                            uint64_t now = (uint64_t)gs.tv_sec * 1000000000ull +
+                                           (uint64_t)gs.tv_nsec;
+                            if (now >= g_end) break;
+                        }
+                        ph = __atomic_load_n(reactor->impl.cq_head, __ATOMIC_ACQUIRE);
+                    }
+                    cq_pending = (ph != *reactor->impl.cq_tail);
+                }
+            }
+
             static const struct __kernel_timespec idle_ts = {.tv_sec = 0, .tv_nsec = 100000000};
             uint32_t to_submit = reactor->sq_unsubmitted;
             reactor->sq_unsubmitted = 0;
@@ -957,12 +1022,14 @@ void cwist_reactor_run(cwist_reactor_t *reactor) {
                     reactor->sq_unsubmitted += to_submit;
                 }
             }
-            int ret = sys_io_uring_enter_timeout(reactor->impl.ring_fd, 0, 1,
-                                                 IORING_ENTER_GETEVENTS, &idle_ts);
-            if (ret < 0) {
-                if (errno == EINTR) continue;
-                if (errno == ETIME) continue;
-                break;
+            if (!cq_pending) {
+                int ret = sys_io_uring_enter_timeout(reactor->impl.ring_fd, 0, 1,
+                                                     IORING_ENTER_GETEVENTS, &idle_ts);
+                if (ret < 0) {
+                    if (errno == EINTR) continue;
+                    if (errno == ETIME) continue;
+                    break;
+                }
             }
             uint32_t head = __atomic_load_n(reactor->impl.cq_head, __ATOMIC_ACQUIRE);
             uint32_t tail = *reactor->impl.cq_tail;
