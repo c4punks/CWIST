@@ -167,21 +167,21 @@ exists for shimmed pointers; they use the same one `cwist_alloc()`
 pointers do.
 
 **Measured overhead** (`tests/bench_malloc_intercept.c`, single-threaded,
-mixed 16–512 byte allocations with an occasional `realloc`, this machine):
+mixed 16-512 byte allocations with an occasional `realloc`; GitHub Actions
+`ubuntu-latest`, AMD EPYC 7763, median of 3 runs):
 
 | configuration | ns/op | vs. baseline |
 |---|---:|---:|
-| baseline (no shim) | ~11.8 | — |
-| shim, full-GC off (default) | ~12.2 | +3% |
-| shim, full-GC on | ~21.9 | +86% |
+| baseline (no shim) | 16.7 | - |
+| shim, full-GC off (default) | 17.6 | +5% |
+| shim, full-GC on | 24.3 | +46% |
 
 The "off" cost is one relaxed atomic load (`cwist_full_gc_enabled()`) plus
-one extra function call per operation — matching the overhead
-`cwist_alloc()`/`cwist_free()` already pay today. The "on" cost is the real
-price of the safety net: pending-sweep list insertion/removal on every
-`malloc`/`free`. Both are per-call microbenchmark numbers on a single
-thread — they isolate per-operation overhead, not lock contention under
-concurrent load.
+one extra function call per operation, the same overhead `cwist_alloc()`/
+`cwist_free()` already pay. The "on" cost is the safety net itself: one
+insertion into and one removal from the calling thread's pending set per
+`malloc`/`free` pair. See "Known performance caveat" below for how that
+cost behaves with many live blocks and several threads.
 
 ### 6. `cwist_alloc` internals
 
@@ -211,3 +211,42 @@ remains correct and simply unregisters the block early.
 - Kernel-level resources (file descriptors, TLS sessions) are closed
   deterministically by the exit sweeps; the epoch deferral governs only the
   memory reclamation behind them.
+
+## Known performance caveat
+
+With `cwist_full_gc(true)`, every `cwist_alloc()` inserts the block into
+the calling thread's pending set and every `cwist_free()` removes it (or
+looks it up and misses, for blocks that were never tracked, such as
+`cwist_strdup()` results). The set is an open-addressing hash table, so
+both operations are O(1) on average no matter how many blocks the thread
+holds, and the thread's set is found through one thread-local load. Each
+thread has its own set; there is no shared lock.
+
+`tests/bench_full_gc_tracking.c` (`make bench_full_gc_tracking`) measures
+this with N tracked blocks kept alive on the thread. GitHub Actions
+`ubuntu-latest` (AMD EPYC 7763, 4 vCPUs), 200000 pairs per measurement,
+median of 3 runs, ns per `cwist_alloc()` + `cwist_free()` pair:
+
+| live tracked blocks | full-GC off | full-GC on |
+|---|---:|---:|
+| 0 | 31.2 | 38.6 |
+| 64 | 31.3 | 40.7 |
+| 1024 | 19.2 | 32.2 |
+| 16384 | 19.2 | 34.1 |
+
+A `cwist_strdup()` + `cwist_free()` pair (the free's lookup misses) costs
+22.4-23.5 ns with full-GC on against 16.6-17.2 ns with it off, again flat
+across the same live-set sizes. With 1024 live blocks per thread, per-thread
+cost with 1/2/4/8 threads churning at once is 34.0/33.2/65.5/104.1 ns with
+full-GC on and 25.6/24.9/49.6/79.8 ns with it off; the growth past two
+threads appears with full-GC off too (the allocator, and 8 threads on 4
+vCPUs), not in the pending sets.
+
+Before issue #65 the set was a list scanned on every removal, so each free
+cost time proportional to the blocks the thread held: on the same runner,
+288.6 ns per pair at 1024 live blocks and 3853.9 ns at 16384.
+
+**Practical guidance**: if you opt into full-GC mode on a high-throughput
+service, profile your allocation hot path first.  The overhead is only
+active when `cwist_full_gc(true)` has been called; all default builds
+(full-GC off) are unaffected.
