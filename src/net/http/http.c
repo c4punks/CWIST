@@ -3377,15 +3377,21 @@ void cwist_http_send_error_response(int fd, int status, const char *msg) {
     if (!reason) reason = "Error";
     if (!msg) msg = reason;
 
-    char buf[512];
+    /* The body goes out as its own iovec: formatting it into the fixed header
+     * buffer truncated long messages while Content-Length still announced
+     * strlen(msg), leaving the peer waiting for bytes that never came. */
+    size_t msg_len = strlen(msg);
+    char buf[256];
     int n = snprintf(
         buf, sizeof(buf),
-        "HTTP/1.1 %d %s\r\nContent-Type: text/plain\r\nContent-Length: %zu\r\nConnection: close\r\n\r\n%s",
-        status, reason, strlen(msg), msg);
-    if (n <= 0) return;
-    size_t len = (size_t)n < sizeof(buf) ? (size_t)n : sizeof(buf) - 1;
+        "HTTP/1.1 %d %s\r\nContent-Type: text/plain\r\nContent-Length: %zu\r\nConnection: close\r\n\r\n",
+        status, reason, msg_len);
+    if (n <= 0 || (size_t)n >= sizeof(buf)) return;
 
-    struct iovec iov = {.iov_base = buf, .iov_len = len};
+    struct iovec iov[2] = {
+        {.iov_base = buf, .iov_len = (size_t)n},
+        {.iov_base = (void *)msg, .iov_len = msg_len},
+    };
     int flags = 0;
 #if defined(MSG_NOSIGNAL)
     flags |= MSG_NOSIGNAL;
@@ -3393,7 +3399,7 @@ void cwist_http_send_error_response(int fd, int status, const char *msg) {
 #if defined(MSG_DONTWAIT)
     flags |= MSG_DONTWAIT;
 #endif
-    (void)cwist_http_sendmsg_all(fd, &iov, 1, flags);
+    (void)cwist_http_sendmsg_all(fd, iov, msg_len ? 2 : 1, flags);
 }
 
 /**
