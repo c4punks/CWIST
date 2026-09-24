@@ -54,33 +54,201 @@ def replace(path: Path, begin: str, end: str, content: str) -> None:
     path.write_text(text[:start] + "\n" + content.rstrip() + "\n" + text[finish:])
 
 WEBSERVER_HISTORY = ROOT / "benchmarks" / "webserver.json"
+WEBSERVER_LATENCY_SVG = ROOT / "docs" / "webserver-latency-distribution.svg"
+
+# Servers compared in the KDE-style latency distribution chart: only the ones
+# run under the identical wrk -t12 -c400 profile every CI cycle (the
+# *_tuned entries use a different, lower-concurrency profile and aren't
+# comparable here; cwist_c1m_arena1/cwist_c1m_drainchunk/cwist_sharded are
+# targeted A/B legs against the plain cwist_c1m row, not part of the
+# standing cross-framework comparison set).
+_LATENCY_KDE_SERVERS = [
+    ("CWIST Classic", "cwist", "#22c55e"),
+    ("CWIST", "cwist_c1m", "#10b981"),
+    ("Axum", "axum", "#3b82f6"),
+    ("Gin", "gin", "#06b6d4"),
+    ("Spring Boot", "spring", "#ef4444"),
+]
+
+
+def _percentile_anchors(ws_latest: dict, prefix: str) -> list[tuple[float, float]]:
+    """(fraction, latency_ms) anchor points from whatever percentile fields
+    are present for this server - gracefully degrades to the older
+    avg/p90/p99/p99.999-only schema for history rows predating the fuller
+    min/p50/p75/p999/p9999/max fields (see the workflow's parse_wrk())."""
+    fields = [
+        (0.0, "min_ms"), (0.5, "p50_ms"), (0.75, "p75_ms"), (0.90, "p90_ms"),
+        (0.99, "p99_ms"), (0.999, "p999_ms"), (0.9999, "p9999_ms"),
+        (0.99999, "p99_999_ms"), (1.0, "max_ms"),
+    ]
+    anchors = []
+    for frac, suffix in fields:
+        val = ws_latest.get(f"{prefix}_{suffix}")
+        if val is None or val <= 0:
+            continue
+        anchors.append((frac, float(val)))
+    # Strictly increasing in both fraction and latency - drop a point that
+    # doesn't add new information (e.g. p999 == p99 when wrk rounds equal).
+    cleaned: list[tuple[float, float]] = []
+    for frac, val in anchors:
+        if cleaned and (frac <= cleaned[-1][0] or val < cleaned[-1][1]):
+            continue
+        cleaned.append((frac, val))
+    return cleaned
+
+
+def _inverse_cdf_samples(anchors: list[tuple[float, float]], n: int) -> list[float]:
+    """n synthetic latency samples by linearly interpolating the inverse CDF
+    (quantile function) built from the known percentile anchors - the
+    standard trick for reconstructing an approximate distribution shape from
+    a handful of percentiles rather than raw per-request samples (wrk/the
+    CI pipeline only ever gives us percentiles, never the raw latencies)."""
+    if len(anchors) < 2:
+        return [anchors[0][1]] * n if anchors else []
+    samples = []
+    for i in range(n):
+        frac = (i + 0.5) / n
+        for j in range(1, len(anchors)):
+            f0, v0 = anchors[j - 1]
+            f1, v1 = anchors[j]
+            if frac <= f1 or j == len(anchors) - 1:
+                t = 0.0 if f1 == f0 else (frac - f0) / (f1 - f0)
+                t = min(1.0, max(0.0, t))
+                samples.append(v0 + t * (v1 - v0))
+                break
+    return samples
+
+
+def _gaussian_kde(samples: list[float], grid: list[float]) -> list[float]:
+    """Textbook Gaussian KDE, pure stdlib (no numpy/scipy dependency here -
+    matches this script's existing zero-dependency style). Bandwidth via
+    Silverman's rule of thumb, degrading to a small fixed bandwidth when the
+    sample is degenerate (e.g. every anchor collapsed to one value)."""
+    n = len(samples)
+    if n == 0:
+        return [0.0] * len(grid)
+    mean = sum(samples) / n
+    var = sum((s - mean) ** 2 for s in samples) / n
+    std = math.sqrt(var)
+    sorted_s = sorted(samples)
+    iqr = sorted_s[int(0.75 * (n - 1))] - sorted_s[int(0.25 * (n - 1))]
+    spread = min(std, iqr / 1.34) if iqr > 0 else std
+    if spread <= 0:
+        spread = max(sorted_s[-1] - sorted_s[0], 1e-6) / 4 or 0.1
+    bandwidth = max(0.9 * spread * n ** (-0.2), 1e-3)
+    density = []
+    norm = 1.0 / (n * bandwidth * math.sqrt(2 * math.pi))
+    for x in grid:
+        total = 0.0
+        for s in samples:
+            z = (x - s) / bandwidth
+            total += math.exp(-0.5 * z * z)
+        density.append(total * norm)
+    return density
+
+
+def render_latency_kde_svg(ws_latest: dict) -> str:
+    """Latency *distribution* chart, distinct from the bar-chart summary in
+    render_webserver_svg(): reconstructs an approximate density curve per
+    server from its known percentiles (see _inverse_cdf_samples/_gaussian_kde)
+    so the shape of the tail - not just its P99.999 number - is visible at a
+    glance. X-axis uses log1p(ms) so a long Gin/Spring tail doesn't compress
+    the CWIST/Axum curves into an unreadable spike at the left edge."""
+    width, height = 1000, 460
+    plot_x0, plot_x1 = 60, 940
+    plot_y0, plot_y1 = 60, 380
+
+    per_server = []
+    max_ms_overall = 1.0
+    for label, prefix, color in _LATENCY_KDE_SERVERS:
+        anchors = _percentile_anchors(ws_latest, prefix)
+        if len(anchors) < 2:
+            continue
+        samples = _inverse_cdf_samples(anchors, 400)
+        per_server.append((label, color, samples))
+        max_ms_overall = max(max_ms_overall, anchors[-1][1])
+
+    def to_x(ms: float) -> float:
+        span = math.log1p(max_ms_overall)
+        return plot_x0 + (math.log1p(max(ms, 0.0)) / span) * (plot_x1 - plot_x0)
+
+    blocks = [
+        f'<text x="30" y="30" class="title">Latency Distribution (density, log scale) - {ws_latest.get("wrk_profile", "wrk 12t 400c")}</text>',
+        f'<rect x="{plot_x0}" y="{plot_y0}" width="{plot_x1-plot_x0}" height="{plot_y1-plot_y0}" fill="#1f2937" rx="6" stroke="#374151"/>',
+    ]
+
+    tick_ms = [0, 1, 2, 5, 10, 20, 50, 100, 200, 500]
+    tick_ms = [t for t in tick_ms if t <= max_ms_overall * 1.05] or [0, 1]
+    for t in tick_ms:
+        x = to_x(t)
+        blocks.append(f'<line x1="{x:.1f}" y1="{plot_y0}" x2="{x:.1f}" y2="{plot_y1}" stroke="#374151" stroke-dasharray="2,3"/>')
+        blocks.append(f'<text x="{x:.1f}" y="{plot_y1+16}" text-anchor="middle" class="tick">{t}ms</text>')
+
+    legend_x = plot_x0
+    for idx, (label, color, _samples) in enumerate(per_server):
+        lx = legend_x + idx * 170
+        blocks.append(f'<rect x="{lx}" y="34" width="11" height="11" fill="{color}" rx="2"/>')
+        blocks.append(f'<text x="{lx+16}" y="43" class="legend">{label}</text>')
+
+    grid_n = 240
+    grid = [math.expm1((i / (grid_n - 1)) * math.log1p(max_ms_overall)) for i in range(grid_n)]
+    for label, color, samples in per_server:
+        density = _gaussian_kde(samples, grid)
+        peak = max(density) or 1.0
+        pts = []
+        for ms, d in zip(grid, density):
+            x = to_x(ms)
+            y = plot_y1 - (d / peak) * (plot_y1 - plot_y0 - 10)
+            pts.append(f"{x:.1f},{y:.1f}")
+        blocks.append(f'<polyline points="{" ".join(pts)}" fill="none" stroke="{color}" stroke-width="2.2" opacity="0.9"/>')
+
+    blocks.append(f'<text x="{(plot_x0+plot_x1)//2}" y="{plot_y1+34}" text-anchor="middle" class="axis-label">Latency (ms, log scale)</text>')
+    blocks.append(f'<text x="30" y="{(plot_y0+plot_y1)//2}" text-anchor="middle" class="axis-label" transform="rotate(-90 30 {(plot_y0+plot_y1)//2})">Relative density</text>')
+    blocks.append(f'<text x="30" y="{height-14}" class="footer">Reconstructed from wrk percentiles (min/p50/p75/p90/p99/p99.9/p99.99/p99.999/max), not raw per-request samples - shape is representative, not exact.</text>')
+
+    svg_style = (
+        '<style>'
+        '.title{font:15px sans-serif;font-weight:bold;fill:#f9fafb}'
+        '.legend{font:12px sans-serif;fill:#d1d5db}'
+        '.tick{font:10px sans-serif;fill:#9ca3af}'
+        '.axis-label{font:12px sans-serif;fill:#9ca3af}'
+        '.footer{font:10px sans-serif;fill:#6b7280}'
+        '</style>'
+    )
+    return (
+        f'<?xml version="1.0" encoding="UTF-8"?>\n'
+        f'<svg xmlns="http://www.w3.org/2000/svg" width="{width}" height="{height}" viewBox="0 0 {width} {height}">'
+        f'{svg_style}<rect width="100%" height="100%" fill="#111827"/>' + ''.join(blocks) + '</svg>\n'
+    )
+
 WEBSERVER_SVG = ROOT / "docs" / "webserver-benchmark-trends.svg"
 README_MD = ROOT / "README.md"
 
 def render_webserver_svg(history: list[dict]) -> str:
     ws_latest = history[-1] if history else {}
     metrics = [
-        ("Throughput (req/s)", [("CWIST", "cwist_rps", "#22c55e"), ("Axum", "axum_rps", "#3b82f6"), ("Gin", "gin_rps", "#06b6d4"), ("Spring", "spring_rps", "#ef4444")]),
-        ("Avg Latency (ms)", [("CWIST", "cwist_lat_ms", "#22c55e"), ("Axum", "axum_lat_ms", "#3b82f6"), ("Gin", "gin_lat_ms", "#06b6d4"), ("Spring", "spring_lat_ms", "#ef4444")]),
-        ("Peak RSS (KiB)", [("CWIST", "cwist_rss_kib", "#22c55e"), ("Axum", "axum_rss_kib", "#3b82f6"), ("Gin", "gin_rss_kib", "#06b6d4"), ("Spring", "spring_rss_kib", "#ef4444")]),
-        ("Context Switches", [("CWIST", "cwist_csw", "#22c55e"), ("Axum", "axum_csw", "#3b82f6"), ("Gin", "gin_csw", "#06b6d4"), ("Spring", "spring_csw", "#ef4444")])
+        ("Throughput (req/s)", [("CWIST Classic", "cwist_rps", "#22c55e"), ("CWIST", "cwist_c1m_rps", "#10b981"), ("Axum", "axum_rps", "#3b82f6"), ("Gin", "gin_rps", "#06b6d4"), ("Spring", "spring_rps", "#ef4444")]),
+        ("Avg Latency (ms)", [("CWIST Classic", "cwist_lat_ms", "#22c55e"), ("CWIST", "cwist_c1m_lat_ms", "#10b981"), ("Axum", "axum_lat_ms", "#3b82f6"), ("Gin", "gin_lat_ms", "#06b6d4"), ("Spring", "spring_lat_ms", "#ef4444")]),
+        ("Peak RSS (KiB)", [("CWIST Classic", "cwist_rss_kib", "#22c55e"), ("CWIST", "cwist_c1m_rss_kib", "#10b981"), ("Axum", "axum_rss_kib", "#3b82f6"), ("Gin", "gin_rss_kib", "#06b6d4"), ("Spring", "spring_rss_kib", "#ef4444")]),
+        ("Context Switches", [("CWIST Classic", "cwist_csw", "#22c55e"), ("CWIST", "cwist_c1m_csw", "#10b981"), ("Axum", "axum_csw", "#3b82f6"), ("Gin", "gin_csw", "#06b6d4"), ("Spring", "spring_csw", "#ef4444")])
     ]
-    
-    width = 960
+
+    width = 1280
     height = 540
     blocks = []
-    
+
     # Title & Legend
     blocks.append('<text x="30" y="35" class="title">Web Server Performance Comparison (wrk 12t 400c)</text>')
-    blocks.append('<rect x="580" y="20" width="12" height="12" fill="#22c55e" rx="2"/><text x="598" y="31" class="legend">CWIST</text>')
-    blocks.append('<rect x="665" y="20" width="12" height="12" fill="#3b82f6" rx="2"/><text x="683" y="31" class="legend">Axum</text>')
-    blocks.append('<rect x="740" y="20" width="12" height="12" fill="#06b6d4" rx="2"/><text x="758" y="31" class="legend">Gin</text>')
-    blocks.append('<rect x="805" y="20" width="12" height="12" fill="#ef4444" rx="2"/><text x="823" y="31" class="legend">Spring Boot</text>')
-    
+    blocks.append('<rect x="640" y="20" width="12" height="12" fill="#22c55e" rx="2"/><text x="658" y="31" class="legend">CWIST Classic</text>')
+    blocks.append('<rect x="790" y="20" width="12" height="12" fill="#10b981" rx="2"/><text x="808" y="31" class="legend">CWIST</text>')
+    blocks.append('<rect x="890" y="20" width="12" height="12" fill="#3b82f6" rx="2"/><text x="908" y="31" class="legend">Axum</text>')
+    blocks.append('<rect x="965" y="20" width="12" height="12" fill="#06b6d4" rx="2"/><text x="983" y="31" class="legend">Gin</text>')
+    blocks.append('<rect x="1030" y="20" width="12" height="12" fill="#ef4444" rx="2"/><text x="1048" y="31" class="legend">Spring Boot</text>')
+
     # Render 4 grid subpanels (2x2 layout)
-    panel_w = 420
+    panel_w = 600
     panel_h = 200
-    offsets = [(30, 60), (490, 60), (30, 290), (490, 290)]
+    offsets = [(30, 60), (670, 60), (30, 290), (670, 290)]
     
     for idx, (m_title, series_list) in enumerate(metrics):
         px, py = offsets[idx]
@@ -95,8 +263,8 @@ def render_webserver_svg(history: list[dict]) -> str:
         for s_idx, (label, key, color) in enumerate(series_list):
             val = float(ws_latest.get(key, 0))
             ratio = min(1.0, max(0.0, val / max_val))
-            bar_len = int(ratio * 240)
-            by = bar_y_base + s_idx * 34
+            bar_len = int(ratio * 320)
+            by = bar_y_base + s_idx * 27
             
             # Format value label
             if "ms" in m_title:
@@ -109,10 +277,10 @@ def render_webserver_svg(history: list[dict]) -> str:
                 val_str = f"{val:,.0f}"
                 
             blocks.append(f'<text x="{px+15}" y="{by+16}" class="bar-label">{label}</text>')
-            blocks.append(f'<rect x="{px+80}" y="{by}" width="240" height="22" fill="#374151" rx="3"/>')
+            blocks.append(f'<rect x="{px+120}" y="{by}" width="320" height="22" fill="#374151" rx="3"/>')
             if bar_len > 0:
-                blocks.append(f'<rect x="{px+80}" y="{by}" width="{bar_len}" height="22" fill="{color}" rx="3"/>')
-            blocks.append(f'<text x="{px+330}" y="{by+16}" class="bar-val">{val_str}</text>')
+                blocks.append(f'<rect x="{px+120}" y="{by}" width="{bar_len}" height="22" fill="{color}" rx="3"/>')
+            blocks.append(f'<text x="{px+450}" y="{by+16}" class="bar-val">{val_str}</text>')
 
     # Footer: recorded Spring/JVM & Go runtime environment & benchmark profile
     env = ws_latest.get("spring_env", {}) or {}
@@ -164,10 +332,10 @@ def render() -> None:
         return f"{value:,.{digits}f}" if isinstance(value, (int, float)) else "N/A"
 
     profiles = [
-        ("cwist", "CWIST classic pool"),
-        ("cwist_c1m", "CWIST C1M reactor"),
-        ("cwist_c1m_arena1", "CWIST C1M reactor (arena_max=1)"),
-        ("cwist_c1m_drainchunk", "CWIST C1M reactor (drain_chunk=8)"),
+        ("cwist", "CWIST Classic pool"),
+        ("cwist_c1m", "CWIST reactor"),
+        ("cwist_c1m_arena1", "CWIST reactor (arena_max=1)"),
+        ("cwist_c1m_drainchunk", "CWIST reactor (drain_chunk=8)"),
         ("axum", "Axum"),
         ("gin", "Gin (Go)"),
         ("spring", "Spring Boot"),
@@ -216,8 +384,8 @@ def render() -> None:
                  "numbers more than most code changes do. Medians of every recorded "
                  "run, split by the CPU it landed on, so rows are only comparable "
                  "down a column:", "",
-                 "| Runner CPU | Runs | CWIST classic ms | CWIST C1M ms | Axum ms | "
-                 "CWIST C1M req/s | Axum req/s |",
+                 "| Runner CPU | Runs | CWIST Classic ms | CWIST ms | Axum ms | "
+                 "CWIST req/s | Axum req/s |",
                  "|---|---:|---:|---:|---:|---:|---:|"]
         for runner, count, stats in ws_by_runner:
             def cell(key, digits=2):
