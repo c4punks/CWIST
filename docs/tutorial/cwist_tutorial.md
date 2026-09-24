@@ -71,10 +71,10 @@ void user_profile_handler(cwist_http_request *req, cwist_http_response *res) {
 }
 
 int main() {
-    cwist_mux *router = cwist_mux_create();
+    cwist_app *app = cwist_app_create();
     
     // 동적 라우팅 등록
-    cwist_mux_add_route(router, CWIST_HTTP_GET, "/users/:id", user_profile_handler);
+    cwist_app_get(app, "/users/:id", user_profile_handler);
     // ...
 }
 ```
