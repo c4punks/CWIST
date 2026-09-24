@@ -340,36 +340,44 @@ int main() {
 HTML 기반의 SSR(Server-Side Rendering) 프로젝트를 구축하거나, React의 빌드 결과물(정적 파일)을 서비스할 때 유용합니다.
 
 ```c
+#include <cwist/app.h>
 #include <cwist/core/template/template.h>
+#include <cjson/cJSON.h>
 
 void render_home_handler(cwist_http_request *req, cwist_http_response *res) {
-    // 템플릿 파일 읽기
-    cwist_template *tpl = cwist_template_load("views/index.html");
-    
+    (void)req;
+
     // 데이터 주입 (예: {{ title }} 변수 치환)
-    cwist_template_set(tpl, "title", "CWIST Homepage");
-    cwist_template_set(tpl, "user", "Developer");
-    
+    cJSON *context = cJSON_CreateObject();
+    cJSON_AddStringToObject(context, "title", "CWIST Homepage");
+    cJSON_AddStringToObject(context, "user", "Developer");
+
+    // 템플릿 파일 읽기 + 렌더링
+    cwist_sstring *output = cwist_template_render_file("views/index.html", context);
+    cJSON_Delete(context);
+
     // 렌더링 후 응답
-    cwist_sstring *output = cwist_template_render(tpl);
-    cwist_sstring_assign(res->body, output->data);
+    if (output) {
+        cwist_sstring_assign(res->body, output->data);
+        cwist_sstring_destroy(output);
+    } else {
+        res->status_code = CWIST_HTTP_INTERNAL_ERROR;
+        cwist_sstring_assign(res->body, "Failed to render template");
+    }
     cwist_http_header_add(&res->headers, "Content-Type", "text/html");
-    
-    cwist_sstring_destroy(output);
-    cwist_template_free(tpl);
 }
 
 int main() {
     cwist_app *app = cwist_app_create();
-    cwist_mux *router = cwist_mux_create();
-    
-    cwist_mux_add_route(router, CWIST_HTTP_GET, "/", render_home_handler);
-    
+
+    cwist_app_get(app, "/", render_home_handler);
+
     // 정적 디렉토리 마운트 (React/Vue 빌드 결과물 서빙 시)
     // "/public" URL로 들어오면 "./public" 폴더의 파일을 제공
-    cwist_app_static(app, router, "/public", "./public");
-    
-    cwist_app_start(app, router, 8080);
+    cwist_app_static(app, "/public", "./public");
+
+    cwist_app_listen(app, 8080);
+    cwist_app_destroy(app);
     return 0;
 }
 ```
