@@ -190,23 +190,26 @@ Automated OS benchmark history is published in `docs/benchmark-trends.svg`. Late
 
 ---
 
-## Current Focus (P2 – P4 Tooling and Ecosystem)
+## Current Focus (v3.8 — QUIC completion and v4.0 readiness)
 
-The completed P1-P3 hardening work is now under regression coverage. Current priorities are developer workflow and ecosystem integrations.
+v3.7 is released; the remaining 3.x work is finishing QUIC on the stable line
+and closing every v4.0 blocker. No new public surface is added.
 
-### Developer Workflow
+### QUIC completion
 
-* Expand benchmark automation (the-benchmarker contract app) and fuzz targets.
-* Keep test-client, scheduler, multiport, `io_uring`, and deferred-async coverage in the default test harness.
+* Re-pin `lib/lsquic` to a stable upstream commit with WebTransport (PR #629)
+  and the three connection-close fixes, and add a CI gate that enforces the
+  pin continues to satisfy both requirements.
+* Port the dev-branch WebTransport server API and native C client to the
+  release line; add interop and soak coverage.
+* Add an h3spec-style HTTP/3 connection-close interop gate.
 
-### Ecosystem
+### v4.0 readiness
 
-* Finish `cwist proto` for v3.4: ~~descriptor-set input~~ (`oneof`, `map`, fixed-width types, `double`, and `protoc --descriptor_set_out` input all done alongside scalar/enum/nested/repeated-packed).
-* ~~Add gRPC client-side support: h2/h2c client, retry policy, and load balancing.~~ (h2c/TLS client with unary + server-streaming calls, deadlines, and cancellation; channel with `pick_first`/`round_robin` LB over per-address subchannels; gRFC A6 retry policy with backoff, pushback, throttling, and transparent retries — all shipped)
-* ~~Add gRPC server-side response compression.~~ (gzip response messages with the compressed-frame flag when the client advertises `grpc-accept-encoding: gzip`; request decompression for `grpc-encoding: gzip`; covered by `test_grpc` and `test_grpc_stream`)
-* Extend the GraphQL subset with schema validation, mutations, nested selections, and subscriptions.
-* Stabilize the experimental native C WebTransport client after LSQUIC PR #629 merges upstream.
-* Evaluate persistent job backends separately from the in-process queue/scheduler.
+* Enact the v3.7 Phase 5 promotion decisions in code and docs.
+* Resolve every deprecation or experimental flag tied to the v4.0 cut.
+* Stabilization-only work: correctness, soak, docs, and CI hardening on the
+  release candidate.
 
 ### gRPC / Protobuf Status
 
@@ -339,7 +342,7 @@ Known limits going in (from PR #176 review), updated:
 
 ---
 
-## v3.7 Milestone (In Progress)
+## v3.7 Milestone (Released 2026-09-24)
 
 Theme: **the last experimental train before v4 stabilization**. v3.6 took
 WASM from "in-tree target" to "usable from JavaScript"; v3.7 is the final
@@ -385,25 +388,76 @@ delaying the cut.
 
 ---
 
-## v3.8 Milestone (Queued)
+## v3.8 Milestone (In Progress)
 
-Theme: **QUIC completion**. v3.7 shipped the WASM edge story and the ecosystem
-experimental support; the QUIC work that was gated on upstream timing rather
-than CWIST code lands here. Both phases are blocked on lsquic, not on CWIST —
-v3.8 starts when the upstream merges land, and neither phase delays the v3.7
-cut. Tracked in issue #17 (WebTransport) and the connection-close notes below.
+Theme: **QUIC completion and v4.0 readiness**. v3.7 shipped the WASM edge story
+and the ecosystem experimental support; v3.8 finishes the QUIC work that was
+gated on upstream timing and prepares the ground for the first stable v4.0
+cut. No new public API may be added in v3.8 — the only surface changes are the
+QUIC completion APIs required by the upstream re-pin and any deprecation
+removals needed for v4.0. Tracked in issue #17 (WebTransport) and the
+connection-close notes below.
 
-* **Phase 2 (from v3.7): WebTransport on the stable line** (conditional on upstream, issue #17):
-  * Trigger condition: LSQUIC PR #629 (WebTransport) merges to upstream lsquic master.
-  * Re-pin `lib/lsquic` to upstream master with WebTransport included; port the dev-branch WebTransport server and native C client to the release line with interop and soak coverage.
-* **Phase 3 (from v3.7): HTTP/3 connection-close correctness**:
-  * Track the lsquic connection-close fixes upstream (triggering-frame-type population, connection-close packet number space selection and pre-handshake fallback) and fold them into the release-line `lib/lsquic` pin at the next re-pin. Status (2026-09-23): none of the three are in the pinned fork or in upstream master (v4.10.0) — blocked on lsquic, not CWIST.
-  * CWIST-side coverage (carried over from v3.7, done): received CONNECTION_CLOSE is recorded via `on_conncloseframe_received` and exposed through `cwist_http3_last_close_error()`; `test_http3` Test 12 pins the peer-abort close path over a real QUIC handshake. The h3spec-style interop gate waits for the lsquic re-pin.
+Entry criteria for v3.8: every item must either (a) unblock QUIC completion on
+the stable line, (b) close a correctness gap carried over from v3.7, or (c)
+resolve a v4.0 blocker (deprecation, docs, or soak). Scope does not grow;
+anything not ready slips to a post-v4.0 cycle.
+
+* **Phase 1: lsquic re-pin and CI gate**:
+  * Re-pin `lib/lsquic` to a stable upstream commit that includes the required
+    merges for WebTransport (LSQUIC PR #629) and the three connection-close
+    fixes (triggering-frame-type population, connection-close packet number
+    space selection, pre-handshake fallback).
+  * Add a CI gate that fails if the pinned `lib/lsquic` commit no longer
+    satisfies the above, so a future dependency bump cannot silently regress
+    QUIC completion.
+
+* **Phase 2: WebTransport on the stable line** (from v3.7, issue #17):
+  * Port the dev-branch WebTransport server API (`cwist_http3_transport_*`,
+    stream accept/read/write) to the release line behind compile/runtime flags
+    if any surface is still experimental; otherwise promote to supported.
+  * Port the native C WebTransport client and an interop example
+    (`example/webtransport/`) with client/server round-trip coverage.
+  * Extend `test_http3` / add `test_webtransport` to cover session negotiation,
+    bidirectional streams, datagrams if enabled, and graceful teardown.
+  * Run a soak gate against at least one other QUIC/WebTransport peer
+    (e.g., `python aioquic` or Chromium) before removing any experimental flag.
+
+* **Phase 3: HTTP/3 connection-close correctness** (from v3.7):
+  * Fold the three upstream lsquic connection-close fixes into the release-line
+    pin. Status at v3.7 cut: none of the three were in the pinned fork or in
+    upstream master (v4.10.0) — blocked on lsquic, not CWIST.
+  * Verify `on_conncloseframe_received` still populates
+    `cwist_http3_last_close_error()` correctly after the re-pin; keep
+    `test_http3` Test 12 pinning the peer-abort close path over a real QUIC
+    handshake.
+  * Add an h3spec-style interop gate that exercises received and emitted
+    CONNECTION_CLOSE frames, including the pre-handshake fallback path.
+
+* **Phase 4: v4.0 readiness**:
+  * Resolve every deprecation or experimental flag that has a v4.0 promotion
+    decision from v3.7 Phase 5: full-GC and malloc interception become
+    *supported opt-in* (`CWIST_DEFER_FREE`, `CWIST_INTERCEPT_MALLOC`), the
+    `CWIST_PROFILE` matrix stays the v4.0 default story, the latency probe
+    stays hidden opt-in, and the HTTP batch-shed counter stays always-on.
+  * Audit docs for stale experimental caveats and update them to the v4.0
+    support status where decisions have been made.
+  * Run the full CI matrix on the release candidate with sanitizers,
+    NDEBUG, classic and C1M modes, and the interop gates. No source changes
+    after the candidate passes except release-metadata commits.
+
+**Release criteria for v3.8:**
+- `lib/lsquic` is pinned to a stable upstream commit that passes the new QUIC
+  gate.
+- WebTransport server and native client build and pass interop tests on Linux.
+- HTTP/3 connection-close behavior is covered by an h3spec-style gate.
+- All v3.7 experimental promotion decisions are enacted in code/docs.
+- CI is green on the exact release commit.
 
 **v4.0 preview (what the narrowed release looks like):** feature freeze at
-cut; no new public API after v3.7; semver commitment begins; deprecated
+v4.0 cut; no new public API after v3.7; semver commitment begins; deprecated
 APIs and flags resolved (promoted or removed); stabilization-only —
-correctness, soak, docs, and the promotion decisions Phase 5 queued up.
+correctness, soak, docs, and the promotion decisions from v3.7 Phase 5.
 
 ---
 
