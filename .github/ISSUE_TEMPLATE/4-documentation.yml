@@ -1,0 +1,35 @@
+name: Documentation problem
+description: Missing, wrong, or outdated docs, tutorials, examples, or header comments.
+title: "[docs/<area>] "
+labels: [documentation]
+body:
+  - type: input
+    id: location
+    attributes:
+      label: Where
+      description: File path or URL (for example docs/api/http.md, tutorials/08-sse-realtime/README.md, a header in include/cwist/).
+    validations:
+      required: true
+  - type: dropdown
+    id: kind
+    attributes:
+      label: Kind of problem
+      options:
+        - Missing (a public API or feature has no documentation)
+        - Wrong (docs disagree with what the code does)
+        - Outdated (describes an older API)
+        - Example or tutorial does not build or run
+        - Unclear
+    validations:
+      required: true
+  - type: textarea
+    id: observed
+    attributes:
+      label: What the docs say, and what the code actually does
+      description: Quote the doc text and point to the code or command output that disagrees.
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: What the docs should say

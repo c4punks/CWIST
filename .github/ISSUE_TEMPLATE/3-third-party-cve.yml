@@ -1,0 +1,47 @@
+name: Third-party vulnerability (vendored dependency)
+description: A published CVE or security advisory in a dependency CWIST bundles or links (BoringSSL, lsquic, SQLite, cJSON, uriparser, cnats, libttak, multipart-parser-c, libcurl, nghttp2, zlib, brotli, zstd).
+title: "[CVE/<component>] "
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        This form is for vulnerabilities that are already public upstream. For an undisclosed vulnerability in CWIST's own code, contact the maintainers on Discord first instead of posting details here.
+  - type: input
+    id: component
+    attributes:
+      label: Component
+      description: Dependency name and where CWIST gets it (for example "lib/boringssl submodule" or "system libcurl").
+    validations:
+      required: true
+  - type: input
+    id: advisory
+    attributes:
+      label: CVE or advisory ID and link
+    validations:
+      required: true
+  - type: input
+    id: pinned
+    attributes:
+      label: Version or commit CWIST currently pins
+      description: For a submodule, `git -C lib/<name> rev-parse HEAD`.
+    validations:
+      required: true
+  - type: input
+    id: fixed
+    attributes:
+      label: First upstream version or commit with the fix
+    validations:
+      required: true
+  - type: textarea
+    id: reachability
+    attributes:
+      label: Is the affected code reachable from CWIST?
+      description: Which CWIST feature or file uses the affected API (file:line if you have it). If you have not checked, say so.
+    validations:
+      required: true
+  - type: textarea
+    id: fix
+    attributes:
+      label: Suggested fix
+      description: For example "bump lib/sqlite3 to 3.x.y" or "backport upstream commit abc123".

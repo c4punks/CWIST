@@ -1,0 +1,59 @@
+name: Sanitizer failure (ASan / UBSan / LSan / TSan)
+description: A sanitizer report from CWIST code, a test, or an example.
+title: "[bug/sanitizer] "
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Include the full sanitizer report. Known upstream lsquic leaks are suppressed in `tests/lsan.supp`; check it before filing a leak that only shows lsquic frames.
+  - type: dropdown
+    id: sanitizer
+    attributes:
+      label: Sanitizer
+      multiple: true
+      options:
+        - AddressSanitizer
+        - UndefinedBehaviorSanitizer
+        - LeakSanitizer
+        - ThreadSanitizer
+        - Other
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: CWIST version or commit
+      description: Release tag or `git rev-parse HEAD`, and the branch.
+    validations:
+      required: true
+  - type: textarea
+    id: command
+    attributes:
+      label: Build and run commands
+      description: For example `make SANITIZE=address,undefined WERROR=1 test_http2`, plus any ASAN_OPTIONS / LSAN_OPTIONS / UBSAN_OPTIONS you set.
+      render: sh
+    validations:
+      required: true
+  - type: textarea
+    id: report
+    attributes:
+      label: Full sanitizer report
+      render: text
+    validations:
+      required: true
+  - type: dropdown
+    id: frequency
+    attributes:
+      label: How often does it reproduce?
+      options:
+        - Every run
+        - Intermittently (give the ratio below)
+        - Once
+    validations:
+      required: true
+  - type: textarea
+    id: notes
+    attributes:
+      label: Anything else observed
+      description: Runner CPU count, reactor backend (io_uring or epoll), load level. Label hypotheses as hypotheses.
