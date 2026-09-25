@@ -506,10 +506,9 @@ not ready slips.
   decisions are enacted in code and docs.
 - CI is green on the exact release commit.
 
-**v4.0 preview:** v4.0 starts the API stability guarantee. Existing
-symbols, signatures, behavior, and public struct layouts stay compatible
-for the whole 4.x line, and new API can be added in any 4.x minor.
-Deprecated APIs and flags are resolved (promoted or removed) before the cut.
+**v4.0 preview:** v4.0 starts the API stability guarantee. From v4.0 on,
+existing public API is not changed, and new features keep being implemented
+as new API in any release. Deprecated APIs and flags are resolved (promoted or removed) before the cut.
 The v4.0 cycle itself focuses on correctness, soak, docs, and the promotion
 decisions. See "API stability from v4.0" under the versioning
 rules.
@@ -548,15 +547,14 @@ The tag history (`v0.1` → `v3.3`) settles into this convention from v3 onward,
 * **Minor** (`v3.2` → `v3.3`): one coherent feature theme (v3.2: HTTP/3 standards compliance + security hardening; v3.3: gRPC streaming + deferred async handlers). A minor is cut when its theme is complete, not on a calendar.
 * **Release title**: `CWIST vX.Y` followed by an em-dash summary of the headline theme ("CWIST v3.3 — gRPC streaming, deferred async handlers, and stability hardening"). Pre-v3 releases used freeform subtitles ("Firefox Compatibility"); the em-dash form is the standard now.
 * **Release body**: "Highlights since vX.(Y−1)" or "Major changes compared to vX.(Y−1)", grouped into numbered/sectioned items with commit references where useful.
-* **API stability from v4.0**: the API that exists at each release stays
-  compatible.
-  * Existing public symbols, signatures, documented behavior, and public
-    struct layouts do not change incompatibly within a major line (4.x).
-  * New API may be added in any minor release (patches stay hotfix-only).
-    A new API marked experimental is outside the guarantee until it is
-    promoted.
-  * An existing API is replaced by adding the new one next to it and
-    deprecating the old one. Removal waits for the next major.
+* **API stability from v4.0**:
+  * Existing public API is not changed: public symbols, signatures,
+    documented behavior, and public struct layouts stay as they are.
+  * New features keep being implemented. They land as new API in any minor
+    release (patches stay hotfix-only). A new API marked experimental is
+    outside the guarantee until it is promoted.
+  * When an existing API needs different behavior, a new API is added next
+    to it; the existing one stays as it is.
 * The 0.x line was pre-1.0 experimentation; the 1.x–2.x lines were feature accretion with themed minors. None of that constrains the 3.x rules above.
 
 ---
