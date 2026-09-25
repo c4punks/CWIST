@@ -185,7 +185,7 @@ missing optional API does not prevent an HTTP/3 build.
   ./server
 
 <!-- BENCHMARKS:START -->
-Latest automated benchmark: **Darwin**: 16.94 M leases/s, 118.22% CPU, 758992 KiB RSS.
+Latest automated benchmark: **Darwin**: 12.07 M leases/s, 128.82% CPU, 680592 KiB RSS.
 
 ![CWIST benchmark trends](docs/benchmark-trends.svg)
 <!-- BENCHMARKS:END -->
@@ -193,29 +193,29 @@ Latest automated benchmark: **Darwin**: 16.94 M leases/s, 118.22% CPU, 758992 Ki
 <!-- WEBSERVER_BENCHMARKS:START -->
 ## Latest isolated HTTP benchmark
 
-Measured commit: `e3801a1550016fa4a63a4b1c342fb088d85bf3c9`. Release tag: `not recorded; identify this run by commit`.
-Run: https://github.com/c4punks/CWIST/actions/runs/36122212147. Timestamp: `2026-09-25T10:17:22.870977+00:00`.
+Measured commit: `d0b735a9a7607a0022b9c5cc843c07767ca1d343`. Release tag: `not recorded; identify this run by commit`.
+Run: https://github.com/c4punks/CWIST/actions/runs/36125514926. Timestamp: `2026-09-25T10:54:35.467560+00:00`.
 
 Latency columns use the **wrk corrected distribution**. Memory columns are process-group end samples, not peaks: Group RSS counts a page shared between worker processes once per process, Group PSS divides it by its mapper count, so compare a single-process server against PSS. Context switches are same-thread counter deltas over threads live at both ends of the window; N/A means unavailable.
 
 | Profile | Req/s | Mean ms | P99.999 ms | Group PSS MiB | Group RSS MiB | Context-switch delta |
 |---|---:|---:|---:|---:|---:|---:|
-| CWIST Classic | 145,207 | 1.576 | 28.403 | 47.39 | 58.20 | 1,444,823 |
-| CWIST | 185,917 | 2.234 | 26.082 | 14.28 | 26.04 | 152,288 |
-| CWIST arena_max=1 | 189,804 | 2.140 | 14.128 | 18.58 | 30.45 | 155,335 |
-| CWIST drain_chunk=8 | 189,415 | 2.121 | 18.622 | 14.31 | 26.09 | 150,741 |
-| Axum | 154,222 | 2.529 | 17.589 | 13.90 | 16.11 | 246,326 |
-| Gin | 112,869 | 4.814 | 59.999 | 27.48 | 29.03 | 408,289 |
-| Spring Boot | 72,343 | 5.476 | 65.721 | 1,285.89 | 1,288.76 | 310,899 |
+| CWIST Classic | 113,820 | 2.067 | 22.806 | 47.29 | 57.66 | 1,108,189 |
+| CWIST | 146,386 | 2.692 | 14.218 | 14.16 | 25.84 | 115,451 |
+| CWIST arena_max=1 | 145,534 | 2.725 | 13.076 | 19.22 | 30.66 | 119,039 |
+| CWIST drain_chunk=8 | 146,690 | 2.703 | 13.534 | 14.29 | 25.92 | 113,627 |
+| Axum | 112,772 | 3.477 | 18.197 | 15.06 | 17.17 | 186,060 |
+| Gin | 78,086 | 6.845 | 81.077 | 28.32 | 29.74 | 314,892 |
+| Spring Boot | 42,967 | 9.242 | 75.232 | 1,268.01 | 1,270.88 | 215,146 |
 
 Main profile: `wrk -t12 -c400 -d10s`, after a discarded 10s warmup.
 
 ### Separate tuned profile
 
 `wrk -t4 -c100 -d10s`, after a discarded 10s warmup. Do not compare these rows as equal-load results against the main table.
-- CWIST Classic: 154,418 req/s; mean 0.415 ms; corrected P99.999 8.753 ms.
-- Axum: 163,029 req/s; mean 0.586 ms; corrected P99.999 6.157 ms.
-- Spring Boot: 74,419 req/s; mean 1.426 ms; corrected P99.999 25.069 ms.
+- CWIST Classic: 114,518 req/s; mean 0.529 ms; corrected P99.999 4.455 ms.
+- Axum: 120,392 req/s; mean 0.785 ms; corrected P99.999 4.980 ms.
+- Spring Boot: 44,998 req/s; mean 2.271 ms; corrected P99.999 31.235 ms.
 
 Spring Boot row: openjdk version "25.0.4.1" 2026-08-18 LTS, Spring Boot 3.2.3, Spring WebFlux + Reactor Netty on native epoll (G1GC, JDK 25 Leyden AOT, virtual threads disabled). Full JVM options are recorded in `benchmarks/webserver.json`.
 
@@ -232,7 +232,7 @@ GitHub hands out a different CPU model per run, which moves these numbers more t
 
 | Runner CPU | Runs | CWIST Classic ms | CWIST ms | Axum ms | CWIST req/s | Axum req/s |
 |---|---:|---:|---:|---:|---:|---:|
-| AMD EPYC 7763 64-Core Processor | 8 | 2.13 | 2.76 | 3.49 | 143,578 | 112,133 |
+| AMD EPYC 7763 64-Core Processor | 9 | 2.12 | 2.73 | 3.48 | 144,063 | 112,461 |
 | AMD EPYC 9V74 80-Core Processor | 2 | 1.61 | 2.20 | 2.56 | 186,420 | 153,007 |
 | INTEL(R) XEON(R) PLATINUM 8573C | 1 | 1.09 | 2.33 | 1.78 | 262,140 | 223,003 |
 | Intel(R) Xeon(R) 6973P-C | 1 | 1.00 | 1.77 | 1.61 | 305,229 | 246,479 |
