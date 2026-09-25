@@ -2,8 +2,8 @@
  * @file main.c
  * @brief Self-healing JSON insert via the ORM API.
  *
- * Broken JSON is healed automatically before cwist_orm_insert dispatches
- * the statement to the socket worker.
+ * Broken JSON is healed with cwist_json_heal() before cwist_orm_insert
+ * dispatches the statement to the socket worker.
  */
 
 #include <stdio.h>
@@ -14,6 +14,17 @@
 #include <cwist/core/utils/zod.h>
 #include <cjson/cJSON.h>
 
+/* The SQLite worker returns INTEGER columns as JSON numbers and TEXT columns
+ * as JSON strings, so format either kind for printing. */
+static const char *cell_text(const cJSON *cell, char *buf, size_t len) {
+    if (cJSON_IsString(cell) && cell->valuestring) return cell->valuestring;
+    if (cJSON_IsNumber(cell)) {
+        snprintf(buf, len, "%lld", (long long)cell->valuedouble);
+        return buf;
+    }
+    return "NULL";
+}
+
 static const cwist_schema_field_t event_fields[] = {
     {"title", {NULL}, CWIST_FIELD_STRING, true},
     {"category", {"cat", "type"}, CWIST_FIELD_STRING, false},
@@ -23,7 +34,16 @@ static const cwist_schema_t event_schema = {event_fields, 3};
 
 static void try_insert(cwist_orm_t *orm, const char *label, const char *json) {
     printf("\n[%s]\n  input: %s\n", label, json);
-    cJSON *obj = cJSON_Parse(json);
+    cwist_heal_config_t cfg = {.threshold = 0.8, .schema = &event_schema};
+    cwist_heal_result_t healed = cwist_json_heal(json, &cfg);
+    if (!healed.json) {
+        printf("  result: INSERT FAILED (could not heal: %s)\n", healed.log);
+        cwist_heal_result_free(&healed);
+        return;
+    }
+    if (healed.healed) printf("  healed (L%d): %s\n", healed.level, healed.json);
+    cJSON *obj = cJSON_Parse(healed.json);
+    cwist_heal_result_free(&healed);
     if (!obj) {
         printf("  result: INSERT FAILED (parse error)\n");
         return;
@@ -74,10 +94,10 @@ int main(void) {
             cJSON *title = cJSON_GetObjectItem(row, "title");
             cJSON *cat = cJSON_GetObjectItem(row, "category");
             cJSON *score = cJSON_GetObjectItem(row, "score");
-            printf("  %-3s | %-20s | %-10s | %s\n", (id && id->valuestring) ? id->valuestring : "?",
-                   (title && title->valuestring) ? title->valuestring : "?",
-                   (cat && cat->valuestring) ? cat->valuestring : "NULL",
-                   (score && score->valuestring) ? score->valuestring : "NULL");
+            char idb[32], titleb[32], catb[32], scoreb[32];
+            printf("  %-3s | %-20s | %-10s | %s\n", cell_text(id, idb, sizeof(idb)),
+                   cell_text(title, titleb, sizeof(titleb)), cell_text(cat, catb, sizeof(catb)),
+                   cell_text(score, scoreb, sizeof(scoreb)));
         }
         cJSON_Delete(rows);
     }

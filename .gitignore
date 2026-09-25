@@ -58,6 +58,8 @@ example/db-crypt/step-1-seal-open/step-1-seal-open
 example/simple-server/simple-server
 example/cde-json-viewer/cde-json-viewer
 example/rps-showcase/rps-showcase
+example/sstring/step-1-getting-started/getting-started
+example/siphash/simple-hashing/simple-hashing
 example/micro/*/*
 !example/micro/*/main.c
 

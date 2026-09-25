@@ -12,6 +12,17 @@
 #include <cwist/core/orm/orm_socket.h>
 #include <cjson/cJSON.h>
 
+/* The SQLite worker returns INTEGER columns as JSON numbers and TEXT columns
+ * as JSON strings, so format either kind for printing. */
+static const char *cell_text(const cJSON *cell, char *buf, size_t len) {
+    if (cJSON_IsString(cell) && cell->valuestring) return cell->valuestring;
+    if (cJSON_IsNumber(cell)) {
+        snprintf(buf, len, "%lld", (long long)cell->valuedouble);
+        return buf;
+    }
+    return "NULL";
+}
+
 int main(void) {
     printf("=== ORM: Open, Insert & Select ===\n");
 
@@ -47,10 +58,9 @@ int main(void) {
             cJSON *id = cJSON_GetObjectItem(row, "id");
             cJSON *name = cJSON_GetObjectItem(row, "name");
             cJSON *age = cJSON_GetObjectItem(row, "age");
-            printf("  id=%-3s  name=%-8s  age=%s\n",
-                   (id && id->valuestring) ? id->valuestring : "?",
-                   (name && name->valuestring) ? name->valuestring : "?",
-                   (age && age->valuestring) ? age->valuestring : "?");
+            char idb[32], nameb[32], ageb[32];
+            printf("  id=%-3s  name=%-8s  age=%s\n", cell_text(id, idb, sizeof(idb)),
+                   cell_text(name, nameb, sizeof(nameb)), cell_text(age, ageb, sizeof(ageb)));
         }
         cJSON_Delete(rows);
     }
