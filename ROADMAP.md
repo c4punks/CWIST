@@ -357,8 +357,9 @@ confirmed. Everything experimental rides here first, behind flags and
 documented as experimental, so that v3.8 can confirm the v4.0 scope (which
 of these items v4.0 supports, keeps opt-in, or removes) and v4.0 (the first
 stable, production-compatible line) can spend its cycle on stabilization,
-semver commitments, and soak-driven promotion decisions. Tracked in issue
-#201.
+semver commitments, and soak-driven promotion decisions. Stabilization
+through v4.0 builds the base for expansion, which resumes in v4.1. Tracked
+in issue #201.
 
 Entry criteria for anything joining v3.7 after this retheme: shipped
 behind a flag or clearly marked experimental in the docs, revertible, and
@@ -404,6 +405,7 @@ replied since the 2026-08-15 inquiry. Waiting on it would stall the 3.x line
 or force a pin to a topic branch, which v3.7 already ruled out. v3.8 instead
 takes two goals CWIST controls end to end, performance and Rust bindings, and
 confirms the v4.0 scope: which API v4.0 supports, keeps opt-in, or removes.
+Stability stays the focus through v4.0; expansion resumes in v4.1.
 Discussion: https://github.com/c4punks/CWIST/discussions/268.
 
 Entry criteria for v3.8: every item must (a) move a measured performance
@@ -510,15 +512,16 @@ not ready slips.
 existing public API is not changed, and new features keep being implemented
 as new API in any release. Deprecated APIs and flags are resolved (promoted or removed) before the cut.
 The v4.0 cycle itself focuses on correctness, soak, docs, and the promotion
-decisions. See "API stability from v4.0" under the versioning
+decisions, so that expansion can resume in v4.1 on a stable base. See "API stability from v4.0" under the versioning
 rules.
 
 ---
 
-## v4.1 (Planned): WebTransport on the stable line
+## v4.1 (Planned): expansion resumes, starting with WebTransport
 
-Moved from v3.8 on 2026-09-25 (issue #17). WebTransport arrives in v4.1 as
-new, additive API; nothing that exists at v4.0 changes.
+v4.1 is where expansion resumes after the v4.0 stabilization cycle. The
+first item is WebTransport, moved from v3.8 on 2026-09-25 (issue #17). It
+arrives as new API; nothing that exists at v4.0 changes.
 
 * Precondition: LSQUIC PR #629 (or its successor) is merged upstream; then
   re-pin `lib/lsquic` to an upstream release. No topic-branch pin.
@@ -534,7 +537,7 @@ new, additive API; nothing that exists at v4.0 changes.
 
 ## Release Line & Codenames
 
-* The 3.x line is stabilization work on the road to v4.0: release intervals are deliberately long, and each release lands a small number of large, well-tested changes rather than frequent small ones. Expect wide gaps between 3.x tags.
+* The 3.x line is stabilization work on the road to v4.0, the stable base that expansion resumes from in v4.1: release intervals are deliberately long, and each release lands a small number of large, well-tested changes rather than frequent small ones. Expect wide gaps between 3.x tags.
 * The first 100% production-compatible stable release is planned as **v4.0**. Until then, minor releases may adjust public APIs (see the versioning note in the README).
 * Starting with the stable line (v4.0 onward), each release receives a codename in the form **adjective + color** (e.g. "Steady Amber"). Codenames are assigned at release time and recorded here.
 
