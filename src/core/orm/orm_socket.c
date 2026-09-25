@@ -27,6 +27,7 @@
 
 #include <sqlite3.h>
 #include <cjson/cJSON.h>
+#include <cwist/core/mem/alloc.h>
 
 /* ------------------------------------------------------------------------- */
 /* Protocol constants                                                        */
@@ -88,6 +89,9 @@ static int send_all(int fd, const void *buf, size_t n)
  */
 static void free_worker_ctx(cwist_orm_worker_ctx_t *ctx)
 {
+    /* The context is allocated by the caller's thread and freed by the
+     * detached worker, so it stays on the raw allocator: a cwist_alloc
+     * scope sweep on the caller side must not reclaim it. */
     if (!ctx) return;
     free(ctx->db_path);
     free(ctx);
@@ -176,10 +180,10 @@ static void *cwist_orm_socket_worker(void *arg)
         if (sql_len == 0 || sql_len > 16 * 1024 * 1024) break; /* sanity */
 
         /* ---- read SQL text ---- */
-        char *sql = (char *)malloc(sql_len + 1);
+        char *sql = (char *)cwist_alloc(sql_len + 1);
         if (!sql) break;
         if (recv_all(ctx->fd, sql, sql_len) != 0) {
-            free(sql);
+            cwist_free(sql);
             break;
         }
         sql[sql_len] = '\0';
@@ -190,7 +194,7 @@ static void *cwist_orm_socket_worker(void *arg)
         char *errmsg = NULL;
 
         rc = sqlite3_exec(db, sql, socket_query_callback, &acc, &errmsg);
-        free(sql);
+        cwist_free(sql);
 
         /* ---- build response payload ---- */
         cJSON *resp = cJSON_CreateObject();
@@ -215,21 +219,21 @@ static void *cwist_orm_socket_worker(void *arg)
 
         uint32_t payload_len = (uint32_t)strlen(payload);
         if (payload_len > UINT32_MAX - 1) {
-            free(payload);
+            cJSON_free(payload);
             break;
         }
 
         /* ---- send framed response ---- */
         uint32_t net_payload = htonl(payload_len);
         if (send_all(ctx->fd, &net_payload, sizeof(net_payload)) != 0) {
-            free(payload);
+            cJSON_free(payload);
             break;
         }
         if (send_all(ctx->fd, payload, payload_len) != 0) {
-            free(payload);
+            cJSON_free(payload);
             break;
         }
-        free(payload);
+        cJSON_free(payload);
     }
 
     sqlite3_close(db);
