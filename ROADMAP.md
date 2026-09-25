@@ -190,12 +190,12 @@ Automated OS benchmark history is published in `docs/benchmark-trends.svg`. Late
 
 ---
 
-## Current Focus (v3.8: performance, Rust FFI, and v4.0 scope confirmation)
+## Current Focus (v3.8: performance, Rust FFI, and v4.0 readiness)
 
 v3.7 is released. WebTransport moved to v4.1 on 2026-09-25 (see the v4.1
 section below), so v3.8 spends its cycle on work CWIST controls end to end:
 closing the measured latency gaps, making CWIST callable from Rust, and
-confirming the v4.0 scope.
+landing the v4.0 readiness work before the existing API is locked.
 
 ### Performance
 
@@ -211,7 +211,7 @@ confirming the v4.0 scope.
 * C-side FFI enablers, all additive (per-route user context,
   exported wrappers for `static inline` helpers, struct layout checks).
 
-### v4.0 scope confirmation
+### v4.0 readiness
 
 * Enact the v3.7 Phase 5 promotion decisions in code and docs.
 * Record a v4.0 decision for every experimental item that still lacks one.
@@ -348,18 +348,17 @@ Known limits going in (from PR #176 review), updated:
 
 ---
 
-## v3.7 Milestone (Released 2026-09-24, emergency patch v3.7.1 on 2026-09-29)
+## v3.7 Milestone (Released 2026-09-24)
 
 Theme: **the last experimental train before v4 stabilization**. v3.6 took
-WASM from "in-tree target" to "usable from JavaScript"; v3.7 is the last
-release where experimental capability lands before the v4.0 scope is
-confirmed. Everything experimental rides here first, behind flags and
-documented as experimental, so that v3.8 can confirm the v4.0 scope (which
-of these items v4.0 supports, keeps opt-in, or removes) and v4.0 (the first
-stable, production-compatible line) can spend its cycle on stabilization,
-semver commitments, and soak-driven promotion decisions. Stabilization
-through v4.0 builds the base for expansion, which resumes in v4.1. Tracked
-in issue #201.
+WASM from "in-tree target" to "usable from JavaScript"; v3.7 is the final
+3.x minor and the last release where new or experimental capability may
+land. Everything experimental rides here first — behind flags, documented
+as experimental — so v4.0 (the first stable, production-compatible line)
+can freeze features and spend its entire cycle on stabilization, semver
+commitments, and soak-driven promotion decisions instead of new surface.
+Broadening v3.7 is deliberate: v4.0 is the narrow one. Tracked in issue
+#201.
 
 Entry criteria for anything joining v3.7 after this retheme: shipped
 behind a flag or clearly marked experimental in the docs, revertible, and
@@ -397,16 +396,16 @@ delaying the cut.
 
 ## v3.8 Milestone (In Progress)
 
-Theme: **performance and Rust FFI, plus v4.0 scope confirmation**. v3.7 shipped the
+Theme: **performance and Rust FFI, plus v4.0 readiness**. v3.7 shipped the
 WASM edge story and the ecosystem experimental support. WebTransport no longer
 belongs to v3.8: it moved to v4.1 on 2026-09-25. LSQUIC PR #629 is still an
 unmerged draft that conflicts with upstream master, and upstream has not
 replied since the 2026-08-15 inquiry. Waiting on it would stall the 3.x line
 or force a pin to a topic branch, which v3.7 already ruled out. v3.8 instead
 takes two goals CWIST controls end to end, performance and Rust bindings, and
-confirms the v4.0 scope: which API v4.0 supports, keeps opt-in, or removes.
-Stability stays the focus through v4.0; expansion resumes in v4.1.
-Discussion: https://github.com/c4punks/CWIST/discussions/268.
+finishes the v4.0 readiness work that has to land before the existing API is
+locked.
+Discussion: https://github.com/c4punks/CWIST/discussions/267.
 
 Entry criteria for v3.8: every item must (a) move a measured performance
 number, with before/after data from the CI benchmark or a checked-in
@@ -482,7 +481,7 @@ not ready slips.
   * Add a CI gate that fails if the pinned `lib/lsquic` commit no longer
     contains the required fixes.
 
-* **Phase 4: v4.0 scope confirmation**:
+* **Phase 4: v4.0 readiness**:
   * Enact the v3.7 Phase 5 decisions: full GC and malloc interception become
     *supported opt-in* (`CWIST_DEFER_FREE`, `CWIST_INTERCEPT_MALLOC`), the
     `CWIST_PROFILE` matrix stays the v4.0 default story, the latency probe
@@ -508,20 +507,20 @@ not ready slips.
   decisions are enacted in code and docs.
 - CI is green on the exact release commit.
 
-**v4.0 preview:** v4.0 starts the API stability guarantee. From v4.0 on,
-existing public API is not changed, and new features keep being implemented
-as new API in any release. Deprecated APIs and flags are resolved (promoted or removed) before the cut.
-The v4.0 cycle itself focuses on correctness, soak, docs, and the promotion
-decisions, so that expansion can resume in v4.1 on a stable base. See "API stability from v4.0" under the versioning
+**v4.0 preview:** v4.0 locks the public API that exists at the cut, not the
+feature set. Existing symbols, signatures, behavior, and public struct
+layouts stay compatible for the whole 4.x line, and new API can be added in
+any 4.x minor. Deprecated APIs and flags are resolved (promoted or removed)
+before the cut. The v4.0 cycle itself focuses on correctness, soak, docs, and
+the promotion decisions. See "API stability from v4.0" under the versioning
 rules.
 
 ---
 
-## v4.1 (Planned): expansion resumes, starting with WebTransport
+## v4.1 (Planned): WebTransport on the stable line
 
-v4.1 is where expansion resumes after the v4.0 stabilization cycle. The
-first item is WebTransport, moved from v3.8 on 2026-09-25 (issue #17). It
-arrives as new API; nothing that exists at v4.0 changes.
+Moved from v3.8 on 2026-09-25 (issue #17). WebTransport arrives in v4.1 as
+new, additive API; nothing that exists at v4.0 changes.
 
 * Precondition: LSQUIC PR #629 (or its successor) is merged upstream; then
   re-pin `lib/lsquic` to an upstream release. No topic-branch pin.
@@ -537,7 +536,7 @@ arrives as new API; nothing that exists at v4.0 changes.
 
 ## Release Line & Codenames
 
-* The 3.x line is stabilization work on the road to v4.0, the stable base that expansion resumes from in v4.1: release intervals are deliberately long, and each release lands a small number of large, well-tested changes rather than frequent small ones. Expect wide gaps between 3.x tags.
+* The 3.x line is stabilization work on the road to v4.0: release intervals are deliberately long, and each release lands a small number of large, well-tested changes rather than frequent small ones. Expect wide gaps between 3.x tags.
 * The first 100% production-compatible stable release is planned as **v4.0**. Until then, minor releases may adjust public APIs (see the versioning note in the README).
 * Starting with the stable line (v4.0 onward), each release receives a codename in the form **adjective + color** (e.g. "Steady Amber"). Codenames are assigned at release time and recorded here.
 
@@ -550,14 +549,15 @@ The tag history (`v0.1` → `v3.3`) settles into this convention from v3 onward,
 * **Minor** (`v3.2` → `v3.3`): one coherent feature theme (v3.2: HTTP/3 standards compliance + security hardening; v3.3: gRPC streaming + deferred async handlers). A minor is cut when its theme is complete, not on a calendar.
 * **Release title**: `CWIST vX.Y` followed by an em-dash summary of the headline theme ("CWIST v3.3 — gRPC streaming, deferred async handlers, and stability hardening"). Pre-v3 releases used freeform subtitles ("Firefox Compatibility"); the em-dash form is the standard now.
 * **Release body**: "Highlights since vX.(Y−1)" or "Major changes compared to vX.(Y−1)", grouped into numbered/sectioned items with commit references where useful.
-* **API stability from v4.0**:
-  * Existing public API is not changed: public symbols, signatures,
-    documented behavior, and public struct layouts stay as they are.
-  * New features keep being implemented. They land as new API in any minor
-    release (patches stay hotfix-only). A new API marked experimental is
-    outside the guarantee until it is promoted.
-  * When an existing API needs different behavior, a new API is added next
-    to it; the existing one stays as it is.
+* **API stability from v4.0**: the lock covers the API that exists at each
+  release, not the feature set.
+  * Existing public symbols, signatures, documented behavior, and public
+    struct layouts do not change incompatibly within a major line (4.x).
+  * New API may be added in any minor release (patches stay hotfix-only).
+    A new API marked experimental is outside the guarantee until it is
+    promoted.
+  * An existing API is replaced by adding the new one next to it and
+    deprecating the old one. Removal waits for the next major.
 * The 0.x line was pre-1.0 experimentation; the 1.x–2.x lines were feature accretion with themed minors. None of that constrains the 3.x rules above.
 
 ---
