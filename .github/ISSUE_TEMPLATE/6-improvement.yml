@@ -1,0 +1,28 @@
+name: Improvement or feature request
+description: A new capability or a change to existing behavior.
+title: "[improvement/<area>] "
+labels: [enhancement]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        From v4.0, existing public API is not changed; new behavior lands as new API. Performance proposals need numbers: workload, command, runner CPU, before and after.
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem or use case
+      description: What you are trying to do and what stops you today.
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed change
+      description: API sketch, configuration, or behavior. Say whether it adds new API or changes existing behavior.
+    validations:
+      required: true
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Measurements or references
+      description: Benchmarks, RFC sections, or other frameworks' behavior. Label unmeasured expectations as hypotheses.

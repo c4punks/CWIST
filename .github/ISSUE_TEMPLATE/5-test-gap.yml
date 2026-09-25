@@ -1,0 +1,34 @@
+name: Test gap or flaky test
+description: Public behavior with no test, or a test that fails intermittently.
+title: "[test/<area>] "
+labels: []
+body:
+  - type: dropdown
+    id: kind
+    attributes:
+      label: Kind
+      options:
+        - Missing coverage
+        - Flaky test
+        - Test fails deterministically
+    validations:
+      required: true
+  - type: input
+    id: target
+    attributes:
+      label: Code or test involved
+      description: Public API or file (for example include/cwist/net/http/http_client.h) or the make target (for example test_http2).
+    validations:
+      required: true
+  - type: textarea
+    id: observed
+    attributes:
+      label: Observed
+      description: For missing coverage, which behavior no test exercises. For failures, the command, the failure output, and how often it fails (for example 3 of 20 runs).
+    validations:
+      required: true
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment
+      description: OS, compiler, CPU count, reactor backend, CI job link if it failed in CI.

@@ -1,0 +1,8 @@
+blank_issues_enabled: true
+contact_links:
+  - name: Questions and discussion
+    url: https://github.com/c4punks/CWIST/discussions
+    about: Ask usage questions or discuss ideas before filing an issue.
+  - name: Discord
+    url: https://discord.gg/6F8HDmNAPg
+    about: Chat with maintainers and other users.

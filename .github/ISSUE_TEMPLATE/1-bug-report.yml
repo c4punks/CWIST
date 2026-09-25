@@ -1,0 +1,60 @@
+name: Bug report (found while using CWIST)
+description: Something behaves differently from the docs or from what a correct HTTP server/client should do.
+title: "[bug/<area>] "
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Describe what you observed, not what you think the cause is. If you have a hypothesis, label it as one (see CONTRIBUTING.md, "No speculation presented as fact").
+  - type: input
+    id: version
+    attributes:
+      label: CWIST version or commit
+      description: Release tag (for example v3.7) or `git rev-parse HEAD`, and the branch (main or dev).
+    validations:
+      required: true
+  - type: input
+    id: platform
+    attributes:
+      label: OS, kernel, compiler
+      description: For example "Ubuntu 24.04, Linux 6.8, gcc 13.3" or "macOS 15, Apple clang 17".
+    validations:
+      required: true
+  - type: dropdown
+    id: mode
+    attributes:
+      label: Server mode and protocol
+      multiple: true
+      options:
+        - CWIST reactor (default, C1M)
+        - CWIST Classic (thread pool)
+        - HTTP/1.1
+        - HTTP/2
+        - HTTP/3
+        - WebSocket
+        - TLS
+        - WASM / WASI
+        - Not applicable
+  - type: textarea
+    id: observed
+    attributes:
+      label: Observed behavior
+      description: Exact output, status codes, error messages, or crash output.
+      render: text
+    validations:
+      required: true
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: How to reproduce
+      description: The smallest program, request (curl, wrk, h2load), and commands that show the problem.
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+      description: What should happen instead. Cite the RFC section or doc page if it applies (write "RFC 9110 section 15.5", ASCII only).
+    validations:
+      required: true
