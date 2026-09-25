@@ -839,7 +839,7 @@ TEST_TARGETS = test_worker_affinity \
                test_css_composer \
                test_multipart
 
-.PHONY: all test $(TEST_TARGETS) fuzz_seq install uninstall dist clean rebuild examples clean-examples wasm wasm-smoke clean-wasm wasip2-smoke clean-wasip2 wit-check jco-transpile wit-bindings component-guest component-smoke clean-component
+.PHONY: all test $(TEST_TARGETS) fuzz_seq install uninstall dist clean rebuild examples clean-examples micro-examples examples-check wasm wasm-smoke clean-wasm wasip2-smoke clean-wasip2 wit-check jco-transpile wit-bindings component-guest component-smoke clean-component
 
 .PHONY: all test $(TEST_TARGETS) fuzz_seq install uninstall dist clean rebuild examples clean-examples wasm wasm-smoke clean-wasm wasip2-smoke clean-wasip2 wit-check jco-transpile wit-bindings component-guest component-smoke clean-component
 
@@ -1228,6 +1228,30 @@ MICRO_BINS = example/micro/01-hello/hello \
              example/micro/17-blog-crud/blog-crud
 
 micro-examples: $(MICRO_BINS)
+
+# Examples that ship their own Makefile instead of a rule here. They are
+# built through those Makefiles so a broken per-directory link line fails
+# the check, not only a broken main.c.
+STANDALONE_EXAMPLE_DIRS = example/db-crypt/step-1-seal-open \
+                          example/db/step-3-zod-validate \
+                          example/html/step-1-builder \
+                          example/json-builder/step-1-basic \
+                          example/jwt/step-1-sign-verify \
+                          example/mem/step-1-alloc \
+                          example/mem/step-2-gc \
+                          example/siphash/simple-hashing \
+                          example/sstring/step-1-getting-started \
+                          example/sstring/step-2-compare-copy \
+                          example/sstring/step-3-substr-append \
+                          example/template/step-1-render
+
+# Build-only (nothing is run): every example must keep building against the
+# current library. Under SANITIZE the standalone Makefiles get the same
+# sanitizer flags so they can link the instrumented archive.
+examples-check: $(LIB_NAME) $(EXAMPLE_BINS) $(MICRO_BINS)
+	@set -e; for d in $(STANDALONE_EXAMPLE_DIRS); do \
+		$(MAKE) -C $$d CC="$(CC)$(if $(SANITIZE), -fsanitize=$(SANITIZE))"; \
+	done
 
 example/micro/01-hello/hello: $(LIB_NAME) example/micro/01-hello/main.c
 	$(CC) $(CFLAGS) -o $@ example/micro/01-hello/main.c $(LIB_NAME) $(LIBS)

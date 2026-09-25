@@ -38,6 +38,9 @@ jobs:
         # epoll: completion posting must wake the real ring without a timeout.
         CWIST_TEST_REQUIRE_IO_URING=1 make SANITIZE=address,undefined WERROR=1 test_reactor_wake
         CWIST_REACTOR_BACKEND=epoll make SANITIZE=address,undefined WERROR=1 test_reactor_wake
+        # Compile-only as well: every example, including the ones built by
+        # their own per-directory Makefile, must keep building and linking.
+        make SANITIZE=address,undefined WERROR=1 examples-check
       env:
         ASAN_OPTIONS: detect_leaks=1:abort_on_error=1:halt_on_error=1
         LSAN_OPTIONS: suppressions=tests/lsan.supp
