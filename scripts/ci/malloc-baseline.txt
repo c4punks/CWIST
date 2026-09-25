@@ -63,6 +63,10 @@
 1	src/core/orm/orm.c:return strdup(buf);
 1	src/core/orm/orm.c:return strdup(cJSON_IsTrue(node) ? "1" : "0");
 1	src/core/orm/orm.c:return strdup(cJSON_IsTrue(node) ? "TRUE" : "FALSE");
+1	src/core/orm/orm_socket.c:(cwist_orm_worker_ctx_t *)calloc(1, sizeof(*ctx));
+1	src/core/orm/orm_socket.c:ctx->db_path = strdup(db_path);
+2	src/core/orm/orm_socket.c:free(ctx);
+1	src/core/orm/orm_socket.c:free(ctx->db_path);
 1	src/core/utils/json_heal.c:free(r->json);
 1	src/core/utils/json_heal.c:free(recovered); /* SLLM callback uses plain malloc per contract */
 1	src/core/validation/bind.c:free(printed);
