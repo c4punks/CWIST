@@ -185,7 +185,7 @@ missing optional API does not prevent an HTTP/3 build.
   ./server
 
 <!-- BENCHMARKS:START -->
-Latest automated benchmark: **Darwin**: 12.38 M leases/s, 130.54% CPU, 764912 KiB RSS.
+Latest automated benchmark: **Darwin**: 16.94 M leases/s, 118.22% CPU, 758992 KiB RSS.
 
 ![CWIST benchmark trends](docs/benchmark-trends.svg)
 <!-- BENCHMARKS:END -->
@@ -193,29 +193,29 @@ Latest automated benchmark: **Darwin**: 12.38 M leases/s, 130.54% CPU, 764912 Ki
 <!-- WEBSERVER_BENCHMARKS:START -->
 ## Latest isolated HTTP benchmark
 
-Measured commit: `3fd4bd1db7e3181cb784e2cebd5bac84a3351b14`. Release tag: `not recorded; identify this run by commit`.
-Run: https://github.com/c4punks/CWIST/actions/runs/36017321687. Timestamp: `2026-09-24T15:16:40.020516+00:00`.
+Measured commit: `e3801a1550016fa4a63a4b1c342fb088d85bf3c9`. Release tag: `not recorded; identify this run by commit`.
+Run: https://github.com/c4punks/CWIST/actions/runs/36122212147. Timestamp: `2026-09-25T10:17:22.870977+00:00`.
 
 Latency columns use the **wrk corrected distribution**. Memory columns are process-group end samples, not peaks: Group RSS counts a page shared between worker processes once per process, Group PSS divides it by its mapper count, so compare a single-process server against PSS. Context switches are same-thread counter deltas over threads live at both ends of the window; N/A means unavailable.
 
 | Profile | Req/s | Mean ms | P99.999 ms | Group PSS MiB | Group RSS MiB | Context-switch delta |
 |---|---:|---:|---:|---:|---:|---:|
-| CWIST Classic | 115,290 | 1.995 | 20.317 | 47.31 | 57.77 | 1,129,020 |
-| CWIST | 143,093 | 2.789 | 29.083 | 14.25 | 25.69 | 124,237 |
-| CWIST arena_max=1 | 143,983 | 2.713 | 12.190 | 18.09 | 29.52 | 128,614 |
-| CWIST drain_chunk=8 | 144,039 | 2.737 | 15.187 | 14.23 | 25.64 | 114,495 |
-| Axum | 113,232 | 3.440 | 16.226 | 14.87 | 16.93 | 193,421 |
-| Gin | 79,983 | 6.722 | 82.435 | 28.30 | 29.72 | 312,749 |
-| Spring Boot | 43,418 | 9.176 | 64.246 | 1,273.96 | 1,276.84 | 220,070 |
+| CWIST Classic | 145,207 | 1.576 | 28.403 | 47.39 | 58.20 | 1,444,823 |
+| CWIST | 185,917 | 2.234 | 26.082 | 14.28 | 26.04 | 152,288 |
+| CWIST arena_max=1 | 189,804 | 2.140 | 14.128 | 18.58 | 30.45 | 155,335 |
+| CWIST drain_chunk=8 | 189,415 | 2.121 | 18.622 | 14.31 | 26.09 | 150,741 |
+| Axum | 154,222 | 2.529 | 17.589 | 13.90 | 16.11 | 246,326 |
+| Gin | 112,869 | 4.814 | 59.999 | 27.48 | 29.03 | 408,289 |
+| Spring Boot | 72,343 | 5.476 | 65.721 | 1,285.89 | 1,288.76 | 310,899 |
 
 Main profile: `wrk -t12 -c400 -d10s`, after a discarded 10s warmup.
 
 ### Separate tuned profile
 
 `wrk -t4 -c100 -d10s`, after a discarded 10s warmup. Do not compare these rows as equal-load results against the main table.
-- CWIST Classic: 114,849 req/s; mean 0.535 ms; corrected P99.999 4.473 ms.
-- Axum: 120,065 req/s; mean 0.789 ms; corrected P99.999 5.635 ms.
-- Spring Boot: 44,547 req/s; mean 2.286 ms; corrected P99.999 29.122 ms.
+- CWIST Classic: 154,418 req/s; mean 0.415 ms; corrected P99.999 8.753 ms.
+- Axum: 163,029 req/s; mean 0.586 ms; corrected P99.999 6.157 ms.
+- Spring Boot: 74,419 req/s; mean 1.426 ms; corrected P99.999 25.069 ms.
 
 Spring Boot row: openjdk version "25.0.4.1" 2026-08-18 LTS, Spring Boot 3.2.3, Spring WebFlux + Reactor Netty on native epoll (G1GC, JDK 25 Leyden AOT, virtual threads disabled). Full JVM options are recorded in `benchmarks/webserver.json`.
 
@@ -233,7 +233,7 @@ GitHub hands out a different CPU model per run, which moves these numbers more t
 | Runner CPU | Runs | CWIST Classic ms | CWIST ms | Axum ms | CWIST req/s | Axum req/s |
 |---|---:|---:|---:|---:|---:|---:|
 | AMD EPYC 7763 64-Core Processor | 8 | 2.13 | 2.76 | 3.49 | 143,578 | 112,133 |
-| AMD EPYC 9V74 80-Core Processor | 1 | 1.65 | 2.17 | 2.60 | 186,923 | 151,791 |
+| AMD EPYC 9V74 80-Core Processor | 2 | 1.61 | 2.20 | 2.56 | 186,420 | 153,007 |
 | INTEL(R) XEON(R) PLATINUM 8573C | 1 | 1.09 | 2.33 | 1.78 | 262,140 | 223,003 |
 | Intel(R) Xeon(R) 6973P-C | 1 | 1.00 | 1.77 | 1.61 | 305,229 | 246,479 |
 | Intel(R) Xeon(R) Platinum 8370C CPU @ 2.80GHz | 1 | 1.39 | 2.29 | 2.54 | 213,771 | 156,146 |
