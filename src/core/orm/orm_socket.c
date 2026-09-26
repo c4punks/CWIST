@@ -6,6 +6,17 @@
  * links against SQLite3.  It exposes the database as a byte stream
  * over a local Unix socket pair so that cwist_orm_t remains fully
  * decoupled from sqlite3.h.
+ *
+ * Trust boundary: the worker executes whatever SQL text arrives on its
+ * end of the pair, verbatim.  That is safe only because the pair is
+ * created with socketpair(AF_UNIX) in cwist_db_transfer_sqlite_to_socket():
+ * it has no filesystem path or network address, so no other process can
+ * connect to it, and the only peer is the caller's end (normally a
+ * cwist_orm_t in the same process).  Anyone holding that caller fd can run
+ * arbitrary SQL against the database, so it must never be handed to an
+ * untrusted party (SCM_RIGHTS, inheritance across fork() without exec, and
+ * so on).  Escaping of untrusted values is the job of the layer that
+ * builds the SQL (orm.c), not of this bridge.
  */
 
 #ifndef _GNU_SOURCE
@@ -188,7 +199,9 @@ static void *cwist_orm_socket_worker(void *arg)
         }
         sql[sql_len] = '\0';
 
-        /* ---- execute ---- */
+        /* ---- execute ----
+         * sql comes from the in-process peer, not from an external client;
+         * see the trust boundary note at the top of this file. */
         query_accumulator_t acc;
         acc.rows = cJSON_CreateArray();
         char *errmsg = NULL;
