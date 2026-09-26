@@ -64,6 +64,12 @@ static size_t header_callback(char *ptr, size_t size, size_t nmemb, void *userp)
         while (*p && !isspace((unsigned char)*p)) p++;
         while (*p && isspace((unsigned char)*p)) p++;
         rh->status_code = strtol(p, NULL, 10);
+        /* Each status line starts a new response: a followed redirect hop
+         * or a 1xx interim reply. Keep only the final response's headers,
+         * and apply the header cap per response. */
+        cwist_http_header_free_all(rh->headers);
+        rh->headers = NULL;
+        rh->header_count = 0;
         return total;
     }
 
