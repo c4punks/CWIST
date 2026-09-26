@@ -8,6 +8,7 @@ build-tutorials/
 # Test binaries
 test_sstring
 test_http
+test_http_client
 test_siphash
 test_mux
 stress_test

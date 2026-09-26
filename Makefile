@@ -843,6 +843,7 @@ TEST_TARGETS = test_worker_affinity \
                test_profile \
                test_http_chunked \
                test_http_chunked_alloc_failure \
+               test_http_client \
                test_static_and_range \
                test_session \
                test_csrf \
@@ -1363,6 +1364,10 @@ endif
 test_http_chunked_alloc_failure: $(LIB_NAME) tests/test_http_chunked_alloc_failure.c
 	$(CC) $(CFLAGS) $(CHUNKED_ALLOC_WRAP) -o test_http_chunked_alloc_failure tests/test_http_chunked_alloc_failure.c $(LIB_NAME) $(LIBS)
 	./test_http_chunked_alloc_failure
+
+test_http_client: $(LIB_NAME) tests/test_http_client.c
+	$(CC) $(CFLAGS) -o test_http_client tests/test_http_client.c $(LIB_NAME) $(LIBS)
+	./test_http_client
 
 test_static_and_range: $(LIB_NAME) tests/test_static_and_range.c
 	$(CC) $(CFLAGS) -o test_static_and_range tests/test_static_and_range.c $(LIB_NAME) $(LIBS)
