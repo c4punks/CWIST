@@ -44,6 +44,11 @@ static int g_failures = 0;
         }                                                        \
     } while (0)
 
+/* Print a test's pass line only if it added no failures. */
+static void report(int failures_before, const char *what) {
+    if (g_failures == failures_before) printf("Passed %s\n", what);
+}
+
 /* --- server side --------------------------------------------------------- */
 
 static void hello_handler(cwist_http_request *req, cwist_http_response *res) {
@@ -191,6 +196,7 @@ static cwist_http_response *request(cwist_http_client *client, const char *url,
 }
 
 static void test_get(cwist_http_client *client, const char *base) {
+    int before = g_failures;
     char url[128];
     snprintf(url, sizeof(url), "%s/hello", base);
     cwist_http_response *res = request(client, url, CWIST_HTTP_GET, NULL, 0);
@@ -201,7 +207,7 @@ static void test_get(cwist_http_client *client, const char *base) {
     const char *h = cwist_http_header_get(res->headers, "X-Cwist-Test");
     CHECK(h && strcmp(h, "hello") == 0, "GET: handler header missing");
     cwist_http_response_destroy(res);
-    printf("Passed GET status, body and header\n");
+    report(before, "GET status, body and header");
 }
 
 static void post_and_expect_echo(cwist_http_client *client, const char *url, const char *body,
@@ -225,6 +231,7 @@ static void post_and_expect_echo(cwist_http_client *client, const char *url, con
 }
 
 static void test_post(cwist_http_client *client, const char *base) {
+    int before = g_failures;
     char url[128];
     snprintf(url, sizeof(url), "%s/echo", base);
 
@@ -235,10 +242,11 @@ static void test_post(cwist_http_client *client, const char *base) {
     static char large[LARGE_POST_LEN];
     for (size_t i = 0; i < sizeof(large); i++) large[i] = (char)('a' + (i * 31) % 26);
     post_and_expect_echo(client, url, large, sizeof(large));
-    printf("Passed POST body reaches the handler\n");
+    report(before, "POST body reaches the handler");
 }
 
 static void test_redirect_followed(cwist_http_client *client, const char *base) {
+    int before = g_failures;
     char url[128];
     snprintf(url, sizeof(url), "%s/redirect", base);
     cwist_http_client_set_follow_redirects(client, 1);
@@ -259,10 +267,11 @@ static void test_redirect_followed(cwist_http_client *client, const char *base) 
     CHECK(content_length_headers == 1, "follow: %d Content-Length headers, want 1",
           content_length_headers);
     cwist_http_response_destroy(res);
-    printf("Passed redirect following enabled\n");
+    report(before, "redirect following enabled");
 }
 
 static void test_redirect_not_followed(cwist_http_client *client, const char *base) {
+    int before = g_failures;
     char url[128];
     snprintf(url, sizeof(url), "%s/redirect", base);
     cwist_http_client_set_follow_redirects(client, 0);
@@ -276,10 +285,11 @@ static void test_redirect_not_followed(cwist_http_client *client, const char *ba
     CHECK(body_equals(res, REDIRECT_BODY, strlen(REDIRECT_BODY)),
           "no-follow: body is not the redirect handler's");
     cwist_http_response_destroy(res);
-    printf("Passed redirect following disabled\n");
+    report(before, "redirect following disabled");
 }
 
 static void test_closed_port(cwist_http_client *client) {
+    int before = g_failures;
     int port = pick_free_port();
     CHECK(port > 0, "could not pick a closed port");
     if (port <= 0) return;
@@ -300,7 +310,9 @@ static void test_closed_port(cwist_http_client *client) {
      * timeout plus scheduling slack, never the 30 s default. */
     CHECK(elapsed < CLOSED_PORT_TIMEOUT_MS + 1000, "closed port took %ld ms to fail", elapsed);
     if (res) cwist_http_response_destroy(res);
-    printf("Passed closed port fails without hanging (%ld ms)\n", elapsed);
+    if (g_failures == before) {
+        printf("Passed closed port fails without hanging (%ld ms)\n", elapsed);
+    }
 }
 
 int main(void) {
