@@ -111,5 +111,10 @@ static inline bool cwist_error_is_ok(const cwist_error_t *err) {
  */
 cwist_error_t make_error(cwist_errtype_t type);
 
+/**
+ * @brief Out-of-line cwist_error_is_ok(); see include/cwist/sys/err/cwist_err.h.
+ */
+bool cwist_error_is_ok_extern(const cwist_error_t *err);
+
 /** @} */
 #endif

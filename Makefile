@@ -333,6 +333,32 @@ $(CNATS_LIB):
 TEST_TARGETS = test_sstring \
                test_seq \
                test_seq_auth \
+               test_sha256 \
+               test_error \
+               test_inline_exports \
+               test_arena \
+               test_wasm_stream \
+               test_stream_producer \
+               test_healthz \
+               test_json_builder \
+               test_flash \
+               test_middleware_jwt \
+               test_sse \
+               test_graphql \
+               test_graphql_subscriptions \
+               test_core_hardening \
+               test_https_full_gc \
+               test_cwist \
+               test_html_builder \
+               test_html_component \
+               test_html_response \
+               test_assets \
+               test_html_parity \
+               test_http2_flow_control \
+               test_idle_reaper \
+               test_linux_writer_fast \
+               test_orm_socket \
+               test_webtransport \
                test_http \
                test_siphash \
                test_mux \
@@ -403,6 +429,57 @@ stress-test: $(LIB_NAME) tests/stress_test.c
 test_seq_auth: $(LIB_NAME) tests/test_seq_auth.c
 	$(CC) $(CFLAGS) -o test_seq_auth tests/test_seq_auth.c $(LIB_NAME) $(LIBS)
 	./test_seq_auth
+
+test_sha256: tests/test_sha256.c include/cwist/core/crypto/sha256.h
+	$(CC) $(CFLAGS) -o $@ tests/test_sha256.c
+	./$@
+
+test_error: $(LIB_NAME) tests/test_error.c
+	$(CC) $(CFLAGS) -o test_error tests/test_error.c $(LIB_NAME) $(LIBS)
+	./test_error
+
+# Out-of-line wrappers for public static inline helpers: same results as the
+# inline versions, and defined global symbols in the archive and in a program
+# linked against it (what a binding generated from the headers links to).
+INLINE_EXPORT_SYMBOLS = cwist_error_is_ok_extern cwist_endpoint_has_extern
+test_inline_exports: $(LIB_NAME) tests/test_inline_exports.c
+	$(CC) $(CFLAGS) -o test_inline_exports tests/test_inline_exports.c $(LIB_NAME) $(LIBS)
+	./test_inline_exports
+	@for sym in $(INLINE_EXPORT_SYMBOLS); do \
+		for obj in $(LIB_NAME) test_inline_exports; do \
+			nm -g $$obj 2>/dev/null | grep -Eq " T _?$$sym$$" || \
+				{ echo "FAIL: $$sym is not a defined global symbol in $$obj"; exit 1; }; \
+		done; \
+		echo "Passed $$sym is a defined global symbol in $(LIB_NAME) and test_inline_exports"; \
+	done
+
+test_arena: $(LIB_NAME) tests/test_arena.c
+	$(CC) $(CFLAGS) -o test_arena tests/test_arena.c $(LIB_NAME) $(LIBS)
+	./test_arena
+
+test_healthz: $(LIB_NAME) tests/test_healthz.c
+	$(CC) $(CFLAGS) -o test_healthz tests/test_healthz.c $(LIB_NAME) $(LIBS)
+	./test_healthz
+
+test_wasm_stream: $(LIB_NAME) tests/test_wasm_stream.c
+	$(CC) $(CFLAGS) -o test_wasm_stream tests/test_wasm_stream.c $(LIB_NAME) $(LIBS)
+	./test_wasm_stream
+
+test_stream_producer: $(LIB_NAME) tests/test_stream_producer.c
+	$(CC) $(CFLAGS) -o test_stream_producer tests/test_stream_producer.c $(LIB_NAME) $(LIBS)
+	./test_stream_producer
+
+test_json_builder: $(LIB_NAME) tests/test_json_builder.c
+	$(CC) $(CFLAGS) -o test_json_builder tests/test_json_builder.c $(LIB_NAME) $(LIBS)
+	./test_json_builder
+
+test_flash: $(LIB_NAME) tests/test_flash.c
+	$(CC) $(CFLAGS) -o test_flash tests/test_flash.c $(LIB_NAME) $(LIBS)
+	./test_flash
+
+test_middleware_jwt: $(LIB_NAME) tests/test_middleware_jwt.c
+	$(CC) $(CFLAGS) -o test_middleware_jwt tests/test_middleware_jwt.c $(LIB_NAME) $(LIBS)
+	./test_middleware_jwt
 
 test_http: $(LIB_NAME) tests/test_http.c
 	$(CC) $(CFLAGS) -o test_http tests/test_http.c $(LIB_NAME) $(LIBS)
