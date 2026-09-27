@@ -1829,6 +1829,30 @@ void cwist_app_ws(cwist_app *app, const char *path, cwist_ws_handler_func handle
 }
 
 /**
+ * @brief Register a callback-shaped non-blocking WebSocket endpoint (C1M mode).
+ * @param app Application being configured.
+ * @param path Exact GET route that should upgrade to WebSocket.
+ * @param on_message Callback invoked per complete message on the reactor path.
+ * @param user_data Opaque pointer forwarded to the callback.
+ */
+void cwist_app_ws_async(cwist_app *app, const char *path, cwist_ws_on_message_t on_message,
+                        void *user_data) {
+    if (!app || !app->router || !path || !on_message) return;
+    cwist_route_table_insert(app->router, path, NULL, CWIST_HTTP_GET, NULL, NULL,
+                             CWIST_ENDPOINT_DEFAULT);
+    cwist_route_entry *entry = cwist_route_table_lookup(app->router, CWIST_HTTP_GET, path);
+    if (entry) {
+        entry->ws_async_on_message = on_message;
+        entry->ws_async_user_data = user_data;
+    }
+}
+
+/* Forwards to the inline helper so the two can never disagree. */
+bool cwist_endpoint_has_extern(cwist_endpoint_opt_t opts, cwist_endpoint_opt_t flag) {
+    return cwist_endpoint_has(opts, flag);
+}
+
+/**
  * @brief Register a GET handler with explicit endpoint options.
  * @param app Application being configured.
  * @param path Exact route path.
