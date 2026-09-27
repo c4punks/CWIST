@@ -111,6 +111,17 @@ jobs:
           make wasm-smoke NODE="$(command -v nodejs || echo /usr/bin/node)"
         fi
 
+    # The struct layout contract (tests/abi_layout.h) on wasm32, where
+    # pointers are 4 bytes: the native jobs cover the 64-bit targets.
+    - name: Check the public struct layout contract on wasm32
+      shell: bash
+      run: |
+        NODE_BIN="$(command -v node || true)"
+        if [ -z "$NODE_BIN" ] || [ ! -x "$NODE_BIN" ]; then
+          NODE_BIN="$(command -v nodejs || echo /usr/bin/node)"
+        fi
+        make wasm-abi-layout NODE="$NODE_BIN"
+
     # The EM_JS `=>` corruption this PR fixes recurs silently the next time
     # anyone runs `make format`. Guard exactly the files carrying EM_JS /
     # CWIST_WASM_INSTALL_VIEWS bodies with clang-format --dry-run --Werror:
