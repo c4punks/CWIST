@@ -759,6 +759,7 @@ TEST_TARGETS = test_worker_affinity \
                test_seq_auth \
                test_sha256 \
                test_error \
+               test_inline_exports \
                test_arena \
                test_wasm_stream \
                test_stream_producer \
@@ -922,6 +923,21 @@ test_sha256: tests/test_sha256.c include/cwist/core/crypto/sha256.h
 test_error: $(LIB_NAME) tests/test_error.c
 	$(CC) $(CFLAGS) -o test_error tests/test_error.c $(LIB_NAME) $(LIBS)
 	./test_error
+
+# Out-of-line wrappers for public static inline helpers: same results as the
+# inline versions, and defined global symbols in the archive and in a program
+# linked against it (what a binding generated from the headers links to).
+INLINE_EXPORT_SYMBOLS = cwist_error_is_ok_extern cwist_endpoint_has_extern
+test_inline_exports: $(LIB_NAME) tests/test_inline_exports.c
+	$(CC) $(CFLAGS) -o test_inline_exports tests/test_inline_exports.c $(LIB_NAME) $(LIBS)
+	./test_inline_exports
+	@for sym in $(INLINE_EXPORT_SYMBOLS); do \
+		for obj in $(LIB_NAME) test_inline_exports; do \
+			nm -g $$obj 2>/dev/null | grep -Eq " T _?$$sym$$" || \
+				{ echo "FAIL: $$sym is not a defined global symbol in $$obj"; exit 1; }; \
+		done; \
+		echo "Passed $$sym is a defined global symbol in $(LIB_NAME) and test_inline_exports"; \
+	done
 
 test_arena: $(LIB_NAME) tests/test_arena.c
 	$(CC) $(CFLAGS) -o test_arena tests/test_arena.c $(LIB_NAME) $(LIBS)

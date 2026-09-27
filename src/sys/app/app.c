@@ -2194,6 +2194,11 @@ void cwist_app_ws_async(cwist_app *app, const char *path, cwist_ws_on_message_t 
     }
 }
 
+/* Forwards to the inline helper so the two can never disagree. */
+bool cwist_endpoint_has_extern(cwist_endpoint_opt_t opts, cwist_endpoint_opt_t flag) {
+    return cwist_endpoint_has(opts, flag);
+}
+
 /**
  * @brief Register a GET handler with explicit endpoint options.
  * @param app Application being configured.
