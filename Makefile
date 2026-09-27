@@ -287,6 +287,12 @@ wasm-smoke: libcwist_wasm.a
 	$(EMCC) $(WASM_CFLAGS) -o wasm_smoke.js tests/wasm_smoke.c libcwist_wasm.a
 	$(NODE) wasm_smoke.js
 
+# The struct layout contract (tests/abi_layout.h) on wasm32. Same sources as
+# the native test_abi_layout; requires Emscripten + node like wasm-smoke.
+wasm-abi-layout: libcwist_wasm.a
+	$(EMCC) $(WASM_CFLAGS) -o wasm_abi_layout.js tests/test_abi_layout.c tests/abi_layout_legacy.c
+	$(NODE) wasm_abi_layout.js
+
 # Integration test for the cwist-wasm JS wrapper (wasm/npm): builds a
 # consumer-style module through include/cwist/wasm/wasm_entry.h, then drives
 # it from node via the wrapper with no Emscripten glue on the JS side.
@@ -312,6 +318,7 @@ wasm-dist: wasm-wrapper-test
 
 clean-wasm:
 	rm -rf $(WASM_BUILD_DIR) libcwist_wasm.a wasm_smoke.js wasm_smoke.wasm \
+	    wasm_abi_layout.js wasm_abi_layout.wasm \
 	    wrapper_test.js wrapper_test.wasm dist
 
 # --- WASI 0.2 (wasm32-wasip2) smoke ------------------------------------------------
@@ -688,6 +695,7 @@ TEST_TARGETS = test_worker_affinity \
                test_reactor_drain_chunk \
                test_latency_probe \
                test_sstring \
+               test_abi_layout \
                test_seq \
                test_seq_auth \
                test_error \
@@ -773,7 +781,7 @@ TEST_TARGETS = test_worker_affinity \
                test_css_composer \
                test_multipart
 
-.PHONY: all test $(TEST_TARGETS) fuzz_seq install uninstall dist clean rebuild examples clean-examples micro-examples examples-check wasm wasm-smoke clean-wasm wasip2-smoke clean-wasip2 wit-check jco-transpile wit-bindings component-guest component-smoke clean-component
+.PHONY: all test $(TEST_TARGETS) fuzz_seq install uninstall dist clean rebuild examples clean-examples micro-examples examples-check wasm wasm-smoke wasm-abi-layout clean-wasm wasip2-smoke clean-wasip2 wit-check jco-transpile wit-bindings component-guest component-smoke clean-component
 
 # Run with e.g. `make fuzz_seq FUZZ_RUNS=100000`.  The target intentionally
 # uses a dedicated clang/libFuzzer toolchain and is not part of `make test`.
@@ -836,6 +844,14 @@ bench_cooperative_queuing: tests/bench_cooperative_queuing.c src/sys/io/reactor.
 test_sstring: $(LIB_NAME) tests/test_sstring.c
 	$(CC) $(CFLAGS) -o test_sstring tests/test_sstring.c $(LIB_NAME) $(LIBS)
 	./test_sstring
+
+# Struct layout contract for bindings (tests/abi_layout.h). The checks are
+# compile-time; the binary prints the layout and compares the legacy-header
+# view. It needs no library code, only the headers $(LIB_NAME) prepares.
+ABI_LAYOUT_SRCS = tests/test_abi_layout.c tests/abi_layout_legacy.c
+test_abi_layout: $(LIB_NAME) $(ABI_LAYOUT_SRCS) tests/abi_layout.h
+	$(CC) $(CFLAGS) -o test_abi_layout $(ABI_LAYOUT_SRCS)
+	./test_abi_layout
 
 test_seq: $(LIB_NAME) tests/test_seq.c
 	$(CC) $(CFLAGS) -o test_seq tests/test_seq.c $(LIB_NAME) $(LIBS)

@@ -43,7 +43,7 @@ jobs:
         run: brew install cmake nghttp2 brotli
       - name: Verify kqueue backend and focused suite
         run: |
-          make test_seq test_http_chunked test_mux test_test_client
+          make test_seq test_http_chunked test_mux test_test_client test_http_pipeline test_http_fairness test_abi_layout
           make -pn | grep -E '^IO_SRC[[:space:]]*=[[:space:]]*src/sys/io/kqueue\.c$'
 
   benchmark:
