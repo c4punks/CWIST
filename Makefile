@@ -818,6 +818,7 @@ TEST_TARGETS = test_worker_affinity \
                test_http_pipeline \
                test_test_client \
                test_multiport \
+               test_route_ctx \
                test_grpc \
                test_grpc_append_error \
                test_grpc_stream \
@@ -1426,6 +1427,10 @@ test_test_client: $(LIB_NAME) tests/test_test_client.c
 test_multiport: $(LIB_NAME) tests/test_multiport.c
 	$(CC) $(CFLAGS) -o test_multiport tests/test_multiport.c $(LIB_NAME) $(LIBS)
 	./test_multiport
+
+test_route_ctx: $(LIB_NAME) tests/test_route_ctx.c
+	$(CC) $(CFLAGS) -o test_route_ctx tests/test_route_ctx.c $(LIB_NAME) $(LIBS)
+	./test_route_ctx
 
 test_grpc: $(LIB_NAME) tests/test_grpc.c
 	$(CC) $(CFLAGS) -o test_grpc tests/test_grpc.c $(LIB_NAME) $(LIBS)

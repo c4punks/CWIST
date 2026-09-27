@@ -69,6 +69,49 @@ void user_handler(cwist_http_request *req, cwist_http_response *res) {
 cwist_app_get(app, "/users/:id", user_handler);
 ```
 
+### `cwist_app_get_ex` / `_post_ex` / `_put_ex` / `_delete_ex` / `_patch_ex`
+Register a route whose handler also receives a context pointer, so state can
+be bound to a route without globals (for example a closure from a language
+binding). Matching, `:param` paths, middleware and every transport behave
+exactly as for `cwist_app_get()`.
+
+```c
+typedef void (*cwist_handler_ex_func)(void *user_ctx, cwist_http_request *req,
+                                      cwist_http_response *res);
+typedef void (*cwist_handler_ctx_destroy_func)(void *user_ctx);
+
+cwist_error_t cwist_app_get_ex(cwist_app *app, const char *path, cwist_handler_ex_func handler,
+                               void *user_ctx, cwist_handler_ctx_destroy_func destroy);
+```
+
+Ownership of `user_ctx` passes to the app on every call. If `destroy` is not
+NULL it runs exactly once with `user_ctx`:
+
+- when the app is destroyed;
+- when the same method and path (one without `:param` segments) is
+  registered again, by any routing function, unless the new registration
+  passes the same non-NULL `user_ctx`;
+- immediately, when the registration fails. The function then returns INT16
+  `-1`; success is INT16 `0`.
+
+Multiport sub-apps share the context without owning it. Pass `destroy = NULL`
+to keep ownership with the caller. The handler can run on several worker
+threads at once, so a shared context needs its own synchronization.
+
+```c
+typedef struct { const char *greeting; } greeter;
+
+static void greet(void *user_ctx, cwist_http_request *req, cwist_http_response *res) {
+    const greeter *g = user_ctx;
+    (void)req;
+    cwist_sstring_assign(res->body, g->greeting);
+}
+
+greeter *g = cwist_alloc(sizeof(*g));
+g->greeting = "hello";
+cwist_app_get_ex(app, "/greet", greet, g, cwist_free);
+```
+
 ### `cwist_app_dispatch_memory`
 Runs the full router/middleware/handler pipeline on a raw HTTP/1.x request held
 in a memory buffer — no socket, thread, or event loop involved. The response is
