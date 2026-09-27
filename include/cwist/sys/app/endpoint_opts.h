@@ -42,4 +42,11 @@ static inline bool cwist_endpoint_has(cwist_endpoint_opt_t opts, cwist_endpoint_
     return (opts & flag) != 0;
 }
 
+/**
+ * @brief Out-of-line cwist_endpoint_has(), for callers that cannot use a
+ * `static inline` function, such as bindings generated from this header.
+ * @return true when any bit of @p flag is set in @p opts.
+ */
+bool cwist_endpoint_has_extern(cwist_endpoint_opt_t opts, cwist_endpoint_opt_t flag);
+
 #endif /* __CWIST_ENDPOINT_OPTS_H__ */

@@ -124,6 +124,17 @@ static inline bool cwist_error_is_ok(const cwist_error_t *err) {
 cwist_error_t make_error(cwist_errtype_t type);
 
 /**
+ * @brief Out-of-line cwist_error_is_ok(), for callers that cannot use a
+ * `static inline` function, such as bindings generated from this header.
+ *
+ * Returns the same result as cwist_error_is_ok() for every input, including
+ * NULL (success) and an unknown errtype (failure).
+ * @param err Error object to test (may be NULL).
+ * @return true when @p err represents success.
+ */
+bool cwist_error_is_ok_extern(const cwist_error_t *err);
+
+/**
  * @brief Release resources owned by an error value.
  * Currently only CWIST_ERR_JSON owns memory (the cJSON payload); all other
  * variants are no-ops. Safe on success values and on NULL.

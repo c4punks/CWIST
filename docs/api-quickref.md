@@ -6,6 +6,19 @@
 - `cwist_error_t make_error(cwist_errtype_t type)`
 - Creates a `cwist_error_t` with the requested error type.
 
+### `cwist_error_is_ok` / `cwist_error_is_ok_extern`
+- `static inline bool cwist_error_is_ok(const cwist_error_t *err)`
+- `bool cwist_error_is_ok_extern(const cwist_error_t *err)`
+- True when the active channel holds its zero/empty value (NULL counts as success). The
+  `_extern` form is the same check as a real symbol, for callers that cannot use a
+  `static inline` function, such as bindings generated from the headers.
+
+### Other exported inline helpers
+- `bool cwist_endpoint_has_extern(cwist_endpoint_opt_t opts, cwist_endpoint_opt_t flag)` is the
+  out-of-line `cwist_endpoint_has()`.
+- Every `static inline` helper in `include/cwist/` is either exported this way or listed with a
+  reason in `scripts/ci/check_inline_exports.py`, which CI runs.
+
 ## SString (`cwist_sstring`)
 
 ### Lifecycle
