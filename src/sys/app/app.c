@@ -369,12 +369,27 @@ typedef struct cwist_route_entry {
     bool has_params;
     cwist_http_method_t method;
     cwist_handler_func handler;
+    cwist_handler_ex_func handler_ex; ///< Set instead of handler by the _ex routes.
+    void *user_ctx;                   ///< Passed to handler_ex.
+    /** Releases user_ctx; NULL when this entry does not own it (caller-owned,
+     *  or a multiport clone sharing the root app's context). */
+    cwist_handler_ctx_destroy_func ctx_destroy;
     cwist_ws_handler_func ws_handler;
     cwist_ws_on_message_t ws_async_on_message;
     void *ws_async_user_data;
     cwist_endpoint_opt_t opts;
     struct cwist_route_entry *next;
 } cwist_route_entry;
+
+/** Handler half of a route registration: exactly one of handler, handler_ex
+ *  or ws_handler is set (or none, for cwist_app_ws_async()). */
+typedef struct {
+    cwist_handler_func handler;
+    cwist_handler_ex_func handler_ex;
+    void *user_ctx;
+    cwist_handler_ctx_destroy_func ctx_destroy;
+    cwist_ws_handler_func ws_handler;
+} cwist_route_target;
 
 struct cwist_route_table {
     size_t bucket_count;
@@ -403,9 +418,9 @@ typedef struct {
 
 static cwist_route_table *cwist_route_table_create(void);
 static void cwist_route_table_destroy(cwist_route_table *table);
-static void cwist_route_table_insert(cwist_route_table *table, const char *path, const char *name,
-                                     cwist_http_method_t method, cwist_handler_func handler,
-                                     cwist_ws_handler_func ws_handler, cwist_endpoint_opt_t opts);
+static bool cwist_route_table_insert(cwist_route_table *table, const char *path, const char *name,
+                                     cwist_http_method_t method, const cwist_route_target *target,
+                                     cwist_endpoint_opt_t opts);
 static cwist_route_entry *cwist_route_table_lookup(cwist_route_table *table,
                                                    cwist_http_method_t method, const char *path);
 static cwist_route_entry *cwist_route_table_match_params(cwist_route_table *table,
@@ -451,21 +466,41 @@ static size_t cwist_route_hash(cwist_http_method_t method, const char *path, siz
     return (size_t)(hash % bucket_count);
 }
 
+/* Run and forget an entry's context destructor, if it owns one. */
+static void cwist_route_entry_release_ctx(cwist_route_entry *entry) {
+    if (entry->ctx_destroy) entry->ctx_destroy(entry->user_ctx);
+    entry->user_ctx = NULL;
+    entry->ctx_destroy = NULL;
+}
+
+static void cwist_route_entry_set_target(cwist_route_entry *entry,
+                                         const cwist_route_target *target) {
+    entry->handler = target->handler;
+    entry->handler_ex = target->handler_ex;
+    entry->user_ctx = target->user_ctx;
+    entry->ctx_destroy = target->ctx_destroy;
+    entry->ws_handler = target->ws_handler;
+    entry->ws_async_on_message = NULL;
+    entry->ws_async_user_data = NULL;
+}
+
 static cwist_route_entry *cwist_route_entry_create(const char *path, const char *name,
                                                    cwist_http_method_t method,
-                                                   cwist_handler_func handler,
-                                                   cwist_ws_handler_func ws_handler,
+                                                   const cwist_route_target *target,
                                                    cwist_endpoint_opt_t opts) {
     cwist_route_entry *entry = (cwist_route_entry *)cwist_alloc(sizeof(cwist_route_entry));
     if (!entry) return NULL;
     entry->path = cwist_strdup(path ? path : "/");
-    entry->path_len = strlen(entry->path);
     entry->name = name ? cwist_strdup(name) : NULL;
+    if (!entry->path || (name && !entry->name)) {
+        cwist_free(entry->path);
+        cwist_free(entry->name);
+        cwist_free(entry);
+        return NULL;
+    }
+    entry->path_len = strlen(entry->path);
     entry->method = method;
-    entry->handler = handler;
-    entry->ws_handler = ws_handler;
-    entry->ws_async_on_message = NULL;
-    entry->ws_async_user_data = NULL;
+    cwist_route_entry_set_target(entry, target);
     entry->opts = opts;
     entry->has_params = route_has_params(entry->path);
     entry->next = NULL;
@@ -473,11 +508,12 @@ static cwist_route_entry *cwist_route_entry_create(const char *path, const char 
 }
 
 /**
- * @brief Destroy one route entry and its owned path string.
+ * @brief Destroy one route entry, its owned strings, and its owned context.
  * @param entry Route entry to release.
  */
 static void cwist_route_entry_free(cwist_route_entry *entry) {
     if (!entry) return;
+    cwist_route_entry_release_ctx(entry);
     cwist_free(entry->path);
     cwist_free(entry->name);
     cwist_free(entry);
@@ -522,18 +558,28 @@ static void cwist_route_table_destroy(cwist_route_table *table) {
     cwist_free(table);
 }
 
-static void cwist_route_table_insert(cwist_route_table *table, const char *path, const char *name,
-                                     cwist_http_method_t method, cwist_handler_func handler,
-                                     cwist_ws_handler_func ws_handler, cwist_endpoint_opt_t opts) {
-    if (!table || !path) return;
+/**
+ * @brief Add a route, or replace the target of an existing exact route.
+ *
+ * The table takes ownership of target->user_ctx when target->ctx_destroy is
+ * set; on failure the destructor runs before returning, so the caller never
+ * has to clean up a context it handed over.
+ * @return true when the route is in the table.
+ */
+static bool cwist_route_table_insert(cwist_route_table *table, const char *path, const char *name,
+                                     cwist_http_method_t method, const cwist_route_target *target,
+                                     cwist_endpoint_opt_t opts) {
     cwist_route_entry *entry =
-        cwist_route_entry_create(path, name, method, handler, ws_handler, opts);
-    if (!entry) return;
+        (table && path) ? cwist_route_entry_create(path, name, method, target, opts) : NULL;
+    if (!entry) {
+        if (target->ctx_destroy) target->ctx_destroy(target->user_ctx);
+        return false;
+    }
 
     if (entry->has_params) {
         entry->next = table->param_routes;
         table->param_routes = entry;
-        return;
+        return true;
     }
 
     size_t idx = cwist_route_hash(method, entry->path, entry->path_len, table->bucket_count);
@@ -541,19 +587,24 @@ static void cwist_route_table_insert(cwist_route_table *table, const char *path,
     cwist_route_entry *curr = *bucket;
     while (curr) {
         if (!curr->has_params && curr->method == method && strcmp(curr->path, entry->path) == 0) {
-            curr->handler = handler;
-            curr->ws_handler = ws_handler;
-            curr->ws_async_on_message = NULL;
-            curr->ws_async_user_data = NULL;
+            /* Re-registering the same non-NULL context keeps it alive; anything else
+             * releases the old one before the new target takes over. */
+            if (!target->user_ctx || curr->user_ctx != target->user_ctx) {
+                cwist_route_entry_release_ctx(curr);
+            }
+            cwist_route_entry_set_target(curr, target);
             curr->opts = opts;
+            /* The replacement entry never owned the context now in curr. */
+            entry->ctx_destroy = NULL;
             cwist_route_entry_free(entry);
-            return;
+            return true;
         }
         curr = curr->next;
     }
 
     entry->next = *bucket;
     *bucket = entry;
+    return true;
 }
 
 static cwist_route_entry *cwist_route_table_lookup(cwist_route_table *table,
@@ -1963,7 +2014,53 @@ static void add_route_named(cwist_app *app, const char *path, const char *name,
     if (opts == 0) {
         opts = CWIST_ENDPOINT_DEFAULT;
     }
-    cwist_route_table_insert(app->router, path, name, method, handler, NULL, opts);
+    const cwist_route_target target = {.handler = handler};
+    cwist_route_table_insert(app->router, path, name, method, &target, opts);
+}
+
+/* Shared body of the cwist_app_*_ex() registrations. The context is owned by
+ * the route table from here on, including on every failure path. */
+static cwist_error_t add_route_ex(cwist_app *app, const char *path, cwist_http_method_t method,
+                                  cwist_handler_ex_func handler, void *user_ctx,
+                                  cwist_handler_ctx_destroy_func destroy) {
+    cwist_error_t err = make_error(CWIST_ERR_INT16);
+    if (!app || !app->router || !handler) {
+        if (destroy) destroy(user_ctx);
+        err.error.err_i16 = -1;
+        return err;
+    }
+    const cwist_route_target target = {
+        .handler_ex = handler, .user_ctx = user_ctx, .ctx_destroy = destroy};
+    /* On failure the table has already released the context. */
+    bool ok =
+        cwist_route_table_insert(app->router, path, NULL, method, &target, CWIST_ENDPOINT_DEFAULT);
+    err.error.err_i16 = ok ? 0 : -1;
+    return err;
+}
+
+cwist_error_t cwist_app_get_ex(cwist_app *app, const char *path, cwist_handler_ex_func handler,
+                               void *user_ctx, cwist_handler_ctx_destroy_func destroy) {
+    return add_route_ex(app, path, CWIST_HTTP_GET, handler, user_ctx, destroy);
+}
+
+cwist_error_t cwist_app_post_ex(cwist_app *app, const char *path, cwist_handler_ex_func handler,
+                                void *user_ctx, cwist_handler_ctx_destroy_func destroy) {
+    return add_route_ex(app, path, CWIST_HTTP_POST, handler, user_ctx, destroy);
+}
+
+cwist_error_t cwist_app_put_ex(cwist_app *app, const char *path, cwist_handler_ex_func handler,
+                               void *user_ctx, cwist_handler_ctx_destroy_func destroy) {
+    return add_route_ex(app, path, CWIST_HTTP_PUT, handler, user_ctx, destroy);
+}
+
+cwist_error_t cwist_app_delete_ex(cwist_app *app, const char *path, cwist_handler_ex_func handler,
+                                  void *user_ctx, cwist_handler_ctx_destroy_func destroy) {
+    return add_route_ex(app, path, CWIST_HTTP_DELETE, handler, user_ctx, destroy);
+}
+
+cwist_error_t cwist_app_patch_ex(cwist_app *app, const char *path, cwist_handler_ex_func handler,
+                                 void *user_ctx, cwist_handler_ctx_destroy_func destroy) {
+    return add_route_ex(app, path, CWIST_HTTP_PATCH, handler, user_ctx, destroy);
 }
 
 static void add_route(cwist_app *app, const char *path, cwist_http_method_t method,
@@ -2072,7 +2169,8 @@ void cwist_app_patch_named(cwist_app *app, const char *path, const char *name,
  */
 void cwist_app_ws(cwist_app *app, const char *path, cwist_ws_handler_func handler) {
     if (!app || !app->router || !path) return;
-    cwist_route_table_insert(app->router, path, NULL, CWIST_HTTP_GET, NULL, handler,
+    const cwist_route_target target = {.ws_handler = handler};
+    cwist_route_table_insert(app->router, path, NULL, CWIST_HTTP_GET, &target,
                              CWIST_ENDPOINT_DEFAULT);
 }
 
@@ -2086,7 +2184,8 @@ void cwist_app_ws(cwist_app *app, const char *path, cwist_ws_handler_func handle
 void cwist_app_ws_async(cwist_app *app, const char *path, cwist_ws_on_message_t on_message,
                         void *user_data) {
     if (!app || !app->router || !path || !on_message) return;
-    cwist_route_table_insert(app->router, path, NULL, CWIST_HTTP_GET, NULL, NULL,
+    const cwist_route_target target = {0};
+    cwist_route_table_insert(app->router, path, NULL, CWIST_HTTP_GET, &target,
                              CWIST_ENDPOINT_DEFAULT);
     cwist_route_entry *entry = cwist_route_table_lookup(app->router, CWIST_HTTP_GET, path);
     if (entry) {
@@ -2147,7 +2246,8 @@ void cwist_app_ws_opt(cwist_app *app, const char *path, cwist_ws_handler_func ha
     if (opts == 0) {
         opts = CWIST_ENDPOINT_DEFAULT;
     }
-    cwist_route_table_insert(app->router, path, NULL, CWIST_HTTP_GET, NULL, handler, opts);
+    const cwist_route_target target = {.ws_handler = handler};
+    cwist_route_table_insert(app->router, path, NULL, CWIST_HTTP_GET, &target, opts);
 }
 
 static bool match_path(const char *pattern, const char *actual, cwist_query_map *params) {
@@ -2479,6 +2579,23 @@ static void cwist_asset_handler(cwist_http_request *req, cwist_http_response *re
     cwist_assets_respond(req, res, ctx ? (const cwist_asset_match *)ctx->handler_data : NULL);
 }
 
+/* Final handler for cwist_app_*_ex() routes: execute_route() passes the route
+ * entry as handler_data, which the middleware executor keeps reachable. */
+static void cwist_route_ex_handler(cwist_http_request *req, cwist_http_response *res) {
+    mw_executor_ctx *ctx = (mw_executor_ctx *)req->private_data;
+    cwist_route_entry *route = ctx ? (cwist_route_entry *)ctx->handler_data : NULL;
+    if (route && route->handler_ex) route->handler_ex(route->user_ctx, req, res);
+}
+
+static void execute_route(cwist_app *app, cwist_http_request *req, cwist_http_response *res,
+                          cwist_route_entry *route) {
+    if (route->handler_ex) {
+        execute_chain(app, req, res, cwist_route_ex_handler, route);
+    } else {
+        execute_chain(app, req, res, route->handler, NULL);
+    }
+}
+
 static void internal_route_handler(cwist_app *app, cwist_http_request *req,
                                    cwist_http_response *res) {
     if (!req || !app || !app->router) return;
@@ -2554,7 +2671,7 @@ static void internal_route_handler(cwist_app *app, cwist_http_request *req,
             cwist_sstring_assign(res->status_text, "Not Implemented");
             cwist_sstring_assign(res->body, "WebSocket async handler requires C1M mode");
         } else {
-            execute_chain(app, req, res, found_route->handler, NULL);
+            execute_route(app, req, res, found_route);
         }
         return;
     }
@@ -2566,7 +2683,7 @@ static void internal_route_handler(cwist_app *app, cwist_http_request *req,
     if (found_route) {
         req->endpoint_opts = found_route->opts ? found_route->opts : CWIST_ENDPOINT_DEFAULT;
         if (res) res->endpoint_opts = req->endpoint_opts;
-        execute_chain(app, req, res, found_route->handler, NULL);
+        execute_route(app, req, res, found_route);
         return;
     }
 
@@ -3510,6 +3627,17 @@ static void cwist_multiport_destroy_owned_subapps(cwist_app *root) {
  * @param src Source route table.
  * @return Deep-cloned table, or NULL on failure.
  */
+/* A cloned route shares the source's user context but never owns it: the
+ * source app outlives its multiport sub-apps and releases the context once. */
+static cwist_route_target cwist_route_clone_target(const cwist_route_entry *entry) {
+    cwist_route_target target = {.handler = entry->handler,
+                                 .handler_ex = entry->handler_ex,
+                                 .user_ctx = entry->user_ctx,
+                                 .ctx_destroy = NULL,
+                                 .ws_handler = entry->ws_handler};
+    return target;
+}
+
 static cwist_route_table *cwist_route_table_clone(cwist_route_table *src) {
     if (!src) return cwist_route_table_create();
     cwist_route_table *dst = cwist_route_table_create();
@@ -3517,13 +3645,15 @@ static cwist_route_table *cwist_route_table_clone(cwist_route_table *src) {
 
     for (size_t i = 0; i < src->bucket_count; i++) {
         for (cwist_route_entry *entry = src->buckets[i]; entry; entry = entry->next) {
-            cwist_route_table_insert(dst, entry->path, entry->name, entry->method, entry->handler,
-                                     entry->ws_handler, entry->opts);
+            cwist_route_target target = cwist_route_clone_target(entry);
+            cwist_route_table_insert(dst, entry->path, entry->name, entry->method, &target,
+                                     entry->opts);
         }
     }
     for (cwist_route_entry *entry = src->param_routes; entry; entry = entry->next) {
-        cwist_route_table_insert(dst, entry->path, entry->name, entry->method, entry->handler,
-                                 entry->ws_handler, entry->opts);
+        cwist_route_target target = cwist_route_clone_target(entry);
+        cwist_route_table_insert(dst, entry->path, entry->name, entry->method, &target,
+                                 entry->opts);
     }
     return dst;
 }

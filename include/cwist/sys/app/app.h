@@ -32,6 +32,24 @@ struct cwist_rdbms_runtime;
 typedef void (*cwist_handler_func)(cwist_http_request *req, cwist_http_response *res);
 
 /**
+ * @brief Route handler that also receives the context it was registered with.
+ *
+ * Registered through the `_ex` routing functions (cwist_app_get_ex() and
+ * friends). @p user_ctx comes first, matching cwist_http2_request_handler_func.
+ * @param user_ctx The pointer passed at registration.
+ * @param req Pointer to the HTTP request object.
+ * @param res Pointer to the HTTP response object.
+ */
+typedef void (*cwist_handler_ex_func)(void *user_ctx, cwist_http_request *req,
+                                      cwist_http_response *res);
+
+/**
+ * @brief Releases a route's user context once the route no longer needs it.
+ * @param user_ctx The pointer passed at registration.
+ */
+typedef void (*cwist_handler_ctx_destroy_func)(void *user_ctx);
+
+/**
  * @brief Function pointer type for WebSocket handlers.
  * @param ws Pointer to the WebSocket context.
  */
@@ -398,6 +416,47 @@ void cwist_app_put(cwist_app *app, const char *path, cwist_handler_func handler)
 void cwist_app_delete(cwist_app *app, const char *path, cwist_handler_func handler);
 void cwist_app_patch(cwist_app *app, const char *path, cwist_handler_func handler);
 void cwist_app_ws(cwist_app *app, const char *path, cwist_ws_handler_func handler);
+
+/**
+ * @brief Registers a GET route whose handler receives a user context.
+ *
+ * Behaves like cwist_app_get() (exact and `:param` paths, middleware, every
+ * transport), but the handler is called as `handler(user_ctx, req, res)`.
+ * This lets a caller bind state to a route without globals, for example a
+ * closure from a language binding.
+ *
+ * Ownership of @p user_ctx passes to the app on every call. When @p destroy
+ * is not NULL it is called exactly once with @p user_ctx:
+ * - when the app is destroyed;
+ * - when the same method and path (one without `:param` segments) is
+ *   registered again, by any routing function, before the new registration
+ *   takes over (unless it passes the same non-NULL @p user_ctx);
+ * - immediately, if the registration fails.
+ * Multiport sub-apps share the context without owning it. Pass NULL for
+ * @p destroy to keep ownership with the caller.
+ *
+ * @param app Application being configured.
+ * @param path Route path; may contain `:param` segments.
+ * @param handler Handler invoked for matching requests.
+ * @param user_ctx Opaque pointer passed to @p handler (may be NULL).
+ * @param destroy Optional destructor for @p user_ctx.
+ * @return INT16 0 on success; INT16 -1 when @p app, @p path or @p handler is
+ *         NULL or the route could not be allocated.
+ */
+cwist_error_t cwist_app_get_ex(cwist_app *app, const char *path, cwist_handler_ex_func handler,
+                               void *user_ctx, cwist_handler_ctx_destroy_func destroy);
+/** @brief POST counterpart of cwist_app_get_ex(). */
+cwist_error_t cwist_app_post_ex(cwist_app *app, const char *path, cwist_handler_ex_func handler,
+                                void *user_ctx, cwist_handler_ctx_destroy_func destroy);
+/** @brief PUT counterpart of cwist_app_get_ex(). */
+cwist_error_t cwist_app_put_ex(cwist_app *app, const char *path, cwist_handler_ex_func handler,
+                               void *user_ctx, cwist_handler_ctx_destroy_func destroy);
+/** @brief DELETE counterpart of cwist_app_get_ex(). */
+cwist_error_t cwist_app_delete_ex(cwist_app *app, const char *path, cwist_handler_ex_func handler,
+                                  void *user_ctx, cwist_handler_ctx_destroy_func destroy);
+/** @brief PATCH counterpart of cwist_app_get_ex(). */
+cwist_error_t cwist_app_patch_ex(cwist_app *app, const char *path, cwist_handler_ex_func handler,
+                                 void *user_ctx, cwist_handler_ctx_destroy_func destroy);
 
 /**
  * @brief Register a callback-shaped non-blocking WebSocket endpoint (C1M mode).

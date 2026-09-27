@@ -106,6 +106,7 @@ test_log
 test_metrics
 test_migrate
 test_multiport
+test_route_ctx
 test_proto_desc
 test_rate_limit
 test_redis
