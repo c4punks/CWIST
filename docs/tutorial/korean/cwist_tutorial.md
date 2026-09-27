@@ -1,49 +1,47 @@
-# CWIST Web Development Tutorial (A to Z)
+# CWIST 웹 개발 튜토리얼 (A to Z)
 
-> 한국어: [korean/cwist_tutorial.md](korean/cwist_tutorial.md)
+Spring Boot나 ReactJS에 익숙한 개발자라면 환영합니다! CWIST는 C 언어로 작성된 고성능, 초경량 웹 프레임워크입니다. 이 튜토리얼은 CWIST의 철학과 구조를 빠르게 파악하고, 실제 웹 애플리케이션 개발에 즉시 활용할 수 있도록 작성되었습니다.
 
-Welcome, especially if you already know Spring Boot or ReactJS! CWIST is a high-performance, ultra-lightweight web framework written in C. This tutorial helps you quickly grasp CWIST's philosophy and structure so you can put it to work on real web applications right away.
-
-> **Philosophy**: "Explicit, lightweight, and safe." CWIST keeps magic to a minimum and uses 100% of C's performance while still offering a modern web development experience (routing, JSON, DB, JWT, WebSocket).
+> **철학**: "명시적이고, 가볍고, 안전하게." CWIST는 마법(Magic)을 최소화하고, C의 성능을 100% 활용하면서도 현대적인 웹 개발 경험(라우팅, JSON, DB, JWT, Websocket)을 제공합니다.
 
 ---
 
-## Table of Contents
-1. [Hello World: Starting Your First Server](#1-hello-world-starting-your-first-server)
-2. [Routing and Handlers (Mux Router)](#2-routing-and-handlers-mux-router)
-3. [JSON Parsing and Zod Schema Validation](#3-json-parsing-and-zod-schema-validation)
-4. [Middleware (CORS, Logging)](#4-middleware-cors-logging)
-5. [Databases and Migrations (SQLite)](#5-databases-and-migrations-sqlite)
-6. [Authentication (JWT and DB Encryption)](#6-authentication-jwt-and-db-encryption)
-7. [PQC TLS (Post-Quantum Hybrid Key Exchange)](#7-pqc-tls-post-quantum-hybrid-key-exchange)
-8. [WebSocket Integration (Real-Time Bidirectional Communication)](#8-websocket-integration-real-time-bidirectional-communication)
-9. [Template Engine and Static File Serving](#9-template-engine-and-static-file-serving)
-10. [Dynamic CSS Composer (WASM and SSR)](#10-dynamic-css-composer-wasm-and-ssr)
+## 목차
+1. [Hello World: 첫 서버 띄우기](#1-hello-world-첫-서버-띄우기)
+2. [라우팅과 핸들러 (Mux Router)](#2-라우팅과-핸들러-mux-router)
+3. [JSON 파싱과 Zod 스키마 검증](#3-json-파싱과-zod-스키마-검증)
+4. [미들웨어 (CORS, Logging)](#4-미들웨어-cors-logging)
+5. [데이터베이스와 마이그레이션 (SQLite)](#5-데이터베이스와-마이그레이션-sqlite)
+6. [인증 (JWT 및 DB 암호화)](#6-인증-jwt-및-db-암호화)
+7. [PQC TLS (양자내성 하이브리드 키 교환)](#7-pqc-tls-양자내성-하이브리드-키-교환)
+8. [웹소켓 연동 (실시간 양방향 통신)](#8-웹소켓-연동-실시간-양방향-통신)
+9. [템플릿 엔진과 정적 파일 제공](#9-템플릿-엔진과-정적-파일-제공)
+10. [동적 CSS 합성기 (WASM 및 SSR)](#10-동적-css-합성기-wasm-및-ssr)
 
 ---
 
-## 1. Hello World: Starting Your First Server
+## 1. Hello World: 첫 서버 띄우기
 
-The heart of CWIST is the `cwist_app` object. Much like Spring's `ApplicationContext`, it manages the application's lifecycle.
+CWIST의 핵심은 `cwist_app` 객체입니다. Spring의 `ApplicationContext`와 유사하게 앱의 수명 주기를 관리합니다.
 
 ```c
 #include <cwist/sys/app/app.h>
 #include <cwist/core/sstring/sstring.h>
 
-// Request handler (Spring's @GetMapping)
+// 요청 핸들러 (Spring의 @GetMapping)
 void hello_handler(cwist_http_request *req, cwist_http_response *res) {
     cwist_sstring_assign(res->body, "Hello, CWIST World!");
     cwist_http_header_add(&res->headers, "Content-Type", "text/plain");
 }
 
 int main() {
-    // 1. Create the app
+    // 1. 앱 생성
     cwist_app *app = cwist_app_create();
     
-    // 2. Configure the router
+    // 2. 라우터 설정
     cwist_app_get(app, "/hello", hello_handler);
     
-    // 3. Run the server on port 8080 (blocking)
+    // 3. 포트 8080에서 서버 실행 (블로킹)
     cwist_app_listen(app, 8080);
     
     cwist_app_destroy(app);
@@ -53,20 +51,20 @@ int main() {
 
 ---
 
-## 2. Routing and Handlers (Mux Router)
+## 2. 라우팅과 핸들러 (Mux Router)
 
-This section shows how to handle dynamic paths (path parameters) and query strings (query parameters). CWIST offers an intuitive pattern very similar to React Router or Express.
+동적 경로(Path Parameter)와 쿼리 문자열(Query Parameter)을 처리하는 방법입니다. React Router나 Express와 매우 유사한 직관적인 패턴을 제공합니다.
 
 ```c
 #include <cwist/app.h>
 #include <stdio.h>
 
-// Example: /users/:id?role=admin
+// 예: /users/:id?role=admin
 void user_profile_handler(cwist_http_request *req, cwist_http_response *res) {
-    // Read the path parameter (:id)
+    // Path 파라미터 읽기 (:id)
     const char *user_id = cwist_query_map_get(req->path_params, "id");
     
-    // Read the query parameter (?role=admin)
+    // Query 파라미터 읽기 (?role=admin)
     const char *role = cwist_query_map_get(req->query_params, "role");
 
     char buf[256];
@@ -78,7 +76,7 @@ void user_profile_handler(cwist_http_request *req, cwist_http_response *res) {
 int main() {
     cwist_app *app = cwist_app_create();
     
-    // Register a dynamic route
+    // 동적 라우팅 등록
     cwist_app_get(app, "/users/:id", user_profile_handler);
     // ...
 }
@@ -86,16 +84,16 @@ int main() {
 
 ---
 
-## 3. JSON Parsing and Zod Schema Validation
+## 3. JSON 파싱과 Zod 스키마 검증
 
-A powerful runtime schema validator inspired by `zod` from the TypeScript world. It safely parses the JSON sent by the client and validates its types.
+TypeScript 진영의 `zod`에서 영감을 받은 강력한 런타임 스키마 검증기입니다. 클라이언트가 보낸 JSON을 안전하게 파싱하고 타입을 검증합니다.
 
 ```c
 #include <cwist/app.h>
 #include <cwist/core/utils/zod.h>
 #include <cjson/cJSON.h>
 
-// 1. Define the schema (name is a required string, age is a required integer)
+// 1. 스키마 정의 (name은 필수 문자열, age는 필수 정수)
 static const cwist_schema_field_t user_fields[] = {
     {"name", {NULL}, CWIST_FIELD_STRING, true},
     {"age", {NULL}, CWIST_FIELD_INT, true},
@@ -103,7 +101,7 @@ static const cwist_schema_field_t user_fields[] = {
 static const cwist_schema_t user_schema = {user_fields, 2};
 
 void create_user_handler(cwist_http_request *req, cwist_http_response *res) {
-    // 2. Validate (Body -> JSON)
+    // 2. 검증 (Body -> JSON)
     cJSON *parsed_json = NULL;
     const char *raw = (req->body && req->body->data) ? req->body->data : "";
     cwist_zod_result_t z_res = cwist_zod_parse(raw, &user_schema, &parsed_json);
@@ -117,7 +115,7 @@ void create_user_handler(cwist_http_request *req, cwist_http_response *res) {
 
     res->status_code = CWIST_HTTP_CREATED;
 
-    // 3. Build the JSON response (cJSON builder pattern)
+    // 3. JSON 응답 생성 (cJSON Builder 패턴)
     cJSON *reply = cJSON_CreateObject();
     cJSON_AddStringToObject(reply, "status", "User created");
     cJSON_AddStringToObject(reply, "name", cJSON_GetObjectItem(parsed_json, "name")->valuestring);
@@ -134,19 +132,19 @@ void create_user_handler(cwist_http_request *req, cwist_http_response *res) {
 
 ---
 
-## 4. Middleware (CORS, Logging)
+## 4. 미들웨어 (CORS, Logging)
 
-You can easily build a pipeline that every request passes through (Spring's Interceptor, Express's Middleware).
+모든 요청을 거쳐가는 파이프라인(Spring의 Interceptor, Express의 Middleware)을 쉽게 구축할 수 있습니다.
 
 ```c
 #include <cwist/app.h>
 
-// Middleware for CORS handling: calling next proceeds to the next stage (the next middleware or the handler)
+// CORS 처리를 위한 미들웨어: next를 호출하면 다음 단계(다음 미들웨어 또는 핸들러)로 진행
 void cors_middleware(cwist_http_request *req, cwist_http_response *res, cwist_handler_func next) {
     cwist_http_header_add(&res->headers, "Access-Control-Allow-Origin", "*");
     cwist_http_header_add(&res->headers, "Access-Control-Allow-Methods", "GET, POST, OPTIONS");
 
-    // Respond immediately to OPTIONS requests (not calling next stops the chain)
+    // OPTIONS 요청 시 바로 응답 (next를 호출하지 않으면 체인 중단)
     if (req->method == CWIST_HTTP_OPTIONS) {
         res->status_code = CWIST_HTTP_NO_CONTENT;
         return;
@@ -158,7 +156,7 @@ void cors_middleware(cwist_http_request *req, cwist_http_response *res, cwist_ha
 int main() {
     cwist_app *app = cwist_app_create();
 
-    // Register the middleware (applied globally)
+    // 미들웨어 등록 (전역 적용)
     cwist_app_use(app, cors_middleware);
     // ...
 }
@@ -166,9 +164,9 @@ int main() {
 
 ---
 
-## 5. Databases and Migrations (SQLite)
+## 5. 데이터베이스와 마이그레이션 (SQLite)
 
-CWIST fully supports embedded SQLite and provides a connection pool and migration tooling tied to the app lifecycle.
+CWIST는 내장형 SQLite를 완벽히 지원하며, 앱 라이프사이클에 연결된 커넥션 풀 및 마이그레이션 도구를 제공합니다.
 
 ```c
 #include <cwist/app.h>
@@ -176,7 +174,7 @@ CWIST fully supports embedded SQLite and provides a connection pool and migratio
 #include <cwist/core/db/migrate.h>
 
 void get_users_handler(cwist_http_request *req, cwist_http_response *res) {
-    // req->db is the DB instance attached to the app with cwist_app_use_db()
+    // req->db는 cwist_app_use_db()로 앱에 연결한 DB 인스턴스
     cwist_db *db = req->db;
 
     sqlite3_stmt *stmt = NULL;
@@ -202,7 +200,7 @@ void get_users_handler(cwist_http_request *req, cwist_http_response *res) {
     cJSON_Delete(users_array);
 }
 
-// Schema migrations (each applied exactly once, in version order)
+// 스키마 마이그레이션 (version 순서대로 한 번씩만 적용)
 static const cwist_migration_t migrations[] = {
     {.version = 1,
      .name = "create_users",
@@ -217,7 +215,7 @@ static const cwist_migration_t migrations[] = {
 int main() {
     cwist_app *app = cwist_app_create();
 
-    // Connect the DB ("file.db" or ":memory:")
+    // DB 연결 ("file.db" 또는 ":memory:")
     cwist_error_t err = cwist_app_use_db(app, "app_data.db");
     if (!cwist_error_is_ok(&err)) {
         cwist_error_dispose(&err);
@@ -225,7 +223,7 @@ int main() {
         return 1;
     }
 
-    // Apply the schema migrations automatically
+    // 스키마 마이그레이션 자동 적용
     if (cwist_migrate_up(cwist_app_get_db(app)->conn, migrations, 2) != CWIST_MIGRATE_OK) {
         cwist_app_destroy(app);
         return 1;
@@ -240,9 +238,9 @@ int main() {
 
 ---
 
-## 6. Authentication (JWT and DB Encryption)
+## 6. 인증 (JWT 및 DB 암호화)
 
-Stateless JWT authentication, a must for the modern web, is supported through built-in functions.
+현대 웹의 필수인 Stateless JWT 인증을 내장 함수로 지원합니다.
 
 ```c
 #include <cwist/app.h>
@@ -252,7 +250,7 @@ Stateless JWT authentication, a must for the modern web, is supported through bu
 
 #define SECRET_KEY "my_super_secret"
 
-// Issue a JWT on successful login
+// 로그인 성공 시 JWT 발급
 void login_handler(cwist_http_request *req, cwist_http_response *res) {
     cJSON *payload = cJSON_CreateObject();
     cJSON_AddStringToObject(payload, "user_id", "12345");
@@ -260,7 +258,7 @@ void login_handler(cwist_http_request *req, cwist_http_response *res) {
     char *payload_json = cJSON_PrintUnformatted(payload);
     cJSON_Delete(payload);
 
-    // Create a token valid for 3600 seconds (1 hour); the exp claim is added automatically
+    // 3600초(1시간) 유효기간의 토큰 생성 (exp 클레임 자동 추가)
     char *token = cwist_jwt_sign(payload_json, SECRET_KEY, 3600);
     cJSON_free(payload_json);
 
@@ -272,22 +270,22 @@ void login_handler(cwist_http_request *req, cwist_http_response *res) {
     cwist_free(token);
 }
 
-// Middleware that verifies the JWT on API requests
+// API 요청 시 JWT 검증 미들웨어
 void auth_middleware(cwist_http_request *req, cwist_http_response *res, cwist_handler_func next) {
     const char *auth_header = cwist_http_header_get(req->headers, "Authorization");
 
     if (auth_header && strncmp(auth_header, "Bearer ", 7) == 0) {
-        // Returns a claims object if the signature and exp check out, NULL otherwise
+        // 서명과 exp 검증에 성공하면 클레임 객체, 실패하면 NULL
         cwist_jwt_claims *claims = cwist_jwt_verify(auth_header + 7, SECRET_KEY);
         if (claims) {
-            // Token is valid, let it through! (e.g. cwist_jwt_claims_get(claims, "role"))
+            // 토큰 유효함, 통과! (예: cwist_jwt_claims_get(claims, "role"))
             cwist_jwt_claims_destroy(claims);
             if (next) next(req, res);
             return;
         }
     }
 
-    // Respond 401 on failure (not calling next stops the chain)
+    // 실패 시 401 응답 (next를 호출하지 않으면 체인 중단)
     res->status_code = CWIST_HTTP_UNAUTHORIZED;
     cwist_sstring_assign(res->body, "{\"error\": \"Unauthorized\"}");
 }
@@ -295,9 +293,9 @@ void auth_middleware(cwist_http_request *req, cwist_http_response *res, cwist_ha
 
 ---
 
-## 7. PQC TLS (Post-Quantum Hybrid Key Exchange)
+## 7. PQC TLS (양자내성 하이브리드 키 교환)
 
-CWIST can enable post-quantum hybrid TLS with a single line of code. It is a hybrid KEM that combines classic X25519 ECDH with the NIST-standard ML-KEM-768 (Kyber family), so the key exchange stays secure even against quantum computers.
+CWIST는 단 한 줄의 코드로 양자내성(Post-Quantum) 하이브리드 TLS를 활성화할 수 있습니다. 이는 기존 X25519 ECDH에 NIST 표준 ML-KEM-768(Kyber 계열)을 결합한 hybrid KEM 방식으로, 양자 컴퓨터 환경에서도 키 교환이 안전합니다.
 
 ```c
 #include <cwist/sys/app/app.h>
@@ -305,47 +303,47 @@ CWIST can enable post-quantum hybrid TLS with a single line of code. It is a hyb
 int main() {
     cwist_app *app = cwist_app_create();
 
-    // Enable HTTPS
+    // HTTPS 활성화
     cwist_app_use_https(app, "server.crt", "server.key");
 
-    // Enable the PQC hybrid layer: one line is all it takes
+    // PQC 하이브리드 레이어 활성화 — 한 줄이면 충분
     cwist_app_use_pqc_layer(app, true);
 
-    // Every TLS 1.3 connection now uses the X25519MLKEM768:X25519:P-256 groups.
-    // TLS 1.2 and below are disabled automatically.
+    // 이제 모든 TLS 1.3 연결은 X25519MLKEM768:X25519:P-256 그룹을 사용합니다.
+    // TLS 1.2 이하는 자동 비활성화됩니다.
     cwist_app_listen(app, 8443);
     cwist_app_destroy(app);
     return 0;
 }
 ```
 
-### Security Policy Summary
+### 보안 정책 요약
 
-| Item | Setting |
+| 항목 | 설정 |
 |------|------|
 | Key Exchange Group | `X25519MLKEM768:X25519:P-256` |
-| Minimum TLS version | 1.3 |
-| Legacy TLS | Disabled (1.0, 1.1, 1.2 removed) |
-| Downgrade protection | Enabled |
+| 최소 TLS 버전 | 1.3 |
+| 레거시 TLS | 비활성화 (1.0, 1.1, 1.2 제거) |
+| downgrade 보호 | 활성화 |
 
-> **Note**: This setting applies only to key exchange at the **transport layer**. Switching certificate signatures to PQC as well would require a separate feature such as `cwist_app_use_pqc_cert()`, which is still considered a step too far for the current ecosystem.
+> **참고**: 이 설정은 **transport 계층**의 키 교환에만 적용됩니다. 인증서 서명(signature)까지 PQC로 전환하려면 별도의 `cwist_app_use_pqc_cert()` 같은 기능이 필요하며, 이는 현재 생태계에서 아직 과도한 단계로 간주됩니다.
 
 ---
 
-## 8. WebSocket Integration (Real-Time Bidirectional Communication)
+## 8. 웹소켓 연동 (실시간 양방향 통신)
 
-CWIST can easily upgrade HTTP traffic to WebSocket on the same port. Once you register a path with `cwist_app_ws()`, the framework handles the upgrade handshake and your handler only deals with the connected `cwist_websocket`.
+CWIST는 동일한 포트에서 HTTP 통신을 WebSocket으로 쉽게 업그레이드 할 수 있습니다. `cwist_app_ws()`로 경로를 등록하면 업그레이드 핸드셰이크는 프레임워크가 처리하고, 핸들러는 연결된 `cwist_websocket`만 다룹니다.
 
 ```c
 #include <cwist/app.h>
 #include <cwist/net/websocket/websocket.h>
 #include <stdio.h>
 
-// Called once per connection. The framework handles the upgrade (101 response),
-// and the connection is cleaned up when this function returns.
+// 연결 하나당 한 번 호출됩니다. 업그레이드(101 응답)는 프레임워크가 처리하며,
+// 이 함수가 반환하면 연결이 정리됩니다.
 void chat_handler(cwist_websocket *ws) {
     cwist_ws_frame *frame;
-    // NULL when the connection closes or errors (PONG replies to PING are automatic)
+    // 연결이 닫히거나 오류가 나면 NULL (PING에 대한 PONG 응답은 자동)
     while ((frame = cwist_websocket_receive(ws)) != NULL) {
         if (frame->opcode == CWIST_WS_FRAME_CLOSE) {
             cwist_websocket_frame_destroy(frame);
@@ -353,7 +351,7 @@ void chat_handler(cwist_websocket *ws) {
         }
         if (frame->opcode == CWIST_WS_FRAME_TEXT) {
             printf("Received: %.*s\n", (int)frame->payload_len, (const char *)frame->payload);
-            // Echo reply (send it back to the client)
+            // 에코 응답 (클라이언트로 다시 전송)
             cwist_websocket_send(ws, CWIST_WS_FRAME_TEXT, frame->payload, frame->payload_len);
         }
         cwist_websocket_frame_destroy(frame);
@@ -372,9 +370,9 @@ int main() {
 
 ---
 
-## 9. Template Engine and Static File Serving
+## 9. 템플릿 엔진과 정적 파일 제공
 
-Useful when building an HTML-based SSR (Server-Side Rendering) project or serving a React build output (static files).
+HTML 기반의 SSR(Server-Side Rendering) 프로젝트를 구축하거나, React의 빌드 결과물(정적 파일)을 서비스할 때 유용합니다.
 
 ```c
 #include <cwist/app.h>
@@ -384,16 +382,16 @@ Useful when building an HTML-based SSR (Server-Side Rendering) project or servin
 void render_home_handler(cwist_http_request *req, cwist_http_response *res) {
     (void)req;
 
-    // Inject data (e.g. substitute the {{ title }} variable)
+    // 데이터 주입 (예: {{ title }} 변수 치환)
     cJSON *context = cJSON_CreateObject();
     cJSON_AddStringToObject(context, "title", "CWIST Homepage");
     cJSON_AddStringToObject(context, "user", "Developer");
 
-    // Read the template file + render it
+    // 템플릿 파일 읽기 + 렌더링
     cwist_sstring *output = cwist_template_render_file("views/index.html", context);
     cJSON_Delete(context);
 
-    // Respond after rendering
+    // 렌더링 후 응답
     if (output) {
         cwist_sstring_assign(res->body, output->data);
         cwist_sstring_destroy(output);
@@ -409,8 +407,8 @@ int main() {
 
     cwist_app_get(app, "/", render_home_handler);
 
-    // Mount a static directory (for serving React/Vue build output)
-    // Requests to the "/public" URL are served files from the "./public" folder
+    // 정적 디렉토리 마운트 (React/Vue 빌드 결과물 서빙 시)
+    // "/public" URL로 들어오면 "./public" 폴더의 파일을 제공
     cwist_app_static(app, "/public", "./public");
 
     cwist_app_listen(app, 8080);
@@ -421,14 +419,14 @@ int main() {
 
 ---
 
-## 10. Dynamic CSS Composer (WASM and SSR)
+## 10. 동적 CSS 합성기 (WASM 및 SSR)
 
-Going beyond a plain backend, CWIST builds on C's strong numeric computation to ship a **CSS Composer that synthesizes a design system at runtime**. It mathematically derives Hover/Active states from a color's lightness and computes roundness and spacing dynamically.
+CWIST는 단순 백엔드 역할을 넘어, C 언어의 강력한 수학적 연산력을 바탕으로 **디자인 시스템을 런타임에 합성해내는 CSS Composer** 기능을 내장하고 있습니다. 색상의 명도(Lightness)를 수학적으로 추론하여 Hover/Active 상태를 만들고, 곡률(Roundness)과 여백(Spacing)을 동적으로 계산합니다.
 
-Here are two typical ways to use it.
+이를 활용하는 두 가지 대표적인 방식을 소개합니다.
 
-### Approach A: 100% Server-Side Rendering (SSR)
-The server generates theme CSS dynamically and injects it at render time. This is very useful for offering per-user custom themes.
+### 방법 A: 100% Server-Side Rendering (SSR)
+서버에서 동적으로 테마 CSS를 생성하여 렌더링 시점에 주입하는 방식입니다. 사용자별 커스텀 테마를 제공할 때 매우 유용합니다.
 
 ```c
 #include <cwist/app.h>
@@ -438,17 +436,17 @@ void theme_css_handler(cwist_http_request *req, cwist_http_response *res) {
     cwist_css_config cfg;
     cwist_css_config_init(&cfg);
 
-    // Parse the hex code from the query parameter and set it as the primary color
+    // 쿼리 파라미터로 받은 헥스(Hex) 코드를 파싱하여 메인 컬러 지정
     const char *color = cwist_query_map_get(req->query_params, "color");
     if (color) {
         cfg.primary_color = cwist_color_hex_to_rgb(color);
     }
     
-    // Set whether dark mode is on
+    // 다크모드 여부 지정
     const char *dark = cwist_query_map_get(req->query_params, "dark");
     cfg.is_dark_mode = (dark && strcmp(dark, "1") == 0);
 
-    // Run the math needed for CSS composition (HSL conversion, etc.) and return the stylesheet string
+    // CSS 합성에 필요한 수학적 계산(HSL 변환 등) 수행 후 스타일시트 문자열 반환
     cwist_sstring *css_output = cwist_css_generate_stylesheet(&cfg);
 
     cwist_sstring_assign(res->body, css_output->data);
@@ -460,7 +458,7 @@ void theme_css_handler(cwist_http_request *req, cwist_http_response *res) {
 int main() {
     cwist_app *app = cwist_app_create();
     
-    // Reachable via <link rel="stylesheet" href="/theme.css?color=ff5733&dark=1">
+    // <link rel="stylesheet" href="/theme.css?color=ff5733&dark=1"> 로 접근 가능
     cwist_app_get(app, "/theme.css", theme_css_handler);
     
     cwist_app_listen(app, 8080);
@@ -469,17 +467,17 @@ int main() {
 }
 ```
 
-### Approach B: Client-Side Composition with React + WebAssembly (WASM)
-CWIST's `css_composer.c` is written independently of the framework, so you can build it to `.wasm` with Emscripten, import it into a React app, and run the computation instantly on the client.
+### 방법 B: React + WebAssembly (WASM) 클라이언트 사이드 합성
+CWIST의 `css_composer.c`는 프레임워크 독립적으로 작성되어, Emscripten을 통해 `.wasm`으로 빌드한 뒤 React 앱 내부로 가져와 클라이언트 측에서 즉각적으로 연산시킬 수도 있습니다.
 
-1. **WASM build (Emscripten)**
+1. **WASM 빌드 (Emscripten)**
 ```bash
 emcc src/core/html/css_composer.c -Iinclude \
     -s EXPORTED_FUNCTIONS="['_cwist_color_hex_to_rgb', '_cwist_css_generate_stylesheet', '_malloc', '_free']" \
     -o public/css_composer.js
 ```
 
-2. **Using it from React (dynamic design system)**
+2. **React에서 활용 (동적 디자인 시스템)**
 ```javascript
 import React, { useEffect, useState } from 'react';
 
@@ -487,19 +485,19 @@ function DynamicThemeApp() {
   const [themeColor, setThemeColor] = useState("#3B82F6");
 
   useEffect(() => {
-    // 1. Load the WASM module
+    // 1. WASM 모듈 로드
     window.Module().then((module) => {
-      // 2. Convert the input hex code into C's RGB struct
+      // 2. 입력받은 hex 코드를 C의 RGB 구조체로 변환
       const hexPtr = module.allocateUTF8(themeColor);
       const rgb = module._cwist_color_hex_to_rgb(hexPtr);
       module._free(hexPtr);
 
-      // (Hypothetical example) Lay out C's config struct in memory, then compose the CSS
-      // In practice it is easier to write a JS <-> C bridge function (wrapper) and call that.
+      // (가상 예시) C의 config 구조체를 메모리에 구성 후 CSS 합성
+      // 실제로는 JS <-> C 브릿지 함수(wrapper)를 만들어 호출하는 것이 편리합니다.
       const cssStringPtr = module._cwist_css_generate_stylesheet(/* config_ptr */);
       const cssString = module.UTF8ToString(cssStringPtr);
 
-      // 3. Inject it into the browser DOM immediately
+      // 3. 브라우저 DOM에 즉시 주입
       document.getElementById('dynamic-theme').innerText = cssString;
     });
   }, [themeColor]);
@@ -516,5 +514,5 @@ function DynamicThemeApp() {
 
 ---
 
-### Wrapping Up
-We hope this tutorial showed how familiar and declarative web development can be, even in a C-based environment. Just remember that the `cwist_app` struct owns the whole lifecycle and registration functions such as `cwist_app_get()` handle routing, and you can build with the same architecture as today's modern frameworks.
+### 마치며
+이 튜토리얼을 통해 C 기반 환경임에도 불구하고 얼마나 친숙하고 선언적으로 웹 개발을 할 수 있는지 확인하셨길 바랍니다. `cwist_app` 구조체가 전체 생명주기를, `cwist_app_get()` 같은 등록 함수가 라우팅을 담당한다는 점만 기억하면 기존 모던 프레임워크와 동일한 아키텍처로 개발을 진행할 수 있습니다.
