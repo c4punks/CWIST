@@ -230,8 +230,14 @@ jobs:
           WASI_SDK="$HOME/toolchains/wasi-sdk-34.0-x86_64-linux" \
           NODE="$(command -v node)"
 
-    - name: Browser bundle gate (esbuild, no node-only imports)
-      run: make component-browser-smoke NODE="$(command -v node)"
+    - name: Install browser test dependencies and pinned Chromium
+      run: |
+        npm ci --prefix tests/browser --ignore-scripts --no-audit --no-fund
+        cd tests/browser
+        npx --no-install playwright install --with-deps --only-shell chromium
+
+    - name: Browser runtime gate (WASI 0.2, positive and negative controls)
+      run: make component-browser-test NODE="$(command -v node)"
 
     - name: Streaming dispatch smoke (async host send-chunk)
       run: |

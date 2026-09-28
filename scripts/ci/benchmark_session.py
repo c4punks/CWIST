@@ -7,7 +7,6 @@ for commands that deliberately escape their session. No command/environment
 contents are logged. Requires Linux pidfds and /proc.
 """
 import argparse
-import json
 import math
 import os
 from pathlib import Path
@@ -78,7 +77,6 @@ def finish_status(code, received):
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--server', required=True)
-    parser.add_argument('--receipt', type=Path)
     parser.add_argument('--timeout', type=positive_seconds, default=120)
     parser.add_argument('--grace', type=positive_seconds, default=2)
     parser.add_argument('command', nargs=argparse.REMAINDER)
@@ -130,12 +128,6 @@ def main(argv=None):
         signal.signal(signal.SIGCHLD, old_child_handler)
         os.close(reader)
         os.close(writer)
-        if args.receipt is not None:
-            receipt = {'complete': code == 0 and not received and not cleanup_errors,
-                       'cleanup_ok': not cleanup_errors,
-                       'survivors': [] if not cleanup_errors else None,
-                       'server_pgid': processes[0].pid if processes else None}
-            args.receipt.write_text(json.dumps(receipt))
         if cleanup_errors:
             raise RuntimeError('benchmark cleanup failed: ' + ', '.join(cleanup_errors))
     return finish_status(code, received)

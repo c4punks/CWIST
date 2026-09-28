@@ -1,0 +1,54 @@
+name: "Durable queue (required Redis + NATS JetStream)"
+
+on:
+  push:
+    branches: [main, master, dev]
+  pull_request:
+    branches: [main, master, dev]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  durable-queue:
+    name: Durable queue gate (strict, pinned brokers)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      with:
+        submodules: recursive
+
+    - name: Install build dependencies
+      run: |
+        sudo apt-get update
+        # Pinned Redis 8.0.3 (matches local evidence runs); Ubuntu's
+        # redis-server package floats, so build the pinned release.
+        sudo apt-get install -y cmake libcurl4-openssl-dev libnghttp2-dev libbrotli-dev libzstd-dev tcl8.6 build-essential
+        curl -fsSL -o /tmp/redis-8.0.3.tar.gz https://download.redis.io/releases/redis-8.0.3.tar.gz
+        echo "33f37290b00b14e9a884dd4dcba335febd63ea16c51609d34fa41e031ad587df  /tmp/redis-8.0.3.tar.gz" | sha256sum -c -
+        tar -xzf /tmp/redis-8.0.3.tar.gz -C /tmp
+        make -C /tmp/redis-8.0.3 -j"$(nproc)"
+        sudo make -C /tmp/redis-8.0.3 install
+
+    - name: Install pinned nats-server
+      run: |
+        curl -fsSL -o /tmp/nats-server.tar.gz https://github.com/nats-io/nats-server/releases/download/v2.12.3/nats-server-v2.12.3-linux-amd64.tar.gz
+        echo "3f113d8f3d64f28239e12deeca9c9941104def9e2a8461fa076b0065b4e76327  /tmp/nats-server.tar.gz" | sha256sum -c -
+        tar -xzf /tmp/nats-server.tar.gz -C /tmp
+        sudo install -m 0755 /tmp/nats-server-v2.12.3-linux-amd64/nats-server /usr/local/bin/nats-server
+        nats-server --version
+        redis-server --version
+
+    - name: Build test_durable_queue
+      run: |
+        make test_durable_queue
+
+    - name: Test gate failure handling
+      run: python3 -m unittest discover -s scripts/ci -p 'test_durable_queue_gate.py'
+
+    - name: Run durable-queue gate (strict + negative modes)
+      timeout-minutes: 15
+      run: python3 scripts/ci/durable_queue_gate.py
