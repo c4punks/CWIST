@@ -61,7 +61,9 @@ fn main() {
         builder = builder.allowlist_function(f);
     }
     for t in OPAQUE {
-        builder = builder.opaque_type(t);
+        // opaque_type() only changes how a type is emitted; it must also be
+        // allowlisted, or fields that point to it have nothing to refer to.
+        builder = builder.allowlist_type(t).opaque_type(t);
     }
     for dir in &cwist.include_paths {
         builder = builder.clang_arg(format!("-I{}", dir.display()));
