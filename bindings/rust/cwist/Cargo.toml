@@ -1,0 +1,13 @@
+[package]
+name = "cwist"
+version = "0.1.0"
+edition = "2021"
+rust-version = "1.70"
+description = "Safe Rust API for CWIST, the C web framework"
+license = "MIT"
+repository = "https://github.com/c4punks/CWIST"
+# Experimental and in-tree for v3.8 (ROADMAP.md); publishing is a v4.0 decision.
+publish = false
+
+[dependencies]
+cwist-sys = { path = "../cwist-sys" }
