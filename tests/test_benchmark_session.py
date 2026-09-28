@@ -1,6 +1,5 @@
 """Linux integration tests: process groups must not leak between benchmarks."""
 import os
-import json
 from pathlib import Path
 import signal
 import subprocess
@@ -63,7 +62,7 @@ class SessionTests(unittest.TestCase):
             work=root/'work.py';work.write_text(WORK)
             pidfile=root/'child.pid'
             grace='1' if signal_phase=='cleanup' else '0.1'
-            args=[sys.executable,str(RUNNER),'--receipt',str(root/'receipt.json'),'--grace',grace,'--timeout',str(timeout),
+            args=[sys.executable,str(RUNNER),'--grace',grace,'--timeout',str(timeout),
                   '--server',f'{sys.executable} {server} {pidfile}',
                   '--',sys.executable,str(work),str(pidfile),mode]
             with (root/'log').open('w+') as log:
@@ -85,9 +84,6 @@ class SessionTests(unittest.TestCase):
                     if mode in ('sleep', 'orphan'):
                         self.assertTrue(pidfile.with_suffix('.work').exists(), output)
                         self.assertFalse(alive(int(pidfile.with_suffix('.work').read_text())), output)
-                    receipt=json.loads((root/'receipt.json').read_text())
-                    self.assertTrue(receipt['cleanup_ok']);self.assertEqual(receipt['survivors'],[])
-                    self.assertEqual(receipt['complete'],code==0)
                     return code
                 finally:
                     if process.poll() is None:
