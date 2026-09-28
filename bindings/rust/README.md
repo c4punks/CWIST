@@ -22,6 +22,13 @@ PKG_CONFIG_PATH="$PWD/.cwist-prefix/lib/pkgconfig" \
 
 bindgen needs libclang (`libclang-dev` on Debian/Ubuntu; Xcode's on macOS).
 
+On macOS with Homebrew, `cwist.pc` names zstd, brotli and nghttp2 as plain
+`-l` flags without Homebrew's library directory, so add it to the link path:
+
+```sh
+export RUSTFLAGS="-L native=$(brew --prefix)/lib"
+```
+
 ## What `cwist-sys` binds
 
 Only what the planned safe wrapper needs, via the allowlist in
