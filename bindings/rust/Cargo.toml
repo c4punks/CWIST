@@ -1,0 +1,3 @@
+[workspace]
+members = ["cwist-sys"]
+resolver = "2"

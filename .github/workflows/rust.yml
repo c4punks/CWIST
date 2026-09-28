@@ -1,0 +1,66 @@
+name: "Rust bindings"
+
+# cwist-sys (bindings/rust): build and install CWIST, then generate the raw
+# bindings against the installed headers through cwist.pc, link libcwist
+# statically, and run cargo test. Linux and macOS (ROADMAP.md, v3.8 Phase 2).
+
+on:
+  push:
+    branches: [main, master, dev]
+  pull_request:
+    branches: [main, master, dev]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  cwist-sys:
+    name: cwist-sys (${{ matrix.os }})
+    if: github.event_name != 'push' || !contains(github.event.head_commit.message, '[skip ci]')
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-15]
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Install build dependencies (Linux)
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y cmake pkg-config libclang-dev \
+            libcurl4-openssl-dev libnghttp2-dev libbrotli-dev libzstd-dev
+
+      - name: Install build dependencies (macOS)
+        if: runner.os == 'macOS'
+        run: brew install cmake pkg-config curl nghttp2 brotli zstd
+
+      - name: Build and install CWIST
+        shell: bash
+        env:
+          # libttak's default stack adds -flto; AppleClang cannot emit fat LTO
+          # objects, and plain objects are what a Rust link consumes.
+          PERF_STACK_FLAGS: ${{ runner.os == 'macOS' && '-O2 -g -pipe' || '' }}
+          PKG_CONFIG_PATH: ${{ runner.os == 'macOS' && '/opt/homebrew/opt/curl/lib/pkgconfig' || '' }}
+        run: |
+          if [ -z "$PERF_STACK_FLAGS" ]; then unset PERF_STACK_FLAGS; fi
+          jobs=$(getconf _NPROCESSORS_ONLN)
+          make -j"$jobs"
+          make install PREFIX="$RUNNER_TEMP/cwist"
+
+      - name: cargo test
+        shell: bash
+        run: |
+          export PKG_CONFIG_PATH="$RUNNER_TEMP/cwist/lib/pkgconfig"
+          if [ "$RUNNER_OS" = "macOS" ]; then
+            export PKG_CONFIG_PATH="$PKG_CONFIG_PATH:/opt/homebrew/opt/curl/lib/pkgconfig"
+            export LIBCLANG_PATH="$(xcode-select -p)/Toolchains/XcodeDefault.xctoolchain/usr/lib"
+          fi
+          cargo --version
+          pkg-config --cflags --libs --static cwist
+          cargo test --manifest-path bindings/rust/Cargo.toml -- --nocapture
