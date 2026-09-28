@@ -4,6 +4,9 @@
 *.so
 tutorials/*/build/
 build-tutorials/
+bindings/rust/target/
+bindings/rust/Cargo.lock
+.cwist-prefix/
 
 # Test binaries
 test_sstring
