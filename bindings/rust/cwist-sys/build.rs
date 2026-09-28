@@ -30,12 +30,38 @@ const FUNCTIONS: &[&str] = &[
 /// break it.
 const OPAQUE: &[&str] = &["cwist_app", "cwist_query_map", "cwist_db", "cJSON", "sqlite3"];
 
+/// Emits the link search paths and libraries from `cwist.pc`. Archives found
+/// in the pkg-config link paths (libcwist and its bundled dependencies) are
+/// linked statically, everything else as a system library.
+///
+/// `cwist.pc` names the C++ runtime `-lstdc++`, which Clang's driver maps to
+/// libc++ on Apple platforms. rustc links with `-nodefaultlibs`, so the name
+/// reaches the linker unchanged there; use `c++` directly instead.
+fn emit_link_flags(cwist: &pkg_config::Library) {
+    let apple = env::var("CARGO_CFG_TARGET_VENDOR").as_deref() == Ok("apple");
+    for dir in &cwist.link_paths {
+        println!("cargo:rustc-link-search=native={}", dir.display());
+    }
+    for lib in &cwist.libs {
+        let lib = if apple && lib == "stdc++" { "c++" } else { lib.as_str() };
+        let archive = format!("lib{lib}.a");
+        let kind = if cwist.link_paths.iter().any(|dir| dir.join(&archive).is_file()) {
+            "static"
+        } else {
+            "dylib"
+        };
+        println!("cargo:rustc-link-lib={kind}={lib}");
+    }
+}
+
 fn main() {
     println!("cargo:rerun-if-changed=wrapper.h");
     println!("cargo:rerun-if-env-changed=PKG_CONFIG_PATH");
 
     let cwist = pkg_config::Config::new()
         .statik(true)
+        // Link lines are emitted below, so the C++ runtime can be adjusted.
+        .cargo_metadata(false)
         .probe("cwist")
         .unwrap_or_else(|err| {
             panic!(
@@ -45,6 +71,8 @@ fn main() {
                  then set PKG_CONFIG_PATH=$HOME/.local/lib/pkgconfig"
             )
         });
+
+    emit_link_flags(&cwist);
 
     let mut builder = bindgen::Builder::default()
         .header("wrapper.h")
