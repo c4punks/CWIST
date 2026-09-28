@@ -6,10 +6,9 @@ rust-version = "1.70"
 description = "Raw FFI bindings to libcwist, the CWIST C web framework"
 license = "MIT"
 repository = "https://github.com/c4punks/CWIST"
-readme = "README.md"
 links = "cwist"
-keywords = ["cwist", "ffi", "bindings", "web-framework", "http"]
-categories = ["external-ffi-bindings", "network-programming", "web-programming"]
+# Experimental and in-tree for v3.8 (ROADMAP.md); publishing is a v4.0 decision.
+publish = false
 
 [build-dependencies]
 bindgen = "0.70"
