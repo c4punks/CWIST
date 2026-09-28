@@ -30,16 +30,37 @@ const FUNCTIONS: &[&str] = &[
 /// break it.
 const OPAQUE: &[&str] = &["cwist_app", "cwist_query_map", "cwist_db", "cJSON", "sqlite3"];
 
+/// System libraries `cwist.pc` names as plain `-l` flags. Their own pkg-config
+/// files supply the directory when it is not a default one (Homebrew), the
+/// same way the CWIST Makefile finds them.
+const SYSTEM_DEPS: &[&str] =
+    &["libzstd", "libbrotlienc", "libbrotlicommon", "libbrotlidec", "libcurl", "libnghttp2"];
+
 /// Emits the link search paths and libraries from `cwist.pc`. Archives found
 /// in the pkg-config link paths (libcwist and its bundled dependencies) are
 /// linked statically, everything else as a system library.
+///
+/// CWIST's own directories are searched first: they hold the bundled
+/// BoringSSL `libssl.a`/`libcrypto.a`, and another OpenSSL installed next to
+/// the system libraries (Homebrew's, for one) must not be picked instead.
 ///
 /// `cwist.pc` names the C++ runtime `-lstdc++`, which Clang's driver maps to
 /// libc++ on Apple platforms. rustc links with `-nodefaultlibs`, so the name
 /// reaches the linker unchanged there; use `c++` directly instead.
 fn emit_link_flags(cwist: &pkg_config::Library) {
     let apple = env::var("CARGO_CFG_TARGET_VENDOR").as_deref() == Ok("apple");
-    for dir in &cwist.link_paths {
+    let mut search: Vec<PathBuf> = cwist.link_paths.clone();
+    for dep in SYSTEM_DEPS {
+        // Optional: without a .pc file the library must be on a default path.
+        if let Ok(lib) = pkg_config::Config::new().cargo_metadata(false).probe(dep) {
+            for dir in lib.link_paths {
+                if !search.contains(&dir) {
+                    search.push(dir);
+                }
+            }
+        }
+    }
+    for dir in &search {
         println!("cargo:rustc-link-search=native={}", dir.display());
     }
     for lib in &cwist.libs {
