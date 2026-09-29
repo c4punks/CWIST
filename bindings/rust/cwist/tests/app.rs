@@ -206,6 +206,45 @@ fn a_panic_while_dropping_a_handler_does_not_cross_into_c() {
 }
 
 #[test]
+fn a_panicking_payload_does_not_abort_request_dispatch() {
+    const CHILD: &str = "CWIST_TEST_PANICKING_PAYLOAD_CHILD";
+    if std::env::var_os(CHILD).is_none() {
+        // An unwind from an extern "C" callback aborts the process. Isolate
+        // the request so a regression fails this test, not the entire suite.
+        let output = std::process::Command::new(std::env::current_exe().unwrap())
+            .args(["--exact", "a_panicking_payload_does_not_abort_request_dispatch", "--nocapture"])
+            .env(CHILD, "1")
+            .output()
+            .expect("run panic payload child");
+        assert!(
+            output.status.success(),
+            "child status: {}\nstdout:\n{}\nstderr:\n{}",
+            output.status,
+            String::from_utf8_lossy(&output.stdout),
+            String::from_utf8_lossy(&output.stderr)
+        );
+        return;
+    }
+
+    let mut app = App::new().unwrap();
+    app.get("/boom", |_, res| {
+        res.set_body("partial").unwrap();
+        std::panic::panic_any(PanicOnDrop);
+    })
+    .unwrap();
+    app.get("/fine", |_, res| res.set_body("still here").unwrap()).unwrap();
+
+    for _ in 0..2 {
+        let res = get(&app, "/boom");
+        assert!(status_line(&res).starts_with("HTTP/1.1 500"), "{res}");
+        assert_eq!(body(&res), "Internal Server Error");
+        let res = get(&app, "/fine");
+        assert!(status_line(&res).starts_with("HTTP/1.1 200"), "{res}");
+        assert_eq!(body(&res), "still here");
+    }
+}
+
+#[test]
 fn dispatch_reports_a_malformed_request() {
     let app = App::new().unwrap();
     assert_eq!(app.dispatch(b"this is not http"), Err(Error::Dispatch));
