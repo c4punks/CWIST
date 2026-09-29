@@ -834,6 +834,12 @@ static void http_rx_recv_cb(void *conn_ptr, int res) {
     }
 }
 
+/* Engine-internal teardown for the async pool: drain pending receive-queue
+ * bytes so the kernel answers with FIN instead of RST, then close and release.
+ * Must run on the connection's reactor owner thread (the reactor may still
+ * have the fd armed); not part of the public API. Defined below. */
+static void http_async_close(int client_fd, cwist_http_async_conn_t *conn);
+
 static void http_async_event_cb(int fd, void *ctx) {
     http_async_ctx_t *c = (http_async_ctx_t *)ctx;
     cwist_http_async_conn_t *conn = c->conn;
@@ -842,10 +848,13 @@ static void http_async_event_cb(int fd, void *ctx) {
     uint32_t now = cwist_fast_monotonic_sec();
     uint32_t timeout_sec = cwist_http_keep_alive_timeout_sec();
 
-    /* Idle connection reaper: close keep-alive sockets that exceeded timeout */
+    /* Idle connection reaper: close keep-alive sockets that exceeded timeout.
+     * A client may have pipelined a request into the post-timeout,
+     * pre-dispatch window; drain before closing so the teardown is a
+     * graceful FIN, not an RST that flushes the peer's queued bytes. The
+     * triggering one-shot slot is consumed, so closing here is safe. */
     if (conn->last_active_sec > 0 && (now - conn->last_active_sec) > timeout_sec) {
-        close(fd);
-        http_async_conn_release(conn);
+        http_async_close(fd, conn);
         return;
     }
     conn->last_active_sec = now;
@@ -869,12 +878,6 @@ typedef struct {
     cwist_reactor_post_t post;
     http_async_ctx_t next;
 } http_async_continuation_t;
-
-/* Engine-internal teardown for the async pool: drain pending receive-queue
- * bytes so the kernel answers with FIN instead of RST, then close and release.
- * Must run on the connection's reactor owner thread (the reactor may still
- * have the fd armed); not part of the public API. Defined below. */
-static void http_async_close(int client_fd, cwist_http_async_conn_t *conn);
 
 static void http_async_continue(void *ctx) {
     http_async_continuation_t *continuation = ctx;
