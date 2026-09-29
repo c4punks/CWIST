@@ -1201,6 +1201,7 @@ clean:
 	rm -f $(OBJS) $(LIB_NAME) $(PC_FILE)
 	rm -rf include/cwist/vendor
 	rm -f $(TEST_TARGETS)
+	rm -rf $(TUTORIALS_BUILD_DIR)
 	rm -f $(CJSON_DIR)/cJSON.o $(CJSON_LIB)
 	rm -rf $(URIPARSER_BUILD_DIR)
 	@rm -rf $(CNATS_DIR)/build
@@ -1633,6 +1634,17 @@ test_orm_socket: $(LIB_NAME) tests/test_orm_socket.c
 FORMAT_DIRS := src include tests example benchmarks
 FORMAT_FILES := $(shell git ls-files $(FORMAT_DIRS) 2>/dev/null | grep -E '\.(c|h)$$' \
                   || find $(FORMAT_DIRS) -type f \( -name '*.c' -o -name '*.h' \) | sort)
+
+# --- Tutorial compile gate ---------------------------------------------------
+# Builds (but does not run) every tutorials/*/main.c and compiles the C blocks
+# in docs/tutorial/cwist_tutorial.md, so API changes that break the tutorials
+# fail CI instead of shipping. See scripts/ci/check_tutorials.py.
+TUTORIALS_BUILD_DIR = build-tutorials
+
+.PHONY: tutorials-check
+tutorials-check: $(LIB_NAME)
+	python3 scripts/ci/check_tutorials.py --cc "$(CC)" --cflags "$(CFLAGS)" \
+		--lib $(LIB_NAME) --libs "$(LIBS)" --out $(TUTORIALS_BUILD_DIR)
 
 .PHONY: format format-check
 
