@@ -2781,6 +2781,11 @@ static void static_ssl_http1_handler(cwist_https_connection *conn, void *ctx) {
      * with CWIST_HTTP_HEADERS_TIMEOUT_MS, so idle keep-alive connections are
      * reaped automatically. */
     while (true) {
+        /* Nothing to read: hand the connection to the park set instead of
+         * holding this pool thread in the header read's poll(). */
+        if (cwist_https_conn_idle(conn) &&
+            cwist_https_park(conn, cwist_https_idle_timeout_ms(), CWIST_HTTPS_PARK_HTTP1))
+            return;
         cwist_http_request *req = cwist_https_receive_request(conn);
         if (!req) return;
         req->app = app;

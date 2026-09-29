@@ -39,7 +39,20 @@ typedef struct cwist_https_connection {
     bool http3_enabled;
     bool http2_sequenced_data; /*< Enable CWIST-specific sequenced DATA frames. */
     bool deferred;             /*< True when response processing has been deferred. */
+    /* Idle parking (cwist_https_park). Internal to the HTTPS pool. */
+    bool park_expired;         /*< Resumed because the parked idle deadline passed. */
+    void *proto_state;         /*< Protocol session kept while parked (HTTP/2). */
+    void (*proto_state_free)(void *state);
+    struct cwist_https_context *pool_ctx; /*< Pool task that serves this connection. */
+    void (*pool_handler)(struct cwist_https_connection *, void *);
+    void *pool_user_ctx;
 } cwist_https_connection;
+
+/** Idle class of a parked connection; each class has its own expiry order. */
+typedef enum cwist_https_park_class {
+    CWIST_HTTPS_PARK_HTTP1 = 0, /*< Expiry closes the connection. */
+    CWIST_HTTPS_PARK_HTTP2 = 1  /*< Expiry resubmits it with park_expired set (GOAWAY). */
+} cwist_https_park_class;
 
 typedef struct cwist_app cwist_app;
 
@@ -49,6 +62,31 @@ typedef struct cwist_https_options {
 } cwist_https_options;
 
 /** --- API Functions --- */
+
+/**
+ * @brief Hand an idle connection back to the HTTPS pool's park set.
+ *
+ * A pool thread that has nothing to read on @p conn calls this instead of
+ * blocking in poll(): the connection is watched by one epoll thread and
+ * resubmitted to the pool when bytes arrive, so an idle keep-alive
+ * connection costs memory but no thread. Returns true when the connection
+ * was parked; the caller must then return without touching @p conn again
+ * (another pool thread may already be serving it). Returns false when
+ * parking is unavailable (full GC, CWIST_HTTPS_PARK=0, shutdown); the
+ * caller keeps serving the connection the blocking way.
+ * @param idle_ms Idle budget before the class-specific expiry action.
+ */
+bool cwist_https_park(cwist_https_connection *conn, uint64_t idle_ms, cwist_https_park_class cls);
+
+/** @brief True when @p conn has no buffered TLS bytes and nothing readable. */
+bool cwist_https_conn_idle(cwist_https_connection *conn);
+
+/**
+ * @brief Idle keep-alive budget for parked HTTP/1.1 TLS connections, in ms.
+ * CWIST_HTTPS_IDLE_TIMEOUT_MS overrides the default (CWIST_HTTP_TIMEOUT_MS,
+ * the same 30 s the blocking header read waited).
+ */
+uint64_t cwist_https_idle_timeout_ms(void);
 
 /**
  * Initialize the OpenSSL library and create an SSL context.

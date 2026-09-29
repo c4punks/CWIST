@@ -3167,6 +3167,29 @@ cwist_error_t cwist_http2_serve_connection(cwist_https_connection *conn, void *u
     return cwist_http2_serve_connection_ex(conn, user_ctx, handler, NULL);
 }
 
+/* HTTP/2 session state that survives parking (cwist_https_park): the frame
+ * loop's locals that must persist between pool threads live here. */
+typedef struct h2_session {
+    h2_conn hc;
+    bool sent_goaway;
+    uint64_t goaway_close_at;
+} h2_session;
+
+static void h2_session_free(void *p) {
+    h2_session *st = (h2_session *)p;
+    h2_conn_destroy(&st->hc);
+    cwist_free(st);
+}
+
+/* Only a session with no stream in flight, no half-assembled header block
+ * and no hook deadline (gRPC) may leave its thread. */
+static bool h2_can_park(h2_conn *hc) {
+    if (hc->streams || hc->deferred_head || hc->cont_len > 0) return false;
+    if (hc->hooks && hc->hooks->next_deadline_ms && hc->hooks->next_deadline_ms(hc->hook_ctx))
+        return false;
+    return true;
+}
+
 cwist_error_t cwist_http2_serve_connection_ex(cwist_https_connection *conn, void *user_ctx,
                                               cwist_http2_request_handler_func handler,
                                               const cwist_http2_stream_hooks *hooks) {
@@ -3178,14 +3201,29 @@ cwist_error_t cwist_http2_serve_connection_ex(cwist_https_connection *conn, void
         return result;
     }
 
-    h2_conn hc;
-    h2_conn_init(&hc, conn);
-    hc.hooks = hooks;
-    hc.hook_ctx = (hooks && hooks->on_conn_open) ? hooks->on_conn_open(user_ctx) : user_ctx;
-    hc.async_q = cwist_h2_async_queue_create();
+    /* A connection resumed from the HTTPS park set carries its session in
+     * conn->proto_state; a fresh one sets the session up here. */
+    h2_session *st = (h2_session *)conn->proto_state;
+    bool resumed = st != NULL;
+    if (!st) {
+        st = (h2_session *)cwist_alloc(sizeof(*st));
+        if (!st) {
+            result = make_error(CWIST_ERR_INT16);
+            result.error.err_i16 = -1;
+            return result;
+        }
+        memset(st, 0, sizeof(*st));
+    }
+    h2_conn *hc = &st->hc;
+    if (!resumed) {
+    h2_conn_init(hc, conn);
+    hc->hooks = hooks;
+    hc->hook_ctx = (hooks && hooks->on_conn_open) ? hooks->on_conn_open(user_ctx) : user_ctx;
+    hc->async_q = cwist_h2_async_queue_create();
 
-    if (cwist_http2_verify_preface(&hc) != 0) {
-        h2_conn_destroy(&hc);
+    if (cwist_http2_verify_preface(hc) != 0) {
+        h2_conn_destroy(hc);
+        cwist_free(st);
         result = make_error(CWIST_ERR_INT16);
         result.error.err_i16 = -1;
         return result;
@@ -3201,30 +3239,45 @@ cwist_error_t cwist_http2_serve_connection_ex(cwist_https_connection *conn, void
         0x00, 0x06, 0x00, 0x01, 0x00, 0x00  // SETTINGS_MAX_HEADER_LIST_SIZE = 65536
     };
     // clang-format on
-    if (h2_write_frame(&hc, CWIST_HTTP2_FRAME_SETTINGS, 0, 0, settings, sizeof(settings)) != 0) {
-        h2_conn_destroy(&hc);
+    if (h2_write_frame(hc, CWIST_HTTP2_FRAME_SETTINGS, 0, 0, settings, sizeof(settings)) != 0) {
+        h2_conn_destroy(hc);
+        cwist_free(st);
         result = make_error(CWIST_ERR_INT16);
         result.error.err_i16 = -1;
         return result;
     }
 
     /* Upgrade connection flow control window to 2GB */
-    h2_send_window_update(&hc, 0, 2147483647 - 65535);
-    hc.fc.receive_window = CWIST_HTTP2_MAX_WINDOW;
+    h2_send_window_update(hc, 0, 2147483647 - 65535);
+    hc->fc.receive_window = CWIST_HTTP2_MAX_WINDOW;
 
     /* Kick off RTT sampling for the adaptive flow control; the ACK arrives
      * in the main loop below.  Failure is non-fatal: pacing simply stays
      * uncalibrated. */
-    h2_send_ping(&hc);
+    h2_send_ping(hc);
+    conn->proto_state = st;
+    conn->proto_state_free = h2_session_free;
+    }
 
     bool connected = true;
-    bool sent_goaway = false;
-    uint64_t goaway_close_at = 0; /* monotonic ms; set once GOAWAY is out */
+    bool sent_goaway = st->sent_goaway;
+    uint64_t goaway_close_at = st->goaway_close_at; /* monotonic ms; set once GOAWAY is out */
+    if (resumed && conn->park_expired) {
+        /* Parked past the idle timeout: announce the shutdown and keep the
+         * grace window, as the in-thread idle expiry below does. */
+        conn->park_expired = false;
+        if (h2_send_goaway(hc, hc->last_processed_stream_id, H2_ERR_NO_ERROR) != 0) {
+            connected = false;
+        } else {
+            sent_goaway = true;
+            goaway_close_at = h2_now_ms() + (uint64_t)h2_goaway_grace_ms();
+        }
+    }
     while (connected) {
         /* Process shutdown: announce GOAWAY and keep serving in-flight
          * streams for the grace window instead of dropping them mid-flight. */
         if (!sent_goaway && !atomic_load(&g_cwist_running)) {
-            if (h2_send_goaway(&hc, hc.last_processed_stream_id, H2_ERR_NO_ERROR) != 0) {
+            if (h2_send_goaway(hc, hc->last_processed_stream_id, H2_ERR_NO_ERROR) != 0) {
                 connected = false;
                 break;
             }
@@ -3238,11 +3291,11 @@ cwist_error_t cwist_http2_serve_connection_ex(cwist_https_connection *conn, void
         }
         /* Hook-taken streams: enforce deadlines and reap finished streams. */
         if (hooks && hooks->on_poll) {
-            h2_stream *ps = hc.streams;
+            h2_stream *ps = hc->streams;
             while (ps) {
                 h2_stream *next = ps->next;
-                if (ps->hook_ctx && hooks->on_poll(hc.hook_ctx, ps->hook_ctx))
-                    h2_stream_remove(&hc, ps->stream_id);
+                if (ps->hook_ctx && hooks->on_poll(hc->hook_ctx, ps->hook_ctx))
+                    h2_stream_remove(hc, ps->stream_id);
                 ps = next;
             }
         }
@@ -3251,26 +3304,46 @@ cwist_error_t cwist_http2_serve_connection_ex(cwist_https_connection *conn, void
 
         /* Frames the send-window wait loop pulled off the wire but could not
          * dispatch are served first; only then touch the socket. */
-        h2_deferred_frame *df = hc.deferred_head;
+        h2_deferred_frame *df = hc->deferred_head;
         if (df) {
-            hc.deferred_head = df->next;
-            if (!hc.deferred_head) hc.deferred_tail = NULL;
+            hc->deferred_head = df->next;
+            if (!hc->deferred_head) hc->deferred_tail = NULL;
             memcpy(hdr, df->hdr, 9);
             payload = df->payload;
             cwist_free(df);
         } else {
+            /* Idle between requests: hand the session to the HTTPS park set
+             * instead of holding this pool thread in poll(). */
+            if (!sent_goaway && h2_can_park(hc)) {
+                if (h2_out_flush(hc) != 0) {
+                    connected = false;
+                    break;
+                }
+                uint64_t idle_ms = (uint64_t)h2_idle_timeout_ms();
+                uint64_t idle_for = h2_now_ms() - hc->last_activity;
+                if (idle_for < idle_ms && cwist_https_conn_idle(conn)) {
+                    st->sent_goaway = sent_goaway;
+                    st->goaway_close_at = goaway_close_at;
+                    if (cwist_https_park(conn, idle_ms - idle_for, CWIST_HTTPS_PARK_HTTP2)) {
+                        /* Another pool thread may own the session now. */
+                        result = make_error(CWIST_ERR_INT16);
+                        result.error.err_i16 = 0;
+                        return result;
+                    }
+                }
+            }
             /* Bound the wait for the next frame with the idle deadline so an
              * idle connection cannot monopolize a pool worker forever.  A
              * hook-provided deadline (gRPC timeout) tightens the wait. */
             uint64_t wait_deadline = sent_goaway ? goaway_close_at : 0;
             if (hooks && hooks->next_deadline_ms) {
-                uint64_t gd = hooks->next_deadline_ms(hc.hook_ctx);
+                uint64_t gd = hooks->next_deadline_ms(hc->hook_ctx);
                 if (gd && (!wait_deadline || gd < wait_deadline)) wait_deadline = gd;
             }
-            int wait_rc = h2_wait_readable(&hc, wait_deadline);
+            int wait_rc = h2_wait_readable(hc, wait_deadline);
             if (wait_rc > 0) {
                 /* Async defer completions: send them before reading more. */
-                if (h2_async_drain(&hc) != 0) {
+                if (h2_async_drain(hc) != 0) {
                     connected = false;
                     break;
                 }
@@ -3281,14 +3354,14 @@ cwist_error_t cwist_http2_serve_connection_ex(cwist_https_connection *conn, void
                 /* A hook deadline expiring is not a connection error: the
                  * poll sweep at the loop top expires the stream. */
                 if (hooks && hooks->next_deadline_ms) {
-                    uint64_t gd = hooks->next_deadline_ms(hc.hook_ctx);
+                    uint64_t gd = hooks->next_deadline_ms(hc->hook_ctx);
                     if (gd && now >= gd) continue;
                 }
-                if (!sent_goaway && now - hc.last_activity >= (uint64_t)h2_idle_timeout_ms()) {
+                if (!sent_goaway && now - hc->last_activity >= (uint64_t)h2_idle_timeout_ms()) {
                     /* Announce the shutdown, then keep serving briefly so a
                      * request that raced onto the connection just before the
                      * idle expiry still gets its response instead of a reset. */
-                    if (h2_send_goaway(&hc, hc.last_processed_stream_id, H2_ERR_NO_ERROR) != 0) {
+                    if (h2_send_goaway(hc, hc->last_processed_stream_id, H2_ERR_NO_ERROR) != 0) {
                         connected = false;
                         break;
                     }
@@ -3302,7 +3375,7 @@ cwist_error_t cwist_http2_serve_connection_ex(cwist_https_connection *conn, void
             /* Frame bytes already in flight may still straddle TLS records or
              * TCP segments; h2_read_full waits out WANT_READ instead of
              * treating it as a dropped connection. */
-            if (h2_read_full(&hc, hdr, 9) != 0) {
+            if (h2_read_full(hc, hdr, 9) != 0) {
                 connected = false;
                 break;
             }
@@ -3318,8 +3391,8 @@ cwist_error_t cwist_http2_serve_connection_ex(cwist_https_connection *conn, void
         if (len > CWIST_HTTP2_MAX_FRAME_SIZE) {
             if (type == CWIST_HTTP2_FRAME_SETTINGS || type == CWIST_HTTP2_FRAME_HEADERS ||
                 type == CWIST_HTTP2_FRAME_CONTINUATION || type == CWIST_HTTP2_FRAME_PUSH_PROMISE) {
-                if (type == CWIST_HTTP2_FRAME_SETTINGS || len > hc.peer_max_frame_size) {
-                    h2_send_goaway(&hc, hc.last_processed_stream_id, H2_ERR_FRAME_SIZE_ERROR);
+                if (type == CWIST_HTTP2_FRAME_SETTINGS || len > hc->peer_max_frame_size) {
+                    h2_send_goaway(hc, hc->last_processed_stream_id, H2_ERR_FRAME_SIZE_ERROR);
                     connected = false;
                     break;
                 }
@@ -3332,19 +3405,19 @@ cwist_error_t cwist_http2_serve_connection_ex(cwist_https_connection *conn, void
                 connected = false;
                 break;
             }
-            if (h2_read_full(&hc, payload, len) != 0) connected = false;
+            if (h2_read_full(hc, payload, len) != 0) connected = false;
             if (!connected) break;
         }
 
-        hc.last_activity = h2_now_ms();
+        hc->last_activity = h2_now_ms();
 
         switch (type) {
             case CWIST_HTTP2_FRAME_SETTINGS: {
-                if (h2_handle_settings(&hc, payload, len, flags & CWIST_HTTP2_FLAG_ACK) != 0) {
-                    h2_send_goaway(&hc, hc.last_processed_stream_id, H2_ERR_PROTOCOL_ERROR);
+                if (h2_handle_settings(hc, payload, len, flags & CWIST_HTTP2_FLAG_ACK) != 0) {
+                    h2_send_goaway(hc, hc->last_processed_stream_id, H2_ERR_PROTOCOL_ERROR);
                     connected = false;
                 } else if ((flags & CWIST_HTTP2_FLAG_ACK) == 0) {
-                    if (h2_write_frame(&hc, CWIST_HTTP2_FRAME_SETTINGS, CWIST_HTTP2_FLAG_ACK, 0,
+                    if (h2_write_frame(hc, CWIST_HTTP2_FRAME_SETTINGS, CWIST_HTTP2_FLAG_ACK, 0,
                                        NULL, 0) != 0) {
                         connected = false;
                     }
@@ -3354,7 +3427,7 @@ cwist_error_t cwist_http2_serve_connection_ex(cwist_https_connection *conn, void
 
             case CWIST_HTTP2_FRAME_HEADERS: {
                 if (stream_id == 0 || (stream_id % 2) == 0) {
-                    h2_send_goaway(&hc, 0, H2_ERR_PROTOCOL_ERROR);
+                    h2_send_goaway(hc, 0, H2_ERR_PROTOCOL_ERROR);
                     connected = false;
                     break;
                 }
@@ -3370,40 +3443,40 @@ cwist_error_t cwist_http2_serve_connection_ex(cwist_https_connection *conn, void
                     block_offset += 5;
                     block_len -= 5;
                 }
-                int hdr_rc = h2_begin_headers(&hc, stream_id, payload + block_offset, block_len,
+                int hdr_rc = h2_begin_headers(hc, stream_id, payload + block_offset, block_len,
                                               flags & CWIST_HTTP2_FLAG_END_HEADERS,
                                               flags & CWIST_HTTP2_FLAG_END_STREAM);
                 if (hdr_rc < 0) {
                     uint32_t err =
                         (hdr_rc == -2) ? H2_ERR_ENHANCE_YOUR_CALM : H2_ERR_PROTOCOL_ERROR;
-                    h2_send_goaway(&hc, hc.last_processed_stream_id, err);
+                    h2_send_goaway(hc, hc->last_processed_stream_id, err);
                     connected = false;
                     break;
                 }
-                if (stream_id > hc.last_processed_stream_id)
-                    hc.last_processed_stream_id = stream_id;
+                if (stream_id > hc->last_processed_stream_id)
+                    hc->last_processed_stream_id = stream_id;
                 if (hdr_rc > 0) {
                     /* Stream refused or malformed: RST_STREAM already queued. */
                     break;
                 }
                 {
-                    h2_stream *s = h2_stream_find(&hc, stream_id);
+                    h2_stream *s = h2_stream_find(hc, stream_id);
                     if (s && s->hook_ctx) {
                         /* Client trailers on a hook-taken stream: END_STREAM
                          * terminates the inbound message flow. */
                         if (hooks && hooks->on_data && (flags & CWIST_HTTP2_FLAG_END_STREAM))
-                            hooks->on_data(hc.hook_ctx, s->hook_ctx, NULL, 0, 1);
+                            hooks->on_data(hc->hook_ctx, s->hook_ctx, NULL, 0, 1);
                         break;
                     }
-                    h2_hook_offer(&hc, s);
+                    h2_hook_offer(hc, s);
                     if (s && s->hook_ctx) {
                         if (hooks->on_data && (flags & CWIST_HTTP2_FLAG_END_STREAM))
-                            hooks->on_data(hc.hook_ctx, s->hook_ctx, NULL, 0, 1);
+                            hooks->on_data(hc->hook_ctx, s->hook_ctx, NULL, 0, 1);
                         break;
                     }
                 }
                 if (flags & CWIST_HTTP2_FLAG_END_STREAM) {
-                    h2_stream *s = h2_stream_find(&hc, stream_id);
+                    h2_stream *s = h2_stream_find(hc, stream_id);
                     if (s && s->req) {
                         cwist_http_response *res =
                             cwist_http_response_create_in_arena(s->req->arena);
@@ -3420,28 +3493,28 @@ cwist_error_t cwist_http2_serve_connection_ex(cwist_https_connection *conn, void
                                 break;
                             }
                             h2_inject_alt_svc(conn, res);
-                            if (h2_send_response_hc(&hc, stream_id, res) != 0) connected = false;
+                            if (h2_send_response_hc(hc, stream_id, res) != 0) connected = false;
                             cwist_http_response_destroy(res);
                         }
-                        h2_stream_remove(&hc, stream_id);
+                        h2_stream_remove(hc, stream_id);
                     }
                 }
                 break;
             }
 
             case CWIST_HTTP2_FRAME_CONTINUATION: {
-                if (stream_id == 0 || !hc.expecting_continuation ||
-                    hc.cont_stream_id != stream_id) {
-                    h2_send_goaway(&hc, hc.last_processed_stream_id, H2_ERR_PROTOCOL_ERROR);
+                if (stream_id == 0 || !hc->expecting_continuation ||
+                    hc->cont_stream_id != stream_id) {
+                    h2_send_goaway(hc, hc->last_processed_stream_id, H2_ERR_PROTOCOL_ERROR);
                     connected = false;
                     break;
                 }
-                int cont_rc = h2_handle_continuation(&hc, stream_id, payload, len,
+                int cont_rc = h2_handle_continuation(hc, stream_id, payload, len,
                                                      flags & CWIST_HTTP2_FLAG_END_HEADERS);
                 if (cont_rc < 0) {
                     uint32_t err =
                         (cont_rc == -2) ? H2_ERR_ENHANCE_YOUR_CALM : H2_ERR_PROTOCOL_ERROR;
-                    h2_send_goaway(&hc, hc.last_processed_stream_id, err);
+                    h2_send_goaway(hc, hc->last_processed_stream_id, err);
                     connected = false;
                     break;
                 }
@@ -3451,15 +3524,15 @@ cwist_error_t cwist_http2_serve_connection_ex(cwist_https_connection *conn, void
                 }
                 if (flags & CWIST_HTTP2_FLAG_END_STREAM) {
                     /* END_STREAM on CONTINUATION is a protocol violation */
-                    h2_send_goaway(&hc, hc.last_processed_stream_id, H2_ERR_PROTOCOL_ERROR);
+                    h2_send_goaway(hc, hc->last_processed_stream_id, H2_ERR_PROTOCOL_ERROR);
                     connected = false;
                     break;
                 }
-                if ((flags & CWIST_HTTP2_FLAG_END_HEADERS) && hc.cont_end_stream) {
-                    h2_stream *s = h2_stream_find(&hc, stream_id);
-                    h2_hook_offer(&hc, s);
+                if ((flags & CWIST_HTTP2_FLAG_END_HEADERS) && hc->cont_end_stream) {
+                    h2_stream *s = h2_stream_find(hc, stream_id);
+                    h2_hook_offer(hc, s);
                     if (s && s->hook_ctx) {
-                        if (hooks->on_data) hooks->on_data(hc.hook_ctx, s->hook_ctx, NULL, 0, 1);
+                        if (hooks->on_data) hooks->on_data(hc->hook_ctx, s->hook_ctx, NULL, 0, 1);
                         break;
                     }
                     if (s && s->req) {
@@ -3478,10 +3551,10 @@ cwist_error_t cwist_http2_serve_connection_ex(cwist_https_connection *conn, void
                                 break;
                             }
                             h2_inject_alt_svc(conn, res);
-                            if (h2_send_response_hc(&hc, stream_id, res) != 0) connected = false;
+                            if (h2_send_response_hc(hc, stream_id, res) != 0) connected = false;
                             cwist_http_response_destroy(res);
                         }
-                        h2_stream_remove(&hc, stream_id);
+                        h2_stream_remove(hc, stream_id);
                     }
                 }
                 break;
@@ -3489,31 +3562,31 @@ cwist_error_t cwist_http2_serve_connection_ex(cwist_https_connection *conn, void
 
             case CWIST_HTTP2_FRAME_DATA: {
                 if (stream_id == 0) {
-                    h2_send_goaway(&hc, 0, H2_ERR_PROTOCOL_ERROR);
+                    h2_send_goaway(hc, 0, H2_ERR_PROTOCOL_ERROR);
                     connected = false;
                     break;
                 }
-                h2_stream *s = h2_stream_find(&hc, stream_id);
+                h2_stream *s = h2_stream_find(hc, stream_id);
                 if (!s) {
                     /* DATA on closed/unknown stream: must check if it violates flow control */
                     /* For simplicity, we treat it as a stream error by ignoring the data
                      * but still accounting connection-level window. */
-                    if (!cwist_http2_flow_control_receive(&hc.fc, len)) {
-                        h2_send_goaway(&hc, hc.last_processed_stream_id, H2_ERR_FLOW_CONTROL_ERROR);
+                    if (!cwist_http2_flow_control_receive(&hc->fc, len)) {
+                        h2_send_goaway(hc, hc->last_processed_stream_id, H2_ERR_FLOW_CONTROL_ERROR);
                         connected = false;
                     } else {
-                        cwist_http2_flow_control_consume(&hc.fc, len);
+                        cwist_http2_flow_control_consume(&hc->fc, len);
                     }
                     break;
                 }
                 if (len > 0) {
-                    if (!cwist_http2_flow_control_receive(&hc.fc, len) ||
+                    if (!cwist_http2_flow_control_receive(&hc->fc, len) ||
                         !cwist_http2_stream_flow_control_receive(&s->fc, len)) {
-                        h2_send_goaway(&hc, hc.last_processed_stream_id, H2_ERR_FLOW_CONTROL_ERROR);
+                        h2_send_goaway(hc, hc->last_processed_stream_id, H2_ERR_FLOW_CONTROL_ERROR);
                         connected = false;
                         break;
                     }
-                    cwist_http2_flow_control_consume(&hc.fc, len);
+                    cwist_http2_flow_control_consume(&hc->fc, len);
                     cwist_http2_stream_flow_control_consume(&s->fc, len);
                 }
                 if (s->hook_ctx) {
@@ -3523,23 +3596,23 @@ cwist_error_t cwist_http2_serve_connection_ex(cwist_https_connection *conn, void
                     int hook_rc = 0;
                     if ((len > 0 || end_stream) && hooks->on_data)
                         hook_rc =
-                            hooks->on_data(hc.hook_ctx, s->hook_ctx, payload, len, end_stream);
+                            hooks->on_data(hc->hook_ctx, s->hook_ctx, payload, len, end_stream);
                     if (hook_rc != 0) {
-                        h2_stream_remove(&hc, stream_id);
+                        h2_stream_remove(hc, stream_id);
                         s = NULL;
                         break;
                     }
-                    if (end_stream && hooks->on_poll && hooks->on_poll(hc.hook_ctx, s->hook_ctx)) {
-                        h2_auto_window_update(&hc, s);
-                        h2_stream_remove(&hc, stream_id);
+                    if (end_stream && hooks->on_poll && hooks->on_poll(hc->hook_ctx, s->hook_ctx)) {
+                        h2_auto_window_update(hc, s);
+                        h2_stream_remove(hc, stream_id);
                         s = NULL;
                         break;
                     }
-                    h2_auto_window_update(&hc, s);
+                    h2_auto_window_update(hc, s);
                     break;
                 }
                 if (payload && len > 0) {
-                    if (hc.sequenced_data && len >= CWIST_SEQ_HEADER_SIZE) {
+                    if (hc->sequenced_data && len >= CWIST_SEQ_HEADER_SIZE) {
                         cwist_seq_chunk_t chunk;
                         if (cwist_seq_chunk_parse(payload, len, &chunk)) {
                             if (!s->body_assembler) {
@@ -3555,18 +3628,18 @@ cwist_error_t cwist_http2_serve_connection_ex(cwist_https_connection *conn, void
                                  * retransmission.  Refuse the stream without
                                  * exposing a mixed body to the application. */
                                 uint8_t rst[4] = {0, 0, 0, H2_ERR_PROTOCOL_ERROR};
-                                h2_write_frame(&hc, CWIST_HTTP2_FRAME_RST_STREAM, 0, stream_id, rst,
+                                h2_write_frame(hc, CWIST_HTTP2_FRAME_RST_STREAM, 0, stream_id, rst,
                                                sizeof(rst));
-                                h2_stream_remove(&hc, stream_id);
+                                h2_stream_remove(hc, stream_id);
                                 break;
                             }
                         }
                         /* Malformed sequence chunks are ignored (discarded). */
-                    } else if (!hc.sequenced_data) {
+                    } else if (!hc->sequenced_data) {
                         if (s->req->body->size + len > CWIST_HTTP_MAX_BODY_SIZE) {
                             uint8_t rst[4] = {0, 0, 0, H2_ERR_REFUSED_STREAM};
-                            h2_write_frame(&hc, CWIST_HTTP2_FRAME_RST_STREAM, 0, stream_id, rst, 4);
-                            h2_stream_remove(&hc, stream_id);
+                            h2_write_frame(hc, CWIST_HTTP2_FRAME_RST_STREAM, 0, stream_id, rst, 4);
+                            h2_stream_remove(hc, stream_id);
                             break;
                         }
                         s->recv_xor ^= h2_xor_bytes(payload, len);
@@ -3576,8 +3649,8 @@ cwist_error_t cwist_http2_serve_connection_ex(cwist_https_connection *conn, void
                 if (flags & CWIST_HTTP2_FLAG_END_STREAM) {
                     /* No assembler means no sequenced chunks ever arrived;
                      * an empty DATA END_STREAM is a complete empty body. */
-                    bool sequence_complete = !hc.sequenced_data || !s->body_assembler;
-                    if (hc.sequenced_data && s->body_assembler) {
+                    bool sequence_complete = !hc->sequenced_data || !s->body_assembler;
+                    if (hc->sequenced_data && s->body_assembler) {
                         const uint8_t *assembled = NULL;
                         size_t assembled_len = 0;
                         if (cwist_seq_assembler_get_data(s->body_assembler, &assembled,
@@ -3597,10 +3670,10 @@ cwist_error_t cwist_http2_serve_connection_ex(cwist_https_connection *conn, void
                          * with REFUSED_STREAM.  Never call the handler with a
                          * partial sequenced body. */
                         uint8_t rst[4] = {0, 0, 0, H2_ERR_REFUSED_STREAM};
-                        h2_write_frame(&hc, CWIST_HTTP2_FRAME_RST_STREAM, 0, stream_id, rst,
+                        h2_write_frame(hc, CWIST_HTTP2_FRAME_RST_STREAM, 0, stream_id, rst,
                                        sizeof(rst));
-                        h2_auto_window_update(&hc, s);
-                        h2_stream_remove(&hc, stream_id);
+                        h2_auto_window_update(hc, s);
+                        h2_stream_remove(hc, stream_id);
                         break;
                     }
                     cwist_http_response *res = cwist_http_response_create_in_arena(s->req->arena);
@@ -3612,83 +3685,83 @@ cwist_error_t cwist_http2_serve_connection_ex(cwist_https_connection *conn, void
                              * the queue drain can find it later. */
                             s->req = NULL;
                             cwist_async_dispatch_ack((cwist_async *)res->async);
-                            h2_auto_window_update(&hc, s);
+                            h2_auto_window_update(hc, s);
                             break;
                         }
                         h2_inject_alt_svc(conn, res);
-                        if (h2_send_response_hc(&hc, stream_id, res) != 0) connected = false;
+                        if (h2_send_response_hc(hc, stream_id, res) != 0) connected = false;
                         cwist_http_response_destroy(res);
                     }
                     /* Keep the stream state alive until its final window
                      * credit is returned; h2_auto_window_update reads it. */
-                    if (connected) h2_auto_window_update(&hc, s);
-                    h2_stream_remove(&hc, stream_id);
+                    if (connected) h2_auto_window_update(hc, s);
+                    h2_stream_remove(hc, stream_id);
                     s = NULL;
                 }
                 if (connected && s) {
-                    h2_auto_window_update(&hc, s);
+                    h2_auto_window_update(hc, s);
                 }
                 break;
             }
 
             case CWIST_HTTP2_FRAME_RST_STREAM: {
                 if (stream_id == 0 || len != 4) {
-                    h2_send_goaway(&hc, hc.last_processed_stream_id, H2_ERR_PROTOCOL_ERROR);
+                    h2_send_goaway(hc, hc->last_processed_stream_id, H2_ERR_PROTOCOL_ERROR);
                     connected = false;
                     break;
                 }
-                if (stream_id > hc.last_processed_stream_id) {
+                if (stream_id > hc->last_processed_stream_id) {
                     /* RFC 7540 section 5.1: RST_STREAM frames MUST NOT be sent for a
                      * stream in the "idle" state. Connection error of type
                      * PROTOCOL_ERROR. */
                     CWIST_LOG_WARN(
                         "[h2] RST_STREAM received for idle stream %u > last_processed %u",
-                        stream_id, hc.last_processed_stream_id);
-                    h2_send_goaway(&hc, hc.last_processed_stream_id, H2_ERR_PROTOCOL_ERROR);
+                        stream_id, hc->last_processed_stream_id);
+                    h2_send_goaway(hc, hc->last_processed_stream_id, H2_ERR_PROTOCOL_ERROR);
                     connected = false;
                     break;
                 }
-                if (!h2_conn_consume_rst_budget(&hc)) {
+                if (!h2_conn_consume_rst_budget(hc)) {
                     CWIST_LOG_WARN(
                         "[h2] peer exceeded RST_STREAM rate limit (Rapid Reset CVE-2023-44487 detected)");
-                    h2_send_goaway(&hc, hc.last_processed_stream_id, H2_ERR_ENHANCE_YOUR_CALM);
+                    h2_send_goaway(hc, hc->last_processed_stream_id, H2_ERR_ENHANCE_YOUR_CALM);
                     connected = false;
                     break;
                 }
                 {
-                    h2_stream *s = h2_stream_find(&hc, stream_id);
+                    h2_stream *s = h2_stream_find(hc, stream_id);
                     if (s && s->hook_ctx && hooks && hooks->on_cancel)
-                        hooks->on_cancel(hc.hook_ctx, s->hook_ctx);
+                        hooks->on_cancel(hc->hook_ctx, s->hook_ctx);
                 }
-                h2_stream_remove(&hc, stream_id);
+                h2_stream_remove(hc, stream_id);
                 break;
             }
 
             case CWIST_HTTP2_FRAME_PING: {
                 if (len != 8) {
-                    h2_send_goaway(&hc, hc.last_processed_stream_id, H2_ERR_FRAME_SIZE_ERROR);
+                    h2_send_goaway(hc, hc->last_processed_stream_id, H2_ERR_FRAME_SIZE_ERROR);
                     connected = false;
                     break;
                 }
                 if ((flags & CWIST_HTTP2_FLAG_ACK) == 0) {
-                    if (!h2_conn_consume_ping_budget(&hc)) {
+                    if (!h2_conn_consume_ping_budget(hc)) {
                         CWIST_LOG_WARN("[h2] peer exceeded PING rate limit (CVE-2019-9512)");
-                        h2_send_goaway(&hc, hc.last_processed_stream_id, H2_ERR_ENHANCE_YOUR_CALM);
+                        h2_send_goaway(hc, hc->last_processed_stream_id, H2_ERR_ENHANCE_YOUR_CALM);
                         connected = false;
                         break;
                     }
-                    if (h2_write_frame(&hc, CWIST_HTTP2_FRAME_PING, CWIST_HTTP2_FLAG_ACK, 0,
+                    if (h2_write_frame(hc, CWIST_HTTP2_FRAME_PING, CWIST_HTTP2_FLAG_ACK, 0,
                                        payload, 8) != 0) {
                         connected = false;
                     }
-                } else if (hc.ping_outstanding && memcmp(payload, hc.ping_payload, 8) == 0) {
+                } else if (hc->ping_outstanding && memcmp(payload, hc->ping_payload, 8) == 0) {
                     /* RTT sample for the adaptive window/pacing tuner.  Keep
                      * one ping in flight while streams are active so the
                      * estimate tracks changing network conditions. */
-                    uint64_t sample = h2_now_us() - hc.ping_sent_us;
-                    hc.ping_outstanding = false;
-                    if (sample > 0) cwist_http2_flow_control_update_rtt(&hc.fc, sample);
-                    if (hc.streams) h2_send_ping(&hc);
+                    uint64_t sample = h2_now_us() - hc->ping_sent_us;
+                    hc->ping_outstanding = false;
+                    if (sample > 0) cwist_http2_flow_control_update_rtt(&hc->fc, sample);
+                    if (hc->streams) h2_send_ping(hc);
                 }
                 break;
             }
@@ -3700,12 +3773,12 @@ cwist_error_t cwist_http2_serve_connection_ex(cwist_https_connection *conn, void
 
             case CWIST_HTTP2_FRAME_WINDOW_UPDATE: {
                 if (len != 4) {
-                    h2_send_goaway(&hc, hc.last_processed_stream_id, H2_ERR_FRAME_SIZE_ERROR);
+                    h2_send_goaway(hc, hc->last_processed_stream_id, H2_ERR_FRAME_SIZE_ERROR);
                     connected = false;
                     break;
                 }
-                if (h2_handle_window_update(&hc, stream_id, payload, len) != 0) {
-                    h2_send_goaway(&hc, hc.last_processed_stream_id, H2_ERR_FLOW_CONTROL_ERROR);
+                if (h2_handle_window_update(hc, stream_id, payload, len) != 0) {
+                    h2_send_goaway(hc, hc->last_processed_stream_id, H2_ERR_FLOW_CONTROL_ERROR);
                     connected = false;
                 }
                 break;
@@ -3718,12 +3791,14 @@ cwist_error_t cwist_http2_serve_connection_ex(cwist_https_connection *conn, void
     }
 
     if (connected && !atomic_load(&g_cwist_running) && !sent_goaway) {
-        h2_send_goaway(&hc, hc.last_processed_stream_id, H2_ERR_NO_ERROR);
+        h2_send_goaway(hc, hc->last_processed_stream_id, H2_ERR_NO_ERROR);
         sent_goaway = true;
     }
 
-    h2_out_flush(&hc); /* best effort: last GOAWAY/batched frames */
-    h2_conn_destroy(&hc);
+    h2_out_flush(hc); /* best effort: last GOAWAY/batched frames */
+    conn->proto_state = NULL;
+    conn->proto_state_free = NULL;
+    h2_session_free(st);
 
     result = make_error(CWIST_ERR_INT16);
     result.error.err_i16 = 0;

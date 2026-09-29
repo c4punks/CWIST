@@ -111,6 +111,12 @@ static cwist_error_t https_wrap_established(cwist_https_context *ctx, int client
                                             cwist_https_connection **conn);
 int https_hs_shepherd_start(void);
 void https_hs_shepherd_stop(void);
+static void https_park_stop(void);
+static void https_connection_teardown(cwist_https_connection *conn);
+/* Set by cwist_https_park() on the pool thread that parked its connection:
+ * the connection may already be served by another thread, so the pool
+ * thread must not touch it (or close it) after the handler returns. */
+static __thread bool t_https_parked = false;
 static void https_close_conn_cb(void *handle);
 
 static void *https_pool_worker(void *arg) {
@@ -225,6 +231,7 @@ void https_pool_submit_conn(cwist_https_connection *conn, cwist_https_context *c
 void https_pool_destroy(void) {
     if (!g_https_pool_initialized) return;
     https_hs_shepherd_stop();
+    https_park_stop();
     pthread_mutex_lock(&g_https_pool.mutex);
     g_https_pool.shutdown = 1;
     pthread_cond_broadcast(&g_https_pool.cond_not_empty);
@@ -250,6 +257,228 @@ void https_pool_destroy(void) {
     g_https_pool_initialized = false;
 }
 /* --- End Thread Pool --- */
+
+/* --- Idle connection park set ---------------------------------------------
+ * Why this exists: a pool thread serving a TLS connection used to wait in
+ * poll() for that connection's next request (30 s for HTTP/1.1 keep-alive,
+ * up to the HTTP/2 idle timeout).  An idle client therefore held a whole
+ * pool thread, and with one or two pool threads per worker only a few dozen
+ * TLS connections could be served at once; the rest queued behind idle
+ * ones.  A pool thread with nothing to read now parks the connection here
+ * and returns.  One epoll thread per process watches every parked fd and
+ * resubmits a connection to the pool when bytes arrive, so an idle
+ * connection costs memory, not a thread.
+ *
+ * Each class keeps a FIFO list; every entry of a class gets the same idle
+ * budget at park time, so the list is (nearly) ordered by deadline and
+ * expiry only looks at the head.  HTTP/1.1 entries are closed on expiry,
+ * exactly as the blocking header read closed them.  HTTP/2 entries are
+ * resubmitted with park_expired set so the session sends GOAWAY and keeps
+ * its grace window, as before.
+ *
+ * Parking is disabled under full GC: its allocations are owned per thread,
+ * and a parked HTTP/2 session would move between threads with them.
+ * ------------------------------------------------------------------------- */
+#ifdef __linux__
+typedef struct https_parked {
+    cwist_https_connection *conn;
+    uint64_t deadline_ms;
+    int cls;
+    bool linked;
+    struct https_parked *prev, *next;
+} https_parked_t;
+
+static struct {
+    pthread_mutex_t lock;
+    pthread_t thread;
+    int epoll_fd;
+    bool running;
+    pid_t owner;
+    https_parked_t *head[2], *tail[2];
+} g_park = {.lock = PTHREAD_MUTEX_INITIALIZER, .epoll_fd = -1};
+
+static void park_unlink_locked(https_parked_t *p) {
+    if (p->prev) p->prev->next = p->next;
+    else g_park.head[p->cls] = p->next;
+    if (p->next) p->next->prev = p->prev;
+    else g_park.tail[p->cls] = p->prev;
+    p->prev = p->next = NULL;
+    p->linked = false;
+}
+
+static void park_resubmit(cwist_https_connection *conn, bool expired) {
+    conn->park_expired = expired;
+    https_pool_submit_conn(conn, conn->pool_ctx, conn->pool_handler, conn->pool_user_ctx);
+}
+
+static void *https_park_thread(void *arg) {
+    (void)arg;
+    struct epoll_event events[1024];
+    while (1) {
+        pthread_mutex_lock(&g_park.lock);
+        bool running = g_park.running;
+        pthread_mutex_unlock(&g_park.lock);
+        if (!running) break;
+
+        int n = epoll_wait(g_park.epoll_fd, events, 1024, 200);
+        for (int i = 0; i < n; i++) {
+            https_parked_t *p = (https_parked_t *)events[i].data.ptr;
+            pthread_mutex_lock(&g_park.lock);
+            bool mine = p->linked;
+            if (mine) park_unlink_locked(p);
+            pthread_mutex_unlock(&g_park.lock);
+            if (!mine) continue;
+            epoll_ctl(g_park.epoll_fd, EPOLL_CTL_DEL, p->conn->fd, NULL);
+            /* Readable or hung up: the pool thread's read reports either. */
+            park_resubmit(p->conn, false);
+            free(p);
+        }
+
+        uint64_t now = cwist_https_now_ms();
+        for (int cls = 0; cls < 2; cls++) {
+            https_parked_t *expired = NULL;
+            pthread_mutex_lock(&g_park.lock);
+            while (g_park.head[cls] && g_park.head[cls]->deadline_ms <= now) {
+                https_parked_t *p = g_park.head[cls];
+                park_unlink_locked(p);
+                p->next = expired;
+                expired = p;
+            }
+            pthread_mutex_unlock(&g_park.lock);
+            while (expired) {
+                https_parked_t *p = expired;
+                expired = p->next;
+                epoll_ctl(g_park.epoll_fd, EPOLL_CTL_DEL, p->conn->fd, NULL);
+                if (cls == CWIST_HTTPS_PARK_HTTP1) {
+                    https_connection_teardown(p->conn);
+                } else {
+                    park_resubmit(p->conn, true);
+                }
+                free(p);
+            }
+        }
+    }
+    return NULL;
+}
+
+/* Called with g_park.lock held. */
+static bool https_park_start_locked(void) {
+    pid_t pid = getpid();
+    if (g_park.running && g_park.owner == pid) return true;
+    /* A forked worker inherits the parent's lists and epoll fd but not its
+     * thread; start its own set (the parent's parked connections are the
+     * parent's to serve). */
+    g_park.head[0] = g_park.head[1] = g_park.tail[0] = g_park.tail[1] = NULL;
+    g_park.running = false;
+    g_park.epoll_fd = epoll_create1(EPOLL_CLOEXEC);
+    if (g_park.epoll_fd < 0) return false;
+    g_park.running = true;
+    g_park.owner = pid;
+    if (pthread_create(&g_park.thread, NULL, https_park_thread, NULL) != 0) {
+        g_park.running = false;
+        close(g_park.epoll_fd);
+        g_park.epoll_fd = -1;
+        return false;
+    }
+    return true;
+}
+
+static bool https_park_enabled(void) {
+    static int enabled = -1;
+    if (enabled < 0) {
+        const char *env = getenv("CWIST_HTTPS_PARK");
+        enabled = !(env && (env[0] == '0' || strcmp(env, "false") == 0));
+    }
+    return enabled && !cwist_full_gc_enabled();
+}
+
+bool cwist_https_park(cwist_https_connection *conn, uint64_t idle_ms, cwist_https_park_class cls) {
+    if (!conn || conn->fd < 0 || !conn->pool_handler || !https_park_enabled()) return false;
+    if (!atomic_load(&g_cwist_running)) return false;
+    https_parked_t *p = calloc(1, sizeof(*p));
+    if (!p) return false;
+    p->conn = conn;
+    p->cls = cls == CWIST_HTTPS_PARK_HTTP2 ? CWIST_HTTPS_PARK_HTTP2 : CWIST_HTTPS_PARK_HTTP1;
+    p->deadline_ms = cwist_https_now_ms() + idle_ms;
+
+    pthread_mutex_lock(&g_park.lock);
+    if (!https_park_start_locked()) {
+        pthread_mutex_unlock(&g_park.lock);
+        free(p);
+        return false;
+    }
+    p->prev = g_park.tail[p->cls];
+    if (p->prev) p->prev->next = p;
+    else g_park.head[p->cls] = p;
+    g_park.tail[p->cls] = p;
+    p->linked = true;
+    conn->park_expired = false;
+    /* Register while holding the lock: once the fd is armed the park thread
+     * may resubmit the connection, and it takes this lock first. */
+    struct epoll_event ev = {.events = EPOLLIN | EPOLLRDHUP | EPOLLONESHOT, .data.ptr = p};
+    if (epoll_ctl(g_park.epoll_fd, EPOLL_CTL_ADD, conn->fd, &ev) != 0) {
+        park_unlink_locked(p);
+        pthread_mutex_unlock(&g_park.lock);
+        free(p);
+        return false;
+    }
+    t_https_parked = true;
+    pthread_mutex_unlock(&g_park.lock);
+    return true;
+}
+
+static void https_park_stop(void) {
+    pthread_mutex_lock(&g_park.lock);
+    bool running = g_park.running && g_park.owner == getpid();
+    g_park.running = false;
+    pthread_mutex_unlock(&g_park.lock);
+    if (!running) return;
+    pthread_join(g_park.thread, NULL);
+    for (int cls = 0; cls < 2; cls++) {
+        https_parked_t *p = g_park.head[cls];
+        while (p) {
+            https_parked_t *next = p->next;
+            https_connection_teardown(p->conn);
+            free(p);
+            p = next;
+        }
+        g_park.head[cls] = g_park.tail[cls] = NULL;
+    }
+    close(g_park.epoll_fd);
+    g_park.epoll_fd = -1;
+}
+#else
+bool cwist_https_park(cwist_https_connection *conn, uint64_t idle_ms, cwist_https_park_class cls) {
+    (void)conn;
+    (void)idle_ms;
+    (void)cls;
+    return false;
+}
+
+static void https_park_stop(void) {}
+#endif
+
+bool cwist_https_conn_idle(cwist_https_connection *conn) {
+    if (!conn || !conn->ssl || conn->buf_len > 0) return false;
+    if (SSL_pending(conn->ssl) > 0) return false;
+    struct pollfd pfd = {.fd = conn->fd, .events = POLLIN};
+    return poll(&pfd, 1, 0) == 0;
+}
+
+uint64_t cwist_https_idle_timeout_ms(void) {
+    static uint64_t cached = 0;
+    if (!cached) {
+        uint64_t v = CWIST_HTTP_TIMEOUT_MS;
+        const char *env = getenv("CWIST_HTTPS_IDLE_TIMEOUT_MS");
+        if (env && *env) {
+            char *end = NULL;
+            unsigned long long parsed = strtoull(env, &end, 10);
+            if (end != env && *end == '\0' && parsed > 0) v = (uint64_t)parsed;
+        }
+        cached = v;
+    }
+    return cached;
+}
 
 /* --- TLS handshake shepherd ------------------------------------------------
  * Why this exists: the pool parks one worker per connection for the whole
@@ -1011,6 +1240,7 @@ static cwist_error_t https_wrap_established(cwist_https_context *ctx, int client
         return err;
     }
 
+    memset(*conn, 0, sizeof(**conn));
     (*conn)->fd = client_fd;
     (*conn)->ssl = ssl;
     (*conn)->read_buf = cwist_alloc(CWIST_HTTP_READ_BUFFER_SIZE);
@@ -1064,8 +1294,6 @@ static cwist_error_t https_wrap_established(cwist_https_context *ctx, int client
     err.error.err_i16 = 0;
     return err;
 }
-
-static void https_connection_teardown(cwist_https_connection *conn);
 
 /**
  * @brief cwist_conn_registry_track() callback adapter: the registry only
@@ -1157,6 +1385,10 @@ cwist_https_protocol cwist_https_connection_protocol(const cwist_https_connectio
  */
 static void https_connection_teardown(cwist_https_connection *conn) {
     if (conn) {
+        if (conn->proto_state && conn->proto_state_free) {
+            conn->proto_state_free(conn->proto_state);
+            conn->proto_state = NULL;
+        }
         if (conn->ssl) {
             SSL_shutdown(conn->ssl);
             SSL_free(conn->ssl);
@@ -1541,8 +1773,14 @@ static void *https_thread_handler(void *arg) {
     }
 
     if (cwist_error_is_ok(&hs_err)) {
+        conn->pool_ctx = payload->ctx;
+        conn->pool_handler = payload->handler;
+        conn->pool_user_ctx = payload->user_ctx;
+        t_https_parked = false;
         payload->handler(conn, payload->user_ctx);
-        if (!conn->deferred) {
+        if (t_https_parked) {
+            t_https_parked = false;
+        } else if (!conn->deferred) {
             cwist_https_close_connection(conn);
         }
     } else {
