@@ -816,8 +816,17 @@ static int h2_wait_readable(h2_conn *hc, uint64_t deadline_ms) {
         int pret = poll(pfd, nfd, wait_ms);
         if (pret < 0) return -1;
         if (pret > 0) {
-            if (pfd[0].revents & POLLIN) return 0;
             if (nfd == 2 && (pfd[1].revents & POLLIN)) return 1;
+            if (pfd[0].revents & POLLIN) {
+                if (afd >= 0 && hc->async_q) {
+                    /* If async queue has pending completions, drain them first */
+                    pthread_mutex_lock(&hc->async_q->mu);
+                    bool has_items = (hc->async_q->head != NULL);
+                    pthread_mutex_unlock(&hc->async_q->mu);
+                    if (has_items) return 1;
+                }
+                return 0;
+            }
             return 0; /* error/hup on the socket: let the read path report it */
         }
     }
@@ -3147,6 +3156,8 @@ static int h2_async_drain(h2_conn *hc) {
         h2_inject_alt_svc(hc->conn, n->send);
         int rc = h2_send_response_hc(hc, n->stream_id, n->send);
         if (n->send_owned && n->send != n->res) cwist_http_response_destroy(n->send);
+        cwist_http_response_destroy(n->res);
+        cwist_http_request_destroy(n->req);
         h2_stream_remove(hc, n->stream_id);
         cwist_free(n);
         if (rc != 0) {
