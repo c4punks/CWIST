@@ -493,10 +493,8 @@ typedef struct cwist_http_async_conn {
 /* Re-arm a connection after a deferred response completed on the reactor
  * thread (keep-alive), reusing the same one-shot event slot model as
  * http_async_event_cb. Buffered bytes resume through a posted continuation,
- * not recursively inline. On failure the fd is closed and conn released.
- * cwist_http_async_close closes the fd and releases the connection shell. */
+ * not recursively inline. On failure the fd is closed and conn released. */
 bool cwist_http_async_rearm(int client_fd, cwist_reactor_t *reactor, cwist_http_async_conn_t *conn);
-void cwist_http_async_close(int client_fd, cwist_http_async_conn_t *conn);
 /* Pipelined continuations dropped (and their connections closed) because the
  * reactor post queue was full. Monotonic; useful for shed-rate alerting. */
 long cwist_http_continuation_shed_count(void);
