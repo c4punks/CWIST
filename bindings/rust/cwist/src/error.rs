@@ -29,9 +29,8 @@ pub enum Error {
         /// The port that could not be served.
         port: u16,
     },
-    /// Another [`App`](crate::App) is already listening in this process.
-    /// CWIST's server and shutdown state are process-wide, so only one
-    /// server runs at a time.
+    /// Another [`App`](crate::App) is already listening in this process;
+    /// CWIST runs one server per process.
     AlreadyListening,
 }
 
