@@ -699,6 +699,14 @@ jobs:
             echo "::error::render() did not produce:$missing"
             exit 1
           fi
+          # A re-run of an older commit must not publish over the report of a
+          # newer one (the push is rejected anyway): publish only while this
+          # commit is still the head of the branch.
+          git fetch --quiet origin "$GITHUB_REF_NAME"
+          if [ "$(git rev-parse FETCH_HEAD)" != "$GITHUB_SHA" ]; then
+            echo "::notice::$GITHUB_REF_NAME has moved past $GITHUB_SHA; not publishing this report"
+            exit 0
+          fi
           git add $generated
           git diff --cached --quiet || git commit -m "docs(ci): update benchmark report [skip ci]"
           git push
