@@ -727,7 +727,18 @@ $(BORINGSSL_STAMP):
 
 $(BORINGSSL_SSL_LIB) $(BORINGSSL_CRYPTO_LIB): $(BORINGSSL_STAMP)
 
-$(LSQUIC_LIB): $(BORINGSSL_SSL_LIB) $(BORINGSSL_CRYPTO_LIB)
+# The archive must follow the pinned lsquic commit, not just exist: lsquic's
+# public structs (e.g. struct lsquic_stream_if) change layout between
+# revisions, and an archive left over from a previous pin, linked against
+# the current headers, reads callbacks from the wrong offsets (the HTTP/3
+# thread then jumps to garbage when a peer closes a connection). The stamp
+# is keyed on the submodule commit so moving the pin forces a rebuild.
+LSQUIC_REV := $(if $(wildcard $(LSQUIC_DIR)/.git),$(shell git -C $(LSQUIC_DIR) rev-parse HEAD 2>/dev/null))
+LSQUIC_STAMP = $(LSQUIC_BUILD_DIR)/.lsquic_built_$(or $(LSQUIC_REV),unversioned)
+
+$(LSQUIC_LIB): $(LSQUIC_STAMP)
+
+$(LSQUIC_STAMP): $(BORINGSSL_SSL_LIB) $(BORINGSSL_CRYPTO_LIB)
 	@echo "Building lsquic..."
 	@mkdir -p $(LSQUIC_BUILD_DIR)
 	cmake -S $(LSQUIC_DIR) -B $(LSQUIC_BUILD_DIR) \
@@ -741,6 +752,8 @@ $(LSQUIC_LIB): $(BORINGSSL_SSL_LIB) $(BORINGSSL_CRYPTO_LIB)
 		-DLSQUIC_WEBTRANSPORT=ON \
 		-DBUILD_SHARED_LIBS=OFF
 	cmake --build $(LSQUIC_BUILD_DIR) --target lsquic
+	@rm -f $(LSQUIC_BUILD_DIR)/.lsquic_built_*
+	@touch $@
 
 $(CNATS_LIB):
 	@echo "Building cnats..."
