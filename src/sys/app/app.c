@@ -2991,9 +2991,23 @@ static app_serve_result_t app_serve_parsed_request(cwist_app *app, int client_fd
 
     /* Deferred-response handoff: ownership of req/res (and the connection)
      * moved to the cwist_async completion path.  Skip the send, BDR learning,
-     * and both destroys; ack before returning so the completion may free. */
+     * and both destroys; ack before returning so the completion may free.
+     * The completion writes out-of-band, so coalesced responses buffered
+     * from earlier requests in this turn must drain first to preserve
+     * response order -- do that before the ack, because once the completion
+     * may run it owns the fd/conn.  On flush failure the connection is dead,
+     * but req/res ownership already moved to the cwist_async, so closing
+     * here would leave the completion holding a dangling conn/fd (UAF, and
+     * the response bytes could land on an unrelated fd reuse).  Hand the
+     * teardown to the completion instead: ack, then abort it; the abort
+     * response send fails on the dead connection and the completion's
+     * send-response path closes the conn, which owns close in all outcomes. */
     if (res->deferred) {
+        cwist_http_async_conn_t *aconn = (cwist_http_async_conn_t *)req->async_conn;
+        bool broken = aconn && aconn->olen > 0 &&
+                      cwist_http_coalesce_flush_blocking(client_fd, aconn) != 0;
         cwist_async_dispatch_ack((cwist_async *)res->async);
+        if (broken) cwist_async_abort((cwist_async *)res->async, CWIST_HTTP_INTERNAL_ERROR);
         return APP_SERVE_DEFERRED;
     }
 
@@ -3266,13 +3280,11 @@ cwist_async_action_t cwist_app_http_handler_async(int client_fd, cwist_http_asyn
         req->db = app->db;
         req->async_conn = conn;
         app_serve_result_t sr = app_serve_parsed_request(app, client_fd, req, priority_weight);
-        /* Deferred: stop draining so pipelined bytes stay in the stash and
-         * responses remain ordered; the completion path re-arms or closes.
-         * The completion writes out-of-band, so buffered responses from
-         * this turn must drain first to preserve response order. */
+        /* Deferred: buffered coalesced responses from this turn already
+         * drained inside app_serve_parsed_request, before the defer was
+         * acked; the completion path owns the fd/conn now (it re-arms or
+         * closes, including the flush-failure abort). Nothing to do here. */
         if (sr == APP_SERVE_DEFERRED) {
-            if (conn->olen > 0 && cwist_http_coalesce_flush_blocking(client_fd, conn) != 0)
-                return CWIST_ASYNC_CLOSE;
             return CWIST_ASYNC_DEFER;
         }
         if (sr == APP_SERVE_DETACH) {
