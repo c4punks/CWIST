@@ -4527,6 +4527,17 @@ int cwist_app_listen(cwist_app *app, int port) {
     }
 #endif
 
+    /* Prime libttak's TSC calibration before forking workers. calibrate_tsc()
+     * sleeps for 10 ms (timing.c) and is triggered lazily by the first
+     * ttak_get_tick_count_ns() call - which used to arrive with the first
+     * request's arena creation inside each worker process, adding ~10 ms to
+     * that worker's first request. The calibrated g_tsc_freq_ghz/g_tsc_scale
+     * globals are plain process memory, so fork children inherit the values
+     * copy-on-write and never repeat the sleep. */
+#ifndef __wasi__
+    (void)ttak_get_tick_count_ns();
+#endif
+
     bool is_worker_child = false;
     pid_t worker_pids[workers > 1 ? workers - 1 : 1];
     size_t worker_count = 0;
