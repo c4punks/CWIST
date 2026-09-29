@@ -618,6 +618,12 @@ static void http_async_conn_release(cwist_http_async_conn_t *conn) {
  * floor the legacy POLL + recv-drain path runs the stash growth instead. */
 #define CWIST_RX_REARM_MIN_AVAIL 1024
 
+/* Idle-keep-alive shrink floor for the rbuf/obuf stashes at rearm: an idle
+ * connection holds ~KB, not 32 KB, while the grow-on-demand paths restore
+ * capacity on the next busy turn. Must satisfy CWIST_RX_REARM_MIN_AVAIL so
+ * the RECV-first arm stays available. */
+#define CWIST_ASYNC_STASH_IDLE 4096
+
 /* Arm the connection's next receive wait.  RX-uring first when the reactor
  * has a real io_uring ring: one RECV SQE into rbuf + len whose completion
  * drives the state machine, replacing the one-shot POLL + recv() pair.
@@ -698,13 +704,26 @@ static void http_async_dispatch(int fd, cwist_http_async_conn_t *conn,
         return;
     }
 
-    /* CWIST_ASYNC_REARM: keep stash buffer allocated across keep-alive requests
-     * to eliminate 16 KiB heap allocation/free churn per request. Only shrink
-     * if the buffer grew excessively large. */
-    if (conn->len == 0 && conn->cap > 65536) {
-        cwist_free(conn->rbuf);
-        conn->rbuf = NULL;
-        conn->cap = 0;
+    /* CWIST_ASYNC_REARM: keep the stashes allocated across keep-alive
+     * requests to avoid per-request heap churn, but shrink an idle
+     * connection's buffers toward a small floor. A served keep-alive
+     * connection otherwise holds 16 KiB rbuf + 16 KiB obuf for its whole
+     * idle lifetime (~24 KB RSS per connection at C1M scale); the
+     * grow-on-demand paths (http_async_stash_grow, coalesce serialize)
+     * restore capacity on the next busy turn. */
+    if (conn->len == 0 && conn->cap > CWIST_ASYNC_STASH_IDLE) {
+        char *nb = cwist_realloc(conn->rbuf, CWIST_ASYNC_STASH_IDLE);
+        if (nb) {
+            conn->rbuf = nb;
+            conn->cap = CWIST_ASYNC_STASH_IDLE;
+        }
+    }
+    if (conn->olen == 0 && conn->ocap > CWIST_ASYNC_STASH_IDLE) {
+        char *nb = cwist_realloc(conn->obuf, CWIST_ASYNC_STASH_IDLE);
+        if (nb) {
+            conn->obuf = nb;
+            conn->ocap = CWIST_ASYNC_STASH_IDLE;
+        }
     }
 
     if (!http_async_arm_wait(fd, conn, handler, ctx, reactor)) {
