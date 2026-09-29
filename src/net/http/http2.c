@@ -2827,6 +2827,8 @@ static h2_stream *h2_request_stream_create(h2_conn *hc, uint32_t stream_id, bool
     cwist_sstring_assign(s->req->version, "HTTP/2");
     s->req->stream_id = stream_id;
     s->req->private_data = hc->conn;
+    s->req->https_conn = hc->conn;
+    s->req->client_fd = hc->conn ? hc->conn->fd : -1;
     s->req->h2_queue = hc->async_q; /* async defer completions route here */
     return s;
 }
@@ -3141,11 +3143,12 @@ static int h2_async_drain(h2_conn *hc) {
             h2_async_node_discard(n);
             continue;
         }
-        s->req = n->req;
+        s->req = NULL; /* Ownership of req/res was transferred to cwist_async */
         h2_inject_alt_svc(hc->conn, n->send);
         int rc = h2_send_response_hc(hc, n->stream_id, n->send);
         if (n->send_owned && n->send != n->res) cwist_http_response_destroy(n->send);
         cwist_http_response_destroy(n->res);
+        cwist_http_request_destroy(n->req);
         h2_stream_remove(hc, n->stream_id);
         cwist_free(n);
         if (rc != 0) {
