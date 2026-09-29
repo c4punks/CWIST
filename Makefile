@@ -619,6 +619,12 @@ component-browser-smoke: component-smoke
 	    --outfile=$(JCO_GUEST_DIR)/browser_bundle.js
 	@echo "component-browser-smoke: PASS (esbuild bundled the guest + adapter for a browser with no node-only imports)" 
 
+# Execute the WASI 0.2 bundle in a real browser, including negative controls.
+# Install test dependencies and Chromium first (see docs/api/wasm-component.md).
+.PHONY: component-browser-test
+component-browser-test: component-browser-smoke
+	$(NODE) tests/browser/run.mjs --self-test
+
 # Object Files and Target
 OBJS = $(SRCS:.c=.o)
 LIB_NAME = libcwist.a
