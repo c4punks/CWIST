@@ -4038,7 +4038,12 @@ cwist_http_request *cwist_http_receive_request(int client_fd, char *read_buf, si
     size_t total_received = *buf_len;
     char *header_end = NULL;
 
-    // 1. Read until headers are complete
+    // 1. Read until headers are complete. The classic pool serves this
+    // socket blocking, so a client dribbling the header byte-by-byte would
+    // hold the thread forever; bound the whole header read by
+    // CWIST_HTTP_HEADERS_TIMEOUT_MS (same budget the TLS path enforces).
+    struct timespec header_start;
+    clock_gettime(CLOCK_MONOTONIC, &header_start);
     while (!(header_end = (char *)cwist_simd_find_crlfcrlf(read_buf, total_received))) {
         if (total_received >= buf_size - 1) {
             /* Fat Cookie/Authorization combinations can legitimately push a
@@ -4051,10 +4056,30 @@ cwist_http_request *cwist_http_receive_request(int client_fd, char *read_buf, si
             return NULL;
         }
 
+        struct timespec now;
+        clock_gettime(CLOCK_MONOTONIC, &now);
+        long elapsed_ms = (now.tv_sec - header_start.tv_sec) * 1000L +
+                          (now.tv_nsec - header_start.tv_nsec) / 1000000L;
+        long remaining_ms = (long)CWIST_HTTP_HEADERS_TIMEOUT_MS - elapsed_ms;
+        if (remaining_ms <= 0) {
+            CWIST_LOG_WARN("[http] dropping connection: header read exceeded %d ms",
+                           CWIST_HTTP_HEADERS_TIMEOUT_MS);
+            if (err_out) *err_out = CWIST_HTTP_PARSE_EOF;
+            return NULL;
+        }
+        struct pollfd pfd = {.fd = client_fd, .events = POLLIN};
+        int pr = poll(&pfd, 1, (int)(remaining_ms > 1000 ? 1000 : remaining_ms));
+        if (pr <= 0) {
+            if (pr < 0 && errno == EINTR) continue;
+            if (pr < 0) continue; /* transient errors retry within the budget */
+            continue;             /* timeout slice expired; re-check the budget */
+        }
+
         ssize_t bytes =
             recv(client_fd, read_buf + total_received, buf_size - 1 - total_received, 0);
         if (bytes <= 0) {
             if (bytes < 0 && errno == EINTR) continue;
+            if (bytes < 0 && (errno == EAGAIN || errno == EWOULDBLOCK)) continue;
             return NULL;
         }
         total_received += (size_t)bytes;
