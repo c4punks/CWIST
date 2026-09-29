@@ -2,9 +2,8 @@ use crate::Error;
 use cwist_sys as sys;
 use std::sync::atomic::{AtomicBool, Ordering};
 
-/// Set while an [`App::listen`](crate::App::listen) call is running. CWIST's
-/// server state (listening sockets, the running flag, the handler pool) is
-/// process-wide, so two servers at once would interfere.
+/// Set while an [`App::listen`](crate::App::listen) call runs. CWIST's server
+/// state is process-wide, so only one server may run at a time.
 static LISTENING: AtomicBool = AtomicBool::new(false);
 
 /// Held for the duration of one `listen` call.
@@ -25,17 +24,12 @@ impl Drop for ListenGuard {
     }
 }
 
-/// Requests a graceful shutdown of the server running in this process.
-///
-/// [`App::listen`](crate::App::listen) stops accepting connections, drains,
-/// and returns. This has the same effect as sending the process SIGTERM or
-/// SIGINT, and like them it is process-wide.
-///
-/// It can be called from any thread, including from inside a route handler,
-/// and calling it more than once is harmless. If no server is running, the
-/// request applies to the next `listen`, which then returns at once.
+/// Requests a graceful shutdown of the server in this process, like
+/// SIGTERM/SIGINT: [`App::listen`](crate::App::listen) stops accepting,
+/// drains and returns. Callable from any thread or handler, any number of
+/// times; with no server running, the next `listen` returns at once.
 pub fn shutdown() {
-    // SAFETY: no preconditions; cwist_shutdown_request only stores an atomic
-    // flag and closes the registered listening sockets, each at most once.
+    // SAFETY: no preconditions; it only sets an atomic flag and shuts down
+    // the listening sockets, each at most once.
     unsafe { sys::cwist_shutdown_request() };
 }
