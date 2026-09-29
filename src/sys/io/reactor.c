@@ -1195,9 +1195,14 @@ void cwist_reactor_run(cwist_reactor_t *reactor) {
     }
 #elif defined(__APPLE__) || defined(__FreeBSD__) || defined(__NetBSD__) || defined(__OpenBSD__)
     struct kevent events[1024];
+    /* Bounded like the epoll and io_uring waits: a shutdown requested
+     * without a signal (cwist_shutdown_request() from another thread) only
+     * clears g_cwist_running and closes the listen socket, which wakes
+     * no kevent, so the flag must be re-checked periodically. */
+    const struct timespec idle_ts = {.tv_sec = 0, .tv_nsec = 100 * 1000 * 1000};
     while (reactor->running && atomic_load(&g_cwist_running)) {
         reactor_drain_posts(reactor);
-        int n = kevent(reactor->impl.kq_fd, NULL, 0, events, 1024, NULL);
+        int n = kevent(reactor->impl.kq_fd, NULL, 0, events, 1024, &idle_ts);
         if (n < 0) {
             if (errno == EINTR) continue;
             break;
