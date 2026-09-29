@@ -217,6 +217,12 @@ static _Atomic long g_http_continuation_shed = 0;
 long cwist_http_continuation_shed_count(void) {
     return atomic_load_explicit(&g_http_continuation_shed, memory_order_relaxed);
 }
+
+/* Live C1M connections (accepted, not yet closed). The shutdown drain in
+ * cwist_app_listen_ex polls this to exit early once nothing is left. */
+long cwist_http_inflight_count(void) {
+    return atomic_load_explicit(&g_http_inflight, memory_order_relaxed);
+}
 #define CWIST_HTTP_INFLIGHT_PER_THREAD 32
 #define CWIST_HTTP_INFLIGHT_FD_RESERVE 4096
 
