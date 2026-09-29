@@ -129,6 +129,7 @@ payload.json
 test_sstring_run
 fly.board/
 test_https
+test_https_park
 benchmarks/web-frameworks/cwist_bench
 dist/
 cwist.pc
