@@ -348,7 +348,7 @@ Known limits going in (from PR #176 review), updated:
 
 ---
 
-## v3.7 Milestone (Released 2026-09-24)
+## v3.7 Milestone (Released 2026-09-24, emergency patch v3.7.1 on 2026-09-29)
 
 Theme: **the last experimental train before v4 stabilization**. v3.6 took
 WASM from "in-tree target" to "usable from JavaScript"; v3.7 is the last
