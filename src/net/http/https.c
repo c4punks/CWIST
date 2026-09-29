@@ -331,7 +331,7 @@ static void *https_park_thread(void *arg) {
             epoll_ctl(g_park.epoll_fd, EPOLL_CTL_DEL, p->conn->fd, NULL);
             /* Readable or hung up: the pool thread's read reports either. */
             park_resubmit(p->conn, false);
-            free(p);
+            cwist_free(p);
         }
 
         uint64_t now = cwist_https_now_ms();
@@ -354,7 +354,7 @@ static void *https_park_thread(void *arg) {
                 } else {
                     park_resubmit(p->conn, true);
                 }
-                free(p);
+                cwist_free(p);
             }
         }
     }
@@ -395,8 +395,10 @@ static bool https_park_enabled(void) {
 bool cwist_https_park(cwist_https_connection *conn, uint64_t idle_ms, cwist_https_park_class cls) {
     if (!conn || conn->fd < 0 || !conn->pool_handler || !https_park_enabled()) return false;
     if (!atomic_load(&g_cwist_running)) return false;
-    https_parked_t *p = calloc(1, sizeof(*p));
+    https_parked_t *p = (https_parked_t *)cwist_alloc(sizeof(*p));
     if (!p) return false;
+    memset(p, 0, sizeof(*p));
+    if (cwist_full_gc_enabled()) cwist_gc_scope_disown(p);
     p->conn = conn;
     p->cls = cls == CWIST_HTTPS_PARK_HTTP2 ? CWIST_HTTPS_PARK_HTTP2 : CWIST_HTTPS_PARK_HTTP1;
     p->deadline_ms = cwist_https_now_ms() + idle_ms;
@@ -404,7 +406,7 @@ bool cwist_https_park(cwist_https_connection *conn, uint64_t idle_ms, cwist_http
     pthread_mutex_lock(&g_park.lock);
     if (!https_park_start_locked()) {
         pthread_mutex_unlock(&g_park.lock);
-        free(p);
+        cwist_free(p);
         return false;
     }
     p->prev = g_park.tail[p->cls];
@@ -419,7 +421,7 @@ bool cwist_https_park(cwist_https_connection *conn, uint64_t idle_ms, cwist_http
     if (epoll_ctl(g_park.epoll_fd, EPOLL_CTL_ADD, conn->fd, &ev) != 0) {
         park_unlink_locked(p);
         pthread_mutex_unlock(&g_park.lock);
-        free(p);
+        cwist_free(p);
         return false;
     }
     t_https_parked = true;
@@ -439,7 +441,7 @@ static void https_park_stop(void) {
         while (p) {
             https_parked_t *next = p->next;
             https_connection_teardown(p->conn);
-            free(p);
+            cwist_free(p);
             p = next;
         }
         g_park.head[cls] = g_park.tail[cls] = NULL;
