@@ -1,0 +1,11 @@
+{
+  "name": "cwist-component-browser-tests",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "node run.mjs --self-test"
+  },
+  "devDependencies": {
+    "playwright": "1.63.0"
+  }
+}
