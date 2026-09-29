@@ -9,9 +9,11 @@
  * disabled path is unaffected (all counters stay zero).
  */
 #include <assert.h>
+#include <signal.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <unistd.h>
 #include <sys/eventfd.h>
 #include "../src/sys/io/reactor.c"
 
@@ -34,6 +36,22 @@ static void *run_thread(void *arg) {
     return NULL;
 }
 
+static void watchdog_dump(int sig) {
+    (void)sig;
+    /* SIGALRM default action terminates without a trace; under ASan on a
+     * loaded runner a rare stall used to leave only "Alarm clock", with no
+     * way to tell a lost completion from a slow one.  Report the state that
+     * matters, then exit with the same code the default action produced. */
+    dprintf(STDERR_FILENO, "[latency-probe] watchdog: rounds_done=%d/%d loop=%p\n", rounds_done,
+            ROUNDS, (void *)loop);
+    if (loop) {
+        dprintf(STDERR_FILENO, "[latency-probe] probe counts: queue=%llu svc=%llu\n",
+                (unsigned long long)loop->probe[LATENCY_PROBE_QUEUE].count,
+                (unsigned long long)loop->probe[LATENCY_PROBE_SVC].count);
+    }
+    _exit(142);
+}
+
 static void ping_cb(int fd, void *ctx) {
     (void)ctx;
     uint64_t one;
@@ -52,6 +70,8 @@ static void ping_cb(int fd, void *ctx) {
 
 int main(void) {
 #ifdef __linux__
+    setvbuf(stdout, NULL, _IONBF, 0); /* watchdog must see how far we got */
+    signal(SIGALRM, watchdog_dump);
     alarm(30); /* Watchdog only, not the correctness oracle. */
     bool probe_on = getenv("CWIST_LATENCY_PROBE") != NULL;
     loop = cwist_reactor_create();
