@@ -459,14 +459,17 @@ parking a worker thread each), a single cwist server on loopback served:
 
 | Scale | Result | Wall time | Server peak RSS |
 |-------|--------|-----------|-----------------|
-| C10K | 10,000 / 10,000 established + responded (100%) | ~0.7 s | ~111 MB |
-| C100K | 100,000 / 100,000 responded (100%) | ~8.7 s | ~124 MB |
-| C1M (8×125K) | 1,000,000 / 1,000,000 responded (100%) | ~14–16 s per client process | ~244 MB |
+| C10K | 10,000 / 10,000 established + responded (100%) | ~0.9 s | ~301 MiB |
+| C100K | 100,000 / 100,000 responded (100%) | ~12.1 s | ~2.35 GiB |
+| C1M (8×125K) | 1,000,000 / 1,000,000 responded (100%) | ~26.5–27.5 s per client process | ~22.9 GiB |
 
-Peak RSS is the summed `VmHWM` high-water mark across the 12 forked
-worker processes (the server defaults to one worker per core); the arena
-bump allocator with a shared per-request arena keeps a million held
-connections inside a quarter gigabyte of resident memory.
+Re-measured on 2026-09-29 at `main` `2f5b4786` with
+`benchmarks/web-frameworks/cwist_bench` (`CWIST_WORKERS=12`). Peak RSS is
+the summed `VmHWM` high-water mark across the 12 forked worker processes.
+Every held connection costs about 24 KB of server memory. The 2026-08
+figures (~111 MB / ~124 MB / ~244 MB at C10K / C100K / C1M) predate later
+changes to the connection path, and per-connection memory is now the
+main cost at C1M.
 
 The classic thread-per-connection path (`CWIST_C1M_MODE=0`) is no longer
 capped at `cores*8` held connections either: every accepted connection gets
@@ -476,8 +479,8 @@ on the same machine, same client:
 
 | Scale | Result | Wall time | Server peak RSS |
 |-------|--------|-----------|-----------------|
-| C10K | 10,000 / 10,000 responded (100%) | ~0.8 s | ~950 MB |
-| C100K | 100,000 / 100,000 responded (100%) | ~9.6 s | ~9.2 GB |
+| C10K | 10,000 / 10,000 responded (100%) | ~1.0 s | ~976 MiB |
+| C100K | 100,000 / 100,000 responded (100%) | ~12.8 s | ~9.0 GiB |
 
 C100K classic needs task-count headroom (one thread per held connection:
 `pids.max` / `TasksMax` above 100K, desktop app scopes often cap this near
@@ -496,7 +499,7 @@ Benchmark environment:
 
 - CPU: AMD Ryzen 5 5600X (6 cores / 12 threads)
 - RAM: 62 GB
-- Kernel: Linux 6.12.101 (Debian 13), GCC 14.2.0
+- Kernel: Linux 6.12.107 (Debian 13), GCC 14.2.0
 - Network: loopback (127.0.0.0/8 source-IP spreading on the client side)
 
 Measured with `tests/bench_cxm.c` (multi-process epoll load client,
@@ -511,11 +514,21 @@ for C100K and above:
   too, and the default 262144 caps you near ~263K connections
 - `net.ipv4.ip_local_port_range="1024 65535"` on the client side
 
-Known limits of the current async path: cleartext HTTP/1.x only (HTTPS still
-uses the thread-pool model for the request phase), a handler that writes
-faster than the socket drains waits inside the reactor thread (bounded by
-`CWIST_HTTP_TIMEOUT_MS`), and idle keep-alive connections are not yet reaped
-by a timer.
+Known limits of the current async path: HTTPS still runs the request phase
+on pool threads, a handler that writes faster than the socket drains waits
+inside the reactor thread (bounded by `CWIST_HTTP_TIMEOUT_MS`), and idle
+cleartext keep-alive connections are not yet reaped by a timer.
+
+**TLS at C1M (since v3.7.1).** A pool thread no longer waits on an idle TLS
+connection: the connection is parked in a per-process epoll set and handed
+back to the pool when bytes arrive (`CWIST_HTTPS_IDLE_TIMEOUT_MS`,
+`CWIST_HTTPS_PARK=0` to disable). Before that, only as many TLS connections
+as HTTPS pool threads were served at once (at most 25 while 395,729 were
+held). Measured through fly.board on the same host, 12 workers: 1,000,000 /
+1,000,000 held and served over TLS HTTP/1.1 (19.9 GB server PSS) and over
+TLS HTTP/2 (30.1 GB), zero failures, with connections opened at 8,000/s;
+at 20,000/s about 37% of full handshakes missed the 45 s handshake budget.
+Details: [fly.board scalability benchmark](https://github.com/gg582/fly.board#scalability-benchmark).
 
 **HTTPS churn experiment (handshake shepherd).** HTTPS accepts go through
 `cwist_https_dispatch()`: a single non-blocking `SSL_accept` attempt, with
