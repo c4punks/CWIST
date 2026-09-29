@@ -46,10 +46,8 @@ mod error;
 mod http;
 mod server;
 
-pub mod middleware;
-
 pub use app::App;
 pub use async_response::AsyncResponse;
 pub use error::Error;
-pub use http::{Method, OwnedResponse, Request, Response};
+pub use http::{Method, Request, Response};
 pub use server::shutdown;

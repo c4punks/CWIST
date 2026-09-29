@@ -302,7 +302,17 @@ cwist_error_t cwist_http_server_loop(int server_fd, cwist_server_config *config,
                                      void (*handler)(int, void *), void *ctx);
 int headers_have_content_length(cwist_http_header_node *headers);
 
+/**
+ * @brief Initialize the handler pool; the mode comes from CWIST_C1M_MODE
+ * (reactor workers unless it is "0" or "false").
+ */
 int cwist_http_pool_init(void);
+/**
+ * @brief Initialize the handler pool for an explicit mode: reactor workers
+ * (@p use_c1m) or the classic dynamic thread pool. The C1M server loop uses
+ * this so the pool always matches the loop that drives it.
+ */
+int cwist_http_pool_init_mode(bool use_c1m);
 void cwist_http_pool_limit_core(unsigned int limit);
 void cwist_http_pool_submit(int client_fd, void (*handler)(int, void *), void *ctx);
 bool cwist_http_pool_rearm_current(int client_fd, void (*handler)(int, void *), void *ctx);

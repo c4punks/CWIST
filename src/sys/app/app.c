@@ -4396,8 +4396,14 @@ void cwist_apply_profile(void) {
  * @return 0 on success, or -1 when initialization, bind, or worker shutdown fails.
  */
 int cwist_app_listen(cwist_app *app, int port) {
+    return cwist_app_listen_ex(app, port, 0, -1);
+}
+
+int cwist_app_listen_ex(cwist_app *app, int port, int workers_override, int c1m_override) {
 #if defined(__EMSCRIPTEN__) || defined(CWIST_WASI_NO_SOCKETS)
     (void)port;
+    (void)workers_override;
+    (void)c1m_override;
     if (app) app->port = port;
     return -1; /* WASM hosts drive requests through cwist_app_dispatch_memory() */
 #else
@@ -4596,11 +4602,16 @@ int cwist_app_listen(cwist_app *app, int port) {
 #else
     bool use_c1m = true;
 #endif
-    if (c1m) {
+    if (c1m_override < 0 && c1m) {
         if (c1m[0] == '0' || strcmp(c1m, "false") == 0) {
             use_c1m = false;
         }
     }
+#ifndef __wasi__
+    if (c1m_override >= 0) use_c1m = c1m_override != 0;
+#else
+    (void)c1m_override;
+#endif
     if (use_c1m) {
         cwist_async_server_loop(server_fd, app);
     } else {

@@ -466,7 +466,30 @@ cwist_async_action_t cwist_app_http_handler_async(int client_fd, cwist_http_asyn
  */
 void cwist_apply_profile(void);
 
+/**
+ * @brief Serve @p app on @p port until shutdown is requested (SIGTERM,
+ * SIGINT or cwist_shutdown_request()); blocks the calling thread.
+ *
+ * The number of worker processes comes from CWIST_WORKERS (default: one per
+ * online core) and the server mode from CWIST_C1M_MODE; with more than one
+ * worker the process forks, and this function also returns in each worker.
+ * Same as cwist_app_listen_ex(app, port, 0, -1).
+ */
 int cwist_app_listen(cwist_app *app, int port);
+
+/**
+ * @brief cwist_app_listen() with explicit overrides for its environment
+ * settings.
+ *
+ * @param workers_override Worker processes; 1 serves in the calling process
+ *        without forking. 0 or less keeps the CWIST_WORKERS rule.
+ * @param c1m_override 1 for the C1M reactor server, whose handler threads
+ *        are all joined before this returns; 0 for the classic thread pool;
+ *        a negative value keeps the CWIST_C1M_MODE rule. Ignored on WASI,
+ *        which has no reactor.
+ * @return 0 after a graceful shutdown; -1 if the server could not start.
+ */
+int cwist_app_listen_ex(cwist_app *app, int port, int workers_override, int c1m_override);
 
 /**
  * @brief Start one app facade across a public port and counted backend port list.
