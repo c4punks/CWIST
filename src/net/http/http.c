@@ -870,12 +870,18 @@ typedef struct {
     http_async_ctx_t next;
 } http_async_continuation_t;
 
+/* Engine-internal teardown for the async pool: drain pending receive-queue
+ * bytes so the kernel answers with FIN instead of RST, then close and release.
+ * Must run on the connection's reactor owner thread (the reactor may still
+ * have the fd armed); not part of the public API. Defined below. */
+static void http_async_close(int client_fd, cwist_http_async_conn_t *conn);
+
 static void http_async_continue(void *ctx) {
     http_async_continuation_t *continuation = ctx;
     http_async_ctx_t next = continuation->next;
     cwist_free(continuation);
     if (!atomic_load(&g_cwist_running) || atomic_load(&g_http_pool_stopping)) {
-        cwist_http_async_close(next.client_fd, next.conn);
+        http_async_close(next.client_fd, next.conn);
         return;
     }
     http_async_event_cb(next.client_fd, &next);
@@ -887,11 +893,11 @@ bool cwist_http_async_rearm(int client_fd, cwist_reactor_t *reactor,
     /* A deferred response may finish in reactor_destroy's final drain. Never
      * enqueue new work into that final snapshot or the connection is orphaned. */
     if (atomic_load(&g_http_pool_stopping)) {
-        cwist_http_async_close(client_fd, conn);
+        http_async_close(client_fd, conn);
         return false;
     }
     if (conn->peer_eof && conn->len == 0) {
-        cwist_http_async_close(client_fd, conn);
+        http_async_close(client_fd, conn);
         return false;
     }
     conn->last_active_sec = cwist_fast_monotonic_sec();
@@ -908,7 +914,7 @@ bool cwist_http_async_rearm(int client_fd, cwist_reactor_t *reactor,
          * run between bounded HTTP request batches. */
         http_async_continuation_t *continuation = cwist_alloc(sizeof(*continuation));
         if (!continuation) {
-            cwist_http_async_close(client_fd, conn);
+            http_async_close(client_fd, conn);
             return false;
         }
         continuation->next = next;
@@ -923,7 +929,7 @@ bool cwist_http_async_rearm(int client_fd, cwist_reactor_t *reactor,
             if (getenv("CWIST_ASYNC_DEBUG") && (n <= 5 || n % 10000 == 0))
                 fprintf(stderr, "[async] continuation shed fd=%d total=%ld\n", client_fd, n);
             cwist_free(continuation);
-            cwist_http_async_close(client_fd, conn);
+            http_async_close(client_fd, conn);
             return false;
         }
         return true;
@@ -946,7 +952,7 @@ bool cwist_http_async_rearm(int client_fd, cwist_reactor_t *reactor,
     return true;
 }
 
-void cwist_http_async_close(int client_fd, cwist_http_async_conn_t *conn) {
+static void http_async_close(int client_fd, cwist_http_async_conn_t *conn) {
     if (client_fd >= 0) {
         /* close() on a socket with unread receive-queue data makes the
          * kernel answer with RST instead of a graceful FIN. A client can
@@ -2508,7 +2514,7 @@ static void http_parked_write_finish(int fd, http_parked_write_t *w, bool draine
     if (keep) {
         cwist_http_async_rearm(fd, reactor, conn);
     } else {
-        cwist_http_async_close(fd, conn);
+        http_async_close(fd, conn);
     }
 }
 
@@ -2752,7 +2758,7 @@ static cwist_file_begin_result_t cwist_http_file_begin(int client_fd, cwist_http
      * would resend them, so this function owns the outcome. */
     http_parked_write_state_t *st = cwist_alloc(sizeof(*st));
     if (!st) {
-        cwist_http_async_close(client_fd, conn);
+        http_async_close(client_fd, conn);
         if (defer && status_out) *status_out = CWIST_ASYNC_SEND_CLOSE;
         return CWIST_FILE_BEGIN_HANDLED;
     }
@@ -2764,7 +2770,7 @@ static cwist_file_begin_result_t cwist_http_file_begin(int client_fd, cwist_http
         int dupfd = dup(res->file_stream_fd);
         if (dupfd < 0) {
             cwist_free(st);
-            cwist_http_async_close(client_fd, conn);
+            http_async_close(client_fd, conn);
             if (defer && status_out) *status_out = CWIST_ASYNC_SEND_CLOSE;
             return CWIST_FILE_BEGIN_HANDLED;
         }
@@ -2776,7 +2782,7 @@ static cwist_file_begin_result_t cwist_http_file_begin(int client_fd, cwist_http
     if (hst == CWIST_WRITE_ERR) {
         if (st->close_file_fd) close(st->file_fd);
         cwist_free(st);
-        cwist_http_async_close(client_fd, conn);
+        http_async_close(client_fd, conn);
         if (defer && status_out) *status_out = CWIST_ASYNC_SEND_CLOSE;
         return CWIST_FILE_BEGIN_HANDLED;
     }
@@ -2822,7 +2828,7 @@ static cwist_file_begin_result_t cwist_http_file_begin(int client_fd, cwist_http
         if (defer && status_out) {
             *status_out = CWIST_ASYNC_SEND_CLOSE;
         } else {
-            cwist_http_async_close(client_fd, conn);
+            http_async_close(client_fd, conn);
         }
     }
     return CWIST_FILE_BEGIN_HANDLED;
@@ -2833,7 +2839,7 @@ void cwist_http_async_send_response(int client_fd, cwist_http_response *res,
                                     cwist_reactor_t *reactor, cwist_http_async_conn_t *conn,
                                     bool keep_alive, bool head_only) {
     if (client_fd < 0 || !res || !reactor || !conn) {
-        cwist_http_async_close(client_fd, conn);
+        http_async_close(client_fd, conn);
         return;
     }
 
@@ -2852,7 +2858,7 @@ void cwist_http_async_send_response(int client_fd, cwist_http_response *res,
         if (keep_alive && err.error.err_i16 == 0) {
             cwist_http_async_rearm(client_fd, reactor, conn);
         } else {
-            cwist_http_async_close(client_fd, conn);
+            http_async_close(client_fd, conn);
         }
         return;
     }
@@ -2932,7 +2938,7 @@ void cwist_http_async_send_response(int client_fd, cwist_http_response *res,
             return;
         }
         cwist_free(w.buf);
-        cwist_http_async_close(client_fd, conn);
+        http_async_close(client_fd, conn);
         return;
     }
 
@@ -2941,7 +2947,7 @@ void cwist_http_async_send_response(int client_fd, cwist_http_response *res,
     if (st == CWIST_WRITE_DONE && keep_alive && atomic_load(&g_cwist_running)) {
         cwist_http_async_rearm(client_fd, reactor, conn);
     } else {
-        cwist_http_async_close(client_fd, conn);
+        http_async_close(client_fd, conn);
     }
 }
 
