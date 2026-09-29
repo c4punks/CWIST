@@ -1384,6 +1384,22 @@ static void https_connection_teardown(cwist_https_connection *conn) {
             SSL_free(conn->ssl);
         }
         if (conn->fd >= 0) {
+            /* close() on a socket with unread receive-queue data makes the
+             * kernel answer with RST instead of a graceful FIN. TLS clients
+             * routinely send their close_notify (or a pipelined next request)
+             * that the request path never consumed, so under connection churn
+             * nearly every teardown became an abortive close: the peer's
+             * kernel flushes queued response bytes on the RST (the "read
+             * error" burst load clients report) and the socket never settles
+             * through TIME_WAIT normally. Drain whatever is pending before
+             * closing; the socket is about to be destroyed anyway. */
+            char drain[2048];
+            ssize_t n;
+            int guard = 16;
+            while (guard-- > 0 && (n = recv(conn->fd, drain, sizeof(drain), MSG_DONTWAIT)) > 0) {
+                /* discard */
+            }
+            (void)n;
             close(conn->fd);
         }
         cwist_free(conn->read_buf);
