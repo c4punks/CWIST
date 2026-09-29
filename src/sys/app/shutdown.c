@@ -7,24 +7,40 @@
 #include <cwist/sys/app/shutdown.h>
 #include <unistd.h>
 #include <stdio.h>
+#ifndef __wasi__
+#include <sys/socket.h>
+#endif
 
 atomic_int g_cwist_running = 1;
 int g_cwist_listen_fd = -1;
 int g_cwist_udp_fd = -1;
 int g_cwist_drain_timeout_sec = 5;
 
-#ifndef __wasi__
-static void cwist_shutdown_handler(int sig) {
-    (void)sig;
+void cwist_shutdown_request(void) {
     atomic_store(&g_cwist_running, 0);
-    int fd = g_cwist_listen_fd;
+    /* Take each descriptor atomically so a second request (another thread,
+     * a signal, a repeated call) cannot close a number that has meanwhile
+     * been reused for an unrelated file. */
+    int fd = __atomic_exchange_n(&g_cwist_listen_fd, -1, __ATOMIC_SEQ_CST);
     if (fd >= 0) {
+#ifndef __wasi__
+        /* close() alone does not interrupt an accept() already blocked in
+         * another thread on Linux; shutdown() makes it return (EINVAL),
+         * which the accept loops treat as the end of the server. */
+        shutdown(fd, SHUT_RDWR);
+#endif
         close(fd);
     }
-    int udp = g_cwist_udp_fd;
+    int udp = __atomic_exchange_n(&g_cwist_udp_fd, -1, __ATOMIC_SEQ_CST);
     if (udp >= 0) {
         close(udp);
     }
+}
+
+#ifndef __wasi__
+static void cwist_shutdown_handler(int sig) {
+    (void)sig;
+    cwist_shutdown_request();
 }
 #endif
 

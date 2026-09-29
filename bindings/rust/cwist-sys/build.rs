@@ -9,7 +9,9 @@ use std::path::PathBuf;
 /// v3.8 needs (app lifecycle, routing with a user context, in-memory
 /// dispatch, request/response strings and headers, error values).
 const FUNCTIONS: &[&str] = &[
-    "cwist_app_(create|destroy|listen|use|dispatch_memory)",
+    "cwist_app_(create|destroy|listen|listen_ex|use|dispatch_memory)",
+    // Graceful shutdown of a running server (sys/app/shutdown.h).
+    "cwist_shutdown_(request|reset)",
     "cwist_app_(get|post|put|delete|patch)(_ex)?",
     "cwist_http_header_(add|get|remove)",
     "cwist_http_method_to_string",
@@ -54,6 +56,9 @@ fn main() {
         .default_enum_style(bindgen::EnumVariation::Consts)
         .prepend_enum_name(false)
         .allowlist_var("CWIST_.*")
+        // Seconds cwist_app_listen*() waits for connections to drain after a
+        // shutdown request.
+        .allowlist_var("g_cwist_drain_timeout_sec")
         .allowlist_type("cwist_(http_request|http_response|http_header_node|sstring|error_t)")
         .allowlist_type("cwist_handler(_ex)?_func|cwist_handler_ctx_destroy_func")
         .allowlist_type("cwist_middleware_func");

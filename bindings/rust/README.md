@@ -35,6 +35,29 @@ The struct layouts the bindings mirror are pinned on the C side by
 `tests/abi_layout.h`, and bindgen checks the generated layouts against the C
 compiler when the crate builds.
 
+## The `cwist` crate
+
+```rust
+let mut app = cwist::App::new()?;
+app.get("/users/:id", |req, res| {
+    let id = req.param("id").unwrap_or("?");
+    let _ = res.set_body(format!("user {id}"));
+})?;
+let response = app.dispatch(b"GET /users/7 HTTP/1.1\r\nHost: localhost\r\n\r\n")?;
+```
+
+* `App` owns the C app and destroys it on drop.
+* Handlers are `Fn(&Request, &mut Response) + Send + Sync + 'static`
+  closures, boxed and registered through the `cwist_app_*_ex` routes; CWIST
+  drops each one exactly once (app drop, route replacement, or failed
+  registration).
+* `Request` and `Response` borrow the C objects for one handler call only.
+* A panic in a handler (or in a handler's `Drop`) is caught at the C
+  boundary; a panicking request is answered with 500.
+* `App::dispatch` runs a request in memory. Serving on a port (`listen`),
+  with graceful shutdown, is `App::listen(port)`; see "Serving" below.
+  Middleware and deferred responses are not wrapped yet.
+
 ## Memory
 
 Rust allocations stay outside `cwist_alloc`: CWIST's full GC and
@@ -42,3 +65,25 @@ Rust allocations stay outside `cwist_alloc`: CWIST's full GC and
 (for example from `cwist_app_dispatch_memory`) are released with `cwist_free`.
 A route context registered with a destructor belongs to the app, which calls
 the destructor exactly once.
+
+## Serving
+
+```rust
+let mut app = cwist::App::new()?;
+app.get("/stop", |_, res| {
+    cwist::shutdown();
+    let _ = res.set_body("bye");
+})?;
+app.listen(8080)?; // blocks until cwist::shutdown() or SIGTERM/SIGINT
+```
+
+* `App::listen` serves in the calling process only: it passes one worker to
+  `cwist_app_listen_ex`, so CWIST never forks and `CWIST_WORKERS` is ignored.
+* It uses the reactor (C1M) server, whose handler threads are joined before
+  `listen` returns; the app is then destroyed and its handlers dropped.
+* `cwist::shutdown()` wraps `cwist_shutdown_request()`: callable from any
+  thread or handler, idempotent, and process-wide like SIGTERM/SIGINT.
+* One server per process: a second concurrent `listen` returns
+  `Error::AlreadyListening`.
+* CWIST fills unset `CWIST_*` tuning variables with `setenv` when `listen`
+  starts; do not touch the environment on other threads meanwhile.
