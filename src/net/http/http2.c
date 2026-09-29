@@ -3147,8 +3147,6 @@ static int h2_async_drain(h2_conn *hc) {
         h2_inject_alt_svc(hc->conn, n->send);
         int rc = h2_send_response_hc(hc, n->stream_id, n->send);
         if (n->send_owned && n->send != n->res) cwist_http_response_destroy(n->send);
-        cwist_http_response_destroy(n->res);
-        cwist_http_request_destroy(n->req);
         h2_stream_remove(hc, n->stream_id);
         cwist_free(n);
         if (rc != 0) {
