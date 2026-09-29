@@ -500,6 +500,9 @@ void cwist_http_async_close(int client_fd, cwist_http_async_conn_t *conn);
 /* Pipelined continuations dropped (and their connections closed) because the
  * reactor post queue was full. Monotonic; useful for shed-rate alerting. */
 long cwist_http_continuation_shed_count(void);
+/* Live C1M connections (accepted, not yet released). Shutdown drain polls
+ * this for an early exit; also useful for metrics. */
+long cwist_http_inflight_count(void);
 
 /* Send a deferred completion's response on the reactor path without ever
  * blocking the reactor thread: speculative non-blocking write first; on a

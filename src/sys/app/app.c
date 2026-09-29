@@ -4688,9 +4688,17 @@ int cwist_app_listen_ex(cwist_app *app, int port, int workers_override, int c1m_
         app->mem_manager->watcher_running = false;
     }
 
+    /* Post-stop drain: give in-flight C1M connections a bounded window to
+     * finish before the process exits, but only for as long as something is
+     * actually alive. The reactor and pool are already torn down at this
+     * point, so an idle server used to sleep out the full timeout on every
+     * shutdown; exit as soon as no connection remains. */
     printf("[CWIST] Draining connections for %d seconds...\n", g_cwist_drain_timeout_sec);
-    if (is_worker_child || workers == 1) {
-        sleep(g_cwist_drain_timeout_sec);
+    if ((is_worker_child || workers == 1) && g_cwist_drain_timeout_sec > 0) {
+        for (int i = 0; i < g_cwist_drain_timeout_sec * 10; i++) {
+            if (cwist_http_inflight_count() <= 0) break;
+            usleep(100 * 1000);
+        }
     }
 
     int worker_result = 0;

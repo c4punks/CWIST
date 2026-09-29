@@ -7,6 +7,7 @@
 #include <cwist/sys/app/shutdown.h>
 #include <unistd.h>
 #include <stdio.h>
+#include <stdlib.h>
 #ifndef __wasi__
 #include <sys/socket.h>
 #endif
@@ -14,7 +15,24 @@
 atomic_int g_cwist_running = 1;
 int g_cwist_listen_fd = -1;
 int g_cwist_udp_fd = -1;
+/* Upper bound for the post-stop connection drain. Overridable with
+ * CWIST_DRAIN_TIMEOUT (seconds; 0 skips the drain wait entirely). The drain
+ * also exits early once no C1M connection is left, so an idle server no
+ * longer sits out the full timeout on every shutdown. */
 int g_cwist_drain_timeout_sec = 5;
+
+static void __attribute__((constructor)) cwist_drain_timeout_init(void) {
+    const char *env = getenv("CWIST_DRAIN_TIMEOUT");
+    if (!env || !*env) return;
+    char *end = NULL;
+    long v = strtol(env, &end, 10);
+    if (end && *end == '\0' && v >= 0 && v <= 3600) {
+        g_cwist_drain_timeout_sec = (int)v;
+    } else {
+        fprintf(stderr, "[CWIST] Ignoring invalid CWIST_DRAIN_TIMEOUT=\"%s\" (using default %d)\n",
+                env, g_cwist_drain_timeout_sec);
+    }
+}
 
 void cwist_shutdown_request(void) {
     atomic_store(&g_cwist_running, 0);
