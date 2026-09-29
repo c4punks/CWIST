@@ -1828,7 +1828,7 @@ static size_t h2_encode_response_headers(cwist_http_response *res, unsigned char
     else if (res->body)
         body_len = res->body->size;
 
-    if (!grpc_mode && !bodyless && !headers_have_content_length(res->headers)) {
+    if (!grpc_mode && !bodyless) {
         char cl_str[32];
         snprintf(cl_str, sizeof(cl_str), "%zu", body_len);
         int name_idx = h2_static_table_find_name("content-length");
@@ -1856,6 +1856,11 @@ static size_t h2_encode_response_headers(cwist_http_response *res, unsigned char
     cwist_http_header_node *curr = res->headers;
     while (curr) {
         if (!curr->key || !curr->key->data || !curr->value || !curr->value->data) {
+            curr = curr->next;
+            continue;
+        }
+        /* RFC 9113: skip content-length (already encoded from body_len) */
+        if (strcasecmp(curr->key->data, "content-length") == 0) {
             curr = curr->next;
             continue;
         }
