@@ -8,4 +8,5 @@
 #include <cwist/net/http/query.h>
 #include <cwist/sys/app/app.h>
 #include <cwist/sys/app/endpoint_opts.h>
+#include <cwist/sys/app/shutdown.h>
 #include <cwist/sys/err/cwist_err.h>

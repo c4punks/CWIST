@@ -38,6 +38,14 @@ extern int g_cwist_drain_timeout_sec;
 void cwist_shutdown_install_handlers(void);
 
 /**
+ * @brief Request a graceful shutdown, as SIGTERM/SIGINT do: clear the running
+ * flag and shut down the listening sockets, so cwist_app_listen() drains and
+ * returns. Safe from any thread, a handler or a signal handler; repeated
+ * calls are harmless.
+ */
+void cwist_shutdown_request(void);
+
+/**
  * @brief Reset shutdown state (useful in test suites).
  */
 void cwist_shutdown_reset(void);

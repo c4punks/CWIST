@@ -92,7 +92,9 @@ cwist_error_t cwist_async_server_loop(int server_fd, cwist_app *app) {
             return err;
         }
     } else {
-        if (cwist_http_pool_init() != 0) {
+        /* This loop only drives reactor workers: do not re-read
+         * CWIST_C1M_MODE, which cwist_app_listen_ex() may have overridden. */
+        if (cwist_http_pool_init_mode(true) != 0) {
             fprintf(stderr, "[async] Failed to init HTTP thread pool\n");
             return err;
         }

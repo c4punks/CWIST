@@ -140,6 +140,39 @@ impl App {
     }
 }
 
+impl App {
+    /// Serves this app on `port` (all IPv4 interfaces) and blocks until a
+    /// graceful shutdown is requested with [`shutdown`](crate::shutdown) or
+    /// SIGTERM/SIGINT. The server then stops accepting, drains and returns,
+    /// and the app is destroyed with its handlers.
+    ///
+    /// It serves in the calling process on the reactor server, ignoring
+    /// `CWIST_WORKERS` and `CWIST_C1M_MODE`: nothing forks, and every handler
+    /// thread has been joined when `listen` returns. One server runs per
+    /// process; a concurrent second call returns [`Error::AlreadyListening`]
+    /// and drops its app. Startup fills unset `CWIST_*` variables with
+    /// `setenv`, so other threads must not touch the environment meanwhile.
+    /// Returns [`Error::Listen`] if the server cannot start, for example
+    /// because the port is in use.
+    pub fn listen(self, port: u16) -> Result<(), Error> {
+        let _guard = crate::server::ListenGuard::acquire()?;
+        // SAFETY: the app is live and owned by self. With one worker and the
+        // reactor server every handler thread is joined before this returns,
+        // so no handler runs after the app is dropped below.
+        let rc = unsafe { sys::cwist_app_listen_ex(self.raw.as_ptr(), port.into(), 1, 1) };
+        // A shutdown leaves the process-wide running flag cleared; reset it
+        // so a later listen can serve.
+        // SAFETY: the server has stopped and the guard is still held.
+        unsafe { sys::cwist_shutdown_reset() };
+        drop(self);
+        if rc == 0 {
+            Ok(())
+        } else {
+            Err(Error::Listen { port })
+        }
+    }
+}
+
 impl Drop for App {
     fn drop(&mut self) {
         // SAFETY: the app is live and owned by self; destroying it runs each

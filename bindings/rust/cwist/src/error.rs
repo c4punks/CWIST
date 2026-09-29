@@ -21,6 +21,14 @@ pub enum Error {
     /// In-memory dispatch failed: the request was malformed or the response
     /// could not be serialized.
     Dispatch,
+    /// The server could not start, for example because the port is in use.
+    Listen {
+        /// The port that could not be served.
+        port: u16,
+    },
+    /// Another [`App`](crate::App) is already listening in this process;
+    /// CWIST runs one server per process.
+    AlreadyListening,
 }
 
 impl fmt::Display for Error {
@@ -32,6 +40,8 @@ impl fmt::Display for Error {
             Error::Header => f.write_str("CWIST rejected the response header"),
             Error::Body => f.write_str("could not store the response body"),
             Error::Dispatch => f.write_str("the request could not be dispatched"),
+            Error::Listen { port } => write!(f, "could not serve on port {port}"),
+            Error::AlreadyListening => f.write_str("a CWIST server is already running"),
         }
     }
 }

@@ -415,7 +415,11 @@ cwist_error_t cwist_http_server_loop(int server_fd, cwist_server_config *config,
                                      void (*handler)(int, void *), void *ctx);
 int headers_have_content_length(cwist_http_header_node *headers);
 
+/** @brief Initialize the handler pool in the mode CWIST_C1M_MODE selects. */
 int cwist_http_pool_init(void);
+/** @brief Initialize the handler pool as reactor workers (@p use_c1m) or the
+ *  classic thread pool, without reading CWIST_C1M_MODE. */
+int cwist_http_pool_init_mode(bool use_c1m);
 void cwist_http_pool_limit_core(unsigned int limit);
 void cwist_http_pool_submit(int client_fd, void (*handler)(int, void *), void *ctx);
 bool cwist_http_pool_rearm_current(int client_fd, void (*handler)(int, void *), void *ctx);

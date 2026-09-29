@@ -394,7 +394,6 @@ static bool http_spawn_worker(void) {
 }
 
 int cwist_http_pool_init(void) {
-    atomic_store(&g_http_pool_stopping, false);
     const char *c1m = getenv("CWIST_C1M_MODE");
     bool use_c1m = true;
     if (c1m) {
@@ -402,7 +401,11 @@ int cwist_http_pool_init(void) {
             use_c1m = false;
         }
     }
+    return cwist_http_pool_init_mode(use_c1m);
+}
 
+int cwist_http_pool_init_mode(bool use_c1m) {
+    atomic_store(&g_http_pool_stopping, false);
     g_http_thread_count = get_optimal_thread_count();
 
     if (use_c1m) {
@@ -4816,7 +4819,10 @@ cwist_error_t cwist_http_server_loop(int server_fd, cwist_server_config *config,
 #endif /* __wasi__ (no fork) */
 
     if (config->use_threading) {
-        if (cwist_http_pool_init() != 0) {
+        /* This loop submits to the classic dynamic pool, so initialise that
+         * pool whatever CWIST_C1M_MODE says (cwist_app_listen_ex() may have
+         * overridden it). */
+        if (cwist_http_pool_init_mode(false) != 0) {
             err.error.err_i16 = -1;
             return err;
         }
