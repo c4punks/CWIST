@@ -109,26 +109,30 @@ taken. Ask in the issue or on Discord if it is unclear which happened.
 
 ## Releases and patch releases
 
-- Milestone releases (`vX.Y`) follow `ROADMAP.md`. They are the only
-  releases that add features or change APIs.
-- Patch releases (`vX.Y.Z`) contain bug fixes only: no new features, no
-  refactors, no API additions beyond what a fix strictly needs, and no
-  dependency bumps except for a security fix. A patch release is cut from a
-  `release/X.Y.Z` branch that starts at the `vX.Y` tag (or the previous
-  patch tag), so feature work that has already reached `main` does not ride
-  along.
+- Milestone releases (`vX.Y`) follow `ROADMAP.md`.
+- Patch releases (`vX.Y.Z`) are cut from `main`. `main` only receives
+  reviewed changes cherry-picked from `dev`, so a patch release carries
+  everything merged since the previous tag: bug fixes, and any experimental
+  work already on `main`.
 - **Emergency patch:** a serious bug in a released version is fixed and
-  released right away instead of waiting for the next milestone. Serious
-  means any of: a crash or hang in the default configuration, data loss or
-  corruption, a security vulnerability, a build that produces a broken
-  binary, or a severe availability regression (for example, a server that
-  stops serving connections under normal load). The fix lands on `dev` and
-  `main` as usual and is cherry-picked onto the release branch. The patch is
-  tagged only after the source archive builds and tests clean without Git
-  metadata: `make dist VERSION=X.Y.Z`, then `make WERROR=1` and
-  `make WERROR=1 test` in the unpacked tree.
-- Patch release notes list every fix with its impact, the affected
-  versions, and any knob a fix introduced.
+  released from `main` right away instead of waiting for the next milestone.
+  Serious means any of: a crash or hang in the default configuration, data
+  loss or corruption, a security vulnerability, a build that produces a
+  broken binary, or a severe availability regression (for example, a server
+  that stops serving connections under normal load). The fix lands on `dev`
+  and `main` as usual.
+- A release is tagged only when:
+  - every CI workflow on the commit to be tagged has passed, and
+  - the source archive builds and tests clean without Git metadata:
+    `make dist VERSION=X.Y.Z` from a checkout whose submodules match the
+    recorded gitlinks, then `make WERROR=1` and `make WERROR=1 test` in the
+    unpacked tree.
+- Release notes list every change since the previous tag: each fix with its
+  impact and the affected versions, every new API or knob, and every
+  feature included, marked experimental when it is. A release that carries
+  features is not described as bug-fix-only.
+- After publishing, re-pin `packaging/homebrew/cwist.rb` and the tap
+  (`c4punks/homebrew-cwist`) to the released archive.
 
 ## Reporting a vulnerability
 
