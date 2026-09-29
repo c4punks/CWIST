@@ -519,7 +519,8 @@ typedef struct https_hs_pending {
     void (*handler)(cwist_https_connection *, void *);
     void *user_ctx;
     uint64_t deadline_ms;
-    struct https_hs_pending *next;
+    struct https_hs_pending *prev, *next;
+    bool linked;
 } https_hs_pending_t;
 
 typedef struct https_hs_shard {
@@ -529,7 +530,10 @@ typedef struct https_hs_shard {
     pthread_t thread;
     bool running;
     pthread_mutex_t lock;
-    https_hs_pending_t *head;
+    /* Pending handshakes in deadline order: every entry is (re)queued at the
+     * tail with now + CWIST_HTTPS_HANDSHAKE_TIMEOUT_MS, so the sweep only
+     * looks at the head. */
+    https_hs_pending_t *head, *tail;
     _Atomic uint32_t pending;
 } https_hs_shard_t;
 
@@ -540,12 +544,32 @@ static https_hs_shard_t g_hs_shards[CWIST_HTTPS_HS_MAX_SHARDS];
 static long g_hs_shard_count = 0;
 static pthread_mutex_t g_hs_start_lock = PTHREAD_MUTEX_INITIALIZER;
 
-static void https_hs_forget_locked(https_hs_shard_t *sh, https_hs_pending_t *prev,
-                                   https_hs_pending_t *p) {
-    if (prev)
-        prev->next = p->next;
+/* Both called with sh->lock held; O(1), so the shepherd's per-event and
+ * sweep costs no longer grow with the number of pending handshakes. */
+static void https_hs_link_locked(https_hs_shard_t *sh, https_hs_pending_t *p) {
+    p->next = NULL;
+    p->prev = sh->tail;
+    if (sh->tail)
+        sh->tail->next = p;
+    else
+        sh->head = p;
+    sh->tail = p;
+    p->linked = true;
+    atomic_fetch_add_explicit(&sh->pending, 1, memory_order_release);
+}
+
+static void https_hs_unlink_locked(https_hs_shard_t *sh, https_hs_pending_t *p) {
+    if (!p->linked) return;
+    if (p->prev)
+        p->prev->next = p->next;
     else
         sh->head = p->next;
+    if (p->next)
+        p->next->prev = p->prev;
+    else
+        sh->tail = p->prev;
+    p->prev = p->next = NULL;
+    p->linked = false;
     atomic_fetch_sub_explicit(&sh->pending, 1, memory_order_release);
 }
 
@@ -590,17 +614,8 @@ static void *https_hs_shepherd(void *arg) {
             /* Detach from the list first: every event path below either
              * re-arms (re-add) or finishes with p freed. */
             pthread_mutex_lock(&sh->lock);
-            https_hs_pending_t *prev = NULL, *cur = sh->head;
-            bool found = false;
-            while (cur) {
-                if (cur == p) {
-                    https_hs_forget_locked(sh, prev, cur);
-                    found = true;
-                    break;
-                }
-                prev = cur;
-                cur = cur->next;
-            }
+            bool found = p->linked;
+            https_hs_unlink_locked(sh, p);
             pthread_mutex_unlock(&sh->lock);
             if (!found) continue; /* already reaped by the sweeper */
 
@@ -623,23 +638,12 @@ static void *https_hs_shepherd(void *arg) {
                     .data.ptr = p,
                 };
                 pthread_mutex_lock(&sh->lock);
-                p->next = sh->head;
-                sh->head = p;
-                atomic_fetch_add_explicit(&sh->pending, 1, memory_order_release);
+                https_hs_link_locked(sh, p);
                 pthread_mutex_unlock(&sh->lock);
                 if (epoll_ctl(sh->epoll_fd, EPOLL_CTL_MOD, p->fd, &ev) != 0 &&
                     epoll_ctl(sh->epoll_fd, EPOLL_CTL_ADD, p->fd, &ev) != 0) {
                     pthread_mutex_lock(&sh->lock);
-                    prev = NULL;
-                    cur = sh->head;
-                    while (cur) {
-                        if (cur == p) {
-                            https_hs_forget_locked(sh, prev, cur);
-                            break;
-                        }
-                        prev = cur;
-                        cur = cur->next;
-                    }
+                    https_hs_unlink_locked(sh, p);
                     pthread_mutex_unlock(&sh->lock);
                     https_hs_abort(sh, p);
                 }
@@ -648,22 +652,16 @@ static void *https_hs_shepherd(void *arg) {
             https_hs_abort(sh, p); /* hard failure or deadline exceeded */
         }
 
-        /* Sweep expired handshakes that never became readable. */
+        /* Sweep expired handshakes that never became readable; the list is
+         * in deadline order, so stop at the first live one. */
         uint64_t sweep_now = cwist_https_now_ms();
         pthread_mutex_lock(&sh->lock);
-        https_hs_pending_t *prev = NULL, *cur = sh->head;
-        while (cur) {
-            https_hs_pending_t *next = cur->next;
-            if (sweep_now >= cur->deadline_ms) {
-                https_hs_forget_locked(sh, prev, cur);
-                pthread_mutex_unlock(&sh->lock);
-                https_hs_abort(sh, cur);
-                pthread_mutex_lock(&sh->lock);
-                cur = prev ? prev->next : sh->head;
-                continue;
-            }
-            prev = cur;
-            cur = next;
+        while (sh->head && sweep_now >= sh->head->deadline_ms) {
+            https_hs_pending_t *expired = sh->head;
+            https_hs_unlink_locked(sh, expired);
+            pthread_mutex_unlock(&sh->lock);
+            https_hs_abort(sh, expired);
+            pthread_mutex_lock(&sh->lock);
         }
         pthread_mutex_unlock(&sh->lock);
     }
@@ -687,7 +685,7 @@ static void https_hs_shard_stop(https_hs_shard_t *sh) {
 
     pthread_mutex_lock(&sh->lock);
     https_hs_pending_t *cur = sh->head;
-    sh->head = NULL;
+    sh->head = sh->tail = NULL;
     pthread_mutex_unlock(&sh->lock);
     while (cur) {
         https_hs_pending_t *next = cur->next;
@@ -849,22 +847,12 @@ void cwist_https_dispatch(int client_fd, cwist_https_context *ctx,
     };
 
     pthread_mutex_lock(&sh->lock);
-    p->next = sh->head;
-    sh->head = p;
-    atomic_fetch_add_explicit(&sh->pending, 1, memory_order_release);
+    https_hs_link_locked(sh, p);
     pthread_mutex_unlock(&sh->lock);
 
     if (epoll_ctl(sh->epoll_fd, EPOLL_CTL_ADD, client_fd, &ev) != 0) {
         pthread_mutex_lock(&sh->lock);
-        https_hs_pending_t *prev = NULL, *cur = sh->head;
-        while (cur) {
-            if (cur == p) {
-                https_hs_forget_locked(sh, prev, cur);
-                break;
-            }
-            prev = cur;
-            cur = cur->next;
-        }
+        https_hs_unlink_locked(sh, p);
         pthread_mutex_unlock(&sh->lock);
         SSL_free(ssl);
         close(client_fd);
