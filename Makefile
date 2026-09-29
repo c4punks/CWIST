@@ -964,7 +964,7 @@ test_error: $(LIB_NAME) tests/test_error.c
 # linked against it (what a binding generated from the headers links to).
 INLINE_EXPORT_SYMBOLS = cwist_error_is_ok_extern cwist_endpoint_has_extern
 test_inline_exports: $(LIB_NAME) tests/test_inline_exports.c
-	$(CC) $(CFLAGS) -o test_inline_exports tests/test_inline_exports.c $(LIB_NAME) $(LIBS)
+	$(CC) $(CFLAGS) -rdynamic -o test_inline_exports tests/test_inline_exports.c $(LIB_NAME) $(LIBS)
 	./test_inline_exports
 	@for sym in $(INLINE_EXPORT_SYMBOLS); do \
 		for obj in $(LIB_NAME) test_inline_exports; do \
