@@ -27,9 +27,11 @@
 //!
 //! # Panics and threads
 //!
-//! A panic in a handler never unwinds into C: it is caught at the callback
-//! boundary and the request is answered with `500 Internal Server Error`.
-//! A panic while a handler is being dropped is caught the same way.
+//! An unwinding panic in a handler is caught at the callback boundary and
+//! the request is answered with `500 Internal Server Error`.
+//! A panic while a handler is being dropped is caught the same way. Caught
+//! panic payloads are intentionally leaked: their destructors can panic again.
+//! Aborting panics (`panic = "abort"`) cannot be caught.
 //! CWIST may call one handler from several worker threads at once, so
 //! handlers must be `Send + Sync`.
 //!

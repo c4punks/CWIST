@@ -59,8 +59,10 @@ let response = app.dispatch(b"GET /users/7 HTTP/1.1\r\nHost: localhost\r\n\r\n")
   drops each one exactly once (app drop, route replacement, or failed
   registration).
 * `Request` and `Response` borrow the C objects for one handler call only.
-* A panic in a handler (or in a handler's `Drop`) is caught at the C
-  boundary; a panicking request is answered with 500.
+* An unwinding panic in a handler (or in a handler's `Drop`) is caught at
+  the C boundary; a panicking request is answered with 500. Caught panic
+  payloads are intentionally leaked because their destructors can panic
+  again. This does not catch aborting panics (`panic = "abort"`).
 * `App::dispatch` runs a request in memory. Serving on a port (`listen`),
   with graceful shutdown, is `App::listen(port)`; see "Serving" below.
   Middleware and deferred responses are not wrapped yet.

@@ -201,7 +201,10 @@ unsafe extern "C" fn route_trampoline(
         let mut response = unsafe { Response::from_raw(res) };
         (ctx.handler)(&request, &mut response);
     }));
-    if outcome.is_err() {
+    if let Err(payload) = outcome {
+        // As in drop_route_ctx, the payload's Drop can panic again. Do not
+        // run it outside catch_unwind in this extern "C" callback.
+        std::mem::forget(payload);
         // SAFETY: as above; only res is touched. Failures are ignored: this
         // is already the error path and must not panic.
         let mut response = unsafe { Response::from_raw(res) };
