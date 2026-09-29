@@ -919,7 +919,24 @@ bool cwist_http_async_rearm(int client_fd, cwist_reactor_t *reactor,
 }
 
 void cwist_http_async_close(int client_fd, cwist_http_async_conn_t *conn) {
-    if (client_fd >= 0) close(client_fd);
+    if (client_fd >= 0) {
+        /* close() on a socket with unread receive-queue data makes the
+         * kernel answer with RST instead of a graceful FIN. A client can
+         * pipeline its next request onto a connection the server is
+         * closing, leaving those bytes unconsumed here; under connection
+         * churn that turned most teardowns into abortive closes (the RST
+         * also flushes response bytes the peer had not read yet). Drain
+         * whatever is pending before closing; the socket is about to be
+         * destroyed anyway. Mirrors https_connection_teardown(). */
+        char drain[2048];
+        ssize_t n;
+        int guard = 16;
+        while (guard-- > 0 && (n = recv(client_fd, drain, sizeof(drain), MSG_DONTWAIT)) > 0) {
+            /* discard */
+        }
+        (void)n;
+        close(client_fd);
+    }
     http_async_conn_release(conn);
 }
 
