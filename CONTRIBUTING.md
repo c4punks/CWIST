@@ -107,6 +107,29 @@ When it happens you get:
 If a PR of yours is closed without that comment and label, it was not
 taken. Ask in the issue or on Discord if it is unclear which happened.
 
+## Releases and patch releases
+
+- Milestone releases (`vX.Y`) follow `ROADMAP.md`. They are the only
+  releases that add features or change APIs.
+- Patch releases (`vX.Y.Z`) contain bug fixes only: no new features, no
+  refactors, no API additions beyond what a fix strictly needs, and no
+  dependency bumps except for a security fix. A patch release is cut from a
+  `release/X.Y.Z` branch that starts at the `vX.Y` tag (or the previous
+  patch tag), so feature work that has already reached `main` does not ride
+  along.
+- **Emergency patch:** a serious bug in a released version is fixed and
+  released right away instead of waiting for the next milestone. Serious
+  means any of: a crash or hang in the default configuration, data loss or
+  corruption, a security vulnerability, a build that produces a broken
+  binary, or a severe availability regression (for example, a server that
+  stops serving connections under normal load). The fix lands on `dev` and
+  `main` as usual and is cherry-picked onto the release branch. The patch is
+  tagged only after the source archive builds and tests clean without Git
+  metadata: `make dist VERSION=X.Y.Z`, then `make WERROR=1` and
+  `make WERROR=1 test` in the unpacked tree.
+- Patch release notes list every fix with its impact, the affected
+  versions, and any knob a fix introduced.
+
 ## Reporting a vulnerability
 
 Open an issue titled `[CVE/<component>]` describing the finding (see
