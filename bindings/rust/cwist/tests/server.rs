@@ -270,8 +270,13 @@ fn a_deferred_response_is_read_only_for_the_handler_and_middleware() {
     let handler_seen = Arc::clone(&seen);
     let middleware_seen = Arc::clone(&seen);
     let done = serve(port, move |app| {
-        let _ = app.use_middleware(move |_req, res, next| {
+        let _ = app.use_middleware(move |req, res, next| {
             next();
+            // Middleware is app-wide; only record the deferred route, not
+            // the /ping readiness probe.
+            if req.path() != Some("/defer") {
+                return;
+            }
             let late = res.add_header("X-Late", "1");
             middleware_seen.lock().unwrap().push(format!("middleware {late:?}"));
         });
@@ -297,6 +302,10 @@ fn a_deferred_response_is_read_only_for_the_handler_and_middleware() {
 
     assert!(wait_until_up(port));
     let response = raw_get(port, "/defer");
+    // Stop the server before asserting, so a failure here cannot leave it
+    // running for the next test.
+    cwist::shutdown();
+    assert_eq!(finished(&done), Ok(()));
     assert!(response.starts_with("HTTP/1.1 200"), "{response}");
     assert!(response.ends_with("\r\n\r\nasync body"), "{response}");
     assert!(!response.contains("X-Late"), "{response}");
@@ -311,9 +320,6 @@ fn a_deferred_response_is_read_only_for_the_handler_and_middleware() {
             "middleware Err(Deferred)",
         ]
     );
-
-    cwist::shutdown();
-    assert_eq!(finished(&done), Ok(()));
 }
 
 #[test]
