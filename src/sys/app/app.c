@@ -1310,9 +1310,26 @@ cwist_app *cwist_app_create(void) {
  * @param mw Middleware callback to append.
  */
 void cwist_app_use(cwist_app *app, cwist_middleware_func mw) {
-    if (!app || !mw) return;
+    cwist_app_use_ex(app, mw, NULL, NULL, NULL);
+}
+
+/**
+ * @brief Append an extended middleware callback to the application's execution chain.
+ * @param app     Application being configured.
+ * @param mw      Legacy middleware function (may be NULL if @p mw_ex is set).
+ * @param mw_ex   Extended middleware function with user context (may be NULL if @p mw is set).
+ * @param user_ctx Opaque context for @p mw_ex.
+ * @param destroy  Destructor for @p user_ctx.
+ */
+void cwist_app_use_ex(cwist_app *app, cwist_middleware_func mw, cwist_middleware_func_ex mw_ex,
+                      void *user_ctx, cwist_middleware_ctx_destroy_func destroy) {
+    if (!app || (!mw && !mw_ex)) return;
     cwist_middleware_node *node = cwist_alloc(sizeof(cwist_middleware_node));
     node->func = mw;
+    node->func_ex = mw_ex;
+    node->user_ctx = user_ctx;
+    node->destroy = destroy;
+    node->is_ex = mw_ex != NULL;
     node->next = NULL;
 
     if (!app->middlewares) {
@@ -1410,6 +1427,7 @@ void cwist_app_destroy(cwist_app *app) {
     cwist_middleware_node *curr_m = app->middlewares;
     while (curr_m) {
         cwist_middleware_node *next = curr_m->next;
+        if (curr_m->destroy) curr_m->destroy(curr_m->user_ctx);
         cwist_free(curr_m);
         curr_m = next;
     }
@@ -1529,7 +1547,11 @@ static void mw_next_wrapper(cwist_http_request *req, cwist_http_response *res) {
         cwist_middleware_node *node = ctx->current_mw_node;
         // Advance the chain for the next "next" call
         ctx->current_mw_node = node->next;
-        node->func(req, res, mw_next_wrapper);
+        if (node->is_ex) {
+            node->func_ex(req, res, mw_next_wrapper, node->user_ctx);
+        } else {
+            node->func(req, res, mw_next_wrapper);
+        }
     } else if (ctx->final_handler) {
         ctx->final_handler(req, res);
     }

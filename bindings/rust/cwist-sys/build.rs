@@ -9,7 +9,7 @@ use std::path::PathBuf;
 /// v3.8 needs (app lifecycle, routing with a user context, in-memory
 /// dispatch, request/response strings and headers, error values).
 const FUNCTIONS: &[&str] = &[
-    "cwist_app_(create|destroy|listen|listen_ex|use|dispatch_memory)",
+    "cwist_app_(create|destroy|listen|listen_ex|use|use_ex|dispatch_memory)",
     // Graceful shutdown of a running server (sys/app/shutdown.h).
     "cwist_shutdown_(request|reset)",
     "cwist_app_(get|post|put|delete|patch)(_ex)?",
@@ -104,13 +104,17 @@ fn main() {
         // C side adds later must not be undefined behaviour in Rust.
         .default_enum_style(bindgen::EnumVariation::Consts)
         .prepend_enum_name(false)
+        // Some system stdatomic.h headers define _Atomic as a type-qualifier
+        // macro that does not accept parenthesised types. Treat _Atomic(T) as
+        // _Atomic T so CWIST atomic pointer fields parse on every host.
+        .clang_arg("-D_Atomic=_Atomic")
         .allowlist_var("CWIST_.*")
         // Seconds cwist_app_listen*() waits for connections to drain after a
         // shutdown request.
         .allowlist_var("g_cwist_drain_timeout_sec")
         .allowlist_type("cwist_(http_request|http_response|http_header_node|sstring|error_t)")
         .allowlist_type("cwist_handler(_ex)?_func|cwist_handler_ctx_destroy_func")
-        .allowlist_type("cwist_middleware_func");
+        .allowlist_type("cwist_middleware(_func|_func_ex|_ctx_destroy_func)");
     for f in FUNCTIONS {
         builder = builder.allowlist_function(f);
     }

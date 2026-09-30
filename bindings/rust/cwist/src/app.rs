@@ -14,6 +14,13 @@ struct RouteCtx {
     handler: Box<Handler>,
 }
 
+type Middleware = dyn Fn(&Request<'_>, &mut Response<'_>, &dyn Fn()) + Send + Sync + 'static;
+
+/// What CWIST stores as an extended middleware's `user_ctx`: one boxed middleware.
+struct MiddlewareCtx {
+    middleware: Box<Middleware>,
+}
+
 type RegisterFn = unsafe extern "C" fn(
     *mut sys::cwist_app,
     *const c_char,
@@ -82,6 +89,39 @@ impl App {
         F: Fn(&Request<'_>, &mut Response<'_>) + Send + Sync + 'static,
     {
         self.route(sys::cwist_app_patch_ex, path, Box::new(handler))
+    }
+
+    /// Appends a middleware to the application chain.
+    ///
+    /// Middleware runs in registration order. Each middleware receives the
+    /// request, a mutable response, and a `next` closure that advances the
+    /// chain. Calling `next` invokes the next middleware or, at the end of the
+    /// chain, the matching route handler. A middleware may choose not to call
+    /// `next` to short-circuit the request.
+    ///
+    /// # Panics
+    ///
+    /// As with route handlers, a panic in a middleware is caught at the C
+    /// boundary and converted into a `500 Internal Server Error`. If the panic
+    /// occurs before `next` was called, the chain continues to the route so the
+    /// request is still answered.
+    pub fn use_middleware<F>(&mut self, middleware: F)
+    where
+        F: Fn(&Request<'_>, &mut Response<'_>, &dyn Fn()) + Send + Sync + 'static,
+    {
+        let ctx = Box::into_raw(Box::new(MiddlewareCtx { middleware: Box::new(middleware) }))
+            .cast::<c_void>();
+        // SAFETY: the app is live; ctx ownership passes to CWIST and is released
+        // by drop_middleware_ctx when the app is destroyed.
+        unsafe {
+            sys::cwist_app_use_ex(
+                self.raw.as_ptr(),
+                None,
+                Some(middleware_trampoline_ex),
+                ctx,
+                Some(drop_middleware_ctx),
+            );
+        }
     }
 
     fn route(&mut self, register: RegisterFn, path: &str, handler: Box<Handler>) -> Result<(), Error> {
@@ -223,6 +263,62 @@ unsafe extern "C" fn drop_route_ctx(user_ctx: *mut c_void) {
         // SAFETY: user_ctx came from Box::into_raw in App::route, and CWIST
         // calls this destructor exactly once per context.
         drop(unsafe { Box::from_raw(user_ctx as *mut RouteCtx) });
+    }));
+    // The payload's own Drop could panic again; leak it instead.
+    if let Err(payload) = result {
+        std::mem::forget(payload);
+    }
+}
+
+/// C entry point for every extended middleware: calls the boxed middleware,
+/// never letting a panic unwind into C.
+unsafe extern "C" fn middleware_trampoline_ex(
+    req: *mut sys::cwist_http_request,
+    res: *mut sys::cwist_http_response,
+    next: sys::cwist_handler_func,
+    user_ctx: *mut c_void,
+) {
+    let (Some(req), Some(res)) = (NonNull::new(req), NonNull::new(res)) else {
+        return;
+    };
+    let outcome = panic::catch_unwind(AssertUnwindSafe(|| {
+        // SAFETY: user_ctx is the MiddlewareCtx registered with this middleware,
+        // alive until its destructor runs, which CWIST never does during a call.
+        let ctx = unsafe { &*(user_ctx as *const MiddlewareCtx) };
+        // SAFETY: CWIST owns req/res for the duration of this call and does
+        // not touch them while the middleware runs.
+        let request = unsafe { Request::from_raw(req) };
+        let mut response = unsafe { Response::from_raw(res) };
+        let next_fn = || {
+            if let Some(f) = next {
+                // SAFETY: next is a valid CWIST chain function; req/res remain
+                // live for the call.
+                unsafe { f(req.as_ptr(), res.as_ptr()) };
+            }
+        };
+        (ctx.middleware)(&request, &mut response, &next_fn);
+    }));
+    if let Err(payload) = outcome {
+        // As in route_trampoline, the payload's Drop can panic again.
+        std::mem::forget(payload);
+        // Do not continue the chain: a panicking middleware has no way to
+        // safely decide whether to call next. Answer with 500 directly.
+        let mut response = unsafe { Response::from_raw(res) };
+        response.set_status(500);
+        let _ = response.set_body("Internal Server Error");
+    }
+}
+
+/// C destructor for a middleware context: drops the boxed middleware. A panic
+/// in the middleware's own Drop is contained.
+unsafe extern "C" fn drop_middleware_ctx(user_ctx: *mut c_void) {
+    if user_ctx.is_null() {
+        return;
+    }
+    let result = panic::catch_unwind(AssertUnwindSafe(|| {
+        // SAFETY: user_ctx came from Box::into_raw in App::use_middleware, and
+        // CWIST calls this destructor exactly once per context.
+        drop(unsafe { Box::from_raw(user_ctx as *mut MiddlewareCtx) });
     }));
     // The payload's own Drop could panic again; leak it instead.
     if let Err(payload) = result {

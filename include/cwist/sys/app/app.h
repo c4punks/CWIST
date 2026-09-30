@@ -114,6 +114,19 @@ bool cwist_rdbms_mount_runtime(cwist_app *app, cwist_rdbms_provider_t provider, 
  */
 typedef void (*cwist_middleware_func)(cwist_http_request *req, cwist_http_response *res,
                                       cwist_handler_func next);
+
+/**
+ * @brief Extended middleware type that also receives a user context.
+ *
+ * This is the target type for language bindings that need to pass a closure
+ * and its destructor through the C middleware chain.
+ */
+typedef void (*cwist_middleware_func_ex)(cwist_http_request *req, cwist_http_response *res,
+                                          cwist_handler_func next, void *user_ctx);
+
+/** @brief Destructor for a middleware user context. */
+typedef void (*cwist_middleware_ctx_destroy_func)(void *user_ctx);
+
 typedef void (*cwist_https_request_handler_func)(cwist_https_connection *conn, void *ctx);
 
 /**
@@ -121,6 +134,10 @@ typedef void (*cwist_https_request_handler_func)(cwist_https_connection *conn, v
  */
 typedef struct cwist_middleware_node {
     cwist_middleware_func func;
+    cwist_middleware_func_ex func_ex;
+    void *user_ctx;
+    cwist_middleware_ctx_destroy_func destroy;
+    bool is_ex;
     struct cwist_middleware_node *next;
 } cwist_middleware_node;
 
@@ -277,6 +294,22 @@ void cwist_app_set_max_memspace(cwist_app *app, size_t size);
 /** @name Middleware */
 /** @{ */
 void cwist_app_use(cwist_app *app, cwist_middleware_func mw);
+
+/**
+ * @brief Append an extended middleware to the application chain.
+ *
+ * Exactly one of @p mw or @p mw_ex must be non-NULL.  The user context is
+ * passed to @p mw_ex on every invocation; @p destroy is called once when the
+ * application is destroyed or the node is otherwise released.
+ *
+ * @param app     Application context.
+ * @param mw      Legacy middleware function (may be NULL if @p mw_ex is set).
+ * @param mw_ex   Extended middleware function with user context (may be NULL if @p mw is set).
+ * @param user_ctx Opaque context for @p mw_ex.
+ * @param destroy  Destructor for @p user_ctx.
+ */
+void cwist_app_use_ex(cwist_app *app, cwist_middleware_func mw, cwist_middleware_func_ex mw_ex,
+                      void *user_ctx, cwist_middleware_ctx_destroy_func destroy);
 /** @} */
 
 /** @name Error Handling Configuration */
