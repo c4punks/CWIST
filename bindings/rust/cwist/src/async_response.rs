@@ -43,10 +43,6 @@ impl Drop for InMemoryDispatch {
 /// timeout) wins and later calls return `false`. Dropping a handle that has
 /// not been completed answers `500 Internal Server Error` and closes the
 /// connection, so a request is never left without a response.
-///
-/// A handle may outlive the server: if [`App::listen`](crate::App::listen)
-/// returns while the exchange is still pending, completing or dropping the
-/// handle later closes the connection without sending anything.
 pub struct AsyncResponse {
     raw: NonNull<sys::cwist_async>,
 }
