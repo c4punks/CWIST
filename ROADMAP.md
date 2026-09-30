@@ -30,7 +30,7 @@
 | Phase | Theme | Progress |
 |-------|-------|----------|
 | Phase 1 — Performance | Reactor latency, RX-uring pipelining, HTTPS handshake shards, worker warmup | Mostly done: #293 closed the measurement loop; RX-uring and worker warmup dropped; HTTPS shard tuning remains open |
-| Phase 2 — Rust FFI | `bindings/rust/` (`cwist-sys` + `cwist`) | Not started |
+| Phase 2 — Rust FFI | `bindings/rust/` (`cwist-sys` + `cwist`) | Mostly done: middleware + async wrappers, example, FFI overhead benchmark |
 | Phase 3 — HTTP/3 Close Correctness | Re-pin lsquic after upstream fixes | Deferred indefinitely — waiting for upstream lsquic to ship WebTransport client support |
 | Phase 4 — v4.0 Scope Confirmation | Enact v3.7 Phase 5 decisions, record experimental-item fates | Not started |
 
@@ -220,7 +220,7 @@ it is additive. Scope does not grow; anything not ready slips.
 | Phase | Goal | Status | Next Actions |
 |-------|------|--------|--------------|
 | **1 — Performance** | Close reactor/Classic/Axum latency gaps; validate RX-uring pipelining; HTTPS handshake shards; worker warmup | Mostly done | #293 has the data; #294 raised `CWIST_HTTPS_HS_SHARDS` default floor to 4 and MAX to 16; RX-uring and worker warmup dropped |
-| **2 — Rust FFI** | Make CWIST callable from Rust (`cwist-sys` + `cwist`) | Not started | Create `bindings/rust/`; add additive `_ex` route registration; export `static inline` wrappers; add layout assertion tests; write `example/rust-hello/`; integrate `cargo test` into CI |
+| **2 — Rust FFI** | Make CWIST callable from Rust (`cwist-sys` + `cwist`) | Mostly done | Middleware and deferred-async wrappers landed; `example/rust-hello/` and FFI overhead benchmark added; remaining: built-in middleware factory wrappers, `cwist_async_respond_with`, published crates |
 | **3 — HTTP/3 close correctness** | Re-pin lsquic when upstream fixes land; add CONNECTION_CLOSE interop gate | Deferred indefinitely | On hold until upstream lsquic ships WebTransport client support; no separate cutoff |
 | **4 — v4.0 scope confirmation** | Enact v3.7 Phase 5 decisions and record v4.0 fate for every experimental item | Not started | Promote full GC/malloc interception to supported opt-in; record decisions for GraphQL subscriptions, durable queue, Redis/NATS borrow, WASM component pipeline; audit stale experimental docs |
 
@@ -244,14 +244,16 @@ microbenchmark, or with a recorded negative result.
 Layout: an in-tree `bindings/rust/` workspace with `cwist-sys` (bindgen output
 that links `libcwist.a` through `cwist.pc`) and `cwist` (the safe wrapper).
 
-| Work Item | What Changes | C-Side Impact |
-|-----------|--------------|---------------|
-| Per-route user context | Additive `_ex` registration functions that carry `void *user_ctx` + optional destructor | New symbols only; existing signatures unchanged |
-| `static inline` helpers | Export wrappers (or use bindgen `--wrap-static-fns`) so bindgen can see them | New symbols only |
-| Struct layout | Decide per field between accessor and bindgen layout access; add layout assertion tests | New layout tests; existing structs unchanged |
-| Safe wrapper scope | App lifecycle, routing with closures, request/response access, middleware, graceful shutdown, deferred async | None |
-| Memory model | Rust allocations stay outside `cwist_alloc`; full GC and `CWIST_INTERCEPT_MALLOC` do not apply to Rust code | Documentation only |
-| CI and measurement | `cargo test` on Linux/macOS, `example/rust-hello/`, FFI overhead measured vs C equivalent | New CI job |
+| Work Item | Status | What Changes | C-Side Impact |
+|-----------|--------|--------------|---------------|
+| Per-route user context | Done | Additive `_ex` registration functions that carry `void *user_ctx` + optional destructor | New symbols only; existing signatures unchanged |
+| `static inline` helpers | Done | Export wrappers (or use bindgen `--wrap-static-fns`) so bindgen can see them | New symbols only |
+| Struct layout | Done | Decide per field between accessor and bindgen layout access; add layout assertion tests | New layout tests; existing structs unchanged |
+| Safe wrapper scope | Done | App lifecycle, routing with closures, request/response access, middleware, graceful shutdown, deferred async | Middleware `_ex` API added; otherwise none |
+| Memory model | Done | Rust allocations stay outside `cwist_alloc`; full GC and `CWIST_INTERCEPT_MALLOC` do not apply to Rust code | Documentation only |
+| CI and measurement | Done | `cargo test` on Linux/macOS, `example/rust-hello/`, FFI overhead measured vs C equivalent | New CI step |
+| Built-in middleware factories | Not started | Wrap `cwist_mw_*` factories in `cwist` crate | None |
+| `cwist_async_respond_with` | Not started | Build an owned `cwist_http_response` from Rust for the full-response async path | Needs a Rust helper or new C allocator wrapper |
 
 Status at the v3.8 cut: experimental, crate version 0.x, not yet published to
 crates.io. The v4.0 decision (publish, or keep in-tree) is recorded before v4.0
