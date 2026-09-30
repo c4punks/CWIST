@@ -1304,27 +1304,17 @@ cwist_app *cwist_app_create(void) {
     return app;
 }
 
-/**
- * @brief Append a middleware callback to the application's execution chain.
- * @param app Application being configured.
- * @param mw Middleware callback to append.
- */
-void cwist_app_use(cwist_app *app, cwist_middleware_func mw) {
-    cwist_app_use_ex(app, mw, NULL, NULL, NULL);
-}
-
-/**
- * @brief Append an extended middleware callback to the application's execution chain.
- * @param app     Application being configured.
- * @param mw      Legacy middleware function (may be NULL if @p mw_ex is set).
- * @param mw_ex   Extended middleware function with user context (may be NULL if @p mw is set).
- * @param user_ctx Opaque context for @p mw_ex.
- * @param destroy  Destructor for @p user_ctx.
- */
-void cwist_app_use_ex(cwist_app *app, cwist_middleware_func mw, cwist_middleware_func_ex mw_ex,
-                      void *user_ctx, cwist_middleware_ctx_destroy_func destroy) {
-    if (!app || (!mw && !mw_ex)) return;
-    cwist_middleware_node *node = cwist_alloc(sizeof(cwist_middleware_node));
+/* Shared body of cwist_app_use() and cwist_app_use_ex(). The context is owned
+ * by the chain from here on, including on every failure path, as with the
+ * cwist_app_*_ex() routes. */
+static bool add_middleware(cwist_app *app, cwist_middleware_func mw, cwist_middleware_func_ex mw_ex,
+                           void *user_ctx, cwist_middleware_ctx_destroy_func destroy) {
+    bool valid = app && (mw != NULL) != (mw_ex != NULL);
+    cwist_middleware_node *node = valid ? cwist_alloc(sizeof(cwist_middleware_node)) : NULL;
+    if (!node) {
+        if (destroy) destroy(user_ctx);
+        return false;
+    }
     node->func = mw;
     node->func_ex = mw_ex;
     node->user_ctx = user_ctx;
@@ -1339,6 +1329,33 @@ void cwist_app_use_ex(cwist_app *app, cwist_middleware_func mw, cwist_middleware
         while (curr->next) curr = curr->next;
         curr->next = node;
     }
+    return true;
+}
+
+/**
+ * @brief Append a middleware callback to the application's execution chain.
+ * @param app Application being configured.
+ * @param mw Middleware callback to append.
+ */
+void cwist_app_use(cwist_app *app, cwist_middleware_func mw) {
+    add_middleware(app, mw, NULL, NULL, NULL);
+}
+
+/**
+ * @brief Append an extended middleware callback to the application's execution chain.
+ * @param app     Application being configured.
+ * @param mw      Legacy middleware function (may be NULL if @p mw_ex is set).
+ * @param mw_ex   Extended middleware function with user context (may be NULL if @p mw is set).
+ * @param user_ctx Opaque context for @p mw_ex.
+ * @param destroy  Destructor for @p user_ctx.
+ * @return INT16 0 on success, -1 on failure (the context is already released).
+ */
+cwist_error_t cwist_app_use_ex(cwist_app *app, cwist_middleware_func mw,
+                               cwist_middleware_func_ex mw_ex, void *user_ctx,
+                               cwist_middleware_ctx_destroy_func destroy) {
+    cwist_error_t err = make_error(CWIST_ERR_INT16);
+    err.error.err_i16 = add_middleware(app, mw, mw_ex, user_ctx, destroy) ? 0 : -1;
+    return err;
 }
 
 /**
@@ -3714,6 +3731,12 @@ static cwist_middleware_node *cwist_middleware_clone(cwist_middleware_node *src)
         cwist_middleware_node *node = (cwist_middleware_node *)cwist_alloc(sizeof(*node));
         if (!node) break;
         node->func = src->func;
+        /* Like a cloned route, a cloned extended middleware shares the source's
+         * context without owning it: the source app releases it once. */
+        node->func_ex = src->func_ex;
+        node->user_ctx = src->user_ctx;
+        node->destroy = NULL;
+        node->is_ex = src->is_ex;
         node->next = NULL;
         *tail = node;
         tail = &node->next;

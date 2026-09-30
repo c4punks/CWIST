@@ -300,16 +300,20 @@ void cwist_app_use(cwist_app *app, cwist_middleware_func mw);
  *
  * Exactly one of @p mw or @p mw_ex must be non-NULL.  The user context is
  * passed to @p mw_ex on every invocation; @p destroy is called once when the
- * application is destroyed or the node is otherwise released.
+ * application is destroyed or, if registration fails, before this returns.
+ * Multiport sub-apps share the context without owning it.
  *
  * @param app     Application context.
  * @param mw      Legacy middleware function (may be NULL if @p mw_ex is set).
  * @param mw_ex   Extended middleware function with user context (may be NULL if @p mw is set).
  * @param user_ctx Opaque context for @p mw_ex.
  * @param destroy  Destructor for @p user_ctx.
+ * @return INT16 0 on success; INT16 -1 when @p app is NULL, not exactly one
+ *         of @p mw and @p mw_ex is set, or the node could not be allocated.
  */
-void cwist_app_use_ex(cwist_app *app, cwist_middleware_func mw, cwist_middleware_func_ex mw_ex,
-                      void *user_ctx, cwist_middleware_ctx_destroy_func destroy);
+cwist_error_t cwist_app_use_ex(cwist_app *app, cwist_middleware_func mw,
+                               cwist_middleware_func_ex mw_ex, void *user_ctx,
+                               cwist_middleware_ctx_destroy_func destroy);
 /** @} */
 
 /** @name Error Handling Configuration */
