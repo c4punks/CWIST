@@ -65,6 +65,16 @@ jobs:
           pkg-config --cflags --libs --static cwist
           cargo test --manifest-path bindings/rust/Cargo.toml -- --nocapture
 
+      - name: FFI overhead micro-benchmark
+        shell: bash
+        run: |
+          export PKG_CONFIG_PATH="$RUNNER_TEMP/cwist/lib/pkgconfig"
+          if [ "$RUNNER_OS" = "macOS" ]; then
+            export PKG_CONFIG_PATH="$PKG_CONFIG_PATH:/opt/homebrew/opt/curl/lib/pkgconfig"
+            export LIBCLANG_PATH="$(xcode-select -p)/Toolchains/XcodeDefault.xctoolchain/usr/lib"
+          fi
+          cargo test --manifest-path bindings/rust/Cargo.toml --test ffi_overhead -- --nocapture
+
       # bindgen compiles size/alignment/offset checks against the C compiler's
       # layouts into the crate; fail if they are missing, and show the ones
       # for the handler structs.
