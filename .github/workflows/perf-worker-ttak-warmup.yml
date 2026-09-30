@@ -46,15 +46,23 @@ jobs:
 
           gcc -Ofast -flto=auto -fno-plt -falign-functions=32 -falign-loops=32 -falign-jumps=32 -falign-labels=32 -fno-semantic-interposition -fomit-frame-pointer -finline-functions -fipa-pta -I./include -I./lib -I./lib/libttak/include -o /tmp/cwist_server /tmp/cwist_server.c libcwist.a lib/cnats/build/lib/libnats_static.a lib/libttak/lib/libttak.a lib/cjson/libcjson.a lib/uriparser/build/liburiparser.a lib/lsquic/build/src/liblsquic/liblsquic.a lib/boringssl/build/libssl.a lib/boringssl/build/libcrypto.a -lcurl -lnghttp2 -lbrotlienc -lbrotlicommon -lbrotlidec -pthread -ldl -lm -lstdc++ -lz -lzstd
 
-      - name: Capture 1-second slices over first 10 seconds
+      - name: Capture 1-second slices after each cold start
         run: |
-          python3 scripts/ci/benchmark_session.py \
-            --server "env CWIST_C1M_MODE=1 /tmp/cwist_server" \
-            -- bash -c '
-              for i in $(seq 1 10); do
-                echo "=== second $i ==="
-                wrk -t12 -c400 -d1s --latency http://127.0.0.1:9091/ 2>&1 | grep -E "Requests/sec:|Latency\s+"
-              done > /tmp/warmup_slices.txt'
+          > /tmp/warmup_slices.txt
+
+          for run in $(seq 1 3); do
+            echo "=== cold start run $run ===" >> /tmp/warmup_slices.txt
+            env CWIST_C1M_MODE=1 /tmp/cwist_server &
+            PID=$!
+            sleep 0.5
+            for i in $(seq 1 10); do
+              echo "--- second $i ---" >> /tmp/warmup_slices.txt
+              wrk -t12 -c400 -d1s --latency http://127.0.0.1:9091/ 2>&1 | grep -E "Requests/sec:|Latency\s+" >> /tmp/warmup_slices.txt
+            done
+            kill -TERM $PID 2>/dev/null || true
+            wait $PID 2>/dev/null || true
+            sleep 1
+          done
 
           echo "--- warmup profile ---"
           cat /tmp/warmup_slices.txt
