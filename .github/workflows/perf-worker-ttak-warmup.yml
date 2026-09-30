@@ -1,0 +1,66 @@
+name: Perf — worker ttak warmup
+
+on:
+  push:
+    branches: [dev]
+    paths:
+      - '.github/workflows/perf-worker-ttak-warmup.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  worker-ttak-warmup:
+    name: CWIST C1M cold-start warmup profile
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with: { submodules: recursive }
+
+      - name: Install dependencies & wrk
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y cmake libcurl4-openssl-dev libnghttp2-dev libbrotli-dev wrk
+
+      - name: Build CWIST and minimal server
+        run: |
+          make -j"$(nproc)"
+
+          cat << 'EOF' > /tmp/cwist_server.c
+          #include <cwist/app.h>
+          #include <cwist/sys/app/app.h>
+          #include <cwist/sys/app/endpoint_opts.h>
+          static void handle_root(cwist_http_request *req, cwist_http_response *res) {
+              (void)req;
+              cwist_sstring_assign(res->body, "Hello, World!");
+          }
+          int main(void) {
+              cwist_app *app = cwist_app_create();
+              cwist_app_get_opt(app, "/", handle_root, CWIST_ENDPOINT_FIXED);
+              cwist_app_listen(app, 9091);
+              cwist_app_destroy(app);
+              return 0;
+          }
+          EOF
+
+          gcc -Ofast -flto=auto -fno-plt -falign-functions=32 -falign-loops=32 -falign-jumps=32 -falign-labels=32 -fno-semantic-interposition -fomit-frame-pointer -finline-functions -fipa-pta -I./include -I./lib -I./lib/libttak/include -o /tmp/cwist_server /tmp/cwist_server.c libcwist.a lib/cnats/build/lib/libnats_static.a lib/libttak/lib/libttak.a lib/cjson/libcjson.a lib/uriparser/build/liburiparser.a lib/lsquic/build/src/liblsquic/liblsquic.a lib/boringssl/build/libssl.a lib/boringssl/build/libcrypto.a -lcurl -lnghttp2 -lbrotlienc -lbrotlicommon -lbrotlidec -pthread -ldl -lm -lstdc++ -lz -lzstd
+
+      - name: Capture 1-second slices over first 10 seconds
+        run: |
+          python3 scripts/ci/benchmark_session.py \
+            --server "env CWIST_C1M_MODE=1 /tmp/cwist_server" \
+            -- bash -c '
+              for i in $(seq 1 10); do
+                echo "=== second $i ==="
+                wrk -t12 -c400 -d1s --latency http://127.0.0.1:9091/ 2>&1 | grep -E "Requests/sec:|Latency\s+"
+              done > /tmp/warmup_slices.txt'
+
+          echo "--- warmup profile ---"
+          cat /tmp/warmup_slices.txt
+
+      - name: Upload raw results
+        uses: actions/upload-artifact@v4
+        with:
+          name: worker-ttak-warmup-logs
+          path: /tmp/warmup_slices.txt

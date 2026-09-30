@@ -1,0 +1,78 @@
+name: Perf — HTTPS handshake shards
+
+on:
+  push:
+    branches: [dev]
+    paths:
+      - '.github/workflows/perf-https-handshake-shards.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  https-handshake-shards:
+    name: HTTPS handshake burst vs shard count
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with: { submodules: recursive }
+
+      - name: Install dependencies & wrk
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y cmake libcurl4-openssl-dev libnghttp2-dev libbrotli-dev wrk
+
+      - name: Build CWIST and HTTPS server
+        run: |
+          make -j"$(nproc)"
+
+          # Generate a self-signed cert for the HTTPS server
+          openssl req -x509 -newkey rsa:2048 -keyout /tmp/key.pem -out /tmp/cert.pem -days 1 -nodes -subj "/CN=localhost"
+
+          cat << 'EOF' > /tmp/cwist_https_server.c
+          #include <cwist/app.h>
+          #include <cwist/sys/app/app.h>
+          #include <cwist/sys/app/endpoint_opts.h>
+          static void handle_root(cwist_http_request *req, cwist_http_response *res) {
+              (void)req;
+              cwist_sstring_assign(res->body, "Hello, World!");
+          }
+          int main(void) {
+              cwist_app *app = cwist_app_create();
+              cwist_app_get_opt(app, "/", handle_root, CWIST_ENDPOINT_FIXED);
+              cwist_app_use_tls(app, "/tmp/cert.pem", "/tmp/key.pem");
+              cwist_app_listen(app, 9443);
+              cwist_app_destroy(app);
+              return 0;
+          }
+          EOF
+
+          gcc -Ofast -flto=auto -fno-plt -falign-functions=32 -falign-loops=32 -falign-jumps=32 -falign-labels=32 -fno-semantic-interposition -fomit-frame-pointer -finline-functions -fipa-pta -I./include -I./lib -I./lib/libttak/include -o /tmp/cwist_https_server /tmp/cwist_https_server.c libcwist.a lib/cnats/build/lib/libnats_static.a lib/libttak/lib/libttak.a lib/cjson/libcjson.a lib/uriparser/build/liburiparser.a lib/lsquic/build/src/liblsquic/liblsquic.a lib/boringssl/build/libssl.a lib/boringssl/build/libcrypto.a -lcurl -lnghttp2 -lbrotlienc -lbrotlicommon -lbrotlidec -pthread -ldl -lm -lstdc++ -lz -lzstd
+
+      - name: Run shard-count matrix
+        run: |
+          run_shard() {
+            local shards="$1"
+            local tag="hs_shards_${shards}"
+            local out="/tmp/${tag}.txt"
+
+            echo "=== CWIST_HTTPS_HS_SHARDS=$shards (HTTPS, Connection: close) ==="
+            python3 scripts/ci/benchmark_session.py \
+              --server "env CWIST_C1M_MODE=1 CWIST_HTTPS_HS_SHARDS=$shards /tmp/cwist_https_server" \
+              -- bash -c 'wrk -t12 -c200 -d10s -H "Connection: close" --latency https://127.0.0.1:9443/ > '"$out"' 2>&1'
+
+            echo "--- results ---"
+            grep -E 'Requests/sec:|Latency\s+|Latency Distribution' "$out" | head -10
+          }
+
+          run_shard 1
+          run_shard 4
+          run_shard 16
+          run_shard 64
+
+      - name: Upload raw results
+        uses: actions/upload-artifact@v4
+        with:
+          name: https-handshake-shards-logs
+          path: /tmp/hs_shards_*.txt
