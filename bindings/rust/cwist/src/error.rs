@@ -32,6 +32,9 @@ pub enum Error {
     /// Another [`App`](crate::App) is already listening in this process;
     /// CWIST runs one server per process.
     AlreadyListening,
+    /// The response was handed to an [`AsyncResponse`](crate::AsyncResponse)
+    /// and can no longer be changed through [`Response`](crate::Response).
+    Deferred,
 }
 
 impl fmt::Display for Error {
@@ -46,6 +49,7 @@ impl fmt::Display for Error {
             Error::Dispatch => f.write_str("the request could not be dispatched"),
             Error::Listen { port } => write!(f, "could not serve on port {port}"),
             Error::AlreadyListening => f.write_str("a CWIST server is already running"),
+            Error::Deferred => f.write_str("the response has been deferred"),
         }
     }
 }
