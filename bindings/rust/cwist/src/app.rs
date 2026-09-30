@@ -178,6 +178,9 @@ impl App {
     pub fn dispatch(&self, request: &[u8]) -> Result<Vec<u8>, Error> {
         let mut out: *mut c_char = ptr::null_mut();
         let mut out_len: usize = 0;
+        // Handlers run synchronously on this thread and the request and
+        // response are freed on return, so AsyncResponse::defer refuses here.
+        let _in_memory = crate::async_response::InMemoryDispatch::enter();
         // SAFETY: the app is live; request is read only for the call; CWIST
         // allocates `out`, which is released with cwist_free below.
         let rc = unsafe {

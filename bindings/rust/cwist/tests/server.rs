@@ -223,3 +223,130 @@ fn async_handler_completes_from_another_thread() {
     cwist::shutdown();
     assert_eq!(finished(&done), Ok(()));
 }
+
+/// Sends one GET and returns the raw response, for checks on headers.
+fn raw_get(port: u16, path: &str) -> String {
+    let mut stream = TcpStream::connect(("127.0.0.1", port)).unwrap();
+    stream.set_read_timeout(Some(Duration::from_secs(5))).unwrap();
+    write!(stream, "GET {path} HTTP/1.1\r\nHost: localhost\r\nConnection: close\r\n\r\n").unwrap();
+    let mut response = String::new();
+    stream.read_to_string(&mut response).unwrap();
+    response
+}
+
+#[test]
+fn dropping_an_unanswered_async_response_answers_500() {
+    let _serial = serial();
+    let port = free_port();
+    let done = serve(port, |app| {
+        app.get("/drop", |req, res| {
+            let handle = cwist::AsyncResponse::defer(req, res).expect("defer");
+            drop(handle);
+        })
+        .unwrap();
+        app.get("/panic", |req, res| {
+            let _handle = cwist::AsyncResponse::defer(req, res).expect("defer");
+            panic!("handler failure after defer");
+        })
+        .unwrap();
+    });
+
+    assert!(wait_until_up(port));
+    assert_eq!(http_get(port, "/drop"), Some((500, "Internal Server Error".to_owned())));
+    // A panic unwinds through the handle's Drop: still one 500, not a hang.
+    assert_eq!(http_get(port, "/panic"), Some((500, "Internal Server Error".to_owned())));
+    // The server is unaffected.
+    assert_eq!(http_get(port, "/ping"), Some((200, "pong".to_owned())));
+
+    cwist::shutdown();
+    assert_eq!(finished(&done), Ok(()));
+}
+
+#[test]
+fn a_deferred_response_is_read_only_for_the_handler_and_middleware() {
+    let _serial = serial();
+    let port = free_port();
+    let seen = Arc::new(Mutex::new(Vec::<String>::new()));
+    let handler_seen = Arc::clone(&seen);
+    let middleware_seen = Arc::clone(&seen);
+    let done = serve(port, move |app| {
+        let _ = app.use_middleware(move |_req, res, next| {
+            next();
+            let late = res.add_header("X-Late", "1");
+            middleware_seen.lock().unwrap().push(format!("middleware {late:?}"));
+        });
+        app.get("/defer", move |req, res| {
+            let handle = cwist::AsyncResponse::defer(req, res).expect("defer");
+            // Complete on another thread and wait for it, so the completion
+            // has written the response while this handler still runs.
+            let (tx, rx) = mpsc::channel();
+            thread::spawn(move || {
+                let _ = tx.send(handle.respond(200, "text/plain", "async body"));
+            });
+            let responded = rx.recv_timeout(Duration::from_secs(5)).expect("respond");
+            let mut seen = handler_seen.lock().unwrap();
+            seen.push(format!("responded {responded}"));
+            seen.push(format!("deferred {}", res.is_deferred()));
+            seen.push(format!("status {}", res.status()));
+            res.set_status(418);
+            seen.push(format!("body {:?}", res.set_body("late body")));
+            seen.push(format!("path {:?}", req.path()));
+        })
+        .unwrap();
+    });
+
+    assert!(wait_until_up(port));
+    let response = raw_get(port, "/defer");
+    assert!(response.starts_with("HTTP/1.1 200"), "{response}");
+    assert!(response.ends_with("\r\n\r\nasync body"), "{response}");
+    assert!(!response.contains("X-Late"), "{response}");
+    assert_eq!(
+        *seen.lock().unwrap(),
+        [
+            "responded true",
+            "deferred true",
+            "status 0",
+            "body Err(Deferred)",
+            "path Some(\"/defer\")",
+            "middleware Err(Deferred)",
+        ]
+    );
+
+    cwist::shutdown();
+    assert_eq!(finished(&done), Ok(()));
+}
+
+#[test]
+fn completing_after_a_timeout_returns_false() {
+    let _serial = serial();
+    let port = free_port();
+    let (tx, rx) = mpsc::channel::<cwist::AsyncResponse>();
+    let done = serve(port, move |app| {
+        app.get("/slow", move |req, res| {
+            let handle = cwist::AsyncResponse::defer(req, res).expect("defer");
+            handle.set_timeout(50);
+            tx.send(handle).expect("send async handle");
+        })
+        .unwrap();
+    });
+
+    assert!(wait_until_up(port));
+    let response = raw_get(port, "/slow");
+    assert!(response.starts_with("HTTP/1.1 504"), "{response}");
+
+    // The timeout already answered and released the completion's reference;
+    // the handle's own reference keeps it valid, and the late answers lose.
+    let handle = rx.recv_timeout(Duration::from_secs(5)).expect("receive async handle");
+    let mut owned = cwist::OwnedResponse::new().unwrap();
+    owned.set_status(200);
+    owned.set_body("too late").unwrap();
+    assert!(!handle.respond_with(owned));
+
+    assert_eq!(http_get(port, "/slow").map(|(s, _)| s), Some(504));
+    let handle = rx.recv_timeout(Duration::from_secs(5)).expect("receive async handle");
+    drop(handle);
+
+    assert_eq!(http_get(port, "/ping"), Some((200, "pong".to_owned())));
+    cwist::shutdown();
+    assert_eq!(finished(&done), Ok(()));
+}

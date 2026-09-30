@@ -173,27 +173,51 @@ impl<'a> Response<'a> {
         self.raw
     }
 
-    fn get(&mut self) -> &mut sys::cwist_http_response {
-        // SAFETY: from_raw's contract.
-        unsafe { self.raw.as_mut() }
+    /// The response, or `None` once it has been deferred: from then on an
+    /// [`AsyncResponse`](crate::AsyncResponse) completion may write it from
+    /// another thread, so Rust must not touch it again.
+    fn get(&mut self) -> Option<&mut sys::cwist_http_response> {
+        if self.is_deferred() {
+            return None;
+        }
+        // SAFETY: from_raw's contract; not deferred, so nothing else writes it.
+        Some(unsafe { self.raw.as_mut() })
     }
 
-    /// The current status code.
+    /// Whether [`AsyncResponse::defer`](crate::AsyncResponse::defer) took this
+    /// response. A deferred response is answered by its `AsyncResponse`:
+    /// [`status`](Self::status) returns 0, [`set_status`](Self::set_status)
+    /// does nothing, and the other setters return [`Error::Deferred`].
+    pub fn is_deferred(&self) -> bool {
+        // SAFETY: from_raw's contract. Only cwist_async_defer writes this
+        // field, on the thread running the handler (this one); completions on
+        // other threads never do, so reading it alone cannot race with them.
+        unsafe { std::ptr::addr_of!((*self.raw.as_ptr()).deferred).read() }
+    }
+
+    /// The current status code, or 0 once the response has been deferred.
     pub fn status(&self) -> u16 {
-        // SAFETY: from_raw's contract; a plain field read.
+        if self.is_deferred() {
+            return 0;
+        }
+        // SAFETY: from_raw's contract; a plain field read of a response that
+        // nothing else writes while it is not deferred.
         let code = unsafe { self.raw.as_ref() }.status_code;
         u16::try_from(code).unwrap_or(0)
     }
 
-    /// Sets the status code, e.g. `201`.
+    /// Sets the status code, e.g. `201`. Does nothing once the response has
+    /// been deferred.
     pub fn set_status(&mut self, code: u16) {
-        self.get().status_code = code.into();
+        if let Some(res) = self.get() {
+            res.status_code = code.into();
+        }
     }
 
     /// Replaces the response body.
     pub fn set_body(&mut self, body: impl AsRef<[u8]>) -> Result<(), Error> {
         let body = body.as_ref();
-        let sstr = self.get().body;
+        let sstr = self.get().ok_or(Error::Deferred)?.body;
         if sstr.is_null() {
             return Err(Error::Body);
         }
@@ -212,7 +236,7 @@ impl<'a> Response<'a> {
     pub fn add_header(&mut self, name: &str, value: &str) -> Result<(), Error> {
         let name = CString::new(name).map_err(|_| Error::InteriorNul("header name"))?;
         let value = CString::new(value).map_err(|_| Error::InteriorNul("header value"))?;
-        let headers = &mut self.get().headers;
+        let headers = &mut self.get().ok_or(Error::Deferred)?.headers;
         // SAFETY: headers is the response's own list head; CWIST copies both
         // strings before returning.
         let err = unsafe { sys::cwist_http_header_add(headers, name.as_ptr(), value.as_ptr()) };
