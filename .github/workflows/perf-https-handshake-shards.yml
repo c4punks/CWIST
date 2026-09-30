@@ -41,7 +41,7 @@ jobs:
           int main(void) {
               cwist_app *app = cwist_app_create();
               cwist_app_get_opt(app, "/", handle_root, CWIST_ENDPOINT_FIXED);
-              cwist_app_use_tls(app, "/tmp/cert.pem", "/tmp/key.pem");
+              cwist_app_use_https(app, "/tmp/cert.pem", "/tmp/key.pem");
               cwist_app_listen(app, 9443);
               cwist_app_destroy(app);
               return 0;
