@@ -2,8 +2,10 @@
 //! handler ownership and panic containment, driven through in-memory dispatch.
 
 use cwist::{App, Error, Method};
+use std::ffi::c_void;
+use std::ptr;
 use std::sync::atomic::{AtomicUsize, Ordering};
-use std::sync::Arc;
+use std::sync::{Arc, Mutex};
 
 fn request(method: &str, target: &str, extra: &str, body: &str) -> Vec<u8> {
     format!(
@@ -251,71 +253,117 @@ fn dispatch_reports_a_malformed_request() {
 }
 
 #[test]
-fn middleware_adds_a_header_and_calls_next() {
+fn middleware_reads_the_request_and_edits_the_response_around_next() {
     let mut app = App::new().unwrap();
-    app.use_middleware(|_req, res, next| {
-        res.add_header("X-Middleware", "before").expect("header");
+    app.use_middleware(|req, res, next| {
+        assert_eq!(req.method(), Method::Get);
+        let client = req.header("x-client").unwrap_or("none").to_owned();
+        res.add_header("X-Before", &client).expect("header");
         next();
-        // Headers added after next are not visible because the response is
-        // serialized during the route handler, but the call still succeeds.
-        let _ = res.add_header("X-Middleware", "after");
-    });
+        // The response is serialized after the whole chain returns, so
+        // changes made after next are sent too.
+        assert_eq!(res.status(), 200);
+        res.set_status(202);
+        res.add_header("X-After", "yes").expect("header");
+    })
+    .unwrap();
     app.get("/r", |_req, res| {
+        res.set_status(200);
         res.add_header("X-Route", "ok").unwrap();
         res.set_body("body").unwrap();
     })
     .unwrap();
 
-    let res = get(&app, "/r");
-    assert!(res.contains("X-Middleware: before\r\n"), "{res}");
+    let raw = app.dispatch(&request("GET", "/r", "X-Client: rust\r\n", "")).unwrap();
+    let res = String::from_utf8(raw).unwrap();
+    assert!(status_line(&res).starts_with("HTTP/1.1 202"), "{res}");
+    assert!(res.contains("X-Before: rust\r\n"), "{res}");
     assert!(res.contains("X-Route: ok\r\n"), "{res}");
+    assert!(res.contains("X-After: yes\r\n"), "{res}");
+    assert_eq!(body(&res), "body");
 }
 
 #[test]
 fn middleware_can_short_circuit_the_chain() {
+    let calls = Arc::new(AtomicUsize::new(0));
     let mut app = App::new().unwrap();
-    app.use_middleware(|_req, res, _next| {
-        res.set_status(403);
-        res.set_body("forbidden").unwrap();
-        // intentionally do not call next
-    });
-    app.get("/r", |_req, res| res.set_body("never seen").unwrap()).unwrap();
+    app.use_middleware(|req, res, next| {
+        if req.path() == Some("/blocked") {
+            res.set_status(403);
+            res.set_body("forbidden").unwrap();
+            return;
+        }
+        next();
+    })
+    .unwrap();
+    for path in ["/blocked", "/open"] {
+        let calls = Arc::clone(&calls);
+        app.get(path, move |_req, res| {
+            calls.fetch_add(1, Ordering::SeqCst);
+            res.set_body("handler").unwrap();
+        })
+        .unwrap();
+    }
 
-    let res = get(&app, "/r");
+    let res = get(&app, "/blocked");
     assert!(status_line(&res).starts_with("HTTP/1.1 403"), "{res}");
     assert_eq!(body(&res), "forbidden");
-    assert!(!res.contains("never seen"), "{res}");
+    assert_eq!(calls.load(Ordering::SeqCst), 0, "the handler ran behind a short-circuit");
+
+    let res = get(&app, "/open");
+    assert_eq!(body(&res), "handler");
+    assert_eq!(calls.load(Ordering::SeqCst), 1);
 }
 
 #[test]
 fn middleware_runs_in_registration_order() {
+    let trace = Arc::new(Mutex::new(Vec::new()));
+    let mut app = App::new().unwrap();
+    for (before, after) in [("a", "A"), ("b", "B")] {
+        let trace = Arc::clone(&trace);
+        app.use_middleware(move |_req, _res, next| {
+            trace.lock().unwrap().push(before);
+            next();
+            trace.lock().unwrap().push(after);
+        })
+        .unwrap();
+    }
+    let handler_trace = Arc::clone(&trace);
+    app.get("/r", move |_req, res| {
+        handler_trace.lock().unwrap().push("handler");
+        res.set_body("done").unwrap();
+    })
+    .unwrap();
+    // Middleware registered after a route still runs for it.
+    let late_trace = Arc::clone(&trace);
+    app.use_middleware(move |_req, _res, next| {
+        late_trace.lock().unwrap().push("c");
+        next();
+    })
+    .unwrap();
+
+    assert_eq!(body(&get(&app, "/r")), "done");
+    assert_eq!(*trace.lock().unwrap(), ["a", "b", "c", "handler", "B", "A"]);
+}
+
+#[test]
+fn next_runs_the_rest_of_the_chain_only_once() {
+    let calls = Arc::new(AtomicUsize::new(0));
     let mut app = App::new().unwrap();
     app.use_middleware(|_req, _res, next| {
-        // Mutate the request context (which is private to this test) so the
-        // execution order is visible even though header adds prepend.
         next();
-    });
-    app.get("/r", |_req, res| res.set_body("ok").unwrap()).unwrap();
+        next();
+    })
+    .unwrap();
+    let handler_calls = Arc::clone(&calls);
+    app.get("/r", move |_req, res| {
+        handler_calls.fetch_add(1, Ordering::SeqCst);
+        res.set_body("once").unwrap();
+    })
+    .unwrap();
 
-    // Register a second middleware after the route: the route always runs
-    // last, so if the second middleware runs before the route its header is
-    // overwritten by the route's own header add. We instead check that the
-    // first middleware's header is present: both middlewares run before the
-    // route regardless of prepend order.
-    let mut app = App::new().unwrap();
-    app.use_middleware(|_req, res, next| {
-        res.add_header("X-First", "1").unwrap();
-        next();
-    });
-    app.use_middleware(|_req, res, next| {
-        res.add_header("X-Second", "1").unwrap();
-        next();
-    });
-    app.get("/r", |_req, res| res.set_body("done").unwrap()).unwrap();
-
-    let res = get(&app, "/r");
-    assert!(res.contains("X-First: 1\r\n"), "{res}");
-    assert!(res.contains("X-Second: 1\r\n"), "{res}");
+    assert_eq!(body(&get(&app, "/r")), "once");
+    assert_eq!(calls.load(Ordering::SeqCst), 1);
 }
 
 #[test]
@@ -323,27 +371,113 @@ fn middleware_is_dropped_exactly_once_when_the_app_is_dropped() {
     let drops = Arc::new(AtomicUsize::new(0));
     {
         let mut app = App::new().unwrap();
-        let guard = DropCounter(Arc::clone(&drops));
-        app.use_middleware(move |_req, _res, next| {
-            let _keep = &guard;
-            next();
-        });
+        for _ in 0..2 {
+            let guard = DropCounter(Arc::clone(&drops));
+            app.use_middleware(move |_req, _res, next| {
+                let _keep = &guard;
+                next();
+            })
+            .unwrap();
+        }
+        get(&app, "/");
         get(&app, "/");
         assert_eq!(drops.load(Ordering::SeqCst), 0, "dropped while the app is alive");
     }
+    assert_eq!(drops.load(Ordering::SeqCst), 2);
+}
+
+/// Counts calls of the destructor below; only the test that uses it touches it.
+static REJECTED_DROPS: AtomicUsize = AtomicUsize::new(0);
+
+unsafe extern "C" fn count_rejected_drop(ctx: *mut c_void) {
+    // SAFETY: ctx is the Box<DropCounter> the test handed to CWIST.
+    drop(unsafe { Box::from_raw(ctx.cast::<DropCounter>()) });
+    REJECTED_DROPS.fetch_add(1, Ordering::SeqCst);
+}
+
+unsafe extern "C" fn never_called(
+    _req: *mut cwist_sys::cwist_http_request,
+    _res: *mut cwist_sys::cwist_http_response,
+    _next: cwist_sys::cwist_handler_func,
+    _ctx: *mut c_void,
+) {
+    std::process::abort();
+}
+
+#[test]
+fn a_rejected_middleware_context_is_released_exactly_once() {
+    // App::use_middleware relies on this C contract: a rejected registration
+    // runs the destructor once before returning and keeps nothing.
+    let drops = Arc::new(AtomicUsize::new(0));
+    let ctx = Box::into_raw(Box::new(DropCounter(Arc::clone(&drops)))).cast::<c_void>();
+    // SAFETY: a NULL app is rejected; ownership of ctx passes to CWIST, which
+    // releases it through count_rejected_drop.
+    let mut err = unsafe {
+        cwist_sys::cwist_app_use_ex(
+            ptr::null_mut(),
+            None,
+            Some(never_called),
+            ctx,
+            Some(count_rejected_drop),
+        )
+    };
+    // SAFETY: err is the live error value returned above, disposed once.
+    let ok = unsafe { cwist_sys::cwist_error_is_ok_extern(&err) };
+    unsafe { cwist_sys::cwist_error_dispose(&mut err) };
+    assert!(!ok);
+    assert_eq!(REJECTED_DROPS.load(Ordering::SeqCst), 1);
     assert_eq!(drops.load(Ordering::SeqCst), 1);
 }
 
 #[test]
 fn a_panicking_middleware_becomes_a_500_and_the_route_is_not_reached() {
-    let mut app = App::new().unwrap();
-    app.use_middleware(|_req, _res, _next| {
-        panic!("middleware failure");
-    });
-    app.get("/fine", |_req, res| res.set_body("still here").unwrap()).unwrap();
+    let drops = Arc::new(AtomicUsize::new(0));
+    let calls = Arc::new(AtomicUsize::new(0));
+    {
+        let mut app = App::new().unwrap();
+        let guard = DropCounter(Arc::clone(&drops));
+        app.use_middleware(move |_req, _res, _next| {
+            let _keep = &guard;
+            panic!("middleware failure");
+        })
+        .unwrap();
+        let handler_calls = Arc::clone(&calls);
+        app.get("/fine", move |_req, res| {
+            handler_calls.fetch_add(1, Ordering::SeqCst);
+            res.set_body("still here").unwrap();
+        })
+        .unwrap();
 
-    let res = get(&app, "/fine");
+        let res = get(&app, "/fine");
+        assert!(status_line(&res).starts_with("HTTP/1.1 500"), "{res}");
+        assert_eq!(body(&res), "Internal Server Error");
+        // The app keeps serving after a contained panic.
+        let res = get(&app, "/fine");
+        assert!(status_line(&res).starts_with("HTTP/1.1 500"), "{res}");
+        assert_eq!(calls.load(Ordering::SeqCst), 0);
+        assert_eq!(drops.load(Ordering::SeqCst), 0);
+    }
+    assert_eq!(drops.load(Ordering::SeqCst), 1);
+}
+
+#[test]
+fn a_panic_after_next_replaces_the_response_with_a_500() {
+    let calls = Arc::new(AtomicUsize::new(0));
+    let mut app = App::new().unwrap();
+    app.use_middleware(|_req, _res, next| {
+        next();
+        panic!("after next");
+    })
+    .unwrap();
+    let handler_calls = Arc::clone(&calls);
+    app.get("/r", move |_req, res| {
+        handler_calls.fetch_add(1, Ordering::SeqCst);
+        res.set_body("handler").unwrap();
+    })
+    .unwrap();
+
+    let res = get(&app, "/r");
     assert!(status_line(&res).starts_with("HTTP/1.1 500"), "{res}");
     assert_eq!(body(&res), "Internal Server Error");
-    assert!(!res.contains("still here"), "{res}");
+    assert_eq!(calls.load(Ordering::SeqCst), 1);
 }

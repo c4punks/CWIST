@@ -65,7 +65,13 @@ let response = app.dispatch(b"GET /users/7 HTTP/1.1\r\nHost: localhost\r\n\r\n")
   again. This does not catch aborting panics (`panic = "abort"`).
 * `App::dispatch` runs a request in memory. Serving on a port (`listen`),
   with graceful shutdown, is `App::listen(port)`; see "Serving" below.
-  Middleware and deferred responses are not wrapped yet.
+* Middleware is `Fn(&Request, &mut Response, &dyn Fn()) + Send + Sync +
+  'static`, registered with `App::use_middleware` through
+  `cwist_app_use_ex` and run in registration order around the route
+  handler. Calling `next` runs the rest of the chain once (later calls do
+  nothing); not calling it short-circuits the request. CWIST drops each
+  middleware exactly once (app drop or failed registration), and a
+  panicking middleware answers 500 without continuing the chain.
 
 ## Memory
 

@@ -12,6 +12,9 @@ pub enum Error {
         /// The path that could not be registered.
         path: String,
     },
+    /// CWIST rejected a middleware registration. The middleware has already
+    /// been released.
+    Middleware,
     /// A string passed to CWIST contains a NUL byte, which C cannot represent.
     InteriorNul(&'static str),
     /// CWIST rejected a response header, for example one containing CR or LF.
@@ -36,6 +39,7 @@ impl fmt::Display for Error {
         match self {
             Error::AppCreate => f.write_str("could not create the CWIST app"),
             Error::Route { path } => write!(f, "could not register route {path:?}"),
+            Error::Middleware => f.write_str("could not register the middleware"),
             Error::InteriorNul(what) => write!(f, "{what} contains a NUL byte"),
             Error::Header => f.write_str("CWIST rejected the response header"),
             Error::Body => f.write_str("could not store the response body"),

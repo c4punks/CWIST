@@ -19,7 +19,8 @@ fn main() {
     app.use_middleware(|_req, res, next| {
         res.add_header("X-Powered-By", "CWIST Rust").expect("header");
         next();
-    });
+    })
+    .expect("register middleware");
 
     println!("Listening on http://127.0.0.1:8080 (press Ctrl-C to stop)");
     app.listen(8080).expect("listen");
