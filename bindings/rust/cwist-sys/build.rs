@@ -14,10 +14,12 @@ const FUNCTIONS: &[&str] = &[
     "cwist_shutdown_(request|reset)",
     "cwist_app_(get|post|put|delete|patch)(_ex)?",
     "cwist_http_header_(add|get|remove)",
+    "cwist_http_response_(create|destroy)",
     "cwist_http_method_to_string",
     "cwist_sstring_(create|destroy|assign|assign_len|append|append_len)",
     "cwist_query_map_get",
     "cwist_async_(defer|retain|release|set_timeout|respond|respond_with|abort)",
+    "cwist_mw_(request_id|access_log|rate_limit_ip|rate_limit_reset|metrics|cors|jwt_auth|compress|jwt_get_claims)",
     "cwist_alloc",
     "cwist_free",
     "make_error",
@@ -113,9 +115,10 @@ fn main() {
         // Seconds cwist_app_listen*() waits for connections to drain after a
         // shutdown request.
         .allowlist_var("g_cwist_drain_timeout_sec")
-        .allowlist_type("cwist_(http_request|http_response|http_header_node|sstring|error_t|http_status_t)")
+        .allowlist_type("cwist_(http_request|http_response|http_header_node|sstring|error_t|http_status_t|jwt_claims)")
         .allowlist_type("cwist_handler(_ex)?_func|cwist_handler_ctx_destroy_func")
-        .allowlist_type("cwist_middleware(_func|_func_ex|_ctx_destroy_func)");
+        .allowlist_type("cwist_middleware(_func|_func_ex|_ctx_destroy_func)")
+        .allowlist_type("cwist_log_format_t");
     for f in FUNCTIONS {
         builder = builder.allowlist_function(f);
     }

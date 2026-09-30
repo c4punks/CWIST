@@ -124,6 +124,16 @@ impl App {
         }
     }
 
+    /// Appends a built-in CWIST middleware factory result to the chain.
+    ///
+    /// This is the lower-level sibling of [`App::use_middleware`]: it takes a
+    /// C function pointer returned by one of the `cwist::middleware` factories
+    /// and appends it directly, with no Rust closure or allocation overhead.
+    pub fn use_builtin_middleware(&mut self, mw: sys::cwist_middleware_func) {
+        // SAFETY: the app is live; mw is a valid middleware function pointer.
+        unsafe { sys::cwist_app_use(self.raw.as_ptr(), mw) };
+    }
+
     fn route(&mut self, register: RegisterFn, path: &str, handler: Box<Handler>) -> Result<(), Error> {
         // Checked before the handler is handed over: on this error it is
         // still ours and is simply dropped here.
