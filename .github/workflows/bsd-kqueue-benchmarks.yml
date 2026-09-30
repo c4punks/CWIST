@@ -297,7 +297,7 @@ jobs:
           # CWIST is measured twice: the classic thread-pool path (the
           # ultra-low-latency profile) and the event-driven C1M reactor path.
           run_bench "CWIST (classic)" "env CWIST_C1M_MODE=0 /tmp/cwist_server" 9091 "/tmp/cwist.txt" "/tmp/cwist_stat.txt" 10
-          run_bench "CWIST C1M" "env CWIST_C1M_MODE=1 /tmp/cwist_server" 9091 "/tmp/cwist_c1m.txt" "/tmp/cwist_c1m_stat.txt" 10
+          run_bench "CWIST C1M" "env CWIST_C1M_MODE=1 CWIST_LATENCY_PROBE=1 /tmp/cwist_server" 9091 "/tmp/cwist_c1m.txt" "/tmp/cwist_c1m_stat.txt" 10
 
           # CWIST_MALLOC_ARENA_MAX=1 caps glibc's per-process malloc arena
           # count to 1 before the fork loop (src/sys/app/app.c), inherited
