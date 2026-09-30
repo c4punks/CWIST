@@ -216,7 +216,7 @@ it is additive. Scope does not grow; anything not ready slips.
 
 | Phase | Goal | Status | Next Actions |
 |-------|------|--------|--------------|
-| **1 — Performance** | Close reactor/Classic/Axum latency gaps; validate RX-uring pipelining; HTTPS handshake shards; worker warmup | Mostly done | #293 has the data; decide on `CWIST_HTTPS_HS_SHARDS` default; RX-uring and worker warmup dropped |
+| **1 — Performance** | Close reactor/Classic/Axum latency gaps; validate RX-uring pipelining; HTTPS handshake shards; worker warmup | Mostly done | #293 has the data; #294 raised `CWIST_HTTPS_HS_SHARDS` default floor to 4 and MAX to 16; RX-uring and worker warmup dropped |
 | **2 — Rust FFI** | Make CWIST callable from Rust (`cwist-sys` + `cwist`) | Not started | Create `bindings/rust/`; add additive `_ex` route registration; export `static inline` wrappers; add layout assertion tests; write `example/rust-hello/`; integrate `cargo test` into CI |
 | **3 — HTTP/3 close correctness** | Re-pin lsquic when upstream fixes land; add CONNECTION_CLOSE interop gate | Blocked on upstream | Track lsquic #688, #687, #693; build h3spec-style gate; add pinned-commit CI check; cutoff 2026-10-09 |
 | **4 — v4.0 scope confirmation** | Enact v3.7 Phase 5 decisions and record v4.0 fate for every experimental item | Not started | Promote full GC/malloc interception to supported opt-in; record decisions for GraphQL subscriptions, durable queue, Redis/NATS borrow, WASM component pipeline; audit stale experimental docs |
@@ -232,7 +232,7 @@ microbenchmark, or with a recorded negative result.
 | #166 tail-latency successor | Opened #293; `CWIST_LATENCY_PROBE` shows callback time is tiny and queue delay drives the tail | Done for v3.8 |
 | Batch/yield matrix | Default `(16, 16)` is near-optimal; `(16, 4)` and `(16, 32)` are marginally better on P99 but RPS is flat | Done; no default change |
 | RX-uring pipelining (#179) | **Negative**: `CWIST_RX_URING=1` is ~14% slower than `=0` on a 16-depth pipeline workload | **Drop** from v3.8 scope; keep the learn flag |
-| HTTPS handshake shards | **Real but niche**: `CWIST_HTTPS_HS_SHARDS=1` is a clear bottleneck (3.1k RPS / 27 ms); 4+ shards saturate (~3.6k RPS / ~13 ms) | **Keep**; consider raising the default shard count |
+| HTTPS handshake shards | **Real but niche**: `CWIST_HTTPS_HS_SHARDS=1` is a clear bottleneck (3.1k RPS / 27 ms); 4+ shards saturate (~3.6k RPS / ~13 ms) | **Raise default floor to 4 and MAX to 16** (#294); explicit override still available |
 | Worker ttak calibration warmup | **No cold-start drift**: RPS varies <5% from second 1 to second 10 across three cold starts | **Drop** from v3.8 scope |
 | Measurement discipline | Compare within one runner-CPU column, or use checked-in microbenchmark | Ongoing |
 

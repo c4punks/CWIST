@@ -243,10 +243,25 @@ typedef struct https_hs_shard {
     _Atomic uint32_t pending;
 } https_hs_shard_t;
 
-static void https_hs_forget_locked(https_hs_pending_t *prev, https_hs_pending_t *p) {
-    if (prev) prev->next = p->next;
-    else g_hs_head = p->next;
-    atomic_fetch_sub_explicit(&g_hs_pending_count, 1, memory_order_release);
+/* One shepherd thread per shard; the count is fixed at start (see below). */
+#define CWIST_HTTPS_HS_MAX_SHARDS 16
+
+static https_hs_shard_t g_hs_shards[CWIST_HTTPS_HS_MAX_SHARDS];
+static long g_hs_shard_count = 0;
+static pthread_mutex_t g_hs_start_lock = PTHREAD_MUTEX_INITIALIZER;
+
+/* Both called with sh->lock held; O(1), so the shepherd's per-event and
+ * sweep costs no longer grow with the number of pending handshakes. */
+static void https_hs_link_locked(https_hs_shard_t *sh, https_hs_pending_t *p) {
+    p->next = NULL;
+    p->prev = sh->tail;
+    if (sh->tail)
+        sh->tail->next = p;
+    else
+        sh->head = p;
+    sh->tail = p;
+    p->linked = true;
+    atomic_fetch_add_explicit(&sh->pending, 1, memory_order_release);
 }
 
 static void https_hs_abort(https_hs_pending_t *p) {
@@ -416,11 +431,87 @@ void https_hs_shepherd_stop(void) {
         cwist_free(cur);
         cur = next;
     }
-    if (g_hs_epoll_fd >= 0) close(g_hs_epoll_fd);
-    if (g_hs_wakeup_rd >= 0) close(g_hs_wakeup_rd);
-    if (g_hs_wakeup_wr >= 0) close(g_hs_wakeup_wr);
-    g_hs_epoll_fd = -1;
-    g_hs_wakeup_rd = g_hs_wakeup_wr = -1;
+    if (sh->epoll_fd >= 0) close(sh->epoll_fd);
+    if (sh->wakeup_rd >= 0) close(sh->wakeup_rd);
+    if (sh->wakeup_wr >= 0) close(sh->wakeup_wr);
+    sh->epoll_fd = -1;
+    sh->wakeup_rd = sh->wakeup_wr = -1;
+}
+
+int https_hs_shepherd_start(void) {
+    pthread_mutex_lock(&g_hs_start_lock);
+    if (g_hs_shard_count > 0) {
+        pthread_mutex_unlock(&g_hs_start_lock);
+        return 0;
+    }
+    /* Spread handshakes across as many shepherd threads as this process has
+     * request workers (bounded), matching the parallelism of the legacy
+     * blocking pool path without parking request workers on handshakes. */
+    long want = get_optimal_thread_count();
+    if (want < 4) want = 4;
+    if (want > CWIST_HTTPS_HS_MAX_SHARDS) want = CWIST_HTTPS_HS_MAX_SHARDS;
+    /* CWIST_HTTPS_HS_SHARDS overrides the computed count for connect-burst
+     * tuning; values outside [1, CWIST_HTTPS_HS_MAX_SHARDS] are ignored. */
+    const char *env = getenv("CWIST_HTTPS_HS_SHARDS");
+    if (env && *env) {
+        char *end = NULL;
+        long parsed = strtol(env, &end, 10);
+        if (end != env && *end == '\0' && parsed >= 1 && parsed <= CWIST_HTTPS_HS_MAX_SHARDS)
+            want = parsed;
+    }
+
+    long started = 0;
+    for (long i = 0; i < want; i++) {
+        https_hs_shard_t *sh = &g_hs_shards[i];
+        memset(sh, 0, sizeof(*sh));
+        sh->epoll_fd = -1;
+        sh->wakeup_rd = sh->wakeup_wr = -1;
+        pthread_mutex_init(&sh->lock, NULL);
+        atomic_init(&sh->pending, 0);
+
+        sh->epoll_fd = epoll_create1(0);
+        if (sh->epoll_fd < 0) break;
+        int pfd[2];
+        if (pipe(pfd) != 0) {
+            close(sh->epoll_fd);
+            sh->epoll_fd = -1;
+            break;
+        }
+        sh->wakeup_rd = pfd[0];
+        sh->wakeup_wr = pfd[1];
+        fcntl(sh->wakeup_rd, F_SETFL, O_NONBLOCK);
+        fcntl(sh->wakeup_wr, F_SETFL, O_NONBLOCK);
+        struct epoll_event ev = {.events = EPOLLIN, .data.ptr = NULL};
+        epoll_ctl(sh->epoll_fd, EPOLL_CTL_ADD, sh->wakeup_rd, &ev);
+        sh->running = true;
+        if (pthread_create(&sh->thread, NULL, https_hs_shepherd, sh) != 0) {
+            sh->running = false;
+            close(sh->wakeup_rd);
+            close(sh->wakeup_wr);
+            close(sh->epoll_fd);
+            sh->epoll_fd = -1;
+            sh->wakeup_rd = sh->wakeup_wr = -1;
+            break;
+        }
+        started++;
+    }
+    if (started == 0) {
+        pthread_mutex_unlock(&g_hs_start_lock);
+        return -1;
+    }
+    g_hs_shard_count = started;
+    pthread_mutex_unlock(&g_hs_start_lock);
+    return 0;
+}
+
+void https_hs_shepherd_stop(void) {
+    pthread_mutex_lock(&g_hs_start_lock);
+    long count = g_hs_shard_count;
+    g_hs_shard_count = 0;
+    pthread_mutex_unlock(&g_hs_start_lock);
+    for (long i = 0; i < count; i++) {
+        https_hs_shard_stop(&g_hs_shards[i]);
+    }
 }
 
 long cwist_https_pending_handshakes(void) {
