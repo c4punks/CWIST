@@ -220,7 +220,7 @@ it is additive. Scope does not grow; anything not ready slips.
 | Phase | Goal | Status | Next Actions |
 |-------|------|--------|--------------|
 | **1 — Performance** | Close reactor/Classic/Axum latency gaps; validate RX-uring pipelining; HTTPS handshake shards; worker warmup | Mostly done | #293 has the data; #294 raised `CWIST_HTTPS_HS_SHARDS` default floor to 4 and MAX to 16; RX-uring and worker warmup dropped |
-| **2 — Rust FFI** | Make CWIST callable from Rust (`cwist-sys` + `cwist`) | Mostly done | Middleware and deferred-async wrappers landed; `example/rust-hello/` and FFI overhead benchmark added; remaining: built-in middleware factory wrappers, `cwist_async_respond_with`, published crates |
+| **2 — Rust FFI** | Make CWIST callable from Rust (`cwist-sys` + `cwist`) | Mostly done | Middleware and deferred-async wrappers landed; `example/rust-hello/` and FFI overhead benchmark added; built-in middleware factory wrappers and owned `cwist_async_respond_with` helper done; remaining: published crates |
 | **3 — HTTP/3 close correctness** | Re-pin lsquic when upstream fixes land; add CONNECTION_CLOSE interop gate | Deferred indefinitely | On hold until upstream lsquic ships WebTransport client support; no separate cutoff |
 | **4 — v4.0 scope confirmation** | Enact v3.7 Phase 5 decisions and record v4.0 fate for every experimental item | Not started | Promote full GC/malloc interception to supported opt-in; record decisions for GraphQL subscriptions, durable queue, Redis/NATS borrow, WASM component pipeline; audit stale experimental docs |
 
@@ -252,8 +252,8 @@ that links `libcwist.a` through `cwist.pc`) and `cwist` (the safe wrapper).
 | Safe wrapper scope | Done | App lifecycle, routing with closures, request/response access, middleware, graceful shutdown, deferred async | Middleware `_ex` API added; otherwise none |
 | Memory model | Done | Rust allocations stay outside `cwist_alloc`; full GC and `CWIST_INTERCEPT_MALLOC` do not apply to Rust code | Documentation only |
 | CI and measurement | Done | `cargo test` on Linux/macOS, `example/rust-hello/`, FFI overhead measured vs C equivalent | New CI step |
-| Built-in middleware factories | Not started | Wrap `cwist_mw_*` factories in `cwist` crate | None |
-| `cwist_async_respond_with` | Not started | Build an owned `cwist_http_response` from Rust for the full-response async path | Needs a Rust helper or new C allocator wrapper |
+| Built-in middleware factories | Done | Wrap `cwist_mw_*` factories in `cwist` crate (`cwist::middleware`) and expose via `App::use_builtin_middleware` | None |
+| `cwist_async_respond_with` | Done | `OwnedResponse` in `cwist::http` builds a CWIST-allocated response; `AsyncResponse::respond_with` transfers ownership | New `cwist_http_response_create/destroy` C helpers |
 
 Status at the v3.8 cut: experimental, crate version 0.x, not yet published to
 crates.io. The v4.0 decision (publish, or keep in-tree) is recorded before v4.0
