@@ -4,6 +4,7 @@
  * in build.rs. */
 #include <cwist/core/mem/alloc.h>
 #include <cwist/core/sstring/sstring.h>
+#include <cwist/net/http/async.h>
 #include <cwist/net/http/http.h>
 #include <cwist/net/http/query.h>
 #include <cwist/sys/app/app.h>

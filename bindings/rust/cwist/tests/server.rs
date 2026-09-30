@@ -186,3 +186,40 @@ fn listening_on_a_busy_port_is_an_error() {
     cwist::shutdown();
     assert_eq!(finished(&done), Ok(()));
 }
+
+#[test]
+fn async_handler_completes_from_another_thread() {
+    let _serial = serial();
+    let port = free_port();
+    let (tx, rx) = mpsc::channel::<cwist::AsyncResponse>();
+    let done = serve(port, move |app| {
+        app.get("/defer", move |_req, res| {
+            let defer = cwist::AsyncResponse::defer(_req, res).expect("defer");
+            tx.send(defer).expect("send async handle");
+        })
+        .unwrap();
+    });
+
+    assert!(wait_until_up(port));
+
+    let mut stream = TcpStream::connect(("127.0.0.1", port)).unwrap();
+    stream
+        .set_read_timeout(Some(Duration::from_secs(5)))
+        .unwrap();
+    write!(
+        stream,
+        "GET /defer HTTP/1.1\r\nHost: localhost\r\nConnection: close\r\n\r\n"
+    )
+    .unwrap();
+
+    let mut defer = rx.recv_timeout(Duration::from_secs(5)).expect("receive async handle");
+    assert!(defer.respond(200, "text/plain", "deferred body"));
+
+    let mut response = String::new();
+    stream.read_to_string(&mut response).unwrap();
+    assert!(response.starts_with("HTTP/1.1 200"), "{response}");
+    assert!(response.contains("deferred body"), "{response}");
+
+    cwist::shutdown();
+    assert_eq!(finished(&done), Ok(()));
+}

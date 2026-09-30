@@ -41,11 +41,13 @@
 #![warn(missing_docs)]
 
 mod app;
+mod async_response;
 mod error;
 mod http;
 mod server;
 
 pub use app::App;
+pub use async_response::AsyncResponse;
 pub use error::Error;
 pub use http::{Method, Request, Response};
 pub use server::shutdown;
