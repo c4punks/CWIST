@@ -1,6 +1,7 @@
 use crate::http::{consume, Request, Response};
 use crate::Error;
 use cwist_sys as sys;
+use std::cell::Cell;
 use std::ffi::{c_void, CString};
 use std::os::raw::c_char;
 use std::panic::{self, AssertUnwindSafe};
@@ -97,30 +98,42 @@ impl App {
     /// request, a mutable response, and a `next` closure that advances the
     /// chain. Calling `next` invokes the next middleware or, at the end of the
     /// chain, the matching route handler. A middleware may choose not to call
-    /// `next` to short-circuit the request.
+    /// `next` to short-circuit the request. Only the first call to `next`
+    /// runs the rest of the chain; later calls do nothing. The response can
+    /// be changed both before and after `next`.
+    ///
+    /// The middleware is dropped exactly once, when the app is destroyed, or
+    /// before this returns [`Error::Middleware`] if CWIST rejects it.
     ///
     /// # Panics
     ///
     /// As with route handlers, a panic in a middleware is caught at the C
-    /// boundary and converted into a `500 Internal Server Error`. If the panic
-    /// occurs before `next` was called, the chain continues to the route so the
-    /// request is still answered.
-    pub fn use_middleware<F>(&mut self, middleware: F)
+    /// boundary and the response becomes a `500 Internal Server Error`. The
+    /// chain does not continue past a panicking middleware; if the panic
+    /// happens after `next`, the rest of the chain has already run and its
+    /// response is replaced.
+    pub fn use_middleware<F>(&mut self, middleware: F) -> Result<(), Error>
     where
         F: Fn(&Request<'_>, &mut Response<'_>, &dyn Fn()) + Send + Sync + 'static,
     {
         let ctx = Box::into_raw(Box::new(MiddlewareCtx { middleware: Box::new(middleware) }))
             .cast::<c_void>();
-        // SAFETY: the app is live; ctx ownership passes to CWIST and is released
-        // by drop_middleware_ctx when the app is destroyed.
-        unsafe {
+        // SAFETY: the app is live; ctx is a valid MiddlewareCtx whose ownership
+        // passes to CWIST on every outcome, including failure (the destructor
+        // then runs before this call returns), so Rust must not touch ctx again.
+        let err = unsafe {
             sys::cwist_app_use_ex(
                 self.raw.as_ptr(),
                 None,
                 Some(middleware_trampoline_ex),
                 ctx,
                 Some(drop_middleware_ctx),
-            );
+            )
+        };
+        if consume(err) {
+            Ok(())
+        } else {
+            Err(Error::Middleware)
         }
     }
 
@@ -299,10 +312,17 @@ unsafe extern "C" fn middleware_trampoline_ex(
         // not touch them while the middleware runs.
         let request = unsafe { Request::from_raw(req) };
         let mut response = unsafe { Response::from_raw(res) };
+        // CWIST's next advances a per-request cursor, so a second call would
+        // skip ahead or run the route handler again; only the first one counts.
+        let called = Cell::new(false);
         let next_fn = || {
+            if called.replace(true) {
+                return;
+            }
             if let Some(f) = next {
                 // SAFETY: next is a valid CWIST chain function; req/res remain
-                // live for the call.
+                // live for the call, and Response holds no reference into res
+                // that the rest of the chain could invalidate.
                 unsafe { f(req.as_ptr(), res.as_ptr()) };
             }
         };
