@@ -538,7 +538,7 @@ typedef struct https_hs_shard {
 } https_hs_shard_t;
 
 /* One shepherd thread per shard; the count is fixed at start (see below). */
-#define CWIST_HTTPS_HS_MAX_SHARDS 8
+#define CWIST_HTTPS_HS_MAX_SHARDS 16
 
 static https_hs_shard_t g_hs_shards[CWIST_HTTPS_HS_MAX_SHARDS];
 static long g_hs_shard_count = 0;
@@ -711,7 +711,7 @@ int https_hs_shepherd_start(void) {
      * request workers (bounded), matching the parallelism of the legacy
      * blocking pool path without parking request workers on handshakes. */
     long want = get_optimal_thread_count();
-    if (want < 2) want = 2;
+    if (want < 4) want = 4;
     if (want > CWIST_HTTPS_HS_MAX_SHARDS) want = CWIST_HTTPS_HS_MAX_SHARDS;
     /* CWIST_HTTPS_HS_SHARDS overrides the computed count for connect-burst
      * tuning; values outside [1, CWIST_HTTPS_HS_MAX_SHARDS] are ignored. */
