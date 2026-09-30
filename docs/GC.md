@@ -1,6 +1,6 @@
 # Full GC: Automatic Resource Reclamation in CWIST
 
-Status: **implemented, opt-in** (`src/core/mem/gc.c`,
+Status: **supported opt-in** (`src/core/mem/gc.c`,
 `include/cwist/core/mem/gc.h`). `cwist_full_gc(true)` is a real, callable
 toggle today, not a future one — see Tutorial 30
 (`tutorials/30-graceful-shutdown/`) for a minimal example. All six design
@@ -246,7 +246,17 @@ Before issue #65 the set was a list scanned on every removal, so each free
 cost time proportional to the blocks the thread held: on the same runner,
 288.6 ns per pair at 1024 live blocks and 3853.9 ns at 16384.
 
-**Practical guidance**: if you opt into full-GC mode on a high-throughput
-service, profile your allocation hot path first.  The overhead is only
-active when `cwist_full_gc(true)` has been called; all default builds
-(full-GC off) are unaffected.
+**Practical guidance**:
+
+- Use full-GC mode for **rapid prototyping** and convenience-first code where
+  manual `cwist_free()` bookkeeping would slow you down. It is the safe
+  default for experiments, internal tools, and workloads where raw throughput
+  is not the primary concern.
+- Keep the **default explicit mode** for **high-throughput production
+  services** where every nanosecond of allocation overhead matters. The
+  explicit `cwist_alloc()` / `cwist_free()` model has zero tracking cost and
+  remains fully supported.
+- If you opt into full-GC mode on a high-throughput service, profile your
+  allocation hot path first. The overhead is only active when
+  `cwist_full_gc(true)` has been called; all default builds (full-GC off) are
+  unaffected.
