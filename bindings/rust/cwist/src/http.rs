@@ -223,3 +223,79 @@ impl<'a> Response<'a> {
         }
     }
 }
+
+/// An owned HTTP response allocated by CWIST.
+///
+/// This is useful when completing a deferred response with a fully constructed
+/// response object via [`AsyncResponse::respond_with`](crate::AsyncResponse::respond_with).
+/// The response is destroyed automatically when this value is dropped, unless
+/// ownership is explicitly transferred to CWIST.
+pub struct OwnedResponse {
+    raw: NonNull<sys::cwist_http_response>,
+}
+
+impl OwnedResponse {
+    /// Creates a new empty response, or returns an error if allocation fails.
+    pub fn new() -> Result<OwnedResponse, Error> {
+        // SAFETY: cwist_http_response_create allocates a response with body and
+        // headers initialized; NULL means allocation failed.
+        let raw = unsafe { sys::cwist_http_response_create() };
+        NonNull::new(raw)
+            .map(|raw| OwnedResponse { raw })
+            .ok_or(Error::Body)
+    }
+
+    pub(crate) fn raw(&self) -> NonNull<sys::cwist_http_response> {
+        self.raw
+    }
+
+    fn get(&mut self) -> &mut sys::cwist_http_response {
+        // SAFETY: self.raw is a live response owned by this struct.
+        unsafe { self.raw.as_mut() }
+    }
+
+    /// Sets the status code, e.g. `201`.
+    pub fn set_status(&mut self, code: u16) {
+        self.get().status_code = code.into();
+    }
+
+    /// Replaces the response body.
+    pub fn set_body(&mut self, body: impl AsRef<[u8]>) -> Result<(), Error> {
+        let body = body.as_ref();
+        let sstr = self.get().body;
+        if sstr.is_null() {
+            return Err(Error::Body);
+        }
+        // SAFETY: sstr is the response's own body sstring; CWIST copies the
+        // bytes, so `body` only needs to live for the call.
+        let err = unsafe { sys::cwist_sstring_assign_len(sstr, body.as_ptr().cast(), body.len()) };
+        if consume(err) {
+            Ok(())
+        } else {
+            Err(Error::Body)
+        }
+    }
+
+    /// Adds a response header. CWIST copies both strings and rejects names or
+    /// values containing CR or LF.
+    pub fn add_header(&mut self, name: &str, value: &str) -> Result<(), Error> {
+        let name = CString::new(name).map_err(|_| Error::InteriorNul("header name"))?;
+        let value = CString::new(value).map_err(|_| Error::InteriorNul("header value"))?;
+        let headers = &mut self.get().headers;
+        // SAFETY: headers is the response's own list head; CWIST copies both
+        // strings before returning.
+        let err = unsafe { sys::cwist_http_header_add(headers, name.as_ptr(), value.as_ptr()) };
+        if consume(err) {
+            Ok(())
+        } else {
+            Err(Error::Header)
+        }
+    }
+}
+
+impl Drop for OwnedResponse {
+    fn drop(&mut self) {
+        // SAFETY: self.raw is a live response allocated by CWIST.
+        unsafe { sys::cwist_http_response_destroy(self.raw.as_ptr()) };
+    }
+}

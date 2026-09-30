@@ -68,6 +68,21 @@ impl AsyncResponse {
         ok
     }
 
+    /// Complete the exchange with a caller-built response.
+    ///
+    /// On success CWIST takes ownership of `response` and destroys it after the
+    /// response is sent. Returns `true` if this call was the first to complete
+    /// the exchange.
+    pub fn respond_with(self, response: crate::OwnedResponse) -> bool {
+        let raw = response.raw();
+        // SAFETY: self.raw is a live handle; response.raw is a live owned
+        // response. Ownership transfers to CWIST, so do not run our Drop.
+        let ok = unsafe { sys::cwist_async_respond_with(self.raw.as_ptr(), raw.as_ptr()) };
+        std::mem::forget(response);
+        std::mem::forget(self);
+        ok
+    }
+
     /// Complete the exchange with an error status and close the connection.
     ///
     /// Returns `true` if this call was the first to complete the exchange.
