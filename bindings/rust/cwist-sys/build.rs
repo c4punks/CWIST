@@ -17,6 +17,7 @@ const FUNCTIONS: &[&str] = &[
     "cwist_http_method_to_string",
     "cwist_sstring_(create|destroy|assign|assign_len|append|append_len)",
     "cwist_query_map_get",
+    "cwist_async_(defer|retain|release|set_timeout|respond|respond_with|abort)",
     "cwist_alloc",
     "cwist_free",
     "make_error",
@@ -30,7 +31,7 @@ const FUNCTIONS: &[&str] = &[
 /// Handle types used only through pointers. Keeping them opaque keeps their
 /// (large, internal) layouts out of the binding, so changes to them cannot
 /// break it.
-const OPAQUE: &[&str] = &["cwist_app", "cwist_query_map", "cwist_db", "cJSON", "sqlite3"];
+const OPAQUE: &[&str] = &["cwist_app", "cwist_query_map", "cwist_db", "cJSON", "sqlite3", "cwist_async"];
 
 /// System libraries `cwist.pc` names as plain `-l` flags. Their own pkg-config
 /// files supply the directory when it is not a default one (Homebrew), the
@@ -112,7 +113,7 @@ fn main() {
         // Seconds cwist_app_listen*() waits for connections to drain after a
         // shutdown request.
         .allowlist_var("g_cwist_drain_timeout_sec")
-        .allowlist_type("cwist_(http_request|http_response|http_header_node|sstring|error_t)")
+        .allowlist_type("cwist_(http_request|http_response|http_header_node|sstring|error_t|http_status_t)")
         .allowlist_type("cwist_handler(_ex)?_func|cwist_handler_ctx_destroy_func")
         .allowlist_type("cwist_middleware(_func|_func_ex|_ctx_destroy_func)");
     for f in FUNCTIONS {

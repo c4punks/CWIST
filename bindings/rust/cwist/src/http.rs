@@ -87,6 +87,10 @@ impl<'a> Request<'a> {
         Request { raw, _borrow: PhantomData }
     }
 
+    pub(crate) fn raw(&self) -> NonNull<sys::cwist_http_request> {
+        self.raw
+    }
+
     fn get(&self) -> &sys::cwist_http_request {
         // SAFETY: from_raw's contract.
         unsafe { self.raw.as_ref() }
@@ -163,6 +167,10 @@ impl<'a> Response<'a> {
     /// else accesses, for `'a`.
     pub(crate) unsafe fn from_raw(raw: NonNull<sys::cwist_http_response>) -> Self {
         Response { raw, _borrow: PhantomData }
+    }
+
+    pub(crate) fn raw(&self) -> NonNull<sys::cwist_http_response> {
+        self.raw
     }
 
     fn get(&mut self) -> &mut sys::cwist_http_response {
