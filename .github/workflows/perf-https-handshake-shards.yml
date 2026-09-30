@@ -58,9 +58,19 @@ jobs:
             local out="/tmp/${tag}.txt"
 
             echo "=== CWIST_HTTPS_HS_SHARDS=$shards (HTTPS, Connection: close) ==="
-            python3 scripts/ci/benchmark_session.py \
-              --server "env CWIST_C1M_MODE=1 CWIST_HTTPS_HS_SHARDS=$shards /tmp/cwist_https_server" \
-              -- bash -c 'wrk -t12 -c200 -d10s -H "Connection: close" --latency https://127.0.0.1:9443/ > '"$out"' 2>&1'
+
+            env CWIST_C1M_MODE=1 CWIST_HTTPS_HS_SHARDS=$shards /tmp/cwist_https_server &
+            local pid=$!
+            sleep 1
+
+            # Quick health check; -k accepts the self-signed cert.
+            curl -sfk https://127.0.0.1:9443/ || echo "health check failed"
+
+            wrk -t12 -c200 -d10s -H "Connection: close" --latency https://127.0.0.1:9443/ > "$out" 2>&1
+
+            kill -TERM $pid 2>/dev/null || true
+            wait $pid 2>/dev/null || true
+            sleep 1
 
             echo "--- results ---"
             grep -E 'Requests/sec:|Latency\s+|Latency Distribution' "$out" | head -10
