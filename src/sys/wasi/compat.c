@@ -147,4 +147,61 @@ const cwist_http2_stream_hooks *cwist_grpc_http2_hooks(void) {
     return NULL;
 }
 
+/* H2 deferred-completion queue: reachable through async.c's Plan B handoff,
+ * but a WASM host never runs an H2 connection, so req->h2_queue is always
+ * NULL on this target and the stubs are never executed. */
+cwist_h2_async_queue *cwist_h2_async_queue_acquire(cwist_h2_async_queue *q) {
+    return q;
+}
+
+void cwist_h2_async_queue_release(cwist_h2_async_queue *q) {
+    (void)q;
+}
+
+int cwist_h2_async_queue_enqueue(cwist_h2_async_queue *q, uint32_t stream_id,
+                                 cwist_http_request *req, cwist_http_response *send,
+                                 cwist_http_response *res, bool send_owned) {
+    (void)q;
+    (void)stream_id;
+    (void)req;
+    (void)send;
+    (void)res;
+    (void)send_owned;
+    return -1;
+}
+
+/* HTTPS connection send/close: reachable through async.c's completion path,
+ * never executed -- a WASM host dispatches in memory and never wraps a TLS
+ * connection. */
+void cwist_https_close_connection(cwist_https_connection *conn) {
+    (void)conn;
+}
+
+static cwist_error_t cwist_wasi_https_unavailable(void) {
+    cwist_error_t err = {0};
+    err.error.err_i16 = -1;
+    return err;
+}
+
+cwist_error_t cwist_https_send_response(cwist_https_connection *conn, cwist_http_response *res) {
+    (void)conn;
+    (void)res;
+    return cwist_wasi_https_unavailable();
+}
+
+cwist_error_t cwist_https_send_response_head(cwist_https_connection *conn,
+                                             cwist_http_response *res) {
+    (void)conn;
+    (void)res;
+    return cwist_wasi_https_unavailable();
+}
+
+void https_pool_submit_conn(cwist_https_connection *conn, cwist_https_context *ctx,
+                            void (*handler)(cwist_https_connection *, void *), void *user_ctx) {
+    (void)conn;
+    (void)ctx;
+    (void)handler;
+    (void)user_ctx;
+}
+
 #endif /* __wasi__ */
