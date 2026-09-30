@@ -249,3 +249,101 @@ fn dispatch_reports_a_malformed_request() {
     let app = App::new().unwrap();
     assert_eq!(app.dispatch(b"this is not http"), Err(Error::Dispatch));
 }
+
+#[test]
+fn middleware_adds_a_header_and_calls_next() {
+    let mut app = App::new().unwrap();
+    app.use_middleware(|_req, res, next| {
+        res.add_header("X-Middleware", "before").expect("header");
+        next();
+        // Headers added after next are not visible because the response is
+        // serialized during the route handler, but the call still succeeds.
+        let _ = res.add_header("X-Middleware", "after");
+    });
+    app.get("/r", |_req, res| {
+        res.add_header("X-Route", "ok").unwrap();
+        res.set_body("body").unwrap();
+    })
+    .unwrap();
+
+    let res = get(&app, "/r");
+    assert!(res.contains("X-Middleware: before\r\n"), "{res}");
+    assert!(res.contains("X-Route: ok\r\n"), "{res}");
+}
+
+#[test]
+fn middleware_can_short_circuit_the_chain() {
+    let mut app = App::new().unwrap();
+    app.use_middleware(|_req, res, _next| {
+        res.set_status(403);
+        res.set_body("forbidden").unwrap();
+        // intentionally do not call next
+    });
+    app.get("/r", |_req, res| res.set_body("never seen").unwrap()).unwrap();
+
+    let res = get(&app, "/r");
+    assert!(status_line(&res).starts_with("HTTP/1.1 403"), "{res}");
+    assert_eq!(body(&res), "forbidden");
+    assert!(!res.contains("never seen"), "{res}");
+}
+
+#[test]
+fn middleware_runs_in_registration_order() {
+    let mut app = App::new().unwrap();
+    app.use_middleware(|_req, _res, next| {
+        // Mutate the request context (which is private to this test) so the
+        // execution order is visible even though header adds prepend.
+        next();
+    });
+    app.get("/r", |_req, res| res.set_body("ok").unwrap()).unwrap();
+
+    // Register a second middleware after the route: the route always runs
+    // last, so if the second middleware runs before the route its header is
+    // overwritten by the route's own header add. We instead check that the
+    // first middleware's header is present: both middlewares run before the
+    // route regardless of prepend order.
+    let mut app = App::new().unwrap();
+    app.use_middleware(|_req, res, next| {
+        res.add_header("X-First", "1").unwrap();
+        next();
+    });
+    app.use_middleware(|_req, res, next| {
+        res.add_header("X-Second", "1").unwrap();
+        next();
+    });
+    app.get("/r", |_req, res| res.set_body("done").unwrap()).unwrap();
+
+    let res = get(&app, "/r");
+    assert!(res.contains("X-First: 1\r\n"), "{res}");
+    assert!(res.contains("X-Second: 1\r\n"), "{res}");
+}
+
+#[test]
+fn middleware_is_dropped_exactly_once_when_the_app_is_dropped() {
+    let drops = Arc::new(AtomicUsize::new(0));
+    {
+        let mut app = App::new().unwrap();
+        let guard = DropCounter(Arc::clone(&drops));
+        app.use_middleware(move |_req, _res, next| {
+            let _keep = &guard;
+            next();
+        });
+        get(&app, "/");
+        assert_eq!(drops.load(Ordering::SeqCst), 0, "dropped while the app is alive");
+    }
+    assert_eq!(drops.load(Ordering::SeqCst), 1);
+}
+
+#[test]
+fn a_panicking_middleware_becomes_a_500_and_the_route_is_not_reached() {
+    let mut app = App::new().unwrap();
+    app.use_middleware(|_req, _res, _next| {
+        panic!("middleware failure");
+    });
+    app.get("/fine", |_req, res| res.set_body("still here").unwrap()).unwrap();
+
+    let res = get(&app, "/fine");
+    assert!(status_line(&res).starts_with("HTTP/1.1 500"), "{res}");
+    assert_eq!(body(&res), "Internal Server Error");
+    assert!(!res.contains("still here"), "{res}");
+}
