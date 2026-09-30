@@ -29,7 +29,7 @@
 
 | Phase | Theme | Progress |
 |-------|-------|----------|
-| Phase 1 — Performance | Reactor latency, RX-uring pipelining, close-drain correctness | Started: HTTP close/drain/churn fixes landed; worker warmup and HTTPS shepherd branches in flight |
+| Phase 1 — Performance | Reactor latency, RX-uring pipelining, HTTPS handshake shards, worker warmup | Mostly done: #293 closed the measurement loop; RX-uring and worker warmup dropped; HTTPS shard tuning remains open |
 | Phase 2 — Rust FFI | `bindings/rust/` (`cwist-sys` + `cwist`) | Not started |
 | Phase 3 — HTTP/3 Close Correctness | Re-pin lsquic after upstream fixes | Blocked on lsquic #688, #687, #693; cutoff 2026-10-09 |
 | Phase 4 — v4.0 Scope Confirmation | Enact v3.7 Phase 5 decisions, record experimental-item fates | Not started |
@@ -77,8 +77,8 @@ Automated OS & Web Server benchmark histories are published in `docs/benchmark-t
 - **CWIST v3.7.2 released 2026-09-29**: WASI 0.2 formally supported, WASM component pipeline evaluated, durable queue and GraphQL subscriptions shipped behind flags.
 - **CWIST v3.8 in progress**: theme is *performance, Rust FFI, and v4.0 scope confirmation*. WebTransport moved to v4.1 on 2026-09-25.
 - **Landed on `dev` since v3.7.2**: HTTP close-drain correctness (#292), HTTPS connection-churn optimization (#291), Rust listen-shutdown support (#287).
-- **In flight**: worker ttak calibration warmup, HTTPS shepherd O1 optimization, Rust panic payload handling, ORM socket trust-boundary docs.
-- **Blocked**: HTTP/3 connection-close correctness depends on lsquic upstream #688, #687, #693.
+- **Performance sweep done** (issue #293): CWIST C1M already leads Axum on a single CI run; batch/yield is near-optimal; RX-uring pipelining and worker ttak warmup showed no win; HTTPS handshake shards are a real niche lever (shard=1 is a bottleneck, 4+ saturate).
+- **Deferred**: HTTP/3 connection-close correctness and the lsquic re-pin are on hold until upstream lsquic ships WebTransport client support.
 
 ---
 
@@ -216,7 +216,7 @@ it is additive. Scope does not grow; anything not ready slips.
 
 | Phase | Goal | Status | Next Actions |
 |-------|------|--------|--------------|
-| **1 — Performance** | Close reactor/Classic/Axum latency gaps; validate RX-uring pipelining | In progress | Run `CWIST_LATENCY_PROBE` gap analysis; open #166 successor; add pipelined workload; finish `perf/worker-ttak-calibration-warmup` and `perf/https-shepherd-o1-pending` |
+| **1 — Performance** | Close reactor/Classic/Axum latency gaps; validate RX-uring pipelining; HTTPS handshake shards; worker warmup | Mostly done | #293 has the data; decide on `CWIST_HTTPS_HS_SHARDS` default; RX-uring and worker warmup dropped |
 | **2 — Rust FFI** | Make CWIST callable from Rust (`cwist-sys` + `cwist`) | Not started | Create `bindings/rust/`; add additive `_ex` route registration; export `static inline` wrappers; add layout assertion tests; write `example/rust-hello/`; integrate `cargo test` into CI |
 | **3 — HTTP/3 close correctness** | Re-pin lsquic when upstream fixes land; add CONNECTION_CLOSE interop gate | Blocked on upstream | Track lsquic #688, #687, #693; build h3spec-style gate; add pinned-commit CI check; cutoff 2026-10-09 |
 | **4 — v4.0 scope confirmation** | Enact v3.7 Phase 5 decisions and record v4.0 fate for every experimental item | Not started | Promote full GC/malloc interception to supported opt-in; record decisions for GraphQL subscriptions, durable queue, Redis/NATS borrow, WASM component pipeline; audit stale experimental docs |
@@ -226,14 +226,15 @@ it is additive. Scope does not grow; anything not ready slips.
 Every item lands with before/after numbers from the CI benchmark or a checked-in
 microbenchmark, or with a recorded negative result.
 
-| Work Item | Why It Matters | How to Measure | Status |
-|-----------|----------------|----------------|--------|
-| Reactor vs Classic vs Axum latency gap | Default reactor path trails Classic and Axum on Intel runners | README per-runner table + `CWIST_LATENCY_PROBE` queue/callback split | Not started |
-| #166 tail-latency successor | Re-measure p99/p99.9 against Axum on the current reactor | Open successor issue; run CI benchmark on same runner CPU | Not started |
-| RX-uring pipelining (#179) | The "pipelining win" is still unproven | Add pipelined workload; compare with/without per-connection learn flag | Not started |
-| Measurement discipline | Runner CPU model moves numbers more than most code changes | Compare within one runner-CPU column, or use checked-in microbenchmark | Ongoing |
-| Worker ttak calibration warmup | Reduce cold-start variance | `perf/worker-ttak-calibration-warmup` branch | In progress |
-| HTTPS shepherd O1 pending | HTTPS handshake path optimization | `perf/https-shepherd-o1-pending` branch | In progress |
+| Work Item | Result | Decision |
+|-----------|--------|----------|
+| Reactor vs Classic vs Axum latency gap | CWIST C1M already leads Axum on a single CI run (291k vs 237k RPS, 1.46 ms vs 1.65 ms avg); queue delay dominates the tail | Done for v3.8; further gains need architectural tail-hardening, not tuning |
+| #166 tail-latency successor | Opened #293; `CWIST_LATENCY_PROBE` shows callback time is tiny and queue delay drives the tail | Done for v3.8 |
+| Batch/yield matrix | Default `(16, 16)` is near-optimal; `(16, 4)` and `(16, 32)` are marginally better on P99 but RPS is flat | Done; no default change |
+| RX-uring pipelining (#179) | **Negative**: `CWIST_RX_URING=1` is ~14% slower than `=0` on a 16-depth pipeline workload | **Drop** from v3.8 scope; keep the learn flag |
+| HTTPS handshake shards | **Real but niche**: `CWIST_HTTPS_HS_SHARDS=1` is a clear bottleneck (3.1k RPS / 27 ms); 4+ shards saturate (~3.6k RPS / ~13 ms) | **Keep**; consider raising the default shard count |
+| Worker ttak calibration warmup | **No cold-start drift**: RPS varies <5% from second 1 to second 10 across three cold starts | **Drop** from v3.8 scope |
+| Measurement discipline | Compare within one runner-CPU column, or use checked-in microbenchmark | Ongoing |
 
 ### Phase 2 — Rust FFI
 
