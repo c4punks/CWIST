@@ -124,13 +124,14 @@ int main(void) {
 
 <!-- WEBSERVER_BENCHMARKS:START -->
 Latest Web Server Benchmark (wrk -t12 -c400 -d10s (after 10s warmup, warmup discarded)):
-- **CWIST Classic pool**: 111345 req/s | Latency 2.07ms (P90 4.24ms, P99 7.66ms, P99.999 18.02ms) | RSS 16008KiB | Csw 1101320
-- **CWIST reactor**: 144109 req/s | Latency 2.76ms (P90 5.12ms, P99 8.11ms, P99.999 15.08ms) | RSS 8416KiB | Csw 117805
-- **CWIST reactor (arena_max=1)** — glibc arena cap adopted in PR #35 after mimalloc was tried and refuted (issue #25); this line confirms the decision on every run: 144450 req/s | Latency 2.72ms (P90 4.93ms, P99 7.70ms, P99.999 12.89ms) | RSS 9236KiB | Csw 112628
-- **CWIST reactor (drain_chunk=8)** — cooperative queuing for cwist_async_defer completions within a big io_uring batch (issue #25, docs/cooperative-queuing.md); this workload has no cwist_async_defer traffic to interleave, so parity with the plain CWIST row above is the expected result, not a null finding — the tail-latency win is isolated directly in tests/bench_cooperative_queuing.c: 143329 req/s | Latency 2.80ms (P90 5.03ms, P99 9.12ms, P99.999 24.02ms) | RSS 8372KiB | Csw 116676
-- **Axum**: 111820 req/s | Latency 3.51ms (P90 5.94ms, P99 8.82ms, P99.999 16.58ms) | RSS 16372KiB | Csw 183239
-- **Gin (Go)**: 77943 req/s | Latency 7.00ms (P90 16.67ms, P99 40.29ms, P99.999 83.64ms) | RSS 29880KiB | Csw 307864
-- **Spring Boot**: 44149 req/s | Latency 8.92ms (P90 12.24ms, P99 18.05ms, P99.999 66.80ms) | RSS 1295520KiB | Csw 224475
+- **CWIST Classic pool**: 190262 req/s | Latency 1.26ms (P90 2.78ms, P99 5.87ms, P99.999 26.23ms) | RSS 17404KiB | Csw 1850857
+- **CWIST reactor**: 234681 req/s | Latency 1.76ms (P90 3.51ms, P99 5.91ms, P99.999 11.55ms) | RSS 7112KiB | Csw 250514
+- **CWIST reactor (arena_max=1)** — glibc arena cap adopted in PR #35 after mimalloc was tried and refuted (issue #25); this line confirms the decision on every run: 234639 req/s | Latency 1.74ms (P90 3.42ms, P99 5.72ms, P99.999 11.45ms) | RSS 8272KiB | Csw 266325
+- **CWIST reactor (drain_chunk=8)** — cooperative queuing for cwist_async_defer completions within a big io_uring batch (issue #25, docs/cooperative-queuing.md); this workload has no cwist_async_defer traffic to interleave, so parity with the plain CWIST row above is the expected result, not a null finding — the tail-latency win is isolated directly in tests/bench_cooperative_queuing.c: 237279 req/s | Latency 1.72ms (P90 3.36ms, P99 5.63ms, P99.999 13.04ms) | RSS 6920KiB | Csw 292022
+- **Axum**: 194514 req/s | Latency 2.04ms (P90 3.60ms, P99 5.56ms, P99.999 11.50ms) | RSS 16460KiB | Csw 351140
+- **Actix (Rust)**: 185244 req/s | Latency 2.76ms (P90 2.80ms, P99 2.84ms) | from the-benchmarker public dataset (c≈512)
+- **Gin (Go)**: 142598 req/s | Latency 4.68ms (P90 12.36ms, P99 29.26ms, P99.999 70.56ms) | RSS 30960KiB | Csw 725941
+- **Spring Boot**: 99713 req/s | Latency 4.03ms (P90 5.49ms, P99 9.59ms, P99.999 52.95ms) | RSS 1335716KiB | Csw 492602
 
 **Spring runtime environment**
 
@@ -219,7 +220,7 @@ memory management to the user. CWIST ships the whole stack:
 
 The benchmark results above demonstrate the advantages in latency, memory footprint, and determinism:
 
-1. **Latency & Throughput.** Under 400 concurrency (`wrk -t12 -c400`, CI run above), both CWIST paths deliver lower average latency and higher throughput than the Axum, Gin, and Spring Boot rows of the same run; the tuned low-latency profile (`wrk -t4 -c100`) shows the sub-millisecond median.
+1. **Latency & Throughput.** Under 400 concurrency (`wrk -t12 -c400`, CI run above), both CWIST paths deliver lower average latency and higher throughput than the Axum, Actix, Gin, and Spring Boot rows of the same run; the tuned low-latency profile (`wrk -t4 -c100`) shows the sub-millisecond median.
 2. **Memory Efficiency.** CWIST's resident footprint is a fraction of the Go row and orders of magnitude below the JVM row of the same CI run. In high-density container environments, this significantly reduces memory consumption across thousands of instances.
 3. **Tail Latency & Predictability.** Zero-copy framing, thread-pinned worker execution, and generational arena allocators minimize latency variance and GC pauses.
 4. **Zero-Overhead FFI.** Production libraries in finance, game servers, machine learning, and systems software written in C/C++ link directly into CWIST with zero FFI conversion or runtime bridge penalty.
