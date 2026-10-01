@@ -22,10 +22,7 @@
 #include <cwist/sys/app/shutdown.h>
 #include <cwist/sys/job/scheduler.h>
 #include <cwist/core/mem/alloc.h>
-#include <cwist/core/mem/gc.h>
-#include "async_gc.h"
 #include "async_internal.h"
-#include <pthread.h>
 #include <stdatomic.h>
 #include <fcntl.h>
 #include <sched.h>
