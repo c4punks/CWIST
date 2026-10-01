@@ -20,6 +20,8 @@ const FUNCTIONS: &[&str] = &[
     "cwist_query_map_get",
     "cwist_async_(defer|retain|release|set_timeout|respond|respond_with|abort)",
     "cwist_mw_(request_id|access_log|rate_limit_ip|rate_limit_reset|metrics|cors|jwt_auth|compress|jwt_get_claims)",
+    // Signs tokens for the JWT middleware (security/jwt/jwt.h).
+    "cwist_jwt_sign",
     "cwist_alloc",
     "cwist_free",
     "make_error",

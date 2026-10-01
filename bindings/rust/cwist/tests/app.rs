@@ -2,7 +2,7 @@
 //! handler ownership and panic containment, driven through in-memory dispatch.
 
 use cwist::{App, Error, Method};
-use std::ffi::c_void;
+use std::ffi::{c_void, CStr, CString};
 use std::ptr;
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::{Arc, Mutex};
@@ -497,4 +497,88 @@ fn dispatch_refuses_to_defer_and_the_handler_answers_itself() {
     let res = get(&app, "/sync");
     assert!(status_line(&res).starts_with("HTTP/1.1 200"), "{res}");
     assert_eq!(body(&res), "answered inline");
+}
+
+/// Signs `payload` with CWIST's own HS256 signer; the token is copied out of
+/// the CWIST allocation, which is then released.
+fn sign_jwt(payload: &str, secret: &str) -> String {
+    let payload = CString::new(payload).unwrap();
+    let secret = CString::new(secret).unwrap();
+    // SAFETY: both strings are NUL-terminated and live for the call.
+    let raw = unsafe { cwist_sys::cwist_jwt_sign(payload.as_ptr(), secret.as_ptr(), 3600) };
+    assert!(!raw.is_null(), "cwist_jwt_sign failed");
+    // SAFETY: raw is a NUL-terminated string from CWIST's allocator, copied
+    // before it is freed and not used afterwards.
+    let token = unsafe { CStr::from_ptr(raw) }.to_str().unwrap().to_owned();
+    unsafe { cwist_sys::cwist_free(raw.cast()) };
+    token
+}
+
+/// An app with `builtin`, then a Rust middleware that marks the response
+/// after `next`, then a Rust route counting its calls.
+fn app_with_builtin(builtin: cwist_sys::cwist_middleware_func, calls: &Arc<AtomicUsize>) -> App {
+    let mut app = App::new().unwrap();
+    app.use_builtin_middleware(builtin).expect("register built-in middleware");
+    app.use_middleware(|_req, res, next| {
+        next();
+        res.add_header("X-After", "yes").unwrap();
+    })
+    .unwrap();
+    let calls = Arc::clone(calls);
+    app.get("/r", move |_req, res| {
+        calls.fetch_add(1, Ordering::SeqCst);
+        res.set_body("route").unwrap();
+    })
+    .unwrap();
+    app
+}
+
+#[test]
+fn builtin_rate_limit_runs_the_rest_of_the_chain() {
+    let calls = Arc::new(AtomicUsize::new(0));
+    let app = app_with_builtin(cwist::middleware::rate_limit_ip(60), &calls);
+
+    // In-memory dispatch has no client address, so the limiter lets the
+    // request through to the Rust middleware and route via next().
+    for _ in 0..3 {
+        let res = get(&app, "/r");
+        assert!(status_line(&res).starts_with("HTTP/1.1 200"), "{res}");
+        assert!(res.contains("X-After: yes\r\n"), "{res}");
+        assert_eq!(body(&res), "route");
+    }
+    assert_eq!(calls.load(Ordering::SeqCst), 3);
+}
+
+#[test]
+fn builtin_jwt_auth_guards_rust_routes() {
+    const SECRET: &str = "rust-builtin-jwt-secret";
+    let calls = Arc::new(AtomicUsize::new(0));
+    let app = app_with_builtin(cwist::middleware::jwt_auth(SECRET), &calls);
+
+    let res = get(&app, "/r");
+    assert!(status_line(&res).starts_with("HTTP/1.1 401"), "{res}");
+    assert!(!res.contains("X-After"), "{res}");
+
+    let bearer = format!("Authorization: Bearer {}\r\n", sign_jwt("{\"sub\":\"alice\"}", "wrong"));
+    let res = String::from_utf8(app.dispatch(&request("GET", "/r", &bearer, "")).unwrap()).unwrap();
+    assert!(status_line(&res).starts_with("HTTP/1.1 401"), "{res}");
+    assert_eq!(calls.load(Ordering::SeqCst), 0);
+
+    // A valid token continues through the chain to the Rust route.
+    let bearer = format!("Authorization: Bearer {}\r\n", sign_jwt("{\"sub\":\"alice\"}", SECRET));
+    let res = String::from_utf8(app.dispatch(&request("GET", "/r", &bearer, "")).unwrap()).unwrap();
+    assert!(status_line(&res).starts_with("HTTP/1.1 200"), "{res}");
+    assert!(res.contains("X-After: yes\r\n"), "{res}");
+    assert_eq!(body(&res), "route");
+    assert_eq!(calls.load(Ordering::SeqCst), 1);
+}
+
+#[test]
+fn a_missing_builtin_middleware_is_an_error_not_a_silent_skip() {
+    let mut app = App::new().unwrap();
+    // What a factory returns when it cannot provide the middleware, for
+    // example jwt_auth once CWIST's secret slots are used up.
+    assert_eq!(app.use_builtin_middleware(None), Err(Error::Middleware));
+    app.get("/r", |_req, res| res.set_body("open").unwrap()).unwrap();
+    assert_eq!(body(&get(&app, "/r")), "open");
 }

@@ -8,8 +8,9 @@
 //! use cwist::App;
 //!
 //! let mut app = App::new().unwrap();
-//! app.use_builtin_middleware(cwist::middleware::request_id(None));
-//! app.use_builtin_middleware(cwist::middleware::access_log(cwist::middleware::LogFormat::Combined));
+//! app.use_builtin_middleware(cwist::middleware::request_id(None)).unwrap();
+//! app.use_builtin_middleware(cwist::middleware::access_log(cwist::middleware::LogFormat::Combined))
+//!     .unwrap();
 //! ```
 
 use cwist_sys as sys;
@@ -75,6 +76,10 @@ pub fn cors() -> sys::cwist_middleware_func {
 }
 
 /// JWT bearer-token authentication middleware.
+///
+/// CWIST keeps at most eight distinct secrets per process. Past that this
+/// returns `None`, which [`App::use_builtin_middleware`](crate::App::use_builtin_middleware)
+/// rejects with an error instead of serving without authentication.
 ///
 /// # Safety / Lifetime
 ///
