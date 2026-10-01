@@ -21,6 +21,7 @@ cwist_app_use(app, cwist_mw_request_id(NULL));
 
 ### Access Log Middleware
 Logs request details (method, path, status, latency) to stdout.
+For a response deferred with `cwist_async_defer()` the status and size are not known when the chain returns; they are logged as `-` (`null` in the JSON format).
 ```c
 cwist_app_use(app, cwist_mw_access_log(CWIST_LOG_COMBINED));
 ```
@@ -57,7 +58,7 @@ const cwist_jwt_claims *claims = cwist_mw_jwt_get_claims(req);
 `secret` must be a null-terminated string that outlives the middleware invocations (typically a static or global string).
 
 ### Compression Middleware
-Inspects `Accept-Encoding`, compresses the response body with a registered backend (gzip/zstd), and adds `Content-Encoding`. Only compresses bodies at or above `min_body_size` bytes.
+Inspects `Accept-Encoding`, compresses the response body with a registered backend (gzip/zstd), and adds `Content-Encoding`. Only compresses bodies at or above `min_body_size` bytes. A response deferred with `cwist_async_defer()` is sent uncompressed: it belongs to its completion once the handler defers it.
 ```c
 cwist_app_use(app, cwist_mw_compress(1024)); /* compress responses >= 1 KiB */
 ```

@@ -98,6 +98,28 @@ static void format_iso8601_time(char *buf, size_t len, const struct timeval *tv)
     snprintf(buf + pos, len - pos, ".%03ldZ", tv->tv_usec / 1000);
 }
 
+/* After next() a deferred response belongs to its cwist_async completion,
+ * which may be writing it on another thread right now (cwist_async_respond(),
+ * the timeout job). The access logs then do not read it: status and size are
+ * logged as unknown (@p unknown) and the request id comes from the request,
+ * where cwist_mw_request_id() also puts it. */
+static const char *access_log_request_id(cwist_http_request *req, cwist_http_response *res) {
+    cwist_http_header_node *headers = res->deferred ? req->headers : res->headers;
+    return cwist_http_header_get(headers, "X-Request-Id");
+}
+
+static void access_log_status_bytes(const cwist_http_response *res, const char *unknown,
+                                    char *status, size_t status_len, char *bytes,
+                                    size_t bytes_len) {
+    if (res->deferred) {
+        snprintf(status, status_len, "%s", unknown);
+        snprintf(bytes, bytes_len, "%s", unknown);
+        return;
+    }
+    snprintf(status, status_len, "%d", (int)res->status_code);
+    snprintf(bytes, bytes_len, "%zu", res->body ? res->body->size : (size_t)0);
+}
+
 static void cwist_mw_access_log_common_handler(cwist_http_request *req, cwist_http_response *res,
                                                cwist_handler_func next) {
     struct timeval start, end;
@@ -105,19 +127,20 @@ static void cwist_mw_access_log_common_handler(cwist_http_request *req, cwist_ht
     next(req, res);
     gettimeofday(&end, NULL);
 
-    const char *rid = cwist_http_header_get(res->headers, "X-Request-Id");
+    const char *rid = access_log_request_id(req, res);
     cwist_sstring *ip = cwist_get_client_ip_from_fd(req->client_fd);
     const char *ip_str = ip ? ip->data : "-";
 
     char time_buf[64];
     format_clf_time(time_buf, sizeof(time_buf), &end);
 
-    size_t res_bytes = res->body ? res->body->size : 0;
+    char status[16], res_bytes[32];
+    access_log_status_bytes(res, "-", status, sizeof(status), res_bytes, sizeof(res_bytes));
 
     pthread_mutex_lock(&log_mutex);
-    printf("%s - %s [%s] \"%s %s %s\" %d %zu\n", ip_str, rid ? rid : "-", time_buf,
+    printf("%s - %s [%s] \"%s %s %s\" %s %s\n", ip_str, rid ? rid : "-", time_buf,
            cwist_http_method_to_string(req->method), req->path->data,
-           req->version ? req->version->data : "HTTP/1.1", res->status_code, res_bytes);
+           req->version ? req->version->data : "HTTP/1.1", status, res_bytes);
     pthread_mutex_unlock(&log_mutex);
 
     if (ip) cwist_sstring_destroy(ip);
@@ -130,7 +153,7 @@ static void cwist_mw_access_log_combined_handler(cwist_http_request *req, cwist_
     next(req, res);
     gettimeofday(&end, NULL);
 
-    const char *rid = cwist_http_header_get(res->headers, "X-Request-Id");
+    const char *rid = access_log_request_id(req, res);
     cwist_sstring *ip = cwist_get_client_ip_from_fd(req->client_fd);
     const char *ip_str = ip ? ip->data : "-";
 
@@ -139,12 +162,13 @@ static void cwist_mw_access_log_combined_handler(cwist_http_request *req, cwist_
 
     const char *referer = cwist_http_header_get(req->headers, "Referer");
     const char *user_agent = cwist_http_header_get(req->headers, "User-Agent");
-    size_t res_bytes = res->body ? res->body->size : 0;
+    char status[16], res_bytes[32];
+    access_log_status_bytes(res, "-", status, sizeof(status), res_bytes, sizeof(res_bytes));
 
     pthread_mutex_lock(&log_mutex);
-    printf("%s - %s [%s] \"%s %s %s\" %d %zu \"%s\" \"%s\"\n", ip_str, rid ? rid : "-", time_buf,
+    printf("%s - %s [%s] \"%s %s %s\" %s %s \"%s\" \"%s\"\n", ip_str, rid ? rid : "-", time_buf,
            cwist_http_method_to_string(req->method), req->path->data,
-           req->version ? req->version->data : "HTTP/1.1", res->status_code, res_bytes,
+           req->version ? req->version->data : "HTTP/1.1", status, res_bytes,
            referer ? referer : "-", user_agent ? user_agent : "-");
     pthread_mutex_unlock(&log_mutex);
 
@@ -159,7 +183,7 @@ static void cwist_mw_access_log_json_handler(cwist_http_request *req, cwist_http
     gettimeofday(&end, NULL);
     long msec = (end.tv_sec - start.tv_sec) * 1000 + (end.tv_usec - start.tv_usec) / 1000;
 
-    const char *rid = cwist_http_header_get(res->headers, "X-Request-Id");
+    const char *rid = access_log_request_id(req, res);
     cwist_sstring *ip = cwist_get_client_ip_from_fd(req->client_fd);
     const char *ip_str = ip ? ip->data : "-";
 
@@ -167,14 +191,15 @@ static void cwist_mw_access_log_json_handler(cwist_http_request *req, cwist_http
     format_iso8601_time(time_buf, sizeof(time_buf), &end);
 
     size_t req_bytes = req->body ? req->body->size : 0;
-    size_t res_bytes = res->body ? res->body->size : 0;
+    char status[16], res_bytes[32];
+    access_log_status_bytes(res, "null", status, sizeof(status), res_bytes, sizeof(res_bytes));
 
     pthread_mutex_lock(&log_mutex);
     printf(
-        "{\"time\":\"%s\",\"client\":\"%s\",\"rid\":\"%s\",\"method\":\"%s\",\"path\":\"%s\",\"protocol\":\"%s\",\"status\":%d,\"duration_ms\":%ld,\"req_bytes\":%zu,\"res_bytes\":%zu}\n",
+        "{\"time\":\"%s\",\"client\":\"%s\",\"rid\":\"%s\",\"method\":\"%s\",\"path\":\"%s\",\"protocol\":\"%s\",\"status\":%s,\"duration_ms\":%ld,\"req_bytes\":%zu,\"res_bytes\":%s}\n",
         time_buf, ip_str, rid ? rid : "-", cwist_http_method_to_string(req->method),
-        req->path->data, req->version ? req->version->data : "HTTP/1.1", res->status_code, msec,
-        req_bytes, res_bytes);
+        req->path->data, req->version ? req->version->data : "HTTP/1.1", status, msec, req_bytes,
+        res_bytes);
     pthread_mutex_unlock(&log_mutex);
 
     if (ip) cwist_sstring_destroy(ip);

@@ -819,6 +819,7 @@ TEST_TARGETS = test_worker_affinity \
                test_shutdown \
                test_listen_ex \
                test_compress \
+               test_builtin_mw_deferred \
                test_log \
                nuke_missing_user_test \
                test_bind \
@@ -1090,6 +1091,10 @@ test_listen_ex: $(LIB_NAME) tests/test_listen_ex.c
 test_compress: $(LIB_NAME) tests/test_compress.c
 	$(CC) $(CFLAGS) -o test_compress tests/test_compress.c $(LIB_NAME) $(LIBS)
 	./test_compress
+
+test_builtin_mw_deferred: $(LIB_NAME) tests/test_builtin_mw_deferred.c
+	$(CC) $(CFLAGS) -o test_builtin_mw_deferred tests/test_builtin_mw_deferred.c $(LIB_NAME) $(LIBS)
+	./test_builtin_mw_deferred
 
 test_log: $(LIB_NAME) tests/test_log.c
 	$(CC) $(CFLAGS) -o test_log tests/test_log.c $(LIB_NAME) $(LIBS)
