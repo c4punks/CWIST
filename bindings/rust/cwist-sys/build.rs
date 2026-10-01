@@ -16,6 +16,9 @@ const FUNCTIONS: &[&str] = &[
     "cwist_http_header_(add|get|remove)",
     "cwist_http_response_(create|destroy)",
     "cwist_http_method_to_string",
+    // Compression backends for cwist_mw_compress (sys/app/compress.h).
+    "cwist_compress_register_backend",
+    "cwist_compress_backend_(gzip|deflate|brotli|zstd)",
     "cwist_sstring_(create|destroy|assign|assign_len|append|append_len)",
     "cwist_query_map_get",
     "cwist_async_(defer|retain|release|set_timeout|respond|respond_with|abort)",
@@ -35,7 +38,15 @@ const FUNCTIONS: &[&str] = &[
 /// Handle types used only through pointers. Keeping them opaque keeps their
 /// (large, internal) layouts out of the binding, so changes to them cannot
 /// break it.
-const OPAQUE: &[&str] = &["cwist_app", "cwist_query_map", "cwist_db", "cJSON", "sqlite3", "cwist_async"];
+const OPAQUE: &[&str] = &[
+    "cwist_app",
+    "cwist_query_map",
+    "cwist_db",
+    "cJSON",
+    "sqlite3",
+    "cwist_async",
+    "cwist_compress_backend",
+];
 
 /// System libraries `cwist.pc` names as plain `-l` flags. Their own pkg-config
 /// files supply the directory when it is not a default one (Homebrew), the
