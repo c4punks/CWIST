@@ -77,7 +77,7 @@ int main(void) {
     setvbuf(stdout, NULL, _IONBF, 0); /* watchdog must see how far we got */
     signal(SIGALRM, watchdog_dump);
 #if defined(__SANITIZE_ADDRESS__)
-    alarm(60); /* ASan/UBSan runners are much slower; fewer rounds still need room. */
+    alarm(120); /* ASan/UBSan runners are much slower; waiting for 120 seconds for tolerance */
 #else
     alarm(30);  /* Watchdog only, not the correctness oracle. */
 #endif
