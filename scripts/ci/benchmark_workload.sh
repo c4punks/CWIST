@@ -43,6 +43,31 @@ for entry in sorted(os.listdir('/proc')):
 EOF
 }
 
+# RSS: the original `ps -o rss= -p $PID` measured only the leader process.
+# In C1M mode the leader may exit after spawning workers, leaving the PID a
+# zombie with no resident memory. Sum VmRSS across the whole process group.
+rss_total() {
+  python3 - "$1" <<'EOF'
+import os, sys
+pgid = int(sys.argv[1])
+total = 0
+for entry in os.listdir('/proc'):
+    if not entry.isdigit():
+        continue
+    try:
+        fields = open(f'/proc/{entry}/stat').read().rsplit(') ', 1)[1].split()
+        if int(fields[2]) != pgid or fields[0] in ('Z', 'X'):
+            continue
+        for line in open(f'/proc/{entry}/status'):
+            if line.startswith('VmRSS:'):
+                total += int(line.split()[1])
+                break
+    except (FileNotFoundError, ProcessLookupError, PermissionError, ValueError):
+        continue
+print(total)
+EOF
+}
+
 # Initial stat (after warmup)
 BEFORE_CSW=$(mktemp)
 csw_snapshot "$PID" "$BEFORE_CSW"
@@ -51,7 +76,7 @@ wrk -t"$THREADS" -c"$CONNECTIONS" -d10s -s "$GITHUB_WORKSPACE/scripts/ci/tail_la
 
 AFTER_CSW=$(mktemp)
 csw_snapshot "$PID" "$AFTER_CSW"
-RSS=$(ps -o rss= -p $PID 2>/dev/null | awk '{print $1}')
+RSS=$(rss_total "$PID")
 [ -z "$RSS" ] && RSS=0
 
 CSW=$(python3 - "$BEFORE_CSW" "$AFTER_CSW" <<'EOF'
