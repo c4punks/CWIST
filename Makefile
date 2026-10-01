@@ -844,6 +844,7 @@ TEST_TARGETS = test_worker_affinity \
                test_scheduler \
                test_gc_job_handoff \
                test_async_defer \
+               test_async_after_shutdown \
                test_async_file_park \
                test_http_fairness \
                test_http_pipeline \
@@ -1484,6 +1485,10 @@ test_async_defer: $(LIB_NAME) tests/test_async_defer.c
 	$(CC) $(CFLAGS) -o test_async_defer tests/test_async_defer.c $(LIB_NAME) $(LIBS)
 	./test_async_defer
 	CWIST_C1M_MODE=0 ./test_async_defer
+
+test_async_after_shutdown: $(LIB_NAME) tests/test_async_after_shutdown.c
+	$(CC) $(CFLAGS) -o test_async_after_shutdown tests/test_async_after_shutdown.c $(LIB_NAME) $(LIBS)
+	./test_async_after_shutdown
 
 test_async_file_park: $(LIB_NAME) tests/test_async_file_park.c
 	$(CC) $(CFLAGS) -o test_async_file_park tests/test_async_file_park.c $(LIB_NAME) $(LIBS)
