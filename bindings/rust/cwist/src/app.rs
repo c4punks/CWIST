@@ -142,9 +142,26 @@ impl App {
     /// This is the lower-level sibling of [`App::use_middleware`]: it takes a
     /// C function pointer returned by one of the `cwist::middleware` factories
     /// and appends it directly, with no Rust closure or allocation overhead.
-    pub fn use_builtin_middleware(&mut self, mw: sys::cwist_middleware_func) {
-        // SAFETY: the app is live; mw is a valid middleware function pointer.
-        unsafe { sys::cwist_app_use(self.raw.as_ptr(), mw) };
+    ///
+    /// Returns [`Error::Middleware`] when there is nothing to register, for
+    /// example a [`jwt_auth`](crate::middleware::jwt_auth) factory that is out
+    /// of secret slots, or when CWIST cannot add it. The app then keeps
+    /// serving without that middleware, so do not ignore this error for
+    /// middleware that enforces access, such as authentication.
+    pub fn use_builtin_middleware(&mut self, mw: sys::cwist_middleware_func) -> Result<(), Error> {
+        if mw.is_none() {
+            return Err(Error::Middleware);
+        }
+        // SAFETY: the app is live; mw is a function pointer returned by a
+        // CWIST middleware factory. With no context there is nothing to own.
+        let err = unsafe {
+            sys::cwist_app_use_ex(self.raw.as_ptr(), mw, None, ptr::null_mut(), None)
+        };
+        if consume(err) {
+            Ok(())
+        } else {
+            Err(Error::Middleware)
+        }
     }
 
     fn route(&mut self, register: RegisterFn, path: &str, handler: Box<Handler>) -> Result<(), Error> {

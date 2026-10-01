@@ -356,3 +356,29 @@ fn completing_after_a_timeout_returns_false() {
     cwist::shutdown();
     assert_eq!(finished(&done), Ok(()));
 }
+
+#[test]
+fn builtin_rate_limit_answers_429_over_tcp() {
+    let _serial = serial();
+    let port = free_port();
+    let done = serve(port, |app| {
+        app.use_builtin_middleware(cwist::middleware::rate_limit_ip(2)).unwrap();
+        app.get("/limited", |_req, res| res.set_body("ok").unwrap()).unwrap();
+    });
+
+    assert!(wait_until_up(port));
+    // The readiness probes went through the limiter too; start from a full
+    // bucket. SAFETY: the bucket table is guarded by CWIST's own lock.
+    unsafe { cwist_sys::cwist_mw_rate_limit_reset() };
+    let first = http_get(port, "/limited");
+    let second = http_get(port, "/limited");
+    let third = http_get(port, "/limited");
+
+    cwist::shutdown();
+    assert_eq!(finished(&done), Ok(()));
+    // SAFETY: as above; leave no bucket behind for later tests.
+    unsafe { cwist_sys::cwist_mw_rate_limit_reset() };
+    assert_eq!(first, Some((200, "ok".to_owned())));
+    assert_eq!(second, Some((200, "ok".to_owned())));
+    assert_eq!(third, Some((429, "Too Many Requests".to_owned())));
+}
