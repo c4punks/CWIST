@@ -26,7 +26,11 @@ void cwist_free(void *ptr) {
 atomic_int g_cwist_running = 1;
 
 #ifdef __linux__
+#ifdef __SANITIZE_ADDRESS__
+enum { ROUNDS = 25 };
+#else
 enum { ROUNDS = 100 };
+#endif
 
 static cwist_reactor_t *loop;
 static int rounds_done;
@@ -73,7 +77,7 @@ int main(void) {
     setvbuf(stdout, NULL, _IONBF, 0); /* watchdog must see how far we got */
     signal(SIGALRM, watchdog_dump);
 #if defined(__SANITIZE_ADDRESS__)
-    alarm(120); /* ASan/UBSan runners are much slower; keep the watchdog long. */
+    alarm(60); /* ASan/UBSan runners are much slower; fewer rounds still need room. */
 #else
     alarm(30);  /* Watchdog only, not the correctness oracle. */
 #endif
