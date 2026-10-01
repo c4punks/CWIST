@@ -170,6 +170,49 @@ fn a_shutdown_requested_before_listen_makes_it_return_at_once() {
     assert_eq!(finished(&done), Ok(()));
 }
 
+/// Opens a connection and sends `GET path` without waiting for the answer.
+fn start_get(port: u16, path: &str) -> TcpStream {
+    let mut stream = TcpStream::connect(("127.0.0.1", port)).unwrap();
+    stream.set_read_timeout(Some(Duration::from_secs(5))).unwrap();
+    write!(stream, "GET {path} HTTP/1.1\r\nHost: localhost\r\n\r\n").unwrap();
+    stream
+}
+
+#[test]
+fn completing_after_the_server_stopped_closes_the_connection() {
+    let _serial = serial();
+    let port = free_port();
+    let (tx, rx) = mpsc::channel::<cwist::AsyncResponse>();
+    let done = serve(port, move |app| {
+        app.get("/defer", move |req, res| {
+            let handle = cwist::AsyncResponse::defer(req, res).expect("defer");
+            tx.send(handle).expect("send async handle");
+        })
+        .unwrap();
+    });
+
+    assert!(wait_until_up(port));
+    let mut answered = start_get(port, "/defer");
+    let first = rx.recv_timeout(Duration::from_secs(5)).expect("first handle");
+    let mut dropped = start_get(port, "/defer");
+    let second = rx.recv_timeout(Duration::from_secs(5)).expect("second handle");
+
+    // Both exchanges are still pending when the server stops, and listen
+    // returns having destroyed the app and the reactors they were parked on.
+    cwist::shutdown();
+    assert_eq!(finished(&done), Ok(()));
+
+    // Completing now, or dropping the handle (which answers 500), cannot
+    // send any more: the connection is closed without a response.
+    assert!(first.respond(200, "text/plain", "too late"));
+    drop(second);
+    for stream in [&mut answered, &mut dropped] {
+        let mut rest = Vec::new();
+        stream.read_to_end(&mut rest).unwrap();
+        assert!(rest.is_empty(), "{}", String::from_utf8_lossy(&rest));
+    }
+}
+
 #[test]
 fn listening_on_a_busy_port_is_an_error() {
     let _serial = serial();
