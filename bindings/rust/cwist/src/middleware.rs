@@ -1,6 +1,6 @@
 //! Built-in CWIST middleware factories exposed as ordinary Rust values.
 //!
-//! Each function returns a C middleware function pointer that can be passed to
+//! Each function returns a [`BuiltinMiddleware`] that can be passed to
 //! [`App::use_builtin_middleware`](crate::App::use_builtin_middleware). They do
 //! not allocate on the Rust side beyond a few small stack values.
 //!
@@ -13,9 +13,57 @@
 //!     .unwrap();
 //! ```
 
+use crate::Error;
 use cwist_sys as sys;
 use std::ffi::CString;
 use std::sync::Once;
+
+/// A built-in CWIST middleware, ready for
+/// [`App::use_builtin_middleware`](crate::App::use_builtin_middleware).
+///
+/// Only the factories in this module create one, so CWIST only ever calls
+/// its own middleware. Any other C function pointer cannot be passed in from
+/// safe code; it would need its own unsafe contract:
+///
+/// ```compile_fail
+/// let mut app = cwist::App::new().unwrap();
+/// app.use_builtin_middleware(None).unwrap();
+/// ```
+///
+/// ```compile_fail
+/// unsafe extern "C" fn mine(
+///     _req: *mut cwist_sys::cwist_http_request,
+///     _res: *mut cwist_sys::cwist_http_response,
+///     _next: cwist_sys::cwist_handler_func,
+/// ) {
+/// }
+/// let mut app = cwist::App::new().unwrap();
+/// app.use_builtin_middleware(Some(mine)).unwrap();
+/// ```
+#[derive(Debug, Clone, Copy)]
+pub struct BuiltinMiddleware {
+    func: unsafe extern "C" fn(
+        *mut sys::cwist_http_request,
+        *mut sys::cwist_http_response,
+        sys::cwist_handler_func,
+    ),
+}
+
+impl BuiltinMiddleware {
+    /// Wraps what a CWIST factory returned, or `None` if it returned NULL.
+    fn from_factory(func: sys::cwist_middleware_func) -> Option<BuiltinMiddleware> {
+        func.map(|func| BuiltinMiddleware { func })
+    }
+
+    /// For factories that never return NULL.
+    fn from_static(func: sys::cwist_middleware_func) -> BuiltinMiddleware {
+        Self::from_factory(func).expect("CWIST middleware factory returned NULL")
+    }
+
+    pub(crate) fn as_sys(self) -> sys::cwist_middleware_func {
+        Some(self.func)
+    }
+}
 
 /// Access-log output format.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -43,44 +91,45 @@ impl LogFormat {
 ///
 /// Currently the `header_name` parameter is ignored by CWIST and the header
 /// is always `X-Request-Id`.
-pub fn request_id(_header_name: Option<&str>) -> sys::cwist_middleware_func {
+pub fn request_id(_header_name: Option<&str>) -> BuiltinMiddleware {
     // SAFETY: cwist_mw_request_id returns a static function pointer; the
     // header_name argument is currently unused.
-    unsafe { sys::cwist_mw_request_id(std::ptr::null()) }
+    BuiltinMiddleware::from_static(unsafe { sys::cwist_mw_request_id(std::ptr::null()) })
 }
 
 /// Access-log middleware.
-pub fn access_log(format: LogFormat) -> sys::cwist_middleware_func {
+pub fn access_log(format: LogFormat) -> BuiltinMiddleware {
     // SAFETY: cwist_mw_access_log returns a static function pointer.
-    unsafe { sys::cwist_mw_access_log(format.to_sys()) }
+    BuiltinMiddleware::from_static(unsafe { sys::cwist_mw_access_log(format.to_sys()) })
 }
 
 /// Per-IP fixed-window rate limiter.
 ///
 /// `requests_per_minute` defaults to 60 if zero or negative.
-pub fn rate_limit_ip(requests_per_minute: i32) -> sys::cwist_middleware_func {
+pub fn rate_limit_ip(requests_per_minute: i32) -> BuiltinMiddleware {
     // SAFETY: cwist_mw_rate_limit_ip returns a static function pointer.
-    unsafe { sys::cwist_mw_rate_limit_ip(requests_per_minute) }
+    BuiltinMiddleware::from_static(unsafe { sys::cwist_mw_rate_limit_ip(requests_per_minute) })
 }
 
 /// Prometheus metrics collection middleware.
-pub fn metrics() -> sys::cwist_middleware_func {
+pub fn metrics() -> BuiltinMiddleware {
     // SAFETY: cwist_mw_metrics returns a static function pointer.
-    unsafe { sys::cwist_mw_metrics() }
+    BuiltinMiddleware::from_static(unsafe { sys::cwist_mw_metrics() })
 }
 
 /// CORS middleware: adds permissive headers and short-circuits OPTIONS
 /// preflight with 204 No Content.
-pub fn cors() -> sys::cwist_middleware_func {
+pub fn cors() -> BuiltinMiddleware {
     // SAFETY: cwist_mw_cors returns a static function pointer.
-    unsafe { sys::cwist_mw_cors() }
+    BuiltinMiddleware::from_static(unsafe { sys::cwist_mw_cors() })
 }
 
 /// JWT bearer-token authentication middleware.
 ///
 /// CWIST keeps at most eight distinct secrets per process. Past that this
-/// returns `None`, which [`App::use_builtin_middleware`](crate::App::use_builtin_middleware)
-/// rejects with an error instead of serving without authentication.
+/// returns [`Error::Middleware`], so an app cannot end up serving without the
+/// authentication it asked for. A secret containing a NUL byte returns
+/// [`Error::InteriorNul`].
 ///
 /// # Safety / Lifetime
 ///
@@ -88,13 +137,13 @@ pub fn cors() -> sys::cwist_middleware_func {
 /// safe API therefore requires `&'static str`. If you need a dynamic secret,
 /// leak a [`CString`] with `into_raw` and accept that it will live until the
 /// process exits.
-pub fn jwt_auth(secret: &'static str) -> sys::cwist_middleware_func {
-    let secret = CString::new(secret).expect("JWT secret contains interior NUL");
-    // SAFETY: cwist_mw_jwt_auth returns a static function pointer and borrows
-    // the secret for the application lifetime. We leak the CString to satisfy
-    // that contract.
+pub fn jwt_auth(secret: &'static str) -> Result<BuiltinMiddleware, Error> {
+    let secret = CString::new(secret).map_err(|_| Error::InteriorNul("JWT secret"))?;
+    // SAFETY: cwist_mw_jwt_auth returns a static function pointer (or NULL
+    // when its secret slots are full) and borrows the secret for the
+    // application lifetime. We leak the CString to satisfy that contract.
     let ptr = secret.into_raw();
-    unsafe { sys::cwist_mw_jwt_auth(ptr) }
+    BuiltinMiddleware::from_factory(unsafe { sys::cwist_mw_jwt_auth(ptr) }).ok_or(Error::Middleware)
 }
 
 /// Response compression middleware.
@@ -105,7 +154,7 @@ pub fn jwt_auth(secret: &'static str) -> sys::cwist_middleware_func {
 /// responses (see [`AsyncResponse`](crate::AsyncResponse)), are sent as they
 /// are. CWIST keeps one threshold per process: the last call sets it for
 /// every app.
-pub fn compress(min_body_size: usize) -> sys::cwist_middleware_func {
+pub fn compress(min_body_size: usize) -> BuiltinMiddleware {
     // CWIST compresses only with registered backends and registers none by
     // itself. The registry is process-wide and unsynchronised, so register
     // the built-in ones exactly once, here: any server running this
@@ -123,5 +172,5 @@ pub fn compress(min_body_size: usize) -> sys::cwist_middleware_func {
         }
     });
     // SAFETY: cwist_mw_compress returns a static function pointer.
-    unsafe { sys::cwist_mw_compress(min_body_size) }
+    BuiltinMiddleware::from_static(unsafe { sys::cwist_mw_compress(min_body_size) })
 }
