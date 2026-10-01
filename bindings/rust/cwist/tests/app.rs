@@ -252,6 +252,42 @@ fn dispatch_reports_a_malformed_request() {
     assert_eq!(app.dispatch(b"this is not http"), Err(Error::Dispatch));
 }
 
+/// Dispatches `GET target` with `extra` header lines; returns the head as text
+/// and the body as bytes (it may be compressed).
+fn get_raw(app: &App, target: &str, extra: &str) -> (String, Vec<u8>) {
+    let raw = app.dispatch(&request("GET", target, extra, "")).expect("dispatch");
+    let split = raw.windows(4).position(|w| w == b"\r\n\r\n").expect("header end");
+    let head = String::from_utf8(raw[..split].to_vec()).expect("UTF-8 head");
+    (head, raw[split + 4..].to_vec())
+}
+
+#[test]
+fn builtin_compress_encodes_what_the_client_accepts() {
+    let text = "abcdefghijklmnopqrstuvwxyz".repeat(160);
+    let mut app = App::new().unwrap();
+    let _ = app.use_builtin_middleware(cwist::middleware::compress(64));
+    let big = text.clone();
+    app.get("/big", move |_req, res| res.set_body(&big).unwrap()).unwrap();
+    app.get("/small", |_req, res| res.set_body("tiny").unwrap()).unwrap();
+
+    let (head, body) = get_raw(&app, "/big", "Accept-Encoding: gzip, deflate, br\r\n");
+    assert!(head.contains("Content-Encoding: gzip\r\n"), "{head}");
+    assert_eq!(body[..2], [0x1f, 0x8b], "not a gzip stream");
+    assert!(body.len() < text.len());
+
+    let (head, body) = get_raw(&app, "/big", "Accept-Encoding: br\r\n");
+    assert!(head.contains("Content-Encoding: br\r\n"), "{head}");
+    assert!(body.len() < text.len());
+
+    // Nothing accepted, or below the threshold: sent as it is.
+    let (head, body) = get_raw(&app, "/big", "");
+    assert!(!head.contains("Content-Encoding"), "{head}");
+    assert_eq!(body, text.as_bytes());
+    let (head, body) = get_raw(&app, "/small", "Accept-Encoding: gzip\r\n");
+    assert!(!head.contains("Content-Encoding"), "{head}");
+    assert_eq!(body, b"tiny");
+}
+
 #[test]
 fn middleware_reads_the_request_and_edits_the_response_around_next() {
     let mut app = App::new().unwrap();

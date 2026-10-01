@@ -187,6 +187,62 @@ fn listening_on_a_busy_port_is_an_error() {
     assert_eq!(finished(&done), Ok(()));
 }
 
+/// One GET accepting gzip over a fresh connection: (head, body bytes).
+fn get_accepting_gzip(port: u16, path: &str) -> (String, Vec<u8>) {
+    let mut stream = TcpStream::connect(("127.0.0.1", port)).unwrap();
+    stream.set_read_timeout(Some(Duration::from_secs(5))).unwrap();
+    write!(
+        stream,
+        "GET {path} HTTP/1.1\r\nHost: localhost\r\nAccept-Encoding: gzip\r\nConnection: close\r\n\r\n"
+    )
+    .unwrap();
+    let mut raw = Vec::new();
+    stream.read_to_end(&mut raw).unwrap();
+    let split = raw.windows(4).position(|w| w == b"\r\n\r\n").expect("header end");
+    let head = String::from_utf8(raw[..split].to_vec()).expect("UTF-8 head");
+    (head, raw[split + 4..].to_vec())
+}
+
+#[test]
+fn compression_leaves_a_deferred_response_alone() {
+    // Long and repetitive, so gzip makes it smaller and is applied.
+    let body = "answered by the async completion, not by the handler. ".repeat(20);
+    let deferred_body_text = body.clone();
+    let plain_body_text = body.clone();
+    let _serial = serial();
+    let port = free_port();
+    let done = serve(port, move |app| {
+        let _ = app.use_builtin_middleware(cwist::middleware::compress(0));
+        app.get("/defer", move |req, res| {
+            let handle = cwist::AsyncResponse::defer(req, res).expect("defer");
+            // Answer on another thread and wait for it, so the completion has
+            // written the response before the compression middleware resumes.
+            let (tx, rx) = mpsc::channel();
+            let text = deferred_body_text.clone();
+            thread::spawn(move || {
+                let _ = tx.send(handle.respond(200, "text/plain", text));
+            });
+            assert!(rx.recv_timeout(Duration::from_secs(5)).expect("respond"));
+        })
+        .unwrap();
+        app.get("/plain", move |_req, res| res.set_body(&plain_body_text).unwrap()).unwrap();
+    });
+
+    assert!(wait_until_up(port));
+    let (plain_head, _) = get_accepting_gzip(port, "/plain");
+    let (deferred_head, deferred_body) = get_accepting_gzip(port, "/defer");
+    // Stop the server before asserting, so a failure cannot leave it running.
+    cwist::shutdown();
+    assert_eq!(finished(&done), Ok(()));
+
+    // The same middleware compresses an ordinary response...
+    assert!(plain_head.contains("Content-Encoding: gzip\r\n"), "{plain_head}");
+    // ...but not one the async completion owns.
+    assert!(deferred_head.starts_with("HTTP/1.1 200"), "{deferred_head}");
+    assert!(!deferred_head.contains("Content-Encoding"), "{deferred_head}");
+    assert_eq!(deferred_body, body.as_bytes());
+}
+
 #[test]
 fn async_handler_completes_from_another_thread() {
     let _serial = serial();

@@ -15,6 +15,7 @@
 
 use cwist_sys as sys;
 use std::ffi::CString;
+use std::sync::Once;
 
 /// Access-log output format.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -98,8 +99,29 @@ pub fn jwt_auth(secret: &'static str) -> sys::cwist_middleware_func {
 
 /// Response compression middleware.
 ///
-/// Responses with a body smaller than `min_body_size` bytes are not compressed.
+/// Compresses successful (2xx) responses with the first encoding the client
+/// accepts, in the order gzip, deflate, br, zstd, and sets `Content-Encoding`.
+/// Responses with a body smaller than `min_body_size` bytes, and deferred
+/// responses (see [`AsyncResponse`](crate::AsyncResponse)), are sent as they
+/// are. CWIST keeps one threshold per process: the last call sets it for
+/// every app.
 pub fn compress(min_body_size: usize) -> sys::cwist_middleware_func {
+    // CWIST compresses only with registered backends and registers none by
+    // itself. The registry is process-wide and unsynchronised, so register
+    // the built-in ones exactly once, here: any server running this
+    // middleware got it from an earlier call, which completed the
+    // registration first.
+    static BACKENDS: Once = Once::new();
+    BACKENDS.call_once(|| {
+        // SAFETY: the backend getters return static descriptors; the Once
+        // makes these the only registry writes from the safe API.
+        unsafe {
+            sys::cwist_compress_register_backend(sys::cwist_compress_backend_gzip());
+            sys::cwist_compress_register_backend(sys::cwist_compress_backend_deflate());
+            sys::cwist_compress_register_backend(sys::cwist_compress_backend_brotli());
+            sys::cwist_compress_register_backend(sys::cwist_compress_backend_zstd());
+        }
+    });
     // SAFETY: cwist_mw_compress returns a static function pointer.
     unsafe { sys::cwist_mw_compress(min_body_size) }
 }
