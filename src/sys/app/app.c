@@ -4452,6 +4452,10 @@ int cwist_app_listen(cwist_app *app, int port) {
     return cwist_app_listen_ex(app, port, 0, -1);
 }
 
+#if !defined(__EMSCRIPTEN__) && !defined(CWIST_WASI_NO_SOCKETS)
+static int app_listen_serve(cwist_app *app, int port, int workers_override, int c1m_override);
+#endif
+
 int cwist_app_listen_ex(cwist_app *app, int port, int workers_override, int c1m_override) {
 #if defined(__EMSCRIPTEN__) || defined(CWIST_WASI_NO_SOCKETS)
     (void)port;
@@ -4464,7 +4468,20 @@ int cwist_app_listen_ex(cwist_app *app, int port, int workers_override, int c1m_
     // Ignore SIGPIPE
     signal(SIGPIPE, SIG_IGN);
 #endif
+    /* SIGTERM/SIGINT request a graceful stop only while this server runs:
+     * the caller's own handlers are back in place when it returns, on every
+     * path (including in forked workers, which also return here). */
     cwist_shutdown_install_handlers();
+    int rc = app_listen_serve(app, port, workers_override, c1m_override);
+    cwist_shutdown_restore_handlers();
+    return rc;
+#endif
+}
+
+#if !defined(__EMSCRIPTEN__) && !defined(CWIST_WASI_NO_SOCKETS)
+/* Body of cwist_app_listen_ex() between installing and restoring the
+ * shutdown signal handlers. */
+static int app_listen_serve(cwist_app *app, int port, int workers_override, int c1m_override) {
     cwist_app_tune_system();
     cwist_apply_profile();
     if (!app) return -1;
@@ -4792,8 +4809,8 @@ int cwist_app_listen_ex(cwist_app *app, int port, int workers_override, int c1m_
     printf("[CWIST] Shutdown complete.\n");
 
     return worker_result;
-#endif
 }
+#endif
 
 static char cwist_swagger_json_path[512] = "openapi.json";
 
