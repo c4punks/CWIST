@@ -82,6 +82,7 @@ test_bdr
 test_bind
 test_cache
 test_compress
+test_builtin_mw_deferred
 test_csrf
 test_db_memory
 test_db_pool
