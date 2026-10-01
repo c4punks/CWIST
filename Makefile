@@ -850,6 +850,7 @@ TEST_TARGETS = test_worker_affinity \
                test_multiport \
                test_route_ctx \
                test_middleware_ctx \
+               test_builtin_mw_chain \
                test_grpc \
                test_grpc_append_error \
                test_grpc_stream \
@@ -1498,6 +1499,10 @@ test_route_ctx: $(LIB_NAME) tests/test_route_ctx.c
 test_middleware_ctx: $(LIB_NAME) tests/test_middleware_ctx.c
 	$(CC) $(CFLAGS) -o test_middleware_ctx tests/test_middleware_ctx.c $(LIB_NAME) $(LIBS)
 	./test_middleware_ctx
+
+test_builtin_mw_chain: $(LIB_NAME) tests/test_builtin_mw_chain.c
+	$(CC) $(CFLAGS) -o test_builtin_mw_chain tests/test_builtin_mw_chain.c $(LIB_NAME) $(LIBS)
+	./test_builtin_mw_chain
 
 test_grpc: $(LIB_NAME) tests/test_grpc.c
 	$(CC) $(CFLAGS) -o test_grpc tests/test_grpc.c $(LIB_NAME) $(LIBS)
