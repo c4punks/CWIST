@@ -255,6 +255,7 @@ fn compression_leaves_a_deferred_response_alone() {
     let _serial = serial();
     let port = free_port();
     let done = serve(port, move |app| {
+        // threshold 0 means compress any body size, so /plain is encoded.
         let _ = app.use_builtin_middleware(cwist::middleware::compress(0));
         app.get("/defer", move |req, res| {
             let handle = cwist::AsyncResponse::defer(req, res).expect("defer");

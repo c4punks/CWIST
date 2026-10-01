@@ -34,6 +34,10 @@
 static bool g_defer = false;
 static cwist_async *g_async = NULL;
 
+/* When g_defer is true the handler both defers and writes the response
+ * synchronously. This stands in for an async completion that already ran
+ * before the middleware resumed; the response is therefore "owned" by the
+ * completion even though no second thread actually touches it here. */
 static void handler(cwist_http_request *req, cwist_http_response *res) {
     if (g_defer) {
         g_async = cwist_async_defer(req, res);
@@ -64,7 +68,8 @@ static void run(cwist_middleware_func mw, bool defer, cwist_http_request *req,
     mw(req, res, handler);
     REQUIRE(res->deferred == defer);
     if (g_async) {
-        /* Nothing completes it here: drop the completion's reference. */
+        /* The handler already finalized the response, so no completion runs.
+         * Just release the async object's reference. */
         cwist_async_release(g_async);
         g_async = NULL;
     }
@@ -72,6 +77,7 @@ static void run(cwist_middleware_func mw, bool defer, cwist_http_request *req,
 
 static void test_compress(void) {
     cwist_compress_register_backend(cwist_compress_backend_gzip());
+    /* threshold 0 means compress regardless of body size */
     cwist_middleware_func mw = cwist_mw_compress(0);
 
     cwist_http_request *req = make_request();
@@ -147,6 +153,8 @@ static void test_access_logs(void) {
 
     capture_log(cwist_mw_access_log(CWIST_LOG_JSON), false, log, sizeof(log));
     expect_contains(log, "\"status\":200,");
+    /* res_bytes is the last JSON field, so the closing brace guards against
+     * matching a partial numeric value. */
     expect_contains(log, "\"res_bytes\":4095}");
     capture_log(cwist_mw_access_log(CWIST_LOG_JSON), true, log, sizeof(log));
     expect_contains(log, "\"status\":null,");
