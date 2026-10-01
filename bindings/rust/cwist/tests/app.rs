@@ -263,6 +263,9 @@ fn get_raw(app: &App, target: &str, extra: &str) -> (String, Vec<u8>) {
 
 #[test]
 fn builtin_compress_encodes_what_the_client_accepts() {
+    // compress(64) registers gzip/deflate/br/zstd once per process and only
+    // compresses bodies >= 64 bytes. The safe wrapper performs the backend
+    // registration; callers do not call the cwist-sys registration functions.
     let text = "abcdefghijklmnopqrstuvwxyz".repeat(160);
     let mut app = App::new().unwrap();
     let _ = app.use_builtin_middleware(cwist::middleware::compress(64));
