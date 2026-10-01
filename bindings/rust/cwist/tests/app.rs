@@ -555,7 +555,7 @@ fn sign_jwt(payload: &str, secret: &str) -> String {
 
 /// An app with `builtin`, then a Rust middleware that marks the response
 /// after `next`, then a Rust route counting its calls.
-fn app_with_builtin(builtin: cwist_sys::cwist_middleware_func, calls: &Arc<AtomicUsize>) -> App {
+fn app_with_builtin(builtin: cwist::middleware::BuiltinMiddleware, calls: &Arc<AtomicUsize>) -> App {
     let mut app = App::new().unwrap();
     app.use_builtin_middleware(builtin).expect("register built-in middleware");
     app.use_middleware(|_req, res, next| {
@@ -592,7 +592,7 @@ fn builtin_rate_limit_runs_the_rest_of_the_chain() {
 fn builtin_jwt_auth_guards_rust_routes() {
     const SECRET: &str = "rust-builtin-jwt-secret";
     let calls = Arc::new(AtomicUsize::new(0));
-    let app = app_with_builtin(cwist::middleware::jwt_auth(SECRET), &calls);
+    let app = app_with_builtin(cwist::middleware::jwt_auth(SECRET).expect("jwt middleware"), &calls);
 
     let res = get(&app, "/r");
     assert!(status_line(&res).starts_with("HTTP/1.1 401"), "{res}");
@@ -613,11 +613,11 @@ fn builtin_jwt_auth_guards_rust_routes() {
 }
 
 #[test]
-fn a_missing_builtin_middleware_is_an_error_not_a_silent_skip() {
-    let mut app = App::new().unwrap();
-    // What a factory returns when it cannot provide the middleware, for
-    // example jwt_auth once CWIST's secret slots are used up.
-    assert_eq!(app.use_builtin_middleware(None), Err(Error::Middleware));
-    app.get("/r", |_req, res| res.set_body("open").unwrap()).unwrap();
-    assert_eq!(body(&get(&app, "/r")), "open");
+fn a_jwt_secret_with_a_nul_byte_is_an_error_not_a_panic() {
+    // C cannot represent it; the factory reports it instead of panicking.
+    // (Slot exhaustion is covered in tests/middleware_slots.rs.)
+    assert_eq!(
+        cwist::middleware::jwt_auth("bad\0secret").unwrap_err(),
+        Error::InteriorNul("JWT secret")
+    );
 }

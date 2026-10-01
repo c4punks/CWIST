@@ -1,4 +1,5 @@
 use crate::http::{consume, Request, Response};
+use crate::middleware::BuiltinMiddleware;
 use crate::Error;
 use cwist_sys as sys;
 use std::cell::Cell;
@@ -140,22 +141,19 @@ impl App {
     /// Appends a built-in CWIST middleware factory result to the chain.
     ///
     /// This is the lower-level sibling of [`App::use_middleware`]: it takes a
-    /// C function pointer returned by one of the `cwist::middleware` factories
-    /// and appends it directly, with no Rust closure or allocation overhead.
+    /// [`BuiltinMiddleware`](crate::middleware::BuiltinMiddleware) from one of
+    /// the `cwist::middleware` factories and appends CWIST's own C middleware
+    /// directly, with no Rust closure or allocation overhead.
     ///
-    /// Returns [`Error::Middleware`] when there is nothing to register, for
-    /// example a [`jwt_auth`](crate::middleware::jwt_auth) factory that is out
-    /// of secret slots, or when CWIST cannot add it. The app then keeps
-    /// serving without that middleware, so do not ignore this error for
+    /// Returns [`Error::Middleware`] when CWIST cannot add it. The app then
+    /// keeps serving without that middleware, so do not ignore this error for
     /// middleware that enforces access, such as authentication.
-    pub fn use_builtin_middleware(&mut self, mw: sys::cwist_middleware_func) -> Result<(), Error> {
-        if mw.is_none() {
-            return Err(Error::Middleware);
-        }
-        // SAFETY: the app is live; mw is a function pointer returned by a
-        // CWIST middleware factory. With no context there is nothing to own.
+    pub fn use_builtin_middleware(&mut self, mw: BuiltinMiddleware) -> Result<(), Error> {
+        // SAFETY: the app is live; mw can only come from a cwist::middleware
+        // factory, so it is one of CWIST's own C middleware functions. With no
+        // context there is nothing to own.
         let err = unsafe {
-            sys::cwist_app_use_ex(self.raw.as_ptr(), mw, None, ptr::null_mut(), None)
+            sys::cwist_app_use_ex(self.raw.as_ptr(), mw.as_sys(), None, ptr::null_mut(), None)
         };
         if consume(err) {
             Ok(())
