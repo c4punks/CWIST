@@ -41,12 +41,13 @@ cwist_middleware_func cwist_mw_cors(void);
  * @brief JWT authentication middleware factory.
  *
  * Reads the Authorization header, expects "Bearer <token>".
- * On success the decoded claims are available via the request context.
+ * On success the decoded claims are available via cwist_mw_jwt_get_claims().
  * On failure responds with 401 Unauthorized and short-circuits the chain.
  *
  * @param secret HMAC-SHA256 signing secret (null-terminated, must outlive the
  *               middleware invocations - typically a static/global string).
- * @return Middleware function pointer.
+ * @return Middleware function pointer, or NULL when @p secret is NULL or
+ *         eight distinct secrets are already registered in this process.
  */
 cwist_middleware_func cwist_mw_jwt_auth(const char *secret);
 
@@ -64,7 +65,9 @@ cwist_middleware_func cwist_mw_compress(size_t min_body_size);
 /**
  * @brief Retrieve JWT claims stored by cwist_mw_jwt_auth from a request.
  *
- * Only valid inside a handler that sits behind the JWT middleware.
+ * Only valid inside a handler that sits behind the JWT middleware, on the
+ * thread running that request's middleware chain; the claims are released
+ * when the chain returns to the middleware.
  *
  * @param req The current HTTP request.
  * @return Read-only pointer to the claims, or NULL if not authenticated.
