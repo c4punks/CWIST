@@ -72,7 +72,11 @@ int main(void) {
 #ifdef __linux__
     setvbuf(stdout, NULL, _IONBF, 0); /* watchdog must see how far we got */
     signal(SIGALRM, watchdog_dump);
-    alarm(30); /* Watchdog only, not the correctness oracle. */
+#if defined(__SANITIZE_ADDRESS__)
+    alarm(120); /* ASan/UBSan runners are much slower; keep the watchdog long. */
+#else
+    alarm(30);  /* Watchdog only, not the correctness oracle. */
+#endif
     bool probe_on = getenv("CWIST_LATENCY_PROBE") != NULL;
     loop = cwist_reactor_create();
     assert(loop != NULL);
