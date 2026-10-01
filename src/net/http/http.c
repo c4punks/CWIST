@@ -21,6 +21,7 @@
 #include <ttak/net/lattice.h>
 #include <ttak/priority/scheduler.h>
 #include "simd_parser.h"
+#include "async_internal.h"
 
 #include <limits.h>
 #include <stdio.h>
@@ -202,6 +203,43 @@ static http_thread_worker_t *g_workers = NULL;
 static _Atomic uint32_t *g_worker_loads = NULL;
 
 static _Atomic long g_http_inflight = 0;
+static _Atomic bool g_http_pool_stopping = false;
+static _Atomic long g_http_continuation_shed = 0;
+
+/* Generation of the C1M worker reactors. cwist_http_pool_destroy() bumps it
+ * before it stops and frees them, so a deferred completion that still holds
+ * a reactor from an earlier generation (cwist_async outlives the server)
+ * closes its connection instead of posting into freed memory. Posters count
+ * themselves in g_reactor_posters around the check and the post; destroy
+ * waits for that count to drain after the bump, so every post that saw the
+ * old generation lands before the reactors' final drain. Both sides use
+ * sequentially consistent atomics, so one of them always sees the other. */
+static _Atomic uint64_t g_reactor_gen = 0;
+static _Atomic long g_reactor_posters = 0;
+
+uint64_t cwist_http_reactor_generation(void) {
+    return atomic_load(&g_reactor_gen);
+}
+
+bool cwist_http_reactor_post_live(cwist_reactor_t *reactor, uint64_t gen,
+                                  cwist_reactor_post_t *node) {
+    atomic_fetch_add(&g_reactor_posters, 1);
+    bool posted = atomic_load(&g_reactor_gen) == gen && cwist_reactor_post(reactor, node);
+    atomic_fetch_sub(&g_reactor_posters, 1);
+    return posted;
+}
+
+/* Continuations dropped because the reactor post queue was full; each one
+ * closed its connection. Exported for metrics/observability. */
+long cwist_http_continuation_shed_count(void) {
+    return atomic_load_explicit(&g_http_continuation_shed, memory_order_relaxed);
+}
+
+/* Live C1M connections (accepted, not yet closed). The shutdown drain in
+ * cwist_app_listen_ex polls this to exit early once nothing is left. */
+long cwist_http_inflight_count(void) {
+    return atomic_load_explicit(&g_http_inflight, memory_order_relaxed);
+}
 #define CWIST_HTTP_INFLIGHT_PER_THREAD 32
 #define CWIST_HTTP_INFLIGHT_FD_RESERVE 4096
 
@@ -455,6 +493,10 @@ void cwist_http_pool_destroy(void) {
     pthread_cond_destroy(&g_dyn_pool.cond);
     pthread_mutex_destroy(&g_dyn_pool.lock);
 
+    /* Retire this generation of reactors before they go; see g_reactor_gen. */
+    atomic_fetch_add(&g_reactor_gen, 1);
+    while (atomic_load(&g_reactor_posters) > 0) sched_yield();
+
     if (g_workers) {
         for (int i = 0; i < g_http_thread_count; i++) {
             if (g_workers[i].reactor) {
@@ -614,6 +656,13 @@ bool cwist_http_async_rearm(int client_fd, cwist_reactor_t *reactor, cwist_http_
 void cwist_http_async_close(int client_fd, cwist_http_async_conn_t *conn) {
     if (client_fd >= 0) close(client_fd);
     http_async_conn_release(conn);
+}
+
+void cwist_http_async_close_orphan(int client_fd, cwist_http_async_conn_t *conn) {
+    /* The worker that owned conn is gone, and its load slot index may belong
+     * to a later pool by now: leave the load counters alone. */
+    if (conn) conn->worker_id = UINT32_MAX;
+    http_async_close(client_fd, conn);
 }
 
 bool cwist_http_pool_submit_async(int client_fd, cwist_async_handler_t handler, void *ctx) {
