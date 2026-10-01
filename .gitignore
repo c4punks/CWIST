@@ -78,6 +78,7 @@ tests/test_proto_gen_sample.cwist.pb.h
 nuke_missing_user_test
 test_access_log
 test_async_defer
+test_async_after_shutdown
 test_bdr
 test_bind
 test_cache
