@@ -817,6 +817,7 @@ TEST_TARGETS = test_worker_affinity \
                test_http2_prebuffer \
                test_http3 \
                test_shutdown \
+               test_listen_signal_restore \
                test_listen_ex \
                test_compress \
                test_builtin_mw_deferred \
@@ -1084,6 +1085,10 @@ test_websocket_async: $(LIB_NAME) tests/test_websocket_async.c
 test_shutdown: $(LIB_NAME) tests/test_shutdown.c
 	$(CC) $(CFLAGS) -o test_shutdown tests/test_shutdown.c $(LIB_NAME) $(LIBS)
 	./test_shutdown
+
+test_listen_signal_restore: $(LIB_NAME) tests/test_listen_signal_restore.c
+	$(CC) $(CFLAGS) -o test_listen_signal_restore tests/test_listen_signal_restore.c $(LIB_NAME) $(LIBS)
+	./test_listen_signal_restore
 
 test_listen_ex: $(LIB_NAME) tests/test_listen_ex.c
 	$(CC) $(CFLAGS) -o test_listen_ex tests/test_listen_ex.c $(LIB_NAME) $(LIBS)

@@ -123,6 +123,7 @@ test_seq
 test_seq_auth
 test_session
 test_shutdown
+test_listen_signal_restore
 test_static_and_range
 test_test_client
 test_waf

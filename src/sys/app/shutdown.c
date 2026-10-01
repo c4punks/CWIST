@@ -8,6 +8,7 @@
 #include <unistd.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <stdbool.h>
 #ifndef __wasi__
 #include <sys/socket.h>
 #endif
@@ -63,19 +64,41 @@ static void cwist_shutdown_handler(int sig) {
 #endif
 
 #ifndef __wasi__
+/* What SIGTERM/SIGINT did before CWIST installed its handlers, so
+ * cwist_shutdown_restore_handlers() can put it back. Saved only on the first
+ * install after a restore: a second install would otherwise record CWIST's
+ * own handler as the previous one. */
+static struct sigaction g_prev_sigterm;
+static struct sigaction g_prev_sigint;
+static bool g_prev_saved = false;
+
 void cwist_shutdown_install_handlers(void) {
-    struct sigaction sa;
+    struct sigaction sa, old_term, old_int;
     sigemptyset(&sa.sa_mask);
     sa.sa_flags = SA_RESTART;
     sa.sa_handler = cwist_shutdown_handler;
-    sigaction(SIGTERM, &sa, NULL);
-    sigaction(SIGINT, &sa, NULL);
+    bool term_ok = sigaction(SIGTERM, &sa, &old_term) == 0;
+    bool int_ok = sigaction(SIGINT, &sa, &old_int) == 0;
+    if (!g_prev_saved && term_ok && int_ok) {
+        g_prev_sigterm = old_term;
+        g_prev_sigint = old_int;
+        g_prev_saved = true;
+    }
+}
+
+void cwist_shutdown_restore_handlers(void) {
+    if (!g_prev_saved) return;
+    sigaction(SIGTERM, &g_prev_sigterm, NULL);
+    sigaction(SIGINT, &g_prev_sigint, NULL);
+    g_prev_saved = false;
 }
 #else
 void cwist_shutdown_install_handlers(void) {
     /* WASI hosts own the instance lifecycle; there are no signals to
      * install. Shutdown is driven by the host dropping the context. */
 }
+
+void cwist_shutdown_restore_handlers(void) {}
 #endif
 
 void cwist_shutdown_reset(void) {
