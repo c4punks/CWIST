@@ -32,7 +32,7 @@
 | Phase 1 — Performance | Reactor latency, RX-uring pipelining, HTTPS handshake shards, worker warmup | Mostly done: #293 closed the measurement loop; RX-uring and worker warmup dropped; HTTPS shard tuning remains open |
 | Phase 2 — Rust FFI | `bindings/rust/` (`cwist-sys` + `cwist`) | Mostly done: middleware + async wrappers, example, FFI overhead benchmark |
 | Phase 3 — HTTP/3 Close Correctness | Re-pin lsquic after upstream fixes | Deferred indefinitely — waiting for upstream lsquic to ship WebTransport client support |
-| Phase 4 — v4.0 Scope Confirmation | Enact v3.7 Phase 5 decisions, record experimental-item fates | In progress: full GC/malloc interception promoted to supported opt-in; remaining experimental-item decisions and docs audit |
+| Phase 4 — v4.0 Scope Confirmation | Enact v3.7 Phase 5 decisions, record experimental-item fates | Done: v3.7 Phase 5 enacted; GraphQL subscriptions, durable queue, Redis RESP2/NATS borrow promoted to supported; WASM component deferred to v4.0; WebTransport stays experimental until v4.1 |
 
 ### 1) Transport Layer
 
@@ -222,7 +222,7 @@ it is additive. Scope does not grow; anything not ready slips.
 | **1 — Performance** | Close reactor/Classic/Axum latency gaps; validate RX-uring pipelining; HTTPS handshake shards; worker warmup | Mostly done | #293 has the data; #294 raised `CWIST_HTTPS_HS_SHARDS` default floor to 4 and MAX to 16; RX-uring and worker warmup dropped |
 | **2 — Rust FFI** | Make CWIST callable from Rust (`cwist-sys` + `cwist`) | Mostly done | Middleware and deferred-async wrappers landed; `example/rust-hello/` and FFI overhead benchmark added; built-in middleware factory wrappers and owned `cwist_async_respond_with` helper done; remaining: published crates |
 | **3 — HTTP/3 close correctness** | Re-pin lsquic when upstream fixes land; add CONNECTION_CLOSE interop gate | Deferred indefinitely | On hold until upstream lsquic ships WebTransport client support; no separate cutoff |
-| **4 — v4.0 scope confirmation** | Enact v3.7 Phase 5 decisions and record v4.0 fate for every experimental item | In progress | Full GC/malloc interception promoted to supported opt-in (`docs/GC.md` updated); remaining: record decisions for GraphQL subscriptions, durable queue, Redis/NATS borrow, WASM component pipeline; audit stale experimental docs |
+| **4 — v4.0 scope confirmation** | Enact v3.7 Phase 5 decisions and record v4.0 fate for every experimental item | Done | v3.7 Phase 5 enacted; GraphQL subscriptions, durable queue, Redis RESP2/NATS borrow promoted to supported; WASM component pipeline deferred to v4.0; WebTransport experimental until v4.1; docs audit done |
 
 ### Phase 1 — Performance
 
@@ -278,9 +278,9 @@ chase #688, #687, or #693 separately.
 | Decision Source | Action |
 |-----------------|--------|
 | v3.7 Phase 5 | **Done** — full GC and malloc interception promoted to *supported opt-in* (`docs/GC.md` updated, defaults unchanged: full-GC off); `CWIST_PROFILE` matrix stays the v4.0 default story; latency probe stays hidden opt-in; HTTP batch-shed counter stays always-on |
-| Experimental items | Record v4.0 decision for GraphQL subscriptions (`graphql_ws.h`), durable job queue (`durable_queue.h`), Redis RESP2 reply tree and NATS connection borrow, and WASM component pipeline (#203) |
+| Experimental items | **Promoted to supported in v3.8** — GraphQL subscriptions (`graphql_ws.h`), durable job queue (`durable_queue.h`), Redis RESP2 reply tree, and NATS connection borrow (`cwist_nats_native()`). **Deferred to v4.0** — WASM component pipeline (#203) stays experimental (gated on WASI 0.3 / unflagged JSPI); WebTransport stays experimental until v4.1 |
 | WebTransport tutorial | Keep experimental until v4.1 |
-| Docs | Audit stale experimental caveats |
+| Docs | **Done** — stale experimental caveats removed from promoted headers/docs; WASM component and WebTransport caveats refreshed with explicit v4.0/v4.1 deferral |
 
 ### Release Criteria for v3.8
 
