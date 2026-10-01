@@ -30,7 +30,7 @@
 | Phase | Theme | Progress |
 |-------|-------|----------|
 | Phase 1 — Performance | Reactor latency, RX-uring pipelining, HTTPS handshake shards, worker warmup | Mostly done: #293 closed the measurement loop; RX-uring and worker warmup dropped; HTTPS shard tuning remains open |
-| Phase 2 — Rust FFI | `bindings/rust/` (`cwist-sys` + `cwist`) | Mostly done: middleware + async wrappers, example, FFI overhead benchmark |
+| Phase 2 — Rust FFI | `bindings/rust/` (`cwist-sys` + `cwist`) | Done: middleware + async wrappers, example, FFI overhead benchmark; `cwist-sys` and `cwist` published to crates.io as v0.1.0 |
 | Phase 3 — HTTP/3 Close Correctness | Re-pin lsquic after upstream fixes | Deferred indefinitely — waiting for upstream lsquic to ship WebTransport client support |
 | Phase 4 — v4.0 Scope Confirmation | Enact v3.7 Phase 5 decisions, record experimental-item fates | Done: v3.7 Phase 5 enacted; GraphQL subscriptions, durable queue, Redis RESP2/NATS borrow promoted to supported; WASM component deferred to v4.0; WebTransport stays experimental until v4.1 |
 
@@ -220,7 +220,7 @@ it is additive. Scope does not grow; anything not ready slips.
 | Phase | Goal | Status | Next Actions |
 |-------|------|--------|--------------|
 | **1 — Performance** | Close reactor/Classic/Axum latency gaps; validate RX-uring pipelining; HTTPS handshake shards; worker warmup | Mostly done | #293 has the data; #294 raised `CWIST_HTTPS_HS_SHARDS` default floor to 4 and MAX to 16; RX-uring and worker warmup dropped |
-| **2 — Rust FFI** | Make CWIST callable from Rust (`cwist-sys` + `cwist`) | Mostly done | Middleware and deferred-async wrappers landed; `example/rust-hello/` and FFI overhead benchmark added; built-in middleware factory wrappers and owned `cwist_async_respond_with` helper done; remaining: published crates |
+| **2 — Rust FFI** | Make CWIST callable from Rust (`cwist-sys` + `cwist`) | Done | Middleware and deferred-async wrappers landed; `example/rust-hello/` and FFI overhead benchmark added; built-in middleware factory wrappers and owned `cwist_async_respond_with` helper done; `cwist-sys` and `cwist` v0.1.0 published to crates.io |
 | **3 — HTTP/3 close correctness** | Re-pin lsquic when upstream fixes land; add CONNECTION_CLOSE interop gate | Deferred indefinitely | On hold until upstream lsquic ships WebTransport client support; no separate cutoff |
 | **4 — v4.0 scope confirmation** | Enact v3.7 Phase 5 decisions and record v4.0 fate for every experimental item | Done | v3.7 Phase 5 enacted; GraphQL subscriptions, durable queue, Redis RESP2/NATS borrow promoted to supported; WASM component pipeline deferred to v4.0; WebTransport experimental until v4.1; docs audit done |
 
@@ -255,9 +255,9 @@ that links `libcwist.a` through `cwist.pc`) and `cwist` (the safe wrapper).
 | Built-in middleware factories | Done | Wrap `cwist_mw_*` factories in `cwist` crate (`cwist::middleware`) and expose via `App::use_builtin_middleware` | None |
 | `cwist_async_respond_with` | Done | `OwnedResponse` in `cwist::http` builds a CWIST-allocated response; `AsyncResponse::respond_with` transfers ownership | New `cwist_http_response_create/destroy` C helpers |
 
-Status at the v3.8 cut: experimental, crate version 0.x, not yet published to
-crates.io. The v4.0 decision (publish, or keep in-tree) is recorded before v4.0
-cuts.
+Status at the v3.8 cut: `cwist-sys` and `cwist` v0.1.0 are published to
+crates.io. The bindings remain experimental in API stability; breaking changes
+may still land while the surface matures, signaled by 0.x crate versions.
 
 ### Phase 3 — HTTP/3 Connection-Close Correctness (Deferred)
 
