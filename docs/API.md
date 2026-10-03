@@ -16,6 +16,7 @@ function signature.
 *   **[HTML Components](api/html.md)**: Reusable HTML render units, component-scoped CSS, and page/fragment responses.
 *   **[Middleware](api/middleware.md)**: Middleware pipeline and built-ins.
 *   **[WebSocket](api/websocket.md)**: WebSocket upgrade and framing.
+*   **[Server-Sent Events](api/sse.md)**: Event-stream responses and live streams.
 
 ## See also
 
