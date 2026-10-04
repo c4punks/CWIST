@@ -1,0 +1,92 @@
+name: Perf — HTTPS gates
+
+# CWIST 3.9 TLS performance gates (issues #306 / #307).
+#
+# Gate 1 (tls_rtt_p50_ms) is the #307 regression test: a sequential TLS
+# client WITHOUT TCP_NODELAY, which stalls ~43ms per request on pre-#307
+# code and ~0.2ms on healthy code. The other gates cover HTTPS churn,
+# keep-alive throughput and 1MiB transfer, each with a plaintext control.
+# See scripts/ci/https_perf_gates.sh for measured baselines.
+on:
+  pull_request:
+    branches: [dev]
+    paths:
+      - '.github/workflows/perf-https-gates.yml'
+      - 'scripts/ci/https_perf_gates.sh'
+      - 'scripts/ci/https_gates_eval.py'
+      - 'src/net/http/https.c'
+      - 'src/net/http/https_upgrade_hook.c'
+      - 'src/net/http/tls_chain.c'
+      - 'src/https/**'
+      - 'lib/boringssl'
+  push:
+    branches: [dev]
+    paths:
+      - '.github/workflows/perf-https-gates.yml'
+      - 'scripts/ci/https_perf_gates.sh'
+      - 'scripts/ci/https_gates_eval.py'
+      - 'src/net/http/https.c'
+      - 'src/net/http/https_upgrade_hook.c'
+      - 'src/net/http/tls_chain.c'
+      - 'src/https/**'
+      - 'lib/boringssl'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  https-gates:
+    name: HTTPS performance gates
+    runs-on: ubuntu-latest
+    # Write is needed only for the post-gate history commit on dev pushes;
+    # that step never runs on pull_request events, and fork PRs get a
+    # read-only token regardless.
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with: { submodules: recursive }
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y cmake libcurl4-openssl-dev libnghttp2-dev \
+            libbrotli-dev wrk apache2-utils libssl-dev
+
+      - name: Run HTTPS gates
+        run: scripts/ci/https_perf_gates.sh https-gates-result.json
+
+      - name: Evaluate gates
+        run: python3 scripts/ci/https_gates_eval.py https-gates-result.json
+
+      - name: Upload result
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: https-gates-result
+          path: https-gates-result.json
+
+      # History update: only after the gates passed on a dev push, so the
+      # same-CPU medians never absorb a regression. PR runs never touch the
+      # history file.
+      - name: Update gate history on dev
+        if: github.event_name == 'push' && github.ref == 'refs/heads/dev'
+        run: python3 scripts/ci/https_gates_eval.py --update https-gates-result.json
+
+      - name: Commit updated history
+        if: github.event_name == 'push' && github.ref == 'refs/heads/dev'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const { execSync } = require('child_process');
+            try {
+              execSync('git diff --quiet -- benchmarks/https_gates.json');
+              console.log('no history changes');
+            } catch {
+              execSync('git config user.name "github-actions[bot]"');
+              execSync('git config user.email "github-actions[bot]@users.noreply.github.com"');
+              execSync('git add benchmarks/https_gates.json');
+              execSync(`git commit -m "bench(ci): record HTTPS gate run [skip ci]"`);
+              execSync('git push');
+            }

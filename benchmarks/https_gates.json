@@ -1,0 +1,15 @@
+[
+  {
+    "timestamp": "2026-10-04T21:07:18+0900",
+    "runner_hw": "12 vCPU | AMD Ryzen 5 5600X 6-Core Processor",
+    "tls_rtt_p50_ms": 0.084,
+    "tls_rtt_p90_ms": 0.11,
+    "https_churn_rps": 1596.46,
+    "http_churn_rps": 14244.68,
+    "https_keepalive_rps": 151444.8,
+    "http_keepalive_rps": 274146.39,
+    "https_keepalive_ratio": 0.552,
+    "https_big_gbps": 4.06,
+    "http_big_gbps": 11.88
+  }
+]
