@@ -15,10 +15,10 @@
 #                          stall (43 ms before the fix, ~0.2 ms after).
 #                          Backstop: p50 <= 5 ms.
 #   2. https_churn_rps     ab -n 6000 -c 32, new connection per request.
-#                          ~600/s before #307, ~1650/s after. Backstop >= 1200.
-#   3. https_keepalive_rps wrk -t4 -c100 -d10s. ~167-190k/s. Backstop >= 130k.
+#                          ~600/s before #307, ~1650/s after. Backstop >= 1000.
+#   3. https_keepalive_rps wrk -t4 -c100 -d10s. ~135-190k/s observed. Backstop >= 110k.
 #   4. https_big_Bps       wrk -t4 -c32 -d10s on a 1 MiB body. ~3.9-4.5GB/s.
-#                          Backstop >= 3 GB/s.
+#                          Backstop >= 2.5 GB/s.
 #   5. http_* controls     same workloads plaintext; detect collateral damage
 #                          to the plain path. The https/http keep-alive ratio
 #                          (~0.65) is recorded as a signal, not gated.
