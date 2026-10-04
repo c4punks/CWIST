@@ -467,6 +467,26 @@ bool cwist_https_conn_idle(cwist_https_connection *conn) {
     return poll(&pfd, 1, 0) == 0;
 }
 
+/* Re-arm immediate ACKs on a connected socket.
+ *
+ * Why: TCP_QUICKACK is not persistent - the kernel re-enters delayed-ACK
+ * (pingpong) mode during the TLS handshake's request/response segment
+ * pattern.  A client that sends its TLS Finished and then holds the first
+ * HTTP request behind Nagle (no TCP_NODELAY: stock ab, many OpenSSL-based
+ * clients) waits for the ACK of the Finished; the server's delayed ACK
+ * holds it for ~40 ms, adding a fixed ~40-50 ms to every connection and
+ * capping churn throughput at ~20 handshakes/s/thread.  Re-arming around
+ * the handshake keeps the ACK of the client's final flight immediate, so
+ * the request arrives right behind the handshake instead of one delayed-ACK
+ * window later.  Best-effort: non-Linux or failure is fine, this only
+ * tunes ACK timing. */
+static void cwist_tcp_quickack(int fd) {
+#if defined(__linux__) && defined(TCP_QUICKACK)
+    int one = 1;
+    (void)setsockopt(fd, IPPROTO_TCP, TCP_QUICKACK, &one, sizeof(one));
+#endif
+}
+
 uint64_t cwist_https_idle_timeout_ms(void) {
     static uint64_t cached = 0;
     if (!cached) {
@@ -620,6 +640,7 @@ static void *https_hs_shepherd(void *arg) {
             if (!found) continue; /* already reaped by the sweeper */
 
             int rc = SSL_accept(p->ssl);
+            cwist_tcp_quickack(p->fd);
             if (rc > 0) {
                 https_hs_complete(sh, p);
                 continue;
@@ -1281,6 +1302,12 @@ static cwist_error_t https_wrap_established(cwist_https_context *ctx, int client
     }
     /* h3 is QUIC-only and never negotiated over TCP TLS */
 
+    /* The handshake's final client flight was just ACKed; stay in quickack
+     * mode so the request that follows (held back by a Nagle-bound client)
+     * is ACKed immediately and the connection does not stall one
+     * delayed-ACK window before the request phase even starts. */
+    cwist_tcp_quickack(client_fd);
+
     err.error.err_i16 = 0;
     return err;
 }
@@ -1312,12 +1339,17 @@ cwist_error_t cwist_https_accept(cwist_https_context *ctx, int client_fd,
     }
 
     SSL_set_fd(ssl, client_fd);
+    cwist_tcp_quickack(client_fd);
 
     /* Bound the whole handshake so a client dribbling bytes cannot pin a
      * pool worker forever. */
     uint64_t handshake_deadline = cwist_https_now_ms() + CWIST_HTTPS_HANDSHAKE_TIMEOUT_MS;
     int rc;
     while ((rc = SSL_accept(ssl)) <= 0) {
+        /* Keep immediate ACKs armed: the kernel drops out of quickack mode
+         * as the handshake segments flow, and the delayed ACK of the
+         * client's Finished would hold a Nagle-bound request by ~40 ms. */
+        cwist_tcp_quickack(client_fd);
         int ssl_err = SSL_get_error(ssl, rc);
         if (ssl_err == SSL_ERROR_WANT_READ || ssl_err == SSL_ERROR_WANT_WRITE) {
             uint64_t now = cwist_https_now_ms();
