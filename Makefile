@@ -813,6 +813,7 @@ TEST_TARGETS = test_worker_affinity \
                test_json_heal \
                test_https \
                test_https_park \
+               test_https_metrics \
                test_http2 \
                test_http2_prebuffer \
                test_http3 \
@@ -1044,6 +1045,10 @@ test_https: $(LIB_NAME) tests/test_https.c
 test_https_park: $(LIB_NAME) tests/test_https_park.c
 	$(CC) $(CFLAGS) -o test_https_park tests/test_https_park.c $(LIB_NAME) $(LIBS)
 	./test_https_park
+
+test_https_metrics: $(LIB_NAME) tests/test_https_metrics.c
+	$(CC) $(CFLAGS) -o test_https_metrics tests/test_https_metrics.c $(LIB_NAME) $(LIBS)
+	./test_https_metrics
 
 test_http2: $(LIB_NAME) tests/test_http2.c
 	$(CC) $(CFLAGS) -o test_http2 tests/test_http2.c $(LIB_NAME) $(LIBS)

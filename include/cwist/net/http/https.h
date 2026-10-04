@@ -178,6 +178,28 @@ void cwist_https_dispatch(int client_fd, cwist_https_context *ctx,
 /** @brief Number of TLS handshakes currently parked in the shepherd. */
 long cwist_https_pending_handshakes(void);
 
+/* --- TLS observability counters (mirrored into the Prometheus /metrics
+ * exposition by the metrics registry; see src/sys/metrics/metrics.c) --- */
+
+/** @brief Total TLS handshakes that completed (full + resumed). */
+long cwist_https_tls_handshakes_total(void);
+/** @brief TLS handshakes completed via session resumption/ticket. */
+long cwist_https_tls_handshakes_resumed_total(void);
+/** @brief Handshakes that negotiated TLS 1.2. */
+long cwist_https_tls_handshakes_tls12_total(void);
+/** @brief Handshakes that negotiated TLS 1.3. */
+long cwist_https_tls_handshakes_tls13_total(void);
+/** @brief Handshakes negotiated with TLS_AES_128_GCM_SHA256. */
+long cwist_https_tls_ciphers_aes128_gcm_total(void);
+/** @brief Handshakes negotiated with TLS_AES_256_GCM_SHA384. */
+long cwist_https_tls_ciphers_aes256_gcm_total(void);
+/** @brief Handshakes negotiated with TLS_CHACHA20_POLY1305_SHA256. */
+long cwist_https_tls_ciphers_chacha20_total(void);
+/** @brief Handshakes negotiated with any other cipher. */
+long cwist_https_tls_ciphers_other_total(void);
+/** @brief Currently established TLS connections (wrap minus teardown). */
+long cwist_https_tls_connections_active(void);
+
 /** --- Error Codes --- */
 /**
  * @brief Defined as errno-like constants used with `cwist_error_t` fields.
