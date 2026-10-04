@@ -859,6 +859,7 @@ TEST_TARGETS = test_worker_affinity \
                test_cors \
                test_websocket \
                test_websocket_async \
+               test_webrtc \
                test_jwt \
                test_migrate \
                test_json_heal \
@@ -946,12 +947,7 @@ bench_security_pool: $(LIB_NAME) tests/bench_security_pool.c
 	$(CC) $(CFLAGS) -o bench_security_pool tests/bench_security_pool.c $(LIB_NAME) $(LIBS)
 	./bench_security_pool
 
-# WebRTC DataChannel end-to-end: ICE + DTLS + SCTP over UDP loopback with an
-# in-process peer (client role) built on the same stack.
-ifeq ($(CWIST_WEBRTC),1)
-TEST_TARGETS += test_webrtc
-endif
-
+# WebRTC DataChannel end-to-end test (see the test_webrtc rule below).
 test: $(TEST_TARGETS)
 
 src/sys/app/app.o: src/sys/app/worker_affinity.h
@@ -1488,6 +1484,12 @@ ifeq ($(CWIST_WEBRTC),1)
 test_webrtc: $(LIB_NAME) $(USRSCTP_LIB) tests/test_webrtc.c
 	$(CC) $(CFLAGS) -o test_webrtc tests/test_webrtc.c $(LIB_NAME) $(LIBS)
 	./test_webrtc
+
+.PHONY: test_webrtc
+else
+# CWIST_WEBRTC=0: the module and its test are compiled out.
+test_webrtc:
+	@echo "CWIST_WEBRTC=0: skipping test_webrtc"
 
 .PHONY: test_webrtc
 endif
