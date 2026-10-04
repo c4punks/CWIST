@@ -498,6 +498,41 @@ rules.
 
 ---
 
+## CWIST v3.9 Roadmap
+
+v3.8 spends its cycle on performance, Rust FFI, and v4.0 scope confirmation.
+The follow-up TLS investigation for issue #306 (PR #307 shipped the
+TCP_QUICKACK handshake fix; shard/teardown/buffer follow-ups all measured
+no-gain) leaves one clear gap: **TLS observability & performance
+governance**. There is no way today to see handshake health in production
+or to stop a TLS regression from landing silently. v3.9 closes that, and
+also brings WebRTC DataChannel support into the release scope.
+
+### v3.9 Status at a Glance
+
+| Goal | Status | Notes |
+|------|--------|-------|
+| (a) CI TLS performance gates (HTTPS churn / keep-alive / large-transfer / RTT) | 🔄 In Progress | Tracked in #306; gate PR pending — measured separately so this roadmap and the gates PR stay decoupled |
+| (b) TLS observability in Prometheus `/metrics` (handshake counts, TLS version/cipher counters, resumption vs full-handshake ratio) | ✅ Done | `cwist_tls_handshakes_total`, `cwist_tls_handshakes_resumed_total`, `cwist_tls_connections_active`, `cwist_tls_handshakes_tls12_total`, `cwist_tls_handshakes_tls13_total`, `cwist_tls_ciphers_{aes128_gcm,aes256_gcm,chacha20,other}_total`; covered by `test_https_metrics` |
+| (c) Correct issue #294's premise with measured data | ✅ Done | Corrected in a #294 comment: the `cwist_app_listen` path never uses the sharded handshake shepherds (app.c multiport accept loop calls `https_pool_submit` directly, and the worker handshakes inline via `cwist_https_accept`); shepherds only serve the `async_server.c` path. Shard tuning therefore does not affect the standard app API |
+| (d) WebRTC DataChannel support | 🔄 In Progress | SDP offer/answer, ICE (server lite-role acceptable at MVP), DTLS via the vendored BoringSSL, SCTP DataChannels via a new `lib/usrsctp` submodule; browser-interoperable DataChannel echo. Implementation PR follows |
+
+Entry criteria for v3.9: every item must move a measured metric (handshake
+throughput, resumption ratio, connection-churn latency, or regression
+detection latency) or retire a mismeasured premise. New public API is
+additive only, matching the v3.8 rule.
+
+Exit criteria for v3.9:
+
+- The CI TLS gate PR (#306) is green on the release commit and fails on a
+  re-introduced #307-class regression (measured by the churn benchmark).
+- `/metrics` exposes the full TLS counter set above on a live app, and the
+  resumption-vs-full ratio is observable across prefork workers.
+- #294 is closed as *not applicable to the standard app API*, with the
+  shepherd-path shard table recorded for the async-server path only.
+
+---
+
 ## v4.1 (Planned): expansion resumes, starting with WebTransport
 
 v4.1 is where expansion resumes after the v4.0 stabilization cycle. The

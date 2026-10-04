@@ -1238,6 +1238,89 @@ void cwist_https_destroy_context(cwist_https_context *ctx) {
  * @param conn Output pointer that receives the allocated connection wrapper.
  * @return Tagged CWIST error describing success or failure.
  */
+/* --- TLS observability counters ------------------------------------------
+ * Owned here (not in the metrics registry) so the hot path never depends
+ * on the sys/metrics layer; metrics.c mirrors them into the Prometheus
+ * exposition on load/render, same pattern as
+ * cwist_http_continuation_shed_count() in http.c. */
+static _Atomic long g_tls_handshakes_total;
+static _Atomic long g_tls_handshakes_resumed;
+static _Atomic long g_tls_handshakes_tls12;
+static _Atomic long g_tls_handshakes_tls13;
+static _Atomic long g_tls_ciphers_aes128_gcm;
+static _Atomic long g_tls_ciphers_aes256_gcm;
+static _Atomic long g_tls_ciphers_chacha20;
+static _Atomic long g_tls_ciphers_other;
+static _Atomic long g_tls_connections_active;
+
+long cwist_https_tls_handshakes_total(void) {
+    return atomic_load_explicit(&g_tls_handshakes_total, memory_order_relaxed);
+}
+
+long cwist_https_tls_handshakes_resumed_total(void) {
+    return atomic_load_explicit(&g_tls_handshakes_resumed, memory_order_relaxed);
+}
+
+long cwist_https_tls_handshakes_tls12_total(void) {
+    return atomic_load_explicit(&g_tls_handshakes_tls12, memory_order_relaxed);
+}
+
+long cwist_https_tls_handshakes_tls13_total(void) {
+    return atomic_load_explicit(&g_tls_handshakes_tls13, memory_order_relaxed);
+}
+
+long cwist_https_tls_ciphers_aes128_gcm_total(void) {
+    return atomic_load_explicit(&g_tls_ciphers_aes128_gcm, memory_order_relaxed);
+}
+
+long cwist_https_tls_ciphers_aes256_gcm_total(void) {
+    return atomic_load_explicit(&g_tls_ciphers_aes256_gcm, memory_order_relaxed);
+}
+
+long cwist_https_tls_ciphers_chacha20_total(void) {
+    return atomic_load_explicit(&g_tls_ciphers_chacha20, memory_order_relaxed);
+}
+
+long cwist_https_tls_ciphers_other_total(void) {
+    return atomic_load_explicit(&g_tls_ciphers_other, memory_order_relaxed);
+}
+
+long cwist_https_tls_connections_active(void) {
+    return atomic_load_explicit(&g_tls_connections_active, memory_order_relaxed);
+}
+
+/* Record a freshly established TLS session: version/cipher buckets and
+ * resumption. Called from https_wrap_established only, which both the
+ * in-worker handshake path (cwist_https_accept) and the shepherd's
+ * pre-handshaked dispatch path funnel through. */
+static void https_tls_record_handshake(SSL *ssl) {
+    atomic_fetch_add_explicit(&g_tls_handshakes_total, 1, memory_order_relaxed);
+    if (SSL_session_reused(ssl))
+        atomic_fetch_add_explicit(&g_tls_handshakes_resumed, 1, memory_order_relaxed);
+
+    switch (SSL_version(ssl)) {
+        case TLS1_2_VERSION:
+            atomic_fetch_add_explicit(&g_tls_handshakes_tls12, 1, memory_order_relaxed);
+            break;
+        case TLS1_3_VERSION:
+            atomic_fetch_add_explicit(&g_tls_handshakes_tls13, 1, memory_order_relaxed);
+            break;
+        default: break;
+    }
+
+    const char *cipher = SSL_get_cipher_name(ssl);
+    if (cipher) {
+        if (strcmp(cipher, "TLS_AES_128_GCM_SHA256") == 0)
+            atomic_fetch_add_explicit(&g_tls_ciphers_aes128_gcm, 1, memory_order_relaxed);
+        else if (strcmp(cipher, "TLS_AES_256_GCM_SHA384") == 0)
+            atomic_fetch_add_explicit(&g_tls_ciphers_aes256_gcm, 1, memory_order_relaxed);
+        else if (strcmp(cipher, "TLS_CHACHA20_POLY1305_SHA256") == 0)
+            atomic_fetch_add_explicit(&g_tls_ciphers_chacha20, 1, memory_order_relaxed);
+        else
+            atomic_fetch_add_explicit(&g_tls_ciphers_other, 1, memory_order_relaxed);
+    }
+}
+
 /* Build the connection wrapper around an already-established TLS session.
  * Shared by the blocking cwist_https_accept path and the shepherd's
  * non-blocking dispatch path. */
@@ -1307,6 +1390,11 @@ static cwist_error_t https_wrap_established(cwist_https_context *ctx, int client
      * is ACKed immediately and the connection does not stall one
      * delayed-ACK window before the request phase even starts. */
     cwist_tcp_quickack(client_fd);
+
+    /* Both handshake paths funnel through here, so this is the single
+     * choke point for TLS observability (issue #306). */
+    https_tls_record_handshake(ssl);
+    atomic_fetch_add_explicit(&g_tls_connections_active, 1, memory_order_relaxed);
 
     err.error.err_i16 = 0;
     return err;
@@ -1407,6 +1495,10 @@ cwist_https_protocol cwist_https_connection_protocol(const cwist_https_connectio
  */
 static void https_connection_teardown(cwist_https_connection *conn) {
     if (conn) {
+        /* Balances the increment at wrap time; teardown is the single exit
+         * point for every established connection (public close and the
+         * full-GC registry sweep alike). */
+        atomic_fetch_sub_explicit(&g_tls_connections_active, 1, memory_order_relaxed);
         if (conn->proto_state && conn->proto_state_free) {
             conn->proto_state_free(conn->proto_state);
             conn->proto_state = NULL;
