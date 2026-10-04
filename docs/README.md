@@ -20,6 +20,8 @@ Longer walkthroughs that combine several subsystems:
 * [NATS integration](tutorials/nats-integration.md) — messaging from handlers.
 * [WebTransport server](tutorials/webtransport-server.md) — experimental HTTP/3
   datagram/streams API.
+* [OpenAPI and Swagger UI](tutorials/openapi-swagger.md) - annotate routes,
+  generate `openapi.json`, and serve an interactive docs page.
 * [CWIST tutorial (single page)](tutorial/cwist_tutorial.md) — the condensed
   one-file variant.
 
