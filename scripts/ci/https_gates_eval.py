@@ -24,20 +24,26 @@ from runner_baseline import runner_key, same_runner_values
 HISTORY = Path(__file__).resolve().parent.parent.parent / "benchmarks" / "https_gates.json"
 
 # (metric, direction, absolute backstop, same-CPU allowance)
-# Backstops come from measured CWIST 3.9 numbers on a Ryzen 5600X (12-core):
-# churn ~1650/s, keep-alive ~167-190k/s, 1MiB ~3.9-4.5GB/s, RTT p50 ~0.2ms,
-# each with real margin; a healthy tree on a slow CI CPU still passes. The
-# pre-#307 tree measured ~600/s churn, ~43ms RTT p50, so these backstops
-# would fail it on any hardware.
+# Backstops are calibrated so a healthy tree passes on the noisiest shared
+# CI runner we have seen, with real margin for run-to-run variance:
+#   local Ryzen 5600X (12-core): churn ~1650/s, keep-alive ~151-190k/s,
+#     1MiB ~4.1GB/s (https) / ~12-14GB/s (http), RTT p50 ~0.09ms.
+#   shared EPYC 9V45 CI runner (run 37201724744): churn 2013/s https /
+#     15793/s http, keep-alive 135570/s https / 206650/s http,
+#     1MiB 4.03GB/s https / 7.8GB/s http.
+# The pre-#307 tree measured ~600/s churn, ~43ms RTT p50, so these
+# backstops still fail it on any hardware. The same-CPU relative check
+# (runner_baseline.py convention) is what catches smaller regressions once
+# enough history accumulates for a runner CPU.
 GATES = [
     ("tls_rtt_p50_ms", "max", 5.0, 2.0),
-    ("https_churn_rps", "min", 1200.0, 1.25),
-    ("https_keepalive_rps", "min", 130000.0, 1.25),
-    ("https_big_gbps", "min", 3.0, 1.30),
+    ("https_churn_rps", "min", 1000.0, 1.25),
+    ("https_keepalive_rps", "min", 110000.0, 1.25),
+    ("https_big_gbps", "min", 2.5, 1.30),
     # Plaintext controls: collateral damage to the plain path fails the gate.
-    ("http_churn_rps", "min", 8000.0, 1.25),
-    ("http_keepalive_rps", "min", 180000.0, 1.25),
-    ("http_big_gbps", "min", 8.0, 1.30),
+    ("http_churn_rps", "min", 6000.0, 1.25),
+    ("http_keepalive_rps", "min", 150000.0, 1.25),
+    ("http_big_gbps", "min", 5.5, 1.30),
 ]
 
 
