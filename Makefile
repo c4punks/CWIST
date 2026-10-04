@@ -101,6 +101,10 @@ LSQUIC_DIR = lib/lsquic
 LSQUIC_BUILD_DIR = $(LSQUIC_DIR)/build
 LSQUIC_LIB = $(LSQUIC_BUILD_DIR)/src/liblsquic/liblsquic.a
 
+USRSCTP_DIR = lib/usrsctp
+USRSCTP_BUILD_DIR = $(USRSCTP_DIR)/build
+USRSCTP_LIB = $(USRSCTP_BUILD_DIR)/usrsctplib/libusrsctp.a
+
 CURL_LIBS := $(shell pkg-config --libs libcurl 2>/dev/null)
 NGHTTP2_LIBS := $(shell pkg-config --libs libnghttp2 2>/dev/null)
 BROTLI_LIBS := $(shell pkg-config --libs libbrotlienc libbrotlicommon libbrotlidec 2>/dev/null)
@@ -129,6 +133,15 @@ SQLITE_VER = 3530400
 SQLITE_ZIP = sqlite-amalgamation-$(SQLITE_VER).zip
 SQLITE_URL = https://www.sqlite.org/$(SQLITE_YEAR)/$(SQLITE_ZIP)
 SQLITE_DIR = lib/sqlite3
+
+# WebRTC DataChannel (src/net/webrtc/). DataChannel-only: SDP offer/answer,
+# ICE-lite, DTLS via the vendored BoringSSL, and SCTP DataChannels (RFC 8831)
+# through the lib/usrsctp submodule running in AF_CONN raw mode tunneled over
+# DTLS. Set CWIST_WEBRTC=0 to leave it out.
+CWIST_WEBRTC ?= 1
+ifeq ($(CWIST_WEBRTC),1)
+    CFLAGS += -DCWIST_WEBRTC -I$(USRSCTP_DIR)/usrsctplib
+endif
 
 # Detect OS
 IO_SRC = src/sys/io/io_select.c # Default fallback
@@ -675,6 +688,16 @@ EXTERNAL_LIBS = $(URIPARSER_LIB) \
                 $(BORINGSSL_SSL_LIB) \
                 $(BORINGSSL_CRYPTO_LIB)
 
+ifeq ($(CWIST_WEBRTC),1)
+    SRCS += src/net/webrtc/webrtc.c \
+            src/net/webrtc/ice.c \
+            src/net/webrtc/sdp.c \
+            src/net/webrtc/dtls.c \
+            src/net/webrtc/sctp.c
+    EXTERNAL_LIBS += $(USRSCTP_LIB)
+    LIBS += $(USRSCTP_LIB)
+endif
+
 # --- Build Targets ---
 
 all: $(LIBTTAK_LIB) $(CJSON_LIB) $(URIPARSER_LIB) $(SQLITE_DIR)/sqlite3.c $(LSQUIC_LIB) $(LIB_NAME)
@@ -691,6 +714,34 @@ $(SQLITE_DIR)/sqlite3.c:
 
 # Ensure lsquic submodule is checked out before compiling objects that need its headers
 $(OBJS): | lib/lsquic/include/lsquic.h
+
+ifeq ($(CWIST_WEBRTC),1)
+$(OBJS): | $(USRSCTP_DIR)/usrsctplib/usrsctp.h
+
+$(USRSCTP_DIR)/usrsctplib/usrsctp.h:
+	@if [ ! -f "$@" ]; then \
+		echo "Initializing usrsctp submodule..."; \
+		git submodule update --init --recursive $(USRSCTP_DIR); \
+	fi
+
+USRSCTP_REV := $(if $(wildcard $(USRSCTP_DIR)/.git),$(shell git -C $(USRSCTP_DIR) rev-parse HEAD 2>/dev/null))
+USRSCTP_STAMP = $(USRSCTP_BUILD_DIR)/.usrsctp_built_$(or $(USRSCTP_REV),unversioned)
+
+$(USRSCTP_LIB): $(USRSCTP_STAMP)
+
+$(USRSCTP_STAMP):
+	@echo "Building usrsctp..."
+	@mkdir -p $(USRSCTP_BUILD_DIR)
+	cmake -S $(USRSCTP_DIR) -B $(USRSCTP_BUILD_DIR) \
+		-DCMAKE_C_COMPILER=$(CC) \
+		-DCMAKE_BUILD_TYPE=Release \
+		-DBUILD_SHARED_LIBS=OFF \
+		-Dsctp_build_programs=OFF \
+		-Dsctp_build_fuzzer=OFF
+	cmake --build $(USRSCTP_BUILD_DIR) --target usrsctp
+	@rm -f $(USRSCTP_BUILD_DIR)/.usrsctp_built_*
+	@touch $@
+endif
 
 lib/lsquic/include/lsquic.h:
 	@if [ ! -f "$@" ]; then \
@@ -894,6 +945,12 @@ fuzz_seq: $(LIBTTAK_LIB) $(CJSON_LIB) tests/fuzz_seq.c src/core/seq/seq.c src/co
 bench_security_pool: $(LIB_NAME) tests/bench_security_pool.c
 	$(CC) $(CFLAGS) -o bench_security_pool tests/bench_security_pool.c $(LIB_NAME) $(LIBS)
 	./bench_security_pool
+
+# WebRTC DataChannel end-to-end: ICE + DTLS + SCTP over UDP loopback with an
+# in-process peer (client role) built on the same stack.
+ifeq ($(CWIST_WEBRTC),1)
+TEST_TARGETS += test_webrtc
+endif
 
 test: $(TEST_TARGETS)
 
@@ -1426,6 +1483,14 @@ test_cookie: $(LIB_NAME) tests/test_cookie.c
 test_multipart: $(LIB_NAME) tests/test_multipart.c
 	$(CC) $(CFLAGS) -o test_multipart tests/test_multipart.c $(LIB_NAME) $(LIBS)
 	./test_multipart
+
+ifeq ($(CWIST_WEBRTC),1)
+test_webrtc: $(LIB_NAME) $(USRSCTP_LIB) tests/test_webrtc.c
+	$(CC) $(CFLAGS) -o test_webrtc tests/test_webrtc.c $(LIB_NAME) $(LIBS)
+	./test_webrtc
+
+.PHONY: test_webrtc
+endif
 
 test_waf: $(LIB_NAME) tests/test_waf.c
 	$(CC) $(CFLAGS) -o test_waf tests/test_waf.c $(LIB_NAME) $(LIBS)
