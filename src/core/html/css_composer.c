@@ -531,9 +531,10 @@ static bool css_starts_url(const char *p) {
  * @param css CSS source text; must not be NULL.
  * @return Newly created sstring with the minified CSS, or NULL on invalid
  *         input or allocation failure. Caller owns the returned string.
- * @details Preserves /*!...*!/ comments verbatim, quoted strings, escapes, and
- *          unquoted url() arguments. Whitespace around structural characters
- *          and comments is dropped unless removing it would glue two tokens.
+ * @details Preserves license comments (those opening with a '!'), quoted
+ *          strings, escapes, and unquoted url() arguments verbatim.
+ *          Whitespace around structural characters and comments is dropped
+ *          unless removing it would glue two tokens.
  */
 cwist_sstring *cwist_css_minify(const char *css) {
     if (!css) return NULL;
