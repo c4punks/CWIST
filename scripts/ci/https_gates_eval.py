@@ -7,8 +7,24 @@ that CPU. Absolute numbers move a lot between CI CPUs, so the backstops are
 wide; the same-CPU check is what catches real regressions early.
 
 Throughput metrics are "min" gates (fail when below backstop / median
-divided by the allowance); the RTT metric is a "max" gate. The https/http
-keep-alive ratio is recorded as a diagnostic signal, not gated.
+divided by the allowance); the RTT metric is a "max" gate.
+
+The absolute throughput numbers swing ~1.8x between the CPUs GitHub hands
+out, so their backstops only catch breakage that is wrong on any hardware.
+The TLS-specific gates are the https/http *ratios*: both sides are measured
+on the same machine in the same run, so the hardware cancels out. Recorded
+healthy range (7 CI runs on EPYC 7763 / 9V74 / 9V45, plus Ryzen 5600X):
+
+    ratio              healthy        backstop   pre-#307 tree (Ryzen)
+    churn_ratio        0.111-0.127    0.08       0.052
+    keepalive_ratio    0.552-0.656    0.45       0.705 (unaffected)
+    big_ratio          0.337-0.519    0.25       0.300 (unaffected)
+
+Regression check, Ryzen 5600X, with #307's TCP_QUICKACK re-arm disabled:
+tls_rtt_p50_ms 0.083 -> 43.0 and churn_ratio 0.118 -> 0.052, so both the
+RTT gate and the churn-ratio gate fail it; https_churn_rps (677/s) also
+falls under its backstop, but that one alone would not catch it on a fast
+CPU. test_https_gates_eval.py replays both rows.
 
 Usage:
     https_gates_eval.py RESULT.json [HISTORY.json]   # evaluate, exit 1 on fail
@@ -24,30 +40,54 @@ from runner_baseline import runner_key, same_runner_values
 HISTORY = Path(__file__).resolve().parent.parent.parent / "benchmarks" / "https_gates.json"
 
 # (metric, direction, absolute backstop, same-CPU allowance)
-# Backstops are calibrated so a healthy tree passes on the noisiest shared
-# CI runner we have seen, with real margin for run-to-run variance:
-#   local Ryzen 5600X (12-core): churn ~1650/s, keep-alive ~151-190k/s,
-#     1MiB ~4.1GB/s (https) / ~12-14GB/s (http), RTT p50 ~0.09ms.
-#   shared EPYC 9V45 CI runner (run 37201724744): churn 2013/s https /
-#     15793/s http, keep-alive 135570/s https / 206650/s http,
-#     1MiB 4.03GB/s https / 7.8GB/s http.
-# The pre-#307 tree measured ~600/s churn, ~43ms RTT p50, so these
-# backstops still fail it on any hardware. The same-CPU relative check
-# (runner_baseline.py convention) is what catches smaller regressions once
-# enough history accumulates for a runner CPU.
+#
+# Absolute backstops sit at ~60% of the slowest healthy runner seen (EPYC
+# 7763: churn 1155/9459/s, keep-alive 75k/126k/s, 1MiB 1.9/5.0 GB/s
+# https/http). The first calibration took them from a Ryzen and an EPYC 9V45
+# run, and every run on the 7763 then failed keep-alive and 1MiB on healthy
+# code (runs 37204551332, 37293341381), which also meant the history below
+# never received a row and the same-CPU check never switched on.
+#
+# Same-CPU allowances: the four EPYC 7763 runs spread 4-7% on throughput
+# and under 3% on the ratios.
 GATES = [
     ("tls_rtt_p50_ms", "max", 5.0, 2.0),
-    ("https_churn_rps", "min", 1000.0, 1.25),
-    ("https_keepalive_rps", "min", 110000.0, 1.25),
-    ("https_big_gbps", "min", 2.5, 1.30),
-    # Plaintext controls: collateral damage to the plain path fails the gate.
-    ("http_churn_rps", "min", 6000.0, 1.25),
-    ("http_keepalive_rps", "min", 150000.0, 1.25),
-    ("http_big_gbps", "min", 5.5, 1.30),
+    # TLS-path gates, hardware-normalised (see module docstring).
+    ("https_churn_ratio", "min", 0.08, 1.20),
+    ("https_keepalive_ratio", "min", 0.45, 1.20),
+    ("https_big_ratio", "min", 0.25, 1.20),
+    # Absolute throughput: catastrophic-only backstops.
+    ("https_churn_rps", "min", 700.0, 1.25),
+    ("https_keepalive_rps", "min", 45000.0, 1.25),
+    ("https_big_gbps", "min", 1.2, 1.30),
+    # Plaintext controls: collateral damage to the plain path.
+    ("http_churn_rps", "min", 5500.0, 1.25),
+    ("http_keepalive_rps", "min", 75000.0, 1.25),
+    ("http_big_gbps", "min", 3.0, 1.30),
+]
+
+# Ratios derived from each row: (name, numerator, denominator).
+RATIOS = [
+    ("https_churn_ratio", "https_churn_rps", "http_churn_rps"),
+    ("https_keepalive_ratio", "https_keepalive_rps", "http_keepalive_rps"),
+    ("https_big_ratio", "https_big_gbps", "http_big_gbps"),
 ]
 
 
+def with_ratios(row):
+    """Copy of `row` with the https/http ratios filled in from its raw
+    numbers (older history rows only carry some of them)."""
+    out = dict(row)
+    for name, num, den in RATIOS:
+        a, b = out.get(num), out.get(den)
+        if isinstance(a, (int, float)) and isinstance(b, (int, float)) and b > 0:
+            out[name] = round(a / b, 3)
+    return out
+
+
 def evaluate(history, row):
+    row = with_ratios(row)
+    history = [with_ratios(r) for r in history]
     failures = []
     details = []
     for metric, direction, backstop, allowance in GATES:
@@ -63,7 +103,7 @@ def evaluate(history, row):
                 continue
         else:
             if value < backstop:
-                failures.append(f"{metric}: {value:.1f} under the {backstop} "
+                failures.append(f"{metric}: {value:.3f} under the {backstop} "
                                 f"absolute backstop")
                 continue
 
@@ -89,17 +129,11 @@ def evaluate(history, row):
         else:
             limit = base / allowance
             if value < limit:
-                failures.append(f"{metric}: {value:.1f} on {key} under {limit:.1f} "
-                                f"(median {base:.1f} of {len(past)} earlier "
+                failures.append(f"{metric}: {value:.3f} on {key} under {limit:.3f} "
+                                f"(median {base:.3f} of {len(past)} earlier "
                                 f"runs / {allowance})")
                 continue
         details.append(f"{metric}: {value:.3f} on {key}, within same-CPU gate")
-
-    ratio = row.get("https_keepalive_ratio")
-    if isinstance(ratio, (int, float)):
-        details.append(f"https_keepalive_ratio: {ratio:.3f} (signal only, "
-                       f"~0.65 expected; large drops hint at TLS-path damage "
-                       f"even when both absolute gates pass)")
     return failures, details
 
 
@@ -120,7 +154,7 @@ def main():
     if update:
         history = [r for r in history
                    if r.get("timestamp") != row.get("timestamp")]
-        history.append(row)
+        history.append(with_ratios(row))
         history_path.write_text(json.dumps(history[-100:], indent=2) + "\n")
         print(f"updated {history_path} ({len(history)} rows)")
 
