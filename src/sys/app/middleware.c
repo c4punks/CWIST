@@ -81,6 +81,13 @@ cwist_middleware_func cwist_mw_request_id(const char *header_name) {
 
 static pthread_mutex_t log_mutex = PTHREAD_MUTEX_INITIALIZER;
 
+/**
+ * @brief Format a timestamp in Common Log Format: dd/Mon/yyyy:HH:MM:SS +zzzz
+ *        in local time.
+ * @param buf Output buffer.
+ * @param len Size of @p buf in bytes.
+ * @param tv Timestamp to format.
+ */
 static void format_clf_time(char *buf, size_t len, const struct timeval *tv) {
     struct tm tm;
     localtime_r(&tv->tv_sec, &tm);
@@ -91,6 +98,13 @@ static void format_clf_time(char *buf, size_t len, const struct timeval *tv) {
     snprintf(buf + pos, len - pos, " %s", tzbuf);
 }
 
+/**
+ * @brief Format a timestamp in UTC ISO 8601 with millisecond precision:
+ *        yyyy-MM-ddTHH:MM:SS.mmmZ.
+ * @param buf Output buffer.
+ * @param len Size of @p buf in bytes.
+ * @param tv Timestamp to format.
+ */
 static void format_iso8601_time(char *buf, size_t len, const struct timeval *tv) {
     struct tm tm;
     gmtime_r(&tv->tv_sec, &tm);
@@ -99,16 +113,34 @@ static void format_iso8601_time(char *buf, size_t len, const struct timeval *tv)
     snprintf(buf + pos, len - pos, ".%03ldZ", tv->tv_usec / 1000);
 }
 
-/* After next() a deferred response belongs to its cwist_async completion,
+/**
+ * @brief Resolve the request ID to log, preferring the response headers.
+ *
+ * After next() a deferred response belongs to its cwist_async completion,
  * which may be writing it on another thread right now (cwist_async_respond(),
  * the timeout job). The access logs then do not read it: status and size are
- * logged as unknown (@p unknown) and the request id comes from the request,
- * where cwist_mw_request_id() also puts it. */
+ * logged as unknown and the request id comes from the request,
+ * where cwist_mw_request_id() also puts it.
+ *
+ * @param req Incoming HTTP request.
+ * @param res Outgoing HTTP response.
+ * @return Header value of X-Request-Id, or NULL if absent.
+ */
 static const char *access_log_request_id(cwist_http_request *req, cwist_http_response *res) {
     cwist_http_header_node *headers = res->deferred ? req->headers : res->headers;
     return cwist_http_header_get(headers, "X-Request-Id");
 }
 
+/**
+ * @brief Render response status code and body size as strings for access logs.
+ * @param res Outgoing HTTP response.
+ * @param unknown Placeholder written to both outputs when @p res is deferred
+ *        and its status/size cannot be read safely.
+ * @param status Output buffer for the status code.
+ * @param status_len Size of @p status in bytes.
+ * @param bytes Output buffer for the response body size.
+ * @param bytes_len Size of @p bytes in bytes.
+ */
 static void access_log_status_bytes(const cwist_http_response *res, const char *unknown,
                                     char *status, size_t status_len, char *bytes,
                                     size_t bytes_len) {
@@ -121,6 +153,13 @@ static void access_log_status_bytes(const cwist_http_response *res, const char *
     snprintf(bytes, bytes_len, "%zu", res->body ? res->body->size : (size_t)0);
 }
 
+/**
+ * @brief Common Log Format access-log middleware; prints one line per request
+ *        to stdout after the handler completes.
+ * @param req Incoming HTTP request.
+ * @param res Outgoing HTTP response.
+ * @param next Next middleware or final handler in the chain.
+ */
 static void cwist_mw_access_log_common_handler(cwist_http_request *req, cwist_http_response *res,
                                                cwist_handler_func next) {
     struct timeval start, end;
@@ -147,6 +186,13 @@ static void cwist_mw_access_log_common_handler(cwist_http_request *req, cwist_ht
     if (ip) cwist_sstring_destroy(ip);
 }
 
+/**
+ * @brief Combined Log Format access-log middleware; like the common format but
+ *        also logs Referer and User-Agent, one line per request to stdout.
+ * @param req Incoming HTTP request.
+ * @param res Outgoing HTTP response.
+ * @param next Next middleware or final handler in the chain.
+ */
 static void cwist_mw_access_log_combined_handler(cwist_http_request *req, cwist_http_response *res,
                                                  cwist_handler_func next) {
     struct timeval start, end;
@@ -176,6 +222,13 @@ static void cwist_mw_access_log_combined_handler(cwist_http_request *req, cwist_
     if (ip) cwist_sstring_destroy(ip);
 }
 
+/**
+ * @brief JSON access-log middleware; prints one JSON object per request to
+ *        stdout, including status, duration, and request/response byte counts.
+ * @param req Incoming HTTP request.
+ * @param res Outgoing HTTP response.
+ * @param next Next middleware or final handler in the chain.
+ */
 static void cwist_mw_access_log_json_handler(cwist_http_request *req, cwist_http_response *res,
                                              cwist_handler_func next) {
     struct timeval start, end;
@@ -267,9 +320,19 @@ static ip_bucket_t ip_buckets[MAX_IP_BUCKETS];
 static int ip_bucket_count = 0;
 static pthread_mutex_t rate_mutex = PTHREAD_MUTEX_INITIALIZER;
 
-/* The rate is passed in, not through req->private_data: inside the app's
+/**
+ * @brief Per-IP token-bucket rate-limit handler; rejects with 429 when the
+ *        client exceeds the allowed requests per minute.
+ *
+ * The rate is passed in, not through req->private_data: inside the app's
  * middleware chain that field holds the chain's own state, which next()
- * reads. */
+ * reads.
+ *
+ * @param req Incoming HTTP request.
+ * @param res Outgoing HTTP response.
+ * @param next Next middleware or final handler in the chain.
+ * @param rpm Allowed requests per minute (token bucket refill rate).
+ */
 static void cwist_mw_rate_limit_ip_handler(cwist_http_request *req, cwist_http_response *res,
                                            cwist_handler_func next, int rpm) {
     if (rpm <= 0) rpm = 60;
@@ -353,9 +416,7 @@ static cwist_middleware_func s_rate_wrappers[CWIST_RATE_LIMIT_MAX_CFGS] = {
 };
 
 /**
- * @brief Return the built-in per-IP rate-limiter middleware.
- * @param requests_per_minute Allowed requests per minute (token bucket rate).
- * @return Middleware function pointer for per-IP rate limiting.
+ * @brief Reset all per-IP rate-limiter buckets, clearing tracked clients.
  */
 void cwist_mw_rate_limit_reset(void) {
     pthread_mutex_lock(&rate_mutex);
@@ -363,6 +424,17 @@ void cwist_mw_rate_limit_reset(void) {
     pthread_mutex_unlock(&rate_mutex);
 }
 
+/**
+ * @brief Return the built-in per-IP rate-limiter middleware.
+ *
+ * Reuses an existing wrapper when the same rate was already registered.  If
+ * all CWIST_RATE_LIMIT_MAX_CFGS config slots are taken, logs a warning and
+ * falls back to the first registered wrapper.
+ *
+ * @param requests_per_minute Allowed requests per minute (token bucket rate);
+ *        values <= 0 fall back to 60.
+ * @return Middleware function pointer for per-IP rate limiting.
+ */
 cwist_middleware_func cwist_mw_rate_limit_ip(int requests_per_minute) {
     if (requests_per_minute <= 0) requests_per_minute = 60;
 

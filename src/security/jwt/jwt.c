@@ -53,9 +53,14 @@ static void b64url_encode(const unsigned char *src, size_t src_len, char *dst) {
 }
 
 /**
- * Decode a Base64URL string.
- * Returns heap-allocated buffer and sets *out_len, or NULL on error.
- * Caller must free with cwist_free().
+ * @brief Decode a Base64URL string.
+ * @param src Base64URL input; either standard or URL-safe alphabet, with optional '=' padding.
+ * @param src_len Length of @p src in bytes.
+ * @param out_len Set to the number of decoded bytes on success.
+ * @return Heap-allocated decoded buffer, or NULL on invalid input or allocation failure.
+ * @retval NULL Invalid input or allocation failure.
+ *
+ * Ownership of a non-NULL return passes to the caller; free with cwist_free().
  */
 static unsigned char *b64url_decode(const char *src, size_t src_len, size_t *out_len) {
     /* Accept either standard or url-safe alphabet; strip '=' padding. */
@@ -413,6 +418,17 @@ void cwist_jwt_claims_destroy(cwist_jwt_claims *claims) {
  * Sequenced JWT transport helpers
  * -------------------------------------------------------------------------- */
 
+/**
+ * @brief Split a JWT token into sequenced transport chunks.
+ * @param token Null-terminated JWT string to split.
+ * @param chunk_payload_size Maximum payload bytes per chunk; must be non-zero.
+ * @param out_count Set to the number of chunks produced.
+ * @return Heap-allocated array of @p out_count chunks, or NULL on invalid input,
+ *         split failure, or allocation failure.
+ *
+ * Each chunk's @c data buffer is owned by the caller and must be released with
+ * cwist_jwt_chunks_free().
+ */
 cwist_jwt_chunk_t *cwist_jwt_split_chunks(const char *token, uint16_t chunk_payload_size,
                                           size_t *out_count) {
     if (!token || chunk_payload_size == 0 || !out_count) return NULL;
@@ -445,12 +461,26 @@ cwist_jwt_chunk_t *cwist_jwt_split_chunks(const char *token, uint16_t chunk_payl
     return chunks;
 }
 
+/**
+ * @brief Free a chunk array produced by cwist_jwt_split_chunks() or cwist_jwt_sign_chunks().
+ * @param chunks Chunk array to free; NULL is accepted as a no-op.
+ * @param count Number of entries in @p chunks.
+ */
 void cwist_jwt_chunks_free(cwist_jwt_chunk_t *chunks, size_t count) {
     if (!chunks) return;
     for (size_t i = 0; i < count; i++) cwist_free(chunks[i].data);
     cwist_free(chunks);
 }
 
+/**
+ * @brief Reassemble a JWT token from sequenced transport chunks.
+ * @param chunks Array of sequenced chunks, in any order accepted by the assembler.
+ * @param count Number of entries in @p chunks.
+ * @return Heap-allocated null-terminated JWT string, or NULL when the chunk set is
+ *         invalid/incomplete or assembly/allocation fails.
+ *
+ * The caller owns the returned string and must free it with cwist_free().
+ */
 char *cwist_jwt_join_chunks(const cwist_jwt_chunk_t *chunks, size_t count) {
     if (!chunks || count == 0) return NULL;
 
@@ -485,6 +515,17 @@ char *cwist_jwt_join_chunks(const cwist_jwt_chunk_t *chunks, size_t count) {
     return token;
 }
 
+/**
+ * @brief Sign a payload as an HS256 JWT and split it into sequenced transport chunks.
+ * @param payload_json Raw payload JSON string to sign.
+ * @param secret Shared HS256 signing secret.
+ * @param exp_seconds Lifetime in seconds to add when the payload lacks exp/iat.
+ * @param chunk_payload_size Maximum payload bytes per chunk; must be non-zero.
+ * @param out_count Set to the number of chunks produced.
+ * @return Heap-allocated chunk array, or NULL when signing or chunking fails.
+ *
+ * Free the result with cwist_jwt_chunks_free().
+ */
 cwist_jwt_chunk_t *cwist_jwt_sign_chunks(const char *payload_json, const char *secret,
                                          long exp_seconds, uint16_t chunk_payload_size,
                                          size_t *out_count) {
@@ -499,6 +540,16 @@ cwist_jwt_chunk_t *cwist_jwt_sign_chunks(const char *payload_json, const char *s
     return chunks;
 }
 
+/**
+ * @brief Reassemble sequenced chunks into a token, verify it, and return its claims.
+ * @param chunks Array of sequenced chunks carrying the JWT token.
+ * @param count Number of entries in @p chunks.
+ * @param secret Shared HS256 signing secret.
+ * @return Heap-allocated verified claims object, or NULL when assembly, parsing,
+ *         signature verification, or claim validation fails.
+ *
+ * The caller owns the result and must release it with cwist_jwt_claims_destroy().
+ */
 cwist_jwt_claims *cwist_jwt_verify_chunks(const cwist_jwt_chunk_t *chunks, size_t count,
                                           const char *secret) {
     if (!chunks || count == 0 || !secret) return NULL;

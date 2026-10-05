@@ -79,6 +79,11 @@
 static pthread_mutex_t g_h3_global_mtx = PTHREAD_MUTEX_INITIALIZER;
 static int g_h3_global_ref = 0;
 
+/**
+ * @brief Take a process-wide reference on the lsquic global state.
+ * Initializes lsquic on the first reference; later calls only bump the
+ * reference count.  Thread-safe via @ref g_h3_global_mtx.
+ */
 static void h3_global_init(void) {
     pthread_mutex_lock(&g_h3_global_mtx);
     if (g_h3_global_ref == 0) {
@@ -88,6 +93,11 @@ static void h3_global_init(void) {
     pthread_mutex_unlock(&g_h3_global_mtx);
 }
 
+/**
+ * @brief Release a reference taken by h3_global_init().
+ * Runs lsquic_global_cleanup() when the last reference is dropped.
+ * Thread-safe; safe to call with no matching init (no-op).
+ */
 static void h3_global_cleanup(void) {
     pthread_mutex_lock(&g_h3_global_mtx);
     if (g_h3_global_ref > 0) {
@@ -168,6 +178,12 @@ typedef struct h3_conn_ctx {
 
 /* Every lsquic_conn_get_ctx(conn) callsite below reads this wrapper's
  * ->h3_ctx instead of casting the raw ctx pointer directly. */
+/**
+ * @brief Extract the shared server context from a connection's context wrapper.
+ * @param conn Connection whose ctx was set up as h3_conn_ctx_t, or NULL.
+ * @return The shared cwist_http3_context*, or NULL if @p conn or its ctx is
+ *         NULL.  Not owned by the caller.
+ */
 static inline cwist_http3_context *h3_shared_ctx(lsquic_conn_t *conn) {
     h3_conn_ctx_t *cc = conn ? (h3_conn_ctx_t *)lsquic_conn_get_ctx(conn) : NULL;
     return cc ? cc->h3_ctx : NULL;
@@ -194,6 +210,12 @@ typedef struct cwist_wt_handle {
 #define CWIST_WT_HANDLE_MAGIC UINT64_C(0x4357495354575431)
 #define CWIST_WT_HANDLE_VERSION 1
 
+/**
+ * @brief Allocate a new typed WebTransport handle wrapping @p ptr.
+ * @param kind Handle kind tag (session or stream).
+ * @param ptr Underlying lsquic object to wrap; must not be NULL.
+ * @return The new handle, or NULL if @p ptr is NULL or allocation fails.
+ */
 static cwist_wt_handle_t *cwist_wt_handle_new(cwist_wt_handle_kind_t kind, void *ptr) {
     if (!ptr) return NULL;
     cwist_wt_handle_t *handle = calloc(1, sizeof(*handle));
@@ -205,6 +227,12 @@ static cwist_wt_handle_t *cwist_wt_handle_new(cwist_wt_handle_kind_t kind, void 
     return handle;
 }
 
+/**
+ * @brief Free a handle and, recursively, all of its child handles.
+ * Detaches the handle from its parent's child list first.  Safe to call
+ * with NULL.
+ * @param Handle to free; ownership is consumed.
+ */
 static void cwist_wt_handle_free(cwist_wt_handle_t *handle) {
     if (!handle) return;
     while (handle->first_child) {
@@ -235,6 +263,10 @@ static void cwist_wt_handle_free(cwist_wt_handle_t *handle) {
     free(handle);
 }
 
+/**
+ * @brief Link @p child into @p parent's child list.
+ * The child is inserted at the head of the list.  No-op if either is NULL.
+ */
 static void cwist_wt_handle_attach(cwist_wt_handle_t *parent, cwist_wt_handle_t *child) {
     if (!parent || !child) return;
     child->parent = parent;
@@ -242,6 +274,13 @@ static void cwist_wt_handle_attach(cwist_wt_handle_t *parent, cwist_wt_handle_t 
     parent->first_child = child;
 }
 
+/**
+ * @brief Validate an opaque pointer and cast it to a typed handle.
+ * Checks the magic, version, kind tag, and wrapped pointer.
+ * @param handle Opaque pointer supplied by the application.
+ * @param kind Expected handle kind.
+ * @return The typed handle, or NULL if any validation check fails.
+ */
 static cwist_wt_handle_t *cwist_wt_handle_cast(void *handle, cwist_wt_handle_kind_t kind) {
     cwist_wt_handle_t *h = (cwist_wt_handle_t *)handle;
     if (!h || h->magic != CWIST_WT_HANDLE_MAGIC || h->version != CWIST_WT_HANDLE_VERSION ||
@@ -251,11 +290,21 @@ static cwist_wt_handle_t *cwist_wt_handle_cast(void *handle, cwist_wt_handle_kin
     return h;
 }
 
+/**
+ * @brief Resolve an opaque handle to its underlying lsquic stream.
+ * @return The wrapped lsquic_stream_t*, or NULL if @p handle is not a valid
+ *         stream-kind handle.  Not owned by the caller.
+ */
 static lsquic_stream_t *cwist_wt_handle_stream(void *handle) {
     cwist_wt_handle_t *h = cwist_wt_handle_cast(handle, CWIST_WT_HANDLE_STREAM);
     return h ? (lsquic_stream_t *)h->ptr : NULL;
 }
 
+/**
+ * @brief Resolve an opaque handle to its underlying WebTransport session.
+ * @return The wrapped lsquic_wt_session_t*, or NULL if @p handle is not a
+ *         valid session-kind handle.  Not owned by the caller.
+ */
 static lsquic_wt_session_t *cwist_wt_handle_session(void *handle) {
     cwist_wt_handle_t *h = cwist_wt_handle_cast(handle, CWIST_WT_HANDLE_SESSION);
     return h ? (lsquic_wt_session_t *)h->ptr : NULL;
@@ -286,9 +335,13 @@ typedef struct cwist_h3_hset {
     size_t decode_off;
 } cwist_h3_hset_t;
 
-/* The engine loop is single-threaded and all hsi callbacks fire from it (or
- * from engine destroy after the loop has exited), so the list needs no
- * locking. */
+/**
+ * @brief Push an hset onto its owner's intrusive list of live hsets.
+ *
+ * No-op if @p ctx or @p hset is NULL.  The engine loop is single-threaded
+ * and all hsi callbacks fire from it (or from engine destroy after the loop
+ * has exited), so the list needs no locking.
+ */
 static void cwist_h3_hset_track(cwist_http3_context *ctx, cwist_h3_hset_t *hset) {
     if (!ctx || !hset) return;
     hset->owner = ctx;
@@ -298,6 +351,10 @@ static void cwist_h3_hset_track(cwist_http3_context *ctx, cwist_h3_hset_t *hset)
     ctx->hsets = hset;
 }
 
+/**
+ * @brief Remove an hset from its owner's tracking list.
+ * No-op for NULL or untracked hsets.  Does not free @p hset itself.
+ */
 static void cwist_h3_hset_untrack(cwist_h3_hset_t *hset) {
     if (!hset || !hset->owner) return;
     *hset->prev = hset->next;
@@ -307,10 +364,14 @@ static void cwist_h3_hset_untrack(cwist_h3_hset_t *hset) {
     hset->owner = NULL;
 }
 
-/* lsquic never calls hsi_discard_header_set for streams that are still open
- * when the engine is destroyed; free whatever is still tracked.  Must run
- * after lsquic_engine_destroy() so a discard issued during destroy has
- * already untracked its hset (no double-free). */
+/**
+ * @brief Free all hsets still tracked by @p ctx.
+ *
+ * lsquic never calls hsi_discard_header_set for streams that are still open
+ * when the engine is destroyed, so anything still tracked leaks without
+ * this.  Must run after lsquic_engine_destroy() so a discard issued during
+ * destroy has already untracked its hset (no double-free).
+ */
 static void cwist_h3_hset_sweep(cwist_http3_context *ctx) {
     if (!ctx) return;
     while (ctx->hsets) {
@@ -320,6 +381,13 @@ static void cwist_h3_hset_sweep(cwist_http3_context *ctx) {
     }
 }
 
+/**
+ * @brief hsi_create_header_set callback: allocate a header set for @p stream.
+ * @param hsi_ctx Tracking context (cwist_http3_context); may be NULL.
+ * @param is_push_promise Unused in this implementation.
+ * @return New tracked cwist_h3_hset_t, or NULL on OOM.  Ownership passes to
+ *         lsquic, which releases it via cwist_h3_hsi_discard().
+ */
 static void *cwist_h3_hsi_create(void *hsi_ctx, lsquic_stream_t *stream, int is_push_promise) {
     (void)is_push_promise;
     cwist_h3_hset_t *hset = calloc(1, sizeof(*hset));
@@ -329,14 +397,24 @@ static void *cwist_h3_hsi_create(void *hsi_ctx, lsquic_stream_t *stream, int is_
     return hset;
 }
 
+/**
+ * @brief hsi_prepare_decode callback: reserve decode storage for a header.
+ * @param hset_p Header set.
+ * @param xhdr Previous header when lsquic retries with a larger value
+ *             requirement, NULL for a fresh slot.
+ * @param req_space Required value capacity in bytes.
+ * @return The (possibly resized) header slot, or NULL if the request exceeds
+ *         the slot count, per-string, or decode-buffer limits.
+ *
+ * When @p xhdr is non-NULL the previously decoded name must be preserved:
+ * only the value capacity is grown.  Reinitializing the slot here loses
+ * :path/Cookie.
+ */
 static struct lsxpack_header *cwist_h3_hsi_prepare(void *hset_p, struct lsxpack_header *xhdr,
                                                    size_t req_space) {
     cwist_h3_hset_t *hset = hset_p;
     if (!hset) return NULL;
 
-    /* lsquic calls us again with the same header when its initial output
-     * buffer was too small.  Preserve the decoded name and grow only the
-     * value capacity; reinitializing the slot here loses :path/Cookie. */
     if (xhdr) {
         if (req_space > LSXPACK_MAX_STRLEN || xhdr->name_offset < 0 ||
             (size_t)xhdr->name_offset >= sizeof(hset->decode_buf) ||
@@ -357,6 +435,14 @@ static struct lsxpack_header *cwist_h3_hsi_prepare(void *hset_p, struct lsxpack_
     return &hset->headers[hset->count];
 }
 
+/**
+ * @brief hsi_process_header callback: account for a completed header.
+ * @param hset_p Header set.
+ * @param xhdr Completed header; the QPACK decoder exposes the exact storage
+ *             it used.  NULL marks the end of a header block.
+ * @retval 0 Header accepted and accounted in the decode buffer.
+ * @retval -1 Header would overflow the decode buffer; logged to stderr.
+ */
 static int cwist_h3_hsi_process_header(void *hset_p, struct lsxpack_header *xhdr) {
     cwist_h3_hset_t *hset = hset_p;
     /* A NULL header marks the end of a header block. */
@@ -375,6 +461,10 @@ static int cwist_h3_hsi_process_header(void *hset_p, struct lsxpack_header *xhdr
     return 0;
 }
 
+/**
+ * @brief hsi_discard_header_set callback: untrack and free a header set.
+ * @param hset_p Header set previously returned by cwist_h3_hsi_create().
+ */
 static void cwist_h3_hsi_discard(void *hset_p) {
     cwist_h3_hset_untrack((cwist_h3_hset_t *)hset_p);
     free(hset_p);
@@ -395,6 +485,11 @@ static const struct lsquic_webtransport_if cwist_h3_wt_if;
 /* SSL context callback                                               */
 /* ------------------------------------------------------------------ */
 
+/**
+ * @brief ea_get_ssl_ctx callback: pick the server SSL_CTX for a connection.
+ * @param peer_ctx The cwist_http3_context registered as stream_if ctx.
+ * @return Its SSL_CTX, or NULL if @p peer_ctx is NULL.
+ */
 static SSL_CTX *cwist_h3_get_ssl_ctx(void *peer_ctx, const struct sockaddr *local) {
     (void)local;
     cwist_http3_context *h3_ctx = (cwist_http3_context *)peer_ctx;
@@ -405,6 +500,19 @@ static SSL_CTX *cwist_h3_get_ssl_ctx(void *peer_ctx, const struct sockaddr *loca
 /* Packet-out callback                                                */
 /* ------------------------------------------------------------------ */
 
+/**
+ * @brief Build the ancillary-data block for one outgoing UDP datagram.
+ * @param msg Message header to populate (msg_control/msg_controllen).
+ * @param cbuf Control buffer, zeroed here.
+ * @param cbuf_sz Capacity of @p cbuf.
+ * @param spec lsquic output spec carrying addresses and ECN bits.
+ * @param gso_seg UDP_SEGMENT segment size, or 0 to omit the cmsg (Linux only).
+ *
+ * Adds, as platform support allows: UDP_SEGMENT (Linux GSO), IP_PKTINFO /
+ * IP_SENDSRCADDR / IPV6_PKTINFO with a non-anyhole local source address, and
+ * IP_TOS / IPV6_TCLASS for ECN.  msg_control is reset to NULL when nothing
+ * was queued.
+ */
 static void h3_setup_cmsg(struct msghdr *msg, char *cbuf, size_t cbuf_sz,
                           const struct lsquic_out_spec *spec, uint16_t gso_seg) {
     msg->msg_control = cbuf;
@@ -496,6 +604,13 @@ static void h3_setup_cmsg(struct msghdr *msg, char *cbuf, size_t cbuf_sz,
     }
 }
 
+/**
+ * @brief Send a single lsquic output spec as one non-blocking datagram.
+ * @param udp_fd Non-blocking UDP socket.
+ * @param spec Spec carrying destination, source address, ECN, and iovecs.
+ * @return sendmsg() result: bytes written, or -1 with errno set
+ *         (EAGAIN/EWOULDBLOCK when the socket buffer is full).
+ */
 static int h3_send_one(int udp_fd, const struct lsquic_out_spec *spec) {
     char ctrl[256];
     struct msghdr msg = {0};
@@ -517,12 +632,21 @@ static int h3_send_one(int udp_fd, const struct lsquic_out_spec *spec) {
 #define SOL_UDP 17
 #endif
 
+/**
+ * @brief Total payload length across all iovecs of a spec.
+ */
 static size_t h3_spec_len(const struct lsquic_out_spec *spec) {
     size_t n = 0;
     for (unsigned k = 0; k < spec->iovlen; k++) n += spec->iov[k].iov_len;
     return n;
 }
 
+/**
+ * @brief Whether two output specs share destination and local addresses.
+ *
+ * Used to coalesce equal-size datagrams into one UDP_SEGMENT GSO send;
+ * differing ECN marks also split a run (checked by the caller).
+ */
 static bool h3_same_dest(const struct lsquic_out_spec *a, const struct lsquic_out_spec *b) {
     if (!a->dest_sa || !b->dest_sa) return false;
     if (a->dest_sa->sa_family != b->dest_sa->sa_family) return false;
@@ -561,6 +685,18 @@ static bool h3_same_dest(const struct lsquic_out_spec *a, const struct lsquic_ou
  * 0 means GSO is confirmed working. */
 static int h3_gso_state = -1; /* -1 = unknown, 0 = enabled, 1 = disabled */
 
+/**
+ * @brief Fallback sender used when UDP GSO is disabled: batches specs into
+ *        sendmmsg(2) calls of up to 64 messages.
+ * @param udp_fd Non-blocking UDP socket.
+ * @param specs Output spec array.
+ * @param i Index of the first spec not yet sent.
+ * @param n_specs Total number of specs.
+ * @return Number of specs consumed (>= @p i), or -1 if the very first send
+ *         failed with a hard error.  EAGAIN/EWOULDBLOCK stops the batch
+ *         without being reported as an error; a failed batch start falls
+ *         back to h3_send_one() for that single spec.
+ */
 static int h3_sendmmsg_batch(int udp_fd, const struct lsquic_out_spec *specs, unsigned i,
                              unsigned n_specs) {
     struct mmsghdr msgs[64];
@@ -607,6 +743,21 @@ static int h3_sendmmsg_batch(int udp_fd, const struct lsquic_out_spec *specs, un
 }
 #endif
 
+/**
+ * @brief ea_packets_out callback: emit lsquic's queued UDP packets.
+ * @param ctx Points at the UDP socket fd (int).
+ * @param specs Packets to send.
+ * @param n_specs Number of entries in @p specs.
+ * @return Number of specs consumed, or -1 if none could be sent and the
+ *         first attempt hit a hard error.
+ *
+ * Linux: one-time GSO probe (CWIST_H3_NO_GSO=1 disables); runs of equal-size
+ * datagrams to the same peer are coalesced into a single UDP_SEGMENT
+ * sendmsg, with a permanent fallback to h3_sendmmsg_batch() if the kernel
+ * rejects GSO.  EAGAIN/EWOULDBLOCK and transient ICMP-style errors
+ * (ECONNREFUSED/ENETUNREACH/EHOSTUNREACH/EMSGSIZE) consume the run without
+ * failing the callback.  Non-Linux: plain per-spec sendmsg loop.
+ */
 static int cwist_h3_packets_out(void *ctx, const struct lsquic_out_spec *specs, unsigned n_specs) {
     int udp_fd = *(int *)ctx;
 #if defined(__linux__)
@@ -702,6 +853,13 @@ static int cwist_h3_packets_out(void *ctx, const struct lsquic_out_spec *specs, 
 /* ALPN selection callback (BoringSSL)                                */
 /* ------------------------------------------------------------------ */
 
+/**
+ * @brief ALPN selection callback (BoringSSL): pick "h3" or "h3-29".
+ * @param out/onout Receives a pointer into the client's protocol list.
+ * @retval SSL_TLSEXT_ERR_OK A supported protocol was selected.
+ * @retval SSL_TLSEXT_ERR_NOACK No supported protocol offered; the handshake
+ *         proceeds without ALPN.
+ */
 static int cwist_h3_alpn_select_cb(SSL *ssl, const uint8_t **out, uint8_t *outlen,
                                    const uint8_t *in, unsigned inlen, void *arg) {
     (void)ssl;
@@ -730,11 +888,25 @@ static int cwist_h3_alpn_select_cb(SSL *ssl, const uint8_t **out, uint8_t *outle
 /* Stream callbacks                                                   */
 /* ------------------------------------------------------------------ */
 
+/**
+ * @brief lsquic logger sink: write one log buffer to stderr.
+ * @return Number of bytes written.
+ */
 static int cwist_h3_log_stderr(void *ctx, const char *buf, size_t len) {
     (void)ctx;
     return (int)fwrite(buf, 1, len, stderr);
 }
 
+/**
+ * @brief on_new_conn callback: allocate and install the per-connection ctx.
+ * @param stream_if_ctx The shared cwist_http3_context.
+ * @return New h3_conn_ctx_t (stored on the connection), or NULL on OOM.
+ *
+ * On OOM the connection proceeds with a NULL ctx: every consumer tolerates
+ * that, but the connection gets no request dispatch or datagram support.
+ * The wrapper carries the shared config plus this connection's own
+ * mutex-guarded datagram queue.
+ */
 static lsquic_conn_ctx_t *cwist_h3_on_new_conn(void *stream_if_ctx, lsquic_conn_t *conn) {
     cwist_http3_context *h3_ctx = stream_if_ctx;
     h3_conn_ctx_t *cc = (h3_conn_ctx_t *)calloc(1, sizeof(*cc));
@@ -754,6 +926,14 @@ static lsquic_conn_ctx_t *cwist_h3_on_new_conn(void *stream_if_ctx, lsquic_conn_
     return (lsquic_conn_ctx_t *)cc;
 }
 
+/**
+ * @brief on_conn_closed callback: log the close status and free the
+ *        per-connection ctx, including any queued datagrams.
+ *
+ * Deliberately avoids lsquic_conn_get_info(): it lazily allocates the
+ * bandwidth sampler even while the connection is being destroyed, leaking it
+ * under LSAN.  Stats must be collected while the connection is alive.
+ */
 static void cwist_h3_on_conn_closed(lsquic_conn_t *conn) {
     if (!conn) return;
     char errbuf[256] = {0};
@@ -781,11 +961,15 @@ static void cwist_h3_on_conn_closed(lsquic_conn_t *conn) {
     }
 }
 
-/* lsquic stream_if callback: a CONNECTION_CLOSE frame arrived from the peer.
+/**
+ * @brief on_conncloseframe_received callback: a CONNECTION_CLOSE frame
+ *        arrived from the peer.
+ *
  * Record it on the shared context so post-serve diagnostics can see why the
  * peer went away without scraping the CWIST_H3_DEBUG journal.  Runs on the
  * engine thread; the last_close_* fields are published to readers that call
- * cwist_http3_last_close_error() after the serve loop has stopped. */
+ * cwist_http3_last_close_error() after the serve loop has stopped.
+ */
 static void cwist_h3_on_conncloseframe_received(lsquic_conn_t *conn, int app_error,
                                                 uint64_t error_code, const char *reason,
                                                 int reason_len) {
@@ -804,6 +988,17 @@ static void cwist_h3_on_conncloseframe_received(lsquic_conn_t *conn, int app_err
     h3_ctx->last_close_received = 1;
 }
 
+/**
+ * @brief on_new_stream callback: allocate the per-request stream context.
+ * @return New stream ctx with an empty cwist_http_request ("HTTP/3"), or
+ *         NULL on OOM (the stream then fails to open).
+ *
+ * Server-pushed streams (only possible when push is enabled) are processed
+ * the same way as client-initiated ones.  Per RFC 9218 Section 6 a server
+ * MUST NOT send PRIORITY_UPDATE for a request stream, so the default
+ * scheduling priority is kept and lsquic_stream_set_priority() is never
+ * called here.
+ */
 static lsquic_stream_ctx_t *cwist_h3_on_new_stream(void *stream_if_ctx, lsquic_stream_t *stream) {
     cwist_http3_context *h3_ctx = (cwist_http3_context *)stream_if_ctx;
     h3_stream_ctx_t *st = calloc(1, sizeof(*st));
@@ -838,6 +1033,12 @@ static lsquic_stream_ctx_t *cwist_h3_on_new_stream(void *stream_if_ctx, lsquic_s
     return (lsquic_stream_ctx_t *)st;
 }
 
+/**
+ * @brief Split a :path value into req->path and req->query (parsed map).
+ *
+ * Allocates the query map in @p req 's arena when a query string is present.
+ * No query string: the whole value becomes the path.
+ */
 static void h3_parse_path(cwist_http_request *req, const char *path) {
     const char *q = strchr(path, '?');
     if (q) {
@@ -856,19 +1057,35 @@ static void h3_parse_path(cwist_http_request *req, const char *path) {
     }
 }
 
-/* Lightweight XOR checksum over a byte buffer. */
+/**
+ * @brief Lightweight XOR checksum over a byte buffer.
+ * @return XOR of all bytes (0 for an empty buffer).
+ */
 static uint8_t h3_xor_bytes(const unsigned char *buf, size_t len) {
     uint8_t x = 0;
     for (size_t i = 0; i < len; i++) x ^= buf[i];
     return x;
 }
 
+/**
+ * @brief Whether a byte is a valid RFC 9110 field-name character
+ *        (tchar: alphanumerics and !#$%&'*+-.^_`|~).
+ */
 static int h3_header_name_char_is_valid(unsigned char c) {
     return (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9') || c == '!' ||
            c == '#' || c == '$' || c == '%' || c == '&' || c == '\'' || c == '*' || c == '+' ||
            c == '-' || c == '.' || c == '^' || c == '_' || c == '`' || c == '|' || c == '~';
 }
 
+/**
+ * @brief Normalize a response header name to lowercase HTTP/3 form.
+ * @param name Source name.
+ * @param out Output buffer of at least @p out_len bytes.
+ * @param out_len Capacity of @p out (NUL included).
+ * @retval 0 Name copied to @p out as lowercase NUL-terminated text.
+ * @retval -1 NULL/empty input, insufficient capacity, pseudo-header prefix,
+ *            or a character outside the RFC 9110 field-name grammar.
+ */
 int cwist_http3_normalize_response_header_name(const char *name, char *out, size_t out_len) {
     if (!name || !out || out_len == 0) return -1;
 
@@ -884,6 +1101,13 @@ int cwist_http3_normalize_response_header_name(const char *name, char *out, size
     return 0;
 }
 
+/**
+ * @brief Whether a response header value is safe to put on the wire.
+ * @retval 1 Every byte satisfies the RFC 9113/9114 field-value grammar
+ *           (no CTLs including CR/LF, no DEL).
+ * @retval 0 @p value is NULL or contains a forbidden byte; clients would
+ *           reject the response as malformed.
+ */
 int cwist_http3_response_header_value_is_safe(const char *value) {
     if (!value) return 0;
     for (const unsigned char *p = (const unsigned char *)value; *p; p++) {
@@ -894,6 +1118,15 @@ int cwist_http3_response_header_value_is_safe(const char *value) {
     return 1;
 }
 
+/**
+ * @brief Fold one decoded request header into the cwist_http_request.
+ *
+ * Recognized pseudo-headers update method/path/authority; known regular
+ * headers are stored in the header list; unrecognized pseudo-headers are
+ * silently ignored (RFC 9114); other regular headers pass through.  Also
+ * detects the WebTransport extended-CONNECT signature (:protocol
+ * "webtransport" with method CONNECT).
+ */
 static void h3_apply_header(cwist_http_request *req, const char *name, const char *value) {
     if (strcmp(name, ":method") == 0) {
         req->method = cwist_http_string_to_method(value);
@@ -945,10 +1178,18 @@ static void h3_apply_header(cwist_http_request *req, const char *name, const cha
     }
 }
 
-/* HTTP/3 delivers an ordered QUIC byte stream, but an application-level
- * sequenced body can be split at arbitrary read boundaries.  Buffer just one
- * wire chunk, then hand complete chunks to the common TASFA-style ARQ
- * assembler. */
+/**
+ * @brief Append one wire chunk to the sequenced-body buffer and feed every
+ *        complete TASFA chunk to the ARQ assembler.
+ * @retval 0 Chunk buffered and/or consumed; possibly no complete chunk yet.
+ * @retval -1 Length overflow, assembler-capacity breach, OOM, or a chunk
+ *            that fails to parse/feed; the caller resets the stream.
+ *
+ * HTTP/3 delivers an ordered QUIC byte stream, but an application-level
+ * sequenced body can be split at arbitrary read boundaries.  Only one wire
+ * chunk is buffered at a time; complete chunks are handed to the common
+ * TASFA-style ARQ assembler.
+ */
 static int h3_seq_append_and_feed(h3_stream_ctx_t *st, const unsigned char *data, size_t len) {
     if (len > SIZE_MAX - st->seq_len) return -1;
     size_t need = st->seq_len + len;
@@ -987,10 +1228,13 @@ static int h3_seq_append_and_feed(h3_stream_ctx_t *st, const unsigned char *data
     return 0;
 }
 
-/* Reject a request whose header block violates RFC 9114 Section 4.3.1.
+/**
+ * @brief Reject a request whose header block violates RFC 9114 Section 4.3.1.
+ *
  * lsquic exposes no stream-reset API in this baseline, so enforcement is a
  * 400 response followed by closing both stream directions (mirrors the
- * existing 413 path), and the request is never dispatched to the handler. */
+ * existing 413 path), and the request is never dispatched to the handler.
+ */
 static void h3_reject_malformed_request(lsquic_stream_t *stream, h3_stream_ctx_t *st) {
     st->malformed = 1;
     st->headers_done = 1;
@@ -1010,6 +1254,18 @@ static void h3_reject_malformed_request(lsquic_stream_t *stream, h3_stream_ctx_t
     lsquic_stream_wantwrite(stream, 1);
 }
 
+/**
+ * @brief Decode the request header set and enforce RFC 9114 Section 4.3.1.
+ * @retval true Header block complete and valid; st->req is populated and
+ *         st->headers_done is set.  Also returns true (idempotently) when
+ *         headers were already processed.
+ * @retval false Headers not yet available, or the block is malformed and a
+ *         400 response has been staged (st->malformed).
+ *
+ * Checks pseudo-header ordering/uniqueness, the CONNECT vs extended-CONNECT
+ * completeness rules, mandatory :method/:scheme/:path for normal requests,
+ * and the OPTIONS-only asterisk-form exception for an empty :path.
+ */
 static bool h3_process_stream_headers(lsquic_stream_t *stream, h3_stream_ctx_t *st) {
     if (st->headers_done) return true;
     void *hset = lsquic_stream_get_hset(stream);
@@ -1123,8 +1379,10 @@ static bool h3_process_stream_headers(lsquic_stream_t *stream, h3_stream_ctx_t *
     return true;
 }
 
-/* RFC 9110: methods with the idempotent property are safe to replay, which
- * makes them acceptable for 0-RTT delivery. */
+/**
+ * @brief Whether a method is idempotent (RFC 9110) and thus acceptable for
+ *        0-RTT replay.
+ */
 static bool h3_method_is_idempotent(cwist_http_method_t method) {
     switch (method) {
         case CWIST_HTTP_GET:
@@ -1136,6 +1394,17 @@ static bool h3_method_is_idempotent(cwist_http_method_t method) {
     }
 }
 
+/**
+ * @brief on_read callback: consume the request and dispatch it.
+ *
+ * Bodies are accumulated up to CWIST_HTTP_MAX_BODY_SIZE (413 beyond that);
+ * sequenced bodies go through h3_seq_append_and_feed() and are only
+ * dispatched when the assembler produces a complete payload.  On FIN the
+ * request handler runs (with the 0-RTT replay guard for non-idempotent
+ * methods while the handshake is in progress), then the response is armed
+ * for writing.  Malformed requests get an inline 400 without dispatch.
+ * Fatal read/allocation errors reset the stream.
+ */
 static void cwist_h3_on_read(lsquic_stream_t *stream, lsquic_stream_ctx_t *st_h) {
     h3_stream_ctx_t *st = (h3_stream_ctx_t *)st_h;
     if (!st) return;
@@ -1343,9 +1612,12 @@ static void cwist_h3_on_read(lsquic_stream_t *stream, lsquic_stream_ctx_t *st_h)
     }
 }
 
-/* RFC 9110 Section 8.6: content-length must be a non-empty run of digits.
- * Anything else from a handler (whitespace, junk, negative, empty) is
- * rejected rather than forwarded into the response headers. */
+/**
+ * @brief Whether a content-length value is a non-empty run of digits
+ *        (RFC 9110 Section 8.6).  Anything else from a handler (whitespace,
+ *        junk, negative, empty) is rejected rather than forwarded into the
+ *        response headers.
+ */
 static bool h3_content_length_is_valid(const char *cl) {
     if (!cl || cl[0] < '0' || cl[0] > '9') return false;
     for (const char *p = cl + 1; *p; ++p) {
@@ -1354,12 +1626,28 @@ static bool h3_content_length_is_valid(const char *cl) {
     return true;
 }
 
-/* RFC 9114 Section 4.1.2: 1xx/204/304 responses carry no content, and
- * content-length on them makes the message malformed at connection level. */
+/**
+ * @brief Whether a status code forbids a response body (RFC 9114 Section
+ *        4.1.2: 1xx/204/304); content-length on them would make the message
+ *        malformed at connection level.
+ */
 static bool h3_status_forbids_body(int status_code) {
     return (status_code >= 100 && status_code < 200) || status_code == 204 || status_code == 304;
 }
 
+/**
+ * @brief on_write callback: serialize the response (HEADERS, then body).
+ *
+ * Three write states: 0 builds and sends the HEADERS block (status coercion
+ * to 500 for invalid values, content-length computed from the actual body,
+ * RFC 9114-forbidden connection headers dropped, empty-body responses
+ * finished with an explicit shutdown(1) because the sendmsg eos flag is
+ * ignored for IETF QUIC); 1 streams the body from memory, pointer, or file
+ * (file streaming is chunked a few pread()s per tick so one large response
+ * cannot starve the other connections); 2 is done and re-arms reading.
+ * Unusable body sources (NULL pointer body / bad fd with non-zero length)
+ * reset the stream rather than announce bytes that can never be delivered.
+ */
 static void cwist_h3_on_write(lsquic_stream_t *stream, lsquic_stream_ctx_t *st_h) {
     h3_stream_ctx_t *st = (h3_stream_ctx_t *)st_h;
     if (!st || !st->response_ready) return;
@@ -1709,6 +1997,10 @@ static void cwist_h3_on_write(lsquic_stream_t *stream, lsquic_stream_ctx_t *st_h
     }
 }
 
+/**
+ * @brief on_close callback: destroy the stream ctx and everything it owns
+ *        (request, response, body buffer, sequenced-data assembler).
+ */
 static void cwist_h3_on_close(lsquic_stream_t *stream, lsquic_stream_ctx_t *st_h) {
     h3_stream_ctx_t *st = (h3_stream_ctx_t *)st_h;
     if (st) {
@@ -1722,11 +2014,17 @@ static void cwist_h3_on_close(lsquic_stream_t *stream, lsquic_stream_ctx_t *st_h
     (void)stream;
 }
 
-/* Pulls the oldest queued datagram off this connection's own queue (see
- * h3_conn_ctx_t). Previously this read/freed a single process-wide
- * g_h3_dgram struct with no lock: two connections sending datagrams at
- * the same time could free() the same buffer twice or hand one
- * connection's payload to another. */
+/**
+ * @brief on_dg_write callback: hand the oldest queued datagram to lsquic.
+ * @return Bytes copied into @p buf, or 0 when the connection's queue is
+ *         empty or the connection has no wrapper ctx.
+ *
+ * Pulls from this connection's own mutex-guarded queue (see h3_conn_ctx_t).
+ * Previously this read/freed a single process-wide g_h3_dgram struct with no
+ * lock: two connections sending datagrams at the same time could free() the
+ * same buffer twice or hand one connection's payload to another.  When the
+ * queue drains, want_datagram_write is disarmed so lsquic stops calling back.
+ */
 static ssize_t cwist_h3_on_dg_write(lsquic_conn_t *conn, void *buf, size_t len) {
     h3_conn_ctx_t *cc = (h3_conn_ctx_t *)lsquic_conn_get_ctx(conn);
     if (!cc) return 0;
@@ -1752,6 +2050,10 @@ static ssize_t cwist_h3_on_dg_write(lsquic_conn_t *conn, void *buf, size_t len) 
     return (ssize_t)to_copy;
 }
 
+/**
+ * @brief on_datagram callback: deliver an incoming H3 datagram to the
+ *        application's registered datagram callback, if any.
+ */
 static void cwist_h3_on_datagram(lsquic_conn_t *conn, const void *buf, size_t len) {
     cwist_http3_context *ctx = h3_shared_ctx(conn);
     if (ctx && ctx->datagram_cb) {
@@ -1761,6 +2063,15 @@ static void cwist_h3_on_datagram(lsquic_conn_t *conn, const void *buf, size_t le
 
 #ifdef CWIST_WEBTRANSPORT
 
+/**
+ * @brief wti_on_session_open callback: accept an extended-CONNECT request as
+ *        a WebTransport session.
+ * @return Session ctx (a new session-kind cwist_wt_handle_t), or NULL if the
+ *         stream ctx is unusable or the handle cannot be allocated.
+ *
+ * Invokes the application's wt_handler with the request/response pair so it
+ * can respond and take over the session.
+ */
 static lsquic_wt_session_ctx_t *
 cwist_h3_wt_on_session_open(void *ctx, lsquic_wt_session_t *sess,
                             const struct lsquic_wt_connect_info *info) {
@@ -1779,6 +2090,10 @@ cwist_h3_wt_on_session_open(void *ctx, lsquic_wt_session_t *sess,
     return NULL;
 }
 
+/**
+ * @brief wti_on_session_rejected callback: the peer rejected the session.
+ * Intentionally a no-op; rejection details are not surfaced to the app.
+ */
 static void cwist_h3_wt_on_session_rejected(void *ctx, const struct lsquic_wt_connect_info *info,
                                             unsigned status, const char *reason,
                                             size_t reason_len) {
@@ -1789,10 +2104,15 @@ static void cwist_h3_wt_on_session_rejected(void *ctx, const struct lsquic_wt_co
     (void)reason_len;
 }
 
-/* WebTransport application error codes are 32-bit on the wire. The lsquic
+/**
+ * @brief wti_on_session_close callback: free the session handle (and its
+ *        child handles).
+ *
+ * WebTransport application error codes are 32-bit on the wire. The lsquic
  * WebTransport branch declared these two callbacks with uint64_t when this
  * code was written; the branch head (litespeedtech/lsquic#629) narrows both
- * to uint32_t. */
+ * to uint32_t.
+ */
 static void cwist_h3_wt_on_session_close(lsquic_wt_session_t *sess,
                                          lsquic_wt_session_ctx_t *sess_ctx, uint32_t code,
                                          const char *reason, size_t reason_len) {
@@ -1803,6 +2123,15 @@ static void cwist_h3_wt_on_session_close(lsquic_wt_session_t *sess,
     cwist_wt_handle_free((cwist_wt_handle_t *)sess_ctx);
 }
 
+/**
+ * @brief Open-callback helper shared by the uni- and bidi-stream callbacks:
+ *        wrap the stream in a stream-kind handle and notify the app.
+ * @return Stream ctx (a stream-kind handle), or NULL only if handle
+ *         allocation fails while a new-stream handler is registered.
+ *
+ * When no new-stream handler is registered the stream is still wrapped so it
+ * stays readable; the app can take it over later.
+ */
 static lsquic_stream_ctx_t *cwist_h3_wt_on_stream(lsquic_wt_session_t *sess,
                                                   lsquic_stream_t *stream) {
     cwist_http3_context *ctx = NULL;
@@ -1823,16 +2152,28 @@ static lsquic_stream_ctx_t *cwist_h3_wt_on_stream(lsquic_wt_session_t *sess,
     return (lsquic_stream_ctx_t *)cwist_wt_handle_new(CWIST_WT_HANDLE_STREAM, stream);
 }
 
+/**
+ * @brief wti_on_uni_stream callback: peer opened a unidirectional stream.
+ * Delegates to cwist_h3_wt_on_stream().
+ */
 static lsquic_stream_ctx_t *cwist_h3_wt_on_uni_stream(lsquic_wt_session_t *sess,
                                                       lsquic_stream_t *stream) {
     return cwist_h3_wt_on_stream(sess, stream);
 }
 
+/**
+ * @brief wti_on_bidi_stream callback: peer opened a bidirectional stream.
+ * Delegates to cwist_h3_wt_on_stream().
+ */
 static lsquic_stream_ctx_t *cwist_h3_wt_on_bidi_stream(lsquic_wt_session_t *sess,
                                                        lsquic_stream_t *stream) {
     return cwist_h3_wt_on_stream(sess, stream);
 }
 
+/**
+ * @brief wti_on_stream_read callback: first data on a WT stream; notifies
+ *        the app's new-stream handler with the stream handle.
+ */
 static void cwist_h3_wt_on_stream_read(lsquic_stream_t *stream, lsquic_stream_ctx_t *st_h) {
     cwist_wt_handle_t *stream_handle = (cwist_wt_handle_t *)st_h;
     lsquic_wt_session_t *sess = lsquic_wt_session_from_stream(stream);
@@ -1844,22 +2185,37 @@ static void cwist_h3_wt_on_stream_read(lsquic_stream_t *stream, lsquic_stream_ct
     }
 }
 
+/**
+ * @brief wti_on_stream_write callback: nothing to write from the server
+ *        side for WT streams; no-op.
+ */
 static void cwist_h3_wt_on_stream_write(lsquic_stream_t *stream, lsquic_stream_ctx_t *st_h) {
     (void)stream;
     (void)st_h;
 }
 
+/**
+ * @brief wti_on_stream_close callback: free the stream handle.
+ */
 static void cwist_h3_wt_on_stream_close(lsquic_stream_t *stream, lsquic_stream_ctx_t *st_h) {
     (void)stream;
     cwist_wt_handle_free((cwist_wt_handle_t *)st_h);
 }
 
+/**
+ * @brief wti_on_stream_ss_code callback: application error code to send when
+ *        this stream is reset.  Returns 0 (no specific code).
+ */
 static uint32_t cwist_h3_wt_on_stream_ss_code(lsquic_stream_t *stream, lsquic_stream_ctx_t *st_h) {
     (void)stream;
     (void)st_h;
     return 0;
 }
 
+/**
+ * @brief WT datagram-read callback: deliver the payload to the app's
+ *        registered datagram callback, if any.
+ */
 static void cwist_h3_wt_on_datagram_read(lsquic_wt_session_t *sess, const void *buf, size_t len) {
     lsquic_conn_t *conn = lsquic_wt_session_conn(sess);
     cwist_http3_context *ctx = h3_shared_ctx(conn);
@@ -1868,6 +2224,10 @@ static void cwist_h3_wt_on_datagram_read(lsquic_wt_session_t *sess, const void *
     }
 }
 
+/**
+ * @brief WT datagram-write callback: nothing queued from the server side;
+ *        returns 0 (no datagram to send).
+ */
 static int cwist_h3_wt_on_datagram_write(lsquic_wt_session_t *sess, size_t max_datagram_size) {
     (void)sess;
     (void)max_datagram_size;
@@ -1923,10 +2283,24 @@ typedef struct cwist_h3_ticket_key {
 static int g_h3_ticket_key_ex_data_idx = -1;
 static pthread_once_t g_h3_ticket_key_ex_data_once = PTHREAD_ONCE_INIT;
 
+/**
+ * @brief pthread_once body: reserve the SSL_CTX ex-data slot that carries
+ *        the per-context ticket key.
+ */
 static void cwist_h3_ticket_key_ex_data_init(void) {
     g_h3_ticket_key_ex_data_idx = SSL_CTX_get_ex_new_index(0, NULL, NULL, NULL, NULL);
 }
 
+/**
+ * @brief BoringSSL session-ticket key callback (shared ticket-key scheme).
+ * @param encrypt Non-zero when producing a new ticket, zero when resuming.
+ * @retval 1 Key applied; proceed with the ticket.
+ * @retval 0 Decline the ticket (unknown key name, missing key, or crypto
+ *         setup failure); a full handshake results.
+ *
+ * One random key is generated per cwist_http3_context and installed here, so
+ * tickets issued by one SO_REUSEPORT worker resume on any other.
+ */
 static int cwist_h3_ticket_key_cb(SSL *ssl, uint8_t *key_name, uint8_t *iv, EVP_CIPHER_CTX *ectx,
                                   HMAC_CTX *hctx, int encrypt) {
     SSL_CTX *ssl_ctx = ssl ? SSL_get_SSL_CTX(ssl) : NULL;
@@ -1975,6 +2349,15 @@ static void cwist_h3_setup_session_tickets(SSL_CTX *ssl_ctx) {
     SSL_CTX_set_tlsext_ticket_key_cb(ssl_ctx, cwist_h3_ticket_key_cb);
 }
 
+/**
+ * @brief Free the per-context session-ticket key, if one was installed.
+ * @param ssl_ctx Context whose ex-data slot was set by
+ *                cwist_h3_setup_session_tickets(); may be NULL (no-op).
+ *
+ * Thread-safety: takes the pthread_once gate before reading
+ * g_h3_ticket_key_ex_data_idx because this can run on a thread that never
+ * armed the once itself (see the note in the body).
+ */
 static void cwist_h3_free_session_ticket_key(SSL_CTX *ssl_ctx) {
     if (!ssl_ctx) return;
     /* g_h3_ticket_key_ex_data_idx is only written once, from inside
@@ -1997,6 +2380,15 @@ static void cwist_h3_free_session_ticket_key(SSL_CTX *ssl_ctx) {
     }
 }
 
+/**
+ * @brief Apply the common server-side SSL_CTX configuration.
+ * @param early_data Non-zero to enable TLS 1.3 early data (0-RTT).
+ * @return Always 0.  QUIC transport parameters are supplied by lsquic, not
+ *         here.
+ *
+ * Pins TLS 1.3, installs default verify paths, the ALPN selection callback,
+ * and the shared session-ticket key machinery.
+ */
 static int cwist_h3_ssl_ctx_init(SSL_CTX *ssl_ctx, int early_data) {
     SSL_CTX_set_min_proto_version(ssl_ctx, TLS1_3_VERSION);
     SSL_CTX_set_max_proto_version(ssl_ctx, TLS1_3_VERSION);
@@ -2012,6 +2404,18 @@ static int cwist_h3_ssl_ctx_init(SSL_CTX *ssl_ctx, int early_data) {
     return 0;
 }
 
+/**
+ * @brief Create an HTTP/3 server context from a certificate/key pair.
+ * @param ctx Receives the new context.
+ * @param cert_path PEM file with the certificate chain.
+ * @param key_path PEM file with the private key.
+ * @return err.error.err_i16 == 0 on success; -1 on bad arguments, TLS setup
+ *         failure, or OOM.  On failure all partial state is unwound and
+ *         *ctx is untouched.
+ *
+ * Takes a process-wide lsquic reference (released by
+ * cwist_http3_destroy_context()).
+ */
 cwist_error_t cwist_http3_init_context(cwist_http3_context **ctx, const char *cert_path,
                                        const char *key_path) {
     cwist_error_t err = make_error(CWIST_ERR_INT16);
@@ -2073,6 +2477,17 @@ cwist_error_t cwist_http3_init_context(cwist_http3_context **ctx, const char *ce
     return err;
 }
 
+/**
+ * @brief Create an HTTP/3 server context with an ephemeral self-signed
+ *        certificate ("localhost", RSA-2048, 1-year validity).
+ * @param ctx Receives the new context.
+ * @return err.error.err_i16 == 0 on success; -1 on TLS setup failure or OOM.
+ *         On failure all partial state is unwound.
+ *
+ * Intended for tests and local deployments where provisioning a real
+ * certificate is impractical.  Takes a process-wide lsquic reference
+ * (released by cwist_http3_destroy_context()).
+ */
 cwist_error_t cwist_http3_init_context_ephemeral(cwist_http3_context **ctx) {
     cwist_error_t err = make_error(CWIST_ERR_INT16);
     if (!ctx) {
@@ -2169,12 +2584,16 @@ cwist_error_t cwist_http3_init_context_ephemeral(cwist_http3_context **ctx) {
     return err;
 }
 
-/* Graceful shutdown: send GOAWAY on every live connection (and stop
- * accepting new ones), then give the engine one chance to flush the queued
- * packets before teardown.  lsquic_engine_cooldown() marks full
- * connections going away (GOAWAY per RFC 9114 Section 5.2); the ensuing
- * lsquic_engine_destroy() closes them with CONNECTION_CLOSE/H3_NO_ERROR
- * instead of leaving clients hanging on silence. */
+/**
+ * @brief Graceful shutdown: send GOAWAY on every live connection (and stop
+ *        accepting new ones), then give the engine one chance to flush the
+ *        queued packets before teardown.
+ *
+ * lsquic_engine_cooldown() marks full connections going away (GOAWAY per
+ * RFC 9114 Section 5.2); the ensuing lsquic_engine_destroy() closes them with
+ * CONNECTION_CLOSE/H3_NO_ERROR instead of leaving clients hanging on
+ * silence.  No-op when the engine was never created.
+ */
 static void cwist_h3_engine_graceful_stop(cwist_http3_context *ctx) {
     lsquic_engine_t *engine = (lsquic_engine_t *)ctx->engine;
     if (!engine) return;
@@ -2185,6 +2604,14 @@ static void cwist_h3_engine_graceful_stop(cwist_http3_context *ctx) {
     }
 }
 
+/**
+ * @brief Destroy a context: graceful engine stop, engine destroy, hset
+ *        sweep, SSL_CTX and ticket-key teardown, context free.
+ * @param ctx Context from cwist_http3_init_context*(); may be NULL (no-op).
+ *
+ * Releases the process-wide lsquic reference taken at init.  Must not be
+ * called concurrently with cwist_http3_server_loop() on the same context.
+ */
 void cwist_http3_destroy_context(cwist_http3_context *ctx) {
     if (ctx) {
         if (ctx->engine) {
@@ -2203,6 +2630,20 @@ void cwist_http3_destroy_context(cwist_http3_context *ctx) {
     }
 }
 
+/**
+ * @brief Return the last CONNECTION_CLOSE received from a peer.
+ * @param app_error_out Receives whether the close carried an application
+ *                      error (may be NULL).
+ * @param code_out Receives the error code (may be NULL).
+ * @param reason_buf Receives the NUL-terminated reason text, truncated to
+ *                   fit (may be NULL).
+ * @param buf_len Capacity of @p reason_buf.
+ * @retval 0 A close frame has been recorded and the outputs were filled.
+ * @retval -1 No CONNECTION_CLOSE has been received (or @p ctx is NULL).
+ *
+ * Meaningful only after the serve loop has stopped; the fields are written
+ * on the engine thread without synchronization.
+ */
 int cwist_http3_last_close_error(const cwist_http3_context *ctx, bool *app_error_out,
                                  uint64_t *code_out, char *reason_buf, size_t buf_len) {
     if (!ctx || !ctx->last_close_received) return -1;
@@ -2221,6 +2662,25 @@ int cwist_http3_last_close_error(const cwist_http3_context *ctx, bool *app_error
 /* Server loop                                                        */
 /* ------------------------------------------------------------------ */
 
+/**
+ * @brief Run the blocking HTTP/3 server loop on a UDP socket.
+ * @param udp_fd Bound UDP socket; forced non-blocking here (idempotent).
+ * @param ctx Context with an initialized SSL_CTX.
+ * @param handler Request handler invoked per request (required).
+ * @param user_ctx Passed through to @p handler.
+ * @return err.error.err_i16 == 0 when the loop exits cleanly (ctx->running
+ *         cleared or process shutdown); -1 on invalid arguments or setup
+ *         failure (socket flags, epoll, memory).
+ *
+ * Configures lsquic engine settings from the context's knobs (push,
+ * WebTransport, datagrams, flow-control windows, timeout set), then polls
+ * the socket (epoll on Linux, poll elsewhere; recvmmsg batching when
+ * available), feeds packets to the engine, and processes connections until
+ * shutdown.  Linux receive batches and the packet buffer are heap-allocated
+ * so the loop does not require an oversized thread stack.  On exit the
+ * engine is gracefully stopped and destroyed.  CWIST_H3_DEBUG=1 routes
+ * lsquic's logger to stderr.
+ */
 cwist_error_t cwist_http3_server_loop(int udp_fd, cwist_http3_context *ctx,
                                       cwist_http3_request_handler_func handler, void *user_ctx) {
     cwist_error_t err = make_error(CWIST_ERR_INT16);
@@ -2680,10 +3140,21 @@ cwist_error_t cwist_http3_server_loop(int udp_fd, cwist_http3_context *ctx,
 /* Push, Priority, and 0-RTT APIs                                     */
 /* ------------------------------------------------------------------ */
 
+/**
+ * @brief Enable or disable HTTP/3 server push for this context.
+ * Takes effect at cwist_http3_server_loop() time (lsquic engine setting).
+ */
 void cwist_http3_set_push_enabled(cwist_http3_context *ctx, int enabled) {
     if (ctx) ctx->push_enabled = enabled;
 }
 
+/**
+ * @brief Enable or disable TLS 1.3 early data (0-RTT) on the context.
+ *
+ * Enabling also arms the replay guard (only idempotent methods are accepted
+ * as early data) unless the application overrides it with
+ * cwist_http3_set_early_data_guard().
+ */
 void cwist_http3_set_early_data(cwist_http3_context *ctx, bool enabled) {
     if (!ctx || !ctx->ssl_ctx) return;
     ctx->early_data_enabled = enabled ? 1 : 0;
@@ -2695,11 +3166,23 @@ void cwist_http3_set_early_data(cwist_http3_context *ctx, bool enabled) {
     }
 }
 
+/**
+ * @brief Enable or disable the 0-RTT replay guard.
+ *
+ * While armed, requests received while the QUIC handshake is still in
+ * progress are refused with 425 unless their method is idempotent (RFC
+ * 8470).
+ */
 void cwist_http3_set_early_data_guard(cwist_http3_context *ctx, int enabled) {
     if (ctx) ctx->early_data_guard = enabled ? 1 : 0;
 }
 
-/* RFC 9110: string-based variant used by tests and external checks. */
+/**
+ * @brief String-based idempotency check (RFC 9110), used by tests and
+ *        external checks.
+ * @retval 1 The method is idempotent (GET/HEAD/PUT/DELETE/OPTIONS/TRACE).
+ * @retval 0 NULL input or a non-idempotent/unknown method.
+ */
 int cwist_http3_method_is_idempotent(const char *method_str) {
     if (!method_str) return 0;
     /* TRACE is absent from cwist_http_method_t; match it by name. */
@@ -2707,6 +3190,20 @@ int cwist_http3_method_is_idempotent(const char *method_str) {
     return h3_method_is_idempotent(cwist_http_string_to_method(method_str)) ? 1 : 0;
 }
 
+/**
+ * @brief Promise a pushed resource from inside a request handler.
+ * @param req Request whose stream anchors the push (must carry the lsquic
+ *            stream in private_data).
+ * @param path Request path for the pushed resource.
+ * @param content_type Ignored; a response field, not valid in a push
+ *                     request set.
+ * @retval 0 Push stream created.
+ * @retval -1 Bad arguments, no connection, or push not negotiated.
+ *
+ * Builds a request header set (:method GET, :scheme https, :path from
+ * @p path, :authority copied from the original request's Host or
+ * "localhost").
+ */
 int cwist_http3_push_resource(cwist_http_request *req, const char *path, const char *content_type) {
     if (!req || !req->private_data || !path) return -1;
     lsquic_stream_t *stream = (lsquic_stream_t *)req->private_data;
@@ -2773,13 +3270,17 @@ int cwist_http3_push_resource(cwist_http_request *req, const char *path, const c
     return lsquic_conn_push_stream(conn, NULL, stream, &headers);
 }
 
+/**
+ * @brief Deprecated and always refused: returns -1.
+ *
+ * lsquic_stream_set_priority() on a request stream emits a PRIORITY_UPDATE
+ * frame on the control stream, which violates RFC 9218 (PRIORITY_UPDATE may
+ * only reference client-opened streams).  Strict stacks (Firefox/neqo) then
+ * kill the connection with H3_FRAME_UNEXPECTED. Use the RFC 9218 `Priority`
+ * header instead.  See the deprecation note in
+ * include/cwist/net/http/http3.h.
+ */
 int cwist_http3_set_stream_priority(cwist_http_request *req, unsigned priority) {
-    /* Refused on purpose: lsquic_stream_set_priority() on a request stream
-     * emits a PRIORITY_UPDATE frame on the control stream, which violates
-     * RFC 9218 (PRIORITY_UPDATE may only reference client-opened streams).
-     * Strict stacks (Firefox/neqo) then kill the connection with
-     * H3_FRAME_UNEXPECTED. Use the RFC 9218 `Priority` header instead.
-     * See the deprecation note in include/cwist/net/http/http3.h. */
     (void)req;
     (void)priority;
     CWIST_LOG_WARN("[HTTP/3] cwist_http3_set_stream_priority() is deprecated "
@@ -2791,11 +3292,22 @@ int cwist_http3_set_stream_priority(cwist_http_request *req, unsigned priority) 
 /* WebTransport API                                                   */
 /* ------------------------------------------------------------------ */
 
+/**
+ * @brief Register the WebTransport session handler (extended CONNECT).
+ *
+ * When set, the server loop enables the lsquic WebTransport settings and
+ * extended-CONNECT requests with :protocol "webtransport" are handed to this
+ * handler via cwist_h3_wt_on_session_open().
+ */
 void cwist_http3_set_webtransport_handler(cwist_http3_context *ctx,
                                           cwist_webtransport_handler_func handler) {
     if (ctx) ctx->wt_handler = handler;
 }
 
+/**
+ * @brief Register the callback invoked for every new WebTransport stream.
+ * @param user_ctx Passed through as the second argument of @p handler.
+ */
 void cwist_webtransport_set_new_stream_handler(cwist_http3_context *ctx,
                                                void (*handler)(void *stream, void *user_ctx),
                                                void *user_ctx) {
@@ -2807,6 +3319,11 @@ void cwist_webtransport_set_new_stream_handler(cwist_http3_context *ctx,
 
 #ifdef CWIST_WEBTRANSPORT
 
+/**
+ * @brief Read from a WebTransport stream (CWIST_WEBTRANSPORT build).
+ * @param stream Stream handle (opaque cwist_wt_handle_t).
+ * @return Bytes read, or -1 on bad arguments/invalid handle.
+ */
 ssize_t cwist_webtransport_read(void *stream, void *buf, size_t len) {
     if (!stream || !buf) return -1;
     lsquic_stream_t *s = cwist_wt_handle_stream(stream);
@@ -2814,6 +3331,11 @@ ssize_t cwist_webtransport_read(void *stream, void *buf, size_t len) {
     return lsquic_stream_read(s, buf, len);
 }
 
+/**
+ * @brief Write to a WebTransport stream (CWIST_WEBTRANSPORT build).
+ * @param stream Stream handle (opaque cwist_wt_handle_t).
+ * @return Bytes written, or -1 on bad arguments/invalid handle.
+ */
 ssize_t cwist_webtransport_write(void *stream, const void *data, size_t len) {
     if (!stream || !data) return -1;
     lsquic_stream_t *s = cwist_wt_handle_stream(stream);
@@ -2821,6 +3343,11 @@ ssize_t cwist_webtransport_write(void *stream, const void *data, size_t len) {
     return lsquic_stream_write(s, data, len);
 }
 
+/**
+ * @brief Flush a WebTransport stream (CWIST_WEBTRANSPORT build).
+ * @retval 0 Flushed.
+ * @retval -1 Bad arguments or invalid handle.
+ */
 int cwist_webtransport_flush(void *stream) {
     if (!stream) return -1;
     lsquic_stream_t *s = cwist_wt_handle_stream(stream);
@@ -2828,6 +3355,11 @@ int cwist_webtransport_flush(void *stream) {
     return lsquic_stream_flush(s);
 }
 
+/**
+ * @brief Close a WebTransport stream (CWIST_WEBTRANSPORT build).
+ * @retval 0 Closed.
+ * @retval -1 Bad arguments or invalid handle.
+ */
 int cwist_webtransport_close_stream(void *stream) {
     if (!stream) return -1;
     lsquic_stream_t *s = cwist_wt_handle_stream(stream);
@@ -2835,6 +3367,15 @@ int cwist_webtransport_close_stream(void *stream) {
     return lsquic_stream_close(s);
 }
 
+/**
+ * @brief Open a bidirectional WebTransport stream (CWIST_WEBTRANSPORT
+ *        build).
+ * @param session Session handle (opaque cwist_wt_handle_t).
+ * @retval 0 Stream opened (and reported to the new-stream handler when one
+ *         is registered).
+ * @retval -1 Bad arguments, invalid session, stream open failure, or handle
+ *         allocation failure.
+ */
 int cwist_webtransport_open_bidi_stream(void *session) {
     if (!session) return -1;
     cwist_wt_handle_t *session_handle = cwist_wt_handle_cast(session, CWIST_WT_HANDLE_SESSION);
@@ -2857,6 +3398,15 @@ int cwist_webtransport_open_bidi_stream(void *session) {
     return 0;
 }
 
+/**
+ * @brief Open a unidirectional WebTransport stream (CWIST_WEBTRANSPORT
+ *        build).
+ * @param session Session handle (opaque cwist_wt_handle_t).
+ * @retval 0 Stream opened (and reported to the new-stream handler when one
+ *         is registered).
+ * @retval -1 Bad arguments, invalid session, stream open failure, or handle
+ *         allocation failure.
+ */
 int cwist_webtransport_open_uni_stream(void *session) {
     if (!session) return -1;
     cwist_wt_handle_t *session_handle = cwist_wt_handle_cast(session, CWIST_WT_HANDLE_SESSION);
@@ -2881,6 +3431,9 @@ int cwist_webtransport_open_uni_stream(void *session) {
 
 #else /* CWIST_WEBTRANSPORT */
 
+/**
+ * @brief Stub used when CWIST_WEBTRANSPORT is not compiled in: always -1.
+ */
 ssize_t cwist_webtransport_read(void *stream, void *buf, size_t len) {
     (void)stream;
     (void)buf;
@@ -2888,6 +3441,9 @@ ssize_t cwist_webtransport_read(void *stream, void *buf, size_t len) {
     return -1;
 }
 
+/**
+ * @brief Stub used when CWIST_WEBTRANSPORT is not compiled in: always -1.
+ */
 ssize_t cwist_webtransport_write(void *stream, const void *data, size_t len) {
     (void)stream;
     (void)data;
@@ -2895,21 +3451,33 @@ ssize_t cwist_webtransport_write(void *stream, const void *data, size_t len) {
     return -1;
 }
 
+/**
+ * @brief Stub used when CWIST_WEBTRANSPORT is not compiled in: always -1.
+ */
 int cwist_webtransport_flush(void *stream) {
     (void)stream;
     return -1;
 }
 
+/**
+ * @brief Stub used when CWIST_WEBTRANSPORT is not compiled in: always -1.
+ */
 int cwist_webtransport_close_stream(void *stream) {
     (void)stream;
     return -1;
 }
 
+/**
+ * @brief Stub used when CWIST_WEBTRANSPORT is not compiled in: always -1.
+ */
 int cwist_webtransport_open_bidi_stream(void *session) {
     (void)session;
     return -1;
 }
 
+/**
+ * @brief Stub used when CWIST_WEBTRANSPORT is not compiled in: always -1.
+ */
 int cwist_webtransport_open_uni_stream(void *session) {
     (void)session;
     return -1;
@@ -2921,18 +3489,34 @@ int cwist_webtransport_open_uni_stream(void *session) {
 /* Resilience knobs                                                   */
 /* ------------------------------------------------------------------ */
 
+/**
+ * @brief Set the connection idle timeout (milliseconds, <= 0 disables).
+ * Takes effect at cwist_http3_server_loop() time.
+ */
 void cwist_http3_set_idle_timeout(cwist_http3_context *ctx, int ms) {
     if (ctx) ctx->idle_timeout_ms = ms > 0 ? ms : 0;
 }
 
+/**
+ * @brief Set the handshake timeout (milliseconds, <= 0 disables).
+ * Takes effect at cwist_http3_server_loop() time.
+ */
 void cwist_http3_set_handshake_timeout(cwist_http3_context *ctx, int ms) {
     if (ctx) ctx->handshake_timeout_ms = ms > 0 ? ms : 0;
 }
 
+/**
+ * @brief Set the keep-alive ping period (milliseconds, <= 0 disables).
+ * Takes effect at cwist_http3_server_loop() time.
+ */
 void cwist_http3_set_ping_period(cwist_http3_context *ctx, int ms) {
     if (ctx) ctx->ping_period_ms = ms > 0 ? ms : 0;
 }
 
+/**
+ * @brief Set the no-progress timeout (milliseconds, <= 0 disables).
+ * Takes effect at cwist_http3_server_loop() time.
+ */
 void cwist_http3_set_noprogress_timeout(cwist_http3_context *ctx, int ms) {
     if (ctx) ctx->noprogress_timeout_ms = ms > 0 ? ms : 0;
 }
@@ -2941,10 +3525,20 @@ void cwist_http3_set_noprogress_timeout(cwist_http3_context *ctx, int ms) {
 /* Datagram API                                                       */
 /* ------------------------------------------------------------------ */
 
+/**
+ * @brief Enable or disable H3 datagrams for this context.
+ *
+ * Note: enabling WebTransport forces the datagram engine settings on
+ * regardless of this knob.
+ */
 void cwist_http3_set_datagram_enabled(cwist_http3_context *ctx, int enabled) {
     if (ctx) ctx->datagram_enabled = enabled;
 }
 
+/**
+ * @brief Register the callback for incoming H3/WebTransport datagrams.
+ * @param user_ctx Passed through as the last argument of @p cb.
+ */
 void cwist_http3_set_datagram_callback(cwist_http3_context *ctx,
                                        void (*cb)(const void *data, size_t len, void *user_ctx),
                                        void *user_ctx) {
@@ -2954,6 +3548,21 @@ void cwist_http3_set_datagram_callback(cwist_http3_context *ctx,
     }
 }
 
+/**
+ * @brief Queue an outgoing H3 datagram on a connection.
+ * @param conn lsquic connection (as seen in cwist_http_request::private_data
+ *             chains); used to find the per-connection queue.
+ * @param data Payload to copy.
+ * @param len Payload length.
+ * @retval 0 Datagram queued; lsquic is signaled to drain it via the
+ *         on_dg_write callback.
+ * @retval -1 Bad arguments, no per-connection ctx, or OOM (nothing queued).
+ *
+ * Thread-safe: the payload is copied and appended to the connection's own
+ * mutex-guarded queue, so concurrent sends on different connections never
+ * share state and concurrent sends on one connection queue instead of
+ * clobbering each other.
+ */
 int cwist_http3_send_datagram(void *conn, const void *data, size_t len) {
     lsquic_conn_t *c = (lsquic_conn_t *)conn;
     if (!c || !data || len == 0) return -1;
@@ -2991,6 +3600,13 @@ int cwist_http3_send_datagram(void *conn, const void *data, size_t len) {
 
 #ifdef CWIST_WEBTRANSPORT
 
+/**
+ * @brief Send a datagram on a WebTransport session (CWIST_WEBTRANSPORT
+ *        build).
+ * @param session Session handle (opaque cwist_wt_handle_t).
+ * @return lsquic_wt_send_datagram() result, or -1 on bad arguments/invalid
+ *         handle.
+ */
 ssize_t cwist_webtransport_send_datagram(void *session, const void *data, size_t len) {
     if (!session || !data || len == 0) return -1;
     lsquic_wt_session_t *sess = cwist_wt_handle_session(session);
@@ -2998,6 +3614,12 @@ ssize_t cwist_webtransport_send_datagram(void *session, const void *data, size_t
     return lsquic_wt_send_datagram(sess, data, len);
 }
 
+/**
+ * @brief Maximum datagram size on a WebTransport session
+ *        (CWIST_WEBTRANSPORT build).
+ * @param session Session handle (opaque cwist_wt_handle_t).
+ * @return Maximum payload size, or 0 on bad arguments/invalid handle.
+ */
 size_t cwist_webtransport_max_datagram_size(void *session) {
     if (!session) return 0;
     lsquic_wt_session_t *sess = cwist_wt_handle_session(session);
@@ -3005,6 +3627,15 @@ size_t cwist_webtransport_max_datagram_size(void *session) {
     return lsquic_wt_max_datagram_size(sess);
 }
 
+/**
+ * @brief Close a WebTransport session with an application error code
+ *        (CWIST_WEBTRANSPORT build).
+ * @param session Session handle (opaque cwist_wt_handle_t).
+ * @param code 32-bit WebTransport application error code.
+ * @param reason Human-readable reason; may be NULL.
+ * @retval 0 Close frame sent.
+ * @retval -1 Bad arguments or invalid handle.
+ */
 int cwist_webtransport_close_session(void *session, uint64_t code, const char *reason) {
     if (!session) return -1;
     lsquic_wt_session_t *sess = cwist_wt_handle_session(session);
@@ -3014,6 +3645,9 @@ int cwist_webtransport_close_session(void *session, uint64_t code, const char *r
 
 #else /* CWIST_WEBTRANSPORT */
 
+/**
+ * @brief Stub used when CWIST_WEBTRANSPORT is not compiled in: always -1.
+ */
 ssize_t cwist_webtransport_send_datagram(void *session, const void *data, size_t len) {
     (void)session;
     (void)data;
@@ -3021,11 +3655,17 @@ ssize_t cwist_webtransport_send_datagram(void *session, const void *data, size_t
     return -1;
 }
 
+/**
+ * @brief Stub used when CWIST_WEBTRANSPORT is not compiled in: always 0.
+ */
 size_t cwist_webtransport_max_datagram_size(void *session) {
     (void)session;
     return 0;
 }
 
+/**
+ * @brief Stub used when CWIST_WEBTRANSPORT is not compiled in: always -1.
+ */
 int cwist_webtransport_close_session(void *session, uint64_t code, const char *reason) {
     (void)session;
     (void)code;
