@@ -80,7 +80,7 @@ jobs:
           path: benchmark-${{ runner.os }}.json
 
   web-server-benchmark:
-    name: web server benchmark (CWIST vs Axum vs Spring vs Gin)
+    name: web server benchmark (CWIST vs Actix vs Axum vs Spring vs Gin)
     if: github.event_name != 'push' || !contains(github.event.head_commit.message, '[skip ci]')
     runs-on: ubuntu-latest
     steps:
@@ -156,7 +156,44 @@ jobs:
           }
           EOF
 
-          # 3. Gin (Go) Minimal HTTP Web Server
+          # 3. Actix-web Minimal HTTP Web Server
+          mkdir -p /tmp/actix_bench && cd /tmp/actix_bench
+          cat << 'EOF' > Cargo.toml
+          [package]
+          name = "actix_server"
+          version = "0.1.0"
+          edition = "2021"
+
+          [dependencies]
+          actix-web = "4"
+          EOF
+          mkdir -p src
+          cat << 'EOF' > src/main.rs
+          use actix_web::{get, App, HttpResponse, HttpServer, Responder};
+
+          #[get("/")]
+          async fn hello() -> impl Responder {
+              HttpResponse::Ok().body("Hello, World!")
+          }
+
+          #[actix_web::main]
+          async fn main() -> std::io::Result<()> {
+              let workers = std::env::var("ACTIX_WORKERS")
+                  .ok()
+                  .and_then(|v| v.parse::<usize>().ok())
+                  .filter(|&n| n > 0)
+                  .unwrap_or_else(|| std::thread::available_parallelism().map(|n| n.get()).unwrap_or(4));
+              HttpServer::new(|| {
+                  App::new().service(hello)
+              })
+              .workers(workers)
+              .bind(("127.0.0.1", 9095))?
+              .run()
+              .await
+          }
+          EOF
+
+          # 4. Gin (Go) Minimal HTTP Web Server
           mkdir -p /tmp/gin_bench && cd /tmp/gin_bench
           cat << 'EOF' > go.mod
           module gin_server
@@ -251,6 +288,7 @@ jobs:
           gcc -Ofast -flto=auto -fno-plt -falign-functions=32 -falign-loops=32 -falign-jumps=32 -falign-labels=32 -fno-semantic-interposition -fomit-frame-pointer -finline-functions -fipa-pta -I./include -I./lib -I./lib/libttak/include -o /tmp/cwist_server /tmp/cwist_server.c libcwist.a lib/cnats/build/lib/libnats_static.a lib/libttak/lib/libttak.a lib/cjson/libcjson.a lib/uriparser/build/liburiparser.a lib/lsquic/build/src/liblsquic/liblsquic.a lib/boringssl/build/libssl.a lib/boringssl/build/libcrypto.a -lcurl -lnghttp2 -lbrotlienc -lbrotlicommon -lbrotlidec -pthread -ldl -lm -lstdc++ -lz -lzstd
 
           cd /tmp/axum_bench && cargo build --release
+          cd /tmp/actix_bench && cargo build --release
           cd /tmp/gin_bench && go mod tidy && go build -o gin_server .
           # Maven Central occasionally returns 403 to shared CI egress IPs;
           # route through Google's GCS mirror of Central and enable retries.
@@ -329,6 +367,7 @@ jobs:
           # visible alongside the c400 throughput numbers.
           run_bench "CWIST tuned" "env CWIST_C1M_MODE=0 /tmp/cwist_server" 9091 "/tmp/cwist_tuned.txt" "/tmp/cwist_tuned_stat.txt" 10 4 100
           export TUNED_PROFILE="wrk -t4 -c100 -d10s (after 10s warmup, warmup discarded)"
+          run_bench "Actix" "/tmp/actix_bench/target/release/actix_server" 9095 "/tmp/actix.txt" "/tmp/actix_stat.txt" 10
           run_bench "Axum" "/tmp/axum_bench/target/release/axum_server" 9092 "/tmp/axum.txt" "/tmp/axum_stat.txt" 10
           # Same -t4 -c100 profile as "CWIST tuned" above. The tuned section
           # used to report CWIST against Spring Boot only, which compares a
@@ -522,6 +561,9 @@ jobs:
 
           cwist_tuned_wrk = parse_wrk("/tmp/cwist_tuned.txt")
 
+          actix_wrk = parse_wrk("/tmp/actix.txt")
+          actix_rss, actix_csw = parse_stat("/tmp/actix_stat.txt")
+
           axum_wrk = parse_wrk("/tmp/axum.txt")
           axum_rss, axum_csw = parse_stat("/tmp/axum_stat.txt")
 
@@ -549,6 +591,7 @@ jobs:
               # expected, desired result, not a null finding.
               **server_fields("cwist_c1m_drainchunk", cwist_c1m_drainchunk_wrk, cwist_c1m_drainchunk_rss, cwist_c1m_drainchunk_csw),
               **server_fields("cwist_tuned", cwist_tuned_wrk),
+              **server_fields("actix", actix_wrk, actix_rss, actix_csw),
               **server_fields("axum", axum_wrk, axum_rss, axum_csw),
               **server_fields("gin", gin_wrk, gin_rss, gin_csw),
               **server_fields("spring", spring_wrk, spring_rss, spring_csw),
@@ -583,7 +626,7 @@ jobs:
       - name: Copy raw benchmark output
         run: |
           mkdir -p raw_logs
-          cp /tmp/cwist.txt /tmp/cwist_stat.txt /tmp/cwist_c1m.txt /tmp/cwist_c1m_stat.txt /tmp/cwist_c1m_arena1.txt /tmp/cwist_c1m_arena1_stat.txt /tmp/cwist_c1m_drainchunk.txt /tmp/cwist_c1m_drainchunk_stat.txt /tmp/cwist_tuned.txt /tmp/axum.txt /tmp/axum_tuned.txt /tmp/axum_stat.txt /tmp/gin.txt /tmp/gin_stat.txt /tmp/spring.txt /tmp/spring_stat.txt /tmp/spring_tuned.txt /tmp/spring_gc.log raw_logs/ 2>/dev/null || true
+          cp /tmp/cwist.txt /tmp/cwist_stat.txt /tmp/cwist_c1m.txt /tmp/cwist_c1m_stat.txt /tmp/cwist_c1m_arena1.txt /tmp/cwist_c1m_arena1_stat.txt /tmp/cwist_c1m_drainchunk.txt /tmp/cwist_c1m_drainchunk_stat.txt /tmp/cwist_tuned.txt /tmp/actix.txt /tmp/actix_stat.txt /tmp/axum.txt /tmp/axum_tuned.txt /tmp/axum_stat.txt /tmp/gin.txt /tmp/gin_stat.txt /tmp/spring.txt /tmp/spring_stat.txt /tmp/spring_tuned.txt /tmp/spring_gc.log raw_logs/ 2>/dev/null || true
       - uses: actions/upload-artifact@v4
         with:
           name: webserver-result
