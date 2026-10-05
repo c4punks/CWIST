@@ -838,6 +838,7 @@ TEST_TARGETS = test_worker_affinity \
                test_seq_auth \
                test_sha256 \
                test_error \
+               test_middleware_jwt \
                test_inline_exports \
                test_arena \
                test_wasm_stream \
@@ -1028,6 +1029,10 @@ test_sha256: tests/test_sha256.c include/cwist/core/crypto/sha256.h
 test_error: $(LIB_NAME) tests/test_error.c
 	$(CC) $(CFLAGS) -o test_error tests/test_error.c $(LIB_NAME) $(LIBS)
 	./test_error
+
+test_middleware_jwt: $(LIB_NAME) tests/test_middleware_jwt.c
+	$(CC) $(CFLAGS) -o test_middleware_jwt tests/test_middleware_jwt.c $(LIB_NAME) $(LIBS)
+	./test_middleware_jwt
 
 # Out-of-line wrappers for public static inline helpers: same results as the
 # inline versions, and defined global symbols in the archive and in a program
