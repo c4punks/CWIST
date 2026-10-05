@@ -21,10 +21,32 @@
 #include <unistd.h>
 #include <usrsctp.h>
 
+/** @def STUN_RETRANS_MS
+ * @brief STUN binding request retransmission interval in milliseconds. */
 #define STUN_RETRANS_MS 300
+/** @def STUN_MAX_ATTEMPTS
+ * @brief Maximum STUN binding request transmissions before giving up. */
 #define STUN_MAX_ATTEMPTS 7
+/** @def SCTP_TIMER_MS
+ * @brief Event-loop poll timeout / SCTP timer tick in milliseconds. */
 #define SCTP_TIMER_MS 10
 
+/** @struct pending_send
+ * @brief Outbound message queued while the SCTP association is not yet ready.
+ *
+ * Singly linked queue node holding a copy of the payload so the caller of
+ * cwist_webrtc_conn_send() can reuse or free its buffer immediately.
+ */
+/** @var pending_send::next
+ * @brief Next node in the queue, or NULL if this is the tail. */
+/** @var pending_send::channel
+ * @brief SCTP stream id (DataChannel id) to send on. */
+/** @var pending_send::is_string
+ * @brief Non-zero if the payload is a DataChannel string message, zero for binary. */
+/** @var pending_send::len
+ * @brief Payload length in bytes. */
+/** @var pending_send::data
+ * @brief Inline payload bytes; allocated with room for @c len bytes after the header. */
 typedef struct pending_send {
     struct pending_send *next;
     uint16_t channel;
@@ -35,6 +57,16 @@ typedef struct pending_send {
 
 /* ---- cross-TU helper implementations used by sctp.c / ice.c ---- */
 
+/** @fn cwist_webrtc_conn_on_message
+ * @brief Dispatch an inbound DataChannel message to the ctx message callback.
+ * @param conn  Connection the message arrived on.
+ * @param channel  SCTP stream id carrying the message.
+ * @param data  Message payload (not NUL-terminated).
+ * @param len  Payload length in bytes.
+ * @param is_string  Whether the payload is a string message (currently unused).
+ *
+ * Runs on the ctx event-loop thread.
+ */
 void cwist_webrtc_conn_on_message(cwist_webrtc_conn *conn, uint16_t channel,
                                   const uint8_t *data, size_t len, int is_string) {
     cwist_webrtc_ctx *ctx = conn->ctx;
@@ -43,6 +75,14 @@ void cwist_webrtc_conn_on_message(cwist_webrtc_conn *conn, uint16_t channel,
     (void)is_string;
 }
 
+/** @fn cwist_webrtc_conn_on_channel_open
+ * @brief Notify the application that a DataChannel was opened.
+ * @param conn  Connection owning the channel.
+ * @param channel  Id of the opened SCTP stream / DataChannel.
+ * @param label  DataChannel label string.
+ *
+ * Runs on the ctx event-loop thread.
+ */
 void cwist_webrtc_conn_on_channel_open(cwist_webrtc_conn *conn, uint16_t channel,
                                        const char *label) {
     cwist_webrtc_ctx *ctx = conn->ctx;
@@ -50,17 +90,42 @@ void cwist_webrtc_conn_on_channel_open(cwist_webrtc_conn *conn, uint16_t channel
         ctx->ch_cb(conn, channel, label, ctx->ch_user);
 }
 
+/** @fn cwist_webrtc_conn_sctp_out
+ * @brief Feed SCTP output bytes into DTLS.
+ * @param conn  Connection whose SCTP stack produced output.
+ * @param buffer  SCTP packet bytes.
+ * @param len  Number of bytes in @p buffer.
+ *
+ * Writes the record into the SSL object's write BIO; the sender is
+ * responsible for flushing the wbio afterwards. No-op until the SSL object
+ * exists.
+ */
 void cwist_webrtc_conn_sctp_out(struct cwist_webrtc_conn *conn, const void *buffer, size_t len) {
     if (!conn->ssl)
         return;
     SSL_write(conn->ssl, buffer, (int)len);
 }
 
+/** @fn cwist_webrtc_conn_send_raw
+ * @brief Send a raw UDP datagram to the connection's remote address.
+ * @param conn  Destination connection.
+ * @param data  Datagram bytes.
+ * @param len  Datagram length.
+ * @return  Bytes sent, or -1 on error (see @c errno), as from sendto(2).
+ */
 int cwist_webrtc_conn_send_raw(struct cwist_webrtc_conn *conn, const uint8_t *data, size_t len) {
     return sendto(conn->ctx->udp_fd, data, len, 0, (struct sockaddr *)&conn->remote,
                   conn->remote_len);
 }
 
+/** @fn cwist_webrtc_ctx_find_conn
+ * @brief Look up a connection by its nominated remote IPv4 address.
+ * @param ctx  Context to search.
+ * @param remote  Remote address (address and port must match exactly).
+ * @return  Matching connection, or NULL if none.
+ * @note  Iterates without holding ctx->lock; safe only from the event-loop
+ *        thread or other lock-free call sites in this file.
+ */
 struct cwist_webrtc_conn *cwist_webrtc_ctx_find_conn(cwist_webrtc_ctx *ctx,
                                                      const struct sockaddr_in *remote) {
     for (struct cwist_webrtc_conn *c = ctx->conns; c; c = c->next) {
@@ -71,6 +136,13 @@ struct cwist_webrtc_conn *cwist_webrtc_ctx_find_conn(cwist_webrtc_ctx *ctx,
     return NULL;
 }
 
+/** @fn cwist_webrtc_ctx_add_conn
+ * @brief Insert a connection at the head of the ctx connection list.
+ * @param ctx  Context owning the list.
+ * @param conn  Connection to insert; takes ownership.
+ *
+ * Takes ctx->lock around the list mutation.
+ */
 void cwist_webrtc_ctx_add_conn(cwist_webrtc_ctx *ctx, struct cwist_webrtc_conn *conn) {
     pthread_mutex_lock(&ctx->lock);
     conn->next = ctx->conns;
@@ -78,13 +150,27 @@ void cwist_webrtc_ctx_add_conn(cwist_webrtc_ctx *ctx, struct cwist_webrtc_conn *
     pthread_mutex_unlock(&ctx->lock);
 }
 
+/** @fn cwist_webrtc_conn_wake
+ * @brief Write one byte to the ctx wake pipe to interrupt poll().
+ * @param ctx  Context whose event loop should wake.
+ *
+ * Best-effort and async-signal-style safe: the pipe is O_NONBLOCK, so a
+ * full pipe is silently ignored.
+ */
 void cwist_webrtc_conn_wake(cwist_webrtc_ctx *ctx) {
     uint8_t b = 1;
     ssize_t rc = write(ctx->wake_pipe[1], &b, 1);
     (void)rc;
 }
 
-/* Best-effort local IPv4 for host candidates: first non-loopback address. */
+/** @fn cwist_webrtc_detect_host_ip
+ * @brief Pick a best-effort local IPv4 address for host candidates.
+ * @param out  Output buffer for a dotted-quad string.
+ * @param cap  Capacity of @p out.
+ *
+ * Writes "127.0.0.1" first, then replaces it with the first non-loopback
+ * IPv4 interface address found, if any.
+ */
 static void cwist_webrtc_detect_host_ip(char *out, size_t cap) {
     snprintf(out, cap, "127.0.0.1");
     struct ifaddrs *ifas = NULL;
@@ -106,10 +192,19 @@ static void cwist_webrtc_detect_host_ip(char *out, size_t cap) {
 
 /* ---- time helpers ---- */
 
+/** @fn now_ts
+ * @brief Fill @p ts with the current monotonic clock.
+ * @param ts  Output timespec.
+ */
 static void now_ts(struct timespec *ts) {
     clock_gettime(CLOCK_MONOTONIC, ts);
 }
 
+/** @fn ms_until
+ * @brief Milliseconds from now until @p ts.
+ * @param ts  Target timestamp (monotonic clock).
+ * @return  Signed millisecond delta; negative if @p ts is in the past.
+ */
 static long ms_until(const struct timespec *ts) {
     struct timespec now;
     now_ts(&now);
@@ -117,6 +212,11 @@ static long ms_until(const struct timespec *ts) {
     return ms;
 }
 
+/** @fn in_ms
+ * @brief Compute the absolute monotonic timestamp @p ms milliseconds from now.
+ * @param ms  Offset in milliseconds (may exceed one second).
+ * @param ts  Output timespec.
+ */
 static void in_ms(long ms, struct timespec *ts) {
     now_ts(ts);
     ts->tv_sec += ms / 1000;
@@ -129,6 +229,13 @@ static void in_ms(long ms, struct timespec *ts) {
 
 /* ---- conn lifecycle ---- */
 
+/** @fn conn_free
+ * @brief Tear down a connection and release all of its resources.
+ * @param conn  Connection to destroy; must already be unlinked from ctx->conns.
+ *
+ * Closes the SCTP association, frees the SSL object, drains the pending-send
+ * queue, and frees the connection itself.
+ */
 static void conn_free(struct cwist_webrtc_conn *conn) {
     cwist_sctp_conn_close(conn);
     if (conn->ssl)
@@ -141,6 +248,13 @@ static void conn_free(struct cwist_webrtc_conn *conn) {
     cwist_free(conn);
 }
 
+/** @fn conn_new
+ * @brief Allocate and minimally initialize a new connection.
+ * @param ctx  Owning context.
+ * @param remote  Remote address; copied into the connection.
+ * @param is_server_role  Non-zero for ICE-lite server role (passive DTLS), zero for client role.
+ * @return  New connection in state CWIST_CONN_STUN, or NULL on allocation failure.
+ */
 static struct cwist_webrtc_conn *conn_new(cwist_webrtc_ctx *ctx,
                                           const struct sockaddr_in *remote, int is_server_role) {
     struct cwist_webrtc_conn *conn = cwist_malloc(sizeof(*conn));
@@ -154,10 +268,22 @@ static struct cwist_webrtc_conn *conn_new(cwist_webrtc_ctx *ctx,
     return conn;
 }
 
+/** @fn conn_arm_stun_timer
+ * @brief Set the STUN retransmission deadline to now + STUN_RETRANS_MS.
+ * @param conn  Connection whose stun_next field is updated.
+ */
 static void conn_arm_stun_timer(struct cwist_webrtc_conn *conn) {
     in_ms(STUN_RETRANS_MS, &conn->stun_next);
 }
 
+/** @fn conn_send_stun_request
+ * @brief Build, sign, and transmit a STUN binding request to the peer.
+ * @param conn  Client-role connection in state CWIST_CONN_STUN.
+ *
+ * Uses USERNAME peer_ufrag:ice_ufrag and short-term credentials with
+ * peer_pwd. Re-arms the retransmission timer and bumps stun_attempts; on
+ * STUN_MAX_ATTEMPTS the timer loop marks the connection dead.
+ */
 static void conn_send_stun_request(struct cwist_webrtc_conn *conn) {
     uint8_t msg[512];
     char username[128];
@@ -173,6 +299,15 @@ static void conn_send_stun_request(struct cwist_webrtc_conn *conn) {
     conn->stun_attempts++;
 }
 
+/** @fn conn_start_dtls
+ * @brief Create the SSL object for a connection and kick off the DTLS handshake.
+ * @param conn  Connection about to enter state CWIST_CONN_DTLS.
+ *
+ * Selects the server or client SSL_CTX by role, attaches memory BIOs, sets
+ * MTU 1200, and calls SSL_do_handshake() once so the first flight (ServerHello
+ * or ClientHello) is queued in the wbio for the caller to flush.
+ * On SSL_new failure the connection is marked CWIST_CONN_DEAD.
+ */
 static void conn_start_dtls(struct cwist_webrtc_conn *conn) {
     cwist_webrtc_ctx *ctx = conn->ctx;
     SSL_CTX *ssl_ctx = conn->is_server_role ? ctx->server_ssl_ctx : ctx->client_ssl_ctx;
@@ -195,6 +330,13 @@ static void conn_start_dtls(struct cwist_webrtc_conn *conn) {
     SSL_do_handshake(conn->ssl);
 }
 
+/** @fn conn_flush_dtls_out
+ * @brief Drain the SSL write BIO and send every pending DTLS datagram.
+ * @param conn  Connection whose wbio holds outbound records.
+ *
+ * Sends via cwist_webrtc_conn_send_raw(); stops when the BIO is empty or a
+ * read returns a short buffer.
+ */
 static void conn_flush_dtls_out(struct cwist_webrtc_conn *conn) {
     uint8_t buf[2048];
     for (;;) {
@@ -207,11 +349,26 @@ static void conn_flush_dtls_out(struct cwist_webrtc_conn *conn) {
     }
 }
 
+/** @fn conn_mark_dead
+ * @brief Mark a connection as dead so the timer loop reaps it.
+ * @param conn  Connection to mark; actual freeing happens later, off the list.
+ */
 static void conn_mark_dead(struct cwist_webrtc_conn *conn) {
     conn->state = CWIST_CONN_DEAD;
 }
 
-/* Drive handshake/data for a conn whose rbio has input. */
+/** @fn conn_service
+ * @brief Drive the DTLS handshake and data path for a connection with input pending.
+ * @param conn  Connection whose rbio has received data or that needs servicing.
+ *
+ * In CWIST_CONN_DTLS: advances the handshake; on success opens the SCTP
+ * association and moves to CWIST_CONN_ESTABLISHED, on SSL_ERROR_SSL marks
+ * the connection dead.
+ * In CWIST_CONN_ESTABLISHED: SSL_read() loop feeds decrypted SCTP packets to
+ * cwist_sctp_conn_input(), detects peer close (ZERO_RETURN/SYSCALL), tracks
+ * sctp_ready via cwist_sctp_assoc_established(), drains outbound SCTP, and
+ * flushes the pending-send queue. Finally flushes any DTLS output.
+ */
 static void conn_service(struct cwist_webrtc_conn *conn) {
     if (conn->state == CWIST_CONN_DTLS) {
         int rc = SSL_do_handshake(conn->ssl);
@@ -264,6 +421,20 @@ static void conn_service(struct cwist_webrtc_conn *conn) {
 
 /* ---- packet handling ---- */
 
+/** @fn handle_stun
+ * @brief Process a STUN binding request or response.
+ * @param ctx  Receiving context.
+ * @param buf  Raw datagram.
+ * @param len  Datagram length.
+ * @param remote  Source address of the datagram.
+ *
+ * Requests are answered only on ICE-lite server contexts: a valid request
+ * gets a binding response, and one with USE-CANDIDATE adopts a parked
+ * offer connection (matched by ufrag) or creates a fresh server-role
+ * connection, then starts DTLS. Responses are accepted only by client-role
+ * connections in state CWIST_CONN_STUN whose transaction id and credentials
+ * match; a valid response starts DTLS.
+ */
 static void handle_stun(cwist_webrtc_ctx *ctx, const uint8_t *buf, size_t len,
                         const struct sockaddr_in *remote) {
     if (cwist_ice_stun_is_binding_request(buf, len)) {
@@ -323,6 +494,16 @@ static void handle_stun(cwist_webrtc_ctx *ctx, const uint8_t *buf, size_t len,
     }
 }
 
+/** @fn handle_packet
+ * @brief Demux an inbound UDP datagram and dispatch it.
+ * @param ctx  Receiving context.
+ * @param buf  Raw datagram.
+ * @param len  Datagram length.
+ * @param remote  Source address of the datagram.
+ *
+ * STUN messages go to handle_stun(); anything else is treated as a DTLS
+ * record for the matching connection and is written into the SSL rbio.
+ */
 static void handle_packet(cwist_webrtc_ctx *ctx, const uint8_t *buf, size_t len,
                           const struct sockaddr_in *remote) {
     if (cwist_ice_stun_is_message(buf, len)) {
@@ -341,6 +522,16 @@ static void handle_packet(cwist_webrtc_ctx *ctx, const uint8_t *buf, size_t len,
 
 /* ---- event loop ---- */
 
+/** @fn loop_run_timers
+ * @brief Run per-iteration timer and reaping work for the event loop.
+ * @param ctx  Context being serviced.
+ *
+ * Under ctx->lock, unlinks dead or closed connections from the list, then
+ * frees them outside the lock. For live connections: retransmits STUN
+ * binding requests on client-role connections (giving up after
+ * STUN_MAX_ATTEMPTS), handles expired DTLS retransmission timeouts, and
+ * services established connections.
+ */
 static void loop_run_timers(cwist_webrtc_ctx *ctx) {
     struct timespec now;
     now_ts(&now);
@@ -389,6 +580,15 @@ static void loop_run_timers(cwist_webrtc_ctx *ctx) {
     }
 }
 
+/** @fn ctx_thread_main
+ * @brief Event-loop thread entry point for a context.
+ * @param arg  cwist_webrtc_ctx pointer.
+ * @return  Always NULL.
+ *
+ * Loops until ctx->stop: polls the UDP socket and wake pipe (SCTP_TIMER_MS
+ * timeout), drains wake bytes, handles all pending inbound datagrams, feeds
+ * elapsed time to usrsctp_handle_timers(), and runs loop_run_timers().
+ */
 static void *ctx_thread_main(void *arg) {
     cwist_webrtc_ctx *ctx = arg;
     uint8_t buf[65536];
@@ -442,6 +642,16 @@ static void *ctx_thread_main(void *arg) {
 
 /* ---- public API ---- */
 
+/** @fn cwist_webrtc_ctx_new
+ * @brief Create a WebRTC server context on a UDP port.
+ * @param port  UDP port to bind; port 0 requests an ephemeral port.
+ * @return  New context, or NULL on any initialization failure.
+ *
+ * Initializes usrsctp, binds a non-blocking UDP socket, creates the wake
+ * pipe, generates the DTLS certificate and both SSL_CTXs (server and
+ * client), rolls ICE credentials, detects the host IP, and starts the
+ * background event-loop thread. ctx->port holds the bound port.
+ */
 cwist_webrtc_ctx *cwist_webrtc_ctx_new(uint16_t port) {
     if (cwist_sctp_global_init() < 0)
         return NULL;
@@ -501,26 +711,65 @@ fail:
     return NULL;
 }
 
+/** @fn cwist_webrtc_ctx_port
+ * @brief Get the UDP port a context is bound to.
+ * @param ctx  Context created by cwist_webrtc_ctx_new().
+ * @return  Bound port number.
+ */
 uint16_t cwist_webrtc_ctx_port(const cwist_webrtc_ctx *ctx) {
     return ctx->port;
 }
 
+/** @fn cwist_webrtc_ctx_fingerprint
+ * @brief Get the DTLS certificate fingerprint for SDP signaling.
+ * @param ctx  Context created by cwist_webrtc_ctx_new().
+ * @return  Colon-separated SHA-256 fingerprint string; valid for the ctx lifetime.
+ */
 const char *cwist_webrtc_ctx_fingerprint(const cwist_webrtc_ctx *ctx) {
     return ctx->fingerprint;
 }
 
+/** @fn cwist_webrtc_ctx_set_message_handler
+ * @brief Register the DataChannel message callback.
+ * @param ctx  Context to configure.
+ * @param cb  Callback invoked per inbound message, or NULL to disable.
+ * @param user  Opaque pointer passed back to @p cb.
+ *
+ * The callback runs on the ctx event-loop thread.
+ */
 void cwist_webrtc_ctx_set_message_handler(cwist_webrtc_ctx *ctx, cwist_webrtc_message_cb cb,
                                           void *user) {
     ctx->msg_cb = cb;
     ctx->msg_user = user;
 }
 
+/** @fn cwist_webrtc_ctx_set_channel_handler
+ * @brief Register the DataChannel-opened callback.
+ * @param ctx  Context to configure.
+ * @param cb  Callback invoked when a DataChannel opens, or NULL to disable.
+ * @param user  Opaque pointer passed back to @p cb.
+ *
+ * The callback runs on the ctx event-loop thread.
+ */
 void cwist_webrtc_ctx_set_channel_handler(cwist_webrtc_ctx *ctx, cwist_webrtc_channel_cb cb,
                                           void *user) {
     ctx->ch_cb = cb;
     ctx->ch_user = user;
 }
 
+/** @fn cwist_webrtc_handle_offer
+ * @brief Parse an SDP offer and build the corresponding ICE-lite answer.
+ * @param ctx  Context that will own the new connection.
+ * @param offer  Remote SDP offer text.
+ * @param answer_out  Buffer receiving the generated answer SDP.
+ * @param out_len  Capacity of @p answer_out.
+ * @return  0 on success, -1 on SDP parse failure or allocation failure.
+ *
+ * Parks a server-role connection with a wildcard remote address and the
+ * offer's ICE credentials; handle_stun() later adopts it when the peer's
+ * STUN request nominates a candidate. Also flips the ctx into ICE-lite
+ * server mode.
+ */
 int cwist_webrtc_handle_offer(cwist_webrtc_ctx *ctx, const char *offer, char *answer_out,
                               size_t out_len) {
     cwist_sdp_info info;
@@ -544,6 +793,11 @@ int cwist_webrtc_handle_offer(cwist_webrtc_ctx *ctx, const char *offer, char *an
                                   ctx->ice_pwd, mid, ctx->host_ip, ctx->port);
 }
 
+/** @fn cwist_webrtc_ctx_connection_count
+ * @brief Count connections whose SCTP association is ready.
+ * @param ctx  Context to inspect.
+ * @return  Number of connections with sctp_ready set.
+ */
 int cwist_webrtc_ctx_connection_count(const cwist_webrtc_ctx *ctx) {
     int n = 0;
     for (struct cwist_webrtc_conn *c = ctx->conns; c; c = c->next) {
@@ -553,6 +807,19 @@ int cwist_webrtc_ctx_connection_count(const cwist_webrtc_ctx *ctx) {
     return n;
 }
 
+/** @fn cwist_webrtc_conn_send
+ * @brief Queue a message for delivery on a DataChannel.
+ * @param conn  Target connection.
+ * @param channel_id  SCTP stream id / DataChannel id.
+ * @param data  Payload bytes.
+ * @param len  Payload length; must be at most 1 MiB.
+ * @param type  CWIST_WEBRTC_DATA_STRING or CWIST_WEBRTC_DATA_BINARY.
+ * @return  0 if queued, -1 if the message is too large or allocation failed.
+ *
+ * The payload is copied; if the SCTP association is not ready yet the
+ * message waits in the connection's pending-send queue and is flushed by
+ * conn_service(). Thread-safe; wakes the event loop.
+ */
 int cwist_webrtc_conn_send(cwist_webrtc_conn *conn, uint16_t channel_id, const uint8_t *data,
                            size_t len, cwist_webrtc_data_type type) {
     if (len > 1 << 20)
@@ -577,11 +844,26 @@ int cwist_webrtc_conn_send(cwist_webrtc_conn *conn, uint16_t channel_id, const u
     return 0;
 }
 
+/** @fn cwist_webrtc_conn_close
+ * @brief Request asynchronous teardown of a connection.
+ * @param conn  Connection to close.
+ *
+ * Only flags the connection; the event loop unlinks and frees it on its
+ * next timer pass. Wakes the event loop.
+ */
 void cwist_webrtc_conn_close(cwist_webrtc_conn *conn) {
     conn->closed = true;
     cwist_webrtc_conn_wake(conn->ctx);
 }
 
+/** @fn cwist_webrtc_ctx_free
+ * @brief Stop a context's event loop and release all of its resources.
+ * @param ctx  Context to destroy; NULL is accepted as a no-op.
+ *
+ * Signals the thread to stop and joins it, frees every connection, then
+ * closes the UDP socket and wake pipe and frees the SSL_CTXs, certificate,
+ * and private key.
+ */
 void cwist_webrtc_ctx_free(cwist_webrtc_ctx *ctx) {
     if (!ctx)
         return;
@@ -616,6 +898,17 @@ void cwist_webrtc_ctx_free(cwist_webrtc_ctx *ctx) {
 
 /* ---- internal client-role dialer (loopback tests) ---- */
 
+/** @fn cwist_webrtc_connect
+ * @brief Open a client-role connection to a remote ICE-lite endpoint.
+ * @param ctx  Context to dial from.
+ * @param remote  Remote UDP address.
+ * @param peer_ufrag  Remote ICE username fragment for STUN credentials.
+ * @param peer_pwd  Remote ICE password for STUN MESSAGE-INTEGRITY.
+ * @return  New connection in state CWIST_CONN_STUN, or NULL on failure.
+ *
+ * Intended for loopback tests. Starts STUN binding requests immediately and
+ * performs DTLS in client (active) role once a binding response arrives.
+ */
 cwist_webrtc_conn *cwist_webrtc_connect(cwist_webrtc_ctx *ctx, const struct sockaddr_in *remote,
                                         const char *peer_ufrag, const char *peer_pwd) {
     struct cwist_webrtc_conn *conn = conn_new(ctx, remote, 0);

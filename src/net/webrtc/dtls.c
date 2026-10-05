@@ -1,5 +1,10 @@
 /** @file dtls.c
  * @brief DTLS helpers: ephemeral certificate generation, fingerprint, SSL_CTX.
+ *
+ * Provides the minimal DTLS layer for WebRTC: an ephemeral self-signed
+ * ECDSA certificate, the SHA-256 certificate fingerprint used in SDP
+ * a=fingerprint attributes, and construction of client/server SSL_CTX
+ * objects pinned to DTLS 1.2.
  */
 #include "webrtc_internal.h"
 
@@ -9,8 +14,24 @@
 #include <stdio.h>
 #include <string.h>
 
+/** @brief DTLS record/link MTU assumed for the media path (bytes).
+ * Used to size outgoing DTLS records so they fit typical UDP/ICE paths
+ * without IP fragmentation.
+ */
 #define CWIST_DTLS_MTU 1200
 
+/** @brief Generate an ephemeral self-signed ECDSA certificate for DTLS.
+ * @param cert_out Receives a new X509 certificate; set to NULL on entry
+ *                 and on failure.
+ * @param pkey_out Receives the matching EVP_PKEY; set to NULL on entry
+ *                 and on failure.
+ * @return 0 on success, -1 on any OpenSSL error.
+ * @note The key is P-256 (NID_X9_62_prime256v1). The certificate has
+ *       version 3 (v2 encoding), serial 1, a 30-day validity starting now,
+ *       and CN "cwist-webrtc". On failure all intermediate objects are
+ *       freed and both outputs remain NULL; on success ownership moves to
+ *       the caller, who must free them with X509_free()/EVP_PKEY_free().
+ */
 int cwist_dtls_generate_cert(X509 **cert_out, EVP_PKEY **pkey_out) {
     *cert_out = NULL;
     *pkey_out = NULL;
@@ -52,6 +73,19 @@ int cwist_dtls_generate_cert(X509 **cert_out, EVP_PKEY **pkey_out) {
     return 0;
 }
 
+/** @brief Compute the SHA-256 fingerprint of a certificate in SDP format.
+ * @param cert Certificate to hash; must be non-NULL.
+ * @param out  Output buffer receiving the fingerprint text.
+ * @param cap  Capacity of @p out in bytes (including the NUL terminator).
+ * @return 0 on success, -1 if the DER encoding fails, the certificate
+ *         exceeds the internal 2048-byte DER buffer, or the digest does
+ *         not fit in @p out.
+ * @retval 0 Fingerprint written, e.g. "AB:12:...:EF" in uppercase hex.
+ * @retval -1 Encoding, size, or digest error.
+ * @note The result is the colon-separated uppercase hex SHA-256 digest as
+ *       used in the SDP a=fingerprint attribute. No terminator is written
+ *       beyond what snprintf() already emits.
+ */
 int cwist_dtls_fingerprint(X509 *cert, char *out, size_t cap) {
     uint8_t der[2048];
     int der_len = i2d_X509(cert, NULL);
@@ -69,6 +103,19 @@ int cwist_dtls_fingerprint(X509 *cert, char *out, size_t cap) {
     return off > 0 && off < cap ? 0 : -1;
 }
 
+/** @brief Create a DTLS SSL_CTX for the client or server role.
+ * @param is_server Non-zero to build a DTLS server context, zero for a
+ *                  DTLS client context.
+ * @param cert      Server certificate; used (with @p pkey) only when
+ *                  @p is_server is non-zero. May be NULL for a client.
+ * @param pkey      Private key matching @p cert; only used for a server.
+ * @return New SSL_CTX on success, NULL on allocation failure or when
+ *         certificate/key loading or validation fails on the server side.
+ * @note The context is pinned to DTLS 1.2 as the minimum protocol version.
+ *       Client contexts use SSL_VERIFY_NONE: peer fingerprint verification
+ *       is deferred to the SDP exchange (the test pins the expected
+ *       fingerprint out of band).
+ */
 SSL_CTX *cwist_dtls_ctx_new(int is_server, X509 *cert, EVP_PKEY *pkey) {
     SSL_CTX *ctx = SSL_CTX_new(is_server ? DTLS_server_method() : DTLS_client_method());
     if (!ctx)
@@ -88,6 +135,9 @@ SSL_CTX *cwist_dtls_ctx_new(int is_server, X509 *cert, EVP_PKEY *pkey) {
     return ctx;
 }
 
+/** @brief Return the DTLS link MTU in bytes.
+ * @return The value of CWIST_DTLS_MTU (1200).
+ */
 unsigned int cwist_dtls_link_mtu(void) {
     return CWIST_DTLS_MTU;
 }

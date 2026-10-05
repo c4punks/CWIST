@@ -24,17 +24,49 @@
 
 #include <cwist/core/mem/alloc.h>
 
-#define DCEP_ACK 0x02
-#define DCEP_OPEN 0x03
+/** @name DCEP message types (RFC 8832) */
+/**@{*/
+#define DCEP_ACK 0x02  /**< DCEP ACK: acknowledges a received OPEN. */
+#define DCEP_OPEN 0x03 /**< DCEP OPEN: announces a new DataChannel. */
+/**@}*/
 
-#define PPID_STRING 50
-#define PPID_BINARY 51
-#define PPID_DCEP 53
+/** @name SCTP payload protocol identifiers (RFC 8831) */
+/**@{*/
+#define PPID_STRING 50 /**< DataChannel message in UTF-8 string form. */
+#define PPID_BINARY 51 /**< DataChannel message in binary form. */
+#define PPID_DCEP 53   /**< DCEP control message (OPEN/ACK). */
+/**@}*/
 
+/** WebRTC DataChannel well-known SCTP port (RFC 8831, both endpoints use it). */
 #define CWIST_SCTP_PORT 5000
-#define CHANNEL_BITS(n) ((n) * 2)
-#define CH_STATE_BYTES (65536 / 4) /* 2 bits per channel */
 
+/** @name Per-connection channel state bitmap
+ *
+ * conn->ch_state tracks two flags per DataChannel id in a packed bit array:
+ * bit 0 = channel announced by the peer (DCEP OPEN received), bit 1 = we
+ * sent DCEP OPEN for the channel. Any bit set means the channel is usable.
+ */
+/**@{*/
+#define CHANNEL_BITS(n) ((n) * 2)                 /**< Bit offset of channel (n)'s flags. */
+#define CH_STATE_BYTES (65536 / 4) /* 2 bits per channel */
+/**@}*/
+
+/**
+ * @brief Global usrsctp conn_output callback (AF_CONN raw mode).
+ *
+ * Hands a usrsctp-generated SCTP packet to the owning connection for
+ * transmission over its DTLS link. Registered once via
+ * usrsctp_init_nothreads() in cwist_sctp_global_init(). The @p addr handle is
+ * the cwist_webrtc_conn pointer registered with usrsctp_register_address().
+ *
+ * @param addr     Connection handle (cwist_webrtc_conn *); may be NULL.
+ * @param buffer   SCTP packet to transmit; ownership stays with usrsctp.
+ * @param length   Length of @p buffer in bytes.
+ * @param tos      Ignored (AF_CONN).
+ * @param set_df   Ignored (AF_CONN).
+ * @return 0 on success, -1 if the connection is gone (packet is dropped).
+ * @warning Called from usrsctp context; must not block or free @p buffer.
+ */
 static int sctp_global_output(void *addr, void *buffer, size_t length, uint8_t tos,
                               uint8_t set_df) {
     (void)tos;
@@ -46,6 +78,15 @@ static int sctp_global_output(void *addr, void *buffer, size_t length, uint8_t t
     return 0;
 }
 
+/**
+ * @brief Initialize the process-wide usrsctp instance. Idempotent.
+ *
+ * Registers the global conn_output callback (sctp_global_output) and disables
+ * UDP tunneling as required by RFC 8831. usrsctp must be pumped with
+ * usrsctp_handle_timers() from the caller's event loop afterwards.
+ *
+ * @return Always 0; later calls are no-ops.
+ */
 int cwist_sctp_global_init(void) {
     static int initialized = 0;
     if (initialized)
@@ -57,6 +98,14 @@ int cwist_sctp_global_init(void) {
     return 0;
 }
 
+/**
+ * @brief Read a per-channel flag bit from conn->ch_state.
+ *
+ * @param conn  Connection whose channel bitmap is read.
+ * @param ch    DataChannel id (0..65535).
+ * @param bit   Flag index within the channel's two bits (0 or 1).
+ * @return The flag value, or false if no bitmap is allocated.
+ */
 static bool ch_get(struct cwist_webrtc_conn *conn, uint16_t ch, int bit) {
     if (!conn->ch_state)
         return false;
@@ -64,6 +113,13 @@ static bool ch_get(struct cwist_webrtc_conn *conn, uint16_t ch, int bit) {
     return (conn->ch_state[off / 8] >> (off % 8)) & 1u;
 }
 
+/**
+ * @brief Set a per-channel flag bit in conn->ch_state.
+ *
+ * @param conn  Connection whose channel bitmap is updated.
+ * @param ch    DataChannel id (0..65535).
+ * @param bit   Flag index within the channel's two bits (0 or 1).
+ */
 static void ch_set(struct cwist_webrtc_conn *conn, uint16_t ch, int bit) {
     if (!conn->ch_state)
         return;
@@ -71,11 +127,32 @@ static void ch_set(struct cwist_webrtc_conn *conn, uint16_t ch, int bit) {
     conn->ch_state[off / 8] |= (uint8_t)(1u << (off % 8));
 }
 
-/* Effective data socket: the accepted socket on the answering side. */
+/**
+ * @brief Resolve the socket that carries DataChannel traffic.
+ *
+ * @param conn  Connection to query.
+ * @return The accepted socket on the answering side, otherwise the listening
+ *         (offering) socket; may be NULL before cwist_sctp_conn_open().
+ */
 static struct socket *cwist_sctp_data_sock(struct cwist_webrtc_conn *conn) {
     return conn->sctp_acc ? conn->sctp_acc : conn->sctp_sock;
 }
 
+/**
+ * @brief Route one received SCTP message to the right handler.
+ *
+ * DCEP OPEN messages are parsed for their label (truncated to 200 bytes),
+ * the channel is marked as peer-opened, a DCEP ACK is sent back, and
+ * cwist_webrtc_conn_on_channel_open() is fired. A received DCEP ACK only
+ * confirms the channel is ready both ways and is otherwise ignored. Binary
+ * and string messages are passed to cwist_webrtc_conn_on_message().
+ *
+ * @param conn    Owning connection; used for callbacks and channel flags.
+ * @param sid     SCTP stream id == DataChannel id.
+ * @param ppid    Payload protocol identifier in host byte order (PPID_*).
+ * @param msg     Message payload; not NUL-terminated.
+ * @param datalen Length of @p msg in bytes.
+ */
 static void dispatch_message(struct cwist_webrtc_conn *conn, uint16_t sid, uint32_t ppid,
                              const uint8_t *msg, size_t datalen) {
     if (ppid == PPID_DCEP && datalen >= 1) {
@@ -101,7 +178,23 @@ static void dispatch_message(struct cwist_webrtc_conn *conn, uint16_t sid, uint3
     }
 }
 
-/* receive_cb for the offering (connected) socket. */
+/**
+ * @brief usrsctp receive callback for the offering (connected) socket.
+ *
+ * Fires inside usrsctp whenever data arrives on the active side's socket;
+ * hands the message to dispatch_message() and frees the usrsctp-allocated
+ * buffer. The answering side instead drains with usrsctp_recvv() in
+ * cwist_sctp_conn_drain(), so this callback is not installed there.
+ *
+ * @param sock     Ignored.
+ * @param addr     Ignored.
+ * @param data     usrsctp-allocated message buffer; freed here.
+ * @param datalen  Length of @p data.
+ * @param rcv      Receive info carrying the stream id and PPID.
+ * @param flags    Ignored.
+ * @param ulp_info The cwist_webrtc_conn registered at socket creation.
+ * @return Always 1, telling usrsctp the data was consumed.
+ */
 static int on_incoming(struct socket *sock, union sctp_sockstore addr, void *data, size_t datalen,
                        struct sctp_rcvinfo rcv, int flags, void *ulp_info) {
     (void)sock;
@@ -115,6 +208,20 @@ static int on_incoming(struct socket *sock, union sctp_sockstore addr, void *dat
     return 1;
 }
 
+/**
+ * @brief Send a DCEP control message (OPEN or ACK) on a DataChannel.
+ *
+ * Builds the message in a stack buffer (max 12-byte header + 200-byte label)
+ * and sends it with PPID_DCEP on stream @p channel via the effective data
+ * socket. OPEN carries a RELIABLE channel type and the given label;
+ * ACK is a bare 12-byte header with no label.
+ *
+ * @param conn    Owning connection.
+ * @param channel DataChannel id == SCTP stream id to send on.
+ * @param type    DCEP message type (DCEP_OPEN or DCEP_ACK).
+ * @param label   Channel label for OPEN; ignored (may be NULL) for ACK.
+ * @return 0 if the message was handed to usrsctp, -1 on send failure.
+ */
 int dcep_send(struct cwist_webrtc_conn *conn, uint16_t channel, uint8_t type, const char *label) {
     uint8_t msg[256];
     size_t len = 0;
@@ -150,6 +257,24 @@ int dcep_send(struct cwist_webrtc_conn *conn, uint16_t channel, uint8_t type, co
     return rc >= 0 ? 0 : -1;
 }
 
+/**
+ * @brief Create the per-connection SCTP socket and start (or listen for) the
+ * association.
+ *
+ * Creates a non-blocking AF_CONN socket with SCTP_RECVRCVINFO and SCTP_NODELAY
+ * enabled, allocates the channel state bitmap, registers the connection as
+ * the AF_CONN address handle, and binds to CWIST_SCTP_PORT. The offering
+ * side additionally connect()s to its own handle to send the INIT (EINPROGRESS
+ * is treated as in-flight); the answering side listen()s for the association.
+ * On any failure all partially created state is torn down.
+ *
+ * @param conn  Connection to set up; sctp_sock/ch_state are filled in.
+ * @return 0 on success, -1 if the socket, bitmap, bind, or listen/connect
+ *         step fails.
+ * @warning The DTLS link must already be up; the active side's connect only
+ *          starts the SCTP handshake, whose packets travel via the
+ *          conn_output callback into cwist_webrtc_conn_sctp_out().
+ */
 int cwist_sctp_conn_open(struct cwist_webrtc_conn *conn) {
     conn->sctp_sock = usrsctp_socket(AF_CONN, SOCK_STREAM, IPPROTO_SCTP,
                                      conn->is_server_role ? NULL : &on_incoming, NULL, 0,
@@ -219,6 +344,15 @@ int cwist_sctp_conn_open(struct cwist_webrtc_conn *conn) {
     return 0;
 }
 
+/**
+ * @brief Tear down all per-connection SCTP state.
+ *
+ * Closes the accepted socket (if any) and the main socket, then deregisters
+ * the AF_CONN handle and frees the channel state bitmap. Safe to call on a
+ * connection that was never opened or already closed.
+ *
+ * @param conn  Connection whose SCTP state is destroyed.
+ */
 void cwist_sctp_conn_close(struct cwist_webrtc_conn *conn) {
     if (conn->sctp_acc) {
         usrsctp_close(conn->sctp_acc);
@@ -235,12 +369,35 @@ void cwist_sctp_conn_close(struct cwist_webrtc_conn *conn) {
     }
 }
 
+/**
+ * @brief Feed a DTLS-decrypted SCTP packet into usrsctp.
+ *
+ * Injects the packet into the connection's association; any immediate
+ * replies are routed back through sctp_global_output(). A no-op if the
+ * socket is not open yet.
+ *
+ * @param conn  Owning connection (registered AF_CONN handle).
+ * @param data  SCTP packet bytes as received over DTLS.
+ * @param len   Length of @p data.
+ */
 void cwist_sctp_conn_input(struct cwist_webrtc_conn *conn, const uint8_t *data, size_t len) {
     if (conn->sctp_sock)
         usrsctp_conninput(conn, data, len, 0);
 }
 
-/* Drain inbound data; accept the association on the passive side. */
+/**
+ * @brief Accept the association (answering side) and drain inbound messages.
+ *
+ * On the passive side, accepts the pending association once and enables
+ * non-blocking mode plus SCTP_RECVRCVINFO on the accepted socket. Then reads
+ * all queued messages from the effective data socket into a static 1 MiB
+ * buffer, skipping notifications and datagrams without complete rcvinfo, and
+ * dispatches each message. Runs from the event loop; never blocks.
+ *
+ * @param conn  Connection to service.
+ * @note The receive buffer is a shared static, so this must not be called
+ *       concurrently from multiple threads.
+ */
 void cwist_sctp_conn_drain(struct cwist_webrtc_conn *conn) {
     if (!conn->sctp_sock)
         return;
@@ -277,6 +434,16 @@ void cwist_sctp_conn_drain(struct cwist_webrtc_conn *conn) {
     }
 }
 
+/**
+ * @brief Check whether the SCTP association is fully established.
+ *
+ * On the answering side the association is up once the accepted socket
+ * exists; on the offering side the SCTP_STATUS socket option must report
+ * SCTP_ESTABLISHED.
+ *
+ * @param conn  Connection to query.
+ * @return true if DataChannel traffic can flow, false otherwise.
+ */
 bool cwist_sctp_assoc_established(struct cwist_webrtc_conn *conn) {
     if (!conn->sctp_sock)
         return false;
@@ -290,6 +457,23 @@ bool cwist_sctp_assoc_established(struct cwist_webrtc_conn *conn) {
     return status.sstat_state == SCTP_ESTABLISHED;
 }
 
+/**
+ * @brief Send a DataChannel message, opening the channel first if needed.
+ *
+ * Fails unless the association's data socket exists and conn->sctp_ready is
+ * set. If neither channel flag is set (channel never announced in either
+ * direction), a DCEP OPEN with an auto-generated "dc<N>" label is sent first
+ * and the open_sent bit is recorded so the OPEN is sent only once. The
+ * payload goes out with PPID_STRING or PPID_BINARY on the channel's stream.
+ *
+ * @param conn      Owning connection.
+ * @param channel   DataChannel id == SCTP stream id.
+ * @param data      Message payload; may be NULL when @p len is 0.
+ * @param len       Payload length in bytes.
+ * @param is_string Non-zero to send as a UTF-8 string message.
+ * @return 0 if the message was handed to usrsctp, -1 if the link is not
+ *         ready or sending failed.
+ */
 int cwist_sctp_send(struct cwist_webrtc_conn *conn, uint16_t channel, const uint8_t *data,
                     size_t len, int is_string) {
     if (!cwist_sctp_data_sock(conn) || !conn->sctp_ready)
