@@ -27,7 +27,7 @@ remain artifacts but cannot be published as successful measurements.
 - Separate tuned profile: `wrk -t4 -c100 -d10s`, also after a discarded
   10-second warmup. CWIST classic and Spring each get a fresh server process.
 - The main cases are CWIST classic, C1M, C1M with `arena_max=1`, C1M with
-  `drain_chunk=8`, explicit C1M `PUBLIC_FIXED`, Axum, Gin and Spring.
+  `drain_chunk=8`, explicit C1M `PUBLIC_FIXED`, Actix, Axum, Gin and Spring.
 - The PUBLIC_FIXED leg sets only `CWIST_BENCH_PUBLIC_FIXED=1` in the benchmark
   fixture to select explicit public-cache registration. Other legs retain bare
   FIXED registration. This is a configuration screen, not proof of a universal
@@ -104,7 +104,7 @@ tuned `wrk -t4 -c100` run).
 ## Runtime configuration
 
 CWIST uses the checked-out source and generated constant-body fixture.
-Axum uses `axum = 0.7` and Tokio; Gin uses v1.10.0 and Go 1.22.
+Actix uses `actix-web = 4`; Axum uses `axum = 0.7` and Tokio; Gin uses v1.10.0 and Go 1.22.
 Spring uses Spring Boot 3.2.3 WebFlux/Reactor Netty on JDK 25, native epoll,
 virtual threads **disabled**, and a fixed **1024 MiB** initial/maximum heap.
 Its recorded JVM arguments include G1GC and the actual runtime tuning flags.
