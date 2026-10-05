@@ -44,17 +44,27 @@ class GateTests(unittest.TestCase):
         failures, _ = evaluate([], HEALTHY)
         self.assertEqual(failures, [])
 
-    def test_pre_307_regression_fails_on_rtt_and_churn_ratio(self):
+    def test_pre_307_regression_fails_on_rtt(self):
         failures, _ = evaluate([], PRE_307)
-        self.assertTrue({'tls_rtt_p50_ms', 'https_churn_ratio'} <= failed_metrics(failures),
-                        failures)
+        self.assertIn('tls_rtt_p50_ms', failed_metrics(failures))
 
-    def test_churn_ratio_alone_catches_it_when_absolute_churn_looks_fine(self):
-        # On a faster CPU the regressed absolute churn can clear its backstop;
-        # the ratio must still fail.
-        fast = dict(PRE_307, https_churn_rps=1100.0, http_churn_rps=21000.0, tls_rtt_p50_ms=0.1)
-        failures, _ = evaluate([], fast)
-        self.assertEqual(failed_metrics(failures), {'https_churn_ratio'})
+    def test_pre_307_regression_fails_same_cpu_churn_ratio(self):
+        # With Ryzen history, the churn-ratio drop (0.118 -> 0.052) fails the
+        # same-CPU check even where the absolute backstop is too loose to.
+        history = [dict(HEALTHY, timestamp=f'2026-10-0{i}') for i in range(1, 6)]
+        failures, _ = evaluate(history, dict(PRE_307, tls_rtt_p50_ms=0.1))
+        self.assertIn('https_churn_ratio', failed_metrics(failures))
+
+    def test_healthy_intel_runner_passes_without_history(self):
+        # Run 37301931499: lower churn ratio than any AMD runner, healthy code.
+        intel = {
+            'runner_hw': '4 vCPU | INTEL(R) XEON(R) PLATINUM 8573C', 'tls_rtt_p50_ms': 0.08,
+            'https_churn_rps': 1440.53, 'http_churn_rps': 20430.4,
+            'https_keepalive_rps': 143567.15, 'http_keepalive_rps': 213915.29,
+            'https_big_gbps': 3.37, 'http_big_gbps': 7.96,
+        }
+        failures, _ = evaluate([], intel)
+        self.assertEqual(failures, [])
 
     def test_every_recorded_run_passes_against_the_rest(self):
         history = json.loads(HISTORY.read_text())

@@ -11,20 +11,24 @@ divided by the allowance); the RTT metric is a "max" gate.
 
 The absolute throughput numbers swing ~1.8x between the CPUs GitHub hands
 out, so their backstops only catch breakage that is wrong on any hardware.
-The TLS-specific gates are the https/http *ratios*: both sides are measured
-on the same machine in the same run, so the hardware cancels out. Recorded
-healthy range (7 CI runs on EPYC 7763 / 9V74 / 9V45, plus Ryzen 5600X):
+The https/http *ratios* cancel most of the hardware out (both sides are
+measured in the same run), but not all of it: TLS handshake cost relative
+to a plaintext accept differs between CPU vendors. Recorded healthy range:
 
-    ratio              healthy        backstop   pre-#307 tree (Ryzen)
-    churn_ratio        0.111-0.127    0.08       0.052
-    keepalive_ratio    0.552-0.656    0.45       0.705 (unaffected)
-    big_ratio          0.337-0.519    0.25       0.300 (unaffected)
+    ratio              AMD (EPYC 7763/9V74/9V45, Ryzen)   Intel Xeon 8573C   backstop
+    churn_ratio        0.111-0.127                         0.071              0.04
+    keepalive_ratio    0.552-0.656                         0.671              0.45
+    big_ratio          0.337-0.519                         0.423              0.25
 
-Regression check, Ryzen 5600X, with #307's TCP_QUICKACK re-arm disabled:
-tls_rtt_p50_ms 0.083 -> 43.0 and churn_ratio 0.118 -> 0.052, so both the
-RTT gate and the churn-ratio gate fail it; https_churn_rps (677/s) also
-falls under its backstop, but that one alone would not catch it on a fast
-CPU. test_https_gates_eval.py replays both rows.
+The churn-ratio backstop therefore cannot separate a regression from a
+vendor difference (a regressed AMD tree measures 0.052, a healthy Intel one
+0.071); it catches large drops, and the same-CPU check below catches the
+rest once a CPU has history.
+
+#307-class regressions are caught by tls_rtt_p50_ms, which does not depend
+on the hardware: Ryzen 5600X with #307's TCP_QUICKACK re-arm disabled went
+from 0.083 to 43.0 ms (healthy runs measure 0.07-0.13 ms on every CPU seen).
+test_https_gates_eval.py replays that row.
 
 Usage:
     https_gates_eval.py RESULT.json [HISTORY.json]   # evaluate, exit 1 on fail
@@ -53,7 +57,7 @@ HISTORY = Path(__file__).resolve().parent.parent.parent / "benchmarks" / "https_
 GATES = [
     ("tls_rtt_p50_ms", "max", 5.0, 2.0),
     # TLS-path gates, hardware-normalised (see module docstring).
-    ("https_churn_ratio", "min", 0.08, 1.20),
+    ("https_churn_ratio", "min", 0.04, 1.20),
     ("https_keepalive_ratio", "min", 0.45, 1.20),
     ("https_big_ratio", "min", 0.25, 1.20),
     # Absolute throughput: catastrophic-only backstops.
