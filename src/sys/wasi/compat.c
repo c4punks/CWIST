@@ -143,6 +143,32 @@ void cwist_reactor_destroy(cwist_reactor_t *reactor) {
     (void)reactor;
 }
 
+void cwist_reactor_timer_init(cwist_reactor_timer_t *timer, void (*cb)(void *ctx), void *ctx) {
+    if (!timer) return;
+    timer->deadline_ns = 0;
+    timer->heap_slot = 0;
+    timer->cb = cb;
+    timer->ctx = ctx;
+}
+
+bool cwist_reactor_timer_arm(cwist_reactor_t *reactor, cwist_reactor_timer_t *timer,
+                             uint64_t delay_us) {
+    (void)reactor;
+    (void)timer;
+    (void)delay_us;
+    return false;
+}
+
+void cwist_reactor_timer_cancel(cwist_reactor_t *reactor, cwist_reactor_timer_t *timer) {
+    (void)reactor;
+    (void)timer;
+}
+
+bool cwist_reactor_timer_armed(const cwist_reactor_timer_t *timer) {
+    (void)timer;
+    return false;
+}
+
 /* --- Metrics / parked-writer fast paths: under WASI 0.2 the real
  * metrics.c and writer_fast.c join the build, so these stubs exist only
  * for preview1 where those units cannot compile. ------------------------ */

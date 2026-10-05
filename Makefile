@@ -829,6 +829,7 @@ TEST_TARGETS = test_worker_affinity \
                test_app_resource_limits \
                test_reactor_wake \
                test_classic_pool_scaling \
+               test_reactor_timer \
                test_reactor_drain_chunk \
                test_latency_probe \
                test_sstring \
@@ -965,6 +966,14 @@ test_app_resource_limits: $(LIB_NAME) tests/test_app_resource_limits.c src/sys/a
 test_reactor_wake: tests/test_reactor_wake.c src/sys/io/reactor.c
 	$(CC) $(CFLAGS) -o $@ tests/test_reactor_wake.c -pthread
 	./$@
+
+# Reactor one-shot timers, on the default backend and on forced epoll.
+test_reactor_timer: tests/test_reactor_timer.c src/sys/io/reactor.c
+	$(CC) $(CFLAGS) -o $@ tests/test_reactor_timer.c -pthread
+	./$@
+ifeq ($(UNAME_S),Linux)
+	CWIST_REACTOR_BACKEND=epoll ./$@
+endif
 
 test_classic_pool_scaling: $(LIB_NAME) tests/test_classic_pool_scaling.c
 	$(CC) $(CFLAGS) -o $@ tests/test_classic_pool_scaling.c $(LIB_NAME) $(LIBS)
