@@ -37,6 +37,7 @@
 #include <stdatomic.h>
 #include <fcntl.h>
 #include <limits.h>
+#include <time.h>
 
 #ifdef __linux__
 #include <sys/syscall.h>
@@ -210,6 +211,10 @@ struct cwist_reactor {
     reactor_slot_chunk_t *chunks;
     reactor_event_ctx_t *free_head;  /* Free list threaded through slots. */
     pthread_mutex_t pool_lock;
+    /* Armed one-shot timers, min-heap on deadline_ns.  Run thread only. */
+    cwist_reactor_timer_t **timer_heap;
+    uint32_t timer_n;
+    uint32_t timer_cap;
 #ifdef __linux__
     /* Deferred SQE batching: submissions made by the reactor's own run thread
      * while it dispatches a CQE batch (overwhelmingly connection re-arms, one
@@ -1184,14 +1189,15 @@ static uint64_t reactor_cq_grace_ns(void) {
 
 void cwist_reactor_run(cwist_reactor_t *reactor) {
     if (!reactor) return;
-    reactor->running = true;
+    __atomic_store_n(&reactor->running, true, __ATOMIC_RELEASE);
 
 #ifdef __linux__
     if (!reactor->impl.use_epoll) {
         reactor->owner = pthread_self();
         const uint64_t cq_grace_ns = reactor_cq_grace_ns();
-        while (reactor->running && atomic_load(&g_cwist_running)) {
+        while (reactor_running(reactor)) {
             reactor_drain_posts(reactor);
+            reactor_run_timers(reactor);
             /* Submit the re-arms queued by the previous dispatch batch under
              * the SQ lock, then wait in a separate call.  The submit enter
              * MUST hold the lock: uring_submit/uring_submit_batch roll the
@@ -1242,7 +1248,11 @@ void cwist_reactor_run(cwist_reactor_t *reactor) {
                 }
             }
 
-            static const struct __kernel_timespec idle_ts = {.tv_sec = 0, .tv_nsec = 100000000};
+            /* Bounded by the idle wait, shortened to the next timer. */
+            const uint64_t wait_ns = reactor_wait_ns(reactor);
+            const struct __kernel_timespec idle_ts = {
+                .tv_sec = (long long)(wait_ns / 1000000000ull),
+                .tv_nsec = (long long)(wait_ns % 1000000000ull)};
             uint32_t to_submit = reactor->sq_unsubmitted;
             reactor->sq_unsubmitted = 0;
             if (to_submit > 0) {
@@ -1335,8 +1345,12 @@ void cwist_reactor_run(cwist_reactor_t *reactor) {
         }
     } else {
         struct epoll_event events[1024];
-        while (reactor->running && atomic_load(&g_cwist_running)) {
-            int n = epoll_wait(reactor->impl.epoll_fd, events, 1024, -1);
+        while (reactor_running(reactor)) {
+            reactor_drain_posts(reactor);
+            reactor_run_timers(reactor);
+            /* Round the wait up so a timer is never polled for early. */
+            int wait_ms = (int)((reactor_wait_ns(reactor) + 999999ull) / 1000000ull);
+            int n = epoll_wait(reactor->impl.epoll_fd, events, 1024, wait_ms);
             if (n < 0) {
                 if (errno == EINTR) continue;
                 break;
@@ -1357,9 +1371,12 @@ void cwist_reactor_run(cwist_reactor_t *reactor) {
      * without a signal (cwist_shutdown_request() from another thread) only
      * clears g_cwist_running and closes the listen socket, which wakes
      * no kevent, so the flag must be re-checked periodically. */
-    const struct timespec idle_ts = {.tv_sec = 0, .tv_nsec = 100 * 1000 * 1000};
-    while (reactor->running && atomic_load(&g_cwist_running)) {
+    while (reactor_running(reactor)) {
         reactor_drain_posts(reactor);
+        reactor_run_timers(reactor);
+        const uint64_t wait_ns = reactor_wait_ns(reactor);
+        const struct timespec idle_ts = {.tv_sec = (time_t)(wait_ns / 1000000000ull),
+                                         .tv_nsec = (long)(wait_ns % 1000000000ull)};
         int n = kevent(reactor->impl.kq_fd, NULL, 0, events, 1024, &idle_ts);
         if (n < 0) {
             if (errno == EINTR) continue;
