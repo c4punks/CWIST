@@ -7,6 +7,8 @@
  */
 #include "webrtc_internal.h"
 
+#include <cwist/core/mem/alloc.h>
+
 #include <arpa/inet.h>
 #include <errno.h>
 #include <fcntl.h>
@@ -141,7 +143,7 @@ static void conn_free(struct cwist_webrtc_conn *conn) {
 
 static struct cwist_webrtc_conn *conn_new(cwist_webrtc_ctx *ctx,
                                           const struct sockaddr_in *remote, int is_server_role) {
-    struct cwist_webrtc_conn *conn = cwist_malloc(1, sizeof(*conn));
+    struct cwist_webrtc_conn *conn = cwist_malloc(sizeof(*conn));
     if (!conn)
         return NULL;
     conn->ctx = ctx;
@@ -444,7 +446,7 @@ cwist_webrtc_ctx *cwist_webrtc_ctx_new(uint16_t port) {
     if (cwist_sctp_global_init() < 0)
         return NULL;
 
-    cwist_webrtc_ctx *ctx = cwist_malloc(1, sizeof(*ctx));
+    cwist_webrtc_ctx *ctx = cwist_malloc(sizeof(*ctx));
     if (!ctx)
         return NULL;
     ctx->udp_fd = -1;

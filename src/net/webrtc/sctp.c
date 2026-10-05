@@ -163,7 +163,7 @@ int cwist_sctp_conn_open(struct cwist_webrtc_conn *conn) {
     usrsctp_setsockopt(conn->sctp_sock, IPPROTO_SCTP, SCTP_RECVRCVINFO, &on, sizeof(on));
     usrsctp_setsockopt(conn->sctp_sock, IPPROTO_SCTP, SCTP_NODELAY, &on, sizeof(on));
 
-    conn->ch_state = cwist_malloc(1, CH_STATE_BYTES);
+    conn->ch_state = cwist_malloc(CH_STATE_BYTES);
     if (!conn->ch_state) {
         usrsctp_close(conn->sctp_sock);
         conn->sctp_sock = NULL;
