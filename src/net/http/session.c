@@ -6,6 +6,7 @@
 #include <cwist/net/http/session.h>
 #include <cwist/net/http/cookie.h>
 #include <cwist/core/mem/alloc.h>
+#include "async_gc.h"
 #include <cjson/cJSON.h>
 #if defined(__EMSCRIPTEN__) || defined(__wasi__)
 /* WASM links no OpenSSL: verify cookie signatures with the bundled
@@ -441,16 +442,13 @@ void cwist_session_destroy(cwist_session_t *session) {
     cwist_free(session);
 }
 
-/**
- * @brief Write the session back to the response as a signed cookie.
- * If the session was invalidated, the cookie is deleted (expired) instead.
- * A no-op when the session is unmodified and already loaded from the
- * request, so read-only requests avoid re-setting the cookie.
- * @param session Session to persist.
- * @param res Response to attach the Set-Cookie header to.
- * @return 0 on success (including the no-op and invalidation cases).
- * @retval -1 if session or res is NULL, or serialization/signing fails.
- */
+void cwist_http_async_disown_session(cwist_session_t *session) {
+    if (!session || !cwist_full_gc_enabled()) return;
+    cwist_http_async_disown_map(session->data);
+    cwist_gc_scope_disown(session);
+    /* app and req are backreferences, not session-owned allocations. */
+}
+
 int cwist_session_commit(cwist_session_t *session, cwist_http_response *res) {
     if (!session || !res) return -1;
     if (!session->modified && session->loaded) return 0;

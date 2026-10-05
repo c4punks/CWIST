@@ -27,10 +27,11 @@ with the receiving job's scope.
    original response to `respond_with` does not cause duplicate destruction.
 
 Completion on the dispatch thread claims and records a pending response without
-sending or destroying it. If completion is produced before dispatch acknowledgement,
-it is recorded and dispatch acknowledgement finishes the execution, or the completion
-awaits the dispatch acknowledgement before destruction. Retained producer/timer reference
-rules remain unchanged.
+sending or destroying it. After middleware unwinds, dispatch acknowledgement
+executes that completion. This preserves an allocation-independent inline abort
+when scheduling fails. Do not join or wait for a completing producer
+from a handler or posthandler: a foreign winning producer waits for dispatch to
+finish. Retained producer/timer reference rules remain unchanged.
 
 ## Ownership inventory
 
