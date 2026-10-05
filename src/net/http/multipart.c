@@ -35,6 +35,18 @@ typedef struct {
 
 static void mp_parse_headers(mp_parse_ctx *ctx);
 
+/**
+ * @brief multipart-parser-c callback: header field fragment received.
+ *
+ * Appends the fragment to the buffered header field name (truncated at the
+ * fixed buffer size). If a header value was already seen for the previous
+ * field, that pair is finalized via mp_parse_headers() before buffering.
+ *
+ * @param p Parser instance (carries mp_parse_ctx).
+ * @param at Pointer to the fragment.
+ * @param len Fragment length.
+ * @return 0 on success.
+ */
 static int mp_on_header_field(multipart_parser *p, const char *at, size_t len) {
     mp_parse_ctx *ctx = (mp_parse_ctx *)multipart_parser_get_data(p);
     if (ctx->have_value) {

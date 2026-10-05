@@ -52,10 +52,27 @@ struct cwist_graphql_event_source {
     size_t topic_cap;
 };
 
+/**
+ * @brief Create an empty event source (topic interest set).
+ * @return New event source, or NULL on allocation failure. Owned by the
+ *         caller; free with cwist_graphql_event_source_destroy().
+ */
 cwist_graphql_event_source_t *cwist_graphql_event_source_create(void) {
     return (cwist_graphql_event_source_t *)cwist_alloc(sizeof(cwist_graphql_event_source_t));
 }
 
+/**
+ * @brief Add a topic to an event source.
+ *
+ * Idempotent: adding a topic that is already present succeeds without
+ * duplicating it. The topic string is copied, so the caller keeps ownership
+ * of @p topic.
+ *
+ * @param src Event source to modify; must not be NULL.
+ * @param topic Topic name to add; must be a non-empty string.
+ * @return true on success (including the already-present case), false on
+ *         invalid arguments or allocation failure.
+ */
 bool cwist_graphql_event_source_add_topic(cwist_graphql_event_source_t *src, const char *topic) {
     if (!src || !topic || topic[0] == '\0') return false;
     for (size_t i = 0; i < src->topic_count; i++) {
@@ -76,6 +93,11 @@ bool cwist_graphql_event_source_add_topic(cwist_graphql_event_source_t *src, con
     return true;
 }
 
+/**
+ * @brief Destroy an event source, freeing all topic strings and the set.
+ *
+ * @param src Event source to free; NULL is a no-op.
+ */
 void cwist_graphql_event_source_destroy(cwist_graphql_event_source_t *src) {
     if (!src) return;
     for (size_t i = 0; i < src->topic_count; i++) cwist_free(src->topics[i]);
@@ -83,6 +105,12 @@ void cwist_graphql_event_source_destroy(cwist_graphql_event_source_t *src) {
     cwist_free(src);
 }
 
+/**
+ * @brief Test whether an event source is interested in @p topic.
+ * @param src Event source; must not be NULL.
+ * @param topic Topic name to look up.
+ * @return true if @p topic is in the set, false otherwise.
+ */
 static bool gql_src_has_topic(const cwist_graphql_event_source_t *src, const char *topic) {
     for (size_t i = 0; i < src->topic_count; i++) {
         if (strcmp(src->topics[i], topic) == 0) return true;
@@ -106,6 +134,13 @@ struct cwist_graphql_ws {
     gql_sub_field_t *subs;
 };
 
+/**
+ * @brief Create a graphql-ws endpoint holding a subscription field registry.
+ * @param schema GraphQL schema the endpoint answers to; not owned, must
+ *        outlive the endpoint.
+ * @return New endpoint, or NULL if @p schema is NULL or allocation fails.
+ *         Free with cwist_graphql_ws_destroy().
+ */
 cwist_graphql_ws_t *cwist_graphql_ws_create(cwist_graphql_schema_t *schema) {
     if (!schema) return NULL;
     cwist_graphql_ws_t *gws = (cwist_graphql_ws_t *)cwist_alloc(sizeof(*gws));
@@ -116,6 +151,14 @@ cwist_graphql_ws_t *cwist_graphql_ws_create(cwist_graphql_schema_t *schema) {
     return gws;
 }
 
+/**
+ * @brief Destroy an endpoint and its subscription field registry.
+ *
+ * Does not touch active connections or broker operations still referencing
+ * the endpoint's resolvers.
+ *
+ * @param gws Endpoint to free; NULL is a no-op.
+ */
 void cwist_graphql_ws_destroy(cwist_graphql_ws_t *gws) {
     if (!gws) return;
     gql_sub_field_t *f = gws->subs;
@@ -128,6 +171,22 @@ void cwist_graphql_ws_destroy(cwist_graphql_ws_t *gws) {
     cwist_free(gws);
 }
 
+/**
+ * @brief Register (or replace) the resolver for a subscription root field.
+ *
+ * If the field is already registered, its resolver and context are replaced
+ * in place; otherwise a new entry is prepended to the registry. The field
+ * name is copied.
+ *
+ * @param gws Endpoint to register on; must not be NULL.
+ * @param field Subscription root field name; must be a non-empty string.
+ * @param subscribe_fn Resolver invoked per `subscribe` for @p field; must not
+ *        be NULL. It receives the parsed arguments and variables and returns
+ *        an event source (owned by the broker) or NULL to reject the
+ *        operation.
+ * @param ctx Opaque pointer passed through to @p subscribe_fn.
+ * @return true on success, false on invalid arguments or allocation failure.
+ */
 bool cwist_graphql_ws_add_subscription(cwist_graphql_ws_t *gws, const char *field,
                                        cwist_graphql_subscribe_fn subscribe_fn, void *ctx) {
     if (!gws || !field || field[0] == '\0' || !subscribe_fn) return false;
@@ -190,23 +249,37 @@ typedef struct gql_ws_flush {
 static pthread_mutex_t g_broker_lock = PTHREAD_MUTEX_INITIALIZER;
 static gql_ws_op_t *g_broker_ops; /* all active operations, all endpoints */
 
+/**
+ * @brief Take a connection reference (atomic, thread-safe).
+ * @param conn Connection to ref.
+ */
 static void gql_ws_conn_ref(gql_ws_conn_t *conn) {
     atomic_fetch_add_explicit(&conn->refs, 1, memory_order_relaxed);
 }
 
-/* Frees the connection state once the WS layer, the protocol layer, and all
- * in-flight flush nodes have released their references. */
+/**
+ * @brief Frees the connection state once the WS layer, the protocol layer, and all
+ * in-flight flush nodes have released their references.
+ */
 static void gql_ws_conn_free(gql_ws_conn_t *conn) {
     for (size_t i = 0; i < conn->pending_count; i++) free(conn->pending[i]);
     cwist_free(conn->pending);
     cwist_free(conn);
 }
 
+/**
+ * @brief Drop a connection reference; frees the connection at zero.
+ *
+ * Thread-safe (atomic). The last unref runs gql_ws_conn_free().
+ */
 static void gql_ws_conn_unref(gql_ws_conn_t *conn) {
     if (atomic_fetch_sub_explicit(&conn->refs, 1, memory_order_acq_rel) == 1)
         gql_ws_conn_free(conn);
 }
 
+/**
+ * @brief Free a broker operation and everything it owns (id, field, event source).
+ */
 static void gql_ws_op_free(gql_ws_op_t *op) {
     cwist_free(op->id);
     cwist_free(op->field);
@@ -214,14 +287,23 @@ static void gql_ws_op_free(gql_ws_op_t *op) {
     cwist_free(op);
 }
 
-/* Remove @p victim from the global broker list (caller holds g_broker_lock). */
+/**
+ * @brief Remove @p victim from the global broker list.
+ *
+ * @param victim Operation to unlink. Caller must hold g_broker_lock.
+ */
 static void gql_ws_op_unlink(gql_ws_op_t *victim) {
     gql_ws_op_t **pp = &g_broker_ops;
     while (*pp && *pp != victim) pp = &(*pp)->next;
     if (*pp) *pp = victim->next;
 }
 
-/* Unlink and free every operation of @p conn (caller holds g_broker_lock). */
+/**
+ * @brief Unlink and free every operation of @p conn.
+ *
+ * @param conn Connection whose operations are purged. Caller must hold
+ *        g_broker_lock.
+ */
 static void gql_ws_conn_purge_ops(gql_ws_conn_t *conn) {
     gql_ws_op_t *op = g_broker_ops;
     while (op) {
@@ -238,6 +320,15 @@ static void gql_ws_conn_purge_ops(gql_ws_conn_t *conn) {
 /* Wire helpers (reactor thread only)                                  */
 /* ------------------------------------------------------------------ */
 
+/**
+ * @brief Serialize and send a JSON message, then destroy it.
+ *
+ * Takes ownership of @p msg regardless of outcome. Closes the socket on
+ * print or send failure.
+ *
+ * @param ws Socket to send on; reactor thread only.
+ * @param msg cJSON message; consumed by this call.
+ */
 static void gql_ws_send_json(cwist_websocket_async *ws, cJSON *msg) {
     char *printed = cJSON_PrintUnformatted(msg);
     cJSON_Delete(msg);
@@ -251,6 +342,15 @@ static void gql_ws_send_json(cwist_websocket_async *ws, cJSON *msg) {
     free(printed);
 }
 
+/**
+ * @brief Send a graphql-ws `error` message {type,id,payload:[{message}]}.
+ *
+ * Closes the socket if the message cannot be built.
+ *
+ * @param ws Socket to send on; reactor thread only.
+ * @param id Operation id, or NULL for connection-level errors (sent as "").
+ * @param message Human-readable error text.
+ */
 static void gql_ws_send_error(cwist_websocket_async *ws, const char *id, const char *message) {
     cJSON *err = cJSON_CreateObject();
     cJSON *payload = cJSON_CreateArray();

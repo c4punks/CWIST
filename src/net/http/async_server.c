@@ -21,10 +21,38 @@
 
 static cwist_reactor_t *g_reactor = NULL;
 
+/**
+ * @brief Decide whether the app is fully configured for HTTPS serving.
+ *
+ * Checks that the app pointer is non-NULL and that SSL mode, an SSL context,
+ * and an HTTPS request handler are all present. No side effects; read-only.
+ *
+ * @param app Application object, may be NULL.
+ * @return true if HTTPS dispatch can be used for accepted connections.
+ */
 static bool app_use_https(const cwist_app *app) {
     return app && app->use_ssl && app->ssl_ctx && app->https_request_handler;
 }
 
+/**
+ * @brief Reactor callback: accept pending connections on a listening socket.
+ *
+ * Accepts all currently queued connections in a loop (non-blocking), disables
+ * Nagle (and enables TCP_QUICKACK on Linux where available) on each accepted
+ * socket, then hands it either to the HTTPS dispatcher or to the HTTP
+ * connection pool, depending on the app configuration. Connections accepted
+ * while SSL is requested but not fully configured are closed with a warning.
+ *
+ * After the accept loop drains, the listening socket is re-armed so the worker
+ * keeps accepting: transient reactor re-add failures (e.g. a full io_uring SQ)
+ * are retried up to 1000 times with a 10 ms backoff before giving up with a
+ * fatal message; if the process is shutting down (@c g_cwist_running cleared),
+ * the reactor is stopped instead. Runs on a reactor worker thread; the
+ * accepted sockets are owned by the HTTP/HTTPS pools once dispatched.
+ *
+ * @param fd    Listening socket fd that became readable.
+ * @param ctx   Reactor slot payload holding the `cwist_app *` pointer.
+ */
 static void async_accept_cb(int fd, void *ctx) {
     /* ctx is the reactor slot's inline payload holding the app pointer. */
     cwist_app *app = *(cwist_app **)ctx;

@@ -392,8 +392,20 @@ static void h3c_wt_on_session_rejected(void *ctx, const struct lsquic_wt_connect
     pthread_mutex_unlock(&client->mtx);
 }
 
-static void h3c_wt_on_session_close(lsquic_wt_session_t *native, lsquic_wt_session_ctx_t *ctx,
-                                    uint64_t code, const char *reason, size_t reason_len) {
+/**
+ * @brief WebTransport callback: session closed by the peer or engine.
+ *
+ * Marks the session closed and drops the cached native session pointer; the
+ * session context itself is owned by cwist_webtransport_client_close().
+ *
+ * wti_on_session_close takes the WebTransport application error code, which
+ * is 32-bit on the wire. It was uint64_t in the older state of the lsquic
+ * WebTransport branch this file was first written against; the branch head
+ * (litespeedtech/lsquic#629) narrows it to uint32_t.
+ */
+static void
+h3c_wt_on_session_close(lsquic_wt_session_t *native, lsquic_wt_session_ctx_t *ctx, uint32_t code,
+                        const char *reason, size_t reason_len) {
     (void)native;
     (void)code;
     (void)reason;
@@ -693,6 +705,17 @@ static void h3c_on_close(lsquic_stream_t *stream, lsquic_stream_ctx_t *st_h) {
     free(st);
 }
 
+/**
+ * @brief lsquic datagram-write callback: emit one pending outgoing datagram.
+ *
+ * Copies the client-held pending datagram (protected by dgram_mtx) into
+ * lsquic's buffer, frees the stored copy, and clears the pending flag.
+ *
+ * @param conn   The lsquic connection asking for a datagram.
+ * @param buf    Destination buffer provided by lsquic.
+ * @param len    Capacity of @p buf in bytes.
+ * @return Number of bytes written to @p buf, or 0 if nothing is pending.
+ */
 static ssize_t h3c_on_dg_write(lsquic_conn_t *conn, void *buf, size_t len) {
     cwist_http3_client *client = (cwist_http3_client *)lsquic_conn_get_ctx(conn);
     if (!client) return 0;
@@ -711,6 +734,18 @@ static ssize_t h3c_on_dg_write(lsquic_conn_t *conn, void *buf, size_t len) {
     return 0;
 }
 
+/**
+ * @brief lsquic datagram-received callback: store one incoming datagram.
+ *
+ * Takes ownership of the datagram payload by copying it into the client's
+ * in_dgram slot (protected by dgram_mtx), replacing any previously received
+ * datagram that was not yet consumed, and sets the ready flag so the
+ * receiving thread can pick it up.
+ *
+ * @param conn   The lsquic connection the datagram arrived on.
+ * @param buf    Pointer to the datagram payload.
+ * @param len    Payload length in bytes.
+ */
 static void h3c_on_datagram(lsquic_conn_t *conn, const void *buf, size_t len) {
     cwist_http3_client *client = (cwist_http3_client *)lsquic_conn_get_ctx(conn);
     if (!client || !buf || len == 0) return;

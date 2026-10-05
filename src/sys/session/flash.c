@@ -8,6 +8,15 @@
 
 #include <cwist/core/siphash/siphash.h>
 
+/** @brief Store a flash entry on the request.
+ *
+ * Creates the request's flash query map on first use. A NULL value is
+ * stored as an empty string.
+ *
+ * @param req Request to attach the flash entry to; ignored if NULL.
+ * @param key Entry key; ignored if NULL.
+ * @param value Entry value; NULL is stored as "".
+ */
 void cwist_flash_set(cwist_http_request *req, const char *key, const char *value) {
     if (!req || !key) return;
     if (!req->flash) {

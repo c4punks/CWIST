@@ -15,7 +15,23 @@
  */
 #include <cwist/net/http/https.h>
 
-__attribute__((weak)) bool cwist_https_upgrade_handler(cwist_https_connection *conn, cwist_http_request *req, cwist_http_response *res) {
+/**
+ * @brief Optional hook called after a successful TLS upgrade of a connection.
+ *
+ * Weak default implementation that keeps cwist ownership of the connection.
+ * Applications that need to take ownership of a TLS-upgraded connection
+ * (e.g. reverse-session hijacking) provide their own strong definition of
+ * this symbol, which overrides this stub at static link time.
+ *
+ * @param conn The upgraded HTTPS connection.
+ * @param req  The HTTP request that triggered the upgrade.
+ * @param res  The HTTP response to be sent before detaching.
+ * @return true to detach the fd/ssl from cwist so they are not closed after
+ *         the response is sent; false to keep cwist ownership (the default).
+ */
+__attribute__((weak)) bool cwist_https_upgrade_handler(cwist_https_connection *conn,
+                                                       cwist_http_request *req,
+                                                       cwist_http_response *res) {
     (void)conn;
     (void)req;
     (void)res;

@@ -364,7 +364,33 @@ static bool match_parametric_route(const char *route_tmpl, const char *req_path,
             curr->handler(req, res);
             return true;
         }
-        curr = curr->bucket_next;
+    }
+
+    // Ignore trailing slashes
+    if (*t == '/' && *(t + 1) == '\0') t++;
+    if (*p == '/' && *(p + 1) == '\0') p++;
+
+    if (*t == '\0' && *p == '\0') {
+        *out_params = params;
+        return true;
+    }
+
+    if (params) cwist_query_map_destroy(params);
+    return false;
+}
+
+/**
+ * @brief Test whether a request path matches a wildcard route template.
+ * @param route_tmpl Route template; only templates ending in '*' are treated as wildcards.
+ * @param req_path Request path to test.
+ * @return true when the template ends in '*' and req_path starts with the template prefix
+ *         (everything before the '*'), otherwise false.
+ */
+static bool match_wildcard_route(const char *route_tmpl, const char *req_path) {
+    size_t len = strlen(route_tmpl);
+    if (len > 0 && route_tmpl[len - 1] == '*') {
+        size_t prefix_len = len - 1;
+        return strncmp(req_path, route_tmpl, prefix_len) == 0;
     }
     return false;
 }

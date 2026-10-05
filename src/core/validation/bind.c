@@ -419,24 +419,60 @@ static bool cwist_bind_generic(const cwist_bind_schema_t *schema,
  * Public implementation
  * ---------------------------------------------------------------------- */
 
-bool cwist_app_req_bind_json(cwist_http_request *req,
-                              const cwist_bind_schema_t *schema,
-                              void *out,
-                              cwist_bind_result_t *result) {
+/**
+ * @brief Validate and bind a JSON request body into a struct per the schema.
+ *
+ * Each schema field is looked up in the parsed JSON body, validated against
+ * its rules, and converted into the struct field at @p f->target_offset.
+ * The output struct is written even for fields with no matching key (zero
+ * values are written for missing fields).
+ *
+ * @param req HTTP request whose body contains JSON text; may be NULL.
+ * @param schema Declarative field schema; must not be NULL.
+ * @param out Destination struct; must not be NULL.
+ * @param result Accumulator for validation errors; reset at start.
+ * @return true when every field passed validation, false otherwise.
+ * @retval true Result is valid and @p out is fully written.
+ * @retval false @p result contains one or more field errors.
+ */
+bool cwist_app_req_bind_json(cwist_http_request *req, const cwist_bind_schema_t *schema, void *out,
+                             cwist_bind_result_t *result) {
     const char *payload = (req && req->body && req->body->data) ? req->body->data : NULL;
     return cwist_bind_generic(schema, payload, true, out, result);
 }
 
-bool cwist_app_req_bind_form(cwist_http_request *req,
-                              const cwist_bind_schema_t *schema,
-                              void *out,
-                              cwist_bind_result_t *result) {
+/**
+ * @brief Validate and bind a form-encoded (key=value) request body into a struct per the schema.
+ *
+ * Uses a simple key=value scan of the body without URL unescaping; values are
+ * bounded to an internal buffer before validation.
+ *
+ * @param req HTTP request whose body contains form text; may be NULL.
+ * @param schema Declarative field schema; must not be NULL.
+ * @param out Destination struct; must not be NULL.
+ * @param result Accumulator for validation errors; reset at start.
+ * @return true when every field passed validation, false otherwise.
+ * @retval true Result is valid and @p out is fully written.
+ * @retval false @p result contains one or more field errors.
+ */
+bool cwist_app_req_bind_form(cwist_http_request *req, const cwist_bind_schema_t *schema, void *out,
+                             cwist_bind_result_t *result) {
     const char *payload = (req && req->body && req->body->data) ? req->body->data : NULL;
     return cwist_bind_generic(schema, payload, false, out, result);
 }
 
-void cwist_bind_write_error_response(cwist_http_response *res,
-                                      const cwist_bind_result_t *result) {
+/**
+ * @brief Write a 400 Bad Request JSON error response from a bind result.
+ *
+ * Serializes the accumulated field errors as a JSON object
+ * `{ "success": false, "errors": [ { "field", "message" }, ... ] }`,
+ * sets the response status and Content-Type, and takes ownership of freeing
+ * the temporary JSON builder.
+ *
+ * @param res Response to fill in; ignored when NULL.
+ * @param result Bind result containing the errors; ignored when NULL.
+ */
+void cwist_bind_write_error_response(cwist_http_response *res, const cwist_bind_result_t *result) {
     if (!res || !result) return;
     res->status_code = CWIST_HTTP_BAD_REQUEST;
     cwist_sstring_assign(res->status_text, "Bad Request");
@@ -460,10 +496,23 @@ void cwist_bind_write_error_response(cwist_http_response *res,
     cwist_json_builder_destroy(jb);
 }
 
-bool cwist_app_req_bind_json_or_400(cwist_http_request *req,
-                                     cwist_http_response *res,
-                                     const cwist_bind_schema_t *schema,
-                                     void *out) {
+/**
+ * @brief Bind a JSON request body, writing a 400 error response on failure.
+ *
+ * Convenience wrapper around cwist_app_req_bind_json() and
+ * cwist_bind_write_error_response() for handlers that want automatic
+ * error replies.
+ *
+ * @param req HTTP request whose body contains JSON text; may be NULL.
+ * @param res Response receiving the error payload when binding fails.
+ * @param schema Declarative field schema; must not be NULL.
+ * @param out Destination struct; must not be NULL.
+ * @return true when binding succeeded; false when an error response was written.
+ * @retval true @p out is fully written, @p res untouched.
+ * @retval false A 400 error response was written to @p res.
+ */
+bool cwist_app_req_bind_json_or_400(cwist_http_request *req, cwist_http_response *res,
+                                    const cwist_bind_schema_t *schema, void *out) {
     cwist_bind_result_t result;
     if (!cwist_app_req_bind_json(req, schema, out, &result)) {
         cwist_bind_write_error_response(res, &result);

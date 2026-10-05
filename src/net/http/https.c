@@ -38,7 +38,10 @@ bool cwist_tls_apply_pqc_layer(cwist_app *app, SSL_CTX *ctx);
  * response headers; larger bodies amortize the per-record overhead. */
 #define CWIST_TLS_COALESCE_MAX (16 * 1024)
 
-/* Monotonic clock in milliseconds, for connection deadlines. */
+/**
+ * @brief Monotonic clock in milliseconds, for connection deadlines.
+ * @return Milliseconds since an unspecified epoch; safe only for deltas.
+ */
 static uint64_t cwist_https_now_ms(void) {
     struct timespec ts;
     clock_gettime(CLOCK_MONOTONIC, &ts);
@@ -107,6 +110,14 @@ static cwist_error_t https_wrap_established(cwist_https_context *ctx, int client
 int https_hs_shepherd_start(void);
 void https_hs_shepherd_stop(void);
 
+/**
+ * @brief Worker loop for the HTTPS thread pool: blocks for queued tasks and
+ *        runs each through https_thread_handler().
+ * @param arg Unused (worker index not needed).
+ * @return Always NULL for pthread compatibility.
+ * @note If the per-task payload allocation fails, the task's connection (or
+ *       raw fd/SSL pair) is closed so no resource leaks.
+ */
 static void *https_pool_worker(void *arg) {
     (void)arg;
     while (1) {
@@ -141,6 +152,12 @@ static void *https_pool_worker(void *arg) {
     return NULL;
 }
 
+/**
+ * @brief Create the worker threads, mutex, and condition variables of the
+ *        global HTTPS thread pool. No-op if already initialized.
+ * @return 0 on success (or if already initialized), -1 if a worker thread
+ *         could not be created.
+ */
 int https_pool_init(void) {
     if (g_https_pool_initialized) return 0;
     memset(&g_https_pool, 0, sizeof(g_https_pool));
@@ -156,12 +173,32 @@ int https_pool_init(void) {
     return 0;
 }
 
-void https_pool_submit(int client_fd, cwist_https_context *ctx, void (*handler)(cwist_https_connection *, void *), void *user_ctx) {
+/**
+ * @brief Queue a freshly accepted client socket whose TLS handshake still
+ *        needs to run in a pool worker.
+ * @param client_fd Accepted TCP socket descriptor.
+ * @param ctx HTTPS context for the handshake.
+ * @param handler Callback invoked once the connection is established.
+ * @param user_ctx Opaque pointer forwarded to the handler.
+ */
+void https_pool_submit(int client_fd, cwist_https_context *ctx,
+                       void (*handler)(cwist_https_connection *, void *), void *user_ctx) {
     https_pool_submit_ready(client_fd, NULL, ctx, handler, user_ctx);
 }
 
-/* Submit a connection whose TLS handshake already completed (pres_ssl). */
-void https_pool_submit_ready(int client_fd, SSL *pres_ssl, cwist_https_context *ctx, void (*handler)(cwist_https_connection *, void *), void *user_ctx) {
+/**
+ * @brief Submit a connection whose TLS handshake already completed (pres_ssl).
+ *        Blocks while the queue is full; on pool shutdown closes and frees
+ *        the socket instead of queueing.
+ * @param client_fd Accepted TCP socket descriptor.
+ * @param pres_ssl Established SSL session, or NULL if the worker must run
+ *        the handshake itself.
+ * @param ctx HTTPS context.
+ * @param handler Callback invoked for the connection.
+ * @param user_ctx Opaque pointer forwarded to the handler.
+ */
+void https_pool_submit_ready(int client_fd, SSL *pres_ssl, cwist_https_context *ctx,
+                             void (*handler)(cwist_https_connection *, void *), void *user_ctx) {
     pthread_mutex_lock(&g_https_pool.mutex);
     while (g_https_pool.count >= HTTPS_TASK_QUEUE_SIZE && !g_https_pool.shutdown) {
         pthread_cond_wait(&g_https_pool.cond_not_full, &g_https_pool.mutex);
@@ -177,12 +214,51 @@ void https_pool_submit_ready(int client_fd, SSL *pres_ssl, cwist_https_context *
     g_https_pool.queue[g_https_pool.tail].handler = handler;
     g_https_pool.queue[g_https_pool.tail].user_ctx = user_ctx;
     g_https_pool.queue[g_https_pool.tail].pres_ssl = pres_ssl;
+    g_https_pool.queue[g_https_pool.tail].conn = NULL;
     g_https_pool.tail = (g_https_pool.tail + 1) % HTTPS_TASK_QUEUE_SIZE;
     g_https_pool.count++;
     pthread_cond_signal(&g_https_pool.cond_not_empty);
     pthread_mutex_unlock(&g_https_pool.mutex);
 }
 
+/**
+ * @brief Submit an established connection back to the worker pool (e.g.
+ *        keep-alive re-arm after async defer). Blocks while the queue is
+ *        full; on pool shutdown closes the connection instead of queueing.
+ * @param conn Established connection wrapper (ownership transfers to the pool).
+ * @param ctx HTTPS context.
+ * @param handler Callback invoked for the connection.
+ * @param user_ctx Opaque pointer forwarded to the handler.
+ */
+void https_pool_submit_conn(cwist_https_connection *conn, cwist_https_context *ctx,
+                            void (*handler)(cwist_https_connection *, void *), void *user_ctx) {
+    if (!conn) return;
+    pthread_mutex_lock(&g_https_pool.mutex);
+    while (g_https_pool.count >= HTTPS_TASK_QUEUE_SIZE && !g_https_pool.shutdown) {
+        pthread_cond_wait(&g_https_pool.cond_not_full, &g_https_pool.mutex);
+    }
+    if (g_https_pool.shutdown) {
+        pthread_mutex_unlock(&g_https_pool.mutex);
+        cwist_https_close_connection(conn);
+        return;
+    }
+    g_https_pool.queue[g_https_pool.tail].client_fd = conn->fd;
+    g_https_pool.queue[g_https_pool.tail].ctx = ctx;
+    g_https_pool.queue[g_https_pool.tail].handler = handler;
+    g_https_pool.queue[g_https_pool.tail].user_ctx = user_ctx;
+    g_https_pool.queue[g_https_pool.tail].pres_ssl = NULL;
+    g_https_pool.queue[g_https_pool.tail].conn = conn;
+    g_https_pool.tail = (g_https_pool.tail + 1) % HTTPS_TASK_QUEUE_SIZE;
+    g_https_pool.count++;
+    pthread_cond_signal(&g_https_pool.cond_not_empty);
+    pthread_mutex_unlock(&g_https_pool.mutex);
+}
+
+/**
+ * @brief Shut down the global HTTPS thread pool: signal workers to exit,
+ *        join them, close any connections still queued, and destroy the
+ *        pool's mutex and condition variables. No-op if never initialized.
+ */
 void https_pool_destroy(void) {
     if (!g_https_pool_initialized) return;
     https_hs_shepherd_stop();
@@ -200,6 +276,281 @@ void https_pool_destroy(void) {
     g_https_pool_initialized = false;
 }
 /* --- End Thread Pool --- */
+
+/* --- Idle connection park set ---------------------------------------------
+ * Why this exists: a pool thread serving a TLS connection used to wait in
+ * poll() for that connection's next request (30 s for HTTP/1.1 keep-alive,
+ * up to the HTTP/2 idle timeout).  An idle client therefore held a whole
+ * pool thread, and with one or two pool threads per worker only a few dozen
+ * TLS connections could be served at once; the rest queued behind idle
+ * ones.  A pool thread with nothing to read now parks the connection here
+ * and returns.  One epoll thread per process watches every parked fd and
+ * resubmits a connection to the pool when bytes arrive, so an idle
+ * connection costs memory, not a thread.
+ *
+ * Each class keeps a FIFO list; every entry of a class gets the same idle
+ * budget at park time, so the list is (nearly) ordered by deadline and
+ * expiry only looks at the head.  HTTP/1.1 entries are closed on expiry,
+ * exactly as the blocking header read closed them.  HTTP/2 entries are
+ * resubmitted with park_expired set so the session sends GOAWAY and keeps
+ * its grace window, as before.
+ *
+ * Parking is disabled under full GC: its allocations are owned per thread,
+ * and a parked HTTP/2 session would move between threads with them.
+ * ------------------------------------------------------------------------- */
+#ifdef __linux__
+typedef struct https_parked {
+    cwist_https_connection *conn;
+    uint64_t deadline_ms;
+    int cls;
+    bool linked;
+    struct https_parked *prev, *next;
+} https_parked_t;
+
+static struct {
+    pthread_mutex_t lock;
+    pthread_t thread;
+    int epoll_fd;
+    bool running;
+    pid_t owner;
+    https_parked_t *head[2], *tail[2];
+} g_park = {.lock = PTHREAD_MUTEX_INITIALIZER, .epoll_fd = -1};
+
+/**
+ * @brief Detach a parked entry from its class list.
+ * @param p Entry to unlink; must be linked.
+ * @note Called with g_park.lock held.
+ */
+static void park_unlink_locked(https_parked_t *p) {
+    if (p->prev) p->prev->next = p->next;
+    else g_park.head[p->cls] = p->next;
+    if (p->next) p->next->prev = p->prev;
+    else g_park.tail[p->cls] = p->prev;
+    p->prev = p->next = NULL;
+    p->linked = false;
+}
+
+/**
+ * @brief Hand a parked connection back to the worker pool.
+ * @param conn Connection to resubmit.
+ * @param expired True when the park idle deadline passed; HTTP/2 sessions use
+ *        this to send GOAWAY instead of serving the wakeup read.
+ */
+static void park_resubmit(cwist_https_connection *conn, bool expired) {
+    conn->park_expired = expired;
+    https_pool_submit_conn(conn, conn->pool_ctx, conn->pool_handler, conn->pool_user_ctx);
+}
+
+/**
+ * @brief Park-thread main loop: epoll-wait on parked fds, resubmit
+ *        connections that become readable, and expire idle ones past their
+ *        deadline (HTTP/1.1 closed, HTTP/2 resubmitted with park_expired).
+ * @param arg Unused.
+ * @return Always NULL for pthread compatibility.
+ */
+static void *https_park_thread(void *arg) {
+    (void)arg;
+    struct epoll_event events[1024];
+    while (1) {
+        pthread_mutex_lock(&g_park.lock);
+        bool running = g_park.running;
+        pthread_mutex_unlock(&g_park.lock);
+        if (!running) break;
+
+        int n = epoll_wait(g_park.epoll_fd, events, 1024, 200);
+        for (int i = 0; i < n; i++) {
+            https_parked_t *p = (https_parked_t *)events[i].data.ptr;
+            pthread_mutex_lock(&g_park.lock);
+            bool mine = p->linked;
+            if (mine) park_unlink_locked(p);
+            pthread_mutex_unlock(&g_park.lock);
+            if (!mine) continue;
+            epoll_ctl(g_park.epoll_fd, EPOLL_CTL_DEL, p->conn->fd, NULL);
+            /* Readable or hung up: the pool thread's read reports either. */
+            park_resubmit(p->conn, false);
+            cwist_free(p);
+        }
+
+        uint64_t now = cwist_https_now_ms();
+        for (int cls = 0; cls < 2; cls++) {
+            https_parked_t *expired = NULL;
+            pthread_mutex_lock(&g_park.lock);
+            while (g_park.head[cls] && g_park.head[cls]->deadline_ms <= now) {
+                https_parked_t *p = g_park.head[cls];
+                park_unlink_locked(p);
+                p->next = expired;
+                expired = p;
+            }
+            pthread_mutex_unlock(&g_park.lock);
+            while (expired) {
+                https_parked_t *p = expired;
+                expired = p->next;
+                epoll_ctl(g_park.epoll_fd, EPOLL_CTL_DEL, p->conn->fd, NULL);
+                if (cls == CWIST_HTTPS_PARK_HTTP1) {
+                    https_connection_teardown(p->conn);
+                } else {
+                    park_resubmit(p->conn, true);
+                }
+                cwist_free(p);
+            }
+        }
+    }
+    return NULL;
+}
+
+/**
+ * @brief Ensure the park thread and its epoll set are running for this
+ *        process. After a fork the child starts a fresh, empty set because the
+ *        parent's parked connections belong to the parent.
+ * @return true if the park set is running when the call returns, false on
+ *         epoll/thread creation failure.
+ * @note Called with g_park.lock held.
+ */
+static bool https_park_start_locked(void) {
+    pid_t pid = getpid();
+    if (g_park.running && g_park.owner == pid) return true;
+    /* A forked worker inherits the parent's lists and epoll fd but not its
+     * thread; start its own set (the parent's parked connections are the
+     * parent's to serve). */
+    g_park.head[0] = g_park.head[1] = g_park.tail[0] = g_park.tail[1] = NULL;
+    g_park.running = false;
+    g_park.epoll_fd = epoll_create1(EPOLL_CLOEXEC);
+    if (g_park.epoll_fd < 0) return false;
+    g_park.running = true;
+    g_park.owner = pid;
+    if (pthread_create(&g_park.thread, NULL, https_park_thread, NULL) != 0) {
+        g_park.running = false;
+        close(g_park.epoll_fd);
+        g_park.epoll_fd = -1;
+        return false;
+    }
+    return true;
+}
+
+/**
+ * @brief Report whether connection parking may be used: enabled unless the
+ *        CWIST_HTTPS_PARK env var disables it, and never under full GC
+ *        (parked allocations are thread-owned and would move threads).
+ * @return true if parking is allowed.
+ */
+static bool https_park_enabled(void) {
+    static int enabled = -1;
+    if (enabled < 0) {
+        const char *env = getenv("CWIST_HTTPS_PARK");
+        enabled = !(env && (env[0] == '0' || strcmp(env, "false") == 0));
+    }
+    return enabled && !cwist_full_gc_enabled();
+}
+
+bool cwist_https_park(cwist_https_connection *conn, uint64_t idle_ms, cwist_https_park_class cls) {
+    if (!conn || conn->fd < 0 || !conn->pool_handler || !https_park_enabled()) return false;
+    if (!atomic_load(&g_cwist_running)) return false;
+    https_parked_t *p = (https_parked_t *)cwist_alloc(sizeof(*p));
+    if (!p) return false;
+    memset(p, 0, sizeof(*p));
+    if (cwist_full_gc_enabled()) cwist_gc_scope_disown(p);
+    p->conn = conn;
+    p->cls = cls == CWIST_HTTPS_PARK_HTTP2 ? CWIST_HTTPS_PARK_HTTP2 : CWIST_HTTPS_PARK_HTTP1;
+    p->deadline_ms = cwist_https_now_ms() + idle_ms;
+
+    pthread_mutex_lock(&g_park.lock);
+    if (!https_park_start_locked()) {
+        pthread_mutex_unlock(&g_park.lock);
+        cwist_free(p);
+        return false;
+    }
+    p->prev = g_park.tail[p->cls];
+    if (p->prev) p->prev->next = p;
+    else g_park.head[p->cls] = p;
+    g_park.tail[p->cls] = p;
+    p->linked = true;
+    conn->park_expired = false;
+    /* Register while holding the lock: once the fd is armed the park thread
+     * may resubmit the connection, and it takes this lock first. */
+    struct epoll_event ev = {.events = EPOLLIN | EPOLLRDHUP | EPOLLONESHOT, .data.ptr = p};
+    if (epoll_ctl(g_park.epoll_fd, EPOLL_CTL_ADD, conn->fd, &ev) != 0) {
+        park_unlink_locked(p);
+        pthread_mutex_unlock(&g_park.lock);
+        cwist_free(p);
+        return false;
+    }
+    t_https_parked = true;
+    pthread_mutex_unlock(&g_park.lock);
+    return true;
+}
+
+static void https_park_stop(void) {
+    pthread_mutex_lock(&g_park.lock);
+    bool running = g_park.running && g_park.owner == getpid();
+    g_park.running = false;
+    pthread_mutex_unlock(&g_park.lock);
+    if (!running) return;
+    pthread_join(g_park.thread, NULL);
+    for (int cls = 0; cls < 2; cls++) {
+        https_parked_t *p = g_park.head[cls];
+        while (p) {
+            https_parked_t *next = p->next;
+            https_connection_teardown(p->conn);
+            cwist_free(p);
+            p = next;
+        }
+        g_park.head[cls] = g_park.tail[cls] = NULL;
+    }
+    close(g_park.epoll_fd);
+    g_park.epoll_fd = -1;
+}
+#else
+bool cwist_https_park(cwist_https_connection *conn, uint64_t idle_ms, cwist_https_park_class cls) {
+    (void)conn;
+    (void)idle_ms;
+    (void)cls;
+    return false;
+}
+
+static void https_park_stop(void) {}
+#endif
+
+bool cwist_https_conn_idle(cwist_https_connection *conn) {
+    if (!conn || !conn->ssl || conn->buf_len > 0) return false;
+    if (SSL_pending(conn->ssl) > 0) return false;
+    struct pollfd pfd = {.fd = conn->fd, .events = POLLIN};
+    return poll(&pfd, 1, 0) == 0;
+}
+
+/* Re-arm immediate ACKs on a connected socket.
+ *
+ * Why: TCP_QUICKACK is not persistent - the kernel re-enters delayed-ACK
+ * (pingpong) mode during the TLS handshake's request/response segment
+ * pattern.  A client that sends its TLS Finished and then holds the first
+ * HTTP request behind Nagle (no TCP_NODELAY: stock ab, many OpenSSL-based
+ * clients) waits for the ACK of the Finished; the server's delayed ACK
+ * holds it for ~40 ms, adding a fixed ~40-50 ms to every connection and
+ * capping churn throughput at ~20 handshakes/s/thread.  Re-arming around
+ * the handshake keeps the ACK of the client's final flight immediate, so
+ * the request arrives right behind the handshake instead of one delayed-ACK
+ * window later.  Best-effort: non-Linux or failure is fine, this only
+ * tunes ACK timing. */
+static void cwist_tcp_quickack(int fd) {
+#if defined(__linux__) && defined(TCP_QUICKACK)
+    int one = 1;
+    (void)setsockopt(fd, IPPROTO_TCP, TCP_QUICKACK, &one, sizeof(one));
+#endif
+}
+
+uint64_t cwist_https_idle_timeout_ms(void) {
+    static uint64_t cached = 0;
+    if (!cached) {
+        uint64_t v = CWIST_HTTP_TIMEOUT_MS;
+        const char *env = getenv("CWIST_HTTPS_IDLE_TIMEOUT_MS");
+        if (env && *env) {
+            char *end = NULL;
+            unsigned long long parsed = strtoull(env, &end, 10);
+            if (end != env && *end == '\0' && parsed > 0) v = (uint64_t)parsed;
+        }
+        cached = v;
+    }
+    return cached;
+}
 
 /* --- TLS handshake shepherd ------------------------------------------------
  * Why this exists: the pool parks one worker per connection for the whole
