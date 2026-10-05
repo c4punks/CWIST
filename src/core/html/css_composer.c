@@ -91,6 +91,11 @@ cwist_color_rgb cwist_color_hsl_to_rgb(cwist_color_hsl hsl) {
     return rgb;
 }
 
+/**
+ * @brief Convert a single hexadecimal digit character to its numeric value.
+ * @param c Hex digit character ('0'-'9', 'a'-'f', or 'A'-'F').
+ * @return Numeric value 0-15, or -1 if @p c is not a valid hex digit.
+ */
 static inline int hex_char_to_val(char c) {
     if (c >= '0' && c <= '9') return c - '0';
     if (c >= 'a' && c <= 'f') return c - 'a' + 10;
@@ -98,6 +103,13 @@ static inline int hex_char_to_val(char c) {
     return -1;
 }
 
+/**
+ * @brief Parse a hexadecimal color string into an RGB color.
+ * @param hex Hex string in "#rrggbb", "rrggbb", "#rgb", or "rgb" form.
+ *            A leading '#' is optional.
+ * @return Parsed RGB color. Returns black ({0, 0, 0}) if @p hex is NULL or
+ *         malformed (wrong length or non-hex characters).
+ */
 cwist_color_rgb cwist_color_hex_to_rgb(const char *hex) {
     cwist_color_rgb rgb = {0, 0, 0};
     if (!hex) return rgb;
@@ -519,10 +531,9 @@ static bool css_starts_url(const char *p) {
  * @param css CSS source text; must not be NULL.
  * @return Newly created sstring with the minified CSS, or NULL on invalid
  *         input or allocation failure. Caller owns the returned string.
- * @details Preserves license comments (those opening with a '!'), quoted
- *          strings, escapes, and unquoted url() arguments verbatim.
- *          Whitespace around structural characters and comments is dropped
- *          unless removing it would glue two tokens.
+ * @details Preserves /*!...*!/ comments verbatim, quoted strings, escapes, and
+ *          unquoted url() arguments. Whitespace around structural characters
+ *          and comments is dropped unless removing it would glue two tokens.
  */
 cwist_sstring *cwist_css_minify(const char *css) {
     if (!css) return NULL;

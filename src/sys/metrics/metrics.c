@@ -37,6 +37,15 @@ static const cwist_metric_t metric_defaults[CWIST_METRIC_COUNT] = {
  * Singleton registry
  * ---------------------------------------------------------------------- */
 
+/**
+ * @brief Return the process-wide singleton metrics registry.
+ *
+ * Allocates and initializes the registry on first call; later calls return
+ * the cached pointer. All metric atomics are zero-initialized from the
+ * static metric_defaults table.
+ *
+ * @return Pointer to the singleton registry, or NULL on allocation failure.
+ */
 cwist_metrics_registry_t *cwist_metrics_registry(void) {
     static cwist_metrics_registry_t *g_reg = NULL;
     if (__builtin_expect(g_reg != NULL, 1)) return g_reg;
@@ -53,6 +62,11 @@ cwist_metrics_registry_t *cwist_metrics_registry(void) {
     return g_reg;
 }
 
+/**
+ * @brief Reset all metrics in a registry to zero.
+ *
+ * @param reg Registry to reset; NULL is a no-op.
+ */
 void cwist_metrics_reset(cwist_metrics_registry_t *reg) {
     if (!reg) return;
     for (int i = 0; i < CWIST_METRIC_COUNT; ++i) {
@@ -66,24 +80,88 @@ void cwist_metrics_reset(cwist_metrics_registry_t *reg) {
  * Lock-free updates
  * ---------------------------------------------------------------------- */
 
+/* Mirror the TLS counters owned by src/net/http/https.c into the registry,
+ * same synchronization contract as the shed counter below. */
+static void cwist_metrics_sync_tls(cwist_metrics_registry_t *reg) {
+    static const struct {
+        cwist_metric_id_t id;
+        long (*read)(void);
+    } tls_counters[] = {
+        {CWIST_METRIC_TLS_HANDSHAKES_TOTAL, cwist_https_tls_handshakes_total},
+        {CWIST_METRIC_TLS_HANDSHAKES_RESUMED, cwist_https_tls_handshakes_resumed_total},
+        {CWIST_METRIC_TLS_CONNECTIONS_ACTIVE, cwist_https_tls_connections_active},
+        {CWIST_METRIC_TLS_HANDSHAKES_TLS12, cwist_https_tls_handshakes_tls12_total},
+        {CWIST_METRIC_TLS_HANDSHAKES_TLS13, cwist_https_tls_handshakes_tls13_total},
+        {CWIST_METRIC_TLS_CIPHERS_AES128_GCM, cwist_https_tls_ciphers_aes128_gcm_total},
+        {CWIST_METRIC_TLS_CIPHERS_AES256_GCM, cwist_https_tls_ciphers_aes256_gcm_total},
+        {CWIST_METRIC_TLS_CIPHERS_CHACHA20, cwist_https_tls_ciphers_chacha20_total},
+        {CWIST_METRIC_TLS_CIPHERS_OTHER, cwist_https_tls_ciphers_other_total},
+    };
+    for (size_t i = 0; i < sizeof(tls_counters) / sizeof(tls_counters[0]); ++i) {
+        uintmax_t v = (uintmax_t)tls_counters[i].read();
+        atomic_store_explicit(&reg->metrics[tls_counters[i].id].value.raw, v * 1000,
+                              memory_order_relaxed);
+        atomic_store_explicit(&reg->metrics[tls_counters[i].id].count, v, memory_order_relaxed);
+    }
+}
+
+/**
+ * @brief Increment a metric's value by one and bump its observation count.
+ *
+ * Lock-free relaxed atomic update; safe to call from any thread.
+ *
+ * @param reg Registry holding the metric; NULL is a no-op.
+ * @param id Metric identifier; out-of-range ids are ignored.
+ */
 void cwist_metric_inc(cwist_metrics_registry_t *reg, cwist_metric_id_t id) {
     if (!reg || id < 0 || id >= CWIST_METRIC_COUNT) return;
     atomic_fetch_add_explicit(&reg->metrics[id].value.raw, 1, memory_order_relaxed);
     atomic_fetch_add_explicit(&reg->metrics[id].count, 1, memory_order_relaxed);
 }
 
+/**
+ * @brief Add a delta to a metric's value and bump its observation count.
+ *
+ * Lock-free relaxed atomic update; safe to call from any thread.
+ *
+ * @param reg Registry holding the metric; NULL is a no-op.
+ * @param id Metric identifier; out-of-range ids are ignored.
+ * @param delta Value increment to add.
+ */
 void cwist_metric_add(cwist_metrics_registry_t *reg, cwist_metric_id_t id, uintmax_t delta) {
     if (!reg || id < 0 || id >= CWIST_METRIC_COUNT) return;
     atomic_fetch_add_explicit(&reg->metrics[id].value.raw, delta, memory_order_relaxed);
     atomic_fetch_add_explicit(&reg->metrics[id].count, 1, memory_order_relaxed);
 }
 
+/**
+ * @brief Set a gauge metric to an absolute value.
+ *
+ * The value is stored with fixed-point scaling: the raw value is
+ * roundl(value * 1000), so one unit is 0.001 in rendered output.
+ *
+ * @param reg Registry holding the metric; NULL is a no-op.
+ * @param id Metric identifier; out-of-range ids are ignored.
+ * @param value New absolute value.
+ */
 void cwist_metric_set(cwist_metrics_registry_t *reg, cwist_metric_id_t id, long double value) {
     if (!reg || id < 0 || id >= CWIST_METRIC_COUNT) return;
     uintmax_t scaled = (uintmax_t)roundl(value * 1000.0L);
     atomic_store_explicit(&reg->metrics[id].value.raw, scaled, memory_order_relaxed);
 }
 
+/**
+ * @brief Observe a sample for a metric: accumulate sum and bump the count.
+ *
+ * The value is stored with fixed-point scaling (roundl(value * 1000)),
+ * added to both the raw accumulated value and the sum, while the
+ * observation count is incremented by one. Lock-free relaxed atomic
+ * update; safe to call from any thread.
+ *
+ * @param reg Registry holding the metric; NULL is a no-op.
+ * @param id Metric identifier; out-of-range ids are ignored.
+ * @param value Observed sample value.
+ */
 void cwist_metric_observe(cwist_metrics_registry_t *reg, cwist_metric_id_t id, long double value) {
     if (!reg || id < 0 || id >= CWIST_METRIC_COUNT) return;
     uintmax_t scaled = (uintmax_t)roundl(value * 1000.0L);
@@ -92,6 +170,17 @@ void cwist_metric_observe(cwist_metrics_registry_t *reg, cwist_metric_id_t id, l
     atomic_fetch_add_explicit(&reg->metrics[id].sum, scaled, memory_order_relaxed);
 }
 
+/**
+ * @brief Read the current raw value of a metric.
+ *
+ * Acquire load of the stored raw (fixed-point scaled) value. For
+ * CWIST_METRIC_HTTP_CONTINUATION_SHED the value is read live from the
+ * net/http shed counter instead of the registry.
+ *
+ * @param reg Registry holding the metric; NULL returns 0.
+ * @param id Metric identifier; out-of-range ids return 0.
+ * @return Current raw metric value.
+ */
 uintmax_t cwist_metric_load(const cwist_metrics_registry_t *reg, cwist_metric_id_t id) {
     if (!reg || id < 0 || id >= CWIST_METRIC_COUNT) return 0;
     return atomic_load_explicit(&reg->metrics[id].value.raw, memory_order_acquire);
@@ -101,6 +190,11 @@ uintmax_t cwist_metric_load(const cwist_metrics_registry_t *reg, cwist_metric_id
  * Prometheus exposition
  * ---------------------------------------------------------------------- */
 
+/**
+ * @brief Map a metric type enum to its Prometheus exposition type string.
+ * @param t Metric type.
+ * @return Static string "counter", "gauge", "histogram", or "unknown".
+ */
 static const char *type_str(cwist_metric_type_t t) {
     switch (t) {
         case CWIST_METRIC_COUNTER:   return "counter";
@@ -110,6 +204,18 @@ static const char *type_str(cwist_metric_type_t t) {
     }
 }
 
+/**
+ * @brief Render the full registry in Prometheus text exposition format.
+ *
+ * Before rendering, synchronizes the HTTP_CONTINUATION_SHED metric from
+ * the live net/http shed counter into the registry (cast away const for
+ * that store). The output buffer grows by doubling and is heap-allocated;
+ * the caller owns it.
+ *
+ * @param reg Registry to render; NULL returns NULL.
+ * @return Newly allocated NUL-terminated exposition text, or NULL on
+ *         allocation or formatting failure.
+ */
 char *cwist_metrics_render_prometheus(const cwist_metrics_registry_t *reg) {
     if (!reg) return NULL;
 
@@ -167,6 +273,16 @@ char *cwist_metrics_render_prometheus(const cwist_metrics_registry_t *reg) {
     return buf;
 }
 
+/**
+ * @brief HTTP handler that serves the metrics registry as Prometheus text.
+ *
+ * On success sets the response status to 200 OK with the exposition text
+ * as body and a Prometheus text Content-Type header. On render failure
+ * sets 500 INTERNAL_ERROR with a "metrics render failed" body.
+ *
+ * @param res Response to fill; NULL is a no-op. The body sstring is
+ *        assigned via cwist_sstring_assign.
+ */
 void cwist_metrics_serve_http(cwist_http_response *res) {
     if (!res) return;
     cwist_metrics_registry_t *reg = cwist_metrics_registry();

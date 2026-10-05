@@ -23,15 +23,34 @@ struct cwist_graphql_schema {
     graphql_field_t *mutations;
 };
 
+/**
+ * @brief Wrap an integer status code in a cwist_error_t tagged as CWIST_ERR_INT16.
+ * @param code Integer status to encode (0 on success, negative on failure).
+ * @return Error value carrying @p code in its err_i16 member.
+ */
 static cwist_error_t gql_error(int code) {
     return (cwist_error_t){ .errtype = CWIST_ERR_INT16, .error.err_i16 = code };
 }
 
+/**
+ * @brief Test whether a character is valid in a GraphQL name at a given position.
+ * @param c Character to test.
+ * @param first True when testing the leading character of a name (only '_' or a
+ *              letter are allowed there).
+ * @retval true The character is allowed at that position.
+ * @retval false The character is not allowed.
+ */
 static bool gql_name_char(char c, bool first) {
     if (first) return (c == '_' || isalpha((unsigned char)c));
     return (c == '_' || isalnum((unsigned char)c));
 }
 
+/**
+ * @brief Validate that a C string conforms to the GraphQL Name production.
+ * @param s String to validate (may be NULL).
+ * @retval true The string is a non-empty, fully valid GraphQL name.
+ * @retval false The string is NULL, empty, or contains invalid characters.
+ */
 static bool gql_name_valid(const char *s) {
     if (!s || !gql_name_char(*s, true)) return false;
     for (++s; *s; ++s) {
@@ -40,6 +59,12 @@ static bool gql_name_valid(const char *s) {
     return true;
 }
 
+/**
+ * @brief Append an error object {"message": ...} to a cJSON errors array.
+ * @details Silently does nothing if the error object cannot be allocated.
+ * @param errors cJSON array receiving the error entry.
+ * @param message Human-readable error message text (borrowed, copied into the array).
+ */
 static void gql_add_error(cJSON *errors, const char *message) {
     cJSON *e = cJSON_CreateObject();
     if (e) {
@@ -48,6 +73,12 @@ static void gql_add_error(cJSON *errors, const char *message) {
     }
 }
 
+/**
+ * @brief Allocate an empty GraphQL schema with no query or mutation fields.
+ * @return Newly allocated schema on success, NULL on allocation failure.
+ *         The caller owns the result and must free it with
+ *         cwist_graphql_schema_destroy().
+ */
 cwist_graphql_schema_t *cwist_graphql_schema_create(void) {
     cwist_graphql_schema_t *schema = (cwist_graphql_schema_t *)cwist_alloc(sizeof(*schema));
     if (schema) {
@@ -57,6 +88,10 @@ cwist_graphql_schema_t *cwist_graphql_schema_create(void) {
     return schema;
 }
 
+/**
+ * @brief Free a linked list of graphql_field_t nodes and their name strings.
+ * @param f Head of the list (may be NULL).
+ */
 static void free_fields(graphql_field_t *f) {
     while (f) {
         graphql_field_t *n = f->next;
@@ -66,6 +101,10 @@ static void free_fields(graphql_field_t *f) {
     }
 }
 
+/**
+ * @brief Destroy a schema and all registered query/mutation fields.
+ * @param schema Schema to free (may be NULL).
+ */
 void cwist_graphql_schema_destroy(cwist_graphql_schema_t *schema) {
     if (!schema) return;
     free_fields(schema->queries);
@@ -73,7 +112,20 @@ void cwist_graphql_schema_destroy(cwist_graphql_schema_t *schema) {
     cwist_free(schema);
 }
 
-static bool add_field(graphql_field_t **head, const char *field, cwist_graphql_resolver_fn resolver, void *ctx) {
+/**
+ * @brief Insert or update a resolver field in a schema field list.
+ * @details If a field with the same name already exists, its resolver and
+ *          context are replaced in place; otherwise a new node is prepended.
+ *          Field names are validated as GraphQL names.
+ * @param head Pointer to the list head pointer.
+ * @param field GraphQL field name.
+ * @param resolver Resolver callback invoked when the field is queried.
+ * @param ctx Opaque pointer passed to the resolver.
+ * @retval true The field was registered (or updated).
+ * @retval false Invalid argument, invalid field name, or allocation failure.
+ */
+static bool add_field(graphql_field_t **head, const char *field, cwist_graphql_resolver_fn resolver,
+                      void *ctx) {
     if (!head || !gql_name_valid(field) || !resolver) return false;
     for (graphql_field_t *f = *head; f; f = f->next) {
         if (strcmp(f->name, field) == 0) {
@@ -96,16 +148,42 @@ static bool add_field(graphql_field_t **head, const char *field, cwist_graphql_r
     return true;
 }
 
-bool cwist_graphql_add_query(cwist_graphql_schema_t *schema, const char *field, cwist_graphql_resolver_fn resolver, void *ctx) {
+/**
+ * @brief Register a resolver for a GraphQL query field.
+ * @param schema Schema to register the field on.
+ * @param field Query field name (must be a valid GraphQL name).
+ * @param resolver Resolver callback invoked when the field is queried.
+ * @param ctx Opaque pointer passed to the resolver.
+ * @retval true The field was registered (or its resolver updated).
+ * @retval false NULL schema or invalid field/resolver.
+ */
+bool cwist_graphql_add_query(cwist_graphql_schema_t *schema, const char *field,
+                             cwist_graphql_resolver_fn resolver, void *ctx) {
     if (!schema) return false;
     return add_field(&schema->queries, field, resolver, ctx);
 }
 
-bool cwist_graphql_add_mutation(cwist_graphql_schema_t *schema, const char *field, cwist_graphql_resolver_fn resolver, void *ctx) {
+/**
+ * @brief Register a resolver for a GraphQL mutation field.
+ * @param schema Schema to register the field on.
+ * @param field Mutation field name (must be a valid GraphQL name).
+ * @param resolver Resolver callback invoked when the field is mutated.
+ * @param ctx Opaque pointer passed to the resolver.
+ * @retval true The field was registered (or its resolver updated).
+ * @retval false NULL schema or invalid field/resolver.
+ */
+bool cwist_graphql_add_mutation(cwist_graphql_schema_t *schema, const char *field,
+                                cwist_graphql_resolver_fn resolver, void *ctx) {
     if (!schema) return false;
     return add_field(&schema->mutations, field, resolver, ctx);
 }
 
+/**
+ * @brief Look up a field by name in a schema field list.
+ * @param head Head of the field list.
+ * @param name Field name to find.
+ * @return Matching field node, or NULL if not present.
+ */
 static graphql_field_t *gql_lookup(graphql_field_t *head, const char *name) {
     for (graphql_field_t *f = head; f; f = f->next) {
         if (strcmp(f->name, name) == 0) return f;
@@ -113,6 +191,11 @@ static graphql_field_t *gql_lookup(graphql_field_t *head, const char *name) {
     return NULL;
 }
 
+/**
+ * @brief Advance a parse cursor past whitespace, commas, and GraphQL '#' comments.
+ * @param p Current cursor position in the query text.
+ * @return Pointer to the first character that is not insignificant.
+ */
 static const char *skip_ws_comments(const char *p) {
     while (*p) {
         if (isspace((unsigned char)*p) || *p == ',') {
@@ -126,8 +209,20 @@ static const char *skip_ws_comments(const char *p) {
     return p;
 }
 
-/* Parse GraphQL arguments: ( arg1: "val", arg2: 123, arg3: $varName ) */
-static const char *parse_arguments(const char *p, const cJSON *variables, cJSON **out_args, cJSON *errors) {
+/**
+ * @brief Parse GraphQL arguments: ( arg1: "val", arg2: 123, arg3: $varName )
+ * @details Strings, numbers, booleans, null, and variable references are
+ *          supported. Parse failures are appended to @p errors and leave
+ *          *out_args as NULL.
+ * @param p Cursor positioned at or before the '('.
+ * @param variables Optional cJSON object supplying variable values.
+ * @param out_args Receives a newly allocated cJSON object with parsed
+ *                 arguments (NULL if the field has no argument list).
+ * @param errors cJSON array receiving parse error entries.
+ * @return Advanced cursor past the closing ')'.
+ */
+static const char *parse_arguments(const char *p, const cJSON *variables, cJSON **out_args,
+                                   cJSON *errors) {
     *out_args = NULL;
     p = skip_ws_comments(p);
     if (*p != '(') return p;
@@ -231,8 +326,23 @@ static const char *parse_arguments(const char *p, const cJSON *variables, cJSON 
     return p;
 }
 
-/* Parse and execute field selections recursively */
-static const char *parse_selection_set(const char *p, graphql_field_t *schema_fields, const cJSON *variables, cJSON *parent_data, cJSON *errors, unsigned int depth) {
+/**
+ * @brief Parse and execute field selections recursively.
+ * @details Each selected field is resolved through @p schema_fields and its
+ *          value added to @p parent_data. Recursion depth and field count are
+ *          bounded by CWIST_GRAPHQL_MAX_DEPTH / CWIST_GRAPHQL_MAX_FIELDS, and
+ *          unknown fields are reported in @p errors.
+ * @param p Cursor positioned at '{'.
+ * @param schema_fields Field list used to resolve selections.
+ * @param variables Optional cJSON object of variable values.
+ * @param parent_data cJSON object receiving resolved field values.
+ * @param errors cJSON array receiving error entries.
+ * @param depth Current recursion depth (1 for the root selection set).
+ * @return Advanced cursor past the closing '}'.
+ */
+static const char *parse_selection_set(const char *p, graphql_field_t *schema_fields,
+                                       const cJSON *variables, cJSON *parent_data, cJSON *errors,
+                                       unsigned int depth) {
     if (depth > CWIST_GRAPHQL_MAX_DEPTH) {
         gql_add_error(errors, "Query selection depth exceeds maximum allowed");
         return p;
@@ -334,7 +444,20 @@ static const char *parse_selection_set(const char *p, graphql_field_t *schema_fi
     return p;
 }
 
-cwist_error_t cwist_graphql_execute(cwist_graphql_schema_t *schema, const char *request_json, cwist_sstring **out_json) {
+/**
+ * @brief Execute a GraphQL query or mutation from a JSON request body.
+ * @details The request must be a JSON object with a string "query" member and
+ *          an optional "variables" object. On success *out_json receives a
+ *          compact JSON response of the form {"data": {...}} with an "errors"
+ *          array added when resolution produced errors. Ownership of
+ *          *out_json transfers to the caller.
+ * @param schema Schema providing the query/mutation fields.
+ * @param request_json JSON-encoded GraphQL request text.
+ * @param out_json Receives the response body string on success.
+ * @return 0 on success, non-zero on invalid arguments or internal failure.
+ */
+cwist_error_t cwist_graphql_execute(cwist_graphql_schema_t *schema, const char *request_json,
+                                    cwist_sstring **out_json) {
     if (!schema || !request_json || !out_json) return gql_error(-1);
     *out_json = NULL;
 
@@ -399,11 +522,22 @@ cwist_error_t cwist_graphql_execute(cwist_graphql_schema_t *schema, const char *
     return gql_error(0);
 }
 
-/* Extract the root field name and parsed arguments of a `subscription`
- * operation.  Used by the experimental WS subscription layer
- * (cwist/net/graphql/graphql_ws.h); not part of the query/mutation execute
- * path.  Only the first root field is reported, matching the single-stream
- * model of the graphql-ws broker. */
+/**
+ * @brief Extract the root field name and parsed arguments of a `subscription`
+ *        operation.
+ * @details Used by the experimental WS subscription layer
+ *          (cwist/net/graphql/graphql_ws.h); not part of the query/mutation
+ *          execute path. Only the first root field is reported, matching the
+ *          single-stream model of the graphql-ws broker.
+ * @param query GraphQL subscription query text.
+ * @param variables Optional cJSON object of variable values.
+ * @param field_out Buffer receiving the resolved root field name.
+ * @param field_cap Capacity of @p field_out in bytes.
+ * @param args_out Receives a newly allocated cJSON argument object (NULL when
+ *                 the field carries no arguments); caller owns it.
+ * @retval true The subscription field and arguments were extracted.
+ * @retval false Invalid arguments or malformed subscription query.
+ */
 bool cwist_graphql_parse_subscription(const char *query, const cJSON *variables, char *field_out,
                                       size_t field_cap, cJSON **args_out) {
     if (!query || !field_out || field_cap == 0 || !args_out) return false;
@@ -455,6 +589,16 @@ bool cwist_graphql_parse_subscription(const char *query, const cJSON *variables,
     return true;
 }
 
+/**
+ * @brief HTTP handler serving GraphQL requests over POST.
+ * @details Executes the request body via cwist_graphql_execute() and writes
+ *          the JSON response. Non-POST requests or execution failures yield a
+ *          400 status with an error body. The Content-Type header is always
+ *          set to application/json.
+ * @param schema Schema used to resolve the request.
+ * @param req Incoming HTTP request (must use POST).
+ * @param res Response object receiving status, body, and headers.
+ */
 void cwist_graphql_serve(cwist_graphql_schema_t *schema, cwist_http_request *req,
                          cwist_http_response *res) {
     if (!schema || !req || !res || req->method != CWIST_HTTP_POST) {

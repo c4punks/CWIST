@@ -9,6 +9,10 @@
 #include <stdio.h>
 #include <ctype.h>
 
+/** @brief Duplicate a C string using cwist_alloc.
+ * @param s Source string; may be NULL.
+ * @return Newly allocated copy owned by the caller, or NULL if @p s is NULL or allocation fails.
+ */
 static char *clone_str(const char *s) {
     if (!s) return NULL;
     size_t n = strlen(s) + 1;
@@ -17,6 +21,9 @@ static char *clone_str(const char *s) {
     return p;
 }
 
+/** @brief Release a cookie and all strings it owns.
+ * @param c Cookie to free; NULL is a no-op.
+ */
 static void free_cookie(cwist_test_client_cookie *c) {
     if (!c) return;
     cwist_free(c->name);
@@ -25,6 +32,11 @@ static void free_cookie(cwist_test_client_cookie *c) {
     cwist_free(c);
 }
 
+/** @brief Look up a cookie by name in a singly linked list.
+ * @param head First node of the list.
+ * @param name Cookie name to match; NULL matches nothing.
+ * @return Matching node, or NULL if not found.
+ */
 static cwist_test_client_cookie *find_cookie(cwist_test_client_cookie *head, const char *name) {
     for (; head; head = head->next) {
         if (strcmp(head->name, name) == 0) return head;
@@ -313,6 +325,17 @@ void cwist_test_client_destroy(cwist_test_client *client) {
     cwist_free(client);
 }
 
+/** @brief Build and dispatch an HTTP request through the client.
+ * Splits any query string off @p path, applies options (body, content type, headers,
+ * ad-hoc cookies), adds jar cookies, dispatches to the app, and updates the cookie jar
+ * from the response. The request object is destroyed before returning.
+ * @param client Client to send through.
+ * @param method HTTP method to use.
+ * @param path Request path, optionally containing a "?query" suffix; must not be NULL.
+ * @param opts Optional request options; NULL means no body, headers, or ad-hoc cookies.
+ * @return Newly allocated response owned by the caller (free with
+ *         cwist_http_response_destroy()), or NULL on invalid input or allocation failure.
+ */
 static cwist_http_response *do_request(cwist_test_client *client, cwist_http_method_t method,
                                         const char *path, const cwist_test_client_request_options *opts) {
     if (!client || !client->app || !path) return NULL;
@@ -367,6 +390,13 @@ static cwist_http_response *do_request(cwist_test_client *client, cwist_http_met
     return res;
 }
 
+/** @brief Send a request with explicit method and options.
+ * @param client Client to send through.
+ * @param method HTTP method to use.
+ * @param path Request path, optionally containing a "?query" suffix.
+ * @param opts Optional request options (body, headers, content type, ad-hoc cookies).
+ * @return Response owned by the caller, or NULL on failure. See do_request().
+ */
 cwist_http_response *cwist_test_client_request_ex(cwist_test_client *client,
                                                    cwist_http_method_t method,
                                                    const char *path,
@@ -374,47 +404,95 @@ cwist_http_response *cwist_test_client_request_ex(cwist_test_client *client,
     return do_request(client, method, path, opts);
 }
 
+/** @brief Send a GET request.
+ * @param client Client to send through.
+ * @param path Request path, optionally containing a "?query" suffix.
+ * @return Response owned by the caller, or NULL on failure. See do_request().
+ */
 cwist_http_response *cwist_test_client_get(cwist_test_client *client, const char *path) {
     return do_request(client, CWIST_HTTP_GET, path, NULL);
 }
 
-cwist_http_response *cwist_test_client_post(cwist_test_client *client, const char *path, const char *body) {
+/** @brief Send a POST request with a plain-text body.
+ * @param client Client to send through.
+ * @param path Request path.
+ * @param body Null-terminated request body; may be NULL.
+ * @return Response owned by the caller, or NULL on failure. See do_request().
+ */
+cwist_http_response *cwist_test_client_post(cwist_test_client *client, const char *path,
+                                            const char *body) {
     cwist_test_client_request_options opts = {0};
     opts.body = body;
     return do_request(client, CWIST_HTTP_POST, path, &opts);
 }
 
-cwist_http_response *cwist_test_client_post_json(cwist_test_client *client, const char *path, const char *json_body) {
+/** @brief Send a POST request with a JSON body and application/json content type.
+ * @param client Client to send through.
+ * @param path Request path.
+ * @param json_body Null-terminated JSON body; may be NULL.
+ * @return Response owned by the caller, or NULL on failure. See do_request().
+ */
+cwist_http_response *cwist_test_client_post_json(cwist_test_client *client, const char *path,
+                                                 const char *json_body) {
     cwist_test_client_request_options opts = {0};
     opts.body = json_body;
     opts.content_type = "application/json";
     return do_request(client, CWIST_HTTP_POST, path, &opts);
 }
 
-cwist_http_response *cwist_test_client_put(cwist_test_client *client, const char *path, const char *body) {
+/** @brief Send a PUT request with a plain-text body.
+ * @param client Client to send through.
+ * @param path Request path.
+ * @param body Null-terminated request body; may be NULL.
+ * @return Response owned by the caller, or NULL on failure. See do_request().
+ */
+cwist_http_response *cwist_test_client_put(cwist_test_client *client, const char *path,
+                                           const char *body) {
     cwist_test_client_request_options opts = {0};
     opts.body = body;
     return do_request(client, CWIST_HTTP_PUT, path, &opts);
 }
 
+/** @brief Send a DELETE request.
+ * @param client Client to send through.
+ * @param path Request path.
+ * @return Response owned by the caller, or NULL on failure. See do_request().
+ */
 cwist_http_response *cwist_test_client_delete(cwist_test_client *client, const char *path) {
     return do_request(client, CWIST_HTTP_DELETE, path, NULL);
 }
 
-cwist_http_response *cwist_test_client_patch(cwist_test_client *client, const char *path, const char *body) {
+/** @brief Send a PATCH request with a plain-text body.
+ * @param client Client to send through.
+ * @param path Request path.
+ * @param body Null-terminated request body; may be NULL.
+ * @return Response owned by the caller, or NULL on failure. See do_request().
+ */
+cwist_http_response *cwist_test_client_patch(cwist_test_client *client, const char *path,
+                                             const char *body) {
     cwist_test_client_request_options opts = {0};
     opts.body = body;
     return do_request(client, CWIST_HTTP_PATCH, path, &opts);
 }
 
-cwist_http_response *cwist_test_client_post_multipart(cwist_test_client *client,
-                                                       const char *path,
-                                                       const char *field_name,
-                                                       const char *file_name,
-                                                       const char *content_type,
-                                                       const char *data,
-                                                       size_t data_len) {
-    if (!client || !client->app || !path || !field_name || !file_name || !content_type || !data) return NULL;
+/** @brief Send a POST request with a single-file multipart/form-data body.
+ * Builds the multipart body with a fixed boundary, including Content-Disposition and
+ * Content-Type headers for the file part. The body buffer is freed before returning.
+ * @param client Client to send through.
+ * @param path Request path.
+ * @param field_name Form field name for the file part; must not be NULL.
+ * @param file_name File name for the Content-Disposition header; must not be NULL.
+ * @param content_type MIME type of the file data; must not be NULL.
+ * @param data Raw file bytes; must not be NULL.
+ * @param data_len Length of @p data in bytes.
+ * @return Response owned by the caller, or NULL on invalid input or allocation failure.
+ */
+cwist_http_response *cwist_test_client_post_multipart(cwist_test_client *client, const char *path,
+                                                      const char *field_name, const char *file_name,
+                                                      const char *content_type, const char *data,
+                                                      size_t data_len) {
+    if (!client || !client->app || !path || !field_name || !file_name || !content_type || !data)
+        return NULL;
     const char *boundary = "CWISTTestClientBoundary7MA4YWxkTrZu0gW";
     size_t boundary_len = strlen(boundary);
 
@@ -447,10 +525,17 @@ cwist_http_response *cwist_test_client_post_multipart(cwist_test_client *client,
     return res;
 }
 
-void cwist_test_client_set_cookie(cwist_test_client *client,
-                                   const char *name,
-                                   const char *value,
-                                   const char *path) {
+/** @brief Set or replace a cookie in the client's jar.
+ * A cookie with the same name gets its value replaced (and path, if @p path is given);
+ * otherwise a new cookie is prepended to the jar. Strings are copied.
+ * @param client Client owning the jar; NULL is a no-op.
+ * @param name Cookie name; must not be NULL.
+ * @param value Cookie value; NULL clears the stored value.
+ * @param path Cookie path; NULL leaves the path unchanged for existing cookies or stores
+ *             no path for new ones.
+ */
+void cwist_test_client_set_cookie(cwist_test_client *client, const char *name, const char *value,
+                                  const char *path) {
     if (!client || !name) return;
     cwist_test_client_cookie *c = find_cookie(client->cookies, name);
     if (c) {
@@ -468,12 +553,21 @@ void cwist_test_client_set_cookie(cwist_test_client *client,
     }
 }
 
+/** @brief Get the value of a cookie from the client's jar.
+ * @param client Client owning the jar; NULL yields NULL.
+ * @param name Cookie name to look up.
+ * @return Cookie value, or NULL if not found or on invalid input. The returned pointer
+ *         is owned by the client and must not be freed.
+ */
 const char *cwist_test_client_get_cookie(cwist_test_client *client, const char *name) {
     if (!client || !name) return NULL;
     cwist_test_client_cookie *c = find_cookie(client->cookies, name);
     return c ? c->value : NULL;
 }
 
+/** @brief Remove and free all cookies in the client's jar.
+ * @param client Client owning the jar; NULL is a no-op.
+ */
 void cwist_test_client_clear_cookies(cwist_test_client *client) {
     if (!client) return;
     cwist_test_client_cookie *c = client->cookies;

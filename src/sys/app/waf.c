@@ -7,11 +7,9 @@
 #include <stdint.h>
 #include <stdbool.h>
 
-typedef struct {
-    const char *text;
-    size_t length;
-} waf_signature;
-
+/** @brief Lowercase an ASCII letter, leaving all other bytes unchanged.
+ * @param c Input byte.
+ * @return The lowercase equivalent of @p c for 'A'..'Z', otherwise @p c. */
 static unsigned char ascii_lower(unsigned char c) {
     return c >= 'A' && c <= 'Z' ? (unsigned char)(c + ('a' - 'A')) : c;
 }
