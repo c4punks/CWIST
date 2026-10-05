@@ -16,7 +16,8 @@ make
 
 ```sh
 ./webrtc-server
-# signaling: http://localhost:8080/ (webrtc UDP port <ephemeral>)
+# signaling: http://localhost:8080/
+# [webrtc] ctx ready in pid <worker> on UDP port <ephemeral>   (first offer)
 ```
 
 Open http://localhost:8080/ in a browser, click **Connect**, type a message
@@ -26,7 +27,11 @@ the server console.
 ## Layout
 
 - `main.c` — cwist app serving `index.html` (GET /) and SDP answers
-  (POST /application/sdp), plus the echo logic on the cwist webrtc ctx.
+  (POST /offer, `application/sdp`), plus the echo logic on the cwist webrtc
+  ctx. `cwist_app_listen` forks one HTTP worker per core and a ctx belongs to
+  the process that created it, so each worker creates its own ctx (own UDP
+  port, own reactor thread) on its first offer; the answer carries that
+  port. Message, channel and close handlers run on the ctx's reactor thread.
 - `index.html` — minimal RTCPeerConnection client using a DataChannel.
 
 ## Notes / limitations (MVP)

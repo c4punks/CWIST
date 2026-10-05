@@ -1494,13 +1494,29 @@ test_webrtc: $(LIB_NAME) $(USRSCTP_LIB) tests/test_webrtc.c
 	$(CC) $(CFLAGS) -o test_webrtc tests/test_webrtc.c $(LIB_NAME) $(LIBS)
 	./test_webrtc
 
-.PHONY: test_webrtc
+# Loopback DataChannel benchmark: idle cost, throughput, RTT. Not part of
+# `make test`; run ./bench_webrtc [small_count] [large_count] after building.
+bench_webrtc: $(LIB_NAME) $(USRSCTP_LIB) tests/bench_webrtc.c
+	$(CC) $(CFLAGS) -o bench_webrtc tests/bench_webrtc.c $(LIB_NAME) $(LIBS)
+
+# Real-browser interop: starts example/webrtc and drives headless Chromium
+# against it (tests/browser/webrtc_chromium.mjs). Needs chromium and Node >= 22;
+# not part of `make test`. Uses port 8080.
+test_webrtc_browser: $(LIB_NAME) $(USRSCTP_LIB)
+	$(MAKE) -C example/webrtc
+	@(cd example/webrtc && exec env CWIST_WORKERS=1 ./webrtc-server > /dev/null 2>&1) & pid=$$!; \
+	sleep 1; \
+	node tests/browser/webrtc_chromium.mjs http://localhost:8080/; rc=$$?; \
+	kill $$pid 2>/dev/null; wait $$pid 2>/dev/null; \
+	exit $$rc
+
+.PHONY: test_webrtc bench_webrtc test_webrtc_browser
 else
 # CWIST_WEBRTC=0: the module and its test are compiled out.
-test_webrtc:
-	@echo "CWIST_WEBRTC=0: skipping test_webrtc"
+test_webrtc bench_webrtc test_webrtc_browser:
+	@echo "CWIST_WEBRTC=0: skipping $@"
 
-.PHONY: test_webrtc
+.PHONY: test_webrtc bench_webrtc test_webrtc_browser
 endif
 
 test_waf: $(LIB_NAME) tests/test_waf.c

@@ -539,10 +539,12 @@ int cwist_ice_stun_parse_response(const uint8_t *buf, size_t len, const uint8_t 
 /** Base64url alphabet (no padding) used to encode random ICE credentials. */
 static const char b64url_chars[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_";
 
-/** @brief Extract the remote ufrag from the USERNAME attribute of a STUN message.
+/** @brief Extract the sender's ufrag from the USERNAME attribute of a STUN message.
  *
- * The USERNAME attribute holds "remoteufrag:localufrag" (RFC 8445); this
- * returns the part before the first ':'.
+ * A Binding request's USERNAME is "<recipient ufrag>:<sender ufrag>"
+ * (RFC 8445 section 7.2.2), so for a request we received this returns the
+ * part after the first ':' -- the remote peer's ufrag, as it appears in the
+ * peer's SDP.
  *
  * @param buf Datagram bytes.
  * @param len Number of bytes at @p buf.
@@ -561,11 +563,13 @@ int cwist_ice_stun_get_remote_ufrag(const uint8_t *buf, size_t len, char *out, s
         uint16_t type = rd16(buf + off);
         uint16_t alen = rd16(buf + off + 2);
         if (type == ATTR_USERNAME) {
+            if (off + 4 + alen > end) return -1;
+            const uint8_t *name = buf + off + 4;
+            size_t colon = 0;
+            while (colon < alen && name[colon] != ':') colon++;
+            if (colon == alen) return -1; /* no ':' separator */
             size_t i = 0;
-            while (i < alen && i + 1 < cap && buf[off + 4 + i] != ':') {
-                out[i] = (char)buf[off + 4 + i];
-                i++;
-            }
+            for (size_t j = colon + 1; j < alen && i + 1 < cap; j++) out[i++] = (char)name[j];
             out[i] = '\0';
             return 0;
         }

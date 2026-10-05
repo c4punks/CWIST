@@ -3,14 +3,15 @@
  *
  * Provides the minimal DTLS layer for WebRTC: an ephemeral self-signed
  * ECDSA certificate, the SHA-256 certificate fingerprint used in SDP
- * a=fingerprint attributes, and construction of client/server SSL_CTX
- * objects pinned to DTLS 1.2.
+ * a=fingerprint attributes, construction of client/server SSL_CTX
+ * objects pinned to DTLS 1.2, and the datagram BIO the sessions run on.
  */
 #include "webrtc_internal.h"
 
 #include <openssl/ec.h>
 #include <openssl/evp.h>
 #include <openssl/x509.h>
+#include <pthread.h>
 #include <stdio.h>
 #include <string.h>
 
@@ -140,4 +141,77 @@ SSL_CTX *cwist_dtls_ctx_new(int is_server, X509 *cert, EVP_PKEY *pkey) {
  */
 unsigned int cwist_dtls_link_mtu(void) {
     return CWIST_DTLS_MTU;
+}
+
+/* ---- datagram BIO ----
+ *
+ * DTLS needs datagram semantics: one BIO_read returns exactly one datagram and
+ * one BIO_write is exactly one datagram.  A memory BIO is a byte stream, so
+ * records written back to back get concatenated and a fixed-size read can cut
+ * one in half across two UDP packets.  This BIO keeps the boundaries and also
+ * skips the extra copy through the memory buffer: reads hand over the datagram
+ * the event loop is processing, writes go straight to the ctx send batch. */
+
+static BIO_METHOD *g_dgram_method;
+static pthread_once_t g_dgram_once = PTHREAD_ONCE_INIT;
+
+/** @brief Return the current inbound datagram once, then report "retry". */
+static int dgram_bio_read(BIO *bio, char *out, int outl) {
+    struct cwist_webrtc_conn *conn = BIO_get_data(bio);
+    BIO_clear_retry_flags(bio);
+    if (!conn || !conn->dtls_in) {
+        BIO_set_retry_read(bio);
+        return -1;
+    }
+    size_t n = conn->dtls_in_len;
+    if (outl < 0 || n > (size_t)outl)
+        n = outl < 0 ? 0 : (size_t)outl; /* DTLS drops a truncated datagram. */
+    memcpy(out, conn->dtls_in, n);
+    conn->dtls_in = NULL;
+    conn->dtls_in_len = 0;
+    return (int)n;
+}
+
+/** @brief Emit one datagram to the conn's peer. */
+static int dgram_bio_write(BIO *bio, const char *in, int inl) {
+    struct cwist_webrtc_conn *conn = BIO_get_data(bio);
+    BIO_clear_retry_flags(bio);
+    if (!conn || inl < 0) return -1;
+    cwist_webrtc_conn_dtls_out(conn, (const uint8_t *)in, (size_t)inl);
+    return inl;
+}
+
+/** @brief Flush always succeeds (the event loop flushes the batch); nothing
+ *         else is supported. */
+static long dgram_bio_ctrl(BIO *bio, int cmd, long num, void *ptr) {
+    (void)bio;
+    (void)num;
+    (void)ptr;
+    return cmd == BIO_CTRL_FLUSH ? 1 : 0;
+}
+
+/** @brief Mark a new BIO initialised. */
+static int dgram_bio_create(BIO *bio) {
+    BIO_set_init(bio, 1);
+    return 1;
+}
+
+/** @brief Build the shared BIO_METHOD once. */
+static void dgram_method_init(void) {
+    BIO_METHOD *m = BIO_meth_new(BIO_get_new_index() | BIO_TYPE_SOURCE_SINK, "cwist-webrtc-dgram");
+    if (!m) return;
+    if (!BIO_meth_set_read(m, dgram_bio_read) || !BIO_meth_set_write(m, dgram_bio_write) ||
+        !BIO_meth_set_ctrl(m, dgram_bio_ctrl) || !BIO_meth_set_create(m, dgram_bio_create)) {
+        BIO_meth_free(m);
+        return;
+    }
+    g_dgram_method = m;
+}
+
+BIO *cwist_dtls_bio_new(struct cwist_webrtc_conn *conn) {
+    pthread_once(&g_dgram_once, dgram_method_init);
+    if (!g_dgram_method) return NULL;
+    BIO *bio = BIO_new(g_dgram_method);
+    if (bio) BIO_set_data(bio, conn);
+    return bio;
 }
