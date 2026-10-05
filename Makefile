@@ -217,7 +217,7 @@ SRCS = src/core/sstring/sstring.c \
        src/net/http/writer_fast.c \
        src/sys/io/uring_sqpoll.c \
        src/net/http/async_server.c \
-       src/net/http/async.c lib/libttak/src/mem/epoch.c src/sys/sys_info.c \
+       src/net/http/async.c src/core/mem/gc.c lib/libttak/src/mem/epoch.c src/sys/sys_info.c \
     lib/libttak/src/mem/mem.c lib/libttak/src/mem/fastpath.c \
     lib/libttak/src/mem/owner.c lib/libttak/src/mem/abstract.c \
        src/net/http/cookie.c \
@@ -249,7 +249,7 @@ SRCS = src/core/sstring/sstring.c \
        src/sys/app/compress.c \
        src/sys/app/test_client.c \
        src/core/log/log.c lib/libttak/src/net/mols_control.c \
-    src/net/http/async.c lib/libttak/src/mem/epoch.c src/sys/sys_info.c \
+    src/net/http/async.c src/core/mem/gc.c lib/libttak/src/mem/epoch.c src/sys/sys_info.c \
     lib/libttak/src/mem/mem.c lib/libttak/src/mem/fastpath.c \
     lib/libttak/src/mem/owner.c lib/libttak/src/mem/abstract.c \
        src/sys/session/flash.c \
@@ -408,7 +408,7 @@ WASIP2_EXTRA_SRCS = src/sys/wasi/compat.c src/sys/metrics/metrics.c \
     src/net/http/writer_fast.c lib/libttak/src/net/lattice.c \
     lib/libttak/src/shared/shared.c lib/libttak/src/timing/deadline.c \
     src/core/log/log.c lib/libttak/src/net/mols_control.c \
-    src/net/http/async.c lib/libttak/src/mem/epoch.c src/sys/sys_info.c \
+    src/net/http/async.c src/core/mem/gc.c lib/libttak/src/mem/epoch.c src/sys/sys_info.c \
     lib/libttak/src/mem/mem.c lib/libttak/src/mem/fastpath.c \
     lib/libttak/src/mem/owner.c lib/libttak/src/mem/abstract.c
 WASIP2_SRCS = $(WASM_SRCS) $(WASIP2_EXTRA_SRCS)
