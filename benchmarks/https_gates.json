@@ -133,5 +133,20 @@
     "http_big_gbps": 12.97,
     "https_churn_ratio": 0.118,
     "https_big_ratio": 0.324
+  },
+  {
+    "timestamp": "2026-10-05T11:21:50+0000",
+    "runner_hw": "4 vCPU | INTEL(R) XEON(R) PLATINUM 8573C",
+    "tls_rtt_p50_ms": 0.08,
+    "tls_rtt_p90_ms": 0.123,
+    "https_churn_rps": 1440.53,
+    "http_churn_rps": 20430.4,
+    "https_keepalive_rps": 143567.15,
+    "http_keepalive_rps": 213915.29,
+    "https_keepalive_ratio": 0.671,
+    "https_big_gbps": 3.37,
+    "http_big_gbps": 7.96,
+    "https_churn_ratio": 0.071,
+    "https_big_ratio": 0.423
   }
 ]
