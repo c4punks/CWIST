@@ -112,11 +112,16 @@ static void ws_async_sweep_watchdog_free(ws_async_sweep_t *sweep);
 static void ws_async_sweep_post_cb(void *ctx);
 static void *ws_async_sweep_watchdog(void *arg);
 
-/* Mark a sweep context dead exactly once.  Lock order is always
- * g_ws_sweeps_lock -> sweep->lock, so a foreign-thread attach cannot push a
- * new connection onto a sweep whose destruction was already decided.  The
- * context itself is released by the watchdog thread once it has exited and
- * no posted sweep can still reference it. */
+/**
+ * @brief Mark a sweep context dead exactly once.
+ *
+ * Lock order is always g_ws_sweeps_lock -> sweep->lock, so a foreign-thread
+ * attach cannot push a new connection onto a sweep whose destruction was
+ * already decided.  The context itself is released by the watchdog thread
+ * once it has exited and no posted sweep can still reference it.
+ *
+ * @param sweep Sweep context to mark dead. Must not be NULL.
+ */
 static void ws_async_sweep_mark_dead(ws_async_sweep_t *sweep) {
     pthread_mutex_lock(&g_ws_sweeps_lock);
     pthread_mutex_lock(&sweep->lock);
@@ -129,10 +134,17 @@ static void ws_async_sweep_mark_dead(ws_async_sweep_t *sweep) {
 /* Lifecycle                                                           */
 /* ------------------------------------------------------------------ */
 
-/* Final teardown: close the fd and release all state.  Only called once no
- * reactor slot can still dispatch into this connection (the current slot has
- * been consumed, and any other pending slot was either canceled or is the
- * callback doing the teardown).  Runs on the reactor thread only. */
+/**
+ * @brief Final teardown: close the fd and release all state.
+ *
+ * Only called once no reactor slot can still dispatch into this connection
+ * (the current slot has been consumed, and any other pending slot was either
+ * canceled or is the callback doing the teardown).  Runs on the reactor
+ * thread only.
+ *
+ * @param ws Connection to destroy; ownership of the struct and all buffers
+ *           is released. Must not be NULL.
+ */
 static void ws_async_teardown(cwist_websocket_async *ws) {
     /* Protocol layers (e.g. graphql-ws) release per-connection state here;
      * runs before any memory is freed and exactly once per connection. */
@@ -147,9 +159,12 @@ static void ws_async_teardown(cwist_websocket_async *ws) {
     cwist_free(ws);
 }
 
-/* Tear down the connection.  Single owner of destruction; every exit path
- * funnels through here, so it is called at most once per connection.  Runs
- * on the reactor thread only (read/write events, sweep, inline attach).
+/**
+ * @brief Tear down the connection.
+ *
+ * Single owner of destruction; every exit path funnels through here, so it is
+ * called at most once per connection.  Runs on the reactor thread only (read/
+ * write events, sweep, inline attach).
  *
  * Termination is subtle under the one-shot io_uring poll model: a poll
  * request still pending in the kernel holds a reference to the file, so
@@ -159,7 +174,10 @@ static void ws_async_teardown(cwist_websocket_async *ws) {
  * connection for the peer immediately (FIN), the pending slot is woken (or
  * canceled), and its callback performs the real teardown.  When nothing is
  * pending — e.g. the read slot that delivered a CLOSE/EOF was just consumed —
- * teardown happens right here, matching the HTTP layer's close() behavior. */
+ * teardown happens right here, matching the HTTP layer's close() behavior.
+ *
+ * @param ws Connection to terminate. Safe to call with NULL (no-op).
+ */
 static void ws_async_terminate(cwist_websocket_async *ws) {
     if (!ws) return;
     if (ws->sweep) {
@@ -192,6 +210,10 @@ static void ws_async_terminate(cwist_websocket_async *ws) {
     ws_async_teardown(ws);
 }
 
+/**
+ * @brief Compute the absolute parked-write deadline.
+ * @return Monotonic timestamp (seconds) WS_ASYNC_PARK_DEADLINE_SEC from now.
+ */
 static uint32_t ws_async_park_deadline(void) {
     return cwist_fast_monotonic_sec() + WS_ASYNC_PARK_DEADLINE_SEC;
 }
@@ -200,10 +222,15 @@ static uint32_t ws_async_park_deadline(void) {
 /* Idle reaping                                                        */
 /* ------------------------------------------------------------------ */
 
-/* CWIST_WS_ASYNC_IDLE_TIMEOUT_SEC: seconds a WS async connection may stay
- * event-free before the lazy reaper closes it.  Default 300 (5 minutes);
- * 0 disables reaping.  Cached once per process, following the
- * reactor_drain_chunk() env-knob idiom in src/sys/io/reactor.c. */
+/**
+ * @brief Read CWIST_WS_ASYNC_IDLE_TIMEOUT_SEC: seconds a WS async connection
+ * may stay event-free before the lazy reaper closes it.
+ *
+ * Default 300 (5 minutes); 0 disables reaping.  Cached once per process,
+ * following the reactor_drain_chunk() env-knob idiom in src/sys/io/reactor.c.
+ *
+ * @return Idle timeout in seconds (0 means reaping disabled).
+ */
 static uint32_t ws_async_idle_timeout_sec(void) {
     static _Atomic int cached = -1;
     int v = atomic_load_explicit(&cached, memory_order_relaxed);
@@ -220,18 +247,32 @@ static uint32_t ws_async_idle_timeout_sec(void) {
     return (uint32_t)v;
 }
 
-/* Refresh the activity clock: any complete frame received, any send, or any
- * PING/PONG traffic counts as activity (mirrors the HTTP conn's
- * last_active_sec updates in src/net/http/http.c). */
+/**
+ * @brief Refresh the connection activity clock.
+ *
+ * Any complete frame received, any send, or any PING/PONG traffic counts as
+ * activity (mirrors the HTTP conn's last_active_sec updates in
+ * src/net/http/http.c).
+ *
+ * @param ws Connection whose last_active_sec timestamp is updated.
+ */
 static void ws_async_touch(cwist_websocket_async *ws) {
     ws->last_active_sec = cwist_fast_monotonic_sec();
 }
 
-/* Lazy per-event idle reaper, modeled on http_async_event_cb (http.c): the
- * one-shot slot model gives each fd at most one read + one POLLOUT slot, so
- * a totally silent connection receives no events and is only reaped on its
+/**
+ * @brief Lazy per-event idle reaper, modeled on http_async_event_cb (http.c).
+ *
+ * The one-shot slot model gives each fd at most one read + one POLLOUT slot,
+ * so a totally silent connection receives no events and is only reaped on its
  * first post-timeout event — the same trade-off the HTTP keep-alive reaper
- * makes.  Returns true when the connection was reaped. */
+ * makes.
+ *
+ * @param ws Connection to check.
+ * @retval true The connection exceeded the idle timeout and was terminated.
+ * @retval false The connection is still within the timeout (or reaping is
+ *         disabled).
+ */
 static bool ws_async_idle_reap(cwist_websocket_async *ws) {
     uint32_t timeout_sec = ws_async_idle_timeout_sec();
     if (timeout_sec == 0) return false;
@@ -269,8 +310,15 @@ static bool ws_async_idle_reap(cwist_websocket_async *ws) {
  * flight while the context is being torn down; cwist_reactor_destroy()
  * drains pending posts, so the wait always terminates. */
 
-/* Sweep cadence: half the timeout, clamped to [1, 60]s, so a silent
- * connection is reaped within roughly timeout + interval. */
+/**
+ * @brief Compute the watchdog sweep cadence.
+ *
+ * Half the idle timeout, clamped to [1, 60]s, so a silent connection is
+ * reaped within roughly timeout + interval.
+ *
+ * @param timeout_sec Idle timeout in seconds.
+ * @return Sweep interval in seconds.
+ */
 static uint32_t ws_async_sweep_interval(uint32_t timeout_sec) {
     uint32_t interval = timeout_sec / 2;
     if (interval < 1) interval = 1;
@@ -278,12 +326,18 @@ static uint32_t ws_async_sweep_interval(uint32_t timeout_sec) {
     return interval;
 }
 
-/* Release the context from the watchdog thread after it has exited its
- * posting loop: wait (in short slices) for any posted sweep still queued on
- * the reactor to drain, then unlink and free.  The context is never freed
- * from the reactor thread, so the watchdog can never touch freed memory.
+/**
+ * @brief Release the sweep context from the watchdog thread after it has
+ * exited its posting loop.
+ *
+ * Waits (in short slices) for any posted sweep still queued on the reactor
+ * to drain, then unlinks and frees.  The context is never freed from the
+ * reactor thread, so the watchdog can never touch freed memory.
  * cwist_reactor_destroy() drains pending posts, so queued callbacks always
- * run and the wait terminates. */
+ * run and the wait terminates.
+ *
+ * @param sweep Sweep context to free. Must not be NULL.
+ */
 static void ws_async_sweep_watchdog_free(ws_async_sweep_t *sweep) {
     const struct timespec slice = {.tv_sec = 0, .tv_nsec = 100000000L};
     for (;;) {
@@ -303,7 +357,17 @@ static void ws_async_sweep_watchdog_free(ws_async_sweep_t *sweep) {
     cwist_free(sweep);
 }
 
-/* Runs on the reactor thread, delivered by cwist_reactor_post(). */
+/**
+ * @brief Sweep tick callback; runs on the reactor thread, delivered by
+ * cwist_reactor_post().
+ *
+ * Reaps at most one timed-out connection per tick, then decrements the posts
+ * counter; posts-- is the last touch of the context (the watchdog frees it
+ * only after observing posts == 0).  Marks the sweep dead when the list is
+ * empty.
+ *
+ * @param ctx The sweep context (@p sweep pointer).
+ */
 static void ws_async_sweep_post_cb(void *ctx) {
     ws_async_sweep_t *sweep = (ws_async_sweep_t *)ctx;
 
@@ -339,6 +403,17 @@ static void ws_async_sweep_post_cb(void *ctx) {
  * low without a condvar; nanosleep is EINTR-tolerant. */
 #define WS_ASYNC_SWEEP_SLICE_MS 100u
 
+/**
+ * @brief Watchdog thread body: sleep the sweep interval, then post a sweep
+ * to the reactor.
+ *
+ * Sleeps the interval in 100 ms slices so dead-flag shutdown latency stays
+ * low without a condvar; nanosleep is EINTR-tolerant.  On exit (dead flag)
+ * frees the context via ws_async_sweep_watchdog_free().
+ *
+ * @param arg The sweep context (@p sweep pointer).
+ * @return Always NULL.
+ */
 static void *ws_async_sweep_watchdog(void *arg) {
     ws_async_sweep_t *sweep = (ws_async_sweep_t *)arg;
     const struct timespec slice = {.tv_sec = 0, .tv_nsec = 100000000L};
@@ -371,9 +446,16 @@ out:
     return NULL;
 }
 
-/* Find or create the sweep context for @p reactor.  Returns NULL when idle
- * reaping is disabled (timeout 0) or on setup failure; connections then only
- * get the per-event reaper.  Safe to call from a foreign thread. */
+/**
+ * @brief Find or create the sweep context for a reactor.
+ *
+ * Returns NULL when idle reaping is disabled (timeout 0) or on setup failure;
+ * connections then only get the per-event reaper.  Safe to call from a
+ * foreign thread.
+ *
+ * @param reactor Reactor whose sweep context is looked up or created.
+ * @return The (possibly new) sweep context, or NULL on failure/disabled.
+ */
 static ws_async_sweep_t *ws_async_sweep_get(cwist_reactor_t *reactor) {
     uint32_t timeout_sec = ws_async_idle_timeout_sec();
     if (timeout_sec == 0) return NULL;
@@ -421,8 +503,17 @@ static ws_async_sweep_t *ws_async_sweep_get(cwist_reactor_t *reactor) {
 /* Parked (POLLOUT-resumable) writes                                   */
 /* ------------------------------------------------------------------ */
 
-/* Serialize one FIN-terminated server frame (server frames are never
- * masked) into a fresh owned buffer.  Returns NULL on allocation failure. */
+/**
+ * @brief Serialize one FIN-terminated server frame (server frames are never
+ * masked) into a fresh owned buffer.
+ *
+ * @param opcode Frame opcode.
+ * @param data Payload bytes; may be NULL when len is 0 (not copied).
+ * @param len Payload length in bytes.
+ * @param out_total Receives the total serialized size (header + payload).
+ * @return Newly allocated buffer owned by the caller, or NULL on allocation
+ *         failure.
+ */
 static uint8_t *ws_async_serialize_frame(cwist_ws_opcode_t opcode, const uint8_t *data, size_t len,
                                          size_t *out_total) {
     uint8_t head[10];
@@ -450,10 +541,21 @@ static uint8_t *ws_async_serialize_frame(cwist_ws_opcode_t opcode, const uint8_t
     return buf;
 }
 
-/* Queue raw frame bytes behind any already-parked unsent bytes, then drain
- * speculatively; whatever does not fit in the socket buffer is parked on a
- * one-shot POLLOUT slot.  Returns 0 when the frame is sent or parked, -1 on
- * failure (connection is terminated by the caller). */
+/**
+ * @brief Queue raw frame bytes behind any already-parked unsent bytes, then
+ * drain speculatively.
+ *
+ * Whatever does not fit in the socket buffer is parked and resumed by a
+ * one-shot POLLOUT slot.  Runs on the reactor thread only.
+ *
+ * @param ws Connection to send on.
+ * @param opcode Frame opcode.
+ * @param data Payload bytes; may be NULL when len is 0.
+ * @param len Payload length in bytes.
+ * @retval 0 The frame was fully sent or parked.
+ * @retval -1 Allocation or send failure, or the POLLOUT slot could not be
+ *         registered (the connection is terminated by the caller).
+ */
 static int ws_async_queue_frame(cwist_websocket_async *ws, cwist_ws_opcode_t opcode,
                                 const uint8_t *data, size_t len) {
     size_t frame_len = 0;
@@ -511,6 +613,18 @@ static int ws_async_queue_frame(cwist_websocket_async *ws, cwist_ws_opcode_t opc
     return 0;
 }
 
+/**
+ * @brief POLLOUT callback: resume a parked write.
+ *
+ * Handles deferred termination first (shutdown() woke this slot so it can
+ * perform the real teardown), then drains the parked buffer.  Send progress
+ * resets the parked-write deadline; on timeout or fatal send error the
+ * connection is terminated.  When the buffer drains, a pending termination
+ * is performed or the read side is re-armed.  Runs on the reactor thread.
+ *
+ * @param fd The connection's socket fd.
+ * @param ctx Reactor slot payload (ws_async_slot_t holding the connection).
+ */
 static void ws_async_write_ready(int fd, void *ctx) {
     ws_async_slot_t *slot = (ws_async_slot_t *)ctx;
     cwist_websocket_async *ws = slot->ws;
@@ -563,12 +677,35 @@ static void ws_async_write_ready(int fd, void *ctx) {
     }
 }
 
+/**
+ * @brief Send one complete WebSocket message frame on an async connection.
+ *
+ * May be called from the reactor thread (e.g. inside the on_message
+ * callback); partial writes are parked and resumed by a POLLOUT slot.
+ *
+ * @param ws Async connection.
+ * @param opcode Frame opcode (text, binary, PING, ...).
+ * @param data Payload bytes; may be NULL when len is 0.
+ * @param len Payload length in bytes.
+ * @retval 0 The frame was sent or parked.
+ * @retval -1 Invalid arguments, the connection is already closing/closed, or
+ *         queueing failed (the connection is torn down).
+ */
 int cwist_websocket_async_send(cwist_websocket_async *ws, cwist_ws_opcode_t opcode,
                                const uint8_t *data, size_t len) {
     if (!ws || ws->closed || (!data && len > 0)) return -1;
     return ws_async_queue_frame(ws, opcode, data, len);
 }
 
+/**
+ * @brief Initiate the WebSocket close handshake with an empty CLOSE frame.
+ *
+ * Idempotent: calling again on a connection already closing is a no-op.
+ * The connection is torn down once the CLOSE frame has drained or, on
+ * queueing failure, via a deferred termination.
+ *
+ * @param ws Async connection to close. Safe to call with NULL.
+ */
 void cwist_websocket_async_close(cwist_websocket_async *ws) {
     if (!ws || ws->closed) return;
     ws->closed = true;
@@ -586,6 +723,18 @@ void cwist_websocket_async_close(cwist_websocket_async *ws) {
     /* Otherwise the parked-write completion terminates after draining. */
 }
 
+/**
+ * @brief Initiate the WebSocket close handshake with a CLOSE frame carrying
+ * a status code.
+ *
+ * The 2-byte big-endian status code is echoed to the peer.  Idempotent:
+ * calling again on a connection already closing is a no-op.  The connection
+ * is torn down once the CLOSE frame has drained or, on queueing failure, via
+ * a deferred termination.
+ *
+ * @param ws Async connection to close. Safe to call with NULL.
+ * @param code RFC 6455 close status code (big-endian on the wire).
+ */
 void cwist_websocket_async_close_code(cwist_websocket_async *ws, uint16_t code) {
     if (!ws || ws->closed) return;
     ws->closed = true;
@@ -605,6 +754,15 @@ void cwist_websocket_async_close_code(cwist_websocket_async *ws, uint16_t code) 
 /* Incremental frame parsing (mirrors cwist_websocket_receive)         */
 /* ------------------------------------------------------------------ */
 
+/**
+ * @brief Append bytes to the connection's read stash, growing by doubling.
+ *
+ * @param ws Connection whose stash buffer is grown.
+ * @param src Bytes to append; may be NULL when len is 0.
+ * @param len Number of bytes to append.
+ * @retval true The bytes were appended.
+ * @retval false Allocation failure; the stash is unchanged.
+ */
 static bool ws_async_stash_append(cwist_websocket_async *ws, const uint8_t *src, size_t len) {
     if (len == 0) return true;
     size_t need = ws->stash_len + len;
@@ -623,9 +781,17 @@ static bool ws_async_stash_append(cwist_websocket_async *ws, const uint8_t *src,
     return true;
 }
 
-/* Append len bytes of src to the reassembly buffer, growing by doubling.
- * Returns false on allocation failure or when the reassembled message would
- * exceed the total-message cap. */
+/**
+ * @brief Append bytes to the fragmented-message reassembly buffer, growing
+ * by doubling.
+ *
+ * @param ws Connection whose reassembly buffer is grown.
+ * @param src Fragment bytes to append; may be NULL when len is 0.
+ * @param len Number of bytes to append.
+ * @retval true The bytes were appended.
+ * @retval false Allocation failure, or the reassembled message would exceed
+ *         WS_ASYNC_MAX_MESSAGE_BYTES.
+ */
 static bool ws_async_frag_append(cwist_websocket_async *ws, const uint8_t *src, size_t len) {
     if (len == 0) return true;
     if (ws->frag_len + len > WS_ASYNC_MAX_MESSAGE_BYTES) return false;
@@ -645,8 +811,24 @@ static bool ws_async_frag_append(cwist_websocket_async *ws, const uint8_t *src, 
     return true;
 }
 
-/* Handle one complete, unmasked frame.  Takes ownership of @p payload.
- * Returns 0 on success, -1 on a protocol violation (connection must fail). */
+/**
+ * @brief Handle one complete, unmasked frame.
+ *
+ * Performs fragmented-message reassembly, answers CLOSE (echoing the status
+ * code) and PING (PONG with the same payload) per RFC 6455, and delivers
+ * data frames through the on_message callback, which takes ownership of the
+ * delivered frame and its payload.
+ *
+ * @param ws Connection receiving the frame.
+ * @param fin FIN flag of the frame.
+ * @param opcode Frame opcode.
+ * @param payload Allocated, unmasked payload; ownership is consumed (freed
+ *        or handed to the on_message callback).
+ * @param payload_len Payload length in bytes.
+ * @retval 0 The frame was handled.
+ * @retval -1 Protocol violation or allocation failure (the connection must
+ *         fail).
+ */
 static int ws_async_process_frame(cwist_websocket_async *ws, bool fin, cwist_ws_opcode_t opcode,
                                   uint8_t *payload, size_t payload_len) {
     bool is_control = (opcode >= 0x8);
@@ -737,9 +919,17 @@ static int ws_async_process_frame(cwist_websocket_async *ws, bool fin, cwist_ws_
     return 0;
 }
 
-/* Parse as many complete frames as the stash holds.  Partial frame bytes
- * stay in the stash for the next read.  Returns 0 on success, -1 on a
- * protocol violation. */
+/**
+ * @brief Parse as many complete frames as the stash holds.
+ *
+ * Partial frame bytes stay in the stash for the next read.  Enforces the
+ * same RFC 6455 rules as cwist_websocket_receive() (masking, RSV bits,
+ * payload caps, control-frame constraints, fragmentation sequence).
+ *
+ * @param ws Connection whose stash is parsed.
+ * @retval 0 All complete frames were consumed.
+ * @retval -1 Protocol violation or allocation failure.
+ */
 static int ws_async_feed(cwist_websocket_async *ws) {
     size_t off = 0;
 
@@ -810,6 +1000,19 @@ static int ws_async_feed(cwist_websocket_async *ws) {
 /* Reactor integration                                                 */
 /* ------------------------------------------------------------------ */
 
+/**
+ * @brief Read-event callback: drain the socket, feed the incremental parser,
+ * and re-arm the one-shot read slot.
+ *
+ * Handles deferred termination (closing flag) first, then the lazy idle
+ * reaper, then drains everything the kernel has without blocking.  EOF,
+ * recv errors, protocol violations from the parser, and a CLOSE requested
+ * from the on_message callback all converge on ws_async_terminate().  Runs
+ * on the reactor thread.
+ *
+ * @param fd The connection's socket fd.
+ * @param ctx Reactor slot payload (ws_async_slot_t holding the connection).
+ */
 static void ws_async_read_ready(int fd, void *ctx) {
     ws_async_slot_t *slot = (ws_async_slot_t *)ctx;
     cwist_websocket_async *ws = slot->ws;
@@ -873,6 +1076,27 @@ static void ws_async_read_ready(int fd, void *ctx) {
     ws->read_armed = true;
 }
 
+/**
+ * @brief Attach an upgraded, HTTP-connection-owned fd to the reactor as an
+ * async WebSocket connection.
+ *
+ * Sets the fd non-blocking, feeds any bytes already read past the upgrade
+ * request through the parser (delivery can happen inline here, including a
+ * close from the on_message callback), arms the one-shot read slot, and
+ * joins the reactor's idle sweep.  On any failure the fd is closed and all
+ * state is freed; on_close does not fire because the attach itself failed.
+ *
+ * @param fd Upgraded socket fd (owned by the new connection on success).
+ * @param reactor Reactor to register the fd with.
+ * @param on_message Callback invoked per complete message; takes ownership
+ *        of the delivered frame. Must not be NULL.
+ * @param on_close Optional callback invoked exactly once during teardown.
+ * @param user_data Opaque pointer passed back to both callbacks.
+ * @param initial Bytes already read past the upgrade request; may be NULL.
+ * @param initial_len Number of bytes in initial.
+ * @return The new async connection, or NULL on invalid arguments or failure
+ *         (fd is closed in the latter case).
+ */
 cwist_websocket_async *cwist_websocket_async_attach_ex(int fd, cwist_reactor_t *reactor,
                                                        cwist_ws_on_message_t on_message,
                                                        cwist_ws_on_close_t on_close,
@@ -960,6 +1184,21 @@ cwist_websocket_async *cwist_websocket_async_attach_ex(int fd, cwist_reactor_t *
     return ws;
 }
 
+/**
+ * @brief Attach an upgraded fd to the reactor as an async WebSocket
+ * connection (no on_close callback variant).
+ *
+ * Thin boolean wrapper around cwist_websocket_async_attach_ex().
+ *
+ * @param fd Upgraded socket fd (owned by the new connection on success).
+ * @param reactor Reactor to register the fd with.
+ * @param on_message Callback invoked per complete message. Must not be NULL.
+ * @param user_data Opaque pointer passed back to the callback.
+ * @param initial Bytes already read past the upgrade request; may be NULL.
+ * @param initial_len Number of bytes in initial.
+ * @retval true The connection was attached and the read slot armed.
+ * @retval false Invalid arguments or failure (fd is closed).
+ */
 bool cwist_websocket_async_attach(int fd, cwist_reactor_t *reactor,
                                   cwist_ws_on_message_t on_message, void *user_data,
                                   const uint8_t *initial, size_t initial_len) {

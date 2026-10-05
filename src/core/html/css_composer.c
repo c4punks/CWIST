@@ -15,6 +15,12 @@
 #define MIN3(a, b, c) ((a) < (b) ? ((a) < (c) ? (a) : (c)) : ((b) < (c) ? (b) : (c)))
 #define MAX3(a, b, c) ((a) > (b) ? ((a) > (c) ? (a) : (c)) : ((b) > (c) ? (b) : (c)))
 
+/**
+ * @brief Convert an RGB color to the HSL color space.
+ * @param rgb RGB components in the range 0-255.
+ * @return HSL with hue in degrees (0-360), saturation and lightness in 0-1.
+ *         Achromatic colors yield saturation and hue of 0.
+ */
 cwist_color_hsl cwist_color_rgb_to_hsl(cwist_color_rgb rgb) {
     cwist_color_hsl hsl = {0.0f, 0.0f, 0.0f};
     float r = rgb.r / 255.0f;
@@ -45,6 +51,13 @@ cwist_color_hsl cwist_color_rgb_to_hsl(cwist_color_rgb rgb) {
     return hsl;
 }
 
+/**
+ * @brief Helper for HSL-to-RGB conversion; maps a hue segment to a channel value.
+ * @param p Minimum channel value (from the HSL conversion formula).
+ * @param q Maximum channel value (from the HSL conversion formula).
+ * @param t Hue fraction; wrapped into the range [0, 1) before evaluation.
+ * @return The channel value in the range [p, q].
+ */
 static float hue2rgb(float p, float q, float t) {
     if (t < 0.0f) t += 1.0f;
     if (t > 1.0f) t -= 1.0f;
@@ -54,6 +67,12 @@ static float hue2rgb(float p, float q, float t) {
     return p;
 }
 
+/**
+ * @brief Convert an HSL color to the RGB color space.
+ * @param hsl Hue in degrees (0-360), saturation and lightness in 0-1.
+ * @return RGB components in the range 0-255, rounded to the nearest integer.
+ *         A saturation of 0 yields a grayscale color.
+ */
 cwist_color_rgb cwist_color_hsl_to_rgb(cwist_color_hsl hsl) {
     cwist_color_rgb rgb = {0, 0, 0};
     float h = hsl.h / 360.0f;
@@ -72,6 +91,11 @@ cwist_color_rgb cwist_color_hsl_to_rgb(cwist_color_hsl hsl) {
     return rgb;
 }
 
+/**
+ * @brief Convert a single hexadecimal digit character to its numeric value.
+ * @param c Hex digit character ('0'-'9', 'a'-'f', or 'A'-'F').
+ * @return Numeric value 0-15, or -1 if @p c is not a valid hex digit.
+ */
 static inline int hex_char_to_val(char c) {
     if (c >= '0' && c <= '9') return c - '0';
     if (c >= 'a' && c <= 'f') return c - 'a' + 10;
@@ -79,6 +103,13 @@ static inline int hex_char_to_val(char c) {
     return -1;
 }
 
+/**
+ * @brief Parse a hexadecimal color string into an RGB color.
+ * @param hex Hex string in "#rrggbb", "rrggbb", "#rgb", or "rgb" form.
+ *            A leading '#' is optional.
+ * @return Parsed RGB color. Returns black ({0, 0, 0}) if @p hex is NULL or
+ *         malformed (wrong length or non-hex characters).
+ */
 cwist_color_rgb cwist_color_hex_to_rgb(const char *hex) {
     cwist_color_rgb rgb = {0, 0, 0};
     if (!hex) return rgb;
@@ -109,12 +140,23 @@ cwist_color_rgb cwist_color_hex_to_rgb(const char *hex) {
     return rgb;
 }
 
+/**
+ * @brief Format an RGB color as a lowercase "#rrggbb" hex string.
+ * @param rgb RGB components in the range 0-255.
+ * @param out_hex Output buffer of at least 8 bytes; left untouched if NULL.
+ */
 void cwist_color_rgb_to_hex(cwist_color_rgb rgb, char out_hex[8]) {
     if (out_hex) {
         snprintf(out_hex, 8, "#%02x%02x%02x", rgb.r, rgb.g, rgb.b);
     }
 }
 
+/**
+ * @brief Initialize a CSS configuration with default values.
+ * @param cfg Configuration to fill. No-op if NULL.
+ * @details Defaults: Tailwind blue primary, Tailwind green secondary,
+ *          8px roundness, 4px spacing base, light mode.
+ */
 void cwist_css_config_init(cwist_css_config *cfg) {
     if (!cfg) return;
     cfg->primary_color = cwist_color_hex_to_rgb("#3B82F6"); // Default Tailwind Blue
@@ -136,6 +178,12 @@ static void get_shifted_hex(cwist_color_rgb base, float light_shift, char out[8]
     cwist_color_rgb_to_hex(shifted, out);
 }
 
+/**
+ * @brief Generate the CSS custom-property block (:root variables) for a config.
+ * @param cfg Theme configuration; must not be NULL.
+ * @return Newly created sstring with the generated CSS, or NULL if @p cfg is
+ *         NULL or allocation fails. Caller owns the returned string.
+ */
 cwist_sstring *cwist_css_generate_variables(const cwist_css_config *cfg) {
     if (!cfg) return NULL;
     cwist_sstring *css = cwist_sstring_create();
@@ -183,6 +231,12 @@ cwist_sstring *cwist_css_generate_variables(const cwist_css_config *cfg) {
     return css;
 }
 
+/**
+ * @brief Generate the utility/component CSS classes that reference the theme variables.
+ * @param cfg Theme configuration (currently unused; classes reference CSS variables).
+ * @return Newly created sstring with the generated CSS, or NULL on allocation
+ *         failure. Caller owns the returned string.
+ */
 cwist_sstring *cwist_css_generate_utility_classes(const cwist_css_config *cfg) {
     (void)cfg; // Currently relying on generated variables
     cwist_sstring *css = cwist_sstring_create();
@@ -223,6 +277,12 @@ cwist_sstring *cwist_css_generate_utility_classes(const cwist_css_config *cfg) {
     return css;
 }
 
+/**
+ * @brief Generate a complete stylesheet (variables plus utility classes).
+ * @param cfg Theme configuration; must not be NULL.
+ * @return Newly created sstring with the concatenated CSS, or NULL if @p cfg
+ *         is NULL or allocation fails. Caller owns the returned string.
+ */
 cwist_sstring *cwist_css_generate_stylesheet(const cwist_css_config *cfg) {
     if (!cfg) return NULL;
     cwist_sstring *final_css = cwist_sstring_create();
@@ -257,6 +317,12 @@ static bool append_ok(cwist_sstring *s, const char *text) {
     return ok;
 }
 
+/**
+ * @brief Validate that a string is a safe CSS identifier.
+ * @param s Candidate identifier; may be NULL.
+ * @retval true @p s is a non-empty CSS identifier ([-]?[a-zA-Z_][a-zA-Z0-9_-]*).
+ * @retval false @p s is NULL, empty, or contains other characters.
+ */
 static bool is_css_ident(const char *s) {
     if (!s || !*s) return false;
     const char *p = s;
@@ -268,6 +334,12 @@ static bool is_css_ident(const char *s) {
     return true;
 }
 
+/**
+ * @brief Look up a scope entry by its base class name.
+ * @param scope Scope to search; must not be NULL.
+ * @param base_class Base class key to find.
+ * @return Pointer to the entry, or NULL if not present.
+ */
 static struct cwist_css_scope_entry *scope_find(const cwist_css_scope *scope,
                                                 const char *base_class) {
     for (size_t i = 0; i < scope->count; i++) {
@@ -311,6 +383,14 @@ static struct cwist_css_scope_entry *scope_get_or_add(cwist_css_scope *scope,
     return entry;
 }
 
+/**
+ * @brief Initialize a CSS scoping context, deriving a deterministic class suffix.
+ * @param scope Scope to initialize. No-op if NULL.
+ * @param component_name Name used to derive the suffix; empty string if NULL.
+ * @details The suffix is an unseeded FNV-1a 32-bit hash of the component name,
+ *          so markup and stylesheets generated in different worker processes
+ *          agree on the same suffix. Call cwist_css_scope_destroy() to release.
+ */
 void cwist_css_scope_init(cwist_css_scope *scope, const char *component_name) {
     if (!scope) return;
     const char *name = component_name ? component_name : "";
@@ -329,6 +409,13 @@ void cwist_css_scope_init(cwist_css_scope *scope, const char *component_name) {
     scope->capacity = 0;
 }
 
+/**
+ * @brief Map a base class to its scoped class name, marking it as used.
+ * @param scope Scope to query.
+ * @param base_class Base class name; must be a valid CSS identifier.
+ * @return Pointer to the scoped class name (e.g. "btn-a1b2c3d4") owned by the
+ *         scope entry, or NULL on invalid input or allocation failure.
+ */
 const char *cwist_css_scope_class(cwist_css_scope *scope, const char *base_class) {
     if (!scope || !scope->suffix[0] || !is_css_ident(base_class)) return NULL;
     struct cwist_css_scope_entry *entry = scope_get_or_add(scope, base_class);
@@ -337,6 +424,15 @@ const char *cwist_css_scope_class(cwist_css_scope *scope, const char *base_class
     return entry->scoped_class->data;
 }
 
+/**
+ * @brief Attach CSS declarations to a scoped class.
+ * @param scope Scope to modify.
+ * @param base_class Base class name; must be a valid CSS identifier.
+ * @param declarations Declaration block text (e.g. "color: red;"). Must not
+ *        contain '{', '}', or '<'.
+ * @retval 0 Declarations stored; any previous declarations are freed.
+ * @retval -1 Invalid argument, unsafe declaration content, or allocation failure.
+ */
 int cwist_css_scope_add_rule(cwist_css_scope *scope, const char *base_class,
                              const char *declarations) {
     if (!scope || !scope->suffix[0] || !is_css_ident(base_class) || !declarations) return -1;
@@ -354,6 +450,13 @@ int cwist_css_scope_add_rule(cwist_css_scope *scope, const char *base_class,
     return 0;
 }
 
+/**
+ * @brief Emit the stylesheet for all used scope entries that have declarations.
+ * @param scope Scope to render; must not be NULL.
+ * @return Newly created sstring with one ".<scoped-class> { ... }" rule per
+ *         used entry, or NULL if @p scope is NULL or allocation fails.
+ *         Caller owns the returned string.
+ */
 cwist_sstring *cwist_css_scope_generate_stylesheet(const cwist_css_scope *scope) {
     if (!scope) return NULL;
     cwist_sstring *css = cwist_sstring_create();
@@ -376,6 +479,12 @@ cwist_sstring *cwist_css_scope_generate_stylesheet(const cwist_css_scope *scope)
     return css;
 }
 
+/**
+ * @brief Destroy a CSS scoping context and free all owned resources.
+ * @param scope Scope to tear down. No-op if NULL.
+ * @details Frees all entry base names, scoped class strings, and declaration
+ *          copies, then zeroes the scope struct.
+ */
 void cwist_css_scope_destroy(cwist_css_scope *scope) {
     if (!scope) return;
     for (size_t i = 0; i < scope->count; i++) {
@@ -387,20 +496,45 @@ void cwist_css_scope_destroy(cwist_css_scope *scope) {
     memset(scope, 0, sizeof(*scope));
 }
 
+/**
+ * @brief Test whether a character is CSS whitespace.
+ * @param c Character to test.
+ * @retval true @p c is ' ', '\\t', '\\n', '\\r', or '\\f'.
+ */
 static bool css_is_space(char c) {
     return c == ' ' || c == '\t' || c == '\n' || c == '\r' || c == '\f';
 }
 
+/**
+ * @brief Test whether a character can be part of a CSS token glued to neighbors.
+ * @param c Character to test.
+ * @retval true @p c is alphanumeric, '-', '_', '%', '.', '#', '\\', or non-ASCII (>= 0x80).
+ */
 static bool css_is_word(char c) {
     return isalnum((unsigned char)c) || c == '-' || c == '_' || c == '%' || c == '.' || c == '#' ||
            c == '\\' || (unsigned char)c >= 0x80;
 }
 
+/**
+ * @brief Test whether the string at @p p starts with an unquoted url( prefix
+ *        (any case).
+ * @param p Pointer into CSS source text; must have at least 4 readable bytes.
+ * @retval true The next four characters are "url(" case-insensitively.
+ */
 static bool css_starts_url(const char *p) {
     return (p[0] == 'u' || p[0] == 'U') && (p[1] == 'r' || p[1] == 'R') &&
            (p[2] == 'l' || p[2] == 'L') && p[3] == '(';
 }
 
+/**
+ * @brief Minify CSS source by stripping comments and collapsing whitespace.
+ * @param css CSS source text; must not be NULL.
+ * @return Newly created sstring with the minified CSS, or NULL on invalid
+ *         input or allocation failure. Caller owns the returned string.
+ * @details Preserves /*!...*!/ comments verbatim, quoted strings, escapes, and
+ *          unquoted url() arguments. Whitespace around structural characters
+ *          and comments is dropped unless removing it would glue two tokens.
+ */
 cwist_sstring *cwist_css_minify(const char *css) {
     if (!css) return NULL;
     size_t n = strlen(css);
@@ -500,6 +634,14 @@ if (!ok) {
 return result;
 }
 
+/**
+ * @brief Concatenate CSS parts into one bundle, optionally minified.
+ * @param parts Array of CSS text fragments; may be NULL only if @p count is 0.
+ * @param count Number of entries in @p parts.
+ * @param minify If true, the concatenated result is passed through cwist_css_minify().
+ * @return Newly created sstring with the bundled CSS, or NULL on invalid input
+ *         or allocation failure. Caller owns the returned string.
+ */
 cwist_sstring *cwist_css_bundle(const char *const *parts, size_t count, bool minify) {
     if (!parts && count > 0) return NULL;
     cwist_sstring *bundle = cwist_sstring_create();

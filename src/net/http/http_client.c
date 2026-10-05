@@ -33,6 +33,20 @@ typedef struct {
     int header_count;
 } response_headers_t;
 
+/**
+ * @brief libcurl write callback that accumulates the response body into a growable buffer.
+ *
+ * Grows the buffer geometrically with realloc. If the accumulated body would
+ * exceed CWIST_HTTP_MAX_BODY_SIZE or memory allocation fails, the transfer is
+ * aborted by returning a short count (0).
+ *
+ * @param contents pointer to the chunk of response data delivered by libcurl.
+ * @param size     size of each element (per libcurl contract).
+ * @param nmemb    number of elements (per libcurl contract).
+ * @param userp    pointer to response_body_t accumulator.
+ * @return number of bytes consumed; a value different from size*nmemb aborts
+ *         the transfer.
+ */
 static size_t write_callback(void *contents, size_t size, size_t nmemb, void *userp) {
     size_t total = size * nmemb;
     response_body_t *body = (response_body_t *)userp;
@@ -53,6 +67,22 @@ static size_t write_callback(void *contents, size_t size, size_t nmemb, void *us
     return total;
 }
 
+/**
+ * @brief libcurl header callback that collects response status and headers.
+ *
+ * Parses the HTTP status line to record the status code, and appends each
+ * "Name: value" header as a new node (prepended to the list). A new status
+ * line (redirect hop or 1xx interim reply) discards headers collected so
+ * far, so only the final response's headers are kept. Header collection is
+ * capped at 200 entries per response to limit resource use; allocation
+ * failures are tolerated by skipping that header.
+ *
+ * @param ptr    pointer to the header line delivered by libcurl.
+ * @param size   size of each element (per libcurl contract).
+ * @param nmemb  number of elements (per libcurl contract).
+ * @param userp  pointer to response_headers_t accumulator.
+ * @return number of bytes consumed; 0 aborts the transfer (header cap hit).
+ */
 static size_t header_callback(char *ptr, size_t size, size_t nmemb, void *userp) {
     size_t total = size * nmemb;
     response_headers_t *rh = (response_headers_t *)userp;
@@ -142,6 +172,16 @@ struct cwist_http_client {
     char *altsvc_db;
 };
 
+/**
+ * @brief Create a new HTTP client handle with default settings.
+ *
+ * Acquires the shared curl global state, then initializes an easy handle
+ * with defaults: redirect following (max 10 hops), 30 s timeout, TCP
+ * keepalive, automatic content decoding, and a CWIST user agent.
+ *
+ * @return new client handle, or NULL on allocation/curl init failure (the
+ *         curl global reference is released in that case).
+ */
 cwist_http_client *cwist_http_client_create(void) {
     cwist_curl_global_acquire();
 
@@ -174,6 +214,15 @@ cwist_http_client *cwist_http_client_create(void) {
     return client;
 }
 
+/**
+ * @brief Destroy a client handle and release all associated resources.
+ *
+ * Cleans up the curl easy handle, frees the CA bundle and alt-svc paths,
+ * frees the handle, and releases the shared curl global reference. Safe to
+ * call with NULL.
+ *
+ * @param client client handle to destroy, or NULL.
+ */
 void cwist_http_client_destroy(cwist_http_client *client) {
     if (!client) return;
     if (client->curl) {
@@ -185,18 +234,39 @@ void cwist_http_client_destroy(cwist_http_client *client) {
     cwist_curl_global_release();
 }
 
+/**
+ * @brief Enable or disable automatic redirect following.
+ *
+ * @param client client handle.
+ * @param follow non-zero to follow redirects, 0 to disable.
+ */
 void cwist_http_client_set_follow_redirects(cwist_http_client *client, int follow) {
     if (!client) return;
     client->follow_redirects = follow;
     curl_easy_setopt(client->curl, CURLOPT_FOLLOWLOCATION, follow ? 1L : 0L);
 }
 
+/**
+ * @brief Set the total request timeout in milliseconds.
+ *
+ * @param client     client handle.
+ * @param timeout_ms timeout in milliseconds (applied to the whole transfer).
+ */
 void cwist_http_client_set_timeout_ms(cwist_http_client *client, int timeout_ms) {
     if (!client) return;
     client->timeout_ms = timeout_ms;
     curl_easy_setopt(client->curl, CURLOPT_TIMEOUT_MS, (long)timeout_ms);
 }
 
+/**
+ * @brief Set the path to a custom CA certificate bundle for TLS verification.
+ *
+ * Replaces any previously set path. Pass NULL to fall back to libcurl's
+ * default trust store.
+ *
+ * @param client client handle.
+ * @param path   filesystem path to the CA bundle, or NULL.
+ */
 void cwist_http_client_set_ca_bundle(cwist_http_client *client, const char *path) {
     if (!client) return;
     cwist_free(client->ca_bundle);
@@ -204,6 +274,16 @@ void cwist_http_client_set_ca_bundle(cwist_http_client *client, const char *path
     curl_easy_setopt(client->curl, CURLOPT_CAINFO, client->ca_bundle);
 }
 
+/**
+ * @brief Enable or disable HTTP alternative services (H1/H2/H3 upgrade).
+ *
+ * When enabled, libcurl may advertise and switch to alternative services
+ * for subsequent requests; requires a database path set via
+ * cwist_http_client_set_altsvc_db.
+ *
+ * @param client  client handle.
+ * @param enabled non-zero to enable alt-svc, 0 to disable.
+ */
 void cwist_http_client_enable_altsvc(cwist_http_client *client, int enabled) {
     if (!client) return;
     client->altsvc_enabled = enabled;
@@ -211,6 +291,14 @@ void cwist_http_client_enable_altsvc(cwist_http_client *client, int enabled) {
                      enabled ? (long)(CURLALTSVC_H1 | CURLALTSVC_H2 | CURLALTSVC_H3) : 0L);
 }
 
+/**
+ * @brief Set the filesystem path of the alt-svc cache database.
+ *
+ * Replaces any previously set path. Pass NULL to clear it.
+ *
+ * @param client client handle.
+ * @param path   path to the alt-svc cache file, or NULL.
+ */
 void cwist_http_client_set_altsvc_db(cwist_http_client *client, const char *path) {
     if (!client) return;
     cwist_free(client->altsvc_db);
@@ -222,6 +310,29 @@ void cwist_http_client_set_altsvc_db(cwist_http_client *client, const char *path
 /* Request execution                                                  */
 /* ------------------------------------------------------------------ */
 
+/**
+ * @brief Execute a single HTTP request.
+ *
+ * The handle is reset and re-configured from the client settings before
+ * each call, so a client may be reused for multiple requests. The response
+ * body is capped at CWIST_HTTP_MAX_BODY_SIZE and headers at 200 entries;
+ * exceeding either cap fails the transfer. HTTP/2 is preferred with
+ * downgrade to HTTP/1.1. On success a cwist_http_response is allocated and
+ * stored in *out_response (caller must free it with
+ * cwist_http_response_free); *out_response is always set to NULL before
+ * the transfer starts. The client is not thread-safe; concurrent requests
+ * require separate handles.
+ *
+ * @param client       client handle.
+ * @param url          request URL.
+ * @param method       HTTP method.
+ * @param headers      linked list of request headers, or NULL.
+ * @param body         request body, or NULL for no body.
+ * @param body_len     length of body in bytes.
+ * @param out_response output for the allocated response object.
+ * @return cwist_error_t with err_i16 set to 0 on success, -1 on failure
+ *         (invalid arguments, curl transfer error, or allocation failure).
+ */
 cwist_error_t cwist_http_client_request(cwist_http_client *client, const char *url,
                                         cwist_http_method_t method, cwist_http_header_node *headers,
                                         const char *body, size_t body_len,

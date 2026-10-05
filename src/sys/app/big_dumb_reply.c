@@ -40,6 +40,14 @@ static const uint8_t BDR_KEY[16] = {0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x
 
 /* --- Blob lifetime -------------------------------------------------------- */
 
+/**
+ * @brief Epoch retire callback: release a blob and any buffer it owns.
+ *
+ * Reads the owned buffer and its free function before freeing, because for
+ * inline (learned) blobs the buffer aliases the blob header itself.
+ *
+ * @param ptr Blob to free; NULL is tolerated.
+ */
 static void bdr_blob_free_cb(void *ptr) {
     bdr_blob_t *blob = (bdr_blob_t *)ptr;
     if (!blob) return;
@@ -52,13 +60,19 @@ static void bdr_blob_free_cb(void *ptr) {
     if (mem != ptr) cwist_free(blob);
 }
 
-/* Retire a swapped-out blob; the epoch guarantees no reader still serves it. */
+/**
+ * @brief Retire a swapped-out blob; the epoch guarantees no reader still serves it.
+ * @param blob Blob to retire; NULL is a no-op.
+ */
 static void bdr_blob_retire(bdr_blob_t *blob) {
     if (blob) ttak_epoch_retire(blob, bdr_blob_free_cb);
 }
 
-/* Learned blob: one allocation carries header and bytes (single copy from
- * the caller-owned serialization, whose lifetime the cache cannot borrow). */
+/**
+ * @brief Build a learned blob: one allocation carries header and bytes (single copy from
+ * the caller-owned serialization, whose lifetime the cache cannot borrow).
+ * @return New blob on success, NULL on allocation failure.
+ */
 static bdr_blob_t *bdr_blob_learn(const void *data, size_t len) {
     bdr_blob_t *blob = cwist_alloc(sizeof(bdr_blob_t) + len);
     if (!blob) return NULL;
@@ -70,7 +84,12 @@ static bdr_blob_t *bdr_blob_learn(const void *data, size_t len) {
     return blob;
 }
 
-/* Callback-provided blob: header only, the buffer pointer is swung as-is. */
+/**
+ * @brief Build a callback-provided blob: header only, the buffer pointer is swung as-is.
+ * @param mem Buffer owned by the caller/callback; freed via @p free_fn.
+ * @param free_fn Deallocator for @p mem; defaults to cwist_free when NULL.
+ * @return New blob on success, NULL on allocation failure.
+ */
 static bdr_blob_t *bdr_blob_wrap(void *mem, size_t len, void (*free_fn)(void *)) {
     bdr_blob_t *blob = cwist_alloc(sizeof(bdr_blob_t));
     if (!blob) return NULL;
@@ -81,10 +100,20 @@ static bdr_blob_t *bdr_blob_wrap(void *mem, size_t len, void (*free_fn)(void *))
     return blob;
 }
 
+/**
+ * @brief Add @p len bytes to the cache's current byte counter (relaxed atomic).
+ * @param bdr Cache instance.
+ * @param len Number of bytes to add.
+ */
 static void bdr_bytes_add(cwist_bdr_t *bdr, size_t len) {
     atomic_fetch_add_explicit(&bdr->current_bytes, len, memory_order_relaxed);
 }
 
+/**
+ * @brief Subtract @p len bytes from the cache's current byte counter, clamping at zero.
+ * @param bdr Cache instance.
+ * @param len Number of bytes to subtract.
+ */
 static void bdr_bytes_sub(cwist_bdr_t *bdr, size_t len) {
     size_t cur = atomic_load_explicit(&bdr->current_bytes, memory_order_relaxed);
     while (cur > 0) {
@@ -95,7 +124,16 @@ static void bdr_bytes_sub(cwist_bdr_t *bdr, size_t len) {
     }
 }
 
-/* Swap a new blob into an entry and retire whatever was published before. */
+/**
+ * @brief Swap a new blob into an entry and retire whatever was published before.
+ *
+ * Keeps the byte counter in sync and retires the predecessor through EBR so
+ * readers inside its epoch keep a valid blob.
+ *
+ * @param bdr Cache instance (byte accounting).
+ * @param entry Entry whose blob pointer is exchanged.
+ * @param blob New blob, or NULL to clear the entry.
+ */
 static void bdr_entry_publish(cwist_bdr_t *bdr, bdr_entry_t *entry, bdr_blob_t *blob) {
     bdr_blob_t *old = atomic_exchange_explicit(&entry->blob, blob, memory_order_acq_rel);
     if (blob) bdr_bytes_add(bdr, blob->len);
@@ -107,22 +145,53 @@ static void bdr_entry_publish(cwist_bdr_t *bdr, bdr_entry_t *entry, bdr_blob_t *
 
 /* --- Lookup helpers ------------------------------------------------------- */
 
+/**
+ * @brief Hash a request key (method first byte mixed into the path SipHash).
+ * @param method HTTP method string; only the first byte contributes.
+ * @param path NUL-terminated request path.
+ * @return 64-bit bucket hash.
+ */
 static uint64_t bdr_hash(const char *method, const char *path) {
     uint64_t h = siphash24((const void *)path, strlen(path), BDR_KEY);
     h ^= (uint64_t)(method[0]);
     return h;
 }
 
+/**
+ * @brief Hash a request key from a non-NUL-terminated path.
+ * @param method HTTP method string; only the first byte contributes.
+ * @param path Request path bytes (not required to be NUL-terminated).
+ * @param path_len Length of @p path in bytes.
+ * @return 64-bit bucket hash.
+ */
 static uint64_t bdr_hash_n(const char *method, const char *path, size_t path_len) {
     uint64_t h = siphash24((const void *)path, path_len, BDR_KEY);
     h ^= (uint64_t)(method[0]);
     return h;
 }
 
+/**
+ * @brief Hash response bytes (fingerprint used to detect content changes).
+ * @param data Response bytes.
+ * @param len Length of @p data in bytes.
+ * @return 64-bit response hash.
+ */
 static uint64_t bdr_hash_data(const void *data, size_t len) {
     return siphash24(data, len, BDR_KEY);
 }
 
+/**
+ * @brief Decide whether an entry should be retired by the janitor.
+ *
+ * An entry decays when its age exceeds @c max_entry_age_sec, or when it is
+ * stable and has accumulated at least @c revalidate_hits hits.
+ *
+ * @param bdr Cache instance (limits; may be NULL).
+ * @param entry Entry to inspect (may be NULL).
+ * @param now Current time.
+ * @retval true The entry should be retired.
+ * @retval false The entry stays live, or arguments are NULL.
+ */
 static bool bdr_entry_should_decay(const cwist_bdr_t *bdr, const bdr_entry_t *entry, time_t now) {
     if (!bdr || !entry) return false;
     int64_t created = atomic_load_explicit(&entry->created_at, memory_order_relaxed);
@@ -136,8 +205,16 @@ static bool bdr_entry_should_decay(const cwist_bdr_t *bdr, const bdr_entry_t *en
     return false;
 }
 
-/* Walk a bucket chain; entries are tombstoned rather than freed, so the
- * walk is safe without locks as long as loads are atomic. */
+/**
+ * @brief Walk a bucket chain for a precomputed request hash.
+ *
+ * Entries are tombstoned rather than freed, so the walk is safe without
+ * locks as long as loads are atomic.  Retired entries are skipped.
+ *
+ * @param bdr Cache instance.
+ * @param req_h Precomputed request hash.
+ * @return Matching live entry, or NULL if none.
+ */
 static bdr_entry_t *bdr_find(cwist_bdr_t *bdr, uint64_t req_h) {
     size_t idx = req_h % bdr->bucket_count;
     bdr_entry_t *curr = atomic_load_explicit(&bdr->buckets[idx], memory_order_acquire);
@@ -151,8 +228,18 @@ static bdr_entry_t *bdr_find(cwist_bdr_t *bdr, uint64_t req_h) {
     return NULL;
 }
 
-/* Insert a fresh candidate entry at the bucket head, lock-free.  Returns
- * the entry that ended up reachable (ours, or the winner of a CAS race). */
+/**
+ * @brief Look up an entry by request hash, inserting a fresh candidate at the
+ * bucket head if absent (lock-free CAS push).
+ *
+ * On a CAS race with a concurrent insert of the same key, the losing entry is
+ * freed and the winner is returned.
+ *
+ * @param bdr Cache instance.
+ * @param req_h Precomputed request hash.
+ * @return The entry that ended up reachable (ours, or the winner of a CAS race),
+ *         or NULL on allocation failure.
+ */
 static bdr_entry_t *bdr_find_or_insert(cwist_bdr_t *bdr, uint64_t req_h) {
     bdr_entry_t *found = bdr_find(bdr, req_h);
     if (found) return found;
@@ -187,6 +274,18 @@ static bdr_entry_t *bdr_find_or_insert(cwist_bdr_t *bdr, uint64_t req_h) {
 
 /* --- Janitor (mutex-serialized, runs every BDR_JANITOR_PERIOD learns) ----- */
 
+/**
+ * @brief Unlink an entry from its bucket chain and push it onto the retired list.
+ *
+ * Tombstones the entry (readers may still hold it), clears its blob, and moves
+ * it to @c retired_entries for deferred reclamation at destroy.  Must be called
+ * with the janitor lock held or during teardown.
+ *
+ * @param bdr Cache instance.
+ * @param idx Bucket index of the entry.
+ * @param prev Predecessor in the chain, or NULL if @p entry is the bucket head.
+ * @param entry Entry to retire.
+ */
 static void bdr_retire_entry(cwist_bdr_t *bdr, size_t idx, bdr_entry_t *prev, bdr_entry_t *entry) {
     atomic_store_explicit(&entry->retired, true, memory_order_release);
     if (prev) {
@@ -202,6 +301,14 @@ static void bdr_retire_entry(cwist_bdr_t *bdr, size_t idx, bdr_entry_t *prev, bd
     bdr->retired_entries = entry;
 }
 
+/**
+ * @brief Incremental GC sweep: visit @p steps buckets and retire decayed entries.
+ *
+ * Advances @c gc_cursor so successive calls cover the table over time.
+ *
+ * @param bdr Cache instance.
+ * @param steps Number of buckets to visit; 0 is a no-op.
+ */
 static void bdr_sweep(cwist_bdr_t *bdr, size_t steps) {
     if (!bdr || bdr->bucket_count == 0 || steps == 0) return;
     time_t now = time(NULL);
@@ -223,6 +330,16 @@ static void bdr_sweep(cwist_bdr_t *bdr, size_t steps) {
     }
 }
 
+/**
+ * @brief Find the oldest live, blob-backed entry and retire it.
+ *
+ * Scans the whole table; used to enforce the @c max_bytes byte budget.
+ *
+ * @param bdr Cache instance.
+ * @param now Current time (baseline for the oldest comparison).
+ * @retval true An entry was retired.
+ * @retval false No eligible entry exists.
+ */
 static bool bdr_trim_oldest(cwist_bdr_t *bdr, time_t now) {
     size_t victim_idx = SIZE_MAX;
     bdr_entry_t *victim = NULL;
@@ -253,6 +370,17 @@ static bool bdr_trim_oldest(cwist_bdr_t *bdr, time_t now) {
     return true;
 }
 
+/**
+ * @brief Spill the in-RAM cache to a SQLite fallback database when RAM is critical.
+ *
+ * When free RAM drops below the 64 MiB threshold, copies every stable entry's
+ * blob into "cwist_bdr_fallback.db", retires all live entries, and flips the
+ * cache into disk mode so subsequent reads miss and writes go to SQLite.
+ * No-op in the WASM build and once disk mode is already active.  Must be
+ * called with the janitor lock held.
+ *
+ * @param bdr Cache instance.
+ */
 static void bdr_check_ram(cwist_bdr_t *bdr) {
 #ifdef __EMSCRIPTEN__
     /* No SQLite disk fallback in the WASM core; the in-RAM cache stands alone. */
@@ -306,6 +434,16 @@ static void bdr_check_ram(cwist_bdr_t *bdr) {
 #endif
 }
 
+/**
+ * @brief Periodic janitor hook, invoked from the lock-free learn path.
+ *
+ * Runs every @c BDR_JANITOR_PERIOD puts: checks for a RAM-critical disk spill,
+ * sweeps a few buckets for decayed entries, and trims the oldest entries while
+ * the byte budget is exceeded.  Serialized with a trylock so a contended tick
+ * is skipped rather than blocking the learn path.
+ *
+ * @param bdr Cache instance.
+ */
 static void bdr_janitor_tick(cwist_bdr_t *bdr) {
     uint64_t n = atomic_fetch_add_explicit(&bdr->put_count, 1, memory_order_relaxed) + 1;
     if (n % BDR_JANITOR_PERIOD != 0) return;
@@ -323,6 +461,14 @@ static void bdr_janitor_tick(cwist_bdr_t *bdr) {
 
 /* --- Lifecycle ------------------------------------------------------------ */
 
+/**
+ * @brief Create a reply cache instance with default limits.
+ *
+ * Initializes the mutex, the bucket table, and the default tuning values
+ * (32 MiB byte budget, 300 s entry TTL, 100000 revalidate hits).
+ *
+ * @return New cache instance on success, NULL on allocation or mutex failure.
+ */
 cwist_bdr_t *cwist_bdr_create(void) {
     cwist_bdr_t *bdr = cwist_alloc(sizeof(cwist_bdr_t));
     if (!bdr) return NULL;
@@ -350,6 +496,15 @@ cwist_bdr_t *cwist_bdr_create(void) {
     return bdr;
 }
 
+/**
+ * @brief Destroy a cache instance and release all its resources.
+ *
+ * Frees every live and retired entry and its blob, the bucket table, and the
+ * disk fallback database (including the "cwist_bdr_fallback.db" file).  Safe
+ * to call with NULL.
+ *
+ * @param bdr Cache instance to destroy, or NULL.
+ */
 void cwist_bdr_destroy(cwist_bdr_t *bdr) {
     if (!bdr) return;
     pthread_mutex_lock(&bdr->lock);
@@ -384,11 +539,20 @@ void cwist_bdr_destroy(cwist_bdr_t *bdr) {
 
 /* --- Read path ------------------------------------------------------------ */
 
-/* Shared read core: epoch-protected hit validation for a precomputed
- * request hash, optionally starting from a caller-cached entry hint.  The
- * hint is re-validated (retirement + key match) under the epoch; a stale
- * hint degrades to a full bucket walk, never to a wrong serve.  Returns the
- * blob bytes with the pin held, or NULL with no pin held. */
+/**
+ * @brief Shared read core: epoch-protected hit validation for a precomputed
+ * request hash, optionally starting from a caller-cached entry hint.
+ *
+ * The hint is re-validated (retirement + key match) under the epoch; a stale
+ * hint degrades to a full bucket walk, never to a wrong serve.
+ *
+ * @param bdr Cache instance.
+ * @param req_h Precomputed request hash.
+ * @param hint Candidate entry from a cursor, or NULL for a full lookup.
+ * @param out_len Receives the blob length on a hit (may be NULL).
+ * @param out_pin Receives the pinned blob; released with cwist_bdr_unpin().
+ * @return Blob bytes with the pin held, or NULL with no pin held.
+ */
 static const void *bdr_serve_hit(cwist_bdr_t *bdr, uint64_t req_h, bdr_entry_t *hint,
                                  size_t *out_len, bdr_blob_t **out_pin) {
     ttak_epoch_enter();
@@ -433,6 +597,19 @@ static const void *bdr_serve_hit(cwist_bdr_t *bdr, uint64_t req_h, bdr_entry_t *
     return blob->data;
 }
 
+/**
+ * @brief Look up a cached GET reply, returning epoch-pinned bytes.
+ *
+ * Only GET requests are served, and only while the cache is in RAM mode.  The
+ * caller must release the pin with cwist_bdr_unpin() once done reading.
+ *
+ * @param bdr Cache instance.
+ * @param method HTTP method; must be "GET".
+ * @param path NUL-terminated request path.
+ * @param out_len Receives the reply length on a hit (may be NULL).
+ * @param out_pin Receives the pin to pass to cwist_bdr_unpin().
+ * @return Reply bytes pinned for the caller, or NULL on miss/invalid input.
+ */
 const void *cwist_bdr_get_pinned(cwist_bdr_t *bdr, const char *method, const char *path,
                                  size_t *out_len, bdr_blob_t **out_pin) {
     if (!bdr || !method || !path || !out_pin) return NULL;
@@ -442,6 +619,23 @@ const void *cwist_bdr_get_pinned(cwist_bdr_t *bdr, const char *method, const cha
     return bdr_serve_hit(bdr, bdr_hash(method, path), NULL, out_len, out_pin);
 }
 
+/**
+ * @brief Cursor-accelerated variant of cwist_bdr_get_pinned() for non-NUL-terminated paths.
+ *
+ * When the cursor's cached entry still matches the request it is used as a
+ * lookup hint; a stale hint degrades to a full bucket walk.  On a hit the
+ * cursor is refreshed to point at the served entry, so repeated reads of the
+ * same path skip the chain walk.
+ *
+ * @param bdr Cache instance.
+ * @param method HTTP method; must be "GET".
+ * @param path Request path bytes (not required to be NUL-terminated).
+ * @param path_len Length of @p path in bytes.
+ * @param out_len Receives the reply length on a hit (may be NULL).
+ * @param out_pin Receives the pin to pass to cwist_bdr_unpin().
+ * @param cursor Reusable lookup cursor, updated on every call.
+ * @return Reply bytes pinned for the caller, or NULL on miss/invalid input.
+ */
 const void *cwist_bdr_get_pinned_cursor(cwist_bdr_t *bdr, const char *method, const char *path,
                                         size_t path_len, size_t *out_len, bdr_blob_t **out_pin,
                                         cwist_bdr_cursor_t *cursor) {
@@ -483,11 +677,31 @@ const void *cwist_bdr_get_pinned_cursor(cwist_bdr_t *bdr, const char *method, co
     return data;
 }
 
+/**
+ * @brief Release a pin obtained from a cwist_bdr_get_pinned*() call.
+ *
+ * The pin is the EBR epoch itself, so this simply leaves the epoch.
+ *
+ * @param pin Pin to release (ignored beyond symmetry with the get calls).
+ */
 void cwist_bdr_unpin(bdr_blob_t *pin) {
     (void)pin; /* The pin is the epoch itself. */
     ttak_epoch_exit();
 }
 
+/**
+ * @brief Look up a cached GET reply and return a borrowed pointer to its bytes.
+ *
+ * Convenience wrapper over cwist_bdr_get_pinned() that unpins immediately, so
+ * the returned pointer is only valid until the next janitor activity that
+ * could retire the entry; prefer the pinned API for anything but a memcpy.
+ *
+ * @param bdr Cache instance.
+ * @param method HTTP method; must be "GET".
+ * @param path NUL-terminated request path.
+ * @param out_len Receives the reply length on a hit (may be NULL).
+ * @return Reply bytes (unpinned), or NULL on miss/invalid input.
+ */
 const void *cwist_bdr_get(cwist_bdr_t *bdr, const char *method, const char *path, size_t *out_len) {
     bdr_blob_t *pin = NULL;
     const void *data = cwist_bdr_get_pinned(bdr, method, path, out_len, &pin);
@@ -495,6 +709,18 @@ const void *cwist_bdr_get(cwist_bdr_t *bdr, const char *method, const char *path
     return data;
 }
 
+/**
+ * @brief Look up a cached GET reply and return an owned copy of its bytes.
+ *
+ * Unlike cwist_bdr_get(), the returned buffer is allocated with cwist_alloc()
+ * and survives cache eviction; the caller frees it with cwist_free().
+ *
+ * @param bdr Cache instance.
+ * @param method HTTP method; must be "GET".
+ * @param path NUL-terminated request path.
+ * @param out_len Receives the copy length on a hit (may be NULL).
+ * @return Newly allocated copy of the reply, or NULL on miss/invalid input/allocation failure.
+ */
 void *cwist_bdr_copy_get(cwist_bdr_t *bdr, const char *method, const char *path, size_t *out_len) {
     bdr_blob_t *pin = NULL;
     size_t len = 0;
@@ -513,6 +739,17 @@ void *cwist_bdr_copy_get(cwist_bdr_t *bdr, const char *method, const char *path,
 
 /* --- Learn path (lock-free) ------------------------------------------------ */
 
+/**
+ * @brief Write a reply into the SQLite fallback database (disk mode).
+ *
+ * Must be called only while the cache is in disk mode; takes the context
+ * mutex for the duration of the statement.
+ *
+ * @param bdr Cache instance (disk_db must be open).
+ * @param req_h Precomputed request hash (primary key).
+ * @param data Response bytes.
+ * @param len Length of @p data in bytes.
+ */
 static void cwist_bdr_put_disk(cwist_bdr_t *bdr, uint64_t req_h, const void *data, size_t len) {
     pthread_mutex_lock(&bdr->lock);
     sqlite3_stmt *stmt;
@@ -525,6 +762,20 @@ static void cwist_bdr_put_disk(cwist_bdr_t *bdr, uint64_t req_h, const void *dat
     pthread_mutex_unlock(&bdr->lock);
 }
 
+/**
+ * @brief Learn a reply observation into the cache (lock-free fast path).
+ *
+ * Only GET replies are tracked.  An entry stabilizes once the same response
+ * bytes are seen twice in a row; a content change under a stable entry demotes
+ * it back to candidate.  In disk mode the observation is written to SQLite
+ * instead.  Triggers the janitor tick periodically.
+ *
+ * @param bdr Cache instance.
+ * @param method HTTP method; must be "GET".
+ * @param path NUL-terminated request path.
+ * @param data Observed response bytes.
+ * @param len Length of @p data in bytes.
+ */
 void cwist_bdr_put(cwist_bdr_t *bdr, const char *method, const char *path, const void *data,
                    size_t len) {
     if (!bdr || !method || !path || !data || len == 0) return;
@@ -574,6 +825,19 @@ void cwist_bdr_put(cwist_bdr_t *bdr, const char *method, const char *path, const
     bdr_janitor_tick(bdr);
 }
 
+/**
+ * @brief Publish a reply as immediately stable, bypassing the learning phase.
+ *
+ * For responses that are known to be constant; stores the bytes and marks the
+ * entry stable in one shot.  In disk mode the observation is written to
+ * SQLite instead.  Triggers the janitor tick periodically.
+ *
+ * @param bdr Cache instance.
+ * @param method HTTP method; must be "GET".
+ * @param path NUL-terminated request path.
+ * @param data Response bytes to cache.
+ * @param len Length of @p data in bytes.
+ */
 void cwist_bdr_put_fixed(cwist_bdr_t *bdr, const char *method, const char *path, const void *data,
                          size_t len) {
     if (!bdr || !method || !path || !data || len == 0) return;
@@ -600,6 +864,24 @@ void cwist_bdr_put_fixed(cwist_bdr_t *bdr, const char *method, const char *path,
     bdr_janitor_tick(bdr);
 }
 
+/**
+ * @brief Publish a stable reply together with a hit-time revalidation hook.
+ *
+ * On every subsequent hit the hook is invoked and, if it reports fresh
+ * bytes, the entry's blob is swapped to the callback-provided buffer through
+ * one pointer exchange.  The hook is published before the blob so a reader
+ * never observes a revalidatable blob without its hook.  In disk mode the
+ * observation is written to SQLite instead (hook not persisted).  Triggers
+ * the janitor tick periodically.
+ *
+ * @param bdr Cache instance.
+ * @param method HTTP method; must be "GET".
+ * @param path NUL-terminated request path.
+ * @param data Response bytes to cache.
+ * @param len Length of @p data in bytes.
+ * @param fn Revalidation callback invoked on hits.
+ * @param arg Opaque argument passed to @p fn.
+ */
 void cwist_bdr_put_revalidatable(cwist_bdr_t *bdr, const char *method, const char *path,
                                  const void *data, size_t len, cwist_bdr_revalidate_fn fn,
                                  void *arg) {
@@ -633,6 +915,17 @@ void cwist_bdr_put_revalidatable(cwist_bdr_t *bdr, const char *method, const cha
     bdr_janitor_tick(bdr);
 }
 
+/**
+ * @brief Update cache limits; zero arguments leave the corresponding limit unchanged.
+ *
+ * Takes the context mutex so the new limits are not torn against a running
+ * janitor tick.
+ *
+ * @param bdr Cache instance.
+ * @param max_bytes New byte budget; 0 keeps the current value.
+ * @param max_entry_age_sec New entry TTL in seconds; 0 keeps the current value.
+ * @param revalidate_hits New stability hit threshold; 0 keeps the current value.
+ */
 void cwist_bdr_set_limits(cwist_bdr_t *bdr, size_t max_bytes, time_t max_entry_age_sec,
                           uint64_t revalidate_hits) {
     if (!bdr) return;

@@ -15,6 +15,12 @@
 
 #define CWIST_QUERY_MAP_DEFAULT_SIZE 16
 
+/**
+ * @brief Duplicate a string using the map's allocator.
+ * @param arena Memory arena to allocate from, or NULL to use heap allocation.
+ * @param str Source string; NULL yields NULL.
+ * @return Newly allocated copy owned by the arena or heap, or NULL on failure.
+ */
 static char *query_strdup(void *arena, const char *str) {
     if (!str) return NULL;
     size_t len = strlen(str);
@@ -169,6 +175,14 @@ const char *cwist_query_map_get(cwist_query_map *map, const char *key) {
     return NULL;
 }
 
+/**
+ * @brief Remove a key/value pair from the map if present.
+ * @param map Query map to modify; NULL is a no-op.
+ * @param key Key to delete; NULL is a no-op.
+ * @retval In heap-managed maps the node and its strings are freed.
+ * @retval In arena-managed maps the node is only unlinked; storage is reclaimed with the arena.
+ *        (Nothing is freed.)
+ */
 void cwist_query_map_delete(cwist_query_map *map, const char *key) {
     if (!map || !key) return;
     if (map->arena) {
@@ -215,6 +229,13 @@ void cwist_query_map_delete(cwist_query_map *map, const char *key) {
     }
 }
 
+/**
+ * @brief Invoke a callback for every key/value pair stored in the map.
+ * @param map Query map to iterate; NULL is a no-op.
+ * @param cb Callback invoked as cb(key, value, ctx) for each entry; NULL is a no-op.
+ * @param ctx Opaque pointer forwarded to the callback for each entry.
+ * @note Iteration order is bucket order and is not sorted.
+ */
 void cwist_query_map_foreach(cwist_query_map *map, cwist_query_map_iter_func cb, void *ctx) {
     if (!map || !cb) return;
     for (size_t i = 0; i < map->size; i++) {

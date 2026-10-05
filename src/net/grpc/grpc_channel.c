@@ -102,18 +102,24 @@ struct cwist_grpc_channel_call {
     char *syn_message;              /* owned */
 };
 
+/** @brief Monotonic clock in milliseconds (CLOCK_MONOTONIC). */
 static uint64_t channel_now_ms(void) {
     struct timespec ts;
     clock_gettime(CLOCK_MONOTONIC, &ts);
     return (uint64_t)ts.tv_sec * 1000 + (uint64_t)ts.tv_nsec / 1000000;
 }
 
+/** @brief Sleep the current thread for @p ms milliseconds. */
 static void channel_sleep_ms(uint64_t ms) {
     if (!ms) return;
     struct timespec ts = {(time_t)(ms / 1000), (long)((ms % 1000) * 1000000L)};
     nanosleep(&ts, NULL);
 }
 
+/** @brief Advance and return the channel's xorshift64 random state.
+ *
+ * Caller must hold ch->mu.
+ */
 static uint64_t channel_rand(cwist_grpc_channel *ch) {
     uint64_t x = ch->rng;
     x ^= x << 13;
@@ -123,7 +129,9 @@ static uint64_t channel_rand(cwist_grpc_channel *ch) {
     return x;
 }
 
-/* Uniform in [0.8, 1.2): the gRFC A6 / connection-backoff jitter factor. */
+/** @brief Uniform jitter factor in [0.8, 1.2): the gRFC A6 /
+ * connection-backoff jitter factor.
+ */
 static double channel_jitter(cwist_grpc_channel *ch) {
     pthread_mutex_lock(&ch->mu);
     double u = (double)(channel_rand(ch) >> 11) * (1.0 / 9007199254740992.0);
@@ -133,6 +141,12 @@ static double channel_jitter(cwist_grpc_channel *ch) {
 
 /* --- throttling (gRFC A6 retryThrottling) --- */
 
+/** @brief Check the gRFC A6 retry throttle: retry only while the token count
+ * is above half of maxTokens.
+ *
+ * @retval 1 retry permitted (or no throttle configured)
+ * @retval 0 throttled
+ */
 static int channel_throttle_allows(cwist_grpc_channel *ch) {
     if (!ch->has_throttle) return 1;
     pthread_mutex_lock(&ch->tmu);
@@ -141,6 +155,7 @@ static int channel_throttle_allows(cwist_grpc_channel *ch) {
     return ok;
 }
 
+/** @brief Charge one token to the gRFC A6 retry throttle (floored at zero). */
 static void channel_throttle_failure(cwist_grpc_channel *ch) {
     if (!ch->has_throttle) return;
     pthread_mutex_lock(&ch->tmu);
@@ -149,6 +164,9 @@ static void channel_throttle_failure(cwist_grpc_channel *ch) {
     pthread_mutex_unlock(&ch->tmu);
 }
 
+/** @brief Refund tokenRatio tokens to the gRFC A6 retry throttle (capped at
+ * maxTokens).
+ */
 static void channel_throttle_success(cwist_grpc_channel *ch) {
     if (!ch->has_throttle) return;
     pthread_mutex_lock(&ch->tmu);
@@ -157,6 +175,10 @@ static void channel_throttle_success(cwist_grpc_channel *ch) {
     pthread_mutex_unlock(&ch->tmu);
 }
 
+/** @brief End-of-call throttle accounting (gRFC A6): refund on success,
+ * charge one token for a retryable-coded failure (or a do-not-retry
+ * pushback) under a retry policy.
+ */
 static void channel_account(cwist_grpc_channel *ch, cwist_grpc_status_t status, int has_policy,
                             uint32_t mask) {
     if (status == CWIST_GRPC_OK) {
@@ -168,7 +190,10 @@ static void channel_account(cwist_grpc_channel *ch, cwist_grpc_status_t status, 
 
 /* --- subchannels --- */
 
-/* Close a dead/GOAWAY connection so the next acquire dials fresh. */
+/** @brief Close a dead/GOAWAY connection so the next acquire dials fresh.
+ *
+ * Caller must hold ch->mu.
+ */
 static void channel_recycle_locked(cwist_grpc_channel *ch, cwist_grpc_subchannel *sub) {
     (void)ch;
     if (sub->client && cwist_grpc_client_dead(sub->client)) {
@@ -177,8 +202,17 @@ static void channel_recycle_locked(cwist_grpc_channel *ch, cwist_grpc_subchannel
     }
 }
 
-/* Dial unless connected; applies doc/connection-backoff.md between failures.
- * Caller holds ch->mu. */
+/** @brief Dial @p sub unless already connected, applying
+ * doc/connection-backoff.md between failures.
+ *
+ * On a failed dial the subchannel's next dial time is pushed out by the
+ * current backoff (with jitter) and the backoff grows geometrically; a
+ * successful dial resets it.
+ *
+ * @retval 0 connected (or already connected)
+ * @retval -1 still in backoff, or the dial failed
+ * @note Caller must hold ch->mu.
+ */
 static int sub_ensure_connected(cwist_grpc_channel *ch, cwist_grpc_subchannel *sub) {
     channel_recycle_locked(ch, sub);
     if (sub->client) return 0;
@@ -205,7 +239,14 @@ static int sub_ensure_connected(cwist_grpc_channel *ch, cwist_grpc_subchannel *s
     return 0;
 }
 
-/* Caller holds ch->mu. */
+/** @brief Pick an already-connected, idle subchannel per the LB policy.
+ *
+ * round_robin rotates across the READY set; pick_first sticks to its current
+ * subchannel (doc/load-balancing.md).
+ *
+ * @return the picked subchannel, or NULL when none is ready
+ * @note Caller must hold ch->mu.
+ */
 static cwist_grpc_subchannel *channel_pick_locked(cwist_grpc_channel *ch) {
     if (ch->lb == CWIST_GRPC_LB_ROUND_ROBIN) {
         for (size_t k = 0; k < ch->nsubs; k++) {
@@ -226,9 +267,14 @@ static cwist_grpc_subchannel *channel_pick_locked(cwist_grpc_channel *ch) {
     return NULL;
 }
 
-/* Acquire a READY subchannel (connected, idle), dialing on demand per LB
- * policy.  On success sub->inflight is incremented; the caller returns it
- * with channel_release().  NULL = TRANSIENT_FAILURE right now. */
+/** @brief Acquire a READY subchannel (connected, idle), dialing on demand per
+ * the LB policy.
+ *
+ * On success sub->inflight is incremented; the caller returns it with
+ * channel_release().
+ *
+ * @return the acquired subchannel, or NULL for TRANSIENT_FAILURE right now
+ */
 static cwist_grpc_subchannel *channel_acquire(cwist_grpc_channel *ch) {
     pthread_mutex_lock(&ch->mu);
     cwist_grpc_subchannel *s = channel_pick_locked(ch);
@@ -266,12 +312,14 @@ static cwist_grpc_subchannel *channel_acquire(cwist_grpc_channel *ch) {
     return NULL;
 }
 
+/** @brief Decrement the subchannel's in-flight call count. */
 static void channel_release(cwist_grpc_channel *ch, cwist_grpc_subchannel *sub) {
     pthread_mutex_lock(&ch->mu);
     if (sub->inflight > 0) sub->inflight--;
     pthread_mutex_unlock(&ch->mu);
 }
 
+/** @brief Close a dead/GOAWAY subchannel connection, taking ch->mu. */
 static void channel_recycle(cwist_grpc_channel *ch, cwist_grpc_subchannel *sub) {
     pthread_mutex_lock(&ch->mu);
     channel_recycle_locked(ch, sub);
@@ -280,7 +328,11 @@ static void channel_recycle(cwist_grpc_channel *ch, cwist_grpc_subchannel *sub) 
 
 /* --- method configs (JSON service config) --- */
 
-/* "/package.Service/Method" -> service/method slices (borrowed). */
+/** @brief Split "/package.Service/Method" into service/method slices (borrowed).
+ *
+ * @param[out] service,service_len service name slice (after any leading '/')
+ * @param[out] method method name slice, or NULL when @p path has no second '/'
+ */
 static void channel_split_method(const char *path, const char **service, size_t *service_len,
                                  const char **method) {
     const char *start = path;
@@ -297,7 +349,12 @@ static void channel_split_method(const char *path, const char **service, size_t 
     *method = slash + 1;
 }
 
-/* Most specific match wins: service+method > service > wildcard. */
+/** @brief Find the method config for a "/service/method" path.
+ *
+ * Most specific match wins: service+method > service > wildcard (empty
+ * service).  List order is preserved at build time, so the first match of
+ * each kind wins.
+ */
 static const grpc_method_config *channel_find_mc(cwist_grpc_channel *ch, const char *path) {
     const char *service, *method;
     size_t service_len;
@@ -319,6 +376,7 @@ static const grpc_method_config *channel_find_mc(cwist_grpc_channel *ch, const c
     return service_match ? service_match : wild_match;
 }
 
+/** @brief Free the channel's method config list and reset ch->mcs to NULL. */
 static void channel_free_mcs(cwist_grpc_channel *ch) {
     grpc_method_config *mc = ch->mcs;
     while (mc) {
@@ -333,6 +391,7 @@ static void channel_free_mcs(cwist_grpc_channel *ch) {
 
 /* --- synthetic (pre-dispatch) call results --- */
 
+/** @brief Duplicate a C string with cwist_alloc; NULL in -> NULL out. */
 static char *channel_strdup(const char *s) {
     if (!s) return NULL;
     size_t len = strlen(s) + 1;
@@ -341,6 +400,14 @@ static char *channel_strdup(const char *s) {
     return copy;
 }
 
+/** @brief Allocate a synthetic (pre-dispatch) channel call result.
+ *
+ * The result carries no live grpc_call; finish/destroy report @p status and
+ * an owned copy of @p message.  Throttle accounting parameters are recorded
+ * for the eventual end-of-call bookkeeping.
+ *
+ * @return the new handle, or NULL on allocation failure
+ */
 static cwist_grpc_channel_call *channel_synthetic(cwist_grpc_channel *ch,
                                                   cwist_grpc_status_t status, const char *message,
                                                   uint32_t attempts, int has_policy,
@@ -357,8 +424,11 @@ static cwist_grpc_channel_call *channel_synthetic(cwist_grpc_channel *ch,
     return cc;
 }
 
-/* Hand a live attempt call over to the user.  On allocation failure the
- * attempt is torn down and the subchannel released. */
+/** @brief Hand a live attempt call over to the user.
+ *
+ * On allocation failure the attempt is torn down (call destroyed, subchannel
+ * released) and NULL is returned.
+ */
 static cwist_grpc_channel_call *channel_wrap(cwist_grpc_channel *ch, cwist_grpc_subchannel *sub,
                                              cwist_grpc_call *call, uint32_t attempts,
                                              int has_policy, uint32_t mask, int accounted) {
@@ -377,6 +447,22 @@ static cwist_grpc_channel_call *channel_wrap(cwist_grpc_channel *ch, cwist_grpc_
 
 /* --- retry engine --- */
 
+/** @brief Start a unary RPC through the channel, running the gRFC A6 retry
+ * engine transparently across attempts.
+ *
+ * Applies the most specific JSON method config (retry policy, waitForReady,
+ * timeout), clamps attempts to GRPC_CHANNEL_MAX_ATTEMPTS_CAP, and retries
+ * only while the request fits the per-RPC buffer limit.  Blocks until the
+ * RPC is committed (Response-Headers or final result), fails with
+ * CWIST_GRPC_DEADLINE_EXCEEDED past the deadline, or waits instead of
+ * failing when waitForReady is set and no subchannel is ready.
+ *
+ * @param method "/package.Service/Method" path
+ * @param request,request_len serialized request (may be NULL when 0)
+ * @param timeout_ms per-call deadline, 0 for none (a method-config timeout
+ *                   may shorten it)
+ * @return channel call handle, or NULL on invalid arguments/allocation failure
+ */
 cwist_grpc_channel_call *cwist_grpc_channel_call_start(cwist_grpc_channel *ch, const char *method,
                                                        const void *request, size_t request_len,
                                                        uint64_t timeout_ms) {
@@ -527,12 +613,27 @@ cwist_grpc_channel_call *cwist_grpc_channel_call_start(cwist_grpc_channel *ch, c
     }
 }
 
+/** @brief Receive the next response message of a channel call.
+ *
+ * Synthetic (pre-dispatch failure) results carry no messages.
+ *
+ * @retval 1 a message was stored in @p out
+ * @retval 0 stream ended (or synthetic result), no more messages
+ * @retval -1 invalid arguments
+ */
 int cwist_grpc_channel_call_recv(cwist_grpc_channel_call *cc, cwist_grpc_message *out) {
     if (!cc || !out) return -1;
     if (!cc->call) return 0; /* synthetic failure: no messages */
     return cwist_grpc_call_recv(cc->call, out);
 }
 
+/** @brief Finish a channel call and return its final gRPC status.
+ *
+ * Performs the end-of-call throttle accounting once, if not already done by
+ * destroy.  For synthetic results, returns the pre-dispatch status and
+ * message.  @p message is borrowed (valid until the call is destroyed) and
+ * may be NULL.
+ */
 cwist_grpc_status_t cwist_grpc_channel_call_finish(cwist_grpc_channel_call *cc,
                                                    const char **message) {
     if (!cc) {
@@ -553,10 +654,17 @@ cwist_grpc_status_t cwist_grpc_channel_call_finish(cwist_grpc_channel_call *cc,
     return status;
 }
 
+/** @brief Cancel the underlying attempt call, if it reached the transport. */
 void cwist_grpc_channel_call_cancel(cwist_grpc_channel_call *cc) {
     if (cc && cc->call) cwist_grpc_call_cancel(cc->call);
 }
 
+/** @brief Destroy a channel call and release its resources.
+ *
+ * Performs the end-of-call throttle accounting first if finish() did not
+ * already.  Destroys the underlying call, recycles/releases the subchannel,
+ * and frees the handle.  NULL-safe.
+ */
 void cwist_grpc_channel_call_destroy(cwist_grpc_channel_call *cc) {
     if (!cc) return;
     if (!cc->accounted) {
@@ -573,10 +681,22 @@ void cwist_grpc_channel_call_destroy(cwist_grpc_channel_call *cc) {
     cwist_free(cc);
 }
 
+/** @brief Number of policy attempts a channel call used (transparent retries excluded). */
 uint32_t cwist_grpc_channel_call_attempts(const cwist_grpc_channel_call *cc) {
     return cc ? cc->attempts : 0;
 }
 
+/** @brief Convenience blocking unary RPC: start, read one response, finish.
+ *
+ * On CWIST_GRPC_OK the first response message is copied into @p response
+ * (caller-owned; freed with cwist_free) with its length in @p response_len;
+ * extra messages are discarded.  On any other status the response is freed
+ * and NULL/0 is returned.  Output pointers may be NULL to discard the
+ * corresponding value.  @p status_message, when non-NULL on entry, receives
+ * an allocated copy of the server status message.
+ *
+ * @return the final gRPC status (CWIST_GRPC_INTERNAL if the call could not start)
+ */
 cwist_grpc_status_t cwist_grpc_channel_unary(cwist_grpc_channel *ch, const char *method,
                                              const void *request, size_t request_len,
                                              uint64_t timeout_ms, uint8_t **response,
@@ -617,8 +737,16 @@ cwist_grpc_status_t cwist_grpc_channel_unary(cwist_grpc_channel *ch, const char 
 
 /* --- name resolution (doc/naming.md) --- */
 
-/* Split "host[:port]" or "[v6][:port]"; bare multi-colon names are IPv6
- * literals without a port.  Default port 443 (naming.md). */
+/** @brief Split "host[:port]" or "[v6][:port]" into host and port.
+ *
+ * A bare multi-colon name is an IPv6 literal without a port.  The default
+ * port is 443 (naming.md).
+ *
+ * @param[out] host NUL-terminated host, must hold at least @p host_cap bytes
+ * @param[out] port parsed port (443 when absent)
+ * @retval 0 parsed
+ * @retval -1 malformed name or host buffer too small
+ */
 static int channel_split_host_port(const char *s, size_t len, char *host, size_t host_cap,
                                    uint16_t *port) {
     *port = 443;
@@ -666,6 +794,11 @@ static int channel_split_host_port(const char *s, size_t len, char *host, size_t
     return 0;
 }
 
+/** @brief Append a backend address as a new subchannel, ignoring duplicates.
+ *
+ * @retval 0 address added (or already present)
+ * @retval -1 address table full or allocation failure
+ */
 static int channel_add_addr(cwist_grpc_channel *ch, const char *host, uint16_t port) {
     for (size_t i = 0; i < ch->nsubs; i++)
         if (ch->subs[i].port == port && strcmp(ch->subs[i].host, host) == 0)
@@ -681,6 +814,14 @@ static int channel_add_addr(cwist_grpc_channel *ch, const char *host, uint16_t p
     return 0;
 }
 
+/** @brief Resolve a DNS name ("host[:port]") into numeric subchannel addresses.
+ *
+ * On success the DNS host becomes the TLS SNI name (when not already set)
+ * and "host:port" becomes the :authority (when not already set).
+ *
+ * @retval 0 at least one address was added
+ * @retval -1 parse or resolution failure (or no usable result)
+ */
 static int channel_resolve_dns(cwist_grpc_channel *ch, const char *name) {
     char host[256];
     uint16_t port;
@@ -711,6 +852,15 @@ static int channel_resolve_dns(cwist_grpc_channel *ch, const char *name) {
     return rc;
 }
 
+/** @brief Resolve a comma-separated ipv4:/ipv6: literal address list.
+ *
+ * Unparseable entries are skipped.  On success the first added address
+ * becomes the TLS SNI name and :authority when those are not already set.
+ *
+ * @param v6 parse tokens as IPv6 (ipv6: scheme) instead of IPv4
+ * @retval 0 at least one address was added
+ * @retval -1 nothing parsed
+ */
 static int channel_resolve_literal(cwist_grpc_channel *ch, const char *list, int v6) {
     char *copy = channel_strdup(list);
     if (!copy) return -1;
@@ -737,6 +887,17 @@ static int channel_resolve_literal(cwist_grpc_channel *ch, const char *list, int
 
 /* --- channel lifecycle --- */
 
+/** @brief Create a channel for @p target and resolve its backend addresses.
+ *
+ * Supported targets: "dns:name" (a "//authority/" prefix is ignored, as in
+ * gRPC C-core), "ipv4:1.2.3.4:port,...", "ipv6:[...]:port,...", and a bare
+ * name (treated as dns:).  unix:, unix-abstract:, and vsock: are not
+ * implemented and fail.  round_robin dials every address up front;
+ * pick_first stays IDLE until the first RPC.
+ *
+ * @param options may be NULL for defaults; see cwist_grpc_channel_options
+ * @return the new channel, or NULL on any failure (fully cleaned up)
+ */
 cwist_grpc_channel *cwist_grpc_channel_connect(const char *target,
                                                const cwist_grpc_channel_options *options) {
     if (!target || !*target) return NULL;
@@ -811,6 +972,10 @@ fail:
     return NULL;
 }
 
+/** @brief Close a channel and free all its resources.
+ *
+ * Calls handed out must be destroyed before closing the channel.  NULL-safe.
+ */
 void cwist_grpc_channel_close(cwist_grpc_channel *ch) {
     if (!ch) return;
     /* Calls handed out must be destroyed before closing the channel. */
@@ -827,6 +992,12 @@ void cwist_grpc_channel_close(cwist_grpc_channel *ch) {
     cwist_free(ch);
 }
 
+/** @brief Aggregate connectivity state across subchannels (load-balancing.md).
+ *
+ * READY if any subchannel is connected, else IDLE while any subchannel may
+ * dial, else TRANSIENT_FAILURE.  NULL maps to SHUTDOWN.  Thread-safe: takes
+ * ch->mu.
+ */
 cwist_grpc_channel_state cwist_grpc_channel_get_state(cwist_grpc_channel *ch) {
     if (!ch) return CWIST_GRPC_CHANNEL_SHUTDOWN;
     uint64_t now = channel_now_ms();
@@ -856,6 +1027,12 @@ static const char *const grpc_status_names[] = {
     "ABORTED",   "OUT_OF_RANGE",   "UNIMPLEMENTED",     "INTERNAL",           "UNAVAILABLE",
     "DATA_LOSS", "UNAUTHENTICATED"};
 
+/** @brief Map a JSON status code (number 0-16 or canonical name) to its mask bit.
+ *
+ * @param[out] bit CWIST_GRPC_STATUS_BIT(code) on success
+ * @retval 0 recognized code
+ * @retval -1 unknown number or name
+ */
 static int grpc_status_from_json(const cJSON *item, uint32_t *bit) {
     if (cJSON_IsNumber(item)) {
         int code = (int)item->valuedouble;
@@ -874,7 +1051,14 @@ static int grpc_status_from_json(const cJSON *item, uint32_t *bit) {
     return -1;
 }
 
-/* proto3 JSON Duration: a decimal number with an "s" suffix. */
+/** @brief Parse a proto3 JSON Duration ("1.5s") into milliseconds.
+ *
+ * The value is rounded to the nearest millisecond, minimum 1 ms.
+ *
+ * @param[out] out_ms parsed duration in milliseconds
+ * @retval 0 parsed
+ * @retval -1 not a string, missing "s" suffix, or non-positive value
+ */
 static int grpc_json_duration_ms(const cJSON *item, uint64_t *out_ms) {
     if (!cJSON_IsString(item)) return -1;
     const char *s = item->valuestring;
@@ -888,8 +1072,17 @@ static int grpc_json_duration_ms(const cJSON *item, uint64_t *out_ms) {
     return 0;
 }
 
-/* A6 retryPolicy validation: maxAttempts integer > 1 (clamped to 5),
- * positive backoffs/multiplier, non-empty retryableStatusCodes. */
+/** @brief Validate and parse an A6 retryPolicy JSON object.
+ *
+ * maxAttempts must be an integer > 1 (clamped to
+ * GRPC_CHANNEL_MAX_ATTEMPTS_CAP, per A6 no validation error), backoffs must
+ * be positive Durations, the multiplier positive, and
+ * retryableStatusCodes a non-empty array of valid codes.
+ *
+ * @param[out] out parsed policy on success
+ * @retval 0 valid policy
+ * @retval -1 invalid policy
+ */
 static int grpc_json_retry_policy(const cJSON *obj, cwist_grpc_retry_policy *out) {
     const cJSON *max_attempts = cJSON_GetObjectItemCaseSensitive(obj, "maxAttempts");
     const cJSON *initial = cJSON_GetObjectItemCaseSensitive(obj, "initialBackoff");
@@ -922,6 +1115,7 @@ static int grpc_json_retry_policy(const cJSON *obj, cwist_grpc_retry_policy *out
     return 0;
 }
 
+/** @brief Free a method config list built during JSON parsing. */
 static void grpc_json_free_mc_list(grpc_method_config *list) {
     while (list) {
         grpc_method_config *next = list->next;
@@ -932,6 +1126,17 @@ static void grpc_json_free_mc_list(grpc_method_config *list) {
     }
 }
 
+/** @brief Apply a JSON service config (doc/service_config.md subset, gRFC A6).
+ *
+ * Parses loadBalancingConfig (first supported policy wins; deprecated
+ * loadBalancingPolicy string also accepted), retryThrottling, and methodConfig
+ * (retryPolicy, waitForReady, timeout per name; hedgingPolicy entries carry
+ * no policy, as in gRPC C-core).  The whole document is validated before
+ * anything is swapped in; on error the channel is left untouched.
+ *
+ * @retval 0 applied
+ * @retval -1 invalid JSON, invalid document, or allocation failure
+ */
 int cwist_grpc_channel_apply_service_config_json(cwist_grpc_channel *ch, const char *json) {
     if (!ch || !json) return -1;
     cJSON *root = cJSON_Parse(json);

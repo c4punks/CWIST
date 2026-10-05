@@ -30,6 +30,18 @@ static int g_entry_count = 0;
  * Registration
  * ---------------------------------------------------------------------- */
 
+/**
+ * @brief Register or update a health probe.
+ *
+ * If a probe with the same name is already active, its function and context
+ * are replaced in place. Otherwise the probe is appended to the registry.
+ *
+ * @param name Probe name; must be non-NULL and outlive the registration.
+ * @param fn Probe function; must be non-NULL.
+ * @param ctx Opaque context passed to @p fn on each evaluation.
+ * @return true on success, false if @p name or @p fn is NULL or the registry
+ *         is full.
+ */
 bool cwist_healthz_register(const char *name, cwist_health_probe_fn fn, void *ctx) {
     if (!name || !fn) return false;
 
@@ -64,6 +76,15 @@ bool cwist_healthz_register(const char *name, cwist_health_probe_fn fn, void *ct
     return true;
 }
 
+/**
+ * @brief Deactivate a registered health probe.
+ *
+ * Marks every active entry with the given name as inactive; inactive entries
+ * are skipped by @ref cwist_healthz_run and their slots may be reused by
+ * @ref cwist_healthz_register. The name and function pointers are not cleared.
+ *
+ * @param name Probe name to remove; NULL is a no-op.
+ */
 void cwist_healthz_unregister(const char *name) {
     if (!name) return;
     for (int i = 0; i < g_entry_count; ++i) {
@@ -77,6 +98,12 @@ void cwist_healthz_unregister(const char *name) {
  * Evaluation
  * ---------------------------------------------------------------------- */
 
+/**
+ * @brief Map a health status enum to its JSON string representation.
+ *
+ * @param s Health status value.
+ * @return "ok", "degraded", "fail", or "unknown" for unrecognized values.
+ */
 static const char *status_str(cwist_health_status_t s) {
     switch (s) {
         case CWIST_HEALTH_OK: return "ok";
@@ -86,6 +113,20 @@ static const char *status_str(cwist_health_status_t s) {
     }
 }
 
+/**
+ * @brief Run all active probes and aggregate their results.
+ *
+ * Probes are evaluated in registration order. The overall status is FAIL if
+ * any probe reports FAIL, DEGRADED if at least one reports DEGRADED and none
+ * report FAIL, and OK otherwise.
+ *
+ * @param out_probes Optional array receiving per-probe results; at most
+ *        @p max_probes entries are written.
+ * @param max_probes Capacity of @p out_probes.
+ * @param out_count Optional output receiving the number of active probes
+ *        evaluated.
+ * @param out_overall Optional output receiving the aggregated status.
+ */
 void cwist_healthz_run(cwist_health_probe_t *out_probes, size_t max_probes, size_t *out_count,
                        cwist_health_status_t *out_overall) {
     size_t count = 0;
@@ -114,6 +155,16 @@ void cwist_healthz_run(cwist_health_probe_t *out_probes, size_t max_probes, size
  * HTTP response helper
  * ---------------------------------------------------------------------- */
 
+/**
+ * @brief Serve the /healthz HTTP endpoint as a JSON response.
+ *
+ * Runs all registered probes and writes a JSON body with an overall "status"
+ * field and a "probes" array of per-probe name, status, and optional message.
+ * The response Content-Type is set to application/json.
+ *
+ * @param res Response to fill; NULL is a no-op. The body and headers are
+ *        (re)assigned on success.
+ */
 void cwist_app_healthz(cwist_http_response *res) {
     if (!res) return;
 

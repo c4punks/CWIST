@@ -8,6 +8,15 @@
 
 #include <cwist/core/siphash/siphash.h>
 
+/** @brief Store a flash entry on the request.
+ *
+ * Creates the request's flash query map on first use. A NULL value is
+ * stored as an empty string.
+ *
+ * @param req Request to attach the flash entry to; ignored if NULL.
+ * @param key Entry key; ignored if NULL.
+ * @param value Entry value; NULL is stored as "".
+ */
 void cwist_flash_set(cwist_http_request *req, const char *key, const char *value) {
     if (!req || !key) return;
     if (!req->flash) {
@@ -18,11 +27,31 @@ void cwist_flash_set(cwist_http_request *req, const char *key, const char *value
     }
 }
 
+/** @brief Read a flash entry without removing it.
+ *
+ * Non-destructive lookup; the entry remains in the flash map.
+ *
+ * @param req Request whose flash map is read.
+ * @param key Entry key to look up.
+ * @return Pointer to the stored value, or NULL if req/key are NULL or the
+ *         key is not present. The pointer stays owned by the flash map.
+ */
 const char *cwist_flash_peek(cwist_http_request *req, const char *key) {
     if (!req || !key || !req->flash) return NULL;
     return cwist_query_map_get(req->flash, key);
 }
 
+/** @brief Read and remove a flash entry.
+ *
+ * Destructive lookup: on success the entry's bucket is unlinked and freed,
+ * and ownership of the value string is transferred to the caller, who must
+ * release it with cwist_free().
+ *
+ * @param req Request whose flash map is read.
+ * @param key Entry key to look up.
+ * @return Newly owned copy pointer to the value (caller frees), or NULL if
+ *         req/key are NULL, the flash map is empty, or the key is missing.
+ */
 const char *cwist_flash_get(cwist_http_request *req, const char *key) {
     if (!req || !key || !req->flash || !req->flash->buckets || req->flash->size == 0) return NULL;
     uint64_t hash = siphash24(key, strlen(key), req->flash->seed);
@@ -45,6 +74,16 @@ const char *cwist_flash_get(cwist_http_request *req, const char *key) {
     return NULL;
 }
 
+/** @brief Serialize all flash entries to a JSON object and clear the map.
+ *
+ * Builds a JSON object string {"key":"value",...} with '"' and '\' escaped
+ * in keys and values, then frees every flash entry and empties the map.
+ *
+ * @param req Request whose flash map is serialized.
+ * @return Newly allocated NUL-terminated JSON string the caller must free
+ *         with cwist_free(), or NULL if there are no entries or if a buffer
+ *         allocation fails (in which case the flash map is left unchanged).
+ */
 char *cwist_flash_pop_all_json(cwist_http_request *req) {
     if (!req || !req->flash || !req->flash->buckets || req->flash->size == 0) return NULL;
     int count = 0;

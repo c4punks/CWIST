@@ -11,6 +11,14 @@ struct cwist_html_component {
     cwist_html_component_render_fn render_fn;
 };
 
+/**
+ * @brief Create a named component wrapping a render function.
+ * @param name Non-empty component name; copied into the new component.
+ * @param render_fn Render function invoked by cwist_html_component_instantiate().
+ * @return New component on success, NULL if arguments are invalid or
+ *         allocation fails. Caller owns the returned component and must
+ *         release it with cwist_html_component_destroy().
+ */
 cwist_html_component_t *cwist_html_component_create(const char *name,
                                                     cwist_html_component_render_fn render_fn) {
     if (!name || !*name || !render_fn) return NULL;
@@ -28,16 +36,38 @@ cwist_html_component_t *cwist_html_component_create(const char *name,
     return comp;
 }
 
+/**
+ * @brief Destroy a component and free its name.
+ * @param comp Component to destroy; NULL is accepted and does nothing.
+ *           Must not be used after this call.
+ */
 void cwist_html_component_destroy(cwist_html_component_t *comp) {
     if (!comp) return;
     cwist_free(comp->name);
     cwist_free(comp);
 }
 
+/**
+ * @brief Get the component's name.
+ * @param comp Component to query; may be NULL.
+ * @return The component's name, or NULL if @p comp is NULL.
+ */
 const char *cwist_html_component_name(const cwist_html_component_t *comp) {
     return comp ? comp->name : NULL;
 }
 
+/**
+ * @brief Run the component's render function to produce an element tree.
+ * @param comp Component whose render function is invoked; may be NULL.
+ * @param props Opaque props forwarded to the render function.
+ * @param children Child elements forwarded to the render function. When
+ *        @p comp is NULL they are destroyed here instead, since no render
+ *        function takes ownership of them.
+ * @param child_count Number of entries in @p children.
+ * @return Rendered element tree, or NULL if arguments are invalid or the
+ *         render function fails. Ownership follows the render function's
+ *         contract.
+ */
 cwist_html_element_t *cwist_html_component_instantiate(cwist_html_component_t *comp,
                                                        const void *props,
                                                        cwist_html_element_t **children,

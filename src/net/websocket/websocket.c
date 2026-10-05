@@ -163,8 +163,21 @@ static ssize_t read_exact(int fd, void *buf, size_t len) {
     return total;
 }
 
-/* Append len bytes of src to ws->frag_buf, growing it as needed.
- * Returns false on allocation failure. */
+/**
+ * @brief Append @p len bytes of @p src to the connection's fragmented-message
+ * reassembly buffer, growing it as needed.
+ *
+ * Doubles the buffer capacity on growth and enforces the
+ * CWIST_WS_MAX_MESSAGE_BYTES total-message cap even when each individual
+ * frame passed the per-frame CWIST_WS_MAX_PAYLOAD_BYTES check.  A zero-length
+ * append is a no-op and always succeeds.
+ *
+ * @param ws WebSocket connection owning the reassembly buffer.
+ * @param src Source bytes to copy (may be NULL when @p len is zero).
+ * @param len Number of bytes to append.
+ * @return true on success, false on allocation failure or when the message
+ *         would exceed CWIST_WS_MAX_MESSAGE_BYTES.
+ */
 static bool ws_frag_append(cwist_websocket *ws, const uint8_t *src, size_t len) {
     if (len == 0) return true;
     /* Reject a reassembled message that exceeds the total-message cap, even

@@ -216,10 +216,15 @@ __attribute__((constructor)) static void cwist_full_gc_guard_init(void) {
 static cwist_gc_t g_full_gc;
 static pthread_once_t g_full_gc_once = PTHREAD_ONCE_INIT;
 
+/** @brief pthread_once body: initialize the full-GC instance in manual-rotation mode. */
 static void cwist_full_gc_lazy_init(void) {
     cwist_gc(&g_full_gc, true);
 }
 
+/**
+ * @brief Lazily initialized process-wide GC instance used by full-GC mode.
+ * @return Shared full-GC context, initialized on first call.
+ */
 static cwist_gc_t *cwist_full_gc_instance(void) {
     pthread_once(&g_full_gc_once, cwist_full_gc_lazy_init);
     return &g_full_gc;
@@ -239,6 +244,16 @@ static cwist_gc_t *cwist_full_gc_instance(void) {
  */
 static pthread_mutex_t g_full_gc_claim_mu = PTHREAD_MUTEX_INITIALIZER;
 
+/**
+ * @brief Claim full-GC mode permanently, exactly once, then harden the toggle.
+ *
+ * The first caller stores @p enable into the guard page, marks the page
+ * locked, and mprotect()s it read-only; every later call is a silent no-op.
+ * Fails safe (no-op) when the guard page was never mapped. Also toggles
+ * auto-rotation on the process-wide full-GC instance.
+ *
+ * @param enable true to enable full-GC mode, false to claim-and-disable.
+ */
 void cwist_full_gc(bool enable) {
     if (!g_full_gc_guard) return; /* guard page unavailable; fail safe, not silently unhardened */
 
@@ -269,16 +284,28 @@ void cwist_full_gc(bool enable) {
     cwist_gc_auto_rotate(cwist_full_gc_instance(), enable);
 }
 
+/**
+ * @brief Query whether full-GC mode was enabled by the (single) cwist_full_gc() claim.
+ * @return Current enabled state; false when the guard page was never mapped.
+ */
 bool cwist_full_gc_enabled(void) {
     if (!g_full_gc_guard) return false;
     return atomic_load_explicit(&g_full_gc_guard->enabled, memory_order_relaxed);
 }
 
+/**
+ * @brief Query whether the full-GC toggle has already been claimed and locked.
+ * @return true once cwist_full_gc() has run its claiming path exactly once.
+ */
 bool cwist_full_gc_locked(void) {
     if (!g_full_gc_guard) return false;
     return atomic_load_explicit(&g_full_gc_guard->locked, memory_order_acquire);
 }
 
+/**
+ * @brief Expose the hardened full-GC guard page for introspection/tests.
+ * @return Pointer to the guard page, or NULL if mmap() failed at startup.
+ */
 void *cwist_full_gc_guard_page(void) {
     return g_full_gc_guard;
 }
@@ -430,6 +457,14 @@ static cwist_gc_pending_t *cwist_gc_pending_get(void) {
     return pending;
 }
 
+/**
+ * @brief Track a live cwist_alloc() block so full-GC can retire it later.
+ *
+ * Best-effort: on allocation failure the block is left untracked rather
+ * than failing the caller's allocation. Duplicate pointers are stored once.
+ *
+ * @param ptr Block to track; a no-op when NULL.
+ */
 void cwist_gc_scope_track(void *ptr) {
     if (!ptr) return;
     cwist_gc_pending_t *pending = cwist_gc_pending_get();
@@ -447,6 +482,16 @@ void cwist_gc_scope_track(void *ptr) {
     pending->count++;
 }
 
+/**
+ * @brief Stop tracking a block without retiring it.
+ *
+ * Used when the caller hands ownership elsewhere (e.g. frees through a
+ * different path); the block is removed from this thread's pending set
+ * and will not be epoch-retired by a later flush.
+ *
+ * @param ptr Block to untrack.
+ * @return true when @p ptr was tracked and removed; false otherwise.
+ */
 bool cwist_gc_scope_untrack(void *ptr) {
     if (!ptr) return false;
     cwist_gc_pending_t *pending = cwist_gc_pending_get();
@@ -474,14 +519,29 @@ bool cwist_gc_scope_untrack(void *ptr) {
     return true;
 }
 
+/**
+ * @brief Alias of cwist_gc_scope_untrack(): drop tracking without retiring.
+ * @param ptr Block to untrack.
+ * @return true when @p ptr was tracked and removed; false otherwise.
+ */
 bool cwist_gc_scope_disown(void *ptr) {
     return cwist_gc_scope_untrack(ptr);
 }
 
+/**
+ * @brief Retire every pending block this thread is still tracking.
+ *
+ * Each tracked block is handed to cwist_ebr_free(), so reclamation is
+ * deferred until no thread can still be reading inside an epoch.
+ */
 void cwist_gc_scope_flush(void) {
     cwist_gc_pending_flush(cwist_gc_pending_get());
 }
 
+/**
+ * @brief Count this thread's not-yet-retired tracked blocks.
+ * @return Number of pending entries; 0 when nothing is tracked.
+ */
 size_t cwist_gc_scope_pending_count(void) {
     cwist_gc_pending_t *pending = cwist_gc_pending_get();
     return pending ? pending->count : 0;
@@ -608,6 +668,15 @@ static cwist_conn_pending_t *cwist_conn_pending_get(void) {
     return pending;
 }
 
+/**
+ * @brief Track a non-memory resource for the full-GC exit sweep.
+ *
+ * No-op unless full-GC mode is enabled. Best-effort: if the per-thread
+ * list cannot grow, the handle is dropped rather than failing the caller.
+ *
+ * @param handle Resource handle to close later (e.g. socket, TLS session).
+ * @param close_fn Callback invoked with @p handle during a sweep or flush.
+ */
 void cwist_conn_registry_track(void *handle, cwist_conn_close_fn close_fn) {
     if (!handle || !close_fn) return;
     if (!cwist_full_gc_enabled()) return;
@@ -631,6 +700,11 @@ void cwist_conn_registry_track(void *handle, cwist_conn_close_fn close_fn) {
     pthread_mutex_unlock(&pending->lock);
 }
 
+/**
+ * @brief Remove a handle from this thread's tracked-connection list.
+ * @param handle Handle previously passed to cwist_conn_registry_track().
+ * @return true when found and removed; false otherwise.
+ */
 bool cwist_conn_registry_untrack(void *handle) {
     if (!handle) return false;
     cwist_conn_pending_t *pending = cwist_conn_pending_get();
@@ -649,6 +723,12 @@ bool cwist_conn_registry_untrack(void *handle) {
     return found;
 }
 
+/**
+ * @brief Close every handle this thread still tracks, right now.
+ *
+ * Unlike the sweeps, the list stays usable afterwards: entries are closed
+ * and cleared but the list is not marked swept, so later tracks still work.
+ */
 void cwist_conn_registry_flush(void) {
     cwist_conn_pending_t *pending = cwist_conn_pending_get();
     if (!pending) return;
@@ -660,10 +740,20 @@ void cwist_conn_registry_flush(void) {
     pthread_mutex_unlock(&pending->lock);
 }
 
+/**
+ * @brief Close every still-registered thread's tracked handles.
+ *
+ * Intended for process-exit paths; each list is closed at most once even
+ * if a thread's TLS destructor sweep races with this call.
+ */
 void cwist_conn_registry_sweep_all(void) {
     cwist_conn_registry_sweep_all_impl();
 }
 
+/**
+ * @brief Count this thread's tracked, not-yet-closed handles.
+ * @return Number of pending entries; 0 when nothing is tracked.
+ */
 size_t cwist_conn_registry_pending_count(void) {
     cwist_conn_pending_t *pending = cwist_conn_pending_get();
     if (!pending) return 0;

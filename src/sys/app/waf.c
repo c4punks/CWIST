@@ -7,6 +7,9 @@
 #include <stdint.h>
 #include <stdbool.h>
 
+/** @brief Lowercase an ASCII letter, leaving all other bytes unchanged.
+ * @param c Input byte.
+ * @return The lowercase equivalent of @p c for 'A'..'Z', otherwise @p c. */
 static unsigned char ascii_lower(unsigned char c) {
     return c >= 'A' && c <= 'Z' ? (unsigned char)(c + ('a' - 'A')) : c;
 }
@@ -46,6 +49,16 @@ static bool waf_out[WAF_MAX_TEXT];
 static uint16_t waf_states;
 static pthread_once_t waf_once = PTHREAD_ONCE_INIT;
 
+/** @brief Build the Aho-Corasick automaton from the signature table.
+ *
+ * Runs once via pthread_once. Inserts every signature into the goto table,
+ * then computes BFS failure links and folds them into the goto table so the
+ * scan loop is a single table index per byte. Not thread-safe by itself;
+ * callers must synchronize via pthread_once.
+ *
+ * Fails open: if the state space exceeds 256 states the build is abandoned
+ * and waf_states is left incomplete, in which case cwist_waf_is_safe()
+ * simply never reports a match for deeper patterns. */
 static void waf_build(void) {
     uint16_t queue[WAF_MAX_TEXT];
     waf_states = 1; /* state 0: root */
@@ -86,6 +99,17 @@ static void waf_build(void) {
     }
 }
 
+/** @brief Check whether a byte string is free of hostile signatures.
+ *
+ * Scans @p input once (O(length)) through the case-insensitive Aho-Corasick
+ * automaton, which is built lazily on first call. Matching is ASCII-only:
+ * bytes at or above 0x80 reset the automaton state, and control bytes other
+ * than tab, newline, and carriage return are rejected outright.
+ *
+ * @param input Byte string to scan; may be NULL.
+ * @param length Number of bytes to scan.
+ * @return true if the input is safe, false if a signature or disallowed
+ *         control byte is found. NULL input is considered safe. */
 bool cwist_waf_is_safe(const char *input, size_t length) {
     if (!input) return true;
     pthread_once(&waf_once, waf_build);
@@ -105,6 +129,15 @@ bool cwist_waf_is_safe(const char *input, size_t length) {
     return true;
 }
 
+/** @brief Escape HTML-special characters in a NUL-terminated string.
+ *
+ * Replaces '&', '<', '>', '"', and '\'' with their HTML entity equivalents
+ * and returns a newly allocated buffer holding the escaped text.
+ *
+ * @param input Input string; may be NULL.
+ * @return Newly allocated, NUL-terminated escaped string that the caller
+ *         owns and must free with cwist_free, or NULL if @p input is NULL,
+ *         on allocation failure, or on size overflow. */
 char *cwist_sanitize_html(const char *input) {
     if (!input) return NULL;
     size_t length = strlen(input), extra = 0;
@@ -143,6 +176,10 @@ char *cwist_sanitize_html(const char *input) {
     return output;
 }
 
+/** @brief Check every header key/value pair in a linked list for hostile
+ * signatures.
+ * @param header First node of the header list; may be NULL (treated as safe).
+ * @return true if all present keys and values pass cwist_waf_is_safe(). */
 static bool waf_headers_safe(const cwist_http_header_node *header) {
     for (; header; header = header->next) {
         if ((header->key && !cwist_waf_is_safe(header->key->data, header->key->size)) ||
@@ -152,6 +189,15 @@ static bool waf_headers_safe(const cwist_http_header_node *header) {
     return true;
 }
 
+/** @brief Middleware handler that screens a request with the WAF checks.
+ *
+ * Runs cwist_waf_is_safe() over the request path, query, body, and headers.
+ * If any part fails, the response is set to HTTP 400 with a fixed body and
+ * the next handler is not invoked; otherwise the request is passed through.
+ *
+ * @param req Request to screen; NULL is treated as safe for its fields.
+ * @param res Response to fill when the request is rejected.
+ * @param next Next handler in the chain, invoked when the request passes. */
 static void waf_handler(cwist_http_request *req, cwist_http_response *res,
                         cwist_handler_func next) {
     bool safe = req && (!req->path || cwist_waf_is_safe(req->path->data, req->path->size)) &&
@@ -166,6 +212,9 @@ static void waf_handler(cwist_http_request *req, cwist_http_response *res,
     next(req, res);
 }
 
+/** @brief Construct the WAF-lite middleware.
+ * @return A middleware function that screens each request with the
+ *         signature-based WAF checks before invoking the next handler. */
 cwist_middleware_func cwist_mw_waf_lite(void) {
     return waf_handler;
 }

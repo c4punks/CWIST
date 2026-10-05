@@ -74,13 +74,32 @@ struct io_uring_getevents_arg {
 
 struct __kernel_timespec;
 
+/** @brief Raw io_uring_setup(2) syscall wrapper (no libc wrapper exists).
+ *  @param entries Ring depth requested.
+ *  @param p Out params/offsets filled by the kernel.
+ *  @return Ring file descriptor on success, -1 with errno set on failure. */
 static inline int sys_io_uring_setup(unsigned entries, struct io_uring_params *p) {
     return (int)syscall(__NR_io_uring_setup, entries, p);
 }
+/** @brief Raw io_uring_enter(2) syscall wrapper.
+ *  @param ring_fd Ring file descriptor.
+ *  @param to_submit Number of queued SQEs to submit.
+ *  @param min_complete Minimum completions to wait for (with GETEVENTS).
+ *  @param flags IORING_ENTER_* flags.
+ *  @param sig Signal mask to apply during the wait, or NULL.
+ *  @return 0 or number of completions on success, -1 with errno set on failure. */
 static inline int sys_io_uring_enter(int ring_fd, unsigned to_submit, unsigned min_complete,
                                      unsigned flags, sigset_t *sig) {
     return (int)syscall(__NR_io_uring_enter, ring_fd, to_submit, min_complete, flags, sig);
 }
+/** @brief io_uring_enter with an absolute timeout, via IORING_ENTER_EXT_ARG.
+ *  @param ring_fd Ring file descriptor.
+ *  @param to_submit Number of queued SQEs to submit.
+ *  @param min_complete Minimum completions to wait for.
+ *  @param flags IORING_ENTER_* flags (EXT_ARG is OR-ed in here).
+ *  @param ts Absolute timeout (CLOCK_MONOTONIC) as __kernel_timespec, or NULL.
+ *  @return Completions/submit result on success, -1 with errno set (ETIME on
+ *          timeout expiry) on failure. */
 static inline int sys_io_uring_enter_timeout(int ring_fd, unsigned to_submit, unsigned min_complete,
                                              unsigned flags, const struct __kernel_timespec *ts) {
     struct io_uring_getevents_arg arg = {.ts = (uint64_t)(uintptr_t)ts};
@@ -88,20 +107,32 @@ static inline int sys_io_uring_enter_timeout(int ring_fd, unsigned to_submit, un
                         flags | IORING_ENTER_EXT_ARG, &arg, sizeof(arg));
 }
 
-/* Ring setup helpers absorbed from the retired io_uring_backend.c. */
+/** @brief Map one io_uring ring region (SQ ring, CQ ring, or SQE array).
+ *
+ * No MAP_POPULATE: with one ring per worker thread the pre-faulted pages
+ * dominate idle RSS (~400 KiB per reactor) while a worker under real
+ * load only ever touches the head of each ring.  On-demand paging keeps
+ * RSS proportional to actual concurrency.
+ *
+ * @param fd Ring file descriptor.
+ * @param sz Region size in bytes.
+ * @param off Region selector (IORING_OFF_*).
+ * @return Mapped pointer, or NULL on failure (caller munmaps and falls back). */
 static void *mmap_ring(int fd, size_t sz, off_t off) {
-    /* No MAP_POPULATE: with one ring per worker thread the pre-faulted pages
-     * dominate idle RSS (~400 KiB per reactor) while a worker under real
-     * load only ever touches the head of each ring.  On-demand paging keeps
-     * RSS proportional to actual concurrency. */
     void *p = mmap(NULL, sz, PROT_READ | PROT_WRITE, MAP_SHARED, fd, off);
     return (p == MAP_FAILED) ? NULL : p;
 }
 
+/** @brief Byte size of the mmap-ed SQ ring region for the given setup params.
+ *  @param p Filled io_uring_params from io_uring_setup.
+ *  @return Region size: sq_off.array offset plus the SQ index array. */
 static size_t sq_ring_size(struct io_uring_params *p) {
     return p->sq_off.array + p->sq_entries * sizeof(uint32_t);
 }
 
+/** @brief Byte size of the mmap-ed CQ ring region for the given setup params.
+ *  @param p Filled io_uring_params from io_uring_setup.
+ *  @return Region size: cq_off.cqes offset plus the CQE array. */
 static size_t cq_ring_size(struct io_uring_params *p) {
     return p->cq_off.cqes + p->cq_entries * sizeof(struct io_uring_cqe);
 }
@@ -226,9 +257,11 @@ static const uint32_t latency_probe_bounds_us[LATENCY_PROBE_BUCKETS - 1] = {
     10,    25,    50,    100,    250,    500,    1000,    2500,   5000,
     10000, 25000, 50000, 100000, 250000, 500000, 1000000, 2500000};
 
-/* CWIST_LATENCY_PROBE=1 enables the per-request latency probe. Cached after
- * the first read like the other env knobs in this file -- the racy recompute
- * is benign (same result every time). */
+/** @brief Whether the per-request latency probe is enabled (CWIST_LATENCY_PROBE=1).
+ *
+ * Cached after the first read like the other env knobs in this file -- the
+ * racy recompute is benign (same result every time).
+ * @return true when the probe is enabled. */
 static bool latency_probe_enabled(void) {
     static _Atomic int cached = -1;
     int v = atomic_load_explicit(&cached, memory_order_relaxed);
@@ -240,6 +273,16 @@ static bool latency_probe_enabled(void) {
     return v == 1;
 }
 
+/** @brief Record one latency sample (microseconds) into a probe histogram.
+ *
+ * Binary-searches the bucket whose upper bound first exceeds the sample,
+ * then updates the bucket, count, running sum, max, and over-5ms counters.
+ * @param buckets Histogram bucket array (LATENCY_PROBE_BUCKETS entries).
+ * @param count In/out total sample count.
+ * @param sum_us In/out running sum of samples.
+ * @param max_us In/out running maximum.
+ * @param over_5ms In/out count of samples beyond 5000 us.
+ * @param sample_us The sample value in microseconds. */
 static void latency_probe_record(uint64_t *buckets, uint64_t *count, uint64_t *sum_us,
                                  uint64_t *max_us, uint64_t *over_5ms, uint64_t sample_us) {
     int lo = 0, hi = LATENCY_PROBE_BUCKETS - 1;
@@ -259,8 +302,13 @@ static void latency_probe_record(uint64_t *buckets, uint64_t *count, uint64_t *s
 
 enum { LATENCY_PROBE_QUEUE = 0, LATENCY_PROBE_SVC = 1 };
 
-/* Approximate percentile from a histogram: smallest bucket upper bound whose
- * cumulative count reaches pct (in per-mille) of total. Returns micros. */
+/** @brief Approximate percentile from a histogram: smallest bucket upper
+ *         bound whose cumulative count reaches pct (in per-mille) of total.
+ *  @param buckets Histogram bucket array.
+ *  @param count Total sample count.
+ *  @param pct_mille Percentile in per-mille (500 = p50, 999 = p99.9).
+ *  @return Bucket upper bound in microseconds, or UINT64_MAX for the
+ *          open-ended top bucket. */
 static uint64_t latency_probe_percentile(const uint64_t *buckets, uint64_t count,
                                          uint64_t pct_mille) {
     uint64_t target = (count * pct_mille + 999) / 1000;

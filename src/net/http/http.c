@@ -77,6 +77,14 @@
 #include <unistd.h>
 #endif
 
+/**
+ * @brief Return the number of CPUs available to this process.
+ *
+ * Honors the process CPU affinity mask where the platform supports it
+ * (sched_getaffinity on Linux); falls back to sysconf(3)/sysctl and
+ * ultimately 1 when the count cannot be determined.
+ * @return Number of usable CPUs, at least 1.
+ */
 long get_cpu_cores(void) {
 #if defined(_WIN32) || defined(_WIN64)
     SYSTEM_INFO sysinfo;
@@ -119,10 +127,24 @@ long get_cpu_cores(void) {
 
 static unsigned int g_http_pool_core_limit = 0;
 
+/**
+ * @brief Fix the HTTP pool worker count to a specific value.
+ * @param limit Fixed thread count; 0 restores automatic sizing.
+ */
 void cwist_http_pool_limit_core(unsigned int limit) {
     g_http_pool_core_limit = limit;
 }
 
+/**
+ * @brief Compute the HTTP worker/event-loop thread count.
+ *
+ * Resolution order: a value fixed with cwist_http_pool_limit_core(), then the
+ * CWIST_WORKER_THREADS environment override, then CPU-core based sizing
+ * modified by CWIST_WORKERS (worker-process count) and CWIST_C1M_MODE.
+ * C1M mode divides the core budget across worker processes (one event loop
+ * per CPU); classic mode multiplies it to cover blocking keep-alive handlers.
+ * @return Computed thread count, clamped to the mode-specific range.
+ */
 long get_optimal_thread_count(void) {
     if (g_http_pool_core_limit > 0) {
         return (long)g_http_pool_core_limit;
@@ -225,10 +247,27 @@ static _Atomic long g_http_continuation_shed = 0;
 static _Atomic uint64_t g_reactor_gen = 0;
 static _Atomic long g_reactor_posters = 0;
 
+/**
+ * @brief Return the current reactor generation counter.
+ *
+ * Deferred completions capture the generation so they can detect pool
+ * teardown; see g_reactor_gen for the protocol.
+ */
 uint64_t cwist_http_reactor_generation(void) {
     return atomic_load(&g_reactor_gen);
 }
 
+/**
+ * @brief Post a reactor node only while the captured generation is current.
+ *
+ * Counts the caller in g_reactor_posters around the generation check and the
+ * post so cwist_http_pool_destroy() cannot free the reactor in between.
+ * @param reactor Reactor to post into.
+ * @param gen Generation the completion was created under.
+ * @param node Post node to enqueue.
+ * @return true when the node was posted; false when the generation moved or
+ *         the post failed (the caller must close instead).
+ */
 bool cwist_http_reactor_post_live(cwist_reactor_t *reactor, uint64_t gen,
                                   cwist_reactor_post_t *node) {
     atomic_fetch_add(&g_reactor_posters, 1);
@@ -237,13 +276,13 @@ bool cwist_http_reactor_post_live(cwist_reactor_t *reactor, uint64_t gen,
     return posted;
 }
 
-/* Continuations dropped because the reactor post queue was full; each one
+/** Continuations dropped because the reactor post queue was full; each one
  * closed its connection. Exported for metrics/observability. */
 long cwist_http_continuation_shed_count(void) {
     return atomic_load_explicit(&g_http_continuation_shed, memory_order_relaxed);
 }
 
-/* Live C1M connections (accepted, not yet closed). The shutdown drain in
+/** Live C1M connections (accepted, not yet closed). The shutdown drain in
  * cwist_app_listen_ex polls this to exit early once nothing is left. */
 long cwist_http_inflight_count(void) {
     return atomic_load_explicit(&g_http_inflight, memory_order_relaxed);
@@ -251,6 +290,13 @@ long cwist_http_inflight_count(void) {
 #define CWIST_HTTP_INFLIGHT_PER_THREAD 32
 #define CWIST_HTTP_INFLIGHT_FD_RESERVE 4096
 
+/**
+ * @brief Compute the per-process cap on concurrently served connections.
+ *
+ * Base is the thread count times CWIST_HTTP_INFLIGHT_PER_THREAD; on POSIX
+ * systems the RLIMIT_NOFILE budget minus a reserve raises it when higher.
+ * @return Inflight connection limit (always >= the thread-count floor).
+ */
 static long cwist_http_inflight_limit(void) {
     long base = g_http_thread_count > 0 ? g_http_thread_count : get_optimal_thread_count();
     long floor = base * CWIST_HTTP_INFLIGHT_PER_THREAD;
@@ -272,6 +318,11 @@ static const char CWIST_HTTP_503[] =
 
 static _Thread_local http_thread_worker_t *t_current_worker = NULL;
 
+/**
+ * @brief Reactor worker main loop for the C1M pool.
+ * @param arg http_thread_worker_t for this thread.
+ * @return NULL when the reactor stops.
+ */
 static void *http_pool_worker(void *arg) {
     http_thread_worker_t *w = (http_thread_worker_t *)arg;
     t_current_worker = w;
@@ -313,6 +364,13 @@ static http_dynamic_pool_t g_dyn_pool;
  * cwist_http_pool_init. */
 static void http_rx_recv_cb(void *conn_ptr, int res);
 
+/**
+ * @brief Main loop of a classic-mode dynamic pool worker thread.
+ *
+ * Pops tasks from the shared queue, runs their handler, and exits after an
+ * idle timeout when the pool is above its base size (scale-down).
+ * @return NULL when the pool stops or the worker scales down.
+ */
 static void *http_dynamic_worker_thread(void *arg) {
     (void)arg;
     while (atomic_load_explicit(&g_dyn_pool.running, memory_order_acquire)) {
@@ -393,6 +451,14 @@ static void *http_dynamic_worker_thread(void *arg) {
     return NULL;
 }
 
+/**
+ * @brief Spawn one detached dynamic-pool worker thread.
+ *
+ * Uses a reduced stack size (CWIST_POOL_STACK_SIZE), retrying with the
+ * default stack when the pthread implementation rejects it.
+ * @return true when the worker was created; false otherwise (the
+ *         active-worker count is rolled back).
+ */
 static bool http_spawn_worker(void) {
     pthread_attr_t attr;
     pthread_attr_init(&attr);
@@ -424,6 +490,10 @@ static bool http_spawn_worker(void) {
     return true;
 }
 
+/**
+ * @brief Initialize the HTTP connection pool using CWIST_C1M_MODE.
+ * @return 0 on success, -1 on failure.
+ */
 int cwist_http_pool_init(void) {
     const char *c1m = getenv("CWIST_C1M_MODE");
     bool use_c1m = true;
@@ -435,6 +505,13 @@ int cwist_http_pool_init(void) {
     return cwist_http_pool_init_mode(use_c1m);
 }
 
+/**
+ * @brief Initialize the HTTP connection pool in the requested mode.
+ * @param use_c1m true for the event-driven reactor (C1M) pool, false for
+ *        the classic dynamic thread pool.
+ * @return 0 on success, -1 on failure (partially created state is cleaned up
+ *         by cwist_http_pool_destroy()).
+ */
 int cwist_http_pool_init_mode(bool use_c1m) {
     atomic_store(&g_http_pool_stopping, false);
     g_http_thread_count = get_optimal_thread_count();
@@ -500,6 +577,12 @@ int cwist_http_pool_init_mode(bool use_c1m) {
     return 0;
 }
 
+/**
+ * @brief Queue a connection for handling on the classic dynamic pool.
+ *
+ * Enforces the inflight limit (over-limit connections get a bare 503 and are
+ * closed) and spawns an extra worker when queued demand exceeds idle capacity.
+ */
 void cwist_http_pool_submit(int client_fd, void (*handler)(int, void *), void *ctx) {
     long limit = cwist_http_inflight_limit();
     long inflight = atomic_fetch_add_explicit(&g_http_inflight, 1, memory_order_acq_rel) + 1;
@@ -548,12 +631,22 @@ void cwist_http_pool_submit(int client_fd, void (*handler)(int, void *), void *c
     pthread_mutex_unlock(&g_dyn_pool.lock);
 }
 
+/**
+ * @brief Requeue the current connection's next handler turn on the pool.
+ * @return false for invalid arguments (fd < 0 or NULL handler).
+ */
 bool cwist_http_pool_rearm_current(int client_fd, void (*handler)(int, void *), void *ctx) {
     if (client_fd < 0 || !handler) return false;
     cwist_http_pool_submit(client_fd, handler, ctx);
     return true;
 }
 
+/**
+ * @brief Tear down both pool variants.
+ *
+ * Stops new work, drains queued tasks, retires the reactor generation and
+ * waits for in-flight posters, then stops, joins, and frees the C1M reactors.
+ */
 void cwist_http_pool_destroy(void) {
     /* Queued continuations must release, not repost into a dying reactor. */
     atomic_store(&g_http_pool_stopping, true);
@@ -623,6 +716,11 @@ typedef struct {
 static void http_async_event_cb(int fd, void *ctx);
 static bool http_async_stash_grow(cwist_http_async_conn_t *conn, size_t need);
 
+/**
+ * @brief Keep-alive idle timeout in seconds.
+ * @return The validated CWIST_HTTP_KEEP_ALIVE_TIMEOUT env override or the
+ *         CWIST_HTTP_KEEP_ALIVE_TIMEOUT_SEC default; cached after first use.
+ */
 static uint32_t cwist_http_keep_alive_timeout_sec(void) {
     static int cached_timeout = -1;
     if (cached_timeout < 0) {
@@ -638,6 +736,12 @@ static uint32_t cwist_http_keep_alive_timeout_sec(void) {
     return (uint32_t)cached_timeout;
 }
 
+/**
+ * @brief Release an async connection shell and its stashes.
+ *
+ * Decrements the worker load slot and the global inflight count, and frees
+ * rbuf, obuf, and the shell itself. The fd is NOT closed here.
+ */
 static void http_async_conn_release(cwist_http_async_conn_t *conn) {
     if (!conn) return;
     if (g_worker_loads && conn->worker_id < (uint32_t)g_http_thread_count) {
@@ -659,7 +763,7 @@ static void http_async_conn_release(cwist_http_async_conn_t *conn) {
  * the RECV-first arm stays available. */
 #define CWIST_ASYNC_STASH_IDLE 4096
 
-/* Arm the connection's next receive wait.  RX-uring first when the reactor
+/** Arm the connection's next receive wait.  RX-uring first when the reactor
  * has a real io_uring ring: one RECV SQE into rbuf + len whose completion
  * drives the state machine, replacing the one-shot POLL + recv() pair.
  * Falls back to the legacy one-shot POLL on unsupported reactors, low stash
@@ -708,7 +812,7 @@ static bool http_async_arm_wait(int fd, cwist_http_async_conn_t *conn,
     return cwist_reactor_add(reactor, fd, http_async_event_cb, &next, sizeof(next));
 }
 
-/* Run the connection handler and act on its verdict.  Shared by the POLL
+/** Run the connection handler and act on its verdict.  Shared by the POLL
  * entry (http_async_event_cb) and the RX-uring RECV completion entry
  * (http_rx_recv_cb).  Takes over fd/conn ownership in every outcome. */
 static void http_async_dispatch(int fd, cwist_http_async_conn_t *conn,
@@ -773,7 +877,7 @@ static void http_async_dispatch(int fd, cwist_http_async_conn_t *conn,
     }
 }
 
-/* RX-uring RECV completion entry (see reactor_rx.h for the SQE namespace).
+/** RX-uring RECV completion entry (see reactor_rx.h for the SQE namespace).
  * The completion IS the readiness signal: positive res staged bytes into the
  * stash, -EAGAIN means the POLL fallback takes over the wait, 0 is EOF, and
  * any other negative res is a recv error.  Runs on the reactor owner thread
@@ -869,6 +973,13 @@ static void http_rx_recv_cb(void *conn_ptr, int res) {
  * have the fd armed); not part of the public API. Defined below. */
 static void http_async_close(int client_fd, cwist_http_async_conn_t *conn);
 
+/** Reactor one-shot callback for an async connection.
+ *
+ * Reaps keep-alive connections past the idle timeout (draining first so the
+ * teardown is a graceful FIN, not an RST), prefers an RX-uring RECV SQE over
+ * POLL when the ring is free, and otherwise dispatches the connection handler
+ * via http_async_dispatch().
+ */
 static void http_async_event_cb(int fd, void *ctx) {
     http_async_ctx_t *c = (http_async_ctx_t *)ctx;
     cwist_http_async_conn_t *conn = c->conn;
@@ -908,6 +1019,12 @@ typedef struct {
     http_async_ctx_t next;
 } http_async_continuation_t;
 
+/**
+ * @brief Reactor-posted continuation: resume a pipelined async connection.
+ *
+ * Runs on the target reactor thread; closes instead of serving once the app
+ * or the pool is stopping.
+ */
 static void http_async_continue(void *ctx) {
     http_async_continuation_t *continuation = ctx;
     http_async_ctx_t next = continuation->next;
@@ -919,6 +1036,14 @@ static void http_async_continue(void *ctx) {
     http_async_event_cb(next.client_fd, &next);
 }
 
+/**
+ * @brief Re-arm an async connection for its next event.
+ *
+ * Handles deferred-completion shutdown races, peer EOF, pipelined bytes
+ * (posted as a continuation so other connections run between batches), and
+ * RECV-first re-arm with a POLL fallback.
+ * @return false when the connection was closed or the re-arm failed.
+ */
 bool cwist_http_async_rearm(int client_fd, cwist_reactor_t *reactor,
                             cwist_http_async_conn_t *conn) {
     if (client_fd < 0 || !reactor || !conn) return false;
@@ -984,6 +1109,11 @@ bool cwist_http_async_rearm(int client_fd, cwist_reactor_t *reactor,
     return true;
 }
 
+/** Close an async connection: drain pending receive-queue bytes (so the
+ * kernel answers with FIN instead of RST, mirroring
+ * https_connection_teardown()), close the fd, and release the connection
+ * shell.  Must run on the connection's reactor owner thread.
+ */
 static void http_async_close(int client_fd, cwist_http_async_conn_t *conn) {
     if (client_fd >= 0) {
         /* close() on a socket with unread receive-queue data makes the
@@ -1006,6 +1136,12 @@ static void http_async_close(int client_fd, cwist_http_async_conn_t *conn) {
     http_async_conn_release(conn);
 }
 
+/**
+ * @brief Close an async connection whose owning worker pool is gone.
+ *
+ * Marks the load slot index invalid so the teardown does not touch load
+ * counters that may belong to a later pool generation.
+ */
 void cwist_http_async_close_orphan(int client_fd, cwist_http_async_conn_t *conn) {
     /* The worker that owned conn is gone, and its load slot index may belong
      * to a later pool by now: leave the load counters alone. */
@@ -1013,6 +1149,14 @@ void cwist_http_async_close_orphan(int client_fd, cwist_http_async_conn_t *conn)
     http_async_close(client_fd, conn);
 }
 
+/**
+ * @brief Submit a connection to the C1M async reactor pool.
+ *
+ * Enforces the inflight limit (503 + close on overflow), sets the socket
+ * non-blocking, allocates the connection shell, and load-balances with
+ * power-of-two-choices over the per-worker load counters.
+ * @return false when the connection was rejected or the initial arm failed.
+ */
 bool cwist_http_pool_submit_async(int client_fd, cwist_async_handler_t handler, void *ctx) {
     long limit = cwist_http_inflight_limit();
     long inflight = atomic_fetch_add_explicit(&g_http_inflight, 1, memory_order_acq_rel) + 1;
@@ -1120,6 +1264,13 @@ const char *cwist_http_method_to_string(cwist_http_method_t method) {
 #define MAGIC_DELE MAKE_MAGIC4('D', 'E', 'L', 'E')
 #define MAGIC_HEAD MAKE_MAGIC4('H', 'E', 'A', 'D')
 
+/**
+ * @brief Parse a method token (with explicit length) into a method enum.
+ *
+ * Uses a SWAR 4-byte magic fast path for GET/POST/PUT/DELETE/HEAD, then
+ * exact-length comparisons.
+ * @return Matching method, or CWIST_HTTP_UNKNOWN.
+ */
 cwist_http_method_t cwist_http_string_to_method_len(const char *str, size_t len) {
     if (!str || len == 0) return CWIST_HTTP_UNKNOWN;
 
@@ -1161,6 +1312,10 @@ cwist_http_method_t cwist_http_string_to_method_len(const char *str, size_t len)
     return CWIST_HTTP_UNKNOWN;
 }
 
+/**
+ * @brief Parse a NUL-terminated method string into a method enum.
+ * @return Matching method, or CWIST_HTTP_UNKNOWN for NULL/unrecognized input.
+ */
 cwist_http_method_t cwist_http_string_to_method(const char *method_str) {
     if (!method_str) return CWIST_HTTP_UNKNOWN;
     return cwist_http_string_to_method_len(method_str, strlen(method_str));
@@ -1666,6 +1821,11 @@ time_t cwist_http_parse_date(const char *str) {
     return timegm(&tm);
 }
 
+/**
+ * @brief Resolve the peer IP address for a connected client socket.
+ * @param fd Connected client socket descriptor.
+ * @return New sstring with the textual IP; "127.0.0.1" when unavailable.
+ */
 cwist_sstring *cwist_get_client_ip_from_fd(int fd) {
     cwist_sstring *s = cwist_sstring_create();
     cwist_sstring_assign(s, "127.0.0.1");
@@ -1765,6 +1925,12 @@ static void cwist_http_response_release_ptr_body(cwist_http_response *res) {
  * @brief Allocate and initialize a default HTTP response object.
  * @return Newly allocated response, or NULL on allocation failure.
  */
+/**
+ * @brief Shared allocator for cwist_http_response_create{,_in_arena}.
+ * @param arena Arena to carve from (NULL allocates from the heap).
+ * @param arena_borrowed true when the arena is owned by the caller.
+ * @return Newly initialized response, or NULL on allocation failure.
+ */
 static cwist_http_response *cwist_http_response_create_impl(cwist_arena_t *arena,
                                                             bool arena_borrowed) {
     cwist_http_response *res =
@@ -1806,6 +1972,10 @@ static cwist_http_response *cwist_http_response_create_impl(cwist_arena_t *arena
     return res;
 }
 
+/**
+ * @brief Allocate a response backed by its own arena.
+ * @return Newly allocated response, or NULL on failure.
+ */
 cwist_http_response *cwist_http_response_create(void) {
     cwist_arena_t *arena = cwist_arena_create(0);
     cwist_http_response *res = cwist_http_response_create_impl(arena, false);
@@ -1816,6 +1986,11 @@ cwist_http_response *cwist_http_response_create(void) {
     return res;
 }
 
+/**
+ * @brief Allocate a response carved from a caller-owned arena.
+ * @param arena Arena to allocate from; NULL falls back to
+ *        cwist_http_response_create().
+ */
 cwist_http_response *cwist_http_response_create_in_arena(void *arena) {
     if (!arena) return cwist_http_response_create();
     return cwist_http_response_create_impl((cwist_arena_t *)arena, true);
@@ -2135,6 +2310,11 @@ size_t cwist_http_serialize_headers(cwist_http_response *res, char *buf, size_t 
 #if defined(__linux__) && defined(TCP_CORK)
 #define CWIST_TCP_CORK_DEFAULT_BURST (256 * 1024)
 
+/**
+ * @brief Runtime toggle for the TCP_CORK coalescing layer (Linux only).
+ * @return true when CWIST_USE_TCP_CORK is set to a positive value; always
+ *         false on other platforms.
+ */
 bool cwist_tcp_cork_enabled(void) {
     static int enabled = -1; /* benign idempotent race on first use */
     if (enabled < 0) {
@@ -2150,6 +2330,10 @@ bool cwist_tcp_cork_enabled(void) {
     return enabled == 1;
 }
 
+/**
+ * @brief TCP_CORK flush burst size in bytes.
+ * @return The CWIST_TCP_CORK_BURST env value (minimum 16 KiB) or the default.
+ */
 static size_t cwist_tcp_cork_burst(void) {
     static size_t burst = 0;
     if (burst == 0) {
@@ -2165,17 +2349,25 @@ static size_t cwist_tcp_cork_burst(void) {
     return burst;
 }
 
+/**
+ * @brief Set or clear TCP_CORK on a socket.
+ * @return setsockopt(2) result (0 on success).
+ */
 static int cwist_tcp_cork_set(int fd, bool on) {
     int v = on ? 1 : 0;
     return setsockopt(fd, IPPROTO_TCP, TCP_CORK, &v, sizeof(v));
 }
 
-/* Flush pending corked bytes, then re-cork: a burst boundary. */
+/** Flush pending corked bytes, then re-cork: a burst boundary. */
 static void cwist_tcp_cork_flush(int fd) {
     cwist_tcp_cork_set(fd, false);
     cwist_tcp_cork_set(fd, true);
 }
 #else
+/**
+ * @brief TCP_CORK coalescing stub for platforms without TCP_CORK.
+ * @return Always false.
+ */
 bool cwist_tcp_cork_enabled(void) {
     return false;
 }
@@ -2522,6 +2714,9 @@ typedef struct {
 _Static_assert(sizeof(http_parked_write_t) <= CWIST_REACTOR_PAYLOAD_SIZE,
                "parked write state must fit a reactor slot payload");
 
+/**
+ * @brief Absolute write deadline (monotonic seconds) for a parked write.
+ */
 static uint32_t http_parked_write_deadline(void) {
     return cwist_fast_monotonic_sec() + cwist_http_keep_alive_timeout_sec();
 }
@@ -2530,11 +2725,22 @@ static void http_parked_write_cb(int fd, void *ctx);
 
 /* Re-park on a fresh one-shot POLLOUT slot; the slot copies the payload and
  * ownership of buf/state moves with it. False means the caller must finish. */
+/**
+ * @brief Re-park a deferred write on a fresh one-shot POLLOUT slot.
+ * @return false past the deadline or when the slot could not be armed; the
+ *         caller must finish the write path itself.
+ */
 static bool http_parked_rearm(int fd, http_parked_write_t *w) {
     return cwist_fast_monotonic_sec() <= w->deadline_sec &&
            cwist_reactor_add_out(w->reactor, fd, http_parked_write_cb, w, sizeof(*w));
 }
 
+/**
+ * @brief Finish a parked write: release buffers and re-arm or close.
+ *
+ * Re-arms keep-alive only when the body drained fully and the app is still
+ * running; otherwise closes the connection.
+ */
 static void http_parked_write_finish(int fd, http_parked_write_t *w, bool drained) {
     cwist_reactor_t *reactor = w->reactor;
     cwist_http_async_conn_t *conn = w->conn;
@@ -2557,6 +2763,14 @@ static void http_parked_write_finish(int fd, http_parked_write_t *w, bool draine
     }
 }
 
+/**
+ * @brief POLLOUT callback draining a parked (deferred) response write.
+ *
+ * Sends the buffered remainder, the sendfile body (FILE mode), or the
+ * referenced pointer body (BODYREF mode); re-parks on EAGAIN until the
+ * deadline. Frees the park state and re-arms or closes via
+ * http_parked_write_finish().
+ */
 static void http_parked_write_cb(int fd, void *ctx) {
     http_parked_write_t *w = (http_parked_write_t *)ctx;
     int flags = 0;
@@ -2874,6 +3088,15 @@ static cwist_file_begin_result_t cwist_http_file_begin(int client_fd, cwist_http
 #endif
 }
 
+/**
+ * @brief Send a response on the async path, parking the unsent remainder on
+ * EAGAIN instead of blocking the reactor thread.
+ *
+ * Pointer bodies park by reference (ownership moves to the park state);
+ * other bodies deep-copy the unsent remainder. File streams use the
+ * non-blocking sendfile path. On completion the connection is re-armed for
+ * keep-alive or closed.
+ */
 void cwist_http_async_send_response(int client_fd, cwist_http_response *res,
                                     cwist_reactor_t *reactor, cwist_http_async_conn_t *conn,
                                     bool keep_alive, bool head_only) {
@@ -2990,6 +3213,11 @@ void cwist_http_async_send_response(int client_fd, cwist_http_response *res,
     }
 }
 
+/**
+ * @brief Async send variant that reports the outcome to the caller instead of
+ * re-arming or closing the connection itself (deferred-completion handoff).
+ * @return KEEPALIVE / DEFERRED / CLOSE describing the connection's fate.
+ */
 cwist_async_send_status_t cwist_http_send_response_async(int client_fd, cwist_http_response *res,
                                                          cwist_http_async_conn_t *conn,
                                                          bool keep_alive, bool head_only) {
@@ -3104,6 +3332,11 @@ cwist_async_send_status_t cwist_http_send_response_async(int client_fd, cwist_ht
  * through the bounded poll wait of cwist_http_sendmsg_all instead, keeping
  * byte order without unbounded buffering. */
 
+/**
+ * @brief Append bytes to a connection's coalesced-output stash.
+ * @return 0 on success, -1 when the data would exceed the coalesce cap or
+ *         the stash could not be grown.
+ */
 int cwist_http_coalesce_append(cwist_http_async_conn_t *conn, const void *data, size_t len) {
     if (len == 0) return 0;
     if (conn->olen + len > CWIST_HTTP_COALESCE_MAX) return -1;
@@ -3123,6 +3356,13 @@ int cwist_http_coalesce_append(cwist_http_async_conn_t *conn, const void *data, 
     return 0;
 }
 
+/**
+ * @brief Flush the coalesced-output stash with one speculative write.
+ *
+ * On a partial write the unsent remainder is deep-copied into the parked
+ * writer, which re-arms or closes the connection when it drains.
+ * @return DONE when fully written, PARKED when deferred, ERROR otherwise.
+ */
 cwist_coalesce_flush_status_t
 cwist_http_coalesce_flush(int client_fd, cwist_http_async_conn_t *conn, bool keep_alive) {
     if (!conn || conn->olen == 0) return CWIST_COALESCE_FLUSH_DONE;
@@ -3175,6 +3415,10 @@ cwist_http_coalesce_flush(int client_fd, cwist_http_async_conn_t *conn, bool kee
     return CWIST_COALESCE_FLUSH_ERROR;
 }
 
+/**
+ * @brief Flush the coalesced-output stash, blocking in poll() until drained.
+ * @return 0 on success, -1 on send failure.
+ */
 int cwist_http_coalesce_flush_blocking(int client_fd, cwist_http_async_conn_t *conn) {
     if (!conn || conn->olen == 0) return 0;
     struct iovec iov = {.iov_base = conn->obuf, .iov_len = conn->olen};
@@ -3190,6 +3434,10 @@ int cwist_http_coalesce_flush_blocking(int client_fd, cwist_http_async_conn_t *c
     return rc;
 }
 
+/**
+ * @brief Build a minimal text error response into the coalesce stash.
+ * @return 0 on success, -1 when the response could not be appended.
+ */
 int cwist_http_coalesce_error_response(cwist_http_async_conn_t *conn, int status) {
     const char *reason = cwist_http_status_reason(status);
     if (!reason) reason = "Error";
@@ -3204,6 +3452,15 @@ int cwist_http_coalesce_error_response(cwist_http_async_conn_t *conn, int status
     return cwist_http_coalesce_append(conn, buf, len);
 }
 
+/**
+ * @brief Coalescing variant of the async send: serialize small responses
+ * directly into the connection's output stash so one reactor turn flushes
+ * many responses with a single write.
+ *
+ * Oversized responses, cap pressure, and file streams drain through the
+ * bounded-blocking or parked paths instead of unbounded buffering.
+ * @return KEEPALIVE / DEFERRED / CLOSE describing the connection's fate.
+ */
 cwist_async_send_status_t cwist_http_send_response_coalesced(int client_fd,
                                                              cwist_http_response *res,
                                                              cwist_http_async_conn_t *conn,
@@ -3387,6 +3644,10 @@ cwist_async_send_status_t cwist_http_send_response_coalesced(int client_fd,
     return keep_alive ? CWIST_ASYNC_SEND_KEEPALIVE : CWIST_ASYNC_SEND_CLOSE;
 }
 
+/**
+ * @brief Map an HTTP status code to its RFC reason phrase.
+ * @return Static reason phrase, or NULL for unknown codes.
+ */
 const char *cwist_http_status_reason(int status) {
     switch (status) {
         case 100: return "Continue";
@@ -3822,6 +4083,10 @@ cwist_http_parse_request_with_header_end(const char *raw_request, size_t raw_len
     return req;
 }
 
+/**
+ * @brief Parse a NUL-terminated raw HTTP request buffer.
+ * @return Parsed request, or NULL when no header terminator exists.
+ */
 cwist_http_request *cwist_http_parse_request(const char *raw_request) {
     if (!raw_request) return NULL;
     size_t raw_len = strlen(raw_request);
@@ -3830,6 +4095,10 @@ cwist_http_request *cwist_http_parse_request(const char *raw_request) {
     return cwist_http_parse_request_with_header_end(raw_request, raw_len, header_end, NULL);
 }
 
+/**
+ * @brief Parse a raw HTTP request buffer with an explicit length.
+ * @return Parsed request, or NULL when no header terminator exists.
+ */
 cwist_http_request *cwist_http_parse_request_len(const char *buf, size_t len) {
     if (!buf || len == 0) return NULL;
     const char *header_end = cwist_simd_find_crlfcrlf(buf, len);
@@ -3837,6 +4106,14 @@ cwist_http_request *cwist_http_parse_request_len(const char *buf, size_t len) {
     return cwist_http_parse_request_with_header_end(buf, len, header_end, NULL);
 }
 
+/**
+ * @brief Serialize a full response (headers + body) into a heap buffer.
+ *
+ * Streaming responses are auto-finalized so the chunked terminator is
+ * present even when the handler skipped cwist_http_response_stream_end().
+ * @return 0 with @p out and @p out_len set, or -1 (invalid input, file-stream
+ *         body, or allocation failure).
+ */
 int cwist_http_response_serialize(cwist_http_response *res, char **out, size_t *out_len) {
     if (!res || !out || !out_len) return -1;
     if (res->use_file_stream) return -1; /* streaming bodies need a socket */
@@ -3872,7 +4149,7 @@ int cwist_http_response_serialize(cwist_http_response *res, char **out, size_t *
 
 /* --- Streaming producer (issue #201 Phase 1) ------------------------------ */
 
-/* Push everything stream_buf holds past stream_flushed to the live sink,
+/** Push everything stream_buf holds past stream_flushed to the live sink,
  * serializing the head first (with Transfer-Encoding: chunked) on the first
  * call. Returns 0 on success, -1 when the sink rejects a write. */
 static int cwist_response_stream_flush(cwist_http_response *res) {
@@ -3894,6 +4171,13 @@ static int cwist_response_stream_flush(cwist_http_response *res) {
     return 0;
 }
 
+/**
+ * @brief Switch a response to chunked streaming mode.
+ *
+ * Discards any body assigned before the switch. Incompatible with pointer
+ * or file-stream bodies.
+ * @return 0 on success, -1 otherwise.
+ */
 int cwist_http_response_stream_begin(cwist_http_response *res) {
     if (!res || res->stream_mode || res->is_ptr_body || res->use_file_stream) return -1;
     res->stream_mode = true;
@@ -3903,6 +4187,13 @@ int cwist_http_response_stream_begin(cwist_http_response *res) {
     return 0;
 }
 
+/**
+ * @brief Append one data chunk to a streaming response.
+ *
+ * Frames the chunk (hex length prefix / CRLF suffix) and flushes through the
+ * sink. A sink failure marks the stream failed.
+ * @return 0 on success, -1 on error.
+ */
 int cwist_http_response_stream_write(cwist_http_response *res, const char *data, size_t len) {
     if (!res || !res->stream_mode || res->stream_ended) return -1;
     if (!data) return -1;
@@ -3928,6 +4219,11 @@ int cwist_http_response_stream_write(cwist_http_response *res, const char *data,
     return 0;
 }
 
+/**
+ * @brief Terminate a streaming response with the final zero-length chunk and
+ * flush.
+ * @return 0 on success, -1 on error.
+ */
 int cwist_http_response_stream_end(cwist_http_response *res) {
     if (!res || !res->stream_mode || res->stream_ended) return -1;
     if (!res->stream_buf) {
@@ -3984,6 +4280,13 @@ static bool http_chunk_append(cwist_sstring *out, const char *data, size_t len) 
     return ok;
 }
 
+/**
+ * @brief Blocking read and reassembly of a chunked transfer-encoded body.
+ *
+ * Consumes the chunked message from buf (recv/poll as needed), compacts the
+ * leftover bytes to the buffer head, and appends decoded chunks to @p out.
+ * @return 0 on success, -1 on malformed framing, overflow, or I/O error.
+ */
 static int http_read_chunked_body(int client_fd, char *buf, size_t *avail, size_t buf_cap,
                                   cwist_sstring *out) {
     size_t offset = 0;
@@ -4083,6 +4386,16 @@ static int http_read_chunked_body(int client_fd, char *buf, size_t *avail, size_
     return 0;
 }
 
+/**
+ * @brief Blocking read of one full request from a classic-pool connection.
+ *
+ * Bounds the header read by CWIST_HTTP_HEADERS_TIMEOUT_MS, answers a
+ * validated Expect: 100-continue, then completes the body per Content-Length
+ * or chunked framing. Leftover pipelined bytes are compacted into read_buf
+ * and *buf_len is updated.
+ * @return Parsed request, or NULL with *err_out set (defaults to
+ *         CWIST_HTTP_PARSE_EOF).
+ */
 cwist_http_request *cwist_http_receive_request(int client_fd, char *read_buf, size_t buf_size,
                                                size_t *buf_len, cwist_http_parse_error_t *err_out) {
     if (err_out) *err_out = CWIST_HTTP_PARSE_EOF;
@@ -4271,7 +4584,7 @@ cwist_http_request *cwist_http_receive_request(int client_fd, char *read_buf, si
  * the copy is cheaper than allocating the connection a fresh stash. */
 #define CWIST_HTTP_BODY_ZC_MIN (16 * 1024)
 
-/* Grow the recv stash.  Returns false when the hard cap is reached. */
+/** Grow the recv stash.  Returns false when the hard cap is reached. */
 static bool http_async_stash_grow(cwist_http_async_conn_t *conn, size_t need) {
     /* RX-uring invariant: the stash buffer must not move while a RECV SQE
      * references it.  Growth only happens while serving (in-flight RECV
@@ -4543,6 +4856,10 @@ static const cwist_mime_entry CWIST_MIME_TABLE[] = {{".html", "text/html; charse
                                                     {".txt", "text/plain; charset=utf-8"},
                                                     {".ico", "image/x-icon"}};
 
+/**
+ * @brief Guess a MIME type from a filename extension.
+ * @return Static MIME string; "application/octet-stream" when unknown.
+ */
 static const char *cwist_guess_mime(const char *file_path) {
     if (!file_path) return "application/octet-stream";
     const char *dot = strrchr(file_path, '.');

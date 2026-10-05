@@ -12,6 +12,10 @@
 
 #define CWIST_CONFIG_BUCKETS 64
 
+/** @brief Hash a config key using the djb2 algorithm.
+ * @param key NUL-terminated key string.
+ * @return Hash value, used modulo the bucket count.
+ */
 static size_t cwist_config_hash(const char *key) {
     size_t hash = 5381;
     int c;
@@ -19,6 +23,9 @@ static size_t cwist_config_hash(const char *key) {
     return hash;
 }
 
+/** @brief Create an empty config store.
+ * @return Newly allocated config on success, NULL if allocation fails.
+ */
 cwist_config *cwist_config_create(void) {
     cwist_config *cfg = (cwist_config *)cwist_alloc(sizeof(cwist_config));
     if (!cfg) return NULL;
@@ -32,6 +39,9 @@ cwist_config *cwist_config_create(void) {
     return cfg;
 }
 
+/** @brief Free a config store and all of its key/value entries.
+ * @param cfg Config to destroy; NULL is accepted and ignored.
+ */
 void cwist_config_destroy(cwist_config *cfg) {
     if (!cfg) return;
     for (size_t i = 0; i < cfg->bucket_count; i++) {
@@ -48,6 +58,11 @@ void cwist_config_destroy(cwist_config *cfg) {
     cwist_free(cfg);
 }
 
+/** @brief Set a config key to a value, replacing any existing entry.
+ * @param cfg Config store; NULL is accepted and ignored.
+ * @param key Key to set; NULL is accepted and ignored. A copy is stored.
+ * @param value Value to set; NULL is stored as an empty string. A copy is stored.
+ */
 void cwist_config_set(cwist_config *cfg, const char *key, const char *value) {
     if (!cfg || !key) return;
     size_t idx = cwist_config_hash(key) % cfg->bucket_count;
@@ -67,6 +82,13 @@ void cwist_config_set(cwist_config *cfg, const char *key, const char *value) {
     cfg->buckets[idx] = bucket;
 }
 
+/** @brief Look up the value for a key.
+ * @param cfg Config store; NULL is accepted.
+ * @param key Key to look up; NULL is accepted.
+ * @return Pointer to the stored value string, or NULL if the key is not found
+ *         or the arguments are invalid. The pointer is owned by the config and
+ *         must not be freed.
+ */
 const char *cwist_config_get(cwist_config *cfg, const char *key) {
     if (!cfg || !key) return NULL;
     size_t idx = cwist_config_hash(key) % cfg->bucket_count;
@@ -80,6 +102,13 @@ const char *cwist_config_get(cwist_config *cfg, const char *key) {
     return NULL;
 }
 
+/** @brief Get a config value parsed as an integer.
+ * @param cfg Config store.
+ * @param key Key to look up.
+ * @param default_val Value returned when the key is missing or is not a
+ *                    well-formed base-10 integer.
+ * @return The parsed integer, or @p default_val on missing/malformed values.
+ */
 int cwist_config_get_int(cwist_config *cfg, const char *key, int default_val) {
     const char *val = cwist_config_get(cfg, key);
     if (!val) return default_val;
@@ -89,6 +118,15 @@ int cwist_config_get_int(cwist_config *cfg, const char *key, int default_val) {
     return (int)l;
 }
 
+/** @brief Get a config value parsed as a boolean.
+ * Accepted true spellings (case-insensitive): "true", "1", "yes".
+ * Accepted false spellings (case-insensitive): "false", "0", "no".
+ * @param cfg Config store.
+ * @param key Key to look up.
+ * @param default_val Value returned when the key is missing or matches no
+ *                    recognized spelling.
+ * @return The parsed boolean, or @p default_val on unrecognized values.
+ */
 bool cwist_config_get_bool(cwist_config *cfg, const char *key, bool default_val) {
     const char *val = cwist_config_get(cfg, key);
     if (!val) return default_val;
@@ -99,6 +137,13 @@ bool cwist_config_get_bool(cwist_config *cfg, const char *key, bool default_val)
     return default_val;
 }
 
+/** @brief Load key/value pairs from the process environment into the config.
+ * Entries without '=' are skipped. If @p prefix is non-NULL and non-empty,
+ * only variables starting with the prefix are loaded; the prefix is kept in
+ * the stored key.
+ * @param cfg Config store; NULL is accepted and ignored.
+ * @param prefix Optional key prefix filter; NULL or empty matches all.
+ */
 void cwist_config_load_env(cwist_config *cfg, const char *prefix) {
     if (!cfg) return;
     extern char **environ;
@@ -117,6 +162,14 @@ void cwist_config_load_env(cwist_config *cfg, const char *prefix) {
     }
 }
 
+/** @brief Load key/value pairs from a simple properties-style file.
+ * Each non-blank, non-comment line must be `key=value`. Leading/trailing
+ * whitespace around keys and values is trimmed, and a value wrapped in double
+ * quotes is unquoted. Lines starting with '#' and lines without '=' are
+ * skipped. If the file cannot be opened, nothing is loaded.
+ * @param cfg Config store; NULL is accepted and ignored.
+ * @param path Path of the file to load; NULL is accepted and ignored.
+ */
 void cwist_config_load_file(cwist_config *cfg, const char *path) {
     if (!cfg || !path) return;
     FILE *f = fopen(path, "r");
