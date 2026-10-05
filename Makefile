@@ -1256,13 +1256,18 @@ install: $(LIB_NAME) $(PC_FILE)
 	install -m 755 tools/cli/cwist $(DESTDIR)$(BINDIR)/cwist
 	@echo "Installation complete.  Compile with: pkg-config --cflags --libs cwist"
 
+# libusrsctp.a is installed with the other external archives when
+# CWIST_WEBRTC=1; list it in Libs so programs using the WebRTC API link.
+PC_WEBRTC_LIBS = $(if $(filter 1,$(CWIST_WEBRTC)),-lusrsctp,)
+
 $(PC_FILE): cwist.pc.in
-	sed -e 's|@PREFIX@|$(PREFIX)|g' -e 's|@VERSION@|$(VERSION)|g' cwist.pc.in > $@
+	sed -e 's|@PREFIX@|$(PREFIX)|g' -e 's|@VERSION@|$(VERSION)|g' \
+	    -e 's|@WEBRTC_LIBS@ |$(if $(PC_WEBRTC_LIBS),$(PC_WEBRTC_LIBS) ,)|g' cwist.pc.in > $@
 
 uninstall:
 	@echo "Uninstalling cwist..."
 	rm -f $(DESTDIR)$(LIBDIR)/$(LIB_NAME)
-	rm -f $(DESTDIR)$(DEPSDIR)/liburiparser.a $(DESTDIR)$(DEPSDIR)/libcjson.a $(DESTDIR)$(DEPSDIR)/libttak.a $(DESTDIR)$(DEPSDIR)/libnats_static.a $(DESTDIR)$(DEPSDIR)/liblsquic.a $(DESTDIR)$(DEPSDIR)/libssl.a $(DESTDIR)$(DEPSDIR)/libcrypto.a
+	rm -f $(DESTDIR)$(DEPSDIR)/liburiparser.a $(DESTDIR)$(DEPSDIR)/libcjson.a $(DESTDIR)$(DEPSDIR)/libttak.a $(DESTDIR)$(DEPSDIR)/libnats_static.a $(DESTDIR)$(DEPSDIR)/liblsquic.a $(DESTDIR)$(DEPSDIR)/libssl.a $(DESTDIR)$(DEPSDIR)/libcrypto.a $(DESTDIR)$(DEPSDIR)/libusrsctp.a
 	rmdir $(DESTDIR)$(DEPSDIR) 2>/dev/null || true
 	rm -rf $(DESTDIR)$(INCLUDEDIR)/cwist
 	rm -f $(INSTALL_PCDIR)/$(PC_FILE)
