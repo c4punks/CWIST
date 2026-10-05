@@ -9,20 +9,37 @@
 #include <cwist/net/http/http.h>
 #include <cwist/core/sstring/sstring.h>
 #include <cwist/core/mem/alloc.h>
+#include <cwist/sys/metrics/metrics.h>
 #include <stdio.h>
 #include <string.h>
 #include <strings.h>
 #include <assert.h>
 
 /* Minimal stubs for unused handlers in middleware.c */
-void *cwist_metrics_registry(void) { return NULL; }
-void cwist_metric_inc(void *m) { (void)m; }
-void cwist_metric_add(void *m, double v) { (void)m; (void)v; }
-cwist_sstring *cwist_get_client_ip_from_fd(int fd) { (void)fd; return NULL; }
-const char *cwist_http_method_to_string(cwist_http_method_t m) { (void)m; return "GET"; }
+cwist_metrics_registry_t *cwist_metrics_registry(void) {
+    return NULL;
+}
+void cwist_metric_inc(cwist_metrics_registry_t *reg, cwist_metric_id_t id) {
+    (void)reg;
+    (void)id;
+}
+void cwist_metric_add(cwist_metrics_registry_t *reg, cwist_metric_id_t id, uintmax_t delta) {
+    (void)reg;
+    (void)id;
+    (void)delta;
+}
+cwist_sstring *cwist_get_client_ip_from_fd(int fd) {
+    (void)fd;
+    return NULL;
+}
+const char *cwist_http_method_to_string(cwist_http_method_t m) {
+    (void)m;
+    return "GET";
+}
 
 /* Minimal HTTP header / request / response helpers */
-cwist_error_t cwist_http_header_add(cwist_http_header_node **head, const char *key, const char *value) {
+cwist_error_t cwist_http_header_add(cwist_http_header_node **head, const char *key,
+                                    const char *value) {
     cwist_http_header_node *node = cwist_alloc(sizeof(*node));
     node->key = cwist_sstring_create();
     cwist_sstring_assign(node->key, key);
@@ -67,11 +84,15 @@ static void dummy_next(cwist_http_request *req, cwist_http_response *res) {
 static void test_jwt_middleware_secret_dedup(void) {
     printf("test_jwt_middleware_secret_dedup...\n");
 
-    char secret1[32];
-    char secret2[32];
+    /* cwist_mw_jwt_auth borrows the secret pointer (the static registration
+     * table outlives any single test), so the buffers must not be stack
+     * locals of this frame: a later registration call strcmp()s every
+     * stored secret, which ASAN flags as stack-use-after-scope. */
+    static char secret1[32];
+    static char secret2[32];
     strcpy(secret1, "secret_xyz");
     strcpy(secret2, "secret_xyz");
-    assert(secret1 != secret2); /* Different pointers with identical content */
+    assert(&secret1[0] != &secret2[0]); /* Different pointers with identical content */
 
     cwist_middleware_func mw1 = cwist_mw_jwt_auth(secret1);
     cwist_middleware_func mw2 = cwist_mw_jwt_auth(secret2);
