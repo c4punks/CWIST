@@ -22,6 +22,8 @@
 #include <string.h>
 #include <usrsctp.h>
 
+#include <cwist/core/mem/alloc.h>
+
 #define DCEP_ACK 0x02
 #define DCEP_OPEN 0x03
 
@@ -109,7 +111,7 @@ static int on_incoming(struct socket *sock, union sctp_sockstore addr, void *dat
     if (!conn || !data)
         return 1;
     dispatch_message(conn, rcv.rcv_sid, ntohl(rcv.rcv_ppid), (const uint8_t *)data, datalen);
-    free(data);
+    cwist_free(data);
     return 1;
 }
 
@@ -161,7 +163,7 @@ int cwist_sctp_conn_open(struct cwist_webrtc_conn *conn) {
     usrsctp_setsockopt(conn->sctp_sock, IPPROTO_SCTP, SCTP_RECVRCVINFO, &on, sizeof(on));
     usrsctp_setsockopt(conn->sctp_sock, IPPROTO_SCTP, SCTP_NODELAY, &on, sizeof(on));
 
-    conn->ch_state = calloc(1, CH_STATE_BYTES);
+    conn->ch_state = cwist_malloc(1, CH_STATE_BYTES);
     if (!conn->ch_state) {
         usrsctp_close(conn->sctp_sock);
         conn->sctp_sock = NULL;
@@ -177,7 +179,7 @@ int cwist_sctp_conn_open(struct cwist_webrtc_conn *conn) {
     local.sconn_addr = conn;
     if (usrsctp_bind(conn->sctp_sock, (struct sockaddr *)&local, sizeof(local)) < 0) {
         usrsctp_deregister_address(conn);
-        free(conn->ch_state);
+        cwist_free(conn->ch_state);
         conn->ch_state = NULL;
         usrsctp_close(conn->sctp_sock);
         conn->sctp_sock = NULL;
@@ -188,7 +190,7 @@ int cwist_sctp_conn_open(struct cwist_webrtc_conn *conn) {
         /* Passive side must accept the incoming SCTP association. */
         if (usrsctp_listen(conn->sctp_sock, 1) < 0) {
             usrsctp_deregister_address(conn);
-            free(conn->ch_state);
+            cwist_free(conn->ch_state);
             conn->ch_state = NULL;
             usrsctp_close(conn->sctp_sock);
             conn->sctp_sock = NULL;
@@ -207,7 +209,7 @@ int cwist_sctp_conn_open(struct cwist_webrtc_conn *conn) {
         if (usrsctp_connect(conn->sctp_sock, (struct sockaddr *)&remote, sizeof(remote)) < 0 &&
             errno != EINPROGRESS) {
             usrsctp_deregister_address(conn);
-            free(conn->ch_state);
+            cwist_free(conn->ch_state);
             conn->ch_state = NULL;
             usrsctp_close(conn->sctp_sock);
             conn->sctp_sock = NULL;
@@ -228,7 +230,7 @@ void cwist_sctp_conn_close(struct cwist_webrtc_conn *conn) {
     }
     if (conn->ch_state) {
         usrsctp_deregister_address(conn);
-        free(conn->ch_state);
+        cwist_free(conn->ch_state);
         conn->ch_state = NULL;
     }
 }
