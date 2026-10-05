@@ -148,5 +148,20 @@
     "http_big_gbps": 7.96,
     "https_churn_ratio": 0.071,
     "https_big_ratio": 0.423
+  },
+  {
+    "timestamp": "2026-10-05T11:39:12+0000",
+    "runner_hw": "4 vCPU | AMD EPYC 9V45 96-Core Processor",
+    "tls_rtt_p50_ms": 0.069,
+    "tls_rtt_p90_ms": 0.115,
+    "https_churn_rps": 2058.5,
+    "http_churn_rps": 15395.04,
+    "https_keepalive_rps": 135589.17,
+    "http_keepalive_rps": 204884.7,
+    "https_keepalive_ratio": 0.662,
+    "https_big_gbps": 4.15,
+    "http_big_gbps": 8.25,
+    "https_churn_ratio": 0.134,
+    "https_big_ratio": 0.503
   }
 ]
