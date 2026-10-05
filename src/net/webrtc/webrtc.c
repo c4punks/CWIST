@@ -134,14 +134,14 @@ static void conn_free(struct cwist_webrtc_conn *conn) {
     while (conn->pending_head) {
         pending_send *p = conn->pending_head;
         conn->pending_head = p->next;
-        free(p);
+        cwist_free(p);
     }
-    free(conn);
+    cwist_free(conn);
 }
 
 static struct cwist_webrtc_conn *conn_new(cwist_webrtc_ctx *ctx,
                                           const struct sockaddr_in *remote, int is_server_role) {
-    struct cwist_webrtc_conn *conn = calloc(1, sizeof(*conn));
+    struct cwist_webrtc_conn *conn = cwist_malloc(1, sizeof(*conn));
     if (!conn)
         return NULL;
     conn->ctx = ctx;
@@ -252,7 +252,7 @@ static void conn_service(struct cwist_webrtc_conn *conn) {
                 conn->pending_head = p->next;
                 if (!conn->pending_head)
                     conn->pending_tail = NULL;
-                free(p);
+                cwist_free(p);
             }
         }
     }
@@ -444,7 +444,7 @@ cwist_webrtc_ctx *cwist_webrtc_ctx_new(uint16_t port) {
     if (cwist_sctp_global_init() < 0)
         return NULL;
 
-    cwist_webrtc_ctx *ctx = calloc(1, sizeof(*ctx));
+    cwist_webrtc_ctx *ctx = cwist_malloc(1, sizeof(*ctx));
     if (!ctx)
         return NULL;
     ctx->udp_fd = -1;
@@ -555,7 +555,7 @@ int cwist_webrtc_conn_send(cwist_webrtc_conn *conn, uint16_t channel_id, const u
                            size_t len, cwist_webrtc_data_type type) {
     if (len > 1 << 20)
         return -1;
-    pending_send *p = malloc(sizeof(*p) + len);
+    pending_send *p = cwist_alloc(sizeof(*p) + len);
     if (!p)
         return -1;
     p->next = NULL;
@@ -609,7 +609,7 @@ void cwist_webrtc_ctx_free(cwist_webrtc_ctx *ctx) {
     if (ctx->pkey)
         EVP_PKEY_free(ctx->pkey);
     pthread_mutex_destroy(&ctx->lock);
-    free(ctx);
+    cwist_free(ctx);
 }
 
 /* ---- internal client-role dialer (loopback tests) ---- */
