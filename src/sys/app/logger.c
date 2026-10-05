@@ -13,10 +13,20 @@ static const char *level_strings[] = {"DEBUG", "INFO", "WARN", "ERROR"};
 static const char *level_colors[] = {"\033[36m", "\033[32m", "\033[33m", "\033[31m"};
 static const char *color_reset = "\033[0m";
 
+/** @brief Returns the output stream for the given log level.
+ * @param level Log level.
+ * @return stderr for WARN and ERROR, stdout otherwise.
+ */
 static FILE *level_file(cwist_log_level_t level) {
     return level >= CWIST_LOG_WARN ? stderr : stdout;
 }
 
+/** @brief Creates a logger instance.
+ * @param name Logger name copied into the instance; NULL selects "cwist".
+ * @return Newly allocated logger on success, NULL on allocation failure.
+ * @note Ownership of the returned logger transfers to the caller; release it
+ *       with cwist_logger_destroy().
+ */
 cwist_logger *cwist_logger_create(const char *name) {
     cwist_logger *log = (cwist_logger *)cwist_alloc(sizeof(cwist_logger));
     if (!log) return NULL;
@@ -26,20 +36,39 @@ cwist_logger *cwist_logger_create(const char *name) {
     return log;
 }
 
+/** @brief Destroys a logger instance and frees its name.
+ * @param log Logger to free; NULL is safely ignored.
+ */
 void cwist_logger_destroy(cwist_logger *log) {
     if (!log) return;
     cwist_free(log->name);
     cwist_free(log);
 }
 
+/** @brief Sets the minimum log level that will be emitted.
+ * @param log Logger to configure; NULL is safely ignored.
+ * @param level New minimum level; messages below it are suppressed.
+ */
 void cwist_logger_set_level(cwist_logger *log, cwist_log_level_t level) {
     if (log) log->level = level;
 }
 
+/** @brief Enables or disables ANSI color output in log lines.
+ * @param log Logger to configure; NULL is safely ignored.
+ * @param enabled true to colorize level prefixes, false for plain output.
+ */
 void cwist_logger_set_colors(cwist_logger *log, bool enabled) {
     if (log) log->use_colors = enabled;
 }
 
+/** @brief Logs a formatted message at the given level.
+ * @param log Logger to log through; NULL is safely ignored.
+ * @param level Level of the message; messages below the logger's level are suppressed.
+ * @param fmt printf-style format string.
+ * @note The message is written to stdout for levels below WARN and to stderr
+ *       otherwise, with a timestamp, level tag, and logger name prefix, followed by a newline.
+ *       Not thread-safe; localtime() and the shared FILE streams are used.
+ */
 void cwist_logger_log(cwist_logger *log, cwist_log_level_t level, const char *fmt, ...) {
     if (!log || level < log->level) return;
     FILE *out = level_file(level);
@@ -61,6 +90,11 @@ void cwist_logger_log(cwist_logger *log, cwist_log_level_t level, const char *fm
     fflush(out);
 }
 
+/** @brief Logs a formatted message at DEBUG level.
+ * @param log Logger to log through; NULL is safely ignored.
+ * @param fmt printf-style format string.
+ * @note Currently emits only an empty prefix line; see the note in the body.
+ */
 void cwist_logger_debug(cwist_logger *log, const char *fmt, ...) {
     if (!log || CWIST_LOG_DEBUG < log->level) return;
     va_list args;
@@ -72,6 +106,10 @@ void cwist_logger_debug(cwist_logger *log, const char *fmt, ...) {
        but here we just forward via the variadic macro pattern in header. */
 }
 
+/** @brief Logs a formatted message at INFO level on stdout.
+ * @param log Logger to log through; NULL is safely ignored.
+ * @param fmt printf-style format string.
+ */
 void cwist_logger_info(cwist_logger *log, const char *fmt, ...) {
     if (!log || CWIST_LOG_INFO < log->level) return;
     va_list args;
@@ -93,6 +131,10 @@ void cwist_logger_info(cwist_logger *log, const char *fmt, ...) {
     fflush(out);
 }
 
+/** @brief Logs a formatted message at WARN level on stderr.
+ * @param log Logger to log through; NULL is safely ignored.
+ * @param fmt printf-style format string.
+ */
 void cwist_logger_warn(cwist_logger *log, const char *fmt, ...) {
     if (!log || CWIST_LOG_WARN < log->level) return;
     va_list args;
@@ -114,6 +156,10 @@ void cwist_logger_warn(cwist_logger *log, const char *fmt, ...) {
     fflush(out);
 }
 
+/** @brief Logs a formatted message at ERROR level on stderr.
+ * @param log Logger to log through; NULL is safely ignored.
+ * @param fmt printf-style format string.
+ */
 void cwist_logger_error(cwist_logger *log, const char *fmt, ...) {
     if (!log || CWIST_LOG_ERROR < log->level) return;
     va_list args;

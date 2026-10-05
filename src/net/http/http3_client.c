@@ -53,6 +53,11 @@
 static pthread_mutex_t g_h3c_global_mtx = PTHREAD_MUTEX_INITIALIZER;
 static int g_h3c_global_ref = 0;
 
+/**
+ * @brief Initialize lsquic global client state on first use.
+ * Thread-safe via g_h3c_global_mtx; reference-counted so paired calls with
+ * h3c_global_cleanup() nest correctly.
+ */
 static void h3c_global_init(void) {
     pthread_mutex_lock(&g_h3c_global_mtx);
     if (g_h3c_global_ref == 0) {
@@ -62,6 +67,11 @@ static void h3c_global_init(void) {
     pthread_mutex_unlock(&g_h3c_global_mtx);
 }
 
+/**
+ * @brief Release one reference to lsquic global client state.
+ * Runs lsquic_global_cleanup() when the last reference is dropped.
+ * Safe to call more often than h3c_global_init().
+ */
 static void h3c_global_cleanup(void) {
     pthread_mutex_lock(&g_h3c_global_mtx);
     if (g_h3c_global_ref > 0) {
@@ -147,6 +157,18 @@ struct cwist_http3_client {
 /* Packet-out callback                                                */
 /* ------------------------------------------------------------------ */
 
+/**
+ * @brief lsquic packets-out callback: send queued QUIC packets via UDP.
+ * @param ctx Client handle (ea_packets_out_ctx).
+ * @param specs Array of output specs; each carries iovecs and a destination.
+ * @param n_specs Number of entries in @p specs.
+ * @return Number of specs consumed (send progress), or -1 on a send error
+ *         other than would-block.
+ * @retval -1 A sendmsg() error other than EAGAIN/EWOULDBLOCK occurred.
+ *
+ * The UDP socket is connected once the peer is known, so the destination
+ * address is only attached while the socket is still unconnected.
+ */
 static int h3c_packets_out(void *ctx, const struct lsquic_out_spec *specs, unsigned n_specs) {
     cwist_http3_client *client = ctx;
     unsigned i;
@@ -187,6 +209,11 @@ typedef struct h3c_hset {
     size_t decode_off;
 } h3c_hset_t;
 
+/**
+ * @brief lsquic header-set callback: allocate a new header set for a stream.
+ * @return Newly calloc'ed h3c_hset_t, or NULL on allocation failure
+ *         (ownership passes to lsquic and later h3c_hsi_discard()).
+ */
 static void *h3c_hsi_create(void *hsi_ctx, lsquic_stream_t *stream, int is_push_promise) {
     (void)hsi_ctx;
     (void)stream;
@@ -195,6 +222,18 @@ static void *h3c_hsi_create(void *hsi_ctx, lsquic_stream_t *stream, int is_push_
     return hset;
 }
 
+/**
+ * @brief lsquic header-set callback: reserve decode space for one header.
+ * @param hset_p h3c_hset_t allocated by h3c_hsi_create().
+ * @param xhdr Non-NULL when lsquic retries the same header with a larger
+ *             required value space; the decoded name must still fit.
+ * @param req_space Required value capacity in bytes.
+ * @return Prepared lsxpack_header slot, or NULL if the header set is full or
+ *         the requested space does not fit in the shared decode buffer.
+ *
+ * Header name/value slices are carved out of a single 64 KiB decode buffer
+ * shared by all headers in the set.
+ */
 static struct lsxpack_header *h3c_hsi_prepare(void *hset_p, struct lsxpack_header *xhdr,
                                               size_t req_space) {
     h3c_hset_t *hset = hset_p;
@@ -220,6 +259,12 @@ static struct lsxpack_header *h3c_hsi_prepare(void *hset_p, struct lsxpack_heade
     return &hset->headers[hset->count];
 }
 
+/**
+ * @brief lsquic header-set callback: commit a fully decoded header.
+ * @return 0 on success; -1 if the decoded header no longer fits the decode
+ *         buffer.
+ * A NULL @p xhdr marks the end of a header block and is accepted as no-op.
+ */
 static int h3c_hsi_process_header(void *hset_p, struct lsxpack_header *xhdr) {
     h3c_hset_t *hset = hset_p;
     /* A NULL header marks the end of a header block. */
@@ -234,6 +279,11 @@ static int h3c_hsi_process_header(void *hset_p, struct lsxpack_header *xhdr) {
     return 0;
 }
 
+/**
+ * @brief lsquic header-set callback: free a header set.
+ * Frees the h3c_hset_t allocated by h3c_hsi_create(), including its
+ * embedded header array and decode buffer.
+ */
 static void h3c_hsi_discard(void *hset_p) {
     free(hset_p);
 }
@@ -249,22 +299,41 @@ static const struct lsquic_hset_if h3c_hset_if = {
 /* Stream callbacks                                                   */
 /* ------------------------------------------------------------------ */
 
+/**
+ * @brief lsquic stream-iface callback: new connection established.
+ * @return The client handle as connection context, so later callbacks can
+ *         recover it via lsquic_conn_get_ctx().
+ */
 static lsquic_conn_ctx_t *h3c_on_new_conn(void *stream_if_ctx, lsquic_conn_t *conn) {
     cwist_http3_client *client = stream_if_ctx;
     (void)conn;
     return (lsquic_conn_ctx_t *)client;
 }
 
+/**
+ * @brief lsquic stream-iface callback: connection is being destroyed.
+ *
+ * The engine destroys the connection after this callback; clears the cached
+ * client->conn pointer so a later request never dereferences freed memory
+ * (e.g. after a certificate verification failure).
+ */
 static void h3c_on_conn_closed(lsquic_conn_t *conn) {
-    /* The engine destroys the connection after this callback; drop our
-     * cached pointer so a later request never dereferences freed memory
-     * (e.g. after a certificate verification failure). */
     cwist_http3_client *client = (cwist_http3_client *)lsquic_conn_get_ctx(conn);
     if (client && client->conn == conn) {
         client->conn = NULL;
     }
 }
 
+/**
+ * @brief lsquic stream-iface callback: a new stream was created.
+ * @return Newly calloc'ed h3c_stream_ctx_t, or NULL on allocation failure
+ *         (ownership passes to lsquic and later h3c_on_close()).
+ *
+ * Registers the stream as client->active_stream under client->mtx. Does not
+ * arm the write side: the request function populates path/method/headers/
+ * body first and enables wantwrite() afterwards, so no default "GET /" is
+ * ever emitted.
+ */
 static lsquic_stream_ctx_t *h3c_on_new_stream(void *stream_if_ctx, lsquic_stream_t *stream) {
     cwist_http3_client *client = stream_if_ctx;
     h3c_stream_ctx_t *st = calloc(1, sizeof(*st));
@@ -282,6 +351,13 @@ static lsquic_stream_ctx_t *h3c_on_new_stream(void *stream_if_ctx, lsquic_stream
 }
 
 #ifdef CWIST_WEBTRANSPORT
+/**
+ * @brief WebTransport callback: session opened after a successful CONNECT.
+ * @return The cwist_webtransport_client_session as session context.
+ *
+ * Records the native session, marks the session open, and wakes any waiter
+ * blocked in cwist_http3_client_request().
+ */
 static lsquic_wt_session_ctx_t *h3c_wt_on_session_open(void *ctx, lsquic_wt_session_t *native,
                                                        const struct lsquic_wt_connect_info *info) {
     (void)info;
@@ -296,6 +372,12 @@ static lsquic_wt_session_ctx_t *h3c_wt_on_session_open(void *ctx, lsquic_wt_sess
     return (lsquic_wt_session_ctx_t *)client->wt_connecting;
 }
 
+/**
+ * @brief WebTransport callback: session establishment was rejected.
+ *
+ * Marks the pending session as rejected and wakes waiters so the CONNECT
+ * request completes with an error.
+ */
 static void h3c_wt_on_session_rejected(void *ctx, const struct lsquic_wt_connect_info *info,
                                        unsigned status, const char *reason, size_t reason_len) {
     (void)info;
@@ -331,6 +413,21 @@ static const struct lsquic_webtransport_if h3c_wt_if = {
 };
 #endif
 
+/**
+ * @brief lsquic stream read callback: decode response headers and body.
+ *
+ * On first invocation, converts the received header set into a
+ * cwist_http_response_t (status code and header list) and releases the
+ * header set. When WebTransport is enabled and this is an extended-connect
+ * stream, a 2xx status is promoted to a WebTransport session via
+ * lsquic_wt_accept(); anything else marks the request rejected. Reads the
+ * body incrementally into a growing buffer; on end-of-stream the body is
+ * attached to the response and @p st_h ->response_ready is set to unblock
+ * the waiting request thread.
+ *
+ * @param stream   The lsquic stream data arrived on.
+ * @param st_h     Per-stream context (h3c_stream_ctx_t).
+ */
 static void h3c_on_read(lsquic_stream_t *stream, lsquic_stream_ctx_t *st_h) {
     h3c_stream_ctx_t *st = (h3c_stream_ctx_t *)st_h;
     if (!st) return;
@@ -430,6 +527,18 @@ static void h3c_on_read(lsquic_stream_t *stream, lsquic_stream_ctx_t *st_h) {
     }
 }
 
+/**
+ * @brief lsquic stream write callback: serialize and send the request.
+ *
+ * Builds the QPACK pseudo-headers (:method, :path, :scheme, :authority and
+ * optional extra headers) plus the request body, and hands them to lsquic.
+ * Afterwards the write side is shut down (FIN) and the stream switches to
+ * read mode unless the request expects an interim response. No-op once
+ * @p st_h ->write_done is set.
+ *
+ * @param stream   The lsquic stream to write the request on.
+ * @param st_h     Per-stream context (h3c_stream_ctx_t).
+ */
 static void h3c_on_write(lsquic_stream_t *stream, lsquic_stream_ctx_t *st_h) {
     h3c_stream_ctx_t *st = (h3c_stream_ctx_t *)st_h;
     if (!st || st->write_done) return;
@@ -551,6 +660,17 @@ static void h3c_on_write(lsquic_stream_t *stream, lsquic_stream_ctx_t *st_h) {
     }
 }
 
+/**
+ * @brief lsquic stream close callback: complete the request and free state.
+ *
+ * Signals @p st_h ->response_ready (if the response had not completed yet),
+ * detaches the stream from the client's active_stream pointer, wakes any
+ * waiter on the client condition variable, and releases the per-stream
+ * request/response buffers and the context itself.
+ *
+ * @param stream   The lsquic stream being closed.
+ * @param st_h     Per-stream context (h3c_stream_ctx_t); may be NULL.
+ */
 static void h3c_on_close(lsquic_stream_t *stream, lsquic_stream_ctx_t *st_h) {
     h3c_stream_ctx_t *st = (h3c_stream_ctx_t *)st_h;
     if (!st) return;
@@ -569,6 +689,17 @@ static void h3c_on_close(lsquic_stream_t *stream, lsquic_stream_ctx_t *st_h) {
     free(st);
 }
 
+/**
+ * @brief lsquic datagram-write callback: emit one pending outgoing datagram.
+ *
+ * Copies the client-held pending datagram (protected by dgram_mtx) into
+ * lsquic's buffer, frees the stored copy, and clears the pending flag.
+ *
+ * @param conn   The lsquic connection asking for a datagram.
+ * @param buf    Destination buffer provided by lsquic.
+ * @param len    Capacity of @p buf in bytes.
+ * @return Number of bytes written to @p buf, or 0 if nothing is pending.
+ */
 static ssize_t h3c_on_dg_write(lsquic_conn_t *conn, void *buf, size_t len) {
     cwist_http3_client *client = (cwist_http3_client *)lsquic_conn_get_ctx(conn);
     if (!client) return 0;
@@ -587,6 +718,18 @@ static ssize_t h3c_on_dg_write(lsquic_conn_t *conn, void *buf, size_t len) {
     return 0;
 }
 
+/**
+ * @brief lsquic datagram-received callback: store one incoming datagram.
+ *
+ * Takes ownership of the datagram payload by copying it into the client's
+ * in_dgram slot (protected by dgram_mtx), replacing any previously received
+ * datagram that was not yet consumed, and sets the ready flag so the
+ * receiving thread can pick it up.
+ *
+ * @param conn   The lsquic connection the datagram arrived on.
+ * @param buf    Pointer to the datagram payload.
+ * @param len    Payload length in bytes.
+ */
 static void h3c_on_datagram(lsquic_conn_t *conn, const void *buf, size_t len) {
     cwist_http3_client *client = (cwist_http3_client *)lsquic_conn_get_ctx(conn);
     if (!client || !buf || len == 0) return;
@@ -616,6 +759,18 @@ static const struct lsquic_stream_if h3c_stream_if = {
 /* I/O loop helper                                                    */
 /* ------------------------------------------------------------------ */
 
+/**
+ * @brief Run one iteration of the QUIC I/O loop.
+ *
+ * Computes how long lsquic wants to wait until its next timer (bounded to
+ * [0, 1s]), polls the UDP socket for that interval, feeds any received
+ * datagram into lsquic_engine_packet_in(), and finally runs
+ * lsquic_engine_process_conns() to advance all connections.
+ *
+ * @param client      The HTTP/3 client whose engine and socket are polled.
+ * @param timeout_ms  Desired poll timeout in milliseconds; values <= 0
+ *                    fall back to 1 ms.
+ */
 static void h3c_process_io(cwist_http3_client *client, int timeout_ms) {
     lsquic_engine_t *engine = client->engine;
     int diff = timeout_ms * 1000; /* microseconds */
@@ -648,11 +803,16 @@ static void h3c_process_io(cwist_http3_client *client, int timeout_ms) {
     lsquic_engine_process_conns(engine);
 }
 
-/* ------------------------------------------------------------------ */
-/* SSL context callback: hand lsquic the client SSL_CTX so the        */
-/* handshake honors its trust store and verify mode.                  */
-/* ------------------------------------------------------------------ */
-
+/**
+ * @brief lsquic SSL-context callback: hand lsquic the client SSL_CTX.
+ *
+ * Returns the client-configured SSL_CTX so the QUIC handshake honors the
+ * client's trust store and verify mode.
+ *
+ * @param peer_ctx   The cwist_http3_client registered as peer context.
+ * @param local      Unused.
+ * @return The client's SSL_CTX, or NULL if @p peer_ctx is NULL.
+ */
 static SSL_CTX *h3c_get_ssl_ctx(void *peer_ctx, const struct sockaddr *local) {
     (void)local;
     cwist_http3_client *client = peer_ctx;

@@ -468,15 +468,30 @@ int cwist_nuke_init(const char *disk_path, int sync_interval_ms) {
     return CWIST_NUKE_OK;
 }
 
+/**
+ * @brief Return the SQLite handle that callers should use for the NUKE database.
+ * @return The in-memory handle in normal mode, or the disk handle after a
+ *         low-memory fallback to disk mode. May be NULL before init or after close.
+ */
 sqlite3 *cwist_nuke_get_db(void) {
     if (g_nuke.is_disk_mode) return g_nuke.disk_db;
     return g_nuke.mem_db;
 }
 
+/**
+ * @brief Placeholder signal handler (no-op).
+ * @param signum Signal number; unused.
+ */
 void cwist_nuke_signal_handler(int signum) {
     CWIST_UNUSED(signum);
 }
 
+/**
+ * @brief Serialize the current NUKE database contents into a buffer.
+ * @param out_size Receives the serialized byte count.
+ * @return Heap buffer produced by sqlite3_serialize (caller frees with sqlite3_free),
+ *         or NULL when out_size is NULL or no database is open. Thread-safe via g_nuke_lock.
+ */
 unsigned char *cwist_nuke_serialize(sqlite3_int64 *out_size) {
     if (!out_size) return NULL;
     *out_size = 0;
@@ -493,6 +508,13 @@ unsigned char *cwist_nuke_serialize(sqlite3_int64 *out_size) {
     return buf;
 }
 
+/**
+ * @brief Replace the in-memory NUKE database with serialized contents.
+ * @param data Serialized database buffer; ownership transfers to SQLite, which
+ *             frees it on close (SQLITE_DESERIALIZE_FREEONCLOSE).
+ * @param data_len Length of @p data in bytes.
+ * @return 0 on success, or -1 on invalid arguments or when running in disk mode.
+ */
 int cwist_nuke_deserialize(unsigned char *data, sqlite3_int64 data_len) {
     if (!data || data_len <= 0) return -1;
 

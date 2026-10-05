@@ -34,6 +34,18 @@ typedef struct {
 
 static void mp_parse_headers(mp_parse_ctx *ctx);
 
+/**
+ * @brief multipart-parser-c callback: header field fragment received.
+ *
+ * Appends the fragment to the buffered header field name (truncated at the
+ * fixed buffer size). If a header value was already seen for the previous
+ * field, that pair is finalized via mp_parse_headers() before buffering.
+ *
+ * @param p Parser instance (carries mp_parse_ctx).
+ * @param at Pointer to the fragment.
+ * @param len Fragment length.
+ * @return 0 on success.
+ */
 static int mp_on_header_field(multipart_parser *p, const char *at, size_t len) {
     mp_parse_ctx *ctx = (mp_parse_ctx *)multipart_parser_get_data(p);
     if (ctx->have_value) {
@@ -47,6 +59,17 @@ static int mp_on_header_field(multipart_parser *p, const char *at, size_t len) {
     return 0;
 }
 
+/**
+ * @brief multipart-parser-c callback: header value fragment received.
+ *
+ * Marks the current header as having a value and appends the fragment to the
+ * buffered header value (truncated at the fixed buffer size).
+ *
+ * @param p Parser instance (carries mp_parse_ctx).
+ * @param at Pointer to the fragment.
+ * @param len Fragment length.
+ * @return 0 on success.
+ */
 static int mp_on_header_value(multipart_parser *p, const char *at, size_t len) {
     mp_parse_ctx *ctx = (mp_parse_ctx *)multipart_parser_get_data(p);
     ctx->have_value = true;
@@ -57,6 +80,16 @@ static int mp_on_header_value(multipart_parser *p, const char *at, size_t len) {
     return 0;
 }
 
+/**
+ * @brief Finalize the buffered header field/value pair into ctx state.
+ *
+ * NUL-terminates both buffers (truncating at their fixed sizes), then, for
+ * "Content-Disposition", extracts the name="..." and filename="..." tags, and
+ * for "Content-Type" stores the whole value. Not thread-safe: operates on the
+ * caller's ctx. Resets the field/value buffers and have_value afterwards.
+ *
+ * @param ctx Parse context to update in place.
+ */
 static void mp_parse_headers(mp_parse_ctx *ctx) {
     if (ctx->header_field_len >= sizeof(ctx->header_field))
         ctx->header_field_len = sizeof(ctx->header_field) - 1;
@@ -101,12 +134,32 @@ static void mp_parse_headers(mp_parse_ctx *ctx) {
     ctx->have_value = false;
 }
 
+/**
+ * @brief multipart-parser-c callback: all headers of a part were received.
+ *
+ * Flushes any pending header pair via mp_parse_headers() so its values are
+ * visible before part data begins.
+ *
+ * @param p Parser instance (carries mp_parse_ctx).
+ * @return 0 on success.
+ */
 static int mp_on_headers_complete(multipart_parser *p) {
     mp_parse_ctx *ctx = (mp_parse_ctx *)multipart_parser_get_data(p);
     mp_parse_headers(ctx);
     return 0;
 }
 
+/**
+ * @brief multipart-parser-c callback: start of a new part.
+ *
+ * Flushes any pending header pair, resets header/name/filename/content_type
+ * buffers and the data accumulator. Any buffered ctx->data from a previous
+ * part is freed here; ownership of the current accumulation passes to the
+ * cwist_multipart_field created in mp_on_part_data_end.
+ *
+ * @param p Parser instance (carries mp_parse_ctx).
+ * @return 0 on success.
+ */
 static int mp_on_part_data_begin(multipart_parser *p) {
     mp_parse_ctx *ctx = (mp_parse_ctx *)multipart_parser_get_data(p);
     if (ctx->have_value) {
@@ -127,6 +180,17 @@ static int mp_on_part_data_begin(multipart_parser *p) {
     return 0;
 }
 
+/**
+ * @brief multipart-parser-c callback: part body fragment received.
+ *
+ * Appends the fragment to ctx->data, growing the buffer with cwist_alloc as
+ * needed (doubling, minimum 256 bytes). The old buffer is freed on growth.
+ *
+ * @param p Parser instance (carries mp_parse_ctx).
+ * @param at Pointer to the fragment.
+ * @param len Fragment length.
+ * @return 0 on success, 1 if memory allocation failed (aborts parsing).
+ */
 static int mp_on_part_data(multipart_parser *p, const char *at, size_t len) {
     mp_parse_ctx *ctx = (mp_parse_ctx *)multipart_parser_get_data(p);
     if (len == 0) return 0;
@@ -147,6 +211,17 @@ static int mp_on_part_data(multipart_parser *p, const char *at, size_t len) {
     return 0;
 }
 
+/**
+ * @brief multipart-parser-c callback: end of a part.
+ *
+ * Allocates a cwist_multipart_field, copies name/filename/content_type into
+ * freshly allocated strings, and transfers ownership of the accumulated
+ * ctx->data buffer to the field (no copy). The field is prepended to
+ * ctx->result->fields and the accumulation state is reset to empty.
+ *
+ * @param p Parser instance (carries mp_parse_ctx).
+ * @return 0 on success, 1 if memory allocation failed (aborts parsing).
+ */
 static int mp_on_part_data_end(multipart_parser *p) {
     mp_parse_ctx *ctx = (mp_parse_ctx *)multipart_parser_get_data(p);
     cwist_multipart_field *field =
@@ -177,6 +252,20 @@ static int mp_on_part_data_end(multipart_parser *p) {
     return 0;
 }
 
+/**
+ * @brief Parse a multipart/form-data body into a field list.
+ *
+ * Runs the multipart-parser-c state machine over @p body with @p boundary
+ * (the boundary without leading dashes). On malformed or truncated input the
+ * parser stops early and NULL is returned, with all intermediate state freed.
+ *
+ * @param body Raw body bytes; must not be NULL.
+ * @param body_len Length of @p body in bytes.
+ * @param boundary MIME boundary string, without the leading "--".
+ * @return Newly allocated cwist_multipart_result on success (caller owns it,
+ *         release with cwist_multipart_result_destroy), NULL on invalid
+ *         arguments, malformed input, or allocation failure.
+ */
 cwist_multipart_result *cwist_multipart_parse(const char *body, size_t body_len,
                                               const char *boundary) {
     if (!body || body_len == 0 || !boundary) return NULL;
@@ -236,6 +325,14 @@ cwist_multipart_result *cwist_multipart_parse(const char *body, size_t body_len,
     return result;
 }
 
+/**
+ * @brief Destroy a parse result and everything it owns.
+ *
+ * Frees every field's name, filename, content_type, and data, then the field
+ * nodes and the result itself. Safe to call with NULL.
+ *
+ * @param result Result returned by cwist_multipart_parse, or NULL.
+ */
 void cwist_multipart_result_destroy(cwist_multipart_result *result) {
     if (!result) return;
     cwist_multipart_field *curr = result->fields;
@@ -251,6 +348,18 @@ void cwist_multipart_result_destroy(cwist_multipart_result *result) {
     cwist_free(result);
 }
 
+/**
+ * @brief Extract the boundary parameter from a Content-Type header value.
+ *
+ * Scans semicolon-separated parameters of @p content_type, skipping optional
+ * whitespace, and accepts both quoted and unquoted boundary values.
+ *
+ * @param content_type Content-Type header value, e.g. from the request; may be
+ *                     NULL.
+ * @return Newly allocated NUL-terminated boundary string (caller frees with
+ *         cwist_free), or NULL if no boundary parameter is present or
+ *         allocation failed.
+ */
 char *cwist_multipart_extract_boundary(const char *content_type) {
     if (!content_type) return NULL;
     const char *p = content_type;
