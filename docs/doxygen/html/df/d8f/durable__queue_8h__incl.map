@@ -1,0 +1,14 @@
+<map id="include/cwist/sys/job/durable_queue.h" name="include/cwist/sys/job/durable_queue.h">
+<area shape="rect" id="Node000001" title="Durable (persistent) job queue backends over Redis and NATS." alt="" coords="67,5,225,45"/>
+<area shape="rect" id="Node000002" href="$d7/da1/sys_2err_2cwist__err_8h.html" title="Unified error code and type definitions for the CWIST system layer." alt="" coords="75,93,217,133"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="149,46,149,79,143,79,143,46"/>
+<area shape="rect" id="Node000003" title=" " alt="" coords="5,181,76,207"/>
+<area shape="poly" id="edge6_Node000001_Node000003" title=" " alt="" coords="115,48,88,68,66,95,51,131,45,168,39,167,46,130,61,92,85,64,112,43"/>
+<area shape="rect" id="Node000006" title=" " alt="" coords="242,101,317,126"/>
+<area shape="poly" id="edge5_Node000001_Node000006" title=" " alt="" coords="177,43,251,91,249,95,174,48"/>
+<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="122,136,69,175,66,171,119,131"/>
+<area shape="rect" id="Node000004" title=" " alt="" coords="102,181,185,207"/>
+<area shape="poly" id="edge3_Node000002_Node000004" title=" " alt="" coords="148,134,147,167,142,167,143,133"/>
+<area shape="rect" id="Node000005" title=" " alt="" coords="209,181,320,207"/>
+<area shape="poly" id="edge4_Node000002_Node000005" title=" " alt="" coords="176,131,237,172,234,176,173,136"/>
+</map>

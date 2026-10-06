@@ -75,23 +75,28 @@ $(function() {
 </div><!-- top -->
 <div class="header">
   <div class="summary">
+<a href="#nested-classes">Classes</a> &#124;
+<a href="#define-members">Macros</a> &#124;
 <a href="#typedef-members">Typedefs</a> &#124;
 <a href="#func-members">Functions</a>  </div>
   <div class="headertitle"><div class="title">reactor.h File Reference</div></div>
 </div><!--header-->
 <div class="contents">
 <div class="textblock"><code>#include &lt;stdbool.h&gt;</code><br />
+<code>#include &lt;stddef.h&gt;</code><br />
 <code>#include &lt;stdint.h&gt;</code><br />
 </div><div class="textblock"><div class="dynheader">
 Include dependency graph for reactor.h:</div>
 <div class="dyncontent">
 <div class="center"><img src="../../d2/deb/reactor_8h__incl.png" border="0" usemap="#ainclude_2cwist_2sys_2io_2reactor_8h" alt=""/></div>
 <map name="ainclude_2cwist_2sys_2io_2reactor_8h" id="ainclude_2cwist_2sys_2io_2reactor_8h">
-<area shape="rect" title=" " alt="" coords="23,5,172,45"/>
+<area shape="rect" title=" " alt="" coords="75,5,224,45"/>
 <area shape="rect" title=" " alt="" coords="5,93,88,119"/>
-<area shape="poly" title=" " alt="" coords="87,47,64,83,59,80,83,44"/>
-<area shape="rect" title=" " alt="" coords="113,93,183,119"/>
-<area shape="poly" title=" " alt="" coords="112,44,135,80,131,83,107,47"/>
+<area shape="poly" title=" " alt="" coords="126,48,74,87,71,83,123,43"/>
+<area shape="rect" title=" " alt="" coords="112,93,187,119"/>
+<area shape="poly" title=" " alt="" coords="152,46,152,79,147,79,147,46"/>
+<area shape="rect" title=" " alt="" coords="211,93,282,119"/>
+<area shape="poly" title=" " alt="" coords="175,43,223,82,220,87,171,48"/>
 </map>
 </div>
 </div><div class="textblock"><div class="dynheader">
@@ -99,42 +104,217 @@ This graph shows which files directly or indirectly include this file:</div>
 <div class="dyncontent">
 <div class="center"><img src="../../da/dce/reactor_8h__dep__incl.png" border="0" usemap="#ainclude_2cwist_2sys_2io_2reactor_8hdep" alt=""/></div>
 <map name="ainclude_2cwist_2sys_2io_2reactor_8hdep" id="ainclude_2cwist_2sys_2io_2reactor_8hdep">
-<area shape="rect" title=" " alt="" coords="163,5,312,45"/>
-<area shape="rect" href="../../d0/d3d/async__server_8c.html" title=" " alt="" coords="5,93,144,133"/>
-<area shape="poly" title=" " alt="" coords="191,54,112,96,109,91,188,49"/>
-<area shape="rect" href="../../dd/d43/http_8c.html" title="Core HTTP request/response allocation, serialization, socket, and server&#45;loop helpers." alt="" coords="169,101,306,126"/>
-<area shape="poly" title=" " alt="" coords="240,59,240,100,235,100,235,59"/>
-<area shape="rect" href="../../d3/d99/reactor_8c.html" title=" " alt="" coords="330,101,473,126"/>
-<area shape="poly" title=" " alt="" coords="286,49,381,98,378,103,284,54"/>
+<area shape="rect" title=" " alt="" coords="3967,5,4116,45"/>
+<area shape="rect" href="../../da/dc7/net_2graphql_2graphql__ws_8h.html" title="GraphQL subscriptions over the graphql&#45;ws WebSocket subprotocol (supported since v3...." alt="" coords="3513,269,3698,309"/>
+<area shape="poly" title=" " alt="" coords="3972,53,3930,72,3891,95,3856,128,3835,159,3812,191,3776,224,3726,252,3674,272,3672,267,3724,247,3773,219,3808,187,3830,156,3852,124,3888,91,3928,67,3970,48"/>
+<area shape="rect" href="../../d9/dab/net_2http_2http_8h.html" title="HTTP Protocol Definitions and Helpers." alt="" coords="1729,93,1892,133"/>
+<area shape="poly" title=" " alt="" coords="3953,33,1892,112,1892,106,3953,27"/>
+<area shape="rect" href="../../dd/d43/http_8c.html" title="Core HTTP request/response allocation, serialization, socket, and server&#45;loop helpers." alt="" coords="3738,621,3875,647"/>
+<area shape="poly" title=" " alt="" coords="4130,31,4275,52,4356,69,4435,91,4545,122,4633,148,4672,166,4710,190,4749,223,4789,268,4806,294,4814,318,4816,376,4816,467,4807,486,4784,503,4747,518,4699,533,4577,559,4430,581,4118,613,3876,631,3875,626,4118,608,4429,575,4576,553,4698,528,4745,513,4781,498,4803,482,4811,466,4811,376,4809,319,4801,296,4785,271,4745,227,4707,194,4670,170,4631,153,4544,127,4434,96,4355,74,4274,57,4129,37"/>
+<area shape="rect" href="../../d0/d3d/async__server_8c.html" title=" " alt="" coords="189,533,328,573"/>
+<area shape="poly" title=" " alt="" coords="3953,31,3087,47,1758,82,1099,106,539,134,319,150,151,166,44,184,16,193,8,201,8,290,14,333,31,373,56,409,86,442,120,470,155,495,219,531,216,535,153,499,117,474,83,445,51,412,26,376,9,335,3,291,3,199,14,188,43,179,150,161,319,144,539,129,1099,101,1758,77,3087,42,3953,25"/>
+<area shape="rect" href="../../d6/d73/async__internal_8h.html" title="Private wiring between the deferred&#45;response path (async.c) and the C1M connection engine (http...." alt="" coords="3631,445,3769,485"/>
+<area shape="poly" title=" " alt="" coords="3990,54,3962,73,3935,95,3900,135,3874,171,3838,240,3806,312,3784,353,3756,399,3718,447,3714,444,3751,396,3780,350,3801,310,3833,238,3869,169,3896,132,3931,91,3958,69,3988,50"/>
+<area shape="rect" href="../../dd/d3b/webrtc_8h.html" title="WebRTC DataChannel server (SDP + ICE&#45;lite + DTLS + SCTP) interface." alt="" coords="3945,101,4137,126"/>
+<area shape="poly" title=" " alt="" coords="4044,59,4044,100,4039,100,4039,59"/>
+<area shape="rect" href="../../da/d89/webrtc__internal_8h.html" title="Internal types and cross&#45;file helpers for the WebRTC DataChannel module (ICE&#45;lite + DTLS + SCTP over ..." alt="" coords="4093,181,4256,221"/>
+<area shape="poly" title=" " alt="" coords="4102,50,4129,68,4151,92,4164,114,4171,138,4177,181,4172,182,4166,139,4159,116,4147,95,4125,72,4099,54"/>
+<area shape="rect" href="../../d4/d57/websocket__async_8c.html" title="Reactor&#45;driven, callback&#45;shaped non&#45;blocking WebSocket path (C1M mode)." alt="" coords="4211,93,4423,133"/>
+<area shape="poly" title=" " alt="" coords="4115,47,4258,91,4256,96,4114,52"/>
+<area shape="rect" href="../../db/dec/ws__async__internal_8h.html" title="Private wiring between the app layer (C1M upgrade path) and the reactor&#45;driven WebSocket implementati..." alt="" coords="3313,269,3474,309"/>
+<area shape="poly" title=" " alt="" coords="3970,52,3845,96,3612,192,3435,272,3433,267,3610,187,3843,91,3968,47"/>
+<area shape="rect" href="../../d3/d99/reactor_8c.html" title="Readiness multiplexer (io_uring / epoll / kqueue) driving CWIST&#39;s synchronous callback model." alt="" coords="4767,189,4910,214"/>
+<area shape="poly" title=" " alt="" coords="4130,24,4281,28,4462,37,4550,46,4631,57,4699,72,4749,91,4779,112,4804,139,4835,187,4831,190,4800,142,4776,116,4747,96,4697,77,4630,63,4549,51,4461,43,4281,33,4130,29"/>
+<area shape="rect" href="../../d2/d6b/reactor__rx_8h.html" title=" " alt="" coords="4817,101,4983,126"/>
+<area shape="poly" title=" " alt="" coords="4130,29,4427,51,4613,68,4799,91,4844,98,4843,103,4798,96,4612,74,4427,56,4130,34"/>
+<area shape="rect" href="../../d6/d59/graphql__ws_8h.html" title=" " alt="" coords="3521,365,3719,390"/>
+<area shape="poly" title=" " alt="" coords="3613,322,3621,364,3615,365,3608,323"/>
+<area shape="rect" href="../../d7/d38/graphql__ws_8c.html" title="Experimental GraphQL subscriptions over the graphql&#45;ws WebSocket subprotocol (v3.7 Phase 4)." alt="" coords="3289,365,3497,390"/>
+<area shape="poly" title=" " alt="" coords="3547,317,3423,367,3421,362,3545,312"/>
+<area shape="rect" href="../../da/dc2/bind_8h.html" title="Declarative Schema Validation and Type&#45;Safe Binding for CWIST." alt="" coords="2675,181,2813,221"/>
+<area shape="poly" title=" " alt="" coords="1906,115,2241,133,2452,152,2663,179,2675,181,2674,186,2662,184,2451,157,2241,139,1905,120"/>
+<area shape="rect" href="../../d2/dc2/net_2graphql_2graphql_8h.html" title="Full&#45;featured, production&#45;ready GraphQL query &amp; mutation execution engine." alt="" coords="2838,181,3023,221"/>
+<area shape="poly" title=" " alt="" coords="1906,115,2307,134,2565,152,2826,179,2838,180,2837,186,2825,184,2565,158,2307,139,1906,120"/>
+<area shape="rect" href="../../d6/dbb/grpc_8h.html" title="gRPC over HTTP/2 helpers for CWIST." alt="" coords="907,357,1071,397"/>
+<area shape="poly" title=" " alt="" coords="1716,124,1498,147,1393,164,1320,184,1305,192,1294,202,1270,223,1139,302,1029,359,1027,355,1136,297,1266,219,1291,198,1301,188,1318,179,1392,158,1497,141,1716,119"/>
+<area shape="rect" href="../../d0/d77/sys_2app_2app_8h.html" title="Core Application Structure and Lifecycle Management." alt="" coords="859,445,1021,485"/>
+<area shape="poly" title=" " alt="" coords="1715,117,1501,119,1242,129,1120,137,1015,149,937,164,912,173,896,183,877,208,866,233,861,257,862,281,876,334,897,396,909,422,925,444,921,447,905,425,892,398,871,336,857,282,856,256,861,231,872,206,893,179,909,168,936,159,1014,143,1119,132,1242,123,1501,114,1715,112"/>
+<area shape="rect" href="../../d5/da9/net_2http_2mux_8h.html" title="HTTP request multiplexer (router)." alt="" coords="1617,533,1780,573"/>
+<area shape="poly" title=" " alt="" coords="1906,114,2195,120,2561,133,2882,152,2987,164,3020,171,3036,179,3059,212,3067,245,3059,279,3037,311,3021,321,2997,329,2924,340,2829,348,2722,353,2516,356,2392,360,2233,372,2107,378,2048,384,1985,396,1916,417,1837,448,1802,467,1769,490,1718,535,1715,531,1766,486,1799,462,1835,443,1915,412,1984,391,2047,379,2107,372,2232,367,2392,355,2516,351,2722,347,2829,343,2923,335,2995,324,3019,316,3033,307,3054,276,3061,245,3054,214,3033,183,3018,176,2986,170,2881,157,2561,138,2195,126,1906,119"/>
+<area shape="rect" href="../../dd/d49/mux_8c.html" title="Fixed&#45;bucket HTTP route dispatch using a lightweight path signature." alt="" coords="2286,621,2426,647"/>
+<area shape="poly" title=" " alt="" coords="1906,113,2212,119,2603,131,2947,151,3061,164,3096,171,3114,179,3147,224,3155,246,3159,267,3159,288,3154,309,3133,347,3098,384,3052,417,2997,449,2934,478,2795,530,2652,571,2521,603,2419,624,2418,619,2520,598,2650,566,2793,525,2932,473,2994,444,3049,413,3095,380,3129,344,3149,307,3154,288,3154,268,3150,248,3142,227,3110,183,3094,176,3060,169,2947,156,2603,137,2212,125,1905,119"/>
+<area shape="rect" href="../../da/d46/session_8h.html" title="Signed client&#45;side session cookie API." alt="" coords="3052,533,3215,573"/>
+<area shape="poly" title=" " alt="" coords="1906,113,2233,119,2656,132,3031,151,3155,164,3193,171,3214,179,3229,204,3238,243,3242,290,3243,341,3238,436,3229,486,3206,515,3177,535,3174,531,3202,511,3224,484,3232,435,3238,341,3237,290,3232,243,3224,206,3210,183,3192,176,3154,169,3030,156,2656,137,2233,125,1906,119"/>
+<area shape="rect" href="../../df/dcd/async__gc_8h.html" title=" " alt="" coords="978,621,1150,647"/>
+<area shape="poly" title=" " alt="" coords="1716,119,1334,127,825,140,367,159,213,171,165,177,140,184,105,203,79,224,64,251,59,288,59,467,61,490,68,508,79,523,93,534,131,553,178,571,224,582,304,591,527,608,978,627,978,633,526,613,303,597,224,587,177,576,129,558,90,539,75,527,63,511,56,491,53,467,53,288,59,249,75,221,102,199,138,179,164,172,212,166,366,154,824,135,1334,121,1716,114"/>
+<area shape="poly" title=" " alt="" coords="1906,112,2239,116,2696,125,2931,134,3152,145,3341,160,3484,179,3541,185,3597,185,3701,185,3745,192,3779,209,3792,223,3801,240,3807,262,3809,288,3809,467,3809,621,3804,621,3804,467,3804,288,3802,263,3796,242,3787,226,3776,214,3743,198,3701,191,3597,191,3540,190,3484,184,3341,165,3151,150,2931,139,2695,131,2239,121,1906,118"/>
+<area shape="rect" href="../../df/d1b/csrf_8h.html" title="CSRF protection via double&#45;submit cookie pattern." alt="" coords="419,533,581,573"/>
+<area shape="poly" title=" " alt="" coords="1715,118,1340,121,841,131,601,139,397,150,250,165,206,174,184,183,177,196,176,212,181,232,192,254,227,303,275,355,386,457,477,531,473,535,383,461,271,359,223,306,187,256,176,234,171,213,172,195,181,179,204,169,249,160,397,145,601,134,841,125,1340,116,1715,112"/>
+<area shape="poly" title=" " alt="" coords="1715,118,1336,121,833,130,591,139,384,150,236,165,191,174,170,183,154,203,144,224,137,247,135,271,140,321,155,372,177,421,201,466,246,532,242,535,197,469,172,424,150,374,134,322,129,271,132,246,139,222,150,200,166,179,190,169,235,160,384,145,591,133,833,125,1336,115,1715,112"/>
+<area shape="rect" href="../../df/d7f/app_8c.html" title=" " alt="" coords="1805,541,1939,566"/>
+<area shape="poly" title=" " alt="" coords="1813,147,1813,288,1813,379,1815,409,1819,432,1838,484,1867,539,1862,542,1834,486,1814,434,1810,410,1808,379,1808,288,1808,147"/>
+<area shape="rect" href="../../de/d91/async_8h.html" title="Deferred&#45;response (async handler) API for CWIST." alt="" coords="3052,445,3215,485"/>
+<area shape="poly" title=" " alt="" coords="1906,113,2227,118,2641,130,2839,139,3006,150,3127,163,3164,171,3183,179,3204,211,3213,247,3212,285,3205,323,3177,394,3148,446,3143,444,3172,392,3199,322,3207,284,3208,247,3199,213,3180,183,3162,176,3126,168,3006,155,2838,144,2641,135,2227,124,1906,118"/>
+<area shape="rect" href="../../d5/dfd/cookie_8h.html" title="HTTP cookie parsing and construction helpers." alt="" coords="432,181,595,221"/>
+<area shape="poly" title=" " alt="" coords="1716,118,1514,122,1239,132,925,152,764,166,607,184,596,186,595,180,606,179,764,161,924,147,1239,127,1514,117,1716,113"/>
+<area shape="rect" href="../../d9/d05/html__response_8h.html" title="HTML page and fragment responses for HTML&#45;over&#45;the&#45;wire handlers." alt="" coords="619,181,781,221"/>
+<area shape="poly" title=" " alt="" coords="1716,120,1316,138,1059,157,800,184,782,187,781,181,800,179,1059,152,1316,133,1715,115"/>
+<area shape="rect" href="../../de/d65/http2_8h.html" title="HTTP/2 Protocol Definitions for CWIST." alt="" coords="404,269,567,309"/>
+<area shape="poly" title=" " alt="" coords="1715,118,1390,124,969,135,769,144,598,154,476,168,439,175,422,183,416,193,414,203,422,225,440,248,461,267,458,271,436,251,417,228,409,203,411,191,418,179,438,170,475,163,598,149,768,138,969,130,1390,118,1715,113"/>
+<area shape="rect" href="../../dd/dff/http3_8h.html" title="HTTP/3 (QUIC&#45;based) Protocol Definitions for CWIST." alt="" coords="2404,357,2567,397"/>
+<area shape="poly" title=" " alt="" coords="1906,113,2206,120,2586,132,2920,151,3030,164,3064,171,3082,179,3104,212,3112,245,3104,278,3082,311,3056,325,3008,337,2869,355,2708,368,2567,375,2567,370,2708,363,2869,350,3007,331,3054,320,3078,307,3099,276,3106,245,3099,214,3078,183,3063,176,3029,169,2920,157,2586,137,2205,125,1906,119"/>
+<area shape="rect" href="../../df/dad/http3__client_8h.html" title="HTTP/3 client using lsquic/BoringSSL." alt="" coords="907,181,1069,221"/>
+<area shape="poly" title=" " alt="" coords="1716,123,1431,144,1256,162,1082,184,1070,186,1069,181,1081,179,1256,156,1431,139,1715,117"/>
+<area shape="rect" href="../../d9/df2/http__client_8h.html" title="Unified HTTP/1.1 and HTTP/2 client using libcurl." alt="" coords="1093,181,1256,221"/>
+<area shape="poly" title=" " alt="" coords="1716,127,1513,151,1275,184,1257,187,1256,182,1274,179,1512,146,1716,122"/>
+<area shape="rect" href="../../d7/d67/net_2http_2https_8h.html" title="HTTPS/TLS wrapper interface." alt="" coords="195,181,357,221"/>
+<area shape="poly" title=" " alt="" coords="1715,117,1479,120,1148,129,765,149,568,164,376,184,358,186,357,181,376,179,568,159,765,144,1147,124,1479,114,1715,112"/>
+<area shape="rect" href="../../db/d59/metrics_8c.html" title="Lock&#45;free metrics registry and Prometheus exposition." alt="" coords="648,277,832,302"/>
+<area shape="poly" title=" " alt="" coords="1716,120,1496,129,1227,142,987,161,901,172,852,184,818,204,789,230,750,278,746,275,785,226,815,200,850,179,900,166,986,155,1227,137,1496,123,1716,115"/>
+<area shape="rect" href="../../df/d58/net_2http_2sse_8h.html" title="Server&#45;Sent Events stream API." alt="" coords="1560,181,1723,221"/>
+<area shape="poly" title=" " alt="" coords="1763,142,1680,184,1677,179,1760,137"/>
+<area shape="rect" href="../../dd/dec/net_2websocket_2websocket_8h.html" title="WebSocket upgrade and frame handling." alt="" coords="1331,181,1536,221"/>
+<area shape="poly" title=" " alt="" coords="1717,139,1516,184,1515,179,1715,133"/>
+<area shape="rect" href="../../d4/de6/websocket_8c.html" title="WebSocket handshake and frame transport helpers for CWIST handlers." alt="" coords="1487,277,1710,302"/>
+<area shape="poly" title=" " alt="" coords="1797,147,1771,186,1736,223,1685,257,1634,279,1632,274,1682,252,1733,219,1767,182,1792,144"/>
+<area shape="rect" href="../../d2/dec/healthz_8h.html" title="Standardised readiness and liveness probing for CWIST." alt="" coords="1848,445,2027,485"/>
+<area shape="poly" title=" " alt="" coords="1825,145,1933,444,1928,446,1820,147"/>
+<area shape="rect" href="../../de/df7/flash_8h.html" title="One&#45;time flash messages (ala Flask flash/get_flashed_messages)." alt="" coords="1899,181,2085,221"/>
+<area shape="poly" title=" " alt="" coords="1864,137,1953,179,1951,184,1862,142"/>
+<area shape="poly" title=" " alt="" coords="1906,111,2147,112,2488,120,2883,141,3085,157,3283,179,3351,184,3411,184,3516,181,3564,186,3612,200,3660,226,3711,267,3734,297,3743,327,3741,360,3733,398,3725,424,3714,446,3709,444,3720,422,3728,397,3736,359,3738,328,3730,300,3707,271,3657,230,3610,205,3563,191,3516,187,3411,189,3350,189,3282,184,3085,163,2882,146,2488,126,2147,117,1906,116"/>
+<area shape="rect" href="../../d0/d6b/compress_8c.html" title="Compression middleware and built&#45;in zlib/brotli/zstd backends." alt="" coords="2109,189,2283,214"/>
+<area shape="poly" title=" " alt="" coords="1906,133,2145,186,2144,191,1905,138"/>
+<area shape="rect" href="../../d9/dc9/middleware_8c.html" title="Built&#45;in middleware implementations for request IDs, logging, rate limits, CORS, and JWT auth." alt="" coords="2307,189,2493,214"/>
+<area shape="poly" title=" " alt="" coords="1906,124,2295,179,2339,186,2338,191,2294,184,1905,129"/>
+<area shape="rect" href="../../db/d6e/waf_8c.html" title="Bounded, case&#45;insensitive WAF&#45;lite checks." alt="" coords="2517,189,2651,214"/>
+<area shape="poly" title=" " alt="" coords="1906,117,2176,138,2341,155,2506,179,2541,186,2540,191,2505,184,2341,161,2176,143,1906,122"/>
+<area shape="rect" href="../../d6/d6d/bind_8c.html" title="Implementation of declarative schema validation and binding." alt="" coords="2478,269,2621,309"/>
+<area shape="poly" title=" " alt="" coords="2690,229,2593,272,2591,267,2688,224"/>
+<area shape="poly" title=" " alt="" coords="3037,212,3486,267,3513,271,3512,276,3485,272,3036,217"/>
+<area shape="rect" href="../../d4/d77/graphql_8h.html" title=" " alt="" coords="2645,277,2817,302"/>
+<area shape="poly" title=" " alt="" coords="2875,229,2758,279,2756,274,2873,224"/>
+<area shape="rect" href="../../dd/d92/graphql_8c.html" title=" " alt="" coords="2841,277,3023,302"/>
+<area shape="poly" title=" " alt="" coords="2934,235,2934,276,2929,276,2929,235"/>
+<area shape="poly" title=" " alt="" coords="974,411,953,446,949,444,969,408"/>
+<area shape="poly" title=" " alt="" coords="1010,407,1045,448,1067,468,1092,483,1156,503,1238,515,1334,521,1436,523,1637,523,1723,525,1792,531,1830,538,1829,543,1792,536,1723,530,1637,528,1436,528,1334,526,1238,520,1154,508,1090,488,1064,472,1041,452,1006,410"/>
+<area shape="poly" title=" " alt="" coords="1034,482,1040,483,1360,521,1618,543,1617,549,1359,526,1040,488,1034,487"/>
+<area shape="poly" title=" " alt="" coords="1035,468,3052,546,3051,551,1035,473"/>
+<area shape="rect" href="../../db/d84/async_8c.html" title="Deferred&#45;response (async handler) implementation." alt="" coords="927,695,1076,720"/>
+<area shape="poly" title=" " alt="" coords="943,499,950,568,957,607,968,646,980,672,995,693,990,696,976,674,963,648,952,609,944,569,938,500"/>
+<area shape="poly" title=" " alt="" coords="846,488,581,539,580,534,845,482"/>
+<area shape="poly" title=" " alt="" coords="846,481,407,536,329,546,328,541,406,531,846,476"/>
+<area shape="poly" title=" " alt="" coords="1035,482,1040,483,1154,495,1251,501,1416,504,1582,508,1678,516,1792,531,1830,538,1829,543,1792,536,1678,522,1581,514,1416,509,1251,506,1154,500,1040,488,1034,487"/>
+<area shape="poly" title=" " alt="" coords="1794,571,2070,605,2286,625,2286,630,2070,610,1793,576"/>
+<area shape="poly" title=" " alt="" coords="3038,561,1150,632,1150,627,3038,556"/>
+<area shape="poly" title=" " alt="" coords="3229,563,3738,622,3738,627,3228,568"/>
+<area shape="poly" title=" " alt="" coords="1047,659,1013,696,1009,693,1043,655"/>
+<area shape="poly" title=" " alt="" coords="3182,490,3208,508,3228,529,3237,552,3236,564,3229,575,3216,583,3195,591,3129,605,2913,630,2614,651,2266,669,1562,695,1076,707,1076,702,1562,689,2266,664,2614,646,2913,624,3128,599,3194,586,3214,578,3225,571,3231,562,3232,553,3224,532,3204,512,3179,495"/>
+<area shape="poly" title=" " alt="" coords="3039,482,2983,488,2678,512,2379,531,1940,552,1940,547,2378,526,2678,507,2982,483,3038,477"/>
+<area shape="poly" title=" " alt="" coords="581,305,592,307,908,360,907,365,592,312,580,310"/>
+<area shape="poly" title=" " alt="" coords="544,312,610,343,678,382,732,423,749,444,755,464,755,554,759,584,772,608,791,630,816,648,874,675,933,692,932,697,872,680,813,653,788,634,768,612,754,585,749,555,749,464,744,446,729,427,676,386,608,348,542,317"/>
+<area shape="poly" title=" " alt="" coords="462,321,277,535,273,531,458,318"/>
+<area shape="poly" title=" " alt="" coords="581,305,592,307,702,311,845,312,917,315,984,322,1041,335,1084,355,1100,370,1109,387,1114,421,1120,455,1128,469,1143,483,1168,497,1198,508,1273,522,1362,528,1458,529,1647,526,1728,526,1792,531,1829,538,1828,543,1792,536,1728,531,1647,531,1458,535,1362,534,1273,527,1197,513,1166,502,1140,487,1124,473,1115,456,1109,422,1104,388,1096,373,1081,360,1040,340,983,328,917,321,845,318,702,317,592,312,580,310"/>
+<area shape="poly" title=" " alt="" coords="2407,404,1913,543,1912,538,2405,399"/>
+<area shape="poly" title=" " alt="" coords="302,230,343,270,393,307,453,337,515,363,642,404,761,433,860,451,859,456,760,438,641,409,513,368,450,342,391,312,339,274,298,234"/>
+<area shape="poly" title=" " alt="" coords="226,230,186,256,149,289,133,308,120,329,112,352,109,376,109,554,116,568,134,582,165,595,205,608,310,631,436,651,708,681,927,699,926,704,708,686,436,656,309,636,204,613,163,600,132,586,111,571,104,555,104,376,107,351,116,327,129,305,145,285,183,252,223,226"/>
+<area shape="poly" title=" " alt="" coords="277,235,262,533,257,533,272,235"/>
+<area shape="poly" title=" " alt="" coords="372,211,474,232,528,247,580,267,597,277,609,288,620,298,637,307,706,329,766,340,820,345,872,344,979,342,1042,345,1115,355,1332,400,1541,453,1837,538,1835,543,1540,458,1330,405,1114,360,1042,350,979,347,872,350,820,350,765,346,705,334,635,312,617,302,605,292,594,281,578,272,526,252,472,237,371,216"/>
+<area shape="poly" title=" " alt="" coords="336,224,441,267,438,272,334,229"/>
+<area shape="poly" title=" " alt="" coords="371,217,679,274,678,279,370,223"/>
+<area shape="poly" title=" " alt="" coords="1408,233,1365,273,1313,312,1232,356,1148,394,1002,448,1001,443,1146,389,1230,352,1311,307,1362,269,1404,229"/>
+<area shape="poly" title=" " alt="" coords="1483,225,1578,274,1575,279,1480,230"/>
+<area shape="poly" title=" " alt="" coords="1917,498,1883,542,1879,539,1912,495"/>
+<area shape="poly" title=" " alt="" coords="3618,490,3449,532,3251,576,3044,620,2953,635,2835,649,2671,662,2455,673,1937,691,1076,708,1076,702,1936,685,2454,668,2671,657,2834,644,2952,630,3043,614,3250,571,3448,527,3617,485"/>
+<area shape="poly" title=" " alt="" coords="3722,496,3802,620,3797,623,3717,499"/>
+<area shape="poly" title=" " alt="" coords="4072,131,4147,179,4144,183,4069,136"/>
+<area shape="rect" href="../../d9/d68/dtls_8c.html" title="DTLS helpers: ephemeral certificate generation, fingerprint, SSL_CTX." alt="" coords="4622,277,4775,302"/>
+<area shape="poly" title=" " alt="" coords="4270,213,4429,237,4610,267,4647,274,4646,279,4609,272,4428,242,4269,218"/>
+<area shape="rect" href="../../db/dba/ice_8c.html" title="Minimal STUN/ICE (RFC 5389 / RFC 8445) for the ICE&#45;lite agent." alt="" coords="3895,277,4043,302"/>
+<area shape="poly" title=" " alt="" coords="4118,229,3998,279,3996,274,4116,224"/>
+<area shape="rect" href="../../df/dc8/sctp_8c.html" title="SCTP DataChannels over DTLS (RFC 8831) and DCEP (RFC 8832)." alt="" coords="4067,277,4223,302"/>
+<area shape="poly" title=" " alt="" coords="4166,235,4152,277,4147,275,4161,233"/>
+<area shape="rect" href="../../d6/d9d/sdp_8c.html" title="Minimal SDP (RFC 4566) parse/generate for DataChannel offers/answers." alt="" coords="4248,277,4400,302"/>
+<area shape="poly" title=" " alt="" coords="4220,226,4305,274,4303,279,4218,230"/>
+<area shape="rect" href="../../d3/d90/webrtc_8c.html" title="WebRTC DataChannel context: UDP I/O, ICE&#45;lite, DTLS, SCTP driving." alt="" coords="4424,277,4597,302"/>
+<area shape="poly" title=" " alt="" coords="4262,222,4467,274,4465,279,4261,227"/>
+<area shape="poly" title=" " alt="" coords="3396,323,3396,364,3391,364,3391,323"/>
+<area shape="poly" title=" " alt="" coords="3300,309,1938,543,1938,538,3299,304"/>
+<area shape="poly" title=" " alt="" coords="4913,137,4937,204,4947,246,4951,288,4951,467,4948,491,4941,510,4930,526,4916,538,4878,557,4833,576,4775,589,4676,600,4402,617,4104,628,3876,634,3876,629,4104,623,4402,612,4676,595,4774,584,4831,571,4876,553,4913,534,4926,522,4937,508,4943,490,4945,467,4945,288,4942,246,4932,206,4908,139"/>
+<area shape="poly" title=" " alt="" coords="4886,139,4849,190,4845,187,4881,136"/>
 </map>
 </div>
 </div>
 <p><a href="../../dc/d85/reactor_8h_source.html">Go to the source code of this file.</a></p>
 <table class="memberdecls">
+<tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="nested-classes" name="nested-classes"></a>
+Classes</h2></td></tr>
+<tr class="memitem:"><td class="memItemLeft" align="right" valign="top">struct &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d2/dcc/structcwist__reactor__post.html">cwist_reactor_post</a></td></tr>
+<tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:"><td class="memItemLeft" align="right" valign="top">struct &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../df/d51/structcwist__reactor__timer.html">cwist_reactor_timer</a></td></tr>
+<tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
+</table><table class="memberdecls">
+<tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="define-members" name="define-members"></a>
+Macros</h2></td></tr>
+<tr class="memitem:a20d4b16f35f8abe1da3bb136a755fd79" id="r_a20d4b16f35f8abe1da3bb136a755fd79"><td class="memItemLeft" align="right" valign="top">#define&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../dc/d85/reactor_8h.html#a20d4b16f35f8abe1da3bb136a755fd79">CWIST_REACTOR_PAYLOAD_SIZE</a>&#160;&#160;&#160;64</td></tr>
+<tr class="separator:a20d4b16f35f8abe1da3bb136a755fd79"><td class="memSeparator" colspan="2">&#160;</td></tr>
+</table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="typedef-members" name="typedef-members"></a>
 Typedefs</h2></td></tr>
-<tr class="memitem:a55f44fe46a653a795375be3b803ba4ad" id="r_a55f44fe46a653a795375be3b803ba4ad"><td class="memItemLeft" align="right" valign="top"><a class="el" href="../../d6/d3c/seq_8h.html#aeb29493e92e60057714a6b22befc6d67">typedef</a> <a class="el" href="../../d6/d3c/seq_8h.html#aeb29493e92e60057714a6b22befc6d67">void</a>(*&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../dc/d85/reactor_8h.html#a55f44fe46a653a795375be3b803ba4ad">cwist_reactor_cb_t</a>) (<a class="el" href="../../d6/d3c/seq_8h.html#aeb29493e92e60057714a6b22befc6d67">int</a> fd, <a class="el" href="../../d6/d3c/seq_8h.html#aeb29493e92e60057714a6b22befc6d67">void</a> *ctx)</td></tr>
+<tr class="memitem:a55f44fe46a653a795375be3b803ba4ad" id="r_a55f44fe46a653a795375be3b803ba4ad"><td class="memItemLeft" align="right" valign="top">typedef void(*&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../dc/d85/reactor_8h.html#a55f44fe46a653a795375be3b803ba4ad">cwist_reactor_cb_t</a>) (int fd, void *ctx)</td></tr>
 <tr class="separator:a55f44fe46a653a795375be3b803ba4ad"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a255365d0eb6a437c8aa4cae182f3ee0d" id="r_a255365d0eb6a437c8aa4cae182f3ee0d"><td class="memItemLeft" align="right" valign="top"><a class="el" href="../../d6/d3c/seq_8h.html#aeb29493e92e60057714a6b22befc6d67">typedef</a> <a class="el" href="../../d6/d3c/seq_8h.html#aeb29493e92e60057714a6b22befc6d67">struct</a> cwist_reactor&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../dc/d85/reactor_8h.html#a255365d0eb6a437c8aa4cae182f3ee0d">cwist_reactor_t</a></td></tr>
+<tr class="memitem:a255365d0eb6a437c8aa4cae182f3ee0d" id="r_a255365d0eb6a437c8aa4cae182f3ee0d"><td class="memItemLeft" align="right" valign="top">typedef struct cwist_reactor&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../dc/d85/reactor_8h.html#a255365d0eb6a437c8aa4cae182f3ee0d">cwist_reactor_t</a></td></tr>
 <tr class="separator:a255365d0eb6a437c8aa4cae182f3ee0d"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a49a1587e6cc611da57554c043cf68f95" id="r_a49a1587e6cc611da57554c043cf68f95"><td class="memItemLeft" align="right" valign="top">typedef struct <a class="el" href="../../d2/dcc/structcwist__reactor__post.html">cwist_reactor_post</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../dc/d85/reactor_8h.html#a49a1587e6cc611da57554c043cf68f95">cwist_reactor_post_t</a></td></tr>
+<tr class="separator:a49a1587e6cc611da57554c043cf68f95"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a6e1227da6b13c449c76dbe283d1f0be2" id="r_a6e1227da6b13c449c76dbe283d1f0be2"><td class="memItemLeft" align="right" valign="top">typedef struct <a class="el" href="../../df/d51/structcwist__reactor__timer.html">cwist_reactor_timer</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../dc/d85/reactor_8h.html#a6e1227da6b13c449c76dbe283d1f0be2">cwist_reactor_timer_t</a></td></tr>
+<tr class="separator:a6e1227da6b13c449c76dbe283d1f0be2"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="func-members" name="func-members"></a>
 Functions</h2></td></tr>
-<tr class="memitem:a9ff56888792460aa778107dde4e91bbe" id="r_a9ff56888792460aa778107dde4e91bbe"><td class="memItemLeft" align="right" valign="top"><a class="el" href="../../dc/d85/reactor_8h.html#a255365d0eb6a437c8aa4cae182f3ee0d">cwist_reactor_t</a> *&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../dc/d85/reactor_8h.html#a9ff56888792460aa778107dde4e91bbe">cwist_reactor_create</a> (<a class="el" href="../../d6/d3c/seq_8h.html#aeb29493e92e60057714a6b22befc6d67">void</a>)</td></tr>
+<tr class="memitem:a9ff56888792460aa778107dde4e91bbe" id="r_a9ff56888792460aa778107dde4e91bbe"><td class="memItemLeft" align="right" valign="top"><a class="el" href="../../dc/d85/reactor_8h.html#a255365d0eb6a437c8aa4cae182f3ee0d">cwist_reactor_t</a> *&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../dc/d85/reactor_8h.html#a9ff56888792460aa778107dde4e91bbe">cwist_reactor_create</a> (void)</td></tr>
 <tr class="separator:a9ff56888792460aa778107dde4e91bbe"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a7596f973cbd936b017e527e3ddde5808" id="r_a7596f973cbd936b017e527e3ddde5808"><td class="memItemLeft" align="right" valign="top"><a class="el" href="../../d6/d3c/seq_8h.html#aeb29493e92e60057714a6b22befc6d67">void</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../dc/d85/reactor_8h.html#a7596f973cbd936b017e527e3ddde5808">cwist_reactor_destroy</a> (<a class="el" href="../../dc/d85/reactor_8h.html#a255365d0eb6a437c8aa4cae182f3ee0d">cwist_reactor_t</a> *reactor)</td></tr>
+<tr class="memitem:a7596f973cbd936b017e527e3ddde5808" id="r_a7596f973cbd936b017e527e3ddde5808"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../dc/d85/reactor_8h.html#a7596f973cbd936b017e527e3ddde5808">cwist_reactor_destroy</a> (<a class="el" href="../../dc/d85/reactor_8h.html#a255365d0eb6a437c8aa4cae182f3ee0d">cwist_reactor_t</a> *reactor)</td></tr>
 <tr class="separator:a7596f973cbd936b017e527e3ddde5808"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:af703cb63199d34e3ba34f02426db2b18" id="r_af703cb63199d34e3ba34f02426db2b18"><td class="memItemLeft" align="right" valign="top"><a class="el" href="../../d6/d3c/seq_8h.html#aeb29493e92e60057714a6b22befc6d67">bool</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../dc/d85/reactor_8h.html#af703cb63199d34e3ba34f02426db2b18">cwist_reactor_add</a> (<a class="el" href="../../dc/d85/reactor_8h.html#a255365d0eb6a437c8aa4cae182f3ee0d">cwist_reactor_t</a> *reactor, <a class="el" href="../../d6/d3c/seq_8h.html#aeb29493e92e60057714a6b22befc6d67">int</a> fd, <a class="el" href="../../dc/d85/reactor_8h.html#a55f44fe46a653a795375be3b803ba4ad">cwist_reactor_cb_t</a> cb, <a class="el" href="../../d6/d3c/seq_8h.html#aeb29493e92e60057714a6b22befc6d67">void</a> *ctx)</td></tr>
-<tr class="separator:af703cb63199d34e3ba34f02426db2b18"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:ae1019ce683fdc8fe50fb24bb6988cebb" id="r_ae1019ce683fdc8fe50fb24bb6988cebb"><td class="memItemLeft" align="right" valign="top"><a class="el" href="../../d6/d3c/seq_8h.html#aeb29493e92e60057714a6b22befc6d67">bool</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../dc/d85/reactor_8h.html#ae1019ce683fdc8fe50fb24bb6988cebb">cwist_reactor_mod</a> (<a class="el" href="../../dc/d85/reactor_8h.html#a255365d0eb6a437c8aa4cae182f3ee0d">cwist_reactor_t</a> *reactor, <a class="el" href="../../d6/d3c/seq_8h.html#aeb29493e92e60057714a6b22befc6d67">int</a> fd, <a class="el" href="../../dc/d85/reactor_8h.html#a55f44fe46a653a795375be3b803ba4ad">cwist_reactor_cb_t</a> cb, <a class="el" href="../../d6/d3c/seq_8h.html#aeb29493e92e60057714a6b22befc6d67">void</a> *ctx)</td></tr>
-<tr class="separator:ae1019ce683fdc8fe50fb24bb6988cebb"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a48813b43eecb4b6630de99cb0006f8df" id="r_a48813b43eecb4b6630de99cb0006f8df"><td class="memItemLeft" align="right" valign="top"><a class="el" href="../../d6/d3c/seq_8h.html#aeb29493e92e60057714a6b22befc6d67">bool</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../dc/d85/reactor_8h.html#a48813b43eecb4b6630de99cb0006f8df">cwist_reactor_del</a> (<a class="el" href="../../dc/d85/reactor_8h.html#a255365d0eb6a437c8aa4cae182f3ee0d">cwist_reactor_t</a> *reactor, <a class="el" href="../../d6/d3c/seq_8h.html#aeb29493e92e60057714a6b22befc6d67">int</a> fd)</td></tr>
+<tr class="memitem:a36ad427aab3be386e5dcc81cfc9f1103" id="r_a36ad427aab3be386e5dcc81cfc9f1103"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../dc/d85/reactor_8h.html#a36ad427aab3be386e5dcc81cfc9f1103">cwist_reactor_add</a> (<a class="el" href="../../dc/d85/reactor_8h.html#a255365d0eb6a437c8aa4cae182f3ee0d">cwist_reactor_t</a> *reactor, int fd, <a class="el" href="../../dc/d85/reactor_8h.html#a55f44fe46a653a795375be3b803ba4ad">cwist_reactor_cb_t</a> cb, const void *payload, size_t payload_size)</td></tr>
+<tr class="separator:a36ad427aab3be386e5dcc81cfc9f1103"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:aff14d90bc843e993808c68cf41c3cad2" id="r_aff14d90bc843e993808c68cf41c3cad2"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../dc/d85/reactor_8h.html#aff14d90bc843e993808c68cf41c3cad2">cwist_reactor_add_out</a> (<a class="el" href="../../dc/d85/reactor_8h.html#a255365d0eb6a437c8aa4cae182f3ee0d">cwist_reactor_t</a> *reactor, int fd, <a class="el" href="../../dc/d85/reactor_8h.html#a55f44fe46a653a795375be3b803ba4ad">cwist_reactor_cb_t</a> cb, const void *payload, size_t payload_size)</td></tr>
+<tr class="separator:aff14d90bc843e993808c68cf41c3cad2"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ac41bb6897a1bfa0bf507bc50183f2311" id="r_ac41bb6897a1bfa0bf507bc50183f2311"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../dc/d85/reactor_8h.html#ac41bb6897a1bfa0bf507bc50183f2311">cwist_reactor_mod</a> (<a class="el" href="../../dc/d85/reactor_8h.html#a255365d0eb6a437c8aa4cae182f3ee0d">cwist_reactor_t</a> *reactor, int fd, <a class="el" href="../../dc/d85/reactor_8h.html#a55f44fe46a653a795375be3b803ba4ad">cwist_reactor_cb_t</a> cb, const void *payload, size_t payload_size)</td></tr>
+<tr class="separator:ac41bb6897a1bfa0bf507bc50183f2311"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a48813b43eecb4b6630de99cb0006f8df" id="r_a48813b43eecb4b6630de99cb0006f8df"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../dc/d85/reactor_8h.html#a48813b43eecb4b6630de99cb0006f8df">cwist_reactor_del</a> (<a class="el" href="../../dc/d85/reactor_8h.html#a255365d0eb6a437c8aa4cae182f3ee0d">cwist_reactor_t</a> *reactor, int fd)</td></tr>
 <tr class="separator:a48813b43eecb4b6630de99cb0006f8df"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:ac07bb3ce2393c0588f863eb97c4d6f5c" id="r_ac07bb3ce2393c0588f863eb97c4d6f5c"><td class="memItemLeft" align="right" valign="top"><a class="el" href="../../d6/d3c/seq_8h.html#aeb29493e92e60057714a6b22befc6d67">void</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../dc/d85/reactor_8h.html#ac07bb3ce2393c0588f863eb97c4d6f5c">cwist_reactor_run</a> (<a class="el" href="../../dc/d85/reactor_8h.html#a255365d0eb6a437c8aa4cae182f3ee0d">cwist_reactor_t</a> *reactor)</td></tr>
+<tr class="memitem:ac07bb3ce2393c0588f863eb97c4d6f5c" id="r_ac07bb3ce2393c0588f863eb97c4d6f5c"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../dc/d85/reactor_8h.html#ac07bb3ce2393c0588f863eb97c4d6f5c">cwist_reactor_run</a> (<a class="el" href="../../dc/d85/reactor_8h.html#a255365d0eb6a437c8aa4cae182f3ee0d">cwist_reactor_t</a> *reactor)</td></tr>
 <tr class="separator:ac07bb3ce2393c0588f863eb97c4d6f5c"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a9df66b83bfa0785186eeb5d2f3f81b2a" id="r_a9df66b83bfa0785186eeb5d2f3f81b2a"><td class="memItemLeft" align="right" valign="top"><a class="el" href="../../d6/d3c/seq_8h.html#aeb29493e92e60057714a6b22befc6d67">void</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../dc/d85/reactor_8h.html#a9df66b83bfa0785186eeb5d2f3f81b2a">cwist_reactor_stop</a> (<a class="el" href="../../dc/d85/reactor_8h.html#a255365d0eb6a437c8aa4cae182f3ee0d">cwist_reactor_t</a> *reactor)</td></tr>
+<tr class="memitem:a9df66b83bfa0785186eeb5d2f3f81b2a" id="r_a9df66b83bfa0785186eeb5d2f3f81b2a"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../dc/d85/reactor_8h.html#a9df66b83bfa0785186eeb5d2f3f81b2a">cwist_reactor_stop</a> (<a class="el" href="../../dc/d85/reactor_8h.html#a255365d0eb6a437c8aa4cae182f3ee0d">cwist_reactor_t</a> *reactor)</td></tr>
 <tr class="separator:a9df66b83bfa0785186eeb5d2f3f81b2a"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a965d32de1ecfb28c970068b164dfe015" id="r_a965d32de1ecfb28c970068b164dfe015"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../dc/d85/reactor_8h.html#a965d32de1ecfb28c970068b164dfe015">cwist_reactor_post</a> (<a class="el" href="../../dc/d85/reactor_8h.html#a255365d0eb6a437c8aa4cae182f3ee0d">cwist_reactor_t</a> *reactor, <a class="el" href="../../dc/d85/reactor_8h.html#a49a1587e6cc611da57554c043cf68f95">cwist_reactor_post_t</a> *node)</td></tr>
+<tr class="separator:a965d32de1ecfb28c970068b164dfe015"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a4233b1b17f49e6bd82c718d75dfbe010" id="r_a4233b1b17f49e6bd82c718d75dfbe010"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../dc/d85/reactor_8h.html#a4233b1b17f49e6bd82c718d75dfbe010">cwist_reactor_timer_init</a> (<a class="el" href="../../dc/d85/reactor_8h.html#a6e1227da6b13c449c76dbe283d1f0be2">cwist_reactor_timer_t</a> *timer, void(*cb)(void *ctx), void *ctx)</td></tr>
+<tr class="separator:a4233b1b17f49e6bd82c718d75dfbe010"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a3672497adf44052b571dcedf9b67250d" id="r_a3672497adf44052b571dcedf9b67250d"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../dc/d85/reactor_8h.html#a3672497adf44052b571dcedf9b67250d">cwist_reactor_timer_arm</a> (<a class="el" href="../../dc/d85/reactor_8h.html#a255365d0eb6a437c8aa4cae182f3ee0d">cwist_reactor_t</a> *reactor, <a class="el" href="../../dc/d85/reactor_8h.html#a6e1227da6b13c449c76dbe283d1f0be2">cwist_reactor_timer_t</a> *timer, uint64_t delay_us)</td></tr>
+<tr class="separator:a3672497adf44052b571dcedf9b67250d"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ace9d400afac10f7afd20113fc4aba894" id="r_ace9d400afac10f7afd20113fc4aba894"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../dc/d85/reactor_8h.html#ace9d400afac10f7afd20113fc4aba894">cwist_reactor_timer_cancel</a> (<a class="el" href="../../dc/d85/reactor_8h.html#a255365d0eb6a437c8aa4cae182f3ee0d">cwist_reactor_t</a> *reactor, <a class="el" href="../../dc/d85/reactor_8h.html#a6e1227da6b13c449c76dbe283d1f0be2">cwist_reactor_timer_t</a> *timer)</td></tr>
+<tr class="separator:ace9d400afac10f7afd20113fc4aba894"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:acb0608bc68f4668fdbacfc78606e55d4" id="r_acb0608bc68f4668fdbacfc78606e55d4"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../dc/d85/reactor_8h.html#acb0608bc68f4668fdbacfc78606e55d4">cwist_reactor_timer_armed</a> (const <a class="el" href="../../dc/d85/reactor_8h.html#a6e1227da6b13c449c76dbe283d1f0be2">cwist_reactor_timer_t</a> *timer)</td></tr>
+<tr class="separator:acb0608bc68f4668fdbacfc78606e55d4"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
+<h2 class="groupheader">Macro Definition Documentation</h2>
+<a id="a20d4b16f35f8abe1da3bb136a755fd79" name="a20d4b16f35f8abe1da3bb136a755fd79"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a20d4b16f35f8abe1da3bb136a755fd79">&#9670;&#160;</a></span>CWIST_REACTOR_PAYLOAD_SIZE</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">#define CWIST_REACTOR_PAYLOAD_SIZE&#160;&#160;&#160;64</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p class="definition">Definition at line <a class="el" href="../../dc/d85/reactor_8h_source.html#l00019">19</a> of file <a class="el" href="../../dc/d85/reactor_8h_source.html">reactor.h</a>.</p>
+
+</div>
+</div>
 <h2 class="groupheader">Typedef Documentation</h2>
 <a id="a55f44fe46a653a795375be3b803ba4ad" name="a55f44fe46a653a795375be3b803ba4ad"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#a55f44fe46a653a795375be3b803ba4ad">&#9670;&#160;</a></span>cwist_reactor_cb_t</h2>
@@ -143,12 +323,26 @@ Functions</h2></td></tr>
 <div class="memproto">
       <table class="memname">
         <tr>
-          <td class="memname"><a class="el" href="../../d6/d3c/seq_8h.html#aeb29493e92e60057714a6b22befc6d67">typedef</a> <a class="el" href="../../d6/d3c/seq_8h.html#aeb29493e92e60057714a6b22befc6d67">void</a>(* cwist_reactor_cb_t) (<a class="el" href="../../d6/d3c/seq_8h.html#aeb29493e92e60057714a6b22befc6d67">int</a> fd, <a class="el" href="../../d6/d3c/seq_8h.html#aeb29493e92e60057714a6b22befc6d67">void</a> *ctx)</td>
+          <td class="memname">typedef void(* cwist_reactor_cb_t) (int fd, void *ctx)</td>
         </tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../dc/d85/reactor_8h_source.html#l00011">11</a> of file <a class="el" href="../../dc/d85/reactor_8h_source.html">reactor.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../dc/d85/reactor_8h_source.html#l00012">12</a> of file <a class="el" href="../../dc/d85/reactor_8h_source.html">reactor.h</a>.</p>
+
+</div>
+</div>
+<a id="a49a1587e6cc611da57554c043cf68f95" name="a49a1587e6cc611da57554c043cf68f95"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a49a1587e6cc611da57554c043cf68f95">&#9670;&#160;</a></span>cwist_reactor_post_t</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">typedef struct <a class="el" href="../../d2/dcc/structcwist__reactor__post.html">cwist_reactor_post</a> <a class="el" href="../../dc/d85/reactor_8h.html#a49a1587e6cc611da57554c043cf68f95">cwist_reactor_post_t</a></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
 
 </div>
 </div>
@@ -159,24 +353,38 @@ Functions</h2></td></tr>
 <div class="memproto">
       <table class="memname">
         <tr>
-          <td class="memname"><a class="el" href="../../d6/d3c/seq_8h.html#aeb29493e92e60057714a6b22befc6d67">typedef</a> <a class="el" href="../../d6/d3c/seq_8h.html#aeb29493e92e60057714a6b22befc6d67">struct</a> cwist_reactor <a class="el" href="../../dc/d85/reactor_8h.html#a255365d0eb6a437c8aa4cae182f3ee0d">cwist_reactor_t</a></td>
+          <td class="memname">typedef struct cwist_reactor <a class="el" href="../../dc/d85/reactor_8h.html#a255365d0eb6a437c8aa4cae182f3ee0d">cwist_reactor_t</a></td>
         </tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../dc/d85/reactor_8h_source.html#l00013">13</a> of file <a class="el" href="../../dc/d85/reactor_8h_source.html">reactor.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../dc/d85/reactor_8h_source.html#l00014">14</a> of file <a class="el" href="../../dc/d85/reactor_8h_source.html">reactor.h</a>.</p>
 
 </div>
 </div>
-<h2 class="groupheader">Function Documentation</h2>
-<a id="af703cb63199d34e3ba34f02426db2b18" name="af703cb63199d34e3ba34f02426db2b18"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#af703cb63199d34e3ba34f02426db2b18">&#9670;&#160;</a></span>cwist_reactor_add()</h2>
+<a id="a6e1227da6b13c449c76dbe283d1f0be2" name="a6e1227da6b13c449c76dbe283d1f0be2"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a6e1227da6b13c449c76dbe283d1f0be2">&#9670;&#160;</a></span>cwist_reactor_timer_t</h2>
 
 <div class="memitem">
 <div class="memproto">
       <table class="memname">
         <tr>
-          <td class="memname"><a class="el" href="../../d6/d3c/seq_8h.html#aeb29493e92e60057714a6b22befc6d67">bool</a> cwist_reactor_add </td>
+          <td class="memname">typedef struct <a class="el" href="../../df/d51/structcwist__reactor__timer.html">cwist_reactor_timer</a> <a class="el" href="../../dc/d85/reactor_8h.html#a6e1227da6b13c449c76dbe283d1f0be2">cwist_reactor_timer_t</a></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+</div>
+</div>
+<h2 class="groupheader">Function Documentation</h2>
+<a id="a36ad427aab3be386e5dcc81cfc9f1103" name="a36ad427aab3be386e5dcc81cfc9f1103"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a36ad427aab3be386e5dcc81cfc9f1103">&#9670;&#160;</a></span>cwist_reactor_add()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">bool cwist_reactor_add </td>
           <td>(</td>
           <td class="paramtype"><a class="el" href="../../dc/d85/reactor_8h.html#a255365d0eb6a437c8aa4cae182f3ee0d">cwist_reactor_t</a> *&#160;</td>
           <td class="paramname"><em>reactor</em>, </td>
@@ -184,7 +392,7 @@ Functions</h2></td></tr>
         <tr>
           <td class="paramkey"></td>
           <td></td>
-          <td class="paramtype"><a class="el" href="../../d6/d3c/seq_8h.html#aeb29493e92e60057714a6b22befc6d67">int</a>&#160;</td>
+          <td class="paramtype">int&#160;</td>
           <td class="paramname"><em>fd</em>, </td>
         </tr>
         <tr>
@@ -196,8 +404,14 @@ Functions</h2></td></tr>
         <tr>
           <td class="paramkey"></td>
           <td></td>
-          <td class="paramtype"><a class="el" href="../../d6/d3c/seq_8h.html#aeb29493e92e60057714a6b22befc6d67">void</a> *&#160;</td>
-          <td class="paramname"><em>ctx</em>&#160;</td>
+          <td class="paramtype">const void *&#160;</td>
+          <td class="paramname"><em>payload</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">size_t&#160;</td>
+          <td class="paramname"><em>payload_size</em>&#160;</td>
         </tr>
         <tr>
           <td></td>
@@ -207,11 +421,59 @@ Functions</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../d3/d99/reactor_8c_source.html#l00169">169</a> of file <a class="el" href="../../d3/d99/reactor_8c_source.html">reactor.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d3/d99/reactor_8c_source.html#l00999">999</a> of file <a class="el" href="../../d3/d99/reactor_8c_source.html">reactor.c</a>.</p>
 
-<p class="reference">References <a class="el" href="../../d6/d3c/seq_8h_source.html#l00029">CWIST_SEQ_HEADER_SIZE</a>.</p>
+<p class="reference">Referenced by <a class="el" href="../../d0/d3d/async__server_8c_source.html#l00129">cwist_async_server_loop()</a>, <a class="el" href="../../d3/d99/reactor_8c_source.html#l00657">cwist_reactor_create()</a>, and <a class="el" href="../../d4/d57/websocket__async_8c_source.html#l01100">cwist_websocket_async_attach_ex()</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../d0/d3d/async__server_8c_source.html#l00065">cwist_async_server_loop()</a>, <a class="el" href="../../dd/d43/http_8c_source.html#l00228">cwist_http_pool_rearm_current()</a>, and <a class="el" href="../../dd/d43/http_8c_source.html#l00202">cwist_http_pool_submit()</a>.</p>
+</div>
+</div>
+<a id="aff14d90bc843e993808c68cf41c3cad2" name="aff14d90bc843e993808c68cf41c3cad2"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#aff14d90bc843e993808c68cf41c3cad2">&#9670;&#160;</a></span>cwist_reactor_add_out()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">bool cwist_reactor_add_out </td>
+          <td>(</td>
+          <td class="paramtype"><a class="el" href="../../dc/d85/reactor_8h.html#a255365d0eb6a437c8aa4cae182f3ee0d">cwist_reactor_t</a> *&#160;</td>
+          <td class="paramname"><em>reactor</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">int&#160;</td>
+          <td class="paramname"><em>fd</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype"><a class="el" href="../../dc/d85/reactor_8h.html#a55f44fe46a653a795375be3b803ba4ad">cwist_reactor_cb_t</a>&#160;</td>
+          <td class="paramname"><em>cb</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">const void *&#160;</td>
+          <td class="paramname"><em>payload</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">size_t&#160;</td>
+          <td class="paramname"><em>payload_size</em>&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p class="definition">Definition at line <a class="el" href="../../d3/d99/reactor_8c_source.html#l01004">1004</a> of file <a class="el" href="../../d3/d99/reactor_8c_source.html">reactor.c</a>.</p>
+
+<p class="reference">Referenced by <a class="el" href="../../dd/d43/http_8c_source.html#l03100">cwist_http_async_send_response()</a>, <a class="el" href="../../dd/d43/http_8c_source.html#l03367">cwist_http_coalesce_flush()</a>, <a class="el" href="../../dd/d43/http_8c_source.html#l03221">cwist_http_send_response_async()</a>, and <a class="el" href="../../dd/d43/http_8c_source.html#l03464">cwist_http_send_response_coalesced()</a>.</p>
 
 </div>
 </div>
@@ -224,18 +486,18 @@ Functions</h2></td></tr>
         <tr>
           <td class="memname"><a class="el" href="../../dc/d85/reactor_8h.html#a255365d0eb6a437c8aa4cae182f3ee0d">cwist_reactor_t</a> * cwist_reactor_create </td>
           <td>(</td>
-          <td class="paramtype"><a class="el" href="../../d6/d3c/seq_8h.html#aeb29493e92e60057714a6b22befc6d67">void</a>&#160;</td>
+          <td class="paramtype">void&#160;</td>
           <td class="paramname"></td><td>)</td>
           <td></td>
         </tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../d3/d99/reactor_8c_source.html#l00093">93</a> of file <a class="el" href="../../d3/d99/reactor_8c_source.html">reactor.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d3/d99/reactor_8c_source.html#l00657">657</a> of file <a class="el" href="../../d3/d99/reactor_8c_source.html">reactor.c</a>.</p>
 
-<p class="reference">References <a class="el" href="../../d9/d39/alloc_8c_source.html#l00221">cwist_alloc()</a>, <a class="el" href="../../d9/d39/alloc_8c_source.html#l00315">cwist_free()</a>, and <a class="el" href="../../d6/d3c/seq_8h_source.html#l00029">CWIST_SEQ_HEADER_SIZE</a>.</p>
+<p class="reference">References <a class="el" href="../../d9/d39/alloc_8c_source.html#l00275">cwist_alloc()</a>, <a class="el" href="../../d9/d39/alloc_8c_source.html#l00390">cwist_free()</a>, and <a class="el" href="../../d3/d99/reactor_8c_source.html#l00999">cwist_reactor_add()</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../d0/d3d/async__server_8c_source.html#l00065">cwist_async_server_loop()</a>, and <a class="el" href="../../dd/d43/http_8c_source.html#l00185">cwist_http_pool_init()</a>.</p>
+<p class="reference">Referenced by <a class="el" href="../../d0/d3d/async__server_8c_source.html#l00129">cwist_async_server_loop()</a>, <a class="el" href="../../dd/d43/http_8c_source.html#l00515">cwist_http_pool_init_mode()</a>, and <a class="el" href="../../d3/d90/webrtc_8c_source.html#l00879">cwist_webrtc_ctx_new()</a>.</p>
 
 </div>
 </div>
@@ -246,7 +508,7 @@ Functions</h2></td></tr>
 <div class="memproto">
       <table class="memname">
         <tr>
-          <td class="memname"><a class="el" href="../../d6/d3c/seq_8h.html#aeb29493e92e60057714a6b22befc6d67">bool</a> cwist_reactor_del </td>
+          <td class="memname">bool cwist_reactor_del </td>
           <td>(</td>
           <td class="paramtype"><a class="el" href="../../dc/d85/reactor_8h.html#a255365d0eb6a437c8aa4cae182f3ee0d">cwist_reactor_t</a> *&#160;</td>
           <td class="paramname"><em>reactor</em>, </td>
@@ -254,7 +516,7 @@ Functions</h2></td></tr>
         <tr>
           <td class="paramkey"></td>
           <td></td>
-          <td class="paramtype"><a class="el" href="../../d6/d3c/seq_8h.html#aeb29493e92e60057714a6b22befc6d67">int</a>&#160;</td>
+          <td class="paramtype">int&#160;</td>
           <td class="paramname"><em>fd</em>&#160;</td>
         </tr>
         <tr>
@@ -265,9 +527,7 @@ Functions</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../d3/d99/reactor_8c_source.html#l00278">278</a> of file <a class="el" href="../../d3/d99/reactor_8c_source.html">reactor.c</a>.</p>
-
-<p class="reference">References <a class="el" href="../../d6/d3c/seq_8h_source.html#l00029">CWIST_SEQ_HEADER_SIZE</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d3/d99/reactor_8c_source.html#l01051">1051</a> of file <a class="el" href="../../d3/d99/reactor_8c_source.html">reactor.c</a>.</p>
 
 </div>
 </div>
@@ -278,7 +538,7 @@ Functions</h2></td></tr>
 <div class="memproto">
       <table class="memname">
         <tr>
-          <td class="memname"><a class="el" href="../../d6/d3c/seq_8h.html#aeb29493e92e60057714a6b22befc6d67">void</a> cwist_reactor_destroy </td>
+          <td class="memname">void cwist_reactor_destroy </td>
           <td>(</td>
           <td class="paramtype"><a class="el" href="../../dc/d85/reactor_8h.html#a255365d0eb6a437c8aa4cae182f3ee0d">cwist_reactor_t</a> *&#160;</td>
           <td class="paramname"><em>reactor</em></td><td>)</td>
@@ -287,22 +547,22 @@ Functions</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../d3/d99/reactor_8c_source.html#l00155">155</a> of file <a class="el" href="../../d3/d99/reactor_8c_source.html">reactor.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d3/d99/reactor_8c_source.html#l00767">767</a> of file <a class="el" href="../../d3/d99/reactor_8c_source.html">reactor.c</a>.</p>
 
-<p class="reference">References <a class="el" href="../../d9/d39/alloc_8c_source.html#l00315">cwist_free()</a>, and <a class="el" href="../../d6/d3c/seq_8h_source.html#l00029">CWIST_SEQ_HEADER_SIZE</a>.</p>
+<p class="reference">References <a class="el" href="../../d9/d39/alloc_8c_source.html#l00390">cwist_free()</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../d0/d3d/async__server_8c_source.html#l00065">cwist_async_server_loop()</a>, and <a class="el" href="../../dd/d43/http_8c_source.html#l00245">cwist_http_pool_destroy()</a>.</p>
+<p class="reference">Referenced by <a class="el" href="../../d0/d3d/async__server_8c_source.html#l00129">cwist_async_server_loop()</a>, <a class="el" href="../../dd/d43/http_8c_source.html#l00650">cwist_http_pool_destroy()</a>, <a class="el" href="../../d3/d90/webrtc_8c_source.html#l00944">cwist_webrtc_ctx_free()</a>, and <a class="el" href="../../d3/d90/webrtc_8c_source.html#l00879">cwist_webrtc_ctx_new()</a>.</p>
 
 </div>
 </div>
-<a id="ae1019ce683fdc8fe50fb24bb6988cebb" name="ae1019ce683fdc8fe50fb24bb6988cebb"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#ae1019ce683fdc8fe50fb24bb6988cebb">&#9670;&#160;</a></span>cwist_reactor_mod()</h2>
+<a id="ac41bb6897a1bfa0bf507bc50183f2311" name="ac41bb6897a1bfa0bf507bc50183f2311"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ac41bb6897a1bfa0bf507bc50183f2311">&#9670;&#160;</a></span>cwist_reactor_mod()</h2>
 
 <div class="memitem">
 <div class="memproto">
       <table class="memname">
         <tr>
-          <td class="memname"><a class="el" href="../../d6/d3c/seq_8h.html#aeb29493e92e60057714a6b22befc6d67">bool</a> cwist_reactor_mod </td>
+          <td class="memname">bool cwist_reactor_mod </td>
           <td>(</td>
           <td class="paramtype"><a class="el" href="../../dc/d85/reactor_8h.html#a255365d0eb6a437c8aa4cae182f3ee0d">cwist_reactor_t</a> *&#160;</td>
           <td class="paramname"><em>reactor</em>, </td>
@@ -310,7 +570,7 @@ Functions</h2></td></tr>
         <tr>
           <td class="paramkey"></td>
           <td></td>
-          <td class="paramtype"><a class="el" href="../../d6/d3c/seq_8h.html#aeb29493e92e60057714a6b22befc6d67">int</a>&#160;</td>
+          <td class="paramtype">int&#160;</td>
           <td class="paramname"><em>fd</em>, </td>
         </tr>
         <tr>
@@ -322,8 +582,14 @@ Functions</h2></td></tr>
         <tr>
           <td class="paramkey"></td>
           <td></td>
-          <td class="paramtype"><a class="el" href="../../d6/d3c/seq_8h.html#aeb29493e92e60057714a6b22befc6d67">void</a> *&#160;</td>
-          <td class="paramname"><em>ctx</em>&#160;</td>
+          <td class="paramtype">const void *&#160;</td>
+          <td class="paramname"><em>payload</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">size_t&#160;</td>
+          <td class="paramname"><em>payload_size</em>&#160;</td>
         </tr>
         <tr>
           <td></td>
@@ -333,9 +599,39 @@ Functions</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../d3/d99/reactor_8c_source.html#l00226">226</a> of file <a class="el" href="../../d3/d99/reactor_8c_source.html">reactor.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d3/d99/reactor_8c_source.html#l01009">1009</a> of file <a class="el" href="../../d3/d99/reactor_8c_source.html">reactor.c</a>.</p>
 
-<p class="reference">References <a class="el" href="../../d6/d3c/seq_8h_source.html#l00029">CWIST_SEQ_HEADER_SIZE</a>.</p>
+</div>
+</div>
+<a id="a965d32de1ecfb28c970068b164dfe015" name="a965d32de1ecfb28c970068b164dfe015"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a965d32de1ecfb28c970068b164dfe015">&#9670;&#160;</a></span>cwist_reactor_post()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">bool <a class="el" href="../../d2/dcc/structcwist__reactor__post.html">cwist_reactor_post</a> </td>
+          <td>(</td>
+          <td class="paramtype"><a class="el" href="../../dc/d85/reactor_8h.html#a255365d0eb6a437c8aa4cae182f3ee0d">cwist_reactor_t</a> *&#160;</td>
+          <td class="paramname"><em>reactor</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype"><a class="el" href="../../dc/d85/reactor_8h.html#a49a1587e6cc611da57554c043cf68f95">cwist_reactor_post_t</a> *&#160;</td>
+          <td class="paramname"><em>node</em>&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p class="definition">Definition at line <a class="el" href="../../d3/d99/reactor_8c_source.html#l00484">484</a> of file <a class="el" href="../../d3/d99/reactor_8c_source.html">reactor.c</a>.</p>
+
+<p class="reference">References <a class="el" href="../../dc/d85/reactor_8h_source.html#l00048">cwist_reactor_post::cb</a>, and <a class="el" href="../../dc/d85/reactor_8h_source.html#l00047">cwist_reactor_post::next</a>.</p>
 
 </div>
 </div>
@@ -346,7 +642,7 @@ Functions</h2></td></tr>
 <div class="memproto">
       <table class="memname">
         <tr>
-          <td class="memname"><a class="el" href="../../d6/d3c/seq_8h.html#aeb29493e92e60057714a6b22befc6d67">void</a> cwist_reactor_run </td>
+          <td class="memname">void cwist_reactor_run </td>
           <td>(</td>
           <td class="paramtype"><a class="el" href="../../dc/d85/reactor_8h.html#a255365d0eb6a437c8aa4cae182f3ee0d">cwist_reactor_t</a> *&#160;</td>
           <td class="paramname"><em>reactor</em></td><td>)</td>
@@ -355,11 +651,9 @@ Functions</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../d3/d99/reactor_8c_source.html#l00313">313</a> of file <a class="el" href="../../d3/d99/reactor_8c_source.html">reactor.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d3/d99/reactor_8c_source.html#l01163">1163</a> of file <a class="el" href="../../d3/d99/reactor_8c_source.html">reactor.c</a>.</p>
 
-<p class="reference">References <a class="el" href="../../d6/d3c/seq_8h_source.html#l00029">CWIST_SEQ_HEADER_SIZE</a>, <a class="el" href="../../de/daf/http3_8c_source.html#l01042">data</a>, and <a class="el" href="../../d3/db2/shutdown_8c_source.html#l00011">g_cwist_running</a>.</p>
-
-<p class="reference">Referenced by <a class="el" href="../../d0/d3d/async__server_8c_source.html#l00065">cwist_async_server_loop()</a>.</p>
+<p class="reference">Referenced by <a class="el" href="../../d0/d3d/async__server_8c_source.html#l00129">cwist_async_server_loop()</a>.</p>
 
 </div>
 </div>
@@ -370,7 +664,7 @@ Functions</h2></td></tr>
 <div class="memproto">
       <table class="memname">
         <tr>
-          <td class="memname"><a class="el" href="../../d6/d3c/seq_8h.html#aeb29493e92e60057714a6b22befc6d67">void</a> cwist_reactor_stop </td>
+          <td class="memname">void cwist_reactor_stop </td>
           <td>(</td>
           <td class="paramtype"><a class="el" href="../../dc/d85/reactor_8h.html#a255365d0eb6a437c8aa4cae182f3ee0d">cwist_reactor_t</a> *&#160;</td>
           <td class="paramname"><em>reactor</em></td><td>)</td>
@@ -379,9 +673,139 @@ Functions</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../d3/d99/reactor_8c_source.html#l00379">379</a> of file <a class="el" href="../../d3/d99/reactor_8c_source.html">reactor.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d3/d99/reactor_8c_source.html#l01407">1407</a> of file <a class="el" href="../../d3/d99/reactor_8c_source.html">reactor.c</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../dd/d43/http_8c_source.html#l00245">cwist_http_pool_destroy()</a>.</p>
+<p class="reference">Referenced by <a class="el" href="../../dd/d43/http_8c_source.html#l00650">cwist_http_pool_destroy()</a>.</p>
+
+</div>
+</div>
+<a id="a3672497adf44052b571dcedf9b67250d" name="a3672497adf44052b571dcedf9b67250d"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a3672497adf44052b571dcedf9b67250d">&#9670;&#160;</a></span>cwist_reactor_timer_arm()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">bool cwist_reactor_timer_arm </td>
+          <td>(</td>
+          <td class="paramtype"><a class="el" href="../../dc/d85/reactor_8h.html#a255365d0eb6a437c8aa4cae182f3ee0d">cwist_reactor_t</a> *&#160;</td>
+          <td class="paramname"><em>reactor</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype"><a class="el" href="../../dc/d85/reactor_8h.html#a6e1227da6b13c449c76dbe283d1f0be2">cwist_reactor_timer_t</a> *&#160;</td>
+          <td class="paramname"><em>timer</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">uint64_t&#160;</td>
+          <td class="paramname"><em>delay_us</em>&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p class="definition">Definition at line <a class="el" href="../../d3/d99/reactor_8c_source.html#l00588">588</a> of file <a class="el" href="../../d3/d99/reactor_8c_source.html">reactor.c</a>.</p>
+
+<p class="reference">References <a class="el" href="../../dc/d85/reactor_8h_source.html#l00065">cwist_reactor_timer::cb</a>, <a class="el" href="../../d9/d39/alloc_8c_source.html#l00275">cwist_alloc()</a>, <a class="el" href="../../d9/d39/alloc_8c_source.html#l00390">cwist_free()</a>, <a class="el" href="../../dc/d85/reactor_8h_source.html#l00063">cwist_reactor_timer::deadline_ns</a>, and <a class="el" href="../../dc/d85/reactor_8h_source.html#l00064">cwist_reactor_timer::heap_slot</a>.</p>
+
+</div>
+</div>
+<a id="acb0608bc68f4668fdbacfc78606e55d4" name="acb0608bc68f4668fdbacfc78606e55d4"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#acb0608bc68f4668fdbacfc78606e55d4">&#9670;&#160;</a></span>cwist_reactor_timer_armed()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">bool cwist_reactor_timer_armed </td>
+          <td>(</td>
+          <td class="paramtype">const <a class="el" href="../../dc/d85/reactor_8h.html#a6e1227da6b13c449c76dbe283d1f0be2">cwist_reactor_timer_t</a> *&#160;</td>
+          <td class="paramname"><em>timer</em></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p class="definition">Definition at line <a class="el" href="../../d3/d99/reactor_8c_source.html#l00612">612</a> of file <a class="el" href="../../d3/d99/reactor_8c_source.html">reactor.c</a>.</p>
+
+<p class="reference">References <a class="el" href="../../dc/d85/reactor_8h_source.html#l00064">cwist_reactor_timer::heap_slot</a>.</p>
+
+</div>
+</div>
+<a id="ace9d400afac10f7afd20113fc4aba894" name="ace9d400afac10f7afd20113fc4aba894"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ace9d400afac10f7afd20113fc4aba894">&#9670;&#160;</a></span>cwist_reactor_timer_cancel()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">void cwist_reactor_timer_cancel </td>
+          <td>(</td>
+          <td class="paramtype"><a class="el" href="../../dc/d85/reactor_8h.html#a255365d0eb6a437c8aa4cae182f3ee0d">cwist_reactor_t</a> *&#160;</td>
+          <td class="paramname"><em>reactor</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype"><a class="el" href="../../dc/d85/reactor_8h.html#a6e1227da6b13c449c76dbe283d1f0be2">cwist_reactor_timer_t</a> *&#160;</td>
+          <td class="paramname"><em>timer</em>&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p class="definition">Definition at line <a class="el" href="../../d3/d99/reactor_8c_source.html#l00607">607</a> of file <a class="el" href="../../d3/d99/reactor_8c_source.html">reactor.c</a>.</p>
+
+<p class="reference">References <a class="el" href="../../dc/d85/reactor_8h_source.html#l00064">cwist_reactor_timer::heap_slot</a>.</p>
+
+</div>
+</div>
+<a id="a4233b1b17f49e6bd82c718d75dfbe010" name="a4233b1b17f49e6bd82c718d75dfbe010"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a4233b1b17f49e6bd82c718d75dfbe010">&#9670;&#160;</a></span>cwist_reactor_timer_init()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">void cwist_reactor_timer_init </td>
+          <td>(</td>
+          <td class="paramtype"><a class="el" href="../../dc/d85/reactor_8h.html#a6e1227da6b13c449c76dbe283d1f0be2">cwist_reactor_timer_t</a> *&#160;</td>
+          <td class="paramname"><em>timer</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">void(*)(void *ctx)&#160;</td>
+          <td class="paramname"><em>cb</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">void *&#160;</td>
+          <td class="paramname"><em>ctx</em>&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p class="definition">Definition at line <a class="el" href="../../d3/d99/reactor_8c_source.html#l00580">580</a> of file <a class="el" href="../../d3/d99/reactor_8c_source.html">reactor.c</a>.</p>
+
+<p class="reference">References <a class="el" href="../../dc/d85/reactor_8h_source.html#l00065">cwist_reactor_timer::cb</a>, <a class="el" href="../../dc/d85/reactor_8h_source.html#l00066">cwist_reactor_timer::ctx</a>, <a class="el" href="../../dc/d85/reactor_8h_source.html#l00063">cwist_reactor_timer::deadline_ns</a>, and <a class="el" href="../../dc/d85/reactor_8h_source.html#l00064">cwist_reactor_timer::heap_slot</a>.</p>
 
 </div>
 </div>

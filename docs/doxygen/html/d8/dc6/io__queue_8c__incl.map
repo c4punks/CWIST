@@ -1,0 +1,33 @@
+<map id="src/sys/io/io_queue.c" name="src/sys/io/io_queue.c">
+<area shape="rect" id="Node000001" title="Lock&#45;free job queue backing cwist_io_queue. Despite the old file name (io_uring.c),..." alt="" coords="444,5,601,31"/>
+<area shape="rect" id="Node000002" href="$d1/df5/cwist__io_8h.html" title="Platform Agnostic Async Job Queue Interface." alt="" coords="26,152,192,177"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="471,33,390,54,301,81,216,115,145,148,143,144,214,110,299,76,389,49,470,28"/>
+<area shape="rect" id="Node000004" title=" " alt="" coords="144,225,226,251"/>
+<area shape="poly" id="edge18_Node000001_Node000004" title=" " alt="" coords="444,30,329,47,199,72,138,89,84,108,42,130,15,154,9,169,11,181,21,192,37,202,81,218,130,228,129,233,80,223,35,207,17,197,6,184,3,168,11,150,39,125,82,103,136,84,197,67,328,41,443,25"/>
+<area shape="rect" id="Node000005" href="$d2/dfe/alloc_8h.html" title="Memory allocation wrappers backed by libttak." alt="" coords="312,79,485,104"/>
+<area shape="poly" id="edge4_Node000001_Node000005" title=" " alt="" coords="504,33,432,74,429,69,501,28"/>
+<area shape="rect" id="Node000008" href="$d0/daa/gc_8h.html" title="Epoch&#45;based garbage collection wrapper." alt="" coords="636,152,793,177"/>
+<area shape="poly" id="edge10_Node000001_Node000008" title=" " alt="" coords="525,30,531,66,538,85,550,102,585,129,627,146,625,151,583,133,546,106,533,88,526,67,520,31"/>
+<area shape="rect" id="Node000011" title=" " alt="" coords="560,79,701,104"/>
+<area shape="poly" id="edge15_Node000001_Node000011" title=" " alt="" coords="541,28,603,69,600,73,538,33"/>
+<area shape="rect" id="Node000012" title=" " alt="" coords="726,79,810,104"/>
+<area shape="poly" id="edge16_Node000001_Node000012" title=" " alt="" coords="563,28,716,72,714,77,561,33"/>
+<area shape="rect" id="Node000013" title=" " alt="" coords="834,79,933,104"/>
+<area shape="poly" id="edge17_Node000001_Node000013" title=" " alt="" coords="581,28,821,75,820,80,580,33"/>
+<area shape="rect" id="Node000003" title=" " alt="" coords="297,225,372,251"/>
+<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="146,175,286,219,284,224,144,180"/>
+<area shape="poly" id="edge3_Node000002_Node000004" title=" " alt="" coords="123,175,164,214,161,218,119,179"/>
+<area shape="poly" id="edge5_Node000005_Node000003" title=" " alt="" coords="482,101,526,112,562,128,575,138,583,150,583,164,575,179,563,190,544,199,495,215,386,234,385,229,494,210,542,194,560,185,571,176,578,163,577,152,571,142,559,133,524,117,481,107"/>
+<area shape="rect" id="Node000006" title=" " alt="" coords="420,152,561,177"/>
+<area shape="poly" id="edge6_Node000005_Node000006" title=" " alt="" coords="415,102,466,141,463,146,412,106"/>
+<area shape="rect" id="Node000007" href="$da/d0c/arena_8h.html" title="Request&#45;scoped arena allocator backed by libttak arena generations." alt="" coords="217,152,396,177"/>
+<area shape="poly" id="edge7_Node000005_Node000007" title=" " alt="" coords="385,106,334,146,330,141,382,102"/>
+<area shape="poly" id="edge9_Node000007_Node000003" title=" " alt="" coords="313,177,327,212,322,214,309,179"/>
+<area shape="poly" id="edge8_Node000007_Node000004" title=" " alt="" coords="288,180,218,221,215,216,286,175"/>
+<area shape="poly" id="edge12_Node000008_Node000003" title=" " alt="" coords="654,180,386,230,385,225,653,175"/>
+<area shape="poly" id="edge11_Node000008_Node000004" title=" " alt="" coords="636,179,240,232,240,227,635,174"/>
+<area shape="rect" id="Node000009" title=" " alt="" coords="524,225,707,251"/>
+<area shape="poly" id="edge13_Node000008_Node000009" title=" " alt="" coords="700,180,644,219,641,215,697,175"/>
+<area shape="rect" id="Node000010" title=" " alt="" coords="732,225,894,251"/>
+<area shape="poly" id="edge14_Node000008_Node000010" title=" " alt="" coords="732,175,788,215,784,219,729,180"/>
+</map>

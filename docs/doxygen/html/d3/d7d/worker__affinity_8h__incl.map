@@ -1,0 +1,9 @@
+<map id="src/sys/app/worker_affinity.h" name="src/sys/app/worker_affinity.h">
+<area shape="rect" id="Node000001" title=" " alt="" coords="63,5,205,45"/>
+<area shape="rect" id="Node000002" title=" " alt="" coords="5,93,73,119"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="113,48,66,86,63,82,109,43"/>
+<area shape="rect" id="Node000003" title=" " alt="" coords="98,93,170,119"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="137,46,137,79,131,79,131,46"/>
+<area shape="rect" id="Node000004" title=" " alt="" coords="194,93,269,119"/>
+<area shape="poly" id="edge3_Node000001_Node000004" title=" " alt="" coords="159,43,208,82,205,87,156,48"/>
+</map>

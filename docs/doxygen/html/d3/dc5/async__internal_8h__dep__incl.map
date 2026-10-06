@@ -1,0 +1,7 @@
+<map id="src/net/http/async_internal.h" name="src/net/http/async_internal.h">
+<area shape="rect" id="Node000001" title="Private wiring between the deferred&#45;response path (async.c) and the C1M connection engine (http...." alt="" coords="95,5,233,45"/>
+<area shape="rect" id="Node000002" href="$db/d84/async_8c.html" title="Deferred&#45;response (async handler) implementation." alt="" coords="5,93,155,119"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="136,57,94,95,91,91,132,53"/>
+<area shape="rect" id="Node000003" href="$dd/d43/http_8c.html" title="Core HTTP request/response allocation, serialization, socket, and server&#45;loop helpers." alt="" coords="179,93,317,119"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="196,53,237,91,234,95,192,57"/>
+</map>
