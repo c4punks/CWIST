@@ -1,4 +1,4 @@
 var searchData=
 [
-  ['quic_5fnet_5fquality_5ft_0',['quic_net_quality_t',['../df/db2/quic__flow__control_8h.html#a679861111c848ea4d3f6973bf8fd128e',1,'quic_flow_control.h']]]
+  ['gql_5fop_5ftype_5ft_0',['gql_op_type_t',['../dd/d92/graphql_8c.html#ac46b8a6639c5677c326f2dd5d2ffe737',1,'graphql.c']]]
 ];

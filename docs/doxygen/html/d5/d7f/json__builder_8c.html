@@ -87,40 +87,46 @@ $(function() {
 <code>#include &lt;<a class="el" href="../../d2/dfe/alloc_8h_source.html">cwist/core/mem/alloc.h</a>&gt;</code><br />
 <code>#include &lt;stdlib.h&gt;</code><br />
 <code>#include &lt;stdio.h&gt;</code><br />
+<code>#include &lt;string.h&gt;</code><br />
 </div><div class="textblock"><div class="dynheader">
 Include dependency graph for json_builder.c:</div>
 <div class="dyncontent">
 <div class="center"><img src="../../d5/d13/json__builder_8c__incl.png" border="0" usemap="#asrc_2core_2utils_2json__builder_8c" alt=""/></div>
 <map name="asrc_2core_2utils_2json__builder_8c" id="asrc_2core_2utils_2json__builder_8c">
-<area shape="rect" title="Incremental JSON emission helpers backed by cwist_sstring." alt="" coords="252,5,388,45"/>
-<area shape="rect" href="../../d3/dc7/core_2utils_2json__builder_8h.html" title="Simple JSON string builder utility." alt="" coords="80,93,231,133"/>
-<area shape="poly" title=" " alt="" coords="285,48,205,89,202,85,282,43"/>
-<area shape="rect" href="../../d4/dbd/core_2sstring_2sstring_8h.html" title="Safe string type with helper methods." alt="" coords="117,181,253,221"/>
-<area shape="poly" title=" " alt="" coords="309,47,244,135,213,172,209,169,240,132,305,44"/>
-<area shape="rect" title=" " alt="" coords="338,277,408,302"/>
-<area shape="poly" title=" " alt="" coords="325,45,336,122,356,221,367,263,362,264,350,222,331,123,319,46"/>
-<area shape="rect" href="../../d2/dfe/alloc_8h.html" title="Memory allocation wrappers backed by libttak." alt="" coords="357,101,530,126"/>
-<area shape="poly" title=" " alt="" coords="349,43,417,91,414,95,346,48"/>
-<area shape="rect" title=" " alt="" coords="554,101,621,126"/>
-<area shape="poly" title=" " alt="" coords="389,43,543,91,549,93,547,98,541,96,387,48"/>
-<area shape="poly" title=" " alt="" coords="165,133,177,167,172,169,160,134"/>
-<area shape="rect" title=" " alt="" coords="92,357,174,383"/>
-<area shape="poly" title=" " alt="" coords="130,135,101,159,68,190,37,228,14,270,8,290,14,308,27,324,43,336,80,354,78,359,40,341,23,327,9,311,3,290,9,268,33,225,64,187,97,155,127,131"/>
-<area shape="rect" title=" " alt="" coords="24,277,95,302"/>
-<area shape="poly" title=" " alt="" coords="159,224,89,271,86,267,156,219"/>
-<area shape="poly" title=" " alt="" coords="227,219,337,269,335,274,225,224"/>
-<area shape="poly" title=" " alt="" coords="179,223,161,270,141,344,136,343,156,269,174,221"/>
-<area shape="rect" href="../../d7/da1/sys_2err_2cwist__err_8h.html" title="Unified error code and type definitions for the CWIST system layer." alt="" coords="171,269,314,309"/>
-<area shape="poly" title=" " alt="" coords="200,220,224,256,220,259,196,223"/>
-<area shape="poly" title=" " alt="" coords="217,312,162,351,159,347,214,307"/>
-<area shape="rect" title=" " alt="" coords="203,357,274,383"/>
-<area shape="poly" title=" " alt="" coords="244,310,242,344,237,343,239,309"/>
-<area shape="rect" title=" " alt="" coords="298,357,408,383"/>
-<area shape="poly" title=" " alt="" coords="271,307,327,347,324,351,268,312"/>
-<area shape="rect" title=" " alt="" coords="530,189,605,214"/>
-<area shape="poly" title=" " alt="" coords="462,124,541,179,538,183,459,128"/>
-<area shape="rect" title=" " alt="" coords="365,189,506,214"/>
-<area shape="poly" title=" " alt="" coords="445,126,441,175,435,175,440,126"/>
+<area shape="rect" title="Incremental JSON emission helpers backed by cwist_sstring." alt="" coords="243,5,379,45"/>
+<area shape="rect" href="../../d3/dc7/core_2utils_2json__builder_8h.html" title="Simple JSON string builder utility." alt="" coords="293,93,444,133"/>
+<area shape="poly" title=" " alt="" coords="326,44,351,80,346,83,322,47"/>
+<area shape="rect" href="../../d4/dbd/core_2sstring_2sstring_8h.html" title="Safe string type with helper methods." alt="" coords="191,181,327,221"/>
+<area shape="poly" title=" " alt="" coords="304,46,283,94,266,168,261,167,278,93,299,44"/>
+<area shape="rect" title=" " alt="" coords="5,277,76,302"/>
+<area shape="poly" title=" " alt="" coords="279,48,245,69,210,95,164,140,122,187,59,267,55,264,117,184,160,136,207,91,242,65,276,43"/>
+<area shape="rect" title=" " alt="" coords="100,277,171,302"/>
+<area shape="poly" title=" " alt="" coords="294,47,239,105,209,143,182,183,160,225,146,264,141,262,156,223,177,180,205,140,235,102,290,44"/>
+<area shape="rect" href="../../d2/dfe/alloc_8h.html" title="Memory allocation wrappers backed by libttak." alt="" coords="469,101,642,126"/>
+<area shape="poly" title=" " alt="" coords="366,43,511,94,509,99,364,48"/>
+<area shape="rect" title=" " alt="" coords="666,101,733,126"/>
+<area shape="poly" title=" " alt="" coords="380,33,509,55,655,91,662,93,661,98,653,96,508,61,379,39"/>
+<area shape="poly" title=" " alt="" coords="346,136,296,175,293,171,343,132"/>
+<area shape="rect" title=" " alt="" coords="375,357,458,383"/>
+<area shape="poly" title=" " alt="" coords="375,133,414,343,409,344,370,134"/>
+<area shape="poly" title=" " alt="" coords="212,224,88,272,83,274,81,269,86,267,210,219"/>
+<area shape="poly" title=" " alt="" coords="233,224,165,271,162,267,230,219"/>
+<area shape="poly" title=" " alt="" coords="291,219,321,241,351,267,382,306,406,344,401,346,378,309,347,271,318,245,288,224"/>
+<area shape="rect" href="../../d7/da1/sys_2err_2cwist__err_8h.html" title="Unified error code and type definitions for the CWIST system layer." alt="" coords="195,269,337,309"/>
+<area shape="poly" title=" " alt="" coords="263,221,266,255,261,256,258,222"/>
+<area shape="poly" title=" " alt="" coords="303,307,383,348,381,353,301,312"/>
+<area shape="rect" title=" " alt="" coords="127,357,197,383"/>
+<area shape="poly" title=" " alt="" coords="242,312,190,351,187,347,239,307"/>
+<area shape="rect" title=" " alt="" coords="221,357,332,383"/>
+<area shape="poly" title=" " alt="" coords="271,309,276,343,271,344,266,310"/>
+<area shape="rect" title=" " alt="" coords="578,277,653,302"/>
+<area shape="poly" title=" " alt="" coords="587,124,625,145,643,161,656,180,662,203,658,226,649,248,636,267,632,264,644,246,653,225,657,203,652,182,639,165,622,150,585,128"/>
+<area shape="rect" title=" " alt="" coords="717,189,858,214"/>
+<area shape="poly" title=" " alt="" coords="588,124,744,181,742,186,586,129"/>
+<area shape="rect" href="../../da/d0c/arena_8h.html" title="Request&#45;scoped arena allocator backed by libttak arena generations." alt="" coords="463,189,642,214"/>
+<area shape="poly" title=" " alt="" coords="558,126,556,174,551,174,552,126"/>
+<area shape="poly" title=" " alt="" coords="545,216,437,348,433,345,541,212"/>
+<area shape="poly" title=" " alt="" coords="563,213,601,264,596,267,559,216"/>
 </map>
 </div>
 </div>
@@ -128,37 +134,37 @@ Include dependency graph for json_builder.c:</div>
 <table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="func-members" name="func-members"></a>
 Functions</h2></td></tr>
-<tr class="memitem:abc5bd58d0eb39778e6f35b3a3b37a9aa" id="r_abc5bd58d0eb39778e6f35b3a3b37a9aa"><td class="memItemLeft" align="right" valign="top"><a class="el" href="../../d7/ddf/structcwist__json__builder.html">cwist_json_builder</a> *&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d5/d7f/json__builder_8c.html#abc5bd58d0eb39778e6f35b3a3b37a9aa">cwist_json_builder_create</a> (<a class="el" href="../../d6/d3c/seq_8h.html#aeb29493e92e60057714a6b22befc6d67">void</a>)</td></tr>
+<tr class="memitem:abc5bd58d0eb39778e6f35b3a3b37a9aa" id="r_abc5bd58d0eb39778e6f35b3a3b37a9aa"><td class="memItemLeft" align="right" valign="top"><a class="el" href="../../d7/ddf/structcwist__json__builder.html">cwist_json_builder</a> *&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d5/d7f/json__builder_8c.html#abc5bd58d0eb39778e6f35b3a3b37a9aa">cwist_json_builder_create</a> (void)</td></tr>
 <tr class="memdesc:abc5bd58d0eb39778e6f35b3a3b37a9aa"><td class="mdescLeft">&#160;</td><td class="mdescRight">Allocate a new JSON builder with an empty output buffer.  <br /></td></tr>
 <tr class="separator:abc5bd58d0eb39778e6f35b3a3b37a9aa"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:aab53471747464d76028ea4641e26925c" id="r_aab53471747464d76028ea4641e26925c"><td class="memItemLeft" align="right" valign="top"><a class="el" href="../../d6/d3c/seq_8h.html#aeb29493e92e60057714a6b22befc6d67">void</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d5/d7f/json__builder_8c.html#aab53471747464d76028ea4641e26925c">cwist_json_builder_destroy</a> (<a class="el" href="../../d7/ddf/structcwist__json__builder.html">cwist_json_builder</a> *b)</td></tr>
+<tr class="memitem:aab53471747464d76028ea4641e26925c" id="r_aab53471747464d76028ea4641e26925c"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d5/d7f/json__builder_8c.html#aab53471747464d76028ea4641e26925c">cwist_json_builder_destroy</a> (<a class="el" href="../../d7/ddf/structcwist__json__builder.html">cwist_json_builder</a> *b)</td></tr>
 <tr class="memdesc:aab53471747464d76028ea4641e26925c"><td class="mdescLeft">&#160;</td><td class="mdescRight">Release a builder and its owned string buffer.  <br /></td></tr>
 <tr class="separator:aab53471747464d76028ea4641e26925c"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a49cc54211811685e921b8f399044ca2f" id="r_a49cc54211811685e921b8f399044ca2f"><td class="memItemLeft" align="right" valign="top"><a class="el" href="../../d6/d3c/seq_8h.html#aeb29493e92e60057714a6b22befc6d67">void</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d5/d7f/json__builder_8c.html#a49cc54211811685e921b8f399044ca2f">cwist_json_begin_object</a> (<a class="el" href="../../d7/ddf/structcwist__json__builder.html">cwist_json_builder</a> *b)</td></tr>
+<tr class="memitem:a49cc54211811685e921b8f399044ca2f" id="r_a49cc54211811685e921b8f399044ca2f"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d5/d7f/json__builder_8c.html#a49cc54211811685e921b8f399044ca2f">cwist_json_begin_object</a> (<a class="el" href="../../d7/ddf/structcwist__json__builder.html">cwist_json_builder</a> *b)</td></tr>
 <tr class="memdesc:a49cc54211811685e921b8f399044ca2f"><td class="mdescLeft">&#160;</td><td class="mdescRight">Begin a JSON object in the current builder context.  <br /></td></tr>
 <tr class="separator:a49cc54211811685e921b8f399044ca2f"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a5e8aaa71594a0a6f5f202c4a895012dd" id="r_a5e8aaa71594a0a6f5f202c4a895012dd"><td class="memItemLeft" align="right" valign="top"><a class="el" href="../../d6/d3c/seq_8h.html#aeb29493e92e60057714a6b22befc6d67">void</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d5/d7f/json__builder_8c.html#a5e8aaa71594a0a6f5f202c4a895012dd">cwist_json_end_object</a> (<a class="el" href="../../d7/ddf/structcwist__json__builder.html">cwist_json_builder</a> *b)</td></tr>
+<tr class="memitem:a5e8aaa71594a0a6f5f202c4a895012dd" id="r_a5e8aaa71594a0a6f5f202c4a895012dd"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d5/d7f/json__builder_8c.html#a5e8aaa71594a0a6f5f202c4a895012dd">cwist_json_end_object</a> (<a class="el" href="../../d7/ddf/structcwist__json__builder.html">cwist_json_builder</a> *b)</td></tr>
 <tr class="memdesc:a5e8aaa71594a0a6f5f202c4a895012dd"><td class="mdescLeft">&#160;</td><td class="mdescRight">Close the current JSON object.  <br /></td></tr>
 <tr class="separator:a5e8aaa71594a0a6f5f202c4a895012dd"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:ae6897f9fe2ef632c9872e005f6d24546" id="r_ae6897f9fe2ef632c9872e005f6d24546"><td class="memItemLeft" align="right" valign="top"><a class="el" href="../../d6/d3c/seq_8h.html#aeb29493e92e60057714a6b22befc6d67">void</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d5/d7f/json__builder_8c.html#ae6897f9fe2ef632c9872e005f6d24546">cwist_json_begin_array</a> (<a class="el" href="../../d7/ddf/structcwist__json__builder.html">cwist_json_builder</a> *b, <a class="el" href="../../d6/d3c/seq_8h.html#aeb29493e92e60057714a6b22befc6d67">const</a> <a class="el" href="../../d6/d3c/seq_8h.html#aeb29493e92e60057714a6b22befc6d67">char</a> *key)</td></tr>
+<tr class="memitem:ae6897f9fe2ef632c9872e005f6d24546" id="r_ae6897f9fe2ef632c9872e005f6d24546"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d5/d7f/json__builder_8c.html#ae6897f9fe2ef632c9872e005f6d24546">cwist_json_begin_array</a> (<a class="el" href="../../d7/ddf/structcwist__json__builder.html">cwist_json_builder</a> *b, const char *key)</td></tr>
 <tr class="memdesc:ae6897f9fe2ef632c9872e005f6d24546"><td class="mdescLeft">&#160;</td><td class="mdescRight">Begin a JSON array, optionally as the value for an object key.  <br /></td></tr>
 <tr class="separator:ae6897f9fe2ef632c9872e005f6d24546"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:afc15f6448f7ac87b93f7a2d1b469603b" id="r_afc15f6448f7ac87b93f7a2d1b469603b"><td class="memItemLeft" align="right" valign="top"><a class="el" href="../../d6/d3c/seq_8h.html#aeb29493e92e60057714a6b22befc6d67">void</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d5/d7f/json__builder_8c.html#afc15f6448f7ac87b93f7a2d1b469603b">cwist_json_end_array</a> (<a class="el" href="../../d7/ddf/structcwist__json__builder.html">cwist_json_builder</a> *b)</td></tr>
+<tr class="memitem:afc15f6448f7ac87b93f7a2d1b469603b" id="r_afc15f6448f7ac87b93f7a2d1b469603b"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d5/d7f/json__builder_8c.html#afc15f6448f7ac87b93f7a2d1b469603b">cwist_json_end_array</a> (<a class="el" href="../../d7/ddf/structcwist__json__builder.html">cwist_json_builder</a> *b)</td></tr>
 <tr class="memdesc:afc15f6448f7ac87b93f7a2d1b469603b"><td class="mdescLeft">&#160;</td><td class="mdescRight">Close the current JSON array.  <br /></td></tr>
 <tr class="separator:afc15f6448f7ac87b93f7a2d1b469603b"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a2acb8de34cc2e48ea4b4fe45fd7b74b7" id="r_a2acb8de34cc2e48ea4b4fe45fd7b74b7"><td class="memItemLeft" align="right" valign="top"><a class="el" href="../../d6/d3c/seq_8h.html#aeb29493e92e60057714a6b22befc6d67">void</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d5/d7f/json__builder_8c.html#a2acb8de34cc2e48ea4b4fe45fd7b74b7">cwist_json_add_string</a> (<a class="el" href="../../d7/ddf/structcwist__json__builder.html">cwist_json_builder</a> *b, <a class="el" href="../../d6/d3c/seq_8h.html#aeb29493e92e60057714a6b22befc6d67">const</a> <a class="el" href="../../d6/d3c/seq_8h.html#aeb29493e92e60057714a6b22befc6d67">char</a> *key, <a class="el" href="../../d6/d3c/seq_8h.html#aeb29493e92e60057714a6b22befc6d67">const</a> <a class="el" href="../../d6/d3c/seq_8h.html#aeb29493e92e60057714a6b22befc6d67">char</a> *value)</td></tr>
+<tr class="memitem:a2acb8de34cc2e48ea4b4fe45fd7b74b7" id="r_a2acb8de34cc2e48ea4b4fe45fd7b74b7"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d5/d7f/json__builder_8c.html#a2acb8de34cc2e48ea4b4fe45fd7b74b7">cwist_json_add_string</a> (<a class="el" href="../../d7/ddf/structcwist__json__builder.html">cwist_json_builder</a> *b, const char *key, const char *value)</td></tr>
 <tr class="memdesc:a2acb8de34cc2e48ea4b4fe45fd7b74b7"><td class="mdescLeft">&#160;</td><td class="mdescRight">Append a JSON string value.  <br /></td></tr>
 <tr class="separator:a2acb8de34cc2e48ea4b4fe45fd7b74b7"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a88a116a0cf5bb638deb16291e02717ce" id="r_a88a116a0cf5bb638deb16291e02717ce"><td class="memItemLeft" align="right" valign="top"><a class="el" href="../../d6/d3c/seq_8h.html#aeb29493e92e60057714a6b22befc6d67">void</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d5/d7f/json__builder_8c.html#a88a116a0cf5bb638deb16291e02717ce">cwist_json_add_int</a> (<a class="el" href="../../d7/ddf/structcwist__json__builder.html">cwist_json_builder</a> *b, <a class="el" href="../../d6/d3c/seq_8h.html#aeb29493e92e60057714a6b22befc6d67">const</a> <a class="el" href="../../d6/d3c/seq_8h.html#aeb29493e92e60057714a6b22befc6d67">char</a> *key, <a class="el" href="../../d6/d3c/seq_8h.html#aeb29493e92e60057714a6b22befc6d67">int</a> value)</td></tr>
+<tr class="memitem:a88a116a0cf5bb638deb16291e02717ce" id="r_a88a116a0cf5bb638deb16291e02717ce"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d5/d7f/json__builder_8c.html#a88a116a0cf5bb638deb16291e02717ce">cwist_json_add_int</a> (<a class="el" href="../../d7/ddf/structcwist__json__builder.html">cwist_json_builder</a> *b, const char *key, int value)</td></tr>
 <tr class="memdesc:a88a116a0cf5bb638deb16291e02717ce"><td class="mdescLeft">&#160;</td><td class="mdescRight">Append a JSON integer value.  <br /></td></tr>
 <tr class="separator:a88a116a0cf5bb638deb16291e02717ce"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:ab3302e0dcb0d2385c380cd9b41fc3e40" id="r_ab3302e0dcb0d2385c380cd9b41fc3e40"><td class="memItemLeft" align="right" valign="top"><a class="el" href="../../d6/d3c/seq_8h.html#aeb29493e92e60057714a6b22befc6d67">void</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d5/d7f/json__builder_8c.html#ab3302e0dcb0d2385c380cd9b41fc3e40">cwist_json_add_bool</a> (<a class="el" href="../../d7/ddf/structcwist__json__builder.html">cwist_json_builder</a> *b, <a class="el" href="../../d6/d3c/seq_8h.html#aeb29493e92e60057714a6b22befc6d67">const</a> <a class="el" href="../../d6/d3c/seq_8h.html#aeb29493e92e60057714a6b22befc6d67">char</a> *key, <a class="el" href="../../d6/d3c/seq_8h.html#aeb29493e92e60057714a6b22befc6d67">bool</a> value)</td></tr>
+<tr class="memitem:ab3302e0dcb0d2385c380cd9b41fc3e40" id="r_ab3302e0dcb0d2385c380cd9b41fc3e40"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d5/d7f/json__builder_8c.html#ab3302e0dcb0d2385c380cd9b41fc3e40">cwist_json_add_bool</a> (<a class="el" href="../../d7/ddf/structcwist__json__builder.html">cwist_json_builder</a> *b, const char *key, bool value)</td></tr>
 <tr class="memdesc:ab3302e0dcb0d2385c380cd9b41fc3e40"><td class="mdescLeft">&#160;</td><td class="mdescRight">Append a JSON boolean literal.  <br /></td></tr>
 <tr class="separator:ab3302e0dcb0d2385c380cd9b41fc3e40"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:aded50302f028667d839072607b89a3bd" id="r_aded50302f028667d839072607b89a3bd"><td class="memItemLeft" align="right" valign="top"><a class="el" href="../../d6/d3c/seq_8h.html#aeb29493e92e60057714a6b22befc6d67">void</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d5/d7f/json__builder_8c.html#aded50302f028667d839072607b89a3bd">cwist_json_add_null</a> (<a class="el" href="../../d7/ddf/structcwist__json__builder.html">cwist_json_builder</a> *b, <a class="el" href="../../d6/d3c/seq_8h.html#aeb29493e92e60057714a6b22befc6d67">const</a> <a class="el" href="../../d6/d3c/seq_8h.html#aeb29493e92e60057714a6b22befc6d67">char</a> *key)</td></tr>
+<tr class="memitem:aded50302f028667d839072607b89a3bd" id="r_aded50302f028667d839072607b89a3bd"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d5/d7f/json__builder_8c.html#aded50302f028667d839072607b89a3bd">cwist_json_add_null</a> (<a class="el" href="../../d7/ddf/structcwist__json__builder.html">cwist_json_builder</a> *b, const char *key)</td></tr>
 <tr class="memdesc:aded50302f028667d839072607b89a3bd"><td class="mdescLeft">&#160;</td><td class="mdescRight">Append a JSON null literal.  <br /></td></tr>
 <tr class="separator:aded50302f028667d839072607b89a3bd"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a0432f1c0583865e2374694c60e868eb5" id="r_a0432f1c0583865e2374694c60e868eb5"><td class="memItemLeft" align="right" valign="top"><a class="el" href="../../d6/d3c/seq_8h.html#aeb29493e92e60057714a6b22befc6d67">const</a> <a class="el" href="../../d6/d3c/seq_8h.html#aeb29493e92e60057714a6b22befc6d67">char</a> *&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d5/d7f/json__builder_8c.html#a0432f1c0583865e2374694c60e868eb5">cwist_json_get_raw</a> (<a class="el" href="../../d7/ddf/structcwist__json__builder.html">cwist_json_builder</a> *b)</td></tr>
+<tr class="memitem:a0432f1c0583865e2374694c60e868eb5" id="r_a0432f1c0583865e2374694c60e868eb5"><td class="memItemLeft" align="right" valign="top">const char *&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d5/d7f/json__builder_8c.html#a0432f1c0583865e2374694c60e868eb5">cwist_json_get_raw</a> (<a class="el" href="../../d7/ddf/structcwist__json__builder.html">cwist_json_builder</a> *b)</td></tr>
 <tr class="memdesc:a0432f1c0583865e2374694c60e868eb5"><td class="mdescLeft">&#160;</td><td class="mdescRight">Expose the builder's raw character buffer.  <br /></td></tr>
 <tr class="separator:a0432f1c0583865e2374694c60e868eb5"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
@@ -174,7 +180,7 @@ Functions</h2></td></tr>
 <div class="memproto">
       <table class="memname">
         <tr>
-          <td class="memname"><a class="el" href="../../d6/d3c/seq_8h.html#aeb29493e92e60057714a6b22befc6d67">void</a> cwist_json_add_bool </td>
+          <td class="memname">void cwist_json_add_bool </td>
           <td>(</td>
           <td class="paramtype"><a class="el" href="../../d7/ddf/structcwist__json__builder.html">cwist_json_builder</a> *&#160;</td>
           <td class="paramname"><em>b</em>, </td>
@@ -182,13 +188,13 @@ Functions</h2></td></tr>
         <tr>
           <td class="paramkey"></td>
           <td></td>
-          <td class="paramtype"><a class="el" href="../../d6/d3c/seq_8h.html#aeb29493e92e60057714a6b22befc6d67">const</a> <a class="el" href="../../d6/d3c/seq_8h.html#aeb29493e92e60057714a6b22befc6d67">char</a> *&#160;</td>
+          <td class="paramtype">const char *&#160;</td>
           <td class="paramname"><em>key</em>, </td>
         </tr>
         <tr>
           <td class="paramkey"></td>
           <td></td>
-          <td class="paramtype"><a class="el" href="../../d6/d3c/seq_8h.html#aeb29493e92e60057714a6b22befc6d67">bool</a>&#160;</td>
+          <td class="paramtype">bool&#160;</td>
           <td class="paramname"><em>value</em>&#160;</td>
         </tr>
         <tr>
@@ -210,11 +216,11 @@ Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d5/d7f/json__builder_8c_source.html#l00144">144</a> of file <a class="el" href="../../d5/d7f/json__builder_8c_source.html">json_builder.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d5/d7f/json__builder_8c_source.html#l00226">226</a> of file <a class="el" href="../../d5/d7f/json__builder_8c_source.html">json_builder.c</a>.</p>
 
-<p class="reference">References <a class="el" href="../../d3/dc7/core_2utils_2json__builder_8h_source.html#l00029">cwist_json_builder::buffer</a>, <a class="el" href="../../dd/d79/sstring_8c_source.html#l00430">cwist_sstring_append()</a>, and <a class="el" href="../../d3/dc7/core_2utils_2json__builder_8h_source.html#l00030">cwist_json_builder::needs_comma</a>.</p>
+<p class="reference">References <a class="el" href="../../d3/dc7/core_2utils_2json__builder_8h_source.html#l00029">cwist_json_builder::buffer</a>, <a class="el" href="../../dd/d79/sstring_8c_source.html#l00525">cwist_sstring_append()</a>, and <a class="el" href="../../d3/dc7/core_2utils_2json__builder_8h_source.html#l00030">cwist_json_builder::needs_comma</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../d6/d6d/bind_8c_source.html#l00431">cwist_bind_write_error_response()</a>.</p>
+<p class="reference">Referenced by <a class="el" href="../../d6/d6d/bind_8c_source.html#l00473">cwist_bind_write_error_response()</a>.</p>
 
 </div>
 </div>
@@ -225,7 +231,7 @@ Functions</h2></td></tr>
 <div class="memproto">
       <table class="memname">
         <tr>
-          <td class="memname"><a class="el" href="../../d6/d3c/seq_8h.html#aeb29493e92e60057714a6b22befc6d67">void</a> cwist_json_add_int </td>
+          <td class="memname">void cwist_json_add_int </td>
           <td>(</td>
           <td class="paramtype"><a class="el" href="../../d7/ddf/structcwist__json__builder.html">cwist_json_builder</a> *&#160;</td>
           <td class="paramname"><em>b</em>, </td>
@@ -233,13 +239,13 @@ Functions</h2></td></tr>
         <tr>
           <td class="paramkey"></td>
           <td></td>
-          <td class="paramtype"><a class="el" href="../../d6/d3c/seq_8h.html#aeb29493e92e60057714a6b22befc6d67">const</a> <a class="el" href="../../d6/d3c/seq_8h.html#aeb29493e92e60057714a6b22befc6d67">char</a> *&#160;</td>
+          <td class="paramtype">const char *&#160;</td>
           <td class="paramname"><em>key</em>, </td>
         </tr>
         <tr>
           <td class="paramkey"></td>
           <td></td>
-          <td class="paramtype"><a class="el" href="../../d6/d3c/seq_8h.html#aeb29493e92e60057714a6b22befc6d67">int</a>&#160;</td>
+          <td class="paramtype">int&#160;</td>
           <td class="paramname"><em>value</em>&#160;</td>
         </tr>
         <tr>
@@ -261,9 +267,9 @@ Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d5/d7f/json__builder_8c_source.html#l00124">124</a> of file <a class="el" href="../../d5/d7f/json__builder_8c_source.html">json_builder.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d5/d7f/json__builder_8c_source.html#l00210">210</a> of file <a class="el" href="../../d5/d7f/json__builder_8c_source.html">json_builder.c</a>.</p>
 
-<p class="reference">References <a class="el" href="../../d3/dc7/core_2utils_2json__builder_8h_source.html#l00029">cwist_json_builder::buffer</a>, <a class="el" href="../../d6/d3c/seq_8h_source.html#l00029">CWIST_SEQ_HEADER_SIZE</a>, <a class="el" href="../../dd/d79/sstring_8c_source.html#l00430">cwist_sstring_append()</a>, and <a class="el" href="../../d3/dc7/core_2utils_2json__builder_8h_source.html#l00030">cwist_json_builder::needs_comma</a>.</p>
+<p class="reference">References <a class="el" href="../../d3/dc7/core_2utils_2json__builder_8h_source.html#l00029">cwist_json_builder::buffer</a>, <a class="el" href="../../dd/d79/sstring_8c_source.html#l00525">cwist_sstring_append()</a>, and <a class="el" href="../../d3/dc7/core_2utils_2json__builder_8h_source.html#l00030">cwist_json_builder::needs_comma</a>.</p>
 
 </div>
 </div>
@@ -274,7 +280,7 @@ Functions</h2></td></tr>
 <div class="memproto">
       <table class="memname">
         <tr>
-          <td class="memname"><a class="el" href="../../d6/d3c/seq_8h.html#aeb29493e92e60057714a6b22befc6d67">void</a> cwist_json_add_null </td>
+          <td class="memname">void cwist_json_add_null </td>
           <td>(</td>
           <td class="paramtype"><a class="el" href="../../d7/ddf/structcwist__json__builder.html">cwist_json_builder</a> *&#160;</td>
           <td class="paramname"><em>b</em>, </td>
@@ -282,7 +288,7 @@ Functions</h2></td></tr>
         <tr>
           <td class="paramkey"></td>
           <td></td>
-          <td class="paramtype"><a class="el" href="../../d6/d3c/seq_8h.html#aeb29493e92e60057714a6b22befc6d67">const</a> <a class="el" href="../../d6/d3c/seq_8h.html#aeb29493e92e60057714a6b22befc6d67">char</a> *&#160;</td>
+          <td class="paramtype">const char *&#160;</td>
           <td class="paramname"><em>key</em>&#160;</td>
         </tr>
         <tr>
@@ -303,9 +309,9 @@ Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d5/d7f/json__builder_8c_source.html#l00161">161</a> of file <a class="el" href="../../d5/d7f/json__builder_8c_source.html">json_builder.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d5/d7f/json__builder_8c_source.html#l00239">239</a> of file <a class="el" href="../../d5/d7f/json__builder_8c_source.html">json_builder.c</a>.</p>
 
-<p class="reference">References <a class="el" href="../../d3/dc7/core_2utils_2json__builder_8h_source.html#l00029">cwist_json_builder::buffer</a>, <a class="el" href="../../dd/d79/sstring_8c_source.html#l00430">cwist_sstring_append()</a>, and <a class="el" href="../../d3/dc7/core_2utils_2json__builder_8h_source.html#l00030">cwist_json_builder::needs_comma</a>.</p>
+<p class="reference">References <a class="el" href="../../d3/dc7/core_2utils_2json__builder_8h_source.html#l00029">cwist_json_builder::buffer</a>, <a class="el" href="../../dd/d79/sstring_8c_source.html#l00525">cwist_sstring_append()</a>, and <a class="el" href="../../d3/dc7/core_2utils_2json__builder_8h_source.html#l00030">cwist_json_builder::needs_comma</a>.</p>
 
 </div>
 </div>
@@ -316,7 +322,7 @@ Functions</h2></td></tr>
 <div class="memproto">
       <table class="memname">
         <tr>
-          <td class="memname"><a class="el" href="../../d6/d3c/seq_8h.html#aeb29493e92e60057714a6b22befc6d67">void</a> cwist_json_add_string </td>
+          <td class="memname">void cwist_json_add_string </td>
           <td>(</td>
           <td class="paramtype"><a class="el" href="../../d7/ddf/structcwist__json__builder.html">cwist_json_builder</a> *&#160;</td>
           <td class="paramname"><em>b</em>, </td>
@@ -324,13 +330,13 @@ Functions</h2></td></tr>
         <tr>
           <td class="paramkey"></td>
           <td></td>
-          <td class="paramtype"><a class="el" href="../../d6/d3c/seq_8h.html#aeb29493e92e60057714a6b22befc6d67">const</a> <a class="el" href="../../d6/d3c/seq_8h.html#aeb29493e92e60057714a6b22befc6d67">char</a> *&#160;</td>
+          <td class="paramtype">const char *&#160;</td>
           <td class="paramname"><em>key</em>, </td>
         </tr>
         <tr>
           <td class="paramkey"></td>
           <td></td>
-          <td class="paramtype"><a class="el" href="../../d6/d3c/seq_8h.html#aeb29493e92e60057714a6b22befc6d67">const</a> <a class="el" href="../../d6/d3c/seq_8h.html#aeb29493e92e60057714a6b22befc6d67">char</a> *&#160;</td>
+          <td class="paramtype">const char *&#160;</td>
           <td class="paramname"><em>value</em>&#160;</td>
         </tr>
         <tr>
@@ -352,11 +358,11 @@ Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d5/d7f/json__builder_8c_source.html#l00104">104</a> of file <a class="el" href="../../d5/d7f/json__builder_8c_source.html">json_builder.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d5/d7f/json__builder_8c_source.html#l00192">192</a> of file <a class="el" href="../../d5/d7f/json__builder_8c_source.html">json_builder.c</a>.</p>
 
-<p class="reference">References <a class="el" href="../../d3/dc7/core_2utils_2json__builder_8h_source.html#l00029">cwist_json_builder::buffer</a>, <a class="el" href="../../dd/d79/sstring_8c_source.html#l00430">cwist_sstring_append()</a>, and <a class="el" href="../../d3/dc7/core_2utils_2json__builder_8h_source.html#l00030">cwist_json_builder::needs_comma</a>.</p>
+<p class="reference">References <a class="el" href="../../d3/dc7/core_2utils_2json__builder_8h_source.html#l00029">cwist_json_builder::buffer</a>, <a class="el" href="../../dd/d79/sstring_8c_source.html#l00525">cwist_sstring_append()</a>, and <a class="el" href="../../d3/dc7/core_2utils_2json__builder_8h_source.html#l00030">cwist_json_builder::needs_comma</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../da/d6c/healthz_8c_source.html#l00099">cwist_app_healthz()</a>, and <a class="el" href="../../d6/d6d/bind_8c_source.html#l00431">cwist_bind_write_error_response()</a>.</p>
+<p class="reference">Referenced by <a class="el" href="../../da/d6c/healthz_8c_source.html#l00168">cwist_app_healthz()</a>, and <a class="el" href="../../d6/d6d/bind_8c_source.html#l00473">cwist_bind_write_error_response()</a>.</p>
 
 </div>
 </div>
@@ -367,7 +373,7 @@ Functions</h2></td></tr>
 <div class="memproto">
       <table class="memname">
         <tr>
-          <td class="memname"><a class="el" href="../../d6/d3c/seq_8h.html#aeb29493e92e60057714a6b22befc6d67">void</a> cwist_json_begin_array </td>
+          <td class="memname">void cwist_json_begin_array </td>
           <td>(</td>
           <td class="paramtype"><a class="el" href="../../d7/ddf/structcwist__json__builder.html">cwist_json_builder</a> *&#160;</td>
           <td class="paramname"><em>b</em>, </td>
@@ -375,7 +381,7 @@ Functions</h2></td></tr>
         <tr>
           <td class="paramkey"></td>
           <td></td>
-          <td class="paramtype"><a class="el" href="../../d6/d3c/seq_8h.html#aeb29493e92e60057714a6b22befc6d67">const</a> <a class="el" href="../../d6/d3c/seq_8h.html#aeb29493e92e60057714a6b22befc6d67">char</a> *&#160;</td>
+          <td class="paramtype">const char *&#160;</td>
           <td class="paramname"><em>key</em>&#160;</td>
         </tr>
         <tr>
@@ -396,11 +402,11 @@ Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d5/d7f/json__builder_8c_source.html#l00075">75</a> of file <a class="el" href="../../d5/d7f/json__builder_8c_source.html">json_builder.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d5/d7f/json__builder_8c_source.html#l00164">164</a> of file <a class="el" href="../../d5/d7f/json__builder_8c_source.html">json_builder.c</a>.</p>
 
-<p class="reference">References <a class="el" href="../../d3/dc7/core_2utils_2json__builder_8h_source.html#l00029">cwist_json_builder::buffer</a>, <a class="el" href="../../dd/d79/sstring_8c_source.html#l00430">cwist_sstring_append()</a>, and <a class="el" href="../../d3/dc7/core_2utils_2json__builder_8h_source.html#l00030">cwist_json_builder::needs_comma</a>.</p>
+<p class="reference">References <a class="el" href="../../d3/dc7/core_2utils_2json__builder_8h_source.html#l00029">cwist_json_builder::buffer</a>, <a class="el" href="../../dd/d79/sstring_8c_source.html#l00525">cwist_sstring_append()</a>, and <a class="el" href="../../d3/dc7/core_2utils_2json__builder_8h_source.html#l00030">cwist_json_builder::needs_comma</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../da/d6c/healthz_8c_source.html#l00099">cwist_app_healthz()</a>, and <a class="el" href="../../d6/d6d/bind_8c_source.html#l00431">cwist_bind_write_error_response()</a>.</p>
+<p class="reference">Referenced by <a class="el" href="../../da/d6c/healthz_8c_source.html#l00168">cwist_app_healthz()</a>, and <a class="el" href="../../d6/d6d/bind_8c_source.html#l00473">cwist_bind_write_error_response()</a>.</p>
 
 </div>
 </div>
@@ -411,7 +417,7 @@ Functions</h2></td></tr>
 <div class="memproto">
       <table class="memname">
         <tr>
-          <td class="memname"><a class="el" href="../../d6/d3c/seq_8h.html#aeb29493e92e60057714a6b22befc6d67">void</a> cwist_json_begin_object </td>
+          <td class="memname">void cwist_json_begin_object </td>
           <td>(</td>
           <td class="paramtype"><a class="el" href="../../d7/ddf/structcwist__json__builder.html">cwist_json_builder</a> *&#160;</td>
           <td class="paramname"><em>b</em></td><td>)</td>
@@ -429,11 +435,11 @@ Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d5/d7f/json__builder_8c_source.html#l00053">53</a> of file <a class="el" href="../../d5/d7f/json__builder_8c_source.html">json_builder.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d5/d7f/json__builder_8c_source.html#l00142">142</a> of file <a class="el" href="../../d5/d7f/json__builder_8c_source.html">json_builder.c</a>.</p>
 
-<p class="reference">References <a class="el" href="../../d3/dc7/core_2utils_2json__builder_8h_source.html#l00029">cwist_json_builder::buffer</a>, <a class="el" href="../../dd/d79/sstring_8c_source.html#l00430">cwist_sstring_append()</a>, and <a class="el" href="../../d3/dc7/core_2utils_2json__builder_8h_source.html#l00030">cwist_json_builder::needs_comma</a>.</p>
+<p class="reference">References <a class="el" href="../../d3/dc7/core_2utils_2json__builder_8h_source.html#l00029">cwist_json_builder::buffer</a>, <a class="el" href="../../dd/d79/sstring_8c_source.html#l00525">cwist_sstring_append()</a>, and <a class="el" href="../../d3/dc7/core_2utils_2json__builder_8h_source.html#l00030">cwist_json_builder::needs_comma</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../da/d6c/healthz_8c_source.html#l00099">cwist_app_healthz()</a>, and <a class="el" href="../../d6/d6d/bind_8c_source.html#l00431">cwist_bind_write_error_response()</a>.</p>
+<p class="reference">Referenced by <a class="el" href="../../da/d6c/healthz_8c_source.html#l00168">cwist_app_healthz()</a>, and <a class="el" href="../../d6/d6d/bind_8c_source.html#l00473">cwist_bind_write_error_response()</a>.</p>
 
 </div>
 </div>
@@ -446,7 +452,7 @@ Functions</h2></td></tr>
         <tr>
           <td class="memname"><a class="el" href="../../d7/ddf/structcwist__json__builder.html">cwist_json_builder</a> * cwist_json_builder_create </td>
           <td>(</td>
-          <td class="paramtype"><a class="el" href="../../d6/d3c/seq_8h.html#aeb29493e92e60057714a6b22befc6d67">void</a>&#160;</td>
+          <td class="paramtype">void&#160;</td>
           <td class="paramname"></td><td>)</td>
           <td></td>
         </tr>
@@ -458,11 +464,11 @@ Functions</h2></td></tr>
 <p>The builder keeps only a minimal amount of state: the backing string buffer and whether the next value must be prefixed with a comma.</p>
 <dl class="section return"><dt>Returns</dt><dd>Newly allocated builder, or NULL when allocation fails. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d5/d7f/json__builder_8c_source.html#l00020">20</a> of file <a class="el" href="../../d5/d7f/json__builder_8c_source.html">json_builder.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d5/d7f/json__builder_8c_source.html#l00021">21</a> of file <a class="el" href="../../d5/d7f/json__builder_8c_source.html">json_builder.c</a>.</p>
 
-<p class="reference">References <a class="el" href="../../d3/dc7/core_2utils_2json__builder_8h_source.html#l00029">cwist_json_builder::buffer</a>, <a class="el" href="../../d9/d39/alloc_8c_source.html#l00221">cwist_alloc()</a>, <a class="el" href="../../d6/d3c/seq_8h_source.html#l00029">CWIST_SEQ_HEADER_SIZE</a>, <a class="el" href="../../dd/d79/sstring_8c_source.html#l00667">cwist_sstring_create()</a>, and <a class="el" href="../../d3/dc7/core_2utils_2json__builder_8h_source.html#l00030">cwist_json_builder::needs_comma</a>.</p>
+<p class="reference">References <a class="el" href="../../d3/dc7/core_2utils_2json__builder_8h_source.html#l00029">cwist_json_builder::buffer</a>, <a class="el" href="../../d9/d39/alloc_8c_source.html#l00275">cwist_alloc()</a>, <a class="el" href="../../d9/d39/alloc_8c_source.html#l00390">cwist_free()</a>, <a class="el" href="../../dd/d79/sstring_8c_source.html#l00766">cwist_sstring_create()</a>, and <a class="el" href="../../d3/dc7/core_2utils_2json__builder_8h_source.html#l00030">cwist_json_builder::needs_comma</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../da/d6c/healthz_8c_source.html#l00099">cwist_app_healthz()</a>, and <a class="el" href="../../d6/d6d/bind_8c_source.html#l00431">cwist_bind_write_error_response()</a>.</p>
+<p class="reference">Referenced by <a class="el" href="../../da/d6c/healthz_8c_source.html#l00168">cwist_app_healthz()</a>, and <a class="el" href="../../d6/d6d/bind_8c_source.html#l00473">cwist_bind_write_error_response()</a>.</p>
 
 </div>
 </div>
@@ -473,7 +479,7 @@ Functions</h2></td></tr>
 <div class="memproto">
       <table class="memname">
         <tr>
-          <td class="memname"><a class="el" href="../../d6/d3c/seq_8h.html#aeb29493e92e60057714a6b22befc6d67">void</a> cwist_json_builder_destroy </td>
+          <td class="memname">void cwist_json_builder_destroy </td>
           <td>(</td>
           <td class="paramtype"><a class="el" href="../../d7/ddf/structcwist__json__builder.html">cwist_json_builder</a> *&#160;</td>
           <td class="paramname"><em>b</em></td><td>)</td>
@@ -491,11 +497,11 @@ Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d5/d7f/json__builder_8c_source.html#l00032">32</a> of file <a class="el" href="../../d5/d7f/json__builder_8c_source.html">json_builder.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d5/d7f/json__builder_8c_source.html#l00037">37</a> of file <a class="el" href="../../d5/d7f/json__builder_8c_source.html">json_builder.c</a>.</p>
 
-<p class="reference">References <a class="el" href="../../d3/dc7/core_2utils_2json__builder_8h_source.html#l00029">cwist_json_builder::buffer</a>, <a class="el" href="../../d9/d39/alloc_8c_source.html#l00315">cwist_free()</a>, and <a class="el" href="../../dd/d79/sstring_8c_source.html#l00688">cwist_sstring_destroy()</a>.</p>
+<p class="reference">References <a class="el" href="../../d3/dc7/core_2utils_2json__builder_8h_source.html#l00029">cwist_json_builder::buffer</a>, <a class="el" href="../../d9/d39/alloc_8c_source.html#l00390">cwist_free()</a>, and <a class="el" href="../../dd/d79/sstring_8c_source.html#l00787">cwist_sstring_destroy()</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../da/d6c/healthz_8c_source.html#l00099">cwist_app_healthz()</a>, and <a class="el" href="../../d6/d6d/bind_8c_source.html#l00431">cwist_bind_write_error_response()</a>.</p>
+<p class="reference">Referenced by <a class="el" href="../../da/d6c/healthz_8c_source.html#l00168">cwist_app_healthz()</a>, and <a class="el" href="../../d6/d6d/bind_8c_source.html#l00473">cwist_bind_write_error_response()</a>.</p>
 
 </div>
 </div>
@@ -506,7 +512,7 @@ Functions</h2></td></tr>
 <div class="memproto">
       <table class="memname">
         <tr>
-          <td class="memname"><a class="el" href="../../d6/d3c/seq_8h.html#aeb29493e92e60057714a6b22befc6d67">void</a> cwist_json_end_array </td>
+          <td class="memname">void cwist_json_end_array </td>
           <td>(</td>
           <td class="paramtype"><a class="el" href="../../d7/ddf/structcwist__json__builder.html">cwist_json_builder</a> *&#160;</td>
           <td class="paramname"><em>b</em></td><td>)</td>
@@ -524,11 +530,11 @@ Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d5/d7f/json__builder_8c_source.html#l00092">92</a> of file <a class="el" href="../../d5/d7f/json__builder_8c_source.html">json_builder.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d5/d7f/json__builder_8c_source.html#l00180">180</a> of file <a class="el" href="../../d5/d7f/json__builder_8c_source.html">json_builder.c</a>.</p>
 
-<p class="reference">References <a class="el" href="../../d3/dc7/core_2utils_2json__builder_8h_source.html#l00029">cwist_json_builder::buffer</a>, <a class="el" href="../../dd/d79/sstring_8c_source.html#l00430">cwist_sstring_append()</a>, and <a class="el" href="../../d3/dc7/core_2utils_2json__builder_8h_source.html#l00030">cwist_json_builder::needs_comma</a>.</p>
+<p class="reference">References <a class="el" href="../../d3/dc7/core_2utils_2json__builder_8h_source.html#l00029">cwist_json_builder::buffer</a>, <a class="el" href="../../dd/d79/sstring_8c_source.html#l00525">cwist_sstring_append()</a>, and <a class="el" href="../../d3/dc7/core_2utils_2json__builder_8h_source.html#l00030">cwist_json_builder::needs_comma</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../da/d6c/healthz_8c_source.html#l00099">cwist_app_healthz()</a>, and <a class="el" href="../../d6/d6d/bind_8c_source.html#l00431">cwist_bind_write_error_response()</a>.</p>
+<p class="reference">Referenced by <a class="el" href="../../da/d6c/healthz_8c_source.html#l00168">cwist_app_healthz()</a>, and <a class="el" href="../../d6/d6d/bind_8c_source.html#l00473">cwist_bind_write_error_response()</a>.</p>
 
 </div>
 </div>
@@ -539,7 +545,7 @@ Functions</h2></td></tr>
 <div class="memproto">
       <table class="memname">
         <tr>
-          <td class="memname"><a class="el" href="../../d6/d3c/seq_8h.html#aeb29493e92e60057714a6b22befc6d67">void</a> cwist_json_end_object </td>
+          <td class="memname">void cwist_json_end_object </td>
           <td>(</td>
           <td class="paramtype"><a class="el" href="../../d7/ddf/structcwist__json__builder.html">cwist_json_builder</a> *&#160;</td>
           <td class="paramname"><em>b</em></td><td>)</td>
@@ -557,11 +563,11 @@ Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d5/d7f/json__builder_8c_source.html#l00064">64</a> of file <a class="el" href="../../d5/d7f/json__builder_8c_source.html">json_builder.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d5/d7f/json__builder_8c_source.html#l00153">153</a> of file <a class="el" href="../../d5/d7f/json__builder_8c_source.html">json_builder.c</a>.</p>
 
-<p class="reference">References <a class="el" href="../../d3/dc7/core_2utils_2json__builder_8h_source.html#l00029">cwist_json_builder::buffer</a>, <a class="el" href="../../dd/d79/sstring_8c_source.html#l00430">cwist_sstring_append()</a>, and <a class="el" href="../../d3/dc7/core_2utils_2json__builder_8h_source.html#l00030">cwist_json_builder::needs_comma</a>.</p>
+<p class="reference">References <a class="el" href="../../d3/dc7/core_2utils_2json__builder_8h_source.html#l00029">cwist_json_builder::buffer</a>, <a class="el" href="../../dd/d79/sstring_8c_source.html#l00525">cwist_sstring_append()</a>, and <a class="el" href="../../d3/dc7/core_2utils_2json__builder_8h_source.html#l00030">cwist_json_builder::needs_comma</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../da/d6c/healthz_8c_source.html#l00099">cwist_app_healthz()</a>, and <a class="el" href="../../d6/d6d/bind_8c_source.html#l00431">cwist_bind_write_error_response()</a>.</p>
+<p class="reference">Referenced by <a class="el" href="../../da/d6c/healthz_8c_source.html#l00168">cwist_app_healthz()</a>, and <a class="el" href="../../d6/d6d/bind_8c_source.html#l00473">cwist_bind_write_error_response()</a>.</p>
 
 </div>
 </div>
@@ -572,7 +578,7 @@ Functions</h2></td></tr>
 <div class="memproto">
       <table class="memname">
         <tr>
-          <td class="memname"><a class="el" href="../../d6/d3c/seq_8h.html#aeb29493e92e60057714a6b22befc6d67">const</a> <a class="el" href="../../d6/d3c/seq_8h.html#aeb29493e92e60057714a6b22befc6d67">char</a> * cwist_json_get_raw </td>
+          <td class="memname">const char * cwist_json_get_raw </td>
           <td>(</td>
           <td class="paramtype"><a class="el" href="../../d7/ddf/structcwist__json__builder.html">cwist_json_builder</a> *&#160;</td>
           <td class="paramname"><em>b</em></td><td>)</td>
@@ -591,11 +597,11 @@ Functions</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>Null-terminated JSON text, or NULL when the builder is invalid. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d5/d7f/json__builder_8c_source.html#l00178">178</a> of file <a class="el" href="../../d5/d7f/json__builder_8c_source.html">json_builder.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d5/d7f/json__builder_8c_source.html#l00252">252</a> of file <a class="el" href="../../d5/d7f/json__builder_8c_source.html">json_builder.c</a>.</p>
 
-<p class="reference">References <a class="el" href="../../d3/dc7/core_2utils_2json__builder_8h_source.html#l00029">cwist_json_builder::buffer</a>, <a class="el" href="../../d6/d3c/seq_8h_source.html#l00029">CWIST_SEQ_HEADER_SIZE</a>, and <a class="el" href="../../d4/dbd/core_2sstring_2sstring_8h_source.html#l00015">cwist_sstring::data</a>.</p>
+<p class="reference">References <a class="el" href="../../d3/dc7/core_2utils_2json__builder_8h_source.html#l00029">cwist_json_builder::buffer</a>, and <a class="el" href="../../d4/dbd/core_2sstring_2sstring_8h_source.html#l00015">cwist_sstring::data</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../da/d6c/healthz_8c_source.html#l00099">cwist_app_healthz()</a>, and <a class="el" href="../../d6/d6d/bind_8c_source.html#l00431">cwist_bind_write_error_response()</a>.</p>
+<p class="reference">Referenced by <a class="el" href="../../da/d6c/healthz_8c_source.html#l00168">cwist_app_healthz()</a>, and <a class="el" href="../../d6/d6d/bind_8c_source.html#l00473">cwist_bind_write_error_response()</a>.</p>
 
 </div>
 </div>

@@ -15,13 +15,12 @@
 #                          stall (43 ms before the fix, ~0.2 ms after).
 #                          Backstop: p50 <= 5 ms.
 #   2. https_churn_rps     ab -n 6000 -c 32, new connection per request.
-#                          ~600/s before #307, ~1650/s after. Backstop >= 1000.
-#   3. https_keepalive_rps wrk -t4 -c100 -d10s. ~135-190k/s observed. Backstop >= 110k.
-#   4. https_big_Bps       wrk -t4 -c32 -d10s on a 1 MiB body. ~3.9-4.5GB/s.
-#                          Backstop >= 2.5 GB/s.
-#   5. http_* controls     same workloads plaintext; detect collateral damage
-#                          to the plain path. The https/http keep-alive ratio
-#                          (~0.65) is recorded as a signal, not gated.
+#                          ~680/s before #307, ~1650/s after (Ryzen).
+#   3. https_keepalive_rps wrk -t4 -c100 -d10s.
+#   4. https_big_gbps      wrk -t4 -c32 -d10s on a 1 MiB body.
+#   5. http_* controls     same workloads plaintext.
+# The thresholds, and the https/http ratio gates derived from these numbers,
+# are in https_gates_eval.py with the measurements behind them.
 set -eu
 
 OUT=${1:-https-gates-result.json}
@@ -174,6 +173,7 @@ HTTP_KEEP=$(wrk -t4 -c100 -d10s http://127.0.0.1:18080/ 2>/dev/null | sed -n 's/
 HTTPS_BIG=$(wrk -t4 -c32 -d10s https://127.0.0.1:18443/big 2>/dev/null | sed -n 's/^Transfer\/sec:\s*\([0-9.]*\)GB.*/\1/p')
 [ -n "$HTTPS_BIG" ] || HTTPS_BIG=$(wrk -t4 -c32 -d10s https://127.0.0.1:18443/big 2>/dev/null | sed -n 's/^Transfer\/sec:\s*\([0-9.]*\)MB.*/0\1/p')
 HTTP_BIG=$(wrk -t4 -c32 -d10s http://127.0.0.1:18080/big 2>/dev/null | sed -n 's/^Transfer\/sec:\s*\([0-9.]*\)GB.*/\1/p')
+[ -n "$HTTP_BIG" ] || HTTP_BIG=$(wrk -t4 -c32 -d10s http://127.0.0.1:18080/big 2>/dev/null | sed -n 's/^Transfer\/sec:\s*\([0-9.]*\)MB.*/0\1/p')
 
 RUNNER_HW="$(nproc) vCPU | $(grep -m1 'model name' /proc/cpuinfo | cut -d: -f2- | sed 's/^ *//')"
 

@@ -104,9 +104,9 @@ Public Attributes</h2></td></tr>
 <tr class="separator:a830998dc592d48d6c2f7174d04efaf16"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a2532d7724af5c67b4e4a2231599fc24f" id="r_a2532d7724af5c67b4e4a2231599fc24f"><td class="memItemLeft" align="right" valign="top"><a class="el" href="../../d5/ddc/structcwist__sstring.html">cwist_sstring</a> *&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d3/d72/structcwist__http__header__node.html#a2532d7724af5c67b4e4a2231599fc24f">value</a></td></tr>
 <tr class="separator:a2532d7724af5c67b4e4a2231599fc24f"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:ab8a868e50d9f32c936af29e24455862e" id="r_ab8a868e50d9f32c936af29e24455862e"><td class="memItemLeft" align="right" valign="top"><a class="el" href="../../d6/d3c/seq_8h.html#aeb29493e92e60057714a6b22befc6d67">struct</a> <a class="el" href="../../d3/d72/structcwist__http__header__node.html">cwist_http_header_node</a> *&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d3/d72/structcwist__http__header__node.html#ab8a868e50d9f32c936af29e24455862e">next</a></td></tr>
+<tr class="memitem:ab8a868e50d9f32c936af29e24455862e" id="r_ab8a868e50d9f32c936af29e24455862e"><td class="memItemLeft" align="right" valign="top">struct <a class="el" href="../../d3/d72/structcwist__http__header__node.html">cwist_http_header_node</a> *&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d3/d72/structcwist__http__header__node.html#ab8a868e50d9f32c936af29e24455862e">next</a></td></tr>
 <tr class="separator:ab8a868e50d9f32c936af29e24455862e"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a1a02ab25681275edcc5ae2a249254251" id="r_a1a02ab25681275edcc5ae2a249254251"><td class="memItemLeft" align="right" valign="top"><a class="el" href="../../d6/d3c/seq_8h.html#aeb29493e92e60057714a6b22befc6d67">bool</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d3/d72/structcwist__http__header__node.html#a1a02ab25681275edcc5ae2a249254251">arena_owned</a></td></tr>
+<tr class="memitem:a1a02ab25681275edcc5ae2a249254251" id="r_a1a02ab25681275edcc5ae2a249254251"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d3/d72/structcwist__http__header__node.html#a1a02ab25681275edcc5ae2a249254251">arena_owned</a></td></tr>
 <tr class="memdesc:a1a02ab25681275edcc5ae2a249254251"><td class="mdescLeft">&#160;</td><td class="mdescRight">True when the node lives in a request arena (freed with the arena).  <br /></td></tr>
 <tr class="separator:a1a02ab25681275edcc5ae2a249254251"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
@@ -115,7 +115,7 @@ Public Attributes</h2></td></tr>
 <p>Linked list node for request/response headers.</p>
 <p>&mdash; Structures &mdash; </p>
 
-<p class="definition">Definition at line <a class="el" href="../../dd/d56/http_8h_source.html#l00048">48</a> of file <a class="el" href="../../dd/d56/http_8h_source.html">http.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../dd/d56/http_8h_source.html#l00059">59</a> of file <a class="el" href="../../dd/d56/http_8h_source.html">http.h</a>.</p>
 </div><h2 class="groupheader">Member Data Documentation</h2>
 <a id="a1a02ab25681275edcc5ae2a249254251" name="a1a02ab25681275edcc5ae2a249254251"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#a1a02ab25681275edcc5ae2a249254251">&#9670;&#160;</a></span>arena_owned</h2>
@@ -124,14 +124,16 @@ Public Attributes</h2></td></tr>
 <div class="memproto">
       <table class="memname">
         <tr>
-          <td class="memname"><a class="el" href="../../d6/d3c/seq_8h.html#aeb29493e92e60057714a6b22befc6d67">bool</a> cwist_http_header_node::arena_owned</td>
+          <td class="memname">bool cwist_http_header_node::arena_owned</td>
         </tr>
       </table>
 </div><div class="memdoc">
 
 <p>True when the node lives in a request arena (freed with the arena). </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d9/dab/net_2http_2http_8h_source.html#l00073">73</a> of file <a class="el" href="../../d9/dab/net_2http_2http_8h_source.html">http.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d9/dab/net_2http_2http_8h_source.html#l00154">154</a> of file <a class="el" href="../../d9/dab/net_2http_2http_8h_source.html">http.h</a>.</p>
+
+<p class="reference">Referenced by <a class="el" href="../../dd/d43/http_8c_source.html#l01697">cwist_http_header_free_all()</a>, and <a class="el" href="../../dd/d43/http_8c_source.html#l01597">cwist_http_header_remove()</a>.</p>
 
 </div>
 </div>
@@ -147,9 +149,9 @@ Public Attributes</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../dd/d56/http_8h_source.html#l00049">49</a> of file <a class="el" href="../../dd/d56/http_8h_source.html">http.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../dd/d56/http_8h_source.html#l00060">60</a> of file <a class="el" href="../../dd/d56/http_8h_source.html">http.h</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../d2/db0/http2_8c_source.html#l02214">cwist_http2_push_resource()</a>, and <a class="el" href="../../d6/d32/http__client_8c_source.html#l00221">cwist_http_client_request()</a>.</p>
+<p class="reference">Referenced by <a class="el" href="../../d2/db0/http2_8c_source.html#l04221">cwist_http2_push_resource()</a>, <a class="el" href="../../d6/d32/http__client_8c_source.html#l00336">cwist_http_client_request()</a>, <a class="el" href="../../dd/d43/http_8c_source.html#l01697">cwist_http_header_free_all()</a>, <a class="el" href="../../dd/d43/http_8c_source.html#l01570">cwist_http_header_get()</a>, <a class="el" href="../../dd/d43/http_8c_source.html#l01597">cwist_http_header_remove()</a>, and <a class="el" href="../../dd/d43/http_8c_source.html#l02082">headers_have_content_length()</a>.</p>
 
 </div>
 </div>
@@ -160,14 +162,14 @@ Public Attributes</h2></td></tr>
 <div class="memproto">
       <table class="memname">
         <tr>
-          <td class="memname"><a class="el" href="../../d6/d3c/seq_8h.html#aeb29493e92e60057714a6b22befc6d67">struct</a> <a class="el" href="../../d3/d72/structcwist__http__header__node.html">cwist_http_header_node</a> * cwist_http_header_node::next</td>
+          <td class="memname">struct <a class="el" href="../../d3/d72/structcwist__http__header__node.html">cwist_http_header_node</a> * cwist_http_header_node::next</td>
         </tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../dd/d56/http_8h_source.html#l00051">51</a> of file <a class="el" href="../../dd/d56/http_8h_source.html">http.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../dd/d56/http_8h_source.html#l00062">62</a> of file <a class="el" href="../../dd/d56/http_8h_source.html">http.h</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../d2/db0/http2_8c_source.html#l02214">cwist_http2_push_resource()</a>, <a class="el" href="../../d1/d88/http3__client_8c_source.html#l00754">cwist_http3_client_request()</a>, <a class="el" href="../../d6/d32/http__client_8c_source.html#l00221">cwist_http_client_request()</a>, <a class="el" href="../../dd/d43/http_8c_source.html#l00640">cwist_http_header_free_all()</a>, and <a class="el" href="../../dd/d43/http_8c_source.html#l00967">headers_have_content_length()</a>.</p>
+<p class="reference">Referenced by <a class="el" href="../../d2/db0/http2_8c_source.html#l04221">cwist_http2_push_resource()</a>, <a class="el" href="../../d1/d88/http3__client_8c_source.html#l01007">cwist_http3_client_request()</a>, <a class="el" href="../../d6/d32/http__client_8c_source.html#l00336">cwist_http_client_request()</a>, <a class="el" href="../../dd/d43/http_8c_source.html#l01697">cwist_http_header_free_all()</a>, <a class="el" href="../../dd/d43/http_8c_source.html#l01570">cwist_http_header_get()</a>, <a class="el" href="../../dd/d43/http_8c_source.html#l01597">cwist_http_header_remove()</a>, and <a class="el" href="../../dd/d43/http_8c_source.html#l02082">headers_have_content_length()</a>.</p>
 
 </div>
 </div>
@@ -183,9 +185,9 @@ Public Attributes</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../dd/d56/http_8h_source.html#l00050">50</a> of file <a class="el" href="../../dd/d56/http_8h_source.html">http.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../dd/d56/http_8h_source.html#l00061">61</a> of file <a class="el" href="../../dd/d56/http_8h_source.html">http.h</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../d2/db0/http2_8c_source.html#l02214">cwist_http2_push_resource()</a>, <a class="el" href="../../d6/d32/http__client_8c_source.html#l00221">cwist_http_client_request()</a>, and <a class="el" href="../../dd/d43/http_8c_source.html#l00580">cwist_http_header_get()</a>.</p>
+<p class="reference">Referenced by <a class="el" href="../../d2/db0/http2_8c_source.html#l04221">cwist_http2_push_resource()</a>, <a class="el" href="../../d6/d32/http__client_8c_source.html#l00336">cwist_http_client_request()</a>, <a class="el" href="../../dd/d43/http_8c_source.html#l01697">cwist_http_header_free_all()</a>, <a class="el" href="../../dd/d43/http_8c_source.html#l01570">cwist_http_header_get()</a>, and <a class="el" href="../../dd/d43/http_8c_source.html#l01597">cwist_http_header_remove()</a>.</p>
 
 </div>
 </div>

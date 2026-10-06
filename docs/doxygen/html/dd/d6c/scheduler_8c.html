@@ -85,6 +85,7 @@ $(function() {
 <a href="#details">More...</a></p>
 <div class="textblock"><code>#include &lt;<a class="el" href="../../d2/dd8/scheduler_8h_source.html">cwist/sys/job/scheduler.h</a>&gt;</code><br />
 <code>#include &lt;<a class="el" href="../../d2/dfe/alloc_8h_source.html">cwist/core/mem/alloc.h</a>&gt;</code><br />
+<code>#include &lt;<a class="el" href="../../d0/daa/gc_8h_source.html">cwist/core/mem/gc.h</a>&gt;</code><br />
 <code>#include &lt;pthread.h&gt;</code><br />
 <code>#include &lt;time.h&gt;</code><br />
 <code>#include &lt;stdlib.h&gt;</code><br />
@@ -95,34 +96,46 @@ Include dependency graph for scheduler.c:</div>
 <div class="dyncontent">
 <div class="center"><img src="../../d4/dee/scheduler_8c__incl.png" border="0" usemap="#asrc_2sys_2job_2scheduler_8c" alt=""/></div>
 <map name="asrc_2sys_2job_2scheduler_8c" id="asrc_2sys_2job_2scheduler_8c">
-<area shape="rect" title="Background job scheduler with delayed execution." alt="" coords="556,5,724,31"/>
-<area shape="rect" href="../../d2/dd8/scheduler_8h.html" title="Background job scheduler / delayed task queue for CWIST." alt="" coords="93,79,277,104"/>
-<area shape="poly" title=" " alt="" coords="567,33,272,79,272,74,567,28"/>
-<area shape="rect" href="../../d2/dfe/alloc_8h.html" title="Memory allocation wrappers backed by libttak." alt="" coords="301,79,475,104"/>
-<area shape="poly" title=" " alt="" coords="600,33,443,77,442,72,599,28"/>
-<area shape="rect" title=" " alt="" coords="499,79,583,104"/>
-<area shape="poly" title=" " alt="" coords="626,33,570,73,567,68,623,29"/>
-<area shape="rect" title=" " alt="" coords="608,79,672,104"/>
-<area shape="poly" title=" " alt="" coords="643,31,643,65,637,65,637,31"/>
-<area shape="rect" title=" " alt="" coords="697,79,767,104"/>
-<area shape="poly" title=" " alt="" coords="657,29,708,68,705,72,653,33"/>
-<area shape="rect" title=" " alt="" coords="791,79,862,104"/>
-<area shape="poly" title=" " alt="" coords="671,28,785,71,783,76,669,33"/>
-<area shape="rect" title=" " alt="" coords="886,79,954,104"/>
-<area shape="poly" title=" " alt="" coords="686,28,873,75,872,81,684,33"/>
-<area shape="rect" href="../../d1/df5/cwist__io_8h.html" title="Platform Agnostic Async Job Queue Interface." alt="" coords="118,152,285,177"/>
-<area shape="poly" title=" " alt="" coords="191,104,199,138,193,139,185,105"/>
-<area shape="rect" title=" " alt="" coords="285,225,360,251"/>
-<area shape="poly" title=" " alt="" coords="224,102,264,120,283,134,300,150,316,180,323,211,318,212,311,182,295,154,279,138,261,125,222,107"/>
-<area shape="rect" title=" " alt="" coords="52,225,135,251"/>
-<area shape="poly" title=" " alt="" coords="94,105,49,122,29,136,13,153,9,162,8,170,17,187,35,203,57,217,54,221,32,207,13,191,3,172,4,161,9,151,26,132,46,118,92,100"/>
-<area shape="rect" title=" " alt="" coords="23,152,94,177"/>
-<area shape="poly" title=" " alt="" coords="166,106,93,147,90,143,164,102"/>
-<area shape="poly" title=" " alt="" coords="222,175,293,216,290,221,220,180"/>
-<area shape="poly" title=" " alt="" coords="186,180,124,220,121,215,183,175"/>
-<area shape="poly" title=" " alt="" coords="385,106,336,214,331,212,380,103"/>
-<area shape="rect" title=" " alt="" coords="411,152,552,177"/>
-<area shape="poly" title=" " alt="" coords="405,102,457,141,454,146,401,106"/>
+<area shape="rect" title="Background job scheduler with delayed execution." alt="" coords="806,5,974,31"/>
+<area shape="rect" href="../../d2/dd8/scheduler_8h.html" title="Background job scheduler / delayed task queue for CWIST." alt="" coords="113,79,297,104"/>
+<area shape="poly" title=" " alt="" coords="807,31,311,82,311,76,806,25"/>
+<area shape="rect" href="../../d2/dfe/alloc_8h.html" title="Memory allocation wrappers backed by libttak." alt="" coords="550,79,724,104"/>
+<area shape="poly" title=" " alt="" coords="850,33,692,77,691,72,849,28"/>
+<area shape="rect" href="../../d0/daa/gc_8h.html" title="Epoch&#45;based garbage collection wrapper." alt="" coords="782,152,940,177"/>
+<area shape="poly" title=" " alt="" coords="852,33,817,51,801,64,789,80,785,97,793,114,809,130,828,143,825,147,805,134,789,117,780,98,784,78,797,60,814,47,850,28"/>
+<area shape="rect" title=" " alt="" coords="799,79,883,104"/>
+<area shape="poly" title=" " alt="" coords="885,33,859,69,855,66,880,29"/>
+<area shape="rect" title=" " alt="" coords="908,79,972,104"/>
+<area shape="poly" title=" " alt="" coords="901,29,926,66,922,69,896,33"/>
+<area shape="rect" title=" " alt="" coords="996,79,1067,104"/>
+<area shape="poly" title=" " alt="" coords="914,28,998,70,995,75,912,33"/>
+<area shape="rect" title=" " alt="" coords="1091,79,1162,104"/>
+<area shape="poly" title=" " alt="" coords="929,28,1079,73,1077,78,928,33"/>
+<area shape="rect" title=" " alt="" coords="1186,79,1254,104"/>
+<area shape="poly" title=" " alt="" coords="949,28,1173,76,1172,81,948,33"/>
+<area shape="rect" href="../../d1/df5/cwist__io_8h.html" title="Platform Agnostic Async Job Queue Interface." alt="" coords="122,152,288,177"/>
+<area shape="poly" title=" " alt="" coords="208,104,208,138,202,138,202,104"/>
+<area shape="rect" title=" " alt="" coords="416,225,490,251"/>
+<area shape="poly" title=" " alt="" coords="226,102,423,216,420,221,224,107"/>
+<area shape="rect" title=" " alt="" coords="237,225,320,251"/>
+<area shape="poly" title=" " alt="" coords="113,106,67,116,29,131,16,140,9,151,9,162,17,176,29,186,49,196,103,212,165,223,224,230,223,235,165,228,102,217,47,201,27,191,12,179,4,163,4,149,12,137,26,126,65,111,112,100"/>
+<area shape="rect" title=" " alt="" coords="27,152,98,177"/>
+<area shape="poly" title=" " alt="" coords="183,106,99,148,97,143,181,102"/>
+<area shape="poly" title=" " alt="" coords="246,175,403,220,402,225,244,180"/>
+<area shape="poly" title=" " alt="" coords="219,176,258,214,255,218,215,180"/>
+<area shape="poly" title=" " alt="" coords="664,102,690,116,714,134,728,155,728,167,722,179,707,191,686,202,629,218,564,229,504,235,504,230,563,223,628,212,684,197,704,187,718,176,723,166,722,157,710,138,687,120,662,106"/>
+<area shape="rect" title=" " alt="" coords="566,152,708,177"/>
+<area shape="poly" title=" " alt="" coords="640,104,640,138,634,138,634,104"/>
+<area shape="rect" href="../../da/d0c/arena_8h.html" title="Request&#45;scoped arena allocator backed by libttak arena generations." alt="" coords="364,152,542,177"/>
+<area shape="poly" title=" " alt="" coords="609,107,497,149,495,144,607,102"/>
+<area shape="poly" title=" " alt="" coords="456,178,456,212,450,212,450,178"/>
+<area shape="poly" title=" " alt="" coords="426,180,321,222,319,218,424,175"/>
+<area shape="poly" title=" " alt="" coords="796,180,505,230,504,225,795,175"/>
+<area shape="poly" title=" " alt="" coords="782,178,334,233,334,227,782,173"/>
+<area shape="rect" title=" " alt="" coords="671,225,854,251"/>
+<area shape="poly" title=" " alt="" coords="847,180,791,219,788,215,844,175"/>
+<area shape="rect" title=" " alt="" coords="878,225,1041,251"/>
+<area shape="poly" title=" " alt="" coords="879,175,934,215,931,219,875,180"/>
 </map>
 </div>
 </div>
@@ -130,27 +143,27 @@ Include dependency graph for scheduler.c:</div>
 <table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="define-members" name="define-members"></a>
 Macros</h2></td></tr>
-<tr class="memitem:a3024ccd4a9af5109d24e6c57565d74a1" id="r_a3024ccd4a9af5109d24e6c57565d74a1"><td class="memItemLeft" align="right" valign="top">#<a class="el" href="../../d6/d3c/seq_8h.html#aeb29493e92e60057714a6b22befc6d67">define</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../dd/d6c/scheduler_8c.html#a3024ccd4a9af5109d24e6c57565d74a1">_POSIX_C_SOURCE</a>&#160;&#160;&#160;200809<a class="el" href="../../d6/d3c/seq_8h.html#aeb29493e92e60057714a6b22befc6d67">L</a></td></tr>
+<tr class="memitem:a3024ccd4a9af5109d24e6c57565d74a1" id="r_a3024ccd4a9af5109d24e6c57565d74a1"><td class="memItemLeft" align="right" valign="top">#define&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../dd/d6c/scheduler_8c.html#a3024ccd4a9af5109d24e6c57565d74a1">_POSIX_C_SOURCE</a>&#160;&#160;&#160;200809L</td></tr>
 <tr class="separator:a3024ccd4a9af5109d24e6c57565d74a1"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:af7b55ac300905012fb3b0824af3c3b14" id="r_af7b55ac300905012fb3b0824af3c3b14"><td class="memItemLeft" align="right" valign="top">#<a class="el" href="../../d6/d3c/seq_8h.html#aeb29493e92e60057714a6b22befc6d67">define</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../dd/d6c/scheduler_8c.html#af7b55ac300905012fb3b0824af3c3b14">CWIST_SCHEDULER_HEAP_INIT</a>&#160;&#160;&#160;16</td></tr>
+<tr class="memitem:af7b55ac300905012fb3b0824af3c3b14" id="r_af7b55ac300905012fb3b0824af3c3b14"><td class="memItemLeft" align="right" valign="top">#define&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../dd/d6c/scheduler_8c.html#af7b55ac300905012fb3b0824af3c3b14">CWIST_SCHEDULER_HEAP_INIT</a>&#160;&#160;&#160;16</td></tr>
 <tr class="separator:af7b55ac300905012fb3b0824af3c3b14"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="func-members" name="func-members"></a>
 Functions</h2></td></tr>
-<tr class="memitem:ae0f1c3ad3074a69d79ea27d641ac2294" id="r_ae0f1c3ad3074a69d79ea27d641ac2294"><td class="memItemLeft" align="right" valign="top"><a class="el" href="../../d2/dd8/scheduler_8h.html#a6f0ae6fce1a81f7dc35c2b235415d1ed">cwist_scheduler_t</a> *&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../dd/d6c/scheduler_8c.html#ae0f1c3ad3074a69d79ea27d641ac2294">cwist_scheduler_create</a> (<a class="el" href="../../d6/d3c/seq_8h.html#aeb29493e92e60057714a6b22befc6d67">size_t</a> worker_count, <a class="el" href="../../d6/d3c/seq_8h.html#aeb29493e92e60057714a6b22befc6d67">size_t</a> <a class="el" href="../../d6/d3c/seq_8h.html#aeb29493e92e60057714a6b22befc6d67">queue_capacity</a>)</td></tr>
-<tr class="memdesc:ae0f1c3ad3074a69d79ea27d641ac2294"><td class="mdescLeft">&#160;</td><td class="mdescRight">Create a scheduler with a pool of background workers.  <br /></td></tr>
+<tr class="memitem:ae0f1c3ad3074a69d79ea27d641ac2294" id="r_ae0f1c3ad3074a69d79ea27d641ac2294"><td class="memItemLeft" align="right" valign="top"><a class="el" href="../../d2/dd8/scheduler_8h.html#a6f0ae6fce1a81f7dc35c2b235415d1ed">cwist_scheduler_t</a> *&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../dd/d6c/scheduler_8c.html#ae0f1c3ad3074a69d79ea27d641ac2294">cwist_scheduler_create</a> (size_t worker_count, size_t queue_capacity)</td></tr>
+<tr class="memdesc:ae0f1c3ad3074a69d79ea27d641ac2294"><td class="mdescLeft">&#160;</td><td class="mdescRight">Create a scheduler with worker and timer threads.  <br /></td></tr>
 <tr class="separator:ae0f1c3ad3074a69d79ea27d641ac2294"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a16ac83e9ad8cc4a59205bb3ce7b1c8ad" id="r_a16ac83e9ad8cc4a59205bb3ce7b1c8ad"><td class="memItemLeft" align="right" valign="top"><a class="el" href="../../d6/d3c/seq_8h.html#aeb29493e92e60057714a6b22befc6d67">void</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../dd/d6c/scheduler_8c.html#a16ac83e9ad8cc4a59205bb3ce7b1c8ad">cwist_scheduler_destroy</a> (<a class="el" href="../../d2/dd8/scheduler_8h.html#a6f0ae6fce1a81f7dc35c2b235415d1ed">cwist_scheduler_t</a> *s)</td></tr>
-<tr class="memdesc:a16ac83e9ad8cc4a59205bb3ce7b1c8ad"><td class="mdescLeft">&#160;</td><td class="mdescRight">Destroy the scheduler and stop all worker threads.  <br /></td></tr>
+<tr class="memitem:a16ac83e9ad8cc4a59205bb3ce7b1c8ad" id="r_a16ac83e9ad8cc4a59205bb3ce7b1c8ad"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../dd/d6c/scheduler_8c.html#a16ac83e9ad8cc4a59205bb3ce7b1c8ad">cwist_scheduler_destroy</a> (<a class="el" href="../../d2/dd8/scheduler_8h.html#a6f0ae6fce1a81f7dc35c2b235415d1ed">cwist_scheduler_t</a> *s)</td></tr>
+<tr class="memdesc:a16ac83e9ad8cc4a59205bb3ce7b1c8ad"><td class="mdescLeft">&#160;</td><td class="mdescRight">Destroy a scheduler and free all its resources.  <br /></td></tr>
 <tr class="separator:a16ac83e9ad8cc4a59205bb3ce7b1c8ad"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a3f5b6e8f86cb918356d278714b809683" id="r_a3f5b6e8f86cb918356d278714b809683"><td class="memItemLeft" align="right" valign="top"><a class="el" href="../../d6/d3c/seq_8h.html#aeb29493e92e60057714a6b22befc6d67">bool</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../dd/d6c/scheduler_8c.html#a3f5b6e8f86cb918356d278714b809683">cwist_scheduler_submit</a> (<a class="el" href="../../d2/dd8/scheduler_8h.html#a6f0ae6fce1a81f7dc35c2b235415d1ed">cwist_scheduler_t</a> *s, <a class="el" href="../../d1/df5/cwist__io_8h.html#a0447e35daf4a82549bf7d207d5ce8a28">cwist_job_func</a> func, <a class="el" href="../../d6/d3c/seq_8h.html#aeb29493e92e60057714a6b22befc6d67">void</a> *arg)</td></tr>
-<tr class="memdesc:a3f5b6e8f86cb918356d278714b809683"><td class="mdescLeft">&#160;</td><td class="mdescRight">Submit a job to be executed as soon as a worker is available.  <br /></td></tr>
+<tr class="memitem:a3f5b6e8f86cb918356d278714b809683" id="r_a3f5b6e8f86cb918356d278714b809683"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../dd/d6c/scheduler_8c.html#a3f5b6e8f86cb918356d278714b809683">cwist_scheduler_submit</a> (<a class="el" href="../../d2/dd8/scheduler_8h.html#a6f0ae6fce1a81f7dc35c2b235415d1ed">cwist_scheduler_t</a> *s, <a class="el" href="../../d1/df5/cwist__io_8h.html#a0447e35daf4a82549bf7d207d5ce8a28">cwist_job_func</a> func, void *arg)</td></tr>
+<tr class="memdesc:a3f5b6e8f86cb918356d278714b809683"><td class="mdescLeft">&#160;</td><td class="mdescRight">Submit a job for immediate execution by a worker thread.  <br /></td></tr>
 <tr class="separator:a3f5b6e8f86cb918356d278714b809683"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a711e7f9807d19aa351f2544c59534790" id="r_a711e7f9807d19aa351f2544c59534790"><td class="memItemLeft" align="right" valign="top"><a class="el" href="../../d6/d3c/seq_8h.html#aeb29493e92e60057714a6b22befc6d67">bool</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../dd/d6c/scheduler_8c.html#a711e7f9807d19aa351f2544c59534790">cwist_scheduler_schedule</a> (<a class="el" href="../../d2/dd8/scheduler_8h.html#a6f0ae6fce1a81f7dc35c2b235415d1ed">cwist_scheduler_t</a> *s, <a class="el" href="../../d1/df5/cwist__io_8h.html#a0447e35daf4a82549bf7d207d5ce8a28">cwist_job_func</a> func, <a class="el" href="../../d6/d3c/seq_8h.html#aeb29493e92e60057714a6b22befc6d67">void</a> *arg, <a class="el" href="../../d6/d3c/seq_8h.html#aeb29493e92e60057714a6b22befc6d67">uint64_t</a> <a class="el" href="../../d6/d3c/seq_8h.html#aeb29493e92e60057714a6b22befc6d67">delay_ms</a>)</td></tr>
-<tr class="memdesc:a711e7f9807d19aa351f2544c59534790"><td class="mdescLeft">&#160;</td><td class="mdescRight">Schedule a job to run after a relative delay.  <br /></td></tr>
+<tr class="memitem:a711e7f9807d19aa351f2544c59534790" id="r_a711e7f9807d19aa351f2544c59534790"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../dd/d6c/scheduler_8c.html#a711e7f9807d19aa351f2544c59534790">cwist_scheduler_schedule</a> (<a class="el" href="../../d2/dd8/scheduler_8h.html#a6f0ae6fce1a81f7dc35c2b235415d1ed">cwist_scheduler_t</a> *s, <a class="el" href="../../d1/df5/cwist__io_8h.html#a0447e35daf4a82549bf7d207d5ce8a28">cwist_job_func</a> func, void *arg, uint64_t delay_ms)</td></tr>
+<tr class="memdesc:a711e7f9807d19aa351f2544c59534790"><td class="mdescLeft">&#160;</td><td class="mdescRight">Schedule a job to run after a delay.  <br /></td></tr>
 <tr class="separator:a711e7f9807d19aa351f2544c59534790"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a93a77a1ca7d1ac21f8d0a91123ca2f83" id="r_a93a77a1ca7d1ac21f8d0a91123ca2f83"><td class="memItemLeft" align="right" valign="top"><a class="el" href="../../d6/d3c/seq_8h.html#aeb29493e92e60057714a6b22befc6d67">size_t</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../dd/d6c/scheduler_8c.html#a93a77a1ca7d1ac21f8d0a91123ca2f83">cwist_scheduler_pending_count</a> (<a class="el" href="../../d2/dd8/scheduler_8h.html#a6f0ae6fce1a81f7dc35c2b235415d1ed">cwist_scheduler_t</a> *s)</td></tr>
-<tr class="memdesc:a93a77a1ca7d1ac21f8d0a91123ca2f83"><td class="mdescLeft">&#160;</td><td class="mdescRight">Number of delayed jobs currently waiting to fire.  <br /></td></tr>
+<tr class="memitem:a93a77a1ca7d1ac21f8d0a91123ca2f83" id="r_a93a77a1ca7d1ac21f8d0a91123ca2f83"><td class="memItemLeft" align="right" valign="top">size_t&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../dd/d6c/scheduler_8c.html#a93a77a1ca7d1ac21f8d0a91123ca2f83">cwist_scheduler_pending_count</a> (<a class="el" href="../../d2/dd8/scheduler_8h.html#a6f0ae6fce1a81f7dc35c2b235415d1ed">cwist_scheduler_t</a> *s)</td></tr>
+<tr class="memdesc:a93a77a1ca7d1ac21f8d0a91123ca2f83"><td class="mdescLeft">&#160;</td><td class="mdescRight">Return the number of jobs waiting on the delayed-job heap.  <br /></td></tr>
 <tr class="separator:a93a77a1ca7d1ac21f8d0a91123ca2f83"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
@@ -166,7 +179,7 @@ Functions</h2></td></tr>
 <div class="memproto">
       <table class="memname">
         <tr>
-          <td class="memname">#<a class="el" href="../../d6/d3c/seq_8h.html#aeb29493e92e60057714a6b22befc6d67">define</a> _POSIX_C_SOURCE&#160;&#160;&#160;200809<a class="el" href="../../d6/d3c/seq_8h.html#aeb29493e92e60057714a6b22befc6d67">L</a></td>
+          <td class="memname">#define _POSIX_C_SOURCE&#160;&#160;&#160;200809L</td>
         </tr>
       </table>
 </div><div class="memdoc">
@@ -182,12 +195,12 @@ Functions</h2></td></tr>
 <div class="memproto">
       <table class="memname">
         <tr>
-          <td class="memname">#<a class="el" href="../../d6/d3c/seq_8h.html#aeb29493e92e60057714a6b22befc6d67">define</a> CWIST_SCHEDULER_HEAP_INIT&#160;&#160;&#160;16</td>
+          <td class="memname">#define CWIST_SCHEDULER_HEAP_INIT&#160;&#160;&#160;16</td>
         </tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../dd/d6c/scheduler_8c_source.html#l00019">19</a> of file <a class="el" href="../../dd/d6c/scheduler_8c_source.html">scheduler.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../dd/d6c/scheduler_8c_source.html#l00020">20</a> of file <a class="el" href="../../dd/d6c/scheduler_8c_source.html">scheduler.c</a>.</p>
 
 </div>
 </div>
@@ -201,13 +214,13 @@ Functions</h2></td></tr>
         <tr>
           <td class="memname"><a class="el" href="../../d2/dd8/scheduler_8h.html#a6f0ae6fce1a81f7dc35c2b235415d1ed">cwist_scheduler_t</a> * cwist_scheduler_create </td>
           <td>(</td>
-          <td class="paramtype"><a class="el" href="../../d6/d3c/seq_8h.html#aeb29493e92e60057714a6b22befc6d67">size_t</a>&#160;</td>
+          <td class="paramtype">size_t&#160;</td>
           <td class="paramname"><em>worker_count</em>, </td>
         </tr>
         <tr>
           <td class="paramkey"></td>
           <td></td>
-          <td class="paramtype"><a class="el" href="../../d6/d3c/seq_8h.html#aeb29493e92e60057714a6b22befc6d67">size_t</a>&#160;</td>
+          <td class="paramtype">size_t&#160;</td>
           <td class="paramname"><em>queue_capacity</em>&#160;</td>
         </tr>
         <tr>
@@ -218,21 +231,23 @@ Functions</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p>Create a scheduler with a pool of background workers. </p>
+<p>Create a scheduler with worker and timer threads. </p>
+<p>Create a scheduler with a pool of background workers.</p>
+<p>Spawns <code>worker_count</code> worker threads (defaulting to 1 if 0) running the io queue event loop, plus one timer thread for delayed jobs. On any failure, all partially created resources are torn down and freed.</p>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
-    <tr><td class="paramname">worker_count</td><td>Number of worker threads. Must be &gt;= 1. </td></tr>
-    <tr><td class="paramname">queue_capacity</td><td>Capacity hint forwarded to the underlying io queue. </td></tr>
+    <tr><td class="paramname">worker_count</td><td>Number of worker threads; 0 is treated as 1. </td></tr>
+    <tr><td class="paramname">queue_capacity</td><td>Capacity passed to <a class="el" href="../../d1/df5/cwist__io_8h.html#ae98b56f01551c8b2a116ede7c918aa99" title="Initialize the job queue.">cwist_io_queue_create()</a>. </td></tr>
   </table>
   </dd>
 </dl>
-<dl class="section return"><dt>Returns</dt><dd>Scheduler handle, or NULL on failure. </dd></dl>
+<dl class="section return"><dt>Returns</dt><dd>The new scheduler, or NULL on allocation or thread-creation failure. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="../../dd/d6c/scheduler_8c_source.html#l00162">162</a> of file <a class="el" href="../../dd/d6c/scheduler_8c_source.html">scheduler.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../dd/d6c/scheduler_8c_source.html#l00259">259</a> of file <a class="el" href="../../dd/d6c/scheduler_8c_source.html">scheduler.c</a>.</p>
 
-<p class="reference">References <a class="el" href="../../d9/d39/alloc_8c_source.html#l00221">cwist_alloc()</a>, <a class="el" href="../../d9/d39/alloc_8c_source.html#l00231">cwist_alloc_array()</a>, <a class="el" href="../../d9/d39/alloc_8c_source.html#l00315">cwist_free()</a>, <a class="el" href="../../d9/d70/io__select_8c_source.html#l00139">cwist_io_queue_create()</a>, <a class="el" href="../../d9/d70/io__select_8c_source.html#l00229">cwist_io_queue_destroy()</a>, and <a class="el" href="../../d6/d3c/seq_8h_source.html#l00029">CWIST_SEQ_HEADER_SIZE</a>.</p>
+<p class="reference">References <a class="el" href="../../d9/d39/alloc_8c_source.html#l00275">cwist_alloc()</a>, <a class="el" href="../../d9/d39/alloc_8c_source.html#l00289">cwist_alloc_array()</a>, <a class="el" href="../../d9/d39/alloc_8c_source.html#l00390">cwist_free()</a>, <a class="el" href="../../d1/de4/io__queue_8c_source.html#l00216">cwist_io_queue_create()</a>, and <a class="el" href="../../d1/de4/io__queue_8c_source.html#l00334">cwist_io_queue_destroy()</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../df/d7f/app_8c_source.html#l01632">cwist_app_use_scheduler()</a>.</p>
+<p class="reference">Referenced by <a class="el" href="../../df/d7f/app_8c_source.html#l01920">cwist_app_use_scheduler()</a>.</p>
 
 </div>
 </div>
@@ -243,7 +258,7 @@ Functions</h2></td></tr>
 <div class="memproto">
       <table class="memname">
         <tr>
-          <td class="memname"><a class="el" href="../../d6/d3c/seq_8h.html#aeb29493e92e60057714a6b22befc6d67">void</a> cwist_scheduler_destroy </td>
+          <td class="memname">void cwist_scheduler_destroy </td>
           <td>(</td>
           <td class="paramtype"><a class="el" href="../../d2/dd8/scheduler_8h.html#a6f0ae6fce1a81f7dc35c2b235415d1ed">cwist_scheduler_t</a> *&#160;</td>
           <td class="paramname"><em>s</em></td><td>)</td>
@@ -252,14 +267,21 @@ Functions</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p>Destroy the scheduler and stop all worker threads. </p>
-<p>Pending immediate jobs are drained before shutdown. Delayed jobs that have not yet fired are dropped. </p>
+<p>Destroy a scheduler and free all its resources. </p>
+<p>Destroy the scheduler and stop all worker threads.</p>
+<p>Stops the timer and worker threads (waiting for them to finish), then destroys the io queue and frees the heap, worker array, and scheduler. Safe to call with NULL.</p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">s</td><td>Scheduler to destroy. </td></tr>
+  </table>
+  </dd>
+</dl>
 
-<p class="definition">Definition at line <a class="el" href="../../dd/d6c/scheduler_8c_source.html#l00212">212</a> of file <a class="el" href="../../dd/d6c/scheduler_8c_source.html">scheduler.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../dd/d6c/scheduler_8c_source.html#l00318">318</a> of file <a class="el" href="../../dd/d6c/scheduler_8c_source.html">scheduler.c</a>.</p>
 
-<p class="reference">References <a class="el" href="../../d9/d39/alloc_8c_source.html#l00315">cwist_free()</a>, <a class="el" href="../../d9/d70/io__select_8c_source.html#l00229">cwist_io_queue_destroy()</a>, <a class="el" href="../../d9/d70/io__select_8c_source.html#l00217">cwist_io_queue_stop()</a>, and <a class="el" href="../../d6/d3c/seq_8h_source.html#l00029">CWIST_SEQ_HEADER_SIZE</a>.</p>
+<p class="reference">References <a class="el" href="../../d9/d39/alloc_8c_source.html#l00390">cwist_free()</a>, <a class="el" href="../../d1/de4/io__queue_8c_source.html#l00334">cwist_io_queue_destroy()</a>, and <a class="el" href="../../d1/de4/io__queue_8c_source.html#l00322">cwist_io_queue_stop()</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../df/d7f/app_8c_source.html#l01211">cwist_app_destroy()</a>, and <a class="el" href="../../df/d7f/app_8c_source.html#l01632">cwist_app_use_scheduler()</a>.</p>
+<p class="reference">Referenced by <a class="el" href="../../df/d7f/app_8c_source.html#l01428">cwist_app_destroy()</a>, and <a class="el" href="../../df/d7f/app_8c_source.html#l01920">cwist_app_use_scheduler()</a>.</p>
 
 </div>
 </div>
@@ -270,7 +292,7 @@ Functions</h2></td></tr>
 <div class="memproto">
       <table class="memname">
         <tr>
-          <td class="memname"><a class="el" href="../../d6/d3c/seq_8h.html#aeb29493e92e60057714a6b22befc6d67">size_t</a> cwist_scheduler_pending_count </td>
+          <td class="memname">size_t cwist_scheduler_pending_count </td>
           <td>(</td>
           <td class="paramtype"><a class="el" href="../../d2/dd8/scheduler_8h.html#a6f0ae6fce1a81f7dc35c2b235415d1ed">cwist_scheduler_t</a> *&#160;</td>
           <td class="paramname"><em>s</em></td><td>)</td>
@@ -279,11 +301,18 @@ Functions</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p>Number of delayed jobs currently waiting to fire. </p>
+<p>Return the number of jobs waiting on the delayed-job heap. </p>
+<p>Number of delayed jobs currently waiting to fire.</p>
+<p>Does not include jobs already submitted to the io queue.</p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">s</td><td>Scheduler to query. </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section return"><dt>Returns</dt><dd>Number of pending delayed jobs; 0 if <code>s</code> is NULL. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="../../dd/d6c/scheduler_8c_source.html#l00264">264</a> of file <a class="el" href="../../dd/d6c/scheduler_8c_source.html">scheduler.c</a>.</p>
-
-<p class="reference">References <a class="el" href="../../d6/d3c/seq_8h_source.html#l00029">CWIST_SEQ_HEADER_SIZE</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../dd/d6c/scheduler_8c_source.html#l00403">403</a> of file <a class="el" href="../../dd/d6c/scheduler_8c_source.html">scheduler.c</a>.</p>
 
 </div>
 </div>
@@ -294,7 +323,7 @@ Functions</h2></td></tr>
 <div class="memproto">
       <table class="memname">
         <tr>
-          <td class="memname"><a class="el" href="../../d6/d3c/seq_8h.html#aeb29493e92e60057714a6b22befc6d67">bool</a> cwist_scheduler_schedule </td>
+          <td class="memname">bool cwist_scheduler_schedule </td>
           <td>(</td>
           <td class="paramtype"><a class="el" href="../../d2/dd8/scheduler_8h.html#a6f0ae6fce1a81f7dc35c2b235415d1ed">cwist_scheduler_t</a> *&#160;</td>
           <td class="paramname"><em>s</em>, </td>
@@ -308,13 +337,13 @@ Functions</h2></td></tr>
         <tr>
           <td class="paramkey"></td>
           <td></td>
-          <td class="paramtype"><a class="el" href="../../d6/d3c/seq_8h.html#aeb29493e92e60057714a6b22befc6d67">void</a> *&#160;</td>
+          <td class="paramtype">void *&#160;</td>
           <td class="paramname"><em>arg</em>, </td>
         </tr>
         <tr>
           <td class="paramkey"></td>
           <td></td>
-          <td class="paramtype"><a class="el" href="../../d6/d3c/seq_8h.html#aeb29493e92e60057714a6b22befc6d67">uint64_t</a>&#160;</td>
+          <td class="paramtype">uint64_t&#160;</td>
           <td class="paramname"><em>delay_ms</em>&#160;</td>
         </tr>
         <tr>
@@ -325,18 +354,31 @@ Functions</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p>Schedule a job to run after a relative delay. </p>
+<p>Schedule a job to run after a delay. </p>
+<p>Schedule a job to run after a relative delay.</p>
+<p>With a zero delay the job is submitted immediately as with <a class="el" href="../../d2/dd8/scheduler_8h.html#a3f5b6e8f86cb918356d278714b809683" title="Submit a job to be executed as soon as a worker is available.">cwist_scheduler_submit()</a>. Otherwise it is pushed onto the delayed-job min-heap and the timer thread runs it once the deadline passes.</p>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
-    <tr><td class="paramname">delay_ms</td><td>Milliseconds to wait before executing the job. </td></tr>
+    <tr><td class="paramname">s</td><td>Scheduler to schedule on. </td></tr>
+    <tr><td class="paramname">func</td><td>Job function to run. </td></tr>
+    <tr><td class="paramname">arg</td><td>Opaque argument passed to <code>func</code>. </td></tr>
+    <tr><td class="paramname">delay_ms</td><td>Delay in milliseconds before execution; 0 means immediate. </td></tr>
   </table>
   </dd>
 </dl>
-<dl class="section return"><dt>Returns</dt><dd>true on success, false on failure. </dd></dl>
+<dl class="retval"><dt>Return values</dt><dd>
+  <table class="retval">
+    <tr><td class="paramname">true</td><td>if the job was scheduled. </td></tr>
+    <tr><td class="paramname">false</td><td>if <code>s</code> or <code>func</code> is NULL, the scheduler is not running, or heap insertion failed (e.g. out of memory). </td></tr>
+  </table>
+  </dd>
+</dl>
 
-<p class="definition">Definition at line <a class="el" href="../../dd/d6c/scheduler_8c_source.html#l00240">240</a> of file <a class="el" href="../../dd/d6c/scheduler_8c_source.html">scheduler.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../dd/d6c/scheduler_8c_source.html#l00371">371</a> of file <a class="el" href="../../dd/d6c/scheduler_8c_source.html">scheduler.c</a>.</p>
 
-<p class="reference">References <a class="el" href="../../d9/d70/io__select_8c_source.html#l00176">cwist_io_queue_submit()</a>, and <a class="el" href="../../d6/d3c/seq_8h_source.html#l00029">CWIST_SEQ_HEADER_SIZE</a>.</p>
+<p class="reference">References <a class="el" href="../../d1/de4/io__queue_8c_source.html#l00263">cwist_io_queue_submit()</a>.</p>
+
+<p class="reference">Referenced by <a class="el" href="../../db/d84/async_8c_source.html#l00281">cwist_async_set_timeout()</a>.</p>
 
 </div>
 </div>
@@ -347,7 +389,7 @@ Functions</h2></td></tr>
 <div class="memproto">
       <table class="memname">
         <tr>
-          <td class="memname"><a class="el" href="../../d6/d3c/seq_8h.html#aeb29493e92e60057714a6b22befc6d67">bool</a> cwist_scheduler_submit </td>
+          <td class="memname">bool cwist_scheduler_submit </td>
           <td>(</td>
           <td class="paramtype"><a class="el" href="../../d2/dd8/scheduler_8h.html#a6f0ae6fce1a81f7dc35c2b235415d1ed">cwist_scheduler_t</a> *&#160;</td>
           <td class="paramname"><em>s</em>, </td>
@@ -361,7 +403,7 @@ Functions</h2></td></tr>
         <tr>
           <td class="paramkey"></td>
           <td></td>
-          <td class="paramtype"><a class="el" href="../../d6/d3c/seq_8h.html#aeb29493e92e60057714a6b22befc6d67">void</a> *&#160;</td>
+          <td class="paramtype">void *&#160;</td>
           <td class="paramname"><em>arg</em>&#160;</td>
         </tr>
         <tr>
@@ -372,12 +414,27 @@ Functions</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p>Submit a job to be executed as soon as a worker is available. </p>
-<dl class="section return"><dt>Returns</dt><dd>true on success, false when the scheduler is stopping or OOM. </dd></dl>
+<p>Submit a job for immediate execution by a worker thread. </p>
+<p>Submit a job to be executed as soon as a worker is available.</p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">s</td><td>Scheduler to submit to. </td></tr>
+    <tr><td class="paramname">func</td><td>Job function to run. </td></tr>
+    <tr><td class="paramname">arg</td><td>Opaque argument passed to <code>func</code>. </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="retval"><dt>Return values</dt><dd>
+  <table class="retval">
+    <tr><td class="paramname">true</td><td>if the job was submitted. </td></tr>
+    <tr><td class="paramname">false</td><td>if <code>s</code> or <code>func</code> is NULL, the scheduler is not running, or the queue submission failed. </td></tr>
+  </table>
+  </dd>
+</dl>
 
-<p class="definition">Definition at line <a class="el" href="../../dd/d6c/scheduler_8c_source.html#l00235">235</a> of file <a class="el" href="../../dd/d6c/scheduler_8c_source.html">scheduler.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../dd/d6c/scheduler_8c_source.html#l00351">351</a> of file <a class="el" href="../../dd/d6c/scheduler_8c_source.html">scheduler.c</a>.</p>
 
-<p class="reference">References <a class="el" href="../../d9/d70/io__select_8c_source.html#l00176">cwist_io_queue_submit()</a>.</p>
+<p class="reference">References <a class="el" href="../../d1/de4/io__queue_8c_source.html#l00263">cwist_io_queue_submit()</a>.</p>
 
 </div>
 </div>

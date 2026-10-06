@@ -1,7 +1,13 @@
 <map id="include/cwist/net/graphql/graphql.h" name="include/cwist/net/graphql/graphql.h">
-<area shape="rect" id="Node000001" title="Full&#45;featured, production&#45;ready GraphQL query &amp; mutation execution engine." alt="" coords="99,5,284,45"/>
-<area shape="rect" id="Node000002" href="$d4/d77/graphql_8h.html" title=" " alt="" coords="5,93,177,119"/>
-<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="158,56,108,95,105,91,155,52"/>
-<area shape="rect" id="Node000003" href="$dd/d92/graphql_8c.html" title=" " alt="" coords="201,93,384,119"/>
-<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="228,52,279,91,276,95,225,56"/>
+<area shape="rect" id="Node000001" title="Full&#45;featured, production&#45;ready GraphQL query &amp; mutation execution engine." alt="" coords="201,5,387,45"/>
+<area shape="rect" id="Node000002" href="$d4/d77/graphql_8h.html" title=" " alt="" coords="5,101,177,126"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="238,53,119,103,117,98,236,48"/>
+<area shape="rect" id="Node000003" href="$da/dc7/net_2graphql_2graphql__ws_8h.html" title="GraphQL subscriptions over the graphql&#45;ws WebSocket subprotocol (supported since v3...." alt="" coords="201,93,387,133"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="297,59,297,93,291,93,291,59"/>
+<area shape="rect" id="Node000006" href="$dd/d92/graphql_8c.html" title=" " alt="" coords="411,101,593,126"/>
+<area shape="poly" id="edge5_Node000001_Node000006" title=" " alt="" coords="353,48,475,98,473,103,351,53"/>
+<area shape="rect" id="Node000004" href="$d6/d59/graphql__ws_8h.html" title=" " alt="" coords="82,181,279,207"/>
+<area shape="poly" id="edge3_Node000003_Node000004" title=" " alt="" coords="257,143,199,183,196,179,254,139"/>
+<area shape="rect" id="Node000005" href="$d7/d38/graphql__ws_8c.html" title="Experimental GraphQL subscriptions over the graphql&#45;ws WebSocket subprotocol (v3.7 Phase 4)." alt="" coords="303,181,511,207"/>
+<area shape="poly" id="edge4_Node000003_Node000005" title=" " alt="" coords="334,139,392,179,389,183,331,143"/>
 </map>

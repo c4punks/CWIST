@@ -1,18 +1,22 @@
 <map id="src/core/seq/seq.c" name="src/core/seq/seq.c">
 <area shape="rect" id="Node000001" title="Implementation of the CWIST sequenced&#45;message protocol." alt="" coords="267,5,405,31"/>
-<area shape="rect" id="Node000002" href="$d6/d3c/seq_8h.html" title="TCP&#45;like sequenced message fragmentation and reassembly." alt="" coords="71,79,225,104"/>
-<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="307,33,192,76,191,71,305,28"/>
+<area shape="rect" id="Node000002" href="$d6/d3c/seq_8h.html" title="TCP&#45;like sequenced message fragmentation and reassembly." alt="" coords="5,152,160,177"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="317,33,116,148,113,143,314,29"/>
 <area shape="rect" id="Node000006" href="$d2/dfe/alloc_8h.html" title="Memory allocation wrappers backed by libttak." alt="" coords="249,79,423,104"/>
 <area shape="poly" id="edge5_Node000001_Node000006" title=" " alt="" coords="339,31,339,65,333,65,333,31"/>
-<area shape="rect" id="Node000008" title=" " alt="" coords="447,79,518,104"/>
-<area shape="poly" id="edge8_Node000001_Node000008" title=" " alt="" coords="361,28,448,70,445,75,358,33"/>
-<area shape="rect" id="Node000003" title=" " alt="" coords="5,152,88,177"/>
-<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="133,106,76,146,73,142,130,102"/>
-<area shape="rect" id="Node000004" title=" " alt="" coords="208,152,283,177"/>
-<area shape="poly" id="edge3_Node000002_Node000004" title=" " alt="" coords="165,102,220,141,217,146,162,106"/>
-<area shape="rect" id="Node000005" title=" " alt="" coords="113,152,183,177"/>
-<area shape="poly" id="edge4_Node000002_Node000005" title=" " alt="" coords="151,104,151,138,145,138,145,104"/>
-<area shape="poly" id="edge6_Node000006_Node000004" title=" " alt="" coords="323,106,273,145,269,141,320,102"/>
-<area shape="rect" id="Node000007" title=" " alt="" coords="307,152,448,177"/>
-<area shape="poly" id="edge7_Node000006_Node000007" title=" " alt="" coords="345,103,366,139,361,141,341,106"/>
+<area shape="rect" id="Node000009" title=" " alt="" coords="447,79,518,104"/>
+<area shape="poly" id="edge11_Node000001_Node000009" title=" " alt="" coords="361,28,448,70,445,75,358,33"/>
+<area shape="rect" id="Node000003" title=" " alt="" coords="136,225,219,251"/>
+<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="99,175,152,215,149,219,96,179"/>
+<area shape="rect" id="Node000004" title=" " alt="" coords="243,225,317,251"/>
+<area shape="poly" id="edge3_Node000002_Node000004" title=" " alt="" coords="115,175,236,218,234,223,113,180"/>
+<area shape="rect" id="Node000005" title=" " alt="" coords="41,225,111,251"/>
+<area shape="poly" id="edge4_Node000002_Node000005" title=" " alt="" coords="84,178,81,212,76,212,79,177"/>
+<area shape="poly" id="edge6_Node000006_Node000004" title=" " alt="" coords="351,103,375,137,381,158,377,179,355,204,328,222,325,217,352,200,372,176,376,158,370,139,346,106"/>
+<area shape="rect" id="Node000007" title=" " alt="" coords="437,152,579,177"/>
+<area shape="poly" id="edge7_Node000006_Node000007" title=" " alt="" coords="365,102,468,144,466,149,363,106"/>
+<area shape="rect" id="Node000008" href="$da/d0c/arena_8h.html" title="Request&#45;scoped arena allocator backed by libttak arena generations." alt="" coords="184,152,363,177"/>
+<area shape="poly" id="edge8_Node000006_Node000008" title=" " alt="" coords="328,106,295,143,291,140,324,103"/>
+<area shape="poly" id="edge9_Node000008_Node000003" title=" " alt="" coords="259,180,206,219,203,215,256,175"/>
+<area shape="poly" id="edge10_Node000008_Node000004" title=" " alt="" coords="277,177,280,212,275,212,272,178"/>
 </map>

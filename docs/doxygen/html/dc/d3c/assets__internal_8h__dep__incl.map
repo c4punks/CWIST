@@ -1,0 +1,7 @@
+<map id="src/sys/app/assets_internal.h" name="src/sys/app/assets_internal.h">
+<area shape="rect" id="Node000001" title="Private wiring between app.c and the asset registry (assets.c)." alt="" coords="86,5,227,45"/>
+<area shape="rect" id="Node000002" href="$df/d7f/app_8c.html" title=" " alt="" coords="5,93,140,119"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="128,57,87,95,83,91,125,53"/>
+<area shape="rect" id="Node000003" href="$d3/d05/assets_8c.html" title="Content&#45;hashed in&#45;memory assets: registration, URL lookup and serving." alt="" coords="165,93,317,119"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="189,53,230,91,226,95,185,57"/>
+</map>

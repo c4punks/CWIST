@@ -1,0 +1,7 @@
+<map id="src/sys/io/reactor_rx.h" name="src/sys/io/reactor_rx.h">
+<area shape="rect" id="Node000001" title=" " alt="" coords="73,5,238,31"/>
+<area shape="rect" id="Node000002" href="$dd/d43/http_8c.html" title="Core HTTP request/response allocation, serialization, socket, and server&#45;loop helpers." alt="" coords="5,79,143,104"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="134,42,89,80,86,76,130,38"/>
+<area shape="rect" id="Node000003" href="$d3/d99/reactor_8c.html" title="Readiness multiplexer (io_uring / epoll / kqueue) driving CWIST&#39;s synchronous callback model." alt="" coords="167,79,309,104"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="181,38,226,76,223,80,177,42"/>
+</map>

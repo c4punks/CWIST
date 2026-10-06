@@ -512,10 +512,10 @@ also brings WebRTC DataChannel support into the release scope.
 
 | Goal | Status | Notes |
 |------|--------|-------|
-| (a) CI TLS performance gates (HTTPS churn / keep-alive / large-transfer / RTT) | 🔄 In Progress | Tracked in #306; gate PR pending — measured separately so this roadmap and the gates PR stay decoupled |
+| (a) CI TLS performance gates (HTTPS churn / keep-alive / large-transfer / RTT) | 🔄 In Progress | Gates landed in #309 but never passed: the absolute backstops came from fast CPUs and healthy code failed on the EPYC 7763 runner, so no history accumulated either. Recalibrated on https/http ratios plus same-CPU history; disabling the #307 fix fails the RTT gate (0.08 → 43 ms) on any CPU. The churn-ratio backstop had to be loosened after the first Intel runner (healthy at 0.071 vs 0.11-0.13 on AMD). Done once green on dev. Tracked in #306 |
 | (b) TLS observability in Prometheus `/metrics` (handshake counts, TLS version/cipher counters, resumption vs full-handshake ratio) | ✅ Done | `cwist_tls_handshakes_total`, `cwist_tls_handshakes_resumed_total`, `cwist_tls_connections_active`, `cwist_tls_handshakes_tls12_total`, `cwist_tls_handshakes_tls13_total`, `cwist_tls_ciphers_{aes128_gcm,aes256_gcm,chacha20,other}_total`; covered by `test_https_metrics` |
-| (c) Correct issue #294's premise with measured data | ✅ Done | Corrected in a #294 comment: the `cwist_app_listen` path never uses the sharded handshake shepherds (app.c multiport accept loop calls `https_pool_submit` directly, and the worker handshakes inline via `cwist_https_accept`); shepherds only serve the `async_server.c` path. Shard tuning therefore does not affect the standard app API |
-| (d) WebRTC DataChannel support | 🔄 In Progress | SDP offer/answer, ICE (server lite-role acceptable at MVP), DTLS via the vendored BoringSSL, SCTP DataChannels via a new `lib/usrsctp` submodule; browser-interoperable DataChannel echo. Implementation PR follows |
+| (c) Settle issue #294 with measured data | ✅ Done | #294 closed as completed. An earlier comment there claimed `cwist_app_listen` never uses the sharded handshake shepherds; that was wrong (it confused `cwist_app_multiport`'s inline path with `cwist_app_listen`). Measured: `cwist_app_listen` adds one thread per `CWIST_HTTPS_HS_SHARDS` shard on the first HTTPS request, in both C1M and classic mode. The default floor of 4 shards / cap of 16 is already on dev, and #294's data shows no gain beyond 4 |
+| (d) WebRTC DataChannel support | ✅ Done | #310: SDP offer/answer, ICE-lite, DTLS (vendored BoringSSL), SCTP DataChannels (`lib/usrsctp`) on the cwist reactor. Echo verified against headless Chromium (`make test_webrtc_browser`); Firefox not yet tested |
 
 Entry criteria for v3.9: every item must move a measured metric (handshake
 throughput, resumption ratio, connection-churn latency, or regression
@@ -528,8 +528,9 @@ Exit criteria for v3.9:
   re-introduced #307-class regression (measured by the churn benchmark).
 - `/metrics` exposes the full TLS counter set above on a live app, and the
   resumption-vs-full ratio is observable across prefork workers.
-- #294 is closed as *not applicable to the standard app API*, with the
-  shepherd-path shard table recorded for the async-server path only.
+- #294 is closed with measured data (done: closed as completed; the
+  shepherds do serve `cwist_app_listen`, and the shipped default needs no
+  change).
 
 ---
 

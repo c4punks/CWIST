@@ -37,6 +37,7 @@
 #include <stdatomic.h>
 #include <fcntl.h>
 #include <limits.h>
+#include <time.h>
 
 #ifdef __linux__
 #include <sys/syscall.h>
@@ -74,13 +75,32 @@ struct io_uring_getevents_arg {
 
 struct __kernel_timespec;
 
+/** @brief Raw io_uring_setup(2) syscall wrapper (no libc wrapper exists).
+ *  @param entries Ring depth requested.
+ *  @param p Out params/offsets filled by the kernel.
+ *  @return Ring file descriptor on success, -1 with errno set on failure. */
 static inline int sys_io_uring_setup(unsigned entries, struct io_uring_params *p) {
     return (int)syscall(__NR_io_uring_setup, entries, p);
 }
+/** @brief Raw io_uring_enter(2) syscall wrapper.
+ *  @param ring_fd Ring file descriptor.
+ *  @param to_submit Number of queued SQEs to submit.
+ *  @param min_complete Minimum completions to wait for (with GETEVENTS).
+ *  @param flags IORING_ENTER_* flags.
+ *  @param sig Signal mask to apply during the wait, or NULL.
+ *  @return 0 or number of completions on success, -1 with errno set on failure. */
 static inline int sys_io_uring_enter(int ring_fd, unsigned to_submit, unsigned min_complete,
                                      unsigned flags, sigset_t *sig) {
     return (int)syscall(__NR_io_uring_enter, ring_fd, to_submit, min_complete, flags, sig);
 }
+/** @brief io_uring_enter with an absolute timeout, via IORING_ENTER_EXT_ARG.
+ *  @param ring_fd Ring file descriptor.
+ *  @param to_submit Number of queued SQEs to submit.
+ *  @param min_complete Minimum completions to wait for.
+ *  @param flags IORING_ENTER_* flags (EXT_ARG is OR-ed in here).
+ *  @param ts Absolute timeout (CLOCK_MONOTONIC) as __kernel_timespec, or NULL.
+ *  @return Completions/submit result on success, -1 with errno set (ETIME on
+ *          timeout expiry) on failure. */
 static inline int sys_io_uring_enter_timeout(int ring_fd, unsigned to_submit, unsigned min_complete,
                                              unsigned flags, const struct __kernel_timespec *ts) {
     struct io_uring_getevents_arg arg = {.ts = (uint64_t)(uintptr_t)ts};
@@ -88,20 +108,32 @@ static inline int sys_io_uring_enter_timeout(int ring_fd, unsigned to_submit, un
                         flags | IORING_ENTER_EXT_ARG, &arg, sizeof(arg));
 }
 
-/* Ring setup helpers absorbed from the retired io_uring_backend.c. */
+/** @brief Map one io_uring ring region (SQ ring, CQ ring, or SQE array).
+ *
+ * No MAP_POPULATE: with one ring per worker thread the pre-faulted pages
+ * dominate idle RSS (~400 KiB per reactor) while a worker under real
+ * load only ever touches the head of each ring.  On-demand paging keeps
+ * RSS proportional to actual concurrency.
+ *
+ * @param fd Ring file descriptor.
+ * @param sz Region size in bytes.
+ * @param off Region selector (IORING_OFF_*).
+ * @return Mapped pointer, or NULL on failure (caller munmaps and falls back). */
 static void *mmap_ring(int fd, size_t sz, off_t off) {
-    /* No MAP_POPULATE: with one ring per worker thread the pre-faulted pages
-     * dominate idle RSS (~400 KiB per reactor) while a worker under real
-     * load only ever touches the head of each ring.  On-demand paging keeps
-     * RSS proportional to actual concurrency. */
     void *p = mmap(NULL, sz, PROT_READ | PROT_WRITE, MAP_SHARED, fd, off);
     return (p == MAP_FAILED) ? NULL : p;
 }
 
+/** @brief Byte size of the mmap-ed SQ ring region for the given setup params.
+ *  @param p Filled io_uring_params from io_uring_setup.
+ *  @return Region size: sq_off.array offset plus the SQ index array. */
 static size_t sq_ring_size(struct io_uring_params *p) {
     return p->sq_off.array + p->sq_entries * sizeof(uint32_t);
 }
 
+/** @brief Byte size of the mmap-ed CQ ring region for the given setup params.
+ *  @param p Filled io_uring_params from io_uring_setup.
+ *  @return Region size: cq_off.cqes offset plus the CQE array. */
 static size_t cq_ring_size(struct io_uring_params *p) {
     return p->cq_off.cqes + p->cq_entries * sizeof(struct io_uring_cqe);
 }
@@ -187,6 +219,10 @@ struct cwist_reactor {
     reactor_slot_chunk_t *chunks;
     reactor_event_ctx_t *free_head;  /* Free list threaded through slots. */
     pthread_mutex_t pool_lock;
+    /* Armed one-shot timers, min-heap on deadline_ns.  Run thread only. */
+    cwist_reactor_timer_t **timer_heap;
+    uint32_t timer_n;
+    uint32_t timer_cap;
 #ifdef __linux__
     /* Deferred SQE batching: submissions made by the reactor's own run thread
      * while it dispatches a CQE batch (overwhelmingly connection re-arms, one
@@ -226,9 +262,11 @@ static const uint32_t latency_probe_bounds_us[LATENCY_PROBE_BUCKETS - 1] = {
     10,    25,    50,    100,    250,    500,    1000,    2500,   5000,
     10000, 25000, 50000, 100000, 250000, 500000, 1000000, 2500000};
 
-/* CWIST_LATENCY_PROBE=1 enables the per-request latency probe. Cached after
- * the first read like the other env knobs in this file -- the racy recompute
- * is benign (same result every time). */
+/** @brief Whether the per-request latency probe is enabled (CWIST_LATENCY_PROBE=1).
+ *
+ * Cached after the first read like the other env knobs in this file -- the
+ * racy recompute is benign (same result every time).
+ * @return true when the probe is enabled. */
 static bool latency_probe_enabled(void) {
     static _Atomic int cached = -1;
     int v = atomic_load_explicit(&cached, memory_order_relaxed);
@@ -240,6 +278,16 @@ static bool latency_probe_enabled(void) {
     return v == 1;
 }
 
+/** @brief Record one latency sample (microseconds) into a probe histogram.
+ *
+ * Binary-searches the bucket whose upper bound first exceeds the sample,
+ * then updates the bucket, count, running sum, max, and over-5ms counters.
+ * @param buckets Histogram bucket array (LATENCY_PROBE_BUCKETS entries).
+ * @param count In/out total sample count.
+ * @param sum_us In/out running sum of samples.
+ * @param max_us In/out running maximum.
+ * @param over_5ms In/out count of samples beyond 5000 us.
+ * @param sample_us The sample value in microseconds. */
 static void latency_probe_record(uint64_t *buckets, uint64_t *count, uint64_t *sum_us,
                                  uint64_t *max_us, uint64_t *over_5ms, uint64_t sample_us) {
     int lo = 0, hi = LATENCY_PROBE_BUCKETS - 1;
@@ -259,8 +307,13 @@ static void latency_probe_record(uint64_t *buckets, uint64_t *count, uint64_t *s
 
 enum { LATENCY_PROBE_QUEUE = 0, LATENCY_PROBE_SVC = 1 };
 
-/* Approximate percentile from a histogram: smallest bucket upper bound whose
- * cumulative count reaches pct (in per-mille) of total. Returns micros. */
+/** @brief Approximate percentile from a histogram: smallest bucket upper
+ *         bound whose cumulative count reaches pct (in per-mille) of total.
+ *  @param buckets Histogram bucket array.
+ *  @param count Total sample count.
+ *  @param pct_mille Percentile in per-mille (500 = p50, 999 = p99.9).
+ *  @return Bucket upper bound in microseconds, or UINT64_MAX for the
+ *          open-ended top bucket. */
 static uint64_t latency_probe_percentile(const uint64_t *buckets, uint64_t count,
                                          uint64_t pct_mille) {
     uint64_t target = (count * pct_mille + 999) / 1000;
@@ -464,6 +517,127 @@ static void reactor_drain_posts(cwist_reactor_t *r) {
     }
 }
 
+/* run flag: cleared by cwist_reactor_stop() from any thread. */
+static bool reactor_running(cwist_reactor_t *r) {
+    return __atomic_load_n(&r->running, __ATOMIC_ACQUIRE) && atomic_load(&g_cwist_running);
+}
+
+/* ---- one-shot timers (min-heap, run thread only) ---- */
+
+/* Upper bound on any poll wait, timers or not: the shutdown flags are only
+ * re-checked between waits (see cwist_reactor_run). */
+#define REACTOR_IDLE_WAIT_NS 100000000ull
+
+static uint64_t reactor_now_ns(void) {
+    struct timespec ts;
+    clock_gettime(CLOCK_MONOTONIC, &ts);
+    return (uint64_t)ts.tv_sec * 1000000000ull + (uint64_t)ts.tv_nsec;
+}
+
+static void timer_heap_place(cwist_reactor_t *r, uint32_t i, cwist_reactor_timer_t *t) {
+    r->timer_heap[i] = t;
+    t->heap_slot = i + 1;
+}
+
+static void timer_heap_up(cwist_reactor_t *r, uint32_t i) {
+    cwist_reactor_timer_t *t = r->timer_heap[i];
+    while (i > 0) {
+        uint32_t parent = (i - 1) / 2;
+        if (r->timer_heap[parent]->deadline_ns <= t->deadline_ns) break;
+        timer_heap_place(r, i, r->timer_heap[parent]);
+        i = parent;
+    }
+    timer_heap_place(r, i, t);
+}
+
+static void timer_heap_down(cwist_reactor_t *r, uint32_t i) {
+    cwist_reactor_timer_t *t = r->timer_heap[i];
+    for (;;) {
+        uint32_t child = 2 * i + 1;
+        if (child >= r->timer_n) break;
+        if (child + 1 < r->timer_n &&
+            r->timer_heap[child + 1]->deadline_ns < r->timer_heap[child]->deadline_ns)
+            child++;
+        if (t->deadline_ns <= r->timer_heap[child]->deadline_ns) break;
+        timer_heap_place(r, i, r->timer_heap[child]);
+        i = child;
+    }
+    timer_heap_place(r, i, t);
+}
+
+static void timer_heap_remove(cwist_reactor_t *r, cwist_reactor_timer_t *t) {
+    uint32_t i = t->heap_slot - 1;
+    t->heap_slot = 0;
+    cwist_reactor_timer_t *last = r->timer_heap[--r->timer_n];
+    if (i == r->timer_n) return;
+    timer_heap_place(r, i, last);
+    if (i > 0 && r->timer_heap[(i - 1) / 2]->deadline_ns > last->deadline_ns)
+        timer_heap_up(r, i);
+    else
+        timer_heap_down(r, i);
+}
+
+void cwist_reactor_timer_init(cwist_reactor_timer_t *timer, void (*cb)(void *ctx), void *ctx) {
+    if (!timer) return;
+    timer->deadline_ns = 0;
+    timer->heap_slot = 0;
+    timer->cb = cb;
+    timer->ctx = ctx;
+}
+
+bool cwist_reactor_timer_arm(cwist_reactor_t *r, cwist_reactor_timer_t *timer, uint64_t delay_us) {
+    if (!r || !timer || !timer->cb) return false;
+    if (timer->heap_slot) timer_heap_remove(r, timer);
+    if (r->timer_n == r->timer_cap) {
+        uint32_t cap = r->timer_cap ? r->timer_cap * 2 : 64;
+        cwist_reactor_timer_t **heap = cwist_alloc(cap * sizeof(*heap));
+        if (!heap) return false;
+        if (r->timer_n) memcpy(heap, r->timer_heap, r->timer_n * sizeof(*heap));
+        cwist_free(r->timer_heap);
+        r->timer_heap = heap;
+        r->timer_cap = cap;
+    }
+    timer->deadline_ns = reactor_now_ns() + delay_us * 1000ull;
+    r->timer_n++;
+    timer_heap_place(r, r->timer_n - 1, timer);
+    timer_heap_up(r, r->timer_n - 1);
+    return true;
+}
+
+void cwist_reactor_timer_cancel(cwist_reactor_t *r, cwist_reactor_timer_t *timer) {
+    if (!r || !timer || !timer->heap_slot) return;
+    timer_heap_remove(r, timer);
+}
+
+bool cwist_reactor_timer_armed(const cwist_reactor_timer_t *timer) {
+    return timer && timer->heap_slot != 0;
+}
+
+/* Fire every timer whose deadline has passed.  At most the timers armed on
+ * entry run, so a callback that re-arms itself with a zero delay waits for
+ * the next round instead of spinning here. */
+static void reactor_run_timers(cwist_reactor_t *r) {
+    if (r->timer_n == 0) return;
+    uint64_t now = reactor_now_ns();
+    uint32_t budget = r->timer_n;
+    while (budget-- > 0 && r->timer_n > 0 && r->timer_heap[0]->deadline_ns <= now) {
+        cwist_reactor_timer_t *t = r->timer_heap[0];
+        timer_heap_remove(r, t);
+        t->cb(t->ctx);
+    }
+}
+
+/* Poll wait for this round: the time to the earliest timer, capped at the
+ * idle wait. */
+static uint64_t reactor_wait_ns(const cwist_reactor_t *r) {
+    if (r->timer_n == 0) return REACTOR_IDLE_WAIT_NS;
+    uint64_t now = reactor_now_ns();
+    uint64_t deadline = r->timer_heap[0]->deadline_ns;
+    if (deadline <= now) return 0;
+    uint64_t wait = deadline - now;
+    return wait < REACTOR_IDLE_WAIT_NS ? wait : REACTOR_IDLE_WAIT_NS;
+}
+
 static void reactor_wake_cb(int fd, void *ctx) {
     cwist_reactor_t *r = *(cwist_reactor_t *const *)ctx;
     uint64_t buf[8];
@@ -484,7 +658,7 @@ cwist_reactor_t *cwist_reactor_create(void) {
     cwist_reactor_t *r = cwist_alloc(sizeof(cwist_reactor_t));
     if (!r) return NULL;
     memset(r, 0, sizeof(cwist_reactor_t));
-    r->running = false;
+    __atomic_store_n(&r->running, false, __ATOMIC_RELEASE);
     pthread_mutex_init(&r->pool_lock, NULL);
 #ifdef __linux__
     pthread_mutex_init(&r->impl.sq_lock, NULL);
@@ -625,6 +799,7 @@ void cwist_reactor_destroy(cwist_reactor_t *reactor) {
 #ifdef __linux__
     pthread_mutex_destroy(&reactor->impl.sq_lock);
 #endif
+    cwist_free(reactor->timer_heap);
     reactor_slot_chunk_t *chunk = reactor->chunks;
     while (chunk) {
         reactor_slot_chunk_t *next = chunk->next;
@@ -987,14 +1162,15 @@ static uint64_t reactor_round_budget_us(void) {
 
 void cwist_reactor_run(cwist_reactor_t *reactor) {
     if (!reactor) return;
-    reactor->running = true;
+    __atomic_store_n(&reactor->running, true, __ATOMIC_RELEASE);
 
 #ifdef __linux__
     if (!reactor->impl.use_epoll) {
         reactor->owner = pthread_self();
         const uint64_t cq_grace_ns = reactor_cq_grace_ns();
-        while (reactor->running && atomic_load(&g_cwist_running)) {
+        while (reactor_running(reactor)) {
             reactor_drain_posts(reactor);
+            reactor_run_timers(reactor);
             /* Submit the re-arms queued by the previous dispatch batch under
              * the SQ lock, then wait in a separate call.  The submit enter
              * MUST hold the lock: uring_submit/uring_submit_batch roll the
@@ -1045,7 +1221,11 @@ void cwist_reactor_run(cwist_reactor_t *reactor) {
                 }
             }
 
-            static const struct __kernel_timespec idle_ts = {.tv_sec = 0, .tv_nsec = 100000000};
+            /* Bounded by the idle wait, shortened to the next timer. */
+            const uint64_t wait_ns = reactor_wait_ns(reactor);
+            const struct __kernel_timespec idle_ts = {
+                .tv_sec = (long long)(wait_ns / 1000000000ull),
+                .tv_nsec = (long long)(wait_ns % 1000000000ull)};
             uint32_t to_submit = reactor->sq_unsubmitted;
             reactor->sq_unsubmitted = 0;
             if (to_submit > 0) {
@@ -1177,9 +1357,12 @@ void cwist_reactor_run(cwist_reactor_t *reactor) {
         }
     } else {
         struct epoll_event events[1024];
-        while (reactor->running && atomic_load(&g_cwist_running)) {
+        while (reactor_running(reactor)) {
             reactor_drain_posts(reactor);
-            int n = epoll_wait(reactor->impl.epoll_fd, events, 1024, 100);
+            reactor_run_timers(reactor);
+            /* Round the wait up so a timer is never polled for early. */
+            int wait_ms = (int)((reactor_wait_ns(reactor) + 999999ull) / 1000000ull);
+            int n = epoll_wait(reactor->impl.epoll_fd, events, 1024, wait_ms);
             if (n < 0) {
                 if (errno == EINTR) continue;
                 break;
@@ -1199,9 +1382,12 @@ void cwist_reactor_run(cwist_reactor_t *reactor) {
      * without a signal (cwist_shutdown_request() from another thread) only
      * clears g_cwist_running and closes the listen socket, which wakes
      * no kevent, so the flag must be re-checked periodically. */
-    const struct timespec idle_ts = {.tv_sec = 0, .tv_nsec = 100 * 1000 * 1000};
-    while (reactor->running && atomic_load(&g_cwist_running)) {
+    while (reactor_running(reactor)) {
         reactor_drain_posts(reactor);
+        reactor_run_timers(reactor);
+        const uint64_t wait_ns = reactor_wait_ns(reactor);
+        const struct timespec idle_ts = {.tv_sec = (time_t)(wait_ns / 1000000000ull),
+                                         .tv_nsec = (long)(wait_ns % 1000000000ull)};
         int n = kevent(reactor->impl.kq_fd, NULL, 0, events, 1024, &idle_ts);
         if (n < 0) {
             if (errno == EINTR) continue;
@@ -1220,7 +1406,8 @@ void cwist_reactor_run(cwist_reactor_t *reactor) {
 
 void cwist_reactor_stop(cwist_reactor_t *reactor) {
     if (!reactor) return;
-    reactor->running = false;
+    /* Called from foreign threads (shutdown paths, embedders). */
+    __atomic_store_n(&reactor->running, false, __ATOMIC_RELEASE);
     /* A run thread parked in io_uring_enter(GETEVENTS) on an idle SQPOLL
      * ring sleeps until a CQE arrives: the kernel ignores the enter
      * timeout for SQPOLL rings, so with no pending SQEs the wait never

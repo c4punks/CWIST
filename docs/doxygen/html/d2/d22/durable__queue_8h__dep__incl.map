@@ -1,0 +1,5 @@
+<map id="include/cwist/sys/job/durable_queue.h" name="include/cwist/sys/job/durable_queue.h">
+<area shape="rect" id="Node000001" title="Durable (persistent) job queue backends over Redis and NATS." alt="" coords="5,5,163,45"/>
+<area shape="rect" id="Node000002" href="$d0/dbf/durable__queue_8c.html" title="Durable job queue backends over Redis (streams) and NATS (JetStream)." alt="" coords="12,93,156,133"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="87,59,87,93,81,93,81,59"/>
+</map>

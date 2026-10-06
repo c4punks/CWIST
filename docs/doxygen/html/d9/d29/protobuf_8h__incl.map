@@ -1,7 +1,9 @@
 <map id="include/cwist/net/grpc/protobuf.h" name="include/cwist/net/grpc/protobuf.h">
-<area shape="rect" id="Node000001" title="Small Protobuf wire&#45;format reader/writer helpers." alt="" coords="9,5,173,45"/>
+<area shape="rect" id="Node000001" title="Small Protobuf wire&#45;format reader/writer helpers." alt="" coords="58,5,222,45"/>
 <area shape="rect" id="Node000002" title=" " alt="" coords="5,93,80,119"/>
-<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="81,47,59,83,55,80,77,44"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="118,48,69,87,66,82,115,43"/>
 <area shape="rect" id="Node000003" title=" " alt="" coords="105,93,175,119"/>
-<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="105,44,128,80,123,83,100,47"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="143,46,143,79,137,79,137,46"/>
+<area shape="rect" id="Node000004" title=" " alt="" coords="199,93,270,119"/>
+<area shape="poly" id="edge3_Node000001_Node000004" title=" " alt="" coords="165,43,211,82,208,86,161,48"/>
 </map>

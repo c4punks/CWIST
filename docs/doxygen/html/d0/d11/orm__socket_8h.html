@@ -106,7 +106,7 @@ This graph shows which files directly or indirectly include this file:</div>
 <div class="center"><img src="../../dc/dfb/orm__socket_8h__dep__incl.png" border="0" usemap="#ainclude_2cwist_2core_2orm_2orm__socket_8hdep" alt=""/></div>
 <map name="ainclude_2cwist_2core_2orm_2orm__socket_8hdep" id="ainclude_2cwist_2core_2orm_2orm__socket_8hdep">
 <area shape="rect" title=" " alt="" coords="31,5,173,45"/>
-<area shape="rect" href="../../d5/dcf/orm__socket_8c.html" title=" " alt="" coords="5,93,199,119"/>
+<area shape="rect" href="../../d5/dcf/orm__socket_8c.html" title="SQLite&#45;to&#45;socket bridge implementation." alt="" coords="5,93,199,119"/>
 <area shape="poly" title=" " alt="" coords="105,59,105,93,99,93,99,59"/>
 </map>
 </div>
@@ -115,15 +115,16 @@ This graph shows which files directly or indirectly include this file:</div>
 <table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="func-members" name="func-members"></a>
 Functions</h2></td></tr>
-<tr class="memitem:a075b96d77de4eb6fb2386e826379a04d" id="r_a075b96d77de4eb6fb2386e826379a04d"><td class="memItemLeft" align="right" valign="top"><a class="el" href="../../d6/d3c/seq_8h.html#aeb29493e92e60057714a6b22befc6d67">int</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d0/d11/orm__socket_8h.html#a075b96d77de4eb6fb2386e826379a04d">cwist_db_transfer_sqlite_to_socket</a> (<a class="el" href="../../d6/d3c/seq_8h.html#aeb29493e92e60057714a6b22befc6d67">const</a> <a class="el" href="../../d6/d3c/seq_8h.html#aeb29493e92e60057714a6b22befc6d67">char</a> *path)</td></tr>
+<tr class="memitem:a075b96d77de4eb6fb2386e826379a04d" id="r_a075b96d77de4eb6fb2386e826379a04d"><td class="memItemLeft" align="right" valign="top">int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d0/d11/orm__socket_8h.html#a075b96d77de4eb6fb2386e826379a04d">cwist_db_transfer_sqlite_to_socket</a> (const char *path)</td></tr>
+<tr class="memdesc:a075b96d77de4eb6fb2386e826379a04d"><td class="mdescLeft">&#160;</td><td class="mdescRight">Open a SQLite database behind an in-process SQL socket.  <br /></td></tr>
 <tr class="separator:a075b96d77de4eb6fb2386e826379a04d"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a49e4e067f82940d518da70b53f2e0db9" id="r_a49e4e067f82940d518da70b53f2e0db9"><td class="memItemLeft" align="right" valign="top"><a class="el" href="../../d6/d9b/orm_8h.html#aeacfe257785ac940ef6c5813dd335a0e">cwist_orm_t</a> *&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d0/d11/orm__socket_8h.html#a49e4e067f82940d518da70b53f2e0db9">cwist_orm_open_socket</a> (<a class="el" href="../../d6/d3c/seq_8h.html#aeb29493e92e60057714a6b22befc6d67">int</a> <a class="el" href="../../d6/d3c/seq_8h.html#aeb29493e92e60057714a6b22befc6d67">sock</a>)</td></tr>
-<tr class="memdesc:a49e4e067f82940d518da70b53f2e0db9"><td class="mdescLeft">&#160;</td><td class="mdescRight">Create an ORM session from an existing SQL socket.  <br /></td></tr>
+<tr class="memitem:a49e4e067f82940d518da70b53f2e0db9" id="r_a49e4e067f82940d518da70b53f2e0db9"><td class="memItemLeft" align="right" valign="top"><a class="el" href="../../d6/d9b/orm_8h.html#aeacfe257785ac940ef6c5813dd335a0e">cwist_orm_t</a> *&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d0/d11/orm__socket_8h.html#a49e4e067f82940d518da70b53f2e0db9">cwist_orm_open_socket</a> (int sock)</td></tr>
+<tr class="memdesc:a49e4e067f82940d518da70b53f2e0db9"><td class="mdescLeft">&#160;</td><td class="mdescRight">Wrap a connected socket descriptor in an ORM session.  <br /></td></tr>
 <tr class="separator:a49e4e067f82940d518da70b53f2e0db9"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:ab8358b56c5396e61785186a6e0895f67" id="r_ab8358b56c5396e61785186a6e0895f67"><td class="memItemLeft" align="right" valign="top"><a class="el" href="../../d6/d3c/seq_8h.html#aeb29493e92e60057714a6b22befc6d67">void</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d0/d11/orm__socket_8h.html#ab8358b56c5396e61785186a6e0895f67">cwist_orm_close_socket</a> (<a class="el" href="../../d6/d9b/orm_8h.html#aeacfe257785ac940ef6c5813dd335a0e">cwist_orm_t</a> *<a class="el" href="../../d6/d3c/seq_8h.html#aeb29493e92e60057714a6b22befc6d67">orm</a>)</td></tr>
-<tr class="memdesc:ab8358b56c5396e61785186a6e0895f67"><td class="mdescLeft">&#160;</td><td class="mdescRight">Destroy an ORM session and close its underlying socket.  <br /></td></tr>
+<tr class="memitem:ab8358b56c5396e61785186a6e0895f67" id="r_ab8358b56c5396e61785186a6e0895f67"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d0/d11/orm__socket_8h.html#ab8358b56c5396e61785186a6e0895f67">cwist_orm_close_socket</a> (<a class="el" href="../../d6/d9b/orm_8h.html#aeacfe257785ac940ef6c5813dd335a0e">cwist_orm_t</a> *orm)</td></tr>
+<tr class="memdesc:ab8358b56c5396e61785186a6e0895f67"><td class="mdescLeft">&#160;</td><td class="mdescRight">Close an ORM session and release its socket.  <br /></td></tr>
 <tr class="separator:ab8358b56c5396e61785186a6e0895f67"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:aa28eec9fd7323d02594d68cd79b4abf5" id="r_aa28eec9fd7323d02594d68cd79b4abf5"><td class="memItemLeft" align="right" valign="top"><a class="el" href="../../d6/d3c/seq_8h.html#aeb29493e92e60057714a6b22befc6d67">int</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d0/d11/orm__socket_8h.html#aa28eec9fd7323d02594d68cd79b4abf5">cwist_orm_socketpair_cloexec</a> (<a class="el" href="../../d6/d3c/seq_8h.html#aeb29493e92e60057714a6b22befc6d67">int</a> domain, <a class="el" href="../../d6/d3c/seq_8h.html#aeb29493e92e60057714a6b22befc6d67">int</a> type, <a class="el" href="../../d6/d3c/seq_8h.html#aeb29493e92e60057714a6b22befc6d67">int</a> protocol, <a class="el" href="../../d6/d3c/seq_8h.html#aeb29493e92e60057714a6b22befc6d67">int</a> <a class="el" href="../../d6/d3c/seq_8h.html#aeb29493e92e60057714a6b22befc6d67">sv</a>[2])</td></tr>
+<tr class="memitem:aa28eec9fd7323d02594d68cd79b4abf5" id="r_aa28eec9fd7323d02594d68cd79b4abf5"><td class="memItemLeft" align="right" valign="top">int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d0/d11/orm__socket_8h.html#aa28eec9fd7323d02594d68cd79b4abf5">cwist_orm_socketpair_cloexec</a> (int domain, int type, int protocol, int sv[2])</td></tr>
 <tr class="separator:aa28eec9fd7323d02594d68cd79b4abf5"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <h2 class="groupheader">Function Documentation</h2>
@@ -134,14 +135,29 @@ Functions</h2></td></tr>
 <div class="memproto">
       <table class="memname">
         <tr>
-          <td class="memname"><a class="el" href="../../d6/d3c/seq_8h.html#aeb29493e92e60057714a6b22befc6d67">int</a> cwist_db_transfer_sqlite_to_socket </td>
+          <td class="memname">int cwist_db_transfer_sqlite_to_socket </td>
           <td>(</td>
-          <td class="paramtype"><a class="el" href="../../d6/d3c/seq_8h.html#aeb29493e92e60057714a6b22befc6d67">const</a> <a class="el" href="../../d6/d3c/seq_8h.html#aeb29493e92e60057714a6b22befc6d67">char</a> *&#160;</td>
+          <td class="paramtype">const char *&#160;</td>
           <td class="paramname"><em>path</em></td><td>)</td>
           <td></td>
         </tr>
       </table>
 </div><div class="memdoc">
+
+<p>Open a SQLite database behind an in-process SQL socket. </p>
+<p>Creates an AF_UNIX socket pair and starts a detached worker thread that owns the SQLite connection on one end. The other end is returned to the caller, typically to be passed to <a class="el" href="../../d0/d11/orm__socket_8h.html#a49e4e067f82940d518da70b53f2e0db9" title="Wrap a connected socket descriptor in an ORM session.">cwist_orm_open_socket()</a>.</p>
+<p>The worker executes every SQL request it receives on the returned fd as-is, with no escaping or filtering. Treat the fd as full access to the database: keep it inside the process and do not pass it to untrusted code or processes (for example over SCM_RIGHTS, or by fork() without exec). Both ends are close-on-exec.</p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">path</td><td>SQLite database path, or ":memory:". </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section return"><dt>Returns</dt><dd>The caller's socket fd, or -1 with errno set on failure. </dd></dl>
+
+<p class="definition">Definition at line <a class="el" href="../../d5/dcf/orm__socket_8c_source.html#l00294">294</a> of file <a class="el" href="../../d5/dcf/orm__socket_8c_source.html">orm_socket.c</a>.</p>
+
+<p class="reference">References <a class="el" href="../../d5/dcf/orm__socket_8c_source.html#l00275">cwist_orm_socketpair_cloexec()</a>.</p>
 
 </div>
 </div>
@@ -152,7 +168,7 @@ Functions</h2></td></tr>
 <div class="memproto">
       <table class="memname">
         <tr>
-          <td class="memname"><a class="el" href="../../d6/d3c/seq_8h.html#aeb29493e92e60057714a6b22befc6d67">void</a> cwist_orm_close_socket </td>
+          <td class="memname">void cwist_orm_close_socket </td>
           <td>(</td>
           <td class="paramtype"><a class="el" href="../../d6/d9b/orm_8h.html#aeacfe257785ac940ef6c5813dd335a0e">cwist_orm_t</a> *&#160;</td>
           <td class="paramname"><em>orm</em></td><td>)</td>
@@ -161,16 +177,17 @@ Functions</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p>Destroy an ORM session and close its underlying socket. </p>
-<p>If a transaction is still open, it is rolled back before the socket is closed. The pointer is invalid after this call.</p>
+<p>Close an ORM session and release its socket. </p>
+<p>Destroy an ORM session and close its underlying socket.</p>
+<p>Issues a best-effort ROLLBACK to discard any dangling transaction, then closes the socket descriptor and frees the handle. Safe to call with NULL.</p>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
-    <tr><td class="paramname">orm</td><td>ORM handle created with <a class="el" href="../../d6/d9b/orm_8h.html#a8b66672c157219e4fef73126c8993fdd" title="Create an ORM session from an existing SQL socket.">cwist_orm_open_socket()</a>. </td></tr>
+    <tr><td class="paramname">orm</td><td>Session to close (may be NULL). </td></tr>
   </table>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d8/d03/orm_8c_source.html#l00153">153</a> of file <a class="el" href="../../d8/d03/orm_8c_source.html">orm.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d8/d03/orm_8c_source.html#l00163">163</a> of file <a class="el" href="../../d8/d03/orm_8c_source.html">orm.c</a>.</p>
 
 </div>
 </div>
@@ -183,24 +200,25 @@ Functions</h2></td></tr>
         <tr>
           <td class="memname"><a class="el" href="../../d6/d9b/orm_8h.html#aeacfe257785ac940ef6c5813dd335a0e">cwist_orm_t</a> * cwist_orm_open_socket </td>
           <td>(</td>
-          <td class="paramtype"><a class="el" href="../../d6/d3c/seq_8h.html#aeb29493e92e60057714a6b22befc6d67">int</a>&#160;</td>
-          <td class="paramname"><em>sock</em></td><td>)</td>
+          <td class="paramtype">int&#160;</td>
+          <td class="paramname"><em>socket_fd</em></td><td>)</td>
           <td></td>
         </tr>
       </table>
 </div><div class="memdoc">
 
-<p>Create an ORM session from an existing SQL socket. </p>
-<p>The socket must have been produced by <a class="el" href="../../d0/d11/orm__socket_8h.html#a075b96d77de4eb6fb2386e826379a04d">cwist_db_transfer_sqlite_to_socket()</a> or by an equivalent SQL-socket factory. The ORM object takes ownership of <code>socket_fd</code> and will close it on <a class="el" href="../../d6/d9b/orm_8h.html#ab8358b56c5396e61785186a6e0895f67" title="Destroy an ORM session and close its underlying socket.">cwist_orm_close_socket()</a>.</p>
+<p>Wrap a connected socket descriptor in an ORM session. </p>
+<p>Create an ORM session from an existing SQL socket.</p>
+<p>Takes ownership of <code>socket_fd:</code> the descriptor is closed by <a class="el" href="../../d6/d9b/orm_8h.html#ab8358b56c5396e61785186a6e0895f67" title="Destroy an ORM session and close its underlying socket.">cwist_orm_close_socket()</a>. The session inherits the current global immediate-commit default and defaults to the SQLite dialect.</p>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
-    <tr><td class="paramname">socket_fd</td><td>Valid connected Unix socket file descriptor. </td></tr>
+    <tr><td class="paramname">socket_fd</td><td>Connected socket descriptor (must be &gt;= 0). </td></tr>
   </table>
   </dd>
 </dl>
-<dl class="section return"><dt>Returns</dt><dd>Pointer to an initialized cwist_orm_t, or <code>NULL</code> on allocation failure. </dd></dl>
+<dl class="section return"><dt>Returns</dt><dd>New ORM handle, or NULL on invalid descriptor or allocation failure. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d8/d03/orm_8c_source.html#l00141">141</a> of file <a class="el" href="../../d8/d03/orm_8c_source.html">orm.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d8/d03/orm_8c_source.html#l00145">145</a> of file <a class="el" href="../../d8/d03/orm_8c_source.html">orm.c</a>.</p>
 
 </div>
 </div>
@@ -211,27 +229,27 @@ Functions</h2></td></tr>
 <div class="memproto">
       <table class="memname">
         <tr>
-          <td class="memname"><a class="el" href="../../d6/d3c/seq_8h.html#aeb29493e92e60057714a6b22befc6d67">int</a> cwist_orm_socketpair_cloexec </td>
+          <td class="memname">int cwist_orm_socketpair_cloexec </td>
           <td>(</td>
-          <td class="paramtype"><a class="el" href="../../d6/d3c/seq_8h.html#aeb29493e92e60057714a6b22befc6d67">int</a>&#160;</td>
+          <td class="paramtype">int&#160;</td>
           <td class="paramname"><em>domain</em>, </td>
         </tr>
         <tr>
           <td class="paramkey"></td>
           <td></td>
-          <td class="paramtype"><a class="el" href="../../d6/d3c/seq_8h.html#aeb29493e92e60057714a6b22befc6d67">int</a>&#160;</td>
+          <td class="paramtype">int&#160;</td>
           <td class="paramname"><em>type</em>, </td>
         </tr>
         <tr>
           <td class="paramkey"></td>
           <td></td>
-          <td class="paramtype"><a class="el" href="../../d6/d3c/seq_8h.html#aeb29493e92e60057714a6b22befc6d67">int</a>&#160;</td>
+          <td class="paramtype">int&#160;</td>
           <td class="paramname"><em>protocol</em>, </td>
         </tr>
         <tr>
           <td class="paramkey"></td>
           <td></td>
-          <td class="paramtype"><a class="el" href="../../d6/d3c/seq_8h.html#aeb29493e92e60057714a6b22befc6d67">int</a>&#160;</td>
+          <td class="paramtype">int&#160;</td>
           <td class="paramname"><em>sv</em>[2]&#160;</td>
         </tr>
         <tr>
@@ -242,9 +260,11 @@ Functions</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../d5/dcf/orm__socket_8c_source.html#l00024">24</a> of file <a class="el" href="../../d5/dcf/orm__socket_8c_source.html">orm_socket.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d5/dcf/orm__socket_8c_source.html#l00275">275</a> of file <a class="el" href="../../d5/dcf/orm__socket_8c_source.html">orm_socket.c</a>.</p>
 
-<p class="reference">References <a class="el" href="../../d5/dcf/orm__socket_8c_source.html#l00012">SOCK_CLOEXEC</a>.</p>
+<p class="reference">References <a class="el" href="../../d5/dcf/orm__socket_8c_source.html#l00263">SOCK_CLOEXEC</a>.</p>
+
+<p class="reference">Referenced by <a class="el" href="../../d5/dcf/orm__socket_8c_source.html#l00294">cwist_db_transfer_sqlite_to_socket()</a>.</p>
 
 </div>
 </div>

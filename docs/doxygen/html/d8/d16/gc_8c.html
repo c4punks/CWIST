@@ -75,6 +75,8 @@ $(function() {
 </div><!-- top -->
 <div class="header">
   <div class="summary">
+<a href="#define-members">Macros</a> &#124;
+<a href="#typedef-members">Typedefs</a> &#124;
 <a href="#func-members">Functions</a>  </div>
   <div class="headertitle"><div class="title">gc.c File Reference</div></div>
 </div><!--header-->
@@ -83,51 +85,549 @@ $(function() {
 <p>Thin implementation wrapper around libttak epoch-based reclamation.  
 <a href="#details">More...</a></p>
 <div class="textblock"><code>#include &lt;<a class="el" href="../../d0/daa/gc_8h_source.html">cwist/core/mem/gc.h</a>&gt;</code><br />
+<code>#include &lt;<a class="el" href="../../d2/dfe/alloc_8h_source.html">cwist/core/mem/alloc.h</a>&gt;</code><br />
+<code>#include &lt;ttak/mem/epoch.h&gt;</code><br />
+<code>#include &lt;pthread.h&gt;</code><br />
+<code>#include &lt;stdint.h&gt;</code><br />
+<code>#include &lt;stdlib.h&gt;</code><br />
+<code>#include &lt;string.h&gt;</code><br />
+<code>#include &lt;sys/mman.h&gt;</code><br />
+<code>#include &lt;unistd.h&gt;</code><br />
 </div><div class="textblock"><div class="dynheader">
 Include dependency graph for gc.c:</div>
 <div class="dyncontent">
 <div class="center"><img src="../../d7/d1b/gc_8c__incl.png" border="0" usemap="#asrc_2core_2mem_2gc_8c" alt=""/></div>
 <map name="asrc_2core_2mem_2gc_8c" id="asrc_2core_2mem_2gc_8c">
-<area shape="rect" title="Thin implementation wrapper around libttak epoch&#45;based reclamation." alt="" coords="79,5,220,31"/>
-<area shape="rect" href="../../d0/daa/gc_8h.html" title="Epoch&#45;based garbage collection wrapper." alt="" coords="71,79,228,104"/>
-<area shape="poly" title=" " alt="" coords="152,31,152,65,147,65,147,31"/>
-<area shape="rect" title=" " alt="" coords="5,152,88,177"/>
-<area shape="poly" title=" " alt="" coords="134,106,76,146,73,142,131,102"/>
-<area shape="rect" title=" " alt="" coords="112,152,187,177"/>
-<area shape="poly" title=" " alt="" coords="152,104,152,138,147,138,147,104"/>
-<area shape="rect" title=" " alt="" coords="211,152,373,177"/>
-<area shape="poly" title=" " alt="" coords="173,102,258,143,255,148,171,106"/>
+<area shape="rect" title="Thin implementation wrapper around libttak epoch&#45;based reclamation." alt="" coords="898,5,1039,31"/>
+<area shape="rect" href="../../d0/daa/gc_8h.html" title="Epoch&#45;based garbage collection wrapper." alt="" coords="215,152,373,177"/>
+<area shape="poly" title=" " alt="" coords="898,22,807,25,694,34,571,52,451,81,415,95,380,112,322,147,320,142,377,107,413,90,449,76,570,46,693,28,806,19,898,16"/>
+<area shape="rect" href="../../d2/dfe/alloc_8h.html" title="Memory allocation wrappers backed by libttak." alt="" coords="462,79,635,104"/>
+<area shape="poly" title=" " alt="" coords="902,33,630,79,629,74,901,28"/>
+<area shape="rect" title=" " alt="" coords="659,79,801,104"/>
+<area shape="poly" title=" " alt="" coords="931,33,783,77,781,72,930,28"/>
+<area shape="rect" title=" " alt="" coords="825,79,909,104"/>
+<area shape="poly" title=" " alt="" coords="954,33,897,73,894,68,951,28"/>
+<area shape="rect" title=" " alt="" coords="933,79,1004,104"/>
+<area shape="poly" title=" " alt="" coords="971,31,971,65,966,65,966,31"/>
+<area shape="rect" title=" " alt="" coords="1028,79,1099,104"/>
+<area shape="poly" title=" " alt="" coords="985,29,1038,68,1035,72,982,33"/>
+<area shape="rect" title=" " alt="" coords="1123,79,1193,104"/>
+<area shape="poly" title=" " alt="" coords="1000,28,1115,71,1113,76,998,33"/>
+<area shape="rect" title=" " alt="" coords="1217,79,1320,104"/>
+<area shape="poly" title=" " alt="" coords="1017,28,1208,73,1206,78,1016,33"/>
+<area shape="rect" title=" " alt="" coords="1345,79,1419,104"/>
+<area shape="poly" title=" " alt="" coords="1040,27,1171,47,1332,76,1331,81,1170,53,1039,32"/>
+<area shape="rect" title=" " alt="" coords="399,225,482,251"/>
+<area shape="poly" title=" " alt="" coords="319,175,406,217,403,222,316,180"/>
+<area shape="rect" title=" " alt="" coords="506,225,581,251"/>
+<area shape="poly" title=" " alt="" coords="335,175,493,220,492,225,333,180"/>
+<area shape="rect" title=" " alt="" coords="5,225,188,251"/>
+<area shape="poly" title=" " alt="" coords="263,180,143,223,141,218,261,175"/>
+<area shape="rect" title=" " alt="" coords="213,225,375,251"/>
+<area shape="poly" title=" " alt="" coords="297,178,297,212,291,212,291,178"/>
+<area shape="poly" title=" " alt="" coords="562,103,585,136,592,156,590,178,580,199,567,217,562,214,575,196,585,177,586,157,580,138,558,106"/>
+<area shape="rect" title=" " alt="" coords="650,152,791,177"/>
+<area shape="poly" title=" " alt="" coords="577,102,681,144,679,149,575,106"/>
+<area shape="rect" href="../../da/d0c/arena_8h.html" title="Request&#45;scoped arena allocator backed by libttak arena generations." alt="" coords="397,152,575,177"/>
+<area shape="poly" title=" " alt="" coords="540,106,507,143,503,140,536,103"/>
+<area shape="poly" title=" " alt="" coords="481,179,458,215,453,212,476,176"/>
+<area shape="poly" title=" " alt="" coords="498,176,527,213,523,216,493,179"/>
 </map>
 </div>
 </div>
 <p><a href="../../d8/d16/gc_8c_source.html">Go to the source code of this file.</a></p>
 <table class="memberdecls">
+<tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="define-members" name="define-members"></a>
+Macros</h2></td></tr>
+<tr class="memitem:a286ebab4f79e4a725d64dbf402ed53fb" id="r_a286ebab4f79e4a725d64dbf402ed53fb"><td class="memItemLeft" align="right" valign="top">#define&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d8/d16/gc_8c.html#a286ebab4f79e4a725d64dbf402ed53fb">CWIST_GC_PENDING_MIN_CAP</a>&#160;&#160;&#160;16</td></tr>
+<tr class="separator:a286ebab4f79e4a725d64dbf402ed53fb"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a154739def5b3de47e39cf11481cee5b7" id="r_a154739def5b3de47e39cf11481cee5b7"><td class="memItemLeft" align="right" valign="top">#define&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d8/d16/gc_8c.html#a154739def5b3de47e39cf11481cee5b7">CWIST_GC_PENDING_KEEP_CAP</a>&#160;&#160;&#160;1024</td></tr>
+<tr class="separator:a154739def5b3de47e39cf11481cee5b7"><td class="memSeparator" colspan="2">&#160;</td></tr>
+</table><table class="memberdecls">
+<tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="typedef-members" name="typedef-members"></a>
+Typedefs</h2></td></tr>
+<tr class="memitem:ab790bb476f395fc9533cf0b5222c3ff9" id="r_ab790bb476f395fc9533cf0b5222c3ff9"><td class="memItemLeft" align="right" valign="top">typedef struct cwist_conn_pending&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d8/d16/gc_8c.html#ab790bb476f395fc9533cf0b5222c3ff9">cwist_conn_pending_t</a></td></tr>
+<tr class="separator:ab790bb476f395fc9533cf0b5222c3ff9"><td class="memSeparator" colspan="2">&#160;</td></tr>
+</table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="func-members" name="func-members"></a>
 Functions</h2></td></tr>
-<tr class="memitem:ae2f90d26b532204cdcc3787ba2ec0b01" id="r_ae2f90d26b532204cdcc3787ba2ec0b01"><td class="memItemLeft" align="right" valign="top"><a class="el" href="../../d6/d3c/seq_8h.html#aeb29493e92e60057714a6b22befc6d67">void</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d8/d16/gc_8c.html#ae2f90d26b532204cdcc3787ba2ec0b01">cwist_gc</a> (<a class="el" href="../../d0/daa/gc_8h.html#a6b6d55b70f6455c39f8618d52dedebe4">cwist_gc_t</a> *<a class="el" href="../../d6/d3c/seq_8h.html#aeb29493e92e60057714a6b22befc6d67">gc</a>, <a class="el" href="../../d6/d3c/seq_8h.html#aeb29493e92e60057714a6b22befc6d67">bool</a> <a class="el" href="../../d6/d3c/seq_8h.html#aeb29493e92e60057714a6b22befc6d67">manual_rotation</a>)</td></tr>
+<tr class="memitem:ae2f90d26b532204cdcc3787ba2ec0b01" id="r_ae2f90d26b532204cdcc3787ba2ec0b01"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d8/d16/gc_8c.html#ae2f90d26b532204cdcc3787ba2ec0b01">cwist_gc</a> (<a class="el" href="../../d0/daa/gc_8h.html#a6b6d55b70f6455c39f8618d52dedebe4">cwist_gc_t</a> *gc, bool manual_rotation)</td></tr>
 <tr class="memdesc:ae2f90d26b532204cdcc3787ba2ec0b01"><td class="mdescLeft">&#160;</td><td class="mdescRight">Lazily initialize and optionally configure manual rotation mode.  <br /></td></tr>
 <tr class="separator:ae2f90d26b532204cdcc3787ba2ec0b01"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a611a910d8f44de93236dec0d77fe470b" id="r_a611a910d8f44de93236dec0d77fe470b"><td class="memItemLeft" align="right" valign="top"><a class="el" href="../../d6/d3c/seq_8h.html#aeb29493e92e60057714a6b22befc6d67">void</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d8/d16/gc_8c.html#a611a910d8f44de93236dec0d77fe470b">cwist_gc_shutdown</a> (<a class="el" href="../../d0/daa/gc_8h.html#a6b6d55b70f6455c39f8618d52dedebe4">cwist_gc_t</a> *<a class="el" href="../../d6/d3c/seq_8h.html#aeb29493e92e60057714a6b22befc6d67">gc</a>)</td></tr>
+<tr class="memitem:a611a910d8f44de93236dec0d77fe470b" id="r_a611a910d8f44de93236dec0d77fe470b"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d8/d16/gc_8c.html#a611a910d8f44de93236dec0d77fe470b">cwist_gc_shutdown</a> (<a class="el" href="../../d0/daa/gc_8h.html#a6b6d55b70f6455c39f8618d52dedebe4">cwist_gc_t</a> *gc)</td></tr>
 <tr class="memdesc:a611a910d8f44de93236dec0d77fe470b"><td class="mdescLeft">&#160;</td><td class="mdescRight">Destroy the wrapped libttak GC state when it has been initialized.  <br /></td></tr>
 <tr class="separator:a611a910d8f44de93236dec0d77fe470b"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a8dada7cf385c59eb67c2dfc296a07ba1" id="r_a8dada7cf385c59eb67c2dfc296a07ba1"><td class="memItemLeft" align="right" valign="top"><a class="el" href="../../d6/d3c/seq_8h.html#aeb29493e92e60057714a6b22befc6d67">void</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d8/d16/gc_8c.html#a8dada7cf385c59eb67c2dfc296a07ba1">cwist_gc_rotate</a> (<a class="el" href="../../d0/daa/gc_8h.html#a6b6d55b70f6455c39f8618d52dedebe4">cwist_gc_t</a> *<a class="el" href="../../d6/d3c/seq_8h.html#aeb29493e92e60057714a6b22befc6d67">gc</a>)</td></tr>
+<tr class="memitem:a8dada7cf385c59eb67c2dfc296a07ba1" id="r_a8dada7cf385c59eb67c2dfc296a07ba1"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d8/d16/gc_8c.html#a8dada7cf385c59eb67c2dfc296a07ba1">cwist_gc_rotate</a> (<a class="el" href="../../d0/daa/gc_8h.html#a6b6d55b70f6455c39f8618d52dedebe4">cwist_gc_t</a> *gc)</td></tr>
 <tr class="memdesc:a8dada7cf385c59eb67c2dfc296a07ba1"><td class="mdescLeft">&#160;</td><td class="mdescRight">Advance the current epoch and reclaim retired nodes when eligible.  <br /></td></tr>
 <tr class="separator:a8dada7cf385c59eb67c2dfc296a07ba1"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a349ae8f8d434ff73172bffbb90ab72de" id="r_a349ae8f8d434ff73172bffbb90ab72de"><td class="memItemLeft" align="right" valign="top"><a class="el" href="../../d6/d3c/seq_8h.html#aeb29493e92e60057714a6b22befc6d67">void</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d8/d16/gc_8c.html#a349ae8f8d434ff73172bffbb90ab72de">cwist_reg_ptr</a> (<a class="el" href="../../d0/daa/gc_8h.html#a6b6d55b70f6455c39f8618d52dedebe4">cwist_gc_t</a> *<a class="el" href="../../d6/d3c/seq_8h.html#aeb29493e92e60057714a6b22befc6d67">gc</a>, <a class="el" href="../../d6/d3c/seq_8h.html#aeb29493e92e60057714a6b22befc6d67">void</a> *ptr)</td></tr>
+<tr class="memitem:a186d9c4a74105ea0bbe6fa9c6d3aa2e3" id="r_a186d9c4a74105ea0bbe6fa9c6d3aa2e3"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d8/d16/gc_8c.html#a186d9c4a74105ea0bbe6fa9c6d3aa2e3">cwist_gc_auto_rotate</a> (<a class="el" href="../../d0/daa/gc_8h.html#a6b6d55b70f6455c39f8618d52dedebe4">cwist_gc_t</a> *gc, bool enabled)</td></tr>
+<tr class="memdesc:a186d9c4a74105ea0bbe6fa9c6d3aa2e3"><td class="mdescLeft">&#160;</td><td class="mdescRight">Enable auto-rotation of epoch GC.  <br /></td></tr>
+<tr class="separator:a186d9c4a74105ea0bbe6fa9c6d3aa2e3"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a555a946c1e2bb6d5685d4f4dd153c8bc" id="r_a555a946c1e2bb6d5685d4f4dd153c8bc"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d8/d16/gc_8c.html#a555a946c1e2bb6d5685d4f4dd153c8bc">cwist_gc_auto_rotated</a> (<a class="el" href="../../d0/daa/gc_8h.html#a6b6d55b70f6455c39f8618d52dedebe4">cwist_gc_t</a> *gc)</td></tr>
+<tr class="memdesc:a555a946c1e2bb6d5685d4f4dd153c8bc"><td class="mdescLeft">&#160;</td><td class="mdescRight">Return if epoch GC is auto-rotated. @ param gc GC context to get status.  <br /></td></tr>
+<tr class="separator:a555a946c1e2bb6d5685d4f4dd153c8bc"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a349ae8f8d434ff73172bffbb90ab72de" id="r_a349ae8f8d434ff73172bffbb90ab72de"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d8/d16/gc_8c.html#a349ae8f8d434ff73172bffbb90ab72de">cwist_reg_ptr</a> (<a class="el" href="../../d0/daa/gc_8h.html#a6b6d55b70f6455c39f8618d52dedebe4">cwist_gc_t</a> *gc, void *ptr)</td></tr>
 <tr class="memdesc:a349ae8f8d434ff73172bffbb90ab72de"><td class="mdescLeft">&#160;</td><td class="mdescRight">Register a pointer with zero-size accounting metadata.  <br /></td></tr>
 <tr class="separator:a349ae8f8d434ff73172bffbb90ab72de"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:ab2568896e448fb825ed2b5bebbdfdc57" id="r_ab2568896e448fb825ed2b5bebbdfdc57"><td class="memItemLeft" align="right" valign="top"><a class="el" href="../../d6/d3c/seq_8h.html#aeb29493e92e60057714a6b22befc6d67">void</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d8/d16/gc_8c.html#ab2568896e448fb825ed2b5bebbdfdc57">cwist_reg_ptr_sized</a> (<a class="el" href="../../d0/daa/gc_8h.html#a6b6d55b70f6455c39f8618d52dedebe4">cwist_gc_t</a> *<a class="el" href="../../d6/d3c/seq_8h.html#aeb29493e92e60057714a6b22befc6d67">gc</a>, <a class="el" href="../../d6/d3c/seq_8h.html#aeb29493e92e60057714a6b22befc6d67">void</a> *ptr, <a class="el" href="../../d6/d3c/seq_8h.html#aeb29493e92e60057714a6b22befc6d67">size_t</a> size)</td></tr>
+<tr class="memitem:ab2568896e448fb825ed2b5bebbdfdc57" id="r_ab2568896e448fb825ed2b5bebbdfdc57"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d8/d16/gc_8c.html#ab2568896e448fb825ed2b5bebbdfdc57">cwist_reg_ptr_sized</a> (<a class="el" href="../../d0/daa/gc_8h.html#a6b6d55b70f6455c39f8618d52dedebe4">cwist_gc_t</a> *gc, void *ptr, size_t size)</td></tr>
 <tr class="memdesc:ab2568896e448fb825ed2b5bebbdfdc57"><td class="mdescLeft">&#160;</td><td class="mdescRight">Register a pointer and its approximate size with the epoch GC.  <br /></td></tr>
 <tr class="separator:ab2568896e448fb825ed2b5bebbdfdc57"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a0ec6a82fe196a811d41577f091577282" id="r_a0ec6a82fe196a811d41577f091577282"><td class="memItemLeft" align="right" valign="top"><a class="el" href="../../d6/d3c/seq_8h.html#aeb29493e92e60057714a6b22befc6d67">ttak_epoch_gc_t</a> *&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d8/d16/gc_8c.html#a0ec6a82fe196a811d41577f091577282">cwist_gc_raw</a> (<a class="el" href="../../d0/daa/gc_8h.html#a6b6d55b70f6455c39f8618d52dedebe4">cwist_gc_t</a> *<a class="el" href="../../d6/d3c/seq_8h.html#aeb29493e92e60057714a6b22befc6d67">gc</a>)</td></tr>
+<tr class="memitem:a0ec6a82fe196a811d41577f091577282" id="r_a0ec6a82fe196a811d41577f091577282"><td class="memItemLeft" align="right" valign="top">ttak_epoch_gc_t *&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d8/d16/gc_8c.html#a0ec6a82fe196a811d41577f091577282">cwist_gc_raw</a> (<a class="el" href="../../d0/daa/gc_8h.html#a6b6d55b70f6455c39f8618d52dedebe4">cwist_gc_t</a> *gc)</td></tr>
 <tr class="memdesc:a0ec6a82fe196a811d41577f091577282"><td class="mdescLeft">&#160;</td><td class="mdescRight">Expose the underlying libttak epoch GC structure for advanced integrations.  <br /></td></tr>
 <tr class="separator:a0ec6a82fe196a811d41577f091577282"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ab6b5184c0bbd3cc7003dbcfdd2f76f98" id="r_ab6b5184c0bbd3cc7003dbcfdd2f76f98"><td class="memItemLeft" align="right" valign="top">void *&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d8/d16/gc_8c.html#ab6b5184c0bbd3cc7003dbcfdd2f76f98">cwist_ebr_alloc</a> (size_t size)</td></tr>
+<tr class="memdesc:ab6b5184c0bbd3cc7003dbcfdd2f76f98"><td class="mdescLeft">&#160;</td><td class="mdescRight">Allocate a block that will later be released through <a class="el" href="../../d8/d16/gc_8c.html#a2406b97d2e5c876a65e828c15e656347" title="Defer release of a block until every thread that might still be reading it (inside ttak_epoch_enter()...">cwist_ebr_free()</a>.  <br /></td></tr>
+<tr class="separator:ab6b5184c0bbd3cc7003dbcfdd2f76f98"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a2406b97d2e5c876a65e828c15e656347" id="r_a2406b97d2e5c876a65e828c15e656347"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d8/d16/gc_8c.html#a2406b97d2e5c876a65e828c15e656347">cwist_ebr_free</a> (void *ptr)</td></tr>
+<tr class="memdesc:a2406b97d2e5c876a65e828c15e656347"><td class="mdescLeft">&#160;</td><td class="mdescRight">Defer release of a block until every thread that might still be reading it (inside ttak_epoch_enter()/ttak_epoch_exit()) has left.  <br /></td></tr>
+<tr class="separator:a2406b97d2e5c876a65e828c15e656347"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:aa040287ba20204989d60d04e984d0937" id="r_aa040287ba20204989d60d04e984d0937"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d8/d16/gc_8c.html#aa040287ba20204989d60d04e984d0937">cwist_gc_pipeline_tick</a> (void)</td></tr>
+<tr class="memdesc:aa040287ba20204989d60d04e984d0937"><td class="mdescLeft">&#160;</td><td class="mdescRight">Advance the EBR epoch and run any callbacks that are now safe.  <br /></td></tr>
+<tr class="separator:aa040287ba20204989d60d04e984d0937"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a4eb61c3775d0863b9eedc5b79904725c" id="r_a4eb61c3775d0863b9eedc5b79904725c"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d8/d16/gc_8c.html#a4eb61c3775d0863b9eedc5b79904725c">cwist_release_guard_init</a> (<a class="el" href="../../d0/daa/gc_8h.html#ab69481b637dc8d922721fdd6945c8e27">cwist_release_guard_t</a> *guard)</td></tr>
+<tr class="memdesc:a4eb61c3775d0863b9eedc5b79904725c"><td class="mdescLeft">&#160;</td><td class="mdescRight">Reset a release guard to its unclaimed state.  <br /></td></tr>
+<tr class="separator:a4eb61c3775d0863b9eedc5b79904725c"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a6e9bae201702c4c1417e366ec3ab1919" id="r_a6e9bae201702c4c1417e366ec3ab1919"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d8/d16/gc_8c.html#a6e9bae201702c4c1417e366ec3ab1919">cwist_release_guard_acquire</a> (<a class="el" href="../../d0/daa/gc_8h.html#ab69481b637dc8d922721fdd6945c8e27">cwist_release_guard_t</a> *guard)</td></tr>
+<tr class="memdesc:a6e9bae201702c4c1417e366ec3ab1919"><td class="mdescLeft">&#160;</td><td class="mdescRight">Claim a release guard.  <br /></td></tr>
+<tr class="separator:a6e9bae201702c4c1417e366ec3ab1919"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a083b2e840cc4afee2f08f66c46f4d64d" id="r_a083b2e840cc4afee2f08f66c46f4d64d"><td class="memItemLeft" align="right" valign="top">&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d8/d16/gc_8c.html#a083b2e840cc4afee2f08f66c46f4d64d">__attribute__</a> ((constructor))</td></tr>
+<tr class="memdesc:a083b2e840cc4afee2f08f66c46f4d64d"><td class="mdescLeft">&#160;</td><td class="mdescRight">Map the guard page before main() runs, so <a class="el" href="../../d8/d16/gc_8c.html#a35e613a89ca213039b7b8b80464c223c" title="Query whether full-GC mode was enabled by the (single) cwist_full_gc() claim.">cwist_full_gc_enabled()</a> &ndash; called on every <a class="el" href="../../d2/dfe/alloc_8h.html#aeba69949fe17751318e6b5fc84a74096" title="Allocate zeroed memory tracked by libttak.">cwist_alloc()</a>/cwist_free() &ndash; never needs a pthread_once/lazy-init check on its hot path (that check itself regressed the C1M reactor latency gate in CI once already).  <br /></td></tr>
+<tr class="separator:a083b2e840cc4afee2f08f66c46f4d64d"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a0d7297e8d4a073c018f97fa6e7f0a372" id="r_a0d7297e8d4a073c018f97fa6e7f0a372"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d8/d16/gc_8c.html#a0d7297e8d4a073c018f97fa6e7f0a372">cwist_full_gc</a> (bool enable)</td></tr>
+<tr class="memdesc:a0d7297e8d4a073c018f97fa6e7f0a372"><td class="mdescLeft">&#160;</td><td class="mdescRight">Claim full-GC mode permanently, exactly once, then harden the toggle.  <br /></td></tr>
+<tr class="separator:a0d7297e8d4a073c018f97fa6e7f0a372"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a35e613a89ca213039b7b8b80464c223c" id="r_a35e613a89ca213039b7b8b80464c223c"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d8/d16/gc_8c.html#a35e613a89ca213039b7b8b80464c223c">cwist_full_gc_enabled</a> (void)</td></tr>
+<tr class="memdesc:a35e613a89ca213039b7b8b80464c223c"><td class="mdescLeft">&#160;</td><td class="mdescRight">Query whether full-GC mode was enabled by the (single) <a class="el" href="../../d8/d16/gc_8c.html#a0d7297e8d4a073c018f97fa6e7f0a372" title="Claim full-GC mode permanently, exactly once, then harden the toggle.">cwist_full_gc()</a> claim.  <br /></td></tr>
+<tr class="separator:a35e613a89ca213039b7b8b80464c223c"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:aa86b6382f284c1b6b81ce4863a2dc671" id="r_aa86b6382f284c1b6b81ce4863a2dc671"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d8/d16/gc_8c.html#aa86b6382f284c1b6b81ce4863a2dc671">cwist_full_gc_locked</a> (void)</td></tr>
+<tr class="memdesc:aa86b6382f284c1b6b81ce4863a2dc671"><td class="mdescLeft">&#160;</td><td class="mdescRight">Query whether the full-GC toggle has already been claimed and locked.  <br /></td></tr>
+<tr class="separator:aa86b6382f284c1b6b81ce4863a2dc671"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:af4daec06978e824bb8635fbfe2005d82" id="r_af4daec06978e824bb8635fbfe2005d82"><td class="memItemLeft" align="right" valign="top">void *&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d8/d16/gc_8c.html#af4daec06978e824bb8635fbfe2005d82">cwist_full_gc_guard_page</a> (void)</td></tr>
+<tr class="memdesc:af4daec06978e824bb8635fbfe2005d82"><td class="mdescLeft">&#160;</td><td class="mdescRight">Expose the hardened full-GC guard page for introspection/tests.  <br /></td></tr>
+<tr class="separator:af4daec06978e824bb8635fbfe2005d82"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:aefa094b961da90bdf2122b4cd056b257" id="r_aefa094b961da90bdf2122b4cd056b257"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d8/d16/gc_8c.html#aefa094b961da90bdf2122b4cd056b257">cwist_gc_scope_track</a> (void *ptr)</td></tr>
+<tr class="memdesc:aefa094b961da90bdf2122b4cd056b257"><td class="mdescLeft">&#160;</td><td class="mdescRight">Track a live <a class="el" href="../../d2/dfe/alloc_8h.html#aeba69949fe17751318e6b5fc84a74096" title="Allocate zeroed memory tracked by libttak.">cwist_alloc()</a> block so full-GC can retire it later.  <br /></td></tr>
+<tr class="separator:aefa094b961da90bdf2122b4cd056b257"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:aa346f21856d29592c1c544275cac74e3" id="r_aa346f21856d29592c1c544275cac74e3"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d8/d16/gc_8c.html#aa346f21856d29592c1c544275cac74e3">cwist_gc_scope_untrack</a> (void *ptr)</td></tr>
+<tr class="memdesc:aa346f21856d29592c1c544275cac74e3"><td class="mdescLeft">&#160;</td><td class="mdescRight">Stop tracking a block without retiring it.  <br /></td></tr>
+<tr class="separator:aa346f21856d29592c1c544275cac74e3"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a28b862cd5828d70bdb18dfad374d97ef" id="r_a28b862cd5828d70bdb18dfad374d97ef"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d8/d16/gc_8c.html#a28b862cd5828d70bdb18dfad374d97ef">cwist_gc_scope_disown</a> (void *ptr)</td></tr>
+<tr class="memdesc:a28b862cd5828d70bdb18dfad374d97ef"><td class="mdescLeft">&#160;</td><td class="mdescRight">Alias of <a class="el" href="../../d8/d16/gc_8c.html#aa346f21856d29592c1c544275cac74e3" title="Stop tracking a block without retiring it.">cwist_gc_scope_untrack()</a>: drop tracking without retiring.  <br /></td></tr>
+<tr class="separator:a28b862cd5828d70bdb18dfad374d97ef"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a9722c1690dcf7f4e07c62bd0d1dd8047" id="r_a9722c1690dcf7f4e07c62bd0d1dd8047"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d8/d16/gc_8c.html#a9722c1690dcf7f4e07c62bd0d1dd8047">cwist_gc_scope_flush</a> (void)</td></tr>
+<tr class="memdesc:a9722c1690dcf7f4e07c62bd0d1dd8047"><td class="mdescLeft">&#160;</td><td class="mdescRight">Retire every pending block this thread is still tracking.  <br /></td></tr>
+<tr class="separator:a9722c1690dcf7f4e07c62bd0d1dd8047"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ad19aa27cf1cc9a2eb2c11fd4ca7098ca" id="r_ad19aa27cf1cc9a2eb2c11fd4ca7098ca"><td class="memItemLeft" align="right" valign="top">size_t&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d8/d16/gc_8c.html#ad19aa27cf1cc9a2eb2c11fd4ca7098ca">cwist_gc_scope_pending_count</a> (void)</td></tr>
+<tr class="memdesc:ad19aa27cf1cc9a2eb2c11fd4ca7098ca"><td class="mdescLeft">&#160;</td><td class="mdescRight">Count this thread's not-yet-retired tracked blocks.  <br /></td></tr>
+<tr class="separator:ad19aa27cf1cc9a2eb2c11fd4ca7098ca"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ab26f402453c12fa53637372d37bc9aed" id="r_ab26f402453c12fa53637372d37bc9aed"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d8/d16/gc_8c.html#ab26f402453c12fa53637372d37bc9aed">cwist_conn_registry_track</a> (void *handle, <a class="el" href="../../d0/daa/gc_8h.html#a5c0209f90f79b0e8b7b893b5d8c9d8ed">cwist_conn_close_fn</a> close_fn)</td></tr>
+<tr class="memdesc:ab26f402453c12fa53637372d37bc9aed"><td class="mdescLeft">&#160;</td><td class="mdescRight">Track a non-memory resource for the full-GC exit sweep.  <br /></td></tr>
+<tr class="separator:ab26f402453c12fa53637372d37bc9aed"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a1bb3e29d15dcaab029c19c82f0707035" id="r_a1bb3e29d15dcaab029c19c82f0707035"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d8/d16/gc_8c.html#a1bb3e29d15dcaab029c19c82f0707035">cwist_conn_registry_untrack</a> (void *handle)</td></tr>
+<tr class="memdesc:a1bb3e29d15dcaab029c19c82f0707035"><td class="mdescLeft">&#160;</td><td class="mdescRight">Remove a handle from this thread's tracked-connection list.  <br /></td></tr>
+<tr class="separator:a1bb3e29d15dcaab029c19c82f0707035"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:aa0e57fd4f5152ff19be1e832e8dfa3cc" id="r_aa0e57fd4f5152ff19be1e832e8dfa3cc"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d8/d16/gc_8c.html#aa0e57fd4f5152ff19be1e832e8dfa3cc">cwist_conn_registry_flush</a> (void)</td></tr>
+<tr class="memdesc:aa0e57fd4f5152ff19be1e832e8dfa3cc"><td class="mdescLeft">&#160;</td><td class="mdescRight">Close every handle this thread still tracks, right now.  <br /></td></tr>
+<tr class="separator:aa0e57fd4f5152ff19be1e832e8dfa3cc"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a190fb06d2ebdb046377b856d47bbbc15" id="r_a190fb06d2ebdb046377b856d47bbbc15"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d8/d16/gc_8c.html#a190fb06d2ebdb046377b856d47bbbc15">cwist_conn_registry_sweep_all</a> (void)</td></tr>
+<tr class="memdesc:a190fb06d2ebdb046377b856d47bbbc15"><td class="mdescLeft">&#160;</td><td class="mdescRight">Close every still-registered thread's tracked handles.  <br /></td></tr>
+<tr class="separator:a190fb06d2ebdb046377b856d47bbbc15"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a9e4705e4cecb1de3290481eef3500c2e" id="r_a9e4705e4cecb1de3290481eef3500c2e"><td class="memItemLeft" align="right" valign="top">size_t&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d8/d16/gc_8c.html#a9e4705e4cecb1de3290481eef3500c2e">cwist_conn_registry_pending_count</a> (void)</td></tr>
+<tr class="memdesc:a9e4705e4cecb1de3290481eef3500c2e"><td class="mdescLeft">&#160;</td><td class="mdescRight">Count this thread's tracked, not-yet-closed handles.  <br /></td></tr>
+<tr class="separator:a9e4705e4cecb1de3290481eef3500c2e"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
 <div class="textblock"><p>Thin implementation wrapper around libttak epoch-based reclamation. </p>
 
 <p class="definition">Definition in file <a class="el" href="../../d8/d16/gc_8c_source.html">gc.c</a>.</p>
-</div><h2 class="groupheader">Function Documentation</h2>
+</div><h2 class="groupheader">Macro Definition Documentation</h2>
+<a id="a154739def5b3de47e39cf11481cee5b7" name="a154739def5b3de47e39cf11481cee5b7"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a154739def5b3de47e39cf11481cee5b7">&#9670;&#160;</a></span>CWIST_GC_PENDING_KEEP_CAP</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">#define CWIST_GC_PENDING_KEEP_CAP&#160;&#160;&#160;1024</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+<p>A flush keeps a table up to this size for reuse and frees larger ones, so one burst of allocations does not pin a big table to the thread. </p>
+
+<p class="definition">Definition at line <a class="el" href="../../d8/d16/gc_8c_source.html#l00326">326</a> of file <a class="el" href="../../d8/d16/gc_8c_source.html">gc.c</a>.</p>
+
+</div>
+</div>
+<a id="a286ebab4f79e4a725d64dbf402ed53fb" name="a286ebab4f79e4a725d64dbf402ed53fb"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a286ebab4f79e4a725d64dbf402ed53fb">&#9670;&#160;</a></span>CWIST_GC_PENDING_MIN_CAP</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">#define CWIST_GC_PENDING_MIN_CAP&#160;&#160;&#160;16</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+<p>Initial table size. </p>
+
+<p class="definition">Definition at line <a class="el" href="../../d8/d16/gc_8c_source.html#l00323">323</a> of file <a class="el" href="../../d8/d16/gc_8c_source.html">gc.c</a>.</p>
+
+</div>
+</div>
+<h2 class="groupheader">Typedef Documentation</h2>
+<a id="ab790bb476f395fc9533cf0b5222c3ff9" name="ab790bb476f395fc9533cf0b5222c3ff9"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ab790bb476f395fc9533cf0b5222c3ff9">&#9670;&#160;</a></span>cwist_conn_pending_t</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">typedef struct cwist_conn_pending <a class="el" href="../../d8/d16/gc_8c.html#ab790bb476f395fc9533cf0b5222c3ff9">cwist_conn_pending_t</a></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+<p>One thread's list of tracked connection handles, plus enough to let the process-exit sweep (<a class="el" href="../../d0/daa/gc_8h.html#a190fb06d2ebdb046377b856d47bbbc15" title="Sweep every thread&#39;s pending-sweep list right now. This is what the process-exit (atexit) hook calls;...">cwist_conn_registry_sweep_all()</a>, running on whichever thread happens to call exit()/return from main) safely race against this same thread's own TLS-destructor sweep (running if this thread happens to exit around the same time): <code>lock</code> serializes the two, <code>swept</code> makes a second attempt (by either path) a no-op instead of double-closing everything. </p>
+
+</div>
+</div>
+<h2 class="groupheader">Function Documentation</h2>
+<a id="a083b2e840cc4afee2f08f66c46f4d64d" name="a083b2e840cc4afee2f08f66c46f4d64d"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a083b2e840cc4afee2f08f66c46f4d64d">&#9670;&#160;</a></span>__attribute__()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">__attribute__ </td>
+          <td>(</td>
+          <td class="paramtype">(constructor)&#160;</td>
+          <td class="paramname"></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Map the guard page before main() runs, so <a class="el" href="../../d8/d16/gc_8c.html#a35e613a89ca213039b7b8b80464c223c" title="Query whether full-GC mode was enabled by the (single) cwist_full_gc() claim.">cwist_full_gc_enabled()</a> &ndash; called on every <a class="el" href="../../d2/dfe/alloc_8h.html#aeba69949fe17751318e6b5fc84a74096" title="Allocate zeroed memory tracked by libttak.">cwist_alloc()</a>/cwist_free() &ndash; never needs a pthread_once/lazy-init check on its hot path (that check itself regressed the C1M reactor latency gate in CI once already). </p>
+
+<p class="definition">Definition at line <a class="el" href="../../d8/d16/gc_8c_source.html#l00193">193</a> of file <a class="el" href="../../d8/d16/gc_8c_source.html">gc.c</a>.</p>
+
+</div>
+</div>
+<a id="aa0e57fd4f5152ff19be1e832e8dfa3cc" name="aa0e57fd4f5152ff19be1e832e8dfa3cc"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#aa0e57fd4f5152ff19be1e832e8dfa3cc">&#9670;&#160;</a></span>cwist_conn_registry_flush()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">void cwist_conn_registry_flush </td>
+          <td>(</td>
+          <td class="paramtype">void&#160;</td>
+          <td class="paramname"></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Close every handle this thread still tracks, right now. </p>
+<p>Sweep (close) everything still on the calling thread's pending-sweep list right now, without waiting for thread exit. Analogous to <a class="el" href="../../d0/daa/gc_8h.html#a9722c1690dcf7f4e07c62bd0d1dd8047" title="Retire every block still on the current thread&#39;s pending-sweep list right now, instead of waiting for...">cwist_gc_scope_flush()</a> but for connections.</p>
+<p>Unlike the sweeps, the list stays usable afterwards: entries are closed and cleared but the list is not marked swept, so later tracks still work. </p>
+
+<p class="definition">Definition at line <a class="el" href="../../d8/d16/gc_8c_source.html#l00718">718</a> of file <a class="el" href="../../d8/d16/gc_8c_source.html">gc.c</a>.</p>
+
+</div>
+</div>
+<a id="a9e4705e4cecb1de3290481eef3500c2e" name="a9e4705e4cecb1de3290481eef3500c2e"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a9e4705e4cecb1de3290481eef3500c2e">&#9670;&#160;</a></span>cwist_conn_registry_pending_count()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">size_t cwist_conn_registry_pending_count </td>
+          <td>(</td>
+          <td class="paramtype">void&#160;</td>
+          <td class="paramname"></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Count this thread's tracked, not-yet-closed handles. </p>
+<p>Number of connections currently on the calling thread's pending-sweep list. Introspection/testing helper.</p>
+<dl class="section return"><dt>Returns</dt><dd>Number of pending entries; 0 when nothing is tracked. </dd></dl>
+
+<p class="definition">Definition at line <a class="el" href="../../d8/d16/gc_8c_source.html#l00743">743</a> of file <a class="el" href="../../d8/d16/gc_8c_source.html">gc.c</a>.</p>
+
+</div>
+</div>
+<a id="a190fb06d2ebdb046377b856d47bbbc15" name="a190fb06d2ebdb046377b856d47bbbc15"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a190fb06d2ebdb046377b856d47bbbc15">&#9670;&#160;</a></span>cwist_conn_registry_sweep_all()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">void cwist_conn_registry_sweep_all </td>
+          <td>(</td>
+          <td class="paramtype">void&#160;</td>
+          <td class="paramname"></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Close every still-registered thread's tracked handles. </p>
+<p>Sweep every thread's pending-sweep list right now. This is what the process-exit (atexit) hook calls; exposed directly for testing, or for callers that want a deterministic sweep point earlier than actual process exit (e.g. <a class="el" href="../../d0/d77/sys_2app_2app_8h.html#a8d6f015a001b2d189ebea808de9da254" title="Destroys the application and frees all resources.">cwist_app_destroy()</a>).</p>
+<p>Intended for process-exit paths; each list is closed at most once even if a thread's TLS destructor sweep races with this call. </p>
+
+<p class="definition">Definition at line <a class="el" href="../../d8/d16/gc_8c_source.html#l00735">735</a> of file <a class="el" href="../../d8/d16/gc_8c_source.html">gc.c</a>.</p>
+
+</div>
+</div>
+<a id="ab26f402453c12fa53637372d37bc9aed" name="ab26f402453c12fa53637372d37bc9aed"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ab26f402453c12fa53637372d37bc9aed">&#9670;&#160;</a></span>cwist_conn_registry_track()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">void cwist_conn_registry_track </td>
+          <td>(</td>
+          <td class="paramtype">void *&#160;</td>
+          <td class="paramname"><em>handle</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype"><a class="el" href="../../d0/daa/gc_8h.html#a5c0209f90f79b0e8b7b893b5d8c9d8ed">cwist_conn_close_fn</a>&#160;</td>
+          <td class="paramname"><em>close_fn</em>&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Track a non-memory resource for the full-GC exit sweep. </p>
+<p>Register a connection handle with the current thread's pending-sweep list (full-GC mode only; a no-op otherwise, so callers can call this unconditionally at connection-open time).</p>
+<p>No-op unless full-GC mode is enabled. Best-effort: if the per-thread list cannot grow, the handle is dropped rather than failing the caller.</p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">handle</td><td>Resource handle to close later (e.g. socket, TLS session). </td></tr>
+    <tr><td class="paramname">close_fn</td><td>Callback invoked with <code>handle</code> during a sweep or flush. </td></tr>
+  </table>
+  </dd>
+</dl>
+
+<p class="definition">Definition at line <a class="el" href="../../d8/d16/gc_8c_source.html#l00666">666</a> of file <a class="el" href="../../d8/d16/gc_8c_source.html">gc.c</a>.</p>
+
+<p class="reference">References <a class="el" href="../../d8/d16/gc_8c_source.html#l00277">cwist_full_gc_enabled()</a>.</p>
+
+</div>
+</div>
+<a id="a1bb3e29d15dcaab029c19c82f0707035" name="a1bb3e29d15dcaab029c19c82f0707035"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a1bb3e29d15dcaab029c19c82f0707035">&#9670;&#160;</a></span>cwist_conn_registry_untrack()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">bool cwist_conn_registry_untrack </td>
+          <td>(</td>
+          <td class="paramtype">void *&#160;</td>
+          <td class="paramname"><em>handle</em></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Remove a handle from this thread's tracked-connection list. </p>
+<p>Remove a handle from the <em>calling thread's</em> pending-sweep list before closing it yourself through the normal explicit path.</p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">handle</td><td>Handle previously passed to <a class="el" href="../../d0/daa/gc_8h.html#ab26f402453c12fa53637372d37bc9aed" title="Register a connection handle with the current thread&#39;s pending-sweep list (full-GC mode only; a no-op...">cwist_conn_registry_track()</a>. </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section return"><dt>Returns</dt><dd>true when found and removed; false otherwise. </dd></dl>
+
+<p class="definition">Definition at line <a class="el" href="../../d8/d16/gc_8c_source.html#l00694">694</a> of file <a class="el" href="../../d8/d16/gc_8c_source.html">gc.c</a>.</p>
+
+<p class="reference">Referenced by <a class="el" href="../../d2/db2/https_8c_source.html#l01612">cwist_https_close_connection()</a>.</p>
+
+</div>
+</div>
+<a id="ab6b5184c0bbd3cc7003dbcfdd2f76f98" name="ab6b5184c0bbd3cc7003dbcfdd2f76f98"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ab6b5184c0bbd3cc7003dbcfdd2f76f98">&#9670;&#160;</a></span>cwist_ebr_alloc()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">void * cwist_ebr_alloc </td>
+          <td>(</td>
+          <td class="paramtype">size_t&#160;</td>
+          <td class="paramname"><em>size</em></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Allocate a block that will later be released through <a class="el" href="../../d8/d16/gc_8c.html#a2406b97d2e5c876a65e828c15e656347" title="Defer release of a block until every thread that might still be reading it (inside ttak_epoch_enter()...">cwist_ebr_free()</a>. </p>
+<p>Allocate a block meant to be released through <a class="el" href="../../d0/daa/gc_8h.html#a2406b97d2e5c876a65e828c15e656347" title="Defer release of a block shared across threads via epoch reclamation.">cwist_ebr_free()</a>.</p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">size</td><td>Number of bytes to allocate. </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section return"><dt>Returns</dt><dd>Newly allocated block, or NULL on failure. </dd></dl>
+
+<p class="definition">Definition at line <a class="el" href="../../d8/d16/gc_8c_source.html#l00102">102</a> of file <a class="el" href="../../d8/d16/gc_8c_source.html">gc.c</a>.</p>
+
+<p class="reference">References <a class="el" href="../../d9/d39/alloc_8c_source.html#l00275">cwist_alloc()</a>.</p>
+
+</div>
+</div>
+<a id="a2406b97d2e5c876a65e828c15e656347" name="a2406b97d2e5c876a65e828c15e656347"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a2406b97d2e5c876a65e828c15e656347">&#9670;&#160;</a></span>cwist_ebr_free()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">void cwist_ebr_free </td>
+          <td>(</td>
+          <td class="paramtype">void *&#160;</td>
+          <td class="paramname"><em>ptr</em></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Defer release of a block until every thread that might still be reading it (inside ttak_epoch_enter()/ttak_epoch_exit()) has left. </p>
+<p>Defer release of a block shared across threads via epoch reclamation.</p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">ptr</td><td>Block to retire; a no-op when NULL. </td></tr>
+  </table>
+  </dd>
+</dl>
+
+<p class="definition">Definition at line <a class="el" href="../../d8/d16/gc_8c_source.html#l00121">121</a> of file <a class="el" href="../../d8/d16/gc_8c_source.html">gc.c</a>.</p>
+
+</div>
+</div>
+<a id="a0d7297e8d4a073c018f97fa6e7f0a372" name="a0d7297e8d4a073c018f97fa6e7f0a372"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a0d7297e8d4a073c018f97fa6e7f0a372">&#9670;&#160;</a></span>cwist_full_gc()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">void cwist_full_gc </td>
+          <td>(</td>
+          <td class="paramtype">bool&#160;</td>
+          <td class="paramname"><em>enable</em></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Claim full-GC mode permanently, exactly once, then harden the toggle. </p>
+<p>Enable or disable full-GC mode process-wide.</p>
+<p>The first caller stores <code>enable</code> into the guard page, marks the page locked, and mprotect()s it read-only; every later call is a silent no-op. Fails safe (no-op) when the guard page was never mapped. Also toggles auto-rotation on the process-wide full-GC instance.</p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">enable</td><td>true to enable full-GC mode, false to claim-and-disable. </td></tr>
+  </table>
+  </dd>
+</dl>
+
+<p class="definition">Definition at line <a class="el" href="../../d8/d16/gc_8c_source.html#l00247">247</a> of file <a class="el" href="../../d8/d16/gc_8c_source.html">gc.c</a>.</p>
+
+<p class="reference">References <a class="el" href="../../d8/d16/gc_8c_source.html#l00053">cwist_gc_auto_rotate()</a>.</p>
+
+</div>
+</div>
+<a id="a35e613a89ca213039b7b8b80464c223c" name="a35e613a89ca213039b7b8b80464c223c"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a35e613a89ca213039b7b8b80464c223c">&#9670;&#160;</a></span>cwist_full_gc_enabled()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">bool cwist_full_gc_enabled </td>
+          <td>(</td>
+          <td class="paramtype">void&#160;</td>
+          <td class="paramname"></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Query whether full-GC mode was enabled by the (single) <a class="el" href="../../d8/d16/gc_8c.html#a0d7297e8d4a073c018f97fa6e7f0a372" title="Claim full-GC mode permanently, exactly once, then harden the toggle.">cwist_full_gc()</a> claim. </p>
+<p>Check whether full-GC mode is currently enabled.</p>
+<dl class="section return"><dt>Returns</dt><dd>Current enabled state; false when the guard page was never mapped. </dd></dl>
+
+<p class="definition">Definition at line <a class="el" href="../../d8/d16/gc_8c_source.html#l00277">277</a> of file <a class="el" href="../../d8/d16/gc_8c_source.html">gc.c</a>.</p>
+
+<p class="reference">Referenced by <a class="el" href="../../d9/d39/alloc_8c_source.html#l00275">cwist_alloc()</a>, <a class="el" href="../../db/d84/async_8c_source.html#l00084">cwist_async_defer()</a>, <a class="el" href="../../d9/d39/alloc_8c_source.html#l00428">cwist_calloc_shim()</a>, <a class="el" href="../../d8/d16/gc_8c_source.html#l00666">cwist_conn_registry_track()</a>, <a class="el" href="../../d9/d39/alloc_8c_source.html#l00390">cwist_free()</a>, <a class="el" href="../../d9/d39/alloc_8c_source.html#l00464">cwist_free_shim()</a>, <a class="el" href="../../d2/db0/http2_8c_source.html#l00350">cwist_h2_async_queue_enqueue()</a>, <a class="el" href="../../de/d67/session_8c_source.html#l00450">cwist_http_async_disown_session()</a>, <a class="el" href="../../d2/db2/https_8c_source.html#l01612">cwist_https_close_connection()</a>, <a class="el" href="../../d1/de4/io__queue_8c_source.html#l00279">cwist_io_queue_run()</a>, <a class="el" href="../../d9/d39/alloc_8c_source.html#l00417">cwist_malloc_shim()</a>, <a class="el" href="../../d9/d39/alloc_8c_source.html#l00305">cwist_realloc()</a>, and <a class="el" href="../../d9/d39/alloc_8c_source.html#l00443">cwist_realloc_shim()</a>.</p>
+
+</div>
+</div>
+<a id="af4daec06978e824bb8635fbfe2005d82" name="af4daec06978e824bb8635fbfe2005d82"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#af4daec06978e824bb8635fbfe2005d82">&#9670;&#160;</a></span>cwist_full_gc_guard_page()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">void * cwist_full_gc_guard_page </td>
+          <td>(</td>
+          <td class="paramtype">void&#160;</td>
+          <td class="paramname"></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Expose the hardened full-GC guard page for introspection/tests. </p>
+<p>Raw pointer to the full-GC toggle's guard page, or NULL if the mmap() backing it failed at process startup. Advanced/testing use only &ndash; e.g. to confirm the page is actually read-only after <a class="el" href="../../d0/daa/gc_8h.html#a0d7297e8d4a073c018f97fa6e7f0a372" title="Enable or disable full-GC mode process-wide.">cwist_full_gc()</a> has been called once.</p>
+<dl class="section return"><dt>Returns</dt><dd>Pointer to the guard page, or NULL if mmap() failed at startup. </dd></dl>
+
+<p class="definition">Definition at line <a class="el" href="../../d8/d16/gc_8c_source.html#l00295">295</a> of file <a class="el" href="../../d8/d16/gc_8c_source.html">gc.c</a>.</p>
+
+</div>
+</div>
+<a id="aa86b6382f284c1b6b81ce4863a2dc671" name="aa86b6382f284c1b6b81ce4863a2dc671"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#aa86b6382f284c1b6b81ce4863a2dc671">&#9670;&#160;</a></span>cwist_full_gc_locked()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">bool cwist_full_gc_locked </td>
+          <td>(</td>
+          <td class="paramtype">void&#160;</td>
+          <td class="paramname"></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Query whether the full-GC toggle has already been claimed and locked. </p>
+<p>Check whether the full-GC toggle has been latched (i.e. <a class="el" href="../../d0/daa/gc_8h.html#a0d7297e8d4a073c018f97fa6e7f0a372" title="Enable or disable full-GC mode process-wide.">cwist_full_gc()</a> has been called once already and every further call will be ignored). Diagnostic/testing use.</p>
+<dl class="section return"><dt>Returns</dt><dd>true once <a class="el" href="../../d0/daa/gc_8h.html#a0d7297e8d4a073c018f97fa6e7f0a372" title="Enable or disable full-GC mode process-wide.">cwist_full_gc()</a> has run its claiming path exactly once. </dd></dl>
+
+<p class="definition">Definition at line <a class="el" href="../../d8/d16/gc_8c_source.html#l00286">286</a> of file <a class="el" href="../../d8/d16/gc_8c_source.html">gc.c</a>.</p>
+
+</div>
+</div>
 <a id="ae2f90d26b532204cdcc3787ba2ec0b01" name="ae2f90d26b532204cdcc3787ba2ec0b01"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#ae2f90d26b532204cdcc3787ba2ec0b01">&#9670;&#160;</a></span>cwist_gc()</h2>
 
@@ -135,7 +635,7 @@ Functions</h2></td></tr>
 <div class="memproto">
       <table class="memname">
         <tr>
-          <td class="memname"><a class="el" href="../../d6/d3c/seq_8h.html#aeb29493e92e60057714a6b22befc6d67">void</a> <a class="el" href="../../d8/d25/structcwist__gc.html">cwist_gc</a> </td>
+          <td class="memname">void <a class="el" href="../../d8/d25/structcwist__gc.html">cwist_gc</a> </td>
           <td>(</td>
           <td class="paramtype"><a class="el" href="../../d0/daa/gc_8h.html#a6b6d55b70f6455c39f8618d52dedebe4">cwist_gc_t</a> *&#160;</td>
           <td class="paramname"><em>gc</em>, </td>
@@ -143,7 +643,7 @@ Functions</h2></td></tr>
         <tr>
           <td class="paramkey"></td>
           <td></td>
-          <td class="paramtype"><a class="el" href="../../d6/d3c/seq_8h.html#aeb29493e92e60057714a6b22befc6d67">bool</a>&#160;</td>
+          <td class="paramtype">bool&#160;</td>
           <td class="paramname"><em>manual_rotation</em>&#160;</td>
         </tr>
         <tr>
@@ -164,9 +664,100 @@ Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d8/d16/gc_8c_source.html#l00013">13</a> of file <a class="el" href="../../d8/d16/gc_8c_source.html">gc.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d8/d16/gc_8c_source.html#l00021">21</a> of file <a class="el" href="../../d8/d16/gc_8c_source.html">gc.c</a>.</p>
 
-<p class="reference">References <a class="el" href="../../d0/daa/gc_8h_source.html#l00020">cwist_gc::impl</a>, and <a class="el" href="../../d0/daa/gc_8h_source.html#l00021">cwist_gc::initialized</a>.</p>
+<p class="reference">References <a class="el" href="../../d0/daa/gc_8h_source.html#l00021">cwist_gc::impl</a>, and <a class="el" href="../../d0/daa/gc_8h_source.html#l00023">cwist_gc::initialized</a>.</p>
+
+</div>
+</div>
+<a id="a186d9c4a74105ea0bbe6fa9c6d3aa2e3" name="a186d9c4a74105ea0bbe6fa9c6d3aa2e3"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a186d9c4a74105ea0bbe6fa9c6d3aa2e3">&#9670;&#160;</a></span>cwist_gc_auto_rotate()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">void cwist_gc_auto_rotate </td>
+          <td>(</td>
+          <td class="paramtype"><a class="el" href="../../d0/daa/gc_8h.html#a6b6d55b70f6455c39f8618d52dedebe4">cwist_gc_t</a> *&#160;</td>
+          <td class="paramname"><em>gc</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">bool&#160;</td>
+          <td class="paramname"><em>enabled</em>&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Enable auto-rotation of epoch GC. </p>
+<p>Toggle whether the GC context reclaims automatically.</p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">gc</td><td>GC context to enable auto-rotation. </td></tr>
+  </table>
+  </dd>
+</dl>
+
+<p class="definition">Definition at line <a class="el" href="../../d8/d16/gc_8c_source.html#l00053">53</a> of file <a class="el" href="../../d8/d16/gc_8c_source.html">gc.c</a>.</p>
+
+<p class="reference">References <a class="el" href="../../d0/daa/gc_8h_source.html#l00025">cwist_gc::auto_rotated</a>, and <a class="el" href="../../d0/daa/gc_8h_source.html#l00023">cwist_gc::initialized</a>.</p>
+
+<p class="reference">Referenced by <a class="el" href="../../d8/d16/gc_8c_source.html#l00247">cwist_full_gc()</a>.</p>
+
+</div>
+</div>
+<a id="a555a946c1e2bb6d5685d4f4dd153c8bc" name="a555a946c1e2bb6d5685d4f4dd153c8bc"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a555a946c1e2bb6d5685d4f4dd153c8bc">&#9670;&#160;</a></span>cwist_gc_auto_rotated()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">bool cwist_gc_auto_rotated </td>
+          <td>(</td>
+          <td class="paramtype"><a class="el" href="../../d0/daa/gc_8h.html#a6b6d55b70f6455c39f8618d52dedebe4">cwist_gc_t</a> *&#160;</td>
+          <td class="paramname"><em>gc</em></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Return if epoch GC is auto-rotated. @ param gc GC context to get status. </p>
+<p>Check whether the GC context is currently set to auto-rotate. </p>
+
+<p class="definition">Definition at line <a class="el" href="../../d8/d16/gc_8c_source.html#l00063">63</a> of file <a class="el" href="../../d8/d16/gc_8c_source.html">gc.c</a>.</p>
+
+<p class="reference">References <a class="el" href="../../d0/daa/gc_8h_source.html#l00025">cwist_gc::auto_rotated</a>.</p>
+
+</div>
+</div>
+<a id="aa040287ba20204989d60d04e984d0937" name="aa040287ba20204989d60d04e984d0937"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#aa040287ba20204989d60d04e984d0937">&#9670;&#160;</a></span>cwist_gc_pipeline_tick()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">void cwist_gc_pipeline_tick </td>
+          <td>(</td>
+          <td class="paramtype">void&#160;</td>
+          <td class="paramname"></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Advance the EBR epoch and run any callbacks that are now safe. </p>
+<p>Drive the EBR pipeline: attempt to advance the epoch and run any <a class="el" href="../../d0/daa/gc_8h.html#a2406b97d2e5c876a65e828c15e656347" title="Defer release of a block shared across threads via epoch reclamation.">cwist_ebr_free()</a> callbacks that are now safe to execute. </p>
+
+<p class="definition">Definition at line <a class="el" href="../../d8/d16/gc_8c_source.html#l00129">129</a> of file <a class="el" href="../../d8/d16/gc_8c_source.html">gc.c</a>.</p>
 
 </div>
 </div>
@@ -177,7 +768,7 @@ Functions</h2></td></tr>
 <div class="memproto">
       <table class="memname">
         <tr>
-          <td class="memname"><a class="el" href="../../d6/d3c/seq_8h.html#aeb29493e92e60057714a6b22befc6d67">ttak_epoch_gc_t</a> * cwist_gc_raw </td>
+          <td class="memname">ttak_epoch_gc_t * cwist_gc_raw </td>
           <td>(</td>
           <td class="paramtype"><a class="el" href="../../d0/daa/gc_8h.html#a6b6d55b70f6455c39f8618d52dedebe4">cwist_gc_t</a> *&#160;</td>
           <td class="paramname"><em>gc</em></td><td>)</td>
@@ -196,9 +787,9 @@ Functions</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>Raw libttak GC handle, or NULL when the wrapper is unavailable. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d8/d16/gc_8c_source.html#l00066">66</a> of file <a class="el" href="../../d8/d16/gc_8c_source.html">gc.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d8/d16/gc_8c_source.html#l00092">92</a> of file <a class="el" href="../../d8/d16/gc_8c_source.html">gc.c</a>.</p>
 
-<p class="reference">References <a class="el" href="../../d0/daa/gc_8h_source.html#l00020">cwist_gc::impl</a>, and <a class="el" href="../../d0/daa/gc_8h_source.html#l00021">cwist_gc::initialized</a>.</p>
+<p class="reference">References <a class="el" href="../../d0/daa/gc_8h_source.html#l00021">cwist_gc::impl</a>, and <a class="el" href="../../d0/daa/gc_8h_source.html#l00023">cwist_gc::initialized</a>.</p>
 
 </div>
 </div>
@@ -209,7 +800,7 @@ Functions</h2></td></tr>
 <div class="memproto">
       <table class="memname">
         <tr>
-          <td class="memname"><a class="el" href="../../d6/d3c/seq_8h.html#aeb29493e92e60057714a6b22befc6d67">void</a> cwist_gc_rotate </td>
+          <td class="memname">void cwist_gc_rotate </td>
           <td>(</td>
           <td class="paramtype"><a class="el" href="../../d0/daa/gc_8h.html#a6b6d55b70f6455c39f8618d52dedebe4">cwist_gc_t</a> *&#160;</td>
           <td class="paramname"><em>gc</em></td><td>)</td>
@@ -227,9 +818,158 @@ Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d8/d16/gc_8c_source.html#l00036">36</a> of file <a class="el" href="../../d8/d16/gc_8c_source.html">gc.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d8/d16/gc_8c_source.html#l00044">44</a> of file <a class="el" href="../../d8/d16/gc_8c_source.html">gc.c</a>.</p>
 
-<p class="reference">References <a class="el" href="../../d0/daa/gc_8h_source.html#l00020">cwist_gc::impl</a>, and <a class="el" href="../../d0/daa/gc_8h_source.html#l00021">cwist_gc::initialized</a>.</p>
+<p class="reference">References <a class="el" href="../../d0/daa/gc_8h_source.html#l00021">cwist_gc::impl</a>, and <a class="el" href="../../d0/daa/gc_8h_source.html#l00023">cwist_gc::initialized</a>.</p>
+
+</div>
+</div>
+<a id="a28b862cd5828d70bdb18dfad374d97ef" name="a28b862cd5828d70bdb18dfad374d97ef"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a28b862cd5828d70bdb18dfad374d97ef">&#9670;&#160;</a></span>cwist_gc_scope_disown()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">bool cwist_gc_scope_disown </td>
+          <td>(</td>
+          <td class="paramtype">void *&#160;</td>
+          <td class="paramname"><em>ptr</em></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Alias of <a class="el" href="../../d8/d16/gc_8c.html#aa346f21856d29592c1c544275cac74e3" title="Stop tracking a block without retiring it.">cwist_gc_scope_untrack()</a>: drop tracking without retiring. </p>
+<p>Remove <code>ptr</code> from the current thread's pending-sweep list without freeing it, because ownership is being handed off to other code that will call <a class="el" href="../../d2/dfe/alloc_8h.html#a220abeebe2823e72511d1690fc561306" title="Free memory obtained via cwist_alloc/cwist_strdup/etc.">cwist_free()</a> (or <a class="el" href="../../d0/daa/gc_8h.html#a2406b97d2e5c876a65e828c15e656347" title="Defer release of a block shared across threads via epoch reclamation.">cwist_ebr_free()</a>) on it later, possibly from a different thread.</p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">ptr</td><td>Block to untrack. </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section return"><dt>Returns</dt><dd>true when <code>ptr</code> was tracked and removed; false otherwise. </dd></dl>
+
+<p class="definition">Definition at line <a class="el" href="../../d8/d16/gc_8c_source.html#l00513">513</a> of file <a class="el" href="../../d8/d16/gc_8c_source.html">gc.c</a>.</p>
+
+<p class="reference">References <a class="el" href="../../d8/d16/gc_8c_source.html#l00481">cwist_gc_scope_untrack()</a>.</p>
+
+<p class="reference">Referenced by <a class="el" href="../../db/d84/async_8c_source.html#l00084">cwist_async_defer()</a>, <a class="el" href="../../d2/db0/http2_8c_source.html#l00350">cwist_h2_async_queue_enqueue()</a>, and <a class="el" href="../../de/d67/session_8c_source.html#l00450">cwist_http_async_disown_session()</a>.</p>
+
+</div>
+</div>
+<a id="a9722c1690dcf7f4e07c62bd0d1dd8047" name="a9722c1690dcf7f4e07c62bd0d1dd8047"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a9722c1690dcf7f4e07c62bd0d1dd8047">&#9670;&#160;</a></span>cwist_gc_scope_flush()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">void cwist_gc_scope_flush </td>
+          <td>(</td>
+          <td class="paramtype">void&#160;</td>
+          <td class="paramname"></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Retire every pending block this thread is still tracking. </p>
+<p>Retire every block still on the current thread's pending-sweep list right now, instead of waiting for the thread to exit.</p>
+<p>Each tracked block is handed to <a class="el" href="../../d0/daa/gc_8h.html#a2406b97d2e5c876a65e828c15e656347" title="Defer release of a block shared across threads via epoch reclamation.">cwist_ebr_free()</a>, so reclamation is deferred until no thread can still be reading inside an epoch. </p>
+
+<p class="definition">Definition at line <a class="el" href="../../d8/d16/gc_8c_source.html#l00523">523</a> of file <a class="el" href="../../d8/d16/gc_8c_source.html">gc.c</a>.</p>
+
+<p class="reference">Referenced by <a class="el" href="../../d1/de4/io__queue_8c_source.html#l00279">cwist_io_queue_run()</a>.</p>
+
+</div>
+</div>
+<a id="ad19aa27cf1cc9a2eb2c11fd4ca7098ca" name="ad19aa27cf1cc9a2eb2c11fd4ca7098ca"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ad19aa27cf1cc9a2eb2c11fd4ca7098ca">&#9670;&#160;</a></span>cwist_gc_scope_pending_count()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">size_t cwist_gc_scope_pending_count </td>
+          <td>(</td>
+          <td class="paramtype">void&#160;</td>
+          <td class="paramname"></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Count this thread's not-yet-retired tracked blocks. </p>
+<p>Number of blocks currently on the calling thread's pending-sweep list. Introspection/testing helper.</p>
+<dl class="section return"><dt>Returns</dt><dd>Number of pending entries; 0 when nothing is tracked. </dd></dl>
+
+<p class="definition">Definition at line <a class="el" href="../../d8/d16/gc_8c_source.html#l00531">531</a> of file <a class="el" href="../../d8/d16/gc_8c_source.html">gc.c</a>.</p>
+
+</div>
+</div>
+<a id="aefa094b961da90bdf2122b4cd056b257" name="aefa094b961da90bdf2122b4cd056b257"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#aefa094b961da90bdf2122b4cd056b257">&#9670;&#160;</a></span>cwist_gc_scope_track()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">void cwist_gc_scope_track </td>
+          <td>(</td>
+          <td class="paramtype">void *&#160;</td>
+          <td class="paramname"><em>ptr</em></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Track a live <a class="el" href="../../d2/dfe/alloc_8h.html#aeba69949fe17751318e6b5fc84a74096" title="Allocate zeroed memory tracked by libttak.">cwist_alloc()</a> block so full-GC can retire it later. </p>
+<p>Register a <a class="el" href="../../d2/dfe/alloc_8h.html#aeba69949fe17751318e6b5fc84a74096" title="Allocate zeroed memory tracked by libttak.">cwist_alloc()</a> block with the current thread's pending-sweep list (full-GC mode only).</p>
+<p>Best-effort: on allocation failure the block is left untracked rather than failing the caller's allocation. Duplicate pointers are stored once.</p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">ptr</td><td>Block to track; a no-op when NULL. </td></tr>
+  </table>
+  </dd>
+</dl>
+
+<p class="definition">Definition at line <a class="el" href="../../d8/d16/gc_8c_source.html#l00454">454</a> of file <a class="el" href="../../d8/d16/gc_8c_source.html">gc.c</a>.</p>
+
+<p class="reference">Referenced by <a class="el" href="../../d9/d39/alloc_8c_source.html#l00275">cwist_alloc()</a>, <a class="el" href="../../d9/d39/alloc_8c_source.html#l00428">cwist_calloc_shim()</a>, <a class="el" href="../../d9/d39/alloc_8c_source.html#l00417">cwist_malloc_shim()</a>, <a class="el" href="../../d9/d39/alloc_8c_source.html#l00305">cwist_realloc()</a>, and <a class="el" href="../../d9/d39/alloc_8c_source.html#l00443">cwist_realloc_shim()</a>.</p>
+
+</div>
+</div>
+<a id="aa346f21856d29592c1c544275cac74e3" name="aa346f21856d29592c1c544275cac74e3"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#aa346f21856d29592c1c544275cac74e3">&#9670;&#160;</a></span>cwist_gc_scope_untrack()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">bool cwist_gc_scope_untrack </td>
+          <td>(</td>
+          <td class="paramtype">void *&#160;</td>
+          <td class="paramname"><em>ptr</em></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Stop tracking a block without retiring it. </p>
+<p>Remove a block from the current thread's pending-sweep list.</p>
+<p>Used when the caller hands ownership elsewhere (e.g. frees through a different path); the block is removed from this thread's pending set and will not be epoch-retired by a later flush.</p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">ptr</td><td>Block to untrack. </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section return"><dt>Returns</dt><dd>true when <code>ptr</code> was tracked and removed; false otherwise. </dd></dl>
+
+<p class="definition">Definition at line <a class="el" href="../../d8/d16/gc_8c_source.html#l00481">481</a> of file <a class="el" href="../../d8/d16/gc_8c_source.html">gc.c</a>.</p>
+
+<p class="reference">Referenced by <a class="el" href="../../d9/d39/alloc_8c_source.html#l00390">cwist_free()</a>, <a class="el" href="../../d9/d39/alloc_8c_source.html#l00464">cwist_free_shim()</a>, <a class="el" href="../../d8/d16/gc_8c_source.html#l00513">cwist_gc_scope_disown()</a>, <a class="el" href="../../d9/d39/alloc_8c_source.html#l00305">cwist_realloc()</a>, and <a class="el" href="../../d9/d39/alloc_8c_source.html#l00443">cwist_realloc_shim()</a>.</p>
 
 </div>
 </div>
@@ -240,7 +980,7 @@ Functions</h2></td></tr>
 <div class="memproto">
       <table class="memname">
         <tr>
-          <td class="memname"><a class="el" href="../../d6/d3c/seq_8h.html#aeb29493e92e60057714a6b22befc6d67">void</a> cwist_gc_shutdown </td>
+          <td class="memname">void cwist_gc_shutdown </td>
           <td>(</td>
           <td class="paramtype"><a class="el" href="../../d0/daa/gc_8h.html#a6b6d55b70f6455c39f8618d52dedebe4">cwist_gc_t</a> *&#160;</td>
           <td class="paramname"><em>gc</em></td><td>)</td>
@@ -258,9 +998,9 @@ Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d8/d16/gc_8c_source.html#l00026">26</a> of file <a class="el" href="../../d8/d16/gc_8c_source.html">gc.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d8/d16/gc_8c_source.html#l00034">34</a> of file <a class="el" href="../../d8/d16/gc_8c_source.html">gc.c</a>.</p>
 
-<p class="reference">References <a class="el" href="../../d0/daa/gc_8h_source.html#l00020">cwist_gc::impl</a>, and <a class="el" href="../../d0/daa/gc_8h_source.html#l00021">cwist_gc::initialized</a>.</p>
+<p class="reference">References <a class="el" href="../../d0/daa/gc_8h_source.html#l00021">cwist_gc::impl</a>, and <a class="el" href="../../d0/daa/gc_8h_source.html#l00023">cwist_gc::initialized</a>.</p>
 
 </div>
 </div>
@@ -271,7 +1011,7 @@ Functions</h2></td></tr>
 <div class="memproto">
       <table class="memname">
         <tr>
-          <td class="memname"><a class="el" href="../../d6/d3c/seq_8h.html#aeb29493e92e60057714a6b22befc6d67">void</a> cwist_reg_ptr </td>
+          <td class="memname">void cwist_reg_ptr </td>
           <td>(</td>
           <td class="paramtype"><a class="el" href="../../d0/daa/gc_8h.html#a6b6d55b70f6455c39f8618d52dedebe4">cwist_gc_t</a> *&#160;</td>
           <td class="paramname"><em>gc</em>, </td>
@@ -279,7 +1019,7 @@ Functions</h2></td></tr>
         <tr>
           <td class="paramkey"></td>
           <td></td>
-          <td class="paramtype"><a class="el" href="../../d6/d3c/seq_8h.html#aeb29493e92e60057714a6b22befc6d67">void</a> *&#160;</td>
+          <td class="paramtype">void *&#160;</td>
           <td class="paramname"><em>ptr</em>&#160;</td>
         </tr>
         <tr>
@@ -300,9 +1040,9 @@ Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d8/d16/gc_8c_source.html#l00046">46</a> of file <a class="el" href="../../d8/d16/gc_8c_source.html">gc.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d8/d16/gc_8c_source.html#l00072">72</a> of file <a class="el" href="../../d8/d16/gc_8c_source.html">gc.c</a>.</p>
 
-<p class="reference">References <a class="el" href="../../d8/d16/gc_8c_source.html#l00056">cwist_reg_ptr_sized()</a>.</p>
+<p class="reference">References <a class="el" href="../../d8/d16/gc_8c_source.html#l00082">cwist_reg_ptr_sized()</a>.</p>
 
 </div>
 </div>
@@ -313,7 +1053,7 @@ Functions</h2></td></tr>
 <div class="memproto">
       <table class="memname">
         <tr>
-          <td class="memname"><a class="el" href="../../d6/d3c/seq_8h.html#aeb29493e92e60057714a6b22befc6d67">void</a> cwist_reg_ptr_sized </td>
+          <td class="memname">void cwist_reg_ptr_sized </td>
           <td>(</td>
           <td class="paramtype"><a class="el" href="../../d0/daa/gc_8h.html#a6b6d55b70f6455c39f8618d52dedebe4">cwist_gc_t</a> *&#160;</td>
           <td class="paramname"><em>gc</em>, </td>
@@ -321,13 +1061,13 @@ Functions</h2></td></tr>
         <tr>
           <td class="paramkey"></td>
           <td></td>
-          <td class="paramtype"><a class="el" href="../../d6/d3c/seq_8h.html#aeb29493e92e60057714a6b22befc6d67">void</a> *&#160;</td>
+          <td class="paramtype">void *&#160;</td>
           <td class="paramname"><em>ptr</em>, </td>
         </tr>
         <tr>
           <td class="paramkey"></td>
           <td></td>
-          <td class="paramtype"><a class="el" href="../../d6/d3c/seq_8h.html#aeb29493e92e60057714a6b22befc6d67">size_t</a>&#160;</td>
+          <td class="paramtype">size_t&#160;</td>
           <td class="paramname"><em>size</em>&#160;</td>
         </tr>
         <tr>
@@ -349,11 +1089,70 @@ Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d8/d16/gc_8c_source.html#l00056">56</a> of file <a class="el" href="../../d8/d16/gc_8c_source.html">gc.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d8/d16/gc_8c_source.html#l00082">82</a> of file <a class="el" href="../../d8/d16/gc_8c_source.html">gc.c</a>.</p>
 
-<p class="reference">References <a class="el" href="../../d0/daa/gc_8h_source.html#l00020">cwist_gc::impl</a>, and <a class="el" href="../../d0/daa/gc_8h_source.html#l00021">cwist_gc::initialized</a>.</p>
+<p class="reference">References <a class="el" href="../../d0/daa/gc_8h_source.html#l00021">cwist_gc::impl</a>, and <a class="el" href="../../d0/daa/gc_8h_source.html#l00023">cwist_gc::initialized</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../d8/d16/gc_8c_source.html#l00046">cwist_reg_ptr()</a>.</p>
+<p class="reference">Referenced by <a class="el" href="../../d8/d16/gc_8c_source.html#l00072">cwist_reg_ptr()</a>.</p>
+
+</div>
+</div>
+<a id="a6e9bae201702c4c1417e366ec3ab1919" name="a6e9bae201702c4c1417e366ec3ab1919"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a6e9bae201702c4c1417e366ec3ab1919">&#9670;&#160;</a></span>cwist_release_guard_acquire()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">bool cwist_release_guard_acquire </td>
+          <td>(</td>
+          <td class="paramtype"><a class="el" href="../../d0/daa/gc_8h.html#ab69481b637dc8d922721fdd6945c8e27">cwist_release_guard_t</a> *&#160;</td>
+          <td class="paramname"><em>guard</em></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Claim a release guard. </p>
+<p>Attempt to claim the guard.</p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">guard</td><td>Guard shared by every racing caller. </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section return"><dt>Returns</dt><dd>true for exactly one caller across all racers; false otherwise. </dd></dl>
+
+<p class="definition">Definition at line <a class="el" href="../../d8/d16/gc_8c_source.html#l00147">147</a> of file <a class="el" href="../../d8/d16/gc_8c_source.html">gc.c</a>.</p>
+
+</div>
+</div>
+<a id="a4eb61c3775d0863b9eedc5b79904725c" name="a4eb61c3775d0863b9eedc5b79904725c"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a4eb61c3775d0863b9eedc5b79904725c">&#9670;&#160;</a></span>cwist_release_guard_init()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">void cwist_release_guard_init </td>
+          <td>(</td>
+          <td class="paramtype"><a class="el" href="../../d0/daa/gc_8h.html#ab69481b637dc8d922721fdd6945c8e27">cwist_release_guard_t</a> *&#160;</td>
+          <td class="paramname"><em>guard</em></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Reset a release guard to its unclaimed state. </p>
+<p>Initialize a release guard to its unclaimed state.</p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">guard</td><td>Guard to initialize. </td></tr>
+  </table>
+  </dd>
+</dl>
+
+<p class="definition">Definition at line <a class="el" href="../../d8/d16/gc_8c_source.html#l00137">137</a> of file <a class="el" href="../../d8/d16/gc_8c_source.html">gc.c</a>.</p>
 
 </div>
 </div>

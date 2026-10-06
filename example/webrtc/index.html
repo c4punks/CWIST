@@ -1,0 +1,48 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>CWIST WebRTC DataChannel echo</title>
+</head>
+<body>
+  <h1>CWIST WebRTC DataChannel echo</h1>
+  <button id="connect">Connect</button>
+  <input id="msg" placeholder="type a message" size="40">
+  <button id="send">Send</button>
+  <pre id="log"></pre>
+  <script>
+    const log = (s) => { document.getElementById('log').textContent += s + "\n"; };
+    let pc = null, dc = null;
+
+    document.getElementById('connect').onclick = async () => {
+      pc = new RTCPeerConnection({ iceServers: [] });
+      dc = pc.createDataChannel('echo');
+      dc.onopen = () => log('datachannel open');
+      dc.onmessage = (ev) => log('<< ' + (typeof ev.data === 'string' ? ev.data : '<binary>'));
+
+      pc.onicecandidate = async (ev) => {
+        if (ev.candidate) return; // ICE-lite answer: wait for gathering to finish
+        const res = await fetch('/offer', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/sdp' },
+          body: pc.localDescription.sdp,
+        });
+        const answer = await res.text();
+        await pc.setRemoteDescription({ type: 'answer', sdp: answer });
+        log('answer set');
+      };
+
+      const offer = await pc.createOffer();
+      await pc.setLocalDescription(offer);
+    };
+
+    document.getElementById('send').onclick = () => {
+      const v = document.getElementById('msg').value;
+      if (dc && dc.readyState === 'open') {
+        dc.send(v);
+        log('>> ' + v);
+      }
+    };
+  </script>
+</body>
+</html>

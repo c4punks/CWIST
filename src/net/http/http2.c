@@ -27,6 +27,7 @@
 #include <cwist/net/http/http2_flow_control.h>
 #include <cwist/net/http/async.h>
 #include <cwist/core/mem/alloc.h>
+#include <cwist/core/mem/gc.h>
 #include <cwist/core/log.h>
 #include <cwist/sys/metrics/metrics.h>
 #include <cwist/core/seq/seq.h>
@@ -94,23 +95,32 @@
 #define CWIST_HTTP2_MAX_CONTINUATIONS 32
 #define CWIST_HTTP2_MAX_HEADERS_PER_REQUEST 256
 
-/* Monotonic clock in milliseconds, for the connection idle deadline. */
+/**
+ * @brief Monotonic clock in milliseconds, for the connection idle deadline.
+ * @return Current CLOCK_MONOTONIC time in milliseconds.
+ */
 static uint64_t h2_now_ms(void) {
     struct timespec ts;
     clock_gettime(CLOCK_MONOTONIC, &ts);
     return (uint64_t)ts.tv_sec * 1000 + (uint64_t)ts.tv_nsec / 1000000;
 }
 
-/* Monotonic clock in microseconds, for flow-control RTT samples/pacing. */
+/**
+ * @brief Monotonic clock in microseconds, for flow-control RTT samples/pacing.
+ * @return Current CLOCK_MONOTONIC time in microseconds.
+ */
 static uint64_t h2_now_us(void) {
     struct timespec ts;
     clock_gettime(CLOCK_MONOTONIC, &ts);
     return (uint64_t)ts.tv_sec * 1000000 + (uint64_t)ts.tv_nsec / 1000;
 }
 
-/* Idle deadline for a connection with no complete frame arriving.  Defaults
- * to CWIST_HTTP2_IDLE_TIMEOUT_MS, overridable via the env var of the same
- * name (read once at first use). */
+/**
+ * @brief Idle deadline for a connection with no complete frame arriving.
+ * Defaults to CWIST_HTTP2_IDLE_TIMEOUT_MS, overridable via the env var of the
+ * same name (read once at first use).
+ * @return Idle timeout in milliseconds.
+ */
 static int h2_idle_timeout_ms(void) {
     static int timeout_ms = 0;
     if (timeout_ms == 0) {
@@ -127,12 +137,14 @@ static int h2_idle_timeout_ms(void) {
     return timeout_ms;
 }
 
-/* Grace window between sending GOAWAY on idle timeout and closing the
- * connection.  A client that raced a request onto the connection just as it
- * went idle needs time to see the GOAWAY and retry; closing the socket the
- * instant GOAWAY leaves makes strict clients (Firefox) surface a protocol
- * error where lenient ones silently retry.  Overridable via
- * CWIST_HTTP2_GOAWAY_GRACE_MS. */
+/**
+ * @brief Grace window between sending GOAWAY on idle timeout and closing the
+ * connection.
+ * A client that raced a request onto the connection just as it went idle needs
+ * time to see the GOAWAY and retry; closing the socket the instant GOAWAY
+ * leaves makes strict clients (Firefox) surface a protocol error where
+ * lenient ones silently retry.  Overridable via CWIST_HTTP2_GOAWAY_GRACE_MS.
+ */
 #define CWIST_HTTP2_GOAWAY_GRACE_MS_DEFAULT 2000
 static int h2_goaway_grace_ms(void) {
     static int grace_ms = -1;
@@ -150,6 +162,12 @@ static int h2_goaway_grace_ms(void) {
     return grace_ms;
 }
 
+/**
+ * @brief Maximum burst of RST_STREAM frames accepted per refill window.
+ * Defaults to CWIST_HTTP2_DEFAULT_RST_BURST, overridable via
+ * CWIST_HTTP2_MAX_RST_BURST (read once at first use).
+ * @return RST burst budget.
+ */
 static uint32_t h2_max_rst_burst(void) {
     static uint32_t val = 0;
     if (val == 0) {
@@ -166,6 +184,12 @@ static uint32_t h2_max_rst_burst(void) {
     return val;
 }
 
+/**
+ * @brief RST_STREAM refill rate in credits per second.
+ * Defaults to CWIST_HTTP2_DEFAULT_RST_RATE, overridable via
+ * CWIST_HTTP2_MAX_RST_RATE (read once at first use).
+ * @return RST refill rate per second.
+ */
 static uint32_t h2_max_rst_rate(void) {
     static uint32_t val = 0;
     if (val == 0) {
@@ -246,6 +270,13 @@ struct cwist_h2_async_queue {
     _Atomic int refs;
 };
 
+/**
+ * @brief Destroy a deferred-response queue node and everything it owns.
+ * Frees the send response (when separately owned), the handler response, and
+ * the request, then the node itself.  Thread-safe: only called when no other
+ * party holds the node.
+ * @param n Node to discard; must not be on a queue.
+ */
 static void h2_async_node_discard(h2_async_node *n) {
     if (n->send_owned && n->send && n->send != n->res) cwist_http_response_destroy(n->send);
     if (n->res) cwist_http_response_destroy(n->res);
@@ -253,6 +284,13 @@ static void h2_async_node_discard(h2_async_node *n) {
     cwist_free(n);
 }
 
+/**
+ * @brief Create the deferred-response completion queue.
+ * Allocates the queue and its wake descriptor (eventfd on Linux, a pipe
+ * elsewhere), both non-blocking.  The queue is born with one reference held
+ * by the connection.
+ * @return Newly allocated queue, or NULL on allocation or descriptor failure.
+ */
 static cwist_h2_async_queue *cwist_h2_async_queue_create(void) {
     cwist_h2_async_queue *q = (cwist_h2_async_queue *)cwist_alloc(sizeof(*q));
     if (!q) return NULL;
@@ -275,14 +313,28 @@ static cwist_h2_async_queue *cwist_h2_async_queue_create(void) {
         q->wake_wr = pfds[1];
     }
 #endif
+    /* Explicit queue refs can outlive the connection thread's TLS GC. */
+    if (cwist_full_gc_enabled()) cwist_gc_scope_disown(q);
     return q;
 }
 
+/**
+ * @brief Take an additional reference on the queue (for an in-flight
+ * cwist_async handle).
+ * @param q Queue to retain; NULL is tolerated.
+ * @return @p q.
+ */
 cwist_h2_async_queue *cwist_h2_async_queue_acquire(cwist_h2_async_queue *q) {
     if (q) atomic_fetch_add_explicit(&q->refs, 1, memory_order_relaxed);
     return q;
 }
 
+/**
+ * @brief Drop a reference on the queue.
+ * On the last reference: closes the wake descriptors, destroys the mutex, and
+ * frees the queue.  Callers must not enqueue after close().
+ * @param q Queue to release; NULL is tolerated.
+ */
 void cwist_h2_async_queue_release(cwist_h2_async_queue *q) {
     if (!q) return;
     if (atomic_fetch_sub_explicit(&q->refs, 1, memory_order_acq_rel) != 1) return;
@@ -300,7 +352,14 @@ int cwist_h2_async_queue_enqueue(cwist_h2_async_queue *q, uint32_t stream_id,
                                  cwist_http_response *res, bool send_owned) {
     if (!q) return -1;
     h2_async_node *n = (h2_async_node *)cwist_alloc(sizeof(*n));
-    if (!n) return -1;
+    if (!n) {
+        /* Enqueue consumes the exchange even when staging fails. Its
+         * producer already relinquished ownership before calling us. */
+        if (send_owned && send && send != res) cwist_http_response_destroy(send);
+        cwist_http_response_destroy(res);
+        cwist_http_request_destroy(req);
+        return -1;
+    }
     n->stream_id = stream_id;
     n->req = req;
     n->send = send;
@@ -313,6 +372,9 @@ int cwist_h2_async_queue_enqueue(cwist_h2_async_queue *q, uint32_t stream_id,
         h2_async_node_discard(n);
         return -1;
     }
+    /* The connection may drain immediately after the mutex is released;
+     * producer TLS sweeping must no longer own this published node. */
+    if (cwist_full_gc_enabled()) cwist_gc_scope_disown(n);
     if (q->tail)
         q->tail->next = n;
     else
@@ -329,6 +391,11 @@ int cwist_h2_async_queue_enqueue(cwist_h2_async_queue *q, uint32_t stream_id,
     return 0;
 }
 
+/**
+ * @brief Wake descriptor to poll from the connection's event loop.
+ * @param q Queue to query.
+ * @return Read side of the wake fd, or -1 when @p q is NULL or has none.
+ */
 static int cwist_h2_async_queue_fd(const cwist_h2_async_queue *q) {
     return q ? q->wake_rd : -1;
 }
@@ -424,6 +491,15 @@ typedef struct h2_conn {
     cwist_h2_async_queue *async_q;
 } h2_conn;
 
+/**
+ * @brief Initialize a connection state struct to RFC defaults.
+ * Zeros the struct, seeds peer defaults (frame size, initial window), sets up
+ * flow control, DoS-mitigation budgets, and the out_mu/fc_mu mutexes (fc_cond
+ * is torn down again if its init fails).  No resources are freed here; pair
+ * with h2_conn_destroy().
+ * @param hc Connection state to initialize.
+ * @param conn Owning HTTPS connection; may be NULL for test scaffolding.
+ */
 static void h2_conn_init(h2_conn *hc, cwist_https_connection *conn) {
     memset(hc, 0, sizeof(*hc));
     hc->conn = conn;
@@ -456,9 +532,12 @@ static void h2_conn_init(h2_conn *hc, cwist_https_connection *conn) {
     }
 }
 
-/* Wake handler threads parked waiting for send-window credit.  Call after
- * any update that may have restored credit (WINDOW_UPDATE applied, SETTINGS
- * initial-window delta, stream abort/detach). */
+/**
+ * @brief Wake handler threads parked waiting for send-window credit.
+ * Call after any update that may have restored credit (WINDOW_UPDATE applied,
+ * SETTINGS initial-window delta, stream abort/detach).
+ * @param hc Connection whose fc_cond is broadcast.
+ */
 static void h2_fc_credit_signal(h2_conn *hc) {
     if (!hc->fc_mu_init) return;
     pthread_mutex_lock(&hc->fc_mu);
@@ -466,9 +545,16 @@ static void h2_fc_credit_signal(h2_conn *hc) {
     pthread_mutex_unlock(&hc->fc_mu);
 }
 
-/* Detach @p s from send-credit waiters and block until none remain, so the
- * stream can be freed without a parked handler thread waking up on a
- * dangling pointer. */
+/**
+ * @brief Detach a stream from send-credit waiters and block until none
+ * remain.
+ * Marks the stream detached (parked threads then exit instead of touching
+ * it) and waits until all fc_waiters have left, so the stream can be freed
+ * without a parked handler thread waking up on a dangling pointer.  Must be
+ * called before the stream is freed.
+ * @param hc Connection owning fc_mu/fc_cond.
+ * @param s Stream to quiesce.
+ */
 static void h2_stream_drain_waiters(h2_conn *hc, h2_stream *s) {
     if (!hc->fc_mu_init) return;
     pthread_mutex_lock(&hc->fc_mu);
@@ -478,6 +564,15 @@ static void h2_stream_drain_waiters(h2_conn *hc, h2_stream *s) {
     pthread_mutex_unlock(&hc->fc_mu);
 }
 
+/**
+ * @brief Tear down a connection state struct and everything it owns.
+ * Drains send-credit waiters and fires on_close hooks per stream before
+ * freeing requests, sequenced-body assemblers, the HPACK dynamic table, the
+ * deferred-frame list, buffers, mutexes, and the async completion queue
+ * (pending completions are discarded).  Safe only when no handler threads
+ * can still be using the streams.
+ * @param hc Connection state to destroy; not freed itself.
+ */
 static void h2_conn_destroy(h2_conn *hc) {
     h2_stream *s = hc->streams;
     while (s) {
@@ -527,6 +622,14 @@ static void h2_conn_destroy(h2_conn *hc) {
     }
 }
 
+/**
+ * @brief Consume one inbound RST_STREAM credit (CVE-2023-44487 mitigation).
+ * Refills the budget from h2_max_rst_rate() based on elapsed time, capped at
+ * h2_max_rst_burst().
+ * @param hc Connection whose budget is spent.
+ * @retval true Credit available and consumed.
+ * @retval false Budget depleted; caller must answer with GOAWAY.
+ */
 static bool h2_conn_consume_rst_budget(h2_conn *hc) {
     uint64_t now = h2_now_ms();
     uint64_t elapsed = (now > hc->rst_last_refill_ms) ? (now - hc->rst_last_refill_ms) : 0;
@@ -551,8 +654,13 @@ static bool h2_conn_consume_rst_budget(h2_conn *hc) {
     return true;
 }
 
-/* Consume one outbound RST_STREAM credit (issue #97: "Made You Reset").
- * Returns false when the budget is depleted — caller must send GOAWAY. */
+/**
+ * @brief Consume one outbound RST_STREAM credit (issue #97: "Made You
+ * Reset").
+ * @param hc Connection whose outbound budget is spent.
+ * @retval false Budget depleted — caller must send GOAWAY.
+ * @retval true Credit available and consumed.
+ */
 static bool h2_conn_consume_out_rst_budget(h2_conn *hc) {
     uint64_t now = h2_now_ms();
     uint64_t elapsed = (now > hc->out_rst_last_refill_ms) ? (now - hc->out_rst_last_refill_ms) : 0;
@@ -572,6 +680,14 @@ static bool h2_conn_consume_out_rst_budget(h2_conn *hc) {
     return true;
 }
 
+/**
+ * @brief Consume one inbound PING credit (ping-flood mitigation).
+ * Refills CWIST_HTTP2_DEFAULT_PING_BURST at CWIST_HTTP2_DEFAULT_PING_RATE
+ * credits per second based on elapsed time.
+ * @param hc Connection whose ping budget is spent.
+ * @retval true Credit available and consumed.
+ * @retval false Budget depleted; caller should throttle/close.
+ */
 static bool h2_conn_consume_ping_budget(h2_conn *hc) {
     uint64_t now = h2_now_ms();
     uint64_t elapsed = (now > hc->ping_last_refill_ms) ? (now - hc->ping_last_refill_ms) : 0;
@@ -596,6 +712,12 @@ static bool h2_conn_consume_ping_budget(h2_conn *hc) {
     return true;
 }
 
+/**
+ * @brief Look up a live stream by ID.
+ * @param hc Connection to search.
+ * @param stream_id Stream identifier to find.
+ * @return Matching stream, or NULL when no such stream is open.
+ */
 static h2_stream *h2_stream_find(h2_conn *hc, uint32_t stream_id) {
     h2_stream *s = hc->streams;
     while (s) {
@@ -605,6 +727,16 @@ static h2_stream *h2_stream_find(h2_conn *hc, uint32_t stream_id) {
     return NULL;
 }
 
+/**
+ * @brief Allocate and register a new stream on the connection.
+ * Receive credit is seeded to the 2GB INITIAL_WINDOW_SIZE we advertise;
+ * send credit starts at the peer's initial window.  Pushes the stream onto
+ * the connection's list and bumps active_streams.
+ * @param hc Connection to attach the stream to.
+ * @param stream_id Identifier for the new stream.
+ * @return New stream, or NULL on allocation failure (active_streams
+ *         unchanged).
+ */
 static h2_stream *h2_stream_create(h2_conn *hc, uint32_t stream_id) {
     h2_stream *s = (h2_stream *)cwist_alloc(sizeof(*s));
     if (!s) return NULL;
@@ -622,6 +754,14 @@ static h2_stream *h2_stream_create(h2_conn *hc, uint32_t stream_id) {
     return s;
 }
 
+/**
+ * @brief Remove and free a stream from the connection's table.
+ * Drains send-credit waiters first, fires the on_close hook when the stream
+ * was hook-taken, then destroys the request and body assembler and frees the
+ * stream.  No-op when the ID is not present.
+ * @param hc Connection owning the stream table.
+ * @param stream_id Identifier of the stream to retire.
+ */
 static void h2_stream_remove(h2_conn *hc, uint32_t stream_id) {
     h2_stream **pp = &hc->streams;
     while (*pp) {
@@ -731,6 +871,13 @@ static bool h2_has_buffered_input(const cwist_https_connection *conn) {
     return conn->read_buf && conn->buf_len > 0;
 }
 
+/**
+ * @brief Write bytes to the underlying transport.
+ * @param conn Connection; TLS via SSL_write when ssl is set, else write(2).
+ * @param buf Bytes to send.
+ * @param len Number of bytes to send.
+ * @return Bytes written, or the SSL_write/write result (negative on error).
+ */
 static int h2_write(cwist_https_connection *conn, const void *buf, int len) {
     if (conn->ssl) return SSL_write(conn->ssl, buf, len);
     return write(conn->fd, buf, len);
@@ -1200,6 +1347,11 @@ static h2_huffman_node *h2_huffman_root = NULL;
  * could hand a half-built trie to a decoder or exhaust the pool twice). */
 static pthread_once_t h2_huffman_once = PTHREAD_ONCE_INIT;
 
+/**
+ * @brief Allocate a node from the static Huffman node pool.
+ * @return Pooled node with children cleared, or NULL when the pool is
+ *         exhausted.
+ */
 static h2_huffman_node *h2_huffman_alloc_node(void) {
     if (h2_huffman_pool_used >= sizeof(h2_huffman_pool) / sizeof(h2_huffman_pool[0])) return NULL;
     h2_huffman_node *node = &h2_huffman_pool[h2_huffman_pool_used++];
@@ -1209,6 +1361,12 @@ static h2_huffman_node *h2_huffman_alloc_node(void) {
     return node;
 }
 
+/**
+ * @brief Build the HPACK Huffman decode tree (RFC 7541 Appendix B).
+ * Runs once via pthread_once.  Inserts all 257 codes into a pool-backed
+ * binary trie and precomputes the 8-bit root lookup table; on pool
+ * exhaustion the tree is left unset so decoding fails cleanly.
+ */
 static void h2_huffman_init(void) {
     static const struct {
         uint32_t code;
@@ -1307,6 +1465,15 @@ static void h2_huffman_init(void) {
     }
 }
 
+/**
+ * @brief Decode an HPACK Huffman-coded string (RFC 7541 Appendix B).
+ * Lazily initializes the decode tree on first call.
+ * @param src Encoded bytes.
+ * @param src_len Number of encoded bytes.
+ * @param out_len Out: decoded length in bytes.
+ * @return Newly allocated NUL-terminated decoded string (caller frees), or
+ *         NULL on initialization, allocation, or coding errors.
+ */
 char *h2_huffman_decode(const unsigned char *src, size_t src_len, size_t *out_len) {
     pthread_once(&h2_huffman_once, h2_huffman_init);
     if (!h2_huffman_root) return NULL;
@@ -1399,6 +1566,15 @@ char *h2_huffman_decode(const unsigned char *src, size_t src_len, size_t *out_le
     return out;
 }
 
+/**
+ * @brief Decode one HPACK string literal (with optional Huffman coding).
+ * Reads the length prefix (7-bit prefix integer with the Huffman flag) and
+ * advances @p pos past the encoded bytes.
+ * @param buf Buffer holding the encoded header block.
+ * @param len Total length of @p buf.
+ * @param pos In/out: offset of the string; advanced past it on success.
+ * @return Newly allocated string (caller frees), or NULL on malformed input.
+ */
 char *h2_decode_string(const unsigned char *buf, size_t len, size_t *pos) {
     if (*pos >= len) return NULL;
     bool huffman = (buf[*pos] & 0x80) != 0;
@@ -1421,6 +1597,11 @@ char *h2_decode_string(const unsigned char *buf, size_t len, size_t *pos) {
     return out;
 }
 
+/**
+ * @brief Resolve an RFC 7541 static table entry by 1-based index.
+ * @param index Static table index (1..61).
+ * @return Pointer to the static entry, or NULL for index 0 or out of range.
+ */
 const cwist_http2_static_header *h2_static_header(uint32_t index) {
     size_t count = sizeof(cwist_http2_static_table) / sizeof(cwist_http2_static_table[0]);
     if (index == 0 || index >= count) return NULL;
@@ -1489,6 +1670,13 @@ static int h2_hpack_set_capacity(h2_conn *hc, uint32_t new_size) {
     return 0;
 }
 
+/**
+ * @brief Split a request target into path and query components.
+ * Splits at the first '?'; when a query is present the query map is reset and
+ * reparsed from it.  Without a query the whole target becomes the path.
+ * @param req Request whose path/query/query_params are updated.
+ * @param path Raw :path pseudo-header value; must not be NULL.
+ */
 static void h2_parse_path(cwist_http_request *req, const char *path) {
     const char *q = strchr(path, '?');
     if (q) {
@@ -1710,6 +1898,15 @@ static int h2_decode_header_block(h2_conn *hc, cwist_http_request *req,
 
 /* --- HPACK Response Encoder --- */
 
+/**
+ * @brief Encode an integer with an N-bit prefix (RFC 7541 section 5.1).
+ * Preserves the high bits of dst[0] outside the prefix mask.
+ * @param dst Destination buffer; dst[0] must already hold any flag bits.
+ * @param dst_cap Capacity of @p dst in bytes.
+ * @param value Integer to encode.
+ * @param prefix_bits Number of prefix bits (1..8).
+ * @return Bytes written, or 0 when @p dst_cap is too small.
+ */
 size_t h2_encode_integer(unsigned char *dst, size_t dst_cap, uint32_t value, uint8_t prefix_bits) {
     uint8_t mask = (uint8_t)((1u << prefix_bits) - 1u);
     unsigned char first = dst[0] & ~mask;
@@ -1730,6 +1927,14 @@ size_t h2_encode_integer(unsigned char *dst, size_t dst_cap, uint32_t value, uin
     return i;
 }
 
+/**
+ * @brief Encode a literal string without Huffman coding (RFC 7541 section
+ * 5.2).
+ * @param dst Destination buffer.
+ * @param dst_cap Capacity of @p dst in bytes.
+ * @param str NUL-terminated string to encode.
+ * @return Bytes written, or 0 when @p dst_cap is too small.
+ */
 size_t h2_encode_string(unsigned char *dst, size_t dst_cap, const char *str) {
     size_t len = strlen(str);
     dst[0] = 0x00;
@@ -1739,6 +1944,11 @@ size_t h2_encode_string(unsigned char *dst, size_t dst_cap, const char *str) {
     return n + len;
 }
 
+/**
+ * @brief Find a static table entry by header name (case-insensitive).
+ * @param name Header name to look up.
+ * @return Static table index of the first name match, or 0 when absent.
+ */
 static int h2_static_table_find_name(const char *name) {
     size_t count = sizeof(cwist_http2_static_table) / sizeof(cwist_http2_static_table[0]);
     for (size_t i = 1; i < count; ++i) {
@@ -1749,12 +1959,29 @@ static int h2_static_table_find_name(const char *name) {
     return 0;
 }
 
-/* RFC 9113 section 8.1.1: responses with 1xx/204/304 status carry no content, and
- * content-length is forbidden on 1xx/204 (and meaningless on 304 here). */
+/**
+ * @brief Whether a status code forbids a response body (RFC 9113 section
+ * 8.1.1).
+ * 1xx/204/304 responses carry no content; content-length is forbidden on
+ * 1xx/204 (and meaningless on 304 here).
+ * @param status_code HTTP status code.
+ * @retval true No body is permitted.
+ * @retval false A body may be sent.
+ */
 static bool h2_status_forbids_body(int status_code) {
     return (status_code >= 100 && status_code < 200) || status_code == 204 || status_code == 304;
 }
 
+/**
+ * @brief HPACK-encode the response header block into a caller buffer.
+ * Emits :status (indexed form for common codes), content-length (skipped in
+ * gRPC mode or for bodyless statuses), and the remaining headers.
+ * @param res Response whose headers are encoded.
+ * @param dst Destination buffer.
+ * @param dst_cap Capacity of @p dst in bytes.
+ * @param grpc_mode Skip content-length (gRPC framing supplies it).
+ * @return Bytes written, or 0 when @p dst_cap is too small.
+ */
 static size_t h2_encode_response_headers(cwist_http_response *res, unsigned char *dst,
                                          size_t dst_cap, bool grpc_mode) {
     size_t pos = 0;
@@ -2077,6 +2304,15 @@ static int h2_send_response_raw(cwist_https_connection *conn, uint32_t stream_id
                                    NULL);
 }
 
+/**
+ * @brief Read exactly @p len bytes from the connection.
+ * Thin wrapper over h2_read_full for code paths that treat any short read as
+ * fatal.
+ * @param hc Connection to read from.
+ * @param buf Destination buffer.
+ * @param len Number of bytes to read.
+ * @return @p len on success, -1 on EOF, timeout, or socket error.
+ */
 static int h2_read_all(h2_conn *hc, void *buf, int len) {
     /* h2_read_full tolerates WANT_READ on the non-blocking TLS sockets;
      * 0/EOF and real errors stay fatal. */
@@ -2335,10 +2571,19 @@ fail:
  * out_mu (so a whole frame never interleaves with dispatcher writes) and
  * flushed immediately for low-latency streaming. */
 
+/**
+ * @brief Take the outbound batch buffer mutex.
+ * Serializes frame writes between the dispatcher loop and hook-taken handler
+ * threads.  No-op when the mutex was never initialized.
+ */
 static void h2_out_lock(h2_conn *hc) {
     if (hc->out_mu_init) pthread_mutex_lock(&hc->out_mu);
 }
 
+/**
+ * @brief Release the outbound batch buffer mutex.  No-op when the mutex was
+ * never initialized.
+ */
 static void h2_out_unlock(h2_conn *hc) {
     if (hc->out_mu_init) pthread_mutex_unlock(&hc->out_mu);
 }
@@ -2419,6 +2664,19 @@ int cwist_http2_stream_send_headers(cwist_h2_stream *stream, int status,
     return rc;
 }
 
+/**
+ * @brief Send DATA on a hook-taken stream, honoring flow-control credit.
+ * Splits @p data into peer_max_frame_size chunks.  When the send window is
+ * exhausted the batch buffer is flushed and the calling handler thread parks
+ * on the connection's fc_cond until the dispatcher applies WINDOW_UPDATE
+ * credit or the stream goes away; credit is re-checked under out_mu before
+ * each frame is written.
+ * @param stream Stream to send on; must belong to a live connection.
+ * @param data Payload bytes.
+ * @param len Payload length.
+ * @return 0 when the whole payload was queued/written, -1 on send failure or
+ *         stream/connection teardown.
+ */
 int cwist_http2_stream_send_data(cwist_h2_stream *stream, const unsigned char *data, size_t len) {
     if (!stream || !stream->hc) return -1;
     h2_conn *hc = stream->hc;
@@ -2515,12 +2773,24 @@ static void h2_hook_offer(h2_conn *hc, h2_stream *s) {
     }
 }
 
+/**
+ * @brief Whether a response is a gRPC response.
+ * @param res Response to inspect.
+ * @retval true Its content-type starts with "application/grpc".
+ * @retval false Otherwise, or when no content-type is present.
+ */
 static bool h2_response_is_grpc(cwist_http_response *res) {
     const char *ct = cwist_http_header_get(res->headers, "content-type");
     if (!ct) ct = cwist_http_header_get(res->headers, "Content-Type");
     return ct && strncmp(ct, "application/grpc", 16) == 0;
 }
 
+/**
+ * @brief Case-insensitive lookup of a response header value.
+ * @param res Response whose header list is searched.
+ * @param name Header name to find.
+ * @return Pointer to the header value, or NULL when absent.
+ */
 static const char *h2_grpc_header_value(cwist_http_response *res, const char *name) {
     for (cwist_http_header_node *h = res->headers; h; h = h->next) {
         if (h->key && h->key->data && h->value && h->value->data &&
@@ -2834,9 +3104,19 @@ static h2_stream *h2_request_stream_create(h2_conn *hc, uint32_t stream_id, bool
     return s;
 }
 
-/* Decode a completed header block into the stream's request, translating
- * decode failures into RST_STREAM.  Returns 0 on success, 1 when a
- * stream-level error was answered with RST_STREAM, -1 on connection error. */
+/**
+ * @brief Decode a completed header block into the stream's request,
+ * translating decode failures into RST_STREAM.
+ * @param hc Connection the stream belongs to.
+ * @param s Stream whose request receives the decoded headers.
+ * @param block HPACK header block bytes.
+ * @param block_len Length of @p block.
+ * @param is_request Whether this is a new request (pseudo-header validation).
+ * @retval 0 Success.
+ * @retval 1 Stream-level error answered with RST_STREAM (stream removed).
+ * @retval -1 Connection error (compression failure or outbound RST budget
+ *         exhausted, GOAWAY already sent).
+ */
 static int h2_decode_stream_headers(h2_conn *hc, h2_stream *s, const unsigned char *block,
                                     size_t block_len, bool is_request) {
     int rc = h2_decode_header_block(hc, s->req, block, block_len, is_request);
@@ -2850,6 +3130,24 @@ static int h2_decode_stream_headers(h2_conn *hc, h2_stream *s, const unsigned ch
     return 0;
 }
 
+/**
+ * @brief Handle a HEADERS frame opening (or continuing) a header block.
+ * With END_HEADERS the block is decoded immediately; otherwise buffering for
+ * CONTINUATION frames begins, subject to the max block size and concurrent
+ * stream limits (refused streams still consume their CONTINUATION sequence
+ * so framing stays in sync).
+ * @param hc Connection receiving the frame.
+ * @param stream_id Stream the header block targets.
+ * @param payload Frame payload (fragment of the header block).
+ * @param len Length of @p payload.
+ * @param end_headers Whether this fragment completes the block.
+ * @param end_stream Whether END_STREAM is set (deferred to block completion).
+ * @retval 0 Block buffered or decoded successfully.
+ * @retval 1 Stream refused (RST_STREAM sent) but framing continues.
+ * @retval -1 Protocol/alloc error; caller must send GOAWAY.
+ * @retval -2 Unrecoverable limit hit or outbound RST budget exhausted;
+ *         GOAWAY already sent.
+ */
 static int h2_begin_headers(h2_conn *hc, uint32_t stream_id, const unsigned char *payload,
                             size_t len, bool end_headers, bool end_stream) {
     if (hc->expecting_continuation) {
@@ -2922,6 +3220,23 @@ static int h2_begin_headers(h2_conn *hc, uint32_t stream_id, const unsigned char
     return 0;
 }
 
+/**
+ * @brief Append one CONTINUATION fragment to the pending header block.
+ * Enforces the continuation-count (CVE-2024-27983) and total block-size
+ * limits; buffers grow by doubling.  Fragments of a refused stream are
+ * consumed but discarded.  On END_HEADERS the completed block is decoded
+ * into a request stream.
+ * @param hc Connection receiving the frame.
+ * @param stream_id Stream the continuation belongs to.
+ * @param payload Fragment bytes.
+ * @param len Length of @p payload.
+ * @param end_headers Whether this fragment completes the block.
+ * @retval 0 Fragment buffered (or discarded) successfully.
+ * @retval 1 Stream refused; framing continues.
+ * @retval -1 Protocol error or allocation failure; caller sends GOAWAY.
+ * @retval -2 Continuation/block limit exceeded; caller tears down the
+ *         connection.
+ */
 static int h2_handle_continuation(h2_conn *hc, uint32_t stream_id, const unsigned char *payload,
                                   size_t len, bool end_headers) {
     if (!hc->expecting_continuation || hc->cont_stream_id != stream_id) {
@@ -2994,6 +3309,18 @@ static int h2_handle_continuation(h2_conn *hc, uint32_t stream_id, const unsigne
 
 /* --- SETTINGS Parser --- */
 
+/**
+ * @brief Apply a SETTINGS frame to connection and stream state.
+ * Validates the frame (6-byte entries, legal values per RFC 7540 section
+ * 6.5.2); an INITIAL_WINDOW_SIZE delta is propagated to every open stream's
+ * send window and parked senders are woken.
+ * @param hc Connection receiving the frame.
+ * @param payload Frame payload (ignored for ACKs).
+ * @param len Length of @p payload.
+ * @param ack Whether this is a SETTINGS ack (no-op).
+ * @retval 0 Settings applied (or ack ignored).
+ * @retval -1 Malformed frame or out-of-range value; caller sends GOAWAY.
+ */
 static int h2_handle_settings(h2_conn *hc, const unsigned char *payload, size_t len, bool ack) {
     if (ack) {
         return 0;
@@ -3051,6 +3378,20 @@ static int h2_handle_settings(h2_conn *hc, const unsigned char *payload, size_t 
 
 /* --- WINDOW_UPDATE Parser --- */
 
+/**
+ * @brief Apply a WINDOW_UPDATE credit increment.
+ * Increments the connection (stream_id 0) or stream send window; increments
+ * that would exceed CWIST_HTTP2_MAX_WINDOW are protocol errors.  Parked
+ * senders are woken.  WINDOW_UPDATE for an unknown stream is ignored for
+ * leniency (RFC 7540).
+ * @param hc Connection receiving the frame.
+ * @param stream_id Stream to credit (0 = connection-level).
+ * @param payload 4-byte increment with the reserved high bit masked.
+ * @param len Must be exactly 4.
+ * @retval 0 Credit applied or ignored.
+ * @retval -1 Malformed frame, non-positive increment, or window overflow;
+ *         caller sends GOAWAY.
+ */
 static int h2_handle_window_update(h2_conn *hc, uint32_t stream_id, const unsigned char *payload,
                                    size_t len) {
     if (len != 4) return -1;
@@ -3079,6 +3420,14 @@ static int h2_handle_window_update(h2_conn *hc, uint32_t stream_id, const unsign
 
 /* --- Preface Verification --- */
 
+/**
+ * @brief Read and validate the client connection preface.
+ * Waits out WANT_READ on non-blocking TLS sockets: the preface can arrive in
+ * a later TLS record than the handshake.
+ * @param hc Connection to verify.
+ * @retval 0 Preface received and matched.
+ * @retval -1 Short read or preface mismatch.
+ */
 static int cwist_http2_verify_preface(h2_conn *hc) {
     char buffer[CWIST_HTTP2_CONNECTION_PREFACE_LEN];
     /* The preface can arrive in a later TLS record than the handshake, so a
@@ -3097,6 +3446,13 @@ static int cwist_http2_verify_preface(h2_conn *hc) {
 
 /* --- Alt-Svc Injection Helper --- */
 
+/**
+ * @brief Add an Alt-Svc advertisement for HTTP/3 to a response.
+ * When the connection has HTTP/3 enabled and the response has no Alt-Svc
+ * header yet, adds "h3=":<port>"; ma=86400" using the socket's local port.
+ * @param conn Connection serving the response.
+ * @param res Response to augment.
+ */
 static void h2_inject_alt_svc(cwist_https_connection *conn, cwist_http_response *res) {
     if (conn->http3_enabled && !cwist_http_header_get(res->headers, "Alt-Svc")) {
         struct sockaddr_storage ss;
@@ -3166,6 +3522,15 @@ static int h2_async_drain(h2_conn *hc) {
 
 /* --- Connection Dispatcher --- */
 
+/**
+ * @brief Serve one HTTP/2 connection until it closes (no stream hooks).
+ * Convenience wrapper over cwist_http2_serve_connection_ex with NULL hooks.
+ * @param conn HTTPS connection with a completed TLS (or h2c) handshake.
+ * @param user_ctx Opaque context passed to @p handler.
+ * @param handler Request handler invoked per stream.
+ * @return CWIST_ERR_INT16 with err_i16 0 on orderly close, -1 on setup or
+ *         preface failure.
+ */
 cwist_error_t cwist_http2_serve_connection(cwist_https_connection *conn, void *user_ctx,
                                            cwist_http2_request_handler_func handler) {
     return cwist_http2_serve_connection_ex(conn, user_ctx, handler, NULL);
@@ -3179,14 +3544,24 @@ typedef struct h2_session {
     uint64_t goaway_close_at;
 } h2_session;
 
+/**
+ * @brief proto_state_free callback: destroy a parked session struct.
+ * @param p h2_session to tear down (connection state plus the struct).
+ */
 static void h2_session_free(void *p) {
     h2_session *st = (h2_session *)p;
     h2_conn_destroy(&st->hc);
     cwist_free(st);
 }
 
-/* Only a session with no stream in flight, no half-assembled header block
- * and no hook deadline (gRPC) may leave its thread. */
+/**
+ * @brief Whether the session may be parked off its thread.
+ * Only a session with no stream in flight, no half-assembled header block,
+ * and no hook deadline (gRPC) may leave its thread.
+ * @param hc Connection state to check.
+ * @retval true Safe to park.
+ * @retval false Live work requires the connection thread.
+ */
 static bool h2_can_park(h2_conn *hc) {
     if (hc->streams || hc->deferred_head || hc->cont_len > 0) return false;
     if (hc->hooks && hc->hooks->next_deadline_ms && hc->hooks->next_deadline_ms(hc->hook_ctx))
@@ -3194,6 +3569,21 @@ static bool h2_can_park(h2_conn *hc) {
     return true;
 }
 
+/**
+ * @brief Serve one HTTP/2 connection until it closes.
+ * Verifies the preface, sends our SETTINGS, then runs the frame dispatcher:
+ * HEADERS/CONTINUATION, DATA, SETTINGS, PING, WINDOW_UPDATE, RST_STREAM, and
+ * GOAWAY, with per-connection DoS budgets and flow control.  A session may
+ * be parked off its thread (cwist_https_park) and resumed via
+ * conn->proto_state; on exit the session is torn down and proto_state
+ * cleared.
+ * @param conn HTTPS connection with a completed TLS (or h2c) handshake.
+ * @param user_ctx Opaque context passed to @p handler and the hooks.
+ * @param handler Request handler invoked per stream.
+ * @param hooks Optional stream-lifetime hooks (may be NULL).
+ * @return CWIST_ERR_INT16 with err_i16 0 on orderly close, -1 on argument,
+ *         allocation, or preface failure.
+ */
 cwist_error_t cwist_http2_serve_connection_ex(cwist_https_connection *conn, void *user_ctx,
                                               cwist_http2_request_handler_func handler,
                                               const cwist_http2_stream_hooks *hooks) {
@@ -3813,6 +4203,21 @@ cwist_error_t cwist_http2_serve_connection_ex(cwist_https_connection *conn, void
 /* HTTP/2 Server Push                                                 */
 /* ------------------------------------------------------------------ */
 
+/**
+ * @brief Push a resource to the client (HTTP/2 server push).
+ * Sends a PUSH_PROMISE on the request's stream for a fresh server-initiated
+ * stream, then responds on that promised stream with a 200 and the supplied
+ * body.  The :authority pseudo-header is copied from the request's Host
+ * header.
+ * @param req Request of the stream that triggered the push; its
+ *        private_data must be the cwist_https_connection.
+ * @param path :path for the promised request.
+ * @param content_type Optional content-type header value.
+ * @param data Body bytes (may be NULL when @p data_len is 0).
+ * @param data_len Body length.
+ * @retval 0 Response queued/written successfully.
+ * @retval -1 Invalid arguments, missing Host header, or send failure.
+ */
 int cwist_http2_push_resource(cwist_http_request *req, const char *path, const char *content_type,
                               const unsigned char *data, size_t data_len) {
     if (!req || !req->private_data || !path) return -1;

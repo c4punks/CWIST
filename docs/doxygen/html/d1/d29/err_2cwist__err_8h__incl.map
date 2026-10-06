@@ -1,7 +1,9 @@
 <map id="include/cwist/err/cwist_err.h" name="include/cwist/err/cwist_err.h">
-<area shape="rect" id="Node000001" title="cwist_err.h interface." alt="" coords="15,5,181,45"/>
+<area shape="rect" id="Node000001" title="cwist_err.h interface." alt="" coords="59,5,225,45"/>
 <area shape="rect" id="Node000002" title=" " alt="" coords="5,93,76,119"/>
-<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="86,47,59,84,55,80,82,44"/>
-<area shape="rect" id="Node000003" title=" " alt="" coords="100,93,211,119"/>
-<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="114,44,141,80,137,84,110,47"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="119,48,68,87,65,82,116,43"/>
+<area shape="rect" id="Node000003" title=" " alt="" coords="101,93,183,119"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="145,46,145,79,139,79,139,46"/>
+<area shape="rect" id="Node000004" title=" " alt="" coords="208,93,319,119"/>
+<area shape="poly" id="edge3_Node000001_Node000004" title=" " alt="" coords="173,43,235,84,233,88,170,48"/>
 </map>

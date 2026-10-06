@@ -58,4 +58,5 @@ Self-contained demos under [`example/`](../example/):
 ## 6. References
 
 * [Mux router algorithm notes](references/mux_algorithm_references.md)
+* [Release codename sequencing](versioning.md) — sequential propagation rules.
 * [ROADMAP.md](../ROADMAP.md) — feature status and the v3.4 milestone plan.

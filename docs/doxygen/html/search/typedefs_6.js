@@ -1,5 +1,5 @@
 var searchData=
 [
-  ['quic_5fconn_5ffc_5ft_0',['quic_conn_fc_t',['../df/db2/quic__flow__control_8h.html#a67029576c55f77659b6ac7216e42ad58',1,'quic_flow_control.h']]],
-  ['quic_5fstream_5ffc_5ft_1',['quic_stream_fc_t',['../df/db2/quic__flow__control_8h.html#aa6aa8f2bde244bec283ea7f79729cd99',1,'quic_flow_control.h']]]
+  ['job_5fnode_5ft_0',['job_node_t',['../d1/de4/io__queue_8c.html#a33eb97006e5539c94cc623bb804d7564',1,'job_node_t:&#160;io_queue.c'],['../d9/d70/io__select_8c.html#a33eb97006e5539c94cc623bb804d7564',1,'job_node_t:&#160;io_select.c']]],
+  ['jq_5fdead_5fcount_5ffn_1',['jq_dead_count_fn',['../d0/dbf/durable__queue_8c.html#abd00118bfaf83a4e406d91c1ed818979',1,'durable_queue.c']]]
 ];

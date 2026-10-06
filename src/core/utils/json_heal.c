@@ -23,6 +23,13 @@ typedef struct {
     size_t cap;
 } strbuf_t;
 
+/**
+ * @brief Initialise a heap-backed dynamic string buffer.
+ * @param b Buffer to initialise; must not be NULL.
+ * @param init_cap Initial capacity in bytes (one extra byte is reserved for the NUL terminator).
+ * @retval true Buffer allocated and initialised.
+ * @retval false Allocation failure; @p b is left uninitialised.
+ */
 static bool strbuf_init(strbuf_t *b, size_t init_cap) {
     b->data = (char *)cwist_alloc(init_cap + 1);
     if (!b->data) return false;
@@ -32,6 +39,13 @@ static bool strbuf_init(strbuf_t *b, size_t init_cap) {
     return true;
 }
 
+/**
+ * @brief Append a single character to the buffer, growing it if needed.
+ * @param b Buffer to append to; must be initialised.
+ * @param c Character to append (the NUL terminator is maintained automatically).
+ * @retval true Character appended (possibly after reallocation).
+ * @retval false Reallocation failure; buffer contents remain valid but @p c was not appended.
+ */
 static bool strbuf_push(strbuf_t *b, char c) {
     if (b->len >= b->cap) {
         size_t new_cap = b->cap * 2 + 64;
@@ -45,6 +59,10 @@ static bool strbuf_push(strbuf_t *b, char c) {
     return true;
 }
 
+/**
+ * @brief Release the buffer's backing allocation and reset it to empty state.
+ * @param b Buffer to release; safe to call on an already-freed or never-initialised buffer.
+ */
 static void strbuf_free(strbuf_t *b) {
     if (b->data) {
         cwist_free(b->data);
@@ -57,6 +75,12 @@ static void strbuf_free(strbuf_t *b) {
  * Log helper
  * ======================================================================== */
 
+/**
+ * @brief Append a message to a NUL-terminated log buffer, truncating at its end.
+ * @param log Log buffer; NULL or a zero size is treated as no-op (log disabled).
+ * @param log_sz Total size of @p log in bytes.
+ * @param msg Message to append; silently dropped when the buffer is already (near) full.
+ */
 static void log_append(char *log, size_t log_sz, const char *msg) {
     if (!log || log_sz == 0) return;
     size_t cur = strlen(log);
@@ -75,7 +99,13 @@ static void log_append(char *log, size_t log_sz, const char *msg) {
  *  5. Attempt cJSON_Parse; return NULL if it still fails.
  * ======================================================================== */
 
-/* Remove trailing commas: ",]" → "]"  /  ",}" → "}" */
+/**
+ * @brief Remove trailing commas (",]" / ",}") inside a string buffer in place.
+ *
+ * String literals and escape sequences are respected: a comma immediately
+ * preceding a ']' or '}' outside a string is deleted.
+ * @param b Buffer holding the JSON text; its length is updated in place.
+ */
 static void remove_trailing_commas(strbuf_t *b) {
     char *d = b->data;
     size_t len = b->len;
@@ -114,7 +144,16 @@ static void remove_trailing_commas(strbuf_t *b) {
     }
 }
 
-/* Append missing closing brackets / braces at the end of the buffer. */
+/**
+ * @brief Append missing closing brackets / braces at the end of the buffer.
+ *
+ * Opens seen outside string literals are pushed on a scratch-allocated stack;
+ * unmatched closers are ignored (left for the parser to flag). When closers
+ * are appended, a note is recorded in the log.
+ * @param b Buffer holding the JSON text.
+ * @param log Optional recovery log (NULL-safe).
+ * @param log_sz Size of @p log in bytes.
+ */
 static void balance_brackets(strbuf_t *b, char *log, size_t log_sz) {
     cwist_scratch_t stack_s CWIST_SCRATCH_DEFER = {0};
     char *stack = (char *)cwist_scratch_alloc(&stack_s, b->len + 1);
@@ -164,7 +203,19 @@ static void balance_brackets(strbuf_t *b, char *log, size_t log_sz) {
     while (top > 0) strbuf_push(b, stack[--top]);
 }
 
-/* Returns a heap-allocated (cwist_alloc) fixed string, or NULL on failure. */
+/**
+ * @brief Attempt L1 syntax repair of malformed JSON text.
+ *
+ * Applies, in order: BOM stripping, removal of // line comments outside
+ * strings, bracket balancing, and trailing-comma removal, then verifies the
+ * result with cJSON_Parse.
+ * @param input Raw JSON text; NULL is rejected.
+ * @param log Optional recovery log (NULL-safe).
+ * @param log_sz Size of @p log in bytes.
+ * @return Heap-allocated (cwist_alloc) NUL-terminated repaired string owned by
+ *         the caller, or NULL if input is NULL, allocation fails, or the
+ *         repaired text still does not parse.
+ */
 static char *l1_heal(const char *input, char *log, size_t log_sz) {
     if (!input) return NULL;
     size_t in_len = strlen(input);
@@ -238,7 +289,15 @@ static char *l1_heal(const char *input, char *log, size_t log_sz) {
  * L2 – Schema alignment (field renaming + type coercion)
  * ======================================================================== */
 
-/* Normalise: lower-case, strip _ and - for fuzzy comparison. */
+/**
+ * @brief Normalise a field name for fuzzy comparison.
+ *
+ * Lower-cases the name and drops '_' and '-' separators, writing at most
+ * dst_sz - 1 characters plus a NUL terminator.
+ * @param src Source name; must not be NULL.
+ * @param dst Destination buffer; must not be NULL.
+ * @param dst_sz Size of @p dst in bytes.
+ */
 static void normalise_name(const char *src, char *dst, size_t dst_sz) {
     size_t j = 0;
     for (size_t i = 0; src[i] && j < dst_sz - 1; i++) {
@@ -249,6 +308,13 @@ static void normalise_name(const char *src, char *dst, size_t dst_sz) {
     dst[j] = '\0';
 }
 
+/**
+ * @brief Compare two field names fuzzily (case-insensitive, ignoring '_'/'-').
+ * @param a First name.
+ * @param b Second name.
+ * @retval true The normalised forms are identical.
+ * @retval false The normalised forms differ.
+ */
 static bool names_fuzzy_match(const char *a, const char *b) {
     char na[64], nb[64];
     normalise_name(a, na, sizeof(na));
@@ -256,7 +322,13 @@ static bool names_fuzzy_match(const char *a, const char *b) {
     return strcmp(na, nb) == 0;
 }
 
-/* Find a cJSON child whose key fuzzy-matches `name`.  NULL if not found. */
+/**
+ * @brief Find a cJSON child whose key fuzzy-matches `name`.
+ * @param obj cJSON object to search; must be an object node.
+ * @param name Name to fuzzy-match against each child's key.
+ * @param found_key Optional output: pointer to the actual child key that matched.
+ * @return The matching child item, or NULL if no child matches.
+ */
 static cJSON *find_fuzzy(cJSON *obj, const char *name, const char **found_key) {
     cJSON *child = obj->child;
     while (child) {
@@ -269,6 +341,20 @@ static cJSON *find_fuzzy(cJSON *obj, const char *name, const char **found_key) {
     return NULL;
 }
 
+/**
+ * @brief Align a parsed JSON object with a schema in place (L2 stage).
+ *
+ * For each schema field, locates the corresponding object member by canonical
+ * name, explicit alias, or fuzzy match; renames it to the canonical name when
+ * found under another key, and coerces its value to the schema's declared type
+ * (string/number/bool conversions). All edits and descriptions of each edit
+ * are applied directly to @p obj and @p log.
+ * @param obj cJSON object to align; must be an object node.
+ * @param schema Field schema to enforce.
+ * @param log Optional recovery log (NULL-safe).
+ * @param log_sz Size of @p log in bytes.
+ * @return Number of changes (renames + coercions) applied; negative on invalid arguments.
+ */
 int cwist_json_schema_align(cJSON *obj, const cwist_schema_t *schema, char *log, size_t log_sz) {
     if (!obj || !schema || !cJSON_IsObject(obj)) return -1;
 

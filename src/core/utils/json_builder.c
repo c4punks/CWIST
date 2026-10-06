@@ -43,12 +43,34 @@ void cwist_json_builder_destroy(cwist_json_builder *b) {
     }
 }
 
+/**
+ * @brief Append a comma separator when the builder is ready for the next value.
+ *
+ * Emits a comma only when the previous value or container was closed
+ * (needs_comma set). Leaves the flag unchanged; callers reset it after
+ * writing their value.
+ *
+ * @param b Builder whose buffer receives the comma. NULL or an invalid
+ *          buffer is ignored.
+ */
 static void append_comma_if_needed(cwist_json_builder *b) {
     if (b && b->buffer && b->needs_comma) {
         cwist_sstring_append(b->buffer, ",");
     }
 }
 
+/**
+ * @brief Append a string to the buffer as a JSON string literal.
+ *
+ * Surrounds the payload with double quotes and escapes the mandatory JSON
+ * control characters (quote, backslash, backspace, form feed, newline,
+ * carriage return, tab). Remaining bytes below 0x20 are emitted as
+ * \u00XX sequences; all other bytes pass through unmodified, so multi-byte
+ * (e.g. UTF-8) content is not validated or re-encoded.
+ *
+ * @param buf Target string buffer. Assumed valid.
+ * @param str Payload to escape. NULL appends nothing.
+ */
 static void append_json_escaped_str(cwist_sstring *buf, const char *str) {
     if (!str) return;
     cwist_sstring_append(buf, "\"");
@@ -96,6 +118,16 @@ static void append_json_escaped_str(cwist_sstring *buf, const char *str) {
     cwist_sstring_append(buf, "\"");
 }
 
+/**
+ * @brief Append an escaped object member key followed by a colon separator.
+ *
+ * Does nothing when key is NULL, allowing callers to treat NULL as "array
+ * element" without a separate branch.
+ *
+ * @param b Builder whose buffer receives the key. Assumed valid with a
+ *          valid buffer.
+ * @param key Member name to emit, or NULL to omit the key entirely.
+ */
 static void append_key_if_present(cwist_json_builder *b, const char *key) {
     if (key) {
         append_json_escaped_str(b->buffer, key);

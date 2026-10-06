@@ -1,21 +1,27 @@
 <map id="src/net/grpc/protobuf.c" name="src/net/grpc/protobuf.c">
-<area shape="rect" id="Node000001" title="Small Protobuf wire&#45;format reader/writer helpers." alt="" coords="312,5,479,31"/>
-<area shape="rect" id="Node000002" href="$db/d5b/protobuf_8h.html" title="Small Protobuf wire&#45;format reader/writer helpers." alt="" coords="28,79,211,104"/>
-<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="352,33,178,78,177,73,350,28"/>
+<area shape="rect" id="Node000001" title="Small Protobuf wire&#45;format reader/writer helpers." alt="" coords="249,5,416,31"/>
+<area shape="rect" id="Node000002" href="$db/d5b/protobuf_8h.html" title="Small Protobuf wire&#45;format reader/writer helpers." alt="" coords="51,79,233,104"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="303,33,187,76,185,71,301,28"/>
 <area shape="rect" id="Node000004" title=" " alt="" coords="5,152,76,177"/>
-<area shape="poly" id="edge8_Node000001_Node000004" title=" " alt="" coords="312,23,229,27,141,37,64,54,36,66,17,80,11,94,12,109,26,139,21,142,7,110,6,93,13,77,33,61,63,49,140,32,228,22,312,18"/>
-<area shape="rect" id="Node000005" href="$d2/dfe/alloc_8h.html" title="Memory allocation wrappers backed by libttak." alt="" coords="235,79,409,104"/>
-<area shape="poly" id="edge4_Node000001_Node000005" title=" " alt="" coords="385,33,346,71,342,67,381,29"/>
-<area shape="rect" id="Node000007" title=" " alt="" coords="433,79,504,104"/>
-<area shape="poly" id="edge7_Node000001_Node000007" title=" " alt="" coords="409,29,449,67,445,71,406,33"/>
-<area shape="rect" id="Node000008" title=" " alt="" coords="528,79,599,104"/>
-<area shape="poly" id="edge9_Node000001_Node000008" title=" " alt="" coords="423,28,524,71,522,76,421,33"/>
-<area shape="rect" id="Node000009" title=" " alt="" coords="623,79,693,104"/>
-<area shape="poly" id="edge10_Node000001_Node000009" title=" " alt="" coords="438,28,610,74,609,80,437,33"/>
-<area shape="rect" id="Node000003" title=" " alt="" coords="117,152,191,177"/>
-<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="127,103,145,138,140,141,123,106"/>
-<area shape="poly" id="edge3_Node000002_Node000004" title=" " alt="" coords="108,106,65,145,62,141,105,102"/>
-<area shape="poly" id="edge5_Node000005_Node000003" title=" " alt="" coords="296,106,195,149,193,144,294,102"/>
-<area shape="rect" id="Node000006" title=" " alt="" coords="251,152,393,177"/>
-<area shape="poly" id="edge6_Node000005_Node000006" title=" " alt="" coords="325,104,325,138,319,138,319,104"/>
+<area shape="poly" id="edge12_Node000001_Node000004" title=" " alt="" coords="249,27,187,34,125,45,72,60,53,70,40,80,33,93,31,108,35,138,29,139,25,108,28,92,36,77,50,65,70,55,124,40,187,29,249,22"/>
+<area shape="rect" id="Node000005" title=" " alt="" coords="179,152,249,177"/>
+<area shape="poly" id="edge14_Node000001_Node000005" title=" " alt="" coords="325,33,234,143,230,140,321,29"/>
+<area shape="rect" id="Node000006" href="$d2/dfe/alloc_8h.html" title="Memory allocation wrappers backed by libttak." alt="" coords="309,79,482,104"/>
+<area shape="poly" id="edge5_Node000001_Node000006" title=" " alt="" coords="345,29,378,66,374,70,341,33"/>
+<area shape="rect" id="Node000010" title=" " alt="" coords="507,79,577,104"/>
+<area shape="poly" id="edge11_Node000001_Node000010" title=" " alt="" coords="367,28,496,72,494,77,365,33"/>
+<area shape="rect" id="Node000011" title=" " alt="" coords="601,79,672,104"/>
+<area shape="poly" id="edge13_Node000001_Node000011" title=" " alt="" coords="384,28,589,76,587,81,382,33"/>
+<area shape="rect" id="Node000003" title=" " alt="" coords="250,225,325,251"/>
+<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="145,104,151,139,157,158,168,176,201,203,238,220,236,225,198,207,164,179,153,161,145,140,140,105"/>
+<area shape="poly" id="edge3_Node000002_Node000004" title=" " alt="" coords="127,106,70,146,67,142,124,102"/>
+<area shape="poly" id="edge4_Node000002_Node000005" title=" " alt="" coords="156,102,194,140,191,144,152,106"/>
+<area shape="poly" id="edge6_Node000006_Node000003" title=" " alt="" coords="373,106,343,126,315,154,300,183,293,213,288,211,295,181,310,150,339,122,370,102"/>
+<area shape="rect" id="Node000007" title=" " alt="" coords="325,152,466,177"/>
+<area shape="poly" id="edge7_Node000006_Node000007" title=" " alt="" coords="398,104,398,138,393,138,393,104"/>
+<area shape="rect" id="Node000008" href="$da/d0c/arena_8h.html" title="Request&#45;scoped arena allocator backed by libttak arena generations." alt="" coords="490,152,669,177"/>
+<area shape="poly" id="edge8_Node000006_Node000008" title=" " alt="" coords="426,102,537,144,535,149,424,107"/>
+<area shape="poly" id="edge10_Node000008_Node000003" title=" " alt="" coords="533,180,339,227,337,222,532,175"/>
+<area shape="rect" id="Node000009" title=" " alt="" coords="538,225,621,251"/>
+<area shape="poly" id="edge9_Node000008_Node000009" title=" " alt="" coords="582,178,582,212,577,212,577,178"/>
 </map>
