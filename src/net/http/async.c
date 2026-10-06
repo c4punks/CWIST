@@ -151,14 +151,8 @@ void cwist_async_dispatch_ack(cwist_async *a) {
 
 static bool cwist_async_claim(cwist_async *a) {
     int expected = CWIST_ASYNC_ST_PENDING;
-    if (!atomic_compare_exchange_strong_explicit(&a->state, &expected, CWIST_ASYNC_ST_CLAIMED,
-                                                 memory_order_acq_rel, memory_order_acquire))
-        return false;
-    while (!atomic_load_explicit(&a->ack, memory_order_acquire)) {
-        if (pthread_equal(pthread_self(), a->dispatch_thread)) return true;
-        sched_yield();
-    }
-    return true;
+    return atomic_compare_exchange_strong_explicit(&a->state, &expected, CWIST_ASYNC_ST_CLAIMED,
+                                                   memory_order_acq_rel, memory_order_acquire);
 }
 
 static void cwist_async_reactor_complete(void *ctx);
