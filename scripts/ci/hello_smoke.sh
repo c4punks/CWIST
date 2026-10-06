@@ -1,8 +1,9 @@
 #!/usr/bin/env bash
-# Serve example/rust-hello and check real HTTP responses from it
-# (ROADMAP.md, v3.8 Phase 2: "the Rust example serves requests").
+# Serve one of the language-binding hello examples (example/rust-hello,
+# example/zig-hello) and check real HTTP responses from it (ROADMAP.md, v3.8
+# Phase 2: "the Rust example serves requests"; issue #36).
 #
-# Usage: scripts/ci/rust_hello_smoke.sh <path to the rust-hello binary>
+# Usage: scripts/ci/hello_smoke.sh <hello binary> <expected X-Powered-By>
 #
 # Starts the server, waits until it answers, checks the routes and the Rust
 # middleware header, then stops it with SIGTERM and requires a clean exit.
@@ -10,8 +11,9 @@
 # running.
 set -euo pipefail
 
-bin=${1:?usage: rust_hello_smoke.sh <rust-hello binary>}
-port=8080 # fixed in example/rust-hello/src/main.rs
+bin=${1:?usage: hello_smoke.sh <hello binary> <expected X-Powered-By>}
+powered_by=${2:?usage: hello_smoke.sh <hello binary> <expected X-Powered-By>}
+port=8080 # fixed in the hello examples
 base="http://127.0.0.1:$port"
 
 work=$(mktemp -d)
@@ -29,7 +31,7 @@ cleanup() {
 trap cleanup EXIT
 
 fail() {
-    echo "rust-hello smoke: $*" >&2
+    echo "hello smoke: $*" >&2
     echo "--- server output ---" >&2
     cat "$log" >&2 || true
     exit 1
@@ -71,12 +73,12 @@ check() {
 }
 
 check / 200 "Hello, World!"
-grep -qi '^X-Powered-By: CWIST Rust' "$hdr" ||
-    fail "GET /: no X-Powered-By header from the Rust middleware"
+grep -qi "^X-Powered-By: $powered_by" "$hdr" ||
+    fail "GET /: no X-Powered-By: $powered_by header"
 check /users/42 200 "user 42"
 check /no/such/route 404 ""
 
-# Graceful shutdown: SIGTERM makes App::listen return and main exit 0.
+# Graceful shutdown: SIGTERM makes the app's listen return and main exit 0.
 # A server that does not stop within 20 s is a failure, not a stuck job.
 kill -TERM "$pid"
 for _ in $(seq 1 200); do
@@ -90,4 +92,4 @@ wait "$pid" || rc=$?
 
 echo "--- server output ---"
 cat "$log"
-echo "rust-hello smoke: OK"
+echo "hello smoke: OK"
