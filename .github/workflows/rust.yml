@@ -78,7 +78,7 @@ jobs:
             export LIBCLANG_PATH="$(xcode-select -p)/Toolchains/XcodeDefault.xctoolchain/usr/lib"
           fi
           cargo build --manifest-path example/rust-hello/Cargo.toml
-          bash scripts/ci/rust_hello_smoke.sh example/rust-hello/target/debug/rust-hello
+          bash scripts/ci/hello_smoke.sh example/rust-hello/target/debug/rust-hello "CWIST Rust"
 
       - name: FFI overhead micro-benchmark
         shell: bash
