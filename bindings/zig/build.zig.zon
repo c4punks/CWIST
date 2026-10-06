@@ -1,0 +1,16 @@
+.{
+    .name = .cwist,
+    .version = "0.1.0",
+    .fingerprint = 0xfa240d1a22ae273b, // Changing this has security and trust implications.
+    // Pinned on purpose (issue #36): Zig is pre-1.0 and changes its build
+    // and language APIs between releases. Move to a newer one in a
+    // dedicated PR.
+    .minimum_zig_version = "0.17.0",
+    .dependencies = .{},
+    .paths = .{
+        "build.zig",
+        "build.zig.zon",
+        "src",
+        "README.md",
+    },
+}
