@@ -4,9 +4,12 @@ Zig API for CWIST (issue #36), next to the Rust bindings in `bindings/rust/`.
 
 * The C API is translated from the installed CWIST headers at build time
   (`b.addTranslateC`, see `src/cwist.h`) and available as `cwist.c`.
-* `src/cwist.zig` adds a small Zig layer on top: `App` with `get`/`post`/
-  `put`/`delete`/`patch` routes, `Request`, `Response`, in-memory `dispatch`,
-  `listen` and `shutdown`.
+* `src/cwist.zig` adds a Zig layer on top:
+  * `App` with `get`/`post`/`put`/`delete`/`patch` routes
+  * Custom middleware (`useMiddleware`) and built-in middleware (`useBuiltinMiddleware`)
+  * `Request`, `Response`, and `OwnedResponse`
+  * Deferred async responses (`AsyncResponse.defer`, `respond`, `respondWith`, `abort`, `setTimeout`)
+  * In-memory `dispatch`, `listen` and `shutdown`
 
 ## Zig version
 
@@ -51,6 +54,10 @@ See `example/zig-hello/` for a complete server.
 * `Request` and `Response` are views of CWIST's objects for one handler call.
   Slices from `Request` point into CWIST's memory and must not be kept after
   the handler returns.
+* Custom middleware signature is `fn (Context, cwist.Request, cwist.Response, *cwist.Next) void`.
+  Calling `next.call()` advances the chain to the next middleware or final handler.
+* `AsyncResponse.defer(req, res)` hands response ownership to an asynchronous handle
+  that can be completed across threads with `respond`, `respondWith`, or `abort`.
 * CWIST runs handlers on several worker threads at once, so a context must
   be safe to use from any thread.
 * A handler returns nothing, so no error crosses into C, and a panic aborts
@@ -59,5 +66,5 @@ See `example/zig-hello/` for a complete server.
   forked workers, and returns after a graceful shutdown (`cwist.shutdown()`,
   SIGTERM or SIGINT) with every handler thread joined.
 
-Not wrapped yet: middleware, deferred (async) responses, TLS. The raw API in
+Not wrapped yet: TLS socket configuration, WebSocket wrappers. The raw API in
 `cwist.c` covers them in the meantime.
