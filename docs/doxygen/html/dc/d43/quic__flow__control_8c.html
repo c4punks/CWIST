@@ -102,32 +102,41 @@ Include dependency graph for quic_flow_control.c:</div>
 <table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="define-members" name="define-members"></a>
 Macros</h2></td></tr>
-<tr class="memitem:aeabf5de0b6992ee3d33eeb8b30276ae6" id="r_aeabf5de0b6992ee3d33eeb8b30276ae6"><td class="memItemLeft" align="right" valign="top">#<a class="el" href="../../d6/d3c/seq_8h.html#aeb29493e92e60057714a6b22befc6d67">define</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../dc/d43/quic__flow__control_8c.html#aeabf5de0b6992ee3d33eeb8b30276ae6">QUIC_MAX_VARINT</a>&#160;&#160;&#160;((1<a class="el" href="../../d6/d3c/seq_8h.html#aeb29493e92e60057714a6b22befc6d67">ULL</a> &lt;&lt; 62) - 1)</td></tr>
+<tr class="memitem:aeabf5de0b6992ee3d33eeb8b30276ae6" id="r_aeabf5de0b6992ee3d33eeb8b30276ae6"><td class="memItemLeft" align="right" valign="top">#define&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../dc/d43/quic__flow__control_8c.html#aeabf5de0b6992ee3d33eeb8b30276ae6">QUIC_MAX_VARINT</a>&#160;&#160;&#160;((1ULL &lt;&lt; 62) - 1)</td></tr>
 <tr class="separator:aeabf5de0b6992ee3d33eeb8b30276ae6"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a11d8d36c0177065d262ee3c8145d88a2" id="r_a11d8d36c0177065d262ee3c8145d88a2"><td class="memItemLeft" align="right" valign="top">#<a class="el" href="../../d6/d3c/seq_8h.html#aeb29493e92e60057714a6b22befc6d67">define</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../dc/d43/quic__flow__control_8c.html#a11d8d36c0177065d262ee3c8145d88a2">QUIC_FRAME_MAX_DATA</a>&#160;&#160;&#160;0x10</td></tr>
+<tr class="memitem:a11d8d36c0177065d262ee3c8145d88a2" id="r_a11d8d36c0177065d262ee3c8145d88a2"><td class="memItemLeft" align="right" valign="top">#define&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../dc/d43/quic__flow__control_8c.html#a11d8d36c0177065d262ee3c8145d88a2">QUIC_FRAME_MAX_DATA</a>&#160;&#160;&#160;0x10</td></tr>
 <tr class="separator:a11d8d36c0177065d262ee3c8145d88a2"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:afa16a344299600d1bbaf43335cd5b402" id="r_afa16a344299600d1bbaf43335cd5b402"><td class="memItemLeft" align="right" valign="top">#<a class="el" href="../../d6/d3c/seq_8h.html#aeb29493e92e60057714a6b22befc6d67">define</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../dc/d43/quic__flow__control_8c.html#afa16a344299600d1bbaf43335cd5b402">QUIC_FRAME_MAX_STREAM_DATA</a>&#160;&#160;&#160;0x11</td></tr>
+<tr class="memitem:afa16a344299600d1bbaf43335cd5b402" id="r_afa16a344299600d1bbaf43335cd5b402"><td class="memItemLeft" align="right" valign="top">#define&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../dc/d43/quic__flow__control_8c.html#afa16a344299600d1bbaf43335cd5b402">QUIC_FRAME_MAX_STREAM_DATA</a>&#160;&#160;&#160;0x11</td></tr>
 <tr class="separator:afa16a344299600d1bbaf43335cd5b402"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="func-members" name="func-members"></a>
 Functions</h2></td></tr>
-<tr class="memitem:a2a6242727cfea90044c86ca351ffb1df" id="r_a2a6242727cfea90044c86ca351ffb1df"><td class="memItemLeft" align="right" valign="top"><a class="el" href="../../d6/d3c/seq_8h.html#aeb29493e92e60057714a6b22befc6d67">void</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../dc/d43/quic__flow__control_8c.html#a2a6242727cfea90044c86ca351ffb1df">quic_flow_control_init</a> (<a class="el" href="../../df/db2/quic__flow__control_8h.html#a67029576c55f77659b6ac7216e42ad58">quic_conn_fc_t</a> *<a class="el" href="../../d6/d3c/seq_8h.html#aeb29493e92e60057714a6b22befc6d67">fc</a>, <a class="el" href="../../d6/d3c/seq_8h.html#aeb29493e92e60057714a6b22befc6d67">uint64_t</a> <a class="el" href="../../d6/d3c/seq_8h.html#aeb29493e92e60057714a6b22befc6d67">initial_conn_window</a>, <a class="el" href="../../d6/d3c/seq_8h.html#aeb29493e92e60057714a6b22befc6d67">uint64_t</a> <a class="el" href="../../d6/d3c/seq_8h.html#aeb29493e92e60057714a6b22befc6d67">initial_stream_window</a>, <a class="el" href="../../d6/d3c/seq_8h.html#aeb29493e92e60057714a6b22befc6d67">uint64_t</a> <a class="el" href="../../d6/d3c/seq_8h.html#aeb29493e92e60057714a6b22befc6d67">max_conn_window</a>, <a class="el" href="../../d6/d3c/seq_8h.html#aeb29493e92e60057714a6b22befc6d67">uint64_t</a> <a class="el" href="../../d6/d3c/seq_8h.html#aeb29493e92e60057714a6b22befc6d67">max_stream_window</a>)</td></tr>
+<tr class="memitem:a2a6242727cfea90044c86ca351ffb1df" id="r_a2a6242727cfea90044c86ca351ffb1df"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../dc/d43/quic__flow__control_8c.html#a2a6242727cfea90044c86ca351ffb1df">quic_flow_control_init</a> (<a class="el" href="../../df/db2/quic__flow__control_8h.html#a67029576c55f77659b6ac7216e42ad58">quic_conn_fc_t</a> *fc, uint64_t initial_conn_window, uint64_t initial_stream_window, uint64_t max_conn_window, uint64_t max_stream_window)</td></tr>
+<tr class="memdesc:a2a6242727cfea90044c86ca351ffb1df"><td class="mdescLeft">&#160;</td><td class="mdescRight">Initialize the connection-level flow control state.  <br /></td></tr>
 <tr class="separator:a2a6242727cfea90044c86ca351ffb1df"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:ac7385559a2ca7af83b17c5ebfa68d8c5" id="r_ac7385559a2ca7af83b17c5ebfa68d8c5"><td class="memItemLeft" align="right" valign="top"><a class="el" href="../../d6/d3c/seq_8h.html#aeb29493e92e60057714a6b22befc6d67">void</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../dc/d43/quic__flow__control_8c.html#ac7385559a2ca7af83b17c5ebfa68d8c5">quic_stream_fc_init</a> (<a class="el" href="../../df/db2/quic__flow__control_8h.html#aa6aa8f2bde244bec283ea7f79729cd99">quic_stream_fc_t</a> *<a class="el" href="../../d6/d3c/seq_8h.html#aeb29493e92e60057714a6b22befc6d67">sfc</a>, <a class="el" href="../../d6/d3c/seq_8h.html#aeb29493e92e60057714a6b22befc6d67">uint64_t</a> stream_id, <a class="el" href="../../d6/d3c/seq_8h.html#aeb29493e92e60057714a6b22befc6d67">uint64_t</a> <a class="el" href="../../d6/d3c/seq_8h.html#aeb29493e92e60057714a6b22befc6d67">initial_stream_window</a>)</td></tr>
+<tr class="memitem:ac7385559a2ca7af83b17c5ebfa68d8c5" id="r_ac7385559a2ca7af83b17c5ebfa68d8c5"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../dc/d43/quic__flow__control_8c.html#ac7385559a2ca7af83b17c5ebfa68d8c5">quic_stream_fc_init</a> (<a class="el" href="../../df/db2/quic__flow__control_8h.html#aa6aa8f2bde244bec283ea7f79729cd99">quic_stream_fc_t</a> *sfc, uint64_t stream_id, uint64_t initial_stream_window)</td></tr>
+<tr class="memdesc:ac7385559a2ca7af83b17c5ebfa68d8c5"><td class="mdescLeft">&#160;</td><td class="mdescRight">Initialize the flow control state for a single stream.  <br /></td></tr>
 <tr class="separator:ac7385559a2ca7af83b17c5ebfa68d8c5"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a1f56f05e639877ae86f8cab78a3d1ae3" id="r_a1f56f05e639877ae86f8cab78a3d1ae3"><td class="memItemLeft" align="right" valign="top"><a class="el" href="../../d6/d3c/seq_8h.html#aeb29493e92e60057714a6b22befc6d67">void</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../dc/d43/quic__flow__control_8c.html#a1f56f05e639877ae86f8cab78a3d1ae3">quic_flow_control_update_rtt</a> (<a class="el" href="../../df/db2/quic__flow__control_8h.html#a67029576c55f77659b6ac7216e42ad58">quic_conn_fc_t</a> *<a class="el" href="../../d6/d3c/seq_8h.html#aeb29493e92e60057714a6b22befc6d67">fc</a>, <a class="el" href="../../d6/d3c/seq_8h.html#aeb29493e92e60057714a6b22befc6d67">uint64_t</a> <a class="el" href="../../d6/d3c/seq_8h.html#aeb29493e92e60057714a6b22befc6d67">rtt_sample_us</a>)</td></tr>
+<tr class="memitem:a1f56f05e639877ae86f8cab78a3d1ae3" id="r_a1f56f05e639877ae86f8cab78a3d1ae3"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../dc/d43/quic__flow__control_8c.html#a1f56f05e639877ae86f8cab78a3d1ae3">quic_flow_control_update_rtt</a> (<a class="el" href="../../df/db2/quic__flow__control_8h.html#a67029576c55f77659b6ac7216e42ad58">quic_conn_fc_t</a> *fc, uint64_t rtt_sample_us)</td></tr>
+<tr class="memdesc:a1f56f05e639877ae86f8cab78a3d1ae3"><td class="mdescLeft">&#160;</td><td class="mdescRight">Feed an RTT sample into the smoothed RTT estimator and re-evaluate quality.  <br /></td></tr>
 <tr class="separator:a1f56f05e639877ae86f8cab78a3d1ae3"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a707bcab2dfe23b4f84a28d18ac41cad1" id="r_a707bcab2dfe23b4f84a28d18ac41cad1"><td class="memItemLeft" align="right" valign="top"><a class="el" href="../../df/db2/quic__flow__control_8h.html#a679861111c848ea4d3f6973bf8fd128e">quic_net_quality_t</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../dc/d43/quic__flow__control_8c.html#a707bcab2dfe23b4f84a28d18ac41cad1">quic_flow_control_evaluate_quality</a> (<a class="el" href="../../df/db2/quic__flow__control_8h.html#a67029576c55f77659b6ac7216e42ad58">quic_conn_fc_t</a> *<a class="el" href="../../d6/d3c/seq_8h.html#aeb29493e92e60057714a6b22befc6d67">fc</a>)</td></tr>
+<tr class="memitem:a707bcab2dfe23b4f84a28d18ac41cad1" id="r_a707bcab2dfe23b4f84a28d18ac41cad1"><td class="memItemLeft" align="right" valign="top"><a class="el" href="../../df/db2/quic__flow__control_8h.html#a679861111c848ea4d3f6973bf8fd128e">quic_net_quality_t</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../dc/d43/quic__flow__control_8c.html#a707bcab2dfe23b4f84a28d18ac41cad1">quic_flow_control_evaluate_quality</a> (<a class="el" href="../../df/db2/quic__flow__control_8h.html#a67029576c55f77659b6ac7216e42ad58">quic_conn_fc_t</a> *fc)</td></tr>
+<tr class="memdesc:a707bcab2dfe23b4f84a28d18ac41cad1"><td class="mdescLeft">&#160;</td><td class="mdescRight">Recompute the network quality class from the smoothed RTT.  <br /></td></tr>
 <tr class="separator:a707bcab2dfe23b4f84a28d18ac41cad1"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:adff0e48e75556aa317f00be3e7d1a6b0" id="r_adff0e48e75556aa317f00be3e7d1a6b0"><td class="memItemLeft" align="right" valign="top"><a class="el" href="../../d6/d3c/seq_8h.html#aeb29493e92e60057714a6b22befc6d67">void</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../dc/d43/quic__flow__control_8c.html#adff0e48e75556aa317f00be3e7d1a6b0">quic_flow_control_adjust_windows</a> (<a class="el" href="../../df/db2/quic__flow__control_8h.html#a67029576c55f77659b6ac7216e42ad58">quic_conn_fc_t</a> *<a class="el" href="../../d6/d3c/seq_8h.html#aeb29493e92e60057714a6b22befc6d67">fc</a>, <a class="el" href="../../df/db2/quic__flow__control_8h.html#aa6aa8f2bde244bec283ea7f79729cd99">quic_stream_fc_t</a> *<a class="el" href="../../d6/d3c/seq_8h.html#aeb29493e92e60057714a6b22befc6d67">sfc</a>)</td></tr>
+<tr class="memitem:adff0e48e75556aa317f00be3e7d1a6b0" id="r_adff0e48e75556aa317f00be3e7d1a6b0"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../dc/d43/quic__flow__control_8c.html#adff0e48e75556aa317f00be3e7d1a6b0">quic_flow_control_adjust_windows</a> (<a class="el" href="../../df/db2/quic__flow__control_8h.html#a67029576c55f77659b6ac7216e42ad58">quic_conn_fc_t</a> *fc, <a class="el" href="../../df/db2/quic__flow__control_8h.html#aa6aa8f2bde244bec283ea7f79729cd99">quic_stream_fc_t</a> *sfc)</td></tr>
+<tr class="memdesc:adff0e48e75556aa317f00be3e7d1a6b0"><td class="mdescLeft">&#160;</td><td class="mdescRight">Grow flow control windows when the network quality is degraded.  <br /></td></tr>
 <tr class="separator:adff0e48e75556aa317f00be3e7d1a6b0"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a03b93d521cb1a3cd90b4d4be09900b56" id="r_a03b93d521cb1a3cd90b4d4be09900b56"><td class="memItemLeft" align="right" valign="top"><a class="el" href="../../d6/d3c/seq_8h.html#aeb29493e92e60057714a6b22befc6d67">void</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../dc/d43/quic__flow__control_8c.html#a03b93d521cb1a3cd90b4d4be09900b56">quic_flow_control_consume_conn</a> (<a class="el" href="../../df/db2/quic__flow__control_8h.html#a67029576c55f77659b6ac7216e42ad58">quic_conn_fc_t</a> *<a class="el" href="../../d6/d3c/seq_8h.html#aeb29493e92e60057714a6b22befc6d67">fc</a>, <a class="el" href="../../d6/d3c/seq_8h.html#aeb29493e92e60057714a6b22befc6d67">uint64_t</a> bytes)</td></tr>
+<tr class="memitem:a03b93d521cb1a3cd90b4d4be09900b56" id="r_a03b93d521cb1a3cd90b4d4be09900b56"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../dc/d43/quic__flow__control_8c.html#a03b93d521cb1a3cd90b4d4be09900b56">quic_flow_control_consume_conn</a> (<a class="el" href="../../df/db2/quic__flow__control_8h.html#a67029576c55f77659b6ac7216e42ad58">quic_conn_fc_t</a> *fc, uint64_t bytes)</td></tr>
+<tr class="memdesc:a03b93d521cb1a3cd90b4d4be09900b56"><td class="mdescLeft">&#160;</td><td class="mdescRight">Account for connection-level flow control bytes consumed by the peer.  <br /></td></tr>
 <tr class="separator:a03b93d521cb1a3cd90b4d4be09900b56"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a8802205a8eb0c90eabe9bb79178759a2" id="r_a8802205a8eb0c90eabe9bb79178759a2"><td class="memItemLeft" align="right" valign="top"><a class="el" href="../../d6/d3c/seq_8h.html#aeb29493e92e60057714a6b22befc6d67">void</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../dc/d43/quic__flow__control_8c.html#a8802205a8eb0c90eabe9bb79178759a2">quic_flow_control_consume_stream</a> (<a class="el" href="../../df/db2/quic__flow__control_8h.html#a67029576c55f77659b6ac7216e42ad58">quic_conn_fc_t</a> *<a class="el" href="../../d6/d3c/seq_8h.html#aeb29493e92e60057714a6b22befc6d67">fc</a>, <a class="el" href="../../df/db2/quic__flow__control_8h.html#aa6aa8f2bde244bec283ea7f79729cd99">quic_stream_fc_t</a> *<a class="el" href="../../d6/d3c/seq_8h.html#aeb29493e92e60057714a6b22befc6d67">sfc</a>, <a class="el" href="../../d6/d3c/seq_8h.html#aeb29493e92e60057714a6b22befc6d67">uint64_t</a> bytes)</td></tr>
+<tr class="memitem:a8802205a8eb0c90eabe9bb79178759a2" id="r_a8802205a8eb0c90eabe9bb79178759a2"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../dc/d43/quic__flow__control_8c.html#a8802205a8eb0c90eabe9bb79178759a2">quic_flow_control_consume_stream</a> (<a class="el" href="../../df/db2/quic__flow__control_8h.html#a67029576c55f77659b6ac7216e42ad58">quic_conn_fc_t</a> *fc, <a class="el" href="../../df/db2/quic__flow__control_8h.html#aa6aa8f2bde244bec283ea7f79729cd99">quic_stream_fc_t</a> *sfc, uint64_t bytes)</td></tr>
+<tr class="memdesc:a8802205a8eb0c90eabe9bb79178759a2"><td class="mdescLeft">&#160;</td><td class="mdescRight">Account for stream-level flow control bytes consumed by the peer.  <br /></td></tr>
 <tr class="separator:a8802205a8eb0c90eabe9bb79178759a2"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a7f648460f4b5166e73d1b0f9b71830f3" id="r_a7f648460f4b5166e73d1b0f9b71830f3"><td class="memItemLeft" align="right" valign="top"><a class="el" href="../../d6/d3c/seq_8h.html#aeb29493e92e60057714a6b22befc6d67">int</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../dc/d43/quic__flow__control_8c.html#a7f648460f4b5166e73d1b0f9b71830f3">quic_flow_control_maybe_send_max_data</a> (<a class="el" href="../../df/db2/quic__flow__control_8h.html#a67029576c55f77659b6ac7216e42ad58">quic_conn_fc_t</a> *<a class="el" href="../../d6/d3c/seq_8h.html#aeb29493e92e60057714a6b22befc6d67">fc</a>, <a class="el" href="../../d6/d3c/seq_8h.html#aeb29493e92e60057714a6b22befc6d67">uint8_t</a> *<a class="el" href="../../d6/d3c/seq_8h.html#aeb29493e92e60057714a6b22befc6d67">buf</a>, <a class="el" href="../../d6/d3c/seq_8h.html#aeb29493e92e60057714a6b22befc6d67">size_t</a> buf_len, <a class="el" href="../../d6/d3c/seq_8h.html#aeb29493e92e60057714a6b22befc6d67">size_t</a> *<a class="el" href="../../d6/d3c/seq_8h.html#aeb29493e92e60057714a6b22befc6d67">written</a>, <a class="el" href="../../d6/d3c/seq_8h.html#aeb29493e92e60057714a6b22befc6d67">bool</a> <a class="el" href="../../d6/d3c/seq_8h.html#aeb29493e92e60057714a6b22befc6d67">force</a>)</td></tr>
+<tr class="memitem:a7f648460f4b5166e73d1b0f9b71830f3" id="r_a7f648460f4b5166e73d1b0f9b71830f3"><td class="memItemLeft" align="right" valign="top">int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../dc/d43/quic__flow__control_8c.html#a7f648460f4b5166e73d1b0f9b71830f3">quic_flow_control_maybe_send_max_data</a> (<a class="el" href="../../df/db2/quic__flow__control_8h.html#a67029576c55f77659b6ac7216e42ad58">quic_conn_fc_t</a> *fc, uint8_t *buf, size_t buf_len, size_t *written, bool force)</td></tr>
+<tr class="memdesc:a7f648460f4b5166e73d1b0f9b71830f3"><td class="mdescLeft">&#160;</td><td class="mdescRight">Write a MAX_DATA frame if the connection limit should be raised.  <br /></td></tr>
 <tr class="separator:a7f648460f4b5166e73d1b0f9b71830f3"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a2ad5415af9160f7095a94f4fc8ac72fc" id="r_a2ad5415af9160f7095a94f4fc8ac72fc"><td class="memItemLeft" align="right" valign="top"><a class="el" href="../../d6/d3c/seq_8h.html#aeb29493e92e60057714a6b22befc6d67">int</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../dc/d43/quic__flow__control_8c.html#a2ad5415af9160f7095a94f4fc8ac72fc">quic_flow_control_maybe_send_max_stream_data</a> (<a class="el" href="../../df/db2/quic__flow__control_8h.html#a67029576c55f77659b6ac7216e42ad58">quic_conn_fc_t</a> *<a class="el" href="../../d6/d3c/seq_8h.html#aeb29493e92e60057714a6b22befc6d67">fc</a>, <a class="el" href="../../df/db2/quic__flow__control_8h.html#aa6aa8f2bde244bec283ea7f79729cd99">quic_stream_fc_t</a> *<a class="el" href="../../d6/d3c/seq_8h.html#aeb29493e92e60057714a6b22befc6d67">sfc</a>, <a class="el" href="../../d6/d3c/seq_8h.html#aeb29493e92e60057714a6b22befc6d67">uint8_t</a> *<a class="el" href="../../d6/d3c/seq_8h.html#aeb29493e92e60057714a6b22befc6d67">buf</a>, <a class="el" href="../../d6/d3c/seq_8h.html#aeb29493e92e60057714a6b22befc6d67">size_t</a> buf_len, <a class="el" href="../../d6/d3c/seq_8h.html#aeb29493e92e60057714a6b22befc6d67">size_t</a> *<a class="el" href="../../d6/d3c/seq_8h.html#aeb29493e92e60057714a6b22befc6d67">written</a>, <a class="el" href="../../d6/d3c/seq_8h.html#aeb29493e92e60057714a6b22befc6d67">bool</a> <a class="el" href="../../d6/d3c/seq_8h.html#aeb29493e92e60057714a6b22befc6d67">force</a>)</td></tr>
+<tr class="memitem:a2ad5415af9160f7095a94f4fc8ac72fc" id="r_a2ad5415af9160f7095a94f4fc8ac72fc"><td class="memItemLeft" align="right" valign="top">int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../dc/d43/quic__flow__control_8c.html#a2ad5415af9160f7095a94f4fc8ac72fc">quic_flow_control_maybe_send_max_stream_data</a> (<a class="el" href="../../df/db2/quic__flow__control_8h.html#a67029576c55f77659b6ac7216e42ad58">quic_conn_fc_t</a> *fc, <a class="el" href="../../df/db2/quic__flow__control_8h.html#aa6aa8f2bde244bec283ea7f79729cd99">quic_stream_fc_t</a> *sfc, uint8_t *buf, size_t buf_len, size_t *written, bool force)</td></tr>
+<tr class="memdesc:a2ad5415af9160f7095a94f4fc8ac72fc"><td class="mdescLeft">&#160;</td><td class="mdescRight">Write a MAX_STREAM_DATA frame if the stream limit should be raised.  <br /></td></tr>
 <tr class="separator:a2ad5415af9160f7095a94f4fc8ac72fc"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <h2 class="groupheader">Macro Definition Documentation</h2>
@@ -138,7 +147,7 @@ Functions</h2></td></tr>
 <div class="memproto">
       <table class="memname">
         <tr>
-          <td class="memname">#<a class="el" href="../../d6/d3c/seq_8h.html#aeb29493e92e60057714a6b22befc6d67">define</a> QUIC_FRAME_MAX_DATA&#160;&#160;&#160;0x10</td>
+          <td class="memname">#define QUIC_FRAME_MAX_DATA&#160;&#160;&#160;0x10</td>
         </tr>
       </table>
 </div><div class="memdoc">
@@ -154,7 +163,7 @@ Functions</h2></td></tr>
 <div class="memproto">
       <table class="memname">
         <tr>
-          <td class="memname">#<a class="el" href="../../d6/d3c/seq_8h.html#aeb29493e92e60057714a6b22befc6d67">define</a> QUIC_FRAME_MAX_STREAM_DATA&#160;&#160;&#160;0x11</td>
+          <td class="memname">#define QUIC_FRAME_MAX_STREAM_DATA&#160;&#160;&#160;0x11</td>
         </tr>
       </table>
 </div><div class="memdoc">
@@ -170,7 +179,7 @@ Functions</h2></td></tr>
 <div class="memproto">
       <table class="memname">
         <tr>
-          <td class="memname">#<a class="el" href="../../d6/d3c/seq_8h.html#aeb29493e92e60057714a6b22befc6d67">define</a> QUIC_MAX_VARINT&#160;&#160;&#160;((1<a class="el" href="../../d6/d3c/seq_8h.html#aeb29493e92e60057714a6b22befc6d67">ULL</a> &lt;&lt; 62) - 1)</td>
+          <td class="memname">#define QUIC_MAX_VARINT&#160;&#160;&#160;((1ULL &lt;&lt; 62) - 1)</td>
         </tr>
       </table>
 </div><div class="memdoc">
@@ -187,7 +196,7 @@ Functions</h2></td></tr>
 <div class="memproto">
       <table class="memname">
         <tr>
-          <td class="memname"><a class="el" href="../../d6/d3c/seq_8h.html#aeb29493e92e60057714a6b22befc6d67">void</a> quic_flow_control_adjust_windows </td>
+          <td class="memname">void quic_flow_control_adjust_windows </td>
           <td>(</td>
           <td class="paramtype"><a class="el" href="../../df/db2/quic__flow__control_8h.html#a67029576c55f77659b6ac7216e42ad58">quic_conn_fc_t</a> *&#160;</td>
           <td class="paramname"><em>fc</em>, </td>
@@ -206,9 +215,19 @@ Functions</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../dc/d43/quic__flow__control_8c_source.html#l00137">137</a> of file <a class="el" href="../../dc/d43/quic__flow__control_8c_source.html">quic_flow_control.c</a>.</p>
+<p>Grow flow control windows when the network quality is degraded. </p>
+<p>Only acts when the connection quality is at least QUIC_NET_QUALITY_HIGH_RTT. Each window that is below its configured maximum is doubled, capped at that maximum. No-op if <code>fc</code> is NULL or quality is better than QUIC_NET_QUALITY_HIGH_RTT; <code>sfc</code> may be NULL, in which case only the connection window is adjusted.</p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">fc</td><td>Connection flow control state. </td></tr>
+    <tr><td class="paramname">sfc</td><td>Stream flow control state to adjust, or NULL. </td></tr>
+  </table>
+  </dd>
+</dl>
 
-<p class="reference">References <a class="el" href="../../d6/d3c/seq_8h_source.html#l00029">CWIST_SEQ_HEADER_SIZE</a>, and <a class="el" href="../../df/db2/quic__flow__control_8h_source.html#l00017">QUIC_NET_QUALITY_HIGH_RTT</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../dc/d43/quic__flow__control_8c_source.html#l00206">206</a> of file <a class="el" href="../../dc/d43/quic__flow__control_8c_source.html">quic_flow_control.c</a>.</p>
+
+<p class="reference">References <a class="el" href="../../df/db2/quic__flow__control_8h_source.html#l00033">quic_conn_fc::conn_max_window</a>, <a class="el" href="../../df/db2/quic__flow__control_8h_source.html#l00031">quic_conn_fc::conn_window_size</a>, <a class="el" href="../../df/db2/quic__flow__control_8h_source.html#l00027">quic_conn_fc::quality</a>, <a class="el" href="../../df/db2/quic__flow__control_8h_source.html#l00017">QUIC_NET_QUALITY_HIGH_RTT</a>, <a class="el" href="../../df/db2/quic__flow__control_8h_source.html#l00037">quic_conn_fc::stream_max_window</a>, and <a class="el" href="../../df/db2/quic__flow__control_8h_source.html#l00044">quic_stream_fc::stream_window_size</a>.</p>
 
 </div>
 </div>
@@ -219,7 +238,7 @@ Functions</h2></td></tr>
 <div class="memproto">
       <table class="memname">
         <tr>
-          <td class="memname"><a class="el" href="../../d6/d3c/seq_8h.html#aeb29493e92e60057714a6b22befc6d67">void</a> quic_flow_control_consume_conn </td>
+          <td class="memname">void quic_flow_control_consume_conn </td>
           <td>(</td>
           <td class="paramtype"><a class="el" href="../../df/db2/quic__flow__control_8h.html#a67029576c55f77659b6ac7216e42ad58">quic_conn_fc_t</a> *&#160;</td>
           <td class="paramname"><em>fc</em>, </td>
@@ -227,7 +246,7 @@ Functions</h2></td></tr>
         <tr>
           <td class="paramkey"></td>
           <td></td>
-          <td class="paramtype"><a class="el" href="../../d6/d3c/seq_8h.html#aeb29493e92e60057714a6b22befc6d67">uint64_t</a>&#160;</td>
+          <td class="paramtype">uint64_t&#160;</td>
           <td class="paramname"><em>bytes</em>&#160;</td>
         </tr>
         <tr>
@@ -238,9 +257,19 @@ Functions</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../dc/d43/quic__flow__control_8c_source.html#l00156">156</a> of file <a class="el" href="../../dc/d43/quic__flow__control_8c_source.html">quic_flow_control.c</a>.</p>
+<p>Account for connection-level flow control bytes consumed by the peer. </p>
+<p>The consumed counter saturates at the QUIC varint maximum instead of wrapping. No-op if <code>fc</code> is NULL.</p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">fc</td><td>Connection flow control state. </td></tr>
+    <tr><td class="paramname">bytes</td><td>Number of bytes consumed. </td></tr>
+  </table>
+  </dd>
+</dl>
 
-<p class="reference">References <a class="el" href="../../d6/d3c/seq_8h_source.html#l00029">CWIST_SEQ_HEADER_SIZE</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../dc/d43/quic__flow__control_8c_source.html#l00230">230</a> of file <a class="el" href="../../dc/d43/quic__flow__control_8c_source.html">quic_flow_control.c</a>.</p>
+
+<p class="reference">References <a class="el" href="../../df/db2/quic__flow__control_8h_source.html#l00030">quic_conn_fc::conn_consumed</a>.</p>
 
 </div>
 </div>
@@ -251,7 +280,7 @@ Functions</h2></td></tr>
 <div class="memproto">
       <table class="memname">
         <tr>
-          <td class="memname"><a class="el" href="../../d6/d3c/seq_8h.html#aeb29493e92e60057714a6b22befc6d67">void</a> quic_flow_control_consume_stream </td>
+          <td class="memname">void quic_flow_control_consume_stream </td>
           <td>(</td>
           <td class="paramtype"><a class="el" href="../../df/db2/quic__flow__control_8h.html#a67029576c55f77659b6ac7216e42ad58">quic_conn_fc_t</a> *&#160;</td>
           <td class="paramname"><em>fc</em>, </td>
@@ -265,7 +294,7 @@ Functions</h2></td></tr>
         <tr>
           <td class="paramkey"></td>
           <td></td>
-          <td class="paramtype"><a class="el" href="../../d6/d3c/seq_8h.html#aeb29493e92e60057714a6b22befc6d67">uint64_t</a>&#160;</td>
+          <td class="paramtype">uint64_t&#160;</td>
           <td class="paramname"><em>bytes</em>&#160;</td>
         </tr>
         <tr>
@@ -276,9 +305,20 @@ Functions</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../dc/d43/quic__flow__control_8c_source.html#l00163">163</a> of file <a class="el" href="../../dc/d43/quic__flow__control_8c_source.html">quic_flow_control.c</a>.</p>
+<p>Account for stream-level flow control bytes consumed by the peer. </p>
+<p>The consumed counter saturates at the QUIC varint maximum instead of wrapping. The connection state <code>fc</code> is not touched; <code>sfc</code> may be NULL, in which case the call is a no-op.</p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">fc</td><td>Connection flow control state (currently unused). </td></tr>
+    <tr><td class="paramname">sfc</td><td>Stream flow control state. </td></tr>
+    <tr><td class="paramname">bytes</td><td>Number of bytes consumed. </td></tr>
+  </table>
+  </dd>
+</dl>
 
-<p class="reference">References <a class="el" href="../../d6/d3c/seq_8h_source.html#l00029">CWIST_SEQ_HEADER_SIZE</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../dc/d43/quic__flow__control_8c_source.html#l00245">245</a> of file <a class="el" href="../../dc/d43/quic__flow__control_8c_source.html">quic_flow_control.c</a>.</p>
+
+<p class="reference">References <a class="el" href="../../df/db2/quic__flow__control_8h_source.html#l00043">quic_stream_fc::stream_consumed</a>.</p>
 
 </div>
 </div>
@@ -298,11 +338,21 @@ Functions</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../dc/d43/quic__flow__control_8c_source.html#l00119">119</a> of file <a class="el" href="../../dc/d43/quic__flow__control_8c_source.html">quic_flow_control.c</a>.</p>
+<p>Recompute the network quality class from the smoothed RTT. </p>
+<p>Classifies by srtt thresholds: &lt;= 50 ms excellent, &lt;= 150 ms normal, &lt;= 500 ms high RTT, above that poor. The result is stored in fc-&gt;quality and returned. Returns QUIC_NET_QUALITY_NORMAL if <code>fc</code> is NULL or no RTT sample has been recorded yet.</p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">fc</td><td>Connection flow control state. </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section return"><dt>Returns</dt><dd>The (updated) quality classification. </dd></dl>
 
-<p class="reference">References <a class="el" href="../../d6/d3c/seq_8h_source.html#l00029">CWIST_SEQ_HEADER_SIZE</a>, <a class="el" href="../../df/db2/quic__flow__control_8h_source.html#l00015">QUIC_NET_QUALITY_EXCELLENT</a>, <a class="el" href="../../df/db2/quic__flow__control_8h_source.html#l00017">QUIC_NET_QUALITY_HIGH_RTT</a>, <a class="el" href="../../df/db2/quic__flow__control_8h_source.html#l00016">QUIC_NET_QUALITY_NORMAL</a>, and <a class="el" href="../../df/db2/quic__flow__control_8h_source.html#l00018">QUIC_NET_QUALITY_POOR</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../dc/d43/quic__flow__control_8c_source.html#l00179">179</a> of file <a class="el" href="../../dc/d43/quic__flow__control_8c_source.html">quic_flow_control.c</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../dc/d43/quic__flow__control_8c_source.html#l00094">quic_flow_control_update_rtt()</a>.</p>
+<p class="reference">References <a class="el" href="../../df/db2/quic__flow__control_8h_source.html#l00027">quic_conn_fc::quality</a>, <a class="el" href="../../df/db2/quic__flow__control_8h_source.html#l00015">QUIC_NET_QUALITY_EXCELLENT</a>, <a class="el" href="../../df/db2/quic__flow__control_8h_source.html#l00017">QUIC_NET_QUALITY_HIGH_RTT</a>, <a class="el" href="../../df/db2/quic__flow__control_8h_source.html#l00016">QUIC_NET_QUALITY_NORMAL</a>, <a class="el" href="../../df/db2/quic__flow__control_8h_source.html#l00018">QUIC_NET_QUALITY_POOR</a>, <a class="el" href="../../df/db2/quic__flow__control_8h_source.html#l00025">quic_conn_fc::rtt_initialized</a>, and <a class="el" href="../../df/db2/quic__flow__control_8h_source.html#l00022">quic_conn_fc::srtt_us</a>.</p>
+
+<p class="reference">Referenced by <a class="el" href="../../dc/d43/quic__flow__control_8c_source.html#l00147">quic_flow_control_update_rtt()</a>.</p>
 
 </div>
 </div>
@@ -313,7 +363,7 @@ Functions</h2></td></tr>
 <div class="memproto">
       <table class="memname">
         <tr>
-          <td class="memname"><a class="el" href="../../d6/d3c/seq_8h.html#aeb29493e92e60057714a6b22befc6d67">void</a> quic_flow_control_init </td>
+          <td class="memname">void quic_flow_control_init </td>
           <td>(</td>
           <td class="paramtype"><a class="el" href="../../df/db2/quic__flow__control_8h.html#a67029576c55f77659b6ac7216e42ad58">quic_conn_fc_t</a> *&#160;</td>
           <td class="paramname"><em>fc</em>, </td>
@@ -321,25 +371,25 @@ Functions</h2></td></tr>
         <tr>
           <td class="paramkey"></td>
           <td></td>
-          <td class="paramtype"><a class="el" href="../../d6/d3c/seq_8h.html#aeb29493e92e60057714a6b22befc6d67">uint64_t</a>&#160;</td>
+          <td class="paramtype">uint64_t&#160;</td>
           <td class="paramname"><em>initial_conn_window</em>, </td>
         </tr>
         <tr>
           <td class="paramkey"></td>
           <td></td>
-          <td class="paramtype"><a class="el" href="../../d6/d3c/seq_8h.html#aeb29493e92e60057714a6b22befc6d67">uint64_t</a>&#160;</td>
+          <td class="paramtype">uint64_t&#160;</td>
           <td class="paramname"><em>initial_stream_window</em>, </td>
         </tr>
         <tr>
           <td class="paramkey"></td>
           <td></td>
-          <td class="paramtype"><a class="el" href="../../d6/d3c/seq_8h.html#aeb29493e92e60057714a6b22befc6d67">uint64_t</a>&#160;</td>
+          <td class="paramtype">uint64_t&#160;</td>
           <td class="paramname"><em>max_conn_window</em>, </td>
         </tr>
         <tr>
           <td class="paramkey"></td>
           <td></td>
-          <td class="paramtype"><a class="el" href="../../d6/d3c/seq_8h.html#aeb29493e92e60057714a6b22befc6d67">uint64_t</a>&#160;</td>
+          <td class="paramtype">uint64_t&#160;</td>
           <td class="paramname"><em>max_stream_window</em>&#160;</td>
         </tr>
         <tr>
@@ -350,9 +400,22 @@ Functions</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../dc/d43/quic__flow__control_8c_source.html#l00050">50</a> of file <a class="el" href="../../dc/d43/quic__flow__control_8c_source.html">quic_flow_control.c</a>.</p>
+<p>Initialize the connection-level flow control state. </p>
+<p>Initial and maximum windows are clamped to QUIC_FLOW_CONTROL_MIN_INITIAL_WINDOW, and each maximum is raised to at least the corresponding initial value. No-op if <code>fc</code> is NULL.</p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">fc</td><td>Flow control state to initialize. </td></tr>
+    <tr><td class="paramname">initial_conn_window</td><td>Initial connection-level window in bytes. </td></tr>
+    <tr><td class="paramname">initial_stream_window</td><td>Initial per-stream window in bytes. </td></tr>
+    <tr><td class="paramname">max_conn_window</td><td>Upper bound for the connection window in bytes. </td></tr>
+    <tr><td class="paramname">max_stream_window</td><td>Upper bound for the per-stream window in bytes. </td></tr>
+  </table>
+  </dd>
+</dl>
 
-<p class="reference">References <a class="el" href="../../d6/d3c/seq_8h_source.html#l00029">CWIST_SEQ_HEADER_SIZE</a>, and <a class="el" href="../../df/db2/quic__flow__control_8h_source.html#l00016">QUIC_NET_QUALITY_NORMAL</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../dc/d43/quic__flow__control_8c_source.html#l00090">90</a> of file <a class="el" href="../../dc/d43/quic__flow__control_8c_source.html">quic_flow_control.c</a>.</p>
+
+<p class="reference">References <a class="el" href="../../df/db2/quic__flow__control_8h_source.html#l00027">quic_conn_fc::quality</a>, and <a class="el" href="../../df/db2/quic__flow__control_8h_source.html#l00016">QUIC_NET_QUALITY_NORMAL</a>.</p>
 
 </div>
 </div>
@@ -363,7 +426,7 @@ Functions</h2></td></tr>
 <div class="memproto">
       <table class="memname">
         <tr>
-          <td class="memname"><a class="el" href="../../d6/d3c/seq_8h.html#aeb29493e92e60057714a6b22befc6d67">int</a> quic_flow_control_maybe_send_max_data </td>
+          <td class="memname">int quic_flow_control_maybe_send_max_data </td>
           <td>(</td>
           <td class="paramtype"><a class="el" href="../../df/db2/quic__flow__control_8h.html#a67029576c55f77659b6ac7216e42ad58">quic_conn_fc_t</a> *&#160;</td>
           <td class="paramname"><em>fc</em>, </td>
@@ -371,25 +434,25 @@ Functions</h2></td></tr>
         <tr>
           <td class="paramkey"></td>
           <td></td>
-          <td class="paramtype"><a class="el" href="../../d6/d3c/seq_8h.html#aeb29493e92e60057714a6b22befc6d67">uint8_t</a> *&#160;</td>
+          <td class="paramtype">uint8_t *&#160;</td>
           <td class="paramname"><em>buf</em>, </td>
         </tr>
         <tr>
           <td class="paramkey"></td>
           <td></td>
-          <td class="paramtype"><a class="el" href="../../d6/d3c/seq_8h.html#aeb29493e92e60057714a6b22befc6d67">size_t</a>&#160;</td>
+          <td class="paramtype">size_t&#160;</td>
           <td class="paramname"><em>buf_len</em>, </td>
         </tr>
         <tr>
           <td class="paramkey"></td>
           <td></td>
-          <td class="paramtype"><a class="el" href="../../d6/d3c/seq_8h.html#aeb29493e92e60057714a6b22befc6d67">size_t</a> *&#160;</td>
+          <td class="paramtype">size_t *&#160;</td>
           <td class="paramname"><em>written</em>, </td>
         </tr>
         <tr>
           <td class="paramkey"></td>
           <td></td>
-          <td class="paramtype"><a class="el" href="../../d6/d3c/seq_8h.html#aeb29493e92e60057714a6b22befc6d67">bool</a>&#160;</td>
+          <td class="paramtype">bool&#160;</td>
           <td class="paramname"><em>force</em>&#160;</td>
         </tr>
         <tr>
@@ -400,9 +463,30 @@ Functions</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../dc/d43/quic__flow__control_8c_source.html#l00172">172</a> of file <a class="el" href="../../dc/d43/quic__flow__control_8c_source.html">quic_flow_control.c</a>.</p>
+<p>Write a MAX_DATA frame if the connection limit should be raised. </p>
+<p>Unless <code>force</code> is set, a frame is produced only when at least half of the connection window has been consumed (see should_update()). The new maximum is consumed + window, never lower than the current maximum, and is stored back in fc-&gt;max_data on success. On entry *written is cleared to 0 when <code>written</code> is non-NULL.</p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">fc</td><td>Connection flow control state. </td></tr>
+    <tr><td class="paramname">buf</td><td>Output buffer for the encoded frame. </td></tr>
+    <tr><td class="paramname">buf_len</td><td>Capacity of <code>buf</code> in bytes. </td></tr>
+    <tr><td class="paramname">written</td><td>Receives the encoded frame length in bytes. </td></tr>
+    <tr><td class="paramname">force</td><td>Emit the frame even if the update threshold is not met. </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="retval"><dt>Return values</dt><dd>
+  <table class="retval">
+    <tr><td class="paramname">1</td><td>Frame written; *written holds its length. </td></tr>
+    <tr><td class="paramname">0</td><td>No update needed; nothing written. </td></tr>
+    <tr><td class="paramname">-1</td><td>Invalid argument or <code>buf</code> too small; nothing written. </td></tr>
+  </table>
+  </dd>
+</dl>
 
-<p class="reference">References <a class="el" href="../../d6/d3c/seq_8h_source.html#l00029">CWIST_SEQ_HEADER_SIZE</a>, and <a class="el" href="../../dc/d43/quic__flow__control_8c_source.html#l00004">QUIC_FRAME_MAX_DATA</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../dc/d43/quic__flow__control_8c_source.html#l00268">268</a> of file <a class="el" href="../../dc/d43/quic__flow__control_8c_source.html">quic_flow_control.c</a>.</p>
+
+<p class="reference">References <a class="el" href="../../df/db2/quic__flow__control_8h_source.html#l00030">quic_conn_fc::conn_consumed</a>, <a class="el" href="../../df/db2/quic__flow__control_8h_source.html#l00031">quic_conn_fc::conn_window_size</a>, <a class="el" href="../../df/db2/quic__flow__control_8h_source.html#l00029">quic_conn_fc::max_data</a>, and <a class="el" href="../../dc/d43/quic__flow__control_8c_source.html#l00004">QUIC_FRAME_MAX_DATA</a>.</p>
 
 </div>
 </div>
@@ -413,7 +497,7 @@ Functions</h2></td></tr>
 <div class="memproto">
       <table class="memname">
         <tr>
-          <td class="memname"><a class="el" href="../../d6/d3c/seq_8h.html#aeb29493e92e60057714a6b22befc6d67">int</a> quic_flow_control_maybe_send_max_stream_data </td>
+          <td class="memname">int quic_flow_control_maybe_send_max_stream_data </td>
           <td>(</td>
           <td class="paramtype"><a class="el" href="../../df/db2/quic__flow__control_8h.html#a67029576c55f77659b6ac7216e42ad58">quic_conn_fc_t</a> *&#160;</td>
           <td class="paramname"><em>fc</em>, </td>
@@ -427,25 +511,25 @@ Functions</h2></td></tr>
         <tr>
           <td class="paramkey"></td>
           <td></td>
-          <td class="paramtype"><a class="el" href="../../d6/d3c/seq_8h.html#aeb29493e92e60057714a6b22befc6d67">uint8_t</a> *&#160;</td>
+          <td class="paramtype">uint8_t *&#160;</td>
           <td class="paramname"><em>buf</em>, </td>
         </tr>
         <tr>
           <td class="paramkey"></td>
           <td></td>
-          <td class="paramtype"><a class="el" href="../../d6/d3c/seq_8h.html#aeb29493e92e60057714a6b22befc6d67">size_t</a>&#160;</td>
+          <td class="paramtype">size_t&#160;</td>
           <td class="paramname"><em>buf_len</em>, </td>
         </tr>
         <tr>
           <td class="paramkey"></td>
           <td></td>
-          <td class="paramtype"><a class="el" href="../../d6/d3c/seq_8h.html#aeb29493e92e60057714a6b22befc6d67">size_t</a> *&#160;</td>
+          <td class="paramtype">size_t *&#160;</td>
           <td class="paramname"><em>written</em>, </td>
         </tr>
         <tr>
           <td class="paramkey"></td>
           <td></td>
-          <td class="paramtype"><a class="el" href="../../d6/d3c/seq_8h.html#aeb29493e92e60057714a6b22befc6d67">bool</a>&#160;</td>
+          <td class="paramtype">bool&#160;</td>
           <td class="paramname"><em>force</em>&#160;</td>
         </tr>
         <tr>
@@ -456,9 +540,31 @@ Functions</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../dc/d43/quic__flow__control_8c_source.html#l00200">200</a> of file <a class="el" href="../../dc/d43/quic__flow__control_8c_source.html">quic_flow_control.c</a>.</p>
+<p>Write a MAX_STREAM_DATA frame if the stream limit should be raised. </p>
+<p>Unless <code>force</code> is set, a frame is produced only when at least half of the stream window has been consumed (see should_update()). The new maximum is consumed + window, never lower than the current maximum, and is stored back in sfc-&gt;max_stream_data on success. On entry *written is cleared to 0 when <code>written</code> is non-NULL.</p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">fc</td><td>Connection flow control state. </td></tr>
+    <tr><td class="paramname">sfc</td><td>Stream flow control state. </td></tr>
+    <tr><td class="paramname">buf</td><td>Output buffer for the encoded frame. </td></tr>
+    <tr><td class="paramname">buf_len</td><td>Capacity of <code>buf</code> in bytes. </td></tr>
+    <tr><td class="paramname">written</td><td>Receives the encoded frame length in bytes. </td></tr>
+    <tr><td class="paramname">force</td><td>Emit the frame even if the update threshold is not met. </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="retval"><dt>Return values</dt><dd>
+  <table class="retval">
+    <tr><td class="paramname">1</td><td>Frame written; *written holds its length. </td></tr>
+    <tr><td class="paramname">0</td><td>No update needed; nothing written. </td></tr>
+    <tr><td class="paramname">-1</td><td>Invalid argument or <code>buf</code> too small; nothing written. </td></tr>
+  </table>
+  </dd>
+</dl>
 
-<p class="reference">References <a class="el" href="../../d6/d3c/seq_8h_source.html#l00029">CWIST_SEQ_HEADER_SIZE</a>, and <a class="el" href="../../dc/d43/quic__flow__control_8c_source.html#l00005">QUIC_FRAME_MAX_STREAM_DATA</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../dc/d43/quic__flow__control_8c_source.html#l00308">308</a> of file <a class="el" href="../../dc/d43/quic__flow__control_8c_source.html">quic_flow_control.c</a>.</p>
+
+<p class="reference">References <a class="el" href="../../df/db2/quic__flow__control_8h_source.html#l00042">quic_stream_fc::max_stream_data</a>, <a class="el" href="../../dc/d43/quic__flow__control_8c_source.html#l00005">QUIC_FRAME_MAX_STREAM_DATA</a>, <a class="el" href="../../df/db2/quic__flow__control_8h_source.html#l00043">quic_stream_fc::stream_consumed</a>, <a class="el" href="../../df/db2/quic__flow__control_8h_source.html#l00041">quic_stream_fc::stream_id</a>, and <a class="el" href="../../df/db2/quic__flow__control_8h_source.html#l00044">quic_stream_fc::stream_window_size</a>.</p>
 
 </div>
 </div>
@@ -469,7 +575,7 @@ Functions</h2></td></tr>
 <div class="memproto">
       <table class="memname">
         <tr>
-          <td class="memname"><a class="el" href="../../d6/d3c/seq_8h.html#aeb29493e92e60057714a6b22befc6d67">void</a> quic_flow_control_update_rtt </td>
+          <td class="memname">void quic_flow_control_update_rtt </td>
           <td>(</td>
           <td class="paramtype"><a class="el" href="../../df/db2/quic__flow__control_8h.html#a67029576c55f77659b6ac7216e42ad58">quic_conn_fc_t</a> *&#160;</td>
           <td class="paramname"><em>fc</em>, </td>
@@ -477,7 +583,7 @@ Functions</h2></td></tr>
         <tr>
           <td class="paramkey"></td>
           <td></td>
-          <td class="paramtype"><a class="el" href="../../d6/d3c/seq_8h.html#aeb29493e92e60057714a6b22befc6d67">uint64_t</a>&#160;</td>
+          <td class="paramtype">uint64_t&#160;</td>
           <td class="paramname"><em>rtt_sample_us</em>&#160;</td>
         </tr>
         <tr>
@@ -488,9 +594,19 @@ Functions</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../dc/d43/quic__flow__control_8c_source.html#l00094">94</a> of file <a class="el" href="../../dc/d43/quic__flow__control_8c_source.html">quic_flow_control.c</a>.</p>
+<p>Feed an RTT sample into the smoothed RTT estimator and re-evaluate quality. </p>
+<p>Uses RFC 6298-style smoothing: rttvar is updated with weight 1/4 and srtt with weight 1/8; the first sample initializes both. Tracked state is confined to <code>fc</code> and is not thread-safe across concurrent calls on the same connection. No-op if <code>fc</code> is NULL or <code>rtt_sample_us</code> is zero.</p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">fc</td><td>Connection flow control state. </td></tr>
+    <tr><td class="paramname">rtt_sample_us</td><td>Latest RTT sample in microseconds. </td></tr>
+  </table>
+  </dd>
+</dl>
 
-<p class="reference">References <a class="el" href="../../d6/d3c/seq_8h_source.html#l00029">CWIST_SEQ_HEADER_SIZE</a>, and <a class="el" href="../../dc/d43/quic__flow__control_8c_source.html#l00119">quic_flow_control_evaluate_quality()</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../dc/d43/quic__flow__control_8c_source.html#l00147">147</a> of file <a class="el" href="../../dc/d43/quic__flow__control_8c_source.html">quic_flow_control.c</a>.</p>
+
+<p class="reference">References <a class="el" href="../../df/db2/quic__flow__control_8h_source.html#l00024">quic_conn_fc::min_rtt_us</a>, <a class="el" href="../../dc/d43/quic__flow__control_8c_source.html#l00179">quic_flow_control_evaluate_quality()</a>, <a class="el" href="../../df/db2/quic__flow__control_8h_source.html#l00025">quic_conn_fc::rtt_initialized</a>, <a class="el" href="../../df/db2/quic__flow__control_8h_source.html#l00023">quic_conn_fc::rttvar_us</a>, and <a class="el" href="../../df/db2/quic__flow__control_8h_source.html#l00022">quic_conn_fc::srtt_us</a>.</p>
 
 </div>
 </div>
@@ -501,7 +617,7 @@ Functions</h2></td></tr>
 <div class="memproto">
       <table class="memname">
         <tr>
-          <td class="memname"><a class="el" href="../../d6/d3c/seq_8h.html#aeb29493e92e60057714a6b22befc6d67">void</a> quic_stream_fc_init </td>
+          <td class="memname">void quic_stream_fc_init </td>
           <td>(</td>
           <td class="paramtype"><a class="el" href="../../df/db2/quic__flow__control_8h.html#aa6aa8f2bde244bec283ea7f79729cd99">quic_stream_fc_t</a> *&#160;</td>
           <td class="paramname"><em>sfc</em>, </td>
@@ -509,13 +625,13 @@ Functions</h2></td></tr>
         <tr>
           <td class="paramkey"></td>
           <td></td>
-          <td class="paramtype"><a class="el" href="../../d6/d3c/seq_8h.html#aeb29493e92e60057714a6b22befc6d67">uint64_t</a>&#160;</td>
+          <td class="paramtype">uint64_t&#160;</td>
           <td class="paramname"><em>stream_id</em>, </td>
         </tr>
         <tr>
           <td class="paramkey"></td>
           <td></td>
-          <td class="paramtype"><a class="el" href="../../d6/d3c/seq_8h.html#aeb29493e92e60057714a6b22befc6d67">uint64_t</a>&#160;</td>
+          <td class="paramtype">uint64_t&#160;</td>
           <td class="paramname"><em>initial_stream_window</em>&#160;</td>
         </tr>
         <tr>
@@ -526,9 +642,20 @@ Functions</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../dc/d43/quic__flow__control_8c_source.html#l00079">79</a> of file <a class="el" href="../../dc/d43/quic__flow__control_8c_source.html">quic_flow_control.c</a>.</p>
+<p>Initialize the flow control state for a single stream. </p>
+<p>The initial window is clamped to QUIC_FLOW_CONTROL_MIN_INITIAL_WINDOW. No-op if <code>sfc</code> is NULL.</p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">sfc</td><td>Stream flow control state to initialize. </td></tr>
+    <tr><td class="paramname">stream_id</td><td>ID of the stream this state belongs to. </td></tr>
+    <tr><td class="paramname">initial_stream_window</td><td>Initial per-stream window in bytes. </td></tr>
+  </table>
+  </dd>
+</dl>
 
-<p class="reference">References <a class="el" href="../../d6/d3c/seq_8h_source.html#l00029">CWIST_SEQ_HEADER_SIZE</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../dc/d43/quic__flow__control_8c_source.html#l00124">124</a> of file <a class="el" href="../../dc/d43/quic__flow__control_8c_source.html">quic_flow_control.c</a>.</p>
+
+<p class="reference">References <a class="el" href="../../df/db2/quic__flow__control_8h_source.html#l00041">quic_stream_fc::stream_id</a>.</p>
 
 </div>
 </div>

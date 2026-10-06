@@ -1,0 +1,5 @@
+<map id="include/cwist/net/grpc/grpc_channel.h" name="include/cwist/net/grpc/grpc_channel.h">
+<area shape="rect" id="Node000001" title="gRPC client channel: name resolution, client&#45;side load balancing, and gRFC A6 retry policy on top of ..." alt="" coords="23,5,187,45"/>
+<area shape="rect" id="Node000002" href="$d5/d7a/grpc__channel_8c.html" title="gRPC client channel: name resolution (doc/naming.md), client&#45;side load balancing (doc/load&#45;balancing...." alt="" coords="5,93,204,119"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="107,59,107,93,102,93,102,59"/>
+</map>

@@ -83,61 +83,600 @@ $(document).ready(function() { init_codefold(1); });
 </div><!--header-->
 <div class="contents">
 <a href="../../d8/d16/gc_8c.html">Go to the documentation of this file.</a><div class="fragment"><div class="line"><a id="l00001" name="l00001"></a><span class="lineno">    1</span><span class="preprocessor">#include &lt;<a class="code" href="../../d0/daa/gc_8h.html">cwist/core/mem/gc.h</a>&gt;</span></div>
-<div class="line"><a id="l00002" name="l00002"></a><span class="lineno">    2</span> </div>
-<div class="foldopen" id="foldopen00013" data-start="{" data-end="}">
-<div class="line"><a id="l00013" name="l00013"></a><span class="lineno"><a class="line" href="../../d0/daa/gc_8h.html#ae2f90d26b532204cdcc3787ba2ec0b01">   13</a></span><span class="keywordtype">void</span> <a class="code hl_struct" href="../../d8/d25/structcwist__gc.html">cwist_gc</a>(<a class="code hl_struct" href="../../d8/d25/structcwist__gc.html">cwist_gc_t</a> *gc, <span class="keywordtype">bool</span> manual_rotation) {</div>
-<div class="line"><a id="l00014" name="l00014"></a><span class="lineno">   14</span>    <span class="keywordflow">if</span> (!gc) <span class="keywordflow">return</span>;</div>
-<div class="line"><a id="l00015" name="l00015"></a><span class="lineno">   15</span>    <span class="keywordflow">if</span> (!gc-&gt;<a class="code hl_variable" href="../../d8/d25/structcwist__gc.html#ae979362fa8a7ee4bfff7640e2889934e">initialized</a>) {</div>
-<div class="line"><a id="l00016" name="l00016"></a><span class="lineno">   16</span>        ttak_epoch_gc_init(&amp;gc-&gt;<a class="code hl_variable" href="../../d8/d25/structcwist__gc.html#af74b458f468ac44c86149c45e810f78c">impl</a>);</div>
-<div class="line"><a id="l00017" name="l00017"></a><span class="lineno">   17</span>        gc-&gt;<a class="code hl_variable" href="../../d8/d25/structcwist__gc.html#ae979362fa8a7ee4bfff7640e2889934e">initialized</a> = <span class="keyword">true</span>;</div>
-<div class="line"><a id="l00018" name="l00018"></a><span class="lineno">   18</span>    }</div>
-<div class="line"><a id="l00019" name="l00019"></a><span class="lineno">   19</span>    ttak_epoch_gc_manual_rotate(&amp;gc-&gt;<a class="code hl_variable" href="../../d8/d25/structcwist__gc.html#af74b458f468ac44c86149c45e810f78c">impl</a>, manual_rotation);</div>
-<div class="line"><a id="l00020" name="l00020"></a><span class="lineno">   20</span>}</div>
-</div>
-<div class="line"><a id="l00021" name="l00021"></a><span class="lineno">   21</span> </div>
-<div class="foldopen" id="foldopen00026" data-start="{" data-end="}">
-<div class="line"><a id="l00026" name="l00026"></a><span class="lineno"><a class="line" href="../../d0/daa/gc_8h.html#a611a910d8f44de93236dec0d77fe470b">   26</a></span><span class="keywordtype">void</span> <a class="code hl_function" href="../../d8/d16/gc_8c.html#a611a910d8f44de93236dec0d77fe470b">cwist_gc_shutdown</a>(<a class="code hl_struct" href="../../d8/d25/structcwist__gc.html">cwist_gc_t</a> *gc) {</div>
-<div class="line"><a id="l00027" name="l00027"></a><span class="lineno">   27</span>    <span class="keywordflow">if</span> (!gc || !gc-&gt;<a class="code hl_variable" href="../../d8/d25/structcwist__gc.html#ae979362fa8a7ee4bfff7640e2889934e">initialized</a>) <span class="keywordflow">return</span>;</div>
-<div class="line"><a id="l00028" name="l00028"></a><span class="lineno">   28</span>    ttak_epoch_gc_destroy(&amp;gc-&gt;<a class="code hl_variable" href="../../d8/d25/structcwist__gc.html#af74b458f468ac44c86149c45e810f78c">impl</a>);</div>
-<div class="line"><a id="l00029" name="l00029"></a><span class="lineno">   29</span>    gc-&gt;<a class="code hl_variable" href="../../d8/d25/structcwist__gc.html#ae979362fa8a7ee4bfff7640e2889934e">initialized</a> = <span class="keyword">false</span>;</div>
+<div class="line"><a id="l00002" name="l00002"></a><span class="lineno">    2</span><span class="preprocessor">#include &lt;<a class="code" href="../../d2/dfe/alloc_8h.html">cwist/core/mem/alloc.h</a>&gt;</span></div>
+<div class="line"><a id="l00003" name="l00003"></a><span class="lineno">    3</span><span class="preprocessor">#include &lt;ttak/mem/epoch.h&gt;</span></div>
+<div class="line"><a id="l00004" name="l00004"></a><span class="lineno">    4</span><span class="preprocessor">#include &lt;pthread.h&gt;</span></div>
+<div class="line"><a id="l00005" name="l00005"></a><span class="lineno">    5</span><span class="preprocessor">#include &lt;stdint.h&gt;</span></div>
+<div class="line"><a id="l00006" name="l00006"></a><span class="lineno">    6</span><span class="preprocessor">#include &lt;stdlib.h&gt;</span></div>
+<div class="line"><a id="l00007" name="l00007"></a><span class="lineno">    7</span><span class="preprocessor">#include &lt;string.h&gt;</span></div>
+<div class="line"><a id="l00008" name="l00008"></a><span class="lineno">    8</span><span class="preprocessor">#if !defined(__wasi__)</span></div>
+<div class="line"><a id="l00009" name="l00009"></a><span class="lineno">    9</span><span class="preprocessor">#include &lt;sys/mman.h&gt;</span></div>
+<div class="line"><a id="l00010" name="l00010"></a><span class="lineno">   10</span><span class="preprocessor">#endif</span></div>
+<div class="line"><a id="l00011" name="l00011"></a><span class="lineno">   11</span><span class="preprocessor">#include &lt;unistd.h&gt;</span></div>
+<div class="line"><a id="l00012" name="l00012"></a><span class="lineno">   12</span> </div>
+<div class="foldopen" id="foldopen00023" data-start="{" data-end="}">
+<div class="line"><a id="l00023" name="l00023"></a><span class="lineno"><a class="line" href="../../d0/daa/gc_8h.html#ae2f90d26b532204cdcc3787ba2ec0b01">   23</a></span><span class="keywordtype">void</span> <a class="code hl_struct" href="../../d8/d25/structcwist__gc.html">cwist_gc</a>(<a class="code hl_struct" href="../../d8/d25/structcwist__gc.html">cwist_gc_t</a> *gc, <span class="keywordtype">bool</span> manual_rotation) {</div>
+<div class="line"><a id="l00024" name="l00024"></a><span class="lineno">   24</span>    <span class="keywordflow">if</span> (!gc) <span class="keywordflow">return</span>;</div>
+<div class="line"><a id="l00025" name="l00025"></a><span class="lineno">   25</span>    <span class="keywordflow">if</span> (!gc-&gt;<a class="code hl_variable" href="../../d8/d25/structcwist__gc.html#ae979362fa8a7ee4bfff7640e2889934e">initialized</a>) {</div>
+<div class="line"><a id="l00026" name="l00026"></a><span class="lineno">   26</span>        ttak_epoch_gc_init(&amp;gc-&gt;<a class="code hl_variable" href="../../d8/d25/structcwist__gc.html#af74b458f468ac44c86149c45e810f78c">impl</a>);</div>
+<div class="line"><a id="l00027" name="l00027"></a><span class="lineno">   27</span>        gc-&gt;<a class="code hl_variable" href="../../d8/d25/structcwist__gc.html#ae979362fa8a7ee4bfff7640e2889934e">initialized</a> = <span class="keyword">true</span>;</div>
+<div class="line"><a id="l00028" name="l00028"></a><span class="lineno">   28</span>    }</div>
+<div class="line"><a id="l00029" name="l00029"></a><span class="lineno">   29</span>    ttak_epoch_gc_manual_rotate(&amp;gc-&gt;<a class="code hl_variable" href="../../d8/d25/structcwist__gc.html#af74b458f468ac44c86149c45e810f78c">impl</a>, manual_rotation);</div>
 <div class="line"><a id="l00030" name="l00030"></a><span class="lineno">   30</span>}</div>
 </div>
 <div class="line"><a id="l00031" name="l00031"></a><span class="lineno">   31</span> </div>
 <div class="foldopen" id="foldopen00036" data-start="{" data-end="}">
-<div class="line"><a id="l00036" name="l00036"></a><span class="lineno"><a class="line" href="../../d0/daa/gc_8h.html#a8dada7cf385c59eb67c2dfc296a07ba1">   36</a></span><span class="keywordtype">void</span> <a class="code hl_function" href="../../d8/d16/gc_8c.html#a8dada7cf385c59eb67c2dfc296a07ba1">cwist_gc_rotate</a>(<a class="code hl_struct" href="../../d8/d25/structcwist__gc.html">cwist_gc_t</a> *gc) {</div>
+<div class="line"><a id="l00036" name="l00036"></a><span class="lineno"><a class="line" href="../../d0/daa/gc_8h.html#a611a910d8f44de93236dec0d77fe470b">   36</a></span><span class="keywordtype">void</span> <a class="code hl_function" href="../../d8/d16/gc_8c.html#a611a910d8f44de93236dec0d77fe470b">cwist_gc_shutdown</a>(<a class="code hl_struct" href="../../d8/d25/structcwist__gc.html">cwist_gc_t</a> *gc) {</div>
 <div class="line"><a id="l00037" name="l00037"></a><span class="lineno">   37</span>    <span class="keywordflow">if</span> (!gc || !gc-&gt;<a class="code hl_variable" href="../../d8/d25/structcwist__gc.html#ae979362fa8a7ee4bfff7640e2889934e">initialized</a>) <span class="keywordflow">return</span>;</div>
-<div class="line"><a id="l00038" name="l00038"></a><span class="lineno">   38</span>    ttak_epoch_gc_rotate(&amp;gc-&gt;<a class="code hl_variable" href="../../d8/d25/structcwist__gc.html#af74b458f468ac44c86149c45e810f78c">impl</a>);</div>
-<div class="line"><a id="l00039" name="l00039"></a><span class="lineno">   39</span>}</div>
+<div class="line"><a id="l00038" name="l00038"></a><span class="lineno">   38</span>    ttak_epoch_gc_destroy(&amp;gc-&gt;<a class="code hl_variable" href="../../d8/d25/structcwist__gc.html#af74b458f468ac44c86149c45e810f78c">impl</a>);</div>
+<div class="line"><a id="l00039" name="l00039"></a><span class="lineno">   39</span>    gc-&gt;<a class="code hl_variable" href="../../d8/d25/structcwist__gc.html#ae979362fa8a7ee4bfff7640e2889934e">initialized</a> = <span class="keyword">false</span>;</div>
+<div class="line"><a id="l00040" name="l00040"></a><span class="lineno">   40</span>}</div>
 </div>
-<div class="line"><a id="l00040" name="l00040"></a><span class="lineno">   40</span> </div>
+<div class="line"><a id="l00041" name="l00041"></a><span class="lineno">   41</span> </div>
 <div class="foldopen" id="foldopen00046" data-start="{" data-end="}">
-<div class="line"><a id="l00046" name="l00046"></a><span class="lineno"><a class="line" href="../../d0/daa/gc_8h.html#a349ae8f8d434ff73172bffbb90ab72de">   46</a></span><span class="keywordtype">void</span> <a class="code hl_function" href="../../d8/d16/gc_8c.html#a349ae8f8d434ff73172bffbb90ab72de">cwist_reg_ptr</a>(<a class="code hl_struct" href="../../d8/d25/structcwist__gc.html">cwist_gc_t</a> *gc, <span class="keywordtype">void</span> *ptr) {</div>
-<div class="line"><a id="l00047" name="l00047"></a><span class="lineno">   47</span>    <a class="code hl_function" href="../../d8/d16/gc_8c.html#ab2568896e448fb825ed2b5bebbdfdc57">cwist_reg_ptr_sized</a>(gc, ptr, 0);</div>
-<div class="line"><a id="l00048" name="l00048"></a><span class="lineno">   48</span>}</div>
+<div class="line"><a id="l00046" name="l00046"></a><span class="lineno"><a class="line" href="../../d0/daa/gc_8h.html#a8dada7cf385c59eb67c2dfc296a07ba1">   46</a></span><span class="keywordtype">void</span> <a class="code hl_function" href="../../d8/d16/gc_8c.html#a8dada7cf385c59eb67c2dfc296a07ba1">cwist_gc_rotate</a>(<a class="code hl_struct" href="../../d8/d25/structcwist__gc.html">cwist_gc_t</a> *gc) {</div>
+<div class="line"><a id="l00047" name="l00047"></a><span class="lineno">   47</span>    <span class="keywordflow">if</span> (!gc || !gc-&gt;<a class="code hl_variable" href="../../d8/d25/structcwist__gc.html#ae979362fa8a7ee4bfff7640e2889934e">initialized</a>) <span class="keywordflow">return</span>;</div>
+<div class="line"><a id="l00048" name="l00048"></a><span class="lineno">   48</span>    ttak_epoch_gc_rotate(&amp;gc-&gt;<a class="code hl_variable" href="../../d8/d25/structcwist__gc.html#af74b458f468ac44c86149c45e810f78c">impl</a>);</div>
+<div class="line"><a id="l00049" name="l00049"></a><span class="lineno">   49</span>}</div>
 </div>
-<div class="line"><a id="l00049" name="l00049"></a><span class="lineno">   49</span> </div>
-<div class="foldopen" id="foldopen00056" data-start="{" data-end="}">
-<div class="line"><a id="l00056" name="l00056"></a><span class="lineno"><a class="line" href="../../d0/daa/gc_8h.html#ab2568896e448fb825ed2b5bebbdfdc57">   56</a></span><span class="keywordtype">void</span> <a class="code hl_function" href="../../d8/d16/gc_8c.html#ab2568896e448fb825ed2b5bebbdfdc57">cwist_reg_ptr_sized</a>(<a class="code hl_struct" href="../../d8/d25/structcwist__gc.html">cwist_gc_t</a> *gc, <span class="keywordtype">void</span> *ptr, <span class="keywordtype">size_t</span> size) {</div>
-<div class="line"><a id="l00057" name="l00057"></a><span class="lineno">   57</span>    <span class="keywordflow">if</span> (!gc || !gc-&gt;<a class="code hl_variable" href="../../d8/d25/structcwist__gc.html#ae979362fa8a7ee4bfff7640e2889934e">initialized</a> || !ptr) <span class="keywordflow">return</span>;</div>
-<div class="line"><a id="l00058" name="l00058"></a><span class="lineno">   58</span>    ttak_epoch_gc_register(&amp;gc-&gt;<a class="code hl_variable" href="../../d8/d25/structcwist__gc.html#af74b458f468ac44c86149c45e810f78c">impl</a>, ptr, size);</div>
+<div class="line"><a id="l00050" name="l00050"></a><span class="lineno">   50</span> </div>
+<div class="foldopen" id="foldopen00055" data-start="{" data-end="}">
+<div class="line"><a id="l00055" name="l00055"></a><span class="lineno"><a class="line" href="../../d0/daa/gc_8h.html#a186d9c4a74105ea0bbe6fa9c6d3aa2e3">   55</a></span><span class="keywordtype">void</span> <a class="code hl_function" href="../../d8/d16/gc_8c.html#a186d9c4a74105ea0bbe6fa9c6d3aa2e3">cwist_gc_auto_rotate</a>(<a class="code hl_struct" href="../../d8/d25/structcwist__gc.html">cwist_gc_t</a> *gc, <span class="keywordtype">bool</span> enabled) {</div>
+<div class="line"><a id="l00056" name="l00056"></a><span class="lineno">   56</span>    <span class="keywordflow">if</span> (!gc || !gc-&gt;<a class="code hl_variable" href="../../d8/d25/structcwist__gc.html#ae979362fa8a7ee4bfff7640e2889934e">initialized</a>) <span class="keywordflow">return</span>;</div>
+<div class="line"><a id="l00057" name="l00057"></a><span class="lineno">   57</span>    <span class="keywordtype">bool</span> gc_status = atomic_load(&amp;gc-&gt;<a class="code hl_variable" href="../../d8/d25/structcwist__gc.html#a829967dbb6a658ce883235c87cb50d46">auto_rotated</a>);</div>
+<div class="line"><a id="l00058" name="l00058"></a><span class="lineno">   58</span>    <span class="keywordflow">while</span> (!atomic_compare_exchange_weak(&amp;gc-&gt;<a class="code hl_variable" href="../../d8/d25/structcwist__gc.html#a829967dbb6a658ce883235c87cb50d46">auto_rotated</a>, &amp;gc_status, enabled));</div>
 <div class="line"><a id="l00059" name="l00059"></a><span class="lineno">   59</span>}</div>
 </div>
 <div class="line"><a id="l00060" name="l00060"></a><span class="lineno">   60</span> </div>
-<div class="foldopen" id="foldopen00066" data-start="{" data-end="}">
-<div class="line"><a id="l00066" name="l00066"></a><span class="lineno"><a class="line" href="../../d0/daa/gc_8h.html#a0ec6a82fe196a811d41577f091577282">   66</a></span>ttak_epoch_gc_t *<a class="code hl_function" href="../../d8/d16/gc_8c.html#a0ec6a82fe196a811d41577f091577282">cwist_gc_raw</a>(<a class="code hl_struct" href="../../d8/d25/structcwist__gc.html">cwist_gc_t</a> *gc) {</div>
-<div class="line"><a id="l00067" name="l00067"></a><span class="lineno">   67</span>    <span class="keywordflow">if</span> (!gc || !gc-&gt;<a class="code hl_variable" href="../../d8/d25/structcwist__gc.html#ae979362fa8a7ee4bfff7640e2889934e">initialized</a>) <span class="keywordflow">return</span> NULL;</div>
-<div class="line"><a id="l00068" name="l00068"></a><span class="lineno">   68</span>    <span class="keywordflow">return</span> &amp;gc-&gt;<a class="code hl_variable" href="../../d8/d25/structcwist__gc.html#af74b458f468ac44c86149c45e810f78c">impl</a>;</div>
-<div class="line"><a id="l00069" name="l00069"></a><span class="lineno">   69</span>}</div>
+<div class="foldopen" id="foldopen00065" data-start="{" data-end="}">
+<div class="line"><a id="l00065" name="l00065"></a><span class="lineno"><a class="line" href="../../d0/daa/gc_8h.html#a555a946c1e2bb6d5685d4f4dd153c8bc">   65</a></span><span class="keywordtype">bool</span> <a class="code hl_function" href="../../d8/d16/gc_8c.html#a555a946c1e2bb6d5685d4f4dd153c8bc">cwist_gc_auto_rotated</a>(<a class="code hl_struct" href="../../d8/d25/structcwist__gc.html">cwist_gc_t</a> *gc) {</div>
+<div class="line"><a id="l00066" name="l00066"></a><span class="lineno">   66</span>    <span class="keywordflow">return</span> atomic_load(&amp;gc-&gt;<a class="code hl_variable" href="../../d8/d25/structcwist__gc.html#a829967dbb6a658ce883235c87cb50d46">auto_rotated</a>);</div>
+<div class="line"><a id="l00067" name="l00067"></a><span class="lineno">   67</span>}</div>
 </div>
-<div class="ttc" id="agc_8c_html_a0ec6a82fe196a811d41577f091577282"><div class="ttname"><a href="../../d8/d16/gc_8c.html#a0ec6a82fe196a811d41577f091577282">cwist_gc_raw</a></div><div class="ttdeci">ttak_epoch_gc_t * cwist_gc_raw(cwist_gc_t *gc)</div><div class="ttdoc">Expose the underlying libttak epoch GC structure for advanced integrations.</div><div class="ttdef"><b>Definition</b> <a href="../../d8/d16/gc_8c_source.html#l00066">gc.c:66</a></div></div>
-<div class="ttc" id="agc_8c_html_a349ae8f8d434ff73172bffbb90ab72de"><div class="ttname"><a href="../../d8/d16/gc_8c.html#a349ae8f8d434ff73172bffbb90ab72de">cwist_reg_ptr</a></div><div class="ttdeci">void cwist_reg_ptr(cwist_gc_t *gc, void *ptr)</div><div class="ttdoc">Register a pointer with zero-size accounting metadata.</div><div class="ttdef"><b>Definition</b> <a href="../../d8/d16/gc_8c_source.html#l00046">gc.c:46</a></div></div>
-<div class="ttc" id="agc_8c_html_a611a910d8f44de93236dec0d77fe470b"><div class="ttname"><a href="../../d8/d16/gc_8c.html#a611a910d8f44de93236dec0d77fe470b">cwist_gc_shutdown</a></div><div class="ttdeci">void cwist_gc_shutdown(cwist_gc_t *gc)</div><div class="ttdoc">Destroy the wrapped libttak GC state when it has been initialized.</div><div class="ttdef"><b>Definition</b> <a href="../../d8/d16/gc_8c_source.html#l00026">gc.c:26</a></div></div>
-<div class="ttc" id="agc_8c_html_a8dada7cf385c59eb67c2dfc296a07ba1"><div class="ttname"><a href="../../d8/d16/gc_8c.html#a8dada7cf385c59eb67c2dfc296a07ba1">cwist_gc_rotate</a></div><div class="ttdeci">void cwist_gc_rotate(cwist_gc_t *gc)</div><div class="ttdoc">Advance the current epoch and reclaim retired nodes when eligible.</div><div class="ttdef"><b>Definition</b> <a href="../../d8/d16/gc_8c_source.html#l00036">gc.c:36</a></div></div>
-<div class="ttc" id="agc_8c_html_ab2568896e448fb825ed2b5bebbdfdc57"><div class="ttname"><a href="../../d8/d16/gc_8c.html#ab2568896e448fb825ed2b5bebbdfdc57">cwist_reg_ptr_sized</a></div><div class="ttdeci">void cwist_reg_ptr_sized(cwist_gc_t *gc, void *ptr, size_t size)</div><div class="ttdoc">Register a pointer and its approximate size with the epoch GC.</div><div class="ttdef"><b>Definition</b> <a href="../../d8/d16/gc_8c_source.html#l00056">gc.c:56</a></div></div>
+<div class="line"><a id="l00068" name="l00068"></a><span class="lineno">   68</span> </div>
+<div class="foldopen" id="foldopen00074" data-start="{" data-end="}">
+<div class="line"><a id="l00074" name="l00074"></a><span class="lineno"><a class="line" href="../../d0/daa/gc_8h.html#a349ae8f8d434ff73172bffbb90ab72de">   74</a></span><span class="keywordtype">void</span> <a class="code hl_function" href="../../d8/d16/gc_8c.html#a349ae8f8d434ff73172bffbb90ab72de">cwist_reg_ptr</a>(<a class="code hl_struct" href="../../d8/d25/structcwist__gc.html">cwist_gc_t</a> *gc, <span class="keywordtype">void</span> *ptr) {</div>
+<div class="line"><a id="l00075" name="l00075"></a><span class="lineno">   75</span>    <a class="code hl_function" href="../../d8/d16/gc_8c.html#ab2568896e448fb825ed2b5bebbdfdc57">cwist_reg_ptr_sized</a>(gc, ptr, 0);</div>
+<div class="line"><a id="l00076" name="l00076"></a><span class="lineno">   76</span>}</div>
+</div>
+<div class="line"><a id="l00077" name="l00077"></a><span class="lineno">   77</span> </div>
+<div class="foldopen" id="foldopen00084" data-start="{" data-end="}">
+<div class="line"><a id="l00084" name="l00084"></a><span class="lineno"><a class="line" href="../../d0/daa/gc_8h.html#ab2568896e448fb825ed2b5bebbdfdc57">   84</a></span><span class="keywordtype">void</span> <a class="code hl_function" href="../../d8/d16/gc_8c.html#ab2568896e448fb825ed2b5bebbdfdc57">cwist_reg_ptr_sized</a>(<a class="code hl_struct" href="../../d8/d25/structcwist__gc.html">cwist_gc_t</a> *gc, <span class="keywordtype">void</span> *ptr, <span class="keywordtype">size_t</span> size) {</div>
+<div class="line"><a id="l00085" name="l00085"></a><span class="lineno">   85</span>    <span class="keywordflow">if</span> (!gc || !gc-&gt;<a class="code hl_variable" href="../../d8/d25/structcwist__gc.html#ae979362fa8a7ee4bfff7640e2889934e">initialized</a> || !ptr) <span class="keywordflow">return</span>;</div>
+<div class="line"><a id="l00086" name="l00086"></a><span class="lineno">   86</span>    ttak_epoch_gc_register(&amp;gc-&gt;<a class="code hl_variable" href="../../d8/d25/structcwist__gc.html#af74b458f468ac44c86149c45e810f78c">impl</a>, ptr, size);</div>
+<div class="line"><a id="l00087" name="l00087"></a><span class="lineno">   87</span>}</div>
+</div>
+<div class="line"><a id="l00088" name="l00088"></a><span class="lineno">   88</span> </div>
+<div class="foldopen" id="foldopen00094" data-start="{" data-end="}">
+<div class="line"><a id="l00094" name="l00094"></a><span class="lineno"><a class="line" href="../../d0/daa/gc_8h.html#a0ec6a82fe196a811d41577f091577282">   94</a></span>ttak_epoch_gc_t *<a class="code hl_function" href="../../d8/d16/gc_8c.html#a0ec6a82fe196a811d41577f091577282">cwist_gc_raw</a>(<a class="code hl_struct" href="../../d8/d25/structcwist__gc.html">cwist_gc_t</a> *gc) {</div>
+<div class="line"><a id="l00095" name="l00095"></a><span class="lineno">   95</span>    <span class="keywordflow">if</span> (!gc || !gc-&gt;<a class="code hl_variable" href="../../d8/d25/structcwist__gc.html#ae979362fa8a7ee4bfff7640e2889934e">initialized</a>) <span class="keywordflow">return</span> NULL;</div>
+<div class="line"><a id="l00096" name="l00096"></a><span class="lineno">   96</span>    <span class="keywordflow">return</span> &amp;gc-&gt;<a class="code hl_variable" href="../../d8/d25/structcwist__gc.html#af74b458f468ac44c86149c45e810f78c">impl</a>;</div>
+<div class="line"><a id="l00097" name="l00097"></a><span class="lineno">   97</span>}</div>
+</div>
+<div class="line"><a id="l00098" name="l00098"></a><span class="lineno">   98</span> </div>
+<div class="foldopen" id="foldopen00104" data-start="{" data-end="}">
+<div class="line"><a id="l00104" name="l00104"></a><span class="lineno"><a class="line" href="../../d0/daa/gc_8h.html#ab6b5184c0bbd3cc7003dbcfdd2f76f98">  104</a></span><span class="keywordtype">void</span> *<a class="code hl_function" href="../../d8/d16/gc_8c.html#ab6b5184c0bbd3cc7003dbcfdd2f76f98">cwist_ebr_alloc</a>(<span class="keywordtype">size_t</span> size) {</div>
+<div class="line"><a id="l00105" name="l00105"></a><span class="lineno">  105</span>    <span class="comment">/* Nothing to protect yet: a block nobody else can see does not need</span></div>
+<div class="line"><a id="l00106" name="l00106"></a><span class="lineno">  106</span><span class="comment">     * epoch coverage until it is published to another thread. */</span></div>
+<div class="line"><a id="l00107" name="l00107"></a><span class="lineno">  107</span>    <span class="keywordflow">return</span> <a class="code hl_function" href="../../d2/dfe/alloc_8h.html#aeba69949fe17751318e6b5fc84a74096">cwist_alloc</a>(size);</div>
+<div class="line"><a id="l00108" name="l00108"></a><span class="lineno">  108</span>}</div>
+</div>
+<div class="line"><a id="l00109" name="l00109"></a><span class="lineno">  109</span> </div>
+<div class="line"><a id="l00114" name="l00114"></a><span class="lineno">  114</span><span class="keyword">static</span> <span class="keywordtype">void</span> cwist_ebr_free_cb(<span class="keywordtype">void</span> *ptr) {</div>
+<div class="line"><a id="l00115" name="l00115"></a><span class="lineno">  115</span>    <a class="code hl_function" href="../../d2/dfe/alloc_8h.html#a220abeebe2823e72511d1690fc561306">cwist_free</a>(ptr);</div>
+<div class="line"><a id="l00116" name="l00116"></a><span class="lineno">  116</span>}</div>
+<div class="line"><a id="l00117" name="l00117"></a><span class="lineno">  117</span> </div>
+<div class="foldopen" id="foldopen00123" data-start="{" data-end="}">
+<div class="line"><a id="l00123" name="l00123"></a><span class="lineno"><a class="line" href="../../d0/daa/gc_8h.html#a2406b97d2e5c876a65e828c15e656347">  123</a></span><span class="keywordtype">void</span> <a class="code hl_function" href="../../d8/d16/gc_8c.html#a2406b97d2e5c876a65e828c15e656347">cwist_ebr_free</a>(<span class="keywordtype">void</span> *ptr) {</div>
+<div class="line"><a id="l00124" name="l00124"></a><span class="lineno">  124</span>    <span class="keywordflow">if</span> (!ptr) <span class="keywordflow">return</span>;</div>
+<div class="line"><a id="l00125" name="l00125"></a><span class="lineno">  125</span>    ttak_epoch_retire(ptr, cwist_ebr_free_cb);</div>
+<div class="line"><a id="l00126" name="l00126"></a><span class="lineno">  126</span>}</div>
+</div>
+<div class="line"><a id="l00127" name="l00127"></a><span class="lineno">  127</span> </div>
+<div class="foldopen" id="foldopen00131" data-start="{" data-end="}">
+<div class="line"><a id="l00131" name="l00131"></a><span class="lineno"><a class="line" href="../../d0/daa/gc_8h.html#aa040287ba20204989d60d04e984d0937">  131</a></span><span class="keywordtype">void</span> <a class="code hl_function" href="../../d8/d16/gc_8c.html#aa040287ba20204989d60d04e984d0937">cwist_gc_pipeline_tick</a>(<span class="keywordtype">void</span>) {</div>
+<div class="line"><a id="l00132" name="l00132"></a><span class="lineno">  132</span>    ttak_epoch_reclaim();</div>
+<div class="line"><a id="l00133" name="l00133"></a><span class="lineno">  133</span>}</div>
+</div>
+<div class="line"><a id="l00134" name="l00134"></a><span class="lineno">  134</span> </div>
+<div class="foldopen" id="foldopen00139" data-start="{" data-end="}">
+<div class="line"><a id="l00139" name="l00139"></a><span class="lineno"><a class="line" href="../../d0/daa/gc_8h.html#a4eb61c3775d0863b9eedc5b79904725c">  139</a></span><span class="keywordtype">void</span> <a class="code hl_function" href="../../d8/d16/gc_8c.html#a4eb61c3775d0863b9eedc5b79904725c">cwist_release_guard_init</a>(<a class="code hl_typedef" href="../../d0/daa/gc_8h.html#ab69481b637dc8d922721fdd6945c8e27">cwist_release_guard_t</a> *guard) {</div>
+<div class="line"><a id="l00140" name="l00140"></a><span class="lineno">  140</span>    <span class="keywordflow">if</span> (!guard) <span class="keywordflow">return</span>;</div>
+<div class="line"><a id="l00141" name="l00141"></a><span class="lineno">  141</span>    atomic_store_explicit(guard, <span class="keyword">false</span>, memory_order_relaxed);</div>
+<div class="line"><a id="l00142" name="l00142"></a><span class="lineno">  142</span>}</div>
+</div>
+<div class="line"><a id="l00143" name="l00143"></a><span class="lineno">  143</span> </div>
+<div class="foldopen" id="foldopen00149" data-start="{" data-end="}">
+<div class="line"><a id="l00149" name="l00149"></a><span class="lineno"><a class="line" href="../../d0/daa/gc_8h.html#a6e9bae201702c4c1417e366ec3ab1919">  149</a></span><span class="keywordtype">bool</span> <a class="code hl_function" href="../../d8/d16/gc_8c.html#a6e9bae201702c4c1417e366ec3ab1919">cwist_release_guard_acquire</a>(<a class="code hl_typedef" href="../../d0/daa/gc_8h.html#ab69481b637dc8d922721fdd6945c8e27">cwist_release_guard_t</a> *guard) {</div>
+<div class="line"><a id="l00150" name="l00150"></a><span class="lineno">  150</span>    <span class="keywordflow">if</span> (!guard) <span class="keywordflow">return</span> <span class="keyword">false</span>;</div>
+<div class="line"><a id="l00151" name="l00151"></a><span class="lineno">  151</span>    <span class="keywordtype">bool</span> expected = <span class="keyword">false</span>;</div>
+<div class="line"><a id="l00152" name="l00152"></a><span class="lineno">  152</span>    <span class="keywordflow">return</span> atomic_compare_exchange_strong_explicit(guard, &amp;expected, <span class="keyword">true</span>, memory_order_acq_rel,</div>
+<div class="line"><a id="l00153" name="l00153"></a><span class="lineno">  153</span>                                                   memory_order_relaxed);</div>
+<div class="line"><a id="l00154" name="l00154"></a><span class="lineno">  154</span>}</div>
+</div>
+<div class="line"><a id="l00155" name="l00155"></a><span class="lineno">  155</span> </div>
+<div class="line"><a id="l00156" name="l00156"></a><span class="lineno">  156</span><span class="comment">/* --- Full-GC mode: process-wide toggle + per-thread pending-sweep list --- */</span></div>
+<div class="line"><a id="l00157" name="l00157"></a><span class="lineno">  157</span> </div>
+<div class="line"><a id="l00177" name="l00177"></a><span class="lineno">  177</span><span class="keyword">typedef</span> <span class="keyword">struct </span>{</div>
+<div class="line"><a id="l00178" name="l00178"></a><span class="lineno">  178</span>    _Atomic <span class="keywordtype">bool</span> enabled;</div>
+<div class="line"><a id="l00179" name="l00179"></a><span class="lineno">  179</span>    _Atomic <span class="keywordtype">bool</span> locked;</div>
+<div class="line"><a id="l00180" name="l00180"></a><span class="lineno">  180</span>} cwist_full_gc_guard_t;</div>
+<div class="line"><a id="l00181" name="l00181"></a><span class="lineno">  181</span> </div>
+<div class="line"><a id="l00187" name="l00187"></a><span class="lineno">  187</span><span class="keyword">static</span> cwist_full_gc_guard_t *g_full_gc_guard = NULL;</div>
+<div class="line"><a id="l00188" name="l00188"></a><span class="lineno">  188</span> </div>
+<div class="foldopen" id="foldopen00195" data-start="{" data-end="}">
+<div class="line"><a id="l00195" name="l00195"></a><span class="lineno"><a class="line" href="../../d8/d16/gc_8c.html#a083b2e840cc4afee2f08f66c46f4d64d">  195</a></span><a class="code hl_function" href="../../d8/d16/gc_8c.html#a083b2e840cc4afee2f08f66c46f4d64d">__attribute__</a>((constructor)) <span class="keyword">static</span> <span class="keywordtype">void</span> cwist_full_gc_guard_init(<span class="keywordtype">void</span>) {</div>
+<div class="line"><a id="l00196" name="l00196"></a><span class="lineno">  196</span><span class="preprocessor">#if defined(__wasi__)</span></div>
+<div class="line"><a id="l00197" name="l00197"></a><span class="lineno">  197</span>    <span class="comment">/* WASI has no mmap: leave the guard NULL so cwist_full_gc_enabled()</span></div>
+<div class="line"><a id="l00198" name="l00198"></a><span class="lineno">  198</span><span class="comment">     * reports full-GC as permanently unavailable (the same fail-safe the</span></div>
+<div class="line"><a id="l00199" name="l00199"></a><span class="lineno">  199</span><span class="comment">     * MAP_FAILED path reaches natively). */</span></div>
+<div class="line"><a id="l00200" name="l00200"></a><span class="lineno">  200</span>    (void)g_full_gc_guard;</div>
+<div class="line"><a id="l00201" name="l00201"></a><span class="lineno">  201</span>    <span class="keywordflow">return</span>;</div>
+<div class="line"><a id="l00202" name="l00202"></a><span class="lineno">  202</span><span class="preprocessor">#else</span></div>
+<div class="line"><a id="l00203" name="l00203"></a><span class="lineno">  203</span>    <span class="keywordtype">long</span> page_size = sysconf(_SC_PAGESIZE);</div>
+<div class="line"><a id="l00204" name="l00204"></a><span class="lineno">  204</span>    <span class="keywordflow">if</span> (page_size &lt;= 0) page_size = 4096;</div>
+<div class="line"><a id="l00205" name="l00205"></a><span class="lineno">  205</span>    <span class="keywordtype">void</span> *page =</div>
+<div class="line"><a id="l00206" name="l00206"></a><span class="lineno">  206</span>        mmap(NULL, (<span class="keywordtype">size_t</span>)page_size, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);</div>
+<div class="line"><a id="l00207" name="l00207"></a><span class="lineno">  207</span>    <span class="keywordflow">if</span> (page == MAP_FAILED) <span class="keywordflow">return</span>;</div>
+<div class="line"><a id="l00208" name="l00208"></a><span class="lineno">  208</span>    cwist_full_gc_guard_t *guard = (cwist_full_gc_guard_t *)page;</div>
+<div class="line"><a id="l00209" name="l00209"></a><span class="lineno">  209</span>    atomic_init(&amp;guard-&gt;enabled, <span class="keyword">false</span>);</div>
+<div class="line"><a id="l00210" name="l00210"></a><span class="lineno">  210</span>    atomic_init(&amp;guard-&gt;locked, <span class="keyword">false</span>);</div>
+<div class="line"><a id="l00211" name="l00211"></a><span class="lineno">  211</span>    g_full_gc_guard = guard;</div>
+<div class="line"><a id="l00212" name="l00212"></a><span class="lineno">  212</span><span class="preprocessor">#endif</span></div>
+<div class="line"><a id="l00213" name="l00213"></a><span class="lineno">  213</span>}</div>
+</div>
+<div class="line"><a id="l00214" name="l00214"></a><span class="lineno">  214</span> </div>
+<div class="line"><a id="l00216" name="l00216"></a><span class="lineno">  216</span><span class="keyword">static</span> <a class="code hl_struct" href="../../d8/d25/structcwist__gc.html">cwist_gc_t</a> g_full_gc;</div>
+<div class="line"><a id="l00217" name="l00217"></a><span class="lineno">  217</span><span class="keyword">static</span> pthread_once_t g_full_gc_once = PTHREAD_ONCE_INIT;</div>
+<div class="line"><a id="l00218" name="l00218"></a><span class="lineno">  218</span> </div>
+<div class="line"><a id="l00220" name="l00220"></a><span class="lineno">  220</span><span class="keyword">static</span> <span class="keywordtype">void</span> cwist_full_gc_lazy_init(<span class="keywordtype">void</span>) {</div>
+<div class="line"><a id="l00221" name="l00221"></a><span class="lineno">  221</span>    <a class="code hl_struct" href="../../d8/d25/structcwist__gc.html">cwist_gc</a>(&amp;g_full_gc, <span class="keyword">true</span>);</div>
+<div class="line"><a id="l00222" name="l00222"></a><span class="lineno">  222</span>}</div>
+<div class="line"><a id="l00223" name="l00223"></a><span class="lineno">  223</span> </div>
+<div class="line"><a id="l00228" name="l00228"></a><span class="lineno">  228</span><span class="keyword">static</span> <a class="code hl_struct" href="../../d8/d25/structcwist__gc.html">cwist_gc_t</a> *cwist_full_gc_instance(<span class="keywordtype">void</span>) {</div>
+<div class="line"><a id="l00229" name="l00229"></a><span class="lineno">  229</span>    pthread_once(&amp;g_full_gc_once, cwist_full_gc_lazy_init);</div>
+<div class="line"><a id="l00230" name="l00230"></a><span class="lineno">  230</span>    <span class="keywordflow">return</span> &amp;g_full_gc;</div>
+<div class="line"><a id="l00231" name="l00231"></a><span class="lineno">  231</span>}</div>
+<div class="line"><a id="l00232" name="l00232"></a><span class="lineno">  232</span> </div>
+<div class="line"><a id="l00245" name="l00245"></a><span class="lineno">  245</span><span class="keyword">static</span> pthread_mutex_t g_full_gc_claim_mu = PTHREAD_MUTEX_INITIALIZER;</div>
+<div class="line"><a id="l00246" name="l00246"></a><span class="lineno">  246</span> </div>
+<div class="foldopen" id="foldopen00257" data-start="{" data-end="}">
+<div class="line"><a id="l00257" name="l00257"></a><span class="lineno"><a class="line" href="../../d0/daa/gc_8h.html#a0d7297e8d4a073c018f97fa6e7f0a372">  257</a></span><span class="keywordtype">void</span> <a class="code hl_function" href="../../d8/d16/gc_8c.html#a0d7297e8d4a073c018f97fa6e7f0a372">cwist_full_gc</a>(<span class="keywordtype">bool</span> enable) {</div>
+<div class="line"><a id="l00258" name="l00258"></a><span class="lineno">  258</span>    <span class="keywordflow">if</span> (!g_full_gc_guard) <span class="keywordflow">return</span>; <span class="comment">/* guard page unavailable; fail safe, not silently unhardened */</span></div>
+<div class="line"><a id="l00259" name="l00259"></a><span class="lineno">  259</span> </div>
+<div class="line"><a id="l00260" name="l00260"></a><span class="lineno">  260</span>    <span class="comment">/* Fast path: once locked, this plain load is the only thing every</span></div>
+<div class="line"><a id="l00261" name="l00261"></a><span class="lineno">  261</span><span class="comment">     * later caller ever does -- safe indefinitely, even after the page</span></div>
+<div class="line"><a id="l00262" name="l00262"></a><span class="lineno">  262</span><span class="comment">     * below becomes read-only. */</span></div>
+<div class="line"><a id="l00263" name="l00263"></a><span class="lineno">  263</span>    <span class="keywordflow">if</span> (atomic_load_explicit(&amp;g_full_gc_guard-&gt;locked, memory_order_acquire)) <span class="keywordflow">return</span>;</div>
+<div class="line"><a id="l00264" name="l00264"></a><span class="lineno">  264</span> </div>
+<div class="line"><a id="l00265" name="l00265"></a><span class="lineno">  265</span>    pthread_mutex_lock(&amp;g_full_gc_claim_mu);</div>
+<div class="line"><a id="l00266" name="l00266"></a><span class="lineno">  266</span>    <span class="keywordflow">if</span> (atomic_load_explicit(&amp;g_full_gc_guard-&gt;locked, memory_order_acquire)) {</div>
+<div class="line"><a id="l00267" name="l00267"></a><span class="lineno">  267</span>        <span class="comment">/* Someone else claimed it while we were waiting for the mutex. */</span></div>
+<div class="line"><a id="l00268" name="l00268"></a><span class="lineno">  268</span>        pthread_mutex_unlock(&amp;g_full_gc_claim_mu);</div>
+<div class="line"><a id="l00269" name="l00269"></a><span class="lineno">  269</span>        <span class="keywordflow">return</span>;</div>
+<div class="line"><a id="l00270" name="l00270"></a><span class="lineno">  270</span>    }</div>
+<div class="line"><a id="l00271" name="l00271"></a><span class="lineno">  271</span> </div>
+<div class="line"><a id="l00272" name="l00272"></a><span class="lineno">  272</span>    <span class="comment">/* We hold the mutex and locked is still false: nobody has mprotect()&#39;d</span></div>
+<div class="line"><a id="l00273" name="l00273"></a><span class="lineno">  273</span><span class="comment">     * the page yet, so it is still writable and we are its sole writer. */</span></div>
+<div class="line"><a id="l00274" name="l00274"></a><span class="lineno">  274</span>    atomic_store_explicit(&amp;g_full_gc_guard-&gt;enabled, enable, memory_order_relaxed);</div>
+<div class="line"><a id="l00275" name="l00275"></a><span class="lineno">  275</span>    atomic_store_explicit(&amp;g_full_gc_guard-&gt;locked, <span class="keyword">true</span>, memory_order_release);</div>
+<div class="line"><a id="l00276" name="l00276"></a><span class="lineno">  276</span><span class="preprocessor">#if !defined(__wasi__)</span></div>
+<div class="line"><a id="l00277" name="l00277"></a><span class="lineno">  277</span>    <span class="comment">/* Unreachable under WASI (the guard is never mapped there), where</span></div>
+<div class="line"><a id="l00278" name="l00278"></a><span class="lineno">  278</span><span class="comment">     * mprotect does not exist. */</span></div>
+<div class="line"><a id="l00279" name="l00279"></a><span class="lineno">  279</span>    <span class="keywordtype">long</span> page_size = sysconf(_SC_PAGESIZE);</div>
+<div class="line"><a id="l00280" name="l00280"></a><span class="lineno">  280</span>    mprotect(g_full_gc_guard, (<span class="keywordtype">size_t</span>)(page_size &gt; 0 ? page_size : 4096), PROT_READ);</div>
+<div class="line"><a id="l00281" name="l00281"></a><span class="lineno">  281</span><span class="preprocessor">#endif</span></div>
+<div class="line"><a id="l00282" name="l00282"></a><span class="lineno">  282</span>    pthread_mutex_unlock(&amp;g_full_gc_claim_mu);</div>
+<div class="line"><a id="l00283" name="l00283"></a><span class="lineno">  283</span> </div>
+<div class="line"><a id="l00284" name="l00284"></a><span class="lineno">  284</span>    <a class="code hl_function" href="../../d8/d16/gc_8c.html#a186d9c4a74105ea0bbe6fa9c6d3aa2e3">cwist_gc_auto_rotate</a>(cwist_full_gc_instance(), enable);</div>
+<div class="line"><a id="l00285" name="l00285"></a><span class="lineno">  285</span>}</div>
+</div>
+<div class="line"><a id="l00286" name="l00286"></a><span class="lineno">  286</span> </div>
+<div class="foldopen" id="foldopen00291" data-start="{" data-end="}">
+<div class="line"><a id="l00291" name="l00291"></a><span class="lineno"><a class="line" href="../../d0/daa/gc_8h.html#a35e613a89ca213039b7b8b80464c223c">  291</a></span><span class="keywordtype">bool</span> <a class="code hl_function" href="../../d8/d16/gc_8c.html#a35e613a89ca213039b7b8b80464c223c">cwist_full_gc_enabled</a>(<span class="keywordtype">void</span>) {</div>
+<div class="line"><a id="l00292" name="l00292"></a><span class="lineno">  292</span>    <span class="keywordflow">if</span> (!g_full_gc_guard) <span class="keywordflow">return</span> <span class="keyword">false</span>;</div>
+<div class="line"><a id="l00293" name="l00293"></a><span class="lineno">  293</span>    <span class="keywordflow">return</span> atomic_load_explicit(&amp;g_full_gc_guard-&gt;enabled, memory_order_relaxed);</div>
+<div class="line"><a id="l00294" name="l00294"></a><span class="lineno">  294</span>}</div>
+</div>
+<div class="line"><a id="l00295" name="l00295"></a><span class="lineno">  295</span> </div>
+<div class="foldopen" id="foldopen00300" data-start="{" data-end="}">
+<div class="line"><a id="l00300" name="l00300"></a><span class="lineno"><a class="line" href="../../d0/daa/gc_8h.html#aa86b6382f284c1b6b81ce4863a2dc671">  300</a></span><span class="keywordtype">bool</span> <a class="code hl_function" href="../../d8/d16/gc_8c.html#aa86b6382f284c1b6b81ce4863a2dc671">cwist_full_gc_locked</a>(<span class="keywordtype">void</span>) {</div>
+<div class="line"><a id="l00301" name="l00301"></a><span class="lineno">  301</span>    <span class="keywordflow">if</span> (!g_full_gc_guard) <span class="keywordflow">return</span> <span class="keyword">false</span>;</div>
+<div class="line"><a id="l00302" name="l00302"></a><span class="lineno">  302</span>    <span class="keywordflow">return</span> atomic_load_explicit(&amp;g_full_gc_guard-&gt;locked, memory_order_acquire);</div>
+<div class="line"><a id="l00303" name="l00303"></a><span class="lineno">  303</span>}</div>
+</div>
+<div class="line"><a id="l00304" name="l00304"></a><span class="lineno">  304</span> </div>
+<div class="foldopen" id="foldopen00309" data-start="{" data-end="}">
+<div class="line"><a id="l00309" name="l00309"></a><span class="lineno"><a class="line" href="../../d0/daa/gc_8h.html#af4daec06978e824bb8635fbfe2005d82">  309</a></span><span class="keywordtype">void</span> *<a class="code hl_function" href="../../d8/d16/gc_8c.html#af4daec06978e824bb8635fbfe2005d82">cwist_full_gc_guard_page</a>(<span class="keywordtype">void</span>) {</div>
+<div class="line"><a id="l00310" name="l00310"></a><span class="lineno">  310</span>    <span class="keywordflow">return</span> g_full_gc_guard;</div>
+<div class="line"><a id="l00311" name="l00311"></a><span class="lineno">  311</span>}</div>
+</div>
+<div class="line"><a id="l00312" name="l00312"></a><span class="lineno">  312</span> </div>
+<div class="line"><a id="l00330" name="l00330"></a><span class="lineno">  330</span><span class="keyword">typedef</span> <span class="keyword">struct </span>{</div>
+<div class="line"><a id="l00331" name="l00331"></a><span class="lineno">  331</span>    <span class="keywordtype">void</span> **slots;</div>
+<div class="line"><a id="l00332" name="l00332"></a><span class="lineno">  332</span>    <span class="keywordtype">size_t</span> cap; <span class="comment">/* 0 or a power of two */</span></div>
+<div class="line"><a id="l00333" name="l00333"></a><span class="lineno">  333</span>    <span class="keywordtype">size_t</span> count;</div>
+<div class="line"><a id="l00334" name="l00334"></a><span class="lineno">  334</span>} cwist_gc_pending_t;</div>
+<div class="line"><a id="l00335" name="l00335"></a><span class="lineno">  335</span> </div>
+<div class="line"><a id="l00337" name="l00337"></a><span class="lineno"><a class="line" href="../../d8/d16/gc_8c.html#a286ebab4f79e4a725d64dbf402ed53fb">  337</a></span><span class="preprocessor">#define CWIST_GC_PENDING_MIN_CAP 16</span></div>
+<div class="line"><a id="l00340" name="l00340"></a><span class="lineno"><a class="line" href="../../d8/d16/gc_8c.html#a154739def5b3de47e39cf11481cee5b7">  340</a></span><span class="preprocessor">#define CWIST_GC_PENDING_KEEP_CAP 1024</span></div>
+<div class="line"><a id="l00341" name="l00341"></a><span class="lineno">  341</span> </div>
+<div class="line"><a id="l00346" name="l00346"></a><span class="lineno">  346</span><span class="keyword">static</span> <span class="keyword">inline</span> <span class="keywordtype">size_t</span> cwist_gc_pending_slot(<span class="keyword">const</span> <span class="keywordtype">void</span> *ptr, <span class="keywordtype">size_t</span> mask) {</div>
+<div class="line"><a id="l00347" name="l00347"></a><span class="lineno">  347</span>    uint64_t h = (uint64_t)((uintptr_t)ptr &gt;&gt; 4) * UINT64_C(0x9E3779B97F4A7C15);</div>
+<div class="line"><a id="l00348" name="l00348"></a><span class="lineno">  348</span>    <span class="keywordflow">return</span> (<span class="keywordtype">size_t</span>)(h &gt;&gt; 32) &amp; mask;</div>
+<div class="line"><a id="l00349" name="l00349"></a><span class="lineno">  349</span>}</div>
+<div class="line"><a id="l00350" name="l00350"></a><span class="lineno">  350</span> </div>
+<div class="line"><a id="l00352" name="l00352"></a><span class="lineno">  352</span><span class="keyword">static</span> <span class="keywordtype">bool</span> cwist_gc_pending_grow(cwist_gc_pending_t *pending) {</div>
+<div class="line"><a id="l00353" name="l00353"></a><span class="lineno">  353</span>    <span class="keywordtype">size_t</span> new_cap = pending-&gt;cap ? pending-&gt;cap * 2 : <a class="code hl_define" href="../../d8/d16/gc_8c.html#a286ebab4f79e4a725d64dbf402ed53fb">CWIST_GC_PENDING_MIN_CAP</a>;</div>
+<div class="line"><a id="l00354" name="l00354"></a><span class="lineno">  354</span>    <span class="keywordtype">void</span> **slots = (<span class="keywordtype">void</span> **)calloc(new_cap, <span class="keyword">sizeof</span>(<span class="keywordtype">void</span> *));</div>
+<div class="line"><a id="l00355" name="l00355"></a><span class="lineno">  355</span>    <span class="keywordflow">if</span> (!slots) <span class="keywordflow">return</span> <span class="keyword">false</span>;</div>
+<div class="line"><a id="l00356" name="l00356"></a><span class="lineno">  356</span>    <span class="keywordtype">size_t</span> mask = new_cap - 1;</div>
+<div class="line"><a id="l00357" name="l00357"></a><span class="lineno">  357</span>    <span class="keywordflow">for</span> (<span class="keywordtype">size_t</span> i = 0; i &lt; pending-&gt;cap; i++) {</div>
+<div class="line"><a id="l00358" name="l00358"></a><span class="lineno">  358</span>        <span class="keywordtype">void</span> *key = pending-&gt;slots[i];</div>
+<div class="line"><a id="l00359" name="l00359"></a><span class="lineno">  359</span>        <span class="keywordflow">if</span> (!key) <span class="keywordflow">continue</span>;</div>
+<div class="line"><a id="l00360" name="l00360"></a><span class="lineno">  360</span>        <span class="keywordtype">size_t</span> j = cwist_gc_pending_slot(key, mask);</div>
+<div class="line"><a id="l00361" name="l00361"></a><span class="lineno">  361</span>        <span class="keywordflow">while</span> (slots[j]) j = (j + 1) &amp; mask;</div>
+<div class="line"><a id="l00362" name="l00362"></a><span class="lineno">  362</span>        slots[j] = key;</div>
+<div class="line"><a id="l00363" name="l00363"></a><span class="lineno">  363</span>    }</div>
+<div class="line"><a id="l00364" name="l00364"></a><span class="lineno">  364</span>    free(pending-&gt;slots);</div>
+<div class="line"><a id="l00365" name="l00365"></a><span class="lineno">  365</span>    pending-&gt;slots = slots;</div>
+<div class="line"><a id="l00366" name="l00366"></a><span class="lineno">  366</span>    pending-&gt;cap = new_cap;</div>
+<div class="line"><a id="l00367" name="l00367"></a><span class="lineno">  367</span>    <span class="keywordflow">return</span> <span class="keyword">true</span>;</div>
+<div class="line"><a id="l00368" name="l00368"></a><span class="lineno">  368</span>}</div>
+<div class="line"><a id="l00369" name="l00369"></a><span class="lineno">  369</span> </div>
+<div class="line"><a id="l00380" name="l00380"></a><span class="lineno">  380</span><span class="keyword">static</span> <span class="keywordtype">void</span> cwist_gc_pending_flush(cwist_gc_pending_t *pending) {</div>
+<div class="line"><a id="l00381" name="l00381"></a><span class="lineno">  381</span>    <span class="keywordflow">if</span> (!pending) <span class="keywordflow">return</span>;</div>
+<div class="line"><a id="l00382" name="l00382"></a><span class="lineno">  382</span>    <span class="keywordtype">void</span> **slots = pending-&gt;slots;</div>
+<div class="line"><a id="l00383" name="l00383"></a><span class="lineno">  383</span>    <span class="keywordtype">size_t</span> cap = pending-&gt;cap;</div>
+<div class="line"><a id="l00384" name="l00384"></a><span class="lineno">  384</span>    <span class="keywordtype">size_t</span> count = pending-&gt;count;</div>
+<div class="line"><a id="l00385" name="l00385"></a><span class="lineno">  385</span>    <span class="keywordflow">if</span> (count == 0 &amp;&amp; cap &lt;= <a class="code hl_define" href="../../d8/d16/gc_8c.html#a154739def5b3de47e39cf11481cee5b7">CWIST_GC_PENDING_KEEP_CAP</a>) <span class="keywordflow">return</span>;</div>
+<div class="line"><a id="l00386" name="l00386"></a><span class="lineno">  386</span> </div>
+<div class="line"><a id="l00387" name="l00387"></a><span class="lineno">  387</span>    pending-&gt;slots = NULL;</div>
+<div class="line"><a id="l00388" name="l00388"></a><span class="lineno">  388</span>    pending-&gt;cap = 0;</div>
+<div class="line"><a id="l00389" name="l00389"></a><span class="lineno">  389</span>    pending-&gt;count = 0;</div>
+<div class="line"><a id="l00390" name="l00390"></a><span class="lineno">  390</span>    <span class="keywordflow">for</span> (<span class="keywordtype">size_t</span> i = 0; i &lt; cap &amp;&amp; count &gt; 0; i++) {</div>
+<div class="line"><a id="l00391" name="l00391"></a><span class="lineno">  391</span>        <span class="keywordflow">if</span> (!slots[i]) <span class="keywordflow">continue</span>;</div>
+<div class="line"><a id="l00392" name="l00392"></a><span class="lineno">  392</span>        <a class="code hl_function" href="../../d8/d16/gc_8c.html#a2406b97d2e5c876a65e828c15e656347">cwist_ebr_free</a>(slots[i]);</div>
+<div class="line"><a id="l00393" name="l00393"></a><span class="lineno">  393</span>        count--;</div>
+<div class="line"><a id="l00394" name="l00394"></a><span class="lineno">  394</span>    }</div>
+<div class="line"><a id="l00395" name="l00395"></a><span class="lineno">  395</span>    <span class="keywordflow">if</span> (cap &lt;= CWIST_GC_PENDING_KEEP_CAP &amp;&amp; !pending-&gt;slots) {</div>
+<div class="line"><a id="l00396" name="l00396"></a><span class="lineno">  396</span>        memset(slots, 0, cap * <span class="keyword">sizeof</span>(<span class="keywordtype">void</span> *));</div>
+<div class="line"><a id="l00397" name="l00397"></a><span class="lineno">  397</span>        pending-&gt;slots = slots;</div>
+<div class="line"><a id="l00398" name="l00398"></a><span class="lineno">  398</span>        pending-&gt;cap = cap;</div>
+<div class="line"><a id="l00399" name="l00399"></a><span class="lineno">  399</span>    } <span class="keywordflow">else</span> {</div>
+<div class="line"><a id="l00400" name="l00400"></a><span class="lineno">  400</span>        free(slots);</div>
+<div class="line"><a id="l00401" name="l00401"></a><span class="lineno">  401</span>    }</div>
+<div class="line"><a id="l00402" name="l00402"></a><span class="lineno">  402</span>}</div>
+<div class="line"><a id="l00403" name="l00403"></a><span class="lineno">  403</span> </div>
+<div class="line"><a id="l00404" name="l00404"></a><span class="lineno">  404</span><span class="preprocessor">#if (defined(__STDC_VERSION__) &amp;&amp; __STDC_VERSION__ &gt;= 201112L)</span></div>
+<div class="line"><a id="l00405" name="l00405"></a><span class="lineno">  405</span><span class="preprocessor">#define CWIST_GC_PENDING_TLS 1</span></div>
+<div class="line"><a id="l00406" name="l00406"></a><span class="lineno">  406</span><span class="keyword">static</span> _Thread_local cwist_gc_pending_t *t_gc_pending = NULL;</div>
+<div class="line"><a id="l00407" name="l00407"></a><span class="lineno">  407</span><span class="preprocessor">#elif defined(__GNUC__) || defined(__clang__)</span></div>
+<div class="line"><a id="l00408" name="l00408"></a><span class="lineno">  408</span><span class="preprocessor">#define CWIST_GC_PENDING_TLS 1</span></div>
+<div class="line"><a id="l00409" name="l00409"></a><span class="lineno">  409</span><span class="keyword">static</span> __thread cwist_gc_pending_t *t_gc_pending = NULL;</div>
+<div class="line"><a id="l00410" name="l00410"></a><span class="lineno">  410</span><span class="preprocessor">#endif</span></div>
+<div class="line"><a id="l00411" name="l00411"></a><span class="lineno">  411</span> </div>
+<div class="line"><a id="l00416" name="l00416"></a><span class="lineno">  416</span><span class="keyword">static</span> <span class="keywordtype">void</span> cwist_gc_pending_destroy(<span class="keywordtype">void</span> *arg) {</div>
+<div class="line"><a id="l00417" name="l00417"></a><span class="lineno">  417</span>    cwist_gc_pending_t *pending = (cwist_gc_pending_t *)arg;</div>
+<div class="line"><a id="l00418" name="l00418"></a><span class="lineno">  418</span>    <span class="keywordflow">if</span> (!pending) <span class="keywordflow">return</span>;</div>
+<div class="line"><a id="l00419" name="l00419"></a><span class="lineno">  419</span><span class="preprocessor">#ifdef CWIST_GC_PENDING_TLS</span></div>
+<div class="line"><a id="l00420" name="l00420"></a><span class="lineno">  420</span>    <span class="comment">/* Destructors run on the exiting thread. Drop the cached pointer first,</span></div>
+<div class="line"><a id="l00421" name="l00421"></a><span class="lineno">  421</span><span class="comment">     * so an allocation made by a later destructor creates a fresh set (and</span></div>
+<div class="line"><a id="l00422" name="l00422"></a><span class="lineno">  422</span><span class="comment">     * re-registers it) instead of touching this one after it is freed. */</span></div>
+<div class="line"><a id="l00423" name="l00423"></a><span class="lineno">  423</span>    t_gc_pending = NULL;</div>
+<div class="line"><a id="l00424" name="l00424"></a><span class="lineno">  424</span><span class="preprocessor">#endif</span></div>
+<div class="line"><a id="l00425" name="l00425"></a><span class="lineno">  425</span>    cwist_gc_pending_flush(pending);</div>
+<div class="line"><a id="l00426" name="l00426"></a><span class="lineno">  426</span>    free(pending-&gt;slots);</div>
+<div class="line"><a id="l00427" name="l00427"></a><span class="lineno">  427</span>    free(pending);</div>
+<div class="line"><a id="l00428" name="l00428"></a><span class="lineno">  428</span>}</div>
+<div class="line"><a id="l00429" name="l00429"></a><span class="lineno">  429</span> </div>
+<div class="line"><a id="l00430" name="l00430"></a><span class="lineno">  430</span><span class="keyword">static</span> pthread_key_t g_pending_key;</div>
+<div class="line"><a id="l00431" name="l00431"></a><span class="lineno">  431</span><span class="keyword">static</span> pthread_once_t g_pending_key_once = PTHREAD_ONCE_INIT;</div>
+<div class="line"><a id="l00432" name="l00432"></a><span class="lineno">  432</span> </div>
+<div class="line"><a id="l00433" name="l00433"></a><span class="lineno">  433</span><span class="keyword">static</span> <span class="keywordtype">void</span> cwist_gc_pending_key_init(<span class="keywordtype">void</span>) {</div>
+<div class="line"><a id="l00434" name="l00434"></a><span class="lineno">  434</span>    pthread_key_create(&amp;g_pending_key, cwist_gc_pending_destroy);</div>
+<div class="line"><a id="l00435" name="l00435"></a><span class="lineno">  435</span>}</div>
+<div class="line"><a id="l00436" name="l00436"></a><span class="lineno">  436</span> </div>
+<div class="line"><a id="l00444" name="l00444"></a><span class="lineno">  444</span><span class="keyword">static</span> cwist_gc_pending_t *cwist_gc_pending_get(<span class="keywordtype">void</span>) {</div>
+<div class="line"><a id="l00445" name="l00445"></a><span class="lineno">  445</span><span class="preprocessor">#ifdef CWIST_GC_PENDING_TLS</span></div>
+<div class="line"><a id="l00446" name="l00446"></a><span class="lineno">  446</span>    <span class="keywordflow">if</span> (t_gc_pending) <span class="keywordflow">return</span> t_gc_pending;</div>
+<div class="line"><a id="l00447" name="l00447"></a><span class="lineno">  447</span><span class="preprocessor">#endif</span></div>
+<div class="line"><a id="l00448" name="l00448"></a><span class="lineno">  448</span>    pthread_once(&amp;g_pending_key_once, cwist_gc_pending_key_init);</div>
+<div class="line"><a id="l00449" name="l00449"></a><span class="lineno">  449</span>    cwist_gc_pending_t *pending = (cwist_gc_pending_t *)pthread_getspecific(g_pending_key);</div>
+<div class="line"><a id="l00450" name="l00450"></a><span class="lineno">  450</span>    <span class="keywordflow">if</span> (!pending) {</div>
+<div class="line"><a id="l00451" name="l00451"></a><span class="lineno">  451</span>        pending = (cwist_gc_pending_t *)calloc(1, <span class="keyword">sizeof</span>(*pending));</div>
+<div class="line"><a id="l00452" name="l00452"></a><span class="lineno">  452</span>        <span class="keywordflow">if</span> (pending) pthread_setspecific(g_pending_key, pending);</div>
+<div class="line"><a id="l00453" name="l00453"></a><span class="lineno">  453</span>    }</div>
+<div class="line"><a id="l00454" name="l00454"></a><span class="lineno">  454</span><span class="preprocessor">#ifdef CWIST_GC_PENDING_TLS</span></div>
+<div class="line"><a id="l00455" name="l00455"></a><span class="lineno">  455</span>    t_gc_pending = pending;</div>
+<div class="line"><a id="l00456" name="l00456"></a><span class="lineno">  456</span><span class="preprocessor">#endif</span></div>
+<div class="line"><a id="l00457" name="l00457"></a><span class="lineno">  457</span>    <span class="keywordflow">return</span> pending;</div>
+<div class="line"><a id="l00458" name="l00458"></a><span class="lineno">  458</span>}</div>
+<div class="line"><a id="l00459" name="l00459"></a><span class="lineno">  459</span> </div>
+<div class="foldopen" id="foldopen00468" data-start="{" data-end="}">
+<div class="line"><a id="l00468" name="l00468"></a><span class="lineno"><a class="line" href="../../d0/daa/gc_8h.html#aefa094b961da90bdf2122b4cd056b257">  468</a></span><span class="keywordtype">void</span> <a class="code hl_function" href="../../d8/d16/gc_8c.html#aefa094b961da90bdf2122b4cd056b257">cwist_gc_scope_track</a>(<span class="keywordtype">void</span> *ptr) {</div>
+<div class="line"><a id="l00469" name="l00469"></a><span class="lineno">  469</span>    <span class="keywordflow">if</span> (!ptr) <span class="keywordflow">return</span>;</div>
+<div class="line"><a id="l00470" name="l00470"></a><span class="lineno">  470</span>    cwist_gc_pending_t *pending = cwist_gc_pending_get();</div>
+<div class="line"><a id="l00471" name="l00471"></a><span class="lineno">  471</span>    <span class="keywordflow">if</span> (!pending) <span class="keywordflow">return</span>;</div>
+<div class="line"><a id="l00472" name="l00472"></a><span class="lineno">  472</span>    <span class="comment">/* Best-effort, as before: if the table cannot grow, leave ptr untracked</span></div>
+<div class="line"><a id="l00473" name="l00473"></a><span class="lineno">  473</span><span class="comment">     * rather than fail the allocation. */</span></div>
+<div class="line"><a id="l00474" name="l00474"></a><span class="lineno">  474</span>    <span class="keywordflow">if</span> ((pending-&gt;count + 1) * 2 &gt; pending-&gt;cap &amp;&amp; !cwist_gc_pending_grow(pending)) <span class="keywordflow">return</span>;</div>
+<div class="line"><a id="l00475" name="l00475"></a><span class="lineno">  475</span>    <span class="keywordtype">size_t</span> mask = pending-&gt;cap - 1;</div>
+<div class="line"><a id="l00476" name="l00476"></a><span class="lineno">  476</span>    <span class="keywordtype">size_t</span> i = cwist_gc_pending_slot(ptr, mask);</div>
+<div class="line"><a id="l00477" name="l00477"></a><span class="lineno">  477</span>    <span class="keywordflow">while</span> (pending-&gt;slots[i]) {</div>
+<div class="line"><a id="l00478" name="l00478"></a><span class="lineno">  478</span>        <span class="keywordflow">if</span> (pending-&gt;slots[i] == ptr) <span class="keywordflow">return</span>; <span class="comment">/* already tracked: keep one entry */</span></div>
+<div class="line"><a id="l00479" name="l00479"></a><span class="lineno">  479</span>        i = (i + 1) &amp; mask;</div>
+<div class="line"><a id="l00480" name="l00480"></a><span class="lineno">  480</span>    }</div>
+<div class="line"><a id="l00481" name="l00481"></a><span class="lineno">  481</span>    pending-&gt;slots[i] = ptr;</div>
+<div class="line"><a id="l00482" name="l00482"></a><span class="lineno">  482</span>    pending-&gt;count++;</div>
+<div class="line"><a id="l00483" name="l00483"></a><span class="lineno">  483</span>}</div>
+</div>
+<div class="line"><a id="l00484" name="l00484"></a><span class="lineno">  484</span> </div>
+<div class="foldopen" id="foldopen00495" data-start="{" data-end="}">
+<div class="line"><a id="l00495" name="l00495"></a><span class="lineno"><a class="line" href="../../d0/daa/gc_8h.html#aa346f21856d29592c1c544275cac74e3">  495</a></span><span class="keywordtype">bool</span> <a class="code hl_function" href="../../d8/d16/gc_8c.html#aa346f21856d29592c1c544275cac74e3">cwist_gc_scope_untrack</a>(<span class="keywordtype">void</span> *ptr) {</div>
+<div class="line"><a id="l00496" name="l00496"></a><span class="lineno">  496</span>    <span class="keywordflow">if</span> (!ptr) <span class="keywordflow">return</span> <span class="keyword">false</span>;</div>
+<div class="line"><a id="l00497" name="l00497"></a><span class="lineno">  497</span>    cwist_gc_pending_t *pending = cwist_gc_pending_get();</div>
+<div class="line"><a id="l00498" name="l00498"></a><span class="lineno">  498</span>    <span class="keywordflow">if</span> (!pending || pending-&gt;count == 0) <span class="keywordflow">return</span> <span class="keyword">false</span>;</div>
+<div class="line"><a id="l00499" name="l00499"></a><span class="lineno">  499</span>    <span class="keywordtype">size_t</span> mask = pending-&gt;cap - 1;</div>
+<div class="line"><a id="l00500" name="l00500"></a><span class="lineno">  500</span>    <span class="keywordtype">size_t</span> i = cwist_gc_pending_slot(ptr, mask);</div>
+<div class="line"><a id="l00501" name="l00501"></a><span class="lineno">  501</span>    <span class="keywordflow">while</span> (pending-&gt;slots[i] != ptr) {</div>
+<div class="line"><a id="l00502" name="l00502"></a><span class="lineno">  502</span>        <span class="keywordflow">if</span> (!pending-&gt;slots[i]) <span class="keywordflow">return</span> <span class="keyword">false</span>;</div>
+<div class="line"><a id="l00503" name="l00503"></a><span class="lineno">  503</span>        i = (i + 1) &amp; mask;</div>
+<div class="line"><a id="l00504" name="l00504"></a><span class="lineno">  504</span>    }</div>
+<div class="line"><a id="l00505" name="l00505"></a><span class="lineno">  505</span> </div>
+<div class="line"><a id="l00506" name="l00506"></a><span class="lineno">  506</span>    <span class="comment">/* Backward-shift deletion: pull each following entry of the probe run</span></div>
+<div class="line"><a id="l00507" name="l00507"></a><span class="lineno">  507</span><span class="comment">     * back into the hole unless the hole lies before that entry&#39;s home</span></div>
+<div class="line"><a id="l00508" name="l00508"></a><span class="lineno">  508</span><span class="comment">     * slot, so every remaining key stays reachable without tombstones. */</span></div>
+<div class="line"><a id="l00509" name="l00509"></a><span class="lineno">  509</span>    <span class="keywordtype">size_t</span> hole = i;</div>
+<div class="line"><a id="l00510" name="l00510"></a><span class="lineno">  510</span>    <span class="keywordflow">for</span> (<span class="keywordtype">size_t</span> j = (i + 1) &amp; mask; pending-&gt;slots[j]; j = (j + 1) &amp; mask) {</div>
+<div class="line"><a id="l00511" name="l00511"></a><span class="lineno">  511</span>        <span class="keywordtype">size_t</span> home = cwist_gc_pending_slot(pending-&gt;slots[j], mask);</div>
+<div class="line"><a id="l00512" name="l00512"></a><span class="lineno">  512</span>        <span class="keywordflow">if</span> (((j - home) &amp; mask) &gt;= ((j - hole) &amp; mask)) {</div>
+<div class="line"><a id="l00513" name="l00513"></a><span class="lineno">  513</span>            pending-&gt;slots[hole] = pending-&gt;slots[j];</div>
+<div class="line"><a id="l00514" name="l00514"></a><span class="lineno">  514</span>            hole = j;</div>
+<div class="line"><a id="l00515" name="l00515"></a><span class="lineno">  515</span>        }</div>
+<div class="line"><a id="l00516" name="l00516"></a><span class="lineno">  516</span>    }</div>
+<div class="line"><a id="l00517" name="l00517"></a><span class="lineno">  517</span>    pending-&gt;slots[hole] = NULL;</div>
+<div class="line"><a id="l00518" name="l00518"></a><span class="lineno">  518</span>    pending-&gt;count--;</div>
+<div class="line"><a id="l00519" name="l00519"></a><span class="lineno">  519</span>    <span class="keywordflow">return</span> <span class="keyword">true</span>;</div>
+<div class="line"><a id="l00520" name="l00520"></a><span class="lineno">  520</span>}</div>
+</div>
+<div class="line"><a id="l00521" name="l00521"></a><span class="lineno">  521</span> </div>
+<div class="foldopen" id="foldopen00527" data-start="{" data-end="}">
+<div class="line"><a id="l00527" name="l00527"></a><span class="lineno"><a class="line" href="../../d0/daa/gc_8h.html#a28b862cd5828d70bdb18dfad374d97ef">  527</a></span><span class="keywordtype">bool</span> <a class="code hl_function" href="../../d8/d16/gc_8c.html#a28b862cd5828d70bdb18dfad374d97ef">cwist_gc_scope_disown</a>(<span class="keywordtype">void</span> *ptr) {</div>
+<div class="line"><a id="l00528" name="l00528"></a><span class="lineno">  528</span>    <span class="keywordflow">return</span> <a class="code hl_function" href="../../d8/d16/gc_8c.html#aa346f21856d29592c1c544275cac74e3">cwist_gc_scope_untrack</a>(ptr);</div>
+<div class="line"><a id="l00529" name="l00529"></a><span class="lineno">  529</span>}</div>
+</div>
+<div class="line"><a id="l00530" name="l00530"></a><span class="lineno">  530</span> </div>
+<div class="foldopen" id="foldopen00537" data-start="{" data-end="}">
+<div class="line"><a id="l00537" name="l00537"></a><span class="lineno"><a class="line" href="../../d0/daa/gc_8h.html#a9722c1690dcf7f4e07c62bd0d1dd8047">  537</a></span><span class="keywordtype">void</span> <a class="code hl_function" href="../../d8/d16/gc_8c.html#a9722c1690dcf7f4e07c62bd0d1dd8047">cwist_gc_scope_flush</a>(<span class="keywordtype">void</span>) {</div>
+<div class="line"><a id="l00538" name="l00538"></a><span class="lineno">  538</span>    cwist_gc_pending_flush(cwist_gc_pending_get());</div>
+<div class="line"><a id="l00539" name="l00539"></a><span class="lineno">  539</span>}</div>
+</div>
+<div class="line"><a id="l00540" name="l00540"></a><span class="lineno">  540</span> </div>
+<div class="foldopen" id="foldopen00545" data-start="{" data-end="}">
+<div class="line"><a id="l00545" name="l00545"></a><span class="lineno"><a class="line" href="../../d0/daa/gc_8h.html#ad19aa27cf1cc9a2eb2c11fd4ca7098ca">  545</a></span><span class="keywordtype">size_t</span> <a class="code hl_function" href="../../d8/d16/gc_8c.html#ad19aa27cf1cc9a2eb2c11fd4ca7098ca">cwist_gc_scope_pending_count</a>(<span class="keywordtype">void</span>) {</div>
+<div class="line"><a id="l00546" name="l00546"></a><span class="lineno">  546</span>    cwist_gc_pending_t *pending = cwist_gc_pending_get();</div>
+<div class="line"><a id="l00547" name="l00547"></a><span class="lineno">  547</span>    <span class="keywordflow">return</span> pending ? pending-&gt;count : 0;</div>
+<div class="line"><a id="l00548" name="l00548"></a><span class="lineno">  548</span>}</div>
+</div>
+<div class="line"><a id="l00549" name="l00549"></a><span class="lineno">  549</span> </div>
+<div class="line"><a id="l00550" name="l00550"></a><span class="lineno">  550</span><span class="comment">/* --- Connection registry: thread/process-exit sweep for non-memory</span></div>
+<div class="line"><a id="l00551" name="l00551"></a><span class="lineno">  551</span><span class="comment"> * resources (sockets, TLS sessions, protocol state). See gc.h&#39;s</span></div>
+<div class="line"><a id="l00552" name="l00552"></a><span class="lineno">  552</span><span class="comment"> * cwist_conn_registry_* doc comments for the contract. */</span></div>
+<div class="line"><a id="l00553" name="l00553"></a><span class="lineno">  553</span> </div>
+<div class="line"><a id="l00554" name="l00554"></a><span class="lineno">  554</span><span class="keyword">typedef</span> <span class="keyword">struct </span>{</div>
+<div class="line"><a id="l00555" name="l00555"></a><span class="lineno">  555</span>    <span class="keywordtype">void</span> *handle;</div>
+<div class="line"><a id="l00556" name="l00556"></a><span class="lineno">  556</span>    <a class="code hl_typedef" href="../../d0/daa/gc_8h.html#a5c0209f90f79b0e8b7b893b5d8c9d8ed">cwist_conn_close_fn</a> close_fn;</div>
+<div class="line"><a id="l00557" name="l00557"></a><span class="lineno">  557</span>} cwist_conn_entry_t;</div>
+<div class="line"><a id="l00558" name="l00558"></a><span class="lineno">  558</span> </div>
+<div class="line"><a id="l00568" name="l00568"></a><span class="lineno">  568</span><span class="keyword">typedef</span> <span class="keyword">struct </span>cwist_conn_pending {</div>
+<div class="line"><a id="l00569" name="l00569"></a><span class="lineno">  569</span>    pthread_mutex_t lock;</div>
+<div class="line"><a id="l00570" name="l00570"></a><span class="lineno">  570</span>    cwist_conn_entry_t *items;</div>
+<div class="line"><a id="l00571" name="l00571"></a><span class="lineno">  571</span>    <span class="keywordtype">size_t</span> count;</div>
+<div class="line"><a id="l00572" name="l00572"></a><span class="lineno">  572</span>    <span class="keywordtype">size_t</span> cap;</div>
+<div class="line"><a id="l00573" name="l00573"></a><span class="lineno">  573</span>    <span class="keywordtype">bool</span> swept;</div>
+<div class="line"><a id="l00574" name="l00574"></a><span class="lineno">  574</span>    <span class="keyword">struct </span>cwist_conn_pending *global_next; <span class="comment">/* g_conn_registry_lock-protected link */</span></div>
+<div class="line"><a id="l00575" name="l00575"></a><span class="lineno"><a class="line" href="../../d8/d16/gc_8c.html#ab790bb476f395fc9533cf0b5222c3ff9">  575</a></span>} <a class="code hl_typedef" href="../../d8/d16/gc_8c.html#ab790bb476f395fc9533cf0b5222c3ff9">cwist_conn_pending_t</a>;</div>
+<div class="line"><a id="l00576" name="l00576"></a><span class="lineno">  576</span> </div>
+<div class="line"><a id="l00577" name="l00577"></a><span class="lineno">  577</span><span class="keyword">static</span> pthread_key_t g_conn_key;</div>
+<div class="line"><a id="l00578" name="l00578"></a><span class="lineno">  578</span><span class="keyword">static</span> pthread_once_t g_conn_key_once = PTHREAD_ONCE_INIT;</div>
+<div class="line"><a id="l00579" name="l00579"></a><span class="lineno">  579</span><span class="keyword">static</span> pthread_mutex_t g_conn_registry_lock = PTHREAD_MUTEX_INITIALIZER;</div>
+<div class="line"><a id="l00580" name="l00580"></a><span class="lineno">  580</span><span class="keyword">static</span> <a class="code hl_typedef" href="../../d8/d16/gc_8c.html#ab790bb476f395fc9533cf0b5222c3ff9">cwist_conn_pending_t</a> *g_conn_registry_head = NULL;</div>
+<div class="line"><a id="l00581" name="l00581"></a><span class="lineno">  581</span><span class="keyword">static</span> _Atomic <span class="keywordtype">bool</span> g_conn_atexit_registered = <span class="keyword">false</span>;</div>
+<div class="line"><a id="l00582" name="l00582"></a><span class="lineno">  582</span> </div>
+<div class="line"><a id="l00584" name="l00584"></a><span class="lineno">  584</span><span class="keyword">static</span> <span class="keywordtype">void</span> cwist_conn_pending_sweep_locked(<a class="code hl_typedef" href="../../d8/d16/gc_8c.html#ab790bb476f395fc9533cf0b5222c3ff9">cwist_conn_pending_t</a> *pending) {</div>
+<div class="line"><a id="l00585" name="l00585"></a><span class="lineno">  585</span>    <span class="keywordflow">if</span> (pending-&gt;swept) <span class="keywordflow">return</span>;</div>
+<div class="line"><a id="l00586" name="l00586"></a><span class="lineno">  586</span>    <span class="keywordflow">for</span> (<span class="keywordtype">size_t</span> i = 0; i &lt; pending-&gt;count; i++) {</div>
+<div class="line"><a id="l00587" name="l00587"></a><span class="lineno">  587</span>        pending-&gt;items[i].close_fn(pending-&gt;items[i].handle);</div>
+<div class="line"><a id="l00588" name="l00588"></a><span class="lineno">  588</span>    }</div>
+<div class="line"><a id="l00589" name="l00589"></a><span class="lineno">  589</span>    pending-&gt;count = 0;</div>
+<div class="line"><a id="l00590" name="l00590"></a><span class="lineno">  590</span>    pending-&gt;swept = <span class="keyword">true</span>;</div>
+<div class="line"><a id="l00591" name="l00591"></a><span class="lineno">  591</span>}</div>
+<div class="line"><a id="l00592" name="l00592"></a><span class="lineno">  592</span> </div>
+<div class="line"><a id="l00594" name="l00594"></a><span class="lineno">  594</span><span class="keyword">static</span> <span class="keywordtype">void</span> cwist_conn_registry_sweep_all_impl(<span class="keywordtype">void</span>) {</div>
+<div class="line"><a id="l00595" name="l00595"></a><span class="lineno">  595</span>    pthread_mutex_lock(&amp;g_conn_registry_lock);</div>
+<div class="line"><a id="l00596" name="l00596"></a><span class="lineno">  596</span>    <span class="keywordflow">for</span> (<a class="code hl_typedef" href="../../d8/d16/gc_8c.html#ab790bb476f395fc9533cf0b5222c3ff9">cwist_conn_pending_t</a> *p = g_conn_registry_head; p; p = p-&gt;global_next) {</div>
+<div class="line"><a id="l00597" name="l00597"></a><span class="lineno">  597</span>        pthread_mutex_lock(&amp;p-&gt;lock);</div>
+<div class="line"><a id="l00598" name="l00598"></a><span class="lineno">  598</span>        cwist_conn_pending_sweep_locked(p);</div>
+<div class="line"><a id="l00599" name="l00599"></a><span class="lineno">  599</span>        pthread_mutex_unlock(&amp;p-&gt;lock);</div>
+<div class="line"><a id="l00600" name="l00600"></a><span class="lineno">  600</span>    }</div>
+<div class="line"><a id="l00601" name="l00601"></a><span class="lineno">  601</span>    pthread_mutex_unlock(&amp;g_conn_registry_lock);</div>
+<div class="line"><a id="l00602" name="l00602"></a><span class="lineno">  602</span>}</div>
+<div class="line"><a id="l00603" name="l00603"></a><span class="lineno">  603</span> </div>
+<div class="line"><a id="l00604" name="l00604"></a><span class="lineno">  604</span><span class="keyword">static</span> <span class="keywordtype">void</span> cwist_conn_registry_atexit(<span class="keywordtype">void</span>) {</div>
+<div class="line"><a id="l00605" name="l00605"></a><span class="lineno">  605</span>    cwist_conn_registry_sweep_all_impl();</div>
+<div class="line"><a id="l00606" name="l00606"></a><span class="lineno">  606</span>}</div>
+<div class="line"><a id="l00607" name="l00607"></a><span class="lineno">  607</span> </div>
+<div class="line"><a id="l00614" name="l00614"></a><span class="lineno">  614</span><span class="keyword">static</span> <span class="keywordtype">void</span> cwist_conn_pending_destroy(<span class="keywordtype">void</span> *arg) {</div>
+<div class="line"><a id="l00615" name="l00615"></a><span class="lineno">  615</span>    <a class="code hl_typedef" href="../../d8/d16/gc_8c.html#ab790bb476f395fc9533cf0b5222c3ff9">cwist_conn_pending_t</a> *pending = (<a class="code hl_typedef" href="../../d8/d16/gc_8c.html#ab790bb476f395fc9533cf0b5222c3ff9">cwist_conn_pending_t</a> *)arg;</div>
+<div class="line"><a id="l00616" name="l00616"></a><span class="lineno">  616</span>    <span class="keywordflow">if</span> (!pending) <span class="keywordflow">return</span>;</div>
+<div class="line"><a id="l00617" name="l00617"></a><span class="lineno">  617</span> </div>
+<div class="line"><a id="l00618" name="l00618"></a><span class="lineno">  618</span>    pthread_mutex_lock(&amp;pending-&gt;lock);</div>
+<div class="line"><a id="l00619" name="l00619"></a><span class="lineno">  619</span>    cwist_conn_pending_sweep_locked(pending);</div>
+<div class="line"><a id="l00620" name="l00620"></a><span class="lineno">  620</span>    pthread_mutex_unlock(&amp;pending-&gt;lock);</div>
+<div class="line"><a id="l00621" name="l00621"></a><span class="lineno">  621</span> </div>
+<div class="line"><a id="l00622" name="l00622"></a><span class="lineno">  622</span>    pthread_mutex_lock(&amp;g_conn_registry_lock);</div>
+<div class="line"><a id="l00623" name="l00623"></a><span class="lineno">  623</span>    <a class="code hl_typedef" href="../../d8/d16/gc_8c.html#ab790bb476f395fc9533cf0b5222c3ff9">cwist_conn_pending_t</a> **link = &amp;g_conn_registry_head;</div>
+<div class="line"><a id="l00624" name="l00624"></a><span class="lineno">  624</span>    <span class="keywordflow">while</span> (*link &amp;&amp; *link != pending) link = &amp;(*link)-&gt;global_next;</div>
+<div class="line"><a id="l00625" name="l00625"></a><span class="lineno">  625</span>    <span class="keywordflow">if</span> (*link == pending) *link = pending-&gt;global_next;</div>
+<div class="line"><a id="l00626" name="l00626"></a><span class="lineno">  626</span>    pthread_mutex_unlock(&amp;g_conn_registry_lock);</div>
+<div class="line"><a id="l00627" name="l00627"></a><span class="lineno">  627</span> </div>
+<div class="line"><a id="l00628" name="l00628"></a><span class="lineno">  628</span>    pthread_mutex_destroy(&amp;pending-&gt;lock);</div>
+<div class="line"><a id="l00629" name="l00629"></a><span class="lineno">  629</span>    free(pending-&gt;items);</div>
+<div class="line"><a id="l00630" name="l00630"></a><span class="lineno">  630</span>    free(pending);</div>
+<div class="line"><a id="l00631" name="l00631"></a><span class="lineno">  631</span>}</div>
+<div class="line"><a id="l00632" name="l00632"></a><span class="lineno">  632</span> </div>
+<div class="line"><a id="l00633" name="l00633"></a><span class="lineno">  633</span><span class="keyword">static</span> <span class="keywordtype">void</span> cwist_conn_key_init(<span class="keywordtype">void</span>) {</div>
+<div class="line"><a id="l00634" name="l00634"></a><span class="lineno">  634</span>    pthread_key_create(&amp;g_conn_key, cwist_conn_pending_destroy);</div>
+<div class="line"><a id="l00635" name="l00635"></a><span class="lineno">  635</span>}</div>
+<div class="line"><a id="l00636" name="l00636"></a><span class="lineno">  636</span> </div>
+<div class="line"><a id="l00638" name="l00638"></a><span class="lineno">  638</span><span class="keyword">static</span> <a class="code hl_typedef" href="../../d8/d16/gc_8c.html#ab790bb476f395fc9533cf0b5222c3ff9">cwist_conn_pending_t</a> *cwist_conn_pending_get(<span class="keywordtype">void</span>) {</div>
+<div class="line"><a id="l00639" name="l00639"></a><span class="lineno">  639</span>    pthread_once(&amp;g_conn_key_once, cwist_conn_key_init);</div>
+<div class="line"><a id="l00640" name="l00640"></a><span class="lineno">  640</span>    <a class="code hl_typedef" href="../../d8/d16/gc_8c.html#ab790bb476f395fc9533cf0b5222c3ff9">cwist_conn_pending_t</a> *pending = (<a class="code hl_typedef" href="../../d8/d16/gc_8c.html#ab790bb476f395fc9533cf0b5222c3ff9">cwist_conn_pending_t</a> *)pthread_getspecific(g_conn_key);</div>
+<div class="line"><a id="l00641" name="l00641"></a><span class="lineno">  641</span>    <span class="keywordflow">if</span> (pending) <span class="keywordflow">return</span> pending;</div>
+<div class="line"><a id="l00642" name="l00642"></a><span class="lineno">  642</span> </div>
+<div class="line"><a id="l00643" name="l00643"></a><span class="lineno">  643</span>    pending = (<a class="code hl_typedef" href="../../d8/d16/gc_8c.html#ab790bb476f395fc9533cf0b5222c3ff9">cwist_conn_pending_t</a> *)calloc(1, <span class="keyword">sizeof</span>(*pending));</div>
+<div class="line"><a id="l00644" name="l00644"></a><span class="lineno">  644</span>    <span class="keywordflow">if</span> (!pending) <span class="keywordflow">return</span> NULL;</div>
+<div class="line"><a id="l00645" name="l00645"></a><span class="lineno">  645</span>    <span class="keywordflow">if</span> (pthread_mutex_init(&amp;pending-&gt;lock, NULL) != 0) {</div>
+<div class="line"><a id="l00646" name="l00646"></a><span class="lineno">  646</span>        free(pending);</div>
+<div class="line"><a id="l00647" name="l00647"></a><span class="lineno">  647</span>        <span class="keywordflow">return</span> NULL;</div>
+<div class="line"><a id="l00648" name="l00648"></a><span class="lineno">  648</span>    }</div>
+<div class="line"><a id="l00649" name="l00649"></a><span class="lineno">  649</span>    <span class="keywordflow">if</span> (pthread_setspecific(g_conn_key, pending) != 0) {</div>
+<div class="line"><a id="l00650" name="l00650"></a><span class="lineno">  650</span>        pthread_mutex_destroy(&amp;pending-&gt;lock);</div>
+<div class="line"><a id="l00651" name="l00651"></a><span class="lineno">  651</span>        free(pending);</div>
+<div class="line"><a id="l00652" name="l00652"></a><span class="lineno">  652</span>        <span class="keywordflow">return</span> NULL;</div>
+<div class="line"><a id="l00653" name="l00653"></a><span class="lineno">  653</span>    }</div>
+<div class="line"><a id="l00654" name="l00654"></a><span class="lineno">  654</span> </div>
+<div class="line"><a id="l00655" name="l00655"></a><span class="lineno">  655</span>    <span class="comment">/* Register the process-exit sweep exactly once, the first time any</span></div>
+<div class="line"><a id="l00656" name="l00656"></a><span class="lineno">  656</span><span class="comment">     * thread ever tracks a connection (not eagerly at load time: most</span></div>
+<div class="line"><a id="l00657" name="l00657"></a><span class="lineno">  657</span><span class="comment">     * processes never enable full-GC, and atexit() handlers are a</span></div>
+<div class="line"><a id="l00658" name="l00658"></a><span class="lineno">  658</span><span class="comment">     * process-wide resource other code may also be competing for). */</span></div>
+<div class="line"><a id="l00659" name="l00659"></a><span class="lineno">  659</span>    <span class="keywordflow">if</span> (!atomic_exchange_explicit(&amp;g_conn_atexit_registered, <span class="keyword">true</span>, memory_order_acq_rel)) {</div>
+<div class="line"><a id="l00660" name="l00660"></a><span class="lineno">  660</span>        atexit(cwist_conn_registry_atexit);</div>
+<div class="line"><a id="l00661" name="l00661"></a><span class="lineno">  661</span>    }</div>
+<div class="line"><a id="l00662" name="l00662"></a><span class="lineno">  662</span> </div>
+<div class="line"><a id="l00663" name="l00663"></a><span class="lineno">  663</span>    pthread_mutex_lock(&amp;g_conn_registry_lock);</div>
+<div class="line"><a id="l00664" name="l00664"></a><span class="lineno">  664</span>    pending-&gt;global_next = g_conn_registry_head;</div>
+<div class="line"><a id="l00665" name="l00665"></a><span class="lineno">  665</span>    g_conn_registry_head = pending;</div>
+<div class="line"><a id="l00666" name="l00666"></a><span class="lineno">  666</span>    pthread_mutex_unlock(&amp;g_conn_registry_lock);</div>
+<div class="line"><a id="l00667" name="l00667"></a><span class="lineno">  667</span> </div>
+<div class="line"><a id="l00668" name="l00668"></a><span class="lineno">  668</span>    <span class="keywordflow">return</span> pending;</div>
+<div class="line"><a id="l00669" name="l00669"></a><span class="lineno">  669</span>}</div>
+<div class="line"><a id="l00670" name="l00670"></a><span class="lineno">  670</span> </div>
+<div class="foldopen" id="foldopen00680" data-start="{" data-end="}">
+<div class="line"><a id="l00680" name="l00680"></a><span class="lineno"><a class="line" href="../../d0/daa/gc_8h.html#ab26f402453c12fa53637372d37bc9aed">  680</a></span><span class="keywordtype">void</span> <a class="code hl_function" href="../../d8/d16/gc_8c.html#ab26f402453c12fa53637372d37bc9aed">cwist_conn_registry_track</a>(<span class="keywordtype">void</span> *handle, <a class="code hl_typedef" href="../../d0/daa/gc_8h.html#a5c0209f90f79b0e8b7b893b5d8c9d8ed">cwist_conn_close_fn</a> close_fn) {</div>
+<div class="line"><a id="l00681" name="l00681"></a><span class="lineno">  681</span>    <span class="keywordflow">if</span> (!handle || !close_fn) <span class="keywordflow">return</span>;</div>
+<div class="line"><a id="l00682" name="l00682"></a><span class="lineno">  682</span>    <span class="keywordflow">if</span> (!<a class="code hl_function" href="../../d8/d16/gc_8c.html#a35e613a89ca213039b7b8b80464c223c">cwist_full_gc_enabled</a>()) <span class="keywordflow">return</span>;</div>
+<div class="line"><a id="l00683" name="l00683"></a><span class="lineno">  683</span>    <a class="code hl_typedef" href="../../d8/d16/gc_8c.html#ab790bb476f395fc9533cf0b5222c3ff9">cwist_conn_pending_t</a> *pending = cwist_conn_pending_get();</div>
+<div class="line"><a id="l00684" name="l00684"></a><span class="lineno">  684</span>    <span class="keywordflow">if</span> (!pending) <span class="keywordflow">return</span>;</div>
+<div class="line"><a id="l00685" name="l00685"></a><span class="lineno">  685</span> </div>
+<div class="line"><a id="l00686" name="l00686"></a><span class="lineno">  686</span>    pthread_mutex_lock(&amp;pending-&gt;lock);</div>
+<div class="line"><a id="l00687" name="l00687"></a><span class="lineno">  687</span>    <span class="keywordflow">if</span> (pending-&gt;count == pending-&gt;cap) {</div>
+<div class="line"><a id="l00688" name="l00688"></a><span class="lineno">  688</span>        <span class="keywordtype">size_t</span> new_cap = pending-&gt;cap ? pending-&gt;cap * 2 : 8;</div>
+<div class="line"><a id="l00689" name="l00689"></a><span class="lineno">  689</span>        cwist_conn_entry_t *grown =</div>
+<div class="line"><a id="l00690" name="l00690"></a><span class="lineno">  690</span>            (cwist_conn_entry_t *)realloc(pending-&gt;items, new_cap * <span class="keyword">sizeof</span>(*grown));</div>
+<div class="line"><a id="l00691" name="l00691"></a><span class="lineno">  691</span>        <span class="keywordflow">if</span> (grown) {</div>
+<div class="line"><a id="l00692" name="l00692"></a><span class="lineno">  692</span>            pending-&gt;items = grown;</div>
+<div class="line"><a id="l00693" name="l00693"></a><span class="lineno">  693</span>            pending-&gt;cap = new_cap;</div>
+<div class="line"><a id="l00694" name="l00694"></a><span class="lineno">  694</span>        }</div>
+<div class="line"><a id="l00695" name="l00695"></a><span class="lineno">  695</span>    }</div>
+<div class="line"><a id="l00696" name="l00696"></a><span class="lineno">  696</span>    <span class="keywordflow">if</span> (pending-&gt;count &lt; pending-&gt;cap) {</div>
+<div class="line"><a id="l00697" name="l00697"></a><span class="lineno">  697</span>        pending-&gt;items[pending-&gt;count++] =</div>
+<div class="line"><a id="l00698" name="l00698"></a><span class="lineno">  698</span>            (cwist_conn_entry_t){.handle = handle, .close_fn = close_fn};</div>
+<div class="line"><a id="l00699" name="l00699"></a><span class="lineno">  699</span>    }</div>
+<div class="line"><a id="l00700" name="l00700"></a><span class="lineno">  700</span>    pthread_mutex_unlock(&amp;pending-&gt;lock);</div>
+<div class="line"><a id="l00701" name="l00701"></a><span class="lineno">  701</span>}</div>
+</div>
+<div class="line"><a id="l00702" name="l00702"></a><span class="lineno">  702</span> </div>
+<div class="foldopen" id="foldopen00708" data-start="{" data-end="}">
+<div class="line"><a id="l00708" name="l00708"></a><span class="lineno"><a class="line" href="../../d0/daa/gc_8h.html#a1bb3e29d15dcaab029c19c82f0707035">  708</a></span><span class="keywordtype">bool</span> <a class="code hl_function" href="../../d8/d16/gc_8c.html#a1bb3e29d15dcaab029c19c82f0707035">cwist_conn_registry_untrack</a>(<span class="keywordtype">void</span> *handle) {</div>
+<div class="line"><a id="l00709" name="l00709"></a><span class="lineno">  709</span>    <span class="keywordflow">if</span> (!handle) <span class="keywordflow">return</span> <span class="keyword">false</span>;</div>
+<div class="line"><a id="l00710" name="l00710"></a><span class="lineno">  710</span>    <a class="code hl_typedef" href="../../d8/d16/gc_8c.html#ab790bb476f395fc9533cf0b5222c3ff9">cwist_conn_pending_t</a> *pending = cwist_conn_pending_get();</div>
+<div class="line"><a id="l00711" name="l00711"></a><span class="lineno">  711</span>    <span class="keywordflow">if</span> (!pending) <span class="keywordflow">return</span> <span class="keyword">false</span>;</div>
+<div class="line"><a id="l00712" name="l00712"></a><span class="lineno">  712</span> </div>
+<div class="line"><a id="l00713" name="l00713"></a><span class="lineno">  713</span>    <span class="keywordtype">bool</span> found = <span class="keyword">false</span>;</div>
+<div class="line"><a id="l00714" name="l00714"></a><span class="lineno">  714</span>    pthread_mutex_lock(&amp;pending-&gt;lock);</div>
+<div class="line"><a id="l00715" name="l00715"></a><span class="lineno">  715</span>    <span class="keywordflow">for</span> (<span class="keywordtype">size_t</span> i = 0; i &lt; pending-&gt;count; i++) {</div>
+<div class="line"><a id="l00716" name="l00716"></a><span class="lineno">  716</span>        <span class="keywordflow">if</span> (pending-&gt;items[i].handle == handle) {</div>
+<div class="line"><a id="l00717" name="l00717"></a><span class="lineno">  717</span>            pending-&gt;items[i] = pending-&gt;items[--pending-&gt;count];</div>
+<div class="line"><a id="l00718" name="l00718"></a><span class="lineno">  718</span>            found = <span class="keyword">true</span>;</div>
+<div class="line"><a id="l00719" name="l00719"></a><span class="lineno">  719</span>            <span class="keywordflow">break</span>;</div>
+<div class="line"><a id="l00720" name="l00720"></a><span class="lineno">  720</span>        }</div>
+<div class="line"><a id="l00721" name="l00721"></a><span class="lineno">  721</span>    }</div>
+<div class="line"><a id="l00722" name="l00722"></a><span class="lineno">  722</span>    pthread_mutex_unlock(&amp;pending-&gt;lock);</div>
+<div class="line"><a id="l00723" name="l00723"></a><span class="lineno">  723</span>    <span class="keywordflow">return</span> found;</div>
+<div class="line"><a id="l00724" name="l00724"></a><span class="lineno">  724</span>}</div>
+</div>
+<div class="line"><a id="l00725" name="l00725"></a><span class="lineno">  725</span> </div>
+<div class="foldopen" id="foldopen00732" data-start="{" data-end="}">
+<div class="line"><a id="l00732" name="l00732"></a><span class="lineno"><a class="line" href="../../d0/daa/gc_8h.html#aa0e57fd4f5152ff19be1e832e8dfa3cc">  732</a></span><span class="keywordtype">void</span> <a class="code hl_function" href="../../d8/d16/gc_8c.html#aa0e57fd4f5152ff19be1e832e8dfa3cc">cwist_conn_registry_flush</a>(<span class="keywordtype">void</span>) {</div>
+<div class="line"><a id="l00733" name="l00733"></a><span class="lineno">  733</span>    <a class="code hl_typedef" href="../../d8/d16/gc_8c.html#ab790bb476f395fc9533cf0b5222c3ff9">cwist_conn_pending_t</a> *pending = cwist_conn_pending_get();</div>
+<div class="line"><a id="l00734" name="l00734"></a><span class="lineno">  734</span>    <span class="keywordflow">if</span> (!pending) <span class="keywordflow">return</span>;</div>
+<div class="line"><a id="l00735" name="l00735"></a><span class="lineno">  735</span>    pthread_mutex_lock(&amp;pending-&gt;lock);</div>
+<div class="line"><a id="l00736" name="l00736"></a><span class="lineno">  736</span>    <span class="keywordflow">for</span> (<span class="keywordtype">size_t</span> i = 0; i &lt; pending-&gt;count; i++) {</div>
+<div class="line"><a id="l00737" name="l00737"></a><span class="lineno">  737</span>        pending-&gt;items[i].close_fn(pending-&gt;items[i].handle);</div>
+<div class="line"><a id="l00738" name="l00738"></a><span class="lineno">  738</span>    }</div>
+<div class="line"><a id="l00739" name="l00739"></a><span class="lineno">  739</span>    pending-&gt;count = 0;</div>
+<div class="line"><a id="l00740" name="l00740"></a><span class="lineno">  740</span>    pthread_mutex_unlock(&amp;pending-&gt;lock);</div>
+<div class="line"><a id="l00741" name="l00741"></a><span class="lineno">  741</span>}</div>
+</div>
+<div class="line"><a id="l00742" name="l00742"></a><span class="lineno">  742</span> </div>
+<div class="foldopen" id="foldopen00749" data-start="{" data-end="}">
+<div class="line"><a id="l00749" name="l00749"></a><span class="lineno"><a class="line" href="../../d0/daa/gc_8h.html#a190fb06d2ebdb046377b856d47bbbc15">  749</a></span><span class="keywordtype">void</span> <a class="code hl_function" href="../../d8/d16/gc_8c.html#a190fb06d2ebdb046377b856d47bbbc15">cwist_conn_registry_sweep_all</a>(<span class="keywordtype">void</span>) {</div>
+<div class="line"><a id="l00750" name="l00750"></a><span class="lineno">  750</span>    cwist_conn_registry_sweep_all_impl();</div>
+<div class="line"><a id="l00751" name="l00751"></a><span class="lineno">  751</span>}</div>
+</div>
+<div class="line"><a id="l00752" name="l00752"></a><span class="lineno">  752</span> </div>
+<div class="foldopen" id="foldopen00757" data-start="{" data-end="}">
+<div class="line"><a id="l00757" name="l00757"></a><span class="lineno"><a class="line" href="../../d0/daa/gc_8h.html#a9e4705e4cecb1de3290481eef3500c2e">  757</a></span><span class="keywordtype">size_t</span> <a class="code hl_function" href="../../d8/d16/gc_8c.html#a9e4705e4cecb1de3290481eef3500c2e">cwist_conn_registry_pending_count</a>(<span class="keywordtype">void</span>) {</div>
+<div class="line"><a id="l00758" name="l00758"></a><span class="lineno">  758</span>    <a class="code hl_typedef" href="../../d8/d16/gc_8c.html#ab790bb476f395fc9533cf0b5222c3ff9">cwist_conn_pending_t</a> *pending = cwist_conn_pending_get();</div>
+<div class="line"><a id="l00759" name="l00759"></a><span class="lineno">  759</span>    <span class="keywordflow">if</span> (!pending) <span class="keywordflow">return</span> 0;</div>
+<div class="line"><a id="l00760" name="l00760"></a><span class="lineno">  760</span>    pthread_mutex_lock(&amp;pending-&gt;lock);</div>
+<div class="line"><a id="l00761" name="l00761"></a><span class="lineno">  761</span>    <span class="keywordtype">size_t</span> n = pending-&gt;count;</div>
+<div class="line"><a id="l00762" name="l00762"></a><span class="lineno">  762</span>    pthread_mutex_unlock(&amp;pending-&gt;lock);</div>
+<div class="line"><a id="l00763" name="l00763"></a><span class="lineno">  763</span>    <span class="keywordflow">return</span> n;</div>
+<div class="line"><a id="l00764" name="l00764"></a><span class="lineno">  764</span>}</div>
+</div>
+<div class="ttc" id="aalloc_8h_html"><div class="ttname"><a href="../../d2/dfe/alloc_8h.html">alloc.h</a></div><div class="ttdoc">Memory allocation wrappers backed by libttak.</div></div>
+<div class="ttc" id="aalloc_8h_html_a220abeebe2823e72511d1690fc561306"><div class="ttname"><a href="../../d2/dfe/alloc_8h.html#a220abeebe2823e72511d1690fc561306">cwist_free</a></div><div class="ttdeci">void cwist_free(void *ptr)</div><div class="ttdoc">Free memory obtained via cwist_alloc/cwist_strdup/etc.</div><div class="ttdef"><b>Definition</b> <a href="../../d9/d39/alloc_8c_source.html#l00390">alloc.c:390</a></div></div>
+<div class="ttc" id="aalloc_8h_html_aeba69949fe17751318e6b5fc84a74096"><div class="ttname"><a href="../../d2/dfe/alloc_8h.html#aeba69949fe17751318e6b5fc84a74096">cwist_alloc</a></div><div class="ttdeci">void * cwist_alloc(size_t size)</div><div class="ttdoc">Allocate zeroed memory tracked by libttak.</div><div class="ttdef"><b>Definition</b> <a href="../../d9/d39/alloc_8c_source.html#l00275">alloc.c:275</a></div></div>
+<div class="ttc" id="agc_8c_html_a083b2e840cc4afee2f08f66c46f4d64d"><div class="ttname"><a href="../../d8/d16/gc_8c.html#a083b2e840cc4afee2f08f66c46f4d64d">__attribute__</a></div><div class="ttdeci">__attribute__((constructor))</div><div class="ttdoc">Map the guard page before main() runs, so cwist_full_gc_enabled() – called on every cwist_alloc()/cwi...</div><div class="ttdef"><b>Definition</b> <a href="../../d8/d16/gc_8c_source.html#l00195">gc.c:195</a></div></div>
+<div class="ttc" id="agc_8c_html_a0d7297e8d4a073c018f97fa6e7f0a372"><div class="ttname"><a href="../../d8/d16/gc_8c.html#a0d7297e8d4a073c018f97fa6e7f0a372">cwist_full_gc</a></div><div class="ttdeci">void cwist_full_gc(bool enable)</div><div class="ttdoc">Claim full-GC mode permanently, exactly once, then harden the toggle.</div><div class="ttdef"><b>Definition</b> <a href="../../d8/d16/gc_8c_source.html#l00257">gc.c:257</a></div></div>
+<div class="ttc" id="agc_8c_html_a0ec6a82fe196a811d41577f091577282"><div class="ttname"><a href="../../d8/d16/gc_8c.html#a0ec6a82fe196a811d41577f091577282">cwist_gc_raw</a></div><div class="ttdeci">ttak_epoch_gc_t * cwist_gc_raw(cwist_gc_t *gc)</div><div class="ttdoc">Expose the underlying libttak epoch GC structure for advanced integrations.</div><div class="ttdef"><b>Definition</b> <a href="../../d8/d16/gc_8c_source.html#l00094">gc.c:94</a></div></div>
+<div class="ttc" id="agc_8c_html_a154739def5b3de47e39cf11481cee5b7"><div class="ttname"><a href="../../d8/d16/gc_8c.html#a154739def5b3de47e39cf11481cee5b7">CWIST_GC_PENDING_KEEP_CAP</a></div><div class="ttdeci">#define CWIST_GC_PENDING_KEEP_CAP</div><div class="ttdef"><b>Definition</b> <a href="../../d8/d16/gc_8c_source.html#l00340">gc.c:340</a></div></div>
+<div class="ttc" id="agc_8c_html_a186d9c4a74105ea0bbe6fa9c6d3aa2e3"><div class="ttname"><a href="../../d8/d16/gc_8c.html#a186d9c4a74105ea0bbe6fa9c6d3aa2e3">cwist_gc_auto_rotate</a></div><div class="ttdeci">void cwist_gc_auto_rotate(cwist_gc_t *gc, bool enabled)</div><div class="ttdoc">Enable auto-rotation of epoch GC.</div><div class="ttdef"><b>Definition</b> <a href="../../d8/d16/gc_8c_source.html#l00055">gc.c:55</a></div></div>
+<div class="ttc" id="agc_8c_html_a190fb06d2ebdb046377b856d47bbbc15"><div class="ttname"><a href="../../d8/d16/gc_8c.html#a190fb06d2ebdb046377b856d47bbbc15">cwist_conn_registry_sweep_all</a></div><div class="ttdeci">void cwist_conn_registry_sweep_all(void)</div><div class="ttdoc">Close every still-registered thread's tracked handles.</div><div class="ttdef"><b>Definition</b> <a href="../../d8/d16/gc_8c_source.html#l00749">gc.c:749</a></div></div>
+<div class="ttc" id="agc_8c_html_a1bb3e29d15dcaab029c19c82f0707035"><div class="ttname"><a href="../../d8/d16/gc_8c.html#a1bb3e29d15dcaab029c19c82f0707035">cwist_conn_registry_untrack</a></div><div class="ttdeci">bool cwist_conn_registry_untrack(void *handle)</div><div class="ttdoc">Remove a handle from this thread's tracked-connection list.</div><div class="ttdef"><b>Definition</b> <a href="../../d8/d16/gc_8c_source.html#l00708">gc.c:708</a></div></div>
+<div class="ttc" id="agc_8c_html_a2406b97d2e5c876a65e828c15e656347"><div class="ttname"><a href="../../d8/d16/gc_8c.html#a2406b97d2e5c876a65e828c15e656347">cwist_ebr_free</a></div><div class="ttdeci">void cwist_ebr_free(void *ptr)</div><div class="ttdoc">Defer release of a block until every thread that might still be reading it (inside ttak_epoch_enter()...</div><div class="ttdef"><b>Definition</b> <a href="../../d8/d16/gc_8c_source.html#l00123">gc.c:123</a></div></div>
+<div class="ttc" id="agc_8c_html_a286ebab4f79e4a725d64dbf402ed53fb"><div class="ttname"><a href="../../d8/d16/gc_8c.html#a286ebab4f79e4a725d64dbf402ed53fb">CWIST_GC_PENDING_MIN_CAP</a></div><div class="ttdeci">#define CWIST_GC_PENDING_MIN_CAP</div><div class="ttdef"><b>Definition</b> <a href="../../d8/d16/gc_8c_source.html#l00337">gc.c:337</a></div></div>
+<div class="ttc" id="agc_8c_html_a28b862cd5828d70bdb18dfad374d97ef"><div class="ttname"><a href="../../d8/d16/gc_8c.html#a28b862cd5828d70bdb18dfad374d97ef">cwist_gc_scope_disown</a></div><div class="ttdeci">bool cwist_gc_scope_disown(void *ptr)</div><div class="ttdoc">Alias of cwist_gc_scope_untrack(): drop tracking without retiring.</div><div class="ttdef"><b>Definition</b> <a href="../../d8/d16/gc_8c_source.html#l00527">gc.c:527</a></div></div>
+<div class="ttc" id="agc_8c_html_a349ae8f8d434ff73172bffbb90ab72de"><div class="ttname"><a href="../../d8/d16/gc_8c.html#a349ae8f8d434ff73172bffbb90ab72de">cwist_reg_ptr</a></div><div class="ttdeci">void cwist_reg_ptr(cwist_gc_t *gc, void *ptr)</div><div class="ttdoc">Register a pointer with zero-size accounting metadata.</div><div class="ttdef"><b>Definition</b> <a href="../../d8/d16/gc_8c_source.html#l00074">gc.c:74</a></div></div>
+<div class="ttc" id="agc_8c_html_a35e613a89ca213039b7b8b80464c223c"><div class="ttname"><a href="../../d8/d16/gc_8c.html#a35e613a89ca213039b7b8b80464c223c">cwist_full_gc_enabled</a></div><div class="ttdeci">bool cwist_full_gc_enabled(void)</div><div class="ttdoc">Query whether full-GC mode was enabled by the (single) cwist_full_gc() claim.</div><div class="ttdef"><b>Definition</b> <a href="../../d8/d16/gc_8c_source.html#l00291">gc.c:291</a></div></div>
+<div class="ttc" id="agc_8c_html_a4eb61c3775d0863b9eedc5b79904725c"><div class="ttname"><a href="../../d8/d16/gc_8c.html#a4eb61c3775d0863b9eedc5b79904725c">cwist_release_guard_init</a></div><div class="ttdeci">void cwist_release_guard_init(cwist_release_guard_t *guard)</div><div class="ttdoc">Reset a release guard to its unclaimed state.</div><div class="ttdef"><b>Definition</b> <a href="../../d8/d16/gc_8c_source.html#l00139">gc.c:139</a></div></div>
+<div class="ttc" id="agc_8c_html_a555a946c1e2bb6d5685d4f4dd153c8bc"><div class="ttname"><a href="../../d8/d16/gc_8c.html#a555a946c1e2bb6d5685d4f4dd153c8bc">cwist_gc_auto_rotated</a></div><div class="ttdeci">bool cwist_gc_auto_rotated(cwist_gc_t *gc)</div><div class="ttdoc">Return if epoch GC is auto-rotated. @ param gc GC context to get status.</div><div class="ttdef"><b>Definition</b> <a href="../../d8/d16/gc_8c_source.html#l00065">gc.c:65</a></div></div>
+<div class="ttc" id="agc_8c_html_a611a910d8f44de93236dec0d77fe470b"><div class="ttname"><a href="../../d8/d16/gc_8c.html#a611a910d8f44de93236dec0d77fe470b">cwist_gc_shutdown</a></div><div class="ttdeci">void cwist_gc_shutdown(cwist_gc_t *gc)</div><div class="ttdoc">Destroy the wrapped libttak GC state when it has been initialized.</div><div class="ttdef"><b>Definition</b> <a href="../../d8/d16/gc_8c_source.html#l00036">gc.c:36</a></div></div>
+<div class="ttc" id="agc_8c_html_a6e9bae201702c4c1417e366ec3ab1919"><div class="ttname"><a href="../../d8/d16/gc_8c.html#a6e9bae201702c4c1417e366ec3ab1919">cwist_release_guard_acquire</a></div><div class="ttdeci">bool cwist_release_guard_acquire(cwist_release_guard_t *guard)</div><div class="ttdoc">Claim a release guard.</div><div class="ttdef"><b>Definition</b> <a href="../../d8/d16/gc_8c_source.html#l00149">gc.c:149</a></div></div>
+<div class="ttc" id="agc_8c_html_a8dada7cf385c59eb67c2dfc296a07ba1"><div class="ttname"><a href="../../d8/d16/gc_8c.html#a8dada7cf385c59eb67c2dfc296a07ba1">cwist_gc_rotate</a></div><div class="ttdeci">void cwist_gc_rotate(cwist_gc_t *gc)</div><div class="ttdoc">Advance the current epoch and reclaim retired nodes when eligible.</div><div class="ttdef"><b>Definition</b> <a href="../../d8/d16/gc_8c_source.html#l00046">gc.c:46</a></div></div>
+<div class="ttc" id="agc_8c_html_a9722c1690dcf7f4e07c62bd0d1dd8047"><div class="ttname"><a href="../../d8/d16/gc_8c.html#a9722c1690dcf7f4e07c62bd0d1dd8047">cwist_gc_scope_flush</a></div><div class="ttdeci">void cwist_gc_scope_flush(void)</div><div class="ttdoc">Retire every pending block this thread is still tracking.</div><div class="ttdef"><b>Definition</b> <a href="../../d8/d16/gc_8c_source.html#l00537">gc.c:537</a></div></div>
+<div class="ttc" id="agc_8c_html_a9e4705e4cecb1de3290481eef3500c2e"><div class="ttname"><a href="../../d8/d16/gc_8c.html#a9e4705e4cecb1de3290481eef3500c2e">cwist_conn_registry_pending_count</a></div><div class="ttdeci">size_t cwist_conn_registry_pending_count(void)</div><div class="ttdoc">Count this thread's tracked, not-yet-closed handles.</div><div class="ttdef"><b>Definition</b> <a href="../../d8/d16/gc_8c_source.html#l00757">gc.c:757</a></div></div>
+<div class="ttc" id="agc_8c_html_aa040287ba20204989d60d04e984d0937"><div class="ttname"><a href="../../d8/d16/gc_8c.html#aa040287ba20204989d60d04e984d0937">cwist_gc_pipeline_tick</a></div><div class="ttdeci">void cwist_gc_pipeline_tick(void)</div><div class="ttdoc">Advance the EBR epoch and run any callbacks that are now safe.</div><div class="ttdef"><b>Definition</b> <a href="../../d8/d16/gc_8c_source.html#l00131">gc.c:131</a></div></div>
+<div class="ttc" id="agc_8c_html_aa0e57fd4f5152ff19be1e832e8dfa3cc"><div class="ttname"><a href="../../d8/d16/gc_8c.html#aa0e57fd4f5152ff19be1e832e8dfa3cc">cwist_conn_registry_flush</a></div><div class="ttdeci">void cwist_conn_registry_flush(void)</div><div class="ttdoc">Close every handle this thread still tracks, right now.</div><div class="ttdef"><b>Definition</b> <a href="../../d8/d16/gc_8c_source.html#l00732">gc.c:732</a></div></div>
+<div class="ttc" id="agc_8c_html_aa346f21856d29592c1c544275cac74e3"><div class="ttname"><a href="../../d8/d16/gc_8c.html#aa346f21856d29592c1c544275cac74e3">cwist_gc_scope_untrack</a></div><div class="ttdeci">bool cwist_gc_scope_untrack(void *ptr)</div><div class="ttdoc">Stop tracking a block without retiring it.</div><div class="ttdef"><b>Definition</b> <a href="../../d8/d16/gc_8c_source.html#l00495">gc.c:495</a></div></div>
+<div class="ttc" id="agc_8c_html_aa86b6382f284c1b6b81ce4863a2dc671"><div class="ttname"><a href="../../d8/d16/gc_8c.html#aa86b6382f284c1b6b81ce4863a2dc671">cwist_full_gc_locked</a></div><div class="ttdeci">bool cwist_full_gc_locked(void)</div><div class="ttdoc">Query whether the full-GC toggle has already been claimed and locked.</div><div class="ttdef"><b>Definition</b> <a href="../../d8/d16/gc_8c_source.html#l00300">gc.c:300</a></div></div>
+<div class="ttc" id="agc_8c_html_ab2568896e448fb825ed2b5bebbdfdc57"><div class="ttname"><a href="../../d8/d16/gc_8c.html#ab2568896e448fb825ed2b5bebbdfdc57">cwist_reg_ptr_sized</a></div><div class="ttdeci">void cwist_reg_ptr_sized(cwist_gc_t *gc, void *ptr, size_t size)</div><div class="ttdoc">Register a pointer and its approximate size with the epoch GC.</div><div class="ttdef"><b>Definition</b> <a href="../../d8/d16/gc_8c_source.html#l00084">gc.c:84</a></div></div>
+<div class="ttc" id="agc_8c_html_ab26f402453c12fa53637372d37bc9aed"><div class="ttname"><a href="../../d8/d16/gc_8c.html#ab26f402453c12fa53637372d37bc9aed">cwist_conn_registry_track</a></div><div class="ttdeci">void cwist_conn_registry_track(void *handle, cwist_conn_close_fn close_fn)</div><div class="ttdoc">Track a non-memory resource for the full-GC exit sweep.</div><div class="ttdef"><b>Definition</b> <a href="../../d8/d16/gc_8c_source.html#l00680">gc.c:680</a></div></div>
+<div class="ttc" id="agc_8c_html_ab6b5184c0bbd3cc7003dbcfdd2f76f98"><div class="ttname"><a href="../../d8/d16/gc_8c.html#ab6b5184c0bbd3cc7003dbcfdd2f76f98">cwist_ebr_alloc</a></div><div class="ttdeci">void * cwist_ebr_alloc(size_t size)</div><div class="ttdoc">Allocate a block that will later be released through cwist_ebr_free().</div><div class="ttdef"><b>Definition</b> <a href="../../d8/d16/gc_8c_source.html#l00104">gc.c:104</a></div></div>
+<div class="ttc" id="agc_8c_html_ab790bb476f395fc9533cf0b5222c3ff9"><div class="ttname"><a href="../../d8/d16/gc_8c.html#ab790bb476f395fc9533cf0b5222c3ff9">cwist_conn_pending_t</a></div><div class="ttdeci">struct cwist_conn_pending cwist_conn_pending_t</div></div>
+<div class="ttc" id="agc_8c_html_ad19aa27cf1cc9a2eb2c11fd4ca7098ca"><div class="ttname"><a href="../../d8/d16/gc_8c.html#ad19aa27cf1cc9a2eb2c11fd4ca7098ca">cwist_gc_scope_pending_count</a></div><div class="ttdeci">size_t cwist_gc_scope_pending_count(void)</div><div class="ttdoc">Count this thread's not-yet-retired tracked blocks.</div><div class="ttdef"><b>Definition</b> <a href="../../d8/d16/gc_8c_source.html#l00545">gc.c:545</a></div></div>
+<div class="ttc" id="agc_8c_html_aefa094b961da90bdf2122b4cd056b257"><div class="ttname"><a href="../../d8/d16/gc_8c.html#aefa094b961da90bdf2122b4cd056b257">cwist_gc_scope_track</a></div><div class="ttdeci">void cwist_gc_scope_track(void *ptr)</div><div class="ttdoc">Track a live cwist_alloc() block so full-GC can retire it later.</div><div class="ttdef"><b>Definition</b> <a href="../../d8/d16/gc_8c_source.html#l00468">gc.c:468</a></div></div>
+<div class="ttc" id="agc_8c_html_af4daec06978e824bb8635fbfe2005d82"><div class="ttname"><a href="../../d8/d16/gc_8c.html#af4daec06978e824bb8635fbfe2005d82">cwist_full_gc_guard_page</a></div><div class="ttdeci">void * cwist_full_gc_guard_page(void)</div><div class="ttdoc">Expose the hardened full-GC guard page for introspection/tests.</div><div class="ttdef"><b>Definition</b> <a href="../../d8/d16/gc_8c_source.html#l00309">gc.c:309</a></div></div>
 <div class="ttc" id="agc_8h_html"><div class="ttname"><a href="../../d0/daa/gc_8h.html">gc.h</a></div><div class="ttdoc">Epoch-based garbage collection wrapper.</div></div>
-<div class="ttc" id="astructcwist__gc_html"><div class="ttname"><a href="../../d8/d25/structcwist__gc.html">cwist_gc</a></div><div class="ttdoc">High-level wrapper over libttak's epoch GC.</div><div class="ttdef"><b>Definition</b> <a href="../../d0/daa/gc_8h_source.html#l00019">gc.h:19</a></div></div>
-<div class="ttc" id="astructcwist__gc_html_ae979362fa8a7ee4bfff7640e2889934e"><div class="ttname"><a href="../../d8/d25/structcwist__gc.html#ae979362fa8a7ee4bfff7640e2889934e">cwist_gc::initialized</a></div><div class="ttdeci">bool initialized</div><div class="ttdef"><b>Definition</b> <a href="../../d0/daa/gc_8h_source.html#l00021">gc.h:21</a></div></div>
-<div class="ttc" id="astructcwist__gc_html_af74b458f468ac44c86149c45e810f78c"><div class="ttname"><a href="../../d8/d25/structcwist__gc.html#af74b458f468ac44c86149c45e810f78c">cwist_gc::impl</a></div><div class="ttdeci">ttak_epoch_gc_t impl</div><div class="ttdef"><b>Definition</b> <a href="../../d0/daa/gc_8h_source.html#l00020">gc.h:20</a></div></div>
+<div class="ttc" id="agc_8h_html_a5c0209f90f79b0e8b7b893b5d8c9d8ed"><div class="ttname"><a href="../../d0/daa/gc_8h.html#a5c0209f90f79b0e8b7b893b5d8c9d8ed">cwist_conn_close_fn</a></div><div class="ttdeci">void(* cwist_conn_close_fn)(void *handle)</div><div class="ttdoc">Full-GC's connection registry: thread/process-exit sweep for resources that aren't plain cwist_alloc(...</div><div class="ttdef"><b>Definition</b> <a href="../../d0/daa/gc_8h_source.html#l00251">gc.h:251</a></div></div>
+<div class="ttc" id="agc_8h_html_ab69481b637dc8d922721fdd6945c8e27"><div class="ttname"><a href="../../d0/daa/gc_8h.html#ab69481b637dc8d922721fdd6945c8e27">cwist_release_guard_t</a></div><div class="ttdeci">atomic_bool cwist_release_guard_t</div><div class="ttdoc">One-shot guard ensuring a shared teardown path runs exactly once.</div><div class="ttdef"><b>Definition</b> <a href="../../d0/daa/gc_8h_source.html#l00226">gc.h:226</a></div></div>
+<div class="ttc" id="astructcwist__gc_html"><div class="ttname"><a href="../../d8/d25/structcwist__gc.html">cwist_gc</a></div><div class="ttdoc">High-level wrapper over libttak's epoch GC.</div><div class="ttdef"><b>Definition</b> <a href="../../d0/daa/gc_8h_source.html#l00020">gc.h:20</a></div></div>
+<div class="ttc" id="astructcwist__gc_html_a829967dbb6a658ce883235c87cb50d46"><div class="ttname"><a href="../../d8/d25/structcwist__gc.html#a829967dbb6a658ce883235c87cb50d46">cwist_gc::auto_rotated</a></div><div class="ttdeci">_Atomic bool auto_rotated</div><div class="ttdoc">Check if GC should scan and reclaim objects.</div><div class="ttdef"><b>Definition</b> <a href="../../d0/daa/gc_8h_source.html#l00025">gc.h:25</a></div></div>
+<div class="ttc" id="astructcwist__gc_html_ae979362fa8a7ee4bfff7640e2889934e"><div class="ttname"><a href="../../d8/d25/structcwist__gc.html#ae979362fa8a7ee4bfff7640e2889934e">cwist_gc::initialized</a></div><div class="ttdeci">bool initialized</div><div class="ttdoc">Check if CWIST GC has initialized.</div><div class="ttdef"><b>Definition</b> <a href="../../d0/daa/gc_8h_source.html#l00023">gc.h:23</a></div></div>
+<div class="ttc" id="astructcwist__gc_html_af74b458f468ac44c86149c45e810f78c"><div class="ttname"><a href="../../d8/d25/structcwist__gc.html#af74b458f468ac44c86149c45e810f78c">cwist_gc::impl</a></div><div class="ttdeci">ttak_epoch_gc_t impl</div><div class="ttdef"><b>Definition</b> <a href="../../d0/daa/gc_8h_source.html#l00021">gc.h:21</a></div></div>
 </div><!-- fragment --></div><!-- contents -->
 <!-- start footer part -->
 <hr class="footer"/><address class="footer"><small>

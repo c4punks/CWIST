@@ -1,0 +1,9 @@
+<map id="cwist_http_async_conn" name="cwist_http_async_conn">
+<area shape="rect" id="Node000001" title=" " alt="" coords="5,181,177,207"/>
+<area shape="poly" id="edge1_Node000001_Node000001" title=" " alt="" coords="192,186,204,194,196,201,178,204,177,199,194,196,199,194,190,191"/>
+<area shape="rect" id="Node000002" href="$d6/d56/structcwist__bdr__cursor.html" title=" " alt="" coords="26,93,157,119"/>
+<area shape="poly" id="edge2_Node000001_Node000002" title=" " alt="" coords="94,133,94,181,89,181,89,133"/>
+<area shape="rect" id="Node000003" href="$d5/d26/structbdr__entry__t.html" title="Big Dumb Reply Entry. Holds an atomically swappable cached response blob." alt="" coords="43,5,139,31"/>
+<area shape="poly" id="edge3_Node000002_Node000003" title=" " alt="" coords="94,45,94,93,89,93,89,45"/>
+<area shape="poly" id="edge4_Node000003_Node000003" title=" " alt="" coords="154,9,166,18,158,26,140,29,139,23,155,21,161,18,152,14"/>
+</map>

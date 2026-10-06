@@ -1,0 +1,34 @@
+<map id="src/core/html/component.c" name="src/core/html/component.c">
+<area shape="rect" id="Node000001" title="Named render functions that produce cwist_html_element_t trees." alt="" coords="232,5,427,31"/>
+<area shape="rect" id="Node000002" href="$d6/dcf/component_8h.html" title="Reusable render units composed on top of the HTML element builder." alt="" coords="332,79,543,104"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="348,28,410,69,407,73,345,33"/>
+<area shape="rect" id="Node000012" href="$d2/dfe/alloc_8h.html" title="Memory allocation wrappers backed by libttak." alt="" coords="135,79,308,104"/>
+<area shape="poly" id="edge13_Node000001_Node000012" title=" " alt="" coords="313,33,252,73,249,69,311,28"/>
+<area shape="rect" id="Node000003" href="$d5/d78/builder_8h.html" title="HTML element builder and renderer." alt="" coords="475,152,658,177"/>
+<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="459,102,534,143,532,147,457,106"/>
+<area shape="rect" id="Node000011" title=" " alt="" coords="177,233,252,258"/>
+<area shape="poly" id="edge12_Node000002_Node000011" title=" " alt="" coords="440,105,434,141,426,161,414,179,396,195,379,205,345,214,308,218,265,228,258,230,256,225,263,223,307,212,344,209,377,200,393,190,410,176,422,159,429,139,434,104"/>
+<area shape="rect" id="Node000004" href="$d4/dbd/core_2sstring_2sstring_8h.html" title="Safe string type with helper methods." alt="" coords="276,225,412,265"/>
+<area shape="poly" id="edge3_Node000003_Node000004" title=" " alt="" coords="535,180,411,223,410,218,533,175"/>
+<area shape="rect" id="Node000010" title=" " alt="" coords="523,401,634,427"/>
+<area shape="poly" id="edge11_Node000003_Node000010" title=" " alt="" coords="570,178,580,387,575,388,565,178"/>
+<area shape="rect" id="Node000005" title=" " alt="" coords="209,321,279,346"/>
+<area shape="poly" id="edge4_Node000004_Node000005" title=" " alt="" coords="324,268,270,313,266,309,320,264"/>
+<area shape="rect" id="Node000006" title=" " alt="" coords="303,321,374,346"/>
+<area shape="poly" id="edge5_Node000004_Node000006" title=" " alt="" coords="345,266,343,307,338,307,340,265"/>
+<area shape="rect" id="Node000007" title=" " alt="" coords="129,401,212,427"/>
+<area shape="poly" id="edge6_Node000004_Node000007" title=" " alt="" coords="277,266,235,286,216,299,199,315,189,332,181,351,174,388,169,387,176,349,184,329,195,312,212,295,232,281,275,261"/>
+<area shape="rect" id="Node000008" href="$d7/da1/sys_2err_2cwist__err_8h.html" title="Unified error code and type definitions for the CWIST system layer." alt="" coords="398,313,541,353"/>
+<area shape="poly" id="edge7_Node000004_Node000008" title=" " alt="" coords="373,263,432,303,429,308,370,268"/>
+<area shape="poly" id="edge9_Node000008_Node000007" title=" " alt="" coords="398,356,226,401,225,396,397,351"/>
+<area shape="rect" id="Node000009" title=" " alt="" coords="429,401,499,427"/>
+<area shape="poly" id="edge8_Node000008_Node000009" title=" " alt="" coords="471,354,468,388,463,387,465,353"/>
+<area shape="poly" id="edge10_Node000008_Node000010" title=" " alt="" coords="497,351,553,391,550,395,494,356"/>
+<area shape="poly" id="edge14_Node000012_Node000011" title=" " alt="" coords="223,104,218,219,213,219,218,104"/>
+<area shape="rect" id="Node000013" title=" " alt="" coords="259,152,400,177"/>
+<area shape="poly" id="edge15_Node000012_Node000013" title=" " alt="" coords="240,102,302,142,299,147,237,106"/>
+<area shape="rect" id="Node000014" href="$da/d0c/arena_8h.html" title="Request&#45;scoped arena allocator backed by libttak arena generations." alt="" coords="5,152,184,177"/>
+<area shape="poly" id="edge16_Node000012_Node000014" title=" " alt="" coords="202,106,129,147,126,143,200,102"/>
+<area shape="poly" id="edge17_Node000014_Node000007" title=" " alt="" coords="101,177,166,387,161,389,96,179"/>
+<area shape="poly" id="edge18_Node000014_Node000011" title=" " alt="" coords="114,175,187,223,184,227,111,180"/>
+</map>

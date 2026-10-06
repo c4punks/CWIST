@@ -1,0 +1,7 @@
+<map id="include/cwist/net/graphql/graphql_ws.h" name="include/cwist/net/graphql/graphql_ws.h">
+<area shape="rect" id="Node000001" title="GraphQL subscriptions over the graphql&#45;ws WebSocket subprotocol (supported since v3...." alt="" coords="125,5,310,45"/>
+<area shape="rect" id="Node000002" href="$d6/d59/graphql__ws_8h.html" title=" " alt="" coords="5,93,203,119"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="180,55,122,95,119,91,177,51"/>
+<area shape="rect" id="Node000003" href="$d7/d38/graphql__ws_8c.html" title="Experimental GraphQL subscriptions over the graphql&#45;ws WebSocket subprotocol (v3.7 Phase 4)." alt="" coords="227,93,435,119"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="257,51,315,91,312,95,254,55"/>
+</map>

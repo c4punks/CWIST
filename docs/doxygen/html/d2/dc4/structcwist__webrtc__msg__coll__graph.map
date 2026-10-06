@@ -1,0 +1,18 @@
+<map id="cwist_webrtc_msg" name="cwist_webrtc_msg">
+<area shape="rect" id="Node000001" title="A DataChannel message on its way into SCTP." alt="" coords="181,5,324,31"/>
+<area shape="poly" id="edge1_Node000001_Node000001" title=" " alt="" coords="338,7,347,11,351,18,343,27,325,31,324,26,340,23,345,18,343,15,336,12"/>
+<area shape="rect" id="Node000002" href="$d9/daa/structcwist__webrtc__conn.html" title="One peer: ICE state, DTLS session, SCTP association." alt="" coords="183,125,328,150"/>
+<area shape="poly" id="edge9_Node000002_Node000001" title=" " alt="" coords="207,39,191,56,184,77,191,97,204,112,221,122,218,127,201,116,186,100,179,77,186,53,204,36"/>
+<area shape="poly" id="edge2_Node000001_Node000002" title=" " alt="" coords="278,114,288,98,293,77,288,56,279,43,268,33,272,29,283,40,292,54,298,77,292,100,282,116"/>
+<area shape="poly" id="edge8_Node000002_Node000002" title=" " alt="" coords="343,127,351,131,355,138,347,147,329,150,328,145,344,142,349,137,347,135,341,132"/>
+<area shape="rect" id="Node000003" href="$dc/d88/structcwist__webrtc__ctx.html" title="A UDP endpoint bound to one reactor, serving many conns." alt="" coords="188,288,323,313"/>
+<area shape="poly" id="edge4_Node000003_Node000002" title=" " alt="" coords="224,160,210,177,200,200,197,220,200,240,210,263,220,276,233,286,230,290,216,279,205,265,195,241,192,220,195,199,205,175,220,156"/>
+<area shape="poly" id="edge3_Node000002_Node000003" title=" " alt="" coords="264,275,267,263,273,220,267,177,259,151,264,149,273,175,278,220,273,265,269,276"/>
+<area shape="rect" id="Node000004" href="$df/d51/structcwist__reactor__timer.html" title=" " alt="" coords="5,5,156,31"/>
+<area shape="poly" id="edge10_Node000002_Node000004" title=" " alt="" coords="94,42,113,70,138,97,165,112,194,122,192,127,163,117,135,101,108,74,90,44"/>
+<area shape="poly" id="edge5_Node000003_Node000004" title=" " alt="" coords="82,44,85,95,90,124,99,151,117,187,136,213,192,262,230,285,227,290,188,266,132,217,113,190,94,153,85,125,80,96,77,45"/>
+<area shape="rect" id="Node000005" href="$d2/dcc/structcwist__reactor__post.html" title=" " alt="" coords="406,5,550,31"/>
+<area shape="poly" id="edge11_Node000002_Node000005" title=" " alt="" coords="429,38,389,57,364,78,338,101,287,127,284,122,335,96,360,74,386,52,427,33"/>
+<area shape="poly" id="edge6_Node000003_Node000005" title=" " alt="" coords="478,45,465,97,454,127,437,154,397,198,353,237,276,290,273,286,349,233,394,194,433,150,449,124,460,96,472,44"/>
+<area shape="poly" id="edge7_Node000005_Node000005" title=" " alt="" coords="564,7,573,11,577,18,569,27,551,31,549,26,566,23,571,18,569,15,562,12"/>
+</map>

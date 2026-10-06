@@ -1,5 +1,7 @@
 <map id="include/cwist/net/http/http2_flow_control.h" name="include/cwist/net/http/http2_flow_control.h">
-<area shape="rect" id="Node000001" title=" " alt="" coords="5,5,168,45"/>
-<area shape="rect" id="Node000002" href="$d9/d16/http2__flow__control_8c.html" title=" " alt="" coords="19,93,154,133"/>
-<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="89,59,89,93,84,93,84,59"/>
+<area shape="rect" id="Node000001" title=" " alt="" coords="78,5,241,45"/>
+<area shape="rect" id="Node000002" href="$d2/db0/http2_8c.html" title="Implementation of HTTP/2 protocol handler for CWIST." alt="" coords="5,101,151,126"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="134,57,91,102,87,98,130,54"/>
+<area shape="rect" id="Node000003" href="$d9/d16/http2__flow__control_8c.html" title=" " alt="" coords="175,93,309,133"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="189,54,226,91,222,95,185,57"/>
 </map>

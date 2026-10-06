@@ -1,0 +1,13 @@
+<map id="include/cwist/net/webrtc.h" name="include/cwist/net/webrtc.h">
+<area shape="rect" id="Node000001" title="WebRTC DataChannel server (SDP + ICE&#45;lite + DTLS + SCTP) interface." alt="" coords="56,5,248,31"/>
+<area shape="rect" id="Node000002" title=" " alt="" coords="5,152,80,177"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="124,33,91,52,62,80,50,109,45,139,40,138,45,108,58,77,88,48,122,28"/>
+<area shape="rect" id="Node000003" title=" " alt="" coords="226,152,297,177"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="182,28,216,48,246,77,259,108,264,138,259,139,254,109,242,80,213,52,180,33"/>
+<area shape="rect" id="Node000004" href="$dc/d85/reactor_8h.html" title=" " alt="" coords="73,79,231,104"/>
+<area shape="poly" id="edge3_Node000001_Node000004" title=" " alt="" coords="155,31,155,65,149,65,149,31"/>
+<area shape="poly" id="edge5_Node000004_Node000002" title=" " alt="" coords="136,106,74,147,71,142,133,102"/>
+<area shape="poly" id="edge6_Node000004_Node000003" title=" " alt="" coords="171,102,233,142,230,147,168,106"/>
+<area shape="rect" id="Node000005" title=" " alt="" coords="111,152,193,177"/>
+<area shape="poly" id="edge4_Node000004_Node000005" title=" " alt="" coords="155,104,155,138,149,138,149,104"/>
+</map>

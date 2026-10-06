@@ -1,0 +1,18 @@
+<map id="cwist_webrtc_ctx" name="cwist_webrtc_ctx">
+<area shape="rect" id="Node000001" title="A UDP endpoint bound to one reactor, serving many conns." alt="" coords="116,103,251,128"/>
+<area shape="rect" id="Node000002" href="$d9/daa/structcwist__webrtc__conn.html" title="One peer: ICE state, DTLS session, SCTP association." alt="" coords="101,275,247,301"/>
+<area shape="poly" id="edge2_Node000002_Node000001" title=" " alt="" coords="163,139,148,162,141,186,139,205,148,248,164,273,160,276,144,250,134,205,136,185,144,160,158,136"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="173,261,180,128,185,128,178,262"/>
+<area shape="poly" id="edge3_Node000002_Node000002" title=" " alt="" coords="262,278,273,288,265,297,247,300,246,295,263,292,268,288,259,283"/>
+<area shape="rect" id="Node000003" href="$d5/dcf/structcwist__webrtc__msg.html" title="A DataChannel message on its way into SCTP." alt="" coords="103,380,245,405"/>
+<area shape="poly" id="edge6_Node000003_Node000002" title=" " alt="" coords="150,312,139,328,136,341,139,355,147,367,158,378,155,382,143,371,134,357,130,341,134,326,145,309"/>
+<area shape="poly" id="edge4_Node000002_Node000003" title=" " alt="" coords="175,366,175,356,175,327,173,301,178,301,181,327,181,356,180,366"/>
+<area shape="poly" id="edge5_Node000003_Node000003" title=" " alt="" coords="261,383,272,392,264,401,246,404,245,399,261,396,267,393,258,388"/>
+<area shape="rect" id="Node000004" href="$df/d51/structcwist__reactor__timer.html" title=" " alt="" coords="5,5,156,31"/>
+<area shape="poly" id="edge10_Node000001_Node000004" title=" " alt="" coords="101,40,128,67,169,100,165,105,124,71,97,43"/>
+<area shape="poly" id="edge7_Node000002_Node000004" title=" " alt="" coords="74,44,64,88,62,113,66,137,78,171,91,196,133,248,161,273,157,277,129,251,87,199,73,173,61,138,57,113,58,87,69,43"/>
+<area shape="rect" id="Node000005" href="$d2/dcc/structcwist__reactor__post.html" title=" " alt="" coords="203,5,347,31"/>
+<area shape="poly" id="edge11_Node000001_Node000005" title=" " alt="" coords="239,40,217,57,201,80,190,103,185,101,196,78,213,53,235,35"/>
+<area shape="poly" id="edge8_Node000002_Node000005" title=" " alt="" coords="283,45,283,69,281,123,281,166,272,206,247,251,230,267,211,278,208,273,227,262,243,248,267,204,275,165,276,122,278,69,277,45"/>
+<area shape="poly" id="edge9_Node000005_Node000005" title=" " alt="" coords="362,10,374,18,366,26,348,28,347,23,364,21,369,18,359,14"/>
+</map>

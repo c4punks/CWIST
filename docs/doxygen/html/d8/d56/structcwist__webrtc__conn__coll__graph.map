@@ -1,0 +1,18 @@
+<map id="cwist_webrtc_conn" name="cwist_webrtc_conn">
+<area shape="rect" id="Node000001" title="One peer: ICE state, DTLS session, SCTP association." alt="" coords="261,125,407,150"/>
+<area shape="poly" id="edge6_Node000001_Node000001" title=" " alt="" coords="422,127,430,131,433,138,425,147,407,150,406,145,423,142,428,137,426,135,419,132"/>
+<area shape="rect" id="Node000002" href="$dc/d88/structcwist__webrtc__ctx.html" title="A UDP endpoint bound to one reactor, serving many conns." alt="" coords="132,288,267,313"/>
+<area shape="poly" id="edge2_Node000002_Node000001" title=" " alt="" coords="299,159,277,178,265,200,260,220,256,241,244,266,219,290,215,286,240,262,251,240,255,219,260,198,273,174,295,155"/>
+<area shape="rect" id="Node000005" href="$d5/dcf/structcwist__webrtc__msg.html" title="A DataChannel message on its way into SCTP." alt="" coords="303,288,445,313"/>
+<area shape="poly" id="edge9_Node000005_Node000001" title=" " alt="" coords="339,163,345,210,358,263,369,287,364,289,353,265,340,211,333,164"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="193,275,194,225,201,198,215,174,235,157,260,146,262,151,238,162,219,178,206,200,199,226,198,275"/>
+<area shape="rect" id="Node000003" href="$df/d51/structcwist__reactor__timer.html" title=" " alt="" coords="5,5,156,31"/>
+<area shape="poly" id="edge10_Node000001_Node000003" title=" " alt="" coords="119,34,310,122,308,127,117,39"/>
+<area shape="poly" id="edge3_Node000002_Node000003" title=" " alt="" coords="83,44,86,94,99,151,119,193,144,231,190,286,186,290,140,234,114,195,94,153,81,95,78,44"/>
+<area shape="rect" id="Node000004" href="$d2/dcc/structcwist__reactor__post.html" title=" " alt="" coords="221,5,365,31"/>
+<area shape="poly" id="edge11_Node000001_Node000004" title=" " alt="" coords="304,43,332,124,327,125,299,45"/>
+<area shape="poly" id="edge4_Node000002_Node000004" title=" " alt="" coords="263,40,220,75,201,98,186,124,179,146,176,169,178,216,187,257,197,287,192,289,182,259,173,217,170,169,174,145,181,122,196,95,216,72,260,36"/>
+<area shape="poly" id="edge5_Node000004_Node000004" title=" " alt="" coords="379,7,388,11,391,18,383,27,365,31,364,26,381,23,386,18,384,15,377,12"/>
+<area shape="poly" id="edge7_Node000001_Node000005" title=" " alt="" coords="389,275,394,263,405,218,404,199,394,177,382,163,365,152,368,148,385,159,399,175,409,198,411,219,399,265,394,277"/>
+<area shape="poly" id="edge8_Node000005_Node000005" title=" " alt="" coords="423,283,456,286,467,291,472,301,466,311,451,317,409,316,409,311,450,312,462,307,467,301,464,295,455,291,422,289"/>
+</map>

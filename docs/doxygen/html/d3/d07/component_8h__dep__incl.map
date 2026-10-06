@@ -1,0 +1,9 @@
+<map id="include/cwist/core/html/component.h" name="include/cwist/core/html/component.h">
+<area shape="rect" id="Node000001" title="Reusable render units composed on top of the HTML element builder." alt="" coords="137,5,283,45"/>
+<area shape="rect" id="Node000002" href="$d9/d05/html__response_8h.html" title="HTML page and fragment responses for HTML&#45;over&#45;the&#45;wire handlers." alt="" coords="27,93,190,133"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="179,56,133,95,129,91,175,52"/>
+<area shape="rect" id="Node000004" href="$d2/d3e/component_8c.html" title="Named render functions that produce cwist_html_element_t trees." alt="" coords="214,101,409,126"/>
+<area shape="poly" id="edge3_Node000001_Node000004" title=" " alt="" coords="245,52,299,98,296,102,241,56"/>
+<area shape="rect" id="Node000003" href="$df/d64/html__response_8c.html" title="Page, fragment, out&#45;of&#45;band and redirect answers for HTML handlers." alt="" coords="5,181,212,207"/>
+<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="111,147,111,181,106,181,106,147"/>
+</map>

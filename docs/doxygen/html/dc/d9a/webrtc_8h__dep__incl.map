@@ -1,0 +1,15 @@
+<map id="include/cwist/net/webrtc.h" name="include/cwist/net/webrtc.h">
+<area shape="rect" id="Node000001" title="WebRTC DataChannel server (SDP + ICE&#45;lite + DTLS + SCTP) interface." alt="" coords="337,5,529,31"/>
+<area shape="rect" id="Node000002" href="$da/d89/webrtc__internal_8h.html" title="Internal types and cross&#45;file helpers for the WebRTC DataChannel module (ICE&#45;lite + DTLS + SCTP over ..." alt="" coords="351,79,514,119"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="435,44,435,79,430,79,430,44"/>
+<area shape="rect" id="Node000003" href="$d9/d68/dtls_8c.html" title="DTLS helpers: ephemeral certificate generation, fingerprint, SSL_CTX." alt="" coords="5,167,159,192"/>
+<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="338,124,134,169,133,164,337,119"/>
+<area shape="rect" id="Node000004" href="$db/dba/ice_8c.html" title="Minimal STUN/ICE (RFC 5389 / RFC 8445) for the ICE&#45;lite agent." alt="" coords="183,167,331,192"/>
+<area shape="poly" id="edge3_Node000002_Node000004" title=" " alt="" coords="379,127,284,169,282,164,377,122"/>
+<area shape="rect" id="Node000005" href="$df/dc8/sctp_8c.html" title="SCTP DataChannels over DTLS (RFC 8831) and DCEP (RFC 8832)." alt="" coords="355,167,511,192"/>
+<area shape="poly" id="edge4_Node000002_Node000005" title=" " alt="" coords="435,132,435,166,430,166,430,132"/>
+<area shape="rect" id="Node000006" href="$d6/d9d/sdp_8c.html" title="Minimal SDP (RFC 4566) parse/generate for DataChannel offers/answers." alt="" coords="535,167,687,192"/>
+<area shape="poly" id="edge5_Node000002_Node000006" title=" " alt="" coords="489,122,586,164,584,169,487,127"/>
+<area shape="rect" id="Node000007" href="$d3/d90/webrtc_8c.html" title="WebRTC DataChannel context: UDP I/O, ICE&#45;lite, DTLS, SCTP driving." alt="" coords="711,167,885,192"/>
+<area shape="poly" id="edge6_Node000002_Node000007" title=" " alt="" coords="528,118,745,164,744,169,527,123"/>
+</map>

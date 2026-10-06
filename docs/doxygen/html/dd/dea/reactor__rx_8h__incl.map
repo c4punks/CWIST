@@ -1,0 +1,13 @@
+<map id="src/sys/io/reactor_rx.h" name="src/sys/io/reactor_rx.h">
+<area shape="rect" id="Node000001" title=" " alt="" coords="73,5,239,31"/>
+<area shape="rect" id="Node000002" href="$dc/d85/reactor_8h.html" title=" " alt="" coords="77,79,235,104"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="159,31,159,65,153,65,153,31"/>
+<area shape="rect" id="Node000003" title=" " alt="" coords="5,152,88,177"/>
+<area shape="poly" id="edge5_Node000001_Node000003" title=" " alt="" coords="129,33,96,52,68,80,55,109,50,139,45,138,50,108,63,77,93,48,126,29"/>
+<area shape="rect" id="Node000005" title=" " alt="" coords="227,152,298,177"/>
+<area shape="poly" id="edge6_Node000001_Node000005" title=" " alt="" coords="187,28,221,48,237,61,250,77,263,108,266,138,261,139,257,109,246,80,233,65,218,52,184,33"/>
+<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="140,106,78,147,75,142,137,102"/>
+<area shape="rect" id="Node000004" title=" " alt="" coords="119,152,193,177"/>
+<area shape="poly" id="edge3_Node000002_Node000004" title=" " alt="" coords="159,104,159,138,153,138,153,104"/>
+<area shape="poly" id="edge4_Node000002_Node000005" title=" " alt="" coords="175,102,235,142,232,147,172,106"/>
+</map>
