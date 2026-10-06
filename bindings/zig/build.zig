@@ -47,27 +47,38 @@ pub fn build(b: *std.Build) void {
 }
 
 /// Links the C++ runtime libcwist's bundled C++ code (BoringSSL) was built
-/// against. On a native Linux build that is the system libstdc++: its
-/// objects reference libstdc++ internals (std::__throw_out_of_range_fmt)
-/// that Zig's own libc++ does not provide. Elsewhere, including macOS where
+/// against. On a native Linux build that is the system libstdc++ plus the
+/// libgcc_s unwinder, as the g++ driver links them: the objects reference
+/// libstdc++ internals (std::__throw_out_of_range_fmt) and _Unwind_Resume,
+/// which Zig's own libc++ does not provide. Elsewhere, including macOS where
 /// the system runtime is libc++, Zig's libc++ is used.
 fn linkCxxRuntime(b: *std.Build, mod: *std.Build.Module, target: std.Build.ResolvedTarget) void {
     if (target.query.isNative() and target.result.os.tag == .linux) {
         const cxx = b.graph.environ_map.get("CXX") orelse "c++";
-        switch (b.runFallible(&.{ cxx, "-print-file-name=libstdc++.so" }, .{ .stderr_behavior = .ignore })) {
-            .success => |stdout| {
-                const path = std.mem.trim(u8, stdout, " \t\r\n");
-                // A bare name back means the compiler did not find it.
-                if (std.fs.path.isAbsolute(path)) {
-                    mod.addObjectFile(b.graph.cwdRelativePath(path));
-                    mod.link_libc = true;
-                    return;
-                }
-            },
-            else => {},
+        // libgcc_s.so is usually a linker script; the .so.1 is the library.
+        const stdcxx = compilerFile(b, cxx, "libstdc++.so");
+        const gcc_s = compilerFile(b, cxx, "libgcc_s.so.1");
+        if (stdcxx != null and gcc_s != null) {
+            mod.addObjectFile(b.graph.cwdRelativePath(stdcxx.?));
+            mod.addObjectFile(b.graph.cwdRelativePath(gcc_s.?));
+            mod.link_libc = true;
+            return;
         }
     }
     mod.linkSystemLibrary("stdc++", .{ .use_pkg_config = .no });
+}
+
+/// The absolute path the C++ compiler resolves `name` to, or null.
+fn compilerFile(b: *std.Build, cxx: []const u8, name: []const u8) ?[]const u8 {
+    const arg = b.fmt("-print-file-name={s}", .{name});
+    switch (b.runFallible(&.{ cxx, arg }, .{ .stderr_behavior = .ignore })) {
+        .success => |stdout| {
+            const path = std.mem.trim(u8, stdout, " \t\r\n");
+            // A bare name back means the compiler did not find it.
+            return if (std.fs.path.isAbsolute(path)) path else null;
+        },
+        else => return null,
+    }
 }
 
 const Flags = struct {
