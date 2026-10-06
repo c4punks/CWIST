@@ -31,6 +31,9 @@ jobs:
       - name: Generate Documentation
         run: doxygen Doxyfile
 
+      - name: Generate SEO Sitemap & robots.txt
+        run: python3 scripts/ci/generate_sitemap.py docs/doxygen/html
+
       - name: Setup Pages
         uses: actions/configure-pages@v6
 
