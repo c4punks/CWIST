@@ -15,12 +15,12 @@ OUTPUT_LANGUAGE        = English
 #--------------------------------------------------------------------------
 # Input
 #--------------------------------------------------------------------------
-INPUT                  = include src
-FILE_PATTERNS          = *.c *.h
+INPUT                  = include src README.md docs
+FILE_PATTERNS          = *.c *.h *.md
 RECURSIVE              = YES
-EXCLUDE_PATTERNS       = */tests/* */example/* */docs/* */lib/*
+EXCLUDE_PATTERNS       = */tests/* */example/* */docs/doxygen/* */lib/*
 EXCLUDE_SYMLINKS       = YES
-EXCLUDE                = lib lib/libttak
+EXCLUDE                = lib lib/libttak docs/doxygen
 
 #--------------------------------------------------------------------------
 # Build
@@ -37,7 +37,7 @@ INLINE_SOURCES         = NO
 SOURCE_BROWSER         = YES
 REFERENCED_BY_RELATION = YES
 REFERENCES_RELATION    = YES
-USE_MDFILE_AS_MAINPAGE = README
+USE_MDFILE_AS_MAINPAGE = README.md
 
 #--------------------------------------------------------------------------
 # Warnings
@@ -52,6 +52,10 @@ WARN_NO_PARAMDOC       = YES
 #--------------------------------------------------------------------------
 GENERATE_HTML          = YES
 HTML_OUTPUT            = html
+HTML_HEADER            = docs/doxygen/theme/header.html
+HTML_EXTRA_STYLESHEET  = docs/doxygen/theme/doxygen-awesome.css
+GENERATE_TREEVIEW      = YES
+DISABLE_INDEX          = NO
 GENERATE_LATEX         = NO
 GENERATE_MAN           = NO
 GENERATE_XML           = NO
