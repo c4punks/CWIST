@@ -17,6 +17,7 @@ function signature.
 *   **[Middleware](api/middleware.md)**: Middleware pipeline and built-ins.
 *   **[WebSocket](api/websocket.md)**: WebSocket upgrade and framing.
 *   **[Server-Sent Events](api/sse.md)**: Event-stream responses and live streams.
+*   **[Cookies](api/cookie.md)**: Cookie header parsing and Set-Cookie construction.
 
 ## See also
 
