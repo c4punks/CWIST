@@ -45,7 +45,7 @@ cwist_error_t cwist_graphql_execute(cwist_graphql_schema_t *schema, const char *
                                     cwist_sstring **out_json);
 
 /** Extract the root field name and parsed arguments of a `subscription` operation.
- * Experimental (v3.7 Phase 4): used by the WS subscription layer; not part of the
+ * Used by the graphql-ws subscription layer (graphql_ws.h); not part of the
  * query/mutation execute path.
  * @param query GraphQL source starting with the `subscription` keyword.
  * @param variables Request variables for `$var` argument references (may be NULL).
