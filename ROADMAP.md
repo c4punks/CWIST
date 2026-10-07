@@ -79,6 +79,7 @@ Automated OS benchmark history is published in `docs/benchmark-trends.svg`. Late
 - **CWIST v3.7.2 released 2026-09-29**: WASI 0.2 formally supported, WASM component pipeline evaluated, durable queue and GraphQL subscriptions shipped behind flags.
 - **CWIST v3.8 released 2026-10-01**: theme was *performance, Rust FFI, and v4.0 scope confirmation*. WebTransport moved to v4.1 on 2026-09-25.
 - **CWIST v3.9 released 2026-10-05**: TLS observability in `/metrics`, CI HTTPS performance gates, and WebRTC DataChannel support.
+- **CWIST v4.0 in preparation**: open decisions and work are listed under [CWIST v4.0 Readiness](#cwist-v40-readiness).
 - **Landed on `dev` since v3.7.2**: HTTP close-drain correctness (#292), HTTPS connection-churn optimization (#291), Rust listen-shutdown support (#287).
 - **Performance sweep done** (issue #293): CWIST C1M already leads Axum on a single CI run; batch/yield is near-optimal; RX-uring pipelining and worker ttak warmup showed no win; HTTPS handshake shards are a real niche lever (shard=1 is a bottleneck, 4+ saturate).
 - **Deferred**: HTTP/3 connection-close correctness and the lsquic re-pin are on hold until upstream lsquic ships WebTransport client support.
@@ -532,6 +533,67 @@ Exit criteria for v3.9:
 - #294 is closed with measured data (done: closed as completed; the
   shepherds do serve `cwist_app_listen`, and the shipped default needs no
   change).
+
+---
+
+## CWIST v4.0 Readiness
+
+v4.0 starts the API stability guarantee described under "API stability from
+v4.0" in the versioning rules below. This section lists what is still open
+before the v4.0 cut, as checked on `dev` at 4cd05e21 (2026-10-07). It records
+open work and pending decisions, not results.
+
+### API surface decisions
+
+After v4.0 an existing public API can no longer change, so each item below
+needs a recorded decision before the cut.
+
+| Item | Current state | Decision needed |
+|------|---------------|-----------------|
+| WASM component pipeline (#203) | Experimental; deferred to v4.0 in v3.8 Phase 4; gated on WASI 0.3 / unflagged JSPI | Promote at v4.0, or ship v4.0 with it marked experimental and outside the guarantee |
+| `cwist_http3_set_stream_priority()` | `@deprecated` in `http3.h`; kept for ABI compatibility; always logs a warning and returns -1 | Remove before the cut, or keep it with the always-refuse behavior as its permanent contract |
+| `cwist_http_stringify_response()` | Declared in `http.h` without a deprecation marker; a source comment in `http.c` calls it "Deprecated / Debug only"; covered by `test_http_stringify` | Keep it as supported API and drop the comment, or mark it deprecated and remove it before the cut |
+| WebTransport client API (`http3_client.h`) | Marked experimental (LSQUIC PR #629) | None for v4.0: stays experimental and outside the guarantee until v4.1 |
+| Public API baseline | No recorded list of public symbols and public struct layouts exists | Record the v4.0 baseline. Possible follow-up: a CI check that diffs headers against it |
+
+The guarantee as written covers the C public API. The Rust crates
+(`cwist-sys`, `cwist`, 0.1.0, documented as experimental in Phase 2 above)
+and the Zig bindings (`bindings/zig`, 0.1.0) are versioned separately.
+
+### Performance target (#319)
+
+* Target: at least 1.05x Actix-web throughput and a lower P99.999 than
+  Actix-web on every CI runner architecture (AMD EPYC, Intel Xeon).
+* Done: Actix-web is in the CI webserver benchmark matrix and charts, and
+  the measurement contract is in `docs/webserver-benchmark.md`.
+* Open: #297 (syscall and serialization reduction: io_uring multishot
+  accept with a fallback for kernels without it, SQE batching, per-accept
+  `setsockopt`, time caching), #293 (tail latency; queue delay drives the
+  tail), and #322 (libttak v3.4.0 benchmark comparison). Each item lands
+  with an A/B measurement or a recorded negative result.
+
+### Carry-over and housekeeping
+
+| Item | State on `dev` at 4cd05e21 | Remaining |
+|------|----------------------------|-----------|
+| #306 TLS performance | Fixed by #307; v3.9 HTTPS gates green on `dev` | Close the issue |
+| #286 raw-allocator gate | `https.c` parked-connection allocations use `cwist_alloc`/`cwist_free`; `cwist audit --gate` passes | Close the issue |
+| Soak testing | Named in the v4.0 preview; no soak job or plan exists in the tree | Define the soak run and its pass criteria |
+| Docs good first issues | #272 landed in #320; PRs open for #273 (#324) and #275 (#325, #326); #271 open | Review and merge |
+
+### Not in v4.0 scope
+
+* WebTransport (#17) and the lsquic re-pin: v4.1, see below.
+
+### Exit criteria for v4.0
+
+- Every API surface decision above is recorded and enacted in code and
+  docs; deprecated APIs and flags are resolved (promoted or removed).
+- The #319 performance target holds on the CI benchmark on every runner
+  architecture.
+- The soak run is defined and passes on the release commit.
+- The release rules in `CONTRIBUTING.md` hold on the release commit (every
+  CI workflow green; `make dist` archive builds and tests clean).
 
 ---
 
