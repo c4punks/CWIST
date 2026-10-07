@@ -49,7 +49,7 @@
 * **Observability**: Prometheus `/metrics` and a probe-registry health-check system are operational.
 * **Per-port sub-applications**: Lifecycle and exception handling for `cwist_multiport_get_app(&app, port)` are hardened; detached ports are separately tunable sub-applications. "Independently tunable" covers app-level config (routes, middleware, TLS, size limits) -- it does not extend to process-wide subsystems. `cwist_full_gc()` (see docs/GC.md) is one process-wide switch: enabling it for one sub-app enables it for every `cwist_app` instance sharing that process, with no per-app opt-out. The cJSON allocator hook installed at process start is the same shape. A deployment that needs different memory-management behavior per sub-app needs separate processes, not separate `cwist_app` instances in one process.
 * **gRPC services**: Applications can register unary and streaming handlers, incrementally decode arbitrarily split gRPC frames, attach transport output sinks, expose standard health/reflection services, and generate C models/method paths with `cwist proto`. Clients use `cwist_grpc_channel`: dns/ipv4/ipv6 target resolution, `pick_first`/`round_robin` load balancing over per-address subchannels, and the gRFC A6 retry engine (exponential backoff, retryable codes, server pushback, throttling, transparent retries); error responses go out Trailers-Only so conforming clients can retry.
-* **Packaging**: `libcwist.a` is a CWIST-only static archive; bundled dependency archives and public headers install side-by-side with `PREFIX`/`DESTDIR` staging support. `cwist.pc` pkg-config metadata, a versioned dist tarball (`dist/cwist-3.2.tar.gz`), and Homebrew (`packaging/homebrew/cwist.rb`) / vcpkg (`packaging/vcpkg/`) packaging drafts are available.
+* **Packaging**: `libcwist.a` is a CWIST-only static archive; bundled dependency archives and public headers install side-by-side with `PREFIX`/`DESTDIR` staging support. `cwist.pc` pkg-config metadata, a versioned dist tarball (`make dist VERSION=X.Y.Z`), and Homebrew (`packaging/homebrew/cwist.rb`) / vcpkg (`packaging/vcpkg/`) packaging drafts are available.
 * **Deferred async handlers**: `cwist_async_defer()` hands a request/response pair to any thread (scheduler job, NATS callback, custom worker) for later completion via `cwist_async_respond()` / `respond_with()` / `abort()`, with optional 504 timeout and per-mode completion routing (reactor-posted in C1M, inline in thread-pool mode).
 
 ### 3) Security & Data Layer
@@ -77,7 +77,8 @@ Automated OS benchmark history is published in `docs/benchmark-trends.svg`. Late
 - **Resolved (v3.4 perf wave)**: BDR cache learn/read paths are lock-free (CAS-published entries, atomic blob swaps, EBR reclamation) and entries support hit-time revalidation hooks with zero-copy pointer swaps (`cwist_bdr_put_revalidatable`); classic pool gained `CWIST_POOL_PREWARM` / `CWIST_POOL_IDLE_TIMEOUT_MS` tunables; the HTTPS handshake shepherd shard count is tunable via `CWIST_HTTPS_HS_SHARDS`.
 - **Resolved (v3.4 gRPC client wave)**: gRPC client retry policy and client-side load balancing are done — `cwist_grpc_channel` resolves dns/ipv4/ipv6 targets into per-address subchannels with connection backoff (doc/connection-backoff.md), balances calls with `pick_first`/`round_robin` (doc/load-balancing.md), and runs the gRFC A6 retry engine (jittered exponential backoff, retryable codes, server pushback, token-bucket throttling, transparent retries, commit-on-headers) configured via C structs or JSON service config. Error responses are Trailers-Only on both unary and streaming server paths so retries can actually happen; `test_grpc_channel` covers the matrix against loopback backends plus a raw GOAWAY fake.
 - **CWIST v3.7.2 released 2026-09-29**: WASI 0.2 formally supported, WASM component pipeline evaluated, durable queue and GraphQL subscriptions shipped behind flags.
-- **CWIST v3.8 in progress**: theme is *performance, Rust FFI, and v4.0 scope confirmation*. WebTransport moved to v4.1 on 2026-09-25.
+- **CWIST v3.8 released 2026-10-01**: theme was *performance, Rust FFI, and v4.0 scope confirmation*. WebTransport moved to v4.1 on 2026-09-25.
+- **CWIST v3.9 released 2026-10-05**: TLS observability in `/metrics`, CI HTTPS performance gates, and WebRTC DataChannel support.
 - **Landed on `dev` since v3.7.2**: HTTP close-drain correctness (#292), HTTPS connection-churn optimization (#291), Rust listen-shutdown support (#287).
 - **Performance sweep done** (issue #293): CWIST C1M already leads Axum on a single CI run; batch/yield is near-optimal; RX-uring pipelining and worker ttak warmup showed no win; HTTPS handshake shards are a real niche lever (shard=1 is a bottleneck, 4+ saturate).
 - **Deferred**: HTTP/3 connection-close correctness and the lsquic re-pin are on hold until upstream lsquic ships WebTransport client support.
@@ -203,7 +204,7 @@ Automated OS benchmark history is published in `docs/benchmark-trends.svg`. Late
 
 ---
 
-## CWIST v3.8 Roadmap (In Progress)
+## CWIST v3.8 Roadmap (Released 2026-10-01)
 
 v3.7 is released. WebTransport moved to v4.1 on 2026-09-25 (see the v4.1
 section below), so v3.8 spends its cycle on work CWIST controls end to end:
@@ -476,7 +477,7 @@ delaying the cut.
 
 ## v3.8 Release Criteria and v4.0 Preview
 
-The detailed plan for v3.8 lives in the [CWIST v3.8 Roadmap](#cwist-v38-roadmap-in-progress) section above. This section keeps the release gate and the v4.0 transition note in one place.
+The detailed plan for v3.8 lives in the [CWIST v3.8 Roadmap](#cwist-v38-roadmap-released-2026-10-01) section above. This section keeps the release gate and the v4.0 transition note in one place.
 
 **Release criteria for v3.8:**
 - Every Phase 1 item has before/after numbers or a recorded negative result.
@@ -498,7 +499,7 @@ rules.
 
 ---
 
-## CWIST v3.9 Roadmap
+## CWIST v3.9 Roadmap (Released 2026-10-05)
 
 v3.8 spends its cycle on performance, Rust FFI, and v4.0 scope confirmation.
 The follow-up TLS investigation for issue #306 (PR #307 shipped the
@@ -512,7 +513,7 @@ also brings WebRTC DataChannel support into the release scope.
 
 | Goal | Status | Notes |
 |------|--------|-------|
-| (a) CI TLS performance gates (HTTPS churn / keep-alive / large-transfer / RTT) | 🔄 In Progress | Gates landed in #309 but never passed: the absolute backstops came from fast CPUs and healthy code failed on the EPYC 7763 runner, so no history accumulated either. Recalibrated on https/http ratios plus same-CPU history; disabling the #307 fix fails the RTT gate (0.08 → 43 ms) on any CPU. The churn-ratio backstop had to be loosened after the first Intel runner (healthy at 0.071 vs 0.11-0.13 on AMD). Done once green on dev. Tracked in #306 |
+| (a) CI TLS performance gates (HTTPS churn / keep-alive / large-transfer / RTT) | ✅ Done | Gates landed in #309 but never passed: the absolute backstops came from fast CPUs and healthy code failed on the EPYC 7763 runner, so no history accumulated either. Recalibrated on https/http ratios plus same-CPU history; disabling the #307 fix fails the RTT gate (0.08 → 43 ms) on any CPU. The churn-ratio backstop had to be loosened after the first Intel runner (healthy at 0.071 vs 0.11-0.13 on AMD). Green on `dev` at 610fe55b (https://github.com/c4punks/CWIST/actions/runs/37303818384). Tracked in #306 |
 | (b) TLS observability in Prometheus `/metrics` (handshake counts, TLS version/cipher counters, resumption vs full-handshake ratio) | ✅ Done | `cwist_tls_handshakes_total`, `cwist_tls_handshakes_resumed_total`, `cwist_tls_connections_active`, `cwist_tls_handshakes_tls12_total`, `cwist_tls_handshakes_tls13_total`, `cwist_tls_ciphers_{aes128_gcm,aes256_gcm,chacha20,other}_total`; covered by `test_https_metrics` |
 | (c) Settle issue #294 with measured data | ✅ Done | #294 closed as completed. An earlier comment there claimed `cwist_app_listen` never uses the sharded handshake shepherds; that was wrong (it confused `cwist_app_multiport`'s inline path with `cwist_app_listen`). Measured: `cwist_app_listen` adds one thread per `CWIST_HTTPS_HS_SHARDS` shard on the first HTTPS request, in both C1M and classic mode. The default floor of 4 shards / cap of 16 is already on dev, and #294's data shows no gain beyond 4 |
 | (d) WebRTC DataChannel support | ✅ Done | #310: SDP offer/answer, ICE-lite, DTLS (vendored BoringSSL), SCTP DataChannels (`lib/usrsctp`) on the cwist reactor. Echo verified against headless Chromium (`make test_webrtc_browser`); Firefox not yet tested |
