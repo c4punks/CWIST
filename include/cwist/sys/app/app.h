@@ -470,8 +470,9 @@ void cwist_apply_profile(void);
  * @brief Serve @p app on @p port until SIGTERM, SIGINT or
  * cwist_shutdown_request(); blocks the calling thread.
  *
- * CWIST_WORKERS (default: one per online core) and CWIST_C1M_MODE select the
- * worker count and server mode; with more than one worker it forks and
+ * CWIST_WORKERS (default: one worker process per three online cores, at
+ * least 2; "auto" or an explicit number overrides) and CWIST_C1M_MODE select
+ * the worker count and server mode; with more than one worker it forks and
  * returns in each worker. Same as cwist_app_listen_ex(app, port, 0, -1).
  */
 int cwist_app_listen(cwist_app *app, int port);

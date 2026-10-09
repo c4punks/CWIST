@@ -4495,10 +4495,20 @@ int cwist_app_listen_ex(cwist_app *app, int port, int workers_override, int c1m_
             workers = (end != workers_env && *end == '\0' && v >= 1 && v <= INT_MAX) ? (int)v : 1;
         }
     } else {
-        // Default to auto (number of online CPU cores) to maximize performance on multi-core
-        // systems out of the box.
+        // Default: one worker process per three online cores (at least 2).
+        // A/B on a 12-core box (wrk -t4 -c256, plain HTTP, issue #293
+        // context): default workers=cores gave ~257k req/s at ~460% CPU with
+        // p99 ~4.8ms, while workers=4 gave ~339k req/s at ~320% CPU with
+        // p99 ~2.4ms. One process per core oversubscribes the box: the
+        // remaining CPU budget (load generator, kernel, IRQs) has no room,
+        // and every extra SO_REUSEPORT accept poll competes for cache lines.
+        // Fewer, busier workers beat more, starved ones. The "auto" value
+        // and CWIST_WORKERS still select one-per-core explicitly.
         long cores = get_cpu_cores();
-        workers = (cores > 0) ? (int)cores : 1;
+        long w = (cores > 0) ? cores / 3 : 1;
+        if (cores <= 2) w = 1; /* fork-free on machines too small to split */
+        if (w < 2 && cores > 2) w = 2;
+        workers = (int)w;
     }
     g_cwist_listen_fd = server_fd;
     
