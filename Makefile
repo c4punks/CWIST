@@ -158,6 +158,30 @@ ifeq ($(UNAME_S),FreeBSD)
     IO_SRC = src/sys/io/kqueue.c
 endif
 
+# Sanitizer toggle: `make SANITIZE=address,undefined test check` builds the
+# library and every test with the given sanitizers.  -fno-lto must come last
+# so it wins over the LTO flags baked into the optimization profiles.
+ifdef SANITIZE
+    CFLAGS += -fsanitize=$(SANITIZE) -fno-lto -fno-omit-frame-pointer
+    LIBS += -fsanitize=$(SANITIZE)
+endif
+
+# Werror toggle for CI: `make WERROR=1` turns every warning into an error.
+# Vendored sources (multipart-parser-c) are exempt; they are not our code.
+ifdef WERROR
+    CFLAGS += -Werror
+endif
+
+lib/multipart-parser-c/multipart_parser.o: CFLAGS := $(filter-out -Werror,$(CFLAGS))
+# sqlite3 also skips LTO: lto1 re-optimizing the amalgamation at link time
+# trips a known -Wstringop-overread false positive (sqlite3Strlen30) that
+# -Werror then promotes to a build failure.
+lib/sqlite3/sqlite3.o: CFLAGS := $(filter-out -Werror -flto=auto -ffat-lto-objects,$(CFLAGS))
+# FTS5 (full-text search v5) lives inside the amalgamation but is disabled
+# unless requested; fly.board uses it for its post search index. The define
+# only reaches the sqlite3.o compile, not the rest of the library.
+lib/sqlite3/sqlite3.o: CFLAGS += -DSQLITE_ENABLE_FTS5
+
 # Source Files
 SRCS = src/core/sstring/sstring.c \
        src/core/seq/seq.c \
