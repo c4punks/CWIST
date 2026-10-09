@@ -198,6 +198,10 @@ lib/multipart-parser-c/multipart_parser.o: CFLAGS := $(filter-out -Werror,$(CFLA
 # trips a known -Wstringop-overread false positive (sqlite3Strlen30) that
 # -Werror then promotes to a build failure.
 lib/sqlite3/sqlite3.o: CFLAGS := $(filter-out -Werror -flto=auto -ffat-lto-objects,$(CFLAGS))
+# FTS5 (full-text search v5) lives inside the amalgamation but is disabled
+# unless requested; fly.board uses it for its post search index. The define
+# only reaches the sqlite3.o compile, not the rest of the library.
+lib/sqlite3/sqlite3.o: CFLAGS += -DSQLITE_ENABLE_FTS5
 
 # Source Files
 SRCS = src/core/sstring/sstring.c \
