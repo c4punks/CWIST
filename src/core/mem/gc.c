@@ -704,19 +704,26 @@ void cwist_conn_registry_track(void *handle, cwist_conn_close_fn close_fn) {
  */
 bool cwist_conn_registry_untrack(void *handle) {
     if (!handle) return false;
-    cwist_conn_pending_t *pending = cwist_conn_pending_get();
-    if (!pending) return false;
 
+    /* A connection is tracked on the thread that accepted it but is often
+     * closed on another one (async completion, keep-alive resubmit to a
+     * different pool worker). Searching only the caller's list left the
+     * freed handle on the accepting thread's list, and a later sweep tore
+     * it down again: use-after-free (#344). Search every thread's list. */
     bool found = false;
-    pthread_mutex_lock(&pending->lock);
-    for (size_t i = 0; i < pending->count; i++) {
-        if (pending->items[i].handle == handle) {
-            pending->items[i] = pending->items[--pending->count];
-            found = true;
-            break;
+    pthread_mutex_lock(&g_conn_registry_lock);
+    for (cwist_conn_pending_t *p = g_conn_registry_head; p && !found; p = p->global_next) {
+        pthread_mutex_lock(&p->lock);
+        for (size_t i = 0; i < p->count; i++) {
+            if (p->items[i].handle == handle) {
+                p->items[i] = p->items[--p->count];
+                found = true;
+                break;
+            }
         }
+        pthread_mutex_unlock(&p->lock);
     }
-    pthread_mutex_unlock(&pending->lock);
+    pthread_mutex_unlock(&g_conn_registry_lock);
     return found;
 }
 
