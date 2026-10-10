@@ -536,6 +536,23 @@ Exit criteria for v3.9:
 
 ---
 
+## CWIST v3.9.1 (bug-fix release, 2026-10-11)
+
+v3.9.1 fixes the HTTPS crashes and stalls found on fly.board (#344), removes
+the HTTPS task queue's fixed ~96 MiB per-process cost (reported by Dan
+Kegel), and adds three CI gates so the same classes of bug fail CI instead of
+production. The public API is unchanged from v3.9.
+
+| Goal | Status | Notes |
+|------|--------|-------|
+| HTTPS task queue grows on demand | ✅ Done | Static 2097152-slot ring (~96 MiB resident per process) replaced by a ring that starts empty and doubles up to the same limit. Idle RSS of a 4-worker server ~422 MB → ~29 MB (`docs/performance/https-pool-dynamic-queue.md`) |
+| #344 fixes | ✅ Done | Deferred-conn use-after-free after the dispatch ack; idle TLS connections parked under full GC (h1 and h2); h2 conns with a deferred stream closed; registry untrack across threads |
+| TSan CI (`.github/workflows/tsan.yml`) | ✅ Done | `make SANITIZE=thread tsan-test`: every test target except `TSAN_EXCLUDE`, each exclusion with its reason; open reports tracked in #351. Bringing it up fixed real races in async ack handoff, HTTPS park restart during shutdown, the scheduler, the reactor run-thread check, and the listen fd globals |
+| RSS gate (`.github/workflows/rss-gate.yml`) | ✅ Done | `scripts/ci/rss_gate.sh`: an HTTPS server on `cwist_app_listen()` with 4 workers must keep every idle process under 32 MiB and grow at most max(8 MiB, 10%) over a second identical load round. Fails on the v3.9 static queue (112 MiB idle process), passes on v3.9.1 (14.5 MiB) |
+| Cppcheck CI (`.github/workflows/cppcheck.yml`) | ✅ Done | `scripts/ci/cppcheck.sh`: warning/performance/portability checks over `src/`, any finding fails. Starting from zero meant fixing 6: three ORM entry points that dereferenced a NULL out-pointer before checking it, a NULL `state` dereference in `mux_chain_next()`, an implementation-defined signed shift in protobuf ZigZag encoding, and a printf format mismatch |
+
+---
+
 ## CWIST v4.0 Readiness
 
 v4.0 starts the API stability guarantee described under "API stability from
