@@ -4570,20 +4570,21 @@ static int app_listen_serve(cwist_app *app, int port, int workers_override, int 
             workers = (end != workers_env && *end == '\0' && v >= 1 && v <= INT_MAX) ? (int)v : 1;
         }
     } else {
-        // Default: one worker process per three online cores (at least 2).
-        // A/B on a 12-core box (wrk -t4 -c256, plain HTTP, issue #293
-        // context): default workers=cores gave ~257k req/s at ~460% CPU with
-        // p99 ~4.8ms, while workers=4 gave ~339k req/s at ~320% CPU with
-        // p99 ~2.4ms. One process per core oversubscribes the box: the
-        // remaining CPU budget (load generator, kernel, IRQs) has no room,
-        // and every extra SO_REUSEPORT accept poll competes for cache lines.
-        // Fewer, busier workers beat more, starved ones. The "auto" value
-        // and CWIST_WORKERS still select one-per-core explicitly.
+        // Default: one worker process per online core. PR #333 retuned this
+        // to cores/3 citing a p99 win at moderate concurrency on a dedicated
+        // 12-core box, but the retune failed the latency regression gate on
+        // every CI run afterwards (5/5 runs across three CPU models, mean
+        // latency 2-3x the same-CPU median; the 100 prior runs at
+        // one-per-core had never failed). Local A/B on a 4-core taskset
+        // emulation of the CI runner (wrk -t4 -c400, 10s after warmup):
+        // 4 workers = 1.12ms mean / ~192k rps, 2 workers = 1.9-2.3ms mean /
+        // ~205k rps - the retune buys ~5% throughput for ~1.8x mean latency
+        // at high connection counts, and on shared CI vCPUs the latency cost
+        // is larger still. CWIST's default profile is the ultra-low-latency
+        // classic pool; deployments that prefer fewer, busier workers can
+        // set CWIST_WORKERS explicitly.
         long cores = get_cpu_cores();
-        long w = (cores > 0) ? cores / 3 : 1;
-        if (cores <= 2) w = 1; /* fork-free on machines too small to split */
-        if (w < 2 && cores > 2) w = 2;
-        workers = (int)w;
+        workers = (cores > 0) ? (int)cores : 1;
     }
     if (workers < 1) workers = 1;
 
