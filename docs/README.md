@@ -56,6 +56,8 @@ Self-contained demos under [`example/`](../example/):
 
 * [Web server benchmark methodology](webserver-benchmark.md) — how the CI
   numbers in the README are produced.
+* [Soak testing](soak-testing.md) — the sustained-load leak/degradation
+  gate for the v4.0 cut, with PASS/FAIL criteria (`scripts/ci/soak.sh`).
 * [benchmark-trends.svg](benchmark-trends.svg) / [webserver-benchmark-trends.svg](webserver-benchmark-trends.svg) —
   historical CI trends.
 
