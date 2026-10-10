@@ -11,17 +11,9 @@ commits over from `dev`.
 directly, even for something that looks like a small, obviously-correct
 fix.
 
-This isn't just a style preference: `main` and `dev` have diverged to the
-point of sharing **no common git history** (no merge-base between them).
-That has a concrete consequence: once a PR is opened against the wrong
-base, GitHub cannot simply change its base branch afterward. Attempting to
-retarget a `main`-rooted PR onto `dev` silently **closes the PR** instead
-of moving it, because there's no shared ancestry for the two branches to
-be diffed against. Recovering from this means recreating the PR's commits
-from scratch against `dev` (`git cherry-pick`, preserving the original
-author) and opening a new PR: extra work for both the contributor and
-whoever reviews it, entirely avoidable by branching from the right place
-the first time.
+This isn't just a style preference: `main` carries the release line and
+receives changes only as cherry-picked, already-reviewed commits from
+`dev`, so a PR opened against the wrong base cannot simply be retargeted.
 
 A CI workflow (`.github/workflows/redirect-main-prs-to-dev.yml`) will
 attempt this recreation automatically for any PR opened against `main`: it
@@ -89,6 +81,13 @@ An example of the bar to hit: "c=512, wrk t4, 3 runs, p99.999 went
 from 60.4 ms to 26.2 ms, zero errors on both sides" is a PR sentence.
 "This should improve tail latency under load" is not, until the runs
 exist.
+
+## AI assistance policy
+
+The early CWIST codebase was written by hand, quickly, with AI as an
+assistant after the fact. The project rule going forward: design first,
+write the code, then use AI to assist. Starting from AI output and
+hoping to shape it into a design is not how changes are made here.
 
 ## A closed PR is not always a rejected one
 
