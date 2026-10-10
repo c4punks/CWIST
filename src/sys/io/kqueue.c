@@ -1,6 +1,7 @@
 #define _POSIX_C_SOURCE 200809L
 #include <cwist/sys/io/cwist_io.h>
 #include <cwist/core/mem/alloc.h>
+#include <cwist/core/mem/gc.h>
 #include <sys/types.h>
 #include <sys/event.h>
 #include <sys/time.h>
@@ -27,6 +28,7 @@ cwist_io_queue *cwist_io_queue_create(size_t capacity) {
     (void)capacity;
     cwist_io_queue *q = cwist_alloc(sizeof(cwist_io_queue));
     if (!q) return NULL;
+    if (cwist_full_gc_enabled()) cwist_gc_scope_disown(q);
 
     q->kq_fd = kqueue();
     if (q->kq_fd < 0) {
@@ -54,6 +56,8 @@ struct job_wrapper {
  */
 bool cwist_io_queue_submit(cwist_io_queue *q, cwist_job_func func, void *arg) {
     struct job_wrapper *job = cwist_alloc(sizeof(struct job_wrapper));
+    if (!job) return false;
+    if (cwist_full_gc_enabled()) cwist_gc_scope_disown(job);
     job->func = func;
     job->arg = arg;
 
