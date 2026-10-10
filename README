@@ -185,21 +185,21 @@ missing optional API does not prevent an HTTP/3 build.
   ./server
 
 <!-- BENCHMARKS:START -->
-Latest automated benchmark: **Darwin**: 14.74 M leases/s, 123.52% CPU, 764832 KiB RSS.
+Latest automated benchmark: **Darwin**: 16.89 M leases/s, 129.1% CPU, 863312 KiB RSS.
 
 ![CWIST benchmark trends](docs/benchmark-trends.svg)
 <!-- BENCHMARKS:END -->
 
 <!-- WEBSERVER_BENCHMARKS:START -->
 Latest Web Server Benchmark (wrk -t12 -c400 -d10s (after 10s warmup, warmup discarded)):
-- **CWIST Classic pool**: 117463 req/s | Latency 1.98ms (P90 4.01ms, P99 7.28ms, P99.999 24.22ms) | RSS 60356KiB | Csw 1104271
-- **CWIST reactor**: 136661 req/s | Latency 2.86ms (P90 5.00ms, P99 7.72ms, P99.999 13.20ms) | RSS 20996KiB | Csw 116504
-- **CWIST reactor (arena_max=1)** — glibc arena cap adopted in PR #35 after mimalloc was tried and refuted (issue #25); this line confirms the decision on every run: 137141 req/s | Latency 2.87ms (P90 5.06ms, P99 7.91ms, P99.999 18.16ms) | RSS 24048KiB | Csw 122330
-- **CWIST reactor (drain_chunk=8)** — cooperative queuing for cwist_async_defer completions within a big io_uring batch (issue #25, docs/cooperative-queuing.md); this workload has no cwist_async_defer traffic to interleave, so parity with the plain CWIST row above is the expected result, not a null finding — the tail-latency win is isolated directly in tests/bench_cooperative_queuing.c: 137848 req/s | Latency 2.85ms (P90 4.97ms, P99 7.86ms, P99.999 18.98ms) | RSS 20148KiB | Csw 123789
-- **Actix**: 129773 req/s | Latency 3.02ms (P90 5.13ms, P99 7.69ms, P99.999 13.97ms) | RSS 12280KiB | Csw 146348
-- **Axum**: 110955 req/s | Latency 3.54ms (P90 5.93ms, P99 8.67ms, P99.999 14.89ms) | RSS 17448KiB | Csw 220400
-- **Gin (Go)**: 78817 req/s | Latency 6.55ms (P90 15.46ms, P99 33.64ms, P99.999 68.73ms) | RSS 30064KiB | Csw 283021
-- **Spring Boot**: 44606 req/s | Latency 8.94ms (P90 11.35ms, P99 18.10ms, P99.999 70.87ms) | RSS 1319216KiB | Csw 222620
+- **CWIST Classic pool**: 177291 req/s | Latency 1.37ms (P90 2.89ms, P99 6.53ms, P99.999 22.84ms) | RSS 59548KiB | Csw 1737800
+- **CWIST reactor**: 218773 req/s | Latency 1.88ms (P90 3.79ms, P99 6.35ms, P99.999 11.72ms) | RSS 20944KiB | Csw 194555
+- **CWIST reactor (arena_max=1)** — glibc arena cap adopted in PR #35 after mimalloc was tried and refuted (issue #25); this line confirms the decision on every run: 216236 req/s | Latency 1.89ms (P90 3.75ms, P99 6.21ms, P99.999 12.12ms) | RSS 26592KiB | Csw 202143
+- **CWIST reactor (drain_chunk=8)** — cooperative queuing for cwist_async_defer completions within a big io_uring batch (issue #25, docs/cooperative-queuing.md); this workload has no cwist_async_defer traffic to interleave, so parity with the plain CWIST row above is the expected result, not a null finding — the tail-latency win is isolated directly in tests/bench_cooperative_queuing.c: 218407 req/s | Latency 1.87ms (P90 3.73ms, P99 6.17ms, P99.999 11.31ms) | RSS 20392KiB | Csw 202098
+- **Actix**: 217225 req/s | Latency 1.88ms (P90 3.72ms, P99 6.24ms, P99.999 11.94ms) | RSS 12236KiB | Csw 237586
+- **Axum**: 192587 req/s | Latency 2.07ms (P90 3.79ms, P99 5.93ms, P99.999 13.70ms) | RSS 16728KiB | Csw 315869
+- **Gin (Go)**: 145381 req/s | Latency 3.57ms (P90 8.60ms, P99 17.82ms, P99.999 39.70ms) | RSS 29420KiB | Csw 424833
+- **Spring Boot**: 117222 req/s | Latency 3.40ms (P90 4.99ms, P99 7.71ms, P99.999 42.05ms) | RSS 1296348KiB | Csw 410895
 
 **Spring runtime environment**
 
@@ -247,9 +247,9 @@ GitHub hands out a different CPU model per run, which moves these numbers more t
 
 | Runner CPU | Runs | CWIST Classic ms | CWIST ms | Axum ms | CWIST req/s | Axum req/s |
 |---|---:|---:|---:|---:|---:|---:|
-| AMD EPYC 7763 64-Core Processor | 46 | 2.03 | 2.98 | 3.53 | 139,651 | 110,874 |
+| AMD EPYC 7763 64-Core Processor | 45 | 2.03 | 2.98 | 3.53 | 140,045 | 110,793 |
 | AMD EPYC 9V74 80-Core Processor | 17 | 1.89 | 2.62 | 3.22 | 147,930 | 121,042 |
-| AMD EPYC 9V45 96-Core Processor | 6 | 1.27 | 2.32 | 2.03 | 218,214 | 195,576 |
+| AMD EPYC 9V45 96-Core Processor | 7 | 1.28 | 2.32 | 2.04 | 218,335 | 194,773 |
 | Intel(R) Xeon(R) 6973P-C | 6 | 0.98 | 1.81 | 1.67 | 294,300 | 237,646 |
 | INTEL(R) XEON(R) PLATINUM 8573C | 5 | 1.15 | 1.89 | 1.95 | 263,319 | 203,941 |
 | Intel(R) Xeon(R) Platinum 8370C CPU @ 2.80GHz | 2 | 1.40 | 2.29 | 2.35 | 201,973 | 167,709 |
