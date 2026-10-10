@@ -1,0 +1,35 @@
+name: "Cppcheck"
+
+# Static analysis gate: scripts/ci/cppcheck.sh runs cppcheck over src/ with
+# the warning, performance and portability checks and fails on any finding.
+# The runner is pinned to ubuntu-24.04 so the cppcheck version (2.13) does
+# not move under the gate; changing it is a deliberate PR.
+
+on:
+  push:
+    branches: [main, master, dev]
+  pull_request:
+    branches: [main, master, dev]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  cppcheck:
+    name: cppcheck (src/)
+    if: github.event_name != 'push' || !contains(github.event.head_commit.message, '[skip ci]')
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Install cppcheck
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y cppcheck
+        cppcheck --version
+
+    - name: Run cppcheck gate
+      run: ./scripts/ci/cppcheck.sh

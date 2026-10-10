@@ -933,7 +933,7 @@ TEST_TARGETS = test_worker_affinity \
                test_css_composer \
                test_multipart
 
-.PHONY: all test $(TEST_TARGETS) fuzz_seq install uninstall dist clean rebuild examples clean-examples micro-examples examples-check wasm wasm-smoke wasm-abi-layout clean-wasm wasip2-smoke clean-wasip2 wit-check jco-transpile wit-bindings component-guest component-smoke clean-component api-baseline
+.PHONY: all test tsan-test $(TEST_TARGETS) fuzz_seq install uninstall dist clean rebuild examples clean-examples micro-examples examples-check wasm wasm-smoke wasm-abi-layout clean-wasm wasip2-smoke clean-wasip2 wit-check jco-transpile wit-bindings component-guest component-smoke clean-component api-baseline
 
 # Regenerate docs/api/v4.0-api-baseline.txt (the recorded v4.0 public API
 # symbol surface). See CONTRIBUTING.md "Releases and patch releases".
@@ -958,6 +958,45 @@ bench_security_pool: $(LIB_NAME) tests/bench_security_pool.c
 
 # WebRTC DataChannel end-to-end test (see the test_webrtc rule below).
 test: $(TEST_TARGETS)
+
+# ThreadSanitizer run used by .github/workflows/tsan.yml: every test target
+# except the ones below, each with the reason it cannot run cleanly under
+# TSan yet. Build and run with SANITIZE=thread. Shrink this list as the
+# open reports are fixed (tracked in issue #351).
+TSAN_EXCLUDE = \
+	test_html_response test_http_client test_static_and_range \
+	test_async_defer test_async_after_shutdown test_listen_ex test_listen_signal_restore \
+	test_websocket_async \
+	test_grpc_stream test_grpc_client \
+	test_http3 test_webtransport \
+	test_gc_ebr_release test_io_queue_full_gc \
+	test_webrtc
+# - test_html_response, test_http_client, test_static_and_range: fork a
+#   server and stop it with SIGTERM; TSan defers async signals until the
+#   blocked accept() returns, so the server is not stopped in time.
+# - test_async_defer, test_async_after_shutdown, test_listen_ex,
+#   test_listen_signal_restore: open report between cwist_http_pool_destroy()
+#   and live pool workers (http.c pool teardown).
+# - test_websocket_async: open report between ws_async_read_ready() and
+#   cwist_websocket_async_attach_ex().
+# - test_grpc_stream, test_grpc_client: open report in grpc_h2_on_poll()
+#   against cwist_grpc_stream_cancelled().
+# - test_http3, test_webtransport: open report between the test thread and
+#   cwist_http3_server_loop() state.
+# - test_gc_ebr_release, test_io_queue_full_gc: exercise epoch-based
+#   reclamation, whose reader protection (ttak_epoch_enter/exit) and
+#   lock-free retire lists TSan cannot model; intermittent reports in
+#   ttak_epoch_reclaim().
+# - test_webrtc: intermittent report of the reactor freeing a message that
+#   another thread queued through conn->inbox (acq_rel CAS, then acq_rel
+#   exchange); not explained yet, under investigation in #351.
+TSAN_TEST_TARGETS = $(filter-out $(TSAN_EXCLUDE),$(TEST_TARGETS))
+
+tsan-test: $(TSAN_TEST_TARGETS)
+
+# HTTPS server for scripts/ci/rss_gate.sh (runs until SIGTERM; not a test).
+rss_gate_server: $(LIB_NAME) tests/rss_gate_server.c
+	$(CC) $(CFLAGS) -o $@ tests/rss_gate_server.c $(LIB_NAME) $(LIBS)
 
 src/sys/app/app.o: src/sys/app/worker_affinity.h
 

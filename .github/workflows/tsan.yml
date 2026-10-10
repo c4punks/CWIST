@@ -1,0 +1,46 @@
+name: "TSan"
+
+# ThreadSanitizer: build with SANITIZE=thread and run `make tsan-test`, which
+# is the full TEST_TARGETS list minus TSAN_EXCLUDE (each exclusion carries
+# its reason in the Makefile). halt_on_error makes the first data race fail
+# the job with its report.
+
+on:
+  push:
+    branches: [main, master, dev]
+  pull_request:
+    branches: [main, master, dev]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  tsan:
+    name: Thread Sanitizer (build + test)
+    if: github.event_name != 'push' || !contains(github.event.head_commit.message, '[skip ci]')
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      with:
+        submodules: recursive
+
+    - name: Install build dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y cmake libcurl4-openssl-dev libnghttp2-dev libbrotli-dev libzstd-dev
+
+    # TSan cannot map its shadow memory with the 32-bit mmap ASLR entropy
+    # that recent Ubuntu runner kernels use ("unexpected memory mapping").
+    - name: Lower mmap ASLR entropy for TSan
+      run: sudo sysctl -w vm.mmap_rnd_bits=28
+
+    - name: Build and run test suite under ThreadSanitizer
+      run: |
+        make clean
+        make -j$(nproc) SANITIZE=thread WERROR=1
+        make SANITIZE=thread WERROR=1 tsan-test
+      env:
+        TSAN_OPTIONS: halt_on_error=1:abort_on_error=1:second_deadlock_stack=1:suppressions=${{ github.workspace }}/tests/tsan.supp

@@ -166,3 +166,5 @@ example/wasm-service-worker/app.js
 example/wasm-service-worker/app.wasm
 tutorials/*/build/
 build-tutorials/
+rss_gate_server
+rss_gate_server.log
