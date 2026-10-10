@@ -433,6 +433,75 @@ static int ssl_read_http_response(SSL *client, char *buf, size_t buf_size) {
     return (int)total;
 }
 
+/* Completes before the dispatcher acks, so the completion runs inside the
+ * ack on the pool worker itself and closes or resubmits the connection
+ * before the worker's handler returns (fly.board's cached-response path). */
+static void sync_async_https_route(cwist_http_request *req, cwist_http_response *res) {
+    cwist_async *a = cwist_async_defer(req, res);
+    assert(a != NULL);
+    cwist_async_respond(a, CWIST_HTTP_OK, "text/plain", "sync-async-ok", 13);
+}
+
+static void run_sync_defer_round(cwist_app *app, const char *conn_hdr, int follow_up) {
+    int sv[2];
+    assert(socketpair(AF_UNIX, SOCK_STREAM, 0, sv) == 0);
+    https_pool_submit(sv[0], app->ssl_ctx, app->https_request_handler, app);
+
+    SSL_CTX *client_ctx = SSL_CTX_new(TLS_client_method());
+    assert(client_ctx != NULL);
+    SSL_CTX_set_verify(client_ctx, SSL_VERIFY_NONE, NULL);
+    SSL *client = SSL_new(client_ctx);
+    assert(client != NULL);
+    assert(SSL_set_fd(client, sv[1]) == 1);
+    assert(SSL_connect(client) == 1);
+
+    char req[160];
+    snprintf(req, sizeof(req), "GET /defer-sync HTTP/1.1\r\nHost: localhost\r\nConnection: %s\r\n\r\n",
+             conn_hdr);
+    assert(SSL_write(client, req, (int)strlen(req)) > 0);
+    char buf[1024];
+    memset(buf, 0, sizeof(buf));
+    assert(ssl_read_http_response(client, buf, sizeof(buf)) > 0);
+    assert(strstr(buf, "sync-async-ok") != NULL);
+
+    if (follow_up) {
+        const char *req2 = "GET /normal HTTP/1.1\r\nHost: localhost\r\nConnection: close\r\n\r\n";
+        assert(SSL_write(client, req2, (int)strlen(req2)) > 0);
+        memset(buf, 0, sizeof(buf));
+        assert(ssl_read_http_response(client, buf, sizeof(buf)) > 0);
+        assert(strstr(buf, "normal-https-ok") != NULL);
+    }
+
+    SSL_shutdown(client);
+    SSL_free(client);
+    SSL_CTX_free(client_ctx);
+    close(sv[1]);
+}
+
+static void test_https_async_defer_completes_before_ack(void) {
+    printf("Testing HTTPS async defer completed before dispatch ack...\n");
+    assert(https_pool_init() == 0);
+
+    cwist_app *app = cwist_app_create();
+    assert(app != NULL);
+    cwist_error_t err = cwist_app_use_https(app, TEST_CERT, TEST_KEY);
+    assert(cwist_error_is_ok(&err));
+    cwist_app_get(app, "/defer-sync", sync_async_https_route);
+    cwist_app_get(app, "/normal", normal_https_route);
+
+    /* close: the completion frees the conn inside the ack. keep-alive: it
+     * resubmits the conn to the pool inside the ack. Either way the worker
+     * must not touch the conn once the handler returns. */
+    for (int i = 0; i < 50; i++) {
+        run_sync_defer_round(app, "close", 0);
+        run_sync_defer_round(app, "keep-alive", 1);
+    }
+    usleep(200000); /* let resubmitted conns drain before the app goes away */
+
+    cwist_app_destroy(app);
+    printf("Passed HTTPS async defer completed before dispatch ack.\n");
+}
+
 static void test_https_async_defer(void) {
     printf("Testing HTTPS async defer and keep-alive...\n");
     assert(https_pool_init() == 0);
@@ -495,6 +564,7 @@ int main(void) {
     test_app_http2_toggle_rebuilds_context();
     test_https_autoloads_aia_intermediate();
     test_https_async_defer();
+    test_https_async_defer_completes_before_ack();
     printf("All HTTPS tests passed!\n");
     return 0;
 }
