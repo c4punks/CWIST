@@ -178,5 +178,20 @@
     "http_big_gbps": 8.59,
     "https_churn_ratio": 0.134,
     "https_big_ratio": 0.515
+  },
+  {
+    "timestamp": "2026-10-10T15:38:22+0000",
+    "runner_hw": "4 vCPU | AMD EPYC 7763 64-Core Processor",
+    "tls_rtt_p50_ms": 0.121,
+    "tls_rtt_p90_ms": 0.163,
+    "https_churn_rps": 1177.09,
+    "http_churn_rps": 9769.89,
+    "https_keepalive_rps": 73890.34,
+    "http_keepalive_rps": 130485.11,
+    "https_keepalive_ratio": 0.566,
+    "https_big_gbps": 1.99,
+    "http_big_gbps": 5.72,
+    "https_churn_ratio": 0.12,
+    "https_big_ratio": 0.348
   }
 ]
