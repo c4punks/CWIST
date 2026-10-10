@@ -15,7 +15,7 @@ void cwist_app_use(cwist_app *app, cwist_middleware_func mw);
 ### Request ID Middleware
 Generates a unique ID for each request and adds it to the `X-Request-Id` header in both request and response.
 ```c
-#include <cwist/middleware.h>
+#include <cwist/sys/app/middleware.h>
 cwist_app_use(app, cwist_mw_request_id(NULL));
 ```
 

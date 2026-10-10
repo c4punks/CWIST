@@ -19,6 +19,7 @@ typedef struct cwist_query_map {
     cwist_query_bucket **buckets;
     size_t size;
     uint8_t seed[16];
+    void *arena;
 } cwist_query_map;
 
 /** @name Lifecycle */
@@ -28,6 +29,7 @@ typedef struct cwist_query_map {
  * @brief Create a new query map.
  */
 cwist_query_map *cwist_query_map_create(void);
+cwist_query_map *cwist_query_map_create_in_arena(void *arena);
 
 /**
  * @brief Destroy a query map.
@@ -63,6 +65,21 @@ const char *cwist_query_map_get(cwist_query_map *map, const char *key);
  * @brief Set a key-value pair.
  */
 void cwist_query_map_set(cwist_query_map *map, const char *key, const char *value);
+
+/**
+ * @brief Delete a key from the map.
+ */
+void cwist_query_map_delete(cwist_query_map *map, const char *key);
+
+/**
+ * @brief Iterator callback signature.
+ */
+typedef void (*cwist_query_map_iter_func)(const char *key, const char *value, void *ctx);
+
+/**
+ * @brief Iterate over all key-value pairs in the map.
+ */
+void cwist_query_map_foreach(cwist_query_map *map, cwist_query_map_iter_func cb, void *ctx);
 
 /** @} */
 

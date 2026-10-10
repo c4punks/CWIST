@@ -15,6 +15,7 @@
 #else
 #include <openssl/hmac.h>
 #include <openssl/evp.h>
+#include <openssl/crypto.h>
 #endif
 #include <string.h>
 #include <stdlib.h>
@@ -133,6 +134,15 @@ static int base64_decode(const char *in, uint8_t *out, size_t out_len) {
 
 /* --- HMAC-SHA256 -------------------------------------------------------- */
 
+/**
+ * @brief Compute HMAC-SHA256 of a message.
+ * @param key HMAC key bytes.
+ * @param key_len Key length in bytes.
+ * @param msg Message bytes.
+ * @param msg_len Message length in bytes.
+ * @param out Output buffer of exactly 32 bytes.
+ * @return true on success, false if the MAC could not be computed.
+ */
 static bool hmac_sha256(const char *key, size_t key_len, const char *msg, size_t msg_len,
                         uint8_t out[32]) {
 #if defined(__EMSCRIPTEN__) || defined(__wasi__)
@@ -192,13 +202,12 @@ static char *generate_secret(size_t len) {
         secret[len * 2] = '\0';
         return secret;
     }
-    static const char hex[] = "0123456789abcdef";
-    for (size_t i = 0; i < len; i++) {
-        secret[i * 2] = hex[buf[i] >> 4];
-        secret[i * 2 + 1] = hex[buf[i] & 0x0F];
-    }
-    secret[len * 2] = '\0';
-    return secret;
+#endif
+#ifdef __EMSCRIPTEN__
+    if (fd < 0 && cwist_session_entropy_js(secret, (int)len) == 1) return secret;
+#endif
+    cwist_free(secret);
+    return NULL;
 }
 
 /**
@@ -285,7 +294,14 @@ static bool verify_signature(cwist_app *app, const char *payload_b64, const char
                      strlen(payload_b64), expected)) {
         return false;
     }
-    return memcmp(sig, expected, 32) == 0;
+#if defined(__EMSCRIPTEN__) || defined(__wasi__)
+    /* No OpenSSL on WASM: use a portable constant-time loop. */
+    unsigned int diff = 0;
+    for (size_t i = 0; i < 32; i++) diff |= sig[i] ^ expected[i];
+    return diff == 0;
+#else
+    return CRYPTO_memcmp(sig, expected, 32) == 0;
+#endif
 }
 
 /**
@@ -317,6 +333,17 @@ static cwist_query_map *parse_payload(const char *payload_b64) {
     return map;
 }
 
+/**
+ * @brief Create a session for a request, loading data from the signed
+ * session cookie if present and valid. If the app has no secret yet, one
+ * is generated. The session is stored in req->session.
+ * @param app Application holding session configuration.
+ * @param req Request to attach the session to.
+ * @param res Response used for cookie parsing context.
+ * @return New empty or loaded session on success, NULL on invalid
+ * arguments or allocation failure. Caller must free with
+ * cwist_session_destroy().
+ */
 cwist_session_t *cwist_session_start(cwist_app *app, cwist_http_request *req,
                                      cwist_http_response *res) {
     if (!app || !req || !res) return NULL;
@@ -477,6 +504,14 @@ int cwist_session_commit(cwist_session_t *session, cwist_http_response *res) {
 
 /* Middleware ------------------------------------------------------------- */
 
+/**
+ * @brief Middleware handler: start a session for the request, run the next
+ * handler, then commit the session back to the response. Skips session
+ * handling when the request has no app.
+ * @param req Request being served.
+ * @param res Response being built.
+ * @param next Next handler in the chain; always invoked.
+ */
 static void cwist_mw_session_handler(cwist_http_request *req, cwist_http_response *res,
                                      cwist_handler_func next) {
     cwist_app *app = req->app;

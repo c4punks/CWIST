@@ -8,6 +8,7 @@
 
 #include <stddef.h>
 #include <ttak/mem/owner.h>
+#include <cwist/core/mem/arena.h>
 
 /**
  * @brief Lazily create (or return) the shared CWIST owner context.

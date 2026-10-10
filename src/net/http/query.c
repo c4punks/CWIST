@@ -1,15 +1,58 @@
 #define _POSIX_C_SOURCE 200809L
-#include <cwist/query.h>
-#include <cwist/siphash.h>
+#include <cwist/net/http/query.h>
+#include <cwist/core/siphash/siphash.h>
+#include <cwist/core/mem/alloc.h>
+#include <cwist/core/mem/arena.h>
 #include <stdlib.h>
 #include <string.h>
+#include <ctype.h>
 #include <stdio.h>
-#include <uriparser/Uri.h>
+
+/**
+ * @file query.c
+ * @brief Hash-map based storage and parsing helpers for URL query parameters.
+ */
 
 #define CWIST_QUERY_MAP_DEFAULT_SIZE 16
 
+/**
+ * @brief Duplicate a string using the map's allocator.
+ * @param arena Memory arena to allocate from, or NULL to use heap allocation.
+ * @param str Source string; NULL yields NULL.
+ * @return Newly allocated copy owned by the arena or heap, or NULL on failure.
+ */
+static char *query_strdup(void *arena, const char *str) {
+    if (!str) return NULL;
+    size_t len = strlen(str);
+    if (arena) {
+        char *copy = (char *)cwist_arena_alloc((cwist_arena_t *)arena, len + 1);
+        if (copy) {
+            memcpy(copy, str, len + 1);
+        }
+        return copy;
+    } else {
+        return cwist_strdup(str);
+    }
+}
+
+/**
+ * @brief Allocate a query map and seed its SipHash key material.
+ * @return Newly allocated map, or NULL when memory allocation fails.
+ */
 cwist_query_map *cwist_query_map_create(void) {
-    cwist_query_map *map = (cwist_query_map *)malloc(sizeof(cwist_query_map));
+    return cwist_query_map_create_in_arena(NULL);
+}
+
+/**
+ * @brief Allocate a query map within a memory arena to avoid GC/heap allocations.
+ */
+cwist_query_map *cwist_query_map_create_in_arena(void *arena) {
+    cwist_query_map *map;
+    if (arena) {
+        map = (cwist_query_map *)cwist_arena_alloc((cwist_arena_t *)arena, sizeof(cwist_query_map));
+    } else {
+        map = (cwist_query_map *)cwist_alloc(sizeof(cwist_query_map));
+    }
     if (!map) return NULL;
 
     map->size = CWIST_QUERY_MAP_DEFAULT_SIZE;
@@ -21,36 +64,61 @@ cwist_query_map *cwist_query_map_create(void) {
             (cwist_query_bucket **)cwist_alloc_array(map->size, sizeof(cwist_query_bucket *));
     }
     if (!map->buckets) {
-        free(map);
+        if (!arena) {
+            cwist_free(map);
+        }
         return NULL;
     }
+    memset(map->buckets, 0, map->size * sizeof(cwist_query_bucket *));
 
+    map->arena = arena;
     cwist_generate_hash_seed(map->seed);
     return map;
 }
 
+/**
+ * @brief Release every bucket node and the map container itself.
+ * @param map Query map to destroy.
+ */
 void cwist_query_map_destroy(cwist_query_map *map) {
     if (!map) return;
+    if (map->arena) {
+        return;
+    }
     cwist_query_map_clear(map);
-    free(map->buckets);
-    free(map);
+    cwist_free(map->buckets);
+    cwist_free(map);
 }
 
+/**
+ * @brief Remove every key/value pair while keeping the bucket array allocated.
+ * @param map Query map to clear in-place.
+ */
 void cwist_query_map_clear(cwist_query_map *map) {
     if (!map) return;
+    if (map->arena) {
+        memset(map->buckets, 0, map->size * sizeof(cwist_query_bucket *));
+        return;
+    }
     for (size_t i = 0; i < map->size; i++) {
         cwist_query_bucket *curr = map->buckets[i];
         while (curr) {
             cwist_query_bucket *next = curr->next;
-            free(curr->key);
-            free(curr->value);
-            free(curr);
+            cwist_free(curr->key);
+            cwist_free(curr->value);
+            cwist_free(curr);
             curr = next;
         }
         map->buckets[i] = NULL;
     }
 }
 
+/**
+ * @brief Insert or replace a decoded query parameter in the map.
+ * @param map Query map that owns the entry storage.
+ * @param key Decoded query-string key.
+ * @param value Decoded query-string value.
+ */
 void cwist_query_map_set(cwist_query_map *map, const char *key, const char *value) {
     if (!map || !key || !value) return;
 
@@ -61,8 +129,10 @@ void cwist_query_map_set(cwist_query_map *map, const char *key, const char *valu
     while (curr) {
         if (strcmp(curr->key, key) == 0) {
             // Update existing
-            free(curr->value);
-            curr->value = strdup(value);
+            if (!map->arena) {
+                cwist_free(curr->value);
+            }
+            curr->value = query_strdup(map->arena, value);
             return;
         }
         curr = curr->next;
@@ -77,12 +147,18 @@ void cwist_query_map_set(cwist_query_map *map, const char *key, const char *valu
         node = (cwist_query_bucket *)cwist_alloc(sizeof(cwist_query_bucket));
     }
     if (!node) return;
-    node->key = strdup(key);
-    node->value = strdup(value);
+    node->key = query_strdup(map->arena, key);
+    node->value = query_strdup(map->arena, value);
     node->next = map->buckets[index];
     map->buckets[index] = node;
 }
 
+/**
+ * @brief Look up a decoded query parameter by key.
+ * @param map Query map to search.
+ * @param key Decoded key to retrieve.
+ * @return Stored value, or NULL when the key is absent.
+ */
 const char *cwist_query_map_get(cwist_query_map *map, const char *key) {
     if (!map || !key) return NULL;
 
@@ -99,6 +175,14 @@ const char *cwist_query_map_get(cwist_query_map *map, const char *key) {
     return NULL;
 }
 
+/**
+ * @brief Remove a key/value pair from the map if present.
+ * @param map Query map to modify; NULL is a no-op.
+ * @param key Key to delete; NULL is a no-op.
+ * @retval In heap-managed maps the node and its strings are freed.
+ * @retval In arena-managed maps the node is only unlinked; storage is reclaimed with the arena.
+ *        (Nothing is freed.)
+ */
 void cwist_query_map_delete(cwist_query_map *map, const char *key) {
     if (!map || !key) return;
     if (map->arena) {
@@ -145,6 +229,13 @@ void cwist_query_map_delete(cwist_query_map *map, const char *key) {
     }
 }
 
+/**
+ * @brief Invoke a callback for every key/value pair stored in the map.
+ * @param map Query map to iterate; NULL is a no-op.
+ * @param cb Callback invoked as cb(key, value, ctx) for each entry; NULL is a no-op.
+ * @param ctx Opaque pointer forwarded to the callback for each entry.
+ * @note Iteration order is bucket order and is not sorted.
+ */
 void cwist_query_map_foreach(cwist_query_map *map, cwist_query_map_iter_func cb, void *ctx) {
     if (!map || !cb) return;
     for (size_t i = 0; i < map->size; i++) {
@@ -200,21 +291,38 @@ static char *url_decode(void *arena, const char *src) {
 void cwist_query_map_parse(cwist_query_map *map, const char *raw_query) {
     if (!map || !raw_query || strlen(raw_query) == 0) return;
 
-    UriQueryListA *queryList = NULL;
-    int itemCount = 0;
-    
-    // uriparser handles & and = and url decoding
-    if (uriDissectQueryMallocA(&queryList, &itemCount, raw_query, raw_query + strlen(raw_query)) != URI_SUCCESS) {
-        return;
-    }
+    char *buffer = query_strdup(map->arena, raw_query);
+    if (!buffer) return;
 
-    UriQueryListA *curr = queryList;
-    while (curr) {
-        if (curr->key) {
-            cwist_query_map_set(map, curr->key, curr->value ? curr->value : "");
+    char *save_ptr = NULL;
+    char *token = strtok_r(buffer, "&", &save_ptr);
+
+    while (token) {
+        char *eq = strchr(token, '=');
+        if (!eq) {
+            token = strtok_r(NULL, "&", &save_ptr);
+            continue;
         }
-        curr = curr->next;
+
+        *eq = '\0';
+        const char *key_raw = token;
+        const char *value_raw = eq + 1;
+
+        char *key_dec = url_decode(map->arena, key_raw);
+        char *value_dec = url_decode(map->arena, value_raw);
+
+        if (key_dec && cwist_query_map_get(map, key_dec) == NULL) {
+            cwist_query_map_set(map, key_dec, value_dec ? value_dec : "");
+        }
+
+        if (!map->arena) {
+            cwist_free(key_dec);
+            cwist_free(value_dec);
+        }
+        token = strtok_r(NULL, "&", &save_ptr);
     }
 
-    uriFreeQueryListA(queryList);
+    if (!map->arena) {
+        cwist_free(buffer);
+    }
 }

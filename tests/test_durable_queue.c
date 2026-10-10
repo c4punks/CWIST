@@ -1,6 +1,6 @@
 /**
  * @file test_durable_queue.c
- * @brief Tests for the experimental durable job queue (Redis + NATS backends).
+ * @brief Tests for the durable job queue (Redis + NATS backends), supported since v3.8.
  *
  * Redis: requires a server at CWIST_REDIS_HOST:CWIST_REDIS_PORT (default
  * 127.0.0.1:6379); skips cleanly when absent.

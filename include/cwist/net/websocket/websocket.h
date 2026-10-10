@@ -10,11 +10,6 @@
 #include <stdint.h>
 #include <stdbool.h>
 
-typedef struct cwist_websocket {
-    int fd;
-    bool is_closed;
-} cwist_websocket;
-
 typedef enum {
     CWIST_WS_FRAME_CONTINUATION = 0x0,
     CWIST_WS_FRAME_TEXT = 0x1,
@@ -65,8 +60,8 @@ bool cwist_websocket_upgrade_response(cwist_http_request *req, cwist_http_respon
 cwist_websocket *cwist_websocket_upgrade(cwist_http_request *req, int client_fd);
 
 /**
- * @brief Receive a frame. Blocks until a frame is received or connection closed.
- * @return NULL on error or connection close.
+ * @brief Receive a frame, blocking until data arrives or the socket closes.
+ * @return `NULL` on error or if the connection was closed.
  */
 cwist_ws_frame *cwist_websocket_receive(cwist_websocket *ws);
 

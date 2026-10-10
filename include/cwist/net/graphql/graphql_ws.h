@@ -1,5 +1,5 @@
-/** @file graphql_ws.h @brief Experimental GraphQL subscriptions over the graphql-ws
- * WebSocket subprotocol (v3.7 Phase 4).
+/** @file graphql_ws.h @brief GraphQL subscriptions over the graphql-ws
+ * WebSocket subprotocol (supported since v3.8).
  *
  * Implements the `graphql-transport-ws` subprotocol on top of the non-blocking
  * WebSocket transport (cwist/net/websocket/websocket_async.h): connection_init ->
@@ -13,7 +13,6 @@
  * in-process and thread-safe: publish may be called from any thread; delivery to the
  * wire happens on the owning reactor thread.
  *
- * EXPERIMENTAL: API and wire behavior may change without notice in a future release.
  * Opt-in only; no existing behavior changes when unused. Requires the C1M
  * (callback-shaped) WebSocket path.
  */

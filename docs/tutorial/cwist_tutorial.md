@@ -61,7 +61,7 @@ This section shows how to handle dynamic paths (path parameters) and query strin
 #include <cwist/app.h>
 #include <stdio.h>
 
-// 예: /users/:id?role=admin
+// Example: /users/:id?role=admin
 void user_profile_handler(cwist_http_request *req, cwist_http_response *res) {
     // Read the path parameter (:id)
     const char *user_id = cwist_query_map_get(req->path_params, "id");
@@ -95,7 +95,7 @@ A powerful runtime schema validator inspired by `zod` from the TypeScript world.
 #include <cwist/core/utils/zod.h>
 #include <cjson/cJSON.h>
 
-// 1. 스키마 정의 (name은 필수 문자열, age는 필수 정수)
+// 1. Define the schema (name is a required string, age is a required integer)
 static const cwist_schema_field_t user_fields[] = {
     {"name", {NULL}, CWIST_FIELD_STRING, true},
     {"age", {NULL}, CWIST_FIELD_INT, true},
@@ -103,7 +103,7 @@ static const cwist_schema_field_t user_fields[] = {
 static const cwist_schema_t user_schema = {user_fields, 2};
 
 void create_user_handler(cwist_http_request *req, cwist_http_response *res) {
-    // 2. 검증 (Body -> JSON)
+    // 2. Validate (Body -> JSON)
     cJSON *parsed_json = NULL;
     const char *raw = (req->body && req->body->data) ? req->body->data : "";
     cwist_zod_result_t z_res = cwist_zod_parse(raw, &user_schema, &parsed_json);
@@ -117,7 +117,7 @@ void create_user_handler(cwist_http_request *req, cwist_http_response *res) {
 
     res->status_code = CWIST_HTTP_CREATED;
 
-    // 3. JSON 응답 생성 (cJSON Builder 패턴)
+    // 3. Build the JSON response (cJSON builder pattern)
     cJSON *reply = cJSON_CreateObject();
     cJSON_AddStringToObject(reply, "status", "User created");
     cJSON_AddStringToObject(reply, "name", cJSON_GetObjectItem(parsed_json, "name")->valuestring);
@@ -141,12 +141,12 @@ You can easily build a pipeline that every request passes through (Spring's Inte
 ```c
 #include <cwist/app.h>
 
-// CORS 처리를 위한 미들웨어: next를 호출하면 다음 단계(다음 미들웨어 또는 핸들러)로 진행
+// Middleware for CORS handling: calling next proceeds to the next stage (the next middleware or the handler)
 void cors_middleware(cwist_http_request *req, cwist_http_response *res, cwist_handler_func next) {
     cwist_http_header_add(&res->headers, "Access-Control-Allow-Origin", "*");
     cwist_http_header_add(&res->headers, "Access-Control-Allow-Methods", "GET, POST, OPTIONS");
 
-    // OPTIONS 요청 시 바로 응답 (next를 호출하지 않으면 체인 중단)
+    // Respond immediately to OPTIONS requests (not calling next stops the chain)
     if (req->method == CWIST_HTTP_OPTIONS) {
         res->status_code = CWIST_HTTP_NO_CONTENT;
         return;
@@ -158,7 +158,7 @@ void cors_middleware(cwist_http_request *req, cwist_http_response *res, cwist_ha
 int main() {
     cwist_app *app = cwist_app_create();
 
-    // 미들웨어 등록 (전역 적용)
+    // Register the middleware (applied globally)
     cwist_app_use(app, cors_middleware);
     // ...
 }
@@ -176,7 +176,7 @@ CWIST fully supports embedded SQLite and provides a connection pool and migratio
 #include <cwist/core/db/migrate.h>
 
 void get_users_handler(cwist_http_request *req, cwist_http_response *res) {
-    // req->db는 cwist_app_use_db()로 앱에 연결한 DB 인스턴스
+    // req->db is the DB instance attached to the app with cwist_app_use_db()
     cwist_db *db = req->db;
 
     sqlite3_stmt *stmt = NULL;
@@ -202,7 +202,7 @@ void get_users_handler(cwist_http_request *req, cwist_http_response *res) {
     cJSON_Delete(users_array);
 }
 
-// 스키마 마이그레이션 (version 순서대로 한 번씩만 적용)
+// Schema migrations (each applied exactly once, in version order)
 static const cwist_migration_t migrations[] = {
     {.version = 1,
      .name = "create_users",
@@ -217,7 +217,7 @@ static const cwist_migration_t migrations[] = {
 int main() {
     cwist_app *app = cwist_app_create();
 
-    // DB 연결 ("file.db" 또는 ":memory:")
+    // Connect the DB ("file.db" or ":memory:")
     cwist_error_t err = cwist_app_use_db(app, "app_data.db");
     if (!cwist_error_is_ok(&err)) {
         cwist_error_dispose(&err);
@@ -225,7 +225,7 @@ int main() {
         return 1;
     }
 
-    // 스키마 마이그레이션 자동 적용
+    // Apply the schema migrations automatically
     if (cwist_migrate_up(cwist_app_get_db(app)->conn, migrations, 2) != CWIST_MIGRATE_OK) {
         cwist_app_destroy(app);
         return 1;
@@ -260,7 +260,7 @@ void login_handler(cwist_http_request *req, cwist_http_response *res) {
     char *payload_json = cJSON_PrintUnformatted(payload);
     cJSON_Delete(payload);
 
-    // 3600초(1시간) 유효기간의 토큰 생성 (exp 클레임 자동 추가)
+    // Create a token valid for 3600 seconds (1 hour); the exp claim is added automatically
     char *token = cwist_jwt_sign(payload_json, SECRET_KEY, 3600);
     cJSON_free(payload_json);
 
@@ -272,22 +272,22 @@ void login_handler(cwist_http_request *req, cwist_http_response *res) {
     cwist_free(token);
 }
 
-// API 요청 시 JWT 검증 미들웨어
+// Middleware that verifies the JWT on API requests
 void auth_middleware(cwist_http_request *req, cwist_http_response *res, cwist_handler_func next) {
     const char *auth_header = cwist_http_header_get(req->headers, "Authorization");
 
     if (auth_header && strncmp(auth_header, "Bearer ", 7) == 0) {
-        // 서명과 exp 검증에 성공하면 클레임 객체, 실패하면 NULL
+        // Returns a claims object if the signature and exp check out, NULL otherwise
         cwist_jwt_claims *claims = cwist_jwt_verify(auth_header + 7, SECRET_KEY);
         if (claims) {
-            // 토큰 유효함, 통과! (예: cwist_jwt_claims_get(claims, "role"))
+            // Token is valid, let it through! (e.g. cwist_jwt_claims_get(claims, "role"))
             cwist_jwt_claims_destroy(claims);
             if (next) next(req, res);
             return;
         }
     }
 
-    // 실패 시 401 응답 (next를 호출하지 않으면 체인 중단)
+    // Respond 401 on failure (not calling next stops the chain)
     res->status_code = CWIST_HTTP_UNAUTHORIZED;
     cwist_sstring_assign(res->body, "{\"error\": \"Unauthorized\"}");
 }
@@ -334,18 +334,18 @@ int main() {
 
 ## 8. WebSocket Integration (Real-Time Bidirectional Communication)
 
-CWIST는 동일한 포트에서 HTTP 통신을 WebSocket으로 쉽게 업그레이드 할 수 있습니다. `cwist_app_ws()`로 경로를 등록하면 업그레이드 핸드셰이크는 프레임워크가 처리하고, 핸들러는 연결된 `cwist_websocket`만 다룹니다.
+CWIST can easily upgrade HTTP traffic to WebSocket on the same port. Once you register a path with `cwist_app_ws()`, the framework handles the upgrade handshake and your handler only deals with the connected `cwist_websocket`.
 
 ```c
 #include <cwist/app.h>
 #include <cwist/net/websocket/websocket.h>
 #include <stdio.h>
 
-// 연결 하나당 한 번 호출됩니다. 업그레이드(101 응답)는 프레임워크가 처리하며,
-// 이 함수가 반환하면 연결이 정리됩니다.
+// Called once per connection. The framework handles the upgrade (101 response),
+// and the connection is cleaned up when this function returns.
 void chat_handler(cwist_websocket *ws) {
     cwist_ws_frame *frame;
-    // 연결이 닫히거나 오류가 나면 NULL (PING에 대한 PONG 응답은 자동)
+    // NULL when the connection closes or errors (PONG replies to PING are automatic)
     while ((frame = cwist_websocket_receive(ws)) != NULL) {
         if (frame->opcode == CWIST_WS_FRAME_CLOSE) {
             cwist_websocket_frame_destroy(frame);
@@ -353,7 +353,7 @@ void chat_handler(cwist_websocket *ws) {
         }
         if (frame->opcode == CWIST_WS_FRAME_TEXT) {
             printf("Received: %.*s\n", (int)frame->payload_len, (const char *)frame->payload);
-            // 에코 응답 (클라이언트로 다시 전송)
+            // Echo reply (send it back to the client)
             cwist_websocket_send(ws, CWIST_WS_FRAME_TEXT, frame->payload, frame->payload_len);
         }
         cwist_websocket_frame_destroy(frame);
@@ -516,5 +516,5 @@ function DynamicThemeApp() {
 
 ---
 
-### 마치며
-이 튜토리얼을 통해 C 기반 환경임에도 불구하고 얼마나 친숙하고 선언적으로 웹 개발을 할 수 있는지 확인하셨길 바랍니다. `cwist_app` 구조체가 전체 생명주기를, `cwist_app_get()` 같은 등록 함수가 라우팅을 담당한다는 점만 기억하면 기존 모던 프레임워크와 동일한 아키텍처로 개발을 진행할 수 있습니다.
+### Wrapping Up
+We hope this tutorial showed how familiar and declarative web development can be, even in a C-based environment. Just remember that the `cwist_app` struct owns the whole lifecycle and registration functions such as `cwist_app_get()` handle routing, and you can build with the same architecture as today's modern frameworks.

@@ -60,21 +60,29 @@ static void on_message(cwist_websocket_async *ws, cwist_ws_frame *frame, void *u
     cwist_websocket_frame_destroy(frame);
 }
 
-/* Wait for the next on_message delivery; returns the count before this one. */
-static int wait_for_message(recorded_msg_t *out) {
+/* Wait until more than `seen_before` messages have been delivered.
+ * Returns the new count. */
+static int wait_for_seen(recorded_msg_t *out, int seen_before) {
     struct timespec deadline;
     clock_gettime(CLOCK_REALTIME, &deadline);
     deadline.tv_sec += TIMEOUT_MS / 1000;
 
     pthread_mutex_lock(&g_mu);
-    int seen_before = g_messages_seen;
-    while (g_messages_seen == seen_before) {
+    while (g_messages_seen <= seen_before) {
         assert(pthread_cond_timedwait(&g_cv, &g_mu, &deadline) == 0);
     }
     *out = g_last;
     int count = g_messages_seen;
     pthread_mutex_unlock(&g_mu);
     return count;
+}
+
+/* Wait for the next on_message delivery; returns the count before this one. */
+static int wait_for_message(recorded_msg_t *out) {
+    pthread_mutex_lock(&g_mu);
+    int seen_before = g_messages_seen;
+    pthread_mutex_unlock(&g_mu);
+    return wait_for_seen(out, seen_before);
 }
 
 /* Build and write one masked client frame (payloads < 126 bytes here). */
@@ -277,6 +285,7 @@ int main(void) {
     printf("5. split-frame incremental parse: ok\n");
 
     /* 3. A PING elicits a PONG with the identical payload. */
+    int before_ping = g_messages_seen;
     write_masked(conn_a[1], 0x89, (const uint8_t *)"pingdata", 8);
     uint8_t opcode, payload[64];
     size_t len;
@@ -284,6 +293,15 @@ int main(void) {
     assert(opcode == CWIST_WS_FRAME_PONG);
     assert(len == 8);
     assert(memcmp(payload, "pingdata", 8) == 0);
+    /* The async path also DELIVERS the PING frame to on_message (same
+     * contract as the blocking API) in addition to queueing the PONG.
+     * That delivery can land on either side of the PONG read above, so
+     * wait against the count taken before the ping; otherwise this PING
+     * would be the "next" message a later wait_for_message sees. */
+    wait_for_seen(&msg, before_ping);
+    assert(msg.opcode == CWIST_WS_FRAME_PING);
+    assert(msg.len == 8);
+    assert(memcmp(msg.payload, "pingdata", 8) == 0);
     printf("3. ping -> pong echo: ok\n");
 
     /* 6. Core regression: while connection A sits idle, a full message

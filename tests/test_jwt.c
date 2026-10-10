@@ -270,8 +270,11 @@ int main(void) {
     test_tampered_payload();
     test_expired_token();
     test_no_exp();
+    test_nbf_token();
     test_sequenced_chunks();
     test_sign_verify_chunks();
+    test_malformed_b64url_remainder();
+    test_corrupt_chunk_feed();
     printf("All JWT tests passed!\n");
     return 0;
 }

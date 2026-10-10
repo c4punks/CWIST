@@ -10,6 +10,12 @@
  * The default transaction mode is manual (immediate commit disabled).
  * Call cwist_orm_immediate_commit(true) to make every write operation
  * automatically commit.
+ *
+ * Values in the cJSON @c data objects are escaped and table/column names
+ * are quoted before they reach the SQL text.  Raw SQL arguments are not:
+ * @c sql in cwist_orm_exec() / cwist_orm_query(), every @c where_clause,
+ * and the @c columns list of cwist_orm_select() are inserted verbatim.
+ * Do not build those strings from untrusted input.
  */
 
 #ifndef __CWIST_ORM_H__

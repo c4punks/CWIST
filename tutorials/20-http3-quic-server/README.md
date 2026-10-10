@@ -3,7 +3,9 @@
 Run high-speed HTTP/3 servers over QUIC transport via lsquic integration.
 
 ## Key Concepts
-- Binding HTTP/3 endpoints over non-blocking UDP sockets.
+- Initializing a QUIC/TLS context with `cwist_http3_init_context_ephemeral(&ctx)`.
+- Running the server loop with `cwist_http3_server_loop(udp_fd, ctx, handler, user_ctx)`.
+- Tearing down the context with `cwist_http3_destroy_context(ctx)`.
 
 ## Build and Run
 

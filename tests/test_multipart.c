@@ -57,10 +57,8 @@ static void test_basic_two_fields(void) {
     printf("  Passed.\n");
 }
 
-/* An empty header value must still terminate its header.  Before the fix the
- * next header's name was appended to the empty-valued one, so
- * "X-Empty:" followed by "Content-Disposition: ..." produced a field with no
- * name at all. */
+/* An empty header value must still terminate its header instead of swallowing
+ * the next one. */
 static void test_empty_header_value_does_not_swallow_next_header(void) {
     printf("Testing empty header value followed by Content-Disposition...\n");
     static const char body[] =
@@ -95,9 +93,8 @@ static void test_empty_header_value_does_not_swallow_next_header(void) {
     printf("  Passed.\n");
 }
 
-/* A body that ends before its closing boundary must not leak the in-flight
- * part buffer.  Completed parts are still returned; the truncated one is
- * dropped.  Run under ASan/LSan to observe the leak on unfixed code. */
+/* A truncated body must not leak the in-flight part buffer; completed parts
+ * are still returned. */
 static void test_truncated_body_drops_partial_part(void) {
     printf("Testing truncated body...\n");
     static const char body[] =
@@ -130,9 +127,7 @@ static void test_truncated_body_drops_partial_part(void) {
     printf("  Passed.\n");
 }
 
-/* Input the underlying parser rejects (an illegal byte in a header name) is
- * reported as NULL, per the documented contract, rather than as a result that
- * silently omits everything after the error. */
+/* Input the parser rejects is reported as NULL per the documented contract. */
 static void test_malformed_input_returns_null(void) {
     printf("Testing malformed input...\n");
     static const char body[] =

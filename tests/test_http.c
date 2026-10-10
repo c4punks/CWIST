@@ -106,9 +106,10 @@ void test_send_response() {
 
     cwist_http_response *res = cwist_http_response_create();
     res->status_code = CWIST_HTTP_OK;
-    smartstring_assign(res->status_text, "OK");
+    cwist_sstring_assign(res->status_text, "OK");
     cwist_http_header_add(&res->headers, "Content-Type", "text/plain");
-    smartstring_assign(res->body, "Hello World");
+    cwist_sstring_assign(res->body, "Hello World");
+    res->keep_alive = false;
 
     cwist_http_send_response(sv[0], res);
 
@@ -120,12 +121,62 @@ void test_send_response() {
     // stack)
     assert(strstr(buffer, "HTTP/1.1 200 OK\r\n") != NULL);
     assert(strstr(buffer, "Content-Type: text/plain\r\n") != NULL);
+    assert(strstr(buffer, "Connection: close\r\n") != NULL);
     assert(strstr(buffer, "\r\nHello World") != NULL);
 
     cwist_http_response_destroy(res);
     close(sv[0]);
     close(sv[1]);
     printf("Passed Response Sending.\n");
+}
+
+/* CR or LF in a header name or value must be rejected so caller-supplied data
+ * cannot end the header early and inject more headers into the response. */
+static void test_header_add_rejects_crlf(void) {
+    printf("Testing header add CR/LF rejection...\n");
+    cwist_http_response *res = cwist_http_response_create();
+    assert(res != NULL);
+    cwist_http_header_node *before = res->headers;
+
+    const char *bad_values[] = {"x\r\nSet-Cookie: injected=1", "x\nSet-Cookie: injected=1",
+                                "x\rSet-Cookie: injected=1"};
+    for (size_t i = 0; i < sizeof(bad_values) / sizeof(bad_values[0]); i++) {
+        cwist_error_t err = cwist_http_header_add(&res->headers, "Location", bad_values[i]);
+        assert(!cwist_error_is_ok(&err));
+        cwist_error_dispose(&err);
+        assert(res->headers == before);
+    }
+    cwist_error_t err = cwist_http_header_add(&res->headers, "X-A\r\nSet-Cookie", "injected=1");
+    assert(!cwist_error_is_ok(&err));
+    cwist_error_dispose(&err);
+    assert(res->headers == before);
+
+    err = cwist_http_header_add(NULL, "X-A", "b");
+    assert(!cwist_error_is_ok(&err));
+    cwist_error_dispose(&err);
+
+    err = cwist_http_header_add(&res->headers, "X-Safe", "value: with colon; and spaces");
+    assert(cwist_error_is_ok(&err));
+    cwist_error_dispose(&err);
+    assert(strcmp(cwist_http_header_get(res->headers, "X-Safe"), "value: with colon; and spaces") ==
+           0);
+
+    int sv[2];
+    assert(socketpair(AF_UNIX, SOCK_STREAM, 0, sv) == 0);
+    res->keep_alive = false;
+    cwist_http_send_response(sv[0], res);
+    close(sv[0]);
+    char rbuf[4096];
+    size_t total = 0;
+    ssize_t n;
+    while ((n = read(sv[1], rbuf + total, sizeof(rbuf) - 1 - total)) > 0) total += (size_t)n;
+    rbuf[total] = '\0';
+    close(sv[1]);
+    assert(strstr(rbuf, "X-Safe: value: with colon; and spaces\r\n") != NULL);
+    assert(strstr(rbuf, "injected") == NULL);
+
+    cwist_http_response_destroy(res);
+    printf("Passed header add CR/LF rejection.\n");
 }
 
 /* --- RFC 9110/9112 compliance tests -------------------------------------- */
@@ -339,18 +390,52 @@ void test_head_response_headers_only() {
     printf("Passed HEAD response suppression.\n");
 }
 
+/* A message longer than the internal header buffer must arrive in full, and
+ * Content-Length must match the bytes actually sent. */
+static void test_error_response_long_message(void) {
+    printf("Testing error response with a long message...\n");
+    char msg[2000];
+    memset(msg, 'e', sizeof(msg) - 1);
+    msg[sizeof(msg) - 1] = '\0';
+
+    int sv[2];
+    assert(socketpair(AF_UNIX, SOCK_STREAM, 0, sv) == 0);
+    cwist_http_send_error_response(sv[0], 400, msg);
+    close(sv[0]);
+
+    char rbuf[4096];
+    size_t total = 0;
+    ssize_t n;
+    while ((n = read(sv[1], rbuf + total, sizeof(rbuf) - 1 - total)) > 0) total += (size_t)n;
+    rbuf[total] = '\0';
+    close(sv[1]);
+
+    assert(strncmp(rbuf, "HTTP/1.1 400 ", 13) == 0);
+    char want[64];
+    snprintf(want, sizeof(want), "Content-Length: %zu\r\n", strlen(msg));
+    assert(strstr(rbuf, want) != NULL);
+    char *body = strstr(rbuf, "\r\n\r\n");
+    assert(body != NULL);
+    body += 4;
+    assert(strlen(body) == strlen(msg));
+    assert(strcmp(body, msg) == 0);
+    printf("Passed error response with a long message.\n");
+}
+
 int main() {
     test_methods();
     test_request_lifecycle();
     test_response_lifecycle();
     test_parse_request();
     test_send_response();
+    test_header_add_rejects_crlf();
     test_wasm_content_type_detection();
     test_host_header_rules();
     test_cl_te_smuggling_rules();
     test_malformed_request_line();
     test_expect_100_continue_flow();
     test_head_response_headers_only();
+    test_error_response_long_message();
     printf("All HTTP tests passed!\n");
     return 0;
 }

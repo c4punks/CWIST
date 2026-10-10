@@ -1,6 +1,7 @@
 #include <cwist/security/db_crypt/db_crypt.h>
 
 #include <openssl/evp.h>
+#include <openssl/mem.h>
 #include <openssl/rand.h>
 
 #include <stdio.h>
@@ -24,15 +25,16 @@ static int aes256_encrypt(const unsigned char *key, const unsigned char *iv,
     EVP_CIPHER_CTX *ctx = EVP_CIPHER_CTX_new();
     if (!ctx) return -1;
 
-    int ok = 1;
     int len1 = 0, len2 = 0;
 
-    ok &= EVP_EncryptInit_ex(ctx, EVP_aes_256_cbc(), NULL, key, iv);
-    ok &= EVP_EncryptUpdate(ctx, out, &len1, in, (int)in_len);
-    ok &= EVP_EncryptFinal_ex(ctx, out + len1, &len2);
+    if (EVP_EncryptInit_ex(ctx, EVP_aes_256_cbc(), NULL, key, iv) != 1 ||
+        EVP_EncryptUpdate(ctx, out, &len1, in, (int)in_len) != 1 ||
+        EVP_EncryptFinal_ex(ctx, out + len1, &len2) != 1) {
+        EVP_CIPHER_CTX_free(ctx);
+        return -1;
+    }
 
     EVP_CIPHER_CTX_free(ctx);
-    if (!ok) return -1;
     return len1 + len2;
 }
 
@@ -46,15 +48,16 @@ static int aes256_decrypt(const unsigned char *key, const unsigned char *iv,
     EVP_CIPHER_CTX *ctx = EVP_CIPHER_CTX_new();
     if (!ctx) return -1;
 
-    int ok = 1;
     int len1 = 0, len2 = 0;
 
-    ok &= EVP_DecryptInit_ex(ctx, EVP_aes_256_cbc(), NULL, key, iv);
-    ok &= EVP_DecryptUpdate(ctx, out, &len1, in, (int)in_len);
-    ok &= EVP_DecryptFinal_ex(ctx, out + len1, &len2);
+    if (EVP_DecryptInit_ex(ctx, EVP_aes_256_cbc(), NULL, key, iv) != 1 ||
+        EVP_DecryptUpdate(ctx, out, &len1, in, (int)in_len) != 1 ||
+        EVP_DecryptFinal_ex(ctx, out + len1, &len2) != 1) {
+        EVP_CIPHER_CTX_free(ctx);
+        return -1;
+    }
 
     EVP_CIPHER_CTX_free(ctx);
-    if (!ok) return -1;
     return len1 + len2;
 }
 
@@ -99,9 +102,15 @@ unsigned char *cwist_db_crypt_seal(const cwist_db_crypt_ctx_t *ctx,
     /* 3. Encrypt SQLite bytes with DEK. */
     size_t ct_max = sqlite_len + 16 + 1; /* extra block for padding */
     unsigned char *ct = (unsigned char *)malloc(ct_max);
-    if (!ct) return NULL;
+    if (!ct) {
+        OPENSSL_cleanse(dek, sizeof(dek));
+        OPENSSL_cleanse(dek_plain, sizeof(dek_plain));
+        return NULL;
+    }
 
     int ct_len = aes256_encrypt(dek, dek_iv, sqlite_bytes, sqlite_len, ct);
+    OPENSSL_cleanse(dek, sizeof(dek));
+    OPENSSL_cleanse(dek_plain, sizeof(dek_plain));
     if (ct_len <= 0) {
         free(ct);
         return NULL;
@@ -202,6 +211,7 @@ unsigned char *cwist_db_crypt_open(const cwist_db_crypt_ctx_t *ctx, const unsign
     if (!pt) return NULL;
 
     int pt_len = aes256_decrypt(dek, dek_iv, blob + off, ct_len, pt);
+    OPENSSL_cleanse(dek_plain, sizeof(dek_plain));
     if (pt_len < 0 || (size_t)pt_len < expected_pt_len) {
         free(pt);
         return NULL;

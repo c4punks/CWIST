@@ -1,7 +1,7 @@
 #ifndef DB_H
 #define DB_H
 
-#include <cwist/sql.h>
+#include <cwist/core/db/sql.h>
 #include "common.h"
 
 extern cwist_db *db_conn;

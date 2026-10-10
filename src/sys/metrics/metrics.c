@@ -5,6 +5,7 @@
 
 #include <cwist/sys/metrics/metrics.h>
 #include <cwist/net/http/http.h>
+#include <cwist/net/http/https.h>
 #include <cwist/core/sstring/sstring.h>
 #include <cwist/core/mem/alloc.h>
 #include <stdio.h>
@@ -56,6 +57,42 @@ static const cwist_metric_t metric_defaults[CWIST_METRIC_COUNT] = {
     [CWIST_METRIC_HTTP_CONTINUATION_SHED] =
         {.name = "cwist_http_continuation_shed_total",
          .help = "Pipelined HTTP/1.1 continuations dropped due to full reactor queue",
+         .type = CWIST_METRIC_COUNTER},
+    [CWIST_METRIC_TLS_HANDSHAKES_TOTAL] =
+        {.name = "cwist_tls_handshakes_total",
+         .help = "TLS handshakes completed (full + resumed)",
+         .type = CWIST_METRIC_COUNTER},
+    [CWIST_METRIC_TLS_HANDSHAKES_RESUMED] =
+        {.name = "cwist_tls_handshakes_resumed_total",
+         .help = "TLS handshakes resumed via session ID or ticket",
+         .type = CWIST_METRIC_COUNTER},
+    [CWIST_METRIC_TLS_CONNECTIONS_ACTIVE] =
+        {.name = "cwist_tls_connections_active",
+         .help = "Currently established TLS connections",
+         .type = CWIST_METRIC_GAUGE},
+    [CWIST_METRIC_TLS_HANDSHAKES_TLS12] =
+        {.name = "cwist_tls_handshakes_tls12_total",
+         .help = "TLS handshakes that negotiated TLS 1.2",
+         .type = CWIST_METRIC_COUNTER},
+    [CWIST_METRIC_TLS_HANDSHAKES_TLS13] =
+        {.name = "cwist_tls_handshakes_tls13_total",
+         .help = "TLS handshakes that negotiated TLS 1.3",
+         .type = CWIST_METRIC_COUNTER},
+    [CWIST_METRIC_TLS_CIPHERS_AES128_GCM] =
+        {.name = "cwist_tls_ciphers_aes128_gcm_total",
+         .help = "TLS handshakes negotiated with TLS_AES_128_GCM_SHA256",
+         .type = CWIST_METRIC_COUNTER},
+    [CWIST_METRIC_TLS_CIPHERS_AES256_GCM] =
+        {.name = "cwist_tls_ciphers_aes256_gcm_total",
+         .help = "TLS handshakes negotiated with TLS_AES_256_GCM_SHA384",
+         .type = CWIST_METRIC_COUNTER},
+    [CWIST_METRIC_TLS_CIPHERS_CHACHA20] =
+        {.name = "cwist_tls_ciphers_chacha20_total",
+         .help = "TLS handshakes negotiated with TLS_CHACHA20_POLY1305_SHA256",
+         .type = CWIST_METRIC_COUNTER},
+    [CWIST_METRIC_TLS_CIPHERS_OTHER] =
+        {.name = "cwist_tls_ciphers_other_total",
+         .help = "TLS handshakes negotiated with any other cipher",
          .type = CWIST_METRIC_COUNTER},
 };
 
@@ -209,6 +246,10 @@ void cwist_metric_observe(cwist_metrics_registry_t *reg, cwist_metric_id_t id, l
  */
 uintmax_t cwist_metric_load(const cwist_metrics_registry_t *reg, cwist_metric_id_t id) {
     if (!reg || id < 0 || id >= CWIST_METRIC_COUNT) return 0;
+    cwist_metrics_sync_tls((cwist_metrics_registry_t *)reg);
+    if (id == CWIST_METRIC_HTTP_CONTINUATION_SHED) {
+        return (uintmax_t)cwist_http_continuation_shed_count();
+    }
     return atomic_load_explicit(&reg->metrics[id].value.raw, memory_order_acquire);
 }
 
@@ -253,6 +294,9 @@ char *cwist_metrics_render_prometheus(const cwist_metrics_registry_t *reg) {
     atomic_store_explicit(
         &((cwist_metrics_registry_t *)reg)->metrics[CWIST_METRIC_HTTP_CONTINUATION_SHED].count,
         (uintmax_t)shed, memory_order_relaxed);
+
+    /* Synchronize TLS counters from the HTTPS layer */
+    cwist_metrics_sync_tls((cwist_metrics_registry_t *)reg);
 
     size_t cap = 4096;
     char *buf = malloc(cap);

@@ -18,6 +18,11 @@ typedef struct cwist_sstring {
     bool borrows_buffer; ///< data points at storage owned elsewhere (static/arena); never freed or
                          ///< realloc'd in place
     size_t size;
+    size_t capacity; ///< Payload bytes the current data buffer can hold,
+                     ///< excluding the NUL; 0 means unknown, in which case
+                     ///< growth falls back to exact-fit reallocation.
+    char *base; ///< Allocation base when data views a region inside it
+                ///< (NULL means data is the base). Freed on destroy.
     size_t (*get_size)(struct cwist_sstring *str);
     int (*compare)(
         struct cwist_sstring *left,
@@ -70,6 +75,20 @@ cwist_error_t cwist_sstring_borrow(cwist_sstring *str, const char *data, size_t 
  * contents are released.
  */
 cwist_error_t cwist_sstring_adopt_len(cwist_sstring *str, char *buf, size_t len);
+
+/**
+ * @brief Adopt a heap buffer as a region view without copying.
+ *
+ * @param str Target string object; any owned buffer it holds is released.
+ * @param base cwist_alloc'd allocation base; ownership transfers to the
+ *        string (freed on destroy/reassign). NULL clears.
+ * @param offset Payload start relative to @p base.
+ * @param len Payload length in bytes; base[offset + len] must be the NUL slot.
+ * @return ERR_SSTRING_OKAY on success, or ERR_SSTRING_NULL_STRING for NULL input.
+ * @note Growth reallocs @p base and preserves the offset, so data keeps
+ *       viewing the same region.
+ */
+cwist_error_t cwist_sstring_adopt_region(cwist_sstring *str, char *base, size_t offset, size_t len);
 
 /**
  * @brief Initialize an sstring.

@@ -9,6 +9,7 @@
 #include <cwist/core/sstring/sstring.h>
 #include <stdint.h>
 #include <stdbool.h>
+#include <stdatomic.h>
 #include <time.h>
 #include <pthread.h>
 
@@ -44,21 +45,25 @@ typedef bool (*cwist_bdr_revalidate_fn)(void *arg, void **out_data, size_t *out_
 
 /**
  * @brief Big Dumb Reply Entry.
- * Stores a completely serialized HTTP response blob.
+ * Holds an atomically swappable cached response blob.
  */
 typedef struct bdr_entry_t {
-    uint64_t request_hash; ///< Key: SipHash(Method + Path)
-    
-    uint64_t response_hash;///< Hash of the response content (for stability check)
-    bool is_stable;        ///< True if response proved stable across requests
-    
-    void *response_blob;   ///< Complete HTTP response (headers + body)
-    size_t len;            ///< Length of blob
-    
-    uint64_t hits;         ///< Hit count
-    time_t created_at;     ///< Creation timestamp
-    
-    struct bdr_entry_t *next;
+    uint64_t request_hash;            ///< Key: SipHash(Method + Path)
+
+    _Atomic uint64_t response_hash;   ///< Hash of the response content (stability check)
+    _Atomic bool is_stable;           ///< True once the response proved stable
+    _Atomic bool retired;             ///< Unlinked by the janitor; walkers skip it
+
+    _Atomic(bdr_blob_t *) blob;       ///< Currently published response blob
+
+    _Atomic uint64_t hits;            ///< Hit count (approximate, relaxed)
+    _Atomic int64_t created_at;       ///< Creation timestamp (time_t)
+
+    cwist_bdr_revalidate_fn revalidate; ///< Optional hit-time refresh hook
+    void *revalidate_arg;               ///< Opaque argument for the hook
+
+    _Atomic(struct bdr_entry_t *) next; ///< Immutable after publication
+    struct bdr_entry_t *retire_next;  ///< Janitor retired-entry list link
 } bdr_entry_t;
 
 /**
@@ -85,20 +90,30 @@ typedef struct cwist_bdr_cursor {
 
 /**
  * @brief Big Dumb Reply Context.
- * Manages cache buckets and learning parameters.
+ * Lock-free read/learn paths; the mutex only serializes janitor work
+ * (sweep/trim/disk spill) and the disk-fallback path.
  */
 typedef struct cwist_bdr_t {
-    pthread_mutex_t lock;      ///< Serializes cache entry and blob lifetime changes.
-    bdr_entry_t **buckets;     ///< Hash buckets
+    pthread_mutex_t lock;      ///< Serializes janitor and disk-mode operations.
+    _Atomic(bdr_entry_t *) *buckets; ///< Hash buckets
     size_t bucket_count;       ///< Number of buckets
-    
-    // Learning Config
+
+    /// Learning configuration parameters.
     int hit_threshold;         ///< (Unused) Hits before caching
     int latency_threshold_ms;  ///< Latency threshold to trigger caching
-    
-    // Fallback Disk DB
+
+    _Atomic size_t current_bytes;    ///< Total bytes stored in-memory
+    size_t max_bytes;                ///< Soft limit for cached response bytes
+    time_t max_entry_age_sec;        ///< TTL for cached replies (0 = no TTL)
+    uint64_t revalidate_hits;        ///< Force refresh after this many hits
+    size_t gc_cursor;                ///< Round-robin sweep cursor
+
+    _Atomic uint64_t put_count;      ///< Learn-path calls; drives janitor cadence
+    bdr_entry_t *retired_entries;    ///< Tombstoned entries, freed at destroy
+
+    /// Fallback disk database mode.
     struct sqlite3 *disk_db;   ///< Disk DB handle for low-RAM mode
-    bool is_disk_mode;         ///< True if fallback is active
+    _Atomic bool is_disk_mode; ///< True if fallback is active
 } cwist_bdr_t;
 
 /**
@@ -118,8 +133,48 @@ void cwist_bdr_destroy(cwist_bdr_t *bdr);
  * @param path Request path.
  * @param out_len [out] Length of the found blob.
  * @return Pointer to the blob if found, NULL otherwise.
+ *
+ * @note Legacy convenience wrapper: the returned pointer is not protected
+ * against concurrent replacement.  New code that serves the blob should use
+ * cwist_bdr_get_pinned()/cwist_bdr_unpin().
  */
 const void *cwist_bdr_get(cwist_bdr_t *bdr, const char *method, const char *path, size_t *out_len);
+
+/**
+ * @brief Find a cached response and pin it for the duration of the serve.
+ *
+ * The pin is an EBR epoch: the blob stays valid until cwist_bdr_unpin(),
+ * even if a concurrent learn or revalidation swaps it out.  Runs the
+ * entry's revalidation hook first when one is registered.
+ *
+ * @param bdr Context.
+ * @param method HTTP Method (only GET supported).
+ * @param path Request path.
+ * @param out_len [out] Length of the found blob.
+ * @param out_pin [out] Opaque pin handle for cwist_bdr_unpin().
+ * @return Pointer to the blob bytes if found, NULL otherwise.
+ */
+const void *cwist_bdr_get_pinned(cwist_bdr_t *bdr, const char *method, const char *path,
+                                 size_t *out_len, bdr_blob_t **out_pin);
+
+/**
+ * @brief cwist_bdr_get_pinned() with a per-connection fast path.
+ *
+ * Identical semantics to cwist_bdr_get_pinned() (same epoch pin, same
+ * revalidation hook, same stability checks), but when @p cursor remembers
+ * the same path the SipHash and bucket walk are skipped: the cached entry
+ * pointer is re-validated under the epoch instead.  Falls back to the full
+ * lookup on any mismatch and refreshes the cursor on success.  @p path_len
+ * must be the exact path length in bytes (no strlen is performed).
+ */
+const void *cwist_bdr_get_pinned_cursor(cwist_bdr_t *bdr, const char *method, const char *path,
+                                        size_t path_len, size_t *out_len, bdr_blob_t **out_pin,
+                                        cwist_bdr_cursor_t *cursor);
+
+/**
+ * @brief Release a pin acquired by cwist_bdr_get_pinned().
+ */
+void cwist_bdr_unpin(bdr_blob_t *pin);
 
 /**
  * @brief Copy a stable response from the cache for concurrent server use.
@@ -129,7 +184,7 @@ const void *cwist_bdr_get(cwist_bdr_t *bdr, const char *method, const char *path
 void *cwist_bdr_copy_get(cwist_bdr_t *bdr, const char *method, const char *path, size_t *out_len);
 
 /**
- * @brief Store a response in the cache.
+ * @brief Store a response in the cache (lock-free learn path).
  * @param bdr Context.
  * @param method HTTP Method.
  * @param path Request path.

@@ -5,9 +5,21 @@
 #include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
+#if !defined(__EMSCRIPTEN__) && !defined(__wasi__)
 #include <sys/mman.h>
+#endif
 #include <unistd.h>
 
+/**
+ * @file gc.c
+ * @brief Thin implementation wrapper around libttak epoch-based reclamation.
+ */
+
+/**
+ * @brief Lazily initialize and optionally configure manual rotation mode.
+ * @param gc GC context owned by the caller.
+ * @param manual_rotation When true, keep epoch advancement under explicit caller control.
+ */
 void cwist_gc(cwist_gc_t *gc, bool manual_rotation) {
     if (!gc) return;
     if (!gc->initialized) {
@@ -17,12 +29,20 @@ void cwist_gc(cwist_gc_t *gc, bool manual_rotation) {
     ttak_epoch_gc_manual_rotate(&gc->impl, manual_rotation);
 }
 
+/**
+ * @brief Destroy the wrapped libttak GC state when it has been initialized.
+ * @param gc GC context to shut down.
+ */
 void cwist_gc_shutdown(cwist_gc_t *gc) {
     if (!gc || !gc->initialized) return;
     ttak_epoch_gc_destroy(&gc->impl);
     gc->initialized = false;
 }
 
+/**
+ * @brief Advance the current epoch and reclaim retired nodes when eligible.
+ * @param gc GC context to rotate.
+ */
 void cwist_gc_rotate(cwist_gc_t *gc) {
     if (!gc || !gc->initialized) return;
     ttak_epoch_gc_rotate(&gc->impl);
@@ -55,11 +75,22 @@ void cwist_reg_ptr(cwist_gc_t *gc, void *ptr) {
     cwist_reg_ptr_sized(gc, ptr, 0);
 }
 
+/**
+ * @brief Register a pointer and its approximate size with the epoch GC.
+ * @param gc GC context that tracks the pointer.
+ * @param ptr Pointer to retire through the epoch GC.
+ * @param size Optional size hint associated with @p ptr.
+ */
 void cwist_reg_ptr_sized(cwist_gc_t *gc, void *ptr, size_t size) {
     if (!gc || !gc->initialized || !ptr) return;
     ttak_epoch_gc_register(&gc->impl, ptr, size);
 }
 
+/**
+ * @brief Expose the underlying libttak epoch GC structure for advanced integrations.
+ * @param gc GC wrapper owned by CWIST.
+ * @return Raw libttak GC handle, or NULL when the wrapper is unavailable.
+ */
 ttak_epoch_gc_t *cwist_gc_raw(cwist_gc_t *gc) {
     if (!gc || !gc->initialized) return NULL;
     return &gc->impl;
@@ -162,6 +193,12 @@ static cwist_full_gc_guard_t *g_full_gc_guard = NULL;
  * regressed the C1M reactor latency gate in CI once already).
  */
 __attribute__((constructor)) static void cwist_full_gc_guard_init(void) {
+#if defined(__EMSCRIPTEN__) || defined(__wasi__)
+    static cwist_full_gc_guard_t s_wasm_guard;
+    atomic_init(&s_wasm_guard.enabled, false);
+    atomic_init(&s_wasm_guard.locked, false);
+    g_full_gc_guard = &s_wasm_guard;
+#else
     long page_size = sysconf(_SC_PAGESIZE);
     if (page_size <= 0) page_size = 4096;
     void *page =
@@ -171,6 +208,7 @@ __attribute__((constructor)) static void cwist_full_gc_guard_init(void) {
     atomic_init(&guard->enabled, false);
     atomic_init(&guard->locked, false);
     g_full_gc_guard = guard;
+#endif
 }
 
 /** @brief Process-wide GC instance backing full-GC's epoch-retire pipeline. */
@@ -234,8 +272,10 @@ void cwist_full_gc(bool enable) {
      * the page yet, so it is still writable and we are its sole writer. */
     atomic_store_explicit(&g_full_gc_guard->enabled, enable, memory_order_relaxed);
     atomic_store_explicit(&g_full_gc_guard->locked, true, memory_order_release);
+#if !defined(__EMSCRIPTEN__) && !defined(__wasi__)
     long page_size = sysconf(_SC_PAGESIZE);
     mprotect(g_full_gc_guard, (size_t)(page_size > 0 ? page_size : 4096), PROT_READ);
+#endif
     pthread_mutex_unlock(&g_full_gc_claim_mu);
 
     cwist_gc_auto_rotate(cwist_full_gc_instance(), enable);

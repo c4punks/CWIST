@@ -3,8 +3,8 @@
 Set up unidirectional real-time event streaming over HTTP using Server-Sent Events.
 
 ## Key Concepts
-- Initialize SSE response headers using `cwist_sse_init(res)`.
-- Dispatch formatted event chunks with `cwist_sse_send(res, event_name, data)`.
+- Initialize SSE response headers using `cwist_sse_response_init(res)`.
+- Dispatch formatted event chunks with `cwist_sse_response_event(res, event_name, id, retry_ms, data)`.
 
 ## Build and Run
 

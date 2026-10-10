@@ -64,10 +64,8 @@ static int append_field(cwist_sstring *out, const char *name, const char *value)
         const char *end = strchr(line, '\n');
         size_t len = end ? (size_t)(end - line) : strlen(line);
         if (len && line[len - 1] == '\r') len--;
-        if (cwist_sstring_append(out, name).error.err_i16 ||
-            cwist_sstring_append(out, ":").error.err_i16 ||
-            (len && cwist_sstring_append_len(out, line, len).error.err_i16) ||
-            cwist_sstring_append(out, "\n").error.err_i16)
+        if (!sse_append(out, name, strlen(name)) || !sse_append(out, ":", 1) ||
+            (len && !sse_append(out, line, len)) || !sse_append(out, "\n", 1))
             return -1;
         line = end ? end + 1 : NULL;
     } while (line);
@@ -118,15 +116,25 @@ static cwist_sstring *format_event(const char *event, const char *id, int retry_
  */
 cwist_error_t cwist_sse_response_init(cwist_http_response *res) {
     if (!res ||
-        cwist_http_header_add(&res->headers, "Content-Type", "text/event-stream; charset=utf-8")
-            .error.err_i16 ||
-        cwist_http_header_add(&res->headers, "Cache-Control", "no-cache").error.err_i16 ||
-        cwist_http_header_add(&res->headers, "X-Accel-Buffering", "no").error.err_i16)
+        !sse_ok(cwist_http_header_add(&res->headers, "Content-Type",
+                                      "text/event-stream; charset=utf-8")) ||
+        !sse_ok(cwist_http_header_add(&res->headers, "Cache-Control", "no-cache")) ||
+        !sse_ok(cwist_http_header_add(&res->headers, "X-Accel-Buffering", "no")))
         return sse_error(-1);
     res->keep_alive = true;
     return sse_error(0);
 }
 
+/** @brief Append a formatted SSE event to a response buffer.
+ *
+ * @param res Response whose body receives the frame; must not be NULL.
+ * @param event Event type field, optional.
+ * @param id Event id field, optional.
+ * @param retry_ms Reconnection delay in milliseconds; -1 to omit.
+ * @param data Event payload data.
+ * @return 0 on success, -1 if @p res is NULL, @p retry_ms is less than -1,
+ *         or the frame could not be built or appended.
+ */
 cwist_error_t cwist_sse_response_event(cwist_http_response *res, const char *event, const char *id,
                                        int retry_ms, const char *data) {
     if (!res || retry_ms < -1) return sse_error(-1);
@@ -209,6 +217,19 @@ cwist_sse_stream_t *cwist_sse_stream_open(cwist_http_request *req) {
     return stream;
 }
 
+/** @brief Send a formatted SSE event on a live stream.
+ *
+ * Serializes access to the stream with its mutex; a failed send marks the
+ * stream as closed.
+ *
+ * @param stream Stream to write to; must not be NULL.
+ * @param event Event type field, optional.
+ * @param id Event id field, optional.
+ * @param retry_ms Reconnection delay in milliseconds; -1 to omit.
+ * @param data Event payload data.
+ * @return 0 on success, -1 if the stream or frame is invalid, the stream is
+ *         closed, or the send fails.
+ */
 cwist_error_t cwist_sse_stream_send(cwist_sse_stream_t *stream, const char *event, const char *id,
                                     int retry_ms, const char *data) {
     if (!stream || retry_ms < -1) return sse_error(-1);

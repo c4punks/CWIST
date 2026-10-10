@@ -2,9 +2,16 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <fcntl.h>
+#include <cwist/sys/wasi.h>
 #include <stdio.h>
 #include <string.h>
-#include <cwist/siphash.h>
+#include <time.h>
+#include <cwist/core/siphash/siphash.h>
+
+/**
+ * @file siphash.c
+ * @brief SipHash implementation plus CWIST-specific entropy expansion for hash seeds.
+ */
 
 /* Left-rotate a 64-bit integer by 'b' bits */
 #define ROTL(x, b) (uint64_t)(((x) << (b)) | ((x) >> (64 - (b))))
@@ -30,6 +37,13 @@ static void sipround(uint64_t *v0, uint64_t *v1, uint64_t *v2, uint64_t *v3) {
     *v2 = ROTL(*v2, 32);
 }
 
+/**
+ * @brief Compute SipHash-2-4 over a byte range using a 16-byte secret key.
+ * @param src Input bytes to hash.
+ * @param len Number of bytes in @p src.
+ * @param key 16-byte SipHash key.
+ * @return 64-bit keyed hash value.
+ */
 uint64_t siphash24(const void *src, size_t len, const uint8_t key[16]) {
     const uint8_t *m = (const uint8_t *)src;
     uint64_t k0, k1;
@@ -115,14 +129,26 @@ static void cwist_entropy_fill(uint8_t *buf, size_t len) {
     size_t filled = 0;
     int fd = open("/dev/urandom", O_RDONLY);
     if (fd >= 0) {
-        read(fd, key, 16);
+        while (filled < len) {
+            ssize_t n = read(fd, buf + filled, len - filled);
+            if (n <= 0) break;
+            filled += (size_t)n;
+        }
         close(fd);
     }
     if (filled < len) {
         struct timespec ts = {0};
         clock_gettime(CLOCK_MONOTONIC, &ts);
+        /* WASI preview1 has no getppid(); the fallback entropy degrades to
+         * pid + clock only, which is acceptable for a last-resort mixer. */
+#if defined(__wasi__)
+/* WASI preview1 has no getpid(); the fallback entropy degrades to pure
+         * clock mixing, which is acceptable for a last-resort mixer. */
+        uint64_t fallbacks[2] = {(uint64_t)ts.tv_nsec, (uint64_t)ts.tv_sec ^ (uint64_t)ts.tv_nsec};
+#else
         uint64_t fallbacks[2] = {(uint64_t)ts.tv_nsec ^ (uint64_t)getpid(),
                                  (uint64_t)ts.tv_sec ^ (uint64_t)getppid()};
+#endif
         srand((unsigned int)(fallbacks[0] ^ fallbacks[1]));
         size_t idx = 0;
         while (filled + idx < len) {

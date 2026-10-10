@@ -12,10 +12,23 @@
 #define CWIST_CSRF_TOKEN_BYTES 32
 #define CWIST_CSRF_TOKEN_CHARS (CWIST_CSRF_TOKEN_BYTES * 2)
 
+/**
+ * @brief Check whether an HTTP method is exempt from CSRF validation.
+ * @param method HTTP method to test.
+ * @return true for GET, HEAD, and OPTIONS; false otherwise.
+ */
 static bool csrf_safe_method(cwist_http_method_t method) {
     return method == CWIST_HTTP_GET || method == CWIST_HTTP_HEAD || method == CWIST_HTTP_OPTIONS;
 }
 
+/**
+ * @brief Generate a new random CSRF token.
+ * Reads 32 bytes from /dev/urandom and hex-encodes them into a
+ * 64-character NUL-terminated string.
+ * @return Newly allocated token string on success; NULL on I/O failure or
+ *         allocation failure. Caller owns the returned buffer and must free
+ *         it with cwist_free().
+ */
 static char *csrf_generate_token(void) {
     unsigned char bytes[CWIST_CSRF_TOKEN_BYTES];
     int fd = open("/dev/urandom", O_RDONLY | O_CLOEXEC);
@@ -43,19 +56,31 @@ static char *csrf_generate_token(void) {
     return token;
 }
 
+/**
+ * @brief Compare two strings for equality in constant time.
+ * @param a First string; may be NULL.
+ * @param b Second string; may be NULL.
+ * @return true if both strings are non-NULL, equal in length and content;
+ *         false otherwise.
+ */
 static bool csrf_equal(const char *a, const char *b) {
     if (!a || !b) return false;
     size_t alen = strlen(a), blen = strlen(b);
-    unsigned char diff = (unsigned char)(alen ^ blen);
+    size_t diff = alen ^ blen;
     size_t limit = alen > blen ? alen : blen;
     for (size_t i = 0; i < limit; ++i) {
         unsigned char ac = i < alen ? (unsigned char)a[i] : 0;
         unsigned char bc = i < blen ? (unsigned char)b[i] : 0;
-        diff |= (unsigned char)(ac ^ bc);
+        diff |= (size_t)(ac ^ bc);
     }
     return diff == 0;
 }
 
+/**
+ * @brief Decode a single hexadecimal digit character to its numeric value.
+ * @param c Character to decode.
+ * @return Numeric value 0-15 on success; -1 if @p c is not a hex digit.
+ */
 static int hex_value(unsigned char c) {
     if (c >= '0' && c <= '9') return c - '0';
     if (c >= 'a' && c <= 'f') return c - 'a' + 10;
@@ -63,6 +88,17 @@ static int hex_value(unsigned char c) {
     return -1;
 }
 
+/**
+ * @brief Extract and URL-decode the CSRF token from a form-encoded body.
+ * Scans the request body for a "_csrf" or "csrf_token" field and decodes
+ * its value ('+' becomes a space, '%XX' becomes the byte). Stops at the
+ * first matching field.
+ * @param req Request whose body is parsed.
+ * @return Newly allocated decoded value on success; NULL if no matching
+ *         field exists, on malformed percent-encoding, or on allocation
+ *         failure. Caller owns the returned buffer and must free it with
+ *         cwist_free().
+ */
 static char *csrf_form_value(const cwist_http_request *req) {
     if (!req || !req->body || !req->body->data) return NULL;
     const char *body = req->body->data;
@@ -104,6 +140,15 @@ static char *csrf_form_value(const cwist_http_request *req) {
     return NULL;
 }
 
+/**
+ * @brief Set the CSRF cookie on the response.
+ * Cookie is scoped to path "/", expires after 30 days, is marked Secure
+ * when the app uses SSL, and uses SameSite=Strict. Not HttpOnly so the
+ * client-side code can read it for form submission.
+ * @param req Current request (used to determine SSL usage).
+ * @param res Response to attach the cookie to.
+ * @param token Token value to store in the cookie.
+ */
 static void csrf_issue_cookie(cwist_http_request *req, cwist_http_response *res,
                               const char *token) {
     cwist_cookie_options options = {0};
@@ -115,6 +160,18 @@ static void csrf_issue_cookie(cwist_http_request *req, cwist_http_response *res,
     cwist_cookie_set(res, CWIST_CSRF_COOKIE_NAME, token, &options);
 }
 
+/**
+ * @brief CSRF protection middleware handler.
+ * Ensures every request carries a CSRF token cookie, refreshing it when
+ * absent. For unsafe methods (not GET/HEAD/OPTIONS) it validates the token
+ * from the X-CSRF-Token header or the parsed form body against the cookie
+ * and rejects mismatches with 403 Forbidden. Stores the current token in
+ * req->csrf_token (freeing any previous value). Safe methods are passed
+ * through to @p next.
+ * @param req Current request; receives the token in req->csrf_token.
+ * @param res Response object; status and cookie may be modified.
+ * @param next Handler to invoke when the request passes validation.
+ */
 static void csrf_handler(cwist_http_request *req, cwist_http_response *res,
                          cwist_handler_func next) {
     const char *cookie_header = cwist_http_header_get(req->headers, "Cookie");
@@ -165,10 +222,21 @@ static void csrf_handler(cwist_http_request *req, cwist_http_response *res,
     next(req, res);
 }
 
+/**
+ * @brief Create the CSRF protection middleware.
+ * @param app Application instance; unused.
+ * @return The CSRF middleware handler function.
+ */
 cwist_middleware_func cwist_mw_csrf(cwist_app *app) {
     (void)app;
     return csrf_handler;
 }
+/**
+ * @brief Get the CSRF token associated with a request.
+ * @param req Request to query.
+ * @return The request's CSRF token, or NULL if @p req is NULL or no token
+ *         has been set. The returned pointer is owned by the request.
+ */
 const char *cwist_csrf_token(cwist_http_request *req) {
     return req ? req->csrf_token : NULL;
 }

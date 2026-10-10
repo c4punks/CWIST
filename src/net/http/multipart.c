@@ -17,9 +17,8 @@ typedef struct {
     size_t header_field_len;
     char header_value[1024];
     size_t header_value_len;
-    /* Set once the parser has delivered a value for the current header, even
-     * an empty one.  header_value_len alone cannot express "seen but empty",
-     * and an empty header value must still terminate the current field. */
+    /* Set once a value was delivered for the current header, even an empty
+     * one; header_value_len alone cannot express "seen but empty". */
     bool have_value;
 
     char name[256];
@@ -253,6 +252,20 @@ static int mp_on_part_data_end(multipart_parser *p) {
     return 0;
 }
 
+/**
+ * @brief Parse a multipart/form-data body into a field list.
+ *
+ * Runs the multipart-parser-c state machine over @p body with @p boundary
+ * (the boundary without leading dashes). On malformed or truncated input the
+ * parser stops early and NULL is returned, with all intermediate state freed.
+ *
+ * @param body Raw body bytes; must not be NULL.
+ * @param body_len Length of @p body in bytes.
+ * @param boundary MIME boundary string, without the leading "--".
+ * @return Newly allocated cwist_multipart_result on success (caller owns it,
+ *         release with cwist_multipart_result_destroy), NULL on invalid
+ *         arguments, malformed input, or allocation failure.
+ */
 cwist_multipart_result *cwist_multipart_parse(const char *body, size_t body_len,
                                               const char *boundary) {
     if (!body || body_len == 0 || !boundary) return NULL;
@@ -276,7 +289,8 @@ cwist_multipart_result *cwist_multipart_parse(const char *body, size_t body_len,
 
     /* multipart-parser-c expects the leading dashes in the boundary. */
     size_t blen = strlen(boundary);
-    char *parser_boundary = (char *)cwist_alloc(blen + 3);
+    cwist_scratch_t parser_boundary_s CWIST_SCRATCH_DEFER = {0};
+    char *parser_boundary = (char *)cwist_scratch_alloc(&parser_boundary_s, blen + 3);
     if (!parser_boundary) {
         cwist_free(result);
         return NULL;
@@ -286,7 +300,6 @@ cwist_multipart_result *cwist_multipart_parse(const char *body, size_t body_len,
     parser_boundary[blen + 2] = '\0';
 
     multipart_parser *parser = multipart_parser_init(parser_boundary, &settings);
-    cwist_free(parser_boundary);
     if (!parser) {
         cwist_free(result);
         return NULL;
@@ -295,18 +308,15 @@ cwist_multipart_result *cwist_multipart_parse(const char *body, size_t body_len,
     size_t consumed = multipart_parser_execute(parser, body, body_len);
     multipart_parser_free(parser);
 
-    /* A body that ends before its closing boundary leaves the in-flight part
-     * buffer owned by ctx: on_part_data_end never fired, so nothing handed it
-     * to a field.  Release it instead of leaking it on every truncated body. */
+    /* Truncated body: on_part_data_end never fired, so release the in-flight
+     * part buffer here. */
     if (ctx.data) {
         cwist_free(ctx.data);
         ctx.data = NULL;
     }
 
-    /* The parser stops early on syntactically invalid input (for example a
-     * byte that is not allowed in a header name).  Honour the documented
-     * contract and report malformed input as NULL rather than returning a
-     * result that silently omits everything after the error. */
+    /* The parser stops early on malformed input; report it as NULL per the
+     * documented contract. */
     if (consumed != body_len) {
         cwist_multipart_result_destroy(result);
         return NULL;

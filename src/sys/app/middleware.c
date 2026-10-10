@@ -1,11 +1,13 @@
 #define _POSIX_C_SOURCE 200809L
-#include <cwist/middleware.h>
-#include <cwist/http.h>
-#include <cwist/macros.h>
-#include <cwist/json_builder.h>
+#include <cwist/sys/app/middleware.h>
+#include <cwist/net/http/http.h>
+#include <cwist/core/macros.h>
+#include <cwist/core/utils/json_builder.h>
+#include <cwist/core/mem/alloc.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <strings.h>
 #include <time.h>
 #include <sys/time.h>
 #include <unistd.h>
@@ -20,6 +22,10 @@
 static pthread_mutex_t rid_mutex = PTHREAD_MUTEX_INITIALIZER;
 static unsigned int rid_seed = 0;
 
+/**
+ * @brief Generate a short pseudo-random request identifier for logging and tracing.
+ * @return Heap-allocated 16-character identifier string.
+ */
 static char *generate_request_id() {
     static const char charset[] = "abcdefghijklmnopqrstuvwxyz0123456789";
     char *id = cwist_alloc(17);
@@ -49,7 +55,7 @@ void cwist_mw_request_id_handler(cwist_http_request *req, cwist_http_response *r
     char *rid;
 
     if (existing) {
-        rid = strdup(existing);
+        rid = cwist_strdup(existing);
     } else {
         rid = generate_request_id();
         cwist_http_header_add(&req->headers, header_name, rid);
@@ -58,9 +64,14 @@ void cwist_mw_request_id_handler(cwist_http_request *req, cwist_http_response *r
     cwist_http_header_add(&res->headers, header_name, rid);
 
     next(req, res);
-    free(rid);
+    cwist_free(rid);
 }
 
+/**
+ * @brief Return the built-in request ID middleware.
+ * @param header_name Currently unused custom header override.
+ * @return Middleware function pointer for request ID injection.
+ */
 cwist_middleware_func cwist_mw_request_id(const char *header_name) {
     CWIST_UNUSED(header_name);
     return cwist_mw_request_id_handler;
@@ -70,6 +81,13 @@ cwist_middleware_func cwist_mw_request_id(const char *header_name) {
 
 static pthread_mutex_t log_mutex = PTHREAD_MUTEX_INITIALIZER;
 
+/**
+ * @brief Format a timestamp in Common Log Format: dd/Mon/yyyy:HH:MM:SS +zzzz
+ *        in local time.
+ * @param buf Output buffer.
+ * @param len Size of @p buf in bytes.
+ * @param tv Timestamp to format.
+ */
 static void format_clf_time(char *buf, size_t len, const struct timeval *tv) {
     struct tm tm;
     localtime_r(&tv->tv_sec, &tm);
@@ -80,6 +98,13 @@ static void format_clf_time(char *buf, size_t len, const struct timeval *tv) {
     snprintf(buf + pos, len - pos, " %s", tzbuf);
 }
 
+/**
+ * @brief Format a timestamp in UTC ISO 8601 with millisecond precision:
+ *        yyyy-MM-ddTHH:MM:SS.mmmZ.
+ * @param buf Output buffer.
+ * @param len Size of @p buf in bytes.
+ * @param tv Timestamp to format.
+ */
 static void format_iso8601_time(char *buf, size_t len, const struct timeval *tv) {
     struct tm tm;
     gmtime_r(&tv->tv_sec, &tm);
@@ -88,6 +113,53 @@ static void format_iso8601_time(char *buf, size_t len, const struct timeval *tv)
     snprintf(buf + pos, len - pos, ".%03ldZ", tv->tv_usec / 1000);
 }
 
+/**
+ * @brief Resolve the request ID to log, preferring the response headers.
+ *
+ * After next() a deferred response belongs to its cwist_async completion,
+ * which may be writing it on another thread right now (cwist_async_respond(),
+ * the timeout job). The access logs then do not read it: status and size are
+ * logged as unknown and the request id comes from the request,
+ * where cwist_mw_request_id() also puts it.
+ *
+ * @param req Incoming HTTP request.
+ * @param res Outgoing HTTP response.
+ * @return Header value of X-Request-Id, or NULL if absent.
+ */
+static const char *access_log_request_id(cwist_http_request *req, cwist_http_response *res) {
+    cwist_http_header_node *headers = res->deferred ? req->headers : res->headers;
+    return cwist_http_header_get(headers, "X-Request-Id");
+}
+
+/**
+ * @brief Render response status code and body size as strings for access logs.
+ * @param res Outgoing HTTP response.
+ * @param unknown Placeholder written to both outputs when @p res is deferred
+ *        and its status/size cannot be read safely.
+ * @param status Output buffer for the status code.
+ * @param status_len Size of @p status in bytes.
+ * @param bytes Output buffer for the response body size.
+ * @param bytes_len Size of @p bytes in bytes.
+ */
+static void access_log_status_bytes(const cwist_http_response *res, const char *unknown,
+                                    char *status, size_t status_len, char *bytes,
+                                    size_t bytes_len) {
+    if (res->deferred) {
+        snprintf(status, status_len, "%s", unknown);
+        snprintf(bytes, bytes_len, "%s", unknown);
+        return;
+    }
+    snprintf(status, status_len, "%d", (int)res->status_code);
+    snprintf(bytes, bytes_len, "%zu", res->body ? res->body->size : (size_t)0);
+}
+
+/**
+ * @brief Common Log Format access-log middleware; prints one line per request
+ *        to stdout after the handler completes.
+ * @param req Incoming HTTP request.
+ * @param res Outgoing HTTP response.
+ * @param next Next middleware or final handler in the chain.
+ */
 static void cwist_mw_access_log_common_handler(cwist_http_request *req, cwist_http_response *res,
                                                cwist_handler_func next) {
     struct timeval start, end;
@@ -95,24 +167,32 @@ static void cwist_mw_access_log_common_handler(cwist_http_request *req, cwist_ht
     next(req, res);
     gettimeofday(&end, NULL);
 
-    const char *rid = cwist_http_header_get(res->headers, "X-Request-Id");
+    const char *rid = access_log_request_id(req, res);
     cwist_sstring *ip = cwist_get_client_ip_from_fd(req->client_fd);
     const char *ip_str = ip ? ip->data : "-";
 
     char time_buf[64];
     format_clf_time(time_buf, sizeof(time_buf), &end);
 
-    size_t res_bytes = res->body ? res->body->size : 0;
+    char status[16], res_bytes[32];
+    access_log_status_bytes(res, "-", status, sizeof(status), res_bytes, sizeof(res_bytes));
 
     pthread_mutex_lock(&log_mutex);
-    printf("%s - %s [%s] \"%s %s %s\" %d %zu\n", ip_str, rid ? rid : "-", time_buf,
+    printf("%s - %s [%s] \"%s %s %s\" %s %s\n", ip_str, rid ? rid : "-", time_buf,
            cwist_http_method_to_string(req->method), req->path->data,
-           req->version ? req->version->data : "HTTP/1.1", res->status_code, res_bytes);
+           req->version ? req->version->data : "HTTP/1.1", status, res_bytes);
     pthread_mutex_unlock(&log_mutex);
 
     if (ip) cwist_sstring_destroy(ip);
 }
 
+/**
+ * @brief Combined Log Format access-log middleware; like the common format but
+ *        also logs Referer and User-Agent, one line per request to stdout.
+ * @param req Incoming HTTP request.
+ * @param res Outgoing HTTP response.
+ * @param next Next middleware or final handler in the chain.
+ */
 static void cwist_mw_access_log_combined_handler(cwist_http_request *req, cwist_http_response *res,
                                                  cwist_handler_func next) {
     struct timeval start, end;
@@ -120,7 +200,7 @@ static void cwist_mw_access_log_combined_handler(cwist_http_request *req, cwist_
     next(req, res);
     gettimeofday(&end, NULL);
 
-    const char *rid = cwist_http_header_get(res->headers, "X-Request-Id");
+    const char *rid = access_log_request_id(req, res);
     cwist_sstring *ip = cwist_get_client_ip_from_fd(req->client_fd);
     const char *ip_str = ip ? ip->data : "-";
 
@@ -129,18 +209,26 @@ static void cwist_mw_access_log_combined_handler(cwist_http_request *req, cwist_
 
     const char *referer = cwist_http_header_get(req->headers, "Referer");
     const char *user_agent = cwist_http_header_get(req->headers, "User-Agent");
-    size_t res_bytes = res->body ? res->body->size : 0;
+    char status[16], res_bytes[32];
+    access_log_status_bytes(res, "-", status, sizeof(status), res_bytes, sizeof(res_bytes));
 
     pthread_mutex_lock(&log_mutex);
-    printf("%s - %s [%s] \"%s %s %s\" %d %zu \"%s\" \"%s\"\n", ip_str, rid ? rid : "-", time_buf,
+    printf("%s - %s [%s] \"%s %s %s\" %s %s \"%s\" \"%s\"\n", ip_str, rid ? rid : "-", time_buf,
            cwist_http_method_to_string(req->method), req->path->data,
-           req->version ? req->version->data : "HTTP/1.1", res->status_code, res_bytes,
+           req->version ? req->version->data : "HTTP/1.1", status, res_bytes,
            referer ? referer : "-", user_agent ? user_agent : "-");
     pthread_mutex_unlock(&log_mutex);
 
     if (ip) cwist_sstring_destroy(ip);
 }
 
+/**
+ * @brief JSON access-log middleware; prints one JSON object per request to
+ *        stdout, including status, duration, and request/response byte counts.
+ * @param req Incoming HTTP request.
+ * @param res Outgoing HTTP response.
+ * @param next Next middleware or final handler in the chain.
+ */
 static void cwist_mw_access_log_json_handler(cwist_http_request *req, cwist_http_response *res,
                                              cwist_handler_func next) {
     struct timeval start, end;
@@ -149,7 +237,7 @@ static void cwist_mw_access_log_json_handler(cwist_http_request *req, cwist_http
     gettimeofday(&end, NULL);
     long msec = (end.tv_sec - start.tv_sec) * 1000 + (end.tv_usec - start.tv_usec) / 1000;
 
-    const char *rid = cwist_http_header_get(res->headers, "X-Request-Id");
+    const char *rid = access_log_request_id(req, res);
     cwist_sstring *ip = cwist_get_client_ip_from_fd(req->client_fd);
     const char *ip_str = ip ? ip->data : "-";
 
@@ -157,14 +245,15 @@ static void cwist_mw_access_log_json_handler(cwist_http_request *req, cwist_http
     format_iso8601_time(time_buf, sizeof(time_buf), &end);
 
     size_t req_bytes = req->body ? req->body->size : 0;
-    size_t res_bytes = res->body ? res->body->size : 0;
+    char status[16], res_bytes[32];
+    access_log_status_bytes(res, "null", status, sizeof(status), res_bytes, sizeof(res_bytes));
 
     pthread_mutex_lock(&log_mutex);
     printf(
-        "{\"time\":\"%s\",\"client\":\"%s\",\"rid\":\"%s\",\"method\":\"%s\",\"path\":\"%s\",\"protocol\":\"%s\",\"status\":%d,\"duration_ms\":%ld,\"req_bytes\":%zu,\"res_bytes\":%zu}\n",
+        "{\"time\":\"%s\",\"client\":\"%s\",\"rid\":\"%s\",\"method\":\"%s\",\"path\":\"%s\",\"protocol\":\"%s\",\"status\":%s,\"duration_ms\":%ld,\"req_bytes\":%zu,\"res_bytes\":%s}\n",
         time_buf, ip_str, rid ? rid : "-", cwist_http_method_to_string(req->method),
-        req->path->data, req->version ? req->version->data : "HTTP/1.1", res->status_code, msec,
-        req_bytes, res_bytes);
+        req->path->data, req->version ? req->version->data : "HTTP/1.1", status, msec, req_bytes,
+        res_bytes);
     pthread_mutex_unlock(&log_mutex);
 
     if (ip) cwist_sstring_destroy(ip);
@@ -231,14 +320,22 @@ static ip_bucket_t ip_buckets[MAX_IP_BUCKETS];
 static int ip_bucket_count = 0;
 static pthread_mutex_t rate_mutex = PTHREAD_MUTEX_INITIALIZER;
 
-typedef struct {
-    int rpm;
-} rate_limit_ctx_t;
-
+/**
+ * @brief Per-IP token-bucket rate-limit handler; rejects with 429 when the
+ *        client exceeds the allowed requests per minute.
+ *
+ * The rate is passed in, not through req->private_data: inside the app's
+ * middleware chain that field holds the chain's own state, which next()
+ * reads.
+ *
+ * @param req Incoming HTTP request.
+ * @param res Outgoing HTTP response.
+ * @param next Next middleware or final handler in the chain.
+ * @param rpm Allowed requests per minute (token bucket refill rate).
+ */
 static void cwist_mw_rate_limit_ip_handler(cwist_http_request *req, cwist_http_response *res,
-                                           cwist_handler_func next) {
-    rate_limit_ctx_t *ctx = (rate_limit_ctx_t *)req->private_data;
-    int rpm = (ctx && ctx->rpm > 0) ? ctx->rpm : 60;
+                                           cwist_handler_func next, int rpm) {
+    if (rpm <= 0) rpm = 60;
 
     cwist_sstring *ip = cwist_get_client_ip_from_fd(req->client_fd);
     if (!ip) {
@@ -264,11 +361,15 @@ static void cwist_mw_rate_limit_ip_handler(cwist_http_request *req, cwist_http_r
         ttak_token_bucket_init(&found->bucket, rate, (double)rpm);
     }
 
-    bool allowed = false;
+    /* Fail-open: if the IP table is full we cannot track this client, so
+     * allow the request rather than permanently blocking unknown IPs (which
+     * would let an attacker exhaust the 1024 slots with spoofed addresses
+     * and then deny service to all legitimate users). */
+    bool allowed = (found == NULL);
     if (found) {
         allowed = ttak_token_bucket_consume(&found->bucket, 1.0);
     }
-    free(ip);
+    cwist_sstring_destroy(ip);
     pthread_mutex_unlock(&rate_mutex);
 
     if (!allowed) {
@@ -296,11 +397,7 @@ static pthread_mutex_t s_rate_cfg_mutex = PTHREAD_MUTEX_INITIALIZER;
 #define CWIST_RATE_LIMIT_DEFINE_WRAPPER(N)                                                      \
     static void cwist_mw_rate_limit_wrap_##N(cwist_http_request *req, cwist_http_response *res, \
                                              cwist_handler_func next) {                         \
-        rate_limit_ctx_t ctx = {.rpm = s_rate_cfgs[N].rpm};                                     \
-        void *prev = req->private_data;                                                         \
-        req->private_data = &ctx;                                                               \
-        cwist_mw_rate_limit_ip_handler(req, res, next);                                         \
-        req->private_data = prev;                                                               \
+        cwist_mw_rate_limit_ip_handler(req, res, next, s_rate_cfgs[N].rpm);                     \
     }
 
 CWIST_RATE_LIMIT_DEFINE_WRAPPER(0)
@@ -319,9 +416,7 @@ static cwist_middleware_func s_rate_wrappers[CWIST_RATE_LIMIT_MAX_CFGS] = {
 };
 
 /**
- * @brief Return the built-in per-IP rate-limiter middleware.
- * @param requests_per_minute Allowed requests per minute (token bucket rate).
- * @return Middleware function pointer for per-IP rate limiting.
+ * @brief Reset all per-IP rate-limiter buckets, clearing tracked clients.
  */
 void cwist_mw_rate_limit_reset(void) {
     pthread_mutex_lock(&rate_mutex);
@@ -329,6 +424,17 @@ void cwist_mw_rate_limit_reset(void) {
     pthread_mutex_unlock(&rate_mutex);
 }
 
+/**
+ * @brief Return the built-in per-IP rate-limiter middleware.
+ *
+ * Reuses an existing wrapper when the same rate was already registered.  If
+ * all CWIST_RATE_LIMIT_MAX_CFGS config slots are taken, logs a warning and
+ * falls back to the first registered wrapper.
+ *
+ * @param requests_per_minute Allowed requests per minute (token bucket rate);
+ *        values <= 0 fall back to 60.
+ * @return Middleware function pointer for per-IP rate limiting.
+ */
 cwist_middleware_func cwist_mw_rate_limit_ip(int requests_per_minute) {
     if (requests_per_minute <= 0) requests_per_minute = 60;
 
@@ -383,6 +489,10 @@ void cwist_mw_cors_handler(cwist_http_request *req, cwist_http_response *res,
     next(req, res);
 }
 
+/**
+ * @brief Return the built-in permissive CORS middleware.
+ * @return Middleware function pointer for CORS handling.
+ */
 cwist_middleware_func cwist_mw_cors(void) {
     return cwist_mw_cors_handler;
 }
@@ -390,45 +500,39 @@ cwist_middleware_func cwist_mw_cors(void) {
 /* --- JWT Authentication Middleware --- */
 
 /*
- * We use req->private_data to carry the decoded claims across the middleware
- * boundary into the downstream handler.  The previous value of private_data
- * is saved/restored so other middleware can also use that field without
- * conflict.
+ * The decoded claims of a request reach downstream handlers through a
+ * per-thread stack of contexts, one per JWT middleware currently running,
+ * each tagged with its request.  req->private_data is not used: inside the
+ * app's middleware chain it holds the chain's own state, which next() and
+ * the final route handler read.
  *
- * The context is stack-allocated inside each wrapper function.  It is only
- * valid during the synchronous execution of the middleware chain; no pointer
- * to the context escapes to asynchronous code.
+ * Each context is stack-allocated in the middleware frame and is only valid
+ * while the rest of the chain runs synchronously inside next(); claims are
+ * destroyed when next() returns, so no pointer to them escapes to
+ * asynchronous code.
  */
 
-#define CWIST_JWT_CTX_MAGIC 0x4A574354UL  /* "JWCT" */
-
-typedef struct {
-    unsigned long magic;             ///< Must equal CWIST_JWT_CTX_MAGIC.
-    const char *secret;              ///< Signing secret (borrowed, never freed here).
-    cwist_jwt_claims *claims;        ///< Decoded claims; owned by this struct.
-    void *prev_private_data;         ///< Previous req->private_data value.
+typedef struct cwist_jwt_ctx {
+    const cwist_http_request *req; ///< Request these claims belong to.
+    cwist_jwt_claims *claims;      ///< Decoded claims; owned by the middleware frame.
+    struct cwist_jwt_ctx *outer;   ///< Enclosing JWT context on this thread.
 } cwist_jwt_ctx_t;
+
+#if (defined(__STDC_VERSION__) && __STDC_VERSION__ >= 201112L)
+static _Thread_local cwist_jwt_ctx_t *t_jwt_ctx = NULL;
+#elif defined(__GNUC__) || defined(__clang__)
+static __thread cwist_jwt_ctx_t *t_jwt_ctx = NULL;
+#endif
 
 /**
  * @brief Validate a bearer token and expose its decoded claims to downstream handlers.
  * @param req Incoming HTTP request.
  * @param res Outgoing HTTP response.
  * @param next Next middleware or final handler in the chain.
+ * @param secret Signing secret of the slot this middleware was created for.
  */
-void cwist_mw_jwt_auth_handler(cwist_http_request *req, cwist_http_response *res,
-                               cwist_handler_func next) {
-    /* Retrieve the secret stored in the context tag */
-    cwist_jwt_ctx_t *ctx = (cwist_jwt_ctx_t *)req->private_data;
-    if (!ctx) {
-        /* Should not happen if the middleware was set up correctly */
-        res->status_code = CWIST_HTTP_INTERNAL_ERROR;
-        cwist_sstring_assign(res->body, "{\"error\":\"JWT middleware misconfigured\"}");
-        cwist_http_header_add(&res->headers, "Content-Type", "application/json");
-        return;
-    }
-
-    const char *secret = ctx->secret;
-
+static void cwist_mw_jwt_auth_handler(cwist_http_request *req, cwist_http_response *res,
+                                      cwist_handler_func next, const char *secret) {
     /* Extract Bearer token from Authorization header */
     char *auth_header = cwist_http_header_get(req->headers, "Authorization");
     if (!auth_header) {
@@ -438,8 +542,8 @@ void cwist_mw_jwt_auth_handler(cwist_http_request *req, cwist_http_response *res
         return;
     }
 
-    /* Expect "Bearer <token>" */
-    if (strncmp(auth_header, "Bearer ", 7) != 0) {
+    /* Expect "Bearer <token>" (scheme is case-insensitive per RFC 6750) */
+    if (strncasecmp(auth_header, "Bearer ", 7) != 0) {
         res->status_code = CWIST_HTTP_UNAUTHORIZED;
         cwist_sstring_assign(res->body, "{\"error\":\"Invalid Authorization scheme\"}");
         cwist_http_header_add(&res->headers, "Content-Type", "application/json");
@@ -447,6 +551,7 @@ void cwist_mw_jwt_auth_handler(cwist_http_request *req, cwist_http_response *res
     }
 
     const char *token = auth_header + 7;
+    while (*token == ' ' || *token == '\t') token++;
 
     cwist_jwt_claims *claims = cwist_jwt_verify(token, secret);
     if (!claims) {
@@ -456,26 +561,16 @@ void cwist_mw_jwt_auth_handler(cwist_http_request *req, cwist_http_response *res
         return;
     }
 
-    /* Stash claims so downstream handlers can retrieve them */
-    ctx->claims = claims;
+    /* Publish the claims to downstream handlers on this thread for the
+     * duration of the rest of the chain. */
+    cwist_jwt_ctx_t ctx = {.req = req, .claims = claims, .outer = t_jwt_ctx};
+    t_jwt_ctx = &ctx;
 
-    next(req, res);
+    if (next) next(req, res);
 
-    /* Clean up after the chain returns */
+    t_jwt_ctx = ctx.outer;
     cwist_jwt_claims_destroy(claims);
-    ctx->claims = NULL;
 }
-
-/*
- * Factory - we use a small heap-allocated context to bind the secret to the
- * handler.  Because cwist_middleware_func is a plain function pointer we cannot
- * capture the secret in a closure, so we embed it in the req->private_data
- * field before dispatching.
- *
- * The returned function pointer is cwist_mw_jwt_auth_handler.  The secret is
- * stored in a per-request cwist_jwt_ctx_t that is pushed/popped around the
- * call so it does not trample any existing private_data.
- */
 
 typedef struct {
     const char *secret;
@@ -491,18 +586,13 @@ static cwist_jwt_mw_cfg_t s_jwt_cfgs[CWIST_JWT_MAX_SECRETS];
 static int s_jwt_cfg_count = 0;
 static pthread_mutex_t s_jwt_cfg_mutex = PTHREAD_MUTEX_INITIALIZER;
 
-/* One wrapper function per registered secret slot.
- * The ctx is stack-allocated; its lifetime is confined to this function frame. */
+/* One wrapper function per registered secret slot, because
+ * cwist_middleware_func is a plain function pointer that cannot carry the
+ * secret itself. */
 #define CWIST_JWT_DEFINE_WRAPPER(N)                                                      \
     static void cwist_mw_jwt_wrap_##N(cwist_http_request *req, cwist_http_response *res, \
                                       cwist_handler_func next) {                         \
-        cwist_jwt_ctx_t ctx = {.magic = CWIST_JWT_CTX_MAGIC,                             \
-                               .secret = s_jwt_cfgs[N].secret,                           \
-                               .claims = NULL,                                           \
-                               .prev_private_data = req->private_data};                  \
-        req->private_data = &ctx;                                                        \
-        cwist_mw_jwt_auth_handler(req, res, next);                                       \
-        req->private_data = ctx.prev_private_data;                                       \
+        cwist_mw_jwt_auth_handler(req, res, next, s_jwt_cfgs[N].secret);                 \
     }
 
 CWIST_JWT_DEFINE_WRAPPER(0)
@@ -529,9 +619,9 @@ cwist_middleware_func cwist_mw_jwt_auth(const char *secret) {
 
     pthread_mutex_lock(&s_jwt_cfg_mutex);
 
-    /* Reuse existing slot for the same secret pointer */
+    /* Reuse existing slot for the same secret */
     for (int i = 0; i < s_jwt_cfg_count; i++) {
-        if (s_jwt_cfgs[i].secret == secret) {
+        if (s_jwt_cfgs[i].secret && strcmp(s_jwt_cfgs[i].secret, secret) == 0) {
             pthread_mutex_unlock(&s_jwt_cfg_mutex);
             return s_jwt_wrappers[i];
         }
@@ -551,14 +641,15 @@ cwist_middleware_func cwist_mw_jwt_auth(const char *secret) {
 }
 
 /**
- * @brief Retrieve the active JWT claims object from request private_data when present.
- * @param req Request currently executing inside the JWT middleware chain.
- * @return Active decoded claims, or NULL when the request is not inside JWT auth.
+ * @brief Retrieve the claims the JWT middleware decoded for a request.
+ * @param req Request currently executing behind the JWT middleware.
+ * @return Active decoded claims, or NULL when the request is not inside JWT auth
+ *         on this thread.
  */
 const cwist_jwt_claims *cwist_mw_jwt_get_claims(const cwist_http_request *req) {
-    if (!req || !req->private_data) return NULL;
-    cwist_jwt_ctx_t *ctx = (cwist_jwt_ctx_t *)req->private_data;
-    /* Validate that private_data is actually a JWT context */
-    if (ctx->magic != CWIST_JWT_CTX_MAGIC) return NULL;
-    return ctx->claims;
+    if (!req) return NULL;
+    for (const cwist_jwt_ctx_t *ctx = t_jwt_ctx; ctx; ctx = ctx->outer) {
+        if (ctx->req == req) return ctx->claims;
+    }
+    return NULL;
 }

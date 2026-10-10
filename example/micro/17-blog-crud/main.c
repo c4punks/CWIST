@@ -30,24 +30,6 @@ static void logger(cwist_http_request *req, cwist_http_response *res, cwist_hand
     next(req, res);
 }
 
-static void require_auth(cwist_http_request *req, cwist_http_response *res,
-                         cwist_handler_func next) {
-    char *auth = cwist_http_header_get(req->headers, "Authorization");
-    if (!auth || strncmp(auth, "Bearer ", 7) != 0) {
-        res->status_code = CWIST_HTTP_UNAUTHORIZED;
-        cwist_sstring_assign(res->body, "{\"error\":\"unauthorized\"}");
-        return;
-    }
-    cwist_jwt_claims *claims = cwist_jwt_verify(auth + 7, JWT_SECRET);
-    if (!claims) {
-        res->status_code = CWIST_HTTP_UNAUTHORIZED;
-        cwist_sstring_assign(res->body, "{\"error\":\"invalid token\"}");
-        return;
-    }
-    cwist_jwt_claims_destroy(claims);
-    next(req, res);
-}
-
 /* ---------- HTML UI ---------- */
 static cwist_sstring *form_ui(void) {
     cwist_css_config cfg;

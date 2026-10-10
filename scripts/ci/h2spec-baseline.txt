@@ -24,7 +24,6 @@ Sends a PRIORITY frame while sending the header blocks
 Sends a PRIORITY frame with 0x0 stream identifier
 Sends a PRIORITY frame with a length other than 5 octets
 Sends a PUSH_PROMISE frame
-Sends a RST_STREAM frame on a idle stream
 Sends a SETTINGS frame for window size to be negative
 Sends a SETTINGS frame with ACK flag and payload
 Sends a SETTINGS frame with a stream identifier other than 0x0
@@ -43,5 +42,4 @@ closed: Sends a HEADERS frame after sending RST_STREAM frame
 half closed (remote): Sends a DATA frame
 half closed (remote): Sends a HEADERS frame
 idle: Sends a DATA frame
-idle: Sends a RST_STREAM frame
 idle: Sends a WINDOW_UPDATE frame

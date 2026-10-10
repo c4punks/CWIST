@@ -6,6 +6,7 @@
 #include <assert.h>
 #include <stdio.h>
 #include <string.h>
+#include <zlib.h>
 
 static void echo_unary(cwist_http_request *req, cwist_http_response *res,
                        const cwist_grpc_message *message, void *user_ctx) {
@@ -227,7 +228,8 @@ static void append_grpc_string_frame(cwist_sstring *body, const char *value) {
     uint8_t *frame = NULL;
     size_t frame_len = 0;
     assert(cwist_grpc_encode_message(pb.data, pb.len, 0, &frame, &frame_len) == 0);
-    assert(cwist_sstring_append_len(body, (char *)frame, frame_len).error.err_i16 == 0);
+    cwist_error_t append_err = cwist_sstring_append_len(body, (char *)frame, frame_len);
+    assert(cwist_error_is_ok(&append_err));
 
     cwist_free(frame);
     cwist_pb_writer_free(&pb);
@@ -299,7 +301,9 @@ int main(void) {
     cwist_app *app = cwist_app_create();
     assert(app != NULL);
     assert(cwist_app_grpc_unary(app, "cwist.test.Echo", "Say", echo_unary, "reply") == 0);
+    assert(cwist_app_grpc_unary(app, "cwist.test.Echo", "Meta", meta_unary, NULL) == 0);
     assert(cwist_app_grpc_stream(app, "cwist.test.Echo", "Chat", echo_stream, "chunk") == 0);
+    assert(cwist_app_grpc_stream(app, "cwist.test.Echo", "Recv", recv_stream, NULL) == 0);
     assert(cwist_app_grpc_health(app) == 0);
     assert(cwist_app_grpc_health_set_status(app, "cwist.test.Echo", 1) == 0);
     assert(cwist_app_grpc_reflection(app) == 0);
@@ -520,6 +524,21 @@ int main(void) {
 
     cwist_test_client_destroy(client);
     cwist_app_destroy(app);
+
+    /* grpc-timeout parsing */
+    uint64_t ms = 0;
+    assert(cwist_grpc_parse_timeout("100m", &ms) == 0 && ms == 100);
+    assert(cwist_grpc_parse_timeout("2S", &ms) == 0 && ms == 2000);
+    assert(cwist_grpc_parse_timeout("1M", &ms) == 0 && ms == 60000);
+    assert(cwist_grpc_parse_timeout("3H", &ms) == 0 && ms == 3 * 3600000);
+    assert(cwist_grpc_parse_timeout("500u", &ms) == 0 && ms == 1);
+    assert(cwist_grpc_parse_timeout("99999999n", &ms) == 0 && ms == 100);
+    assert(cwist_grpc_parse_timeout("", &ms) != 0);
+    assert(cwist_grpc_parse_timeout("10x", &ms) != 0);
+    assert(cwist_grpc_parse_timeout("1x", &ms) != 0);
+    assert(cwist_grpc_parse_timeout("m", &ms) != 0);
+    assert(cwist_grpc_parse_timeout("123456789m", &ms) != 0);
+
     cwist_free(frame);
     cwist_pb_writer_free(&request_pb);
 

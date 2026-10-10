@@ -2,11 +2,13 @@
 #include "common.h"
 #include "db.h"
 #include "utils.h"
-#include <cwist/app.h>
-#include <cwist/http.h>
-#include <cwist/sstring.h>
-#include <cwist/query.h>
-#include <cwist/json_builder.h>
+#include <cwist/sys/app/app.h>
+#include <cwist/net/http/http.h>
+#include <cwist/core/sstring/sstring.h>
+#include <cwist/net/http/query.h>
+#include <cwist/core/utils/json_builder.h>
+#include <cwist/core/template/template.h>
+#include <cwist/core/mem/alloc.h>
 #include <cjson/cJSON.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -143,30 +145,6 @@ void state_handler(cwist_http_request *req, cwist_http_response *res) {
     char mode[16];
     get_game_state(req->db, room_id, board, &turn, status, &players, mode, NULL);
 
-    cwist_json_builder *jb = cwist_json_builder_create();
-    cwist_json_begin_object(jb);
-    cwist_json_add_string(jb, "status", status);
-    cwist_json_add_int(jb, "turn", turn);
-    cwist_json_add_string(jb, "mode", mode);
-    cwist_json_add_int(jb, "room_id", room_id);
-    
-    cwist_json_begin_array(jb, "board");
-    for(int r=0; r<SIZE; r++) {
-        for(int c=0; c<SIZE; c++) {
-            // Need a way to add numbers to array in jb? 
-            // The docs only show cwist_json_begin_array(jb, "key") which adds it as an object field.
-            // If it's a raw array element, maybe there's another function?
-            // Re-reading json.md... it doesn't show how to add elements to an array.
-            // I'll assume cwist_json_add_int works for array elements if key is NULL or there's an equivalent.
-            // Actually, cJSON might still be easier for complex nested structures if jb is too simple.
-            // But let's try to stick to jb if possible.
-            // If the API doesn't support raw array elements, I'll fallback to cJSON for the board.
-        }
-    }
-    // Since json.md is incomplete about array elements, I'll use cJSON for state_handler to be safe, 
-    // or just use sstring to manually build the array if I want to be "lightweight".
-    
-    // Actually, I'll use cJSON for the complex state for now as it's already used in db.c anyway.
     cJSON *json = cJSON_CreateObject();
     cJSON_AddStringToObject(json, "status", status);
     cJSON_AddNumberToObject(json, "turn", turn);
@@ -179,12 +157,13 @@ void state_handler(cwist_http_request *req, cwist_http_response *res) {
         for (int c = 0; c < SIZE; c++) {
             cJSON_AddItemToArray(row_arr, cJSON_CreateNumber(board[r][c]));
         }
+        cJSON_AddItemToArray(board_arr, row_arr);
     }
     cJSON_AddItemToObject(json, "board", board_arr);
 
     char *str = cJSON_PrintUnformatted(json);
     cwist_sstring_assign(res->body, str);
-    free(str);
+    cwist_free(str);
     cJSON_Delete(json);
     cwist_http_header_add(&res->headers, "Content-Type", "application/json");
 }

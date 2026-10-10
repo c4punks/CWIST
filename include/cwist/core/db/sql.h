@@ -23,13 +23,11 @@ typedef struct cwist_db {
     size_t pool_slot; /* Set by cwist_db_pool; ignored by standalone connections. */
 } cwist_db;
 
-/** @name Lifecycle */
-/** @{ */
+/** @name API */
 
 /**
- * @brief Connect to a database (or open file).
- * @param db Out parameter for the database handle.
- * @param path Path to SQLite file (or ":memory:").
+ * Connect to a database (or open file).
+ * path: Path to SQLite file (or ":memory:")
  */
 cwist_error_t cwist_db_open(cwist_db **db, const char *path);
 
@@ -56,11 +54,6 @@ cwist_error_t cwist_db_serialize(cwist_db *db, void **out, size_t *out_len);
  */
 void cwist_db_close(cwist_db *db);
 
-/** @} */
-
-/** @name Execution */
-/** @{ */
-
 /**
  * Execute a command (INSERT, UPDATE, DELETE, CREATE).
  * Does not return rows. Returns err_i16 = -1 when db/sql pointer is invalid.
@@ -68,7 +61,7 @@ void cwist_db_close(cwist_db *db);
 cwist_error_t cwist_db_exec(cwist_db *db, const char *sql);
 
 /**
- * @brief Execute a query and return results as a cJSON Array of Objects.
+ * Execute a query and return results as a cJSON Array of Objects.
  * Example: [{"id":1, "name":"foo"}, {"id":2, "name":"bar"}]
  * The `result` pointer is reset to NULL on entry and left NULL on failure.
  */

@@ -44,13 +44,17 @@ static int g_entry_count = 0;
  */
 bool cwist_healthz_register(const char *name, cwist_health_probe_fn fn, void *ctx) {
     if (!name || !fn) return false;
-    if (g_entry_count >= CWIST_HEALTHZ_MAX_PROBES) return false;
 
+    int first_free_slot = -1;
     for (int i = 0; i < g_entry_count; ++i) {
-        if (g_entries[i].active && strcmp(g_entries[i].name, name) == 0) {
-            g_entries[i].fn = fn;
-            g_entries[i].ctx = ctx;
-            return true;
+        if (g_entries[i].active) {
+            if (strcmp(g_entries[i].name, name) == 0) {
+                g_entries[i].fn = fn;
+                g_entries[i].ctx = ctx;
+                return true;
+            }
+        } else if (first_free_slot == -1) {
+            first_free_slot = i;
         }
     }
 
@@ -109,12 +113,26 @@ static const char *status_str(cwist_health_status_t s) {
     }
 }
 
+/**
+ * @brief Run all active probes and aggregate their results.
+ *
+ * Probes are evaluated in registration order. The overall status is FAIL if
+ * any probe reports FAIL, DEGRADED if at least one reports DEGRADED and none
+ * report FAIL, and OK otherwise.
+ *
+ * @param out_probes Optional array receiving per-probe results; at most
+ *        @p max_probes entries are written.
+ * @param max_probes Capacity of @p out_probes.
+ * @param out_count Optional output receiving the number of active probes
+ *        evaluated.
+ * @param out_overall Optional output receiving the aggregated status.
+ */
 void cwist_healthz_run(cwist_health_probe_t *out_probes, size_t max_probes, size_t *out_count,
                        cwist_health_status_t *out_overall) {
     size_t count = 0;
     cwist_health_status_t overall = CWIST_HEALTH_OK;
 
-    for (int i = 0; i < g_entry_count && count < max_probes; ++i) {
+    for (int i = 0; i < g_entry_count; ++i) {
         if (!g_entries[i].active) continue;
         cwist_health_probe_t r = g_entries[i].fn(g_entries[i].ctx);
         if (out_probes && count < max_probes) {

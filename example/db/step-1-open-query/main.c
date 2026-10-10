@@ -58,10 +58,9 @@ int main(void) {
             cJSON *id = cJSON_GetObjectItem(row, "id");
             cJSON *name = cJSON_GetObjectItem(row, "name");
             cJSON *age = cJSON_GetObjectItem(row, "age");
-            printf("  id=%-3s  name=%-8s  age=%s\n",
-                   (id && id->valuestring) ? id->valuestring : "?",
-                   (name && name->valuestring) ? name->valuestring : "?",
-                   (age && age->valuestring) ? age->valuestring : "?");
+            char idb[32], nameb[32], ageb[32];
+            printf("  id=%-3s  name=%-8s  age=%s\n", cell_text(id, idb, sizeof(idb)),
+                   cell_text(name, nameb, sizeof(nameb)), cell_text(age, ageb, sizeof(ageb)));
         }
         cJSON_Delete(rows);
     }

@@ -34,8 +34,19 @@ extern int g_cwist_drain_timeout_sec;
 
 /**
  * @brief Install SIGTERM and SIGINT handlers for graceful shutdown.
+ *
+ * The handlers in place before the first install are saved for
+ * cwist_shutdown_restore_handlers().
  */
 void cwist_shutdown_install_handlers(void);
+
+/**
+ * @brief Put back the SIGTERM and SIGINT handlers that were in place before
+ * cwist_shutdown_install_handlers(). Does nothing if they are not installed.
+ * cwist_app_listen_ex() calls it before returning, so the signals request a
+ * graceful stop only while a server runs.
+ */
+void cwist_shutdown_restore_handlers(void);
 
 /**
  * @brief Request a graceful shutdown, as SIGTERM/SIGINT do: clear the running

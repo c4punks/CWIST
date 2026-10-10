@@ -1,5 +1,6 @@
-#include <cwistaw/smartstring.h>
-#include <cwistaw/err/cwist_err.h>
+#include <cwist/core/sstring/sstring.h>
+#include <cwist/core/mem/alloc.h>
+#include <cwist/sys/err/cwist_err.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -25,26 +26,54 @@ cwist_error_t cwist_sstring_append_sstring_escaped(cwist_sstring *str, const cwi
 /**
  * @brief Ensure @p str owns a writable buffer with room for @p needed bytes (+NUL).
  *
- * Owned buffers are grown in place via cwist_realloc. Borrowed buffers
- * (static storage or arena chunks, see cwist_sstring_borrow) are detached:
- * a fresh heap buffer is allocated and the first @p preserve_len bytes are
- * carried over, leaving the borrowed source untouched.
+ * Owned buffers are grown in place via cwist_realloc with geometric headroom
+ * (doubling), so repeated appends amortize to O(total bytes) instead of the
+ * O(n^2) of exact-fit reallocation; the reserved capacity is cached in
+ * str->capacity. Region views (cwist_sstring_adopt_region) realloc the
+ * allocation base and keep data at its offset into it. When str->capacity
+ * is 0 (unknown, e.g. buffers assigned outside this module) growth falls
+ * back to exact-fit reallocation.
+ * Borrowed buffers (static storage or arena chunks, see cwist_sstring_borrow)
+ * are detached: a fresh heap buffer is allocated and the first @p preserve_len
+ * bytes are carried over, leaving the borrowed source untouched.
  *
  * @param str String object to prepare.
  * @param needed Required payload capacity in bytes (excluding the NUL).
  * @param preserve_len Leading bytes of the old contents to keep when detaching.
  * @return The (possibly new) buffer, or NULL on allocation failure with the
- *         string left unchanged. On success callers must clear borrows_buffer.
+ *         string left unchanged. On success the new capacity is recorded in
+ *         str->capacity; callers must clear borrows_buffer.
  */
 static char *cwist_sstring_reserve(cwist_sstring *str, size_t needed, size_t preserve_len) {
-    if (str->borrows_buffer) {
-        char *new_data = (char *)cwist_alloc(needed + 1);
-        if (new_data && str->data && preserve_len > 0) {
-            memcpy(new_data, str->data, preserve_len);
+    if (!str->borrows_buffer && str->data && str->capacity >= needed) return str->data;
+
+    size_t new_cap = str->capacity ? str->capacity : 16;
+    while (new_cap < needed) {
+        if (new_cap > (SIZE_MAX - 1) / 2) {
+            new_cap = needed;
+            break;
         }
-        return new_data;
+        new_cap *= 2;
     }
-    return (char *)cwist_realloc(str->data, needed + 1);
+
+    char *result;
+    if (str->borrows_buffer) {
+        result = (char *)cwist_alloc(new_cap + 1);
+        if (result) {
+            if (str->data && preserve_len > 0) memcpy(result, str->data, preserve_len);
+            str->base = result;
+            str->capacity = new_cap;
+        }
+        return result;
+    }
+
+    char *orig = str->base ? str->base : str->data;
+    const size_t lead = (str->base && str->data) ? (size_t)(str->data - str->base) : 0;
+    char *grown = (char *)cwist_realloc(orig, lead + new_cap + 1);
+    if (!grown) return NULL;
+    str->base = grown;
+    str->capacity = new_cap;
+    return grown + lead;
 }
 
 /**
@@ -96,10 +125,12 @@ cwist_error_t cwist_sstring_borrow(cwist_sstring *str, const char *data, size_t 
     }
 
     if (str->data && !str->borrows_buffer) {
-        cwist_free(str->data);
+        cwist_free(str->base ? str->base : str->data);
     }
+    str->base = NULL;
     str->data = (char *)(data ? data : "");
     str->size = data ? len : 0;
+    str->capacity = 0; ///< borrowed capacity is unknown until detach
     str->borrows_buffer = true;
     str->is_fixed = false;
 
@@ -123,12 +154,47 @@ cwist_error_t cwist_sstring_adopt_len(cwist_sstring *str, char *buf, size_t len)
     }
 
     if (str->data && !str->borrows_buffer) {
-        cwist_free(str->data);
+        cwist_free(str->base ? str->base : str->data);
     }
+    str->base = buf;
     str->data = buf;
     str->size = buf ? len : 0;
+    str->capacity = 0; ///< adopted buffer size is unknown beyond len + NUL
     str->borrows_buffer = false;
     if (buf) buf[len] = '\0';
+
+    err.error.err_i8 = ERR_SSTRING_OKAY;
+    return err;
+}
+
+/**
+ * @brief Adopt a heap buffer as a region view without copying.
+ * @param str Target string object; any owned buffer it holds is released.
+ * @param base cwist_alloc'd allocation base; ownership transfers to the
+ *        string (freed on destroy/reassign). NULL clears.
+ * @param offset Payload start relative to @p base.
+ * @param len Payload length in bytes; base[offset + len] must be the NUL slot.
+ * @return ERR_SSTRING_OKAY on success, or ERR_SSTRING_NULL_STRING for NULL input.
+ * @note Growth reallocs @p base and preserves the offset, so data keeps
+ *       viewing the same region.
+ */
+cwist_error_t cwist_sstring_adopt_region(cwist_sstring *str, char *base, size_t offset,
+                                         size_t len) {
+    cwist_error_t err = make_error(CWIST_ERR_INT8);
+    if (!str) {
+        err.error.err_i8 = ERR_SSTRING_NULL_STRING;
+        return err;
+    }
+
+    if (str->data && !str->borrows_buffer) {
+        cwist_free(str->base ? str->base : str->data);
+    }
+    str->base = base;
+    str->data = base ? base + offset : NULL;
+    str->size = base ? len : 0;
+    str->capacity = 0; ///< adopted region size is unknown beyond len + NUL
+    str->borrows_buffer = false;
+    if (base) base[offset + len] = '\0';
 
     err.error.err_i8 = ERR_SSTRING_OKAY;
     return err;
@@ -174,6 +240,11 @@ cwist_error_t cwist_sstring_append_len(cwist_sstring *str, const char *data, siz
     return err;
 }
 
+/**
+ * @brief Initialize a mutable string with the default append/copy behavior.
+ * @param str String object to initialize in caller-owned storage.
+ * @return ERR_SSTRING_OKAY on success, or ERR_SSTRING_NULL_STRING for NULL input.
+ */
 cwist_error_t cwist_sstring_init(cwist_sstring *str) {
     cwist_error_t err = make_error(CWIST_ERR_INT8);
     if (!str) {
@@ -183,6 +254,8 @@ cwist_error_t cwist_sstring_init(cwist_sstring *str) {
 
     str->data = NULL;
     str->size = 0;
+    str->capacity = 0;
+    str->base = NULL;
     str->is_fixed = false;
     str->owns_storage = false;
     str->borrows_buffer = false;
@@ -209,6 +282,8 @@ cwist_error_t cwist_sstring_init_escaped(cwist_sstring *str) {
 
     str->data = NULL;
     str->size = 0;
+    str->capacity = 0;
+    str->base = NULL;
     str->is_fixed = false;
     str->owns_storage = false;
     str->borrows_buffer = false;
@@ -230,6 +305,10 @@ size_t cwist_sstring_get_size(cwist_sstring *str) {
     return str ? str->size : 0;
 }
 
+static inline const char *sstring_as_text(const cwist_sstring *s) {
+    return (s && s->data) ? s->data : "";
+}
+
 /**
  * @brief Compare two CWIST string objects using strcmp semantics.
  * @param left Left-hand string.
@@ -237,12 +316,7 @@ size_t cwist_sstring_get_size(cwist_sstring *str) {
  * @return Negative, zero, or positive depending on lexical ordering.
  */
 int cwist_sstring_compare_sstring(cwist_sstring *left, const cwist_sstring *right) {
-    if (!left || !left->data) {
-        if (!right || !right->data) return 0;
-        return -1;
-    }
-    if (!right || !right->data) return 1;
-    return strcmp(left->data, right->data);
+    return strcmp(sstring_as_text(left), sstring_as_text(right));
 }
 
 /**
@@ -281,7 +355,12 @@ cwist_error_t cwist_sstring_ltrim(cwist_sstring *str) {
     return err;
 }
 
-cwist_error_t smartstring_rtrim(smartstring *str) {
+/**
+ * @brief Trim trailing ASCII whitespace from the string in place.
+ * @param str String object to mutate.
+ * @return ERR_SSTRING_OKAY on success, or an error describing invalid input.
+ */
+cwist_error_t cwist_sstring_rtrim(cwist_sstring *str) {
     cwist_error_t err = make_error(CWIST_ERR_INT8);
     err.error.err_i8 = ERR_SSTRING_NULL_STRING;
     if (!str || !str->data) return err;
@@ -289,7 +368,7 @@ cwist_error_t smartstring_rtrim(smartstring *str) {
     size_t len = strlen(str->data);
 
     if (len == 0) {
-        err.error.err_i8 = ERR_SSTRING_ZERO_LENGTH;
+        err.error.err_i8 = ERR_SSTRING_OKAY;
         return err;
     }
 
@@ -326,7 +405,14 @@ cwist_error_t cwist_sstring_trim(cwist_sstring *str) {
     return cwist_sstring_ltrim(str);
 }
 
-cwist_error_t smartstring_change_size(smartstring *str, size_t new_size, bool blow_data) {
+/**
+ * @brief Resize the string buffer, optionally allowing truncation.
+ * @param str String object to resize.
+ * @param new_size Requested new size in bytes.
+ * @param blow_data When true, allow shrinking below the current content length.
+ * @return ERR_SSTRING_OKAY on success, or an error describing the resize failure.
+ */
+cwist_error_t cwist_sstring_change_size(cwist_sstring *str, size_t new_size, bool blow_data) {
     cwist_error_t err = make_error(CWIST_ERR_INT8);
 
     if (!str) {
@@ -369,8 +455,7 @@ cwist_error_t smartstring_change_size(smartstring *str, size_t new_size, bool bl
              /* Detached buffers carry no NUL past the preserved payload. */
             str->data[current_len] = '\0';
         }
-    } else {
-        str->data[new_size] = '\0';
+        // str->size remains current_len (existing data preserved)
     }
 
     err.error.err_i8 = ERR_SSTRING_OKAY;
@@ -426,21 +511,27 @@ cwist_error_t cwist_sstring_assign(cwist_sstring *str, const char *data) {
 
     cJSON_Delete(err.error.err_json);
     err = make_error(CWIST_ERR_INT8);
-    err.error.err_i8 = ERR_SMARTSTRING_OKAY;
+    err.error.err_i8 = ERR_SSTRING_OKAY;
 
     return err;
 }
 
-cwist_error_t smartstring_append(smartstring *str, const char *data) {
+/**
+ * @brief Append a NUL-terminated C string to the target string.
+ * @param str Target string object.
+ * @param data Source string to append.
+ * @return ERR_SSTRING_OKAY on success, or an error payload describing the failure.
+ */
+cwist_error_t cwist_sstring_append(cwist_sstring *str, const char *data) {
     if (!str) {
         cwist_error_t err = make_error(CWIST_ERR_INT8);
-        err.error.err_i8 = ERR_SMARTSTRING_NULL_STRING;
+        err.error.err_i8 = ERR_SSTRING_NULL_STRING;
         return err;
     }
     if (!data) {
         // Appending nothing is success
         cwist_error_t err = make_error(CWIST_ERR_INT8);
-        err.error.err_i8 = ERR_SMARTSTRING_OKAY;
+        err.error.err_i8 = ERR_SSTRING_OKAY;
         return err;
     }
 
@@ -477,7 +568,7 @@ cwist_error_t smartstring_append(smartstring *str, const char *data) {
 
     cJSON_Delete(err.error.err_json);
     err = make_error(CWIST_ERR_INT8);
-    err.error.err_i8 = ERR_SMARTSTRING_OKAY;
+    err.error.err_i8 = ERR_SSTRING_OKAY;
     return err;
 }
 
@@ -504,9 +595,6 @@ cwist_error_t cwist_sstring_append_escaped(cwist_sstring *str, const char *data)
     size_t input_len = strlen(data);
     size_t new_size = current_len + (input_len * 6) + 1;
 
-    cwist_error_t err = make_error(CWIST_ERR_JSON);
-    err.error.err_json = cJSON_CreateObject();
-
     if (str->is_fixed) {
         if (new_size > str->size) {
             cwist_error_t err = make_error(CWIST_ERR_JSON);
@@ -520,8 +608,12 @@ cwist_error_t cwist_sstring_append_escaped(cwist_sstring *str, const char *data)
     } else {
         char *new_data = cwist_sstring_reserve(str, new_size, current_len);
         if (!new_data) {
-             cJSON_AddStringToObject(err.error.err_json, "err", "Cannot append: memory full");
-             return err;
+            cwist_error_t err = make_error(CWIST_ERR_JSON);
+            err.error.err_json = cJSON_CreateObject();
+            if (err.error.err_json) {
+                cJSON_AddStringToObject(err.error.err_json, "err", "Cannot append: memory full");
+            }
+            return err;
         }
         str->data = new_data;
         str->borrows_buffer = false;
@@ -536,7 +628,7 @@ cwist_error_t cwist_sstring_append_escaped(cwist_sstring *str, const char *data)
                 ptr += 4;
                 break;
             case '>':
-                memcpy(ptr, "&gtl", 4);
+                memcpy(ptr, "&gt;", 4);
                 ptr += 4;
                 break;
             case '&':
@@ -558,8 +650,7 @@ cwist_error_t cwist_sstring_append_escaped(cwist_sstring *str, const char *data)
     *ptr = '\0';
     str->size = (size_t)(ptr - str->data);
 
-    cJSON_Delete(err.error.err_json);
-    err = make_error(CWIST_ERR_INT8);
+    cwist_error_t err = make_error(CWIST_ERR_INT8);
     err.error.err_i8 = ERR_SSTRING_OKAY;
     return err;
 }
@@ -630,7 +721,13 @@ cwist_error_t cwist_sstring_seek(cwist_sstring *str, char *substr, int location)
     return err;
 }
 
-cwist_error_t smartstring_copy(smartstring *origin, char *destination) {
+/**
+ * @brief Copy the entire string into a caller-provided destination buffer.
+ * @param origin Source string object.
+ * @param destination Destination C buffer.
+ * @return ERR_SSTRING_OKAY on success, or an error describing invalid input.
+ */
+cwist_error_t cwist_sstring_copy(cwist_sstring *origin, char *destination) {
 
     cwist_error_t err = make_error(CWIST_ERR_INT8);
     if (!origin || !origin->data || !destination) {
@@ -644,14 +741,41 @@ cwist_error_t smartstring_copy(smartstring *origin, char *destination) {
     return err;
 }
 
-smartstring *smartstring_create(void) {
-    smartstring *str = (smartstring *)malloc(sizeof(smartstring));
+/**
+ * @brief Copy one CWIST string into another.
+ * @param origin Destination string object.
+ * @param from Source string object, or NULL to clear the destination.
+ * @return ERR_SSTRING_OKAY on success, or an error describing invalid input.
+ */
+cwist_error_t cwist_sstring_copy_sstring(cwist_sstring *origin, const cwist_sstring *from) {
+    if (!origin) {
+        cwist_error_t err = make_error(CWIST_ERR_INT8);
+        err.error.err_i8 = ERR_SSTRING_NULL_STRING;
+        return err;
+    }
+    if (!from) {
+        return cwist_sstring_assign(origin, NULL);
+    }
+    return cwist_sstring_assign(origin, from->data);
+}
+
+/**
+ * @brief Allocate and initialize a new heap-owned CWIST string object.
+ * @return Newly allocated string object, or NULL on allocation failure.
+ */
+cwist_sstring *cwist_sstring_create(void) {
+    cwist_sstring *str = (cwist_sstring *)cwist_alloc(sizeof(cwist_sstring));
     if (!str) return NULL;
 
-    memset(str, 0, sizeof(smartstring));
+    memset(str, 0, sizeof(cwist_sstring));
     str->is_fixed = false;
+    str->owns_storage = true;
     str->size = 0;
     str->data = NULL; // Initially empty
+    str->get_size = cwist_sstring_get_size;
+    str->compare = cwist_sstring_compare_sstring;
+    str->copy = cwist_sstring_copy_sstring;
+    str->append = cwist_sstring_append_sstring;
 
     return str;
 }
@@ -665,11 +789,13 @@ void cwist_sstring_destroy(cwist_sstring *str) {
 
     if (str->data) {
         if (!str->borrows_buffer) {
-            cwist_free(str->data);
+            cwist_free(str->base ? str->base : str->data);
         }
         str->data = NULL;
     }
+    str->base = NULL;
     str->size = 0;
+    str->capacity = 0;
 
     if (str->owns_storage) {
         cwist_free(str);
@@ -681,25 +807,32 @@ void cwist_sstring_destroy(cwist_sstring *str) {
     }
 }
 
-int smartstring_compare(smartstring *str, const char *compare_to) {
-    if (!str || !str->data) {
-        if (!compare_to) return 0; // Both NULL-ish (empty treated as NULL for comparison?)
-        return -1; 
-    }
-    if (!compare_to) return 1; 
-    
-    return strcmp(str->data, compare_to);
+/**
+ * @brief Compare a CWIST string against a raw C string using strcmp semantics.
+ * @param str Left-hand CWIST string.
+ * @param compare_to Right-hand raw C string.
+ * @return Negative, zero, or positive depending on lexical ordering.
+ */
+int cwist_sstring_compare(cwist_sstring *str, const char *compare_to) {
+    return strcmp(sstring_as_text(str), compare_to ? compare_to : "");
 }
 
-smartstring *smartstring_substr(smartstring *str, int start, int length) {
+/**
+ * @brief Create a heap-owned substring spanning the requested range.
+ * @param str Source string object.
+ * @param start Zero-based starting index.
+ * @param length Requested substring length.
+ * @return Newly allocated substring, or NULL when the range is invalid or OOM occurs.
+ */
+cwist_sstring *cwist_sstring_substr(cwist_sstring *str, int start, int length) {
     if (!str || !str->data || start < 0 || length < 0) return NULL;
 
     size_t current_len = strlen(str->data);
     if ((size_t)start >= current_len) return NULL;
 
     // Adjust length if it goes beyond end
-    if ((size_t)(start + length) > current_len) {
-        length = current_len - start;
+    if ((size_t)length > current_len - (size_t)start) {
+        length = (int)(current_len - (size_t)start);
     }
 
     cwist_sstring *sub = cwist_sstring_create();
@@ -707,9 +840,11 @@ smartstring *smartstring_substr(smartstring *str, int start, int length) {
 
     sub->data = (char *)cwist_alloc(length + 1);
     if (!sub->data) {
-        smartstring_destroy(sub);
+        cwist_sstring_destroy(sub);
         return NULL;
     }
+    sub->base = sub->data;
+    sub->capacity = length;
     sub->size = length;
 
     memcpy(sub->data, str->data + start, length);

@@ -199,24 +199,20 @@ char *cwist_jwt_sign(const char *payload_json, const char *secret, long exp_seco
     size_t hdr_enc_len = b64url_encoded_len(strlen(HEADER_JSON));
     size_t pay_enc_len = b64url_encoded_len(strlen(final_payload_json));
 
-    char *hdr_enc = (char *)cwist_alloc(hdr_enc_len);
-    char *pay_enc = (char *)cwist_alloc(pay_enc_len);
+    char *hdr_enc CWIST_DEFER_FREE = (char *)cwist_alloc(hdr_enc_len);
+    char *pay_enc CWIST_DEFER_FREE = (char *)cwist_alloc(pay_enc_len);
     if (!hdr_enc || !pay_enc) {
-        cwist_free(hdr_enc);
-        cwist_free(pay_enc);
-        free(final_payload_json);
+        cJSON_free(final_payload_json);
         return NULL;
     }
 
     b64url_encode((const unsigned char *)HEADER_JSON, strlen(HEADER_JSON), hdr_enc);
     b64url_encode((const unsigned char *)final_payload_json, strlen(final_payload_json), pay_enc);
-    cwist_free(final_payload_json);
+    cJSON_free(final_payload_json);
 
     /* --- Build "header.payload" signing input using sstring --------------- */
     cwist_sstring *signing_input = cwist_sstring_create();
     if (!signing_input) {
-        cwist_free(hdr_enc);
-        cwist_free(pay_enc);
         return NULL;
     }
     cwist_sstring_append(signing_input, hdr_enc);
@@ -227,17 +223,13 @@ char *cwist_jwt_sign(const char *payload_json, const char *secret, long exp_seco
     unsigned char sig_raw[32];
     if (!hmac_sha256(secret, strlen(secret), signing_input->data, signing_input->size, sig_raw)) {
         cwist_sstring_destroy(signing_input);
-        cwist_free(hdr_enc);
-        cwist_free(pay_enc);
         return NULL;
     }
 
     size_t sig_enc_len = b64url_encoded_len(32);
-    char *sig_enc = (char *)cwist_alloc(sig_enc_len);
+    char *sig_enc CWIST_DEFER_FREE = (char *)cwist_alloc(sig_enc_len);
     if (!sig_enc) {
         cwist_sstring_destroy(signing_input);
-        cwist_free(hdr_enc);
-        cwist_free(pay_enc);
         return NULL;
     }
     b64url_encode(sig_raw, 32, sig_enc);
@@ -246,9 +238,6 @@ char *cwist_jwt_sign(const char *payload_json, const char *secret, long exp_seco
     cwist_sstring *token = cwist_sstring_create();
     if (!token) {
         cwist_sstring_destroy(signing_input);
-        cwist_free(hdr_enc);
-        cwist_free(pay_enc);
-        cwist_free(sig_enc);
         return NULL;
     }
     cwist_sstring_append(token, signing_input->data);
@@ -259,9 +248,6 @@ char *cwist_jwt_sign(const char *payload_json, const char *secret, long exp_seco
 
     cwist_sstring_destroy(token);
     cwist_sstring_destroy(signing_input);
-    cwist_free(hdr_enc);
-    cwist_free(pay_enc);
-    cwist_free(sig_enc);
 
     return result;
 }
@@ -378,15 +364,16 @@ cwist_jwt_claims *cwist_jwt_verify(const char *token, const char *secret) {
     time_t now = time(NULL);
     cJSON *exp_item = cJSON_GetObjectItemCaseSensitive(json, "exp");
     if (exp_item && cJSON_IsNumber(exp_item)) {
-        time_t now = time(NULL);
-        if ((time_t)exp_item->valuedouble < now) {
+        time_t exp_time = (time_t)exp_item->valuedouble;
+        if (now > CWIST_JWT_TIME_LEEWAY && exp_time < now - CWIST_JWT_TIME_LEEWAY) {
             cJSON_Delete(json);
             return NULL; /* token expired */
         }
     }
     cJSON *nbf_item = cJSON_GetObjectItemCaseSensitive(json, "nbf");
     if (nbf_item && cJSON_IsNumber(nbf_item)) {
-        if ((time_t)nbf_item->valuedouble - CWIST_JWT_TIME_LEEWAY > now) {
+        time_t nbf_time = (time_t)nbf_item->valuedouble;
+        if (nbf_time > now && (nbf_time - now) > CWIST_JWT_TIME_LEEWAY) {
             cJSON_Delete(json);
             return NULL; /* token not yet valid */
         }
@@ -431,6 +418,17 @@ void cwist_jwt_claims_destroy(cwist_jwt_claims *claims) {
  * Sequenced JWT transport helpers
  * -------------------------------------------------------------------------- */
 
+/**
+ * @brief Split a JWT token into sequenced transport chunks.
+ * @param token Null-terminated JWT string to split.
+ * @param chunk_payload_size Maximum payload bytes per chunk; must be non-zero.
+ * @param out_count Set to the number of chunks produced.
+ * @return Heap-allocated array of @p out_count chunks, or NULL on invalid input,
+ *         split failure, or allocation failure.
+ *
+ * Each chunk's @c data buffer is owned by the caller and must be released with
+ * cwist_jwt_chunks_free().
+ */
 cwist_jwt_chunk_t *cwist_jwt_split_chunks(const char *token, uint16_t chunk_payload_size,
                                           size_t *out_count) {
     if (!token || chunk_payload_size == 0 || !out_count) return NULL;
@@ -495,7 +493,10 @@ char *cwist_jwt_join_chunks(const cwist_jwt_chunk_t *chunks, size_t count) {
             cwist_seq_assembler_destroy(a);
             return NULL;
         }
-        cwist_seq_assembler_feed(a, &chunk);
+        if (!cwist_seq_assembler_feed(a, &chunk)) {
+            cwist_seq_assembler_destroy(a);
+            return NULL;
+        }
     }
 
     const uint8_t *data = NULL;
@@ -514,6 +515,17 @@ char *cwist_jwt_join_chunks(const cwist_jwt_chunk_t *chunks, size_t count) {
     return token;
 }
 
+/**
+ * @brief Sign a payload as an HS256 JWT and split it into sequenced transport chunks.
+ * @param payload_json Raw payload JSON string to sign.
+ * @param secret Shared HS256 signing secret.
+ * @param exp_seconds Lifetime in seconds to add when the payload lacks exp/iat.
+ * @param chunk_payload_size Maximum payload bytes per chunk; must be non-zero.
+ * @param out_count Set to the number of chunks produced.
+ * @return Heap-allocated chunk array, or NULL when signing or chunking fails.
+ *
+ * Free the result with cwist_jwt_chunks_free().
+ */
 cwist_jwt_chunk_t *cwist_jwt_sign_chunks(const char *payload_json, const char *secret,
                                          long exp_seconds, uint16_t chunk_payload_size,
                                          size_t *out_count) {
@@ -528,6 +540,16 @@ cwist_jwt_chunk_t *cwist_jwt_sign_chunks(const char *payload_json, const char *s
     return chunks;
 }
 
+/**
+ * @brief Reassemble sequenced chunks into a token, verify it, and return its claims.
+ * @param chunks Array of sequenced chunks carrying the JWT token.
+ * @param count Number of entries in @p chunks.
+ * @param secret Shared HS256 signing secret.
+ * @return Heap-allocated verified claims object, or NULL when assembly, parsing,
+ *         signature verification, or claim validation fails.
+ *
+ * The caller owns the result and must release it with cwist_jwt_claims_destroy().
+ */
 cwist_jwt_claims *cwist_jwt_verify_chunks(const cwist_jwt_chunk_t *chunks, size_t count,
                                           const char *secret) {
     if (!chunks || count == 0 || !secret) return NULL;

@@ -154,6 +154,13 @@ static void respond_big_job(void *arg) {
 }
 
 static void bigdefer_handler(cwist_http_request *req, cwist_http_response *res) {
+    /* Force backpressure at the sender, not with a tiny client receive
+     * window: draining queued TCP bytes must not outlast keep-alive. */
+    int sndbuf = 4096;
+    if (setsockopt(req->client_fd, SOL_SOCKET, SO_SNDBUF, &sndbuf, sizeof(sndbuf)) < 0) {
+        res->status_code = CWIST_HTTP_INTERNAL_ERROR;
+        return;
+    }
     cwist_async *a = cwist_async_defer(req, res);
     if (!a) {
         res->status_code = CWIST_HTTP_INTERNAL_ERROR;
@@ -470,8 +477,6 @@ int main(void) {
         int fd = connect_to_server();
         CHECK(fd >= 0, "connect for slow-client park");
         if (fd >= 0) {
-            int rcvbuf = 4096;
-            setsockopt(fd, SOL_SOCKET, SO_RCVBUF, &rcvbuf, sizeof(rcvbuf));
             send_all(fd, "GET /bigdefer HTTP/1.1\r\nHost: localhost\r\n\r\n");
             /* Do not read: the server's send buffer fills and the deferred
              * completion must park instead of blocking a worker/reactor. */

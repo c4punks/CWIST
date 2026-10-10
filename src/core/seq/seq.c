@@ -81,6 +81,19 @@ bool cwist_seq_chunk_parse(const uint8_t *data, size_t len, cwist_seq_chunk_t *o
     return true;
 }
 
+/**
+ * @brief Serialize a chunk header into an 8-byte buffer.
+ *
+ * Encodes @p seq, @p total, @p payload_len, and @p chunk_size as big-endian
+ * 16-bit fields. Performs no validation; callers must supply a consistent
+ * sequence pair (see cwist_seq_chunk_parse()).
+ *
+ * @param out        Buffer of CWIST_SEQ_HEADER_SIZE bytes to write.
+ * @param seq        Chunk sequence number (1-based).
+ * @param total      Total number of chunks in the message.
+ * @param payload_len Payload bytes in this chunk.
+ * @param chunk_size Full payload size of every non-final chunk.
+ */
 void cwist_seq_chunk_build_header(uint8_t out[CWIST_SEQ_HEADER_SIZE], uint16_t seq, uint16_t total,
                                   uint16_t payload_len, uint16_t chunk_size) {
     seq_write_u16(out + 0, seq);
@@ -93,6 +106,22 @@ void cwist_seq_chunk_build_header(uint8_t out[CWIST_SEQ_HEADER_SIZE], uint16_t s
 /* Message splitter                                                           */
 /* -------------------------------------------------------------------------- */
 
+/**
+ * @brief Split a message buffer into sequenced chunks.
+ *
+ * Allocates each chunk with cwist_alloc() and writes it into @p out; the
+ * result is released with cwist_seq_message_free(). Every chunk except the
+ * last carries exactly @p chunk_payload_size payload bytes. @p out is zeroed
+ * before use and again on failure.
+ *
+ * @param data              Message bytes to split.
+ * @param len               Length of @p data in bytes.
+ * @param chunk_payload_size Payload bytes per chunk; must be non-zero.
+ * @param out               Receives the chunk array on success.
+ * @retval true  @p out holds @p out->count chunks.
+ * @retval false Invalid arguments, or the message would exceed the chunk or
+ *         reassembled-size limits, or allocation failed; @p out is zeroed.
+ */
 bool cwist_seq_split(const uint8_t *data, size_t len, uint16_t chunk_payload_size,
                      cwist_seq_message_t *out) {
     if (!data || len == 0 || chunk_payload_size == 0 || !out) return false;
@@ -168,6 +197,17 @@ cwist_seq_assembler_t *cwist_seq_assembler_create(void) {
     return cwist_seq_assembler_create_limited(0);
 }
 
+/**
+ * @brief Create an assembler with a reassembled-size limit.
+ *
+ * Allocates an empty assembler state; buffers are allocated lazily on the
+ * first cwist_seq_assembler_feed() call. Destroy with
+ * cwist_seq_assembler_destroy().
+ *
+ * @param max_data_len Maximum accepted reassembled size in bytes, or 0 to use
+ *                     the CWIST_SEQ_MAX_REASSEMBLED_SIZE default.
+ * @return New assembler, or NULL on allocation failure.
+ */
 cwist_seq_assembler_t *cwist_seq_assembler_create_limited(size_t max_data_len) {
     cwist_seq_assembler_t *a = (cwist_seq_assembler_t *)cwist_alloc(sizeof(*a));
     if (!a) return NULL;
@@ -199,10 +239,12 @@ void cwist_seq_assembler_destroy(cwist_seq_assembler_t *a) {
  */
 void cwist_seq_assembler_reset(cwist_seq_assembler_t *a) {
     if (!a) return;
+    size_t max_data_len = a->max_data_len;
     cwist_free(a->data);
     cwist_free(a->received);
     cwist_free(a->payload_lens);
     memset(a, 0, sizeof(*a));
+    a->max_data_len = max_data_len;
 }
 
 /**
@@ -244,7 +286,8 @@ bool cwist_seq_assembler_feed(cwist_seq_assembler_t *a, const cwist_seq_chunk_t 
          * false protocol errors on reordered HTTP/2/3-adjacent transports. */
         if ((size_t)chunk->total > SIZE_MAX / (size_t)chunk->chunk_size) return false;
         a->data_cap = (size_t)chunk->total * chunk->chunk_size;
-        if (a->max_data_len && a->data_cap > a->max_data_len) {
+        size_t ceiling = a->max_data_len ? a->max_data_len : CWIST_SEQ_MAX_REASSEMBLED_SIZE;
+        if (a->data_cap > ceiling) {
             a->data_cap = 0;
             return false;
         }
@@ -268,8 +311,10 @@ bool cwist_seq_assembler_feed(cwist_seq_assembler_t *a, const cwist_seq_chunk_t 
     if (a->received[index]) {
         /* Safe duplicates are idempotent.  A different duplicate is data
          * corruption, not a retry, and must never overwrite good bytes. */
-        return a->payload_lens[index] == chunk->payload_len &&
-               memcmp(a->data + offset, chunk->payload, chunk->payload_len) == 0;
+        bool identical = a->payload_lens[index] == chunk->payload_len &&
+                         memcmp(a->data + offset, chunk->payload, chunk->payload_len) == 0;
+        if (!identical) a->contaminated = true;
+        return identical;
     }
 
     if (offset > a->data_cap || chunk->payload_len > a->data_cap - offset) return false;
@@ -296,10 +341,24 @@ bool cwist_seq_assembler_feed(cwist_seq_assembler_t *a, const cwist_seq_chunk_t 
  * @retval false Not complete, or @p a is NULL.
  */
 bool cwist_seq_assembler_is_complete(const cwist_seq_assembler_t *a) {
-    return a && a->have_state && a->received_count == a->total &&
+    return a && a->have_state && !a->contaminated && a->received_count == a->total &&
            a->received[a->total - 1] && a->total_len > 0;
 }
 
+/**
+ * @brief List the sequence numbers of missing chunks.
+ *
+ * Returns the count of missing chunks and, when @p out has capacity, writes
+ * their 1-based sequence numbers in ascending order. Returns 0 if the
+ * assembler has no state or the message is already complete; in those cases
+ * nothing is written to @p out.
+ *
+ * @param a       Assembler to query; may be NULL.
+ * @param out     Optional array to receive missing sequence numbers.
+ * @param out_cap Number of elements @p out can hold; ignored when @p out is
+ *                NULL.
+ * @return Total number of missing chunks (may exceed @p out_cap).
+ */
 size_t cwist_seq_assembler_recovery_targets(const cwist_seq_assembler_t *a, uint16_t *out,
                                             size_t out_cap) {
     if (!a || !a->have_state || cwist_seq_assembler_is_complete(a)) return 0;
@@ -314,6 +373,20 @@ size_t cwist_seq_assembler_recovery_targets(const cwist_seq_assembler_t *a, uint
     return missing;
 }
 
+/**
+ * @brief Access the fully reassembled message.
+ *
+ * Succeeds only when cwist_seq_assembler_is_complete() is true. The returned
+ * pointer refers to the assembler's internal buffer, which remains valid
+ * until the assembler is reset, destroyed, or fed another chunk; ownership
+ * stays with the assembler.
+ *
+ * @param a       Assembler to query.
+ * @param out_data Receives a pointer to the reassembled bytes.
+ * @param out_len  Receives the reassembled length in bytes.
+ * @retval true  The message is complete; outputs are populated.
+ * @retval false The message is incomplete or an output pointer is NULL.
+ */
 bool cwist_seq_assembler_get_data(cwist_seq_assembler_t *a, const uint8_t **out_data,
                                   size_t *out_len) {
     if (!cwist_seq_assembler_is_complete(a) || !out_data || !out_len) return false;

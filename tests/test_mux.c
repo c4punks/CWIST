@@ -1,7 +1,7 @@
-#include <cwist/mux.h>
-#include <cwist/http.h>
-#include <cwist/query.h>
-#include <cwist/sstring.h>
+#include <cwist/net/http/mux.h>
+#include <cwist/net/http/http.h>
+#include <cwist/net/http/query.h>
+#include <cwist/core/sstring/sstring.h>
 #include <stdio.h>
 #include <assert.h>
 #include <string.h>
@@ -27,7 +27,7 @@ int main() {
 
     assert(val_name && strcmp(val_name, "yjlee") == 0);
     assert(val_role && strcmp(val_role, "admin") == 0);
-    assert(val_active && strcmp(val_active, "") == 0);
+    assert(val_active == NULL);   /* no '=' → segment skipped */
     assert(val_missing == NULL);
 
     cwist_query_map_destroy(map);

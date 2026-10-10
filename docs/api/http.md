@@ -1,12 +1,12 @@
 # HTTP Core API
 
-*Header:* `<cwist/http.h>`
+*Header:* `<cwist/net/http/http.h>`
 
 Low-level HTTP structures, framing limits, and parsing logic.
 
 ## Constants
 
-Defined in `<cwist/http.h>` to guard every connection against resource exhaustion.
+Defined in `<cwist/net/http/http.h>` to guard every connection against resource exhaustion.
 
 - `CWIST_HTTP_MAX_HEADER_SIZE` – cap on accumulated header bytes (default 8KiB).
 - `CWIST_HTTP_MAX_BODY_SIZE` – cap on POST body bytes kept in memory (default 10MiB).
@@ -59,7 +59,7 @@ cwist_error_t cwist_http_response_send_file(
     size_t *out_size
 );
 ```
-Reads a static file from disk, copies it into the response body, and sets a sensible `Content-Type`. Files larger than `CWIST_HTTP_MAX_BODY_SIZE` are rejected with `-EFBIG`. Returns `0` on success and propagates `-errno` on failures (`-ENOENT`, `-EISDIR`, etc.). `out_size` is optional; when provided it receives the file length so handlers can emit HEAD responses without buffering the payload.
+Reads a static file from disk, copies it into the response body, and sets a sensible `Content-Type`. Files larger than `CWIST_HTTP_MAX_BODY_SIZE` are rejected with `-EFBIG` unless the route is tagged with `CWIST_ENDPOINT_FILE`, which switches Linux/macOS/FreeBSD to `sendfile(2)` so the kernel streams the payload directly. Returns `0` on success and propagates `-errno` on failures (`-ENOENT`, `-EISDIR`, etc.). `out_size` is optional; when provided it receives the file length so handlers can emit HEAD responses without buffering the payload. The built-in table includes modern web extensions such as `.wasm` and `.mjs`.
 
 ### `cwist_http_header_add`
 ```c
@@ -72,6 +72,7 @@ Adds a header to the linked list.
 char *cwist_http_header_get(cwist_http_header_node *head, const char *key);
 ```
 Retrieves the value of a header by key. Returns `NULL` if not found.
+Header lookup is case-insensitive (`Host` and `host` are equivalent).
 
 ## Server Core
 
@@ -102,3 +103,35 @@ Starts the main server loop.
 cwist_error_t cwist_accept_socket(int server_fd, struct sockaddr *sockv4, void (*handler_func)(int, void *), void *ctx);
 ```
 Low-level accept loop wrapper.
+
+### `cwist_http_continuation_shed_count`
+```c
+long cwist_http_continuation_shed_count(void);
+```
+Monotonic counter of pipelined HTTP/1.1 continuations dropped (and whose connections were closed) because the reactor post queue was full. Also exposed via Prometheus `/metrics` as `cwist_http_continuation_shed_total`. Useful for backpressure and shed-rate alerting.
+
+## Security Headers
+
+### `cwist_http_response_add_security_headers`
+```c
+void cwist_http_response_add_security_headers(cwist_http_response *res);
+```
+Injects a default set of hardening headers into the response if each is not already present (first-one-wins, so a handler can pre-set a header to override the default). Safe to call on both HTTP and HTTPS responses. Does **not** set `Strict-Transport-Security`; use `cwist_http_response_add_hsts()` for that.
+
+Headers set by this function:
+
+| Header | Default value |
+|---|---|
+| `X-Frame-Options` | `DENY` |
+| `X-Content-Type-Options` | `nosniff` |
+| `Referrer-Policy` | `strict-origin-when-cross-origin` |
+| `Content-Security-Policy` | restricted default-src/script-src/style-src/font-src/img-src policy |
+| `Cross-Origin-Resource-Policy` | `same-origin` |
+| `Permissions-Policy` | camera/microphone/geolocation/payment/usb/interest-cohort all denied |
+| `Cross-Origin-Opener-Policy` | `same-origin` |
+
+### `cwist_http_response_add_hsts`
+```c
+void cwist_http_response_add_hsts(cwist_http_response *res);
+```
+Adds `Strict-Transport-Security: max-age=31536000; includeSubDomains` to a TLS response. No-op when the header is already present. Per RFC 6797 section 7.2, call this only from an HTTPS handler; never call it on a plain-HTTP response.

@@ -119,7 +119,11 @@ typedef struct {
 } cwist_owner_realloc_args_t;
 
 static ttak_mutex_t g_owner_lock;
+#if defined(__TINYC__)
+static atomic_bool g_owner_lock_ready = false;
+#else
 static atomic_bool g_owner_lock_ready = ATOMIC_VAR_INIT(false);
+#endif
 static ttak_owner_t *g_owner = NULL;
 static cwist_owner_policy_t g_owner_policy = {.flags = TTAK_MEM_DEFAULT | TTAK_MEM_STRICT_CHECK};
 static bool g_owner_enabled = false;
@@ -269,7 +273,11 @@ void *cwist_malloc(size_t size) {
  * @return Zeroed memory block, or NULL when allocation fails.
  */
 void *cwist_alloc(size_t size) {
-    return cwist_malloc(size);
+    void *ptr = cwist_malloc(size);
+    if (ptr && cwist_full_gc_enabled()) {
+        cwist_gc_scope_track(ptr);
+    }
+    return ptr;
 }
 
 /**
@@ -381,6 +389,13 @@ char *cwist_strndup(const char *src, size_t n) {
  */
 void cwist_free(void *ptr) {
     if (!ptr) return;
+    if (cwist_full_gc_enabled()) {
+        /* Best-effort: absent from the pending list just means ptr came
+         * from cwist_strdup()/cwist_realloc()/etc. rather than cwist_alloc(),
+         * or full-GC was off when it was allocated. Either way we still
+         * free it normally below. */
+        cwist_gc_scope_untrack(ptr);
+    }
     if (!g_owner_enabled) {
         free(ptr);
         return;

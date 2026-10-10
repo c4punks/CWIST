@@ -1,6 +1,6 @@
 # SString API
 
-*Header:* `<cwist/sstring.h>`
+*Header:* `<cwist/core/sstring/sstring.h>`
 
 Safe, dynamic string manipulation library.
 

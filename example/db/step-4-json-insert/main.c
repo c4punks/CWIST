@@ -94,10 +94,10 @@ int main(void) {
             cJSON *title = cJSON_GetObjectItem(row, "title");
             cJSON *cat = cJSON_GetObjectItem(row, "category");
             cJSON *score = cJSON_GetObjectItem(row, "score");
-            printf("  %-3s | %-20s | %-10s | %s\n", (id && id->valuestring) ? id->valuestring : "?",
-                   (title && title->valuestring) ? title->valuestring : "?",
-                   (cat && cat->valuestring) ? cat->valuestring : "NULL",
-                   (score && score->valuestring) ? score->valuestring : "NULL");
+            char idb[32], titleb[32], catb[32], scoreb[32];
+            printf("  %-3s | %-20s | %-10s | %s\n", cell_text(id, idb, sizeof(idb)),
+                   cell_text(title, titleb, sizeof(titleb)), cell_text(cat, catb, sizeof(catb)),
+                   cell_text(score, scoreb, sizeof(scoreb)));
         }
         cJSON_Delete(rows);
     }

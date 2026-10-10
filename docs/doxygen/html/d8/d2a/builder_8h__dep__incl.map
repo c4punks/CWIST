@@ -1,5 +1,14 @@
 <map id="include/cwist/core/html/builder.h" name="include/cwist/core/html/builder.h">
-<area shape="rect" id="Node000001" title="HTML element builder and renderer." alt="" coords="19,5,158,45"/>
-<area shape="rect" id="Node000002" href="$d1/d43/builder_8c.html" title="Minimal HTML tree construction and rendering helpers." alt="" coords="5,93,172,119"/>
-<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="91,59,91,93,86,93,86,59"/>
+<area shape="rect" id="Node000001" title="HTML element builder and renderer." alt="" coords="150,5,289,45"/>
+<area shape="rect" id="Node000002" href="$d6/dcf/component_8h.html" title="Reusable render units composed on top of the HTML element builder." alt="" coords="147,93,292,133"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="222,59,222,93,217,93,217,59"/>
+<area shape="rect" id="Node000003" href="$d9/d05/html__response_8h.html" title="HTML page and fragment responses for HTML&#45;over&#45;the&#45;wire handlers." alt="" coords="27,181,190,221"/>
+<area shape="poly" id="edge5_Node000001_Node000003" title=" " alt="" coords="176,55,154,73,136,95,126,116,118,140,112,182,107,181,113,138,121,114,132,92,151,69,173,51"/>
+<area shape="rect" id="Node000006" href="$d1/d43/builder_8c.html" title="Minimal HTML tree construction and rendering helpers." alt="" coords="316,101,483,126"/>
+<area shape="poly" id="edge6_Node000001_Node000006" title=" " alt="" coords="272,49,377,98,374,103,270,54"/>
+<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="185,144,135,183,132,179,182,140"/>
+<area shape="rect" id="Node000005" href="$d2/d3e/component_8c.html" title="Named render functions that produce cwist_html_element_t trees." alt="" coords="214,189,409,214"/>
+<area shape="poly" id="edge4_Node000002_Node000005" title=" " alt="" coords="251,141,300,186,297,190,248,145"/>
+<area shape="rect" id="Node000004" href="$df/d64/html__response_8c.html" title="Page, fragment, out&#45;of&#45;band and redirect answers for HTML handlers." alt="" coords="5,269,212,295"/>
+<area shape="poly" id="edge3_Node000003_Node000004" title=" " alt="" coords="111,235,111,269,106,269,106,235"/>
 </map>

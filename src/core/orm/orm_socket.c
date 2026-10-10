@@ -6,6 +6,17 @@
  * links against SQLite3.  It exposes the database as a byte stream
  * over a local Unix socket pair so that cwist_orm_t remains fully
  * decoupled from sqlite3.h.
+ *
+ * Trust boundary: the worker executes whatever SQL text arrives on its
+ * end of the pair, verbatim.  That is safe only because the pair is
+ * created with socketpair(AF_UNIX) in cwist_db_transfer_sqlite_to_socket():
+ * it has no filesystem path or network address, so no other process can
+ * connect to it, and the only peer is the caller's end (normally a
+ * cwist_orm_t in the same process).  Anyone holding that caller fd can run
+ * arbitrary SQL against the database, so it must never be handed to an
+ * untrusted party (SCM_RIGHTS, inheritance across fork() without exec, and
+ * so on).  Escaping of untrusted values is the job of the layer that
+ * builds the SQL (orm.c), not of this bridge.
  */
 
 #ifndef _GNU_SOURCE
@@ -27,6 +38,7 @@
 
 #include <sqlite3.h>
 #include <cjson/cJSON.h>
+#include <cwist/core/mem/alloc.h>
 
 /* ------------------------------------------------------------------------- */
 /* Protocol constants                                                        */
@@ -88,6 +100,9 @@ static int send_all(int fd, const void *buf, size_t n)
  */
 static void free_worker_ctx(cwist_orm_worker_ctx_t *ctx)
 {
+    /* The context is allocated by the caller's thread and freed by the
+     * detached worker, so it stays on the raw allocator: a cwist_alloc
+     * scope sweep on the caller side must not reclaim it. */
     if (!ctx) return;
     free(ctx->db_path);
     free(ctx);
@@ -176,21 +191,23 @@ static void *cwist_orm_socket_worker(void *arg)
         if (sql_len == 0 || sql_len > 16 * 1024 * 1024) break; /* sanity */
 
         /* ---- read SQL text ---- */
-        char *sql = (char *)malloc(sql_len + 1);
+        char *sql = (char *)cwist_alloc(sql_len + 1);
         if (!sql) break;
         if (recv_all(ctx->fd, sql, sql_len) != 0) {
-            free(sql);
+            cwist_free(sql);
             break;
         }
         sql[sql_len] = '\0';
 
-        /* ---- execute ---- */
+        /* ---- execute ----
+         * sql comes from the in-process peer, not from an external client;
+         * see the trust boundary note at the top of this file. */
         query_accumulator_t acc;
         acc.rows = cJSON_CreateArray();
         char *errmsg = NULL;
 
         rc = sqlite3_exec(db, sql, socket_query_callback, &acc, &errmsg);
-        free(sql);
+        cwist_free(sql);
 
         /* ---- build response payload ---- */
         cJSON *resp = cJSON_CreateObject();
@@ -215,21 +232,21 @@ static void *cwist_orm_socket_worker(void *arg)
 
         uint32_t payload_len = (uint32_t)strlen(payload);
         if (payload_len > UINT32_MAX - 1) {
-            free(payload);
+            cJSON_free(payload);
             break;
         }
 
         /* ---- send framed response ---- */
         uint32_t net_payload = htonl(payload_len);
         if (send_all(ctx->fd, &net_payload, sizeof(net_payload)) != 0) {
-            free(payload);
+            cJSON_free(payload);
             break;
         }
         if (send_all(ctx->fd, payload, payload_len) != 0) {
-            free(payload);
+            cJSON_free(payload);
             break;
         }
-        free(payload);
+        cJSON_free(payload);
     }
 
     sqlite3_close(db);

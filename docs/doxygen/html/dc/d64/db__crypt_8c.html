@@ -81,6 +81,7 @@ $(function() {
 <div class="contents">
 <div class="textblock"><code>#include &lt;<a class="el" href="../../d9/df9/db__crypt_8h_source.html">cwist/security/db_crypt/db_crypt.h</a>&gt;</code><br />
 <code>#include &lt;openssl/evp.h&gt;</code><br />
+<code>#include &lt;openssl/mem.h&gt;</code><br />
 <code>#include &lt;openssl/rand.h&gt;</code><br />
 <code>#include &lt;stdio.h&gt;</code><br />
 <code>#include &lt;stdlib.h&gt;</code><br />
@@ -90,19 +91,21 @@ Include dependency graph for db_crypt.c:</div>
 <div class="dyncontent">
 <div class="center"><img src="../../d4/d1f/db__crypt_8c__incl.png" border="0" usemap="#asrc_2security_2db__crypt_2db__crypt_8c" alt=""/></div>
 <map name="asrc_2security_2db__crypt_2db__crypt_8c" id="asrc_2security_2db__crypt_2db__crypt_8c">
-<area shape="rect" title=" " alt="" coords="375,5,533,45"/>
+<area shape="rect" title=" " alt="" coords="465,5,622,45"/>
 <area shape="rect" href="../../d9/df9/db__crypt_8h.html" title="Two&#45;level key hierarchy for encrypting an SQLite database blob." alt="" coords="5,93,177,133"/>
-<area shape="poly" title=" " alt="" coords="376,48,185,93,184,88,375,43"/>
+<area shape="poly" title=" " alt="" coords="465,44,191,96,190,91,464,39"/>
 <area shape="rect" title=" " alt="" coords="202,101,314,126"/>
-<area shape="poly" title=" " alt="" coords="412,48,297,98,295,93,410,43"/>
-<area shape="rect" title=" " alt="" coords="338,101,455,126"/>
-<area shape="poly" title=" " alt="" coords="443,47,414,90,410,87,439,44"/>
-<area shape="rect" title=" " alt="" coords="479,101,546,126"/>
-<area shape="poly" title=" " alt="" coords="469,44,499,87,495,90,465,47"/>
-<area shape="rect" title=" " alt="" coords="571,101,641,126"/>
-<area shape="poly" title=" " alt="" coords="489,43,575,92,573,96,486,48"/>
-<area shape="rect" title=" " alt="" coords="665,101,736,126"/>
-<area shape="poly" title=" " alt="" coords="514,43,655,91,661,93,659,98,653,96,513,48"/>
+<area shape="poly" title=" " alt="" coords="481,48,310,99,308,94,480,43"/>
+<area shape="rect" title=" " alt="" coords="338,101,461,126"/>
+<area shape="poly" title=" " alt="" coords="513,48,431,96,429,91,510,43"/>
+<area shape="rect" title=" " alt="" coords="485,101,602,126"/>
+<area shape="poly" title=" " alt="" coords="546,46,546,87,541,87,541,46"/>
+<area shape="rect" title=" " alt="" coords="626,101,693,126"/>
+<area shape="poly" title=" " alt="" coords="571,43,634,90,631,95,567,48"/>
+<area shape="rect" title=" " alt="" coords="717,101,788,126"/>
+<area shape="poly" title=" " alt="" coords="590,43,713,93,711,98,588,48"/>
+<area shape="rect" title=" " alt="" coords="812,101,883,126"/>
+<area shape="poly" title=" " alt="" coords="623,42,709,64,801,91,808,93,807,98,800,96,708,69,622,47"/>
 <area shape="rect" title=" " alt="" coords="6,181,81,207"/>
 <area shape="poly" title=" " alt="" coords="82,135,60,171,55,168,77,132"/>
 <area shape="rect" title=" " alt="" coords="105,181,176,207"/>
@@ -173,11 +176,11 @@ Functions</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>Heap-allocated SQLite bytes, or NULL on error. Caller must free(). </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="../../dc/d64/db__crypt_8c_source.html#l00150">150</a> of file <a class="el" href="../../dc/d64/db__crypt_8c_source.html">db_crypt.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../dc/d64/db__crypt_8c_source.html#l00160">160</a> of file <a class="el" href="../../dc/d64/db__crypt_8c_source.html">db_crypt.c</a>.</p>
 
 <p class="reference">References <a class="el" href="../../d9/df9/db__crypt_8h_source.html#l00043">CWIST_DB_CRYPT_HDR_LEN</a>, <a class="el" href="../../d9/df9/db__crypt_8h_source.html#l00041">CWIST_DB_CRYPT_IV_LEN</a>, <a class="el" href="../../d9/df9/db__crypt_8h_source.html#l00040">CWIST_DB_CRYPT_KEY_LEN</a>, and <a class="el" href="../../d9/df9/db__crypt_8h_source.html#l00054">cwist_db_crypt_ctx_t::kek</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../d4/d48/db__sync_8c_source.html#l00169">cwist_db_sync_pull()</a>.</p>
+<p class="reference">Referenced by <a class="el" href="../../d4/d48/db__sync_8c_source.html#l00163">cwist_db_sync_pull()</a>.</p>
 
 </div>
 </div>
@@ -232,11 +235,11 @@ Functions</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>Heap-allocated sealed blob, or NULL on error. Caller must free() the returned pointer. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="../../dc/d64/db__crypt_8c_source.html#l00069">69</a> of file <a class="el" href="../../dc/d64/db__crypt_8c_source.html">db_crypt.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../dc/d64/db__crypt_8c_source.html#l00068">68</a> of file <a class="el" href="../../dc/d64/db__crypt_8c_source.html">db_crypt.c</a>.</p>
 
 <p class="reference">References <a class="el" href="../../d9/df9/db__crypt_8h_source.html#l00041">CWIST_DB_CRYPT_IV_LEN</a>, <a class="el" href="../../d9/df9/db__crypt_8h_source.html#l00040">CWIST_DB_CRYPT_KEY_LEN</a>, and <a class="el" href="../../d9/df9/db__crypt_8h_source.html#l00054">cwist_db_crypt_ctx_t::kek</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../d4/d48/db__sync_8c_source.html#l00068">cwist_db_sync_serve()</a>.</p>
+<p class="reference">Referenced by <a class="el" href="../../d4/d48/db__sync_8c_source.html#l00069">cwist_db_sync_serve()</a>.</p>
 
 </div>
 </div>

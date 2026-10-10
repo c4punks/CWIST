@@ -38,13 +38,55 @@ typedef struct cwist_https_connection {
     cwist_https_protocol negotiated_protocol;
     bool http3_enabled;
     bool http2_sequenced_data; /*< Enable CWIST-specific sequenced DATA frames. */
+    bool deferred;             /*< True when response processing has been deferred. */
+    /* Idle parking (cwist_https_park). Internal to the HTTPS pool. */
+    bool park_expired;         /*< Resumed because the parked idle deadline passed. */
+    void *proto_state;         /*< Protocol session kept while parked (HTTP/2). */
+    void (*proto_state_free)(void *state);
+    struct cwist_https_context *pool_ctx; /*< Pool task that serves this connection. */
+    void (*pool_handler)(struct cwist_https_connection *, void *);
+    void *pool_user_ctx;
 } cwist_https_connection;
+
+/** Idle class of a parked connection; each class has its own expiry order. */
+typedef enum cwist_https_park_class {
+    CWIST_HTTPS_PARK_HTTP1 = 0, /*< Expiry closes the connection. */
+    CWIST_HTTPS_PARK_HTTP2 = 1  /*< Expiry resubmits it with park_expired set (GOAWAY). */
+} cwist_https_park_class;
+
+typedef struct cwist_app cwist_app;
 
 typedef struct cwist_https_options {
     bool enable_http2;
+    bool enable_http3;
 } cwist_https_options;
 
 /** --- API Functions --- */
+
+/**
+ * @brief Hand an idle connection back to the HTTPS pool's park set.
+ *
+ * A pool thread that has nothing to read on @p conn calls this instead of
+ * blocking in poll(): the connection is watched by one epoll thread and
+ * resubmitted to the pool when bytes arrive, so an idle keep-alive
+ * connection costs memory but no thread. Returns true when the connection
+ * was parked; the caller must then return without touching @p conn again
+ * (another pool thread may already be serving it). Returns false when
+ * parking is unavailable (full GC, CWIST_HTTPS_PARK=0, shutdown); the
+ * caller keeps serving the connection the blocking way.
+ * @param idle_ms Idle budget before the class-specific expiry action.
+ */
+bool cwist_https_park(cwist_https_connection *conn, uint64_t idle_ms, cwist_https_park_class cls);
+
+/** @brief True when @p conn has no buffered TLS bytes and nothing readable. */
+bool cwist_https_conn_idle(cwist_https_connection *conn);
+
+/**
+ * @brief Idle keep-alive budget for parked HTTP/1.1 TLS connections, in ms.
+ * CWIST_HTTPS_IDLE_TIMEOUT_MS overrides the default (CWIST_HTTP_TIMEOUT_MS,
+ * the same 30 s the blocking header read waited).
+ */
+uint64_t cwist_https_idle_timeout_ms(void);
 
 /**
  * Initialize the OpenSSL library and create an SSL context.
@@ -135,6 +177,28 @@ void cwist_https_dispatch(int client_fd, cwist_https_context *ctx,
 
 /** @brief Number of TLS handshakes currently parked in the shepherd. */
 long cwist_https_pending_handshakes(void);
+
+/* --- TLS observability counters (mirrored into the Prometheus /metrics
+ * exposition by the metrics registry; see src/sys/metrics/metrics.c) --- */
+
+/** @brief Total TLS handshakes that completed (full + resumed). */
+long cwist_https_tls_handshakes_total(void);
+/** @brief TLS handshakes completed via session resumption/ticket. */
+long cwist_https_tls_handshakes_resumed_total(void);
+/** @brief Handshakes that negotiated TLS 1.2. */
+long cwist_https_tls_handshakes_tls12_total(void);
+/** @brief Handshakes that negotiated TLS 1.3. */
+long cwist_https_tls_handshakes_tls13_total(void);
+/** @brief Handshakes negotiated with TLS_AES_128_GCM_SHA256. */
+long cwist_https_tls_ciphers_aes128_gcm_total(void);
+/** @brief Handshakes negotiated with TLS_AES_256_GCM_SHA384. */
+long cwist_https_tls_ciphers_aes256_gcm_total(void);
+/** @brief Handshakes negotiated with TLS_CHACHA20_POLY1305_SHA256. */
+long cwist_https_tls_ciphers_chacha20_total(void);
+/** @brief Handshakes negotiated with any other cipher. */
+long cwist_https_tls_ciphers_other_total(void);
+/** @brief Currently established TLS connections (wrap minus teardown). */
+long cwist_https_tls_connections_active(void);
 
 /** --- Error Codes --- */
 /**

@@ -1,6 +1,6 @@
 # Database API
 
-*Header:* `<cwist/sql.h>`
+*Header:* `<cwist/core/db/sql.h>`
 
 Wrapper for SQLite3 database operations.
 

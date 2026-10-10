@@ -143,6 +143,15 @@ static bool cwist_fetch_cert_url(const char *url, cwist_cert_fetch_buffer *out) 
     return true;
 }
 
+/**
+ * @brief Parse a single DER-encoded X.509 certificate.
+ *
+ * OpenSSL error state is cleared before returning NULL on parse failure.
+ *
+ * @param data DER certificate bytes.
+ * @param len length of @p data.
+ * @return newly allocated stack containing one X509 (caller frees), or NULL.
+ */
 static STACK_OF(X509) * cwist_parse_der_x509(const uint8_t *data, size_t len) {
     if (!data || len == 0 || len > LONG_MAX) return NULL;
 
@@ -162,6 +171,17 @@ static STACK_OF(X509) * cwist_parse_der_x509(const uint8_t *data, size_t len) {
     return certs;
 }
 
+/**
+ * @brief Parse PEM-encoded X.509 certificates.
+ *
+ * Reads every PEM certificate from the buffer. OpenSSL error state is
+ * cleared before returning.
+ *
+ * @param data PEM certificate text.
+ * @param len length of @p data.
+ * @return newly allocated stack of X509 (caller frees), or NULL if none
+ *         could be parsed.
+ */
 static STACK_OF(X509) * cwist_parse_pem_x509(const uint8_t *data, size_t len) {
     if (!data || len == 0 || len > INT_MAX) return NULL;
 
@@ -193,6 +213,15 @@ static STACK_OF(X509) * cwist_parse_pem_x509(const uint8_t *data, size_t len) {
     return certs;
 }
 
+/**
+ * @brief Parse a DER-encoded PKCS#7 container and extract its certificates.
+ *
+ * OpenSSL error state is cleared before returning NULL on failure.
+ *
+ * @param data DER PKCS#7 bytes.
+ * @param len length of @p data.
+ * @return newly allocated stack of X509 (caller frees), or NULL.
+ */
 static STACK_OF(X509) * cwist_parse_der_pkcs7(const uint8_t *data, size_t len) {
     if (!data || len == 0) return NULL;
 
@@ -210,6 +239,15 @@ static STACK_OF(X509) * cwist_parse_der_pkcs7(const uint8_t *data, size_t len) {
     return certs;
 }
 
+/**
+ * @brief Parse a PEM-encoded PKCS#7 container and extract its certificates.
+ *
+ * OpenSSL error state is cleared before returning NULL on failure.
+ *
+ * @param data PEM PKCS#7 text.
+ * @param len length of @p data.
+ * @return newly allocated stack of X509 (caller frees), or NULL.
+ */
 static STACK_OF(X509) * cwist_parse_pem_pkcs7(const uint8_t *data, size_t len) {
     if (!data || len == 0 || len > INT_MAX) return NULL;
 
@@ -233,6 +271,16 @@ static STACK_OF(X509) * cwist_parse_pem_pkcs7(const uint8_t *data, size_t len) {
     return certs;
 }
 
+/**
+ * @brief Try each supported certificate container format in turn.
+ *
+ * Attempts, in order: DER X.509, PEM X.509, DER PKCS#7, PEM PKCS#7.
+ *
+ * @param data raw certificate bytes of unknown encoding.
+ * @param len length of @p data.
+ * @return newly allocated stack of X509 from the first format that parses
+ *         (caller frees), or NULL if none matched.
+ */
 static STACK_OF(X509) * cwist_parse_certificates(const uint8_t *data, size_t len) {
     STACK_OF(X509) *certs = cwist_parse_der_x509(data, len);
     if (certs) return certs;
@@ -266,6 +314,17 @@ static bool cwist_x509_is_valid_issuer(X509 *issuer, X509 *subject) {
     return issuer_key && X509_verify(subject, issuer_key) == 1;
 }
 
+/**
+ * @brief Find the first certificate in @p candidates that validly issued
+ *        @p subject.
+ *
+ * The returned pointer is borrowed from @p candidates; no reference count
+ * is incremented.
+ *
+ * @param subject certificate whose issuer is sought.
+ * @param candidates stack of candidate issuer certificates.
+ * @return matching issuer certificate, or NULL if none qualifies.
+ */
 static X509 *cwist_find_issuer(X509 *subject, STACK_OF(X509) * candidates) {
     if (!subject || !candidates) return NULL;
 

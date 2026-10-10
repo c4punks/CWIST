@@ -78,6 +78,16 @@ $(function() {
 <div class="contents">
 
 <p><code>#include &lt;<a class="el" href="../../d7/d95/https_8h_source.html">https.h</a>&gt;</code></p>
+<div class="dynheader">
+Collaboration diagram for cwist_https_connection:</div>
+<div class="dyncontent">
+<div class="center"><img src="../../df/df9/structcwist__https__connection__coll__graph.png" border="0" usemap="#acwist__https__connection_coll__map" alt="Collaboration graph"/></div>
+<map name="acwist__https__connection_coll__map" id="acwist__https__connection_coll__map">
+<area shape="rect" title=" " alt="" coords="5,93,180,119"/>
+<area shape="rect" href="../../dd/dcc/structcwist__https__context.html" title=" " alt="" coords="17,5,169,31"/>
+<area shape="poly" title=" " alt="" coords="95,45,95,93,90,93,90,45"/>
+</map>
+<center><span class="legend">[<a href="../../graph_legend.html">legend</a>]</span></center></div>
 <table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="pub-attribs" name="pub-attribs"></a>
 Public Attributes</h2></td></tr>
@@ -95,10 +105,26 @@ Public Attributes</h2></td></tr>
 <tr class="separator:ad8c28ef41b14a3bcd430029ecfe06008"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:afdf3f82e9168047d62d064540163dc95" id="r_afdf3f82e9168047d62d064540163dc95"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../db/d95/structcwist__https__connection.html#afdf3f82e9168047d62d064540163dc95">http3_enabled</a></td></tr>
 <tr class="separator:afdf3f82e9168047d62d064540163dc95"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a917f8bebdd75483d55b0f973e8cc1ee3" id="r_a917f8bebdd75483d55b0f973e8cc1ee3"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../db/d95/structcwist__https__connection.html#a917f8bebdd75483d55b0f973e8cc1ee3">http2_sequenced_data</a></td></tr>
+<tr class="separator:a917f8bebdd75483d55b0f973e8cc1ee3"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:addf499a7ed2032d9fc705dece83c3c96" id="r_addf499a7ed2032d9fc705dece83c3c96"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../db/d95/structcwist__https__connection.html#addf499a7ed2032d9fc705dece83c3c96">deferred</a></td></tr>
+<tr class="separator:addf499a7ed2032d9fc705dece83c3c96"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a0b5a44da0895c618562012e3cc60f440" id="r_a0b5a44da0895c618562012e3cc60f440"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../db/d95/structcwist__https__connection.html#a0b5a44da0895c618562012e3cc60f440">park_expired</a></td></tr>
+<tr class="separator:a0b5a44da0895c618562012e3cc60f440"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a60d19620da75f2b7a543426bf567e4fd" id="r_a60d19620da75f2b7a543426bf567e4fd"><td class="memItemLeft" align="right" valign="top">void *&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../db/d95/structcwist__https__connection.html#a60d19620da75f2b7a543426bf567e4fd">proto_state</a></td></tr>
+<tr class="separator:a60d19620da75f2b7a543426bf567e4fd"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a571d6ca9a0eb7ae79d25dadc3d6dc304" id="r_a571d6ca9a0eb7ae79d25dadc3d6dc304"><td class="memItemLeft" align="right" valign="top">void(*&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../db/d95/structcwist__https__connection.html#a571d6ca9a0eb7ae79d25dadc3d6dc304">proto_state_free</a> )(void *state)</td></tr>
+<tr class="separator:a571d6ca9a0eb7ae79d25dadc3d6dc304"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a73c4f8077f097ab6b7a69516906acddd" id="r_a73c4f8077f097ab6b7a69516906acddd"><td class="memItemLeft" align="right" valign="top">struct <a class="el" href="../../dd/dcc/structcwist__https__context.html">cwist_https_context</a> *&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../db/d95/structcwist__https__connection.html#a73c4f8077f097ab6b7a69516906acddd">pool_ctx</a></td></tr>
+<tr class="separator:a73c4f8077f097ab6b7a69516906acddd"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:aff42bb728da1e31f28cd9d10fadb45a8" id="r_aff42bb728da1e31f28cd9d10fadb45a8"><td class="memItemLeft" align="right" valign="top">void(*&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../db/d95/structcwist__https__connection.html#aff42bb728da1e31f28cd9d10fadb45a8">pool_handler</a> )(struct <a class="el" href="../../db/d95/structcwist__https__connection.html">cwist_https_connection</a> *, void *)</td></tr>
+<tr class="separator:aff42bb728da1e31f28cd9d10fadb45a8"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a537b59d814963b2066e534b85d552cea" id="r_a537b59d814963b2066e534b85d552cea"><td class="memItemLeft" align="right" valign="top">void *&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../db/d95/structcwist__https__connection.html#a537b59d814963b2066e534b85d552cea">pool_user_ctx</a></td></tr>
+<tr class="separator:a537b59d814963b2066e534b85d552cea"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
 <div class="textblock">
-<p class="definition">Definition at line <a class="el" href="../../d7/d95/https_8h_source.html#l00020">20</a> of file <a class="el" href="../../d7/d95/https_8h_source.html">https.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d7/d95/https_8h_source.html#l00021">21</a> of file <a class="el" href="../../d7/d95/https_8h_source.html">https.h</a>.</p>
 </div><h2 class="groupheader">Member Data Documentation</h2>
 <a id="a6eb0bf7e34e18b3c3e6392e43d1a5d48" name="a6eb0bf7e34e18b3c3e6392e43d1a5d48"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#a6eb0bf7e34e18b3c3e6392e43d1a5d48">&#9670;&#160;</a></span>buf_len</h2>
@@ -112,7 +138,25 @@ Public Attributes</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../d7/d67/net_2http_2https_8h_source.html#l00033">33</a> of file <a class="el" href="../../d7/d67/net_2http_2https_8h_source.html">https.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d7/d67/net_2http_2https_8h_source.html#l00036">36</a> of file <a class="el" href="../../d7/d67/net_2http_2https_8h_source.html">https.h</a>.</p>
+
+<p class="reference">Referenced by <a class="el" href="../../d2/db2/https_8c_source.html#l00541">cwist_https_conn_idle()</a>, and <a class="el" href="../../d2/db2/https_8c_source.html#l01624">cwist_https_receive_request()</a>.</p>
+
+</div>
+</div>
+<a id="addf499a7ed2032d9fc705dece83c3c96" name="addf499a7ed2032d9fc705dece83c3c96"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#addf499a7ed2032d9fc705dece83c3c96">&#9670;&#160;</a></span>deferred</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">bool cwist_https_connection::deferred</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p class="definition">Definition at line <a class="el" href="../../d7/d67/net_2http_2https_8h_source.html#l00041">41</a> of file <a class="el" href="../../d7/d67/net_2http_2https_8h_source.html">https.h</a>.</p>
 
 </div>
 </div>
@@ -128,7 +172,25 @@ Public Attributes</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../d7/d95/https_8h_source.html#l00021">21</a> of file <a class="el" href="../../d7/d95/https_8h_source.html">https.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d7/d95/https_8h_source.html#l00022">22</a> of file <a class="el" href="../../d7/d95/https_8h_source.html">https.h</a>.</p>
+
+<p class="reference">Referenced by <a class="el" href="../../df/d7f/app_8c_source.html#l03212">cwist_app_http_handler_async()</a>, <a class="el" href="../../d2/db2/https_8c_source.html#l00541">cwist_https_conn_idle()</a>, <a class="el" href="../../d2/db2/https_8c_source.html#l01624">cwist_https_receive_request()</a>, <a class="el" href="../../d2/db2/https_8c_source.html#l01829">cwist_https_send_response()</a>, <a class="el" href="../../d2/db2/https_8c_source.html#l01924">cwist_https_send_response_head()</a>, and <a class="el" href="../../d2/db2/https_8c_source.html#l00249">https_pool_submit_conn()</a>.</p>
+
+</div>
+</div>
+<a id="a917f8bebdd75483d55b0f973e8cc1ee3" name="a917f8bebdd75483d55b0f973e8cc1ee3"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a917f8bebdd75483d55b0f973e8cc1ee3">&#9670;&#160;</a></span>http2_sequenced_data</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">bool cwist_https_connection::http2_sequenced_data</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p class="definition">Definition at line <a class="el" href="../../d7/d67/net_2http_2https_8h_source.html#l00040">40</a> of file <a class="el" href="../../d7/d67/net_2http_2https_8h_source.html">https.h</a>.</p>
 
 </div>
 </div>
@@ -144,7 +206,9 @@ Public Attributes</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../d7/d67/net_2http_2https_8h_source.html#l00036">36</a> of file <a class="el" href="../../d7/d67/net_2http_2https_8h_source.html">https.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d7/d67/net_2http_2https_8h_source.html#l00039">39</a> of file <a class="el" href="../../d7/d67/net_2http_2https_8h_source.html">https.h</a>.</p>
+
+<p class="reference">Referenced by <a class="el" href="../../d2/db2/https_8c_source.html#l01829">cwist_https_send_response()</a>, and <a class="el" href="../../d2/db2/https_8c_source.html#l01924">cwist_https_send_response_head()</a>.</p>
 
 </div>
 </div>
@@ -160,7 +224,7 @@ Public Attributes</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../d7/d67/net_2http_2https_8h_source.html#l00034">34</a> of file <a class="el" href="../../d7/d67/net_2http_2https_8h_source.html">https.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d7/d67/net_2http_2https_8h_source.html#l00037">37</a> of file <a class="el" href="../../d7/d67/net_2http_2https_8h_source.html">https.h</a>.</p>
 
 </div>
 </div>
@@ -176,7 +240,111 @@ Public Attributes</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../d7/d67/net_2http_2https_8h_source.html#l00035">35</a> of file <a class="el" href="../../d7/d67/net_2http_2https_8h_source.html">https.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d7/d67/net_2http_2https_8h_source.html#l00038">38</a> of file <a class="el" href="../../d7/d67/net_2http_2https_8h_source.html">https.h</a>.</p>
+
+<p class="reference">Referenced by <a class="el" href="../../d2/db2/https_8c_source.html#l01558">cwist_https_connection_protocol()</a>, and <a class="el" href="../../d2/db2/https_8c_source.html#l01554">cwist_https_connection_uses_http2()</a>.</p>
+
+</div>
+</div>
+<a id="a0b5a44da0895c618562012e3cc60f440" name="a0b5a44da0895c618562012e3cc60f440"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a0b5a44da0895c618562012e3cc60f440">&#9670;&#160;</a></span>park_expired</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">bool cwist_https_connection::park_expired</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p class="definition">Definition at line <a class="el" href="../../d7/d67/net_2http_2https_8h_source.html#l00043">43</a> of file <a class="el" href="../../d7/d67/net_2http_2https_8h_source.html">https.h</a>.</p>
+
+<p class="reference">Referenced by <a class="el" href="../../d2/db0/http2_8c_source.html#l03587">cwist_http2_serve_connection_ex()</a>.</p>
+
+</div>
+</div>
+<a id="a73c4f8077f097ab6b7a69516906acddd" name="a73c4f8077f097ab6b7a69516906acddd"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a73c4f8077f097ab6b7a69516906acddd">&#9670;&#160;</a></span>pool_ctx</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">struct <a class="el" href="../../dd/dcc/structcwist__https__context.html">cwist_https_context</a>* cwist_https_connection::pool_ctx</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p class="definition">Definition at line <a class="el" href="../../d7/d67/net_2http_2https_8h_source.html#l00046">46</a> of file <a class="el" href="../../d7/d67/net_2http_2https_8h_source.html">https.h</a>.</p>
+
+</div>
+</div>
+<a id="aff42bb728da1e31f28cd9d10fadb45a8" name="aff42bb728da1e31f28cd9d10fadb45a8"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#aff42bb728da1e31f28cd9d10fadb45a8">&#9670;&#160;</a></span>pool_handler</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">void(* cwist_https_connection::pool_handler) (struct <a class="el" href="../../db/d95/structcwist__https__connection.html">cwist_https_connection</a> *, void *)</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p class="definition">Definition at line <a class="el" href="../../d7/d67/net_2http_2https_8h_source.html#l00047">47</a> of file <a class="el" href="../../d7/d67/net_2http_2https_8h_source.html">https.h</a>.</p>
+
+</div>
+</div>
+<a id="a537b59d814963b2066e534b85d552cea" name="a537b59d814963b2066e534b85d552cea"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a537b59d814963b2066e534b85d552cea">&#9670;&#160;</a></span>pool_user_ctx</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">void* cwist_https_connection::pool_user_ctx</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p class="definition">Definition at line <a class="el" href="../../d7/d67/net_2http_2https_8h_source.html#l00048">48</a> of file <a class="el" href="../../d7/d67/net_2http_2https_8h_source.html">https.h</a>.</p>
+
+</div>
+</div>
+<a id="a60d19620da75f2b7a543426bf567e4fd" name="a60d19620da75f2b7a543426bf567e4fd"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a60d19620da75f2b7a543426bf567e4fd">&#9670;&#160;</a></span>proto_state</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">void* cwist_https_connection::proto_state</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p class="definition">Definition at line <a class="el" href="../../d7/d67/net_2http_2https_8h_source.html#l00044">44</a> of file <a class="el" href="../../d7/d67/net_2http_2https_8h_source.html">https.h</a>.</p>
+
+<p class="reference">Referenced by <a class="el" href="../../d2/db0/http2_8c_source.html#l03587">cwist_http2_serve_connection_ex()</a>.</p>
+
+</div>
+</div>
+<a id="a571d6ca9a0eb7ae79d25dadc3d6dc304" name="a571d6ca9a0eb7ae79d25dadc3d6dc304"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a571d6ca9a0eb7ae79d25dadc3d6dc304">&#9670;&#160;</a></span>proto_state_free</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">void(* cwist_https_connection::proto_state_free) (void *state)</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p class="definition">Definition at line <a class="el" href="../../d7/d67/net_2http_2https_8h_source.html#l00045">45</a> of file <a class="el" href="../../d7/d67/net_2http_2https_8h_source.html">https.h</a>.</p>
+
+<p class="reference">Referenced by <a class="el" href="../../d2/db0/http2_8c_source.html#l03587">cwist_http2_serve_connection_ex()</a>.</p>
 
 </div>
 </div>
@@ -192,7 +360,9 @@ Public Attributes</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../d7/d67/net_2http_2https_8h_source.html#l00032">32</a> of file <a class="el" href="../../d7/d67/net_2http_2https_8h_source.html">https.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d7/d67/net_2http_2https_8h_source.html#l00035">35</a> of file <a class="el" href="../../d7/d67/net_2http_2https_8h_source.html">https.h</a>.</p>
+
+<p class="reference">Referenced by <a class="el" href="../../d2/db2/https_8c_source.html#l01624">cwist_https_receive_request()</a>.</p>
 
 </div>
 </div>
@@ -208,7 +378,9 @@ Public Attributes</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../d7/d95/https_8h_source.html#l00022">22</a> of file <a class="el" href="../../d7/d95/https_8h_source.html">https.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d7/d95/https_8h_source.html#l00023">23</a> of file <a class="el" href="../../d7/d95/https_8h_source.html">https.h</a>.</p>
+
+<p class="reference">Referenced by <a class="el" href="../../d2/db2/https_8c_source.html#l00541">cwist_https_conn_idle()</a>, <a class="el" href="../../d2/db2/https_8c_source.html#l01624">cwist_https_receive_request()</a>, <a class="el" href="../../d2/db2/https_8c_source.html#l01829">cwist_https_send_response()</a>, and <a class="el" href="../../d2/db2/https_8c_source.html#l01924">cwist_https_send_response_head()</a>.</p>
 
 </div>
 </div>
