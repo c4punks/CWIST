@@ -82,6 +82,28 @@ struct __kernel_timespec;
 static inline int sys_io_uring_setup(unsigned entries, struct io_uring_params *p) {
     return (int)syscall(__NR_io_uring_setup, entries, p);
 }
+/* The kernel orders an SQE's publication before its CQE, but ThreadSanitizer
+ * cannot see through the io_uring rings, so a connection prepared by one
+ * thread and completed on the reactor thread looks like a race. Tell it:
+ * every SQ tail publication releases the ring, and the run thread acquires
+ * it before dispatching CQEs. No code is generated outside TSan builds. */
+#if defined(__SANITIZE_THREAD__)
+#define REACTOR_TSAN 1
+#elif defined(__has_feature)
+#if __has_feature(thread_sanitizer)
+#define REACTOR_TSAN 1
+#endif
+#endif
+#ifdef REACTOR_TSAN
+void __tsan_acquire(void *addr);
+void __tsan_release(void *addr);
+#define reactor_tsan_release(ring) __tsan_release((void *)(ring))
+#define reactor_tsan_acquire(ring) __tsan_acquire((void *)(ring))
+#else
+#define reactor_tsan_release(ring) ((void)(ring))
+#define reactor_tsan_acquire(ring) ((void)(ring))
+#endif
+
 /** @brief Raw io_uring_enter(2) syscall wrapper.
  *  @param ring_fd Ring file descriptor.
  *  @param to_submit Number of queued SQEs to submit.
@@ -236,7 +258,8 @@ struct cwist_reactor {
     /* SQEs parked in the SQ by queue_deferred, covered by the next wait
      * enter's to_submit.  Only touched by the run thread. */
     uint32_t sq_unsubmitted;
-    pthread_t owner;
+    /* Owned by the run thread: read only after reactor_on_run_thread(), so
+     * other threads never touch it. */
     bool dispatching;
     /* RX-uring completion handler for tagged (low-bit set) RECV SQEs;
      * registered by the HTTP layer once per worker reactor. */
@@ -254,6 +277,15 @@ struct cwist_reactor {
     } probe[2];
 #endif
 };
+
+/* The reactor this thread is running in cwist_reactor_run(), or NULL. A
+ * thread-local instead of a pthread_t owner field in the reactor: other
+ * threads would otherwise read that field while the run thread writes it. */
+static __thread cwist_reactor_t *t_run_reactor;
+
+static inline bool reactor_on_run_thread(const cwist_reactor_t *reactor) {
+    return t_run_reactor == reactor;
+}
 
 /* Microsecond bucket boundaries for the latency probe histograms: 18 buckets
  * spanning [0,10) us up to [1e6,+inf) us. */
@@ -410,7 +442,7 @@ bool cwist_reactor_recv_arm(cwist_reactor_t *reactor, int fd, void *buf, unsigne
      * submits immediately so remote workers wake.  Data SQEs carry no ev_ctx
      * slot, so deferred_ctxs[] holds NULL for them and flush_deferred knows
      * the connection pointer rides in the tagged user_data. */
-    if (reactor->dispatching && pthread_equal(pthread_self(), reactor->owner) &&
+    if (reactor_on_run_thread(reactor) && reactor->dispatching &&
         reactor->deferred_n <
             (uint32_t)(sizeof(reactor->deferred_sqes) / sizeof(reactor->deferred_sqes[0]))) {
         uint32_t slot = reactor->deferred_n++;
@@ -821,6 +853,7 @@ static bool uring_submit(cwist_reactor_t *reactor, struct io_uring_sqe *out_sqe)
         uint32_t index = tail & *reactor->impl.sq_ring_mask;
         struct io_uring_sqe *sqe = &reactor->impl.sqes[index];
         memcpy(sqe, out_sqe, sizeof(*sqe));
+        reactor_tsan_release(&reactor->impl);
         __atomic_store_n(reactor->impl.sq_tail, tail + 1, __ATOMIC_RELEASE);
         if (sys_io_uring_enter(reactor->impl.ring_fd, 1, 0, 0, NULL) < 0) {
             if (getenv("CWIST_ASYNC_DEBUG")) {
@@ -864,6 +897,7 @@ static bool uring_submit_batch(cwist_reactor_t *reactor, struct io_uring_sqe *ba
             uint32_t index = (tail + i) & *reactor->impl.sq_ring_mask;
             memcpy(&reactor->impl.sqes[index], &batch[i], sizeof(batch[i]));
         }
+        reactor_tsan_release(&reactor->impl);
         __atomic_store_n(reactor->impl.sq_tail, tail + n, __ATOMIC_RELEASE);
         if (sys_io_uring_enter(reactor->impl.ring_fd, n, 0, 0, NULL) >= 0) {
             ok = true;
@@ -921,6 +955,7 @@ static void queue_deferred(cwist_reactor_t *reactor) {
             memcpy(&reactor->impl.sqes[index], &reactor->deferred_sqes[i],
                    sizeof(reactor->deferred_sqes[i]));
         }
+        reactor_tsan_release(&reactor->impl);
         __atomic_store_n(reactor->impl.sq_tail, tail + n, __ATOMIC_RELEASE);
         reactor->deferred_n = 0;
         reactor->sq_unsubmitted += n;
@@ -954,7 +989,7 @@ static bool reactor_add_common(cwist_reactor_t *reactor, int fd, cwist_reactor_c
         sqe.user_data = (uint64_t)ev_ctx;
         /* Run-thread re-arms defer to the batch flush; everything else
          * submits immediately so remote workers wake from their wait. */
-        if (reactor->dispatching && pthread_equal(pthread_self(), reactor->owner) &&
+        if (reactor_on_run_thread(reactor) && reactor->dispatching &&
             reactor->deferred_n <
                 (uint32_t)(sizeof(reactor->deferred_sqes) / sizeof(reactor->deferred_sqes[0]))) {
             uint32_t slot = reactor->deferred_n++;
@@ -1163,10 +1198,10 @@ static uint64_t reactor_round_budget_us(void) {
 void cwist_reactor_run(cwist_reactor_t *reactor) {
     if (!reactor) return;
     __atomic_store_n(&reactor->running, true, __ATOMIC_RELEASE);
+    t_run_reactor = reactor;
 
 #ifdef __linux__
     if (!reactor->impl.use_epoll) {
-        reactor->owner = pthread_self();
         const uint64_t cq_grace_ns = reactor_cq_grace_ns();
         while (reactor_running(reactor)) {
             reactor_drain_posts(reactor);
@@ -1255,6 +1290,7 @@ void cwist_reactor_run(cwist_reactor_t *reactor) {
             if (head == tail) {
                 continue;
             }
+            reactor_tsan_acquire(&reactor->impl);
             reactor->dispatching = true;
             const uint64_t round_budget_us = reactor_round_budget_us();
             uint64_t round_start_ns = 0;
@@ -1402,6 +1438,7 @@ void cwist_reactor_run(cwist_reactor_t *reactor) {
         }
     }
 #endif
+    t_run_reactor = NULL;
 }
 
 void cwist_reactor_stop(cwist_reactor_t *reactor) {
