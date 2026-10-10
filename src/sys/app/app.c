@@ -4,28 +4,67 @@
 #define _POSIX_C_SOURCE 200809L
 #define _DEFAULT_SOURCE
 #include <sched.h>
+#if defined(__linux__) && defined(_GNU_SOURCE)
+#include "worker_affinity.h"
+#endif
+#include "assets_internal.h"
 #include <cwist/sys/app/app.h>
 #include <cwist/sys/app/config.h>
 #include <cwist/sys/app/logger.h>
 #include <cwist/sys/app/shutdown.h>
-#include <cwist/sys/health/healthz.h>
+#include <cwist/sys/wasi.h>
+#include <cwist/sys/app/big_dumb_reply.h>
+#include <cwist/sys/app/app.h>
 #include <cwist/net/http/http.h>
+#include <cwist/net/http/async.h>
+#include <cwist/net/http/https.h>
 #include <cwist/net/http/http2.h>
+#include <cwist/net/grpc/grpc.h>
 #include <cwist/net/http/http3.h>
+#include <cwist/net/http/async_server.h>
+#include "../../net/http/simd_parser.h"
+#include "../../net/websocket/ws_async_internal.h"
+#include <cwist/sys/health/healthz.h>
 #include <cwist/net/http/https.h>
 #include <cwist/core/sstring/sstring.h>
 #include <cwist/core/db/nuke_db.h>
 #include <cwist/core/mem/alloc.h>
-#include <cwist/core/utils/json_builder.h> // Helper included for apps, though not strictly used here yet
+#include <cwist/core/utils/json_builder.h>
+#include <ttak/net/lattice.h>
+#include <ttak/mols_control.h>
+#include <ttak/priority/scheduler.h>
+#include <ttak/async/sched.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
+#include <ctype.h>
+#include <strings.h>
+#include <limits.h>
+#ifndef PATH_MAX
+#define PATH_MAX 4096
+#endif
 #include <unistd.h>
+#if !defined(__EMSCRIPTEN__) && !defined(__wasi__)
+#include <sys/wait.h>
 #include <signal.h>
+#endif
 #include <errno.h>
 #include <fcntl.h>
 #include <poll.h>
+#if defined(__GLIBC__)
+#include <malloc.h>
+#endif
 #include <arpa/inet.h>
+#include <netinet/tcp.h>
+#include <dirent.h>
+#include <sys/stat.h>
+#ifndef __wasi__
+#include <sys/resource.h>
+#endif
+#include <time.h>
+#include <pthread.h>
+#include <ttak/mem/mem.h>
+#include <ttak/timing/timing.h>
 
 #define CWIST_ROUTE_BUCKETS 127
 #define CWIST_STATIC_RETIRE_NS TT_SECOND(5)
@@ -42,6 +81,9 @@
  * @brief Tune system resource limits to handle high concurrency loads.
  */
 static void cwist_app_tune_system(void) {
+#ifdef __wasi__
+    /* WASI preview1 has no rlimit; fd budgeting is the host's concern. */
+#else
     struct rlimit rl;
     if (getrlimit(RLIMIT_NOFILE, &rl) != 0) {
         fprintf(stderr, "[CWIST] Cannot read file limits: %s\n", strerror(errno));
@@ -77,10 +119,11 @@ static void cwist_app_tune_system(void) {
         }
     }
     printf("[CWIST] Open file soft limit: %llu\n", (unsigned long long)rl.rlim_cur);
+#endif
 }
 #endif
 
-#ifndef __EMSCRIPTEN__
+#if !defined(__EMSCRIPTEN__) && !defined(__wasi__)
 /**
  * @brief Read the current libttak tick count used for static-file retirement deadlines.
  * @return Monotonic tick value compatible with libttak memory APIs.
@@ -90,7 +133,7 @@ static inline uint64_t cwist_mem_now(void) {
 }
 #endif
 
-#ifndef __EMSCRIPTEN__
+#if !defined(__EMSCRIPTEN__) && !defined(__wasi__)
 /* The static-file memory cache rides on libttak's mem tree and a watcher
  * thread; WASM hosts get neither (cwist_prepare_static() always declines). */
 /**
@@ -229,6 +272,9 @@ static bool cwist_mem_attach_entry(cwist_fix_server_mem *mem, cwist_file_t *entr
     entry->data = data;
     entry->size = st->st_size;
     entry->last_mod = st->st_mtime;
+    snprintf(entry->etag, sizeof(entry->etag), "\"%lx-%lx\"", (unsigned long)st->st_mtime,
+             (unsigned long)st->st_size);
+    cwist_http_format_date(st->st_mtime, entry->last_mod_hdr, sizeof(entry->last_mod_hdr));
     entry->node = node;
 
     mem->current_used += st->st_size;
@@ -298,6 +344,9 @@ static bool cwist_mem_refresh_file(cwist_fix_server_mem *mem, cwist_file_t *entr
     entry->node = node;
     entry->size = st->st_size;
     entry->last_mod = st->st_mtime;
+    snprintf(entry->etag, sizeof(entry->etag), "\"%lx-%lx\"", (unsigned long)st->st_mtime,
+             (unsigned long)st->st_size);
+    cwist_http_format_date(st->st_mtime, entry->last_mod_hdr, sizeof(entry->last_mod_hdr));
 
     if (mem->current_used >= old_size) {
         mem->current_used -= old_size;
@@ -315,12 +364,32 @@ static bool cwist_mem_refresh_file(cwist_fix_server_mem *mem, cwist_file_t *entr
 
 typedef struct cwist_route_entry {
     char *path;
+    size_t path_len;  ///< Cached strlen(path); immutable after insert.
+    char *name;
     bool has_params;
     cwist_http_method_t method;
     cwist_handler_func handler;
+    cwist_handler_ex_func handler_ex; ///< Set instead of handler by the _ex routes.
+    void *user_ctx;                   ///< Passed to handler_ex.
+    /** Releases user_ctx; NULL when this entry does not own it (caller-owned,
+     *  or a multiport clone sharing the root app's context). */
+    cwist_handler_ctx_destroy_func ctx_destroy;
     cwist_ws_handler_func ws_handler;
+    cwist_ws_on_message_t ws_async_on_message;
+    void *ws_async_user_data;
+    cwist_endpoint_opt_t opts;
     struct cwist_route_entry *next;
 } cwist_route_entry;
+
+/** Handler half of a route registration: exactly one of handler, handler_ex
+ *  or ws_handler is set (or none, for cwist_app_ws_async()). */
+typedef struct {
+    cwist_handler_func handler;
+    cwist_handler_ex_func handler_ex;
+    void *user_ctx;
+    cwist_handler_ctx_destroy_func ctx_destroy;
+    cwist_ws_handler_func ws_handler;
+} cwist_route_target;
 
 struct cwist_route_table {
     size_t bucket_count;
@@ -331,6 +400,7 @@ struct cwist_route_table {
 struct cwist_static_dir {
     char *url_prefix;
     char *fs_root;
+    char *cache_control;
     struct cwist_static_dir *next;
 };
 
@@ -348,9 +418,9 @@ typedef struct {
 
 static cwist_route_table *cwist_route_table_create(void);
 static void cwist_route_table_destroy(cwist_route_table *table);
-static void cwist_route_table_insert(cwist_route_table *table, const char *path, const char *name,
-                                     cwist_http_method_t method, cwist_handler_func handler,
-                                     cwist_ws_handler_func ws_handler, cwist_endpoint_opt_t opts);
+static bool cwist_route_table_insert(cwist_route_table *table, const char *path, const char *name,
+                                     cwist_http_method_t method, const cwist_route_target *target,
+                                     cwist_endpoint_opt_t opts);
 static cwist_route_entry *cwist_route_table_lookup(cwist_route_table *table,
                                                    cwist_http_method_t method, const char *path);
 static cwist_route_entry *cwist_route_table_match_params(cwist_route_table *table,
@@ -366,59 +436,107 @@ static void cwist_multiport_unlink_app(cwist_app *app);
 static void cwist_multiport_h3_copy_tunables(cwist_http3_context *dst,
                                              const cwist_http3_context *src);
 
+/**
+ * @brief Detect whether a route pattern contains colon-prefixed path parameters.
+ * @param path Route pattern to inspect.
+ * @return true when the path contains parameter segments.
+ */
 static bool route_has_params(const char *path) {
     if (!path) return false;
     return strchr(path, ':') != NULL;
 }
 
-static size_t cwist_route_hash(cwist_http_method_t method, const char *path, size_t bucket_count) {
+/**
+ * @brief Hash a method/path pair into the fixed route-table bucket space.
+ * @param method HTTP method associated with the route.
+ * @param path Route path string.
+ * @param bucket_count Number of buckets in the route table.
+ * @return Bucket index for the route.
+ */
+static size_t cwist_route_hash(cwist_http_method_t method, const char *path, size_t path_len,
+                               size_t bucket_count) {
     const unsigned long long FNV_OFFSET = 1469598103934665603ULL;
     const unsigned long long FNV_PRIME = 1099511628211ULL;
     unsigned long long hash = FNV_OFFSET ^ (unsigned long long)method;
     const unsigned char *ptr = (const unsigned char *)path;
-    while (ptr && *ptr) {
-        hash ^= (unsigned long long)(*ptr++);
+    for (size_t i = 0; i < path_len; i++) {
+        hash ^= (unsigned long long)ptr[i];
         hash *= FNV_PRIME;
     }
     return (size_t)(hash % bucket_count);
 }
 
+/* Run and forget an entry's context destructor, if it owns one. */
+static void cwist_route_entry_release_ctx(cwist_route_entry *entry) {
+    if (entry->ctx_destroy) entry->ctx_destroy(entry->user_ctx);
+    entry->user_ctx = NULL;
+    entry->ctx_destroy = NULL;
+}
+
+static void cwist_route_entry_set_target(cwist_route_entry *entry,
+                                         const cwist_route_target *target) {
+    entry->handler = target->handler;
+    entry->handler_ex = target->handler_ex;
+    entry->user_ctx = target->user_ctx;
+    entry->ctx_destroy = target->ctx_destroy;
+    entry->ws_handler = target->ws_handler;
+    entry->ws_async_on_message = NULL;
+    entry->ws_async_user_data = NULL;
+}
+
 static cwist_route_entry *cwist_route_entry_create(const char *path, const char *name,
                                                    cwist_http_method_t method,
-                                                   cwist_handler_func handler,
-                                                   cwist_ws_handler_func ws_handler,
+                                                   const cwist_route_target *target,
                                                    cwist_endpoint_opt_t opts) {
     cwist_route_entry *entry = (cwist_route_entry *)cwist_alloc(sizeof(cwist_route_entry));
     if (!entry) return NULL;
-    entry->path = strdup(path ? path : "/");
+    entry->path = cwist_strdup(path ? path : "/");
+    entry->name = name ? cwist_strdup(name) : NULL;
+    if (!entry->path || (name && !entry->name)) {
+        cwist_free(entry->path);
+        cwist_free(entry->name);
+        cwist_free(entry);
+        return NULL;
+    }
+    entry->path_len = strlen(entry->path);
     entry->method = method;
-    entry->handler = handler;
-    entry->ws_handler = ws_handler;
+    cwist_route_entry_set_target(entry, target);
+    entry->opts = opts;
     entry->has_params = route_has_params(entry->path);
     entry->next = NULL;
     return entry;
 }
 
+/**
+ * @brief Destroy one route entry, its owned strings, and its owned context.
+ * @param entry Route entry to release.
+ */
 static void cwist_route_entry_free(cwist_route_entry *entry) {
     if (!entry) return;
-    free(entry->path);
-    free(entry);
+    cwist_route_entry_release_ctx(entry);
+    cwist_free(entry->path);
+    cwist_free(entry->name);
+    cwist_free(entry);
 }
 
 static cwist_route_table *cwist_route_table_create(void) {
-    cwist_route_table *table = (cwist_route_table *)malloc(sizeof(cwist_route_table));
+    cwist_route_table *table = (cwist_route_table *)cwist_alloc(sizeof(cwist_route_table));
     if (!table) return NULL;
     table->bucket_count = CWIST_ROUTE_BUCKETS;
     table->buckets =
         (cwist_route_entry **)cwist_alloc_array(table->bucket_count, sizeof(cwist_route_entry *));
     if (!table->buckets) {
-        free(table);
+        cwist_free(table);
         return NULL;
     }
     table->param_routes = NULL;
     return table;
 }
 
+/**
+ * @brief Destroy the route table, including static and parameterized route chains.
+ * @param table Route table to release.
+ */
 static void cwist_route_table_destroy(cwist_route_table *table) {
     if (!table) return;
     for (size_t i = 0; i < table->bucket_count; i++) {
@@ -429,7 +547,7 @@ static void cwist_route_table_destroy(cwist_route_table *table) {
             curr = next;
         }
     }
-    free(table->buckets);
+    cwist_free(table->buckets);
 
     cwist_route_entry *param = table->param_routes;
     while (param) {
@@ -437,54 +555,68 @@ static void cwist_route_table_destroy(cwist_route_table *table) {
         cwist_route_entry_free(param);
         param = next;
     }
-    free(table);
+    cwist_free(table);
 }
 
-static void cwist_route_table_insert(cwist_route_table *table, const char *path, const char *name,
-                                     cwist_http_method_t method, cwist_handler_func handler,
-                                     cwist_ws_handler_func ws_handler, cwist_endpoint_opt_t opts) {
-    if (!table || !path) return;
+/**
+ * @brief Add a route, or replace the target of an existing exact route.
+ *
+ * The table takes ownership of target->user_ctx when target->ctx_destroy is
+ * set; on failure the destructor runs before returning, so the caller never
+ * has to clean up a context it handed over.
+ * @return true when the route is in the table.
+ */
+static bool cwist_route_table_insert(cwist_route_table *table, const char *path, const char *name,
+                                     cwist_http_method_t method, const cwist_route_target *target,
+                                     cwist_endpoint_opt_t opts) {
     cwist_route_entry *entry =
-        cwist_route_entry_create(path, name, method, handler, ws_handler, opts);
-    if (!entry) return;
+        (table && path) ? cwist_route_entry_create(path, name, method, target, opts) : NULL;
+    if (!entry) {
+        if (target->ctx_destroy) target->ctx_destroy(target->user_ctx);
+        return false;
+    }
 
     if (entry->has_params) {
         entry->next = table->param_routes;
         table->param_routes = entry;
-        return;
+        return true;
     }
 
-    size_t idx = cwist_route_hash(method, entry->path, table->bucket_count);
+    size_t idx = cwist_route_hash(method, entry->path, entry->path_len, table->bucket_count);
     cwist_route_entry **bucket = &table->buckets[idx];
     cwist_route_entry *curr = *bucket;
     while (curr) {
         if (!curr->has_params && curr->method == method && strcmp(curr->path, entry->path) == 0) {
-            curr->handler = handler;
-            curr->ws_handler = ws_handler;
+            /* Re-registering the same non-NULL context keeps it alive; anything else
+             * releases the old one before the new target takes over. */
+            if (!target->user_ctx || curr->user_ctx != target->user_ctx) {
+                cwist_route_entry_release_ctx(curr);
+            }
+            cwist_route_entry_set_target(curr, target);
+            curr->opts = opts;
+            /* The replacement entry never owned the context now in curr. */
+            entry->ctx_destroy = NULL;
             cwist_route_entry_free(entry);
-            return;
+            return true;
         }
         curr = curr->next;
     }
 
     entry->next = *bucket;
     *bucket = entry;
+    return true;
 }
 
 static cwist_route_entry *cwist_route_table_lookup(cwist_route_table *table,
                                                    cwist_http_method_t method, const char *path) {
     if (!table || !path) return NULL;
-    size_t idx = cwist_route_hash(method, path, table->bucket_count);
+    /* One scan of the path: length feeds both the hash and the compare. */
+    size_t path_len = strlen(path);
+    size_t idx = cwist_route_hash(method, path, path_len, table->bucket_count);
     cwist_route_entry *curr = table->buckets[idx];
 
-    // Tiny string optimization: if length <= 8, cast to uint64 and compare in one shot
-    // Note: We need to handle potential access beyond string end safely.
-    // However, simplest heuristic is checking length first.
-    // Actually, we can just check length.
-
-    size_t path_len = strlen(path);
     uint64_t path_u64 = 0;
-    bool use_fast_path = (path_len <= 8);
+    const bool use_fast_path = (path_len <= 8);
     if (use_fast_path) {
         memcpy(&path_u64, path, path_len); // Safe copy
     }
@@ -492,15 +624,14 @@ static cwist_route_entry *cwist_route_table_lookup(cwist_route_table *table,
     while (curr) {
         if (curr->method == method) {
             if (use_fast_path) {
-                 // Fast path check
-                size_t curr_len = strlen(curr->path);
-                if (curr_len == path_len) {
+                /* Length is cached on the entry; immutable after insert. */
+                if (curr->path_len == path_len) {
                     uint64_t curr_u64 = 0;
-                    memcpy(&curr_u64, curr->path, curr_len);
+                    memcpy(&curr_u64, curr->path, curr->path_len);
                     if (path_u64 == curr_u64) return curr;
                 }
             } else {
-                if (strcmp(curr->path, path) == 0) {
+                if (curr->path_len == path_len && memcmp(curr->path, path, path_len) == 0) {
                     return curr;
                 }
             }
@@ -516,7 +647,16 @@ static cwist_route_entry *cwist_route_table_match_params(cwist_route_table *tabl
     cwist_route_entry *curr = table->param_routes;
     while (curr) {
         if (curr->method == req->method) {
-            if (match_path(curr->path, req->path->data, req->path_params)) {
+            if (!req->path_params) {
+                /* Probe without capturing: no heap alloc, no map clearing per
+                 * candidate. Only a confirmed match pays for the params map. */
+                if (match_path(curr->path, req->path->data, NULL)) {
+                    req->path_params = cwist_query_map_create();
+                    if (!req->path_params) return NULL;
+                    match_path(curr->path, req->path->data, req->path_params);
+                    return curr;
+                }
+            } else if (match_path(curr->path, req->path->data, req->path_params)) {
                 return curr;
             }
         }
@@ -622,7 +762,7 @@ static bool cwist_static_match_entry(const cwist_static_dir *entry, const char *
  */
 static bool cwist_prepare_static(cwist_app *app, cwist_http_request *req,
                                  cwist_static_request_info *info) {
-#ifdef __EMSCRIPTEN__
+#if defined(__EMSCRIPTEN__) || defined(__wasi__)
     /* No filesystem-backed static cache in WASM hosts. */
     (void)app;
     (void)req;
@@ -649,9 +789,10 @@ static bool cwist_prepare_static(cwist_app *app, cwist_http_request *req,
         entry = entry->next;
     }
     return false;
+#endif
 }
 
-#ifndef __EMSCRIPTEN__
+#if !defined(__EMSCRIPTEN__) && !defined(__wasi__)
 /**
  * @brief Recursively scan a static root directory to size or populate the fixed-memory cache.
  * @param fs_root Filesystem directory to scan.
@@ -767,12 +908,12 @@ static cwist_file_t *cwist_mem_get_file(cwist_fix_server_mem *mem, const char *f
 
 static char *cwist_normalize_prefix(const char *prefix) {
     if (!prefix || prefix[0] == '\0') {
-        return strdup("/");
+        return cwist_strdup("/");
     }
 
     size_t len = strlen(prefix);
     bool needs_leading_slash = prefix[0] != '/';
-    char *buffer = (char *)malloc(len + needs_leading_slash + 1);
+    char *buffer = (char *)cwist_alloc(len + needs_leading_slash + 1);
     if (!buffer) {
         return NULL;
     }
@@ -795,19 +936,45 @@ static char *cwist_normalize_prefix(const char *prefix) {
 
 static char *cwist_normalize_directory(const char *directory) {
     if (!directory || directory[0] == '\0') {
-        return strdup(".");
+        directory = ".";
     }
+    char *resolved = realpath(directory, NULL);
+    if (resolved) {
+        return resolved;
+    }
+    /* Fallback when the path does not yet exist: strip trailing slashes */
     size_t len = strlen(directory);
     while (len > 1 && directory[len - 1] == '/') {
         len--;
     }
-    char *copy = (char *)malloc(len + 1);
+    char *copy = (char *)cwist_alloc(len + 1);
     if (!copy) return NULL;
     memcpy(copy, directory, len);
     copy[len] = '\0';
     return copy;
 }
 
+#if !defined(__EMSCRIPTEN__) && !defined(__wasi__)
+/**
+ * @brief Cleanup hook used when a response borrows a static-file cache payload.
+ * @param ptr Borrowed body pointer.
+ * @param len Borrowed body length.
+ * @param ctx Cache entry that owns the libttak node.
+ */
+static void cwist_static_release_body(const void *ptr, size_t len, void *ctx) {
+    (void)ptr;
+    (void)len;
+    ttak_mem_node_t *node = (ttak_mem_node_t *)ctx;
+    if (node) {
+        ttak_mem_node_release(node);
+    }
+}
+
+/**
+ * @brief Serve a static file response from the fixed-memory cache or disk fallback.
+ * @param req Incoming request targeting a static mapping.
+ * @param res Response object to populate.
+ */
 static void cwist_static_handler(cwist_http_request *req, cwist_http_response *res) {
     mw_executor_ctx *ctx = (mw_executor_ctx *)req->private_data;
     cwist_static_request_info *info = ctx ? (cwist_static_request_info *)ctx->handler_data : NULL;
@@ -825,7 +992,10 @@ static void cwist_static_handler(cwist_http_request *req, cwist_http_response *r
     }
     relative_buf[PATH_MAX - 1] = '\0';
 
-    if (cwist_path_has_parent_ref(relative_buf)) {
+    char decoded_relative[PATH_MAX];
+    cwist_url_decode(relative_buf, decoded_relative, sizeof(decoded_relative));
+
+    if (cwist_path_has_parent_ref(decoded_relative)) {
         res->status_code = CWIST_HTTP_FORBIDDEN;
         cwist_sstring_assign(res->body, "Directory traversal blocked");
         return;
@@ -840,6 +1010,22 @@ static void cwist_static_handler(cwist_http_request *req, cwist_http_response *r
         return;
     }
 
+    char canonical[PATH_MAX];
+    if (!realpath(fs_path, canonical)) {
+        res->status_code = CWIST_HTTP_NOT_FOUND;
+        cwist_sstring_assign(res->body, "Not Found");
+        return;
+    }
+
+    /* Ensure the resolved path stays inside the configured static root */
+    size_t root_len = strlen(info->mapping->fs_root);
+    if (strncmp(canonical, info->mapping->fs_root, root_len) != 0 ||
+        (canonical[root_len] != '/' && canonical[root_len] != '\0')) {
+        res->status_code = CWIST_HTTP_FORBIDDEN;
+        cwist_sstring_assign(res->body, "Directory traversal blocked");
+        return;
+    }
+
     cwist_app *app = req->app;
     if (!app || !app->mem_manager) {
         res->status_code = CWIST_HTTP_INTERNAL_ERROR;
@@ -849,11 +1035,11 @@ static void cwist_static_handler(cwist_http_request *req, cwist_http_response *r
 
     cwist_fix_server_mem *mem = app->mem_manager;
     pthread_mutex_lock(&mem->lock);
-    cwist_file_t *file = cwist_mem_get_file(mem, fs_path);
-    
+    cwist_file_t *file = cwist_mem_get_file(mem, canonical);
+
     if (file) {
         // Simple MIME guess
-        const char *dot = strrchr(fs_path, '.');
+        const char *dot = strrchr(canonical, '.');
         const char *mime = "application/octet-stream";
         if (dot) {
             if (strcasecmp(dot, ".html") == 0)
@@ -876,12 +1062,9 @@ static void cwist_static_handler(cwist_http_request *req, cwist_http_response *r
                 mime = "text/plain; charset=utf-8";
         }
 
-        // Generate cache headers
-        char etag[64];
-        snprintf(etag, sizeof(etag), "\"%lx-%lx\"", (unsigned long)file->last_mod,
-                 (unsigned long)file->size);
-        char last_mod_buf[64];
-        cwist_http_format_date(file->last_mod, last_mod_buf, sizeof(last_mod_buf));
+        // Cache headers are formatted once at load/reload time.
+        const char *etag = file->etag;
+        const char *last_mod_buf = file->last_mod_hdr;
 
         // Check conditional requests
         bool not_modified = false;
@@ -921,21 +1104,34 @@ static void cwist_static_handler(cwist_http_request *req, cwist_http_response *r
                 bool range_valid = true;
 
                 if (p[0] == '-') {
-                    size_t suffix = (size_t)atoi(p + 1);
-                    range_start = (file->size > suffix) ? file->size - suffix : 0;
-                    range_end = file->size - 1;
-                } else {
-                    range_start = (size_t)atoi(p);
-                    char *dash = strchr(p, '-');
-                    if (dash && dash[1] != '\0') {
-                        range_end = (size_t)atoi(dash + 1);
+                    /* suffix-range: bytes=-N means the last N bytes */
+                    char *end = NULL;
+                    unsigned long long sv = strtoull(p + 1, &end, 10);
+                    if (end == p + 1 || *end != '\0') {
+                        range_valid = false;
                     } else {
+                        range_start = (file->size > (size_t)sv) ? file->size - (size_t)sv : 0;
                         range_end = file->size - 1;
+                    }
+                } else {
+                    /* first-byte-pos [ "-" [ last-byte-pos ] ] */
+                    char *end = NULL;
+                    unsigned long long rs = strtoull(p, &end, 10);
+                    if (end == p) {
+                        range_valid = false;
+                    } else {
+                        range_start = (size_t)rs;
+                        char *dash = strchr(p, '-');
+                        if (dash && dash[1] != '\0') {
+                            unsigned long long re = strtoull(dash + 1, &end, 10);
+                            range_end = (end != dash + 1) ? (size_t)re : file->size - 1;
+                        } else {
+                            range_end = file->size - 1;
+                        }
                     }
                 }
 
-                if (range_start > range_end || range_start >= file->size) {
-                    (void)range_valid;
+                if (!range_valid || range_start > range_end || range_start >= file->size) {
                     res->status_code = CWIST_HTTP_RANGE_NOT_SATISFIABLE;
                     char cr[128];
                     snprintf(cr, sizeof(cr), "bytes */%zu", file->size);
@@ -985,20 +1181,14 @@ static void cwist_static_handler(cwist_http_request *req, cwist_http_response *r
     } else {
         res->status_code = CWIST_HTTP_NOT_FOUND;
         cwist_sstring_assign(res->body, "Not Found");
-    } else if (ferr.error.err_i16 == -EISDIR) {
-        res->status_code = CWIST_HTTP_FORBIDDEN;
-        cwist_sstring_assign(res->body, "Directory listing not allowed");
-    } else if (ferr.error.err_i16 == -EFBIG) {
-        res->status_code = CWIST_HTTP_INTERNAL_ERROR;
-        cwist_sstring_assign(res->body, "Static file too large");
-    } else {
-        res->status_code = CWIST_HTTP_INTERNAL_ERROR;
-        cwist_sstring_assign(res->body, "Failed to read static file");
     }
+    pthread_mutex_unlock(&mem->lock);
 }
+#endif /* __EMSCRIPTEN__ */
 #include <limits.h>
 #include <errno.h>
 
+#if !defined(__EMSCRIPTEN__) && !defined(__wasi__)
 /**
  * @brief Allocate and initialize the top-level CWIST application object.
  * @return Newly created application, or NULL when allocation fails.
@@ -1061,24 +1251,34 @@ static cwist_error_t cwist_app_refresh_http3_context(cwist_app *app) {
     }
     return err;
 }
+#endif /* __EMSCRIPTEN__ */
 
 cwist_app *cwist_app_create(void) {
-    cwist_app *app = (cwist_app *)malloc(sizeof(cwist_app));
+    cwist_app *app = (cwist_app *)cwist_alloc(sizeof(cwist_app));
     if (!app) return NULL;
 
     app->port = 8080;
     app->use_ssl = false;
+    app->use_http2 = false;
+    app->use_http3 = false;
+    app->use_https2 = false;
+    app->use_https3 = false;
     app->cert_path = NULL;
     app->key_path = NULL;
+    app->https_request_handler = NULL;
     app->router = cwist_route_table_create();
     if (!app->router) {
-        free(app);
+        cwist_free(app);
         return NULL;
     }
     app->middlewares = NULL;
     app->ssl_ctx = NULL;
+    app->h3_ctx = NULL;
     app->error_handler = NULL;
+    app->error_handlers = NULL;
     app->static_dirs = NULL;
+    app->config = cwist_config_create();
+    app->logger = cwist_logger_create("cwist");
     app->db = NULL;
     app->db_path = NULL;
     app->nuke_enabled = false;
@@ -1097,15 +1297,29 @@ cwist_app *cwist_app_create(void) {
     app->scheduler = NULL;
     app->grpc_routes = NULL;
 
+#if !defined(__EMSCRIPTEN__) && !defined(__wasi__)
     cwist_app_refresh_https_request_handler(app);
-    
+#endif
+
     return app;
 }
 
-void cwist_app_use(cwist_app *app, cwist_middleware_func mw) {
-    if (!app || !mw) return;
-    cwist_middleware_node *node = malloc(sizeof(cwist_middleware_node));
+/* Shared body of cwist_app_use() and cwist_app_use_ex(). The context is owned
+ * by the chain from here on, including on every failure path, as with the
+ * cwist_app_*_ex() routes. */
+static bool add_middleware(cwist_app *app, cwist_middleware_func mw, cwist_middleware_func_ex mw_ex,
+                           void *user_ctx, cwist_middleware_ctx_destroy_func destroy) {
+    bool valid = app && (mw != NULL) != (mw_ex != NULL);
+    cwist_middleware_node *node = valid ? cwist_alloc(sizeof(cwist_middleware_node)) : NULL;
+    if (!node) {
+        if (destroy) destroy(user_ctx);
+        return false;
+    }
     node->func = mw;
+    node->func_ex = mw_ex;
+    node->user_ctx = user_ctx;
+    node->destroy = destroy;
+    node->is_ex = mw_ex != NULL;
     node->next = NULL;
 
     if (!app->middlewares) {
@@ -1115,8 +1329,49 @@ void cwist_app_use(cwist_app *app, cwist_middleware_func mw) {
         while (curr->next) curr = curr->next;
         curr->next = node;
     }
+    return true;
 }
 
+/**
+ * @brief Append a middleware callback to the application's execution chain.
+ * @param app Application being configured.
+ * @param mw Middleware callback to append.
+ */
+void cwist_app_use(cwist_app *app, cwist_middleware_func mw) {
+    add_middleware(app, mw, NULL, NULL, NULL);
+}
+
+/**
+ * @brief Append an extended middleware callback to the application's execution chain.
+ * @param app     Application being configured.
+ * @param mw      Legacy middleware function (may be NULL if @p mw_ex is set).
+ * @param mw_ex   Extended middleware function with user context (may be NULL if @p mw is set).
+ * @param user_ctx Opaque context for @p mw_ex.
+ * @param destroy  Destructor for @p user_ctx.
+ * @return INT16 0 on success, -1 on failure (the context is already released).
+ */
+cwist_error_t cwist_app_use_ex(cwist_app *app, cwist_middleware_func mw,
+                               cwist_middleware_func_ex mw_ex, void *user_ctx,
+                               cwist_middleware_ctx_destroy_func destroy) {
+    cwist_error_t err = make_error(CWIST_ERR_INT16);
+    err.error.err_i16 = add_middleware(app, mw, mw_ex, user_ctx, destroy) ? 0 : -1;
+    return err;
+}
+
+/**
+ * @brief Override the static file memory budget used by cwist_mem_init().
+ * @param app Application being configured.
+ * @param size Maximum bytes reserved for static payload caching.
+ */
+void cwist_app_set_max_memspace(cwist_app *app, size_t size) {
+    if (app) app->max_mem_space = size;
+}
+
+/**
+ * @brief Install a custom HTTP error callback.
+ * @param app Application being configured.
+ * @param handler Handler invoked for framework-generated errors such as 404 responses.
+ */
 void cwist_app_set_error_handler(cwist_app *app, cwist_error_handler_func handler) {
     if (app) app->error_handler = handler;
 }
@@ -1172,19 +1427,25 @@ void cwist_app_configure_bdr(cwist_app *app, size_t max_bytes, time_t max_entry_
  */
 void cwist_app_destroy(cwist_app *app) {
     if (!app) return;
+#if !defined(__EMSCRIPTEN__) && !defined(__wasi__)
     cwist_multiport_destroy_owned_subapps(app);
     cwist_multiport_unlink_app(app);
+#endif
     if (app->cert_path) cwist_free(app->cert_path);
     if (app->key_path) cwist_free(app->key_path);
     if (app->tls_groups) cwist_free(app->tls_groups);
+#if !defined(__EMSCRIPTEN__) && !defined(__wasi__)
     if (app->ssl_ctx) cwist_https_destroy_context(app->ssl_ctx);
+    if (app->h3_ctx) cwist_http3_destroy_context(app->h3_ctx);
+#endif
 
     cwist_route_table_destroy(app->router);
 
     cwist_middleware_node *curr_m = app->middlewares;
     while (curr_m) {
         cwist_middleware_node *next = curr_m->next;
-        free(curr_m);
+        if (curr_m->destroy) curr_m->destroy(curr_m->user_ctx);
+        cwist_free(curr_m);
         curr_m = next;
     }
 
@@ -1206,13 +1467,14 @@ void cwist_app_destroy(cwist_app *app) {
     cwist_static_dir *curr_s = app->static_dirs;
     while (curr_s) {
         cwist_static_dir *next = curr_s->next;
-        free(curr_s->url_prefix);
-        free(curr_s->fs_root);
-        free(curr_s);
+        cwist_free(curr_s->url_prefix);
+        cwist_free(curr_s->fs_root);
+        cwist_free(curr_s->cache_control);
+        cwist_free(curr_s);
         curr_s = next;
     }
 
-#ifndef __EMSCRIPTEN__
+#if !defined(__EMSCRIPTEN__) && !defined(__wasi__)
     if (app->mem_manager) {
         app->mem_manager->watcher_running = false;
         // If thread was started, join it.
@@ -1241,8 +1503,10 @@ void cwist_app_destroy(cwist_app *app) {
     if (app->bdr_ctx) {
         cwist_bdr_destroy(app->bdr_ctx);
     }
+    cwist_assets_destroy(app->assets);
+    app->assets = NULL;
 
-#ifndef __EMSCRIPTEN__
+#if !defined(__EMSCRIPTEN__) && !defined(__wasi__)
     if (app->nuke_enabled) {
         cwist_nuke_close();
     }
@@ -1263,13 +1527,15 @@ void cwist_app_destroy(cwist_app *app) {
         }
         app->db = NULL;
     }
+#endif /* __EMSCRIPTEN__ */
     if (app->db_path) {
-        free(app->db_path);
+        cwist_free(app->db_path);
     }
 
     if (app->session_secret) cwist_free(app->session_secret);
     if (app->session_name) cwist_free(app->session_name);
 
+#if !defined(__EMSCRIPTEN__) && !defined(__wasi__)
     if (app->db_pool) {
         cwist_db_pool_destroy((cwist_db_pool_t *)app->db_pool);
     }
@@ -1280,10 +1546,16 @@ void cwist_app_destroy(cwist_app *app) {
         cwist_scheduler_destroy((cwist_scheduler_t *)app->scheduler);
     }
     cwist_grpc_routes_destroy(app);
+#endif /* __EMSCRIPTEN__ */
 
     cwist_free(app);
 }
 
+/**
+ * @brief Advance the middleware chain or invoke the final route handler.
+ * @param req Active request object.
+ * @param res Active response object.
+ */
 static void mw_next_wrapper(cwist_http_request *req, cwist_http_response *res) {
     mw_executor_ctx *ctx = (mw_executor_ctx *)req->private_data;
     if (!ctx) return;
@@ -1292,7 +1564,11 @@ static void mw_next_wrapper(cwist_http_request *req, cwist_http_response *res) {
         cwist_middleware_node *node = ctx->current_mw_node;
         // Advance the chain for the next "next" call
         ctx->current_mw_node = node->next;
-        node->func(req, res, mw_next_wrapper);
+        if (node->is_ex) {
+            node->func_ex(req, res, mw_next_wrapper, node->user_ctx);
+        } else {
+            node->func(req, res, mw_next_wrapper);
+        }
     } else if (ctx->final_handler) {
         ctx->final_handler(req, res);
     }
@@ -1320,8 +1596,15 @@ static void execute_chain(cwist_app *app, cwist_http_request *req, cwist_http_re
     req->private_data = NULL;
 }
 
+/**
+ * @brief Enable TLS for the application using the supplied certificate pair.
+ * @param app Application being configured.
+ * @param cert_path PEM certificate chain path.
+ * @param key_path PEM private key path.
+ * @return Tagged CWIST error describing success or failure.
+ */
 cwist_error_t cwist_app_use_https(cwist_app *app, const char *cert_path, const char *key_path) {
-#ifdef __EMSCRIPTEN__
+#if defined(__EMSCRIPTEN__) || defined(__wasi__)
     (void)cert_path;
     (void)key_path;
     cwist_error_t err = make_error(CWIST_ERR_INT16);
@@ -1336,10 +1619,29 @@ cwist_error_t cwist_app_use_https(cwist_app *app, const char *cert_path, const c
     }
 
     app->use_ssl = true;
-    app->cert_path = strdup(cert_path);
-    app->key_path = strdup(key_path);
+    if (app->cert_path) cwist_free(app->cert_path);
+    if (app->key_path) cwist_free(app->key_path);
+    app->cert_path = cwist_strdup(cert_path);
+    app->key_path = cwist_strdup(key_path);
 
-    return cwist_https_init_context(&app->ssl_ctx, cert_path, key_path);
+    if (!app->cert_path || !app->key_path) {
+        if (app->cert_path) {
+            cwist_free(app->cert_path);
+            app->cert_path = NULL;
+        }
+        if (app->key_path) {
+            cwist_free(app->key_path);
+            app->key_path = NULL;
+        }
+        err.error.err_i16 = -1;
+        return err;
+    }
+
+    if (app->use_https3 || app->use_http3) {
+        cwist_app_refresh_http3_context(app);
+    }
+    return cwist_app_refresh_https_context(app);
+#endif
 }
 
 void cwist_app_use_pqc_layer(cwist_app *app, bool enabled) {
@@ -1366,6 +1668,10 @@ cwist_error_t cwist_app_use_https2(cwist_app *app, bool enabled) {
     }
 
     app->use_https2 = enabled;
+#if defined(__EMSCRIPTEN__) || defined(__wasi__)
+    err.error.err_i16 = -1; /* HTTP/2 transport is native-only */
+    return err;
+#else
     cwist_app_refresh_https_request_handler(app);
     err.error.err_i16 = 0;
 
@@ -1374,6 +1680,7 @@ cwist_error_t cwist_app_use_https2(cwist_app *app, bool enabled) {
     }
 
     return cwist_app_refresh_https_context(app);
+#endif
 }
 
 cwist_error_t cwist_app_use_https3(cwist_app *app, bool enabled) {
@@ -1384,6 +1691,10 @@ cwist_error_t cwist_app_use_https3(cwist_app *app, bool enabled) {
     }
 
     app->use_https3 = enabled;
+#if defined(__EMSCRIPTEN__) || defined(__wasi__)
+    err.error.err_i16 = -1; /* HTTP/3 transport is native-only */
+    return err;
+#else
     err.error.err_i16 = 0;
 
     if (!app->use_ssl || !app->cert_path || !app->key_path) {
@@ -1392,6 +1703,7 @@ cwist_error_t cwist_app_use_https3(cwist_app *app, bool enabled) {
 
     cwist_app_refresh_http3_context(app);
     return cwist_app_refresh_https_context(app);
+#endif
 }
 
 cwist_error_t cwist_app_use_http2(cwist_app *app, bool enabled) {
@@ -1414,16 +1726,23 @@ cwist_error_t cwist_app_use_http3(cwist_app *app, bool enabled) {
     }
 
     app->use_http3 = enabled;
+#if defined(__EMSCRIPTEN__) || defined(__wasi__)
+    err.error.err_i16 = -1; /* HTTP/3 transport is native-only */
+    return err;
+#else
     err.error.err_i16 = 0;
     return cwist_app_refresh_http3_context(app);
+#endif
 }
 
 void cwist_app_use_webtransport(cwist_app *app, cwist_webtransport_handler_func handler) {
     if (!app) return;
     app->wt_handler = handler;
+#if !defined(__EMSCRIPTEN__) && !defined(__wasi__)
     if (app->h3_ctx) {
         cwist_http3_set_webtransport_handler(app->h3_ctx, handler);
     }
+#endif
 }
 
 /**
@@ -1439,6 +1758,10 @@ cwist_error_t cwist_app_use_db(cwist_app *app, const char *db_path) {
         return err;
     }
 
+#if defined(__EMSCRIPTEN__) || defined(__wasi__)
+    err.error.err_i16 = -1; /* SQLite lives outside the minimal WASM core */
+    return err;
+#else
     cwist_db *db = NULL;
     err = cwist_db_open(&db, db_path);
     if (err.error.err_i16 < 0) {
@@ -1449,12 +1772,14 @@ cwist_error_t cwist_app_use_db(cwist_app *app, const char *db_path) {
         cwist_db_close(app->db);
     }
     if (app->db_path) {
-        free(app->db_path);
+        cwist_free(app->db_path);
     }
 
     app->db = db;
-    app->db_path = strdup(db_path);
+    app->db_path = cwist_strdup(db_path);
+    app->nuke_enabled = false;
     return err;
+#endif
 }
 
 /**
@@ -1471,7 +1796,7 @@ cwist_error_t cwist_app_use_nuke_db(cwist_app *app, const char *db_path, int syn
         return err;
     }
 
-#ifdef __EMSCRIPTEN__
+#if defined(__EMSCRIPTEN__) || defined(__wasi__)
     (void)sync_interval_ms;
     err.error.err_i16 = -1; /* NUKE DB needs native libttak memory */
     return err;
@@ -1523,6 +1848,11 @@ cwist_error_t cwist_app_use_nuke_db(cwist_app *app, const char *db_path, int syn
  */
 cwist_db *cwist_app_get_db(cwist_app *app) {
     if (!app) return NULL;
+#if !defined(__EMSCRIPTEN__) && !defined(__wasi__)
+    if (app->nuke_enabled) {
+        app->db->conn = cwist_nuke_get_db();
+    }
+#endif
     return app->db;
 }
 
@@ -1532,7 +1862,7 @@ cwist_error_t cwist_app_use_db_pool(cwist_app *app, const char *db_path, size_t 
         err.error.err_i16 = -1;
         return err;
     }
-#ifdef __EMSCRIPTEN__
+#if defined(__EMSCRIPTEN__) || defined(__wasi__)
     (void)db_path;
     (void)max_conns;
     err.error.err_i16 = -1; /* connection pools need native sockets/threads */
@@ -1562,7 +1892,7 @@ cwist_error_t cwist_app_use_redis(cwist_app *app, const char *host, int port, si
         err.error.err_i16 = -1;
         return err;
     }
-#ifdef __EMSCRIPTEN__
+#if defined(__EMSCRIPTEN__) || defined(__wasi__)
     (void)host;
     (void)port;
     (void)max_conns;
@@ -1593,7 +1923,7 @@ cwist_error_t cwist_app_use_scheduler(cwist_app *app, size_t worker_count, size_
         err.error.err_i16 = -1;
         return err;
     }
-#ifdef __EMSCRIPTEN__
+#if defined(__EMSCRIPTEN__) || defined(__wasi__)
     (void)worker_count;
     (void)queue_capacity;
     err.error.err_i16 = -1; /* worker pools need native threads */
@@ -1639,21 +1969,22 @@ cwist_error_t cwist_app_static(cwist_app *app, const char *url_prefix, const cha
 
     char *resolved = cwist_normalize_directory(directory);
     if (!resolved) {
-        free(normalized);
+        cwist_free(normalized);
         err.error.err_i16 = -1;
         return err;
     }
 
-    cwist_static_dir *entry = (cwist_static_dir *)malloc(sizeof(cwist_static_dir));
+    cwist_static_dir *entry = (cwist_static_dir *)cwist_alloc(sizeof(cwist_static_dir));
     if (!entry) {
-        free(normalized);
-        free(resolved);
+        cwist_free(normalized);
+        cwist_free(resolved);
         err.error.err_i16 = -1;
         return err;
     }
 
     entry->url_prefix = normalized;
     entry->fs_root = resolved;
+    entry->cache_control = NULL;
     entry->next = app->static_dirs;
     app->static_dirs = entry;
 
@@ -1719,7 +2050,56 @@ static void add_route_named(cwist_app *app, const char *path, const char *name,
                             cwist_http_method_t method, cwist_handler_func handler,
                             cwist_endpoint_opt_t opts) {
     if (!app || !app->router || !path) return;
-    cwist_route_table_insert(app->router, path, method, handler, NULL);
+    if (opts == 0) {
+        opts = CWIST_ENDPOINT_DEFAULT;
+    }
+    const cwist_route_target target = {.handler = handler};
+    cwist_route_table_insert(app->router, path, name, method, &target, opts);
+}
+
+/* Shared body of the cwist_app_*_ex() registrations. The context is owned by
+ * the route table from here on, including on every failure path. */
+static cwist_error_t add_route_ex(cwist_app *app, const char *path, cwist_http_method_t method,
+                                  cwist_handler_ex_func handler, void *user_ctx,
+                                  cwist_handler_ctx_destroy_func destroy) {
+    cwist_error_t err = make_error(CWIST_ERR_INT16);
+    if (!app || !app->router || !handler) {
+        if (destroy) destroy(user_ctx);
+        err.error.err_i16 = -1;
+        return err;
+    }
+    const cwist_route_target target = {
+        .handler_ex = handler, .user_ctx = user_ctx, .ctx_destroy = destroy};
+    /* On failure the table has already released the context. */
+    bool ok =
+        cwist_route_table_insert(app->router, path, NULL, method, &target, CWIST_ENDPOINT_DEFAULT);
+    err.error.err_i16 = ok ? 0 : -1;
+    return err;
+}
+
+cwist_error_t cwist_app_get_ex(cwist_app *app, const char *path, cwist_handler_ex_func handler,
+                               void *user_ctx, cwist_handler_ctx_destroy_func destroy) {
+    return add_route_ex(app, path, CWIST_HTTP_GET, handler, user_ctx, destroy);
+}
+
+cwist_error_t cwist_app_post_ex(cwist_app *app, const char *path, cwist_handler_ex_func handler,
+                                void *user_ctx, cwist_handler_ctx_destroy_func destroy) {
+    return add_route_ex(app, path, CWIST_HTTP_POST, handler, user_ctx, destroy);
+}
+
+cwist_error_t cwist_app_put_ex(cwist_app *app, const char *path, cwist_handler_ex_func handler,
+                               void *user_ctx, cwist_handler_ctx_destroy_func destroy) {
+    return add_route_ex(app, path, CWIST_HTTP_PUT, handler, user_ctx, destroy);
+}
+
+cwist_error_t cwist_app_delete_ex(cwist_app *app, const char *path, cwist_handler_ex_func handler,
+                                  void *user_ctx, cwist_handler_ctx_destroy_func destroy) {
+    return add_route_ex(app, path, CWIST_HTTP_DELETE, handler, user_ctx, destroy);
+}
+
+cwist_error_t cwist_app_patch_ex(cwist_app *app, const char *path, cwist_handler_ex_func handler,
+                                 void *user_ctx, cwist_handler_ctx_destroy_func destroy) {
+    return add_route_ex(app, path, CWIST_HTTP_PATCH, handler, user_ctx, destroy);
 }
 
 static void add_route(cwist_app *app, const char *path, cwist_http_method_t method,
@@ -1734,12 +2114,13 @@ static void add_route(cwist_app *app, const char *path, cwist_http_method_t meth
  * @param handler HTTP handler invoked for matching requests.
  */
 void cwist_app_get(cwist_app *app, const char *path, cwist_handler_func handler) {
-    add_route(app, path, CWIST_HTTP_GET, handler);
+    add_route(app, path, CWIST_HTTP_GET, handler, CWIST_ENDPOINT_DEFAULT);
 }
 
 #include <cwist/sys/metrics/metrics.h>
 
 static void cwist_metrics_route_handler(cwist_http_request *req, cwist_http_response *res) {
+    (void)req;
     cwist_metrics_serve_http(res);
 }
 
@@ -1749,16 +2130,19 @@ void cwist_app_enable_metrics(cwist_app *app) {
 }
 
 static void cwist_healthz_route_handler(cwist_http_request *req, cwist_http_response *res) {
+    (void)req;
     cwist_app_healthz(res);
 }
 
 static void cwist_liveness_route_handler(cwist_http_request *req, cwist_http_response *res) {
+    (void)req;
     res->status_code = CWIST_HTTP_OK;
     cwist_sstring_assign(res->body, "{\"status\":\"alive\"}");
     cwist_http_header_add(&res->headers, "Content-Type", "application/json");
 }
 
 static void cwist_readiness_route_handler(cwist_http_request *req, cwist_http_response *res) {
+    (void)req;
     cwist_app_healthz(res);
 }
 
@@ -1781,7 +2165,7 @@ void cwist_app_get_named(cwist_app *app, const char *path, const char *name,
  * @param handler HTTP handler invoked for matching requests.
  */
 void cwist_app_post(cwist_app *app, const char *path, cwist_handler_func handler) {
-    add_route(app, path, CWIST_HTTP_POST, handler);
+    add_route(app, path, CWIST_HTTP_POST, handler, CWIST_ENDPOINT_DEFAULT);
 }
 
 void cwist_app_put(cwist_app *app, const char *path, cwist_handler_func handler) {
@@ -1824,7 +2208,8 @@ void cwist_app_patch_named(cwist_app *app, const char *path, const char *name,
  */
 void cwist_app_ws(cwist_app *app, const char *path, cwist_ws_handler_func handler) {
     if (!app || !app->router || !path) return;
-    cwist_route_table_insert(app->router, path, NULL, CWIST_HTTP_GET, NULL, handler,
+    const cwist_route_target target = {.ws_handler = handler};
+    cwist_route_table_insert(app->router, path, NULL, CWIST_HTTP_GET, &target,
                              CWIST_ENDPOINT_DEFAULT);
 }
 
@@ -1838,7 +2223,8 @@ void cwist_app_ws(cwist_app *app, const char *path, cwist_ws_handler_func handle
 void cwist_app_ws_async(cwist_app *app, const char *path, cwist_ws_on_message_t on_message,
                         void *user_data) {
     if (!app || !app->router || !path || !on_message) return;
-    cwist_route_table_insert(app->router, path, NULL, CWIST_HTTP_GET, NULL, NULL,
+    const cwist_route_target target = {0};
+    cwist_route_table_insert(app->router, path, NULL, CWIST_HTTP_GET, &target,
                              CWIST_ENDPOINT_DEFAULT);
     cwist_route_entry *entry = cwist_route_table_lookup(app->router, CWIST_HTTP_GET, path);
     if (entry) {
@@ -1904,35 +2290,45 @@ void cwist_app_ws_opt(cwist_app *app, const char *path, cwist_ws_handler_func ha
     if (opts == 0) {
         opts = CWIST_ENDPOINT_DEFAULT;
     }
-    cwist_route_table_insert(app->router, path, NULL, CWIST_HTTP_GET, NULL, handler, opts);
+    const cwist_route_target target = {.ws_handler = handler};
+    cwist_route_table_insert(app->router, path, NULL, CWIST_HTTP_GET, &target, opts);
 }
 
 static bool match_path(const char *pattern, const char *actual, cwist_query_map *params) {
-    char p[256], a[256];
-    strncpy(p, pattern, 255);
-    strncpy(a, actual, 255);
-    p[255] = a[255] = '\0';
-
     if (params) {
         cwist_query_map_clear(params);
     }
 
-    char *saveptr_p, *saveptr_a;
-    char *tok_p = strtok_r(p, "/", &saveptr_p);
-    char *tok_a = strtok_r(a, "/", &saveptr_a);
+    const char *p = pattern;
+    const char *a = actual;
+    for (;;) {
+        while (*p == '/') p++;
+        while (*a == '/') a++;
+        if (*p == '\0' || *a == '\0') return *p == '\0' && *a == '\0';
 
-    while (tok_p && tok_a) {
-        if (tok_p[0] == ':') {
-            // Path Parameter
-            cwist_query_map_set(params, tok_p + 1, tok_a);
-        } else if (strcmp(tok_p, tok_a) != 0) {
+        const char *p_slash = strchr(p, '/');
+        const size_t p_len = p_slash ? (size_t)(p_slash - p) : strlen(p);
+        const char *a_slash = strchr(a, '/');
+        const size_t a_len = a_slash ? (size_t)(a_slash - a) : strlen(a);
+
+        if (p[0] == ':') {
+            if (params) {
+                char key[256], val[256];
+                const size_t klen = (p_len - 1 < 255) ? p_len - 1 : 255;
+                const size_t vlen = (a_len < 255) ? a_len : 255;
+                memcpy(key, p + 1, klen);
+                key[klen] = '\0';
+                memcpy(val, a, vlen);
+                val[vlen] = '\0';
+                cwist_query_map_set(params, key, val);
+            }
+        } else if (p_len != a_len || memcmp(p, a, p_len) != 0) {
             return false;
         }
-        tok_p = strtok_r(NULL, "/", &saveptr_p);
-        tok_a = strtok_r(NULL, "/", &saveptr_a);
-    }
 
-    return tok_p == NULL && tok_a == NULL;
+        p += p_len;
+        a += a_len;
+    }
 }
 
 static cwist_route_entry *cwist_route_table_find_by_name(cwist_route_table *table,
@@ -2018,6 +2414,10 @@ int cwist_app_dispatch_memory(cwist_app *app, const char *req_buf, size_t req_le
     cwist_app_dispatch(app, req, res);
     cwist_http_request_destroy(req);
 
+    /* Producer streams finalize at dispatch return when the handler did not
+     * end them explicitly (terminator only; no sink is attached here). */
+    if (res->stream_mode && !res->stream_ended) cwist_http_response_stream_end(res);
+
     /* One-shot buffer exchange: Connection: close semantics. */
     res->keep_alive = false;
     int rc = cwist_http_response_serialize(res, res_buf, res_len);
@@ -2025,30 +2425,278 @@ int cwist_app_dispatch_memory(cwist_app *app, const char *req_buf, size_t req_le
     return rc;
 }
 
+/* --- WASM boundary streaming (issue #93 Phase 3) -------------------------- */
+
+/* Cap on the body bytes preallocated from the declared Content-Length.
+ * Feeds beyond this grow the buffer on demand so a bogus huge declaration
+ * cannot force a huge allocation at begin() time. */
+#define CWIST_STREAM_REQ_EAGER_MAX ((size_t)1 << 20)
+
+struct cwist_stream_req {
+    /* Head and body share one contiguous buffer: the head sits at
+     * [0, head_len) and fed body bytes are appended after it, so each
+     * chunk is copied exactly once into its final wire position. */
+    char *wire;
+    size_t head_len;
+    size_t content_length; /* parsed from Content-Length; 0 when absent */
+    size_t body_len;
+    size_t wire_cap;
+    bool complete; /* set by a successful cwist_stream_req_end() */
+};
+
+/* Case-insensitive scan of the head block for a Content-Length header.
+ * Returns the declared length, 0 when absent, -1 on malformed values. */
+static long cwist_stream_parse_content_length(const char *head, size_t head_len) {
+    static const char cl_name[] = "content-length:";
+    const char *p = head;
+    const char *end = head + head_len;
+    while (p + sizeof(cl_name) - 1 <= end) {
+        size_t i = 0;
+        while (i < sizeof(cl_name) - 1) {
+            unsigned char c = (unsigned char)p[i];
+            if (c >= 'A' && c <= 'Z') c = (unsigned char)(c + ('a' - 'A'));
+            if ((char)c != cl_name[i]) break;
+            i++;
+        }
+        if (i == sizeof(cl_name) - 1) {
+            const char *v = p + i;
+            while (v < end && (*v == ' ' || *v == '\t')) v++;
+            errno = 0;
+            char *num_end = NULL;
+            long n = strtol(v, &num_end, 10);
+            if (errno != 0 || num_end == v || n < 0) return -1;
+            return n;
+        }
+        /* advance to the next header line */
+        while (p < end && *p != '\n') p++;
+        if (p < end) p++;
+    }
+    return 0;
+}
+
+cwist_stream_req_t *cwist_stream_req_begin(const char *head, size_t head_len) {
+    if (!head || head_len == 0) return NULL;
+    cwist_stream_req_t *r = cwist_alloc(sizeof(*r));
+    if (!r) return NULL;
+    long cl = cwist_stream_parse_content_length(head, head_len);
+    if (cl < 0) {
+        cwist_free(r);
+        return NULL;
+    }
+    r->head_len = head_len;
+    r->content_length = (size_t)cl;
+    r->body_len = 0;
+    /* Eagerly reserve the declared body when it is modest; larger bodies
+     * grow on feed so a bogus Content-Length cannot force a big allocation. */
+    size_t eager = (size_t)cl < CWIST_STREAM_REQ_EAGER_MAX ? (size_t)cl : 0;
+    r->wire_cap = head_len + eager;
+    r->wire = cwist_alloc(r->wire_cap);
+    if (!r->wire) {
+        cwist_free(r);
+        return NULL;
+    }
+    memcpy(r->wire, head, head_len);
+    r->complete = false;
+    return r;
+}
+
+int cwist_stream_req_feed(cwist_stream_req_t *r, const char *chunk, size_t len) {
+    if (!r || (!chunk && len > 0)) return -1;
+    if (len > r->content_length - r->body_len) return -1; /* overflow of declared length */
+    if (len == 0) return 0;
+    size_t used = r->head_len + r->body_len;
+    if (len > r->wire_cap - used) {
+        size_t ncap = r->wire_cap ? r->wire_cap : 4096;
+        while (ncap - r->head_len < r->body_len + len) ncap *= 2;
+        char *nb = cwist_alloc(ncap);
+        if (!nb) return -1;
+        memcpy(nb, r->wire, used);
+        cwist_free(r->wire);
+        r->wire = nb;
+        r->wire_cap = ncap;
+    }
+    memcpy(r->wire + used, chunk, len);
+    r->body_len += len;
+    return 0;
+}
+
+int cwist_stream_req_end(cwist_stream_req_t *r) {
+    if (!r) return -1;
+    if (r->body_len != r->content_length) return -1;
+    r->complete = true;
+    return 0;
+}
+
+int cwist_stream_req_dispatch(cwist_stream_req_t *r, cwist_app *app, cwist_stream_write_fn write_fn,
+                              void *write_ctx) {
+    if (!r) return -1;
+    int rc;
+    if (!app || !write_fn || !r->complete) {
+        rc = -1;
+    } else {
+        rc =
+            cwist_app_dispatch_stream(app, r->wire, r->head_len + r->body_len, write_fn, write_ctx);
+    }
+    cwist_free(r->wire);
+    cwist_free(r);
+    return rc;
+}
+
+int cwist_app_dispatch_stream(cwist_app *app, const char *req_buf, size_t req_len,
+                              cwist_stream_write_fn write_fn, void *write_ctx) {
+    if (!app || !req_buf || !write_fn) return -1;
+
+    cwist_http_request *req = cwist_http_parse_request_len(req_buf, req_len);
+    if (!req) return -1;
+
+    cwist_http_response *res = cwist_http_response_create();
+    if (!res) {
+        cwist_http_request_destroy(req);
+        return -1;
+    }
+    /* Attach the sink before dispatch: producer writes stream head-first
+     * and chunk-by-chunk while the handler is still running. */
+    res->stream_sink = write_fn;
+    res->stream_sink_ctx = write_ctx;
+    cwist_app_dispatch(app, req, res);
+    cwist_http_request_destroy(req);
+    res->keep_alive = false;
+
+    if (res->stream_mode) {
+        /* Finalize an un-ended stream (flushes the terminator through the
+         * sink), then detach: everything already travelled to write_fn. */
+        if (!res->stream_ended) cwist_http_response_stream_end(res);
+        res->stream_sink = NULL;
+        cwist_http_response_destroy(res);
+        return res->stream_failed ? -2 : 0;
+    }
+    res->stream_sink = NULL;
+
+    if (res->use_file_stream) {
+        /* File-stream bodies are not resident memory; the streaming boundary
+         * handles the same in-memory shapes as dispatch_memory. */
+        cwist_http_response_destroy(res);
+        return -1;
+    }
+
+    char head_buf[CWIST_HTTP_MAX_HEADER_SIZE];
+    size_t head_len = cwist_http_serialize_headers(res, head_buf, sizeof(head_buf));
+    if (head_len == 0 || head_len >= sizeof(head_buf)) {
+        cwist_http_response_destroy(res);
+        return -1;
+    }
+    if (write_fn(write_ctx, head_buf, head_len) != 0) {
+        cwist_http_response_destroy(res);
+        return -2;
+    }
+
+    const void *body_ptr = NULL;
+    size_t body_len = 0;
+    if (res->is_ptr_body) {
+        body_ptr = res->ptr_body;
+        body_len = res->ptr_body_len;
+    } else if (res->body && res->body->data) {
+        body_ptr = res->body->data;
+        body_len = res->body->size;
+    }
+    int rc = 0;
+    size_t off = 0;
+    while (off < body_len) {
+        size_t n = body_len - off;
+        if (n > CWIST_STREAM_CHUNK) n = CWIST_STREAM_CHUNK;
+        if (write_fn(write_ctx, (const char *)body_ptr + off, n) != 0) {
+            rc = -2;
+            break;
+        }
+        off += n;
+    }
+    cwist_http_response_destroy(res);
+    return rc;
+}
+
 // Internal Router Logic
+/**
+ * @brief Serve a content-hashed in-memory asset resolved by cwist_assets_match().
+ */
+static void cwist_asset_handler(cwist_http_request *req, cwist_http_response *res) {
+    mw_executor_ctx *ctx = (mw_executor_ctx *)req->private_data;
+    cwist_assets_respond(req, res, ctx ? (const cwist_asset_match *)ctx->handler_data : NULL);
+}
+
+/* Final handler for cwist_app_*_ex() routes: execute_route() passes the route
+ * entry as handler_data, which the middleware executor keeps reachable. */
+static void cwist_route_ex_handler(cwist_http_request *req, cwist_http_response *res) {
+    mw_executor_ctx *ctx = (mw_executor_ctx *)req->private_data;
+    cwist_route_entry *route = ctx ? (cwist_route_entry *)ctx->handler_data : NULL;
+    if (route && route->handler_ex) route->handler_ex(route->user_ctx, req, res);
+}
+
+static void execute_route(cwist_app *app, cwist_http_request *req, cwist_http_response *res,
+                          cwist_route_entry *route) {
+    if (route->handler_ex) {
+        execute_chain(app, req, res, cwist_route_ex_handler, route);
+    } else {
+        execute_chain(app, req, res, route->handler, NULL);
+    }
+}
+
 static void internal_route_handler(cwist_app *app, cwist_http_request *req,
                                    cwist_http_response *res) {
     if (!req || !app || !app->router) return;
 
-    cwist_static_request_info static_info = {0};
-    if (cwist_prepare_static(app, req, &static_info)) {
-        execute_chain(app, req, res, cwist_static_handler, &static_info);
-        return;
+    req->endpoint_opts = CWIST_ENDPOINT_DEFAULT;
+    if (res) {
+        res->endpoint_opts = req->endpoint_opts;
     }
 
     const char *path = (req->path && req->path->data) ? req->path->data : "/";
     cwist_route_entry *found_route = cwist_route_table_lookup(app->router, req->method, path);
 
-    if (found_route && req->path_params) {
-        cwist_query_map_clear(req->path_params);
-    }
-
-    if (!found_route) {
-        found_route = cwist_route_table_match_params(app->router, req);
-    }
-
     if (found_route) {
-        if (found_route->ws_handler) {
+        req->endpoint_opts = found_route->opts ? found_route->opts : CWIST_ENDPOINT_DEFAULT;
+        if (res) res->endpoint_opts = req->endpoint_opts;
+        if (found_route->ws_async_on_message && req->async_conn) {
+#if !defined(__EMSCRIPTEN__) && !defined(__wasi__)
+            /* C1M path (issue #181): the route handler runs on the reactor
+             * thread, so invoking a blocking ws_handler here would park the
+             * whole worker in recv().  Complete the upgrade, send the 101
+             * through the coalesced writer, then hand the fd to the
+             * reactor-driven callback-shaped WebSocket path. */
+            if (cwist_websocket_upgrade_response(req, res)) {
+                cwist_http_async_conn_t *aconn = (cwist_http_async_conn_t *)req->async_conn;
+                req->upgraded = true;
+                res->keep_alive = true;
+                cwist_http_send_response_coalesced(req->client_fd, res, aconn, false, false);
+                cwist_http_coalesce_flush_blocking(req->client_fd, aconn);
+                if (cwist_websocket_async_attach(req->client_fd, aconn->reactor,
+                                                 found_route->ws_async_on_message,
+                                                 found_route->ws_async_user_data,
+                                                 (const uint8_t *)aconn->rbuf, aconn->len)) {
+                    /* Bytes already read past the upgrade request were
+                     * copied into the WS stash by attach.  The HTTP layer
+                     * releases the connection shell (without closing the fd)
+                     * when the C1M loop reports CWIST_ASYNC_DETACH on
+                     * req->ws_async_handoff; the WS async state owns the fd
+                     * from here on. */
+                    req->async_conn = NULL;
+                    req->ws_async_handoff = true;
+                } else {
+                    /* 101 already sent and attach closed the fd; detach so
+                     * the HTTP layer only releases the connection shell. */
+                    req->async_conn = NULL;
+                    req->ws_async_handoff = true;
+                }
+            } else {
+                res->status_code = CWIST_HTTP_BAD_REQUEST;
+                cwist_sstring_assign(res->body, "WebSocket Upgrade Failed");
+            }
+#endif
+        } else if (found_route->ws_handler) {
+#if defined(__EMSCRIPTEN__) || defined(__wasi__)
+            /* WebSocket upgrades need a live socket; in-memory dispatch has none. */
+            res->status_code = CWIST_HTTP_BAD_REQUEST;
+            cwist_sstring_assign(res->body, "WebSocket Upgrade Failed");
+#else
             if (req->client_fd >= 0) {
                 cwist_websocket *ws = cwist_websocket_upgrade(req, req->client_fd);
                 if (ws) {
@@ -2059,20 +2707,65 @@ static void internal_route_handler(cwist_app *app, cwist_http_request *req,
                     cwist_sstring_assign(res->body, "WebSocket Upgrade Failed");
                 }
             }
+#endif
+        } else if (found_route->ws_async_on_message) {
+            /* Callback-shaped WS routes are C1M-only; classic mode keeps the
+             * blocking cwist_websocket_receive() API via cwist_app_ws(). */
+            res->status_code = CWIST_HTTP_NOT_IMPLEMENTED;
+            cwist_sstring_assign(res->status_text, "Not Implemented");
+            cwist_sstring_assign(res->body, "WebSocket async handler requires C1M mode");
         } else {
-            execute_chain(app, req, res, found_route->handler, NULL);
+            execute_route(app, req, res, found_route);
         }
+        return;
+    }
+
+    if (!found_route) {
+        found_route = cwist_route_table_match_params(app->router, req);
+    }
+
+    if (found_route) {
+        req->endpoint_opts = found_route->opts ? found_route->opts : CWIST_ENDPOINT_DEFAULT;
+        if (res) res->endpoint_opts = req->endpoint_opts;
+        execute_route(app, req, res, found_route);
+        return;
+    }
+
+    /* In-memory assets need no filesystem, so unlike static directories they
+     * are served on WASM hosts too. */
+    cwist_asset_match asset_match = {0};
+    if (cwist_assets_match(app, req, &asset_match)) {
+        req->endpoint_opts = CWIST_ENDPOINT_FILE;
+        if (res) res->endpoint_opts = req->endpoint_opts;
+        execute_chain(app, req, res, cwist_asset_handler, &asset_match);
+        return;
+    }
+
+    cwist_static_request_info static_info = {0};
+    if (cwist_prepare_static(app, req, &static_info)) {
+#if !defined(__EMSCRIPTEN__) && !defined(__wasi__)
+        req->endpoint_opts = CWIST_ENDPOINT_FILE;
+        if (res) res->endpoint_opts = req->endpoint_opts;
+        execute_chain(app, req, res, cwist_static_handler, &static_info);
+        return;
+#else
+        /* Unreachable: cwist_prepare_static() always declines on WASM hosts,
+         * and the filesystem-backed handler is not compiled in. Guarded so
+         * the native-only handler reference stays out of the WASM link. */
+        return;
+#endif
+    }
+
+    cwist_error_handler_func eh = cwist_app_find_error_handler(app, CWIST_HTTP_NOT_FOUND);
+    if (eh) {
+        eh(req, res, CWIST_HTTP_NOT_FOUND);
     } else {
-        if (app->error_handler) {
-            app->error_handler(req, res, CWIST_HTTP_NOT_FOUND);
-        } else {
-            res->status_code = CWIST_HTTP_NOT_FOUND;
-            cwist_sstring_assign(res->body, "404 Not Found");
-        }
+        res->status_code = CWIST_HTTP_NOT_FOUND;
+        cwist_sstring_assign(res->body, "404 Not Found");
     }
 }
 
-#ifndef __EMSCRIPTEN__
+#if !defined(__EMSCRIPTEN__) && !defined(CWIST_WASI_NO_SOCKETS)
 /* Everything below up to the multiport section is socket serving machinery:
  * TLS/plain connection handlers, h2/h3 bridges, async flush paths. */
 static void static_http2_route_bridge(void *user_ctx, cwist_http_request *req,
@@ -2093,6 +2786,10 @@ static void static_http3_route_bridge(void *user_ctx, cwist_http_request *req,
     internal_route_handler(app, req, res);
 }
 
+#ifndef __wasi__
+/* TLS connection handlers: BoringSSL is not linked on WASI, and the only
+ * call sites (cwist_app_listen's SSL branch, multiport) are compiled out
+ * there. */
 static void static_ssl_handler(cwist_https_connection *conn, void *ctx) {
     cwist_app *app = (cwist_app *)ctx;
     if (!app || !conn) return;
@@ -2123,22 +2820,45 @@ static void static_ssl_http1_handler(cwist_https_connection *conn, void *ctx) {
      * with CWIST_HTTP_HEADERS_TIMEOUT_MS, so idle keep-alive connections are
      * reaped automatically. */
     while (true) {
+        /* Nothing to read: hand the connection to the park set instead of
+         * holding this pool thread in the header read's poll(). */
+        if (cwist_https_conn_idle(conn) &&
+            cwist_https_park(conn, cwist_https_idle_timeout_ms(), CWIST_HTTPS_PARK_HTTP1))
+            return;
         cwist_http_request *req = cwist_https_receive_request(conn);
         if (!req) return;
         req->app = app;
         req->db = app->db;
+        req->https_conn = conn;
 
-        cwist_http_response *res = cwist_http_response_create();
+        cwist_http_response *res = cwist_http_response_create_in_arena(req->arena);
         if (!res) {
             cwist_http_request_destroy(req);
             return;
         }
         internal_route_handler(app, req, res);
 
+        /* Deferred-response handoff: ownership of req/res and conn moved to cwist_async */
+        if (res->deferred) {
+            cwist_async_dispatch_ack((cwist_async *)res->async);
+            return;
+        }
+
         bool keep_alive = req->keep_alive && res->keep_alive;
         bool upgraded = req->upgraded;
 
-        cwist_https_send_response(conn, res);
+        /* During shutdown, answer in flight but mark the connection as
+         * closing so the client does not race another request onto it. */
+        if (!atomic_load(&g_cwist_running)) {
+            res->keep_alive = false;
+            keep_alive = false;
+        }
+
+        if (req->method == CWIST_HTTP_HEAD) {
+            cwist_https_send_response_head(conn, res);
+        } else {
+            cwist_https_send_response(conn, res);
+        }
 
         bool detached = false;
         if (upgraded) {
@@ -2156,11 +2876,10 @@ static void static_ssl_http1_handler(cwist_https_connection *conn, void *ctx) {
     }
 }
 
-static void static_http_handler(int client_fd, void *ctx) {
+static void static_ssl_http2_handler(cwist_https_connection *conn, void *ctx) {
     cwist_app *app = (cwist_app *)ctx;
-    char *read_buf = malloc(CWIST_HTTP_READ_BUFFER_SIZE);
-    if (!read_buf) {
-        close(client_fd);
+    if (!cwist_https_connection_uses_http2(conn)) {
+        static_ssl_http1_handler(conn, ctx);
         return;
     }
 
@@ -2170,6 +2889,7 @@ static void static_http_handler(int client_fd, void *ctx) {
         cJSON_Delete(err.error.err_json);
     }
 }
+#endif /* __wasi__ (TLS handlers need BoringSSL) */
 
 /**
  * @brief Map a request parse failure to the RFC 9110/9112 error status the
@@ -2231,14 +2951,16 @@ static cwist_async_action_t app_async_flush_exit(int client_fd, cwist_http_async
 /**
  * @brief Route and respond to one fully parsed HTTP/1.1 request.
  * Shared by the blocking keep-alive loop and the event-driven async path.
- * @return true when the connection stays open (keep-alive), false to close.
  */
 typedef enum {
     APP_SERVE_CLOSE = 0, /* Close the connection. */
     APP_SERVE_KEEPALIVE, /* Connection stays open. */
-    APP_SERVE_DEFERRED /* Handler deferred via cwist_async_defer; skip everything. */
+    APP_SERVE_DEFERRED, /* Handler deferred via cwist_async_defer; skip everything. */
+    APP_SERVE_DETACH /* Upgraded fd handed to another owner (WS async); do not close or re-arm. */
 } app_serve_result_t;
 
+#ifndef CWIST_WASI_NO_SOCKETS
+/* Socket-server request serving: preview1 hosts dispatch in memory instead. */
 static app_serve_result_t app_serve_parsed_request(cwist_app *app, int client_fd,
                                                    cwist_http_request *req,
                                                    uint32_t priority_weight) {
@@ -2246,21 +2968,55 @@ static app_serve_result_t app_serve_parsed_request(cwist_app *app, int client_fd
     if (app->bdr_ctx && req->method == CWIST_HTTP_GET) {
         size_t cached_len = 0;
         bdr_blob_t *bdr_pin = NULL;
-        const void *cached_blob =
-            cwist_bdr_get_pinned(app->bdr_ctx, "GET", req->path->data, &cached_len, &bdr_pin);
-        if (cached_blob && cached_len > 0) {
-            send(client_fd, cached_blob, cached_len, MSG_NOSIGNAL);
-            bool keep_alive = req->keep_alive;
-            cwist_http_request_destroy(req);
-            return keep_alive;
+        const void *cached_blob;
+        if (req->async_conn) {
+            /* Keep-alive connections repeat the same route: the per-connection
+             * cursor turns the lookup into a content-compare + epoch-validated
+             * entry reuse instead of a SipHash + bucket walk per request. */
+            cwist_http_async_conn_t *aconn = req->async_conn;
+            cached_blob = cwist_bdr_get_pinned_cursor(app->bdr_ctx, "GET", req->path->data,
+                                                      req->path->size, &cached_len, &bdr_pin,
+                                                      &aconn->bdr_cursor);
+        } else {
+            cached_blob =
+                cwist_bdr_get_pinned(app->bdr_ctx, "GET", req->path->data, &cached_len, &bdr_pin);
         }
+        if (cached_blob && cached_len > 0) {
+            bool keep_alive = req->keep_alive;
+            if (req->async_conn) {
+                cwist_http_async_conn_t *aconn = req->async_conn;
+                if (cached_len > CWIST_HTTP_COALESCE_MAX ||
+                    aconn->olen + cached_len > CWIST_HTTP_COALESCE_MAX) {
+                    if (cwist_http_coalesce_flush_blocking(client_fd, aconn) != 0) {
+                        cwist_bdr_unpin(bdr_pin);
+                        cwist_http_request_destroy(req);
+                        return APP_SERVE_CLOSE;
+                    }
+                }
+                if (cached_len > CWIST_HTTP_COALESCE_MAX) {
+                    send(client_fd, cached_blob, cached_len, MSG_NOSIGNAL);
+                } else if (cwist_http_coalesce_append(aconn, cached_blob, cached_len) != 0) {
+                    cwist_bdr_unpin(bdr_pin);
+                    cwist_http_request_destroy(req);
+                    return APP_SERVE_CLOSE;
+                }
+            } else {
+                send(client_fd, cached_blob, cached_len, MSG_NOSIGNAL);
+            }
+            cwist_bdr_unpin(bdr_pin);
+            cwist_http_request_destroy(req);
+            return keep_alive ? APP_SERVE_KEEPALIVE : APP_SERVE_CLOSE;
+        }
+        if (bdr_pin) cwist_bdr_unpin(bdr_pin);
     }
     // -----------------------------
 
-    cwist_http_response *res = cwist_http_response_create();
+    /* Share the request arena: saves one arena create/destroy per request and
+     * the response is always destroyed just before the request below. */
+    cwist_http_response *res = cwist_http_response_create_in_arena(req->arena);
     if (!res) {
         cwist_http_request_destroy(req);
-        return false;
+        return APP_SERVE_CLOSE;
     }
 
     bool endpoint_fixed = cwist_endpoint_has(req->endpoint_opts, CWIST_ENDPOINT_FIXED);
@@ -2272,6 +3028,37 @@ static app_serve_result_t app_serve_parsed_request(cwist_app *app, int client_fd
 
     internal_route_handler(app, req, res);
 
+    /* Deferred-response handoff: ownership of req/res (and the connection)
+     * moved to the cwist_async completion path.  Skip the send, BDR learning,
+     * and both destroys; ack before returning so the completion may free.
+     * The completion writes out-of-band, so coalesced responses buffered
+     * from earlier requests in this turn must drain first to preserve
+     * response order -- do that before the ack, because once the completion
+     * may run it owns the fd/conn.  On flush failure the connection is dead,
+     * but req/res ownership already moved to the cwist_async, so closing
+     * here would leave the completion holding a dangling conn/fd (UAF, and
+     * the response bytes could land on an unrelated fd reuse).  Hand the
+     * teardown to the completion instead: ack, then abort it; the abort
+     * response send fails on the dead connection and the completion's
+     * send-response path closes the conn, which owns close in all outcomes. */
+    if (res->deferred) {
+        cwist_http_async_conn_t *aconn = (cwist_http_async_conn_t *)req->async_conn;
+        bool broken = aconn && aconn->olen > 0 &&
+                      cwist_http_coalesce_flush_blocking(client_fd, aconn) != 0;
+        cwist_async_dispatch_ack((cwist_async *)res->async);
+        if (broken) cwist_async_abort((cwist_async *)res->async, CWIST_HTTP_INTERNAL_ERROR);
+        return APP_SERVE_DEFERRED;
+    }
+
+    /* WebSocket async handoff (issue #181): the 101 was sent and the fd was
+     * handed to the reactor-driven WS path inside internal_route_handler.
+     * The HTTP layer must neither close nor re-arm it. */
+    if (req->ws_async_handoff) {
+        cwist_http_response_destroy(res);
+        cwist_http_request_destroy(req);
+        return APP_SERVE_DETACH;
+    }
+
     if (app->bdr_ctx && !endpoint_fixed) {
         clock_gettime(CLOCK_MONOTONIC, &end);
         duration_ms = (end.tv_sec - start.tv_sec) * 1000 + (end.tv_nsec - start.tv_nsec) / 1000000;
@@ -2280,9 +3067,16 @@ static app_serve_result_t app_serve_parsed_request(cwist_app *app, int client_fd
     bool keep_alive = req->keep_alive && res->keep_alive;
     bool upgraded = req->upgraded;
 
+    /* During shutdown, answer in flight but mark the connection as closing
+     * so the client does not race another request onto it. */
+    if (!atomic_load(&g_cwist_running)) {
+        res->keep_alive = false;
+        keep_alive = false;
+    }
+
     if (!upgraded) {
         if (req->async_conn) {
-            cwist_async_send_status_t as_st = cwist_http_send_response_async(
+            cwist_async_send_status_t as_st = cwist_http_send_response_coalesced(
                 client_fd, res, req->async_conn, keep_alive, req->method == CWIST_HTTP_HEAD);
             cwist_http_response_destroy(res);
             cwist_http_request_destroy(req);
@@ -2291,7 +3085,7 @@ static app_serve_result_t app_serve_parsed_request(cwist_app *app, int client_fd
             return APP_SERVE_CLOSE;
         }
 
-        /* RFC 9110 §9.3.2: HEAD replies carry the GET headers (Content-Length
+        /* RFC 9110 section 9.3.2: HEAD replies carry the GET headers (Content-Length
          * included) but no body bytes, for every route. */
         cwist_error_t send_err = (req->method == CWIST_HTTP_HEAD)
                                      ? cwist_http_send_response_head(client_fd, res)
@@ -2299,7 +3093,7 @@ static app_serve_result_t app_serve_parsed_request(cwist_app *app, int client_fd
         if (send_err.error.err_i16 < 0) {
             cwist_http_response_destroy(res);
             cwist_http_request_destroy(req);
-            return false;
+            return APP_SERVE_CLOSE;
         }
 
         // --- Big Dumb Reply (Learn) ---
@@ -2311,7 +3105,11 @@ static app_serve_result_t app_serve_parsed_request(cwist_app *app, int client_fd
                 scaled_threshold = scaled_threshold * (100 - priority_weight) / 100;
             }
 
-            if (req->method == CWIST_HTTP_GET && !endpoint_file) {
+            /* A response that declares Vary differs by request headers the
+             * path-keyed cache cannot see (e.g. fragment vs full page), so
+             * replaying it for another request would be wrong. */
+            bool varies = cwist_http_header_get(res->headers, "Vary") != NULL;
+            if (req->method == CWIST_HTTP_GET && !endpoint_file && !varies) {
                 if (endpoint_fixed) {
                     cwist_sstring *serialized = cwist_http_stringify_response(res);
                     if (serialized) {
@@ -2335,14 +3133,82 @@ static app_serve_result_t app_serve_parsed_request(cwist_app *app, int client_fd
     cwist_http_response_destroy(res);
     cwist_http_request_destroy(req);
 
-    return keep_alive && !upgraded;
+    return (keep_alive && !upgraded) ? APP_SERVE_KEEPALIVE : APP_SERVE_CLOSE;
 }
+#endif /* __wasi__ */
 
 /**
  * @brief Event-driven HTTP/1.1 handler for the C1M reactor path.
- * Drains the socket without blocking, serves every complete request in the
- * stash, then tells the pool whether to rearm, close, or detach the fd.
+ * Drains the socket without blocking and serves a bounded request batch.
+ * Remaining buffered work is posted so other ready connections can run.
  */
+#define CWIST_HTTP_REQUESTS_PER_TURN_DEFAULT 16
+#define CWIST_HTTP_REQUESTS_PER_TURN_MAX 1024
+
+/* Requests served per reactor callback before yielding to other connections.
+ * CWIST_HTTP_BATCH overrides the default; values are clamped to [1, 1024]. */
+static unsigned int app_http_requests_per_turn(void) {
+    static _Atomic int cached = -1;
+    int v = atomic_load_explicit(&cached, memory_order_relaxed);
+    if (v < 0) {
+        const char *env = getenv("CWIST_HTTP_BATCH");
+        long parsed = env ? strtol(env, NULL, 10) : 0;
+        if (parsed < 1) parsed = CWIST_HTTP_REQUESTS_PER_TURN_DEFAULT;
+        if (parsed > CWIST_HTTP_REQUESTS_PER_TURN_MAX) parsed = CWIST_HTTP_REQUESTS_PER_TURN_MAX;
+        v = (int)parsed;
+        atomic_store_explicit(&cached, v, memory_order_relaxed);
+    }
+    return (unsigned int)v;
+}
+
+/* Yield granularity inside one batch: after this many served requests, if
+ * pipelined bytes remain buffered the loop exits early and the continuation
+ * path (cwist_http_async_rearm, http.c) reposts the connection so other
+ * ready connections run first.  Defaults to the full batch (legacy behavior);
+ * CWIST_HTTP_YIELD_BATCH overrides, clamped to [1, 1024]. */
+static unsigned int app_http_yield_batch(void) {
+    static _Atomic int cached = -1;
+    int v = atomic_load_explicit(&cached, memory_order_relaxed);
+    if (v < 0) {
+        const char *env = getenv("CWIST_HTTP_YIELD_BATCH");
+        long parsed = env ? strtol(env, NULL, 10) : 0;
+        if (parsed < 1) parsed = app_http_requests_per_turn();
+        if (parsed > CWIST_HTTP_REQUESTS_PER_TURN_MAX) parsed = CWIST_HTTP_REQUESTS_PER_TURN_MAX;
+        v = (int)parsed;
+        atomic_store_explicit(&cached, v, memory_order_relaxed);
+    }
+    return (unsigned int)v;
+}
+
+#ifndef CWIST_WASI_NO_SOCKETS
+/* h2c connection handoff: the blocking HTTP/2 server runs on a detached
+ * thread per connection so an abandoned connection's idle poll never pins
+ * a reactor loop.  Owns the fd, the sniffed-byte replay, and the app. */
+#define CWIST_H2C_THREAD_STACK_SIZE (256 * 1024)
+
+typedef struct {
+    int fd;
+    char *replay;
+    size_t replay_len;
+    cwist_app *app;
+} h2c_handoff_t;
+
+static void *h2c_handoff_main(void *arg) {
+    h2c_handoff_t *h = (h2c_handoff_t *)arg;
+    cwist_https_connection h2c = {.fd = h->fd,
+                                  .ssl = NULL,
+                                  .read_buf = h->replay,
+                                  .buf_len = h->replay_len,
+                                  .negotiated_http2 = true,
+                                  .negotiated_protocol = CWIST_HTTPS_PROTOCOL_HTTP2};
+    cwist_http2_serve_connection_ex(&h2c, h->app, static_http2_route_bridge,
+                                    cwist_grpc_http2_hooks());
+    close(h->fd);
+    cwist_free(h->replay);
+    cwist_free(h);
+    return NULL;
+}
+
 cwist_async_action_t cwist_app_http_handler_async(int client_fd, cwist_http_async_conn_t *conn) {
     cwist_app *app = (cwist_app *)conn->user_ctx;
     static _Atomic long dbg_fill_fail, dbg_fatal, dbg_serve_close;
@@ -2368,13 +3234,40 @@ cwist_async_action_t cwist_app_http_handler_async(int client_fd, cwist_http_asyn
         return CWIST_ASYNC_CLOSE;
     }
 
-    /* h2c preface: hand the whole connection to the blocking HTTP/2 server,
-     * which owns and closes the fd from here on.  The sniff stash already
-     * consumed the preface (and often the first pipelined frames) from the
-     * socket, so replay those bytes through the connection's prebuffer. */
+    /* h2c preface: hand the whole connection to the blocking HTTP/2 server on
+     * a dedicated thread.  The h2 serve loop waits in poll() for up to the
+     * idle budget (300 s default) on a connection the peer has abandoned --
+     * running it inline here would pin this reactor for that long, and every
+     * other connection on the loop would stall behind it (surfaced as h2spec
+     * error-response timeouts cascading once a loop was pinned).  The thread
+     * owns fd and replay; the reactor never touches either again (DETACH). */
     if (app->use_http2 && conn->len >= 24 &&
         memcmp(conn->rbuf, "PRI * HTTP/2.0\r\n\r\nSM\r\n\r\n", 24) == 0) {
         char *replay = cwist_alloc(conn->len);
+        h2c_handoff_t *handoff = replay ? cwist_alloc(sizeof(*handoff)) : NULL;
+        if (handoff) {
+            pthread_t tid;
+            pthread_attr_t attr;
+            pthread_attr_init(&attr);
+            pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_DETACHED);
+            /* The h2 serve loop's stack need is shallow; cap the reservation
+             * like the classic pool does so a burst of h2c connections cannot
+             * reserve 8 MiB apiece. */
+            if (pthread_attr_setstacksize(&attr, CWIST_H2C_THREAD_STACK_SIZE) != 0)
+                pthread_attr_init(&attr);
+            int rc;
+            memcpy(replay, conn->rbuf, conn->len);
+            handoff->fd = client_fd;
+            handoff->replay = replay;
+            handoff->replay_len = conn->len;
+            handoff->app = app;
+            rc = pthread_create(&tid, &attr, h2c_handoff_main, handoff);
+            pthread_attr_destroy(&attr);
+            if (rc == 0) return CWIST_ASYNC_DETACH;
+            cwist_free(handoff);
+        }
+        /* Thread creation failed: preserve the old inline behavior rather
+         * than dropping the connection. */
         if (replay) {
             memcpy(replay, conn->rbuf, conn->len);
             cwist_https_connection h2c = {.fd = client_fd,
@@ -2399,31 +3292,58 @@ cwist_async_action_t cwist_app_http_handler_async(int client_fd, cwist_http_asyn
     /* Jeungseung Gaebang Scaling for priority weighting. */
     uint32_t priority_weight = ((mixed_seed * 16777619U) >> 8) % 100;
 
-    for (;;) {
+    /* One pipeline must not monopolize this reactor's other connections. */
+    const unsigned int yield_batch = app_http_yield_batch();
+    for (unsigned int handled = 0; handled < app_http_requests_per_turn(); ++handled) {
         cwist_http_request *req = NULL;
         cwist_http_parse_error_t perr = CWIST_HTTP_PARSE_OK;
         cwist_recv_status_t st = cwist_http_receive_request_nb(conn, &req, &perr);
-        if (st == CWIST_RECV_NEED_MORE) return CWIST_ASYNC_REARM;
+        if (st == CWIST_RECV_NEED_MORE) {
+            /* EOF with no complete frame must close, not wait or repost. */
+            return app_async_flush_exit(client_fd, conn,
+                                        conn->peer_eof ? CWIST_ASYNC_CLOSE : CWIST_ASYNC_REARM,
+                                        !conn->peer_eof);
+        }
         if (st == CWIST_RECV_FATAL) {
-            app_maybe_send_parse_error(client_fd, perr);
+            app_maybe_send_parse_error_async(conn, perr);
             if (dbg) {
                 long n = atomic_fetch_add(&dbg_fatal, 1) + 1;
                 if (n <= 5 || n % 10000 == 0)
                     fprintf(stderr, "[async] recv-fatal fd=%d total=%ld len=%zu\n", client_fd, n,
                             conn->len);
             }
-            return CWIST_ASYNC_CLOSE;
+            return app_async_flush_exit(client_fd, conn, CWIST_ASYNC_CLOSE, false);
         }
+        req->client_fd = client_fd;
         req->app = app;
         req->db = app->db;
-        if (!app_serve_parsed_request(app, client_fd, req, priority_weight)) {
+        req->async_conn = conn;
+        app_serve_result_t sr = app_serve_parsed_request(app, client_fd, req, priority_weight);
+        /* Deferred: buffered coalesced responses from this turn already
+         * drained inside app_serve_parsed_request, before the defer was
+         * acked; the completion path owns the fd/conn now (it re-arms or
+         * closes, including the flush-failure abort). Nothing to do here. */
+        if (sr == APP_SERVE_DEFERRED) {
+            return CWIST_ASYNC_DEFER;
+        }
+        if (sr == APP_SERVE_DETACH) {
+            /* fd ownership moved (WebSocket async upgrade, issue #181); the
+             * HTTP layer must not close or re-arm it. */
+            return CWIST_ASYNC_DETACH;
+        }
+        if (sr == APP_SERVE_CLOSE) {
             if (dbg) {
                 long n = atomic_fetch_add(&dbg_serve_close, 1) + 1;
                 if (n <= 5 || n % 10000 == 0)
                     fprintf(stderr, "[async] serve-close fd=%d total=%ld\n", client_fd, n);
             }
-            return CWIST_ASYNC_CLOSE;
+            return app_async_flush_exit(client_fd, conn, CWIST_ASYNC_CLOSE, false);
         }
+        /* Cooperative yield: buffered pipelined bytes cannot wait for a read
+         * event, but serving the whole turn inline serializes every other
+         * connection on this reactor.  Exit to the continuation path below,
+         * which reposts this connection so it resumes after the ready CQEs. */
+        if ((handled + 1) % yield_batch == 0 && conn->len > 0) break;
     }
     if (conn->len > 0) {
         /* Buffered work cannot wait for another read event. The continuation
@@ -2431,14 +3351,27 @@ cwist_async_action_t cwist_app_http_handler_async(int client_fd, cwist_http_asyn
          * flush owns them instead and re-arms after draining. */
         cwist_coalesce_flush_status_t fs = cwist_http_coalesce_flush(client_fd, conn, true);
         if (fs == CWIST_COALESCE_FLUSH_ERROR) return CWIST_ASYNC_CLOSE;
-        if (fs == CWIST_COALESCE_FLUSH_PARKED) return CWIST_ASYNC_DEFER;
+        if (fs == CWIST_COALESCE_FLUSH_PARKED) {
+#ifdef CWIST_PFC_TESTING
+            /* Same park counter as app_async_flush_exit: this continuation
+             * flush can produce PARKED too (issue #172). The seam has no
+             * in-tree caller; declare it so an external harness compiling
+             * this file with -DCWIST_PFC_TESTING does not rely on an
+             * implicit declaration. */
+            extern void cwist_pfc_test_parked(void);
+            cwist_pfc_test_parked();
+#endif
+            return CWIST_ASYNC_DEFER;
+        }
         cwist_http_async_rearm(client_fd, conn->reactor, conn);
         return CWIST_ASYNC_DEFER;
     }
     return app_async_flush_exit(
         client_fd, conn, conn->peer_eof ? CWIST_ASYNC_CLOSE : CWIST_ASYNC_REARM, !conn->peer_eof);
 }
+#endif /* CWIST_WASI_NO_SOCKETS */
 
+#ifndef CWIST_WASI_NO_SOCKETS
 void cwist_app_http_handler(int client_fd, void *ctx) {
     cwist_app *app = (cwist_app *)ctx;
 
@@ -2537,54 +3470,24 @@ void cwist_app_http_handler(int client_fd, void *ctx) {
         req->app = app;
         req->db = app->db;
 
-        // --- Big Dumb Reply (Read) ---
-        if (app->bdr_ctx && req->method == CWIST_HTTP_GET) {
-            size_t cached_len = 0;
-            void *cached_blob = cwist_bdr_copy_get(app->bdr_ctx, "GET", req->path->data, &cached_len);
-            if (cached_blob) {
-                // BDR Hit! Blast it out.
-                send(client_fd, cached_blob, cached_len, 0); // Flags handled by socket opt ideally or just 0
-                cwist_free(cached_blob);
-                
-                // Cleanup and Loop
-                bool keep_alive = req->keep_alive;
-                cwist_http_request_destroy(req);
-                if (!keep_alive) break;
-                continue;
-            }
+        app_serve_result_t sr = app_serve_parsed_request(app, client_fd, req, priority_weight);
+        if (sr == APP_SERVE_DEFERRED) {
+            /* The async completion owns the fd now; it re-arms on the pool
+             * (keep-alive) or closes.  Do not close here. */
+            return;
         }
-        // -----------------------------
-
-        cwist_http_response *res = cwist_http_response_create();
-        if (!res) {
-            cwist_http_request_destroy(req);
-            break;
-        }
-        
-        internal_route_handler(app, req, res);
-        
-        bool keep_alive = req->keep_alive && res->keep_alive;
-        
-        if (!req->upgraded) {
-            if (cwist_http_send_response(client_fd, res).error.err_i16 < 0) {
-                cwist_http_response_destroy(res);
-                cwist_http_request_destroy(req);
-                break;
-            }
-        }
-        
-        cwist_http_response_destroy(res);
-        cwist_http_request_destroy(req);
-        
-        if (!keep_alive || req->upgraded) {
+        if (sr == APP_SERVE_CLOSE) {
             break;
         }
     }
-    
-    free(read_buf);
+
     close(client_fd);
 }
+#endif /* CWIST_WASI_NO_SOCKETS (socket serving machinery) */
+#endif /* __EMSCRIPTEN__ (socket serving machinery) */
 
+#if !defined(__EMSCRIPTEN__) && !defined(__wasi__)
+/* Multiport listeners are socket/UDP machinery; WASM hosts never bind. */
 #ifndef CWIST_MULTIPORT_MAX_PORTS
 #define CWIST_MULTIPORT_MAX_PORTS 64
 #endif
@@ -2596,10 +3499,22 @@ typedef struct cwist_multiport_slot {
     struct cwist_multiport_slot *next;
 } cwist_multiport_slot;
 
+typedef struct cwist_multiport_h3_listener {
+    unsigned short port;
+    int udp_fd;
+    pthread_t thread;
+    bool thread_started;
+    bool running;
+    cwist_app *app;
+    cwist_http3_context *ctx;
+} cwist_multiport_h3_listener;
+
 typedef struct cwist_multiport_group {
     cwist_app *root;
     unsigned short public_port;
     cwist_multiport_slot *slots;
+    cwist_multiport_h3_listener h3_listeners[CWIST_MULTIPORT_MAX_PORTS];
+    size_t h3_listener_count;
     struct cwist_multiport_group *next;
 } cwist_multiport_group;
 
@@ -2707,6 +3622,34 @@ static void cwist_multiport_unlink_app(cwist_app *app) {
 }
 
 /**
+ * @brief Stop every HTTP/3 fan-out listener attached to a multiport group.
+ * @param group Multiport group that owns the listener array.
+ */
+static void cwist_multiport_h3_stop_group(cwist_multiport_group *group) {
+    if (!group) return;
+    for (size_t i = 0; i < group->h3_listener_count; i++) {
+        cwist_multiport_h3_listener *listener = &group->h3_listeners[i];
+        if (listener->ctx) {
+            listener->ctx->running = 0;
+        }
+        if (listener->udp_fd >= 0) {
+            close(listener->udp_fd);
+            listener->udp_fd = -1;
+        }
+        if (listener->thread_started) {
+            pthread_join(listener->thread, NULL);
+            listener->thread_started = false;
+            listener->running = false;
+        }
+        if (listener->ctx) {
+            cwist_http3_destroy_context(listener->ctx);
+            listener->ctx = NULL;
+        }
+    }
+    group->h3_listener_count = 0;
+}
+
+/**
  * @brief Destroy sub-apps owned by a root multiport group and remove that group.
  * @param root Root application being destroyed.
  */
@@ -2719,6 +3662,8 @@ static void cwist_multiport_destroy_owned_subapps(cwist_app *root) {
             link = &group->next;
             continue;
         }
+
+        cwist_multiport_h3_stop_group(group);
 
         cwist_multiport_slot *slot = group->slots;
         while (slot) {
@@ -2743,6 +3688,17 @@ static void cwist_multiport_destroy_owned_subapps(cwist_app *root) {
  * @param src Source route table.
  * @return Deep-cloned table, or NULL on failure.
  */
+/* A cloned route shares the source's user context but never owns it: the
+ * source app outlives its multiport sub-apps and releases the context once. */
+static cwist_route_target cwist_route_clone_target(const cwist_route_entry *entry) {
+    cwist_route_target target = {.handler = entry->handler,
+                                 .handler_ex = entry->handler_ex,
+                                 .user_ctx = entry->user_ctx,
+                                 .ctx_destroy = NULL,
+                                 .ws_handler = entry->ws_handler};
+    return target;
+}
+
 static cwist_route_table *cwist_route_table_clone(cwist_route_table *src) {
     if (!src) return cwist_route_table_create();
     cwist_route_table *dst = cwist_route_table_create();
@@ -2750,13 +3706,15 @@ static cwist_route_table *cwist_route_table_clone(cwist_route_table *src) {
 
     for (size_t i = 0; i < src->bucket_count; i++) {
         for (cwist_route_entry *entry = src->buckets[i]; entry; entry = entry->next) {
-            cwist_route_table_insert(dst, entry->path, entry->name, entry->method, entry->handler,
-                                     entry->ws_handler, entry->opts);
+            cwist_route_target target = cwist_route_clone_target(entry);
+            cwist_route_table_insert(dst, entry->path, entry->name, entry->method, &target,
+                                     entry->opts);
         }
     }
     for (cwist_route_entry *entry = src->param_routes; entry; entry = entry->next) {
-        cwist_route_table_insert(dst, entry->path, entry->name, entry->method, entry->handler,
-                                 entry->ws_handler, entry->opts);
+        cwist_route_target target = cwist_route_clone_target(entry);
+        cwist_route_table_insert(dst, entry->path, entry->name, entry->method, &target,
+                                 entry->opts);
     }
     return dst;
 }
@@ -2773,6 +3731,12 @@ static cwist_middleware_node *cwist_middleware_clone(cwist_middleware_node *src)
         cwist_middleware_node *node = (cwist_middleware_node *)cwist_alloc(sizeof(*node));
         if (!node) break;
         node->func = src->func;
+        /* Like a cloned route, a cloned extended middleware shares the source's
+         * context without owning it: the source app releases it once. */
+        node->func_ex = src->func_ex;
+        node->user_ctx = src->user_ctx;
+        node->destroy = NULL;
+        node->is_ex = src->is_ex;
         node->next = NULL;
         *tail = node;
         tail = &node->next;
@@ -2866,6 +3830,10 @@ static cwist_app *cwist_app_clone_for_multiport(cwist_app *src) {
     dst->middlewares = cwist_middleware_clone(src->middlewares);
     dst->error_handlers = cwist_error_handlers_clone(src->error_handlers);
     dst->static_dirs = cwist_static_dirs_clone(src->static_dirs);
+    if (cwist_assets_clone(&dst->assets, src->assets) != 0) {
+        cwist_app_destroy(dst);
+        return NULL;
+    }
     if (cwist_grpc_routes_clone(dst, src) != 0) {
         cwist_app_destroy(dst);
         return NULL;
@@ -2878,6 +3846,9 @@ static cwist_app *cwist_app_clone_for_multiport(cwist_app *src) {
     }
     if (src->use_http3) {
         cwist_app_use_http3(dst, true);
+    }
+    if (src->h3_ctx && dst->h3_ctx) {
+        cwist_multiport_h3_copy_tunables(dst->h3_ctx, src->h3_ctx);
     }
     if (src->db_path && !src->nuke_enabled) {
         cwist_app_use_db(dst, src->db_path);
@@ -2929,7 +3900,7 @@ typedef struct cwist_multiport_http_client {
 static void *cwist_multiport_http_client_thread(void *arg) {
     cwist_multiport_http_client *client = (cwist_multiport_http_client *)arg;
     if (!client) return NULL;
-    static_http_handler(client->client_fd, client->app);
+    cwist_app_http_handler(client->client_fd, client->app);
     free(client);
     return NULL;
 }
@@ -3301,6 +4272,14 @@ int cwist_app_multiport(cwist_app **app_ref, unsigned short public_port, cwist_m
         }
     }
 
+    for (size_t i = 0; i < port_count; i++) {
+        cwist_app *port_app = cwist_multiport_bound_app(group, app, bind_ports[i]);
+        if (cwist_multiport_validate_port_app(port_app, bind_ports[i]) != 0) {
+            return -1;
+        }
+    }
+    bool needs_https_pool = cwist_multiport_needs_https_pool(group, app, bind_ports, port_count);
+
     struct pollfd pfds[CWIST_MULTIPORT_MAX_PORTS];
     for (size_t i = 0; i < port_count; i++) {
         pfds[i].fd = -1;
@@ -3326,8 +4305,15 @@ int cwist_app_multiport(cwist_app **app_ref, unsigned short public_port, cwist_m
         printf("CWIST multiport facade listening on TCP port %hu\n", bind_ports[i]);
     }
 
-    if (app->use_ssl && https_pool_init() != 0) {
+    if (cwist_multiport_h3_start_all(group, app, bind_ports, port_count) != 0) {
+        fprintf(stderr, "Failed to initialize multiport HTTP/3 fan-out.\n");
+        cwist_multiport_close_all(pfds, port_count);
+        return -1;
+    }
+
+    if (needs_https_pool && https_pool_init() != 0) {
         fprintf(stderr, "Failed to initialize HTTPS worker pool.\n");
+        cwist_multiport_h3_stop_group(group);
         cwist_multiport_close_all(pfds, port_count);
         return -1;
     }
@@ -3363,6 +4349,9 @@ int cwist_app_multiport(cwist_app **app_ref, unsigned short public_port, cwist_m
                     continue;
                 }
 
+                int nodelay = 1;
+                setsockopt(client_fd, IPPROTO_TCP, TCP_NODELAY, &nodelay, sizeof(nodelay));
+
                 cwist_app *port_app = cwist_multiport_bound_app(group, app, bind_ports[i]);
                 if (port_app->use_ssl) {
                     https_pool_submit(client_fd, port_app->ssl_ctx, static_ssl_handler, port_app);
@@ -3373,11 +4362,13 @@ int cwist_app_multiport(cwist_app **app_ref, unsigned short public_port, cwist_m
         }
     }
 
-    if (app->use_ssl) {
+    if (needs_https_pool) {
         https_pool_destroy();
     }
+    cwist_multiport_h3_stop_group(group);
     cwist_multiport_close_all(pfds, port_count);
     g_cwist_listen_fd = -1;
+    g_cwist_udp_fd = -1;
 
     if (app->mem_manager) {
         app->mem_manager->watcher_running = false;
@@ -3386,6 +4377,9 @@ int cwist_app_multiport(cwist_app **app_ref, unsigned short public_port, cwist_m
     printf("[CWIST] Multiport facade shutdown complete.\n");
     return 0;
 }
+#endif /* __EMSCRIPTEN__ (multiport) */
+
+#if !defined(__EMSCRIPTEN__) && !defined(__wasi__)
 struct h3_thread_payload {
     int udp_fd;
     cwist_app *app;
@@ -3401,12 +4395,95 @@ static void *h3_server_thread_func(void *arg) {
 #endif /* __EMSCRIPTEN__ */
 
 /**
+ * @brief Apply a CWIST_PROFILE preset before the per-variable env reads in
+ * cwist_app_listen().  Each setenv() call uses overwrite=0 so any variable
+ * already present in the caller's environment takes precedence.
+ *
+ * Profiles:
+ *   performance - maximize request throughput: C1M enabled, glibc arena cap,
+ *                 tighter reactor drain chunk (8 events between post drains),
+ *                 larger per-turn HTTP batch so a hot connection yields less.
+ *   lowmem      - minimize resident memory: C1M enabled, glibc arena capped,
+ *                 worker count capped at 2 so total RSS scales with fewer
+ *                 processes (throughput trades off against memory).
+ *   lowlat      - minimize per-request latency: classic thread-pool mode,
+ *                 sub-millisecond median at moderate concurrency.
+ *   default     - C1M enabled with reactor drain chunk 8; also applied when
+ *                 CWIST_PROFILE is unset, so the built-in app baseline uses
+ *                 the tighter drain chunk instead of the reactor's 64-event
+ *                 fallback. Explicit env vars still win (overwrite=0).
+ */
+void cwist_apply_profile(void) {
+    const char *profile = getenv("CWIST_PROFILE");
+    if (!profile || profile[0] == '\0' || strcmp(profile, "default") == 0) {
+        setenv("CWIST_C1M_MODE", "1", 0);
+        setenv("CWIST_REACTOR_DRAIN_CHUNK", "8", 0);
+        return;
+    }
+
+    if (strcmp(profile, "performance") == 0) {
+        setenv("CWIST_C1M_MODE", "1", 0);
+        setenv("CWIST_MALLOC_ARENA_MAX", "1", 0);
+        setenv("CWIST_REACTOR_DRAIN_CHUNK", "8", 0);
+        setenv("CWIST_HTTP_BATCH", "64", 0);
+        printf("[CWIST] profile: performance\n");
+    } else if (strcmp(profile, "lowmem") == 0) {
+        setenv("CWIST_C1M_MODE", "1", 0);
+        setenv("CWIST_MALLOC_ARENA_MAX", "1", 0);
+        setenv("CWIST_WORKERS", "2", 0);
+        printf("[CWIST] profile: lowmem\n");
+    } else if (strcmp(profile, "lowlat") == 0) {
+        setenv("CWIST_C1M_MODE", "0", 0);
+        printf("[CWIST] profile: lowlat\n");
+    } else {
+        fprintf(stderr, "[CWIST] unknown CWIST_PROFILE value \"%s\"; using defaults\n", profile);
+        setenv("CWIST_C1M_MODE", "1", 0);
+        setenv("CWIST_REACTOR_DRAIN_CHUNK", "8", 0);
+    }
+}
+
+/**
  * @brief Initialize runtime services and enter the HTTP or HTTPS server loop.
  * @param app Application instance to run.
  * @param port TCP port to bind.
  * @return 0 on success, or -1 when initialization, bind, or worker shutdown fails.
  */
 int cwist_app_listen(cwist_app *app, int port) {
+    return cwist_app_listen_ex(app, port, 0, -1);
+}
+
+#if !defined(__EMSCRIPTEN__) && !defined(CWIST_WASI_NO_SOCKETS)
+static int app_listen_serve(cwist_app *app, int port, int workers_override, int c1m_override);
+#endif
+
+int cwist_app_listen_ex(cwist_app *app, int port, int workers_override, int c1m_override) {
+#if defined(__EMSCRIPTEN__) || defined(CWIST_WASI_NO_SOCKETS)
+    (void)port;
+    (void)workers_override;
+    (void)c1m_override;
+    if (app) app->port = port;
+    return -1; /* WASM hosts drive requests through cwist_app_dispatch_memory() */
+#else
+#ifndef __wasi__
+    // Ignore SIGPIPE
+    signal(SIGPIPE, SIG_IGN);
+#endif
+    /* SIGTERM/SIGINT request a graceful stop only while this server runs:
+     * the caller's own handlers are back in place when it returns, on every
+     * path (including in forked workers, which also return here). */
+    cwist_shutdown_install_handlers();
+    int rc = app_listen_serve(app, port, workers_override, c1m_override);
+    cwist_shutdown_restore_handlers();
+    return rc;
+#endif
+}
+
+#if !defined(__EMSCRIPTEN__) && !defined(CWIST_WASI_NO_SOCKETS)
+/* Body of cwist_app_listen_ex() between installing and restoring the
+ * shutdown signal handlers. */
+static int app_listen_serve(cwist_app *app, int port, int workers_override, int c1m_override) {
+    cwist_app_tune_system();
+    cwist_apply_profile();
     if (!app) return -1;
     app->port = port;
 
@@ -3439,7 +4516,7 @@ int cwist_app_listen(cwist_app *app, int port) {
      * previous anti-pattern where workers forked before binding and inherited
      * threads that do not exist in the child. */
     struct sockaddr_in addr;
-    int server_fd = cwist_make_socket_ipv4(&addr, "0.0.0.0", port, 128);
+    int server_fd = cwist_make_socket_ipv4(&addr, "0.0.0.0", port, 32768);
     if (server_fd < 0) {
         perror("Failed to bind port");
         return -1;
@@ -3449,6 +4526,7 @@ int cwist_app_listen(cwist_app *app, int port) {
     /* Bind the HTTP/3 UDP socket before forking as well.  The thread that
      * services it is started per-process after the fork. */
     int udp_fd = -1;
+#ifndef __wasi__
     if (app->h3_ctx && (app->use_http3 || app->use_https3)) {
         udp_fd = socket(AF_INET, SOCK_DGRAM, 0);
         if (udp_fd >= 0) {
@@ -3475,11 +4553,14 @@ int cwist_app_listen(cwist_app *app, int port) {
             }
         }
     }
+#endif /* __wasi__ (no UDP/threads) */
 
     // Fork worker processes before any threads are created.
     int workers = 1;
     const char *workers_env = getenv("CWIST_WORKERS");
-    if (workers_env) {
+    if (workers_override > 0) {
+        workers = workers_override;
+    } else if (workers_env) {
         if (strcmp(workers_env, "auto") == 0) {
             long cores = get_cpu_cores();
             workers = (cores > 0) ? (int)cores : 1;
@@ -3489,16 +4570,71 @@ int cwist_app_listen(cwist_app *app, int port) {
             workers = (end != workers_env && *end == '\0' && v >= 1 && v <= INT_MAX) ? (int)v : 1;
         }
     } else {
-        // Default to auto (number of online CPU cores) to maximize performance on multi-core
-        // systems out of the box.
+        // Default: one worker process per three online cores (at least 2).
+        // A/B on a 12-core box (wrk -t4 -c256, plain HTTP, issue #293
+        // context): default workers=cores gave ~257k req/s at ~460% CPU with
+        // p99 ~4.8ms, while workers=4 gave ~339k req/s at ~320% CPU with
+        // p99 ~2.4ms. One process per core oversubscribes the box: the
+        // remaining CPU budget (load generator, kernel, IRQs) has no room,
+        // and every extra SO_REUSEPORT accept poll competes for cache lines.
+        // Fewer, busier workers beat more, starved ones. The "auto" value
+        // and CWIST_WORKERS still select one-per-core explicitly.
         long cores = get_cpu_cores();
-        workers = (cores > 0) ? (int)cores : 1;
+        long w = (cores > 0) ? cores / 3 : 1;
+        if (cores <= 2) w = 1; /* fork-free on machines too small to split */
+        if (w < 2 && cores > 2) w = 2;
+        workers = (int)w;
     }
     if (workers < 1) workers = 1;
+
+#if defined(__GLIBC__)
+    /* Experimental (issue #25, ROADMAP.md v3.5): cap glibc's per-process
+     * arena count before forking, so the setting is inherited by every
+     * worker. mallopt() state is plain process memory, not something a
+     * live fork() can "share back" afterward - COW means a child's first
+     * write to any inherited page (which malloc always does) forks its own
+     * private copy immediately, so there's no way to keep multiple
+     * processes pointed at one mutable arena. What *is* achievable is
+     * capping how many arenas each process can independently accumulate:
+     * by default glibc lets internal thread contention grow up to
+     * ncpus*8 arenas *per process* (each worker here forks before
+     * creating its own watcher/HTTP-3 threads, so every worker can hit
+     * that ceiling independently) - with N worker processes that's a
+     * multiplicative blow-up, and each extra arena is its own mmap'd
+     * region that adds directly to RSS. CWIST_MALLOC_ARENA_MAX=1 forces
+     * every worker down to its single main arena regardless of how many
+     * threads it spins up afterward. Unset by default: preserves today's
+     * behavior exactly. Measured against the mimalloc A/B in that issue
+     * and adopted (PR #35, merged) after winning on every metric - the CI
+     * benchmark job keeps confirming that decision on every run, this is
+     * not an open question anymore, just still opt-in rather than a
+     * default so existing deployments' behavior never changes silently. */
+    const char *arena_max_env = getenv("CWIST_MALLOC_ARENA_MAX");
+    if (arena_max_env && arena_max_env[0]) {
+        char *end = NULL;
+        long arena_max = strtol(arena_max_env, &end, 10);
+        if (end && *end == '\0' && arena_max >= 0 && arena_max <= INT_MAX) {
+            mallopt(M_ARENA_MAX, (int)arena_max);
+        }
+    }
+#endif
+
+    /* Prime libttak's TSC calibration before forking workers. calibrate_tsc()
+     * sleeps for 10 ms (timing.c) and is triggered lazily by the first
+     * ttak_get_tick_count_ns() call - which used to arrive with the first
+     * request's arena creation inside each worker process, adding ~10 ms to
+     * that worker's first request. The calibrated g_tsc_freq_ghz/g_tsc_scale
+     * globals are plain process memory, so fork children inherit the values
+     * copy-on-write and never repeat the sleep. */
+#ifndef __wasi__
+    (void)ttak_get_tick_count_ns();
+#endif
+
     bool is_worker_child = false;
     pid_t worker_pids[workers > 1 ? workers - 1 : 1];
     size_t worker_count = 0;
     int child_idx = 0;
+#ifndef __wasi__
     for (int i = 1; i < workers; i++) {
         pid_t pid = fork();
         if (pid == 0) {
@@ -3514,13 +4650,11 @@ int cwist_app_listen(cwist_app *app, int port) {
     }
 
 #if defined(__linux__) && defined(_GNU_SOURCE)
-    /* Pin worker processes to CPU cores to prevent scheduler migration jitter */
-    long core_count = get_cpu_cores();
-    if (core_count < 1) core_count = 1;
-    cpu_set_t cpuset;
-    CPU_ZERO(&cpuset);
-    CPU_SET((size_t)(is_worker_child ? child_idx : 0) % (size_t)core_count, &cpuset);
-    sched_setaffinity(0, sizeof(cpuset), &cpuset);
+    /* Keep each worker inside its inherited affinity mask (including sparse IDs). */
+    if (workers > 1 && cwist_app_pin_worker((size_t)(is_worker_child ? child_idx : 0)) < 0) {
+        /* On failure, retain the inherited mask rather than guessing a CPU ID. */
+        perror("worker CPU affinity");
+    }
 #endif
 
     if (is_worker_child) {
@@ -3534,6 +4668,15 @@ int cwist_app_listen(cwist_app *app, int port) {
             udp_fd = -1;
         }
     }
+#else
+    (void)addr;
+#endif /* __wasi__ (single process) */
+
+    /* The static cache owns a libttak cleanup thread as well as the watcher.
+     * Initialize it only after all worker forks so no child inherits mutexes
+     * or a pthread handle whose owning thread exists only in the parent. */
+#ifndef __wasi__
+    cwist_mem_init(app);
 
     // Per-process threads start here.  Each worker gets its own watcher and
     // HTTP/3 thread, so fork-after-thread deadlock is avoided.
@@ -3563,18 +4706,45 @@ int cwist_app_listen(cwist_app *app, int port) {
         }
     }
 
+#endif /* __wasi__ (no static-cache thread, watcher, or H3 thread) */
     printf("CWIST App running on port %d (SSL: %s) [Event-driven, workers=%d, pid=%d]\n", port,
            app->use_ssl ? "On" : "Off", workers, (int)getpid());
 
     // Check config for non-blocking scale mode (default enabled)
     const char *c1m = getenv("CWIST_C1M_MODE");
+#ifdef __wasi__
+    /* The C1M reactor is epoll/eventfd-based; WASI hosts run the blocking
+     * accept loop instead. */
+    bool use_c1m = false;
+#else
     bool use_c1m = true;
-    if (c1m) {
+#endif
+    if (c1m_override < 0 && c1m) {
         if (c1m[0] == '0' || strcmp(c1m, "false") == 0) {
             use_c1m = false;
         }
-        cwist_https_server_loop(server_fd, app->ssl_ctx, static_ssl_handler, app);
+    }
+#ifndef __wasi__
+    if (c1m_override >= 0) use_c1m = c1m_override != 0;
+#else
+    (void)c1m_override;
+#endif
+    if (use_c1m) {
+        cwist_async_server_loop(server_fd, app);
     } else {
+#ifdef __wasi__
+        if (app->use_ssl) {
+            fprintf(stderr, "TLS is not available on WASI (no BoringSSL); serve cleartext.\n");
+            g_cwist_listen_fd = -1;
+            return -1;
+        }
+        /* Single-threaded host: no pool, no epoll - the blocking accept
+         * fallback in cwist_http_server_loop() handles one connection at a
+         * time, which is what a WASM socket grant can drive anyway. */
+        cwist_server_config config = {
+            .use_forking = false, .use_threading = false, .use_epoll = false};
+        cwist_http_server_loop(server_fd, &config, cwist_app_http_handler, app);
+#else
         if (app->use_ssl) {
             if (!app->ssl_ctx) {
                 fprintf(stderr, "SSL enabled but context not initialized.\n");
@@ -3587,6 +4757,7 @@ int cwist_app_listen(cwist_app *app, int port) {
                 .use_forking = false, .use_threading = true, .use_epoll = false};
             cwist_http_server_loop(server_fd, &config, cwist_app_http_handler, app);
         }
+#endif
     }
 
     /* Graceful shutdown cleanup */
@@ -3601,12 +4772,22 @@ int cwist_app_listen(cwist_app *app, int port) {
         app->mem_manager->watcher_running = false;
     }
 
+    /* Post-stop drain: give in-flight C1M connections a bounded window to
+     * finish before the process exits, but only for as long as something is
+     * actually alive. The reactor and pool are already torn down at this
+     * point, so an idle server used to sleep out the full timeout on every
+     * shutdown; exit as soon as no connection remains. */
     printf("[CWIST] Draining connections for %d seconds...\n", g_cwist_drain_timeout_sec);
-    if (is_worker_child || workers == 1) {
-        sleep(g_cwist_drain_timeout_sec);
+    if ((is_worker_child || workers == 1) && g_cwist_drain_timeout_sec > 0) {
+        for (int i = 0; i < g_cwist_drain_timeout_sec * 10; i++) {
+            if (cwist_http_inflight_count() <= 0) break;
+            usleep(100 * 1000);
+        }
     }
 
+    int worker_result = 0;
     /* Parent process reaps worker children so they do not become zombies. */
+#ifndef __wasi__
     if (!is_worker_child && workers > 1) {
         /* SIGTERM is delivered to the supervisor only.  Ask every worker to
          * leave its inherited accept loop before waiting for it; otherwise a
@@ -3630,11 +4811,16 @@ int cwist_app_listen(cwist_app *app, int port) {
             }
         }
     }
+#else
+    (void)worker_pids;
+    (void)worker_count;
+#endif /* __wasi__ (no child processes) */
 
     printf("[CWIST] Shutdown complete.\n");
 
-    return 0;
+    return worker_result;
 }
+#endif
 
 static char cwist_swagger_json_path[512] = "openapi.json";
 

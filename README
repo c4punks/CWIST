@@ -1,64 +1,71 @@
-# CWIST - C Web development Is Still Trustworthy
++------------------------------------------------------------------+
+|                                            ________              |
+|   #####  #   #  #  #   ####  #####   ==   /        \             |
+|   #      #   #  #  #  #        #      == |     !    \            |
+|   #      #   #  #  #   ###     #       ==|           \___        |
+|   #      #   #  #  #      #    #      == |    | |    /           |
+|   #####  ########  #  ####     #     ==   \_________/            |
+|                                                                  |
+|              C Web development Is Still Trustworthy              |
+|                                                                  |
++------------------------------------------------------------------+
 
-CWIST is a modern, lightweight C web framework designed for building secure and scalable applications. It brings the ergonomics of modern web frameworks to C without sacrificing performance or control.
+A high-performance, C17 web framework that brings modern ergonomics
+(HTTP/3, WebTransport, Post-Quantum TLS, zero-copy I/O) to systems
+programming without sacrificing control.
+Powered by BoringSSL, lsquic, OpenSSL without context contamination.
 
-== FEATURES ==
+Two server modes, tuned for opposite things; pick per workload.
+CWIST reactor is the default (no env var needed); CWIST_C1M_MODE=0 selects
+CWIST Classic pool.
 
-- HTTP/1.1 Server: Robust request parsing and response handling.
-- SString: Custom string library with compare and substr support.
-- WebSocket Support: Easy upgrade from HTTP to persistent connections.
-- Middleware System: Chainable processing for logging and security.
-- Path Parameters: Express-style routing with :param support and Mux Router.
-- JSON Builder: Lightweight utility using cJSON for response building.
-- Static Assets & DB Sharing: Serve directories with `cwist_app_static` and reuse SQLite handles via `cwist_app_use_db`.
-- Secure by Design: Built-in integration with Monocypher.
+  CWIST reactor (default)  takes the throughput. Many connections per event
+                           loop, so a connection costs a reactor slot, not a
+                           parked thread. On the run below: 142,258 req/s
+                           against Axum's 114,649, 24% more.
 
-<!-- WEBSERVER_BENCHMARKS:START -->
-*Benchmark results are dynamically rendered here during CI runs.*
-<!-- WEBSERVER_BENCHMARKS:END -->
+  CWIST Classic pool       takes the latency. A thread per connection, so no
+                           request waits behind another in a batch. Median
+                           1.55ms against Axum's 3.21ms, and ahead through
+                           p99.
 
-====================================== code ===================================
-| #include <cwist/app.h>                                                      |
-| #include <cwist/sstring.h>                                                  |
-|                                                                             |
-| void index_handler(cwist_http_request *req, cwist_http_response *res) {     |
-|     cwist_sstring_assign(res->body, "Hello from CWIST!");                   |
-| }                                                                           |
-|                                                                             |
-| int main() {                                                                |
-|     cwist_app *app = cwist_app_create();                                    |
-|     cwist_app_use_db(app, ":memory:");                                      |
-|     cwist_app_get(app, "/", index_handler);                                 |
-|     cwist_app_listen(app, 8080);                                            |
-|     cwist_app_destroy(app);                                                 |
-|     return 0;                                                               |
-| }                                                                           |
-===============================================================================
+The distribution, not the average, is the point:
 
-3. Compilation:
-$ gcc -o server main.c -lcwist -lssl -lcrypto -luriparser -lsqlite3 -lcjson
-$ ./server
+                    p50      p90      p99    p99.9  p99.999
+  CWIST Classic   1.55ms   4.12ms   7.35ms  13.30ms  29.39ms
+  CWIST           1.99ms   7.86ms  15.06ms  19.58ms  25.82ms
+  Axum            3.21ms   5.78ms   8.61ms  11.57ms  18.09ms
 
-== DEPENDENCIES ==
+Classic pool leads for the first 99% of requests and both modes answer
+the median faster. The crossover is at p99.9, where Axum's extreme tail
+is tighter; closing that is open work.
 
-- cJSON ([https://github.com/DaveGamble/cJSON](https://github.com/DaveGamble/cJSON))
-- OpenSSL (libssl, libcrypto)
-- uriparser
-- sqlite3
+
+==================================================================
+ WHY CWIST?
+==================================================================
+
+* "Why not just use Axum (Rust) or Gin (Go)?" -- CWIST's True Niche
+  At first glance, one might ask: Why use a C-based web framework
+  when modern memory-safe languages with massive ecosystems exist?
+
+  The answer lies in Ultra-Low Latency, Extreme Container Density,
+  Zero Jitter, and Zero-Friction FFI:
 
   1. Low Latency & High Throughput:
-     Under heavy concurrency (wrk -t12 -c400), CWIST Classic Pool delivers
-     2.16ms average latency (P90 4.45ms, P99 8.80ms) and ~111k req/s,
-     and C1M Reactor delivers 2.41ms (versus 3.52ms for Axum, 7.18ms for
-     Gin, and 9.11ms for Spring Boot). In tuned low-latency profiles,
-     CWIST averages 0.59ms latency (P50 0.46ms, P90 1.12ms).
+     Under heavy concurrency (wrk -t12 -c400, CI benchmark), CWIST Classic
+     Pool delivers 1.52ms average latency (P90 3.20ms, P99 7.15ms) at ~151k
+     req/s, and C1M Reactor delivers 1.59ms at ~153k req/s (versus 2.55ms
+     for Axum, 4.64ms for Gin, and 5.91ms for Spring Boot in the same run).
+     In the tuned low-latency profile (wrk -t4 -c100), CWIST averages
+     0.41ms latency (P50 0.34ms, P90 0.69ms) at ~155k req/s.
 
   2. Predictable Memory & Container Density:
-     CWIST operates with a compact memory footprint (~15.9MB RSS in
-     C1M Reactor mode, ~21.7MB in Classic Pool mode), compared to
-     ~29.5MB for Gin and ~1.34GB for Spring Boot. In containerized
-     deployments with thousands of replicas, this preserves significant
-     memory resources.
+     CWIST operates with a compact memory footprint (~9.1MB RSS in
+     C1M Reactor mode, ~15.4MB in Classic Pool mode, same CI run),
+     compared to ~29.8MB for Gin and ~1.29GB for Spring Boot. In
+     containerized deployments with thousands of replicas, this preserves
+     significant memory resources.
 
   3. Zero GC Pauses & Predictable Tail Latency:
      With generational arenas, EBR GC, and deterministic worker
@@ -128,7 +135,7 @@ Rendering       HTML builder, CSS composer, template engine,
  QUICK START
 ==================================================================
 
-  git clone https://github.com/religiya-serdtsa/cwist.git
+  git clone https://github.com/c4punks/CWIST.git
   cd cwist
   make
 
@@ -176,6 +183,79 @@ missing optional API does not prevent an HTTP/3 build.
 
   gcc -o server main.c -lcwist -lssl -lcrypto -luriparser -lcjson -ldl -lpthread
   ./server
+
+<!-- BENCHMARKS:START -->
+Latest automated benchmark: **Darwin**: 14.19 M leases/s, 130.36% CPU, 797696 KiB RSS.
+
+![CWIST benchmark trends](docs/benchmark-trends.svg)
+<!-- BENCHMARKS:END -->
+
+<!-- WEBSERVER_BENCHMARKS:START -->
+Latest Web Server Benchmark (wrk -t12 -c400 -d10s (after 10s warmup, warmup discarded)):
+- **CWIST Classic pool**: 115954 req/s | Latency 2.01ms (P90 4.22ms, P99 7.68ms, P99.999 22.01ms) | RSS 59044KiB | Csw 1164482
+- **CWIST reactor**: 136246 req/s | Latency 2.87ms (P90 5.04ms, P99 7.75ms, P99.999 14.38ms) | RSS 20040KiB | Csw 119800
+- **CWIST reactor (arena_max=1)** — glibc arena cap adopted in PR #35 after mimalloc was tried and refuted (issue #25); this line confirms the decision on every run: 137323 req/s | Latency 2.85ms (P90 4.97ms, P99 7.79ms, P99.999 16.74ms) | RSS 24156KiB | Csw 113815
+- **CWIST reactor (drain_chunk=8)** — cooperative queuing for cwist_async_defer completions within a big io_uring batch (issue #25, docs/cooperative-queuing.md); this workload has no cwist_async_defer traffic to interleave, so parity with the plain CWIST row above is the expected result, not a null finding — the tail-latency win is isolated directly in tests/bench_cooperative_queuing.c: 137476 req/s | Latency 2.85ms (P90 5.07ms, P99 7.68ms, P99.999 12.33ms) | RSS 20952KiB | Csw 120856
+- **Axum**: 110433 req/s | Latency 3.55ms (P90 6.00ms, P99 8.90ms, P99.999 17.28ms) | RSS 18348KiB | Csw 187263
+- **Gin (Go)**: 78769 req/s | Latency 6.74ms (P90 16.15ms, P99 35.36ms, P99.999 80.97ms) | RSS 30720KiB | Csw 298754
+- **Spring Boot**: 43382 req/s | Latency 9.17ms (P90 11.53ms, P99 19.10ms, P99.999 96.65ms) | RSS 1326532KiB | Csw 229505
+
+**Spring runtime environment**
+
+- **JDK:** `openjdk version "25.0.4.1" 2026-08-18 LTS`
+- **Spring Boot:** 3.2.3
+- **Stack:** Spring WebFlux + Reactor Netty on native epoll (G1GC, JDK 25 Leyden AOT, virtual threads disabled)
+- **Virtual threads:** disabled
+
+**JVM options**
+
+```text
+-Xms1024m
+-Xmx1024m
+-XX:+UseG1GC
+-XX:GCTimeRatio=99
+-XX:G1HeapRegionSize=1m
+-XX:+AlwaysPreTouch
+-XX:CompileThreshold=1500
+-XX:CICompilerCount=4
+-Djava.security.egd=file:/dev/urandom
+-Djava.net.preferIPv4Stack=true
+-Dio.netty.allocator.type=pooled
+-Dio.netty.leakDetection.level=disabled
+-Dio.netty.buffer.checkBounds=false
+-Dio.netty.buffer.checkAccessible=false
+-Dreactor.netty.ioWorkerCount=4
+-Xlog:gc*:file=/tmp/spring_gc.log:time,uptime,level,tags
+-XX:+AOTClassLinking
+-XX:AOTCache=/tmp/spring_bench/app.aot (JEP 483 + JEP 514 single-step AOT)
+```
+
+**Warmup/profile**
+
+wrk -t12 -c400 -d10s (after 10s warmup, warmup discarded)
+
+![Web Server Benchmark Trends](docs/webserver-benchmark-trends.svg)
+
+Latency distribution (density curve reconstructed from each server's percentiles - shows the shape of the tail, not just its P99.999 number):
+
+![Web Server Latency Distribution](docs/webserver-latency-distribution.svg)
+
+### Per runner CPU
+
+GitHub hands out a different CPU model per run, which moves these numbers more than most code changes do. Medians of every recorded run, split by the CPU it landed on, so rows are only comparable down a column:
+
+| Runner CPU | Runs | CWIST Classic ms | CWIST ms | Axum ms | CWIST req/s | Axum req/s |
+|---|---:|---:|---:|---:|---:|---:|
+| AMD EPYC 7763 64-Core Processor | 53 | 2.05 | 2.89 | 3.54 | 140,677 | 110,433 |
+| AMD EPYC 9V74 80-Core Processor | 23 | 1.61 | 2.57 | 2.62 | 182,209 | 150,456 |
+| AMD EPYC 9V45 96-Core Processor | 12 | 1.27 | 1.87 | 2.10 | 223,051 | 189,872 |
+| Intel(R) Xeon(R) 6973P-C | 7 | 0.98 | 1.46 | 1.62 | 314,909 | 246,066 |
+| INTEL(R) XEON(R) PLATINUM 8573C | 4 | 1.24 | 1.72 | 1.98 | 244,777 | 198,838 |
+| Intel(R) Xeon(R) Platinum 8370C CPU @ 2.80GHz | 1 | 1.38 | 1.96 | 2.43 | 205,814 | 160,582 |
+<!-- WEBSERVER_BENCHMARKS:END -->
+
+~~~HEAVY BENCHMARK ON CWIST APP~~~ ==> https://github.com/gg582/fly.board/blob/main/README.md
+
 
 ==================================================================
  CLI, PROJECT MANIFESTS, AND OPENAPI
@@ -313,6 +393,6 @@ See BENCHMARK.txt for the full transcript and reproducible workflow.
  DOCUMENTATION
 ==================================================================
 
-* API Reference  : https://religiya-serdtsa.github.io/CWIST/
+* API Reference  : https://c4punks.github.io/CWIST/
 * docs/          -- tutorials and Doxygen sources
 * example/       -- runnable demos including rps-showcase and othello-web

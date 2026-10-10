@@ -16,6 +16,8 @@ framework-specific tuning is applied beyond what is documented here.
 | Warmup | `wrk -t12 -c400 -d10s http://127.0.0.1:$PORT/` | Discarded. Lets JIT-tiered runtimes (JVM) reach steady state. Applied identically to all four servers. |
 | Measurement | `wrk -t12 -c400 -d10s http://127.0.0.1:$PORT/` | Recorded: `Requests/sec`, avg `Latency`. |
 
+**CPU budget:** every server and the load generator see the full runner CPU set — no pinning, no per-runtime thread caps. Each runtime uses its own default/auto worker sizing (CWIST `CWIST_WORKERS=auto`, Tokio `available_parallelism`, Go `GOMAXPROCS=default`, Netty `ioWorkerCount=nproc`). This keeps the comparison fair: no framework gets a hand-tuned advantage the others do not get.
+
 - Server startup wait is a readiness loop (`curl` poll, up to 90s for the JVM), not a fixed sleep.
 - **Peak RSS** is sampled from `ps -o rss=` immediately after the measured run.
 - **Context switches** (`nvcsw + nivcsw` from `ps`) are counted only over the measured
@@ -74,12 +76,21 @@ never measured at. Axum and Gin are not yet included in this second pass.
 ## Spring Boot (JVM fairness configuration)
 
 The JVM is not a measure-once runtime: tiered JIT compilation, heap resizing, and class
-loading dominate short runs. The suite therefore fixes and *records* the following:
+loading dominate short runs. The suite therefore fixes and *records* the following.
+
+The benchmarked stack is **Spring WebFlux on Reactor Netty** — Spring's reactive,
+event-loop server — rather than Spring MVC on the thread-per-request Tomcat servlet
+container. Netty's event loop is the appropriate Java comparison point for the async
+CWIST (io_uring/epoll) and Axum (tokio) servers. On top of the event loop,
+**virtual threads are enabled** (`spring.threads.virtual.enabled=true`, Project Loom)
+so that any work dispatched off the Netty event loop runs on Loom virtual threads
+instead of a bounded platform-thread pool.
 
 | Setting | Value |
 |---|---|
 | Java | Temurin **21** (`actions/setup-java`) |
-| Spring Boot | **3.2.3** (`spring-boot-starter-web`) |
+| Spring Boot | **3.2.3** (`spring-boot-starter-webflux`) |
+| Server | **Reactor Netty** (event loop, non-blocking I/O) |
 | Virtual threads | **enabled** — `spring.threads.virtual.enabled=true` (Project Loom) |
 | JVM options | `-Xms512m -Xmx512m` (fixed heap, no resize noise during measurement) |
 | AOT cache | **CDS** — training run with `-XX:ArchiveClassesAtExit=app.jsa` (clean shutdown via SIGTERM), measured run replays `-XX:SharedArchiveFile=app.jsa` |
@@ -107,6 +118,7 @@ to the numbers, so a result is never an isolated req/s figure:
   "spring_env": {
     "java_version": "openjdk version \"21.x\" ... (Temurin)",
     "spring_boot_version": "3.2.3",
+    "stack": "Spring WebFlux + Reactor Netty (event loop, virtual threads enabled)",
     "jvm_opts": "-Xms512m -Xmx512m -XX:SharedArchiveFile=... (CDS AOT cache)",
     "virtual_threads": true,
     "aot_cache": "CDS (-XX:ArchiveClassesAtExit training run + -XX:SharedArchiveFile replay)"
@@ -116,6 +128,31 @@ to the numbers, so a result is never an isolated req/s figure:
 
 `scripts/ci/benchmark.py render` prints this environment block as the SVG footer and in
 the README benchmark summary.
+
+## Latency distribution chart
+
+`docs/webserver-latency-distribution.svg` (linked in the README right below the
+bar-chart trends SVG) plots each server's latency distribution as a density
+curve, so the *shape* of the tail is visible at a glance instead of only its
+P99.999 number. It compares the same five servers as the summary table above
+(`cwist`, `cwist_c1m`, `axum`, `gin`, `spring`) — the `_tuned` entries (different,
+lower-concurrency load profile) and the opt-in experimental A/Bs
+(`cwist_c1m_arena1`, `cwist_sharded`) are excluded so the chart only ever compares
+runs made under the identical `wrk -t12 -c400 -d10s` profile.
+
+This is **reconstructed, not raw**: wrk only ever reports percentiles
+(min/p50/p75/p90/p99/p99.9/p99.99/p99.999/max — all now captured by the
+workflow's `parse_wrk()`, see `.github/workflows/bsd-kqueue-benchmarks.yml`),
+never the underlying per-request samples. `scripts/ci/benchmark.py`
+(`_inverse_cdf_samples`) linearly interpolates the inverse CDF between those
+known percentile points to synthesize a representative sample set, then runs a
+standard Gaussian KDE (`_gaussian_kde`, Silverman's rule of thumb for
+bandwidth) over it. The x-axis uses `log1p(ms)` so a long tail (Gin, Spring
+Boot) doesn't compress the tighter CWIST/Axum curves into an unreadable spike
+at the left edge. Treat the curve shapes as representative, not exact — a
+server with sparser percentile data (an older history row missing the newer
+p75/p999/p9999/min/max fields) still renders, just with fewer anchor points to
+interpolate between.
 
 ## Known limitations
 

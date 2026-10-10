@@ -170,6 +170,49 @@ fn a_shutdown_requested_before_listen_makes_it_return_at_once() {
     assert_eq!(finished(&done), Ok(()));
 }
 
+/// Opens a connection and sends `GET path` without waiting for the answer.
+fn start_get(port: u16, path: &str) -> TcpStream {
+    let mut stream = TcpStream::connect(("127.0.0.1", port)).unwrap();
+    stream.set_read_timeout(Some(Duration::from_secs(5))).unwrap();
+    write!(stream, "GET {path} HTTP/1.1\r\nHost: localhost\r\n\r\n").unwrap();
+    stream
+}
+
+#[test]
+fn completing_after_the_server_stopped_closes_the_connection() {
+    let _serial = serial();
+    let port = free_port();
+    let (tx, rx) = mpsc::channel::<cwist::AsyncResponse>();
+    let done = serve(port, move |app| {
+        app.get("/defer", move |req, res| {
+            let handle = cwist::AsyncResponse::defer(req, res).expect("defer");
+            tx.send(handle).expect("send async handle");
+        })
+        .unwrap();
+    });
+
+    assert!(wait_until_up(port));
+    let mut answered = start_get(port, "/defer");
+    let first = rx.recv_timeout(Duration::from_secs(5)).expect("first handle");
+    let mut dropped = start_get(port, "/defer");
+    let second = rx.recv_timeout(Duration::from_secs(5)).expect("second handle");
+
+    // Both exchanges are still pending when the server stops, and listen
+    // returns having destroyed the app and the reactors they were parked on.
+    cwist::shutdown();
+    assert_eq!(finished(&done), Ok(()));
+
+    // Completing now, or dropping the handle (which answers 500), cannot
+    // send any more: the connection is closed without a response.
+    assert!(first.respond(200, "text/plain", "too late"));
+    drop(second);
+    for stream in [&mut answered, &mut dropped] {
+        let mut rest = Vec::new();
+        stream.read_to_end(&mut rest).unwrap();
+        assert!(rest.is_empty(), "{}", String::from_utf8_lossy(&rest));
+    }
+}
+
 #[test]
 fn listening_on_a_busy_port_is_an_error() {
     let _serial = serial();
@@ -185,6 +228,63 @@ fn listening_on_a_busy_port_is_an_error() {
     assert!(wait_until_up(port));
     cwist::shutdown();
     assert_eq!(finished(&done), Ok(()));
+}
+
+/// One GET accepting gzip over a fresh connection: (head, body bytes).
+fn get_accepting_gzip(port: u16, path: &str) -> (String, Vec<u8>) {
+    let mut stream = TcpStream::connect(("127.0.0.1", port)).unwrap();
+    stream.set_read_timeout(Some(Duration::from_secs(5))).unwrap();
+    write!(
+        stream,
+        "GET {path} HTTP/1.1\r\nHost: localhost\r\nAccept-Encoding: gzip\r\nConnection: close\r\n\r\n"
+    )
+    .unwrap();
+    let mut raw = Vec::new();
+    stream.read_to_end(&mut raw).unwrap();
+    let split = raw.windows(4).position(|w| w == b"\r\n\r\n").expect("header end");
+    let head = String::from_utf8(raw[..split].to_vec()).expect("UTF-8 head");
+    (head, raw[split + 4..].to_vec())
+}
+
+#[test]
+fn compression_leaves_a_deferred_response_alone() {
+    // Long and repetitive, so gzip makes it smaller and is applied.
+    let body = "answered by the async completion, not by the handler. ".repeat(20);
+    let deferred_body_text = body.clone();
+    let plain_body_text = body.clone();
+    let _serial = serial();
+    let port = free_port();
+    let done = serve(port, move |app| {
+        // threshold 0 means compress any body size, so /plain is encoded.
+        let _ = app.use_builtin_middleware(cwist::middleware::compress(0));
+        app.get("/defer", move |req, res| {
+            let handle = cwist::AsyncResponse::defer(req, res).expect("defer");
+            // Answer on another thread and wait for it, so the completion has
+            // written the response before the compression middleware resumes.
+            let (tx, rx) = mpsc::channel();
+            let text = deferred_body_text.clone();
+            thread::spawn(move || {
+                let _ = tx.send(handle.respond(200, "text/plain", text));
+            });
+            assert!(rx.recv_timeout(Duration::from_secs(5)).expect("respond"));
+        })
+        .unwrap();
+        app.get("/plain", move |_req, res| res.set_body(&plain_body_text).unwrap()).unwrap();
+    });
+
+    assert!(wait_until_up(port));
+    let (plain_head, _) = get_accepting_gzip(port, "/plain");
+    let (deferred_head, deferred_body) = get_accepting_gzip(port, "/defer");
+    // Stop the server before asserting, so a failure cannot leave it running.
+    cwist::shutdown();
+    assert_eq!(finished(&done), Ok(()));
+
+    // The same middleware compresses an ordinary response...
+    assert!(plain_head.contains("Content-Encoding: gzip\r\n"), "{plain_head}");
+    // ...but not one the async completion owns.
+    assert!(deferred_head.starts_with("HTTP/1.1 200"), "{deferred_head}");
+    assert!(!deferred_head.contains("Content-Encoding"), "{deferred_head}");
+    assert_eq!(deferred_body, body.as_bytes());
 }
 
 #[test]
@@ -270,8 +370,13 @@ fn a_deferred_response_is_read_only_for_the_handler_and_middleware() {
     let handler_seen = Arc::clone(&seen);
     let middleware_seen = Arc::clone(&seen);
     let done = serve(port, move |app| {
-        let _ = app.use_middleware(move |_req, res, next| {
+        let _ = app.use_middleware(move |req, res, next| {
             next();
+            // Middleware is app-wide; only record the deferred route, not
+            // the /ping readiness probe.
+            if req.path() != Some("/defer") {
+                return;
+            }
             let late = res.add_header("X-Late", "1");
             middleware_seen.lock().unwrap().push(format!("middleware {late:?}"));
         });
@@ -297,6 +402,10 @@ fn a_deferred_response_is_read_only_for_the_handler_and_middleware() {
 
     assert!(wait_until_up(port));
     let response = raw_get(port, "/defer");
+    // Stop the server before asserting, so a failure here cannot leave it
+    // running for the next test.
+    cwist::shutdown();
+    assert_eq!(finished(&done), Ok(()));
     assert!(response.starts_with("HTTP/1.1 200"), "{response}");
     assert!(response.ends_with("\r\n\r\nasync body"), "{response}");
     assert!(!response.contains("X-Late"), "{response}");
@@ -311,9 +420,6 @@ fn a_deferred_response_is_read_only_for_the_handler_and_middleware() {
             "middleware Err(Deferred)",
         ]
     );
-
-    cwist::shutdown();
-    assert_eq!(finished(&done), Ok(()));
 }
 
 #[test]
@@ -349,4 +455,30 @@ fn completing_after_a_timeout_returns_false() {
     assert_eq!(http_get(port, "/ping"), Some((200, "pong".to_owned())));
     cwist::shutdown();
     assert_eq!(finished(&done), Ok(()));
+}
+
+#[test]
+fn builtin_rate_limit_answers_429_over_tcp() {
+    let _serial = serial();
+    let port = free_port();
+    let done = serve(port, |app| {
+        app.use_builtin_middleware(cwist::middleware::rate_limit_ip(2)).unwrap();
+        app.get("/limited", |_req, res| res.set_body("ok").unwrap()).unwrap();
+    });
+
+    assert!(wait_until_up(port));
+    // The readiness probes went through the limiter too; start from a full
+    // bucket. SAFETY: the bucket table is guarded by CWIST's own lock.
+    unsafe { cwist_sys::cwist_mw_rate_limit_reset() };
+    let first = http_get(port, "/limited");
+    let second = http_get(port, "/limited");
+    let third = http_get(port, "/limited");
+
+    cwist::shutdown();
+    assert_eq!(finished(&done), Ok(()));
+    // SAFETY: as above; leave no bucket behind for later tests.
+    unsafe { cwist_sys::cwist_mw_rate_limit_reset() };
+    assert_eq!(first, Some((200, "ok".to_owned())));
+    assert_eq!(second, Some((200, "ok".to_owned())));
+    assert_eq!(third, Some((429, "Too Many Requests".to_owned())));
 }

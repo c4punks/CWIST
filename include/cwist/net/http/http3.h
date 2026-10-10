@@ -54,6 +54,14 @@ struct cwist_http3_context {
     int ping_period_ms;        /**< 0 = use lsquic default (server: none) */
     int noprogress_timeout_ms; /**< 0 = use lsquic default (60s server) */
     void *hsets; /**< Head of tracked cwist_h3_hset list (internal; swept on engine destroy) */
+    /* Last CONNECTION_CLOSE frame received from a peer by any connection of
+     * this context. Written on the engine thread from lsquic's close-frame
+     * callback; read via cwist_http3_last_close_error() for post-serve
+     * diagnostics (call after the serve loop has stopped). */
+    volatile int last_close_received; /**< Non-zero once a close frame was recorded */
+    int last_close_app_error;         /**< 0 transport, 1 application, -1 unknown */
+    uint64_t last_close_code;         /**< QUIC transport or H3 application error code */
+    char last_close_reason[256];      /**< Peer reason phrase, NUL-terminated */
 };
 
 /**
@@ -90,13 +98,6 @@ cwist_error_t cwist_http3_init_context_ephemeral(cwist_http3_context **ctx);
  * @brief Destroy an HTTP/3 context.
  */
 void cwist_http3_destroy_context(cwist_http3_context *ctx);
-
-/**
- * @brief Serve a single HTTP/3 connection.
- */
-cwist_error_t cwist_http3_serve_connection(cwist_http3_connection *conn,
-                                           void *user_ctx,
-                                           cwist_http3_request_handler_func handler);
 
 /**
  * @brief Run the HTTP/3 server event loop.

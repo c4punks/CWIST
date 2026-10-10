@@ -11,6 +11,7 @@ bindings/rust/Cargo.lock
 # Test binaries
 test_sstring
 test_http
+test_http_client
 test_siphash
 test_mux
 stress_test
@@ -83,6 +84,7 @@ test_bdr
 test_bind
 test_cache
 test_compress
+test_builtin_mw_deferred
 test_csrf
 test_db_memory
 test_db_pool
@@ -122,6 +124,7 @@ test_seq
 test_seq_auth
 test_session
 test_shutdown
+test_listen_signal_restore
 test_static_and_range
 test_test_client
 test_waf
@@ -132,6 +135,7 @@ payload.json
 test_sstring_run
 fly.board/
 test_https
+test_https_park
 benchmarks/web-frameworks/cwist_bench
 dist/
 cwist.pc
