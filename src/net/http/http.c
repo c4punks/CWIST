@@ -3471,7 +3471,6 @@ static void http_send_100_continue(int fd) {
  * @return Heap-allocated response string, or NULL on invalid input.
  */
 cwist_sstring *cwist_http_stringify_response(cwist_http_response *res) {
-    // Deprecated / Debug only
     if (!res) return NULL;
     cwist_sstring *s = cwist_sstring_create();
     if (!s) return NULL;
