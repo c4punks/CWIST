@@ -139,7 +139,7 @@ SQLITE_DIR = lib/sqlite3
 # on this branch, so it is compiled here.  main pins lsquic master, which does
 # not carry that API, and carries no WebTransport source either.  Set
 # CWIST_WEBTRANSPORT=0 to leave it out.
-CWIST_WEBTRANSPORT ?= 0
+CWIST_WEBTRANSPORT ?= 1
 ifeq ($(CWIST_WEBTRANSPORT),1)
     CFLAGS += -DCWIST_WEBTRANSPORT
 endif
