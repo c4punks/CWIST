@@ -381,7 +381,7 @@ static void latency_probe_dump(const cwist_reactor_t *reactor) {
             if (!b[i]) continue;
             if (i + 1 < LATENCY_PROBE_BUCKETS)
                 fprintf(stderr, "[latency-probe] pid=%d %-12s [%-8u,%-8u) us : %llu\n",
-                        (int)getpid(), name, i == 0 ? 0 : latency_probe_bounds_us[i - 1],
+                        (int)getpid(), name, i == 0 ? 0u : latency_probe_bounds_us[i - 1],
                         latency_probe_bounds_us[i], (unsigned long long)b[i]);
             else
                 fprintf(stderr, "[latency-probe] pid=%d %-12s [1000000, +inf) us : %llu\n",
