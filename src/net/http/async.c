@@ -113,7 +113,9 @@ cwist_async *cwist_async_defer(cwist_http_request *req, cwist_http_response *res
     if (req->https_conn) {
         a->https_conn = req->https_conn;
         ((cwist_https_connection *)req->https_conn)->deferred = true;
-        t_https_deferred = true;
+        /* Only an HTTP/1.1 completion takes the conn itself; an h2 stream's
+         * completion goes through h2_queue and the h2 loop keeps the conn. */
+        if (!req->h2_queue) t_https_deferred = true;
     }
     if (req->h2_queue) {
         /* Keep the queue alive until the completion has been enqueued, even

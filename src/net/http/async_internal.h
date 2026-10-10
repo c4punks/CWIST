@@ -30,8 +30,9 @@ bool cwist_http_reactor_post_live(cwist_reactor_t *reactor, uint64_t gen,
 void cwist_http_async_close_orphan(int client_fd, cwist_http_async_conn_t *conn);
 
 /**
- * Return whether cwist_async_defer() took an HTTPS connection on this thread
- * since the last call, and clear the flag. The HTTPS pool worker checks this
+ * Return whether cwist_async_defer() handed an HTTP/1.1 HTTPS connection to
+ * its completion on this thread since the last call, and clear the flag
+ * (deferring an h2 stream leaves the conn with the h2 loop). The HTTPS pool worker checks this
  * instead of conn->deferred: once the dispatch ack is published the
  * completion owns the conn and may already have closed or resubmitted it.
  */
