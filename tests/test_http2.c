@@ -225,7 +225,7 @@ static void test_http2_roundtrip(void) {
         uint8_t type = hdr[3];
         uint32_t stream_id = (((uint32_t)hdr[5] & 0x7f) << 24) | ((uint32_t)hdr[6] << 16) |
                              ((uint32_t)hdr[7] << 8) | hdr[8];
-        unsigned char payload[256] = {0};
+        unsigned char payload[4096] = {0};
         assert(len < sizeof(payload));
         if (len > 0) {
             assert(ssl_read_exact(client, payload, len) == 0);
@@ -385,7 +385,7 @@ static void test_http2_ping(void) {
         uint8_t flags = hdr[4];
         uint32_t stream_id = (((uint32_t)hdr[5] & 0x7f) << 24) | ((uint32_t)hdr[6] << 16) |
                              ((uint32_t)hdr[7] << 8) | hdr[8];
-        unsigned char payload[256] = {0};
+        unsigned char payload[4096] = {0};
         assert(len < sizeof(payload));
         if (len > 0) assert(ssl_read_exact(client, payload, len) == 0);
 
@@ -462,7 +462,7 @@ static void test_http2_multi_stream_concurrent(void) {
         uint8_t type = hdr[3];
         uint32_t stream_id = (((uint32_t)hdr[5] & 0x7f) << 24) | ((uint32_t)hdr[6] << 16) |
                              ((uint32_t)hdr[7] << 8) | hdr[8];
-        unsigned char payload[256] = {0};
+        unsigned char payload[4096] = {0};
         assert(len < sizeof(payload));
         if (len > 0) assert(ssl_read_exact(client, payload, len) == 0);
 
@@ -537,7 +537,7 @@ static void test_http2_continuation(void) {
         uint8_t type = hdr[3];
         uint32_t stream_id = (((uint32_t)hdr[5] & 0x7f) << 24) | ((uint32_t)hdr[6] << 16) |
                              ((uint32_t)hdr[7] << 8) | hdr[8];
-        unsigned char payload[256] = {0};
+        unsigned char payload[4096] = {0};
         assert(len < sizeof(payload));
         if (len > 0) assert(ssl_read_exact(client, payload, len) == 0);
 
@@ -695,7 +695,7 @@ static void test_http2_response_headers(void) {
         uint8_t type = hdr[3];
         uint32_t stream_id = (((uint32_t)hdr[5] & 0x7f) << 24) | ((uint32_t)hdr[6] << 16) |
                              ((uint32_t)hdr[7] << 8) | hdr[8];
-        unsigned char payload[256] = {0};
+        unsigned char payload[4096] = {0};
         assert(len < sizeof(payload));
         if (len > 0) assert(ssl_read_exact(client, payload, len) == 0);
 
@@ -1045,7 +1045,7 @@ static void test_http2_rapid_reset(void) {
 }
 
 static void test_http2_idle_stream_rst(void) {
-    printf("Testing HTTP/2 idle stream RST_STREAM rejection (RFC 7540 §5.1)...\n");
+    printf("Testing HTTP/2 idle stream RST_STREAM rejection (RFC 7540 section 5.1)...\n");
     int sv[2];
     assert(socketpair(AF_UNIX, SOCK_STREAM, 0, sv) == 0);
 
@@ -1105,7 +1105,7 @@ static void test_http2_idle_stream_rst(void) {
     }
 
     assert(saw_goaway);
-    assert(goaway_err == 0x1); /* PROTOCOL_ERROR per RFC 7540 §5.1 */
+    assert(goaway_err == 0x1); /* PROTOCOL_ERROR per RFC 7540 section 5.1 */
 
     SSL_shutdown(client);
     SSL_free(client);
@@ -1113,7 +1113,7 @@ static void test_http2_idle_stream_rst(void) {
     close(sv[1]);
 
     pthread_join(tid, NULL);
-    printf("Passed HTTP/2 idle stream RST_STREAM rejection (RFC 7540 §5.1).\n");
+    printf("Passed HTTP/2 idle stream RST_STREAM rejection (RFC 7540 section 5.1).\n");
 }
 
 static void test_http2_continuation_flood(void) {
@@ -1386,6 +1386,9 @@ int main(void) {
     test_http2_async_defer_rst_drops();
     test_http2_missing_pseudo_header();
     test_http2_max_concurrent_streams();
+    test_http2_rapid_reset();
+    test_http2_idle_stream_rst();
+    test_http2_continuation_flood();
     printf("All HTTP/2 tests passed!\n");
     return 0;
 }

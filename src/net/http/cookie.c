@@ -94,12 +94,16 @@ void cwist_cookie_parse(cwist_query_map *map, const char *header) {
             char *name = pair;
             char *value = eq + 1;
             /* trim trailing whitespace on name */
-            char *end = name + strlen(name) - 1;
-            while (end > name && (*end == ' ' || *end == '\t')) *end-- = '\0';
+            size_t nlen = strlen(name);
+            while (nlen > 0 && (name[nlen - 1] == ' ' || name[nlen - 1] == '\t')) {
+                name[--nlen] = '\0';
+            }
 
-            char decoded[4096];
-            if (cwist_cookie_decode(value, decoded, sizeof(decoded)) >= 0) {
-                cwist_query_map_set(map, name, decoded);
+            if (nlen > 0) {
+                char decoded[4096];
+                if (cwist_cookie_decode(value, decoded, sizeof(decoded)) >= 0) {
+                    cwist_query_map_set(map, name, decoded);
+                }
             }
         }
         pair = strtok_r(NULL, ";", &save);

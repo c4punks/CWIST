@@ -1,5 +1,8 @@
-#include <cwist/sql.h>
-#include <cwist/err/cwist_err.h>
+#include <cwist/core/db/sql.h>
+#include <cwist/core/utils/json_heal.h>
+#include <cwist/core/utils/zod.h>
+#include <cwist/sys/err/cwist_err.h>
+#include <cwist/core/mem/alloc.h>
 #include <sqlite3.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -126,6 +129,12 @@ static void cwist_db_apply_hint(sqlite3 *conn, const cwist_db_plan_hint *hint) {
 }
 
 // Make SQLite Error type as cwist_error_t
+/**
+ * @brief Convert an SQLite result code and message into CWIST's JSON error form.
+ * @param rc SQLite result code.
+ * @param msg SQLite-provided human-readable message.
+ * @return JSON-backed CWIST error object.
+ */
 static cwist_error_t make_sqlite_error(int rc, char *msg) {
     cwist_error_t err = make_error(CWIST_ERR_JSON);
     err.error.err_json = cJSON_CreateObject();
@@ -136,6 +145,12 @@ static cwist_error_t make_sqlite_error(int rc, char *msg) {
 
 // Open SQLite database file
 // 0 on success, -1 on failure
+/**
+ * @brief Open a SQLite database and wrap the resulting connection in a CWIST handle.
+ * @param db Output pointer receiving the allocated database wrapper.
+ * @param path Filesystem path or SQLite URI to open.
+ * @return Tagged CWIST error describing success or failure.
+ */
 cwist_error_t cwist_db_open(cwist_db **db, const char *path) {
     cwist_error_t err = make_error(CWIST_ERR_INT16);
 
@@ -158,7 +173,7 @@ cwist_error_t cwist_db_open(cwist_db **db, const char *path) {
     if (rc) {
         cwist_error_t sql_err = make_sqlite_error(rc, (char *)sqlite3_errmsg((*db)->conn));
         sqlite3_close((*db)->conn);
-        free(*db);
+        cwist_free(*db);
         *db = NULL;
         return sql_err;
     }
@@ -282,14 +297,28 @@ void cwist_db_close(cwist_db *db) {
         if (db->conn) {
             sqlite3_close(db->conn);
         }
-        free(db);
+        cwist_free(db);
     }
 }
 
 // Execute given SQL command
 // return errmsg on failure
+/**
+ * @brief Execute an arbitrary SQL statement string without returning rows.
+ * @param db Open database wrapper.
+ * @param sql SQL text to execute.
+ * @return Tagged CWIST error describing success or failure.
+ */
 cwist_error_t cwist_db_exec(cwist_db *db, const char *sql) {
+    cwist_error_t err = make_error(CWIST_ERR_INT16);
+    if (!db || !db->conn || !sql) {
+        err.error.err_i16 = -1;
+        return err;
+    }
+
     char *zErrMsg = 0;
+    cwist_db_plan_hint hint = cwist_db_analyze_sql(sql);
+    cwist_db_apply_hint(db->conn, &hint);
     int rc = sqlite3_exec(db->conn, sql, 0, 0, &zErrMsg);
 
     if (rc != SQLITE_OK) {
@@ -298,7 +327,6 @@ cwist_error_t cwist_db_exec(cwist_db *db, const char *sql) {
         return err;
     }
 
-    cwist_error_t err = make_error(CWIST_ERR_INT16);
     err.error.err_i16 = 0;
     return err;
 }
@@ -308,6 +336,14 @@ typedef struct {
     cJSON *rows;
 } query_context;
 
+/**
+ * @brief Convert one sqlite3_exec callback row into a cJSON object appended to the result array.
+ * @param data Query context carrying the destination array.
+ * @param argc Number of columns in the row.
+ * @param argv Column values as strings or NULL.
+ * @param azColName Column names for the current row.
+ * @return 0 to continue sqlite3_exec iteration.
+ */
 static int query_callback(void *data, int argc, char **argv, char **azColName) {
     query_context *ctx = (query_context *)data;
     cJSON *row = cJSON_CreateObject();
@@ -328,8 +364,21 @@ static int query_callback(void *data, int argc, char **argv, char **azColName) {
 }
 
 // execute a query and store result at result pointer
+/**
+ * @brief Execute a SQL query and collect every row into a cJSON array.
+ * @param db Open database wrapper.
+ * @param sql SQL text to execute.
+ * @param result Output pointer receiving the cJSON row array.
+ * @return Tagged CWIST error describing success or failure.
+ */
 cwist_error_t cwist_db_query(cwist_db *db, const char *sql, cJSON **result) {
-    if (!db || !sql || !result) {
+    if (!result) {
+        cwist_error_t err = make_error(CWIST_ERR_INT16);
+        err.error.err_i16 = -1;
+        return err;
+    }
+    *result = NULL;
+    if (!db || !db->conn || !sql) {
         cwist_error_t err = make_error(CWIST_ERR_INT16);
         err.error.err_i16 = -1;
         return err;
@@ -339,6 +388,8 @@ cwist_error_t cwist_db_query(cwist_db *db, const char *sql, cJSON **result) {
     ctx.rows = cJSON_CreateArray();
 
     char *zErrMsg = 0;
+    cwist_db_plan_hint hint = cwist_db_analyze_sql(sql);
+    cwist_db_apply_hint(db->conn, &hint);
     int rc = sqlite3_exec(db->conn, sql, query_callback, &ctx, &zErrMsg);
 
     if (rc != SQLITE_OK) {

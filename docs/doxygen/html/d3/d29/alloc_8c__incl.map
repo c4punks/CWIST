@@ -1,29 +1,41 @@
 <map id="src/core/mem/alloc.c" name="src/core/mem/alloc.c">
-<area shape="rect" id="Node000001" title="Memory allocation bridge that can route CWIST allocations through libttak owner guards." alt="" coords="805,5,963,31"/>
-<area shape="rect" id="Node000002" href="$d2/dfe/alloc_8h.html" title="Memory allocation wrappers backed by libttak." alt="" coords="21,79,195,104"/>
-<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="805,28,209,81,208,76,805,23"/>
-<area shape="rect" id="Node000005" title=" " alt="" coords="219,79,355,104"/>
-<area shape="poly" id="edge4_Node000001_Node000005" title=" " alt="" coords="805,30,368,81,368,76,805,25"/>
-<area shape="rect" id="Node000006" title=" " alt="" coords="379,79,531,104"/>
-<area shape="poly" id="edge5_Node000001_Node000006" title=" " alt="" coords="815,33,538,79,537,74,815,28"/>
-<area shape="rect" id="Node000007" title=" " alt="" coords="555,79,683,104"/>
-<area shape="poly" id="edge6_Node000001_Node000007" title=" " alt="" coords="842,33,676,78,674,72,841,28"/>
-<area shape="rect" id="Node000008" title=" " alt="" coords="707,79,818,104"/>
-<area shape="poly" id="edge7_Node000001_Node000008" title=" " alt="" coords="866,33,795,74,793,69,863,28"/>
-<area shape="rect" id="Node000009" title=" " alt="" coords="843,79,925,104"/>
-<area shape="poly" id="edge8_Node000001_Node000009" title=" " alt="" coords="887,31,887,65,881,65,881,31"/>
-<area shape="rect" id="Node000010" title=" " alt="" coords="949,79,1016,104"/>
-<area shape="poly" id="edge9_Node000001_Node000010" title=" " alt="" coords="901,29,957,68,954,73,898,33"/>
-<area shape="rect" id="Node000011" title=" " alt="" coords="1041,79,1111,104"/>
-<area shape="poly" id="edge10_Node000001_Node000011" title=" " alt="" coords="916,28,1033,71,1031,76,914,33"/>
-<area shape="rect" id="Node000012" title=" " alt="" coords="1135,79,1206,104"/>
-<area shape="poly" id="edge11_Node000001_Node000012" title=" " alt="" coords="931,28,1123,75,1121,81,929,33"/>
-<area shape="rect" id="Node000013" title=" " alt="" coords="1230,79,1301,104"/>
-<area shape="poly" id="edge12_Node000001_Node000013" title=" " alt="" coords="957,28,1217,76,1216,81,956,33"/>
-<area shape="rect" id="Node000014" title=" " alt="" coords="1325,79,1424,104"/>
-<area shape="poly" id="edge13_Node000001_Node000014" title=" " alt="" coords="963,27,1312,76,1311,81,963,32"/>
-<area shape="rect" id="Node000003" title=" " alt="" coords="5,152,80,177"/>
-<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="99,106,64,144,61,140,95,103"/>
-<area shape="rect" id="Node000004" title=" " alt="" coords="104,152,245,177"/>
-<area shape="poly" id="edge3_Node000002_Node000004" title=" " alt="" coords="121,103,156,140,153,144,117,106"/>
+<area shape="rect" id="Node000001" title="Memory allocation bridge that can route CWIST allocations through libttak owner guards." alt="" coords="889,5,1046,31"/>
+<area shape="rect" id="Node000002" href="$d2/dfe/alloc_8h.html" title="Memory allocation wrappers backed by libttak." alt="" coords="102,79,275,104"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="889,29,289,84,289,78,888,24"/>
+<area shape="rect" id="Node000006" title=" " alt="" coords="333,225,415,251"/>
+<area shape="poly" id="edge16_Node000001_Node000006" title=" " alt="" coords="888,23,782,28,660,38,549,55,506,67,474,81,441,109,416,145,397,182,384,213,379,211,392,179,411,142,437,106,471,76,504,62,548,49,660,32,781,22,888,18"/>
+<area shape="rect" id="Node000007" href="$d0/daa/gc_8h.html" title="Epoch&#45;based garbage collection wrapper." alt="" coords="445,152,602,177"/>
+<area shape="poly" id="edge7_Node000001_Node000007" title=" " alt="" coords="889,26,647,45,540,61,504,71,485,80,479,94,482,109,503,140,499,143,477,111,474,93,481,77,502,66,539,56,647,40,888,21"/>
+<area shape="rect" id="Node000010" title=" " alt="" coords="495,79,631,104"/>
+<area shape="poly" id="edge12_Node000001_Node000010" title=" " alt="" coords="903,33,642,79,641,74,902,28"/>
+<area shape="rect" id="Node000011" title=" " alt="" coords="655,79,807,104"/>
+<area shape="poly" id="edge13_Node000001_Node000011" title=" " alt="" coords="930,33,783,77,782,72,929,28"/>
+<area shape="rect" id="Node000012" title=" " alt="" coords="831,79,959,104"/>
+<area shape="poly" id="edge14_Node000001_Node000012" title=" " alt="" coords="957,33,919,71,915,67,953,29"/>
+<area shape="rect" id="Node000013" title=" " alt="" coords="984,79,1095,104"/>
+<area shape="poly" id="edge15_Node000001_Node000013" title=" " alt="" coords="981,29,1020,67,1016,71,977,33"/>
+<area shape="rect" id="Node000014" title=" " alt="" coords="1119,79,1186,104"/>
+<area shape="poly" id="edge17_Node000001_Node000014" title=" " alt="" coords="998,28,1111,71,1109,76,996,33"/>
+<area shape="rect" id="Node000015" title=" " alt="" coords="1211,79,1281,104"/>
+<area shape="poly" id="edge18_Node000001_Node000015" title=" " alt="" coords="1013,28,1198,75,1197,80,1011,33"/>
+<area shape="rect" id="Node000016" title=" " alt="" coords="1305,79,1376,104"/>
+<area shape="poly" id="edge19_Node000001_Node000016" title=" " alt="" coords="1037,28,1292,76,1291,81,1036,33"/>
+<area shape="rect" id="Node000017" title=" " alt="" coords="1400,79,1471,104"/>
+<area shape="poly" id="edge20_Node000001_Node000017" title=" " alt="" coords="1046,25,1200,45,1387,76,1386,81,1199,51,1046,31"/>
+<area shape="rect" id="Node000018" title=" " alt="" coords="1495,79,1594,104"/>
+<area shape="poly" id="edge21_Node000001_Node000018" title=" " alt="" coords="1046,24,1240,45,1482,76,1481,81,1240,50,1046,29"/>
+<area shape="rect" id="Node000003" title=" " alt="" coords="234,225,309,251"/>
+<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="107,107,63,117,27,133,16,142,9,152,9,163,16,176,29,186,48,196,102,211,163,223,220,230,220,235,162,228,100,217,46,201,26,191,12,179,4,164,4,150,12,138,25,128,62,112,105,101"/>
+<area shape="rect" id="Node000004" title=" " alt="" coords="26,152,167,177"/>
+<area shape="poly" id="edge3_Node000002_Node000004" title=" " alt="" coords="175,106,124,146,121,141,172,102"/>
+<area shape="rect" id="Node000005" href="$da/d0c/arena_8h.html" title="Request&#45;scoped arena allocator backed by libttak arena generations." alt="" coords="191,152,370,177"/>
+<area shape="poly" id="edge4_Node000002_Node000005" title=" " alt="" coords="205,102,256,141,253,146,202,106"/>
+<area shape="poly" id="edge6_Node000005_Node000003" title=" " alt="" coords="282,178,277,212,272,211,276,177"/>
+<area shape="poly" id="edge5_Node000005_Node000006" title=" " alt="" coords="297,175,349,215,346,219,294,179"/>
+<area shape="poly" id="edge9_Node000007_Node000003" title=" " alt="" coords="483,180,323,225,321,220,482,175"/>
+<area shape="poly" id="edge8_Node000007_Node000006" title=" " alt="" coords="500,180,412,222,410,217,498,175"/>
+<area shape="rect" id="Node000008" title=" " alt="" coords="440,225,623,251"/>
+<area shape="poly" id="edge10_Node000007_Node000008" title=" " alt="" coords="527,177,531,212,526,212,522,178"/>
+<area shape="rect" id="Node000009" title=" " alt="" coords="647,225,810,251"/>
+<area shape="poly" id="edge11_Node000007_Node000009" title=" " alt="" coords="557,175,683,218,682,223,555,180"/>
 </map>

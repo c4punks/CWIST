@@ -7,19 +7,22 @@
 #include <time.h>
 
 int main(void) {
+    /* An unopenable path must fail cleanly instead of crashing. */
+    assert(cwist_db_pool_create("/cwist-no-such-dir/pool.db", 4) == NULL);
+
     cwist_db_pool_t *pool = cwist_db_pool_create(":memory:", 3);
     assert(pool != NULL);
 
     cwist_error_t err =
         cwist_db_pool_exec(pool, "CREATE TABLE users (id INTEGER PRIMARY KEY, name TEXT);");
-    assert(err.error.err_i16 == 0);
+    assert(cwist_error_is_ok(&err));
 
     err = cwist_db_pool_exec(pool, "INSERT INTO users (name) VALUES ('alice'), ('bob');");
-    assert(err.error.err_i16 == 0);
+    assert(cwist_error_is_ok(&err));
 
     cJSON *result = NULL;
     err = cwist_db_pool_query(pool, "SELECT * FROM users ORDER BY id;", &result);
-    assert(err.error.err_i16 == 0);
+    assert(cwist_error_is_ok(&err));
     assert(result != NULL);
     assert(cJSON_IsArray(result));
     assert(cJSON_GetArraySize(result) == 2);
@@ -35,6 +38,10 @@ int main(void) {
     cwist_db *conn = cwist_db_pool_acquire(pool);
     assert(conn != NULL);
     cwist_db_pool_release(pool, conn);
+
+    /* A stale release must be a no-op. */
+    cwist_db_pool_release(pool, conn);
+    assert(cwist_db_pool_in_use(pool) == 0);
 
     /* Every connection shares the :memory: database and timeout is bounded. */
     conn = cwist_db_pool_acquire(pool);

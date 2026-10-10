@@ -64,3 +64,39 @@ jobs:
           cargo --version
           pkg-config --cflags --libs --static cwist
           cargo test --manifest-path bindings/rust/Cargo.toml -- --nocapture
+
+      # ROADMAP.md, v3.8 Phase 2: the Rust example serves requests.
+      # example/rust-hello is not a member of the bindings/rust workspace, so
+      # cargo test above never builds it: build it against the installed
+      # CWIST, run it and check real responses over HTTP.
+      - name: example/rust-hello serves requests
+        shell: bash
+        run: |
+          export PKG_CONFIG_PATH="$RUNNER_TEMP/cwist/lib/pkgconfig"
+          if [ "$RUNNER_OS" = "macOS" ]; then
+            export PKG_CONFIG_PATH="$PKG_CONFIG_PATH:/opt/homebrew/opt/curl/lib/pkgconfig"
+            export LIBCLANG_PATH="$(xcode-select -p)/Toolchains/XcodeDefault.xctoolchain/usr/lib"
+          fi
+          cargo build --manifest-path example/rust-hello/Cargo.toml
+          bash scripts/ci/hello_smoke.sh example/rust-hello/target/debug/rust-hello "CWIST Rust"
+
+      - name: FFI overhead micro-benchmark
+        shell: bash
+        run: |
+          export PKG_CONFIG_PATH="$RUNNER_TEMP/cwist/lib/pkgconfig"
+          if [ "$RUNNER_OS" = "macOS" ]; then
+            export PKG_CONFIG_PATH="$PKG_CONFIG_PATH:/opt/homebrew/opt/curl/lib/pkgconfig"
+            export LIBCLANG_PATH="$(xcode-select -p)/Toolchains/XcodeDefault.xctoolchain/usr/lib"
+          fi
+          cargo test --manifest-path bindings/rust/Cargo.toml --test ffi_overhead -- --nocapture
+
+      # bindgen compiles size/alignment/offset checks against the C compiler's
+      # layouts into the crate; fail if they are missing, and show the ones
+      # for the handler structs.
+      - name: Show bindgen layout checks
+        shell: bash
+        run: |
+          bindings=$(find bindings/rust/target -path '*/out/bindings.rs' | head -1)
+          echo "$bindings"
+          grep -cE '"(Size|Alignment) of|"Offset of field' "$bindings"
+          grep -E '"Size of (cwist_http_request|cwist_http_response|cwist_error_t)"' "$bindings"

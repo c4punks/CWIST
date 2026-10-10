@@ -1,25 +1,31 @@
 <map id="src/core/utils/json_heal.c" name="src/core/utils/json_heal.c">
-<area shape="rect" id="Node000001" title="Multi&#45;stage JSON recovery pipeline with optional schema alignment." alt="" coords="442,5,578,45"/>
-<area shape="rect" id="Node000002" href="$db/dd3/json__heal_8h.html" title="Self&#45;Healing JSON Recovery Layer (CWIST)" alt="" coords="104,93,255,133"/>
-<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="443,47,266,93,264,87,441,42"/>
-<area shape="rect" id="Node000005" title=" " alt="" coords="5,181,116,207"/>
-<area shape="poly" id="edge8_Node000001_Node000005" title=" " alt="" coords="442,32,350,38,247,49,154,68,118,80,93,95,80,111,72,129,64,168,59,167,67,128,76,108,90,91,116,76,152,63,246,44,350,32,442,26"/>
-<area shape="rect" id="Node000006" href="$d2/dfe/alloc_8h.html" title="Memory allocation wrappers backed by libttak." alt="" coords="279,101,453,126"/>
-<area shape="poly" id="edge5_Node000001_Node000006" title=" " alt="" coords="480,48,398,96,395,91,477,43"/>
-<area shape="rect" id="Node000008" title=" " alt="" coords="477,101,543,126"/>
-<area shape="poly" id="edge9_Node000001_Node000008" title=" " alt="" coords="513,46,513,87,507,87,507,46"/>
-<area shape="rect" id="Node000009" title=" " alt="" coords="568,101,639,126"/>
-<area shape="poly" id="edge10_Node000001_Node000009" title=" " alt="" coords="533,44,582,89,579,93,529,48"/>
-<area shape="rect" id="Node000010" title=" " alt="" coords="663,101,733,126"/>
-<area shape="poly" id="edge11_Node000001_Node000010" title=" " alt="" coords="552,43,662,93,660,98,550,48"/>
-<area shape="rect" id="Node000011" title=" " alt="" coords="757,101,828,126"/>
-<area shape="poly" id="edge12_Node000001_Node000011" title=" " alt="" coords="579,41,747,91,754,93,752,98,745,96,577,46"/>
-<area shape="rect" id="Node000003" title=" " alt="" coords="141,181,223,207"/>
-<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="183,133,184,167,178,167,177,134"/>
-<area shape="rect" id="Node000004" title=" " alt="" coords="247,181,322,207"/>
-<area shape="poly" id="edge3_Node000002_Node000004" title=" " alt="" coords="206,131,260,171,256,175,203,136"/>
-<area shape="poly" id="edge4_Node000002_Node000005" title=" " alt="" coords="152,136,91,176,88,172,149,131"/>
-<area shape="poly" id="edge6_Node000006_Node000004" title=" " alt="" coords="356,128,308,174,305,170,352,124"/>
-<area shape="rect" id="Node000007" title=" " alt="" coords="346,181,487,207"/>
-<area shape="poly" id="edge7_Node000006_Node000007" title=" " alt="" coords="376,125,404,168,399,171,371,128"/>
+<area shape="rect" id="Node000001" title="Multi&#45;stage JSON recovery pipeline with optional schema alignment." alt="" coords="459,5,595,45"/>
+<area shape="rect" id="Node000002" href="$db/dd3/json__heal_8h.html" title="Self&#45;Healing JSON Recovery Layer (CWIST)" alt="" coords="5,93,156,133"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="460,42,170,98,169,92,459,37"/>
+<area shape="rect" id="Node000005" title=" " alt="" coords="112,181,223,207"/>
+<area shape="poly" id="edge11_Node000001_Node000005" title=" " alt="" coords="459,32,408,37,351,49,293,68,239,96,220,112,204,131,180,170,176,167,200,128,217,108,237,91,291,63,349,44,407,32,458,26"/>
+<area shape="rect" id="Node000006" href="$d2/dfe/alloc_8h.html" title="Memory allocation wrappers backed by libttak." alt="" coords="250,101,423,126"/>
+<area shape="poly" id="edge5_Node000001_Node000006" title=" " alt="" coords="487,48,376,98,373,93,484,43"/>
+<area shape="rect" id="Node000009" title=" " alt="" coords="447,101,514,126"/>
+<area shape="poly" id="edge12_Node000001_Node000009" title=" " alt="" coords="519,47,496,90,491,87,515,44"/>
+<area shape="rect" id="Node000010" title=" " alt="" coords="539,101,609,126"/>
+<area shape="poly" id="edge13_Node000001_Node000010" title=" " alt="" coords="540,44,563,87,559,90,535,47"/>
+<area shape="rect" id="Node000011" title=" " alt="" coords="633,101,704,126"/>
+<area shape="poly" id="edge14_Node000001_Node000011" title=" " alt="" coords="560,43,640,91,637,96,557,48"/>
+<area shape="rect" id="Node000012" title=" " alt="" coords="728,101,807,126"/>
+<area shape="poly" id="edge15_Node000001_Node000012" title=" " alt="" coords="582,43,718,91,724,93,722,98,716,96,580,48"/>
+<area shape="rect" id="Node000013" title=" " alt="" coords="831,101,901,126"/>
+<area shape="poly" id="edge16_Node000001_Node000013" title=" " alt="" coords="596,36,702,59,820,91,828,93,826,98,819,96,701,64,595,42"/>
+<area shape="rect" id="Node000003" title=" " alt="" coords="87,255,170,280"/>
+<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="70,135,56,169,54,188,58,206,74,228,96,245,92,249,70,232,53,208,48,188,51,168,65,133"/>
+<area shape="rect" id="Node000004" title=" " alt="" coords="299,255,374,280"/>
+<area shape="poly" id="edge3_Node000002_Node000004" title=" " alt="" coords="82,133,85,170,91,189,101,205,132,222,180,237,286,257,285,262,178,242,129,227,98,209,86,191,79,171,76,134"/>
+<area shape="poly" id="edge4_Node000002_Node000005" title=" " alt="" coords="103,132,146,170,142,174,100,136"/>
+<area shape="poly" id="edge6_Node000006_Node000004" title=" " alt="" coords="390,123,523,154,578,169,605,179,611,194,605,208,591,221,569,231,512,247,447,258,388,265,387,259,447,253,511,242,567,226,588,216,601,205,606,194,601,183,577,174,521,159,388,129"/>
+<area shape="rect" id="Node000007" title=" " alt="" coords="450,181,591,207"/>
+<area shape="poly" id="edge7_Node000006_Node000007" title=" " alt="" coords="364,124,483,174,481,179,362,128"/>
+<area shape="rect" id="Node000008" href="$da/d0c/arena_8h.html" title="Request&#45;scoped arena allocator backed by libttak arena generations." alt="" coords="247,181,426,207"/>
+<area shape="poly" id="edge8_Node000006_Node000008" title=" " alt="" coords="339,126,339,167,334,167,334,126"/>
+<area shape="poly" id="edge9_Node000008_Node000003" title=" " alt="" coords="304,209,176,253,175,248,302,204"/>
+<area shape="poly" id="edge10_Node000008_Node000004" title=" " alt="" coords="339,207,339,241,334,241,334,207"/>
 </map>

@@ -93,6 +93,31 @@ const decode = (u8) => new TextDecoder().decode(u8);
     assert.ok(res.body.length > 100, 'non-trivial db image: ' + res.body.length + ' bytes');
     assert.strictEqual(res.headers['Content-Type'], 'application/octet-stream');
 
+    /* 7b. GET /items/list -> the component-rendered list: only the fragment
+     *     for an htmx request, a full page linking a content-hashed
+     *     stylesheet otherwise, and that stylesheet served by the module. */
+    res = handle({ method: 'GET', path: '/items/list', headers: { 'HX-Request': 'true' } });
+    assert.strictEqual(res.status, 200);
+    assert.match(res.headers['Content-Type'] || '', /text\/html/);
+    const fragment = decode(res.body);
+    assert.ok(fragment.startsWith('<ul id="item-list"><li class="row-'), 'fragment: ' + fragment);
+    assert.ok(fragment.includes('>coffee beans (3)</li>'), 'fragment row text');
+    assert.ok(!fragment.includes('<html>'), 'fragment is not a page');
+
+    res = handle({ method: 'GET', path: '/items/list' });
+    assert.strictEqual(res.status, 200);
+    const page = decode(res.body);
+    assert.ok(page.startsWith('<!DOCTYPE html><html><head><link rel="stylesheet"'), 'page: ' + page);
+    assert.ok(page.includes(fragment), 'page embeds the same list markup');
+    const href = page.match(/href="([^"]+)"/)[1];
+    assert.match(href, /^\/assets\/list\.[0-9a-f]{16}\.css$/);
+
+    res = handle({ method: 'GET', path: href });
+    assert.strictEqual(res.status, 200);
+    assert.strictEqual(res.headers['Cache-Control'], 'public, max-age=31536000, immutable');
+    assert.match(res.headers['Content-Type'] || '', /text\/css/);
+    assert.ok(decode(res.body).includes('.row-'), 'scoped rule in the stylesheet');
+
     /* 8. GET /items on a second "instance" with the same pinned secret still
      *    sees the data (in-memory db is per-instance; sessions are not). */
     const Module2 = await createCwistAppModule();
@@ -106,7 +131,7 @@ const decode = (u8) => new TextDecoder().decode(u8);
     res = handle({ method: 'GET', path: '/no-such-page' });
     assert.strictEqual(res.status, 404, 'fallback status: ' + res.status);
 
-    console.log('wasm-service-worker smoke: OK (routing, zod 400s, template, db, image, session, 404)');
+    console.log('wasm-service-worker smoke: OK (routing, zod 400s, template, db, image, components, assets, session, 404)');
 })().catch((err) => {
     console.error(err);
     process.exit(1);

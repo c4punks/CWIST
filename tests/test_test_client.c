@@ -162,6 +162,7 @@ int main(void) {
     /* Cookie jar: set, send, receive from response, send again */
     cwist_test_client_set_cookie(client, "manual", "mv", "/");
     FAIL_IF(strcmp(cwist_test_client_get_cookie(client, "manual"), "mv") != 0, "manual cookie");
+    FAIL_IF(cwist_test_client_get_cookie(client, NULL) != NULL, "get null cookie");
 
     res = cwist_test_client_get(client, "/set-cookie");
     FAIL_IF(!res || strcmp(cwist_test_client_get_cookie(client, "tc"), "jarvalue") != 0,

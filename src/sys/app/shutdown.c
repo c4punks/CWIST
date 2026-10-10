@@ -7,6 +7,8 @@
 #include <cwist/sys/app/shutdown.h>
 #include <unistd.h>
 #include <stdio.h>
+#include <stdlib.h>
+#include <stdbool.h>
 #ifndef __wasi__
 #include <sys/socket.h>
 #endif
@@ -14,6 +16,10 @@
 atomic_int g_cwist_running = 1;
 int g_cwist_listen_fd = -1;
 int g_cwist_udp_fd = -1;
+/* Upper bound for the post-stop connection drain. Overridable with
+ * CWIST_DRAIN_TIMEOUT (seconds; 0 skips the drain wait entirely). The drain
+ * also exits early once no C1M connection is left, so an idle server no
+ * longer sits out the full timeout on every shutdown. */
 int g_cwist_drain_timeout_sec = 5;
 
 /**
@@ -99,7 +105,7 @@ static bool g_prev_saved = false;
  * WASI hosts, which own the instance lifecycle.
  */
 void cwist_shutdown_install_handlers(void) {
-    struct sigaction sa;
+    struct sigaction sa, old_term, old_int;
     sigemptyset(&sa.sa_mask);
     sa.sa_flags = SA_RESTART;
     sa.sa_handler = cwist_shutdown_handler;

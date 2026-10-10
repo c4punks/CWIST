@@ -225,7 +225,10 @@ impl App {
     /// Serves this app on `port` (all IPv4 interfaces) and blocks until a
     /// graceful shutdown is requested with [`shutdown`](crate::shutdown) or
     /// SIGTERM/SIGINT. The server then stops accepting, drains and returns,
-    /// and the app is destroyed with its handlers.
+    /// and the app is destroyed with its handlers. CWIST handles SIGTERM and
+    /// SIGINT only while `listen` runs: whatever handled them before is back
+    /// in place when it returns, so after that they behave as they did
+    /// before `listen` (by default, ending the process).
     ///
     /// It serves in the calling process on the reactor server, ignoring
     /// `CWIST_WORKERS` and `CWIST_C1M_MODE`: nothing forks, and every handler

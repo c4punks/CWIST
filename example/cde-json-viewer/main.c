@@ -62,58 +62,24 @@ static cwist_sstring *form_ui(cJSON *json) {
     return out;
 }
 
-void handle_client(int client_fd, void *ctx) {
-    (void)ctx;
-    char buffer[BUFFER_SIZE];
-    int read_len = read(client_fd, buffer, BUFFER_SIZE - 1);
-    if (read_len < 0) {
-        close(client_fd);
+static void index_handler(cwist_http_request *req, cwist_http_response *res) {
+    (void)req;
+    cJSON *json = cJSON_Parse(MOCK_JSON);
+    if (!json) {
+        res->status_code = CWIST_HTTP_INTERNAL_ERROR;
         return;
     }
-    buffer[read_len] = '\0';
-    
-    // Log request (optional)
-    printf("Received Request:\n%s\n----------------\n", buffer);
-
-    // Prepare Response
-    cwist_http_response *res = cwist_http_response_create();
-    
-    // Generate Body
-    cJSON *json = cJSON_Parse(MOCK_JSON_INPUT);
-    if (json) {
-        generate_cde_html(res->body, json);
-        cJSON_Delete(json);
-        cwist_http_header_add(&res->headers, "Content-Type", "text/html");
-        
-        char len_str[32];
-        if (res->body->data) {
-            sprintf(len_str, "%zu", strlen(res->body->data));
-            cwist_http_header_add(&res->headers, "Content-Length", len_str);
-        }
-    } else {
-         res->status_code = CWIST_HTTP_INTERNAL_ERROR;
-         cwist_sstring_assign(res->status_text, "Internal Server Error");
-    }
-
-    cwist_http_send_response(client_fd, res);
-    cwist_http_response_destroy(res);
-    close(client_fd);
+    cwist_sstring *html = form_ui(json);
+    cJSON_Delete(json);
+    cwist_http_header_add(&res->headers, "Content-Type", "text/html");
+    cwist_sstring_assign(res->body, html->data);
+    cwist_sstring_destroy(html);
 }
 
-int main() {
-    int port = 8080, backlog = 128;
-    const char *addr = "127.0.0.1";
-    struct sockaddr_in sockv4;
-    
-    int server_fd =  cwist_make_socket_ipv4(&sockv4, addr, port, backlog);
-    if (server_fd < 0) {
-        printf("Failed to create server socket: %d\n", server_fd);
-        return 1;
-    }
-
-    printf("Server listening on port %d\n", PORT);
-    printf("Visit http://%s:%d to see the CDE JSON Viewer\n", addr, port);
-
-    cwist_accept_socket(server_fd, (struct sockaddr*)&sockv4, handle_client, NULL);
+int main(void) {
+    cwist_app *app = cwist_app_create();
+    cwist_app_get(app, "/", index_handler);
+    cwist_app_listen(app, 8080);
+    cwist_app_destroy(app);
     return 0;
 }

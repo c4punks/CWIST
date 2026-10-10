@@ -9,7 +9,9 @@
 #include <cwist/net/http/http.h>
 #include <zlib.h>
 #include <brotli/encode.h>
+#include <zstd.h>
 #include <string.h>
+#include <strings.h>
 #include <stdio.h>
 #include <stdlib.h>
 
@@ -73,6 +75,17 @@ static int zlib_deflate_init(void **state) {
     return 0;
 }
 
+/**
+ * @brief Compress one body chunk through a zlib stream.
+ * @param state zlib stream initialized by zlib_*_init.
+ * @param in Input chunk.
+ * @param in_len Length of @p in.
+ * @param out Output buffer.
+ * @param in,out out_len On entry, capacity of @p out; on success, bytes written.
+ * @param flush Non-zero when this is the final chunk of the body.
+ * @retval 0 on success.
+ * @retval -1 if the chunk was only partially consumed or the stream errored.
+ */
 static int zlib_compress(void *state, const char *in, size_t in_len, char *out, size_t *out_len,
                          int flush) {
     z_stream *zs = (z_stream *)state;
@@ -81,7 +94,15 @@ static int zlib_compress(void *state, const char *in, size_t in_len, char *out, 
     zs->next_out = (Bytef *)out;
     zs->avail_out = (uInt)(*out_len);
     int rc = deflate(zs, flush ? Z_FINISH : Z_NO_FLUSH);
-    if (rc != Z_OK && rc != Z_STREAM_END && rc != Z_BUF_ERROR) return -1;
+    /* All-or-nothing: the caller advances the input by the full chunk, so a
+     * partially consumed chunk would silently drop the tail of the body.
+     * Report an error instead; the middleware then serves the body
+     * uncompressed. */
+    if (flush) {
+        if (rc != Z_STREAM_END) return -1;
+    } else {
+        if (rc != Z_OK || zs->avail_in != 0) return -1;
+    }
     *out_len = (size_t)(*out_len - zs->avail_out);
     return 0;
 }
@@ -101,7 +122,9 @@ static int zlib_finish(void *state, char *out, size_t *out_len) {
     zs->next_out = (Bytef *)out;
     zs->avail_out = (uInt)(*out_len);
     int rc = deflate(zs, Z_FINISH);
-    if (rc != Z_OK && rc != Z_STREAM_END && rc != Z_BUF_ERROR) return -1;
+    /* Z_BUF_ERROR here means the trailer did not fit; accepting it would
+     * emit a truncated gzip stream. */
+    if (rc != Z_STREAM_END) return -1;
     *out_len = (size_t)(*out_len - zs->avail_out);
     return 0;
 }
@@ -161,6 +184,12 @@ typedef struct {
     size_t out_pos;
 } cwist_brotli_state_t;
 
+/**
+ * @brief Allocate a Brotli backend state.
+ * @param state Out param receiving the allocated state on success.
+ * @retval 0 on success, with *state set.
+ * @retval -1 on allocation failure.
+ */
 static int brotli_init(void **state) {
     cwist_brotli_state_t *bs = (cwist_brotli_state_t *)calloc(1, sizeof(*bs));
     if (!bs) return -1;
@@ -168,6 +197,13 @@ static int brotli_init(void **state) {
     return 0;
 }
 
+/**
+ * @brief Grow the input accumulation buffer if it cannot hold @p need more bytes.
+ * @param bs Brotli state.
+ * @param need Additional bytes that must fit in the accumulator.
+ * @retval 0 if the accumulator has capacity for @p need more bytes.
+ * @retval -1 if @p bs is NULL or reallocation failed (state unchanged on failure).
+ */
 static int brotli_ensure_accum(cwist_brotli_state_t *bs, size_t need) {
     if (!bs) return -1;
     size_t required = bs->accum_len + need;
@@ -182,6 +218,23 @@ static int brotli_ensure_accum(cwist_brotli_state_t *bs, size_t need) {
     return 0;
 }
 
+/**
+ * @brief Compress one body chunk with Brotli.
+ *
+ * Without flush, input is appended to an internal accumulator and no output is
+ * produced. With flush, the accumulated input plus the final chunk is
+ * compressed into an internal buffer, and as much of the result as fits is
+ * copied to @p out; the remainder is drained via brotli_finish().
+ *
+ * @param state Brotli state.
+ * @param in Input chunk (may be NULL when nothing new to add).
+ * @param in_len Length of @p in.
+ * @param out Caller output buffer.
+ * @param in,out out_len On entry, capacity of @p out; on success, bytes copied.
+ * @param flush Non-zero for the final chunk of the body.
+ * @retval 0 on success.
+ * @retval -1 on invalid arguments or allocation/compression failure.
+ */
 static int brotli_compress(void *state, const char *in, size_t in_len, char *out, size_t *out_len,
                            int flush) {
     cwist_brotli_state_t *bs = (cwist_brotli_state_t *)state;
@@ -249,6 +302,14 @@ static int brotli_compress(void *state, const char *in, size_t in_len, char *out
     return 0;
 }
 
+/**
+ * @brief Drain remaining compressed output from the internal buffer.
+ * @param state Brotli state.
+ * @param out Caller output buffer.
+ * @param in,out out_len On entry, capacity of @p out; on success, bytes copied.
+ * @retval 0 on success (including when the internal buffer is fully drained).
+ * @retval -1 on invalid arguments.
+ */
 static int brotli_finish(void *state, char *out, size_t *out_len) {
     cwist_brotli_state_t *bs = (cwist_brotli_state_t *)state;
     if (!bs || !out || !out_len) return -1;
@@ -261,6 +322,10 @@ static int brotli_finish(void *state, char *out, size_t *out_len) {
     return 0;
 }
 
+/**
+ * @brief Free a Brotli state and all its buffers. Safe on NULL.
+ * @param state Brotli state allocated by brotli_init.
+ */
 static void brotli_cleanup(void *state) {
     cwist_brotli_state_t *bs = (cwist_brotli_state_t *)state;
     if (!bs) return;
@@ -277,6 +342,10 @@ static const cwist_compress_backend cwist_backend_brotli = {
     .cleanup = brotli_cleanup,
 };
 
+/**
+ * @brief Get the built-in Brotli backend.
+ * @return Pointer to the static Brotli backend descriptor.
+ */
 const cwist_compress_backend *cwist_compress_backend_brotli(void) {
     return &cwist_backend_brotli;
 }
@@ -293,6 +362,12 @@ typedef struct {
     size_t out_pos;
 } cwist_zstd_state_t;
 
+/**
+ * @brief Allocate and initialize a zstd backend state (compression stream).
+ * @param state Out param receiving the allocated state on success.
+ * @retval 0 on success, with *state set.
+ * @retval -1 on allocation or stream initialization failure (resources freed).
+ */
 static int zstd_init(void **state) {
     cwist_zstd_state_t *zs = (cwist_zstd_state_t *)calloc(1, sizeof(*zs));
     if (!zs) return -1;
@@ -311,6 +386,13 @@ static int zstd_init(void **state) {
     return 0;
 }
 
+/**
+ * @brief Grow the input accumulation buffer if it cannot hold @p need more bytes.
+ * @param zs zstd state.
+ * @param need Additional bytes that must fit in the accumulator.
+ * @retval 0 if the accumulator has capacity for @p need more bytes.
+ * @retval -1 if reallocation failed (state unchanged on failure).
+ */
 static int zstd_ensure_accum(cwist_zstd_state_t *zs, size_t need) {
     size_t required = zs->accum_len + need;
     if (required > zs->accum_cap) {
@@ -324,6 +406,23 @@ static int zstd_ensure_accum(cwist_zstd_state_t *zs, size_t need) {
     return 0;
 }
 
+/**
+ * @brief Compress one body chunk with zstd.
+ *
+ * Without flush, input is appended to an internal accumulator and no output is
+ * produced. With flush, the accumulated input plus the final chunk is
+ * compressed into an internal buffer, and as much of the result as fits is
+ * copied to @p out; the remainder is drained via zstd_finish().
+ *
+ * @param state zstd state.
+ * @param in Input chunk (may be NULL when nothing new to add).
+ * @param in_len Length of @p in.
+ * @param out Caller output buffer.
+ * @param in,out out_len On entry, capacity of @p out; on success, bytes copied.
+ * @param flush Non-zero for the final chunk of the body.
+ * @retval 0 on success.
+ * @retval -1 on invalid arguments or allocation/compression failure.
+ */
 static int zstd_compress(void *state, const char *in, size_t in_len, char *out, size_t *out_len,
                          int flush) {
     cwist_zstd_state_t *zs = (cwist_zstd_state_t *)state;
@@ -377,6 +476,14 @@ static int zstd_compress(void *state, const char *in, size_t in_len, char *out, 
     return 0;
 }
 
+/**
+ * @brief Drain remaining compressed output from the internal buffer.
+ * @param state zstd state.
+ * @param out Caller output buffer.
+ * @param in,out out_len On entry, capacity of @p out; on success, bytes copied.
+ * @retval 0 on success (including when the internal buffer is fully drained).
+ * @retval -1 on invalid arguments.
+ */
 static int zstd_finish(void *state, char *out, size_t *out_len) {
     cwist_zstd_state_t *zs = (cwist_zstd_state_t *)state;
     if (!zs || !out || !out_len) return -1;
@@ -388,6 +495,10 @@ static int zstd_finish(void *state, char *out, size_t *out_len) {
     return 0;
 }
 
+/**
+ * @brief Free a zstd state, its stream, and its buffers. Safe on NULL.
+ * @param state zstd state allocated by zstd_init.
+ */
 static void zstd_cleanup(void *state) {
     cwist_zstd_state_t *zs = (cwist_zstd_state_t *)state;
     if (!zs) return;
@@ -405,6 +516,10 @@ static const cwist_compress_backend cwist_backend_zstd = {
     .cleanup = zstd_cleanup,
 };
 
+/**
+ * @brief Get the built-in zstd backend.
+ * @return Pointer to the static zstd backend descriptor.
+ */
 const cwist_compress_backend *cwist_compress_backend_zstd(void) {
     return &cwist_backend_zstd;
 }
@@ -471,13 +586,29 @@ static void remove_header(cwist_http_header_node **head, const char *key) {
             *curr = (*curr)->next;
             cwist_sstring_destroy(to_free->key);
             cwist_sstring_destroy(to_free->value);
-            cwist_free(to_free);
+            if (!to_free->arena_owned) {
+                cwist_free(to_free);
+            }
             continue;
         }
         curr = &(*curr)->next;
     }
 }
 
+/**
+ * @brief Compression middleware handler.
+ *
+ * Runs the next handler, then compresses the response body if the client
+ * accepts a registered encoding and the response is eligible: not deferred,
+ * not empty, not a pointer/file-stream body, status in the 2xx range, and at
+ * least g_compress_min_size bytes. On success the body is replaced by the
+ * compressed data and Content-Encoding is set (Content-Length is removed).
+ * On any compression failure the original body is left untouched.
+ *
+ * @param req Request (Accept-Encoding selects the backend).
+ * @param res Response produced by @p next; modified in place on success.
+ * @param next Next handler in the chain.
+ */
 static void cwist_mw_compress_handler(cwist_http_request *req, cwist_http_response *res,
                                       cwist_handler_func next) {
     const char *accept = cwist_http_header_get(req->headers, "Accept-Encoding");
@@ -485,6 +616,10 @@ static void cwist_mw_compress_handler(cwist_http_request *req, cwist_http_respon
 
     next(req, res);
 
+    /* A deferred response belongs to its cwist_async completion, which may
+     * be writing it on another thread right now (cwist_async_respond(), the
+     * timeout job); leave it alone. */
+    if (res->deferred) return;
     if (!backend) return;
     if (!res->body || res->body->size == 0) return;
     if (res->is_ptr_body || res->use_file_stream) return;
@@ -495,7 +630,7 @@ static void cwist_mw_compress_handler(cwist_http_request *req, cwist_http_respon
     if (backend->init(&state) != 0) return;
 
     size_t out_cap = res->body->size + 256;
-    char *out_buf = (char *)malloc(out_cap);
+    char *out_buf = (char *)cwist_malloc(out_cap);
     if (!out_buf) {
         backend->cleanup(state);
         return;
@@ -547,15 +682,15 @@ static void cwist_mw_compress_handler(cwist_http_request *req, cwist_http_respon
                 }
                 out_buf = new_buf;
                 out_cap = new_cap;
-                tail = out_cap - total_out;
+                continue;
             }
-        }
-        if (tail > 0) {
-            if (backend->finish(state, out_buf + total_out, &tail) != 0) {
+            size_t wrote = tail;
+            if (backend->finish(state, out_buf + total_out, &wrote) != 0) {
                 ok = 0;
-            } else {
-                total_out += tail;
+                break;
             }
+            total_out += wrote;
+            if (wrote < tail) break; /* drained */
         }
     }
 
@@ -566,8 +701,7 @@ static void cwist_mw_compress_handler(cwist_http_request *req, cwist_http_respon
         cwist_http_header_add(&res->headers, "Content-Encoding", backend->encoding_name);
         remove_header(&res->headers, "Content-Length");
     }
-
-    free(out_buf);
+    cwist_free(out_buf);
 }
 
 /**

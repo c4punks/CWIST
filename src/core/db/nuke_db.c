@@ -6,6 +6,7 @@
 #endif
 #include <cwist/core/db/nuke_db.h>
 #include <cwist/core/macros.h>
+#include <cwist/core/mem/alloc.h>
 #include <cwist/sys/sys_info.h>
 #include <sqlite3.h>
 #include <stdio.h>
@@ -272,7 +273,7 @@ static void nuke_cleanup_internal(void) {
     }
 
     if (g_nuke.disk_path) {
-        free(g_nuke.disk_path);
+        cwist_free(g_nuke.disk_path);
         g_nuke.disk_path = NULL;
     }
 

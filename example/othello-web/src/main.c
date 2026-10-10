@@ -1,7 +1,7 @@
 #define _GNU_SOURCE
-#include <cwist/app.h>
-#include <cwist/http.h>
-#include <cwist/sql.h>
+#include <cwist/sys/app/app.h>
+#include <cwist/net/http/http.h>
+#include <cwist/core/db/sql.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -14,7 +14,6 @@
 #include "utils.h"
 
 #define PORT 31744
-
 void *cleanup_thread(void *arg) {
     cwist_db *db = (cwist_db *)arg;
     while (1) {
@@ -60,7 +59,8 @@ int main(int argc, char **argv) {
     pthread_detach(tid);
 
     // Static assets
-    cwist_app_static(app, "/", "./"); 
+    cwist_app_get(app, "/", root_handler);
+    cwist_app_static(app, "/public", "public");
 
     // API Routes
     cwist_app_post(app, "/join", join_handler);

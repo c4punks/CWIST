@@ -1,5 +1,6 @@
 var annotated_dup =
 [
+    [ "__prim_cwist_error_t", "d8/dca/struct____prim__cwist__error__t.html", "d8/dca/struct____prim__cwist__error__t" ],
     [ "bdr_entry_t", "d5/d26/structbdr__entry__t.html", "d5/d26/structbdr__entry__t" ],
     [ "cwist_app", "dc/da0/structcwist__app.html", "dc/da0/structcwist__app" ],
     [ "cwist_bdr_t", "d9/d90/structcwist__bdr__t.html", "d9/d90/structcwist__bdr__t" ],

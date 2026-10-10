@@ -1,13 +1,17 @@
 <map id="include/cwist/sys/app/big_dumb_reply.h" name="include/cwist/sys/app/big_dumb_reply.h">
-<area shape="rect" id="Node000001" title="Auto&#45;Caching Layer for repetitive requests." alt="" coords="254,5,415,45"/>
+<area shape="rect" id="Node000001" title="Auto&#45;Caching Layer for repetitive requests." alt="" coords="417,5,578,45"/>
 <area shape="rect" id="Node000002" href="$d4/dbd/core_2sstring_2sstring_8h.html" title="Safe string type with helper methods." alt="" coords="147,93,283,133"/>
-<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="310,48,254,87,251,83,306,43"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="436,48,290,92,289,87,435,43"/>
 <area shape="rect" id="Node000005" title=" " alt="" coords="5,269,88,295"/>
-<area shape="poly" id="edge10_Node000001_Node000005" title=" " alt="" coords="255,47,195,67,136,96,84,131,66,152,51,182,43,220,45,256,39,256,38,220,45,180,62,149,80,127,133,91,193,62,253,42"/>
+<area shape="poly" id="edge10_Node000001_Node000005" title=" " alt="" coords="417,30,353,36,281,47,206,66,136,96,105,113,83,130,66,151,51,182,43,220,45,256,39,256,38,220,45,180,61,148,79,126,102,109,133,91,205,61,280,42,352,30,416,25"/>
 <area shape="rect" id="Node000007" title=" " alt="" coords="419,269,490,295"/>
-<area shape="poly" id="edge9_Node000001_Node000007" title=" " alt="" coords="351,44,390,103,430,180,444,220,453,256,448,257,439,221,426,182,385,106,346,47"/>
-<area shape="rect" id="Node000009" title=" " alt="" coords="492,101,556,126"/>
-<area shape="poly" id="edge11_Node000001_Node000009" title=" " alt="" coords="377,43,488,93,485,98,375,48"/>
+<area shape="poly" id="edge9_Node000001_Node000007" title=" " alt="" coords="494,46,483,94,468,183,460,256,454,256,463,182,477,93,489,45"/>
+<area shape="rect" id="Node000009" title=" " alt="" coords="492,101,591,126"/>
+<area shape="poly" id="edge11_Node000001_Node000009" title=" " alt="" coords="509,44,531,87,527,89,505,47"/>
+<area shape="rect" id="Node000010" title=" " alt="" coords="615,101,679,126"/>
+<area shape="poly" id="edge12_Node000001_Node000010" title=" " alt="" coords="531,43,616,92,614,96,529,48"/>
+<area shape="rect" id="Node000011" title=" " alt="" coords="703,101,787,126"/>
+<area shape="poly" id="edge13_Node000001_Node000011" title=" " alt="" coords="553,43,700,94,699,99,551,48"/>
 <area shape="rect" id="Node000003" title=" " alt="" coords="85,189,155,214"/>
 <area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="195,136,145,181,142,177,192,132"/>
 <area shape="rect" id="Node000004" title=" " alt="" coords="179,189,250,214"/>

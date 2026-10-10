@@ -122,6 +122,24 @@ int main(void) {
     check_mock(0, 0, 0, 0, false, false);
     check_mock(64, 512, 64, 0, true, false);
     check_mock(64, 512, 64, 1, false, true);
+
+    /* CWIST_FD_LIMIT_TARGET: valid override below the default, still capped
+     * by the hard limit like the default target is. */
+    check_mock_env("2000", 64, 1000000, 2000, 1);
+    check_mock_env("2000", 64, 500, 500, 1);
+    /* A target below the current soft limit is a no-op, same as the
+     * default-target no-op case above. */
+    check_mock_env("100", 2000, 500000, 2000, 0);
+    /* Invalid values (unparsable, trailing garbage, zero, negative, empty)
+     * all fall back to the untunable default rather than a bad rlim_t. */
+    check_mock_env("not-a-number", 64, RLIM_INFINITY, 1050000, 1);
+    check_mock_env("123abc", 64, RLIM_INFINITY, 1050000, 1);
+    check_mock_env("0", 64, RLIM_INFINITY, 1050000, 1);
+    check_mock_env("-5", 64, RLIM_INFINITY, 1050000, 1);
+    check_mock_env("", 64, RLIM_INFINITY, 1050000, 1);
+    /* Unset behaves identically to the pre-existing default-target cases. */
+    check_mock_env(NULL, 64, RLIM_INFINITY, 1050000, 1);
+
     TEST_REQUIRE(getrlimit(RLIMIT_NOFILE, &after) == 0);
     TEST_REQUIRE(before.rlim_cur == after.rlim_cur && before.rlim_max == after.rlim_max);
     puts("Resource limit tests passed.");

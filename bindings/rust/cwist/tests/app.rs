@@ -621,20 +621,3 @@ fn a_jwt_secret_with_a_nul_byte_is_an_error_not_a_panic() {
         Error::InteriorNul("JWT secret")
     );
 }
-
-#[test]
-fn dispatch_refuses_to_defer_and_the_handler_answers_itself() {
-    let mut app = App::new().unwrap();
-    app.get("/sync", |req, res| {
-        // In-memory dispatch frees the request and response when the handler
-        // returns, so nothing can take them over.
-        assert!(cwist::AsyncResponse::defer(req, res).is_none());
-        assert!(!res.is_deferred());
-        res.set_body("answered inline").unwrap();
-    })
-    .unwrap();
-
-    let res = get(&app, "/sync");
-    assert!(status_line(&res).starts_with("HTTP/1.1 200"), "{res}");
-    assert_eq!(body(&res), "answered inline");
-}

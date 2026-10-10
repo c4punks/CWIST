@@ -116,6 +116,39 @@ static void test_migrate_down_all(void) {
     assert(sqlite3_column_int(stmt, 0) == 0);
     sqlite3_finalize(stmt);
 
+    /* The irreversible v2 must still be recorded as applied. */
+    assert(cwist_migrate_version(db) == 2);
+
+    /* Re-upping must not re-run v2's up_sql on the existing column. */
+    assert(cwist_migrate_up(db, migrations, N_MIGRATIONS) == CWIST_MIGRATE_OK);
+    assert(cwist_migrate_version(db) == 3);
+
+    sqlite3_close(db);
+    printf("  Passed.\n");
+}
+
+static void test_migrate_down_steps_skip_irreversible(void) {
+    printf("Testing migrate down does not spend a step on an irreversible migration...\n");
+
+    sqlite3 *db = NULL;
+    assert(sqlite3_open(":memory:", &db) == SQLITE_OK);
+
+    assert(cwist_migrate_up(db, migrations, N_MIGRATIONS) == CWIST_MIGRATE_OK);
+    assert(cwist_migrate_version(db) == 3);
+
+    /* Two steps: v3 and v1 are rolled back; irreversible v2 is skipped. */
+    assert(cwist_migrate_down(db, migrations, N_MIGRATIONS, 2) == CWIST_MIGRATE_OK);
+    assert(cwist_migrate_version(db) == 2);
+
+    sqlite3_stmt *stmt = NULL;
+    assert(sqlite3_prepare_v2(db,
+                              "SELECT count(*) FROM sqlite_master WHERE type='table' AND name IN "
+                              "('users','sessions');",
+                              -1, &stmt, NULL) == SQLITE_OK);
+    assert(sqlite3_step(stmt) == SQLITE_ROW);
+    assert(sqlite3_column_int(stmt, 0) == 0);
+    sqlite3_finalize(stmt);
+
     sqlite3_close(db);
     printf("  Passed.\n");
 }
@@ -184,6 +217,7 @@ int main(void) {
     test_migrate_idempotent();
     test_migrate_down_one();
     test_migrate_down_all();
+    test_migrate_down_steps_skip_irreversible();
 
     printf("=== DB Crypt tests ===\n");
     test_db_crypt_roundtrip();

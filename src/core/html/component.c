@@ -5,8 +5,6 @@
 
 #include <cwist/core/html/component.h>
 #include <cwist/core/mem/alloc.h>
-#include <stdbool.h>
-#include <string.h>
 
 struct cwist_html_component {
     char *name;
@@ -74,13 +72,13 @@ cwist_html_element_t *cwist_html_component_instantiate(cwist_html_component_t *c
                                                        const void *props,
                                                        cwist_html_element_t **children,
                                                        size_t child_count) {
-    if (!children) child_count = 0;
-    if (!comp || !comp->render_fn) {
-        release_unattached(NULL, children, child_count);
+    if (!children && child_count > 0) return NULL;
+    if (!comp) {
+        /* No render function will take the children, so release them here. */
+        for (size_t i = 0; i < child_count; i++) {
+            cwist_html_element_destroy(children[i]);
+        }
         return NULL;
     }
-
-    cwist_html_element_t *root = comp->render_fn(props, children, child_count);
-    release_unattached(root, children, child_count);
-    return root;
+    return comp->render_fn(props, children, child_count);
 }

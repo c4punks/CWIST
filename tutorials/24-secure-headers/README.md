@@ -1,9 +1,16 @@
 # Tutorial 24: Hardened HTTP Security Headers
 
-Inject security hardening headers (`X-Frame-Options`, `X-Content-Type-Options`) across all outgoing responses.
+Inject a full set of security hardening headers into every response using
+`cwist_http_response_add_security_headers()`.
 
 ## Key Concepts
-- Applying security header hardening middleware with `cwist_middleware_secure_headers`.
+- Calling `cwist_http_response_add_security_headers()` to set all seven
+  standard hardening headers in one call (X-Frame-Options,
+  X-Content-Type-Options, Referrer-Policy, Content-Security-Policy,
+  Cross-Origin-Resource-Policy, Permissions-Policy,
+  Cross-Origin-Opener-Policy).
+- First-one-wins semantics: set a header before calling the function to
+  override the default value for that header.
 
 ## Build and Run
 

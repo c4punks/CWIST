@@ -1,5 +1,5 @@
-#include <cwist/http.h>
-#include <cwist/middleware.h>
+#include <cwist/net/http/http.h>
+#include <cwist/sys/app/middleware.h>
 #include <stdio.h>
 #include <string.h>
 #include <assert.h>

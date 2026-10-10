@@ -1,6 +1,7 @@
 #define _POSIX_C_SOURCE 200809L
-#include <cwist/mux.h>
-#include <cwist/http.h>
+#include <cwist/net/http/mux.h>
+#include <cwist/net/http/http.h>
+#include <cwist/core/mem/alloc.h>
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
@@ -105,8 +106,12 @@ static size_t cwist_mux_bucket_index(const cwist_mux_router *router,
 
 /* --- Mux Router Implementation --- */
 
+/**
+ * @brief Create an empty mux router with the default bucket fan-out.
+ * @return Newly allocated router, or NULL when allocation fails.
+ */
 cwist_mux_router *cwist_mux_router_create(void) {
-    cwist_mux_router *router = (cwist_mux_router *)malloc(sizeof(cwist_mux_router));
+    cwist_mux_router *router = (cwist_mux_router *)cwist_alloc(sizeof(cwist_mux_router));
     if (!router) return NULL;
     router->bucket_count = CWIST_MUX_DEFAULT_BUCKETS;
     router->buckets =
@@ -117,19 +122,32 @@ cwist_mux_router *cwist_mux_router_create(void) {
     }
     memset(router->buckets, 0, router->bucket_count * sizeof(cwist_mux_route *));
     router->routes = NULL;
+    router->param_routes = NULL;
+    router->wildcard_routes = NULL;
     return router;
 }
 
+/**
+ * @brief Destroy a mux router and all registered route records.
+ * @param router Router to destroy. NULL is ignored.
+ */
 void cwist_mux_router_destroy(cwist_mux_router *router) {
     if (!router) return;
     cwist_mux_route *curr = router->routes;
     while (curr) {
         cwist_mux_route *next = curr->next;
         cwist_sstring_destroy(curr->path);
-        free(curr);
+        cwist_mux_middleware_node *mw = curr->middleware;
+        while (mw) {
+            cwist_mux_middleware_node *mw_next = mw->next;
+            cwist_free(mw);
+            mw = mw_next;
+        }
+        cwist_free(curr);
         curr = next;
     }
-    free(router);
+    cwist_free(router->buckets);
+    cwist_free(router);
 }
 
 /**
@@ -143,19 +161,52 @@ void cwist_mux_handle(cwist_mux_router *router, cwist_http_method_t method, cons
                       cwist_http_handler_func handler) {
     if (!router || !path || !handler) return;
 
-    cwist_mux_route *route = (cwist_mux_route *)malloc(sizeof(cwist_mux_route));
+    cwist_mux_route *route = (cwist_mux_route *)cwist_alloc(sizeof(cwist_mux_route));
     if (!route) return;
 
     route->method = method;
     route->path = cwist_sstring_create();
     cwist_sstring_assign(route->path, (char *)path);
     route->handler = handler;
-    
-    // Push to front (simplicity)
+    route->bucket_next = NULL;
+    route->param_next = NULL;
+    route->middleware = NULL;
+    route->is_wildcard = false;
     route->next = router->routes;
     router->routes = route;
+
+    size_t path_len = strlen(path);
+    route->is_parametric = (strchr(path, ':') != NULL);
+    route->is_wildcard = (path_len > 0 && path[path_len - 1] == '*');
+
+    if (route->is_wildcard) {
+        route->param_next = router->wildcard_routes;
+        router->wildcard_routes = route;
+    } else if (route->is_parametric) {
+        route->param_next = router->param_routes;
+        router->param_routes = route;
+    } else {
+        cwist_mux_signature signature = cwist_mux_signature_from_path(method, path);
+        route->signature_hi = signature.hi;
+        route->signature_lo = signature.lo;
+
+        size_t idx = cwist_mux_bucket_index(router, &signature);
+        route->bucket_next = router->buckets[idx];
+        router->buckets[idx] = route;
+    }
 }
 
+/**
+ * @brief Match a request path against a route template containing `:param` segments.
+ * @param route_tmpl Route template with `:name` placeholders for variable segments.
+ * @param req_path Request path to test against the template.
+ * @param out_params On match, receives an allocated query map with extracted parameters
+ *                 (NULL when the template had no parameters). Left untouched on mismatch;
+ *                 any partially built map is freed internally.
+ * @return true when the path matches the template exactly (trailing slash ignored), otherwise false.
+ * @retval true  On match, *out_params owns the extracted parameter map (caller-owned).
+ * @retval false On mismatch, *out_params is unchanged.
+ */
 static bool match_parametric_route(const char *route_tmpl, const char *req_path,
                                    cwist_query_map **out_params) {
     const char *t = route_tmpl;
@@ -202,6 +253,13 @@ static bool match_parametric_route(const char *route_tmpl, const char *req_path,
     return false;
 }
 
+/**
+ * @brief Test whether a request path matches a wildcard route template.
+ * @param route_tmpl Route template; only templates ending in '*' are treated as wildcards.
+ * @param req_path Request path to test.
+ * @return true when the template ends in '*' and req_path starts with the template prefix
+ *         (everything before the '*'), otherwise false.
+ */
 static bool match_wildcard_route(const char *route_tmpl, const char *req_path) {
     size_t len = strlen(route_tmpl);
     if (len > 0 && route_tmpl[len - 1] == '*') {
@@ -211,6 +269,13 @@ static bool match_wildcard_route(const char *route_tmpl, const char *req_path) {
     return false;
 }
 
+/**
+ * @brief Advance the middleware chain: invoke the next middleware or the terminal handler.
+ * @param req Request carrying the chain state in req->route_middleware_state.
+ * @param res Response object forwarded to the current middleware or handler.
+ * @note The chain state is a stack-allocated struct owned by run_middleware_chain;
+ *       this must only be called while that function is on the stack.
+ */
 static void mux_chain_next(cwist_http_request *req, cwist_http_response *res) {
     typedef struct {
         cwist_mux_middleware_node *current;
@@ -226,6 +291,16 @@ static void mux_chain_next(cwist_http_request *req, cwist_http_response *res) {
     }
 }
 
+/**
+ * @brief Run a route's middleware chain followed by its handler, in order.
+ * @param mw Head of the middleware list for the matched route.
+ * @param req Request to process; req->route_middleware_state is set to point at the
+ *            chain state for the duration of the call and cleared to NULL afterwards.
+ * @param res Response object forwarded through the chain.
+ * @param handler Terminal handler invoked once the middleware list is exhausted.
+ * @note The chain state lives on the stack of this function; middleware callbacks
+ *       must not retain req->route_middleware_state beyond the synchronous call.
+ */
 static void run_middleware_chain(cwist_mux_middleware_node *mw, cwist_http_request *req,
                                  cwist_http_response *res, cwist_http_handler_func handler) {
     typedef struct {
@@ -238,6 +313,14 @@ static void run_middleware_chain(cwist_mux_middleware_node *mw, cwist_http_reque
     req->route_middleware_state = NULL;
 }
 
+/**
+ * @brief Look up a registered route for a method/path pair without dispatching to it.
+ * @param router Router whose exact and parametric routes are searched.
+ * @param method HTTP method to match.
+ * @param path Request path to resolve; NULL is treated as the root.
+ * @return Matching route record, or NULL when no exact or parametric route matches.
+ * @note Wildcard routes are not considered by this lookup.
+ */
 cwist_mux_route *cwist_mux_find_route(cwist_mux_router *router, cwist_http_method_t method,
                                       const char *path) {
     if (!router || !path) return NULL;
@@ -268,6 +351,12 @@ cwist_mux_route *cwist_mux_find_route(cwist_mux_router *router, cwist_http_metho
 
 /* --- Route Groups --- */
 
+/**
+ * @brief Create a route group that registers all its handlers under a shared path prefix.
+ * @param router Router that will own the routes registered through the group.
+ * @param prefix Path prefix prepended to every route path registered on the group.
+ * @return Newly allocated group, or NULL when an argument is NULL or allocation fails.
+ */
 cwist_mux_group *cwist_mux_group_create(cwist_mux_router *router, const char *prefix) {
     if (!router || !prefix) return NULL;
     cwist_mux_group *group = (cwist_mux_group *)cwist_alloc(sizeof(cwist_mux_group));
@@ -282,12 +371,27 @@ cwist_mux_group *cwist_mux_group_create(cwist_mux_router *router, const char *pr
     return group;
 }
 
+/**
+ * @brief Destroy a route group and its stored prefix string.
+ * @param group Group to destroy. NULL is ignored.
+ * @note Only the group record is freed; routes registered through the group remain
+ *       owned by the router and are released by cwist_mux_router_destroy().
+ */
 void cwist_mux_group_destroy(cwist_mux_group *group) {
     if (!group) return;
     cwist_free(group->prefix);
     cwist_free(group);
 }
 
+/**
+ * @brief Register a method/path handler on the router, prefixed by the group's prefix.
+ * @param group Group supplying the path prefix and target router.
+ * @param method HTTP method to match.
+ * @param path Route path relative to the group prefix; the two are concatenated verbatim.
+ * @param handler Callback to invoke for a matching request.
+ * @note Invalid arguments (NULL group, router, path, or handler) are silently ignored,
+ *       as is an allocation failure while building the full path.
+ */
 void cwist_mux_group_handle(cwist_mux_group *group, cwist_http_method_t method, const char *path,
                             cwist_http_handler_func handler) {
     if (!group || !group->router || !path || !handler) return;
@@ -303,6 +407,13 @@ void cwist_mux_group_handle(cwist_mux_group *group, cwist_http_method_t method, 
 
 /* --- Per-Route Middleware --- */
 
+/**
+ * @brief Attach a middleware callback to a route, applied only when that route is served.
+ * @param route Route to attach the middleware to. NULL is ignored.
+ * @param mw Middleware function to prepend to the route's chain. NULL is ignored.
+ * @note Middleware runs in most-recently-added-first order because each node is
+ *       prepended to the head of the list. An allocation failure is silently ignored.
+ */
 void cwist_mux_route_use(cwist_mux_route *route, cwist_middleware_func mw) {
     if (!route || !mw) return;
     cwist_mux_middleware_node *node =
@@ -340,7 +451,47 @@ bool cwist_mux_serve(cwist_mux_router *router, cwist_http_request *req, cwist_ht
             }
             return true;
         }
-        curr = curr->next;
+        curr = curr->bucket_next;
     }
+
+    // 2. Try parametric matching (linear search)
+    curr = router->param_routes;
+    while (curr) {
+        if (curr->method == req->method && curr->path && curr->path->data) {
+            cwist_query_map *extracted_params = NULL;
+            if (match_parametric_route(curr->path->data, path, &extracted_params)) {
+                if (extracted_params) {
+                    if (req->path_params) {
+                        cwist_query_map_destroy(req->path_params);
+                    }
+                    req->path_params = extracted_params;
+                }
+                if (curr->middleware) {
+                    run_middleware_chain(curr->middleware, req, res, curr->handler);
+                } else {
+                    curr->handler(req, res);
+                }
+                return true;
+            }
+        }
+        curr = curr->param_next;
+    }
+
+    // 3. Try wildcard matching (linear search)
+    curr = router->wildcard_routes;
+    while (curr) {
+        if (curr->method == req->method && curr->path && curr->path->data) {
+            if (match_wildcard_route(curr->path->data, path)) {
+                if (curr->middleware) {
+                    run_middleware_chain(curr->middleware, req, res, curr->handler);
+                } else {
+                    curr->handler(req, res);
+                }
+                return true;
+            }
+        }
+        curr = curr->param_next;
+    }
+
     return false;
 }

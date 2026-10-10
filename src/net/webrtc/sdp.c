@@ -1,11 +1,24 @@
 /** @file sdp.c
  * @brief Minimal SDP (RFC 4566) parse/generate for DataChannel offers/answers.
+ *
+ * Supports only the subset of SDP needed for a single SCTP DataChannel
+ * m-section: ICE credentials, DTLS fingerprint/setup, mid, and ice-lite.
+ * Parsing extracts fields into a cwist_sdp_info struct; generation produces
+ * offer or answer strings with CRLF line endings.
  */
 #include "webrtc_internal.h"
 
 #include <stdio.h>
 #include <string.h>
 
+/** @brief Copy the value part of an attribute line after a fixed prefix.
+ * @param line   NUL-terminated SDP line beginning with @p prefix.
+ * @param prefix Attribute prefix (e.g. "a=ice-ufrag:") to strip.
+ * @param dst    Destination buffer, always NUL-terminated on success.
+ * @param cap    Capacity of @p dst in bytes.
+ * @note Does nothing if @p line does not start with @p prefix.
+ *       Silently truncates values longer than cap - 1.
+ */
 static void copy_attr_value(const char *line, const char *prefix, char *dst, size_t cap) {
     size_t plen = strlen(prefix);
     if (strncmp(line, prefix, plen) != 0)
@@ -18,6 +31,15 @@ static void copy_attr_value(const char *line, const char *prefix, char *dst, siz
     dst[n] = '\0';
 }
 
+/** @brief Parse an SDP blob into a cwist_sdp_info structure.
+ * @param sdp   SDP text (not required to be NUL-terminated).
+ * @param len   Length of @p sdp in bytes.
+ * @param info  Output structure; zeroed first, then filled from recognized lines.
+ * @return 0 on success, -1 if ice-ufrag or ice-pwd is missing or empty.
+ * @note Lines longer than 511 bytes are truncated. If an attribute appears
+ *       more than once, the last occurrence wins. Sets info->has_lite when
+ *       "a=ice-lite" appears.
+ */
 int cwist_sdp_parse(const char *sdp, size_t len, cwist_sdp_info *info) {
     memset(info, 0, sizeof(*info));
     char line[512];
@@ -51,6 +73,19 @@ int cwist_sdp_parse(const char *sdp, size_t len, cwist_sdp_info *info) {
     return 0;
 }
 
+/** @brief Emit the shared session/m-section portion of an SDP offer.
+ * @param out         Output buffer, receives CRLF-terminated SDP text.
+ * @param cap         Capacity of @p out in bytes.
+ * @param fingerprint DTLS certificate fingerprint (hex, colon-separated).
+ * @param ufrag       ICE username fragment.
+ * @param pwd         ICE password.
+ * @param mid         Media section ID for the BUNDLE group and m-line.
+ * @param setup       DTLS setup attribute value ("active"/"passive").
+ * @param with_lite   Nonzero to include an "a=ice-lite" attribute line.
+ * @param sess_id     o= line session ID.
+ * @return 0 on success, -1 if the output was truncated or encoding failed.
+ * @warning Not NUL-guaranteed on truncation; failure must be checked before use.
+ */
 static int write_session(char *out, size_t cap, const char *fingerprint, const char *ufrag,
                          const char *pwd, const char *mid, const char *setup, int with_lite,
                          long long sess_id) {
@@ -77,6 +112,20 @@ static int write_session(char *out, size_t cap, const char *fingerprint, const c
     return 0;
 }
 
+/** @brief Generate an SDP answer for an ICE-lite DataChannel endpoint.
+ * @param out         Output buffer, receives CRLF-terminated SDP answer.
+ * @param cap         Capacity of @p out in bytes.
+ * @param fingerprint DTLS certificate fingerprint (hex, colon-separated).
+ * @param ufrag       ICE username fragment.
+ * @param pwd         ICE password.
+ * @param mid         Media section ID (also used in the BUNDLE group).
+ * @param host        Local host address for the a=candidate line.
+ * @param port        Local UDP port for the a=candidate line.
+ * @return 0 on success, -1 if the output was truncated or encoding failed.
+ * @note Declares ice-lite and hardcodes a=setup:passive, since the
+ *       ICE-lite answering endpoint takes the passive DTLS role, and emits
+ *       a single host candidate followed by end-of-candidates.
+ */
 int cwist_sdp_write_answer(char *out, size_t cap, const char *fingerprint, const char *ufrag,
                            const char *pwd, const char *mid, const char *host, uint16_t port) {
     /* ICE-lite answering endpoint takes the passive DTLS role. */
@@ -104,6 +153,18 @@ int cwist_sdp_write_answer(char *out, size_t cap, const char *fingerprint, const
     return 0;
 }
 
+/** @brief Generate an SDP offer for a full (non-lite) DataChannel endpoint.
+ * @param out         Output buffer, receives CRLF-terminated SDP offer.
+ * @param cap         Capacity of @p out in bytes.
+ * @param fingerprint DTLS certificate fingerprint (hex, colon-separated).
+ * @param ufrag       ICE username fragment.
+ * @param pwd         ICE password.
+ * @param mid         Media section ID (also used in the BUNDLE group).
+ * @return 0 on success, -1 if the output was truncated or encoding failed.
+ * @note Thin wrapper over write_session() with setup "active", no ice-lite,
+ *       and a fixed session ID; the full agent offering endpoint takes the
+ *       active DTLS role.
+ */
 int cwist_sdp_write_offer(char *out, size_t cap, const char *fingerprint, const char *ufrag,
                           const char *pwd, const char *mid) {
     /* Full agent offering endpoint takes the active DTLS role. */

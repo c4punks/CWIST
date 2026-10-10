@@ -1,5 +1,12 @@
 /** @file ice.c
  * @brief Minimal STUN/ICE (RFC 5389 / RFC 8445) for the ICE-lite agent.
+ *
+ * Implements just enough of STUN message parsing, validation, and construction
+ * to run an ICE-lite endpoint: binding request/response handling,
+ * MESSAGE-INTEGRITY (HMAC-SHA1) and FINGERPRINT (CRC-32) generation and
+ * checking, XOR-MAPPED-ADDRESS extraction, and random ICE credential
+ * generation. No retransmission or state machine logic lives here; callers in
+ * webrtc.c drive timing and nomination.
  */
 #include "webrtc_internal.h"
 
@@ -8,21 +15,30 @@
 #include <openssl/rand.h>
 #include <string.h>
 
-#define STUN_MAGIC 0x2112A442u
-#define STUN_HDR_LEN 20
-#define ATTR_MAPPED_ADDRESS 0x0001
-#define ATTR_USERNAME 0x0006
-#define ATTR_MESSAGE_INTEGRITY 0x0008
-#define ATTR_PRIORITY 0x0024
-#define ATTR_USE_CANDIDATE 0x0025
-#define ATTR_XOR_MAPPED_ADDRESS 0x0020
-#define ATTR_FINGERPRINT 0x8028
-#define ATTR_ICE_CONTROLLED 0x8029
-#define ATTR_ICE_CONTROLLING 0x802A
+/** @name STUN wire-format constants (RFC 5389)
+ * @{ */
+#define STUN_MAGIC 0x2112A442u /**< Magic cookie; also the XOR mask for addresses/ports. */
+#define STUN_HDR_LEN 20        /**< Fixed STUN message header size in bytes. */
+#define ATTR_MAPPED_ADDRESS 0x0001     /**< MAPPED-ADDRESS attribute type. Unused (we send XOR-MAPPED-ADDRESS). */
+#define ATTR_USERNAME 0x0006           /**< USERNAME attribute type ("remoteufrag:localufrag"). */
+#define ATTR_MESSAGE_INTEGRITY 0x0008  /**< MESSAGE-INTEGRITY attribute type (HMAC-SHA1, 20 bytes). */
+#define ATTR_PRIORITY 0x0024           /**< PRIORITY attribute type (ICE, RFC 8445). */
+#define ATTR_USE_CANDIDATE 0x0025      /**< USE-CANDIDATE attribute type (nomination hint). */
+#define ATTR_XOR_MAPPED_ADDRESS 0x0020 /**< XOR-MAPPED-ADDRESS attribute type. */
+#define ATTR_FINGERPRINT 0x8028        /**< FINGERPRINT attribute type (CRC-32 xor 0x5354554E). */
+#define ATTR_ICE_CONTROLLED 0x8029     /**< ICE-CONTROLLED attribute type. Unused by this agent. */
+#define ATTR_ICE_CONTROLLING 0x802A    /**< ICE-CONTROLLING attribute type (we always send it). */
+/** @} */
 
+/** Byte-at-a-time CRC-32 (IEEE, poly 0xEDB88320) lookup table, built lazily by crc32_init(). */
 static uint32_t crc32_table[256];
+/** Set once crc32_table has been initialized. */
 static bool crc32_ready = false;
 
+/** @brief Build the CRC-32 lookup table on first use.
+ *
+ * Idempotent; subsequent calls return immediately.
+ */
 static void crc32_init(void) {
     if (crc32_ready)
         return;
@@ -35,7 +51,13 @@ static void crc32_init(void) {
     crc32_ready = true;
 }
 
-/* Incremental CRC-32 (IEEE) over possibly several consecutive calls. */
+/** @brief Incremental CRC-32 (IEEE) over possibly several consecutive calls.
+ * @param c    Running CRC value; start a new checksum with 0xFFFFFFFF and xor
+ *             the final result with 0xFFFFFFFF (the STUN FINGERPRINT framing).
+ * @param data Bytes to fold into the checksum.
+ * @param len  Number of bytes at @p data.
+ * @return Updated running CRC.
+ */
 static uint32_t crc32_update(uint32_t c, const uint8_t *data, size_t len) {
     crc32_init();
     for (size_t i = 0; i < len; i++)
@@ -43,19 +65,34 @@ static uint32_t crc32_update(uint32_t c, const uint8_t *data, size_t len) {
     return c;
 }
 
+/** @brief Read a 32-bit big-endian value.
+ * @param p Pointer to at least 4 readable bytes.
+ * @return The value in host byte order semantics (as an integer composed from big-endian bytes).
+ */
 static uint32_t rd32(const uint8_t *p) {
     return (uint32_t)p[0] << 24 | (uint32_t)p[1] << 16 | (uint32_t)p[2] << 8 | p[3];
 }
 
+/** @brief Read a 16-bit big-endian value.
+ * @param p Pointer to at least 2 readable bytes.
+ */
 static uint16_t rd16(const uint8_t *p) {
     return (uint16_t)((uint16_t)p[0] << 8 | p[1]);
 }
 
+/** @brief Write a 16-bit value in big-endian order.
+ * @param p Destination buffer (2 bytes).
+ * @param v Value to encode.
+ */
 static void wr16(uint8_t *p, uint16_t v) {
     p[0] = (uint8_t)(v >> 8);
     p[1] = (uint8_t)v;
 }
 
+/** @brief Write a 32-bit value in big-endian order.
+ * @param p Destination buffer (4 bytes).
+ * @param v Value to encode.
+ */
 static void wr32(uint8_t *p, uint32_t v) {
     p[0] = (uint8_t)(v >> 24);
     p[1] = (uint8_t)(v >> 16);
@@ -63,17 +100,44 @@ static void wr32(uint8_t *p, uint32_t v) {
     p[3] = (uint8_t)v;
 }
 
+/** @brief Check whether a datagram looks like a STUN message.
+ * @param buf Datagram bytes.
+ * @param len Number of bytes at @p buf.
+ * @return 1 if @p buf holds at least a STUN header and the magic cookie matches,
+ *         0 otherwise.
+ * @note This is a shape check only; no attribute parsing or auth is performed.
+ */
 int cwist_ice_stun_is_message(const uint8_t *buf, size_t len) {
     return len >= STUN_HDR_LEN && rd32(buf + 4) == STUN_MAGIC;
 }
 
+/** @brief Check whether a datagram is a STUN binding request.
+ * @param buf Datagram bytes.
+ * @param len Number of bytes at @p buf.
+ * @return true if @p buf is a STUN message with type CWIST_STUN_BINDING_REQUEST.
+ */
 bool cwist_ice_stun_is_binding_request(const uint8_t *buf, size_t len) {
     return cwist_ice_stun_is_message(buf, len) && rd16(buf) == CWIST_STUN_BINDING_REQUEST;
 }
 
-/* Walk attributes. Calls cb(type, value, value_len) for each; stop if cb returns false. */
+/** Callback invoked once per STUN attribute during a walk_attrs() scan.
+ * @param type    Attribute type field.
+ * @param val     Pointer to the attribute value inside the message buffer.
+ * @param val_len Value length in bytes (unpadded).
+ * @param arg     Opaque pointer supplied to walk_attrs().
+ * @retval true   Continue walking.
+ * @retval false  Stop walking (walk_attrs() then reports failure to its caller).
+ */
 typedef bool (*attr_cb)(uint16_t type, const uint8_t *val, uint16_t val_len, void *arg);
 
+/** @brief Walk the attribute list of a STUN message.
+ * @param msg STUN message buffer (header + attributes).
+ * @param len Total bytes available at @p msg.
+ * @param cb  Callback invoked for each attribute, in message order.
+ * @param arg Passed through to @p cb.
+ * @return true if the attribute area is well-formed and fully consumed,
+ *         false if the message is truncated, malformed, or @p cb stopped the walk.
+ */
 static bool walk_attrs(const uint8_t *msg, size_t len, attr_cb cb, void *arg) {
     uint16_t msg_len = rd16(msg + 2);
     if ((size_t)msg_len + STUN_HDR_LEN > len || msg_len % 4 != 0)
@@ -93,12 +157,16 @@ static bool walk_attrs(const uint8_t *msg, size_t len, attr_cb cb, void *arg) {
     return off == end;
 }
 
+/** State for attr_find_cb(): which attribute type to look for and the result. */
 typedef struct {
-    bool found;
-    uint16_t val_len;
-    uint16_t type_wanted;
+    bool found;           /**< Set true once the wanted attribute has been seen. */
+    uint16_t val_len;     /**< Value length of the found attribute (valid only if found). */
+    uint16_t type_wanted; /**< Attribute type to search for. */
 } attr_find_arg;
 
+/** @brief attr_cb that records the first occurrence of a wanted attribute.
+ * Stops the walk (returns false) after the first match so later duplicates are ignored.
+ */
 static bool attr_find_cb(uint16_t type, const uint8_t *val, uint16_t val_len, void *arg) {
     (void)val;
     attr_find_arg *a = arg;
@@ -110,17 +178,35 @@ static bool attr_find_cb(uint16_t type, const uint8_t *val, uint16_t val_len, vo
     return true;
 }
 
+/** @brief Check whether a STUN message contains an attribute of the given type.
+ * @param msg  STUN message buffer.
+ * @param len  Bytes available at @p msg.
+ * @param type Attribute type to look for.
+ * @return true if present. Malformed messages simply report "not found".
+ */
 static bool attr_present(const uint8_t *msg, size_t len, uint16_t type) {
     attr_find_arg a = { .type_wanted = type };
     walk_attrs(msg, len, attr_find_cb, &a);
     return a.found;
 }
 
+/** @brief Check whether a STUN message carries the USE-CANDIDATE attribute.
+ * @param buf Datagram bytes.
+ * @param len Number of bytes at @p buf.
+ */
 bool cwist_ice_stun_has_use_candidate(const uint8_t *buf, size_t len) {
     return attr_present(buf, len, ATTR_USE_CANDIDATE);
 }
 
-/* Locate the MESSAGE-INTEGRITY attribute; *mi_off gets its header offset. */
+/** @brief Locate the MESSAGE-INTEGRITY attribute in a STUN message.
+ * @param msg    STUN message buffer.
+ * @param len    Bytes available at @p msg.
+ * @param mi_off Receives the offset of the MI attribute header within @p msg.
+ * @return true if a MESSAGE-INTEGRITY attribute was found, false otherwise.
+ * @retval true  Only if the attribute length is exactly 20 (HMAC-SHA1 size).
+ * @warning A short/long MI attribute is reported as "not found" here; callers
+ *          treat that as an unsigned message rather than as a hard error.
+ */
 static bool find_mi(const uint8_t *msg, size_t len, size_t *mi_off) {
     if (!cwist_ice_stun_is_message(msg, len))
         return false;
@@ -139,6 +225,19 @@ static bool find_mi(const uint8_t *msg, size_t len, size_t *mi_off) {
     return false;
 }
 
+/** @brief Validate the MESSAGE-INTEGRITY of a STUN message against a password.
+ * @param buf Datagram bytes (any STUN message type; also used for responses).
+ * @param len Number of bytes at @p buf.
+ * @param pwd Short-term credential password used as the HMAC-SHA1 key.
+ * @return 1 if the HMAC matches, 0 if the message is malformed, the HMAC does
+ *         not match, or OpenSSL allocation fails.
+ * @retval 1 Also when no MESSAGE-INTEGRITY attribute is present: accepted for
+ *            MVP interoperability (RFC 8445 requires MI, but the agent stays
+ *            permissive here).
+ * @note The HMAC covers the message up to and including the MI attribute
+ *       header, with the header's length field adjusted to end at the MI
+ *       attribute, per RFC 5389.
+ */
 int cwist_ice_stun_validate_request(const uint8_t *buf, size_t len, const char *pwd) {
     size_t pwd_len = strlen(pwd);
     uint8_t hmac[EVP_MAX_MD_SIZE];
@@ -164,6 +263,21 @@ int cwist_ice_stun_validate_request(const uint8_t *buf, size_t len, const char *
     return hmac_len == 20 && memcmp(hmac, buf + mi_off + 4, 20) == 0;
 }
 
+/** @brief Build a STUN binding response for a received binding request.
+ *
+ * Emits a message containing XOR-MAPPED-ADDRESS (IPv4 only), MESSAGE-INTEGRITY
+ * (HMAC-SHA1 keyed with @p pwd), and FINGERPRINT attributes, reusing the
+ * request's transaction ID.
+ *
+ * @param out    Destination buffer.
+ * @param cap    Capacity of @p out in bytes.
+ * @param req    The received binding request (used for its transaction ID).
+ * @param req_len Bytes at @p req; currently unused.
+ * @param mapped Address/port to report back (XOR-encoded with the magic cookie).
+ * @param pwd    Short-term credential password for the MI HMAC.
+ * @return Total response length in bytes, or -1 if @p cap is too small or
+ *         OpenSSL allocation fails.
+ */
 int cwist_ice_stun_build_response(uint8_t *out, size_t cap, const uint8_t *req, size_t req_len,
                                   const struct sockaddr_in *mapped, const char *pwd) {
     (void)req_len;
@@ -229,6 +343,21 @@ int cwist_ice_stun_build_response(uint8_t *out, size_t cap, const uint8_t *req, 
     return (int)(STUN_HDR_LEN + blen);
 }
 
+/** @brief Build an unsigned ICE-controlling STUN binding request.
+ *
+ * The request carries USERNAME (only if @p username is non-empty),
+ * ICE-CONTROLLING, USE-CANDIDATE, and PRIORITY attributes. MESSAGE-INTEGRITY
+ * and FINGERPRINT are intentionally not added here; the MI key (the peer's
+ * password) is only known at send time, so the caller signs the built request
+ * with cwist_ice_stun_sign_request().
+ *
+ * @param out      Destination buffer.
+ * @param cap      Capacity of @p out in bytes.
+ * @param txid     12-byte transaction ID to copy into the header.
+ * @param username "remoteufrag:localufrag" string for the USERNAME attribute;
+ *                 skipped when empty.
+ * @return Total request length in bytes, or -1 if @p cap is too small.
+ */
 int cwist_ice_stun_build_request(uint8_t *out, size_t cap, const uint8_t txid[12],
                                  const char *username) {
     size_t ulen = strlen(username);
@@ -276,7 +405,21 @@ int cwist_ice_stun_build_request(uint8_t *out, size_t cap, const uint8_t txid[12
     return (int)(STUN_HDR_LEN + blen);
 }
 
-/* Append MI + FINGERPRINT to a freshly built request. */
+/** @brief Append MESSAGE-INTEGRITY and FINGERPRINT attributes to a built request.
+ *
+ * Rewrites the message header with the final length after appending. The MI
+ * HMAC covers header+body up to and including the MI attribute header, with the
+ * length field adjusted accordingly, per RFC 5389; the FINGERPRINT CRC covers
+ * the whole message including MI.
+ *
+ * @param msg     Buffer holding a message previously built by
+ *                cwist_ice_stun_build_request(); extended in place.
+ * @param cap     Total capacity of @p msg.
+ * @param msg_len Current length of the message in @p msg.
+ * @param pwd     Short-term credential password for the MI HMAC.
+ * @return New total message length, or -1 if @p cap is too small or OpenSSL
+ *         allocation fails.
+ */
 static int stun_sign(uint8_t *msg, size_t cap, size_t msg_len, const char *pwd) {
     uint8_t body[64];
     size_t blen = 0;
@@ -321,16 +464,27 @@ static int stun_sign(uint8_t *msg, size_t cap, size_t msg_len, const char *pwd) 
     return (int)(msg_len + blen);
 }
 
+/** @brief Public wrapper around stun_sign() for signing a built binding request.
+ * @param msg     Buffer holding the request; extended in place.
+ * @param cap     Total capacity of @p msg.
+ * @param msg_len Current request length.
+ * @param pwd     Peer password used as the MI HMAC key.
+ * @return New total length, or -1 on failure (see stun_sign()).
+ */
 int cwist_ice_stun_sign_request(uint8_t *msg, size_t cap, size_t msg_len, const char *pwd) {
     return stun_sign(msg, cap, msg_len, pwd);
 }
 
+/** State for parse_resp_cb(): collected MESSAGE-INTEGRITY value and mapped address. */
 typedef struct {
-    const uint8_t *mi_val;
-    struct sockaddr_in mapped;
-    bool has_mapped;
+    const uint8_t *mi_val;   /**< Pointer to the MI attribute value (into the message buffer), or NULL. */
+    struct sockaddr_in mapped; /**< Decoded XOR-MAPPED-ADDRESS, valid only if has_mapped. */
+    bool has_mapped;         /**< True once an IPv4 XOR-MAPPED-ADDRESS has been decoded. */
 } parse_resp_arg;
 
+/** @brief attr_cb collecting the MI value and XOR-MAPPED-ADDRESS from a response.
+ * Never stops the walk; duplicates overwrite earlier values (last one wins).
+ */
 static bool parse_resp_cb(uint16_t type, const uint8_t *val, uint16_t val_len, void *arg) {
     parse_resp_arg *a = arg;
     if (type == ATTR_MESSAGE_INTEGRITY) {
@@ -345,6 +499,22 @@ static bool parse_resp_cb(uint16_t type, const uint8_t *val, uint16_t val_len, v
     return true;
 }
 
+/** @brief Validate a received STUN binding response.
+ *
+ * Checks, in order: well-formed STUN message of type BINDING-RESPONSE,
+ * transaction ID match against @p txid, MESSAGE-INTEGRITY HMAC with @p pwd
+ * (via cwist_ice_stun_validate_request()), and presence of a MESSAGE-INTEGRITY
+ * attribute. If @p mapped is non-NULL, an IPv4 XOR-MAPPED-ADDRESS must also be
+ * present and is decoded into it.
+ *
+ * @param buf    Datagram bytes.
+ * @param len    Number of bytes at @p buf.
+ * @param txid   Transaction ID the response must carry (the one we sent).
+ * @param pwd    Local password used as the MI HMAC key.
+ * @param mapped Optional output for the decoded mapped address.
+ * @retval 1 Valid response.
+ * @retval 0 Any check failed or the message is malformed.
+ */
 int cwist_ice_stun_parse_response(const uint8_t *buf, size_t len, const uint8_t txid[12],
                                   const char *pwd, struct sockaddr_in *mapped) {
     if (!cwist_ice_stun_is_message(buf, len) || rd16(buf) != CWIST_STUN_BINDING_RESPONSE)
@@ -366,8 +536,23 @@ int cwist_ice_stun_parse_response(const uint8_t *buf, size_t len, const uint8_t 
     return 1;
 }
 
+/** Base64url alphabet (no padding) used to encode random ICE credentials. */
 static const char b64url_chars[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_";
 
+/** @brief Extract the sender's ufrag from the USERNAME attribute of a STUN message.
+ *
+ * A Binding request's USERNAME is "<recipient ufrag>:<sender ufrag>"
+ * (RFC 8445 section 7.2.2), so for a request we received this returns the
+ * part after the first ':' -- the remote peer's ufrag, as it appears in the
+ * peer's SDP.
+ *
+ * @param buf Datagram bytes.
+ * @param len Number of bytes at @p buf.
+ * @param out Output buffer for the NUL-terminated ufrag.
+ * @param cap Capacity of @p out; output is truncated to cap - 1 characters.
+ * @retval 0 Ufrag extracted (possibly truncated).
+ * @retval -1 Not a STUN message, or no USERNAME attribute present.
+ */
 int cwist_ice_stun_get_remote_ufrag(const uint8_t *buf, size_t len, char *out, size_t cap) {
     if (!cwist_ice_stun_is_message(buf, len))
         return -1;
@@ -378,11 +563,13 @@ int cwist_ice_stun_get_remote_ufrag(const uint8_t *buf, size_t len, char *out, s
         uint16_t type = rd16(buf + off);
         uint16_t alen = rd16(buf + off + 2);
         if (type == ATTR_USERNAME) {
+            if (off + 4 + alen > end) return -1;
+            const uint8_t *name = buf + off + 4;
+            size_t colon = 0;
+            while (colon < alen && name[colon] != ':') colon++;
+            if (colon == alen) return -1; /* no ':' separator */
             size_t i = 0;
-            while (i < alen && i + 1 < cap && buf[off + 4 + i] != ':') {
-                out[i] = (char)buf[off + 4 + i];
-                i++;
-            }
+            for (size_t j = colon + 1; j < alen && i + 1 < cap; j++) out[i++] = (char)name[j];
             out[i] = '\0';
             return 0;
         }
@@ -391,6 +578,17 @@ int cwist_ice_stun_get_remote_ufrag(const uint8_t *buf, size_t len, char *out, s
     return -1;
 }
 
+/** @brief Generate random ICE ufrag/pwd credentials.
+ *
+ * Both strings are drawn from 24 bytes of CSPRNG output encoded with the
+ * base64url alphabet (6 bits per character).
+ *
+ * @param ufrag     Output buffer for the ufrag.
+ * @param ufrag_cap Capacity of @p ufrag; up to 8 characters plus NUL are written.
+ * @param pwd       Output buffer for the password.
+ * @param pwd_cap   Capacity of @p pwd; up to 32 characters plus NUL are written.
+ * @warning Behavior is undefined if either capacity is 0 (cap - 1 underflows).
+ */
 void cwist_ice_random_creds(char *ufrag, size_t ufrag_cap, char *pwd, size_t pwd_cap) {
     uint8_t raw[24];
     RAND_bytes(raw, sizeof(raw));

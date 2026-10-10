@@ -5,6 +5,7 @@
 #define __CWIST_ERR_H__
 
 #include <stdint.h>
+#include <stdbool.h>
 #include <cjson/cJSON.h>
 
 struct cwist_sstring;
@@ -17,7 +18,7 @@ typedef enum cwist_errtype_t {
   /// big, signed errcodes
   /// WARN: mostly unused
     CWIST_ERR_INT64,
-#if defined(__clang__) || defined(__GNUC__) && defined(USE_128BIT_ERRCODE)
+#if (defined(__clang__) || defined(__GNUC__)) && defined(USE_128BIT_ERRCODE)
     CWIST_ERR_INT128,
 #endif
   /// @name unsigned int errcodes
@@ -27,7 +28,7 @@ typedef enum cwist_errtype_t {
   /// big, unsigned errcodes
   /// WARN: mostly unused
     CWIST_ERR_UINT64,
-#if defined(__clang__) || defined(__GNUC__) && defined(USE_128BIT_ERRCODE)
+#if (defined(__clang__) || defined(__GNUC__)) && defined(USE_128BIT_ERRCODE)
     CWIST_ERR_UINT128,
 #endif
 
@@ -49,7 +50,7 @@ typedef struct __prim_cwist_error_t {
     int32_t err_i32;
     int64_t err_i64;
 #if (defined(__clang__) || defined(__GNUC__)) && defined(USE_128BIT_ERRCODE)
-    int64_t err_i128;
+    __int128 err_i128;
 #endif
 
   /* Unsigned error types. These types are often utilised when handling raw bytes;
@@ -61,7 +62,7 @@ typedef struct __prim_cwist_error_t {
     uint64_t err_u64;
 
 #if (defined(__clang__) || defined(__GNUC__)) && defined(USE_128BIT_ERRCODE)
-    int64_t err_i128;
+    unsigned __int128 err_u128;
 #endif
     struct cwist_sstring *err_string;
     cJSON *err_json;

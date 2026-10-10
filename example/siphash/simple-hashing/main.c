@@ -1,5 +1,5 @@
 #include <stdio.h>
-#include <cwist/siphash.h>
+#include <cwist/core/siphash/siphash.h>
 #include <string.h>
 #include <inttypes.h>
 

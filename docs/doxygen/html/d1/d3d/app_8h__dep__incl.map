@@ -1,5 +1,5 @@
 <map id="include/cwist/app.h" name="include/cwist/app.h">
-<area shape="rect" id="Node000001" title="app.h interface." alt="" coords="32,5,179,31"/>
+<area shape="rect" id="Node000001" title="Top&#45;level application header." alt="" coords="32,5,179,31"/>
 <area shape="rect" id="Node000002" href="$d3/db9/middleware_8h.html" title="middleware.h interface." alt="" coords="5,79,205,104"/>
 <area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="108,44,108,79,103,79,103,44"/>
 </map>

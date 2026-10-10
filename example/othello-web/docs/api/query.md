@@ -1,6 +1,6 @@
 # Query & URI API
 
-*Header:* `<cwist/query.h>`
+*Header:* `<cwist/net/http/query.h>`
 
 Advanced query string parsing using `liburiparser`.
 

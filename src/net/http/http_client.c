@@ -12,6 +12,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <strings.h>
 
 #include <curl/curl.h>
 #include <ctype.h>
@@ -309,6 +310,29 @@ void cwist_http_client_set_altsvc_db(cwist_http_client *client, const char *path
 /* Request execution                                                  */
 /* ------------------------------------------------------------------ */
 
+/**
+ * @brief Execute a single HTTP request.
+ *
+ * The handle is reset and re-configured from the client settings before
+ * each call, so a client may be reused for multiple requests. The response
+ * body is capped at CWIST_HTTP_MAX_BODY_SIZE and headers at 200 entries;
+ * exceeding either cap fails the transfer. HTTP/2 is preferred with
+ * downgrade to HTTP/1.1. On success a cwist_http_response is allocated and
+ * stored in *out_response (caller must free it with
+ * cwist_http_response_free); *out_response is always set to NULL before
+ * the transfer starts. The client is not thread-safe; concurrent requests
+ * require separate handles.
+ *
+ * @param client       client handle.
+ * @param url          request URL.
+ * @param method       HTTP method.
+ * @param headers      linked list of request headers, or NULL.
+ * @param body         request body, or NULL for no body.
+ * @param body_len     length of body in bytes.
+ * @param out_response output for the allocated response object.
+ * @return cwist_error_t with err_i16 set to 0 on success, -1 on failure
+ *         (invalid arguments, curl transfer error, or allocation failure).
+ */
 cwist_error_t cwist_http_client_request(cwist_http_client *client, const char *url,
                                         cwist_http_method_t method, cwist_http_header_node *headers,
                                         const char *body, size_t body_len,

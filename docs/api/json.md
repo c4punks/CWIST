@@ -50,6 +50,12 @@ const char *cwist_json_get_raw(cwist_json_builder *b);
 ```
 - **Ownership:** The string is owned by the builder and remains valid until the builder is destroyed. Do NOT free this pointer.
 
+### `cwist_json_builder_destroy`
+```c
+void cwist_json_builder_destroy(cwist_json_builder *b);
+```
+Frees all memory owned by the builder, including the internal buffer returned by `cwist_json_get_raw`. Must be called once when the builder is no longer needed.
+
 ## Example
 ```c
 cwist_json_builder *jb = cwist_json_builder_create();

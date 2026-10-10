@@ -1,6 +1,6 @@
 # HTTPS API
 
-*Header:* `<cwist/https.h>`
+*Header:* `<cwist/net/http/https.h>`
 
 Secure transport layer utilizing OpenSSL.
 

@@ -1,4 +1,4 @@
-#include <cwist/siphash.h>
+#include <cwist/core/siphash/siphash.h>
 #include <stdio.h>
 #include <string.h>
 #include <assert.h>

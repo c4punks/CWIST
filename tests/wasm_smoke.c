@@ -65,12 +65,13 @@ EM_JS(void, js_verify, (const char *res_ptr, int res_len), {
         throw new Error("bad response via TypedArray: " + JSON.stringify(text));
     }
     const samples = Module.cwistView.i32(_samples_ptr(), _samples_len());
-    const total = Array.from(samples).reduce((a, b) = > a + b, 0);
-    if (total != = 60 || samples.length != = 4) {
+    const total = Array.from(samples).reduce((a, b) => a + b, 0);
+    if (total !== 60 || samples.length !== 4) {
         throw new Error("bad i32 view: " + Array.from(samples).join(","));
     }
     console.log("wasm_smoke: JS TypedArray views verified (" + res_len +
                 " response bytes, samples sum " + total + ")");
+    // clang-format on
 });
 
 static void hello_handler(cwist_http_request *req, cwist_http_response *res) {

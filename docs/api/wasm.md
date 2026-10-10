@@ -163,8 +163,9 @@ different secret.
 
 `cwist_app_dispatch_memory()` is whole-request-in, whole-response-out.
 Phase 3 adds streaming at the **boundary** (the handler still builds the
-response body in memory; a chunked-producer handler API is a separate,
-larger change):
+response body in memory; the chunked-producer handler API now exists as
+`cwist_http_response_stream_begin/write/end`, see "Streaming producer"
+below):
 
 - `cwist_app_dispatch_stream(app, req, req_len, write_fn, ctx)` delivers
   the serialized response through a sink callback: the head (status line +
@@ -210,11 +211,9 @@ README.md for build and local serving instructions.
 
 ## Not covered (yet)
 
-- WASI target for non-Emscripten edge runtimes (Cloudflare Workers, wasmtime,
-  Fastly Compute) - everything here assumes an Emscripten `Module` host.
-  See `docs/api/wasi.md` for the Phase 3 evaluation and its prerequisites.
-- A streaming *producer* API inside handlers (response body generated
-  chunk by chunk rather than buffered).
+- WASI 0.2 (`wasm32-wasip2`) is now supported and CI-gated; see
+  `docs/api/wasi.md`. Cloudflare Workers and Fastly Compute are not yet
+  evaluated — everything here still assumes an Emscripten `Module` host.
 - Published npm package / release artifact; today every consumer builds from
   source with `make wasm`.
 - WASM CI; `wasm-smoke` is a manual check, so run it before touching

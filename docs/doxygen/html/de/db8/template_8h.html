@@ -165,8 +165,13 @@ Functions</h2></td></tr>
 <p>This function parses a template string and replaces placeholders with values from the provided cJSON context.</p>
 <p>It supports:</p><ul>
 <li>Variable replacement: {{ key }}</li>
+<li>Variable filters: {{ key | upper }}, {{ key | lower }}, {{ key | escape }}, {{ key | trim }}, {{ key | length }}, {{ key | default("n/a") }}</li>
 <li>Simple conditionals: {% if key %}...{% endif %}</li>
+<li>Negated conditionals: {% if not key %}...{% endif %}</li>
+<li>Else branches: {% if key %}...{% else %}...{% endif %}</li>
 <li>Looping over arrays: {% for item in array %}...{{ item.key }}...{% endfor %}</li>
+<li>File includes: {% include "partial.html" %}</li>
+<li>Comments: {# ignored #}</li>
 </ul>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
@@ -186,9 +191,9 @@ Functions</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>Heap-allocated rendered output, or NULL on failure. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d6/d06/template_8c_source.html#l00178">178</a> of file <a class="el" href="../../d6/d06/template_8c_source.html">template.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d6/d06/template_8c_source.html#l00431">431</a> of file <a class="el" href="../../d6/d06/template_8c_source.html">template.c</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../d6/d06/template_8c_source.html#l00189">cwist_template_render_file()</a>.</p>
+<p class="reference">Referenced by <a class="el" href="../../d6/d06/template_8c_source.html#l00442">cwist_template_render_file()</a>.</p>
 
 </div>
 </div>
@@ -238,9 +243,9 @@ Functions</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>Heap-allocated rendered output, or NULL when file IO or rendering fails. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d6/d06/template_8c_source.html#l00189">189</a> of file <a class="el" href="../../d6/d06/template_8c_source.html">template.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d6/d06/template_8c_source.html#l00442">442</a> of file <a class="el" href="../../d6/d06/template_8c_source.html">template.c</a>.</p>
 
-<p class="reference">References <a class="el" href="../../d9/d39/alloc_8c_source.html#l00221">cwist_alloc()</a>, <a class="el" href="../../d9/d39/alloc_8c_source.html#l00315">cwist_free()</a>, <a class="el" href="../../d6/d06/template_8c_source.html#l00178">cwist_template_render()</a>, and <a class="el" href="../../de/daf/http3_8c_source.html#l00611">len</a>.</p>
+<p class="reference">References <a class="el" href="../../d9/d39/alloc_8c_source.html#l00275">cwist_alloc()</a>, <a class="el" href="../../d2/dfe/alloc_8h_source.html#l00101">CWIST_DEFER_FREE</a>, and <a class="el" href="../../d6/d06/template_8c_source.html#l00431">cwist_template_render()</a>.</p>
 
 </div>
 </div>
