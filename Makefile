@@ -925,7 +925,6 @@ TEST_TARGETS = test_worker_affinity \
                test_full_gc_tracking \
                test_io_queue_full_gc \
                test_full_gc_ownership_handoff \
-               test_gc_job_handoff \
                test_defer_free \
                test_malloc_intercept \
                test_proto_gen \
@@ -1589,6 +1588,7 @@ test_gc_job_handoff: $(LIB_NAME) tests/test_gc_job_handoff.c
 	$(CC) $(CFLAGS) -o $@ tests/test_gc_job_handoff.c $(LIB_NAME) $(LIBS)
 	./$@
 	./$@ nogc
+	./$@ runtime
 	$(CC) $(CFLAGS) -DNDEBUG -o $@ tests/test_gc_job_handoff.c $(LIB_NAME) $(LIBS)
 	./$@
 	./$@ nogc
@@ -1693,12 +1693,6 @@ test_full_gc_tracking: $(LIB_NAME) tests/test_full_gc_tracking.c
 test_io_queue_full_gc: $(LIB_NAME) tests/test_io_queue_full_gc.c
 	$(CC) $(CFLAGS) -o test_io_queue_full_gc tests/test_io_queue_full_gc.c $(LIB_NAME) $(LIBS)
 	./test_io_queue_full_gc
-
-test_gc_job_handoff: $(LIB_NAME) tests/test_gc_job_handoff.c
-	$(CC) $(CFLAGS) -o test_gc_job_handoff tests/test_gc_job_handoff.c $(LIB_NAME) $(LIBS)
-	./test_gc_job_handoff
-	./test_gc_job_handoff nogc
-	./test_gc_job_handoff runtime
 
 test_full_gc_ownership_handoff: $(LIB_NAME) tests/test_full_gc_ownership_handoff.c
 	$(CC) $(CFLAGS) -o test_full_gc_ownership_handoff tests/test_full_gc_ownership_handoff.c $(LIB_NAME) $(LIBS)
