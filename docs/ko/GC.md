@@ -157,6 +157,47 @@ include 가드에 걸려 아무 일도 하지 않습니다. 그렇지 않으면 
 에포크 GC에 기록되므로(`cwist_reg_ptr_sized`로 크기 인식) 에포크 순환이 그것을 회수합니다.
 명시적 `cwist_free`도 여전히 올바르며, 단지 블록의 등록을 일찍 해제할 뿐입니다.
 
+### 7. 명시적 flush와 회수
+
+쉽게 가정하기 쉽지만 둘 다 틀린 내용이 두 가지 있습니다.
+
+- **"retire"는 "해제"가 아닙니다.** `cwist_gc_scope_flush()`와 `cwist_ebr_free()`는
+  블록을 *retire*할 뿐입니다. 실제 해제는 누군가 회수를 구동할 때 일어납니다.
+  `cwist_gc_pipeline_tick()`이나 `cwist_scheduler` 뒤의 io_queue(`cwist_app_use_scheduler()`,
+  `cwist_async_set_timeout()`)가 그 역할을 합니다. full-GC 인스턴스는 수동 순환이라
+  저절로 회수가 돌지 않습니다. 회수를 구동하지 않는 프로세스는 flush한 것을 전부 그대로
+  들고 있고, retire할 때마다 돌려받지 못하는 노드도 하나씩 할당됩니다.
+- **에포크 지연은 에포크 안에 있는 읽기 스레드만 보호합니다.** 요청 처리 스레드(HTTPS pool,
+  리액터, h2 루프)는 `ttak_epoch_enter()`를 호출하지 않습니다. 회수가 한 번 돌면, 그 스레드가
+  아직 쓰고 있는 블록이라도 retire된 블록은 해제됩니다.
+
+그래서 `cwist_gc_scope_flush()`에는 엄격한 전제 조건이 있습니다. **호출 스레드가 앞으로 다시
+건드릴 추적 블록을 하나도 들고 있지 않아야 합니다.**
+
+| 호출 위치 | 괜찮은가? | 이유 |
+|---|---|---|
+| 전용 워커 스레드에서 자기 완결적인 작업이 끝난 뒤, 결과를 `cwist_gc_scope_disown()`이나 `cwist_async_respond_with()` 같은 disown하는 API로 넘긴 다음 | 예 | 작업이 할당한 것 중 살아 있는 게 없음 |
+| 요청 핸들러나 미들웨어 (`next()`가 돌아온 뒤라도) | **아니요** | 응답은 그 뒤에도 읽히고 전송되며(압축, 직렬화), `cwist_http_header_add()`로 추가한 헤더는 추적 대상임 |
+| 연결을 처리하는 모든 스레드 | **아니요** | 연결별 상태(h2 세션 버퍼, HPACK 테이블)가 요청 사이에도 그 스레드에 살아 있음 |
+
+`cwist_conn_registry_flush()`도 같은 구조입니다. 호출 스레드가 등록한 모든 연결을 닫는데,
+지금 다른 스레드가 처리 중인 연결(park, defer, 재제출된 연결)도 포함됩니다.
+
+`cwist` CLI는 이 내용을 읽도록 강제합니다. `cwist audit`와 `cwist watcher`는 애플리케이션
+코드에서 `cwist_gc_scope_flush`, `cwist_ebr_free`, `cwist_gc_scope_disown`/`cwist_gc_scope_untrack`,
+`cwist_conn_registry_flush`, `cwist_conn_registry_sweep_all`을 호출하는 모든 곳에 경고를 냅니다.
+경고마다 해당 API의 계약이 적혀 있습니다. 호출 위치가 계약을 지키는지 확인했다면, 그 위치에
+표시를 달아 경고를 끄세요.
+
+```c
+/* 작업 끝: 이 작업이 할당한 것은 위에서 모두 해제하거나 disown했음. */
+cwist_gc_scope_flush(); /* cwist-ack: cwist_gc_scope_flush */
+```
+
+(표시는 호출 바로 윗줄에 달아도 됩니다.) 이 내용은 c4punks/CWIST#347에서 나왔습니다. 한
+애플리케이션이 요청 미들웨어에서 flush를 하고 있었는데, 그 프로세스에서 회수를 구동하는 곳이
+하나도 없었기 때문에 문제가 드러나지 않았을 뿐입니다.
+
 ## 의미 요약
 
 | 이벤트 | full_gc 없음 (기본값) | `cwist_full_gc(true)` |
@@ -166,7 +207,7 @@ include 가드에 걸려 아무 일도 하지 않습니다. 그렇지 않으면 
 | `cwist_alloc` 객체 | 수동 `cwist_free` | 에포크 순환이 회수; 명시적 free도 문제없음 |
 | cJSON 내부 `malloc` | 해당 없음 (cJSON이 자체 메모리 관리) | `cJSON_InitHooks`로 `cwist_alloc`에 연결; 에포크 순환으로 해제 |
 | 핸들러가 맨 `malloc()` 호출 (`CWIST_INTERCEPT_MALLOC` 옵트인) | 잊으면 힙 누수 | pending-sweep 목록으로 연결; 에포크 순환으로 해제 |
-| 정리 안전성 | 호출자의 규율 | 에포크 지연; 참조되는 동안 회수 없음 |
+| 정리 안전성 | 호출자의 규율 | `ttak_epoch_enter()` 안의 읽기 스레드에 한해 에포크 지연; 요청 처리 스레드는 해당하지 않으므로 명시적 flush는 7절을 따라야 함 |
 
 ## 목표가 아닌 것과 참고 사항
 
