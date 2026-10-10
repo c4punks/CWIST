@@ -1,9 +1,7 @@
 <map id="src/sys/err/error.c" name="src/sys/err/error.c">
-<area shape="rect" id="Node000001" title="Minimal constructors for the framework&#39;s tagged error container." alt="" coords="140,5,275,31"/>
+<area shape="rect" id="Node000001" title="Minimal constructors for the framework&#39;s tagged error container." alt="" coords="75,5,209,31"/>
 <area shape="rect" id="Node000002" href="$d7/da1/sys_2err_2cwist__err_8h.html" title="Unified error code and type definitions for the CWIST system layer." alt="" coords="71,79,213,119"/>
-<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="200,33,169,70,164,66,196,29"/>
-<area shape="rect" id="Node000006" title=" " alt="" coords="237,86,308,111"/>
-<area shape="poly" id="edge5_Node000001_Node000006" title=" " alt="" coords="219,29,256,73,252,77,215,33"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="145,31,145,65,139,65,139,31"/>
 <area shape="rect" id="Node000003" title=" " alt="" coords="5,167,76,192"/>
 <area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="119,121,68,160,65,156,116,117"/>
 <area shape="rect" id="Node000004" title=" " alt="" coords="101,167,183,192"/>

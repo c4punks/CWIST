@@ -6,15 +6,6 @@ language:
   engines:
     default:
       command: /opt/web/cwist_bench
-      # Pin the tuned worker count. Measured A/B (Ryzen 5600X, wrk -t4 -c256):
-      # default one-worker-per-core gives ~260-300k req/s while 4 workers
-      # gives ~315-340k on both a shared box and a dedicated 8-core cpuset
-      # (harness-style pinning, load generator on disjoint cores). See
-      # c4punks/CWIST PR #333 for the sweep. "auto" would select one worker
-      # per allotted core, which oversubscribes once the load generator and
-      # kernel share the machine.
-      environment:
-        CWIST_WORKERS: "4"
 
 framework:
   github: c4punks/CWIST

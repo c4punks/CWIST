@@ -54,14 +54,6 @@ struct cwist_http3_context {
     int ping_period_ms;        /**< 0 = use lsquic default (server: none) */
     int noprogress_timeout_ms; /**< 0 = use lsquic default (60s server) */
     void *hsets; /**< Head of tracked cwist_h3_hset list (internal; swept on engine destroy) */
-    /* Last CONNECTION_CLOSE frame received from a peer by any connection of
-     * this context. Written on the engine thread from lsquic's close-frame
-     * callback; read via cwist_http3_last_close_error() for post-serve
-     * diagnostics (call after the serve loop has stopped). */
-    volatile int last_close_received; /**< Non-zero once a close frame was recorded */
-    int last_close_app_error;         /**< 0 transport, 1 application, -1 unknown */
-    uint64_t last_close_code;         /**< QUIC transport or H3 application error code */
-    char last_close_reason[256];      /**< Peer reason phrase, NUL-terminated */
 };
 
 /**
@@ -327,36 +319,6 @@ size_t cwist_webtransport_max_datagram_size(void *session);
 int cwist_webtransport_close_session(void *session, uint64_t code, const char *reason);
 
 /** @} */
-
-/** --- Diagnostics --- */
-
-/**
- * @brief Return the last CONNECTION_CLOSE frame received by any connection
- *        of this context.
- *
- * When the peer (or an intermediary-facing client) closes a QUIC connection,
- * lsquic reports the frame's error class, code, and reason phrase here.  This
- * is the programmatic counterpart to the CWIST_H3_DEBUG=1 journal hook and is
- * meant for post-serve diagnostics: the callback runs on the engine thread,
- * so call this after cwist_http3_server_loop() has returned (or the context
- * was otherwise quiesced) — the same lifecycle guarantee as the rest of the
- * context's teardown-time state.
- *
- * @param ctx          HTTP/3 context.
- * @param app_error_out Optional; receives true for an application-level
- *                     close (H3 CONNECTION_CLOSE, 0x1D), false for a
- *                     transport-level close (0x1C).  An "unknown" class
- *                     (lsquic reports -1) also yields false.
- * @param code_out     Optional; receives the QUIC transport error code or
- *                     the H3 application error code.
- * @param reason_buf   Optional; receives the peer's reason phrase,
- *                     NUL-terminated, truncated to @p buf_len - 1 bytes.
- * @param buf_len      Capacity of @p reason_buf.
- * @return 0 if a CONNECTION_CLOSE frame has been received, -1 otherwise
- *         (nothing recorded yet, or @p ctx is NULL).
- */
-int cwist_http3_last_close_error(const cwist_http3_context *ctx, bool *app_error_out,
-                                 uint64_t *code_out, char *reason_buf, size_t buf_len);
 
 /** --- Unstable-network resilience knobs --- */
 

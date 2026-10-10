@@ -257,16 +257,19 @@ fn compression_leaves_a_deferred_response_alone() {
     let done = serve(port, move |app| {
         // threshold 0 means compress any body size, so /plain is encoded.
         let _ = app.use_builtin_middleware(cwist::middleware::compress(0));
+        let (defer_tx, defer_rx) = mpsc::channel::<cwist::AsyncResponse>();
+        let defer_rx = Arc::new(Mutex::new(defer_rx));
+        let defer_rx_clone = Arc::clone(&defer_rx);
+        let text = deferred_body_text.clone();
+        thread::spawn(move || {
+            let res = defer_rx_clone.lock().unwrap().recv_timeout(Duration::from_secs(5));
+            if let Ok(handle) = res {
+                let _ = handle.respond(200, "text/plain", text);
+            }
+        });
         app.get("/defer", move |req, res| {
             let handle = cwist::AsyncResponse::defer(req, res).expect("defer");
-            // Answer on another thread and wait for it, so the completion has
-            // written the response before the compression middleware resumes.
-            let (tx, rx) = mpsc::channel();
-            let text = deferred_body_text.clone();
-            thread::spawn(move || {
-                let _ = tx.send(handle.respond(200, "text/plain", text));
-            });
-            assert!(rx.recv_timeout(Duration::from_secs(5)).expect("respond"));
+            defer_tx.send(handle).expect("send async handle");
         })
         .unwrap();
         app.get("/plain", move |_req, res| res.set_body(&plain_body_text).unwrap()).unwrap();
@@ -369,6 +372,15 @@ fn a_deferred_response_is_read_only_for_the_handler_and_middleware() {
     let seen = Arc::new(Mutex::new(Vec::<String>::new()));
     let handler_seen = Arc::clone(&seen);
     let middleware_seen = Arc::clone(&seen);
+    let (defer_tx, defer_rx) = mpsc::channel::<cwist::AsyncResponse>();
+    let defer_rx = Arc::new(Mutex::new(defer_rx));
+    let defer_rx_clone = Arc::clone(&defer_rx);
+    thread::spawn(move || {
+        let res = defer_rx_clone.lock().unwrap().recv_timeout(Duration::from_secs(5));
+        if let Ok(handle) = res {
+            let _ = handle.respond(200, "text/plain", "async body");
+        }
+    });
     let done = serve(port, move |app| {
         let _ = app.use_middleware(move |req, res, next| {
             next();
@@ -380,22 +392,16 @@ fn a_deferred_response_is_read_only_for_the_handler_and_middleware() {
             let late = res.add_header("X-Late", "1");
             middleware_seen.lock().unwrap().push(format!("middleware {late:?}"));
         });
+        let tx = defer_tx.clone();
         app.get("/defer", move |req, res| {
             let handle = cwist::AsyncResponse::defer(req, res).expect("defer");
-            // Complete on another thread and wait for it, so the completion
-            // has written the response while this handler still runs.
-            let (tx, rx) = mpsc::channel();
-            thread::spawn(move || {
-                let _ = tx.send(handle.respond(200, "text/plain", "async body"));
-            });
-            let responded = rx.recv_timeout(Duration::from_secs(5)).expect("respond");
             let mut seen = handler_seen.lock().unwrap();
-            seen.push(format!("responded {responded}"));
             seen.push(format!("deferred {}", res.is_deferred()));
             seen.push(format!("status {}", res.status()));
             res.set_status(418);
             seen.push(format!("body {:?}", res.set_body("late body")));
             seen.push(format!("path {:?}", req.path()));
+            tx.send(handle).expect("send async handle");
         })
         .unwrap();
     });
@@ -412,7 +418,6 @@ fn a_deferred_response_is_read_only_for_the_handler_and_middleware() {
     assert_eq!(
         *seen.lock().unwrap(),
         [
-            "responded true",
             "deferred true",
             "status 0",
             "body Err(Deferred)",

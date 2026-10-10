@@ -69,6 +69,7 @@
 1	src/core/orm/orm_socket.c:free(ctx->db_path);
 1	src/core/utils/json_heal.c:free(r->json);
 1	src/core/utils/json_heal.c:free(recovered); /* SLLM callback uses plain malloc per contract */
+1	src/core/validation/bind.c:free(printed);
 9	src/net/db_sync/db_sync.c:free(blob);
 1	src/net/db_sync/db_sync.c:unsigned char *blob = (unsigned char *)malloc(blob_len);
 2	src/net/graphql/graphql.c:free(printed);
@@ -111,7 +112,6 @@
 1	src/net/http/http3_client.c:client->in_dgram.data = malloc(len);
 1	src/net/http/http3_client.c:client->out_dgram.data = malloc(len);
 1	src/net/http/http3_client.c:cwist_http3_client *client = calloc(1, sizeof(*client));
-1	src/net/http/http3_client.c:cwist_webtransport_client_session *session = calloc(1, sizeof(*session));
 4	src/net/http/http3_client.c:free(client);
 2	src/net/http/http3_client.c:free(client->host);
 2	src/net/http/http3_client.c:free(client->in_dgram.data);
@@ -119,7 +119,6 @@
 1	src/net/http/http3_client.c:free(client->wt_connecting);
 1	src/net/http/http3_client.c:free(hset_p);
 2	src/net/http/http3_client.c:free(name);
-2	src/net/http/http3_client.c:free(session);
 1	src/net/http/http3_client.c:free(st);
 1	src/net/http/http3_client.c:free(st->req_body);
 1	src/net/http/http3_client.c:free(st->req_path);

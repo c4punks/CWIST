@@ -72,10 +72,6 @@ CWIST-side quirk handling for wasip2:
   time are plain-C stubs in `src/sys/wasi/compat.c`; the metrics and
   writer-fast stubs in that file are preview1-only since the real units
   join the wasip2 build.
-- The request-serving call chain peaks near 96KB of stack — over wasm-ld's
-  64KB default, and the overflow silently corrupts linear memory rather
-  than trapping. Link wasip2 binaries with a larger stack
-  (`-Wl,-z,stack-size=…`, `WASIP2_STACK_BYTES` in the Makefile).
 
 ## WASI preview1 (retired)
 

@@ -32,7 +32,7 @@
 | Phase 1 — Performance | Reactor latency, RX-uring pipelining, HTTPS handshake shards, worker warmup | Mostly done: #293 closed the measurement loop; RX-uring and worker warmup dropped; HTTPS shard tuning remains open |
 | Phase 2 — Rust FFI | `bindings/rust/` (`cwist-sys` + `cwist`) | Done: middleware + async wrappers, example, FFI overhead benchmark; `cwist-sys` and `cwist` published to crates.io as v0.1.0 |
 | Phase 3 — HTTP/3 Close Correctness | Re-pin lsquic after upstream fixes | Deferred indefinitely — waiting for upstream lsquic to ship WebTransport client support |
-| Phase 4 — v4.0 Scope Confirmation | Enact v3.7 Phase 5 decisions, record experimental-item fates | Done: v3.7 Phase 5 enacted; GraphQL subscriptions, durable queue, Redis RESP2/NATS borrow promoted to supported; WASM component deferred past v4.0 (ships experimental at v4.0, promotion re-evaluated at v4.1); WebTransport stays experimental until v4.1 |
+| Phase 4 — v4.0 Scope Confirmation | Enact v3.7 Phase 5 decisions, record experimental-item fates | Done: v3.7 Phase 5 enacted; GraphQL subscriptions, durable queue, Redis RESP2/NATS borrow promoted to supported; WASM component deferred to v4.0; WebTransport stays experimental until v4.1 |
 
 ### 1) Transport Layer
 
@@ -224,7 +224,7 @@ it is additive. Scope does not grow; anything not ready slips.
 | **1 — Performance** | Close reactor/Classic/Axum latency gaps; validate RX-uring pipelining; HTTPS handshake shards; worker warmup | Mostly done | #293 has the data; #294 raised `CWIST_HTTPS_HS_SHARDS` default floor to 4 and MAX to 16; RX-uring and worker warmup dropped |
 | **2 — Rust FFI** | Make CWIST callable from Rust (`cwist-sys` + `cwist`) | Done | Middleware and deferred-async wrappers landed; `example/rust-hello/` and FFI overhead benchmark added; built-in middleware factory wrappers and owned `cwist_async_respond_with` helper done; `cwist-sys` and `cwist` v0.1.0 published to crates.io |
 | **3 — HTTP/3 close correctness** | Re-pin lsquic when upstream fixes land; add CONNECTION_CLOSE interop gate | Deferred indefinitely | On hold until upstream lsquic ships WebTransport client support; no separate cutoff |
-| **4 — v4.0 scope confirmation** | Enact v3.7 Phase 5 decisions and record v4.0 fate for every experimental item | Done | v3.7 Phase 5 enacted; GraphQL subscriptions, durable queue, Redis RESP2/NATS borrow promoted to supported; WASM component pipeline ships experimental at v4.0 with promotion re-evaluated at v4.1; WebTransport experimental until v4.1; docs audit done |
+| **4 — v4.0 scope confirmation** | Enact v3.7 Phase 5 decisions and record v4.0 fate for every experimental item | Done | v3.7 Phase 5 enacted; GraphQL subscriptions, durable queue, Redis RESP2/NATS borrow promoted to supported; WASM component pipeline deferred to v4.0; WebTransport experimental until v4.1; docs audit done |
 
 ### Phase 1 — Performance
 
@@ -280,7 +280,7 @@ chase #688, #687, or #693 separately.
 | Decision Source | Action |
 |-----------------|--------|
 | v3.7 Phase 5 | **Done** — full GC and malloc interception promoted to *supported opt-in* (`docs/GC.md` updated, defaults unchanged: full-GC off); `CWIST_PROFILE` matrix stays the v4.0 default story; latency probe stays hidden opt-in; HTTP batch-shed counter stays always-on |
-| Experimental items | **Promoted to supported in v3.8** — GraphQL subscriptions (`graphql_ws.h`), durable job queue (`durable_queue.h`), Redis RESP2 reply tree, and NATS connection borrow (`cwist_nats_native()`). **Decided for v4.0 (2026-10-10)** — WASM component pipeline (#203) ships v4.0 experimental and outside the guarantee; promotion re-evaluated at v4.1 (gated on WASI 0.3 / unflagged JSPI); WebTransport stays experimental until v4.1 |
+| Experimental items | **Promoted to supported in v3.8** — GraphQL subscriptions (`graphql_ws.h`), durable job queue (`durable_queue.h`), Redis RESP2 reply tree, and NATS connection borrow (`cwist_nats_native()`). **Deferred to v4.0** — WASM component pipeline (#203) stays experimental (gated on WASI 0.3 / unflagged JSPI); WebTransport stays experimental until v4.1 |
 | WebTransport tutorial | Keep experimental until v4.1 |
 | Docs | **Done** — stale experimental caveats removed from promoted headers/docs; WASM component and WebTransport caveats refreshed with explicit v4.0/v4.1 deferral |
 
@@ -550,9 +550,9 @@ needs a recorded decision before the cut.
 
 | Item | Current state | Decision needed |
 |------|---------------|-----------------|
-| WASM component pipeline (#203) | Experimental; gated on WASI 0.3 / unflagged JSPI | **Decided (2026-10-10):** ship v4.0 with it experimental and outside the guarantee; promotion re-evaluated at v4.1 |
-| `cwist_http3_set_stream_priority()` | `@deprecated` in `http3.h`; kept for ABI compatibility; always logs a warning and returns -1 | **Decided (2026-10-10):** kept with the always-refuse behavior as its permanent contract for v4.0 |
-| `cwist_http_stringify_response()` | Declared in `http.h`; covered by `test_http_stringify` | **Decided (2026-10-10):** revived as supported API; deprecated comment dropped from `http.c` |
+| WASM component pipeline (#203) | Experimental; deferred to v4.0 in v3.8 Phase 4; gated on WASI 0.3 / unflagged JSPI | Promote at v4.0, or ship v4.0 with it marked experimental and outside the guarantee |
+| `cwist_http3_set_stream_priority()` | `@deprecated` in `http3.h`; kept for ABI compatibility; always logs a warning and returns -1 | Remove before the cut, or keep it with the always-refuse behavior as its permanent contract |
+| `cwist_http_stringify_response()` | Declared in `http.h` without a deprecation marker; a source comment in `http.c` calls it "Deprecated / Debug only"; covered by `test_http_stringify` | Keep it as supported API and drop the comment, or mark it deprecated and remove it before the cut |
 | WebTransport client API (`http3_client.h`) | Marked experimental (LSQUIC PR #629) | None for v4.0: stays experimental and outside the guarantee until v4.1 |
 | Public API baseline | No recorded list of public symbols and public struct layouts exists | **Done:** baseline recorded in [`docs/api/v4.0-api-baseline.txt`](docs/api/v4.0-api-baseline.txt), regenerated by `make api-baseline`. Possible follow-up: a CI check that diffs headers against it |
 
@@ -583,8 +583,6 @@ and the Zig bindings (`bindings/zig`, 0.1.0) are versioned separately.
 
 ### Not in v4.0 scope
 
-* WASM component pipeline (#203): stays experimental and outside the
-  guarantee; promotion re-evaluated at v4.1 (decided 2026-10-10).
 * WebTransport (#17) and the lsquic re-pin: v4.1, see below.
 
 ### Exit criteria for v4.0

@@ -85,6 +85,7 @@ $(function() {
 <a href="#details">More...</a></p>
 <div class="textblock"><code>#include &lt;<a class="el" href="../../d1/df5/cwist__io_8h_source.html">cwist/sys/io/cwist_io.h</a>&gt;</code><br />
 <code>#include &lt;<a class="el" href="../../d2/dfe/alloc_8h_source.html">cwist/core/mem/alloc.h</a>&gt;</code><br />
+<code>#include &lt;<a class="el" href="../../d0/daa/gc_8h_source.html">cwist/core/mem/gc.h</a>&gt;</code><br />
 <code>#include &lt;sys/types.h&gt;</code><br />
 <code>#include &lt;sys/event.h&gt;</code><br />
 <code>#include &lt;sys/time.h&gt;</code><br />
@@ -97,36 +98,44 @@ Include dependency graph for kqueue.c:</div>
 <div class="dyncontent">
 <div class="center"><img src="../../d5/ddf/kqueue_8c__incl.png" border="0" usemap="#asrc_2sys_2io_2kqueue_8c" alt=""/></div>
 <map name="asrc_2sys_2io_2kqueue_8c" id="asrc_2sys_2io_2kqueue_8c">
-<area shape="rect" title="BSD kqueue backend for the generic CWIST job queue interface." alt="" coords="674,5,821,31"/>
-<area shape="rect" href="../../d1/df5/cwist__io_8h.html" title="Platform Agnostic Async Job Queue Interface." alt="" coords="5,152,172,177"/>
-<area shape="poly" title=" " alt="" coords="674,22,587,26,480,36,364,53,251,81,178,112,118,147,116,142,175,107,249,76,363,48,479,31,586,21,674,17"/>
-<area shape="rect" href="../../d2/dfe/alloc_8h.html" title="Memory allocation wrappers backed by libttak." alt="" coords="262,79,435,104"/>
-<area shape="poly" title=" " alt="" coords="684,33,427,79,426,74,683,28"/>
-<area shape="rect" title=" " alt="" coords="459,79,555,104"/>
-<area shape="poly" title=" " alt="" coords="710,33,560,77,559,72,708,28"/>
-<area shape="rect" title=" " alt="" coords="580,79,677,104"/>
-<area shape="poly" title=" " alt="" coords="730,33,661,74,659,69,727,28"/>
-<area shape="rect" title=" " alt="" coords="702,79,793,104"/>
-<area shape="poly" title=" " alt="" coords="750,31,750,65,745,65,745,31"/>
-<area shape="rect" title=" " alt="" coords="817,79,888,104"/>
-<area shape="poly" title=" " alt="" coords="766,28,826,69,823,73,763,33"/>
-<area shape="rect" title=" " alt="" coords="913,79,979,104"/>
-<area shape="poly" title=" " alt="" coords="780,28,901,71,900,76,778,33"/>
-<area shape="rect" title=" " alt="" coords="1003,79,1078,104"/>
-<area shape="poly" title=" " alt="" coords="795,28,990,75,989,80,794,33"/>
-<area shape="rect" title=" " alt="" coords="1103,79,1171,104"/>
-<area shape="poly" title=" " alt="" coords="822,28,1090,76,1089,81,821,33"/>
-<area shape="rect" title=" " alt="" coords="249,225,323,251"/>
-<area shape="poly" title=" " alt="" coords="121,175,242,218,240,223,119,180"/>
-<area shape="rect" title=" " alt="" coords="95,225,178,251"/>
-<area shape="poly" title=" " alt="" coords="99,176,124,213,119,216,94,179"/>
-<area shape="poly" title=" " alt="" coords="363,103,388,137,394,158,390,179,367,205,337,222,335,218,363,200,385,176,389,158,383,139,359,106"/>
-<area shape="rect" title=" " alt="" coords="450,152,591,177"/>
-<area shape="poly" title=" " alt="" coords="377,102,481,144,479,149,375,106"/>
-<area shape="rect" href="../../da/d0c/arena_8h.html" title="Request&#45;scoped arena allocator backed by libttak arena generations." alt="" coords="197,152,375,177"/>
-<area shape="poly" title=" " alt="" coords="340,106,307,143,303,140,336,103"/>
-<area shape="poly" title=" " alt="" coords="289,178,289,212,283,212,283,178"/>
-<area shape="poly" title=" " alt="" coords="263,180,175,222,172,217,261,175"/>
+<area shape="rect" title="BSD kqueue backend for the generic CWIST job queue interface." alt="" coords="721,5,868,31"/>
+<area shape="rect" href="../../d1/df5/cwist__io_8h.html" title="Platform Agnostic Async Job Queue Interface." alt="" coords="395,152,562,177"/>
+<area shape="poly" title=" " alt="" coords="721,26,679,33,633,43,587,59,545,81,515,109,493,141,489,138,511,106,542,76,585,54,632,38,678,27,720,21"/>
+<area shape="rect" href="../../d2/dfe/alloc_8h.html" title="Memory allocation wrappers backed by libttak." alt="" coords="121,79,294,104"/>
+<area shape="poly" title=" " alt="" coords="721,31,308,81,308,75,720,26"/>
+<area shape="rect" href="../../d0/daa/gc_8h.html" title="Epoch&#45;based garbage collection wrapper." alt="" coords="586,152,744,177"/>
+<area shape="poly" title=" " alt="" coords="721,30,622,49,581,63,556,80,551,90,551,99,563,116,586,132,615,145,613,150,584,137,559,120,546,100,546,89,552,77,579,59,621,44,720,25"/>
+<area shape="rect" title=" " alt="" coords="566,79,662,104"/>
+<area shape="poly" title=" " alt="" coords="766,33,657,76,655,71,764,28"/>
+<area shape="rect" title=" " alt="" coords="687,79,784,104"/>
+<area shape="poly" title=" " alt="" coords="787,33,756,70,752,67,783,29"/>
+<area shape="rect" title=" " alt="" coords="809,79,900,104"/>
+<area shape="poly" title=" " alt="" coords="806,29,838,66,834,70,802,33"/>
+<area shape="rect" title=" " alt="" coords="924,79,995,104"/>
+<area shape="poly" title=" " alt="" coords="822,28,921,71,919,76,820,33"/>
+<area shape="rect" title=" " alt="" coords="1020,79,1086,104"/>
+<area shape="poly" title=" " alt="" coords="837,28,1007,75,1006,80,835,33"/>
+<area shape="rect" title=" " alt="" coords="1110,79,1185,104"/>
+<area shape="poly" title=" " alt="" coords="856,28,1097,76,1096,81,855,33"/>
+<area shape="rect" title=" " alt="" coords="1210,79,1278,104"/>
+<area shape="poly" title=" " alt="" coords="868,25,1016,46,1197,76,1196,81,1015,51,867,31"/>
+<area shape="rect" title=" " alt="" coords="209,225,284,251"/>
+<area shape="poly" title=" " alt="" coords="442,180,298,224,296,219,440,175"/>
+<area shape="rect" title=" " alt="" coords="437,225,520,251"/>
+<area shape="poly" title=" " alt="" coords="481,178,481,212,476,212,476,178"/>
+<area shape="poly" title=" " alt="" coords="122,104,72,114,31,129,18,139,10,149,9,161,16,176,27,185,44,194,91,209,196,228,195,234,89,214,42,199,24,190,12,179,4,162,5,147,14,135,29,124,71,109,120,99"/>
+<area shape="rect" title=" " alt="" coords="229,152,370,177"/>
+<area shape="poly" title=" " alt="" coords="224,102,276,141,272,146,221,106"/>
+<area shape="rect" href="../../da/d0c/arena_8h.html" title="Request&#45;scoped arena allocator backed by libttak arena generations." alt="" coords="26,152,205,177"/>
+<area shape="poly" title=" " alt="" coords="195,106,143,146,140,141,191,102"/>
+<area shape="poly" title=" " alt="" coords="138,175,214,216,212,221,135,180"/>
+<area shape="poly" title=" " alt="" coords="174,175,424,223,423,229,173,180"/>
+<area shape="poly" title=" " alt="" coords="598,180,298,231,297,225,597,175"/>
+<area shape="poly" title=" " alt="" coords="636,180,522,223,521,218,634,175"/>
+<area shape="rect" title=" " alt="" coords="559,225,742,251"/>
+<area shape="poly" title=" " alt="" coords="665,178,658,212,653,211,660,177"/>
+<area shape="rect" title=" " alt="" coords="766,225,929,251"/>
+<area shape="poly" title=" " alt="" coords="695,175,806,218,804,223,693,180"/>
 </map>
 </div>
 </div>
@@ -203,9 +212,9 @@ Functions</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>Queue handle, or NULL when kqueue setup fails. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="../../dd/d2e/kqueue_8c_source.html#l00026">26</a> of file <a class="el" href="../../dd/d2e/kqueue_8c_source.html">kqueue.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../dd/d2e/kqueue_8c_source.html#l00027">27</a> of file <a class="el" href="../../dd/d2e/kqueue_8c_source.html">kqueue.c</a>.</p>
 
-<p class="reference">References <a class="el" href="../../d9/d39/alloc_8c_source.html#l00275">cwist_alloc()</a>, and <a class="el" href="../../d9/d39/alloc_8c_source.html#l00390">cwist_free()</a>.</p>
+<p class="reference">References <a class="el" href="../../d9/d39/alloc_8c_source.html#l00275">cwist_alloc()</a>, <a class="el" href="../../d9/d39/alloc_8c_source.html#l00390">cwist_free()</a>, <a class="el" href="../../d8/d16/gc_8c_source.html#l00291">cwist_full_gc_enabled()</a>, and <a class="el" href="../../d8/d16/gc_8c_source.html#l00527">cwist_gc_scope_disown()</a>.</p>
 
 <p class="reference">Referenced by <a class="el" href="../../dd/d6c/scheduler_8c_source.html#l00259">cwist_scheduler_create()</a>.</p>
 
@@ -236,11 +245,11 @@ Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="../../dd/d2e/kqueue_8c_source.html#l00120">120</a> of file <a class="el" href="../../dd/d2e/kqueue_8c_source.html">kqueue.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../dd/d2e/kqueue_8c_source.html#l00124">124</a> of file <a class="el" href="../../dd/d2e/kqueue_8c_source.html">kqueue.c</a>.</p>
 
 <p class="reference">References <a class="el" href="../../d9/d39/alloc_8c_source.html#l00390">cwist_free()</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../dd/d6c/scheduler_8c_source.html#l00259">cwist_scheduler_create()</a>, and <a class="el" href="../../dd/d6c/scheduler_8c_source.html#l00318">cwist_scheduler_destroy()</a>.</p>
+<p class="reference">Referenced by <a class="el" href="../../dd/d6c/scheduler_8c_source.html#l00259">cwist_scheduler_create()</a>, and <a class="el" href="../../dd/d6c/scheduler_8c_source.html#l00321">cwist_scheduler_destroy()</a>.</p>
 
 </div>
 </div>
@@ -269,9 +278,9 @@ Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="../../dd/d2e/kqueue_8c_source.html#l00078">78</a> of file <a class="el" href="../../dd/d2e/kqueue_8c_source.html">kqueue.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../dd/d2e/kqueue_8c_source.html#l00082">82</a> of file <a class="el" href="../../dd/d2e/kqueue_8c_source.html">kqueue.c</a>.</p>
 
-<p class="reference">References <a class="el" href="../../d9/d39/alloc_8c_source.html#l00390">cwist_free()</a>, <a class="el" href="../../d8/d16/gc_8c_source.html#l00277">cwist_full_gc_enabled()</a>, and <a class="el" href="../../d8/d16/gc_8c_source.html#l00523">cwist_gc_scope_flush()</a>.</p>
+<p class="reference">References <a class="el" href="../../d9/d39/alloc_8c_source.html#l00390">cwist_free()</a>, <a class="el" href="../../d8/d16/gc_8c_source.html#l00291">cwist_full_gc_enabled()</a>, and <a class="el" href="../../d8/d16/gc_8c_source.html#l00537">cwist_gc_scope_flush()</a>.</p>
 
 </div>
 </div>
@@ -301,9 +310,9 @@ Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="../../dd/d2e/kqueue_8c_source.html#l00108">108</a> of file <a class="el" href="../../dd/d2e/kqueue_8c_source.html">kqueue.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../dd/d2e/kqueue_8c_source.html#l00112">112</a> of file <a class="el" href="../../dd/d2e/kqueue_8c_source.html">kqueue.c</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../dd/d6c/scheduler_8c_source.html#l00318">cwist_scheduler_destroy()</a>.</p>
+<p class="reference">Referenced by <a class="el" href="../../dd/d6c/scheduler_8c_source.html#l00321">cwist_scheduler_destroy()</a>.</p>
 
 </div>
 </div>
@@ -351,11 +360,11 @@ Functions</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>true on success, false when event registration fails. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="../../dd/d2e/kqueue_8c_source.html#l00055">55</a> of file <a class="el" href="../../dd/d2e/kqueue_8c_source.html">kqueue.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../dd/d2e/kqueue_8c_source.html#l00057">57</a> of file <a class="el" href="../../dd/d2e/kqueue_8c_source.html">kqueue.c</a>.</p>
 
-<p class="reference">References <a class="el" href="../../d9/d39/alloc_8c_source.html#l00275">cwist_alloc()</a>, and <a class="el" href="../../d9/d39/alloc_8c_source.html#l00390">cwist_free()</a>.</p>
+<p class="reference">References <a class="el" href="../../d9/d39/alloc_8c_source.html#l00275">cwist_alloc()</a>, <a class="el" href="../../d9/d39/alloc_8c_source.html#l00390">cwist_free()</a>, <a class="el" href="../../d8/d16/gc_8c_source.html#l00291">cwist_full_gc_enabled()</a>, and <a class="el" href="../../d8/d16/gc_8c_source.html#l00527">cwist_gc_scope_disown()</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../dd/d6c/scheduler_8c_source.html#l00371">cwist_scheduler_schedule()</a>, and <a class="el" href="../../dd/d6c/scheduler_8c_source.html#l00351">cwist_scheduler_submit()</a>.</p>
+<p class="reference">Referenced by <a class="el" href="../../dd/d6c/scheduler_8c_source.html#l00374">cwist_scheduler_schedule()</a>, and <a class="el" href="../../dd/d6c/scheduler_8c_source.html#l00354">cwist_scheduler_submit()</a>.</p>
 
 </div>
 </div>

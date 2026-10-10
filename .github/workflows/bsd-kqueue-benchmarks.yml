@@ -178,8 +178,6 @@ jobs:
 
           #[actix_web::main]
           async fn main() -> std::io::Result<()> {
-              // Honor ACTIX_WORKERS so CI can size the worker pool to its
-              // pinned core set instead of oversubscribing all visible CPUs.
               let workers = std::env::var("ACTIX_WORKERS")
                   .ok()
                   .and_then(|v| v.parse::<usize>().ok())
@@ -369,8 +367,8 @@ jobs:
           # visible alongside the c400 throughput numbers.
           run_bench "CWIST tuned" "env CWIST_C1M_MODE=0 /tmp/cwist_server" 9091 "/tmp/cwist_tuned.txt" "/tmp/cwist_tuned_stat.txt" 10 4 100
           export TUNED_PROFILE="wrk -t4 -c100 -d10s (after 10s warmup, warmup discarded)"
-          run_bench "Axum" "/tmp/axum_bench/target/release/axum_server" 9092 "/tmp/axum.txt" "/tmp/axum_stat.txt" 10
           run_bench "Actix" "/tmp/actix_bench/target/release/actix_server" 9095 "/tmp/actix.txt" "/tmp/actix_stat.txt" 10
+          run_bench "Axum" "/tmp/axum_bench/target/release/axum_server" 9092 "/tmp/axum.txt" "/tmp/axum_stat.txt" 10
           # Same -t4 -c100 profile as "CWIST tuned" above. The tuned section
           # used to report CWIST against Spring Boot only, which compares a
           # statically linked C server against a JVM one and says little about
@@ -563,11 +561,11 @@ jobs:
 
           cwist_tuned_wrk = parse_wrk("/tmp/cwist_tuned.txt")
 
-          axum_wrk = parse_wrk("/tmp/axum.txt")
-          axum_rss, axum_csw = parse_stat("/tmp/axum_stat.txt")
-
           actix_wrk = parse_wrk("/tmp/actix.txt")
           actix_rss, actix_csw = parse_stat("/tmp/actix_stat.txt")
+
+          axum_wrk = parse_wrk("/tmp/axum.txt")
+          axum_rss, axum_csw = parse_stat("/tmp/axum_stat.txt")
 
           axum_tuned_wrk = parse_wrk("/tmp/axum_tuned.txt")
 
@@ -593,8 +591,8 @@ jobs:
               # expected, desired result, not a null finding.
               **server_fields("cwist_c1m_drainchunk", cwist_c1m_drainchunk_wrk, cwist_c1m_drainchunk_rss, cwist_c1m_drainchunk_csw),
               **server_fields("cwist_tuned", cwist_tuned_wrk),
-              **server_fields("axum", axum_wrk, axum_rss, axum_csw),
               **server_fields("actix", actix_wrk, actix_rss, actix_csw),
+              **server_fields("axum", axum_wrk, axum_rss, axum_csw),
               **server_fields("gin", gin_wrk, gin_rss, gin_csw),
               **server_fields("spring", spring_wrk, spring_rss, spring_csw),
               # Same -t4 -c100 low-concurrency profile as cwist_tuned_*, added
@@ -628,7 +626,7 @@ jobs:
       - name: Copy raw benchmark output
         run: |
           mkdir -p raw_logs
-          cp /tmp/cwist.txt /tmp/cwist_stat.txt /tmp/cwist_c1m.txt /tmp/cwist_c1m_stat.txt /tmp/cwist_c1m_arena1.txt /tmp/cwist_c1m_arena1_stat.txt /tmp/cwist_c1m_drainchunk.txt /tmp/cwist_c1m_drainchunk_stat.txt /tmp/cwist_tuned.txt /tmp/axum.txt /tmp/axum_tuned.txt /tmp/axum_stat.txt /tmp/actix.txt /tmp/actix_stat.txt /tmp/gin.txt /tmp/gin_stat.txt /tmp/spring.txt /tmp/spring_stat.txt /tmp/spring_tuned.txt /tmp/spring_gc.log raw_logs/ 2>/dev/null || true
+          cp /tmp/cwist.txt /tmp/cwist_stat.txt /tmp/cwist_c1m.txt /tmp/cwist_c1m_stat.txt /tmp/cwist_c1m_arena1.txt /tmp/cwist_c1m_arena1_stat.txt /tmp/cwist_c1m_drainchunk.txt /tmp/cwist_c1m_drainchunk_stat.txt /tmp/cwist_tuned.txt /tmp/actix.txt /tmp/actix_stat.txt /tmp/axum.txt /tmp/axum_tuned.txt /tmp/axum_stat.txt /tmp/gin.txt /tmp/gin_stat.txt /tmp/spring.txt /tmp/spring_stat.txt /tmp/spring_tuned.txt /tmp/spring_gc.log raw_logs/ 2>/dev/null || true
       - uses: actions/upload-artifact@v4
         with:
           name: webserver-result

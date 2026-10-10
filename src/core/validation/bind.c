@@ -80,14 +80,9 @@ static bool check_rule(const cwist_bind_rule_t *rule, const char *value, size_t 
             break;
 
         case CWIST_BIND_RULE_MIN_VAL: {
-            char *end = NULL;
             long double v = 0.0L;
-            if (value && *value) {
-                errno = 0;
-                v = strtold(value, &end);
-            }
-            if (!value || !end || end == value || *end != '\0' || errno == ERANGE ||
-                v < rule->u.min_val) {
+            if (value) v = strtold(value, NULL);
+            if (!value || v < rule->u.min_val) {
                 snprintf(buf, sizeof(buf), "%s: minimum value is %Lg",
                          rule->error_message ? rule->error_message : "value too small",
                          rule->u.min_val);
@@ -98,14 +93,9 @@ static bool check_rule(const cwist_bind_rule_t *rule, const char *value, size_t 
         }
 
         case CWIST_BIND_RULE_MAX_VAL: {
-            char *end = NULL;
             long double v = 0.0L;
-            if (value && *value) {
-                errno = 0;
-                v = strtold(value, &end);
-            }
-            if (!value || !end || end == value || *end != '\0' || errno == ERANGE ||
-                v > rule->u.max_val) {
+            if (value) v = strtold(value, NULL);
+            if (!value || v > rule->u.max_val) {
                 snprintf(buf, sizeof(buf), "%s: maximum value is %Lg",
                          rule->error_message ? rule->error_message : "value too large",
                          rule->u.max_val);
@@ -118,10 +108,6 @@ static bool check_rule(const cwist_bind_rule_t *rule, const char *value, size_t 
         case CWIST_BIND_RULE_REGEX: {
             if (!value) {
                 bind_add_error(r, key, "missing value for regex check");
-                return false;
-            }
-            if (!rule->u.pattern) {
-                bind_add_error(r, key, "invalid regex pattern");
                 return false;
             }
             regex_t re;
@@ -152,8 +138,7 @@ static bool check_rule(const cwist_bind_rule_t *rule, const char *value, size_t 
             break;
 
         case CWIST_BIND_RULE_CUSTOM:
-            if (!rule->u.custom.fn || !value ||
-                !rule->u.custom.fn(value, len, rule->u.custom.ctx)) {
+            if (!value || !rule->u.custom.fn(value, len, rule->u.custom.ctx)) {
                 snprintf(buf, sizeof(buf), "%s",
                          rule->error_message ? rule->error_message : "custom validation failed");
                 bind_add_error(r, key, buf);
@@ -334,7 +319,6 @@ static bool cwist_bind_generic(const cwist_bind_schema_t *schema, const char *pa
     for (size_t i = 0; i < schema->field_count; ++i) {
         const cwist_bind_field_t *f = &schema->fields[i];
         const char *raw_value = NULL;
-        char *allocated_json = NULL;
 
         if (is_json && root) {
             const cJSON *item = cJSON_GetObjectItemCaseSensitive(root, f->json_key);
@@ -356,8 +340,17 @@ static bool cwist_bind_generic(const cwist_bind_schema_t *schema, const char *pa
                 } else if (cJSON_IsNull(item)) {
                     raw_value = NULL;
                 } else if (cJSON_IsObject(item) || cJSON_IsArray(item)) {
-                    allocated_json = cJSON_PrintUnformatted(item);
-                    raw_value = allocated_json;
+                    /* For JSON_OBJECT targets, serialise the subtree */
+                    if (f->target_type == CWIST_BIND_JSON_OBJECT) {
+                        char *printed = cJSON_PrintUnformatted(item);
+                        raw_value = printed; /* transient; written below */
+                        write_value(f, raw_value, out, result);
+                        free(printed);
+                        continue;
+                    } else {
+                        raw_value = cJSON_PrintUnformatted(item);
+                        /* fall through to string validation then cleanup */
+                    }
                 }
             }
         } else {
@@ -402,9 +395,7 @@ static bool cwist_bind_generic(const cwist_bind_schema_t *schema, const char *pa
         }
 
         /* Clean up temporary printed JSON if we allocated one above */
-        if (allocated_json) {
-            cJSON_free(allocated_json);
-            allocated_json = NULL;
+        if (!is_json) { /* already handled */
         }
     }
 

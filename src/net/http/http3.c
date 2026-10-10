@@ -940,10 +940,16 @@ static void cwist_h3_on_conn_closed(lsquic_conn_t *conn) {
     enum LSQUIC_CONN_STATUS status = lsquic_conn_status(conn, errbuf, sizeof(errbuf));
     fprintf(stderr, "[HTTP/3] Conn close status=%d msg=%s\n", (int)status,
             errbuf[0] ? errbuf : "(none)");
-    /* No lsquic_conn_get_info() here: it lazily allocates the bandwidth
-     * sampler (lsquic_send_ctl_get_bw) even while the connection is being
-     * destroyed, leaking it under LSAN.  Stats would have to be collected
-     * while the connection is alive. */
+    struct lsquic_conn_info info;
+    if (lsquic_conn_get_info(conn, &info) == 0) {
+        fprintf(stderr,
+                "[HTTP/3] Conn closed rtt=%u rttvar=%u "
+                "pkts_sent=%" PRIu64 " pkts_lost=%" PRIu64 " "
+                "pkts_retx=%" PRIu64 " cwnd=%u\n",
+                info.lci_rtt, info.lci_rttvar, info.lci_pkts_sent, info.lci_pkts_lost,
+                info.lci_pkts_retx, info.lci_cwnd);
+    }
+
     h3_conn_ctx_t *cc = (h3_conn_ctx_t *)lsquic_conn_get_ctx(conn);
     if (cc) {
         pthread_mutex_lock(&cc->dgram_lock);
@@ -961,44 +967,6 @@ static void cwist_h3_on_conn_closed(lsquic_conn_t *conn) {
     }
 }
 
-/**
- * @brief on_conncloseframe_received callback: a CONNECTION_CLOSE frame
- *        arrived from the peer.
- *
- * Record it on the shared context so post-serve diagnostics can see why the
- * peer went away without scraping the CWIST_H3_DEBUG journal.  Runs on the
- * engine thread; the last_close_* fields are published to readers that call
- * cwist_http3_last_close_error() after the serve loop has stopped.
- */
-static void cwist_h3_on_conncloseframe_received(lsquic_conn_t *conn, int app_error,
-                                                uint64_t error_code, const char *reason,
-                                                int reason_len) {
-    cwist_http3_context *h3_ctx = h3_shared_ctx(conn);
-    if (!h3_ctx) return;
-    h3_ctx->last_close_app_error = app_error;
-    h3_ctx->last_close_code = error_code;
-    if (reason && reason_len > 0) {
-        size_t n = (size_t)reason_len >= sizeof(h3_ctx->last_close_reason)
-                     ? sizeof(h3_ctx->last_close_reason) - 1 : (size_t)reason_len;
-        memcpy(h3_ctx->last_close_reason, reason, n);
-        h3_ctx->last_close_reason[n] = '\0';
-    } else {
-        h3_ctx->last_close_reason[0] = '\0';
-    }
-    h3_ctx->last_close_received = 1;
-}
-
-/**
- * @brief on_new_stream callback: allocate the per-request stream context.
- * @return New stream ctx with an empty cwist_http_request ("HTTP/3"), or
- *         NULL on OOM (the stream then fails to open).
- *
- * Server-pushed streams (only possible when push is enabled) are processed
- * the same way as client-initiated ones.  Per RFC 9218 Section 6 a server
- * MUST NOT send PRIORITY_UPDATE for a request stream, so the default
- * scheduling priority is kept and lsquic_stream_set_priority() is never
- * called here.
- */
 static lsquic_stream_ctx_t *cwist_h3_on_new_stream(void *stream_if_ctx, lsquic_stream_t *stream) {
     cwist_http3_context *h3_ctx = (cwist_http3_context *)stream_if_ctx;
     h3_stream_ctx_t *st = calloc(1, sizeof(*st));
@@ -2104,17 +2072,8 @@ static void cwist_h3_wt_on_session_rejected(void *ctx, const struct lsquic_wt_co
     (void)reason_len;
 }
 
-/**
- * @brief wti_on_session_close callback: free the session handle (and its
- *        child handles).
- *
- * WebTransport application error codes are 32-bit on the wire. The lsquic
- * WebTransport branch declared these two callbacks with uint64_t when this
- * code was written; the branch head (litespeedtech/lsquic#629) narrows both
- * to uint32_t.
- */
 static void cwist_h3_wt_on_session_close(lsquic_wt_session_t *sess,
-                                         lsquic_wt_session_ctx_t *sess_ctx, uint32_t code,
+                                         lsquic_wt_session_ctx_t *sess_ctx, uint64_t code,
                                          const char *reason, size_t reason_len) {
     (void)sess;
     (void)code;
@@ -2202,11 +2161,7 @@ static void cwist_h3_wt_on_stream_close(lsquic_stream_t *stream, lsquic_stream_c
     cwist_wt_handle_free((cwist_wt_handle_t *)st_h);
 }
 
-/**
- * @brief wti_on_stream_ss_code callback: application error code to send when
- *        this stream is reset.  Returns 0 (no specific code).
- */
-static uint32_t cwist_h3_wt_on_stream_ss_code(lsquic_stream_t *stream, lsquic_stream_ctx_t *st_h) {
+static uint64_t cwist_h3_wt_on_stream_ss_code(lsquic_stream_t *stream, lsquic_stream_ctx_t *st_h) {
     (void)stream;
     (void)st_h;
     return 0;
@@ -2253,7 +2208,6 @@ static const struct lsquic_webtransport_if cwist_h3_wt_if = {
 static const struct lsquic_stream_if cwist_h3_stream_if = {
     .on_new_conn = cwist_h3_on_new_conn,
     .on_conn_closed = cwist_h3_on_conn_closed,
-    .on_conncloseframe_received = cwist_h3_on_conncloseframe_received,
     .on_new_stream = cwist_h3_on_new_stream,
     .on_read = cwist_h3_on_read,
     .on_write = cwist_h3_on_write,
@@ -2630,34 +2584,6 @@ void cwist_http3_destroy_context(cwist_http3_context *ctx) {
     }
 }
 
-/**
- * @brief Return the last CONNECTION_CLOSE received from a peer.
- * @param app_error_out Receives whether the close carried an application
- *                      error (may be NULL).
- * @param code_out Receives the error code (may be NULL).
- * @param reason_buf Receives the NUL-terminated reason text, truncated to
- *                   fit (may be NULL).
- * @param buf_len Capacity of @p reason_buf.
- * @retval 0 A close frame has been recorded and the outputs were filled.
- * @retval -1 No CONNECTION_CLOSE has been received (or @p ctx is NULL).
- *
- * Meaningful only after the serve loop has stopped; the fields are written
- * on the engine thread without synchronization.
- */
-int cwist_http3_last_close_error(const cwist_http3_context *ctx, bool *app_error_out,
-                                 uint64_t *code_out, char *reason_buf, size_t buf_len) {
-    if (!ctx || !ctx->last_close_received) return -1;
-    if (app_error_out) *app_error_out = ctx->last_close_app_error == 1;
-    if (code_out) *code_out = ctx->last_close_code;
-    if (reason_buf && buf_len > 0) {
-        size_t n = strlen(ctx->last_close_reason);
-        if (n >= buf_len) n = buf_len - 1;
-        memcpy(reason_buf, ctx->last_close_reason, n);
-        reason_buf[n] = '\0';
-    }
-    return 0;
-}
-
 /* ------------------------------------------------------------------ */
 /* Server loop                                                        */
 /* ------------------------------------------------------------------ */
@@ -2761,9 +2687,7 @@ cwist_error_t cwist_http3_server_loop(int udp_fd, cwist_http3_context *ctx,
     }
 
     /* Diagnostic hook: CWIST_H3_DEBUG=1 routes lsquic's internal logger to
-     * stderr so CONNECTION_CLOSE error codes become visible in the journal.
-     * The last received close frame is also recorded on the context for
-     * programmatic access via cwist_http3_last_close_error(). */
+     * stderr so CONNECTION_CLOSE error codes become visible in the journal. */
     if (getenv("CWIST_H3_DEBUG")) {
         static const struct lsquic_logger_if h3_log_if = {
             .log_buf = cwist_h3_log_stderr,

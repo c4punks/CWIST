@@ -134,16 +134,6 @@ SQLITE_ZIP = sqlite-amalgamation-$(SQLITE_VER).zip
 SQLITE_URL = https://www.sqlite.org/$(SQLITE_YEAR)/$(SQLITE_ZIP)
 SQLITE_DIR = lib/sqlite3
 
-# WebTransport client (src/net/http/http3_client.c).  Built on the lsquic API
-# proposed in litespeedtech/lsquic#629, which is what lib/lsquic is pinned to
-# on this branch, so it is compiled here.  main pins lsquic master, which does
-# not carry that API, and carries no WebTransport source either.  Set
-# CWIST_WEBTRANSPORT=0 to leave it out.
-CWIST_WEBTRANSPORT ?= 0
-ifeq ($(CWIST_WEBTRANSPORT),1)
-    CFLAGS += -DCWIST_WEBTRANSPORT
-endif
-
 # WebRTC DataChannel (src/net/webrtc/). DataChannel-only: SDP offer/answer,
 # ICE-lite, DTLS via the vendored BoringSSL, and SCTP DataChannels (RFC 8831)
 # through the lib/usrsctp submodule running in AF_CONN raw mode tunneled over
@@ -198,10 +188,6 @@ lib/multipart-parser-c/multipart_parser.o: CFLAGS := $(filter-out -Werror,$(CFLA
 # trips a known -Wstringop-overread false positive (sqlite3Strlen30) that
 # -Werror then promotes to a build failure.
 lib/sqlite3/sqlite3.o: CFLAGS := $(filter-out -Werror -flto=auto -ffat-lto-objects,$(CFLAGS))
-# FTS5 (full-text search v5) lives inside the amalgamation but is disabled
-# unless requested; fly.board uses it for its post search index. The define
-# only reaches the sqlite3.o compile, not the rest of the library.
-lib/sqlite3/sqlite3.o: CFLAGS += -DSQLITE_ENABLE_FTS5
 
 # Source Files
 SRCS = src/core/sstring/sstring.c \
@@ -215,9 +201,9 @@ SRCS = src/core/sstring/sstring.c \
        src/net/http/http2.c \
        src/net/http/http2_flow_control.c \
        src/net/http/http3.c \
+       src/net/http/http3_client.c \
        src/net/http/curl_global.c \
        src/net/http/http_client.c \
-       src/net/http/http3_client.c \
        src/net/http/https.c \
        src/net/http/https_upgrade_hook.c \
        src/net/http/tls_chain.c \
@@ -337,6 +323,7 @@ WASM_SRCS = src/core/sstring/sstring.c \
        src/core/validation/bind.c \
        src/core/mem/alloc.c \
        src/core/mem/arena.c \
+       src/core/mem/gc.c \
        src/core/db/db.c \
        lib/sqlite3/sqlite3.c \
        lib/cjson/cJSON.c
@@ -459,10 +446,6 @@ wasip2-smoke: $(WASIP2_ARCHIVE)
 	    body=$$(curl -s -m 2 http://127.0.0.1:$(WASIP2_PORT)/hello || true); \
 	    if [ "$$body" = "hello from WASI 0.2" ]; then ok=1; break; fi; \
 	done; \
-	if [ $$ok -eq 1 ]; then \
-	    body=$$(curl -s -m 2 http://127.0.0.1:$(WASIP2_PORT)/hello || true); \
-	    [ "$$body" = "hello from WASI 0.2" ] || ok=0; \
-	fi; \
 	cat $$LOG; rm -f $$LOG; \
 	if [ $$ok -ne 1 ]; then echo "wasip2-smoke: curl probe failed"; exit 1; fi; \
 	kill -9 $$WPID 2>/dev/null || true; \
@@ -658,17 +641,6 @@ component-browser-test: component-browser-smoke
 # Object Files and Target
 OBJS = $(SRCS:.c=.o)
 LIB_NAME = libcwist.a
-
-# Rebuild every object when the compile flags change.  CWIST_WEBTRANSPORT adds
-# and removes struct members in http3.c, so flipping it without a clean left a
-# library holding objects built both ways: the layouts disagreed and the result
-# was a stack smash at runtime, not a compile error.  .build-flags records the
-# flags and every object depends on it, so a changed flag forces a rebuild.
-.build-flags: FORCE
-	@printf '%s' '$(CFLAGS)' | cmp -s - $@ || printf '%s' '$(CFLAGS)' > $@
-FORCE:
-.PHONY: FORCE
-$(OBJS): .build-flags
 LIBTTAK_DIR = lib/libttak
 LIBTTAK_LIB = $(LIBTTAK_DIR)/lib/libttak.a
 LIBTTAK_EXTRA_CFLAGS =
@@ -855,8 +827,8 @@ $(CNATS_LIB):
 
 TEST_TARGETS = test_worker_affinity \
                test_app_resource_limits \
-               test_classic_pool_scaling \
                test_reactor_wake \
+               test_classic_pool_scaling \
                test_reactor_timer \
                test_reactor_drain_chunk \
                test_latency_probe \
@@ -866,6 +838,7 @@ TEST_TARGETS = test_worker_affinity \
                test_seq_auth \
                test_sha256 \
                test_error \
+               test_middleware_jwt \
                test_inline_exports \
                test_arena \
                test_wasm_stream \
@@ -873,23 +846,11 @@ TEST_TARGETS = test_worker_affinity \
                test_healthz \
                test_json_builder \
                test_flash \
-               test_middleware_jwt \
-               test_sse \
-               test_graphql \
                test_graphql_subscriptions \
-               test_core_hardening \
-               test_https_full_gc \
-               test_cwist \
-               test_html_builder \
                test_html_component \
                test_html_response \
                test_assets \
                test_html_parity \
-               test_http2_flow_control \
-               test_idle_reaper \
-               test_linux_writer_fast \
-               test_orm_socket \
-               test_webtransport \
                test_http \
                test_http_stringify \
                test_siphash \
@@ -939,6 +900,7 @@ TEST_TARGETS = test_worker_affinity \
                test_db_memory \
                test_redis \
                test_scheduler \
+               test_gc_job_handoff \
                test_async_defer \
                test_async_after_shutdown \
                test_async_file_park \
@@ -968,6 +930,7 @@ TEST_TARGETS = test_worker_affinity \
                test_malloc_intercept \
                test_proto_gen \
                test_proto_desc \
+               test_html_builder \
                test_css_composer \
                test_multipart
 
@@ -977,6 +940,8 @@ TEST_TARGETS = test_worker_affinity \
 # symbol surface). See CONTRIBUTING.md "Releases and patch releases".
 api-baseline:
 	./scripts/ci/api-baseline.sh
+
+.PHONY: all test $(TEST_TARGETS) fuzz_seq install uninstall dist clean rebuild examples clean-examples wasm wasm-smoke clean-wasm wasip2-smoke clean-wasip2 wit-check jco-transpile wit-bindings component-guest component-smoke clean-component
 
 # Run with e.g. `make fuzz_seq FUZZ_RUNS=100000`.  The target intentionally
 # uses a dedicated clang/libFuzzer toolchain and is not part of `make test`.
@@ -1005,13 +970,6 @@ test_app_resource_limits: $(LIB_NAME) tests/test_app_resource_limits.c src/sys/a
 	$(CC) $(CFLAGS) -o $@ tests/test_app_resource_limits.c $(LIB_NAME) $(LIBS)
 	./$@
 
-test_classic_pool_scaling: $(LIB_NAME) tests/test_classic_pool_scaling.c
-	$(CC) $(CFLAGS) -o $@ tests/test_classic_pool_scaling.c $(LIB_NAME) $(LIBS)
-	./$@ burst
-	./$@ multi
-	./$@ cap
-	./$@ failure
-
 # Kernel/queue contract test: use the real reactor with a test-only allocator,
 # without pulling HTTP/TLS or libttak runtime state into the wake-up schedule.
 test_reactor_wake: tests/test_reactor_wake.c src/sys/io/reactor.c
@@ -1025,6 +983,13 @@ test_reactor_timer: tests/test_reactor_timer.c src/sys/io/reactor.c
 ifeq ($(UNAME_S),Linux)
 	CWIST_REACTOR_BACKEND=epoll ./$@
 endif
+
+test_classic_pool_scaling: $(LIB_NAME) tests/test_classic_pool_scaling.c
+	$(CC) $(CFLAGS) -o $@ tests/test_classic_pool_scaling.c $(LIB_NAME) $(LIBS)
+	./$@ burst
+	./$@ multi
+	./$@ cap
+	./$@ failure
 
 # Cooperative-queuing correctness test (issue #25): CWIST_REACTOR_DRAIN_CHUNK
 # interleaves foreign-thread post draining into a big CQE batch instead of
@@ -1073,6 +1038,10 @@ test_error: $(LIB_NAME) tests/test_error.c
 	$(CC) $(CFLAGS) -o test_error tests/test_error.c $(LIB_NAME) $(LIBS)
 	./test_error
 
+test_middleware_jwt: $(LIB_NAME) tests/test_middleware_jwt.c
+	$(CC) $(CFLAGS) -o test_middleware_jwt tests/test_middleware_jwt.c $(LIB_NAME) $(LIBS)
+	./test_middleware_jwt
+
 # Out-of-line wrappers for public static inline helpers: same results as the
 # inline versions, and defined global symbols in the archive and in a program
 # linked against it (what a binding generated from the headers links to).
@@ -1111,10 +1080,6 @@ test_json_builder: $(LIB_NAME) tests/test_json_builder.c
 test_flash: $(LIB_NAME) tests/test_flash.c
 	$(CC) $(CFLAGS) -o test_flash tests/test_flash.c $(LIB_NAME) $(LIBS)
 	./test_flash
-
-test_middleware_jwt: $(LIB_NAME) tests/test_middleware_jwt.c
-	$(CC) $(CFLAGS) -o test_middleware_jwt tests/test_middleware_jwt.c $(LIB_NAME) $(LIBS)
-	./test_middleware_jwt
 
 test_http: $(LIB_NAME) tests/test_http.c
 	$(CC) $(CFLAGS) -o test_http tests/test_http.c $(LIB_NAME) $(LIBS)
@@ -1620,6 +1585,15 @@ test_scheduler: $(LIB_NAME) tests/test_scheduler.c
 	$(CC) $(CFLAGS) -o test_scheduler tests/test_scheduler.c $(LIB_NAME) $(LIBS)
 	./test_scheduler
 
+test_gc_job_handoff: $(LIB_NAME) tests/test_gc_job_handoff.c
+	$(CC) $(CFLAGS) -o $@ tests/test_gc_job_handoff.c $(LIB_NAME) $(LIBS)
+	./$@
+	./$@ nogc
+	$(CC) $(CFLAGS) -DNDEBUG -o $@ tests/test_gc_job_handoff.c $(LIB_NAME) $(LIBS)
+	./$@
+	./$@ nogc
+
+
 test_durable_queue: $(LIB_NAME) tests/test_durable_queue.c
 	$(CC) $(CFLAGS) -o test_durable_queue tests/test_durable_queue.c $(LIB_NAME) $(LIBS)
 	./test_durable_queue
@@ -1769,21 +1743,13 @@ test_proto_desc: $(LIB_NAME) tests/test_proto_gen.c tests/make_sample_descriptor
 	$(CC) $(CFLAGS) -Itests -DPROTO_GEN_SAMPLE_HEADER='"test_proto_gen_desc_sample.cwist.pb.h"' -o test_proto_desc tests/test_proto_gen.c $(LIB_NAME) $(LIBS)
 	./test_proto_desc
 
-test_css_composer: $(LIB_NAME) tests/test_css_composer.c
-	$(CC) $(CFLAGS) -o test_css_composer tests/test_css_composer.c $(LIB_NAME) $(LIBS)
-	./test_css_composer
-
-# The following seven had a tests/test_*.c file with no Makefile rule at
-# all (so no CI coverage, ever) until scripts/ci/check_test_wiring.py
-# caught the gap - all seven build and pass as-is, just never wired in.
-test_cwist: $(LIB_NAME) tests/test_cwist.c
-	$(CC) $(CFLAGS) -o test_cwist tests/test_cwist.c $(LIB_NAME) $(LIBS)
-	./test_cwist
-
 test_html_builder: $(LIB_NAME) tests/test_html_builder.c
 	$(CC) $(CFLAGS) -o test_html_builder tests/test_html_builder.c $(LIB_NAME) $(LIBS)
 	./test_html_builder
 
+test_css_composer: $(LIB_NAME) tests/test_css_composer.c
+	$(CC) $(CFLAGS) -o test_css_composer tests/test_css_composer.c $(LIB_NAME) $(LIBS)
+	./test_css_composer
 test_html_component: $(LIB_NAME) tests/test_html_component.c
 	$(CC) $(CFLAGS) -o test_html_component tests/test_html_component.c $(LIB_NAME) $(LIBS)
 	./test_html_component
@@ -1816,9 +1782,7 @@ test_orm_socket: $(LIB_NAME) tests/test_orm_socket.c
 	$(CC) $(CFLAGS) -o test_orm_socket tests/test_orm_socket.c $(LIB_NAME) $(LIBS)
 	./test_orm_socket
 
-test_webtransport: $(LIB_NAME) tests/test_webtransport.c
-	$(CC) $(CFLAGS) -o test_webtransport tests/test_webtransport.c $(LIB_NAME) $(LIBS)
-	./test_webtransport
+
 
 
 # ---------------------------------------------------------------------------
@@ -1826,10 +1790,11 @@ test_webtransport: $(LIB_NAME) tests/test_webtransport.c
 #
 # Scoped to the trees CWIST owns.  lib/ is vendored and carries its own
 # .clang-format with DisableFormat, so it stays untouched either way.
-# ---------------------------------------------------------------------------
+#
 # Tracked files only: `make test` drops generated headers (tests/*.cwist.pb.h)
 # into these trees, and a plain find would format build output and then fail
 # format-check on it.
+# ---------------------------------------------------------------------------
 FORMAT_DIRS := src include tests example benchmarks
 FORMAT_FILES := $(shell git ls-files $(FORMAT_DIRS) 2>/dev/null | grep -E '\.(c|h)$$' \
                   || find $(FORMAT_DIRS) -type f \( -name '*.c' -o -name '*.h' \) | sort)

@@ -323,17 +323,6 @@ void cwist_http_response_set_body_ptr_managed(cwist_http_response *res, const vo
                                               cwist_http_body_cleanup_fn cleanup, void *ctx);
 void cwist_http_response_set_alt_svc(cwist_http_response *res, const char *alt_svc);
 
-/**
- * @brief Build a string representation of an HTTP response.
- *
- * Supported API. Materializes the response status line, headers, and body
- * into a single contiguous string. Intended for debugging and logging; it
- * is not the wire-send path (see cwist_http_send_response()).
- *
- * @param res Response object to stringify. Must not be NULL.
- * @return Heap-allocated string of the full response, or NULL on invalid
- *         input or allocation failure. Caller owns the returned string.
- */
 cwist_sstring *cwist_http_stringify_response(cwist_http_response *res);
 cwist_error_t cwist_http_send_response(int client_fd, cwist_http_response *res);
 /**

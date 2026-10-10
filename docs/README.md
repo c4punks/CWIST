@@ -2,8 +2,6 @@
 
 Everything you need to learn, use, and extend CWIST, in suggested reading order.
 
-A Korean translation of this directory is in [ko/](ko/README.md).
-
 ## 1. Getting started
 
 * [README](../README.md) — install, hello world, feature tour, benchmarks.
@@ -50,7 +48,6 @@ Self-contained demos under [`example/`](../example/):
 | [json-builder](../example/json-builder), [html](../example/html), [template](../example/template) | Rendering helpers |
 | [micro](../example/micro), [mem](../example/mem), [siphash](../example/siphash), [sstring](../example/sstring) | Core utilities |
 | [cde-json-viewer](../example/cde-json-viewer) | JSON viewer app |
-| [webtransport](../example/webtransport) | Experimental WebTransport |
 
 ## 5. Benchmarks and methodology
 

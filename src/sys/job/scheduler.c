@@ -261,7 +261,8 @@ cwist_scheduler_t *cwist_scheduler_create(size_t worker_count, size_t queue_capa
 
     cwist_scheduler_t *s = (cwist_scheduler_t *)cwist_alloc(sizeof(*s));
     if (!s) return NULL;
-    /* A returned scheduler can outlive its creator; destroy owns its shell. */
+    /* Explicit destroy owns the scheduler, not its creator's TLS scope.
+     * Detach on the allocating thread before publishing to workers. */
     if (cwist_full_gc_enabled()) cwist_gc_scope_disown(s);
     memset(s, 0, sizeof(*s));
 

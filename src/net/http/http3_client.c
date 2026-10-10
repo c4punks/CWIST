@@ -393,20 +393,8 @@ static void h3c_wt_on_session_rejected(void *ctx, const struct lsquic_wt_connect
     pthread_mutex_unlock(&client->mtx);
 }
 
-/**
- * @brief WebTransport callback: session closed by the peer or engine.
- *
- * Marks the session closed and drops the cached native session pointer; the
- * session context itself is owned by cwist_webtransport_client_close().
- *
- * wti_on_session_close takes the WebTransport application error code, which
- * is 32-bit on the wire. It was uint64_t in the older state of the lsquic
- * WebTransport branch this file was first written against; the branch head
- * (litespeedtech/lsquic#629) narrows it to uint32_t.
- */
-static void
-h3c_wt_on_session_close(lsquic_wt_session_t *native, lsquic_wt_session_ctx_t *ctx, uint32_t code,
-                        const char *reason, size_t reason_len) {
+static void h3c_wt_on_session_close(lsquic_wt_session_t *native, lsquic_wt_session_ctx_t *ctx,
+                                    uint64_t code, const char *reason, size_t reason_len) {
     (void)native;
     (void)code;
     (void)reason;
@@ -482,11 +470,6 @@ static void h3c_on_read(lsquic_stream_t *stream, lsquic_stream_ctx_t *st_h) {
                 free(value);
                 free(name);
             }
-            /* Ownership moved to us with lsquic_stream_get_hset(): lsquic
-             * no longer discards the header set on stream teardown, so it
-             * must be freed here (it is a ~68 KiB h3c_hset_t).  All header
-             * name/value slices were copied out of decode_buf above. */
-            h3c_hsi_discard(hset);
             st->headers_done = 1;
 #ifdef CWIST_WEBTRANSPORT
             if (st->is_webtransport_connect) {
@@ -885,10 +868,7 @@ cwist_http3_client *cwist_http3_client_create(void) {
     settings.es_datagrams = client->datagram_enabled ? 1 : 0;
 #ifdef CWIST_WEBTRANSPORT
     settings.es_webtransport = 1;
-    /* lsquic_engine.c rejects anything above 1: the WebTransport
-     * implementation on litespeedtech/lsquic#629 carries one session per
-     * connection. The server side (http3.c) already sets 1. */
-    settings.es_max_webtransport_sessions = 1;
+    settings.es_max_webtransport_sessions = 4;
     settings.es_http_datagrams = 1;
     settings.es_reset_stream_at = 1;
 #endif
@@ -932,16 +912,6 @@ cwist_http3_client *cwist_http3_client_create(void) {
 void cwist_http3_client_destroy(cwist_http3_client *client) {
     if (!client) return;
     if (client->engine) {
-        /* Orderly teardown: lsquic_engine_destroy() drops live connections
-         * without draining them, which leaks lsquic-internal per-connection
-         * state (QPACK decoder header-in buffers, bandwidth sampler).
-         * Close the connection first and pump until the engine reaps it so
-         * lsquic can release that state; h3c_on_conn_closed() NULLs
-         * client->conn once the connection is gone. */
-        if (client->conn) {
-            lsquic_conn_close(client->conn);
-            for (int i = 0; i < 100 && client->conn; ++i) h3c_process_io(client, 20);
-        }
         lsquic_engine_destroy(client->engine);
     }
     if (client->ssl_ctx) {
@@ -1269,146 +1239,6 @@ ssize_t cwist_http3_client_recv_datagram(cwist_http3_client *client, void *buf, 
     pthread_mutex_unlock(&client->dgram_mtx);
     return (ssize_t)to_copy;
 }
-
-/* ------------------------------------------------------------------ */
-/* WebTransport client (LSQUIC proposal API)                          */
-/* ------------------------------------------------------------------ */
-
-#ifdef CWIST_WEBTRANSPORT
-/**
- * @brief Add one request header. cwist_http_header_add() reports a failed
- *        allocation on the JSON error channel (err_i16 stays 0), so the
- *        result is checked with cwist_error_is_ok() and then released.
- */
-static bool h3c_header_add(cwist_http_header_node **headers, const char *key, const char *value) {
-    cwist_error_t err = cwist_http_header_add(headers, key, value);
-    bool ok = cwist_error_is_ok(&err);
-    cwist_error_dispose(&err);
-    return ok;
-}
-#endif
-
-cwist_error_t
-cwist_http3_client_webtransport_connect(cwist_http3_client *client, const char *path,
-                                        const char *origin,
-                                        cwist_webtransport_client_session **out_session) {
-    cwist_error_t err = make_error(CWIST_ERR_INT16);
-    err.error.err_i16 = -1;
-    if (!client || !path || !out_session) return err;
-    *out_session = NULL;
-#ifndef CWIST_WEBTRANSPORT
-    (void)origin;
-    return err;
-#else
-    if (client->wt_connecting && client->wt_connecting->open) return err;
-
-    cwist_webtransport_client_session *session = calloc(1, sizeof(*session));
-    if (!session) return err;
-    session->client = client;
-    client->wt_connecting = session;
-
-    cwist_http_header_node *headers = NULL;
-    if (!h3c_header_add(&headers, ":protocol", "webtransport") ||
-        (origin && !h3c_header_add(&headers, "origin", origin))) {
-        cwist_http_header_free_all(headers);
-        free(session);
-        client->wt_connecting = NULL;
-        return err;
-    }
-
-    cwist_http_response *response = NULL;
-    err = cwist_http3_client_request(client, path, CWIST_HTTP_CONNECT, headers, NULL, 0, &response);
-    cwist_http_header_free_all(headers);
-    if (response) cwist_http_response_destroy(response);
-    if (err.error.err_i16 != 0 || !session->open || !session->native) {
-        if (client->wt_connecting == session) client->wt_connecting = NULL;
-        free(session);
-        err.error.err_i16 = -1;
-        return err;
-    }
-    *out_session = session;
-    return err;
-#endif
-}
-
-int cwist_webtransport_client_poll(cwist_http3_client *client, int timeout_ms) {
-    if (!client || !client->engine || client->udp_fd < 0) return -1;
-    h3c_process_io(client, timeout_ms > 0 ? timeout_ms : 1);
-    return 0;
-}
-
-int cwist_webtransport_client_is_open(const cwist_webtransport_client_session *session) {
-#ifdef CWIST_WEBTRANSPORT
-    return session && session->open && session->native;
-#else
-    (void)session;
-    return 0;
-#endif
-}
-
-void *cwist_webtransport_client_open_bidi(cwist_webtransport_client_session *session) {
-#ifdef CWIST_WEBTRANSPORT
-    return cwist_webtransport_client_is_open(session) ? lsquic_wt_open_bidi(session->native) : NULL;
-#else
-    (void)session;
-    return NULL;
-#endif
-}
-
-void *cwist_webtransport_client_open_uni(cwist_webtransport_client_session *session) {
-#ifdef CWIST_WEBTRANSPORT
-    return cwist_webtransport_client_is_open(session) ? lsquic_wt_open_uni(session->native) : NULL;
-#else
-    (void)session;
-    return NULL;
-#endif
-}
-
-ssize_t cwist_webtransport_client_stream_read(void *stream, void *buf, size_t len) {
-    return stream && buf && len ? lsquic_stream_read((lsquic_stream_t *)stream, buf, len) : -1;
-}
-
-ssize_t cwist_webtransport_client_stream_write(void *stream, const void *buf, size_t len) {
-    return stream && buf && len ? lsquic_stream_write((lsquic_stream_t *)stream, buf, len) : -1;
-}
-
-int cwist_webtransport_client_stream_flush(void *stream) {
-    return stream ? lsquic_stream_flush((lsquic_stream_t *)stream) : -1;
-}
-
-int cwist_webtransport_client_stream_close(void *stream) {
-    if (!stream) return -1;
-    lsquic_stream_close((lsquic_stream_t *)stream);
-    return 0;
-}
-
-ssize_t cwist_webtransport_client_send_datagram(cwist_webtransport_client_session *session,
-                                                const void *data, size_t len) {
-#ifdef CWIST_WEBTRANSPORT
-    return cwist_webtransport_client_is_open(session) && data && len
-               ? lsquic_wt_send_datagram(session->native, data, len)
-               : -1;
-#else
-    (void)session;
-    (void)data;
-    (void)len;
-    return -1;
-#endif
-}
-
-int cwist_webtransport_client_close(cwist_webtransport_client_session *session, uint64_t code,
-                                    const char *reason) {
-#ifdef CWIST_WEBTRANSPORT
-    if (!cwist_webtransport_client_is_open(session)) return -1;
-    return lsquic_wt_close(session->native, code, reason, reason ? strlen(reason) : 0);
-#else
-    (void)session;
-    (void)code;
-    (void)reason;
-    return -1;
-#endif
-}
-
 /* ------------------------------------------------------------------ */
 /* Resilience knobs                                                   */
 /* ------------------------------------------------------------------ */

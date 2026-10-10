@@ -21,7 +21,25 @@ from pathlib import Path
 # Files intentionally left out of `make test`, with why - not a place to
 # silence this gate, a place to record a real, checked reason. Anything
 # not listed here must be wired in or deleted.
+# main carries the release subset of the dev tree: these tests are wired
+# into make test on dev, together with source changes main does not have
+# yet. Drop an entry when its dev wiring is brought over.
+_MAIN_ONLY_UNWIRED = (
+    "wired into TEST_TARGETS on dev only; main has not taken the matching "
+    "Makefile rule and source changes yet."
+)
+
 EXPECTED_UNWIRED = {
+    "test_core_hardening": _MAIN_ONLY_UNWIRED,
+    "test_cwist": _MAIN_ONLY_UNWIRED,
+    "test_graphql": _MAIN_ONLY_UNWIRED,
+    "test_http2_flow_control": _MAIN_ONLY_UNWIRED,
+    "test_https_full_gc": _MAIN_ONLY_UNWIRED,
+    "test_idle_reaper": _MAIN_ONLY_UNWIRED,
+    "test_linux_writer_fast": _MAIN_ONLY_UNWIRED,
+    "test_orm_socket": _MAIN_ONLY_UNWIRED,
+    "test_sse": _MAIN_ONLY_UNWIRED,
+    "test_webtransport": _MAIN_ONLY_UNWIRED,
     "test_quic_flow_control": (
         "links against quic_stream_fc_init()/quic_flow_control_*() which "
         "are not implemented anywhere in the tree yet (undefined reference "

@@ -374,28 +374,6 @@ static cwist_error_t redis_command_frame(cwist_redis_t *r, const char *frame, si
     return (cwist_error_t){.errtype = CWIST_ERR_INT16, .error.err_i16 = 0};
 }
 
-/**
- * @brief Append to a RESP frame being built. A failed allocation is
- *        reported on the JSON error channel, where err_i8 stays 0, so the
- *        result is checked with cwist_error_is_ok() and then released;
- *        otherwise a truncated command would be sent to the server.
- */
-static bool redis_frame_append(cwist_sstring *frame, const void *data, size_t len) {
-    cwist_error_t err = cwist_sstring_append_len(frame, (const char *)data, len);
-    bool ok = cwist_error_is_ok(&err);
-    cwist_error_dispose(&err);
-    return ok;
-}
-
-/** Build a RESP2 frame from an argv array, send it, and return the raw reply
- * tree. Unlike the legacy string API, a Redis '-' error reply is surfaced as
- * a failure with *@p reply set to NULL.
- * @param r Connection handle.
- * @param argc Number of command arguments.
- * @param argv Argument pointers.
- * @param argv_lens Length of each argument in bytes.
- * @param reply Out: reply tree on success (caller frees); always NULL on error.
- * @return Error value indicating success or failure. */
 cwist_error_t cwist_redis_command_argv_reply(cwist_redis_t *r, size_t argc, const void *const *argv,
                                              const size_t *argv_lens, cwist_redis_reply_t **reply) {
     if (!r || !argc || !argv || !argv_lens || !reply) return make_error(CWIST_ERR_INT16);
@@ -404,14 +382,14 @@ cwist_error_t cwist_redis_command_argv_reply(cwist_redis_t *r, size_t argc, cons
     if (!frame) return make_error(CWIST_ERR_INT16);
     char count[32];
     snprintf(count, sizeof(count), "*%zu\r\n", argc);
-    if (!redis_frame_append(frame, count, strlen(count))) goto fail;
+    if (cwist_sstring_append_len(frame, count, strlen(count)).error.err_i8) goto fail;
     for (size_t i = 0; i < argc; ++i) {
         if (!argv[i] && argv_lens[i]) goto fail;
         char len[32];
         snprintf(len, sizeof(len), "$%zu\r\n", argv_lens[i]);
-        if (!redis_frame_append(frame, len, strlen(len)) ||
-            (argv_lens[i] && !redis_frame_append(frame, argv[i], argv_lens[i])) ||
-            !redis_frame_append(frame, "\r\n", 2))
+        if (cwist_sstring_append_len(frame, len, strlen(len)).error.err_i8 ||
+            (argv_lens[i] && cwist_sstring_append_len(frame, argv[i], argv_lens[i]).error.err_i8) ||
+            cwist_sstring_append_len(frame, "\r\n", 2).error.err_i8)
             goto fail;
     }
     cwist_error_t err = redis_command_frame_tree(r, frame->data, frame->size, reply);
@@ -515,15 +493,19 @@ cwist_error_t cwist_redis_command(cwist_redis_t *r, const char *cmd, char **out)
     return err;
 }
 
-/** Build a RESP2 frame from an argv array, send it, and return the flattened
- * first-payload reply with its length.
- * @param r Connection handle.
- * @param argc Number of command arguments.
- * @param argv Argument pointers.
- * @param argv_lens Length of each argument in bytes.
- * @param out Optional out: heap-allocated reply value (caller frees).
- * @param out_len Optional out: reply length in bytes.
- * @return Error value indicating success or failure. */
+/**
+ * @brief Append to a RESP frame being built. A failed allocation is
+ *        reported on the JSON error channel, where err_i8 stays 0, so the
+ *        result is checked with cwist_error_is_ok() and then released;
+ *        otherwise a truncated command would be sent to the server.
+ */
+static bool redis_frame_append(cwist_sstring *frame, const void *data, size_t len) {
+    cwist_error_t err = cwist_sstring_append_len(frame, (const char *)data, len);
+    bool ok = cwist_error_is_ok(&err);
+    cwist_error_dispose(&err);
+    return ok;
+}
+
 cwist_error_t cwist_redis_command_argv(cwist_redis_t *r, size_t argc, const void *const *argv,
                                        const size_t *argv_lens, char **out, size_t *out_len) {
     if (!r || !argc || !argv || !argv_lens) return make_error(CWIST_ERR_INT16);

@@ -15,7 +15,6 @@ static volatile int g_wt_handler_called = 0;
 static volatile int g_new_stream_called = 0;
 
 static void wt_test_handler(cwist_http_request *req, cwist_http_response *res, void *stream) {
-    (void)req;
     (void)stream;
     g_wt_handler_called = 1;
     /* Accept the session */
@@ -55,7 +54,6 @@ int main(void) {
     cwist_app_use_webtransport(app, wt_test_handler);
     assert(app->wt_handler == wt_test_handler);
     printf("[PASS] App-level WebTransport handler registration.\n");
-    cwist_app_destroy(app);
 
     /* --- Test 2: HTTP/3 context-level WebTransport registration --- */
     cwist_http3_context *ctx = NULL;

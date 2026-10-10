@@ -57,9 +57,9 @@ struct cwist_io_queue {
 static job_node_t *cwist_job_node_create(cwist_job_func func, void *arg) {
     job_node_t *node = cwist_alloc(sizeof(*node));
     if (!node) return NULL;
-    /* Submitted nodes (and the create-path stub) belong to the queue's
-     * retirement/destroy lifecycle, even after their allocating thread
-     * exits. The callback argument remains opaque and caller-owned. */
+    /* Sentinels and submitted nodes belong to the queue's retirement /
+     * destroy lifecycle, even after their allocating thread exits.
+     * The callback argument remains opaque and caller-owned. */
     if (cwist_full_gc_enabled()) cwist_gc_scope_disown(node);
     node->func = func;
     node->arg = arg;

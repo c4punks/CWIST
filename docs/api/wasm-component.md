@@ -145,44 +145,6 @@ overhead is what crosses the default limit.
    shipping unflagged in node and browsers, and port the SSE examples
    off the EM_JS callback. Only then does the Emscripten build leave CI.
 
-## Browser runtime gate (WASI 0.2)
-
-`make component-browser-smoke` remains a packaging-only check.
-`make component-browser-test` runs that build, then executes the generated
-bundle and real WASM shards in headless Chromium through Playwright.
-Install the test-only dependencies and browser first:
-
-```sh
-npm ci --prefix tests/browser --ignore-scripts --no-audit --no-fund
-(cd tests/browser && npx --no-install playwright install --only-shell chromium)
-make component-browser-test NODE="$(command -v node)"
-```
-
-On Linux CI, add `--with-deps` to the Playwright install command. The
-lockfile pins Playwright and therefore its Chromium revision; neither is
-added to the production `cwist-wasm` package. The existing component
-prerequisites (wasi-sdk 25, wasm-tools, wit-bindgen, jco) still apply.
-
-The runner serves an in-memory allowlist of generated artifacts on a
-loopback-only ephemeral port. It checks GET `/hello`, response headers,
-and POST `/echo` with the same non-NUL binary payload as the Node smoke.
-The fixture uses C strings, so this is not arbitrary NUL-byte coverage.
-It requires a structured result from the browser assertions and actual
-WASM shard requests. Page exceptions, failed loads, missing dependencies
-and timeouts fail rather than skip. Browser and server are closed on exit.
-
-The target also starts two negative controls: unavailable WASM shards and
-an injected browser exception. Each must exit 1 with its own diagnostic;
-a crash, timeout, or missing browser is not accepted as the expected failure.
-To rerun against already-built artifacts:
-
-```sh
-node tests/browser/run.mjs --self-test
-```
-
-This gate covers WASI 0.2 in Chromium only. It does not claim Service
-Worker coverage, WASI 0.3/JSPI support, or replacement of Emscripten.
-
 ## Measured while building stage 2
 
 - The WIT never passed wit-bindgen validation as written: the error
