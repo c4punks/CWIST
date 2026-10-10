@@ -30,9 +30,9 @@
 | Phase | Theme | Progress |
 |-------|-------|----------|
 | Phase 1 — Performance | Reactor latency, RX-uring pipelining, HTTPS handshake shards, worker warmup | Mostly done: #293 closed the measurement loop; RX-uring and worker warmup dropped; HTTPS shard tuning remains open |
-| Phase 2 — Rust FFI | `bindings/rust/` (`cwist-sys` + `cwist`) | Not started |
-| Phase 3 — HTTP/3 Close Correctness | Re-pin lsquic after upstream fixes | Blocked on lsquic #688, #687, #693; cutoff 2026-10-09 |
-| Phase 4 — v4.0 Scope Confirmation | Enact v3.7 Phase 5 decisions, record experimental-item fates | Not started |
+| Phase 2 — Rust FFI | `bindings/rust/` (`cwist-sys` + `cwist`) | Done: middleware + async wrappers, example, FFI overhead benchmark; `cwist-sys` and `cwist` published to crates.io as v0.1.0 |
+| Phase 3 — HTTP/3 Close Correctness | Re-pin lsquic after upstream fixes | Deferred indefinitely — waiting for upstream lsquic to ship WebTransport client support |
+| Phase 4 — v4.0 Scope Confirmation | Enact v3.7 Phase 5 decisions, record experimental-item fates | Done: v3.7 Phase 5 enacted; GraphQL subscriptions, durable queue, Redis RESP2/NATS borrow promoted to supported; WASM component deferred past v4.0 (ships experimental at v4.0, promotion re-evaluated at v4.1); WebTransport stays experimental until v4.1 |
 
 ### 1) Transport Layer
 
@@ -217,9 +217,9 @@ it is additive. Scope does not grow; anything not ready slips.
 | Phase | Goal | Status | Next Actions |
 |-------|------|--------|--------------|
 | **1 — Performance** | Close reactor/Classic/Axum latency gaps; validate RX-uring pipelining; HTTPS handshake shards; worker warmup | Mostly done | #293 has the data; #294 raised `CWIST_HTTPS_HS_SHARDS` default floor to 4 and MAX to 16; RX-uring and worker warmup dropped |
-| **2 — Rust FFI** | Make CWIST callable from Rust (`cwist-sys` + `cwist`) | Not started | Create `bindings/rust/`; add additive `_ex` route registration; export `static inline` wrappers; add layout assertion tests; write `example/rust-hello/`; integrate `cargo test` into CI |
-| **3 — HTTP/3 close correctness** | Re-pin lsquic when upstream fixes land; add CONNECTION_CLOSE interop gate | Blocked on upstream | Track lsquic #688, #687, #693; build h3spec-style gate; add pinned-commit CI check; cutoff 2026-10-09 |
-| **4 — v4.0 scope confirmation** | Enact v3.7 Phase 5 decisions and record v4.0 fate for every experimental item | Not started | Promote full GC/malloc interception to supported opt-in; record decisions for GraphQL subscriptions, durable queue, Redis/NATS borrow, WASM component pipeline; audit stale experimental docs |
+| **2 — Rust FFI** | Make CWIST callable from Rust (`cwist-sys` + `cwist`) | Done | Middleware and deferred-async wrappers landed; `example/rust-hello/` and FFI overhead benchmark added; built-in middleware factory wrappers and owned `cwist_async_respond_with` helper done; `cwist-sys` and `cwist` v0.1.0 published to crates.io |
+| **3 — HTTP/3 close correctness** | Re-pin lsquic when upstream fixes land; add CONNECTION_CLOSE interop gate | Deferred indefinitely | On hold until upstream lsquic ships WebTransport client support; no separate cutoff |
+| **4 — v4.0 scope confirmation** | Enact v3.7 Phase 5 decisions and record v4.0 fate for every experimental item | Done | v3.7 Phase 5 enacted; GraphQL subscriptions, durable queue, Redis RESP2/NATS borrow promoted to supported; WASM component pipeline ships experimental at v4.0 with promotion re-evaluated at v4.1; WebTransport experimental until v4.1; docs audit done |
 
 ### Phase 1 — Performance
 
@@ -271,8 +271,8 @@ The CWIST-side half is done. The three lsquic fixes are open upstream as
 
 | Decision Source | Action |
 |-----------------|--------|
-| v3.7 Phase 5 | Promote full GC and malloc interception to *supported opt-in* (`CWIST_DEFER_FREE`, `CWIST_INTERCEPT_MALLOC`); keep `CWIST_PROFILE` matrix as v4.0 default story; keep latency probe hidden opt-in; keep HTTP batch-shed counter always-on |
-| Experimental items | Record v4.0 decision for GraphQL subscriptions (`graphql_ws.h`), durable job queue (`durable_queue.h`), Redis RESP2 reply tree and NATS connection borrow, and WASM component pipeline (#203) |
+| v3.7 Phase 5 | **Done** — full GC and malloc interception promoted to *supported opt-in* (`docs/GC.md` updated, defaults unchanged: full-GC off); `CWIST_PROFILE` matrix stays the v4.0 default story; latency probe stays hidden opt-in; HTTP batch-shed counter stays always-on |
+| Experimental items | **Promoted to supported in v3.8** — GraphQL subscriptions (`graphql_ws.h`), durable job queue (`durable_queue.h`), Redis RESP2 reply tree, and NATS connection borrow (`cwist_nats_native()`). **Decided for v4.0 (2026-10-10)** — WASM component pipeline (#203) ships v4.0 experimental and outside the guarantee; promotion re-evaluated at v4.1 (gated on WASI 0.3 / unflagged JSPI); WebTransport stays experimental until v4.1 |
 | WebTransport tutorial | Keep experimental until v4.1 |
 | Docs | Audit stale experimental caveats |
 
@@ -448,6 +448,105 @@ as new API in any release. Deprecated APIs and flags are resolved (promoted or r
 The v4.0 cycle itself focuses on correctness, soak, docs, and the promotion
 decisions, so that expansion can resume in v4.1 on a stable base. See "API stability from v4.0" under the versioning
 rules.
+
+---
+
+## CWIST v3.9 Roadmap (Released 2026-10-05)
+
+v3.8 spends its cycle on performance, Rust FFI, and v4.0 scope confirmation.
+The follow-up TLS investigation for issue #306 (PR #307 shipped the
+TCP_QUICKACK handshake fix; shard/teardown/buffer follow-ups all measured
+no-gain) leaves one clear gap: **TLS observability & performance
+governance**. There is no way today to see handshake health in production
+or to stop a TLS regression from landing silently. v3.9 closes that, and
+also brings WebRTC DataChannel support into the release scope.
+
+### v3.9 Status at a Glance
+
+| Goal | Status | Notes |
+|------|--------|-------|
+| (a) CI TLS performance gates (HTTPS churn / keep-alive / large-transfer / RTT) | ✅ Done | Gates landed in #309 but never passed: the absolute backstops came from fast CPUs and healthy code failed on the EPYC 7763 runner, so no history accumulated either. Recalibrated on https/http ratios plus same-CPU history; disabling the #307 fix fails the RTT gate (0.08 → 43 ms) on any CPU. The churn-ratio backstop had to be loosened after the first Intel runner (healthy at 0.071 vs 0.11-0.13 on AMD). Green on `dev` at 610fe55b (https://github.com/c4punks/CWIST/actions/runs/37303818384). Tracked in #306 |
+| (b) TLS observability in Prometheus `/metrics` (handshake counts, TLS version/cipher counters, resumption vs full-handshake ratio) | ✅ Done | `cwist_tls_handshakes_total`, `cwist_tls_handshakes_resumed_total`, `cwist_tls_connections_active`, `cwist_tls_handshakes_tls12_total`, `cwist_tls_handshakes_tls13_total`, `cwist_tls_ciphers_{aes128_gcm,aes256_gcm,chacha20,other}_total`; covered by `test_https_metrics` |
+| (c) Settle issue #294 with measured data | ✅ Done | #294 closed as completed. An earlier comment there claimed `cwist_app_listen` never uses the sharded handshake shepherds; that was wrong (it confused `cwist_app_multiport`'s inline path with `cwist_app_listen`). Measured: `cwist_app_listen` adds one thread per `CWIST_HTTPS_HS_SHARDS` shard on the first HTTPS request, in both C1M and classic mode. The default floor of 4 shards / cap of 16 is already on dev, and #294's data shows no gain beyond 4 |
+| (d) WebRTC DataChannel support | ✅ Done | #310: SDP offer/answer, ICE-lite, DTLS (vendored BoringSSL), SCTP DataChannels (`lib/usrsctp`) on the cwist reactor. Echo verified against headless Chromium (`make test_webrtc_browser`); Firefox not yet tested |
+
+Entry criteria for v3.9: every item must move a measured metric (handshake
+throughput, resumption ratio, connection-churn latency, or regression
+detection latency) or retire a mismeasured premise. New public API is
+additive only, matching the v3.8 rule.
+
+Exit criteria for v3.9:
+
+- The CI TLS gate PR (#306) is green on the release commit and fails on a
+  re-introduced #307-class regression (measured by the churn benchmark).
+- `/metrics` exposes the full TLS counter set above on a live app, and the
+  resumption-vs-full ratio is observable across prefork workers.
+- #294 is closed with measured data (done: closed as completed; the
+  shepherds do serve `cwist_app_listen`, and the shipped default needs no
+  change).
+
+---
+
+## CWIST v4.0 Readiness
+
+v4.0 starts the API stability guarantee described under "API stability from
+v4.0" in the versioning rules below. This section lists what is still open
+before the v4.0 cut, as checked on `dev` at 4cd05e21 (2026-10-07). It records
+open work and pending decisions, not results.
+
+### API surface decisions
+
+After v4.0 an existing public API can no longer change, so each item below
+needs a recorded decision before the cut.
+
+| Item | Current state | Decision needed |
+|------|---------------|-----------------|
+| WASM component pipeline (#203) | Experimental; gated on WASI 0.3 / unflagged JSPI | **Decided (2026-10-10):** ship v4.0 with it experimental and outside the guarantee; promotion re-evaluated at v4.1 |
+| `cwist_http3_set_stream_priority()` | `@deprecated` in `http3.h`; kept for ABI compatibility; always logs a warning and returns -1 | **Decided (2026-10-10):** kept with the always-refuse behavior as its permanent contract for v4.0 |
+| `cwist_http_stringify_response()` | Declared in `http.h`; covered by `test_http_stringify` | **Decided (2026-10-10):** revived as supported API; deprecated comment dropped from `http.c` |
+| WebTransport client API (`http3_client.h`) | Marked experimental (LSQUIC PR #629) | None for v4.0: stays experimental and outside the guarantee until v4.1 |
+| Public API baseline | No recorded list of public symbols and public struct layouts exists | Record the v4.0 baseline. Possible follow-up: a CI check that diffs headers against it |
+
+The guarantee as written covers the C public API. The Rust crates
+(`cwist-sys`, `cwist`, 0.1.0, documented as experimental in Phase 2 above)
+and the Zig bindings (`bindings/zig`, 0.1.0) are versioned separately.
+
+### Performance target (#319)
+
+* Target: at least 1.05x Actix-web throughput and a lower P99.999 than
+  Actix-web on every CI runner architecture (AMD EPYC, Intel Xeon).
+* Done: Actix-web is in the CI webserver benchmark matrix and charts, and
+  the measurement contract is in `docs/webserver-benchmark.md`.
+* Open: #297 (syscall and serialization reduction: io_uring multishot
+  accept with a fallback for kernels without it, SQE batching, per-accept
+  `setsockopt`, time caching), #293 (tail latency; queue delay drives the
+  tail), and #322 (libttak v3.4.0 benchmark comparison). Each item lands
+  with an A/B measurement or a recorded negative result.
+
+### Carry-over and housekeeping
+
+| Item | State on `dev` at 4cd05e21 | Remaining |
+|------|----------------------------|-----------|
+| #306 TLS performance | Fixed by #307; v3.9 HTTPS gates green on `dev` | Close the issue |
+| #286 raw-allocator gate | `https.c` parked-connection allocations use `cwist_alloc`/`cwist_free`; `cwist audit --gate` passes | Close the issue |
+| Soak testing | Named in the v4.0 preview; no soak job or plan exists in the tree | Define the soak run and its pass criteria |
+| Docs good first issues | #272 landed in #320; PRs open for #273 (#324) and #275 (#325, #326); #271 open | Review and merge |
+
+### Not in v4.0 scope
+
+* WASM component pipeline (#203): stays experimental and outside the
+  guarantee; promotion re-evaluated at v4.1 (decided 2026-10-10).
+* WebTransport (#17) and the lsquic re-pin: v4.1, see below.
+
+### Exit criteria for v4.0
+
+- Every API surface decision above is recorded and enacted in code and
+  docs; deprecated APIs and flags are resolved (promoted or removed).
+- The #319 performance target holds on the CI benchmark on every runner
+  architecture.
+- The soak run is defined and passes on the release commit.
+- The release rules in `CONTRIBUTING.md` hold on the release commit (every
+  CI workflow green; `make dist` archive builds and tests clean).
 
 ---
 
