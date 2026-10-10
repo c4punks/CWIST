@@ -340,7 +340,9 @@ int cwist_pb_skip_field(cwist_pb_reader *r, const cwist_pb_field *field) {
  *         unsigned codes regardless of sign (0, -1, 1, -2, 2 -> 0, 1, 2, 3, 4).
  */
 uint64_t cwist_pb_zigzag_encode(int64_t value) {
-    return ((uint64_t)value << 1) ^ (uint64_t)(value >> 63);
+    /* All ones for a negative value, zero otherwise, without the
+     * implementation-defined right shift of a negative signed value. */
+    return ((uint64_t)value << 1) ^ ((uint64_t)0 - ((uint64_t)value >> 63));
 }
 
 /**

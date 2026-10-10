@@ -290,7 +290,7 @@ cwist_error_t cwist_orm_exec(cwist_orm_t *orm, const char *sql) {
  */
 cwist_error_t cwist_orm_query(cwist_orm_t *orm, const char *sql, cJSON **result) {
     cwist_error_t err = make_error(CWIST_ERR_INT16);
-    *result = NULL;
+    if (result) *result = NULL;
     if (!orm || !sql || !result) {
         err.error.err_i16 = CWIST_ERROR_INVALID_PARAM;
         return err;
@@ -833,7 +833,7 @@ cwist_error_t cwist_orm_insert_returning_json(cwist_orm_t *orm, const char *tabl
                                               const cJSON *data, const char *returning_col,
                                               cJSON **out) {
     cwist_error_t err = make_error(CWIST_ERR_INT16);
-    *out = NULL;
+    if (out) *out = NULL;
     if (!orm || !table || !data || !returning_col || !out) {
         err.error.err_i16 = CWIST_ERROR_INVALID_PARAM;
         return err;
@@ -1007,7 +1007,7 @@ cwist_error_t cwist_orm_insert_returning_llong(cwist_orm_t *orm, const char *tab
 cwist_error_t cwist_orm_select_one_json(cwist_orm_t *orm, const char *table, const char *column,
                                         const char *where_clause, cJSON **out) {
     cwist_error_t err = make_error(CWIST_ERR_INT16);
-    *out = NULL;
+    if (out) *out = NULL;
     if (!orm || !table || !column || !out) {
         err.error.err_i16 = CWIST_ERROR_INVALID_PARAM;
         return err;

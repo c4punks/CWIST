@@ -282,7 +282,8 @@ static void mux_chain_next(cwist_http_request *req, cwist_http_response *res) {
         cwist_http_handler_func handler;
     } mux_chain_state;
     mux_chain_state *state = (mux_chain_state *)req->route_middleware_state;
-    if (state && state->current) {
+    if (!state) return;
+    if (state->current) {
         cwist_mux_middleware_node *mw = state->current;
         state->current = mw->next;
         mw->func(req, res, mux_chain_next);
