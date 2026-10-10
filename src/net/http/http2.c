@@ -3570,6 +3570,33 @@ static bool h2_can_park(h2_conn *hc) {
 }
 
 /**
+ * @brief Hand a parkable session's allocations off this thread's full-GC
+ *        pending-sweep list, so it may resume on another pool thread.
+ *
+ * A parkable session (h2_can_park) owns only the session struct, the batch
+ * and CONTINUATION buffers, the HPACK dynamic table, and the hook context
+ * (the gRPC connection context is refcounted and already released from
+ * other threads; disowning a pointer this thread never tracked, such as an
+ * app passed as user_ctx, is a no-op). The async queue is disowned when
+ * created. Whatever a later thread allocates for the session is tracked
+ * there and disowned again at the next park. No-op without full GC.
+ * @param st Session about to be parked.
+ */
+static void h2_session_disown(h2_session *st) {
+    if (!cwist_full_gc_enabled()) return;
+    h2_conn *hc = &st->hc;
+    cwist_gc_scope_disown(hc->out_buf);
+    cwist_gc_scope_disown(hc->cont_buf);
+    for (h2_hpack_entry *he = hc->hpack_head; he; he = he->next) {
+        cwist_gc_scope_disown(he->name);
+        cwist_gc_scope_disown(he->value);
+        cwist_gc_scope_disown(he);
+    }
+    cwist_gc_scope_disown(hc->hook_ctx);
+    cwist_gc_scope_disown(st);
+}
+
+/**
  * @brief Serve one HTTP/2 connection until it closes.
  * Verifies the preface, sends our SETTINGS, then runs the frame dispatcher:
  * HEADERS/CONTINUATION, DATA, SETTINGS, PING, WINDOW_UPDATE, RST_STREAM, and
@@ -3718,6 +3745,7 @@ cwist_error_t cwist_http2_serve_connection_ex(cwist_https_connection *conn, void
                 if (idle_for < idle_ms && cwist_https_conn_idle(conn)) {
                     st->sent_goaway = sent_goaway;
                     st->goaway_close_at = goaway_close_at;
+                    h2_session_disown(st);
                     if (cwist_https_park(conn, idle_ms - idle_for, CWIST_HTTPS_PARK_HTTP2)) {
                         /* Another pool thread may own the session now. */
                         result = make_error(CWIST_ERR_INT16);

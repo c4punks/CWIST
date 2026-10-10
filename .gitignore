@@ -136,6 +136,7 @@ test_sstring_run
 fly.board/
 test_https
 test_https_park
+test_https_park_full_gc
 benchmarks/web-frameworks/cwist_bench
 dist/
 cwist.pc

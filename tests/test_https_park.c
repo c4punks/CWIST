@@ -12,6 +12,7 @@
 #include <cwist/sys/app/compress.h>
 #include <cwist/net/http/https.h>
 #include <cwist/net/http/async.h>
+#include <cwist/core/mem/gc.h>
 #include <assert.h>
 #include <errno.h>
 #include <pthread.h>
@@ -474,6 +475,27 @@ static void test_http2_deferred_response(void) {
     printf("Passed HTTP/2 deferred response over TLS.\n");
 }
 
+/* A connection whose stream was deferred in the same pool-thread run that
+ * ends the session (GOAWAY right behind the request) must still be closed:
+ * the h2 loop owns the conn, the async completion only owns the stream. */
+static void test_http2_conn_closed_after_deferred_stream(void) {
+    printf("Testing HTTP/2 conn close after a deferred stream...\n");
+    cwist_app *app = make_app(true);
+    h2_resp_t r;
+
+    client_t a = client_open(app, true);
+    h2_start(&a);
+    h2_get(&a, 1, "/defer", false);
+    static const unsigned char goaway[17] = {0, 0, 8, 7, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0};
+    ssl_write_all(a.ssl, goaway, sizeof(goaway));
+    (void)h2_read_response(&a, 1, &r);
+    assert(wait_closed(&a, 4000));
+
+    client_close(&a);
+    cwist_app_destroy(app);
+    printf("Passed HTTP/2 conn close after a deferred stream.\n");
+}
+
 /* The compress middleware shrinks a body whose handler already set
  * Content-Length: the HTTP/2 content-length must match the DATA sent. */
 static void test_http2_content_length_matches_compressed_body(void) {
@@ -521,8 +543,31 @@ static void test_pool_destroy_closes_parked_connections(void) {
     printf("Passed pool shutdown with parked connections.\n");
 }
 
+#ifdef TEST_HTTPS_PARK_FULL_GC
+/* Pool shutdown under full GC: the parked conn is untracked from the
+ * connection registry before teardown, so the pool thread's exit sweep does
+ * not close it a second time (ASan catches the double free). */
+static void test_pool_destroy_closes_parked_http1_full_gc(void) {
+    printf("Testing pool shutdown with a parked HTTP/1.1 connection under full GC...\n");
+    cwist_app *app = make_app(false);
+    char body[64];
+
+    client_t a = client_open(app, false);
+    assert(h1_get(&a, "/hello", body, sizeof(body)) == 0);
+    https_pool_destroy();
+    assert(wait_closed(&a, 1000));
+
+    client_close(&a);
+    cwist_app_destroy(app);
+    printf("Passed pool shutdown with a parked HTTP/1.1 connection under full GC.\n");
+}
+#endif
+
 int main(void) {
     signal(SIGPIPE, SIG_IGN);
+#ifdef TEST_HTTPS_PARK_FULL_GC
+    cwist_full_gc(true);
+#endif
     /* Read once and cached by cwist, so set before anything starts. */
     setenv("CWIST_WORKER_THREADS", "1", 1);
     setenv("CWIST_HTTPS_IDLE_TIMEOUT_MS", "1500", 1);
@@ -536,7 +581,12 @@ int main(void) {
     test_http2_idle_session_is_parked();
     test_http2_parked_session_expires_with_goaway();
     test_http2_deferred_response();
+    test_http2_conn_closed_after_deferred_stream();
     test_http2_content_length_matches_compressed_body();
+#ifdef TEST_HTTPS_PARK_FULL_GC
+    test_pool_destroy_closes_parked_http1_full_gc();
+    assert(https_pool_init() == 0);
+#endif
     test_pool_destroy_closes_parked_connections();
     printf("All HTTPS parking tests passed!\n");
     return 0;

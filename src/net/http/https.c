@@ -8,6 +8,7 @@
 #include <cwist/core/mem/gc.h>
 #include <cwist/sys/app/shutdown.h>
 #include "tls_chain.h"
+#include "async_internal.h"
 #include <openssl/ssl.h>
 #include <openssl/err.h>
 #include <openssl/evp.h>
@@ -116,6 +117,7 @@ int https_hs_shepherd_start(void);
 void https_hs_shepherd_stop(void);
 static void https_park_stop(void);
 static void https_connection_teardown(cwist_https_connection *conn);
+static void https_park_teardown(cwist_https_connection *conn);
 /* Set by cwist_https_park() on the pool thread that parked its connection:
  * the connection may already be served by another thread, so the pool
  * thread must not touch it (or close it) after the handler returns. */
@@ -415,7 +417,7 @@ static void *https_park_thread(void *arg) {
                 expired = p->next;
                 epoll_ctl(g_park.epoll_fd, EPOLL_CTL_DEL, p->conn->fd, NULL);
                 if (cls == CWIST_HTTPS_PARK_HTTP1) {
-                    https_connection_teardown(p->conn);
+                    https_park_teardown(p->conn);
                 } else {
                     park_resubmit(p->conn, true);
                 }
@@ -457,8 +459,13 @@ static bool https_park_start_locked(void) {
 
 /**
  * @brief Report whether connection parking may be used: enabled unless the
- *        CWIST_HTTPS_PARK env var disables it, and never under full GC
- *        (parked allocations are thread-owned and would move threads).
+ *        CWIST_HTTPS_PARK env var disables it.
+ *
+ * Under full GC a parked connection resumes on another pool thread, so
+ * nothing it holds may stay on the parking thread's pending-sweep list. The
+ * conn and its read buffer are disowned to the connection registry at wrap
+ * time, which is all an idle HTTP/1.1 connection holds; http2.c disowns an
+ * idle h2 session before parking it.
  * @return true if parking is allowed.
  */
 static bool https_park_enabled(void) {
@@ -467,7 +474,17 @@ static bool https_park_enabled(void) {
         const char *env = getenv("CWIST_HTTPS_PARK");
         enabled = !(env && (env[0] == '0' || strcmp(env, "false") == 0));
     }
-    return enabled && !cwist_full_gc_enabled();
+    return enabled;
+}
+
+/**
+ * @brief Tear down a connection the park set owns. Under full GC the conn is
+ *        still in the connection registry, so drop it there first or a later
+ *        sweep would close it a second time.
+ */
+static void https_park_teardown(cwist_https_connection *conn) {
+    if (cwist_full_gc_enabled()) cwist_conn_registry_untrack(conn);
+    https_connection_teardown(conn);
 }
 
 bool cwist_https_park(cwist_https_connection *conn, uint64_t idle_ms, cwist_https_park_class cls) {
@@ -518,7 +535,7 @@ static void https_park_stop(void) {
         https_parked_t *p = g_park.head[cls];
         while (p) {
             https_parked_t *next = p->next;
-            https_connection_teardown(p->conn);
+            https_park_teardown(p->conn);
             cwist_free(p);
             p = next;
         }
@@ -1985,10 +2002,15 @@ static void *https_thread_handler(void *arg) {
         conn->pool_handler = payload->handler;
         conn->pool_user_ctx = payload->user_ctx;
         t_https_parked = false;
+        (void)cwist_async_https_take_deferred();
         payload->handler(conn, payload->user_ctx);
+        /* A deferred conn belongs to its completion after the dispatch ack,
+         * which may already have closed or resubmitted it: never read conn
+         * here once it was deferred (#344). */
+        bool deferred = cwist_async_https_take_deferred();
         if (t_https_parked) {
             t_https_parked = false;
-        } else if (!conn->deferred) {
+        } else if (!deferred) {
             cwist_https_close_connection(conn);
         }
     } else {
