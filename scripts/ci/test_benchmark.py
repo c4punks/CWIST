@@ -168,6 +168,18 @@ class BenchmarkRenderTests(unittest.TestCase):
         self.assertIn("CWIST Classic", svg)
         self.assertIn("<polyline", svg)
 
+    def test_settled_internal_variant_rows_are_not_rendered(self):
+        # The arena_max=1 and drain_chunk=8 legs were interim A/B experiments
+        # that are now settled decisions (issue #25, docs/cooperative-queuing.md);
+        # they must not come back as comparison rows on the next render.
+        readme = self.render()
+        self.assertNotIn("arena_max=1", readme)
+        self.assertNotIn("drain_chunk=8", readme)
+        self.assertNotIn("TUNED_BENCHMARK", readme)
+        self.assertIn("docs/cooperative-queuing.md", readme)
+        self.assertIn("**Axum**:", readme)
+        self.assertIn("**Gin (Go)**:", readme)
+
     def test_actix_in_latency_distribution_and_summary_when_present(self):
         row = {
             "cwist_rps": 100, "actix_rps": 150, "wrk_profile": PROFILE,
