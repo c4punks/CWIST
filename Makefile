@@ -959,6 +959,7 @@ TEST_TARGETS = test_worker_affinity \
                test_gc_ebr_release \
                test_full_gc_toggle_hardening \
                test_conn_registry \
+               test_gc_job_handoff \
                test_full_gc_sweep \
                test_full_gc_tracking \
                test_io_queue_full_gc \
@@ -1698,6 +1699,15 @@ test_gc_ebr_release: $(LIB_NAME) tests/test_gc_ebr_release.c
 test_full_gc_toggle_hardening: $(LIB_NAME) tests/test_full_gc_toggle_hardening.c
 	$(CC) $(CFLAGS) -o test_full_gc_toggle_hardening tests/test_full_gc_toggle_hardening.c $(LIB_NAME) $(LIBS)
 	./test_full_gc_toggle_hardening
+
+test_gc_job_handoff: $(LIB_NAME) tests/test_gc_job_handoff.c
+	$(CC) $(CFLAGS) -o $@ tests/test_gc_job_handoff.c $(LIB_NAME) $(LIBS)
+	./$@
+	./$@ nogc
+	./$@ runtime
+	$(CC) $(CFLAGS) -DNDEBUG -o $@ tests/test_gc_job_handoff.c $(LIB_NAME) $(LIBS)
+	./$@
+	./$@ nogc
 
 test_conn_registry: $(LIB_NAME) tests/test_conn_registry.c
 	$(CC) $(CFLAGS) -o test_conn_registry tests/test_conn_registry.c $(LIB_NAME) $(LIBS)
