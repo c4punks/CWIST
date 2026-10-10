@@ -65,6 +65,7 @@ WEBSERVER_LATENCY_SVG = ROOT / "docs" / "webserver-latency-distribution.svg"
 _LATENCY_KDE_SERVERS = [
     ("CWIST Classic", "cwist", "#22c55e"),
     ("CWIST", "cwist_c1m", "#10b981"),
+    ("Actix", "actix", "#f97316"),
     ("Axum", "axum", "#3b82f6"),
     ("Gin", "gin", "#06b6d4"),
     ("Spring Boot", "spring", "#ef4444"),
@@ -227,28 +228,29 @@ README_MD = ROOT / "README.md"
 def render_webserver_svg(history: list[dict]) -> str:
     ws_latest = history[-1] if history else {}
     metrics = [
-        ("Throughput (req/s)", [("CWIST Classic", "cwist_rps", "#22c55e"), ("CWIST", "cwist_c1m_rps", "#10b981"), ("Axum", "axum_rps", "#3b82f6"), ("Gin", "gin_rps", "#06b6d4"), ("Spring", "spring_rps", "#ef4444")]),
-        ("Avg Latency (ms)", [("CWIST Classic", "cwist_lat_ms", "#22c55e"), ("CWIST", "cwist_c1m_lat_ms", "#10b981"), ("Axum", "axum_lat_ms", "#3b82f6"), ("Gin", "gin_lat_ms", "#06b6d4"), ("Spring", "spring_lat_ms", "#ef4444")]),
-        ("Group RSS end sample (KiB)", [("CWIST Classic", "cwist_rss_kib", "#22c55e"), ("CWIST", "cwist_c1m_rss_kib", "#10b981"), ("Axum", "axum_rss_kib", "#3b82f6"), ("Gin", "gin_rss_kib", "#06b6d4"), ("Spring", "spring_rss_kib", "#ef4444")]),
-        ("Context Switches", [("CWIST Classic", "cwist_csw", "#22c55e"), ("CWIST", "cwist_c1m_csw", "#10b981"), ("Axum", "axum_csw", "#3b82f6"), ("Gin", "gin_csw", "#06b6d4"), ("Spring", "spring_csw", "#ef4444")])
+        ("Throughput (req/s)", [("CWIST Classic", "cwist_rps", "#22c55e"), ("CWIST", "cwist_c1m_rps", "#10b981"), ("Actix", "actix_rps", "#f97316"), ("Axum", "axum_rps", "#3b82f6"), ("Gin", "gin_rps", "#06b6d4"), ("Spring", "spring_rps", "#ef4444")]),
+        ("Avg Latency (ms)", [("CWIST Classic", "cwist_lat_ms", "#22c55e"), ("CWIST", "cwist_c1m_lat_ms", "#10b981"), ("Actix", "actix_lat_ms", "#f97316"), ("Axum", "axum_lat_ms", "#3b82f6"), ("Gin", "gin_lat_ms", "#06b6d4"), ("Spring", "spring_lat_ms", "#ef4444")]),
+        ("Group RSS end sample (KiB)", [("CWIST Classic", "cwist_rss_kib", "#22c55e"), ("CWIST", "cwist_c1m_rss_kib", "#10b981"), ("Actix", "actix_rss_kib", "#f97316"), ("Axum", "axum_rss_kib", "#3b82f6"), ("Gin", "gin_rss_kib", "#06b6d4"), ("Spring", "spring_rss_kib", "#ef4444")]),
+        ("Context Switches", [("CWIST Classic", "cwist_csw", "#22c55e"), ("CWIST", "cwist_c1m_csw", "#10b981"), ("Actix", "actix_csw", "#f97316"), ("Axum", "axum_csw", "#3b82f6"), ("Gin", "gin_csw", "#06b6d4"), ("Spring", "spring_csw", "#ef4444")])
     ]
 
     width = 1280
-    height = 540
+    height = 570
     blocks = []
 
     # Title & Legend
     blocks.append('<text x="30" y="35" class="title">Web Server Performance Comparison (wrk 12t 400c)</text>')
-    blocks.append('<rect x="640" y="20" width="12" height="12" fill="#22c55e" rx="2"/><text x="658" y="31" class="legend">CWIST Classic</text>')
-    blocks.append('<rect x="790" y="20" width="12" height="12" fill="#10b981" rx="2"/><text x="808" y="31" class="legend">CWIST</text>')
-    blocks.append('<rect x="890" y="20" width="12" height="12" fill="#3b82f6" rx="2"/><text x="908" y="31" class="legend">Axum</text>')
-    blocks.append('<rect x="965" y="20" width="12" height="12" fill="#06b6d4" rx="2"/><text x="983" y="31" class="legend">Gin</text>')
-    blocks.append('<rect x="1030" y="20" width="12" height="12" fill="#ef4444" rx="2"/><text x="1048" y="31" class="legend">Spring Boot</text>')
+    blocks.append('<rect x="580" y="20" width="12" height="12" fill="#22c55e" rx="2"/><text x="598" y="31" class="legend">CWIST Classic</text>')
+    blocks.append('<rect x="730" y="20" width="12" height="12" fill="#10b981" rx="2"/><text x="748" y="31" class="legend">CWIST</text>')
+    blocks.append('<rect x="830" y="20" width="12" height="12" fill="#f97316" rx="2"/><text x="848" y="31" class="legend">Actix</text>')
+    blocks.append('<rect x="910" y="20" width="12" height="12" fill="#3b82f6" rx="2"/><text x="928" y="31" class="legend">Axum</text>')
+    blocks.append('<rect x="985" y="20" width="12" height="12" fill="#06b6d4" rx="2"/><text x="1003" y="31" class="legend">Gin</text>')
+    blocks.append('<rect x="1050" y="20" width="12" height="12" fill="#ef4444" rx="2"/><text x="1068" y="31" class="legend">Spring Boot</text>')
 
     # Render 4 grid subpanels (2x2 layout)
     panel_w = 600
-    panel_h = 200
-    offsets = [(30, 60), (670, 60), (30, 290), (670, 290)]
+    panel_h = 220
+    offsets = [(30, 60), (670, 60), (30, 300), (670, 300)]
     
     for idx, (m_title, series_list) in enumerate(metrics):
         px, py = offsets[idx]
@@ -259,7 +261,7 @@ def render_webserver_svg(history: list[dict]) -> str:
         max_val = max(vals, default=1.0)
         if max_val <= 0: max_val = 1.0
         
-        bar_y_base = py + 44
+        bar_y_base = py + 42
         for s_idx, (label, key, color) in enumerate(series_list):
             available = type(ws_latest.get(key)) in (int, float) and math.isfinite(ws_latest[key])
             val = float(ws_latest[key]) if available else 0.0
@@ -301,8 +303,8 @@ def render_webserver_svg(history: list[dict]) -> str:
             footer2 += f" | Runner: {runner}"
         if go_env:
             footer2 += f" | {go_env.get('go_version', 'Go')} + {go_env.get('framework', 'Gin')}"
-        blocks.append(f'<text x="30" y="512" class="footer">{footer1}</text>')
-        blocks.append(f'<text x="30" y="530" class="footer">{footer2}</text>')
+        blocks.append(f'<text x="30" y="542" class="footer">{footer1}</text>')
+        blocks.append(f'<text x="30" y="558" class="footer">{footer2}</text>')
 
     svg_style = (
         '<style>'
@@ -341,7 +343,7 @@ def webserver_summary(row):
     names = [('cwist','CWIST Classic'), ('cwist_c1m','CWIST'),
              ('cwist_c1m_arena1','CWIST arena_max=1'),
              ('cwist_c1m_drainchunk','CWIST drain_chunk=8'),
-             ('axum','Axum'), ('gin','Gin'), ('spring','Spring Boot')]
+             ('actix','Actix'), ('axum','Axum'), ('gin','Gin'), ('spring','Spring Boot')]
     for key, name in names:
         lines.append(f"| {name} | {metric(key+'_rps',0)} | {metric(key+'_lat_ms')} | {metric(key+'_p99_999_ms')} | {metric(key+'_pss_kib',2,1024)} | {metric(key+'_rss_kib',2,1024)} | {metric(key+'_csw',0)} |")
     lines += ['', 'Main profile: `wrk -t12 -c400 -d10s`, after a discarded 10s warmup.',
@@ -386,6 +388,7 @@ def render() -> None:
     cwist_c1m_lat_part = get_lat_part("cwist_c1m")
     cwist_c1m_arena1_lat_part = get_lat_part("cwist_c1m_arena1")
     cwist_c1m_drainchunk_lat_part = get_lat_part("cwist_c1m_drainchunk")
+    actix_lat_part = get_lat_part("actix")
     axum_lat_part = get_lat_part("axum")
     gin_lat_part = get_lat_part("gin")
     spring_lat_part = get_lat_part("spring")
@@ -407,12 +410,16 @@ def render() -> None:
             f"![Web Server Latency Distribution](docs/webserver-latency-distribution.svg)"
         )
     else:
+        actix_line = ""
+        if "actix_rps" in ws_latest:
+            actix_line = f"- **Actix**: {ws_latest.get('actix_rps',0):.0f} req/s | Latency {ws_latest.get('actix_lat_ms',0):.2f}ms{actix_lat_part} | RSS {ws_latest.get('actix_rss_kib',0):.0f}KiB | Csw {ws_latest.get('actix_csw',0):.0f}\n"
         ws_summary = (
             f"Latest Web Server Benchmark ({ws_latest.get('wrk_profile','wrk 12t 400c')}):\n"
             f"- **CWIST Classic pool**: {ws_latest.get('cwist_rps',0):.0f} req/s | Latency {ws_latest.get('cwist_lat_ms',0):.2f}ms{cwist_lat_part} | RSS {ws_latest.get('cwist_rss_kib',0):.0f}KiB | Csw {ws_latest.get('cwist_csw',0):.0f}\n"
             f"- **CWIST reactor**: {ws_latest.get('cwist_c1m_rps',0):.0f} req/s | Latency {ws_latest.get('cwist_c1m_lat_ms',0):.2f}ms{cwist_c1m_lat_part} | RSS {ws_latest.get('cwist_c1m_rss_kib',0):.0f}KiB | Csw {ws_latest.get('cwist_c1m_csw',0):.0f}\n"
             f"- **CWIST reactor (arena_max=1)** — glibc arena cap adopted in PR #35 after mimalloc was tried and refuted (issue #25); this line confirms the decision on every run: {ws_latest.get('cwist_c1m_arena1_rps',0):.0f} req/s | Latency {ws_latest.get('cwist_c1m_arena1_lat_ms',0):.2f}ms{cwist_c1m_arena1_lat_part} | RSS {ws_latest.get('cwist_c1m_arena1_rss_kib',0):.0f}KiB | Csw {ws_latest.get('cwist_c1m_arena1_csw',0):.0f}\n"
             f"- **CWIST reactor (drain_chunk=8)** — cooperative queuing for cwist_async_defer completions within a big io_uring batch (issue #25, docs/cooperative-queuing.md); this workload has no cwist_async_defer traffic to interleave, so parity with the plain CWIST row above is the expected result, not a null finding — the tail-latency win is isolated directly in tests/bench_cooperative_queuing.c: {ws_latest.get('cwist_c1m_drainchunk_rps',0):.0f} req/s | Latency {ws_latest.get('cwist_c1m_drainchunk_lat_ms',0):.2f}ms{cwist_c1m_drainchunk_lat_part} | RSS {ws_latest.get('cwist_c1m_drainchunk_rss_kib',0):.0f}KiB | Csw {ws_latest.get('cwist_c1m_drainchunk_csw',0):.0f}\n"
+            f"{actix_line}"
             f"- **Axum**: {ws_latest.get('axum_rps',0):.0f} req/s | Latency {ws_latest.get('axum_lat_ms',0):.2f}ms{axum_lat_part} | RSS {ws_latest.get('axum_rss_kib',0):.0f}KiB | Csw {ws_latest.get('axum_csw',0):.0f}\n"
             f"- **Gin (Go)**: {ws_latest.get('gin_rps',0):.0f} req/s | Latency {ws_latest.get('gin_lat_ms',0):.2f}ms{gin_lat_part} | RSS {ws_latest.get('gin_rss_kib',0):.0f}KiB | Csw {ws_latest.get('gin_csw',0):.0f}\n"
             f"- **Spring Boot**: {ws_latest.get('spring_rps',0):.0f} req/s | Latency {ws_latest.get('spring_lat_ms',0):.2f}ms{spring_lat_part} | RSS {ws_latest.get('spring_rss_kib',0):.0f}KiB | Csw {ws_latest.get('spring_csw',0):.0f}\n"

@@ -1,11 +1,11 @@
 # Web Server Benchmark Methodology
 
-This document describes exactly how the CWIST vs Axum vs Gin vs Spring Boot comparison in
+This document describes exactly how the CWIST vs Actix vs Axum vs Gin vs Spring Boot comparison in
 `benchmarks/webserver.json` (rendered into `docs/webserver-benchmark-trends.svg`) is
 produced, so every published number can be reproduced and audited.
 
 The suite runs in GitHub Actions (`web-server-benchmark` job in
-`.github/workflows/bsd-kqueue-benchmarks.yml`) on `ubuntu-latest`. All four servers are
+`.github/workflows/bsd-kqueue-benchmarks.yml`) on `ubuntu-latest`. All five servers are
 minimal `GET / -> "Hello, World!"` applications generated inline by the workflow; no
 framework-specific tuning is applied beyond what is documented here.
 
@@ -60,6 +60,11 @@ never measured at. Axum and Gin are not yet included in this second pass.
 - Built from the checked-out commit: `make`, then the bench server linked against
   `libcwist.a` with `gcc -O3`.
 - Listens on port `9091`.
+
+## Actix
+
+- `actix-web = "4"`, `cargo build --release`.
+- Listens on port `9095`.
 
 ## Axum
 

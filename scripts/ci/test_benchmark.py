@@ -168,6 +168,27 @@ class BenchmarkRenderTests(unittest.TestCase):
         self.assertIn("CWIST Classic", svg)
         self.assertIn("<polyline", svg)
 
+    def test_actix_in_latency_distribution_and_summary_when_present(self):
+        row = {
+            "cwist_rps": 100, "actix_rps": 150, "wrk_profile": PROFILE,
+            "actix_min_ms": 0.02, "actix_p50_ms": 1.2, "actix_p75_ms": 2.0,
+            "actix_p90_ms": 3.0, "actix_p99_ms": 5.0, "actix_p999_ms": 8.0,
+            "actix_p9999_ms": 12.0, "actix_p99_999_ms": 18.0, "actix_max_ms": 22.0,
+            "actix_rss_kib": 15000, "actix_csw": 50000,
+        }
+        history = self.root / "benchmarks/webserver.json"
+        history.write_text(json.dumps([row]) + "\n")
+        subprocess.run(
+            [sys.executable, str(self.root / "scripts/ci/benchmark.py"), "render"],
+            check=True, capture_output=True, text=True,
+        )
+        svg = (self.root / "docs/webserver-latency-distribution.svg").read_text()
+        self.assertIn("Actix", svg)
+        trends_svg = (self.root / "docs/webserver-benchmark-trends.svg").read_text()
+        self.assertIn("Actix", trends_svg)
+        readme = (self.root / "README.md").read_text()
+        self.assertIn("- **Actix**: 150 req/s", readme)
+
 
 if __name__ == "__main__":
     unittest.main()
