@@ -8,6 +8,7 @@
  * job to the io queue so a worker can execute it.
  */
 #define _POSIX_C_SOURCE 200809L
+#include <stdatomic.h>
 #include <cwist/sys/job/scheduler.h>
 #include <cwist/core/mem/alloc.h>
 #include <cwist/core/mem/gc.h>
@@ -37,7 +38,9 @@ struct cwist_scheduler {
 
     pthread_mutex_t delayed_mtx;
     pthread_cond_t delayed_cond;
-    bool running;
+    /* Atomic: written by destroy and read by the timer thread and by
+     * cwist_scheduler_submit*() on any thread, not all under delayed_mtx. */
+    _Atomic bool running;
 };
 
 /* --- Time helpers ------------------------------------------------------- */
