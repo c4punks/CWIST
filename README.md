@@ -16,6 +16,19 @@ HTTP/3 (QUIC), WebSocket, and WebTransport support, hybrid post-quantum TLS
 reactor. It is written in plain C and links statically.
 </p>
 
+## Quick start
+
+```sh
+git clone https://github.com/c4punks/CWIST.git
+cd cwist
+make
+```
+
+Then build and run a minimal server ([hello world](#hello-world) below), or
+start from the 30 hands-on modules in [tutorials/](tutorials/README.md) and
+the guides in [docs/](docs/README.md). Install options (including Homebrew)
+are in [Install](#install) below.
+
 ## Two server modes, and why you would pick each
 
 CWIST ships two request paths and they are tuned for opposite things. Pick per
@@ -45,15 +58,6 @@ runner CPU model changes between runs, which moves them more than most code
 changes do. They are not universal guarantees.
 
 [Heavy Benchmark on CWIST APP](https://github.com/gg582/fly.board/blob/main/README.md)
-
-<!-- TUNED_BENCHMARK:START -->
-**Tuned low-latency run (wrk -t4 -c100 -d10s (after 10s warmup, warmup discarded)), CWIST vs Axum on identical concurrency:**
-
-- **CWIST**: 116,078 req/s at 0.54ms average latency (P50 0.41ms, P90 1.04ms, P99 2.32ms)
-- **Axum**: 119,535 req/s at 0.79ms average latency (P50 0.69ms, P90 1.46ms, P99 2.56ms), same binary as the main run above
-
-These runs use a different concurrency budget from the main table. They do not establish a causal scheduling explanation or a universal tail-latency improvement.
-<!-- TUNED_BENCHMARK:END -->
 
 ---
 
@@ -149,17 +153,16 @@ int main(void) {
 }
 ```
 
-
 <!-- WEBSERVER_BENCHMARKS:START -->
 Latest Web Server Benchmark (wrk -t12 -c400 -d10s (after 10s warmup, warmup discarded)):
 - **CWIST Classic pool**: 108016 req/s | Latency 2.18ms (P90 4.61ms, P99 8.69ms, P99.999 27.44ms) | RSS 58468KiB | Csw 1090490
 - **CWIST reactor**: 133937 req/s | Latency 2.94ms (P90 5.22ms, P99 8.05ms, P99.999 14.86ms) | RSS 20028KiB | Csw 128063
-- **CWIST reactor (arena_max=1)** — glibc arena cap adopted in PR #35 after mimalloc was tried and refuted (issue #25); this line confirms the decision on every run: 135447 req/s | Latency 2.89ms (P90 5.03ms, P99 7.70ms, P99.999 20.29ms) | RSS 26028KiB | Csw 126424
-- **CWIST reactor (drain_chunk=8)** — cooperative queuing for cwist_async_defer completions within a big io_uring batch (issue #25, docs/cooperative-queuing.md); this workload has no cwist_async_defer traffic to interleave, so parity with the plain CWIST row above is the expected result, not a null finding — the tail-latency win is isolated directly in tests/bench_cooperative_queuing.c: 137427 req/s | Latency 2.92ms (P90 5.33ms, P99 9.04ms, P99.999 32.54ms) | RSS 21464KiB | Csw 123007
 - **Actix**: 128539 req/s | Latency 3.05ms (P90 5.25ms, P99 7.89ms, P99.999 14.90ms) | RSS 11668KiB | Csw 133962
 - **Axum**: 111548 req/s | Latency 3.52ms (P90 5.95ms, P99 8.93ms, P99.999 21.60ms) | RSS 16972KiB | Csw 185059
 - **Gin (Go)**: 75732 req/s | Latency 7.37ms (P90 18.39ms, P99 40.27ms, P99.999 80.96ms) | RSS 30368KiB | Csw 322627
 - **Spring Boot**: 43151 req/s | Latency 9.20ms (P90 12.22ms, P99 19.63ms, P99.999 67.78ms) | RSS 1322448KiB | Csw 221785
+
+_Settled CWIST-internal tuning variants (glibc arena cap from PR #35, cooperative drain chunk from issue #25) are recorded in docs/cooperative-queuing.md and benchmarks/webserver.json; they are no longer rendered as comparison rows._
 
 **Spring runtime environment**
 
@@ -216,7 +219,6 @@ GitHub hands out a different CPU model per run, which moves these numbers more t
 <!-- WEBSERVER_BENCHMARKS:END -->
 
 _Methodology, JVM options, and fairness settings: [docs/webserver-benchmark.md](docs/webserver-benchmark.md)_
-
 
 ## What CWIST includes
 
