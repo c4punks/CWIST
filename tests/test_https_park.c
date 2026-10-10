@@ -475,6 +475,27 @@ static void test_http2_deferred_response(void) {
     printf("Passed HTTP/2 deferred response over TLS.\n");
 }
 
+/* A connection whose stream was deferred in the same pool-thread run that
+ * ends the session (GOAWAY right behind the request) must still be closed:
+ * the h2 loop owns the conn, the async completion only owns the stream. */
+static void test_http2_conn_closed_after_deferred_stream(void) {
+    printf("Testing HTTP/2 conn close after a deferred stream...\n");
+    cwist_app *app = make_app(true);
+    h2_resp_t r;
+
+    client_t a = client_open(app, true);
+    h2_start(&a);
+    h2_get(&a, 1, "/defer", false);
+    static const unsigned char goaway[17] = {0, 0, 8, 7, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0};
+    ssl_write_all(a.ssl, goaway, sizeof(goaway));
+    (void)h2_read_response(&a, 1, &r);
+    assert(wait_closed(&a, 4000));
+
+    client_close(&a);
+    cwist_app_destroy(app);
+    printf("Passed HTTP/2 conn close after a deferred stream.\n");
+}
+
 /* The compress middleware shrinks a body whose handler already set
  * Content-Length: the HTTP/2 content-length must match the DATA sent. */
 static void test_http2_content_length_matches_compressed_body(void) {
@@ -560,6 +581,7 @@ int main(void) {
     test_http2_idle_session_is_parked();
     test_http2_parked_session_expires_with_goaway();
     test_http2_deferred_response();
+    test_http2_conn_closed_after_deferred_stream();
     test_http2_content_length_matches_compressed_body();
 #ifdef TEST_HTTPS_PARK_FULL_GC
     test_pool_destroy_closes_parked_http1_full_gc();
