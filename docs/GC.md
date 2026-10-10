@@ -190,6 +190,51 @@ cost behaves with many live blocks and several threads.
 `cwist_reg_ptr_sized`) so epoch rotation reclaims it; explicit `cwist_free`
 remains correct and simply unregisters the block early.
 
+### 7. Explicit flushes and reclamation
+
+Two things are easy to assume and both are wrong:
+
+- **"Retired" is not "freed".** `cwist_gc_scope_flush()` and `cwist_ebr_free()`
+  only *retire* blocks. They are freed when something drives reclamation:
+  `cwist_gc_pipeline_tick()`, or the io_queue behind a `cwist_scheduler`
+  (`cwist_app_use_scheduler()`, `cwist_async_set_timeout()`). The full-GC
+  instance runs in manual rotation, so nothing drives reclamation on its own.
+  A process that never drives it keeps everything it flushes. Each retire
+  also allocates a node that is never returned.
+- **Epoch deferral protects only readers inside an epoch.** Request-serving
+  threads (HTTPS pool, reactors, h2 loops) never call `ttak_epoch_enter()`.
+  Once reclamation runs, a retired block is freed even if one of those
+  threads is still using it.
+
+So `cwist_gc_scope_flush()` has a hard precondition: **the calling thread
+holds no tracked block that anything will touch again.**
+
+| Call site | OK? | Why |
+|---|---|---|
+| End of a self-contained job on a dedicated worker thread, after handing results on through `cwist_gc_scope_disown()` or a disowning API such as `cwist_async_respond_with()` | Yes | Nothing the job allocated is live any more |
+| Request handler or middleware, even after `next()` returns | **No** | The response is still read and sent afterwards (compression, serialization), and headers added with `cwist_http_header_add()` are tracked |
+| Any thread that serves connections | **No** | Per-connection state (h2 session buffers, HPACK table) lives on that thread across requests |
+
+`cwist_conn_registry_flush()` has the same shape: it closes every connection
+the calling thread registered, including ones another thread is serving
+right now (parked, deferred, resubmitted).
+
+The `cwist` CLI enforces reading this. `cwist audit` and `cwist watcher` warn
+on every call to `cwist_gc_scope_flush`, `cwist_ebr_free`,
+`cwist_gc_scope_disown`/`cwist_gc_scope_untrack`, `cwist_conn_registry_flush`
+and `cwist_conn_registry_sweep_all` in application code. Each warning states
+the API's contract. Once you have checked a call site against it, mark the
+site to silence the warning:
+
+```c
+/* End of job: everything this task allocated was freed or disowned above. */
+cwist_gc_scope_flush(); /* cwist-ack: cwist_gc_scope_flush */
+```
+
+(The marker may also sit on the line directly above the call.) This came out
+of c4punks/CWIST#347: an application flushed from a request middleware, which
+was silent only because nothing in that process ever drove reclamation.
+
 ## Semantics summary
 
 | Event | Without full_gc (default) | With `cwist_full_gc(true)` |
@@ -199,7 +244,7 @@ remains correct and simply unregisters the block early.
 | `cwist_alloc` object | Manual `cwist_free` | Epoch rotation reclaims; explicit free still fine |
 | cJSON's internal `malloc` | N/A (cJSON manages its own memory) | Redirected to `cwist_alloc` via `cJSON_InitHooks`; freed by epoch rotation |
 | Handler calls bare `malloc()` (opt-in via `CWIST_INTERCEPT_MALLOC`) | Heap leak if forgotten | Redirected to the pending-sweep list; freed by epoch rotation |
-| Teardown safety | Caller discipline | Epoch-deferred; no reclaim while referenced |
+| Teardown safety | Caller discipline | Epoch-deferred for readers inside `ttak_epoch_enter()`; request-serving threads are not, so explicit flushes must follow section 7 |
 
 ## Non-goals and notes
 
