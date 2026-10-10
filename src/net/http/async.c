@@ -81,6 +81,14 @@ static const char *cwist_async_reason(cwist_http_status_t status) {
     }
 }
 
+static __thread bool t_https_deferred = false;
+
+bool cwist_async_https_take_deferred(void) {
+    bool deferred = t_https_deferred;
+    t_https_deferred = false;
+    return deferred;
+}
+
 cwist_async *cwist_async_defer(cwist_http_request *req, cwist_http_response *res) {
     if (!req || !res || res->deferred) return NULL;
     cwist_async *a = cwist_alloc(sizeof(*a));
@@ -105,6 +113,7 @@ cwist_async *cwist_async_defer(cwist_http_request *req, cwist_http_response *res
     if (req->https_conn) {
         a->https_conn = req->https_conn;
         ((cwist_https_connection *)req->https_conn)->deferred = true;
+        t_https_deferred = true;
     }
     if (req->h2_queue) {
         /* Keep the queue alive until the completion has been enqueued, even

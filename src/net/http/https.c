@@ -8,6 +8,7 @@
 #include <cwist/core/mem/gc.h>
 #include <cwist/sys/app/shutdown.h>
 #include "tls_chain.h"
+#include "async_internal.h"
 #include <openssl/ssl.h>
 #include <openssl/err.h>
 #include <openssl/evp.h>
@@ -1985,10 +1986,15 @@ static void *https_thread_handler(void *arg) {
         conn->pool_handler = payload->handler;
         conn->pool_user_ctx = payload->user_ctx;
         t_https_parked = false;
+        (void)cwist_async_https_take_deferred();
         payload->handler(conn, payload->user_ctx);
+        /* A deferred conn belongs to its completion after the dispatch ack,
+         * which may already have closed or resubmitted it: never read conn
+         * here once it was deferred (#344). */
+        bool deferred = cwist_async_https_take_deferred();
         if (t_https_parked) {
             t_https_parked = false;
-        } else if (!conn->deferred) {
+        } else if (!deferred) {
             cwist_https_close_connection(conn);
         }
     } else {
