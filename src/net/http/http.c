@@ -3377,6 +3377,14 @@ cwist_http_coalesce_flush(int client_fd, cwist_http_async_conn_t *conn, bool kee
     flags |= MSG_DONTWAIT;
 #endif
 
+    if (!atomic_load(&g_cwist_running)) {
+        /* Shutdown stops the reactor loop: finish this already-built batch
+         * here instead of parking bytes on a callback that cannot run. */
+        int rc = cwist_http_sendmsg_all(client_fd, &iov, 1, flags);
+        conn->olen = 0;
+        return rc == 0 ? CWIST_COALESCE_FLUSH_DONE : CWIST_COALESCE_FLUSH_ERROR;
+    }
+
     size_t sent = 0;
     cwist_write_status_t st = cwist_http_sendmsg_speculative(client_fd, &iov, 1, flags, &sent);
     if (st == CWIST_WRITE_DONE) {
@@ -4442,11 +4450,13 @@ cwist_http_request *cwist_http_receive_request(int client_fd, char *read_buf, si
         read_buf[total_received] = '\0';
     }
 
+    /* Like the nonblocking receiver, parse only this header block. Framing
+     * below owns body assembly; subsequent pipelined requests are not a body. */
+    size_t header_len = (size_t)(header_end + 4 - read_buf);
     cwist_http_request *req =
-        cwist_http_parse_request_with_header_end(read_buf, total_received, header_end, err_out);
+        cwist_http_parse_request_with_header_end(read_buf, header_len, header_end, err_out);
     if (!req) return NULL;
 
-    size_t header_len = (size_t)(header_end + 4 - read_buf);
     size_t body_received = total_received - header_len;
 
     /* RFC 9110 section 10.1.1: the parser already validated that any Expect value is
