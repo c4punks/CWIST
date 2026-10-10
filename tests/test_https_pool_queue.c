@@ -27,6 +27,9 @@ static bool g_gate_open = false;
 static atomic_bool g_blocker_running = false;
 static long g_seen[TASKS];
 static atomic_long g_seen_n = 0;
+/* Bumped after g_seen[] is written, so a reader that waits on it sees the
+ * slot (g_seen_n only reserves the slot). */
+static atomic_long g_done_n = 0;
 
 static cwist_https_connection *fake_conn(void) {
     cwist_https_connection *c = cwist_alloc(sizeof(*c));
@@ -50,6 +53,7 @@ static void record(cwist_https_connection *conn, void *ctx) {
     long n = atomic_fetch_add(&g_seen_n, 1);
     assert(n < TASKS);
     g_seen[n] = (long)(intptr_t)ctx;
+    atomic_fetch_add(&g_done_n, 1);
 }
 
 static void submit_round(long base, long count) {
@@ -65,11 +69,11 @@ int main(void) {
     /* Wrap the ring at its initial size first: a few small batches that the
      * single worker drains between submits move head/tail off slot 0. */
     for (int r = 0; r < 3; r++) {
-        long before = atomic_load(&g_seen_n);
+        long before = atomic_load(&g_done_n);
         submit_round(before, 700);
-        while (atomic_load(&g_seen_n) < before + 700) usleep(1000);
+        while (atomic_load(&g_done_n) < before + 700) usleep(1000);
     }
-    long base = atomic_load(&g_seen_n);
+    long base = atomic_load(&g_done_n);
 
     /* Hold the only worker, then queue far past the initial capacity. */
     https_pool_submit_conn(fake_conn(), NULL, blocker, NULL);
@@ -80,7 +84,7 @@ int main(void) {
     g_gate_open = true;
     pthread_cond_broadcast(&g_gate_cv);
     pthread_mutex_unlock(&g_gate_mu);
-    while (atomic_load(&g_seen_n) < TASKS) usleep(1000);
+    while (atomic_load(&g_done_n) < TASKS) usleep(1000);
 
     for (long i = 0; i < TASKS; i++) {
         if (g_seen[i] != i) {
