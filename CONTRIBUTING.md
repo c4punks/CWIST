@@ -131,6 +131,16 @@ taken. Ask in the issue or on Discord if it is unclear which happened.
     `make dist VERSION=X.Y.Z` from a checkout whose submodules match the
     recorded gitlinks, then `make WERROR=1` and `make WERROR=1 test` in the
     unpacked tree.
+- **Public API baseline (required for every major release, starting with
+  v4.0):** regenerate `docs/api/v4.0-api-baseline.txt` with
+  `make api-baseline` and review the resulting diff as an intentional API
+  change. Any symbol addition, removal, or rename in the diff must be a
+  deliberate, recorded API decision before the cut — an unexpected diff is
+  a release blocker.
+- **Soak run (required before a major-release cut, starting with v4.0):**
+  the release commit must pass the soak defined in `docs/soak-testing.md`
+  (`scripts/ci/soak.sh` with the release-candidate duration); see ROADMAP.md
+  "CWIST v4.0 Readiness" for the exit criteria.
 - Release notes list every change since the previous tag: each fix with its
   impact and the affected versions, every new API or knob, and every
   feature included, marked experimental when it is. A release that carries
