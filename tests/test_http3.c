@@ -144,25 +144,17 @@ static void raw_process_io(raw_h3_client_t *cl, int timeout_ms) {
 }
 
 static void *http3_server_thread(void *arg) {
-    int udp_fd = *(int *)arg;
-    cwist_http3_context *ctx = NULL;
-    cwist_error_t err = cwist_http3_init_context(&ctx, TEST_CERT, TEST_KEY);
-    assert(err.error.err_i16 == 0);
-
-    cwist_http3_server_loop(udp_fd, ctx, http3_test_handler, NULL);
-
-    cwist_http3_destroy_context(ctx);
+    server_thread_args_t *args = (server_thread_args_t *)arg;
+    cwist_http3_server_loop(args->udp_fd, args->ctx, http3_test_handler, NULL);
     return NULL;
 }
-#endif
 
 int main(void) {
     printf("Testing HTTP/3 (BoringSSL + lsquic) infrastructure...\n");
 
+    /* --- Test 1: init_context with valid cert/key --- */
     cwist_http3_context *ctx = NULL;
     cwist_error_t err = cwist_http3_init_context(&ctx, TEST_CERT, TEST_KEY);
-
-#if CWIST_HAVE_OPENSSL_QUIC
     assert(err.error.err_i16 == 0);
     assert(ctx != NULL);
     assert(ctx->ssl_ctx != NULL);
@@ -193,7 +185,6 @@ int main(void) {
     addr.sin_family = AF_INET;
     addr.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
     addr.sin_port = htons(0);
-
     assert(bind(udp_fd, (struct sockaddr *)&addr, sizeof(addr)) == 0);
 
     ctx = NULL;
@@ -211,16 +202,11 @@ int main(void) {
     int rc = pthread_create(&tid, NULL, http3_server_thread, &args);
     assert(rc == 0);
 
-    usleep(100000);
+    /* Let the server start polling */
+    usleep(50000);
 
-    struct sockaddr_in server_addr;
-    socklen_t server_addr_len = sizeof(server_addr);
-    getsockname(udp_fd, (struct sockaddr *)&server_addr, &server_addr_len);
-
-    /* The server loop must force the UDP socket into non-blocking mode */
-    int fl = fcntl(udp_fd, F_GETFL, 0);
-    assert(fl >= 0 && (fl & O_NONBLOCK));
-    printf("[PASS] HTTP/3 server_loop sets O_NONBLOCK on the UDP socket.\n");
+    /* Verify the context is marked running */
+    assert(ctx->running == 1);
 
     /* The server loop must force the UDP socket into non-blocking mode */
     int fl = fcntl(udp_fd, F_GETFL, 0);
@@ -230,15 +216,27 @@ int main(void) {
     /* Stop the server */
     ctx->running = 0;
 
-    usleep(100000);
+    rc = pthread_join(tid, NULL);
+    assert(rc == 0);
+    printf("[PASS] HTTP/3 server_loop starts and stops gracefully.\n");
+
+    cwist_http3_destroy_context(ctx);
     close(udp_fd);
 
-    printf("HTTP/3 server loop skeleton test finished.\n");
-#else
-    assert(err.error.err_i16 == -1);
-    assert(ctx == NULL);
-    printf("HTTP/3 QUIC support unavailable in this OpenSSL build; TCP HTTP/1.1 fallback remains available.\n");
-#endif
+    /* --- Test 6: Advanced features (API smoke test) --- */
+    ctx = NULL;
+    err = cwist_http3_init_context_ephemeral(&ctx);
+    assert(err.error.err_i16 == 0);
+
+    /* Enable server push */
+    cwist_http3_set_push_enabled(ctx, 1);
+    assert(ctx->push_enabled == 1);
+    printf("[PASS] HTTP/3 server push enable API.\n");
+
+    /* Connection migration is on by default */
+    assert(ctx->allow_migration == 0); /* not explicitly set yet */
+    cwist_http3_destroy_context(ctx);
+    printf("[PASS] HTTP/3 connection migration defaults.\n");
 
     /* --- Test 7: response header normalization for browser strictness --- */
     char h3_name[64];
@@ -425,6 +423,119 @@ int main(void) {
     printf("[PASS] HTTP/3 verify succeeds with CA bundle for server cert.\n");
 
     cwist_http3_client_destroy(client);
+    ctx->running = 0;
+    rc = pthread_join(tid, NULL);
+    assert(rc == 0);
+    cwist_http3_destroy_context(ctx);
+    close(udp_fd);
+
+    /* --- Test 12: a peer-initiated CONNECTION_CLOSE is recorded on the
+     * context.  The high-level client cannot close a connection (engine
+     * destroy is silent), so use the raw lsquic client above: complete the
+     * handshake, then abort.  The pinned lsquic notifies the peer with a
+     * transport-level CONNECTION_CLOSE (NO_ERROR, "user aborted
+     * connection"); the server must record it and expose it via
+     * cwist_http3_last_close_error(). --- */
+    ctx = NULL;
+    err = cwist_http3_init_context_ephemeral(&ctx);
+    assert(err.error.err_i16 == 0);
+
+    udp_fd = socket(AF_INET, SOCK_DGRAM, 0);
+    assert(udp_fd >= 0);
+    memset(&addr, 0, sizeof(addr));
+    addr.sin_family = AF_INET;
+    addr.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
+    addr.sin_port = htons(0);
+    assert(bind(udp_fd, (struct sockaddr *)&addr, sizeof(addr)) == 0);
+    addr_len = sizeof(addr);
+    assert(getsockname(udp_fd, (struct sockaddr *)&addr, &addr_len) == 0);
+
+    server_thread_args_t args12 = {.udp_fd = udp_fd, .ctx = ctx};
+    rc = pthread_create(&tid, NULL, http3_server_thread, &args12);
+    assert(rc == 0);
+    usleep(50000);
+
+    /* No close frame received yet. */
+    bool close_app = true;
+    uint64_t close_code = UINT64_MAX;
+    char close_reason[256];
+    assert(cwist_http3_last_close_error(ctx, &close_app, &close_code, close_reason,
+                                        sizeof(close_reason)) == -1);
+
+    /* Raw client: connect and wait for the handshake to complete. */
+    raw_h3_client_t raw = {0};
+    raw.udp_fd = socket(AF_INET, SOCK_DGRAM, 0);
+    assert(raw.udp_fd >= 0);
+    struct sockaddr_in raw_local = {0};
+    raw_local.sin_family = AF_INET;
+    raw_local.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
+    raw_local.sin_port = htons(0);
+    assert(bind(raw.udp_fd, (struct sockaddr *)&raw_local, sizeof(raw_local)) == 0);
+    raw.local_addr_len = sizeof(raw.local_addr);
+    assert(getsockname(raw.udp_fd, (struct sockaddr *)&raw.local_addr,
+                       &raw.local_addr_len) == 0);
+
+    raw.ssl_ctx = SSL_CTX_new(TLS_method());
+    assert(raw.ssl_ctx != NULL);
+    SSL_CTX_set_min_proto_version(raw.ssl_ctx, TLS1_3_VERSION);
+    SSL_CTX_set_max_proto_version(raw.ssl_ctx, TLS1_3_VERSION);
+    /* No verification: the server uses an ephemeral self-signed cert. */
+
+    struct lsquic_engine_settings raw_settings;
+    lsquic_engine_init_settings(&raw_settings, LSENG_HTTP);
+    raw_settings.es_versions = (1 << LSQVER_I001) | (1 << LSQVER_I002);
+
+    struct lsquic_engine_api raw_api = {
+        .ea_stream_if = &raw_stream_if,
+        .ea_stream_if_ctx = &raw,
+        .ea_packets_out = raw_packets_out,
+        .ea_packets_out_ctx = &raw,
+        .ea_get_ssl_ctx = raw_get_ssl_ctx,
+        .ea_settings = &raw_settings,
+        .ea_alpn = "h3",
+    };
+    raw.engine = lsquic_engine_new(LSENG_HTTP, &raw_api);
+    assert(raw.engine != NULL);
+
+    raw.conn = lsquic_engine_connect(raw.engine, N_LSQVER,
+                                     (struct sockaddr *)&raw.local_addr,
+                                     (struct sockaddr *)&addr, &raw, NULL, "localhost", 0,
+                                     NULL, 0, NULL, 0);
+    assert(raw.conn != NULL);
+
+    int hsk_ok = 0;
+    for (int i = 0; i < 200 && !hsk_ok; ++i) {
+        raw_process_io(&raw, 50);
+        if (!raw.conn_closed && lsquic_conn_status(raw.conn, NULL, 0) == LSCONN_ST_CONNECTED)
+            hsk_ok = 1;
+    }
+    assert(hsk_ok);
+    printf("[PASS] HTTP/3 raw client handshake completed.\n");
+
+    /* Let the server promote its mini connection to a full one. */
+    usleep(200000);
+
+    /* Abort: the pinned lsquic notifies the peer with CONNECTION_CLOSE. */
+    lsquic_conn_abort(raw.conn);
+    for (int i = 0; i < 20; ++i) raw_process_io(&raw, 25);
+
+    lsquic_engine_destroy(raw.engine);
+    SSL_CTX_free(raw.ssl_ctx);
+    close(raw.udp_fd);
+
+    /* The close frame is recorded on the engine thread; poll briefly. */
+    int close_rc = -1;
+    for (int i = 0; i < 60 && close_rc != 0; ++i) {
+        close_rc = cwist_http3_last_close_error(ctx, &close_app, &close_code, close_reason,
+                                                sizeof(close_reason));
+        if (close_rc != 0) usleep(50000);
+    }
+    assert(close_rc == 0);
+    assert(close_app == false); /* transport-level close (0x1C), not H3 */
+    assert(close_code == 0);    /* TEC_NO_ERROR pinned by lsquic abort path */
+    printf("[PASS] HTTP/3 peer CONNECTION_CLOSE recorded (transport, code=0, reason=\"%s\").\n",
+           close_reason);
+
     ctx->running = 0;
     rc = pthread_join(tid, NULL);
     assert(rc == 0);

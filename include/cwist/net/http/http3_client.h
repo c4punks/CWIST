@@ -22,6 +22,7 @@ extern "C" {
  * @brief Opaque HTTP/3 client handle.
  */
 typedef struct cwist_http3_client cwist_http3_client;
+typedef struct cwist_webtransport_client_session cwist_webtransport_client_session;
 
 /** @name Lifecycle */
 /** @{ */
@@ -189,26 +190,21 @@ ssize_t cwist_http3_client_recv_datagram(cwist_http3_client *client, void *buf, 
 
 /** @} */
 
-/** @name Resilience */
-/** @{ */
-
-/** @name Request Execution */
+/** @name WebTransport client (experimental; LSQUIC PR #629) */
 /** @{ */
 
 /**
- * @brief Perform a synchronous HTTP/3 request.
+ * Establish an HTTP/3 Extended CONNECT WebTransport session.
  *
- * Establishes a QUIC connection if none exists, sends the request,
- * and blocks until the complete response is received or the timeout
- * expires.
+ * The client must have a server configured first.  The returned session is
+ * owned by @p client and remains valid until it is closed or the client is
+ * destroyed.  Call cwist_webtransport_client_poll() while the session is
+ * active to progress QUIC I/O.
  *
- * @param client    Client handle.
- * @param path      Request path (e.g. "/index.html").
- * @param method    HTTP method enum.
- * @param headers   Optional request headers (may be NULL).
- * @param body      Optional request body (may be NULL).
- * @param body_len  Length of @p body.
- * @param out_response  Output pointer for parsed response.
+ * @param client Configured HTTP/3 client.
+ * @param path WebTransport endpoint path.
+ * @param origin Optional Origin value; pass NULL when not applicable.
+ * @param out_session Receives the connected session.
  * @return CWIST error, err_i16 == 0 on success.
  */
 cwist_error_t
@@ -216,7 +212,8 @@ cwist_http3_client_webtransport_connect(cwist_http3_client *client, const char *
                                         const char *origin,
                                         cwist_webtransport_client_session **out_session);
 
-/** @} */
+/** Progress an active WebTransport client's UDP and QUIC state machine. */
+int cwist_webtransport_client_poll(cwist_http3_client *client, int timeout_ms);
 
 /** Return non-zero while the peer has not closed the session. */
 int cwist_webtransport_client_is_open(const cwist_webtransport_client_session *session);
@@ -227,7 +224,11 @@ void *cwist_webtransport_client_open_bidi(cwist_webtransport_client_session *ses
 /** Open a client-initiated unidirectional WebTransport data stream. */
 void *cwist_webtransport_client_open_uni(cwist_webtransport_client_session *session);
 
-/** @} */
+/** Non-blocking I/O helpers for streams returned by the open functions. */
+ssize_t cwist_webtransport_client_stream_read(void *stream, void *buf, size_t len);
+ssize_t cwist_webtransport_client_stream_write(void *stream, const void *buf, size_t len);
+int cwist_webtransport_client_stream_flush(void *stream);
+int cwist_webtransport_client_stream_close(void *stream);
 
 /** Send an unreliable datagram in this WebTransport session. */
 ssize_t cwist_webtransport_client_send_datagram(cwist_webtransport_client_session *session,

@@ -259,7 +259,7 @@ def render_webserver_svg(history: list[dict]) -> str:
         max_val = max(vals, default=1.0)
         if max_val <= 0: max_val = 1.0
         
-        bar_y_base = py + 55
+        bar_y_base = py + 44
         for s_idx, (label, key, color) in enumerate(series_list):
             available = type(ws_latest.get(key)) in (int, float) and math.isfinite(ws_latest[key])
             val = float(ws_latest[key]) if available else 0.0

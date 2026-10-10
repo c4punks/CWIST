@@ -32,6 +32,24 @@ struct cwist_rdbms_runtime;
 typedef void (*cwist_handler_func)(cwist_http_request *req, cwist_http_response *res);
 
 /**
+ * @brief Route handler that also receives the context it was registered with.
+ *
+ * Registered through the `_ex` routing functions (cwist_app_get_ex() and
+ * friends). @p user_ctx comes first, matching cwist_http2_request_handler_func.
+ * @param user_ctx The pointer passed at registration.
+ * @param req Pointer to the HTTP request object.
+ * @param res Pointer to the HTTP response object.
+ */
+typedef void (*cwist_handler_ex_func)(void *user_ctx, cwist_http_request *req,
+                                      cwist_http_response *res);
+
+/**
+ * @brief Releases a route's user context once the route no longer needs it.
+ * @param user_ctx The pointer passed at registration.
+ */
+typedef void (*cwist_handler_ctx_destroy_func)(void *user_ctx);
+
+/**
  * @brief Function pointer type for WebSocket handlers.
  * @param ws Pointer to the WebSocket context.
  */
@@ -48,7 +66,7 @@ typedef void (*cwist_error_handler_func)(cwist_http_request *req, cwist_http_res
  *
  * @param req    Parsed HTTP request object (CONNECT with :protocol=webtransport).
  * @param res    HTTP response object to be populated (e.g., 200 OK to accept).
- * @param stream Opaque lsquic_stream_t pointer for the WebTransport session.
+ * @param stream Opaque CWIST WebTransport session handle.
  */
 typedef void (*cwist_webtransport_handler_func)(cwist_http_request *req, cwist_http_response *res,
                                                 void *stream);
@@ -96,6 +114,19 @@ bool cwist_rdbms_mount_runtime(cwist_app *app, cwist_rdbms_provider_t provider, 
  */
 typedef void (*cwist_middleware_func)(cwist_http_request *req, cwist_http_response *res,
                                       cwist_handler_func next);
+
+/**
+ * @brief Extended middleware type that also receives a user context.
+ *
+ * This is the target type for language bindings that need to pass a closure
+ * and its destructor through the C middleware chain.
+ */
+typedef void (*cwist_middleware_func_ex)(cwist_http_request *req, cwist_http_response *res,
+                                          cwist_handler_func next, void *user_ctx);
+
+/** @brief Destructor for a middleware user context. */
+typedef void (*cwist_middleware_ctx_destroy_func)(void *user_ctx);
+
 typedef void (*cwist_https_request_handler_func)(cwist_https_connection *conn, void *ctx);
 
 /**
@@ -103,11 +134,17 @@ typedef void (*cwist_https_request_handler_func)(cwist_https_connection *conn, v
  */
 typedef struct cwist_middleware_node {
     cwist_middleware_func func;
+    cwist_middleware_func_ex func_ex;
+    void *user_ctx;
+    cwist_middleware_ctx_destroy_func destroy;
+    bool is_ex;
     struct cwist_middleware_node *next;
 } cwist_middleware_node;
 
 typedef struct cwist_route_table cwist_route_table;
 typedef struct cwist_static_dir cwist_static_dir;
+typedef struct cwist_config cwist_config;
+typedef struct cwist_logger cwist_logger;
 
 /**
  * @brief Main Application Context.
@@ -118,7 +155,10 @@ typedef struct cwist_static_dir cwist_static_dir;
 typedef struct cwist_app {
     int port;
     bool use_ssl;
-    bool use_http2;
+    bool use_http2;   ///< Cleartext HTTP/2 (h2c)
+    bool use_http3;   ///< Ephemeral (Zero-config) HTTP/3
+    bool use_https2;  ///< TLS HTTP/2 (h2)
+    bool use_https3;  ///< TLS HTTP/3
     char *cert_path;
     char *key_path;
     cwist_https_request_handler_func https_request_handler;
@@ -131,11 +171,14 @@ typedef struct cwist_app {
     cwist_error_handler_func error_handler; ///< Global fallback error handler.
     cwist_error_handler_entry *error_handlers; ///< Per-status-code error handlers.
 
-    // Internal contexts
-    cwist_https_context *ssl_ctx;
-    cwist_db *db;
-    char *db_path;
-    bool nuke_enabled;
+    struct cwist_config *config; ///< Application configuration.
+    struct cwist_logger *logger; ///< Application logger.
+
+    cwist_https_context *ssl_ctx; ///< SSL context when TLS is enabled.
+    struct cwist_http3_context *h3_ctx; ///< HTTP/3 QUIC Context.
+    cwist_db *db; ///< Shared database handle.
+    char *db_path; ///< Database path (if set).
+    bool nuke_enabled; ///< True when NUKE DB integration is active.
 
     /** @brief Max memory space for static file pool (0 = auto-detected * 2) */
     size_t max_mem_space;
@@ -174,9 +217,12 @@ typedef struct cwist_app {
 
     /** @brief Unary gRPC route registry. */
     void *grpc_routes;
+
+    /** @brief Content-hashed in-memory assets (see <cwist/sys/app/assets.h>). */
+    void *assets;
 } cwist_app;
 
-// --- Memory Management ---
+/** --- Memory Management --- */
 
 /**
  * @brief Represents a file loaded into the fixed memory pool.
@@ -187,6 +233,8 @@ typedef struct cwist_file_t {
     void *data;       ///< Pointer to memory-tracked file contents
     size_t size;      ///< Size of the file in bytes
     time_t last_mod;  ///< Last modification time
+    char etag[40];          ///< Precomputed ETag for conditional requests
+    char last_mod_hdr[30];  ///< Precomputed HTTP-date (29 chars + NUL)
     ttak_mem_node_t *node; ///< Tracking node for libttak lifecycle
 } cwist_file_t;
 
@@ -213,7 +261,7 @@ typedef struct cwist_fix_server_mem {
     int check_interval_ms;
 } cwist_fix_server_mem;
 
-// --- API ---
+/** --- API --- */
 
 /**
  * @brief Creates a new CWIST application instance.
@@ -243,10 +291,33 @@ void cwist_app_destroy(cwist_app *app);
  */
 void cwist_app_set_max_memspace(cwist_app *app, size_t size);
 
-// Middleware
+/** @name Middleware */
+/** @{ */
 void cwist_app_use(cwist_app *app, cwist_middleware_func mw);
 
-// Error Handling Configuration
+/**
+ * @brief Append an extended middleware to the application chain.
+ *
+ * Exactly one of @p mw or @p mw_ex must be non-NULL.  The user context is
+ * passed to @p mw_ex on every invocation; @p destroy is called once when the
+ * application is destroyed or, if registration fails, before this returns.
+ * Multiport sub-apps share the context without owning it.
+ *
+ * @param app     Application context.
+ * @param mw      Legacy middleware function (may be NULL if @p mw_ex is set).
+ * @param mw_ex   Extended middleware function with user context (may be NULL if @p mw is set).
+ * @param user_ctx Opaque context for @p mw_ex.
+ * @param destroy  Destructor for @p user_ctx.
+ * @return INT16 0 on success; INT16 -1 when @p app is NULL, not exactly one
+ *         of @p mw and @p mw_ex is set, or the node could not be allocated.
+ */
+cwist_error_t cwist_app_use_ex(cwist_app *app, cwist_middleware_func mw,
+                               cwist_middleware_func_ex mw_ex, void *user_ctx,
+                               cwist_middleware_ctx_destroy_func destroy);
+/** @} */
+
+/** @name Error Handling Configuration */
+/** @{ */
 void cwist_app_set_error_handler(cwist_app *app, cwist_error_handler_func handler);
 void cwist_app_register_error_handler(cwist_app *app, cwist_http_status_t status,
                                       cwist_error_handler_func handler);
@@ -367,6 +438,9 @@ cwist_scheduler_t *cwist_app_get_scheduler(cwist_app *app);
 bool cwist_app_auto_rdbms(cwist_app *app, int port);
 
 #define cwist_use_https2(enabled) cwist_app_use_https2((app), (enabled))
+#define cwist_use_https3(enabled) cwist_app_use_https3((app), (enabled))
+#define cwist_use_http2(enabled) cwist_app_use_http2((app), (enabled))
+#define cwist_use_http3(enabled) cwist_app_use_http3((app), (enabled))
 
 /** @name Routing */
 /** @{ */
@@ -379,6 +453,58 @@ void cwist_app_put(cwist_app *app, const char *path, cwist_handler_func handler)
 void cwist_app_delete(cwist_app *app, const char *path, cwist_handler_func handler);
 void cwist_app_patch(cwist_app *app, const char *path, cwist_handler_func handler);
 void cwist_app_ws(cwist_app *app, const char *path, cwist_ws_handler_func handler);
+
+/**
+ * @brief Registers a GET route whose handler receives a user context.
+ *
+ * Behaves like cwist_app_get() (exact and `:param` paths, middleware, every
+ * transport), but the handler is called as `handler(user_ctx, req, res)`.
+ * This lets a caller bind state to a route without globals, for example a
+ * closure from a language binding.
+ *
+ * Ownership of @p user_ctx passes to the app on every call. When @p destroy
+ * is not NULL it is called exactly once with @p user_ctx:
+ * - when the app is destroyed;
+ * - when the same method and path (one without `:param` segments) is
+ *   registered again, by any routing function, before the new registration
+ *   takes over (unless it passes the same non-NULL @p user_ctx);
+ * - immediately, if the registration fails.
+ * Multiport sub-apps share the context without owning it. Pass NULL for
+ * @p destroy to keep ownership with the caller.
+ *
+ * @param app Application being configured.
+ * @param path Route path; may contain `:param` segments.
+ * @param handler Handler invoked for matching requests.
+ * @param user_ctx Opaque pointer passed to @p handler (may be NULL).
+ * @param destroy Optional destructor for @p user_ctx.
+ * @return INT16 0 on success; INT16 -1 when @p app, @p path or @p handler is
+ *         NULL or the route could not be allocated.
+ */
+cwist_error_t cwist_app_get_ex(cwist_app *app, const char *path, cwist_handler_ex_func handler,
+                               void *user_ctx, cwist_handler_ctx_destroy_func destroy);
+/** @brief POST counterpart of cwist_app_get_ex(). */
+cwist_error_t cwist_app_post_ex(cwist_app *app, const char *path, cwist_handler_ex_func handler,
+                                void *user_ctx, cwist_handler_ctx_destroy_func destroy);
+/** @brief PUT counterpart of cwist_app_get_ex(). */
+cwist_error_t cwist_app_put_ex(cwist_app *app, const char *path, cwist_handler_ex_func handler,
+                               void *user_ctx, cwist_handler_ctx_destroy_func destroy);
+/** @brief DELETE counterpart of cwist_app_get_ex(). */
+cwist_error_t cwist_app_delete_ex(cwist_app *app, const char *path, cwist_handler_ex_func handler,
+                                  void *user_ctx, cwist_handler_ctx_destroy_func destroy);
+/** @brief PATCH counterpart of cwist_app_get_ex(). */
+cwist_error_t cwist_app_patch_ex(cwist_app *app, const char *path, cwist_handler_ex_func handler,
+                                 void *user_ctx, cwist_handler_ctx_destroy_func destroy);
+
+/**
+ * @brief Register a callback-shaped non-blocking WebSocket endpoint (C1M mode).
+ *
+ * On the C1M reactor path each complete message is delivered through
+ * on_message without blocking the worker.  In classic mode (thread pool) a
+ * route registered only through this function answers 501 Not Implemented;
+ * use cwist_app_ws() for the blocking handler API there.
+ */
+void cwist_app_ws_async(cwist_app *app, const char *path, cwist_ws_on_message_t on_message,
+                        void *user_data);
 void cwist_app_get_opt(cwist_app *app, const char *path, cwist_handler_func handler,
                        cwist_endpoint_opt_t opts);
 void cwist_app_post_opt(cwist_app *app, const char *path, cwist_handler_func handler,
@@ -413,6 +539,7 @@ char *cwist_url_for(cwist_app *app, const char *name, cwist_query_map *params);
  * @param app Pointer to the app.
  * @param url_prefix URL prefix (e.g., "/static").
  * @param directory Local filesystem path.
+ * @note Additional method helpers can be added as needed.
  */
 cwist_error_t cwist_app_static(cwist_app *app, const char *url_prefix, const char *directory);
 
@@ -460,7 +587,44 @@ cwist_multiport_t cwist_create_multiport_from_array(const unsigned short *ports,
 #define cwist_create_multiport(ports) \
     cwist_create_multiport_from_array((ports), sizeof(ports) / sizeof((ports)[0]))
 
+void cwist_app_http_handler(int client_fd, void *ctx);
+cwist_async_action_t cwist_app_http_handler_async(int client_fd, cwist_http_async_conn_t *conn);
+
+/**
+ * @brief Apply CWIST_PROFILE preset env-var defaults.
+ *
+ * Reads CWIST_PROFILE and uses setenv(overwrite=0) to fill in defaults for
+ * the relevant tuning variables before cwist_app_listen() reads them.
+ * Recognized values: "performance", "lowmem", "lowlat", "default". An unset
+ * (or empty) CWIST_PROFILE is treated as "default": C1M mode on and reactor
+ * drain chunk 8. Called automatically by cwist_app_listen(); exposed here so
+ * tests and tools can invoke it directly before any env-var caches are
+ * populated.
+ */
+void cwist_apply_profile(void);
+
+/**
+ * @brief Serve @p app on @p port until SIGTERM, SIGINT or
+ * cwist_shutdown_request(); blocks the calling thread.
+ *
+ * CWIST_WORKERS (default: one worker process per three online cores, at
+ * least 2; "auto" or an explicit number overrides) and CWIST_C1M_MODE select
+ * the worker count and server mode; with more than one worker it forks and
+ * returns in each worker. Same as cwist_app_listen_ex(app, port, 0, -1).
+ */
 int cwist_app_listen(cwist_app *app, int port);
+
+/**
+ * @brief cwist_app_listen() with the worker count and server mode given
+ * explicitly.
+ * @param workers_override Worker processes (1 serves without forking); 0 or
+ *        less reads CWIST_WORKERS.
+ * @param c1m_override 1 for the reactor server, which joins its handler
+ *        threads before returning; 0 for the classic pool; negative reads
+ *        CWIST_C1M_MODE. Ignored on WASI.
+ * @return 0 after a graceful shutdown, -1 if the server could not start.
+ */
+int cwist_app_listen_ex(cwist_app *app, int port, int workers_override, int c1m_override);
 
 /**
  * @brief Start one app facade across a public port and counted backend port list.
@@ -501,5 +665,79 @@ void cwist_app_dispatch(cwist_app *app, cwist_http_request *req, cwist_http_resp
  */
 int cwist_app_dispatch_memory(cwist_app *app, const char *req_buf, size_t req_len, char **res_buf,
                               size_t *res_len);
+
+/** --- WASM boundary streaming (issue #93 Phase 3) -------------------------
+ *
+ * Streaming here means the *boundary*, not a streaming handler API: the
+ * request body may be fed incrementally (large uploads without one giant
+ * contiguous host buffer) and the serialized response is delivered through
+ * a caller-supplied chunk callback instead of one returned buffer, so hosts
+ * can consume it incrementally (e.g. pipe it into a JS ReadableStream).
+ * The handler itself still builds the response body in memory; a true
+ * chunked producer API inside handlers is a separate, larger change.
+ */
+
+/** Chunk sink for cwist_app_dispatch_stream().  Receives the serialized
+ * response bytes in order: the head (status line + headers) first, then the
+ * body in slices of at most CWIST_STREAM_CHUNK bytes.  Return 0 to continue,
+ * nonzero to abort the dispatch (the remaining bytes are dropped and the
+ * dispatch returns -2). */
+typedef int (*cwist_stream_write_fn)(void *ctx, const char *data, size_t len);
+
+/** Maximum slice size passed to cwist_stream_write_fn() for the body. */
+#define CWIST_STREAM_CHUNK (64 * 1024)
+
+/**
+ * @brief Like cwist_app_dispatch_memory(), but streams the serialized
+ * response through @p write_fn instead of returning one buffer.
+ * @param app Application to dispatch against.
+ * @param req_buf Serialized HTTP/1.1 request (head + body, as the wire form).
+ * @param req_len Length of @p req_buf.
+ * @param write_fn Chunk sink; must not be NULL.
+ * @param write_ctx Opaque argument passed to every write_fn call.
+ * @return 0 when the full response was delivered; -1 on dispatch/serialize
+ * failure; -2 when the sink aborted.
+ */
+int cwist_app_dispatch_stream(cwist_app *app, const char *req_buf, size_t req_len,
+                              cwist_stream_write_fn write_fn, void *write_ctx);
+
+/** Opaque incremental request assembly handle.  Feeding a body chunk by
+ * chunk lets hosts avoid materializing one contiguous buffer for large
+ * uploads; chunks are copied once into the internally assembled wire
+ * buffer, which dispatch sends without a further reassembly copy. */
+typedef struct cwist_stream_req cwist_stream_req_t;
+
+/**
+ * @brief Begin an incremental request: @p head is the serialized request
+ * line plus headers (everything up to and including the terminating CRLF
+ * of the header block).  The body length is taken from Content-Length
+ * (required for fed bodies; Transfer-Encoding: chunked is not reassembled).
+ * @return Handle on success, NULL on allocation failure.
+ */
+cwist_stream_req_t *cwist_stream_req_begin(const char *head, size_t head_len);
+
+/**
+ * @brief Feed one body chunk.  Chunks may be any size and may split
+ * anywhere; reassembly is the implementation's job.  Feeding more bytes
+ * than the declared Content-Length is an error.
+ * @return 0 on success, -1 on overflow/malformed state.
+ */
+int cwist_stream_req_feed(cwist_stream_req_t *req, const char *chunk, size_t len);
+
+/**
+ * @brief Declare the body complete.  The fed byte count must equal the
+ * declared Content-Length (or both be zero for a bodyless request).
+ * @return 0 on success, -1 on a short body.
+ */
+int cwist_stream_req_end(cwist_stream_req_t *req);
+
+/**
+ * @brief Dispatch a completed incremental request with a streaming
+ * response.  Takes ownership of @p req regardless of outcome.
+ * @return As cwist_app_dispatch_stream(); -1 also when cwist_stream_req_end()
+ * has not succeeded (the fed body is incomplete).
+ */
+int cwist_stream_req_dispatch(cwist_stream_req_t *req, cwist_app *app,
+                              cwist_stream_write_fn write_fn, void *write_ctx);
 
 #endif

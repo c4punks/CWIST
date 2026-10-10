@@ -1,9 +1,10 @@
 # CWIST on the WASM component model
 
-**Status:** experimental (issue #203, v3.7 Phase 1). The supported browser
-path remains the Emscripten bundle (`docs/api/wasm.md`); this document
-describes the component pipeline that is slated to replace it once the WASI
-0.3 world is usable end to end.
+**Status:** experimental (issue #203, v3.7 Phase 1; v3.8 defers the
+production switch to v4.0). The supported browser path remains the
+Emscripten bundle (`docs/api/wasm.md`); this document describes the component
+pipeline that is slated to replace it once the WASI 0.3 world and unflagged
+JSPI are usable end to end.
 
 ## Why
 
@@ -109,8 +110,9 @@ established by elimination:
 - Root cause: **stack exhaustion.** wasm-ld's default 64 KiB stack is too
   small for the socket-serving chain once p3's async lowering is in the
   frame mix. `-z stack-size=131072` passes at `-O1` and `-O2`
-  deterministically; the Makefile sets 262144 for headroom whenever
-  `WASIP2_TARGET` is `wasm32-wasip3`.
+  deterministically; the Makefile links every wasip2/wasip3 guest with
+  `-Wl,-z,stack-size=$(WASIP2_STACK_BYTES)` (default 1 MiB), which covers
+  wasip3 with headroom.
 
 A plain BSD-socket minimal repro (accept/read/write, no CWIST) passes
 unchanged on the same toolchain, so small-frame guests are unaffected;

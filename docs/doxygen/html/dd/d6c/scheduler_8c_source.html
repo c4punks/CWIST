@@ -250,121 +250,118 @@ $(document).ready(function() { init_codefold(1); });
 <div class="line"><a id="l00261" name="l00261"></a><span class="lineno">  261</span> </div>
 <div class="line"><a id="l00262" name="l00262"></a><span class="lineno">  262</span>    <a class="code hl_typedef" href="../../d2/dd8/scheduler_8h.html#a6f0ae6fce1a81f7dc35c2b235415d1ed">cwist_scheduler_t</a> *s = (<a class="code hl_typedef" href="../../d2/dd8/scheduler_8h.html#a6f0ae6fce1a81f7dc35c2b235415d1ed">cwist_scheduler_t</a> *)<a class="code hl_function" href="../../d2/dfe/alloc_8h.html#aeba69949fe17751318e6b5fc84a74096">cwist_alloc</a>(<span class="keyword">sizeof</span>(*s));</div>
 <div class="line"><a id="l00263" name="l00263"></a><span class="lineno">  263</span>    <span class="keywordflow">if</span> (!s) <span class="keywordflow">return</span> NULL;</div>
-<div class="line"><a id="l00264" name="l00264"></a><span class="lineno">  264</span>    <span class="comment">/* Explicit destroy owns the scheduler, not its creator&#39;s TLS scope.</span></div>
-<div class="line"><a id="l00265" name="l00265"></a><span class="lineno">  265</span><span class="comment">     * Detach on the allocating thread before publishing to workers. */</span></div>
-<div class="line"><a id="l00266" name="l00266"></a><span class="lineno">  266</span>    <span class="keywordflow">if</span> (<a class="code hl_function" href="../../d0/daa/gc_8h.html#a35e613a89ca213039b7b8b80464c223c">cwist_full_gc_enabled</a>()) <a class="code hl_function" href="../../d0/daa/gc_8h.html#a28b862cd5828d70bdb18dfad374d97ef">cwist_gc_scope_disown</a>(s);</div>
-<div class="line"><a id="l00267" name="l00267"></a><span class="lineno">  267</span>    memset(s, 0, <span class="keyword">sizeof</span>(*s));</div>
-<div class="line"><a id="l00268" name="l00268"></a><span class="lineno">  268</span> </div>
-<div class="line"><a id="l00269" name="l00269"></a><span class="lineno">  269</span>    s-&gt;queue = <a class="code hl_function" href="../../d1/df5/cwist__io_8h.html#ae98b56f01551c8b2a116ede7c918aa99">cwist_io_queue_create</a>(queue_capacity);</div>
-<div class="line"><a id="l00270" name="l00270"></a><span class="lineno">  270</span>    <span class="keywordflow">if</span> (!s-&gt;queue) {</div>
-<div class="line"><a id="l00271" name="l00271"></a><span class="lineno">  271</span>        <a class="code hl_function" href="../../d2/dfe/alloc_8h.html#a220abeebe2823e72511d1690fc561306">cwist_free</a>(s);</div>
-<div class="line"><a id="l00272" name="l00272"></a><span class="lineno">  272</span>        <span class="keywordflow">return</span> NULL;</div>
-<div class="line"><a id="l00273" name="l00273"></a><span class="lineno">  273</span>    }</div>
-<div class="line"><a id="l00274" name="l00274"></a><span class="lineno">  274</span> </div>
-<div class="line"><a id="l00275" name="l00275"></a><span class="lineno">  275</span>    s-&gt;workers = (pthread_t *)<a class="code hl_function" href="../../d2/dfe/alloc_8h.html#acf0a2673b8792bf9a1b3267c17ca0385">cwist_alloc_array</a>(worker_count, <span class="keyword">sizeof</span>(pthread_t));</div>
-<div class="line"><a id="l00276" name="l00276"></a><span class="lineno">  276</span>    <span class="keywordflow">if</span> (!s-&gt;workers) {</div>
-<div class="line"><a id="l00277" name="l00277"></a><span class="lineno">  277</span>        <a class="code hl_function" href="../../d1/df5/cwist__io_8h.html#a90a553923ea4f601ffb5acaf8660d9fe">cwist_io_queue_destroy</a>(s-&gt;queue);</div>
-<div class="line"><a id="l00278" name="l00278"></a><span class="lineno">  278</span>        <a class="code hl_function" href="../../d2/dfe/alloc_8h.html#a220abeebe2823e72511d1690fc561306">cwist_free</a>(s);</div>
-<div class="line"><a id="l00279" name="l00279"></a><span class="lineno">  279</span>        <span class="keywordflow">return</span> NULL;</div>
-<div class="line"><a id="l00280" name="l00280"></a><span class="lineno">  280</span>    }</div>
-<div class="line"><a id="l00281" name="l00281"></a><span class="lineno">  281</span>    s-&gt;worker_count = worker_count;</div>
-<div class="line"><a id="l00282" name="l00282"></a><span class="lineno">  282</span> </div>
-<div class="line"><a id="l00283" name="l00283"></a><span class="lineno">  283</span>    pthread_mutex_init(&amp;s-&gt;delayed_mtx, NULL);</div>
-<div class="line"><a id="l00284" name="l00284"></a><span class="lineno">  284</span>    cond_init_monotonic(&amp;s-&gt;delayed_cond);</div>
-<div class="line"><a id="l00285" name="l00285"></a><span class="lineno">  285</span>    s-&gt;running = <span class="keyword">true</span>;</div>
-<div class="line"><a id="l00286" name="l00286"></a><span class="lineno">  286</span> </div>
-<div class="line"><a id="l00287" name="l00287"></a><span class="lineno">  287</span>    <span class="keywordflow">for</span> (<span class="keywordtype">size_t</span> i = 0; i &lt; worker_count; i++) {</div>
-<div class="line"><a id="l00288" name="l00288"></a><span class="lineno">  288</span>        <span class="keywordflow">if</span> (pthread_create(&amp;s-&gt;workers[i], NULL, scheduler_worker_thread, s) != 0) {</div>
-<div class="line"><a id="l00289" name="l00289"></a><span class="lineno">  289</span>            scheduler_cleanup_threads(s, i);</div>
-<div class="line"><a id="l00290" name="l00290"></a><span class="lineno">  290</span>            pthread_mutex_destroy(&amp;s-&gt;delayed_mtx);</div>
-<div class="line"><a id="l00291" name="l00291"></a><span class="lineno">  291</span>            pthread_cond_destroy(&amp;s-&gt;delayed_cond);</div>
-<div class="line"><a id="l00292" name="l00292"></a><span class="lineno">  292</span>            <a class="code hl_function" href="../../d2/dfe/alloc_8h.html#a220abeebe2823e72511d1690fc561306">cwist_free</a>(s-&gt;workers);</div>
-<div class="line"><a id="l00293" name="l00293"></a><span class="lineno">  293</span>            <a class="code hl_function" href="../../d1/df5/cwist__io_8h.html#a90a553923ea4f601ffb5acaf8660d9fe">cwist_io_queue_destroy</a>(s-&gt;queue);</div>
-<div class="line"><a id="l00294" name="l00294"></a><span class="lineno">  294</span>            <a class="code hl_function" href="../../d2/dfe/alloc_8h.html#a220abeebe2823e72511d1690fc561306">cwist_free</a>(s);</div>
-<div class="line"><a id="l00295" name="l00295"></a><span class="lineno">  295</span>            <span class="keywordflow">return</span> NULL;</div>
-<div class="line"><a id="l00296" name="l00296"></a><span class="lineno">  296</span>        }</div>
-<div class="line"><a id="l00297" name="l00297"></a><span class="lineno">  297</span>    }</div>
-<div class="line"><a id="l00298" name="l00298"></a><span class="lineno">  298</span> </div>
-<div class="line"><a id="l00299" name="l00299"></a><span class="lineno">  299</span>    <span class="keywordflow">if</span> (pthread_create(&amp;s-&gt;timer_thread, NULL, scheduler_timer_thread, s) != 0) {</div>
-<div class="line"><a id="l00300" name="l00300"></a><span class="lineno">  300</span>        scheduler_cleanup_threads(s, worker_count);</div>
-<div class="line"><a id="l00301" name="l00301"></a><span class="lineno">  301</span>        pthread_mutex_destroy(&amp;s-&gt;delayed_mtx);</div>
-<div class="line"><a id="l00302" name="l00302"></a><span class="lineno">  302</span>        pthread_cond_destroy(&amp;s-&gt;delayed_cond);</div>
-<div class="line"><a id="l00303" name="l00303"></a><span class="lineno">  303</span>        <a class="code hl_function" href="../../d2/dfe/alloc_8h.html#a220abeebe2823e72511d1690fc561306">cwist_free</a>(s-&gt;workers);</div>
-<div class="line"><a id="l00304" name="l00304"></a><span class="lineno">  304</span>        <a class="code hl_function" href="../../d1/df5/cwist__io_8h.html#a90a553923ea4f601ffb5acaf8660d9fe">cwist_io_queue_destroy</a>(s-&gt;queue);</div>
-<div class="line"><a id="l00305" name="l00305"></a><span class="lineno">  305</span>        <a class="code hl_function" href="../../d2/dfe/alloc_8h.html#a220abeebe2823e72511d1690fc561306">cwist_free</a>(s);</div>
-<div class="line"><a id="l00306" name="l00306"></a><span class="lineno">  306</span>        <span class="keywordflow">return</span> NULL;</div>
-<div class="line"><a id="l00307" name="l00307"></a><span class="lineno">  307</span>    }</div>
+<div class="line"><a id="l00264" name="l00264"></a><span class="lineno">  264</span>    memset(s, 0, <span class="keyword">sizeof</span>(*s));</div>
+<div class="line"><a id="l00265" name="l00265"></a><span class="lineno">  265</span> </div>
+<div class="line"><a id="l00266" name="l00266"></a><span class="lineno">  266</span>    s-&gt;queue = <a class="code hl_function" href="../../d1/df5/cwist__io_8h.html#ae98b56f01551c8b2a116ede7c918aa99">cwist_io_queue_create</a>(queue_capacity);</div>
+<div class="line"><a id="l00267" name="l00267"></a><span class="lineno">  267</span>    <span class="keywordflow">if</span> (!s-&gt;queue) {</div>
+<div class="line"><a id="l00268" name="l00268"></a><span class="lineno">  268</span>        <a class="code hl_function" href="../../d2/dfe/alloc_8h.html#a220abeebe2823e72511d1690fc561306">cwist_free</a>(s);</div>
+<div class="line"><a id="l00269" name="l00269"></a><span class="lineno">  269</span>        <span class="keywordflow">return</span> NULL;</div>
+<div class="line"><a id="l00270" name="l00270"></a><span class="lineno">  270</span>    }</div>
+<div class="line"><a id="l00271" name="l00271"></a><span class="lineno">  271</span> </div>
+<div class="line"><a id="l00272" name="l00272"></a><span class="lineno">  272</span>    s-&gt;workers = (pthread_t *)<a class="code hl_function" href="../../d2/dfe/alloc_8h.html#acf0a2673b8792bf9a1b3267c17ca0385">cwist_alloc_array</a>(worker_count, <span class="keyword">sizeof</span>(pthread_t));</div>
+<div class="line"><a id="l00273" name="l00273"></a><span class="lineno">  273</span>    <span class="keywordflow">if</span> (!s-&gt;workers) {</div>
+<div class="line"><a id="l00274" name="l00274"></a><span class="lineno">  274</span>        <a class="code hl_function" href="../../d1/df5/cwist__io_8h.html#a90a553923ea4f601ffb5acaf8660d9fe">cwist_io_queue_destroy</a>(s-&gt;queue);</div>
+<div class="line"><a id="l00275" name="l00275"></a><span class="lineno">  275</span>        <a class="code hl_function" href="../../d2/dfe/alloc_8h.html#a220abeebe2823e72511d1690fc561306">cwist_free</a>(s);</div>
+<div class="line"><a id="l00276" name="l00276"></a><span class="lineno">  276</span>        <span class="keywordflow">return</span> NULL;</div>
+<div class="line"><a id="l00277" name="l00277"></a><span class="lineno">  277</span>    }</div>
+<div class="line"><a id="l00278" name="l00278"></a><span class="lineno">  278</span>    s-&gt;worker_count = worker_count;</div>
+<div class="line"><a id="l00279" name="l00279"></a><span class="lineno">  279</span> </div>
+<div class="line"><a id="l00280" name="l00280"></a><span class="lineno">  280</span>    pthread_mutex_init(&amp;s-&gt;delayed_mtx, NULL);</div>
+<div class="line"><a id="l00281" name="l00281"></a><span class="lineno">  281</span>    cond_init_monotonic(&amp;s-&gt;delayed_cond);</div>
+<div class="line"><a id="l00282" name="l00282"></a><span class="lineno">  282</span>    s-&gt;running = <span class="keyword">true</span>;</div>
+<div class="line"><a id="l00283" name="l00283"></a><span class="lineno">  283</span> </div>
+<div class="line"><a id="l00284" name="l00284"></a><span class="lineno">  284</span>    <span class="keywordflow">for</span> (<span class="keywordtype">size_t</span> i = 0; i &lt; worker_count; i++) {</div>
+<div class="line"><a id="l00285" name="l00285"></a><span class="lineno">  285</span>        <span class="keywordflow">if</span> (pthread_create(&amp;s-&gt;workers[i], NULL, scheduler_worker_thread, s) != 0) {</div>
+<div class="line"><a id="l00286" name="l00286"></a><span class="lineno">  286</span>            scheduler_cleanup_threads(s, i);</div>
+<div class="line"><a id="l00287" name="l00287"></a><span class="lineno">  287</span>            pthread_mutex_destroy(&amp;s-&gt;delayed_mtx);</div>
+<div class="line"><a id="l00288" name="l00288"></a><span class="lineno">  288</span>            pthread_cond_destroy(&amp;s-&gt;delayed_cond);</div>
+<div class="line"><a id="l00289" name="l00289"></a><span class="lineno">  289</span>            <a class="code hl_function" href="../../d2/dfe/alloc_8h.html#a220abeebe2823e72511d1690fc561306">cwist_free</a>(s-&gt;workers);</div>
+<div class="line"><a id="l00290" name="l00290"></a><span class="lineno">  290</span>            <a class="code hl_function" href="../../d1/df5/cwist__io_8h.html#a90a553923ea4f601ffb5acaf8660d9fe">cwist_io_queue_destroy</a>(s-&gt;queue);</div>
+<div class="line"><a id="l00291" name="l00291"></a><span class="lineno">  291</span>            <a class="code hl_function" href="../../d2/dfe/alloc_8h.html#a220abeebe2823e72511d1690fc561306">cwist_free</a>(s);</div>
+<div class="line"><a id="l00292" name="l00292"></a><span class="lineno">  292</span>            <span class="keywordflow">return</span> NULL;</div>
+<div class="line"><a id="l00293" name="l00293"></a><span class="lineno">  293</span>        }</div>
+<div class="line"><a id="l00294" name="l00294"></a><span class="lineno">  294</span>    }</div>
+<div class="line"><a id="l00295" name="l00295"></a><span class="lineno">  295</span> </div>
+<div class="line"><a id="l00296" name="l00296"></a><span class="lineno">  296</span>    <span class="keywordflow">if</span> (pthread_create(&amp;s-&gt;timer_thread, NULL, scheduler_timer_thread, s) != 0) {</div>
+<div class="line"><a id="l00297" name="l00297"></a><span class="lineno">  297</span>        scheduler_cleanup_threads(s, worker_count);</div>
+<div class="line"><a id="l00298" name="l00298"></a><span class="lineno">  298</span>        pthread_mutex_destroy(&amp;s-&gt;delayed_mtx);</div>
+<div class="line"><a id="l00299" name="l00299"></a><span class="lineno">  299</span>        pthread_cond_destroy(&amp;s-&gt;delayed_cond);</div>
+<div class="line"><a id="l00300" name="l00300"></a><span class="lineno">  300</span>        <a class="code hl_function" href="../../d2/dfe/alloc_8h.html#a220abeebe2823e72511d1690fc561306">cwist_free</a>(s-&gt;workers);</div>
+<div class="line"><a id="l00301" name="l00301"></a><span class="lineno">  301</span>        <a class="code hl_function" href="../../d1/df5/cwist__io_8h.html#a90a553923ea4f601ffb5acaf8660d9fe">cwist_io_queue_destroy</a>(s-&gt;queue);</div>
+<div class="line"><a id="l00302" name="l00302"></a><span class="lineno">  302</span>        <a class="code hl_function" href="../../d2/dfe/alloc_8h.html#a220abeebe2823e72511d1690fc561306">cwist_free</a>(s);</div>
+<div class="line"><a id="l00303" name="l00303"></a><span class="lineno">  303</span>        <span class="keywordflow">return</span> NULL;</div>
+<div class="line"><a id="l00304" name="l00304"></a><span class="lineno">  304</span>    }</div>
+<div class="line"><a id="l00305" name="l00305"></a><span class="lineno">  305</span> </div>
+<div class="line"><a id="l00306" name="l00306"></a><span class="lineno">  306</span>    <span class="keywordflow">return</span> s;</div>
+<div class="line"><a id="l00307" name="l00307"></a><span class="lineno">  307</span>}</div>
+</div>
 <div class="line"><a id="l00308" name="l00308"></a><span class="lineno">  308</span> </div>
-<div class="line"><a id="l00309" name="l00309"></a><span class="lineno">  309</span>    <span class="keywordflow">return</span> s;</div>
-<div class="line"><a id="l00310" name="l00310"></a><span class="lineno">  310</span>}</div>
+<div class="foldopen" id="foldopen00318" data-start="{" data-end="}">
+<div class="line"><a id="l00318" name="l00318"></a><span class="lineno"><a class="line" href="../../d2/dd8/scheduler_8h.html#a16ac83e9ad8cc4a59205bb3ce7b1c8ad">  318</a></span><span class="keywordtype">void</span> <a class="code hl_function" href="../../dd/d6c/scheduler_8c.html#a16ac83e9ad8cc4a59205bb3ce7b1c8ad">cwist_scheduler_destroy</a>(<a class="code hl_typedef" href="../../d2/dd8/scheduler_8h.html#a6f0ae6fce1a81f7dc35c2b235415d1ed">cwist_scheduler_t</a> *s) {</div>
+<div class="line"><a id="l00319" name="l00319"></a><span class="lineno">  319</span>    <span class="keywordflow">if</span> (!s) <span class="keywordflow">return</span>;</div>
+<div class="line"><a id="l00320" name="l00320"></a><span class="lineno">  320</span> </div>
+<div class="line"><a id="l00321" name="l00321"></a><span class="lineno">  321</span>    s-&gt;running = <span class="keyword">false</span>;</div>
+<div class="line"><a id="l00322" name="l00322"></a><span class="lineno">  322</span>    pthread_mutex_lock(&amp;s-&gt;delayed_mtx);</div>
+<div class="line"><a id="l00323" name="l00323"></a><span class="lineno">  323</span>    pthread_cond_broadcast(&amp;s-&gt;delayed_cond);</div>
+<div class="line"><a id="l00324" name="l00324"></a><span class="lineno">  324</span>    pthread_mutex_unlock(&amp;s-&gt;delayed_mtx);</div>
+<div class="line"><a id="l00325" name="l00325"></a><span class="lineno">  325</span> </div>
+<div class="line"><a id="l00326" name="l00326"></a><span class="lineno">  326</span>    <a class="code hl_function" href="../../d1/df5/cwist__io_8h.html#a8a4f1c13d9b5a63a0470e575d03e4113">cwist_io_queue_stop</a>(s-&gt;queue);</div>
+<div class="line"><a id="l00327" name="l00327"></a><span class="lineno">  327</span> </div>
+<div class="line"><a id="l00328" name="l00328"></a><span class="lineno">  328</span>    <span class="keywordflow">for</span> (<span class="keywordtype">size_t</span> i = 0; i &lt; s-&gt;worker_count; i++) {</div>
+<div class="line"><a id="l00329" name="l00329"></a><span class="lineno">  329</span>        pthread_join(s-&gt;workers[i], NULL);</div>
+<div class="line"><a id="l00330" name="l00330"></a><span class="lineno">  330</span>    }</div>
+<div class="line"><a id="l00331" name="l00331"></a><span class="lineno">  331</span>    pthread_join(s-&gt;timer_thread, NULL);</div>
+<div class="line"><a id="l00332" name="l00332"></a><span class="lineno">  332</span> </div>
+<div class="line"><a id="l00333" name="l00333"></a><span class="lineno">  333</span>    <a class="code hl_function" href="../../d1/df5/cwist__io_8h.html#a90a553923ea4f601ffb5acaf8660d9fe">cwist_io_queue_destroy</a>(s-&gt;queue);</div>
+<div class="line"><a id="l00334" name="l00334"></a><span class="lineno">  334</span>    <a class="code hl_function" href="../../d2/dfe/alloc_8h.html#a220abeebe2823e72511d1690fc561306">cwist_free</a>(s-&gt;heap);</div>
+<div class="line"><a id="l00335" name="l00335"></a><span class="lineno">  335</span>    <a class="code hl_function" href="../../d2/dfe/alloc_8h.html#a220abeebe2823e72511d1690fc561306">cwist_free</a>(s-&gt;workers);</div>
+<div class="line"><a id="l00336" name="l00336"></a><span class="lineno">  336</span>    pthread_mutex_destroy(&amp;s-&gt;delayed_mtx);</div>
+<div class="line"><a id="l00337" name="l00337"></a><span class="lineno">  337</span>    pthread_cond_destroy(&amp;s-&gt;delayed_cond);</div>
+<div class="line"><a id="l00338" name="l00338"></a><span class="lineno">  338</span>    <a class="code hl_function" href="../../d2/dfe/alloc_8h.html#a220abeebe2823e72511d1690fc561306">cwist_free</a>(s);</div>
+<div class="line"><a id="l00339" name="l00339"></a><span class="lineno">  339</span>}</div>
 </div>
-<div class="line"><a id="l00311" name="l00311"></a><span class="lineno">  311</span> </div>
-<div class="foldopen" id="foldopen00321" data-start="{" data-end="}">
-<div class="line"><a id="l00321" name="l00321"></a><span class="lineno"><a class="line" href="../../d2/dd8/scheduler_8h.html#a16ac83e9ad8cc4a59205bb3ce7b1c8ad">  321</a></span><span class="keywordtype">void</span> <a class="code hl_function" href="../../dd/d6c/scheduler_8c.html#a16ac83e9ad8cc4a59205bb3ce7b1c8ad">cwist_scheduler_destroy</a>(<a class="code hl_typedef" href="../../d2/dd8/scheduler_8h.html#a6f0ae6fce1a81f7dc35c2b235415d1ed">cwist_scheduler_t</a> *s) {</div>
-<div class="line"><a id="l00322" name="l00322"></a><span class="lineno">  322</span>    <span class="keywordflow">if</span> (!s) <span class="keywordflow">return</span>;</div>
-<div class="line"><a id="l00323" name="l00323"></a><span class="lineno">  323</span> </div>
-<div class="line"><a id="l00324" name="l00324"></a><span class="lineno">  324</span>    s-&gt;running = <span class="keyword">false</span>;</div>
-<div class="line"><a id="l00325" name="l00325"></a><span class="lineno">  325</span>    pthread_mutex_lock(&amp;s-&gt;delayed_mtx);</div>
-<div class="line"><a id="l00326" name="l00326"></a><span class="lineno">  326</span>    pthread_cond_broadcast(&amp;s-&gt;delayed_cond);</div>
-<div class="line"><a id="l00327" name="l00327"></a><span class="lineno">  327</span>    pthread_mutex_unlock(&amp;s-&gt;delayed_mtx);</div>
-<div class="line"><a id="l00328" name="l00328"></a><span class="lineno">  328</span> </div>
-<div class="line"><a id="l00329" name="l00329"></a><span class="lineno">  329</span>    <a class="code hl_function" href="../../d1/df5/cwist__io_8h.html#a8a4f1c13d9b5a63a0470e575d03e4113">cwist_io_queue_stop</a>(s-&gt;queue);</div>
-<div class="line"><a id="l00330" name="l00330"></a><span class="lineno">  330</span> </div>
-<div class="line"><a id="l00331" name="l00331"></a><span class="lineno">  331</span>    <span class="keywordflow">for</span> (<span class="keywordtype">size_t</span> i = 0; i &lt; s-&gt;worker_count; i++) {</div>
-<div class="line"><a id="l00332" name="l00332"></a><span class="lineno">  332</span>        pthread_join(s-&gt;workers[i], NULL);</div>
-<div class="line"><a id="l00333" name="l00333"></a><span class="lineno">  333</span>    }</div>
-<div class="line"><a id="l00334" name="l00334"></a><span class="lineno">  334</span>    pthread_join(s-&gt;timer_thread, NULL);</div>
-<div class="line"><a id="l00335" name="l00335"></a><span class="lineno">  335</span> </div>
-<div class="line"><a id="l00336" name="l00336"></a><span class="lineno">  336</span>    <a class="code hl_function" href="../../d1/df5/cwist__io_8h.html#a90a553923ea4f601ffb5acaf8660d9fe">cwist_io_queue_destroy</a>(s-&gt;queue);</div>
-<div class="line"><a id="l00337" name="l00337"></a><span class="lineno">  337</span>    <a class="code hl_function" href="../../d2/dfe/alloc_8h.html#a220abeebe2823e72511d1690fc561306">cwist_free</a>(s-&gt;heap);</div>
-<div class="line"><a id="l00338" name="l00338"></a><span class="lineno">  338</span>    <a class="code hl_function" href="../../d2/dfe/alloc_8h.html#a220abeebe2823e72511d1690fc561306">cwist_free</a>(s-&gt;workers);</div>
-<div class="line"><a id="l00339" name="l00339"></a><span class="lineno">  339</span>    pthread_mutex_destroy(&amp;s-&gt;delayed_mtx);</div>
-<div class="line"><a id="l00340" name="l00340"></a><span class="lineno">  340</span>    pthread_cond_destroy(&amp;s-&gt;delayed_cond);</div>
-<div class="line"><a id="l00341" name="l00341"></a><span class="lineno">  341</span>    <a class="code hl_function" href="../../d2/dfe/alloc_8h.html#a220abeebe2823e72511d1690fc561306">cwist_free</a>(s);</div>
-<div class="line"><a id="l00342" name="l00342"></a><span class="lineno">  342</span>}</div>
+<div class="line"><a id="l00340" name="l00340"></a><span class="lineno">  340</span> </div>
+<div class="foldopen" id="foldopen00351" data-start="{" data-end="}">
+<div class="line"><a id="l00351" name="l00351"></a><span class="lineno"><a class="line" href="../../d2/dd8/scheduler_8h.html#a3f5b6e8f86cb918356d278714b809683">  351</a></span><span class="keywordtype">bool</span> <a class="code hl_function" href="../../dd/d6c/scheduler_8c.html#a3f5b6e8f86cb918356d278714b809683">cwist_scheduler_submit</a>(<a class="code hl_typedef" href="../../d2/dd8/scheduler_8h.html#a6f0ae6fce1a81f7dc35c2b235415d1ed">cwist_scheduler_t</a> *s, <a class="code hl_typedef" href="../../d1/df5/cwist__io_8h.html#a0447e35daf4a82549bf7d207d5ce8a28">cwist_job_func</a> func, <span class="keywordtype">void</span> *arg) {</div>
+<div class="line"><a id="l00352" name="l00352"></a><span class="lineno">  352</span>    <span class="keywordflow">if</span> (!s || !func || !s-&gt;running) <span class="keywordflow">return</span> <span class="keyword">false</span>;</div>
+<div class="line"><a id="l00353" name="l00353"></a><span class="lineno">  353</span>    <span class="keywordflow">return</span> <a class="code hl_function" href="../../d1/df5/cwist__io_8h.html#af8273eb32d71938b4faca82ed325b9aa">cwist_io_queue_submit</a>(s-&gt;queue, func, arg);</div>
+<div class="line"><a id="l00354" name="l00354"></a><span class="lineno">  354</span>}</div>
 </div>
-<div class="line"><a id="l00343" name="l00343"></a><span class="lineno">  343</span> </div>
-<div class="foldopen" id="foldopen00354" data-start="{" data-end="}">
-<div class="line"><a id="l00354" name="l00354"></a><span class="lineno"><a class="line" href="../../d2/dd8/scheduler_8h.html#a3f5b6e8f86cb918356d278714b809683">  354</a></span><span class="keywordtype">bool</span> <a class="code hl_function" href="../../dd/d6c/scheduler_8c.html#a3f5b6e8f86cb918356d278714b809683">cwist_scheduler_submit</a>(<a class="code hl_typedef" href="../../d2/dd8/scheduler_8h.html#a6f0ae6fce1a81f7dc35c2b235415d1ed">cwist_scheduler_t</a> *s, <a class="code hl_typedef" href="../../d1/df5/cwist__io_8h.html#a0447e35daf4a82549bf7d207d5ce8a28">cwist_job_func</a> func, <span class="keywordtype">void</span> *arg) {</div>
-<div class="line"><a id="l00355" name="l00355"></a><span class="lineno">  355</span>    <span class="keywordflow">if</span> (!s || !func || !s-&gt;running) <span class="keywordflow">return</span> <span class="keyword">false</span>;</div>
-<div class="line"><a id="l00356" name="l00356"></a><span class="lineno">  356</span>    <span class="keywordflow">return</span> <a class="code hl_function" href="../../d1/df5/cwist__io_8h.html#af8273eb32d71938b4faca82ed325b9aa">cwist_io_queue_submit</a>(s-&gt;queue, func, arg);</div>
-<div class="line"><a id="l00357" name="l00357"></a><span class="lineno">  357</span>}</div>
+<div class="line"><a id="l00355" name="l00355"></a><span class="lineno">  355</span> </div>
+<div class="foldopen" id="foldopen00371" data-start="{" data-end="}">
+<div class="line"><a id="l00371" name="l00371"></a><span class="lineno"><a class="line" href="../../d2/dd8/scheduler_8h.html#a711e7f9807d19aa351f2544c59534790">  371</a></span><span class="keywordtype">bool</span> <a class="code hl_function" href="../../dd/d6c/scheduler_8c.html#a711e7f9807d19aa351f2544c59534790">cwist_scheduler_schedule</a>(<a class="code hl_typedef" href="../../d2/dd8/scheduler_8h.html#a6f0ae6fce1a81f7dc35c2b235415d1ed">cwist_scheduler_t</a> *s, <a class="code hl_typedef" href="../../d1/df5/cwist__io_8h.html#a0447e35daf4a82549bf7d207d5ce8a28">cwist_job_func</a> func, <span class="keywordtype">void</span> *arg,</div>
+<div class="line"><a id="l00372" name="l00372"></a><span class="lineno">  372</span>                              uint64_t delay_ms) {</div>
+<div class="line"><a id="l00373" name="l00373"></a><span class="lineno">  373</span>    <span class="keywordflow">if</span> (!s || !func || !s-&gt;running) <span class="keywordflow">return</span> <span class="keyword">false</span>;</div>
+<div class="line"><a id="l00374" name="l00374"></a><span class="lineno">  374</span>    <span class="keywordflow">if</span> (delay_ms == 0) {</div>
+<div class="line"><a id="l00375" name="l00375"></a><span class="lineno">  375</span>        <span class="keywordflow">return</span> <a class="code hl_function" href="../../d1/df5/cwist__io_8h.html#af8273eb32d71938b4faca82ed325b9aa">cwist_io_queue_submit</a>(s-&gt;queue, func, arg);</div>
+<div class="line"><a id="l00376" name="l00376"></a><span class="lineno">  376</span>    }</div>
+<div class="line"><a id="l00377" name="l00377"></a><span class="lineno">  377</span> </div>
+<div class="line"><a id="l00378" name="l00378"></a><span class="lineno">  378</span>    scheduled_job_t job;</div>
+<div class="line"><a id="l00379" name="l00379"></a><span class="lineno">  379</span>    job.deadline_ms = now_ms() + delay_ms;</div>
+<div class="line"><a id="l00380" name="l00380"></a><span class="lineno">  380</span>    job.func = func;</div>
+<div class="line"><a id="l00381" name="l00381"></a><span class="lineno">  381</span>    job.arg = arg;</div>
+<div class="line"><a id="l00382" name="l00382"></a><span class="lineno">  382</span> </div>
+<div class="line"><a id="l00383" name="l00383"></a><span class="lineno">  383</span>    pthread_mutex_lock(&amp;s-&gt;delayed_mtx);</div>
+<div class="line"><a id="l00384" name="l00384"></a><span class="lineno">  384</span>    <span class="keywordtype">size_t</span> before = s-&gt;heap_count;</div>
+<div class="line"><a id="l00385" name="l00385"></a><span class="lineno">  385</span>    heap_push(s, job);</div>
+<div class="line"><a id="l00386" name="l00386"></a><span class="lineno">  386</span>    <span class="keywordflow">if</span> (s-&gt;heap_count != before + 1) {</div>
+<div class="line"><a id="l00387" name="l00387"></a><span class="lineno">  387</span>        pthread_mutex_unlock(&amp;s-&gt;delayed_mtx);</div>
+<div class="line"><a id="l00388" name="l00388"></a><span class="lineno">  388</span>        <span class="keywordflow">return</span> <span class="keyword">false</span>;</div>
+<div class="line"><a id="l00389" name="l00389"></a><span class="lineno">  389</span>    }</div>
+<div class="line"><a id="l00390" name="l00390"></a><span class="lineno">  390</span>    pthread_cond_signal(&amp;s-&gt;delayed_cond);</div>
+<div class="line"><a id="l00391" name="l00391"></a><span class="lineno">  391</span>    pthread_mutex_unlock(&amp;s-&gt;delayed_mtx);</div>
+<div class="line"><a id="l00392" name="l00392"></a><span class="lineno">  392</span>    <span class="keywordflow">return</span> <span class="keyword">true</span>;</div>
+<div class="line"><a id="l00393" name="l00393"></a><span class="lineno">  393</span>}</div>
 </div>
-<div class="line"><a id="l00358" name="l00358"></a><span class="lineno">  358</span> </div>
-<div class="foldopen" id="foldopen00374" data-start="{" data-end="}">
-<div class="line"><a id="l00374" name="l00374"></a><span class="lineno"><a class="line" href="../../d2/dd8/scheduler_8h.html#a711e7f9807d19aa351f2544c59534790">  374</a></span><span class="keywordtype">bool</span> <a class="code hl_function" href="../../dd/d6c/scheduler_8c.html#a711e7f9807d19aa351f2544c59534790">cwist_scheduler_schedule</a>(<a class="code hl_typedef" href="../../d2/dd8/scheduler_8h.html#a6f0ae6fce1a81f7dc35c2b235415d1ed">cwist_scheduler_t</a> *s, <a class="code hl_typedef" href="../../d1/df5/cwist__io_8h.html#a0447e35daf4a82549bf7d207d5ce8a28">cwist_job_func</a> func, <span class="keywordtype">void</span> *arg,</div>
-<div class="line"><a id="l00375" name="l00375"></a><span class="lineno">  375</span>                              uint64_t delay_ms) {</div>
-<div class="line"><a id="l00376" name="l00376"></a><span class="lineno">  376</span>    <span class="keywordflow">if</span> (!s || !func || !s-&gt;running) <span class="keywordflow">return</span> <span class="keyword">false</span>;</div>
-<div class="line"><a id="l00377" name="l00377"></a><span class="lineno">  377</span>    <span class="keywordflow">if</span> (delay_ms == 0) {</div>
-<div class="line"><a id="l00378" name="l00378"></a><span class="lineno">  378</span>        <span class="keywordflow">return</span> <a class="code hl_function" href="../../d1/df5/cwist__io_8h.html#af8273eb32d71938b4faca82ed325b9aa">cwist_io_queue_submit</a>(s-&gt;queue, func, arg);</div>
-<div class="line"><a id="l00379" name="l00379"></a><span class="lineno">  379</span>    }</div>
-<div class="line"><a id="l00380" name="l00380"></a><span class="lineno">  380</span> </div>
-<div class="line"><a id="l00381" name="l00381"></a><span class="lineno">  381</span>    scheduled_job_t job;</div>
-<div class="line"><a id="l00382" name="l00382"></a><span class="lineno">  382</span>    job.deadline_ms = now_ms() + delay_ms;</div>
-<div class="line"><a id="l00383" name="l00383"></a><span class="lineno">  383</span>    job.func = func;</div>
-<div class="line"><a id="l00384" name="l00384"></a><span class="lineno">  384</span>    job.arg = arg;</div>
-<div class="line"><a id="l00385" name="l00385"></a><span class="lineno">  385</span> </div>
-<div class="line"><a id="l00386" name="l00386"></a><span class="lineno">  386</span>    pthread_mutex_lock(&amp;s-&gt;delayed_mtx);</div>
-<div class="line"><a id="l00387" name="l00387"></a><span class="lineno">  387</span>    <span class="keywordtype">size_t</span> before = s-&gt;heap_count;</div>
-<div class="line"><a id="l00388" name="l00388"></a><span class="lineno">  388</span>    heap_push(s, job);</div>
-<div class="line"><a id="l00389" name="l00389"></a><span class="lineno">  389</span>    <span class="keywordflow">if</span> (s-&gt;heap_count != before + 1) {</div>
-<div class="line"><a id="l00390" name="l00390"></a><span class="lineno">  390</span>        pthread_mutex_unlock(&amp;s-&gt;delayed_mtx);</div>
-<div class="line"><a id="l00391" name="l00391"></a><span class="lineno">  391</span>        <span class="keywordflow">return</span> <span class="keyword">false</span>;</div>
-<div class="line"><a id="l00392" name="l00392"></a><span class="lineno">  392</span>    }</div>
-<div class="line"><a id="l00393" name="l00393"></a><span class="lineno">  393</span>    pthread_cond_signal(&amp;s-&gt;delayed_cond);</div>
-<div class="line"><a id="l00394" name="l00394"></a><span class="lineno">  394</span>    pthread_mutex_unlock(&amp;s-&gt;delayed_mtx);</div>
-<div class="line"><a id="l00395" name="l00395"></a><span class="lineno">  395</span>    <span class="keywordflow">return</span> <span class="keyword">true</span>;</div>
-<div class="line"><a id="l00396" name="l00396"></a><span class="lineno">  396</span>}</div>
-</div>
-<div class="line"><a id="l00397" name="l00397"></a><span class="lineno">  397</span> </div>
-<div class="foldopen" id="foldopen00406" data-start="{" data-end="}">
-<div class="line"><a id="l00406" name="l00406"></a><span class="lineno"><a class="line" href="../../d2/dd8/scheduler_8h.html#a93a77a1ca7d1ac21f8d0a91123ca2f83">  406</a></span><span class="keywordtype">size_t</span> <a class="code hl_function" href="../../dd/d6c/scheduler_8c.html#a93a77a1ca7d1ac21f8d0a91123ca2f83">cwist_scheduler_pending_count</a>(<a class="code hl_typedef" href="../../d2/dd8/scheduler_8h.html#a6f0ae6fce1a81f7dc35c2b235415d1ed">cwist_scheduler_t</a> *s) {</div>
-<div class="line"><a id="l00407" name="l00407"></a><span class="lineno">  407</span>    <span class="keywordflow">if</span> (!s) <span class="keywordflow">return</span> 0;</div>
-<div class="line"><a id="l00408" name="l00408"></a><span class="lineno">  408</span>    pthread_mutex_lock(&amp;s-&gt;delayed_mtx);</div>
-<div class="line"><a id="l00409" name="l00409"></a><span class="lineno">  409</span>    <span class="keywordtype">size_t</span> count = s-&gt;heap_count;</div>
-<div class="line"><a id="l00410" name="l00410"></a><span class="lineno">  410</span>    pthread_mutex_unlock(&amp;s-&gt;delayed_mtx);</div>
-<div class="line"><a id="l00411" name="l00411"></a><span class="lineno">  411</span>    <span class="keywordflow">return</span> count;</div>
-<div class="line"><a id="l00412" name="l00412"></a><span class="lineno">  412</span>}</div>
+<div class="line"><a id="l00394" name="l00394"></a><span class="lineno">  394</span> </div>
+<div class="foldopen" id="foldopen00403" data-start="{" data-end="}">
+<div class="line"><a id="l00403" name="l00403"></a><span class="lineno"><a class="line" href="../../d2/dd8/scheduler_8h.html#a93a77a1ca7d1ac21f8d0a91123ca2f83">  403</a></span><span class="keywordtype">size_t</span> <a class="code hl_function" href="../../dd/d6c/scheduler_8c.html#a93a77a1ca7d1ac21f8d0a91123ca2f83">cwist_scheduler_pending_count</a>(<a class="code hl_typedef" href="../../d2/dd8/scheduler_8h.html#a6f0ae6fce1a81f7dc35c2b235415d1ed">cwist_scheduler_t</a> *s) {</div>
+<div class="line"><a id="l00404" name="l00404"></a><span class="lineno">  404</span>    <span class="keywordflow">if</span> (!s) <span class="keywordflow">return</span> 0;</div>
+<div class="line"><a id="l00405" name="l00405"></a><span class="lineno">  405</span>    pthread_mutex_lock(&amp;s-&gt;delayed_mtx);</div>
+<div class="line"><a id="l00406" name="l00406"></a><span class="lineno">  406</span>    <span class="keywordtype">size_t</span> count = s-&gt;heap_count;</div>
+<div class="line"><a id="l00407" name="l00407"></a><span class="lineno">  407</span>    pthread_mutex_unlock(&amp;s-&gt;delayed_mtx);</div>
+<div class="line"><a id="l00408" name="l00408"></a><span class="lineno">  408</span>    <span class="keywordflow">return</span> count;</div>
+<div class="line"><a id="l00409" name="l00409"></a><span class="lineno">  409</span>}</div>
 </div>
 <div class="ttc" id="aalloc_8h_html"><div class="ttname"><a href="../../d2/dfe/alloc_8h.html">alloc.h</a></div><div class="ttdoc">Memory allocation wrappers backed by libttak.</div></div>
 <div class="ttc" id="aalloc_8h_html_a220abeebe2823e72511d1690fc561306"><div class="ttname"><a href="../../d2/dfe/alloc_8h.html#a220abeebe2823e72511d1690fc561306">cwist_free</a></div><div class="ttdeci">void cwist_free(void *ptr)</div><div class="ttdoc">Free memory obtained via cwist_alloc/cwist_strdup/etc.</div><div class="ttdef"><b>Definition</b> <a href="../../d9/d39/alloc_8c_source.html#l00390">alloc.c:390</a></div></div>
@@ -373,18 +370,18 @@ $(document).ready(function() { init_codefold(1); });
 <div class="ttc" id="aalloc_8h_html_aeba69949fe17751318e6b5fc84a74096"><div class="ttname"><a href="../../d2/dfe/alloc_8h.html#aeba69949fe17751318e6b5fc84a74096">cwist_alloc</a></div><div class="ttdeci">void * cwist_alloc(size_t size)</div><div class="ttdoc">Allocate zeroed memory tracked by libttak.</div><div class="ttdef"><b>Definition</b> <a href="../../d9/d39/alloc_8c_source.html#l00275">alloc.c:275</a></div></div>
 <div class="ttc" id="acwist__io_8h_html_a0447e35daf4a82549bf7d207d5ce8a28"><div class="ttname"><a href="../../d1/df5/cwist__io_8h.html#a0447e35daf4a82549bf7d207d5ce8a28">cwist_job_func</a></div><div class="ttdeci">void(* cwist_job_func)(void *arg)</div><div class="ttdoc">Job function signature.</div><div class="ttdef"><b>Definition</b> <a href="../../d1/df5/cwist__io_8h_source.html#l00022">cwist_io.h:22</a></div></div>
 <div class="ttc" id="acwist__io_8h_html_a3fc0472d3c48cdb9925cce08d02593dc"><div class="ttname"><a href="../../d1/df5/cwist__io_8h.html#a3fc0472d3c48cdb9925cce08d02593dc">cwist_io_queue</a></div><div class="ttdeci">struct cwist_io_queue cwist_io_queue</div><div class="ttdoc">Opaque handle for the IO Queue. Backend implementation depends on OS (io_uring, kqueue,...</div><div class="ttdef"><b>Definition</b> <a href="../../d1/df5/cwist__io_8h_source.html#l00016">cwist_io.h:16</a></div></div>
-<div class="ttc" id="acwist__io_8h_html_a817485c076ee5f5cb2a203917931e2cc"><div class="ttname"><a href="../../d1/df5/cwist__io_8h.html#a817485c076ee5f5cb2a203917931e2cc">cwist_io_queue_run</a></div><div class="ttdeci">void cwist_io_queue_run(cwist_io_queue *q)</div><div class="ttdoc">Run the event loop. Blocks indefinitely, processing jobs as they complete/trigger.</div><div class="ttdef"><b>Definition</b> <a href="../../d1/de4/io__queue_8c_source.html#l00285">io_queue.c:285</a></div></div>
-<div class="ttc" id="acwist__io_8h_html_a8a4f1c13d9b5a63a0470e575d03e4113"><div class="ttname"><a href="../../d1/df5/cwist__io_8h.html#a8a4f1c13d9b5a63a0470e575d03e4113">cwist_io_queue_stop</a></div><div class="ttdeci">void cwist_io_queue_stop(cwist_io_queue *q)</div><div class="ttdoc">Request that all runners stop processing without freeing the queue.</div><div class="ttdef"><b>Definition</b> <a href="../../d1/de4/io__queue_8c_source.html#l00328">io_queue.c:328</a></div></div>
-<div class="ttc" id="acwist__io_8h_html_a90a553923ea4f601ffb5acaf8660d9fe"><div class="ttname"><a href="../../d1/df5/cwist__io_8h.html#a90a553923ea4f601ffb5acaf8660d9fe">cwist_io_queue_destroy</a></div><div class="ttdeci">void cwist_io_queue_destroy(cwist_io_queue *q)</div><div class="ttdoc">Destroy the queue and free resources.</div><div class="ttdef"><b>Definition</b> <a href="../../d1/de4/io__queue_8c_source.html#l00340">io_queue.c:340</a></div></div>
-<div class="ttc" id="acwist__io_8h_html_ae98b56f01551c8b2a116ede7c918aa99"><div class="ttname"><a href="../../d1/df5/cwist__io_8h.html#ae98b56f01551c8b2a116ede7c918aa99">cwist_io_queue_create</a></div><div class="ttdeci">cwist_io_queue * cwist_io_queue_create(size_t capacity)</div><div class="ttdoc">Initialize the job queue.</div><div class="ttdef"><b>Definition</b> <a href="../../d1/de4/io__queue_8c_source.html#l00220">io_queue.c:220</a></div></div>
-<div class="ttc" id="acwist__io_8h_html_af8273eb32d71938b4faca82ed325b9aa"><div class="ttname"><a href="../../d1/df5/cwist__io_8h.html#af8273eb32d71938b4faca82ed325b9aa">cwist_io_queue_submit</a></div><div class="ttdeci">bool cwist_io_queue_submit(cwist_io_queue *q, cwist_job_func func, void *arg)</div><div class="ttdoc">Submit a job to be executed asynchronously.</div><div class="ttdef"><b>Definition</b> <a href="../../d1/de4/io__queue_8c_source.html#l00269">io_queue.c:269</a></div></div>
+<div class="ttc" id="acwist__io_8h_html_a817485c076ee5f5cb2a203917931e2cc"><div class="ttname"><a href="../../d1/df5/cwist__io_8h.html#a817485c076ee5f5cb2a203917931e2cc">cwist_io_queue_run</a></div><div class="ttdeci">void cwist_io_queue_run(cwist_io_queue *q)</div><div class="ttdoc">Run the event loop. Blocks indefinitely, processing jobs as they complete/trigger.</div><div class="ttdef"><b>Definition</b> <a href="../../d1/de4/io__queue_8c_source.html#l00279">io_queue.c:279</a></div></div>
+<div class="ttc" id="acwist__io_8h_html_a8a4f1c13d9b5a63a0470e575d03e4113"><div class="ttname"><a href="../../d1/df5/cwist__io_8h.html#a8a4f1c13d9b5a63a0470e575d03e4113">cwist_io_queue_stop</a></div><div class="ttdeci">void cwist_io_queue_stop(cwist_io_queue *q)</div><div class="ttdoc">Request that all runners stop processing without freeing the queue.</div><div class="ttdef"><b>Definition</b> <a href="../../d1/de4/io__queue_8c_source.html#l00322">io_queue.c:322</a></div></div>
+<div class="ttc" id="acwist__io_8h_html_a90a553923ea4f601ffb5acaf8660d9fe"><div class="ttname"><a href="../../d1/df5/cwist__io_8h.html#a90a553923ea4f601ffb5acaf8660d9fe">cwist_io_queue_destroy</a></div><div class="ttdeci">void cwist_io_queue_destroy(cwist_io_queue *q)</div><div class="ttdoc">Destroy the queue and free resources.</div><div class="ttdef"><b>Definition</b> <a href="../../d1/de4/io__queue_8c_source.html#l00334">io_queue.c:334</a></div></div>
+<div class="ttc" id="acwist__io_8h_html_ae98b56f01551c8b2a116ede7c918aa99"><div class="ttname"><a href="../../d1/df5/cwist__io_8h.html#ae98b56f01551c8b2a116ede7c918aa99">cwist_io_queue_create</a></div><div class="ttdeci">cwist_io_queue * cwist_io_queue_create(size_t capacity)</div><div class="ttdoc">Initialize the job queue.</div><div class="ttdef"><b>Definition</b> <a href="../../d1/de4/io__queue_8c_source.html#l00216">io_queue.c:216</a></div></div>
+<div class="ttc" id="acwist__io_8h_html_af8273eb32d71938b4faca82ed325b9aa"><div class="ttname"><a href="../../d1/df5/cwist__io_8h.html#af8273eb32d71938b4faca82ed325b9aa">cwist_io_queue_submit</a></div><div class="ttdeci">bool cwist_io_queue_submit(cwist_io_queue *q, cwist_job_func func, void *arg)</div><div class="ttdoc">Submit a job to be executed asynchronously.</div><div class="ttdef"><b>Definition</b> <a href="../../d1/de4/io__queue_8c_source.html#l00263">io_queue.c:263</a></div></div>
 <div class="ttc" id="agc_8h_html"><div class="ttname"><a href="../../d0/daa/gc_8h.html">gc.h</a></div><div class="ttdoc">Epoch-based garbage collection wrapper.</div></div>
-<div class="ttc" id="agc_8h_html_a28b862cd5828d70bdb18dfad374d97ef"><div class="ttname"><a href="../../d0/daa/gc_8h.html#a28b862cd5828d70bdb18dfad374d97ef">cwist_gc_scope_disown</a></div><div class="ttdeci">bool cwist_gc_scope_disown(void *ptr)</div><div class="ttdoc">Remove ptr from the current thread's pending-sweep list without freeing it, because ownership is bein...</div><div class="ttdef"><b>Definition</b> <a href="../../d8/d16/gc_8c_source.html#l00527">gc.c:527</a></div></div>
-<div class="ttc" id="agc_8h_html_a35e613a89ca213039b7b8b80464c223c"><div class="ttname"><a href="../../d0/daa/gc_8h.html#a35e613a89ca213039b7b8b80464c223c">cwist_full_gc_enabled</a></div><div class="ttdeci">bool cwist_full_gc_enabled(void)</div><div class="ttdoc">Check whether full-GC mode is currently enabled.</div><div class="ttdef"><b>Definition</b> <a href="../../d8/d16/gc_8c_source.html#l00291">gc.c:291</a></div></div>
-<div class="ttc" id="ascheduler_8c_html_a16ac83e9ad8cc4a59205bb3ce7b1c8ad"><div class="ttname"><a href="../../dd/d6c/scheduler_8c.html#a16ac83e9ad8cc4a59205bb3ce7b1c8ad">cwist_scheduler_destroy</a></div><div class="ttdeci">void cwist_scheduler_destroy(cwist_scheduler_t *s)</div><div class="ttdoc">Destroy a scheduler and free all its resources.</div><div class="ttdef"><b>Definition</b> <a href="../../dd/d6c/scheduler_8c_source.html#l00321">scheduler.c:321</a></div></div>
-<div class="ttc" id="ascheduler_8c_html_a3f5b6e8f86cb918356d278714b809683"><div class="ttname"><a href="../../dd/d6c/scheduler_8c.html#a3f5b6e8f86cb918356d278714b809683">cwist_scheduler_submit</a></div><div class="ttdeci">bool cwist_scheduler_submit(cwist_scheduler_t *s, cwist_job_func func, void *arg)</div><div class="ttdoc">Submit a job for immediate execution by a worker thread.</div><div class="ttdef"><b>Definition</b> <a href="../../dd/d6c/scheduler_8c_source.html#l00354">scheduler.c:354</a></div></div>
-<div class="ttc" id="ascheduler_8c_html_a711e7f9807d19aa351f2544c59534790"><div class="ttname"><a href="../../dd/d6c/scheduler_8c.html#a711e7f9807d19aa351f2544c59534790">cwist_scheduler_schedule</a></div><div class="ttdeci">bool cwist_scheduler_schedule(cwist_scheduler_t *s, cwist_job_func func, void *arg, uint64_t delay_ms)</div><div class="ttdoc">Schedule a job to run after a delay.</div><div class="ttdef"><b>Definition</b> <a href="../../dd/d6c/scheduler_8c_source.html#l00374">scheduler.c:374</a></div></div>
-<div class="ttc" id="ascheduler_8c_html_a93a77a1ca7d1ac21f8d0a91123ca2f83"><div class="ttname"><a href="../../dd/d6c/scheduler_8c.html#a93a77a1ca7d1ac21f8d0a91123ca2f83">cwist_scheduler_pending_count</a></div><div class="ttdeci">size_t cwist_scheduler_pending_count(cwist_scheduler_t *s)</div><div class="ttdoc">Return the number of jobs waiting on the delayed-job heap.</div><div class="ttdef"><b>Definition</b> <a href="../../dd/d6c/scheduler_8c_source.html#l00406">scheduler.c:406</a></div></div>
+<div class="ttc" id="agc_8h_html_a28b862cd5828d70bdb18dfad374d97ef"><div class="ttname"><a href="../../d0/daa/gc_8h.html#a28b862cd5828d70bdb18dfad374d97ef">cwist_gc_scope_disown</a></div><div class="ttdeci">bool cwist_gc_scope_disown(void *ptr)</div><div class="ttdoc">Remove ptr from the current thread's pending-sweep list without freeing it, because ownership is bein...</div><div class="ttdef"><b>Definition</b> <a href="../../d8/d16/gc_8c_source.html#l00513">gc.c:513</a></div></div>
+<div class="ttc" id="agc_8h_html_a35e613a89ca213039b7b8b80464c223c"><div class="ttname"><a href="../../d0/daa/gc_8h.html#a35e613a89ca213039b7b8b80464c223c">cwist_full_gc_enabled</a></div><div class="ttdeci">bool cwist_full_gc_enabled(void)</div><div class="ttdoc">Check whether full-GC mode is currently enabled.</div><div class="ttdef"><b>Definition</b> <a href="../../d8/d16/gc_8c_source.html#l00277">gc.c:277</a></div></div>
+<div class="ttc" id="ascheduler_8c_html_a16ac83e9ad8cc4a59205bb3ce7b1c8ad"><div class="ttname"><a href="../../dd/d6c/scheduler_8c.html#a16ac83e9ad8cc4a59205bb3ce7b1c8ad">cwist_scheduler_destroy</a></div><div class="ttdeci">void cwist_scheduler_destroy(cwist_scheduler_t *s)</div><div class="ttdoc">Destroy a scheduler and free all its resources.</div><div class="ttdef"><b>Definition</b> <a href="../../dd/d6c/scheduler_8c_source.html#l00318">scheduler.c:318</a></div></div>
+<div class="ttc" id="ascheduler_8c_html_a3f5b6e8f86cb918356d278714b809683"><div class="ttname"><a href="../../dd/d6c/scheduler_8c.html#a3f5b6e8f86cb918356d278714b809683">cwist_scheduler_submit</a></div><div class="ttdeci">bool cwist_scheduler_submit(cwist_scheduler_t *s, cwist_job_func func, void *arg)</div><div class="ttdoc">Submit a job for immediate execution by a worker thread.</div><div class="ttdef"><b>Definition</b> <a href="../../dd/d6c/scheduler_8c_source.html#l00351">scheduler.c:351</a></div></div>
+<div class="ttc" id="ascheduler_8c_html_a711e7f9807d19aa351f2544c59534790"><div class="ttname"><a href="../../dd/d6c/scheduler_8c.html#a711e7f9807d19aa351f2544c59534790">cwist_scheduler_schedule</a></div><div class="ttdeci">bool cwist_scheduler_schedule(cwist_scheduler_t *s, cwist_job_func func, void *arg, uint64_t delay_ms)</div><div class="ttdoc">Schedule a job to run after a delay.</div><div class="ttdef"><b>Definition</b> <a href="../../dd/d6c/scheduler_8c_source.html#l00371">scheduler.c:371</a></div></div>
+<div class="ttc" id="ascheduler_8c_html_a93a77a1ca7d1ac21f8d0a91123ca2f83"><div class="ttname"><a href="../../dd/d6c/scheduler_8c.html#a93a77a1ca7d1ac21f8d0a91123ca2f83">cwist_scheduler_pending_count</a></div><div class="ttdeci">size_t cwist_scheduler_pending_count(cwist_scheduler_t *s)</div><div class="ttdoc">Return the number of jobs waiting on the delayed-job heap.</div><div class="ttdef"><b>Definition</b> <a href="../../dd/d6c/scheduler_8c_source.html#l00403">scheduler.c:403</a></div></div>
 <div class="ttc" id="ascheduler_8c_html_ae0f1c3ad3074a69d79ea27d641ac2294"><div class="ttname"><a href="../../dd/d6c/scheduler_8c.html#ae0f1c3ad3074a69d79ea27d641ac2294">cwist_scheduler_create</a></div><div class="ttdeci">cwist_scheduler_t * cwist_scheduler_create(size_t worker_count, size_t queue_capacity)</div><div class="ttdoc">Create a scheduler with worker and timer threads.</div><div class="ttdef"><b>Definition</b> <a href="../../dd/d6c/scheduler_8c_source.html#l00259">scheduler.c:259</a></div></div>
 <div class="ttc" id="ascheduler_8c_html_af7b55ac300905012fb3b0824af3c3b14"><div class="ttname"><a href="../../dd/d6c/scheduler_8c.html#af7b55ac300905012fb3b0824af3c3b14">CWIST_SCHEDULER_HEAP_INIT</a></div><div class="ttdeci">#define CWIST_SCHEDULER_HEAP_INIT</div><div class="ttdef"><b>Definition</b> <a href="../../dd/d6c/scheduler_8c_source.html#l00020">scheduler.c:20</a></div></div>
 <div class="ttc" id="ascheduler_8h_html"><div class="ttname"><a href="../../d2/dd8/scheduler_8h.html">scheduler.h</a></div><div class="ttdoc">Background job scheduler / delayed task queue for CWIST.</div></div>

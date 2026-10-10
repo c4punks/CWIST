@@ -1,13 +1,23 @@
 # LeakSanitizer suppressions for the CI ASan/UBSan gate.
 #
-# Vendored lsquic teardown: on abortive connection/engine destroy, lsquic
-# releases QPACK decoder pages, bandwidth samplers and the cert cache only on
-# the orderly drain path. These allocations live inside lib/lsquic, not CWIST
-# code.
-leak:lsquic_qdh_header_in_begin
-leak:lsquic_malo_create
+# The entries below are upstream lsquic leaks, not CWIST memory: one-time
+# globals allocated inside lsquic_global_init() that lsquic_global_cleanup()
+# never releases.  They surface in the HTTP/3 tests (tests/test_http3.c,
+# including the connection-close coverage in Test 12) because that suite is
+# what initializes and tears down lsquic in-process.
+#
+# Previously this file also suppressed lsquic_qdh_header_in_begin,
+# lsquic_malo_create, and lsquic_bw_sampler_init.  Those turned out to be
+# CWIST-reachable leaks (a header set never discarded by the H3 client, and
+# lsquic_conn_get_info() allocating a sampler while the connection is being
+# destroyed) and are fixed in src/net/http/http3_client.c and
+# src/net/http/http3.c; the suppressions were removed so regressions there
+# fail the gate again.
+
+# Global certificate-compression cache (allocated once by
+# lsquic_global_init(), never freed by lsquic_global_cleanup()).
 leak:lsquic_crt_init
-leak:lsquic_bw_sampler_init
+leak:lsquic_global_init
+# Backing strings of the same cache; lsquic_str_* are its allocators.
 leak:lsquic_str_new
 leak:lsquic_str_append
-leak:lsquic_global_init

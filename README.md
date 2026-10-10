@@ -4,120 +4,118 @@
 
 <h1 align="center">CWIST</h1>
 <p align="center"><strong>C Web development Is Still Trustworthy</strong></p>
-**Implementations powered by lsquic/BoringSSL/OpenSSL without context contamination.**
+
+<p align="center">
+  <a href="https://discord.gg/6F8HDmNAPg"><img src="https://img.shields.io/badge/Discord-Join%20chat-5865F2?logo=discord&logoColor=white" alt="Discord"></a>
+</p>
 
 <p align="center">
 CWIST is a C17 web framework and application server with built-in HTTP/1.1, HTTP/2,
 HTTP/3 (QUIC), WebSocket, and WebTransport support, hybrid post-quantum TLS
 (X25519MLKEM768), an embedded SQLite ORM, and a synchronous io_uring/epoll/kqueue
-reactor. It is written in plain C, links statically, and serves ~152k req/s at
-1.59ms average latency in ~9.1MB of RSS (CI: `wrk -t12 -c400 -d10s` after warmup,
-C1M reactor mode — see the benchmark block below; a tuned `wrk -t4 -c100` profile
-reaches 0.41ms average at ~155k req/s).
+reactor. It is written in plain C and links statically.
 </p>
+
+## Two server modes, and why you would pick each
+
+CWIST ships two request paths and they are tuned for opposite things. Pick per
+workload; the mode is one environment variable.
+
+**CWIST reactor (default)** takes the throughput. It multiplexes many connections per event
+loop, so connection count is decoupled from thread count and a connection costs
+a reactor slot rather than a parked thread. On the run recorded further down it
+leads the async row on throughput. This is the default mode; no extra environment
+variable is needed unless you want the other path.
+
+**CWIST Classic pool** is the opt-in thread-per-connection mode. Every connection gets
+its own thread, so no request waits behind another in a batch. It answers the
+median request in less than half of the Axum row's time, and stays ahead through
+p99. Enable it with `CWIST_C1M_MODE=0`.
+
+### The distribution is the point, not the average
+
+An average hides which requests were slow. The benchmark block below samples
+the full distribution, and the density chart draws the whole shape. Read it as:
+classic pool leads through the median and p99; the crossover is at the extreme
+tail, where Axum's is tighter. Closing that gap is open work rather than
+something to spin.
+
+These figures come from one commit, load profile, and CI environment, and the
+runner CPU model changes between runs, which moves them more than most code
+changes do. They are not universal guarantees.
 
 [Heavy Benchmark on CWIST APP](https://github.com/gg582/fly.board/blob/main/README.md)
 
-<!-- WEBSERVER_BENCHMARKS:START -->
-*Benchmark results are dynamically rendered here during CI runs.*
-<!-- WEBSERVER_BENCHMARKS:END -->
+<!-- TUNED_BENCHMARK:START -->
+**Tuned low-latency run (wrk -t4 -c100 -d10s (after 10s warmup, warmup discarded)), CWIST vs Axum on identical concurrency:**
 
-_Methodology, JVM options, and fairness settings: [docs/webserver-benchmark.md](docs/webserver-benchmark.md)_
+- **CWIST**: 107,161 req/s at 0.57ms average latency (P50 0.45ms, P90 1.05ms, P99 2.41ms)
+- **Axum**: 118,950 req/s at 0.79ms average latency (P50 0.69ms, P90 1.46ms, P99 2.58ms), same binary as the main run above
+
+These runs use a different concurrency budget from the main table. They do not establish a causal scheduling explanation or a universal tail-latency improvement.
+<!-- TUNED_BENCHMARK:END -->
 
 ---
 
-## Why CWIST?
+## Install
 
-Most C web frameworks stop at HTTP/1.1 and leave TLS, protocol upgrades, and memory
-management as exercises for the user. CWIST ships with the entire stack:
-
-- **HTTP/3 & WebTransport Server** powered by lsquic (server-side WebTransport sessions
-  over QUIC with bidirectional/unidirectional streams).
-- **Post-Quantum TLS** via a single API call: `cwist_app_use_pqc_layer(app, true)`
-  forces hybrid X25519MLKEM768 and disables legacy TLS < 1.3. No OpenSSL knowledge required.
-- **Server-side zero-copy I/O & C100K Reactor** backed by io_uring / epoll / kqueue with lock-free
-  job queues and generational arena allocators from libttak.
-- **Nuke DB**: a read-optimal, in-memory SQLite engine that syncs to disk on every COMMIT.
-- **Auto-RDBMS Detection**: probe any TCP port and automatically mount PostgreSQL, MySQL,
-  or MariaDB runtimes by wire-protocol fingerprinting.
-
-## Core Features
-
-| Layer | What you get |
-|-------|-------------|
-| **Protocols** | HTTP/1.1, HTTP/2 (h2/h2c), HTTP/3 (QUIC), WebSocket, WebTransport |
-| **TLS / Security** | BoringSSL, PQC hybrid groups, ECH, JWT, DB Crypt, Monocypher |
-| **Database** | SQLite3 + ORM, Nuke DB (in-memory + WAL sync), RDBMS auto-detection |
-| **Routing** | Express-style `:param` routes, Mux router, chainable middleware |
-| **Performance** | Zero-copy I/O, generational arenas, EBR GC, lock-free queues, Big Dumb Reply cache |
-| **Observability** | Structured access logs, metrics endpoint, healthz, rate limiting |
-| **gRPC / Protobuf** | Unary and streaming routes, incremental framing, health/reflection services, and `cwist proto` scalar-model generation |
-| **Rendering** | HTML builder, CSS composer, template engine, JSON builder / heal |
-
-## Quick Start
+CWIST vendors its dependencies (BoringSSL, lsquic, libttak, SQLite3), so a plain
+build works on a fresh Linux, macOS, or BSD machine:
 
 ```sh
-git clone https://github.com/religiya-serdtsa/cwist.git
+git clone https://github.com/c4punks/CWIST.git
 cd cwist
 make
+sudo make install        # optional, installs to /usr/local (override with PREFIX=/opt/cwist)
 ```
 
-## Platform support
+### Homebrew
 
-CWIST builds on Linux, macOS, and BSD systems. The HTTP/3 server and native
-client use non-blocking UDP sockets on every platform; Linux uses `epoll`,
-while BSD-family systems use the portable polling path. ECN metadata is
-enabled only when the host exposes the required socket option and ancillary
-data interfaces, so an unavailable optional API does not prevent an HTTP/3
-build.
+macOS and Linux (Linuxbrew) users can install the latest release from the
+[CWIST tap](https://github.com/c4punks/homebrew-cwist):
 
-## I/O model: io_uring at the wait layer only
+```sh
+brew tap c4punks/cwist
+brew install cwist
+```
 
-On Linux, CWIST uses io_uring (raw syscalls, no liburing dependency) strictly
-as a **readiness multiplexer** — a replacement for `epoll_wait` in
-`src/sys/io/reactor.c`. The reactor arms one-shot `IORING_OP_POLL_ADD`
-requests; when a completion arrives, the woken worker performs ordinary
-blocking `recv`/`send` inline and runs the request to completion on the spot.
-If io_uring setup fails, the reactor falls back to epoll (kqueue on
-macOS/BSD) with identical behavior.
+Or install directly without tapping:
 
-**Why the request hot path is not completion-based.** A full completion
-model (submitting `recv`/`send` as SQEs and reacting to CQEs) pushes every
-request through the ring multiple times and ties progress to loop ticks —
-that is the design point where async runtimes land at 2–3ms average latency
-(Axum/Tokio territory). CWIST's 0.0x ms latency comes from the opposite
-choice: the worker that wakes up for an event owns the request synchronously
-until it is finished, so no SQE ever sits between a packet and its handler.
-Keeping io_uring at the wait layer — and out of the hot path — is a
-deliberate design strength, not an unfinished integration:
+```sh
+brew install c4punks/cwist/cwist
+```
 
-- **No queues.** A request passes through no queue between the readiness
-  notification and its handler; the woken worker completes it inline. That
-  absence — not any single optimization — is where the 0.0x ms latency
-  comes from. A completion model routes each request through a ring 3–4
-  times and binds it to loop ticks, which is exactly the 2–3ms regime.
-- **Structural backpressure.** Callbacks block, so unfinished work cannot
-  accumulate in the kernel or in userland. One in-flight cap per worker
-  thread (`32` in `src/net/http/http.c`) is the entire flow-control story;
-  past the cap the server sheds load with a fixed 503 instead of inflating
-  tail latency.
-- **Cache locality.** A request's whole lifetime runs on one thread's
-  contiguous stack and reuses L1/L2 lines. A completion model splits the
-  handler into fragments and lifts per-stage state onto the heap.
-- **No state machines.** Handlers are straight-line code; a stack trace is
-  the request's execution history.
-- **Deterministic tail.** With no queue waiting anywhere, p99/p999
-  converge on the mean.
+The formula builds from the release source tarball
+(`dist/cwist-<version>.tar.gz`, vendored dependencies included) and installs
+`libcwist.a`, public headers, the `cwist` CLI, and `cwist.pc` pkg-config
+metadata under the Homebrew prefix.
 
-The trade-off is explicit: per-connection concurrency is bounded by the
-worker count (cores×8), and horizontal headroom comes from multi-process
-scaling (fork + SO_REUSEPORT) rather than from per-core async fan-out. The
-retired completion-based backend (`io_uring_backend.c`) was removed; its
-ring setup/teardown and free-stack slot infrastructure were absorbed into
-the reactor.
+## Hello world
 
-**Operational gate.** Average request latency crossing **1ms** is treated as
-a regression and a build/benchmark failure, regardless of throughput gains.
+```c
+#include <cwist/app.h>
+
+static void hello(cwist_http_request *req, cwist_http_response *res) {
+    (void)req;
+    cwist_sstring_assign(res->body, "Hello from CWIST!");
+}
+
+int main(void) {
+    cwist_app *app = cwist_app_create();
+    cwist_app_get(app, "/", hello);
+    cwist_app_listen(app, 8080);
+    cwist_app_destroy(app);
+    return 0;
+}
+```
+
+```sh
+gcc -o server main.c -lcwist -lssl -lcrypto -lz -lzstd -lbrotlienc -lbrotlicommon -luriparser -lcjson -ldl -lpthread -lm
+./server
+```
+
+A larger example with a database, post-quantum TLS, metrics, and RDBMS
+auto-detection:
 
 ```c
 #include <cwist/app.h>
@@ -143,7 +141,6 @@ int main(void) {
     /* Auto-detect PostgreSQL / MySQL / MariaDB on localhost */
     cwist_app_auto_rdbms(app, 5432);
 
-    /* Routes */
     cwist_app_get(app, "/", hello);
 
     cwist_app_listen(app, 8080);
@@ -151,6 +148,74 @@ int main(void) {
     return 0;
 }
 ```
+
+
+<!-- WEBSERVER_BENCHMARKS:START -->
+Latest Web Server Benchmark (wrk -t12 -c400 -d10s (after 10s warmup, warmup discarded)):
+- **CWIST Classic pool**: 115954 req/s | Latency 2.01ms (P90 4.22ms, P99 7.68ms, P99.999 22.01ms) | RSS 59044KiB | Csw 1164482
+- **CWIST reactor**: 136246 req/s | Latency 2.87ms (P90 5.04ms, P99 7.75ms, P99.999 14.38ms) | RSS 20040KiB | Csw 119800
+- **CWIST reactor (arena_max=1)** — glibc arena cap adopted in PR #35 after mimalloc was tried and refuted (issue #25); this line confirms the decision on every run: 137323 req/s | Latency 2.85ms (P90 4.97ms, P99 7.79ms, P99.999 16.74ms) | RSS 24156KiB | Csw 113815
+- **CWIST reactor (drain_chunk=8)** — cooperative queuing for cwist_async_defer completions within a big io_uring batch (issue #25, docs/cooperative-queuing.md); this workload has no cwist_async_defer traffic to interleave, so parity with the plain CWIST row above is the expected result, not a null finding — the tail-latency win is isolated directly in tests/bench_cooperative_queuing.c: 137476 req/s | Latency 2.85ms (P90 5.07ms, P99 7.68ms, P99.999 12.33ms) | RSS 20952KiB | Csw 120856
+- **Axum**: 110433 req/s | Latency 3.55ms (P90 6.00ms, P99 8.90ms, P99.999 17.28ms) | RSS 18348KiB | Csw 187263
+- **Gin (Go)**: 78769 req/s | Latency 6.74ms (P90 16.15ms, P99 35.36ms, P99.999 80.97ms) | RSS 30720KiB | Csw 298754
+- **Spring Boot**: 43382 req/s | Latency 9.17ms (P90 11.53ms, P99 19.10ms, P99.999 96.65ms) | RSS 1326532KiB | Csw 229505
+
+**Spring runtime environment**
+
+- **JDK:** `openjdk version "25.0.4.1" 2026-08-18 LTS`
+- **Spring Boot:** 3.2.3
+- **Stack:** Spring WebFlux + Reactor Netty on native epoll (G1GC, JDK 25 Leyden AOT, virtual threads disabled)
+- **Virtual threads:** disabled
+
+**JVM options**
+
+```text
+-Xms1024m
+-Xmx1024m
+-XX:+UseG1GC
+-XX:GCTimeRatio=99
+-XX:G1HeapRegionSize=1m
+-XX:+AlwaysPreTouch
+-XX:CompileThreshold=1500
+-XX:CICompilerCount=4
+-Djava.security.egd=file:/dev/urandom
+-Djava.net.preferIPv4Stack=true
+-Dio.netty.allocator.type=pooled
+-Dio.netty.leakDetection.level=disabled
+-Dio.netty.buffer.checkBounds=false
+-Dio.netty.buffer.checkAccessible=false
+-Dreactor.netty.ioWorkerCount=4
+-Xlog:gc*:file=/tmp/spring_gc.log:time,uptime,level,tags
+-XX:+AOTClassLinking
+-XX:AOTCache=/tmp/spring_bench/app.aot (JEP 483 + JEP 514 single-step AOT)
+```
+
+**Warmup/profile**
+
+wrk -t12 -c400 -d10s (after 10s warmup, warmup discarded)
+
+![Web Server Benchmark Trends](docs/webserver-benchmark-trends.svg)
+
+Latency distribution (density curve reconstructed from each server's percentiles - shows the shape of the tail, not just its P99.999 number):
+
+![Web Server Latency Distribution](docs/webserver-latency-distribution.svg)
+
+### Per runner CPU
+
+GitHub hands out a different CPU model per run, which moves these numbers more than most code changes do. Medians of every recorded run, split by the CPU it landed on, so rows are only comparable down a column:
+
+| Runner CPU | Runs | CWIST Classic ms | CWIST ms | Axum ms | CWIST req/s | Axum req/s |
+|---|---:|---:|---:|---:|---:|---:|
+| AMD EPYC 7763 64-Core Processor | 53 | 2.05 | 2.89 | 3.54 | 140,677 | 110,433 |
+| AMD EPYC 9V74 80-Core Processor | 23 | 1.61 | 2.57 | 2.62 | 182,209 | 150,456 |
+| AMD EPYC 9V45 96-Core Processor | 12 | 1.27 | 1.87 | 2.10 | 223,051 | 189,872 |
+| Intel(R) Xeon(R) 6973P-C | 7 | 0.98 | 1.46 | 1.62 | 314,909 | 246,066 |
+| INTEL(R) XEON(R) PLATINUM 8573C | 4 | 1.24 | 1.72 | 1.98 | 244,777 | 198,838 |
+| Intel(R) Xeon(R) Platinum 8370C CPU @ 2.80GHz | 1 | 1.38 | 1.96 | 2.43 | 205,814 | 160,582 |
+<!-- WEBSERVER_BENCHMARKS:END -->
+
+_Methodology, JVM options, and fairness settings: [docs/webserver-benchmark.md](docs/webserver-benchmark.md)_
+
 
 ## What CWIST includes
 
@@ -170,20 +235,21 @@ memory management to the user. CWIST ships the whole stack:
 | Layer | What you get |
 |-------|-------------|
 | **Protocols** | HTTP/1.1, HTTP/2 (h2/h2c), HTTP/3 (QUIC), WebSocket, WebTransport |
-| **TLS / Security** | BoringSSL, PQC hybrid groups, ECH, JWT, DB Crypt, Monocypher |
+| **TLS / Security** | BoringSSL, PQC hybrid groups, ECH, JWT, DB Crypt |
 | **Database** | SQLite3 + ORM, Nuke DB (in-memory + WAL sync), RDBMS auto-detection |
 | **Routing** | Express-style `:param` routes, Mux router, chainable middleware |
 | **Performance** | Zero-copy I/O, generational arenas, EBR GC, lock-free queues, Big Dumb Reply cache |
+| **Async handlers** | Deferred responses (`cwist_async_defer` / `cwist_async_respond`): offload blocking work to a job thread and complete the request later without stalling the reactor |
 | **Observability** | Structured access logs, metrics endpoint, healthz, rate limiting |
-| **gRPC / Protobuf** | Unary and streaming routes, incremental framing, health/reflection services, and `cwist proto` scalar-model generation |
+| **gRPC / Protobuf** | Unary and streaming routes, incremental framing, health/reflection services, Trailers-Only error responses, and `cwist proto` model/encoder/decoder generation (scalars, repeated, nested messages, enums). Channel client: dns/ipv4/ipv6 resolution, `pick_first`/`round_robin` load balancing, and gRFC A6 retries (backoff, pushback, throttling, transparent retries) |
 | **Rendering** | HTML builder, CSS composer, template engine, JSON builder / heal |
 
 ## Why C, when Axum and Gin exist?
 
 The benchmark results above demonstrate the advantages in latency, memory footprint, and determinism:
 
-1. **Latency & Throughput.** Under 400 concurrency (`wrk -t12 -c400`), CWIST Classic Pool delivers 2.16ms average latency and ~111k req/s, and C1M Reactor delivers 2.41ms (versus 3.52ms for Axum, 7.18ms for Gin, and 9.11ms for Spring Boot). In tuned low-latency configurations (`wrk -t4 -c100`), CWIST achieves 0.59ms average latency (P50 0.46ms, P90 1.12ms) at ~108k req/s.
-2. **Memory Efficiency.** CWIST maintains a lean memory footprint (~15.9MB RSS in C1M mode, ~21.7MB in Classic Pool), compared to ~29.5MB for Gin and ~1.34GB for Spring Boot. In high-density container environments, this significantly reduces memory consumption across thousands of instances.
+1. **Latency & Throughput.** Under 400 concurrency (`wrk -t12 -c400`, CI run above), both CWIST paths deliver lower average latency and higher throughput than the Axum, Actix, Gin, and Spring Boot rows of the same run; the tuned low-latency profile (`wrk -t4 -c100`) shows the sub-millisecond median.
+2. **Memory Efficiency.** CWIST's resident footprint is a fraction of the Go row and orders of magnitude below the JVM row of the same CI run. In high-density container environments, this significantly reduces memory consumption across thousands of instances.
 3. **Tail Latency & Predictability.** Zero-copy framing, thread-pinned worker execution, and generational arena allocators minimize latency variance and GC pauses.
 4. **Zero-Overhead FFI.** Production libraries in finance, game servers, machine learning, and systems software written in C/C++ link directly into CWIST with zero FFI conversion or runtime bridge penalty.
 5. **Instant Cold Start.** With no runtime VM warmup or GC initialization required, CWIST starts in milliseconds and immediately serves requests at full capacity.
@@ -196,23 +262,21 @@ systems use the portable polling path. ECN metadata is enabled only when the
 host exposes the required socket options, so a missing optional API never
 blocks an HTTP/3 build.
 
-## Execution & I/O models: C1M Reactor and Classic Pool
+## Execution & I/O models: CWIST reactor (default) and CWIST Classic pool
 
 CWIST provides two operational execution models tailored for different workload profiles:
 
-1. **C1M Reactor Mode (`CWIST_C1M_MODE=1`, default)**: An event-driven asynchronous reactor designed for massive concurrent connections (`epoll` on Linux, `kqueue` on macOS/BSD). It uses non-blocking I/O multiplexing and cooperative scheduling with lock-free coordination to maintain low latency under high concurrency without per-connection thread overhead.
-2. **Classic Pool Mode (`CWIST_C1M_MODE=0`)**: A worker thread pool model designed for low-jitter, predictable throughput on compute-bound workloads. In this mode, incoming requests are assigned to worker threads using thread-pinned queues and executed to completion inline on the worker stack.
+1. **CWIST reactor mode (`CWIST_C1M_MODE=1`, default)**: An event-driven asynchronous reactor designed for massive concurrent connections (`io_uring` on Linux, `kqueue` on macOS/BSD). It uses non-blocking I/O multiplexing and cooperative scheduling with lock-free coordination to maintain low latency under high concurrency without per-connection thread overhead. This is the default mode: if you do not set `CWIST_C1M_MODE`, you are running the CWIST reactor.
+2. **CWIST Classic pool mode (`CWIST_C1M_MODE=0`)**: A worker thread pool model designed for low-jitter, predictable throughput on compute-bound workloads. In this mode, incoming requests are assigned to worker threads using thread-pinned queues and executed to completion inline on the worker stack. Enable it explicitly when you want a thread per active connection instead of the reactor.
 
 ### Readiness multiplexing vs full completion rings
 
-On Linux, CWIST uses `io_uring` (raw syscalls, no liburing dependency) strictly as a readiness multiplexer, replacing `epoll_wait` in `src/sys/io/reactor.c`. The reactor arms one-shot `IORING_OP_POLL_ADD` requests. When a completion arrives, the woken worker performs inline I/O operations directly. If io_uring setup fails, the reactor falls back to epoll (kqueue on macOS/BSD) with identical behavior.
+On Linux, CWIST uses `io_uring` (raw syscalls, no liburing dependency) as the event engine, replacing `epoll_wait` in `src/sys/io/reactor.c`. By default the reactor arms one-shot `IORING_OP_POLL_ADD` requests and the woken worker performs inline I/O directly. On reactors with a real io_uring ring the async HTTP receive wait can instead be a single `IORING_OP_RECV` whose completion stages the bytes, replacing the POLL+recv pair (issue #179, PR #187); a per-connection learn flag keeps non-pipelining clients at the legacy op count. `CWIST_RX_URING=0` restores the POLL path, `CWIST_LATENCY_PROBE=1` records arm-to-dispatch and callback-time histograms per reactor (issue #166). If io_uring setup fails, the reactor falls back to epoll (kqueue on macOS/BSD) with identical behavior.
 
 - **Direct readiness handling.** When a readiness notification arrives, the worker processes the event directly rather than routing multiple intermediate completion steps through userspace ring buffers on every tick.
 - **Structural backpressure.** Work cannot unboundedly accumulate; per-worker concurrency limits allow the server to shed excess load under saturation rather than inflating tail latency.
 - **Cache locality.** Handling request execution on contiguous worker stacks minimizes cache misses and fragmentation compared to multi-stage heap-allocated callback chains.
 - **Deterministic tail.** Thread-pinned worker execution and generational arenas keep latency variance minimal across percentiles.
-
-**Operational gate.** Average request latency crossing **1ms** is treated as a regression and a build/benchmark failure, regardless of throughput gains.
 
 ## Development hot reload
 
@@ -228,40 +292,8 @@ cwist watcher
 ```
 
 Use `cwist watcher --no-run` for CI or rebuild-only use, or `--poll` to force
-portable polling. `dev.debounce_ms` and
-`dev.stop_timeout_ms` in the manifest control atomic-save coalescing and
-graceful process shutdown.
-
-## Managing a project with the cwist CLI
-
-`make install` also installs the `cwist` command line tool into `$(PREFIX)/bin`.
-
-```sh
-# Scaffold a project: src/main.c, Makefile, and a demo.cwpro manifest
-cwist new project demo --directory ~/src
-cd ~/src/demo
-
-# Build and run like the generated Makefile does
-make            # cc src/main.c -lcwist -lpthread  (needs CWIST installed)
-./bin/demo
-
-# Develop with hot reload (incremental rebuild + zero-downtime restart)
-cwist watcher
-
-# Generate OpenAPI 3.1 from Doxygen @openapi.* route annotations
-cwist openapi
-
-# Generate C models and gRPC method paths from proto3 definitions
-cwist proto api.proto
-
-# Inspect the project manifest and detected routes
-cwist describe
-```
-
-The `.cwpro` manifest (`cwist-project/v1`) is the single source of truth for
-the watcher and generators: entry point, include paths, dev debounce/stop
-timeouts, and route discovery scope all live there, so builds stay reproducible
-across machines without extra configuration.
+portable polling. `dev.debounce_ms` and `dev.stop_timeout_ms` in the manifest
+control atomic-save coalescing and graceful process shutdown.
 
 ## Managing a project with the cwist CLI
 
@@ -297,12 +329,12 @@ across machines without extra configuration.
 ## Linking
 
 CWIST's `libcwist.a` is a **thin static archive**: it contains only CWIST
-objects.  `make install PREFIX=/opt/cwist` installs its built external
+objects. `make install PREFIX=/opt/cwist` installs its built external
 submodules separately in `/opt/cwist/lib/cwist`, and installs their public
 headers in `/opt/cwist/include/cwist/vendor`.
 
 Compile against both header directories and link against both library
-directories.  This keeps third-party archives independently replaceable and
+directories. This keeps third-party archives independently replaceable and
 avoids duplicate symbols from a merged (fat) archive.
 
 ```sh
@@ -315,8 +347,7 @@ gcc -I/opt/cwist/include -I/opt/cwist/include/cwist/vendor main.c \
 `DESTDIR` is supported for staged packages, for example
 `make install PREFIX=/usr DESTDIR=/tmp/cwist-package`.
 
-The order above is important for static linking: CWIST comes first, followed
-by its dependencies.
+The order above matters for static linking: CWIST first, then its dependencies.
 
 ### Required flags (always needed)
 
@@ -324,9 +355,9 @@ by its dependencies.
 |------|----------|
 | `-lcwist` | The framework itself |
 | `-llsquic -lssl -lcrypto` | HTTP/3/QUIC and TLS (bundled BoringSSL) |
-| `-lz` | zlib — gzip/deflate compression and internal use |
-| `-lzstd` | Zstandard — payload compression (preferred algorithm) |
-| `-lbrotlienc -lbrotlicommon` | Brotli — payload compression |
+| `-lz` | zlib: gzip/deflate compression and internal use |
+| `-lzstd` | Zstandard: payload compression (preferred algorithm) |
+| `-lbrotlienc -lbrotlicommon` | Brotli: payload compression |
 | `-lnats_static -lttak -luriparser -lcjson` | Bundled NATS, libttak, URI parsing, and JSON |
 | `-ldl` | Dynamic loading (RDBMS auto-mount) |
 | `-lpthread` | POSIX threads |
@@ -337,9 +368,18 @@ by its dependencies.
 | Flag | When required |
 |------|---------------|
 | `-lnghttp2` | HTTP/2 support |
-| `-lngtcp2 -lngtcp2_crypto_quictls` | HTTP/3 / QUIC |
-| `-lnghttp3` | HTTP/3 QPACK |
 | `-lcurl` | RDBMS auto-mount wire probing |
+
+### pkg-config (installed since v3.2)
+
+`make install` ships `cwist.pc`, so the flags above collapse into one line:
+
+```sh
+gcc -o server main.c $(pkg-config --cflags --libs cwist)
+```
+
+For static linking, use `pkg-config --cflags --libs --static cwist`, which also
+pulls in the optional libs (`-lcurl`, `-lnghttp2`).
 
 ### pkg-config snippet for Makefile
 
@@ -352,21 +392,20 @@ CWIST_LIBS := -lcwist \
 
 # Append optional libs if present on the build host
 CWIST_LIBS += $(shell pkg-config --libs libnghttp2  2>/dev/null)
-CWIST_LIBS += $(shell pkg-config --libs libngtcp2   2>/dev/null)
-CWIST_LIBS += $(shell pkg-config --libs libnghttp3  2>/dev/null)
 CWIST_LIBS += $(shell pkg-config --libs libcurl     2>/dev/null || echo -lcurl)
 
 your_target: your_source.c
 	$(CC) -o $@ $< $(CWIST_LIBS)
 ```
 
-> **Note** — `brotlienc` and `brotlicommon` ship as **`libbrotli-dev`** on
+> **Note**: `brotlienc` and `brotlicommon` ship as **`libbrotli-dev`** on
 > Debian/Ubuntu and **`brotli-devel`** on Fedora/RHEL. `zstd` ships as
 > **`libzstd-dev`** / **`libzstd-devel`**.
 
 ## Configuration
 
-CWIST bundles a lightweight configuration loader that reads `.env` files and environment variables with optional prefixes.
+CWIST bundles a lightweight configuration loader that reads `.env` files and
+environment variables with optional prefixes.
 
 ### Loading `.env` files
 
@@ -409,21 +448,58 @@ These variables are read directly by the framework runtime (no prefix required):
 | Variable | Type | Default | Description |
 |----------|------|---------|-------------|
 | `CWIST_WORKERS` | integer | `1` | Number of worker processes to fork before entering the event loop. |
-| `CWIST_C1M_MODE` | boolean | `true` | Enables the high-concurrency C1M async server loop. Set to `0` or `false` to fall back to a blocking accept loop. |
+| `CWIST_C1M_MODE` | boolean | `true` | Default server mode. `true`/`1` selects the CWIST reactor (C1M) and `false`/`0` selects CWIST Classic pool. The reactor is the default; only set this if you want the classic thread-per-connection path. |
+| `CWIST_HTTP_BATCH` | integer | `16` | Maximum pipelined HTTP/1.1 requests dispatched per event-loop turn (clamped to `[1, 1024]`). Excess requests are deferred via reactor continuations. |
+| `CWIST_HTTP_YIELD_BATCH` | integer | `16` (derived from batch) | Request dispatch yield granularity within a batch before re-posting connection to reactor queue. |
+| `CWIST_ASYNC_DEBUG` | boolean | unset | When set, the C1M async path and the reactor log rare failure events (rearm/submit/SQ failures) to stderr. No output in normal operation. |
 
-**C1M Mode's value is theorically ready for C1M Server loop. However, a benchmark failed with file descriptor exhaution. This is theorically calculated. The real benchmark will handle C300K connections.**
+**CWIST reactor mode (C1M) is now measured, not theoretical.** With the event-driven one-shot
+connection path (connections live in the io_uring/epoll reactor instead of
+parking a worker thread each), a single cwist server on loopback served:
 
-| Scale | Result | Wall time |
-|-------|--------|-----------|
-| C10K | 10,000 / 10,000 established + responded (100%) | ~0.5 s |
-| C100K | 100,000 / 100,000 responded (100%) | ~9 s |
-| C1M (8×125K) | 1,000,000 / 1,000,000 responded (100%) | ~20 s per client process |
+| Scale | Result | Wall time | Server peak RSS |
+|-------|--------|-----------|-----------------|
+| C10K | 10,000 / 10,000 established + responded (100%) | ~0.9 s | ~301 MiB |
+| C100K | 100,000 / 100,000 responded (100%) | ~12.1 s | ~2.35 GiB |
+| C1M (8×125K) | 1,000,000 / 1,000,000 responded (100%) | ~26.5–27.5 s per client process | ~22.9 GiB |
+
+Re-measured on 2026-09-29 at `main` `2f5b4786` with
+`benchmarks/web-frameworks/cwist_bench` (`CWIST_WORKERS=12`). Peak RSS is
+the summed `VmHWM` high-water mark across the 12 forked worker processes.
+Every held connection costs about 24 KB of server memory. The 2026-08
+figures (~111 MB / ~124 MB / ~244 MB at C10K / C100K / C1M) predate later
+changes to the connection path, and per-connection memory is now the
+main cost at C1M.
+
+The classic thread-per-connection path (`CWIST_C1M_MODE=0`) is no longer
+capped at `cores*8` held connections either: every accepted connection gets
+its own on-demand detached thread with a 256 KiB stack, so held connections
+scale with the task budget instead of parking a fixed worker pool. Measured
+on the same machine, same client:
+
+| Scale | Result | Wall time | Server peak RSS |
+|-------|--------|-----------|-----------------|
+| C10K | 10,000 / 10,000 responded (100%) | ~1.0 s | ~976 MiB |
+| C100K | 100,000 / 100,000 responded (100%) | ~12.8 s | ~9.0 GiB |
+
+C100K classic needs task-count headroom (one thread per held connection:
+`pids.max` / `TasksMax` above 100K, desktop app scopes often cap this near
+76K, and `kernel.threads-max` is fine by default) and roughly 26 GB of
+virtual commit budget for 100K x 256 KiB stacks (about 9.2 GB of that
+actually resident; raise `vm.overcommit_ratio` when RAMxratio + swap is
+tight). C1M is out of reach
+for this model, a million threads exceeds `threads-max`, which is exactly
+what the reactor path is for.
+
+**Which mode should you pick?** The default is the CWIST reactor (`CWIST_C1M_MODE` unset or `1`). It is the right starting point for most workloads: APIs behind a reverse proxy, web pages, webhooks, and anything that must *hold* large numbers of simultaneously open, mostly idle connections, SSE fan-out, websocket-scale chat, long-polling, or genuine C1M targets. The reactor keeps connection count decoupled from thread count and avoids the scheduling overhead of a parked thread per connection.
+
+Switch to CWIST Classic pool (`CWIST_C1M_MODE=0`) only when your workload is dominated by short request bursts where the lowest possible median latency matters more than connection density, and you can tolerate one thread per active connection. That is where cwist's sub-millisecond tuned latency comes from (see the benchmark block above). Giving up the reactor for the classic path costs nothing until your workload is dominated by hundreds of thousands of idle open sockets.
 
 Benchmark environment:
 
 - CPU: AMD Ryzen 5 5600X (6 cores / 12 threads)
 - RAM: 62 GB
-- Kernel: Linux 6.12.101 (Debian 13), GCC 14.2.0
+- Kernel: Linux 6.12.107 (Debian 13), GCC 14.2.0
 - Network: loopback (127.0.0.0/8 source-IP spreading on the client side)
 
 Measured with `tests/bench_cxm.c` (multi-process epoll load client,
@@ -434,15 +510,25 @@ for C100K and above:
 
 - `ulimit -n 1050000` (and `fs.file-max` ≥ 8M for C1M: each connection costs
   one file descriptor on client and server side alike)
-- `net.netfilter.nf_conntrack_max=4194304` — loopback traffic is conntracked
+- `net.netfilter.nf_conntrack_max=4194304`, loopback traffic is conntracked
   too, and the default 262144 caps you near ~263K connections
 - `net.ipv4.ip_local_port_range="1024 65535"` on the client side
 
-Known limits of the current async path: cleartext HTTP/1.x only (HTTPS still
-uses the thread-pool model for the request phase), a handler that writes
-faster than the socket drains waits inside the reactor thread (bounded by
-`CWIST_HTTP_TIMEOUT_MS`), and idle keep-alive connections are not yet reaped
-by a timer.
+Known limits of the current async path: HTTPS still runs the request phase
+on pool threads, a handler that writes faster than the socket drains waits
+inside the reactor thread (bounded by `CWIST_HTTP_TIMEOUT_MS`), and idle
+cleartext keep-alive connections are not yet reaped by a timer.
+
+**TLS at C1M (since v3.7.1).** A pool thread no longer waits on an idle TLS
+connection: the connection is parked in a per-process epoll set and handed
+back to the pool when bytes arrive (`CWIST_HTTPS_IDLE_TIMEOUT_MS`,
+`CWIST_HTTPS_PARK=0` to disable). Before that, only as many TLS connections
+as HTTPS pool threads were served at once (at most 25 while 395,729 were
+held). Measured through fly.board on the same host, 12 workers: 1,000,000 /
+1,000,000 held and served over TLS HTTP/1.1 (19.9 GB server PSS) and over
+TLS HTTP/2 (30.1 GB), zero failures, with connections opened at 8,000/s;
+at 20,000/s about 37% of full handshakes missed the 45 s handshake budget.
+Details: [fly.board scalability benchmark](https://github.com/gg582/fly.board#scalability-benchmark).
 
 **HTTPS churn experiment (handshake shepherd).** HTTPS accepts go through
 `cwist_https_dispatch()`: a single non-blocking `SSL_accept` attempt, with
@@ -451,49 +537,44 @@ thread (Linux-only; other platforms fall back to the blocking pool path).
 Parked handshakes are reaped after `CWIST_HTTPS_HANDSHAKE_TIMEOUT_MS`
 (45 s, compile-time). This replaced a synchronous in-worker handshake that stalled the accept loop
 under churn (accept-queue overflow, silently dropped handshakes, "phantom"
-ESTABLISHED clients). Measured on the benchmark machine above (fly.board,
-TLS 1.3, loopback, same kernel/sysctl tuning):
-
-- Load: 20 `h2load` processes x `-c 5000 -n 50000 -r 1000 -T 30` against
-  `https://127.0.0.$i:8888/` (1,000,000 requests total).
-- Before the fix: deadlocked within minutes (0 completed requests, hundreds
-  of phantom connections).
-- After the fix: completes in ~7 min, 756,610 / 1,000,000 requests (75.7%),
-  zero phantom connections. The remaining ~24% are slow handshakes reclaimed
-  by h2load's `-T 30` timeout while queued behind the single shepherd
-  thread; multi-shepherd scaling is the next performance candidate.
-- Regression check: `h2load -c 1000 -n 10000` passes at 100%
-  (~1,780 req/s), and `make test_https` passes.
+ESTABLISHED clients). Under a million-request loopback connect-burst load
+(h2load), the old path deadlocked within minutes while the shepherd path
+completes the run; the requests it drops are slow handshakes h2load reclaims
+with its own timeout while queued behind the shepherd. The shepherd has since
+been sharded across `CWIST_HTTPS_HS_MAX_SHARDS` threads (hashed by fd,
+default derived from the request worker count); tuning
+`CWIST_HTTPS_HS_SHARDS` against connect-burst workloads is the next
+performance candidate. `make test_https` covers the path.
 
 Some example applications (e.g. `example/othello-web`) also read the standard
 `PORT` variable when no explicit port is given.
 
 ## Nuke DB
 
-Read-from-RAM, Write-to-Disk. Nuke DB loads an on-disk SQLite file into memory via
-`sqlite3_deserialize`, runs `PRAGMA integrity_check`, and then serves every query from RAM.
-Every COMMIT triggers a background WAL sync. If bootstrap fails, it falls back to
-read-only disk protection mode.
+Read-from-RAM, Write-to-Disk. Nuke DB loads an on-disk SQLite file into memory
+via `sqlite3_deserialize`, runs `PRAGMA integrity_check`, and then serves every
+query from RAM. Every COMMIT triggers a background WAL sync. If bootstrap
+fails, it falls back to read-only disk protection mode.
 
 ```c
 cwist_nuke_init("data.db", 5000);   /* 5-second auto-sync interval */
 cwist_db *db = cwist_nuke_get_db();
 ```
 
-## libttak Performance Core
+## libttak performance core
 
 CWIST links the in-tree **libttak** allocator/reactor toolkit:
 
-- **Generational Arena Allocator** — static assets and BDR blobs are released in one
-  shot, eliminating RSS fragmentation.
-- **Epoch-Based Reclamation (EBR)** — `ttak_epoch_enter/exit` pin critical sections;
-  stale buffers are reclaimed automatically.
-- **Detachable Memory** — signal-safe, cache-aligned arenas for TLS write buffers and
-  WebSocket frames.
-- **Lock-Free Job Queue** — producers push with a single atomic swap; consumers reuse
-  detached nodes to prevent fragmentation.
+- **Generational Arena Allocator**: static assets and BDR blobs are released in
+  one shot, eliminating RSS fragmentation.
+- **Epoch-Based Reclamation (EBR)**: `ttak_epoch_enter/exit` pin critical
+  sections; stale buffers are reclaimed automatically.
+- **Detachable Memory**: signal-safe, cache-aligned arenas for TLS write
+  buffers and WebSocket frames.
+- **Lock-Free Job Queue**: producers push with a single atomic swap; consumers
+  reuse detached nodes to prevent fragmentation.
 
-## PQC TLS Layer
+## PQC TLS layer
 
 Enable post-quantum cryptography with one line:
 
@@ -501,8 +582,9 @@ Enable post-quantum cryptography with one line:
 cwist_app_use_pqc_layer(app, true);
 ```
 
-This forces `X25519MLKEM768:X25519:P-256`, sets TLS 1.3 as the minimum version, and
-strips all legacy TLSv1.0–1.2 ciphers. Application code never touches OpenSSL directly.
+This forces `X25519MLKEM768:X25519:P-256`, sets TLS 1.3 as the minimum version,
+and strips all legacy TLSv1.0-1.2 ciphers. Application code never touches
+OpenSSL directly.
 
 ## WebTransport
 
@@ -513,9 +595,10 @@ cwist_app_use_webtransport(app, my_wt_handler);
 ```
 
 The framework handles the CONNECT negotiation, keeps the stream open after 2xx,
-and provides `cwist_webtransport_read/write/flush/close/open_bidi/open_uni` APIs.
+and provides `cwist_webtransport_read/write/flush/close/open_bidi/open_uni`
+APIs.
 
-## RDBMS Auto-Mount
+## RDBMS auto-mount
 
 Point CWIST at a local TCP port and it detects the provider by wire protocol:
 
@@ -525,22 +608,8 @@ if (cwist_app_auto_rdbms(app, 5432)) {
 }
 ```
 
-No port-number guessing—CWIST sends a PostgreSQL StartupMessage or reads a MySQL
-Handshake initiation packet to classify the server.
-
-## Benchmark Snapshot
-
-Recorded on an AMD EPYC 7763 container (4 vCPU, Linux 6.14):
-
-| Metric | Value |
-|--------|-------|
-| Tool | ApacheBench 2.3 |
-| Command | `ab -n 100 -c 85 -k http://localhost:31744/` |
-| Requests/sec | 2,958.40 |
-| Mean latency | 0.338 ms per concurrent request |
-| Failed requests | 0 |
-
-See `BENCHMARK.txt` for the full transcript and reproducible workflow.
+No port-number guessing: CWIST sends a PostgreSQL StartupMessage or reads a
+MySQL Handshake initiation packet to classify the server.
 
 ## Dependencies
 
@@ -550,7 +619,6 @@ See `BENCHMARK.txt` for the full transcript and reproducible workflow.
 - SQLite3 (in-tree)
 - cJSON
 - uriparser
-- Monocypher
 - zlib
 - Brotli (`libbrotlienc`, `libbrotlicommon`)
 - Zstandard (`libzstd`)
@@ -567,8 +635,53 @@ See [NOTICE.md](NOTICE.md) for the license summary of every vendored component.
   (`scripts/ci/h2spec-baseline.txt`); regressions fail the build. Known
   conformance gaps are tracked in that baseline file.
 
+## Community
+
+The official CWIST Discord server: **https://discord.gg/6F8HDmNAPg**: questions,
+design discussion, and contribution coordination happen there.
+
 ## Documentation
 
-- [API Reference](https://religiya-serdtsa.github.io/CWIST/)
-- `docs/` — tutorials and Doxygen sources
-- `example/` — runnable demos including `rps-showcase` and `othello-web`
+The full documentation map lives in [docs/README.md](docs/README.md). The short
+version, in suggested reading order:
+
+- **[Tutorials](tutorials/README.md)**: 30 hands-on modules (`tutorials/01..30`),
+  each with a runnable `main.c`, a `CMakeLists.txt`, and a guided README.
+- **[Guides](docs/tutorials/)**: task-oriented walkthroughs: [CRUD blog](docs/tutorials/blog-crud.md),
+  [NATS integration](docs/tutorials/nats-integration.md), [WebTransport server](docs/tutorials/webtransport-server.md).
+- **[API reference](docs/API.md)**: per-module docs under `docs/api/`, plus the
+  [flat quick reference](docs/api-quickref.md) and generated
+  [Doxygen HTML](https://c4punks.github.io/CWIST/).
+- **[ROADMAP.md](ROADMAP.md)**: feature status and milestone planning.
+
+## Examples
+
+Runnable demos under [example/](example/): a [minimal server](example/simple-server),
+[step-by-step HTTP](example/http), [SQLite](example/db) and
+[encrypted-column DB](example/db-crypt), [JWT auth](example/jwt), a
+[WebSocket Othello game](example/othello-web), the [rps-showcase](example/rps-showcase)
+throughput demo, rendering helpers ([json-builder](example/json-builder),
+[html](example/html), [template](example/template)), and the experimental
+[WebTransport](example/webtransport) app. See the
+[examples table](docs/README.md#4-runnable-examples) for the full list.
+
+A production deployment built on CWIST: [fly.board](https://github.com/gg582/fly.board).
+
+## Third-Party Licenses
+
+CWIST vendors its dependencies under `lib/`; each retains its own license
+(full summary in [NOTICE.md](NOTICE.md), authoritative text in each
+submodule's license file):
+
+| Component | License |
+|-----------|---------|
+| BoringSSL | Apache-2.0 |
+| lsquic | MIT (some Chromium-derived parts BSD-3-Clause) |
+| cJSON, multipart-parser-c | MIT |
+| libttak | BSD-3-Clause |
+| SQLite | Public Domain |
+| cnats | Apache-2.0 |
+| uriparser | BSD-3-Clause (library only; its test suite is LGPL-2.1-or-later and is not linked) |
+
+Static linking propagates each component's license obligations to linked
+binaries; review [NOTICE.md](NOTICE.md) when distributing.

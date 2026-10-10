@@ -1,5 +1,6 @@
 #define _POSIX_C_SOURCE 200809L
 #include <cwist/sys/io/cwist_io.h>
+#include <cwist/core/mem/alloc.h>
 #include <sys/types.h>
 #include <sys/event.h>
 #include <sys/time.h>
@@ -30,7 +31,7 @@ cwist_io_queue *cwist_io_queue_create(size_t capacity) {
     q->kq_fd = kqueue();
     if (q->kq_fd < 0) {
         perror("kqueue");
-        free(q);
+        cwist_free(q);
         return NULL;
     }
     return q;
@@ -52,7 +53,7 @@ struct job_wrapper {
  * @return true on success, false when event registration fails.
  */
 bool cwist_io_queue_submit(cwist_io_queue *q, cwist_job_func func, void *arg) {
-    struct job_wrapper *job = malloc(sizeof(struct job_wrapper));
+    struct job_wrapper *job = cwist_alloc(sizeof(struct job_wrapper));
     job->func = func;
     job->arg = arg;
 
@@ -64,7 +65,7 @@ bool cwist_io_queue_submit(cwist_io_queue *q, cwist_job_func func, void *arg) {
 
     if (kevent(q->kq_fd, &kev, 1, NULL, 0, NULL) < 0) {
         perror("kevent submit");
-        free(job);
+        cwist_free(job);
         return false;
     }
     return true;
@@ -89,7 +90,7 @@ void cwist_io_queue_run(cwist_io_queue *q) {
                 struct job_wrapper *job = (struct job_wrapper *)events[i].udata;
                 if (job) {
                     job->func(job->arg);
-                    free(job);
+                    cwist_free(job);
                 }
             }
         }

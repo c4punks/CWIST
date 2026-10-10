@@ -7,6 +7,7 @@
 #define _POSIX_C_SOURCE 200809L
 #endif
 #include <cwist/net/http/http.h>
+#include <cwist/sys/wasi.h>
 #include <cwist/net/http/session.h>
 #include <cwist/core/sstring/sstring.h>
 #include <cwist/sys/err/cwist_err.h>
@@ -14,34 +15,54 @@
 #include <cwist/core/mem/arena.h>
 #include <cwist/sys/app/shutdown.h>
 #include <cwist/sys/io/reactor.h>
+#include "../../sys/io/reactor_rx.h"
+#include <cwist/net/http/writer_fast.h>
 #include <cwist/core/log.h>
 #include <cwist/sys/metrics/metrics.h>
 #include <ttak/mols_control.h>
 #include <ttak/net/lattice.h>
 #include <ttak/priority/scheduler.h>
 #include "simd_parser.h"
+#include "async_internal.h"
 
 #include <limits.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <stdbool.h>
+#include <strings.h>
 #include <errno.h>
 #include <poll.h>
+#ifndef __wasi__
 #include <signal.h>
+#endif
+#include <time.h>
 
 #include <sys/types.h>
 #include <unistd.h>
+#if !defined(__EMSCRIPTEN__) && !defined(__wasi__)
 #include <sys/wait.h>
+#endif
 #include <pthread.h>
+#include <sched.h>
 #include <stdatomic.h>
 #include <arpa/inet.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
+#include <netinet/tcp.h>
 #include <sys/stat.h>
+#ifndef __wasi__
+#include <sys/resource.h>
+#endif
 #include <fcntl.h>
 #ifdef __linux__
 #include <sys/epoll.h>
+#endif
+#if defined(__linux__)
+#include <sys/sendfile.h>
+#endif
+#if defined(__APPLE__) || defined(__FreeBSD__)
+#include <sys/uio.h>
 #endif
 #if defined(__APPLE__) || defined(__FreeBSD__) || defined(__NetBSD__) || defined(__OpenBSD__)
 #include <sys/event.h>
@@ -56,50 +77,85 @@
 #include <unistd.h>
 #endif
 
+/**
+ * @brief Return the number of CPUs available to this process.
+ *
+ * Honors the process CPU affinity mask where the platform supports it
+ * (sched_getaffinity on Linux); falls back to sysconf(3)/sysctl and
+ * ultimately 1 when the count cannot be determined.
+ * @return Number of usable CPUs, at least 1.
+ */
 long get_cpu_cores(void) {
 #if defined(_WIN32) || defined(_WIN64)
-    /* Windows Environment */
     SYSTEM_INFO sysinfo;
     GetSystemInfo(&sysinfo);
     return (long)sysinfo.dwNumberOfProcessors;
-
+#elif defined(__linux__)
+    cpu_set_t cpuset;
+    CPU_ZERO(&cpuset);
+    if (sched_getaffinity(0, sizeof(cpuset), &cpuset) == 0) {
+        int count = CPU_COUNT(&cpuset);
+        if (count > 0) return (long)count;
+    }
+#if defined(_SC_NPROCESSORS_ONLN)
+    long nproc = sysconf(_SC_NPROCESSORS_ONLN);
+    if (nproc > 0) return nproc;
+#endif
+    return 1;
 #elif defined(__FreeBSD__) || defined(__OpenBSD__) || defined(__NetBSD__) || defined(__DragonFly__)
-    /* BSD Variant - Query kernel MIB tree directly via sysctl */
     int mib[2];
     int nproc = 0;
     size_t len = sizeof(nproc);
-
     mib[0] = CTL_HW;
 #if defined(HW_NCPUONLINE)
-    /* OpenBSD/FreeBSD preferred: returns counts of actual online cores */
     mib[1] = HW_NCPUONLINE;
 #else
-    /* Fallback for older BSD kernels */
     mib[1] = HW_NCPU;
 #endif
-
     if (sysctl(mib, 2, &nproc, &len, NULL, 0) == 0) {
         return (long)nproc;
     }
     return 4;
-
 #elif defined(_SC_NPROCESSORS_ONLN)
-    /* Linux / Unix POSIX standard */
     long nproc = sysconf(_SC_NPROCESSORS_ONLN);
-    return (nproc >= 4) ? nproc : 4;
-
+    if (nproc > 0) return nproc;
+    return 1;
 #else
-    /* Fallback value for undetermined architecture */
-    return 4;
+    return 1;
 #endif
 }
 
+static unsigned int g_http_pool_core_limit = 0;
+
+/**
+ * @brief Fix the HTTP pool worker count to a specific value.
+ * @param limit Fixed thread count; 0 restores automatic sizing.
+ */
+void cwist_http_pool_limit_core(unsigned int limit) {
+    g_http_pool_core_limit = limit;
+}
+
+/**
+ * @brief Compute the HTTP worker/event-loop thread count.
+ *
+ * Resolution order: a value fixed with cwist_http_pool_limit_core(), then the
+ * CWIST_WORKER_THREADS environment override, then CPU-core based sizing
+ * modified by CWIST_WORKERS (worker-process count) and CWIST_C1M_MODE.
+ * C1M mode divides the core budget across worker processes (one event loop
+ * per CPU); classic mode multiplies it to cover blocking keep-alive handlers.
+ * @return Computed thread count, clamped to the mode-specific range.
+ */
 long get_optimal_thread_count(void) {
+    if (g_http_pool_core_limit > 0) {
+        return (long)g_http_pool_core_limit;
+    }
     const char *env = getenv("CWIST_WORKER_THREADS");
     if (env && env[0]) {
-        long override = atol(env);
-        if (override > 0) return override;
+        char *end = NULL;
+        long override = strtol(env, &end, 10);
+        if (end != env && *end == '\0' && override > 0) return override;
     }
+
     long cores = get_cpu_cores();
     if (cores < 1) cores = 1;
 
@@ -107,8 +163,9 @@ long get_optimal_thread_count(void) {
     const char *w_env = getenv("CWIST_WORKERS");
     if (w_env && w_env[0]) {
         if (strcmp(w_env, "auto") != 0) {
-            long parsed = atol(w_env);
-            if (parsed > 0) workers = parsed;
+            char *end = NULL;
+            long parsed = strtol(w_env, &end, 10);
+            if (end != w_env && *end == '\0' && parsed > 0) workers = parsed;
         }
     }
 
@@ -116,15 +173,31 @@ long get_optimal_thread_count(void) {
     bool is_c1m = !c1m || (c1m[0] != '0' && strcmp(c1m, "false") != 0);
 
     if (is_c1m) {
-        /* In event-driven C1M mode, each reactor thread multiplexes I/O asynchronously.
-         * When multiple worker processes are forked (workers > 1), each worker process
-         * needs only cores / workers reactor threads so total reactor threads equals CPU cores.
-         * In single process mode (workers == 1), allocate cores reactor threads. */
-        if (workers > 1) {
-            long count = cores / workers;
-            return count > 0 ? count : 1;
-        }
-        return cores > 0 ? cores : 1;
+        /* In event-driven C1M mode each reactor thread multiplexes I/O
+         * asynchronously. Target one event loop per CPU across the whole
+         * deployment: extra loops on the same CPU add no parallelism, only
+         * scheduler queueing, and the queueing lands on the tail. The CI
+         * benchmark matrix tracks this configuration on every run.
+         *
+         * `cores` is this process's own CPU budget, not the machine's:
+         * get_cpu_cores() reads sched_getaffinity(), and with workers > 1
+         * every worker has already been pinned to a single CPU by
+         * cwist_app_pin_worker() before the pool is built. So in the
+         * default pinned deployment cores is 1 here and the division
+         * below yields 0, clamped to 1 -- one loop per process. Unpinned
+         * (e.g. the CI benchmark, which deliberately sees the whole
+         * runner), cores is the machine count and the worker processes
+         * share it, so the division spreads the loops evenly across them.
+         *
+         * A higher floor would protect synchronous handoffs (h2c) and
+         * blocking handlers, but extra loops on a shared CPU cannot run
+         * concurrently there either: a blocking handler stalls its own
+         * worker's connections until it yields, while the other workers
+         * (other CPUs, shared listener) keep serving. */
+        long count = workers > 0 ? cores / workers : cores;
+        if (count < 1) count = 1;
+        if (count > 64) count = 64;
+        return count;
     }
 
     if (workers == 1) {
@@ -149,65 +222,115 @@ long get_optimal_thread_count(void) {
 #define HTTP_TASKS_PER_THREAD 32768
 
 typedef struct {
-    int client_fd;
-    void (*handler_func)(int, void *);
-    void *ctx;
-} http_pool_task_t;
-
-typedef struct {
     pthread_t thread;
-    http_pool_task_t *queue;
-    size_t head;
-    size_t tail;
-    size_t count;
-    pthread_mutex_t mutex;
-    pthread_cond_t cond_not_empty;
-    pthread_cond_t cond_not_full;
-    int shutdown;
+    cwist_reactor_t *reactor;
     uint32_t worker_id;
 } http_thread_worker_t;
 
 static size_t g_rr_index = 0;
-static long g_http_thread_count;
+static long g_http_thread_count = 0;
 static http_thread_worker_t *g_workers = NULL;
+static _Atomic uint32_t *g_worker_loads = NULL;
 
-/* Saturation backpressure: track in-flight connections and shed load once
- * every worker thread could be parked on a connection many times over.
- * Past the limit there is no throughput left to win - new arrivals would
- * only inflate tail latency for traffic already being served. Shedding is
- * a single fixed 503 write + close, so it adds no latency to others. */
 static _Atomic long g_http_inflight = 0;
+static _Atomic bool g_http_pool_stopping = false;
+static _Atomic long g_http_continuation_shed = 0;
+
+/* Generation of the C1M worker reactors. cwist_http_pool_destroy() bumps it
+ * before it stops and frees them, so a deferred completion that still holds
+ * a reactor from an earlier generation (cwist_async outlives the server)
+ * closes its connection instead of posting into freed memory. Posters count
+ * themselves in g_reactor_posters around the check and the post; destroy
+ * waits for that count to drain after the bump, so every post that saw the
+ * old generation lands before the reactors' final drain. Both sides use
+ * sequentially consistent atomics, so one of them always sees the other. */
+static _Atomic uint64_t g_reactor_gen = 0;
+static _Atomic long g_reactor_posters = 0;
+
+/**
+ * @brief Return the current reactor generation counter.
+ *
+ * Deferred completions capture the generation so they can detect pool
+ * teardown; see g_reactor_gen for the protocol.
+ */
+uint64_t cwist_http_reactor_generation(void) {
+    return atomic_load(&g_reactor_gen);
+}
+
+/**
+ * @brief Post a reactor node only while the captured generation is current.
+ *
+ * Counts the caller in g_reactor_posters around the generation check and the
+ * post so cwist_http_pool_destroy() cannot free the reactor in between.
+ * @param reactor Reactor to post into.
+ * @param gen Generation the completion was created under.
+ * @param node Post node to enqueue.
+ * @return true when the node was posted; false when the generation moved or
+ *         the post failed (the caller must close instead).
+ */
+bool cwist_http_reactor_post_live(cwist_reactor_t *reactor, uint64_t gen,
+                                  cwist_reactor_post_t *node) {
+    atomic_fetch_add(&g_reactor_posters, 1);
+    bool posted = atomic_load(&g_reactor_gen) == gen && cwist_reactor_post(reactor, node);
+    atomic_fetch_sub(&g_reactor_posters, 1);
+    return posted;
+}
+
+/** Continuations dropped because the reactor post queue was full; each one
+ * closed its connection. Exported for metrics/observability. */
+long cwist_http_continuation_shed_count(void) {
+    return atomic_load_explicit(&g_http_continuation_shed, memory_order_relaxed);
+}
+
+/** Live C1M connections (accepted, not yet closed). The shutdown drain in
+ * cwist_app_listen_ex polls this to exit early once nothing is left. */
+long cwist_http_inflight_count(void) {
+    return atomic_load_explicit(&g_http_inflight, memory_order_relaxed);
+}
 #define CWIST_HTTP_INFLIGHT_PER_THREAD 32
+#define CWIST_HTTP_INFLIGHT_FD_RESERVE 4096
+
+/**
+ * @brief Compute the per-process cap on concurrently served connections.
+ *
+ * Base is the thread count times CWIST_HTTP_INFLIGHT_PER_THREAD; on POSIX
+ * systems the RLIMIT_NOFILE budget minus a reserve raises it when higher.
+ * @return Inflight connection limit (always >= the thread-count floor).
+ */
+static long cwist_http_inflight_limit(void) {
+    long base = g_http_thread_count > 0 ? g_http_thread_count : get_optimal_thread_count();
+    long floor = base * CWIST_HTTP_INFLIGHT_PER_THREAD;
+#ifndef __wasi__
+    struct rlimit rl;
+    if (getrlimit(RLIMIT_NOFILE, &rl) != 0) return floor;
+    long budget = (rl.rlim_cur == RLIM_INFINITY)
+                      ? (1024L * 1024L)
+                      : (long)rl.rlim_cur - CWIST_HTTP_INFLIGHT_FD_RESERVE;
+    return budget > floor ? budget : floor;
+#else
+    /* WASI preview1 has no rlimit; the thread-count floor is enough. */
+    return floor;
+#endif
+}
 
 static const char CWIST_HTTP_503[] =
     "HTTP/1.1 503 Service Unavailable\r\nContent-Length: 0\r\nConnection: close\r\n\r\n";
 
-typedef struct {
-    int client_fd;
-    void (*handler_func)(int, void *);
-    void *ctx;
-    cwist_reactor_t *reactor;
-} http_conn_ctx_t;
-
-/* The reactor copies this struct into its pooled, zeroed slot at add time,
- * so the callback reads the slot's inline storage - no per-connection
- * heap allocation, nothing to free here. */
-static void http_conn_event_cb(int fd, void *ctx) {
-    http_conn_ctx_t *c = (http_conn_ctx_t *)ctx;
-    void (*handler)(int, void *) = c->handler_func;
-    void *user_ctx = c->ctx;
-
-    handler(fd, user_ctx);
-    atomic_fetch_sub_explicit(&g_http_inflight, 1, memory_order_release);
-}
-
 static _Thread_local http_thread_worker_t *t_current_worker = NULL;
 
+/**
+ * @brief Reactor worker main loop for the C1M pool.
+ * @param arg http_thread_worker_t for this thread.
+ * @return NULL when the reactor stops.
+ */
 static void *http_pool_worker(void *arg) {
     http_thread_worker_t *w = (http_thread_worker_t *)arg;
+    t_current_worker = w;
     ttak_net_lattice_set_worker_id(w->worker_id);
 
-    http_pool_task_t batch[16];
+    cwist_reactor_run(w->reactor);
+    return NULL;
+}
 
 /* Dynamic Thread Pool for Classic Mode
  * Combines pre-allocated idle worker threads with fast job queue and
@@ -236,6 +359,18 @@ typedef struct {
 
 static http_dynamic_pool_t g_dyn_pool;
 
+/* RX-uring RECV completion entry for the async connection path; defined
+ * with the async helpers below.  Registered as the reactor's rx_cb in
+ * cwist_http_pool_init. */
+static void http_rx_recv_cb(void *conn_ptr, int res);
+
+/**
+ * @brief Main loop of a classic-mode dynamic pool worker thread.
+ *
+ * Pops tasks from the shared queue, runs their handler, and exits after an
+ * idle timeout when the pool is above its base size (scale-down).
+ * @return NULL when the pool stops or the worker scales down.
+ */
 static void *http_dynamic_worker_thread(void *arg) {
     (void)arg;
     while (atomic_load_explicit(&g_dyn_pool.running, memory_order_acquire)) {
@@ -316,13 +451,37 @@ static void *http_dynamic_worker_thread(void *arg) {
     return NULL;
 }
 
+/**
+ * @brief Spawn one detached dynamic-pool worker thread.
+ *
+ * Uses a reduced stack size (CWIST_POOL_STACK_SIZE), retrying with the
+ * default stack when the pthread implementation rejects it.
+ * @return true when the worker was created; false otherwise (the
+ *         active-worker count is rolled back).
+ */
 static bool http_spawn_worker(void) {
     pthread_attr_t attr;
     pthread_attr_init(&attr);
     pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_DETACHED);
+    /* Cap worker stack reservation: the default 8MB dwarfs the worker's real
+     * worst case (16KB read_buf + 8KB header_buf + 64KB file-stream fallback
+     * buffer plus call-chain slack).  Note glibc rejects sizes smaller than
+     * the process' static TLS footprint (allocatestack.c), which is why the
+     * HTTP/3 batch scratch buffers must stay out of TLS. */
+    if (pthread_attr_setstacksize(&attr, CWIST_POOL_STACK_SIZE) != 0) {
+        CWIST_LOG_WARN("[http] pthread_attr_setstacksize(%d) failed; using default stack",
+                       CWIST_POOL_STACK_SIZE);
+    }
     pthread_t tid;
     atomic_fetch_add_explicit(&g_dyn_pool.active_workers, 1, memory_order_relaxed);
     int rc = pthread_create(&tid, &attr, http_dynamic_worker_thread, NULL);
+    if (rc != 0) {
+        /* Retry with the default stack rather than losing the worker. */
+        pthread_attr_destroy(&attr);
+        pthread_attr_init(&attr);
+        pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_DETACHED);
+        rc = pthread_create(&tid, &attr, http_dynamic_worker_thread, NULL);
+    }
     pthread_attr_destroy(&attr);
     if (rc != 0) {
         atomic_fetch_sub_explicit(&g_dyn_pool.active_workers, 1, memory_order_relaxed);
@@ -331,6 +490,10 @@ static bool http_spawn_worker(void) {
     return true;
 }
 
+/**
+ * @brief Initialize the HTTP connection pool using CWIST_C1M_MODE.
+ * @return 0 on success, -1 on failure.
+ */
 int cwist_http_pool_init(void) {
     const char *c1m = getenv("CWIST_C1M_MODE");
     bool use_c1m = true;
@@ -339,7 +502,18 @@ int cwist_http_pool_init(void) {
             use_c1m = false;
         }
     }
+    return cwist_http_pool_init_mode(use_c1m);
+}
 
+/**
+ * @brief Initialize the HTTP connection pool in the requested mode.
+ * @param use_c1m true for the event-driven reactor (C1M) pool, false for
+ *        the classic dynamic thread pool.
+ * @return 0 on success, -1 on failure (partially created state is cleaned up
+ *         by cwist_http_pool_destroy()).
+ */
+int cwist_http_pool_init_mode(bool use_c1m) {
+    atomic_store(&g_http_pool_stopping, false);
     g_http_thread_count = get_optimal_thread_count();
 
     if (use_c1m) {
@@ -359,6 +533,9 @@ int cwist_http_pool_init(void) {
         for (int i = 0; i < g_http_thread_count; i++) {
             g_workers[i].reactor = cwist_reactor_create();
             if (!g_workers[i].reactor) return -1;
+            /* RX-uring receive path: route tagged RECV completions into the
+             * HTTP connection state machine (no-op where unsupported). */
+            cwist_reactor_set_rx_cb(g_workers[i].reactor, http_rx_recv_cb);
             g_workers[i].worker_id = (uint32_t)i;
             if (pthread_create(&g_workers[i].thread, NULL, http_pool_worker, &g_workers[i]) != 0) {
                 return -1;
@@ -377,8 +554,21 @@ int cwist_http_pool_init(void) {
         pthread_mutex_init(&g_dyn_pool.lock, NULL);
         pthread_cond_init(&g_dyn_pool.cond, NULL);
 
-        /* Pre-warm core worker threads */
-        for (int i = 0; i < g_http_thread_count; i++) {
+        /* Pre-warm worker threads. CWIST_POOL_PREWARM extends the spawn count
+         * beyond the base pool when the expected concurrency is known, so the
+         * acceptor does not serialize pthread_create + stack mmap during a
+         * connection ramp. */
+        long prewarm = g_http_thread_count;
+        const char *pw = getenv("CWIST_POOL_PREWARM");
+        if (pw && *pw) {
+            char *end = NULL;
+            long parsed = strtol(pw, &end, 10);
+            if (end == pw || *end != '\0') parsed = 0;
+            if (parsed > prewarm) prewarm = parsed;
+        }
+        long max_w = atomic_load_explicit(&g_dyn_pool.max_workers, memory_order_relaxed);
+        if (prewarm > max_w) prewarm = max_w;
+        for (long i = 0; i < prewarm; i++) {
             if (!http_spawn_worker()) {
                 return -1;
             }
@@ -387,35 +577,26 @@ int cwist_http_pool_init(void) {
     return 0;
 }
 
+/**
+ * @brief Queue a connection for handling on the classic dynamic pool.
+ *
+ * Enforces the inflight limit (over-limit connections get a bare 503 and are
+ * closed) and spawns an extra worker when queued demand exceeds idle capacity.
+ */
 void cwist_http_pool_submit(int client_fd, void (*handler)(int, void *), void *ctx) {
-    /* Backpressure gate: shed before doing any routing/allocation work when
-     * saturated. In-flight = queued + actively served connections. */
-    long limit = g_http_thread_count * CWIST_HTTP_INFLIGHT_PER_THREAD;
+    long limit = cwist_http_inflight_limit();
     long inflight = atomic_fetch_add_explicit(&g_http_inflight, 1, memory_order_acq_rel) + 1;
     if (inflight > limit) {
         atomic_fetch_sub_explicit(&g_http_inflight, 1, memory_order_release);
+#ifdef MSG_NOSIGNAL
         send(client_fd, CWIST_HTTP_503, sizeof(CWIST_HTTP_503) - 1, MSG_NOSIGNAL | MSG_DONTWAIT);
+#endif
         close(client_fd);
         return;
     }
 
-    /* Deterministic worker selection using Choi Seok-jeong's MOLS to minimize cache bouncing. */
-    uint16_t node_id = (uint16_t)(client_fd % TTAK_MOLS_NODE_COUNT);
-    uint32_t mixed = ttak_apply_mols_control(node_id, (uint32_t)g_rr_index);
-    size_t worker_idx = mixed % (size_t)g_http_thread_count;
-
-    g_rr_index = (g_rr_index + 1) % (size_t)g_http_thread_count;
-
-    http_thread_worker_t *w = &g_workers[worker_idx];
-
-    http_conn_ctx_t c = {
-        .client_fd = client_fd,
-        .handler_func = handler,
-        .ctx = ctx,
-        .reactor = w->reactor,
-    };
-
-    if (!cwist_reactor_add(w->reactor, client_fd, http_conn_event_cb, &c, sizeof(c))) {
+    http_pool_task_t *node = cwist_alloc(sizeof(*node));
+    if (!node) {
         atomic_fetch_sub_explicit(&g_http_inflight, 1, memory_order_release);
         close(client_fd);
         return;
@@ -436,28 +617,39 @@ void cwist_http_pool_submit(int client_fd, void (*handler)(int, void *), void *c
     long pending =
         atomic_fetch_add_explicit(&g_dyn_pool.pending_tasks, 1, memory_order_release) + 1;
 
+    /* Signalled sleepers remain counted idle until they reacquire this lock.
+     * Compare queued demand with that capacity, not merely idle == 0: a
+     * burst can otherwise strand connections behind busy keep-alive handlers.
+     * Keep the cap check and the spawn reservation in this critical section. */
     long current = atomic_load_explicit(&g_dyn_pool.active_workers, memory_order_relaxed);
     long idle = atomic_load_explicit(&g_dyn_pool.idle_workers, memory_order_relaxed);
     long max_w = atomic_load_explicit(&g_dyn_pool.max_workers, memory_order_relaxed);
-    if (idle == 0 && current < max_w) {
+    if (pending > idle && current < max_w) {
         http_spawn_worker();
     }
+    pthread_cond_signal(&g_dyn_pool.cond);
+    pthread_mutex_unlock(&g_dyn_pool.lock);
 }
 
+/**
+ * @brief Requeue the current connection's next handler turn on the pool.
+ * @return false for invalid arguments (fd < 0 or NULL handler).
+ */
 bool cwist_http_pool_rearm_current(int client_fd, void (*handler)(int, void *), void *ctx) {
-    if (!t_current_worker || !t_current_worker->reactor || client_fd < 0) return false;
-
-    http_conn_ctx_t c = {
-        .client_fd = client_fd,
-        .handler_func = handler,
-        .ctx = ctx,
-        .reactor = t_current_worker->reactor,
-    };
-
-    return cwist_reactor_add(t_current_worker->reactor, client_fd, http_conn_event_cb, &c, sizeof(c));
+    if (client_fd < 0 || !handler) return false;
+    cwist_http_pool_submit(client_fd, handler, ctx);
+    return true;
 }
 
+/**
+ * @brief Tear down both pool variants.
+ *
+ * Stops new work, drains queued tasks, retires the reactor generation and
+ * waits for in-flight posters, then stops, joins, and frees the C1M reactors.
+ */
 void cwist_http_pool_destroy(void) {
+    /* Queued continuations must release, not repost into a dying reactor. */
+    atomic_store(&g_http_pool_stopping, true);
     atomic_store_explicit(&g_dyn_pool.running, false, memory_order_release);
     pthread_mutex_lock(&g_dyn_pool.lock);
     pthread_cond_broadcast(&g_dyn_pool.cond);
@@ -479,6 +671,10 @@ void cwist_http_pool_destroy(void) {
     pthread_cond_destroy(&g_dyn_pool.cond);
     pthread_mutex_destroy(&g_dyn_pool.lock);
 
+    /* Retire this generation of reactors before they go; see g_reactor_gen. */
+    atomic_fetch_add(&g_reactor_gen, 1);
+    while (atomic_load(&g_reactor_posters) > 0) sched_yield();
+
     if (g_workers) {
         for (int i = 0; i < g_http_thread_count; i++) {
             if (g_workers[i].reactor) {
@@ -487,21 +683,18 @@ void cwist_http_pool_destroy(void) {
         }
         for (int i = 0; i < g_http_thread_count; i++) {
             pthread_join(g_workers[i].thread, NULL);
+            if (g_workers[i].reactor) {
+                cwist_reactor_destroy(g_workers[i].reactor);
+                g_workers[i].reactor = NULL;
+            }
         }
-#else
-        pthread_join(g_workers[i].thread, NULL);
-#endif
-        pthread_mutex_destroy(&g_workers[i].mutex);
-        pthread_cond_destroy(&g_workers[i].cond_not_empty);
-        pthread_cond_destroy(&g_workers[i].cond_not_full);
-        if (g_workers[i].queue) {
-            cwist_free(g_workers[i].queue);
+        cwist_free(g_workers);
+        g_workers = NULL;
+        if (g_worker_loads) {
+            cwist_free(g_worker_loads);
+            g_worker_loads = NULL;
         }
     }
-
-    cwist_free(g_workers);
-    g_workers = nullptr;
-    g_http_thread_count = 0;
 }
 /* --- End Thread Pool --- */
 
@@ -519,42 +712,112 @@ typedef struct {
     cwist_http_async_conn_t *conn;
 } http_async_ctx_t;
 
+/* Defined below; referenced earlier by the RX-uring helpers. */
+static void http_async_event_cb(int fd, void *ctx);
+static bool http_async_stash_grow(cwist_http_async_conn_t *conn, size_t need);
+
+/**
+ * @brief Keep-alive idle timeout in seconds.
+ * @return The validated CWIST_HTTP_KEEP_ALIVE_TIMEOUT env override or the
+ *         CWIST_HTTP_KEEP_ALIVE_TIMEOUT_SEC default; cached after first use.
+ */
 static uint32_t cwist_http_keep_alive_timeout_sec(void) {
     static int cached_timeout = -1;
     if (cached_timeout < 0) {
         const char *env = getenv("CWIST_HTTP_KEEP_ALIVE_TIMEOUT");
-        int val = (env && *env) ? atoi(env) : 0;
+        int val = 0;
+        if (env && *env) {
+            char *end = NULL;
+            long v = strtol(env, &end, 10);
+            if (end != env && *end == '\0' && v > 0 && v <= INT_MAX) val = (int)v;
+        }
         cached_timeout = (val > 0) ? val : CWIST_HTTP_KEEP_ALIVE_TIMEOUT_SEC;
     }
     return (uint32_t)cached_timeout;
 }
 
+/**
+ * @brief Release an async connection shell and its stashes.
+ *
+ * Decrements the worker load slot and the global inflight count, and frees
+ * rbuf, obuf, and the shell itself. The fd is NOT closed here.
+ */
 static void http_async_conn_release(cwist_http_async_conn_t *conn) {
     if (!conn) return;
     if (g_worker_loads && conn->worker_id < (uint32_t)g_http_thread_count) {
         atomic_fetch_sub_explicit(&g_worker_loads[conn->worker_id], 1, memory_order_relaxed);
     }
     cwist_free(conn->rbuf);
+    cwist_free(conn->obuf);
     cwist_free(conn);
     atomic_fetch_sub_explicit(&g_http_inflight, 1, memory_order_release);
 }
 
-static void http_async_event_cb(int fd, void *ctx) {
-    http_async_ctx_t *c = (http_async_ctx_t *)ctx;
-    cwist_http_async_conn_t *conn = c->conn;
-    cwist_async_handler_t handler = c->handler;
+/* Minimum free stash bytes required before arming a RECV SQE.  Below this
+ * floor the legacy POLL + recv-drain path runs the stash growth instead. */
+#define CWIST_RX_REARM_MIN_AVAIL 1024
 
-    uint32_t now = cwist_fast_monotonic_sec();
-    uint32_t timeout_sec = cwist_http_keep_alive_timeout_sec();
+/* Idle-keep-alive shrink floor for the rbuf/obuf stashes at rearm: an idle
+ * connection holds ~KB, not 32 KB, while the grow-on-demand paths restore
+ * capacity on the next busy turn. Must satisfy CWIST_RX_REARM_MIN_AVAIL so
+ * the RECV-first arm stays available. */
+#define CWIST_ASYNC_STASH_IDLE 4096
 
-    /* Idle connection reaper: close keep-alive sockets that exceeded timeout */
-    if (conn->last_active_sec > 0 && (now - conn->last_active_sec) > timeout_sec) {
-        close(fd);
-        http_async_conn_release(conn);
-        return;
+/** Arm the connection's next receive wait.  RX-uring first when the reactor
+ * has a real io_uring ring: one RECV SQE into rbuf + len whose completion
+ * drives the state machine, replacing the one-shot POLL + recv() pair.
+ * Falls back to the legacy one-shot POLL on unsupported reactors, low stash
+ * headroom, or submission failure (byte-identical legacy behavior).
+ *
+ * Wait-state invariant (owner thread only): at most one RECV SQE per
+ * connection at a time, and a POLL is armed only when no RECV is in flight,
+ * so the two can never double-dispatch.  The stash buffer never moves or is
+ * consumed while a RECV referencing it is in flight; growth and compaction
+ * happen only after the completion lands (rx_recv_inflight == false). */
+static bool http_async_arm_wait(int fd, cwist_http_async_conn_t *conn,
+                                cwist_async_handler_t handler, void *ctx,
+                                cwist_reactor_t *reactor) {
+    http_async_ctx_t next = {
+        .client_fd = fd,
+        .handler = handler,
+        .ctx = ctx,
+        .reactor = reactor,
+        .conn = conn,
+    };
+    if (cwist_reactor_rx_supported(reactor) && !conn->peer_eof && !conn->rx_recv_inflight &&
+        !conn->rx_prefers_poll) {
+        if (conn->cap == 0 && !http_async_stash_grow(conn, CWIST_HTTP_READ_BUFFER_SIZE)) {
+            /* Stash allocation failed: the legacy fill path retries growth
+             * when POLL fires and closes on failure, matching today. */
+        } else if (conn->cap > 0) {
+            size_t avail = conn->cap - 1 - conn->len;
+            if (avail >= CWIST_RX_REARM_MIN_AVAIL) {
+                /* Mark the RECV in flight BEFORE submitting the SQE. The
+                 * acceptor thread is not this reactor's owner, so the kernel
+                 * can complete the SQE and the owner thread can dispatch the
+                 * connection to close (and free it) while this function is
+                 * still running; any conn write after submission is a
+                 * use-after-free. Roll back on submission failure so the
+                 * POLL fallback below sees the un-armed state. */
+                conn->rx_recv_inflight = true;
+                if (cwist_reactor_recv_arm(reactor, fd, conn->rbuf + conn->len, (unsigned)avail,
+                                           conn, &conn->rx_armed_ns)) {
+                    return true;
+                }
+                conn->rx_recv_inflight = false;
+            }
+        }
+        /* Low headroom or arm failure: fall through to the POLL wait. */
     }
-    conn->last_active_sec = now;
+    return cwist_reactor_add(reactor, fd, http_async_event_cb, &next, sizeof(next));
+}
 
+/** Run the connection handler and act on its verdict.  Shared by the POLL
+ * entry (http_async_event_cb) and the RX-uring RECV completion entry
+ * (http_rx_recv_cb).  Takes over fd/conn ownership in every outcome. */
+static void http_async_dispatch(int fd, cwist_http_async_conn_t *conn,
+                                cwist_async_handler_t handler, void *ctx,
+                                cwist_reactor_t *reactor) {
     cwist_async_action_t action = handler(fd, conn);
 
     if (action == CWIST_ASYNC_DEFER) {
@@ -565,7 +828,11 @@ static void http_async_event_cb(int fd, void *ctx) {
     if (action == CWIST_ASYNC_DETACH) {
         /* The handler owns fd now (h2c preface, protocol upgrade).  Free the
          * shell but never touch the fd. */
+        if (g_worker_loads && conn->worker_id < (uint32_t)g_http_thread_count) {
+            atomic_fetch_sub_explicit(&g_worker_loads[conn->worker_id], 1, memory_order_relaxed);
+        }
         cwist_free(conn->rbuf);
+        cwist_free(conn->obuf);
         cwist_free(conn);
         atomic_fetch_sub_explicit(&g_http_inflight, 1, memory_order_release);
         return;
@@ -576,23 +843,29 @@ static void http_async_event_cb(int fd, void *ctx) {
         return;
     }
 
-    /* CWIST_ASYNC_REARM: keep stash buffer allocated across keep-alive requests
-     * to eliminate 16 KiB heap allocation/free churn per request. Only shrink
-     * if the buffer grew excessively large. */
-    if (conn->len == 0 && conn->cap > 65536) {
-        cwist_free(conn->rbuf);
-        conn->rbuf = NULL;
-        conn->cap = 0;
+    /* CWIST_ASYNC_REARM: keep the stashes allocated across keep-alive
+     * requests to avoid per-request heap churn, but shrink an idle
+     * connection's buffers toward a small floor. A served keep-alive
+     * connection otherwise holds 16 KiB rbuf + 16 KiB obuf for its whole
+     * idle lifetime (~24 KB RSS per connection at C1M scale); the
+     * grow-on-demand paths (http_async_stash_grow, coalesce serialize)
+     * restore capacity on the next busy turn. */
+    if (conn->len == 0 && conn->cap > CWIST_ASYNC_STASH_IDLE) {
+        char *nb = cwist_realloc(conn->rbuf, CWIST_ASYNC_STASH_IDLE);
+        if (nb) {
+            conn->rbuf = nb;
+            conn->cap = CWIST_ASYNC_STASH_IDLE;
+        }
+    }
+    if (conn->olen == 0 && conn->ocap > CWIST_ASYNC_STASH_IDLE) {
+        char *nb = cwist_realloc(conn->obuf, CWIST_ASYNC_STASH_IDLE);
+        if (nb) {
+            conn->obuf = nb;
+            conn->ocap = CWIST_ASYNC_STASH_IDLE;
+        }
     }
 
-    http_async_ctx_t next = {
-        .client_fd = fd,
-        .handler = handler,
-        .ctx = c->ctx,
-        .reactor = c->reactor,
-        .conn = conn,
-    };
-    if (!cwist_reactor_add(c->reactor, fd, http_async_event_cb, &next, sizeof(next))) {
+    if (!http_async_arm_wait(fd, conn, handler, ctx, reactor)) {
         if (getenv("CWIST_ASYNC_DEBUG")) {
             static _Atomic long dbg_rearm_fail;
             long n = atomic_fetch_add(&dbg_rearm_fail, 1) + 1;
@@ -604,25 +877,186 @@ static void http_async_event_cb(int fd, void *ctx) {
     }
 }
 
+/** RX-uring RECV completion entry (see reactor_rx.h for the SQE namespace).
+ * The completion IS the readiness signal: positive res staged bytes into the
+ * stash, -EAGAIN means the POLL fallback takes over the wait, 0 is EOF, and
+ * any other negative res is a recv error.  Runs on the reactor owner thread
+ * while dispatching, so re-arms made here join the deferred SQE batch. */
+static void http_rx_recv_cb(void *conn_ptr, int res) {
+    cwist_http_async_conn_t *conn = (cwist_http_async_conn_t *)conn_ptr;
+    conn->rx_recv_inflight = false;
+
+    if (res == -ECANCELED) {
+        /* The deferred submission failed (SQ wedged) or the ring tore down;
+         * legacy arm-failure semantics: close fd and release the shell. */
+        close(conn->fd);
+        http_async_conn_release(conn);
+        return;
+    }
+    if (res == 0) {
+        /* EOF: do not re-arm; the handler drains complete buffered requests
+         * and then closes through the existing peer_eof path. */
+        conn->peer_eof = true;
+    } else if (res < 0 && res != -EAGAIN) {
+        close(conn->fd);
+        http_async_conn_release(conn);
+        return;
+    } else if (res > 0) {
+        conn->len += (size_t)res;
+        conn->rbuf[conn->len] = '\0';
+        conn->virgin = false;
+    }
+    /* res == -EAGAIN: nothing staged; the POLL fallback below resumes the
+     * wait without running the handler on an empty stash. */
+
+    /* Latency probe: rx_armed_ns is only written while the probe is enabled,
+     * so a zero value means the probe is off and both clock reads below are
+     * skipped.  Snapshot it now: the serve path re-arms the next RECV and
+     * would overwrite conn->rx_armed_ns before the queue delay is computed. */
+    uint64_t t0 = 0;
+    uint64_t armed_ns = conn->rx_armed_ns;
+    if (armed_ns) {
+        struct timespec ts;
+        clock_gettime(CLOCK_MONOTONIC, &ts);
+        t0 = (uint64_t)ts.tv_sec * 1000000000ull + (uint64_t)ts.tv_nsec;
+    }
+    conn->last_active_sec = cwist_fast_monotonic_sec();
+
+    if (res == -EAGAIN) {
+        /* Data not ready: hand the wait to the legacy one-shot POLL.  Arm
+         * POLL directly (NOT http_async_arm_wait, which is RECV-first and
+         * would immediately re-arm a RECV, livelocking on -EAGAIN).  When
+         * POLL fires, http_async_event_cb re-arms a RECV and the completion
+         * drives from there.
+         *
+         * Learn: this client sends one request per idle period (wrk-style
+         * keepalive), so an armed RECV just burns an SQE before the POLL
+         * fallback every round.  Prefer POLL until a RECV actually stages
+         * bytes again (pipelining detected), keeping the steady-state op
+         * count identical to the legacy path. */
+        conn->rx_prefers_poll = true;
+        http_async_ctx_t next = {
+            .client_fd = conn->fd,
+            .handler = conn->handler,
+            .ctx = conn->user_ctx,
+            .reactor = conn->reactor,
+            .conn = conn,
+        };
+        if (!cwist_reactor_add(conn->reactor, conn->fd, http_async_event_cb, &next, sizeof(next))) {
+            close(conn->fd);
+            http_async_conn_release(conn);
+        }
+        return;
+    }
+
+    /* rx_data_ready tells cwist_http_async_conn_fill the bytes are already
+     * in the stash (or EOF is already recorded); never recv() on top of a
+     * RECV completion.  Bytes flowed: a pipelining client gets the SQE
+     * path again. */
+    conn->rx_data_ready = true;
+    conn->rx_prefers_poll = false;
+    http_async_dispatch(conn->fd, conn, conn->handler, conn->user_ctx, conn->reactor);
+
+    if (armed_ns) {
+        uint64_t queue_us = (t0 - armed_ns) / 1000;
+        struct timespec ts;
+        clock_gettime(CLOCK_MONOTONIC, &ts);
+        uint64_t t1 = (uint64_t)ts.tv_sec * 1000000000ull + (uint64_t)ts.tv_nsec;
+        cwist_reactor_probe_record(conn->reactor, true, queue_us);
+        cwist_reactor_probe_record(conn->reactor, false, (t1 - t0) / 1000);
+    }
+}
+
+/* Engine-internal teardown for the async pool: drain pending receive-queue
+ * bytes so the kernel answers with FIN instead of RST, then close and release.
+ * Must run on the connection's reactor owner thread (the reactor may still
+ * have the fd armed); not part of the public API. Defined below. */
+static void http_async_close(int client_fd, cwist_http_async_conn_t *conn);
+
+/** Reactor one-shot callback for an async connection.
+ *
+ * Reaps keep-alive connections past the idle timeout (draining first so the
+ * teardown is a graceful FIN, not an RST), prefers an RX-uring RECV SQE over
+ * POLL when the ring is free, and otherwise dispatches the connection handler
+ * via http_async_dispatch().
+ */
+static void http_async_event_cb(int fd, void *ctx) {
+    http_async_ctx_t *c = (http_async_ctx_t *)ctx;
+    cwist_http_async_conn_t *conn = c->conn;
+    cwist_async_handler_t handler = c->handler;
+
+    uint32_t now = cwist_fast_monotonic_sec();
+    uint32_t timeout_sec = cwist_http_keep_alive_timeout_sec();
+
+    /* Idle connection reaper: close keep-alive sockets that exceeded timeout.
+     * A client may have pipelined a request into the post-timeout,
+     * pre-dispatch window; drain before closing so the teardown is a
+     * graceful FIN, not an RST that flushes the peer's queued bytes. The
+     * triggering one-shot slot is consumed, so closing here is safe. */
+    if (conn->last_active_sec > 0 && (now - conn->last_active_sec) > timeout_sec) {
+        http_async_close(fd, conn);
+        return;
+    }
+    conn->last_active_sec = now;
+
+    if (cwist_reactor_rx_supported(c->reactor) && !conn->rx_recv_inflight && !conn->peer_eof &&
+        conn->len == 0 && !conn->rx_prefers_poll) {
+        /* POLL is only a readiness trigger on the RX path: with an empty
+         * stash the wait moves to a RECV SQE whose completion drives the
+         * state machine.  (POLL gets armed only by the -EAGAIN and
+         * low-headroom fallbacks.)  Buffered bytes (continuation posts,
+         * parked-writer resumes) must be served, not waited on, so they
+         * fall through to the legacy dispatch below.  If the arm fails,
+         * fall through to the legacy inline drain. */
+        if (http_async_arm_wait(fd, conn, handler, c->ctx, c->reactor)) return;
+    }
+
+    http_async_dispatch(fd, conn, handler, c->ctx, c->reactor);
+}
+
 typedef struct {
     cwist_reactor_post_t post;
     http_async_ctx_t next;
 } http_async_continuation_t;
 
+/**
+ * @brief Reactor-posted continuation: resume a pipelined async connection.
+ *
+ * Runs on the target reactor thread; closes instead of serving once the app
+ * or the pool is stopping.
+ */
 static void http_async_continue(void *ctx) {
     http_async_continuation_t *continuation = ctx;
     http_async_ctx_t next = continuation->next;
     cwist_free(continuation);
     if (!atomic_load(&g_cwist_running) || atomic_load(&g_http_pool_stopping)) {
-        cwist_http_async_close(next.client_fd, next.conn);
+        http_async_close(next.client_fd, next.conn);
         return;
     }
     http_async_event_cb(next.client_fd, &next);
 }
 
+/**
+ * @brief Re-arm an async connection for its next event.
+ *
+ * Handles deferred-completion shutdown races, peer EOF, pipelined bytes
+ * (posted as a continuation so other connections run between batches), and
+ * RECV-first re-arm with a POLL fallback.
+ * @return false when the connection was closed or the re-arm failed.
+ */
 bool cwist_http_async_rearm(int client_fd, cwist_reactor_t *reactor,
                             cwist_http_async_conn_t *conn) {
     if (client_fd < 0 || !reactor || !conn) return false;
+    /* A deferred response may finish in reactor_destroy's final drain. Never
+     * enqueue new work into that final snapshot or the connection is orphaned. */
+    if (atomic_load(&g_http_pool_stopping)) {
+        http_async_close(client_fd, conn);
+        return false;
+    }
+    if (conn->peer_eof && conn->len == 0) {
+        http_async_close(client_fd, conn);
+        return false;
+    }
     conn->last_active_sec = cwist_fast_monotonic_sec();
     http_async_ctx_t next = {
         .client_fd = client_fd,
@@ -637,7 +1071,7 @@ bool cwist_http_async_rearm(int client_fd, cwist_reactor_t *reactor,
          * run between bounded HTTP request batches. */
         http_async_continuation_t *continuation = cwist_alloc(sizeof(*continuation));
         if (!continuation) {
-            cwist_http_async_close(client_fd, conn);
+            http_async_close(client_fd, conn);
             return false;
         }
         continuation->next = next;
@@ -652,7 +1086,7 @@ bool cwist_http_async_rearm(int client_fd, cwist_reactor_t *reactor,
             if (getenv("CWIST_ASYNC_DEBUG") && (n <= 5 || n % 10000 == 0))
                 fprintf(stderr, "[async] continuation shed fd=%d total=%ld\n", client_fd, n);
             cwist_free(continuation);
-            cwist_http_async_close(client_fd, conn);
+            http_async_close(client_fd, conn);
             return false;
         }
         return true;
@@ -663,7 +1097,11 @@ bool cwist_http_async_rearm(int client_fd, cwist_reactor_t *reactor,
         conn->rbuf = NULL;
         conn->cap = 0;
     }
-    if (!cwist_reactor_add(reactor, client_fd, http_async_event_cb, &next, sizeof(next))) {
+    /* RX-uring: RECV-first re-arm when the ring supports it (peer_eof was
+     * handled above, so the wait is a plain receive wait).  arm_wait falls
+     * back to the legacy one-shot POLL on unsupported reactors or arm
+     * failure. */
+    if (!http_async_arm_wait(client_fd, conn, conn->handler, conn->user_ctx, reactor)) {
         close(client_fd);
         http_async_conn_release(conn);
         return false;
@@ -671,26 +1109,69 @@ bool cwist_http_async_rearm(int client_fd, cwist_reactor_t *reactor,
     return true;
 }
 
-void cwist_http_async_close(int client_fd, cwist_http_async_conn_t *conn) {
-    if (client_fd >= 0) close(client_fd);
+/** Close an async connection: drain pending receive-queue bytes (so the
+ * kernel answers with FIN instead of RST, mirroring
+ * https_connection_teardown()), close the fd, and release the connection
+ * shell.  Must run on the connection's reactor owner thread.
+ */
+static void http_async_close(int client_fd, cwist_http_async_conn_t *conn) {
+    if (client_fd >= 0) {
+        /* close() on a socket with unread receive-queue data makes the
+         * kernel answer with RST instead of a graceful FIN. A client can
+         * pipeline its next request onto a connection the server is
+         * closing, leaving those bytes unconsumed here; under connection
+         * churn that turned most teardowns into abortive closes (the RST
+         * also flushes response bytes the peer had not read yet). Drain
+         * whatever is pending before closing; the socket is about to be
+         * destroyed anyway. Mirrors https_connection_teardown(). */
+        char drain[2048];
+        ssize_t n;
+        int guard = 16;
+        while (guard-- > 0 && (n = recv(client_fd, drain, sizeof(drain), MSG_DONTWAIT)) > 0) {
+            /* discard */
+        }
+        (void)n;
+        close(client_fd);
+    }
     http_async_conn_release(conn);
 }
 
+/**
+ * @brief Close an async connection whose owning worker pool is gone.
+ *
+ * Marks the load slot index invalid so the teardown does not touch load
+ * counters that may belong to a later pool generation.
+ */
+void cwist_http_async_close_orphan(int client_fd, cwist_http_async_conn_t *conn) {
+    /* The worker that owned conn is gone, and its load slot index may belong
+     * to a later pool by now: leave the load counters alone. */
+    if (conn) conn->worker_id = UINT32_MAX;
+    http_async_close(client_fd, conn);
+}
+
+/**
+ * @brief Submit a connection to the C1M async reactor pool.
+ *
+ * Enforces the inflight limit (503 + close on overflow), sets the socket
+ * non-blocking, allocates the connection shell, and load-balances with
+ * power-of-two-choices over the per-worker load counters.
+ * @return false when the connection was rejected or the initial arm failed.
+ */
 bool cwist_http_pool_submit_async(int client_fd, cwist_async_handler_t handler, void *ctx) {
     long limit = cwist_http_inflight_limit();
     long inflight = atomic_fetch_add_explicit(&g_http_inflight, 1, memory_order_acq_rel) + 1;
     if (inflight > limit) {
         atomic_fetch_sub_explicit(&g_http_inflight, 1, memory_order_release);
+#ifdef MSG_NOSIGNAL
         send(client_fd, CWIST_HTTP_503, sizeof(CWIST_HTTP_503) - 1, MSG_NOSIGNAL | MSG_DONTWAIT);
+#endif
         close(client_fd);
         return false;
     }
 
-#if !defined(__linux__)
     /* The one-shot path must never park the reactor on a blocking recv. */
     int fl = fcntl(client_fd, F_GETFL, 0);
     if (fl >= 0) fcntl(client_fd, F_SETFL, fl | O_NONBLOCK);
-#endif
 
     cwist_http_async_conn_t *conn = cwist_alloc(sizeof(*conn));
     if (!conn) {
@@ -722,26 +1203,22 @@ bool cwist_http_pool_submit_async(int client_fd, cwist_async_handler_t handler, 
     conn->reactor = w->reactor;
     conn->handler = handler;
 
-    http_async_ctx_t c = {
-        .client_fd = client_fd,
-        .handler = handler,
-        .ctx = ctx,
-        .reactor = w->reactor,
-        .conn = conn,
-    };
-    if (!cwist_reactor_add(w->reactor, client_fd, http_async_event_cb, &c, sizeof(c))) {
-        if (getenv("CWIST_ASYNC_DEBUG")) {
-            static _Atomic long dbg_submit_fail;
-            long n = atomic_fetch_add(&dbg_submit_fail, 1) + 1;
-            if (n <= 5 || n % 10000 == 0)
-                fprintf(stderr, "[async] submit-add failed fd=%d total=%ld worker=%zu\n", client_fd,
-                        n, worker_idx);
-        }
-        http_async_conn_release(conn);
-        close(client_fd);
-        return false;
+    /* RX-uring: when the worker reactor has a real io_uring ring, the first
+     * receive wait is a RECV SQE into the (freshly grown) stash whose
+     * completion drives the state machine; on any arm failure the legacy
+     * one-shot POLL is armed instead. */
+    if (http_async_arm_wait(client_fd, conn, handler, ctx, w->reactor)) return true;
+
+    if (getenv("CWIST_ASYNC_DEBUG")) {
+        static _Atomic long dbg_submit_fail;
+        long n = atomic_fetch_add(&dbg_submit_fail, 1) + 1;
+        if (n <= 5 || n % 10000 == 0)
+            fprintf(stderr, "[async] submit-add failed fd=%d total=%ld worker=%zu\n", client_fd, n,
+                    worker_idx);
     }
-    return true;
+    http_async_conn_release(conn);
+    close(client_fd);
+    return false;
 }
 
 /* --- End Async Connection Path --- */
@@ -759,6 +1236,11 @@ const int CWIST_HTTP_LISTEN_FAILED = -5;
 
 /* --- Helpers --- */
 
+/**
+ * @brief Convert a HTTP method enum into its wire-format token.
+ * @param method HTTP method enum value.
+ * @return Static string name for the method.
+ */
 const char *cwist_http_method_to_string(cwist_http_method_t method) {
     switch (method) {
         case CWIST_HTTP_GET: return "GET";
@@ -782,6 +1264,13 @@ const char *cwist_http_method_to_string(cwist_http_method_t method) {
 #define MAGIC_DELE MAKE_MAGIC4('D', 'E', 'L', 'E')
 #define MAGIC_HEAD MAKE_MAGIC4('H', 'E', 'A', 'D')
 
+/**
+ * @brief Parse a method token (with explicit length) into a method enum.
+ *
+ * Uses a SWAR 4-byte magic fast path for GET/POST/PUT/DELETE/HEAD, then
+ * exact-length comparisons.
+ * @return Matching method, or CWIST_HTTP_UNKNOWN.
+ */
 cwist_http_method_t cwist_http_string_to_method_len(const char *str, size_t len) {
     if (!str || len == 0) return CWIST_HTTP_UNKNOWN;
 
@@ -823,15 +1312,13 @@ cwist_http_method_t cwist_http_string_to_method_len(const char *str, size_t len)
     return CWIST_HTTP_UNKNOWN;
 }
 
+/**
+ * @brief Parse a NUL-terminated method string into a method enum.
+ * @return Matching method, or CWIST_HTTP_UNKNOWN for NULL/unrecognized input.
+ */
 cwist_http_method_t cwist_http_string_to_method(const char *method_str) {
-    if (strcmp(method_str, "GET") == 0) return CWIST_HTTP_GET;
-    if (strcmp(method_str, "POST") == 0) return CWIST_HTTP_POST;
-    if (strcmp(method_str, "PUT") == 0) return CWIST_HTTP_PUT;
-    if (strcmp(method_str, "DELETE") == 0) return CWIST_HTTP_DELETE;
-    if (strcmp(method_str, "PATCH") == 0) return CWIST_HTTP_PATCH;
-    if (strcmp(method_str, "HEAD") == 0) return CWIST_HTTP_HEAD;
-    if (strcmp(method_str, "OPTIONS") == 0) return CWIST_HTTP_OPTIONS;
-    return CWIST_HTTP_UNKNOWN;
+    if (!method_str) return CWIST_HTTP_UNKNOWN;
+    return cwist_http_string_to_method_len(method_str, strlen(method_str));
 }
 
 /* --- Header Manipulation --- */
@@ -898,12 +1385,14 @@ static cwist_error_t cwist_http_sstring_assign_arena(cwist_sstring *str, cwist_a
         char *buf = (char *)cwist_arena_alloc(arena, len + 1);
         if (buf) {
             if (str->data && !str->borrows_buffer) {
-                cwist_free(str->data);
+                cwist_free(str->base ? str->base : str->data);
             }
             if (data && len > 0) memcpy(buf, data, len);
             buf[len] = '\0';
+            str->base = NULL;
             str->data = buf;
             str->size = len;
+            str->capacity = 0; ///< arena capacity is unknown until detach
             str->borrows_buffer = true;
             cwist_error_t err = make_error(CWIST_ERR_INT8);
             err.error.err_i8 = ERR_SSTRING_OKAY;
@@ -946,8 +1435,27 @@ static cwist_error_t cwist_http_header_add_ex_len(cwist_http_header_node **head,
     node->value = cwist_http_sstring_create(arena);
     node->next = NULL;
 
-    cwist_http_sstring_assign_arena(node->key, arena, key, key_len);
-    cwist_http_sstring_assign_arena(node->value, arena, value, value_len);
+    bool ok = node->key && node->value;
+    if (ok) {
+        cwist_error_t kerr = cwist_http_sstring_assign_arena(node->key, arena, key, key_len);
+        ok = cwist_error_is_ok(&kerr);
+        cwist_error_dispose(&kerr);
+    }
+    if (ok) {
+        cwist_error_t verr = cwist_http_sstring_assign_arena(node->value, arena, value, value_len);
+        ok = cwist_error_is_ok(&verr);
+        cwist_error_dispose(&verr);
+    }
+    if (!ok) {
+        /* A half-built node would serialize as an empty or missing header;
+         * release it and report the failure instead. */
+        cwist_http_header_free_all(node);
+        err = make_error(CWIST_ERR_JSON);
+        err.error.err_json = cJSON_CreateObject();
+        cJSON_AddStringToObject(err.error.err_json, "http_error",
+                                "Failed to allocate header strings");
+        return err;
+    }
 
     node->next = *head;
     *head = node;
@@ -966,40 +1474,8 @@ static cwist_error_t cwist_http_header_add_ex_len(cwist_http_header_node **head,
  */
 static cwist_error_t cwist_http_header_add_ex(cwist_http_header_node **head, cwist_arena_t *arena,
                                               const char *key, const char *value) {
-    cwist_error_t err = make_error(CWIST_ERR_INT16);
-
-    bool from_arena = false;
-    cwist_http_header_node *node = NULL;
-    if (arena) {
-        node = (cwist_http_header_node *)cwist_arena_alloc(arena, sizeof(cwist_http_header_node));
-        if (node) {
-            memset(node, 0, sizeof(cwist_http_header_node));
-            from_arena = true;
-        }
-    }
-    if (!node) {
-        node = (cwist_http_header_node *)cwist_alloc(sizeof(cwist_http_header_node));
-    }
-    if (!node) {
-        err = make_error(CWIST_ERR_JSON);
-        err.error.err_json = cJSON_CreateObject();
-        cJSON_AddStringToObject(err.error.err_json, "http_error", "Failed to allocate header");
-        return err;
-    }
-    node->arena_owned = from_arena;
-
-    node->key = cwist_http_sstring_create(arena);
-    node->value = cwist_http_sstring_create(arena);
-    node->next = NULL;
-
-    cwist_http_sstring_assign_arena(node->key, arena, key, key ? strlen(key) : 0);
-    cwist_http_sstring_assign_arena(node->value, arena, value, value ? strlen(value) : 0);
-
-    node->next = *head;
-    *head = node;
-
-    err.error.err_i16 = 0; // Success
-    return err;
+    return cwist_http_header_add_ex_len(head, arena, key, key ? strlen(key) : 0, value,
+                                        value ? strlen(value) : 0);
 }
 
 /**
@@ -1058,24 +1534,48 @@ static cwist_error_t cwist_http_header_add_static(cwist_http_header_node **head,
     return err;
 }
 
+/** @brief True when a header name or value contains no CR or LF. */
+static bool cwist_http_header_text_is_safe(const char *text) {
+    return !text || !strpbrk(text, "\r\n");
+}
+
 /**
  * @brief Prepend one header node to the linked-list header collection.
  * @param head Header-list head pointer to update.
  * @param key Header name to store.
  * @param value Header value to store.
- * @return Tagged CWIST error describing success or allocation failure.
+ * @return Tagged CWIST error: INT16 0 on success, INT16 -1 when head is NULL or
+ *         key/value contains CR or LF (nothing is added), or a JSON error on
+ *         allocation failure.
  */
 cwist_error_t cwist_http_header_add(cwist_http_header_node **head, const char *key,
                                     const char *value) {
+    /* The serializer writes key and value verbatim around ": " and CRLF, so a
+     * CR or LF here would let caller-supplied data end the header early and
+     * inject further headers or a body into the response. */
+    if (!head || !cwist_http_header_text_is_safe(key) || !cwist_http_header_text_is_safe(value)) {
+        cwist_error_t err = make_error(CWIST_ERR_INT16);
+        err.error.err_i16 = -1;
+        return err;
+    }
     return cwist_http_header_add_ex(head, NULL, key, value);
 }
 
+/**
+ * @brief Find a header value using case-insensitive header-name comparison.
+ * @param head Head of the header linked list.
+ * @param key Header name to search for.
+ * @return Raw header value string, or NULL when absent.
+ */
 char *cwist_http_header_get(cwist_http_header_node *head, const char *key) {
+    if (!head || !key) return NULL;
+    size_t klen = strlen(key);
     cwist_http_header_node *curr = head;
     while (curr) {
-        // case-insensitive comparison for headers is standard, but keeping it strict for now for simplicity
-        if (curr->key->data && strcmp(curr->key->data, key) == 0) {
-            return curr->value->data;
+        if (curr->key && curr->key->data && curr->key->size == klen) {
+            if (strcasecmp(curr->key->data, key) == 0) {
+                return curr->value ? curr->value->data : NULL;
+            }
         }
         curr = curr->next;
     }
@@ -1083,11 +1583,48 @@ char *cwist_http_header_get(cwist_http_header_node *head, const char *key) {
 }
 
 /**
+ * @brief Unlink and release every header node matching a name.
+ * @param head Pointer to the header-list head; updated as nodes are removed.
+ * @param key Header name (case-insensitive) to remove; all duplicates go.
+ * @return Number of nodes removed.
+ *
+ * Ownership is handled per node: heap-owned nodes are freed, arena-owned
+ * nodes are left for the arena to reclaim, and borrowed key/value buffers
+ * are never freed individually.  Applications should call this instead of
+ * hand-rolling unlink loops, which have repeatedly gotten that bookkeeping
+ * wrong.
+ */
+size_t cwist_http_header_remove(cwist_http_header_node **head, const char *key) {
+    if (!head || !key) return 0;
+    size_t removed = 0;
+    while (*head) {
+        cwist_http_header_node *node = *head;
+        if (node->key && node->key->data && strcasecmp(node->key->data, key) == 0) {
+            *head = node->next;
+            cwist_sstring_destroy(node->key);
+            cwist_sstring_destroy(node->value);
+            if (!node->arena_owned) cwist_free(node);
+            removed++;
+        } else {
+            head = &node->next;
+        }
+    }
+    return removed;
+}
+
+/**
  * @brief Add default security headers to an HTTP response if not already present.
+ *
+ * Safe to call for both HTTP and HTTPS responses.  HSTS is intentionally
+ * omitted here because RFC 6797 section 7.2 forbids sending it over plain HTTP;
+ * browsers ignore it on non-TLS connections anyway.  Use
+ * cwist_http_response_add_hsts() from your HTTPS handler to add it there.
+ *
  * @param res Response object to populate.
  */
 void cwist_http_response_add_security_headers(cwist_http_response *res) {
     if (!res) return;
+    cwist_arena_t *arena = (cwist_arena_t *)res->arena;
 
     /* All key/value pairs are compile-time constants: borrow them instead of
      * heap-copying, so a default response performs zero heap allocations for
@@ -1106,10 +1643,10 @@ void cwist_http_response_add_security_headers(cwist_http_response *res) {
         cwist_http_header_add_static(
             &res->headers, arena, "Content-Security-Policy",
             "default-src 'self'; "
-            "script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com https://cdn.jsdelivr.net; "
+            "script-src 'self' https://cdnjs.cloudflare.com; "
             "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdn.jsdelivr.net https://cdnjs.cloudflare.com; "
-            "font-src 'self' https://fonts.gstatic.com; "
-            "img-src 'self' data:; "
+            "font-src 'self' https://fonts.gstatic.com https://cdn.jsdelivr.net; "
+            "img-src 'self'; "
             "connect-src 'self'; "
             "frame-ancestors 'none'; "
             "base-uri 'self'; "
@@ -1161,42 +1698,50 @@ void cwist_http_header_free_all(cwist_http_header_node *head) {
     cwist_http_header_node *curr = head;
     while (curr) {
         cwist_http_header_node *next = curr->next;
-        smartstring_destroy(curr->key);
-        smartstring_destroy(curr->value);
-        free(curr);
+        cwist_sstring_destroy(curr->key);
+        cwist_sstring_destroy(curr->value);
+        if (!curr->arena_owned) {
+            cwist_free(curr);
+        }
         curr = next;
     }
 }
 
 /**
- * @brief Check whether a header key names the Connection header.
- * @param key Header key to inspect.
- * @return true when the key is "connection" ignoring case.
+ * @brief Copy the cached RFC 7231 IMF-fixdate string for the current second.
+ * @param out_buf Destination buffer; receives 29 date bytes plus NUL.
  */
-static bool header_key_is_connection(const char *key) {
-    if (!key) return false;
-    return strcasecmp(key, "connection") == 0;
-}
+static void cwist_get_cached_date_header(char out_buf[36]) {
+    static _Atomic time_t g_last_sec = 0;
+    static char g_date_str[36] = {0};
+    static pthread_mutex_t g_date_lock = PTHREAD_MUTEX_INITIALIZER;
 
-
-/**
- * @brief Detect whether the current header list already contains a Connection header.
- * @param head Head of the header linked list.
- * @return true when a Connection header is present.
- */
-static bool headers_have_connection(cwist_http_header_node *head) {
-    cwist_http_header_node *curr = head;
-    while (curr) {
-        if (curr->key && curr->key->data && header_key_is_connection(curr->key->data)) {
-            return true;
+    time_t now = time(NULL);
+    time_t last = atomic_load_explicit(&g_last_sec, memory_order_relaxed);
+    if (now != last) {
+        pthread_mutex_lock(&g_date_lock);
+        if (now != atomic_load_explicit(&g_last_sec, memory_order_relaxed)) {
+            struct tm gmt;
+#if defined(_WIN32)
+            gmtime_s(&gmt, &now);
+#else
+            gmtime_r(&now, &gmt);
+#endif
+            strftime(g_date_str, sizeof(g_date_str), "%a, %d %b %Y %H:%M:%S GMT", &gmt);
+            atomic_store_explicit(&g_last_sec, now, memory_order_release);
         }
-        curr = curr->next;
+        pthread_mutex_unlock(&g_date_lock);
     }
-    return false;
+    memcpy(out_buf, g_date_str, 30);
+    out_buf[29] = '\0';
 }
 
 /* --- Request Lifecycle --- */
 
+/**
+ * @brief Allocate and initialize a default HTTP request object.
+ * @return Newly allocated request, or NULL on allocation failure.
+ */
 cwist_http_request *cwist_http_request_create(void) {
     cwist_arena_t *arena = cwist_arena_create(0);
     cwist_http_request *req =
@@ -1207,22 +1752,27 @@ cwist_http_request *cwist_http_request_create(void) {
     }
 
     req->method = CWIST_HTTP_GET; // Default
-    req->path = cwist_sstring_create();
-    req->query = cwist_sstring_create();
-    req->query_params = cwist_query_map_create();
-    req->path_params = cwist_query_map_create();
-    req->version = cwist_sstring_create();
+    req->path = cwist_http_sstring_create(arena);
+    req->query = cwist_http_sstring_create(arena);
+    req->query_params = NULL;
+    req->path_params = NULL;
+    req->version = cwist_http_sstring_create(arena);
     req->headers = NULL;
-    req->body = cwist_sstring_create();
+    req->body = cwist_http_sstring_create(arena);
     req->keep_alive = true;
     req->client_fd = -1;
     req->app = NULL;
     req->db = NULL;
+    req->flash = NULL;
     req->upgraded = false;
     req->content_length = 0;
     req->stream_id = 0;
     req->private_data = NULL;
     req->endpoint_opts = CWIST_ENDPOINT_DEFAULT;
+    req->arena = arena;
+    req->async_conn = NULL;
+    req->https_conn = NULL;
+    req->h2_queue = NULL;
 
     // Defaults (borrowed statics; parsing overwrites them via arena/heap assign)
     cwist_sstring_borrow(req->version, "HTTP/1.1", 8);
@@ -1272,6 +1822,11 @@ time_t cwist_http_parse_date(const char *str) {
     return timegm(&tm);
 }
 
+/**
+ * @brief Resolve the peer IP address for a connected client socket.
+ * @param fd Connected client socket descriptor.
+ * @return New sstring with the textual IP; "127.0.0.1" when unavailable.
+ */
 cwist_sstring *cwist_get_client_ip_from_fd(int fd) {
     cwist_sstring *s = cwist_sstring_create();
     cwist_sstring_assign(s, "127.0.0.1");
@@ -1279,6 +1834,9 @@ cwist_sstring *cwist_get_client_ip_from_fd(int fd) {
     // If unavailable, return localhost
     if (fd <= 0) return s;
 
+#ifndef CWIST_WASI_NO_SOCKETS
+    /* WASI preview1 has no socket peer addresses; the caller only needs a
+     * placeholder when running under a WASM host. */
     struct sockaddr_storage addr;
     socklen_t len = sizeof(addr);
 
@@ -1300,19 +1858,33 @@ cwist_sstring *cwist_get_client_ip_from_fd(int fd) {
 
     // assign found ip as a value
     cwist_sstring_assign(s, ip);
+#endif
     return s;
 }
 
+/**
+ * @brief Destroy a parsed HTTP request and all nested allocations it owns.
+ * @param req Request object to destroy.
+ */
 void cwist_http_request_destroy(cwist_http_request *req) {
     if (req) {
+        cwist_arena_t *arena = (cwist_arena_t *)req->arena;
         cwist_sstring_destroy(req->path);
         cwist_sstring_destroy(req->query);
         cwist_query_map_destroy(req->query_params);
         cwist_query_map_destroy(req->path_params);
         cwist_sstring_destroy(req->version);
         cwist_sstring_destroy(req->body);
+        cwist_query_map_destroy(req->flash);
+        cwist_session_destroy(req->session);
+        cwist_free(req->csrf_token);
         cwist_http_header_free_all(req->headers);
-        free(req);
+        if (!arena || !cwist_arena_owns(arena, req)) {
+            cwist_free(req);
+        }
+        /* Releases every arena-carved struct (request, sstrings, header
+         * nodes) in one shot; heap-owned buffers were freed above. */
+        cwist_arena_destroy(arena);
     }
 }
 
@@ -1354,34 +1926,102 @@ static void cwist_http_response_release_ptr_body(cwist_http_response *res) {
  * @brief Allocate and initialize a default HTTP response object.
  * @return Newly allocated response, or NULL on allocation failure.
  */
+/**
+ * @brief Shared allocator for cwist_http_response_create{,_in_arena}.
+ * @param arena Arena to carve from (NULL allocates from the heap).
+ * @param arena_borrowed true when the arena is owned by the caller.
+ * @return Newly initialized response, or NULL on allocation failure.
+ */
 static cwist_http_response *cwist_http_response_create_impl(cwist_arena_t *arena,
                                                             bool arena_borrowed) {
     cwist_http_response *res =
         (cwist_http_response *)cwist_http_struct_alloc(arena, sizeof(cwist_http_response));
     if (!res) return NULL;
 
-    res->version = smartstring_create();
+    res->version = cwist_http_sstring_create(arena);
     res->status_code = CWIST_HTTP_OK;
-    res->status_text = smartstring_create();
+    res->status_text = cwist_http_sstring_create(arena);
     res->headers = NULL;
-    res->body = smartstring_create();
+    res->body = cwist_http_sstring_create(arena);
+    res->endpoint_opts = CWIST_ENDPOINT_DEFAULT;
+    res->keep_alive = true;
+    res->is_ptr_body = false;
+    res->ptr_body = NULL;
+    res->ptr_body_len = 0;
+    res->ptr_body_cleanup = NULL;
+    res->ptr_body_cleanup_ctx = NULL;
+    res->use_file_stream = false;
+    res->file_stream_fd = -1;
+    res->file_stream_len = 0;
+    res->file_stream_offset = 0;
+    res->file_stream_auto_close = false;
+    res->stream_mode = false;
+    res->stream_ended = false;
+    res->stream_failed = false;
+    res->stream_buf = cwist_http_sstring_create(arena);
+    res->stream_flushed = 0;
+    res->stream_sink = NULL;
+    res->stream_sink_ctx = NULL;
+    res->stream_head_sent = false;
+    res->arena = arena;
+    res->arena_borrowed = arena_borrowed;
 
     // Defaults (borrowed statics; handlers may overwrite via regular assign)
     cwist_sstring_borrow(res->version, "HTTP/1.1", 8);
     cwist_sstring_borrow(res->status_text, "OK", 2);
 
-    cwist_http_response_add_security_headers(res);
-
     return res;
 }
 
+/**
+ * @brief Allocate a response backed by its own arena.
+ * @return Newly allocated response, or NULL on failure.
+ */
+cwist_http_response *cwist_http_response_create(void) {
+    cwist_arena_t *arena = cwist_arena_create(0);
+    cwist_http_response *res = cwist_http_response_create_impl(arena, false);
+    if (!res) {
+        cwist_arena_destroy(arena);
+        return NULL;
+    }
+    return res;
+}
+
+/**
+ * @brief Allocate a response carved from a caller-owned arena.
+ * @param arena Arena to allocate from; NULL falls back to
+ *        cwist_http_response_create().
+ */
+cwist_http_response *cwist_http_response_create_in_arena(void *arena) {
+    if (!arena) return cwist_http_response_create();
+    return cwist_http_response_create_impl((cwist_arena_t *)arena, true);
+}
+
+/**
+ * @brief Destroy an HTTP response and release any attached body resources.
+ * @param res Response object to destroy.
+ */
 void cwist_http_response_destroy(cwist_http_response *res) {
     if (res) {
-        smartstring_destroy(res->version);
-        smartstring_destroy(res->status_text);
-        smartstring_destroy(res->body);
+        cwist_arena_t *arena = (cwist_arena_t *)res->arena;
+        cwist_http_response_release_ptr_body(res);
+        cwist_http_response_release_file_stream(res);
+        cwist_sstring_destroy(res->version);
+        cwist_sstring_destroy(res->status_text);
+        cwist_sstring_destroy(res->body);
+        cwist_sstring_destroy(res->stream_buf);
         cwist_http_header_free_all(res->headers);
-        free(res);
+        cwist_free(res->alt_svc);
+        /* Snapshot before the possible free: when the arena was full the
+         * struct fell back to the heap, so res may be freed below and any
+         * later field read is a use-after-free. */
+        bool borrowed = res->arena_borrowed;
+        if (!arena || !cwist_arena_owns(arena, res)) {
+            cwist_free(res);
+        }
+        if (!borrowed) {
+            cwist_arena_destroy(arena);
+        }
     }
 }
 
@@ -1428,7 +2068,7 @@ void cwist_http_response_set_alt_svc(cwist_http_response *res, const char *alt_s
         res->alt_svc = NULL;
     }
     if (alt_svc) {
-        res->alt_svc = strdup(alt_svc);
+        res->alt_svc = cwist_strdup(alt_svc);
     }
 }
 
@@ -1466,6 +2106,41 @@ static size_t serialize_headers(cwist_http_response *res, char *buf, size_t buf_
     } else if (res->body) {
         body_len = res->body->size;
     }
+
+    /* Fast path for default HTTP/1.1 200 OK response with no custom headers.
+     * Streamed responses take the general path: chunked mode needs the
+     * Transfer-Encoding header the fast path cannot emit. */
+    if (res->status_code == 200 && !res->headers && !res->alt_svc && !res->stream_mode &&
+        buf_size >= 128) {
+        /* Compact ring/line buffer optimization for high-throughput pipelining */
+        static const char status_prefix[] = "HTTP/1.1 200 OK\r\nContent-Length: ";
+        memcpy(buf, status_prefix, sizeof(status_prefix) - 1);
+        size_t offset = sizeof(status_prefix) - 1;
+
+        /* Fast integer to ascii without snprintf overhead */
+        char num_buf[20];
+        char *p = num_buf + sizeof(num_buf);
+        size_t tmp_len = body_len;
+        do {
+            *--p = '0' + (tmp_len % 10);
+            tmp_len /= 10;
+        } while (tmp_len > 0);
+        size_t num_len = (num_buf + sizeof(num_buf)) - p;
+        memcpy(buf + offset, p, num_len);
+        offset += num_len;
+
+        if (res->keep_alive) {
+            static const char conn_ka[] = "\r\nConnection: keep-alive\r\n\r\n";
+            memcpy(buf + offset, conn_ka, sizeof(conn_ka) - 1);
+            offset += sizeof(conn_ka) - 1;
+        } else {
+            static const char conn_cl[] = "\r\nConnection: close\r\n\r\n";
+            memcpy(buf + offset, conn_cl, sizeof(conn_cl) - 1);
+            offset += sizeof(conn_cl) - 1;
+        }
+        return offset;
+    }
+
     size_t offset = 0;
 
     // Status Line
@@ -1478,47 +2153,116 @@ static size_t serialize_headers(cwist_http_response *res, char *buf, size_t buf_
         if (reason) status_txt = reason;
     }
     if (!status_txt) status_txt = "OK";
-    if (offset < buf_size) {
-        int n = snprintf(buf + offset, buf_size - offset, "%s %d %s\r\n",
-                         res->version->data ? res->version->data : "HTTP/1.1", res->status_code,
-                         status_txt);
-        if (n > 0) {
-            offset += n;
-            if (offset > buf_size) offset = buf_size;
+    /* Hand-rolled status line (version SP code SP reason CRLF): snprintf
+     * here showed up hot because every non-fast-path response pays it. */
+    {
+        const char *version =
+            (res->version && res->version->data) ? res->version->data : "HTTP/1.1";
+        const size_t vlen = strlen(version);
+        const size_t rlen = strlen(status_txt);
+        unsigned int code = (unsigned int)res->status_code;
+        char code_buf[10];
+        char *cp = code_buf + sizeof(code_buf);
+        do {
+            *--cp = (char)('0' + (code % 10));
+            code /= 10;
+        } while (code > 0);
+        const size_t code_len = (size_t)(code_buf + sizeof(code_buf) - cp);
+        if (offset + vlen + 1 + code_len + 1 + rlen + 2 <= buf_size) {
+            memcpy(buf + offset, version, vlen);
+            offset += vlen;
+            buf[offset++] = ' ';
+            memcpy(buf + offset, cp, code_len);
+            offset += code_len;
+            buf[offset++] = ' ';
+            memcpy(buf + offset, status_txt, rlen);
+            offset += rlen;
+            buf[offset++] = '\r';
+            buf[offset++] = '\n';
         }
     }
 
-    // Headers
+    // Headers: memcpy with known sstring lengths (no snprintf/strlen overhead),
+    // detecting Date/Content-Length/Connection in the same single pass with a
+    // length + first-byte filter before falling back to strcasecmp.
+    bool have_date = false, have_clen = false, have_conn = false, have_te = false;
     cwist_http_header_node *curr = res->headers;
     while (curr) {
         if (curr->key->data && curr->value->data) {
-            if (offset < buf_size) {
-                int n = snprintf(buf + offset, buf_size - offset, "%s: %s\r\n", curr->key->data, curr->value->data);
-                if (n > 0) {
-                    offset += n;
-                    if (offset > buf_size) offset = buf_size;
-                }
+            size_t klen = curr->key->size;
+            size_t vlen = curr->value->size;
+            if (offset + klen + 2 + vlen + 2 <= buf_size) {
+                memcpy(buf + offset, curr->key->data, klen);
+                buf[offset + klen] = ':';
+                buf[offset + klen + 1] = ' ';
+                memcpy(buf + offset + klen + 2, curr->value->data, vlen);
+                buf[offset + klen + 2 + vlen] = '\r';
+                buf[offset + klen + 2 + vlen + 1] = '\n';
+                offset += klen + vlen + 4;
+            }
+            char k0 = curr->key->data[0];
+            if (klen == 4 && (k0 == 'D' || k0 == 'd')) {
+                if (strcasecmp(curr->key->data, "date") == 0) have_date = true;
+            } else if (klen == 14 && (k0 == 'C' || k0 == 'c')) {
+                if (strcasecmp(curr->key->data, "content-length") == 0) have_clen = true;
+            } else if (klen == 10 && (k0 == 'C' || k0 == 'c')) {
+                if (strcasecmp(curr->key->data, "connection") == 0) have_conn = true;
+            } else if (klen == 17 && (k0 == 'T' || k0 == 't')) {
+                if (strcasecmp(curr->key->data, "transfer-encoding") == 0) have_te = true;
             }
         }
         curr = curr->next;
     }
 
-    if (!headers_have_content_length(res->headers)) {
-        if (offset < buf_size) {
-            int n = snprintf(buf + offset, buf_size - offset, "Content-Length: %zu\r\n", body_len);
-            if (n > 0) {
-                offset += n;
-                if (offset > buf_size) offset = buf_size;
-            }
+    if (!have_date && offset + 37 <= buf_size) {
+        char date_str[36];
+        cwist_get_cached_date_header(date_str); /* 29 bytes, NUL-terminated */
+        memcpy(buf + offset, "Date: ", 6);
+        memcpy(buf + offset + 6, date_str, 29);
+        buf[offset + 35] = '\r';
+        buf[offset + 36] = '\n';
+        offset += 37;
+    }
+
+    if (res->stream_mode && !have_te && !have_clen) {
+        static const char te_chunked[] = "Transfer-Encoding: chunked\r\n";
+        if (offset + sizeof(te_chunked) - 1 <= buf_size) {
+            memcpy(buf + offset, te_chunked, sizeof(te_chunked) - 1);
+            offset += sizeof(te_chunked) - 1;
         }
     }
 
-    if (!headers_have_connection(res->headers)) {
-        if (offset < buf_size) {
-            int n = snprintf(buf + offset, buf_size - offset, "Connection: %s\r\n", res->keep_alive ? "keep-alive" : "close");
-            if (n > 0) {
-                offset += n;
-                if (offset > buf_size) offset = buf_size;
+    if (!have_clen && !res->stream_mode) {
+        /* Fast integer to ascii without snprintf overhead */
+        char num_buf[20];
+        char *p = num_buf + sizeof(num_buf);
+        size_t tmp_len = body_len;
+        do {
+            *--p = '0' + (tmp_len % 10);
+            tmp_len /= 10;
+        } while (tmp_len > 0);
+        size_t num_len = (size_t)((num_buf + sizeof(num_buf)) - p);
+        if (offset + 16 + num_len + 2 <= buf_size) {
+            memcpy(buf + offset, "Content-Length: ", 16);
+            memcpy(buf + offset + 16, p, num_len);
+            buf[offset + 16 + num_len] = '\r';
+            buf[offset + 16 + num_len + 1] = '\n';
+            offset += 16 + num_len + 2;
+        }
+    }
+
+    if (!have_conn) {
+        if (res->keep_alive) {
+            static const char conn_ka[] = "Connection: keep-alive\r\n";
+            if (offset + sizeof(conn_ka) - 1 <= buf_size) {
+                memcpy(buf + offset, conn_ka, sizeof(conn_ka) - 1);
+                offset += sizeof(conn_ka) - 1;
+            }
+        } else {
+            static const char conn_cl[] = "Connection: close\r\n";
+            if (offset + sizeof(conn_cl) - 1 <= buf_size) {
+                memcpy(buf + offset, conn_cl, sizeof(conn_cl) - 1);
+                offset += sizeof(conn_cl) - 1;
             }
         }
     }
@@ -1533,12 +2277,9 @@ static size_t serialize_headers(cwist_http_response *res, char *buf, size_t buf_
         }
     }
 
-    if (offset < buf_size) {
-        int n = snprintf(buf + offset, buf_size - offset, "\r\n");
-        if (n > 0) {
-            offset += n;
-            if (offset > buf_size) offset = buf_size;
-        }
+    if (offset + 2 <= buf_size) {
+        buf[offset++] = '\r';
+        buf[offset++] = '\n';
     }
     return offset;
 }
@@ -1570,6 +2311,11 @@ size_t cwist_http_serialize_headers(cwist_http_response *res, char *buf, size_t 
 #if defined(__linux__) && defined(TCP_CORK)
 #define CWIST_TCP_CORK_DEFAULT_BURST (256 * 1024)
 
+/**
+ * @brief Runtime toggle for the TCP_CORK coalescing layer (Linux only).
+ * @return true when CWIST_USE_TCP_CORK is set to a positive value; always
+ *         false on other platforms.
+ */
 bool cwist_tcp_cork_enabled(void) {
     static int enabled = -1; /* benign idempotent race on first use */
     if (enabled < 0) {
@@ -1585,6 +2331,10 @@ bool cwist_tcp_cork_enabled(void) {
     return enabled == 1;
 }
 
+/**
+ * @brief TCP_CORK flush burst size in bytes.
+ * @return The CWIST_TCP_CORK_BURST env value (minimum 16 KiB) or the default.
+ */
 static size_t cwist_tcp_cork_burst(void) {
     static size_t burst = 0;
     if (burst == 0) {
@@ -1600,17 +2350,25 @@ static size_t cwist_tcp_cork_burst(void) {
     return burst;
 }
 
+/**
+ * @brief Set or clear TCP_CORK on a socket.
+ * @return setsockopt(2) result (0 on success).
+ */
 static int cwist_tcp_cork_set(int fd, bool on) {
     int v = on ? 1 : 0;
     return setsockopt(fd, IPPROTO_TCP, TCP_CORK, &v, sizeof(v));
 }
 
-/* Flush pending corked bytes, then re-cork: a burst boundary. */
+/** Flush pending corked bytes, then re-cork: a burst boundary. */
 static void cwist_tcp_cork_flush(int fd) {
     cwist_tcp_cork_set(fd, false);
     cwist_tcp_cork_set(fd, true);
 }
 #else
+/**
+ * @brief TCP_CORK coalescing stub for platforms without TCP_CORK.
+ * @return Always false.
+ */
 bool cwist_tcp_cork_enabled(void) {
     return false;
 }
@@ -1622,6 +2380,42 @@ bool cwist_tcp_cork_enabled(void) {
  * @return 0 on success, -1 on fatal error or timeout.
  */
 static int cwist_http_sendmsg_all(int fd, struct iovec *iov, int iovcnt, int flags) {
+#ifdef CWIST_WASI_SOCKETS
+    /* wasi:sockets (0.2) has no sendmsg(2): coalesce the iov into a single
+     * buffer and drive plain send(). Response iovs are small (headers + one
+     * body segment), so the copy is cheap. */
+    size_t total = 0;
+    for (int i = 0; i < iovcnt; i++) total += iov[i].iov_len;
+    char *buf = cwist_alloc(total ? total : 1);
+    if (!buf) return -1;
+    size_t off = 0;
+    for (int i = 0; i < iovcnt; i++) {
+        memcpy(buf + off, iov[i].iov_base, iov[i].iov_len);
+        off += iov[i].iov_len;
+    }
+    size_t sent = 0;
+    int rc = -1;
+    while (sent < total) {
+        ssize_t n = send(fd, buf + sent, total - sent, flags);
+        if (n < 0) {
+            if (errno == EINTR) continue;
+            if (errno == EAGAIN || errno == EWOULDBLOCK) {
+                struct pollfd pfd = {.fd = fd, .events = POLLOUT};
+                int pr = poll(&pfd, 1, CWIST_HTTP_TIMEOUT_MS);
+                if (pr <= 0) goto wasi_done;
+                if (pfd.revents & (POLLERR | POLLHUP | POLLNVAL)) goto wasi_done;
+                continue;
+            }
+            goto wasi_done;
+        }
+        if (n == 0) goto wasi_done;
+        sent += (size_t)n;
+    }
+    rc = 0;
+wasi_done:
+    cwist_free(buf);
+    return rc;
+#elif !defined(CWIST_WASI_NO_SOCKETS)
     /* Speculative zero-latency fast-path attempt:
      * Completes immediately for non-saturated sockets without entering poll() loops. */
     size_t fast_sent = 0;
@@ -1635,6 +2429,18 @@ static int cwist_http_sendmsg_all(int fd, struct iovec *iov, int iovcnt, int fla
 
     struct iovec *cur = iov;
     int curcnt = iovcnt;
+
+    /* Advance by bytes already sent in fast-path attempt */
+    while (curcnt > 0 && fast_sent >= cur->iov_len) {
+        fast_sent -= cur->iov_len;
+        cur++;
+        curcnt--;
+    }
+    if (curcnt > 0 && fast_sent > 0) {
+        cur->iov_base = (char *)cur->iov_base + fast_sent;
+        cur->iov_len -= fast_sent;
+    }
+
     while (curcnt > 0) {
         struct msghdr msg = {0};
         msg.msg_iov = cur;
@@ -1664,6 +2470,15 @@ static int cwist_http_sendmsg_all(int fd, struct iovec *iov, int iovcnt, int fla
         }
     }
     return 0;
+#else
+    /* WASI preview1 has no sockets; sending is impossible. Callers treat
+     * this as a write error and tear the connection down. */
+    (void)fd;
+    (void)iov;
+    (void)iovcnt;
+    (void)flags;
+    return -1;
+#endif
 }
 
 /**
@@ -1673,13 +2488,21 @@ static int cwist_http_sendmsg_all(int fd, struct iovec *iov, int iovcnt, int fla
  * @return true when the file body and headers were transmitted successfully.
  */
 static bool cwist_http_stream_file_fast(int client_fd, cwist_http_response *res) {
-#if defined(__linux__) || defined(__APPLE__) || defined(__FreeBSD__)
     if (!res || !res->use_file_stream || res->file_stream_fd < 0) return false;
     size_t remaining = res->file_stream_len;
     off_t offset = res->file_stream_offset;
+#if defined(__linux__)
+    const bool cork = cwist_tcp_cork_enabled();
+    const size_t burst = cork ? cwist_tcp_cork_burst() : 0;
+    size_t since_flush = 0;
+#endif
     while (remaining > 0) {
 #if defined(__linux__)
-        ssize_t sent = sendfile(client_fd, res->file_stream_fd, &offset, remaining);
+        /* Cap each sendfile at the remaining burst budget so flushes land on
+         * moderate boundaries instead of one giant clump. */
+        size_t quota = remaining;
+        if (cork && burst - since_flush < quota) quota = burst - since_flush;
+        ssize_t sent = sendfile(client_fd, res->file_stream_fd, &offset, quota);
         if (sent < 0) {
             if (errno == EINTR) continue;
             if (errno == EAGAIN || errno == EWOULDBLOCK) {
@@ -1692,21 +2515,22 @@ static bool cwist_http_stream_file_fast(int client_fd, cwist_http_response *res)
         }
         if (sent == 0) break;
         remaining -= (size_t)sent;
-#elif defined(__APPLE__)
-        off_t chunk = (off_t)remaining;
-        int rc = sendfile(res->file_stream_fd, client_fd, offset, &chunk, NULL, 0);
-        if (rc == -1) {
-            if (errno == EINTR) continue;
-            if (errno == EAGAIN || errno == EWOULDBLOCK) {
-                if (chunk > 0) {
-                    offset += chunk;
-                    remaining -= (size_t)chunk;
-                }
-                struct pollfd pfd = { .fd = client_fd, .events = POLLOUT };
-                int ret = poll(&pfd, 1, CWIST_HTTP_TIMEOUT_MS);
-                if (ret <= 0 || (pfd.revents & (POLLERR | POLLHUP | POLLNVAL))) return false;
-                continue;
+        if (cork) {
+            since_flush += (size_t)sent;
+            if (since_flush >= burst && remaining > 0) {
+                cwist_tcp_cork_flush(client_fd);
+                since_flush = 0;
             }
+        }
+#else
+        /* Portable read+write fallback for macOS, FreeBSD, and other platforms.
+           lseek is used to handle the offset since pread avoids modifying the
+           file descriptor's position across calls. */
+        char buf[65536];
+        size_t to_read = remaining < sizeof(buf) ? remaining : sizeof(buf);
+        ssize_t n = pread(res->file_stream_fd, buf, to_read, offset);
+        if (n < 0) {
+            if (errno == EINTR) continue;
             return false;
         }
         if (n == 0) break;
@@ -1721,26 +2545,16 @@ static bool cwist_http_stream_file_fast(int client_fd, cwist_http_response *res)
                     if (ret <= 0 || (pfd.revents & (POLLERR | POLLHUP | POLLNVAL))) return false;
                     continue;
                 }
-                struct pollfd pfd = { .fd = client_fd, .events = POLLOUT };
-                int ret = poll(&pfd, 1, CWIST_HTTP_TIMEOUT_MS);
-                if (ret <= 0 || (pfd.revents & (POLLERR | POLLHUP | POLLNVAL))) return false;
-                continue;
+                return false;
             }
-            return false;
+            nw += w;
         }
-        if (sent == 0) break;
-        offset += sent;
-        remaining -= (size_t)sent;
+        offset += nw;
+        remaining -= (size_t)nw;
 #endif
     }
     res->file_stream_offset = offset;
     return remaining == 0;
-#else
-    (void)client_fd;
-    (void)res;
-    errno = ENOTSUP;
-    return false;
-#endif
 }
 
 /**
@@ -1816,13 +2630,19 @@ cwist_error_t cwist_http_send_response(int client_fd, cwist_http_response *res) 
         }
     }
 
+#if defined(__linux__) && defined(TCP_CORK)
+    /* Uncorking flushes the final partial burst; runs on every outcome so a
+     * failed send can never leave the socket corked. */
+    if (cork) cwist_tcp_cork_set(client_fd, false);
+#endif
+
     cwist_http_response_release_ptr_body(res);
     cwist_http_response_release_file_stream(res);
     return err;
 }
 
 /**
- * @brief Send only the status line and headers of a response (RFC 9110 §9.3.2
+ * @brief Send only the status line and headers of a response (RFC 9110 section 9.3.2
  * HEAD semantics): Content-Length reflects the would-be body, but no body
  * bytes are written. Body resources are released as in the full send path.
  */
@@ -1863,34 +2683,95 @@ cwist_error_t cwist_http_send_response_head(int client_fd, cwist_http_response *
  * everything the callback needs, so no extra heap struct is required. */
 
 typedef struct {
+    int file_fd;      /* sendfile source (Linux file mode). */
+    off_t file_off;
+    size_t file_left;
+    bool close_file_fd; /* file_fd is our dup() and must be closed. */
+    const char *body;   /* Referenced pointer body (BODYREF mode). */
+    size_t body_off;
+    size_t body_left;
+    cwist_http_body_cleanup_fn body_cleanup; /* Runs once at park finish. */
+    void *body_cleanup_ctx;
+} http_parked_write_state_t;
+
+enum {
+    HTTP_PARK_INLINE = 0, /* w.buf holds the full unsent remainder. */
+    HTTP_PARK_FILE,       /* w.buf holds unsent headers; state->file streams. */
+    HTTP_PARK_BODYREF,    /* w.buf holds unsent headers; state->body references. */
+};
+
+typedef struct {
     cwist_reactor_t *reactor;
     cwist_http_async_conn_t *conn;
-    char *buf;                    /* Owned copy of the unsent bytes. */
+    char *buf;      /* Owned copy of the unsent header bytes (all modes). */
     size_t off;
     size_t len;
-    uint32_t deadline_sec;        /* Absolute write deadline (monotonic sec). */
+    http_parked_write_state_t *state; /* Heap state for FILE/BODYREF modes. */
+    uint32_t deadline_sec;            /* Absolute write deadline (monotonic sec). */
+    uint8_t mode;
     bool keep_alive;
 } http_parked_write_t;
 
 _Static_assert(sizeof(http_parked_write_t) <= CWIST_REACTOR_PAYLOAD_SIZE,
                "parked write state must fit a reactor slot payload");
 
+/**
+ * @brief Absolute write deadline (monotonic seconds) for a parked write.
+ */
 static uint32_t http_parked_write_deadline(void) {
     return cwist_fast_monotonic_sec() + cwist_http_keep_alive_timeout_sec();
 }
 
-static void http_parked_write_finish(int fd, http_parked_write_t *w) {
+static void http_parked_write_cb(int fd, void *ctx);
+
+/* Re-park on a fresh one-shot POLLOUT slot; the slot copies the payload and
+ * ownership of buf/state moves with it. False means the caller must finish. */
+/**
+ * @brief Re-park a deferred write on a fresh one-shot POLLOUT slot.
+ * @return false past the deadline or when the slot could not be armed; the
+ *         caller must finish the write path itself.
+ */
+static bool http_parked_rearm(int fd, http_parked_write_t *w) {
+    return cwist_fast_monotonic_sec() <= w->deadline_sec &&
+           cwist_reactor_add_out(w->reactor, fd, http_parked_write_cb, w, sizeof(*w));
+}
+
+/**
+ * @brief Finish a parked write: release buffers and re-arm or close.
+ *
+ * Re-arms keep-alive only when the body drained fully and the app is still
+ * running; otherwise closes the connection.
+ */
+static void http_parked_write_finish(int fd, http_parked_write_t *w, bool drained) {
     cwist_reactor_t *reactor = w->reactor;
     cwist_http_async_conn_t *conn = w->conn;
-    bool keep = w->keep_alive && w->off == w->len && atomic_load(&g_cwist_running);
+    bool keep = w->keep_alive && drained && atomic_load(&g_cwist_running);
     cwist_free(w->buf);
+    if (w->state) {
+#if defined(__linux__)
+        if (w->state->close_file_fd && w->state->file_fd >= 0) close(w->state->file_fd);
+#endif
+        if (w->state->body_cleanup && w->state->body) {
+            size_t total = w->state->body_off + w->state->body_left;
+            w->state->body_cleanup((void *)w->state->body, total, w->state->body_cleanup_ctx);
+        }
+        cwist_free(w->state);
+    }
     if (keep) {
         cwist_http_async_rearm(fd, reactor, conn);
     } else {
-        cwist_http_async_close(fd, conn);
+        http_async_close(fd, conn);
     }
 }
 
+/**
+ * @brief POLLOUT callback draining a parked (deferred) response write.
+ *
+ * Sends the buffered remainder, the sendfile body (FILE mode), or the
+ * referenced pointer body (BODYREF mode); re-parks on EAGAIN until the
+ * deadline. Frees the park state and re-arms or closes via
+ * http_parked_write_finish().
+ */
 static void http_parked_write_cb(int fd, void *ctx) {
     http_parked_write_t *w = (http_parked_write_t *)ctx;
     int flags = 0;
@@ -1900,6 +2781,8 @@ static void http_parked_write_cb(int fd, void *ctx) {
 #if defined(MSG_DONTWAIT)
     flags |= MSG_DONTWAIT;
 #endif
+
+    /* Unsent header bytes drain first in every mode. */
     while (w->off < w->len) {
         ssize_t n = send(fd, w->buf + w->off, w->len - w->off, flags);
         if (n > 0) {
@@ -1910,34 +2793,335 @@ static void http_parked_write_cb(int fd, void *ctx) {
             continue;
         }
         if (n < 0 && errno == EINTR) continue;
-        if (n < 0 && (errno == EAGAIN || errno == EWOULDBLOCK) &&
-            cwist_fast_monotonic_sec() <= w->deadline_sec &&
-            cwist_reactor_add_out(w->reactor, fd, http_parked_write_cb, w, sizeof(*w))) {
-            /* Payload copied into the new slot; buf ownership moves with it. */
+        if (n < 0 && (errno == EAGAIN || errno == EWOULDBLOCK) && http_parked_rearm(fd, w)) {
+            /* Payload copied into the new slot; buf/state ownership moves with it. */
             return;
         }
-        break; /* Fatal error, timeout, or re-arm failure. */
+        http_parked_write_finish(fd, w, false);
+        return;
     }
-    http_parked_write_finish(fd, w);
+    cwist_free(w->buf);
+    w->buf = NULL;
+
+    if (w->mode == HTTP_PARK_FILE) {
+#if defined(__linux__)
+        http_parked_write_state_t *f = w->state;
+        while (f && f->file_left > 0) {
+            ssize_t n = sendfile(fd, f->file_fd, &f->file_off, f->file_left);
+            if (n > 0) {
+                f->file_left -= (size_t)n;
+                w->deadline_sec = http_parked_write_deadline();
+                continue;
+            }
+            if (n < 0 && errno == EINTR) continue;
+            if (n < 0 && (errno == EAGAIN || errno == EWOULDBLOCK) && http_parked_rearm(fd, w)) {
+                return;
+            }
+            break;
+        }
+        http_parked_write_finish(fd, w, f && f->file_left == 0);
+#else
+        /* Non-Linux never parks FILE mode; defensive close. */
+        http_parked_write_finish(fd, w, false);
+#endif
+        return;
+    }
+
+    if (w->mode == HTTP_PARK_BODYREF) {
+        http_parked_write_state_t *s = w->state;
+        while (s && s->body_left > 0) {
+            ssize_t n = send(fd, s->body + s->body_off, s->body_left, flags);
+            if (n > 0) {
+                s->body_off += (size_t)n;
+                s->body_left -= (size_t)n;
+                w->deadline_sec = http_parked_write_deadline();
+                continue;
+            }
+            if (n < 0 && errno == EINTR) continue;
+            if (n < 0 && (errno == EAGAIN || errno == EWOULDBLOCK) && http_parked_rearm(fd, w)) {
+                return;
+            }
+            break;
+        }
+        http_parked_write_finish(fd, w, s && s->body_left == 0);
+        return;
+    }
+
+    http_parked_write_finish(fd, w, true);
 }
 
+/**
+ * @brief Park a response whose body must not be deep-copied: a file stream
+ * (FILE mode; body not resident in memory) or a pointer body (BODYREF mode;
+ * often multi-MiB). The unsent header remainder is copied into the payload
+ * and the body streams from heap state on resume.
+ *
+ * On success, BODYREF mode transfers pointer-body ownership (including the
+ * cleanup hook) to the park state; the caller's release calls become no-ops.
+ * On failure nothing is parked and body ownership stays with the caller,
+ * except that a BODYREF cleanup whose ownership already moved runs here so
+ * the body is still released exactly once.
+ *
+ * @return true when parked (conn handed to the reactor slot), false when
+ *         nothing was parked and the caller must finish another way.
+ */
+static bool http_park_streamed_body(int client_fd, cwist_reactor_t *reactor,
+                                    cwist_http_async_conn_t *conn, cwist_http_response *res,
+                                    const char *header_buf, size_t header_len, size_t header_sent,
+                                    const void *body_ptr, size_t body_len, bool keep_alive,
+                                    bool file_mode) {
+    http_parked_write_state_t *st = cwist_alloc(sizeof(*st));
+    if (!st) return false;
+    memset(st, 0, sizeof(*st));
+    if (file_mode) {
+#if defined(__linux__)
+        st->file_fd = res->file_stream_fd;
+        st->file_off = res->file_stream_offset;
+        st->file_left = res->file_stream_len;
+        if (res->file_stream_auto_close) {
+            int dupfd = dup(res->file_stream_fd);
+            if (dupfd < 0) {
+                cwist_free(st);
+                return false;
+            }
+            st->file_fd = dupfd;
+            st->close_file_fd = true;
+        }
+#else
+        cwist_free(st);
+        return false;
+#endif
+    } else {
+        size_t body_sent = header_sent > header_len ? header_sent - header_len : 0;
+        st->body = (const char *)body_ptr;
+        st->body_off = body_sent;
+        st->body_left = body_len - body_sent;
+        st->body_cleanup = res->ptr_body_cleanup;
+        st->body_cleanup_ctx = res->ptr_body_cleanup_ctx;
+        /* Ownership of the pointer body (and its cleanup hook) moves to the
+         * park state; the caller's release becomes a no-op. */
+        res->is_ptr_body = false;
+        res->ptr_body = NULL;
+        res->ptr_body_len = 0;
+        res->ptr_body_cleanup = NULL;
+        res->ptr_body_cleanup_ctx = NULL;
+    }
+
+    http_parked_write_t w = {
+        .reactor = reactor,
+        .conn = conn,
+        .buf = NULL,
+        .off = 0,
+        .len = 0,
+        .state = st,
+        .deadline_sec = http_parked_write_deadline(),
+        .mode = file_mode ? HTTP_PARK_FILE : HTTP_PARK_BODYREF,
+        .keep_alive = keep_alive,
+    };
+    size_t hd_left = header_sent < header_len ? header_len - header_sent : 0;
+    if (hd_left > 0) {
+        w.buf = cwist_alloc(hd_left);
+        if (!w.buf) goto fail;
+        memcpy(w.buf, header_buf + header_sent, hd_left);
+        w.len = hd_left;
+    }
+    if (cwist_reactor_add_out(reactor, client_fd, http_parked_write_cb, &w, sizeof(w))) return true;
+
+fail:
+    cwist_free(w.buf);
+#if defined(__linux__)
+    if (st->close_file_fd && st->file_fd >= 0) close(st->file_fd);
+#endif
+    if (!file_mode && st->body_cleanup && st->body) {
+        /* Park failed after ownership moved: run the cleanup here so the
+         * body is still released exactly once. */
+        st->body_cleanup((void *)st->body, st->body_off + st->body_left, st->body_cleanup_ctx);
+        res->is_ptr_body = false;
+        res->ptr_body = NULL;
+        res->ptr_body_len = 0;
+        res->ptr_body_cleanup = NULL;
+        res->ptr_body_cleanup_ctx = NULL;
+    }
+    cwist_free(st);
+    return false;
+}
+
+typedef enum {
+    CWIST_FILE_BEGIN_FALLBACK = 0, /* nothing sent; caller may use the legacy path */
+    CWIST_FILE_BEGIN_HANDLED,      /* finished, parked, or closed; conn handled */
+} cwist_file_begin_result_t;
+
+/**
+ * @brief Begin an async file-stream response without blocking a reactor
+ * thread: headers via the speculative fast path, the body through a
+ * non-blocking sendfile burst, and any EAGAIN parks the remaining
+ * {fd, offset} state on a one-shot POLLOUT slot.
+ * @param defer When false, completion rearms/closes the connection inline;
+ *              when true, the outcome is reported through status_out for the
+ *              caller to handle.
+ * @return CWIST_FILE_BEGIN_HANDLED when the response is fully handled here
+ *         (finished, parked, or the connection closed);
+ *         CWIST_FILE_BEGIN_FALLBACK when nothing was sent and the caller may
+ *         still use the legacy bounded-blocking path.
+ */
+static cwist_file_begin_result_t cwist_http_file_begin(int client_fd, cwist_http_response *res,
+                                                       cwist_reactor_t *reactor,
+                                                       cwist_http_async_conn_t *conn,
+                                                       bool keep_alive, bool defer,
+                                                       cwist_async_send_status_t *status_out) {
+#if !defined(__linux__)
+    /* The non-blocking burst below relies on Linux sendfile(2) and dup(2).
+     * Elsewhere (macOS/BSD sendfile has a different signature; Emscripten and
+     * WASI have neither) nothing has been sent yet, so let the caller use the
+     * bounded-blocking path, like http_park_streamed_body() does. */
+    (void)client_fd;
+    (void)res;
+    (void)reactor;
+    (void)conn;
+    (void)keep_alive;
+    (void)defer;
+    (void)status_out;
+    return CWIST_FILE_BEGIN_FALLBACK;
+#else
+    char header_buf[CWIST_HTTP_MAX_HEADER_SIZE];
+    size_t header_len = serialize_headers(res, header_buf, sizeof(header_buf));
+
+    int flags = 0;
+#if defined(MSG_NOSIGNAL)
+    flags |= MSG_NOSIGNAL;
+#endif
+#if defined(MSG_DONTWAIT)
+    flags |= MSG_DONTWAIT;
+#endif
+
+    struct iovec iov = {.iov_base = header_buf, .iov_len = header_len};
+    size_t sent = 0;
+    cwist_write_status_t hst = cwist_http_sendmsg_speculative(client_fd, &iov, 1, flags, &sent);
+
+    if (hst == CWIST_WRITE_PENDING) {
+        if (http_park_streamed_body(client_fd, reactor, conn, res, header_buf, header_len, sent,
+                                    NULL, 0, keep_alive, true)) {
+            cwist_http_response_release_file_stream(res);
+            if (defer && status_out) *status_out = CWIST_ASYNC_SEND_DEFERRED;
+            return CWIST_FILE_BEGIN_HANDLED;
+        }
+        return CWIST_FILE_BEGIN_FALLBACK;
+    }
+
+    /* Headers are on the wire (or failed fatally): from here the legacy path
+     * would resend them, so this function owns the outcome. */
+    http_parked_write_state_t *st = cwist_alloc(sizeof(*st));
+    if (!st) {
+        http_async_close(client_fd, conn);
+        if (defer && status_out) *status_out = CWIST_ASYNC_SEND_CLOSE;
+        return CWIST_FILE_BEGIN_HANDLED;
+    }
+    memset(st, 0, sizeof(*st));
+    st->file_fd = res->file_stream_fd;
+    st->file_off = res->file_stream_offset;
+    st->file_left = res->file_stream_len;
+    if (res->file_stream_auto_close) {
+        int dupfd = dup(res->file_stream_fd);
+        if (dupfd < 0) {
+            cwist_free(st);
+            http_async_close(client_fd, conn);
+            if (defer && status_out) *status_out = CWIST_ASYNC_SEND_CLOSE;
+            return CWIST_FILE_BEGIN_HANDLED;
+        }
+        st->file_fd = dupfd;
+        st->close_file_fd = true;
+    }
+    cwist_http_response_release_file_stream(res);
+
+    if (hst == CWIST_WRITE_ERR) {
+        if (st->close_file_fd) close(st->file_fd);
+        cwist_free(st);
+        http_async_close(client_fd, conn);
+        if (defer && status_out) *status_out = CWIST_ASYNC_SEND_CLOSE;
+        return CWIST_FILE_BEGIN_HANDLED;
+    }
+
+    while (st->file_left > 0) {
+        ssize_t n = sendfile(client_fd, st->file_fd, &st->file_off, st->file_left);
+        if (n > 0) {
+            st->file_left -= (size_t)n;
+            continue;
+        }
+        if (n < 0 && errno == EINTR) continue;
+        if (n < 0 && (errno == EAGAIN || errno == EWOULDBLOCK)) {
+            http_parked_write_t w = {
+                .reactor = reactor,
+                .conn = conn,
+                .buf = NULL,
+                .off = 0,
+                .len = 0,
+                .state = st,
+                .deadline_sec = http_parked_write_deadline(),
+                .mode = HTTP_PARK_FILE,
+                .keep_alive = keep_alive,
+            };
+            if (cwist_reactor_add_out(reactor, client_fd, http_parked_write_cb, &w, sizeof(w))) {
+                if (defer && status_out) *status_out = CWIST_ASYNC_SEND_DEFERRED;
+                return CWIST_FILE_BEGIN_HANDLED;
+            }
+            break;
+        }
+        break;
+    }
+
+    bool drained = st->file_left == 0;
+    if (st->close_file_fd) close(st->file_fd);
+    cwist_free(st);
+    if (drained && keep_alive && atomic_load(&g_cwist_running)) {
+        if (defer && status_out) {
+            *status_out = CWIST_ASYNC_SEND_KEEPALIVE;
+        } else {
+            cwist_http_async_rearm(client_fd, reactor, conn);
+        }
+    } else {
+        if (defer && status_out) {
+            *status_out = CWIST_ASYNC_SEND_CLOSE;
+        } else {
+            http_async_close(client_fd, conn);
+        }
+    }
+    return CWIST_FILE_BEGIN_HANDLED;
+#endif
+}
+
+/**
+ * @brief Send a response on the async path, parking the unsent remainder on
+ * EAGAIN instead of blocking the reactor thread.
+ *
+ * Pointer bodies park by reference (ownership moves to the park state);
+ * other bodies deep-copy the unsent remainder. File streams use the
+ * non-blocking sendfile path. On completion the connection is re-armed for
+ * keep-alive or closed.
+ */
 void cwist_http_async_send_response(int client_fd, cwist_http_response *res,
                                     cwist_reactor_t *reactor, cwist_http_async_conn_t *conn,
                                     bool keep_alive, bool head_only) {
     if (client_fd < 0 || !res || !reactor || !conn) {
-        cwist_http_async_close(client_fd, conn);
+        http_async_close(client_fd, conn);
         return;
     }
 
-    /* File streams keep the existing bounded-blocking send path: their body
-     * is not resident in memory, so it cannot be deep-copied for parking
-     * without buffering the whole file. */
+    /* File streams: headers via the speculative path, body via non-blocking
+     * sendfile; EAGAIN parks {fd, offset} state instead of blocking a
+     * reactor thread in poll(). Falls back to the bounded-blocking path
+     * only when nothing has been sent yet. */
     if (!head_only && res->use_file_stream) {
+#if defined(__linux__)
+        if (cwist_http_file_begin(client_fd, res, reactor, conn, keep_alive, false, NULL) ==
+            CWIST_FILE_BEGIN_HANDLED) {
+            return;
+        }
+#endif
         cwist_error_t err = cwist_http_send_response(client_fd, res);
         if (keep_alive && err.error.err_i16 == 0) {
             cwist_http_async_rearm(client_fd, reactor, conn);
         } else {
-            cwist_http_async_close(client_fd, conn);
+            http_async_close(client_fd, conn);
         }
         return;
     }
@@ -1979,6 +3163,15 @@ void cwist_http_async_send_response(int client_fd, cwist_http_response *res,
     cwist_write_status_t st = cwist_http_sendmsg_speculative(client_fd, iov, iov_cnt, flags, &sent);
 
     if (st == CWIST_WRITE_PENDING) {
+        /* A pointer body parks by reference: ownership (and the cleanup
+         * hook) moves to the park state instead of deep-copying the body. */
+        if (res->is_ptr_body && body_ptr && body_len > 0 &&
+            http_park_streamed_body(client_fd, reactor, conn, res, header_buf, header_len, sent,
+                                    body_ptr, body_len, keep_alive, false)) {
+            cwist_http_response_release_ptr_body(res); /* no-op: ownership moved */
+            cwist_http_response_release_file_stream(res);
+            return;
+        }
         /* Deep-copy the unsent remainder before releasing the body: the
          * completion frees req/res (and the arena) right after we return. */
         size_t total = header_len + body_len;
@@ -2008,7 +3201,7 @@ void cwist_http_async_send_response(int client_fd, cwist_http_response *res,
             return;
         }
         cwist_free(w.buf);
-        cwist_http_async_close(client_fd, conn);
+        http_async_close(client_fd, conn);
         return;
     }
 
@@ -2017,16 +3210,28 @@ void cwist_http_async_send_response(int client_fd, cwist_http_response *res,
     if (st == CWIST_WRITE_DONE && keep_alive && atomic_load(&g_cwist_running)) {
         cwist_http_async_rearm(client_fd, reactor, conn);
     } else {
-        cwist_http_async_close(client_fd, conn);
+        http_async_close(client_fd, conn);
     }
 }
 
+/**
+ * @brief Async send variant that reports the outcome to the caller instead of
+ * re-arming or closing the connection itself (deferred-completion handoff).
+ * @return KEEPALIVE / DEFERRED / CLOSE describing the connection's fate.
+ */
 cwist_async_send_status_t cwist_http_send_response_async(int client_fd, cwist_http_response *res,
                                                          cwist_http_async_conn_t *conn,
                                                          bool keep_alive, bool head_only) {
     if (client_fd < 0 || !res || !conn) return CWIST_ASYNC_SEND_CLOSE;
 
     if (!head_only && res->use_file_stream) {
+#if defined(__linux__)
+        cwist_async_send_status_t fstatus = CWIST_ASYNC_SEND_CLOSE;
+        if (cwist_http_file_begin(client_fd, res, conn->reactor, conn, keep_alive, true,
+                                  &fstatus) == CWIST_FILE_BEGIN_HANDLED) {
+            return fstatus;
+        }
+#endif
         cwist_error_t err = cwist_http_send_response(client_fd, res);
         return (keep_alive && err.error.err_i16 == 0) ? CWIST_ASYNC_SEND_KEEPALIVE
                                                       : CWIST_ASYNC_SEND_CLOSE;
@@ -2069,6 +3274,15 @@ cwist_async_send_status_t cwist_http_send_response_async(int client_fd, cwist_ht
     cwist_write_status_t st = cwist_http_sendmsg_speculative(client_fd, iov, iov_cnt, flags, &sent);
 
     if (st == CWIST_WRITE_PENDING) {
+        /* Pointer bodies park by reference (ownership moves to the park
+         * state); everything else keeps the deep-copy remainder path. */
+        if (res->is_ptr_body && body_ptr && body_len > 0 &&
+            http_park_streamed_body(client_fd, conn->reactor, conn, res, header_buf, header_len,
+                                    sent, body_ptr, body_len, keep_alive, false)) {
+            cwist_http_response_release_ptr_body(res); /* no-op: ownership moved */
+            cwist_http_response_release_file_stream(res);
+            return CWIST_ASYNC_SEND_DEFERRED;
+        }
         size_t total = header_len + body_len;
         size_t left = total - sent;
         http_parked_write_t w = {
@@ -2119,6 +3333,11 @@ cwist_async_send_status_t cwist_http_send_response_async(int client_fd, cwist_ht
  * through the bounded poll wait of cwist_http_sendmsg_all instead, keeping
  * byte order without unbounded buffering. */
 
+/**
+ * @brief Append bytes to a connection's coalesced-output stash.
+ * @return 0 on success, -1 when the data would exceed the coalesce cap or
+ *         the stash could not be grown.
+ */
 int cwist_http_coalesce_append(cwist_http_async_conn_t *conn, const void *data, size_t len) {
     if (len == 0) return 0;
     if (conn->olen + len > CWIST_HTTP_COALESCE_MAX) return -1;
@@ -2138,6 +3357,13 @@ int cwist_http_coalesce_append(cwist_http_async_conn_t *conn, const void *data, 
     return 0;
 }
 
+/**
+ * @brief Flush the coalesced-output stash with one speculative write.
+ *
+ * On a partial write the unsent remainder is deep-copied into the parked
+ * writer, which re-arms or closes the connection when it drains.
+ * @return DONE when fully written, PARKED when deferred, ERROR otherwise.
+ */
 cwist_coalesce_flush_status_t
 cwist_http_coalesce_flush(int client_fd, cwist_http_async_conn_t *conn, bool keep_alive) {
     if (!conn || conn->olen == 0) return CWIST_COALESCE_FLUSH_DONE;
@@ -2182,6 +3408,10 @@ cwist_http_coalesce_flush(int client_fd, cwist_http_async_conn_t *conn, bool kee
     return CWIST_COALESCE_FLUSH_ERROR;
 }
 
+/**
+ * @brief Flush the coalesced-output stash, blocking in poll() until drained.
+ * @return 0 on success, -1 on send failure.
+ */
 int cwist_http_coalesce_flush_blocking(int client_fd, cwist_http_async_conn_t *conn) {
     if (!conn || conn->olen == 0) return 0;
     struct iovec iov = {.iov_base = conn->obuf, .iov_len = conn->olen};
@@ -2197,6 +3427,10 @@ int cwist_http_coalesce_flush_blocking(int client_fd, cwist_http_async_conn_t *c
     return rc;
 }
 
+/**
+ * @brief Build a minimal text error response into the coalesce stash.
+ * @return 0 on success, -1 when the response could not be appended.
+ */
 int cwist_http_coalesce_error_response(cwist_http_async_conn_t *conn, int status) {
     const char *reason = cwist_http_status_reason(status);
     if (!reason) reason = "Error";
@@ -2211,23 +3445,65 @@ int cwist_http_coalesce_error_response(cwist_http_async_conn_t *conn, int status
     return cwist_http_coalesce_append(conn, buf, len);
 }
 
+/**
+ * @brief Coalescing variant of the async send: serialize small responses
+ * directly into the connection's output stash so one reactor turn flushes
+ * many responses with a single write.
+ *
+ * Oversized responses, cap pressure, and file streams drain through the
+ * bounded-blocking or parked paths instead of unbounded buffering.
+ * @return KEEPALIVE / DEFERRED / CLOSE describing the connection's fate.
+ */
 cwist_async_send_status_t cwist_http_send_response_coalesced(int client_fd,
                                                              cwist_http_response *res,
                                                              cwist_http_async_conn_t *conn,
                                                              bool keep_alive, bool head_only) {
     if (client_fd < 0 || !res || !conn) return CWIST_ASYNC_SEND_CLOSE;
 
-    /* File streams keep the bounded-blocking send path; drain the stash
-     * first so their bytes cannot overtake buffered responses. */
+    /* File streams: drain any buffered responses ahead of the file without
+     * blocking the reactor (the obuf remainder parks as the file park's
+     * prefix bytes), then stream the file through the non-blocking path;
+     * EAGAIN parks {fd, offset} state. */
     if (!head_only && res->use_file_stream) {
+#if defined(__linux__)
+        int flags = 0;
+#if defined(MSG_NOSIGNAL)
+        flags |= MSG_NOSIGNAL;
+#endif
+#if defined(MSG_DONTWAIT)
+        flags |= MSG_DONTWAIT;
+#endif
+        size_t sent = 0;
+        cwist_write_status_t fst = CWIST_WRITE_DONE;
+        if (conn->olen > 0) {
+            struct iovec iov = {.iov_base = conn->obuf, .iov_len = conn->olen};
+            fst = cwist_http_sendmsg_speculative(client_fd, &iov, 1, flags, &sent);
+        }
+        if (fst == CWIST_WRITE_PENDING) {
+            /* The obuf remainder becomes the park's prefix; the file body
+             * resumes behind it, preserving byte order. */
+            if (http_park_streamed_body(client_fd, conn->reactor, conn, res, conn->obuf, conn->olen,
+                                        sent, NULL, 0, keep_alive, true)) {
+                conn->olen = 0;
+                cwist_http_response_release_file_stream(res);
+                return CWIST_ASYNC_SEND_DEFERRED;
+            }
+            conn->olen = 0;
+            return CWIST_ASYNC_SEND_CLOSE;
+        }
+        conn->olen = 0;
+        if (fst == CWIST_WRITE_ERR) return CWIST_ASYNC_SEND_CLOSE;
+        cwist_async_send_status_t fstatus = CWIST_ASYNC_SEND_CLOSE;
+        if (cwist_http_file_begin(client_fd, res, conn->reactor, conn, keep_alive, true,
+                                  &fstatus) == CWIST_FILE_BEGIN_HANDLED) {
+            return fstatus;
+        }
+#endif
         if (cwist_http_coalesce_flush_blocking(client_fd, conn) != 0) return CWIST_ASYNC_SEND_CLOSE;
         cwist_error_t err = cwist_http_send_response(client_fd, res);
         return (keep_alive && err.error.err_i16 == 0) ? CWIST_ASYNC_SEND_KEEPALIVE
                                                       : CWIST_ASYNC_SEND_CLOSE;
     }
-
-    char header_buf[CWIST_HTTP_MAX_HEADER_SIZE];
-    size_t header_len = serialize_headers(res, header_buf, sizeof(header_buf));
 
     const void *body_ptr = NULL;
     size_t body_len = 0;
@@ -2241,8 +3517,11 @@ cwist_async_send_status_t cwist_http_send_response_coalesced(int client_fd,
         }
     }
 
-    size_t total = header_len + body_len;
-    if (total > CWIST_HTTP_COALESCE_MAX || conn->olen + total > CWIST_HTTP_COALESCE_MAX) {
+    /* Cap pressure is judged against the worst-case header size so the
+     * header can be serialized directly into the coalesce buffer below,
+     * skipping the stack-to-obuf copy on the common path. */
+    size_t upper = CWIST_HTTP_MAX_HEADER_SIZE + body_len;
+    if (upper > CWIST_HTTP_COALESCE_MAX || conn->olen + upper > CWIST_HTTP_COALESCE_MAX) {
         if (cwist_http_coalesce_flush_blocking(client_fd, conn) != 0) {
             cwist_http_response_release_ptr_body(res);
             cwist_http_response_release_file_stream(res);
@@ -2250,9 +3529,13 @@ cwist_async_send_status_t cwist_http_send_response_coalesced(int client_fd,
         }
     }
 
-    /* Oversized single response: keep the legacy speculative send with a
-     * parked remainder rather than bouncing through the capped stash. */
-    if (total > CWIST_HTTP_COALESCE_MAX) {
+    /* Oversized single response: serialize into a stack buffer and keep
+     * the legacy speculative send with a parked remainder rather than
+     * bouncing through the capped stash. */
+    if (upper > CWIST_HTTP_COALESCE_MAX) {
+        char header_buf[CWIST_HTTP_MAX_HEADER_SIZE];
+        size_t header_len = serialize_headers(res, header_buf, sizeof(header_buf));
+        size_t total = header_len + body_len;
         struct iovec iov[2];
         int iov_cnt = 1;
         iov[0].iov_base = header_buf;
@@ -2275,6 +3558,15 @@ cwist_async_send_status_t cwist_http_send_response_coalesced(int client_fd,
         cwist_write_status_t st =
             cwist_http_sendmsg_speculative(client_fd, iov, iov_cnt, flags, &sent);
         if (st == CWIST_WRITE_PENDING) {
+            /* Pointer bodies park by reference (ownership moves to the park
+             * state); everything else keeps the deep-copy remainder path. */
+            if (res->is_ptr_body && body_ptr && body_len > 0 &&
+                http_park_streamed_body(client_fd, conn->reactor, conn, res, header_buf, header_len,
+                                        sent, body_ptr, body_len, keep_alive, false)) {
+                cwist_http_response_release_ptr_body(res); /* no-op: ownership moved */
+                cwist_http_response_release_file_stream(res);
+                return CWIST_ASYNC_SEND_DEFERRED;
+            }
             size_t left = total - sent;
             http_parked_write_t w = {
                 .reactor = conn->reactor,
@@ -2314,11 +3606,30 @@ cwist_async_send_status_t cwist_http_send_response_coalesced(int client_fd,
         return CWIST_ASYNC_SEND_CLOSE;
     }
 
-    if (cwist_http_coalesce_append(conn, header_buf, header_len) != 0 ||
-        (body_len > 0 && body_ptr && cwist_http_coalesce_append(conn, body_ptr, body_len) != 0)) {
-        cwist_http_response_release_ptr_body(res);
-        cwist_http_response_release_file_stream(res);
-        return CWIST_ASYNC_SEND_CLOSE;
+    /* Common path: serialize the header straight into the stash buffer and
+     * copy the body behind it.  The cap check above guarantees
+     * olen + MAX_HEADER_SIZE + body_len fits CWIST_HTTP_COALESCE_MAX, so the
+     * single growth step below replaces the old serialize-to-stack then
+     * memcpy-into-obuf sequence with one direct serialization. */
+    if (conn->olen + upper > conn->ocap) {
+        size_t ncap = conn->ocap ? conn->ocap : 16384;
+        while (ncap < conn->olen + upper) ncap *= 2;
+        char *nb = cwist_alloc(ncap);
+        if (!nb) {
+            cwist_http_response_release_ptr_body(res);
+            cwist_http_response_release_file_stream(res);
+            return CWIST_ASYNC_SEND_CLOSE;
+        }
+        if (conn->olen > 0) memcpy(nb, conn->obuf, conn->olen);
+        cwist_free(conn->obuf);
+        conn->obuf = nb;
+        conn->ocap = ncap;
+    }
+    size_t header_len = serialize_headers(res, conn->obuf + conn->olen, CWIST_HTTP_MAX_HEADER_SIZE);
+    conn->olen += header_len;
+    if (body_len > 0 && body_ptr) {
+        memcpy(conn->obuf + conn->olen, body_ptr, body_len);
+        conn->olen += body_len;
     }
 
     cwist_http_response_release_ptr_body(res);
@@ -2326,6 +3637,10 @@ cwist_async_send_status_t cwist_http_send_response_coalesced(int client_fd,
     return keep_alive ? CWIST_ASYNC_SEND_KEEPALIVE : CWIST_ASYNC_SEND_CLOSE;
 }
 
+/**
+ * @brief Map an HTTP status code to its RFC reason phrase.
+ * @return Static reason phrase, or NULL for unknown codes.
+ */
 const char *cwist_http_status_reason(int status) {
     switch (status) {
         case 100: return "Continue";
@@ -2392,24 +3707,6 @@ const char *cwist_http_status_reason(int status) {
         case 511: return "Network Authentication Required";
         default: return NULL;
     }
-
-    char header_buf[CWIST_HTTP_MAX_HEADER_SIZE];
-    size_t header_len = serialize_headers(res, header_buf, sizeof(header_buf));
-
-    struct iovec iov = { .iov_base = header_buf, .iov_len = header_len };
-    int flags = 0;
-    #if defined(MSG_NOSIGNAL)
-    flags |= MSG_NOSIGNAL;
-    #endif
-    #if defined(MSG_DONTWAIT)
-    flags |= MSG_DONTWAIT;
-    #endif
-
-    err.error.err_i16 = (cwist_http_sendmsg_all(client_fd, &iov, 1, flags) == 0) ? 0 : -1;
-
-    cwist_http_response_release_ptr_body(res);
-    cwist_http_response_release_file_stream(res);
-    return err;
 }
 
 /**
@@ -2422,28 +3719,25 @@ const char *cwist_http_status_reason(int status) {
 void cwist_http_send_error_response(int fd, int status, const char *msg) {
     if (fd < 0) return;
 
-    const char *reason;
-    switch (status) {
-        case 400: reason = "Bad Request"; break;
-        case 413: reason = "Content Too Large"; break;
-        case 417: reason = "Expectation Failed"; break;
-        case 431: reason = "Request Header Fields Too Large"; break;
-        case 500: reason = "Internal Server Error"; break;
-        case 501: reason = "Not Implemented"; break;
-        case 503: reason = "Service Unavailable"; break;
-        default:  reason = "Error"; break;
-    }
+    const char *reason = cwist_http_status_reason(status);
+    if (!reason) reason = "Error";
     if (!msg) msg = reason;
 
-    char buf[512];
+    /* The body goes out as its own iovec: formatting it into the fixed header
+     * buffer truncated long messages while Content-Length still announced
+     * strlen(msg), leaving the peer waiting for bytes that never came. */
+    size_t msg_len = strlen(msg);
+    char buf[256];
     int n = snprintf(
         buf, sizeof(buf),
-        "HTTP/1.1 %d %s\r\nContent-Type: text/plain\r\nContent-Length: %zu\r\nConnection: close\r\n\r\n%s",
-        status, reason, strlen(msg), msg);
-    if (n <= 0) return;
-    size_t len = (size_t)n < sizeof(buf) ? (size_t)n : sizeof(buf) - 1;
+        "HTTP/1.1 %d %s\r\nContent-Type: text/plain\r\nContent-Length: %zu\r\nConnection: close\r\n\r\n",
+        status, reason, msg_len);
+    if (n <= 0 || (size_t)n >= sizeof(buf)) return;
 
-    struct iovec iov = {.iov_base = buf, .iov_len = len};
+    struct iovec iov[2] = {
+        {.iov_base = buf, .iov_len = (size_t)n},
+        {.iov_base = (void *)msg, .iov_len = msg_len},
+    };
     int flags = 0;
 #if defined(MSG_NOSIGNAL)
     flags |= MSG_NOSIGNAL;
@@ -2451,11 +3745,11 @@ void cwist_http_send_error_response(int fd, int status, const char *msg) {
 #if defined(MSG_DONTWAIT)
     flags |= MSG_DONTWAIT;
 #endif
-    (void)cwist_http_sendmsg_all(fd, &iov, 1, flags);
+    (void)cwist_http_sendmsg_all(fd, iov, msg_len ? 2 : 1, flags);
 }
 
 /**
- * @brief Emit the interim 100 Continue response (RFC 9110 §10.1.1) before the
+ * @brief Emit the interim 100 Continue response (RFC 9110 section 10.1.1) before the
  * request body is read. Best effort: a failed write surfaces on the next recv.
  */
 static void http_send_100_continue(int fd) {
@@ -2474,12 +3768,13 @@ static void http_send_100_continue(int fd) {
  * @return Heap-allocated response string, or NULL on invalid input.
  */
 cwist_sstring *cwist_http_stringify_response(cwist_http_response *res) {
-    // Deprecated / Debug only
     if (!res) return NULL;
     cwist_sstring *s = cwist_sstring_create();
+    if (!s) return NULL;
     char header_buf[CWIST_HTTP_MAX_HEADER_SIZE];
-    serialize_headers(res, header_buf, sizeof(header_buf));
-    cwist_sstring_assign(s, header_buf);
+    /* serialize_headers returns a byte span, not a NUL-terminated string. */
+    size_t header_len = serialize_headers(res, header_buf, sizeof(header_buf));
+    cwist_sstring_assign_len(s, header_buf, header_len);
     if (res->is_ptr_body && res->ptr_body) {
         cwist_sstring_append_len(s, (char *)res->ptr_body, res->ptr_body_len);
     } else if (res->body) {
@@ -2494,7 +3789,7 @@ cwist_sstring *cwist_http_stringify_response(cwist_http_response *res) {
  * @return Parsed request object, or NULL on malformed input.
  */
 /**
- * @brief Validate the combined Transfer-Encoding header list (RFC 9112 §6.1).
+ * @brief Validate the combined Transfer-Encoding header list (RFC 9112 section 6.1).
  * Headers are prepended during parsing, so the first TE node found is the
  * last one on the wire and carries the final coding.
  * @return 0 valid, 1 when the final coding is not chunked, 2 when an
@@ -2621,12 +3916,13 @@ cwist_http_parse_request_with_header_end(const char *raw_request, size_t raw_len
     bool cl_seen = false, cl_bad = false;
     size_t cl_value = 0;
     bool te_seen = false;
+    bool expect_100 = false, expect_bad = false;
     const bool is_http11 = req->version->data && strncmp(req->version->data, "HTTP/1.1", 8) == 0;
 
     line_start = line_end + 2;
     while (line_start < header_end) {
-        line_end = strstr(line_start, "\r\n");
-        if (!line_end) break;
+        line_end = cwist_simd_find_crlf(line_start, (size_t)(header_end + 2 - line_start));
+        if (!line_end || line_end == line_start) break;
 
         const char *colon = cwist_simd_find_char(line_start, (size_t)(line_end - line_start), ':');
         if (colon) {
@@ -2635,8 +3931,19 @@ cwist_http_parse_request_with_header_end(const char *raw_request, size_t raw_len
             while (val_start < line_end && *val_start == ' ') val_start++;
             size_t val_len = line_end - val_start;
 
-            cwist_http_header_add_ex_len(&req->headers, (cwist_arena_t *)req->arena, line_start,
-                                         key_len, val_start, val_len);
+            cwist_error_t herr =
+                cwist_http_header_add_ex_len(&req->headers, (cwist_arena_t *)req->arena, line_start,
+                                             key_len, val_start, val_len);
+            bool header_ok = cwist_error_is_ok(&herr);
+            cwist_error_dispose(&herr);
+            if (!header_ok) {
+                /* Out of memory: dropping the header could hide Host or
+                 * Content-Length from the checks below, so give up quietly as
+                 * cwist_http_request_create() failure does. */
+                cwist_http_request_destroy(req);
+                if (err_out) *err_out = CWIST_HTTP_PARSE_EOF;
+                return NULL;
+            }
 
             char k0 = line_start[0];
             if (key_len == 10 && (k0 == 'C' || k0 == 'c')) {
@@ -2656,7 +3963,7 @@ cwist_http_parse_request_with_header_end(const char *raw_request, size_t raw_len
                 }
             } else if (key_len == 14 && (k0 == 'C' || k0 == 'c')) {
                 if (strncasecmp(line_start, "Content-Length", 14) == 0) {
-                    /* RFC 9112 §6.3: strict digits-only parse; duplicate CL is
+                    /* RFC 9112 section 6.3: strict digits-only parse; duplicate CL is
                      * idempotent only when every value matches. */
                     size_t vlen = val_len;
                     while (vlen > 0 && (val_start[vlen - 1] == ' ' || val_start[vlen - 1] == '\t'))
@@ -2714,13 +4021,11 @@ cwist_http_parse_request_with_header_end(const char *raw_request, size_t raw_len
                     }
                 }
             }
-            free(header_line);
         }
-        
         line_start = line_end + 2;
     }
 
-    /* RFC 9112 §3.2: HTTP/1.1 requests must carry exactly one non-empty Host. */
+    /* RFC 9112 section 3.2: HTTP/1.1 requests must carry exactly one non-empty Host. */
     if (is_http11 && (!has_host || host_dup || host_empty)) {
         cwist_http_request_destroy(req);
         if (err_out) *err_out = CWIST_HTTP_PARSE_MALFORMED;
@@ -2732,7 +4037,7 @@ cwist_http_parse_request_with_header_end(const char *raw_request, size_t raw_len
         return NULL;
     }
     if (te_seen) {
-        /* RFC 9112 §6.3: TE and CL together are a request-smuggling vector. */
+        /* RFC 9112 section 6.3: TE and CL together are a request-smuggling vector. */
         if (cl_seen) {
             cwist_http_request_destroy(req);
             if (err_out) *err_out = CWIST_HTTP_PARSE_MALFORMED;
@@ -2747,17 +4052,14 @@ cwist_http_parse_request_with_header_end(const char *raw_request, size_t raw_len
             return NULL;
         }
     }
-    /* RFC 9110 §10.1.1: only the 100-continue expectation is supported. */
-    const char *expect = cwist_http_header_get(req->headers, "Expect");
-    if (expect) {
-        size_t elen = strlen(expect);
-        while (elen > 0 && (expect[elen - 1] == ' ' || expect[elen - 1] == '\t')) elen--;
-        if (!(elen == 12 && strncasecmp(expect, "100-continue", 12) == 0)) {
-            cwist_http_request_destroy(req);
-            if (err_out) *err_out = CWIST_HTTP_PARSE_EXPECT_FAILED;
-            return NULL;
-        }
+    /* RFC 9110 section 10.1.1: only the 100-continue expectation is supported. */
+    if (expect_bad) {
+        cwist_http_request_destroy(req);
+        if (err_out) *err_out = CWIST_HTTP_PARSE_EXPECT_FAILED;
+        return NULL;
     }
+    req->te_chunked_seen = te_seen;
+    req->expect_100_seen = expect_100;
 
     const char *body_start = header_end + 4;
     size_t available = raw_len - (size_t)(body_start - raw_request);
@@ -2773,12 +4075,161 @@ cwist_http_parse_request_with_header_end(const char *raw_request, size_t raw_len
     return req;
 }
 
+/**
+ * @brief Parse a NUL-terminated raw HTTP request buffer.
+ * @return Parsed request, or NULL when no header terminator exists.
+ */
 cwist_http_request *cwist_http_parse_request(const char *raw_request) {
     if (!raw_request) return NULL;
     size_t raw_len = strlen(raw_request);
     const char *header_end = cwist_simd_find_crlfcrlf(raw_request, raw_len);
     if (!header_end) return NULL;
-    return cwist_http_parse_request_with_header_end(raw_request, header_end, NULL);
+    return cwist_http_parse_request_with_header_end(raw_request, raw_len, header_end, NULL);
+}
+
+/**
+ * @brief Parse a raw HTTP request buffer with an explicit length.
+ * @return Parsed request, or NULL when no header terminator exists.
+ */
+cwist_http_request *cwist_http_parse_request_len(const char *buf, size_t len) {
+    if (!buf || len == 0) return NULL;
+    const char *header_end = cwist_simd_find_crlfcrlf(buf, len);
+    if (!header_end) return NULL;
+    return cwist_http_parse_request_with_header_end(buf, len, header_end, NULL);
+}
+
+/**
+ * @brief Serialize a full response (headers + body) into a heap buffer.
+ *
+ * Streaming responses are auto-finalized so the chunked terminator is
+ * present even when the handler skipped cwist_http_response_stream_end().
+ * @return 0 with @p out and @p out_len set, or -1 (invalid input, file-stream
+ *         body, or allocation failure).
+ */
+int cwist_http_response_serialize(cwist_http_response *res, char **out, size_t *out_len) {
+    if (!res || !out || !out_len) return -1;
+    if (res->use_file_stream) return -1; /* streaming bodies need a socket */
+
+    char header_buf[CWIST_HTTP_MAX_HEADER_SIZE];
+    size_t header_len = serialize_headers(res, header_buf, sizeof(header_buf));
+
+    const void *body = NULL;
+    size_t body_len = 0;
+    if (res->stream_mode) {
+        /* Chunked framing was appended at write time; auto-finalize so the
+         * terminator is present even when the handler skipped end(). */
+        if (!res->stream_ended) cwist_http_response_stream_end(res);
+        body = res->stream_buf ? res->stream_buf->data : NULL;
+        body_len = res->stream_buf ? res->stream_buf->size : 0;
+    } else if (res->is_ptr_body) {
+        body = res->ptr_body;
+        body_len = res->ptr_body_len;
+    } else if (res->body && res->body->data) {
+        body = res->body->data;
+        body_len = res->body->size;
+    }
+
+    char *buf = (char *)cwist_alloc(header_len + body_len + 1);
+    if (!buf) return -1;
+    memcpy(buf, header_buf, header_len);
+    if (body_len) memcpy(buf + header_len, body, body_len);
+    buf[header_len + body_len] = '\0';
+    *out = buf;
+    *out_len = header_len + body_len;
+    return 0;
+}
+
+/* --- Streaming producer (issue #201 Phase 1) ------------------------------ */
+
+/** Push everything stream_buf holds past stream_flushed to the live sink,
+ * serializing the head first (with Transfer-Encoding: chunked) on the first
+ * call. Returns 0 on success, -1 when the sink rejects a write. */
+static int cwist_response_stream_flush(cwist_http_response *res) {
+    if (!res->stream_sink) return 0;
+    if (!res->stream_head_sent) {
+        char head_buf[CWIST_HTTP_MAX_HEADER_SIZE];
+        size_t head_len = serialize_headers(res, head_buf, sizeof(head_buf));
+        if (head_len == 0 || head_len >= sizeof(head_buf)) return -1;
+        if (res->stream_sink(res->stream_sink_ctx, head_buf, head_len) != 0) return -1;
+        res->stream_head_sent = true;
+    }
+    size_t pending = res->stream_buf ? res->stream_buf->size - res->stream_flushed : 0;
+    if (pending > 0) {
+        if (res->stream_sink(res->stream_sink_ctx, res->stream_buf->data + res->stream_flushed,
+                             pending) != 0)
+            return -1;
+        res->stream_flushed = res->stream_buf->size;
+    }
+    return 0;
+}
+
+/**
+ * @brief Switch a response to chunked streaming mode.
+ *
+ * Discards any body assigned before the switch. Incompatible with pointer
+ * or file-stream bodies.
+ * @return 0 on success, -1 otherwise.
+ */
+int cwist_http_response_stream_begin(cwist_http_response *res) {
+    if (!res || res->stream_mode || res->is_ptr_body || res->use_file_stream) return -1;
+    res->stream_mode = true;
+    /* A body assigned before begin is discarded: chunked framing owns the
+     * payload from here on. */
+    if (res->body) res->body->size = 0; /* discard any body assigned before begin */
+    return 0;
+}
+
+/**
+ * @brief Append one data chunk to a streaming response.
+ *
+ * Frames the chunk (hex length prefix / CRLF suffix) and flushes through the
+ * sink. A sink failure marks the stream failed.
+ * @return 0 on success, -1 on error.
+ */
+int cwist_http_response_stream_write(cwist_http_response *res, const char *data, size_t len) {
+    if (!res || !res->stream_mode || res->stream_ended) return -1;
+    if (!data) return -1;
+    if (len == 0) return 0; /* an empty chunk is the terminator; never emit one mid-stream */
+    if (!res->stream_buf) {
+        res->stream_buf = cwist_http_sstring_create(res->arena);
+        if (!res->stream_buf) return -1;
+    }
+    char frame_hdr[24];
+    int frame_hdr_len = snprintf(frame_hdr, sizeof(frame_hdr), "%zx\r\n", len);
+    if (frame_hdr_len <= 0) return -1;
+    cwist_error_t append_err =
+        cwist_sstring_append_len(res->stream_buf, frame_hdr, (size_t)frame_hdr_len);
+    if (cwist_error_is_ok(&append_err))
+        append_err = cwist_sstring_append_len(res->stream_buf, data, len);
+    if (cwist_error_is_ok(&append_err))
+        append_err = cwist_sstring_append_len(res->stream_buf, "\r\n", 2);
+    if (!cwist_error_is_ok(&append_err)) return -1;
+    if (cwist_response_stream_flush(res) != 0) {
+        res->stream_failed = true;
+        return -1;
+    }
+    return 0;
+}
+
+/**
+ * @brief Terminate a streaming response with the final zero-length chunk and
+ * flush.
+ * @return 0 on success, -1 on error.
+ */
+int cwist_http_response_stream_end(cwist_http_response *res) {
+    if (!res || !res->stream_mode || res->stream_ended) return -1;
+    if (!res->stream_buf) {
+        res->stream_buf = cwist_http_sstring_create(res->arena);
+        if (!res->stream_buf) return -1;
+    }
+    cwist_error_t end_err = cwist_sstring_append_len(res->stream_buf, "0\r\n\r\n", 5);
+    if (!cwist_error_is_ok(&end_err)) return -1;
+    if (cwist_response_stream_flush(res) != 0) {
+        res->stream_failed = true;
+        return -1;
+    }
+    res->stream_ended = true;
+    return 0;
 }
 
 /**
@@ -2807,6 +4258,27 @@ static int http_parse_chunk_size(const char *line, size_t len, size_t *out_size)
     return 0;
 }
 
+/**
+ * @brief Append a decoded chunk to the body being assembled.
+ *
+ * cwist_sstring_append_len() reports a failed allocation on the JSON error
+ * channel, where err_i8 stays 0, so the result is checked with
+ * cwist_error_is_ok() and the error payload is released.
+ */
+static bool http_chunk_append(cwist_sstring *out, const char *data, size_t len) {
+    cwist_error_t err = cwist_sstring_append_len(out, data, len);
+    bool ok = cwist_error_is_ok(&err);
+    cwist_error_dispose(&err);
+    return ok;
+}
+
+/**
+ * @brief Blocking read and reassembly of a chunked transfer-encoded body.
+ *
+ * Consumes the chunked message from buf (recv/poll as needed), compacts the
+ * leftover bytes to the buffer head, and appends decoded chunks to @p out.
+ * @return 0 on success, -1 on malformed framing, overflow, or I/O error.
+ */
 static int http_read_chunked_body(int client_fd, char *buf, size_t *avail, size_t buf_cap,
                                   cwist_sstring *out) {
     size_t offset = 0;
@@ -2894,7 +4366,7 @@ static int http_read_chunked_body(int client_fd, char *buf, size_t *avail, size_
         }
 
         if (buf[offset + chunk_size] != '\r' || buf[offset + chunk_size + 1] != '\n') return -1;
-        if (cwist_sstring_append_len(out, buf + offset, chunk_size).error.err_i8 != 0) return -1;
+        if (!http_chunk_append(out, buf + offset, chunk_size)) return -1;
         offset += chunk_size + 2;
     }
 
@@ -2906,14 +4378,29 @@ static int http_read_chunked_body(int client_fd, char *buf, size_t *avail, size_
     return 0;
 }
 
+/**
+ * @brief Blocking read of one full request from a classic-pool connection.
+ *
+ * Bounds the header read by CWIST_HTTP_HEADERS_TIMEOUT_MS, answers a
+ * validated Expect: 100-continue, then completes the body per Content-Length
+ * or chunked framing. Leftover pipelined bytes are compacted into read_buf
+ * and *buf_len is updated.
+ * @return Parsed request, or NULL with *err_out set (defaults to
+ *         CWIST_HTTP_PARSE_EOF).
+ */
 cwist_http_request *cwist_http_receive_request(int client_fd, char *read_buf, size_t buf_size,
                                                size_t *buf_len, cwist_http_parse_error_t *err_out) {
     if (err_out) *err_out = CWIST_HTTP_PARSE_EOF;
     size_t total_received = *buf_len;
     char *header_end = NULL;
 
-    // 1. Read until headers are complete
-    while (!(header_end = strstr(read_buf, "\r\n\r\n"))) {
+    // 1. Read until headers are complete. The classic pool serves this
+    // socket blocking, so a client dribbling the header byte-by-byte would
+    // hold the thread forever; bound the whole header read by
+    // CWIST_HTTP_HEADERS_TIMEOUT_MS (same budget the TLS path enforces).
+    struct timespec header_start;
+    clock_gettime(CLOCK_MONOTONIC, &header_start);
+    while (!(header_end = (char *)cwist_simd_find_crlfcrlf(read_buf, total_received))) {
         if (total_received >= buf_size - 1) {
             /* Fat Cookie/Authorization combinations can legitimately push a
              * header block past the read buffer; without this trail the drop
@@ -2924,15 +4411,31 @@ cwist_http_request *cwist_http_receive_request(int client_fd, char *read_buf, si
             if (err_out) *err_out = CWIST_HTTP_PARSE_HEADER_OVERFLOW;
             return NULL;
         }
-        
-        struct pollfd pfd = { .fd = client_fd, .events = POLLIN };
-        int ret = poll(&pfd, 1, CWIST_HTTP_TIMEOUT_MS);
-        if (ret <= 0) return NULL; // Timeout or error
+
+        struct timespec now;
+        clock_gettime(CLOCK_MONOTONIC, &now);
+        long elapsed_ms = (now.tv_sec - header_start.tv_sec) * 1000L +
+                          (now.tv_nsec - header_start.tv_nsec) / 1000000L;
+        long remaining_ms = (long)CWIST_HTTP_HEADERS_TIMEOUT_MS - elapsed_ms;
+        if (remaining_ms <= 0) {
+            CWIST_LOG_WARN("[http] dropping connection: header read exceeded %d ms",
+                           CWIST_HTTP_HEADERS_TIMEOUT_MS);
+            if (err_out) *err_out = CWIST_HTTP_PARSE_EOF;
+            return NULL;
+        }
+        struct pollfd pfd = {.fd = client_fd, .events = POLLIN};
+        int pr = poll(&pfd, 1, (int)(remaining_ms > 1000 ? 1000 : remaining_ms));
+        if (pr <= 0) {
+            if (pr < 0 && errno == EINTR) continue;
+            if (pr < 0) continue; /* transient errors retry within the budget */
+            continue;             /* timeout slice expired; re-check the budget */
+        }
 
         ssize_t bytes =
             recv(client_fd, read_buf + total_received, buf_size - 1 - total_received, 0);
         if (bytes <= 0) {
             if (bytes < 0 && errno == EINTR) continue;
+            if (bytes < 0 && (errno == EAGAIN || errno == EWOULDBLOCK)) continue;
             return NULL;
         }
         total_received += (size_t)bytes;
@@ -2943,7 +4446,7 @@ cwist_http_request *cwist_http_receive_request(int client_fd, char *read_buf, si
         cwist_http_parse_request_with_header_end(read_buf, total_received, header_end, err_out);
     if (!req) return NULL;
 
-    size_t header_len = (header_end + 4) - read_buf;
+    size_t header_len = (size_t)(header_end + 4 - read_buf);
     size_t body_received = total_received - header_len;
 
     /* RFC 9110 section 10.1.1: the parser already validated that any Expect value is
@@ -2965,7 +4468,7 @@ cwist_http_request *cwist_http_receive_request(int client_fd, char *read_buf, si
         }
 
         // Allocate body
-        char *body = malloc(req->content_length + 1);
+        char *body = cwist_alloc(req->content_length + 1);
         if (!body) {
             cwist_http_request_destroy(req);
             if (err_out) *err_out = CWIST_HTTP_PARSE_EOF;
@@ -2997,10 +4500,8 @@ cwist_http_request *cwist_http_receive_request(int client_fd, char *read_buf, si
                 cwist_http_request_destroy(req);
                 return NULL;
             }
-
-            ssize_t bytes = recv(client_fd, body + current_body_len, req->content_length - current_body_len, 0);
-            if (bytes <= 0) {
-                free(body);
+            if (bytes == 0) {
+                cwist_free(body);
                 cwist_http_request_destroy(req);
                 return NULL;
             }
@@ -3012,8 +4513,8 @@ cwist_http_request *cwist_http_receive_request(int client_fd, char *read_buf, si
         cwist_sstring_adopt_len(req->body, body, (size_t)req->content_length);
 
         // Calculate leftovers
-        if (body_received > req->content_length) {
-            size_t leftover_len = body_received - req->content_length;
+        if (body_received > (size_t)req->content_length) {
+            size_t leftover_len = body_received - (size_t)req->content_length;
             memmove(read_buf, header_end + 4 + req->content_length, leftover_len);
             *buf_len = leftover_len;
         } else {
@@ -3049,7 +4550,13 @@ cwist_http_request *cwist_http_receive_request(int client_fd, char *read_buf, si
             cwist_sstring_destroy(chunked);
             cwist_sstring_adopt_len(req->body, chunked_data, chunked_len);
         } else {
-            *buf_len = 0;
+            // No body, leftovers are everything after headers
+            if (body_received > 0) {
+                memmove(read_buf, header_end + 4, body_received);
+                *buf_len = body_received;
+            } else {
+                *buf_len = 0;
+            }
         }
     }
     read_buf[*buf_len] = '\0';
@@ -3062,8 +4569,18 @@ cwist_http_request *cwist_http_receive_request(int client_fd, char *read_buf, si
 
 #define CWIST_ASYNC_STASH_MAX (CWIST_HTTP_READ_BUFFER_SIZE + CWIST_HTTP_MAX_BODY_SIZE)
 
-/* Grow the recv stash.  Returns false when the hard cap is reached. */
+/* Bodies at least this large transfer stash-buffer ownership to the request
+ * (zero-copy region view) instead of being copied out. Below the threshold
+ * the copy is cheaper than allocating the connection a fresh stash. */
+#define CWIST_HTTP_BODY_ZC_MIN (16 * 1024)
+
+/** Grow the recv stash.  Returns false when the hard cap is reached. */
 static bool http_async_stash_grow(cwist_http_async_conn_t *conn, size_t need) {
+    /* RX-uring invariant: the stash buffer must not move while a RECV SQE
+     * references it.  Growth only happens while serving (in-flight RECV
+     * cleared), so this is defensive: fail closed rather than relocate the
+     * buffer under the kernel's DMA. */
+    if (conn->rx_recv_inflight) return false;
     if (need > CWIST_ASYNC_STASH_MAX) return false;
     if (conn->cap >= need) return true;
     size_t cap = conn->cap ? conn->cap : CWIST_HTTP_READ_BUFFER_SIZE;
@@ -3074,7 +4591,13 @@ static bool http_async_stash_grow(cwist_http_async_conn_t *conn, size_t need) {
         }
         cap *= 2;
     }
-    return 0;
+    if (cap > CWIST_ASYNC_STASH_MAX) cap = CWIST_ASYNC_STASH_MAX;
+    if (cap == conn->cap) return false;
+    char *nb = cwist_realloc(conn->rbuf, cap);
+    if (!nb) return false;
+    conn->rbuf = nb;
+    conn->cap = cap;
+    return true;
 }
 
 /**
@@ -3083,9 +4606,17 @@ static bool http_async_stash_grow(cwist_http_async_conn_t *conn, size_t need) {
  * if bytes remain after a short recv the one-shot re-arm fires again
  * immediately.  This skips the guaranteed-EAGAIN second recv that otherwise
  * costs one wasted syscall per request on non-pipelined keep-alive traffic.
- * @return 0 on success (EAGAIN or data), -1 on orderly close or fatal error.
+ * @return 0 on data, EAGAIN, or EOF (recorded in peer_eof); -1 on fatal error.
  */
 int cwist_http_async_conn_fill(cwist_http_async_conn_t *conn) {
+    if (conn->peer_eof) return 0;
+    if (conn->rx_recv_inflight || conn->rx_data_ready) {
+        /* RX-uring path: the in-flight RECV SQE owns the socket read (never
+         * recv() on top of it), and a completed RECV already staged its bytes
+         * (or recorded EOF) into the stash.  Nothing to drain here. */
+        conn->rx_data_ready = false;
+        return 0;
+    }
     for (;;) {
         if (conn->len + 1 >= conn->cap && !http_async_stash_grow(conn, conn->len + 4096)) {
             return -1;
@@ -3099,55 +4630,15 @@ int cwist_http_async_conn_fill(cwist_http_async_conn_t *conn) {
             if ((size_t)n < avail) return 0; /* short read: drained for now */
             continue;
         }
-        if (n == 0) return -1;
+        if (n == 0) {
+            /* A half-close does not discard already buffered requests. */
+            conn->peer_eof = true;
+            return 0;
+        }
         if (errno == EINTR) continue;
         if (errno == EAGAIN || errno == EWOULDBLOCK) return 0;
         return -1;
     }
-
-    // Status Line
-    char status_line[256];
-    snprintf(status_line, sizeof(status_line), "%s %d %s\r\n",
-             res->version->data ? res->version->data : "HTTP/1.1",
-             res->status_code,
-             res->status_text->data ? res->status_text->data : "OK");
-    cwist_sstring_append(response_str, status_line);
-
-    // Headers
-    cwist_http_header_node *curr = res->headers;
-    while (curr) {
-        if (curr->key->data && curr->value->data) {
-            smartstring_append(response_str, curr->key->data);
-            smartstring_append(response_str, ": ");
-            smartstring_append(response_str, curr->value->data);
-            smartstring_append(response_str, "\r\n");
-        }
-        curr = curr->next;
-    }
-
-    if (!headers_have_content_length(res->headers)) {
-        char cl_header[64];
-        snprintf(cl_header, sizeof(cl_header), "Content-Length: %zu\r\n", body_len);
-        cwist_sstring_append(response_str, cl_header);
-    }
-
-    if (!headers_have_connection(res->headers)) {
-        if (res->keep_alive) {
-            cwist_sstring_append(response_str, "Connection: keep-alive\r\n");
-        } else {
-            cwist_sstring_append(response_str, "Connection: close\r\n");
-        }
-    }
-
-    // End of headers
-    cwist_sstring_append(response_str, "\r\n");
-
-    // Body
-    if (res->body && res->body->data) {
-        cwist_sstring_append_len(response_str, res->body->data, res->body->size);
-    }
-    
-    return response_str;
 }
 
 /**
@@ -3185,62 +4676,10 @@ static int http_chunked_scan(const char *buf, size_t avail, size_t *consumed,
         if (buf[pos + chunk_size] != '\r' || buf[pos + chunk_size + 1] != '\n') return -1;
         if (assemble) {
             if (assemble->size + chunk_size > CWIST_HTTP_MAX_BODY_SIZE) return -1;
-            if (cwist_sstring_append_len(assemble, (char *)buf + pos, chunk_size).error.err_i8 != 0)
-                return -1;
+            if (!http_chunk_append(assemble, (const char *)buf + pos, chunk_size)) return -1;
         }
         pos += chunk_size + 2;
     }
-
-    cwist_sstring *response_str = cwist_http_stringify_response(res);
-    if (!response_str) {
-        err.error.err_i16 = -1;
-        return err;
-    }
-
-    // Send
-    err.error.err_i16 = 0;
-
-    const char *p = response_str->data;
-    size_t left = response_str->size;
-
-    signal(SIGPIPE, SIG_IGN);
-
-    while (left > 0) {
-        struct pollfd pfd = { .fd = client_fd, .events = POLLOUT };
-        int ret = poll(&pfd, 1, CWIST_HTTP_TIMEOUT_MS);
-        if (ret <= 0) {
-            err.error.err_i16 = -1;
-            break;
-        }
-
-        ssize_t sent;
-        #ifdef MSG_NOSIGNAL
-        sent = send(client_fd, p, left, MSG_NOSIGNAL);
-        #else
-        sent = send(client_fd, p, left, 0);
-        #endif
-
-        if (sent < 0) {
-            if (errno == EINTR) {
-                continue;
-            }
-            if (errno == EAGAIN || errno == EWOULDBLOCK) {
-                continue;
-            }
-            err.error.err_i16 = -1;
-            break;
-        }
-        if (sent == 0) {
-            err.error.err_i16 = -1;
-            break;
-        }
-
-        p += (size_t)sent;
-        left -= (size_t)sent;
-    }
-
-    cwist_sstring_destroy(response_str);
-    return err;
 }
 
 /**
@@ -3274,16 +4713,18 @@ cwist_recv_status_t cwist_http_receive_request_nb(cwist_http_async_conn_t *conn,
         cwist_http_parse_request_with_header_end(conn->rbuf, header_len, header_end, err_out);
     if (!req) return CWIST_RECV_FATAL;
 
-    size_t header_len = (size_t)(header_end + 4 - conn->rbuf);
     size_t body_received = conn->len - header_len;
     size_t consumed = header_len;
 
-    /* RFC 9110 §10.1.1: answer a validated Expect: 100-continue once, before
-     * the stash accumulates the full body. */
-    const char *te = cwist_http_header_get(req->headers, "Transfer-Encoding");
-    const char *expect = cwist_http_header_get(req->headers, "Expect");
+    /* RFC 9110 section 10.1.1: answer a validated Expect: 100-continue once, before
+     * the stash accumulates the full body. Flags come from the header pass. */
+    const bool te = req->te_chunked_seen;
+    const bool expect = req->expect_100_seen;
     if (expect && !conn->expect_continue_sent &&
         ((size_t)req->content_length > body_received || (te && req->content_length == 0))) {
+        /* Buffered coalesced responses must drain first: the client holds
+         * the body until this interim reply arrives. */
+        cwist_http_coalesce_flush_blocking(conn->fd, conn);
         http_send_100_continue(conn->fd);
         conn->expect_continue_sent = true;
     }
@@ -3304,16 +4745,38 @@ cwist_recv_status_t cwist_http_receive_request_nb(cwist_http_async_conn_t *conn,
             cwist_http_request_destroy(req);
             return CWIST_RECV_NEED_MORE;
         }
-        char *body = cwist_alloc((size_t)req->content_length + 1);
-        if (!body) {
-            cwist_http_request_destroy(req);
-            if (err_out) *err_out = CWIST_HTTP_PARSE_EOF;
-            return CWIST_RECV_FATAL;
+        /* Zero-copy handover: a large body ending exactly at the stash end
+         * moves buffer ownership to the request as a region view over the
+         * payload, and the connection starts on a fresh stash. Both fill
+         * paths keep rbuf[len] NUL-terminated, which is the adopted region's
+         * terminating slot. Pipelined leftovers and small bodies keep the
+         * copy path below. */
+        if (header_len + (size_t)req->content_length == conn->len &&
+            (size_t)req->content_length >= CWIST_HTTP_BODY_ZC_MIN) {
+            char *fresh = cwist_alloc(CWIST_HTTP_READ_BUFFER_SIZE);
+            if (fresh) {
+                fresh[0] = '\0';
+                conn->rbuf[conn->len] = '\0'; /* defensive: region NUL slot */
+                cwist_sstring_adopt_region(req->body, conn->rbuf, header_len,
+                                           (size_t)req->content_length);
+                conn->rbuf = fresh;
+                conn->cap = CWIST_HTTP_READ_BUFFER_SIZE;
+                conn->len = 0;
+                consumed = 0; /* nothing left to shift */
+            }
         }
-        memcpy(body, conn->rbuf + header_len, (size_t)req->content_length);
-        body[req->content_length] = '\0';
-        cwist_sstring_adopt_len(req->body, body, (size_t)req->content_length);
-        consumed += (size_t)req->content_length;
+        if (consumed > 0) {
+            char *body = cwist_alloc((size_t)req->content_length + 1);
+            if (!body) {
+                cwist_http_request_destroy(req);
+                if (err_out) *err_out = CWIST_HTTP_PARSE_EOF;
+                return CWIST_RECV_FATAL;
+            }
+            memcpy(body, conn->rbuf + header_len, (size_t)req->content_length);
+            body[req->content_length] = '\0';
+            cwist_sstring_adopt_len(req->body, body, (size_t)req->content_length);
+            consumed += (size_t)req->content_length;
+        }
     } else {
         /* Presence of TE implies parser-validated chunked framing. */
         if (te) {
@@ -3383,6 +4846,10 @@ static const cwist_mime_entry CWIST_MIME_TABLE[] = {{".html", "text/html; charse
                                                     {".txt", "text/plain; charset=utf-8"},
                                                     {".ico", "image/x-icon"}};
 
+/**
+ * @brief Guess a MIME type from a filename extension.
+ * @return Static MIME string; "application/octet-stream" when unknown.
+ */
 static const char *cwist_guess_mime(const char *file_path) {
     if (!file_path) return "application/octet-stream";
     const char *dot = strrchr(file_path, '.');
@@ -3413,6 +4880,9 @@ cwist_error_t cwist_http_response_send_file(cwist_http_response *res, const char
         return err;
     }
 
+    cwist_http_response_release_file_stream(res);
+    cwist_http_response_release_ptr_body(res);
+
     int fd = open(file_path, O_RDONLY);
     if (fd < 0) {
         err.error.err_i16 = -errno;
@@ -3432,13 +4902,28 @@ cwist_error_t cwist_http_response_send_file(cwist_http_response *res, const char
         return err;
     }
 
-    if ((size_t)st.st_size > CWIST_HTTP_MAX_BODY_SIZE) {
+    bool endpoint_file = cwist_endpoint_has(res->endpoint_opts, CWIST_ENDPOINT_FILE);
+
+    if (!endpoint_file && (size_t)st.st_size > CWIST_HTTP_MAX_BODY_SIZE) {
         close(fd);
         err.error.err_i16 = -EFBIG;
         return err;
     }
 
     size_t file_size = (size_t)st.st_size;
+    bool use_fast_stream = false;
+
+    if (file_size > 0 && endpoint_file) {
+#if defined(__linux__) || defined(__APPLE__) || defined(__FreeBSD__)
+        res->use_file_stream = true;
+        res->file_stream_fd = fd;
+        res->file_stream_len = file_size;
+        res->file_stream_offset = 0;
+        res->file_stream_auto_close = true;
+        use_fast_stream = true;
+#endif
+    }
+
     char *buffer = NULL;
 
     if (!use_fast_stream && file_size > 0) {
@@ -3450,25 +4935,26 @@ cwist_error_t cwist_http_response_send_file(cwist_http_response *res, const char
         }
     }
 
-    size_t total_read = 0;
-    while (total_read < file_size) {
-        ssize_t bytes = read(fd, buffer + total_read, file_size - total_read);
-        if (bytes < 0) {
-            if (errno == EINTR) continue;
-            err.error.err_i16 = -errno;
-            free(buffer);
-            close(fd);
-            return err;
+    if (!use_fast_stream) {
+        size_t total_read = 0;
+        while (total_read < file_size) {
+            ssize_t bytes = read(fd, buffer + total_read, file_size - total_read);
+            if (bytes < 0) {
+                if (errno == EINTR) continue;
+                err.error.err_i16 = -errno;
+                cwist_free(buffer);
+                close(fd);
+                return err;
+            }
+            if (bytes == 0) {
+                err.error.err_i16 = -EIO;
+                cwist_free(buffer);
+                close(fd);
+                return err;
+            }
+            total_read += (size_t)bytes;
         }
-        if (bytes == 0) {
-            err.error.err_i16 = -EIO;
-            free(buffer);
-            close(fd);
-            return err;
-        }
-        total_read += (size_t)bytes;
-    }
-    close(fd);
+        close(fd);
 
         if (file_size > 0) {
             /* Adopt the read buffer as the body: no second file-size copy. */
@@ -3505,6 +4991,10 @@ const char CWIST_BLOB_500[] =
     "HTTP/1.1 500 Internal Server Error\r\nContent-Length: 21\r\nConnection: close\r\n\r\nInternal Server Error";
 
 /* --- Socket Manipulation --- */
+/* Everything from here on is the socket server runtime: WASI preview1 has
+ * no sockets, so the whole section compiles out there. WASM hosts drive
+ * requests through cwist_app_dispatch_memory() instead. */
+#ifndef CWIST_WASI_NO_SOCKETS
 
 /**
  * @brief Create, configure, bind, and listen on an IPv4 TCP socket.
@@ -3547,11 +5037,6 @@ int cwist_make_socket_ipv4(struct sockaddr_in *sockv4, const char *address, uint
 
 #if defined(SO_REUSEPORT)
     setsockopt(server_fd, SOL_SOCKET, SO_REUSEPORT, &opt, sizeof(opt));
-#endif
-
-#if defined(__linux__) && defined(TCP_DEFER_ACCEPT)
-  int defer = 1;
-  setsockopt(server_fd, IPPROTO_TCP, TCP_DEFER_ACCEPT, &defer, sizeof(defer));
 #endif
 
 #if defined(__APPLE__) || defined(__FreeBSD__)
@@ -3645,6 +5130,7 @@ static void cwist_accept_error_backoff(int err) {
  * @param handler_func Request handler callback.
  * @param ctx Opaque callback context.
  */
+#if !defined(__wasi__)
 static void handle_client_forking(int client_fd, void (*handler_func)(int, void *), void *ctx) {
     pid_t pid = fork();
     if (pid == 0) {
@@ -3655,6 +5141,7 @@ static void handle_client_forking(int client_fd, void (*handler_func)(int, void 
         close(client_fd);
     }
 }
+#endif /* __wasi__ (no fork) */
 
 /**
  * @brief Accept one client connection and dispatch it according to the current server strategy.
@@ -3712,20 +5199,36 @@ cwist_error_t cwist_http_server_loop(int server_fd, cwist_server_config *config,
         return err;
     }
 
+#if !defined(__wasi__)
     if (config->use_forking) {
-        while (true) {
+        while (atomic_load(&g_cwist_running)) {
             int client_fd = accept(server_fd, NULL, NULL);
             if (client_fd < 0) {
-                if (errno == EINTR) continue;
+                int accept_err = errno;
+                if (accept_err == EBADF || accept_err == EINVAL) break;
+                if (cwist_accept_error_should_retry(accept_err)) {
+                    cwist_accept_error_backoff(accept_err);
+                    continue;
+                }
                 err.error.err_i16 = -1;
                 return err;
             }
+            int nodelay = 1;
+            setsockopt(client_fd, IPPROTO_TCP, TCP_NODELAY, &nodelay, sizeof(nodelay));
             handle_client_forking(client_fd, handler, ctx);
         }
     }
+#endif /* __wasi__ (no fork) */
 
     if (config->use_threading) {
-        while (true) {
+        /* This loop submits to the classic dynamic pool, so initialise that
+         * pool whatever CWIST_C1M_MODE says (cwist_app_listen_ex() may have
+         * overridden it). */
+        if (cwist_http_pool_init_mode(false) != 0) {
+            err.error.err_i16 = -1;
+            return err;
+        }
+        while (atomic_load(&g_cwist_running)) {
             int client_fd = accept(server_fd, NULL, NULL);
             if (client_fd < 0) {
                 int accept_err = errno;
@@ -3737,21 +5240,9 @@ cwist_error_t cwist_http_server_loop(int server_fd, cwist_server_config *config,
                 }
                 continue;
             }
-            pthread_t thread;
-            struct thread_payload *payload = malloc(sizeof(*payload));
-            if (!payload) {
-                close(client_fd);
-                continue;
-            }
-            payload->client_fd = client_fd;
-            payload->handler_func = handler;
-            payload->ctx = ctx;
-            if (pthread_create(&thread, NULL, thread_handler, payload) == 0) {
-                pthread_detach(thread);
-            } else {
-                free(payload);
-                close(client_fd);
-            }
+            int nodelay = 1;
+            setsockopt(client_fd, IPPROTO_TCP, TCP_NODELAY, &nodelay, sizeof(nodelay));
+            cwist_http_pool_submit(client_fd, handler, ctx);
         }
         cwist_http_pool_destroy();
         err.error.err_i16 = 0;
@@ -3760,13 +5251,16 @@ cwist_error_t cwist_http_server_loop(int server_fd, cwist_server_config *config,
 
 #ifdef __linux__
     if (config->use_epoll) {
+        int flags = fcntl(server_fd, F_GETFL, 0);
+        if (flags >= 0) fcntl(server_fd, F_SETFL, flags | O_NONBLOCK);
+
         int epoll_fd = epoll_create1(0);
         if (epoll_fd < 0) {
             err.error.err_i16 = -1;
             return err;
         }
         struct epoll_event event;
-        event.events = EPOLLIN;
+        event.events = EPOLLIN | EPOLLET;
         event.data.fd = server_fd;
         if (epoll_ctl(epoll_fd, EPOLL_CTL_ADD, server_fd, &event) < 0) {
             close(epoll_fd);
@@ -3774,11 +5268,12 @@ cwist_error_t cwist_http_server_loop(int server_fd, cwist_server_config *config,
             return err;
         }
 
-        while (true) {
-            struct epoll_event events[16];
-            int count = epoll_wait(epoll_fd, events, 16, -1);
+        while (atomic_load(&g_cwist_running)) {
+            struct epoll_event events[1024];
+            int count = epoll_wait(epoll_fd, events, 1024, -1);
             if (count < 0) {
                 if (errno == EINTR) continue;
+                if (errno == EBADF) break;
                 break;
             }
             for (int i = 0; i < count; i++) {
@@ -3814,24 +5309,28 @@ cwist_error_t cwist_http_server_loop(int server_fd, cwist_server_config *config,
 
 #if defined(__APPLE__) || defined(__FreeBSD__) || defined(__NetBSD__) || defined(__OpenBSD__)
     if (config->use_epoll) {
+        int flags = fcntl(server_fd, F_GETFL, 0);
+        if (flags >= 0) fcntl(server_fd, F_SETFL, flags | O_NONBLOCK);
+
         int kqueue_fd = kqueue();
         if (kqueue_fd < 0) {
             err.error.err_i16 = -1;
             return err;
         }
         struct kevent change;
-        EV_SET(&change, server_fd, EVFILT_READ, EV_ADD, 0, 0, NULL);
+        EV_SET(&change, server_fd, EVFILT_READ, EV_ADD | EV_CLEAR, 0, 0, NULL);
         if (kevent(kqueue_fd, &change, 1, NULL, 0, NULL) < 0) {
             close(kqueue_fd);
             err.error.err_i16 = -1;
             return err;
         }
 
-        while (true) {
+        while (atomic_load(&g_cwist_running)) {
             struct kevent events[16];
             int count = kevent(kqueue_fd, NULL, 0, events, 16, NULL);
             if (count < 0) {
                 if (errno == EINTR) continue;
+                if (errno == EBADF) break;
                 break;
             }
             for (int i = 0; i < count; i++) {
@@ -3867,3 +5366,4 @@ cwist_error_t cwist_http_server_loop(int server_fd, cwist_server_config *config,
 
     return cwist_accept_socket(server_fd, NULL, handler, ctx);
 }
+#endif /* __wasi__ (socket server runtime) */

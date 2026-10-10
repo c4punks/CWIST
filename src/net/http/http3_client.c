@@ -102,6 +102,9 @@ typedef struct h3c_stream_ctx {
     int headers_done;
     int response_ready;
     int write_done;
+#ifdef CWIST_WEBTRANSPORT
+    int is_webtransport_connect;
+#endif
 } h3c_stream_ctx_t;
 
 #ifdef CWIST_WEBTRANSPORT
@@ -145,12 +148,27 @@ struct cwist_http3_client {
         size_t len;
         int ready;
     } in_dgram;
+#ifdef CWIST_WEBTRANSPORT
+    cwist_webtransport_client_session *wt_connecting;
+#endif
 };
 
 /* ------------------------------------------------------------------ */
 /* Packet-out callback                                                */
 /* ------------------------------------------------------------------ */
 
+/**
+ * @brief lsquic packets-out callback: send queued QUIC packets via UDP.
+ * @param ctx Client handle (ea_packets_out_ctx).
+ * @param specs Array of output specs; each carries iovecs and a destination.
+ * @param n_specs Number of entries in @p specs.
+ * @return Number of specs consumed (send progress), or -1 on a send error
+ *         other than would-block.
+ * @retval -1 A sendmsg() error other than EAGAIN/EWOULDBLOCK occurred.
+ *
+ * The UDP socket is connected once the peer is known, so the destination
+ * address is only attached while the socket is still unconnected.
+ */
 static int h3c_packets_out(void *ctx, const struct lsquic_out_spec *specs, unsigned n_specs) {
     cwist_http3_client *client = ctx;
     unsigned i;
@@ -191,6 +209,11 @@ typedef struct h3c_hset {
     size_t decode_off;
 } h3c_hset_t;
 
+/**
+ * @brief lsquic header-set callback: allocate a new header set for a stream.
+ * @return Newly calloc'ed h3c_hset_t, or NULL on allocation failure
+ *         (ownership passes to lsquic and later h3c_hsi_discard()).
+ */
 static void *h3c_hsi_create(void *hsi_ctx, lsquic_stream_t *stream, int is_push_promise) {
     (void)hsi_ctx;
     (void)stream;
@@ -199,6 +222,18 @@ static void *h3c_hsi_create(void *hsi_ctx, lsquic_stream_t *stream, int is_push_
     return hset;
 }
 
+/**
+ * @brief lsquic header-set callback: reserve decode space for one header.
+ * @param hset_p h3c_hset_t allocated by h3c_hsi_create().
+ * @param xhdr Non-NULL when lsquic retries the same header with a larger
+ *             required value space; the decoded name must still fit.
+ * @param req_space Required value capacity in bytes.
+ * @return Prepared lsxpack_header slot, or NULL if the header set is full or
+ *         the requested space does not fit in the shared decode buffer.
+ *
+ * Header name/value slices are carved out of a single 64 KiB decode buffer
+ * shared by all headers in the set.
+ */
 static struct lsxpack_header *h3c_hsi_prepare(void *hset_p, struct lsxpack_header *xhdr,
                                               size_t req_space) {
     h3c_hset_t *hset = hset_p;
@@ -264,6 +299,11 @@ static const struct lsquic_hset_if h3c_hset_if = {
 /* Stream callbacks                                                   */
 /* ------------------------------------------------------------------ */
 
+/**
+ * @brief lsquic stream-iface callback: new connection established.
+ * @return The client handle as connection context, so later callbacks can
+ *         recover it via lsquic_conn_get_ctx().
+ */
 static lsquic_conn_ctx_t *h3c_on_new_conn(void *stream_if_ctx, lsquic_conn_t *conn) {
     cwist_http3_client *client = stream_if_ctx;
     (void)conn;
@@ -278,15 +318,22 @@ static lsquic_conn_ctx_t *h3c_on_new_conn(void *stream_if_ctx, lsquic_conn_t *co
  * (e.g. after a certificate verification failure).
  */
 static void h3c_on_conn_closed(lsquic_conn_t *conn) {
-    /* The engine destroys the connection after this callback; drop our
-     * cached pointer so a later request never dereferences freed memory
-     * (e.g. after a certificate verification failure). */
     cwist_http3_client *client = (cwist_http3_client *)lsquic_conn_get_ctx(conn);
     if (client && client->conn == conn) {
         client->conn = NULL;
     }
 }
 
+/**
+ * @brief lsquic stream-iface callback: a new stream was created.
+ * @return Newly calloc'ed h3c_stream_ctx_t, or NULL on allocation failure
+ *         (ownership passes to lsquic and later h3c_on_close()).
+ *
+ * Registers the stream as client->active_stream under client->mtx. Does not
+ * arm the write side: the request function populates path/method/headers/
+ * body first and enables wantwrite() afterwards, so no default "GET /" is
+ * ever emitted.
+ */
 static lsquic_stream_ctx_t *h3c_on_new_stream(void *stream_if_ctx, lsquic_stream_t *stream) {
     cwist_http3_client *client = stream_if_ctx;
     h3c_stream_ctx_t *st = calloc(1, sizeof(*st));
@@ -304,6 +351,13 @@ static lsquic_stream_ctx_t *h3c_on_new_stream(void *stream_if_ctx, lsquic_stream
 }
 
 #ifdef CWIST_WEBTRANSPORT
+/**
+ * @brief WebTransport callback: session opened after a successful CONNECT.
+ * @return The cwist_webtransport_client_session as session context.
+ *
+ * Records the native session, marks the session open, and wakes any waiter
+ * blocked in cwist_http3_client_request().
+ */
 static lsquic_wt_session_ctx_t *h3c_wt_on_session_open(void *ctx, lsquic_wt_session_t *native,
                                                        const struct lsquic_wt_connect_info *info) {
     (void)info;
@@ -318,6 +372,12 @@ static lsquic_wt_session_ctx_t *h3c_wt_on_session_open(void *ctx, lsquic_wt_sess
     return (lsquic_wt_session_ctx_t *)client->wt_connecting;
 }
 
+/**
+ * @brief WebTransport callback: session establishment was rejected.
+ *
+ * Marks the pending session as rejected and wakes waiters so the CONNECT
+ * request completes with an error.
+ */
 static void h3c_wt_on_session_rejected(void *ctx, const struct lsquic_wt_connect_info *info,
                                        unsigned status, const char *reason, size_t reason_len) {
     (void)info;
@@ -342,7 +402,9 @@ static void h3c_wt_on_session_rejected(void *ctx, const struct lsquic_wt_connect
  * wti_on_session_close takes the WebTransport application error code, which
  * is 32-bit on the wire. It was uint64_t in the older state of the lsquic
  * WebTransport branch this file was first written against; the branch head
- * (litespeedtech/lsquic#629) narrows it to uint32_t. */
+ * (litespeedtech/lsquic#629) narrows it to uint32_t.
+ */
+static void
 h3c_wt_on_session_close(lsquic_wt_session_t *native, lsquic_wt_session_ctx_t *ctx, uint32_t code,
                         const char *reason, size_t reason_len) {
     (void)native;
@@ -775,28 +837,6 @@ static SSL_CTX *h3c_get_ssl_ctx(void *peer_ctx, const struct sockaddr *local) {
 }
 
 /* ------------------------------------------------------------------ */
-/* SSL context callback: hand lsquic the client SSL_CTX so the        */
-/* handshake honors its trust store and verify mode.                  */
-/* ------------------------------------------------------------------ */
-
-static SSL_CTX *h3c_get_ssl_ctx(void *peer_ctx, const struct sockaddr *local) {
-    (void)local;
-    cwist_http3_client *client = peer_ctx;
-    return client ? client->ssl_ctx : NULL;
-}
-
-/* ------------------------------------------------------------------ */
-/* SSL context callback: hand lsquic the client SSL_CTX so the        */
-/* handshake honors its trust store and verify mode.                  */
-/* ------------------------------------------------------------------ */
-
-static SSL_CTX *h3c_get_ssl_ctx(void *peer_ctx, const struct sockaddr *local) {
-    (void)local;
-    cwist_http3_client *client = peer_ctx;
-    return client ? client->ssl_ctx : NULL;
-}
-
-/* ------------------------------------------------------------------ */
 /* Client API                                                         */
 /* ------------------------------------------------------------------ */
 
@@ -843,6 +883,15 @@ cwist_http3_client *cwist_http3_client_create(void) {
     settings.es_pace_packets = 1;
     settings.es_optimistic_nat = 1;
     settings.es_datagrams = client->datagram_enabled ? 1 : 0;
+#ifdef CWIST_WEBTRANSPORT
+    settings.es_webtransport = 1;
+    /* lsquic_engine.c rejects anything above 1: the WebTransport
+     * implementation on litespeedtech/lsquic#629 carries one session per
+     * connection. The server side (http3.c) already sets 1. */
+    settings.es_max_webtransport_sessions = 1;
+    settings.es_http_datagrams = 1;
+    settings.es_reset_stream_at = 1;
+#endif
 
     char err_buf[256];
     if (lsquic_engine_check_settings(&settings, LSENG_HTTP, err_buf, sizeof(err_buf)) != 0) {
@@ -904,6 +953,9 @@ void cwist_http3_client_destroy(cwist_http3_client *client) {
     free(client->host);
     free(client->out_dgram.data);
     free(client->in_dgram.data);
+#ifdef CWIST_WEBTRANSPORT
+    free(client->wt_connecting);
+#endif
     pthread_mutex_destroy(&client->dgram_mtx);
     pthread_mutex_destroy(&client->mtx);
     pthread_cond_destroy(&client->cond);
@@ -1037,6 +1089,9 @@ cwist_error_t cwist_http3_client_request(cwist_http3_client *client, const char 
         }
 
         /* Request a new stream */
+        pthread_mutex_lock(&client->mtx);
+        client->active_stream = NULL;
+        pthread_mutex_unlock(&client->mtx);
         lsquic_conn_make_stream(client->conn);
 
         /* I/O loop until stream is created */
@@ -1079,6 +1134,24 @@ cwist_error_t cwist_http3_client_request(cwist_http3_client *client, const char 
             err.error.err_i16 = -1;
             goto retry_backoff;
         }
+
+        st->req_path = strdup(path);
+        if (!st->req_path) {
+            err.error.err_i16 = -1;
+            goto retry_backoff;
+        }
+        st->req_method = method;
+        st->req_headers = headers;
+#ifdef CWIST_WEBTRANSPORT
+        for (cwist_http_header_node *header = headers; header; header = header->next) {
+            if (header->key && header->value && header->key->data && header->value->data &&
+                strcasecmp(header->key->data, ":protocol") == 0 &&
+                strcasecmp(header->value->data, "webtransport") == 0) {
+                st->is_webtransport_connect = 1;
+                break;
+            }
+        }
+#endif
 
         /* Store request body */
         if (body && body_len > 0) {

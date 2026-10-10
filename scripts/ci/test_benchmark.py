@@ -123,7 +123,7 @@ class BenchmarkRenderTests(unittest.TestCase):
     def test_repeated_render_is_byte_identical(self):
         self.render()
         outputs = ["README", "README.md", "ROADMAP.md", "docs/benchmark-trends.svg",
-                   "docs/webserver-benchmark-trends.svg"]
+                   "docs/webserver-benchmark-trends.svg", "docs/webserver-latency-distribution.svg"]
         first = {name: (self.root / name).read_bytes() for name in outputs}
         self.render()
         self.assertEqual(first, {name: (self.root / name).read_bytes() for name in outputs})
