@@ -29,17 +29,6 @@ EXPECTED_UNWIRED = {
         "forgotten. Wire it in once cwist/net/quic_flow_control.h has a "
         "real implementation to link against."
     ),
-    "test_smartstring": (
-        "the cwistaw/smartstring module it exercises is not built into "
-        "libcwist.a and does not compile: include/cwistaw/smartstring.h "
-        "includes a nonexistent <cwistaw/err/cwist_err.h> (the err header "
-        "lives at include/cwist/err/cwist_err.h), declares "
-        "smartstring_init() with an undeclared cwist_error_r type (exists "
-        "nowhere in the tree), and uses the smartstring typedef inside its "
-        "own struct body. Fixing that is an API rework of an unused "
-        "module, not test wiring. Wire it in once cwistaw/smartstring.h "
-        "and src/smartstring/smartstring.c actually compile."
-    ),
 }
 
 
