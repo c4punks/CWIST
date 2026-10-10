@@ -137,6 +137,7 @@ fly.board/
 test_https
 test_https_park
 test_https_park_full_gc
+test_https_pool_queue
 benchmarks/web-frameworks/cwist_bench
 dist/
 cwist.pc
