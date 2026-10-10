@@ -341,15 +341,11 @@ def webserver_summary(row):
              '', '| Profile | Req/s | Mean ms | P99.999 ms | Group PSS MiB | Group RSS MiB | Context-switch delta |',
              '|---|---:|---:|---:|---:|---:|---:|']
     names = [('cwist','CWIST Classic'), ('cwist_c1m','CWIST'),
-             ('cwist_c1m_arena1','CWIST arena_max=1'),
-             ('cwist_c1m_drainchunk','CWIST drain_chunk=8'),
              ('actix','Actix'), ('axum','Axum'), ('gin','Gin'), ('spring','Spring Boot')]
     for key, name in names:
         lines.append(f"| {name} | {metric(key+'_rps',0)} | {metric(key+'_lat_ms')} | {metric(key+'_p99_999_ms')} | {metric(key+'_pss_kib',2,1024)} | {metric(key+'_rss_kib',2,1024)} | {metric(key+'_csw',0)} |")
     lines += ['', 'Main profile: `wrk -t12 -c400 -d10s`, after a discarded 10s warmup.',
-              '', '### Separate tuned profile', '', '`wrk -t4 -c100 -d10s`, after a discarded 10s warmup. Do not compare these rows as equal-load results against the main table.']
-    for key, name in [('cwist_tuned','CWIST Classic'), ('axum_tuned','Axum'), ('spring_tuned','Spring Boot')]:
-        lines.append(f"- {name}: {metric(key+'_rps',0)} req/s; mean {metric(key+'_lat_ms')} ms; corrected P99.999 {metric(key+'_p99_999_ms')} ms.")
+              '', 'Settled CWIST-internal tuning variants (glibc arena cap from PR #35, cooperative drain chunk from issue #25) and the separate `wrk -t4 -c100` low-concurrency legs are recorded in `benchmarks/webserver.json` and docs/cooperative-queuing.md; they are no longer rendered as comparison rows.']
     spring = row.get('spring_env', {}) or {}
     if spring:
         lines += ['', f"Spring Boot row: {spring.get('java_version','n/a')}, Spring Boot {spring.get('spring_boot_version','n/a')}, {spring.get('stack','n/a')}. Full JVM options are recorded in `benchmarks/webserver.json`."]
@@ -386,8 +382,6 @@ def render() -> None:
 
     cwist_lat_part = get_lat_part("cwist")
     cwist_c1m_lat_part = get_lat_part("cwist_c1m")
-    cwist_c1m_arena1_lat_part = get_lat_part("cwist_c1m_arena1")
-    cwist_c1m_drainchunk_lat_part = get_lat_part("cwist_c1m_drainchunk")
     actix_lat_part = get_lat_part("actix")
     axum_lat_part = get_lat_part("axum")
     gin_lat_part = get_lat_part("gin")
@@ -417,12 +411,11 @@ def render() -> None:
             f"Latest Web Server Benchmark ({ws_latest.get('wrk_profile','wrk 12t 400c')}):\n"
             f"- **CWIST Classic pool**: {ws_latest.get('cwist_rps',0):.0f} req/s | Latency {ws_latest.get('cwist_lat_ms',0):.2f}ms{cwist_lat_part} | RSS {ws_latest.get('cwist_rss_kib',0):.0f}KiB | Csw {ws_latest.get('cwist_csw',0):.0f}\n"
             f"- **CWIST reactor**: {ws_latest.get('cwist_c1m_rps',0):.0f} req/s | Latency {ws_latest.get('cwist_c1m_lat_ms',0):.2f}ms{cwist_c1m_lat_part} | RSS {ws_latest.get('cwist_c1m_rss_kib',0):.0f}KiB | Csw {ws_latest.get('cwist_c1m_csw',0):.0f}\n"
-            f"- **CWIST reactor (arena_max=1)** — glibc arena cap adopted in PR #35 after mimalloc was tried and refuted (issue #25); this line confirms the decision on every run: {ws_latest.get('cwist_c1m_arena1_rps',0):.0f} req/s | Latency {ws_latest.get('cwist_c1m_arena1_lat_ms',0):.2f}ms{cwist_c1m_arena1_lat_part} | RSS {ws_latest.get('cwist_c1m_arena1_rss_kib',0):.0f}KiB | Csw {ws_latest.get('cwist_c1m_arena1_csw',0):.0f}\n"
-            f"- **CWIST reactor (drain_chunk=8)** — cooperative queuing for cwist_async_defer completions within a big io_uring batch (issue #25, docs/cooperative-queuing.md); this workload has no cwist_async_defer traffic to interleave, so parity with the plain CWIST row above is the expected result, not a null finding — the tail-latency win is isolated directly in tests/bench_cooperative_queuing.c: {ws_latest.get('cwist_c1m_drainchunk_rps',0):.0f} req/s | Latency {ws_latest.get('cwist_c1m_drainchunk_lat_ms',0):.2f}ms{cwist_c1m_drainchunk_lat_part} | RSS {ws_latest.get('cwist_c1m_drainchunk_rss_kib',0):.0f}KiB | Csw {ws_latest.get('cwist_c1m_drainchunk_csw',0):.0f}\n"
             f"{actix_line}"
             f"- **Axum**: {ws_latest.get('axum_rps',0):.0f} req/s | Latency {ws_latest.get('axum_lat_ms',0):.2f}ms{axum_lat_part} | RSS {ws_latest.get('axum_rss_kib',0):.0f}KiB | Csw {ws_latest.get('axum_csw',0):.0f}\n"
             f"- **Gin (Go)**: {ws_latest.get('gin_rps',0):.0f} req/s | Latency {ws_latest.get('gin_lat_ms',0):.2f}ms{gin_lat_part} | RSS {ws_latest.get('gin_rss_kib',0):.0f}KiB | Csw {ws_latest.get('gin_csw',0):.0f}\n"
             f"- **Spring Boot**: {ws_latest.get('spring_rps',0):.0f} req/s | Latency {ws_latest.get('spring_lat_ms',0):.2f}ms{spring_lat_part} | RSS {ws_latest.get('spring_rss_kib',0):.0f}KiB | Csw {ws_latest.get('spring_csw',0):.0f}\n"
+            "\n_Settled CWIST-internal tuning variants (glibc arena cap from PR #35, cooperative drain chunk from issue #25) are recorded in docs/cooperative-queuing.md and benchmarks/webserver.json; they are no longer rendered as comparison rows._\n"
         )
         ws_env = ws_latest.get("spring_env", {}) or {}
         if ws_env:
@@ -482,33 +475,6 @@ def render() -> None:
 
     if README.exists(): replace(README, "<!-- WEBSERVER_BENCHMARKS:START -->", "<!-- WEBSERVER_BENCHMARKS:END -->", ws_summary)
     if README_MD.exists(): replace(README_MD, "<!-- WEBSERVER_BENCHMARKS:START -->", "<!-- WEBSERVER_BENCHMARKS:END -->", ws_summary)
-
-    tuned_rps = ws_latest.get("cwist_tuned_rps")
-    axum_tuned_rps = ws_latest.get("axum_tuned_rps")
-    if tuned_rps and README_MD.exists() and "<!-- TUNED_BENCHMARK:START -->" in README_MD.read_text():
-        tuned_profile = ws_latest.get("tuned_profile") or "wrk -t4 -c100 -d10s"
-        # Pair the tuned run with Axum, not Spring Boot. Both are compiled
-        # servers with no managed runtime, so the comparison says something
-        # about CWIST's own latency floor; beating a JVM server on latency and
-        # memory is not informative about that. Axum runs the identical
-        # -t4 -c100 profile (see the workflow's "Axum tuned" leg).
-        tuned_line = (
-            f"**Tuned low-latency run ({tuned_profile}), CWIST vs Axum on identical concurrency:**\n\n"
-            f"- **CWIST**: {tuned_rps:,.0f} req/s at {ws_latest.get('cwist_tuned_lat_ms',0):.2f}ms average latency "
-            f"(P50 {ws_latest.get('cwist_tuned_p50_ms',0):.2f}ms, P90 {ws_latest.get('cwist_tuned_p90_ms',0):.2f}ms, "
-            f"P99 {ws_latest.get('cwist_tuned_p99_ms',0):.2f}ms)\n"
-        )
-        if axum_tuned_rps:
-            tuned_line += (
-                f"- **Axum**: {axum_tuned_rps:,.0f} req/s at {ws_latest.get('axum_tuned_lat_ms',0):.2f}ms average latency "
-                f"(P50 {ws_latest.get('axum_tuned_p50_ms',0):.2f}ms, P90 {ws_latest.get('axum_tuned_p90_ms',0):.2f}ms, "
-                f"P99 {ws_latest.get('axum_tuned_p99_ms',0):.2f}ms), same binary as the main run above\n"
-            )
-        tuned_line += (
-            f"\nThese runs use a different concurrency budget from the main table. "
-            f"They do not establish a causal scheduling explanation or a universal tail-latency improvement."
-        )
-        replace(README_MD, "<!-- TUNED_BENCHMARK:START -->", "<!-- TUNED_BENCHMARK:END -->", tuned_line)
 
 if __name__ == "__main__":
     if len(sys.argv) == 2 and sys.argv[1] == "measure": print(json.dumps(run_measurement()))
