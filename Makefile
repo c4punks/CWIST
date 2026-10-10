@@ -907,6 +907,7 @@ TEST_TARGETS = test_worker_affinity \
                test_https \
                test_https_park \
                test_https_park_full_gc \
+               test_https_pool_queue \
                test_https_metrics \
                test_http2 \
                test_http2_prebuffer \
@@ -1154,6 +1155,10 @@ test_https: $(LIB_NAME) tests/test_https.c
 test_https_park: $(LIB_NAME) tests/test_https_park.c
 	$(CC) $(CFLAGS) -o test_https_park tests/test_https_park.c $(LIB_NAME) $(LIBS)
 	./test_https_park
+
+test_https_pool_queue: $(LIB_NAME) tests/test_https_pool_queue.c
+	$(CC) $(CFLAGS) -o test_https_pool_queue tests/test_https_pool_queue.c $(LIB_NAME) $(LIBS)
+	./test_https_pool_queue
 
 test_https_park_full_gc: $(LIB_NAME) tests/test_https_park_full_gc.c tests/test_https_park.c
 	$(CC) $(CFLAGS) -o test_https_park_full_gc tests/test_https_park_full_gc.c $(LIB_NAME) $(LIBS)
