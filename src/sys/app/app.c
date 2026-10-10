@@ -4122,8 +4122,8 @@ static int cwist_multiport_h3_start_one(cwist_multiport_group *group, cwist_app 
     listener->thread_started = true;
     listener->running = true;
     group->h3_listener_count++;
-    if (g_cwist_udp_fd < 0) {
-        g_cwist_udp_fd = listener->udp_fd;
+    if (__atomic_load_n(&g_cwist_udp_fd, __ATOMIC_SEQ_CST) < 0) {
+        __atomic_store_n(&g_cwist_udp_fd, listener->udp_fd, __ATOMIC_SEQ_CST);
     }
     printf("CWIST multiport HTTP/3 fan-out listening on UDP port %hu\n", port);
     return 0;
@@ -4318,7 +4318,7 @@ int cwist_app_multiport(cwist_app **app_ref, unsigned short public_port, cwist_m
         return -1;
     }
 
-    g_cwist_listen_fd = pfds[0].fd;
+    __atomic_store_n(&g_cwist_listen_fd, pfds[0].fd, __ATOMIC_SEQ_CST);
     printf("CWIST App running on %zu TCP ports via multiport facade (SSL: %s)\n", port_count,
            app->use_ssl ? "On" : "Off");
 
@@ -4367,8 +4367,8 @@ int cwist_app_multiport(cwist_app **app_ref, unsigned short public_port, cwist_m
     }
     cwist_multiport_h3_stop_group(group);
     cwist_multiport_close_all(pfds, port_count);
-    g_cwist_listen_fd = -1;
-    g_cwist_udp_fd = -1;
+    __atomic_store_n(&g_cwist_listen_fd, -1, __ATOMIC_SEQ_CST);
+    __atomic_store_n(&g_cwist_udp_fd, -1, __ATOMIC_SEQ_CST);
 
     if (app->mem_manager) {
         app->mem_manager->watcher_running = false;
@@ -4521,7 +4521,7 @@ static int app_listen_serve(cwist_app *app, int port, int workers_override, int 
         perror("Failed to bind port");
         return -1;
     }
-    g_cwist_listen_fd = server_fd;
+    __atomic_store_n(&g_cwist_listen_fd, server_fd, __ATOMIC_SEQ_CST);
 
     /* Bind the HTTP/3 UDP socket before forking as well.  The thread that
      * services it is started per-process after the fork. */
@@ -4662,7 +4662,7 @@ static int app_listen_serve(cwist_app *app, int port, int workers_override, int 
         close(server_fd);
         server_fd = cwist_make_socket_ipv4(&addr, "0.0.0.0", port, 32768);
         if (server_fd >= 0) {
-            g_cwist_listen_fd = server_fd;
+            __atomic_store_n(&g_cwist_listen_fd, server_fd, __ATOMIC_SEQ_CST);
         }
         if (udp_fd >= 0) {
             close(udp_fd);
@@ -4694,7 +4694,7 @@ static int app_listen_serve(cwist_app *app, int port, int workers_override, int 
             pthread_t h3_tid;
             if (pthread_create(&h3_tid, NULL, h3_server_thread_func, h3_p) == 0) {
                 pthread_detach(h3_tid);
-                g_cwist_udp_fd = udp_fd;
+                __atomic_store_n(&g_cwist_udp_fd, udp_fd, __ATOMIC_SEQ_CST);
                 printf("HTTP/3 (QUIC) enabled on UDP port %d\n", port);
             } else {
                 free(h3_p);
@@ -4736,7 +4736,7 @@ static int app_listen_serve(cwist_app *app, int port, int workers_override, int 
 #ifdef __wasi__
         if (app->use_ssl) {
             fprintf(stderr, "TLS is not available on WASI (no BoringSSL); serve cleartext.\n");
-            g_cwist_listen_fd = -1;
+            __atomic_store_n(&g_cwist_listen_fd, -1, __ATOMIC_SEQ_CST);
             return -1;
         }
         /* Single-threaded host: no pool, no epoll - the blocking accept
@@ -4749,7 +4749,7 @@ static int app_listen_serve(cwist_app *app, int port, int workers_override, int 
         if (app->use_ssl) {
             if (!app->ssl_ctx) {
                 fprintf(stderr, "SSL enabled but context not initialized.\n");
-                g_cwist_listen_fd = -1;
+                __atomic_store_n(&g_cwist_listen_fd, -1, __ATOMIC_SEQ_CST);
                 return -1;
             }
             cwist_https_server_loop(server_fd, app->ssl_ctx, static_ssl_handler, app);
@@ -4762,8 +4762,8 @@ static int app_listen_serve(cwist_app *app, int port, int workers_override, int 
     }
 
     /* Graceful shutdown cleanup */
-    g_cwist_listen_fd = -1;
-    g_cwist_udp_fd = -1;
+    __atomic_store_n(&g_cwist_listen_fd, -1, __ATOMIC_SEQ_CST);
+    __atomic_store_n(&g_cwist_udp_fd, -1, __ATOMIC_SEQ_CST);
 
     if (app->h3_ctx) {
         app->h3_ctx->running = 0;

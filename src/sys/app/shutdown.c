@@ -168,6 +168,6 @@ void cwist_shutdown_restore_handlers(void) {}
  */
 void cwist_shutdown_reset(void) {
     atomic_store(&g_cwist_running, 1);
-    g_cwist_listen_fd = -1;
-    g_cwist_udp_fd = -1;
+    __atomic_store_n(&g_cwist_listen_fd, -1, __ATOMIC_SEQ_CST);
+    __atomic_store_n(&g_cwist_udp_fd, -1, __ATOMIC_SEQ_CST);
 }

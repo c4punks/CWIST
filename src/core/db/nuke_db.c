@@ -4,6 +4,7 @@
 /* Keep kqueue/kevent visible: strict _POSIX_C_SOURCE hides them on macOS. */
 #define _DARWIN_C_SOURCE
 #endif
+#include <stdatomic.h>
 #include <cwist/core/db/nuke_db.h>
 #include <cwist/core/macros.h>
 #include <cwist/core/mem/alloc.h>
@@ -44,7 +45,7 @@
 
 static cwist_nuke_db_t g_nuke = {0};
 static pthread_t g_sync_thread = 0;
-static volatile bool g_running = false;
+static _Atomic bool g_running = false; /* read by the sync thread, written by init/close */
 static pthread_mutex_t g_nuke_lock = PTHREAD_MUTEX_INITIALIZER;
 static sigset_t g_sigset;
 
