@@ -1,0 +1,45 @@
+name: "RSS gate"
+
+# Resident-memory gate (scripts/ci/rss_gate.sh): an HTTPS server on the real
+# cwist_app_listen() path with 4 prefork workers must stay under a fixed
+# per-process idle RSS limit, and must not grow over a second, identical
+# round of keep-alive, churn, burst and large-response load. Catches fixed
+# per-process costs (the ~96 MiB static HTTPS queue fixed in v3.9.1) and
+# steady-state leaks. Limits are documented in the script.
+
+on:
+  push:
+    branches: [main, master, dev]
+  pull_request:
+    branches: [main, master, dev]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  rss-gate:
+    name: RSS gate (HTTPS, 4 workers)
+    if: github.event_name != 'push' || !contains(github.event.head_commit.message, '[skip ci]')
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      with:
+        submodules: recursive
+
+    - name: Install build and load dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y cmake libcurl4-openssl-dev libnghttp2-dev libbrotli-dev libzstd-dev wrk apache2-utils nghttp2-client
+
+    - name: Build library and gate server
+      run: make -j$(nproc) rss_gate_server
+
+    - name: Run RSS gate
+      run: ./scripts/ci/rss_gate.sh
+
+    - name: Server log
+      if: always()
+      run: cat rss_gate_server.log 2>/dev/null || true

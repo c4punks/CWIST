@@ -1,0 +1,17 @@
+# ThreadSanitizer suppressions for `make SANITIZE=thread tsan-test`
+# (.github/workflows/tsan.yml). Every entry says why it is not a CWIST bug.
+#
+# sqlite3_backup_init() locks the source and then the destination database.
+# NukeDB backs up disk -> memory when it loads and memory -> disk when it
+# syncs, so TSan sees both lock orders. The two never overlap: the load runs
+# in cwist_nuke_init() before the sync thread starts, and the final sync in
+# cwist_nuke_close() runs after that thread is joined.
+deadlock:sqlite3_backup_init
+
+# libttak's retired-node pool (lib/libttak/src/mem/epoch.c) pops a lock-free
+# Treiber stack: a popper reads head->next while another popper that won the
+# same head clears it. Nodes are never freed, so this does not crash, but it
+# is an ABA hazard in the vendored library, not in CWIST code. It needs a fix
+# in libttak and a submodule bump; tracked in issue #351. Intermittent, so
+# without this entry the TSan job would fail at random.
+race:epoch_node_pool_acquire
