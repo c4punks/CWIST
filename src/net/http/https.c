@@ -80,7 +80,14 @@ struct https_thread_payload {
 };
 
 /* --- Thread Pool for HTTPS --- */
-#define HTTPS_TASK_QUEUE_SIZE 2097152
+/* The task queue is a ring that starts small and doubles when a burst fills
+ * it, up to HTTPS_TASK_QUEUE_MAX tasks; past that, submitters block until a
+ * worker frees a slot (the old fixed-size behaviour). It used to be a static
+ * HTTPS_TASK_QUEUE_MAX-entry array (~96 MiB) that https_pool_init()'s memset
+ * made resident in every worker process before the first connection. The
+ * ring never shrinks: a process keeps the capacity of its largest burst. */
+#define HTTPS_TASK_QUEUE_INITIAL 1024
+#define HTTPS_TASK_QUEUE_MAX 2097152
 
 typedef struct {
     int client_fd;
@@ -94,7 +101,8 @@ typedef struct {
 typedef struct {
     pthread_t threads[2048];
     size_t threads_size;
-    https_pool_task_t queue[HTTPS_TASK_QUEUE_SIZE];
+    https_pool_task_t *queue; /* ring of queue_len slots; cwist_malloc'd, never GC-tracked */
+    size_t queue_len;
     size_t head;
     size_t tail;
     size_t count;
@@ -125,6 +133,43 @@ static __thread bool t_https_parked = false;
 static void https_close_conn_cb(void *handle);
 
 /**
+ * @brief Resize the task ring to @p new_len slots, keeping queued tasks in
+ *        order (unwrapped to start at slot 0). Caller holds g_https_pool.mutex
+ *        and guarantees new_len >= count.
+ * @return false if the allocation failed; the old ring is left untouched.
+ */
+static inline bool resize_queue(size_t new_len) {
+    /* cwist_malloc, not cwist_alloc: every pool thread touches the ring, so
+     * it must not sit on one thread's full-GC sweep list. */
+    https_pool_task_t *queue = cwist_malloc(new_len * sizeof(*queue));
+    if (!queue) return false;
+    for (size_t i = 0; i < g_https_pool.count; i++) {
+        queue[i] = g_https_pool.queue[(g_https_pool.head + i) % g_https_pool.queue_len];
+    }
+    cwist_free(g_https_pool.queue);
+    g_https_pool.queue = queue;
+    g_https_pool.queue_len = new_len;
+    g_https_pool.head = 0;
+    g_https_pool.tail = g_https_pool.count;
+    return true;
+}
+
+/**
+ * @brief Make room for one more task, doubling the ring if it is full.
+ *        Caller holds g_https_pool.mutex.
+ * @return true if a slot is free; false when the ring is at
+ *         HTTPS_TASK_QUEUE_MAX or cannot grow (the caller then waits for a
+ *         worker to free a slot, as with the old fixed-size queue).
+ */
+static bool https_pool_reserve_locked(void) {
+    if (g_https_pool.count < g_https_pool.queue_len) return true;
+    if (g_https_pool.queue_len >= HTTPS_TASK_QUEUE_MAX) return false;
+    size_t new_len = g_https_pool.queue_len ? g_https_pool.queue_len * 2 : HTTPS_TASK_QUEUE_INITIAL;
+    if (new_len > HTTPS_TASK_QUEUE_MAX) new_len = HTTPS_TASK_QUEUE_MAX;
+    return resize_queue(new_len);
+}
+
+/**
  * @brief Worker loop for the HTTPS thread pool: blocks for queued tasks and
  *        runs each through https_thread_handler().
  * @param arg Unused (worker index not needed).
@@ -144,7 +189,7 @@ static void *https_pool_worker(void *arg) {
             break;
         }
         https_pool_task_t task = g_https_pool.queue[g_https_pool.head];
-        g_https_pool.head = (g_https_pool.head + 1) % HTTPS_TASK_QUEUE_SIZE;
+        g_https_pool.head = (g_https_pool.head + 1) % g_https_pool.queue_len;
         g_https_pool.count--;
         pthread_cond_signal(&g_https_pool.cond_not_full);
         pthread_mutex_unlock(&g_https_pool.mutex);
@@ -218,7 +263,7 @@ void https_pool_submit(int client_fd, cwist_https_context *ctx,
 void https_pool_submit_ready(int client_fd, SSL *pres_ssl, cwist_https_context *ctx,
                              void (*handler)(cwist_https_connection *, void *), void *user_ctx) {
     pthread_mutex_lock(&g_https_pool.mutex);
-    while (g_https_pool.count >= HTTPS_TASK_QUEUE_SIZE && !g_https_pool.shutdown) {
+    while (!g_https_pool.shutdown && !https_pool_reserve_locked()) {
         pthread_cond_wait(&g_https_pool.cond_not_full, &g_https_pool.mutex);
     }
     if (g_https_pool.shutdown) {
@@ -233,7 +278,7 @@ void https_pool_submit_ready(int client_fd, SSL *pres_ssl, cwist_https_context *
     g_https_pool.queue[g_https_pool.tail].user_ctx = user_ctx;
     g_https_pool.queue[g_https_pool.tail].pres_ssl = pres_ssl;
     g_https_pool.queue[g_https_pool.tail].conn = NULL;
-    g_https_pool.tail = (g_https_pool.tail + 1) % HTTPS_TASK_QUEUE_SIZE;
+    g_https_pool.tail = (g_https_pool.tail + 1) % g_https_pool.queue_len;
     g_https_pool.count++;
     pthread_cond_signal(&g_https_pool.cond_not_empty);
     pthread_mutex_unlock(&g_https_pool.mutex);
@@ -252,7 +297,7 @@ void https_pool_submit_conn(cwist_https_connection *conn, cwist_https_context *c
                             void (*handler)(cwist_https_connection *, void *), void *user_ctx) {
     if (!conn) return;
     pthread_mutex_lock(&g_https_pool.mutex);
-    while (g_https_pool.count >= HTTPS_TASK_QUEUE_SIZE && !g_https_pool.shutdown) {
+    while (!g_https_pool.shutdown && !https_pool_reserve_locked()) {
         pthread_cond_wait(&g_https_pool.cond_not_full, &g_https_pool.mutex);
     }
     if (g_https_pool.shutdown) {
@@ -266,7 +311,7 @@ void https_pool_submit_conn(cwist_https_connection *conn, cwist_https_context *c
     g_https_pool.queue[g_https_pool.tail].user_ctx = user_ctx;
     g_https_pool.queue[g_https_pool.tail].pres_ssl = NULL;
     g_https_pool.queue[g_https_pool.tail].conn = conn;
-    g_https_pool.tail = (g_https_pool.tail + 1) % HTTPS_TASK_QUEUE_SIZE;
+    g_https_pool.tail = (g_https_pool.tail + 1) % g_https_pool.queue_len;
     g_https_pool.count++;
     pthread_cond_signal(&g_https_pool.cond_not_empty);
     pthread_mutex_unlock(&g_https_pool.mutex);
@@ -290,7 +335,7 @@ void https_pool_destroy(void) {
     }
     while (g_https_pool.count > 0) {
         https_pool_task_t task = g_https_pool.queue[g_https_pool.head];
-        g_https_pool.head = (g_https_pool.head + 1) % HTTPS_TASK_QUEUE_SIZE;
+        g_https_pool.head = (g_https_pool.head + 1) % g_https_pool.queue_len;
         g_https_pool.count--;
         if (task.conn) {
             cwist_https_close_connection(task.conn);
@@ -302,6 +347,9 @@ void https_pool_destroy(void) {
     pthread_mutex_destroy(&g_https_pool.mutex);
     pthread_cond_destroy(&g_https_pool.cond_not_empty);
     pthread_cond_destroy(&g_https_pool.cond_not_full);
+    cwist_free(g_https_pool.queue);
+    g_https_pool.queue = NULL;
+    g_https_pool.queue_len = 0;
 
     g_https_pool_initialized = false;
 }
