@@ -124,6 +124,7 @@ static cwist_error_t https_wrap_established(cwist_https_context *ctx, int client
 int https_hs_shepherd_start(void);
 void https_hs_shepherd_stop(void);
 static void https_park_stop(void);
+static void https_park_reopen(void);
 static void https_connection_teardown(cwist_https_connection *conn);
 static void https_park_teardown(cwist_https_connection *conn);
 /* Set by cwist_https_park() on the pool thread that parked its connection:
@@ -223,6 +224,7 @@ static void *https_pool_worker(void *arg) {
  */
 int https_pool_init(void) {
     if (g_https_pool_initialized) return 0;
+    https_park_reopen();
     memset(&g_https_pool, 0, sizeof(g_https_pool));
     pthread_mutex_init(&g_https_pool.mutex, NULL);
     pthread_cond_init(&g_https_pool.cond_not_empty, NULL);
@@ -390,6 +392,11 @@ static struct {
     pthread_t thread;
     int epoll_fd;
     bool running;
+    /* Set by https_park_stop() until the next https_pool_init(): pool
+     * workers still run while the pool shuts down, and one that parked a
+     * connection after the stop would start a second park thread, setting
+     * running again under the thread being joined. */
+    bool closed;
     pid_t owner;
     https_parked_t *head[2], *tail[2];
 } g_park = {.lock = PTHREAD_MUTEX_INITIALIZER, .epoll_fd = -1};
@@ -430,12 +437,15 @@ static void *https_park_thread(void *arg) {
     (void)arg;
     struct epoll_event events[1024];
     while (1) {
+        /* epoll_fd is (re)assigned under the lock by https_park_start_locked(),
+         * so read it there together with running. */
         pthread_mutex_lock(&g_park.lock);
         bool running = g_park.running;
+        int epfd = g_park.epoll_fd;
         pthread_mutex_unlock(&g_park.lock);
         if (!running) break;
 
-        int n = epoll_wait(g_park.epoll_fd, events, 1024, 200);
+        int n = epoll_wait(epfd, events, 1024, 200);
         for (int i = 0; i < n; i++) {
             https_parked_t *p = (https_parked_t *)events[i].data.ptr;
             pthread_mutex_lock(&g_park.lock);
@@ -443,7 +453,7 @@ static void *https_park_thread(void *arg) {
             if (mine) park_unlink_locked(p);
             pthread_mutex_unlock(&g_park.lock);
             if (!mine) continue;
-            epoll_ctl(g_park.epoll_fd, EPOLL_CTL_DEL, p->conn->fd, NULL);
+            epoll_ctl(epfd, EPOLL_CTL_DEL, p->conn->fd, NULL);
             /* Readable or hung up: the pool thread's read reports either. */
             park_resubmit(p->conn, false);
             cwist_free(p);
@@ -463,7 +473,7 @@ static void *https_park_thread(void *arg) {
             while (expired) {
                 https_parked_t *p = expired;
                 expired = p->next;
-                epoll_ctl(g_park.epoll_fd, EPOLL_CTL_DEL, p->conn->fd, NULL);
+                epoll_ctl(epfd, EPOLL_CTL_DEL, p->conn->fd, NULL);
                 if (cls == CWIST_HTTPS_PARK_HTTP1) {
                     https_park_teardown(p->conn);
                 } else {
@@ -487,6 +497,7 @@ static void *https_park_thread(void *arg) {
 static bool https_park_start_locked(void) {
     pid_t pid = getpid();
     if (g_park.running && g_park.owner == pid) return true;
+    if (g_park.closed && g_park.owner == pid) return false; /* pool is shutting down */
     /* A forked worker inherits the parent's lists and epoll fd but not its
      * thread; start its own set (the parent's parked connections are the
      * parent's to serve). */
@@ -572,10 +583,18 @@ bool cwist_https_park(cwist_https_connection *conn, uint64_t idle_ms, cwist_http
     return true;
 }
 
+/** @brief Allow parking again for a new pool generation (see g_park.closed). */
+static void https_park_reopen(void) {
+    pthread_mutex_lock(&g_park.lock);
+    g_park.closed = false;
+    pthread_mutex_unlock(&g_park.lock);
+}
+
 static void https_park_stop(void) {
     pthread_mutex_lock(&g_park.lock);
     bool running = g_park.running && g_park.owner == getpid();
     g_park.running = false;
+    if (running) g_park.closed = true;
     pthread_mutex_unlock(&g_park.lock);
     if (!running) return;
     pthread_join(g_park.thread, NULL);
@@ -601,6 +620,7 @@ bool cwist_https_park(cwist_https_connection *conn, uint64_t idle_ms, cwist_http
 }
 
 static void https_park_stop(void) {}
+static void https_park_reopen(void) {}
 #endif
 
 bool cwist_https_conn_idle(cwist_https_connection *conn) {
