@@ -199,11 +199,31 @@ bool cwist_gc_scope_disown(void *ptr);
  * @brief Retire every block still on the current thread's pending-sweep
  *        list right now, instead of waiting for the thread to exit.
  *
- * Call this at the end of each unit of work a worker thread processes (a
- * request, a queued job) so a forgotten cwist_free() is caught immediately
- * rather than accumulating for the lifetime of a long-lived worker thread.
- * The actual free still only happens once something calls
- * cwist_gc_pipeline_tick() / ttak_epoch_reclaim() afterwards.
+ * "Every block" means every block, live or not: the flush cannot tell a
+ * forgotten allocation from one that is still in use, so it retires both.
+ *
+ * **Contract.** Call this only at a point where the calling thread holds
+ * no tracked block that anything will touch again:
+ *  - OK: the end of a self-contained job on a dedicated worker thread, after
+ *    everything the job hands on has been disowned (cwist_gc_scope_disown())
+ *    or handed to a CWIST API that disowns it (e.g. cwist_async_respond_with()).
+ *  - Not OK: inside a request handler or middleware (the response is still
+ *    being built and sent after next() returns), or on any thread that serves
+ *    connections (HTTP/2 session state and other per-connection objects live
+ *    across requests on that thread).
+ *
+ * **Reclamation.** Retired blocks go to cwist_ebr_free() and are released
+ * only when something drives reclamation (cwist_gc_pipeline_tick(), or the
+ * io_queue behind a cwist_scheduler). Request-serving threads never enter an
+ * epoch, so reclaim treats a retired block as unreferenced even if a thread
+ * is still using it. A process that never drives reclaim never frees what it
+ * flushes (each retire also costs a node that is not returned); a process
+ * that does will free whatever was retired, in use or not.
+ *
+ * Misusing this is silent until reclaim starts, so the `cwist` CLI
+ * (`cwist audit`, `cwist watcher`) warns on every call site that is not
+ * marked `cwist-ack: cwist_gc_scope_flush`. See docs/GC.md, "Explicit
+ * flushes and reclamation", and c4punks/CWIST#347.
  */
 void cwist_gc_scope_flush(void);
 
@@ -264,19 +284,20 @@ typedef void (*cwist_conn_close_fn)(void *handle);
 void cwist_conn_registry_track(void *handle, cwist_conn_close_fn close_fn);
 
 /**
- * @brief Remove a handle from the *calling thread's* pending-sweep list
- *        before closing it yourself through the normal explicit path.
+ * @brief Remove a handle from the pending-sweep lists before closing it
+ *        yourself through the normal explicit path.
  *
- * Only looks at the calling thread's own list -- a handle closed from a
- * different thread than the one that tracked it will not be found here
- * (returns false) and the sweep will still run @p close_fn on it later.
- * If a handle's close can legitimately happen from another thread, that
- * code path needs its own coordination (e.g. cwist_release_guard_t) on
- * top of this, same as cwist_gc_scope_untrack()'s cross-thread caveat.
+ * Searches every thread's list, not just the caller's: a connection is
+ * usually tracked on the thread that accepted it but closed on another one
+ * (async completion, keep-alive resubmit, parked-connection expiry), and a
+ * handle left behind would be closed a second time by that thread's sweep
+ * (#344). Untrack must still happen before the handle is freed, and only
+ * one party may close it; coordinate racing closers yourself (e.g.
+ * cwist_release_guard_t).
  *
  * @return true if @p handle was pending and has been removed; false if
- *         it was never tracked, already swept, or tracked by a different
- *         thread. Either way the caller should proceed to close it.
+ *         it was never tracked or already swept. Either way the caller
+ *         should proceed to close it.
  */
 bool cwist_conn_registry_untrack(void *handle);
 
@@ -284,6 +305,11 @@ bool cwist_conn_registry_untrack(void *handle);
  * @brief Sweep (close) everything still on the calling thread's
  *        pending-sweep list right now, without waiting for thread exit.
  *        Analogous to cwist_gc_scope_flush() but for connections.
+ *
+ * The list holds every connection this thread registered, including ones
+ * another thread is serving right now (parked, deferred, resubmitted), so
+ * call this only when none of them can still be in use. The `cwist` CLI
+ * warns on call sites not marked `cwist-ack: cwist_conn_registry_flush`.
  */
 void cwist_conn_registry_flush(void);
 

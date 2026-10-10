@@ -320,14 +320,17 @@ def audit_update_baseline(root: Path, baseline_path: Path) -> None:
 def run_audit(source: Path, category: str, style: str, as_json: bool) -> None:
     rows = audit_sources(source, category, style)
     rows = [(display_path(f), ln, cat, sty, snip) for f, ln, cat, sty, snip in rows]
+    hazards = scan_hazards(source)
     if as_json:
         print(json.dumps([
             {"file": f, "line": ln, "category": cat, "style": sty, "snippet": snip}
             for f, ln, cat, sty, snip in rows
         ], indent=2))
+        report_hazards(hazards, sys.stderr)
         return
     if not rows:
         print("no matching allocation/sync call sites found")
+        report_hazards(hazards)
         return
     width = max(len(f"{f}:{ln}") for f, ln, *_ in rows)
     for f, ln, cat, sty, snip in rows:
@@ -341,6 +344,7 @@ def run_audit(source: Path, category: str, style: str, as_json: bool) -> None:
     for (cat, sty), n in sorted(counts.items()):
         print(f"  {cat:<8} {sty:<6} {n}")
     warn_multiport_full_gc_conflict(counts)
+    report_hazards(hazards)
 
 
 def warn_multiport_full_gc_conflict(counts: dict[tuple[str, str], int]) -> None:
@@ -358,6 +362,110 @@ def warn_multiport_full_gc_conflict(counts: dict[tuple[str, str], int]) -> None:
         print("hook it's paired with): every cwist_app sharing this process --")
         print("root app and every multiport sub-app -- gets the same setting, with")
         print("no per-app opt-out. If that's not what you want, see docs/GC.md.")
+
+
+# Ownership-sensitive full-GC calls that look harmless but carry a contract
+# the compiler cannot check. `cwist audit` and `cwist watcher` warn on each
+# use until the call site is marked `cwist-ack: <name>` (in a comment on the
+# same line or the line above), i.e. until someone has read the contract in
+# docs/GC.md ("Explicit flushes and reclamation") and checked the call meets
+# it. See c4punks/CWIST#347 for the misuse that prompted this.
+HAZARDS: dict[str, dict[str, str]] = {
+    "cwist_gc_scope_flush": {
+        "risk": "retires EVERY block the calling thread still tracks, live or not",
+        "rule": "call only where the thread holds no live tracked block (end of a "
+                "self-contained job); never from a handler, middleware, or a thread "
+                "that is serving connections",
+    },
+    "cwist_ebr_free": {
+        "risk": "frees once the epoch advances; readers outside ttak_epoch_enter() "
+                "are not protected, and nothing is freed unless reclaim is driven",
+        "rule": "every reader must sit inside ttak_epoch_enter()/exit(), and "
+                "something must call cwist_gc_pipeline_tick()",
+    },
+    "cwist_gc_scope_disown": {
+        "risk": "drops the block from the full-GC sweep; you now own freeing it",
+        "rule": "call on the thread that allocated it, at the handoff, and make "
+                "sure exactly one cwist_free() follows",
+    },
+    "cwist_gc_scope_untrack": {
+        "risk": "drops the block from the full-GC sweep; you now own freeing it",
+        "rule": "same contract as cwist_gc_scope_disown(); prefer that name for handoffs",
+    },
+    "cwist_conn_registry_flush": {
+        "risk": "closes every connection the calling thread registered, including "
+                "ones another thread is serving right now (parked, deferred)",
+        "rule": "call only when no connection this thread accepted can still be in use",
+    },
+    "cwist_conn_registry_sweep_all": {
+        "risk": "closes every registered connection on every thread",
+        "rule": "process shutdown only, after serving has stopped",
+    },
+}
+_HAZARD_RE = re.compile(r"\b(" + "|".join(HAZARDS) + r")\s*\(")
+_ACK_RE = re.compile(r"cwist-ack:\s*([A-Za-z0-9_,\s]+)")
+
+
+def _acked(line: str, api: str) -> bool:
+    m = _ACK_RE.search(line)
+    return bool(m) and api in {a.strip() for a in m.group(1).replace(",", " ").split()}
+
+
+def _inside_cwist_tree(path: Path) -> bool:
+    """True for CWIST's own sources, whose internal uses of these calls are
+    the implementation of the contract rather than application code."""
+    for parent in [path, *path.parents]:
+        if (parent / "include" / "cwist" / "core" / "mem" / "gc.h").is_file() and \
+                (parent / "src" / "core" / "mem" / "gc.c").is_file():
+            return True
+    return False
+
+
+def scan_hazards(source: Path) -> list[tuple[str, int, str]]:
+    """Return (file, line, api) for every un-acknowledged HAZARDS call under
+    `source` (a file or a directory; .c and .h files). CWIST's own tree is
+    skipped."""
+    source = source.expanduser().resolve()
+    if not source.exists() or _inside_cwist_tree(source):
+        return []
+    files = [source] if source.is_file() else sorted(
+        p for p in source.rglob("*") if p.suffix in (".c", ".h") and p.is_file())
+    hits: list[tuple[str, int, str]] = []
+    for file in files:
+        try:
+            lines = file.read_text(encoding="utf-8", errors="replace").splitlines()
+        except OSError:
+            continue
+        for idx, line in enumerate(lines):
+            stripped = line.strip()
+            if stripped.startswith(("//", "*", "/*", "#define")):
+                continue
+            for m in _HAZARD_RE.finditer(line):
+                api = m.group(1)
+                prev = lines[idx - 1] if idx else ""
+                if _acked(line, api) or _acked(prev, api):
+                    continue
+                hits.append((str(file), idx + 1, api))
+    return hits
+
+
+def report_hazards(hits: list[tuple[str, int, str]], stream=None) -> None:
+    """Print one warning block per hazardous API, listing its call sites."""
+    if not hits:
+        return
+    stream = stream or sys.stdout
+    by_api: dict[str, list[str]] = {}
+    for f, ln, api in hits:
+        by_api.setdefault(api, []).append(f"{display_path(f)}:{ln}")
+    for api, sites in by_api.items():
+        h = HAZARDS[api]
+        print(file=stream)
+        print(f"WARNING: {api}() {h['risk']}.", file=stream)
+        print(f"  Use it only if you know its contract: {h['rule']}.", file=stream)
+        print("  Read CWIST's docs/GC.md (\"Explicit flushes and reclamation\") before using it,", file=stream)
+        print(f"  then mark the call with a comment: /* cwist-ack: {api} */", file=stream)
+        for site in sites:
+            print(f"    {site}", file=stream)
 
 
 def generate_openapi(source: Path, output: Path, title: str, version: str) -> None:
@@ -1508,6 +1616,8 @@ def watcher(project_arg: str | None, interval: float, once: bool, run: bool, for
     debounce = max(int(dev.get("debounce_ms", 150)), 0) / 1000
     print(f"watching {source_root} ({events.backend}, interval {interval:.2f}s, hot reload {'on' if run else 'off'}"
           + (f", excluding {', '.join(exclude)}" if exclude else "") + ")")
+    report_hazards([h for h in scan_hazards(source_root)
+                    if not _is_excluded(Path(h[0]), root, exclude)], sys.stderr)
     last_build_ok = True
     try:
         if run and not once and not supervisor.start():
@@ -1531,6 +1641,9 @@ def watcher(project_arg: str | None, interval: float, once: bool, run: bool, for
                                 if previous.get(path) != current.get(path)}
                     previous = current
                 source_changes = {path for path in changed if path.suffix in {".c", ".h"}}
+                if not once:  # the startup scan already covered every file
+                    report_hazards([h for path in sorted(source_changes) for h in scan_hazards(path)],
+                                   sys.stderr)
                 scope = impacted_sources(root, source_changes, exclude) if source_changes else set()
                 print("changed:", ", ".join(str(path.relative_to(root)) for path in sorted(changed)))
                 print("recompile scope:", ", ".join(str(path.relative_to(root)) for path in sorted(scope)) or "build metadata")
@@ -1570,7 +1683,8 @@ def main() -> None:
     proto.add_argument("--output", type=Path)
     proto.add_argument("--descriptor-set", action="store_true",
                        help="treat input as a binary FileDescriptorSet (protoc --descriptor_set_out); auto-detected otherwise")
-    audit = sub.add_parser("audit", help="list allocation/pthread call sites by convention (cwist / gnu / bsd)")
+    audit = sub.add_parser("audit", help="list allocation/pthread call sites by convention (cwist / gnu / bsd), "
+                           "and warn about ownership-sensitive full-GC calls (see HAZARDS)")
     audit.add_argument("target", nargs="?", default=None,
                        help='a file/directory to scan (relative, absolute, or ~), recursively -- '
                             'OR a query string \'style:bsd;folder:./src/net\' (an optional leading '
