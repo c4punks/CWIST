@@ -402,10 +402,15 @@ static void cwist_gc_pending_flush(cwist_gc_pending_t *pending) {
      * else frees what was just retired unless the app happens to run an
      * io_queue (#347). Every retired block was tracked by this thread and,
      * by the cwist_gc_scope_flush() contract, is no longer in use, so
-     * freeing it as soon as no thread is inside an older epoch is safe.
+     * freeing it once the grace period has passed is safe.
      * Skipped when nothing was retired, so an io_queue job that freed
      * everything itself pays nothing. */
-    if (retired > 0) ttak_epoch_reclaim();
+    if (retired > 0) {
+        /* libttak keeps a retired block for TTAK_EPOCH_GRACE epochs, and
+         * each reclaim advances at most one: with no reader inside an epoch
+         * this many calls free what was just retired. */
+        for (unsigned i = 0; i < TTAK_EPOCH_GRACE; i++) ttak_epoch_reclaim();
+    }
 }
 
 #if (defined(__STDC_VERSION__) && __STDC_VERSION__ >= 201112L)
