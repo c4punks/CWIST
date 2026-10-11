@@ -55,8 +55,22 @@
 #include <openssl/hmac.h>
 
 #include <lsquic.h>
-#ifdef CWIST_WEBTRANSPORT
+/* WebTransport server backends (CWIST_WEBTRANSPORT=server, see Makefile):
+ *  - CWIST_WT_SESSION_API: lsquic's WebTransport session API (lsquic_wt.h,
+ *    LSQUIC PR #629). Sessions, peer and local uni/bidi streams, datagrams.
+ *  - CWIST_WT_STOCK_LSQUIC: the client-bidi-stream support stock lsquic
+ *    ships (LSQUIC_WEBTRANSPORT_SERVER_SUPPORT, draft-02 SETTINGS). Sessions,
+ *    peer-opened bidi streams and datagrams; stock lsquic cannot open server
+ *    streams and drops peer uni streams, so those calls return -1. */
+#ifdef CWIST_WEBTRANSPORT_SERVER
+#ifdef CWIST_HAVE_LSQUIC_WT
 #include <lsquic_wt.h>
+#define CWIST_WT_SESSION_API 1
+#elif LSQUIC_WEBTRANSPORT_SERVER_SUPPORT
+#define CWIST_WT_STOCK_LSQUIC 1
+#else
+#error "CWIST_WEBTRANSPORT_SERVER needs lsquic_wt.h or LSQUIC_WEBTRANSPORT_SERVER_SUPPORT"
+#endif
 #endif
 #include <lsxpack_header.h>
 
@@ -143,9 +157,14 @@ typedef struct h3_stream_ctx {
     int is_connect;          /* :method CONNECT */
     int saw_empty_path;      /* :path arrived with a zero-length value */
     int malformed;           /* RFC 9114 Section 4.3.1 violation */
-#ifdef CWIST_WEBTRANSPORT
-    int is_webtransport;
+#ifdef CWIST_WEBTRANSPORT_SERVER
+    int is_webtransport; /* extended CONNECT with :protocol webtransport */
     int wt_taken;
+#endif
+#ifdef CWIST_WT_STOCK_LSQUIC
+    int wt_dispatched;                  /* session handler already ran */
+    struct cwist_wt_handle *wt_session; /* CONNECT stream: accepted session */
+    struct cwist_wt_handle *wt_stream;  /* stream is a peer-opened WT bidi */
 #endif
 } h3_stream_ctx_t;
 
@@ -174,6 +193,9 @@ typedef struct h3_conn_ctx {
     pthread_mutex_t dgram_lock;
     h3_dgram_node_t *dgram_head;
     h3_dgram_node_t *dgram_tail;
+#ifdef CWIST_WT_STOCK_LSQUIC
+    struct cwist_wt_handle *wt_sessions; /* accepted sessions, engine thread only */
+#endif
 } h3_conn_ctx_t;
 
 /* Every lsquic_conn_get_ctx(conn) callsite below reads this wrapper's
@@ -189,7 +211,7 @@ static inline cwist_http3_context *h3_shared_ctx(lsquic_conn_t *conn) {
     return cc ? cc->h3_ctx : NULL;
 }
 
-#ifdef CWIST_WEBTRANSPORT
+#ifdef CWIST_WEBTRANSPORT_SERVER
 
 typedef enum cwist_wt_handle_kind {
     CWIST_WT_HANDLE_SESSION = 1,
@@ -205,6 +227,11 @@ typedef struct cwist_wt_handle {
     struct cwist_wt_handle *parent;
     struct cwist_wt_handle *first_child;
     struct cwist_wt_handle *next_sibling;
+#ifdef CWIST_WT_STOCK_LSQUIC
+    lsquic_conn_t *conn;                 /* session: owning connection */
+    uint64_t session_id;                 /* session: CONNECT stream id */
+    struct cwist_wt_handle *next_session; /* session: h3_conn_ctx_t list */
+#endif
 } cwist_wt_handle_t;
 
 #define CWIST_WT_HANDLE_MAGIC UINT64_C(0x4357495354575431)
@@ -263,6 +290,7 @@ static void cwist_wt_handle_free(cwist_wt_handle_t *handle) {
     free(handle);
 }
 
+#ifdef CWIST_WT_SESSION_API
 /**
  * @brief Link @p child into @p parent's child list.
  * The child is inserted at the head of the list.  No-op if either is NULL.
@@ -273,6 +301,7 @@ static void cwist_wt_handle_attach(cwist_wt_handle_t *parent, cwist_wt_handle_t 
     child->next_sibling = parent->first_child;
     parent->first_child = child;
 }
+#endif
 
 /**
  * @brief Validate an opaque pointer and cast it to a typed handle.
@@ -300,6 +329,7 @@ static lsquic_stream_t *cwist_wt_handle_stream(void *handle) {
     return h ? (lsquic_stream_t *)h->ptr : NULL;
 }
 
+#ifdef CWIST_WT_SESSION_API
 /**
  * @brief Resolve an opaque handle to its underlying WebTransport session.
  * @return The wrapped lsquic_wt_session_t*, or NULL if @p handle is not a
@@ -309,8 +339,9 @@ static lsquic_wt_session_t *cwist_wt_handle_session(void *handle) {
     cwist_wt_handle_t *h = cwist_wt_handle_cast(handle, CWIST_WT_HANDLE_SESSION);
     return h ? (lsquic_wt_session_t *)h->ptr : NULL;
 }
+#endif
 
-#endif /* CWIST_WEBTRANSPORT */
+#endif /* CWIST_WEBTRANSPORT_SERVER */
 
 /* ------------------------------------------------------------------ */
 /* Header-set interface for lsquic (QPACK decode)                     */
@@ -477,7 +508,7 @@ static const struct lsquic_hset_if cwist_h3_hset_if = {
     .hsi_discard_header_set = cwist_h3_hsi_discard,
 };
 
-#ifdef CWIST_WEBTRANSPORT
+#ifdef CWIST_WT_SESSION_API
 static const struct lsquic_webtransport_if cwist_h3_wt_if;
 #endif
 
@@ -1011,7 +1042,7 @@ static lsquic_stream_ctx_t *cwist_h3_on_new_stream(void *stream_if_ctx, lsquic_s
     }
     cwist_sstring_assign(st->req->version, "HTTP/3");
     st->req->private_data = stream;
-#ifdef CWIST_WEBTRANSPORT
+#ifdef CWIST_WEBTRANSPORT_SERVER
     st->is_webtransport = 0;
 #endif
 
@@ -1328,11 +1359,11 @@ static bool h3_process_stream_headers(lsquic_stream_t *stream, h3_stream_ctx_t *
                 st->seen_regular_header = 1;
             }
             h3_apply_header(st->req, name, value);
-#ifdef CWIST_WEBTRANSPORT
+#ifdef CWIST_WEBTRANSPORT_SERVER
+            /* :protocol may precede :method; is_connect is checked once the
+             * whole block is in (below). */
             if (strcmp(name, ":protocol") == 0 && strcmp(value, "webtransport") == 0) {
-                if (st->req && st->req->method == CWIST_HTTP_CONNECT) {
-                    st->is_webtransport = 1;
-                }
+                st->is_webtransport = 1;
             }
 #endif
         }
@@ -1372,6 +1403,9 @@ static bool h3_process_stream_headers(lsquic_stream_t *stream, h3_stream_ctx_t *
             return false;
         }
     }
+#ifdef CWIST_WEBTRANSPORT_SERVER
+    if (!st->is_connect) st->is_webtransport = 0;
+#endif
     st->headers_done = 1;
     char *seq_header = cwist_http_header_get(st->req->headers, "x-cwist-sequenced-data");
     st->sequenced_data =
@@ -1394,6 +1428,207 @@ static bool h3_method_is_idempotent(cwist_http_method_t method) {
     }
 }
 
+#ifdef CWIST_WT_STOCK_LSQUIC
+/* ------------------------------------------------------------------ */
+/* WebTransport on stock lsquic                                       */
+/* ------------------------------------------------------------------ */
+
+/* Stock lsquic (LSQUIC_WEBTRANSPORT_SERVER_SUPPORT) advertises the draft-02
+ * SETTINGS and turns a peer bidi stream that opens with the 0x41 signal into
+ * a raw byte stream tagged with its session id; the rest lives here. The
+ * session is the extended-CONNECT stream, kept open after a 2xx response.
+ * Datagrams carry the session's quarter stream id (RFC 9297 Section 2.1).
+ * Closing writes a CLOSE_WEBTRANSPORT_SESSION capsule and FIN on the CONNECT
+ * stream. Everything runs on the engine thread, so the per-connection
+ * session list needs no lock. */
+
+#define H3_WT_CLOSE_SESSION_CAPSULE UINT64_C(0x2843)
+#define H3_WT_MAX_CLOSE_REASON 1024
+/* lsquic (this baseline) has no "largest DATAGRAM payload" query: assume the
+ * 1200-byte QUIC minimum minus short-header, AEAD and frame overhead. */
+#define H3_WT_DATAGRAM_BUDGET (1200 - 64)
+
+/** @brief QUIC variable-length integer size of @p v (RFC 9000 Section 16). */
+static size_t h3_wt_varint_len(uint64_t v) {
+    return v < 64 ? 1 : v < 16384 ? 2 : v < 1073741824 ? 4 : 8;
+}
+
+/**
+ * @brief Encode @p v as a QUIC varint into @p p.
+ * @return Bytes written (1, 2, 4 or 8).  @p v must be below 2^62.
+ */
+static size_t h3_wt_varint_write(unsigned char *p, uint64_t v) {
+    size_t n = h3_wt_varint_len(v);
+    for (size_t i = 0; i < n; i++) p[n - 1 - i] = (unsigned char)(v >> (8 * i));
+    p[0] |= (unsigned char)((n == 1 ? 0 : n == 2 ? 1 : n == 4 ? 2 : 3) << 6);
+    return n;
+}
+
+/**
+ * @brief Decode a QUIC varint from @p p.
+ * @return Bytes consumed, or 0 when @p len is too short.
+ */
+static size_t h3_wt_varint_read(const unsigned char *p, size_t len, uint64_t *out) {
+    if (len == 0) return 0;
+    size_t n = (size_t)1 << (p[0] >> 6);
+    if (len < n) return 0;
+    uint64_t v = p[0] & 0x3f;
+    for (size_t i = 1; i < n; i++) v = (v << 8) | p[i];
+    *out = v;
+    return n;
+}
+
+/** @brief Accepted session on @p conn whose CONNECT stream id is @p id. */
+static cwist_wt_handle_t *h3_wt_find_session(lsquic_conn_t *conn, uint64_t id) {
+    h3_conn_ctx_t *cc = conn ? (h3_conn_ctx_t *)lsquic_conn_get_ctx(conn) : NULL;
+    for (cwist_wt_handle_t *h = cc ? cc->wt_sessions : NULL; h; h = h->next_session) {
+        if (h->session_id == id) return h;
+    }
+    return NULL;
+}
+
+/** @brief Remove @p session from its connection's session list. */
+static void h3_wt_unlink_session(cwist_wt_handle_t *session) {
+    h3_conn_ctx_t *cc = (h3_conn_ctx_t *)lsquic_conn_get_ctx(session->conn);
+    if (!cc) return;
+    for (cwist_wt_handle_t **link = &cc->wt_sessions; *link; link = &(*link)->next_session) {
+        if (*link == session) {
+            *link = session->next_session;
+            break;
+        }
+    }
+    session->next_session = NULL;
+}
+
+/**
+ * @brief Run the app's session handler for an extended CONNECT.
+ *
+ * A 2xx keeps the CONNECT stream open as the session: the response goes out
+ * as HEADERS without FIN.  Any other status is sent as an ordinary response
+ * and the session handle is freed when the handler returns.
+ */
+static void h3_wt_open_session(lsquic_stream_t *stream, h3_stream_ctx_t *st,
+                               cwist_http3_context *h3_ctx) {
+    st->wt_dispatched = 1;
+    lsquic_conn_t *conn = lsquic_stream_conn(stream);
+    h3_conn_ctx_t *cc = (h3_conn_ctx_t *)lsquic_conn_get_ctx(conn);
+    if (!st->res) st->res = cwist_http_response_create();
+    cwist_wt_handle_t *session =
+        st->res && cc ? cwist_wt_handle_new(CWIST_WT_HANDLE_SESSION, stream) : NULL;
+    if (!session) {
+        lsquic_stream_close(stream);
+        return;
+    }
+    session->conn = conn;
+    session->session_id = lsquic_stream_id(stream);
+    session->next_session = cc->wt_sessions;
+    cc->wt_sessions = session;
+
+    h3_ctx->wt_handler(st->req, st->res, session);
+
+    if (st->res->status_code >= 200 && st->res->status_code < 300) {
+        st->wt_session = session;
+        if (st->res->body && st->res->body->size > 0) {
+            CWIST_LOG_WARN("[HTTP/3] WebTransport session response body dropped");
+            cwist_sstring_assign(st->res->body, "");
+        }
+        cwist_http_header_add(&st->res->headers, "sec-webtransport-http3-draft", "draft02");
+        st->response_ready = 1;
+        lsquic_stream_wantwrite(stream, 1);
+        return;
+    }
+    h3_wt_unlink_session(session);
+    cwist_wt_handle_free(session);
+    st->response_ready = 1;
+    lsquic_stream_wantread(stream, 0);
+    lsquic_stream_shutdown(stream, 0);
+    lsquic_stream_wantwrite(stream, 1);
+}
+
+/**
+ * @brief Read side of an accepted session's CONNECT stream.
+ *
+ * Capsules carry nothing the server acts on, so they are drained.  FIN or a
+ * reset ends the session; the stream is closed and on_close frees the
+ * handle.
+ */
+static void h3_wt_session_on_read(lsquic_stream_t *stream) {
+    unsigned char buf[1024];
+    ssize_t n;
+    while ((n = lsquic_stream_read(stream, buf, sizeof(buf))) > 0) {
+    }
+    if (n == 0 || (errno != EAGAIN && errno != EWOULDBLOCK)) {
+        lsquic_stream_close(stream);
+    }
+}
+
+/**
+ * @brief Bind a peer-opened WebTransport bidi stream to its session.
+ * @retval true lsquic tagged @p stream as a WebTransport stream; it is now
+ *         st->wt_stream, or closed when its session is unknown.  It must
+ *         not be treated as a request.
+ * @retval false An ordinary request stream.
+ *
+ * lsquic tags the stream while its filter reads the first frame header,
+ * which happens before on_read or inside the first lsquic_stream_read();
+ * that read then fails without consuming payload, so nothing is lost.
+ */
+static bool h3_wt_adopt_stream(lsquic_stream_t *stream, h3_stream_ctx_t *st) {
+    if (st->wt_stream) return true;
+    if (!lsquic_stream_is_webtransport_client_bidi_stream(stream)) return false;
+    int sid = lsquic_stream_get_webtransport_session_stream_id(stream);
+    cwist_wt_handle_t *session =
+        sid >= 0 ? h3_wt_find_session(lsquic_stream_conn(stream), (uint64_t)sid) : NULL;
+    cwist_wt_handle_t *handle =
+        session ? cwist_wt_handle_new(CWIST_WT_HANDLE_STREAM, stream) : NULL;
+    if (!handle) {
+        lsquic_stream_close(stream);
+        return true;
+    }
+    st->wt_stream = handle;
+    return true;
+}
+
+/**
+ * @brief on_read for a WebTransport stream: hand it to the app's new-stream
+ *        handler, which reads with cwist_webtransport_read().  Without a
+ *        handler the data is discarded.
+ */
+static void h3_wt_stream_on_read(lsquic_stream_t *stream, h3_stream_ctx_t *st) {
+    cwist_http3_context *ctx = h3_shared_ctx(lsquic_stream_conn(stream));
+    if (ctx && ctx->wt_new_stream_handler) {
+        ctx->wt_new_stream_handler(st->wt_stream, ctx->wt_new_stream_ctx);
+        return;
+    }
+    unsigned char buf[4096];
+    ssize_t n;
+    while ((n = lsquic_stream_read(stream, buf, sizeof(buf))) > 0) {
+    }
+    if (n == 0 || (errno != EAGAIN && errno != EWOULDBLOCK)) {
+        lsquic_stream_close(stream);
+    }
+}
+
+/**
+ * @brief Strip a WebTransport datagram's quarter stream id.
+ * @return true when @p buf belongs to an accepted session on @p conn;
+ *         @p payload / @p payload_len then describe the application bytes.
+ */
+static bool h3_wt_datagram_payload(lsquic_conn_t *conn, const void *buf, size_t len,
+                                   const void **payload, size_t *payload_len) {
+    h3_conn_ctx_t *cc = (h3_conn_ctx_t *)lsquic_conn_get_ctx(conn);
+    if (!cc || !cc->wt_sessions) return false;
+    uint64_t quarter = 0;
+    size_t n = h3_wt_varint_read((const unsigned char *)buf, len, &quarter);
+    if (n == 0 || quarter > (UINT64_MAX >> 2) || !h3_wt_find_session(conn, quarter << 2)) {
+        return false;
+    }
+    *payload = (const unsigned char *)buf + n;
+    *payload_len = len - n;
+    return true;
+}
+#endif /* CWIST_WT_STOCK_LSQUIC */
+
 /**
  * @brief on_read callback: consume the request and dispatch it.
  *
@@ -1412,8 +1647,29 @@ static void cwist_h3_on_read(lsquic_stream_t *stream, lsquic_stream_ctx_t *st_h)
     unsigned char buf[8192];
     ssize_t nread;
 
+#ifdef CWIST_WT_STOCK_LSQUIC
+    if (h3_wt_adopt_stream(stream, st)) {
+        if (st->wt_stream) h3_wt_stream_on_read(stream, st);
+        return;
+    }
+    if (st->wt_session) {
+        h3_wt_session_on_read(stream);
+        return;
+    }
+#endif
     h3_process_stream_headers(stream, st);
     if (st->malformed) return;
+#ifdef CWIST_WT_STOCK_LSQUIC
+    /* An extended CONNECT never sends FIN, so the session is opened as soon
+     * as its header block is in rather than at end of stream. */
+    if (st->headers_done && st->is_webtransport && !st->wt_dispatched) {
+        cwist_http3_context *h3_ctx = h3_shared_ctx(lsquic_stream_conn(stream));
+        if (h3_ctx && h3_ctx->wt_handler) {
+            h3_wt_open_session(stream, st, h3_ctx);
+            return;
+        }
+    }
+#endif
 
     while ((nread = lsquic_stream_read(stream, buf, sizeof(buf))) > 0) {
         if (st->sequenced_data) {
@@ -1536,7 +1792,7 @@ static void cwist_h3_on_read(lsquic_stream_t *stream, lsquic_stream_ctx_t *st_h)
         st->res = cwist_http_response_create();
         if (st->res && st->req) {
             cwist_http3_context *h3_ctx = h3_shared_ctx(lsquic_stream_conn(stream));
-#ifdef CWIST_WEBTRANSPORT
+#ifdef CWIST_WT_SESSION_API
             if (st->is_webtransport && h3_ctx && h3_ctx->wt_handler) {
                 char *host = cwist_http_header_get(st->req->headers, "host");
                 char *origin = cwist_http_header_get(st->req->headers, "origin");
@@ -1608,6 +1864,14 @@ static void cwist_h3_on_read(lsquic_stream_t *stream, lsquic_stream_ctx_t *st_h)
         lsquic_stream_shutdown(stream, 0);
         lsquic_stream_wantwrite(stream, 1);
     } else if (nread < 0 && errno != EAGAIN && errno != EWOULDBLOCK) {
+#ifdef CWIST_WT_STOCK_LSQUIC
+        /* The read that runs lsquic's frame filter over a WebTransport
+         * stream's signal fails; the stream is tagged by then. */
+        if (h3_wt_adopt_stream(stream, st)) {
+            if (st->wt_stream) h3_wt_stream_on_read(stream, st);
+            return;
+        }
+#endif
         lsquic_stream_close(stream);
     }
 }
@@ -1820,7 +2084,11 @@ static void cwist_h3_on_write(lsquic_stream_t *stream, lsquic_stream_ctx_t *st_h
             node = node->next;
         }
 
-        if (status_code == CWIST_HTTP_OK && !bodyless && !is_head && body_len == 0) {
+        bool empty_ok = false;
+#ifdef CWIST_WT_STOCK_LSQUIC
+        empty_ok = st->wt_session != NULL;
+#endif
+        if (status_code == CWIST_HTTP_OK && !bodyless && !is_head && body_len == 0 && !empty_ok) {
             /* Legal per RFC 9110, but a 200 with no body and no
              * content-length usually means a handler forgot to assign one;
              * make it diagnosable in the logs. */
@@ -1836,6 +2104,9 @@ static void cwist_h3_on_write(lsquic_stream_t *stream, lsquic_stream_ctx_t *st_h
             initial_body_len = st->res->body->size;
         }
         int eos = (bodyless || is_head || initial_body_len == 0) ? 1 : 0;
+#ifdef CWIST_WT_STOCK_LSQUIC
+        if (st->wt_session) eos = 0;
+#endif
 
         lsquic_http_headers_t headers = {
             .count = (unsigned)hdr_count,
@@ -1849,6 +2120,16 @@ static void cwist_h3_on_write(lsquic_stream_t *stream, lsquic_stream_ctx_t *st_h
             lsquic_stream_close(stream);
             return;
         }
+#ifdef CWIST_WT_STOCK_LSQUIC
+        if (st->wt_session) {
+            /* Session accepted: the stream stays open until either side
+             * closes it (write_state 3). */
+            st->write_state = 3;
+            lsquic_stream_wantwrite(stream, 0);
+            lsquic_stream_flush(stream);
+            return;
+        }
+#endif
         if (eos) {
             /* NB: the eos argument of lsquic_stream_send_headers is ignored
              * for IETF QUIC, so an empty body must be finished with an
@@ -2004,6 +2285,13 @@ static void cwist_h3_on_write(lsquic_stream_t *stream, lsquic_stream_ctx_t *st_h
 static void cwist_h3_on_close(lsquic_stream_t *stream, lsquic_stream_ctx_t *st_h) {
     h3_stream_ctx_t *st = (h3_stream_ctx_t *)st_h;
     if (st) {
+#ifdef CWIST_WT_STOCK_LSQUIC
+        if (st->wt_session) {
+            h3_wt_unlink_session(st->wt_session);
+            cwist_wt_handle_free(st->wt_session);
+        }
+        cwist_wt_handle_free(st->wt_stream);
+#endif
         cwist_http_request_destroy(st->req);
         cwist_http_response_destroy(st->res);
         free(st->body);
@@ -2057,11 +2345,21 @@ static ssize_t cwist_h3_on_dg_write(lsquic_conn_t *conn, void *buf, size_t len) 
 static void cwist_h3_on_datagram(lsquic_conn_t *conn, const void *buf, size_t len) {
     cwist_http3_context *ctx = h3_shared_ctx(conn);
     if (ctx && ctx->datagram_cb) {
+#ifdef CWIST_WT_STOCK_LSQUIC
+        /* A WebTransport session's datagram reaches the app without its
+         * quarter stream id, as with the session API backend. */
+        const void *payload = NULL;
+        size_t payload_len = 0;
+        if (h3_wt_datagram_payload(conn, buf, len, &payload, &payload_len)) {
+            ctx->datagram_cb(payload, payload_len, ctx->datagram_user_ctx);
+            return;
+        }
+#endif
         ctx->datagram_cb(buf, len, ctx->datagram_user_ctx);
     }
 }
 
-#ifdef CWIST_WEBTRANSPORT
+#ifdef CWIST_WT_SESSION_API
 
 /**
  * @brief wti_on_session_open callback: accept an extended-CONNECT request as
@@ -2248,7 +2546,7 @@ static const struct lsquic_webtransport_if cwist_h3_wt_if = {
     .wti_on_datagram_write = cwist_h3_wt_on_datagram_write,
 };
 
-#endif /* CWIST_WEBTRANSPORT */
+#endif /* CWIST_WT_SESSION_API */
 
 static const struct lsquic_stream_if cwist_h3_stream_if = {
     .on_new_conn = cwist_h3_on_new_conn,
@@ -2695,7 +2993,16 @@ cwist_error_t cwist_http3_server_loop(int udp_fd, cwist_http3_context *ctx,
     settings.es_allow_migration = ctx->allow_migration ? ctx->allow_migration : 1;
     settings.es_max_delayed_0rtt_packets = 32;
     settings.es_datagrams = ctx->datagram_enabled;
-#ifdef CWIST_WEBTRANSPORT
+#ifdef CWIST_WT_STOCK_LSQUIC
+    if (ctx->wt_handler) {
+        /* Stock lsquic sends SETTINGS_ENABLE_WEBTRANSPORT, the session limit,
+         * H3_DATAGRAM and SETTINGS_ENABLE_CONNECT_PROTOCOL when this is on;
+         * the DATAGRAM transport parameter needs es_datagrams. */
+        settings.es_webtransport_server = 1;
+        settings.es_max_webtransport_server_streams = 1;
+        settings.es_datagrams = 1;
+    }
+#elif defined(CWIST_WT_SESSION_API)
     if (ctx->wt_handler) {
         /* Required lsquic settings for WebTransport (see DEV_LSQUIC.md).
          * RFC 9297 Section 3.1: H3_DATAGRAM is only meaningful when the
@@ -3317,10 +3624,10 @@ void cwist_webtransport_set_new_stream_handler(cwist_http3_context *ctx,
     }
 }
 
-#ifdef CWIST_WEBTRANSPORT
+#ifdef CWIST_WEBTRANSPORT_SERVER
 
 /**
- * @brief Read from a WebTransport stream (CWIST_WEBTRANSPORT build).
+ * @brief Read from a WebTransport stream (WebTransport server build).
  * @param stream Stream handle (opaque cwist_wt_handle_t).
  * @return Bytes read, or -1 on bad arguments/invalid handle.
  */
@@ -3328,11 +3635,17 @@ ssize_t cwist_webtransport_read(void *stream, void *buf, size_t len) {
     if (!stream || !buf) return -1;
     lsquic_stream_t *s = cwist_wt_handle_stream(stream);
     if (!s) return -1;
-    return lsquic_stream_read(s, buf, len);
+    ssize_t n = lsquic_stream_read(s, buf, len);
+#ifdef CWIST_WT_STOCK_LSQUIC
+    /* FIN consumed: stop on_read, which would otherwise keep firing on a
+     * stream the app has finished reading but not closed. */
+    if (n == 0) lsquic_stream_wantread(s, 0);
+#endif
+    return n;
 }
 
 /**
- * @brief Write to a WebTransport stream (CWIST_WEBTRANSPORT build).
+ * @brief Write to a WebTransport stream (WebTransport server build).
  * @param stream Stream handle (opaque cwist_wt_handle_t).
  * @return Bytes written, or -1 on bad arguments/invalid handle.
  */
@@ -3344,7 +3657,7 @@ ssize_t cwist_webtransport_write(void *stream, const void *data, size_t len) {
 }
 
 /**
- * @brief Flush a WebTransport stream (CWIST_WEBTRANSPORT build).
+ * @brief Flush a WebTransport stream (WebTransport server build).
  * @retval 0 Flushed.
  * @retval -1 Bad arguments or invalid handle.
  */
@@ -3356,7 +3669,7 @@ int cwist_webtransport_flush(void *stream) {
 }
 
 /**
- * @brief Close a WebTransport stream (CWIST_WEBTRANSPORT build).
+ * @brief Close a WebTransport stream (WebTransport server build).
  * @retval 0 Closed.
  * @retval -1 Bad arguments or invalid handle.
  */
@@ -3367,8 +3680,32 @@ int cwist_webtransport_close_stream(void *stream) {
     return lsquic_stream_close(s);
 }
 
+#ifdef CWIST_WT_STOCK_LSQUIC
+
 /**
- * @brief Open a bidirectional WebTransport stream (CWIST_WEBTRANSPORT
+ * @brief Open a bidirectional WebTransport stream: unsupported on stock
+ *        lsquic, which cannot open server-initiated WebTransport streams.
+ * @retval -1 Always.
+ */
+int cwist_webtransport_open_bidi_stream(void *session) {
+    (void)session;
+    return -1;
+}
+
+/**
+ * @brief Open a unidirectional WebTransport stream: unsupported on stock
+ *        lsquic, which cannot open server-initiated WebTransport streams.
+ * @retval -1 Always.
+ */
+int cwist_webtransport_open_uni_stream(void *session) {
+    (void)session;
+    return -1;
+}
+
+#else /* CWIST_WT_SESSION_API */
+
+/**
+ * @brief Open a bidirectional WebTransport stream (WebTransport server
  *        build).
  * @param session Session handle (opaque cwist_wt_handle_t).
  * @retval 0 Stream opened (and reported to the new-stream handler when one
@@ -3399,7 +3736,7 @@ int cwist_webtransport_open_bidi_stream(void *session) {
 }
 
 /**
- * @brief Open a unidirectional WebTransport stream (CWIST_WEBTRANSPORT
+ * @brief Open a unidirectional WebTransport stream (WebTransport server
  *        build).
  * @param session Session handle (opaque cwist_wt_handle_t).
  * @retval 0 Stream opened (and reported to the new-stream handler when one
@@ -3429,10 +3766,12 @@ int cwist_webtransport_open_uni_stream(void *session) {
     return 0;
 }
 
-#else /* CWIST_WEBTRANSPORT */
+#endif /* CWIST_WT_STOCK_LSQUIC */
+
+#else /* CWIST_WEBTRANSPORT_SERVER */
 
 /**
- * @brief Stub used when CWIST_WEBTRANSPORT is not compiled in: always -1.
+ * @brief Stub used when the WebTransport server is not compiled in: always -1.
  */
 ssize_t cwist_webtransport_read(void *stream, void *buf, size_t len) {
     (void)stream;
@@ -3442,7 +3781,7 @@ ssize_t cwist_webtransport_read(void *stream, void *buf, size_t len) {
 }
 
 /**
- * @brief Stub used when CWIST_WEBTRANSPORT is not compiled in: always -1.
+ * @brief Stub used when the WebTransport server is not compiled in: always -1.
  */
 ssize_t cwist_webtransport_write(void *stream, const void *data, size_t len) {
     (void)stream;
@@ -3452,7 +3791,7 @@ ssize_t cwist_webtransport_write(void *stream, const void *data, size_t len) {
 }
 
 /**
- * @brief Stub used when CWIST_WEBTRANSPORT is not compiled in: always -1.
+ * @brief Stub used when the WebTransport server is not compiled in: always -1.
  */
 int cwist_webtransport_flush(void *stream) {
     (void)stream;
@@ -3460,7 +3799,7 @@ int cwist_webtransport_flush(void *stream) {
 }
 
 /**
- * @brief Stub used when CWIST_WEBTRANSPORT is not compiled in: always -1.
+ * @brief Stub used when the WebTransport server is not compiled in: always -1.
  */
 int cwist_webtransport_close_stream(void *stream) {
     (void)stream;
@@ -3468,7 +3807,7 @@ int cwist_webtransport_close_stream(void *stream) {
 }
 
 /**
- * @brief Stub used when CWIST_WEBTRANSPORT is not compiled in: always -1.
+ * @brief Stub used when the WebTransport server is not compiled in: always -1.
  */
 int cwist_webtransport_open_bidi_stream(void *session) {
     (void)session;
@@ -3476,14 +3815,14 @@ int cwist_webtransport_open_bidi_stream(void *session) {
 }
 
 /**
- * @brief Stub used when CWIST_WEBTRANSPORT is not compiled in: always -1.
+ * @brief Stub used when the WebTransport server is not compiled in: always -1.
  */
 int cwist_webtransport_open_uni_stream(void *session) {
     (void)session;
     return -1;
 }
 
-#endif /* CWIST_WEBTRANSPORT */
+#endif /* CWIST_WEBTRANSPORT_SERVER */
 
 /* ------------------------------------------------------------------ */
 /* Resilience knobs                                                   */
@@ -3598,10 +3937,78 @@ int cwist_http3_send_datagram(void *conn, const void *data, size_t len) {
     return 0;
 }
 
-#ifdef CWIST_WEBTRANSPORT
+#ifdef CWIST_WEBTRANSPORT_SERVER
+
+#ifdef CWIST_WT_STOCK_LSQUIC
 
 /**
- * @brief Send a datagram on a WebTransport session (CWIST_WEBTRANSPORT
+ * @brief Send a datagram on a WebTransport session (stock lsquic backend).
+ * @param session Session handle (opaque cwist_wt_handle_t).
+ * @return @p len once queued, or -1 on bad arguments, an invalid handle, a
+ *         payload over cwist_webtransport_max_datagram_size(), or OOM.
+ *         cwist_http3_send_datagram() copies the payload, so it is staged
+ *         on the stack.
+ *
+ * Prefixes the session's quarter stream id (RFC 9297 Section 2.1) and
+ * queues the datagram on the connection like cwist_http3_send_datagram().
+ */
+ssize_t cwist_webtransport_send_datagram(void *session, const void *data, size_t len) {
+    if (!session || !data || len == 0) return -1;
+    cwist_wt_handle_t *h = cwist_wt_handle_cast(session, CWIST_WT_HANDLE_SESSION);
+    if (!h || len > cwist_webtransport_max_datagram_size(session)) return -1;
+    unsigned char buf[H3_WT_DATAGRAM_BUDGET];
+    size_t prefix = h3_wt_varint_write(buf, h->session_id >> 2);
+    memcpy(buf + prefix, data, len);
+    return cwist_http3_send_datagram(h->conn, buf, prefix + len) == 0 ? (ssize_t)len : -1;
+}
+
+/**
+ * @brief Largest payload cwist_webtransport_send_datagram() accepts (stock
+ *        lsquic backend).
+ * @return A conservative bound derived from the 1200-byte QUIC minimum
+ *         packet size, or 0 on bad arguments/invalid handle.
+ */
+size_t cwist_webtransport_max_datagram_size(void *session) {
+    cwist_wt_handle_t *h = cwist_wt_handle_cast(session, CWIST_WT_HANDLE_SESSION);
+    if (!h) return 0;
+    return H3_WT_DATAGRAM_BUDGET - h3_wt_varint_len(h->session_id >> 2);
+}
+
+/**
+ * @brief Close a WebTransport session (stock lsquic backend).
+ * @param session Session handle (opaque cwist_wt_handle_t).
+ * @param code 32-bit WebTransport application error code.
+ * @param reason Human-readable reason; may be NULL.  At most 1024 bytes.
+ * @retval 0 CLOSE_WEBTRANSPORT_SESSION capsule written and FIN queued.
+ * @retval -1 Bad arguments, invalid handle, @p code above UINT32_MAX, an
+ *         over-long reason, or a failed stream write.
+ *
+ * The handle stays valid until lsquic closes the CONNECT stream.
+ */
+int cwist_webtransport_close_session(void *session, uint64_t code, const char *reason) {
+    cwist_wt_handle_t *h = cwist_wt_handle_cast(session, CWIST_WT_HANDLE_SESSION);
+    if (!h || code > UINT32_MAX) return -1;
+    size_t reason_len = reason ? strlen(reason) : 0;
+    if (reason_len > H3_WT_MAX_CLOSE_REASON) return -1;
+    unsigned char capsule[8 + 8 + 4 + H3_WT_MAX_CLOSE_REASON];
+    size_t off = h3_wt_varint_write(capsule, H3_WT_CLOSE_SESSION_CAPSULE);
+    off += h3_wt_varint_write(capsule + off, 4 + reason_len);
+    capsule[off++] = (unsigned char)(code >> 24);
+    capsule[off++] = (unsigned char)(code >> 16);
+    capsule[off++] = (unsigned char)(code >> 8);
+    capsule[off++] = (unsigned char)code;
+    if (reason_len) memcpy(capsule + off, reason, reason_len);
+    off += reason_len;
+    lsquic_stream_t *s = (lsquic_stream_t *)h->ptr;
+    if (lsquic_stream_write(s, capsule, off) != (ssize_t)off) return -1;
+    lsquic_stream_flush(s);
+    return lsquic_stream_shutdown(s, 1);
+}
+
+#else /* CWIST_WT_SESSION_API */
+
+/**
+ * @brief Send a datagram on a WebTransport session (WebTransport server
  *        build).
  * @param session Session handle (opaque cwist_wt_handle_t).
  * @return lsquic_wt_send_datagram() result, or -1 on bad arguments/invalid
@@ -3616,7 +4023,7 @@ ssize_t cwist_webtransport_send_datagram(void *session, const void *data, size_t
 
 /**
  * @brief Maximum datagram size on a WebTransport session
- *        (CWIST_WEBTRANSPORT build).
+ *        (WebTransport server build).
  * @param session Session handle (opaque cwist_wt_handle_t).
  * @return Maximum payload size, or 0 on bad arguments/invalid handle.
  */
@@ -3629,7 +4036,7 @@ size_t cwist_webtransport_max_datagram_size(void *session) {
 
 /**
  * @brief Close a WebTransport session with an application error code
- *        (CWIST_WEBTRANSPORT build).
+ *        (WebTransport server build).
  * @param session Session handle (opaque cwist_wt_handle_t).
  * @param code 32-bit WebTransport application error code.
  * @param reason Human-readable reason; may be NULL.
@@ -3643,10 +4050,12 @@ int cwist_webtransport_close_session(void *session, uint64_t code, const char *r
     return lsquic_wt_close(sess, code, reason, reason ? strlen(reason) : 0);
 }
 
-#else /* CWIST_WEBTRANSPORT */
+#endif /* CWIST_WT_STOCK_LSQUIC */
+
+#else /* CWIST_WEBTRANSPORT_SERVER */
 
 /**
- * @brief Stub used when CWIST_WEBTRANSPORT is not compiled in: always -1.
+ * @brief Stub used when the WebTransport server is not compiled in: always -1.
  */
 ssize_t cwist_webtransport_send_datagram(void *session, const void *data, size_t len) {
     (void)session;
@@ -3656,7 +4065,7 @@ ssize_t cwist_webtransport_send_datagram(void *session, const void *data, size_t
 }
 
 /**
- * @brief Stub used when CWIST_WEBTRANSPORT is not compiled in: always 0.
+ * @brief Stub used when the WebTransport server is not compiled in: always 0.
  */
 size_t cwist_webtransport_max_datagram_size(void *session) {
     (void)session;
@@ -3664,7 +4073,7 @@ size_t cwist_webtransport_max_datagram_size(void *session) {
 }
 
 /**
- * @brief Stub used when CWIST_WEBTRANSPORT is not compiled in: always -1.
+ * @brief Stub used when the WebTransport server is not compiled in: always -1.
  */
 int cwist_webtransport_close_session(void *session, uint64_t code, const char *reason) {
     (void)session;
@@ -3673,4 +4082,4 @@ int cwist_webtransport_close_session(void *session, uint64_t code, const char *r
     return -1;
 }
 
-#endif /* CWIST_WEBTRANSPORT */
+#endif /* CWIST_WEBTRANSPORT_SERVER */

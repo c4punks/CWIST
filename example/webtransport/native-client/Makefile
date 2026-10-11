@@ -1,7 +1,7 @@
 CC ?= gcc
 ROOT = ../../..
 
-CFLAGS = -Wall -Wextra -g -DCWIST_WEBTRANSPORT \
+CFLAGS = -Wall -Wextra -g \
          -I$(ROOT)/include -I$(ROOT)/lib -I$(ROOT)/lib/libttak/include \
          -I$(ROOT)/lib/cjson -I$(ROOT)/lib/sqlite3 -I$(ROOT)/lib/uriparser/include \
          -I$(ROOT)/lib/cnats/src -I$(ROOT)/lib/boringssl/include \

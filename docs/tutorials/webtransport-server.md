@@ -7,6 +7,27 @@ and QUIC; browsers also require a certificate they trust during development.
 > polling path on macOS/BSD. ECN receive metadata is optional, so missing BSD
 > socket extensions do not block a WebTransport build or listener startup.
 
+## Build
+
+`CWIST_WEBTRANSPORT` takes a comma-separated list of roles: `server`,
+`client,server` or `none`. `make CWIST_WEBTRANSPORT=server` builds the server
+and is the default on main; the client is experimental and builds only with
+`client`.
+
+The server builds against either lsquic:
+
+| lsquic in `lib/lsquic` | Sessions | Peer bidi streams | Peer uni streams | Server-opened streams | Datagrams |
+| --- | --- | --- | --- | --- | --- |
+| Stock lsquic (main's pin) | yes | yes | dropped by lsquic | no: `cwist_webtransport_open_*_stream()` returns -1 | yes |
+| With `lsquic_wt.h` (LSQUIC PR #629) | yes | yes | yes | yes | yes |
+
+Stock lsquic advertises the draft-02 SETTINGS, and the server answers an
+accepted session with `sec-webtransport-http3-draft: draft02`. On that
+backend, `cwist_webtransport_close_session()` writes a
+CLOSE_WEBTRANSPORT_SESSION capsule and finishes the CONNECT stream.
+`make webtransport-e2e` runs an echo server against an aioquic client (needs
+`pip install aioquic`).
+
 ## 1. Configure HTTP/3 and a session handler
 
 ```c

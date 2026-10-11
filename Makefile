@@ -134,14 +134,41 @@ SQLITE_ZIP = sqlite-amalgamation-$(SQLITE_VER).zip
 SQLITE_URL = https://www.sqlite.org/$(SQLITE_YEAR)/$(SQLITE_ZIP)
 SQLITE_DIR = lib/sqlite3
 
-# WebTransport client (src/net/http/http3_client.c).  Built on the lsquic API
-# proposed in litespeedtech/lsquic#629, which is what lib/lsquic is pinned to
-# on this branch, so it is compiled here.  main pins lsquic master, which does
-# not carry that API, and carries no WebTransport source either.  Set
-# CWIST_WEBTRANSPORT=0 to leave it out.
-CWIST_WEBTRANSPORT ?= 1
-ifeq ($(CWIST_WEBTRANSPORT),1)
-    CFLAGS += -DCWIST_WEBTRANSPORT
+# WebTransport over HTTP/3, as a comma-separated list of roles:
+#   CWIST_WEBTRANSPORT=server         the WebTransport server (main's default)
+#   CWIST_WEBTRANSPORT=client,server  server and the experimental client (dev's
+#                                     default)
+#   CWIST_WEBTRANSPORT=none           neither (0 and 1 still mean none and
+#                                     every role)
+# The server builds on either lsquic. With lsquic_wt.h (LSQUIC PR #629) it
+# uses that session API; otherwise it uses the client-bidi-stream support of
+# stock lsquic (LSQUIC_WEBTRANSPORT_SERVER_SUPPORT), which cannot open server
+# streams. The client needs lsquic_wt.h. Object files rebuild on a change.
+CWIST_WEBTRANSPORT ?= client,server
+comma := ,
+CWIST_WT_ROLES := $(strip $(subst $(comma), ,$(CWIST_WEBTRANSPORT)))
+ifeq ($(CWIST_WT_ROLES),1)
+    CWIST_WT_ROLES := client server
+endif
+ifneq ($(filter-out client server none 0,$(CWIST_WT_ROLES)),)
+    $(error CWIST_WEBTRANSPORT: unknown role '$(filter-out client server none 0,$(CWIST_WT_ROLES))' (use server, client, client$(comma)server or none))
+endif
+CWIST_HAVE_LSQUIC_WT := $(if $(wildcard $(LSQUIC_DIR)/include/lsquic_wt.h),1,)
+# liblsquic is configured with -DLSQUIC_WEBTRANSPORT=ON (see $(LSQUIC_STAMP)),
+# which on stock lsquic adds fields to struct lsquic_engine_settings: every
+# translation unit including lsquic.h must see the same layout.
+CFLAGS += -DLSQUIC_WEBTRANSPORT_SERVER_SUPPORT=1
+ifneq ($(filter server,$(CWIST_WT_ROLES)),)
+    CFLAGS += -DCWIST_WEBTRANSPORT_SERVER
+endif
+ifneq ($(filter client,$(CWIST_WT_ROLES)),)
+    ifneq ($(CWIST_HAVE_LSQUIC_WT),1)
+        $(error CWIST_WEBTRANSPORT=client needs an lsquic with the WebTransport session API: $(LSQUIC_DIR)/include/lsquic_wt.h is missing)
+    endif
+    CFLAGS += -DCWIST_WEBTRANSPORT_CLIENT
+endif
+ifeq ($(CWIST_HAVE_LSQUIC_WT),1)
+    CFLAGS += -DCWIST_HAVE_LSQUIC_WT
 endif
 
 # WebRTC DataChannel (src/net/webrtc/). DataChannel-only: SDP offer/answer,
@@ -651,7 +678,7 @@ component-browser-smoke: component-smoke
 
 # Execute the WASI 0.2 bundle in a real browser, including negative controls.
 # Install test dependencies and Chromium first (see docs/api/wasm-component.md).
-.PHONY: component-browser-test
+.PHONY: component-browser-test webtransport-e2e
 component-browser-test: component-browser-smoke
 	$(NODE) tests/browser/run.mjs --self-test
 
@@ -1891,6 +1918,21 @@ test_orm_socket: $(LIB_NAME) tests/test_orm_socket.c
 test_webtransport: $(LIB_NAME) tests/test_webtransport.c
 	$(CC) $(CFLAGS) -o test_webtransport tests/test_webtransport.c $(LIB_NAME) $(LIBS)
 	./test_webtransport
+
+# WebTransport server end to end: tests/webtransport_echo_server driven by
+# an aioquic client (pip install aioquic). Needs CWIST_WEBTRANSPORT=server and
+# runs on the stock lsquic backend (main's pin).
+webtransport_echo_server: $(LIB_NAME) tests/webtransport_echo_server.c
+	$(CC) $(CFLAGS) -o $@ tests/webtransport_echo_server.c $(LIB_NAME) $(LIBS)
+
+PYTHON ?= python3
+webtransport-e2e: webtransport_echo_server
+ifeq ($(CWIST_HAVE_LSQUIC_WT),1)
+	@echo "webtransport-e2e: skipped: lib/lsquic has lsquic_wt.h, whose session API negotiates newer WebTransport drafts than aioquic's draft-02"
+else
+	$(PYTHON) scripts/ci/webtransport_e2e.py ./webtransport_echo_server \
+		example/othello-web/server.crt example/othello-web/server.key
+endif
 
 
 # ---------------------------------------------------------------------------

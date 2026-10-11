@@ -7,6 +7,25 @@ CWIST는 HTTP/3 서버 위에서 WebTransport를 제공합니다. WebTransport�
 > 사용합니다. ECN 수신 메타데이터는 선택 사항이므로, BSD 소켓 확장이 없어도 WebTransport 빌드나
 > 리스너 시작이 막히지 않습니다.
 
+## 빌드
+
+`CWIST_WEBTRANSPORT`에는 역할을 쉼표로 구분해 지정합니다: `server`, `client,server`, `none`.
+`make CWIST_WEBTRANSPORT=server`는 서버만 빌드하며 main의 기본값입니다. 클라이언트는 실험
+기능이라 `client`를 지정했을 때만 빌드됩니다.
+
+서버는 두 종류의 lsquic 모두에서 빌드됩니다:
+
+| `lib/lsquic`의 lsquic | 세션 | 상대가 연 bidi 스트림 | 상대가 연 uni 스트림 | 서버가 여는 스트림 | 데이터그램 |
+| --- | --- | --- | --- | --- | --- |
+| 일반 lsquic (main의 pin) | 지원 | 지원 | lsquic이 버림 | 미지원: `cwist_webtransport_open_*_stream()`이 -1 반환 | 지원 |
+| `lsquic_wt.h` 포함 (LSQUIC PR #629) | 지원 | 지원 | 지원 | 지원 | 지원 |
+
+일반 lsquic은 draft-02 SETTINGS를 광고하며, 서버는 수락한 세션에
+`sec-webtransport-http3-draft: draft02`로 응답합니다. 이 백엔드에서
+`cwist_webtransport_close_session()`은 CLOSE_WEBTRANSPORT_SESSION capsule을 쓰고 CONNECT
+스트림을 끝냅니다. `make webtransport-e2e`는 echo 서버를 aioquic 클라이언트로 검증합니다
+(`pip install aioquic` 필요).
+
 ## 1. HTTP/3과 세션 핸들러 설정하기
 
 ```c

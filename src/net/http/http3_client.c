@@ -35,7 +35,7 @@
 #include <openssl/evp.h>
 
 #include <lsquic.h>
-#ifdef CWIST_WEBTRANSPORT
+#ifdef CWIST_WEBTRANSPORT_CLIENT
 #include <lsquic_wt.h>
 #endif
 #include <lsxpack_header.h>
@@ -102,12 +102,12 @@ typedef struct h3c_stream_ctx {
     int headers_done;
     int response_ready;
     int write_done;
-#ifdef CWIST_WEBTRANSPORT
+#ifdef CWIST_WEBTRANSPORT_CLIENT
     int is_webtransport_connect;
 #endif
 } h3c_stream_ctx_t;
 
-#ifdef CWIST_WEBTRANSPORT
+#ifdef CWIST_WEBTRANSPORT_CLIENT
 struct cwist_webtransport_client_session {
     lsquic_wt_session_t *native;
     struct cwist_http3_client *client;
@@ -148,7 +148,7 @@ struct cwist_http3_client {
         size_t len;
         int ready;
     } in_dgram;
-#ifdef CWIST_WEBTRANSPORT
+#ifdef CWIST_WEBTRANSPORT_CLIENT
     cwist_webtransport_client_session *wt_connecting;
 #endif
 };
@@ -350,7 +350,7 @@ static lsquic_stream_ctx_t *h3c_on_new_stream(void *stream_if_ctx, lsquic_stream
     return (lsquic_stream_ctx_t *)st;
 }
 
-#ifdef CWIST_WEBTRANSPORT
+#ifdef CWIST_WEBTRANSPORT_CLIENT
 /**
  * @brief WebTransport callback: session opened after a successful CONNECT.
  * @return The cwist_webtransport_client_session as session context.
@@ -488,7 +488,7 @@ static void h3c_on_read(lsquic_stream_t *stream, lsquic_stream_ctx_t *st_h) {
              * name/value slices were copied out of decode_buf above. */
             h3c_hsi_discard(hset);
             st->headers_done = 1;
-#ifdef CWIST_WEBTRANSPORT
+#ifdef CWIST_WEBTRANSPORT_CLIENT
             if (st->is_webtransport_connect) {
                 cwist_http3_client *client =
                     (cwist_http3_client *)lsquic_conn_get_ctx(lsquic_stream_conn(stream));
@@ -883,7 +883,7 @@ cwist_http3_client *cwist_http3_client_create(void) {
     settings.es_pace_packets = 1;
     settings.es_optimistic_nat = 1;
     settings.es_datagrams = client->datagram_enabled ? 1 : 0;
-#ifdef CWIST_WEBTRANSPORT
+#ifdef CWIST_WEBTRANSPORT_CLIENT
     settings.es_webtransport = 1;
     /* lsquic_engine.c rejects anything above 1: the WebTransport
      * implementation on litespeedtech/lsquic#629 carries one session per
@@ -953,7 +953,7 @@ void cwist_http3_client_destroy(cwist_http3_client *client) {
     free(client->host);
     free(client->out_dgram.data);
     free(client->in_dgram.data);
-#ifdef CWIST_WEBTRANSPORT
+#ifdef CWIST_WEBTRANSPORT_CLIENT
     free(client->wt_connecting);
 #endif
     pthread_mutex_destroy(&client->dgram_mtx);
@@ -1142,7 +1142,7 @@ cwist_error_t cwist_http3_client_request(cwist_http3_client *client, const char 
         }
         st->req_method = method;
         st->req_headers = headers;
-#ifdef CWIST_WEBTRANSPORT
+#ifdef CWIST_WEBTRANSPORT_CLIENT
         for (cwist_http_header_node *header = headers; header; header = header->next) {
             if (header->key && header->value && header->key->data && header->value->data &&
                 strcasecmp(header->key->data, ":protocol") == 0 &&
@@ -1274,7 +1274,7 @@ ssize_t cwist_http3_client_recv_datagram(cwist_http3_client *client, void *buf, 
 /* WebTransport client (LSQUIC proposal API)                          */
 /* ------------------------------------------------------------------ */
 
-#ifdef CWIST_WEBTRANSPORT
+#ifdef CWIST_WEBTRANSPORT_CLIENT
 /**
  * @brief Add one request header. cwist_http_header_add() reports a failed
  *        allocation on the JSON error channel (err_i16 stays 0), so the
@@ -1296,7 +1296,7 @@ cwist_http3_client_webtransport_connect(cwist_http3_client *client, const char *
     err.error.err_i16 = -1;
     if (!client || !path || !out_session) return err;
     *out_session = NULL;
-#ifndef CWIST_WEBTRANSPORT
+#ifndef CWIST_WEBTRANSPORT_CLIENT
     (void)origin;
     return err;
 #else
@@ -1338,7 +1338,7 @@ int cwist_webtransport_client_poll(cwist_http3_client *client, int timeout_ms) {
 }
 
 int cwist_webtransport_client_is_open(const cwist_webtransport_client_session *session) {
-#ifdef CWIST_WEBTRANSPORT
+#ifdef CWIST_WEBTRANSPORT_CLIENT
     return session && session->open && session->native;
 #else
     (void)session;
@@ -1347,7 +1347,7 @@ int cwist_webtransport_client_is_open(const cwist_webtransport_client_session *s
 }
 
 void *cwist_webtransport_client_open_bidi(cwist_webtransport_client_session *session) {
-#ifdef CWIST_WEBTRANSPORT
+#ifdef CWIST_WEBTRANSPORT_CLIENT
     return cwist_webtransport_client_is_open(session) ? lsquic_wt_open_bidi(session->native) : NULL;
 #else
     (void)session;
@@ -1356,7 +1356,7 @@ void *cwist_webtransport_client_open_bidi(cwist_webtransport_client_session *ses
 }
 
 void *cwist_webtransport_client_open_uni(cwist_webtransport_client_session *session) {
-#ifdef CWIST_WEBTRANSPORT
+#ifdef CWIST_WEBTRANSPORT_CLIENT
     return cwist_webtransport_client_is_open(session) ? lsquic_wt_open_uni(session->native) : NULL;
 #else
     (void)session;
@@ -1384,7 +1384,7 @@ int cwist_webtransport_client_stream_close(void *stream) {
 
 ssize_t cwist_webtransport_client_send_datagram(cwist_webtransport_client_session *session,
                                                 const void *data, size_t len) {
-#ifdef CWIST_WEBTRANSPORT
+#ifdef CWIST_WEBTRANSPORT_CLIENT
     return cwist_webtransport_client_is_open(session) && data && len
                ? lsquic_wt_send_datagram(session->native, data, len)
                : -1;
@@ -1398,7 +1398,7 @@ ssize_t cwist_webtransport_client_send_datagram(cwist_webtransport_client_sessio
 
 int cwist_webtransport_client_close(cwist_webtransport_client_session *session, uint64_t code,
                                     const char *reason) {
-#ifdef CWIST_WEBTRANSPORT
+#ifdef CWIST_WEBTRANSPORT_CLIENT
     if (!cwist_webtransport_client_is_open(session)) return -1;
     return lsquic_wt_close(session->native, code, reason, reason ? strlen(reason) : 0);
 #else
