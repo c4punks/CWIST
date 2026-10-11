@@ -852,23 +852,25 @@ cwist_error_t cwist_orm_insert_returning_json(cwist_orm_t *orm, const char *tabl
         return err;
     }
 
-    size_t sql_len = strlen(base) + strlen(qret) + 16;
-    char *sql = (char *)malloc(sql_len);
+    const char *fmt;
+    switch (orm->dialect) {
+        case CWIST_ORM_POSTGRES:
+        case CWIST_ORM_MARIADB: fmt = "%s RETURNING %s;"; break;
+        case CWIST_ORM_MYSQL: fmt = "%s; SELECT LAST_INSERT_ID() AS %s;"; break;
+        case CWIST_ORM_SQLITE:
+        default: fmt = "%s; SELECT last_insert_rowid() AS %s;"; break;
+    }
+    /* Size from the format itself: a fixed +16 truncated the SQLite and
+     * MySQL suffixes, so the INSERT ran but the SELECT never did. */
+    int need = snprintf(NULL, 0, fmt, base, qret);
+    char *sql = need >= 0 ? (char *)malloc((size_t)need + 1) : NULL;
     if (!sql) {
         free(base);
         free(qret);
         err.error.err_i16 = CWIST_ERROR_NOMEM;
         return err;
     }
-    switch (orm->dialect) {
-        case CWIST_ORM_POSTGRES:
-        case CWIST_ORM_MARIADB: snprintf(sql, sql_len, "%s RETURNING %s;", base, qret); break;
-        case CWIST_ORM_MYSQL:
-            snprintf(sql, sql_len, "%s; SELECT LAST_INSERT_ID() AS %s;", base, qret);
-            break;
-        case CWIST_ORM_SQLITE:
-        default: snprintf(sql, sql_len, "%s; SELECT last_insert_rowid() AS %s;", base, qret); break;
-    }
+    snprintf(sql, (size_t)need + 1, fmt, base, qret);
     free(base);
     free(qret);
 

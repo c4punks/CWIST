@@ -135,8 +135,18 @@ static int socket_query_callback(void *data, int argc, char **argv,
             char *endptr = NULL;
             errno = 0;
             long long ll = strtoll(argv[i], &endptr, 10);
+            char canon[32];
             if (endptr && *endptr == '\0' && errno == 0) {
-                cJSON_AddNumberToObject(row, azColName[i], (double)ll);
+                /* Emit the digits as raw JSON: cJSON prints numbers with 15
+                 * significant digits, which corrupted integers from ~1e15 up.
+                 * Only canonical integer text becomes a number; "007" or
+                 * " 12" is text that merely parses as one and stays a string. */
+                snprintf(canon, sizeof(canon), "%lld", ll);
+                if (strcmp(canon, argv[i]) == 0) {
+                    cJSON_AddRawToObject(row, azColName[i], argv[i]);
+                } else {
+                    cJSON_AddStringToObject(row, azColName[i], argv[i]);
+                }
             } else {
                 double d = strtod(argv[i], &endptr);
                 if (endptr && *endptr == '\0' && errno == 0) {
