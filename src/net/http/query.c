@@ -69,6 +69,7 @@ cwist_query_map *cwist_query_map_create_in_arena(void *arena) {
     }
     memset(map->buckets, 0, map->size * sizeof(cwist_query_bucket *));
     map->arena = arena;
+    map->count = 0;
     cwist_generate_hash_seed(map->seed);
     return map;
 }
@@ -102,6 +103,38 @@ void cwist_query_map_clear(cwist_query_map *map) {
         }
         map->buckets[i] = NULL;
     }
+    map->count = 0;
+}
+
+/**
+ * @brief Double the bucket array once the load factor passes 3/4.
+ *
+ * The map used to keep its initial 16 buckets forever, so a request with
+ * hundreds of parameters walked chains of dozens of nodes on every lookup.
+ * Nodes are relinked, not copied; on allocation failure the map keeps its
+ * current size and stays correct, only slower.
+ */
+static void query_map_grow(cwist_query_map *map) {
+    if (map->size && map->count + 1 <= map->size - map->size / 4) return;
+    size_t new_size = map->size ? map->size * 2 : CWIST_QUERY_MAP_DEFAULT_SIZE;
+    if (new_size <= map->size || new_size > SIZE_MAX / sizeof(cwist_query_bucket *)) return;
+    cwist_query_bucket **buckets =
+        (cwist_query_bucket **)query_alloc(map->arena, new_size * sizeof(cwist_query_bucket *));
+    if (!buckets) return;
+    memset(buckets, 0, new_size * sizeof(cwist_query_bucket *));
+    for (size_t i = 0; i < map->size; i++) {
+        cwist_query_bucket *curr = map->buckets[i];
+        while (curr) {
+            cwist_query_bucket *next = curr->next;
+            size_t index = siphash24(curr->key, strlen(curr->key), map->seed) % new_size;
+            curr->next = buckets[index];
+            buckets[index] = curr;
+            curr = next;
+        }
+    }
+    query_release(map->arena, map->buckets);
+    map->buckets = buckets;
+    map->size = new_size;
 }
 
 /**
@@ -112,6 +145,10 @@ void cwist_query_map_clear(cwist_query_map *map) {
  */
 void cwist_query_map_set(cwist_query_map *map, const char *key, const char *value) {
     if (!map || !key || !value) return;
+    if (!map->size) {
+        query_map_grow(map);
+        if (!map->size) return;
+    }
 
     uint64_t hash = siphash24(key, strlen(key), map->seed);
     size_t index = hash % map->size;
@@ -130,6 +167,10 @@ void cwist_query_map_set(cwist_query_map *map, const char *key, const char *valu
     }
 
     // Insert new
+    if (map->count + 1 > map->size - map->size / 4) {
+        query_map_grow(map);
+        index = hash % map->size;
+    }
     cwist_query_bucket *node = (cwist_query_bucket *)query_alloc(map->arena, sizeof(cwist_query_bucket));
     if (!node) return;
     node->key = query_strdup(map->arena, key);
@@ -143,6 +184,7 @@ void cwist_query_map_set(cwist_query_map *map, const char *key, const char *valu
     }
     node->next = map->buckets[index];
     map->buckets[index] = node;
+    map->count++;
 }
 
 /**
@@ -152,7 +194,7 @@ void cwist_query_map_set(cwist_query_map *map, const char *key, const char *valu
  * @return Stored value, or NULL when the key is absent.
  */
 const char *cwist_query_map_get(cwist_query_map *map, const char *key) {
-    if (!map || !key) return NULL;
+    if (!map || !key || !map->size) return NULL;
 
     uint64_t hash = siphash24(key, strlen(key), map->seed);
     size_t index = hash % map->size;
@@ -176,7 +218,7 @@ const char *cwist_query_map_get(cwist_query_map *map, const char *key) {
  *        (Nothing is freed.)
  */
 void cwist_query_map_delete(cwist_query_map *map, const char *key) {
-    if (!map || !key) return;
+    if (!map || !key || !map->size) return;
     uint64_t hash = siphash24(key, strlen(key), map->seed);
     size_t index = hash % map->size;
 
@@ -192,6 +234,7 @@ void cwist_query_map_delete(cwist_query_map *map, const char *key) {
             query_release(map->arena, curr->key);
             query_release(map->arena, curr->value);
             query_release(map->arena, curr);
+            map->count--;
             return;
         }
         prev = curr;

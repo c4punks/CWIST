@@ -241,6 +241,65 @@ static void test_query_params_through_request_parser(void) {
     cwist_http_request_destroy(req);
 }
 
+/* The map used to keep 16 buckets forever; it now doubles past a 3/4 load
+ * factor, on the heap and in an arena alike, and keeps count exact. */
+static size_t longest_chain(const cwist_query_map *m) {
+    size_t worst = 0;
+    for (size_t i = 0; i < m->size; i++) {
+        size_t n = 0;
+        for (cwist_query_bucket *b = m->buckets[i]; b; b = b->next) n++;
+        if (n > worst) worst = n;
+    }
+    return worst;
+}
+
+static void exercise_growth(cwist_query_map *m) {
+    char k[16];
+    for (int i = 0; i < 1000; i++) {
+        snprintf(k, sizeof(k), "g%d", i);
+        cwist_query_map_set(m, k, k);
+    }
+    assert(m->count == 1000);
+    assert(m->size >= 1024 && m->count <= m->size - m->size / 4);
+    assert(longest_chain(m) < 16); /* 1000 keys in 16 buckets averaged 62 */
+    cwist_query_map_set(m, "g7", "updated"); /* update: count unchanged */
+    assert(m->count == 1000);
+    for (int i = 0; i < 1000; i++) {
+        snprintf(k, sizeof(k), "g%d", i);
+        assert(cwist_query_map_get(m, k));
+    }
+    for (int i = 0; i < 1000; i += 2) {
+        snprintf(k, sizeof(k), "g%d", i);
+        cwist_query_map_delete(m, k);
+    }
+    assert(m->count == 500);
+    cwist_query_map_clear(m);
+    assert(m->count == 0);
+}
+
+static void test_query_map_growth(void) {
+    cwist_query_map *m = cwist_query_map_create();
+    assert(m->size == 16 && m->count == 0);
+    exercise_growth(m);
+    cwist_query_map_destroy(m);
+
+    cwist_arena_t *arena = cwist_arena_create(0);
+    m = cwist_query_map_create_in_arena(arena);
+    exercise_growth(m); /* grown bucket arrays fall back to the heap */
+    cwist_query_map_destroy(m);
+    cwist_arena_destroy(arena);
+
+    /* A zeroed map (size 0) must not divide by zero; set grows it. */
+    cwist_query_map z;
+    memset(&z, 0, sizeof(z));
+    assert(cwist_query_map_get(&z, "a") == NULL);
+    cwist_query_map_delete(&z, "a");
+    cwist_query_map_set(&z, "a", "1");
+    assert(z.size > 0 && z.count == 1 && strcmp(cwist_query_map_get(&z, "a"), "1") == 0);
+    cwist_query_map_clear(&z);
+    cwist_free(z.buckets);
+}
+
 /* --- css composer -------------------------------------------------------- */
 
 static void expect_rgb(cwist_color_rgb c, int r, int g, int b) {
@@ -329,6 +388,7 @@ int main(void) {
     test_query_map_heap_and_arena();
     test_query_map_arena_large_query();
     test_query_params_through_request_parser();
+    test_query_map_growth();
     test_css_colors();
     test_css_generators();
     test_alloc_helpers();

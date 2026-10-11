@@ -17,9 +17,10 @@ typedef struct cwist_query_bucket {
 
 typedef struct cwist_query_map {
     cwist_query_bucket **buckets;
-    size_t size;
+    size_t size; /**< Bucket count; doubles when count exceeds 3/4 of it. */
     uint8_t seed[16];
     void *arena;
+    size_t count; /**< Number of entries. */
 } cwist_query_map;
 
 /** @name Lifecycle */

@@ -1,62 +1,14 @@
 /** @file query.h
- * @brief query.h interface.
+ * @brief Compatibility header: forwards to <cwist/net/http/query.h>.
+ *
+ * This used to be a second copy of the query map definitions. It shared the
+ * __CWIST_QUERY_H__ include guard with the real header but had fallen behind
+ * (no arena field), so whichever header a translation unit included first
+ * decided the layout of cwist_query_map. It now includes the real header.
  */
-#ifndef __CWIST_QUERY_H__
-#define __CWIST_QUERY_H__
+#ifndef CWIST_QUERY_COMPAT_H
+#define CWIST_QUERY_COMPAT_H
 
-#include <stdint.h>
-#include <stddef.h>
-
-typedef struct cwist_query_bucket {
-    char *key;
-    char *value;
-    struct cwist_query_bucket *next;
-} cwist_query_bucket;
-
-typedef struct cwist_query_map {
-    cwist_query_bucket **buckets;
-    size_t size;
-    uint8_t seed[16];
-} cwist_query_map;
-
-/** @name Lifecycle */
-/** @{ */
-
-/**
- * @brief Create a new query map.
- */
-cwist_query_map *cwist_query_map_create(void);
-
-/**
- * @brief Destroy a query map.
- */
-void cwist_query_map_destroy(cwist_query_map *map);
-
-/** @} */
-
-/** @name Parsing */
-/** @{ */
-
-/**
- * @brief Parse raw query string (e.g., "a=1&b=2") into map.
- */
-void cwist_query_map_parse(cwist_query_map *map, const char *raw_query);
-
-/** @} */
-
-/** @name Access */
-/** @{ */
-
-/**
- * @brief Get a value by key.
- */
-const char *cwist_query_map_get(cwist_query_map *map, const char *key);
-
-/**
- * @brief Set a key-value pair.
- */
-void cwist_query_map_set(cwist_query_map *map, const char *key, const char *value);
-
-/** @} */
+#include <cwist/net/http/query.h>
 
 #endif
