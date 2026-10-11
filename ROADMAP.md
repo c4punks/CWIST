@@ -559,7 +559,7 @@ feature. The public API is unchanged from v3.9.
 
 | Goal | Status | Notes |
 |------|--------|-------|
-| HTTPS C100k gate (`.github/workflows/c100k.yml`) | ✅ Done | `scripts/ci/c100k_https.sh` + `tests/c100k_https_client.c`: 100,000 concurrent TLS connections on one `cwist_app_listen()` server (4 workers), all held open through an idle hold, then 2 keep-alive rounds of one request per connection. Runs in C1M, classic and full-GC mode. Local (12 cores): 100k/100k established and answered in every mode, ramp ~18.5 s, ~3.4 KB server RSS per open connection (`docs/performance/https-c100k.md`) |
+| HTTPS C100k gate (`.github/workflows/c100k.yml`) | ✅ Done | `scripts/ci/c100k_https.sh` + `tests/c100k_https_client.c`: 100,000 concurrent TLS connections on one `cwist_app_listen()` server (4 workers), all held open through an idle hold, then 2 keep-alive rounds of one request per connection. Runs in C1M, classic and full-GC mode. Local (12 cores) and CI (4 cores): 100k/100k established and answered in every mode, ramp ~19.5 s / ~34 s, ~13.2 KB server memory per open connection, of which ~4 KB is the idle 16 KiB read buffer (`docs/performance/https-c100k.md`) |
 | Unit tests for every feature | Planned | Inventory public headers against `TEST_TARGETS`, then add a test for each feature without one |
 
 ---

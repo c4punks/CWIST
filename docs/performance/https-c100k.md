@@ -46,16 +46,36 @@ With only two addresses and the ports nearly used up, the ramp took 55 s
 instead of 18.5 s. As the free ports run out, `connect()` takes longer to
 find one. The slowdown came from the client side, not from the server.
 
-## Results (local, 12 cores, 2026-10-11, dev)
+## Results (2026-10-11, dev)
 
-| Mode | Established | Dropped | Round 1 | Round 2 | Ramp | RSS / open conn |
-|------|-------------|---------|---------|---------|------|-----------------|
-| C1M (default) | 100000 | 0 | 100000 ok, 73.7k rps | 100000 ok, 123.3k rps | 18.6 s | 3390 B |
-| Classic (`CWIST_C1M_MODE=0`) | 100000 | 0 | 100000 ok, 62.1k rps | 100000 ok, 125.7k rps | 18.8 s | 3430 B |
-| Full GC (`CWIST_TEST_FULL_GC=1`) | 100000 | 0 | 100000 ok, 74.7k rps | 100000 ok, 130.0k rps | 18.5 s | 3403 B |
+| Mode | Machine | Established | Dropped | Round 1 | Round 2 | Ramp | Memory / open conn |
+|------|---------|-------------|---------|---------|---------|------|--------------------|
+| C1M (default) | local, 12 cores | 100000 | 0 | 100000 ok, 71.1k rps | 100000 ok, 110.2k rps | 19.4 s | 13189 B |
+| Classic (`CWIST_C1M_MODE=0`) | local, 12 cores | 100000 | 0 | 100000 ok, 74.9k rps | 100000 ok, 113.0k rps | 19.3 s | 13218 B |
+| Full GC (`CWIST_TEST_FULL_GC=1`) | local, 12 cores | 100000 | 0 | 100000 ok, 60.9k rps | 100000 ok, 107.4k rps | 19.7 s | 13208 B |
+| C1M / classic / full GC | GitHub runner, 4 cores | 100000 | 0 | 100000 ok, ~33k rps | 100000 ok, ~52-56k rps | ~33.8 s | ~13.2 KB |
 
-Total server RSS was 26 MB idle and 357 MB with 100k connections open,
-across the master and 4 workers.
+Total server memory is 32 MB idle and about 1.3 GB with 100k connections
+open, across the master and 3 forked workers. With `CWIST_WORKERS=4` the
+master serves connections too.
+
+### Where the 13.2 KB goes
+
+- About 4 KB is the connection's 16 KiB `read_buf`. It is allocated when
+  the connection is wrapped and kept while the connection is idle or
+  parked. Measured by shrinking it to 4 KiB: memory per connection fell from
+  13.4 KB to 9.3 KB at 30k connections. A buffer released on park and
+  reallocated on resume would remove most of this cost for idle
+  connections. Not done yet.
+- The other ~9 KB is the TLS session state (BoringSSL `SSL` object) plus
+  the conn, park entry and allocator overhead. It has not been broken down
+  further.
+
+An earlier local run reported ~3.4 KB per connection. That run was wrong. A
+server left over from a previous run was still listening on the same port
+with `SO_REUSEPORT`, so it received part of the connections. The script now
+fails at start if the port already answers. It also counts swapped-out pages
+together with RSS.
 
 ## Running it
 

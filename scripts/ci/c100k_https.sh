@@ -14,7 +14,7 @@
 #
 # PASS requires every connection established, none dropped, every request
 # answered with 200 "ok", the ramp finished within C100K_RAMP_MAX_S, and the
-# server's total RSS with all connections open at most
+# server's total memory (RSS + swap) with all connections open at most
 # C100K_RSS_PER_CONN_MAX_BYTES per connection.
 #
 # The client spreads connections over C100K_HOSTS (default 127.0.0.1-4): each
@@ -61,6 +61,13 @@ if [ $(((port_hi - port_lo + 1) * nhosts)) -lt "$CONNS" ]; then
     exit 2
 fi
 
+# A leftover server on the same port (SO_REUSEPORT) would silently take a
+# share of the connections and make the RSS figures look smaller than they are.
+if (exec 3<>"/dev/tcp/127.0.0.1/$PORT") 2>/dev/null; then
+    echo "c100k: port $PORT already in use; stop the other server first" >&2
+    exit 2
+fi
+
 WORK="$(mktemp -d)"
 openssl req -x509 -newkey ec -pkeyopt ec_paramgen_curve:P-256 -nodes -days 1 \
     -subj /CN=localhost -keyout "$WORK/key.pem" -out "$WORK/cert.pem" >/dev/null 2>&1 \
@@ -88,10 +95,13 @@ done
 curl -sk -o /dev/null -m 2 "$URL" || { echo "c100k: server did not come up" >&2; cat c100k_server.log >&2; exit 2; }
 
 pids() { echo "$MASTER"; pgrep -P "$MASTER"; }
+# Resident plus swapped-out pages: under host memory pressure idle anonymous
+# pages can move to swap, and RSS alone then under-reports the per-connection
+# cost.
 total_rss() {
     local t=0 p r
     for p in $(pids); do
-        r=$(awk '/^VmRSS:/{print $2}' "/proc/$p/status" 2>/dev/null)
+        r=$(awk '/^(VmRSS|VmSwap):/{s += $2} END{print s + 0}' "/proc/$p/status" 2>/dev/null)
         t=$((t + ${r:-0}))
     done
     echo "$t"
