@@ -5,9 +5,12 @@
  * Serves GET / ("ok") and GET /big (64 KiB) over TLS with the regular
  * cwist_app_listen() path, so the gate measures the resident memory a real
  * deployment pays: worker processes, the HTTPS pool, park set and reactors.
+ * Also the server of scripts/ci/c100k_https.sh. CWIST_TEST_FULL_GC=1 turns on
+ * full GC (cwist_full_gc), the mode fly.board runs in.
  * Not a unit test (it runs until SIGTERM), so it is not in TEST_TARGETS.
  */
 #include <cwist/sys/app/app.h>
+#include <cwist/core/mem/gc.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -29,6 +32,8 @@ int main(int argc, char **argv) {
     const char *cert = argc > 2 ? argv[2] : "example/othello-web/server.crt";
     const char *key = argc > 3 ? argv[3] : "example/othello-web/server.key";
     memset(g_big, 'x', sizeof(g_big));
+    const char *full_gc = getenv("CWIST_TEST_FULL_GC");
+    if (full_gc && strcmp(full_gc, "1") == 0) cwist_full_gc(true);
     cwist_app *app = cwist_app_create();
     if (!app) return 1;
     cwist_error_t err = cwist_app_use_https(app, cert, key);

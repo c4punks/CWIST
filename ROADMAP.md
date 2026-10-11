@@ -551,6 +551,17 @@ production. The public API is unchanged from v3.9.
 | RSS gate (`.github/workflows/rss-gate.yml`) | ✅ Done | `scripts/ci/rss_gate.sh`: an HTTPS server on `cwist_app_listen()` with 4 workers must keep every idle process under 32 MiB and grow at most max(8 MiB, 10%) over a second identical load round. Fails on the v3.9 static queue (112 MiB idle process), passes on v3.9.1 (14.5 MiB) |
 | Cppcheck CI (`.github/workflows/cppcheck.yml`) | ✅ Done | `scripts/ci/cppcheck.sh`: warning/performance/portability checks over `src/`, any finding fails. Starting from zero meant fixing 6: three ORM entry points that dereferenced a NULL out-pointer before checking it, a NULL `state` dereference in `mux_chain_next()`, an implementation-defined signed shift in protobuf ZigZag encoding, and a printf format mismatch |
 
+
+## CWIST v3.9.2 Roadmap
+
+v3.9.2 is a test release: an HTTPS C100k gate, then unit tests for every
+feature. The public API is unchanged from v3.9.
+
+| Goal | Status | Notes |
+|------|--------|-------|
+| HTTPS C100k gate (`.github/workflows/c100k.yml`) | ✅ Done | `scripts/ci/c100k_https.sh` + `tests/c100k_https_client.c`: 100,000 concurrent TLS connections on one `cwist_app_listen()` server (4 workers), all held open through an idle hold, then 2 keep-alive rounds of one request per connection. Runs in C1M, classic and full-GC mode. Local (12 cores): 100k/100k established and answered in every mode, ramp ~18.5 s, ~3.4 KB server RSS per open connection (`docs/performance/https-c100k.md`) |
+| Unit tests for every feature | Planned | Inventory public headers against `TEST_TARGETS`, then add a test for each feature without one |
+
 ---
 
 ## CWIST v4.0 Readiness

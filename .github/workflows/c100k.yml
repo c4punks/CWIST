@@ -1,0 +1,72 @@
+name: "HTTPS C100k"
+
+# HTTPS C100k gate (scripts/ci/c100k_https.sh): 100,000 concurrent TLS
+# connections on one cwist_app_listen() server with 4 prefork workers. Every
+# connection must be established and held open, survive an idle hold in the
+# park set, and get a 200 on each keep-alive request round; server RSS with
+# all connections open is capped per connection. Runs in the default C1M
+# mode, classic mode, and under full GC. Limits are documented in the script.
+
+on:
+  push:
+    branches: [main, master, dev]
+  pull_request:
+    branches: [main, master, dev]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  c100k:
+    name: HTTPS C100k (${{ matrix.mode }})
+    if: github.event_name != 'push' || !contains(github.event.head_commit.message, '[skip ci]')
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - mode: c1m
+            c1m: "1"
+            full_gc: "0"
+          - mode: classic
+            c1m: "0"
+            full_gc: "0"
+          - mode: full-gc
+            c1m: "1"
+            full_gc: "1"
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      with:
+        submodules: recursive
+
+    - name: Install build dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y cmake libcurl4-openssl-dev libnghttp2-dev libbrotli-dev libzstd-dev libssl-dev
+
+    - name: Build library, gate server and load client
+      run: make -j$(nproc) rss_gate_server c100k_https_client
+
+    - name: Kernel limits for 100k loopback connections
+      run: |
+        sudo sysctl -w net.ipv4.ip_local_port_range="10000 65000"
+        sudo sysctl -w net.core.somaxconn=65535
+        sudo sysctl -w net.ipv4.tcp_max_syn_backlog=65535
+        sudo sysctl -w fs.nr_open=1048576
+
+    - name: Run C100k gate
+      env:
+        CWIST_C1M_MODE: ${{ matrix.c1m }}
+        CWIST_TEST_FULL_GC: ${{ matrix.full_gc }}
+      run: |
+        # The runner's hard RLIMIT_NOFILE is too low for 100k connections;
+        # raise it for this shell so the script and its children inherit it.
+        sudo prlimit --pid $$ --nofile=1048576:1048576
+        ./scripts/ci/c100k_https.sh
+
+    - name: Server log
+      if: always()
+      run: cat c100k_server.log 2>/dev/null || true

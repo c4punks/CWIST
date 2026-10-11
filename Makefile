@@ -1034,6 +1034,11 @@ tsan-test: $(TSAN_TEST_TARGETS)
 rss_gate_server: $(LIB_NAME) tests/rss_gate_server.c
 	$(CC) $(CFLAGS) -o $@ tests/rss_gate_server.c $(LIB_NAME) $(LIBS)
 
+# HTTPS C100k load client for scripts/ci/c100k_https.sh (needs a running
+# server; not a test). Plain OpenSSL + epoll, no libcwist.
+c100k_https_client: tests/c100k_https_client.c
+	$(CC) -O2 -Wall -Wextra -std=gnu17 -o $@ tests/c100k_https_client.c -lssl -lcrypto -lpthread
+
 src/sys/app/app.o: src/sys/app/worker_affinity.h
 
 test_worker_affinity: tests/test_worker_affinity.c src/sys/app/worker_affinity.h
