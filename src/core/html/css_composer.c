@@ -75,12 +75,20 @@ static float hue2rgb(float p, float q, float t) {
  */
 cwist_color_rgb cwist_color_hsl_to_rgb(cwist_color_hsl hsl) {
     cwist_color_rgb rgb = {0, 0, 0};
-    float h = hsl.h / 360.0f;
+    /* Wrap the hue into [0, 360): hue2rgb() only folds one turn. */
+    float h = fmodf(hsl.h, 360.0f) / 360.0f;
+    if (h < 0.0f) h += 1.0f;
     float s = hsl.s;
     float l = hsl.l;
 
+    /* Clamp first: converting a float outside 0..255 to unsigned char is
+     * undefined. Gray is rounded like the chromatic channels below. */
+    if (s < 0.0f) s = 0.0f;
+    if (s > 1.0f) s = 1.0f;
+    if (l < 0.0f) l = 0.0f;
+    if (l > 1.0f) l = 1.0f;
     if (s == 0.0f) {
-        rgb.r = rgb.g = rgb.b = (unsigned char)(l * 255.0f);
+        rgb.r = rgb.g = rgb.b = (unsigned char)roundf(l * 255.0f);
     } else {
         float q = l < 0.5f ? l * (1.0f + s) : l + s - l * s;
         float p = 2.0f * l - q;

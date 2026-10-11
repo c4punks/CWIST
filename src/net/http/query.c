@@ -21,18 +21,30 @@
  * @param str Source string; NULL yields NULL.
  * @return Newly allocated copy owned by the arena or heap, or NULL on failure.
  */
+/* Arena maps carve from the request arena, which is a fixed 8 KiB
+ * generation: a query of a few KiB used to exhaust it, and every later
+ * key/value was dropped silently. Allocations now fall back to the heap,
+ * and every release path frees whatever the arena does not own. */
+static void *query_alloc(void *arena, size_t size) {
+    if (arena) {
+        void *p = cwist_arena_alloc((cwist_arena_t *)arena, size);
+        if (p) return p;
+    }
+    return cwist_alloc(size);
+}
+
+static void query_release(void *arena, void *ptr) {
+    if (!ptr) return;
+    if (arena && cwist_arena_owns((cwist_arena_t *)arena, ptr)) return;
+    cwist_free(ptr);
+}
+
 static char *query_strdup(void *arena, const char *str) {
     if (!str) return NULL;
     size_t len = strlen(str);
-    if (arena) {
-        char *copy = (char *)cwist_arena_alloc((cwist_arena_t *)arena, len + 1);
-        if (copy) {
-            memcpy(copy, str, len + 1);
-        }
-        return copy;
-    } else {
-        return cwist_strdup(str);
-    }
+    char *copy = (char *)query_alloc(arena, len + 1);
+    if (copy) memcpy(copy, str, len + 1);
+    return copy;
 }
 
 /**
@@ -47,30 +59,15 @@ cwist_query_map *cwist_query_map_create(void) {
  * @brief Allocate a query map within a memory arena to avoid GC/heap allocations.
  */
 cwist_query_map *cwist_query_map_create_in_arena(void *arena) {
-    cwist_query_map *map;
-    if (arena) {
-        map = (cwist_query_map *)cwist_arena_alloc((cwist_arena_t *)arena, sizeof(cwist_query_map));
-    } else {
-        map = (cwist_query_map *)cwist_alloc(sizeof(cwist_query_map));
-    }
+    cwist_query_map *map = (cwist_query_map *)query_alloc(arena, sizeof(cwist_query_map));
     if (!map) return NULL;
-
     map->size = CWIST_QUERY_MAP_DEFAULT_SIZE;
-    if (arena) {
-        map->buckets = (cwist_query_bucket **)cwist_arena_alloc(
-            (cwist_arena_t *)arena, map->size * sizeof(cwist_query_bucket *));
-    } else {
-        map->buckets =
-            (cwist_query_bucket **)cwist_alloc_array(map->size, sizeof(cwist_query_bucket *));
-    }
+    map->buckets = (cwist_query_bucket **)query_alloc(arena, map->size * sizeof(cwist_query_bucket *));
     if (!map->buckets) {
-        if (!arena) {
-            cwist_free(map);
-        }
+        query_release(arena, map);
         return NULL;
     }
     memset(map->buckets, 0, map->size * sizeof(cwist_query_bucket *));
-
     map->arena = arena;
     cwist_generate_hash_seed(map->seed);
     return map;
@@ -82,12 +79,10 @@ cwist_query_map *cwist_query_map_create_in_arena(void *arena) {
  */
 void cwist_query_map_destroy(cwist_query_map *map) {
     if (!map) return;
-    if (map->arena) {
-        return;
-    }
+    void *arena = map->arena;
     cwist_query_map_clear(map);
-    cwist_free(map->buckets);
-    cwist_free(map);
+    query_release(arena, map->buckets);
+    query_release(arena, map);
 }
 
 /**
@@ -96,17 +91,13 @@ void cwist_query_map_destroy(cwist_query_map *map) {
  */
 void cwist_query_map_clear(cwist_query_map *map) {
     if (!map) return;
-    if (map->arena) {
-        memset(map->buckets, 0, map->size * sizeof(cwist_query_bucket *));
-        return;
-    }
     for (size_t i = 0; i < map->size; i++) {
         cwist_query_bucket *curr = map->buckets[i];
         while (curr) {
             cwist_query_bucket *next = curr->next;
-            cwist_free(curr->key);
-            cwist_free(curr->value);
-            cwist_free(curr);
+            query_release(map->arena, curr->key);
+            query_release(map->arena, curr->value);
+            query_release(map->arena, curr);
             curr = next;
         }
         map->buckets[i] = NULL;
@@ -128,27 +119,28 @@ void cwist_query_map_set(cwist_query_map *map, const char *key, const char *valu
     cwist_query_bucket *curr = map->buckets[index];
     while (curr) {
         if (strcmp(curr->key, key) == 0) {
-            // Update existing
-            if (!map->arena) {
-                cwist_free(curr->value);
-            }
-            curr->value = query_strdup(map->arena, value);
+            // Update existing; keep the old value if the copy fails
+            char *copy = query_strdup(map->arena, value);
+            if (!copy) return;
+            query_release(map->arena, curr->value);
+            curr->value = copy;
             return;
         }
         curr = curr->next;
     }
 
     // Insert new
-    cwist_query_bucket *node;
-    if (map->arena) {
-        node = (cwist_query_bucket *)cwist_arena_alloc((cwist_arena_t *)map->arena,
-                                                       sizeof(cwist_query_bucket));
-    } else {
-        node = (cwist_query_bucket *)cwist_alloc(sizeof(cwist_query_bucket));
-    }
+    cwist_query_bucket *node = (cwist_query_bucket *)query_alloc(map->arena, sizeof(cwist_query_bucket));
     if (!node) return;
     node->key = query_strdup(map->arena, key);
     node->value = query_strdup(map->arena, value);
+    if (!node->key || !node->value) {
+        /* A NULL key in a bucket would crash the next strcmp(). */
+        query_release(map->arena, node->key);
+        query_release(map->arena, node->value);
+        query_release(map->arena, node);
+        return;
+    }
     node->next = map->buckets[index];
     map->buckets[index] = node;
 }
@@ -185,28 +177,6 @@ const char *cwist_query_map_get(cwist_query_map *map, const char *key) {
  */
 void cwist_query_map_delete(cwist_query_map *map, const char *key) {
     if (!map || !key) return;
-    if (map->arena) {
-        /* In an arena-managed map, deletion is handled as a no-op or lazy nullification to prevent
-         * manual frees. */
-        uint64_t hash = siphash24(key, strlen(key), map->seed);
-        size_t index = hash % map->size;
-        cwist_query_bucket *curr = map->buckets[index];
-        cwist_query_bucket *prev = NULL;
-        while (curr) {
-            if (strcmp(curr->key, key) == 0) {
-                if (prev) {
-                    prev->next = curr->next;
-                } else {
-                    map->buckets[index] = curr->next;
-                }
-                return;
-            }
-            prev = curr;
-            curr = curr->next;
-        }
-        return;
-    }
-
     uint64_t hash = siphash24(key, strlen(key), map->seed);
     size_t index = hash % map->size;
 
@@ -219,9 +189,9 @@ void cwist_query_map_delete(cwist_query_map *map, const char *key) {
             } else {
                 map->buckets[index] = curr->next;
             }
-            cwist_free(curr->key);
-            cwist_free(curr->value);
-            cwist_free(curr);
+            query_release(map->arena, curr->key);
+            query_release(map->arena, curr->value);
+            query_release(map->arena, curr);
             return;
         }
         prev = curr;
@@ -257,12 +227,7 @@ static char *url_decode(void *arena, const char *src) {
     if (!src) return NULL;
 
     size_t len = strlen(src);
-    char *out;
-    if (arena) {
-        out = (char *)cwist_arena_alloc((cwist_arena_t *)arena, len + 1);
-    } else {
-        out = (char *)cwist_alloc(len + 1);
-    }
+    char *out = (char *)query_alloc(arena, len + 1);
     if (!out) return NULL;
 
     size_t j = 0;
@@ -315,14 +280,10 @@ void cwist_query_map_parse(cwist_query_map *map, const char *raw_query) {
             cwist_query_map_set(map, key_dec, value_dec ? value_dec : "");
         }
 
-        if (!map->arena) {
-            cwist_free(key_dec);
-            cwist_free(value_dec);
-        }
+        query_release(map->arena, key_dec);
+        query_release(map->arena, value_dec);
         token = strtok_r(NULL, "&", &save_ptr);
     }
 
-    if (!map->arena) {
-        cwist_free(buffer);
-    }
+    query_release(map->arena, buffer);
 }

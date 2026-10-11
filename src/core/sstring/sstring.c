@@ -4,6 +4,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <stdint.h>
+#include <stdbool.h>
 #include <ctype.h>
 
 /**
@@ -463,6 +465,37 @@ cwist_error_t cwist_sstring_change_size(cwist_sstring *str, size_t new_size, boo
 }
 
 /**
+ * @brief Report whether @p p points into @p str's own buffer.
+ *
+ * Assign and append take a plain C string that may alias the destination
+ * (cwist_sstring_append_sstring(s, s), or a pointer into s->data). Growing
+ * the buffer would then free the source before it is copied, and even
+ * without growth strcpy/strcat on overlapping memory is undefined. Callers
+ * work from a private copy when this returns true.
+ */
+static bool sstring_aliases(const cwist_sstring *str, const char *p) {
+    if (!p || !str->data || str->borrows_buffer) return false;
+    uintptr_t lo = (uintptr_t)(str->base ? str->base : str->data);
+    uintptr_t hi = (uintptr_t)str->data + strlen(str->data) + 1;
+    uintptr_t at = (uintptr_t)p;
+    return at >= lo && at < hi;
+}
+
+/** @brief Run @p op on a private copy of @p data (see sstring_aliases()). */
+static cwist_error_t sstring_with_copy(cwist_sstring *str, const char *data,
+                                       cwist_error_t (*op)(cwist_sstring *, const char *)) {
+    char *copy = cwist_strdup(data);
+    if (!copy) {
+        cwist_error_t err = make_error(CWIST_ERR_INT8);
+        err.error.err_i8 = ERR_SSTRING_RESIZE_TOO_LARGE;
+        return err;
+    }
+    cwist_error_t err = op(str, copy);
+    cwist_free(copy);
+    return err;
+}
+
+/**
  * @brief Replace the string contents with a NUL-terminated C string.
  * @param str Target string object.
  * @param data Source string, or NULL to clear the value.
@@ -474,6 +507,7 @@ cwist_error_t cwist_sstring_assign(cwist_sstring *str, const char *data) {
         err.error.err_i8 = ERR_SSTRING_NULL_STRING;
         return err;
     }
+    if (sstring_aliases(str, data)) return sstring_with_copy(str, data, cwist_sstring_assign);
 
     cwist_error_t err = make_error(CWIST_ERR_JSON);
     err.error.err_json = cJSON_CreateObject();
@@ -528,6 +562,7 @@ cwist_error_t cwist_sstring_append(cwist_sstring *str, const char *data) {
         err.error.err_i8 = ERR_SSTRING_NULL_STRING;
         return err;
     }
+    if (sstring_aliases(str, data)) return sstring_with_copy(str, data, cwist_sstring_append);
     if (!data) {
         // Appending nothing is success
         cwist_error_t err = make_error(CWIST_ERR_INT8);
@@ -584,6 +619,7 @@ cwist_error_t cwist_sstring_append_escaped(cwist_sstring *str, const char *data)
         err.error.err_i8 = ERR_SSTRING_NULL_STRING;
         return err;
     }
+    if (sstring_aliases(str, data)) return sstring_with_copy(str, data, cwist_sstring_append_escaped);
     if (!data) {
         // Appending nothing is success
         cwist_error_t err = make_error(CWIST_ERR_INT8);
