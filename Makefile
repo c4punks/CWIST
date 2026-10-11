@@ -1004,6 +1004,7 @@ test: $(TEST_TARGETS)
 # TSan yet. Build and run with SANITIZE=thread. Shrink this list as the
 # open reports are fixed (tracked in issue #351).
 TSAN_EXCLUDE = \
+	stress_test \
 	test_html_response test_http_client test_static_and_range \
 	test_async_defer test_async_after_shutdown test_listen_ex test_listen_signal_restore \
 	test_websocket_async \
@@ -1011,6 +1012,10 @@ TSAN_EXCLUDE = \
 	test_http3 test_webtransport \
 	test_gc_ebr_release test_io_queue_full_gc \
 	test_webrtc
+# - stress_test: cwist_app_listen() forks prefork workers after the master
+#   has started threads; TSan does not support starting threads after a
+#   multi-threaded fork, so the workers die and ab intermittently sees
+#   connection resets (run 38108375276).
 # - test_html_response, test_http_client, test_static_and_range: fork a
 #   server and stop it with SIGTERM; TSan defers async signals until the
 #   blocked accept() returns, so the server is not stopped in time.

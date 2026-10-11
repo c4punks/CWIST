@@ -565,7 +565,10 @@ size_t cwist_gc_scope_pending_count(void) {
  * no longer closes connections other threads are still using. Untrack is a
  * hash delete instead of a walk over every thread's list, and close_fn
  * always runs with no registry lock held, so a close_fn may track or
- * untrack other handles. */
+ * untrack other handles.
+ *
+ * The table, batches and owner tokens use the raw allocator: they are the
+ * GC's own bookkeeping and must never sit on a full-GC pending list. */
 
 /** Per-thread owner token; its address identifies the owning thread. */
 typedef struct cwist_conn_owner {

@@ -861,7 +861,8 @@ cwist_error_t cwist_orm_insert_returning_json(cwist_orm_t *orm, const char *tabl
         default: fmt = "%s; SELECT last_insert_rowid() AS %s;"; break;
     }
     /* Size from the format itself: a fixed +16 truncated the SQLite and
-     * MySQL suffixes, so the INSERT ran but the SELECT never did. */
+     * MySQL suffixes, so the INSERT ran but the SELECT never did. Raw
+     * malloc like every SQL buffer in this file (freed right below). */
     int need = snprintf(NULL, 0, fmt, base, qret);
     char *sql = need >= 0 ? (char *)malloc((size_t)need + 1) : NULL;
     if (!sql) {
