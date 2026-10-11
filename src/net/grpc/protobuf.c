@@ -85,7 +85,7 @@ int cwist_pb_write_varint(cwist_pb_writer *w, uint64_t value) {
  * @return 0 on success, -1 on invalid argument or allocation failure.
  */
 int cwist_pb_write_key(cwist_pb_writer *w, uint32_t field_number, cwist_pb_wire_type_t wire_type) {
-    if (!w || field_number == 0) return -1;
+    if (!w || field_number == 0 || field_number > CWIST_PB_MAX_FIELD_NUMBER) return -1;
     if (wire_type != CWIST_PB_VARINT && wire_type != CWIST_PB_64BIT && wire_type != CWIST_PB_LEN &&
         wire_type != CWIST_PB_32BIT) {
         return -1;
@@ -287,9 +287,11 @@ int cwist_pb_read_field(cwist_pb_reader *r, cwist_pb_field *field) {
 
     uint64_t key = 0;
     if (cwist_pb_read_varint(r, &key) != 0) return -1;
+    /* Check before the cast: a key above the field-number range would
+     * otherwise truncate to a different, valid-looking field number. */
+    if ((key >> 3) == 0 || (key >> 3) > CWIST_PB_MAX_FIELD_NUMBER) return -1;
     field->number = (uint32_t)(key >> 3);
     field->wire_type = (cwist_pb_wire_type_t)(key & 0x07);
-    if (field->number == 0) return -1;
 
     switch (field->wire_type) {
         case CWIST_PB_VARINT:

@@ -21,6 +21,9 @@ typedef enum cwist_pb_wire_type {
     CWIST_PB_32BIT = 5,
 } cwist_pb_wire_type_t;
 
+/** Largest valid protobuf field number (2^29 - 1). */
+#define CWIST_PB_MAX_FIELD_NUMBER 536870911u
+
 typedef struct cwist_pb_writer {
     uint8_t *data;
     size_t len;
