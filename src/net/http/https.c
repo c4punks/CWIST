@@ -596,6 +596,15 @@ static void https_park_teardown(cwist_https_connection *conn) {
 bool cwist_https_park(cwist_https_connection *conn, uint64_t idle_ms, cwist_https_park_class cls) {
     if (!conn || conn->fd < 0 || !conn->pool_handler || !https_park_enabled()) return false;
     if (!atomic_load(&g_cwist_running)) return false;
+    /* An idle connection with nothing buffered does not need its 16 KiB
+     * read buffer while parked; cwist_https_receive_request() allocates a
+     * fresh one when the connection is served again. Measured on the C100k
+     * gate this was ~4 KB of resident memory per idle connection. Done
+     * before the fd is armed below, while no other thread can see conn. */
+    if (conn->read_buf && conn->buf_len == 0) {
+        cwist_free(conn->read_buf);
+        conn->read_buf = NULL;
+    }
     https_parked_t *p = (https_parked_t *)cwist_alloc(sizeof(*p));
     if (!p) return false;
     memset(p, 0, sizeof(*p));
@@ -1754,7 +1763,17 @@ void cwist_https_close_connection(cwist_https_connection *conn) {
  * @return Parsed HTTP request, or NULL on timeout, parse failure, or IO failure.
  */
 cwist_http_request *cwist_https_receive_request(cwist_https_connection *conn) {
-    if (!conn || !conn->ssl || !conn->read_buf) return NULL;
+    if (!conn || !conn->ssl) return NULL;
+    if (!conn->read_buf) {
+        /* Released when the connection was parked (cwist_https_park()). */
+        conn->read_buf = cwist_alloc(CWIST_HTTP_READ_BUFFER_SIZE);
+        if (!conn->read_buf) return NULL;
+        /* Same ownership as at wrap time: the conn's teardown frees it, so
+         * it must not sit on this thread's full-GC sweep list. */
+        if (cwist_full_gc_enabled()) cwist_gc_scope_disown(conn->read_buf);
+        conn->buf_len = 0;
+        conn->read_buf[0] = '\0';
+    }
 
     size_t total_received = conn->buf_len;
     char *header_end = NULL;

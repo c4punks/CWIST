@@ -29,8 +29,9 @@ PASS requires all of the following:
 - No connection dropped.
 - Every request answered in every round.
 - The ramp finishes within 180 s.
-- Server RSS with all connections open stays at or below 16 KiB per
-  connection, measured above the idle baseline.
+- Server memory with all connections open stays at or below 8 KiB per
+  connection, measured above the idle baseline. (The limit was 16 KiB
+  until parked connections released their read buffer; see below.)
 
 Each limit can be overridden with an environment variable. The variables
 are listed in the script header.
@@ -59,17 +60,19 @@ Total server memory is 32 MB idle and about 1.3 GB with 100k connections
 open, across the master and 3 forked workers. With `CWIST_WORKERS=4` the
 master serves connections too.
 
-### Where the 13.2 KB goes
+### Where the memory goes
 
-- About 4 KB is the connection's 16 KiB `read_buf`. It is allocated when
-  the connection is wrapped and kept while the connection is idle or
-  parked. Measured by shrinking it to 4 KiB: memory per connection fell from
-  13.4 KB to 9.3 KB at 30k connections. A buffer released on park and
-  reallocated on resume would remove most of this cost for idle
-  connections. Not done yet.
-- The other ~9 KB is the TLS session state (BoringSSL `SSL` object) plus
-  the conn, park entry and allocator overhead. It has not been broken down
-  further.
+The table above was measured before parked connections released their read
+buffer. Since then, the gate measures ~5.0 KB per open connection locally
+(C1M 4982 B, full GC 5064 B, 2026-10-11). Total server memory with 100k
+connections open dropped from ~1.3 GB to ~0.52 GB.
+
+- Before the change, the connection's 16 KiB `read_buf` stayed allocated
+  while the connection was idle in the park set. `cwist_https_park()` now
+  frees it when nothing is buffered, and `cwist_https_receive_request()`
+  allocates a new one when the connection is served again.
+- The remaining ~5 KB is the TLS session state (BoringSSL `SSL` object)
+  plus the conn, park entry and allocator overhead.
 
 An earlier local run reported ~3.4 KB per connection. That run was wrong. A
 server left over from a previous run was still listening on the same port
