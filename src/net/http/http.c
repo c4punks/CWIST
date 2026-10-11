@@ -2003,6 +2003,7 @@ cwist_http_response *cwist_http_response_create_in_arena(void *arena) {
  */
 void cwist_http_response_destroy(cwist_http_response *res) {
     if (res) {
+        cwist_async_forget_response(res);
         cwist_arena_t *arena = (cwist_arena_t *)res->arena;
         cwist_http_response_release_ptr_body(res);
         cwist_http_response_release_file_stream(res);

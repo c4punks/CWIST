@@ -29,6 +29,8 @@
 #include <stdatomic.h>
 #include <fcntl.h>
 #include <sched.h>
+#include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 #include <sys/socket.h>
 #include <unistd.h>
@@ -91,6 +93,28 @@ static const char *cwist_async_reason(cwist_http_status_t status) {
 
 static __thread bool t_https_deferred = false;
 
+/* The exchange the handler running on this thread deferred, until dispatch
+ * takes it. Only the dispatch thread writes or reads it, so a producer on
+ * another thread cannot change what dispatch decides (#344). */
+static __thread cwist_async *t_pending_async = NULL;
+static __thread const cwist_http_response *t_pending_res = NULL;
+
+static _Atomic bool g_misuse_reported = false;
+
+/* Report an exchange whose public deferred/async fields disagree with what
+ * cwist_async_defer() recorded. Prints once per process; with
+ * CWIST_ASYNC_STRICT=1 it aborts so the misuse leaves a core. */
+static void cwist_async_report_misuse(const char *what) {
+    const char *strict = getenv("CWIST_ASYNC_STRICT");
+    if (!atomic_exchange(&g_misuse_reported, true) || (strict && strict[0] == '1')) {
+        fprintf(stderr,
+                "cwist: async misuse: %s; producers must not write res->deferred or "
+                "res->async (see cwist_async_wait_dispatched())\n",
+                what);
+    }
+    if (strict && strict[0] == '1') abort();
+}
+
 bool cwist_async_https_take_deferred(void) {
     bool deferred = t_https_deferred;
     t_https_deferred = false;
@@ -144,7 +168,34 @@ cwist_async *cwist_async_defer(cwist_http_request *req, cwist_http_response *res
     cwist_http_async_disown_response(res);
     res->async = a;
     res->deferred = true;
+    t_pending_async = a;
+    t_pending_res = res;
     return a;
+}
+
+cwist_async *cwist_async_dispatch_take(cwist_http_response *res) {
+    cwist_async *a = t_pending_res == res ? t_pending_async : NULL;
+    t_pending_async = NULL;
+    t_pending_res = NULL;
+    if (!res) return NULL;
+    if (a) {
+        if (!res->deferred || res->async != a)
+            cwist_async_report_misuse("res->deferred/res->async changed before the dispatch ack");
+    } else if (res->deferred) {
+        cwist_async_report_misuse("res->deferred set without cwist_async_defer()");
+    }
+    return a;
+}
+
+void cwist_async_forget_response(const cwist_http_response *res) {
+    if (t_pending_res == res) {
+        t_pending_async = NULL;
+        t_pending_res = NULL;
+    }
+}
+
+bool cwist_async_res_deferred(const cwist_http_response *res) {
+    return res && (res->deferred || (t_pending_async && t_pending_res == res));
 }
 
 cwist_async *cwist_async_retain(cwist_async *a) {
@@ -154,6 +205,10 @@ cwist_async *cwist_async_retain(cwist_async *a) {
 
 void cwist_async_release(cwist_async *a) {
     if (a && atomic_fetch_sub_explicit(&a->refs, 1, memory_order_acq_rel) == 1) {
+        if (t_pending_async == a) {
+            t_pending_async = NULL;
+            t_pending_res = NULL;
+        }
         pthread_mutex_destroy(&a->mu);
         cwist_free(a);
     }
@@ -161,6 +216,10 @@ void cwist_async_release(cwist_async *a) {
 
 void cwist_async_dispatch_ack(cwist_async *a) {
     if (!a) return;
+    if (t_pending_async == a) {
+        t_pending_async = NULL;
+        t_pending_res = NULL;
+    }
     /* Middleware may allocate after next() returns. No producer may mutate
      * or destroy this graph until the acknowledgement; a producer that
      * already completed waits on mu and left its result to send here. */

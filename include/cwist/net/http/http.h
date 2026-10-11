@@ -235,8 +235,8 @@ typedef struct cwist_http_response {
                             ///< destroyed here.
 
     /// Deferred-response handoff (internal; see net/http/async.h)
-    bool deferred;          ///< Handler deferred the response via cwist_async_defer.
-    void *async;            ///< Owning cwist_async while deferred.
+    bool deferred;          ///< Handler deferred the response via cwist_async_defer (read-only).
+    void *async;            ///< Owning cwist_async while deferred (read-only).
 } cwist_http_response;
 
 /** --- API Functions --- */

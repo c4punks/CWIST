@@ -455,6 +455,7 @@ These variables are read directly by the framework runtime (no prefix required):
 | `CWIST_HTTP_BATCH` | integer | `16` | Maximum pipelined HTTP/1.1 requests dispatched per event-loop turn (clamped to `[1, 1024]`). Excess requests are deferred via reactor continuations. |
 | `CWIST_HTTP_YIELD_BATCH` | integer | `16` (derived from batch) | Request dispatch yield granularity within a batch before re-posting connection to reactor queue. |
 | `CWIST_ASYNC_DEBUG` | boolean | unset | When set, the C1M async path and the reactor log rare failure events (rearm/submit/SQ failures) to stderr. No output in normal operation. |
+| `CWIST_ASYNC_STRICT` | boolean | unset | `1` makes deferred-response misuse abort (leaving a core) instead of printing one warning: `res->deferred` or `res->async` changed by a producer before the dispatch ack, or `res->deferred` set without `cwist_async_defer()`. Dispatch never trusts those fields either way. |
 
 **CWIST reactor mode (C1M) is now measured, not theoretical.** With the event-driven one-shot
 connection path (connections live in the io_uring/epoll reactor instead of

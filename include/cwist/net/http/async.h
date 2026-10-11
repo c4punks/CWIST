@@ -31,6 +31,12 @@
  * POLLOUT-resumable writer is future work (v2).
  *
  * Deferred responses bypass Big Dumb Reply learning and are never cached.
+ *
+ * res->deferred and res->async are read-only for application code. Dispatch
+ * decides the handoff from what cwist_async_defer() recorded on its own
+ * thread, not from those fields, so a producer that writes them cannot make
+ * dispatch send and destroy an exchange it no longer owns. Such a write is
+ * reported once on stderr; with CWIST_ASYNC_STRICT=1 it aborts.
  */
 
 #ifndef __CWIST_NET_HTTP_ASYNC_H__

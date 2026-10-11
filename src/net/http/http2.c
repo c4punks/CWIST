@@ -26,6 +26,7 @@
 #include <cwist/net/http/http2.h>
 #include <cwist/net/http/http2_flow_control.h>
 #include <cwist/net/http/async.h>
+#include "async_internal.h"
 #include <cwist/core/mem/alloc.h>
 #include <cwist/core/mem/gc.h>
 #include <cwist/core/log.h>
@@ -3904,14 +3905,15 @@ cwist_error_t cwist_http2_serve_connection_ex(cwist_https_connection *conn, void
                             cwist_http_response_create_in_arena(s->req->arena);
                         if (res) {
                             handler(user_ctx, s->req, res);
-                            if (res->deferred) {
+                            cwist_async *deferred = cwist_async_dispatch_take(res);
+                            if (deferred) {
                                 /* Deferred-response handoff: ownership of
                                  * req/res moved to cwist_async; the stream
                                  * stays in the table so the queue drain can
                                  * find it, and RST_STREAM must not touch the
                                  * request (s->req is NULL from here on). */
                                 s->req = NULL;
-                                cwist_async_dispatch_ack((cwist_async *)res->async);
+                                cwist_async_dispatch_ack(deferred);
                                 break;
                             }
                             h2_inject_alt_svc(conn, res);
@@ -3962,14 +3964,15 @@ cwist_error_t cwist_http2_serve_connection_ex(cwist_https_connection *conn, void
                             cwist_http_response_create_in_arena(s->req->arena);
                         if (res) {
                             handler(user_ctx, s->req, res);
-                            if (res->deferred) {
+                            cwist_async *deferred = cwist_async_dispatch_take(res);
+                            if (deferred) {
                                 /* Deferred-response handoff: ownership of
                                  * req/res moved to cwist_async; the stream
                                  * stays in the table so the queue drain can
                                  * find it, and RST_STREAM must not touch the
                                  * request (s->req is NULL from here on). */
                                 s->req = NULL;
-                                cwist_async_dispatch_ack((cwist_async *)res->async);
+                                cwist_async_dispatch_ack(deferred);
                                 break;
                             }
                             h2_inject_alt_svc(conn, res);
@@ -4101,12 +4104,13 @@ cwist_error_t cwist_http2_serve_connection_ex(cwist_https_connection *conn, void
                     cwist_http_response *res = cwist_http_response_create_in_arena(s->req->arena);
                     if (res) {
                         handler(user_ctx, s->req, res);
-                        if (res->deferred) {
+                        cwist_async *deferred = cwist_async_dispatch_take(res);
+                        if (deferred) {
                             /* Deferred-response handoff: req/res owned by
                              * cwist_async; keep the stream in the table so
                              * the queue drain can find it later. */
                             s->req = NULL;
-                            cwist_async_dispatch_ack((cwist_async *)res->async);
+                            cwist_async_dispatch_ack(deferred);
                             h2_auto_window_update(hc, s);
                             break;
                         }
