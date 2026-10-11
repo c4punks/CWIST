@@ -73,8 +73,11 @@ for path in headers:
         typedefs.add(m.group(1))
 
     # Function declarations (cwist_* identifiers at declarator position).
+    # The preceding ';' or '}' is a lookbehind, not part of the match: a
+    # consumed ';' would leave the next back-to-back declaration without
+    # its anchor, and every second declaration in a row would be skipped.
     for m in re.finditer(
-            r"(?:^|[;}]\s*)(?:[\w\s\*]+?)\b(cwist_\w+)\s*\([^;{}]*\)\s*;", buf):
+            r"(?:^|(?<=[;}]))\s*(?:[\w\s\*]+?)\b(cwist_\w+)\s*\([^;{}]*\)\s*;", buf):
         name = m.group(1)
         if name not in typedefs:  # typedef'd function pointers are types, not functions
             functions.add(name)
