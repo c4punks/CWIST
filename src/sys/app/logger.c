@@ -61,49 +61,58 @@ void cwist_logger_set_colors(cwist_logger *log, bool enabled) {
     if (log) log->use_colors = enabled;
 }
 
-/** @brief Logs a formatted message at the given level.
+/** @brief Writes one log line: timestamp, level tag, logger name, message.
  * @param log Logger to log through; NULL is safely ignored.
  * @param level Level of the message; messages below the logger's level are suppressed.
  * @param fmt printf-style format string.
- * @note The message is written to stdout for levels below WARN and to stderr
- *       otherwise, with a timestamp, level tag, and logger name prefix, followed by a newline.
- *       Not thread-safe; localtime() and the shared FILE streams are used.
+ * @param args Arguments for @p fmt.
+ * @note Shared by cwist_logger_log() and the per-level wrappers, so every
+ *       entry point formats the message the same way.
  */
-void cwist_logger_log(cwist_logger *log, cwist_log_level_t level, const char *fmt, ...) {
-    if (!log || level < log->level) return;
+static void logger_vlog(cwist_logger *log, cwist_log_level_t level, const char *fmt, va_list args) {
+    if (!log || level < log->level || (unsigned)level > CWIST_LOG_ERROR) return;
     FILE *out = level_file(level);
     time_t now = time(NULL);
-    struct tm *tm_info = localtime(&now);
+    struct tm tm_info;
     char time_buf[32];
-    strftime(time_buf, sizeof(time_buf), "%Y-%m-%d %H:%M:%S", tm_info);
+    strftime(time_buf, sizeof(time_buf), "%Y-%m-%d %H:%M:%S", localtime_r(&now, &tm_info));
+
     if (log->use_colors) {
         fprintf(out, "%s[%s]%s [%s] %s: ", level_colors[level], time_buf, color_reset,
                 level_strings[level], log->name);
     } else {
         fprintf(out, "[%s] [%s] %s: ", time_buf, level_strings[level], log->name);
     }
-    va_list args;
-    va_start(args, fmt);
     vfprintf(out, fmt, args);
-    va_end(args);
     fprintf(out, "\n");
     fflush(out);
 }
 
-/** @brief Logs a formatted message at DEBUG level.
+/** @brief Logs a formatted message at the given level.
  * @param log Logger to log through; NULL is safely ignored.
+ * @param level Level of the message; messages below the logger's level are suppressed.
  * @param fmt printf-style format string.
- * @note Currently emits only an empty prefix line; see the note in the body.
+ * @note The message is written to stdout for levels below WARN and to stderr
+ *       otherwise, with a timestamp, level tag, and logger name prefix, followed by a newline.
+ *       The shared FILE streams are not locked across the prefix and the message,
+ *       so lines from concurrent threads may interleave.
  */
-void cwist_logger_debug(cwist_logger *log, const char *fmt, ...) {
-    if (!log || CWIST_LOG_DEBUG < log->level) return;
+void cwist_logger_log(cwist_logger *log, cwist_log_level_t level, const char *fmt, ...) {
     va_list args;
     va_start(args, fmt);
-    cwist_logger_log(log, CWIST_LOG_DEBUG, "%s", "");
+    logger_vlog(log, level, fmt, args);
     va_end(args);
-    /* Re-construct with va_list pass-through not possible portably for wrappers.
-       Using a small internal buffer approach for wrapper macros is better,
-       but here we just forward via the variadic macro pattern in header. */
+}
+
+/** @brief Logs a formatted message at DEBUG level on stdout.
+ * @param log Logger to log through; NULL is safely ignored.
+ * @param fmt printf-style format string.
+ */
+void cwist_logger_debug(cwist_logger *log, const char *fmt, ...) {
+    va_list args;
+    va_start(args, fmt);
+    logger_vlog(log, CWIST_LOG_DEBUG, fmt, args);
+    va_end(args);
 }
 
 /** @brief Logs a formatted message at INFO level on stdout.
@@ -111,24 +120,10 @@ void cwist_logger_debug(cwist_logger *log, const char *fmt, ...) {
  * @param fmt printf-style format string.
  */
 void cwist_logger_info(cwist_logger *log, const char *fmt, ...) {
-    if (!log || CWIST_LOG_INFO < log->level) return;
     va_list args;
     va_start(args, fmt);
-    FILE *out = stdout;
-    time_t now = time(NULL);
-    struct tm *tm_info = localtime(&now);
-    char time_buf[32];
-    strftime(time_buf, sizeof(time_buf), "%Y-%m-%d %H:%M:%S", tm_info);
-    if (log->use_colors) {
-        fprintf(out, "%s[%s]%s [INFO] %s: ", level_colors[CWIST_LOG_INFO], time_buf, color_reset,
-                log->name);
-    } else {
-        fprintf(out, "[%s] [INFO] %s: ", time_buf, log->name);
-    }
-    vfprintf(out, fmt, args);
+    logger_vlog(log, CWIST_LOG_INFO, fmt, args);
     va_end(args);
-    fprintf(out, "\n");
-    fflush(out);
 }
 
 /** @brief Logs a formatted message at WARN level on stderr.
@@ -136,24 +131,10 @@ void cwist_logger_info(cwist_logger *log, const char *fmt, ...) {
  * @param fmt printf-style format string.
  */
 void cwist_logger_warn(cwist_logger *log, const char *fmt, ...) {
-    if (!log || CWIST_LOG_WARN < log->level) return;
     va_list args;
     va_start(args, fmt);
-    FILE *out = stderr;
-    time_t now = time(NULL);
-    struct tm *tm_info = localtime(&now);
-    char time_buf[32];
-    strftime(time_buf, sizeof(time_buf), "%Y-%m-%d %H:%M:%S", tm_info);
-    if (log->use_colors) {
-        fprintf(out, "%s[%s]%s [WARN] %s: ", level_colors[CWIST_LOG_WARN], time_buf, color_reset,
-                log->name);
-    } else {
-        fprintf(out, "[%s] [WARN] %s: ", time_buf, log->name);
-    }
-    vfprintf(out, fmt, args);
+    logger_vlog(log, CWIST_LOG_WARN, fmt, args);
     va_end(args);
-    fprintf(out, "\n");
-    fflush(out);
 }
 
 /** @brief Logs a formatted message at ERROR level on stderr.
@@ -161,22 +142,8 @@ void cwist_logger_warn(cwist_logger *log, const char *fmt, ...) {
  * @param fmt printf-style format string.
  */
 void cwist_logger_error(cwist_logger *log, const char *fmt, ...) {
-    if (!log || CWIST_LOG_ERROR < log->level) return;
     va_list args;
     va_start(args, fmt);
-    FILE *out = stderr;
-    time_t now = time(NULL);
-    struct tm *tm_info = localtime(&now);
-    char time_buf[32];
-    strftime(time_buf, sizeof(time_buf), "%Y-%m-%d %H:%M:%S", tm_info);
-    if (log->use_colors) {
-        fprintf(out, "%s[%s]%s [ERROR] %s: ", level_colors[CWIST_LOG_ERROR], time_buf, color_reset,
-                log->name);
-    } else {
-        fprintf(out, "[%s] [ERROR] %s: ", time_buf, log->name);
-    }
-    vfprintf(out, fmt, args);
+    logger_vlog(log, CWIST_LOG_ERROR, fmt, args);
     va_end(args);
-    fprintf(out, "\n");
-    fflush(out);
 }

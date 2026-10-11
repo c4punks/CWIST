@@ -854,6 +854,7 @@ $(CNATS_LIB):
 # --- Test Targets ---
 
 TEST_TARGETS = test_worker_affinity \
+               test_logger_config \
                test_app_resource_limits \
                test_classic_pool_scaling \
                test_reactor_wake \
@@ -1088,6 +1089,10 @@ test_latency_probe: tests/test_latency_probe.c src/sys/io/reactor.c
 
 bench_cooperative_queuing: tests/bench_cooperative_queuing.c src/sys/io/reactor.c
 	$(CC) $(CFLAGS) -o $@ tests/bench_cooperative_queuing.c -pthread
+
+test_logger_config: $(LIB_NAME) tests/test_logger_config.c
+	$(CC) $(CFLAGS) -o test_logger_config tests/test_logger_config.c $(LIB_NAME) $(LIBS)
+	./test_logger_config
 
 test_sstring: $(LIB_NAME) tests/test_sstring.c
 	$(CC) $(CFLAGS) -o test_sstring tests/test_sstring.c $(LIB_NAME) $(LIBS)

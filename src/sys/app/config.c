@@ -69,15 +69,25 @@ void cwist_config_set(cwist_config *cfg, const char *key, const char *value) {
     cwist_config_bucket *curr = cfg->buckets[idx];
     while (curr) {
         if (strcmp(curr->key, key) == 0) {
+            /* Keep the old value if the copy fails, so get() never sees NULL. */
+            char *copy = cwist_strdup(value ? value : "");
+            if (!copy) return;
             cwist_free(curr->value);
-            curr->value = cwist_strdup(value ? value : "");
+            curr->value = copy;
             return;
         }
         curr = curr->next;
     }
     cwist_config_bucket *bucket = (cwist_config_bucket *)cwist_alloc(sizeof(cwist_config_bucket));
+    if (!bucket) return;
     bucket->key = cwist_strdup(key);
     bucket->value = cwist_strdup(value ? value : "");
+    if (!bucket->key || !bucket->value) {
+        cwist_free(bucket->key);
+        cwist_free(bucket->value);
+        cwist_free(bucket);
+        return;
+    }
     bucket->next = cfg->buckets[idx];
     cfg->buckets[idx] = bucket;
 }
