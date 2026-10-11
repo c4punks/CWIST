@@ -66,6 +66,21 @@ typedef struct cwist_async cwist_async;
 cwist_async *cwist_async_defer(cwist_http_request *req, cwist_http_response *res);
 
 /**
+ * @brief Wait until dispatch has acknowledged the handoff of @p a.
+ *
+ * A producer on another thread must not read or mutate the deferred request
+ * or response until dispatch and the middleware chain have unwound: until
+ * then the dispatch thread still reads the response (including
+ * res->deferred) and may send and destroy it. Call this on the producer
+ * before touching req/res directly; respond, respond_with and abort already
+ * wait on their own. Returns immediately on the dispatch thread itself
+ * (an inline producer runs before the acknowledgement by construction) and
+ * for NULL. The wait is short: dispatch acknowledges as soon as the handler
+ * and middleware return.
+ */
+void cwist_async_wait_dispatched(cwist_async *a);
+
+/**
  * @brief Retain a live handle for a producer that may outlive completion.
  * Must be called while the caller already holds a reference, or before the
  * dispatch handoff can complete. It cannot resurrect an expired handle.

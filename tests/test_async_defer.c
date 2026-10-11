@@ -263,6 +263,53 @@ static bool has_code(const char *buf, const char *code) {
         }                                       \
     } while (0)
 
+/* cwist_async_wait_dispatched(): a producer on another thread blocks until
+ * the dispatch ack, while the dispatch thread itself never waits. */
+static atomic_int g_wait_stage;
+
+static void *wait_dispatched_producer(void *arg) {
+    cwist_async *a = (cwist_async *)arg;
+    atomic_store(&g_wait_stage, 1);
+    cwist_async_wait_dispatched(a);
+    atomic_store(&g_wait_stage, 2);
+    return NULL;
+}
+
+static int test_wait_dispatched(void) {
+    int failures = 0;
+    int sockets[2];
+    if (socketpair(AF_UNIX, SOCK_STREAM, 0, sockets) < 0) return 1;
+    cwist_http_request *req = cwist_http_request_create();
+    cwist_http_response *res = cwist_http_response_create();
+    cwist_async *a = req && res ? (req->client_fd = sockets[0], cwist_async_defer(req, res)) : NULL;
+    if (!a) {
+        cwist_http_request_destroy(req);
+        cwist_http_response_destroy(res);
+        close(sockets[0]);
+        close(sockets[1]);
+        return 1;
+    }
+    req->keep_alive = false;
+    cwist_async_wait_dispatched(NULL);
+    cwist_async_wait_dispatched(a); /* dispatch thread: returns at once */
+
+    atomic_store(&g_wait_stage, 0);
+    pthread_t producer;
+    CHECK(pthread_create(&producer, NULL, wait_dispatched_producer, a) == 0,
+          "start waiting producer");
+    while (atomic_load(&g_wait_stage) < 1) {
+    }
+    usleep(50 * 1000);
+    CHECK(atomic_load(&g_wait_stage) == 1, "producer waits for the dispatch ack");
+    cwist_async_dispatch_ack(a);
+    pthread_join(producer, NULL);
+    CHECK(atomic_load(&g_wait_stage) == 2, "producer resumes after the dispatch ack");
+
+    CHECK(cwist_async_respond(a, CWIST_HTTP_OK, "text/plain", "ok", 2), "complete after wait");
+    close(sockets[1]);
+    return failures;
+}
+
 /* Synchronous completion destroys req/res before the losing calls run. */
 static int test_retained_completion(void) {
     int failures = 0;
@@ -537,6 +584,7 @@ int main(void) {
     }
 
     failures += test_retained_completion();
+    failures += test_wait_dispatched();
     if (failures == 0) {
         printf("All async defer tests passed.\n");
         return 0;

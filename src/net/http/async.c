@@ -176,6 +176,11 @@ void cwist_async_dispatch_ack(cwist_async *a) {
     if (finish) cwist_async_deliver(a);
 }
 
+void cwist_async_wait_dispatched(cwist_async *a) {
+    if (!a || pthread_equal(a->dispatch_thread, pthread_self())) return;
+    while (!atomic_load_explicit(&a->ack, memory_order_acquire)) sched_yield();
+}
+
 static bool cwist_async_claim(cwist_async *a) {
     int expected = CWIST_ASYNC_ST_PENDING;
     return atomic_compare_exchange_strong_explicit(&a->state, &expected, CWIST_ASYNC_ST_CLAIMED,
