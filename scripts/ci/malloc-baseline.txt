@@ -17,14 +17,14 @@
 3	src/core/mem/arena.c:free(tls);
 1	src/core/mem/arena.c:free(tls->structs[i]);
 1	src/core/mem/arena.c:tls = (cwist_arena_tls_t *)calloc(1, sizeof(cwist_arena_tls_t));
-1	src/core/mem/gc.c:cwist_conn_entry_t *batch = (cwist_conn_entry_t *)malloc(want * sizeof(*batch));
+1	src/core/mem/gc.c:cwist_conn_entry_t *heap = (cwist_conn_entry_t *)calloc(want, sizeof(*heap));
 1	src/core/mem/gc.c:cwist_conn_entry_t *slots = (cwist_conn_entry_t *)calloc(new_cap, sizeof(*slots));
 1	src/core/mem/gc.c:free(g_conn_slots);
+1	src/core/mem/gc.c:free(heap);
 2	src/core/mem/gc.c:free(owner);
 1	src/core/mem/gc.c:free(pending);
 2	src/core/mem/gc.c:free(pending->slots);
 1	src/core/mem/gc.c:free(slots);
-1	src/core/mem/gc.c:if (batch != &one) free(batch);
 1	src/core/mem/gc.c:owner = (cwist_conn_owner_t *)calloc(1, sizeof(*owner));
 1	src/core/mem/gc.c:pending = (cwist_gc_pending_t *)calloc(1, sizeof(*pending));
 1	src/core/mem/gc.c:void **slots = (void **)calloc(new_cap, sizeof(void *));

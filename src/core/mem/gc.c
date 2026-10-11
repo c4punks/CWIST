@@ -661,9 +661,9 @@ static void cwist_conn_close_owned(cwist_conn_owner_t *owner) {
             return;
         }
         cwist_conn_entry_t one;
-        cwist_conn_entry_t *batch = (cwist_conn_entry_t *)malloc(want * sizeof(*batch));
-        size_t room = batch ? want : 1;
-        if (!batch) batch = &one;
+        cwist_conn_entry_t *heap = (cwist_conn_entry_t *)calloc(want, sizeof(*heap));
+        cwist_conn_entry_t *batch = heap ? heap : &one;
+        size_t room = heap ? want : 1;
         size_t n = 0;
         for (size_t i = 0; i < g_conn_cap && n < room;) {
             if (g_conn_slots[i].handle && (!owner || g_conn_slots[i].owner == owner)) {
@@ -675,7 +675,7 @@ static void cwist_conn_close_owned(cwist_conn_owner_t *owner) {
         }
         pthread_mutex_unlock(&g_conn_registry_lock);
         for (size_t k = 0; k < n; k++) batch[k].close_fn(batch[k].handle);
-        if (batch != &one) free(batch);
+        free(heap);
     }
 }
 
