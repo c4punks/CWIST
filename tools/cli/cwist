@@ -372,7 +372,8 @@ def warn_multiport_full_gc_conflict(counts: dict[tuple[str, str], int]) -> None:
 # it. See c4punks/CWIST#347 for the misuse that prompted this.
 HAZARDS: dict[str, dict[str, str]] = {
     "cwist_gc_scope_flush": {
-        "risk": "retires EVERY block the calling thread still tracks, live or not",
+        "risk": "frees EVERY block the calling thread still tracks, live or not "
+                "(retire + reclaim; a live block becomes a use-after-free)",
         "rule": "call only where the thread holds no live tracked block (end of a "
                 "self-contained job); never from a handler, middleware, or a thread "
                 "that is serving connections",

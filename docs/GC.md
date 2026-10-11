@@ -194,13 +194,15 @@ remains correct and simply unregisters the block early.
 
 Two things are easy to assume and both are wrong:
 
-- **"Retired" is not "freed".** `cwist_gc_scope_flush()` and `cwist_ebr_free()`
-  only *retire* blocks. They are freed when something drives reclamation:
-  `cwist_gc_pipeline_tick()`, or the io_queue behind a `cwist_scheduler`
-  (`cwist_app_use_scheduler()`, `cwist_async_set_timeout()`). The full-GC
-  instance runs in manual rotation, so nothing drives reclamation on its own.
-  A process that never drives it keeps everything it flushes. Each retire
-  also allocates a node that is never returned.
+- **A flush frees.** `cwist_gc_scope_flush()` retires every block the thread
+  tracks and then drives reclamation itself (`ttak_epoch_reclaim()`), so the
+  blocks are freed as soon as no thread is inside an older epoch, normally
+  before the call returns. The thread-exit sweep does the same. A bare
+  `cwist_ebr_free()` only retires; it is freed by the next reclamation from
+  any thread (a flush, `cwist_gc_pipeline_tick()`, or the io_queue behind a
+  `cwist_scheduler`). Before #347 a flush only retired, and the full-GC
+  instance rotates manually, so an app without a scheduler never freed what
+  it flushed.
 - **Epoch deferral protects only readers inside an epoch.** Request-serving
   threads (HTTPS pool, reactors, h2 loops) never call `ttak_epoch_enter()`.
   Once reclamation runs, a retired block is freed even if one of those

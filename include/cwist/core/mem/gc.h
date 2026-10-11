@@ -212,15 +212,16 @@ bool cwist_gc_scope_disown(void *ptr);
  *    connections (HTTP/2 session state and other per-connection objects live
  *    across requests on that thread).
  *
- * **Reclamation.** Retired blocks go to cwist_ebr_free() and are released
- * only when something drives reclamation (cwist_gc_pipeline_tick(), or the
- * io_queue behind a cwist_scheduler). Request-serving threads never enter an
- * epoch, so reclaim treats a retired block as unreferenced even if a thread
- * is still using it. A process that never drives reclaim never frees what it
- * flushes (each retire also costs a node that is not returned); a process
- * that does will free whatever was retired, in use or not.
+ * **Reclamation.** Retired blocks go to cwist_ebr_free(), and the flush
+ * then drives reclamation itself (ttak_epoch_reclaim()), so they are freed
+ * as soon as no thread is inside an older epoch, normally before this call
+ * returns. The thread-exit sweep does the same. Request-serving threads
+ * never enter an epoch, so reclaim treats a retired block as unreferenced
+ * even if a thread is still using it: a block flushed while still in use is
+ * freed while still in use. (Before #347 nothing drove reclaim unless the
+ * app ran an io_queue, so misuse leaked instead of crashing.)
  *
- * Misusing this is silent until reclaim starts, so the `cwist` CLI
+ * Misuse is a use-after-free, so the `cwist` CLI
  * (`cwist audit`, `cwist watcher`) warns on every call site that is not
  * marked `cwist-ack: cwist_gc_scope_flush`. See docs/GC.md, "Explicit
  * flushes and reclamation", and c4punks/CWIST#347.

@@ -384,10 +384,12 @@ static void cwist_gc_pending_flush(cwist_gc_pending_t *pending) {
     pending->slots = NULL;
     pending->cap = 0;
     pending->count = 0;
+    size_t retired = 0;
     for (size_t i = 0; i < cap && count > 0; i++) {
         if (!slots[i]) continue;
         cwist_ebr_free(slots[i]);
         count--;
+        retired++;
     }
     if (cap <= CWIST_GC_PENDING_KEEP_CAP && !pending->slots) {
         memset(slots, 0, cap * sizeof(void *));
@@ -396,6 +398,14 @@ static void cwist_gc_pending_flush(cwist_gc_pending_t *pending) {
     } else {
         free(slots);
     }
+    /* Drive reclaim here: the full-GC instance rotates manually, so nothing
+     * else frees what was just retired unless the app happens to run an
+     * io_queue (#347). Every retired block was tracked by this thread and,
+     * by the cwist_gc_scope_flush() contract, is no longer in use, so
+     * freeing it as soon as no thread is inside an older epoch is safe.
+     * Skipped when nothing was retired, so an io_queue job that freed
+     * everything itself pays nothing. */
+    if (retired > 0) ttak_epoch_reclaim();
 }
 
 #if (defined(__STDC_VERSION__) && __STDC_VERSION__ >= 201112L)

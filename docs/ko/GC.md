@@ -161,12 +161,13 @@ include 가드에 걸려 아무 일도 하지 않습니다. 그렇지 않으면 
 
 쉽게 가정하기 쉽지만 둘 다 틀린 내용이 두 가지 있습니다.
 
-- **"retire"는 "해제"가 아닙니다.** `cwist_gc_scope_flush()`와 `cwist_ebr_free()`는
-  블록을 *retire*할 뿐입니다. 실제 해제는 누군가 회수를 구동할 때 일어납니다.
-  `cwist_gc_pipeline_tick()`이나 `cwist_scheduler` 뒤의 io_queue(`cwist_app_use_scheduler()`,
-  `cwist_async_set_timeout()`)가 그 역할을 합니다. full-GC 인스턴스는 수동 순환이라
-  저절로 회수가 돌지 않습니다. 회수를 구동하지 않는 프로세스는 flush한 것을 전부 그대로
-  들고 있고, retire할 때마다 돌려받지 못하는 노드도 하나씩 할당됩니다.
+- **flush는 해제까지 합니다.** `cwist_gc_scope_flush()`는 스레드가 추적하는 블록을 모두
+  retire한 뒤 직접 회수(`ttak_epoch_reclaim()`)를 구동합니다. 그래서 더 오래된 에포크 안에 있는
+  스레드가 없으면 바로 해제되고, 보통 호출이 돌아오기 전에 끝납니다. 스레드 종료 시 sweep도
+  같습니다. `cwist_ebr_free()`만 단독으로 부르면 retire만 하고, 다음에 어느 스레드에서든 회수가
+  돌 때(flush, `cwist_gc_pipeline_tick()`, `cwist_scheduler` 뒤의 io_queue) 해제됩니다.
+  #347 전에는 flush가 retire만 했고 full-GC 인스턴스는 수동 순환이라, scheduler가 없는 앱은
+  flush한 것을 끝내 해제하지 못했습니다.
 - **에포크 지연은 에포크 안에 있는 읽기 스레드만 보호합니다.** 요청 처리 스레드(HTTPS pool,
   리액터, h2 루프)는 `ttak_epoch_enter()`를 호출하지 않습니다. 회수가 한 번 돌면, 그 스레드가
   아직 쓰고 있는 블록이라도 retire된 블록은 해제됩니다.

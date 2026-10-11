@@ -12,6 +12,9 @@
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
+#if defined(__GLIBC__)
+#include <malloc.h>
+#endif
 
 #define LIVE 20000
 
@@ -146,12 +149,62 @@ static void test_alloc_during_thread_exit(void) {
     printf("Passed test_alloc_during_thread_exit\n");
 }
 
+/* #347: a flush (and the thread-exit sweep) used to only retire blocks.
+ * The full-GC instance rotates manually, so without an io_queue nothing
+ * ever reclaimed them and every flushed block leaked. Large blocks are
+ * mmapped by glibc, so mallinfo2().hblkhd shows whether they were really
+ * returned. Skipped where the allocator does not report mmapped bytes
+ * (other libcs, sanitizer allocators). */
+#if defined(__GLIBC__) && (__GLIBC__ > 2 || (__GLIBC__ == 2 && __GLIBC_MINOR__ >= 33))
+#define BIG_BLOCKS 32
+#define BIG_BLOCK (1u << 20)
+
+static size_t mmapped_bytes(void) {
+    return mallinfo2().hblkhd;
+}
+
+static void alloc_big_tracked(void) {
+    for (int i = 0; i < BIG_BLOCKS; i++) {
+        char *p = cwist_alloc(BIG_BLOCK);
+        assert(p);
+        p[0] = 1; /* forgotten on purpose: only the flush/sweep frees it */
+    }
+}
+
+static void *forgetful_thread(void *arg) {
+    (void)arg;
+    alloc_big_tracked();
+    return NULL; /* thread-exit sweep */
+}
+
+static void test_flush_reclaims(void) {
+    size_t before = mmapped_bytes();
+    alloc_big_tracked();
+    size_t grown = mmapped_bytes();
+    if (grown < before + (size_t)BIG_BLOCKS * BIG_BLOCK) {
+        printf("test_flush_reclaims: allocator does not report mmapped bytes, skipped\n");
+        return;
+    }
+    cwist_gc_scope_flush();
+    assert(cwist_gc_scope_pending_count() == 0);
+    assert(mmapped_bytes() <= before + BIG_BLOCK); /* freed, not just retired */
+
+    pthread_t t;
+    assert(pthread_create(&t, NULL, forgetful_thread, NULL) == 0);
+    assert(pthread_join(t, NULL) == 0);
+    assert(mmapped_bytes() <= before + BIG_BLOCK);
+}
+#else
+static void test_flush_reclaims(void) {}
+#endif
+
 int main(void) {
     cwist_full_gc(true);
     assert(cwist_full_gc_enabled());
     test_large_live_set();
     test_disown_and_realloc();
     test_flush();
+    test_flush_reclaims();
     test_threads();
     test_alloc_during_thread_exit();
     for (int i = 0; i < 16; i++) cwist_gc_pipeline_tick();
