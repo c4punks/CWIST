@@ -232,6 +232,11 @@ static void *https_pool_worker(void *arg) {
         pthread_cond_signal(&g_https_pool.cond_not_full);
         pthread_mutex_unlock(&g_https_pool.mutex);
 
+        /* A resubmitted or resumed connection was tracked by whichever
+         * thread wrapped it; this thread serves it now, so its exit sweep
+         * (not the tracker's) is the one that may close it (#345). */
+        if (task.conn && cwist_full_gc_enabled()) cwist_conn_registry_adopt(task.conn);
+
         struct https_thread_payload *payload = cwist_alloc(sizeof(*payload));
         if (payload) {
             payload->client_fd = task.client_fd;

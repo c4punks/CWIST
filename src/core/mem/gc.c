@@ -556,130 +556,190 @@ size_t cwist_gc_scope_pending_count(void) {
 
 /* --- Connection registry: thread/process-exit sweep for non-memory
  * resources (sockets, TLS sessions, protocol state). See gc.h's
- * cwist_conn_registry_* doc comments for the contract. */
+ * cwist_conn_registry_* doc comments for the contract.
+ *
+ * One process-wide table maps each tracked handle to its close_fn and its
+ * owner, the thread whose exit sweep closes it (#345). The owner starts as
+ * the tracking thread and moves with cwist_conn_registry_adopt() when
+ * another thread takes over serving the connection, so a thread that exits
+ * no longer closes connections other threads are still using. Untrack is a
+ * hash delete instead of a walk over every thread's list, and close_fn
+ * always runs with no registry lock held, so a close_fn may track or
+ * untrack other handles. */
+
+/** Per-thread owner token; its address identifies the owning thread. */
+typedef struct cwist_conn_owner {
+    char unused;
+} cwist_conn_owner_t;
 
 typedef struct {
-    void *handle;
+    void *handle; /* NULL marks an empty slot */
     cwist_conn_close_fn close_fn;
+    cwist_conn_owner_t *owner;
 } cwist_conn_entry_t;
-
-/**
- * One thread's list of tracked connection handles, plus enough to let
- * the process-exit sweep (cwist_conn_registry_sweep_all(), running on
- * whichever thread happens to call exit()/return from main) safely race
- * against this same thread's own TLS-destructor sweep (running if this
- * thread happens to exit around the same time): `lock` serializes the
- * two, `swept` makes a second attempt (by either path) a no-op instead
- * of double-closing everything.
- */
-typedef struct cwist_conn_pending {
-    pthread_mutex_t lock;
-    cwist_conn_entry_t *items;
-    size_t count;
-    size_t cap;
-    bool swept;
-    struct cwist_conn_pending *global_next; /* g_conn_registry_lock-protected link */
-} cwist_conn_pending_t;
 
 static pthread_key_t g_conn_key;
 static pthread_once_t g_conn_key_once = PTHREAD_ONCE_INIT;
 static pthread_mutex_t g_conn_registry_lock = PTHREAD_MUTEX_INITIALIZER;
-static cwist_conn_pending_t *g_conn_registry_head = NULL;
-static _Atomic bool g_conn_atexit_registered = false;
+static cwist_conn_entry_t *g_conn_slots = NULL; /* open addressing, power-of-two cap */
+static size_t g_conn_cap = 0;
+static size_t g_conn_count = 0;
+static _Atomic bool g_conn_hooks_registered = false;
 
-/** @brief Close and drop every entry in @p pending. Caller holds pending->lock. */
-static void cwist_conn_pending_sweep_locked(cwist_conn_pending_t *pending) {
-    if (pending->swept) return;
-    for (size_t i = 0; i < pending->count; i++) {
-        pending->items[i].close_fn(pending->items[i].handle);
-    }
-    pending->count = 0;
-    pending->swept = true;
+static size_t cwist_conn_slot(const void *handle, size_t mask) {
+    uintptr_t x = (uintptr_t)handle;
+    x ^= x >> 33;
+    x *= (uintptr_t)0xff51afd7ed558ccdULL;
+    x ^= x >> 33;
+    return (size_t)x & mask;
 }
 
-/** @brief Sweep every still-registered thread's pending list right now. */
-static void cwist_conn_registry_sweep_all_impl(void) {
-    pthread_mutex_lock(&g_conn_registry_lock);
-    for (cwist_conn_pending_t *p = g_conn_registry_head; p; p = p->global_next) {
-        pthread_mutex_lock(&p->lock);
-        cwist_conn_pending_sweep_locked(p);
-        pthread_mutex_unlock(&p->lock);
+/** @brief Index of @p handle, or SIZE_MAX. Caller holds the lock. */
+static size_t cwist_conn_find_locked(const void *handle) {
+    if (g_conn_count == 0) return SIZE_MAX;
+    size_t mask = g_conn_cap - 1;
+    for (size_t i = cwist_conn_slot(handle, mask);; i = (i + 1) & mask) {
+        if (g_conn_slots[i].handle == handle) return i;
+        if (!g_conn_slots[i].handle) return SIZE_MAX;
     }
-    pthread_mutex_unlock(&g_conn_registry_lock);
 }
 
-static void cwist_conn_registry_atexit(void) {
-    cwist_conn_registry_sweep_all_impl();
+/** @brief Backward-shift delete of slot @p i. Caller holds the lock. */
+static void cwist_conn_remove_at_locked(size_t i) {
+    size_t mask = g_conn_cap - 1;
+    size_t hole = i;
+    for (size_t j = (i + 1) & mask; g_conn_slots[j].handle; j = (j + 1) & mask) {
+        size_t home = cwist_conn_slot(g_conn_slots[j].handle, mask);
+        if (((j - home) & mask) >= ((j - hole) & mask)) {
+            g_conn_slots[hole] = g_conn_slots[j];
+            hole = j;
+        }
+    }
+    g_conn_slots[hole] = (cwist_conn_entry_t){0};
+    g_conn_count--;
+}
+
+/** @brief Grow so one more entry fits at <= 50% load. Caller holds the lock. */
+static bool cwist_conn_reserve_locked(void) {
+    if ((g_conn_count + 1) * 2 <= g_conn_cap) return true;
+    size_t new_cap = g_conn_cap ? g_conn_cap * 2 : 64;
+    cwist_conn_entry_t *slots = (cwist_conn_entry_t *)calloc(new_cap, sizeof(*slots));
+    if (!slots) return false;
+    size_t mask = new_cap - 1;
+    for (size_t i = 0; i < g_conn_cap; i++) {
+        if (!g_conn_slots[i].handle) continue;
+        size_t j = cwist_conn_slot(g_conn_slots[i].handle, mask);
+        while (slots[j].handle) j = (j + 1) & mask;
+        slots[j] = g_conn_slots[i];
+    }
+    free(g_conn_slots);
+    g_conn_slots = slots;
+    g_conn_cap = new_cap;
+    return true;
 }
 
 /**
- * @brief pthread TLS destructor: sweep this thread's connections, then
- * unlink it from the global registry so the atexit sweep (which may run
- * later, on a different thread) never touches this about-to-be-freed
- * struct.
+ * @brief Remove every entry owned by @p owner (every entry when NULL) and
+ *        close each one with no lock held.
+ *
+ * Entries are moved out in batches under the lock, then closed after it is
+ * dropped. If the batch buffer cannot be allocated, entries are taken one
+ * at a time instead (slower, but nothing is left open).
  */
-static void cwist_conn_pending_destroy(void *arg) {
-    cwist_conn_pending_t *pending = (cwist_conn_pending_t *)arg;
-    if (!pending) return;
+static void cwist_conn_close_owned(cwist_conn_owner_t *owner) {
+    for (;;) {
+        pthread_mutex_lock(&g_conn_registry_lock);
+        size_t want = 0;
+        for (size_t i = 0; i < g_conn_cap; i++) {
+            if (g_conn_slots[i].handle && (!owner || g_conn_slots[i].owner == owner)) want++;
+        }
+        if (want == 0) {
+            pthread_mutex_unlock(&g_conn_registry_lock);
+            return;
+        }
+        cwist_conn_entry_t one;
+        cwist_conn_entry_t *batch = (cwist_conn_entry_t *)malloc(want * sizeof(*batch));
+        size_t room = batch ? want : 1;
+        if (!batch) batch = &one;
+        size_t n = 0;
+        for (size_t i = 0; i < g_conn_cap && n < room;) {
+            if (g_conn_slots[i].handle && (!owner || g_conn_slots[i].owner == owner)) {
+                batch[n++] = g_conn_slots[i];
+                cwist_conn_remove_at_locked(i); /* may shift a later entry into i */
+            } else {
+                i++;
+            }
+        }
+        pthread_mutex_unlock(&g_conn_registry_lock);
+        for (size_t k = 0; k < n; k++) batch[k].close_fn(batch[k].handle);
+        if (batch != &one) free(batch);
+    }
+}
 
-    pthread_mutex_lock(&pending->lock);
-    cwist_conn_pending_sweep_locked(pending);
-    pthread_mutex_unlock(&pending->lock);
+static void cwist_conn_registry_atexit(void) {
+    cwist_conn_close_owned(NULL);
+}
 
+/* fork(): the child inherits the parent's table, but the connections are
+ * the parent's. A child that later runs exit() would otherwise shut down
+ * TLS sessions on sockets the parent is still serving. The lock is held
+ * across fork so the child never inherits it mid-update. */
+static void cwist_conn_atfork_prepare(void) {
     pthread_mutex_lock(&g_conn_registry_lock);
-    cwist_conn_pending_t **link = &g_conn_registry_head;
-    while (*link && *link != pending) link = &(*link)->global_next;
-    if (*link == pending) *link = pending->global_next;
-    pthread_mutex_unlock(&g_conn_registry_lock);
+}
 
-    pthread_mutex_destroy(&pending->lock);
-    free(pending->items);
-    free(pending);
+static void cwist_conn_atfork_parent(void) {
+    pthread_mutex_unlock(&g_conn_registry_lock);
+}
+
+static void cwist_conn_atfork_child(void) {
+    if (g_conn_slots) memset(g_conn_slots, 0, g_conn_cap * sizeof(*g_conn_slots));
+    g_conn_count = 0;
+    pthread_mutex_unlock(&g_conn_registry_lock);
+}
+
+/** @brief pthread TLS destructor: close what this thread still owns. */
+static void cwist_conn_owner_destroy(void *arg) {
+    cwist_conn_owner_t *owner = (cwist_conn_owner_t *)arg;
+    if (!owner) return;
+    cwist_conn_close_owned(owner);
+    free(owner);
 }
 
 static void cwist_conn_key_init(void) {
-    pthread_key_create(&g_conn_key, cwist_conn_pending_destroy);
+    pthread_key_create(&g_conn_key, cwist_conn_owner_destroy);
 }
 
-/** @brief Lazily create (or return) this thread's connection pending list. */
-static cwist_conn_pending_t *cwist_conn_pending_get(void) {
+/** @brief This thread's owner token, created on first use. */
+static cwist_conn_owner_t *cwist_conn_owner_get(bool create) {
     pthread_once(&g_conn_key_once, cwist_conn_key_init);
-    cwist_conn_pending_t *pending = (cwist_conn_pending_t *)pthread_getspecific(g_conn_key);
-    if (pending) return pending;
+    cwist_conn_owner_t *owner = (cwist_conn_owner_t *)pthread_getspecific(g_conn_key);
+    if (owner || !create) return owner;
 
-    pending = (cwist_conn_pending_t *)calloc(1, sizeof(*pending));
-    if (!pending) return NULL;
-    if (pthread_mutex_init(&pending->lock, NULL) != 0) {
-        free(pending);
-        return NULL;
-    }
-    if (pthread_setspecific(g_conn_key, pending) != 0) {
-        pthread_mutex_destroy(&pending->lock);
-        free(pending);
+    owner = (cwist_conn_owner_t *)calloc(1, sizeof(*owner));
+    if (!owner) return NULL;
+    if (pthread_setspecific(g_conn_key, owner) != 0) {
+        free(owner);
         return NULL;
     }
 
-    /* Register the process-exit sweep exactly once, the first time any
-     * thread ever tracks a connection (not eagerly at load time: most
-     * processes never enable full-GC, and atexit() handlers are a
-     * process-wide resource other code may also be competing for). */
-    if (!atomic_exchange_explicit(&g_conn_atexit_registered, true, memory_order_acq_rel)) {
+    /* Register the process-exit sweep and the fork handler exactly once,
+     * the first time any thread tracks a connection (not eagerly at load
+     * time: most processes never enable full-GC). */
+    if (!atomic_exchange_explicit(&g_conn_hooks_registered, true, memory_order_acq_rel)) {
         atexit(cwist_conn_registry_atexit);
+        pthread_atfork(cwist_conn_atfork_prepare, cwist_conn_atfork_parent, cwist_conn_atfork_child);
     }
-
-    pthread_mutex_lock(&g_conn_registry_lock);
-    pending->global_next = g_conn_registry_head;
-    g_conn_registry_head = pending;
-    pthread_mutex_unlock(&g_conn_registry_lock);
-
-    return pending;
+    return owner;
 }
 
 /**
  * @brief Track a non-memory resource for the full-GC exit sweep.
  *
- * No-op unless full-GC mode is enabled. Best-effort: if the per-thread
- * list cannot grow, the handle is dropped rather than failing the caller.
+ * No-op unless full-GC mode is enabled. Best-effort: if the table cannot
+ * grow, the handle is dropped rather than failing the caller. Tracking a
+ * handle that is already tracked updates its close_fn and makes the caller
+ * its owner.
  *
  * @param handle Resource handle to close later (e.g. socket, TLS session).
  * @param close_fn Callback invoked with @p handle during a sweep or flush.
@@ -687,92 +747,87 @@ static cwist_conn_pending_t *cwist_conn_pending_get(void) {
 void cwist_conn_registry_track(void *handle, cwist_conn_close_fn close_fn) {
     if (!handle || !close_fn) return;
     if (!cwist_full_gc_enabled()) return;
-    cwist_conn_pending_t *pending = cwist_conn_pending_get();
-    if (!pending) return;
+    cwist_conn_owner_t *owner = cwist_conn_owner_get(true);
+    if (!owner) return;
 
-    pthread_mutex_lock(&pending->lock);
-    if (pending->count == pending->cap) {
-        size_t new_cap = pending->cap ? pending->cap * 2 : 8;
-        cwist_conn_entry_t *grown =
-            (cwist_conn_entry_t *)realloc(pending->items, new_cap * sizeof(*grown));
-        if (grown) {
-            pending->items = grown;
-            pending->cap = new_cap;
-        }
+    pthread_mutex_lock(&g_conn_registry_lock);
+    size_t i = cwist_conn_find_locked(handle);
+    if (i != SIZE_MAX) {
+        g_conn_slots[i].close_fn = close_fn;
+        g_conn_slots[i].owner = owner;
+    } else if (cwist_conn_reserve_locked()) {
+        size_t mask = g_conn_cap - 1;
+        size_t j = cwist_conn_slot(handle, mask);
+        while (g_conn_slots[j].handle) j = (j + 1) & mask;
+        g_conn_slots[j] = (cwist_conn_entry_t){.handle = handle, .close_fn = close_fn, .owner = owner};
+        g_conn_count++;
     }
-    if (pending->count < pending->cap) {
-        pending->items[pending->count++] =
-            (cwist_conn_entry_t){.handle = handle, .close_fn = close_fn};
-    }
-    pthread_mutex_unlock(&pending->lock);
+    pthread_mutex_unlock(&g_conn_registry_lock);
 }
 
 /**
- * @brief Remove a handle from this thread's tracked-connection list.
+ * @brief Remove a handle from the registry, whichever thread owns it.
  * @param handle Handle previously passed to cwist_conn_registry_track().
  * @return true when found and removed; false otherwise.
  */
 bool cwist_conn_registry_untrack(void *handle) {
     if (!handle) return false;
-
-    /* A connection is tracked on the thread that accepted it but is often
-     * closed on another one (async completion, keep-alive resubmit to a
-     * different pool worker). Searching only the caller's list left the
-     * freed handle on the accepting thread's list, and a later sweep tore
-     * it down again: use-after-free (#344). Search every thread's list. */
-    bool found = false;
     pthread_mutex_lock(&g_conn_registry_lock);
-    for (cwist_conn_pending_t *p = g_conn_registry_head; p && !found; p = p->global_next) {
-        pthread_mutex_lock(&p->lock);
-        for (size_t i = 0; i < p->count; i++) {
-            if (p->items[i].handle == handle) {
-                p->items[i] = p->items[--p->count];
-                found = true;
-                break;
-            }
-        }
-        pthread_mutex_unlock(&p->lock);
-    }
+    size_t i = cwist_conn_find_locked(handle);
+    if (i != SIZE_MAX) cwist_conn_remove_at_locked(i);
     pthread_mutex_unlock(&g_conn_registry_lock);
-    return found;
+    return i != SIZE_MAX;
 }
 
 /**
- * @brief Close every handle this thread still tracks, right now.
+ * @brief Make the calling thread the owner of a tracked handle.
+ * @param handle Handle previously passed to cwist_conn_registry_track().
+ * @return true when @p handle is tracked (and now owned by the caller);
+ *         false when it is not tracked or full GC is off.
+ */
+bool cwist_conn_registry_adopt(void *handle) {
+    if (!handle || !cwist_full_gc_enabled()) return false;
+    cwist_conn_owner_t *owner = cwist_conn_owner_get(true);
+    if (!owner) return false;
+    pthread_mutex_lock(&g_conn_registry_lock);
+    size_t i = cwist_conn_find_locked(handle);
+    if (i != SIZE_MAX) g_conn_slots[i].owner = owner;
+    pthread_mutex_unlock(&g_conn_registry_lock);
+    return i != SIZE_MAX;
+}
+
+/**
+ * @brief Close every handle the calling thread owns, right now.
  *
- * Unlike the sweeps, the list stays usable afterwards: entries are closed
- * and cleared but the list is not marked swept, so later tracks still work.
+ * The registry stays usable afterwards; later tracks work as before.
  */
 void cwist_conn_registry_flush(void) {
-    cwist_conn_pending_t *pending = cwist_conn_pending_get();
-    if (!pending) return;
-    pthread_mutex_lock(&pending->lock);
-    for (size_t i = 0; i < pending->count; i++) {
-        pending->items[i].close_fn(pending->items[i].handle);
-    }
-    pending->count = 0;
-    pthread_mutex_unlock(&pending->lock);
+    cwist_conn_owner_t *owner = cwist_conn_owner_get(false);
+    if (owner) cwist_conn_close_owned(owner);
 }
 
 /**
- * @brief Close every still-registered thread's tracked handles.
+ * @brief Close every tracked handle, whichever thread owns it.
  *
- * Intended for process-exit paths; each list is closed at most once even
- * if a thread's TLS destructor sweep races with this call.
+ * Intended for process-exit paths. Each handle is removed before it is
+ * closed, so racing sweeps (atexit vs. a thread's own exit) close it once.
  */
 void cwist_conn_registry_sweep_all(void) {
-    cwist_conn_registry_sweep_all_impl();
+    cwist_conn_close_owned(NULL);
 }
 
 /**
- * @brief Count this thread's tracked, not-yet-closed handles.
- * @return Number of pending entries; 0 when nothing is tracked.
+ * @brief Count the tracked handles the calling thread owns.
+ * @return Number of owned entries; 0 when nothing is tracked.
  */
 size_t cwist_conn_registry_pending_count(void) {
-    cwist_conn_pending_t *pending = cwist_conn_pending_get();
-    if (!pending) return 0;
-    pthread_mutex_lock(&pending->lock);
-    size_t n = pending->count;
-    pthread_mutex_unlock(&pending->lock);
+    cwist_conn_owner_t *owner = cwist_conn_owner_get(false);
+    if (!owner) return 0;
+    size_t n = 0;
+    pthread_mutex_lock(&g_conn_registry_lock);
+    for (size_t i = 0; i < g_conn_cap; i++) {
+        if (g_conn_slots[i].handle && g_conn_slots[i].owner == owner) n++;
+    }
+    pthread_mutex_unlock(&g_conn_registry_lock);
     return n;
 }

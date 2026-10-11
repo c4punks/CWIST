@@ -272,28 +272,47 @@ bool cwist_release_guard_acquire(cwist_release_guard_t *guard);
 typedef void (*cwist_conn_close_fn)(void *handle);
 
 /**
- * @brief Register a connection handle with the current thread's
- *        pending-sweep list (full-GC mode only; a no-op otherwise, so
+ * @brief Register a connection handle for the full-GC exit sweep, owned by
+ *        the calling thread (full-GC mode only; a no-op otherwise, so
  *        callers can call this unconditionally at connection-open time).
+ *
+ * The registry is one process-wide table. Each handle has an owner thread;
+ * that thread's exit sweep (or cwist_conn_registry_flush()) closes it. The
+ * owner is the tracking thread until cwist_conn_registry_adopt() moves it.
  *
  * @param handle Opaque connection handle, passed back to @p close_fn.
  * @param close_fn Called with @p handle to close/tear it down; must be
  *                  safe to call from whichever thread ends up sweeping it
  *                  (the owning thread at its own exit, or any thread
- *                  running the atexit sweep at process exit).
+ *                  running the atexit sweep at process exit). It is called
+ *                  with no registry lock held and may track or untrack
+ *                  other handles.
  */
 void cwist_conn_registry_track(void *handle, cwist_conn_close_fn close_fn);
 
 /**
- * @brief Remove a handle from the pending-sweep lists before closing it
- *        yourself through the normal explicit path.
+ * @brief Make the calling thread the owner of a tracked handle.
  *
- * Searches every thread's list, not just the caller's: a connection is
+ * Call this when a thread takes over serving a connection another thread
+ * tracked (pool resubmit, parked-connection resume, async completion that
+ * keeps the connection). Without it, the tracking thread's exit would
+ * close a connection the new thread is still using (#345).
+ *
+ * @return true if @p handle is tracked and now owned by the caller; false
+ *         if it is not tracked or full GC is off.
+ */
+bool cwist_conn_registry_adopt(void *handle);
+
+/**
+ * @brief Remove a handle from the registry before closing it yourself
+ *        through the normal explicit path.
+ *
+ * Works from any thread, whichever thread owns the handle: a connection is
  * usually tracked on the thread that accepted it but closed on another one
  * (async completion, keep-alive resubmit, parked-connection expiry), and a
- * handle left behind would be closed a second time by that thread's sweep
- * (#344). Untrack must still happen before the handle is freed, and only
- * one party may close it; coordinate racing closers yourself (e.g.
+ * handle left behind would be closed a second time by a sweep (#344).
+ * Untrack must still happen before the handle is freed, and only one party
+ * may close it; coordinate racing closers yourself (e.g.
  * cwist_release_guard_t).
  *
  * @return true if @p handle was pending and has been removed; false if
@@ -303,14 +322,15 @@ void cwist_conn_registry_track(void *handle, cwist_conn_close_fn close_fn);
 bool cwist_conn_registry_untrack(void *handle);
 
 /**
- * @brief Sweep (close) everything still on the calling thread's
- *        pending-sweep list right now, without waiting for thread exit.
- *        Analogous to cwist_gc_scope_flush() but for connections.
+ * @brief Close every handle the calling thread owns right now, without
+ *        waiting for thread exit. Analogous to cwist_gc_scope_flush() but
+ *        for connections.
  *
- * The list holds every connection this thread registered, including ones
- * another thread is serving right now (parked, deferred, resubmitted), so
- * call this only when none of them can still be in use. The `cwist` CLI
- * warns on call sites not marked `cwist-ack: cwist_conn_registry_flush`.
+ * Ownership follows cwist_conn_registry_adopt(), but a connection this
+ * thread tracked and another thread serves without adopting it (a parked
+ * or deferred connection) is still owned here, so call this only when none
+ * of them can still be in use. The `cwist` CLI warns on call sites not
+ * marked `cwist-ack: cwist_conn_registry_flush`.
  */
 void cwist_conn_registry_flush(void);
 
@@ -323,8 +343,12 @@ void cwist_conn_registry_flush(void);
 void cwist_conn_registry_sweep_all(void);
 
 /**
- * @brief Number of connections currently on the calling thread's
- *        pending-sweep list. Introspection/testing helper.
+ * @brief Number of tracked connections the calling thread owns.
+ *        Introspection/testing helper.
+ *
+ * After fork() the child starts with an empty registry: the inherited
+ * connections belong to the parent, and a child that exits must not shut
+ * them down.
  */
 size_t cwist_conn_registry_pending_count(void);
 

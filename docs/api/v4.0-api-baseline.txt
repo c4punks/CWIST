@@ -4,7 +4,7 @@
 # enum constants, extern globals. Struct layouts are tested
 # separately by tests/abi_layout*.
 
-== functions (765) ==
+== functions (766) ==
 cwist_accept_socket
 cwist_alloc
 cwist_alloc_array
@@ -126,6 +126,7 @@ cwist_config_get_int
 cwist_config_load_env
 cwist_config_load_file
 cwist_config_set
+cwist_conn_registry_adopt
 cwist_conn_registry_flush
 cwist_conn_registry_pending_count
 cwist_conn_registry_sweep_all

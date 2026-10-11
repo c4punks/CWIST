@@ -78,12 +78,21 @@ The engine is libttak's epoch GC (`ttak_epoch_gc`, see
 
 ### 3. Thread/process exit sweeps
 
-- **Thread exit**: a per-thread connection registry lives in thread-local
-  storage; a pthread TLS destructor sweeps and closes whatever the thread
-  still owns when it exits.
+- **Thread exit**: the connection registry is one process-wide table that
+  maps each tracked handle to its close function and its *owner* thread. A
+  pthread TLS destructor closes whatever the exiting thread still owns. The
+  owner is the thread that tracked the handle until another thread calls
+  `cwist_conn_registry_adopt()`. The HTTPS pool adopts every connection it
+  resumes or resubmits, so a thread that exits does not close a connection
+  another thread is serving (#345).
 - **Process exit**: an `atexit` sweep performs the same close-out for the
   whole process, so stray connections are shut (TLS shutdown, socket close,
   session teardown) rather than abandoned.
+- **Untrack** works from any thread in O(1). **Close functions** run with no
+  registry lock held, so they may track or untrack other handles.
+- **fork()**: the child starts with an empty registry. The inherited
+  connections belong to the parent, and a child that calls `exit()` must
+  not shut them down.
 
 ### 4. Pseudo-RAII for handle-like locals
 
@@ -218,8 +227,8 @@ holds no tracked block that anything will touch again.**
 | Any thread that serves connections | **No** | Per-connection state (h2 session buffers, HPACK table) lives on that thread across requests |
 
 `cwist_conn_registry_flush()` has the same shape: it closes every connection
-the calling thread registered, including ones another thread is serving
-right now (parked, deferred, resubmitted).
+the calling thread owns. That includes connections it tracked and another
+thread serves without having adopted them (parked or deferred ones).
 
 The `cwist` CLI enforces reading this. `cwist audit` and `cwist watcher` warn
 on every call to `cwist_gc_scope_flush`, `cwist_ebr_free`,

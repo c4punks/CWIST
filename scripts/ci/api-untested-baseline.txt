@@ -43,7 +43,6 @@ cwist_bind_write_error_response
 cwist_calloc_shim
 cwist_compress_backend_deflate
 cwist_compress_backend_zstd
-cwist_conn_registry_sweep_all
 cwist_db_pool_destroy
 cwist_db_sync_pull
 cwist_free_shim
