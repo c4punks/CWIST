@@ -110,6 +110,7 @@ typedef struct {
     pthread_cond_t cond_not_empty;
     pthread_cond_t cond_not_full;
     int shutdown;
+    bool resizing; /* a submitter is allocating a bigger ring outside the mutex */
 } https_thread_pool_t;
 
 static https_thread_pool_t g_https_pool;
@@ -134,40 +135,76 @@ static __thread bool t_https_parked = false;
 static void https_close_conn_cb(void *handle);
 
 /**
- * @brief Resize the task ring to @p new_len slots, keeping queued tasks in
- *        order (unwrapped to start at slot 0). Caller holds g_https_pool.mutex
- *        and guarantees new_len >= count.
- * @return false if the allocation failed; the old ring is left untouched.
+ * @brief Copy the queued tasks of the current ring into @p queue (unwrapped
+ *        to start at slot 0) and make it the ring. Caller holds
+ *        g_https_pool.mutex and guarantees new_len >= count.
+ * @return The previous ring, for the caller to free after unlocking.
  */
-static inline bool resize_queue(size_t new_len) {
-    /* cwist_malloc, not cwist_alloc: every pool thread touches the ring, so
-     * it must not sit on one thread's full-GC sweep list. */
-    https_pool_task_t *queue = cwist_malloc(new_len * sizeof(*queue));
-    if (!queue) return false;
-    for (size_t i = 0; i < g_https_pool.count; i++) {
-        queue[i] = g_https_pool.queue[(g_https_pool.head + i) % g_https_pool.queue_len];
+static inline https_pool_task_t *resize_queue(https_pool_task_t *queue, size_t new_len) {
+    https_pool_task_t *old = g_https_pool.queue;
+    size_t count = g_https_pool.count;
+    if (count > 0) {
+        /* Two contiguous copies instead of a per-slot modulo walk: this is
+         * the only part of a resize that still runs under the mutex. */
+        size_t first = g_https_pool.queue_len - g_https_pool.head;
+        if (first > count) first = count;
+        memcpy(queue, old + g_https_pool.head, first * sizeof(*queue));
+        memcpy(queue + first, old, (count - first) * sizeof(*queue));
     }
-    cwist_free(g_https_pool.queue);
     g_https_pool.queue = queue;
     g_https_pool.queue_len = new_len;
     g_https_pool.head = 0;
-    g_https_pool.tail = g_https_pool.count;
-    return true;
+    g_https_pool.tail = count;
+    return old;
 }
 
 /**
  * @brief Make room for one more task, doubling the ring if it is full.
- *        Caller holds g_https_pool.mutex.
+ *        Caller holds g_https_pool.mutex; it is released while the bigger
+ *        ring is allocated and while the old one is freed, so a resize does
+ *        not stall workers popping tasks or other submitters for the cost
+ *        of a large malloc/free. Only one submitter resizes at a time; the
+ *        others see resizing and wait on cond_not_full, which the resizer
+ *        broadcasts when it is done.
  * @return true if a slot is free; false when the ring is at
- *         HTTPS_TASK_QUEUE_MAX or cannot grow (the caller then waits for a
- *         worker to free a slot, as with the old fixed-size queue).
+ *         HTTPS_TASK_QUEUE_MAX, cannot grow, or is being grown by another
+ *         submitter (the caller then waits on cond_not_full).
  */
 static bool https_pool_reserve_locked(void) {
-    if (g_https_pool.count < g_https_pool.queue_len) return true;
-    if (g_https_pool.queue_len >= HTTPS_TASK_QUEUE_MAX) return false;
-    size_t new_len = g_https_pool.queue_len ? g_https_pool.queue_len * 2 : HTTPS_TASK_QUEUE_INITIAL;
-    if (new_len > HTTPS_TASK_QUEUE_MAX) new_len = HTTPS_TASK_QUEUE_MAX;
-    return resize_queue(new_len);
+    while (g_https_pool.count >= g_https_pool.queue_len) {
+        if (g_https_pool.resizing || g_https_pool.shutdown) return false;
+        if (g_https_pool.queue_len >= HTTPS_TASK_QUEUE_MAX) return false;
+        size_t new_len = g_https_pool.queue_len ? g_https_pool.queue_len * 2 : HTTPS_TASK_QUEUE_INITIAL;
+        if (new_len > HTTPS_TASK_QUEUE_MAX) new_len = HTTPS_TASK_QUEUE_MAX;
+
+        g_https_pool.resizing = true;
+        pthread_mutex_unlock(&g_https_pool.mutex);
+        /* cwist_malloc, not cwist_alloc: every pool thread touches the ring,
+         * so it must not sit on one thread's full-GC sweep list. */
+        https_pool_task_t *queue = cwist_malloc(new_len * sizeof(*queue));
+        pthread_mutex_lock(&g_https_pool.mutex);
+        if (!queue || g_https_pool.shutdown) {
+            /* On shutdown https_pool_destroy() owns the ring; drop ours. */
+            cwist_free(queue);
+            g_https_pool.resizing = false;
+            pthread_cond_broadcast(&g_https_pool.cond_not_full);
+            return false;
+        }
+
+        /* Only this submitter grows the ring and nothing shrinks it, so
+         * queue_len is unchanged and new_len still exceeds count. */
+        https_pool_task_t *old = resize_queue(queue, new_len);
+        pthread_cond_broadcast(&g_https_pool.cond_not_full); /* slots are free now */
+        pthread_mutex_unlock(&g_https_pool.mutex);
+        cwist_free(old);
+        pthread_mutex_lock(&g_https_pool.mutex);
+        /* resizing stays set until here so https_pool_destroy() cannot tear
+         * down the mutex while this thread is still outside it. */
+        g_https_pool.resizing = false;
+        pthread_cond_broadcast(&g_https_pool.cond_not_full);
+        /* Others may have filled the new slots meanwhile: loop rechecks. */
+    }
+    return true;
 }
 
 /**
@@ -331,6 +368,11 @@ void https_pool_destroy(void) {
     pthread_mutex_lock(&g_https_pool.mutex);
     g_https_pool.shutdown = 1;
     pthread_cond_broadcast(&g_https_pool.cond_not_empty);
+    /* Wake submitters blocked on a full ring so they see shutdown, and wait
+     * out a submitter that is growing the ring outside the mutex: the ring
+     * and the mutex are torn down below. */
+    pthread_cond_broadcast(&g_https_pool.cond_not_full);
+    while (g_https_pool.resizing) pthread_cond_wait(&g_https_pool.cond_not_full, &g_https_pool.mutex);
     pthread_mutex_unlock(&g_https_pool.mutex);
     for (int i = 0; i < get_optimal_thread_count(); i++) {
         pthread_join(g_https_pool.threads[i], NULL);
