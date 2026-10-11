@@ -50,6 +50,13 @@ Cryptographic hash function for hash maps (used in Query/Headers).
 Unified error handling system using `cwist_error_t`.
 - **Header:** `<cwist/sys/err/cwist_err.h>`
 - **Features:** Can return simple integer codes or complex JSON objects (e.g., OpenSSL/SQLite errors).
+- **Allocation failure:** CWIST never aborts and never dereferences a failed
+  allocation on a public path. A setup call (`*_create`, `*_init`,
+  `*_use_*`, setters) reports the failure through its return value and
+  leaves earlier state in place. On a request path, the request fails: an
+  error status such as 500, or a closed connection. An optional per-request
+  feature is skipped instead: no request ID, no static cache, no session
+  cookie.
 
 ### 8. Big Dumb Reply (BDR)
 Auto-caches serialized responses for expensive handlers.

@@ -166,6 +166,7 @@ void cwist_config_load_env(cwist_config *cfg, const char *prefix) {
             if (key_len < prefix_len || strncmp(*env, prefix, prefix_len) != 0) continue;
         }
         char *key CWIST_DEFER_FREE = (char *)cwist_alloc(key_len + 1);
+        if (!key) continue; /* skip this variable rather than crash */
         memcpy(key, *env, key_len);
         key[key_len] = '\0';
         cwist_config_set(cfg, key, eq + 1);

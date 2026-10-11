@@ -965,8 +965,10 @@ void cwist_http3_client_destroy(cwist_http3_client *client) {
 
 int cwist_http3_client_set_server(cwist_http3_client *client, const char *host, uint16_t port) {
     if (!client || !host) return -1;
+    char *copy = strdup(host);
+    if (!copy) return -1; /* keep the previous server */
     free(client->host);
-    client->host = strdup(host);
+    client->host = copy;
     client->port = port;
     return 0;
 }

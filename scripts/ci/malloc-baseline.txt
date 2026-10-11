@@ -111,7 +111,7 @@
 1	src/net/http/http3_client.c:char *name = malloc(name_len + 1);
 1	src/net/http/http3_client.c:char *tmp = realloc(st->resp_body, new_cap);
 1	src/net/http/http3_client.c:char *value = malloc(value_len + 1);
-1	src/net/http/http3_client.c:client->host = strdup(host);
+1	src/net/http/http3_client.c:char *copy = strdup(host);
 1	src/net/http/http3_client.c:client->in_dgram.data = malloc(len);
 1	src/net/http/http3_client.c:client->out_dgram.data = malloc(len);
 1	src/net/http/http3_client.c:cwist_http3_client *client = calloc(1, sizeof(*client));

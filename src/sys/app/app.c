@@ -838,6 +838,12 @@ static void cwist_mem_init(cwist_app *app) {
     if (!app || !app->static_dirs) return;
 
     app->mem_manager = cwist_alloc(sizeof(cwist_fix_server_mem));
+    if (!app->mem_manager) {
+        /* Serving still works: static files are then read from disk per
+         * request instead of from the in-memory cache (#341). */
+        fprintf(stderr, "[StaticMem] Out of memory; static cache disabled\n");
+        return;
+    }
     app->mem_manager->check_interval_ms = 2000;
     pthread_mutex_init(&app->mem_manager->lock, NULL);
     app->mem_manager->retire_grace_ns = CWIST_STATIC_RETIRE_NS;

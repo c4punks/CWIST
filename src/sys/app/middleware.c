@@ -24,11 +24,13 @@ static unsigned int rid_seed = 0;
 
 /**
  * @brief Generate a short pseudo-random request identifier for logging and tracing.
- * @return Heap-allocated 16-character identifier string.
+ * @param id Receives 16 identifier characters and a NUL terminator.
+ *
+ * Writes into the caller's buffer so the middleware has no allocation that
+ * can fail on a request path (#341).
  */
-static char *generate_request_id() {
+static void generate_request_id(char id[17]) {
     static const char charset[] = "abcdefghijklmnopqrstuvwxyz0123456789";
-    char *id = cwist_alloc(17);
 
     pthread_mutex_lock(&rid_mutex);
     if (rid_seed == 0) rid_seed = (unsigned int)time(NULL) ^ (unsigned int)pthread_self();
@@ -39,7 +41,6 @@ static char *generate_request_id() {
         id[i] = charset[rand_r(&seed) % (sizeof(charset) - 1)];
     }
     id[16] = '\0';
-    return id;
 }
 
 /**
@@ -51,20 +52,20 @@ static char *generate_request_id() {
 void cwist_mw_request_id_handler(cwist_http_request *req, cwist_http_response *res,
                                  cwist_handler_func next) {
     const char *header_name = "X-Request-Id";
-    char *existing = cwist_http_header_get(req->headers, header_name);
-    char *rid;
+    const char *rid = cwist_http_header_get(req->headers, header_name);
+    char generated[17];
 
-    if (existing) {
-        rid = cwist_strdup(existing);
-    } else {
-        rid = generate_request_id();
+    if (!rid) {
+        generate_request_id(generated);
+        rid = generated;
         cwist_http_header_add(&req->headers, header_name, rid);
     }
 
+    /* header_add copies the value, so neither the request's own header nor
+     * the stack buffer has to outlive this call. */
     cwist_http_header_add(&res->headers, header_name, rid);
 
     next(req, res);
-    cwist_free(rid);
 }
 
 /**

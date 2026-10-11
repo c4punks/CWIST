@@ -242,8 +242,11 @@ int cwist_app_use_session(cwist_app *app, const char *secret) {
  */
 void cwist_app_set_session_name(cwist_app *app, const char *name) {
     if (!app || !name) return;
+    /* Keep the current name if the copy fails rather than leave it NULL. */
+    char *copy = cwist_strdup(name);
+    if (!copy) return;
     if (app->session_name) cwist_free(app->session_name);
-    app->session_name = cwist_strdup(name);
+    app->session_name = copy;
 }
 
 /**
@@ -364,8 +367,9 @@ cwist_session_t *cwist_session_start(cwist_app *app, cwist_http_request *req,
         cwist_cookie_parse(cookies, cookie_header);
         const char *raw = cwist_cookie_get(cookies, app->session_name);
         if (raw) {
+            /* On OOM the cookie is treated as absent: a fresh session. */
             char *copy = cwist_strdup(raw);
-            char *dot = strchr(copy, '.');
+            char *dot = copy ? strchr(copy, '.') : NULL;
             if (dot) {
                 *dot = '\0';
                 if (verify_signature(app, copy, dot + 1)) {

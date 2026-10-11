@@ -31,6 +31,10 @@ cwist_logger *cwist_logger_create(const char *name) {
     cwist_logger *log = (cwist_logger *)cwist_alloc(sizeof(cwist_logger));
     if (!log) return NULL;
     log->name = cwist_strdup(name ? name : "cwist");
+    if (!log->name) {
+        cwist_free(log);
+        return NULL;
+    }
     log->level = CWIST_LOG_INFO;
     log->use_colors = true;
     return log;
