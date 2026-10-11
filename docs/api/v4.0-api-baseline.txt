@@ -4,7 +4,7 @@
 # enum constants, extern globals. Struct layouts are tested
 # separately by tests/abi_layout*.
 
-== functions (766) ==
+== functions (744) ==
 cwist_accept_socket
 cwist_alloc
 cwist_alloc_array
@@ -79,7 +79,6 @@ cwist_app_use_pqc_layer
 cwist_app_use_redis
 cwist_app_use_scheduler
 cwist_app_use_session
-cwist_app_use_webtransport
 cwist_app_ws
 cwist_app_ws_async
 cwist_app_ws_opt
@@ -96,6 +95,7 @@ cwist_async_respond
 cwist_async_respond_with
 cwist_async_retain
 cwist_async_set_timeout
+cwist_async_wait_dispatched
 cwist_bdr_copy_get
 cwist_bdr_create
 cwist_bdr_destroy
@@ -313,7 +313,6 @@ cwist_http3_client_set_max_retries
 cwist_http3_client_set_retry_delay_ms
 cwist_http3_client_set_server
 cwist_http3_client_set_timeout_ms
-cwist_http3_client_webtransport_connect
 cwist_http3_destroy_context
 cwist_http3_init_context
 cwist_http3_init_context_ephemeral
@@ -331,7 +330,6 @@ cwist_http3_set_noprogress_timeout
 cwist_http3_set_ping_period
 cwist_http3_set_push_enabled
 cwist_http3_set_stream_priority
-cwist_http3_set_webtransport_handler
 cwist_http_async_conn_fill
 cwist_http_async_rearm
 cwist_http_async_send_response
@@ -748,31 +746,11 @@ cwist_websocket_send
 cwist_websocket_send_sequenced
 cwist_websocket_upgrade
 cwist_websocket_upgrade_response
-cwist_webtransport_client_close
-cwist_webtransport_client_is_open
-cwist_webtransport_client_open_bidi
-cwist_webtransport_client_open_uni
-cwist_webtransport_client_poll
-cwist_webtransport_client_send_datagram
-cwist_webtransport_client_stream_close
-cwist_webtransport_client_stream_flush
-cwist_webtransport_client_stream_read
-cwist_webtransport_client_stream_write
-cwist_webtransport_close_session
-cwist_webtransport_close_stream
-cwist_webtransport_flush
-cwist_webtransport_max_datagram_size
-cwist_webtransport_open_bidi_stream
-cwist_webtransport_open_uni_stream
-cwist_webtransport_read
-cwist_webtransport_send_datagram
-cwist_webtransport_set_new_stream_handler
-cwist_webtransport_write
 cwist_zod_parse
 cwist_zod_print_errors
 cwist_zod_validate
 
-== types (struct/union/enum names) (151) ==
+== types (struct/union/enum names) (150) ==
 __natsConnection
 __prim_cwist_error_t
 bdr_blob_t
@@ -918,14 +896,13 @@ cwist_webrtc_conn
 cwist_webrtc_ctx
 cwist_websocket
 cwist_websocket_async
-cwist_webtransport_client_session
 cwist_ws_frame
 cwist_zod_error
 cwist_zod_result
 quic_conn_fc
 quic_stream_fc
 
-== typedefs (203) ==
+== typedefs (201) ==
 __prim_cwist_error_t
 bdr_blob_t
 bdr_entry_t
@@ -1114,8 +1091,6 @@ cwist_webrtc_data_type
 cwist_webrtc_message_cb
 cwist_websocket
 cwist_websocket_async
-cwist_webtransport_client_session
-cwist_webtransport_handler_func
 cwist_write_status_t
 cwist_ws_frame
 cwist_ws_handler_func
@@ -1384,3 +1359,41 @@ cwist_session_t
 cwist_sse_stream_t
 cwist_websocket_async
 cwist_write_status_t
+
+# Experimental: outside the v4.0 guarantee (WebTransport, until v4.1).
+
+== experimental functions (23) ==
+cwist_app_use_webtransport
+cwist_http3_client_webtransport_connect
+cwist_http3_set_webtransport_handler
+cwist_webtransport_client_close
+cwist_webtransport_client_is_open
+cwist_webtransport_client_open_bidi
+cwist_webtransport_client_open_uni
+cwist_webtransport_client_poll
+cwist_webtransport_client_send_datagram
+cwist_webtransport_client_stream_close
+cwist_webtransport_client_stream_flush
+cwist_webtransport_client_stream_read
+cwist_webtransport_client_stream_write
+cwist_webtransport_close_session
+cwist_webtransport_close_stream
+cwist_webtransport_flush
+cwist_webtransport_max_datagram_size
+cwist_webtransport_open_bidi_stream
+cwist_webtransport_open_uni_stream
+cwist_webtransport_read
+cwist_webtransport_send_datagram
+cwist_webtransport_set_new_stream_handler
+cwist_webtransport_write
+
+== experimental types (struct/union/enum names) (1) ==
+cwist_webtransport_client_session
+
+== experimental typedefs (2) ==
+cwist_webtransport_client_session
+cwist_webtransport_handler_func
+
+== experimental enum constants (0) ==
+
+== experimental globals (extern) (0) ==

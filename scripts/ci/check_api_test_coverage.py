@@ -34,10 +34,18 @@ UNTESTED = Path("scripts/ci/api-untested-baseline.txt")
 
 
 def public_functions(text: str) -> set[str]:
-    m = re.search(r"^== functions \(\d+\) ==\n(.*?)(?=^==|\Z)", text, re.M | re.S)
-    if not m:
+    # The guaranteed and the experimental function sections both count:
+    # experimental API needs tests as much as the rest.
+    sections = re.findall(
+        r"^== (?:experimental )?functions \(\d+\) ==\n(.*?)(?=^==|^#|\Z)", text, re.M | re.S)
+    if not sections:
         raise ValueError("no '== functions (N) ==' section in the API baseline")
-    return {line.strip() for line in m.group(1).splitlines() if line.strip()}
+    return {
+        line.strip()
+        for body in sections
+        for line in body.splitlines()
+        if line.strip()
+    }
 
 
 def referenced_names(root: Path) -> set[str]:

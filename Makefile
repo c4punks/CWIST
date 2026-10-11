@@ -921,6 +921,7 @@ TEST_TARGETS = test_worker_affinity \
                test_linux_writer_fast \
                test_orm_socket \
                test_webtransport \
+               test_webtransport_client_api \
                test_http \
                test_http_stringify \
                test_siphash \
@@ -1918,6 +1919,10 @@ test_orm_socket: $(LIB_NAME) tests/test_orm_socket.c
 test_webtransport: $(LIB_NAME) tests/test_webtransport.c
 	$(CC) $(CFLAGS) -o test_webtransport tests/test_webtransport.c $(LIB_NAME) $(LIBS)
 	./test_webtransport
+
+test_webtransport_client_api: $(LIB_NAME) tests/test_webtransport_client_api.c
+	$(CC) $(CFLAGS) -o $@ tests/test_webtransport_client_api.c $(LIB_NAME) $(LIBS)
+	./$@
 
 # WebTransport server end to end: tests/webtransport_echo_server driven by
 # an aioquic client (pip install aioquic). Needs CWIST_WEBTRANSPORT=server and
