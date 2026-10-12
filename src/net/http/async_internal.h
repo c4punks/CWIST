@@ -12,6 +12,8 @@
 #include <stdbool.h>
 #include <stdint.h>
 
+struct cwist_async;
+
 /** Current generation of the C1M worker reactors; changes when the pool is destroyed. */
 uint64_t cwist_http_reactor_generation(void);
 
@@ -37,5 +39,40 @@ void cwist_http_async_close_orphan(int client_fd, cwist_http_async_conn_t *conn)
  * completion owns the conn and may already have closed or resubmitted it.
  */
 bool cwist_async_https_take_deferred(void);
+
+/* Dispatch-thread handoff record (async_tls.c). It has no other dependency,
+ * so http.c and the middleware link it on every target, WASM included. */
+
+/** Record that @p a now owns @p res; called by cwist_async_defer(). */
+void cwist_async_record_pending(struct cwist_async *a, const cwist_http_response *res);
+
+/** Drop this thread's record if it names @p a (ack, final release). */
+void cwist_async_forget_handle(const struct cwist_async *a);
+
+/**
+ * Dispatch side of the handoff: return the handle cwist_async_defer() created
+ * for @p res on this thread, or NULL if the handler did not defer it, and
+ * forget it. Dispatch calls this right after the handler returns and uses the
+ * result instead of res->deferred/res->async, which a producer can reach and
+ * overwrite before the ack. A mismatch between the two is reported (and
+ * aborts under CWIST_ASYNC_STRICT=1).
+ */
+struct cwist_async *cwist_async_dispatch_take(cwist_http_response *res);
+
+/**
+ * Return whether @p res is deferred as seen from this thread: either
+ * cwist_async_defer() deferred it here and dispatch has not taken it yet, or
+ * res->deferred is set. Middleware uses this so a producer that clears
+ * res->deferred early cannot make the dispatch thread touch the response.
+ */
+bool cwist_async_res_deferred(const cwist_http_response *res);
+
+/**
+ * Drop this thread's pending handoff if it names @p res, so a response later
+ * allocated at the same address is not mistaken for it. Called when a
+ * response is destroyed without dispatch having taken it (a defer outside
+ * dispatch, or a path such as HTTP/3 that does not hand off).
+ */
+void cwist_async_forget_response(const cwist_http_response *res);
 
 #endif

@@ -14,6 +14,7 @@
 #include <strings.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include "../../net/http/async_internal.h"
 
 #define CWIST_MAX_BACKENDS 8
 
@@ -619,7 +620,7 @@ static void cwist_mw_compress_handler(cwist_http_request *req, cwist_http_respon
     /* A deferred response belongs to its cwist_async completion, which may
      * be writing it on another thread right now (cwist_async_respond(), the
      * timeout job); leave it alone. */
-    if (res->deferred) return;
+    if (cwist_async_res_deferred(res)) return;
     if (!backend) return;
     if (!res->body || res->body->size == 0) return;
     if (res->is_ptr_body || res->use_file_stream) return;

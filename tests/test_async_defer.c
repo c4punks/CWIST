@@ -12,6 +12,7 @@
 #include <cwist/sys/app/app.h>
 #include <cwist/sys/app/shutdown.h>
 #include <cwist/net/http/async.h>
+#include "../src/net/http/async_internal.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -130,6 +131,19 @@ static void race_handler(cwist_http_request *req, cwist_http_response *res) {
     }
     pthread_detach(t1);
     pthread_detach(t2);
+}
+
+/* A producer that clears res->deferred before dispatch looks (the fly.board
+ * #344 pattern, made deterministic): dispatch must still hand off instead of
+ * sending and destroying the response under the producer. */
+static void cleared_flag_handler(cwist_http_request *req, cwist_http_response *res) {
+    cwist_async *a = cwist_async_defer(req, res);
+    if (!a) {
+        res->status_code = CWIST_HTTP_INTERNAL_ERROR;
+        return;
+    }
+    res->deferred = false;
+    schedule_respond(req, a, 50);
 }
 
 static void hello_handler(cwist_http_request *req, cwist_http_response *res) {
@@ -310,6 +324,68 @@ static int test_wait_dispatched(void) {
     return failures;
 }
 
+/* cwist_async_dispatch_take() answers from what cwist_async_defer() recorded
+ * on this thread, whatever the public fields say. */
+static int test_dispatch_take(void) {
+    int failures = 0;
+    int sockets[2];
+    if (socketpair(AF_UNIX, SOCK_STREAM, 0, sockets) < 0) return 1;
+    cwist_http_request *req = cwist_http_request_create();
+    cwist_http_response *res = cwist_http_response_create();
+    cwist_http_response *plain = cwist_http_response_create();
+    cwist_async *a = req && res ? (req->client_fd = sockets[0], cwist_async_defer(req, res)) : NULL;
+    if (!a || !plain) {
+        cwist_http_request_destroy(req);
+        cwist_http_response_destroy(res);
+        cwist_http_response_destroy(plain);
+        close(sockets[0]);
+        close(sockets[1]);
+        return 1;
+    }
+    req->keep_alive = false;
+    CHECK(cwist_async_res_deferred(res), "deferred response reads as deferred");
+    CHECK(!cwist_async_res_deferred(plain), "other response reads as not deferred");
+    CHECK(cwist_async_dispatch_take(plain) == NULL, "take ignores a response it did not defer");
+
+    plain->deferred = true;
+    CHECK(cwist_async_dispatch_take(plain) == NULL,
+          "a hand-set res->deferred without defer is not a handoff");
+    plain->deferred = false;
+    cwist_http_response_destroy(plain);
+    /* Acknowledge and abort so the handle releases req/res. */
+    cwist_async_dispatch_ack(a);
+    cwist_async_abort(a, CWIST_HTTP_INTERNAL_ERROR);
+    close(sockets[1]);
+    return failures;
+}
+
+/* A cleared flag before take still yields the recorded handle. */
+static int test_dispatch_take_cleared(void) {
+    int failures = 0;
+    int sockets[2];
+    if (socketpair(AF_UNIX, SOCK_STREAM, 0, sockets) < 0) return 1;
+    cwist_http_request *req = cwist_http_request_create();
+    cwist_http_response *res = cwist_http_response_create();
+    cwist_async *a = req && res ? (req->client_fd = sockets[0], cwist_async_defer(req, res)) : NULL;
+    if (!a) {
+        cwist_http_request_destroy(req);
+        cwist_http_response_destroy(res);
+        close(sockets[0]);
+        close(sockets[1]);
+        return 1;
+    }
+    req->keep_alive = false;
+    res->deferred = false;
+    CHECK(cwist_async_res_deferred(res), "pending handoff reads as deferred on dispatch");
+    CHECK(cwist_async_dispatch_take(res) == a, "take returns the handle despite the cleared flag");
+    CHECK(cwist_async_dispatch_take(res) == NULL, "take forgets the handoff");
+    res->deferred = true;
+    cwist_async_dispatch_ack(a);
+    CHECK(cwist_async_respond(a, CWIST_HTTP_OK, "text/plain", "ok", 2), "complete after take");
+    close(sockets[1]);
+    return failures;
+}
+
 /* Synchronous completion destroys req/res before the losing calls run. */
 static int test_retained_completion(void) {
     int failures = 0;
@@ -376,6 +452,7 @@ int main(void) {
         cwist_app_get(app, "/timeout-before-response", timeout_before_response_handler);
         cwist_app_get(app, "/race", race_handler);
         cwist_app_get(app, "/hello", hello_handler);
+        cwist_app_get(app, "/cleared-flag", cleared_flag_handler);
         cwist_app_get(app, "/bigdefer", bigdefer_handler);
         g_big_body = malloc(BIG_BODY_LEN);
         if (!g_big_body) _exit(1);
@@ -575,6 +652,23 @@ int main(void) {
         }
     }
 
+    /* Dispatch decides the handoff, not res->deferred. */
+    {
+        struct client_conn c = {.fd = connect_to_server(), .pending_len = 0};
+        CHECK(c.fd >= 0, "connect for cleared deferred flag");
+        if (c.fd >= 0) {
+            send_all(c.fd, "GET /cleared-flag HTTP/1.1\r\nHost: localhost\r\n\r\n");
+            int n = read_one_response(&c, buf, sizeof(buf));
+            CHECK(n > 0 && has_code(buf, "200") && strstr(buf, "deferred-body"),
+                  "cleared res->deferred still hands the exchange to the producer");
+            send_all(c.fd, "GET /hello HTTP/1.1\r\nHost: localhost\r\n\r\n");
+            n = read_one_response(&c, buf, sizeof(buf));
+            CHECK(n > 0 && has_code(buf, "200") && strstr(buf, "second-ok"),
+                  "keep-alive after a cleared deferred flag");
+            close(c.fd);
+        }
+    }
+
     kill(pid, SIGTERM);
     int status;
     waitpid(pid, &status, 0);
@@ -585,6 +679,8 @@ int main(void) {
 
     failures += test_retained_completion();
     failures += test_wait_dispatched();
+    failures += test_dispatch_take();
+    failures += test_dispatch_take_cleared();
     if (failures == 0) {
         printf("All async defer tests passed.\n");
         return 0;

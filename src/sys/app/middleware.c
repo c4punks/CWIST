@@ -12,6 +12,7 @@
 #include <sys/time.h>
 #include <unistd.h>
 #include <pthread.h>
+#include "../../net/http/async_internal.h"
 
 /**
  * @file middleware.c
@@ -128,7 +129,7 @@ static void format_iso8601_time(char *buf, size_t len, const struct timeval *tv)
  * @return Header value of X-Request-Id, or NULL if absent.
  */
 static const char *access_log_request_id(cwist_http_request *req, cwist_http_response *res) {
-    cwist_http_header_node *headers = res->deferred ? req->headers : res->headers;
+    cwist_http_header_node *headers = cwist_async_res_deferred(res) ? req->headers : res->headers;
     return cwist_http_header_get(headers, "X-Request-Id");
 }
 
@@ -145,7 +146,7 @@ static const char *access_log_request_id(cwist_http_request *req, cwist_http_res
 static void access_log_status_bytes(const cwist_http_response *res, const char *unknown,
                                     char *status, size_t status_len, char *bytes,
                                     size_t bytes_len) {
-    if (res->deferred) {
+    if (cwist_async_res_deferred(res)) {
         snprintf(status, status_len, "%s", unknown);
         snprintf(bytes, bytes_len, "%s", unknown);
         return;

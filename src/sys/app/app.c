@@ -22,6 +22,7 @@
 #include <cwist/net/grpc/grpc.h>
 #include <cwist/net/http/http3.h>
 #include <cwist/net/http/async_server.h>
+#include "../../net/http/async_internal.h"
 #include "../../net/http/simd_parser.h"
 #include "../../net/websocket/ws_async_internal.h"
 #include <cwist/sys/health/healthz.h>
@@ -2790,6 +2791,9 @@ static void static_http3_route_bridge(void *user_ctx, cwist_http_request *req,
     req->app = app;
     req->db = app->db;
     internal_route_handler(app, req, res);
+    /* HTTP/3 has no deferred-response path yet; drop this thread's pending
+     * handoff so a later dispatch cannot mistake it for its own. */
+    (void)cwist_async_dispatch_take(res);
 }
 
 #ifndef __wasi__
@@ -2845,8 +2849,9 @@ static void static_ssl_http1_handler(cwist_https_connection *conn, void *ctx) {
         internal_route_handler(app, req, res);
 
         /* Deferred-response handoff: ownership of req/res and conn moved to cwist_async */
-        if (res->deferred) {
-            cwist_async_dispatch_ack((cwist_async *)res->async);
+        cwist_async *deferred = cwist_async_dispatch_take(res);
+        if (deferred) {
+            cwist_async_dispatch_ack(deferred);
             return;
         }
 
@@ -3047,12 +3052,13 @@ static app_serve_result_t app_serve_parsed_request(cwist_app *app, int client_fd
      * teardown to the completion instead: ack, then abort it; the abort
      * response send fails on the dead connection and the completion's
      * send-response path closes the conn, which owns close in all outcomes. */
-    if (res->deferred) {
+    cwist_async *deferred = cwist_async_dispatch_take(res);
+    if (deferred) {
         cwist_http_async_conn_t *aconn = (cwist_http_async_conn_t *)req->async_conn;
         bool broken = aconn && aconn->olen > 0 &&
                       cwist_http_coalesce_flush_blocking(client_fd, aconn) != 0;
-        cwist_async_dispatch_ack((cwist_async *)res->async);
-        if (broken) cwist_async_abort((cwist_async *)res->async, CWIST_HTTP_INTERNAL_ERROR);
+        cwist_async_dispatch_ack(deferred);
+        if (broken) cwist_async_abort(deferred, CWIST_HTTP_INTERNAL_ERROR);
         return APP_SERVE_DEFERRED;
     }
 

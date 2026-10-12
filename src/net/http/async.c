@@ -144,6 +144,7 @@ cwist_async *cwist_async_defer(cwist_http_request *req, cwist_http_response *res
     cwist_http_async_disown_response(res);
     res->async = a;
     res->deferred = true;
+    cwist_async_record_pending(a, res);
     return a;
 }
 
@@ -154,6 +155,7 @@ cwist_async *cwist_async_retain(cwist_async *a) {
 
 void cwist_async_release(cwist_async *a) {
     if (a && atomic_fetch_sub_explicit(&a->refs, 1, memory_order_acq_rel) == 1) {
+        cwist_async_forget_handle(a);
         pthread_mutex_destroy(&a->mu);
         cwist_free(a);
     }
@@ -161,6 +163,7 @@ void cwist_async_release(cwist_async *a) {
 
 void cwist_async_dispatch_ack(cwist_async *a) {
     if (!a) return;
+    cwist_async_forget_handle(a);
     /* Middleware may allocate after next() returns. No producer may mutate
      * or destroy this graph until the acknowledgement; a producer that
      * already completed waits on mu and left its result to send here. */
