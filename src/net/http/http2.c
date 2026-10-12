@@ -27,6 +27,7 @@
 #include <cwist/net/http/http2_flow_control.h>
 #include <cwist/net/http/async.h>
 #include "async_internal.h"
+#include "h2_wire.h"
 #include <cwist/core/mem/alloc.h>
 #include <cwist/core/mem/gc.h>
 #include <cwist/core/log.h>
@@ -100,10 +101,14 @@
  * @brief Monotonic clock in milliseconds, for the connection idle deadline.
  * @return Current CLOCK_MONOTONIC time in milliseconds.
  */
-static uint64_t h2_now_ms(void) {
+static inline uint64_t h2_now_ns(void) {
     struct timespec ts;
     clock_gettime(CLOCK_MONOTONIC, &ts);
-    return (uint64_t)ts.tv_sec * 1000 + (uint64_t)ts.tv_nsec / 1000000;
+    return (uint64_t)ts.tv_sec * 1000000000ull + (uint64_t)ts.tv_nsec;
+}
+
+static uint64_t h2_now_ms(void) {
+    return h2_now_ns() / 1000000;
 }
 
 /**
@@ -111,9 +116,20 @@ static uint64_t h2_now_ms(void) {
  * @return Current CLOCK_MONOTONIC time in microseconds.
  */
 static uint64_t h2_now_us(void) {
-    struct timespec ts;
-    clock_gettime(CLOCK_MONOTONIC, &ts);
-    return (uint64_t)ts.tv_sec * 1000000 + (uint64_t)ts.tv_nsec / 1000;
+    return h2_now_ns() / 1000;
+}
+
+/**
+ * @brief Parse an integer env knob.
+ * @param env The getenv() result (NULL when unset).
+ * @param fallback Value for an unset, empty, malformed or too small value.
+ * @param min Smallest accepted value.
+ */
+static inline long h2_env_long(const char *env, long fallback, long min) {
+    if (!env || !*env) return fallback;
+    char *end = NULL;
+    long v = strtol(env, &end, 10);
+    return (end != env && *end == '\0' && v >= min) ? v : fallback;
 }
 
 /**
@@ -125,15 +141,8 @@ static uint64_t h2_now_us(void) {
 static int h2_idle_timeout_ms(void) {
     static int timeout_ms = 0;
     if (timeout_ms == 0) {
-        const char *env = getenv("CWIST_HTTP2_IDLE_TIMEOUT_MS");
-        if (env && *env) {
-            char *end = NULL;
-            long v = strtol(env, &end, 10);
-            timeout_ms =
-                (end != env && *end == '\0' && v > 0) ? (int)v : CWIST_HTTP2_IDLE_TIMEOUT_MS;
-        } else {
-            timeout_ms = CWIST_HTTP2_IDLE_TIMEOUT_MS;
-        }
+        timeout_ms =
+            (int)h2_env_long(getenv("CWIST_HTTP2_IDLE_TIMEOUT_MS"), CWIST_HTTP2_IDLE_TIMEOUT_MS, 1);
     }
     return timeout_ms;
 }
@@ -150,15 +159,8 @@ static int h2_idle_timeout_ms(void) {
 static int h2_goaway_grace_ms(void) {
     static int grace_ms = -1;
     if (grace_ms < 0) {
-        const char *env = getenv("CWIST_HTTP2_GOAWAY_GRACE_MS");
-        if (env && *env) {
-            char *end = NULL;
-            long v = strtol(env, &end, 10);
-            grace_ms = (end != env && *end == '\0' && v >= 0) ? (int)v
-                                                              : CWIST_HTTP2_GOAWAY_GRACE_MS_DEFAULT;
-        } else {
-            grace_ms = CWIST_HTTP2_GOAWAY_GRACE_MS_DEFAULT;
-        }
+        grace_ms = (int)h2_env_long(getenv("CWIST_HTTP2_GOAWAY_GRACE_MS"),
+                                    CWIST_HTTP2_GOAWAY_GRACE_MS_DEFAULT, 0);
     }
     return grace_ms;
 }
@@ -172,15 +174,8 @@ static int h2_goaway_grace_ms(void) {
 static uint32_t h2_max_rst_burst(void) {
     static uint32_t val = 0;
     if (val == 0) {
-        const char *env = getenv("CWIST_HTTP2_MAX_RST_BURST");
-        if (env && *env) {
-            char *end = NULL;
-            long v = strtol(env, &end, 10);
-            val =
-                (end != env && *end == '\0' && v > 0) ? (uint32_t)v : CWIST_HTTP2_DEFAULT_RST_BURST;
-        } else {
-            val = CWIST_HTTP2_DEFAULT_RST_BURST;
-        }
+        val = (uint32_t)h2_env_long(getenv("CWIST_HTTP2_MAX_RST_BURST"),
+                                    CWIST_HTTP2_DEFAULT_RST_BURST, 1);
     }
     return val;
 }
@@ -194,15 +189,8 @@ static uint32_t h2_max_rst_burst(void) {
 static uint32_t h2_max_rst_rate(void) {
     static uint32_t val = 0;
     if (val == 0) {
-        const char *env = getenv("CWIST_HTTP2_MAX_RST_RATE");
-        if (env && *env) {
-            char *end = NULL;
-            long v = strtol(env, &end, 10);
-            val =
-                (end != env && *end == '\0' && v > 0) ? (uint32_t)v : CWIST_HTTP2_DEFAULT_RST_RATE;
-        } else {
-            val = CWIST_HTTP2_DEFAULT_RST_RATE;
-        }
+        val = (uint32_t)h2_env_long(getenv("CWIST_HTTP2_MAX_RST_RATE"),
+                                    CWIST_HTTP2_DEFAULT_RST_RATE, 1);
     }
     return val;
 }
@@ -1049,15 +1037,10 @@ static int h2_write_all(cwist_https_connection *conn, const void *buf, size_t le
 
 static void h2_make_frame_header(unsigned char out[CWIST_HTTP2_FRAME_HEADER_SIZE], uint32_t len,
                                  uint8_t type, uint8_t flags, uint32_t stream_id) {
-    out[0] = (unsigned char)((len >> 16) & 0xff);
-    out[1] = (unsigned char)((len >> 8) & 0xff);
-    out[2] = (unsigned char)(len & 0xff);
+    h2_put_u24(out, len);
     out[3] = type;
     out[4] = flags;
-    out[5] = (unsigned char)((stream_id >> 24) & 0x7f);
-    out[6] = (unsigned char)((stream_id >> 16) & 0xff);
-    out[7] = (unsigned char)((stream_id >> 8) & 0xff);
-    out[8] = (unsigned char)(stream_id & 0xff);
+    h2_put_u31(out + 5, stream_id);
 }
 
 /* --- Userspace frame batching ---
@@ -1069,14 +1052,8 @@ static void h2_make_frame_header(unsigned char out[CWIST_HTTP2_FRAME_HEADER_SIZE
 static size_t h2_batch_threshold(void) {
     static size_t threshold = 0;
     if (threshold == 0) {
-        const char *env = getenv("CWIST_H2_BATCH_BYTES");
-        long v = 0;
-        if (env && *env) {
-            char *end = NULL;
-            v = strtol(env, &end, 10);
-            if (end == env || *end != '\0') v = 0;
-        }
-        threshold = (v >= 4096) ? (size_t)v : (size_t)CWIST_H2_BATCH_DEFAULT_BYTES;
+        threshold =
+            (size_t)h2_env_long(getenv("CWIST_H2_BATCH_BYTES"), CWIST_H2_BATCH_DEFAULT_BYTES, 4096);
     }
     return threshold;
 }
@@ -1155,14 +1132,8 @@ static int h2_write_frame_any(h2_conn *hc, cwist_https_connection *conn, uint8_t
 
 static int h2_send_goaway(h2_conn *hc, uint32_t last_stream_id, uint32_t error_code) {
     unsigned char payload[8];
-    payload[0] = (unsigned char)((last_stream_id >> 24) & 0x7f);
-    payload[1] = (unsigned char)((last_stream_id >> 16) & 0xff);
-    payload[2] = (unsigned char)((last_stream_id >> 8) & 0xff);
-    payload[3] = (unsigned char)(last_stream_id & 0xff);
-    payload[4] = (unsigned char)((error_code >> 24) & 0xff);
-    payload[5] = (unsigned char)((error_code >> 16) & 0xff);
-    payload[6] = (unsigned char)((error_code >> 8) & 0xff);
-    payload[7] = (unsigned char)(error_code & 0xff);
+    h2_put_u31(payload, last_stream_id);
+    h2_put_u32(payload + 4, error_code);
     return h2_write_frame(hc, CWIST_HTTP2_FRAME_GOAWAY, 0, 0, payload, 8);
 }
 
@@ -1185,20 +1156,13 @@ static int h2_send_rst_stream(h2_conn *hc, uint32_t stream_id, uint32_t error_co
         return -2;
     }
     unsigned char payload[4];
-    payload[0] = (unsigned char)((error_code >> 24) & 0xff);
-    payload[1] = (unsigned char)((error_code >> 16) & 0xff);
-    payload[2] = (unsigned char)((error_code >> 8) & 0xff);
-    payload[3] = (unsigned char)(error_code & 0xff);
+    h2_put_u32(payload, error_code);
     return h2_write_frame(hc, CWIST_HTTP2_FRAME_RST_STREAM, 0, stream_id, payload, 4);
 }
 
 static int h2_send_window_update(h2_conn *hc, uint32_t stream_id, int32_t increment) {
-
     unsigned char payload[4];
-    payload[0] = (unsigned char)((increment >> 24) & 0x7f);
-    payload[1] = (unsigned char)((increment >> 16) & 0xff);
-    payload[2] = (unsigned char)((increment >> 8) & 0xff);
-    payload[3] = (unsigned char)(increment & 0xff);
+    h2_put_u31(payload, (uint32_t)increment);
     return h2_write_frame(hc, CWIST_HTTP2_FRAME_WINDOW_UPDATE, 0, stream_id, payload, 4);
 }
 
@@ -2349,11 +2313,10 @@ static int h2_process_incoming_frames_nonblocking(h2_conn *hc, h2_stream *s) {
         int n = h2_read_all(hc, hdr, 9);
         if (n != 9) return -1;
 
-        uint32_t len = ((uint32_t)hdr[0] << 16) | ((uint32_t)hdr[1] << 8) | hdr[2];
+        uint32_t len = h2_get_u24(hdr);
         uint8_t type = hdr[3];
         uint8_t flags = hdr[4];
-        uint32_t stream_id = (((uint32_t)hdr[5] & 0x7f) << 24) | ((uint32_t)hdr[6] << 16) |
-                             ((uint32_t)hdr[7] << 8) | hdr[8];
+        uint32_t stream_id = h2_get_u31(hdr + 5);
 
         unsigned char *payload = NULL;
         if (len > 0) {
@@ -2370,9 +2333,7 @@ static int h2_process_incoming_frames_nonblocking(h2_conn *hc, h2_stream *s) {
 
         if (type == 0x08) { // WINDOW_UPDATE
             if (len == 4) {
-                int32_t increment = (((int32_t)payload[0] & 0x7f) << 24) |
-                                    ((int32_t)payload[1] << 16) | ((int32_t)payload[2] << 8) |
-                                    (int32_t)payload[3];
+                int32_t increment = (int32_t)h2_get_u31(payload);
                 if (increment > 0) {
                     if (stream_id == 0) {
                         cwist_http2_flow_control_add_send_window(&hc->fc, (uint32_t)increment);
@@ -3332,9 +3293,8 @@ static int h2_handle_settings(h2_conn *hc, const unsigned char *payload, size_t 
     }
 
     for (size_t i = 0; i + 6 <= len; i += 6) {
-        uint16_t id = ((uint16_t)payload[i] << 8) | payload[i + 1];
-        uint32_t value = ((uint32_t)payload[i + 2] << 24) | ((uint32_t)payload[i + 3] << 16) |
-                         ((uint32_t)payload[i + 4] << 8) | (uint32_t)payload[i + 5];
+        uint16_t id = h2_get_u16(payload + i);
+        uint32_t value = h2_get_u32(payload + i + 2);
         switch (id) {
             case 0x1: /* SETTINGS_HEADER_TABLE_SIZE */ break;
             case 0x2: /* SETTINGS_ENABLE_PUSH */
@@ -3397,9 +3357,7 @@ static int h2_handle_window_update(h2_conn *hc, uint32_t stream_id, const unsign
                                    size_t len) {
     if (len != 4) return -1;
 
-    int32_t increment =
-        (int32_t)((((uint32_t)payload[0] & 0x7f) << 24) | ((uint32_t)payload[1] << 16) |
-                  ((uint32_t)payload[2] << 8) | (uint32_t)payload[3]);
+    int32_t increment = (int32_t)h2_get_u31(payload);
     if (increment <= 0) return -1;
 
     if (stream_id == 0) {
@@ -3804,11 +3762,10 @@ cwist_error_t cwist_http2_serve_connection_ex(cwist_https_connection *conn, void
             }
         }
 
-        uint32_t len = ((uint32_t)hdr[0] << 16) | ((uint32_t)hdr[1] << 8) | hdr[2];
+        uint32_t len = h2_get_u24(hdr);
         uint8_t type = hdr[3];
         uint8_t flags = hdr[4];
-        uint32_t stream_id = (((uint32_t)hdr[5] & 0x7f) << 24) | ((uint32_t)hdr[6] << 16) |
-                             ((uint32_t)hdr[7] << 8) | hdr[8];
+        uint32_t stream_id = h2_get_u31(hdr + 5);
 
         /* Frame size validation */
         if (len > CWIST_HTTP2_MAX_FRAME_SIZE) {
@@ -4305,10 +4262,7 @@ int cwist_http2_push_resource(cwist_http_request *req, const char *path, const c
     pos += n;
 
     unsigned char pp_payload[4096 + 4];
-    pp_payload[0] = (unsigned char)((promised_stream_id >> 24) & 0x7f);
-    pp_payload[1] = (unsigned char)((promised_stream_id >> 16) & 0xff);
-    pp_payload[2] = (unsigned char)((promised_stream_id >> 8) & 0xff);
-    pp_payload[3] = (unsigned char)(promised_stream_id & 0xff);
+    h2_put_u31(pp_payload, promised_stream_id);
     memcpy(pp_payload + 4, header_block, pos);
 
     if (h2_write_frame_now(conn, 0x05, CWIST_HTTP2_FLAG_END_HEADERS, original_stream_id, pp_payload,
