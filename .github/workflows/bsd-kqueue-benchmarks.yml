@@ -30,6 +30,8 @@ jobs:
         run: python3 scripts/ci/check_test_wiring.py
       - name: Check public headers against the API baseline (v4.0 stability gate)
         run: python3 scripts/ci/check_api_baseline.py
+      - name: Check every CWIST_* runtime variable is documented
+        run: python3 scripts/ci/check_env_knobs.py
       - name: Check every public API function is called by a unit test (ratchet)
         run: python3 scripts/ci/check_api_test_coverage.py
       - name: Check every public static inline helper is exported or excluded
