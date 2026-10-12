@@ -33,7 +33,8 @@ $$\text{AA} \rightarrow \text{AB} \rightarrow \text{BA} \rightarrow \text{BB} \r
 
 ## 3. Three-letter extension
 
-A three-letter codename expands the same way as the two-letter one: the
+Codenames extend to three letters only when the two-letter sequence is
+exhausted. A three-letter codename expands the same way as the two-letter one: the
 new letter always enters at the tail (rightmost position) and propagates
 one position to the left per release until every position holds it; then
 the next letter enters at the tail.

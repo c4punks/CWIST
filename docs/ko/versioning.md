@@ -29,7 +29,7 @@ $$\text{AA} \rightarrow \text{AB} \rightarrow \text{BA} \rightarrow \text{BB} \r
 
 ## 3. 3자리 확장 시퀀스
 
-3자리로 확장할 때도 2자리와 같은 방식입니다. 신규 알파벳은 항상 꼬리(가장 오른쪽)로 들어오고, 릴리즈마다 한 자리씩 왼쪽으로 전파되어 모든 자리를 채웁니다. 다 채워지면 다음 알파벳이 다시 꼬리로 들어옵니다:
+3자리 확장은 2자리 시퀀스가 고갈되었을 때만 합니다. 3자리로 확장할 때도 2자리와 같은 방식입니다. 신규 알파벳은 항상 꼬리(가장 오른쪽)로 들어오고, 릴리즈마다 한 자리씩 왼쪽으로 전파되어 모든 자리를 채웁니다. 다 채워지면 다음 알파벳이 다시 꼬리로 들어옵니다:
 
 $$\text{AAA} \rightarrow \text{AAB} \rightarrow \text{ABB} \rightarrow \text{BBB} \rightarrow \text{BBC} \rightarrow \text{BCC} \rightarrow \text{CCC} \rightarrow \dots$$
 
