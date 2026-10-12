@@ -9,14 +9,23 @@
 #include <stdio.h>
 #include <unistd.h>
 #include <errno.h>
+#include <stdatomic.h>
+#include <stdint.h>
+#include <time.h>
 
 /**
  * @file kqueue.c
  * @brief BSD kqueue backend for the generic CWIST job queue interface.
  */
 
+/* ident 0 is never a job: jobs use their wrapper's address as ident. */
+#define KQ_WAKE_IDENT 0
+
 struct cwist_io_queue {
     int kq_fd;
+    atomic_bool running;
+    /* Jobs accepted by submit and not yet taken by a runner. */
+    atomic_size_t pending_jobs;
 };
 
 /**
@@ -36,6 +45,19 @@ cwist_io_queue *cwist_io_queue_create(size_t capacity) {
         cwist_free(q);
         return NULL;
     }
+
+    /* The stop wake. No EV_CLEAR: once stop triggers it, it stays active and
+     * every runner's kevent() returns, not just the first one to look. */
+    struct kevent kev;
+    EV_SET(&kev, KQ_WAKE_IDENT, EVFILT_USER, EV_ADD | EV_ENABLE, 0, 0, NULL);
+    if (kevent(q->kq_fd, &kev, 1, NULL, 0, NULL) < 0) {
+        perror("kevent wake");
+        close(q->kq_fd);
+        cwist_free(q);
+        return NULL;
+    }
+    atomic_init(&q->running, true);
+    atomic_init(&q->pending_jobs, 0);
     return q;
 }
 
@@ -52,11 +74,25 @@ struct job_wrapper {
  * @param q Kqueue-backed queue handle.
  * @param func Callback to execute when the event is consumed.
  * @param arg User payload forwarded to @p func.
- * @return true on success, false when event registration fails.
+ * @return true on success, false when the queue is stopping, OOM, or event
+ *         registration fails.
  */
 bool cwist_io_queue_submit(cwist_io_queue *q, cwist_job_func func, void *arg) {
+    if (!q || !func) return false;
+
+    /* Count the job before checking running, so a runner that sees
+     * running == false and pending_jobs == 0 knows no submit is in flight. */
+    atomic_fetch_add_explicit(&q->pending_jobs, 1, memory_order_acq_rel);
+    if (!atomic_load_explicit(&q->running, memory_order_acquire)) {
+        atomic_fetch_sub_explicit(&q->pending_jobs, 1, memory_order_acq_rel);
+        return false;
+    }
+
     struct job_wrapper *job = cwist_alloc(sizeof(struct job_wrapper));
-    if (!job) return false;
+    if (!job) {
+        atomic_fetch_sub_explicit(&q->pending_jobs, 1, memory_order_acq_rel);
+        return false;
+    }
     if (cwist_full_gc_enabled()) cwist_gc_scope_disown(job);
     job->func = func;
     job->arg = arg;
@@ -70,18 +106,21 @@ bool cwist_io_queue_submit(cwist_io_queue *q, cwist_job_func func, void *arg) {
     if (kevent(q->kq_fd, &kev, 1, NULL, 0, NULL) < 0) {
         perror("kevent submit");
         cwist_free(job);
+        atomic_fetch_sub_explicit(&q->pending_jobs, 1, memory_order_acq_rel);
         return false;
     }
     return true;
 }
 
 /**
- * @brief Block on kqueue events and execute queued callbacks forever.
+ * @brief Process queued jobs until shutdown is requested and no work remains.
  * @param q Kqueue-backed queue handle.
  */
 void cwist_io_queue_run(cwist_io_queue *q) {
+    if (!q) return;
     struct kevent events[32];
-    while (1) {
+    while (atomic_load_explicit(&q->running, memory_order_acquire) ||
+           atomic_load_explicit(&q->pending_jobs, memory_order_acquire) > 0) {
         int n = kevent(q->kq_fd, NULL, 0, events, 32, NULL);
         if (n < 0) {
             if (errno == EINTR) continue;
@@ -89,14 +128,30 @@ void cwist_io_queue_run(cwist_io_queue *q) {
             break;
         }
 
+        int ran = 0;
         for (int i = 0; i < n; i++) {
-            if (events[i].filter == EVFILT_USER) {
-                struct job_wrapper *job = (struct job_wrapper *)events[i].udata;
-                if (job) {
-                    job->func(job->arg);
-                    cwist_free(job);
-                }
+            if (events[i].filter != EVFILT_USER || events[i].ident == KQ_WAKE_IDENT) continue;
+            struct job_wrapper *job = (struct job_wrapper *)events[i].udata;
+            if (!job) continue;
+            atomic_fetch_sub_explicit(&q->pending_jobs, 1, memory_order_acq_rel);
+            job->func(job->arg);
+            cwist_free(job);
+            ran++;
+
+            // Full-GC mode: catch whatever this job forgot to cwist_free()
+            // right away instead of letting it pile up for the lifetime of
+            // this (long-lived, pooled) worker thread, as io_queue.c does.
+            if (cwist_full_gc_enabled()) {
+                cwist_gc_scope_flush();
             }
+        }
+
+        /* Stopping, but another runner still holds the last jobs: the wake
+         * event keeps kevent() returning at once, so back off instead of
+         * spinning until that runner takes them. */
+        if (ran == 0 && n > 0 && !atomic_load_explicit(&q->running, memory_order_acquire)) {
+            struct timespec ts = {0, 1000000}; /* 1ms */
+            nanosleep(&ts, NULL);
         }
     }
 }
@@ -104,28 +159,48 @@ void cwist_io_queue_run(cwist_io_queue *q) {
 /**
  * @brief Request that runners stop without freeing the queue.
  *
- * On kqueue this closes the descriptor, causing kevent() to return an error
- * and the runner loop to exit.
+ * Runners finish the jobs already submitted, then return. The descriptor stays
+ * open until cwist_io_queue_destroy(), so a runner blocked in kevent() is woken
+ * by the wake event rather than by a close() that BSD kernels need not notice.
  *
  * @param q Queue handle to stop.
  */
 void cwist_io_queue_stop(cwist_io_queue *q) {
     if (!q) return;
-    if (q->kq_fd >= 0) {
-        close(q->kq_fd);
-        q->kq_fd = -1;
+    atomic_store_explicit(&q->running, false, memory_order_release);
+    struct kevent kev;
+    EV_SET(&kev, KQ_WAKE_IDENT, EVFILT_USER, 0, NOTE_TRIGGER, 0, NULL);
+    if (kevent(q->kq_fd, &kev, 1, NULL, 0, NULL) < 0) {
+        perror("kevent stop");
     }
 }
 
 /**
- * @brief Close the underlying kqueue descriptor and free the queue wrapper.
+ * @brief Free jobs nobody ran, close the kqueue descriptor, free the queue.
+ *
+ * All runners are gone by contract (stop, then join, then destroy).
+ *
  * @param q Queue handle to destroy.
  */
 void cwist_io_queue_destroy(cwist_io_queue *q) {
-    if (q) {
-        if (q->kq_fd >= 0) {
-            close(q->kq_fd);
+    if (!q) return;
+    atomic_store_explicit(&q->running, false, memory_order_release);
+
+    /* Drop the level-triggered wake first, or the drain below never ends. */
+    struct kevent kev;
+    EV_SET(&kev, KQ_WAKE_IDENT, EVFILT_USER, EV_DELETE, 0, 0, NULL);
+    (void)kevent(q->kq_fd, &kev, 1, NULL, 0, NULL);
+
+    struct kevent events[32];
+    const struct timespec zero = {0, 0};
+    int n;
+    while ((n = kevent(q->kq_fd, NULL, 0, events, 32, &zero)) > 0) {
+        for (int i = 0; i < n; i++) {
+            if (events[i].filter == EVFILT_USER && events[i].udata) {
+                cwist_free((void *)events[i].udata);
+            }
         }
-        cwist_free(q);
     }
+    close(q->kq_fd);
+    cwist_free(q);
 }
