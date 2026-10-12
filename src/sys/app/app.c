@@ -8,13 +8,17 @@
 #include "worker_affinity.h"
 #endif
 #include "assets_internal.h"
+/* Application headers (external) */
 #include <cwist/sys/app/app.h>
 #include <cwist/sys/app/config.h>
 #include <cwist/sys/app/logger.h>
 #include <cwist/sys/app/shutdown.h>
-#include <cwist/sys/wasi.h>
 #include <cwist/sys/app/big_dumb_reply.h>
-#include <cwist/sys/app/app.h>
+/* WASM/WASI header (external) */
+#include <cwist/sys/wasi.h>
+/* Healthz header (external) */
+#include <cwist/sys/health/healthz.h>
+/* Network headers (external) */
 #include <cwist/net/http/http.h>
 #include <cwist/net/http/async.h>
 #include <cwist/net/http/https.h>
@@ -22,19 +26,25 @@
 #include <cwist/net/grpc/grpc.h>
 #include <cwist/net/http/http3.h>
 #include <cwist/net/http/async_server.h>
+
+/* Internal Network headers */
 #include "../../net/http/async_internal.h"
 #include "../../net/http/simd_parser.h"
 #include "../../net/websocket/ws_async_internal.h"
-#include <cwist/sys/health/healthz.h>
-#include <cwist/net/http/https.h>
+/* Core headers */
 #include <cwist/core/sstring/sstring.h>
 #include <cwist/core/db/nuke_db.h>
 #include <cwist/core/mem/alloc.h>
 #include <cwist/core/utils/json_builder.h>
+/* Libttak headers */
+#include <ttak/mem/mem.h>
+#include <ttak/timing/timing.h>
 #include <ttak/net/lattice.h>
 #include <ttak/mols_control.h>
 #include <ttak/priority/scheduler.h>
 #include <ttak/async/sched.h>
+
+/* Standard C libraries & POSIX & etc */
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
@@ -64,8 +74,6 @@
 #endif
 #include <time.h>
 #include <pthread.h>
-#include <ttak/mem/mem.h>
-#include <ttak/timing/timing.h>
 
 #define CWIST_ROUTE_BUCKETS 127
 #define CWIST_STATIC_RETIRE_NS TT_SECOND(5)
@@ -3234,7 +3242,7 @@ cwist_async_action_t cwist_app_http_handler_async(int client_fd, cwist_http_asyn
         d = getenv("CWIST_ASYNC_DEBUG") != NULL;
         atomic_store_explicit(&dbg_cached, d, memory_order_relaxed);
     }
-    const bool dbg = d != 0;
+    const bool dbg = (d != 0);
 
     if (cwist_http_async_conn_fill(conn) != 0) {
         if (dbg) {
@@ -4649,8 +4657,8 @@ static int app_listen_serve(cwist_app *app, int port, int workers_override, int 
     bool is_worker_child = false;
     pid_t worker_pids[workers > 1 ? workers - 1 : 1];
     size_t worker_count = 0;
-    int child_idx = 0;
 #ifndef __wasi__
+    int child_idx = 0;
     for (int i = 1; i < workers; i++) {
         pid_t pid = fork();
         if (pid == 0) {
