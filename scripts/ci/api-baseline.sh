@@ -1,128 +1,13 @@
 #!/usr/bin/env bash
-# Regenerate docs/api/v4.0-api-baseline.txt — the recorded v4.0 public API
-# symbol surface (ROADMAP "CWIST v4.0 Readiness": "Record the v4.0
-# baseline"). Run via `make api-baseline`.
-#
-# The baseline covers the symbol surface of the C public headers
-# (include/cwist/**): public functions, public typedef/struct/enum/union
-# type names, enum constants, and extern globals. Full struct layout dumps
-# are ABI-test territory (tests/abi_layout*), not this file.
-#
-# Deterministic: output is sorted and independent of header read order, so
-# diffs review cleanly. Any diff at release time must be reviewed as an
-# intentional API change.
+# Regenerate docs/api/v4.0-api-baseline.txt, the recorded public API of
+# include/cwist/** (names, function signatures, struct/union/enum layouts).
+# Run via `make api-baseline`; `make api-check` is the CI gate that compares
+# the headers against the committed file. See scripts/ci/api_baseline.py.
 set -euo pipefail
 
 cd "$(git rev-parse --show-toplevel 2>/dev/null || echo .)"
 
 OUT=docs/api/v4.0-api-baseline.txt
-python3 - > "$OUT" <<'EOF'
-import re
-import subprocess
-import sys
-
-headers = subprocess.check_output(
-    ["git", "ls-files", "include/cwist"], text=True).split()
-
-functions, typedefs, types, constants, globals_ = set(), set(), set(), set(), set()
-
-# Join continuation lines and strip comments so declarations can be matched
-# against a flat buffer.
-def flatten(path):
-    text = open(path, encoding="utf-8").read()
-    text = re.sub(r"/\*.*?\*/", " ", text, flags=re.S)
-    text = re.sub(r"//[^\n]*", " ", text)
-    return text
-
-for path in headers:
-    if not path.endswith(".h"):
-        continue
-    buf = flatten(path)
-
-    # Enum bodies: record constants and the enum tag/typedef name.
-    for m in re.finditer(r"typedef\s+enum\s*(\w*)\s*\{(.*?)\}\s*(\w*)\s*;", buf, flags=re.S):
-        tag, body, name = m.group(1), m.group(2), m.group(3)
-        if tag:
-            types.add(tag)
-        if name:
-            typedefs.add(name)
-        constants.update(re.findall(r"\b(CWIST_[A-Z0-9_]+)\b", body))
-    for m in re.finditer(r"(?<!typedef\s)enum\s+(\w+)\s*\{", buf):
-        types.add(m.group(1))
-
-    # Anonymous enum constants (rare, but keep the surface complete).
-    for m in re.finditer(r"(?<!typedef\s)enum\s*\{(.*?)\}\s*;", buf, flags=re.S):
-        constants.update(re.findall(r"\b(CWIST_[A-Z0-9_]+)\b", m.group(1)))
-
-    # struct/union names and typedef names for struct/union types.
-    for m in re.finditer(r"typedef\s+(?:struct|union)\s*(\w*)\s*\{.*?}\s*(\w+)\s*;", buf, flags=re.S):
-        if m.group(1):
-            types.add(m.group(1))
-        typedefs.add(m.group(2))
-    for m in re.finditer(r"(?<!typedef\s)(?:struct|union)\s+(cwist_\w+)\s*[;{]", buf):
-        types.add(m.group(1))
-    # Forward-declared / opaque handle typedefs: `typedef struct x x;`
-    for m in re.finditer(r"typedef\s+(?:struct|union|enum)\s+(\w+)\s+(\w+)\s*;", buf):
-        types.add(m.group(1))
-        typedefs.add(m.group(2))
-    # Plain typedefs (function pointers and aliases).
-    for m in re.finditer(r"typedef\s+(?!struct\b)(?!union\b)(?!enum\b)([^;]+?)\s+(\w+)\s*;", buf):
-        typedefs.add(m.group(2))
-    # Function-pointer typedefs: `typedef ret (*name)(args);`
-    for m in re.finditer(r"typedef\s+[^;]*?\(\s*\*\s*(\w+)\s*\)\s*\([^;]*\)\s*;", buf):
-        typedefs.add(m.group(1))
-
-    # Function declarations (cwist_* identifiers at declarator position).
-    # The preceding ';' or '}' is a lookbehind, not part of the match: a
-    # consumed ';' would leave the next back-to-back declaration without
-    # its anchor, and every second declaration in a row would be skipped.
-    for m in re.finditer(
-            r"(?:^|(?<=[;}]))\s*(?:[\w\s\*]+?)\b(cwist_\w+)\s*\([^;{}]*\)\s*;", buf):
-        name = m.group(1)
-        if name not in typedefs:  # typedef'd function pointers are types, not functions
-            functions.add(name)
-
-    # Extern globals.
-    for m in re.finditer(r"extern\s+[^;]*?\b(cwist_\w+)\s*(?:\[[^]]*\])?\s*;", buf):
-        globals_.add(m.group(1))
-
-def section(title, items):
-    print(f"\n== {title} ({len(items)}) ==")
-    for it in sorted(items):
-        print(it)
-
-# Experimental surface (ROADMAP "API surface decisions"): WebTransport stays
-# experimental until v4.1, so its symbols are recorded apart from the
-# guaranteed surface. They are still declared in every build: a role left
-# out of CWIST_WEBTRANSPORT gets stubs that fail, never a missing symbol.
-EXPERIMENTAL = re.compile(r"webtransport", re.I)
-
-def split(items):
-    exp = {it for it in items if EXPERIMENTAL.search(it)}
-    return items - exp, exp
-
-functions, exp_functions = split(functions)
-types, exp_types = split(types)
-typedefs, exp_typedefs = split(typedefs)
-constants, exp_constants = split(constants)
-globals_, exp_globals = split(globals_)
-
-print("# CWIST v4.0 public API baseline (symbol surface)")
-print("# Regenerated by `make api-baseline` — do not edit by hand.")
-print("# Covers include/cwist/** public headers: functions, type names,")
-print("# enum constants, extern globals. Struct layouts are tested")
-print("# separately by tests/abi_layout*.")
-section("functions", functions)
-section("types (struct/union/enum names)", types)
-section("typedefs", typedefs)
-section("enum constants", constants)
-section("globals (extern)", globals_)
-print("\n# Experimental: outside the v4.0 guarantee (WebTransport, until v4.1).")
-section("experimental functions", exp_functions)
-section("experimental types (struct/union/enum names)", exp_types)
-section("experimental typedefs", exp_typedefs)
-section("experimental enum constants", exp_constants)
-section("experimental globals (extern)", exp_globals)
-EOF
-
+python3 scripts/ci/api_baseline.py . > "$OUT.tmp"
+mv "$OUT.tmp" "$OUT"
 echo "api-baseline: wrote $OUT"

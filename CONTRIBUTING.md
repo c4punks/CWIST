@@ -130,11 +130,20 @@ taken. Ask in the issue or on Discord if it is unclear which happened.
     `make dist VERSION=X.Y.Z` from a checkout whose submodules match the
     recorded gitlinks, then `make WERROR=1` and `make WERROR=1 test` in the
     unpacked tree.
-- **Public API baseline (required for every major release, starting with
-  v4.0):** regenerate `docs/api/v4.0-api-baseline.txt` with
-  `make api-baseline` and review the resulting diff as an intentional API
-  change. Any symbol addition, removal, or rename in the diff must be a
-  deliberate, recorded API decision before the cut — an unexpected diff is
+- **Public API baseline:** `docs/api/v4.0-api-baseline.txt` records the
+  public headers: names, function signatures (parameter names dropped) and
+  struct/union/enum layouts in member order. CI runs
+  `scripts/ci/check_api_baseline.py` (`make api-check`) on every push and PR:
+  - the headers must match the committed baseline, so a PR that changes the
+    public API also commits the regenerated file (`make api-baseline`). That
+    diff is the PR's acknowledgment of the API change, and review treats it
+    as one;
+  - once the LTS tag `v4` exists, no guaranteed entry from that tag's
+    baseline may be removed or changed, even with the baseline regenerated.
+    New API passes; the experimental (WebTransport) sections are not
+    checked.
+  Before a major-release cut, any change in the baseline since the previous
+  release must be a deliberate, recorded API decision; an unexpected diff is
   a release blocker.
 - **Soak run (required before a major-release cut, starting with v4.0):**
   the release commit must pass the soak defined in `docs/soak-testing.md`
