@@ -57,12 +57,15 @@ static char *normalize_prefix(const char *url_prefix) {
     if (!url_prefix || url_prefix[0] != '/') return NULL;
     size_t len = strlen(url_prefix);
     while (len > 0 && url_prefix[len - 1] == '/') len--;
+
     for (size_t i = 0; i < len; i++) {
         unsigned char c = (unsigned char)url_prefix[i];
         if (c <= 0x20 || c == 0x7f || c == '?' || c == '#' || c == '%') return NULL;
     }
+
     char *out = (char *)cwist_alloc(len + 1);
     if (!out) return NULL;
+
     memcpy(out, url_prefix, len);
     out[len] = '\0';
     return out;
@@ -83,8 +86,11 @@ static bool name_is_valid(const char *name) {
             seg = p + 1;
             continue;
         }
-        bool ok = (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9') ||
-                  c == '.' || c == '-' || c == '_' || c == '~';
+        bool ok = (c >= 'a' && c <= 'z')
+            || (c >= 'A' && c <= 'Z')
+            || (c >= '0' && c <= '9')
+            || c == '.' || c == '-'
+            || c == '_' || c == '~';
         if (!ok) return false;
     }
 }
@@ -299,11 +305,16 @@ static cwist_error_t asset_publish(cwist_app *app, const char *name, unsigned ch
  */
 cwist_error_t cwist_app_asset_add(cwist_app *app, const char *name, const void *data, size_t len,
                                   const char *content_type) {
-    if (!app || !name_is_valid(name) || (!data && len > 0)) return asset_result(-1);
-    if (content_type && (!*content_type || !header_value_is_valid(content_type))) {
+    if (!app || !name_is_valid(name)
+             || (!data && len > 0))
+        return asset_result(-1);
+
+    if (content_type
+            && (!*content_type || !header_value_is_valid(content_type))) {
         return asset_result(-1);
     }
     unsigned char *copy = (unsigned char *)cwist_alloc(len ? len : 1);
+
     if (!copy) return asset_result(-1);
     if (len > 0) memcpy(copy, data, len);
     return asset_publish(app, name, copy, len, content_type);
@@ -328,12 +339,14 @@ cwist_error_t cwist_app_asset_add_file(cwist_app *app, const char *name, const c
     if (content_type && (!*content_type || !header_value_is_valid(content_type))) {
         return asset_result(-1);
     }
+
     FILE *f = fopen(path, "rb");
     if (!f) return asset_result(-1);
 
     size_t cap = 4096, len = 0;
     unsigned char *buf = (unsigned char *)cwist_alloc(cap);
     bool ok = buf != NULL;
+
     while (ok) {
         if (len == cap) {
             unsigned char *grown = (unsigned char *)cwist_realloc(buf, cap * 2);
@@ -352,10 +365,12 @@ cwist_error_t cwist_app_asset_add_file(cwist_app *app, const char *name, const c
         }
     }
     fclose(f);
+
     if (!ok) {
         cwist_free(buf);
         return asset_result(-1);
     }
+
     return asset_publish(app, name, buf, len, content_type);
 }
 
@@ -370,12 +385,15 @@ cwist_error_t cwist_app_asset_add_file(cwist_app *app, const char *name, const c
  */
 const char *cwist_app_asset_url(cwist_app *app, const char *name) {
     if (!app || !name) return NULL;
+
     cwist_asset_registry *reg = registry_get(app, false);
     if (!reg) return NULL;
+
     for (struct cwist_asset *a = atomic_load_explicit(&reg->head, memory_order_acquire); a;
          a = a->next) {
         if (strcmp(a->name, name) == 0) return a->url;
     }
+
     return NULL;
 }
 
@@ -409,9 +427,11 @@ bool cwist_assets_match(cwist_app *app, const cwist_http_request *req, cwist_ass
         }
         if (!logical && strcmp(a->name, rest) == 0) logical = a;
     }
+
     if (!logical) return false;
     out->asset = logical;
     out->immutable = false;
+
     return true;
 }
 
@@ -494,11 +514,14 @@ void cwist_assets_respond(cwist_http_request *req, cwist_http_response *res,
 int cwist_assets_clone(void **dst, const void *src) {
     *dst = NULL;
     if (!src) return 0;
+
     const cwist_asset_registry *from = (const cwist_asset_registry *)src;
     cwist_asset_registry *reg = (cwist_asset_registry *)cwist_alloc(sizeof(*reg));
     if (!reg) return -1;
+
     reg->prefix = cwist_strdup(from->prefix);
     atomic_init(&reg->head, NULL);
+
     if (!reg->prefix) {
         cwist_free(reg);
         return -1;
@@ -515,24 +538,30 @@ int cwist_assets_clone(void **dst, const void *src) {
             ok = false;
             break;
         }
+
         if (a->len) memcpy(data, a->data, a->len);
+
         char hash[ASSET_HASH_HEX + 1];
         memcpy(hash, a->etag + 1, ASSET_HASH_HEX);
         hash[ASSET_HASH_HEX] = '\0';
         struct cwist_asset *copy = asset_build(reg, a->name, data, a->len, a->content_type, hash);
+
         if (!copy) {
             ok = false;
             break;
         }
+
         copy->next = NULL;
         *tail = copy;
         tail = &copy->next;
     }
+
     atomic_init(&reg->head, head);
     if (!ok) {
         cwist_assets_destroy(reg);
         return -1;
     }
+
     *dst = reg;
     return 0;
 }
@@ -541,12 +570,14 @@ int cwist_assets_clone(void **dst, const void *src) {
 void cwist_assets_destroy(void *registry) {
     cwist_asset_registry *reg = (cwist_asset_registry *)registry;
     if (!reg) return;
+
     struct cwist_asset *a = atomic_load_explicit(&reg->head, memory_order_acquire);
     while (a) {
         struct cwist_asset *next = a->next;
         asset_free(a);
         a = next;
     }
+
     cwist_free(reg->prefix);
     cwist_free(reg);
 }
