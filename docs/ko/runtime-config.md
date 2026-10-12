@@ -89,6 +89,7 @@
 | `CWIST_REACTOR_DRAIN_CHUNK` | tuning | 0 이상 정수 | `8` (`CWIST_PROFILE`이 설정, 없으면 `64`) | 게시된 작업을 비우는 사이에 처리하는 completion 수. [협력적 큐잉](cooperative-queuing.md) 참고. |
 | `CWIST_REACTOR_ROUND_BUDGET_US` | tuning | 마이크로초, 0 이상 | `2000` | reactor 라운드가 이 시간을 넘기면, 대기 중인 re-arm을 라운드 끝이 아니라 콜백 64개마다 커널에 넘깁니다. 라운드는 끝까지 실행됩니다. `0`이면 한도를 끕니다. |
 | `CWIST_REACTOR_CQ_GRACE_NS` | tuning | 나노초, 0 이상 | `20000` | 커널에서 잠들기 전에 completion ring을 확인하며 도는 시간. `0`이면 돌지 않습니다. |
+| `CWIST_REACTOR_LATE_US` | tuning | 마이크로초, 0 이상 | `3000` | 실험 기능(#319). reactor 라운드가 completion을 수확한 뒤 이 시간을 넘기면, 남은 콜백을 지연 모드로 처리합니다: 콜백마다 re-arm을 바로 커널에 넘기고, 게시된 작업을 콜백마다 비우며, 파이프라인 HTTP/1.1 연결은 양보하지 않고 쌓인 요청을 처리합니다. io_uring 전용. `0`이면 끕니다. |
 
 ## 진단
 

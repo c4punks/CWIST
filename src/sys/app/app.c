@@ -27,12 +27,13 @@
 #include <cwist/net/http/http3.h>
 #include <cwist/net/http/async_server.h>
 
-/* Internal Network headers */
+/* Network headers (internal) */
 #include "../../net/http/async_internal.h"
 #include "../../net/http/simd_parser.h"
 #include "../../net/websocket/ws_async_internal.h"
-/* Internal I/O headers */
+/* I/O headers (internal) */
 #include "../io/reactor_rx.h"
+#include "../io/async_debug.h"
 /* Core headers */
 #include <cwist/core/sstring/sstring.h>
 #include <cwist/core/db/nuke_db.h>
