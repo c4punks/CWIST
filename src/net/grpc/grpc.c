@@ -1590,7 +1590,7 @@ static void grpc_session_fail(cwist_grpc_session *session, cwist_grpc_status_t s
                               const char *message) {
     pthread_mutex_lock(&session->mu);
     session->cancelled = 1;
-    session->stream.cancelled = 1;
+    __atomic_store_n(&session->stream.cancelled, 1, __ATOMIC_RELEASE);
     session->stream.status = status;
     session->stream.status_message = message;
     pthread_cond_broadcast(&session->cond);
@@ -1639,7 +1639,7 @@ static void grpc_session_send_trailers(cwist_grpc_session *session, cwist_grpc_s
     if (session->stream.retry_pushback_set)
         snprintf(pushback_buf, sizeof(pushback_buf), "%d", (int)session->stream.retry_pushback_ms);
     pthread_mutex_lock(&session->wmu);
-    if (session->h2s && !session->trailers_sent) {
+    if (session->h2s && !__atomic_load_n(&session->trailers_sent, __ATOMIC_ACQUIRE)) {
         if (!session->headers_sent && status != CWIST_GRPC_OK) {
             /* Trailers-Only (PROTOCOL-HTTP2, gRFC A6): the whole response is
              * one HEADERS frame with END_STREAM.  Response-Headers never went
@@ -1654,7 +1654,7 @@ static void grpc_session_send_trailers(cwist_grpc_session *session, cwist_grpc_s
                 hdrs[count++] = (cwist_http2_header){"grpc-retry-pushback-ms", pushback_buf};
             if (cwist_http2_stream_send_headers(session->h2s, 200, hdrs, count, 1) == 0)
                 session->headers_sent = 1;
-            session->trailers_sent = 1;
+            __atomic_store_n(&session->trailers_sent, 1, __ATOMIC_RELEASE);
         } else if (grpc_session_send_headers_locked(session) == 0) {
             cwist_http2_header pairs[3];
             size_t count = 0;
@@ -1672,9 +1672,10 @@ static void grpc_session_send_trailers(cwist_grpc_session *session, cwist_grpc_s
                 count++;
             }
             (void)cwist_http2_stream_send_trailers(session->h2s, pairs, count);
-            session->trailers_sent = 1;
+            __atomic_store_n(&session->trailers_sent, 1, __ATOMIC_RELEASE);
         } else {
-            session->trailers_sent = 1; /* transport broken; do not retry */
+            /* transport broken; do not retry */
+            __atomic_store_n(&session->trailers_sent, 1, __ATOMIC_RELEASE);
         }
     }
     pthread_mutex_unlock(&session->wmu);
@@ -1697,7 +1698,8 @@ static int grpc_session_write_frame(void *ctx, const uint8_t *frame, size_t fram
     cwist_grpc_session *session = ctx;
     pthread_mutex_lock(&session->wmu);
     int rc = -1;
-    if (session->h2s && !session->trailers_sent && grpc_session_send_headers_locked(session) == 0)
+    if (session->h2s && !__atomic_load_n(&session->trailers_sent, __ATOMIC_ACQUIRE) &&
+        grpc_session_send_headers_locked(session) == 0)
         rc = cwist_http2_stream_send_data(session->h2s, frame, frame_len);
     pthread_mutex_unlock(&session->wmu);
     return rc;
@@ -1741,7 +1743,7 @@ int cwist_grpc_stream_recv(cwist_grpc_stream *stream, cwist_grpc_message *out) {
     if (!stream->session) {
         /* Buffered path: pop the pre-decoded message array. */
         if (stream->deadline_ms && grpc_now_ms() >= stream->deadline_ms) {
-            stream->cancelled = 1;
+            __atomic_store_n(&stream->cancelled, 1, __ATOMIC_RELEASE);
             return -1;
         }
         if (stream->recv_pos >= stream->message_count) return 0;
@@ -1777,7 +1779,7 @@ int cwist_grpc_stream_recv(cwist_grpc_stream *stream, cwist_grpc_message *out) {
             uint64_t now = grpc_now_ms();
             if (now >= stream->deadline_ms) {
                 session->cancelled = 1;
-                stream->cancelled = 1;
+                __atomic_store_n(&stream->cancelled, 1, __ATOMIC_RELEASE);
                 /* Report the real outcome so a handler that simply closes
                  * with stream->status still emits DEADLINE_EXCEEDED. */
                 stream->status = CWIST_GRPC_DEADLINE_EXCEEDED;
@@ -1811,7 +1813,9 @@ int cwist_grpc_stream_recv(cwist_grpc_stream *stream, cwist_grpc_message *out) {
  * @retval 0 Still active. */
 int cwist_grpc_stream_cancelled(cwist_grpc_stream *stream) {
     if (!stream) return 0;
-    if (stream->cancelled) return 1;
+    /* Public field, also set by the poll/deadline path without the
+     * handler's lock: always accessed atomically (#351). */
+    if (__atomic_load_n(&stream->cancelled, __ATOMIC_ACQUIRE)) return 1;
     if (stream->session) {
         cwist_grpc_session *session = stream->session;
         pthread_mutex_lock(&session->mu);
@@ -1908,7 +1912,7 @@ static void *grpc_h2_on_headers(void *conn_ctx, cwist_http_request *req, cwist_h
     session->stream.write_frame = grpc_session_write_frame;
     session->stream.write_frame_ctx = session;
     session->stream.session = session;
-    session->stream.cancelled = 0;
+    __atomic_store_n(&session->stream.cancelled, 0, __ATOMIC_RELEASE);
     session->stream.recv_pos = 0;
     const char *timeout = grpc_header_get(req, "grpc-timeout");
     if (timeout) {
@@ -2006,7 +2010,7 @@ static void grpc_h2_on_cancel(void *conn_ctx, void *stream_ctx) {
     if (!session) return;
     pthread_mutex_lock(&session->mu);
     session->cancelled = 1;
-    session->stream.cancelled = 1;
+    __atomic_store_n(&session->stream.cancelled, 1, __ATOMIC_RELEASE);
     pthread_cond_broadcast(&session->cond);
     pthread_mutex_unlock(&session->mu);
 }
@@ -2028,16 +2032,17 @@ static int grpc_h2_on_poll(void *conn_ctx, void *stream_ctx) {
 
     /* Deadline enforcement: cancel the handler and emit DEADLINE_EXCEEDED
      * trailers so the client learns the outcome. */
-    if (session->stream.deadline_ms && !session->trailers_sent &&
+    if (session->stream.deadline_ms &&
+        !__atomic_load_n(&session->trailers_sent, __ATOMIC_ACQUIRE) &&
         grpc_now_ms() >= session->stream.deadline_ms) {
         pthread_mutex_lock(&session->mu);
         session->cancelled = 1;
-        session->stream.cancelled = 1;
+        __atomic_store_n(&session->stream.cancelled, 1, __ATOMIC_RELEASE);
         pthread_cond_broadcast(&session->cond);
         pthread_mutex_unlock(&session->mu);
         grpc_session_send_trailers(session, CWIST_GRPC_DEADLINE_EXCEEDED, "deadline exceeded");
     }
-    return session->trailers_sent;
+    return __atomic_load_n(&session->trailers_sent, __ATOMIC_ACQUIRE);
 }
 
 /** @brief next_deadline_ms hook: earliest active session deadline.
@@ -2054,7 +2059,8 @@ static uint64_t grpc_h2_next_deadline_ms(void *conn_ctx) {
     uint64_t nearest = 0;
     pthread_mutex_lock(&ctx->mu);
     for (cwist_grpc_session *s = ctx->sessions; s; s = s->next) {
-        if (s->trailers_sent || !s->stream.deadline_ms) continue;
+        if (__atomic_load_n(&s->trailers_sent, __ATOMIC_ACQUIRE) || !s->stream.deadline_ms)
+            continue;
         if (!nearest || s->stream.deadline_ms < nearest) nearest = s->stream.deadline_ms;
     }
     pthread_mutex_unlock(&ctx->mu);
@@ -2079,7 +2085,7 @@ static void grpc_h2_on_close(void *conn_ctx, void *stream_ctx) {
     pthread_mutex_unlock(&session->wmu);
     pthread_mutex_lock(&session->mu);
     session->cancelled = 1;
-    session->stream.cancelled = 1;
+    __atomic_store_n(&session->stream.cancelled, 1, __ATOMIC_RELEASE);
     pthread_cond_broadcast(&session->cond);
     pthread_mutex_unlock(&session->mu);
     grpc_session_release(session);

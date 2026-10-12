@@ -1016,7 +1016,8 @@ static void cwist_h3_on_conncloseframe_received(lsquic_conn_t *conn, int app_err
     } else {
         h3_ctx->last_close_reason[0] = '\0';
     }
-    h3_ctx->last_close_received = 1;
+    /* Publishes the fields above to cwist_http3_last_close_error(). */
+    __atomic_store_n(&h3_ctx->last_close_received, 1, __ATOMIC_RELEASE);
 }
 
 /**
@@ -2939,12 +2940,13 @@ void cwist_http3_destroy_context(cwist_http3_context *ctx) {
  * @retval 0 A close frame has been recorded and the outputs were filled.
  * @retval -1 No CONNECTION_CLOSE has been received (or @p ctx is NULL).
  *
- * Meaningful only after the serve loop has stopped; the fields are written
- * on the engine thread without synchronization.
+ * The engine thread publishes the fields with a release store of
+ * last_close_received, which this reads with acquire. A later close frame
+ * rewrites them, so read them once the serve loop has stopped.
  */
 int cwist_http3_last_close_error(const cwist_http3_context *ctx, bool *app_error_out,
                                  uint64_t *code_out, char *reason_buf, size_t buf_len) {
-    if (!ctx || !ctx->last_close_received) return -1;
+    if (!ctx || !__atomic_load_n(&ctx->last_close_received, __ATOMIC_ACQUIRE)) return -1;
     if (app_error_out) *app_error_out = ctx->last_close_app_error == 1;
     if (code_out) *code_out = ctx->last_close_code;
     if (reason_buf && buf_len > 0) {
@@ -3082,7 +3084,7 @@ cwist_error_t cwist_http3_server_loop(int udp_fd, cwist_http3_context *ctx,
     ctx->engine = engine;
     ctx->handler = handler;
     ctx->user_ctx = user_ctx;
-    ctx->running = 1;
+    __atomic_store_n(&ctx->running, 1, __ATOMIC_RELEASE);
 
     /* The receive loop relies on MSG_DONTWAIT, which some platforms lack
      * (it degrades to 0).  Guarantee non-blocking semantics at the socket
@@ -3181,7 +3183,10 @@ cwist_error_t cwist_http3_server_loop(int udp_fd, cwist_http3_context *ctx,
     }
 #endif
 
-    while (ctx && ctx->running && atomic_load(&g_cwist_running)) {
+    /* running is a public volatile int another thread clears to stop the
+     * loop; access it atomically (#351). */
+    while (ctx && __atomic_load_n(&ctx->running, __ATOMIC_ACQUIRE) &&
+           atomic_load(&g_cwist_running)) {
         int diff = 100000;
         int timeout_ms = 50;
         bool has_tick = lsquic_engine_earliest_adv_tick(engine, &diff);

@@ -37,7 +37,8 @@ struct cwist_http3_context {
     void *engine;     /**< Opaque lsquic_engine_t pointer */
     void (*handler)(void *user_ctx, cwist_http_request *req, cwist_http_response *res);
     void *user_ctx;
-    volatile int running; /**< Set to 0 to gracefully stop server_loop */
+    volatile int running; /**< Set to 0 to gracefully stop server_loop; from another thread use
+                               __atomic_store_n(&ctx->running, 0, __ATOMIC_RELEASE). */
     int push_enabled;     /**< HTTP/3 server push enabled */
     int early_data_enabled; /**< 0-RTT early data enabled */
     int early_data_guard;   /**< Restrict 0-RTT requests to idempotent methods */

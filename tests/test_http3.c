@@ -3,6 +3,7 @@
 #include <cwist/sys/err/cwist_err.h>
 #include <lsquic.h>
 #include <assert.h>
+#include <stdatomic.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
@@ -21,7 +22,7 @@ int cwist_http3_normalize_response_header_name(const char *name, char *out, size
 int cwist_http3_response_header_value_is_safe(const char *value);
 int cwist_http3_method_is_idempotent(const char *method_str);
 
-static volatile int g_handler_called = 0;
+static _Atomic int g_handler_called = 0; /* set on the server thread */
 
 static void http3_test_handler(void *user_ctx, cwist_http_request *req, cwist_http_response *res) {
     (void)user_ctx;
@@ -206,7 +207,7 @@ int main(void) {
     usleep(50000);
 
     /* Verify the context is marked running */
-    assert(ctx->running == 1);
+    assert(__atomic_load_n(&ctx->running, __ATOMIC_ACQUIRE) == 1);
 
     /* The server loop must force the UDP socket into non-blocking mode */
     int fl = fcntl(udp_fd, F_GETFL, 0);
@@ -214,7 +215,7 @@ int main(void) {
     printf("[PASS] HTTP/3 server_loop sets O_NONBLOCK on the UDP socket.\n");
 
     /* Stop the server */
-    ctx->running = 0;
+    __atomic_store_n(&ctx->running, 0, __ATOMIC_RELEASE);
 
     rc = pthread_join(tid, NULL);
     assert(rc == 0);
@@ -377,7 +378,7 @@ int main(void) {
     printf("[PASS] HTTP/3 CONNECT with :scheme/:path rejected with 400.\n");
 
     cwist_http3_client_destroy(client);
-    ctx->running = 0;
+    __atomic_store_n(&ctx->running, 0, __ATOMIC_RELEASE);
     rc = pthread_join(tid, NULL);
     assert(rc == 0);
     cwist_http3_destroy_context(ctx);
@@ -423,7 +424,7 @@ int main(void) {
     printf("[PASS] HTTP/3 verify succeeds with CA bundle for server cert.\n");
 
     cwist_http3_client_destroy(client);
-    ctx->running = 0;
+    __atomic_store_n(&ctx->running, 0, __ATOMIC_RELEASE);
     rc = pthread_join(tid, NULL);
     assert(rc == 0);
     cwist_http3_destroy_context(ctx);
@@ -536,7 +537,7 @@ int main(void) {
     printf("[PASS] HTTP/3 peer CONNECTION_CLOSE recorded (transport, code=0, reason=\"%s\").\n",
            close_reason);
 
-    ctx->running = 0;
+    __atomic_store_n(&ctx->running, 0, __ATOMIC_RELEASE);
     rc = pthread_join(tid, NULL);
     assert(rc == 0);
     cwist_http3_destroy_context(ctx);

@@ -160,6 +160,25 @@ static void ws_async_teardown(cwist_websocket_async *ws) {
 }
 
 /**
+ * @brief Unlink @p ws from its reactor's idle-sweep list, if it is on one.
+ *
+ * When the last connection is gone the sweep context is marked dead and its
+ * watchdog frees it once the last posted sweep has drained.
+ */
+static void ws_async_sweep_unlink(cwist_websocket_async *ws) {
+    ws_async_sweep_t *sweep = ws->sweep;
+    if (!sweep) return;
+    pthread_mutex_lock(&sweep->lock);
+    cwist_websocket_async **pp = &sweep->head;
+    while (*pp && *pp != ws) pp = &(*pp)->sweep_next;
+    if (*pp) *pp = ws->sweep_next;
+    bool empty = (sweep->head == NULL);
+    pthread_mutex_unlock(&sweep->lock);
+    ws->sweep = NULL;
+    if (empty) ws_async_sweep_mark_dead(sweep);
+}
+
+/**
  * @brief Tear down the connection.
  *
  * Single owner of destruction; every exit path funnels through here, so it is
@@ -180,20 +199,7 @@ static void ws_async_teardown(cwist_websocket_async *ws) {
  */
 static void ws_async_terminate(cwist_websocket_async *ws) {
     if (!ws) return;
-    if (ws->sweep) {
-        /* Unlink from the reactor's sweep list; when the last connection is
-         * gone the sweep context is marked dead and its watchdog frees it
-         * once the last posted sweep has drained. */
-        ws_async_sweep_t *sweep = ws->sweep;
-        pthread_mutex_lock(&sweep->lock);
-        cwist_websocket_async **pp = &sweep->head;
-        while (*pp && *pp != ws) pp = &(*pp)->sweep_next;
-        if (*pp) *pp = ws->sweep_next;
-        bool empty = (sweep->head == NULL);
-        pthread_mutex_unlock(&sweep->lock);
-        ws->sweep = NULL;
-        if (empty) ws_async_sweep_mark_dead(sweep);
-    }
+    ws_async_sweep_unlink(ws);
     bool parked = ws->park_len > ws->park_off;
     if (ws->read_armed || parked) {
         ws->closing = true;
@@ -1154,19 +1160,12 @@ cwist_websocket_async *cwist_websocket_async_attach_ex(int fd, cwist_reactor_t *
         return NULL;
     }
 
-    ws_async_slot_t slot = {.ws = ws};
-    if (!cwist_reactor_add(reactor, fd, ws_async_read_ready, &slot, sizeof(slot))) {
-        close(fd);
-        cwist_free(ws->stash);
-        cwist_free(ws->frag_buf);
-        cwist_free(ws->park_buf);
-        cwist_free(ws);
-        return NULL;
-    }
-    ws->read_armed = true;
-
-    /* Join the reactor's idle sweep (no-op when reaping is disabled).  Done
-     * after the read slot is armed so a failed attach never unlinks.  The
+    /* Everything the reactor thread reads is set before the slot is added:
+     * once cwist_reactor_add() returns, the read callback may already run
+     * on the reactor thread (attach can be called from any thread), so this
+     * thread must not write ws any more (#351).
+     *
+     * Join the reactor's idle sweep (no-op when reaping is disabled).  The
      * g_ws_sweeps_lock -> sweep->lock order matches the sweeper's teardown
      * protocol, so a sweep marked dead is never pushed to. */
     ws_async_sweep_t *sweep = ws_async_sweep_get(reactor);
@@ -1180,6 +1179,19 @@ cwist_websocket_async *cwist_websocket_async_attach_ex(int fd, cwist_reactor_t *
         }
         pthread_mutex_unlock(&sweep->lock);
         pthread_mutex_unlock(&g_ws_sweeps_lock);
+    }
+    ws->read_armed = true;
+
+    ws_async_slot_t slot = {.ws = ws};
+    if (!cwist_reactor_add(reactor, fd, ws_async_read_ready, &slot, sizeof(slot))) {
+        ws->read_armed = false;
+        ws_async_sweep_unlink(ws);
+        close(fd);
+        cwist_free(ws->stash);
+        cwist_free(ws->frag_buf);
+        cwist_free(ws->park_buf);
+        cwist_free(ws);
+        return NULL;
     }
     return ws;
 }

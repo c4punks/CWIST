@@ -1039,29 +1039,17 @@ test: $(TEST_TARGETS)
 # open reports are fixed (tracked in issue #351).
 TSAN_EXCLUDE = \
 	stress_test \
-	test_html_response test_http_client test_static_and_range \
-	test_async_defer test_async_after_shutdown test_listen_ex test_listen_signal_restore \
-	test_websocket_async \
-	test_grpc_stream test_grpc_client \
-	test_http3 test_webtransport \
+	test_http_client \
 	test_gc_ebr_release test_io_queue_full_gc \
 	test_webrtc
 # - stress_test: cwist_app_listen() forks prefork workers after the master
 #   has started threads; TSan does not support starting threads after a
 #   multi-threaded fork, so the workers die and ab intermittently sees
 #   connection resets (run 38108375276).
-# - test_html_response, test_http_client, test_static_and_range: fork a
-#   server and stop it with SIGTERM; TSan defers async signals until the
-#   blocked accept() returns, so the server is not stopped in time.
-# - test_async_defer, test_async_after_shutdown, test_listen_ex,
-#   test_listen_signal_restore: open report between cwist_http_pool_destroy()
-#   and live pool workers (http.c pool teardown).
-# - test_websocket_async: open report between ws_async_read_ready() and
-#   cwist_websocket_async_attach_ex().
-# - test_grpc_stream, test_grpc_client: open report in grpc_h2_on_poll()
-#   against cwist_grpc_stream_cancelled().
-# - test_http3, test_webtransport: open report between the test thread and
-#   cwist_http3_server_loop() state.
+# - test_http_client: open report. On classic-mode shutdown,
+#   cwist_app_destroy() frees the route table while a pool worker still
+#   serves a keep-alive request (cwist_route_table_lookup); the post-stop
+#   drain gives up after CWIST_DRAIN_TIMEOUT and nothing stops that worker.
 # - test_gc_ebr_release, test_io_queue_full_gc: exercise epoch-based
 #   reclamation, whose reader protection (ttak_epoch_enter/exit) and
 #   lock-free retire lists TSan cannot model; intermittent reports in

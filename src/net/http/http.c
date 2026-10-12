@@ -283,9 +283,11 @@ long cwist_http_continuation_shed_count(void) {
 }
 
 /** Live C1M connections (accepted, not yet closed). The shutdown drain in
- * cwist_app_listen_ex polls this to exit early once nothing is left. */
+ * cwist_app_listen_ex polls this to exit early once nothing is left.
+ * Acquire pairs with the handlers' release decrement, so once the drain sees
+ * zero, everything those handlers did happens before cwist_app_destroy(). */
 long cwist_http_inflight_count(void) {
-    return atomic_load_explicit(&g_http_inflight, memory_order_relaxed);
+    return atomic_load_explicit(&g_http_inflight, memory_order_acquire);
 }
 #define CWIST_HTTP_INFLIGHT_PER_THREAD 32
 #define CWIST_HTTP_INFLIGHT_FD_RESERVE 4096
@@ -353,6 +355,12 @@ typedef struct {
     atomic_long idle_workers;
     atomic_long max_workers;
     atomic_bool running;
+    /* Worker threads that have not returned yet, counted across pool
+     * generations. Workers are detached, so destroy waits on this before it
+     * tears down lock/cond (#351). Never reset by init. */
+    atomic_long live_workers;
+    atomic_long busy_workers; /* Live workers currently inside a handler. */
+    bool primitives_live; /* lock/cond initialised and not destroyed. */
     pthread_mutex_t lock;
     pthread_cond_t cond;
 } http_dynamic_pool_t;
@@ -371,8 +379,7 @@ static void http_rx_recv_cb(void *conn_ptr, int res);
  * idle timeout when the pool is above its base size (scale-down).
  * @return NULL when the pool stops or the worker scales down.
  */
-static void *http_dynamic_worker_thread(void *arg) {
-    (void)arg;
+static void *http_dynamic_worker_loop(void) {
     while (atomic_load_explicit(&g_dyn_pool.running, memory_order_acquire)) {
         http_pool_task_t *task = NULL;
 
@@ -444,10 +451,21 @@ static void *http_dynamic_worker_thread(void *arg) {
             cwist_free(task);
 
             ttak_net_lattice_set_worker_id((uint32_t)(uintptr_t)pthread_self());
+            atomic_fetch_add_explicit(&g_dyn_pool.busy_workers, 1, memory_order_relaxed);
             if (handler) handler(fd, ctx);
+            atomic_fetch_sub_explicit(&g_dyn_pool.busy_workers, 1, memory_order_release);
             atomic_fetch_sub_explicit(&g_http_inflight, 1, memory_order_release);
         }
     }
+    return NULL;
+}
+
+/** @brief Thread entry: run the worker loop, then drop the live count last. */
+static void *http_dynamic_worker_thread(void *arg) {
+    (void)arg;
+    http_dynamic_worker_loop();
+    /* Last access to the pool: after this, destroy may free lock/cond. */
+    atomic_fetch_sub_explicit(&g_dyn_pool.live_workers, 1, memory_order_release);
     return NULL;
 }
 
@@ -474,6 +492,7 @@ static bool http_spawn_worker(void) {
     }
     pthread_t tid;
     atomic_fetch_add_explicit(&g_dyn_pool.active_workers, 1, memory_order_relaxed);
+    atomic_fetch_add_explicit(&g_dyn_pool.live_workers, 1, memory_order_relaxed);
     int rc = pthread_create(&tid, &attr, http_dynamic_worker_thread, NULL);
     if (rc != 0) {
         /* Retry with the default stack rather than losing the worker. */
@@ -485,6 +504,7 @@ static bool http_spawn_worker(void) {
     pthread_attr_destroy(&attr);
     if (rc != 0) {
         atomic_fetch_sub_explicit(&g_dyn_pool.active_workers, 1, memory_order_relaxed);
+        atomic_fetch_sub_explicit(&g_dyn_pool.live_workers, 1, memory_order_relaxed);
         return false;
     }
     return true;
@@ -551,8 +571,13 @@ int cwist_http_pool_init_mode(bool use_c1m) {
         atomic_init(&g_dyn_pool.max_workers, 65536);
         atomic_init(&g_dyn_pool.running, true);
 
-        pthread_mutex_init(&g_dyn_pool.lock, NULL);
-        pthread_cond_init(&g_dyn_pool.cond, NULL);
+        /* A previous destroy that gave up waiting for its workers left
+         * lock/cond alive for them; keep using those. */
+        if (!g_dyn_pool.primitives_live) {
+            pthread_mutex_init(&g_dyn_pool.lock, NULL);
+            pthread_cond_init(&g_dyn_pool.cond, NULL);
+            g_dyn_pool.primitives_live = true;
+        }
 
         /* Pre-warm worker threads. CWIST_POOL_PREWARM extends the spawn count
          * beyond the base pool when the expected concurrency is known, so the
@@ -668,8 +693,35 @@ void cwist_http_pool_destroy(void) {
     }
     pthread_mutex_unlock(&g_dyn_pool.lock);
 
-    pthread_cond_destroy(&g_dyn_pool.cond);
-    pthread_mutex_destroy(&g_dyn_pool.lock);
+    /* Workers are detached, so lock/cond may only be destroyed once every
+     * worker has returned (#351). Idle workers wake on the broadcast and exit
+     * at once; wait for those, briefly. A worker still inside a handler (a
+     * keep-alive read, a slow route) is not waited for, so shutdown is not
+     * held up: lock/cond then stay alive (static storage) for it, and the
+     * next init reuses them instead of re-initialising under it. */
+    if (g_dyn_pool.primitives_live) {
+        struct timespec start, now;
+        clock_gettime(CLOCK_MONOTONIC, &start);
+        for (;;) {
+            long live = atomic_load_explicit(&g_dyn_pool.live_workers, memory_order_acquire);
+            long busy = atomic_load_explicit(&g_dyn_pool.busy_workers, memory_order_acquire);
+            if (live <= busy) break;
+            clock_gettime(CLOCK_MONOTONIC, &now);
+            if ((now.tv_sec - start.tv_sec) * 1000 + (now.tv_nsec - start.tv_nsec) / 1000000 >=
+                1000)
+                break;
+            pthread_mutex_lock(&g_dyn_pool.lock);
+            pthread_cond_broadcast(&g_dyn_pool.cond);
+            pthread_mutex_unlock(&g_dyn_pool.lock);
+            struct timespec nap = {0, 1000000};
+            nanosleep(&nap, NULL);
+        }
+        if (atomic_load_explicit(&g_dyn_pool.live_workers, memory_order_acquire) == 0) {
+            pthread_cond_destroy(&g_dyn_pool.cond);
+            pthread_mutex_destroy(&g_dyn_pool.lock);
+            g_dyn_pool.primitives_live = false;
+        }
+    }
 
     /* Retire this generation of reactors before they go; see g_reactor_gen. */
     atomic_fetch_add(&g_reactor_gen, 1);
@@ -5154,6 +5206,46 @@ static void handle_client_forking(int client_fd, void (*handler_func)(int, void 
 }
 #endif /* __wasi__ (no fork) */
 
+#if defined(__SANITIZE_THREAD__)
+#define HTTP_ACCEPT_TSAN 1
+#elif defined(__has_feature)
+#if __has_feature(thread_sanitizer)
+#define HTTP_ACCEPT_TSAN 1
+#endif
+#endif
+
+#ifdef HTTP_ACCEPT_TSAN
+#define HTTP_ACCEPT_WAIT_MS 100
+#else
+#define HTTP_ACCEPT_WAIT_MS (-1)
+#endif
+
+/**
+ * @brief accept(2) for the blocking classic/forking server loops.
+ *
+ * Under ThreadSanitizer only, wait for the listener with a bounded poll()
+ * first: TSan delivers an asynchronous signal only when the interrupted
+ * thread leaves its blocking call, so a SIGTERM to a server parked in
+ * accept() would never run the shutdown handler (#351). Other builds call
+ * accept() directly, with no extra syscall.
+ * @return accept()'s result; -1 with EINTR when the server stopped while
+ *         waiting (TSan builds).
+ */
+static int http_accept_blocking(int server_fd) {
+#ifdef HTTP_ACCEPT_TSAN
+    struct pollfd pfd = {.fd = server_fd, .events = POLLIN};
+    while (atomic_load(&g_cwist_running)) {
+        int r = poll(&pfd, 1, HTTP_ACCEPT_WAIT_MS);
+        if (r > 0 || (r < 0 && errno != EINTR)) break;
+    }
+    if (!atomic_load(&g_cwist_running)) {
+        errno = EINTR;
+        return -1;
+    }
+#endif
+    return accept(server_fd, NULL, NULL);
+}
+
 /**
  * @brief Accept one client connection and dispatch it according to the current server strategy.
  * @param server_fd Listening server socket.
@@ -5213,7 +5305,7 @@ cwist_error_t cwist_http_server_loop(int server_fd, cwist_server_config *config,
 #if !defined(__wasi__)
     if (config->use_forking) {
         while (atomic_load(&g_cwist_running)) {
-            int client_fd = accept(server_fd, NULL, NULL);
+            int client_fd = http_accept_blocking(server_fd);
             if (client_fd < 0) {
                 int accept_err = errno;
                 if (accept_err == EBADF || accept_err == EINVAL) break;
@@ -5240,7 +5332,7 @@ cwist_error_t cwist_http_server_loop(int server_fd, cwist_server_config *config,
             return err;
         }
         while (atomic_load(&g_cwist_running)) {
-            int client_fd = accept(server_fd, NULL, NULL);
+            int client_fd = http_accept_blocking(server_fd);
             if (client_fd < 0) {
                 int accept_err = errno;
                 if (accept_err == EINTR) continue;
@@ -5281,7 +5373,9 @@ cwist_error_t cwist_http_server_loop(int server_fd, cwist_server_config *config,
 
         while (atomic_load(&g_cwist_running)) {
             struct epoll_event events[1024];
-            int count = epoll_wait(epoll_fd, events, 1024, -1);
+            /* Bounded under TSan so a deferred SIGTERM gets to run; see
+             * http_accept_blocking(). */
+            int count = epoll_wait(epoll_fd, events, 1024, HTTP_ACCEPT_WAIT_MS);
             if (count < 0) {
                 if (errno == EINTR) continue;
                 if (errno == EBADF) break;
