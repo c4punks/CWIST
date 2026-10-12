@@ -122,7 +122,7 @@ static result_t run_in_child(const char *late_env, int spin_us_each) {
 }
 
 int main(void) {
-    /* Default threshold (4 ms): 5 ms callbacks make every callback after the
+    /* Default threshold (3 ms): 5 ms callbacks make every callback after the
      * first one late. */
     result_t def = run_in_child(NULL, 5000);
     if (def.late_seen == -1) {

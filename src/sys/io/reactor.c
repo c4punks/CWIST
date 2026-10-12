@@ -1214,7 +1214,7 @@ static uint64_t reactor_round_budget_us(void) {
  * connection's buffered pipeline without yielding. The connections behind a
  * slow round have already waited the threshold; late mode stops them from
  * waiting for the rest of it too. CWIST_REACTOR_LATE_US overrides the
- * 4000 us default; 0 disables. */
+ * 3000 us default; 0 disables. */
 static uint64_t reactor_late_ns(void) {
     static _Atomic long cached = -1;
     long v = atomic_load_explicit(&cached, memory_order_relaxed);
@@ -1223,9 +1223,9 @@ static uint64_t reactor_late_ns(void) {
         if (s && *s) {
             char *end = NULL;
             long parsed = strtol(s, &end, 10);
-            v = (end != s && *end == '\0' && parsed >= 0 && parsed < 3600000000L) ? parsed : 4000;
+            v = (end != s && *end == '\0' && parsed >= 0 && parsed < 3600000000L) ? parsed : 3000;
         } else {
-            v = 4000;
+            v = 3000;
         }
         atomic_store_explicit(&cached, v, memory_order_relaxed);
     }
