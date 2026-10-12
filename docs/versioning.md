@@ -33,7 +33,10 @@ $$\text{AA} \rightarrow \text{AB} \rightarrow \text{BA} \rightarrow \text{BB} \r
 
 ## 3. Three-letter extension
 
-A three-letter codename follows the same tail-in propagation rule:
+A three-letter codename expands the same way as the two-letter one: the
+new letter always enters at the tail (rightmost position) and propagates
+one position to the left per release until every position holds it; then
+the next letter enters at the tail.
 
 $$\text{AAA} \rightarrow \text{AAB} \rightarrow \text{ABB} \rightarrow \text{BBB} \rightarrow \text{BBC} \rightarrow \text{BCC} \rightarrow \text{CCC} \rightarrow \dots$$
 
