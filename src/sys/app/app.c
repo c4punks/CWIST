@@ -8,6 +8,7 @@
 #include "worker_affinity.h"
 #endif
 #include "assets_internal.h"
+#include "../io/async_debug.h"
 #include "../io/reactor_rx.h"
 #include <cwist/sys/app/app.h>
 #include <cwist/sys/app/config.h>
