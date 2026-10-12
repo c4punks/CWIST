@@ -33,6 +33,8 @@ CWIST를 배우고, 사용하고, 확장하는 데 필요한 모든 문서를 �
 * [API 모듈 색인](API.md) - `api/` 아래의 모듈별 문서.
 * [간단 레퍼런스](api-quickref.md) - 공개 함수를 한 파일에 나열한 목록.
 * [REFERENCE.md](REFERENCE.md) - 구조와 동작에 대한 레퍼런스.
+* [런타임 설정](runtime-config.md) - 모든 `CWIST_*` 환경 변수와 기본값, v4가
+  각 변수에 대해 약속하는 내용.
 * [Doxygen HTML](https://c4punks.github.io/CWIST/) - 주석이 달린 공개 헤더
   (`include/cwist/`)에서 생성한 문서.
 

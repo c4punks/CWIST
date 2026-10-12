@@ -25,6 +25,7 @@
 #define _POSIX_C_SOURCE 200809L
 #include <cwist/sys/io/reactor.h>
 #include "reactor_rx.h"
+#include "async_debug.h"
 #include <cwist/core/mem/alloc.h>
 #include <cwist/sys/app/shutdown.h>
 #include <unistd.h>
@@ -261,6 +262,12 @@ struct cwist_reactor {
     /* Owned by the run thread: read only after reactor_on_run_thread(), so
      * other threads never touch it. */
     bool dispatching;
+    /* True while the run thread dispatches a callback of a round that has
+     * run past CWIST_REACTOR_LATE_US (issue #319 experiment). Run thread
+     * only; read through cwist_reactor_dispatch_late(). */
+    bool dispatch_late;
+    uint64_t late_rounds;    /* Rounds that crossed the threshold. */
+    uint64_t late_callbacks; /* Callbacks dispatched in late mode. */
     /* RX-uring completion handler for tagged (low-bit set) RECV SQEs;
      * registered by the HTTP layer once per worker reactor. */
     cwist_rx_cb_t rx_cb;
@@ -360,6 +367,10 @@ static uint64_t latency_probe_percentile(const uint64_t *buckets, uint64_t count
 
 static void latency_probe_dump(const cwist_reactor_t *reactor) {
     if (!latency_probe_enabled()) return;
+    if (reactor->late_rounds)
+        fprintf(stderr, "[latency-probe] pid=%d late_rounds=%llu late_callbacks=%llu\n",
+                (int)getpid(), (unsigned long long)reactor->late_rounds,
+                (unsigned long long)reactor->late_callbacks);
     for (int phase = 0; phase < 2; phase++) {
         const uint64_t *b = reactor->probe[phase].buckets;
         uint64_t count = reactor->probe[phase].count;
@@ -856,7 +867,7 @@ static bool uring_submit(cwist_reactor_t *reactor, struct io_uring_sqe *out_sqe)
         reactor_tsan_release(&reactor->impl);
         __atomic_store_n(reactor->impl.sq_tail, tail + 1, __ATOMIC_RELEASE);
         if (sys_io_uring_enter(reactor->impl.ring_fd, 1, 0, 0, NULL) < 0) {
-            if (getenv("CWIST_ASYNC_DEBUG")) {
+            if (cwist_async_debug_enabled()) {
                 static _Atomic long dbg_enter_fail;
                 long n = atomic_fetch_add(&dbg_enter_fail, 1) + 1;
                 if (n <= 5 || n % 10000 == 0)
@@ -869,7 +880,7 @@ static bool uring_submit(cwist_reactor_t *reactor, struct io_uring_sqe *out_sqe)
         } else {
             ok = true;
         }
-    } else if (getenv("CWIST_ASYNC_DEBUG")) {
+    } else if (cwist_async_debug_enabled()) {
         static _Atomic long dbg_sq_full;
         long n = atomic_fetch_add(&dbg_sq_full, 1) + 1;
         if (n <= 5 || n % 10000 == 0)
@@ -924,7 +935,7 @@ static void flush_deferred(cwist_reactor_t *reactor) {
             nanosleep(&ts, NULL); /* SQ drains without our help; wait it out */
         }
         if (attempt == 100) {
-            if (getenv("CWIST_ASYNC_DEBUG")) {
+            if (cwist_async_debug_enabled()) {
                 fprintf(stderr, "[reactor] deferred submit failed fd=%d; closing\n", (int)sqe->fd);
             }
             if (ev_ctx) {
@@ -1195,6 +1206,39 @@ static uint64_t reactor_round_budget_us(void) {
 #endif
 #endif
 
+#ifdef __linux__
+/* Late-round threshold (issue #319 experiment). Once a dispatch round has
+ * run this long since its completions were reaped, every remaining callback
+ * of the round is dispatched in late mode: its re-arm (and any parked so
+ * far) is submitted right after it instead of at round end, foreign-thread
+ * posts are drained after each callback, and the HTTP layer serves the
+ * connection's buffered pipeline without yielding. The connections behind a
+ * slow round have already waited the threshold; late mode stops them from
+ * waiting for the rest of it too. CWIST_REACTOR_LATE_US overrides the
+ * 3000 us default; 0 disables. */
+static uint64_t reactor_late_ns(void) {
+    static _Atomic long cached = -1;
+    long v = atomic_load_explicit(&cached, memory_order_relaxed);
+    if (v < 0) {
+        const char *s = getenv("CWIST_REACTOR_LATE_US");
+        if (s && *s) {
+            char *end = NULL;
+            long parsed = strtol(s, &end, 10);
+            v = (end != s && *end == '\0' && parsed >= 0 && parsed < 3600000000L) ? parsed : 3000;
+        } else {
+            v = 3000;
+        }
+        atomic_store_explicit(&cached, v, memory_order_relaxed);
+    }
+    return (uint64_t)v * 1000ull;
+}
+
+bool cwist_reactor_dispatch_late(void) {
+    const cwist_reactor_t *r = t_run_reactor;
+    return r && r->dispatching && r->dispatch_late;
+}
+#endif
+
 void cwist_reactor_run(cwist_reactor_t *reactor) {
     if (!reactor) return;
     __atomic_store_n(&reactor->running, true, __ATOMIC_RELEASE);
@@ -1203,6 +1247,7 @@ void cwist_reactor_run(cwist_reactor_t *reactor) {
 #ifdef __linux__
     if (!reactor->impl.use_epoll) {
         const uint64_t cq_grace_ns = reactor_cq_grace_ns();
+        const uint64_t late_ns = reactor_late_ns();
         while (reactor_running(reactor)) {
             reactor_drain_posts(reactor);
             reactor_run_timers(reactor);
@@ -1294,7 +1339,7 @@ void cwist_reactor_run(cwist_reactor_t *reactor) {
             reactor->dispatching = true;
             const uint64_t round_budget_us = reactor_round_budget_us();
             uint64_t round_start_ns = 0;
-            if (round_budget_us) {
+            if (round_budget_us || late_ns) {
                 struct timespec ts;
                 clock_gettime(CLOCK_MONOTONIC, &ts);
                 round_start_ns = (uint64_t)ts.tv_sec * 1000000000ull + (uint64_t)ts.tv_nsec;
@@ -1314,7 +1359,19 @@ void cwist_reactor_run(cwist_reactor_t *reactor) {
             uint32_t drain_chunk = reactor_drain_chunk();
             uint32_t since_drain = 0;
             uint32_t since_budget_check = 0;
+            bool round_late = false;
             while (head != tail) {
+                if (late_ns && !round_late) {
+                    struct timespec ts;
+                    clock_gettime(CLOCK_MONOTONIC, &ts);
+                    uint64_t now_ns =
+                        (uint64_t)ts.tv_sec * 1000000000ull + (uint64_t)ts.tv_nsec;
+                    if (now_ns - round_start_ns >= late_ns) {
+                        round_late = true;
+                        reactor->dispatch_late = true;
+                        reactor->late_rounds++;
+                    }
+                }
                 struct io_uring_cqe *cqe = &reactor->impl.cqes[head & *reactor->impl.cq_ring_mask];
                 uint64_t user_data = cqe->user_data;
                 if (user_data & 1u) {
@@ -1364,6 +1421,15 @@ void cwist_reactor_run(cwist_reactor_t *reactor) {
                     }
                 }
                 head++;
+                if (round_late) {
+                    /* Late mode: nothing this connection queued waits for
+                     * the rest of the round. */
+                    reactor->late_callbacks++;
+                    __atomic_store_n(reactor->impl.cq_head, head, __ATOMIC_RELEASE);
+                    flush_deferred(reactor);
+                    reactor_drain_posts(reactor);
+                    continue;
+                }
                 if (drain_chunk && ++since_drain >= drain_chunk && head != tail) {
                     since_drain = 0;
                     __atomic_store_n(reactor->impl.cq_head, head, __ATOMIC_RELEASE);
@@ -1388,6 +1454,7 @@ void cwist_reactor_run(cwist_reactor_t *reactor) {
                 }
             }
             reactor->dispatching = false;
+            reactor->dispatch_late = false;
             __atomic_store_n(reactor->impl.cq_head, head, __ATOMIC_RELEASE);
             queue_deferred(reactor);
         }

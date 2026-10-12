@@ -891,6 +891,7 @@ TEST_TARGETS = test_worker_affinity \
                test_reactor_wake \
                test_reactor_timer \
                test_reactor_drain_chunk \
+               test_reactor_late \
                test_latency_probe \
                test_sstring \
                test_abi_layout \
@@ -1004,7 +1005,7 @@ TEST_TARGETS = test_worker_affinity \
                test_css_composer \
                test_multipart
 
-.PHONY: all test tsan-test $(TEST_TARGETS) fuzz_seq install uninstall dist clean rebuild examples clean-examples micro-examples examples-check wasm wasm-smoke wasm-abi-layout clean-wasm wasip2-smoke clean-wasip2 wit-check jco-transpile wit-bindings component-guest component-smoke clean-component api-baseline api-check
+.PHONY: all test tsan-test $(TEST_TARGETS) fuzz_seq install uninstall dist clean rebuild examples clean-examples micro-examples examples-check wasm wasm-smoke wasm-abi-layout clean-wasm wasip2-smoke clean-wasip2 wit-check jco-transpile wit-bindings component-guest component-smoke clean-component api-baseline api-check env-check
 
 # Regenerate docs/api/v4.0-api-baseline.txt (the recorded v4.0 public API
 # symbol surface). See CONTRIBUTING.md "Releases and patch releases".
@@ -1015,6 +1016,11 @@ api-baseline:
 # LTS tag v4 exists nothing it guarantees may be removed or changed.
 api-check:
 	python3 scripts/ci/check_api_baseline.py
+
+# CI gate: every CWIST_* variable src/ reads is documented in
+# docs/runtime-config.md (and its Korean mirror); see that page for statuses.
+env-check:
+	python3 scripts/ci/check_env_knobs.py
 
 # Run with e.g. `make fuzz_seq FUZZ_RUNS=100000`.  The target intentionally
 # uses a dedicated clang/libFuzzer toolchain and is not part of `make test`.
@@ -1107,6 +1113,9 @@ endif
 # full before/after latency measurement.
 test_reactor_drain_chunk: tests/test_reactor_drain_chunk.c src/sys/io/reactor.c
 	$(CC) $(CFLAGS) -o $@ tests/test_reactor_drain_chunk.c -pthread
+
+test_reactor_late: tests/test_reactor_late.c src/sys/io/reactor.c
+	$(CC) $(CFLAGS) -o $@ tests/test_reactor_late.c -pthread
 	./$@
 
 # Latency probe test (issue #166): run twice per build, with the probe
