@@ -8,6 +8,7 @@
 #include "worker_affinity.h"
 #endif
 #include "assets_internal.h"
+#include "../io/reactor_rx.h"
 #include <cwist/sys/app/app.h>
 #include <cwist/sys/app/config.h>
 #include <cwist/sys/app/logger.h>
@@ -3306,9 +3307,15 @@ cwist_async_action_t cwist_app_http_handler_async(int client_fd, cwist_http_asyn
     /* Jeungseung Gaebang Scaling for priority weighting. */
     uint32_t priority_weight = ((mixed_seed * 16777619U) >> 8) % 100;
 
-    /* One pipeline must not monopolize this reactor's other connections. */
+    /* One pipeline must not monopolize this reactor's other connections,
+     * unless this callback runs in a late round (issue #319 experiment): the
+     * connection has already waited past CWIST_REACTOR_LATE_US, so it serves
+     * its buffered pipeline now instead of yielding behind the others. */
+    const bool late = cwist_reactor_dispatch_late();
     const unsigned int yield_batch = app_http_yield_batch();
-    for (unsigned int handled = 0; handled < app_http_requests_per_turn(); ++handled) {
+    const unsigned int turn_max =
+        late ? CWIST_HTTP_REQUESTS_PER_TURN_MAX : app_http_requests_per_turn();
+    for (unsigned int handled = 0; handled < turn_max; ++handled) {
         cwist_http_request *req = NULL;
         cwist_http_parse_error_t perr = CWIST_HTTP_PARSE_OK;
         cwist_recv_status_t st = cwist_http_receive_request_nb(conn, &req, &perr);
@@ -3357,7 +3364,7 @@ cwist_async_action_t cwist_app_http_handler_async(int client_fd, cwist_http_asyn
          * event, but serving the whole turn inline serializes every other
          * connection on this reactor.  Exit to the continuation path below,
          * which reposts this connection so it resumes after the ready CQEs. */
-        if ((handled + 1) % yield_batch == 0 && conn->len > 0) break;
+        if (!late && (handled + 1) % yield_batch == 0 && conn->len > 0) break;
     }
     if (conn->len > 0) {
         /* Buffered work cannot wait for another read event. The continuation
