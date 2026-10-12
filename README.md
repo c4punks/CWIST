@@ -446,7 +446,9 @@ WORKERS=4
 
 ### Framework-built-in environment variables
 
-These variables are read directly by the framework runtime (no prefix required):
+These variables are read directly by the framework runtime (no prefix required).
+The table below lists the common ones; [docs/runtime-config.md](docs/runtime-config.md)
+lists every `CWIST_*` variable with its default and its v4 support status.
 
 | Variable | Type | Default | Description |
 |----------|------|---------|-------------|

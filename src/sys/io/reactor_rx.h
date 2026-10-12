@@ -70,7 +70,17 @@ bool cwist_reactor_recv_arm(cwist_reactor_t *reactor, int fd, void *buf, unsigne
  * wrapper in cwist_reactor_run. */
 void cwist_reactor_probe_record(cwist_reactor_t *reactor, bool queue, uint64_t sample_us);
 
+/* True while the calling thread dispatches a reactor callback in late mode:
+ * the round it belongs to has run past CWIST_REACTOR_LATE_US (issue #319
+ * experiment), so the connection should finish its buffered work now
+ * instead of yielding. False off the run thread and outside dispatch. */
+bool cwist_reactor_dispatch_late(void);
+
 #else /* !__linux__ */
+
+static inline bool cwist_reactor_dispatch_late(void) {
+    return false;
+}
 
 static inline bool cwist_rx_uring_env_enabled(void) {
     return false;

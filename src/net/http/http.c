@@ -16,6 +16,7 @@
 #include <cwist/sys/app/shutdown.h>
 #include <cwist/sys/io/reactor.h>
 #include "../../sys/io/reactor_rx.h"
+#include "../../sys/io/async_debug.h"
 #include <cwist/net/http/writer_fast.h>
 #include <cwist/core/log.h>
 #include <cwist/sys/metrics/metrics.h>
@@ -1057,7 +1058,7 @@ static void http_async_dispatch(int fd, cwist_http_async_conn_t *conn,
     }
 
     if (!http_async_arm_wait(fd, conn, handler, ctx, reactor)) {
-        if (getenv("CWIST_ASYNC_DEBUG")) {
+        if (cwist_async_debug_enabled()) {
             static _Atomic long dbg_rearm_fail;
             long n = atomic_fetch_add(&dbg_rearm_fail, 1) + 1;
             if (n <= 5 || n % 10000 == 0)
@@ -1274,7 +1275,7 @@ bool cwist_http_async_rearm(int client_fd, cwist_reactor_t *reactor,
             long n =
                 atomic_fetch_add_explicit(&g_http_continuation_shed, 1, memory_order_relaxed) + 1;
             cwist_metric_inc(cwist_metrics_registry(), CWIST_METRIC_HTTP_CONTINUATION_SHED);
-            if (getenv("CWIST_ASYNC_DEBUG") && (n <= 5 || n % 10000 == 0))
+            if (cwist_async_debug_enabled() && (n <= 5 || n % 10000 == 0))
                 fprintf(stderr, "[async] continuation shed fd=%d total=%ld\n", client_fd, n);
             cwist_free(continuation);
             http_async_close(client_fd, conn);
@@ -1400,7 +1401,7 @@ bool cwist_http_pool_submit_async(int client_fd, cwist_async_handler_t handler, 
      * one-shot POLL is armed instead. */
     if (http_async_arm_wait(client_fd, conn, handler, ctx, w->reactor)) return true;
 
-    if (getenv("CWIST_ASYNC_DEBUG")) {
+    if (cwist_async_debug_enabled()) {
         static _Atomic long dbg_submit_fail;
         long n = atomic_fetch_add(&dbg_submit_fail, 1) + 1;
         if (n <= 5 || n % 10000 == 0)
