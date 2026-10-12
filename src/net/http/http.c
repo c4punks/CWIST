@@ -283,9 +283,11 @@ long cwist_http_continuation_shed_count(void) {
 }
 
 /** Live C1M connections (accepted, not yet closed). The shutdown drain in
- * cwist_app_listen_ex polls this to exit early once nothing is left. */
+ * cwist_app_listen_ex polls this to exit early once nothing is left.
+ * Acquire pairs with the handlers' release decrement, so once the drain sees
+ * zero, everything those handlers did happens before cwist_app_destroy(). */
 long cwist_http_inflight_count(void) {
-    return atomic_load_explicit(&g_http_inflight, memory_order_relaxed);
+    return atomic_load_explicit(&g_http_inflight, memory_order_acquire);
 }
 #define CWIST_HTTP_INFLIGHT_PER_THREAD 32
 #define CWIST_HTTP_INFLIGHT_FD_RESERVE 4096
