@@ -25,6 +25,7 @@
 #include <ttak/timing/timing.h>
 #include <ttak/async/sched.h>
 #include "tls_chain.h"
+#include "h3_hdr_out.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -1151,6 +1152,16 @@ int cwist_http3_response_header_value_is_safe(const char *value) {
 }
 
 /**
+ * @brief Answer with a JSON error: @p status, @p body_json as the body (when
+ *        the response has one) and Content-Type: application/json.
+ */
+static void h3_json_error(cwist_http_response *res, int status, const char *body_json) {
+    res->status_code = status;
+    if (res->body) cwist_sstring_assign(res->body, body_json);
+    cwist_http_header_add(&res->headers, "Content-Type", "application/json");
+}
+
+/**
  * @brief Fold one decoded request header into the cwist_http_request.
  *
  * Recognized pseudo-headers update method/path/authority; known regular
@@ -1271,15 +1282,8 @@ static void h3_reject_malformed_request(lsquic_stream_t *stream, h3_stream_ctx_t
     st->malformed = 1;
     st->headers_done = 1;
     if (!st->res) st->res = cwist_http_response_create();
-    if (st->res) {
-        st->res->status_code = CWIST_HTTP_BAD_REQUEST;
-        if (st->res->body) {
-            cwist_sstring_assign(st->res->body, "{\"error\":\"malformed request\"}");
-        }
-        if (st->res->headers) {
-            cwist_http_header_add(&st->res->headers, "Content-Type", "application/json");
-        }
-    }
+    if (st->res)
+        h3_json_error(st->res, CWIST_HTTP_BAD_REQUEST, "{\"error\":\"malformed request\"}");
     st->response_ready = 1;
     lsquic_stream_wantread(stream, 0);
     lsquic_stream_shutdown(stream, 0);
@@ -1687,13 +1691,8 @@ static void cwist_h3_on_read(lsquic_stream_t *stream, lsquic_stream_ctx_t *st_h)
              * (RFC 9110 Section 15.5.14). */
             if (!st->res) st->res = cwist_http_response_create();
             if (st->res) {
-                st->res->status_code = 413; /* Payload Too Large */
-                if (st->res->body) {
-                    cwist_sstring_assign(st->res->body, "{\"error\":\"payload too large\"}");
-                }
-                if (st->res->headers) {
-                    cwist_http_header_add(&st->res->headers, "Content-Type", "application/json");
-                }
+                h3_json_error(st->res, 413 /* Payload Too Large */,
+                              "{\"error\":\"payload too large\"}");
                 st->response_ready = 1;
                 lsquic_stream_wantread(stream, 0);
                 lsquic_stream_shutdown(stream, 0);
@@ -1729,13 +1728,7 @@ static void cwist_h3_on_read(lsquic_stream_t *stream, lsquic_stream_ctx_t *st_h)
             /* Malformed request: no headers before FIN */
             st->res = cwist_http_response_create();
             if (st->res) {
-                st->res->status_code = CWIST_HTTP_BAD_REQUEST;
-                if (st->res->body) {
-                    cwist_sstring_assign(st->res->body, "{\"error\":\"malformed request\"}");
-                }
-                if (st->res->headers) {
-                    cwist_http_header_add(&st->res->headers, "Content-Type", "application/json");
-                }
+                h3_json_error(st->res, CWIST_HTTP_BAD_REQUEST, "{\"error\":\"malformed request\"}");
             }
             st->response_ready = 1;
             lsquic_stream_wantread(stream, 0);
@@ -1752,13 +1745,9 @@ static void cwist_h3_on_read(lsquic_stream_t *stream, lsquic_stream_ctx_t *st_h)
                 /* Do not dispatch a partial request. */
                 st->res = cwist_http_response_create();
                 if (st->res) {
-                    st->res->status_code = CWIST_HTTP_BAD_REQUEST;
                     cwist_http_header_add(&st->res->headers, "x-cwist-retry", "1");
-                    if (st->res->body) {
-                        cwist_sstring_assign(st->res->body,
-                                             "{\"error\":\"incomplete sequenced body, retry\"}");
-                    }
-                    cwist_http_header_add(&st->res->headers, "Content-Type", "application/json");
+                    h3_json_error(st->res, CWIST_HTTP_BAD_REQUEST,
+                                  "{\"error\":\"incomplete sequenced body, retry\"}");
                 }
                 st->response_ready = 1;
                 lsquic_stream_wantread(stream, 0);
@@ -1846,15 +1835,8 @@ static void cwist_h3_on_read(lsquic_stream_t *stream, lsquic_stream_ctx_t *st_h)
                      * body: without one the response goes out as HEADERS+FIN
                      * with no content-length, which some clients surface as
                      * an empty (0-byte) reply instead of status 425. */
-                    st->res->status_code = 425; /* Too Early */
-                    if (st->res->body) {
-                        cwist_sstring_assign(st->res->body,
-                                             "{\"error\":\"too early, retry after handshake\"}");
-                    }
-                    if (st->res->headers) {
-                        cwist_http_header_add(&st->res->headers, "Content-Type",
-                                              "application/json");
-                    }
+                    h3_json_error(st->res, 425 /* Too Early */,
+                                  "{\"error\":\"too early, retry after handshake\"}");
                 } else {
                     h3_ctx->handler(h3_ctx->user_ctx, st->req, st->res);
                 }
@@ -1926,8 +1908,8 @@ static void cwist_h3_on_write(lsquic_stream_t *stream, lsquic_stream_ctx_t *st_h
     if (st->write_state == 0) {
         struct lsxpack_header headers_arr[H3_MAX_RESPONSE_HEADERS];
         char hbuf[H3_RESPONSE_HEADER_BUF_SIZE];
-        size_t hbuf_off = 0;
-        size_t hdr_count = 0;
+        h3_hdr_out hdrs = {
+            .arr = headers_arr, .max = H3_MAX_RESPONSE_HEADERS, .buf = hbuf, .cap = sizeof(hbuf)};
 
         bool bodyless = h3_status_forbids_body(st->res->status_code);
         bool is_head = st->req && st->req->method == CWIST_HTTP_HEAD;
@@ -1965,15 +1947,7 @@ static void cwist_h3_on_write(lsquic_stream_t *stream, lsquic_stream_ctx_t *st_h
         int status_code = st->res->status_code;
         char status_str[16];
         snprintf(status_str, sizeof(status_str), "%d", status_code);
-        size_t slen = strlen(status_str);
-        if (hdr_count < H3_MAX_RESPONSE_HEADERS && slen > 0 &&
-            hbuf_off + 7 + 2 + slen <= sizeof(hbuf)) {
-            memcpy(hbuf + hbuf_off, ":status", 7);
-            memcpy(hbuf + hbuf_off + 9, status_str, slen);
-            lsxpack_header_set_offset2(&headers_arr[hdr_count], hbuf + hbuf_off, 0, 7, 9, slen);
-            hbuf_off += 9 + slen;
-            hdr_count++;
-        }
+        if (status_str[0] != '\0') h3_hdr_out_add_str(&hdrs, ":status", status_str);
 
         /* content-length */
         size_t body_len = 0;
@@ -1987,7 +1961,7 @@ static void cwist_h3_on_write(lsquic_stream_t *stream, lsquic_stream_ctx_t *st_h
         const char *user_cl =
             st->res->headers ? cwist_http_header_get(st->res->headers, "content-length") : NULL;
 
-        if (!bodyless && (body_len > 0 || is_head) && hdr_count < H3_MAX_RESPONSE_HEADERS) {
+        if (!bodyless && (body_len > 0 || is_head) && hdrs.count < hdrs.max) {
             /* For HEAD, content-length describes the would-be GET body: keep
              * the handler-provided value when present (e.g. static file size
              * with an empty body), otherwise compute it like a GET.  For all
@@ -2009,41 +1983,18 @@ static void cwist_h3_on_write(lsquic_stream_t *stream, lsquic_stream_ctx_t *st_h
                 snprintf(cl_str, sizeof(cl_str), "%zu", body_len);
                 cl_val = cl_str;
             }
-            if (cl_val && cl_val[0] != '\0') {
-                size_t cl_name_len = 14;
-                size_t cl_val_len = strlen(cl_val);
-                size_t total = cl_name_len + 2 + cl_val_len;
-                if (cl_val_len > 0 && hbuf_off + total <= sizeof(hbuf)) {
-                    memcpy(hbuf + hbuf_off, "content-length", cl_name_len);
-                    memcpy(hbuf + hbuf_off + cl_name_len + 2, cl_val, cl_val_len);
-                    lsxpack_header_set_offset2(&headers_arr[hdr_count], hbuf + hbuf_off, 0,
-                                               cl_name_len, cl_name_len + 2, cl_val_len);
-                    hbuf_off += total;
-                    hdr_count++;
-                }
-            }
+            if (cl_val && cl_val[0] != '\0') h3_hdr_out_add_str(&hdrs, "content-length", cl_val);
         }
 
         /* content-type (if body is present or HEAD request) */
         if (st->res->headers && (body_len > 0 || is_head)) {
             char *ct = cwist_http_header_get(st->res->headers, "content-type");
-            if (ct && ct[0] != '\0' && hdr_count < H3_MAX_RESPONSE_HEADERS) {
-                size_t klen = 12;
-                size_t vlen = strlen(ct);
-                if (vlen > 0 && hbuf_off + klen + 2 + vlen <= sizeof(hbuf)) {
-                    memcpy(hbuf + hbuf_off, "content-type", klen);
-                    memcpy(hbuf + hbuf_off + klen + 2, ct, vlen);
-                    lsxpack_header_set_offset2(&headers_arr[hdr_count], hbuf + hbuf_off, 0, klen,
-                                               klen + 2, vlen);
-                    hbuf_off += klen + 2 + vlen;
-                    hdr_count++;
-                }
-            }
+            if (ct && ct[0] != '\0') h3_hdr_out_add_str(&hdrs, "content-type", ct);
         }
 
         /* user headers (skip content-length/content-type already handled) */
         cwist_http_header_node *node = st->res->headers;
-        while (node && hdr_count < H3_MAX_RESPONSE_HEADERS) {
+        while (node && hdrs.count < hdrs.max) {
             if (node->key && node->key->data && node->key->size > 0 && node->value &&
                 node->value->data) {
                 char h3_name[256];
@@ -2071,16 +2022,8 @@ static void cwist_h3_on_write(lsquic_stream_t *stream, lsquic_stream_ctx_t *st_h
                     continue;
                 }
 
-                size_t klen = strlen(h3_name);
-                size_t vlen = node->value->size;
-                if (klen > 0 && hbuf_off + klen + 2 + vlen <= sizeof(hbuf)) {
-                    memcpy(hbuf + hbuf_off, h3_name, klen);
-                    memcpy(hbuf + hbuf_off + klen + 2, node->value->data, vlen);
-                    lsxpack_header_set_offset2(&headers_arr[hdr_count], hbuf + hbuf_off, 0, klen,
-                                               klen + 2, vlen);
-                    hbuf_off += klen + 2 + vlen;
-                    hdr_count++;
-                }
+                h3_hdr_out_add(&hdrs, h3_name, strlen(h3_name), node->value->data,
+                               node->value->size);
             }
             node = node->next;
         }
@@ -2110,7 +2053,7 @@ static void cwist_h3_on_write(lsquic_stream_t *stream, lsquic_stream_ctx_t *st_h
 #endif
 
         lsquic_http_headers_t headers = {
-            .count = (unsigned)hdr_count,
+            .count = (unsigned)hdrs.count,
             .headers = headers_arr,
         };
         if (lsquic_stream_send_headers(stream, &headers, eos) != 0) {
@@ -3527,55 +3470,18 @@ int cwist_http3_push_resource(cwist_http_request *req, const char *path, const c
      * :authority, :path; content-type is a response field and is omitted) */
     struct lsxpack_header headers_arr[4];
     char hbuf[2048];
-    size_t hbuf_off = 0;
-    size_t hdr_count = 0;
+    h3_hdr_out hdrs = {.arr = headers_arr, .max = 4, .buf = hbuf, .cap = sizeof(hbuf)};
 
-    /* :method = GET */
-    const char *method = "GET";
-    size_t mlen = strlen(method);
-    if (hbuf_off + 7 + 2 + mlen <= sizeof(hbuf)) {
-        memcpy(hbuf + hbuf_off, ":method", 7);
-        memcpy(hbuf + hbuf_off + 9, method, mlen);
-        lsxpack_header_set_offset2(&headers_arr[hdr_count], hbuf + hbuf_off, 0, 7, 9, mlen);
-        hbuf_off += 9 + mlen;
-        hdr_count++;
-    }
-
-    /* :scheme = https (HTTP/3 is always over QUIC/TLS) */
-    const char *scheme = "https";
-    size_t sclen = strlen(scheme);
-    if (hbuf_off + 7 + 2 + sclen <= sizeof(hbuf)) {
-        memcpy(hbuf + hbuf_off, ":scheme", 7);
-        memcpy(hbuf + hbuf_off + 9, scheme, sclen);
-        lsxpack_header_set_offset2(&headers_arr[hdr_count], hbuf + hbuf_off, 0, 7, 9, sclen);
-        hbuf_off += 9 + sclen;
-        hdr_count++;
-    }
-
-    /* :path */
-    size_t plen = strlen(path);
-    if (hbuf_off + 5 + 2 + plen <= sizeof(hbuf)) {
-        memcpy(hbuf + hbuf_off, ":path", 5);
-        memcpy(hbuf + hbuf_off + 7, path, plen);
-        lsxpack_header_set_offset2(&headers_arr[hdr_count], hbuf + hbuf_off, 0, 5, 7, plen);
-        hbuf_off += 7 + plen;
-        hdr_count++;
-    }
-
-    /* :authority (copy from original request if available) */
-    char *authority = cwist_http_header_get(req->headers, "host");
-    if (!authority) authority = "localhost";
-    size_t alen = strlen(authority);
-    if (hbuf_off + 10 + 2 + alen <= sizeof(hbuf)) {
-        memcpy(hbuf + hbuf_off, ":authority", 10);
-        memcpy(hbuf + hbuf_off + 12, authority, alen);
-        lsxpack_header_set_offset2(&headers_arr[hdr_count], hbuf + hbuf_off, 0, 10, 12, alen);
-        hbuf_off += 12 + alen;
-        hdr_count++;
-    }
+    h3_hdr_out_add_str(&hdrs, ":method", "GET");
+    /* HTTP/3 is always over QUIC/TLS. */
+    h3_hdr_out_add_str(&hdrs, ":scheme", "https");
+    h3_hdr_out_add_str(&hdrs, ":path", path);
+    /* :authority: copy from the original request if available. */
+    const char *authority = cwist_http_header_get(req->headers, "host");
+    h3_hdr_out_add_str(&hdrs, ":authority", authority ? authority : "localhost");
 
     lsquic_http_headers_t headers = {
-        .count = (unsigned)hdr_count,
+        .count = (unsigned)hdrs.count,
         .headers = headers_arr,
     };
 

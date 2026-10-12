@@ -2,6 +2,7 @@
 
 #include <limits.h>
 #include <string.h>
+#include "h2_wire.h"
 
 /** @brief Clamp a value into a uint32 window range.
  *
@@ -108,19 +109,11 @@ static int cwist_http2_write_window_update(uint8_t *buffer, size_t buffer_len, s
         return -1;
     }
 
-    buffer[0] = 0;
-    buffer[1] = 0;
-    buffer[2] = 4;
-    buffer[3] = 0x08;
+    h2_put_u24(buffer, 4);
+    buffer[3] = 0x08; /* WINDOW_UPDATE */
     buffer[4] = 0;
-    buffer[5] = (uint8_t)((stream_id >> 24) & 0x7fU);
-    buffer[6] = (uint8_t)(stream_id >> 16);
-    buffer[7] = (uint8_t)(stream_id >> 8);
-    buffer[8] = (uint8_t)stream_id;
-    buffer[9] = (uint8_t)(increment >> 24);
-    buffer[10] = (uint8_t)(increment >> 16);
-    buffer[11] = (uint8_t)(increment >> 8);
-    buffer[12] = (uint8_t)increment;
+    h2_put_u31(buffer + 5, stream_id);
+    h2_put_u32(buffer + 9, increment);
     *written = 13U;
     return 0;
 }
