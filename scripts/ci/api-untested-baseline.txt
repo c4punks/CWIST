@@ -11,6 +11,7 @@ cwist_app_get_db_pool
 cwist_app_get_named
 cwist_app_get_opt
 cwist_app_get_redis_pool
+cwist_app_http_handler
 cwist_app_multiport
 cwist_app_patch_named
 cwist_app_patch_opt
@@ -26,6 +27,7 @@ cwist_app_set_tls_groups
 cwist_app_static_with_cache
 cwist_app_use_db
 cwist_app_use_db_pool
+cwist_app_use_ech
 cwist_app_use_http2
 cwist_app_use_https3
 cwist_app_use_nuke_db
@@ -34,6 +36,7 @@ cwist_app_use_redis
 cwist_app_ws
 cwist_app_ws_async
 cwist_app_ws_opt
+cwist_async_server_loop
 cwist_bdr_get
 cwist_bdr_get_pinned
 cwist_bdr_put_fixed
@@ -43,8 +46,10 @@ cwist_bind_write_error_response
 cwist_calloc_shim
 cwist_compress_backend_deflate
 cwist_compress_backend_zstd
+cwist_create_owner
 cwist_db_pool_destroy
 cwist_db_sync_pull
+cwist_db_sync_serve
 cwist_free_shim
 cwist_gc
 cwist_gc_auto_rotate
@@ -52,6 +57,7 @@ cwist_gc_auto_rotated
 cwist_gc_raw
 cwist_gc_rotate
 cwist_gc_shutdown
+cwist_get_available_ram
 cwist_graphql_parse_subscription
 cwist_graphql_serve
 cwist_grpc_call_await_headers
@@ -131,11 +137,13 @@ cwist_json_schema_align
 cwist_log_init
 cwist_log_write
 cwist_make_socket_ipv4
+cwist_malloc_shim
 cwist_metric_observe
 cwist_mux_group_create
 cwist_mux_group_destroy
 cwist_mux_group_handle
 cwist_mux_route_use
+cwist_mw_request_id
 cwist_mw_session
 cwist_nats_dispatch
 cwist_nats_native
@@ -168,9 +176,9 @@ cwist_seq_auth_random
 cwist_seq_chunk_build_header
 cwist_session_delete
 cwist_session_invalidate
-cwist_sha256_transform
 cwist_sse_stream_comment
 cwist_tcp_cork_enabled
+cwist_template_render
 cwist_template_render_file
 cwist_test_client_clear_cookies
 cwist_url_for

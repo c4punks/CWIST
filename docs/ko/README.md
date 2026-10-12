@@ -62,7 +62,7 @@ CWIST를 배우고, 사용하고, 확장하는 데 필요한 모든 문서를 �
 ## 6. 참고 자료
 
 * [Mux 라우터 알고리즘 노트](references/mux_algorithm_references.md)
-* [릴리스 코드네임 순서 규칙](../versioning.md) - 순차 전파 규칙 (원문이 한국어입니다).
+* [릴리스 코드네임 순서 규칙](versioning.md) - 순차 전파 규칙과 API 안정성 게이트.
 * [ROADMAP.md](../../ROADMAP.md) - 기능 현황과 마일스톤 계획.
 
 ## 번역된 문서 목록

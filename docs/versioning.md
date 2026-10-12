@@ -1,53 +1,81 @@
 # Release Codename Sequencing Specification
 
-CWIST LTS 릴리즈의 코드네임은 의미적 해석이나 계층(Major, Minor 등)에 대한 구분 없이, 알파벳의 **순차적 후입 전파(Tail-In Sequential Propagation)** 규칙만을 따르는 상태 식별자입니다.
+The codename of a CWIST LTS release is a state identifier. It carries no
+semantic meaning and no tier (major, minor, and so on); it follows only the
+alphabet's **tail-in sequential propagation** rule.
 
 ---
 
-## 1. 기본 원칙
+## 1. Principles
 
-- 코드네임은 영문 대문자 ASCII로 구성됩니다.
-- 신규 알파벳은 항상 **가장 오른쪽(후미)**으로 진입합니다.
-- 다음 릴리즈마다 신규 알파벳이 왼쪽으로 한 자리씩 밀고 들어가며, 모든 자리가 해당 알파벳으로 채워지면 다음 알파벳으로 순환합니다.
-- 특정 알파벳 자리에 대한 기능적 의미나 버전 가중치는 두지 않습니다.
+- A codename consists of uppercase ASCII letters.
+- A new letter always enters at the **rightmost (tail)** position.
+- Each following release pushes the new letter one position to the left.
+  Once every position holds that letter, the sequence moves on to the next
+  letter.
+- No position carries a functional meaning or a version weight.
 
 ---
 
-## 2. 2자리 시퀀스 (기본)
+## 2. Two-letter sequence (default)
 
 $$\text{AA} \rightarrow \text{AB} \rightarrow \text{BA} \rightarrow \text{BB} \rightarrow \text{BC} \rightarrow \text{CB} \rightarrow \text{CC} \rightarrow \text{CD} \rightarrow \dots$$
 
 1. `AA`
-2. `AB` (`B` 후입)
-3. `BA` (`B` 좌측 전파)
-4. `BB` (`B` 완료)
-5. `BC` (`C` 후입)
-6. `CB` (`C` 좌측 전파)
-7. `CC` (`C` 완료)
+2. `AB` (`B` enters at the tail)
+3. `BA` (`B` propagates left)
+4. `BB` (`B` complete)
+5. `BC` (`C` enters at the tail)
+6. `CB` (`C` propagates left)
+7. `CC` (`C` complete)
 
 ---
 
-## 3. 3자리 확장 시퀀스
+## 3. Three-letter extension
 
-자릿수를 3자리로 확장할 경우에도 동일한 후입 전파 규칙을 적용합니다:
+Codenames extend to three letters only when the two-letter sequence is
+exhausted. A three-letter codename expands the same way as the two-letter one: the
+new letter always enters at the tail (rightmost position) and propagates
+one position to the left per release until every position holds it; then
+the next letter enters at the tail.
 
 $$\text{AAA} \rightarrow \text{AAB} \rightarrow \text{ABB} \rightarrow \text{BBB} \rightarrow \text{BBC} \rightarrow \text{BCC} \rightarrow \text{CCC} \rightarrow \dots$$
 
 1. `AAA`
-2. `AAB` (`B` 후입)
-3. `ABB` (`B` 좌측 전파)
-4. `BBB` (`B` 완료)
-5. `BBC` (`C` 후입)
-6. `BCC` (`C` 좌측 전파)
-7. `CCC` (`C` 완료)
+2. `AAB` (`B` enters at the tail)
+3. `ABB` (`B` propagates left)
+4. `BBB` (`B` complete)
+5. `BBC` (`C` enters at the tail)
+6. `BCC` (`C` propagates left)
+7. `CCC` (`C` complete)
 
 ---
 
-## 4. 표기
+## 4. Notation
 
-빌드 바이너리 및 CLI 출력에 릴리즈 식별자로 병기됩니다:
+The codename is shown next to the release identifier in build binaries and
+CLI output:
 
 ```sh
 $ cwist --version
 cwist 4.0.0-LTS (AA)
 ```
+
+---
+
+## 5. API stability gate (from the v4 LTS)
+
+Independently of the codename, from v4 on the existing public API does not
+change (ROADMAP.md "API stability from v4.0"). CI checks this with
+`scripts/ci/check_api_baseline.py`.
+
+- `docs/api/v4.0-api-baseline.txt` records the public headers: names,
+  function signatures (parameter names dropped) and struct/union/enum
+  layouts.
+- CI fails when the headers no longer match that file. For an intended
+  change, regenerate it with `make api-baseline` and commit it in the same
+  PR.
+- Once the LTS tag `v4` exists, CI also fails when a guaranteed entry from
+  that tag's baseline is removed or changed, even with the baseline
+  regenerated. New API passes; the experimental (WebTransport) sections are
+  not checked.
