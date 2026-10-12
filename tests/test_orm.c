@@ -11,6 +11,7 @@
 #include <cjson/cJSON.h>
 #include <assert.h>
 #include <math.h>
+#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -203,6 +204,58 @@ static void test_value_fidelity(void) {
     cwist_orm_close_socket(orm);
 }
 
+/* #354: the exact path keeps integers above 2^53 that the double-based
+ * helpers round. */
+static void test_exact_i64(void) {
+    cwist_orm_t *orm = open_memdb();
+    cwist_orm_immediate_commit(true);
+    assert(rc(cwist_orm_exec(orm, "CREATE TABLE x(id INTEGER PRIMARY KEY, v, t TEXT);")) == 0);
+    assert(rc(cwist_orm_exec(orm, "INSERT INTO x VALUES "
+                                  "(1, 9007199254740993, '9223372036854775807'), "
+                                  "(2, -9223372036854775808, '007'), "
+                                  "(3, 1.5, NULL), (4, 0, '-0');")) == 0);
+    int64_t v = 7;
+    assert(rc(cwist_orm_select_one_i64(orm, "x", "v", "id = 1", &v)) == 0);
+    assert(v == INT64_C(9007199254740993));
+    long long lossy = 0;
+    assert(rc(cwist_orm_select_one_llong(orm, "x", "v", "id = 1", &lossy)) == 0);
+    assert(lossy != 9007199254740993LL); /* why the exact path exists */
+    assert(rc(cwist_orm_select_one_i64(orm, "x", "v", "id = 2", &v)) == 0 && v == INT64_MIN);
+    assert(rc(cwist_orm_select_one_i64(orm, "x", "v", "id = 4", &v)) == 0 && v == 0);
+
+    /* A TEXT cell holding canonical integer text, as other workers may send. */
+    assert(rc(cwist_orm_select_one_i64(orm, "x", "t", "id = 1", &v)) == 0 && v == INT64_MAX);
+
+    /* Not an exact integer: out is left alone. */
+    v = 42;
+    assert(rc(cwist_orm_select_one_i64(orm, "x", "v", "id = 3", &v)) == CWIST_ERROR_PROTOCOL);
+    assert(rc(cwist_orm_select_one_i64(orm, "x", "t", "id = 2", &v)) == CWIST_ERROR_PROTOCOL);
+    assert(rc(cwist_orm_select_one_i64(orm, "x", "t", "id = 3", &v)) == CWIST_ERROR_PROTOCOL);
+    assert(rc(cwist_orm_select_one_i64(orm, "x", "t", "id = 4", &v)) == CWIST_ERROR_PROTOCOL);
+    assert(rc(cwist_orm_select_one_i64(orm, "x", "v", "id = 99", &v)) == CWIST_ERROR_PROTOCOL);
+    assert(rc(cwist_orm_select_one_i64(orm, "missing", "v", NULL, &v)) == CWIST_ERROR_PROTOCOL);
+    assert(v == 42);
+    assert(rc(cwist_orm_select_one_i64(NULL, "x", "v", NULL, &v)) == CWIST_ERROR_INVALID_PARAM);
+    assert(rc(cwist_orm_select_one_i64(orm, "x", "v", NULL, NULL)) == CWIST_ERROR_INVALID_PARAM);
+
+    /* Rowids above 2^53 come back exactly from INSERT ... RETURNING. */
+    assert(rc(cwist_orm_exec(orm, "CREATE TABLE big(id INTEGER PRIMARY KEY, name TEXT);")) == 0);
+    assert(rc(cwist_orm_exec(orm, "INSERT INTO big VALUES (1152921504606846975, 'seed');")) == 0);
+    cJSON *row = cJSON_CreateObject();
+    cJSON_AddStringToObject(row, "name", "next");
+    int64_t id = 0;
+    assert(rc(cwist_orm_insert_returning_i64(orm, "big", row, "id", &id)) == 0);
+    assert(id == INT64_C(1152921504606846976));
+    cwist_orm_use_dialect(orm, CWIST_ORM_POSTGRES); /* RETURNING form */
+    assert(rc(cwist_orm_insert_returning_i64(orm, "big", row, "id", &id)) == 0);
+    assert(id == INT64_C(1152921504606846977));
+    cwist_orm_use_dialect(orm, CWIST_ORM_SQLITE);
+    assert(rc(cwist_orm_insert_returning_i64(orm, "big", NULL, "id", &id)) ==
+           CWIST_ERROR_INVALID_PARAM);
+    cJSON_Delete(row);
+    cwist_orm_close_socket(orm);
+}
+
 static void test_dialects(void) {
     cwist_orm_t *orm = open_memdb();
     cwist_orm_immediate_commit(true);
@@ -234,6 +287,7 @@ int main(void) {
     test_insert_returning();
     test_select_one();
     test_value_fidelity();
+    test_exact_i64();
     test_dialects();
     cwist_orm_immediate_commit(false);
     printf("test_orm: ok\n");
