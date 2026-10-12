@@ -4,7 +4,7 @@
 # (parameter names dropped) and struct/union/enum layouts in member order.
 # `make api-check` (CI) fails when the headers no longer match this file.
 
-== functions (760) ==
+== functions (762) ==
 cwist_accept_socket
 cwist_alloc
 cwist_alloc_array
@@ -550,6 +550,7 @@ cwist_orm_delete
 cwist_orm_exec
 cwist_orm_immediate_commit
 cwist_orm_insert
+cwist_orm_insert_returning_i64
 cwist_orm_insert_returning_int
 cwist_orm_insert_returning_json
 cwist_orm_insert_returning_llong
@@ -559,6 +560,7 @@ cwist_orm_query
 cwist_orm_rollback
 cwist_orm_select
 cwist_orm_select_one_double
+cwist_orm_select_one_i64
 cwist_orm_select_one_int
 cwist_orm_select_one_json
 cwist_orm_select_one_llong
@@ -766,7 +768,7 @@ cwist_zod_parse
 cwist_zod_print_errors
 cwist_zod_validate
 
-== function signatures (761) ==
+== function signatures (763) ==
 cwist_accept_socket: cwist_error_t (int, struct sockaddr *, void (*)(int client_fd, void *ctx), void *)
 cwist_alloc: void * (size_t)
 cwist_alloc_array: void * (size_t, size_t)
@@ -1313,6 +1315,7 @@ cwist_orm_delete: cwist_error_t (cwist_orm_t *, const char *, const char *)
 cwist_orm_exec: cwist_error_t (cwist_orm_t *, const char *)
 cwist_orm_immediate_commit: void (bool)
 cwist_orm_insert: cwist_error_t (cwist_orm_t *, const char *, const cJSON *)
+cwist_orm_insert_returning_i64: cwist_error_t (cwist_orm_t *, const char *, const cJSON *, const char *, int64_t *)
 cwist_orm_insert_returning_int: cwist_error_t (cwist_orm_t *, const char *, const cJSON *, const char *, int *)
 cwist_orm_insert_returning_json: cwist_error_t (cwist_orm_t *, const char *, const cJSON *, const char *, cJSON **)
 cwist_orm_insert_returning_llong: cwist_error_t (cwist_orm_t *, const char *, const cJSON *, const char *, long long *)
@@ -1322,6 +1325,7 @@ cwist_orm_query: cwist_error_t (cwist_orm_t *, const char *, cJSON **)
 cwist_orm_rollback: cwist_error_t (cwist_orm_t *)
 cwist_orm_select: cwist_error_t (cwist_orm_t *, const char *, const char *, const char *, cJSON **)
 cwist_orm_select_one_double: cwist_error_t (cwist_orm_t *, const char *, const char *, const char *, double *)
+cwist_orm_select_one_i64: cwist_error_t (cwist_orm_t *, const char *, const char *, const char *, int64_t *)
 cwist_orm_select_one_int: cwist_error_t (cwist_orm_t *, const char *, const char *, const char *, int *)
 cwist_orm_select_one_json: cwist_error_t (cwist_orm_t *, const char *, const char *, const char *, cJSON **)
 cwist_orm_select_one_llong: cwist_error_t (cwist_orm_t *, const char *, const char *, const char *, long long *)

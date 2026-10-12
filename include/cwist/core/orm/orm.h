@@ -22,6 +22,7 @@
 #define __CWIST_ORM_H__
 
 #include <stdbool.h>
+#include <stdint.h>
 #include <cwist/sys/err/cwist_err.h>
 #include <cjson/cJSON.h>
 
@@ -281,6 +282,46 @@ cwist_error_t cwist_orm_select_one_double(cwist_orm_t *orm, const char *table, c
 
 cwist_error_t cwist_orm_select_one_string(cwist_orm_t *orm, const char *table, const char *column,
                                           const char *where_clause, char **out);
+
+/* ------------------------------------------------------------------ */
+/* Exact 64-bit integers                                               */
+/* ------------------------------------------------------------------ */
+
+/**
+ * @brief Select a single integer cell exactly as an int64_t.
+ *
+ * Same query as cwist_orm_select_one_llong(), but the value is read from
+ * the integer digits the worker sent instead of through a cJSON number (a
+ * double), so integers above 2^53 (snowflake-style IDs) keep every digit.
+ * The cell must be a JSON integer, or a JSON string holding canonical
+ * integer text (an optional '-' and digits, no leading zeros).
+ *
+ * @param orm          Active session.
+ * @param table        Table name.
+ * @param column       Column name.
+ * @param where_clause Optional raw SQL WHERE condition (not escaped).
+ * @param out          [out] Receives the value.
+ * @return CWIST_SUCCESS on success; CWIST_ERROR_INVALID_PARAM for NULL
+ *         arguments; CWIST_ERROR_IO when the worker exchange fails;
+ *         CWIST_ERROR_PROTOCOL when no row is returned, or the value is not
+ *         an integer or does not fit in int64_t. @p out is unchanged on
+ *         failure.
+ */
+cwist_error_t cwist_orm_select_one_i64(cwist_orm_t *orm, const char *table, const char *column,
+                                       const char *where_clause, int64_t *out);
+
+/**
+ * @brief Insert a row and return an integer column exactly as an int64_t.
+ *
+ * Same statement as cwist_orm_insert_returning_llong(), with the returned
+ * value read as in cwist_orm_select_one_i64().
+ *
+ * @return As cwist_orm_select_one_i64(); CWIST_ERROR_NOMEM when the SQL
+ *         cannot be built.
+ */
+cwist_error_t cwist_orm_insert_returning_i64(cwist_orm_t *orm, const char *table,
+                                             const cJSON *data, const char *returning_col,
+                                             int64_t *out);
 
 /**
  * @brief Type-generic SELECT a single scalar value.

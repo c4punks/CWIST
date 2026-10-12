@@ -51,14 +51,14 @@
 1	src/core/orm/orm.c:free(final);
 7	src/core/orm/orm.c:free(literal);
 1	src/core/orm/orm.c:free(orm);
-3	src/core/orm/orm.c:free(payload);
+4	src/core/orm/orm.c:free(payload);
 3	src/core/orm/orm.c:free(qcol);
 7	src/core/orm/orm.c:free(qid);
 2	src/core/orm/orm.c:free(qret);
 17	src/core/orm/orm.c:free(qtable);
 1	src/core/orm/orm.c:free(raw);
 6	src/core/orm/orm.c:free(set_clause);
-6	src/core/orm/orm.c:free(sql);
+8	src/core/orm/orm.c:free(sql);
 7	src/core/orm/orm.c:free(values);
 1	src/core/orm/orm.c:if (!node) return strdup("NULL");
 1	src/core/orm/orm.c:if (!node->valuestring) return strdup("''");

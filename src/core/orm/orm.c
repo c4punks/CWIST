@@ -811,6 +811,46 @@ cwist_error_t cwist_orm_select(cwist_orm_t *orm, const char *table, const char *
 /* ------------------------------------------------------------------ */
 
 /**
+ * @brief Build `INSERT ... RETURNING` (or the dialect's equivalent) for
+ *        the insert_returning helpers.
+ * @return malloc'd SQL the caller frees, or NULL on allocation failure.
+ */
+static char *orm_build_returning_sql(const cwist_orm_t *orm, const char *table, const cJSON *data,
+                                     const char *returning_col) {
+    char *base = orm_build_insert_sql(orm, table, data);
+    if (!base) return NULL;
+
+    char *qret = cwist_orm_quote_identifier(orm, returning_col);
+    if (!qret) {
+        free(base);
+        return NULL;
+    }
+
+    const char *fmt;
+    switch (orm->dialect) {
+        case CWIST_ORM_POSTGRES:
+        case CWIST_ORM_MARIADB: fmt = "%s RETURNING %s;"; break;
+        case CWIST_ORM_MYSQL: fmt = "%s; SELECT LAST_INSERT_ID() AS %s;"; break;
+        case CWIST_ORM_SQLITE:
+        default: fmt = "%s; SELECT last_insert_rowid() AS %s;"; break;
+    }
+    /* Size from the format itself: a fixed +16 truncated the SQLite and
+     * MySQL suffixes, so the INSERT ran but the SELECT never did. Raw
+     * malloc like every SQL buffer in this file (the caller frees it). */
+    int need = snprintf(NULL, 0, fmt, base, qret);
+    char *sql = need >= 0 ? (char *)malloc((size_t)need + 1) : NULL;
+    if (!sql) {
+        free(base);
+        free(qret);
+        return NULL;
+    }
+    snprintf(sql, (size_t)need + 1, fmt, base, qret);
+    free(base);
+    free(qret);
+    return sql;
+}
+
+/**
  * @brief Insert a row and return a JSON value from the new row.
  *
  * Appends a dialect-specific RETURNING clause (or an equivalent
@@ -839,41 +879,11 @@ cwist_error_t cwist_orm_insert_returning_json(cwist_orm_t *orm, const char *tabl
         return err;
     }
 
-    char *base = orm_build_insert_sql(orm, table, data);
-    if (!base) {
-        err.error.err_i16 = CWIST_ERROR_NOMEM;
-        return err;
-    }
-
-    char *qret = cwist_orm_quote_identifier(orm, returning_col);
-    if (!qret) {
-        free(base);
-        err.error.err_i16 = CWIST_ERROR_NOMEM;
-        return err;
-    }
-
-    const char *fmt;
-    switch (orm->dialect) {
-        case CWIST_ORM_POSTGRES:
-        case CWIST_ORM_MARIADB: fmt = "%s RETURNING %s;"; break;
-        case CWIST_ORM_MYSQL: fmt = "%s; SELECT LAST_INSERT_ID() AS %s;"; break;
-        case CWIST_ORM_SQLITE:
-        default: fmt = "%s; SELECT last_insert_rowid() AS %s;"; break;
-    }
-    /* Size from the format itself: a fixed +16 truncated the SQLite and
-     * MySQL suffixes, so the INSERT ran but the SELECT never did. Raw
-     * malloc like every SQL buffer in this file (freed right below). */
-    int need = snprintf(NULL, 0, fmt, base, qret);
-    char *sql = need >= 0 ? (char *)malloc((size_t)need + 1) : NULL;
+    char *sql = orm_build_returning_sql(orm, table, data, returning_col);
     if (!sql) {
-        free(base);
-        free(qret);
         err.error.err_i16 = CWIST_ERROR_NOMEM;
         return err;
     }
-    snprintf(sql, (size_t)need + 1, fmt, base, qret);
-    free(base);
-    free(qret);
 
     cJSON *rows = NULL;
     err = cwist_orm_query(orm, sql, &rows);
@@ -992,6 +1002,39 @@ cwist_error_t cwist_orm_insert_returning_llong(cwist_orm_t *orm, const char *tab
 /* ------------------------------------------------------------------ */
 
 /**
+ * @brief Build `SELECT column FROM table [WHERE ...] LIMIT 1` for the
+ *        select_one helpers.
+ * @return malloc'd SQL the caller frees, or NULL on allocation failure.
+ */
+static char *orm_build_select_one_sql(const cwist_orm_t *orm, const char *table,
+                                      const char *column, const char *where_clause) {
+    char *qtable = cwist_orm_quote_identifier(orm, table);
+    char *qcol = cwist_orm_quote_identifier(orm, column);
+    if (!qtable || !qcol) {
+        free(qtable);
+        free(qcol);
+        return NULL;
+    }
+
+    size_t sql_len = strlen(qcol) + strlen(qtable) + 48 + (where_clause ? strlen(where_clause) : 0);
+    char *sql = (char *)malloc(sql_len);
+    if (!sql) {
+        free(qtable);
+        free(qcol);
+        return NULL;
+    }
+
+    if (where_clause && *where_clause) {
+        snprintf(sql, sql_len, "SELECT %s FROM %s WHERE %s LIMIT 1;", qcol, qtable, where_clause);
+    } else {
+        snprintf(sql, sql_len, "SELECT %s FROM %s LIMIT 1;", qcol, qtable);
+    }
+    free(qtable);
+    free(qcol);
+    return sql;
+}
+
+/**
  * @brief Select a single column value from the first matching row as JSON.
  *
  * Runs a `SELECT column FROM table [WHERE ...] LIMIT 1` query and
@@ -1016,31 +1059,11 @@ cwist_error_t cwist_orm_select_one_json(cwist_orm_t *orm, const char *table, con
         return err;
     }
 
-    char *qtable = cwist_orm_quote_identifier(orm, table);
-    char *qcol = cwist_orm_quote_identifier(orm, column);
-    if (!qtable || !qcol) {
-        free(qtable);
-        free(qcol);
-        err.error.err_i16 = CWIST_ERROR_NOMEM;
-        return err;
-    }
-
-    size_t sql_len = strlen(qcol) + strlen(qtable) + 48 + (where_clause ? strlen(where_clause) : 0);
-    char *sql = (char *)malloc(sql_len);
+    char *sql = orm_build_select_one_sql(orm, table, column, where_clause);
     if (!sql) {
-        free(qtable);
-        free(qcol);
         err.error.err_i16 = CWIST_ERROR_NOMEM;
         return err;
     }
-
-    if (where_clause && *where_clause) {
-        snprintf(sql, sql_len, "SELECT %s FROM %s WHERE %s LIMIT 1;", qcol, qtable, where_clause);
-    } else {
-        snprintf(sql, sql_len, "SELECT %s FROM %s LIMIT 1;", qcol, qtable);
-    }
-    free(qtable);
-    free(qcol);
 
     cJSON *rows = NULL;
     err = cwist_orm_query(orm, sql, &rows);
@@ -1204,5 +1227,194 @@ cwist_error_t cwist_orm_select_one_string(cwist_orm_t *orm, const char *table, c
         err.error.err_i16 = CWIST_ERROR_PROTOCOL;
     }
     cJSON_Delete(val);
+    return err;
+}
+
+/* ------------------------------------------------------------------ */
+/* Exact 64-bit integers (#354)                                        */
+/* ------------------------------------------------------------------ */
+
+/* The typed helpers above read values through cJSON numbers, which are
+ * doubles. The worker sends canonical integers as raw JSON digits, so the
+ * exact path takes them from the response text instead: cJSON validates the
+ * response, then a small scanner finds the same cell in the raw text. */
+
+static const char *orm_json_ws(const char *p) {
+    while (*p == ' ' || *p == '\t' || *p == '\n' || *p == '\r') p++;
+    return p;
+}
+
+/** @brief Skip a JSON string starting at its opening quote; NULL if unterminated. */
+static const char *orm_json_skip_string(const char *p) {
+    for (p++; *p && *p != '"'; p++) {
+        if (*p == '\\' && !*++p) return NULL;
+    }
+    return *p == '"' ? p + 1 : NULL;
+}
+
+/** @brief Skip one JSON value; NULL if it is malformed. */
+static const char *orm_json_skip_value(const char *p) {
+    p = orm_json_ws(p);
+    if (*p == '"') return orm_json_skip_string(p);
+    if (*p == '{' || *p == '[') {
+        int depth = 0;
+        while (*p) {
+            if (*p == '"') {
+                p = orm_json_skip_string(p);
+                if (!p) return NULL;
+                continue;
+            }
+            if (*p == '{' || *p == '[') {
+                depth++;
+            } else if (*p == '}' || *p == ']') {
+                if (--depth == 0) return p + 1;
+            }
+            p++;
+        }
+        return NULL;
+    }
+    const char *start = p;
+    while (*p && *p != ',' && *p != '}' && *p != ']' && *p != ' ' && *p != '\t' && *p != '\n' &&
+           *p != '\r')
+        p++;
+    return p > start ? p : NULL;
+}
+
+/**
+ * @brief Find @p key in the JSON object at @p p and return its value.
+ *
+ * Keys are compared as written. A key containing an escape sequence never
+ * matches, so a column name with a quote, backslash or control character is
+ * not reachable through this path.
+ * @return Start of the value, or NULL when absent or malformed.
+ */
+static const char *orm_json_object_get(const char *p, const char *key) {
+    size_t key_len = strlen(key);
+    p = orm_json_ws(p);
+    if (*p != '{') return NULL;
+    p = orm_json_ws(p + 1);
+    while (*p == '"') {
+        const char *ks = p;
+        const char *ke = orm_json_skip_string(p);
+        if (!ke) return NULL;
+        p = orm_json_ws(ke);
+        if (*p != ':') return NULL;
+        p = orm_json_ws(p + 1);
+        size_t n = (size_t)(ke - ks - 2);
+        if (n == key_len && !memchr(ks + 1, '\\', n) && memcmp(ks + 1, key, n) == 0) return p;
+        p = orm_json_skip_value(p);
+        if (!p) return NULL;
+        p = orm_json_ws(p);
+        if (*p != ',') return NULL;
+        p = orm_json_ws(p + 1);
+    }
+    return NULL;
+}
+
+/**
+ * @brief Parse a JSON integer, or a string holding canonical integer text,
+ *        into an int64_t without going through a double.
+ * @return true when the token is canonical (optional '-', digits, no leading
+ *         zero, not "-0") and fits in int64_t.
+ */
+static bool orm_parse_exact_i64(const char *p, int64_t *out) {
+    const char *s = p;
+    const char *e;
+    if (*p == '"') {
+        e = orm_json_skip_string(p);
+        if (!e) return false;
+        s = p + 1;
+        e--; /* closing quote */
+    } else {
+        e = orm_json_skip_value(p);
+        if (!e) return false;
+    }
+    size_t n = (size_t)(e - s);
+    size_t i = (n > 0 && s[0] == '-') ? 1 : 0;
+    if (i >= n || n > 20) return false;
+    if (s[i] == '0' && (n - i > 1 || i == 1)) return false;
+    for (size_t k = i; k < n; k++) {
+        if (s[k] < '0' || s[k] > '9') return false;
+    }
+    char buf[24];
+    memcpy(buf, s, n);
+    buf[n] = '\0';
+    errno = 0;
+    long long v = strtoll(buf, NULL, 10);
+    if (errno == ERANGE) return false;
+    *out = (int64_t)v;
+    return true;
+}
+
+/**
+ * @brief Run @p sql and read column @p key of the first row exactly.
+ * @return CWIST_SUCCESS, CWIST_ERROR_IO or CWIST_ERROR_PROTOCOL (see
+ *         cwist_orm_select_one_i64()).
+ */
+static cwist_error_t orm_query_first_i64(cwist_orm_t *orm, const char *sql, const char *key,
+                                         int64_t *out) {
+    cwist_error_t err = make_error(CWIST_ERR_INT16);
+    char *payload = NULL;
+    if (orm_exchange(orm, sql, &payload) != 0) {
+        err.error.err_i16 = CWIST_ERROR_IO;
+        return err;
+    }
+
+    /* cJSON checks the status and that the cell is a number or a string. */
+    err.error.err_i16 = CWIST_ERROR_PROTOCOL;
+    cJSON *root = cJSON_Parse(payload);
+    cJSON *status = cJSON_GetObjectItemCaseSensitive(root, "status");
+    cJSON *first = cJSON_GetArrayItem(cJSON_GetObjectItemCaseSensitive(root, "rows"), 0);
+    cJSON *val = cJSON_GetObjectItemCaseSensitive(first, key);
+    bool shape_ok = cJSON_IsNumber(status) && (int)status->valuedouble == 0 &&
+                    (cJSON_IsNumber(val) || cJSON_IsString(val));
+    cJSON_Delete(root);
+
+    if (shape_ok) {
+        const char *rows = orm_json_object_get(payload, "rows");
+        const char *row = rows && *rows == '[' ? orm_json_ws(rows + 1) : NULL;
+        const char *cell = row ? orm_json_object_get(row, key) : NULL;
+        int64_t v;
+        if (cell && orm_parse_exact_i64(cell, &v)) {
+            *out = v;
+            err.error.err_i16 = CWIST_SUCCESS;
+        }
+    }
+    free(payload);
+    return err;
+}
+
+cwist_error_t cwist_orm_select_one_i64(cwist_orm_t *orm, const char *table, const char *column,
+                                       const char *where_clause, int64_t *out) {
+    cwist_error_t err = make_error(CWIST_ERR_INT16);
+    if (!orm || !table || !column || !out) {
+        err.error.err_i16 = CWIST_ERROR_INVALID_PARAM;
+        return err;
+    }
+    char *sql = orm_build_select_one_sql(orm, table, column, where_clause);
+    if (!sql) {
+        err.error.err_i16 = CWIST_ERROR_NOMEM;
+        return err;
+    }
+    err = orm_query_first_i64(orm, sql, column, out);
+    free(sql);
+    return err;
+}
+
+cwist_error_t cwist_orm_insert_returning_i64(cwist_orm_t *orm, const char *table,
+                                             const cJSON *data, const char *returning_col,
+                                             int64_t *out) {
+    cwist_error_t err = make_error(CWIST_ERR_INT16);
+    if (!orm || !table || !data || !returning_col || !out) {
+        err.error.err_i16 = CWIST_ERROR_INVALID_PARAM;
+        return err;
+    }
+    char *sql = orm_build_returning_sql(orm, table, data, returning_col);
+    if (!sql) {
+        err.error.err_i16 = CWIST_ERROR_NOMEM;
+        return err;
+    }
+    err = orm_query_first_i64(orm, sql, returning_col, out);
+    free(sql);
     return err;
 }
