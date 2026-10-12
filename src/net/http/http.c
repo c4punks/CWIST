@@ -391,8 +391,10 @@ typedef struct http_live_conn {
     struct http_live_conn *prev, *next;
 } http_live_conn_t;
 
+#ifndef __wasi__
 static pthread_mutex_t g_live_lock = PTHREAD_MUTEX_INITIALIZER;
 static http_live_conn_t *g_live_head;
+#endif
 static _Atomic long g_live_count;
 static __thread http_live_conn_t *t_live_conn;
 
@@ -415,6 +417,10 @@ void cwist_http_live_idle_leave(void) {
 
 /** Run @p handler on a dup of @p fd with the connection registered. */
 static void http_live_serve(int fd, void (*handler)(int, void *), void *ctx) {
+#ifdef __wasi__
+    /* No dup() or shutdown() on WASI: serve unregistered, as before. */
+    handler(fd, ctx);
+#else
     int hfd = fd >= 0 ? dup(fd) : -1;
     if (hfd < 0) {
         /* No descriptor to spare: serve unregistered, as before. */
@@ -444,15 +450,22 @@ static void http_live_serve(int fd, void (*handler)(int, void *), void *ctx) {
     /* Last touch of this connection: everything the handler did happens
      * before the shutdown wait sees the count drop. */
     atomic_fetch_sub_explicit(&g_live_count, 1, memory_order_release);
+#endif
 }
 
 /** shutdown(@p how) every registered connection, or only the idle ones. */
 static void http_live_kick(int how, bool idle_only) {
+#ifdef __wasi__
+    /* Nothing is ever registered on WASI (see http_live_serve). */
+    (void)how;
+    (void)idle_only;
+#else
     pthread_mutex_lock(&g_live_lock);
     for (http_live_conn_t *c = g_live_head; c; c = c->next) {
         if (!idle_only || atomic_load(&c->idle)) shutdown(c->fd, how);
     }
     pthread_mutex_unlock(&g_live_lock);
+#endif
 }
 
 static long http_live_ms_since(const struct timespec *start) {
