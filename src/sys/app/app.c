@@ -29,6 +29,7 @@
 
 /* Network headers (internal) */
 #include "../../net/http/async_internal.h"
+#include "../../net/http/http_live.h"
 #include "../../net/http/simd_parser.h"
 #include "../../net/websocket/ws_async_internal.h"
 /* I/O headers (internal) */
@@ -3435,7 +3436,14 @@ void cwist_app_http_handler(int client_fd, void *ctx) {
         if (app->bdr_ctx) {
             while (true) {
                 if (buf_len == 0) {
+                    /* Keep-alive wait for the next request: a shutting-down
+                     * classic pool closes idle connections (http_live.h). */
+                    if (!cwist_http_live_idle_enter()) {
+                        close(client_fd);
+                        return;
+                    }
                     ssize_t bytes = recv(client_fd, read_buf, sizeof(read_buf) - 1, 0);
+                    cwist_http_live_idle_leave();
                     if (bytes <= 0) {
                         if (bytes < 0 && errno == EINTR) continue;
                         close(client_fd);

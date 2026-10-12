@@ -25,6 +25,7 @@
 #include <ttak/priority/scheduler.h>
 #include "simd_parser.h"
 #include "async_internal.h"
+#include "http_live.h"
 
 #include <limits.h>
 #include <stdio.h>
@@ -373,6 +374,140 @@ static http_dynamic_pool_t g_dyn_pool;
  * cwist_http_pool_init. */
 static void http_rx_recv_cb(void *conn_ptr, int res);
 
+/* --- Classic connection registry (shutdown) -------------------------------
+ * Pool handlers run on detached workers and may sit in a blocking read on a
+ * keep-alive connection for as long as the client keeps it open. Shutdown
+ * used to wait only up to the drain timeout and then destroy the app under
+ * them (route table freed while a worker was still dispatching a request).
+ * Each worker now registers the connection it serves; cwist_http_pool_destroy
+ * closes idle ones at once, gives in-flight requests the drain timeout, then
+ * shuts the rest down and waits until every handler has returned.
+ *
+ * The handler gets a dup of the socket and closes that; the pool keeps the
+ * original open until the entry is unlinked, so a shutdown() issued under
+ * g_live_lock can never reach a descriptor number that was reused. */
+typedef struct http_live_conn {
+    int fd;          /* The pool's descriptor; the handler serves a dup. */
+    _Atomic int idle; /* Handler is waiting for the next request. */
+    struct http_live_conn *prev, *next;
+} http_live_conn_t;
+
+#ifndef __wasi__
+static pthread_mutex_t g_live_lock = PTHREAD_MUTEX_INITIALIZER;
+static http_live_conn_t *g_live_head;
+#endif
+static _Atomic long g_live_count;
+static __thread http_live_conn_t *t_live_conn;
+
+bool cwist_http_live_idle_enter(void) {
+    http_live_conn_t *c = t_live_conn;
+    if (!c) return true;
+    /* Pairs with http_live_kick(): either it sees idle and shuts the socket
+     * down, or this sees the stop flag. */
+    atomic_store(&c->idle, 1);
+    if (atomic_load(&g_http_pool_stopping)) {
+        atomic_store(&c->idle, 0);
+        return false;
+    }
+    return true;
+}
+
+void cwist_http_live_idle_leave(void) {
+    if (t_live_conn) atomic_store(&t_live_conn->idle, 0);
+}
+
+/** Run @p handler on a dup of @p fd with the connection registered. */
+static void http_live_serve(int fd, void (*handler)(int, void *), void *ctx) {
+#ifdef __wasi__
+    /* No dup() or shutdown() on WASI: serve unregistered, as before. */
+    handler(fd, ctx);
+#else
+    int hfd = fd >= 0 ? dup(fd) : -1;
+    if (hfd < 0) {
+        /* No descriptor to spare: serve unregistered, as before. */
+        handler(fd, ctx);
+        return;
+    }
+    http_live_conn_t live = {.fd = fd};
+    pthread_mutex_lock(&g_live_lock);
+    live.next = g_live_head;
+    if (g_live_head) g_live_head->prev = &live;
+    g_live_head = &live;
+    atomic_fetch_add_explicit(&g_live_count, 1, memory_order_relaxed);
+    pthread_mutex_unlock(&g_live_lock);
+
+    t_live_conn = &live;
+    handler(hfd, ctx);
+    t_live_conn = NULL;
+
+    pthread_mutex_lock(&g_live_lock);
+    if (live.prev)
+        live.prev->next = live.next;
+    else
+        g_live_head = live.next;
+    if (live.next) live.next->prev = live.prev;
+    pthread_mutex_unlock(&g_live_lock);
+    close(fd);
+    /* Last touch of this connection: everything the handler did happens
+     * before the shutdown wait sees the count drop. */
+    atomic_fetch_sub_explicit(&g_live_count, 1, memory_order_release);
+#endif
+}
+
+/** shutdown(@p how) every registered connection, or only the idle ones. */
+static void http_live_kick(int how, bool idle_only) {
+#ifdef __wasi__
+    /* Nothing is ever registered on WASI (see http_live_serve). */
+    (void)how;
+    (void)idle_only;
+#else
+    pthread_mutex_lock(&g_live_lock);
+    for (http_live_conn_t *c = g_live_head; c; c = c->next) {
+        if (!idle_only || atomic_load(&c->idle)) shutdown(c->fd, how);
+    }
+    pthread_mutex_unlock(&g_live_lock);
+#endif
+}
+
+static long http_live_ms_since(const struct timespec *start) {
+    struct timespec now;
+    clock_gettime(CLOCK_MONOTONIC, &now);
+    return (now.tv_sec - start->tv_sec) * 1000L + (now.tv_nsec - start->tv_nsec) / 1000000L;
+}
+
+/** Wait until no handler is serving a classic connection (see above). */
+static void http_live_drain(void) {
+    if (atomic_load_explicit(&g_live_count, memory_order_acquire) == 0) return;
+    http_live_kick(SHUT_RD, true);
+    struct timespec start;
+    clock_gettime(CLOCK_MONOTONIC, &start);
+    const long drain_ms = (long)g_cwist_drain_timeout_sec * 1000L;
+    struct timespec nap = {0, 2 * 1000000L};
+    while (atomic_load_explicit(&g_live_count, memory_order_acquire) > 0 &&
+           http_live_ms_since(&start) < drain_ms) {
+        nanosleep(&nap, NULL);
+    }
+    long left = atomic_load_explicit(&g_live_count, memory_order_acquire);
+    if (left == 0) return;
+    CWIST_LOG_WARN("[http] %ld classic connection(s) still busy after the %d s drain; "
+                   "shutting them down",
+                   left, g_cwist_drain_timeout_sec);
+    http_live_kick(SHUT_RDWR, false);
+    /* A handler blocked in socket I/O returns now. One stuck in route code
+     * is waited for: destroying the app under it is the bug this fixes. */
+    long next_warn_ms = 5000;
+    clock_gettime(CLOCK_MONOTONIC, &start);
+    while ((left = atomic_load_explicit(&g_live_count, memory_order_acquire)) > 0) {
+        nanosleep(&nap, NULL);
+        long waited = http_live_ms_since(&start);
+        if (waited >= next_warn_ms) {
+            CWIST_LOG_WARN("[http] still waiting for %ld classic handler(s) to return (%ld s)",
+                           left, waited / 1000);
+            next_warn_ms += 5000;
+        }
+    }
+}
+
 /**
  * @brief Main loop of a classic-mode dynamic pool worker thread.
  *
@@ -453,7 +588,7 @@ static void *http_dynamic_worker_loop(void) {
 
             ttak_net_lattice_set_worker_id((uint32_t)(uintptr_t)pthread_self());
             atomic_fetch_add_explicit(&g_dyn_pool.busy_workers, 1, memory_order_relaxed);
-            if (handler) handler(fd, ctx);
+            if (handler) http_live_serve(fd, handler, ctx);
             atomic_fetch_sub_explicit(&g_dyn_pool.busy_workers, 1, memory_order_release);
             atomic_fetch_sub_explicit(&g_http_inflight, 1, memory_order_release);
         }
@@ -693,6 +828,10 @@ void cwist_http_pool_destroy(void) {
         node = next;
     }
     pthread_mutex_unlock(&g_dyn_pool.lock);
+
+    /* No handler may still be serving a connection once this returns: the
+     * caller destroys the app next. */
+    http_live_drain();
 
     /* Workers are detached, so lock/cond may only be destroyed once every
      * worker has returned (#351). Idle workers wake on the broadcast and exit
@@ -4485,6 +4624,10 @@ cwist_http_request *cwist_http_receive_request(int client_fd, char *read_buf, si
             if (err_out) *err_out = CWIST_HTTP_PARSE_EOF;
             return NULL;
         }
+        /* Nothing of the next request yet: the connection is idle, and a
+         * shutting-down pool closes it instead of waiting. */
+        const bool idle = total_received == 0;
+        if (idle && !cwist_http_live_idle_enter()) return NULL;
         struct pollfd pfd = {.fd = client_fd, .events = POLLIN};
         int pr = poll(&pfd, 1, (int)(remaining_ms > 1000 ? 1000 : remaining_ms));
         if (pr <= 0) {
@@ -4495,6 +4638,7 @@ cwist_http_request *cwist_http_receive_request(int client_fd, char *read_buf, si
 
         ssize_t bytes =
             recv(client_fd, read_buf + total_received, buf_size - 1 - total_received, 0);
+        if (idle) cwist_http_live_idle_leave();
         if (bytes <= 0) {
             if (bytes < 0 && errno == EINTR) continue;
             if (bytes < 0 && (errno == EAGAIN || errno == EWOULDBLOCK)) continue;

@@ -949,6 +949,7 @@ TEST_TARGETS = test_worker_affinity \
                test_shutdown \
                test_listen_signal_restore \
                test_listen_ex \
+               test_classic_shutdown \
                test_compress \
                test_builtin_mw_deferred \
                test_log \
@@ -1045,17 +1046,12 @@ test: $(TEST_TARGETS)
 # open reports are fixed (tracked in issue #351).
 TSAN_EXCLUDE = \
 	stress_test \
-	test_http_client \
 	test_gc_ebr_release test_io_queue_full_gc \
 	test_webrtc
 # - stress_test: cwist_app_listen() forks prefork workers after the master
 #   has started threads; TSan does not support starting threads after a
 #   multi-threaded fork, so the workers die and ab intermittently sees
 #   connection resets (run 38108375276).
-# - test_http_client: open report. On classic-mode shutdown,
-#   cwist_app_destroy() frees the route table while a pool worker still
-#   serves a keep-alive request (cwist_route_table_lookup); the post-stop
-#   drain gives up after CWIST_DRAIN_TIMEOUT and nothing stops that worker.
 # - test_gc_ebr_release, test_io_queue_full_gc: exercise epoch-based
 #   reclamation, whose reader protection (ttak_epoch_enter/exit) and
 #   lock-free retire lists TSan cannot model; intermittent reports in
@@ -1316,6 +1312,10 @@ test_listen_signal_restore: $(LIB_NAME) tests/test_listen_signal_restore.c
 test_listen_ex: $(LIB_NAME) tests/test_listen_ex.c
 	$(CC) $(CFLAGS) -o test_listen_ex tests/test_listen_ex.c $(LIB_NAME) $(LIBS)
 	./test_listen_ex
+
+test_classic_shutdown: $(LIB_NAME) tests/test_classic_shutdown.c
+	$(CC) $(CFLAGS) -o test_classic_shutdown tests/test_classic_shutdown.c $(LIB_NAME) $(LIBS)
+	./test_classic_shutdown
 
 test_compress: $(LIB_NAME) tests/test_compress.c
 	$(CC) $(CFLAGS) -o test_compress tests/test_compress.c $(LIB_NAME) $(LIBS)
