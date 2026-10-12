@@ -258,7 +258,7 @@ SRCS = src/core/sstring/sstring.c \
        src/net/http/writer_fast.c \
        src/sys/io/uring_sqpoll.c \
        src/net/http/async_server.c \
-       src/net/http/async.c src/core/mem/gc.c lib/libttak/src/mem/epoch.c src/sys/sys_info.c \
+       src/net/http/async.c src/net/http/async_tls.c src/core/mem/gc.c lib/libttak/src/mem/epoch.c src/sys/sys_info.c \
     lib/libttak/src/mem/mem.c lib/libttak/src/mem/fastpath.c \
     lib/libttak/src/mem/owner.c lib/libttak/src/mem/abstract.c \
        src/net/http/cookie.c \
@@ -290,7 +290,7 @@ SRCS = src/core/sstring/sstring.c \
        src/sys/app/compress.c \
        src/sys/app/test_client.c \
        src/core/log/log.c lib/libttak/src/net/mols_control.c \
-    src/net/http/async.c src/core/mem/gc.c lib/libttak/src/mem/epoch.c src/sys/sys_info.c \
+    src/net/http/async.c src/net/http/async_tls.c src/core/mem/gc.c lib/libttak/src/mem/epoch.c src/sys/sys_info.c \
     lib/libttak/src/mem/mem.c lib/libttak/src/mem/fastpath.c \
     lib/libttak/src/mem/owner.c lib/libttak/src/mem/abstract.c \
        src/sys/session/flash.c \
@@ -340,6 +340,7 @@ WASM_SRCS = src/core/sstring/sstring.c \
        src/core/seq/seq_auth.c \
        src/sys/err/error.c \
        src/net/http/http.c \
+       src/net/http/async_tls.c \
        src/net/http/mux.c \
        src/net/http/query.c \
        src/net/http/cookie.c \
