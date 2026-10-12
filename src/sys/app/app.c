@@ -881,7 +881,9 @@ static void *cwist_mem_watcher(void *arg) {
     cwist_app *app = (cwist_app *)arg;
     cwist_fix_server_mem *mem = app->mem_manager;
 
-    while (mem->watcher_running) {
+    /* watcher_running is a plain bool in the public layout; every access
+     * goes through __atomic builtins instead of changing its type (#351). */
+    while (__atomic_load_n(&mem->watcher_running, __ATOMIC_ACQUIRE)) {
         usleep(mem->check_interval_ms * 1000);
 
         pthread_mutex_lock(&mem->lock);
@@ -1482,7 +1484,7 @@ void cwist_app_destroy(cwist_app *app) {
 
 #if !defined(__EMSCRIPTEN__) && !defined(__wasi__)
     if (app->mem_manager) {
-        app->mem_manager->watcher_running = false;
+        __atomic_store_n(&app->mem_manager->watcher_running, false, __ATOMIC_RELEASE);
         // If thread was started, join it.
         // Note: In simple destroy we might not have started it or might be crashing, but try join.
         if (app->mem_manager->watcher_thread) {
@@ -3636,7 +3638,7 @@ static void cwist_multiport_h3_stop_group(cwist_multiport_group *group) {
     for (size_t i = 0; i < group->h3_listener_count; i++) {
         cwist_multiport_h3_listener *listener = &group->h3_listeners[i];
         if (listener->ctx) {
-            listener->ctx->running = 0;
+            __atomic_store_n(&listener->ctx->running, 0, __ATOMIC_RELEASE);
         }
         if (listener->udp_fd >= 0) {
             close(listener->udp_fd);
@@ -4260,8 +4262,9 @@ int cwist_app_multiport(cwist_app **app_ref, unsigned short public_port, cwist_m
     if (!app->mem_manager) {
         cwist_mem_init(app);
     }
-    if (app->mem_manager && !app->mem_manager->watcher_running) {
-        app->mem_manager->watcher_running = true;
+    if (app->mem_manager &&
+        !__atomic_load_n(&app->mem_manager->watcher_running, __ATOMIC_ACQUIRE)) {
+        __atomic_store_n(&app->mem_manager->watcher_running, true, __ATOMIC_RELEASE);
         pthread_create(&app->mem_manager->watcher_thread, NULL, cwist_mem_watcher, app);
     }
 
@@ -4377,7 +4380,7 @@ int cwist_app_multiport(cwist_app **app_ref, unsigned short public_port, cwist_m
     __atomic_store_n(&g_cwist_udp_fd, -1, __ATOMIC_SEQ_CST);
 
     if (app->mem_manager) {
-        app->mem_manager->watcher_running = false;
+        __atomic_store_n(&app->mem_manager->watcher_running, false, __ATOMIC_RELEASE);
     }
 
     printf("[CWIST] Multiport facade shutdown complete.\n");
@@ -4688,7 +4691,7 @@ static int app_listen_serve(cwist_app *app, int port, int workers_override, int 
     // Per-process threads start here.  Each worker gets its own watcher and
     // HTTP/3 thread, so fork-after-thread deadlock is avoided.
     if (app->mem_manager) {
-        app->mem_manager->watcher_running = true;
+        __atomic_store_n(&app->mem_manager->watcher_running, true, __ATOMIC_RELEASE);
         pthread_create(&app->mem_manager->watcher_thread, NULL, cwist_mem_watcher, app);
     }
 
@@ -4772,11 +4775,11 @@ static int app_listen_serve(cwist_app *app, int port, int workers_override, int 
     __atomic_store_n(&g_cwist_udp_fd, -1, __ATOMIC_SEQ_CST);
 
     if (app->h3_ctx) {
-        app->h3_ctx->running = 0;
+        __atomic_store_n(&app->h3_ctx->running, 0, __ATOMIC_RELEASE);
     }
 
     if (app->mem_manager) {
-        app->mem_manager->watcher_running = false;
+        __atomic_store_n(&app->mem_manager->watcher_running, false, __ATOMIC_RELEASE);
     }
 
     /* Post-stop drain: give in-flight C1M connections a bounded window to

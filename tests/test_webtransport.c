@@ -1,6 +1,7 @@
 #include <cwist/sys/app/app.h>
 #include <cwist/net/http/http3.h>
 #include <assert.h>
+#include <stdatomic.h>
 #include <stdio.h>
 #include <string.h>
 #include <unistd.h>
@@ -11,8 +12,8 @@
 #define TEST_CERT "example/othello-web/server.crt"
 #define TEST_KEY "example/othello-web/server.key"
 
-static volatile int g_wt_handler_called = 0;
-static volatile int g_new_stream_called = 0;
+static _Atomic int g_wt_handler_called = 0; /* set on the server thread */
+static _Atomic int g_new_stream_called = 0;
 
 static void wt_test_handler(cwist_http_request *req, cwist_http_response *res, void *stream) {
     (void)req;
@@ -87,9 +88,9 @@ int main(void) {
     assert(rc == 0);
 
     usleep(100000);
-    assert(ctx->running == 1);
+    assert(__atomic_load_n(&ctx->running, __ATOMIC_ACQUIRE) == 1);
 
-    ctx->running = 0;
+    __atomic_store_n(&ctx->running, 0, __ATOMIC_RELEASE);
     rc = pthread_join(tid, NULL);
     assert(rc == 0);
     printf("[PASS] WebTransport server loop starts and stops gracefully.\n");
