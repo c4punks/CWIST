@@ -2943,12 +2943,7 @@ static void app_maybe_send_parse_error_async(cwist_http_async_conn_t *conn,
 static cwist_async_action_t app_async_flush_exit(int client_fd, cwist_http_async_conn_t *conn,
                                                  cwist_async_action_t action, bool keep_alive) {
     static _Atomic long dbg_parked;
-    static _Atomic int dbg_cached = -1;
-    int d = atomic_load_explicit(&dbg_cached, memory_order_relaxed);
-    if (d < 0) {
-        d = getenv("CWIST_ASYNC_DEBUG") != NULL;
-        atomic_store_explicit(&dbg_cached, d, memory_order_relaxed);
-    }
+    int d = cwist_async_debug_enabled();
     cwist_coalesce_flush_status_t fs = cwist_http_coalesce_flush(client_fd, conn, keep_alive);
     if (fs == CWIST_COALESCE_FLUSH_PARKED) {
         if (d) {
@@ -3227,15 +3222,7 @@ static void *h2c_handoff_main(void *arg) {
 cwist_async_action_t cwist_app_http_handler_async(int client_fd, cwist_http_async_conn_t *conn) {
     cwist_app *app = (cwist_app *)conn->user_ctx;
     static _Atomic long dbg_fill_fail, dbg_fatal, dbg_serve_close;
-    /* getenv walks the whole environ vector; cache it instead of paying a
-     * scan on every event.  The racy recompute is benign (same result). */
-    static _Atomic int dbg_cached = -1;
-    int d = atomic_load_explicit(&dbg_cached, memory_order_relaxed);
-    if (d < 0) {
-        d = getenv("CWIST_ASYNC_DEBUG") != NULL;
-        atomic_store_explicit(&dbg_cached, d, memory_order_relaxed);
-    }
-    const bool dbg = d != 0;
+    const bool dbg = cwist_async_debug_enabled();
 
     if (cwist_http_async_conn_fill(conn) != 0) {
         if (dbg) {

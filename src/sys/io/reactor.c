@@ -25,6 +25,7 @@
 #define _POSIX_C_SOURCE 200809L
 #include <cwist/sys/io/reactor.h>
 #include "reactor_rx.h"
+#include "async_debug.h"
 #include <cwist/core/mem/alloc.h>
 #include <cwist/sys/app/shutdown.h>
 #include <unistd.h>
@@ -866,7 +867,7 @@ static bool uring_submit(cwist_reactor_t *reactor, struct io_uring_sqe *out_sqe)
         reactor_tsan_release(&reactor->impl);
         __atomic_store_n(reactor->impl.sq_tail, tail + 1, __ATOMIC_RELEASE);
         if (sys_io_uring_enter(reactor->impl.ring_fd, 1, 0, 0, NULL) < 0) {
-            if (getenv("CWIST_ASYNC_DEBUG")) {
+            if (cwist_async_debug_enabled()) {
                 static _Atomic long dbg_enter_fail;
                 long n = atomic_fetch_add(&dbg_enter_fail, 1) + 1;
                 if (n <= 5 || n % 10000 == 0)
@@ -879,7 +880,7 @@ static bool uring_submit(cwist_reactor_t *reactor, struct io_uring_sqe *out_sqe)
         } else {
             ok = true;
         }
-    } else if (getenv("CWIST_ASYNC_DEBUG")) {
+    } else if (cwist_async_debug_enabled()) {
         static _Atomic long dbg_sq_full;
         long n = atomic_fetch_add(&dbg_sq_full, 1) + 1;
         if (n <= 5 || n % 10000 == 0)
@@ -934,7 +935,7 @@ static void flush_deferred(cwist_reactor_t *reactor) {
             nanosleep(&ts, NULL); /* SQ drains without our help; wait it out */
         }
         if (attempt == 100) {
-            if (getenv("CWIST_ASYNC_DEBUG")) {
+            if (cwist_async_debug_enabled()) {
                 fprintf(stderr, "[reactor] deferred submit failed fd=%d; closing\n", (int)sqe->fd);
             }
             if (ev_ctx) {

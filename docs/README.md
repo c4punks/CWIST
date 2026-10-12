@@ -32,6 +32,8 @@ Longer walkthroughs that combine several subsystems:
 * [API module index](API.md) — per-module documentation under `docs/api/`.
 * [Flat quick reference](api-quickref.md) — one-file listing of public calls.
 * [REFERENCE.md](REFERENCE.md) — architecture and behavioral reference.
+* [Runtime configuration](runtime-config.md) — every `CWIST_*` environment
+  variable, its default, and what v4 promises about it.
 * [Doxygen HTML](https://c4punks.github.io/CWIST/) — generated from
   annotated public headers (`include/cwist/`).
 
