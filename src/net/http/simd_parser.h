@@ -206,8 +206,147 @@ static inline const char *cwist_simd_find_crlf(const char *buf, size_t len) {
 static inline const char *cwist_simd_find_crlfcrlf(const char *buf, size_t len) {
     if (!buf || len < 4) return NULL;
 
-    const char *curr = buf;
-    size_t remaining = len;
+    size_t i = 0;
+
+    /* Paired matcher: a "\r\n\r\n" occurrence at offset j requires
+     *   buf[j] == '\r' && buf[j+1] == '\n' && buf[j+2] == '\r' && buf[j+3] == '\n'
+     * Compare four unaligned loads (at j, j+1, j+2, j+3) and AND the four
+     * equality masks, so every offset is tested in a single pass with no
+     * rescan on bare-'\r' data. The unaligned load idiom matches
+     * cwist_simd_find_char above; the scalar tail below keeps the
+     * memchr/SWAR structure and covers the vector-safety margin and the
+     * non-vector architectures. */
+#if defined(CWIST_SIMD_AVX2)
+    const __m256i cr_v = _mm256_set1_epi8('\r');
+    const __m256i lf_v = _mm256_set1_epi8('\n');
+    while (i + 32 + 3 <= len) {
+        __m256i v0 = _mm256_loadu_si256((const __m256i *)(const void *)(buf + i));
+        __m256i v1 = _mm256_loadu_si256((const __m256i *)(const void *)(buf + i + 1));
+        __m256i v2 = _mm256_loadu_si256((const __m256i *)(const void *)(buf + i + 2));
+        __m256i v3 = _mm256_loadu_si256((const __m256i *)(const void *)(buf + i + 3));
+        __m256i m = _mm256_and_si256(_mm256_cmpeq_epi8(v0, cr_v), _mm256_cmpeq_epi8(v1, lf_v));
+        m = _mm256_and_si256(m, _mm256_cmpeq_epi8(v2, cr_v));
+        m = _mm256_and_si256(m, _mm256_cmpeq_epi8(v3, lf_v));
+        uint32_t mask = (uint32_t)_mm256_movemask_epi8(m);
+        if (mask != 0) {
+            return buf + i + __builtin_ctz(mask);
+        }
+        i += 32;
+    }
+#elif defined(CWIST_SIMD_SSE2)
+    const __m128i cr_v = _mm_set1_epi8('\r');
+    const __m128i lf_v = _mm_set1_epi8('\n');
+    while (i + 16 + 3 <= len) {
+        __m128i v0 = _mm_loadu_si128((const __m128i *)(const void *)(buf + i));
+        __m128i v1 = _mm_loadu_si128((const __m128i *)(const void *)(buf + i + 1));
+        __m128i v2 = _mm_loadu_si128((const __m128i *)(const void *)(buf + i + 2));
+        __m128i v3 = _mm_loadu_si128((const __m128i *)(const void *)(buf + i + 3));
+        __m128i m = _mm_and_si128(_mm_and_si128(_mm_cmpeq_epi8(v0, cr_v), _mm_cmpeq_epi8(v1, lf_v)),
+                                  _mm_and_si128(_mm_cmpeq_epi8(v2, cr_v), _mm_cmpeq_epi8(v3, lf_v)));
+        uint32_t mask = (uint32_t)_mm_movemask_epi8(m);
+        if (mask != 0) {
+            return buf + i + __builtin_ctz(mask);
+        }
+        i += 16;
+    }
+#elif defined(CWIST_SIMD_NEON)
+    const uint8x16_t cr_v = vdupq_n_u8((uint8_t)'\r');
+    const uint8x16_t lf_v = vdupq_n_u8((uint8_t)'\n');
+    while (i + 16 + 3 <= len) {
+        uint8x16_t v0 = vld1q_u8((const uint8_t *)(buf + i));
+        uint8x16_t v1 = vld1q_u8((const uint8_t *)(buf + i + 1));
+        uint8x16_t v2 = vld1q_u8((const uint8_t *)(buf + i + 2));
+        uint8x16_t v3 = vld1q_u8((const uint8_t *)(buf + i + 3));
+        uint8x16_t m = vandq_u8(vandq_u8(vceqq_u8(v0, cr_v), vceqq_u8(v1, lf_v)),
+                                vandq_u8(vceqq_u8(v2, cr_v), vceqq_u8(v3, lf_v)));
+#if defined(__aarch64__)
+        if (vmaxvq_u8(m) != 0) {
+            for (size_t k = 0; k < 16; k++) {
+                if (buf[i + k] == '\r' && buf[i + k + 1] == '\n' && buf[i + k + 2] == '\r' &&
+                    buf[i + k + 3] == '\n')
+                    return buf + i + k;
+            }
+        }
+#else
+        uint64x2_t m64 = vreinterpretq_u64_u8(m);
+        if (vgetq_lane_u64(m64, 0) != 0 || vgetq_lane_u64(m64, 1) != 0) {
+            for (size_t k = 0; k < 16; k++) {
+                if (buf[i + k] == '\r' && buf[i + k + 1] == '\n' && buf[i + k + 2] == '\r' &&
+                    buf[i + k + 3] == '\n')
+                    return buf + i + k;
+            }
+        }
+#endif
+        i += 16;
+    }
+#elif defined(CWIST_SIMD_RISCV_VECTOR)
+    while (len - i >= 4) {
+        size_t vl = __riscv_vsetvl_e8m1(len - i - 3);
+        if (vl == 0) break;
+        vuint8m1_t v0 = __riscv_vle8_v_u8m1((const uint8_t *)(buf + i), vl);
+        vuint8m1_t v1 = __riscv_vle8_v_u8m1((const uint8_t *)(buf + i + 1), vl);
+        vuint8m1_t v2 = __riscv_vle8_v_u8m1((const uint8_t *)(buf + i + 2), vl);
+        vuint8m1_t v3 = __riscv_vle8_v_u8m1((const uint8_t *)(buf + i + 3), vl);
+        vbool8_t m = __riscv_vmand_mm(__riscv_vmseq_vx_u8m1_b8(v0, (uint8_t)'\r', vl),
+                                      __riscv_vmseq_vx_u8m1_b8(v1, (uint8_t)'\n', vl), vl);
+        m = __riscv_vmand_mm(m, __riscv_vmseq_vx_u8m1_b8(v2, (uint8_t)'\r', vl), vl);
+        m = __riscv_vmand_mm(m, __riscv_vmseq_vx_u8m1_b8(v3, (uint8_t)'\n', vl), vl);
+        long first = __riscv_vfirst_m_b8(m, vl);
+        if (first >= 0) {
+            return buf + i + first;
+        }
+        i += vl;
+    }
+#elif defined(CWIST_SIMD_PPC_ALTIVEC)
+    const __vector unsigned char cr_v = vec_splats((unsigned char)'\r');
+    const __vector unsigned char lf_v = vec_splats((unsigned char)'\n');
+    const __vector unsigned char zero_v = vec_splats((unsigned char)0);
+    while (i + 16 + 3 <= len) {
+        __vector unsigned char v0, v1, v2, v3;
+        memcpy(&v0, buf + i, 16);
+        memcpy(&v1, buf + i + 1, 16);
+        memcpy(&v2, buf + i + 2, 16);
+        memcpy(&v3, buf + i + 3, 16);
+        __vector unsigned char m = vec_and(vec_and(vec_cmpeq(v0, cr_v), vec_cmpeq(v1, lf_v)),
+                                           vec_and(vec_cmpeq(v2, cr_v), vec_cmpeq(v3, lf_v)));
+        if (!vec_all_eq(m, zero_v)) {
+            for (size_t k = 0; k < 16; k++) {
+                if (buf[i + k] == '\r' && buf[i + k + 1] == '\n' && buf[i + k + 2] == '\r' &&
+                    buf[i + k + 3] == '\n')
+                    return buf + i + k;
+            }
+        }
+        i += 16;
+    }
+#elif defined(CWIST_SIMD_MIPS_MSA)
+    v16u8 cr_v = (v16u8)__builtin_msa_fill_b((unsigned char)'\r');
+    v16u8 lf_v = (v16u8)__builtin_msa_fill_b((unsigned char)'\n');
+    while (i + 16 + 3 <= len) {
+        v16u8 v0, v1, v2, v3;
+        memcpy(&v0, buf + i, 16);
+        memcpy(&v1, buf + i + 1, 16);
+        memcpy(&v2, buf + i + 2, 16);
+        memcpy(&v3, buf + i + 3, 16);
+        v16u8 m = (v16u8)__builtin_msa_and_v(
+            __builtin_msa_and_v(__builtin_msa_ceq_b((v16i8)v0, (v16i8)cr_v),
+                                __builtin_msa_ceq_b((v16i8)v1, (v16i8)lf_v)),
+            __builtin_msa_and_v(__builtin_msa_ceq_b((v16i8)v2, (v16i8)cr_v),
+                                __builtin_msa_ceq_b((v16i8)v3, (v16i8)lf_v)));
+        if (__builtin_msa_bnz_b(m)) {
+            for (size_t k = 0; k < 16; k++) {
+                if (buf[i + k] == '\r' && buf[i + k + 1] == '\n' && buf[i + k + 2] == '\r' &&
+                    buf[i + k + 3] == '\n')
+                    return buf + i + k;
+            }
+        }
+        i += 16;
+    }
+#endif
+
+    /* Scalar tail: memchr-driven (with the 64-bit SWAR loop inside
+     * cwist_simd_find_char) over the remaining bytes. */
+    const char *curr = buf + i;
+    size_t remaining = len - i;
 
     while (remaining >= 4) {
         const char *cr = cwist_simd_find_char(curr, remaining, '\r');

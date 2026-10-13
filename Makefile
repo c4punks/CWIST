@@ -888,6 +888,7 @@ TEST_TARGETS = test_worker_affinity \
                test_log_async \
                test_protobuf \
                test_core_utils \
+               test_simd_parser \
                test_orm \
                test_app_resource_limits \
                test_classic_pool_scaling \
@@ -1136,6 +1137,10 @@ test_orm: $(LIB_NAME) tests/test_orm.c
 test_core_utils: $(LIB_NAME) tests/test_core_utils.c
 	$(CC) $(CFLAGS) -o test_core_utils tests/test_core_utils.c $(LIB_NAME) $(LIBS)
 	./test_core_utils
+
+test_simd_parser: $(LIB_NAME) tests/test_simd_parser.c
+	$(CC) $(CFLAGS) -o test_simd_parser tests/test_simd_parser.c $(LIB_NAME) $(LIBS)
+	./test_simd_parser
 
 test_protobuf: $(LIB_NAME) tests/test_protobuf.c
 	$(CC) $(CFLAGS) -o test_protobuf tests/test_protobuf.c $(LIB_NAME) $(LIBS)

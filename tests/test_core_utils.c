@@ -197,6 +197,35 @@ static void test_query_map_heap_and_arena(void) {
     cwist_arena_destroy(arena);
 }
 
+/* Malformed percent-escapes must behave exactly like the old
+ * sscanf/isxdigit implementation: a '%' not followed by two hex digits is
+ * copied literally and scanning resumes at the next byte. */
+static void test_query_map_malformed_escapes(void) {
+    cwist_query_map *m = cwist_query_map_create();
+    assert(m);
+
+    cwist_query_map_parse(m,
+                          "lit=%zz&trunc=%4&lonely=%&ok=%41&"
+                          "mixed=a%4zb&lower=%ab&upper=%AB&plus=a+b&trail=x%");
+    assert(strcmp(cwist_query_map_get(m, "lit"), "%zz") == 0);
+    assert(strcmp(cwist_query_map_get(m, "trunc"), "%4") == 0);
+    assert(strcmp(cwist_query_map_get(m, "lonely"), "%") == 0);
+    assert(strcmp(cwist_query_map_get(m, "ok"), "A") == 0);
+    assert(strcmp(cwist_query_map_get(m, "mixed"), "a%4zb") == 0);
+    assert(strcmp(cwist_query_map_get(m, "lower"), "\xab") == 0);
+    assert(strcmp(cwist_query_map_get(m, "upper"), "\xab") == 0);
+    assert(strcmp(cwist_query_map_get(m, "plus"), "a b") == 0);
+    assert(strcmp(cwist_query_map_get(m, "trail"), "x%") == 0);
+
+    /* Consecutive delimiters and a trailing '&' collapse like strtok_r. */
+    cwist_query_map_clear(m);
+    cwist_query_map_parse(m, "&&a=1&&&b=2&");
+    assert(strcmp(cwist_query_map_get(m, "a"), "1") == 0);
+    assert(strcmp(cwist_query_map_get(m, "b"), "2") == 0);
+
+    cwist_query_map_destroy(m);
+}
+
 /* A request's query map lives in its 8 KiB arena. A query of ~1.4 KiB
  * (80 params) used to exhaust it, and every later parameter was dropped
  * without an error. */
@@ -387,6 +416,7 @@ int main(void) {
     test_sstring_escaped_and_adopt();
     test_query_map_heap_and_arena();
     test_query_map_arena_large_query();
+    test_query_map_malformed_escapes();
     test_query_params_through_request_parser();
     test_query_map_growth();
     test_css_colors();

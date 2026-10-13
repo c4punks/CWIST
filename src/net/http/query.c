@@ -260,9 +260,19 @@ void cwist_query_map_foreach(cwist_query_map *map, cwist_query_map_iter_func cb,
     }
 }
 
+/* Hex nibble values for URL percent-decoding. Only consulted after
+ * isxdigit validation, so non-hex entries are never read. */
+static const uint8_t url_decode_hex[256] = {
+    ['0'] = 0,  1,          2,          3,          4,          5,          6,          7,
+    ['8'] = 8,  9,          ['A'] = 10, 11,         12,         13,         14,         15,
+    ['a'] = 10, 11,         12,         13,         14,         15,
+};
+
 /**
  * @brief Decode a URL-encoded component with '+' → space semantics.
  *        '+' → 0x20, '%XY' → hex byte (strict), everything else passthrough.
+ *        A '%' not followed by two hex digits is copied literally, matching
+ *        the previous sscanf/isxdigit behavior.
  * @param src Raw (still encoded) key or value.
  * @return Newly allocated decoded string, or NULL on allocation failure.
  */
@@ -274,17 +284,27 @@ static char *url_decode(void *arena, const char *src) {
     if (!out) return NULL;
 
     size_t j = 0;
-    for (size_t i = 0; i < len; i++) {
-        if (src[i] == '%' && i + 2 < len && isxdigit((unsigned char)src[i + 1]) &&
-            isxdigit((unsigned char)src[i + 2])) {
-            unsigned int byte;
-            sscanf(src + i + 1, "%2x", &byte);
-            out[j++] = (char)byte;
-            i += 2;
-        } else if (src[i] == '+') {
+    size_t i = 0;
+    while (i < len) {
+        /* Copy the plain run up to the next '%' or '+' in one shot. */
+        size_t plain = strcspn(src + i, "%+");
+        if (plain > 0) {
+            memcpy(out + j, src + i, plain);
+            j += plain;
+            i += plain;
+            if (i >= len) break;
+        }
+        if (src[i] == '+') {
             out[j++] = 0x20; /* SPACE (U+0020) */
+            i++;
+        } else if (i + 2 < len && isxdigit((unsigned char)src[i + 1]) &&
+                   isxdigit((unsigned char)src[i + 2])) {
+            out[j++] = (char)((url_decode_hex[(unsigned char)src[i + 1]] << 4) |
+                              url_decode_hex[(unsigned char)src[i + 2]]);
+            i += 3;
         } else {
             out[j++] = src[i];
+            i++;
         }
     }
     out[j] = '\0';
@@ -302,15 +322,22 @@ void cwist_query_map_parse(cwist_query_map *map, const char *raw_query) {
     char *buffer = query_strdup(map->arena, raw_query);
     if (!buffer) return;
 
-    char *save_ptr = NULL;
-    char *token = strtok_r(buffer, "&", &save_ptr);
+    /* Single pass over buffer splitting on '&' and '='; strtok_r's empty
+     * token collapsing is reproduced by skipping zero-length segments. */
+    char *seg = buffer;
+    char *end = buffer + strlen(buffer);
+    while (seg < end) {
+        char *amp = memchr(seg, '&', (size_t)(end - seg));
+        char *seg_end = amp ? amp : end;
+        if (amp) *amp = '\0';
 
-    while (token) {
-        char *eq = strchr(token, '=');
-        if (!eq) {
-            token = strtok_r(NULL, "&", &save_ptr);
-            continue;
-        }
+        char *token = seg;
+        seg = seg_end + (amp ? 1 : 0);
+
+        if (seg_end == token) continue; /* strtok_r skips empty tokens */
+
+        char *eq = memchr(token, '=', (size_t)(seg_end - token));
+        if (!eq) continue;
 
         *eq = '\0';
         const char *key_raw = token;
@@ -325,7 +352,6 @@ void cwist_query_map_parse(cwist_query_map *map, const char *raw_query) {
 
         query_release(map->arena, key_dec);
         query_release(map->arena, value_dec);
-        token = strtok_r(NULL, "&", &save_ptr);
     }
 
     query_release(map->arena, buffer);
