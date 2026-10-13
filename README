@@ -185,19 +185,19 @@ missing optional API does not prevent an HTTP/3 build.
   ./server
 
 <!-- BENCHMARKS:START -->
-Latest automated benchmark: **Darwin**: 12.27 M leases/s, 129.77% CPU, 922832 KiB RSS.
+Latest automated benchmark: **Darwin**: 13.17 M leases/s, 129.55% CPU, 877296 KiB RSS.
 
 ![CWIST benchmark trends](docs/benchmark-trends.svg)
 <!-- BENCHMARKS:END -->
 
 <!-- WEBSERVER_BENCHMARKS:START -->
 Latest Web Server Benchmark (wrk -t12 -c400 -d10s (after 10s warmup, warmup discarded)):
-- **CWIST Classic pool**: 144972 req/s | Latency 1.57ms (P90 3.37ms, P99 6.59ms, P99.999 25.75ms) | RSS 59788KiB | Csw 1436677
-- **CWIST reactor**: 181589 req/s | Latency 2.22ms (P90 4.24ms, P99 6.93ms, P99.999 13.16ms) | RSS 20984KiB | Csw 163050
-- **Actix**: 176136 req/s | Latency 2.26ms (P90 4.14ms, P99 6.62ms, P99.999 15.17ms) | RSS 12308KiB | Csw 202188
-- **Axum**: 153803 req/s | Latency 2.56ms (P90 4.48ms, P99 6.78ms, P99.999 14.28ms) | RSS 15560KiB | Csw 264696
-- **Gin (Go)**: 116971 req/s | Latency 4.43ms (P90 10.55ms, P99 22.91ms, P99.999 65.71ms) | RSS 29440KiB | Csw 378755
-- **Spring Boot**: 75071 req/s | Latency 5.24ms (P90 7.02ms, P99 10.33ms, P99.999 36.00ms) | RSS 1337576KiB | Csw 322400
+- **CWIST Classic pool**: 109920 req/s | Latency 2.12ms (P90 4.34ms, P99 7.65ms, P99.999 20.14ms) | RSS 60012KiB | Csw 1028480
+- **CWIST reactor**: 134402 req/s | Latency 2.91ms (P90 5.05ms, P99 7.75ms, P99.999 13.70ms) | RSS 20176KiB | Csw 125829
+- **Actix**: 128808 req/s | Latency 3.05ms (P90 5.19ms, P99 8.00ms, P99.999 17.37ms) | RSS 12004KiB | Csw 150629
+- **Axum**: 111623 req/s | Latency 3.52ms (P90 5.96ms, P99 8.83ms, P99.999 17.61ms) | RSS 14924KiB | Csw 197269
+- **Gin (Go)**: 78824 req/s | Latency 6.83ms (P90 16.47ms, P99 37.10ms, P99.999 87.51ms) | RSS 29432KiB | Csw 305807
+- **Spring Boot**: 44710 req/s | Latency 8.95ms (P90 11.45ms, P99 18.92ms, P99.999 100.33ms) | RSS 1307740KiB | Csw 219690
 
 _Settled CWIST-internal tuning variants (glibc arena cap from PR #35, cooperative drain chunk from issue #25) are recorded in docs/cooperative-queuing.md and benchmarks/webserver.json; they are no longer rendered as comparison rows._
 
@@ -247,8 +247,8 @@ GitHub hands out a different CPU model per run, which moves these numbers more t
 
 | Runner CPU | Runs | CWIST Classic ms | CWIST ms | Axum ms | CWIST req/s | Axum req/s |
 |---|---:|---:|---:|---:|---:|---:|
-| AMD EPYC 7763 64-Core Processor | 46 | 2.05 | 2.97 | 3.54 | 140,049 | 110,619 |
-| AMD EPYC 9V74 80-Core Processor | 18 | 1.64 | 2.57 | 2.65 | 177,021 | 148,911 |
+| AMD EPYC 7763 64-Core Processor | 47 | 2.05 | 2.97 | 3.54 | 140,045 | 110,711 |
+| AMD EPYC 9V74 80-Core Processor | 17 | 1.65 | 2.62 | 2.65 | 180,117 | 148,699 |
 | AMD EPYC 9V45 96-Core Processor | 6 | 1.27 | 2.32 | 2.04 | 218,554 | 194,398 |
 | Intel(R) Xeon(R) 6973P-C | 5 | 0.97 | 1.88 | 1.66 | 296,517 | 238,006 |
 | INTEL(R) XEON(R) PLATINUM 8573C | 4 | 1.12 | 1.94 | 1.88 | 267,459 | 210,991 |
