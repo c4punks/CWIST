@@ -83,17 +83,21 @@ static void cwist_queue_push(cwist_io_queue *q, job_node_t *node) {
 }
 
 /**
- * @brief Pop the next executable node from the queue.
+ * @brief Pop the next job from the queue.
+ * The popped node becomes the new sentinel, which the next pop frees, so the
+ * callback and argument are copied out here and the node is not touched again.
  * @param q Queue to consume from.
- * @return Next job node, or NULL when the queue is empty.
+ * @param func Receives the job callback.
+ * @param arg Receives the job argument.
+ * @return true when a job was popped, false when the queue is empty.
  */
-static job_node_t *cwist_queue_pop(cwist_io_queue *q) {
+static bool cwist_queue_pop(cwist_io_queue *q, cwist_job_func *func, void **arg) {
     while (1) {
         job_node_t *head = atomic_load_explicit(&q->head, memory_order_acquire);
         job_node_t *tail = atomic_load_explicit(&q->tail, memory_order_acquire);
         job_node_t *next = atomic_load_explicit(&head->next, memory_order_acquire);
         if (!next) {
-            return NULL;
+            return false;
         }
         if (head == tail) {
             atomic_compare_exchange_weak_explicit(&q->tail, &tail, next, memory_order_release,
@@ -103,7 +107,9 @@ static job_node_t *cwist_queue_pop(cwist_io_queue *q) {
         if (atomic_compare_exchange_weak_explicit(&q->head, &head, next, memory_order_acq_rel,
                                                   memory_order_relaxed)) {
             cwist_job_node_destroy(head);
-            return next;
+            *func = next->func;
+            *arg = next->arg;
+            return true;
         }
     }
 }
@@ -187,8 +193,9 @@ void cwist_io_queue_run(cwist_io_queue *q) {
     if (!q) return;
     while (atomic_load_explicit(&q->running, memory_order_acquire) ||
            atomic_load_explicit(&q->pending_jobs, memory_order_acquire) > 0) {
-        job_node_t *node = cwist_queue_pop(q);
-        if (!node) {
+        cwist_job_func func = NULL;
+        void *arg = NULL;
+        if (!cwist_queue_pop(q, &func, &arg)) {
             if (!cwist_queue_wait(q)) {
                 break;
             }
@@ -196,11 +203,7 @@ void cwist_io_queue_run(cwist_io_queue *q) {
         }
 
         atomic_fetch_sub_explicit(&q->pending_jobs, 1, memory_order_acq_rel);
-        cwist_job_func func = node->func;
-        void *arg = node->arg;
         if (func) func(arg);
-        node->func = NULL;
-        node->arg = NULL;
     }
 }
 
