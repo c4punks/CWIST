@@ -50,6 +50,7 @@
 #endif
 #include <sys/mman.h>
 #include <sys/epoll.h>
+#include <sys/socket.h>
 #include <sys/eventfd.h>
 
 #ifndef IORING_ENTER_EXT_ARG
@@ -271,6 +272,13 @@ struct cwist_reactor {
     /* RX-uring completion handler for tagged (low-bit set) RECV SQEs;
      * registered by the HTTP layer once per worker reactor. */
     cwist_rx_cb_t rx_cb;
+    /* RX-epoll: fds whose armed receive may already have bytes waiting (the
+     * last recv filled the buffer, or an edge arrived while unarmed). An
+     * edge-triggered registration will not report those again, so the run
+     * loop receives them before its next wait. Run thread only. */
+    int *rx_ready;
+    uint32_t rx_ready_n;
+    uint32_t rx_ready_cap;
     /* Per-request latency probe recorder (issue #166). Owner-thread only, so
      * plain counters suffice. Two histograms: time from (re-)arm to dispatch
      * (queue_delay) and callback runtime (svc). */
@@ -418,8 +426,208 @@ bool cwist_rx_uring_env_enabled(void) {
     return v == 1;
 }
 
+/* CWIST_RX_EPOLL: unset = on, "0" = off (epoll reactors keep the one-shot
+ * POLL + recv path). Cached like CWIST_RX_URING. */
+static bool rx_epoll_env_enabled(void) {
+    static _Atomic int cached = -1;
+    int v = atomic_load_explicit(&cached, memory_order_relaxed);
+    if (v < 0) {
+        const char *s = getenv("CWIST_RX_EPOLL");
+        v = (s && strcmp(s, "0") == 0) ? 0 : 1;
+        atomic_store_explicit(&cached, v, memory_order_relaxed);
+    }
+    return v == 1;
+}
+
 bool cwist_reactor_rx_supported(const cwist_reactor_t *reactor) {
-    return reactor && !reactor->impl.use_epoll && cwist_rx_uring_env_enabled();
+    if (!reactor) return false;
+    if (reactor->impl.use_epoll) return rx_epoll_env_enabled();
+    return cwist_rx_uring_env_enabled();
+}
+
+/* Per-fd epoll registration state, process-wide (an fd belongs to one
+ * reactor at a time). It serves two purposes:
+ *
+ *  - A hint for the one-shot path: a re-arm of an fd that is already
+ *    registered goes straight to EPOLL_CTL_MOD instead of failing an ADD with
+ *    EEXIST first, which used to cost two epoll_ctl calls per keep-alive
+ *    request.
+ *  - The RX-epoll receive path (reactor_rx.h): the fd stays registered
+ *    edge-triggered, with no EPOLLONESHOT, and the reactor does the recv() into
+ *    the armed buffer itself. A steady keep-alive request then costs a recv
+ *    and a send, with no epoll_ctl.
+ *
+ * state is the only field touched off the run thread (by cwist_reactor_add,
+ * _mod and _del, which take an fd out of RX mode); the rest belongs to the
+ * run thread of the reactor that armed the fd. Every state value is only a
+ * hint for epoll_ctl: a stale one costs one failed call (ENOENT/EEXIST) and
+ * the fallback, never a lost registration, except RX, which recv_arm trusts
+ * only for the same connection pointer (see cwist_reactor_fd_forget). */
+enum { EPFD_UNKNOWN = 0, EPFD_ONESHOT = 1, EPFD_RX = 2 };
+
+typedef struct {
+    _Atomic uint8_t state;
+    bool armed;      /* A receive is armed: the next readable edge recv()s. */
+    bool queued;     /* On the owning reactor's rx_ready list. */
+    bool maybe_more; /* Bytes may be waiting that no new edge will report. */
+    unsigned len;
+    void *buf;
+    void *conn;
+} epoll_fd_slot_t;
+
+#define EPFD_CHUNK_BITS 10
+#define EPFD_CHUNK (1u << EPFD_CHUNK_BITS)
+#define EPFD_MAX_FDS (1u << 22)
+static _Atomic(epoll_fd_slot_t *) g_epfd_chunks[EPFD_MAX_FDS / EPFD_CHUNK];
+
+/** @brief Slot for @p fd, or NULL when out of range or (unless @p create) not allocated yet. */
+static epoll_fd_slot_t *epfd_slot(int fd, bool create) {
+    if (fd < 0 || (unsigned)fd >= EPFD_MAX_FDS) return NULL;
+    _Atomic(epoll_fd_slot_t *) *chunk = &g_epfd_chunks[(unsigned)fd >> EPFD_CHUNK_BITS];
+    epoll_fd_slot_t *c = atomic_load_explicit(chunk, memory_order_acquire);
+    if (!c) {
+        if (!create) return NULL;
+        /* Chunks live as long as the process: reachable from the table and
+         * reused by every later fd in their range. */
+        epoll_fd_slot_t *fresh = cwist_alloc(EPFD_CHUNK * sizeof(*fresh));
+        if (!fresh) return NULL;
+        memset(fresh, 0, EPFD_CHUNK * sizeof(*fresh));
+        if (atomic_compare_exchange_strong_explicit(chunk, &c, fresh, memory_order_acq_rel,
+                                                    memory_order_acquire)) {
+            c = fresh;
+        } else {
+            cwist_free(fresh); /* Another thread installed it first; c holds that one. */
+        }
+    }
+    return &c[(unsigned)fd & (EPFD_CHUNK - 1)];
+}
+
+static void epfd_set_state(int fd, uint8_t state) {
+    epoll_fd_slot_t *slot = epfd_slot(fd, state != EPFD_UNKNOWN);
+    if (slot) atomic_store_explicit(&slot->state, state, memory_order_relaxed);
+}
+
+static uint8_t epfd_get_state(int fd) {
+    epoll_fd_slot_t *slot = epfd_slot(fd, false);
+    return slot ? atomic_load_explicit(&slot->state, memory_order_relaxed) : EPFD_UNKNOWN;
+}
+
+void cwist_reactor_fd_forget(int fd) {
+    epfd_set_state(fd, EPFD_UNKNOWN);
+}
+
+/** @brief Point @p fd's registration on @p epfd at @p ev, trying MOD or ADD first per the hint. */
+static bool epoll_register(int epfd, int fd, struct epoll_event *ev) {
+    if (epfd_get_state(fd) != EPFD_UNKNOWN) {
+        if (epoll_ctl(epfd, EPOLL_CTL_MOD, fd, ev) == 0) return true;
+        return errno == ENOENT && epoll_ctl(epfd, EPOLL_CTL_ADD, fd, ev) == 0;
+    }
+    if (epoll_ctl(epfd, EPOLL_CTL_ADD, fd, ev) == 0) return true;
+    return errno == EEXIST && epoll_ctl(epfd, EPOLL_CTL_MOD, fd, ev) == 0;
+}
+
+/** @brief Queue @p fd for a receive before the next wait. Run thread only. */
+static bool rx_ready_push(cwist_reactor_t *r, int fd, epoll_fd_slot_t *slot) {
+    if (slot->queued) return true;
+    if (r->rx_ready_n == r->rx_ready_cap) {
+        uint32_t cap = r->rx_ready_cap ? r->rx_ready_cap * 2 : 64;
+        int *grown = cwist_alloc(cap * sizeof(*grown));
+        if (!grown) return false;
+        if (r->rx_ready_n) memcpy(grown, r->rx_ready, r->rx_ready_n * sizeof(*grown));
+        cwist_free(r->rx_ready);
+        r->rx_ready = grown;
+        r->rx_ready_cap = cap;
+    }
+    r->rx_ready[r->rx_ready_n++] = fd;
+    slot->queued = true;
+    return true;
+}
+
+/** @brief recv() into the armed buffer of @p fd and deliver the result to rx_cb.
+ * EAGAIN keeps the receive armed for the next edge. Run thread only. */
+static void rx_epoll_recv(cwist_reactor_t *r, int fd, epoll_fd_slot_t *slot) {
+    ssize_t n;
+    do {
+        n = recv(fd, slot->buf, slot->len, MSG_DONTWAIT);
+    } while (n < 0 && errno == EINTR);
+    if (n < 0 && (errno == EAGAIN || errno == EWOULDBLOCK)) {
+        slot->maybe_more = false;
+        return;
+    }
+    int res = n >= 0 ? (int)n : -errno;
+    /* A full buffer may have left bytes behind; a short read drained the
+     * socket, so anything newer raises a fresh edge. */
+    slot->maybe_more = n > 0 && (size_t)n == slot->len;
+    slot->armed = false;
+    /* rx_cb may close and free the connection, or re-arm (possibly queueing
+     * this fd again); the slot itself stays valid. */
+    if (r->rx_cb) r->rx_cb(slot->conn, res);
+}
+
+/** @brief Handle one readiness event of an RX-mode fd. Run thread only. */
+static void rx_epoll_event(cwist_reactor_t *r, int fd) {
+    epoll_fd_slot_t *slot = epfd_slot(fd, false);
+    if (!slot || atomic_load_explicit(&slot->state, memory_order_relaxed) != EPFD_RX) return;
+    if (!slot->armed) {
+        /* The connection is between receives (serving, or parked on a
+         * deferred response). Remember the edge for the next arm. */
+        slot->maybe_more = true;
+        return;
+    }
+    rx_epoll_recv(r, fd, slot);
+}
+
+/** @brief Receive for the fds queued by recv_arm. Arms made by these callbacks
+ * queue behind them and run on the next pass. Run thread only. */
+static void rx_epoll_drain_ready(cwist_reactor_t *r) {
+    uint32_t n = r->rx_ready_n;
+    for (uint32_t i = 0; i < n; i++) {
+        int fd = r->rx_ready[i];
+        epoll_fd_slot_t *slot = epfd_slot(fd, false);
+        if (!slot) continue;
+        slot->queued = false;
+        if (atomic_load_explicit(&slot->state, memory_order_relaxed) != EPFD_RX || !slot->armed) {
+            continue;
+        }
+        rx_epoll_recv(r, fd, slot);
+    }
+    /* Keep what the callbacks queued during this pass. */
+    memmove(r->rx_ready, r->rx_ready + n, (r->rx_ready_n - n) * sizeof(*r->rx_ready));
+    r->rx_ready_n -= n;
+}
+
+/** @brief RX-epoll arm: see cwist_reactor_recv_arm. */
+static bool rx_epoll_arm(cwist_reactor_t *reactor, int fd, void *buf, unsigned len, void *conn) {
+    /* Off the run thread the slot would race the run thread's receive; the
+     * caller falls back to the one-shot POLL, whose callback arms from the
+     * run thread. */
+    if (!reactor_on_run_thread(reactor)) return false;
+    epoll_fd_slot_t *slot = epfd_slot(fd, true);
+    if (!slot) return false;
+    bool registered =
+        atomic_load_explicit(&slot->state, memory_order_relaxed) == EPFD_RX && slot->conn == conn;
+    slot->buf = buf;
+    slot->len = len;
+    slot->conn = conn;
+    if (!registered) {
+        /* First arm, or the fd went through the one-shot path since. MOD and
+         * ADD both report an fd that is already readable, so no edge is lost
+         * across the switch. */
+        struct epoll_event ev;
+        ev.events = EPOLLIN | EPOLLRDHUP | EPOLLET;
+        ev.data.u64 = ((uint64_t)(unsigned)fd << 1) | 1u;
+        if (!epoll_register(reactor->impl.epoll_fd, fd, &ev)) return false;
+        atomic_store_explicit(&slot->state, EPFD_RX, memory_order_relaxed);
+        slot->maybe_more = false;
+        slot->armed = true;
+        return true;
+    }
+    slot->armed = true;
+    if (slot->maybe_more && !rx_ready_push(reactor, fd, slot)) {
+        slot->armed = false;
+        return false;
+    }
+    return true;
 }
 
 void cwist_reactor_set_rx_cb(cwist_reactor_t *reactor, cwist_rx_cb_t cb) {
@@ -430,6 +638,14 @@ bool cwist_reactor_recv_arm(cwist_reactor_t *reactor, int fd, void *buf, unsigne
                             uint64_t *armed_ns) {
     if (!reactor || fd < 0 || !buf || len == 0 || !conn) return false;
     if (!cwist_reactor_rx_supported(reactor)) return false;
+    if (reactor->impl.use_epoll) {
+        if (armed_ns && latency_probe_enabled()) {
+            struct timespec ts;
+            clock_gettime(CLOCK_MONOTONIC, &ts);
+            *armed_ns = (uint64_t)ts.tv_sec * 1000000000ull + (uint64_t)ts.tv_nsec;
+        }
+        return rx_epoll_arm(reactor, fd, buf, len, conn);
+    }
     /* Tag-bit discipline: ev_ctx pointers come from cwist_alloc (malloc
      * backed, at least max_align_t aligned), so the low bit is always zero
      * there and one here.  Refuse a misaligned connection pointer rather
@@ -834,6 +1050,7 @@ void cwist_reactor_destroy(cwist_reactor_t *reactor) {
         close(reactor->impl.ring_fd);
     } else {
         close(reactor->impl.epoll_fd);
+        cwist_free(reactor->rx_ready);
     }
 #elif defined(__APPLE__) || defined(__FreeBSD__) || defined(__NetBSD__) || defined(__OpenBSD__)
     close(reactor->impl.kq_fd);
@@ -1017,13 +1234,11 @@ static bool reactor_add_common(cwist_reactor_t *reactor, int fd, cwist_reactor_c
         struct epoll_event ev;
         ev.events = (for_write ? EPOLLOUT : EPOLLIN) | EPOLLET | EPOLLONESHOT;
         ev.data.ptr = ev_ctx;
-        if (epoll_ctl(reactor->impl.epoll_fd, EPOLL_CTL_ADD, fd, &ev) == 0) {
+        if (epoll_register(reactor->impl.epoll_fd, fd, &ev)) {
+            /* Also takes the fd out of RX mode: the one-shot registration
+             * replaced the edge-triggered one. */
+            epfd_set_state(fd, EPFD_ONESHOT);
             return true;
-        }
-        if (errno == EEXIST) {
-            if (epoll_ctl(reactor->impl.epoll_fd, EPOLL_CTL_MOD, fd, &ev) == 0) {
-                return true;
-            }
         }
         free_reactor_ctx(reactor, ev_ctx);
         return false;
@@ -1076,6 +1291,7 @@ bool cwist_reactor_mod(cwist_reactor_t *reactor, int fd, cwist_reactor_cb_t cb, 
         ev.events = EPOLLIN | EPOLLET | EPOLLONESHOT;
         ev.data.ptr = ev_ctx;
         if (epoll_ctl(reactor->impl.epoll_fd, EPOLL_CTL_MOD, fd, &ev) == 0) {
+            epfd_set_state(fd, EPFD_ONESHOT);
             return true;
         }
         free_reactor_ctx(reactor, ev_ctx);
@@ -1108,6 +1324,7 @@ bool cwist_reactor_del(cwist_reactor_t *reactor, int fd) {
         return uring_submit(reactor, &sqe);
     } else {
         struct epoll_event ev;
+        epfd_set_state(fd, EPFD_UNKNOWN);
         return epoll_ctl(reactor->impl.epoll_fd, EPOLL_CTL_DEL, fd, &ev) == 0;
     }
 #elif defined(__APPLE__) || defined(__FreeBSD__) || defined(__NetBSD__) || defined(__OpenBSD__)
@@ -1465,18 +1682,27 @@ void cwist_reactor_run(cwist_reactor_t *reactor) {
             reactor_run_timers(reactor);
             /* Round the wait up so a timer is never polled for early. */
             int wait_ms = (int)((reactor_wait_ns(reactor) + 999999ull) / 1000000ull);
+            /* Queued RX receives must not wait behind a blocking poll. */
+            if (reactor->rx_ready_n > 0) wait_ms = 0;
             int n = epoll_wait(reactor->impl.epoll_fd, events, 1024, wait_ms);
             if (n < 0) {
                 if (errno == EINTR) continue;
                 break;
             }
             for (int i = 0; i < n; i++) {
+                /* Low bit set: an RX-mode fd (fd << 1 | 1); ev_ctx slots are
+                 * at least 8-byte aligned and never carry it. */
+                if (events[i].data.u64 & 1u) {
+                    rx_epoll_event(reactor, (int)(events[i].data.u64 >> 1));
+                    continue;
+                }
                 reactor_event_ctx_t *ev_ctx = (reactor_event_ctx_t *)events[i].data.ptr;
                 if (ev_ctx) {
                     ev_ctx->cb(ev_ctx->fd, ev_ctx->ctx);
                     free_reactor_ctx(reactor, ev_ctx);
                 }
             }
+            if (reactor->rx_ready_n > 0) rx_epoll_drain_ready(reactor);
         }
     }
 #elif defined(__APPLE__) || defined(__FreeBSD__) || defined(__NetBSD__) || defined(__OpenBSD__)

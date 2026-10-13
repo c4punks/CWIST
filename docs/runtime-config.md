@@ -86,6 +86,7 @@ Each variable has one status. The status says what v4 promises about it.
 |----------|--------|--------|---------|--------|
 | `CWIST_REACTOR_BACKEND` | tuning | `epoll` | io_uring | Linux: force the epoll backend, for A/B measurement. |
 | `CWIST_RX_URING` | tuning | `0` disables | on | Receive with `IORING_OP_RECV` instead of POLL + `recv`. |
+| `CWIST_RX_EPOLL` | tuning | `0` disables | on | On the epoll reactor (no io_uring ring, or `CWIST_REACTOR_BACKEND=epoll`), keep keep-alive connections registered edge-triggered and receive from the reactor, instead of re-arming a one-shot poll with `epoll_ctl` per request. |
 | `CWIST_REACTOR_DRAIN_CHUNK` | tuning | integer ≥ 0 | `8` (set by `CWIST_PROFILE`; `64` without it) | Completions handled between drains of posted work. See [cooperative queuing](cooperative-queuing.md). |
 | `CWIST_REACTOR_ROUND_BUDGET_US` | tuning | microseconds ≥ 0 | `2000` | Once a reactor round runs longer than this, parked re-arms are flushed to the kernel every 64 callbacks instead of at the end of the round. The round still runs to completion. `0` disables the bound. |
 | `CWIST_REACTOR_CQ_GRACE_NS` | tuning | nanoseconds ≥ 0 | `20000` | How long the reactor spins on the completion ring before it sleeps in the kernel. `0` disables the spin. |

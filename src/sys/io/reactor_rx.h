@@ -17,6 +17,18 @@
  * max_align_t aligned) and can never carry the tag bit; reactor.c asserts
  * this when arming.
  *
+ * RX-epoll: on an epoll reactor (no io_uring ring, e.g. under a seccomp
+ * profile that blocks it) the same contract is served without SQEs.  The fd
+ * stays registered edge-triggered (no EPOLLONESHOT) with user_data
+ * fd << 1 | 1, and on readiness the reactor itself recv()s into the armed
+ * buffer and reports the result through the same completion handler.  A
+ * steady keep-alive request then costs one recv and one send, where the
+ * one-shot path also paid an epoll_ctl re-arm.  Epoll arms are accepted on
+ * the run thread only; elsewhere cwist_reactor_recv_arm returns false and the
+ * caller's POLL fallback re-arms from the run thread.  Any cwist_reactor_add,
+ * _mod or _del of the fd takes it back to the one-shot path.  -EAGAIN is
+ * never reported: the receive stays armed until bytes, EOF or an error.
+ *
  * This header is private to the build (src/sys/io); it is not installed.
  * Everything compiles to no-ops on non-Linux so callers need no ifdefs
  * beyond cheap inline checks. */
@@ -39,9 +51,16 @@ extern "C" {
  * cwist_reactor_rx_supported). */
 bool cwist_rx_uring_env_enabled(void);
 
-/* True iff this reactor can take the RX-uring path: the env knob allows it
- * and the reactor actually runs an io_uring ring (not the epoll fallback). */
+/* True iff this reactor can take the RX path: an io_uring reactor with
+ * CWIST_RX_URING allowing it, or an epoll reactor with CWIST_RX_EPOLL
+ * allowing it. */
 bool cwist_reactor_rx_supported(const cwist_reactor_t *reactor);
+
+/* Drop the epoll registration state recorded for fd.  Call on a freshly
+ * accepted fd: its number may have belonged to a closed socket, and the
+ * stale state would otherwise cost the first re-arm a failed epoll_ctl (and
+ * must never let an RX arm for a new connection skip registration). */
+void cwist_reactor_fd_forget(int fd);
 
 /* Completion handler for tagged RECV SQEs.  conn is the untagged connection
  * pointer; res is the CQE result: byte count, 0 (EOF), -EAGAIN, or another
@@ -88,6 +107,9 @@ static inline bool cwist_rx_uring_env_enabled(void) {
 static inline bool cwist_reactor_rx_supported(const cwist_reactor_t *reactor) {
     (void)reactor;
     return false;
+}
+static inline void cwist_reactor_fd_forget(int fd) {
+    (void)fd;
 }
 typedef void (*cwist_rx_cb_t)(void *conn, int res);
 static inline void cwist_reactor_set_rx_cb(cwist_reactor_t *reactor, cwist_rx_cb_t cb) {
