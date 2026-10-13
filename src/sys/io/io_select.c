@@ -7,7 +7,14 @@
 
 /**
  * @file io_select.c
- * @brief Lock-free job queue fallback used when no platform-specific async backend is selected.
+ * @brief Job queue fallback used when no platform-specific async backend is selected.
+ *
+ * A Michael & Scott two-lock queue: producers append under tail_lock and
+ * consumers pop under head_lock, around a dummy sentinel node. The lock-free
+ * variant needs safe memory reclamation (see io_queue.c), which this portable
+ * fallback does without: a node is freed only by a consumer holding
+ * head_lock, after it stopped being the sentinel, and no producer reads a
+ * node after linking past it, so nothing can still hold a freed node.
  */
 
 typedef struct job_node {
@@ -17,8 +24,10 @@ typedef struct job_node {
 } job_node_t;
 
 struct cwist_io_queue {
-    _Atomic(job_node_t *) head;
-    _Atomic(job_node_t *) tail;
+    job_node_t *head; /* guarded by head_lock */
+    job_node_t *tail; /* guarded by tail_lock */
+    pthread_mutex_t head_lock;
+    pthread_mutex_t tail_lock;
     atomic_size_t pending_jobs;
     atomic_bool running;
     pthread_mutex_t sleep_lock;
@@ -50,29 +59,18 @@ static void cwist_job_node_destroy(job_node_t *node) {
 }
 
 /**
- * @brief Push a node onto the Michael-Scott style linked queue.
+ * @brief Append a node to the queue and wake a sleeper when needed.
  * @param q Queue receiving the new job.
  * @param node Node to append.
  */
 static void cwist_queue_push(cwist_io_queue *q, job_node_t *node) {
     atomic_store_explicit(&node->next, NULL, memory_order_relaxed);
-    while (1) {
-        job_node_t *tail = atomic_load_explicit(&q->tail, memory_order_acquire);
-        job_node_t *next = atomic_load_explicit(&tail->next, memory_order_acquire);
-        if (tail == atomic_load_explicit(&q->tail, memory_order_acquire)) {
-            if (!next) {
-                if (atomic_compare_exchange_weak_explicit(
-                        &tail->next, &next, node, memory_order_release, memory_order_relaxed)) {
-                    atomic_compare_exchange_strong_explicit(
-                        &q->tail, &tail, node, memory_order_release, memory_order_relaxed);
-                    break;
-                }
-            } else {
-                atomic_compare_exchange_weak_explicit(&q->tail, &tail, next, memory_order_release,
-                                                      memory_order_relaxed);
-            }
-        }
-    }
+    pthread_mutex_lock(&q->tail_lock);
+    /* next is atomic because a consumer may read the sentinel's next under
+     * head_lock while it is also the tail being linked here. */
+    atomic_store_explicit(&q->tail->next, node, memory_order_release);
+    q->tail = node;
+    pthread_mutex_unlock(&q->tail_lock);
 
     size_t prev = atomic_fetch_add_explicit(&q->pending_jobs, 1, memory_order_release);
     if (prev == 0) {
@@ -84,34 +82,30 @@ static void cwist_queue_push(cwist_io_queue *q, job_node_t *node) {
 
 /**
  * @brief Pop the next job from the queue.
- * The popped node becomes the new sentinel, which the next pop frees, so the
- * callback and argument are copied out here and the node is not touched again.
+ * The popped node becomes the new sentinel, which the next pop frees once
+ * this one releases head_lock, so the callback and argument are copied out
+ * under the lock and the node is not touched again.
  * @param q Queue to consume from.
  * @param func Receives the job callback.
  * @param arg Receives the job argument.
  * @return true when a job was popped, false when the queue is empty.
  */
 static bool cwist_queue_pop(cwist_io_queue *q, cwist_job_func *func, void **arg) {
-    while (1) {
-        job_node_t *head = atomic_load_explicit(&q->head, memory_order_acquire);
-        job_node_t *tail = atomic_load_explicit(&q->tail, memory_order_acquire);
-        job_node_t *next = atomic_load_explicit(&head->next, memory_order_acquire);
-        if (!next) {
-            return false;
-        }
-        if (head == tail) {
-            atomic_compare_exchange_weak_explicit(&q->tail, &tail, next, memory_order_release,
-                                                  memory_order_relaxed);
-            continue;
-        }
-        if (atomic_compare_exchange_weak_explicit(&q->head, &head, next, memory_order_acq_rel,
-                                                  memory_order_relaxed)) {
-            cwist_job_node_destroy(head);
-            *func = next->func;
-            *arg = next->arg;
-            return true;
-        }
+    pthread_mutex_lock(&q->head_lock);
+    job_node_t *head = q->head;
+    job_node_t *next = atomic_load_explicit(&head->next, memory_order_acquire);
+    if (!next) {
+        pthread_mutex_unlock(&q->head_lock);
+        return false;
     }
+    *func = next->func;
+    *arg = next->arg;
+    q->head = next;
+    pthread_mutex_unlock(&q->head_lock);
+    /* head was the sentinel and is no longer the tail (it has a next), so
+     * no producer or consumer can reach it any more. */
+    cwist_job_node_destroy(head);
+    return true;
 }
 
 /**
@@ -147,23 +141,27 @@ cwist_io_queue *cwist_io_queue_create(size_t capacity) {
         return NULL;
     }
 
-    atomic_store_explicit(&q->head, stub, memory_order_relaxed);
-    atomic_store_explicit(&q->tail, stub, memory_order_relaxed);
+    q->head = stub;
+    q->tail = stub;
     atomic_init(&q->pending_jobs, 0);
     atomic_store_explicit(&q->running, true, memory_order_release);
 
-    if (pthread_mutex_init(&q->sleep_lock, NULL) != 0) {
-        cwist_job_node_destroy(stub);
-        cwist_free(q);
-        return NULL;
-    }
-    if (pthread_cond_init(&q->sleep_cond, NULL) != 0) {
-        pthread_mutex_destroy(&q->sleep_lock);
-        cwist_job_node_destroy(stub);
-        cwist_free(q);
-        return NULL;
-    }
+    if (pthread_mutex_init(&q->head_lock, NULL) != 0) goto fail_head;
+    if (pthread_mutex_init(&q->tail_lock, NULL) != 0) goto fail_tail;
+    if (pthread_mutex_init(&q->sleep_lock, NULL) != 0) goto fail_sleep;
+    if (pthread_cond_init(&q->sleep_cond, NULL) != 0) goto fail_cond;
     return q;
+
+fail_cond:
+    pthread_mutex_destroy(&q->sleep_lock);
+fail_sleep:
+    pthread_mutex_destroy(&q->tail_lock);
+fail_tail:
+    pthread_mutex_destroy(&q->head_lock);
+fail_head:
+    cwist_job_node_destroy(stub);
+    cwist_free(q);
+    return NULL;
 }
 
 /**
@@ -230,7 +228,10 @@ void cwist_io_queue_destroy(cwist_io_queue *q) {
     pthread_cond_broadcast(&q->sleep_cond);
     pthread_mutex_unlock(&q->sleep_lock);
 
-    job_node_t *node = atomic_load_explicit(&q->head, memory_order_acquire);
+    /* Runners are gone by contract; the locks only pair with the last pops. */
+    pthread_mutex_lock(&q->head_lock);
+    job_node_t *node = q->head;
+    pthread_mutex_unlock(&q->head_lock);
     while (node) {
         job_node_t *next = atomic_load_explicit(&node->next, memory_order_acquire);
         cwist_job_node_destroy(node);
@@ -239,5 +240,7 @@ void cwist_io_queue_destroy(cwist_io_queue *q) {
 
     pthread_cond_destroy(&q->sleep_cond);
     pthread_mutex_destroy(&q->sleep_lock);
+    pthread_mutex_destroy(&q->tail_lock);
+    pthread_mutex_destroy(&q->head_lock);
     cwist_free(q);
 }
