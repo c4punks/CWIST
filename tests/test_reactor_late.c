@@ -104,6 +104,10 @@ static result_t run_in_child(const char *late_env, int spin_us_each) {
             setenv("CWIST_REACTOR_LATE_US", late_env, 1);
         else
             unsetenv("CWIST_REACTOR_LATE_US");
+        /* Isolate late-round mode from the tail heuristic: both feed
+         * cwist_reactor_dispatch_late(), and these batches always run past
+         * CWIST_REACTOR_TAIL_US because of the callback spins. */
+        setenv("CWIST_REACTOR_TAIL_US", "0", 1);
         result_t r = run_batch(spin_us_each);
         ssize_t w = write(fds[1], &r, sizeof(r));
         (void)w;

@@ -74,9 +74,10 @@ void cwist_reactor_set_rx_cb(cwist_reactor_t *reactor, cwist_rx_cb_t cb);
 /* Arm one IORING_OP_RECV on the reactor ring.  The SQE references
  * [buf, buf+len) and must stay valid until the completion arrives, so the
  * caller must not move or consume that buffer while the SQE is in flight.
- * At most one RECV per connection at a time.  When the latency probe is
- * enabled, *armed_ns (if non-NULL) receives the arm timestamp so the caller
- * can compute queue delay.  Run-thread calls during dispatch defer into the
+ * At most one RECV per connection at a time.  *armed_ns (if non-NULL) always
+ * receives the arm timestamp: the HTTP completion handler runs the
+ * tail-elevation heuristic against it, and the latency probe records queue
+ * delay from it when enabled.  Run-thread calls during dispatch defer into the
  * existing SQE batch; other threads submit immediately so parked workers
  * wake.  Returns false when unsupported or on submission failure; the caller
  * then falls back to the legacy POLL path. */
@@ -92,13 +93,48 @@ void cwist_reactor_probe_record(cwist_reactor_t *reactor, bool queue, uint64_t s
 /* True while the calling thread dispatches a reactor callback in late mode:
  * the round it belongs to has run past CWIST_REACTOR_LATE_US (issue #319
  * experiment), so the connection should finish its buffered work now
- * instead of yielding. False off the run thread and outside dispatch. */
+ * instead of yielding. Also true for a callback whose event was aged past
+ * CWIST_REACTOR_TAIL_US (tail-elevation heuristic, both backends): the event
+ * already queued that long, so it is served first and runs to completion.
+ * False off the run thread and outside dispatch. */
 bool cwist_reactor_dispatch_late(void);
+
+/* Tail-elevation heuristic (CWIST_REACTOR_TAIL_US, default 3500 us; 0
+ * disables): CLOCK_MONOTONIC read, age check, and probe-enable query shared
+ * by the dispatch loops and the HTTP RX completion handler. */
+uint64_t cwist_reactor_now_ns(void);
+uint64_t cwist_reactor_tail_ns(void);
+bool cwist_reactor_event_aged(uint64_t now_ns, uint64_t armed_ns, uint64_t tail_ns);
+bool cwist_reactor_latency_probe_enabled(void);
+
+/* Mark the remainder of the current dispatch callback as aged: used by the
+ * HTTP RX completion handler, which owns the RECV arm timestamp the reactor
+ * cannot see. cwist_reactor_dispatch_late() returns true until the callback
+ * returns to the run loop. */
+void cwist_reactor_dispatch_age_bypass(void);
 
 #else /* !__linux__ */
 
 static inline bool cwist_reactor_dispatch_late(void) {
     return false;
+}
+static inline uint64_t cwist_reactor_now_ns(void) {
+    return 0;
+}
+static inline uint64_t cwist_reactor_tail_ns(void) {
+    return 0;
+}
+static inline bool cwist_reactor_event_aged(uint64_t now_ns, uint64_t armed_ns,
+                                            uint64_t tail_ns) {
+    (void)now_ns;
+    (void)armed_ns;
+    (void)tail_ns;
+    return false;
+}
+static inline bool cwist_reactor_latency_probe_enabled(void) {
+    return false;
+}
+static inline void cwist_reactor_dispatch_age_bypass(void) {
 }
 
 static inline bool cwist_rx_uring_env_enabled(void) {

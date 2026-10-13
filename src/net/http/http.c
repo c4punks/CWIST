@@ -1101,16 +1101,17 @@ static void http_rx_recv_cb(void *conn_ptr, int res) {
     /* res == -EAGAIN: nothing staged; the POLL fallback below resumes the
      * wait without running the handler on an empty stash. */
 
-    /* Latency probe: rx_armed_ns is only written while the probe is enabled,
-     * so a zero value means the probe is off and both clock reads below are
-     * skipped.  Snapshot it now: the serve path re-arms the next RECV and
-     * would overwrite conn->rx_armed_ns before the queue delay is computed. */
-    uint64_t t0 = 0;
+    /* rx_armed_ns is stamped at every arm. Snapshot it now: the serve path
+     * re-arms the next RECV and would overwrite conn->rx_armed_ns before the
+     * queue delay is computed. One clock read at delivery feeds the
+     * tail-elevation heuristic (CWIST_REACTOR_TAIL_US) and, when the probe
+     * is enabled, the queue-delay sample below. */
     uint64_t armed_ns = conn->rx_armed_ns;
+    uint64_t t0 = 0;
     if (armed_ns) {
-        struct timespec ts;
-        clock_gettime(CLOCK_MONOTONIC, &ts);
-        t0 = (uint64_t)ts.tv_sec * 1000000000ull + (uint64_t)ts.tv_nsec;
+        t0 = cwist_reactor_now_ns();
+        if (cwist_reactor_event_aged(t0, armed_ns, cwist_reactor_tail_ns()))
+            cwist_reactor_dispatch_age_bypass();
     }
     conn->last_active_sec = cwist_fast_monotonic_sec();
 
@@ -1149,7 +1150,7 @@ static void http_rx_recv_cb(void *conn_ptr, int res) {
     conn->rx_prefers_poll = false;
     http_async_dispatch(conn->fd, conn, conn->handler, conn->user_ctx, conn->reactor);
 
-    if (armed_ns) {
+    if (armed_ns && cwist_reactor_latency_probe_enabled()) {
         uint64_t queue_us = (t0 - armed_ns) / 1000;
         struct timespec ts;
         clock_gettime(CLOCK_MONOTONIC, &ts);

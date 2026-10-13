@@ -167,6 +167,11 @@ int main(void) {
     setenv("CWIST_WORKERS", "1", 1);
     setenv("CWIST_WORKER_THREADS", "1", 1);
     setenv("CWIST_C1M_MODE", "1", 1);
+    /* Isolate cooperative yielding from the tail heuristic: a connection
+     * gated longer than CWIST_REACTOR_TAIL_US is *supposed* to finish its
+     * buffered pipeline without yielding, which would defeat this test's
+     * probe. The heuristic itself is covered by test_reactor_tail. */
+    setenv("CWIST_REACTOR_TAIL_US", "0", 1);
     const char *delay = getenv("CWIST_TEST_HANDLER_DELAY_US");
     delay_us = delay ? strtol(delay, NULL, 10) : 0;
     bool half_close = getenv("CWIST_TEST_HALF_CLOSE") != NULL;

@@ -201,11 +201,11 @@ typedef struct {
     cwist_reactor_cb_t cb;
     void *ctx;
 #ifdef __linux__
-    /* CLOCK_MONOTONIC timestamp taken in reactor_add_common right before the
-     * POLL_ADD submit/defer decision; approximates when the fd started
-     * waiting for readiness. Only set when CWIST_LATENCY_PROBE is enabled;
-     * zero means "armed before the probe was enabled" (defensive, see the
-     * dispatch loop). */
+    /* CLOCK_MONOTONIC timestamp taken in alloc_reactor_ctx right before the
+     * arm is submitted or deferred; approximates when the fd started waiting
+     * for readiness. Always set (the tail-elevation heuristic and the latency
+     * probe both consume it); zero means "armed before the stamp existed"
+     * (defensive, see the dispatch loop). */
     uint64_t armed_ns;
 #endif
     /* Inline caller payload; ctx always points here. Zeroed on checkout so
@@ -265,10 +265,14 @@ struct cwist_reactor {
     bool dispatching;
     /* True while the run thread dispatches a callback of a round that has
      * run past CWIST_REACTOR_LATE_US (issue #319 experiment). Run thread
-     * only; read through cwist_reactor_dispatch_late(). */
+     * only; read through cwist_reactor_dispatch_late(), which also reports
+     * per-event tail elevation (CWIST_REACTOR_TAIL_US). */
     bool dispatch_late;
     uint64_t late_rounds;    /* Rounds that crossed the threshold. */
     uint64_t late_callbacks; /* Callbacks dispatched in late mode. */
+    /* Events the tail heuristic pulled out of a batch and served first
+     * (see reactor_tail_ns). Run thread only. */
+    uint64_t tail_elevations;
     /* RX-uring completion handler for tagged (low-bit set) RECV SQEs;
      * registered by the HTTP layer once per worker reactor. */
     cwist_rx_cb_t rx_cb;
@@ -297,6 +301,13 @@ struct cwist_reactor {
  * thread-local instead of a pthread_t owner field in the reactor: other
  * threads would otherwise read that field while the run thread writes it. */
 static __thread cwist_reactor_t *t_run_reactor;
+
+/* True while the run thread dispatches an event the tail heuristic aged out
+ * of its batch: its callback sees cwist_reactor_dispatch_late() == true. Set
+ * by the dispatch loops' elevation pass and by the HTTP RX completion
+ * handler (which owns the RECV arm timestamp); cleared when the callback
+ * returns, so it never leaks into the next event of the batch. */
+static __thread bool t_dispatch_aged;
 
 static inline bool reactor_on_run_thread(const cwist_reactor_t *reactor) {
     return t_run_reactor == reactor;
@@ -379,6 +390,9 @@ static void latency_probe_dump(const cwist_reactor_t *reactor) {
         fprintf(stderr, "[latency-probe] pid=%d late_rounds=%llu late_callbacks=%llu\n",
                 (int)getpid(), (unsigned long long)reactor->late_rounds,
                 (unsigned long long)reactor->late_callbacks);
+    if (reactor->tail_elevations)
+        fprintf(stderr, "[latency-probe] pid=%d tail_elevations=%llu\n", (int)getpid(),
+                (unsigned long long)reactor->tail_elevations);
     for (int phase = 0; phase < 2; phase++) {
         const uint64_t *b = reactor->probe[phase].buckets;
         uint64_t count = reactor->probe[phase].count;
@@ -560,8 +574,13 @@ static void rx_epoll_recv(cwist_reactor_t *r, int fd, epoll_fd_slot_t *slot) {
     slot->maybe_more = n > 0 && (size_t)n == slot->len;
     slot->armed = false;
     /* rx_cb may close and free the connection, or re-arm (possibly queueing
-     * this fd again); the slot itself stays valid. */
-    if (r->rx_cb) r->rx_cb(slot->conn, res);
+     * this fd again); the slot itself stays valid. The handler may raise the
+     * tail-heuristic bypass (cwist_reactor_dispatch_age_bypass); it is scoped
+     * to this callback, so clear it before the next event of the batch. */
+    if (r->rx_cb) {
+        r->rx_cb(slot->conn, res);
+        t_dispatch_aged = false;
+    }
 }
 
 /** @brief Handle one readiness event of an RX-mode fd. Run thread only. */
@@ -639,11 +658,9 @@ bool cwist_reactor_recv_arm(cwist_reactor_t *reactor, int fd, void *buf, unsigne
     if (!reactor || fd < 0 || !buf || len == 0 || !conn) return false;
     if (!cwist_reactor_rx_supported(reactor)) return false;
     if (reactor->impl.use_epoll) {
-        if (armed_ns && latency_probe_enabled()) {
-            struct timespec ts;
-            clock_gettime(CLOCK_MONOTONIC, &ts);
-            *armed_ns = (uint64_t)ts.tv_sec * 1000000000ull + (uint64_t)ts.tv_nsec;
-        }
+        /* Always stamped: the HTTP completion handler runs the tail heuristic
+         * against it (and the latency probe on top). */
+        if (armed_ns) *armed_ns = cwist_reactor_now_ns();
         return rx_epoll_arm(reactor, fd, buf, len, conn);
     }
     /* Tag-bit discipline: ev_ctx pointers come from cwist_alloc (malloc
@@ -659,11 +676,7 @@ bool cwist_reactor_recv_arm(cwist_reactor_t *reactor, int fd, void *buf, unsigne
     sqe.addr = (uint64_t)(uintptr_t)buf;
     sqe.len = len;
     sqe.user_data = (uint64_t)(uintptr_t)conn | 1u;
-    if (armed_ns && latency_probe_enabled()) {
-        struct timespec ts;
-        clock_gettime(CLOCK_MONOTONIC, &ts);
-        *armed_ns = (uint64_t)ts.tv_sec * 1000000000ull + (uint64_t)ts.tv_nsec;
-    }
+    if (armed_ns) *armed_ns = cwist_reactor_now_ns();
 
     /* Run-thread re-arms defer into the batch flush; everything else
      * submits immediately so remote workers wake.  Data SQEs carry no ev_ctx
@@ -723,6 +736,16 @@ static reactor_event_ctx_t *alloc_reactor_ctx(cwist_reactor_t *r, int fd, cwist_
     if (!ev_ctx) return NULL;
 
     memset(ev_ctx, 0, sizeof(*ev_ctx));
+#ifdef __linux__
+    {
+        /* One clock read + store per arm: feeds the tail-elevation heuristic
+         * (dispatch-side compare against CWIST_REACTOR_TAIL_US) and the
+         * latency probe's queue_delay histogram. */
+        struct timespec ts;
+        clock_gettime(CLOCK_MONOTONIC, &ts);
+        ev_ctx->armed_ns = (uint64_t)ts.tv_sec * 1000000000ull + (uint64_t)ts.tv_nsec;
+    }
+#endif
     ev_ctx->fd = fd;
     ev_ctx->cb = cb;
     ev_ctx->ctx = ev_ctx->payload;
@@ -739,6 +762,37 @@ static void free_reactor_ctx(cwist_reactor_t *r, reactor_event_ctx_t *ev_ctx) {
     r->free_head = ev_ctx;
     pthread_mutex_unlock(&r->pool_lock);
 }
+
+#ifdef __linux__
+/* Dispatch one ev_ctx completion: probe-wrapped when CWIST_LATENCY_PROBE is
+ * enabled, plain otherwise. Shared by the uring batch loop and its
+ * tail-elevation pre-pass so both record identical probe samples. */
+static void dispatch_ev_ctx(cwist_reactor_t *reactor, reactor_event_ctx_t *ev_ctx) {
+    if (!latency_probe_enabled()) {
+        ev_ctx->cb(ev_ctx->fd, ev_ctx->ctx);
+        return;
+    }
+    struct timespec ts;
+    clock_gettime(CLOCK_MONOTONIC, &ts);
+    uint64_t t0 = (uint64_t)ts.tv_sec * 1000000000ull + (uint64_t)ts.tv_nsec;
+    /* armed_ns == 0 means the slot predates the stamp; fold it into the
+     * first bucket rather than producing a garbage delay. */
+    uint64_t delay_ns = ev_ctx->armed_ns ? t0 - ev_ctx->armed_ns : 0;
+    ev_ctx->cb(ev_ctx->fd, ev_ctx->ctx);
+    clock_gettime(CLOCK_MONOTONIC, &ts);
+    uint64_t t1 = (uint64_t)ts.tv_sec * 1000000000ull + (uint64_t)ts.tv_nsec;
+    latency_probe_record(reactor->probe[LATENCY_PROBE_QUEUE].buckets,
+                         &reactor->probe[LATENCY_PROBE_QUEUE].count,
+                         &reactor->probe[LATENCY_PROBE_QUEUE].sum_us,
+                         &reactor->probe[LATENCY_PROBE_QUEUE].max_us,
+                         &reactor->probe[LATENCY_PROBE_QUEUE].over_5ms, delay_ns / 1000);
+    latency_probe_record(reactor->probe[LATENCY_PROBE_SVC].buckets,
+                         &reactor->probe[LATENCY_PROBE_SVC].count,
+                         &reactor->probe[LATENCY_PROBE_SVC].sum_us,
+                         &reactor->probe[LATENCY_PROBE_SVC].max_us,
+                         &reactor->probe[LATENCY_PROBE_SVC].over_5ms, (t1 - t0) / 1000);
+}
+#endif
 
 bool cwist_reactor_post(cwist_reactor_t *r, cwist_reactor_post_t *node) {
     if (!r || !node || !node->cb) return false;
@@ -1162,6 +1216,7 @@ static void flush_deferred(cwist_reactor_t *reactor) {
                 /* Tagged RECV SQE: the connection owns the fd and shell, so
                  * report the cancellation and let its handler clean up. */
                 reactor->rx_cb((void *)(sqe->user_data & ~(uint64_t)1u), -ECANCELED);
+                t_dispatch_aged = false;
             }
         }
     }
@@ -1200,11 +1255,6 @@ static bool reactor_add_common(cwist_reactor_t *reactor, int fd, cwist_reactor_c
     if (!ev_ctx) return false;
 
 #ifdef __linux__
-    if (latency_probe_enabled()) {
-        struct timespec ts;
-        clock_gettime(CLOCK_MONOTONIC, &ts);
-        ev_ctx->armed_ns = (uint64_t)ts.tv_sec * 1000000000ull + (uint64_t)ts.tv_nsec;
-    }
     if (!reactor->impl.use_epoll) {
         /* One-shot POLL_ADD: multishot (IORING_POLL_ADD_MULTI) was rejected
          * because the slot is recycled after firing, so a persistent poll
@@ -1450,9 +1500,73 @@ static uint64_t reactor_late_ns(void) {
     return (uint64_t)v * 1000ull;
 }
 
+/* Tail-elevation threshold (per-event, both reactor backends). An event
+ * armed this long ago has already queued past the knee of the arm-to-dispatch
+ * latency curve; when a dispatch batch holds it behind younger events, the
+ * run loop pulls it out and serves it first, and cwist_reactor_dispatch_late()
+ * reports true for its callback so the HTTP layer serves its buffered
+ * pipeline without yielding. Complements the round-duration late mode above:
+ * that one reacts to a slow round, this one to a slow *event* regardless of
+ * how young the round is. CWIST_REACTOR_TAIL_US overrides the 3500 us
+ * default; 0 disables. */
+static uint64_t reactor_tail_ns(void) {
+    static _Atomic long cached = -1;
+    long v = atomic_load_explicit(&cached, memory_order_relaxed);
+    if (v < 0) {
+        const char *s = getenv("CWIST_REACTOR_TAIL_US");
+        if (s && *s) {
+            char *end = NULL;
+            long parsed = strtol(s, &end, 10);
+            v = (end != s && *end == '\0' && parsed >= 0 && parsed < 3600000000L) ? parsed : 3500;
+        } else {
+            v = 3500;
+        }
+        atomic_store_explicit(&cached, v, memory_order_relaxed);
+    }
+    return (uint64_t)v * 1000ull;
+}
+
+uint64_t cwist_reactor_now_ns(void) {
+    struct timespec ts;
+    clock_gettime(CLOCK_MONOTONIC, &ts);
+    return (uint64_t)ts.tv_sec * 1000000000ull + (uint64_t)ts.tv_nsec;
+}
+
+bool cwist_reactor_event_aged(uint64_t now_ns, uint64_t armed_ns, uint64_t tail_ns) {
+    return tail_ns > 0 && armed_ns > 0 && now_ns - armed_ns >= tail_ns;
+}
+
+uint64_t cwist_reactor_tail_ns(void) {
+    return reactor_tail_ns();
+}
+
+bool cwist_reactor_latency_probe_enabled(void) {
+    return latency_probe_enabled();
+}
+
+/* True while the run thread dispatches an event the tail heuristic aged out
+ * of its batch: its callback sees cwist_reactor_dispatch_late() == true. Set
+ * by the dispatch loops' elevation pass and by the HTTP RX completion
+ * handler (which owns the RECV arm timestamp); cleared when the callback
+ * returns, so it never leaks into the next event of the batch. */
+void cwist_reactor_dispatch_age_bypass(void) {
+    t_dispatch_aged = true;
+}
+
+/* Delivery-time half of the tail heuristic (run thread): one clock read and
+ * compare against the slot's arm stamp; aged events raise the elevation
+ * counter and see cwist_reactor_dispatch_late() == true for the duration of
+ * their callback (the caller clears the flag after the callback returns). */
+static bool reactor_tail_mark_aged(cwist_reactor_t *reactor, uint64_t armed_ns, uint64_t tail_ns) {
+    if (!cwist_reactor_event_aged(cwist_reactor_now_ns(), armed_ns, tail_ns)) return false;
+    reactor->tail_elevations++;
+    t_dispatch_aged = true;
+    return true;
+}
+
 bool cwist_reactor_dispatch_late(void) {
     const cwist_reactor_t *r = t_run_reactor;
-    return r && r->dispatching && r->dispatch_late;
+    return r && r->dispatching && (r->dispatch_late || t_dispatch_aged);
 }
 #endif
 
@@ -1555,11 +1669,39 @@ void cwist_reactor_run(cwist_reactor_t *reactor) {
             reactor_tsan_acquire(&reactor->impl);
             reactor->dispatching = true;
             const uint64_t round_budget_us = reactor_round_budget_us();
+            const uint64_t tail_ns = reactor_tail_ns();
             uint64_t round_start_ns = 0;
             if (round_budget_us || late_ns) {
                 struct timespec ts;
                 clock_gettime(CLOCK_MONOTONIC, &ts);
                 round_start_ns = (uint64_t)ts.tv_sec * 1000000000ull + (uint64_t)ts.tv_nsec;
+            }
+            /* Tail elevation (CWIST_REACTOR_TAIL_US, both backends): an event
+             * armed longer ago than the threshold has already waited out the
+             * tail; if this batch buries it behind younger completions it
+             * would wait out the whole round too. One clock read per round
+             * scans the batch for already-aged ev_ctx slots and dispatches
+             * them first; the main loop re-checks age at each delivery for
+             * events that age behind a slow earlier callback. Either way
+             * cwist_reactor_dispatch_late() reports true for the callback so
+             * the HTTP layer bypasses its yield. Consumed pre-pass slots are
+             * tagged user_data = 0 and skipped by the main loop. Tagged RX
+             * completions carry no reactor-side stamp; the HTTP RX handler
+             * runs the same check against the arm timestamp it owns. */
+            if (tail_ns) {
+                for (uint32_t i = head; i != tail; i++) {
+                    struct io_uring_cqe *cqe =
+                        &reactor->impl.cqes[i & *reactor->impl.cq_ring_mask];
+                    const uint64_t ud = cqe->user_data;
+                    if (ud == 0 || (ud & 1u)) continue;
+                    reactor_event_ctx_t *ev_ctx = (reactor_event_ctx_t *)ud;
+                    if (!reactor_tail_mark_aged(reactor, ev_ctx->armed_ns, tail_ns)) continue;
+                    cqe->user_data = 0;
+                    if (cqe->res >= 0) dispatch_ev_ctx(reactor, ev_ctx);
+                    t_dispatch_aged = false;
+                    free_reactor_ctx(reactor, ev_ctx);
+                    __atomic_store_n(reactor->impl.cq_head, i + 1, __ATOMIC_RELEASE);
+                }
             }
             /* Cooperative queuing: a busy round can carry hundreds of ready
              * connections in one CQE batch (the ring is 4096 deep). Foreign-
@@ -1591,6 +1733,11 @@ void cwist_reactor_run(cwist_reactor_t *reactor) {
                 }
                 struct io_uring_cqe *cqe = &reactor->impl.cqes[head & *reactor->impl.cq_ring_mask];
                 uint64_t user_data = cqe->user_data;
+                if (user_data == 0) {
+                    /* Served by the tail-elevation pre-pass. */
+                    head++;
+                    continue;
+                }
                 if (user_data & 1u) {
                     /* Tagged data-path SQE (RX-uring RECV): the connection
                      * pointer rides in the remaining bits.  Dispatch on any
@@ -1600,40 +1747,15 @@ void cwist_reactor_run(cwist_reactor_t *reactor) {
                      * timestamp), not by the ev_ctx wrapper below. */
                     if (reactor->rx_cb) {
                         reactor->rx_cb((void *)(user_data & ~(uint64_t)1u), cqe->res);
+                        t_dispatch_aged = false;
                     }
                 } else {
                     reactor_event_ctx_t *ev_ctx = (reactor_event_ctx_t *)user_data;
                     if (ev_ctx) {
-                        if (cqe->res >= 0) {
-                            if (latency_probe_enabled()) {
-                                struct timespec ts;
-                                clock_gettime(CLOCK_MONOTONIC, &ts);
-                                uint64_t t0 =
-                                    (uint64_t)ts.tv_sec * 1000000000ull + (uint64_t)ts.tv_nsec;
-                                /* armed_ns == 0 means the slot was armed before
-                                 * the probe was enabled; fold it into the first
-                                 * bucket rather than producing a garbage delay. */
-                                uint64_t delay_ns = ev_ctx->armed_ns ? t0 - ev_ctx->armed_ns : 0;
-                                ev_ctx->cb(ev_ctx->fd, ev_ctx->ctx);
-                                clock_gettime(CLOCK_MONOTONIC, &ts);
-                                uint64_t t1 =
-                                    (uint64_t)ts.tv_sec * 1000000000ull + (uint64_t)ts.tv_nsec;
-                                latency_probe_record(reactor->probe[LATENCY_PROBE_QUEUE].buckets,
-                                                     &reactor->probe[LATENCY_PROBE_QUEUE].count,
-                                                     &reactor->probe[LATENCY_PROBE_QUEUE].sum_us,
-                                                     &reactor->probe[LATENCY_PROBE_QUEUE].max_us,
-                                                     &reactor->probe[LATENCY_PROBE_QUEUE].over_5ms,
-                                                     delay_ns / 1000);
-                                latency_probe_record(reactor->probe[LATENCY_PROBE_SVC].buckets,
-                                                     &reactor->probe[LATENCY_PROBE_SVC].count,
-                                                     &reactor->probe[LATENCY_PROBE_SVC].sum_us,
-                                                     &reactor->probe[LATENCY_PROBE_SVC].max_us,
-                                                     &reactor->probe[LATENCY_PROBE_SVC].over_5ms,
-                                                     (t1 - t0) / 1000);
-                            } else {
-                                ev_ctx->cb(ev_ctx->fd, ev_ctx->ctx);
-                            }
-                        }
+                        (void)(tail_ns &&
+                               reactor_tail_mark_aged(reactor, ev_ctx->armed_ns, tail_ns));
+                        if (cqe->res >= 0) dispatch_ev_ctx(reactor, ev_ctx);
+                        t_dispatch_aged = false;
                         free_reactor_ctx(reactor, ev_ctx);
                     }
                 }
@@ -1689,6 +1811,24 @@ void cwist_reactor_run(cwist_reactor_t *reactor) {
                 if (errno == EINTR) continue;
                 break;
             }
+            /* Tail elevation (CWIST_REACTOR_TAIL_US): same heuristic as the
+             * uring batch above, on this backend's event array. Aged ev_ctx
+             * slots are served first and nulled out; the plain loop below
+             * skips them. RX-mode fds (low bit set) carry their arm stamp on
+             * the HTTP side, which runs the check in its completion handler. */
+            reactor->dispatching = true;
+            const uint64_t tail_ns = reactor_tail_ns();
+            if (tail_ns) {
+                for (int i = 0; i < n; i++) {
+                    if ((events[i].data.u64 & 1u) || !events[i].data.ptr) continue;
+                    reactor_event_ctx_t *ev_ctx = (reactor_event_ctx_t *)events[i].data.ptr;
+                    if (!reactor_tail_mark_aged(reactor, ev_ctx->armed_ns, tail_ns)) continue;
+                    events[i].data.ptr = NULL;
+                    ev_ctx->cb(ev_ctx->fd, ev_ctx->ctx);
+                    t_dispatch_aged = false;
+                    free_reactor_ctx(reactor, ev_ctx);
+                }
+            }
             for (int i = 0; i < n; i++) {
                 /* Low bit set: an RX-mode fd (fd << 1 | 1); ev_ctx slots are
                  * at least 8-byte aligned and never carry it. */
@@ -1698,11 +1838,15 @@ void cwist_reactor_run(cwist_reactor_t *reactor) {
                 }
                 reactor_event_ctx_t *ev_ctx = (reactor_event_ctx_t *)events[i].data.ptr;
                 if (ev_ctx) {
+                    (void)(tail_ns &&
+                           reactor_tail_mark_aged(reactor, ev_ctx->armed_ns, tail_ns));
                     ev_ctx->cb(ev_ctx->fd, ev_ctx->ctx);
+                    t_dispatch_aged = false;
                     free_reactor_ctx(reactor, ev_ctx);
                 }
             }
             if (reactor->rx_ready_n > 0) rx_epoll_drain_ready(reactor);
+            reactor->dispatching = false;
         }
     }
 #elif defined(__APPLE__) || defined(__FreeBSD__) || defined(__NetBSD__) || defined(__OpenBSD__)

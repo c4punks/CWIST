@@ -897,6 +897,7 @@ TEST_TARGETS = test_worker_affinity \
                test_rx_epoll \
                test_reactor_drain_chunk \
                test_reactor_late \
+               test_reactor_tail \
                test_latency_probe \
                test_sstring \
                test_abi_layout \
@@ -1123,6 +1124,14 @@ test_reactor_drain_chunk: tests/test_reactor_drain_chunk.c src/sys/io/reactor.c
 
 test_reactor_late: tests/test_reactor_late.c src/sys/io/reactor.c
 	$(CC) $(CFLAGS) -o $@ tests/test_reactor_late.c -pthread
+	./$@
+
+# Tail-elevation heuristic: an event armed past CWIST_REACTOR_TAIL_US is
+# served before younger events of the same batch on both backends, and its
+# callback observes cwist_reactor_dispatch_late(). Runs each knob value in a
+# child process (the knob is cached on first read) on uring and epoll.
+test_reactor_tail: tests/test_reactor_tail.c src/sys/io/reactor.c
+	$(CC) $(CFLAGS) -o $@ tests/test_reactor_tail.c -pthread
 	./$@
 
 # Latency probe test (issue #166): run twice per build, with the probe

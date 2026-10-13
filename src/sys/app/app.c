@@ -3314,9 +3314,10 @@ cwist_async_action_t cwist_app_http_handler_async(int client_fd, cwist_http_asyn
     uint32_t priority_weight = ((mixed_seed * 16777619U) >> 8) % 100;
 
     /* One pipeline must not monopolize this reactor's other connections,
-     * unless this callback runs in a late round (issue #319 experiment): the
-     * connection has already waited past CWIST_REACTOR_LATE_US, so it serves
-     * its buffered pipeline now instead of yielding behind the others. */
+     * unless this callback runs in a late round (issue #319 experiment) or the
+     * tail heuristic aged its event out of the batch (CWIST_REACTOR_TAIL_US):
+     * the connection has already waited past the threshold, so it serves its
+     * buffered pipeline now instead of yielding behind the others. */
     const bool late = cwist_reactor_dispatch_late();
     const unsigned int yield_batch = app_http_yield_batch();
     const unsigned int turn_max =

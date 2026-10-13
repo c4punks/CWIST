@@ -91,6 +91,7 @@ Each variable has one status. The status says what v4 promises about it.
 | `CWIST_REACTOR_ROUND_BUDGET_US` | tuning | microseconds ≥ 0 | `2000` | Once a reactor round runs longer than this, parked re-arms are flushed to the kernel every 64 callbacks instead of at the end of the round. The round still runs to completion. `0` disables the bound. |
 | `CWIST_REACTOR_CQ_GRACE_NS` | tuning | nanoseconds ≥ 0 | `20000` | How long the reactor spins on the completion ring before it sleeps in the kernel. `0` disables the spin. |
 | `CWIST_REACTOR_LATE_US` | tuning | microseconds ≥ 0 | `3000` | Experiment (#319). Once a reactor round has run this long since its completions were reaped, the rest of the round runs in late mode: each callback's re-arm is submitted right after it, posted work is drained after each callback, and a pipelined HTTP/1.1 connection serves its buffered requests without yielding. io_uring only. `0` disables. |
+| `CWIST_REACTOR_TAIL_US` | tuning | microseconds ≥ 0 | `3500` | Tail-elevation heuristic (io_uring and epoll). An event armed longer ago than this is pulled to the front of its dispatch batch and served first; its connection then serves its buffered pipeline without yielding. Complements `CWIST_REACTOR_LATE_US`, which reacts to a slow round rather than a slow event. `0` disables. |
 
 ## Diagnostics
 
