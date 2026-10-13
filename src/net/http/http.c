@@ -1361,7 +1361,9 @@ bool cwist_http_pool_submit_async(int client_fd, cwist_async_handler_t handler, 
         return false;
     }
 
-    /* The one-shot path must never park the reactor on a blocking recv. */
+    /* The one-shot path must never park the reactor on a blocking recv.
+     * accept4(SOCK_NONBLOCK) sockets already carry the flag, but this is a
+     * public API also fed blocking fds (e.g. socketpair in tests). */
     int fl = fcntl(client_fd, F_GETFL, 0);
     if (fl >= 0) fcntl(client_fd, F_SETFL, fl | O_NONBLOCK);
 
@@ -4599,8 +4601,15 @@ cwist_http_request *cwist_http_receive_request(int client_fd, char *read_buf, si
     // socket blocking, so a client dribbling the header byte-by-byte would
     // hold the thread forever; bound the whole header read by
     // CWIST_HTTP_HEADERS_TIMEOUT_MS (same budget the TLS path enforces).
+    // CLOCK_MONOTONIC_COARSE trades ~4 ms granularity (vDSO, no syscall)
+    // for the precise clock; immaterial against a 120 s budget and 1 s
+    // poll slices.
     struct timespec header_start;
+#if defined(CLOCK_MONOTONIC_COARSE)
+    clock_gettime(CLOCK_MONOTONIC_COARSE, &header_start);
+#else
     clock_gettime(CLOCK_MONOTONIC, &header_start);
+#endif
     while (!(header_end = (char *)cwist_simd_find_crlfcrlf(read_buf, total_received))) {
         if (total_received >= buf_size - 1) {
             /* Fat Cookie/Authorization combinations can legitimately push a
@@ -4614,7 +4623,11 @@ cwist_http_request *cwist_http_receive_request(int client_fd, char *read_buf, si
         }
 
         struct timespec now;
+#if defined(CLOCK_MONOTONIC_COARSE)
+        clock_gettime(CLOCK_MONOTONIC_COARSE, &now);
+#else
         clock_gettime(CLOCK_MONOTONIC, &now);
+#endif
         long elapsed_ms = (now.tv_sec - header_start.tv_sec) * 1000L +
                           (now.tv_nsec - header_start.tv_nsec) / 1000000L;
         long remaining_ms = (long)CWIST_HTTP_HEADERS_TIMEOUT_MS - elapsed_ms;
