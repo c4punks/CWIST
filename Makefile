@@ -998,6 +998,7 @@ TEST_TARGETS = test_worker_affinity \
                test_full_gc_sweep \
                test_full_gc_tracking \
                test_io_queue_full_gc \
+               test_io_queue_stop \
                test_full_gc_ownership_handoff \
                test_defer_free \
                test_malloc_intercept \
@@ -1828,6 +1829,10 @@ test_full_gc_tracking: $(LIB_NAME) tests/test_full_gc_tracking.c
 test_io_queue_full_gc: $(LIB_NAME) tests/test_io_queue_full_gc.c
 	$(CC) $(CFLAGS) -o test_io_queue_full_gc tests/test_io_queue_full_gc.c $(LIB_NAME) $(LIBS)
 	./test_io_queue_full_gc
+
+test_io_queue_stop: $(LIB_NAME) tests/test_io_queue_stop.c
+	$(CC) $(CFLAGS) -o $@ tests/test_io_queue_stop.c $(LIB_NAME) $(LIBS)
+	./$@
 
 test_full_gc_ownership_handoff: $(LIB_NAME) tests/test_full_gc_ownership_handoff.c
 	$(CC) $(CFLAGS) -o test_full_gc_ownership_handoff tests/test_full_gc_ownership_handoff.c $(LIB_NAME) $(LIBS)

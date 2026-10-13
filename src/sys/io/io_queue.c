@@ -162,12 +162,18 @@ static void cwist_queue_push(cwist_io_queue *q, job_node_t *node) {
 }
 
 /**
- * @brief Pop the next executable node from the queue.
+ * @brief Pop the next job from the queue.
+ * The callback and argument are copied out inside the EBR critical section.
+ * Once the section ends the popped node is the new sentinel, and the next
+ * pop can unlink and retire it while this job still runs, so the caller
+ * must not touch the node again.
  * @param q Queue to consume from.
- * @return Next job node, or NULL when the queue is empty.
+ * @param func Receives the job callback.
+ * @param arg Receives the job argument.
+ * @return true when a job was popped, false when the queue is empty.
  */
-static job_node_t *cwist_queue_pop(cwist_io_queue *q) {
-    job_node_t *result = NULL;
+static bool cwist_queue_pop(cwist_io_queue *q, cwist_job_func *func, void **arg) {
+    bool popped = false;
     ttak_epoch_enter();
     while (1) {
         job_node_t *head = atomic_load_explicit(&q->head, memory_order_acquire);
@@ -187,12 +193,14 @@ static job_node_t *cwist_queue_pop(cwist_io_queue *q) {
              * producer may still hold it; defer the free across an epoch
              * boundary instead of releasing it here. */
             cwist_queue_defer_free(q, head);
-            result = next;
+            *func = next->func;
+            *arg = next->arg;
+            popped = true;
             break;
         }
     }
     ttak_epoch_exit();
-    return result;
+    return popped;
 }
 
 /**
@@ -287,8 +295,9 @@ void cwist_io_queue_run(cwist_io_queue *q) {
     unsigned int since_reclaim = 0;
     while (atomic_load_explicit(&q->running, memory_order_acquire) ||
            atomic_load_explicit(&q->pending_jobs, memory_order_acquire) > 0) {
-        job_node_t *node = cwist_queue_pop(q);
-        if (!node) {
+        cwist_job_func func = NULL;
+        void *arg = NULL;
+        if (!cwist_queue_pop(q, &func, &arg)) {
             cwist_queue_reclaim(q);
             since_reclaim = 0;
             if (!cwist_queue_wait(q)) {
@@ -298,8 +307,6 @@ void cwist_io_queue_run(cwist_io_queue *q) {
         }
 
         atomic_fetch_sub_explicit(&q->pending_jobs, 1, memory_order_acq_rel);
-        cwist_job_func func = node->func;
-        void *arg = node->arg;
         if (func) func(arg);
 
         // Full-GC mode: catch whatever this job forgot to cwist_free()
@@ -309,10 +316,6 @@ void cwist_io_queue_run(cwist_io_queue *q) {
         if (cwist_full_gc_enabled()) {
             cwist_gc_scope_flush();
         }
-
-        // Node becomes the new sentinel and will be released when the next job is popped.
-        node->func = NULL;
-        node->arg = NULL;
 
         if (++since_reclaim >= 64) {
             since_reclaim = 0;

@@ -33,7 +33,8 @@ enum { ROUNDS = 100 };
 #endif
 
 static cwist_reactor_t *loop;
-static int rounds_done;
+/* Written by the reactor thread, read by main and the watchdog. */
+static atomic_int rounds_done;
 
 static void *run_thread(void *arg) {
     cwist_reactor_run(arg);
@@ -46,7 +47,7 @@ static void watchdog_dump(int sig) {
      * loaded runner a rare stall used to leave only "Alarm clock", with no
      * way to tell a lost completion from a slow one.  Report the state that
      * matters, then exit with the same code the default action produced. */
-    dprintf(STDERR_FILENO, "[latency-probe] watchdog: rounds_done=%d/%d loop=%p\n", rounds_done,
+    dprintf(STDERR_FILENO, "[latency-probe] watchdog: rounds_done=%d/%d loop=%p\n", atomic_load(&rounds_done),
             ROUNDS, (void *)loop);
     if (loop) {
         dprintf(STDERR_FILENO, "[latency-probe] probe counts: queue=%llu svc=%llu\n",
@@ -61,8 +62,7 @@ static void ping_cb(int fd, void *ctx) {
     uint64_t one;
     ssize_t n = read(fd, &one, sizeof(one));
     (void)n;
-    rounds_done++;
-    if (rounds_done < ROUNDS) {
+    if (atomic_fetch_add(&rounds_done, 1) + 1 < ROUNDS) {
         /* Re-arm from inside the dispatch, like reactor_wake_cb does; the
          * run thread takes the deferred-SQE path. */
         assert(cwist_reactor_add(loop, fd, ping_cb, NULL, 0));
@@ -105,11 +105,17 @@ int main(void) {
             n = write(fd, &one, sizeof(one));
         } while (n < 0 && errno == EAGAIN);
         assert(n == (ssize_t)sizeof(one));
+        /* The eventfd is not a semaphore: writes that land before the
+         * callback reads it merge into one read, so on a slow (TSan) runner
+         * fewer than ROUNDS callbacks ran and the test hung until the
+         * watchdog. Ping-pong: wait for this round's callback first. */
+        struct timespec poll = {.tv_sec = 0, .tv_nsec = 100000};
+        while (atomic_load(&rounds_done) <= i) nanosleep(&poll, NULL);
         struct timespec ts = {.tv_sec = 0, .tv_nsec = 1000000};
         nanosleep(&ts, NULL);
     }
     assert(pthread_join(owner, NULL) == 0);
-    assert(rounds_done == ROUNDS);
+    assert(atomic_load(&rounds_done) == ROUNDS);
 
     if (probe_on) {
         assert(loop->probe[LATENCY_PROBE_QUEUE].count > 0);
