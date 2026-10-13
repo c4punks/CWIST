@@ -474,8 +474,9 @@ typedef struct cwist_http_async_conn {
     cwist_reactor_t *reactor; /* Owning reactor (deferred-response completion target). */
     cwist_async_handler_t handler; /* Connection handler, reused for re-arm after a defer. */
     bool peer_eof; /* Read side closed; drain complete buffered requests. */
-    /* RX-uring receive path (Linux reactors with a real io_uring ring only;
-     * unused elsewhere).  Wait-state discipline, all transitions on the
+    /* RX receive path (Linux reactors only: a RECV SQE on an io_uring ring,
+     * or the reactor's own recv() on an epoll one; unused elsewhere).
+     * Wait-state discipline, all transitions on the
      * reactor owner thread: at most one of {RECV SQE in flight, one-shot
      * POLL armed} at any time, or NONE while buffered work is served.
      * While rx_recv_inflight is true the stash buffer must not move or be

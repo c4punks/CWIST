@@ -6,6 +6,7 @@
 #include <cwist/net/http/http2.h>
 #include <cwist/core/mem/alloc.h>
 #include <cwist/sys/app/shutdown.h>
+#include "../../sys/io/reactor_rx.h"
 #include <fcntl.h>
 #include <errno.h>
 #include <unistd.h>
@@ -64,6 +65,9 @@ static void async_accept_cb(int fd, void *ctx) {
     socklen_t len = sizeof(addr);
     while ((client_fd = accept(fd, (struct sockaddr *)&addr, &len)) >= 0) {
 #endif
+        /* The fd number may have been a closed socket's: reset its epoll
+         * registration hint before the first arm. */
+        cwist_reactor_fd_forget(client_fd);
         int nodelay = 1;
         setsockopt(client_fd, IPPROTO_TCP, TCP_NODELAY, &nodelay, sizeof(nodelay));
 #if defined(__linux__) && defined(TCP_QUICKACK)
