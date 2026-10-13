@@ -286,6 +286,7 @@ SRCS = src/core/sstring/sstring.c \
        src/sys/app/middleware.c \
        src/sys/app/config.c \
        src/sys/app/logger.c \
+       src/sys/app/log_async.c \
        src/sys/app/shutdown.c \
        src/sys/app/compress.c \
        src/sys/app/test_client.c \
@@ -349,6 +350,7 @@ WASM_SRCS = src/core/sstring/sstring.c \
        src/sys/app/middleware.c \
        src/sys/app/config.c \
        src/sys/app/logger.c \
+       src/sys/app/log_async.c \
        src/sys/app/shutdown.c \
        src/sys/app/big_dumb_reply.c \
        src/sys/app/test_client.c \
@@ -883,6 +885,7 @@ $(CNATS_LIB):
 
 TEST_TARGETS = test_worker_affinity \
                test_logger_config \
+               test_log_async \
                test_protobuf \
                test_core_utils \
                test_orm \
@@ -1141,6 +1144,10 @@ test_protobuf: $(LIB_NAME) tests/test_protobuf.c
 test_logger_config: $(LIB_NAME) tests/test_logger_config.c
 	$(CC) $(CFLAGS) -o test_logger_config tests/test_logger_config.c $(LIB_NAME) $(LIBS)
 	./test_logger_config
+
+test_log_async: $(LIB_NAME) tests/test_log_async.c
+	$(CC) $(CFLAGS) -o test_log_async tests/test_log_async.c $(LIB_NAME) $(LIBS)
+	./test_log_async
 
 test_sstring: $(LIB_NAME) tests/test_sstring.c
 	$(CC) $(CFLAGS) -o test_sstring tests/test_sstring.c $(LIB_NAME) $(LIBS)

@@ -26,6 +26,27 @@ For a response deferred with `cwist_async_defer()` the status and size are not k
 cwist_app_use(app, cwist_mw_access_log(CWIST_LOG_COMBINED));
 ```
 
+#### Async log output
+
+By default each access-log line, and each `cwist_logger_*` line, is written to stdout or stderr by the thread that handles the request. Call `cwist_log_async_start()` once at startup to have one background thread write them instead. The request thread then only formats the line and copies it into a buffer.
+
+```c
+#include <cwist/sys/app/logger.h>
+
+cwist_log_async_start(0);   /* 0 = 256 KiB buffer per stream */
+cwist_app_use(app, cwist_mw_access_log(CWIST_LOG_COMBINED));
+cwist_app_listen(app, 8080);
+cwist_log_async_stop();     /* writes what is still queued */
+```
+
+- **Lines:** each line stays whole, and lines on one stream keep the order they were logged in.
+- **Full buffer:** when the buffer is full, the caller waits for space. No line is dropped.
+- **Long lines:** a line larger than the buffer is written synchronously, so it can land out of order.
+- **Exit:** lines still queued at `exit()` are written by an `atexit` hook. Call `cwist_log_async_flush()` before `_exit()`.
+- **Workers:** forked workers (`CWIST_WORKERS`) each start their own writer on their first line.
+- **Mixing:** output written with `printf` on the same stream is not ordered against queued lines.
+- **WASM:** not available. `cwist_log_async_start()` returns `false` and logging stays synchronous.
+
 ### Rate Limiter Middleware
 Limits the number of requests per minute from a single IP.
 ```c
