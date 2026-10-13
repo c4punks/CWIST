@@ -83,4 +83,42 @@ void cwist_logger_error(cwist_logger *log, const char *fmt, ...);
 
 /** @} */
 
+/** @name Async output
+ * Opt-in background writer for cwist_logger_* lines and the built-in
+ * access-log middleware (cwist_mw_access_log()). Callers format the line and
+ * queue it; one writer thread does the write() calls, so the request path
+ * makes no syscall. Lines stay whole and in order per stream, a full buffer
+ * makes the caller wait (nothing is dropped), and a line larger than the
+ * buffer is written synchronously.
+ */
+/** @{ */
+
+/**
+ * @brief Start the background log writer.
+ * @param buffer_bytes Buffer size per stream (stdout and stderr); 0 selects 256 KiB.
+ * @return true when async logging is active, false when it could not start
+ *         (logging then stays synchronous).
+ * @note Lines still queued at exit() are written by an atexit hook. Call
+ *       cwist_log_async_flush() before _exit(). A forked child (CWIST_WORKERS)
+ *       starts its own writer on its first line.
+ */
+bool cwist_log_async_start(size_t buffer_bytes);
+
+/**
+ * @brief Block until every line queued so far has been written.
+ */
+void cwist_log_async_flush(void);
+
+/**
+ * @brief Write out queued lines, stop the writer and return to synchronous output.
+ */
+void cwist_log_async_stop(void);
+
+/**
+ * @brief Whether the background log writer is active.
+ */
+bool cwist_log_async_active(void);
+
+/** @} */
+
 #endif

@@ -26,6 +26,27 @@ cwist_app_use(app, cwist_mw_request_id(NULL));
 cwist_app_use(app, cwist_mw_access_log(CWIST_LOG_COMBINED));
 ```
 
+#### 비동기 로그 출력
+
+기본적으로 액세스 로그 한 줄과 `cwist_logger_*` 한 줄은 요청을 처리하는 스레드가 stdout이나 stderr에 직접 씁니다. 시작할 때 `cwist_log_async_start()`를 한 번 호출하면 백그라운드 스레드 하나가 대신 씁니다. 그러면 요청 스레드는 줄을 만들어 버퍼에 복사하기만 합니다.
+
+```c
+#include <cwist/sys/app/logger.h>
+
+cwist_log_async_start(0);   /* 0 = 스트림마다 256 KiB 버퍼 */
+cwist_app_use(app, cwist_mw_access_log(CWIST_LOG_COMBINED));
+cwist_app_listen(app, 8080);
+cwist_log_async_stop();     /* 아직 쌓여 있는 줄을 씁니다 */
+```
+
+- **줄 단위:** 각 줄은 잘리지 않고, 같은 스트림의 줄은 기록한 순서를 유지합니다.
+- **버퍼가 찼을 때:** 호출한 쪽이 빈 공간이 생길 때까지 기다립니다. 줄을 버리지 않습니다.
+- **긴 줄:** 버퍼보다 큰 줄은 동기로 쓰기 때문에 순서가 어긋날 수 있습니다.
+- **종료:** `exit()` 시점에 남은 줄은 `atexit` 훅이 씁니다. `_exit()` 전에는 `cwist_log_async_flush()`를 호출하세요.
+- **워커:** fork된 워커(`CWIST_WORKERS`)는 각자 첫 줄을 쓸 때 writer를 따로 시작합니다.
+- **섞어 쓰기:** 같은 스트림에 `printf`로 쓴 출력과 버퍼에 쌓인 줄 사이의 순서는 보장하지 않습니다.
+- **WASM:** 지원하지 않습니다. `cwist_log_async_start()`가 `false`를 반환하고 동기 출력을 유지합니다.
+
 ### 속도 제한 미들웨어
 단일 IP의 분당 요청 수를 제한합니다.
 ```c

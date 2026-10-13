@@ -4,10 +4,12 @@
 #define _POSIX_C_SOURCE 200809L
 #include <cwist/sys/app/logger.h>
 #include <cwist/core/mem/alloc.h>
+#include "log_async.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
+#include <unistd.h>
 
 static const char *level_strings[] = {"DEBUG", "INFO", "WARN", "ERROR"};
 static const char *level_colors[] = {"\033[36m", "\033[32m", "\033[33m", "\033[31m"};
@@ -76,20 +78,49 @@ void cwist_logger_set_colors(cwist_logger *log, bool enabled) {
 static void logger_vlog(cwist_logger *log, cwist_log_level_t level, const char *fmt, va_list args) {
     if (!log || level < log->level || (unsigned)level > CWIST_LOG_ERROR) return;
     FILE *out = level_file(level);
+    /* localtime_r() takes glibc's timezone lock on every call, which is the
+     * most expensive part of a log line once many threads log at once. The
+     * stamp only changes once a second, so each thread keeps its last one. */
+    static _Thread_local time_t cached_sec = (time_t)-1;
+    static _Thread_local char time_buf[32];
     time_t now = time(NULL);
-    struct tm tm_info;
-    char time_buf[32];
-    strftime(time_buf, sizeof(time_buf), "%Y-%m-%d %H:%M:%S", localtime_r(&now, &tm_info));
-
-    if (log->use_colors) {
-        fprintf(out, "%s[%s]%s [%s] %s: ", level_colors[level], time_buf, color_reset,
-                level_strings[level], log->name);
-    } else {
-        fprintf(out, "[%s] [%s] %s: ", time_buf, level_strings[level], log->name);
+    if (now != cached_sec) {
+        struct tm tm_info;
+        strftime(time_buf, sizeof(time_buf), "%Y-%m-%d %H:%M:%S", localtime_r(&now, &tm_info));
+        cached_sec = now;
     }
-    vfprintf(out, fmt, args);
-    fprintf(out, "\n");
-    fflush(out);
+
+    /* Format the whole line first, so it is written with one call (or queued
+     * for the async writer) instead of a prefix, a message and a newline. */
+    char stack_buf[1024];
+    char *line = stack_buf;
+    const char *color = log->use_colors ? level_colors[level] : "";
+    const char *reset = log->use_colors ? color_reset : "";
+    /* With colors off, color and reset are "" and the line reads
+     * "[time] [LEVEL] name: ", as before. */
+    int prefix = snprintf(NULL, 0, "%s[%s]%s [%s] %s: ", color, time_buf, reset,
+                          level_strings[level], log->name);
+    va_list measure;
+    va_copy(measure, args);
+    int body = vsnprintf(NULL, 0, fmt, measure);
+    va_end(measure);
+    if (prefix < 0 || body < 0) return;
+    size_t len = (size_t)prefix + (size_t)body + 1; /* + newline */
+    if (len + 1 > sizeof(stack_buf)) {
+        line = cwist_alloc(len + 1);
+        if (!line) return;
+    }
+    snprintf(line, len + 1, "%s[%s]%s [%s] %s: ", color, time_buf, reset, level_strings[level],
+             log->name);
+    vsnprintf(line + prefix, len + 1 - (size_t)prefix, fmt, args);
+    line[len - 1] = '\n';
+    line[len] = '\0';
+
+    if (!cwist_log_async_submit(fileno(out), line, len)) {
+        fwrite(line, 1, len, out);
+        fflush(out);
+    }
+    if (line != stack_buf) cwist_free(line);
 }
 
 /** @brief Logs a formatted message at the given level.

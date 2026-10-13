@@ -4,6 +4,7 @@
 #include <cwist/core/macros.h>
 #include <cwist/core/utils/json_builder.h>
 #include <cwist/core/mem/alloc.h>
+#include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -13,6 +14,7 @@
 #include <unistd.h>
 #include <pthread.h>
 #include "../../net/http/async_internal.h"
+#include "log_async.h"
 
 /**
  * @file middleware.c
@@ -82,6 +84,37 @@ cwist_middleware_func cwist_mw_request_id(const char *header_name) {
 /* --- Access Log Middleware --- */
 
 static pthread_mutex_t log_mutex = PTHREAD_MUTEX_INITIALIZER;
+
+/**
+ * @brief Write one access-log line to stdout.
+ * The line is formatted once and queued for the async log writer when
+ * cwist_log_async_start() is active; otherwise it goes to stdout under
+ * log_mutex as before.
+ * @param fmt printf-style format of the whole line, newline included.
+ */
+static void access_log_printf(const char *fmt, ...) __attribute__((format(printf, 1, 2)));
+static void access_log_printf(const char *fmt, ...) {
+    char stack_buf[1024];
+    char *line = stack_buf;
+    va_list args;
+    va_start(args, fmt);
+    int n = vsnprintf(stack_buf, sizeof(stack_buf), fmt, args);
+    va_end(args);
+    if (n < 0) return;
+    if ((size_t)n >= sizeof(stack_buf)) {
+        line = cwist_alloc((size_t)n + 1);
+        if (!line) return;
+        va_start(args, fmt);
+        vsnprintf(line, (size_t)n + 1, fmt, args);
+        va_end(args);
+    }
+    if (!cwist_log_async_submit(STDOUT_FILENO, line, (size_t)n)) {
+        pthread_mutex_lock(&log_mutex);
+        fwrite(line, 1, (size_t)n, stdout);
+        pthread_mutex_unlock(&log_mutex);
+    }
+    if (line != stack_buf) cwist_free(line);
+}
 
 /**
  * @brief Format a timestamp in Common Log Format: dd/Mon/yyyy:HH:MM:SS +zzzz
@@ -179,11 +212,9 @@ static void cwist_mw_access_log_common_handler(cwist_http_request *req, cwist_ht
     char status[16], res_bytes[32];
     access_log_status_bytes(res, "-", status, sizeof(status), res_bytes, sizeof(res_bytes));
 
-    pthread_mutex_lock(&log_mutex);
-    printf("%s - %s [%s] \"%s %s %s\" %s %s\n", ip_str, rid ? rid : "-", time_buf,
-           cwist_http_method_to_string(req->method), req->path->data,
-           req->version ? req->version->data : "HTTP/1.1", status, res_bytes);
-    pthread_mutex_unlock(&log_mutex);
+    access_log_printf("%s - %s [%s] \"%s %s %s\" %s %s\n", ip_str, rid ? rid : "-", time_buf,
+                      cwist_http_method_to_string(req->method), req->path->data,
+                      req->version ? req->version->data : "HTTP/1.1", status, res_bytes);
 
     if (ip) cwist_sstring_destroy(ip);
 }
@@ -214,12 +245,10 @@ static void cwist_mw_access_log_combined_handler(cwist_http_request *req, cwist_
     char status[16], res_bytes[32];
     access_log_status_bytes(res, "-", status, sizeof(status), res_bytes, sizeof(res_bytes));
 
-    pthread_mutex_lock(&log_mutex);
-    printf("%s - %s [%s] \"%s %s %s\" %s %s \"%s\" \"%s\"\n", ip_str, rid ? rid : "-", time_buf,
-           cwist_http_method_to_string(req->method), req->path->data,
-           req->version ? req->version->data : "HTTP/1.1", status, res_bytes,
-           referer ? referer : "-", user_agent ? user_agent : "-");
-    pthread_mutex_unlock(&log_mutex);
+    access_log_printf("%s - %s [%s] \"%s %s %s\" %s %s \"%s\" \"%s\"\n", ip_str, rid ? rid : "-",
+                      time_buf, cwist_http_method_to_string(req->method), req->path->data,
+                      req->version ? req->version->data : "HTTP/1.1", status, res_bytes,
+                      referer ? referer : "-", user_agent ? user_agent : "-");
 
     if (ip) cwist_sstring_destroy(ip);
 }
@@ -250,13 +279,11 @@ static void cwist_mw_access_log_json_handler(cwist_http_request *req, cwist_http
     char status[16], res_bytes[32];
     access_log_status_bytes(res, "null", status, sizeof(status), res_bytes, sizeof(res_bytes));
 
-    pthread_mutex_lock(&log_mutex);
-    printf(
+    access_log_printf(
         "{\"time\":\"%s\",\"client\":\"%s\",\"rid\":\"%s\",\"method\":\"%s\",\"path\":\"%s\",\"protocol\":\"%s\",\"status\":%s,\"duration_ms\":%ld,\"req_bytes\":%zu,\"res_bytes\":%s}\n",
         time_buf, ip_str, rid ? rid : "-", cwist_http_method_to_string(req->method),
         req->path->data, req->version ? req->version->data : "HTTP/1.1", status, msec, req_bytes,
         res_bytes);
-    pthread_mutex_unlock(&log_mutex);
 
     if (ip) cwist_sstring_destroy(ip);
 }
