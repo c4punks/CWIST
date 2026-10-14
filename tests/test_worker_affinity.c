@@ -7,6 +7,8 @@
 #include <errno.h>
 #include <sched.h>
 #include <stdbool.h>
+#include <string.h>
+#include <sys/stat.h>
 #include <sys/wait.h>
 #include <unistd.h>
 
@@ -42,6 +44,9 @@ static int write_mask(pid_t pid, size_t size, const cpu_set_t *mask) {
     current = *mask;
     return 0;
 }
+/* Fake sysfs root; a missing directory means "no topology exposed". */
+static char sysfs_root[256] = "/nonexistent-cwist-sysfs";
+#define CWIST_APP_CPU_SYSFS sysfs_root
 #define sched_getaffinity read_mask
 #define sched_setaffinity write_mask
 #include "worker_affinity.h"
@@ -56,6 +61,80 @@ static void check_pair(int first, int second, size_t index, int expected) {
     REQUIRE(cwist_app_pin_worker(index) == 0);
     REQUIRE(writes == 1);
     REQUIRE(CPU_COUNT(&current) == 1 && CPU_ISSET(expected, &current));
+}
+/* Build a fake topology: siblings[cpu] is the cpulist for that CPU. */
+static void fake_topology(const char *dir, int ncpu, const char *const *siblings,
+                          const char *file) {
+    snprintf(sysfs_root, sizeof(sysfs_root), "%s", dir);
+    char path[512];
+    REQUIRE(mkdir(dir, 0700) == 0 || errno == EEXIST);
+    for (int cpu = 0; cpu < ncpu; cpu++) {
+        snprintf(path, sizeof(path), "%s/cpu%d", dir, cpu);
+        REQUIRE(mkdir(path, 0700) == 0 || errno == EEXIST);
+        snprintf(path, sizeof(path), "%s/cpu%d/topology", dir, cpu);
+        REQUIRE(mkdir(path, 0700) == 0 || errno == EEXIST);
+        snprintf(path, sizeof(path), "%s/cpu%d/topology/%s", dir, cpu, file);
+        FILE *f = fopen(path, "w");
+        REQUIRE(f);
+        fprintf(f, "%s\n", siblings[cpu]);
+        fclose(f);
+    }
+}
+static void pin_order(int ncpu, const int *expected) {
+    for (int i = 0; i < ncpu; i++) {
+        CPU_ZERO(&current);
+        for (int cpu = 0; cpu < ncpu; cpu++) CPU_SET(cpu, &current);
+        writes = 0;
+        REQUIRE(cwist_app_pin_worker((size_t)i) == 0);
+        REQUIRE(writes == 1);
+        REQUIRE(CPU_COUNT(&current) == 1 && CPU_ISSET(expected[i], &current));
+    }
+}
+static void check_smt(void) {
+    char base[] = "/tmp/cwist-affinity-XXXXXX";
+    REQUIRE(mkdtemp(base));
+    char dir[300];
+    /* Adjacent siblings (0,1 2,3 ...): one thread per core first. */
+    static const char *const adjacent[] = {"0-1", "0-1", "2-3", "2-3", "4-5", "4-5", "6-7", "6-7"};
+    static const int adjacent_order[] = {0, 2, 4, 6, 1, 3, 5, 7};
+    snprintf(dir, sizeof(dir), "%s/adjacent", base);
+    fake_topology(dir, 8, adjacent, "core_cpus_list");
+    pin_order(8, adjacent_order);
+    /* Split siblings (0,4 1,5 ...): already one per core, order unchanged. */
+    static const char *const split[] = {"0,4", "1,5", "2,6", "3,7", "0,4", "1,5", "2,6", "3,7"};
+    static const int split_order[] = {0, 1, 2, 3, 4, 5, 6, 7};
+    snprintf(dir, sizeof(dir), "%s/split", base);
+    fake_topology(dir, 8, split, "core_cpus_list");
+    pin_order(8, split_order);
+    /* Older kernels: thread_siblings_list only, 4-way SMT. */
+    static const char *const smt4[] = {"0-3", "0-3", "0-3", "0-3", "4-7", "4-7", "4-7", "4-7"};
+    static const int smt4_order[] = {0, 4, 1, 5, 2, 6, 3, 7};
+    snprintf(dir, sizeof(dir), "%s/smt4", base);
+    fake_topology(dir, 8, smt4, "thread_siblings_list");
+    pin_order(8, smt4_order);
+    /* A mask holding one thread of core 0 and both of core 1: the lone
+     * thread of core 0 counts as rank 0. */
+    snprintf(sysfs_root, sizeof(sysfs_root), "%s/adjacent", base);
+    CPU_ZERO(&current);
+    CPU_SET(1, &current);
+    CPU_SET(2, &current);
+    CPU_SET(3, &current);
+    REQUIRE(cwist_app_pin_worker(1) == 0 && CPU_ISSET(2, &current) && CPU_COUNT(&current) == 1);
+    CPU_ZERO(&current);
+    CPU_SET(1, &current);
+    CPU_SET(2, &current);
+    CPU_SET(3, &current);
+    REQUIRE(cwist_app_pin_worker(2) == 0 && CPU_ISSET(3, &current) && CPU_COUNT(&current) == 1);
+    /* Malformed file: falls back to plain ascending order. */
+    static const char *const junk[] = {"x", "0-", "", "9999999"};
+    static const int junk_order[] = {0, 1, 2, 3};
+    snprintf(dir, sizeof(dir), "%s/junk", base);
+    fake_topology(dir, 4, junk, "core_cpus_list");
+    pin_order(4, junk_order);
+    snprintf(sysfs_root, sizeof(sysfs_root), "/nonexistent-cwist-sysfs");
+    char cmd[400];
+    snprintf(cmd, sizeof(cmd), "rm -rf '%s'", base);
+    REQUIRE(system(cmd) == 0);
 }
 static void check_errors(void) {
     CPU_ZERO(&current);
@@ -112,9 +191,10 @@ int main(void) {
     check_pair(0, 1, 0, 0);
     check_pair(0, 1, 1, 1);
     check_pair(CPU_SETSIZE - 1, CPU_SETSIZE - 1, 999, CPU_SETSIZE - 1);
+    check_smt();
     check_errors();
     check_real_child();
-    puts("Worker affinity tests passed (7 placements, 3 failures, real child).");
+    puts("Worker affinity tests passed (7 placements, SMT orders, 3 failures, real child).");
     return 0;
 }
 #else
