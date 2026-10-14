@@ -59,9 +59,9 @@ WEBSERVER_LATENCY_SVG = ROOT / "docs" / "webserver-latency-distribution.svg"
 # Servers compared in the KDE-style latency distribution chart: only the ones
 # run under the identical wrk -t12 -c400 profile every CI cycle (the
 # *_tuned entries use a different, lower-concurrency profile and aren't
-# comparable here; cwist_c1m_arena1/cwist_c1m_drainchunk/cwist_c1m_lateoff/
-# cwist_sharded are targeted A/B legs against the plain cwist_c1m row, not
-# part of the standing cross-framework comparison set).
+# comparable here; cwist_c1m_arena1/cwist_c1m_drainchunk/cwist_sharded are
+# targeted A/B legs against the plain cwist_c1m row, not part of the
+# standing cross-framework comparison set).
 _LATENCY_KDE_SERVERS = [
     ("CWIST Classic", "cwist", "#22c55e"),
     ("CWIST", "cwist_c1m", "#10b981"),

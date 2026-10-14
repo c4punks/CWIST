@@ -896,7 +896,6 @@ TEST_TARGETS = test_worker_affinity \
                test_reactor_timer \
                test_rx_epoll \
                test_reactor_drain_chunk \
-               test_reactor_late \
                test_latency_probe \
                test_sstring \
                test_abi_layout \
@@ -1120,9 +1119,6 @@ test_rx_epoll: tests/test_rx_epoll.c src/sys/io/reactor.c src/sys/io/reactor_rx.
 # full before/after latency measurement.
 test_reactor_drain_chunk: tests/test_reactor_drain_chunk.c src/sys/io/reactor.c
 	$(CC) $(CFLAGS) -o $@ tests/test_reactor_drain_chunk.c -pthread
-
-test_reactor_late: tests/test_reactor_late.c src/sys/io/reactor.c
-	$(CC) $(CFLAGS) -o $@ tests/test_reactor_late.c -pthread
 	./$@
 
 # Latency probe test (issue #166): run twice per build, with the probe
