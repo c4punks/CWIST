@@ -1132,6 +1132,12 @@ test_latency_probe: tests/test_latency_probe.c src/sys/io/reactor.c
 bench_cooperative_queuing: tests/bench_cooperative_queuing.c src/sys/io/reactor.c
 	$(CC) $(CFLAGS) -o $@ tests/bench_cooperative_queuing.c -pthread
 
+# Epoll-backend twin of bench_cooperative_queuing: same measurement, but the
+# binary bakes in CWIST_REACTOR_BACKEND=epoll (via -DCWIST_BENCH_EPOLL) so
+# the backend is deterministic regardless of the surrounding environment.
+bench_cooperative_queuing_epoll: tests/bench_cooperative_queuing.c src/sys/io/reactor.c
+	$(CC) $(CFLAGS) -DCWIST_BENCH_EPOLL -o $@ tests/bench_cooperative_queuing.c -pthread
+
 test_orm: $(LIB_NAME) tests/test_orm.c
 	$(CC) $(CFLAGS) -o test_orm tests/test_orm.c $(LIB_NAME) $(LIBS)
 	./test_orm

@@ -1,10 +1,11 @@
-# C1M 리액터 CQE 비우기에서의 협력적 큐잉 (이슈 #25)
+# C1M 리액터 묶음 비우기에서의 협력적 큐잉 (이슈 #25)
 
 상태: **구현됨, 기본으로 켜짐** (`CWIST_REACTOR_DRAIN_CHUNK`, `src/sys/io/reactor.c`). 변수가
 설정되지 않았을 때 리액터의 내장 대체값은 64이지만, `cwist_apply_profile()`(기본값을 포함한
 모든 `CWIST_PROFILE`에 대해 `cwist_app_listen()`이 호출)이 이를 8로 설정하므로 앱 수준
 기본값은 더 촘촘한 청크를 씁니다. 기존 동작(묶음 중간의 비우기 없음)으로 되돌리려면 `0`으로
-설정하세요.
+설정하세요. 이 캐던스는 모든 백엔드에 적용됩니다. io_uring CQE 묶음, epoll 이벤트 배열
+(`epoll_wait`당 최대 1024개), kqueue 이벤트 배열.
 
 ## 배경
 
@@ -14,8 +15,10 @@
 다 **연결 내부**의 head-of-line 블로킹, 즉 한 연결의 파이프라인 적체가 리액터를 독점하는 문제를
 겨냥합니다.
 
-이 수정은 지금까지 다루지 않았던 다른 계층을 겨냥합니다. 하나의 io_uring 깨우기 라운드 안에서의
-**연결 간** 순서입니다.
+이 수정은 지금까지 다루지 않았던 다른 계층을 겨냥합니다. 하나의 리액터 깨우기 라운드 안에서의
+**연결 간** 순서입니다. io_uring 분기에서 발견되어 먼저 수정되었고, epoll과 kqueue 루프도
+똑같은 모양(라운드 맨 위의 비우기 한 번, 그 뒤 이벤트 배열 전체를 아무것도 끼워 넣지 않고
+실행)이었으므로 같은 캐던스를 갖습니다.
 
 ## 빈틈
 
@@ -59,7 +62,10 @@ if (drain_chunk && ++since_drain >= drain_chunk && head != tail) {
 `0`이면 이 부분을 완전히 건너뛰어 기존 동작으로 돌아갑니다. 루프는 수정 전과 똑같습니다.
 설정하지 않으면 기본값은 64입니다. 이 수정은 외부 스레드의 post가 묶음의 나머지에 비해 *언제*
 비워지는지만 바꿉니다. 처리되는 연결 수, 한 연결 안의 요청 순서, classic 풀 동작은 전혀 바꾸지
-않습니다 (문제가 발견된 곳과 같은 io_uring 분기에만 해당).
+않습니다. 같은 검사가 세 디스패치 루프(io_uring, epoll, kqueue) 모두에서 실행되며, 위 스니펫은
+io_uring 것으로, 거기의 `head != tail` 가드는 이벤트 배열 백엔드에서 `i + 1 < n`에 대응합니다.
+그래서 묶음의 마지막 이벤트 뒤에는 쓸데없는 비우기가 따라오지 않습니다(라운드 맨 위의 비우기가
+처리합니다).
 
 ## 측정된 효과
 
@@ -73,6 +79,21 @@ if (drain_chunk && ++since_drain >= drain_chunk && head != tail) {
 | 기존 (설정 안 함) | 41.1-41.4 ms (~= 512 x 80us, 즉 묶음 전체를 기다림) |
 | `CWIST_REACTOR_DRAIN_CHUNK=32` | 2.32 ms (~18배) |
 | `CWIST_REACTOR_DRAIN_CHUNK=8` | 0.38 ms (~107배) |
+
+epoll 백엔드 버전(`bench_cooperative_queuing_epoll`, 같은 소스에
+`CWIST_REACTOR_BACKEND=epoll`을 박아 넣어 빌드)도 같은 모양을 보입니다. 변경 전 트리로 빌드한
+baseline 바이너리와 교차 실행해 측정했습니다(라운드 5회 x 회당 10회 실행, 이 머신 기준). 기존
+epoll 루프는 라운드 맨 위에서만 post를 비웠으므로 묶음 중간의 post는 이벤트 배열 512개 전체를
+기다렸고, chunk=8은 그 대기를 약 8개 콜백으로 제한합니다.
+
+| 설정 (epoll 백엔드) | post에서 콜백까지 지연 |
+|---|---:|
+| baseline (변경 전, 묶음 중간 비우기 없음) | 라운드당 평균 41.3-42.2 ms |
+| `CWIST_REACTOR_DRAIN_CHUNK=0` (새 코드에서 기존 동작) | 평균 41.7 ms |
+| `CWIST_REACTOR_DRAIN_CHUNK=8` | 라운드당 평균 0.44-0.49 ms (~90배) |
+
+교차 실행하는 같은 바이너리 A/B(`CWIST_REACTOR_DRAIN_CHUNK=0` 대 8)는 CI의
+`.github/workflows/perf-epoll-drain.yml`이 돌립니다.
 
 `tests/test_reactor_drain_chunk.c`는 이 벤치마크의 통과/실패 버전으로 `make test`에 연결되어
 있습니다. 청크를 쓴 post가 청크 없이 묶음 전체에 걸리는 시간의 절반 미만, 그리고 같은 실행에서

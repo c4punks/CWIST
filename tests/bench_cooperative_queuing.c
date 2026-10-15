@@ -4,20 +4,28 @@
 /* Before/after measurement for CWIST_REACTOR_DRAIN_CHUNK (issue #25,
  * "cooperative queuing" follow-up).
  *
- * Hypothesis: a big ready-batch in one io_uring wake round (the ring holds
- * up to 4096 CQEs) drains fully -- including every connection's own handler
- * work -- before cwist_reactor_post()'d foreign-thread completions (the
- * cwist_async_defer path: background DB/job continuations) are serviced.
- * A completion's own tail latency should scale with how many *other*
- * connections happened to be ready in the same wake, not with its own cost.
+ * Hypothesis: a big ready-batch in one reactor wake round (an io_uring CQE
+ * batch, or one epoll_wait/kevent event array of up to 1024 events) drains
+ * fully -- including every connection's own handler work -- before
+ * cwist_reactor_post()'d foreign-thread completions (the cwist_async_defer
+ * path: background DB/job continuations) are serviced. A completion's own
+ * tail latency should scale with how many *other* connections happened to
+ * be ready in the same wake, not with its own cost.
  *
  * This harness builds that exact shape directly against the reactor, no
  * HTTP layer involved: BATCH pipes are all made readable at once (so a
- * single io_uring_enter drains all BATCH CQEs in one round), each callback
- * doing FAKE_HANDLER_US of busy-work to stand in for a real request handler.
- * A background thread posts one foreign-thread completion partway through
- * the batch and its post-to-callback latency is measured -- with and without
- * CWIST_REACTOR_DRAIN_CHUNK set.
+ * single wait drains all BATCH events in one round), each callback doing
+ * FAKE_HANDLER_US of busy-work to stand in for a real request handler. A
+ * background thread posts one foreign-thread completion partway through
+ * the batch and its post-to-callback latency is measured -- with and
+ * without CWIST_REACTOR_DRAIN_CHUNK set.
+ *
+ * Two binaries are built from this file (see the Makefile):
+ *   - bench_cooperative_queuing:        the io_uring backend (skips if the
+ *     ring is unavailable and the reactor falls back to epoll);
+ *   - bench_cooperative_queuing_epoll:  same measurement on a forced-epoll
+ *     reactor (CWIST_REACTOR_BACKEND=epoll baked in, so the backend is
+ *     deterministic regardless of the surrounding environment).
  *
  * Include the implementation directly (same technique as
  * tests/test_reactor_wake.c) to drive it without a public test API.
@@ -66,7 +74,7 @@ static void post_cb(void *ctx) {
     clock_gettime(CLOCK_MONOTONIC, &now);
     post_latency_ms = ms_between(post_sent_at, now);
     /* Foreign-thread posts are only drained at the top of an outer-loop
-     * round (see reactor_drain_posts() call sites), never mid-CQE-batch in
+     * round (see reactor_drain_posts() call sites), never mid-batch in
      * legacy mode -- so this must be what stops the loop. Stopping from
      * conn_cb once handled==BATCH would exit before the *next* round's
      * top-of-loop drain ever runs, and the post would never fire at all. */
@@ -99,12 +107,21 @@ static double run_once(void) {
     post_latency_ms = -1.0;
     loop = cwist_reactor_create();
     assert(loop);
-    if (loop->impl.use_epoll) {
-        fprintf(stderr, "SKIP: io_uring unavailable, falling back to epoll -- "
-                        "this experiment is io_uring-batch-specific\n");
+#ifdef CWIST_BENCH_EPOLL
+    if (!loop->impl.use_epoll) {
+        fprintf(stderr, "SKIP: CWIST_REACTOR_BACKEND=epoll was requested but "
+                        "the reactor did not take the epoll path\n");
         cwist_reactor_destroy(loop);
         exit(0);
     }
+#else
+    if (loop->impl.use_epoll) {
+        fprintf(stderr, "SKIP: io_uring unavailable, falling back to epoll -- "
+                        "use bench_cooperative_queuing_epoll for this backend\n");
+        cwist_reactor_destroy(loop);
+        exit(0);
+    }
+#endif
     owner = pthread_self();
 
     for (int i = 0; i < BATCH; i++) {
@@ -136,6 +153,17 @@ static double run_once(void) {
 }
 
 int main(void) {
+    /* Pin the backend before the first reactor is created: the io_uring
+     * variant must not silently measure the epoll fallback (and vice versa)
+     * if the surrounding environment exports CWIST_REACTOR_BACKEND. */
+#ifdef CWIST_BENCH_EPOLL
+    setenv("CWIST_REACTOR_BACKEND", "epoll", 1);
+    printf("backend=epoll (forced)\n");
+#else
+    setenv("CWIST_REACTOR_BACKEND", "io_uring", 1);
+    printf("backend=io_uring (forced; falls back to epoll if unavailable)\n");
+#endif
+
     /* POST_AFTER exists only to document the intended stagger; the poster
      * thread's own usleep(200) is what actually lands the post mid-batch
      * given FAKE_HANDLER_US * BATCH's total duration. */

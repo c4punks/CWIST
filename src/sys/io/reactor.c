@@ -1326,14 +1326,15 @@ bool cwist_reactor_del(cwist_reactor_t *reactor, int fd) {
 #endif
 }
 
-#ifdef __linux__
-/* CWIST_REACTOR_DRAIN_CHUNK: cooperative-queuing knob (see the comment at
- * its call site). Values > 0 bound how many connection callbacks run before
- * foreign-thread posts are drained. 0 disables the mid-batch drain (legacy
- * behavior). Unset or invalid defaults to 64 so a foreign-thread completion
- * does not queue behind a full CQE batch by default. Cached after the first
- * read like the other env knobs in this file -- the racy recompute is benign
- * (same result every time). */
+/* CWIST_REACTOR_DRAIN_CHUNK: cooperative-queuing knob (see the comments at
+ * its call sites in cwist_reactor_run()). Values > 0 bound how many
+ * connection callbacks run before foreign-thread posts are drained, on
+ * every backend (io_uring CQE batch, epoll event array, kqueue event
+ * array). 0 disables the mid-batch drain (legacy behavior). Unset or
+ * invalid defaults to 64 so a foreign-thread completion does not queue
+ * behind a full batch by default. Cached after the first read like the
+ * other env knobs in this file -- the racy recompute is benign (same result
+ * every time). */
 static uint32_t reactor_drain_chunk(void) {
     static _Atomic int cached = -1;
     int v = atomic_load_explicit(&cached, memory_order_relaxed);
@@ -1350,6 +1351,7 @@ static uint32_t reactor_drain_chunk(void) {
     return (uint32_t)v;
 }
 
+#ifdef __linux__
 /* CQ grace: how long a reactor loop peeks its completion ring (pure
  * userspace, no syscall) before committing to the kernel wait. Completions
  * that land while a dispatch batch is being processed -- the common shape
@@ -1623,17 +1625,39 @@ void cwist_reactor_run(cwist_reactor_t *reactor) {
                 if (errno == EINTR) continue;
                 break;
             }
+            /* Cooperative queuing, same cadence as the io_uring branch (see
+             * the comment there): epoll_wait hands back up to 1024 events in
+             * one array, and this loop used to run them all with no drain
+             * point in between -- so a foreign-thread completion posted via
+             * cwist_reactor_post() mid-batch waited behind every remaining
+             * event's handler, even though the post itself costs nothing.
+             * CWIST_REACTOR_DRAIN_CHUNK bounds that wait to ~chunk callbacks
+             * so a foreign-thread completion's tail latency stops scaling
+             * with the same-wake batch size. 0 restores the legacy
+             * single-drain-at-top-of-round behavior. Not drained after the
+             * last event: the top-of-round drain covers it, mirroring the
+             * io_uring branch's head != tail guard. */
+            uint32_t drain_chunk = reactor_drain_chunk();
+            uint32_t since_drain = 0;
             for (int i = 0; i < n; i++) {
                 /* Low bit set: an RX-mode fd (fd << 1 | 1); ev_ctx slots are
                  * at least 8-byte aligned and never carry it. */
                 if (events[i].data.u64 & 1u) {
                     rx_epoll_event(reactor, (int)(events[i].data.u64 >> 1));
+                    if (drain_chunk && ++since_drain >= drain_chunk && i + 1 < n) {
+                        since_drain = 0;
+                        reactor_drain_posts(reactor);
+                    }
                     continue;
                 }
                 reactor_event_ctx_t *ev_ctx = (reactor_event_ctx_t *)events[i].data.ptr;
                 if (ev_ctx) {
                     ev_ctx->cb(ev_ctx->fd, ev_ctx->ctx);
                     free_reactor_ctx(reactor, ev_ctx);
+                    if (drain_chunk && ++since_drain >= drain_chunk && i + 1 < n) {
+                        since_drain = 0;
+                        reactor_drain_posts(reactor);
+                    }
                 }
             }
             if (reactor->rx_ready_n > 0) rx_epoll_drain_ready(reactor);
@@ -1656,11 +1680,24 @@ void cwist_reactor_run(cwist_reactor_t *reactor) {
             if (errno == EINTR) continue;
             break;
         }
+        /* Cooperative queuing, same cadence as the io_uring and epoll
+         * branches: kevent hands back up to 1024 events in one array and a
+         * foreign-thread completion posted via cwist_reactor_post() mid-batch
+         * must not wait behind every remaining event's handler.
+         * CWIST_REACTOR_DRAIN_CHUNK bounds that wait to ~chunk callbacks; 0
+         * restores the legacy single-drain-at-top-of-round behavior. Not
+         * drained after the last event: the top-of-round drain covers it. */
+        uint32_t drain_chunk = reactor_drain_chunk();
+        uint32_t since_drain = 0;
         for (int i = 0; i < n; i++) {
             reactor_event_ctx_t *ev_ctx = (reactor_event_ctx_t *)events[i].udata;
             if (ev_ctx) {
                 ev_ctx->cb(ev_ctx->fd, ev_ctx->ctx);
                 free_reactor_ctx(reactor, ev_ctx);
+                if (drain_chunk && ++since_drain >= drain_chunk && i + 1 < n) {
+                    since_drain = 0;
+                    reactor_drain_posts(reactor);
+                }
             }
         }
     }
