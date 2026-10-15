@@ -1,0 +1,53 @@
+name: "Soak"
+
+# HTTP soak gate (scripts/ci/soak.sh, docs/soak-testing.md): the
+# example/simple-server runs under sustained alternating keep-alive and
+# Connection: close churn slices. The gate fails on server exit mid-run,
+# any socket error or non-2xx, RSS growth over baseline (>10%), open-fd
+# growth (>5), or p99 latency drift across slices (>20%).
+#
+# PR and push runs use the 10-minute default; the release-candidate run
+# (DURATION=1800, the v4.0 exit criterion) is a workflow_dispatch with an
+# explicit duration.
+
+on:
+  push:
+    branches: [main, master, dev]
+  pull_request:
+    branches: [main, master, dev]
+  workflow_dispatch:
+    inputs:
+      duration:
+        description: "Soak duration in seconds (release candidate: 1800)"
+        required: false
+        default: "1800"
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  soak:
+    name: HTTP soak (${{ github.event_name == 'workflow_dispatch' && format('{0}s', github.event.inputs.duration) || '600s' }})
+    if: github.event_name != 'push' || !contains(github.event.head_commit.message, '[skip ci]')
+    runs-on: ubuntu-latest
+    timeout-minutes: 75
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      with:
+        submodules: recursive
+
+    - name: Install build dependencies & wrk
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y cmake libcurl4-openssl-dev libnghttp2-dev libbrotli-dev wrk
+
+    - name: Run soak gate
+      env:
+        DURATION: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.duration || '600' }}
+      run: ./scripts/ci/soak.sh
+
+    - name: Server log
+      if: always()
+      run: cat /tmp/cwist-soak-server.log 2>/dev/null || true
