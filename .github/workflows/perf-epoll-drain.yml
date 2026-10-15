@@ -1,0 +1,66 @@
+name: Perf — epoll drain chunk A/B
+
+on:
+  push:
+    branches: [dev]
+    paths:
+      - '.github/workflows/perf-epoll-drain.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  epoll-drain-ab:
+    name: CWIST_REACTOR_DRAIN_CHUNK epoll A/B
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with: { submodules: recursive }
+
+      - name: Build cooperative-queuing bench binaries
+        run: |
+          make bench_cooperative_queuing_epoll
+          make bench_cooperative_queuing
+
+      # Same binary, env-only A/B: CWIST_REACTOR_DRAIN_CHUNK=0 (legacy,
+      # single drain at the top of each epoll round) vs =8 (the value
+      # cwist_apply_profile() sets for every CWIST_PROFILE, including the
+      # default). Rounds of the two legs interleave so slow-runner drift
+      # lands on both legs equally. Each round prints every run's
+      # post-to-callback latency; the "run" lines are what to compare.
+      - name: Run A/B with CWIST_REACTOR_DRAIN_CHUNK=0 and 8 (epoll backend)
+        run: |
+          run_leg() {
+            local chunk="$1"
+            local tag="drain_chunk_${chunk}"
+            local out="/tmp/${tag}.txt"
+
+            echo "=== CWIST_REACTOR_DRAIN_CHUNK=$chunk (epoll backend) ==="
+            env CWIST_REACTOR_DRAIN_CHUNK="$chunk" ./bench_cooperative_queuing_epoll \
+              > "$out" 2>&1
+
+            echo "--- results ---"
+            cat "$out"
+          }
+
+          for round in 1 2 3 4 5; do
+            echo "##### round $round #####"
+            run_leg 0
+            run_leg 8
+          done
+
+      # The io_uring leg must not regress from the epoll-path change: it
+      # shares reactor_drain_posts() but its dispatch loop is untouched.
+      - name: Run io_uring-backend bench (chunk=8) as a no-regression check
+        run: |
+          env CWIST_REACTOR_DRAIN_CHUNK=8 ./bench_cooperative_queuing \
+            > /tmp/drain_chunk_8_uring.txt 2>&1 || true
+          echo "--- io_uring results ---"
+          cat /tmp/drain_chunk_8_uring.txt
+
+      - name: Upload raw results
+        uses: actions/upload-artifact@v4
+        with:
+          name: epoll-drain-chunk-logs
+          path: /tmp/drain_chunk_*.txt

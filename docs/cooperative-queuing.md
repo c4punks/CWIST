@@ -1,11 +1,13 @@
-# Cooperative queuing in the C1M reactor's CQE drain (issue #25)
+# Cooperative queuing in the C1M reactor's batch drain (issue #25)
 
 Status: **implemented, on by default** (`CWIST_REACTOR_DRAIN_CHUNK`,
 `src/sys/io/reactor.c`). The reactor's built-in fallback is 64 when the
 variable is unset, but `cwist_apply_profile()` (called from
 `cwist_app_listen()` for every `CWIST_PROFILE`, including the default)
 sets it to 8, so app-level defaults use the tighter chunk. Set to `0` to
-restore legacy behavior (no mid-batch drain).
+restore legacy behavior (no mid-batch drain). The cadence applies to every
+backend: the io_uring CQE batch, the epoll event array (up to 1024 events
+per `epoll_wait`), and the kqueue event array.
 
 ## Background
 
@@ -17,7 +19,10 @@ inline per turn) and response coalescing (`0bcc4f5a`). Both target
 pipelined backlog monopolizing the reactor.
 
 This fix targets a different, previously-unaddressed layer:
-**inter-connection** ordering within a single io_uring wake round.
+**inter-connection** ordering within a single reactor wake round. It was
+found and first fixed on the io_uring branch; the epoll and kqueue loops
+had the identical shape (one drain at the top of the round, then the whole
+event array with nothing in between) and carry the same cadence now.
 
 ## The gap
 
@@ -70,8 +75,11 @@ to before the fix. Unset defaults to 64. This only ever reorders *when* a
 foreign-thread post is drained
 relative to the rest of the batch; it does not change how many
 connections get served, how requests within one connection are ordered,
-or classic-pool behavior at all (io_uring-branch-only, matching where the
-problem was found).
+or classic-pool behavior at all. The same check runs in all three
+dispatch loops (io_uring, epoll, kqueue); the snippet above is the
+io_uring one, whose `head != tail` guard maps to `i + 1 < n` on the
+event-array backends so the last event of a batch is never followed by a
+redundant drain (the top-of-round drain covers it).
 
 ## Measured effect
 
@@ -86,6 +94,23 @@ post-to-callback latency is measured. 10 runs each, this machine:
 | legacy (unset) | 41.1–41.4 ms (~= 512 × 80us, i.e. waits for the whole batch) |
 | `CWIST_REACTOR_DRAIN_CHUNK=32` | 2.32 ms (~18x) |
 | `CWIST_REACTOR_DRAIN_CHUNK=8` | 0.38 ms (~107x) |
+
+The epoll-backend twin (`bench_cooperative_queuing_epoll`, built from the
+same source with `CWIST_REACTOR_BACKEND=epoll` baked in) shows the same
+shape, measured interleaved against a baseline binary built from the
+pre-change tree (5 rounds x 10 runs each, this machine): the legacy epoll
+loop drained posts only once at the top of each round, so a mid-batch post
+waited behind the whole 512-event array, and chunk=8 bounds that to ~8
+callbacks:
+
+| configuration (epoll backend) | post-to-callback latency |
+|---|---:|
+| baseline (pre-change, no mid-round drain possible) | 41.3–42.2 ms mean per round |
+| `CWIST_REACTOR_DRAIN_CHUNK=0` (legacy on new code) | 41.7 ms mean |
+| `CWIST_REACTOR_DRAIN_CHUNK=8` | 0.44–0.49 ms mean (~90x) |
+
+`.github/workflows/perf-epoll-drain.yml` runs the interleaved same-binary
+A/B (`CWIST_REACTOR_DRAIN_CHUNK=0` vs `8`) in CI.
 
 `tests/test_reactor_drain_chunk.c` is the pass/fail twin of this
 benchmark, wired into `make test`: it asserts a chunked post lands in
