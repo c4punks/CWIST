@@ -2503,6 +2503,7 @@ struct cwist_http_async_conn_t [18] uint64_t rx_armed_ns
 struct cwist_http_async_conn_t [19] uint64_t kern_last_mono_ns
 struct cwist_http_async_conn_t [20] bool kern_valid
 struct cwist_http_async_conn_t [21] cwist_bdr_cursor_t bdr_cursor
+struct cwist_http_async_conn_t [22] uint32_t stash_grown_sec
 struct cwist_http_header_node [0] cwist_sstring *key
 struct cwist_http_header_node [1] cwist_sstring *value
 struct cwist_http_header_node [2] struct cwist_http_header_node *next
