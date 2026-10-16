@@ -568,7 +568,7 @@ feature. The public API is unchanged from v3.9.
 
 v4.0 starts the API stability guarantee described under "API stability from
 v4.0" in the versioning rules below. This section lists what is still open
-before the v4.0 cut, as checked on `dev` at 4cd05e21 (2026-10-07). It records
+before the v4.0 cut, as checked on `dev` at 95ea6ffe (2026-10-16). It records
 open work and pending decisions, not results.
 
 ### API surface decisions
@@ -597,20 +597,28 @@ and the Zig bindings (`bindings/zig`, 0.1.0) are versioned separately.
   Actix-web on every CI runner architecture (AMD EPYC, Intel Xeon).
 * Done: Actix-web is in the CI webserver benchmark matrix and charts, and
   the measurement contract is in `docs/webserver-benchmark.md`.
-* Open: #297 (syscall and serialization reduction: io_uring multishot
-  accept with a fallback for kernels without it, SQE batching, per-accept
-  `setsockopt`, time caching), #293 (tail latency; queue delay drives the
-  tail), and #322 (libttak v3.4.0 benchmark comparison). Each item lands
-  with an A/B measurement or a recorded negative result.
+* Closed: #297 and #293 (the syscall-reduction audit recorded its results,
+  including measured negatives, in `docs/performance/issue-297-syscall-audit.md`;
+  the tail-latency measurement loop concluded that queue delay drives the
+  tail) and #322 (libttak is at v3.5.0). The October perf wave landed on
+  both branches: SIMD crlf parser (#374), RX-epoll fast path (#371),
+  SMT-aware worker affinity (#376), late-round heuristic removal (#377),
+  epoll/kqueue drain-chunk cadence (#378), and the keep-alive stash
+  hysteresis (#381). Still open: #353 (HTTPS pool task-queue lock
+  profiling vs sharded/lock-free variants) and the #319 target itself —
+  CI benchmark history shows C1M at ~1.0–1.05x Actix RPS with P99.999 not
+  yet consistently below Actix on every runner CPU, so the exit-criterion
+  verification run is the remaining gate. Each item lands with an A/B
+  measurement or a recorded negative result.
 
 ### Carry-over and housekeeping
 
-| Item | State on `dev` at 4cd05e21 | Remaining |
+| Item | State on `dev` at 95ea6ffe (2026-10-16) | Remaining |
 |------|----------------------------|-----------|
-| #306 TLS performance | Fixed by #307; v3.9 HTTPS gates green on `dev` | Close the issue |
-| #286 raw-allocator gate | `https.c` parked-connection allocations use `cwist_alloc`/`cwist_free`; `cwist audit --gate` passes | Close the issue |
-| Soak testing | Named in the v4.0 preview; no soak job or plan exists in the tree | **Done:** defined in [`docs/soak-testing.md`](docs/soak-testing.md) with runnable entry point `scripts/ci/soak.sh`; pass criteria recorded there |
-| Docs good first issues | #272 landed in #320; PRs open for #273 (#324) and #275 (#325, #326); #271 open | Review and merge |
+| #306 TLS performance | Fixed by #307; v3.9 HTTPS gates green on `dev` | **Closed** |
+| #286 raw-allocator gate | `https.c` parked-connection allocations use `cwist_alloc`/`cwist_free`; `cwist audit --gate` passes | **Closed** |
+| Soak testing | Defined in [`docs/soak-testing.md`](docs/soak-testing.md) with runnable entry point `scripts/ci/soak.sh` | **Done:** also CI-gated — `.github/workflows/soak.yml` runs the 10-minute soak on every push/PR to main/master/dev and takes a duration input for the `DURATION=1800` release-candidate run (#379) |
+| Docs good first issues | #272 landed in #320; PRs #324 (#273), #325 and #326 (#275) are merged | Verify the merged PRs against issues #271/#273/#275 and close them |
 
 ### Not in v4.0 scope
 
