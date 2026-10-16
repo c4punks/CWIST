@@ -662,7 +662,7 @@ arrives as new API; nothing that exists at v4.0 changes.
 
 * The 3.x line is stabilization work on the road to v4.0, the stable base that expansion resumes from in v4.1: release intervals are deliberately long, and each release lands a small number of large, well-tested changes rather than frequent small ones. Expect wide gaps between 3.x tags.
 * The first 100% production-compatible stable release is planned as **v4.0**. Until then, minor releases may adjust public APIs (see the versioning note in the README).
-* Starting with the stable line (v4.0 onward), each release receives a codename in the form **adjective + color** (e.g. "Steady Amber"). Codenames are assigned at release time and recorded here.
+* Starting with the stable line (v4.0 onward), each release receives a codename per the letter-sequence spec in [docs/versioning.md](docs/versioning.md): two uppercase letters starting at `AA`, with a new letter entering at the tail and propagating one position left per release (v4.0 is `AA`, shown as `cwist 4.0.0-LTS (AA)`). Codenames are assigned at release time and recorded here.
 
 ### Versioning rules (as practiced)
 
