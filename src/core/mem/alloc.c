@@ -66,6 +66,7 @@ __attribute__((constructor)) static void cwist_install_cjson_hooks(void) {
 }
 #else
 #include <cwist/core/mem/gc.h>
+#include "gc_internal.h"
 #include <ttak/mem/mem.h>
 #include <ttak/timing/timing.h>
 #include <ttak/sync/sync.h>
@@ -389,6 +390,10 @@ char *cwist_strndup(const char *src, size_t n) {
  */
 void cwist_free(void *ptr) {
     if (!ptr) return;
+    /* No-op unless ptr was handed to a GC context via cwist_reg_ptr(): an
+     * explicit free must detach it first, or cwist_gc_shutdown() would
+     * release it a second time. */
+    cwist_gc_reg_untrack(ptr);
     if (cwist_full_gc_enabled()) {
         /* Best-effort: absent from the pending list just means ptr came
          * from cwist_strdup()/cwist_realloc()/etc. rather than cwist_alloc(),

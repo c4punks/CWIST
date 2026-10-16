@@ -15,6 +15,155 @@
  * @brief Thin implementation wrapper around libttak epoch-based reclamation.
  */
 
+/* --- cwist_reg_ptr registry: CWIST-side bookkeeping for pointers handed to
+ * a GC context via cwist_reg_ptr()/cwist_reg_ptr_sized().
+ *
+ * libttak's epoch GC releases whatever is still in its mem_tree at destroy
+ * time with ttak_mem_free(), which validates the ttak block header and
+ * aborts on any pointer that does not carry one (lib/libttak/src/mem/mem.c's
+ * V_HEADER). cwist_alloc() blocks have no such header when the owner guard
+ * is off (the default), so the wrapper must detach every CWIST-registered
+ * block from the tree before destruction and release it with cwist_free()
+ * itself. This table records exactly which pointers went through the
+ * wrapper (and which context owns them) so cwist_gc_shutdown(), an explicit
+ * cwist_free(), and cross-context re-registration can do that detachment.
+ *
+ * Pointers registered directly with ttak via cwist_gc_raw() are
+ * intentionally absent here: they keep libttak's native teardown semantics
+ * (freed by ttak_mem_free() at destroy), e.g. example/rps-showcase's
+ * ttak_mem_alloc_safe() payloads. Never mix the two registration paths for
+ * the same pointer.
+ *
+ * The table, like the other registries in this file, uses the raw
+ * allocator: it is the GC's own bookkeeping and must never sit on a
+ * full-GC pending list. */
+
+typedef struct {
+    void *ptr;         /* NULL marks an empty slot */
+    cwist_gc_t *owner; /* context responsible for releasing the block */
+} cwist_reg_entry_t;
+
+static pthread_mutex_t g_reg_lock = PTHREAD_MUTEX_INITIALIZER;
+static cwist_reg_entry_t *g_reg_slots = NULL; /* open addressing, power-of-two cap */
+static size_t g_reg_cap = 0;
+static size_t g_reg_count = 0;
+
+static size_t cwist_reg_slot(const void *ptr, size_t mask) {
+    uint64_t h = (uint64_t)((uintptr_t)ptr >> 4) * UINT64_C(0x9E3779B97F4A7C15);
+    return (size_t)(h >> 32) & mask;
+}
+
+/** @brief Entry for @p ptr, or NULL. Caller holds g_reg_lock. */
+static cwist_reg_entry_t *cwist_reg_find_locked(const void *ptr) {
+    if (g_reg_count == 0) return NULL;
+    size_t mask = g_reg_cap - 1;
+    for (size_t i = cwist_reg_slot(ptr, mask);; i = (i + 1) & mask) {
+        if (!g_reg_slots[i].ptr) return NULL;
+        if (g_reg_slots[i].ptr == ptr) return &g_reg_slots[i];
+    }
+}
+
+/** @brief Backward-shift delete of the entry at @p e. Caller holds g_reg_lock. */
+static void cwist_reg_remove_locked(cwist_reg_entry_t *e) {
+    size_t mask = g_reg_cap - 1;
+    size_t hole = (size_t)(e - g_reg_slots);
+    for (size_t j = (hole + 1) & mask; g_reg_slots[j].ptr; j = (j + 1) & mask) {
+        size_t home = cwist_reg_slot(g_reg_slots[j].ptr, mask);
+        if (((j - home) & mask) >= ((j - hole) & mask)) {
+            g_reg_slots[hole] = g_reg_slots[j];
+            hole = j;
+        }
+    }
+    g_reg_slots[hole] = (cwist_reg_entry_t){0};
+    g_reg_count--;
+}
+
+/** @brief Grow so one more entry fits at <= 50% load. Caller holds g_reg_lock. */
+static bool cwist_reg_reserve_locked(void) {
+    if ((g_reg_count + 1) * 2 <= g_reg_cap) return true;
+    size_t new_cap = g_reg_cap ? g_reg_cap * 2 : 64;
+    cwist_reg_entry_t *slots = (cwist_reg_entry_t *)calloc(new_cap, sizeof(*slots));
+    if (!slots) return false;
+    size_t mask = new_cap - 1;
+    for (size_t i = 0; i < g_reg_cap; i++) {
+        if (!g_reg_slots[i].ptr) continue;
+        size_t j = cwist_reg_slot(g_reg_slots[i].ptr, mask);
+        while (slots[j].ptr) j = (j + 1) & mask;
+        slots[j] = g_reg_slots[i];
+    }
+    free(g_reg_slots);
+    g_reg_slots = slots;
+    g_reg_cap = new_cap;
+    return true;
+}
+
+/**
+ * @brief Detach @p ptr from whichever GC context tracks it, without freeing.
+ *
+ * Removes the pointer from the registry and from its owner's libttak
+ * mem_tree (when that context is still initialized) so a later
+ * cwist_gc_shutdown() of the context no longer touches the block. Called by
+ * cwist_free() so an explicit free of a registered pointer is always safe,
+ * and by cwist_reg_ptr_sized() when registration moves to another context.
+ *
+ * @param ptr Block to detach; a no-op when NULL.
+ * @return true when @p ptr was registered and has been detached.
+ */
+bool cwist_gc_reg_untrack(void *ptr) {
+    if (!ptr) return false;
+    pthread_mutex_lock(&g_reg_lock);
+    cwist_reg_entry_t *e = cwist_reg_find_locked(ptr);
+    if (!e) {
+        pthread_mutex_unlock(&g_reg_lock);
+        return false;
+    }
+    cwist_gc_t *owner = e->owner;
+    cwist_reg_remove_locked(e);
+    pthread_mutex_unlock(&g_reg_lock);
+
+    if (owner && owner->initialized) {
+        ttak_mem_node_t *node = ttak_mem_tree_find_node(&owner->impl.tree, ptr);
+        if (node) ttak_mem_tree_remove(&owner->impl.tree, node);
+    }
+    return true;
+}
+
+/**
+ * @brief Release every block still registered with @p gc through the
+ *        cwist_reg_ptr()/cwist_reg_ptr_sized() wrapper.
+ *
+ * Each block is first detached from the context's libttak mem_tree (so the
+ * upcoming ttak destroy-time pass, which frees with ttak_mem_free() and
+ * requires a ttak block header, never sees it) and then released with
+ * cwist_free(). Entries are taken one at a time: cwist_free() itself calls
+ * cwist_gc_reg_untrack(), which takes the same registry lock.
+ *
+ * @param gc Context being shut down.
+ */
+static void cwist_reg_drain(cwist_gc_t *gc) {
+    for (;;) {
+        pthread_mutex_lock(&g_reg_lock);
+        cwist_reg_entry_t *e = NULL;
+        for (size_t i = 0; i < g_reg_cap; i++) {
+            if (g_reg_slots[i].ptr && g_reg_slots[i].owner == gc) {
+                e = &g_reg_slots[i];
+                break;
+            }
+        }
+        if (!e) {
+            pthread_mutex_unlock(&g_reg_lock);
+            return;
+        }
+        void *ptr = e->ptr;
+        cwist_reg_remove_locked(e);
+        pthread_mutex_unlock(&g_reg_lock);
+
+        ttak_mem_node_t *node = ttak_mem_tree_find_node(&gc->impl.tree, ptr);
+        if (node) ttak_mem_tree_remove(&gc->impl.tree, node);
+        cwist_free(ptr);
+    }
+}
+
 /**
  * @brief Lazily initialize and optionally configure manual rotation mode.
  * @param gc GC context owned by the caller.
@@ -31,10 +180,17 @@ void cwist_gc(cwist_gc_t *gc, bool manual_rotation) {
 
 /**
  * @brief Destroy the wrapped libttak GC state when it has been initialized.
+ *
+ * Blocks still registered through cwist_reg_ptr()/cwist_reg_ptr_sized() are
+ * detached from the libttak tree and released with cwist_free() first;
+ * anything registered directly with ttak via cwist_gc_raw() is left for
+ * ttak_epoch_gc_destroy() to release with ttak_mem_free().
+ *
  * @param gc GC context to shut down.
  */
 void cwist_gc_shutdown(cwist_gc_t *gc) {
     if (!gc || !gc->initialized) return;
+    cwist_reg_drain(gc);
     ttak_epoch_gc_destroy(&gc->impl);
     gc->initialized = false;
 }
@@ -68,6 +224,11 @@ bool cwist_gc_auto_rotated(cwist_gc_t *gc) {
 
 /**
  * @brief Register a pointer with zero-size accounting metadata.
+ *
+ * See cwist_reg_ptr_sized() for the full contract: registering hands
+ * ownership of the block to the context, which releases it with
+ * cwist_free() at cwist_gc_shutdown().
+ *
  * @param gc GC context that tracks the pointer.
  * @param ptr Pointer to retire through the epoch GC.
  */
@@ -77,17 +238,82 @@ void cwist_reg_ptr(cwist_gc_t *gc, void *ptr) {
 
 /**
  * @brief Register a pointer and its approximate size with the epoch GC.
+ *
+ * The pointer must be releasable with cwist_free() (i.e. come from CWIST's
+ * allocator: cwist_alloc() and family). The wrapper records the pointer in
+ * its own registry so that cwist_gc_shutdown() can detach it from libttak's
+ * mem_tree and release it with cwist_free(); libttak's destroy-time pass
+ * frees with ttak_mem_free(), which aborts on headerless cwist_alloc
+ * blocks. Pointers allocated directly from libttak (ttak_mem_alloc_safe())
+ * must NOT go through here; register them with the raw context instead —
+ * ttak_epoch_gc_register(cwist_gc_raw(gc), ptr, size) — so libttak's own
+ * teardown releases them.
+ *
+ * Ownership: after registration the context owns the block and will free it
+ * at shutdown. An explicit cwist_free() first detaches it automatically;
+ * registering the same pointer with another context moves tracking there.
+ *
  * @param gc GC context that tracks the pointer.
  * @param ptr Pointer to retire through the epoch GC.
  * @param size Optional size hint associated with @p ptr.
  */
 void cwist_reg_ptr_sized(cwist_gc_t *gc, void *ptr, size_t size) {
     if (!gc || !gc->initialized || !ptr) return;
+
+    pthread_mutex_lock(&g_reg_lock);
+    cwist_reg_entry_t *e = cwist_reg_find_locked(ptr);
+    if (e) {
+        if (e->owner == gc) {
+            /* Already tracked by this context: skip a duplicate ttak tree
+             * node, which destroy would hand to ttak_mem_free() twice. */
+            pthread_mutex_unlock(&g_reg_lock);
+            return;
+        }
+        /* Registration moves to a new context: drop the pointer from the
+         * previous owner first, so that context's shutdown neither frees
+         * the block nor trips over it. */
+        cwist_gc_t *prev = e->owner;
+        cwist_reg_remove_locked(e);
+        pthread_mutex_unlock(&g_reg_lock);
+        if (prev && prev->initialized) {
+            ttak_mem_node_t *node = ttak_mem_tree_find_node(&prev->impl.tree, ptr);
+            if (node) ttak_mem_tree_remove(&prev->impl.tree, node);
+        }
+        pthread_mutex_lock(&g_reg_lock);
+        if (cwist_reg_find_locked(ptr)) {
+            /* Another thread registered it in the meantime; that
+             * registration stands. */
+            pthread_mutex_unlock(&g_reg_lock);
+            return;
+        }
+    }
+    bool tracked = cwist_reg_reserve_locked();
+    if (tracked) {
+        size_t mask = g_reg_cap - 1;
+        size_t i = cwist_reg_slot(ptr, mask);
+        while (g_reg_slots[i].ptr) i = (i + 1) & mask;
+        g_reg_slots[i] = (cwist_reg_entry_t){.ptr = ptr, .owner = gc};
+        g_reg_count++;
+    }
+    pthread_mutex_unlock(&g_reg_lock);
+
+    /* Best-effort, matching cwist_gc_scope_track(): when the registry
+     * itself cannot record the pointer, leave it untracked rather than
+     * register it with ttak, whose destroy-time free would abort on a
+     * headerless cwist_alloc block. */
+    if (!tracked) return;
     ttak_epoch_gc_register(&gc->impl, ptr, size);
 }
 
 /**
  * @brief Expose the underlying libttak epoch GC structure for advanced integrations.
+ *
+ * Use this to register pointers that carry a libttak block header
+ * (ttak_mem_alloc_safe() et al.) via ttak_epoch_gc_register(): such blocks
+ * keep libttak's native teardown semantics and are released by
+ * ttak_mem_free() at destroy. cwist_reg_ptr() is the right API for
+ * cwist_alloc() blocks instead.
+ *
  * @param gc GC wrapper owned by CWIST.
  * @return Raw libttak GC handle, or NULL when the wrapper is unavailable.
  */

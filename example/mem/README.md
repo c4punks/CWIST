@@ -67,8 +67,11 @@ arr: 10 20 30 40 50 60 70 80
 Initialises a GC context with manual rotation
 (`cwist_gc(&gc, /*manual_rotation=*/true)`), registers three
 `cwist_alloc`'d buffers with `cwist_reg_ptr` / `cwist_reg_ptr_sized`,
-and reclaims retired allocations by calling `cwist_gc_rotate` between
-allocations. `cwist_gc_shutdown` tears the context down at the end:
+and rotates the epoch with `cwist_gc_rotate` between allocations.
+Registration hands ownership to the context: an explicit `cwist_free`
+(p1) detaches its block from the context automatically, and
+`cwist_gc_shutdown` releases every block still registered (p2, p3) with
+`cwist_free`:
 
 ```
 === Epoch GC Tutorial ===
@@ -78,12 +81,13 @@ GC initialized (manual rotation mode)
 Registered p1 (256 B) and p2 (512 B)
 
 [Manual rotation]
-Epoch rotated; retired allocations reclaimed
+Epoch rotated
+Explicitly freed p1 (auto-unregistered)
 Registered p3 (1024 B)
 Second rotation complete
 
 [Shutdown]
-GC shut down
+GC shut down (p2 and p3 reclaimed)
 
 === Done ===
 ```

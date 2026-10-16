@@ -76,6 +76,23 @@ The engine is libttak's epoch GC (`ttak_epoch_gc`, see
   driven by allocation hints) or manual (`cwist_gc_rotate` from the event
   loop), matching the existing wrapper semantics.
 
+**Registration owns the block.** `cwist_reg_ptr` / `cwist_reg_ptr_sized`
+hand ownership of the registered pointer to the context, and the context
+releases it with `cwist_free` at `cwist_gc_shutdown`. Register only pointers
+that `cwist_free` can release — that is, pointers from CWIST's allocator
+(`cwist_alloc` and family). An explicit `cwist_free` stays correct: it
+detaches the pointer from the context first (automatically) and then frees
+it, exactly the "explicit free unregisters early" rule below. This matters
+because libttak's own destroy-time pass frees whatever is left in its tree
+with `ttak_mem_free`, which validates ttak block headers and aborts on a
+headerless `cwist_alloc` block — the wrapper's registry is what keeps the
+two free paths from meeting. Pointers allocated directly from libttak
+(`ttak_mem_alloc_safe`) are the opposite case: they keep libttak's teardown
+semantics and must be registered with the raw context instead —
+`ttak_epoch_gc_register(cwist_gc_raw(gc), ptr, size)` — so libttak frees
+them at destroy (see `example/rps-showcase`). Never register the same
+pointer through both paths.
+
 ### 3. Thread/process exit sweeps
 
 - **Thread exit**: the connection registry is one process-wide table that

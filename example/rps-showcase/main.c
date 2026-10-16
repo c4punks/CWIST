@@ -37,10 +37,20 @@ static void *stats_loop(void *arg) {
     return NULL;
 }
 
+/* The payload buffers are ttak_mem_alloc_safe() blocks: they carry a ttak
+ * block header, so they are registered with the raw libttak context and
+ * released by ttak_mem_free() at cwist_gc_shutdown(). cwist_reg_ptr() is
+ * only for cwist_alloc() blocks, which cwist_gc_shutdown() releases with
+ * cwist_free(). */
+static void rps_gc_register(void *ptr, size_t size) {
+    ttak_epoch_gc_t *raw = cwist_gc_raw(&g_payload_gc);
+    if (raw) ttak_epoch_gc_register(raw, ptr, size);
+}
+
 static void rps_payload_release(rps_payload_t *payload) {
     if (!payload) return;
     if (payload->ptr) {
-        cwist_reg_ptr_sized(&g_payload_gc, payload->ptr, payload->len);
+        rps_gc_register(payload->ptr, payload->len);
     }
     cwist_free(payload);
 }
@@ -62,14 +72,14 @@ static void rps_payload_refresh(void) {
 
     int written = snprintf(buffer, cap, "{\"status\":\"ok\",\"tick\":%lu}", now);
     if (written < 0) {
-        cwist_reg_ptr_sized(&g_payload_gc, buffer, cap);
+        rps_gc_register(buffer, cap);
         pthread_mutex_unlock(&g_payload_lock);
         return;
     }
 
     rps_payload_t *payload = cwist_alloc(sizeof(*payload));
     if (!payload) {
-        cwist_reg_ptr_sized(&g_payload_gc, buffer, cap);
+        rps_gc_register(buffer, cap);
         pthread_mutex_unlock(&g_payload_lock);
         return;
     }

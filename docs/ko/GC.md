@@ -64,6 +64,18 @@ CWIST가 이미 `src/core/mem/gc.c`에서 감싸 두었습니다 (`cwist_gc`, `c
 - 순환은 자동(할당 힌트에 따라 주기를 조절하는 백그라운드 순환 스레드)이거나 수동(이벤트
   루프에서 `cwist_gc_rotate` 호출)일 수 있으며, 기존 래퍼의 의미와 같습니다.
 
+**등록은 블록의 소유권을 넘깁니다.** `cwist_reg_ptr` / `cwist_reg_ptr_sized`는 등록된
+포인터의 소유권을 컨텍스트에 넘기며, 컨텍스트는 `cwist_gc_shutdown`에서 `cwist_free`로 그
+블록을 해제합니다. `cwist_free`로 해제할 수 있는 포인터, 즉 CWIST 할당기(`cwist_alloc` 계열)에서
+온 포인터만 등록하세요. 명시적인 `cwist_free`는 그대로 올바릅니다. 먼저 (자동으로) 컨텍스트에서
+포인터를 분리한 뒤 해제하므로, 아래의 "명시적 free는 조기에 등록 해제" 규칙과 정확히 같습니다.
+libttak의 소멸 시점 정리는 자기 트리에 남은 것을 `ttak_mem_free`로 해제하는데, 이 함수는 ttak
+블록 헤더를 검증하므로 헤더가 없는 `cwist_alloc` 블록을 만나면 중단(abort)합니다. 래퍼의
+레지스트리가 두 해제 경로가 만나지 않게 막습니다. 반대로 libttak에서 직접 할당한
+(`ttak_mem_alloc_safe`) 포인터는 libttak의 종료 의미를 그대로 따라야 합니다. 원시 컨텍스트에
+등록하세요 — `ttak_epoch_gc_register(cwist_gc_raw(gc), ptr, size)` — 그러면 libttak이
+소멸 시점에 해제합니다(`example/rps-showcase` 참고). 같은 포인터를 두 경로로 등록하지 마세요.
+
 ### 3. 스레드/프로세스 종료 정리
 
 - **스레드 종료**: 연결 레지스트리는 프로세스 전체에 하나 있는 테이블입니다. 추적하는 핸들마다

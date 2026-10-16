@@ -35,6 +35,10 @@ void cwist_gc(cwist_gc_t *gc, bool manual_rotation);
 
 /**
  * @brief Shut down and free internal GC state.
+ *
+ * Releases every block still registered through cwist_reg_ptr() /
+ * cwist_reg_ptr_sized() with cwist_free(); blocks registered directly with
+ * ttak via cwist_gc_raw() are released by libttak instead.
  */
 void cwist_gc_shutdown(cwist_gc_t *gc);
 
@@ -58,16 +62,41 @@ bool cwist_gc_auto_rotated(cwist_gc_t *gc);
 
 /**
  * @brief Register a pointer without specifying a size (defaults to 0).
+ *
+ * Hands ownership of the block to the context: cwist_gc_shutdown() releases
+ * it with cwist_free(), and an explicit cwist_free() detaches it first.
+ * The pointer must come from CWIST's allocator (cwist_alloc() and family);
+ * see cwist_reg_ptr_sized() for the full contract.
  */
 void cwist_reg_ptr(cwist_gc_t *gc, void *ptr);
 
 /**
  * @brief Register a pointer and its size for better accounting.
+ *
+ * The pointer must be releasable with cwist_free() (i.e. come from CWIST's
+ * allocator: cwist_alloc() and family). The wrapper keeps its own registry
+ * of such pointers so that cwist_gc_shutdown() can detach them from
+ * libttak's mem_tree and release them with cwist_free(); libttak's own
+ * destroy-time pass frees with ttak_mem_free() and aborts on a cwist_alloc
+ * block, which carries no ttak block header. Pointers allocated directly
+ * from libttak (ttak_mem_alloc_safe()) keep libttak's teardown semantics
+ * instead: register them through cwist_gc_raw() with
+ * ttak_epoch_gc_register().
+ *
+ * After registration the context owns the block. An explicit cwist_free()
+ * detaches it automatically (staying correct, just unregistering early),
+ * and registering the same pointer with another context moves tracking
+ * there.
  */
 void cwist_reg_ptr_sized(cwist_gc_t *gc, void *ptr, size_t size);
 
 /**
  * @brief Obtain the raw libttak epoch GC pointer (advanced usage).
+ *
+ * Intended for registering pointers that carry a libttak block header
+ * (ttak_mem_alloc_safe() et al.) via ttak_epoch_gc_register(): such blocks
+ * are released by ttak_mem_free() when the context is destroyed. Use
+ * cwist_reg_ptr() for cwist_alloc() blocks instead.
  */
 ttak_epoch_gc_t *cwist_gc_raw(cwist_gc_t *gc);
 
