@@ -1056,7 +1056,11 @@ static bool http_async_arm_wait(int fd, cwist_http_async_conn_t *conn,
     };
     if (cwist_reactor_rx_supported(reactor) && !conn->peer_eof && !conn->rx_recv_inflight &&
         !conn->rx_prefers_poll) {
-        if (conn->cap == 0 && !http_async_stash_grow(conn, CWIST_HTTP_READ_BUFFER_SIZE)) {
+        /* Virgin stash: grow to the 4 KiB idle floor, not the 16 KiB read
+         * buffer. A mostly-idle C1M connection then pays ~4 KiB, not 16 KiB,
+         * of rbuf on first arm; any request above the floor regrows through
+         * http_async_stash_grow exactly as a regrown stash does today. */
+        if (conn->cap == 0 && !http_async_stash_grow(conn, CWIST_ASYNC_STASH_IDLE)) {
             /* Stash allocation failed: the legacy fill path retries growth
              * when POLL fires and closes on failure, matching today. */
         } else if (conn->cap > 0) {
@@ -4858,7 +4862,12 @@ static bool http_async_stash_grow(cwist_http_async_conn_t *conn, size_t need) {
     if (conn->rx_recv_inflight) return false;
     if (need > CWIST_ASYNC_STASH_MAX) return false;
     if (conn->cap >= need) return true;
-    size_t cap = conn->cap ? conn->cap : CWIST_HTTP_READ_BUFFER_SIZE;
+    /* Doubling base: a virgin stash starts at the 4 KiB idle floor (the
+     * first-arm site grows it to exactly that), so an idle C1M connection
+     * pays floor memory, not CWIST_HTTP_READ_BUFFER_SIZE. Above the floor
+     * the doubling ladder is unchanged: need 16 KiB on a virgin stash ends
+     * at the same 16 KiB cap as before. */
+    size_t cap = conn->cap ? conn->cap : CWIST_ASYNC_STASH_IDLE;
     while (cap < need) {
         if (cap > CWIST_ASYNC_STASH_MAX / 2) {
             cap = CWIST_ASYNC_STASH_MAX;
