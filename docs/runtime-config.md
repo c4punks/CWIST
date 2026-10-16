@@ -30,6 +30,7 @@ Each variable has one status. The status says what v4 promises about it.
 | `CWIST_DRAIN_TIMEOUT` | supported | seconds, `0`–`3600` | `5` | How long shutdown waits for in-flight requests before the app is destroyed. Out of range values are reported on stderr and ignored. |
 | `CWIST_FD_LIMIT_TARGET` | supported | integer > 0 | `1050000` | Open-file soft limit the server raises itself to at start (capped by the hard limit). See [C1M file limits](c1m-file-limits.md). |
 | `CWIST_MALLOC_ARENA_MAX` | tuning | integer ≥ 0 | unset (glibc default) | glibc only: `mallopt(M_ARENA_MAX)`. `1` trades some allocator concurrency for a much lower RSS. |
+| `CWIST_MALLOC_TRIM_IDLE_SEC` | tuning | seconds, `0`–`86400` | `30` | glibc only (no-op elsewhere): seconds of cumulative event-free reactor idleness after which the reactor calls `malloc_trim(0)` on a zero-event wake, returning the free arena top to the OS. Runs only on idle wakes, so the hot path pays nothing. Measured ≈1.2 MiB median per worker after a load round. `0` disables the trim. |
 
 ## Classic thread pool
 
