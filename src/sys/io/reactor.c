@@ -1616,8 +1616,18 @@ void cwist_reactor_run(cwist_reactor_t *reactor) {
         while (reactor_running(reactor)) {
             reactor_drain_posts(reactor);
             reactor_run_timers(reactor);
-            /* Round the wait up so a timer is never polled for early. */
-            int wait_ms = (int)((reactor_wait_ns(reactor) + 999999ull) / 1000000ull);
+            /* Round to the nearest millisecond, with a 1 ms minimum so a
+             * sub-millisecond remainder never degenerates into a busy poll:
+             * the remainder is deliberately absorbed by that final 1 ms wait
+             * instead of rounding every wait up (which let a timer land up to
+             * ~1 ms late). An early epoll_wait return cannot dispatch a timer
+             * early: reactor_run_timers() re-checks each deadline against the
+             * clock, and the only armed timers (webrtc conn/SCTP ticks, see
+             * src/net/webrtc/webrtc.c) re-check their own expiry or are
+             * harmless when ticked slightly early. An already-due timer waits
+             * at most this 1 ms before firing. */
+            int wait_ms = (int)((reactor_wait_ns(reactor) + 500000ull) / 1000000ull);
+            if (wait_ms < 1) wait_ms = 1;
             /* Queued RX receives must not wait behind a blocking poll. */
             if (reactor->rx_ready_n > 0) wait_ms = 0;
             int n = epoll_wait(reactor->impl.epoll_fd, events, 1024, wait_ms);
