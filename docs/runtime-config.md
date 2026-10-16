@@ -44,6 +44,7 @@ Each variable has one status. The status says what v4 promises about it.
 | Variable | Status | Values | Default | Effect |
 |----------|--------|--------|---------|--------|
 | `CWIST_HTTP_KEEP_ALIVE_TIMEOUT` | supported | seconds > 0 | `15` | Idle time before a keep-alive connection is closed. |
+| `CWIST_ASYNC_STASH_IDLE_SEC` | tuning | seconds ≥ 0 | `10` | C1M async HTTP: seconds an oversized keep-alive rbuf/obuf stash must go unneeded before it is shrunk toward the 4 KiB floor at re-arm. Busy connections keep their capacity (no per-request shrink→regrow realloc); idle ones still converge to the floor, delayed by the window. `0` restores the legacy immediate shrink. |
 | `CWIST_HTTP_BATCH` | tuning | `1`–`1024` | `16` | Pipelined requests dispatched per event-loop turn; the rest continue on the next turn. |
 | `CWIST_HTTP_YIELD_BATCH` | tuning | `1`–`1024` | `CWIST_HTTP_BATCH` | Requests served within a batch before the connection yields back to the reactor queue. |
 | `CWIST_USE_TCP_CORK` | tuning | integer > 0 | off | Linux, cleartext HTTP/1.1: cork the socket so headers, body and file bytes go out in full segments. |

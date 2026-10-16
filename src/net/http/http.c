@@ -928,6 +928,35 @@ static uint32_t cwist_http_keep_alive_timeout_sec(void) {
     return (uint32_t)cached_timeout;
 }
 
+/* Default hysteresis window (seconds) before an async connection's stash is
+ * shrunk at re-arm; see http_async_stash_idle_shrink(). */
+#define CWIST_ASYNC_STASH_IDLE_SEC_DEFAULT 10
+
+/**
+ * @brief Idle-stash hysteresis window in seconds.
+ * @return The validated CWIST_ASYNC_STASH_IDLE_SEC env override or
+ *         CWIST_ASYNC_STASH_IDLE_SEC_DEFAULT (10); cached after first read.
+ *         0 restores the legacy immediate shrink at every re-arm.
+ */
+static uint32_t http_async_stash_idle_sec(void) {
+    static _Atomic int cached = -1;
+    int v = atomic_load_explicit(&cached, memory_order_relaxed);
+    if (v < 0) {
+        const char *s = getenv("CWIST_ASYNC_STASH_IDLE_SEC");
+        if (s) {
+            char *end = NULL;
+            long parsed = strtol(s, &end, 10);
+            v = (end != s && *end == '\0' && parsed >= 0 && parsed < INT_MAX)
+                    ? (int)parsed
+                    : CWIST_ASYNC_STASH_IDLE_SEC_DEFAULT;
+        } else {
+            v = CWIST_ASYNC_STASH_IDLE_SEC_DEFAULT;
+        }
+        atomic_store_explicit(&cached, v, memory_order_relaxed);
+    }
+    return (uint32_t)v;
+}
+
 /**
  * @brief Release an async connection shell and its stashes.
  *
@@ -954,6 +983,55 @@ static void http_async_conn_release(cwist_http_async_conn_t *conn) {
  * capacity on the next busy turn. Must satisfy CWIST_RX_REARM_MIN_AVAIL so
  * the RECV-first arm stays available. */
 #define CWIST_ASYNC_STASH_IDLE 4096
+
+/** Shrink an async connection's stashes toward the idle floor when the
+ *  capacity has not been needed for CWIST_ASYNC_STASH_IDLE_SEC seconds
+ *  (conn->stash_grown_sec, stamped at every rbuf/obuf growth).
+ *
+ *  Churn mechanism the hysteresis exists for: shrinking at every keep-alive
+ *  re-arm and regrowing on the next request above the floor is a
+ *  shrink->regrow realloc pair per request -- glibc arena lock, a possible
+ *  buffer move with memcpy, and fresh page touches on regrow -- a
+ *  rare-but-large P99.999 stall source at C1M concurrency. A busy keep-alive
+ *  connection keeps its capacity for as long as requests keep needing it;
+ *  a quiet one still converges to the small floor, one window after its
+ *  last growth, so the C1M idle-RSS goal is preserved, delayed by the
+ *  window. CWIST_ASYNC_STASH_IDLE_SEC=0 restores the legacy immediate
+ *  shrink.
+ *
+ *  Single policy for both re-arm sites (http_async_dispatch's CWIST_ASYNC_REARM
+ *  path and cwist_http_async_rearm): rbuf cap > 64 KiB and idle -> freed
+ *  entirely (big-buffer return); otherwise rbuf cap above the floor and idle
+ *  -> realloc'd down to the floor; obuf is handled symmetrically at both
+ *  sites.
+ *
+ *  RX-uring invariant: only call at re-arm points where no RECV SQE
+ *  references the buffers (rx_recv_inflight == false). Both call sites
+ *  satisfy this; keep it so. */
+static void http_async_stash_idle_shrink(cwist_http_async_conn_t *conn) {
+    uint32_t now = cwist_fast_monotonic_sec();
+    if (now - conn->stash_grown_sec < http_async_stash_idle_sec()) return;
+    if (conn->len == 0) {
+        if (conn->cap > 65536) {
+            cwist_free(conn->rbuf);
+            conn->rbuf = NULL;
+            conn->cap = 0;
+        } else if (conn->cap > CWIST_ASYNC_STASH_IDLE) {
+            char *nb = cwist_realloc(conn->rbuf, CWIST_ASYNC_STASH_IDLE);
+            if (nb) {
+                conn->rbuf = nb;
+                conn->cap = CWIST_ASYNC_STASH_IDLE;
+            }
+        }
+    }
+    if (conn->olen == 0 && conn->ocap > CWIST_ASYNC_STASH_IDLE) {
+        char *nb = cwist_realloc(conn->obuf, CWIST_ASYNC_STASH_IDLE);
+        if (nb) {
+            conn->obuf = nb;
+            conn->ocap = CWIST_ASYNC_STASH_IDLE;
+        }
+    }
+}
 
 /** Arm the connection's next receive wait.  RX-uring first when the reactor
  * has a real io_uring ring: one RECV SQE into rbuf + len whose completion
@@ -1036,26 +1114,15 @@ static void http_async_dispatch(int fd, cwist_http_async_conn_t *conn,
     }
 
     /* CWIST_ASYNC_REARM: keep the stashes allocated across keep-alive
-     * requests to avoid per-request heap churn, but shrink an idle
-     * connection's buffers toward a small floor. A served keep-alive
-     * connection otherwise holds 16 KiB rbuf + 16 KiB obuf for its whole
-     * idle lifetime (~24 KB RSS per connection at C1M scale); the
+     * requests to avoid per-request heap churn. Shrinking toward the idle
+     * floor is gated by the stash_grown_sec hysteresis: a served keep-alive
+     * connection otherwise holds 16 KiB rbuf + 16 KiB obuf whenever its
+     * capacity was recently needed (~24 KB RSS per connection at C1M scale);
+     * a quiet connection still converges to the small floor one
+     * CWIST_ASYNC_STASH_IDLE_SEC window after its last growth. The
      * grow-on-demand paths (http_async_stash_grow, coalesce serialize)
      * restore capacity on the next busy turn. */
-    if (conn->len == 0 && conn->cap > CWIST_ASYNC_STASH_IDLE) {
-        char *nb = cwist_realloc(conn->rbuf, CWIST_ASYNC_STASH_IDLE);
-        if (nb) {
-            conn->rbuf = nb;
-            conn->cap = CWIST_ASYNC_STASH_IDLE;
-        }
-    }
-    if (conn->olen == 0 && conn->ocap > CWIST_ASYNC_STASH_IDLE) {
-        char *nb = cwist_realloc(conn->obuf, CWIST_ASYNC_STASH_IDLE);
-        if (nb) {
-            conn->obuf = nb;
-            conn->ocap = CWIST_ASYNC_STASH_IDLE;
-        }
-    }
+    http_async_stash_idle_shrink(conn);
 
     if (!http_async_arm_wait(fd, conn, handler, ctx, reactor)) {
         if (cwist_async_debug_enabled()) {
@@ -1283,12 +1350,10 @@ bool cwist_http_async_rearm(int client_fd, cwist_reactor_t *reactor,
         }
         return true;
     }
-    /* Same stash shrink as the REARM path in http_async_event_cb. */
-    if (conn->len == 0 && conn->cap > 65536) {
-        cwist_free(conn->rbuf);
-        conn->rbuf = NULL;
-        conn->cap = 0;
-    }
+    /* Same stash shrink as the REARM path in http_async_dispatch, through
+     * the one shared policy (rbuf > 64 KiB freed entirely, otherwise
+     * realloc'd to the floor; obuf symmetric). */
+    http_async_stash_idle_shrink(conn);
     /* RX-uring: RECV-first re-arm when the ring supports it (peer_eof was
      * handled above, so the wait is a plain receive wait).  arm_wait falls
      * back to the legacy one-shot POLL on unsupported reactors or arm
@@ -1376,6 +1441,7 @@ bool cwist_http_pool_submit_async(int client_fd, cwist_async_handler_t handler, 
     conn->user_ctx = ctx;
     conn->virgin = true;
     conn->last_active_sec = cwist_fast_monotonic_sec();
+    conn->stash_grown_sec = conn->last_active_sec;
 
     /* Worker selection: Power of Two Random Choices (P2C) load balancing
      * to eliminate queue skew without cache-bouncing work stealing. */
@@ -3544,6 +3610,8 @@ int cwist_http_coalesce_append(cwist_http_async_conn_t *conn, const void *data, 
         cwist_free(conn->obuf);
         conn->obuf = nb;
         conn->ocap = ncap;
+        /* Hysteresis anchor for the idle shrink: capacity was just needed. */
+        conn->stash_grown_sec = cwist_fast_monotonic_sec();
     }
     memcpy(conn->obuf + conn->olen, data, len);
     conn->olen += len;
@@ -3825,6 +3893,8 @@ cwist_async_send_status_t cwist_http_send_response_coalesced(int client_fd,
         cwist_free(conn->obuf);
         conn->obuf = nb;
         conn->ocap = ncap;
+        /* Hysteresis anchor for the idle shrink: capacity was just needed. */
+        conn->stash_grown_sec = cwist_fast_monotonic_sec();
     }
     size_t header_len = serialize_headers(res, conn->obuf + conn->olen, CWIST_HTTP_MAX_HEADER_SIZE);
     conn->olen += header_len;
@@ -4805,6 +4875,8 @@ static bool http_async_stash_grow(cwist_http_async_conn_t *conn, size_t need) {
     if (!nb) return false;
     conn->rbuf = nb;
     conn->cap = cap;
+    /* Hysteresis anchor for the idle shrink: capacity was just needed. */
+    conn->stash_grown_sec = cwist_fast_monotonic_sec();
     return true;
 }
 
@@ -4971,6 +5043,8 @@ cwist_recv_status_t cwist_http_receive_request_nb(cwist_http_async_conn_t *conn,
                 conn->cap = CWIST_HTTP_READ_BUFFER_SIZE;
                 conn->len = 0;
                 consumed = 0; /* nothing left to shift */
+                /* Capacity was just provisioned for a large-body turn. */
+                conn->stash_grown_sec = cwist_fast_monotonic_sec();
             }
         }
         if (consumed > 0) {
