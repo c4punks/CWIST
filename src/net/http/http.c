@@ -1096,7 +1096,27 @@ static void http_async_dispatch(int fd, cwist_http_async_conn_t *conn,
 
     if (action == CWIST_ASYNC_DEFER) {
         /* The handler parked the request on a cwist_async; the completion
-         * path owns fd and conn now and re-arms or closes when done. */
+         * path owns fd and conn now and re-arms or closes when done.
+         *
+         * A deferred connection used to hold its full rbuf/obuf stashes for
+         * the entire deferral (SSE, long-poll): the idle shrink only ran at
+         * re-arm, which a parked connection never reaches. Shrink toward the
+         * idle floor here instead, so a parked connection pays ~KB, not
+         * ~32 KB, for the whole deferral.
+         *
+         * Defer-specific shrink: the shared helper is keep-alive hysteresis-
+         * gated (it must be: a busy connection would otherwise
+         * shrink->regrow every request, a P99.999 stall source). That
+         * hysteresis is exactly wrong at defer -- the stash was grown moments
+         * ago, yet the connection is now parked indefinitely and the capacity
+         * is not needed until the completion re-arms (which regrows on
+         * demand). So age the anchor out before calling it; the resulting
+         * shrink->regrow pair costs one realloc per defer cycle, not per
+         * request. RX-uring invariant holds: defer runs with no RECV SQE in
+         * flight (rx_recv_inflight was cleared by the RECV completion entry,
+         * or the wait was a POLL), same as at re-arm. */
+        conn->stash_grown_sec = 0;
+        http_async_stash_idle_shrink(conn);
         return;
     }
     if (action == CWIST_ASYNC_DETACH) {
