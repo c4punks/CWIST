@@ -28,7 +28,7 @@ cwist_app_use(app, cwist_mw_access_log(CWIST_LOG_COMBINED));
 
 #### Async log output
 
-By default each access-log line, and each `cwist_logger_*` line, is written to stdout or stderr by the thread that handles the request. Call `cwist_log_async_start()` once at startup to have one background thread write them instead. The request thread then only formats the line and copies it into a buffer.
+By default each access-log line, and each `cwist_logger_*` line, is written to stdout or stderr by the thread that handles the request, using block-buffered stdio (a TTY destination stays line-buffered), so lines may reach the fd in batches rather than one at a time. Call `cwist_log_async_start()` once at startup to have one background thread write them instead — that is also the way to get immediate per-line delivery. The request thread then only formats the line and copies it into a buffer.
 
 ```c
 #include <cwist/sys/app/logger.h>

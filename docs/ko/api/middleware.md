@@ -28,7 +28,7 @@ cwist_app_use(app, cwist_mw_access_log(CWIST_LOG_COMBINED));
 
 #### 비동기 로그 출력
 
-기본적으로 액세스 로그 한 줄과 `cwist_logger_*` 한 줄은 요청을 처리하는 스레드가 stdout이나 stderr에 직접 씁니다. 시작할 때 `cwist_log_async_start()`를 한 번 호출하면 백그라운드 스레드 하나가 대신 씁니다. 그러면 요청 스레드는 줄을 만들어 버퍼에 복사하기만 합니다.
+기본적으로 액세스 로그 한 줄과 `cwist_logger_*` 한 줄은 요청을 처리하는 스레드가 stdout이나 stderr에 직접 쓰며, 이때 stdio 블록 버퍼링을 사용합니다(TTY면 줄 버퍼링을 유지). 따라서 한 줄씩 즉시 전달되지 않고 묶음으로 전달될 수 있습니다. 시작할 때 `cwist_log_async_start()`를 한 번 호출하면 백그라운드 스레드 하나가 대신 쓰며, 이것이 한 줄 즉시 전달을 얻는 방법이기도 합니다. 그러면 요청 스레드는 줄을 만들어 버퍼에 복사하기만 합니다.
 
 ```c
 #include <cwist/sys/app/logger.h>
