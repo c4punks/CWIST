@@ -30,6 +30,7 @@ Each variable has one status. The status says what v4 promises about it.
 | `CWIST_DRAIN_TIMEOUT` | supported | seconds, `0`–`3600` | `5` | How long shutdown waits for in-flight requests before the app is destroyed. Out of range values are reported on stderr and ignored. |
 | `CWIST_FD_LIMIT_TARGET` | supported | integer > 0 | `1050000` | Open-file soft limit the server raises itself to at start (capped by the hard limit). See [C1M file limits](c1m-file-limits.md). |
 | `CWIST_MALLOC_ARENA_MAX` | tuning | integer ≥ 0 | unset (glibc default) | glibc only: `mallopt(M_ARENA_MAX)`. `1` trades some allocator concurrency for a much lower RSS. |
+| `CWIST_MALLOC_TRIM_IDLE_SEC` | tuning | seconds, `0`–`86400` | `30` | glibc only (no-op elsewhere): seconds of cumulative event-free reactor idleness after which the reactor calls `malloc_trim(0)` on a zero-event wake, returning the free arena top to the OS. Runs only on idle wakes, so the hot path pays nothing. Measured ≈1.2 MiB median per worker after a load round. `0` disables the trim. |
 
 ## Classic thread pool
 
@@ -57,6 +58,7 @@ Each variable has one status. The status says what v4 promises about it.
 | `CWIST_HTTPS_IDLE_TIMEOUT_MS` | supported | milliseconds > 0 | `30000` | Idle time before an HTTPS connection is closed. |
 | `CWIST_HTTPS_PARK` | tuning | `0`/`false` disables | on | Park idle TLS connections in the reactor instead of holding a pool thread. |
 | `CWIST_HTTPS_HS_SHARDS` | tuning | `1`–`16` | CPU cores, clamped to `4`–`16` | Handshake shards. For connect-burst tuning. |
+| `CWIST_TLS_SESS_CACHE_SIZE` | tuning | integer, `0`–`1048576` | `1024` | Cap on the BoringSSL server-side session cache (`SSL_CTX_sess_set_cache_size`), applied to every server TLS context (HTTP/1.1, HTTP/2, HTTP/3). Bounds TLS 1.2 session-ID retention per worker process. `0` leaves the BoringSSL default (uncapped). Consulted on session insert only. |
 
 ## HTTP/2
 

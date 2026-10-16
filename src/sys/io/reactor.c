@@ -52,6 +52,10 @@
 #include <sys/epoll.h>
 #include <sys/socket.h>
 #include <sys/eventfd.h>
+/* malloc_trim(3): glibc-only <malloc.h>. The weak declaration below lets the
+ * binary link (and the trim degrade to a no-op) on Linux libcs without it,
+ * e.g. musl. */
+#include <malloc.h>
 
 #ifndef IORING_ENTER_EXT_ARG
 #define IORING_ENTER_EXT_ARG (1U << 3)
@@ -284,6 +288,10 @@ struct cwist_reactor {
         uint64_t max_us;
         uint64_t over_5ms; /* samples beyond 5000 us */
     } probe[2];
+    /* CLOCK_MONOTONIC timestamp of the first event-free wake that started the
+     * current idle streak (0 = not idle). Run thread only. Drives the idle
+     * malloc_trim cadence; see reactor_idle_note_wake(). */
+    uint64_t idle_since_ns;
 #endif
 };
 
@@ -1406,6 +1414,60 @@ static uint64_t reactor_round_budget_us(void) {
     return (uint64_t)v;
 }
 
+/* Idle malloc trim (measured ~1.2 MiB median per worker returned to the OS on
+ * an idle HTTPS worker after a load round): glibc never gives back the free
+ * top of the main arena unless asked. CWIST_MALLOC_TRIM_IDLE_SEC bounds how
+ * many seconds of cumulative event-free idleness a reactor may accumulate
+ * before it calls malloc_trim(0) on a wake that saw zero events -- a mostly
+ * idle deployment sheds arena top memory without any hot-path cost. The knob
+ * is cached after the first read like the other env knobs in this file; 0
+ * disables the trim. */
+static uint32_t reactor_malloc_trim_idle_sec(void) {
+    static _Atomic int cached = -1;
+    int v = atomic_load_explicit(&cached, memory_order_relaxed);
+    if (v < 0) {
+        const char *s = getenv("CWIST_MALLOC_TRIM_IDLE_SEC");
+        if (s && *s) {
+            char *end = NULL;
+            long parsed = strtol(s, &end, 10);
+            v = (end != s && parsed >= 0 && parsed < 86400) ? (int)parsed : 30;
+        } else {
+            v = 30;
+        }
+        atomic_store_explicit(&cached, v, memory_order_relaxed);
+    }
+    return (uint32_t)v;
+}
+
+/* Weak: musl and other non-glibc Linux libcs have no malloc_trim. */
+extern int malloc_trim(size_t __pad) __attribute__((weak));
+
+/* A wake that dispatched events (or ran posted work) ends the idle streak. */
+static void reactor_idle_note_eventful(cwist_reactor_t *r) { r->idle_since_ns = 0; }
+
+/* Bookkeeping for a wake that saw zero events. Starts an idle streak on the
+ * first such wake; once the streak has lasted CWIST_MALLOC_TRIM_IDLE_SEC
+ * cumulative seconds, returns the arena top to the OS and re-anchors the
+ * streak. Runs on the run thread only, after the wait returned empty. */
+static void reactor_idle_note_wake(cwist_reactor_t *r) {
+    uint32_t sec = reactor_malloc_trim_idle_sec();
+    if (sec == 0 || &malloc_trim == NULL) {
+        r->idle_since_ns = 0;
+        return;
+    }
+    struct timespec ts;
+    clock_gettime(CLOCK_MONOTONIC, &ts);
+    uint64_t now = (uint64_t)ts.tv_sec * 1000000000ull + (uint64_t)ts.tv_nsec;
+    if (r->idle_since_ns == 0) {
+        r->idle_since_ns = now;
+        return;
+    }
+    if (now - r->idle_since_ns >= (uint64_t)sec * 1000000000ull) {
+        malloc_trim(0);
+        r->idle_since_ns = now;
+    }
+}
+
 #if defined(__x86_64__) || defined(__i386__)
 #define reactor_cpu_relax() __builtin_ia32_pause()
 #elif defined(__aarch64__)
@@ -1499,17 +1561,19 @@ void cwist_reactor_run(cwist_reactor_t *reactor) {
             if (!cq_pending) {
                 int ret = sys_io_uring_enter_timeout(reactor->impl.ring_fd, 0, 1,
                                                      IORING_ENTER_GETEVENTS, &idle_ts);
-                if (ret < 0) {
-                    if (errno == EINTR) continue;
-                    if (errno == ETIME) continue;
-                    break;
-                }
+                /* EINTR and ETIME both leave the CQ untouched, so the
+                 * head/tail check below still decides eventfulness. */
+                if (ret < 0 && errno != EINTR && errno != ETIME) break;
             }
             uint32_t head = __atomic_load_n(reactor->impl.cq_head, __ATOMIC_ACQUIRE);
             uint32_t tail = *reactor->impl.cq_tail;
             if (head == tail) {
+                /* Zero-completion wake: pure idle. Feeds the idle malloc_trim
+                 * cadence; see reactor_idle_note_wake(). */
+                reactor_idle_note_wake(reactor);
                 continue;
             }
+            reactor_idle_note_eventful(reactor);
             reactor_tsan_acquire(&reactor->impl);
             reactor->dispatching = true;
             const uint64_t round_budget_us = reactor_round_budget_us();
@@ -1634,6 +1698,13 @@ void cwist_reactor_run(cwist_reactor_t *reactor) {
             if (n < 0) {
                 if (errno == EINTR) continue;
                 break;
+            }
+            if (n == 0) {
+                /* Event-free idle wake: feeds the idle malloc_trim cadence;
+                 * see reactor_idle_note_wake(). */
+                reactor_idle_note_wake(reactor);
+            } else {
+                reactor_idle_note_eventful(reactor);
             }
             /* Cooperative queuing, same cadence as the io_uring branch (see
              * the comment there): epoll_wait hands back up to 1024 events in

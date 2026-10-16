@@ -30,6 +30,7 @@
 | `CWIST_DRAIN_TIMEOUT` | supported | 초, `0`–`3600` | `5` | 종료 시 앱을 해제하기 전에 처리 중인 요청을 기다리는 시간. 범위 밖 값은 stderr에 알리고 무시합니다. |
 | `CWIST_FD_LIMIT_TARGET` | supported | 0보다 큰 정수 | `1050000` | 서버가 시작할 때 스스로 올리는 열린 파일 soft limit(hard limit까지). [C1M 파일 한도](c1m-file-limits.md) 참고. |
 | `CWIST_MALLOC_ARENA_MAX` | tuning | 0 이상 정수 | 설정 안 함(glibc 기본값) | glibc 전용: `mallopt(M_ARENA_MAX)`. `1`은 할당기 동시성을 조금 내주고 RSS를 크게 줄입니다. |
+| `CWIST_MALLOC_TRIM_IDLE_SEC` | tuning | 초, `0`–`86400` | `30` | glibc 전용(그 외 libc에서는 동작 없음): 이벤트 없이 유휴 상태가 누적된 시간이 이 값에 도달하면 리액터가 이벤트 없는 wake에서 `malloc_trim(0)`을 호출해 glibc 아레나 상단의 여유 메모리를 OS에 반환합니다. 유휴 wake에서만 동작해 핫 패스 비용은 없습니다. 로드 라운드 후 워커당 중간값 약 1.2 MiB 절감. `0`이면 끕니다. |
 
 ## Classic 스레드 풀
 
@@ -57,6 +58,7 @@
 | `CWIST_HTTPS_IDLE_TIMEOUT_MS` | supported | 밀리초, 0보다 큼 | `30000` | HTTPS 연결을 닫기 전 유휴 시간. |
 | `CWIST_HTTPS_PARK` | tuning | `0`/`false`면 끔 | 켜짐 | 유휴 TLS 연결이 풀 스레드를 붙잡지 않고 reactor에 대기합니다. |
 | `CWIST_HTTPS_HS_SHARDS` | tuning | `1`–`16` | CPU 코어 수, `4`–`16`으로 제한 | 핸드셰이크 샤드 수. 연결 폭주 튜닝용. |
+| `CWIST_TLS_SESS_CACHE_SIZE` | tuning | 정수, `0`–`1048576` | `1024` | BoringSSL 서버측 세션 캐시 상한(`SSL_CTX_sess_set_cache_size`)으로, 모든 서버 TLS 컨텍스트(HTTP/1.1, HTTP/2, HTTP/3)에 적용됩니다. 워커 프로세스당 TLS 1.2 세션 ID 보유량을 제한합니다. `0`이면 BoringSSL 기본값(제한 없음)을 씁니다. 세션 삽입 시에만 참조합니다. |
 
 ## HTTP/2
 

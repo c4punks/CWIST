@@ -1056,7 +1056,11 @@ static bool http_async_arm_wait(int fd, cwist_http_async_conn_t *conn,
     };
     if (cwist_reactor_rx_supported(reactor) && !conn->peer_eof && !conn->rx_recv_inflight &&
         !conn->rx_prefers_poll) {
-        if (conn->cap == 0 && !http_async_stash_grow(conn, CWIST_HTTP_READ_BUFFER_SIZE)) {
+        /* Virgin stash: grow to the 4 KiB idle floor, not the 16 KiB read
+         * buffer. A mostly-idle C1M connection then pays ~4 KiB, not 16 KiB,
+         * of rbuf on first arm; any request above the floor regrows through
+         * http_async_stash_grow exactly as a regrown stash does today. */
+        if (conn->cap == 0 && !http_async_stash_grow(conn, CWIST_ASYNC_STASH_IDLE)) {
             /* Stash allocation failed: the legacy fill path retries growth
              * when POLL fires and closes on failure, matching today. */
         } else if (conn->cap > 0) {
@@ -1092,7 +1096,27 @@ static void http_async_dispatch(int fd, cwist_http_async_conn_t *conn,
 
     if (action == CWIST_ASYNC_DEFER) {
         /* The handler parked the request on a cwist_async; the completion
-         * path owns fd and conn now and re-arms or closes when done. */
+         * path owns fd and conn now and re-arms or closes when done.
+         *
+         * A deferred connection used to hold its full rbuf/obuf stashes for
+         * the entire deferral (SSE, long-poll): the idle shrink only ran at
+         * re-arm, which a parked connection never reaches. Shrink toward the
+         * idle floor here instead, so a parked connection pays ~KB, not
+         * ~32 KB, for the whole deferral.
+         *
+         * Defer-specific shrink: the shared helper is keep-alive hysteresis-
+         * gated (it must be: a busy connection would otherwise
+         * shrink->regrow every request, a P99.999 stall source). That
+         * hysteresis is exactly wrong at defer -- the stash was grown moments
+         * ago, yet the connection is now parked indefinitely and the capacity
+         * is not needed until the completion re-arms (which regrows on
+         * demand). So age the anchor out before calling it; the resulting
+         * shrink->regrow pair costs one realloc per defer cycle, not per
+         * request. RX-uring invariant holds: defer runs with no RECV SQE in
+         * flight (rx_recv_inflight was cleared by the RECV completion entry,
+         * or the wait was a POLL), same as at re-arm. */
+        conn->stash_grown_sec = 0;
+        http_async_stash_idle_shrink(conn);
         return;
     }
     if (action == CWIST_ASYNC_DETACH) {
@@ -4858,7 +4882,12 @@ static bool http_async_stash_grow(cwist_http_async_conn_t *conn, size_t need) {
     if (conn->rx_recv_inflight) return false;
     if (need > CWIST_ASYNC_STASH_MAX) return false;
     if (conn->cap >= need) return true;
-    size_t cap = conn->cap ? conn->cap : CWIST_HTTP_READ_BUFFER_SIZE;
+    /* Doubling base: a virgin stash starts at the 4 KiB idle floor (the
+     * first-arm site grows it to exactly that), so an idle C1M connection
+     * pays floor memory, not CWIST_HTTP_READ_BUFFER_SIZE. Above the floor
+     * the doubling ladder is unchanged: need 16 KiB on a virgin stash ends
+     * at the same 16 KiB cap as before. */
+    size_t cap = conn->cap ? conn->cap : CWIST_ASYNC_STASH_IDLE;
     while (cap < need) {
         if (cap > CWIST_ASYNC_STASH_MAX / 2) {
             cap = CWIST_ASYNC_STASH_MAX;

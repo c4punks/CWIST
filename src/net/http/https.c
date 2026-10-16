@@ -1180,6 +1180,7 @@ static void cwist_https_apply_base_tls_defaults(SSL_CTX *ssl_ctx) {
      * OpenSSL refuses to resume cached sessions. Combined with HTTP/1.1
      * keep-alive this removes most full (asymmetric) handshakes. */
     SSL_CTX_set_session_cache_mode(ssl_ctx, SSL_SESS_CACHE_SERVER);
+    SSL_CTX_sess_set_cache_size(ssl_ctx, cwist_tls_sess_cache_size());
     SSL_CTX_set_session_id_context(ssl_ctx, (const unsigned char *)"cwist-v1", 8);
     SSL_CTX_set_timeout(ssl_ctx, 300);
 }
