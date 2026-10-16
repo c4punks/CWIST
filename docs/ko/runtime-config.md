@@ -44,6 +44,7 @@
 | 변수 | 상태 | 값 | 기본값 | 효과 |
 |------|------|----|--------|------|
 | `CWIST_HTTP_KEEP_ALIVE_TIMEOUT` | supported | 초, 0보다 큼 | `15` | keep-alive 연결을 닫기 전 유휴 시간. |
+| `CWIST_ASYNC_STASH_IDLE_SEC` | tuning | 초, 0 이상 | `10` | C1M async HTTP: keep-alive 연결의 큰 rbuf/obuf stash를 re-arm 시 4 KiB 바닥으로 축소하기 전에 용량이 필요 없었던 시간. 바쁜 연결은 용량을 유지해 요청마다 일어나는 축소→재확장 realloc을 없애고, 유휴 연결은 이 시간만큼 늦게 바닥에 수렴합니다. `0`이면 기존처럼 즉시 축소합니다. |
 | `CWIST_HTTP_BATCH` | tuning | `1`–`1024` | `16` | 이벤트 루프 한 턴에 디스패치하는 파이프라인 요청 수. 나머지는 다음 턴에 이어집니다. |
 | `CWIST_HTTP_YIELD_BATCH` | tuning | `1`–`1024` | `CWIST_HTTP_BATCH` | 연결이 reactor 큐로 양보하기 전에 한 배치 안에서 처리하는 요청 수. |
 | `CWIST_USE_TCP_CORK` | tuning | 0보다 큰 정수 | 꺼짐 | Linux, 평문 HTTP/1.1: 소켓을 cork해서 헤더, 본문, 파일 바이트를 꽉 찬 세그먼트로 보냅니다. |

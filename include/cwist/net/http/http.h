@@ -500,6 +500,11 @@ typedef struct cwist_http_async_conn {
      * bucket walk via a content-compare (validated under the EBR epoch on
      * every use). Zero-initialized at connection setup. */
     cwist_bdr_cursor_t bdr_cursor;
+    /* Hysteresis anchor for the idle stash shrink (CWIST_ASYNC_STASH_IDLE_SEC):
+     * monotonic time the rbuf/obuf capacity was last grown. While requests
+     * keep needing capacity the stash is never shrunk at re-arm; one idle
+     * window after the last growth it converges to the small floor. */
+    uint32_t stash_grown_sec;
 } cwist_http_async_conn_t;
 
 /* Re-arm a connection after a deferred response completed on the reactor
