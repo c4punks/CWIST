@@ -238,5 +238,20 @@
     "http_big_gbps": 8.73,
     "https_churn_ratio": 0.131,
     "https_big_ratio": 0.483
+  },
+  {
+    "timestamp": "2026-10-16T15:11:39+0000",
+    "runner_hw": "4 vCPU | Intel(R) Xeon(R) Platinum 8370C CPU @ 2.80GHz",
+    "tls_rtt_p50_ms": 0.084,
+    "tls_rtt_p90_ms": 0.13,
+    "https_churn_rps": 1298.46,
+    "http_churn_rps": 17088.47,
+    "https_keepalive_rps": 116511.15,
+    "http_keepalive_rps": 206094.85,
+    "https_keepalive_ratio": 0.565,
+    "https_big_gbps": 2.63,
+    "http_big_gbps": 7.07,
+    "https_churn_ratio": 0.076,
+    "https_big_ratio": 0.372
   }
 ]
