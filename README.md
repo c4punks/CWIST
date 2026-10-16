@@ -19,15 +19,14 @@ reactor. It is written in plain C and links statically.
 ## Quick start
 
 ```sh
-git clone https://github.com/c4punks/CWIST.git
-cd cwist
-make
+brew tap c4punks/cwist
+brew install c4punks/cwist/cwist
 ```
 
 Then build and run a minimal server ([hello world](#hello-world) below), or
 start from the 30 hands-on modules in [tutorials/](tutorials/README.md) and
-the guides in [docs/](docs/README.md). Install options (including Homebrew)
-are in [Install](#install) below.
+the guides in [docs/](docs/README.md). Building from source (`git clone` +
+`make`) and the other install options are in [Install](#install) below.
 
 ## Two server modes, and why you would pick each
 
