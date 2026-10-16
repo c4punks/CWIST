@@ -1968,29 +1968,26 @@ void cwist_http_header_free_all(cwist_http_header_node *head) {
 /**
  * @brief Copy the cached RFC 7231 IMF-fixdate string for the current second.
  * @param out_buf Destination buffer; receives 29 date bytes plus NUL.
+ * @note Each thread caches its own (second, string) pair, so the once-per-second
+ *       recompute needs no lock: at a second boundary every worker recomputes
+ *       its own copy once and concurrent one-time recomputes yield the same value.
  */
 static void cwist_get_cached_date_header(char out_buf[36]) {
-    static _Atomic time_t g_last_sec = 0;
-    static char g_date_str[36] = {0};
-    static pthread_mutex_t g_date_lock = PTHREAD_MUTEX_INITIALIZER;
+    static _Thread_local time_t cached_sec = (time_t)-1;
+    static _Thread_local char date_str[36];
 
     time_t now = time(NULL);
-    time_t last = atomic_load_explicit(&g_last_sec, memory_order_relaxed);
-    if (now != last) {
-        pthread_mutex_lock(&g_date_lock);
-        if (now != atomic_load_explicit(&g_last_sec, memory_order_relaxed)) {
-            struct tm gmt;
+    if (now != cached_sec) {
+        struct tm gmt;
 #if defined(_WIN32)
-            gmtime_s(&gmt, &now);
+        gmtime_s(&gmt, &now);
 #else
-            gmtime_r(&now, &gmt);
+        gmtime_r(&now, &gmt);
 #endif
-            strftime(g_date_str, sizeof(g_date_str), "%a, %d %b %Y %H:%M:%S GMT", &gmt);
-            atomic_store_explicit(&g_last_sec, now, memory_order_release);
-        }
-        pthread_mutex_unlock(&g_date_lock);
+        strftime(date_str, sizeof(date_str), "%a, %d %b %Y %H:%M:%S GMT", &gmt);
+        cached_sec = now;
     }
-    memcpy(out_buf, g_date_str, 30);
+    memcpy(out_buf, date_str, 30);
     out_buf[29] = '\0';
 }
 

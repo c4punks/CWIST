@@ -117,8 +117,11 @@ static void logger_vlog(cwist_logger *log, cwist_log_level_t level, const char *
     line[len] = '\0';
 
     if (!cwist_log_async_submit(fileno(out), line, len)) {
+        /* Sync fallback: no per-line fflush. stdio batches lines in its
+         * buffer (block-buffered on pipes and files, line-buffered on a TTY),
+         * so delivery is not immediate. Call cwist_log_async_start() for
+         * immediate per-line delivery. */
         fwrite(line, 1, len, out);
-        fflush(out);
     }
     if (line != stack_buf) cwist_free(line);
 }
@@ -130,7 +133,12 @@ static void logger_vlog(cwist_logger *log, cwist_log_level_t level, const char *
  * @note The message is written to stdout for levels below WARN and to stderr
  *       otherwise, with a timestamp, level tag, and logger name prefix, followed by a newline.
  *       The shared FILE streams are not locked across the prefix and the message,
- *       so lines from concurrent threads may interleave.
+ *       so lines from concurrent threads may interleave. In the sync fallback
+ *       each line is still one fwrite(3) call (line-at-a-time write
+ *       granularity), but stdio block-buffers the bytes, so lines are
+ *       delivered in batches rather than per line; a TTY destination stays
+ *       line-buffered. Call cwist_log_async_start() for immediate per-line
+ *       delivery.
  */
 void cwist_logger_log(cwist_logger *log, cwist_log_level_t level, const char *fmt, ...) {
     va_list args;
