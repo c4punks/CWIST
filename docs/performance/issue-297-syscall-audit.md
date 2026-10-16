@@ -100,16 +100,31 @@ kernel. Nothing to cache.
 
 ## What the profile says to do instead (ranked)
 
-1. **Zero-syscall response write (serialization-adjacent, biggest count).**
-   `sendmsg` is exactly 1 per request — 1.19M calls in a 10 s c400 run, the
-   largest syscall count by two orders of magnitude. The SQPOLL send ring
-   already exists (`cwist_io_uring_sqpoll_send`, src/sys/io/uring_sqpoll.c)
-   and is only probed, never used. Wiring the coalesced `obuf` flush
-   (src/net/http/http.c:3368) to an IORING_OP_SEND SQE removes one syscall
-   per request, but requires: a completion-queue reader, obuf lifetime
-   extension until CQE (obuf is reused across keep-alive requests today),
-   and response/close ordering. That is a serialization-path change
-   (issue #297 section 2.3 territory) and needs its own branch + gate.
+1. **~~Zero-syscall response write (serialization-adjacent, biggest count).~~
+   NEGATIVE (2026-10-16, measured, do not retry blindly).** `sendmsg` is
+   exactly 1 per request — 1.19M calls in a 10 s c400 run, the largest
+   syscall count by two orders of magnitude. The SQPOLL send ring was wired
+   into the coalesced `obuf` flush (`cwist_io_uring_sqpoll_send`,
+   src/sys/io/uring_sqpoll.c) on a branch: per-worker ring created after
+   fork, CQ mmap + reap via the ring fd registered with the worker reactor,
+   obuf lifetime gated on the SEND CQE, partial/EAGAIN driven through the
+   existing POLLOUT park machinery, `-EPIPE` handled (io_uring SEND never
+   raises SIGPIPE), `CWIST_SEND_RING=1` opt-in. The mechanism worked
+   exactly — strace shows sendmsg dropping 1.00 -> 0.00 per request — but
+   the A/B was decisively negative (3 interleaved rounds per leg, cwist_bench,
+   base-vs-base noise RPS +-2-4%, P99 +-8%, P99.999 +-25%):
+   c256 RPS 352k -> 178k (-49.5%), P99.999 46.5 -> 77.0 ms;
+   c400 RPS 386k -> 195k (-49.5%), P99.999 56.7 -> 77.6 ms.
+   Structural cause, same shape as the reverted multishot accept (1.1): the
+   synchronous path re-arms the connection for reads immediately after
+   sendmsg returns; the async path must wait for SEND CQE -> ring-fd poll
+   wake -> reap -> re-arm -> next read wake — a full extra reactor
+   round-trip per request — and pays ~65% more `io_uring_enter` calls
+   (236k vs 150k per 6 s under strace at c256). On the producer side, an
+   SQPOLL kernel thread per worker also competes for the core budget (the
+   ROADMAP's v3.6 SQ-wakeup evaluation). Not merged; no knob shipped.
+   Remedy would need request/response pipelining across that gap, which is
+   a different architecture, not a tuning knob.
 2. **Pre-serialized response cache (#297 2.1).** For the benchmarker
    contract app (`GET /` empty body, `GET /user/:id`) a fully materialized
    200 response would cut the serialize+sendmsg path to a single static
@@ -117,8 +132,9 @@ kernel. Nothing to cache.
    remain.
 3. **SQPOLL reactor ring (#297 1.2 proper).** Requires timerfd timers and a
    shutdown nudge; eliminates the deferred-batch flush enters (~0.025/req
-   today, so the ceiling is small unless (1) lands and the ring carries
-   sends too).
+   today, so the ceiling is small — and the SQPOLL-send experiment above
+   adds a measured caution against SQPOLL data-path rings on this
+   workload).
 4. **Accept path: leave as is.** accept4 is ~0 per request at keep-alive and
    the multishot alternative measured strictly worse.
 
