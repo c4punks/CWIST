@@ -15,6 +15,7 @@
 #include <openssl/x509.h>
 
 #include <limits.h>
+#include <stdatomic.h>
 #include <stdbool.h>
 #include <stdint.h>
 #include <stdlib.h>
@@ -502,6 +503,38 @@ static X509 *cwist_fetch_issuer_from_aia(X509 *subject) {
 
     AUTHORITY_INFO_ACCESS_free(aia);
     return issuer;
+}
+
+/** Bounded retention for the BoringSSL server-side session cache.
+ *
+ * BoringSSL's implicit cap is 20k entries per SSL_CTX (ssl.h
+ * SSL_SESSION_CACHE_MAX_SIZE); nothing in CWIST called
+ * SSL_CTX_sess_set_cache_size, so a deployment seeing TLS 1.2 session-ID
+ * resumption could accumulate up to that per worker process with no bound it
+ * could tune. The knob caps the cache on every server context. Measured
+ * session-cache usage under wrk/ab/h2load and openssl s_client TLS 1.2 churn
+ * is 0 (TLS 1.3 tickets are stateless and never enter the server cache), so
+ * today this is retention hardening, not an RSS win. The cap is consulted on
+ * session insert only: zero hot-path impact.
+ *
+ * @return The validated CWIST_TLS_SESS_CACHE_SIZE env override or 1024;
+ *         cached after first read. 0 leaves the BoringSSL default uncapped.
+ */
+unsigned long cwist_tls_sess_cache_size(void) {
+    static _Atomic long cached = -1;
+    long v = atomic_load_explicit(&cached, memory_order_relaxed);
+    if (v < 0) {
+        const char *s = getenv("CWIST_TLS_SESS_CACHE_SIZE");
+        if (s && *s) {
+            char *end = NULL;
+            long parsed = strtol(s, &end, 10);
+            v = (end != s && parsed >= 0 && parsed <= 1048576L) ? parsed : 1024;
+        } else {
+            v = 1024;
+        }
+        atomic_store_explicit(&cached, v, memory_order_relaxed);
+    }
+    return (unsigned long)v;
 }
 
 /**

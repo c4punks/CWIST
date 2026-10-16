@@ -2577,6 +2577,7 @@ static int cwist_h3_ticket_key_cb(SSL *ssl, uint8_t *key_name, uint8_t *iv, EVP_
  */
 static void cwist_h3_setup_session_tickets(SSL_CTX *ssl_ctx) {
     SSL_CTX_set_session_cache_mode(ssl_ctx, SSL_SESS_CACHE_SERVER);
+    SSL_CTX_sess_set_cache_size(ssl_ctx, cwist_tls_sess_cache_size());
 
     pthread_once(&g_h3_ticket_key_ex_data_once, cwist_h3_ticket_key_ex_data_init);
     if (g_h3_ticket_key_ex_data_idx < 0) return;

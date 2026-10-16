@@ -58,6 +58,7 @@
 | `CWIST_HTTPS_IDLE_TIMEOUT_MS` | supported | 밀리초, 0보다 큼 | `30000` | HTTPS 연결을 닫기 전 유휴 시간. |
 | `CWIST_HTTPS_PARK` | tuning | `0`/`false`면 끔 | 켜짐 | 유휴 TLS 연결이 풀 스레드를 붙잡지 않고 reactor에 대기합니다. |
 | `CWIST_HTTPS_HS_SHARDS` | tuning | `1`–`16` | CPU 코어 수, `4`–`16`으로 제한 | 핸드셰이크 샤드 수. 연결 폭주 튜닝용. |
+| `CWIST_TLS_SESS_CACHE_SIZE` | tuning | 정수, `0`–`1048576` | `1024` | BoringSSL 서버측 세션 캐시 상한(`SSL_CTX_sess_set_cache_size`)으로, 모든 서버 TLS 컨텍스트(HTTP/1.1, HTTP/2, HTTP/3)에 적용됩니다. 워커 프로세스당 TLS 1.2 세션 ID 보유량을 제한합니다. `0`이면 BoringSSL 기본값(제한 없음)을 씁니다. 세션 삽입 시에만 참조합니다. |
 
 ## HTTP/2
 

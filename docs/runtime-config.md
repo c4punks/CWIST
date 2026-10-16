@@ -58,6 +58,7 @@ Each variable has one status. The status says what v4 promises about it.
 | `CWIST_HTTPS_IDLE_TIMEOUT_MS` | supported | milliseconds > 0 | `30000` | Idle time before an HTTPS connection is closed. |
 | `CWIST_HTTPS_PARK` | tuning | `0`/`false` disables | on | Park idle TLS connections in the reactor instead of holding a pool thread. |
 | `CWIST_HTTPS_HS_SHARDS` | tuning | `1`–`16` | CPU cores, clamped to `4`–`16` | Handshake shards. For connect-burst tuning. |
+| `CWIST_TLS_SESS_CACHE_SIZE` | tuning | integer, `0`–`1048576` | `1024` | Cap on the BoringSSL server-side session cache (`SSL_CTX_sess_set_cache_size`), applied to every server TLS context (HTTP/1.1, HTTP/2, HTTP/3). Bounds TLS 1.2 session-ID retention per worker process. `0` leaves the BoringSSL default (uncapped). Consulted on session insert only. |
 
 ## HTTP/2
 
