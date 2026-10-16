@@ -90,26 +90,40 @@ alive() {
 }
 
 # Run one wrk slice; parse p99 latency (us), socket errors, non-2xx count.
-# Sets: WRK_P99_US WRK_ERRORS
+# $2 may be "ignore-read": for Connection: close churn slices the server's
+# close-after-response shows up as one wrk "Socket errors: read" per request
+# (wrk counts the expected close of the churn mechanism as a read error), so
+# the read component is excluded from the error budget there; connect/write/
+# timeout errors and non-2xx still fail the slice. Sets: WRK_P99_US WRK_ERRORS
 run_slice() {
-    local url=$1; shift || true
-    local out
-    out=$("$WRK" -t4 -c"$CONCURRENCY" -d"${SLICE}s" --latency "$@" "$url" 2>&1)
+    local url=$1 ignore_read=0; shift || true
+    [ "${1:-}" = "ignore-read" ] && { ignore_read=1; shift; }
+    local out rc
+    out=$("$WRK" -t4 -c"$CONCURRENCY" -d"${SLICE}s" --latency "$@" "$url" 2>&1) || {
+        rc=$?
+        printf '%s\n' "$out" >&2
+        echo "soak: FAIL — wrk exited $rc on $url" >&2
+        exit 1
+    }
     WRK_P99_US=$(printf '%s\n' "$out" | awk '
         / 99%/ {
             tok=$2; val=tok; sub(/[^0-9.].*$/, "", val);
             unit=tok; sub(/^[0-9.]+/, "", unit);
             f = unit=="us" ? 1 : unit=="ms" ? 1000 : unit=="s" ? 1000000 : 0;
             if (f) printf "%d", val*f }')
-    WRK_ERRORS=$(printf '%s\n' "$out" | python3 -c '
-import re, sys
+    WRK_ERRORS=$(IGNORE_READ=$ignore_read python3 -c '
+import os, re, sys
 text = sys.stdin.read()
 errs = 0
 m = re.search(r"Socket errors: connect (\d+), read (\d+), write (\d+), timeout (\d+)", text)
-if m: errs += sum(int(g) for g in m.groups())
+if m:
+    groups = [int(g) for g in m.groups()]
+    if os.environ.get("IGNORE_READ") != "1":
+        errs += groups[1]
+    errs += groups[0] + groups[2] + groups[3]
 m = re.search(r"Non-2xx or 3xx responses: (\d+)", text)
 if m: errs += int(m.group(1))
-print(errs)')
+print(errs)' <<<"$out")
     printf '%s\n' "$out" | grep -E 'Latency|99%|Requests/sec|Socket errors|Non-2xx' || true
 }
 
@@ -162,7 +176,11 @@ while [ $i -lt "$slices" ]; do
         run_slice "$BASE/"
     else
         echo "soak: [$i/$slices] churn slice ${SLICE}s (Connection: close) -> $BASE/health"
-        run_slice "$BASE/health" '-H "Connection: close"'
+        # -H and its value must be separate argv entries: some wrk builds
+        # (Ubuntu's 4.1.0 among them) reject the single-argument form
+        # '-H "Connection: close"' as an unknown option. Read errors are the
+        # churn mechanism itself and are excluded from the error budget.
+        run_slice "$BASE/health" ignore-read -H "Connection: close"
     fi
     if [ -n "$BASE_HTTPS" ]; then
         echo "soak: [$i/$slices] https keep-alive slice -> $BASE_HTTPS/health"
