@@ -2,9 +2,7 @@
 # was added (2026-10-11). This list may only shrink: v3.9.2 works it down to empty.
 cwist_accept_socket
 cwist_app_configure_bdr
-cwist_app_delete_named
 cwist_app_delete_opt
-cwist_app_enable_healthz
 cwist_app_enable_metrics
 cwist_app_get_db
 cwist_app_get_db_pool
@@ -15,12 +13,10 @@ cwist_app_http_handler
 cwist_app_multiport
 cwist_app_patch_named
 cwist_app_patch_opt
-cwist_app_post_named
 cwist_app_post_opt
 cwist_app_put_named
 cwist_app_put_opt
 cwist_app_register_error_handler
-cwist_app_set_error_handler
 cwist_app_set_max_memspace
 cwist_app_set_session_max_age
 cwist_app_set_tls_groups
@@ -42,7 +38,6 @@ cwist_bdr_get_pinned
 cwist_bdr_put_fixed
 cwist_bdr_put_revalidatable
 cwist_bdr_set_limits
-cwist_bind_write_error_response
 cwist_calloc_shim
 cwist_compress_backend_deflate
 cwist_compress_backend_zstd
@@ -181,7 +176,6 @@ cwist_tcp_cork_enabled
 cwist_template_render
 cwist_template_render_file
 cwist_test_client_clear_cookies
-cwist_url_for
 cwist_webrtc_conn_retain
 cwist_websocket_async_close
 cwist_websocket_async_send
