@@ -35,6 +35,17 @@ pub enum Error {
     /// The response was handed to an [`AsyncResponse`](crate::AsyncResponse)
     /// and can no longer be changed through [`Response`](crate::Response).
     Deferred,
+    /// CWIST could not allocate or grow an [`SString`](crate::SString).
+    SString,
+    /// A database operation failed: the file could not be opened, the SQL was
+    /// rejected, or a result/serialized image could not be produced.
+    Database,
+    /// `cwist_jwt_sign()` failed, for example because the claims were not
+    /// valid JSON.
+    JwtSign,
+    /// `cwist_jwt_verify()` rejected the token: it is malformed, its
+    /// HMAC-SHA256 signature does not match, or it has expired.
+    InvalidToken,
 }
 
 impl fmt::Display for Error {
@@ -50,6 +61,10 @@ impl fmt::Display for Error {
             Error::Listen { port } => write!(f, "could not serve on port {port}"),
             Error::AlreadyListening => f.write_str("a CWIST server is already running"),
             Error::Deferred => f.write_str("the response has been deferred"),
+            Error::SString => f.write_str("could not allocate or grow the CWIST string"),
+            Error::Database => f.write_str("the database operation failed"),
+            Error::JwtSign => f.write_str("CWIST could not sign the token"),
+            Error::InvalidToken => f.write_str("the JWT token is invalid or expired"),
         }
     }
 }
