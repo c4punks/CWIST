@@ -79,3 +79,17 @@ change (ROADMAP.md "API stability from v4.0"). CI checks this with
   that tag's baseline is removed or changed, even with the baseline
   regenerated. New API passes; the experimental (WebTransport) sections are
   not checked.
+
+---
+
+## 6. First ascent of a major version
+
+When a major version line opens for the first time (the major number
+increments), the releases of that line are named sequentially from `v1`:
+`v1 → v2 → v3 → v4 → …`. The counter always starts at 1 and never skips.
+
+This rule applies to every fresh major line independently: the first
+ascent of the next major starts again at `v1`, regardless of how far the
+previous line counted. Do not carry the previous line's counter over, and
+do not jump ahead (for example to a `.0` style name) because an
+editor or autocomplete suggested it.
