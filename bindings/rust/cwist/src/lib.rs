@@ -42,14 +42,26 @@
 
 mod app;
 mod async_response;
+mod db;
 mod error;
 mod http;
+mod jwt;
+mod scheduler;
 mod server;
+mod siphash;
+mod sstring;
+mod arena;
 
 pub mod middleware;
 
 pub use app::App;
+pub use arena::Arena;
 pub use async_response::AsyncResponse;
+pub use db::Db;
 pub use error::Error;
 pub use http::{Method, OwnedResponse, Request, Response};
+pub use scheduler::Scheduler;
 pub use server::shutdown;
+pub use siphash::Key;
+pub use sstring::SString;
+pub use jwt::{sign, verify, Claims};
