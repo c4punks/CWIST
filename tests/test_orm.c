@@ -282,12 +282,102 @@ static void test_dialects(void) {
     cwist_orm_close_socket(orm);
 }
 
+/* #354 ask 2: values typed by the column's SQLite storage class, not by
+ * their text.  TEXT holding digits stays TEXT, INTEGER stays exact above
+ * 2^53, BLOB comes back as bytes with a length, and NULL is distinct from
+ * an empty string. */
+static void test_query_typed(void) {
+    cwist_orm_t *orm = open_memdb();
+    cwist_orm_immediate_commit(true);
+    assert(rc(cwist_orm_exec(orm,
+                             "CREATE TABLE q(id INTEGER PRIMARY KEY, r REAL, s TEXT, b BLOB, n TEXT);")) == 0);
+    assert(rc(cwist_orm_exec(orm, "INSERT INTO q VALUES "
+                                  "(1, 2.5, 'hello', x'00ff10', NULL), "
+                                  "(9007199254740993, -0.25, '007', x'', '');")) == 0);
+
+    cwist_orm_result_t *res = NULL;
+    assert(rc(cwist_orm_query_typed(orm, "SELECT id, r, s, b, n FROM q ORDER BY r DESC;", &res)) == 0);
+    assert(res && res->row_count == 2 && res->column_count == 5);
+    assert(cwist_orm_result_column_index(res, "id") == 0);
+    assert(cwist_orm_result_column_index(res, "n") == 4);
+    assert(cwist_orm_result_column_index(res, "missing") == res->column_count);
+    assert(cwist_orm_result_column_index(NULL, "id") == 0);
+    assert(cwist_orm_result_cell(NULL, 0, 0) == NULL);
+    assert(cwist_orm_result_cell(res, 2, 0) == NULL);
+    assert(cwist_orm_result_cell(res, 0, 5) == NULL);
+
+    /* Mixed-type first row: one of every storage class. */
+    const cwist_orm_value_t *cell = cwist_orm_result_cell(res, 0, 0);
+    assert(cell && cell->type == CWIST_ORM_TYPE_INTEGER && cell->i64 == 1);
+    cell = cwist_orm_result_cell(res, 0, 1);
+    assert(cell && cell->type == CWIST_ORM_TYPE_REAL && cell->real == 2.5);
+    cell = cwist_orm_result_cell(res, 0, 2);
+    assert(cell && cell->type == CWIST_ORM_TYPE_TEXT && strcmp(cell->text, "hello") == 0);
+    cell = cwist_orm_result_cell(res, 0, 3);
+    assert(cell && cell->type == CWIST_ORM_TYPE_BLOB && cell->blob_len == 3);
+    assert(cell->blob[0] == 0x00 && cell->blob[1] == 0xff && cell->blob[2] == 0x10);
+    cell = cwist_orm_result_cell(res, 0, 4);
+    assert(cell && cell->type == CWIST_ORM_TYPE_NULL && cell->text == NULL && cell->blob == NULL);
+
+    /* Second row: integer above 2^53 stays exact, canonical-integer TEXT
+     * stays TEXT, empty BLOB has length 0, empty TEXT is not NULL. */
+    cell = cwist_orm_result_cell(res, 1, 0);
+    assert(cell && cell->type == CWIST_ORM_TYPE_INTEGER && cell->i64 == INT64_C(9007199254740993));
+    cell = cwist_orm_result_cell(res, 1, 1);
+    assert(cell && cell->type == CWIST_ORM_TYPE_REAL && cell->real == -0.25);
+    cell = cwist_orm_result_cell(res, 1, 2);
+    assert(cell && cell->type == CWIST_ORM_TYPE_TEXT && strcmp(cell->text, "007") == 0);
+    cell = cwist_orm_result_cell(res, 1, 3);
+    assert(cell && cell->type == CWIST_ORM_TYPE_BLOB && cell->blob_len == 0 && cell->blob == NULL);
+    cell = cwist_orm_result_cell(res, 1, 4);
+    assert(cell && cell->type == CWIST_ORM_TYPE_TEXT && cell->text[0] == '\0');
+    cwist_orm_result_free(res);
+    res = NULL;
+
+    /* Zero rows still reports the columns. */
+    assert(rc(cwist_orm_query_typed(orm, "SELECT id, s FROM q WHERE id = 99;", &res)) == 0);
+    assert(res && res->row_count == 0 && res->column_count == 2);
+    assert(cwist_orm_result_cell(res, 0, 0) == NULL);
+    cwist_orm_result_free(res);
+    res = NULL;
+
+    /* Errors reset the result. */
+    assert(rc(cwist_orm_query_typed(orm, "SELEKT nonsense;", &res)) != 0 && res == NULL);
+    assert(rc(cwist_orm_query_typed(NULL, "SELECT 1;", &res)) == CWIST_ERROR_INVALID_PARAM);
+    assert(rc(cwist_orm_query_typed(orm, NULL, &res)) == CWIST_ERROR_INVALID_PARAM);
+    assert(rc(cwist_orm_query_typed(orm, "SELECT 1;", NULL)) == CWIST_ERROR_INVALID_PARAM);
+
+    /* BLOB bytes that are not valid UTF-8 and do not survive as text. */
+    assert(rc(cwist_orm_exec(orm, "CREATE TABLE raw(b BLOB);")) == 0);
+    assert(rc(cwist_orm_exec(orm, "INSERT INTO raw VALUES (x'c0ffee42');")) == 0);
+    assert(rc(cwist_orm_query_typed(orm, "SELECT b FROM raw;", &res)) == 0);
+    cell = cwist_orm_result_cell(res, 0, 0);
+    assert(cell && cell->type == CWIST_ORM_TYPE_BLOB && cell->blob_len == 4);
+    assert(cell->blob[0] == 0xc0 && cell->blob[1] == 0xff && cell->blob[2] == 0xee &&
+           cell->blob[3] == 0x42);
+    cwist_orm_result_free(res);
+    cwist_orm_result_free(NULL);
+
+    /* The legacy path still types by text: the id is a JSON number rounded
+     * to a double, and '007' is a string (not canonical integer text). */
+    cJSON *rows = NULL;
+    assert(rc(cwist_orm_query(orm, "SELECT id, s FROM q WHERE id = 9007199254740993;", &rows)) == 0);
+    cJSON *legacy_row = cJSON_GetArrayItem(rows, 0);
+    cJSON *legacy_id = cJSON_GetObjectItem(legacy_row, "id");
+    assert(cJSON_IsNumber(legacy_id) && legacy_id->valuedouble == 9007199254740992.0);
+    assert(cJSON_IsString(cJSON_GetObjectItem(legacy_row, "s")));
+    cJSON_Delete(rows);
+
+    cwist_orm_close_socket(orm);
+}
+
 int main(void) {
     test_query_and_transactions();
     test_insert_returning();
     test_select_one();
     test_value_fidelity();
     test_exact_i64();
+    test_query_typed();
     test_dialects();
     cwist_orm_immediate_commit(false);
     printf("test_orm: ok\n");

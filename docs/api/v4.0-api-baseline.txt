@@ -4,7 +4,7 @@
 # (parameter names dropped) and struct/union/enum layouts in member order.
 # `make api-check` (CI) fails when the headers no longer match this file.
 
-== functions (766) ==
+== functions (770) ==
 cwist_accept_socket
 cwist_alloc
 cwist_alloc_array
@@ -561,6 +561,10 @@ cwist_orm_insert_returning_llong
 cwist_orm_insert_returning_long
 cwist_orm_open_socket
 cwist_orm_query
+cwist_orm_query_typed
+cwist_orm_result_cell
+cwist_orm_result_column_index
+cwist_orm_result_free
 cwist_orm_rollback
 cwist_orm_select
 cwist_orm_select_one_double
@@ -772,7 +776,7 @@ cwist_zod_parse
 cwist_zod_print_errors
 cwist_zod_validate
 
-== function signatures (767) ==
+== function signatures (771) ==
 cwist_accept_socket: cwist_error_t (int, struct sockaddr *, void (*)(int client_fd, void *ctx), void *)
 cwist_alloc: void * (size_t)
 cwist_alloc_array: void * (size_t, size_t)
@@ -1330,6 +1334,10 @@ cwist_orm_insert_returning_llong: cwist_error_t (cwist_orm_t *, const char *, co
 cwist_orm_insert_returning_long: cwist_error_t (cwist_orm_t *, const char *, const cJSON *, const char *, long *)
 cwist_orm_open_socket: cwist_orm_t * (int)
 cwist_orm_query: cwist_error_t (cwist_orm_t *, const char *, cJSON **)
+cwist_orm_query_typed: cwist_error_t (cwist_orm_t *, const char *, cwist_orm_result_t **)
+cwist_orm_result_cell: const cwist_orm_value_t * (const cwist_orm_result_t *, size_t, size_t)
+cwist_orm_result_column_index: size_t (const cwist_orm_result_t *, const char *)
+cwist_orm_result_free: void (cwist_orm_result_t *)
 cwist_orm_rollback: cwist_error_t (cwist_orm_t *)
 cwist_orm_select: cwist_error_t (cwist_orm_t *, const char *, const char *, const char *, cJSON **)
 cwist_orm_select_one_double: cwist_error_t (cwist_orm_t *, const char *, const char *, const char *, double *)
@@ -1565,7 +1573,7 @@ cwist_wasm_component_dispose: void (void *)
 cwist_wasm_dispatch_memory: const char * (cwist_app *, const char *, size_t, size_t *)
 cwist_wasm_free: void (void *)
 
-== types (struct/union/enum names) (150) ==
+== types (struct/union/enum names) (153) ==
 __natsConnection
 __prim_cwist_error_t
 bdr_blob_t
@@ -1672,6 +1680,9 @@ cwist_nats
 cwist_nuke_db_t
 cwist_orm
 cwist_orm_dialect
+cwist_orm_result
+cwist_orm_value
+cwist_orm_value_type
 cwist_pb_field
 cwist_pb_reader
 cwist_pb_wire_type
@@ -1717,7 +1728,7 @@ cwist_zod_result
 quic_conn_fc
 quic_stream_fc
 
-== typedefs (201) ==
+== typedefs (204) ==
 __prim_cwist_error_t
 bdr_blob_t
 bdr_entry_t
@@ -1853,7 +1864,10 @@ cwist_nats_msg_cb
 cwist_nats_t
 cwist_nuke_db_t
 cwist_orm_dialect_t
+cwist_orm_result_t
 cwist_orm_t
+cwist_orm_value_t
+cwist_orm_value_type_t
 cwist_pb_field
 cwist_pb_reader
 cwist_pb_wire_type_t
@@ -1920,7 +1934,7 @@ quic_conn_fc_t
 quic_net_quality_t
 quic_stream_fc_t
 
-== enum constants (224) ==
+== enum constants (229) ==
 CWIST_ASYNC_CLOSE
 CWIST_ASYNC_DEFER
 CWIST_ASYNC_DETACH
@@ -2123,6 +2137,11 @@ CWIST_ORM_MARIADB
 CWIST_ORM_MYSQL
 CWIST_ORM_POSTGRES
 CWIST_ORM_SQLITE
+CWIST_ORM_TYPE_BLOB
+CWIST_ORM_TYPE_INTEGER
+CWIST_ORM_TYPE_NULL
+CWIST_ORM_TYPE_REAL
+CWIST_ORM_TYPE_TEXT
 CWIST_PB_32BIT
 CWIST_PB_64BIT
 CWIST_PB_LEN

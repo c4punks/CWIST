@@ -1418,3 +1418,276 @@ cwist_error_t cwist_orm_insert_returning_i64(cwist_orm_t *orm, const char *table
     free(sql);
     return err;
 }
+
+/* ------------------------------------------------------------------ */
+/* Column-typed result sets (#354)                                     */
+/* ------------------------------------------------------------------ */
+
+/**
+ * @brief Decode one base64 character; -1 when it is not in the alphabet.
+ */
+static int orm_b64_value(unsigned char c) {
+    if (c >= 'A' && c <= 'Z') return c - 'A';
+    if (c >= 'a' && c <= 'z') return c - 'a' + 26;
+    if (c >= '0' && c <= '9') return c - '0' + 52;
+    if (c == '+') return 62;
+    if (c == '/') return 63;
+    return -1;
+}
+
+/**
+ * @brief Base64-decode a worker BLOB cell into a new buffer.
+ * @return Heap buffer (NULL when the decoded length is 0), or NULL with
+ *         *out_len == SIZE_MAX when the input is not valid base64.
+ */
+static unsigned char *orm_b64_decode(const char *in, size_t *out_len) {
+    size_t n = strlen(in);
+    if (n % 4 != 0) {
+        *out_len = SIZE_MAX;
+        return NULL;
+    }
+    size_t pad = 0;
+    if (n > 0 && in[n - 1] == '=') pad++;
+    if (n > 1 && in[n - 2] == '=') pad++;
+    size_t cap = n / 4 * 3 - pad;
+    unsigned char *out = (unsigned char *)malloc(cap ? cap : 1);
+    if (!out) {
+        *out_len = SIZE_MAX;
+        return NULL;
+    }
+    size_t o = 0;
+    for (size_t i = 0; i < n; i += 4) {
+        int v[4];
+        int chars = 3;
+        for (int k = 0; k < 4; k++) {
+            char c = in[i + k];
+            if (c == '=') {
+                if (i + 4 != n || k < 2 || (k == 2 && in[i + 3] != '=')) {
+                    free(out);
+                    *out_len = SIZE_MAX;
+                    return NULL;
+                }
+                v[k] = 0;
+                chars--;
+            } else {
+                v[k] = orm_b64_value((unsigned char)c);
+                if (v[k] < 0) {
+                    free(out);
+                    *out_len = SIZE_MAX;
+                    return NULL;
+                }
+            }
+        }
+        unsigned triple = ((unsigned)v[0] << 18) | ((unsigned)v[1] << 12) |
+                          ((unsigned)v[2] << 6) | (unsigned)v[3];
+        if (o < cap) out[o++] = (unsigned char)(triple >> 16);
+        if (o < cap) out[o++] = (unsigned char)(triple >> 8);
+        if (o < cap) out[o++] = (unsigned char)triple;
+    }
+    *out_len = cap;
+    return out;
+}
+
+/**
+ * @brief Materialize one typed cell into a cwist_orm_value_t.
+ *
+ * INTEGER digits are parsed with strtoll (no double round-trip, so values
+ * above 2^53 stay exact); anything but canonical integer text that fits
+ * int64_t is a protocol error.  Ownership of text/blob moves to @p v.
+ * @return CWIST_SUCCESS or CWIST_ERROR_PROTOCOL / CWIST_ERROR_NOMEM.
+ */
+static int orm_fill_typed_cell(cwist_orm_value_t *v, const cJSON *cell) {
+    const cJSON *tag = cJSON_GetObjectItemCaseSensitive(cell, "t");
+    if (!cJSON_IsString(tag) || !tag->valuestring) return CWIST_ERROR_PROTOCOL;
+    const char *t = tag->valuestring;
+    const cJSON *payload = cJSON_GetObjectItemCaseSensitive(cell, "v");
+
+    if (strcmp(t, "null") == 0) {
+        v->type = CWIST_ORM_TYPE_NULL;
+        return CWIST_SUCCESS;
+    }
+    if (strcmp(t, "int") == 0) {
+        if (!cJSON_IsString(payload) || !payload->valuestring) return CWIST_ERROR_PROTOCOL;
+        const char *s = payload->valuestring;
+        if (!*s) return CWIST_ERROR_PROTOCOL;
+        errno = 0;
+        char *endptr = NULL;
+        long long val = strtoll(s, &endptr, 10);
+        if (errno == ERANGE || !endptr || *endptr != '\0') return CWIST_ERROR_PROTOCOL;
+        v->type = CWIST_ORM_TYPE_INTEGER;
+        v->i64 = (int64_t)val;
+        return CWIST_SUCCESS;
+    }
+    if (strcmp(t, "real") == 0) {
+        if (!cJSON_IsNumber(payload)) return CWIST_ERROR_PROTOCOL;
+        v->type = CWIST_ORM_TYPE_REAL;
+        v->real = payload->valuedouble;
+        return CWIST_SUCCESS;
+    }
+    if (strcmp(t, "text") == 0) {
+        if (!cJSON_IsString(payload) || !payload->valuestring) return CWIST_ERROR_PROTOCOL;
+        v->type = CWIST_ORM_TYPE_TEXT;
+        v->text = strdup(payload->valuestring);
+        return v->text ? CWIST_SUCCESS : CWIST_ERROR_NOMEM;
+    }
+    if (strcmp(t, "blob") == 0) {
+        if (!cJSON_IsString(payload) || !payload->valuestring) return CWIST_ERROR_PROTOCOL;
+        size_t len = 0;
+        unsigned char *bytes = orm_b64_decode(payload->valuestring, &len);
+        if (len == SIZE_MAX) return CWIST_ERROR_PROTOCOL;
+        v->type = CWIST_ORM_TYPE_BLOB;
+        v->blob = len ? bytes : NULL;
+        v->blob_len = len;
+        if (!len) free(bytes);
+        return CWIST_SUCCESS;
+    }
+    return CWIST_ERROR_PROTOCOL;
+}
+
+/**
+ * @brief Execute a SELECT-style query and return column-typed rows.
+ *
+ * Reads the worker's "typed" payload, which types every cell from its
+ * SQLite storage class: INTEGER as exact int64 digits, REAL as a double,
+ * TEXT as a string, BLOB as decoded bytes with its length, and NULL as a
+ * distinct type.  On success @p *result receives a heap-allocated result
+ * set the caller releases with cwist_orm_result_free().
+ *
+ * @param orm    Active session.
+ * @param sql    Null-terminated SQL query.
+ * @param result [out] Receives the result set, or NULL on failure.
+ * @return CWIST_SUCCESS on success; CWIST_ERROR_INVALID_PARAM for NULL
+ *         arguments, CWIST_ERROR_IO on transport failure, or
+ *         CWIST_ERROR_PROTOCOL on a backend error or a malformed typed
+ *         payload.
+ */
+cwist_error_t cwist_orm_query_typed(cwist_orm_t *orm, const char *sql,
+                                    cwist_orm_result_t **result) {
+    cwist_error_t err = make_error(CWIST_ERR_INT16);
+    if (result) *result = NULL;
+    if (!orm || !sql || !result) {
+        err.error.err_i16 = CWIST_ERROR_INVALID_PARAM;
+        return err;
+    }
+
+    char *payload = NULL;
+    if (orm_exchange(orm, sql, &payload) != 0) {
+        err.error.err_i16 = CWIST_ERROR_IO;
+        return err;
+    }
+
+    err.error.err_i16 = CWIST_ERROR_PROTOCOL;
+    cJSON *root = cJSON_Parse(payload);
+    free(payload);
+    if (!root) return err;
+
+    cwist_orm_result_t *res = NULL;
+
+    cJSON *status = cJSON_GetObjectItemCaseSensitive(root, "status");
+    if (!cJSON_IsNumber(status) || (int)status->valuedouble != 0) goto done;
+
+    cJSON *typed = cJSON_GetObjectItemCaseSensitive(root, "typed");
+    cJSON *columns = cJSON_GetObjectItemCaseSensitive(typed, "columns");
+    cJSON *trows = cJSON_GetObjectItemCaseSensitive(typed, "rows");
+    if (!cJSON_IsArray(columns) || !cJSON_IsArray(trows)) goto done;
+
+    res = (cwist_orm_result_t *)calloc(1, sizeof(*res));
+    if (!res) {
+        err.error.err_i16 = CWIST_ERROR_NOMEM;
+        goto done;
+    }
+
+    res->column_count = (size_t)cJSON_GetArraySize(columns);
+    res->row_count = (size_t)cJSON_GetArraySize(trows);
+
+    res->columns = (char **)calloc(res->column_count ? res->column_count : 1, sizeof(char *));
+    if (!res->columns) {
+        err.error.err_i16 = CWIST_ERROR_NOMEM;
+        goto fail;
+    }
+    for (size_t i = 0; i < res->column_count; i++) {
+        cJSON *name = cJSON_GetArrayItem(columns, (int)i);
+        if (!cJSON_IsString(name) || !name->valuestring) goto fail;
+        res->columns[i] = strdup(name->valuestring);
+        if (!res->columns[i]) {
+            err.error.err_i16 = CWIST_ERROR_NOMEM;
+            goto fail;
+        }
+    }
+
+    if (res->row_count > 0) {
+        if (res->column_count == 0 ||
+            res->row_count > SIZE_MAX / res->column_count / sizeof(cwist_orm_value_t))
+            goto fail;
+        res->cells = (cwist_orm_value_t *)calloc(
+            res->row_count * res->column_count, sizeof(cwist_orm_value_t));
+        if (!res->cells) {
+            err.error.err_i16 = CWIST_ERROR_NOMEM;
+            goto fail;
+        }
+    }
+
+    size_t idx = 0;
+    cJSON *trow = NULL;
+    cJSON_ArrayForEach(trow, trows) {
+        if (!cJSON_IsArray(trow) || (size_t)cJSON_GetArraySize(trow) != res->column_count)
+            goto fail;
+        for (size_t c = 0; c < res->column_count; c++, idx++) {
+            int rc = orm_fill_typed_cell(&res->cells[idx], cJSON_GetArrayItem(trow, (int)c));
+            if (rc != CWIST_SUCCESS) {
+                err.error.err_i16 = rc;
+                goto fail;
+            }
+        }
+    }
+
+    *result = res;
+    err.error.err_i16 = CWIST_SUCCESS;
+    goto done;
+
+fail:
+    cwist_orm_result_free(res);
+done:
+    cJSON_Delete(root);
+    return err;
+}
+
+/**
+ * @brief Release a result set from cwist_orm_query_typed().
+ *
+ * Frees the column names, every owned cell payload, and the structure
+ * itself.  Safe to call with NULL.
+ *
+ * @param result Result set to free.
+ */
+void cwist_orm_result_free(cwist_orm_result_t *result) {
+    if (!result) return;
+    if (result->cells) {
+        size_t total = result->row_count * result->column_count;
+        for (size_t i = 0; i < total; i++) {
+            free(result->cells[i].text);
+            free(result->cells[i].blob);
+        }
+    }
+    if (result->columns) {
+        for (size_t i = 0; i < result->column_count; i++) free(result->columns[i]);
+    }
+    free(result->columns);
+    free(result->cells);
+    free(result);
+}
+
+size_t cwist_orm_result_column_index(const cwist_orm_result_t *result, const char *column) {
+    if (!result || !column) return result ? result->column_count : 0;
+    for (size_t i = 0; i < result->column_count; i++) {
+        if (result->columns[i] && strcmp(result->columns[i], column) == 0) return i;
+    }
+    return result->column_count;
+}
+
+const cwist_orm_value_t *cwist_orm_result_cell(const cwist_orm_result_t *result, size_t row,
+                                               size_t column) {
+    if (!result || !result->cells || row >= result->row_count || column >= result->column_count)
+        return NULL;
+    return &result->cells[row * result->column_count + column];
+}

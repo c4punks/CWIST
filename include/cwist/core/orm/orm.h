@@ -143,7 +143,10 @@ cwist_error_t cwist_orm_exec(cwist_orm_t *orm, const char *sql);
  * @brief Execute a SELECT query and return the result set.
  *
  * The returned cJSON object is an array.  Each element is an object
- * whose keys are column names and whose values are the row data.
+ * whose keys are column names and whose values are the row data.  Values
+ * keep the legacy text-based typing (canonical integer text becomes a
+ * number); use cwist_orm_query_typed() for values typed by the column's
+ * SQLite storage class.
  *
  * @param orm    ORM session.
  * @param sql    Null-terminated SELECT statement.
@@ -260,6 +263,116 @@ cwist_error_t cwist_orm_insert_returning_llong(cwist_orm_t *orm, const char *tab
         long *: cwist_orm_insert_returning_long,                 \
         long long *: cwist_orm_insert_returning_llong,           \
         cJSON **: cwist_orm_insert_returning_json)((orm), (table), (data), (returning_col), (out))
+
+/* ------------------------------------------------------------------ */
+/* Column-typed result sets (#354)                                     */
+/* ------------------------------------------------------------------ */
+
+/**
+ * @brief Storage class of a typed result cell.
+ *
+ * The class comes from the SQLite value's storage class
+ * (sqlite3_column_type()), not from its text: a TEXT column holding
+ * canonical integer text is CWIST_ORM_TYPE_TEXT, and SQL NULL is
+ * CWIST_ORM_TYPE_NULL, distinct from an empty TEXT value.
+ */
+typedef enum cwist_orm_value_type {
+    CWIST_ORM_TYPE_NULL = 0,   /**< SQL NULL */
+    CWIST_ORM_TYPE_INTEGER,    /**< INTEGER, exact through the full int64 range */
+    CWIST_ORM_TYPE_REAL,       /**< REAL as a double */
+    CWIST_ORM_TYPE_TEXT,       /**< TEXT as a null-terminated string */
+    CWIST_ORM_TYPE_BLOB,       /**< BLOB as (blob, blob_len) bytes */
+} cwist_orm_value_type_t;
+
+/**
+ * @brief One cell of a column-typed result set.
+ *
+ * Exactly one payload field is meaningful per cwist_orm_value_type_t:
+ * i64 for CWIST_ORM_TYPE_INTEGER (exact above 2^53), real for
+ * CWIST_ORM_TYPE_REAL, text for CWIST_ORM_TYPE_TEXT (never NULL), and
+ * (blob, blob_len) for CWIST_ORM_TYPE_BLOB (blob is NULL when the BLOB
+ * is empty).  Owned by the result set; released by
+ * cwist_orm_result_free().
+ */
+typedef struct cwist_orm_value {
+    cwist_orm_value_type_t type;
+    int64_t       i64;      /**< CWIST_ORM_TYPE_INTEGER */
+    double        real;     /**< CWIST_ORM_TYPE_REAL */
+    char         *text;     /**< CWIST_ORM_TYPE_TEXT */
+    unsigned char *blob;    /**< CWIST_ORM_TYPE_BLOB (NULL when empty) */
+    size_t        blob_len; /**< CWIST_ORM_TYPE_BLOB */
+} cwist_orm_value_t;
+
+/**
+ * @brief Column-typed result set produced by cwist_orm_query_typed().
+ *
+ * Cells are stored row-major: cell (row, column) lives at
+ * cells[row * column_count + column].  Column names come from the
+ * result-producing statement.  Everything is released by
+ * cwist_orm_result_free().
+ */
+typedef struct cwist_orm_result {
+    size_t              column_count;
+    size_t              row_count;
+    char              **columns;
+    cwist_orm_value_t  *cells;
+} cwist_orm_result_t;
+
+/**
+ * @brief Execute a SELECT-style query and return column-typed rows.
+ *
+ * Values are typed by each cell's SQLite storage class, not by its
+ * text, unlike cwist_orm_query() whose JSON values keep the legacy
+ * text-based typing (canonical integer text becomes a number there).
+ * Here a TEXT cell stays TEXT even when it holds digits, INTEGER keeps
+ * every digit above 2^53, and SQL NULL is a distinct type from an
+ * empty TEXT value.
+ *
+ * @param orm    ORM session.
+ * @param sql    Null-terminated SELECT statement.
+ * @param result [out] Receives a heap-allocated cwist_orm_result_t that
+ *               the caller must release with cwist_orm_result_free().
+ *               On failure the pointer is set to @c NULL.
+ * @return cwist_error_t with err_i16 == 0 on success;
+ *         CWIST_ERROR_INVALID_PARAM for NULL arguments,
+ *         CWIST_ERROR_IO on transport failure, CWIST_ERROR_PROTOCOL on
+ *         a backend error or a response without typed column metadata.
+ */
+cwist_error_t cwist_orm_query_typed(cwist_orm_t *orm, const char *sql,
+                                    cwist_orm_result_t **result);
+
+/**
+ * @brief Release a result set from cwist_orm_query_typed().
+ *
+ * Safe to call with @c NULL.
+ *
+ * @param result Result set to free.
+ */
+void cwist_orm_result_free(cwist_orm_result_t *result);
+
+/**
+ * @brief Find a column index by name in a typed result set.
+ *
+ * @param result Result set.
+ * @param column Column name.
+ * @return The column index, or @p result->column_count when the name is
+ *         not present (or either argument is NULL).
+ */
+size_t cwist_orm_result_column_index(const cwist_orm_result_t *result,
+                                     const char *column);
+
+/**
+ * @brief Read one cell of a typed result set.
+ *
+ * @param result Result set.
+ * @param row    Row index.
+ * @param column Column index.
+ * @return Pointer to the cell, or @c NULL when the coordinates are out
+ *         of range or @p result is NULL.  The pointer is owned by the
+ *         result set and stays valid until cwist_orm_result_free().
+ */
+const cwist_orm_value_t *cwist_orm_result_cell(const cwist_orm_result_t *result,
+                                               size_t row, size_t column);
 
 /* ------------------------------------------------------------------ */
 /* _Generic type-dispatched SELECT single scalar                       */
