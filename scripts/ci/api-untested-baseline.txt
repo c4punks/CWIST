@@ -2,23 +2,14 @@
 # was added (2026-10-11). This list may only shrink: v3.9.2 works it down to empty.
 cwist_accept_socket
 cwist_app_configure_bdr
-cwist_app_delete_opt
 cwist_app_enable_metrics
 cwist_app_get_db
 cwist_app_get_db_pool
-cwist_app_get_named
-cwist_app_get_opt
 cwist_app_get_redis_pool
 cwist_app_http_handler
 cwist_app_multiport
-cwist_app_patch_named
-cwist_app_patch_opt
-cwist_app_post_opt
-cwist_app_put_named
-cwist_app_put_opt
 cwist_app_register_error_handler
 cwist_app_set_max_memspace
-cwist_app_set_session_max_age
 cwist_app_set_tls_groups
 cwist_app_static_with_cache
 cwist_app_use_db
