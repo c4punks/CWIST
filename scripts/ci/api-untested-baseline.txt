@@ -39,8 +39,6 @@ cwist_bdr_put_fixed
 cwist_bdr_put_revalidatable
 cwist_bdr_set_limits
 cwist_calloc_shim
-cwist_compress_backend_deflate
-cwist_compress_backend_zstd
 cwist_create_owner
 cwist_db_pool_destroy
 cwist_db_sync_pull
