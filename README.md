@@ -476,6 +476,28 @@ figures (~111 MB / ~124 MB / ~244 MB at C10K / C100K / C1M) predate later
 changes to the connection path, and per-connection memory is now the
 main cost at C1M.
 
+Re-run on 2026-10-17 (same 12-core machine, HTTPS gate server
+`tests/rss_gate_server` with 4 workers via `scripts/ci/c100k_https.sh`,
+C1M reactor mode), ramp + idle hold + two keep-alive rounds:
+
+| Scale | Result | Ramp | Round 1 / Round 2 rps | Memory / open conn |
+|-------|--------|------|-----------------------|--------------------|
+| C10K | 10,000 / 10,000 established, 0 dropped, all answered | 1.97 s | 64.0k / 115.9k | 5,906 B |
+| C100K | 100,000 / 100,000 established, 0 dropped, all answered | 18.14 s | 73.0k / 106.4k | 4,975 B |
+
+The C1M row could not be re-run on this machine on 2026-10-17 for two
+host-environment limits, both outside CWIST: the host netfilter conntrack
+table is capped at 262,144 flows (the ramp froze at exactly 262,090
+connections, recycling at ~180/s; `nf_conntrack_max` needs root to raise),
+and with ~45 GiB of RAM already in use by other workloads the remaining
+~10 GiB is short of the ~20 GiB a 1M-connection run needs (the run was
+stopped at ~450k connections to protect the host from OOM). The
+2026-09-29 numbers above remain the C1M reference. `scripts/ci/c1m_local.sh`
+automates the 8x125K orchestration: each client gets its own loopback /16
+(sharing source addresses across clients deadlocks the ramp around ~180k
+connections as their ephemeral-port ranges collide in the kernel), and
+`unshare -Urn` lifts the conntrack cap with a fresh per-namespace table.
+
 The classic thread-per-connection path (`CWIST_C1M_MODE=0`) is no longer
 capped at `cores*8` held connections either: every accepted connection gets
 its own on-demand detached thread with a 256 KiB stack, so held connections

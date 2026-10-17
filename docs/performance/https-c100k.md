@@ -47,6 +47,27 @@ With only two addresses and the ports nearly used up, the ramp took 55 s
 instead of 18.5 s. As the free ports run out, `connect()` takes longer to
 find one. The slowdown came from the client side, not from the server.
 
+## Results (2026-10-17, dev)
+
+Local machine, 12 cores, C1M reactor mode (default), HTTPS gate server
+`tests/rss_gate_server` (4 prefork workers) driven by
+`tests/c100k_https_client` through `scripts/ci/c100k_https.sh`:
+
+| Scale | Established | Dropped idle | Round 1 | Round 2 | Ramp | Memory / open conn |
+|-------|-------------|--------------|---------|---------|------|--------------------|
+| C10K (`C100K_CONNS=10000`) | 10000 | 0 | 10000 ok, 64.0k rps | 10000 ok, 115.9k rps | 1.97 s | 5906 B |
+| C100K (default) | 100000 | 0 | 100000 ok, 73.0k rps | 100000 ok, 106.4k rps | 18.14 s | 4975 B |
+
+Both runs PASS every gate criterion (ramp under 180 s, no dropped
+connection, every request answered, memory at most 8192 B per open
+connection). The per-connection figure is consistent with the ~5 KB
+parked-connection cost measured 2026-10-11 after parked connections
+started releasing their 16 KiB read buffer.
+
+The C1M row (8x125K clients) did not complete on this machine; see
+[Scaling past the gate on a single host](#scaling-past-the-gate-on-a-single-host)
+below.
+
 ## Results (2026-10-11, dev)
 
 | Mode | Machine | Established | Dropped | Round 1 | Round 2 | Ramp | Memory / open conn |
@@ -80,11 +101,50 @@ with `SO_REUSEPORT`, so it received part of the connections. The script now
 fails at start if the port already answers. It also counts swapped-out pages
 together with RSS.
 
+## Scaling past the gate on a single host
+
+Three host limits gate a 1M-connection run, all outside CWIST:
+
+- **conntrack table.** Every loopback flow occupies an entry. The host's
+  `nf_conntrack_max` of 262144 froze the 2026-10-17 ramp at exactly 262090
+  connections (the rest of the table was unrelated traffic), recycling at
+  ~180/s as entries timed out. `unshare -Urn` (user + network namespace)
+  gives the run a fresh, namespace-owned conntrack table — and root inside
+  it, so the cap can be raised — without touching host configuration.
+- **Per-client address isolation.** With all clients spreading over the
+  same 127.0.0.1-3 addresses, their ephemeral-port ranges collide in the
+  kernel 4-tuple space and the ramp deadlocks around ~180k total
+  connections: client `connect()` burns kernel time retrying, there are no
+  SYN retransmits, and the server sits idle. Giving each client its own
+  loopback /16 (127.0.<client+1>.1-3) removes the overlap, because the
+  destination address is part of the 4-tuple.
+- **RAM.** At ~5 KB per open connection the server needs ~5-6 GiB at 1M
+  connections, plus roughly 1 GiB per 125K-connection client (8 clients).
+  The 2026-10-17 attempt was stopped at ~450k connections (server RSS
+  2.28 GiB, still climbing) because other workloads held ~45 GiB of the
+  machine's 62 GiB; the C1M reference numbers were measured on the same
+  hardware with that memory free.
+
+`scripts/ci/c1m_local.sh` automates the 8x125K run: per-client loopback
+/16s, server RSS+swap sampling, and per-client gate accounting. On a host
+with a small conntrack table, run it inside a user+network namespace:
+
+```sh
+make rss_gate_server c100k_https_client
+scripts/ci/c1m_local.sh            # 8 x 125K on the host network namespace
+unshare -Urn bash -c '             # ... or with a fresh conntrack table
+  ip link set lo up
+  sysctl -w net.netfilter.nf_conntrack_max=2097152
+  scripts/ci/c1m_local.sh
+'
+```
+
 ## Running it
 
 ```sh
 make rss_gate_server c100k_https_client
 scripts/ci/c100k_https.sh                      # C1M
+scripts/ci/c1m_local.sh                        # C1M scale: 8x125K clients
 CWIST_C1M_MODE=0 scripts/ci/c100k_https.sh     # classic
 CWIST_TEST_FULL_GC=1 scripts/ci/c100k_https.sh # full GC
 ```
