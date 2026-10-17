@@ -959,6 +959,7 @@ TEST_TARGETS = test_worker_affinity \
                test_log \
                nuke_missing_user_test \
                test_bind \
+               test_bind_write_error_response \
                test_metrics \
                test_access_log \
                test_rate_limit \
@@ -1357,6 +1358,10 @@ nuke_missing_user_test: $(LIB_NAME) tests/nuke_missing_user_test.c
 test_bind: $(LIB_NAME) tests/test_bind.c
 	$(CC) $(CFLAGS) -o test_bind tests/test_bind.c $(LIB_NAME) $(LIBS)
 	./test_bind
+
+test_bind_write_error_response: $(LIB_NAME) tests/test_bind_write_error_response.c
+	$(CC) $(CFLAGS) -o test_bind_write_error_response tests/test_bind_write_error_response.c $(LIB_NAME) $(LIBS)
+	./test_bind_write_error_response
 
 test_metrics: $(LIB_NAME) tests/test_metrics.c
 	$(CC) $(CFLAGS) -o test_metrics tests/test_metrics.c $(LIB_NAME) $(LIBS)
