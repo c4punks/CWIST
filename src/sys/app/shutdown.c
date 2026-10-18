@@ -46,12 +46,18 @@ static void __attribute__((constructor)) cwist_drain_timeout_init(void) {
 /**
  * @brief Request a graceful shutdown of the server.
  *
- * Clears the g_cwist_running flag and closes the listening and UDP
+ * Clears the g_cwist_running flag and releases the listening and UDP
  * descriptors (if open). Closing the listen descriptor also calls
  * shutdown(SHUT_RDWR) so accept() loops blocked in other threads wake up
  * with EINVAL. Safe to call more than once and from any thread: each
  * descriptor is claimed atomically, so a second call cannot close a
  * descriptor number that has been reused for an unrelated file.
+ *
+ * The UDP descriptor is only claimed, never closed here: the HTTP/3 loop
+ * thread may be inside recvmmsg() on it, and closing under it both races
+ * with the read and can later close a reused descriptor number. The loop
+ * observes g_cwist_running within its poll timeout (<= 1s) and the owning
+ * server path closes the descriptor after joining that thread.
  */
 void cwist_shutdown_request(void) {
     atomic_store(&g_cwist_running, 0);
@@ -68,10 +74,7 @@ void cwist_shutdown_request(void) {
 #endif
         close(fd);
     }
-    int udp = __atomic_exchange_n(&g_cwist_udp_fd, -1, __ATOMIC_SEQ_CST);
-    if (udp >= 0) {
-        close(udp);
-    }
+    __atomic_exchange_n(&g_cwist_udp_fd, -1, __ATOMIC_SEQ_CST);
 }
 
 #ifndef __wasi__

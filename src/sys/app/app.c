@@ -3715,14 +3715,17 @@ static void cwist_multiport_h3_stop_group(cwist_multiport_group *group) {
         if (listener->ctx) {
             __atomic_store_n(&listener->ctx->running, 0, __ATOMIC_RELEASE);
         }
-        if (listener->udp_fd >= 0) {
-            close(listener->udp_fd);
-            listener->udp_fd = -1;
-        }
+        /* Join before close: the listener thread may be inside recvmmsg() on
+         * udp_fd, and closing under it races with the read. The loop notices
+         * ctx->running within its poll timeout and exits on its own. */
         if (listener->thread_started) {
             pthread_join(listener->thread, NULL);
             listener->thread_started = false;
             listener->running = false;
+        }
+        if (listener->udp_fd >= 0) {
+            close(listener->udp_fd);
+            listener->udp_fd = -1;
         }
         if (listener->ctx) {
             cwist_http3_destroy_context(listener->ctx);

@@ -785,7 +785,9 @@ typedef struct https_hs_shard {
     int wakeup_rd;
     int wakeup_wr;
     pthread_t thread;
-    bool running;
+    /* Read lock-free by the shepherd loop and written by start/stop on other
+     * threads, so it must stay atomic. */
+    _Atomic bool running;
     pthread_mutex_t lock;
     /* Pending handshakes in deadline order: every entry is (re)queued at the
      * tail with now + CWIST_HTTPS_HANDSHAKE_TIMEOUT_MS, so the sweep only
