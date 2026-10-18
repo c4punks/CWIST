@@ -10,6 +10,7 @@
 #include <cwist/sys/err/cwist_err.h>
 #include <openssl/ssl.h>
 #include <openssl/err.h>
+#include <pthread.h>
 
 #define HTTPS_THREAD_POOL_SIZE HTTP_THREAD_POOL_SIZE
 
@@ -27,6 +28,11 @@ typedef struct cwist_https_context {
     bool http2_enabled;
     bool http3_enabled;
     void *ticket_key; ///< Shared session-ticket key material (forked workers inherit it)
+    /** Guards @p ctx against a concurrent cwist_https_reload_context() swap.
+     * Readers hold it only across the pointer load and SSL_new() (which
+     * takes the connection's own SSL_CTX reference); the reloader takes the
+     * write side to publish the new context. */
+    pthread_rwlock_t ctx_lock;
 } cwist_https_context;
 
 typedef struct cwist_https_connection {
@@ -109,6 +115,27 @@ cwist_error_t cwist_https_init_context_with_options(cwist_https_context **ctx,
  * Destroy the HTTPS context and cleanup OpenSSL.
  */
 void cwist_https_destroy_context(cwist_https_context *ctx);
+
+/**
+ * @brief Hot-reload the certificate chain and key of a live HTTPS context.
+ *
+ * Builds and fully validates a new SSL_CTX, then atomically swaps it into
+ * @p ctx: established connections and in-progress handshakes keep running on
+ * the old SSL_CTX (held alive by BoringSSL reference counting), while new
+ * handshakes present the new certificate. The shared session-ticket key is
+ * carried over, so session resumption survives the reload.
+ *
+ * Safe to call from any thread while listeners are serving.
+ *
+ * @param ctx HTTPS context created by cwist_https_init_context*().
+ * @param cert_path Path to the new PEM certificate chain.
+ * @param key_path Path to the new PEM private key.
+ * @param app Application context for the PQC layer (may be NULL).
+ * @return err.error.err_i16 == 0 on success; on failure the old certificate
+ *         keeps serving.
+ */
+cwist_error_t cwist_https_reload_context(cwist_https_context *ctx, const char *cert_path,
+                                         const char *key_path, cwist_app *app);
 
 /**
  * Perform SSL handshake on an accepted socket.

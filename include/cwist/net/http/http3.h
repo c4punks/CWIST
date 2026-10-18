@@ -11,6 +11,7 @@
 #include <openssl/ssl.h>
 #include <stdbool.h>
 #include <stdint.h>
+#include <pthread.h>
 
 /** --- Forward Declarations --- */
 
@@ -55,6 +56,17 @@ struct cwist_http3_context {
     int ping_period_ms;        /**< 0 = use lsquic default (server: none) */
     int noprogress_timeout_ms; /**< 0 = use lsquic default (60s server) */
     void *hsets; /**< Head of tracked cwist_h3_hset list (internal; swept on engine destroy) */
+    /* Hot reload (cwist_http3_reload_context): ssl_ctx is swapped under
+     * ssl_ctx_lock. ssl_ctx_handout pins the SSL_CTX most recently handed to
+     * lsquic's per-connection ea_get_ssl_ctx callback until the next handout
+     * or destroy, bridging the window between the callback returning a
+     * pointer and lsquic's SSL_new() taking the connection's own reference.
+     * ticket_key owns the shared session-ticket key material installed on
+     * every SSL_CTX this context has used, so QUIC session resumption (and
+     * 0-RTT) survives a reload. */
+    pthread_rwlock_t ssl_ctx_lock;
+    SSL_CTX *ssl_ctx_handout;
+    void *ticket_key;
     /* Last CONNECTION_CLOSE frame received from a peer by any connection of
      * this context. Written on the engine thread from lsquic's close-frame
      * callback; read via cwist_http3_last_close_error() for post-serve
@@ -99,6 +111,28 @@ cwist_error_t cwist_http3_init_context_ephemeral(cwist_http3_context **ctx);
  * @brief Destroy an HTTP/3 context.
  */
 void cwist_http3_destroy_context(cwist_http3_context *ctx);
+
+/**
+ * @brief Hot-reload the certificate chain and key of a live HTTP/3 context.
+ *
+ * Builds and fully validates a new SSL_CTX, then swaps it into @p ctx under
+ * its lock: lsquic's per-connection SSL_CTX lookup picks up the new
+ * certificate for new handshakes, while established QUIC connections keep
+ * their own SSL reference and finish on the old one. The shared
+ * session-ticket key is carried over, so QUIC session resumption (and 0-RTT,
+ * when enabled) survives the reload.
+ *
+ * Safe to call from any thread while cwist_http3_server_loop() is running on
+ * @p ctx.
+ *
+ * @param ctx HTTP/3 context created by cwist_http3_init_context().
+ * @param cert_path Path to the new PEM certificate chain.
+ * @param key_path Path to the new PEM private key.
+ * @return err.error.err_i16 == 0 on success; on failure the old certificate
+ *         keeps serving.
+ */
+cwist_error_t cwist_http3_reload_context(cwist_http3_context *ctx, const char *cert_path,
+                                         const char *key_path);
 
 /**
  * @brief Run the HTTP/3 server event loop.

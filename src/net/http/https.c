@@ -721,6 +721,24 @@ uint64_t cwist_https_idle_timeout_ms(void) {
     return cached;
 }
 
+/**
+ * @brief Create an SSL from the context's current SSL_CTX, reload-safe.
+ * @param ctx HTTPS context; may be NULL or hold no SSL_CTX.
+ * @return New SSL (which holds its own SSL_CTX reference), or NULL.
+ *
+ * The read lock spans the pointer load and SSL_new(): a concurrent
+ * cwist_https_reload_context() swaps and releases the listener's reference
+ * under the write lock, and once SSL_new() returns the connection owns its
+ * own reference, so the old SSL_CTX cannot die under the handshake.
+ */
+static SSL *cwist_https_ssl_new(cwist_https_context *ctx) {
+    if (!ctx) return NULL;
+    pthread_rwlock_rdlock(&ctx->ctx_lock);
+    SSL *ssl = ctx->ctx ? SSL_new(ctx->ctx) : NULL;
+    pthread_rwlock_unlock(&ctx->ctx_lock);
+    return ssl;
+}
+
 /* --- TLS handshake shepherd ------------------------------------------------
  * Why this exists: the pool parks one worker per connection for the whole
  * connection lifetime.  A synchronous in-worker handshake made that fatal
@@ -1034,7 +1052,7 @@ long cwist_https_pending_handshakes(void) {
  */
 void cwist_https_dispatch(int client_fd, cwist_https_context *ctx,
                           void (*handler)(cwist_https_connection *, void *), void *user_ctx) {
-    if (!ctx || !ctx->ctx || client_fd < 0) {
+    if (!ctx || client_fd < 0) {
         if (client_fd >= 0) close(client_fd);
         return;
     }
@@ -1047,7 +1065,7 @@ void cwist_https_dispatch(int client_fd, cwist_https_context *ctx,
     int fl = fcntl(client_fd, F_GETFL, 0);
     if (fl >= 0) fcntl(client_fd, F_SETFL, fl | O_NONBLOCK);
 
-    SSL *ssl = SSL_new(ctx->ctx);
+    SSL *ssl = cwist_https_ssl_new(ctx);
     if (!ssl) {
         close(client_fd);
         return;
@@ -1119,7 +1137,7 @@ long cwist_https_pending_handshakes(void) {
 /* Non-Linux fallback: no epoll shepherd, use the legacy blocking pool path. */
 void cwist_https_dispatch(int client_fd, cwist_https_context *ctx,
                           void (*handler)(cwist_https_connection *, void *), void *user_ctx) {
-    if (!ctx || !ctx->ctx || client_fd < 0) {
+    if (!ctx || client_fd < 0) {
         if (client_fd >= 0) close(client_fd);
         return;
     }
@@ -1280,6 +1298,10 @@ static int cwist_https_alpn_select_cb(SSL *ssl, const unsigned char **out, unsig
  *      tickets from the overlap window can still decrypt.
  *   c) Use an atomic pointer swap or reader-writer lock to avoid a
  *      race between the rotate timer and cwist_tls_ticket_key_cb().
+ *
+ * Certificate hot reload (cwist_https_reload_context()) does NOT rotate this
+ * key: the reloaded SSL_CTX carries the same STEK so session resumption
+ * survives the swap. See docs/decisions/0002-tls-hot-reload-stek.md.
  * ------------------------------------------------------------------------- */
 typedef struct cwist_tls_ticket_key {
     unsigned char name[16];     /* key_name sent in the ticket */
@@ -1346,18 +1368,26 @@ cwist_error_t cwist_https_init_context(cwist_https_context **ctx, const char *ce
     return cwist_https_init_context_with_options(ctx, cert_path, key_path, NULL, NULL);
 }
 
-cwist_error_t cwist_https_init_context_with_options(cwist_https_context **ctx,
-                                                    const char *cert_path, const char *key_path,
-                                                    const cwist_https_options *options,
-                                                    cwist_app *app) {
+/**
+ * @brief Build a fully configured server SSL_CTX from PEM files.
+ * @param out Receives the new SSL_CTX (caller owns the reference).
+ * @param cert_path Path to the PEM certificate chain.
+ * @param key_path Path to the PEM private key.
+ * @param options HTTP/2/HTTP/3 profile toggles (may be NULL).
+ * @param app Application context for the PQC layer (may be NULL).
+ * @return Tagged CWIST error describing success or failure.
+ *
+ * Shared by cwist_https_init_context_with_options() and
+ * cwist_https_reload_context() so a reloaded listener gets exactly the TLS
+ * profile a fresh one would.
+ */
+static cwist_error_t cwist_https_build_ssl_ctx(SSL_CTX **out, const char *cert_path,
+                                               const char *key_path,
+                                               const cwist_https_options *options,
+                                               cwist_app *app) {
     cwist_error_t err = make_error(CWIST_ERR_INT16);
     bool enable_http3 = options && options->enable_http3;
     bool enable_http2 = options && (options->enable_http2 || enable_http3);
-
-    if (!ctx || !cert_path || !key_path) {
-        err.error.err_i16 = -1;
-        return err;
-    }
 
     // Initialize OpenSSL
     SSL_load_error_strings();
@@ -1410,6 +1440,30 @@ cwist_error_t cwist_https_init_context_with_options(cwist_https_context **ctx,
         return make_ssl_error("Private key does not match certificate");
     }
 
+    *out = ssl_ctx;
+    err.error.err_i16 = 0;
+    return err;
+}
+
+cwist_error_t cwist_https_init_context_with_options(cwist_https_context **ctx,
+                                                    const char *cert_path, const char *key_path,
+                                                    const cwist_https_options *options,
+                                                    cwist_app *app) {
+    cwist_error_t err = make_error(CWIST_ERR_INT16);
+    bool enable_http3 = options && options->enable_http3;
+    bool enable_http2 = options && (options->enable_http2 || enable_http3);
+
+    if (!ctx || !cert_path || !key_path) {
+        err.error.err_i16 = -1;
+        return err;
+    }
+
+    SSL_CTX *ssl_ctx = NULL;
+    err = cwist_https_build_ssl_ctx(&ssl_ctx, cert_path, key_path, options, app);
+    if (!cwist_error_is_ok(&err)) {
+        return err;
+    }
+
     *ctx = (cwist_https_context *)cwist_alloc(sizeof(cwist_https_context));
     if (!*ctx) {
         SSL_CTX_free(ssl_ctx);
@@ -1420,6 +1474,7 @@ cwist_error_t cwist_https_init_context_with_options(cwist_https_context **ctx,
     (*ctx)->http2_enabled = enable_http2;
     (*ctx)->http3_enabled = enable_http3;
     (*ctx)->ticket_key = NULL;
+    pthread_rwlock_init(&(*ctx)->ctx_lock, NULL);
 
     /* Pre-fork shared ticket key so every forked worker can resume tickets
      * issued by any other worker. Must run before workers are forked. */
@@ -1432,6 +1487,68 @@ cwist_error_t cwist_https_init_context_with_options(cwist_https_context **ctx,
 }
 
 /**
+ * @brief Swap in a new certificate chain and key without dropping connections.
+ * @param ctx Live HTTPS context whose SSL_CTX is replaced.
+ * @param cert_path Path to the new PEM certificate chain.
+ * @param key_path Path to the new PEM private key.
+ * @param app Application context for the PQC layer (may be NULL).
+ * @return Tagged CWIST error describing success or failure. On failure the
+ *         previous certificate keeps serving.
+ *
+ * The new SSL_CTX is fully built and validated before the swap. Connections
+ * established (or handshaking) on the old SSL_CTX keep it alive through
+ * BoringSSL's reference counting and finish on the old certificate; new
+ * handshakes use the new one. The shared session-ticket key is carried over
+ * unchanged, so tickets issued before the reload still resume afterwards
+ * (see docs/decisions/0002-tls-hot-reload.md).
+ */
+cwist_error_t cwist_https_reload_context(cwist_https_context *ctx, const char *cert_path,
+                                         const char *key_path, cwist_app *app) {
+    cwist_error_t err = make_error(CWIST_ERR_INT16);
+    if (!ctx || !cert_path || !key_path) {
+        err.error.err_i16 = -1;
+        return err;
+    }
+
+    cwist_https_options options = {.enable_http2 = ctx->http2_enabled,
+                                   .enable_http3 = ctx->http3_enabled};
+    SSL_CTX *new_ctx = NULL;
+    err = cwist_https_build_ssl_ctx(&new_ctx, cert_path, key_path, &options, app);
+    if (!cwist_error_is_ok(&err)) {
+        return err;
+    }
+
+    /* Carry the shared STEK over: the wrapper owns it and outlives every
+     * SSL_CTX it is installed on (it is freed only by
+     * cwist_https_destroy_context(), after the pool is drained). The once
+     * gate runs here because the reloading thread may not be the one that
+     * created the context. */
+    pthread_once(&g_ticket_key_ex_data_once, cwist_tls_ticket_key_ex_data_init);
+    if (ctx->ticket_key && g_ticket_key_ex_data_idx >= 0) {
+        SSL_CTX_set_ex_data(new_ctx, g_ticket_key_ex_data_idx, ctx->ticket_key);
+        SSL_CTX_set_tlsext_ticket_key_cb(new_ctx, cwist_tls_ticket_key_cb);
+    } else if (!ctx->ticket_key) {
+        /* No shared key was ever armed: do it now so the reloaded context
+         * matches a fresh one. */
+        cwist_tls_setup_shared_ticket_key(new_ctx, &ctx->ticket_key);
+    }
+
+    SSL_CTX_set_alpn_select_cb(new_ctx, cwist_https_alpn_select_cb, (void *)ctx);
+
+    pthread_rwlock_wrlock(&ctx->ctx_lock);
+    SSL_CTX *old_ctx = ctx->ctx;
+    ctx->ctx = new_ctx;
+    pthread_rwlock_unlock(&ctx->ctx_lock);
+
+    /* Drops only the listener's reference; in-flight handshakes and
+     * established connections hold their own. */
+    if (old_ctx) SSL_CTX_free(old_ctx);
+
+    err.error.err_i16 = 0;
+    return err;
+}
+
+/**
  * @brief Free an HTTPS context and release its OpenSSL resources.
  * @param ctx Context to destroy.
  */
@@ -1440,6 +1557,7 @@ void cwist_https_destroy_context(cwist_https_context *ctx) {
         if (ctx->ctx) {
             SSL_CTX_free(ctx->ctx);
         }
+        pthread_rwlock_destroy(&ctx->ctx_lock);
         if (ctx->ticket_key) {
             /* Scrub key material before releasing it. */
             OPENSSL_cleanse(ctx->ticket_key, sizeof(cwist_tls_ticket_key));
@@ -1636,12 +1754,12 @@ cwist_error_t cwist_https_accept(cwist_https_context *ctx, int client_fd,
                                  cwist_https_connection **conn) {
     cwist_error_t err = make_error(CWIST_ERR_INT16);
 
-    if (!ctx || !ctx->ctx || client_fd < 0) {
+    if (!ctx || client_fd < 0) {
         err.error.err_i16 = -1;
         return err;
     }
 
-    SSL *ssl = SSL_new(ctx->ctx);
+    SSL *ssl = cwist_https_ssl_new(ctx);
     if (!ssl) {
         return make_ssl_error("Failed to create SSL structure");
     }

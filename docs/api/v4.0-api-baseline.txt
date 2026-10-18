@@ -4,7 +4,7 @@
 # (parameter names dropped) and struct/union/enum layouts in member order.
 # `make api-check` (CI) fails when the headers no longer match this file.
 
-== functions (770) ==
+== functions (773) ==
 cwist_accept_socket
 cwist_alloc
 cwist_alloc_array
@@ -59,6 +59,7 @@ cwist_app_put_ex
 cwist_app_put_named
 cwist_app_put_opt
 cwist_app_register_error_handler
+cwist_app_reload_tls
 cwist_app_req_bind_form
 cwist_app_req_bind_json
 cwist_app_req_bind_json_or_400
@@ -330,6 +331,7 @@ cwist_http3_init_context
 cwist_http3_init_context_ephemeral
 cwist_http3_last_close_error
 cwist_http3_push_resource
+cwist_http3_reload_context
 cwist_http3_send_datagram
 cwist_http3_server_loop
 cwist_http3_set_datagram_callback
@@ -424,6 +426,7 @@ cwist_https_init_context_with_options
 cwist_https_park
 cwist_https_pending_handshakes
 cwist_https_receive_request
+cwist_https_reload_context
 cwist_https_send_response
 cwist_https_send_response_head
 cwist_https_server_loop
@@ -776,7 +779,7 @@ cwist_zod_parse
 cwist_zod_print_errors
 cwist_zod_validate
 
-== function signatures (771) ==
+== function signatures (774) ==
 cwist_accept_socket: cwist_error_t (int, struct sockaddr *, void (*)(int client_fd, void *ctx), void *)
 cwist_alloc: void * (size_t)
 cwist_alloc_array: void * (size_t, size_t)
@@ -832,6 +835,7 @@ cwist_app_put_ex: cwist_error_t (cwist_app *, const char *, cwist_handler_ex_fun
 cwist_app_put_named: void (cwist_app *, const char *, const char *, cwist_handler_func)
 cwist_app_put_opt: void (cwist_app *, const char *, cwist_handler_func, cwist_endpoint_opt_t)
 cwist_app_register_error_handler: void (cwist_app *, cwist_http_status_t, cwist_error_handler_func)
+cwist_app_reload_tls: cwist_error_t (cwist_app *, const char *, const char *)
 cwist_app_req_bind_form: bool (cwist_http_request *, const cwist_bind_schema_t *, void *, cwist_bind_result_t *)
 cwist_app_req_bind_json: bool (cwist_http_request *, const cwist_bind_schema_t *, void *, cwist_bind_result_t *)
 cwist_app_req_bind_json_or_400: bool (cwist_http_request *, cwist_http_response *, const cwist_bind_schema_t *, void *)
@@ -1103,6 +1107,7 @@ cwist_http3_init_context: cwist_error_t (cwist_http3_context **, const char *, c
 cwist_http3_init_context_ephemeral: cwist_error_t (cwist_http3_context **)
 cwist_http3_last_close_error: int (const cwist_http3_context *, bool *, uint64_t *, char *, size_t)
 cwist_http3_push_resource: int (cwist_http_request *, const char *, const char *)
+cwist_http3_reload_context: cwist_error_t (cwist_http3_context *, const char *, const char *)
 cwist_http3_send_datagram: int (void *, const void *, size_t)
 cwist_http3_server_loop: cwist_error_t (int, cwist_http3_context *, cwist_http3_request_handler_func, void *)
 cwist_http3_set_datagram_callback: void (cwist_http3_context *, void (*)(const void *data, size_t len, void *user_ctx), void *)
@@ -1197,6 +1202,7 @@ cwist_https_init_context_with_options: cwist_error_t (cwist_https_context **, co
 cwist_https_park: bool (cwist_https_connection *, uint64_t, cwist_https_park_class)
 cwist_https_pending_handshakes: long (void)
 cwist_https_receive_request: cwist_http_request * (cwist_https_connection *)
+cwist_https_reload_context: cwist_error_t (cwist_https_context *, const char *, const char *, cwist_app *)
 cwist_https_send_response: cwist_error_t (cwist_https_connection *, cwist_http_response *)
 cwist_https_send_response_head: cwist_error_t (cwist_https_connection *, cwist_http_response *)
 cwist_https_server_loop: cwist_error_t (int, cwist_https_context *, void (*)(cwist_https_connection *conn, void *), void *)
@@ -2496,10 +2502,13 @@ struct cwist_http3_context [17] int handshake_timeout_ms
 struct cwist_http3_context [18] int ping_period_ms
 struct cwist_http3_context [19] int noprogress_timeout_ms
 struct cwist_http3_context [20] void *hsets
-struct cwist_http3_context [21] volatile int last_close_received
-struct cwist_http3_context [22] int last_close_app_error
-struct cwist_http3_context [23] uint64_t last_close_code
-struct cwist_http3_context [24] char last_close_reason[256]
+struct cwist_http3_context [21] pthread_rwlock_t ssl_ctx_lock
+struct cwist_http3_context [22] SSL_CTX *ssl_ctx_handout
+struct cwist_http3_context [23] void *ticket_key
+struct cwist_http3_context [24] volatile int last_close_received
+struct cwist_http3_context [25] int last_close_app_error
+struct cwist_http3_context [26] uint64_t last_close_code
+struct cwist_http3_context [27] char last_close_reason[256]
 struct cwist_http_async_conn_t [0] int fd
 struct cwist_http_async_conn_t [1] void *user_ctx
 struct cwist_http_async_conn_t [2] char *rbuf
@@ -2604,6 +2613,7 @@ struct cwist_https_context [0] SSL_CTX *ctx
 struct cwist_https_context [1] bool http2_enabled
 struct cwist_https_context [2] bool http3_enabled
 struct cwist_https_context [3] void *ticket_key
+struct cwist_https_context [4] pthread_rwlock_t ctx_lock
 struct cwist_https_options [0] bool enable_http2
 struct cwist_https_options [1] bool enable_http3
 struct cwist_json_builder [0] cwist_sstring *buffer

@@ -1664,6 +1664,61 @@ cwist_error_t cwist_app_use_https(cwist_app *app, const char *cert_path, const c
 #endif
 }
 
+/**
+ * @brief Hot-reload the TLS certificate pair on every live TLS context of the
+ *        application. See the public contract in app.h.
+ */
+cwist_error_t cwist_app_reload_tls(cwist_app *app, const char *cert_path, const char *key_path) {
+#if defined(__EMSCRIPTEN__) || defined(__wasi__)
+    (void)cert_path;
+    (void)key_path;
+    cwist_error_t err = make_error(CWIST_ERR_INT16);
+    err.error.err_i16 = -1; /* TLS needs BoringSSL sockets; native builds only */
+    (void)app;
+    return err;
+#else
+    cwist_error_t err = make_error(CWIST_ERR_INT16);
+    if (!app || !cert_path || !key_path || !app->use_ssl) {
+        err.error.err_i16 = -1;
+        return err;
+    }
+    if (!app->ssl_ctx) {
+        err.error.err_i16 = -1;
+        return err;
+    }
+
+    err = cwist_https_reload_context(app->ssl_ctx, cert_path, key_path, app);
+    if (!cwist_error_is_ok(&err)) {
+        return err;
+    }
+
+    /* HTTPS/3 keeps its own SSL_CTX for the QUIC engine; swap it too so both
+     * transports present the new certificate together. */
+    if (app->use_https3 && app->h3_ctx) {
+        err = cwist_http3_reload_context(app->h3_ctx, cert_path, key_path);
+        if (!cwist_error_is_ok(&err)) {
+            return err;
+        }
+    }
+
+    /* Publish the new paths last so a later refresh (e.g. an HTTP/2 toggle)
+     * rebuilds from them; they are config-time state, not read per accept. */
+    char *new_cert = cwist_strdup(cert_path);
+    char *new_key = cwist_strdup(key_path);
+    if (!new_cert || !new_key) {
+        cwist_free(new_cert);
+        cwist_free(new_key);
+        err.error.err_i16 = -1;
+        return err;
+    }
+    cwist_free(app->cert_path);
+    cwist_free(app->key_path);
+    app->cert_path = new_cert;
+    app->key_path = new_key;
+    return err;
+#endif
+}
+
 void cwist_app_use_pqc_layer(cwist_app *app, bool enabled) {
     if (!app) return;
     app->pqc_layer_enabled = enabled;
@@ -4714,14 +4769,15 @@ static int app_listen_serve(cwist_app *app, int port, int workers_override, int 
         pthread_create(&app->mem_manager->watcher_thread, NULL, cwist_mem_watcher, app);
     }
 
+    pthread_t h3_tid = 0;
+    bool h3_thread_started = false;
     if (udp_fd >= 0) {
         struct h3_thread_payload *h3_p = malloc(sizeof(*h3_p));
         if (h3_p) {
             h3_p->udp_fd = udp_fd;
             h3_p->app = app;
-            pthread_t h3_tid;
             if (pthread_create(&h3_tid, NULL, h3_server_thread_func, h3_p) == 0) {
-                pthread_detach(h3_tid);
+                h3_thread_started = true;
                 __atomic_store_n(&g_cwist_udp_fd, udp_fd, __ATOMIC_SEQ_CST);
                 printf("HTTP/3 (QUIC) enabled on UDP port %d\n", port);
             } else {
@@ -4796,6 +4852,15 @@ static int app_listen_serve(cwist_app *app, int port, int workers_override, int 
     if (app->h3_ctx) {
         __atomic_store_n(&app->h3_ctx->running, 0, __ATOMIC_RELEASE);
     }
+#ifndef __wasi__
+    if (h3_thread_started) {
+        pthread_join(h3_tid, NULL);
+    }
+    if (udp_fd >= 0) {
+        close(udp_fd);
+        udp_fd = -1;
+    }
+#endif
 
     if (app->mem_manager) {
         __atomic_store_n(&app->mem_manager->watcher_running, false, __ATOMIC_RELEASE);
