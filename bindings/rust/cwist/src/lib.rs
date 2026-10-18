@@ -66,4 +66,4 @@ pub use scheduler::Scheduler;
 pub use server::shutdown;
 pub use siphash::Key;
 pub use sstring::SString;
-pub use jwt::{sign, verify, Claims};
+pub use jwt::{sign, sign_ed25519, sign_es256, verify, verify_ed25519, verify_es256, Claims};

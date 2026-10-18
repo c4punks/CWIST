@@ -942,6 +942,7 @@ TEST_TARGETS = test_worker_affinity \
                test_websocket_async \
                test_webrtc \
                test_jwt \
+               test_jwt_asym \
                test_migrate \
                test_json_heal \
                test_https \
@@ -1269,6 +1270,10 @@ test_mux_param: $(LIB_NAME) tests/test_mux_param.c
 test_jwt: $(LIB_NAME) tests/test_jwt.c
 	$(CC) $(CFLAGS) -o test_jwt tests/test_jwt.c $(LIB_NAME) $(LIBS)
 	./test_jwt
+
+test_jwt_asym: $(LIB_NAME) tests/test_jwt_asym.c
+	$(CC) $(CFLAGS) -o $@ tests/test_jwt_asym.c $(LIB_NAME) $(LIBS)
+	./$@
 
 test_migrate: $(LIB_NAME) tests/test_migrate.c
 	$(CC) $(CFLAGS) -o test_migrate tests/test_migrate.c $(LIB_NAME) $(LIBS)
