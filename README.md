@@ -476,6 +476,31 @@ figures (~111 MB / ~124 MB / ~244 MB at C10K / C100K / C1M) predate later
 changes to the connection path, and per-connection memory is now the
 main cost at C1M.
 
+Re-run on 2026-10-17 (same 12-core machine, HTTPS gate server
+`tests/rss_gate_server` with 4 workers via `scripts/ci/c100k_https.sh`,
+C1M reactor mode), ramp + idle hold + two keep-alive rounds:
+
+| Scale | Result | Ramp | Round 1 / Round 2 rps | Memory / open conn |
+|-------|--------|------|-----------------------|--------------------|
+| C10K | 10,000 / 10,000 established, 0 dropped, all answered | 1.97 s | 64.0k / 115.9k | 5,906 B |
+| C100K | 100,000 / 100,000 established, 0 dropped, all answered | 18.14 s | 73.0k / 106.4k | 4,975 B |
+
+The C1M row re-ran successfully on 2026-10-18 with `scripts/ci/c1m_local.sh`
+(8 clients x 125,000 TLS connections against the same gate server, inside an
+unprivileged user+network namespace): 1,000,000 / 1,000,000 connections
+established, none dropped, every keep-alive round answered, server peak
+4.56 GiB above idle — 4,866 B per open connection, matching the C100K
+figure. The ramp is TLS-handshake-bound: ~2,900 full P-256 handshakes/s
+across the 8 clients on this 12-core box, so opening 1M connections takes
+~340 s. Three tooling fixes made the scale run reproducible, all detailed
+in [docs/performance/https-c100k.md](docs/performance/https-c100k.md): a
+fresh network namespace needs its `ip_local_port_range` widened (kernel
+defaults cap a 3-host client at exactly 84,696 connections), the gate
+client now ignores SIGPIPE (a server-side close under load used to kill
+clients mid-round, exit 141), and the C1M fleet should link the repo's
+BoringSSL — OpenSSL ignores `SSL_MODE_RELEASE_BUFFERS`, inflating an idle
+125K-connection client from ~0.9 GiB to ~4.2 GiB.
+
 The classic thread-per-connection path (`CWIST_C1M_MODE=0`) is no longer
 capped at `cores*8` held connections either: every accepted connection gets
 its own on-demand detached thread with a 256 KiB stack, so held connections

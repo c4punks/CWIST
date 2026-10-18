@@ -33,6 +33,7 @@
 #include <openssl/err.h>
 #include <openssl/ssl.h>
 #include <pthread.h>
+#include <signal.h>
 #include <stdatomic.h>
 #include <stdbool.h>
 #include <stddef.h>
@@ -430,6 +431,12 @@ int main(int argc, char **argv) {
     }
     if (!hosts || port <= 0 || g_conns == 0 || g_threads == 0 || g_inflight == 0) usage(argv[0]);
     parse_hosts(hosts, port);
+
+    /* A request round writes on every held connection; if the server closed
+     * any of them under load, the default SIGPIPE action would kill the
+     * whole client (observed as silent deaths at C1M scale, exit 141).
+     * Ignore it so the failed write is counted as a round failure instead. */
+    signal(SIGPIPE, SIG_IGN);
 
     struct rlimit rl;
     if (getrlimit(RLIMIT_NOFILE, &rl) == 0 && rl.rlim_cur < g_conns + 1024) {
