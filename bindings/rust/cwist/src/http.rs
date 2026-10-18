@@ -62,7 +62,7 @@ unsafe fn sstring_bytes<'a>(s: *const sys::cwist_sstring) -> &'a [u8] {
 ///
 /// # Safety
 /// `p` is NULL or a NUL-terminated string that stays valid during `'a`.
-unsafe fn c_str<'a>(p: *const std::os::raw::c_char) -> Option<&'a str> {
+pub(crate) unsafe fn c_str<'a>(p: *const std::os::raw::c_char) -> Option<&'a str> {
     if p.is_null() {
         return None;
     }
