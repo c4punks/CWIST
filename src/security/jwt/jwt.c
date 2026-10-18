@@ -7,6 +7,12 @@
 #include <openssl/hmac.h>
 #include <openssl/sha.h>
 #include <openssl/evp.h>
+#include <openssl/pem.h>
+#include <openssl/bio.h>
+#include <openssl/ec.h>
+#include <openssl/ecdsa.h>
+#include <openssl/bn.h>
+#include <openssl/obj.h>
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -15,7 +21,7 @@
 
 /**
  * @file jwt.c
- * @brief HS256 JWT signing, verification, and decoded-claims access helpers.
+ * @brief HS256/ES256/EdDSA JWT signing, verification, and decoded-claims access helpers.
  */
 
 /* --------------------------------------------------------------------------
@@ -139,8 +145,23 @@ static unsigned char *b64url_decode(const char *src, size_t src_len, size_t *out
 }
 
 /* --------------------------------------------------------------------------
- * Internal: HMAC-SHA256
+ * Internal: algorithm dispatch (HS256, ES256, Ed25519)
  * -------------------------------------------------------------------------- */
+
+typedef enum {
+    JWT_ALG_HS256,
+    JWT_ALG_ES256,
+    JWT_ALG_ED25519,
+} jwt_alg_t;
+
+static const char *jwt_alg_name(jwt_alg_t alg) {
+    switch (alg) {
+    case JWT_ALG_HS256: return "HS256";
+    case JWT_ALG_ES256: return "ES256";
+    case JWT_ALG_ED25519: return "EdDSA";
+    }
+    return NULL;
+}
 
 /** Compute HMAC-SHA256 of @p msg using @p key; writes to @p out (32 bytes). */
 static bool hmac_sha256(const char *key, size_t key_len, const char *msg, size_t msg_len,
@@ -149,6 +170,188 @@ static bool hmac_sha256(const char *key, size_t key_len, const char *msg, size_t
     unsigned char *r =
         HMAC(EVP_sha256(), key, (int)key_len, (const unsigned char *)msg, msg_len, out, &out_len);
     return r != NULL && out_len == 32;
+}
+
+/** Load a PEM-encoded private key, or NULL. */
+static EVP_PKEY *jwt_load_private_key(const char *pem) {
+    BIO *bio = BIO_new_mem_buf(pem, (int)strlen(pem));
+    if (!bio) return NULL;
+    EVP_PKEY *key = PEM_read_bio_PrivateKey(bio, NULL, NULL, NULL);
+    BIO_free(bio);
+    return key;
+}
+
+/** Load a PEM-encoded public key, falling back to a private key (public half used). */
+static EVP_PKEY *jwt_load_public_key(const char *pem) {
+    BIO *bio = BIO_new_mem_buf(pem, (int)strlen(pem));
+    if (!bio) return NULL;
+    EVP_PKEY *key = PEM_read_bio_PUBKEY(bio, NULL, NULL, NULL);
+    if (!key) {
+        /* The first read consumed the buffer; rewind before the fallback. */
+        BIO_reset(bio);
+        key = PEM_read_bio_PrivateKey(bio, NULL, NULL, NULL);
+    }
+    BIO_free(bio);
+    return key;
+}
+
+/** Whether @p key is an EC key on P-256, as ES256 requires. */
+static bool jwt_key_is_p256(EVP_PKEY *key) {
+    if (EVP_PKEY_id(key) != EVP_PKEY_EC) return false;
+    EC_KEY *ec = EVP_PKEY_get0_EC_KEY(key);
+    if (!ec) return false;
+    const EC_GROUP *group = EC_KEY_get0_group(ec);
+    return group && EC_GROUP_get_curve_name(group) == NID_X9_62_prime256v1;
+}
+
+/**
+ * Sign @p msg with @p alg; @p key is the HMAC secret for HS256 or a PEM
+ * private key otherwise. Returns a cwist_alloc'd signature in JOSE form
+ * (raw R||S for ES256), or NULL on error.
+ */
+static unsigned char *jwt_sign_bytes(jwt_alg_t alg, const char *key, const char *msg,
+                                     size_t msg_len, size_t *out_len) {
+    if (alg == JWT_ALG_HS256) {
+        unsigned char *sig = (unsigned char *)cwist_alloc(32);
+        if (!sig) return NULL;
+        if (!hmac_sha256(key, strlen(key), msg, msg_len, sig)) {
+            cwist_free(sig);
+            return NULL;
+        }
+        *out_len = 32;
+        return sig;
+    }
+
+    EVP_PKEY *pkey = jwt_load_private_key(key);
+    if (!pkey) return NULL;
+    if (alg == JWT_ALG_ES256 && !jwt_key_is_p256(pkey)) {
+        EVP_PKEY_free(pkey);
+        return NULL;
+    }
+    if (alg == JWT_ALG_ED25519 && EVP_PKEY_id(pkey) != EVP_PKEY_ED25519) {
+        EVP_PKEY_free(pkey);
+        return NULL;
+    }
+
+    EVP_MD_CTX *ctx = EVP_MD_CTX_new();
+    if (!ctx) {
+        EVP_PKEY_free(pkey);
+        return NULL;
+    }
+    const EVP_MD *md = (alg == JWT_ALG_ES256) ? EVP_sha256() : NULL;
+    unsigned char *sig = NULL;
+    if (EVP_DigestSignInit(ctx, NULL, md, NULL, pkey) != 1) goto fail;
+
+    size_t raw_len = 0;
+    if (EVP_DigestSign(ctx, NULL, &raw_len, (const unsigned char *)msg, msg_len) != 1) goto fail;
+    {
+        unsigned char *raw = (unsigned char *)cwist_alloc(raw_len);
+        if (!raw) goto fail;
+        if (EVP_DigestSign(ctx, raw, &raw_len, (const unsigned char *)msg, msg_len) != 1) {
+            cwist_free(raw);
+            goto fail;
+        }
+        if (alg == JWT_ALG_ED25519) {
+            sig = raw; /* Ed25519 signs directly in JOSE form (64 bytes) */
+            *out_len = raw_len;
+        } else {
+            /* Convert the ASN.1 DER ECDSA signature to raw 32-byte R||S. */
+            sig = (unsigned char *)cwist_alloc(64);
+            if (!sig) {
+                cwist_free(raw);
+                goto fail;
+            }
+            ECDSA_SIG *ecsig = ECDSA_SIG_from_bytes(raw, raw_len);
+            cwist_free(raw);
+            if (!ecsig) {
+                cwist_free(sig);
+                sig = NULL;
+                goto fail;
+            }
+            const BIGNUM *r, *s;
+            ECDSA_SIG_get0(ecsig, &r, &s);
+            if (BN_bn2bin_padded(sig, 32, r) != 1 ||
+                BN_bn2bin_padded(sig + 32, 32, s) != 1) {
+                ECDSA_SIG_free(ecsig);
+                cwist_free(sig);
+                sig = NULL;
+                goto fail;
+            }
+            ECDSA_SIG_free(ecsig);
+            *out_len = 64;
+        }
+    }
+
+    EVP_MD_CTX_free(ctx);
+    EVP_PKEY_free(pkey);
+    return sig;
+
+fail:
+    EVP_MD_CTX_free(ctx);
+    EVP_PKEY_free(pkey);
+    return NULL;
+}
+
+/**
+ * Verify @p sig (JOSE form) over @p msg with @p alg; @p key is the HMAC
+ * secret for HS256 or a PEM public/private key otherwise. The ES256 key must
+ * be on P-256 and the Ed25519 key must be Ed25519, so a key of the wrong
+ * type can never validate.
+ */
+static bool jwt_verify_bytes(jwt_alg_t alg, const char *key, const char *msg, size_t msg_len,
+                             const unsigned char *sig, size_t sig_len) {
+
+    if (alg == JWT_ALG_HS256) {
+        unsigned char expected[32];
+        if (sig_len != 32) return false;
+        if (!hmac_sha256(key, strlen(key), msg, msg_len, expected)) return false;
+        int cmp = 0;
+        for (int i = 0; i < 32; i++) {
+            cmp |= expected[i] ^ sig[i];
+        }
+        return cmp == 0;
+    }
+
+    bool ok = false;
+    EVP_MD_CTX *ctx = NULL;
+    EVP_PKEY *pkey = jwt_load_public_key(key);
+    if (!pkey) return false;
+    if (alg == JWT_ALG_ES256 && !jwt_key_is_p256(pkey)) goto fail;
+    if (alg == JWT_ALG_ED25519 && EVP_PKEY_id(pkey) != EVP_PKEY_ED25519) goto fail;
+
+    ctx = EVP_MD_CTX_new();
+    if (!ctx) goto fail;
+    const EVP_MD *md = (alg == JWT_ALG_ES256) ? EVP_sha256() : NULL;
+    if (EVP_DigestVerifyInit(ctx, NULL, md, NULL, pkey) != 1) goto out_ctx;
+
+    if (alg == JWT_ALG_ED25519) {
+        ok = EVP_DigestVerify(ctx, sig, sig_len, (const unsigned char *)msg, msg_len) == 1;
+    } else {
+        /* Re-encode raw R||S as the ASN.1 DER the EVP interface expects. */
+        if (sig_len != 64) goto out_ctx;
+        BIGNUM *r = BN_bin2bn(sig, 32, NULL);
+        BIGNUM *s = BN_bin2bn(sig + 32, 32, NULL);
+        ECDSA_SIG *ecsig = ECDSA_SIG_new();
+        if (!r || !s || !ecsig || ECDSA_SIG_set0(ecsig, r, s) != 1) {
+            BN_free(r);
+            BN_free(s);
+            ECDSA_SIG_free(ecsig);
+            goto out_ctx;
+        }
+        uint8_t *der = NULL;
+        size_t der_len = 0;
+        if (ECDSA_SIG_to_bytes(&der, &der_len, ecsig) == 1) {
+            ok = EVP_DigestVerify(ctx, der, der_len, (const unsigned char *)msg, msg_len) == 1;
+            OPENSSL_free(der);
+        }
+        ECDSA_SIG_free(ecsig); /* takes r and s */
+    }
+
+out_ctx:
+    EVP_MD_CTX_free(ctx);
+fail:
+    EVP_PKEY_free(pkey);
+    return ok;
 }
 
 /* --------------------------------------------------------------------------
@@ -164,21 +367,36 @@ struct cwist_jwt_claims {
  * -------------------------------------------------------------------------- */
 
 /**
- * @brief Sign a JSON payload as an HS256 JWT and optionally inject exp/iat claims.
+ * @brief Sign a JSON payload as a JWT with @p alg and optionally inject exp/iat.
+ * @param alg Signature algorithm (HS256/ES256/EdDSA).
  * @param payload_json Raw payload JSON string to sign.
- * @param secret Shared HS256 signing secret.
+ * @param key HMAC secret (HS256) or PEM private key (ES256/Ed25519).
+ * @param kid Optional key id for the header, or NULL.
  * @param exp_seconds Lifetime in seconds to add when the payload lacks exp/iat.
  * @return Heap-allocated JWT string, or NULL on parse/signature allocation failure.
  */
-char *cwist_jwt_sign(const char *payload_json, const char *secret, long exp_seconds) {
-    if (!payload_json || !secret) return NULL;
+static char *jwt_sign_common(jwt_alg_t alg, const char *payload_json, const char *key,
+                             const char *kid, long exp_seconds) {
+    if (!payload_json || !key) return NULL;
 
     /* --- Build header JSON ------------------------------------------------ */
-    static const char *HEADER_JSON = "{\"alg\":\"HS256\",\"typ\":\"JWT\"}";
+    cJSON *header = cJSON_CreateObject();
+    if (!header) return NULL;
+    cJSON_AddStringToObject(header, "alg", jwt_alg_name(alg));
+    cJSON_AddStringToObject(header, "typ", "JWT");
+    if (kid) {
+        cJSON_AddStringToObject(header, "kid", kid);
+    }
+    char *header_json = cJSON_PrintUnformatted(header);
+    cJSON_Delete(header);
+    if (!header_json) return NULL;
 
     /* --- Optionally inject exp/iat into payload --------------------------- */
     cJSON *payload = cJSON_Parse(payload_json);
-    if (!payload) return NULL;
+    if (!payload) {
+        cJSON_free(header_json);
+        return NULL;
+    }
 
     if (exp_seconds > 0) {
         time_t now = time(NULL);
@@ -193,21 +411,26 @@ char *cwist_jwt_sign(const char *payload_json, const char *secret, long exp_seco
 
     char *final_payload_json = cJSON_PrintUnformatted(payload);
     cJSON_Delete(payload);
-    if (!final_payload_json) return NULL;
+    if (!final_payload_json) {
+        cJSON_free(header_json);
+        return NULL;
+    }
 
     /* --- Base64URL encode header and payload ------------------------------ */
-    size_t hdr_enc_len = b64url_encoded_len(strlen(HEADER_JSON));
+    size_t hdr_enc_len = b64url_encoded_len(strlen(header_json));
     size_t pay_enc_len = b64url_encoded_len(strlen(final_payload_json));
 
     char *hdr_enc CWIST_DEFER_FREE = (char *)cwist_alloc(hdr_enc_len);
     char *pay_enc CWIST_DEFER_FREE = (char *)cwist_alloc(pay_enc_len);
     if (!hdr_enc || !pay_enc) {
+        cJSON_free(header_json);
         cJSON_free(final_payload_json);
         return NULL;
     }
 
-    b64url_encode((const unsigned char *)HEADER_JSON, strlen(HEADER_JSON), hdr_enc);
+    b64url_encode((const unsigned char *)header_json, strlen(header_json), hdr_enc);
     b64url_encode((const unsigned char *)final_payload_json, strlen(final_payload_json), pay_enc);
+    cJSON_free(header_json);
     cJSON_free(final_payload_json);
 
     /* --- Build "header.payload" signing input using sstring --------------- */
@@ -219,20 +442,24 @@ char *cwist_jwt_sign(const char *payload_json, const char *secret, long exp_seco
     cwist_sstring_append(signing_input, ".");
     cwist_sstring_append(signing_input, pay_enc);
 
-    /* --- Compute HMAC-SHA256 signature ------------------------------------ */
-    unsigned char sig_raw[32];
-    if (!hmac_sha256(secret, strlen(secret), signing_input->data, signing_input->size, sig_raw)) {
+    /* --- Compute the signature -------------------------------------------- */
+    size_t sig_len = 0;
+    unsigned char *sig_raw = jwt_sign_bytes(alg, key, signing_input->data, signing_input->size,
+                                            &sig_len);
+    if (!sig_raw) {
         cwist_sstring_destroy(signing_input);
         return NULL;
     }
 
-    size_t sig_enc_len = b64url_encoded_len(32);
+    size_t sig_enc_len = b64url_encoded_len(sig_len);
     char *sig_enc CWIST_DEFER_FREE = (char *)cwist_alloc(sig_enc_len);
     if (!sig_enc) {
+        cwist_free(sig_raw);
         cwist_sstring_destroy(signing_input);
         return NULL;
     }
-    b64url_encode(sig_raw, 32, sig_enc);
+    b64url_encode(sig_raw, sig_len, sig_enc);
+    cwist_free(sig_raw);
 
     /* --- Assemble final token using sstring ------------------------------- */
     cwist_sstring *token = cwist_sstring_create();
@@ -252,14 +479,29 @@ char *cwist_jwt_sign(const char *payload_json, const char *secret, long exp_seco
     return result;
 }
 
+char *cwist_jwt_sign(const char *payload_json, const char *secret, long exp_seconds) {
+    return jwt_sign_common(JWT_ALG_HS256, payload_json, secret, NULL, exp_seconds);
+}
+
+char *cwist_jwt_sign_es256(const char *payload_json, const char *pem_private_key, const char *kid,
+                           long exp_seconds) {
+    return jwt_sign_common(JWT_ALG_ES256, payload_json, pem_private_key, kid, exp_seconds);
+}
+
+char *cwist_jwt_sign_ed25519(const char *payload_json, const char *pem_private_key,
+                             const char *kid, long exp_seconds) {
+    return jwt_sign_common(JWT_ALG_ED25519, payload_json, pem_private_key, kid, exp_seconds);
+}
+
 /**
- * @brief Verify a JWT signature, parse its payload, and enforce the exp claim when present.
+ * @brief Verify a JWT with @p alg, parse its payload, and enforce exp/nbf when present.
+ * @param alg Signature algorithm the token header must declare exactly.
  * @param token JWT string in header.payload.signature form.
- * @param secret Shared HS256 signing secret.
+ * @param key HMAC secret (HS256) or PEM public/private key (ES256/Ed25519).
  * @return Heap-allocated claims object, or NULL when verification/parsing fails.
  */
-cwist_jwt_claims *cwist_jwt_verify(const char *token, const char *secret) {
-    if (!token || !secret) return NULL;
+static cwist_jwt_claims *jwt_verify_common(jwt_alg_t alg, const char *token, const char *key) {
+    if (!token || !key) return NULL;
 
     /* --- Split the token into three parts --------------------------------- */
     /* We need mutable copies to split on '.' */
@@ -280,7 +522,7 @@ cwist_jwt_claims *cwist_jwt_verify(const char *token, const char *secret) {
     }
     *dot2 = '\0';
 
-    /* --- Validate the header: must declare alg=HS256 (RFC 8725 section 3.1) ----- */
+    /* --- Validate the header: must declare exactly our alg (RFC 8725 3.1) - */
     size_t hdr_json_len = 0;
     unsigned char *hdr_json = b64url_decode(tok_copy, strlen(tok_copy), &hdr_json_len);
     if (!hdr_json) {
@@ -294,8 +536,8 @@ cwist_jwt_claims *cwist_jwt_verify(const char *token, const char *secret) {
         return NULL;
     }
     cJSON *alg_item = cJSON_GetObjectItemCaseSensitive(hdr, "alg");
-    bool alg_ok =
-        alg_item && cJSON_IsString(alg_item) && strcmp(alg_item->valuestring, "HS256") == 0;
+    bool alg_ok = alg_item && cJSON_IsString(alg_item) &&
+                  strcmp(alg_item->valuestring, jwt_alg_name(alg)) == 0;
     cJSON_Delete(hdr);
     if (!alg_ok) {
         cwist_free(tok_copy);
@@ -305,44 +547,20 @@ cwist_jwt_claims *cwist_jwt_verify(const char *token, const char *secret) {
     const char *pay_enc = dot1 + 1;
     const char *sig_enc = dot2 + 1;
 
-    /* --- Re-build the signing input from the original token --------------- */
-    /* signing_input = original "hdr_enc.pay_enc" (up to the second dot) */
-    size_t first_two_len = (size_t)(dot2 - tok_copy);
-    /* dot2 points inside tok_copy which is already modified; use original */
-    cwist_sstring *signing_input = cwist_sstring_create();
-    if (!signing_input) {
-        cwist_free(tok_copy);
-        return NULL;
-    }
-    cwist_sstring_assign_len(signing_input, token, first_two_len);
-
-    /* --- Recompute expected signature ------------------------------------- */
-    unsigned char expected_sig[32];
-    if (!hmac_sha256(secret, strlen(secret), signing_input->data, signing_input->size,
-                     expected_sig)) {
-        cwist_sstring_destroy(signing_input);
-        cwist_free(tok_copy);
-        return NULL;
-    }
-    cwist_sstring_destroy(signing_input);
-
     /* --- Decode the provided signature ------------------------------------ */
     size_t provided_sig_len = 0;
     unsigned char *provided_sig = b64url_decode(sig_enc, strlen(sig_enc), &provided_sig_len);
-    if (!provided_sig || provided_sig_len != 32) {
+    if (!provided_sig) {
         cwist_free(tok_copy);
-        cwist_free(provided_sig);
         return NULL;
     }
 
-    /* --- Constant-time comparison ---------------------------------------- */
-    int cmp = 0;
-    for (int i = 0; i < 32; i++) {
-        cmp |= expected_sig[i] ^ provided_sig[i];
-    }
+    /* --- Verify over the original "hdr_enc.pay_enc" signing input --------- */
+    size_t first_two_len = (size_t)(dot2 - tok_copy);
+    bool sig_ok = jwt_verify_bytes(alg, key, token, first_two_len, provided_sig,
+                                   provided_sig_len);
     cwist_free(provided_sig);
-
-    if (cmp != 0) {
+    if (!sig_ok) {
         cwist_free(tok_copy);
         return NULL; /* signature mismatch */
     }
@@ -387,6 +605,18 @@ cwist_jwt_claims *cwist_jwt_verify(const char *token, const char *secret) {
     }
     claims->json = json;
     return claims;
+}
+
+cwist_jwt_claims *cwist_jwt_verify(const char *token, const char *secret) {
+    return jwt_verify_common(JWT_ALG_HS256, token, secret);
+}
+
+cwist_jwt_claims *cwist_jwt_verify_es256(const char *token, const char *pem_key) {
+    return jwt_verify_common(JWT_ALG_ES256, token, pem_key);
+}
+
+cwist_jwt_claims *cwist_jwt_verify_ed25519(const char *token, const char *pem_key) {
+    return jwt_verify_common(JWT_ALG_ED25519, token, pem_key);
 }
 
 /**

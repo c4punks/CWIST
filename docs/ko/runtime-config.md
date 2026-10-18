@@ -28,6 +28,7 @@
 | `CWIST_C1M_MODE` | supported | `0` 또는 `false`면 끔 | `1` | `1`은 CWIST reactor(C1M)로 서비스하고, `0`은 classic 스레드 풀을 고릅니다. |
 | `CWIST_PROFILE` | supported | `default`, `performance`, `lowmem`, `lowlat` | `default` | 환경에 설정되지 않은 다른 변수를 채우는 프리셋입니다(명시한 값이 우선). `default`: `CWIST_C1M_MODE=1`, `CWIST_REACTOR_DRAIN_CHUNK=8`. `performance`: 여기에 `CWIST_MALLOC_ARENA_MAX=1`, `CWIST_HTTP_BATCH=64` 추가. `lowmem`: `CWIST_C1M_MODE=1`, `CWIST_MALLOC_ARENA_MAX=1`, `CWIST_WORKERS=2`. `lowlat`: `CWIST_C1M_MODE=0`. 모르는 값이면 경고하고 `default`를 씁니다. |
 | `CWIST_DRAIN_TIMEOUT` | supported | 초, `0`–`3600` | `5` | 종료 시 앱을 해제하기 전에 처리 중인 요청을 기다리는 시간. 범위 밖 값은 stderr에 알리고 무시합니다. |
+| `CWIST_REUSEPORT` | supported | `0` 또는 `false`면 끔 | 켜짐 | TCP와 UDP(HTTP/3) 리슨 소켓에 SO_REUSEPORT를 설정해 두 번째 프로세스가 같은 포트를 바인드할 수 있게 합니다(무중단 재시작, [무중단 재시작](deployment/zero-downtime-restart.md) 참조). 끄면 포트 충돌 시 bind()가 실패하지만, 워커 프로세스는 fork 후 포트를 다시 바인드하므로 `CWIST_WORKERS=1`이 필요합니다. |
 | `CWIST_FD_LIMIT_TARGET` | supported | 0보다 큰 정수 | `1050000` | 서버가 시작할 때 스스로 올리는 열린 파일 soft limit(hard limit까지). [C1M 파일 한도](c1m-file-limits.md) 참고. |
 | `CWIST_MALLOC_ARENA_MAX` | tuning | 0 이상 정수 | 설정 안 함(glibc 기본값) | glibc 전용: `mallopt(M_ARENA_MAX)`. `1`은 할당기 동시성을 조금 내주고 RSS를 크게 줄입니다. |
 | `CWIST_MALLOC_TRIM_IDLE_SEC` | tuning | 초, `0`–`86400` | `30` | glibc 전용(그 외 libc에서는 동작 없음): 이벤트 없이 유휴 상태가 누적된 시간이 이 값에 도달하면 리액터가 이벤트 없는 wake에서 `malloc_trim(0)`을 호출해 glibc 아레나 상단의 여유 메모리를 OS에 반환합니다. 유휴 wake에서만 동작해 핫 패스 비용은 없습니다. 로드 라운드 후 워커당 중간값 약 1.2 MiB 절감. `0`이면 끕니다. |
@@ -89,6 +90,7 @@
 |------|------|----|--------|------|
 | `CWIST_REACTOR_BACKEND` | tuning | `epoll` | io_uring | Linux: A/B 측정용으로 epoll 백엔드를 강제합니다. |
 | `CWIST_RX_URING` | tuning | `0`이면 끔 | 켜짐 | POLL + `recv` 대신 `IORING_OP_RECV`로 받습니다. |
+| `CWIST_ACCEPT_URING` | tuning | `0`이면 끔 | 켜짐 | one-shot POLL + `accept4` 반복 대신 multishot `IORING_OP_ACCEPT` 하나로 새 연결을 받습니다. multishot accept를 지원하지 않는 커널은 조용히 poll 경로로 돌아갑니다. |
 | `CWIST_RX_EPOLL` | tuning | `0`이면 끔 | 켜짐 | epoll reactor(io_uring ring이 없거나 `CWIST_REACTOR_BACKEND=epoll`)에서 keep-alive 연결을 edge-triggered로 등록해 둔 채 reactor가 직접 받습니다. 요청마다 `epoll_ctl`로 one-shot poll을 다시 거는 대신입니다. |
 | `CWIST_REACTOR_DRAIN_CHUNK` | tuning | 0 이상 정수 | `8` (`CWIST_PROFILE`이 설정, 없으면 `64`) | 게시된 작업을 비우는 사이에 처리하는 연결 콜백 수. 모든 reactor 백엔드(io_uring, epoll, kqueue)에 적용됩니다. `0`이면 묶음 중간의 비우기를 끕니다(기존 동작). [협력적 큐잉](cooperative-queuing.md) 참고. |
 | `CWIST_REACTOR_ROUND_BUDGET_US` | tuning | 마이크로초, 0 이상 | `2000` | reactor 라운드가 이 시간을 넘기면, 대기 중인 re-arm을 라운드 끝이 아니라 콜백 64개마다 커널에 넘깁니다. 라운드는 끝까지 실행됩니다. `0`이면 한도를 끕니다. |

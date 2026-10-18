@@ -15,7 +15,8 @@
  *
  * ev_ctx pointers come from cwist_alloc (malloc-backed, so at least
  * max_align_t aligned) and can never carry the tag bit; reactor.c asserts
- * this when arming.
+ * this when arming.  Multishot-accept slots (see the bottom of this header)
+ * tag bit 1 instead, so the run loop can tell all three apart.
  *
  * RX-epoll: on an epoll reactor (no io_uring ring, e.g. under a seccomp
  * profile that blocks it) the same contract is served without SQEs.  The fd
@@ -89,6 +90,32 @@ bool cwist_reactor_recv_arm(cwist_reactor_t *reactor, int fd, void *buf, unsigne
  * wrapper in cwist_reactor_run. */
 void cwist_reactor_probe_record(cwist_reactor_t *reactor, bool queue, uint64_t sample_us);
 
+/* --- Multishot accept (issue #406) -----------------------------------------
+ * The listen socket's accept can ride one IORING_OP_ACCEPT with
+ * IORING_ACCEPT_MULTISHOT instead of a one-shot POLL + accept4 drain loop:
+ * each completion IS an accepted connection (SOCK_CLOEXEC|SOCK_NONBLOCK
+ * already set).  Accept slots tag bit 1 of user_data (the RX path uses bit
+ * 0); both live outside the ev_ctx namespace, whose slots are malloc-aligned.
+ *
+ * The slot is persistent, unlike the one-shot ev_ctx slots: it survives
+ * across completions until the multishot accept terminates (completion
+ * without IORING_CQE_F_MORE) or the reactor is destroyed. */
+
+/* Completion handler for multishot accepts.  fd >= 0 is a freshly accepted
+ * socket (CLOEXEC+NONBLOCK set).  A negative fd is -errno and is delivered
+ * exactly once, when the accept terminates: unsupported opcode on an old
+ * kernel (-EINVAL), listener error, or teardown.  The caller should resume
+ * the one-shot POLL accept loop; the reactor has already freed the slot when
+ * the callback returns.  Runs on the reactor owner thread while dispatching. */
+typedef void (*cwist_accept_cb_t)(void *ctx, int fd);
+
+/* Arm one multishot accept on the reactor ring.  At most one per listen fd.
+ * Returns false when this reactor has no io_uring ring (epoll fallback) or
+ * CWIST_ACCEPT_URING=0; the caller then uses the one-shot POLL path.  Arm
+ * before cwist_reactor_run() or from the run thread. */
+bool cwist_reactor_accept_arm(cwist_reactor_t *reactor, int listen_fd, cwist_accept_cb_t cb,
+                              void *ctx);
+
 #else /* !__linux__ */
 
 static inline bool cwist_rx_uring_env_enabled(void) {
@@ -121,6 +148,15 @@ static inline void cwist_reactor_probe_record(cwist_reactor_t *reactor, bool que
     (void)reactor;
     (void)queue;
     (void)sample_us;
+}
+typedef void (*cwist_accept_cb_t)(void *ctx, int fd);
+static inline bool cwist_reactor_accept_arm(cwist_reactor_t *reactor, int listen_fd,
+                                            cwist_accept_cb_t cb, void *ctx) {
+    (void)reactor;
+    (void)listen_fd;
+    (void)cb;
+    (void)ctx;
+    return false;
 }
 
 #endif /* __linux__ */

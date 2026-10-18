@@ -79,6 +79,22 @@ struct io_uring_getevents_arg {
 #define IORING_ASYNC_CANCEL_ANY (1U << 2)
 #endif
 
+#ifndef IORING_ACCEPT_MULTISHOT
+#define IORING_ACCEPT_MULTISHOT (1U << 0)
+#endif
+
+#ifndef IORING_CQE_F_MORE
+#define IORING_CQE_F_MORE (1U << 1)
+#endif
+
+/* accept4-style flags for the SQE; on Linux these equal the O_* values. */
+#ifndef SOCK_CLOEXEC
+#define SOCK_CLOEXEC O_CLOEXEC
+#endif
+#ifndef SOCK_NONBLOCK
+#define SOCK_NONBLOCK O_NONBLOCK
+#endif
+
 struct __kernel_timespec;
 
 /** @brief Raw io_uring_setup(2) syscall wrapper (no libc wrapper exists).
@@ -230,6 +246,21 @@ typedef struct reactor_slot_chunk {
     reactor_event_ctx_t slots[];
 } reactor_slot_chunk_t;
 
+#ifdef __linux__
+/* Persistent multishot-accept registration (issue #406). Unlike the
+ * one-shot ev_ctx slots this object lives across completions: one
+ * IORING_OP_ACCEPT+MULTISHOT keeps producing CQEs until it terminates
+ * (completion without IORING_CQE_F_MORE). Dispatched via bit 1 of
+ * user_data (bit 0 is the RX-uring tag); cwist_alloc alignment keeps both
+ * tag bits clear. */
+typedef struct reactor_accept_slot {
+    struct reactor_accept_slot *next;
+    int listen_fd;
+    cwist_accept_cb_t cb;
+    void *ctx;
+} reactor_accept_slot_t;
+#endif
+
 struct cwist_reactor {
     reactor_impl_t impl;
     bool running;
@@ -270,6 +301,9 @@ struct cwist_reactor {
     /* RX-uring completion handler for tagged (low-bit set) RECV SQEs;
      * registered by the HTTP layer once per worker reactor. */
     cwist_rx_cb_t rx_cb;
+    /* Persistent multishot-accept registrations (bit-1-tagged ACCEPT SQEs);
+     * freed on terminal completion or at destroy. */
+    reactor_accept_slot_t *accept_slots;
     /* RX-epoll: fds whose armed receive may already have bytes waiting (the
      * last recv filled the buffer, or an edge arrived while unarmed). An
      * edge-triggered registration will not report those again, so the run
@@ -685,6 +719,64 @@ void cwist_reactor_probe_record(cwist_reactor_t *reactor, bool queue, uint64_t s
                          &reactor->probe[phase].sum_us, &reactor->probe[phase].max_us,
                          &reactor->probe[phase].over_5ms, sample_us);
 }
+
+/* --- Multishot accept (issue #406) ------------------------------------------
+ * CWIST_ACCEPT_URING: unset = auto (multishot accept whenever the reactor
+ * has a real io_uring ring), "0" = force off (one-shot POLL + accept4 loop).
+ * Cached after the first read like the other env knobs in this file. */
+static bool accept_uring_env_enabled(void) {
+    static _Atomic int cached = -1;
+    int v = atomic_load_explicit(&cached, memory_order_relaxed);
+    if (v < 0) {
+        const char *s = getenv("CWIST_ACCEPT_URING");
+        v = (s && strcmp(s, "0") == 0) ? 0 : 1;
+        atomic_store_explicit(&cached, v, memory_order_relaxed);
+    }
+    return v == 1;
+}
+
+static void reactor_accept_unlink(cwist_reactor_t *reactor, reactor_accept_slot_t *slot) {
+    reactor_accept_slot_t **pp = &reactor->accept_slots;
+    while (*pp) {
+        if (*pp == slot) {
+            *pp = slot->next;
+            return;
+        }
+        pp = &(*pp)->next;
+    }
+}
+
+bool cwist_reactor_accept_arm(cwist_reactor_t *reactor, int listen_fd, cwist_accept_cb_t cb,
+                              void *ctx) {
+    if (!reactor || listen_fd < 0 || !cb) return false;
+    if (reactor->impl.use_epoll || !reactor->impl.active) return false;
+    if (!accept_uring_env_enabled()) return false;
+
+    reactor_accept_slot_t *slot = cwist_alloc(sizeof(*slot));
+    if (!slot) return false;
+    slot->listen_fd = listen_fd;
+    slot->cb = cb;
+    slot->ctx = ctx;
+
+    struct io_uring_sqe sqe;
+    memset(&sqe, 0, sizeof(sqe));
+    sqe.opcode = IORING_OP_ACCEPT;
+    sqe.fd = listen_fd;
+    sqe.accept_flags = SOCK_CLOEXEC | SOCK_NONBLOCK;
+    sqe.ioprio = IORING_ACCEPT_MULTISHOT;
+    sqe.user_data = (uint64_t)(uintptr_t)slot | 2u;
+
+    /* Link before submitting: a fast completion can dispatch on the run
+     * thread as soon as the SQE is visible, and destroy must find the slot. */
+    slot->next = reactor->accept_slots;
+    reactor->accept_slots = slot;
+    if (!uring_submit(reactor, &sqe)) {
+        reactor_accept_unlink(reactor, slot);
+        cwist_free(slot);
+        return false;
+    }
+    return true;
+}
 #endif
 
 static reactor_event_ctx_t *alloc_reactor_ctx(cwist_reactor_t *r, int fd, cwist_reactor_cb_t cb,
@@ -1056,6 +1148,13 @@ void cwist_reactor_destroy(cwist_reactor_t *reactor) {
     pthread_mutex_destroy(&reactor->pool_lock);
 #ifdef __linux__
     pthread_mutex_destroy(&reactor->impl.sq_lock);
+    /* Multishot accepts terminated with the ring; free their registrations. */
+    reactor_accept_slot_t *as = reactor->accept_slots;
+    while (as) {
+        reactor_accept_slot_t *next = as->next;
+        cwist_free(as);
+        as = next;
+    }
 #endif
     cwist_free(reactor->timer_heap);
     reactor_slot_chunk_t *chunk = reactor->chunks;
@@ -1610,6 +1709,22 @@ void cwist_reactor_run(cwist_reactor_t *reactor) {
                      * timestamp), not by the ev_ctx wrapper below. */
                     if (reactor->rx_cb) {
                         reactor->rx_cb((void *)(user_data & ~(uint64_t)1u), cqe->res);
+                    }
+                } else if (user_data & 2u) {
+                    /* Multishot-accept slot (issue #406): cqe->res is the
+                     * accepted fd, already CLOEXEC|NONBLOCK.  A completion
+                     * without IORING_CQE_F_MORE ends the registration: notify
+                     * once with the terminal status (-errno, or -ECANCELED on
+                     * an error-free end) so the caller can resume the
+                     * one-shot POLL accept loop, then free the slot. */
+                    reactor_accept_slot_t *slot =
+                        (reactor_accept_slot_t *)(uintptr_t)(user_data & ~(uint64_t)3u);
+                    int res = cqe->res;
+                    if (res >= 0) slot->cb(slot->ctx, res);
+                    if (!(cqe->flags & IORING_CQE_F_MORE)) {
+                        reactor_accept_unlink(reactor, slot);
+                        slot->cb(slot->ctx, res < 0 ? res : -ECANCELED);
+                        cwist_free(slot);
                     }
                 } else {
                     reactor_event_ctx_t *ev_ctx = (reactor_event_ctx_t *)user_data;

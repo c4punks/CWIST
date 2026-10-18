@@ -26,6 +26,7 @@
 #include "simd_parser.h"
 #include "async_internal.h"
 #include "http_live.h"
+#include "sockopts.h"
 
 #include <limits.h>
 #include <stdio.h>
@@ -914,18 +915,20 @@ static bool http_async_stash_grow(cwist_http_async_conn_t *conn, size_t need);
  *         CWIST_HTTP_KEEP_ALIVE_TIMEOUT_SEC default; cached after first use.
  */
 static uint32_t cwist_http_keep_alive_timeout_sec(void) {
-    static int cached_timeout = -1;
-    if (cached_timeout < 0) {
+    static _Atomic int cached_timeout = -1;
+    int v = atomic_load_explicit(&cached_timeout, memory_order_relaxed);
+    if (v < 0) {
         const char *env = getenv("CWIST_HTTP_KEEP_ALIVE_TIMEOUT");
         int val = 0;
         if (env && *env) {
             char *end = NULL;
-            long v = strtol(env, &end, 10);
-            if (end != env && *end == '\0' && v > 0 && v <= INT_MAX) val = (int)v;
+            long parsed = strtol(env, &end, 10);
+            if (end != env && *end == '\0' && parsed > 0 && parsed <= INT_MAX) val = (int)parsed;
         }
-        cached_timeout = (val > 0) ? val : CWIST_HTTP_KEEP_ALIVE_TIMEOUT_SEC;
+        v = (val > 0) ? val : CWIST_HTTP_KEEP_ALIVE_TIMEOUT_SEC;
+        atomic_store_explicit(&cached_timeout, v, memory_order_relaxed);
     }
-    return (uint32_t)cached_timeout;
+    return (uint32_t)v;
 }
 
 /* Default hysteresis window (seconds) before an async connection's stash is
@@ -5304,6 +5307,12 @@ const char CWIST_BLOB_500[] =
  * requests through cwist_app_dispatch_memory() instead. */
 #ifndef CWIST_WASI_NO_SOCKETS
 
+bool cwist_reuseport_enabled(void) {
+    const char *env = getenv("CWIST_REUSEPORT");
+    if (!env) return true;
+    return !(env[0] == '0' || strcmp(env, "false") == 0);
+}
+
 /**
  * @brief Create, configure, bind, and listen on an IPv4 TCP socket.
  * @param sockv4 Output sockaddr structure populated for the bind call.
@@ -5344,7 +5353,9 @@ int cwist_make_socket_ipv4(struct sockaddr_in *sockv4, const char *address, uint
     }
 
 #if defined(SO_REUSEPORT)
-    setsockopt(server_fd, SOL_SOCKET, SO_REUSEPORT, &opt, sizeof(opt));
+    if (cwist_reuseport_enabled()) {
+        setsockopt(server_fd, SOL_SOCKET, SO_REUSEPORT, &opt, sizeof(opt));
+    }
 #endif
 
 #if defined(__APPLE__) || defined(__FreeBSD__)
