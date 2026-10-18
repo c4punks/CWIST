@@ -28,6 +28,7 @@
 | `CWIST_C1M_MODE` | supported | `0` 또는 `false`면 끔 | `1` | `1`은 CWIST reactor(C1M)로 서비스하고, `0`은 classic 스레드 풀을 고릅니다. |
 | `CWIST_PROFILE` | supported | `default`, `performance`, `lowmem`, `lowlat` | `default` | 환경에 설정되지 않은 다른 변수를 채우는 프리셋입니다(명시한 값이 우선). `default`: `CWIST_C1M_MODE=1`, `CWIST_REACTOR_DRAIN_CHUNK=8`. `performance`: 여기에 `CWIST_MALLOC_ARENA_MAX=1`, `CWIST_HTTP_BATCH=64` 추가. `lowmem`: `CWIST_C1M_MODE=1`, `CWIST_MALLOC_ARENA_MAX=1`, `CWIST_WORKERS=2`. `lowlat`: `CWIST_C1M_MODE=0`. 모르는 값이면 경고하고 `default`를 씁니다. |
 | `CWIST_DRAIN_TIMEOUT` | supported | 초, `0`–`3600` | `5` | 종료 시 앱을 해제하기 전에 처리 중인 요청을 기다리는 시간. 범위 밖 값은 stderr에 알리고 무시합니다. |
+| `CWIST_REUSEPORT` | supported | `0` 또는 `false`면 끔 | 켜짐 | TCP와 UDP(HTTP/3) 리슨 소켓에 SO_REUSEPORT를 설정해 두 번째 프로세스가 같은 포트를 바인드할 수 있게 합니다(무중단 재시작, [무중단 재시작](deployment/zero-downtime-restart.md) 참조). 끄면 포트 충돌 시 bind()가 실패하지만, 워커 프로세스는 fork 후 포트를 다시 바인드하므로 `CWIST_WORKERS=1`이 필요합니다. |
 | `CWIST_FD_LIMIT_TARGET` | supported | 0보다 큰 정수 | `1050000` | 서버가 시작할 때 스스로 올리는 열린 파일 soft limit(hard limit까지). [C1M 파일 한도](c1m-file-limits.md) 참고. |
 | `CWIST_MALLOC_ARENA_MAX` | tuning | 0 이상 정수 | 설정 안 함(glibc 기본값) | glibc 전용: `mallopt(M_ARENA_MAX)`. `1`은 할당기 동시성을 조금 내주고 RSS를 크게 줄입니다. |
 | `CWIST_MALLOC_TRIM_IDLE_SEC` | tuning | 초, `0`–`86400` | `30` | glibc 전용(그 외 libc에서는 동작 없음): 이벤트 없이 유휴 상태가 누적된 시간이 이 값에 도달하면 리액터가 이벤트 없는 wake에서 `malloc_trim(0)`을 호출해 glibc 아레나 상단의 여유 메모리를 OS에 반환합니다. 유휴 wake에서만 동작해 핫 패스 비용은 없습니다. 로드 라운드 후 워커당 중간값 약 1.2 MiB 절감. `0`이면 끕니다. |

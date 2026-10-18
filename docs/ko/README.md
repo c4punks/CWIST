@@ -19,6 +19,8 @@ CWIST를 배우고, 사용하고, 확장하는 데 필요한 모든 문서를 �
 
 * [Wasmtime 어플라이언스 배포](deployment/wasmtime-appliance.md) - WASI 예제의 빌드, 격리된
   상태, 재시작 검증, 백업, 롤백.
+* [무중단 재시작](deployment/zero-downtime-restart.md) - SO_REUSEPORT 소켓 핸드오프,
+  드레인 순서, systemd 통합, HTTP/3 동작.
 * [CWIST로 CRUD 블로그 만들기](tutorials/blog-crud.md) - 라우팅 + SQLite + JSON.
 * [NATS 연동](tutorials/nats-integration.md) - 핸들러에서 메시징하기.
 * [WebTransport 서버](tutorials/webtransport-server.md) - 실험적인 HTTP/3

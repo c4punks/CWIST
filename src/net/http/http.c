@@ -26,6 +26,7 @@
 #include "simd_parser.h"
 #include "async_internal.h"
 #include "http_live.h"
+#include "sockopts.h"
 
 #include <limits.h>
 #include <stdio.h>
@@ -5304,6 +5305,12 @@ const char CWIST_BLOB_500[] =
  * requests through cwist_app_dispatch_memory() instead. */
 #ifndef CWIST_WASI_NO_SOCKETS
 
+bool cwist_reuseport_enabled(void) {
+    const char *env = getenv("CWIST_REUSEPORT");
+    if (!env) return true;
+    return !(env[0] == '0' || strcmp(env, "false") == 0);
+}
+
 /**
  * @brief Create, configure, bind, and listen on an IPv4 TCP socket.
  * @param sockv4 Output sockaddr structure populated for the bind call.
@@ -5344,7 +5351,9 @@ int cwist_make_socket_ipv4(struct sockaddr_in *sockv4, const char *address, uint
     }
 
 #if defined(SO_REUSEPORT)
-    setsockopt(server_fd, SOL_SOCKET, SO_REUSEPORT, &opt, sizeof(opt));
+    if (cwist_reuseport_enabled()) {
+        setsockopt(server_fd, SOL_SOCKET, SO_REUSEPORT, &opt, sizeof(opt));
+    }
 #endif
 
 #if defined(__APPLE__) || defined(__FreeBSD__)
