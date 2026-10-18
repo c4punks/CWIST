@@ -36,13 +36,74 @@ static bool app_use_https(const cwist_app *app) {
 }
 
 /**
+ * @brief Hand one accepted socket to the HTTPS dispatcher or the HTTP pool.
+ *
+ * Shared by the one-shot POLL accept loop and the io_uring multishot accept
+ * path; the socket is already non-blocking. Connections accepted while SSL is
+ * requested but not fully configured are closed with a warning.
+ */
+static void async_accept_dispatch(cwist_app *app, int client_fd) {
+    /* The fd number may have been a closed socket's: reset its epoll
+     * registration hint before the first arm. */
+    cwist_reactor_fd_forget(client_fd);
+    int nodelay = 1;
+    setsockopt(client_fd, IPPROTO_TCP, TCP_NODELAY, &nodelay, sizeof(nodelay));
+#if defined(__linux__) && defined(TCP_QUICKACK)
+    int quickack = 1;
+    setsockopt(client_fd, IPPROTO_TCP, TCP_QUICKACK, &quickack, sizeof(quickack));
+#endif
+
+    if (app_use_https(app)) {
+        cwist_https_dispatch(client_fd, app->ssl_ctx, app->https_request_handler, app);
+    } else if (app && !app->use_ssl) {
+        cwist_http_pool_submit_async(client_fd, cwist_app_http_handler_async, app);
+    } else {
+        fprintf(
+            stderr,
+            "[async] SSL request accepted but HTTPS not ready (use_ssl=%d ssl_ctx=%p handler=%p), closing fd=%d\n",
+            app ? app->use_ssl : -1, app ? (void *)app->ssl_ctx : NULL,
+            app ? (void *)app->https_request_handler : NULL, client_fd);
+        close(client_fd);
+    }
+}
+
+#if defined(__linux__)
+/* Multishot-accept arm context: outlives the registration, so it is static
+ * (one async server loop per process, like g_reactor). */
+typedef struct {
+    cwist_app *app;
+    int listen_fd;
+} async_accept_ctx_t;
+static async_accept_ctx_t g_accept_ctx;
+
+static void async_accept_cb(int fd, void *ctx);
+
+/**
+ * @brief io_uring multishot-accept completion; one call per accepted fd.
+ *
+ * A negative fd is a terminal status (-errno): the multishot accept ended
+ * (e.g. IORING_ACCEPT_MULTISHOT unsupported on this kernel), so the proven
+ * one-shot POLL + accept4 loop takes over the listener. Runs on the reactor
+ * thread; the reactor has already released the accept slot when this returns.
+ */
+static void async_accept_uring_cb(void *ctx, int fd) {
+    async_accept_ctx_t *ac = (async_accept_ctx_t *)ctx;
+    if (fd < 0) {
+        if (g_reactor && atomic_load(&g_cwist_running)) {
+            cwist_reactor_add(g_reactor, ac->listen_fd, async_accept_cb, &ac->app,
+                              sizeof(ac->app));
+        }
+        return;
+    }
+    async_accept_dispatch(ac->app, fd);
+}
+#endif
+
+/**
  * @brief Reactor callback: accept pending connections on a listening socket.
  *
- * Accepts all currently queued connections in a loop (non-blocking), disables
- * Nagle (and enables TCP_QUICKACK on Linux where available) on each accepted
- * socket, then hands it either to the HTTPS dispatcher or to the HTTP
- * connection pool, depending on the app configuration. Connections accepted
- * while SSL is requested but not fully configured are closed with a warning.
+ * Accepts all currently queued connections in a loop (non-blocking), then
+ * hands each to async_accept_dispatch().
  *
  * After the accept loop drains, the listening socket is re-armed so the worker
  * keeps accepting: transient reactor re-add failures (e.g. a full io_uring SQ)
@@ -65,28 +126,7 @@ static void async_accept_cb(int fd, void *ctx) {
     socklen_t len = sizeof(addr);
     while ((client_fd = accept(fd, (struct sockaddr *)&addr, &len)) >= 0) {
 #endif
-        /* The fd number may have been a closed socket's: reset its epoll
-         * registration hint before the first arm. */
-        cwist_reactor_fd_forget(client_fd);
-        int nodelay = 1;
-        setsockopt(client_fd, IPPROTO_TCP, TCP_NODELAY, &nodelay, sizeof(nodelay));
-#if defined(__linux__) && defined(TCP_QUICKACK)
-        int quickack = 1;
-        setsockopt(client_fd, IPPROTO_TCP, TCP_QUICKACK, &quickack, sizeof(quickack));
-#endif
-
-        if (app_use_https(app)) {
-            cwist_https_dispatch(client_fd, app->ssl_ctx, app->https_request_handler, app);
-        } else if (app && !app->use_ssl) {
-            cwist_http_pool_submit_async(client_fd, cwist_app_http_handler_async, app);
-        } else {
-            fprintf(
-                stderr,
-                "[async] SSL request accepted but HTTPS not ready (use_ssl=%d ssl_ctx=%p handler=%p), closing fd=%d\n",
-                app ? app->use_ssl : -1, app ? (void *)app->ssl_ctx : NULL,
-                app ? (void *)app->https_request_handler : NULL, client_fd);
-            close(client_fd);
-        }
+        async_accept_dispatch(app, client_fd);
     }
 
     /* Re-arm the listening socket so we can accept the next batch.  A
@@ -178,7 +218,14 @@ cwist_error_t cwist_async_server_loop(int server_fd, cwist_app *app) {
         return err;
     }
 
-    cwist_reactor_add(g_reactor, server_fd, async_accept_cb, &app, sizeof(app));
+#if defined(__linux__)
+    /* io_uring reactors: one multishot ACCEPT SQE replaces the one-shot
+     * POLL + accept4 drain loop. Arm failure (no ring, knob off) and a
+     * terminal completion both land on the legacy path. */
+    g_accept_ctx = (async_accept_ctx_t){.app = app, .listen_fd = server_fd};
+    if (!cwist_reactor_accept_arm(g_reactor, server_fd, async_accept_uring_cb, &g_accept_ctx))
+#endif
+        cwist_reactor_add(g_reactor, server_fd, async_accept_cb, &app, sizeof(app));
 #if defined(__linux__)
     cwist_sqpoll_ring_t sq_probe;
     if (cwist_io_uring_init_sqpoll(&sq_probe, 64, 1000) == 0) {

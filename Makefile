@@ -897,6 +897,7 @@ TEST_TARGETS = test_worker_affinity \
                test_reactor_wake \
                test_reactor_timer \
                test_rx_epoll \
+               test_reactor_accept \
                test_reactor_drain_chunk \
                test_latency_probe \
                test_sstring \
@@ -931,6 +932,7 @@ TEST_TARGETS = test_worker_affinity \
                test_webtransport \
                test_webtransport_client_api \
                test_http \
+               test_http_uring_hammer \
                test_http_stringify \
                test_siphash \
                test_mux \
@@ -1126,6 +1128,16 @@ test_rx_epoll: tests/test_rx_epoll.c src/sys/io/reactor.c src/sys/io/reactor_rx.
 	$(CC) $(CFLAGS) -o $@ tests/test_rx_epoll.c -pthread
 	./$@
 
+# Multishot-accept contract test (issue #406): functional run on the default
+# backend, the knob-off arm refusal, and the forced-epoll fallback.
+test_reactor_accept: tests/test_reactor_accept.c src/sys/io/reactor.c src/sys/io/reactor_rx.h
+	$(CC) $(CFLAGS) -o $@ tests/test_reactor_accept.c -pthread
+	./$@
+	./$@ off
+ifeq ($(UNAME_S),Linux)
+	CWIST_REACTOR_BACKEND=epoll ./$@
+endif
+
 # Cooperative-queuing correctness test (issue #25): CWIST_REACTOR_DRAIN_CHUNK
 # interleaves foreign-thread post draining into a big CQE batch instead of
 # only at the batch's end. See tests/bench_cooperative_queuing.c for the
@@ -1249,6 +1261,17 @@ test_middleware_jwt: $(LIB_NAME) tests/test_middleware_jwt.c
 test_http: $(LIB_NAME) tests/test_http.c
 	$(CC) $(CFLAGS) -o test_http tests/test_http.c $(LIB_NAME) $(LIBS)
 	./test_http
+
+# HTTP/1.1 keep-alive hammer on the async server (issue #406): default
+# backend accepts through the multishot IORING_OP_ACCEPT path where the
+# kernel supports it; the epoll and knob-off runs exercise the fallback.
+test_http_uring_hammer: $(LIB_NAME) tests/test_http_uring_hammer.c
+	$(CC) $(CFLAGS) -o $@ tests/test_http_uring_hammer.c $(LIB_NAME) $(LIBS)
+	./$@
+ifeq ($(UNAME_S),Linux)
+	CWIST_ACCEPT_URING=0 ./$@
+	CWIST_REACTOR_BACKEND=epoll ./$@
+endif
 
 test_http_stringify: $(LIB_NAME) tests/test_http_stringify.c
 	$(CC) $(CFLAGS) -o test_http_stringify tests/test_http_stringify.c $(LIB_NAME) $(LIBS)
