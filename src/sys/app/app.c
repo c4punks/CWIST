@@ -30,6 +30,7 @@
 /* Network headers (internal) */
 #include "../../net/http/async_internal.h"
 #include "../../net/http/http_live.h"
+#include "../../net/http/sockopts.h"
 #include "../../net/http/simd_parser.h"
 #include "../../net/websocket/ws_async_internal.h"
 /* I/O headers (internal) */
@@ -4135,7 +4136,9 @@ static int cwist_multiport_bind_udp(unsigned short port) {
     int opt = 1;
     setsockopt(udp_fd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt));
 #ifdef SO_REUSEPORT
-    setsockopt(udp_fd, SOL_SOCKET, SO_REUSEPORT, &opt, sizeof(opt));
+    if (cwist_reuseport_enabled()) {
+        setsockopt(udp_fd, SOL_SOCKET, SO_REUSEPORT, &opt, sizeof(opt));
+    }
 #endif
     int rcvbuf = 2 * 1024 * 1024;
     int sndbuf = 2 * 1024 * 1024;
@@ -4622,7 +4625,9 @@ static int app_listen_serve(cwist_app *app, int port, int workers_override, int 
             int opt = 1;
             setsockopt(udp_fd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt));
 #ifdef SO_REUSEPORT
-            setsockopt(udp_fd, SOL_SOCKET, SO_REUSEPORT, &opt, sizeof(opt));
+            if (cwist_reuseport_enabled()) {
+                setsockopt(udp_fd, SOL_SOCKET, SO_REUSEPORT, &opt, sizeof(opt));
+            }
 #endif
             int rcvbuf = 2 * 1024 * 1024;
             int sndbuf = 2 * 1024 * 1024;

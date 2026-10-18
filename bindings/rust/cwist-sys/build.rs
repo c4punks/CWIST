@@ -38,6 +38,8 @@ const FUNCTIONS: &[&str] = &[
     "cwist_mw_(request_id|access_log|rate_limit_ip|rate_limit_reset|metrics|cors|jwt_auth|compress|jwt_get_claims)",
     // Signs tokens for the JWT middleware (security/jwt/jwt.h).
     "cwist_jwt_sign",
+    // Asymmetric algorithms (ES256, Ed25519); kid is an optional header claim.
+    "cwist_jwt_(sign_es256|verify_es256|sign_ed25519|verify_ed25519)",
     "cwist_jwt_(verify|claims_get|claims_destroy)",
     "cwist_alloc",
     "cwist_free",

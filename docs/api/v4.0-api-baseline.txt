@@ -480,9 +480,13 @@ cwist_jwt_claims_get
 cwist_jwt_join_chunks
 cwist_jwt_sign
 cwist_jwt_sign_chunks
+cwist_jwt_sign_ed25519
+cwist_jwt_sign_es256
 cwist_jwt_split_chunks
 cwist_jwt_verify
 cwist_jwt_verify_chunks
+cwist_jwt_verify_ed25519
+cwist_jwt_verify_es256
 cwist_log_async_active
 cwist_log_async_flush
 cwist_log_async_start
@@ -1256,9 +1260,13 @@ cwist_jwt_claims_get: const char * (const cwist_jwt_claims *, const char *)
 cwist_jwt_join_chunks: char * (const cwist_jwt_chunk_t *, size_t)
 cwist_jwt_sign: char * (const char *, const char *, long)
 cwist_jwt_sign_chunks: cwist_jwt_chunk_t * (const char *, const char *, long, uint16_t, size_t *)
+cwist_jwt_sign_ed25519: char * (const char *, const char *, const char *, long)
+cwist_jwt_sign_es256: char * (const char *, const char *, const char *, long)
 cwist_jwt_split_chunks: cwist_jwt_chunk_t * (const char *, uint16_t, size_t *)
 cwist_jwt_verify: cwist_jwt_claims * (const char *, const char *)
 cwist_jwt_verify_chunks: cwist_jwt_claims * (const cwist_jwt_chunk_t *, size_t, const char *)
+cwist_jwt_verify_ed25519: cwist_jwt_claims * (const char *, const char *)
+cwist_jwt_verify_es256: cwist_jwt_claims * (const char *, const char *)
 cwist_log_async_active: bool (void)
 cwist_log_async_flush: void (void)
 cwist_log_async_start: bool (size_t)
