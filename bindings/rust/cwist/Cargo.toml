@@ -1,6 +1,6 @@
 [package]
 name = "cwist"
-version = "0.1.0"
+version = "0.2.0"
 edition = "2021"
 rust-version = "1.70"
 description = "Safe Rust API for CWIST, the C web framework"
@@ -11,4 +11,4 @@ keywords = ["cwist", "web-framework", "http", "server", "async"]
 categories = ["network-programming", "web-programming::http-server"]
 
 [dependencies]
-cwist-sys = { path = "../cwist-sys", version = "0.1.0" }
+cwist-sys = { path = "../cwist-sys", version = "0.2.0" }

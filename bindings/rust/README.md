@@ -1,7 +1,8 @@
 # Rust bindings (experimental)
 
 In-tree Rust bindings for CWIST, v3.8 Phase 2 in `ROADMAP.md` (issue #36).
-Experimental: crate version 0.x, not published to crates.io.
+Experimental: crate version 0.x, published to crates.io as `cwist` and
+`cwist-sys`; the API may still break between 0.x releases.
 
 | crate | status |
 |---|---|
@@ -11,7 +12,8 @@ Experimental: crate version 0.x, not published to crates.io.
 ## Building
 
 `cwist-sys` links an installed libcwist through `cwist.pc`, so build and
-install CWIST first, then point pkg-config at it:
+install CWIST first (>= 3.9; the advanced wrappers need its headers), then
+point pkg-config at it:
 
 ```sh
 make -j"$(nproc)"
