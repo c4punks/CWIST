@@ -1,11 +1,11 @@
 use crate::http::{consume, Request, Response};
 use crate::middleware::BuiltinMiddleware;
+use crate::support::catch_leak;
 use crate::Error;
 use cwist_sys as sys;
 use std::cell::Cell;
 use std::ffi::{c_void, CString};
 use std::os::raw::c_char;
-use std::panic::{self, AssertUnwindSafe};
 use std::ptr::{self, NonNull};
 use std::slice;
 
@@ -275,20 +275,17 @@ unsafe extern "C" fn route_trampoline(
     let (Some(req), Some(res)) = (NonNull::new(req), NonNull::new(res)) else {
         return;
     };
-    let outcome = panic::catch_unwind(AssertUnwindSafe(|| {
+    let ran = catch_leak(|| {
         // SAFETY: user_ctx is the RouteCtx registered with this route, alive
         // until its destructor runs, which CWIST never does during a call.
-        let ctx = unsafe { &*(user_ctx as *const RouteCtx) };
+        let ctx = unsafe { &*user_ctx.cast::<RouteCtx>() };
         // SAFETY: CWIST owns req/res for the duration of this call and does
         // not touch them while the handler runs.
         let request = unsafe { Request::from_raw(req) };
         let mut response = unsafe { Response::from_raw(res) };
         (ctx.handler)(&request, &mut response);
-    }));
-    if let Err(payload) = outcome {
-        // As in drop_route_ctx, the payload's Drop can panic again. Do not
-        // run it outside catch_unwind in this extern "C" callback.
-        std::mem::forget(payload);
+    });
+    if !ran {
         // SAFETY: as above; only res is touched. Failures are ignored: this
         // is already the error path and must not panic.
         let mut response = unsafe { Response::from_raw(res) };
@@ -303,15 +300,11 @@ unsafe extern "C" fn drop_route_ctx(user_ctx: *mut c_void) {
     if user_ctx.is_null() {
         return;
     }
-    let result = panic::catch_unwind(AssertUnwindSafe(|| {
+    catch_leak(|| {
         // SAFETY: user_ctx came from Box::into_raw in App::route, and CWIST
         // calls this destructor exactly once per context.
         drop(unsafe { Box::from_raw(user_ctx as *mut RouteCtx) });
-    }));
-    // The payload's own Drop could panic again; leak it instead.
-    if let Err(payload) = result {
-        std::mem::forget(payload);
-    }
+    });
 }
 
 /// C entry point for every extended middleware: calls the boxed middleware,
@@ -325,10 +318,10 @@ unsafe extern "C" fn middleware_trampoline_ex(
     let (Some(req), Some(res)) = (NonNull::new(req), NonNull::new(res)) else {
         return;
     };
-    let outcome = panic::catch_unwind(AssertUnwindSafe(|| {
+    let ran = catch_leak(|| {
         // SAFETY: user_ctx is the MiddlewareCtx registered with this middleware,
         // alive until its destructor runs, which CWIST never does during a call.
-        let ctx = unsafe { &*(user_ctx as *const MiddlewareCtx) };
+        let ctx = unsafe { &*user_ctx.cast::<MiddlewareCtx>() };
         // SAFETY: CWIST owns req/res for the duration of this call and does
         // not touch them while the middleware runs.
         let request = unsafe { Request::from_raw(req) };
@@ -348,10 +341,8 @@ unsafe extern "C" fn middleware_trampoline_ex(
             }
         };
         (ctx.middleware)(&request, &mut response, &next_fn);
-    }));
-    if let Err(payload) = outcome {
-        // As in route_trampoline, the payload's Drop can panic again.
-        std::mem::forget(payload);
+    });
+    if !ran {
         // Do not continue the chain: a panicking middleware has no way to
         // safely decide whether to call next. Answer with 500 directly.
         let mut response = unsafe { Response::from_raw(res) };
@@ -366,13 +357,9 @@ unsafe extern "C" fn drop_middleware_ctx(user_ctx: *mut c_void) {
     if user_ctx.is_null() {
         return;
     }
-    let result = panic::catch_unwind(AssertUnwindSafe(|| {
+    catch_leak(|| {
         // SAFETY: user_ctx came from Box::into_raw in App::use_middleware, and
         // CWIST calls this destructor exactly once per context.
         drop(unsafe { Box::from_raw(user_ctx as *mut MiddlewareCtx) });
-    }));
-    // The payload's own Drop could panic again; leak it instead.
-    if let Err(payload) = result {
-        std::mem::forget(payload);
-    }
+    });
 }
