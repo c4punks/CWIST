@@ -90,6 +90,7 @@ Each variable has one status. The status says what v4 promises about it.
 |----------|--------|--------|---------|--------|
 | `CWIST_REACTOR_BACKEND` | tuning | `epoll` | io_uring | Linux: force the epoll backend, for A/B measurement. |
 | `CWIST_RX_URING` | tuning | `0` disables | on | Receive with `IORING_OP_RECV` instead of POLL + `recv`. |
+| `CWIST_ACCEPT_URING` | tuning | `0` disables | on | Accept new connections with a multishot `IORING_OP_ACCEPT` instead of a one-shot POLL + `accept4` drain loop. Kernels without multishot accept fall back to the poll loop silently. |
 | `CWIST_RX_EPOLL` | tuning | `0` disables | on | On the epoll reactor (no io_uring ring, or `CWIST_REACTOR_BACKEND=epoll`), keep keep-alive connections registered edge-triggered and receive from the reactor, instead of re-arming a one-shot poll with `epoll_ctl` per request. |
 | `CWIST_REACTOR_DRAIN_CHUNK` | tuning | integer ≥ 0 | `8` (set by `CWIST_PROFILE`; `64` without it) | Connection callbacks handled between drains of posted work, on every reactor backend (io_uring, epoll, kqueue). `0` disables the mid-batch drain (legacy). See [cooperative queuing](cooperative-queuing.md). |
 | `CWIST_REACTOR_ROUND_BUDGET_US` | tuning | microseconds ≥ 0 | `2000` | Once a reactor round runs longer than this, parked re-arms are flushed to the kernel every 64 callbacks instead of at the end of the round. The round still runs to completion. `0` disables the bound. |

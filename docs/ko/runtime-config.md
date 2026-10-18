@@ -90,6 +90,7 @@
 |------|------|----|--------|------|
 | `CWIST_REACTOR_BACKEND` | tuning | `epoll` | io_uring | Linux: A/B 측정용으로 epoll 백엔드를 강제합니다. |
 | `CWIST_RX_URING` | tuning | `0`이면 끔 | 켜짐 | POLL + `recv` 대신 `IORING_OP_RECV`로 받습니다. |
+| `CWIST_ACCEPT_URING` | tuning | `0`이면 끔 | 켜짐 | one-shot POLL + `accept4` 반복 대신 multishot `IORING_OP_ACCEPT` 하나로 새 연결을 받습니다. multishot accept를 지원하지 않는 커널은 조용히 poll 경로로 돌아갑니다. |
 | `CWIST_RX_EPOLL` | tuning | `0`이면 끔 | 켜짐 | epoll reactor(io_uring ring이 없거나 `CWIST_REACTOR_BACKEND=epoll`)에서 keep-alive 연결을 edge-triggered로 등록해 둔 채 reactor가 직접 받습니다. 요청마다 `epoll_ctl`로 one-shot poll을 다시 거는 대신입니다. |
 | `CWIST_REACTOR_DRAIN_CHUNK` | tuning | 0 이상 정수 | `8` (`CWIST_PROFILE`이 설정, 없으면 `64`) | 게시된 작업을 비우는 사이에 처리하는 연결 콜백 수. 모든 reactor 백엔드(io_uring, epoll, kqueue)에 적용됩니다. `0`이면 묶음 중간의 비우기를 끕니다(기존 동작). [협력적 큐잉](cooperative-queuing.md) 참고. |
 | `CWIST_REACTOR_ROUND_BUDGET_US` | tuning | 마이크로초, 0 이상 | `2000` | reactor 라운드가 이 시간을 넘기면, 대기 중인 re-arm을 라운드 끝이 아니라 콜백 64개마다 커널에 넘깁니다. 라운드는 끝까지 실행됩니다. `0`이면 한도를 끕니다. |
