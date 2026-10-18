@@ -24,11 +24,7 @@ cwist_app_ws
 cwist_app_ws_async
 cwist_app_ws_opt
 cwist_async_server_loop
-cwist_bdr_get
-cwist_bdr_get_pinned
-cwist_bdr_put_fixed
 cwist_bdr_put_revalidatable
-cwist_bdr_set_limits
 cwist_calloc_shim
 cwist_compress_backend_deflate
 cwist_compress_backend_zstd

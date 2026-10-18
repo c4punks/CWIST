@@ -967,6 +967,7 @@ TEST_TARGETS = test_worker_affinity \
                test_rate_limit \
                test_cache \
                test_bdr \
+               test_bdr_cache \
                test_secure_headers \
                test_profile \
                test_http_chunked \
@@ -1400,6 +1401,10 @@ test_cache: $(LIB_NAME) tests/test_cache.c
 test_bdr: $(LIB_NAME) tests/test_bdr.c
 	$(CC) $(CFLAGS) -o test_bdr tests/test_bdr.c $(LIB_NAME) $(LIBS)
 	./test_bdr
+
+test_bdr_cache: $(LIB_NAME) tests/test_bdr_cache.c
+	$(CC) $(CFLAGS) -o $@ tests/test_bdr_cache.c $(LIB_NAME) $(LIBS)
+	./$@
 
 install: $(LIB_NAME) $(PC_FILE)
 	@echo "Installing CWIST library to $(LIBDIR)..."
