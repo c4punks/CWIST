@@ -26,8 +26,6 @@ cwist_app_ws_opt
 cwist_async_server_loop
 cwist_bdr_put_revalidatable
 cwist_calloc_shim
-cwist_compress_backend_deflate
-cwist_compress_backend_zstd
 cwist_create_owner
 cwist_db_pool_destroy
 cwist_db_sync_pull

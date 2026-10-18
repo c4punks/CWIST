@@ -957,6 +957,7 @@ TEST_TARGETS = test_worker_affinity \
                test_listen_ex \
                test_classic_shutdown \
                test_compress \
+               test_compress_backends \
                test_builtin_mw_deferred \
                test_log \
                nuke_missing_user_test \
@@ -1353,6 +1354,10 @@ test_classic_shutdown: $(LIB_NAME) tests/test_classic_shutdown.c
 test_compress: $(LIB_NAME) tests/test_compress.c
 	$(CC) $(CFLAGS) -o test_compress tests/test_compress.c $(LIB_NAME) $(LIBS)
 	./test_compress
+
+test_compress_backends: $(LIB_NAME) tests/test_compress_backends.c
+	$(CC) $(CFLAGS) -o $@ tests/test_compress_backends.c $(LIB_NAME) $(LIBS)
+	./$@
 
 test_builtin_mw_deferred: $(LIB_NAME) tests/test_builtin_mw_deferred.c
 	$(CC) $(CFLAGS) -o test_builtin_mw_deferred tests/test_builtin_mw_deferred.c $(LIB_NAME) $(LIBS)
