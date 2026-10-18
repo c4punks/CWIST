@@ -19,9 +19,39 @@ INFLIGHT="${C1M_INFLIGHT:-512}"
 HOLD_S="${C1M_HOLD_S:-5}"
 ROUNDS="${C1M_ROUNDS:-2}"
 RAMP_MAX_S="${C1M_RAMP_MAX_S:-180}"
+# Clients peak in memory during their own ramp (fresh SSL objects and
+# handshake buffers, ~35-40 KB per connection); once idle, RELEASE_BUFFERS
+# shrinks them to a fraction. Starting them together piles every ramp onto
+# the same wall clock, which needs ~40 GB of free RAM for 8x125K. Staggering
+# the starts keeps the concurrent peak near one ramp plus the idle fleet.
+STAGGER_S="${C1M_STAGGER_S:-0}"
+# A client normally exits after its rounds, closing its connections. With a
+# stagger, earlier clients must linger so all 1M connections stay open until
+# the last client finishes.
+LINGER_S="${C1M_LINGER_S:-0}"
+# Client binary. The stock c100k_https_client links system OpenSSL, which
+# ignores SSL_MODE_RELEASE_BUFFERS: every held connection keeps its two 16 KiB
+# buffers, so an idle 125K-connection client still resident-uses ~4.2 GiB and
+# the 8-client fleet needs ~34 GiB. A build against the repo's BoringSSL
+# (RELEASE_BUFFERS is honored) idles at a fraction of that:
+#   gcc -O2 -o c100k_bssl_client tests/c100k_https_client.c \
+#       -Ilib/boringssl/include lib/boringssl/build/libssl.a \
+#       lib/boringssl/build/libcrypto.a -lpthread -ldl -lstdc++
+CLIENT_BIN="${C1M_CLIENT_BIN:-./c100k_https_client}"
 
 ulimit -n 1050000 2>/dev/null || ulimit -n "$(ulimit -Hn)" 2>/dev/null || true
 echo "ulimit -n = $(ulimit -n)"
+
+# A fresh user+network namespace (unshare -Urn) starts from kernel defaults:
+# ip_local_port_range is 32768-60999, which caps each client at
+# HOSTS_PER_CLIENT x 28232 connections (3 hosts -> 84696, observed exactly),
+# and somaxconn is small. On the host these writes need root and fail
+# silently; inside the namespace we have it. Written via /proc/sys because
+# sysctl(8) lives in /usr/sbin, which is not on a bare unshare PATH.
+echo "1024 65535" > /proc/sys/net/ipv4/ip_local_port_range 2>/dev/null
+echo 1048576 > /proc/sys/net/core/somaxconn 2>/dev/null
+echo 2097152 > /proc/sys/net/netfilter/nf_conntrack_max 2>/dev/null
+echo "port_range=$(cat /proc/sys/net/ipv4/ip_local_port_range)"
 
 cd "$(dirname "$0")/../.."
 
@@ -70,12 +100,17 @@ while [ "$i" -lt "$CLIENTS" ]; do
         n=$((n + 1))
     done
     C100K_READY_FILE="$WORK/ready.$i" C100K_DONE_FILE="$WORK/done.$i" \
-        ./c100k_https_client --hosts "$hosts" --port "$PORT" \
-        --conns "$CONNS_PER_CLIENT" --threads "$THREADS" --inflight "$INFLIGHT" \
-        --hold "$HOLD_S" --rounds "$ROUNDS" --timeout "$RAMP_MAX_S" \
-        >"c1m_client.$i.log" 2>&1 &
+        C100K_LINGER_S="$LINGER_S" CLIENT_BIN="$CLIENT_BIN" \
+        MALLOC_ARENA_MAX=4 MALLOC_MMAP_THRESHOLD_=16384 MALLOC_TRIM_THRESHOLD_=4194304 \
+        sh -c '"$CLIENT_BIN" --hosts "$1" --port "$2" \
+        --conns "$3" --threads "$4" --inflight "$5" \
+        --hold "$6" --rounds "$7" --timeout "$8" \
+        >"$9" 2>&1; echo "client_exit=$?" >>"$9"' \
+        _ "$hosts" "$PORT" "$CONNS_PER_CLIENT" "$THREADS" "$INFLIGHT" \
+        "$HOLD_S" "$ROUNDS" "$RAMP_MAX_S" "c1m_client.$i.log" &
     CLIENT_PIDS="$CLIENT_PIDS $!"
     i=$((i + 1))
+    [ "$STAGGER_S" -gt 0 ] && [ "$i" -lt "$CLIENTS" ] && sleep "$STAGGER_S"
 done
 
 peak=0
@@ -84,7 +119,8 @@ while :; do
     for c in $CLIENT_PIDS; do kill -0 "$c" 2>/dev/null && alive=$((alive + 1)); done
     cur=$(total_rss)
     [ "$cur" -gt "$peak" ] && peak=$cur
-    echo "c1m: rss=${cur}KiB peak=${peak}KiB clients_alive=$alive"
+    avail=$(awk '/^MemAvailable:/{print $2}' /proc/meminfo)
+    echo "c1m: rss=${cur}KiB peak=${peak}KiB clients_alive=$alive mem_available=${avail}KiB"
     [ "$alive" -eq 0 ] && break
     sleep 2
 done

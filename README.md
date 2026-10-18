@@ -485,18 +485,21 @@ C1M reactor mode), ramp + idle hold + two keep-alive rounds:
 | C10K | 10,000 / 10,000 established, 0 dropped, all answered | 1.97 s | 64.0k / 115.9k | 5,906 B |
 | C100K | 100,000 / 100,000 established, 0 dropped, all answered | 18.14 s | 73.0k / 106.4k | 4,975 B |
 
-The C1M row could not be re-run on this machine on 2026-10-17 for two
-host-environment limits, both outside CWIST: the host netfilter conntrack
-table is capped at 262,144 flows (the ramp froze at exactly 262,090
-connections, recycling at ~180/s; `nf_conntrack_max` needs root to raise),
-and with ~45 GiB of RAM already in use by other workloads the remaining
-~10 GiB is short of the ~20 GiB a 1M-connection run needs (the run was
-stopped at ~450k connections to protect the host from OOM). The
-2026-09-29 numbers above remain the C1M reference. `scripts/ci/c1m_local.sh`
-automates the 8x125K orchestration: each client gets its own loopback /16
-(sharing source addresses across clients deadlocks the ramp around ~180k
-connections as their ephemeral-port ranges collide in the kernel), and
-`unshare -Urn` lifts the conntrack cap with a fresh per-namespace table.
+The C1M row re-ran successfully on 2026-10-18 with `scripts/ci/c1m_local.sh`
+(8 clients x 125,000 TLS connections against the same gate server, inside an
+unprivileged user+network namespace): 1,000,000 / 1,000,000 connections
+established, none dropped, every keep-alive round answered, server peak
+4.56 GiB above idle — 4,866 B per open connection, matching the C100K
+figure. The ramp is TLS-handshake-bound: ~2,900 full P-256 handshakes/s
+across the 8 clients on this 12-core box, so opening 1M connections takes
+~340 s. Three tooling fixes made the scale run reproducible, all detailed
+in [docs/performance/https-c100k.md](docs/performance/https-c100k.md): a
+fresh network namespace needs its `ip_local_port_range` widened (kernel
+defaults cap a 3-host client at exactly 84,696 connections), the gate
+client now ignores SIGPIPE (a server-side close under load used to kill
+clients mid-round, exit 141), and the C1M fleet should link the repo's
+BoringSSL — OpenSSL ignores `SSL_MODE_RELEASE_BUFFERS`, inflating an idle
+125K-connection client from ~0.9 GiB to ~4.2 GiB.
 
 The classic thread-per-connection path (`CWIST_C1M_MODE=0`) is no longer
 capped at `cores*8` held connections either: every accepted connection gets

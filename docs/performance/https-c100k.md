@@ -64,9 +64,25 @@ connection). The per-connection figure is consistent with the ~5 KB
 parked-connection cost measured 2026-10-11 after parked connections
 started releasing their 16 KiB read buffer.
 
-The C1M row (8x125K clients) did not complete on this machine; see
-[Scaling past the gate on a single host](#scaling-past-the-gate-on-a-single-host)
-below.
+## Results (2026-10-18, dev): C1M over TLS
+
+Same server, driven by 8 `c100k_https_client` processes x 125,000
+connections through `scripts/ci/c1m_local.sh` inside an unprivileged
+user+network namespace (`unshare -Urn`), clients linked against the
+repo's BoringSSL:
+
+| Scale | Established | Dropped idle | Ramp | Rounds | Server peak |
+|-------|-------------|--------------|------|--------|-------------|
+| C1M (8x125K, TLS 1.3) | 1,000,000 | 0 | 328-341 s per client | all 2,000,000 answered, 0 failed | 4.56 GiB (4866 B/conn) |
+
+The ramp is TLS-handshake-bound, not server-bound: ~2,900 full P-256
+handshakes/s across the 8 clients while 12 cores are shared with the
+server, so opening 1M connections takes ~340 s (C100K: 18 s). Every
+client reported 125000 ok in both keep-alive rounds. The server holds
+~4.9 KB per open TLS connection — the same parked-connection cost as
+C100K. The whole client fleet resident-uses ~7 GiB thanks to BoringSSL
+honoring `SSL_MODE_RELEASE_BUFFERS` (the OpenSSL build idles at ~4.2 GiB
+per 125K-connection client; see below).
 
 ## Results (2026-10-11, dev)
 
@@ -103,14 +119,23 @@ together with RSS.
 
 ## Scaling past the gate on a single host
 
-Three host limits gate a 1M-connection run, all outside CWIST:
+Five limits gate a 1M-connection HTTPS run, all outside CWIST. The first
+two are why `c1m_local.sh` self-configures its namespace; the last three
+were found by failing at each of them in turn:
 
-- **conntrack table.** Every loopback flow occupies an entry. The host's
-  `nf_conntrack_max` of 262144 froze the 2026-10-17 ramp at exactly 262090
-  connections (the rest of the table was unrelated traffic), recycling at
-  ~180/s as entries timed out. `unshare -Urn` (user + network namespace)
-  gives the run a fresh, namespace-owned conntrack table — and root inside
-  it, so the cap can be raised — without touching host configuration.
+- **conntrack table.** Every loopback flow occupies an entry wherever
+  conntrack is active. The host's `nf_conntrack_max` of 262144 froze one
+  2026-10-17 attempt at exactly 262090 connections (the rest of the table
+  was unrelated traffic), recycling at ~180/s as entries timed out. A fresh
+  network namespace has no conntrack hooks at all (nothing references it),
+  so `unshare -Urn` sidesteps the table entirely without touching the host.
+- **Ephemeral port range.** A fresh network namespace starts from kernel
+  defaults: `ip_local_port_range` is 32768-60999. With three destination
+  addresses per client that caps a client at exactly 3 x 28232 = 84696
+  connections — every further `connect()` fails with EADDRNOTAVAIL, and
+  the client burns the rest of its ramp deadline retrying. The script
+  widens the range to 1024-65535 itself (written via `/proc/sys`, because
+  `sysctl(8)` lives in `/usr/sbin`, off a bare `unshare` PATH).
 - **Per-client address isolation.** With all clients spreading over the
   same 127.0.0.1-3 addresses, their ephemeral-port ranges collide in the
   kernel 4-tuple space and the ramp deadlocks around ~180k total
@@ -118,26 +143,40 @@ Three host limits gate a 1M-connection run, all outside CWIST:
   SYN retransmits, and the server sits idle. Giving each client its own
   loopback /16 (127.0.<client+1>.1-3) removes the overlap, because the
   destination address is part of the 4-tuple.
-- **RAM.** At ~5 KB per open connection the server needs ~5-6 GiB at 1M
-  connections, plus roughly 1 GiB per 125K-connection client (8 clients).
-  The 2026-10-17 attempt was stopped at ~450k connections (server RSS
-  2.28 GiB, still climbing) because other workloads held ~45 GiB of the
-  machine's 62 GiB; the C1M reference numbers were measured on the same
-  hardware with that memory free.
+- **SIGPIPE in the load client.** When the server closes any connection
+  under extreme load, the client's next request write raises SIGPIPE and
+  the default action kills the whole client — observed as silent deaths
+  (exit 141, empty log) at 500k+ connections. `c100k_https_client` now
+  ignores SIGPIPE so the failed write is counted as a round failure.
+- **Client fleet memory.** An idle TLS connection costs the server ~5 KB
+  but the *client* keeps two 16 KiB buffers per connection — unless the
+  TLS stack honors `SSL_MODE_RELEASE_BUFFERS`. BoringSSL (what the repo
+  vendors and the server uses) does; system OpenSSL does not, inflating
+  an idle 125K-connection client from ~0.9 GiB to ~4.2 GiB. For 8x125K
+  the fleet needs ~7 GiB linked against BoringSSL versus ~34 GiB against
+  OpenSSL. Build the BoringSSL client with:
+  ```sh
+  gcc -O2 -o c100k_bssl_client tests/c100k_https_client.c \
+      -Ilib/boringssl/include lib/boringssl/build/libssl.a \
+      lib/boringssl/build/libcrypto.a -lpthread -ldl -lstdc++
+  ```
 
 `scripts/ci/c1m_local.sh` automates the 8x125K run: per-client loopback
-/16s, server RSS+swap sampling, and per-client gate accounting. On a host
-with a small conntrack table, run it inside a user+network namespace:
+/16s, namespace self-configuration, server RSS+swap sampling, and
+per-client gate accounting. Example:
 
 ```sh
 make rss_gate_server c100k_https_client
-scripts/ci/c1m_local.sh            # 8 x 125K on the host network namespace
-unshare -Urn bash -c '             # ... or with a fresh conntrack table
+unshare -Urn bash -c '
   ip link set lo up
-  sysctl -w net.netfilter.nf_conntrack_max=2097152
-  scripts/ci/c1m_local.sh
+  C1M_CLIENT_BIN=./c100k_bssl_client scripts/ci/c1m_local.sh
 '
 ```
+
+On a host with less free RAM, stagger the client starts so at most one
+ramp is in flight (`C1M_STAGGER_S=60`) and keep earlier clients' sockets
+open with `C1M_LINGER_S` until the last client finishes; both trade wall
+time for peak memory.
 
 ## Running it
 
