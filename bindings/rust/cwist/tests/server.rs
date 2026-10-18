@@ -312,7 +312,7 @@ fn async_handler_completes_from_another_thread() {
     )
     .unwrap();
 
-    let mut defer = rx.recv_timeout(Duration::from_secs(5)).expect("receive async handle");
+    let defer = rx.recv_timeout(Duration::from_secs(5)).expect("receive async handle");
     assert!(defer.respond(200, "text/plain", "deferred body"));
 
     let mut response = String::new();

@@ -70,6 +70,36 @@ unsafe fn c_str<'a>(p: *const std::os::raw::c_char) -> Option<&'a str> {
     unsafe { CStr::from_ptr(p) }.to_str().ok()
 }
 
+/// Replaces the body of `res`. Shared by `Response` and `OwnedResponse`.
+fn write_body(res: &mut sys::cwist_http_response, body: &[u8]) -> Result<(), Error> {
+    if res.body.is_null() {
+        return Err(Error::Body);
+    }
+    // SAFETY: res.body is the response's own body sstring; CWIST copies the
+    // bytes, so `body` only needs to live for the call.
+    let err = unsafe { sys::cwist_sstring_assign_len(res.body, body.as_ptr().cast(), body.len()) };
+    if consume(err) {
+        Ok(())
+    } else {
+        Err(Error::Body)
+    }
+}
+
+/// Adds a header to `res`. CWIST copies both strings and rejects names or
+/// values containing CR or LF. Shared by `Response` and `OwnedResponse`.
+fn write_header(res: &mut sys::cwist_http_response, name: &str, value: &str) -> Result<(), Error> {
+    let name = CString::new(name).map_err(|_| Error::InteriorNul("header name"))?;
+    let value = CString::new(value).map_err(|_| Error::InteriorNul("header value"))?;
+    // SAFETY: res.headers is the response's own list head; CWIST copies both
+    // strings before returning.
+    let err = unsafe { sys::cwist_http_header_add(&mut res.headers, name.as_ptr(), value.as_ptr()) };
+    if consume(err) {
+        Ok(())
+    } else {
+        Err(Error::Header)
+    }
+}
+
 /// The request passed to a route handler.
 ///
 /// Borrows CWIST's request object for one handler call; values it returns
@@ -192,7 +222,7 @@ impl<'a> Response<'a> {
         // SAFETY: from_raw's contract. Only cwist_async_defer writes this
         // field, on the thread running the handler (this one); completions on
         // other threads never do, so reading it alone cannot race with them.
-        unsafe { std::ptr::addr_of!((*self.raw.as_ptr()).deferred).read() }
+        unsafe { self.raw.as_ref() }.deferred
     }
 
     /// The current status code, or 0 once the response has been deferred.
@@ -216,35 +246,13 @@ impl<'a> Response<'a> {
 
     /// Replaces the response body.
     pub fn set_body(&mut self, body: impl AsRef<[u8]>) -> Result<(), Error> {
-        let body = body.as_ref();
-        let sstr = self.get().ok_or(Error::Deferred)?.body;
-        if sstr.is_null() {
-            return Err(Error::Body);
-        }
-        // SAFETY: sstr is the response's own body sstring; CWIST copies the
-        // bytes, so `body` only needs to live for the call.
-        let err = unsafe { sys::cwist_sstring_assign_len(sstr, body.as_ptr().cast(), body.len()) };
-        if consume(err) {
-            Ok(())
-        } else {
-            Err(Error::Body)
-        }
+        write_body(self.get().ok_or(Error::Deferred)?, body.as_ref())
     }
 
     /// Adds a response header. CWIST copies both strings and rejects names or
     /// values containing CR or LF.
     pub fn add_header(&mut self, name: &str, value: &str) -> Result<(), Error> {
-        let name = CString::new(name).map_err(|_| Error::InteriorNul("header name"))?;
-        let value = CString::new(value).map_err(|_| Error::InteriorNul("header value"))?;
-        let headers = &mut self.get().ok_or(Error::Deferred)?.headers;
-        // SAFETY: headers is the response's own list head; CWIST copies both
-        // strings before returning.
-        let err = unsafe { sys::cwist_http_header_add(headers, name.as_ptr(), value.as_ptr()) };
-        if consume(err) {
-            Ok(())
-        } else {
-            Err(Error::Header)
-        }
+        write_header(self.get().ok_or(Error::Deferred)?, name, value)
     }
 }
 
@@ -285,35 +293,13 @@ impl OwnedResponse {
 
     /// Replaces the response body.
     pub fn set_body(&mut self, body: impl AsRef<[u8]>) -> Result<(), Error> {
-        let body = body.as_ref();
-        let sstr = self.get().body;
-        if sstr.is_null() {
-            return Err(Error::Body);
-        }
-        // SAFETY: sstr is the response's own body sstring; CWIST copies the
-        // bytes, so `body` only needs to live for the call.
-        let err = unsafe { sys::cwist_sstring_assign_len(sstr, body.as_ptr().cast(), body.len()) };
-        if consume(err) {
-            Ok(())
-        } else {
-            Err(Error::Body)
-        }
+        write_body(self.get(), body.as_ref())
     }
 
     /// Adds a response header. CWIST copies both strings and rejects names or
     /// values containing CR or LF.
     pub fn add_header(&mut self, name: &str, value: &str) -> Result<(), Error> {
-        let name = CString::new(name).map_err(|_| Error::InteriorNul("header name"))?;
-        let value = CString::new(value).map_err(|_| Error::InteriorNul("header value"))?;
-        let headers = &mut self.get().headers;
-        // SAFETY: headers is the response's own list head; CWIST copies both
-        // strings before returning.
-        let err = unsafe { sys::cwist_http_header_add(headers, name.as_ptr(), value.as_ptr()) };
-        if consume(err) {
-            Ok(())
-        } else {
-            Err(Error::Header)
-        }
+        write_header(self.get(), name, value)
     }
 }
 

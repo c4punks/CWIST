@@ -45,6 +45,7 @@ mod async_response;
 mod error;
 mod http;
 mod server;
+mod support;
 
 pub mod middleware;
 
