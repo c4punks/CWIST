@@ -955,6 +955,7 @@ TEST_TARGETS = test_worker_affinity \
                test_shutdown \
                test_listen_signal_restore \
                test_listen_ex \
+               test_socket_handoff \
                test_classic_shutdown \
                test_compress \
                test_compress_backends \
@@ -1346,6 +1347,10 @@ test_listen_signal_restore: $(LIB_NAME) tests/test_listen_signal_restore.c
 test_listen_ex: $(LIB_NAME) tests/test_listen_ex.c
 	$(CC) $(CFLAGS) -o test_listen_ex tests/test_listen_ex.c $(LIB_NAME) $(LIBS)
 	./test_listen_ex
+
+test_socket_handoff: $(LIB_NAME) tests/test_socket_handoff.c
+	$(CC) $(CFLAGS) -o test_socket_handoff tests/test_socket_handoff.c $(LIB_NAME) $(LIBS)
+	./test_socket_handoff
 
 test_classic_shutdown: $(LIB_NAME) tests/test_classic_shutdown.c
 	$(CC) $(CFLAGS) -o test_classic_shutdown tests/test_classic_shutdown.c $(LIB_NAME) $(LIBS)

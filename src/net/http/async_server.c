@@ -7,6 +7,7 @@
 #include <cwist/core/mem/alloc.h>
 #include <cwist/sys/app/shutdown.h>
 #include "../../sys/io/reactor_rx.h"
+#include "sockopts.h"
 #include <fcntl.h>
 #include <errno.h>
 #include <unistd.h>
@@ -162,8 +163,10 @@ cwist_error_t cwist_async_server_loop(int server_fd, cwist_app *app) {
     }
 
 #if defined(SO_REUSEPORT)
-    int reuseport = 1;
-    setsockopt(server_fd, SOL_SOCKET, SO_REUSEPORT, &reuseport, sizeof(reuseport));
+    if (cwist_reuseport_enabled()) {
+        int reuseport = 1;
+        setsockopt(server_fd, SOL_SOCKET, SO_REUSEPORT, &reuseport, sizeof(reuseport));
+    }
 #endif
 
     __atomic_store_n(&g_cwist_listen_fd, server_fd, __ATOMIC_SEQ_CST);
