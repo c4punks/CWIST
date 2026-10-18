@@ -16,7 +16,6 @@ cwist_app_use_db
 cwist_app_use_db_pool
 cwist_app_use_ech
 cwist_app_use_http2
-cwist_app_use_https3
 cwist_app_use_nuke_db
 cwist_app_use_pqc_layer
 cwist_app_use_redis
@@ -64,7 +63,6 @@ cwist_http3_client_enable_0rtt
 cwist_http3_client_enable_datagrams
 cwist_http3_client_recv_datagram
 cwist_http3_client_send_datagram
-cwist_http3_client_set_max_retries
 cwist_http3_client_set_retry_delay_ms
 cwist_http3_push_resource
 cwist_http3_send_datagram

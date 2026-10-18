@@ -334,6 +334,30 @@ void cwist_app_configure_bdr(cwist_app *app, size_t max_bytes, time_t max_entry_
                              uint64_t revalidate_hits);
 
 cwist_error_t cwist_app_use_https(cwist_app *app, const char *cert_path, const char *key_path);
+
+/**
+ * @brief Hot-reload the TLS certificate chain and key without restarting the
+ *        listener.
+ *
+ * Builds and validates a new SSL_CTX from @p cert_path/@p key_path and swaps
+ * it into the application's live HTTPS context (and the HTTP/3 context when
+ * HTTPS/3 is enabled): established connections and in-progress handshakes
+ * finish on the old certificate, new handshakes present the new one. The
+ * shared session-ticket key (STEK) is carried over, so session resumption
+ * survives the reload; see docs/decisions/0002-tls-hot-reload.md.
+ *
+ * Safe to call from any thread while the app is serving. In the pre-fork
+ * multi-worker model (CWIST_WORKERS > 1) each worker process holds its own
+ * copy of the context, so call it in every worker (e.g. from a SIGHUP
+ * handler installed in each process).
+ *
+ * @param app Application configured with cwist_app_use_https().
+ * @param cert_path Path to the new PEM certificate chain.
+ * @param key_path Path to the new PEM private key.
+ * @return err.error.err_i16 == 0 on success; on failure the previous
+ *         certificate keeps serving and the stored paths stay unchanged.
+ */
+cwist_error_t cwist_app_reload_tls(cwist_app *app, const char *cert_path, const char *key_path);
 cwist_error_t cwist_app_use_https2(cwist_app *app, bool enabled);
 cwist_error_t cwist_app_use_https3(cwist_app *app, bool enabled);
 

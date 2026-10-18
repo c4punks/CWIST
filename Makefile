@@ -948,6 +948,7 @@ TEST_TARGETS = test_worker_affinity \
                test_migrate \
                test_json_heal \
                test_https \
+               test_tls_hot_reload \
                test_https_park \
                test_https_park_full_gc \
                test_https_pool_queue \
@@ -1310,6 +1311,10 @@ test_json_heal: $(LIB_NAME) tests/test_json_heal.c
 test_https: $(LIB_NAME) tests/test_https.c
 	$(CC) $(CFLAGS) -o test_https tests/test_https.c $(LIB_NAME) $(LIBS)
 	./test_https
+
+test_tls_hot_reload: $(LIB_NAME) tests/test_tls_hot_reload.c
+	$(CC) $(CFLAGS) -o test_tls_hot_reload tests/test_tls_hot_reload.c $(LIB_NAME) $(LIBS)
+	./test_tls_hot_reload
 
 test_https_park: $(LIB_NAME) tests/test_https_park.c
 	$(CC) $(CFLAGS) -o test_https_park tests/test_https_park.c $(LIB_NAME) $(LIBS)

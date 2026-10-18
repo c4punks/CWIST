@@ -520,12 +520,28 @@ static const struct lsquic_webtransport_if cwist_h3_wt_if;
 /**
  * @brief ea_get_ssl_ctx callback: pick the server SSL_CTX for a connection.
  * @param peer_ctx The cwist_http3_context registered as stream_if ctx.
- * @return Its SSL_CTX, or NULL if @p peer_ctx is NULL.
+ * @return Its current SSL_CTX, or NULL if @p peer_ctx is NULL.
+ *
+ * lsquic calls SSL_new() on the returned pointer right after this returns,
+ * still on the engine thread, and the connection owns that reference from
+ * then on. To bridge the window between this return and SSL_new() against a
+ * concurrent cwist_http3_reload_context() swap-and-free, the callback takes
+ * an extra reference and stores it in ssl_ctx_handout; the next handout (or
+ * context destroy) drops the previous one, so at most one extra reference is
+ * ever pinned.
  */
 static SSL_CTX *cwist_h3_get_ssl_ctx(void *peer_ctx, const struct sockaddr *local) {
     (void)local;
     cwist_http3_context *h3_ctx = (cwist_http3_context *)peer_ctx;
-    return h3_ctx ? h3_ctx->ssl_ctx : NULL;
+    if (!h3_ctx) return NULL;
+    pthread_rwlock_rdlock(&h3_ctx->ssl_ctx_lock);
+    SSL_CTX *ssl_ctx = h3_ctx->ssl_ctx;
+    if (ssl_ctx) SSL_CTX_up_ref(ssl_ctx);
+    SSL_CTX *prev = h3_ctx->ssl_ctx_handout;
+    h3_ctx->ssl_ctx_handout = ssl_ctx;
+    pthread_rwlock_unlock(&h3_ctx->ssl_ctx_lock);
+    if (prev) SSL_CTX_free(prev);
+    return ssl_ctx;
 }
 
 /* ------------------------------------------------------------------ */
@@ -2574,70 +2590,48 @@ static int cwist_h3_ticket_key_cb(SSL *ssl, uint8_t *key_name, uint8_t *iv, EVP_
  * @brief Arm the server session cache and the shared ticket key so the
  *        context issues resumable tickets (prerequisite for 0-RTT).
  * @param ssl_ctx Context being configured.
+ * @param key_io Ticket-key slot owned by the cwist_http3_context wrapper:
+ *        when *key_io is NULL a fresh key is generated into it, otherwise the
+ *        existing key is installed (a reloaded SSL_CTX keeps issuing and
+ *        resuming tickets under the same key). The wrapper frees it.
  */
-static void cwist_h3_setup_session_tickets(SSL_CTX *ssl_ctx) {
+static void cwist_h3_setup_session_tickets(SSL_CTX *ssl_ctx, cwist_h3_ticket_key **key_io) {
     SSL_CTX_set_session_cache_mode(ssl_ctx, SSL_SESS_CACHE_SERVER);
     SSL_CTX_sess_set_cache_size(ssl_ctx, cwist_tls_sess_cache_size());
 
     pthread_once(&g_h3_ticket_key_ex_data_once, cwist_h3_ticket_key_ex_data_init);
     if (g_h3_ticket_key_ex_data_idx < 0) return;
 
-    cwist_h3_ticket_key *key = (cwist_h3_ticket_key *)cwist_alloc(sizeof(*key));
-    if (!key) return;
-    if (RAND_bytes((uint8_t *)key, sizeof(*key)) != 1) {
-        cwist_free(key);
-        return; /* Fall back to the library-internal (per-worker) keys. */
+    if (!*key_io) {
+        cwist_h3_ticket_key *key = (cwist_h3_ticket_key *)cwist_alloc(sizeof(*key));
+        if (!key) return;
+        if (RAND_bytes((uint8_t *)key, sizeof(*key)) != 1) {
+            cwist_free(key);
+            return; /* Fall back to the library-internal (per-worker) keys. */
+        }
+        *key_io = key;
     }
-    SSL_CTX_set_ex_data(ssl_ctx, g_h3_ticket_key_ex_data_idx, key);
+    SSL_CTX_set_ex_data(ssl_ctx, g_h3_ticket_key_ex_data_idx, *key_io);
     SSL_CTX_set_tlsext_ticket_key_cb(ssl_ctx, cwist_h3_ticket_key_cb);
-}
-
-/**
- * @brief Free the per-context session-ticket key, if one was installed.
- * @param ssl_ctx Context whose ex-data slot was set by
- *                cwist_h3_setup_session_tickets(); may be NULL (no-op).
- *
- * Thread-safety: takes the pthread_once gate before reading
- * g_h3_ticket_key_ex_data_idx because this can run on a thread that never
- * armed the once itself (see the note in the body).
- */
-static void cwist_h3_free_session_ticket_key(SSL_CTX *ssl_ctx) {
-    if (!ssl_ctx) return;
-    /* g_h3_ticket_key_ex_data_idx is only written once, from inside
-     * cwist_h3_ticket_key_ex_data_init() via the pthread_once below -
-     * but this function is also reached from cwist_http3_destroy_context()
-     * (line ~2196), which can run on a thread that never called
-     * cwist_h3_setup_session_tickets()/this same pthread_once itself (e.g.
-     * a dedicated shutdown/admin thread tearing down a context another
-     * thread created). Without calling pthread_once() here too, that
-     * thread has no happens-before edge to the writer and is reading the
-     * global race-free only by luck on the caller's platform/compiler.
-     * pthread_once() is cheap after the first call, so just always take
-     * this gate before reading the index. */
-    pthread_once(&g_h3_ticket_key_ex_data_once, cwist_h3_ticket_key_ex_data_init);
-    if (g_h3_ticket_key_ex_data_idx < 0) return;
-    void *key = SSL_CTX_get_ex_data(ssl_ctx, g_h3_ticket_key_ex_data_idx);
-    if (key) {
-        SSL_CTX_set_ex_data(ssl_ctx, g_h3_ticket_key_ex_data_idx, NULL);
-        cwist_free(key);
-    }
 }
 
 /**
  * @brief Apply the common server-side SSL_CTX configuration.
  * @param early_data Non-zero to enable TLS 1.3 early data (0-RTT).
+ * @param key_io Shared session-ticket key slot (see
+ *        cwist_h3_setup_session_tickets()).
  * @return Always 0.  QUIC transport parameters are supplied by lsquic, not
  *         here.
  *
  * Pins TLS 1.3, installs default verify paths, the ALPN selection callback,
  * and the shared session-ticket key machinery.
  */
-static int cwist_h3_ssl_ctx_init(SSL_CTX *ssl_ctx, int early_data) {
+static int cwist_h3_ssl_ctx_init(SSL_CTX *ssl_ctx, int early_data, cwist_h3_ticket_key **key_io) {
     SSL_CTX_set_min_proto_version(ssl_ctx, TLS1_3_VERSION);
     SSL_CTX_set_max_proto_version(ssl_ctx, TLS1_3_VERSION);
     SSL_CTX_set_default_verify_paths(ssl_ctx);
     SSL_CTX_set_alpn_select_cb(ssl_ctx, cwist_h3_alpn_select_cb, NULL);
-    cwist_h3_setup_session_tickets(ssl_ctx);
+    cwist_h3_setup_session_tickets(ssl_ctx, key_io);
 
     if (early_data) {
         SSL_CTX_set_early_data_enabled(ssl_ctx, 1);
@@ -2645,6 +2639,66 @@ static int cwist_h3_ssl_ctx_init(SSL_CTX *ssl_ctx, int early_data) {
 
     /* Server-side QUIC transport parameters will be supplied by lsquic */
     return 0;
+}
+
+/**
+ * @brief Scrub and free a session-ticket key allocated by
+ *        cwist_h3_setup_session_tickets().
+ */
+static void cwist_h3_free_ticket_key(cwist_h3_ticket_key *key) {
+    if (key) {
+        OPENSSL_cleanse(key, sizeof(*key));
+        cwist_free(key);
+    }
+}
+
+/**
+ * @brief Build a fully configured HTTP/3 server SSL_CTX from PEM files.
+ * @param out Receives the new SSL_CTX (caller owns the reference).
+ * @param cert_path PEM file with the certificate chain.
+ * @param key_path PEM file with the private key.
+ * @param early_data Non-zero to enable TLS 1.3 early data.
+ * @param key_io Shared session-ticket key slot (generated when NULL).
+ * @return err.error.err_i16 == 0 on success.
+ *
+ * Shared by cwist_http3_init_context() and cwist_http3_reload_context().
+ */
+static cwist_error_t cwist_h3_build_ssl_ctx(SSL_CTX **out, const char *cert_path,
+                                            const char *key_path, int early_data,
+                                            cwist_h3_ticket_key **key_io) {
+    cwist_error_t err = make_error(CWIST_ERR_INT16);
+
+    const SSL_METHOD *method = TLS_method();
+    SSL_CTX *ssl_ctx = SSL_CTX_new(method);
+    if (!ssl_ctx) {
+        err.error.err_i16 = -1;
+        return err;
+    }
+
+    cwist_h3_ssl_ctx_init(ssl_ctx, early_data, key_io);
+
+    if (SSL_CTX_use_certificate_chain_file(ssl_ctx, cert_path) <= 0 ||
+        SSL_CTX_use_PrivateKey_file(ssl_ctx, key_path, SSL_FILETYPE_PEM) <= 0) {
+        SSL_CTX_free(ssl_ctx);
+        err.error.err_i16 = -1;
+        return err;
+    }
+
+    if (cwist_tls_autoload_intermediates(ssl_ctx) < 0) {
+        SSL_CTX_free(ssl_ctx);
+        err.error.err_i16 = -1;
+        return err;
+    }
+
+    if (SSL_CTX_check_private_key(ssl_ctx) != 1) {
+        SSL_CTX_free(ssl_ctx);
+        err.error.err_i16 = -1;
+        return err;
+    }
+
+    *out = ssl_ctx;
+    err.error.err_i16 = 0;
+    return err;
 }
 
 /**
@@ -2669,45 +2723,19 @@ cwist_error_t cwist_http3_init_context(cwist_http3_context **ctx, const char *ce
 
     h3_global_init();
 
-    const SSL_METHOD *method = TLS_method();
-    SSL_CTX *ssl_ctx = SSL_CTX_new(method);
-    if (!ssl_ctx) {
+    cwist_h3_ticket_key *tkey = NULL;
+    SSL_CTX *ssl_ctx = NULL;
+    err = cwist_h3_build_ssl_ctx(&ssl_ctx, cert_path, key_path, 0, &tkey);
+    if (!cwist_error_is_ok(&err)) {
+        cwist_h3_free_ticket_key(tkey);
         h3_global_cleanup();
-        err.error.err_i16 = -1;
-        return err;
-    }
-
-    cwist_h3_ssl_ctx_init(ssl_ctx, 0);
-
-    if (SSL_CTX_use_certificate_chain_file(ssl_ctx, cert_path) <= 0 ||
-        SSL_CTX_use_PrivateKey_file(ssl_ctx, key_path, SSL_FILETYPE_PEM) <= 0) {
-        cwist_h3_free_session_ticket_key(ssl_ctx);
-        SSL_CTX_free(ssl_ctx);
-        h3_global_cleanup();
-        err.error.err_i16 = -1;
-        return err;
-    }
-
-    if (cwist_tls_autoload_intermediates(ssl_ctx) < 0) {
-        cwist_h3_free_session_ticket_key(ssl_ctx);
-        SSL_CTX_free(ssl_ctx);
-        h3_global_cleanup();
-        err.error.err_i16 = -1;
-        return err;
-    }
-
-    if (SSL_CTX_check_private_key(ssl_ctx) != 1) {
-        cwist_h3_free_session_ticket_key(ssl_ctx);
-        SSL_CTX_free(ssl_ctx);
-        h3_global_cleanup();
-        err.error.err_i16 = -1;
         return err;
     }
 
     *ctx = (cwist_http3_context *)cwist_alloc(sizeof(cwist_http3_context));
     if (!*ctx) {
-        cwist_h3_free_session_ticket_key(ssl_ctx);
         SSL_CTX_free(ssl_ctx);
+        cwist_h3_free_ticket_key(tkey);
         h3_global_cleanup();
         err.error.err_i16 = -1;
         return err;
@@ -2716,6 +2744,8 @@ cwist_error_t cwist_http3_init_context(cwist_http3_context **ctx, const char *ce
     memset(*ctx, 0, sizeof(cwist_http3_context));
     (*ctx)->ssl_ctx = ssl_ctx;
     (*ctx)->udp_fd = -1;
+    (*ctx)->ticket_key = tkey;
+    pthread_rwlock_init(&(*ctx)->ssl_ctx_lock, NULL);
     err.error.err_i16 = 0;
     return err;
 }
@@ -2740,6 +2770,7 @@ cwist_error_t cwist_http3_init_context_ephemeral(cwist_http3_context **ctx) {
 
     h3_global_init();
 
+    cwist_h3_ticket_key *tkey = NULL;
     const SSL_METHOD *method = TLS_method();
     SSL_CTX *ssl_ctx = SSL_CTX_new(method);
     if (!ssl_ctx) {
@@ -2748,11 +2779,11 @@ cwist_error_t cwist_http3_init_context_ephemeral(cwist_http3_context **ctx) {
         return err;
     }
 
-    cwist_h3_ssl_ctx_init(ssl_ctx, 0);
+    cwist_h3_ssl_ctx_init(ssl_ctx, 0, &tkey);
 
     EVP_PKEY_CTX *pctx = EVP_PKEY_CTX_new_id(EVP_PKEY_RSA, NULL);
     if (!pctx) {
-        cwist_h3_free_session_ticket_key(ssl_ctx);
+        cwist_h3_free_ticket_key(tkey);
         SSL_CTX_free(ssl_ctx);
         h3_global_cleanup();
         err.error.err_i16 = -1;
@@ -2760,7 +2791,7 @@ cwist_error_t cwist_http3_init_context_ephemeral(cwist_http3_context **ctx) {
     }
     if (EVP_PKEY_keygen_init(pctx) <= 0 || EVP_PKEY_CTX_set_rsa_keygen_bits(pctx, 2048) <= 0) {
         EVP_PKEY_CTX_free(pctx);
-        cwist_h3_free_session_ticket_key(ssl_ctx);
+        cwist_h3_free_ticket_key(tkey);
         SSL_CTX_free(ssl_ctx);
         h3_global_cleanup();
         err.error.err_i16 = -1;
@@ -2769,7 +2800,7 @@ cwist_error_t cwist_http3_init_context_ephemeral(cwist_http3_context **ctx) {
     EVP_PKEY *pkey = NULL;
     if (EVP_PKEY_keygen(pctx, &pkey) <= 0 || !pkey) {
         EVP_PKEY_CTX_free(pctx);
-        cwist_h3_free_session_ticket_key(ssl_ctx);
+        cwist_h3_free_ticket_key(tkey);
         SSL_CTX_free(ssl_ctx);
         h3_global_cleanup();
         err.error.err_i16 = -1;
@@ -2780,7 +2811,7 @@ cwist_error_t cwist_http3_init_context_ephemeral(cwist_http3_context **ctx) {
     X509 *x509 = X509_new();
     if (!x509) {
         EVP_PKEY_free(pkey);
-        cwist_h3_free_session_ticket_key(ssl_ctx);
+        cwist_h3_free_ticket_key(tkey);
         SSL_CTX_free(ssl_ctx);
         h3_global_cleanup();
         err.error.err_i16 = -1;
@@ -2801,7 +2832,7 @@ cwist_error_t cwist_http3_init_context_ephemeral(cwist_http3_context **ctx) {
     if (SSL_CTX_use_certificate(ssl_ctx, x509) != 1 || SSL_CTX_use_PrivateKey(ssl_ctx, pkey) != 1) {
         X509_free(x509);
         EVP_PKEY_free(pkey);
-        cwist_h3_free_session_ticket_key(ssl_ctx);
+        cwist_h3_free_ticket_key(tkey);
         SSL_CTX_free(ssl_ctx);
         h3_global_cleanup();
         err.error.err_i16 = -1;
@@ -2813,7 +2844,7 @@ cwist_error_t cwist_http3_init_context_ephemeral(cwist_http3_context **ctx) {
 
     *ctx = (cwist_http3_context *)cwist_alloc(sizeof(cwist_http3_context));
     if (!*ctx) {
-        cwist_h3_free_session_ticket_key(ssl_ctx);
+        cwist_h3_free_ticket_key(tkey);
         SSL_CTX_free(ssl_ctx);
         h3_global_cleanup();
         err.error.err_i16 = -1;
@@ -2823,6 +2854,8 @@ cwist_error_t cwist_http3_init_context_ephemeral(cwist_http3_context **ctx) {
     memset(*ctx, 0, sizeof(cwist_http3_context));
     (*ctx)->ssl_ctx = ssl_ctx;
     (*ctx)->udp_fd = -1;
+    (*ctx)->ticket_key = tkey;
+    pthread_rwlock_init(&(*ctx)->ssl_ctx_lock, NULL);
     err.error.err_i16 = 0;
     return err;
 }
@@ -2864,13 +2897,56 @@ void cwist_http3_destroy_context(cwist_http3_context *ctx) {
         }
         cwist_h3_hset_sweep(ctx);
         if (ctx->ssl_ctx) {
-            cwist_h3_free_session_ticket_key(ctx->ssl_ctx);
             SSL_CTX_free(ctx->ssl_ctx);
             ctx->ssl_ctx = NULL;
         }
+        if (ctx->ssl_ctx_handout) {
+            SSL_CTX_free(ctx->ssl_ctx_handout);
+            ctx->ssl_ctx_handout = NULL;
+        }
+        pthread_rwlock_destroy(&ctx->ssl_ctx_lock);
+        /* The shared ticket key outlives every SSL_CTX it was installed on:
+         * retired reload predecessors die with their last connection, all
+         * closed by the engine destroy above. */
+        cwist_h3_free_ticket_key((cwist_h3_ticket_key *)ctx->ticket_key);
+        ctx->ticket_key = NULL;
         cwist_free(ctx);
         h3_global_cleanup();
     }
+}
+
+/**
+ * @brief Swap in a new certificate chain and key without dropping QUIC
+ *        connections. See the public contract in http3.h.
+ */
+cwist_error_t cwist_http3_reload_context(cwist_http3_context *ctx, const char *cert_path,
+                                         const char *key_path) {
+    cwist_error_t err = make_error(CWIST_ERR_INT16);
+    if (!ctx || !cert_path || !key_path) {
+        err.error.err_i16 = -1;
+        return err;
+    }
+
+    /* The wrapper owns the shared ticket key; the new SSL_CTX reuses it, so
+     * tickets issued before the reload still resume afterwards. */
+    SSL_CTX *new_ctx = NULL;
+    err = cwist_h3_build_ssl_ctx(&new_ctx, cert_path, key_path, ctx->early_data_enabled,
+                                 (cwist_h3_ticket_key **)&ctx->ticket_key);
+    if (!cwist_error_is_ok(&err)) {
+        return err;
+    }
+
+    pthread_rwlock_wrlock(&ctx->ssl_ctx_lock);
+    SSL_CTX *old_ctx = ctx->ssl_ctx;
+    ctx->ssl_ctx = new_ctx;
+    pthread_rwlock_unlock(&ctx->ssl_ctx_lock);
+
+    /* Drops only the listener's reference; the handout pin and live
+     * connections hold their own. */
+    if (old_ctx) SSL_CTX_free(old_ctx);
+
+    err.error.err_i16 = 0;
+    return err;
 }
 
 /**
@@ -3412,9 +3488,13 @@ void cwist_http3_set_push_enabled(cwist_http3_context *ctx, int enabled) {
  * cwist_http3_set_early_data_guard().
  */
 void cwist_http3_set_early_data(cwist_http3_context *ctx, bool enabled) {
-    if (!ctx || !ctx->ssl_ctx) return;
+    if (!ctx) return;
+    pthread_rwlock_rdlock(&ctx->ssl_ctx_lock);
+    SSL_CTX *ssl_ctx = ctx->ssl_ctx;
+    if (ssl_ctx) SSL_CTX_set_early_data_enabled(ssl_ctx, enabled ? 1 : 0);
+    pthread_rwlock_unlock(&ctx->ssl_ctx_lock);
+    if (!ssl_ctx) return;
     ctx->early_data_enabled = enabled ? 1 : 0;
-    SSL_CTX_set_early_data_enabled(ctx->ssl_ctx, enabled ? 1 : 0);
     if (enabled) {
         /* Replay protection is opt-out: restrict 0-RTT requests to
          * idempotent methods unless the application overrides the guard. */
