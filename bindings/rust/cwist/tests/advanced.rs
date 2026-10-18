@@ -1,7 +1,10 @@
 //! The advanced/dangerous FFI surface wrapped safely: growable strings,
 //! SQLite, the job scheduler, JWT, SipHash and the bump arena.
 
-use cwist::{sign, verify, Arena, Db, Error, Key, Scheduler, SString};
+use cwist::{
+    sign, sign_ed25519, sign_es256, verify, verify_ed25519, verify_es256, Arena, Db, Error, Key,
+    Scheduler, SString,
+};
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::Arc;
 use std::time::{Duration, Instant};
@@ -228,4 +231,59 @@ fn arena_zeroed_memory_owns_and_generations() {
     let big = roomy.alloc_bytes(4096).expect("alloc big");
     assert!(big.iter().all(|&b| b == 0));
     big[4095] = 1;
+}
+
+// P-256 and Ed25519 test keys (throwaway, generated for these tests).
+const EC256_PRIV: &str = "-----BEGIN EC PRIVATE KEY-----\n\
+MHcCAQEEIDC7BCqt+gWMBQEEX7581vxye5WCTZNUlp2OdYdHwbYSoAoGCCqGSM49\n\
+AwEHoUQDQgAEQlZeTKbWplC+kWKJzbfp82Ig7o1N0Pdin5CkqfUEO+prdr/XnLjp\n\
+vFFp2mMpAudMNv4Uw8BmpCLrUSeUF1jZKQ==\n\
+-----END EC PRIVATE KEY-----\n";
+const EC256_PUB: &str = "-----BEGIN PUBLIC KEY-----\n\
+MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEQlZeTKbWplC+kWKJzbfp82Ig7o1N\n\
+0Pdin5CkqfUEO+prdr/XnLjpvFFp2mMpAudMNv4Uw8BmpCLrUSeUF1jZKQ==\n\
+-----END PUBLIC KEY-----\n";
+const ED25519_PRIV: &str = "-----BEGIN PRIVATE KEY-----\n\
+MC4CAQAwBQYDK2VwBCIEIOg0tgwevnUolReLx+S+Kq+tiity9wj7HtCnqnU45TLD\n\
+-----END PRIVATE KEY-----\n";
+const ED25519_PUB: &str = "-----BEGIN PUBLIC KEY-----\n\
+MCowBQYDK2VwAyEAm1eSBuXZV0PVcazp/ZYocHlQfQJVEDOmhcRNj3X1sdI=\n\
+-----END PUBLIC KEY-----\n";
+
+#[test]
+fn jwt_es256_roundtrip_kid_and_confusion() {
+    let token = sign_es256(r#"{"sub":"user-1"}"#, EC256_PRIV, Some("key-1"), 3600).expect("sign");
+    assert!(token.starts_with("eyJhbGciOiJFUzI1NiIsInR5cCI6IkpXVCIsImtpZCI6ImtleS0xIn0"));
+
+    let claims = verify_es256(&token, EC256_PUB).expect("verify");
+    assert_eq!(claims.get("sub"), Some("user-1"));
+    drop(claims);
+
+    // The private key verifies too (its public half is used).
+    assert!(verify_es256(&token, EC256_PRIV).is_ok());
+
+    // Wrong key, wrong algorithm and HMAC verification all reject it.
+    assert!(matches!(verify_es256(&token, ED25519_PUB), Err(Error::InvalidToken)));
+    assert!(matches!(verify_ed25519(&token, ED25519_PUB), Err(Error::InvalidToken)));
+    assert!(matches!(verify(&token, "secret"), Err(Error::InvalidToken)));
+
+    // HS256 tokens are rejected by the asymmetric verifiers (alg confusion).
+    let hs = sign(r#"{"sub":"1"}"#, "secret", 3600).expect("hs256 sign");
+    assert!(matches!(verify_es256(&hs, EC256_PUB), Err(Error::InvalidToken)));
+    assert!(matches!(verify_ed25519(&hs, ED25519_PUB), Err(Error::InvalidToken)));
+}
+
+#[test]
+fn jwt_ed25519_roundtrip_and_key_type_mismatch() {
+    let token = sign_ed25519(r#"{"sub":"alice"}"#, ED25519_PRIV, None, 3600).expect("sign");
+    assert!(token.starts_with("eyJhbGciOiJFZERTQSIsInR5cCI6IkpXVCJ9"));
+
+    let claims = verify_ed25519(&token, ED25519_PUB).expect("verify");
+    assert_eq!(claims.get("sub"), Some("alice"));
+    drop(claims);
+
+    // Keys of the wrong type cannot sign for the other algorithm.
+    assert!(sign_es256(r#"{"sub":"1"}"#, ED25519_PRIV, None, 0).is_err());
+    assert!(sign_ed25519(r#"{"sub":"1"}"#, EC256_PRIV, None, 0).is_err());
+    assert!(sign_es256(r#"{"sub":"1"}"#, "not a pem", None, 0).is_err());
 }

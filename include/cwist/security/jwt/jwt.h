@@ -2,7 +2,8 @@
  * @file jwt.h
  * @brief JWT (JSON Web Token) generation and verification.
  *
- * Supports HS256 (HMAC-SHA256) signed tokens only.
+ * Supports HS256 (HMAC-SHA256), ES256 (ECDSA P-256 + SHA-256) and EdDSA
+ * (Ed25519) signed tokens.
  * Wrapper over OpenSSL, following the cwist security module convention.
  */
 
@@ -148,6 +149,71 @@ cwist_jwt_chunk_t *cwist_jwt_sign_chunks(const char *payload_json, const char *s
  */
 cwist_jwt_claims *cwist_jwt_verify_chunks(const cwist_jwt_chunk_t *chunks, size_t count,
                                           const char *secret);
+
+/**
+ * @brief Sign a JWT token with ES256 (ECDSA over P-256 with SHA-256).
+ *
+ * Behaves like cwist_jwt_sign() except the signature is asymmetric: the
+ * header declares "alg":"ES256" and the signature is the 64-byte raw R||S
+ * form required by JOSE (RFC 7518 section 3.4).
+ *
+ * @param payload_json    JSON string for the payload (see cwist_jwt_sign()).
+ * @param pem_private_key PEM-encoded EC private key (SEC 1 or PKCS#8),
+ *                        null-terminated. The key's curve must be P-256.
+ * @param kid             Optional key id written into the JWT header, or NULL.
+ * @param exp_seconds     Seconds until expiry (see cwist_jwt_sign()).
+ * @return Heap-allocated null-terminated JWT string, or NULL on error.
+ *         Caller must free with cwist_free().
+ */
+char *cwist_jwt_sign_es256(const char *payload_json, const char *pem_private_key,
+                           const char *kid, long exp_seconds);
+
+/**
+ * @brief Verify an ES256-signed JWT token and return the decoded claims.
+ *
+ * The header must declare exactly "alg":"ES256" (a token signed with any
+ * other algorithm is rejected, which also closes the HS256/ES256 confusion
+ * class of RFC 8725 section 2.1) and the signature must verify against the
+ * public half of @p pem_key. The "exp"/"nbf" checks match
+ * cwist_jwt_verify().
+ *
+ * @param token    Null-terminated JWT string ("header.payload.sig").
+ * @param pem_key  PEM-encoded EC P-256 public key (or private key; the public
+ *                 half is used), null-terminated.
+ * @return Pointer to a cwist_jwt_claims object on success, NULL on failure.
+ *         Caller must free with cwist_jwt_claims_destroy().
+ */
+cwist_jwt_claims *cwist_jwt_verify_es256(const char *token, const char *pem_key);
+
+/**
+ * @brief Sign a JWT token with EdDSA (Ed25519, RFC 8037).
+ *
+ * Like cwist_jwt_sign_es256() but with an Ed25519 PEM private key; the header
+ * declares "alg":"EdDSA".
+ *
+ * @param payload_json    JSON string for the payload (see cwist_jwt_sign()).
+ * @param pem_private_key PEM-encoded Ed25519 private key, null-terminated.
+ * @param kid             Optional key id written into the JWT header, or NULL.
+ * @param exp_seconds     Seconds until expiry (see cwist_jwt_sign()).
+ * @return Heap-allocated null-terminated JWT string, or NULL on error.
+ *         Caller must free with cwist_free().
+ */
+char *cwist_jwt_sign_ed25519(const char *payload_json, const char *pem_private_key,
+                             const char *kid, long exp_seconds);
+
+/**
+ * @brief Verify an Ed25519-signed JWT token and return the decoded claims.
+ *
+ * The header must declare exactly "alg":"EdDSA". See cwist_jwt_verify_es256()
+ * for the verification contract.
+ *
+ * @param token    Null-terminated JWT string ("header.payload.sig").
+ * @param pem_key  PEM-encoded Ed25519 public key (or private key),
+ *                 null-terminated.
+ * @return Pointer to a cwist_jwt_claims object on success, NULL on failure.
+ *         Caller must free with cwist_jwt_claims_destroy().
+ */
+cwist_jwt_claims *cwist_jwt_verify_ed25519(const char *token, const char *pem_key);
 
 #ifdef __cplusplus
 }

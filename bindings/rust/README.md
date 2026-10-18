@@ -40,8 +40,9 @@ request/response strings and headers, error values, the `_extern` forms of
 `static inline` helpers, and the advanced surface the safe wrappers cover:
 safe strings (`cwist_sstring_*`), the SQLite wrapper (`cwist_db_*` plus the
 hook-aware `cJSON_PrintUnformatted`/`cJSON_Delete`/`cJSON_free`), the
-background scheduler (`cwist_scheduler_*`), JWT verify/claims
-(`cwist_jwt_verify` and friends; `cwist_jwt_sign` was already bound),
+background scheduler (`cwist_scheduler_*`), JWT sign/verify/claims
+(`cwist_jwt_sign`, `cwist_jwt_verify`, the ES256/Ed25519 variants and
+friends),
 SipHash-2-4 (`siphash24`, `cwist_generate_hash_seed`) and the bump arena
 (`cwist_arena_*`). `cwist_app`, `cwist_query_map`, `cwist_db`, `cJSON`,
 `sqlite3`, `cwist_async`, `cwist_compress_backend`, `cwist_scheduler_t` and
@@ -102,7 +103,10 @@ bytes with `Error::InteriorNul` instead of truncating. Per-item contracts
   no parameter binding, so validate statements in Rust before they touch
   user input. `serialize`/`open_memory` round-trip a database image.
 * `cwist::Scheduler` — worker pool plus delayed task queue; `Send + Sync`.
-* `cwist::{sign, verify, Claims}` — HMAC-SHA256 JWT.
+* `cwist::{sign, sign_es256, sign_ed25519, verify, verify_es256,
+  verify_ed25519, Claims}` — JWT with HMAC-SHA256, ES256 (P-256) or
+  Ed25519; the verifiers accept only their own `alg`, so cross-algorithm
+  confusion is rejected.
 * `cwist::Key` — SipHash-2-4 with a random or caller-supplied 128-bit key.
 * `cwist::Arena` — request-scoped bump allocator; `alloc_bytes` hands out
   zeroed slices, `unsafe alloc_uninit` is the zero-copy escape hatch.

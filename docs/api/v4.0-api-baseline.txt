@@ -4,7 +4,7 @@
 # (parameter names dropped) and struct/union/enum layouts in member order.
 # `make api-check` (CI) fails when the headers no longer match this file.
 
-== functions (770) ==
+== functions (774) ==
 cwist_accept_socket
 cwist_alloc
 cwist_alloc_array
@@ -477,9 +477,13 @@ cwist_jwt_claims_get
 cwist_jwt_join_chunks
 cwist_jwt_sign
 cwist_jwt_sign_chunks
+cwist_jwt_sign_ed25519
+cwist_jwt_sign_es256
 cwist_jwt_split_chunks
 cwist_jwt_verify
 cwist_jwt_verify_chunks
+cwist_jwt_verify_ed25519
+cwist_jwt_verify_es256
 cwist_log_async_active
 cwist_log_async_flush
 cwist_log_async_start
@@ -776,7 +780,7 @@ cwist_zod_parse
 cwist_zod_print_errors
 cwist_zod_validate
 
-== function signatures (771) ==
+== function signatures (775) ==
 cwist_accept_socket: cwist_error_t (int, struct sockaddr *, void (*)(int client_fd, void *ctx), void *)
 cwist_alloc: void * (size_t)
 cwist_alloc_array: void * (size_t, size_t)
@@ -1250,9 +1254,13 @@ cwist_jwt_claims_get: const char * (const cwist_jwt_claims *, const char *)
 cwist_jwt_join_chunks: char * (const cwist_jwt_chunk_t *, size_t)
 cwist_jwt_sign: char * (const char *, const char *, long)
 cwist_jwt_sign_chunks: cwist_jwt_chunk_t * (const char *, const char *, long, uint16_t, size_t *)
+cwist_jwt_sign_ed25519: char * (const char *, const char *, const char *, long)
+cwist_jwt_sign_es256: char * (const char *, const char *, const char *, long)
 cwist_jwt_split_chunks: cwist_jwt_chunk_t * (const char *, uint16_t, size_t *)
 cwist_jwt_verify: cwist_jwt_claims * (const char *, const char *)
 cwist_jwt_verify_chunks: cwist_jwt_claims * (const cwist_jwt_chunk_t *, size_t, const char *)
+cwist_jwt_verify_ed25519: cwist_jwt_claims * (const char *, const char *)
+cwist_jwt_verify_es256: cwist_jwt_claims * (const char *, const char *)
 cwist_log_async_active: bool (void)
 cwist_log_async_flush: void (void)
 cwist_log_async_start: bool (size_t)
