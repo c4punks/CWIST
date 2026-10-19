@@ -453,18 +453,20 @@ out:
 }
 
 /**
- * @brief Find or create the sweep context for a reactor.
+ * @brief Attach @p ws to the sweep context for @p reactor, creating one if
+ * needed.
  *
- * Returns NULL when idle reaping is disabled (timeout 0) or on setup failure;
- * connections then only get the per-event reaper.  Safe to call from a
- * foreign thread.
+ * No-op when idle reaping is disabled (timeout 0) or on setup failure;
+ * connections then only get the per-event reaper.  Holds g_ws_sweeps_lock ->
+ * sweep->lock across lookup and link so a sweep marked dead between lookup
+ * and link is never returned without linking @p ws into a live sweep.
  *
+ * @param ws Connection to register with the reactor's idle sweep.
  * @param reactor Reactor whose sweep context is looked up or created.
- * @return The (possibly new) sweep context, or NULL on failure/disabled.
  */
-static ws_async_sweep_t *ws_async_sweep_get(cwist_reactor_t *reactor) {
+static void ws_async_sweep_link(cwist_websocket_async *ws, cwist_reactor_t *reactor) {
     uint32_t timeout_sec = ws_async_idle_timeout_sec();
-    if (timeout_sec == 0) return NULL;
+    if (timeout_sec == 0) return;
 
     pthread_mutex_lock(&g_ws_sweeps_lock);
     for (ws_async_sweep_t *s = g_ws_sweeps; s; s = s->next) {
@@ -472,17 +474,22 @@ static ws_async_sweep_t *ws_async_sweep_get(cwist_reactor_t *reactor) {
          * created so the new connection is swept.  dead is only written
          * under g_ws_sweeps_lock (mark_dead), so this read is safe. */
         if (s->reactor == reactor && !s->dead) {
+            pthread_mutex_lock(&s->lock);
+            ws->sweep = s;
+            ws->sweep_next = s->head;
+            s->head = ws;
+            pthread_mutex_unlock(&s->lock);
             pthread_mutex_unlock(&g_ws_sweeps_lock);
-            return s;
+            return;
         }
     }
     pthread_mutex_unlock(&g_ws_sweeps_lock);
 
     ws_async_sweep_t *sweep = (ws_async_sweep_t *)cwist_alloc(sizeof(*sweep));
-    if (!sweep) return NULL;
+    if (!sweep) return;
     sweep->reactor = reactor;
     sweep->interval_sec = ws_async_sweep_interval(timeout_sec);
-    sweep->head = NULL;
+    sweep->head = ws;
     sweep->dead = false;
     sweep->posts = 0;
     sweep->node.cb = ws_async_sweep_post_cb;
@@ -490,11 +497,15 @@ static ws_async_sweep_t *ws_async_sweep_get(cwist_reactor_t *reactor) {
     sweep->next = NULL;
     pthread_mutex_init(&sweep->lock, NULL);
 
+    ws->sweep = sweep;
+    ws->sweep_next = NULL;
+
     pthread_t thread;
     if (pthread_create(&thread, NULL, ws_async_sweep_watchdog, sweep) != 0) {
+        ws->sweep = NULL;
         pthread_mutex_destroy(&sweep->lock);
         cwist_free(sweep);
-        return NULL;
+        return;
     }
     pthread_detach(thread);
 
@@ -502,7 +513,6 @@ static ws_async_sweep_t *ws_async_sweep_get(cwist_reactor_t *reactor) {
     sweep->next = g_ws_sweeps;
     g_ws_sweeps = sweep;
     pthread_mutex_unlock(&g_ws_sweeps_lock);
-    return sweep;
 }
 
 /* ------------------------------------------------------------------ */
@@ -1165,21 +1175,8 @@ cwist_websocket_async *cwist_websocket_async_attach_ex(int fd, cwist_reactor_t *
      * on the reactor thread (attach can be called from any thread), so this
      * thread must not write ws any more (#351).
      *
-     * Join the reactor's idle sweep (no-op when reaping is disabled).  The
-     * g_ws_sweeps_lock -> sweep->lock order matches the sweeper's teardown
-     * protocol, so a sweep marked dead is never pushed to. */
-    ws_async_sweep_t *sweep = ws_async_sweep_get(reactor);
-    if (sweep) {
-        pthread_mutex_lock(&g_ws_sweeps_lock);
-        pthread_mutex_lock(&sweep->lock);
-        if (!sweep->dead) {
-            ws->sweep = sweep;
-            ws->sweep_next = sweep->head;
-            sweep->head = ws;
-        }
-        pthread_mutex_unlock(&sweep->lock);
-        pthread_mutex_unlock(&g_ws_sweeps_lock);
-    }
+     * Join the reactor's idle sweep (no-op when reaping is disabled). */
+    ws_async_sweep_link(ws, reactor);
     ws->read_armed = true;
 
     ws_async_slot_t slot = {.ws = ws};

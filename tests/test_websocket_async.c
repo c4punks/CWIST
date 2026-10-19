@@ -161,8 +161,9 @@ static void run_idle_timeout_child(void) {
 
     /* Scenario 2: activity resets the clock.  timeout=2s, sweep=1s.
      * t=0 frame A (delivered, last_active=0); t=1 frame B (gap 1s < 2s, so
-     * it survives and last_active=1); t=2.5 frame C (gap 1.5s < 2s thanks to
-     * the reset — a stale clock would measure 2.5s and reap it). */
+     * it survives and last_active=1); t=2.2 frame C (gap 1.2s < 2s thanks to
+     * the reset — a stale clock would measure 2.2s > 2s and reap it, while
+     * staying well clear of a 2-tick coarse-clock advance under TSan). */
     int active_fd[2];
     assert(socketpair(AF_UNIX, SOCK_STREAM, 0, active_fd) == 0);
     assert(cwist_websocket_async_attach(active_fd[0], reactor, on_message, NULL, NULL, 0));
@@ -172,7 +173,7 @@ static void run_idle_timeout_child(void) {
     sleep(1);
     write_masked(active_fd[1], 0x81, (const uint8_t *)"B", 1);
     wait_for_message(&msg);
-    usleep(1500000);
+    usleep(1200000);
     write_masked(active_fd[1], 0x81, (const uint8_t *)"C", 1);
     wait_for_message(&msg);
     assert(msg.opcode == CWIST_WS_FRAME_TEXT);

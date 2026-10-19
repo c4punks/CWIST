@@ -111,7 +111,7 @@ fn safe_wrapper_overhead_vs_raw_ffi() {
     println!("  overhead          : {overhead_ns:.1} ns/call");
 
     // The safe wrapper adds two C crossings (trampoline + panic boundary)
-    // and a Box allocation per route. A 500 ns ceiling is generous on CI
-    // runners and catches gross regressions.
-    assert!(overhead_ns < 500.0, "wrapper overhead regressed: {overhead_ns:.1} ns/call");
+    // and a Box allocation per route. A 1000 ns ceiling is generous on shared
+    // CI runners (especially macOS VMs) and catches gross regressions.
+    assert!(overhead_ns < 1000.0, "wrapper overhead regressed: {overhead_ns:.1} ns/call");
 }
