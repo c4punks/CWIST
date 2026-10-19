@@ -1,0 +1,131 @@
+name: "Rust crate publish"
+
+# Publish cwist-sys and cwist to crates.io when a rust-v* tag is pushed.
+# On every PR that touches bindings/rust/ a dry-run job verifies the crate
+# would publish cleanly, with no actual upload.
+#
+# Tag format: rust-v<semver>  e.g. rust-v0.2.1
+# Both Cargo.toml [package].version fields must match the semver part of
+# the tag; the job fails before publishing if they diverge.
+#
+# Publish order: cwist-sys first (cwist depends on it), then cwist after a
+# short wait for the crates.io index to propagate.
+
+on:
+  push:
+    tags:
+      - 'rust-v*'
+  pull_request:
+    paths:
+      - 'bindings/rust/**'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  CWIST_INSTALL: ${{ github.workspace }}/.cwist-prefix
+
+jobs:
+  # -------------------------------------------------------------------------
+  # dry-run: runs on every bindings-affecting PR.
+  # -------------------------------------------------------------------------
+  dry-run:
+    name: cargo publish --dry-run
+    if: github.event_name == 'pull_request' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Install build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y cmake pkg-config libclang-dev \
+            libcurl4-openssl-dev libnghttp2-dev libbrotli-dev libzstd-dev
+
+      - name: Build and install CWIST
+        run: |
+          make -j"$(nproc)"
+          make install PREFIX="$CWIST_INSTALL"
+
+      - name: cargo publish --dry-run cwist-sys
+        env:
+          PKG_CONFIG_PATH: ${{ env.CWIST_INSTALL }}/lib/pkgconfig
+        run: |
+          cargo publish --dry-run \
+            --manifest-path bindings/rust/cwist-sys/Cargo.toml
+
+      - name: cargo publish --dry-run cwist
+        env:
+          PKG_CONFIG_PATH: ${{ env.CWIST_INSTALL }}/lib/pkgconfig
+        run: |
+          cargo publish --dry-run \
+            --manifest-path bindings/rust/cwist/Cargo.toml
+
+  # -------------------------------------------------------------------------
+  # publish: runs only on rust-v* tag push.
+  # -------------------------------------------------------------------------
+  publish:
+    name: Publish to crates.io
+    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/rust-v')
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Install build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y cmake pkg-config libclang-dev \
+            libcurl4-openssl-dev libnghttp2-dev libbrotli-dev libzstd-dev
+
+      - name: Build and install CWIST
+        run: |
+          make -j"$(nproc)"
+          make install PREFIX="$CWIST_INSTALL"
+
+      # Fail early if the tag does not match both Cargo.toml versions.
+      - name: Verify tag matches Cargo.toml versions
+        run: |
+          TAG="${GITHUB_REF#refs/tags/rust-v}"
+          SYS=$(grep '^version' bindings/rust/cwist-sys/Cargo.toml | head -1 | sed 's/.*"\(.*\)".*/\1/')
+          CWIST=$(grep '^version' bindings/rust/cwist/Cargo.toml    | head -1 | sed 's/.*"\(.*\)".*/\1/')
+          echo "Tag:        $TAG"
+          echo "cwist-sys:  $SYS"
+          echo "cwist:      $CWIST"
+          if [ "$TAG" != "$SYS" ] || [ "$TAG" != "$CWIST" ]; then
+            echo "ERROR: tag version ($TAG) does not match Cargo.toml versions (sys=$SYS cwist=$CWIST)" >&2
+            exit 1
+          fi
+
+      # Run the full test matrix before publishing.
+      - name: cargo test
+        env:
+          PKG_CONFIG_PATH: ${{ env.CWIST_INSTALL }}/lib/pkgconfig
+        run: |
+          cargo test --manifest-path bindings/rust/Cargo.toml -- --nocapture
+
+      - name: Publish cwist-sys
+        env:
+          CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
+          PKG_CONFIG_PATH: ${{ env.CWIST_INSTALL }}/lib/pkgconfig
+        run: |
+          cargo publish \
+            --manifest-path bindings/rust/cwist-sys/Cargo.toml
+
+      # Wait for crates.io to index cwist-sys before cwist tries to resolve it.
+      - name: Wait for crates.io index propagation
+        run: sleep 30
+
+      - name: Publish cwist
+        env:
+          CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
+          PKG_CONFIG_PATH: ${{ env.CWIST_INSTALL }}/lib/pkgconfig
+        run: |
+          cargo publish \
+            --manifest-path bindings/rust/cwist/Cargo.toml
