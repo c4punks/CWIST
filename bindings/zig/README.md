@@ -46,6 +46,75 @@ exe.root_module.addImport("cwist", cwist.module("cwist"));
 
 See `example/zig-hello/` for a complete server.
 
+## Safe-wrapper surface
+
+The `src/cwist.zig` safe layer covers the following types and functions.
+Everything else is accessible through the raw C translation at `cwist.c`
+(see "Raw access" below).
+
+| Symbol | Description |
+|---|---|
+| `Error` | Error set mirroring `CWIST_ERROR_*` |
+| `Method` | HTTP method enum |
+| `LogFormat` | Access-log format enum |
+| `middleware.requestId` | Request-ID header injection |
+| `middleware.accessLog` | Structured access logging |
+| `middleware.rateLimitIp` | Per-IP request rate limiting |
+| `middleware.metrics` | Prometheus metrics endpoint |
+| `middleware.cors` | CORS preflight and headers |
+| `middleware.jwtAuth` | HMAC-SHA256 JWT bearer authentication |
+| `middleware.compress` | Response compression |
+| `Request` | Borrowed view of one HTTP request |
+| `Response` | Borrowed view of one HTTP response |
+| `OwnedResponse` | Heap-allocated response for out-of-handler use |
+| `AsyncResponse` | Deferred response across threads |
+| `App` | Server lifecycle, route and middleware registration |
+| `shutdown` | Graceful shutdown from any thread |
+
+## Raw-only (not yet wrapped)
+
+The features below are available through the raw C translation (`cwist.c`)
+but have no Zig safe wrapper. A future PR may add one for each.
+
+| CWIST feature | C header |
+|---|---|
+| Database / ORM (`cwist_db_*`, `cwist_orm_*`) | `cwist/sys/app/db.h`, `cwist/core/db/orm.h` |
+| Scheduler (`cwist_scheduler_*`) | `cwist/sys/app/scheduler.h` |
+| JWT asymmetric algorithms (`cwist_jwt_*`) | `cwist/core/security/jwt.h` |
+| Redis client (`cwist_redis_*`) | `cwist/sys/app/redis.h` |
+| SipHash (`cwist_siphash*`) | `cwist/core/crypto/siphash.h` |
+| Short string (`cwist_sstring_*`) | `cwist/core/util/sstring.h` |
+| Arena allocator (`cwist_arena_*`) | `cwist/core/mem/arena.h` |
+| WebSocket (`cwist_websocket_*`) | `cwist/net/ws/websocket.h` |
+| TLS socket configuration (`cwist_app_set_tls_groups`, `cwist_app_ws_opt`) | `cwist/sys/app/app.h` |
+| HTTP/3 and WebTransport | `cwist/net/http3/http3.h` |
+| gRPC | `cwist/net/grpc/grpc.h` |
+| Multiport listen (`cwist_app_multiport`) | `cwist/sys/app/app.h` |
+
+## Raw access
+
+Use `cwist.c` to call any CWIST function directly from Zig:
+
+```zig
+const cwist = @import("cwist");
+
+fn handler(ctx: void, req: cwist.Request, res: cwist.Response) void {
+    _ = ctx;
+    _ = req;
+
+    // Raw C call for a feature without a Zig wrapper.
+    const log = cwist.c.cwist_logger_create("myapp");
+    cwist.c.cwist_logger_info(log, "request received");
+    cwist.c.cwist_logger_destroy(log);
+
+    res.setStatus(200) catch {};
+    res.setBody("ok") catch {};
+}
+```
+
+All pointers from the raw C API follow CWIST's ownership rules as documented
+in the C headers; Zig does not manage their lifetimes automatically.
+
 ## Handlers, lifetimes and threads
 
 * A handler is `fn (Context, cwist.Request, cwist.Response) void`. `Context`
@@ -65,6 +134,3 @@ See `example/zig-hello/` for a complete server.
 * `listen` serves in the calling process on the reactor server, with no
   forked workers, and returns after a graceful shutdown (`cwist.shutdown()`,
   SIGTERM or SIGINT) with every handler thread joined.
-
-Not wrapped yet: TLS socket configuration, WebSocket wrappers. The raw API in
-`cwist.c` covers them in the meantime.
