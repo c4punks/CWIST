@@ -15,69 +15,60 @@ A high-performance, C17 web framework that brings modern ergonomics
 programming without sacrificing control.
 Powered by BoringSSL, lsquic, OpenSSL without context contamination.
 
+Write a web app once in C and serve it from a native server, from a
+WASI 0.2 edge runtime (Wasmtime), or from inside the browser's Service
+Worker (example/wasm-service-worker, example/wasip2-kv). The WASM hosts
+are newer than the native server; each example's README says what is
+and is not guaranteed yet.
+
 Two server modes, tuned for opposite things; pick per workload.
 CWIST reactor is the default (no env var needed); CWIST_C1M_MODE=0 selects
 CWIST Classic pool.
 
-  CWIST reactor (default)  takes the throughput. Many connections per event
-                           loop, so a connection costs a reactor slot, not a
-                           parked thread. On the run below: 142,258 req/s
-                           against Axum's 114,649, 24% more.
+  CWIST reactor (default)  takes throughput and connection density. Many
+                           connections per event loop, so a held connection
+                           costs a reactor slot (about 5 KB over TLS), not
+                           a parked thread.
 
-  CWIST Classic pool       takes the latency. A thread per connection, so no
-                           request waits behind another in a batch. Median
-                           1.55ms against Axum's 3.21ms, and ahead through
-                           p99.
+  CWIST Classic pool       takes median latency. A thread per connection,
+                           so no request waits behind another in a batch.
 
-The distribution, not the average, is the point:
+CI record as of 2026-10-20 (wrk -t12 -c400 -d10s, 100 runs since
+2026-09-15, benchmarks/webserver.json):
 
-                    p50      p90      p99    p99.9  p99.999
-  CWIST Classic   1.55ms   4.12ms   7.35ms  13.30ms  29.39ms
-  CWIST           1.99ms   7.86ms  15.06ms  19.58ms  25.82ms
-  Axum            3.21ms   5.78ms   8.61ms  11.57ms  18.09ms
+  Reactor throughput vs Axum        higher in 100 of 100 runs (median +24%)
+  Reactor throughput vs Actix       higher in 40 of 42 runs; latest run a tie
+  Classic median latency vs Axum    lower in 100 of 100 runs (about half)
+  Classic p99 vs Axum               lower in 69 of 100 runs
+  Reactor P99.999 vs Axum           lower in only 45 of 100 runs
 
-Classic pool leads for the first 99% of requests and both modes answer
-the median faster. The crossover is at p99.9, where Axum's extreme tail
-is tighter; closing that is open work.
+Axum's extreme tail is usually tighter; closing that is open work. The
+latest full run is in the benchmark block below.
 
 
 ==================================================================
  WHY CWIST?
 ==================================================================
 
-* "Why not just use Axum (Rust) or Gin (Go)?" -- CWIST's True Niche
-  At first glance, one might ask: Why use a C-based web framework
-  when modern memory-safe languages with massive ecosystems exist?
+* "Why not just use Axum (Rust) or Gin (Go)?"
 
-  The answer lies in Ultra-Low Latency, Extreme Container Density,
-  Zero Jitter, and Zero-Friction FFI:
+  1. Your C and C++ code is already the backend:
+     Libraries for finance, game servers, ML inference or device
+     control link straight into the server with no FFI layer, no
+     serialization boundary and no second runtime.
 
-  1. Low Latency & High Throughput:
-     Under heavy concurrency (wrk -t12 -c400, CI benchmark), CWIST Classic
-     Pool delivers 1.52ms average latency (P90 3.20ms, P99 7.15ms) at ~151k
-     req/s, and C1M Reactor delivers 1.59ms at ~153k req/s (versus 2.55ms
-     for Axum, 4.64ms for Gin, and 5.91ms for Spring Boot in the same run).
-     In the tuned low-latency profile (wrk -t4 -c100), CWIST averages
-     0.41ms latency (P50 0.34ms, P90 0.69ms) at ~155k req/s.
+  2. The same app reaches the browser and the edge:
+     C compiles to WASM with mature toolchains, so one CWIST app runs
+     natively, on Wasmtime, and inside a Service Worker.
 
-  2. Predictable Memory & Container Density:
-     CWIST operates with a compact memory footprint (~9.1MB RSS in
-     C1M Reactor mode, ~15.4MB in Classic Pool mode, same CI run),
-     compared to ~29.8MB for Gin and ~1.29GB for Spring Boot. In
-     containerized deployments with thousands of replicas, this preserves
-     significant memory resources.
+  3. Predictable footprint and start-up:
+     No garbage collector, VM or JIT warm-up. In the latest CI run
+     the reactor used 22 MiB RSS, in the same class as Actix (12 MiB)
+     and Axum (17 MiB), below Gin (29 MiB) and about 60x below the
+     Spring Boot row (1.3 GiB).
 
-  3. Zero GC Pauses & Predictable Tail Latency:
-     With generational arenas, EBR GC, and deterministic worker
-     scheduling, CWIST avoids GC pause spikes and work-stealing jitter.
-
-  4. Zero-Friction C/C++ Integration:
-     Existing C/C++ libraries and native engines link directly at
-     compile-time with 0% FFI translation penalty.
-
-  5. Instantaneous Cold Starts:
-     Without JVM warmup or runtime bootstrap overhead, CWIST boots
-     instantly and handles requests at full capacity from the first packet.
+  4. Competitive throughput and median latency, with the tail
+     trade-off stated above rather than hidden.
 
 ------------------------------------------------------------------
 

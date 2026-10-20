@@ -144,7 +144,7 @@ Each route can be annotated with a bitmask of behavioral flags:
 | Flag | Description |
 | ---- | ----------- |
 | `CWIST_DYNAMIC` | Default dynamic handler behavior. |
-| `CWIST_ENDPOINT_FIXED` | Hint that the route's response is request-invariant. **Does not activate caching in the current revision** — every request is dispatched normally. See `docs/fixed-cache-status.md` and ADR-0001 (draft PR #85). |
+| `CWIST_ENDPOINT_FIXED` | Hint that the route's response is request-invariant. **Does not activate caching in the current revision** — every request is dispatched normally. See `docs/fixed-cache-status.md`. |
 | `CWIST_ENDPOINT_FILE` | Hint that the endpoint streams files, enabling Linux/BSD `sendfile` fast paths. |
 
 Use the `_opt` helpers to set these flags:
