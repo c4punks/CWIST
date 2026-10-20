@@ -1,0 +1,86 @@
+name: "HTTPS C1M"
+
+# HTTPS C1M gate (scripts/ci/c1m_https.sh): 1,000,000 concurrent TLS
+# connections on one cwist_app_listen() server. Extends the C100K gate to one
+# million connections by adding 50 loopback addresses in the 127.1.0.0/16
+# range inside a dedicated network namespace; each address contributes ~55K
+# ephemeral ports, giving 2.75M ports across 50 addresses.
+#
+# Runs on a self-hosted runner tagged [self-hosted, c1m] that must provide:
+#   - Linux with iproute2 and a kernel supporting network namespaces
+#   - At least 16 GiB RAM (8 KiB/conn * 1M + OS overhead)
+#   - RLIMIT_NOFILE hard limit >= 1,050,000 (prlimit raises the soft limit)
+#   - CAP_NET_ADMIN for ip-netns and ip-addr (or run in an existing netns)
+#
+# Cadence: nightly on dev, and on workflow_dispatch for release validation.
+# Does not run on PR/push: the C100K gate already catches per-PR regressions.
+
+on:
+  schedule:
+    # Nightly at 02:30 UTC (after the nightly C100K run at 01:30).
+    - cron: '30 2 * * *'
+  workflow_dispatch:
+    inputs:
+      conns:
+        description: 'Connection count (default: 1000000)'
+        required: false
+        default: '1000000'
+      ramp_max_s:
+        description: 'Ramp time limit in seconds (default: 600)'
+        required: false
+        default: '600'
+
+permissions:
+  contents: read
+
+jobs:
+  c1m:
+    name: HTTPS C1M (${{ matrix.mode }})
+    runs-on: [self-hosted, c1m]
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - mode: c1m
+            c1m_flag: "1"
+            full_gc: "0"
+          - mode: full-gc
+            c1m_flag: "1"
+            full_gc: "1"
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Install build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y cmake libcurl4-openssl-dev libnghttp2-dev \
+            libbrotli-dev libzstd-dev libssl-dev iproute2
+
+      - name: Build library, gate server and load client
+        run: make -j"$(nproc)" rss_gate_server c100k_https_client
+
+      - name: Kernel limits for 1M loopback connections
+        run: |
+          sudo sysctl -w net.core.somaxconn=131072
+          sudo sysctl -w net.ipv4.tcp_max_syn_backlog=131072
+          sudo sysctl -w fs.nr_open=2097152
+          sudo sysctl -w net.ipv4.tcp_tw_reuse=1
+
+      - name: Run C1M gate
+        env:
+          CWIST_C1M_MODE: ${{ matrix.c1m_flag }}
+          CWIST_TEST_FULL_GC: ${{ matrix.full_gc }}
+          CWIST_C1M_NETNS: cwist_c1m_${{ github.run_id }}
+          C1M_CONNS: ${{ github.event.inputs.conns || '1000000' }}
+          C1M_RAMP_MAX_S: ${{ github.event.inputs.ramp_max_s || '600' }}
+          CWIST_WORKERS: '8'
+        run: |
+          sudo prlimit --pid $$ --nofile=1050000:1050000
+          sudo ./scripts/ci/c1m_https.sh
+
+      - name: Server log
+        if: always()
+        run: cat c1m_server.log 2>/dev/null || true
