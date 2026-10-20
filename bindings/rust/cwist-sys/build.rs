@@ -27,7 +27,8 @@ const FUNCTIONS: &[&str] = &[
     "cwist_db_(open|open_memory|serialize|close|exec|query)",
     "cJSON_(PrintUnformatted|Delete|free)",
     // Background job scheduler / delayed task queue (sys/job/scheduler.h).
-    "cwist_scheduler_(create|destroy|submit|schedule|pending_count)",
+    "cwist_scheduler_(create|destroy|submit|schedule|pending_count|cancel_pending)",
+    "cwist_scheduler_drop_cb",
     // SipHash-2-4 and its random seed (core/siphash/siphash.h).
     "siphash24",
     "cwist_generate_hash_seed",

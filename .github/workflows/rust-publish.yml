@@ -58,12 +58,13 @@ jobs:
           cargo publish --dry-run \
             --manifest-path bindings/rust/cwist-sys/Cargo.toml
 
-      - name: cargo publish --dry-run cwist
+      - name: Package cwist (offline against local cwist-sys)
         env:
           PKG_CONFIG_PATH: ${{ env.CWIST_INSTALL }}/lib/pkgconfig
         run: |
-          cargo publish --dry-run \
+          cargo package --no-verify \
             --manifest-path bindings/rust/cwist/Cargo.toml
+          cargo check --manifest-path bindings/rust/Cargo.toml --all-targets
 
   # -------------------------------------------------------------------------
   # publish: runs only on rust-v* tag push.

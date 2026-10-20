@@ -23,6 +23,65 @@ static void *alloc_arg(int value) {
     return p;
 }
 
+/* --- cancel_pending tests ------------------------------------------------ */
+
+static int g_drop_count = 0;
+
+static void counting_drop(void *arg) {
+    free(arg);
+    g_drop_count++;
+}
+
+static void test_cancel_pending_calls_drop_cb(void) {
+    printf("test_cancel_pending_calls_drop_cb...\n");
+    g_drop_count = 0;
+
+    /* Use a very long delay so the jobs never fire during this test. */
+    cwist_scheduler_t *s = cwist_scheduler_create(1, 8);
+    assert(s);
+
+    const int N = 5;
+    for (int i = 0; i < N; i++) {
+        assert(cwist_scheduler_schedule(s, increment_job, alloc_arg(i), 60000));
+    }
+    assert((int)cwist_scheduler_pending_count(s) == N);
+
+    size_t cancelled = cwist_scheduler_cancel_pending(s, counting_drop);
+    assert((int)cancelled == N);
+    assert(g_drop_count == N);
+    assert(cwist_scheduler_pending_count(s) == 0);
+
+    cwist_scheduler_destroy(s);
+    printf("  OK\n");
+}
+
+static void test_cancel_pending_null_drop_cb(void) {
+    printf("test_cancel_pending_null_drop_cb...\n");
+
+    cwist_scheduler_t *s = cwist_scheduler_create(1, 8);
+    assert(s);
+
+    int stack_args[3] = {1, 2, 3};
+    for (int i = 0; i < 3; i++) {
+        assert(cwist_scheduler_schedule(s, increment_job, &stack_args[i], 60000));
+    }
+    size_t cancelled = cwist_scheduler_cancel_pending(s, NULL);
+    assert(cancelled == 3);
+    assert(cwist_scheduler_pending_count(s) == 0);
+
+    cwist_scheduler_destroy(s);
+    printf("  OK\n");
+}
+
+static void test_cancel_pending_null_scheduler(void) {
+    printf("test_cancel_pending_null_scheduler...\n");
+    size_t n = cwist_scheduler_cancel_pending(NULL, counting_drop);
+    assert(n == 0);
+    printf("  OK\n");
+}
+
+/* --- main ---------------------------------------------------------------- */
+
 int main(void) {
     cwist_scheduler_t *s = cwist_scheduler_create(2, 16);
     assert(s != NULL);
@@ -56,6 +115,11 @@ int main(void) {
     assert(cwist_scheduler_pending_count(s) == 0);
 
     cwist_scheduler_destroy(s);
+
+    test_cancel_pending_calls_drop_cb();
+    test_cancel_pending_null_drop_cb();
+    test_cancel_pending_null_scheduler();
+
     printf("All scheduler tests passed.\n");
     return 0;
 }

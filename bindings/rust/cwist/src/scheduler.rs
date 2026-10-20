@@ -28,9 +28,9 @@ fn accepted(ok: bool, arg: *mut c_void) -> bool {
 /// A panic in a job is caught at the C boundary; the caught payload is
 /// leaked, since its destructor could panic again.
 ///
-/// Dropping the scheduler joins the workers: started jobs run to completion,
-/// but a job still queued or delayed is freed by CWIST without running, so
-/// one boxed closure per unrun job leaks (there is no C cancel/drain API).
+/// Dropping the scheduler cancels all delayed jobs that have not yet fired
+/// (their closures are dropped), then joins the workers so every started job
+/// runs to completion before `drop` returns.
 ///
 /// `Scheduler` is `Send` and `Sync`: the queue is mutex-protected and its
 /// running flag is atomic.
@@ -66,8 +66,7 @@ impl Scheduler {
 
     /// Runs `job` on a worker after `delay`. Returns `false` on failure, in
     /// which case the job is dropped here. A delayed job that has not fired
-    /// when the scheduler is dropped leaks its closure (see the [`Scheduler`]
-    /// documentation).
+    /// when the scheduler is dropped has its closure dropped without running.
     pub fn schedule(&self, delay: Duration, job: impl FnOnce() + Send + 'static) -> bool {
         let arg = box_job(job);
         // SAFETY: as in spawn.
@@ -91,9 +90,27 @@ impl Scheduler {
 
 impl Drop for Scheduler {
     fn drop(&mut self) {
+        // Cancel delayed jobs that have not yet fired; drop_job_trampoline
+        // drops the boxed closure for each one so no memory leaks.
+        // SAFETY: the scheduler is live; arg is a valid Job box.
+        unsafe {
+            sys::cwist_scheduler_cancel_pending(
+                self.raw.as_ptr(),
+                Some(drop_job_trampoline),
+            );
+        }
         // SAFETY: the scheduler is live and owned by this struct; destroy
         // joins the workers, so no trampoline runs after this returns.
         unsafe { sys::cwist_scheduler_destroy(self.raw.as_ptr()) };
+    }
+}
+
+/// Drop trampoline used by [`Drop`]: releases the boxed closure without
+/// running it.
+unsafe extern "C" fn drop_job_trampoline(arg: *mut std::ffi::c_void) {
+    if !arg.is_null() {
+        // SAFETY: arg is a Job box placed by box_job and not yet consumed.
+        drop(unsafe { Box::from_raw(arg.cast::<Job>()) });
     }
 }
 

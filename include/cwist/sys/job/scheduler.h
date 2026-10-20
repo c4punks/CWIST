@@ -57,6 +57,33 @@ bool cwist_scheduler_schedule(cwist_scheduler_t *s, cwist_job_func func, void *a
  */
 size_t cwist_scheduler_pending_count(cwist_scheduler_t *s);
 
+/**
+ * @brief Callback invoked for each pending job that is cancelled.
+ *
+ * @param arg The argument that would have been passed to the job function.
+ */
+typedef void (*cwist_scheduler_drop_cb)(void *arg);
+
+/**
+ * @brief Cancel all delayed jobs that have not yet fired.
+ *
+ * Dequeues every job still waiting on the delayed-job heap. For each job,
+ * @p drop_cb is called with the job's arg so the caller can reclaim any
+ * heap-allocated state. If @p drop_cb is NULL the args are discarded.
+ *
+ * Jobs that have already been submitted to the io queue by the timer thread
+ * will still run; this function only removes jobs still on the heap.
+ *
+ * Safe to call concurrently with cwist_scheduler_schedule(): both operations
+ * hold the same mutex.
+ *
+ * @param s       Scheduler whose pending jobs are to be cancelled.
+ * @param drop_cb Optional destructor called once per cancelled job's arg.
+ * @return        Number of jobs cancelled.
+ */
+size_t cwist_scheduler_cancel_pending(cwist_scheduler_t *s,
+                                      cwist_scheduler_drop_cb drop_cb);
+
 #ifdef __cplusplus
 }
 #endif

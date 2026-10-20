@@ -33,7 +33,7 @@ struct cwist_scheduler {
     pthread_t timer_thread;
 
     scheduled_job_t *heap;
-    size_t heap_count;
+    _Atomic size_t heap_count;
     size_t heap_capacity;
 
     pthread_mutex_t delayed_mtx;
@@ -103,7 +103,7 @@ static void cond_init_monotonic(pthread_cond_t *cond) {
  * @retval -1 if the allocation failed.
  */
 static int heap_grow(cwist_scheduler_t *s) {
-    if (s->heap_count < s->heap_capacity) return 0;
+    if (atomic_load_explicit(&s->heap_count, memory_order_relaxed) < s->heap_capacity) return 0;
     size_t new_cap = s->heap_capacity ? s->heap_capacity * 2 : CWIST_SCHEDULER_HEAP_INIT;
     scheduled_job_t *new_heap = cwist_realloc(s->heap, new_cap * sizeof(scheduled_job_t));
     if (!new_heap) return -1;
@@ -140,7 +140,8 @@ static void heap_swap(scheduled_job_t *a, scheduled_job_t *b) {
  */
 static void heap_push(cwist_scheduler_t *s, scheduled_job_t job) {
     if (heap_grow(s) != 0) return;
-    size_t i = s->heap_count++;
+    size_t i = atomic_load_explicit(&s->heap_count, memory_order_relaxed);
+    atomic_store_explicit(&s->heap_count, i + 1, memory_order_release);
     s->heap[i] = job;
     while (i > 0) {
         size_t parent = (i - 1) / 2;
@@ -159,16 +160,18 @@ static void heap_push(cwist_scheduler_t *s, scheduled_job_t job) {
  */
 static scheduled_job_t heap_pop(cwist_scheduler_t *s) {
     scheduled_job_t root = s->heap[0];
-    s->heap[0] = s->heap[--s->heap_count];
+    size_t count = atomic_load_explicit(&s->heap_count, memory_order_relaxed) - 1;
+    atomic_store_explicit(&s->heap_count, count, memory_order_release);
+    s->heap[0] = s->heap[count];
     size_t i = 0;
     while (1) {
         size_t left = i * 2 + 1;
         size_t right = left + 1;
         size_t smallest = i;
-        if (left < s->heap_count && s->heap[left].deadline_ms < s->heap[smallest].deadline_ms) {
+        if (left < count && s->heap[left].deadline_ms < s->heap[smallest].deadline_ms) {
             smallest = left;
         }
-        if (right < s->heap_count && s->heap[right].deadline_ms < s->heap[smallest].deadline_ms) {
+        if (right < count && s->heap[right].deadline_ms < s->heap[smallest].deadline_ms) {
             smallest = right;
         }
         if (smallest == i) break;
@@ -205,7 +208,7 @@ static void *scheduler_timer_thread(void *arg) {
 
     pthread_mutex_lock(&s->delayed_mtx);
     while (s->running) {
-        if (s->heap_count == 0) {
+        if (atomic_load_explicit(&s->heap_count, memory_order_relaxed) == 0) {
             pthread_cond_wait(&s->delayed_cond, &s->delayed_mtx);
             continue;
         }
@@ -386,9 +389,9 @@ bool cwist_scheduler_schedule(cwist_scheduler_t *s, cwist_job_func func, void *a
     job.arg = arg;
 
     pthread_mutex_lock(&s->delayed_mtx);
-    size_t before = s->heap_count;
+    size_t before = atomic_load_explicit(&s->heap_count, memory_order_relaxed);
     heap_push(s, job);
-    if (s->heap_count != before + 1) {
+    if (atomic_load_explicit(&s->heap_count, memory_order_relaxed) != before + 1) {
         pthread_mutex_unlock(&s->delayed_mtx);
         return false;
     }
@@ -407,8 +410,38 @@ bool cwist_scheduler_schedule(cwist_scheduler_t *s, cwist_job_func func, void *a
  */
 size_t cwist_scheduler_pending_count(cwist_scheduler_t *s) {
     if (!s) return 0;
+    return atomic_load_explicit(&s->heap_count, memory_order_acquire);
+}
+
+/**
+ * @brief Cancel all delayed jobs that have not yet fired.
+ *
+ * Detaches the delayed-job heap under @p s->delayed_mtx and invokes
+ * @p drop_cb(arg) for each cancelled job outside the lock so caller
+ * destructors cannot deadlock on scheduler re-entry. Jobs already submitted
+ * to the io queue by the timer thread before this call are not affected.
+ *
+ * @param s       Scheduler whose pending jobs are to be cancelled.
+ * @param drop_cb Destructor called once per cancelled job's arg; may be NULL.
+ * @return        Number of jobs cancelled.
+ */
+size_t cwist_scheduler_cancel_pending(cwist_scheduler_t *s,
+                                      cwist_scheduler_drop_cb drop_cb) {
+    if (!s) return 0;
+
     pthread_mutex_lock(&s->delayed_mtx);
-    size_t count = s->heap_count;
+    scheduled_job_t *detached = s->heap;
+    size_t cancelled = atomic_load_explicit(&s->heap_count, memory_order_relaxed);
+    s->heap = NULL;
+    s->heap_capacity = 0;
+    atomic_store_explicit(&s->heap_count, 0, memory_order_release);
     pthread_mutex_unlock(&s->delayed_mtx);
-    return count;
+
+    if (drop_cb) {
+        for (size_t i = 0; i < cancelled; i++) {
+            drop_cb(detached[i].arg);
+        }
+    }
+    cwist_free(detached);
+    return cancelled;
 }
