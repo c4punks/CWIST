@@ -61,7 +61,7 @@ var searchData=
   ['example_20with_20wasmtime_58',['Deploy the WASI 0.2 example with Wasmtime',['../db/de3/md_docs_2deployment_2wasmtime-appliance.html',1,'']]],
   ['example_3a_20othello_20web_59',['Example: Othello Web',['../da/dca/md_docs_2REFERENCE.html#autotoc_md760',1,'']]],
   ['example_3a_20service_20worker_20app_60',['Runnable example: Service Worker app',['../d5/d0e/md_docs_2api_2wasm.html#autotoc_md224',1,'']]],
-  ['examples_61',['examples',['..//home/yjlee/cwist/docs/README.md#autotoc_md746',1,'4. Runnable examples'],['../index.html#autotoc_md21',1,'Examples']]],
+  ['examples_61',['examples',['..//home/runner/work/CWIST/CWIST/docs/README.md#autotoc_md746',1,'4. Runnable examples'],['../index.html#autotoc_md21',1,'Examples']]],
   ['exchange_62',['7. PQC TLS (Post-Quantum Hybrid Key Exchange)',['../dd/d4c/md_docs_2tutorial_2cwist__tutorial.html#autotoc_md809',1,'']]],
   ['exist_63',['Why C, when Axum and Gin exist?',['../index.html#autotoc_md9',1,'']]],
   ['exit_20sweeps_64',['3. Thread/process exit sweeps',['../d9/dd1/md_docs_2GC.html#autotoc_md307',1,'']]],

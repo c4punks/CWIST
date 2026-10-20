@@ -26,7 +26,7 @@ var searchData=
   ['get_5fcpu_5fcores_23',['get_cpu_cores',['../d9/dab/net_2http_2http_8h.html#a2393019be867d510503593429e2049de',1,'get_cpu_cores(void):&#160;http.c'],['../dd/d43/http_8c.html#a2393019be867d510503593429e2049de',1,'get_cpu_cores(void):&#160;http.c']]],
   ['get_5foptimal_5fthread_5fcount_24',['get_optimal_thread_count',['../dd/d43/http_8c.html#a8bc51aa11f3b08db86b8e617786b2b9f',1,'get_optimal_thread_count(void):&#160;http.c'],['../d9/dab/net_2http_2http_8h.html#a8bc51aa11f3b08db86b8e617786b2b9f',1,'get_optimal_thread_count(void):&#160;http.c']]],
   ['get_5fsize_25',['get_size',['../d5/ddc/structcwist__sstring.html#ab07dd4ec3ba6f33f00b038dc5012c802',1,'cwist_sstring']]],
-  ['getting_20started_26',['1. Getting started',['..//home/yjlee/cwist/docs/README.md#autotoc_md743',1,'']]],
+  ['getting_20started_26',['1. Getting started',['..//home/runner/work/CWIST/CWIST/docs/README.md#autotoc_md743',1,'']]],
   ['gin_20exist_27',['Why C, when Axum and Gin exist?',['../index.html#autotoc_md9',1,'']]],
   ['gin_20go_28',['gin go',['../d6/d42/md_docs_2webserver-benchmark.html#autotoc_md888',1,'Gin (Go)'],['../d8/d7e/md_docs_2ko_2webserver-benchmark.html#autotoc_md703',1,'Gin (Go)']]],
   ['global_20toggle_29',['1. &lt;tt&gt;cwist_full_gc(bool)&lt;/tt&gt; — the global toggle',['../d9/dd1/md_docs_2GC.html#autotoc_md305',1,'']]],
@@ -81,5 +81,5 @@ var searchData=
   ['grpc_5fmethod_5fconfig_78',['grpc_method_config',['../d5/d7a/grpc__channel_8c.html#aa71b8fbaf45b3c74f7a0b634a5da007d',1,'grpc_channel.c']]],
   ['grpc_5fqnode_79',['grpc_qnode',['../d9/dba/grpc_8c.html#a772139c0354322e4d8ee3bdf8e7e562d',1,'grpc.c']]],
   ['grpc_5froutes_80',['grpc_routes',['../dc/da0/structcwist__app.html#afc9fa598fee9f0a01b9f94883436918c',1,'cwist_app']]],
-  ['guides_81',['2. Task-oriented guides',['..//home/yjlee/cwist/docs/README.md#autotoc_md744',1,'']]]
+  ['guides_81',['2. Task-oriented guides',['..//home/runner/work/CWIST/CWIST/docs/README.md#autotoc_md744',1,'']]]
 ];

@@ -2,7 +2,7 @@ var searchData=
 [
   ['4_20미들웨어_20cors_20logging_0',['4. 미들웨어 (CORS, Logging)',['../df/df1/md_docs_2tutorial_2korean_2cwist__tutorial.html#autotoc_md831',1,'']]],
   ['4_20반복적인_20크기_20정제_1',['4. 반복적인 크기 정제',['../d4/d7c/md_docs_2ko_2references_2mux__algorithm__references.html#autotoc_md649',1,'']]],
-  ['4_20실행_20가능한_20예제_2',['4. 실행 가능한 예제',['..//home/yjlee/cwist/docs/ko/README.md#autotoc_md623',1,'']]],
+  ['4_20실행_20가능한_20예제_2',['4. 실행 가능한 예제',['..//home/runner/work/CWIST/CWIST/docs/ko/README.md#autotoc_md623',1,'']]],
   ['4_20재시작_20백업_20복원_3',['4. 재시작, 백업, 복원',['../d1/dc3/md_docs_2ko_2deployment_2wasmtime-appliance.html#autotoc_md576',1,'']]],
   ['4_20쿼리_20파싱_4',['4. 쿼리 파싱',['../d3/d19/md_docs_2ko_2REFERENCE.html#autotoc_md632',1,'']]],
   ['4_20표기_5',['4. 표기',['../d6/de8/md_docs_2ko_2versioning.html#autotoc_md692',1,'']]],
@@ -17,7 +17,7 @@ var searchData=
   ['4_20pseudo_20raii_20for_20handle_20like_20locals_14',['4. Pseudo-RAII for handle-like locals',['../d9/dd1/md_docs_2GC.html#autotoc_md308',1,'']]],
   ['4_20query_20parsing_15',['4. Query Parsing',['../da/dca/md_docs_2REFERENCE.html#autotoc_md754',1,'']]],
   ['4_20restart_20back_20up_20and_20restore_16',['4. Restart, back up, and restore',['../db/de3/md_docs_2deployment_2wasmtime-appliance.html#autotoc_md285',1,'']]],
-  ['4_20runnable_20examples_17',['4. Runnable examples',['..//home/yjlee/cwist/docs/README.md#autotoc_md746',1,'']]],
+  ['4_20runnable_20examples_17',['4. Runnable examples',['..//home/runner/work/CWIST/CWIST/docs/README.md#autotoc_md746',1,'']]],
   ['4_20test_20the_20api_18',['4. Test the API',['../d4/db0/md_docs_2tutorials_2blog-crud.html#autotoc_md853',1,'']]],
   ['4_20time_20caching_20—_20already_20implemented_19',['1.4 Time caching — ALREADY IMPLEMENTED',['../d0/d34/md_docs_2performance_2issue-297-syscall-audit.html#autotoc_md731',1,'']]],
   ['4_20workers_20steady_20and_20churn_20load_203_20alternating_20rounds_20',['2. 4 workers, steady and churn load (3 alternating rounds)',['../df/d28/md_docs_2performance_2https-pool-dynamic-queue.html#autotoc_md721',1,'']]]

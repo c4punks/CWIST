@@ -29,7 +29,7 @@ var searchData=
   ['bench_20server_20and_20workload_20mix_26',['Bench server and workload mix',['../db/d05/md_docs_2soak-testing.html#autotoc_md789',1,'']]],
   ['benchmark_20methodology_27',['Web Server Benchmark Methodology',['../d6/d42/md_docs_2webserver-benchmark.html',1,'']]],
   ['benchmark_20run_28',['Latest benchmark run',['../index.html#autotoc_md18',1,'']]],
-  ['benchmarks_20and_20methodology_29',['5. Benchmarks and methodology',['..//home/yjlee/cwist/docs/README.md#autotoc_md747',1,'']]],
+  ['benchmarks_20and_20methodology_29',['5. Benchmarks and methodology',['..//home/runner/work/CWIST/CWIST/docs/README.md#autotoc_md747',1,'']]],
   ['bidirectional_20communication_30',['8. WebSocket Integration (Real-Time Bidirectional Communication)',['../dd/d4c/md_docs_2tutorial_2cwist__tutorial.html#autotoc_md812',1,'']]],
   ['big_20dumb_20reply_20bdr_31',['big dumb reply bdr',['../da/dca/md_docs_2REFERENCE.html#autotoc_md758',1,'8. Big Dumb Reply (BDR)'],['../d3/d19/md_docs_2ko_2REFERENCE.html#autotoc_md636',1,'8. Big Dumb Reply (BDR)']]],
   ['big_5fdumb_5freply_2ec_32',['big_dumb_reply.c',['../dc/da3/big__dumb__reply_8c.html',1,'']]],

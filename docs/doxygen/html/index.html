@@ -151,7 +151,7 @@ Quick start</h2>
 <div class="ttc" id="asys_2app_2app_8h_html_a9aeebb72e5908f56c1b5823ae4a773c8"><div class="ttname"><a href="d0/d77/sys_2app_2app_8h.html#a9aeebb72e5908f56c1b5823ae4a773c8">cwist_app_create</a></div><div class="ttdeci">cwist_app * cwist_app_create(void)</div><div class="ttdoc">Creates a new CWIST application instance.</div><div class="ttdef"><b>Definition</b> <a href="df/d7f/app_8c_source.html#l01277">app.c:1277</a></div></div>
 </div><!-- fragment --><div class="fragment"><div class="line">gcc -o server main.c $(pkg-config --cflags --libs cwist)</div>
 <div class="line">./server</div>
-</div><!-- fragment --><p>Or scaffold a hot-reloading project with <code>cwist new project demo &amp;&amp; cwist watcher</code>. Next steps: the 30 modules in tutorials/ and the guides in <a class="el" href="/home/yjlee/cwist/docs/README.md#md_docs_2README">docs/</a>.</p>
+</div><!-- fragment --><p>Or scaffold a hot-reloading project with <code>cwist new project demo &amp;&amp; cwist watcher</code>. Next steps: the 30 modules in tutorials/ and the guides in <a class="el" href="/home/runner/work/CWIST/CWIST/docs/README.md#md_docs_2README">docs/</a>.</p>
 <h2><a class="anchor" id="autotoc_md4"></a>
 One app, three places to run it</h2>
 <p>A CWIST app is a set of routes on a <code><a class="el" href="dc/da0/structcwist__app.html" title="Main Application Context.">cwist_app</a></code>. Where it runs depends only on how you hand that app to a host:</p>
@@ -256,7 +256,7 @@ Memory safety and security in C</h2>
 <li><b>Deterministic lifetimes.</b> Request buffers and cached replies live in libttak generational arenas and epoch-based reclamation critical sections. Deferred responses use an explicit ownership handoff, and <code>CWIST_ASYNC_STRICT=1</code> turns misuse into an abort instead of a warning.</li>
 <li><b>Secure defaults.</b> Hybrid post-quantum TLS with TLS 1.3 minimum, a built-in WAF, token-bucket rate limiting, timing-safe HMAC session verification, CSRF tokens and strict security headers (HSTS, COOP, Permissions-Policy).</li>
 </ul>
-<p>Design decisions and their current status are recorded in <a class="el" href="/home/yjlee/cwist/docs/decisions/README.md#md_docs_2decisions_2README">docs/decisions/</a>.</p>
+<p>Design decisions and their current status are recorded in <a class="el" href="/home/runner/work/CWIST/CWIST/docs/decisions/README.md#md_docs_2decisions_2README">docs/decisions/</a>.</p>
 <h2><a class="anchor" id="autotoc_md11"></a>
 Install</h2>
 <p>CWIST vendors its dependencies (BoringSSL, lsquic, libttak, SQLite3), so a plain build works on a fresh Linux, macOS, or BSD machine:</p>
@@ -352,12 +352,12 @@ Feature notes</h2>
 Latest benchmark run</h2>
 <p>CI regenerates this block from each benchmark run.</p>
 <p>Latest Web Server Benchmark (wrk -t12 -c400 -d10s (after 10s warmup, warmup discarded)):</p><ul>
-<li><b>CWIST Classic pool</b>: 155941 req/s | Latency 1.49ms (P90 3.02ms, P99 5.92ms, P99.999 18.63ms) | RSS 61100KiB | Csw 1488999</li>
-<li><b>CWIST reactor</b>: 183303 req/s | Latency 2.24ms (P90 4.38ms, P99 7.57ms, P99.999 22.01ms) | RSS 22060KiB | Csw 145617</li>
-<li><b>Actix</b>: 174662 req/s | Latency 2.30ms (P90 4.30ms, P99 7.08ms, P99.999 13.55ms) | RSS 11980KiB | Csw 189420</li>
-<li><b>Axum</b>: 151695 req/s | Latency 2.60ms (P90 4.53ms, P99 6.92ms, P99.999 14.29ms) | RSS 14928KiB | Csw 260600</li>
-<li><b>Gin (Go)</b>: 116080 req/s | Latency 4.31ms (P90 10.13ms, P99 21.34ms, P99.999 43.03ms) | RSS 30780KiB | Csw 367969</li>
-<li><b>Spring Boot</b>: 74789 req/s | Latency 5.27ms (P90 7.17ms, P99 10.37ms, P99.999 42.51ms) | RSS 1312936KiB | Csw 338919</li>
+<li><b>CWIST Classic pool</b>: 194157 req/s | Latency 1.19ms (P90 2.46ms, P99 5.13ms, P99.999 18.86ms) | RSS 59116KiB | Csw 1940764</li>
+<li><b>CWIST reactor</b>: 236606 req/s | Latency 1.74ms (P90 3.53ms, P99 5.88ms, P99.999 12.22ms) | RSS 21948KiB | Csw 231835</li>
+<li><b>Actix</b>: 215870 req/s | Latency 1.90ms (P90 3.75ms, P99 6.23ms, P99.999 14.93ms) | RSS 12536KiB | Csw 254623</li>
+<li><b>Axum</b>: 179266 req/s | Latency 2.22ms (P90 3.97ms, P99 6.27ms, P99.999 13.11ms) | RSS 15580KiB | Csw 400383</li>
+<li><b>Gin (Go)</b>: 141961 req/s | Latency 4.98ms (P90 13.53ms, P99 31.72ms, P99.999 89.26ms) | RSS 28360KiB | Csw 545661</li>
+<li><b>Spring Boot</b>: 112147 req/s | Latency 3.57ms (P90 5.47ms, P99 9.01ms, P99.999 42.75ms) | RSS 1285480KiB | Csw 409552</li>
 </ul>
 <p><em>Settled CWIST-internal tuning variants (glibc arena cap from PR #35, cooperative drain chunk from issue #25) are recorded in <a class="el" href="d9/d15/cooperative-queuing_8md.html">docs/cooperative-queuing.md</a> and benchmarks/webserver.json; they are no longer rendered as comparison rows.</em></p>
 <p><b>Spring runtime environment</b></p>
@@ -400,12 +400,12 @@ Stability and conformance</h2>
 </ul>
 <h2><a class="anchor" id="autotoc_md20"></a>
 Documentation</h2>
-<p>The full map is <a class="el" href="/home/yjlee/cwist/docs/README.md#md_docs_2README">docs/README.md</a>. In suggested reading order:</p>
+<p>The full map is <a class="el" href="/home/runner/work/CWIST/CWIST/docs/README.md#md_docs_2README">docs/README.md</a>. In suggested reading order:</p>
 <ul>
 <li><b>Tutorials</b>: 30 hands-on modules, each with a runnable <code>main.c</code>, a <code>CMakeLists.txt</code> and a guided README.</li>
 <li><b><a href="docs/tutorials/">Guides</a></b>: <a class="el" href="d4/db0/md_docs_2tutorials_2blog-crud.html">CRUD blog</a>, <a class="el" href="da/d48/md_docs_2tutorials_2nats-integration.html">NATS integration</a>, <a class="el" href="d2/dcb/md_docs_2tutorials_2webtransport-server.html">WebTransport server</a>.</li>
 <li><b><a class="el" href="d7/d15/md_docs_2API.html">API reference</a></b>: per-module docs under <code>docs/api/</code>, the <a class="el" href="d1/d7e/md_docs_2api-quickref.html">flat quick reference</a> and generated <a href="https://c4punks.github.io/CWIST/">Doxygen HTML</a>.</li>
-<li><b><a class="el" href="/home/yjlee/cwist/docs/decisions/README.md#md_docs_2decisions_2README">Decision records</a></b> and <b>ROADMAP.md</b>.</li>
+<li><b><a class="el" href="/home/runner/work/CWIST/CWIST/docs/decisions/README.md#md_docs_2decisions_2README">Decision records</a></b> and <b>ROADMAP.md</b>.</li>
 </ul>
 <h2><a class="anchor" id="autotoc_md21"></a>
 Examples</h2>

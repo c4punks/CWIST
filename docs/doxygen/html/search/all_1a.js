@@ -35,7 +35,7 @@ var searchData=
   ['operate_20safely_32',['3. Operate safely',['../d2/dcb/md_docs_2tutorials_2webtransport-server.html#autotoc_md867',1,'']]],
   ['opt_20in_20wrk_20raw_20corrected_20latency_20histograms_33',['Opt-in wrk raw/corrected latency histograms',['../d1/dfd/md_docs_2performance_2wrk-dual-histogram.html',1,'']]],
   ['order_20and_20loss_20under_20growth_3a_20tt_20tests_20test_5fhttps_5fpool_5fqueue_20c_20tt_34',['4. Order and loss under growth: &lt;tt&gt;tests/test_https_pool_queue.c&lt;/tt&gt;',['../df/d28/md_docs_2performance_2https-pool-dynamic-queue.html#autotoc_md723',1,'']]],
-  ['oriented_20guides_35',['2. Task-oriented guides',['..//home/yjlee/cwist/docs/README.md#autotoc_md744',1,'']]],
+  ['oriented_20guides_35',['2. Task-oriented guides',['..//home/runner/work/CWIST/CWIST/docs/README.md#autotoc_md744',1,'']]],
   ['orm_2ec_36',['orm.c',['../d8/d03/orm_8c.html',1,'']]],
   ['orm_2eh_37',['orm.h',['../d6/d9b/orm_8h.html',1,'']]],
   ['orm_5fproto_5fmagic_38',['ORM_PROTO_MAGIC',['../d5/dcf/orm__socket_8c.html#aad0e1b104655825167fa9ad8dcdd97be',1,'orm_socket.c']]],
