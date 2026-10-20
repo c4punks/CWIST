@@ -1,13 +1,16 @@
 name: Deploy Documentation to GitHub Pages
-# Trigger rebuild to redeploy Pages after Doxygen regeneration
+# Regenerates Doxygen docs and auto-commits them to the pushed branch, then
+# deploys a versioned site: current main at the root, one directory per
+# release tag (retroactive — every v* tag is rebuilt on each deploy).
 
 on:
   push:
-    branches: [main, master]
+    branches: [main, master, dev]
+    tags: ['v*']
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
   pages: write
   id-token: write
 
@@ -16,14 +19,28 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  deploy:
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
+  tags:
+    runs-on: ubuntu-latest
+    outputs:
+      list: ${{ steps.list.outputs.tags }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - id: list
+        run: |
+          tags=$(git tag -l 'v*' | sort -V | jq -R -s -c 'split("\n")[:-1]')
+          echo "tags=$tags" >> "$GITHUB_OUTPUT"
+
+  main-docs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          # The root of the site always tracks main, even for tag pushes.
+          ref: ${{ github.event_name == 'push' && startsWith(github.ref, 'refs/tags/') && 'main' || github.ref_name }}
 
       - name: Install Doxygen
         run: sudo apt-get update && sudo apt-get install -y doxygen graphviz
@@ -31,8 +48,113 @@ jobs:
       - name: Generate Documentation
         run: doxygen Doxyfile
 
+      - name: Upload main site artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: docs-main
+          path: docs/doxygen/html
+          if-no-files-found: error
+
+      - name: Commit regenerated docs
+        # Skip the bot's own regeneration commits so the push-back cannot loop.
+        if: >-
+          github.event_name == 'push' &&
+          !startsWith(github.ref, 'refs/tags/') &&
+          !startsWith(github.event.head_commit.message, 'docs(doxygen):')
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add docs/doxygen
+          if git diff --cached --quiet; then
+            echo "docs unchanged"
+            exit 0
+          fi
+          git commit -m "docs(doxygen): regenerate docs"
+          for i in 1 2 3; do
+            git pull --rebase origin "${{ github.ref_name }}" && \
+              git push origin "HEAD:${{ github.ref_name }}" && exit 0
+          done
+          exit 1
+
+  tag-docs:
+    needs: tags
+    if: >-
+      github.ref == 'refs/heads/main' ||
+      startsWith(github.ref, 'refs/tags/') ||
+      github.event_name == 'workflow_dispatch'
+    strategy:
+      fail-fast: false
+      matrix:
+        tag: ${{ fromJSON(needs.tags.outputs.list) }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout tag
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ matrix.tag }}
+          fetch-depth: 0
+
+      - name: Install Doxygen
+        run: sudo apt-get update && sudo apt-get install -y doxygen graphviz
+
+      - name: Generate Documentation for ${{ matrix.tag }}
+        run: |
+          (cat Doxyfile; \
+           echo "PROJECT_NUMBER = ${{ matrix.tag }}"; \
+           echo "OUTPUT_DIRECTORY = doxygen-out") | doxygen -
+          if [ ! -f doxygen-out/html/index.html ]; then
+            echo "::warning::Doxygen produced no index.html for ${{ matrix.tag }}"
+            mkdir -p doxygen-out/html
+            printf '<!DOCTYPE html><title>%s</title><p>Documentation unavailable for %s.</p>\n' \
+              "${{ matrix.tag }}" "${{ matrix.tag }}" > doxygen-out/html/index.html
+          fi
+
+      - name: Upload tag site artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: docs-tag-${{ matrix.tag }}
+          path: doxygen-out/html
+          if-no-files-found: error
+
+  deploy:
+    needs: [tags, main-docs, tag-docs]
+    if: >-
+      github.ref == 'refs/heads/main' ||
+      startsWith(github.ref, 'refs/tags/') ||
+      github.event_name == 'workflow_dispatch'
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout sitemap script
+        uses: actions/checkout@v4
+        with:
+          sparse-checkout: scripts/ci
+
+      - name: Download doc artifacts
+        uses: actions/download-artifact@v4
+        with:
+          pattern: docs-*
+          path: assembled
+
+      - name: Assemble versioned site
+        run: |
+          mkdir -p site
+          cp -r assembled/docs-main/. site/
+          for d in assembled/docs-tag-*; do
+            tag="${d##*/docs-tag-}"
+            mkdir -p "site/$tag"
+            cp -r "$d/." "site/$tag/"
+          done
+
+      - name: Render versions index
+        run: >
+          python3 scripts/ci/render_docs_versions.py site
+          ${{ join(fromJSON(needs.tags.outputs.list), ' ') }}
+
       - name: Generate SEO Sitemap & robots.txt
-        run: python3 scripts/ci/generate_sitemap.py docs/doxygen/html
+        run: python3 scripts/ci/generate_sitemap.py site
 
       - name: Setup Pages
         uses: actions/configure-pages@v6
@@ -40,7 +162,7 @@ jobs:
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v5
         with:
-          path: docs/doxygen/html
+          path: site
 
       - name: Deploy to GitHub Pages
         id: deployment
