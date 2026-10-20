@@ -7,6 +7,8 @@
 
 <p align="center">
   <a href="https://discord.gg/6F8HDmNAPg"><img src="https://img.shields.io/badge/Discord-Join%20chat-5865F2?logo=discord&logoColor=white" alt="Discord"></a>
+  <a href="https://oborona.zip"><img src="https://img.shields.io/badge/Live%20in%20Production-oborona.zip-00A86B" alt="Live in Production: oborona.zip"></a>
+  <a href="https://c4punks.github.io/CWIST/"><img src="https://img.shields.io/badge/Docs-API%20Reference-blue" alt="API Reference"></a>
 </p>
 
 <p align="center">
@@ -16,6 +18,10 @@ HTTP/3 (QUIC), WebSocket, and WebTransport support, hybrid post-quantum TLS
 reactor. It is written in plain C and links statically.
 </p>
 
+<p align="center">
+  <strong>Powered by CWIST in production:</strong> <a href="https://oborona.zip">oborona.zip</a> (daily engineering blog) · <a href="https://github.com/gg582/fly.board">fly.board</a>
+</p>
+
 ## Quick start
 
 ```sh
@@ -23,10 +29,67 @@ brew tap c4punks/cwist
 brew install c4punks/cwist/cwist
 ```
 
-Then build and run a minimal server ([hello world](#hello-world) below), or
-start from the 30 hands-on modules in [tutorials/](tutorials/README.md) and
+```c
+#include <cwist/app.h>
+
+static void hello(cwist_http_request *req, cwist_http_response *res) {
+    (void)req;
+    cwist_sstring_assign(res->body, "Hello from CWIST!");
+}
+
+int main(void) {
+    cwist_app *app = cwist_app_create();
+    cwist_app_get(app, "/", hello);
+    cwist_app_listen(app, 8080);
+    cwist_app_destroy(app);
+    return 0;
+}
+```
+
+Compile and run with `pkg-config` (or scaffold a hot-reloading project via `cwist new project demo && cwist watcher`):
+
+```sh
+gcc -o server main.c $(pkg-config --cflags --libs cwist)
+./server
+```
+
+A larger example with an in-memory SQLite ORM, post-quantum TLS, metrics, and RDBMS auto-detection:
+
+```c
+#include <cwist/app.h>
+
+static void hello(cwist_http_request *req, cwist_http_response *res) {
+    (void)req;
+    cwist_sstring_assign(res->body, "Hello from CWIST!");
+}
+
+int main(void) {
+    cwist_app *app = cwist_app_create();
+
+    /* SQLite + ORM-ready database */
+    cwist_app_use_db(app, ":memory:");
+
+    /* Post-Quantum TLS (hybrid X25519MLKEM768) */
+    cwist_app_use_pqc_layer(app, true);
+
+    /* Observability endpoints */
+    cwist_app_enable_metrics(app);
+    cwist_app_enable_healthz(app);
+
+    /* Auto-detect PostgreSQL / MySQL / MariaDB on localhost */
+    cwist_app_auto_rdbms(app, 5432);
+
+    cwist_app_get(app, "/", hello);
+
+    cwist_app_listen(app, 8080);
+    cwist_app_destroy(app);
+    return 0;
+}
+```
+
+Start from the 30 hands-on modules in [tutorials/](tutorials/README.md) and
 the guides in [docs/](docs/README.md). Building from source (`git clone` +
-`make`) and the other install options are in [Install](#install) below.
+`make`) and explicit static linker flags are in [Install](#install) and [Linking](#linking) below.
 
 ## Two server modes, and why you would pick each
 
@@ -92,65 +155,6 @@ The formula builds from the release source tarball
 (`dist/cwist-<version>.tar.gz`, vendored dependencies included) and installs
 `libcwist.a`, public headers, the `cwist` CLI, and `cwist.pc` pkg-config
 metadata under the Homebrew prefix.
-
-## Hello world
-
-```c
-#include <cwist/app.h>
-
-static void hello(cwist_http_request *req, cwist_http_response *res) {
-    (void)req;
-    cwist_sstring_assign(res->body, "Hello from CWIST!");
-}
-
-int main(void) {
-    cwist_app *app = cwist_app_create();
-    cwist_app_get(app, "/", hello);
-    cwist_app_listen(app, 8080);
-    cwist_app_destroy(app);
-    return 0;
-}
-```
-
-```sh
-gcc -o server main.c -lcwist -lssl -lcrypto -lz -lzstd -lbrotlienc -lbrotlicommon -luriparser -lcjson -ldl -lpthread -lm
-./server
-```
-
-A larger example with a database, post-quantum TLS, metrics, and RDBMS
-auto-detection:
-
-```c
-#include <cwist/app.h>
-
-static void hello(cwist_http_request *req, cwist_http_response *res) {
-    (void)req;
-    cwist_sstring_assign(res->body, "Hello from CWIST!");
-}
-
-int main(void) {
-    cwist_app *app = cwist_app_create();
-
-    /* SQLite + ORM-ready database */
-    cwist_app_use_db(app, ":memory:");
-
-    /* Post-Quantum TLS (hybrid X25519MLKEM768) */
-    cwist_app_use_pqc_layer(app, true);
-
-    /* Observability endpoints */
-    cwist_app_enable_metrics(app);
-    cwist_app_enable_healthz(app);
-
-    /* Auto-detect PostgreSQL / MySQL / MariaDB on localhost */
-    cwist_app_auto_rdbms(app, 5432);
-
-    cwist_app_get(app, "/", hello);
-
-    cwist_app_listen(app, 8080);
-    cwist_app_destroy(app);
-    return 0;
-}
-```
 
 <!-- WEBSERVER_BENCHMARKS:START -->
 Latest Web Server Benchmark (wrk -t12 -c400 -d10s (after 10s warmup, warmup discarded)):
@@ -255,6 +259,15 @@ The benchmark results above demonstrate the advantages in latency, memory footpr
 3. **Tail Latency & Predictability.** Zero-copy framing, thread-pinned worker execution, and generational arena allocators minimize latency variance and GC pauses.
 4. **Zero-Overhead FFI.** Production libraries in finance, game servers, machine learning, and systems software written in C/C++ link directly into CWIST with zero FFI conversion or runtime bridge penalty.
 5. **Instant Cold Start.** With no runtime VM warmup or GC initialization required, CWIST starts in milliseconds and immediately serves requests at full capacity.
+
+## Memory safety & security in C
+
+The first question anyone asks about a C web server is: *what about buffer overflows, use-after-free, and memory leaks?* CWIST is engineered around deterministic memory lifetimes and strict CI gates rather than ad-hoc `malloc`/`free` calls:
+
+- **Generational Arenas & EBR Reclamation (`libttak`)**: Request buffers, static assets, and BDR caches live in generational arenas or Epoch-Based Reclamation (`ttak_epoch_enter/exit`) critical sections. Memory is reclaimed in bulk at the end of a request or epoch without dangling pointers or RSS fragmentation.
+- **Allocator Gate & Ownership Handoff**: Raw `malloc`/`free` calls in the framework are gated in CI (`scripts/ci/check_malloc_gate.py`). Asynchronous job threads and reactor continuations use explicit ownership handoff (`cwist_async_defer` / disown tracking) with optional strict abort checks (`CWIST_ASYNC_STRICT=1`).
+- **Continuous Fuzzing & Sanitizers**: Every push runs the test suite under **AddressSanitizer (ASan)** and **UndefinedBehaviorSanitizer (UBSan)** with `-Werror`. Protocol parsers and framing layers (HTTP/1.1, HTTP/2, HTTP/3, WebSocket, multipart, JSON/URI) have dedicated fuzz targets under `fuzz/`.
+- **Defense-in-Depth Defaults**: Out of the box, CWIST ships hybrid post-quantum TLS (`X25519MLKEM768` via BoringSSL), a built-in WAF (`cwist/sys/app/waf.h`), token-bucket rate limiting, timing-safe HMAC session verification, CSRF tokens, and strict HTTP security headers (HSTS, COOP, Permissions-Policy).
 
 ## Platform support
 
@@ -695,7 +708,7 @@ throughput demo, rendering helpers ([json-builder](example/json-builder),
 [WebTransport](example/webtransport) app. See the
 [examples table](docs/README.md#4-runnable-examples) for the full list.
 
-A production deployment built on CWIST: [fly.board](https://github.com/gg582/fly.board).
+Production deployments built on CWIST: [oborona.zip](https://oborona.zip) (live daily engineering blog) and [fly.board](https://github.com/gg582/fly.board).
 
 ## Third-Party Licenses
 
