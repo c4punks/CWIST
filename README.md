@@ -397,17 +397,6 @@ Latency distribution (density curve reconstructed from each server's percentiles
 
 ![Web Server Latency Distribution](docs/webserver-latency-distribution.svg)
 
-### Per runner CPU
-
-GitHub hands out a different CPU model per run, which moves these numbers more than most code changes do. Medians of every recorded run, split by the CPU it landed on, so rows are only comparable down a column:
-
-| Runner CPU | Runs | CWIST Classic ms | CWIST ms | Axum ms | CWIST req/s | Axum req/s |
-|---|---:|---:|---:|---:|---:|---:|
-| AMD EPYC 7763 64-Core Processor | 46 | 2.05 | 2.94 | 3.55 | 140,071 | 110,485 |
-| AMD EPYC 9V74 80-Core Processor | 15 | 1.63 | 2.24 | 2.64 | 181,522 | 149,122 |
-| AMD EPYC 9V45 96-Core Processor | 10 | 1.26 | 2.00 | 1.98 | 216,839 | 197,466 |
-| Intel(R) Xeon(R) 6973P-C | 6 | 0.98 | 1.69 | 1.65 | 296,658 | 239,744 |
-| INTEL(R) XEON(R) PLATINUM 8573C | 5 | 1.16 | 1.82 | 2.01 | 244,489 | 197,968 |
 <!-- WEBSERVER_BENCHMARKS:END -->
 
 _Methodology, JVM options, and fairness settings: [docs/webserver-benchmark.md](docs/webserver-benchmark.md)_
