@@ -20,7 +20,7 @@ var searchData=
   ['2_20routing_20and_20handlers_20mux_20router_17',['2. Routing and Handlers (Mux Router)',['../dd/d4c/md_docs_2tutorial_2cwist__tutorial.html#autotoc_md434',1,'']]],
   ['2_20separate_20the_20artifact_20from_20state_18',['2. Separate the artifact from state',['../db/de3/md_docs_2deployment_2wasmtime-appliance.html#autotoc_md282',1,'']]],
   ['2_20socket_20server_19',['WASI 0.2 socket server',['../d6/d26/md_docs_2api_2wasi.html#autotoc_md200',1,'']]],
-  ['2_20task_20oriented_20guides_20',['2. Task-oriented guides',['..//home/yjlee/cwist/docs/README.md#autotoc_md375',1,'']]],
+  ['2_20task_20oriented_20guides_20',['2. Task-oriented guides',['..//home/runner/work/CWIST/CWIST/docs/README.md#autotoc_md375',1,'']]],
   ['2_20two_20letter_20sequence_20default_21',['2. Two-letter sequence (default)',['../d0/db4/md_docs_2versioning.html#autotoc_md507',1,'']]],
   ['2026_2009_2012_22',['Component measurement (2026-09-12)',['../dd/d56/md_docs_2reactor-wakeup-regression.html#autotoc_md372',1,'']]],
   ['2026_2009_2021_23',['Toolchain status (measured 2026-09-21)',['../d8/d77/md_docs_2api_2wasm-component.html#autotoc_md207',1,'']]],

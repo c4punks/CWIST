@@ -10,7 +10,7 @@ var searchData=
   ['4_20pseudo_20raii_20for_20handle_20like_20locals_7',['4. Pseudo-RAII for handle-like locals',['../d9/dd1/md_docs_2GC.html#autotoc_md303',1,'']]],
   ['4_20query_20parsing_8',['4. Query Parsing',['../da/dca/md_docs_2REFERENCE.html#autotoc_md385',1,'']]],
   ['4_20restart_20back_20up_20and_20restore_9',['4. Restart, back up, and restore',['../db/de3/md_docs_2deployment_2wasmtime-appliance.html#autotoc_md284',1,'']]],
-  ['4_20runnable_20examples_10',['4. Runnable examples',['..//home/yjlee/cwist/docs/README.md#autotoc_md377',1,'']]],
+  ['4_20runnable_20examples_10',['4. Runnable examples',['..//home/runner/work/CWIST/CWIST/docs/README.md#autotoc_md377',1,'']]],
   ['4_20test_20the_20api_11',['4. Test the API',['../d4/db0/md_docs_2tutorials_2blog-crud.html#autotoc_md488',1,'']]],
   ['4_20time_20caching_20—_20already_20implemented_12',['1.4 Time caching — ALREADY IMPLEMENTED',['../d0/d34/md_docs_2performance_2issue-297-syscall-audit.html#autotoc_md362',1,'']]],
   ['4_20workers_20steady_20and_20churn_20load_203_20alternating_20rounds_13',['2. 4 workers, steady and churn load (3 alternating rounds)',['../df/d28/md_docs_2performance_2https-pool-dynamic-queue.html#autotoc_md352',1,'']]]

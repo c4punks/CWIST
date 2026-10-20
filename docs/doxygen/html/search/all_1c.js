@@ -6,7 +6,7 @@ var searchData=
   ['query_20parsing_3',['4. Query Parsing',['../da/dca/md_docs_2REFERENCE.html#autotoc_md385',1,'']]],
   ['query_20uri_20api_4',['Query &amp; URI API',['../dc/d49/md_docs_2api_2query.html',1,'']]],
   ['query_2ec_5',['query.c',['../dd/d7f/query_8c.html',1,'']]],
-  ['query_2eh_6',['query.h',['../d1/d7a/net_2http_2query_8h.html',1,'(Global Namespace)'],['../dd/d6e/query_8h.html',1,'(Global Namespace)']]],
+  ['query_2eh_6',['query.h',['../dd/d6e/query_8h.html',1,'(Global Namespace)'],['../d1/d7a/net_2http_2query_8h.html',1,'(Global Namespace)']]],
   ['query_2emd_7',['query.md',['../da/d50/query_8md.html',1,'']]],
   ['query_5fparams_8',['query_params',['../dd/d68/structcwist__http__request.html#a004b3d61d997aa7847cb3c5e9fc64e20',1,'cwist_http_request']]],
   ['query_5fstring_9',['query_string',['../d1/de3/structcwist__test__client__request__options.html#a41c8a26186e402d218fbbdef626d3df5',1,'cwist_test_client_request_options']]],
