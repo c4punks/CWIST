@@ -1,10 +1,27 @@
 var test__client_8h =
 [
+    [ "cwist_test_client_cookie", "d0/d82/structcwist__test__client__cookie.html", "d0/d82/structcwist__test__client__cookie" ],
     [ "cwist_test_client", "d7/d17/structcwist__test__client.html", "d7/d17/structcwist__test__client" ],
+    [ "cwist_test_client_kv", "df/d38/structcwist__test__client__kv.html", "df/d38/structcwist__test__client__kv" ],
+    [ "cwist_test_client_request_options", "d1/de3/structcwist__test__client__request__options.html", "d1/de3/structcwist__test__client__request__options" ],
+    [ "CWIST_ASSERT_BODY_CONTAINS", "db/de3/test__client_8h.html#a03d089f3c5e576dc223ebbc82f2e9c9a", null ],
+    [ "CWIST_ASSERT_HEADER", "db/de3/test__client_8h.html#a1dcb5e9e5bad702365315980e1cb7dc9", null ],
+    [ "CWIST_ASSERT_STATUS", "db/de3/test__client_8h.html#a8c0df5f366d0ba4bc9d2aca79f4f3866", null ],
     [ "cwist_test_client", "db/de3/test__client_8h.html#a55553f598b39a98f624b7dd141b2664c", null ],
+    [ "cwist_test_client_cookie", "db/de3/test__client_8h.html#a8fa73fc1c6eb772dcc05ffb1b6a4ad7e", null ],
+    [ "cwist_test_client_kv", "db/de3/test__client_8h.html#a6431d3bb7d1a269b0ccef08ee2fcfe32", null ],
+    [ "cwist_test_client_request_options", "db/de3/test__client_8h.html#afa8177a36bc6936feede97cbc7839b18", null ],
+    [ "cwist_test_client_clear_cookies", "db/de3/test__client_8h.html#a4a1b1fca085aa5ef47b02dbc2f3cb757", null ],
     [ "cwist_test_client_create", "db/de3/test__client_8h.html#ad55ee67ee531c07fe9ebbf931183eeee", null ],
+    [ "cwist_test_client_delete", "db/de3/test__client_8h.html#a5ab7c2a2573f0e606b45624d463586de", null ],
     [ "cwist_test_client_destroy", "db/de3/test__client_8h.html#a72517a7cd29c71651d3c3ef0a7b3d33d", null ],
     [ "cwist_test_client_get", "db/de3/test__client_8h.html#a448d65dbe6d1503f4fa1ba6dc8612593", null ],
+    [ "cwist_test_client_get_cookie", "db/de3/test__client_8h.html#aceccbf0fcc630a4f468fd0206c3c496e", null ],
+    [ "cwist_test_client_patch", "db/de3/test__client_8h.html#aa3c166bc657ad62c9d7c68eb2fb66eea", null ],
     [ "cwist_test_client_post", "db/de3/test__client_8h.html#aeb4e3f151109782952cc364363bad306", null ],
-    [ "cwist_test_client_post_json", "db/de3/test__client_8h.html#a07792883be0706aed916aa473d771cde", null ]
+    [ "cwist_test_client_post_json", "db/de3/test__client_8h.html#a07792883be0706aed916aa473d771cde", null ],
+    [ "cwist_test_client_post_multipart", "db/de3/test__client_8h.html#a3f4947fc5cdc0e35b511cc355a6b645f", null ],
+    [ "cwist_test_client_put", "db/de3/test__client_8h.html#a41b364190950962ec242681c8c6a63b4", null ],
+    [ "cwist_test_client_request_ex", "db/de3/test__client_8h.html#a7aabd2a3a2ae0bb849f3df4cf0117161", null ],
+    [ "cwist_test_client_set_cookie", "db/de3/test__client_8h.html#ac9242cddd1d1895fe7c8dde34d8812f1", null ]
 ];

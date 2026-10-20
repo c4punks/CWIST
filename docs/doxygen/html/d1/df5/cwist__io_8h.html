@@ -1,3 +1,4 @@
+<!-- HTML header for doxygen 1.9.8-->
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "https://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml" lang="en-US">
 <head>
@@ -5,14 +6,32 @@
 <meta http-equiv="X-UA-Compatible" content="IE=11"/>
 <meta name="generator" content="Doxygen 1.9.8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
-<title>cwist: include/cwist/sys/io/cwist_io.h File Reference</title>
+<title>include/cwist/sys/io/cwist_io.h File Reference - CWIST High-Performance C Web Framework</title>
+<meta name="description" content="CWIST: High-performance C17 web framework and application server (HTTP/1.1, HTTP/2, HTTP/3, WebTransport, WebSocket, PQC TLS) powered by io_uring and libttak."/>
+<meta name="keywords" content="C web framework, C17, HTTP3, QUIC, io_uring, web server, actix alternative, high performance, REST API in C, C web server"/>
+<meta name="author" content="c4punks"/>
+<meta name="robots" content="index, follow"/>
+<!-- Open Graph / Facebook -->
+<meta property="og:type" content="website"/>
+<meta property="og:title" content="include/cwist/sys/io/cwist_io.h File Reference - CWIST Modern C Web Framework"/>
+<meta property="og:description" content="High-performance C17 web framework & application server with zero-copy io_uring reactor, PQC TLS, and HTTP/3 support."/>
+<meta property="og:url" content="https://c4punks.github.io/CWIST/"/>
+<!-- Twitter -->
+<meta name="twitter:card" content="summary_large_image"/>
+<meta name="twitter:title" content="include/cwist/sys/io/cwist_io.h File Reference - CWIST Modern C Web Framework"/>
+<meta name="twitter:description" content="High-performance C17 web framework & application server with zero-copy io_uring reactor, PQC TLS, and HTTP/3 support."/>
 <link href="../../tabs.css" rel="stylesheet" type="text/css"/>
 <script type="text/javascript" src="../../jquery.js"></script>
 <script type="text/javascript" src="../../dynsections.js"></script>
+<link href="../../navtree.css" rel="stylesheet" type="text/css"/>
+<script type="text/javascript" src="../../resize.js"></script>
+<script type="text/javascript" src="../../navtreedata.js"></script>
+<script type="text/javascript" src="../../navtree.js"></script>
 <link href="../../search/search.css" rel="stylesheet" type="text/css"/>
 <script type="text/javascript" src="../../search/searchdata.js"></script>
 <script type="text/javascript" src="../../search/search.js"></script>
 <link href="../../doxygen.css" rel="stylesheet" type="text/css" />
+<link href="../../doxygen-awesome.css" rel="stylesheet" type="text/css"/>
 </head>
 <body>
 <div id="top"><!-- do not remove this div, it is closed by doxygen! -->
@@ -47,6 +66,23 @@ $(function() {
 /* @license-end */
 </script>
 <div id="main-nav"></div>
+</div><!-- top -->
+<div id="side-nav" class="ui-resizable side-nav-resizable">
+  <div id="nav-tree">
+    <div id="nav-tree-contents">
+      <div id="nav-sync" class="sync"></div>
+    </div>
+  </div>
+  <div id="splitbar" style="-moz-user-select:none;" 
+       class="ui-resizable-handle">
+  </div>
+</div>
+<script type="text/javascript">
+/* @license magnet:?xt=urn:btih:d3d9a9a6595521f9666a5e94cc830dab83b65699&amp;dn=expat.txt MIT */
+$(document).ready(function(){initNavTree('d1/df5/cwist__io_8h.html','../../'); initResizable(); });
+/* @license-end */
+</script>
+<div id="doc-content">
 <!-- window showing the filter options -->
 <div id="MSearchSelectWindow"
      onmouseover="return searchBox.OnSearchSelectShow()"
@@ -68,11 +104,6 @@ $(function() {
 </div>
 </div>
 
-<div id="nav-path" class="navpath">
-  <ul>
-<li class="navelem"><a class="el" href="../../dir_d44c64559bbebec7f509842c48db8b23.html">include</a></li><li class="navelem"><a class="el" href="../../dir_2109d32ae718f50aecd8856dacda770b.html">cwist</a></li><li class="navelem"><a class="el" href="../../dir_25e5ef8a21ecb7bc8582f64237a0de4b.html">sys</a></li><li class="navelem"><a class="el" href="../../dir_55dc0eef07f14ac1b128d5e03c141bde.html">io</a></li>  </ul>
-</div>
-</div><!-- top -->
 <div class="header">
   <div class="summary">
 <a href="#typedef-members">Typedefs</a> &#124;
@@ -107,7 +138,7 @@ This graph shows which files directly or indirectly include this file:</div>
 <area shape="poly" title=" " alt="" coords="3212,52,3072,96,3071,91,3210,47"/>
 <area shape="rect" href="../../d1/de4/io__queue_8c.html" title="Lock&#45;free job queue backing cwist_io_queue. Despite the old file name (io_uring.c),..." alt="" coords="3115,101,3272,126"/>
 <area shape="poly" title=" " alt="" coords="3256,57,3208,102,3204,98,3252,53"/>
-<area shape="rect" href="../../d9/d70/io__select_8c.html" title="Lock&#45;free job queue fallback used when no platform&#45;specific async backend is selected." alt="" coords="3297,101,3453,126"/>
+<area shape="rect" href="../../d9/d70/io__select_8c.html" title="Job queue fallback used when no platform&#45;specific async backend is selected." alt="" coords="3297,101,3453,126"/>
 <area shape="poly" title=" " alt="" coords="3316,53,3364,98,3360,102,3312,57"/>
 <area shape="rect" href="../../dd/d2e/kqueue_8c.html" title="BSD kqueue backend for the generic CWIST job queue interface." alt="" coords="3477,101,3624,126"/>
 <area shape="poly" title=" " alt="" coords="3356,47,3516,98,3514,103,3354,52"/>
@@ -311,11 +342,11 @@ Functions</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>Queue handle, or NULL when kqueue setup fails. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d1/de4/io__queue_8c_source.html#l00220">220</a> of file <a class="el" href="../../d1/de4/io__queue_8c_source.html">io_queue.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d1/de4/io__queue_8c_source.html#l00228">228</a> of file <a class="el" href="../../d1/de4/io__queue_8c_source.html">io_queue.c</a>.</p>
 
-<p class="reference">References <a class="el" href="../../d9/d39/alloc_8c_source.html#l00275">cwist_alloc()</a>, <a class="el" href="../../d9/d39/alloc_8c_source.html#l00390">cwist_free()</a>, <a class="el" href="../../d8/d16/gc_8c_source.html#l00291">cwist_full_gc_enabled()</a>, and <a class="el" href="../../d8/d16/gc_8c_source.html#l00527">cwist_gc_scope_disown()</a>.</p>
+<p class="reference">References <a class="el" href="../../d9/d39/alloc_8c_source.html#l00276">cwist_alloc()</a>, <a class="el" href="../../d9/d39/alloc_8c_source.html#l00391">cwist_free()</a>, <a class="el" href="../../d8/d16/gc_8c_source.html#l00514">cwist_full_gc_enabled()</a>, <a class="el" href="../../d8/d16/gc_8c_source.html#l00765">cwist_gc_scope_disown()</a>, and <a class="el" href="../../dd/d2e/kqueue_8c_source.html#l00022">KQ_WAKE_IDENT</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../dd/d6c/scheduler_8c_source.html#l00259">cwist_scheduler_create()</a>.</p>
+<p class="reference">Referenced by <a class="el" href="../../dd/d6c/scheduler_8c_source.html#l00265">cwist_scheduler_create()</a>.</p>
 
 </div>
 </div>
@@ -350,6 +381,7 @@ Functions</h2></td></tr>
   </dd>
 </dl>
 <p>Destroy the queue and free resources.</p>
+<p>All runners are gone by contract (stop, then join, then destroy).</p>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
     <tr><td class="paramname">q</td><td>Queue handle to destroy. </td></tr>
@@ -357,11 +389,11 @@ Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d1/de4/io__queue_8c_source.html#l00340">340</a> of file <a class="el" href="../../d1/de4/io__queue_8c_source.html">io_queue.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d1/de4/io__queue_8c_source.html#l00343">343</a> of file <a class="el" href="../../d1/de4/io__queue_8c_source.html">io_queue.c</a>.</p>
 
-<p class="reference">References <a class="el" href="../../d9/d39/alloc_8c_source.html#l00390">cwist_free()</a>.</p>
+<p class="reference">References <a class="el" href="../../d9/d39/alloc_8c_source.html#l00391">cwist_free()</a>, and <a class="el" href="../../dd/d2e/kqueue_8c_source.html#l00022">KQ_WAKE_IDENT</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../dd/d6c/scheduler_8c_source.html#l00259">cwist_scheduler_create()</a>, and <a class="el" href="../../dd/d6c/scheduler_8c_source.html#l00321">cwist_scheduler_destroy()</a>.</p>
+<p class="reference">Referenced by <a class="el" href="../../dd/d6c/scheduler_8c_source.html#l00265">cwist_scheduler_create()</a>, and <a class="el" href="../../dd/d6c/scheduler_8c_source.html#l00327">cwist_scheduler_destroy()</a>.</p>
 
 </div>
 </div>
@@ -403,9 +435,9 @@ Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d1/de4/io__queue_8c_source.html#l00285">285</a> of file <a class="el" href="../../d1/de4/io__queue_8c_source.html">io_queue.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d1/de4/io__queue_8c_source.html#l00293">293</a> of file <a class="el" href="../../d1/de4/io__queue_8c_source.html">io_queue.c</a>.</p>
 
-<p class="reference">References <a class="el" href="../../d9/d39/alloc_8c_source.html#l00390">cwist_free()</a>, <a class="el" href="../../d8/d16/gc_8c_source.html#l00291">cwist_full_gc_enabled()</a>, and <a class="el" href="../../d8/d16/gc_8c_source.html#l00537">cwist_gc_scope_flush()</a>.</p>
+<p class="reference">References <a class="el" href="../../d9/d39/alloc_8c_source.html#l00391">cwist_free()</a>, <a class="el" href="../../d8/d16/gc_8c_source.html#l00514">cwist_full_gc_enabled()</a>, <a class="el" href="../../d8/d16/gc_8c_source.html#l00775">cwist_gc_scope_flush()</a>, and <a class="el" href="../../dd/d2e/kqueue_8c_source.html#l00022">KQ_WAKE_IDENT</a>.</p>
 
 </div>
 </div>
@@ -441,7 +473,7 @@ Functions</h2></td></tr>
   </dd>
 </dl>
 <p>Request that all runners stop processing without freeing the queue.</p>
-<p>On kqueue this closes the descriptor, causing kevent() to return an error and the runner loop to exit.</p>
+<p>Runners finish the jobs already submitted, then return. The descriptor stays open until <a class="el" href="../../d1/df5/cwist__io_8h.html#a90a553923ea4f601ffb5acaf8660d9fe" title="Destroy the queue and free resources.">cwist_io_queue_destroy()</a>, so a runner blocked in kevent() is woken by the wake event rather than by a close() that BSD kernels need not notice.</p>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
     <tr><td class="paramname">q</td><td>Queue handle to stop. </td></tr>
@@ -449,9 +481,11 @@ Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d1/de4/io__queue_8c_source.html#l00328">328</a> of file <a class="el" href="../../d1/de4/io__queue_8c_source.html">io_queue.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d1/de4/io__queue_8c_source.html#l00331">331</a> of file <a class="el" href="../../d1/de4/io__queue_8c_source.html">io_queue.c</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../dd/d6c/scheduler_8c_source.html#l00321">cwist_scheduler_destroy()</a>.</p>
+<p class="reference">References <a class="el" href="../../dd/d2e/kqueue_8c_source.html#l00022">KQ_WAKE_IDENT</a>.</p>
+
+<p class="reference">Referenced by <a class="el" href="../../dd/d6c/scheduler_8c_source.html#l00327">cwist_scheduler_destroy()</a>.</p>
 
 </div>
 </div>
@@ -526,20 +560,24 @@ Functions</h2></td></tr>
   </table>
   </dd>
 </dl>
-<dl class="section return"><dt>Returns</dt><dd>true on success, false when event registration fails. </dd></dl>
+<dl class="section return"><dt>Returns</dt><dd>true on success, false when the queue is stopping, OOM, or event registration fails. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d1/de4/io__queue_8c_source.html#l00269">269</a> of file <a class="el" href="../../d1/de4/io__queue_8c_source.html">io_queue.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d1/de4/io__queue_8c_source.html#l00277">277</a> of file <a class="el" href="../../d1/de4/io__queue_8c_source.html">io_queue.c</a>.</p>
 
-<p class="reference">References <a class="el" href="../../d9/d39/alloc_8c_source.html#l00275">cwist_alloc()</a>, <a class="el" href="../../d9/d39/alloc_8c_source.html#l00390">cwist_free()</a>, <a class="el" href="../../d8/d16/gc_8c_source.html#l00291">cwist_full_gc_enabled()</a>, and <a class="el" href="../../d8/d16/gc_8c_source.html#l00527">cwist_gc_scope_disown()</a>.</p>
+<p class="reference">References <a class="el" href="../../d9/d39/alloc_8c_source.html#l00276">cwist_alloc()</a>, <a class="el" href="../../d9/d39/alloc_8c_source.html#l00391">cwist_free()</a>, <a class="el" href="../../d8/d16/gc_8c_source.html#l00514">cwist_full_gc_enabled()</a>, and <a class="el" href="../../d8/d16/gc_8c_source.html#l00765">cwist_gc_scope_disown()</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../dd/d6c/scheduler_8c_source.html#l00374">cwist_scheduler_schedule()</a>, and <a class="el" href="../../dd/d6c/scheduler_8c_source.html#l00354">cwist_scheduler_submit()</a>.</p>
+<p class="reference">Referenced by <a class="el" href="../../dd/d6c/scheduler_8c_source.html#l00380">cwist_scheduler_schedule()</a>, and <a class="el" href="../../dd/d6c/scheduler_8c_source.html#l00360">cwist_scheduler_submit()</a>.</p>
 
 </div>
 </div>
 </div><!-- contents -->
+</div><!-- doc-content -->
 <!-- start footer part -->
-<hr class="footer"/><address class="footer"><small>
-Generated by&#160;<a href="https://www.doxygen.org/index.html"><img class="footer" src="../../doxygen.svg" width="104" height="31" alt="doxygen"/></a> 1.9.8
-</small></address>
+<div id="nav-path" class="navpath"><!-- id is needed for treeview function! -->
+  <ul>
+    <li class="navelem"><a class="el" href="../../dir_d44c64559bbebec7f509842c48db8b23.html">include</a></li><li class="navelem"><a class="el" href="../../dir_2109d32ae718f50aecd8856dacda770b.html">cwist</a></li><li class="navelem"><a class="el" href="../../dir_25e5ef8a21ecb7bc8582f64237a0de4b.html">sys</a></li><li class="navelem"><a class="el" href="../../dir_55dc0eef07f14ac1b128d5e03c141bde.html">io</a></li><li class="navelem"><a class="el" href="../../d1/df5/cwist__io_8h.html">cwist_io.h</a></li>
+    <li class="footer">Generated by <a href="https://www.doxygen.org/index.html"><img class="footer" src="../../doxygen.svg" width="104" height="31" alt="doxygen"/></a> 1.9.8 </li>
+  </ul>
+</div>
 </body>
 </html>

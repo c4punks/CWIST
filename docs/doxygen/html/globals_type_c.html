@@ -1,3 +1,4 @@
+<!-- HTML header for doxygen 1.9.8-->
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "https://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml" lang="en-US">
 <head>
@@ -5,14 +6,32 @@
 <meta http-equiv="X-UA-Compatible" content="IE=11"/>
 <meta name="generator" content="Doxygen 1.9.8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
-<title>cwist: File Members</title>
+<title>File Members - CWIST High-Performance C Web Framework</title>
+<meta name="description" content="CWIST: High-performance C17 web framework and application server (HTTP/1.1, HTTP/2, HTTP/3, WebTransport, WebSocket, PQC TLS) powered by io_uring and libttak."/>
+<meta name="keywords" content="C web framework, C17, HTTP3, QUIC, io_uring, web server, actix alternative, high performance, REST API in C, C web server"/>
+<meta name="author" content="c4punks"/>
+<meta name="robots" content="index, follow"/>
+<!-- Open Graph / Facebook -->
+<meta property="og:type" content="website"/>
+<meta property="og:title" content="File Members - CWIST Modern C Web Framework"/>
+<meta property="og:description" content="High-performance C17 web framework & application server with zero-copy io_uring reactor, PQC TLS, and HTTP/3 support."/>
+<meta property="og:url" content="https://c4punks.github.io/CWIST/"/>
+<!-- Twitter -->
+<meta name="twitter:card" content="summary_large_image"/>
+<meta name="twitter:title" content="File Members - CWIST Modern C Web Framework"/>
+<meta name="twitter:description" content="High-performance C17 web framework & application server with zero-copy io_uring reactor, PQC TLS, and HTTP/3 support."/>
 <link href="tabs.css" rel="stylesheet" type="text/css"/>
 <script type="text/javascript" src="jquery.js"></script>
 <script type="text/javascript" src="dynsections.js"></script>
+<link href="navtree.css" rel="stylesheet" type="text/css"/>
+<script type="text/javascript" src="resize.js"></script>
+<script type="text/javascript" src="navtreedata.js"></script>
+<script type="text/javascript" src="navtree.js"></script>
 <link href="search/search.css" rel="stylesheet" type="text/css"/>
 <script type="text/javascript" src="search/searchdata.js"></script>
 <script type="text/javascript" src="search/search.js"></script>
 <link href="doxygen.css" rel="stylesheet" type="text/css" />
+<link href="doxygen-awesome.css" rel="stylesheet" type="text/css"/>
 </head>
 <body>
 <div id="top"><!-- do not remove this div, it is closed by doxygen! -->
@@ -48,6 +67,22 @@ $(function() {
 </script>
 <div id="main-nav"></div>
 </div><!-- top -->
+<div id="side-nav" class="ui-resizable side-nav-resizable">
+  <div id="nav-tree">
+    <div id="nav-tree-contents">
+      <div id="nav-sync" class="sync"></div>
+    </div>
+  </div>
+  <div id="splitbar" style="-moz-user-select:none;" 
+       class="ui-resizable-handle">
+  </div>
+</div>
+<script type="text/javascript">
+/* @license magnet:?xt=urn:btih:d3d9a9a6595521f9666a5e94cc830dab83b65699&amp;dn=expat.txt MIT */
+$(document).ready(function(){initNavTree('globals_type_c.html',''); initResizable(); });
+/* @license-end */
+</script>
+<div id="doc-content">
 <!-- window showing the filter options -->
 <div id="MSearchSelectWindow"
      onmouseover="return searchBox.OnSearchSelectShow()"
@@ -73,7 +108,8 @@ $(function() {
 <div class="textblock">Here is a list of all typedefs with links to the files they belong to:</div>
 
 <h3><a id="index_c" name="index_c"></a>- c -</h3><ul>
-<li>cwist_app&#160;:&#160;<a class="el" href="d0/d77/sys_2app_2app_8h.html#a73f89cc6dd1b2df889d0e1987c179c83">app.h</a>, <a class="el" href="d7/d67/net_2http_2https_8h.html#a73f89cc6dd1b2df889d0e1987c179c83">https.h</a></li>
+<li>cwist_accept_cb_t&#160;:&#160;<a class="el" href="d2/d6b/reactor__rx_8h.html#aa0ff369796ed2d081cf5a74ec126549d">reactor_rx.h</a></li>
+<li>cwist_app&#160;:&#160;<a class="el" href="d7/d67/net_2http_2https_8h.html#a73f89cc6dd1b2df889d0e1987c179c83">https.h</a>, <a class="el" href="d0/d77/sys_2app_2app_8h.html#a73f89cc6dd1b2df889d0e1987c179c83">app.h</a></li>
 <li>cwist_arena_t&#160;:&#160;<a class="el" href="da/d0c/arena_8h.html#a18e3b94906aace36413cfdec0fbe329b">arena.h</a></li>
 <li>cwist_arena_tls_t&#160;:&#160;<a class="el" href="de/d6c/arena_8c.html#ac687b71d4b7f381cdfab6d08c59a5dc2">arena.c</a></li>
 <li>cwist_asset_match&#160;:&#160;<a class="el" href="d7/d1d/assets__internal_8h.html#aa2e35dc140a5e63c3f362d72d6c7ce72">assets_internal.h</a></li>
@@ -97,11 +133,11 @@ $(function() {
 <li>cwist_config&#160;:&#160;<a class="el" href="d0/d77/sys_2app_2app_8h.html#a4ea984510af4527950e237b29b604d0f">app.h</a>, <a class="el" href="db/d16/config_8h.html#a4ea984510af4527950e237b29b604d0f">config.h</a></li>
 <li>cwist_config_bucket&#160;:&#160;<a class="el" href="db/d16/config_8h.html#a969eb9c9904e18da305854d471d5e56c">config.h</a></li>
 <li>cwist_conn_close_fn&#160;:&#160;<a class="el" href="d0/daa/gc_8h.html#a5c0209f90f79b0e8b7b893b5d8c9d8ed">gc.h</a></li>
-<li>cwist_conn_pending_t&#160;:&#160;<a class="el" href="d8/d16/gc_8c.html#ab790bb476f395fc9533cf0b5222c3ff9">gc.c</a></li>
+<li>cwist_conn_owner_t&#160;:&#160;<a class="el" href="d8/d16/gc_8c.html#a449a3b9fe458900c0bd52268ae793800">gc.c</a></li>
 <li>cwist_cookie_options&#160;:&#160;<a class="el" href="d5/dfd/cookie_8h.html#aa6f1db19c5b410c2835194a23182bda2">cookie.h</a></li>
 <li>cwist_css_config&#160;:&#160;<a class="el" href="da/d0a/css__composer_8h.html#a2db8b23afb589ecee9fd830123d73ddb">css_composer.h</a></li>
 <li>cwist_css_scope&#160;:&#160;<a class="el" href="da/d0a/css__composer_8h.html#a065c31cbabae1ed90de1e65735ea7b37">css_composer.h</a></li>
-<li>cwist_db&#160;:&#160;<a class="el" href="d0/dae/core_2db_2sql_8h.html#a74ff230e8d19be8906dd08cae2a10085">sql.h</a></li>
+<li>cwist_db&#160;:&#160;<a class="el" href="d4/d59/sql_8h.html#a74ff230e8d19be8906dd08cae2a10085">sql.h</a></li>
 <li>cwist_db_crypt_ctx_t&#160;:&#160;<a class="el" href="d9/df9/db__crypt_8h.html#a04ba672317171ec912e8c533a8b189b4">db_crypt.h</a></li>
 <li>cwist_db_pool_t&#160;:&#160;<a class="el" href="db/db7/pool_8h.html#ac514a17cb5ebe045e1a57b8d6a636dd5">pool.h</a></li>
 <li>cwist_endpoint_opt_t&#160;:&#160;<a class="el" href="de/d66/endpoint__opts_8h.html#a00dc64c06f8d5300f53642d690592f78">endpoint_opts.h</a></li>
@@ -214,10 +250,13 @@ $(function() {
 <li>cwist_mux_route&#160;:&#160;<a class="el" href="d5/d57/mux_8h.html#a0597f3346e5c7f96984a9a1f8fc72c74">mux.h</a></li>
 <li>cwist_mux_router&#160;:&#160;<a class="el" href="d5/d57/mux_8h.html#a9a6a254663d79489d5ee3082f352703b">mux.h</a></li>
 <li>cwist_nats_msg_cb&#160;:&#160;<a class="el" href="d1/de1/cwist__nats_8h.html#a024043e5b54137bf408a336b60f33275">cwist_nats.h</a></li>
-<li>cwist_nats_t&#160;:&#160;<a class="el" href="dd/d3c/durable__queue_8h.html#a5692a2f056a6005cf60cafbb3b283cb0">durable_queue.h</a>, <a class="el" href="d1/de1/cwist__nats_8h.html#a5692a2f056a6005cf60cafbb3b283cb0">cwist_nats.h</a></li>
+<li>cwist_nats_t&#160;:&#160;<a class="el" href="d1/de1/cwist__nats_8h.html#a5692a2f056a6005cf60cafbb3b283cb0">cwist_nats.h</a>, <a class="el" href="dd/d3c/durable__queue_8h.html#a5692a2f056a6005cf60cafbb3b283cb0">durable_queue.h</a></li>
 <li>cwist_nuke_db_t&#160;:&#160;<a class="el" href="dc/dfe/nuke__db_8h.html#a5d7896139d7b5e0b56e79c4370e4f27c">nuke_db.h</a></li>
 <li>cwist_orm_dialect_t&#160;:&#160;<a class="el" href="d6/d9b/orm_8h.html#a934bf8f6f96b08f20e8c9de0b632fc76">orm.h</a></li>
+<li>cwist_orm_result_t&#160;:&#160;<a class="el" href="d6/d9b/orm_8h.html#a38075ab36ec6acd5b83092fb23c2e45e">orm.h</a></li>
 <li>cwist_orm_t&#160;:&#160;<a class="el" href="d6/d9b/orm_8h.html#aeacfe257785ac940ef6c5813dd335a0e">orm.h</a></li>
+<li>cwist_orm_value_t&#160;:&#160;<a class="el" href="d6/d9b/orm_8h.html#a3b16210cc3d67b0fd0d1bcd60f5862a9">orm.h</a></li>
+<li>cwist_orm_value_type_t&#160;:&#160;<a class="el" href="d6/d9b/orm_8h.html#a256bf5598745a55067a3acac43017130">orm.h</a></li>
 <li>cwist_pb_field&#160;:&#160;<a class="el" href="db/d5b/protobuf_8h.html#a3db91d6c62775029a7060054560b8cef">protobuf.h</a></li>
 <li>cwist_pb_reader&#160;:&#160;<a class="el" href="db/d5b/protobuf_8h.html#a998bb020254e98d341ede2f258fc5c21">protobuf.h</a></li>
 <li>cwist_pb_wire_type_t&#160;:&#160;<a class="el" href="db/d5b/protobuf_8h.html#a4eb3991a6920f64397b890e3375ad702">protobuf.h</a></li>
@@ -239,6 +278,7 @@ $(function() {
 <li>cwist_route_entry&#160;:&#160;<a class="el" href="df/d7f/app_8c.html#a71c3129ec029cc6b67bcecbe32644d22">app.c</a></li>
 <li>cwist_route_table&#160;:&#160;<a class="el" href="d0/d77/sys_2app_2app_8h.html#a9c476b4b678429cd9ecd188fdbb7600e">app.h</a></li>
 <li>cwist_rx_cb_t&#160;:&#160;<a class="el" href="d2/d6b/reactor__rx_8h.html#af3ed9c839bed9b08ab1e23ea53ebf340">reactor_rx.h</a></li>
+<li>cwist_scheduler_drop_cb&#160;:&#160;<a class="el" href="d2/dd8/scheduler_8h.html#af9cff7a369239215c4ff522fbc48f7d1">scheduler.h</a></li>
 <li>cwist_scheduler_t&#160;:&#160;<a class="el" href="d2/dd8/scheduler_8h.html#a6f0ae6fce1a81f7dc35c2b235415d1ed">scheduler.h</a></li>
 <li>cwist_schema_field_t&#160;:&#160;<a class="el" href="db/dd3/json__heal_8h.html#ac7a498c9ea2def9aa03815f60b69d246">json_heal.h</a></li>
 <li>cwist_schema_t&#160;:&#160;<a class="el" href="db/dd3/json__heal_8h.html#a9cc13dc50bf367a849dfb3ff56fe3b59">json_heal.h</a></li>
@@ -252,7 +292,7 @@ $(function() {
 <li>cwist_sllm_heal_fn&#160;:&#160;<a class="el" href="db/dd3/json__heal_8h.html#ae61f8087f8dfc87ea0a74936c7f710a9">json_heal.h</a></li>
 <li>cwist_sse_event_t&#160;:&#160;<a class="el" href="df/d58/net_2http_2sse_8h.html#ab8a9928d5aed3b0b4d452137ce721fee">sse.h</a></li>
 <li>cwist_sse_stream_t&#160;:&#160;<a class="el" href="df/d58/net_2http_2sse_8h.html#a1814cb23b06dfb500d1f266a97cc8d2d">sse.h</a></li>
-<li>cwist_sstring&#160;:&#160;<a class="el" href="d4/dbd/core_2sstring_2sstring_8h.html#a903f7eaecc64d99c905951c1979e6dfc">sstring.h</a></li>
+<li>cwist_sstring&#160;:&#160;<a class="el" href="d1/d34/sstring_8h.html#a903f7eaecc64d99c905951c1979e6dfc">sstring.h</a></li>
 <li>cwist_static_dir&#160;:&#160;<a class="el" href="d0/d77/sys_2app_2app_8h.html#afe3526e737ac5cee98bd862fb23e6702">app.h</a></li>
 <li>cwist_stream_req_t&#160;:&#160;<a class="el" href="d0/d77/sys_2app_2app_8h.html#abf487614a2636acf78fe9bdc09247d0b">app.h</a></li>
 <li>cwist_stream_write_fn&#160;:&#160;<a class="el" href="d0/d77/sys_2app_2app_8h.html#a6bd815554d6da982f36552f7ab3cfb9e">app.h</a></li>
@@ -278,9 +318,12 @@ $(function() {
 <li>cwist_zod_result_t&#160;:&#160;<a class="el" href="dc/d6e/zod_8h.html#accba431f5f6b91b8731f9109350b3752">zod.h</a></li>
 </ul>
 </div><!-- contents -->
+</div><!-- doc-content -->
 <!-- start footer part -->
-<hr class="footer"/><address class="footer"><small>
-Generated by&#160;<a href="https://www.doxygen.org/index.html"><img class="footer" src="doxygen.svg" width="104" height="31" alt="doxygen"/></a> 1.9.8
-</small></address>
+<div id="nav-path" class="navpath"><!-- id is needed for treeview function! -->
+  <ul>
+    <li class="footer">Generated by <a href="https://www.doxygen.org/index.html"><img class="footer" src="doxygen.svg" width="104" height="31" alt="doxygen"/></a> 1.9.8 </li>
+  </ul>
+</div>
 </body>
 </html>

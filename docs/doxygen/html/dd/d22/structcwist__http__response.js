@@ -1,7 +1,11 @@
 var structcwist__http__response =
 [
     [ "alt_svc", "dd/d22/structcwist__http__response.html#a6c96e657a81f54634eee95f77d9affdf", null ],
+    [ "arena", "dd/d22/structcwist__http__response.html#aae4b1dd82d595385f6d99dfe143924db", null ],
+    [ "arena_borrowed", "dd/d22/structcwist__http__response.html#a3832fdfdd4a05aed3ed9d3e0d2a3d770", null ],
+    [ "async", "dd/d22/structcwist__http__response.html#aba9a54d6190af36db7ffcd4a9bf6d77a", null ],
     [ "body", "dd/d22/structcwist__http__response.html#a342acf59fe7ce906f6d80a01bfdc1e6e", null ],
+    [ "deferred", "dd/d22/structcwist__http__response.html#aed1da4a04320ba43b8f9abcf4ef19a4f", null ],
     [ "endpoint_opts", "dd/d22/structcwist__http__response.html#a128a2953a2f58e9d2dd9901a4d899e92", null ],
     [ "file_stream_auto_close", "dd/d22/structcwist__http__response.html#a5befd9047a5a32a9cae81c59cd871576", null ],
     [ "file_stream_fd", "dd/d22/structcwist__http__response.html#a276851f42d4ef74dc3f2b82f74f770c6", null ],
@@ -16,6 +20,14 @@ var structcwist__http__response =
     [ "ptr_body_len", "dd/d22/structcwist__http__response.html#ac6c3558639fc917b5f2ba31bcd418278", null ],
     [ "status_code", "dd/d22/structcwist__http__response.html#a501dbd60856eb6710143dd87acd64b2d", null ],
     [ "status_text", "dd/d22/structcwist__http__response.html#a18b9974235032a9abc93a0dcd78af74c", null ],
+    [ "stream_buf", "dd/d22/structcwist__http__response.html#ab2921051ca7925e6f353788c10ced7c7", null ],
+    [ "stream_ended", "dd/d22/structcwist__http__response.html#afd9995bfbe1246e52ab52e96aac039b2", null ],
+    [ "stream_failed", "dd/d22/structcwist__http__response.html#acbd68f20584fe982a4c02bb6dcca59b5", null ],
+    [ "stream_flushed", "dd/d22/structcwist__http__response.html#a90cd463be4255a10a10dce5a2d52cd0e", null ],
+    [ "stream_head_sent", "dd/d22/structcwist__http__response.html#a96eb1bc2f298c5db3e4f7f9179beaeb6", null ],
+    [ "stream_mode", "dd/d22/structcwist__http__response.html#ab1bb73c2a78fe8fbbcbb329e70432a7d", null ],
+    [ "stream_sink", "dd/d22/structcwist__http__response.html#aa9dbfac0d47a8cc5a5304c6097049bcc", null ],
+    [ "stream_sink_ctx", "dd/d22/structcwist__http__response.html#a4d71398c696723b0ddd5884a09a5f65d", null ],
     [ "use_file_stream", "dd/d22/structcwist__http__response.html#a2dc25ecc16aa4a8a602035df19ecc468", null ],
     [ "version", "dd/d22/structcwist__http__response.html#a17b6aef7a3abc8194e7e422dca5c2cba", null ]
 ];

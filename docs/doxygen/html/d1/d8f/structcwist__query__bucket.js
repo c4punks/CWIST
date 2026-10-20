@@ -1,6 +1,6 @@
 var structcwist__query__bucket =
 [
-    [ "key", "d1/d8f/structcwist__query__bucket.html#a296bb148e799cb02e6ca83b3e1bd912e", null ],
-    [ "next", "d1/d8f/structcwist__query__bucket.html#ac304b9d09fe271ac77c2f61c0c36a8ee", null ],
-    [ "value", "d1/d8f/structcwist__query__bucket.html#aad4481720c4bd1fb461bf31d140fb1dd", null ]
+    [ "key", "d1/d8f/structcwist__query__bucket.html#a22c5ba17b3ad33c63b534f73f530ad9e", null ],
+    [ "next", "d1/d8f/structcwist__query__bucket.html#a56e9a4813c2a89fda7487113b3707aef", null ],
+    [ "value", "d1/d8f/structcwist__query__bucket.html#a48feaf546840540379239c7116452e43", null ]
 ];

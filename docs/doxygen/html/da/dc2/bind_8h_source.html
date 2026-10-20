@@ -1,3 +1,4 @@
+<!-- HTML header for doxygen 1.9.8-->
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "https://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml" lang="en-US">
 <head>
@@ -5,14 +6,32 @@
 <meta http-equiv="X-UA-Compatible" content="IE=11"/>
 <meta name="generator" content="Doxygen 1.9.8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
-<title>cwist: include/cwist/core/validation/bind.h Source File</title>
+<title>include/cwist/core/validation/bind.h Source File - CWIST High-Performance C Web Framework</title>
+<meta name="description" content="CWIST: High-performance C17 web framework and application server (HTTP/1.1, HTTP/2, HTTP/3, WebTransport, WebSocket, PQC TLS) powered by io_uring and libttak."/>
+<meta name="keywords" content="C web framework, C17, HTTP3, QUIC, io_uring, web server, actix alternative, high performance, REST API in C, C web server"/>
+<meta name="author" content="c4punks"/>
+<meta name="robots" content="index, follow"/>
+<!-- Open Graph / Facebook -->
+<meta property="og:type" content="website"/>
+<meta property="og:title" content="include/cwist/core/validation/bind.h Source File - CWIST Modern C Web Framework"/>
+<meta property="og:description" content="High-performance C17 web framework & application server with zero-copy io_uring reactor, PQC TLS, and HTTP/3 support."/>
+<meta property="og:url" content="https://c4punks.github.io/CWIST/"/>
+<!-- Twitter -->
+<meta name="twitter:card" content="summary_large_image"/>
+<meta name="twitter:title" content="include/cwist/core/validation/bind.h Source File - CWIST Modern C Web Framework"/>
+<meta name="twitter:description" content="High-performance C17 web framework & application server with zero-copy io_uring reactor, PQC TLS, and HTTP/3 support."/>
 <link href="../../tabs.css" rel="stylesheet" type="text/css"/>
 <script type="text/javascript" src="../../jquery.js"></script>
 <script type="text/javascript" src="../../dynsections.js"></script>
+<link href="../../navtree.css" rel="stylesheet" type="text/css"/>
+<script type="text/javascript" src="../../resize.js"></script>
+<script type="text/javascript" src="../../navtreedata.js"></script>
+<script type="text/javascript" src="../../navtree.js"></script>
 <link href="../../search/search.css" rel="stylesheet" type="text/css"/>
 <script type="text/javascript" src="../../search/searchdata.js"></script>
 <script type="text/javascript" src="../../search/search.js"></script>
 <link href="../../doxygen.css" rel="stylesheet" type="text/css" />
+<link href="../../doxygen-awesome.css" rel="stylesheet" type="text/css"/>
 </head>
 <body>
 <div id="top"><!-- do not remove this div, it is closed by doxygen! -->
@@ -52,6 +71,23 @@ $(function() {
 $(document).ready(function() { init_codefold(1); });
 /* @license-end */
 </script>
+</div><!-- top -->
+<div id="side-nav" class="ui-resizable side-nav-resizable">
+  <div id="nav-tree">
+    <div id="nav-tree-contents">
+      <div id="nav-sync" class="sync"></div>
+    </div>
+  </div>
+  <div id="splitbar" style="-moz-user-select:none;" 
+       class="ui-resizable-handle">
+  </div>
+</div>
+<script type="text/javascript">
+/* @license magnet:?xt=urn:btih:d3d9a9a6595521f9666a5e94cc830dab83b65699&amp;dn=expat.txt MIT */
+$(document).ready(function(){initNavTree('da/dc2/bind_8h_source.html','../../'); initResizable(); });
+/* @license-end */
+</script>
+<div id="doc-content">
 <!-- window showing the filter options -->
 <div id="MSearchSelectWindow"
      onmouseover="return searchBox.OnSearchSelectShow()"
@@ -73,11 +109,6 @@ $(document).ready(function() { init_codefold(1); });
 </div>
 </div>
 
-<div id="nav-path" class="navpath">
-  <ul>
-<li class="navelem"><a class="el" href="../../dir_d44c64559bbebec7f509842c48db8b23.html">include</a></li><li class="navelem"><a class="el" href="../../dir_2109d32ae718f50aecd8856dacda770b.html">cwist</a></li><li class="navelem"><a class="el" href="../../dir_10b21726104ad23c5e3d9a30e698c859.html">core</a></li><li class="navelem"><a class="el" href="../../dir_37a79fecf10b4cd4600d7949fce58f5b.html">validation</a></li>  </ul>
-</div>
-</div><!-- top -->
 <div class="header">
   <div class="headertitle"><div class="title">bind.h</div></div>
 </div><!--header-->
@@ -320,9 +351,9 @@ $(document).ready(function() { init_codefold(1); });
 <div class="line"><a id="l00316" name="l00316"></a><span class="lineno">  316</span> </div>
 <div class="line"><a id="l00317" name="l00317"></a><span class="lineno">  317</span><span class="preprocessor">#endif </span><span class="comment">/* __CWIST_VALIDATION_BIND_H__ */</span><span class="preprocessor"></span></div>
 <div class="ttc" id="abind_8h_html_a1066c5a43d9c7395525cfa2be387540e"><div class="ttname"><a href="../../da/dc2/bind_8h.html#a1066c5a43d9c7395525cfa2be387540e">cwist_bind_schema_t</a></div><div class="ttdeci">struct cwist_bind_schema cwist_bind_schema_t</div><div class="ttdoc">Complete schema descriptor for a struct.</div></div>
-<div class="ttc" id="abind_8h_html_a1a0a0b65ababb7cda931d07a71975fad"><div class="ttname"><a href="../../da/dc2/bind_8h.html#a1a0a0b65ababb7cda931d07a71975fad">cwist_app_req_bind_json_or_400</a></div><div class="ttdeci">bool cwist_app_req_bind_json_or_400(cwist_http_request *req, cwist_http_response *res, const cwist_bind_schema_t *schema, void *out)</div><div class="ttdoc">Convenience wrapper: bind JSON and auto-respond 400 on failure.</div><div class="ttdef"><b>Definition</b> <a href="../../d6/d6d/bind_8c_source.html#l00503">bind.c:503</a></div></div>
+<div class="ttc" id="abind_8h_html_a1a0a0b65ababb7cda931d07a71975fad"><div class="ttname"><a href="../../da/dc2/bind_8h.html#a1a0a0b65ababb7cda931d07a71975fad">cwist_app_req_bind_json_or_400</a></div><div class="ttdeci">bool cwist_app_req_bind_json_or_400(cwist_http_request *req, cwist_http_response *res, const cwist_bind_schema_t *schema, void *out)</div><div class="ttdoc">Convenience wrapper: bind JSON and auto-respond 400 on failure.</div><div class="ttdef"><b>Definition</b> <a href="../../d6/d6d/bind_8c_source.html#l00502">bind.c:502</a></div></div>
 <div class="ttc" id="abind_8h_html_a34845e585a850cd9de48950c821a1995"><div class="ttname"><a href="../../da/dc2/bind_8h.html#a34845e585a850cd9de48950c821a1995">CWIST_BIND_MAX_ERRORS</a></div><div class="ttdeci">#define CWIST_BIND_MAX_ERRORS</div><div class="ttdef"><b>Definition</b> <a href="../../da/dc2/bind_8h_source.html#l00094">bind.h:94</a></div></div>
-<div class="ttc" id="abind_8h_html_a454338c5b7f23725d0bd86c03fcc1c8b"><div class="ttname"><a href="../../da/dc2/bind_8h.html#a454338c5b7f23725d0bd86c03fcc1c8b">cwist_app_req_bind_form</a></div><div class="ttdeci">bool cwist_app_req_bind_form(cwist_http_request *req, const cwist_bind_schema_t *schema, void *out, cwist_bind_result_t *result)</div><div class="ttdoc">Bind URL-encoded form data to a user struct.</div><div class="ttdef"><b>Definition</b> <a href="../../d6/d6d/bind_8c_source.html#l00447">bind.c:447</a></div></div>
+<div class="ttc" id="abind_8h_html_a454338c5b7f23725d0bd86c03fcc1c8b"><div class="ttname"><a href="../../da/dc2/bind_8h.html#a454338c5b7f23725d0bd86c03fcc1c8b">cwist_app_req_bind_form</a></div><div class="ttdeci">bool cwist_app_req_bind_form(cwist_http_request *req, const cwist_bind_schema_t *schema, void *out, cwist_bind_result_t *result)</div><div class="ttdoc">Bind URL-encoded form data to a user struct.</div><div class="ttdef"><b>Definition</b> <a href="../../d6/d6d/bind_8c_source.html#l00446">bind.c:446</a></div></div>
 <div class="ttc" id="abind_8h_html_a4cadc78d10cf4e3c57e5ef4e05736335"><div class="ttname"><a href="../../da/dc2/bind_8h.html#a4cadc78d10cf4e3c57e5ef4e05736335">CWIST_BIND_MSG_MAX</a></div><div class="ttdeci">#define CWIST_BIND_MSG_MAX</div><div class="ttdef"><b>Definition</b> <a href="../../da/dc2/bind_8h_source.html#l00095">bind.h:95</a></div></div>
 <div class="ttc" id="abind_8h_html_a503e73e8a6906b3b83d523314eabba4c"><div class="ttname"><a href="../../da/dc2/bind_8h.html#a503e73e8a6906b3b83d523314eabba4c">CWIST_BIND_KEY_MAX</a></div><div class="ttdeci">#define CWIST_BIND_KEY_MAX</div><div class="ttdef"><b>Definition</b> <a href="../../da/dc2/bind_8h_source.html#l00096">bind.h:96</a></div></div>
 <div class="ttc" id="abind_8h_html_a698d39aa5bf28a644edab885a90cd15c"><div class="ttname"><a href="../../da/dc2/bind_8h.html#a698d39aa5bf28a644edab885a90cd15c">cwist_bind_rule_t</a></div><div class="ttdeci">struct cwist_bind_rule cwist_bind_rule_t</div><div class="ttdoc">Single validation rule attached to a field.</div></div>
@@ -336,11 +367,11 @@ $(document).ready(function() { init_codefold(1); });
 <div class="ttc" id="abind_8h_html_a9901987a92ff86a43cf3b62c8b95203eaf8089c10099ba6cbaa6451d1f0db37f8"><div class="ttname"><a href="../../da/dc2/bind_8h.html#a9901987a92ff86a43cf3b62c8b95203eaf8089c10099ba6cbaa6451d1f0db37f8">CWIST_BIND_BOOL</a></div><div class="ttdeci">@ CWIST_BIND_BOOL</div><div class="ttdef"><b>Definition</b> <a href="../../da/dc2/bind_8h_source.html#l00063">bind.h:63</a></div></div>
 <div class="ttc" id="abind_8h_html_a9901987a92ff86a43cf3b62c8b95203eafef4850ce2d306cf60ceb44edd8fdb0a"><div class="ttname"><a href="../../da/dc2/bind_8h.html#a9901987a92ff86a43cf3b62c8b95203eafef4850ce2d306cf60ceb44edd8fdb0a">CWIST_BIND_SSTRING</a></div><div class="ttdeci">@ CWIST_BIND_SSTRING</div><div class="ttdoc">cwist_sstring target.</div><div class="ttdef"><b>Definition</b> <a href="../../da/dc2/bind_8h_source.html#l00069">bind.h:69</a></div></div>
 <div class="ttc" id="abind_8h_html_a9e111b307bfb4ee1767dfc91b7995f89"><div class="ttname"><a href="../../da/dc2/bind_8h.html#a9e111b307bfb4ee1767dfc91b7995f89">cwist_bind_field_type_t</a></div><div class="ttdeci">enum cwist_bind_field_type cwist_bind_field_type_t</div><div class="ttdoc">Logical type of a bind target field.</div></div>
-<div class="ttc" id="abind_8h_html_aa5615f17162472e111e6556c278a1309"><div class="ttname"><a href="../../da/dc2/bind_8h.html#aa5615f17162472e111e6556c278a1309">cwist_app_req_bind_json</a></div><div class="ttdeci">bool cwist_app_req_bind_json(cwist_http_request *req, const cwist_bind_schema_t *schema, void *out, cwist_bind_result_t *result)</div><div class="ttdoc">Bind a JSON payload to a user struct according to a schema.</div><div class="ttdef"><b>Definition</b> <a href="../../d6/d6d/bind_8c_source.html#l00427">bind.c:427</a></div></div>
+<div class="ttc" id="abind_8h_html_aa5615f17162472e111e6556c278a1309"><div class="ttname"><a href="../../da/dc2/bind_8h.html#aa5615f17162472e111e6556c278a1309">cwist_app_req_bind_json</a></div><div class="ttdeci">bool cwist_app_req_bind_json(cwist_http_request *req, const cwist_bind_schema_t *schema, void *out, cwist_bind_result_t *result)</div><div class="ttdoc">Bind a JSON payload to a user struct according to a schema.</div><div class="ttdef"><b>Definition</b> <a href="../../d6/d6d/bind_8c_source.html#l00426">bind.c:426</a></div></div>
 <div class="ttc" id="abind_8h_html_ab640d273975d3f9e8e57373b4235ceb8"><div class="ttname"><a href="../../da/dc2/bind_8h.html#ab640d273975d3f9e8e57373b4235ceb8">cwist_bind_rule_type_t</a></div><div class="ttdeci">enum cwist_bind_rule_type cwist_bind_rule_type_t</div><div class="ttdoc">Supported validation constraint types.</div></div>
 <div class="ttc" id="abind_8h_html_ac294f8a7004db677c8fa219e720cc416"><div class="ttname"><a href="../../da/dc2/bind_8h.html#ac294f8a7004db677c8fa219e720cc416">cwist_bind_error_t</a></div><div class="ttdeci">struct cwist_bind_error cwist_bind_error_t</div><div class="ttdoc">A single bind/validation failure.</div></div>
 <div class="ttc" id="abind_8h_html_ad8bdd35490f25f7e65b0fd145a9bafeb"><div class="ttname"><a href="../../da/dc2/bind_8h.html#ad8bdd35490f25f7e65b0fd145a9bafeb">cwist_bind_result_t</a></div><div class="ttdeci">struct cwist_bind_result cwist_bind_result_t</div><div class="ttdoc">Result of a bind operation.</div></div>
-<div class="ttc" id="abind_8h_html_adaec190afb4b3baa50acddaddb0daa28"><div class="ttname"><a href="../../da/dc2/bind_8h.html#adaec190afb4b3baa50acddaddb0daa28">cwist_bind_write_error_response</a></div><div class="ttdeci">void cwist_bind_write_error_response(cwist_http_response *res, const cwist_bind_result_t *result)</div><div class="ttdoc">Populate a response with 400 Bad Request and a JSON error payload.</div><div class="ttdef"><b>Definition</b> <a href="../../d6/d6d/bind_8c_source.html#l00464">bind.c:464</a></div></div>
+<div class="ttc" id="abind_8h_html_adaec190afb4b3baa50acddaddb0daa28"><div class="ttname"><a href="../../da/dc2/bind_8h.html#adaec190afb4b3baa50acddaddb0daa28">cwist_bind_write_error_response</a></div><div class="ttdeci">void cwist_bind_write_error_response(cwist_http_response *res, const cwist_bind_result_t *result)</div><div class="ttdoc">Populate a response with 400 Bad Request and a JSON error payload.</div><div class="ttdef"><b>Definition</b> <a href="../../d6/d6d/bind_8c_source.html#l00463">bind.c:463</a></div></div>
 <div class="ttc" id="abind_8h_html_ae88989dbb2cd23835e1c8d6c1b933a27"><div class="ttname"><a href="../../da/dc2/bind_8h.html#ae88989dbb2cd23835e1c8d6c1b933a27">cwist_bind_rule_type</a></div><div class="ttdeci">cwist_bind_rule_type</div><div class="ttdoc">Supported validation constraint types.</div><div class="ttdef"><b>Definition</b> <a href="../../da/dc2/bind_8h_source.html#l00033">bind.h:33</a></div></div>
 <div class="ttc" id="abind_8h_html_ae88989dbb2cd23835e1c8d6c1b933a27a232755ad434780c51a5294dcdd951422"><div class="ttname"><a href="../../da/dc2/bind_8h.html#ae88989dbb2cd23835e1c8d6c1b933a27a232755ad434780c51a5294dcdd951422">CWIST_BIND_RULE_CUSTOM</a></div><div class="ttdeci">@ CWIST_BIND_RULE_CUSTOM</div><div class="ttdoc">User-supplied predicate.</div><div class="ttdef"><b>Definition</b> <a href="../../da/dc2/bind_8h_source.html#l00041">bind.h:41</a></div></div>
 <div class="ttc" id="abind_8h_html_ae88989dbb2cd23835e1c8d6c1b933a27a2ca76c9a0f86837bdf1eedb1430c1f34"><div class="ttname"><a href="../../da/dc2/bind_8h.html#ae88989dbb2cd23835e1c8d6c1b933a27a2ca76c9a0f86837bdf1eedb1430c1f34">CWIST_BIND_RULE_MAX_LEN</a></div><div class="ttdeci">@ CWIST_BIND_RULE_MAX_LEN</div><div class="ttdoc">Maximum string length.</div><div class="ttdef"><b>Definition</b> <a href="../../da/dc2/bind_8h_source.html#l00036">bind.h:36</a></div></div>
@@ -387,9 +418,13 @@ $(document).ready(function() { init_codefold(1); });
 <div class="ttc" id="astructcwist__http__request_html"><div class="ttname"><a href="../../dd/d68/structcwist__http__request.html">cwist_http_request</a></div><div class="ttdef"><b>Definition</b> <a href="../../dd/d56/http_8h_source.html#l00065">http.h:65</a></div></div>
 <div class="ttc" id="astructcwist__http__response_html"><div class="ttname"><a href="../../dd/d22/structcwist__http__response.html">cwist_http_response</a></div><div class="ttdoc">HTTP Response Object. Supports standard string body or Zero-Copy pointer body.</div><div class="ttdef"><b>Definition</b> <a href="../../dd/d56/http_8h_source.html#l00082">http.h:82</a></div></div>
 </div><!-- fragment --></div><!-- contents -->
+</div><!-- doc-content -->
 <!-- start footer part -->
-<hr class="footer"/><address class="footer"><small>
-Generated by&#160;<a href="https://www.doxygen.org/index.html"><img class="footer" src="../../doxygen.svg" width="104" height="31" alt="doxygen"/></a> 1.9.8
-</small></address>
+<div id="nav-path" class="navpath"><!-- id is needed for treeview function! -->
+  <ul>
+    <li class="navelem"><a class="el" href="../../dir_d44c64559bbebec7f509842c48db8b23.html">include</a></li><li class="navelem"><a class="el" href="../../dir_2109d32ae718f50aecd8856dacda770b.html">cwist</a></li><li class="navelem"><a class="el" href="../../dir_10b21726104ad23c5e3d9a30e698c859.html">core</a></li><li class="navelem"><a class="el" href="../../dir_37a79fecf10b4cd4600d7949fce58f5b.html">validation</a></li><li class="navelem"><a class="el" href="../../da/dc2/bind_8h.html">bind.h</a></li>
+    <li class="footer">Generated by <a href="https://www.doxygen.org/index.html"><img class="footer" src="../../doxygen.svg" width="104" height="31" alt="doxygen"/></a> 1.9.8 </li>
+  </ul>
+</div>
 </body>
 </html>

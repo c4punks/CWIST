@@ -1,3 +1,4 @@
+<!-- HTML header for doxygen 1.9.8-->
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "https://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml" lang="en-US">
 <head>
@@ -5,14 +6,32 @@
 <meta http-equiv="X-UA-Compatible" content="IE=11"/>
 <meta name="generator" content="Doxygen 1.9.8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
-<title>cwist: include/cwist/core/orm/orm.h File Reference</title>
+<title>include/cwist/core/orm/orm.h File Reference - CWIST High-Performance C Web Framework</title>
+<meta name="description" content="CWIST: High-performance C17 web framework and application server (HTTP/1.1, HTTP/2, HTTP/3, WebTransport, WebSocket, PQC TLS) powered by io_uring and libttak."/>
+<meta name="keywords" content="C web framework, C17, HTTP3, QUIC, io_uring, web server, actix alternative, high performance, REST API in C, C web server"/>
+<meta name="author" content="c4punks"/>
+<meta name="robots" content="index, follow"/>
+<!-- Open Graph / Facebook -->
+<meta property="og:type" content="website"/>
+<meta property="og:title" content="include/cwist/core/orm/orm.h File Reference - CWIST Modern C Web Framework"/>
+<meta property="og:description" content="High-performance C17 web framework & application server with zero-copy io_uring reactor, PQC TLS, and HTTP/3 support."/>
+<meta property="og:url" content="https://c4punks.github.io/CWIST/"/>
+<!-- Twitter -->
+<meta name="twitter:card" content="summary_large_image"/>
+<meta name="twitter:title" content="include/cwist/core/orm/orm.h File Reference - CWIST Modern C Web Framework"/>
+<meta name="twitter:description" content="High-performance C17 web framework & application server with zero-copy io_uring reactor, PQC TLS, and HTTP/3 support."/>
 <link href="../../tabs.css" rel="stylesheet" type="text/css"/>
 <script type="text/javascript" src="../../jquery.js"></script>
 <script type="text/javascript" src="../../dynsections.js"></script>
+<link href="../../navtree.css" rel="stylesheet" type="text/css"/>
+<script type="text/javascript" src="../../resize.js"></script>
+<script type="text/javascript" src="../../navtreedata.js"></script>
+<script type="text/javascript" src="../../navtree.js"></script>
 <link href="../../search/search.css" rel="stylesheet" type="text/css"/>
 <script type="text/javascript" src="../../search/searchdata.js"></script>
 <script type="text/javascript" src="../../search/search.js"></script>
 <link href="../../doxygen.css" rel="stylesheet" type="text/css" />
+<link href="../../doxygen-awesome.css" rel="stylesheet" type="text/css"/>
 </head>
 <body>
 <div id="top"><!-- do not remove this div, it is closed by doxygen! -->
@@ -47,6 +66,23 @@ $(function() {
 /* @license-end */
 </script>
 <div id="main-nav"></div>
+</div><!-- top -->
+<div id="side-nav" class="ui-resizable side-nav-resizable">
+  <div id="nav-tree">
+    <div id="nav-tree-contents">
+      <div id="nav-sync" class="sync"></div>
+    </div>
+  </div>
+  <div id="splitbar" style="-moz-user-select:none;" 
+       class="ui-resizable-handle">
+  </div>
+</div>
+<script type="text/javascript">
+/* @license magnet:?xt=urn:btih:d3d9a9a6595521f9666a5e94cc830dab83b65699&amp;dn=expat.txt MIT */
+$(document).ready(function(){initNavTree('d6/d9b/orm_8h.html','../../'); initResizable(); });
+/* @license-end */
+</script>
+<div id="doc-content">
 <!-- window showing the filter options -->
 <div id="MSearchSelectWindow"
      onmouseover="return searchBox.OnSearchSelectShow()"
@@ -68,13 +104,9 @@ $(function() {
 </div>
 </div>
 
-<div id="nav-path" class="navpath">
-  <ul>
-<li class="navelem"><a class="el" href="../../dir_d44c64559bbebec7f509842c48db8b23.html">include</a></li><li class="navelem"><a class="el" href="../../dir_2109d32ae718f50aecd8856dacda770b.html">cwist</a></li><li class="navelem"><a class="el" href="../../dir_10b21726104ad23c5e3d9a30e698c859.html">core</a></li><li class="navelem"><a class="el" href="../../dir_36bbea0153910efaf4fcae064307190c.html">orm</a></li>  </ul>
-</div>
-</div><!-- top -->
 <div class="header">
   <div class="summary">
+<a href="#nested-classes">Classes</a> &#124;
 <a href="#define-members">Macros</a> &#124;
 <a href="#typedef-members">Typedefs</a> &#124;
 <a href="#enum-members">Enumerations</a> &#124;
@@ -86,6 +118,7 @@ $(function() {
 <p>Tiny ORM over a SQL socket stream.  
 <a href="#details">More...</a></p>
 <div class="textblock"><code>#include &lt;stdbool.h&gt;</code><br />
+<code>#include &lt;stdint.h&gt;</code><br />
 <code>#include &lt;<a class="el" href="../../d7/da1/sys_2err_2cwist__err_8h_source.html">cwist/sys/err/cwist_err.h</a>&gt;</code><br />
 <code>#include &lt;cjson/cJSON.h&gt;</code><br />
 </div><div class="textblock"><div class="dynheader">
@@ -93,17 +126,18 @@ Include dependency graph for orm.h:</div>
 <div class="dyncontent">
 <div class="center"><img src="../../d1/df5/orm_8h__incl.png" border="0" usemap="#ainclude_2cwist_2core_2orm_2orm_8h" alt=""/></div>
 <map name="ainclude_2cwist_2core_2orm_2orm_8h" id="ainclude_2cwist_2core_2orm_2orm_8h">
-<area shape="rect" title="Tiny ORM over a SQL socket stream." alt="" coords="85,5,224,45"/>
+<area shape="rect" title="Tiny ORM over a SQL socket stream." alt="" coords="127,5,265,45"/>
 <area shape="rect" title=" " alt="" coords="5,181,88,207"/>
-<area shape="poly" title=" " alt="" coords="124,47,97,68,74,95,58,132,51,168,46,167,53,130,70,92,94,64,121,43"/>
-<area shape="rect" href="../../d7/da1/sys_2err_2cwist__err_8h.html" title="Unified error code and type definitions for the CWIST system layer." alt="" coords="83,93,226,133"/>
-<area shape="poly" title=" " alt="" coords="157,46,157,79,152,79,152,46"/>
-<area shape="rect" title=" " alt="" coords="209,181,319,207"/>
-<area shape="poly" title=" " alt="" coords="188,43,216,64,240,92,256,130,264,167,259,168,251,132,235,95,212,68,185,48"/>
-<area shape="poly" title=" " alt="" coords="130,136,76,175,73,171,127,131"/>
-<area shape="rect" title=" " alt="" coords="114,181,185,207"/>
-<area shape="poly" title=" " alt="" coords="156,134,154,168,148,167,151,133"/>
-<area shape="poly" title=" " alt="" coords="183,131,238,171,235,175,180,136"/>
+<area shape="poly" title=" " alt="" coords="128,47,90,66,73,79,60,95,51,112,46,131,46,167,40,167,41,130,46,110,55,92,70,75,87,62,125,42"/>
+<area shape="rect" title=" " alt="" coords="117,181,187,207"/>
+<area shape="poly" title=" " alt="" coords="211,44,229,86,232,111,226,134,209,158,188,176,184,172,205,155,222,132,227,110,224,87,206,47"/>
+<area shape="rect" href="../../d7/da1/sys_2err_2cwist__err_8h.html" title="Unified error code and type definitions for the CWIST system layer." alt="" coords="70,93,213,133"/>
+<area shape="poly" title=" " alt="" coords="186,47,163,83,158,80,182,44"/>
+<area shape="rect" title=" " alt="" coords="234,181,345,207"/>
+<area shape="poly" title=" " alt="" coords="214,44,246,92,282,168,278,170,242,95,209,47"/>
+<area shape="poly" title=" " alt="" coords="120,136,73,174,70,170,117,131"/>
+<area shape="poly" title=" " alt="" coords="147,133,151,167,146,168,141,134"/>
+<area shape="poly" title=" " alt="" coords="178,131,257,172,254,177,176,136"/>
 </map>
 </div>
 </div><div class="textblock"><div class="dynheader">
@@ -123,6 +157,15 @@ This graph shows which files directly or indirectly include this file:</div>
 </div>
 <p><a href="../../d6/d9b/orm_8h_source.html">Go to the source code of this file.</a></p>
 <table class="memberdecls">
+<tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="nested-classes" name="nested-classes"></a>
+Classes</h2></td></tr>
+<tr class="memitem:"><td class="memItemLeft" align="right" valign="top">struct &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d2/dd9/structcwist__orm__value.html">cwist_orm_value</a></td></tr>
+<tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">One cell of a column-typed result set.  <a href="../../d2/dd9/structcwist__orm__value.html#details">More...</a><br /></td></tr>
+<tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:"><td class="memItemLeft" align="right" valign="top">struct &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d8/d83/structcwist__orm__result.html">cwist_orm_result</a></td></tr>
+<tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">Column-typed result set produced by <a class="el" href="../../d6/d9b/orm_8h.html#afb79a67e3a91c896fee4905549ccec69" title="Execute a SELECT-style query and return column-typed rows.">cwist_orm_query_typed()</a>.  <a href="../../d8/d83/structcwist__orm__result.html#details">More...</a><br /></td></tr>
+<tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
+</table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="define-members" name="define-members"></a>
 Macros</h2></td></tr>
 <tr class="memitem:a937d55837b61ff2212cd5698e896c906" id="r_a937d55837b61ff2212cd5698e896c906"><td class="memItemLeft" align="right" valign="top">#define&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d6/d9b/orm_8h.html#a937d55837b61ff2212cd5698e896c906">cwist_orm_insert_r</a>(orm,  table,  data,  returning_col,  out)</td></tr>
@@ -140,6 +183,15 @@ Typedefs</h2></td></tr>
 <tr class="memitem:a934bf8f6f96b08f20e8c9de0b632fc76" id="r_a934bf8f6f96b08f20e8c9de0b632fc76"><td class="memItemLeft" align="right" valign="top">typedef enum <a class="el" href="../../d6/d9b/orm_8h.html#a8a140e98cb138fd4575440dc18836a9a">cwist_orm_dialect</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d6/d9b/orm_8h.html#a934bf8f6f96b08f20e8c9de0b632fc76">cwist_orm_dialect_t</a></td></tr>
 <tr class="memdesc:a934bf8f6f96b08f20e8c9de0b632fc76"><td class="mdescLeft">&#160;</td><td class="mdescRight">Supported SQL dialects for query generation.  <br /></td></tr>
 <tr class="separator:a934bf8f6f96b08f20e8c9de0b632fc76"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a256bf5598745a55067a3acac43017130" id="r_a256bf5598745a55067a3acac43017130"><td class="memItemLeft" align="right" valign="top">typedef enum <a class="el" href="../../d6/d9b/orm_8h.html#a84b532ec7398ed41c2ef6dbcdbf05e24">cwist_orm_value_type</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d6/d9b/orm_8h.html#a256bf5598745a55067a3acac43017130">cwist_orm_value_type_t</a></td></tr>
+<tr class="memdesc:a256bf5598745a55067a3acac43017130"><td class="mdescLeft">&#160;</td><td class="mdescRight">Storage class of a typed result cell.  <br /></td></tr>
+<tr class="separator:a256bf5598745a55067a3acac43017130"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a3b16210cc3d67b0fd0d1bcd60f5862a9" id="r_a3b16210cc3d67b0fd0d1bcd60f5862a9"><td class="memItemLeft" align="right" valign="top">typedef struct <a class="el" href="../../d2/dd9/structcwist__orm__value.html">cwist_orm_value</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d6/d9b/orm_8h.html#a3b16210cc3d67b0fd0d1bcd60f5862a9">cwist_orm_value_t</a></td></tr>
+<tr class="memdesc:a3b16210cc3d67b0fd0d1bcd60f5862a9"><td class="mdescLeft">&#160;</td><td class="mdescRight">One cell of a column-typed result set.  <br /></td></tr>
+<tr class="separator:a3b16210cc3d67b0fd0d1bcd60f5862a9"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a38075ab36ec6acd5b83092fb23c2e45e" id="r_a38075ab36ec6acd5b83092fb23c2e45e"><td class="memItemLeft" align="right" valign="top">typedef struct <a class="el" href="../../d8/d83/structcwist__orm__result.html">cwist_orm_result</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d6/d9b/orm_8h.html#a38075ab36ec6acd5b83092fb23c2e45e">cwist_orm_result_t</a></td></tr>
+<tr class="memdesc:a38075ab36ec6acd5b83092fb23c2e45e"><td class="mdescLeft">&#160;</td><td class="mdescRight">Column-typed result set produced by <a class="el" href="../../d6/d9b/orm_8h.html#afb79a67e3a91c896fee4905549ccec69" title="Execute a SELECT-style query and return column-typed rows.">cwist_orm_query_typed()</a>.  <br /></td></tr>
+<tr class="separator:a38075ab36ec6acd5b83092fb23c2e45e"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="enum-members" name="enum-members"></a>
 Enumerations</h2></td></tr>
@@ -150,6 +202,17 @@ Enumerations</h2></td></tr>
  }</td></tr>
 <tr class="memdesc:a8a140e98cb138fd4575440dc18836a9a"><td class="mdescLeft">&#160;</td><td class="mdescRight">Supported SQL dialects for query generation.  <a href="../../d6/d9b/orm_8h.html#a8a140e98cb138fd4575440dc18836a9a">More...</a><br /></td></tr>
 <tr class="separator:a8a140e98cb138fd4575440dc18836a9a"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a84b532ec7398ed41c2ef6dbcdbf05e24" id="r_a84b532ec7398ed41c2ef6dbcdbf05e24"><td class="memItemLeft" align="right" valign="top">enum &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d6/d9b/orm_8h.html#a84b532ec7398ed41c2ef6dbcdbf05e24">cwist_orm_value_type</a> { <br />
+&#160;&#160;<a class="el" href="../../d6/d9b/orm_8h.html#a84b532ec7398ed41c2ef6dbcdbf05e24aa082003106646b20810ceeece0590cb3">CWIST_ORM_TYPE_NULL</a> = 0
+, <a class="el" href="../../d6/d9b/orm_8h.html#a84b532ec7398ed41c2ef6dbcdbf05e24a3ea04d3b4b27e6c9a90bab6ff459ec64">CWIST_ORM_TYPE_INTEGER</a>
+, <a class="el" href="../../d6/d9b/orm_8h.html#a84b532ec7398ed41c2ef6dbcdbf05e24ad9c9201b8e3047d6c8ec21e83637c9e5">CWIST_ORM_TYPE_REAL</a>
+, <a class="el" href="../../d6/d9b/orm_8h.html#a84b532ec7398ed41c2ef6dbcdbf05e24ad9171d2169402c2d567e63ef6dbdf838">CWIST_ORM_TYPE_TEXT</a>
+, <br />
+&#160;&#160;<a class="el" href="../../d6/d9b/orm_8h.html#a84b532ec7398ed41c2ef6dbcdbf05e24a001deca070e2d9f256c43793112fcd60">CWIST_ORM_TYPE_BLOB</a>
+<br />
+ }</td></tr>
+<tr class="memdesc:a84b532ec7398ed41c2ef6dbcdbf05e24"><td class="mdescLeft">&#160;</td><td class="mdescRight">Storage class of a typed result cell.  <a href="../../d6/d9b/orm_8h.html#a84b532ec7398ed41c2ef6dbcdbf05e24">More...</a><br /></td></tr>
+<tr class="separator:a84b532ec7398ed41c2ef6dbcdbf05e24"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="func-members" name="func-members"></a>
 Functions</h2></td></tr>
@@ -201,6 +264,18 @@ Functions</h2></td></tr>
 <tr class="memitem:a6da79c3b09779f44b4c818a30a3d8720" id="r_a6da79c3b09779f44b4c818a30a3d8720"><td class="memItemLeft" align="right" valign="top"><a class="el" href="../../d4/d50/structcwist__error__t.html">cwist_error_t</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d6/d9b/orm_8h.html#a6da79c3b09779f44b4c818a30a3d8720">cwist_orm_insert_returning_llong</a> (<a class="el" href="../../d6/d9b/orm_8h.html#aeacfe257785ac940ef6c5813dd335a0e">cwist_orm_t</a> *orm, const char *table, const cJSON *data, const char *returning_col, long long *out)</td></tr>
 <tr class="memdesc:a6da79c3b09779f44b4c818a30a3d8720"><td class="mdescLeft">&#160;</td><td class="mdescRight">Insert a row and return a column value as a long long.  <br /></td></tr>
 <tr class="separator:a6da79c3b09779f44b4c818a30a3d8720"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:afb79a67e3a91c896fee4905549ccec69" id="r_afb79a67e3a91c896fee4905549ccec69"><td class="memItemLeft" align="right" valign="top"><a class="el" href="../../d4/d50/structcwist__error__t.html">cwist_error_t</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d6/d9b/orm_8h.html#afb79a67e3a91c896fee4905549ccec69">cwist_orm_query_typed</a> (<a class="el" href="../../d6/d9b/orm_8h.html#aeacfe257785ac940ef6c5813dd335a0e">cwist_orm_t</a> *orm, const char *sql, <a class="el" href="../../d6/d9b/orm_8h.html#a38075ab36ec6acd5b83092fb23c2e45e">cwist_orm_result_t</a> **result)</td></tr>
+<tr class="memdesc:afb79a67e3a91c896fee4905549ccec69"><td class="mdescLeft">&#160;</td><td class="mdescRight">Execute a SELECT-style query and return column-typed rows.  <br /></td></tr>
+<tr class="separator:afb79a67e3a91c896fee4905549ccec69"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ad7d2e9d452adfafd39bff0b407604ae4" id="r_ad7d2e9d452adfafd39bff0b407604ae4"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d6/d9b/orm_8h.html#ad7d2e9d452adfafd39bff0b407604ae4">cwist_orm_result_free</a> (<a class="el" href="../../d6/d9b/orm_8h.html#a38075ab36ec6acd5b83092fb23c2e45e">cwist_orm_result_t</a> *result)</td></tr>
+<tr class="memdesc:ad7d2e9d452adfafd39bff0b407604ae4"><td class="mdescLeft">&#160;</td><td class="mdescRight">Release a result set from <a class="el" href="../../d6/d9b/orm_8h.html#afb79a67e3a91c896fee4905549ccec69" title="Execute a SELECT-style query and return column-typed rows.">cwist_orm_query_typed()</a>.  <br /></td></tr>
+<tr class="separator:ad7d2e9d452adfafd39bff0b407604ae4"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:afc4f1bb4cfaca73817351fd9b85e82e2" id="r_afc4f1bb4cfaca73817351fd9b85e82e2"><td class="memItemLeft" align="right" valign="top">size_t&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d6/d9b/orm_8h.html#afc4f1bb4cfaca73817351fd9b85e82e2">cwist_orm_result_column_index</a> (const <a class="el" href="../../d6/d9b/orm_8h.html#a38075ab36ec6acd5b83092fb23c2e45e">cwist_orm_result_t</a> *result, const char *column)</td></tr>
+<tr class="memdesc:afc4f1bb4cfaca73817351fd9b85e82e2"><td class="mdescLeft">&#160;</td><td class="mdescRight">Find a column index by name in a typed result set.  <br /></td></tr>
+<tr class="separator:afc4f1bb4cfaca73817351fd9b85e82e2"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a1ce173b162b55a29c2fde9f59aa743d4" id="r_a1ce173b162b55a29c2fde9f59aa743d4"><td class="memItemLeft" align="right" valign="top">const <a class="el" href="../../d6/d9b/orm_8h.html#a3b16210cc3d67b0fd0d1bcd60f5862a9">cwist_orm_value_t</a> *&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d6/d9b/orm_8h.html#a1ce173b162b55a29c2fde9f59aa743d4">cwist_orm_result_cell</a> (const <a class="el" href="../../d6/d9b/orm_8h.html#a38075ab36ec6acd5b83092fb23c2e45e">cwist_orm_result_t</a> *result, size_t row, size_t column)</td></tr>
+<tr class="memdesc:a1ce173b162b55a29c2fde9f59aa743d4"><td class="mdescLeft">&#160;</td><td class="mdescRight">Read one cell of a typed result set.  <br /></td></tr>
+<tr class="separator:a1ce173b162b55a29c2fde9f59aa743d4"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a214ea2d56811b05e47ebc3db54a556a5" id="r_a214ea2d56811b05e47ebc3db54a556a5"><td class="memItemLeft" align="right" valign="top"><a class="el" href="../../d4/d50/structcwist__error__t.html">cwist_error_t</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d6/d9b/orm_8h.html#a214ea2d56811b05e47ebc3db54a556a5">cwist_orm_select_one_json</a> (<a class="el" href="../../d6/d9b/orm_8h.html#aeacfe257785ac940ef6c5813dd335a0e">cwist_orm_t</a> *orm, const char *table, const char *column, const char *where_clause, cJSON **out)</td></tr>
 <tr class="memdesc:a214ea2d56811b05e47ebc3db54a556a5"><td class="mdescLeft">&#160;</td><td class="mdescRight">Select a single column value from the first matching row as JSON.  <br /></td></tr>
 <tr class="separator:a214ea2d56811b05e47ebc3db54a556a5"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -219,6 +294,12 @@ Functions</h2></td></tr>
 <tr class="memitem:ab6e368f24997a3b439981f72a0261c39" id="r_ab6e368f24997a3b439981f72a0261c39"><td class="memItemLeft" align="right" valign="top"><a class="el" href="../../d4/d50/structcwist__error__t.html">cwist_error_t</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d6/d9b/orm_8h.html#ab6e368f24997a3b439981f72a0261c39">cwist_orm_select_one_string</a> (<a class="el" href="../../d6/d9b/orm_8h.html#aeacfe257785ac940ef6c5813dd335a0e">cwist_orm_t</a> *orm, const char *table, const char *column, const char *where_clause, char **out)</td></tr>
 <tr class="memdesc:ab6e368f24997a3b439981f72a0261c39"><td class="mdescLeft">&#160;</td><td class="mdescRight">Select a single column value from the first matching row as a string.  <br /></td></tr>
 <tr class="separator:ab6e368f24997a3b439981f72a0261c39"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a9f9cc4e28af2616d893fefbb3dde261a" id="r_a9f9cc4e28af2616d893fefbb3dde261a"><td class="memItemLeft" align="right" valign="top"><a class="el" href="../../d4/d50/structcwist__error__t.html">cwist_error_t</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d6/d9b/orm_8h.html#a9f9cc4e28af2616d893fefbb3dde261a">cwist_orm_select_one_i64</a> (<a class="el" href="../../d6/d9b/orm_8h.html#aeacfe257785ac940ef6c5813dd335a0e">cwist_orm_t</a> *orm, const char *table, const char *column, const char *where_clause, int64_t *out)</td></tr>
+<tr class="memdesc:a9f9cc4e28af2616d893fefbb3dde261a"><td class="mdescLeft">&#160;</td><td class="mdescRight">Select a single integer cell exactly as an int64_t.  <br /></td></tr>
+<tr class="separator:a9f9cc4e28af2616d893fefbb3dde261a"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a21dc130fc35ea703726d78c057c0743b" id="r_a21dc130fc35ea703726d78c057c0743b"><td class="memItemLeft" align="right" valign="top"><a class="el" href="../../d4/d50/structcwist__error__t.html">cwist_error_t</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d6/d9b/orm_8h.html#a21dc130fc35ea703726d78c057c0743b">cwist_orm_insert_returning_i64</a> (<a class="el" href="../../d6/d9b/orm_8h.html#aeacfe257785ac940ef6c5813dd335a0e">cwist_orm_t</a> *orm, const char *table, const cJSON *data, const char *returning_col, int64_t *out)</td></tr>
+<tr class="memdesc:a21dc130fc35ea703726d78c057c0743b"><td class="mdescLeft">&#160;</td><td class="mdescRight">Insert a row and return an integer column exactly as an int64_t.  <br /></td></tr>
+<tr class="separator:a21dc130fc35ea703726d78c057c0743b"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
 <div class="textblock"><p>Tiny ORM over a SQL socket stream. </p>
@@ -276,10 +357,10 @@ Functions</h2></td></tr>
 <div class="line">        long *: <a class="code hl_function" href="../../d6/d9b/orm_8h.html#af57e43a5b4970bc58f1b9b29e0ae94f8">cwist_orm_insert_returning_long</a>,                 \</div>
 <div class="line">        long long *: <a class="code hl_function" href="../../d6/d9b/orm_8h.html#a6da79c3b09779f44b4c818a30a3d8720">cwist_orm_insert_returning_llong</a>,           \</div>
 <div class="line">        cJSON **: <a class="code hl_function" href="../../d6/d9b/orm_8h.html#a43aaa5a15c9ce87e5f62f566a1bcab4d">cwist_orm_insert_returning_json</a>)((orm), (table), (data), (returning_col), (out))</div>
-<div class="ttc" id="aorm_8h_html_a43aaa5a15c9ce87e5f62f566a1bcab4d"><div class="ttname"><a href="../../d6/d9b/orm_8h.html#a43aaa5a15c9ce87e5f62f566a1bcab4d">cwist_orm_insert_returning_json</a></div><div class="ttdeci">cwist_error_t cwist_orm_insert_returning_json(cwist_orm_t *orm, const char *table, const cJSON *data, const char *returning_col, cJSON **out)</div><div class="ttdoc">Insert a row and return a JSON value from the new row.</div><div class="ttdef"><b>Definition</b> <a href="../../d8/d03/orm_8c_source.html#l00832">orm.c:832</a></div></div>
-<div class="ttc" id="aorm_8h_html_a4e0900e6da745a30ac05deadac40f160"><div class="ttname"><a href="../../d6/d9b/orm_8h.html#a4e0900e6da745a30ac05deadac40f160">cwist_orm_insert_returning_int</a></div><div class="ttdeci">cwist_error_t cwist_orm_insert_returning_int(cwist_orm_t *orm, const char *table, const cJSON *data, const char *returning_col, int *out)</div><div class="ttdoc">Insert a row and return a column value as an int.</div><div class="ttdef"><b>Definition</b> <a href="../../d8/d03/orm_8c_source.html#l00919">orm.c:919</a></div></div>
-<div class="ttc" id="aorm_8h_html_a6da79c3b09779f44b4c818a30a3d8720"><div class="ttname"><a href="../../d6/d9b/orm_8h.html#a6da79c3b09779f44b4c818a30a3d8720">cwist_orm_insert_returning_llong</a></div><div class="ttdeci">cwist_error_t cwist_orm_insert_returning_llong(cwist_orm_t *orm, const char *table, const cJSON *data, const char *returning_col, long long *out)</div><div class="ttdoc">Insert a row and return a column value as a long long.</div><div class="ttdef"><b>Definition</b> <a href="../../d8/d03/orm_8c_source.html#l00972">orm.c:972</a></div></div>
-<div class="ttc" id="aorm_8h_html_af57e43a5b4970bc58f1b9b29e0ae94f8"><div class="ttname"><a href="../../d6/d9b/orm_8h.html#af57e43a5b4970bc58f1b9b29e0ae94f8">cwist_orm_insert_returning_long</a></div><div class="ttdeci">cwist_error_t cwist_orm_insert_returning_long(cwist_orm_t *orm, const char *table, const cJSON *data, const char *returning_col, long *out)</div><div class="ttdoc">Insert a row and return a column value as a long.</div><div class="ttdef"><b>Definition</b> <a href="../../d8/d03/orm_8c_source.html#l00945">orm.c:945</a></div></div>
+<div class="ttc" id="aorm_8h_html_a43aaa5a15c9ce87e5f62f566a1bcab4d"><div class="ttname"><a href="../../d6/d9b/orm_8h.html#a43aaa5a15c9ce87e5f62f566a1bcab4d">cwist_orm_insert_returning_json</a></div><div class="ttdeci">cwist_error_t cwist_orm_insert_returning_json(cwist_orm_t *orm, const char *table, const cJSON *data, const char *returning_col, cJSON **out)</div><div class="ttdoc">Insert a row and return a JSON value from the new row.</div><div class="ttdef"><b>Definition</b> <a href="../../d8/d03/orm_8c_source.html#l00872">orm.c:872</a></div></div>
+<div class="ttc" id="aorm_8h_html_a4e0900e6da745a30ac05deadac40f160"><div class="ttname"><a href="../../d6/d9b/orm_8h.html#a4e0900e6da745a30ac05deadac40f160">cwist_orm_insert_returning_int</a></div><div class="ttdeci">cwist_error_t cwist_orm_insert_returning_int(cwist_orm_t *orm, const char *table, const cJSON *data, const char *returning_col, int *out)</div><div class="ttdoc">Insert a row and return a column value as an int.</div><div class="ttdef"><b>Definition</b> <a href="../../d8/d03/orm_8c_source.html#l00932">orm.c:932</a></div></div>
+<div class="ttc" id="aorm_8h_html_a6da79c3b09779f44b4c818a30a3d8720"><div class="ttname"><a href="../../d6/d9b/orm_8h.html#a6da79c3b09779f44b4c818a30a3d8720">cwist_orm_insert_returning_llong</a></div><div class="ttdeci">cwist_error_t cwist_orm_insert_returning_llong(cwist_orm_t *orm, const char *table, const cJSON *data, const char *returning_col, long long *out)</div><div class="ttdoc">Insert a row and return a column value as a long long.</div><div class="ttdef"><b>Definition</b> <a href="../../d8/d03/orm_8c_source.html#l00985">orm.c:985</a></div></div>
+<div class="ttc" id="aorm_8h_html_af57e43a5b4970bc58f1b9b29e0ae94f8"><div class="ttname"><a href="../../d6/d9b/orm_8h.html#af57e43a5b4970bc58f1b9b29e0ae94f8">cwist_orm_insert_returning_long</a></div><div class="ttdeci">cwist_error_t cwist_orm_insert_returning_long(cwist_orm_t *orm, const char *table, const cJSON *data, const char *returning_col, long *out)</div><div class="ttdoc">Insert a row and return a column value as a long.</div><div class="ttdef"><b>Definition</b> <a href="../../d8/d03/orm_8c_source.html#l00958">orm.c:958</a></div></div>
 </div><!-- fragment -->
 <p>Type-generic INSERT with RETURNING clause. </p>
 <p>Dispatches to the appropriate typed helper based on the type of <code>out</code>.</p>
@@ -288,9 +369,9 @@ Functions</h2></td></tr>
 <div class="line"> </div>
 <div class="line">cJSON *obj;</div>
 <div class="line"><a class="code hl_define" href="../../d6/d9b/orm_8h.html#a937d55837b61ff2212cd5698e896c906">cwist_orm_insert_r</a>(orm, <span class="stringliteral">&quot;users&quot;</span>, row, <span class="stringliteral">&quot;*&quot;</span>, &amp;obj);</div>
-<div class="ttc" id="aorm_8h_html_a937d55837b61ff2212cd5698e896c906"><div class="ttname"><a href="../../d6/d9b/orm_8h.html#a937d55837b61ff2212cd5698e896c906">cwist_orm_insert_r</a></div><div class="ttdeci">#define cwist_orm_insert_r(orm, table, data, returning_col, out)</div><div class="ttdoc">Type-generic INSERT with RETURNING clause.</div><div class="ttdef"><b>Definition</b> <a href="../../d6/d9b/orm_8h_source.html#l00256">orm.h:256</a></div></div>
+<div class="ttc" id="aorm_8h_html_a937d55837b61ff2212cd5698e896c906"><div class="ttname"><a href="../../d6/d9b/orm_8h.html#a937d55837b61ff2212cd5698e896c906">cwist_orm_insert_r</a></div><div class="ttdeci">#define cwist_orm_insert_r(orm, table, data, returning_col, out)</div><div class="ttdoc">Type-generic INSERT with RETURNING clause.</div><div class="ttdef"><b>Definition</b> <a href="../../d6/d9b/orm_8h_source.html#l00260">orm.h:260</a></div></div>
 </div><!-- fragment --> 
-<p class="definition">Definition at line <a class="el" href="../../d6/d9b/orm_8h_source.html#l00256">256</a> of file <a class="el" href="../../d6/d9b/orm_8h_source.html">orm.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d6/d9b/orm_8h_source.html#l00260">260</a> of file <a class="el" href="../../d6/d9b/orm_8h_source.html">orm.h</a>.</p>
 
 </div>
 </div>
@@ -344,21 +425,21 @@ Functions</h2></td></tr>
 <div class="line">        double *: <a class="code hl_function" href="../../d6/d9b/orm_8h.html#a28fae8a2bc1192e5239430e88029a6f3">cwist_orm_select_one_double</a>,               \</div>
 <div class="line">        char **: <a class="code hl_function" href="../../d6/d9b/orm_8h.html#ab6e368f24997a3b439981f72a0261c39">cwist_orm_select_one_string</a>,                \</div>
 <div class="line">        cJSON **: <a class="code hl_function" href="../../d6/d9b/orm_8h.html#a214ea2d56811b05e47ebc3db54a556a5">cwist_orm_select_one_json</a>)((orm), (table), (column), (where), (out))</div>
-<div class="ttc" id="aorm_8h_html_a08a522841826a633ebe414b8148ca787"><div class="ttname"><a href="../../d6/d9b/orm_8h.html#a08a522841826a633ebe414b8148ca787">cwist_orm_select_one_int</a></div><div class="ttdeci">cwist_error_t cwist_orm_select_one_int(cwist_orm_t *orm, const char *table, const char *column, const char *where_clause, int *out)</div><div class="ttdoc">Select a single column value from the first matching row as an int.</div><div class="ttdef"><b>Definition</b> <a href="../../d8/d03/orm_8c_source.html#l01086">orm.c:1086</a></div></div>
-<div class="ttc" id="aorm_8h_html_a214ea2d56811b05e47ebc3db54a556a5"><div class="ttname"><a href="../../d6/d9b/orm_8h.html#a214ea2d56811b05e47ebc3db54a556a5">cwist_orm_select_one_json</a></div><div class="ttdeci">cwist_error_t cwist_orm_select_one_json(cwist_orm_t *orm, const char *table, const char *column, const char *where_clause, cJSON **out)</div><div class="ttdoc">Select a single column value from the first matching row as JSON.</div><div class="ttdef"><b>Definition</b> <a href="../../d8/d03/orm_8c_source.html#l01007">orm.c:1007</a></div></div>
-<div class="ttc" id="aorm_8h_html_a28fae8a2bc1192e5239430e88029a6f3"><div class="ttname"><a href="../../d6/d9b/orm_8h.html#a28fae8a2bc1192e5239430e88029a6f3">cwist_orm_select_one_double</a></div><div class="ttdeci">cwist_error_t cwist_orm_select_one_double(cwist_orm_t *orm, const char *table, const char *column, const char *where_clause, double *out)</div><div class="ttdoc">Select a single column value from the first matching row as a double.</div><div class="ttdef"><b>Definition</b> <a href="../../d8/d03/orm_8c_source.html#l01164">orm.c:1164</a></div></div>
-<div class="ttc" id="aorm_8h_html_a9d9e67d3bf48e09e8d38a9bc40196c08"><div class="ttname"><a href="../../d6/d9b/orm_8h.html#a9d9e67d3bf48e09e8d38a9bc40196c08">cwist_orm_select_one_llong</a></div><div class="ttdeci">cwist_error_t cwist_orm_select_one_llong(cwist_orm_t *orm, const char *table, const char *column, const char *where_clause, long long *out)</div><div class="ttdoc">Select a single column value from the first matching row as a long long.</div><div class="ttdef"><b>Definition</b> <a href="../../d8/d03/orm_8c_source.html#l01138">orm.c:1138</a></div></div>
-<div class="ttc" id="aorm_8h_html_ab6e368f24997a3b439981f72a0261c39"><div class="ttname"><a href="../../d6/d9b/orm_8h.html#ab6e368f24997a3b439981f72a0261c39">cwist_orm_select_one_string</a></div><div class="ttdeci">cwist_error_t cwist_orm_select_one_string(cwist_orm_t *orm, const char *table, const char *column, const char *where_clause, char **out)</div><div class="ttdoc">Select a single column value from the first matching row as a string.</div><div class="ttdef"><b>Definition</b> <a href="../../d8/d03/orm_8c_source.html#l01192">orm.c:1192</a></div></div>
-<div class="ttc" id="aorm_8h_html_aff436457073f7391e32a22ee1ba9a947"><div class="ttname"><a href="../../d6/d9b/orm_8h.html#aff436457073f7391e32a22ee1ba9a947">cwist_orm_select_one_long</a></div><div class="ttdeci">cwist_error_t cwist_orm_select_one_long(cwist_orm_t *orm, const char *table, const char *column, const char *where_clause, long *out)</div><div class="ttdoc">Select a single column value from the first matching row as a long.</div><div class="ttdef"><b>Definition</b> <a href="../../d8/d03/orm_8c_source.html#l01112">orm.c:1112</a></div></div>
+<div class="ttc" id="aorm_8h_html_a08a522841826a633ebe414b8148ca787"><div class="ttname"><a href="../../d6/d9b/orm_8h.html#a08a522841826a633ebe414b8148ca787">cwist_orm_select_one_int</a></div><div class="ttdeci">cwist_error_t cwist_orm_select_one_int(cwist_orm_t *orm, const char *table, const char *column, const char *where_clause, int *out)</div><div class="ttdoc">Select a single column value from the first matching row as an int.</div><div class="ttdef"><b>Definition</b> <a href="../../d8/d03/orm_8c_source.html#l01112">orm.c:1112</a></div></div>
+<div class="ttc" id="aorm_8h_html_a214ea2d56811b05e47ebc3db54a556a5"><div class="ttname"><a href="../../d6/d9b/orm_8h.html#a214ea2d56811b05e47ebc3db54a556a5">cwist_orm_select_one_json</a></div><div class="ttdeci">cwist_error_t cwist_orm_select_one_json(cwist_orm_t *orm, const char *table, const char *column, const char *where_clause, cJSON **out)</div><div class="ttdoc">Select a single column value from the first matching row as JSON.</div><div class="ttdef"><b>Definition</b> <a href="../../d8/d03/orm_8c_source.html#l01053">orm.c:1053</a></div></div>
+<div class="ttc" id="aorm_8h_html_a28fae8a2bc1192e5239430e88029a6f3"><div class="ttname"><a href="../../d6/d9b/orm_8h.html#a28fae8a2bc1192e5239430e88029a6f3">cwist_orm_select_one_double</a></div><div class="ttdeci">cwist_error_t cwist_orm_select_one_double(cwist_orm_t *orm, const char *table, const char *column, const char *where_clause, double *out)</div><div class="ttdoc">Select a single column value from the first matching row as a double.</div><div class="ttdef"><b>Definition</b> <a href="../../d8/d03/orm_8c_source.html#l01190">orm.c:1190</a></div></div>
+<div class="ttc" id="aorm_8h_html_a9d9e67d3bf48e09e8d38a9bc40196c08"><div class="ttname"><a href="../../d6/d9b/orm_8h.html#a9d9e67d3bf48e09e8d38a9bc40196c08">cwist_orm_select_one_llong</a></div><div class="ttdeci">cwist_error_t cwist_orm_select_one_llong(cwist_orm_t *orm, const char *table, const char *column, const char *where_clause, long long *out)</div><div class="ttdoc">Select a single column value from the first matching row as a long long.</div><div class="ttdef"><b>Definition</b> <a href="../../d8/d03/orm_8c_source.html#l01164">orm.c:1164</a></div></div>
+<div class="ttc" id="aorm_8h_html_ab6e368f24997a3b439981f72a0261c39"><div class="ttname"><a href="../../d6/d9b/orm_8h.html#ab6e368f24997a3b439981f72a0261c39">cwist_orm_select_one_string</a></div><div class="ttdeci">cwist_error_t cwist_orm_select_one_string(cwist_orm_t *orm, const char *table, const char *column, const char *where_clause, char **out)</div><div class="ttdoc">Select a single column value from the first matching row as a string.</div><div class="ttdef"><b>Definition</b> <a href="../../d8/d03/orm_8c_source.html#l01218">orm.c:1218</a></div></div>
+<div class="ttc" id="aorm_8h_html_aff436457073f7391e32a22ee1ba9a947"><div class="ttname"><a href="../../d6/d9b/orm_8h.html#aff436457073f7391e32a22ee1ba9a947">cwist_orm_select_one_long</a></div><div class="ttdeci">cwist_error_t cwist_orm_select_one_long(cwist_orm_t *orm, const char *table, const char *column, const char *where_clause, long *out)</div><div class="ttdoc">Select a single column value from the first matching row as a long.</div><div class="ttdef"><b>Definition</b> <a href="../../d8/d03/orm_8c_source.html#l01138">orm.c:1138</a></div></div>
 </div><!-- fragment -->
 <p>Type-generic SELECT a single scalar value. </p>
 <p>Builds <code>SELECT column FROM table [WHERE where_clause] LIMIT 1</code> and writes the first cell into <code>out</code> according to its C type.</p>
 <p>The caller must free a <code>char*</code> or <code>cJSON*</code> result.</p>
 <p>Example: </p><div class="fragment"><div class="line"><span class="keywordtype">int</span> age;</div>
 <div class="line"><a class="code hl_define" href="../../d6/d9b/orm_8h.html#ae0aaf4e676d5a5df45d58548db7e1d8d">cwist_orm_select_one</a>(orm, <span class="stringliteral">&quot;users&quot;</span>, <span class="stringliteral">&quot;age&quot;</span>, <span class="stringliteral">&quot;id = 1&quot;</span>, &amp;age);</div>
-<div class="ttc" id="aorm_8h_html_ae0aaf4e676d5a5df45d58548db7e1d8d"><div class="ttname"><a href="../../d6/d9b/orm_8h.html#ae0aaf4e676d5a5df45d58548db7e1d8d">cwist_orm_select_one</a></div><div class="ttdeci">#define cwist_orm_select_one(orm, table, column, where, out)</div><div class="ttdoc">Type-generic SELECT a single scalar value.</div><div class="ttdef"><b>Definition</b> <a href="../../d6/d9b/orm_8h_source.html#l00299">orm.h:299</a></div></div>
+<div class="ttc" id="aorm_8h_html_ae0aaf4e676d5a5df45d58548db7e1d8d"><div class="ttname"><a href="../../d6/d9b/orm_8h.html#ae0aaf4e676d5a5df45d58548db7e1d8d">cwist_orm_select_one</a></div><div class="ttdeci">#define cwist_orm_select_one(orm, table, column, where, out)</div><div class="ttdoc">Type-generic SELECT a single scalar value.</div><div class="ttdef"><b>Definition</b> <a href="../../d6/d9b/orm_8h_source.html#l00453">orm.h:453</a></div></div>
 </div><!-- fragment --> 
-<p class="definition">Definition at line <a class="el" href="../../d6/d9b/orm_8h_source.html#l00299">299</a> of file <a class="el" href="../../d6/d9b/orm_8h_source.html">orm.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d6/d9b/orm_8h_source.html#l00453">453</a> of file <a class="el" href="../../d6/d9b/orm_8h_source.html">orm.h</a>.</p>
 
 </div>
 </div>
@@ -379,6 +460,23 @@ Functions</h2></td></tr>
 
 </div>
 </div>
+<a id="a38075ab36ec6acd5b83092fb23c2e45e" name="a38075ab36ec6acd5b83092fb23c2e45e"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a38075ab36ec6acd5b83092fb23c2e45e">&#9670;&#160;</a></span>cwist_orm_result_t</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">typedef struct <a class="el" href="../../d8/d83/structcwist__orm__result.html">cwist_orm_result</a> <a class="el" href="../../d6/d9b/orm_8h.html#a38075ab36ec6acd5b83092fb23c2e45e">cwist_orm_result_t</a></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Column-typed result set produced by <a class="el" href="../../d6/d9b/orm_8h.html#afb79a67e3a91c896fee4905549ccec69" title="Execute a SELECT-style query and return column-typed rows.">cwist_orm_query_typed()</a>. </p>
+<p>Cells are stored row-major: cell (row, column) lives at cells[row * column_count + column]. Column names come from the result-producing statement. Everything is released by <a class="el" href="../../d6/d9b/orm_8h.html#ad7d2e9d452adfafd39bff0b407604ae4" title="Release a result set from cwist_orm_query_typed().">cwist_orm_result_free()</a>. </p>
+
+</div>
+</div>
 <a id="aeacfe257785ac940ef6c5813dd335a0e" name="aeacfe257785ac940ef6c5813dd335a0e"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#aeacfe257785ac940ef6c5813dd335a0e">&#9670;&#160;</a></span>cwist_orm_t</h2>
 
@@ -393,7 +491,41 @@ Functions</h2></td></tr>
 
 <p>Opaque ORM session handle. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d6/d9b/orm_8h_source.html#l00035">35</a> of file <a class="el" href="../../d6/d9b/orm_8h_source.html">orm.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d6/d9b/orm_8h_source.html#l00036">36</a> of file <a class="el" href="../../d6/d9b/orm_8h_source.html">orm.h</a>.</p>
+
+</div>
+</div>
+<a id="a3b16210cc3d67b0fd0d1bcd60f5862a9" name="a3b16210cc3d67b0fd0d1bcd60f5862a9"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a3b16210cc3d67b0fd0d1bcd60f5862a9">&#9670;&#160;</a></span>cwist_orm_value_t</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">typedef struct <a class="el" href="../../d2/dd9/structcwist__orm__value.html">cwist_orm_value</a> <a class="el" href="../../d6/d9b/orm_8h.html#a3b16210cc3d67b0fd0d1bcd60f5862a9">cwist_orm_value_t</a></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>One cell of a column-typed result set. </p>
+<p>Exactly one payload field is meaningful per cwist_orm_value_type_t: i64 for CWIST_ORM_TYPE_INTEGER (exact above 2^53), real for CWIST_ORM_TYPE_REAL, text for CWIST_ORM_TYPE_TEXT (never NULL), and (blob, blob_len) for CWIST_ORM_TYPE_BLOB (blob is NULL when the BLOB is empty). Owned by the result set; released by <a class="el" href="../../d6/d9b/orm_8h.html#ad7d2e9d452adfafd39bff0b407604ae4" title="Release a result set from cwist_orm_query_typed().">cwist_orm_result_free()</a>. </p>
+
+</div>
+</div>
+<a id="a256bf5598745a55067a3acac43017130" name="a256bf5598745a55067a3acac43017130"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a256bf5598745a55067a3acac43017130">&#9670;&#160;</a></span>cwist_orm_value_type_t</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">typedef enum <a class="el" href="../../d6/d9b/orm_8h.html#a84b532ec7398ed41c2ef6dbcdbf05e24">cwist_orm_value_type</a> <a class="el" href="../../d6/d9b/orm_8h.html#a256bf5598745a55067a3acac43017130">cwist_orm_value_type_t</a></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Storage class of a typed result cell. </p>
+<p>The class comes from the SQLite value's storage class (sqlite3_column_type()), not from its text: a TEXT column holding canonical integer text is CWIST_ORM_TYPE_TEXT, and SQL NULL is CWIST_ORM_TYPE_NULL, distinct from an empty TEXT value. </p>
 
 </div>
 </div>
@@ -422,7 +554,38 @@ Functions</h2></td></tr>
 </td></tr>
 </table>
 
-<p class="definition">Definition at line <a class="el" href="../../d6/d9b/orm_8h_source.html#l00038">38</a> of file <a class="el" href="../../d6/d9b/orm_8h_source.html">orm.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d6/d9b/orm_8h_source.html#l00039">39</a> of file <a class="el" href="../../d6/d9b/orm_8h_source.html">orm.h</a>.</p>
+
+</div>
+</div>
+<a id="a84b532ec7398ed41c2ef6dbcdbf05e24" name="a84b532ec7398ed41c2ef6dbcdbf05e24"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a84b532ec7398ed41c2ef6dbcdbf05e24">&#9670;&#160;</a></span>cwist_orm_value_type</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">enum <a class="el" href="../../d6/d9b/orm_8h.html#a84b532ec7398ed41c2ef6dbcdbf05e24">cwist_orm_value_type</a></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Storage class of a typed result cell. </p>
+<p>The class comes from the SQLite value's storage class (sqlite3_column_type()), not from its text: a TEXT column holding canonical integer text is CWIST_ORM_TYPE_TEXT, and SQL NULL is CWIST_ORM_TYPE_NULL, distinct from an empty TEXT value. </p>
+<table class="fieldtable">
+<tr><th colspan="2">Enumerator</th></tr><tr><td class="fieldname"><a id="a84b532ec7398ed41c2ef6dbcdbf05e24aa082003106646b20810ceeece0590cb3" name="a84b532ec7398ed41c2ef6dbcdbf05e24aa082003106646b20810ceeece0590cb3"></a>CWIST_ORM_TYPE_NULL&#160;</td><td class="fielddoc"><p>SQL NULL </p>
+</td></tr>
+<tr><td class="fieldname"><a id="a84b532ec7398ed41c2ef6dbcdbf05e24a3ea04d3b4b27e6c9a90bab6ff459ec64" name="a84b532ec7398ed41c2ef6dbcdbf05e24a3ea04d3b4b27e6c9a90bab6ff459ec64"></a>CWIST_ORM_TYPE_INTEGER&#160;</td><td class="fielddoc"><p>INTEGER, exact through the full int64 range </p>
+</td></tr>
+<tr><td class="fieldname"><a id="a84b532ec7398ed41c2ef6dbcdbf05e24ad9c9201b8e3047d6c8ec21e83637c9e5" name="a84b532ec7398ed41c2ef6dbcdbf05e24ad9c9201b8e3047d6c8ec21e83637c9e5"></a>CWIST_ORM_TYPE_REAL&#160;</td><td class="fielddoc"><p>REAL as a double </p>
+</td></tr>
+<tr><td class="fieldname"><a id="a84b532ec7398ed41c2ef6dbcdbf05e24ad9171d2169402c2d567e63ef6dbdf838" name="a84b532ec7398ed41c2ef6dbcdbf05e24ad9171d2169402c2d567e63ef6dbdf838"></a>CWIST_ORM_TYPE_TEXT&#160;</td><td class="fielddoc"><p>TEXT as a null-terminated string </p>
+</td></tr>
+<tr><td class="fieldname"><a id="a84b532ec7398ed41c2ef6dbcdbf05e24a001deca070e2d9f256c43793112fcd60" name="a84b532ec7398ed41c2ef6dbcdbf05e24a001deca070e2d9f256c43793112fcd60"></a>CWIST_ORM_TYPE_BLOB&#160;</td><td class="fielddoc"><p>BLOB as (blob, blob_len) bytes </p>
+</td></tr>
+</table>
+
+<p class="definition">Definition at line <a class="el" href="../../d6/d9b/orm_8h_source.html#l00279">279</a> of file <a class="el" href="../../d6/d9b/orm_8h_source.html">orm.h</a>.</p>
 
 </div>
 </div>
@@ -558,7 +721,7 @@ Functions</h2></td></tr>
 
 <p class="definition">Definition at line <a class="el" href="../../d8/d03/orm_8c_source.html#l00727">727</a> of file <a class="el" href="../../d8/d03/orm_8c_source.html">orm.c</a>.</p>
 
-<p class="reference">References <a class="el" href="../../d3/d73/err_2cwist__err_8h_source.html#l00016">CWIST_ERR_INT16</a>, <a class="el" href="../../d7/da1/sys_2err_2cwist__err_8h_source.html#l00153">CWIST_ERROR_INVALID_PARAM</a>, <a class="el" href="../../d7/da1/sys_2err_2cwist__err_8h_source.html#l00152">CWIST_ERROR_NOMEM</a>, <a class="el" href="../../d8/d03/orm_8c_source.html#l00241">cwist_orm_exec()</a>, <a class="el" href="../../d3/d73/err_2cwist__err_8h_source.html#l00049">__prim_cwist_error_t::err_i16</a>, <a class="el" href="../../d3/d73/err_2cwist__err_8h_source.html#l00074">cwist_error_t::error</a>, and <a class="el" href="../../db/dcc/error_8c_source.html#l00013">make_error()</a>.</p>
+<p class="reference">References <a class="el" href="../../d3/d73/err_2cwist__err_8h_source.html#l00016">CWIST_ERR_INT16</a>, <a class="el" href="../../d7/da1/sys_2err_2cwist__err_8h_source.html#l00153">CWIST_ERROR_INVALID_PARAM</a>, <a class="el" href="../../d7/da1/sys_2err_2cwist__err_8h_source.html#l00152">CWIST_ERROR_NOMEM</a>, <a class="el" href="../../d8/d03/orm_8c_source.html#l00241">cwist_orm_exec()</a>, <a class="el" href="../../d3/d73/err_2cwist__err_8h_source.html#l00049">__prim_cwist_error_t::err_i16</a>, <a class="el" href="../../d3/d73/err_2cwist__err_8h_source.html#l00074">cwist_error_t::error</a>, and <a class="el" href="../../db/dcc/error_8c_source.html#l00014">make_error()</a>.</p>
 
 </div>
 </div>
@@ -612,7 +775,7 @@ Functions</h2></td></tr>
 
 <p class="definition">Definition at line <a class="el" href="../../d8/d03/orm_8c_source.html#l00241">241</a> of file <a class="el" href="../../d8/d03/orm_8c_source.html">orm.c</a>.</p>
 
-<p class="reference">References <a class="el" href="../../d3/d73/err_2cwist__err_8h_source.html#l00016">CWIST_ERR_INT16</a>, <a class="el" href="../../d7/da1/sys_2err_2cwist__err_8h_source.html#l00153">CWIST_ERROR_INVALID_PARAM</a>, <a class="el" href="../../d7/da1/sys_2err_2cwist__err_8h_source.html#l00151">CWIST_ERROR_IO</a>, <a class="el" href="../../d7/da1/sys_2err_2cwist__err_8h_source.html#l00154">CWIST_ERROR_PROTOCOL</a>, <a class="el" href="../../d7/da1/sys_2err_2cwist__err_8h_source.html#l00149">CWIST_SUCCESS</a>, <a class="el" href="../../d3/d73/err_2cwist__err_8h_source.html#l00049">__prim_cwist_error_t::err_i16</a>, <a class="el" href="../../d3/d73/err_2cwist__err_8h_source.html#l00074">cwist_error_t::error</a>, and <a class="el" href="../../db/dcc/error_8c_source.html#l00013">make_error()</a>.</p>
+<p class="reference">References <a class="el" href="../../d3/d73/err_2cwist__err_8h_source.html#l00016">CWIST_ERR_INT16</a>, <a class="el" href="../../d7/da1/sys_2err_2cwist__err_8h_source.html#l00153">CWIST_ERROR_INVALID_PARAM</a>, <a class="el" href="../../d7/da1/sys_2err_2cwist__err_8h_source.html#l00151">CWIST_ERROR_IO</a>, <a class="el" href="../../d7/da1/sys_2err_2cwist__err_8h_source.html#l00154">CWIST_ERROR_PROTOCOL</a>, <a class="el" href="../../d7/da1/sys_2err_2cwist__err_8h_source.html#l00149">CWIST_SUCCESS</a>, <a class="el" href="../../d3/d73/err_2cwist__err_8h_source.html#l00049">__prim_cwist_error_t::err_i16</a>, <a class="el" href="../../d3/d73/err_2cwist__err_8h_source.html#l00074">cwist_error_t::error</a>, and <a class="el" href="../../db/dcc/error_8c_source.html#l00014">make_error()</a>.</p>
 
 <p class="reference">Referenced by <a class="el" href="../../d8/d03/orm_8c_source.html#l00211">cwist_orm_commit()</a>, <a class="el" href="../../d8/d03/orm_8c_source.html#l00727">cwist_orm_delete()</a>, <a class="el" href="../../d8/d03/orm_8c_source.html#l00586">cwist_orm_insert()</a>, <a class="el" href="../../d8/d03/orm_8c_source.html#l00221">cwist_orm_rollback()</a>, and <a class="el" href="../../d8/d03/orm_8c_source.html#l00629">cwist_orm_update()</a>.</p>
 
@@ -715,7 +878,61 @@ Functions</h2></td></tr>
 
 <p class="definition">Definition at line <a class="el" href="../../d8/d03/orm_8c_source.html#l00586">586</a> of file <a class="el" href="../../d8/d03/orm_8c_source.html">orm.c</a>.</p>
 
-<p class="reference">References <a class="el" href="../../d3/d73/err_2cwist__err_8h_source.html#l00016">CWIST_ERR_INT16</a>, <a class="el" href="../../d7/da1/sys_2err_2cwist__err_8h_source.html#l00153">CWIST_ERROR_INVALID_PARAM</a>, <a class="el" href="../../d7/da1/sys_2err_2cwist__err_8h_source.html#l00152">CWIST_ERROR_NOMEM</a>, <a class="el" href="../../d8/d03/orm_8c_source.html#l00241">cwist_orm_exec()</a>, <a class="el" href="../../d3/d73/err_2cwist__err_8h_source.html#l00049">__prim_cwist_error_t::err_i16</a>, <a class="el" href="../../d3/d73/err_2cwist__err_8h_source.html#l00074">cwist_error_t::error</a>, and <a class="el" href="../../db/dcc/error_8c_source.html#l00013">make_error()</a>.</p>
+<p class="reference">References <a class="el" href="../../d3/d73/err_2cwist__err_8h_source.html#l00016">CWIST_ERR_INT16</a>, <a class="el" href="../../d7/da1/sys_2err_2cwist__err_8h_source.html#l00153">CWIST_ERROR_INVALID_PARAM</a>, <a class="el" href="../../d7/da1/sys_2err_2cwist__err_8h_source.html#l00152">CWIST_ERROR_NOMEM</a>, <a class="el" href="../../d8/d03/orm_8c_source.html#l00241">cwist_orm_exec()</a>, <a class="el" href="../../d3/d73/err_2cwist__err_8h_source.html#l00049">__prim_cwist_error_t::err_i16</a>, <a class="el" href="../../d3/d73/err_2cwist__err_8h_source.html#l00074">cwist_error_t::error</a>, and <a class="el" href="../../db/dcc/error_8c_source.html#l00014">make_error()</a>.</p>
+
+</div>
+</div>
+<a id="a21dc130fc35ea703726d78c057c0743b" name="a21dc130fc35ea703726d78c057c0743b"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a21dc130fc35ea703726d78c057c0743b">&#9670;&#160;</a></span>cwist_orm_insert_returning_i64()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname"><a class="el" href="../../d4/d50/structcwist__error__t.html">cwist_error_t</a> cwist_orm_insert_returning_i64 </td>
+          <td>(</td>
+          <td class="paramtype"><a class="el" href="../../d6/d9b/orm_8h.html#aeacfe257785ac940ef6c5813dd335a0e">cwist_orm_t</a> *&#160;</td>
+          <td class="paramname"><em>orm</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">const char *&#160;</td>
+          <td class="paramname"><em>table</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">const cJSON *&#160;</td>
+          <td class="paramname"><em>data</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">const char *&#160;</td>
+          <td class="paramname"><em>returning_col</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">int64_t *&#160;</td>
+          <td class="paramname"><em>out</em>&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Insert a row and return an integer column exactly as an int64_t. </p>
+<p>Same statement as <a class="el" href="../../d6/d9b/orm_8h.html#a6da79c3b09779f44b4c818a30a3d8720" title="Insert a row and return a column value as a long long.">cwist_orm_insert_returning_llong()</a>, with the returned value read as in <a class="el" href="../../d6/d9b/orm_8h.html#a9f9cc4e28af2616d893fefbb3dde261a" title="Select a single integer cell exactly as an int64_t.">cwist_orm_select_one_i64()</a>.</p>
+<dl class="section return"><dt>Returns</dt><dd>As <a class="el" href="../../d6/d9b/orm_8h.html#a9f9cc4e28af2616d893fefbb3dde261a" title="Select a single integer cell exactly as an int64_t.">cwist_orm_select_one_i64()</a>; CWIST_ERROR_NOMEM when the SQL cannot be built. </dd></dl>
+
+<p class="definition">Definition at line <a class="el" href="../../d8/d03/orm_8c_source.html#l01404">1404</a> of file <a class="el" href="../../d8/d03/orm_8c_source.html">orm.c</a>.</p>
+
+<p class="reference">References <a class="el" href="../../d3/d73/err_2cwist__err_8h_source.html#l00016">CWIST_ERR_INT16</a>, <a class="el" href="../../d7/da1/sys_2err_2cwist__err_8h_source.html#l00153">CWIST_ERROR_INVALID_PARAM</a>, <a class="el" href="../../d7/da1/sys_2err_2cwist__err_8h_source.html#l00152">CWIST_ERROR_NOMEM</a>, <a class="el" href="../../d3/d73/err_2cwist__err_8h_source.html#l00049">__prim_cwist_error_t::err_i16</a>, <a class="el" href="../../d3/d73/err_2cwist__err_8h_source.html#l00074">cwist_error_t::error</a>, and <a class="el" href="../../db/dcc/error_8c_source.html#l00014">make_error()</a>.</p>
 
 </div>
 </div>
@@ -776,9 +993,9 @@ Functions</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>CWIST_SUCCESS on success; otherwise the error from <a class="el" href="../../d8/d03/orm_8c.html#a43aaa5a15c9ce87e5f62f566a1bcab4d" title="Insert a row and return a JSON value from the new row.">cwist_orm_insert_returning_json()</a> or CWIST_ERROR_PROTOCOL when the returned value is not a number. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d8/d03/orm_8c_source.html#l00919">919</a> of file <a class="el" href="../../d8/d03/orm_8c_source.html">orm.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d8/d03/orm_8c_source.html#l00932">932</a> of file <a class="el" href="../../d8/d03/orm_8c_source.html">orm.c</a>.</p>
 
-<p class="reference">References <a class="el" href="../../d7/da1/sys_2err_2cwist__err_8h_source.html#l00154">CWIST_ERROR_PROTOCOL</a>, <a class="el" href="../../d8/d03/orm_8c_source.html#l00832">cwist_orm_insert_returning_json()</a>, <a class="el" href="../../d3/d73/err_2cwist__err_8h_source.html#l00049">__prim_cwist_error_t::err_i16</a>, and <a class="el" href="../../d3/d73/err_2cwist__err_8h_source.html#l00074">cwist_error_t::error</a>.</p>
+<p class="reference">References <a class="el" href="../../d7/da1/sys_2err_2cwist__err_8h_source.html#l00154">CWIST_ERROR_PROTOCOL</a>, <a class="el" href="../../d8/d03/orm_8c_source.html#l00872">cwist_orm_insert_returning_json()</a>, <a class="el" href="../../d3/d73/err_2cwist__err_8h_source.html#l00049">__prim_cwist_error_t::err_i16</a>, and <a class="el" href="../../d3/d73/err_2cwist__err_8h_source.html#l00074">cwist_error_t::error</a>.</p>
 
 </div>
 </div>
@@ -840,11 +1057,11 @@ Functions</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>CWIST_SUCCESS on success; CWIST_ERROR_INVALID_PARAM for NULL arguments, CWIST_ERROR_NOMEM on allocation failure, CWIST_ERROR_PROTOCOL when the value is missing from the result. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d8/d03/orm_8c_source.html#l00832">832</a> of file <a class="el" href="../../d8/d03/orm_8c_source.html">orm.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d8/d03/orm_8c_source.html#l00872">872</a> of file <a class="el" href="../../d8/d03/orm_8c_source.html">orm.c</a>.</p>
 
-<p class="reference">References <a class="el" href="../../d3/d73/err_2cwist__err_8h_source.html#l00016">CWIST_ERR_INT16</a>, <a class="el" href="../../d7/da1/sys_2err_2cwist__err_8h_source.html#l00153">CWIST_ERROR_INVALID_PARAM</a>, <a class="el" href="../../d7/da1/sys_2err_2cwist__err_8h_source.html#l00152">CWIST_ERROR_NOMEM</a>, <a class="el" href="../../d7/da1/sys_2err_2cwist__err_8h_source.html#l00154">CWIST_ERROR_PROTOCOL</a>, <a class="el" href="../../d6/d9b/orm_8h_source.html#l00042">CWIST_ORM_MARIADB</a>, <a class="el" href="../../d6/d9b/orm_8h_source.html#l00041">CWIST_ORM_MYSQL</a>, <a class="el" href="../../d6/d9b/orm_8h_source.html#l00040">CWIST_ORM_POSTGRES</a>, <a class="el" href="../../d8/d03/orm_8c_source.html#l00291">cwist_orm_query()</a>, <a class="el" href="../../d6/d9b/orm_8h_source.html#l00039">CWIST_ORM_SQLITE</a>, <a class="el" href="../../d3/d73/err_2cwist__err_8h_source.html#l00049">__prim_cwist_error_t::err_i16</a>, <a class="el" href="../../d3/d73/err_2cwist__err_8h_source.html#l00074">cwist_error_t::error</a>, and <a class="el" href="../../db/dcc/error_8c_source.html#l00013">make_error()</a>.</p>
+<p class="reference">References <a class="el" href="../../d3/d73/err_2cwist__err_8h_source.html#l00016">CWIST_ERR_INT16</a>, <a class="el" href="../../d7/da1/sys_2err_2cwist__err_8h_source.html#l00153">CWIST_ERROR_INVALID_PARAM</a>, <a class="el" href="../../d7/da1/sys_2err_2cwist__err_8h_source.html#l00152">CWIST_ERROR_NOMEM</a>, <a class="el" href="../../d7/da1/sys_2err_2cwist__err_8h_source.html#l00154">CWIST_ERROR_PROTOCOL</a>, <a class="el" href="../../d8/d03/orm_8c_source.html#l00291">cwist_orm_query()</a>, <a class="el" href="../../d3/d73/err_2cwist__err_8h_source.html#l00049">__prim_cwist_error_t::err_i16</a>, <a class="el" href="../../d3/d73/err_2cwist__err_8h_source.html#l00074">cwist_error_t::error</a>, and <a class="el" href="../../db/dcc/error_8c_source.html#l00014">make_error()</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../d8/d03/orm_8c_source.html#l00919">cwist_orm_insert_returning_int()</a>, <a class="el" href="../../d8/d03/orm_8c_source.html#l00972">cwist_orm_insert_returning_llong()</a>, and <a class="el" href="../../d8/d03/orm_8c_source.html#l00945">cwist_orm_insert_returning_long()</a>.</p>
+<p class="reference">Referenced by <a class="el" href="../../d8/d03/orm_8c_source.html#l00932">cwist_orm_insert_returning_int()</a>, <a class="el" href="../../d8/d03/orm_8c_source.html#l00985">cwist_orm_insert_returning_llong()</a>, and <a class="el" href="../../d8/d03/orm_8c_source.html#l00958">cwist_orm_insert_returning_long()</a>.</p>
 
 </div>
 </div>
@@ -905,9 +1122,9 @@ Functions</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>CWIST_SUCCESS on success; otherwise the error from <a class="el" href="../../d8/d03/orm_8c.html#a43aaa5a15c9ce87e5f62f566a1bcab4d" title="Insert a row and return a JSON value from the new row.">cwist_orm_insert_returning_json()</a> or CWIST_ERROR_PROTOCOL when the returned value is not a number. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d8/d03/orm_8c_source.html#l00972">972</a> of file <a class="el" href="../../d8/d03/orm_8c_source.html">orm.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d8/d03/orm_8c_source.html#l00985">985</a> of file <a class="el" href="../../d8/d03/orm_8c_source.html">orm.c</a>.</p>
 
-<p class="reference">References <a class="el" href="../../d7/da1/sys_2err_2cwist__err_8h_source.html#l00154">CWIST_ERROR_PROTOCOL</a>, <a class="el" href="../../d8/d03/orm_8c_source.html#l00832">cwist_orm_insert_returning_json()</a>, <a class="el" href="../../d3/d73/err_2cwist__err_8h_source.html#l00049">__prim_cwist_error_t::err_i16</a>, and <a class="el" href="../../d3/d73/err_2cwist__err_8h_source.html#l00074">cwist_error_t::error</a>.</p>
+<p class="reference">References <a class="el" href="../../d7/da1/sys_2err_2cwist__err_8h_source.html#l00154">CWIST_ERROR_PROTOCOL</a>, <a class="el" href="../../d8/d03/orm_8c_source.html#l00872">cwist_orm_insert_returning_json()</a>, <a class="el" href="../../d3/d73/err_2cwist__err_8h_source.html#l00049">__prim_cwist_error_t::err_i16</a>, and <a class="el" href="../../d3/d73/err_2cwist__err_8h_source.html#l00074">cwist_error_t::error</a>.</p>
 
 </div>
 </div>
@@ -968,9 +1185,9 @@ Functions</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>CWIST_SUCCESS on success; otherwise the error from <a class="el" href="../../d8/d03/orm_8c.html#a43aaa5a15c9ce87e5f62f566a1bcab4d" title="Insert a row and return a JSON value from the new row.">cwist_orm_insert_returning_json()</a> or CWIST_ERROR_PROTOCOL when the returned value is not a number. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d8/d03/orm_8c_source.html#l00945">945</a> of file <a class="el" href="../../d8/d03/orm_8c_source.html">orm.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d8/d03/orm_8c_source.html#l00958">958</a> of file <a class="el" href="../../d8/d03/orm_8c_source.html">orm.c</a>.</p>
 
-<p class="reference">References <a class="el" href="../../d7/da1/sys_2err_2cwist__err_8h_source.html#l00154">CWIST_ERROR_PROTOCOL</a>, <a class="el" href="../../d8/d03/orm_8c_source.html#l00832">cwist_orm_insert_returning_json()</a>, <a class="el" href="../../d3/d73/err_2cwist__err_8h_source.html#l00049">__prim_cwist_error_t::err_i16</a>, and <a class="el" href="../../d3/d73/err_2cwist__err_8h_source.html#l00074">cwist_error_t::error</a>.</p>
+<p class="reference">References <a class="el" href="../../d7/da1/sys_2err_2cwist__err_8h_source.html#l00154">CWIST_ERROR_PROTOCOL</a>, <a class="el" href="../../d8/d03/orm_8c_source.html#l00872">cwist_orm_insert_returning_json()</a>, <a class="el" href="../../d3/d73/err_2cwist__err_8h_source.html#l00049">__prim_cwist_error_t::err_i16</a>, and <a class="el" href="../../d3/d73/err_2cwist__err_8h_source.html#l00074">cwist_error_t::error</a>.</p>
 
 </div>
 </div>
@@ -1011,7 +1228,7 @@ Functions</h2></td></tr>
 
 <p class="definition">Definition at line <a class="el" href="../../d8/d03/orm_8c_source.html#l00145">145</a> of file <a class="el" href="../../d8/d03/orm_8c_source.html">orm.c</a>.</p>
 
-<p class="reference">References <a class="el" href="../../d6/d9b/orm_8h_source.html#l00039">CWIST_ORM_SQLITE</a>.</p>
+<p class="reference">References <a class="el" href="../../d6/d9b/orm_8h_source.html#l00040">CWIST_ORM_SQLITE</a>.</p>
 
 </div>
 </div>
@@ -1048,7 +1265,7 @@ Functions</h2></td></tr>
 </div><div class="memdoc">
 
 <p>Execute a SELECT query and return the result set. </p>
-<p>The returned cJSON object is an array. Each element is an object whose keys are column names and whose values are the row data.</p>
+<p>The returned cJSON object is an array. Each element is an object whose keys are column names and whose values are the row data. Values keep the legacy text-based typing (canonical integer text becomes a number); use <a class="el" href="../../d6/d9b/orm_8h.html#afb79a67e3a91c896fee4905549ccec69" title="Execute a SELECT-style query and return column-typed rows.">cwist_orm_query_typed()</a> for values typed by the column's SQLite storage class.</p>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
     <tr><td class="paramname">orm</td><td>ORM session. </td></tr>
@@ -1072,9 +1289,200 @@ Functions</h2></td></tr>
 
 <p class="definition">Definition at line <a class="el" href="../../d8/d03/orm_8c_source.html#l00291">291</a> of file <a class="el" href="../../d8/d03/orm_8c_source.html">orm.c</a>.</p>
 
-<p class="reference">References <a class="el" href="../../d3/d73/err_2cwist__err_8h_source.html#l00016">CWIST_ERR_INT16</a>, <a class="el" href="../../d7/da1/sys_2err_2cwist__err_8h_source.html#l00153">CWIST_ERROR_INVALID_PARAM</a>, <a class="el" href="../../d7/da1/sys_2err_2cwist__err_8h_source.html#l00151">CWIST_ERROR_IO</a>, <a class="el" href="../../d7/da1/sys_2err_2cwist__err_8h_source.html#l00154">CWIST_ERROR_PROTOCOL</a>, <a class="el" href="../../d7/da1/sys_2err_2cwist__err_8h_source.html#l00149">CWIST_SUCCESS</a>, <a class="el" href="../../d3/d73/err_2cwist__err_8h_source.html#l00049">__prim_cwist_error_t::err_i16</a>, <a class="el" href="../../d3/d73/err_2cwist__err_8h_source.html#l00074">cwist_error_t::error</a>, and <a class="el" href="../../db/dcc/error_8c_source.html#l00013">make_error()</a>.</p>
+<p class="reference">References <a class="el" href="../../d3/d73/err_2cwist__err_8h_source.html#l00016">CWIST_ERR_INT16</a>, <a class="el" href="../../d7/da1/sys_2err_2cwist__err_8h_source.html#l00153">CWIST_ERROR_INVALID_PARAM</a>, <a class="el" href="../../d7/da1/sys_2err_2cwist__err_8h_source.html#l00151">CWIST_ERROR_IO</a>, <a class="el" href="../../d7/da1/sys_2err_2cwist__err_8h_source.html#l00154">CWIST_ERROR_PROTOCOL</a>, <a class="el" href="../../d7/da1/sys_2err_2cwist__err_8h_source.html#l00149">CWIST_SUCCESS</a>, <a class="el" href="../../d3/d73/err_2cwist__err_8h_source.html#l00049">__prim_cwist_error_t::err_i16</a>, <a class="el" href="../../d3/d73/err_2cwist__err_8h_source.html#l00074">cwist_error_t::error</a>, and <a class="el" href="../../db/dcc/error_8c_source.html#l00014">make_error()</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../d8/d03/orm_8c_source.html#l00832">cwist_orm_insert_returning_json()</a>, <a class="el" href="../../d8/d03/orm_8c_source.html#l00773">cwist_orm_select()</a>, and <a class="el" href="../../d8/d03/orm_8c_source.html#l01007">cwist_orm_select_one_json()</a>.</p>
+<p class="reference">Referenced by <a class="el" href="../../d8/d03/orm_8c_source.html#l00872">cwist_orm_insert_returning_json()</a>, <a class="el" href="../../d8/d03/orm_8c_source.html#l00773">cwist_orm_select()</a>, and <a class="el" href="../../d8/d03/orm_8c_source.html#l01053">cwist_orm_select_one_json()</a>.</p>
+
+</div>
+</div>
+<a id="afb79a67e3a91c896fee4905549ccec69" name="afb79a67e3a91c896fee4905549ccec69"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#afb79a67e3a91c896fee4905549ccec69">&#9670;&#160;</a></span>cwist_orm_query_typed()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname"><a class="el" href="../../d4/d50/structcwist__error__t.html">cwist_error_t</a> cwist_orm_query_typed </td>
+          <td>(</td>
+          <td class="paramtype"><a class="el" href="../../d6/d9b/orm_8h.html#aeacfe257785ac940ef6c5813dd335a0e">cwist_orm_t</a> *&#160;</td>
+          <td class="paramname"><em>orm</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">const char *&#160;</td>
+          <td class="paramname"><em>sql</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype"><a class="el" href="../../d6/d9b/orm_8h.html#a38075ab36ec6acd5b83092fb23c2e45e">cwist_orm_result_t</a> **&#160;</td>
+          <td class="paramname"><em>result</em>&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Execute a SELECT-style query and return column-typed rows. </p>
+<p>Values are typed by each cell's SQLite storage class, not by its text, unlike <a class="el" href="../../d8/d03/orm_8c.html#a11e221d99d7e127b9402507b67965127" title="Execute a SELECT-style query and return the result rows.">cwist_orm_query()</a> whose JSON values keep the legacy text-based typing (canonical integer text becomes a number there). Here a TEXT cell stays TEXT even when it holds digits, INTEGER keeps every digit above 2^53, and SQL NULL is a distinct type from an empty TEXT value.</p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">orm</td><td>ORM session. </td></tr>
+    <tr><td class="paramname">sql</td><td>Null-terminated SELECT statement. </td></tr>
+    <tr><td class="paramname">result</td><td>[out] Receives a heap-allocated cwist_orm_result_t that the caller must release with <a class="el" href="../../d8/d03/orm_8c.html#ad7d2e9d452adfafd39bff0b407604ae4" title="Release a result set from cwist_orm_query_typed().">cwist_orm_result_free()</a>. On failure the pointer is set to <code>NULL</code>. </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section return"><dt>Returns</dt><dd><a class="el" href="../../d4/d50/structcwist__error__t.html" title="Integrated error structure used throughout the system.">cwist_error_t</a> with err_i16 == 0 on success; CWIST_ERROR_INVALID_PARAM for NULL arguments, CWIST_ERROR_IO on transport failure, CWIST_ERROR_PROTOCOL on a backend error or a response without typed column metadata.</dd></dl>
+<p>Reads the worker's "typed" payload, which types every cell from its SQLite storage class: INTEGER as exact int64 digits, REAL as a double, TEXT as a string, BLOB as decoded bytes with its length, and NULL as a distinct type. On success <code>*result</code> receives a heap-allocated result set the caller releases with <a class="el" href="../../d8/d03/orm_8c.html#ad7d2e9d452adfafd39bff0b407604ae4" title="Release a result set from cwist_orm_query_typed().">cwist_orm_result_free()</a>.</p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">orm</td><td>Active session. </td></tr>
+    <tr><td class="paramname">sql</td><td>Null-terminated SQL query. </td></tr>
+    <tr><td class="paramname">result</td><td>[out] Receives the result set, or NULL on failure. </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section return"><dt>Returns</dt><dd>CWIST_SUCCESS on success; CWIST_ERROR_INVALID_PARAM for NULL arguments, CWIST_ERROR_IO on transport failure, or CWIST_ERROR_PROTOCOL on a backend error or a malformed typed payload. </dd></dl>
+
+<p class="definition">Definition at line <a class="el" href="../../d8/d03/orm_8c_source.html#l01564">1564</a> of file <a class="el" href="../../d8/d03/orm_8c_source.html">orm.c</a>.</p>
+
+<p class="reference">References <a class="el" href="../../d6/d9b/orm_8h_source.html#l00318">cwist_orm_result::cells</a>, <a class="el" href="../../d6/d9b/orm_8h_source.html#l00315">cwist_orm_result::column_count</a>, <a class="el" href="../../d6/d9b/orm_8h_source.html#l00317">cwist_orm_result::columns</a>, <a class="el" href="../../d3/d73/err_2cwist__err_8h_source.html#l00016">CWIST_ERR_INT16</a>, <a class="el" href="../../d7/da1/sys_2err_2cwist__err_8h_source.html#l00153">CWIST_ERROR_INVALID_PARAM</a>, <a class="el" href="../../d7/da1/sys_2err_2cwist__err_8h_source.html#l00151">CWIST_ERROR_IO</a>, <a class="el" href="../../d7/da1/sys_2err_2cwist__err_8h_source.html#l00152">CWIST_ERROR_NOMEM</a>, <a class="el" href="../../d7/da1/sys_2err_2cwist__err_8h_source.html#l00154">CWIST_ERROR_PROTOCOL</a>, <a class="el" href="../../d8/d03/orm_8c_source.html#l01663">cwist_orm_result_free()</a>, <a class="el" href="../../d7/da1/sys_2err_2cwist__err_8h_source.html#l00149">CWIST_SUCCESS</a>, <a class="el" href="../../d3/d73/err_2cwist__err_8h_source.html#l00049">__prim_cwist_error_t::err_i16</a>, <a class="el" href="../../d3/d73/err_2cwist__err_8h_source.html#l00074">cwist_error_t::error</a>, <a class="el" href="../../db/dcc/error_8c_source.html#l00014">make_error()</a>, and <a class="el" href="../../d6/d9b/orm_8h_source.html#l00316">cwist_orm_result::row_count</a>.</p>
+
+</div>
+</div>
+<a id="a1ce173b162b55a29c2fde9f59aa743d4" name="a1ce173b162b55a29c2fde9f59aa743d4"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a1ce173b162b55a29c2fde9f59aa743d4">&#9670;&#160;</a></span>cwist_orm_result_cell()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">const <a class="el" href="../../d6/d9b/orm_8h.html#a3b16210cc3d67b0fd0d1bcd60f5862a9">cwist_orm_value_t</a> * cwist_orm_result_cell </td>
+          <td>(</td>
+          <td class="paramtype">const <a class="el" href="../../d6/d9b/orm_8h.html#a38075ab36ec6acd5b83092fb23c2e45e">cwist_orm_result_t</a> *&#160;</td>
+          <td class="paramname"><em>result</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">size_t&#160;</td>
+          <td class="paramname"><em>row</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">size_t&#160;</td>
+          <td class="paramname"><em>column</em>&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Read one cell of a typed result set. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">result</td><td>Result set. </td></tr>
+    <tr><td class="paramname">row</td><td>Row index. </td></tr>
+    <tr><td class="paramname">column</td><td>Column index. </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section return"><dt>Returns</dt><dd>Pointer to the cell, or <code>NULL</code> when the coordinates are out of range or <code>result</code> is NULL. The pointer is owned by the result set and stays valid until <a class="el" href="../../d6/d9b/orm_8h.html#ad7d2e9d452adfafd39bff0b407604ae4" title="Release a result set from cwist_orm_query_typed().">cwist_orm_result_free()</a>. </dd></dl>
+
+<p class="definition">Definition at line <a class="el" href="../../d8/d03/orm_8c_source.html#l01688">1688</a> of file <a class="el" href="../../d8/d03/orm_8c_source.html">orm.c</a>.</p>
+
+<p class="reference">References <a class="el" href="../../d6/d9b/orm_8h_source.html#l00318">cwist_orm_result::cells</a>, <a class="el" href="../../d6/d9b/orm_8h_source.html#l00315">cwist_orm_result::column_count</a>, and <a class="el" href="../../d6/d9b/orm_8h_source.html#l00316">cwist_orm_result::row_count</a>.</p>
+
+</div>
+</div>
+<a id="afc4f1bb4cfaca73817351fd9b85e82e2" name="afc4f1bb4cfaca73817351fd9b85e82e2"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#afc4f1bb4cfaca73817351fd9b85e82e2">&#9670;&#160;</a></span>cwist_orm_result_column_index()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">size_t cwist_orm_result_column_index </td>
+          <td>(</td>
+          <td class="paramtype">const <a class="el" href="../../d6/d9b/orm_8h.html#a38075ab36ec6acd5b83092fb23c2e45e">cwist_orm_result_t</a> *&#160;</td>
+          <td class="paramname"><em>result</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">const char *&#160;</td>
+          <td class="paramname"><em>column</em>&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Find a column index by name in a typed result set. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">result</td><td>Result set. </td></tr>
+    <tr><td class="paramname">column</td><td>Column name. </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section return"><dt>Returns</dt><dd>The column index, or <code>result-&gt;column_count</code> when the name is not present (or either argument is NULL). </dd></dl>
+
+<p class="definition">Definition at line <a class="el" href="../../d8/d03/orm_8c_source.html#l01680">1680</a> of file <a class="el" href="../../d8/d03/orm_8c_source.html">orm.c</a>.</p>
+
+<p class="reference">References <a class="el" href="../../d6/d9b/orm_8h_source.html#l00315">cwist_orm_result::column_count</a>, and <a class="el" href="../../d6/d9b/orm_8h_source.html#l00317">cwist_orm_result::columns</a>.</p>
+
+</div>
+</div>
+<a id="ad7d2e9d452adfafd39bff0b407604ae4" name="ad7d2e9d452adfafd39bff0b407604ae4"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ad7d2e9d452adfafd39bff0b407604ae4">&#9670;&#160;</a></span>cwist_orm_result_free()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">void cwist_orm_result_free </td>
+          <td>(</td>
+          <td class="paramtype"><a class="el" href="../../d6/d9b/orm_8h.html#a38075ab36ec6acd5b83092fb23c2e45e">cwist_orm_result_t</a> *&#160;</td>
+          <td class="paramname"><em>result</em></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Release a result set from <a class="el" href="../../d6/d9b/orm_8h.html#afb79a67e3a91c896fee4905549ccec69" title="Execute a SELECT-style query and return column-typed rows.">cwist_orm_query_typed()</a>. </p>
+<p>Safe to call with <code>NULL</code>.</p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">result</td><td>Result set to free.</td></tr>
+  </table>
+  </dd>
+</dl>
+<p>Frees the column names, every owned cell payload, and the structure itself. Safe to call with NULL.</p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">result</td><td>Result set to free. </td></tr>
+  </table>
+  </dd>
+</dl>
+
+<p class="definition">Definition at line <a class="el" href="../../d8/d03/orm_8c_source.html#l01663">1663</a> of file <a class="el" href="../../d8/d03/orm_8c_source.html">orm.c</a>.</p>
+
+<p class="reference">References <a class="el" href="../../d6/d9b/orm_8h_source.html#l00302">cwist_orm_value::blob</a>, <a class="el" href="../../d6/d9b/orm_8h_source.html#l00318">cwist_orm_result::cells</a>, <a class="el" href="../../d6/d9b/orm_8h_source.html#l00315">cwist_orm_result::column_count</a>, <a class="el" href="../../d6/d9b/orm_8h_source.html#l00317">cwist_orm_result::columns</a>, <a class="el" href="../../d6/d9b/orm_8h_source.html#l00316">cwist_orm_result::row_count</a>, and <a class="el" href="../../d6/d9b/orm_8h_source.html#l00301">cwist_orm_value::text</a>.</p>
+
+<p class="reference">Referenced by <a class="el" href="../../d8/d03/orm_8c_source.html#l01564">cwist_orm_query_typed()</a>.</p>
 
 </div>
 </div>
@@ -1189,7 +1597,7 @@ Functions</h2></td></tr>
 
 <p class="definition">Definition at line <a class="el" href="../../d8/d03/orm_8c_source.html#l00773">773</a> of file <a class="el" href="../../d8/d03/orm_8c_source.html">orm.c</a>.</p>
 
-<p class="reference">References <a class="el" href="../../d3/d73/err_2cwist__err_8h_source.html#l00016">CWIST_ERR_INT16</a>, <a class="el" href="../../d7/da1/sys_2err_2cwist__err_8h_source.html#l00153">CWIST_ERROR_INVALID_PARAM</a>, <a class="el" href="../../d7/da1/sys_2err_2cwist__err_8h_source.html#l00152">CWIST_ERROR_NOMEM</a>, <a class="el" href="../../d8/d03/orm_8c_source.html#l00291">cwist_orm_query()</a>, <a class="el" href="../../d3/d73/err_2cwist__err_8h_source.html#l00049">__prim_cwist_error_t::err_i16</a>, <a class="el" href="../../d3/d73/err_2cwist__err_8h_source.html#l00074">cwist_error_t::error</a>, and <a class="el" href="../../db/dcc/error_8c_source.html#l00013">make_error()</a>.</p>
+<p class="reference">References <a class="el" href="../../d3/d73/err_2cwist__err_8h_source.html#l00016">CWIST_ERR_INT16</a>, <a class="el" href="../../d7/da1/sys_2err_2cwist__err_8h_source.html#l00153">CWIST_ERROR_INVALID_PARAM</a>, <a class="el" href="../../d7/da1/sys_2err_2cwist__err_8h_source.html#l00152">CWIST_ERROR_NOMEM</a>, <a class="el" href="../../d8/d03/orm_8c_source.html#l00291">cwist_orm_query()</a>, <a class="el" href="../../d3/d73/err_2cwist__err_8h_source.html#l00049">__prim_cwist_error_t::err_i16</a>, <a class="el" href="../../d3/d73/err_2cwist__err_8h_source.html#l00074">cwist_error_t::error</a>, and <a class="el" href="../../db/dcc/error_8c_source.html#l00014">make_error()</a>.</p>
 
 </div>
 </div>
@@ -1250,9 +1658,73 @@ Functions</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>CWIST_SUCCESS on success; otherwise the error from <a class="el" href="../../d8/d03/orm_8c.html#a214ea2d56811b05e47ebc3db54a556a5" title="Select a single column value from the first matching row as JSON.">cwist_orm_select_one_json()</a> or CWIST_ERROR_PROTOCOL when the returned value is not a number. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d8/d03/orm_8c_source.html#l01164">1164</a> of file <a class="el" href="../../d8/d03/orm_8c_source.html">orm.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d8/d03/orm_8c_source.html#l01190">1190</a> of file <a class="el" href="../../d8/d03/orm_8c_source.html">orm.c</a>.</p>
 
-<p class="reference">References <a class="el" href="../../d7/da1/sys_2err_2cwist__err_8h_source.html#l00154">CWIST_ERROR_PROTOCOL</a>, <a class="el" href="../../d8/d03/orm_8c_source.html#l01007">cwist_orm_select_one_json()</a>, <a class="el" href="../../d3/d73/err_2cwist__err_8h_source.html#l00049">__prim_cwist_error_t::err_i16</a>, and <a class="el" href="../../d3/d73/err_2cwist__err_8h_source.html#l00074">cwist_error_t::error</a>.</p>
+<p class="reference">References <a class="el" href="../../d7/da1/sys_2err_2cwist__err_8h_source.html#l00154">CWIST_ERROR_PROTOCOL</a>, <a class="el" href="../../d8/d03/orm_8c_source.html#l01053">cwist_orm_select_one_json()</a>, <a class="el" href="../../d3/d73/err_2cwist__err_8h_source.html#l00049">__prim_cwist_error_t::err_i16</a>, and <a class="el" href="../../d3/d73/err_2cwist__err_8h_source.html#l00074">cwist_error_t::error</a>.</p>
+
+</div>
+</div>
+<a id="a9f9cc4e28af2616d893fefbb3dde261a" name="a9f9cc4e28af2616d893fefbb3dde261a"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a9f9cc4e28af2616d893fefbb3dde261a">&#9670;&#160;</a></span>cwist_orm_select_one_i64()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname"><a class="el" href="../../d4/d50/structcwist__error__t.html">cwist_error_t</a> cwist_orm_select_one_i64 </td>
+          <td>(</td>
+          <td class="paramtype"><a class="el" href="../../d6/d9b/orm_8h.html#aeacfe257785ac940ef6c5813dd335a0e">cwist_orm_t</a> *&#160;</td>
+          <td class="paramname"><em>orm</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">const char *&#160;</td>
+          <td class="paramname"><em>table</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">const char *&#160;</td>
+          <td class="paramname"><em>column</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">const char *&#160;</td>
+          <td class="paramname"><em>where_clause</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">int64_t *&#160;</td>
+          <td class="paramname"><em>out</em>&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Select a single integer cell exactly as an int64_t. </p>
+<p>Same query as <a class="el" href="../../d6/d9b/orm_8h.html#a9d9e67d3bf48e09e8d38a9bc40196c08" title="Select a single column value from the first matching row as a long long.">cwist_orm_select_one_llong()</a>, but the value is read from the integer digits the worker sent instead of through a cJSON number (a double), so integers above 2^53 (snowflake-style IDs) keep every digit. The cell must be a JSON integer, or a JSON string holding canonical integer text (an optional '-' and digits, no leading zeros).</p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">orm</td><td>Active session. </td></tr>
+    <tr><td class="paramname">table</td><td>Table name. </td></tr>
+    <tr><td class="paramname">column</td><td>Column name. </td></tr>
+    <tr><td class="paramname">where_clause</td><td>Optional raw SQL WHERE condition (not escaped). </td></tr>
+    <tr><td class="paramname">out</td><td>[out] Receives the value. </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section return"><dt>Returns</dt><dd>CWIST_SUCCESS on success; CWIST_ERROR_INVALID_PARAM for NULL arguments; CWIST_ERROR_IO when the worker exchange fails; CWIST_ERROR_PROTOCOL when no row is returned, or the value is not an integer or does not fit in int64_t. <code>out</code> is unchanged on failure. </dd></dl>
+
+<p class="definition">Definition at line <a class="el" href="../../d8/d03/orm_8c_source.html#l01387">1387</a> of file <a class="el" href="../../d8/d03/orm_8c_source.html">orm.c</a>.</p>
+
+<p class="reference">References <a class="el" href="../../d3/d73/err_2cwist__err_8h_source.html#l00016">CWIST_ERR_INT16</a>, <a class="el" href="../../d7/da1/sys_2err_2cwist__err_8h_source.html#l00153">CWIST_ERROR_INVALID_PARAM</a>, <a class="el" href="../../d7/da1/sys_2err_2cwist__err_8h_source.html#l00152">CWIST_ERROR_NOMEM</a>, <a class="el" href="../../d3/d73/err_2cwist__err_8h_source.html#l00049">__prim_cwist_error_t::err_i16</a>, <a class="el" href="../../d3/d73/err_2cwist__err_8h_source.html#l00074">cwist_error_t::error</a>, and <a class="el" href="../../db/dcc/error_8c_source.html#l00014">make_error()</a>.</p>
 
 </div>
 </div>
@@ -1313,9 +1785,9 @@ Functions</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>CWIST_SUCCESS on success; otherwise the error from <a class="el" href="../../d8/d03/orm_8c.html#a214ea2d56811b05e47ebc3db54a556a5" title="Select a single column value from the first matching row as JSON.">cwist_orm_select_one_json()</a> or CWIST_ERROR_PROTOCOL when the returned value is not a number. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d8/d03/orm_8c_source.html#l01086">1086</a> of file <a class="el" href="../../d8/d03/orm_8c_source.html">orm.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d8/d03/orm_8c_source.html#l01112">1112</a> of file <a class="el" href="../../d8/d03/orm_8c_source.html">orm.c</a>.</p>
 
-<p class="reference">References <a class="el" href="../../d7/da1/sys_2err_2cwist__err_8h_source.html#l00154">CWIST_ERROR_PROTOCOL</a>, <a class="el" href="../../d8/d03/orm_8c_source.html#l01007">cwist_orm_select_one_json()</a>, <a class="el" href="../../d3/d73/err_2cwist__err_8h_source.html#l00049">__prim_cwist_error_t::err_i16</a>, and <a class="el" href="../../d3/d73/err_2cwist__err_8h_source.html#l00074">cwist_error_t::error</a>.</p>
+<p class="reference">References <a class="el" href="../../d7/da1/sys_2err_2cwist__err_8h_source.html#l00154">CWIST_ERROR_PROTOCOL</a>, <a class="el" href="../../d8/d03/orm_8c_source.html#l01053">cwist_orm_select_one_json()</a>, <a class="el" href="../../d3/d73/err_2cwist__err_8h_source.html#l00049">__prim_cwist_error_t::err_i16</a>, and <a class="el" href="../../d3/d73/err_2cwist__err_8h_source.html#l00074">cwist_error_t::error</a>.</p>
 
 </div>
 </div>
@@ -1377,11 +1849,11 @@ Functions</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>CWIST_SUCCESS on success; CWIST_ERROR_INVALID_PARAM for NULL arguments, CWIST_ERROR_NOMEM on allocation failure, CWIST_ERROR_PROTOCOL when no row or column value is returned. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d8/d03/orm_8c_source.html#l01007">1007</a> of file <a class="el" href="../../d8/d03/orm_8c_source.html">orm.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d8/d03/orm_8c_source.html#l01053">1053</a> of file <a class="el" href="../../d8/d03/orm_8c_source.html">orm.c</a>.</p>
 
-<p class="reference">References <a class="el" href="../../d3/d73/err_2cwist__err_8h_source.html#l00016">CWIST_ERR_INT16</a>, <a class="el" href="../../d7/da1/sys_2err_2cwist__err_8h_source.html#l00153">CWIST_ERROR_INVALID_PARAM</a>, <a class="el" href="../../d7/da1/sys_2err_2cwist__err_8h_source.html#l00152">CWIST_ERROR_NOMEM</a>, <a class="el" href="../../d7/da1/sys_2err_2cwist__err_8h_source.html#l00154">CWIST_ERROR_PROTOCOL</a>, <a class="el" href="../../d8/d03/orm_8c_source.html#l00291">cwist_orm_query()</a>, <a class="el" href="../../d3/d73/err_2cwist__err_8h_source.html#l00049">__prim_cwist_error_t::err_i16</a>, <a class="el" href="../../d3/d73/err_2cwist__err_8h_source.html#l00074">cwist_error_t::error</a>, and <a class="el" href="../../db/dcc/error_8c_source.html#l00013">make_error()</a>.</p>
+<p class="reference">References <a class="el" href="../../d3/d73/err_2cwist__err_8h_source.html#l00016">CWIST_ERR_INT16</a>, <a class="el" href="../../d7/da1/sys_2err_2cwist__err_8h_source.html#l00153">CWIST_ERROR_INVALID_PARAM</a>, <a class="el" href="../../d7/da1/sys_2err_2cwist__err_8h_source.html#l00152">CWIST_ERROR_NOMEM</a>, <a class="el" href="../../d7/da1/sys_2err_2cwist__err_8h_source.html#l00154">CWIST_ERROR_PROTOCOL</a>, <a class="el" href="../../d8/d03/orm_8c_source.html#l00291">cwist_orm_query()</a>, <a class="el" href="../../d3/d73/err_2cwist__err_8h_source.html#l00049">__prim_cwist_error_t::err_i16</a>, <a class="el" href="../../d3/d73/err_2cwist__err_8h_source.html#l00074">cwist_error_t::error</a>, and <a class="el" href="../../db/dcc/error_8c_source.html#l00014">make_error()</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../d8/d03/orm_8c_source.html#l01164">cwist_orm_select_one_double()</a>, <a class="el" href="../../d8/d03/orm_8c_source.html#l01086">cwist_orm_select_one_int()</a>, <a class="el" href="../../d8/d03/orm_8c_source.html#l01138">cwist_orm_select_one_llong()</a>, <a class="el" href="../../d8/d03/orm_8c_source.html#l01112">cwist_orm_select_one_long()</a>, and <a class="el" href="../../d8/d03/orm_8c_source.html#l01192">cwist_orm_select_one_string()</a>.</p>
+<p class="reference">Referenced by <a class="el" href="../../d8/d03/orm_8c_source.html#l01190">cwist_orm_select_one_double()</a>, <a class="el" href="../../d8/d03/orm_8c_source.html#l01112">cwist_orm_select_one_int()</a>, <a class="el" href="../../d8/d03/orm_8c_source.html#l01164">cwist_orm_select_one_llong()</a>, <a class="el" href="../../d8/d03/orm_8c_source.html#l01138">cwist_orm_select_one_long()</a>, and <a class="el" href="../../d8/d03/orm_8c_source.html#l01218">cwist_orm_select_one_string()</a>.</p>
 
 </div>
 </div>
@@ -1442,9 +1914,9 @@ Functions</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>CWIST_SUCCESS on success; otherwise the error from <a class="el" href="../../d8/d03/orm_8c.html#a214ea2d56811b05e47ebc3db54a556a5" title="Select a single column value from the first matching row as JSON.">cwist_orm_select_one_json()</a> or CWIST_ERROR_PROTOCOL when the returned value is not a number. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d8/d03/orm_8c_source.html#l01138">1138</a> of file <a class="el" href="../../d8/d03/orm_8c_source.html">orm.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d8/d03/orm_8c_source.html#l01164">1164</a> of file <a class="el" href="../../d8/d03/orm_8c_source.html">orm.c</a>.</p>
 
-<p class="reference">References <a class="el" href="../../d7/da1/sys_2err_2cwist__err_8h_source.html#l00154">CWIST_ERROR_PROTOCOL</a>, <a class="el" href="../../d8/d03/orm_8c_source.html#l01007">cwist_orm_select_one_json()</a>, <a class="el" href="../../d3/d73/err_2cwist__err_8h_source.html#l00049">__prim_cwist_error_t::err_i16</a>, and <a class="el" href="../../d3/d73/err_2cwist__err_8h_source.html#l00074">cwist_error_t::error</a>.</p>
+<p class="reference">References <a class="el" href="../../d7/da1/sys_2err_2cwist__err_8h_source.html#l00154">CWIST_ERROR_PROTOCOL</a>, <a class="el" href="../../d8/d03/orm_8c_source.html#l01053">cwist_orm_select_one_json()</a>, <a class="el" href="../../d3/d73/err_2cwist__err_8h_source.html#l00049">__prim_cwist_error_t::err_i16</a>, and <a class="el" href="../../d3/d73/err_2cwist__err_8h_source.html#l00074">cwist_error_t::error</a>.</p>
 
 </div>
 </div>
@@ -1505,9 +1977,9 @@ Functions</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>CWIST_SUCCESS on success; otherwise the error from <a class="el" href="../../d8/d03/orm_8c.html#a214ea2d56811b05e47ebc3db54a556a5" title="Select a single column value from the first matching row as JSON.">cwist_orm_select_one_json()</a> or CWIST_ERROR_PROTOCOL when the returned value is not a number. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d8/d03/orm_8c_source.html#l01112">1112</a> of file <a class="el" href="../../d8/d03/orm_8c_source.html">orm.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d8/d03/orm_8c_source.html#l01138">1138</a> of file <a class="el" href="../../d8/d03/orm_8c_source.html">orm.c</a>.</p>
 
-<p class="reference">References <a class="el" href="../../d7/da1/sys_2err_2cwist__err_8h_source.html#l00154">CWIST_ERROR_PROTOCOL</a>, <a class="el" href="../../d8/d03/orm_8c_source.html#l01007">cwist_orm_select_one_json()</a>, <a class="el" href="../../d3/d73/err_2cwist__err_8h_source.html#l00049">__prim_cwist_error_t::err_i16</a>, and <a class="el" href="../../d3/d73/err_2cwist__err_8h_source.html#l00074">cwist_error_t::error</a>.</p>
+<p class="reference">References <a class="el" href="../../d7/da1/sys_2err_2cwist__err_8h_source.html#l00154">CWIST_ERROR_PROTOCOL</a>, <a class="el" href="../../d8/d03/orm_8c_source.html#l01053">cwist_orm_select_one_json()</a>, <a class="el" href="../../d3/d73/err_2cwist__err_8h_source.html#l00049">__prim_cwist_error_t::err_i16</a>, and <a class="el" href="../../d3/d73/err_2cwist__err_8h_source.html#l00074">cwist_error_t::error</a>.</p>
 
 </div>
 </div>
@@ -1568,9 +2040,9 @@ Functions</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>CWIST_SUCCESS on success; otherwise the error from <a class="el" href="../../d8/d03/orm_8c.html#a214ea2d56811b05e47ebc3db54a556a5" title="Select a single column value from the first matching row as JSON.">cwist_orm_select_one_json()</a>, CWIST_ERROR_PROTOCOL when the returned value is not a string, or CWIST_ERROR_NOMEM when the string copy cannot be allocated. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d8/d03/orm_8c_source.html#l01192">1192</a> of file <a class="el" href="../../d8/d03/orm_8c_source.html">orm.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d8/d03/orm_8c_source.html#l01218">1218</a> of file <a class="el" href="../../d8/d03/orm_8c_source.html">orm.c</a>.</p>
 
-<p class="reference">References <a class="el" href="../../d7/da1/sys_2err_2cwist__err_8h_source.html#l00152">CWIST_ERROR_NOMEM</a>, <a class="el" href="../../d7/da1/sys_2err_2cwist__err_8h_source.html#l00154">CWIST_ERROR_PROTOCOL</a>, <a class="el" href="../../d8/d03/orm_8c_source.html#l01007">cwist_orm_select_one_json()</a>, <a class="el" href="../../d3/d73/err_2cwist__err_8h_source.html#l00049">__prim_cwist_error_t::err_i16</a>, and <a class="el" href="../../d3/d73/err_2cwist__err_8h_source.html#l00074">cwist_error_t::error</a>.</p>
+<p class="reference">References <a class="el" href="../../d7/da1/sys_2err_2cwist__err_8h_source.html#l00152">CWIST_ERROR_NOMEM</a>, <a class="el" href="../../d7/da1/sys_2err_2cwist__err_8h_source.html#l00154">CWIST_ERROR_PROTOCOL</a>, <a class="el" href="../../d8/d03/orm_8c_source.html#l01053">cwist_orm_select_one_json()</a>, <a class="el" href="../../d3/d73/err_2cwist__err_8h_source.html#l00049">__prim_cwist_error_t::err_i16</a>, and <a class="el" href="../../d3/d73/err_2cwist__err_8h_source.html#l00074">cwist_error_t::error</a>.</p>
 
 </div>
 </div>
@@ -1639,7 +2111,7 @@ Functions</h2></td></tr>
 
 <p class="definition">Definition at line <a class="el" href="../../d8/d03/orm_8c_source.html#l00629">629</a> of file <a class="el" href="../../d8/d03/orm_8c_source.html">orm.c</a>.</p>
 
-<p class="reference">References <a class="el" href="../../d3/d73/err_2cwist__err_8h_source.html#l00016">CWIST_ERR_INT16</a>, <a class="el" href="../../d7/da1/sys_2err_2cwist__err_8h_source.html#l00153">CWIST_ERROR_INVALID_PARAM</a>, <a class="el" href="../../d7/da1/sys_2err_2cwist__err_8h_source.html#l00152">CWIST_ERROR_NOMEM</a>, <a class="el" href="../../d8/d03/orm_8c_source.html#l00241">cwist_orm_exec()</a>, <a class="el" href="../../d3/d73/err_2cwist__err_8h_source.html#l00049">__prim_cwist_error_t::err_i16</a>, <a class="el" href="../../d3/d73/err_2cwist__err_8h_source.html#l00074">cwist_error_t::error</a>, and <a class="el" href="../../db/dcc/error_8c_source.html#l00013">make_error()</a>.</p>
+<p class="reference">References <a class="el" href="../../d3/d73/err_2cwist__err_8h_source.html#l00016">CWIST_ERR_INT16</a>, <a class="el" href="../../d7/da1/sys_2err_2cwist__err_8h_source.html#l00153">CWIST_ERROR_INVALID_PARAM</a>, <a class="el" href="../../d7/da1/sys_2err_2cwist__err_8h_source.html#l00152">CWIST_ERROR_NOMEM</a>, <a class="el" href="../../d8/d03/orm_8c_source.html#l00241">cwist_orm_exec()</a>, <a class="el" href="../../d3/d73/err_2cwist__err_8h_source.html#l00049">__prim_cwist_error_t::err_i16</a>, <a class="el" href="../../d3/d73/err_2cwist__err_8h_source.html#l00074">cwist_error_t::error</a>, and <a class="el" href="../../db/dcc/error_8c_source.html#l00014">make_error()</a>.</p>
 
 </div>
 </div>
@@ -1692,9 +2164,13 @@ Functions</h2></td></tr>
 </div>
 </div>
 </div><!-- contents -->
+</div><!-- doc-content -->
 <!-- start footer part -->
-<hr class="footer"/><address class="footer"><small>
-Generated by&#160;<a href="https://www.doxygen.org/index.html"><img class="footer" src="../../doxygen.svg" width="104" height="31" alt="doxygen"/></a> 1.9.8
-</small></address>
+<div id="nav-path" class="navpath"><!-- id is needed for treeview function! -->
+  <ul>
+    <li class="navelem"><a class="el" href="../../dir_d44c64559bbebec7f509842c48db8b23.html">include</a></li><li class="navelem"><a class="el" href="../../dir_2109d32ae718f50aecd8856dacda770b.html">cwist</a></li><li class="navelem"><a class="el" href="../../dir_10b21726104ad23c5e3d9a30e698c859.html">core</a></li><li class="navelem"><a class="el" href="../../dir_36bbea0153910efaf4fcae064307190c.html">orm</a></li><li class="navelem"><a class="el" href="../../d6/d9b/orm_8h.html">orm.h</a></li>
+    <li class="footer">Generated by <a href="https://www.doxygen.org/index.html"><img class="footer" src="../../doxygen.svg" width="104" height="31" alt="doxygen"/></a> 1.9.8 </li>
+  </ul>
+</div>
 </body>
 </html>

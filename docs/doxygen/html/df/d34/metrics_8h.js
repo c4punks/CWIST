@@ -16,6 +16,18 @@ var metrics_8h =
       [ "CWIST_METRIC_VALIDATION_ERRORS", "df/d34/metrics_8h.html#a4b994f8e8094a926156bcc218559ffe5a527f601a19d438298be114fa83fbb875", null ],
       [ "CWIST_METRIC_REQUESTS_TOTAL", "df/d34/metrics_8h.html#a4b994f8e8094a926156bcc218559ffe5a078f5bc31ca4000c74fd603348d58564", null ],
       [ "CWIST_METRIC_REQUEST_DURATION_NS", "df/d34/metrics_8h.html#a4b994f8e8094a926156bcc218559ffe5a6d2888346ad4b7a3bd79e032470df131", null ],
+      [ "CWIST_METRIC_HTTP_HEADER_OVERFLOW", "df/d34/metrics_8h.html#a4b994f8e8094a926156bcc218559ffe5a12bd19aaf49ec57d41ca0594ca06208f", null ],
+      [ "CWIST_METRIC_H2_HEADERS_DROPPED", "df/d34/metrics_8h.html#a4b994f8e8094a926156bcc218559ffe5a8db70e6b63b8b2d364d0933e2e62684e", null ],
+      [ "CWIST_METRIC_HTTP_CONTINUATION_SHED", "df/d34/metrics_8h.html#a4b994f8e8094a926156bcc218559ffe5adfb0b37fd2a20c6e9c5bcbe41685863a", null ],
+      [ "CWIST_METRIC_TLS_HANDSHAKES_TOTAL", "df/d34/metrics_8h.html#a4b994f8e8094a926156bcc218559ffe5ad9ca8f905ae406ef5ee91f613c233cfe", null ],
+      [ "CWIST_METRIC_TLS_HANDSHAKES_RESUMED", "df/d34/metrics_8h.html#a4b994f8e8094a926156bcc218559ffe5af14b89f31b448c0f4e1e1dcdc24b4942", null ],
+      [ "CWIST_METRIC_TLS_CONNECTIONS_ACTIVE", "df/d34/metrics_8h.html#a4b994f8e8094a926156bcc218559ffe5a5dfca573bbf81c9e165c9c29228a98ff", null ],
+      [ "CWIST_METRIC_TLS_HANDSHAKES_TLS12", "df/d34/metrics_8h.html#a4b994f8e8094a926156bcc218559ffe5a25f5adcc9b70caf97fbcea1f2fc4c74a", null ],
+      [ "CWIST_METRIC_TLS_HANDSHAKES_TLS13", "df/d34/metrics_8h.html#a4b994f8e8094a926156bcc218559ffe5a16399eddd142a8e8fe73e09aba91f112", null ],
+      [ "CWIST_METRIC_TLS_CIPHERS_AES128_GCM", "df/d34/metrics_8h.html#a4b994f8e8094a926156bcc218559ffe5a20e1f55c02e623f514cf66bd9cf97caf", null ],
+      [ "CWIST_METRIC_TLS_CIPHERS_AES256_GCM", "df/d34/metrics_8h.html#a4b994f8e8094a926156bcc218559ffe5ac7a6b6128ce3a0ba66a5eaa6b9047826", null ],
+      [ "CWIST_METRIC_TLS_CIPHERS_CHACHA20", "df/d34/metrics_8h.html#a4b994f8e8094a926156bcc218559ffe5a1892fad67896641bb6203cf2f3b34a2d", null ],
+      [ "CWIST_METRIC_TLS_CIPHERS_OTHER", "df/d34/metrics_8h.html#a4b994f8e8094a926156bcc218559ffe5ac5d704420477232e50164cddd0b30ad4", null ],
       [ "CWIST_METRIC_COUNT", "df/d34/metrics_8h.html#a4b994f8e8094a926156bcc218559ffe5af42a8c54709ec9c23b8e593d015e0a9e", null ]
     ] ],
     [ "cwist_metric_type", "df/d34/metrics_8h.html#a757fbefdb6fdfb162a0cec119b076a16", [

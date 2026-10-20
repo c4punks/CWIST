@@ -1,3 +1,4 @@
+<!-- HTML header for doxygen 1.9.8-->
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "https://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml" lang="en-US">
 <head>
@@ -5,14 +6,32 @@
 <meta http-equiv="X-UA-Compatible" content="IE=11"/>
 <meta name="generator" content="Doxygen 1.9.8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
-<title>cwist: src/security/jwt/jwt.c File Reference</title>
+<title>src/security/jwt/jwt.c File Reference - CWIST High-Performance C Web Framework</title>
+<meta name="description" content="CWIST: High-performance C17 web framework and application server (HTTP/1.1, HTTP/2, HTTP/3, WebTransport, WebSocket, PQC TLS) powered by io_uring and libttak."/>
+<meta name="keywords" content="C web framework, C17, HTTP3, QUIC, io_uring, web server, actix alternative, high performance, REST API in C, C web server"/>
+<meta name="author" content="c4punks"/>
+<meta name="robots" content="index, follow"/>
+<!-- Open Graph / Facebook -->
+<meta property="og:type" content="website"/>
+<meta property="og:title" content="src/security/jwt/jwt.c File Reference - CWIST Modern C Web Framework"/>
+<meta property="og:description" content="High-performance C17 web framework & application server with zero-copy io_uring reactor, PQC TLS, and HTTP/3 support."/>
+<meta property="og:url" content="https://c4punks.github.io/CWIST/"/>
+<!-- Twitter -->
+<meta name="twitter:card" content="summary_large_image"/>
+<meta name="twitter:title" content="src/security/jwt/jwt.c File Reference - CWIST Modern C Web Framework"/>
+<meta name="twitter:description" content="High-performance C17 web framework & application server with zero-copy io_uring reactor, PQC TLS, and HTTP/3 support."/>
 <link href="../../tabs.css" rel="stylesheet" type="text/css"/>
 <script type="text/javascript" src="../../jquery.js"></script>
 <script type="text/javascript" src="../../dynsections.js"></script>
+<link href="../../navtree.css" rel="stylesheet" type="text/css"/>
+<script type="text/javascript" src="../../resize.js"></script>
+<script type="text/javascript" src="../../navtreedata.js"></script>
+<script type="text/javascript" src="../../navtree.js"></script>
 <link href="../../search/search.css" rel="stylesheet" type="text/css"/>
 <script type="text/javascript" src="../../search/searchdata.js"></script>
 <script type="text/javascript" src="../../search/search.js"></script>
 <link href="../../doxygen.css" rel="stylesheet" type="text/css" />
+<link href="../../doxygen-awesome.css" rel="stylesheet" type="text/css"/>
 </head>
 <body>
 <div id="top"><!-- do not remove this div, it is closed by doxygen! -->
@@ -47,6 +66,23 @@ $(function() {
 /* @license-end */
 </script>
 <div id="main-nav"></div>
+</div><!-- top -->
+<div id="side-nav" class="ui-resizable side-nav-resizable">
+  <div id="nav-tree">
+    <div id="nav-tree-contents">
+      <div id="nav-sync" class="sync"></div>
+    </div>
+  </div>
+  <div id="splitbar" style="-moz-user-select:none;" 
+       class="ui-resizable-handle">
+  </div>
+</div>
+<script type="text/javascript">
+/* @license magnet:?xt=urn:btih:d3d9a9a6595521f9666a5e94cc830dab83b65699&amp;dn=expat.txt MIT */
+$(document).ready(function(){initNavTree('d8/d80/jwt_8c.html','../../'); initResizable(); });
+/* @license-end */
+</script>
+<div id="doc-content">
 <!-- window showing the filter options -->
 <div id="MSearchSelectWindow"
      onmouseover="return searchBox.OnSearchSelectShow()"
@@ -68,20 +104,16 @@ $(function() {
 </div>
 </div>
 
-<div id="nav-path" class="navpath">
-  <ul>
-<li class="navelem"><a class="el" href="../../dir_68267d1309a1af8e8297ef4c3efbcdba.html">src</a></li><li class="navelem"><a class="el" href="../../dir_8a6c31bbbfb30065ee9a683ead3fe21a.html">security</a></li><li class="navelem"><a class="el" href="../../dir_1e885d2206a7d7f75b3ade40dad03d8b.html">jwt</a></li>  </ul>
-</div>
-</div><!-- top -->
 <div class="header">
   <div class="summary">
 <a href="#define-members">Macros</a> &#124;
+<a href="#enum-members">Enumerations</a> &#124;
 <a href="#func-members">Functions</a>  </div>
   <div class="headertitle"><div class="title">jwt.c File Reference</div></div>
 </div><!--header-->
 <div class="contents">
 
-<p>HS256 JWT signing, verification, and decoded-claims access helpers.  
+<p>HS256/ES256/EdDSA JWT signing, verification, and decoded-claims access helpers.  
 <a href="#details">More...</a></p>
 <div class="textblock"><code>#include &lt;<a class="el" href="../../d5/d6c/jwt_8h_source.html">cwist/security/jwt/jwt.h</a>&gt;</code><br />
 <code>#include &lt;<a class="el" href="../../d2/dfe/alloc_8h_source.html">cwist/core/mem/alloc.h</a>&gt;</code><br />
@@ -91,6 +123,12 @@ $(function() {
 <code>#include &lt;openssl/hmac.h&gt;</code><br />
 <code>#include &lt;openssl/sha.h&gt;</code><br />
 <code>#include &lt;openssl/evp.h&gt;</code><br />
+<code>#include &lt;openssl/pem.h&gt;</code><br />
+<code>#include &lt;openssl/bio.h&gt;</code><br />
+<code>#include &lt;openssl/ec.h&gt;</code><br />
+<code>#include &lt;openssl/ecdsa.h&gt;</code><br />
+<code>#include &lt;openssl/bn.h&gt;</code><br />
+<code>#include &lt;openssl/obj.h&gt;</code><br />
 <code>#include &lt;stdio.h&gt;</code><br />
 <code>#include &lt;stdlib.h&gt;</code><br />
 <code>#include &lt;string.h&gt;</code><br />
@@ -100,31 +138,43 @@ Include dependency graph for jwt.c:</div>
 <div class="dyncontent">
 <div class="center"><img src="../../d5/dc1/jwt_8c__incl.png" border="0" usemap="#asrc_2security_2jwt_2jwt_8c" alt=""/></div>
 <map name="asrc_2security_2jwt_2jwt_8c" id="asrc_2security_2jwt_2jwt_8c">
-<area shape="rect" title="HS256 JWT signing, verification, and decoded&#45;claims access helpers." alt="" coords="1052,5,1208,31"/>
+<area shape="rect" title="HS256/ES256/EdDSA JWT signing, verification, and decoded&#45;claims access helpers." alt="" coords="1299,5,1455,31"/>
 <area shape="rect" href="../../d5/d6c/jwt_8h.html" title="JWT (JSON Web Token) generation and verification." alt="" coords="574,167,710,207"/>
-<area shape="poly" title=" " alt="" coords="1062,33,970,53,870,81,772,121,689,162,687,158,770,116,868,76,968,48,1061,28"/>
+<area shape="poly" title=" " alt="" coords="1299,23,1210,28,1102,38,985,55,869,81,819,98,770,119,686,162,684,157,767,115,817,93,868,76,984,50,1101,32,1209,23,1298,18"/>
 <area shape="rect" title=" " alt="" coords="882,255,946,280"/>
-<area shape="poly" title=" " alt="" coords="1137,30,1147,64,1154,110,1152,161,1145,186,1132,209,1067,230,960,258,959,252,1065,225,1128,205,1140,184,1147,161,1149,111,1142,65,1132,32"/>
+<area shape="poly" title=" " alt="" coords="1308,33,1254,51,1228,64,1204,81,1189,96,1179,112,1169,144,1158,177,1148,193,1132,209,1107,219,1063,232,960,258,959,253,1061,227,1105,214,1129,204,1144,190,1154,174,1164,142,1174,110,1185,93,1200,77,1225,60,1252,46,1307,28"/>
 <area shape="rect" href="../../d2/dfe/alloc_8h.html" title="Memory allocation wrappers backed by libttak." alt="" coords="103,86,277,111"/>
-<area shape="poly" title=" " alt="" coords="1052,28,291,92,290,86,1052,23"/>
+<area shape="poly" title=" " alt="" coords="1299,27,290,93,290,88,1298,22"/>
 <area shape="rect" href="../../d4/dbd/core_2sstring_2sstring_8h.html" title="Safe string type with helper methods." alt="" coords="881,79,1017,119"/>
-<area shape="poly" title=" " alt="" coords="1105,33,1006,76,1004,71,1103,28"/>
+<area shape="poly" title=" " alt="" coords="1307,33,1036,81,1031,82,1030,77,1035,76,1306,28"/>
 <area shape="rect" title=" " alt="" coords="952,174,1023,199"/>
-<area shape="poly" title=" " alt="" coords="1122,32,1008,165,1004,162,1118,29"/>
+<area shape="poly" title=" " alt="" coords="1299,27,1202,45,1151,60,1102,81,1073,99,1047,122,1006,165,1002,162,1043,118,1070,95,1099,76,1149,55,1201,39,1298,22"/>
 <area shape="rect" title=" " alt="" coords="1047,174,1117,199"/>
-<area shape="poly" title=" " alt="" coords="1129,31,1092,161,1087,160,1124,30"/>
+<area shape="poly" title=" " alt="" coords="1299,25,1259,31,1217,41,1175,58,1138,81,1121,98,1108,119,1091,162,1086,160,1103,117,1117,95,1135,77,1173,53,1215,36,1258,26,1298,20"/>
 <area shape="rect" title=" " alt="" coords="976,255,1087,280"/>
-<area shape="poly" title=" " alt="" coords="1144,29,1162,50,1176,78,1189,114,1195,145,1192,175,1176,208,1161,226,1143,239,1101,257,1099,252,1140,235,1158,222,1172,205,1187,174,1190,145,1183,116,1172,80,1158,53,1140,32"/>
+<area shape="poly" title=" " alt="" coords="1325,33,1278,51,1255,64,1235,81,1221,96,1213,112,1206,143,1198,175,1190,192,1176,209,1138,235,1097,253,1095,248,1136,231,1172,205,1185,189,1193,174,1201,142,1208,110,1217,93,1231,77,1252,60,1276,46,1324,28"/>
 <area shape="rect" href="../../d6/d3c/seq_8h.html" title="TCP&#45;like sequenced message fragmentation and reassembly." alt="" coords="395,174,550,199"/>
-<area shape="poly" title=" " alt="" coords="1052,31,919,50,769,81,627,127,513,171,511,166,625,122,768,76,918,45,1052,25"/>
+<area shape="poly" title=" " alt="" coords="1299,23,1192,27,1057,37,910,54,763,81,691,101,622,125,511,171,508,166,620,120,690,96,761,76,909,49,1057,32,1192,22,1298,18"/>
 <area shape="rect" title=" " alt="" coords="1244,86,1368,111"/>
-<area shape="poly" title=" " alt="" coords="1157,28,1269,78,1267,83,1155,33"/>
+<area shape="poly" title=" " alt="" coords="1368,33,1328,77,1324,74,1364,29"/>
 <area shape="rect" title=" " alt="" coords="1392,86,1503,111"/>
-<area shape="poly" title=" " alt="" coords="1181,28,1381,76,1395,80,1394,85,1380,81,1180,33"/>
+<area shape="poly" title=" " alt="" coords="1389,29,1430,74,1426,77,1385,33"/>
 <area shape="rect" title=" " alt="" coords="1527,86,1639,111"/>
-<area shape="poly" title=" " alt="" coords="1209,26,1352,46,1516,76,1533,80,1532,85,1515,81,1351,52,1208,31"/>
-<area shape="rect" title=" " alt="" coords="1663,86,1730,111"/>
-<area shape="poly" title=" " alt="" coords="1208,19,1299,24,1411,34,1532,51,1652,76,1661,79,1659,84,1651,81,1531,56,1410,40,1299,29,1208,24"/>
+<area shape="poly" title=" " alt="" coords="1408,28,1541,79,1540,84,1406,33"/>
+<area shape="rect" title=" " alt="" coords="1663,86,1781,111"/>
+<area shape="poly" title=" " alt="" coords="1434,28,1652,76,1668,80,1667,85,1651,81,1433,33"/>
+<area shape="rect" title=" " alt="" coords="1805,86,1913,111"/>
+<area shape="poly" title=" " alt="" coords="1455,25,1612,45,1793,76,1809,80,1808,85,1792,81,1611,50,1455,30"/>
+<area shape="rect" title=" " alt="" coords="1937,86,2040,111"/>
+<area shape="poly" title=" " alt="" coords="1455,21,1669,38,1798,54,1927,76,1942,80,1941,85,1926,81,1797,59,1668,44,1454,26"/>
+<area shape="rect" title=" " alt="" coords="2064,86,2191,111"/>
+<area shape="poly" title=" " alt="" coords="1455,20,1721,36,1887,53,2053,76,2074,80,2073,85,2052,81,1886,58,1720,42,1455,25"/>
+<area shape="rect" title=" " alt="" coords="2215,86,2319,111"/>
+<area shape="poly" title=" " alt="" coords="1455,17,1596,20,1783,29,1993,46,2204,76,2221,80,2220,85,2203,81,1992,52,1782,34,1596,25,1455,22"/>
+<area shape="rect" title=" " alt="" coords="2344,86,2452,111"/>
+<area shape="poly" title=" " alt="" coords="1455,16,1616,18,1834,26,2082,44,2208,58,2332,76,2350,80,2349,85,2331,81,2208,63,2082,49,1834,31,1616,23,1455,21"/>
+<area shape="rect" title=" " alt="" coords="2477,86,2543,111"/>
+<area shape="poly" title=" " alt="" coords="1455,18,1677,22,1969,32,2256,49,2375,61,2465,76,2474,79,2473,84,2464,81,2375,66,2256,54,1969,37,1677,27,1455,23"/>
 <area shape="rect" title=" " alt="" coords="502,255,585,280"/>
 <area shape="poly" title=" " alt="" coords="620,209,571,248,567,244,617,205"/>
 <area shape="rect" title=" " alt="" coords="326,255,401,280"/>
@@ -160,14 +210,34 @@ Macros</h2></td></tr>
 <tr class="memitem:a9fada6926f06cf6c89e800725c76577e" id="r_a9fada6926f06cf6c89e800725c76577e"><td class="memItemLeft" align="right" valign="top">#define&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d8/d80/jwt_8c.html#a9fada6926f06cf6c89e800725c76577e">CWIST_JWT_TIME_LEEWAY</a>&#160;&#160;&#160;300</td></tr>
 <tr class="separator:a9fada6926f06cf6c89e800725c76577e"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table><table class="memberdecls">
+<tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="enum-members" name="enum-members"></a>
+Enumerations</h2></td></tr>
+<tr class="memitem:a889db178d8714ab67bc994f1d8faad33" id="r_a889db178d8714ab67bc994f1d8faad33"><td class="memItemLeft" align="right" valign="top">enum &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d8/d80/jwt_8c.html#a889db178d8714ab67bc994f1d8faad33">jwt_alg_t</a> { <a class="el" href="../../d8/d80/jwt_8c.html#a889db178d8714ab67bc994f1d8faad33aaa9217f4c8f5266d5401402f0ec98604">JWT_ALG_HS256</a>
+, <a class="el" href="../../d8/d80/jwt_8c.html#a889db178d8714ab67bc994f1d8faad33a84f9bf1cb93f6ae622a9de57d9c67472">JWT_ALG_ES256</a>
+, <a class="el" href="../../d8/d80/jwt_8c.html#a889db178d8714ab67bc994f1d8faad33a7dc1f237400db583167d328cd7735674">JWT_ALG_ED25519</a>
+ }</td></tr>
+<tr class="separator:a889db178d8714ab67bc994f1d8faad33"><td class="memSeparator" colspan="2">&#160;</td></tr>
+</table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="func-members" name="func-members"></a>
 Functions</h2></td></tr>
 <tr class="memitem:a7a722b14dc0d9fc508c800bbe3671417" id="r_a7a722b14dc0d9fc508c800bbe3671417"><td class="memItemLeft" align="right" valign="top">char *&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d8/d80/jwt_8c.html#a7a722b14dc0d9fc508c800bbe3671417">cwist_jwt_sign</a> (const char *payload_json, const char *secret, long exp_seconds)</td></tr>
-<tr class="memdesc:a7a722b14dc0d9fc508c800bbe3671417"><td class="mdescLeft">&#160;</td><td class="mdescRight">Sign a JSON payload as an HS256 JWT and optionally inject exp/iat claims.  <br /></td></tr>
+<tr class="memdesc:a7a722b14dc0d9fc508c800bbe3671417"><td class="mdescLeft">&#160;</td><td class="mdescRight">Sign a JWT token with HMAC-SHA256.  <br /></td></tr>
 <tr class="separator:a7a722b14dc0d9fc508c800bbe3671417"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a99a9d7d8249d30e9ac1c349fee2ad480" id="r_a99a9d7d8249d30e9ac1c349fee2ad480"><td class="memItemLeft" align="right" valign="top">char *&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d8/d80/jwt_8c.html#a99a9d7d8249d30e9ac1c349fee2ad480">cwist_jwt_sign_es256</a> (const char *payload_json, const char *pem_private_key, const char *kid, long exp_seconds)</td></tr>
+<tr class="memdesc:a99a9d7d8249d30e9ac1c349fee2ad480"><td class="mdescLeft">&#160;</td><td class="mdescRight">Sign a JWT token with ES256 (ECDSA over P-256 with SHA-256).  <br /></td></tr>
+<tr class="separator:a99a9d7d8249d30e9ac1c349fee2ad480"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:afbea518478ac45e5f86153c41da97347" id="r_afbea518478ac45e5f86153c41da97347"><td class="memItemLeft" align="right" valign="top">char *&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d8/d80/jwt_8c.html#afbea518478ac45e5f86153c41da97347">cwist_jwt_sign_ed25519</a> (const char *payload_json, const char *pem_private_key, const char *kid, long exp_seconds)</td></tr>
+<tr class="memdesc:afbea518478ac45e5f86153c41da97347"><td class="mdescLeft">&#160;</td><td class="mdescRight">Sign a JWT token with EdDSA (Ed25519, RFC 8037).  <br /></td></tr>
+<tr class="separator:afbea518478ac45e5f86153c41da97347"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a7ebdc506413955dc760508df1943b0ca" id="r_a7ebdc506413955dc760508df1943b0ca"><td class="memItemLeft" align="right" valign="top">cwist_jwt_claims *&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d8/d80/jwt_8c.html#a7ebdc506413955dc760508df1943b0ca">cwist_jwt_verify</a> (const char *token, const char *secret)</td></tr>
-<tr class="memdesc:a7ebdc506413955dc760508df1943b0ca"><td class="mdescLeft">&#160;</td><td class="mdescRight">Verify a JWT signature, parse its payload, and enforce the exp claim when present.  <br /></td></tr>
+<tr class="memdesc:a7ebdc506413955dc760508df1943b0ca"><td class="mdescLeft">&#160;</td><td class="mdescRight">Verify a JWT token and return the decoded claims.  <br /></td></tr>
 <tr class="separator:a7ebdc506413955dc760508df1943b0ca"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a449066f8812ceed8be3af264d626b123" id="r_a449066f8812ceed8be3af264d626b123"><td class="memItemLeft" align="right" valign="top">cwist_jwt_claims *&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d8/d80/jwt_8c.html#a449066f8812ceed8be3af264d626b123">cwist_jwt_verify_es256</a> (const char *token, const char *pem_key)</td></tr>
+<tr class="memdesc:a449066f8812ceed8be3af264d626b123"><td class="mdescLeft">&#160;</td><td class="mdescRight">Verify an ES256-signed JWT token and return the decoded claims.  <br /></td></tr>
+<tr class="separator:a449066f8812ceed8be3af264d626b123"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:af92c64b451fdba1c2e3065572daaf5fc" id="r_af92c64b451fdba1c2e3065572daaf5fc"><td class="memItemLeft" align="right" valign="top">cwist_jwt_claims *&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d8/d80/jwt_8c.html#af92c64b451fdba1c2e3065572daaf5fc">cwist_jwt_verify_ed25519</a> (const char *token, const char *pem_key)</td></tr>
+<tr class="memdesc:af92c64b451fdba1c2e3065572daaf5fc"><td class="mdescLeft">&#160;</td><td class="mdescRight">Verify an Ed25519-signed JWT token and return the decoded claims.  <br /></td></tr>
+<tr class="separator:af92c64b451fdba1c2e3065572daaf5fc"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a05776c1f6f45fbb9499e8b8788fbc64e" id="r_a05776c1f6f45fbb9499e8b8788fbc64e"><td class="memItemLeft" align="right" valign="top">const char *&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d8/d80/jwt_8c.html#a05776c1f6f45fbb9499e8b8788fbc64e">cwist_jwt_claims_get</a> (const cwist_jwt_claims *claims, const char *key)</td></tr>
 <tr class="memdesc:a05776c1f6f45fbb9499e8b8788fbc64e"><td class="mdescLeft">&#160;</td><td class="mdescRight">Retrieve one string-valued claim from a verified JWT payload.  <br /></td></tr>
 <tr class="separator:a05776c1f6f45fbb9499e8b8788fbc64e"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -191,7 +261,7 @@ Functions</h2></td></tr>
 <tr class="separator:adb61a3f86525a66a8b5d2eb0ae0c492c"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
-<div class="textblock"><p>HS256 JWT signing, verification, and decoded-claims access helpers. </p>
+<div class="textblock"><p>HS256/ES256/EdDSA JWT signing, verification, and decoded-claims access helpers. </p>
 
 <p class="definition">Definition in file <a class="el" href="../../d8/d80/jwt_8c_source.html">jwt.c</a>.</p>
 </div><h2 class="groupheader">Macro Definition Documentation</h2>
@@ -206,6 +276,28 @@ Functions</h2></td></tr>
         </tr>
       </table>
 </div><div class="memdoc">
+
+</div>
+</div>
+<h2 class="groupheader">Enumeration Type Documentation</h2>
+<a id="a889db178d8714ab67bc994f1d8faad33" name="a889db178d8714ab67bc994f1d8faad33"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a889db178d8714ab67bc994f1d8faad33">&#9670;&#160;</a></span>jwt_alg_t</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">enum <a class="el" href="../../d8/d80/jwt_8c.html#a889db178d8714ab67bc994f1d8faad33">jwt_alg_t</a></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+<table class="fieldtable">
+<tr><th colspan="2">Enumerator</th></tr><tr><td class="fieldname"><a id="a889db178d8714ab67bc994f1d8faad33aaa9217f4c8f5266d5401402f0ec98604" name="a889db178d8714ab67bc994f1d8faad33aaa9217f4c8f5266d5401402f0ec98604"></a>JWT_ALG_HS256&#160;</td><td class="fielddoc"></td></tr>
+<tr><td class="fieldname"><a id="a889db178d8714ab67bc994f1d8faad33a84f9bf1cb93f6ae622a9de57d9c67472" name="a889db178d8714ab67bc994f1d8faad33a84f9bf1cb93f6ae622a9de57d9c67472"></a>JWT_ALG_ES256&#160;</td><td class="fielddoc"></td></tr>
+<tr><td class="fieldname"><a id="a889db178d8714ab67bc994f1d8faad33a7dc1f237400db583167d328cd7735674" name="a889db178d8714ab67bc994f1d8faad33a7dc1f237400db583167d328cd7735674"></a>JWT_ALG_ED25519&#160;</td><td class="fielddoc"></td></tr>
+</table>
+
+<p class="definition">Definition at line <a class="el" href="../../d8/d80/jwt_8c_source.html#l00151">151</a> of file <a class="el" href="../../d8/d80/jwt_8c_source.html">jwt.c</a>.</p>
 
 </div>
 </div>
@@ -246,9 +338,9 @@ Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d8/d80/jwt_8c_source.html#l00469">469</a> of file <a class="el" href="../../d8/d80/jwt_8c_source.html">jwt.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d8/d80/jwt_8c_source.html#l00699">699</a> of file <a class="el" href="../../d8/d80/jwt_8c_source.html">jwt.c</a>.</p>
 
-<p class="reference">References <a class="el" href="../../d9/d39/alloc_8c_source.html#l00390">cwist_free()</a>.</p>
+<p class="reference">References <a class="el" href="../../d9/d39/alloc_8c_source.html#l00391">cwist_free()</a>.</p>
 
 </div>
 </div>
@@ -277,9 +369,9 @@ Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d8/d80/jwt_8c_source.html#l00411">411</a> of file <a class="el" href="../../d8/d80/jwt_8c_source.html">jwt.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d8/d80/jwt_8c_source.html#l00641">641</a> of file <a class="el" href="../../d8/d80/jwt_8c_source.html">jwt.c</a>.</p>
 
-<p class="reference">References <a class="el" href="../../d9/d39/alloc_8c_source.html#l00390">cwist_free()</a>.</p>
+<p class="reference">References <a class="el" href="../../d9/d39/alloc_8c_source.html#l00391">cwist_free()</a>.</p>
 
 </div>
 </div>
@@ -320,7 +412,7 @@ Functions</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>Borrowed pointer to the claim string, or NULL when absent/non-string. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d8/d80/jwt_8c_source.html#l00398">398</a> of file <a class="el" href="../../d8/d80/jwt_8c_source.html">jwt.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d8/d80/jwt_8c_source.html#l00628">628</a> of file <a class="el" href="../../d8/d80/jwt_8c_source.html">jwt.c</a>.</p>
 
 </div>
 </div>
@@ -362,11 +454,11 @@ Functions</h2></td></tr>
 <dl class="section return"><dt>Returns</dt><dd>Heap-allocated null-terminated JWT string, or NULL when the chunk set is invalid/incomplete or assembly/allocation fails.</dd></dl>
 <p>The caller owns the returned string and must free it with <a class="el" href="../../d2/dfe/alloc_8h.html#a220abeebe2823e72511d1690fc561306" title="Free memory obtained via cwist_alloc/cwist_strdup/etc.">cwist_free()</a>. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d8/d80/jwt_8c_source.html#l00484">484</a> of file <a class="el" href="../../d8/d80/jwt_8c_source.html">jwt.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d8/d80/jwt_8c_source.html#l00714">714</a> of file <a class="el" href="../../d8/d80/jwt_8c_source.html">jwt.c</a>.</p>
 
-<p class="reference">References <a class="el" href="../../d9/d39/alloc_8c_source.html#l00275">cwist_alloc()</a>, <a class="el" href="../../d2/d8b/seq_8c_source.html#l00196">cwist_seq_assembler_create()</a>, <a class="el" href="../../d2/d8b/seq_8c_source.html#l00223">cwist_seq_assembler_destroy()</a>, <a class="el" href="../../d2/d8b/seq_8c_source.html#l00268">cwist_seq_assembler_feed()</a>, <a class="el" href="../../d2/d8b/seq_8c_source.html#l00390">cwist_seq_assembler_get_data()</a>, and <a class="el" href="../../d2/d8b/seq_8c_source.html#l00063">cwist_seq_chunk_parse()</a>.</p>
+<p class="reference">References <a class="el" href="../../d9/d39/alloc_8c_source.html#l00276">cwist_alloc()</a>, <a class="el" href="../../d2/d8b/seq_8c_source.html#l00196">cwist_seq_assembler_create()</a>, <a class="el" href="../../d2/d8b/seq_8c_source.html#l00223">cwist_seq_assembler_destroy()</a>, <a class="el" href="../../d2/d8b/seq_8c_source.html#l00268">cwist_seq_assembler_feed()</a>, <a class="el" href="../../d2/d8b/seq_8c_source.html#l00390">cwist_seq_assembler_get_data()</a>, and <a class="el" href="../../d2/d8b/seq_8c_source.html#l00063">cwist_seq_chunk_parse()</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../d8/d80/jwt_8c_source.html#l00553">cwist_jwt_verify_chunks()</a>.</p>
+<p class="reference">Referenced by <a class="el" href="../../d8/d80/jwt_8c_source.html#l00783">cwist_jwt_verify_chunks()</a>.</p>
 
 </div>
 </div>
@@ -402,23 +494,22 @@ Functions</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p>Sign a JSON payload as an HS256 JWT and optionally inject exp/iat claims. </p>
-<p>Sign a JWT token with HMAC-SHA256.</p>
+<p>Sign a JWT token with HMAC-SHA256. </p>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
-    <tr><td class="paramname">payload_json</td><td>Raw payload JSON string to sign. </td></tr>
-    <tr><td class="paramname">secret</td><td>Shared HS256 signing secret. </td></tr>
-    <tr><td class="paramname">exp_seconds</td><td>Lifetime in seconds to add when the payload lacks exp/iat. </td></tr>
+    <tr><td class="paramname">payload_json</td><td>JSON string for the payload (e.g. "{\"sub\":\"1\"}"). Standard claims like "exp" and "iat" are added automatically when <code>exp_seconds</code> is &gt; 0. Supply them yourself if you need fine-grained control (pass exp_seconds = 0 in that case). </td></tr>
+    <tr><td class="paramname">secret</td><td>HMAC secret key (null-terminated). </td></tr>
+    <tr><td class="paramname">exp_seconds</td><td>Seconds until expiry from now. Pass 0 to skip automatic "exp" injection (you must include it in payload_json). </td></tr>
   </table>
   </dd>
 </dl>
-<dl class="section return"><dt>Returns</dt><dd>Heap-allocated JWT string, or NULL on parse/signature allocation failure. </dd></dl>
+<dl class="section return"><dt>Returns</dt><dd>Heap-allocated null-terminated JWT string, or NULL on error. Caller must free with <a class="el" href="../../d2/dfe/alloc_8h.html#a220abeebe2823e72511d1690fc561306" title="Free memory obtained via cwist_alloc/cwist_strdup/etc.">cwist_free()</a>. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d8/d80/jwt_8c_source.html#l00173">173</a> of file <a class="el" href="../../d8/d80/jwt_8c_source.html">jwt.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d8/d80/jwt_8c_source.html#l00482">482</a> of file <a class="el" href="../../d8/d80/jwt_8c_source.html">jwt.c</a>.</p>
 
-<p class="reference">References <a class="el" href="../../d9/d39/alloc_8c_source.html#l00275">cwist_alloc()</a>, <a class="el" href="../../d2/dfe/alloc_8h_source.html#l00101">CWIST_DEFER_FREE</a>, <a class="el" href="../../dd/d79/sstring_8c_source.html#l00525">cwist_sstring_append()</a>, <a class="el" href="../../dd/d79/sstring_8c_source.html#l00766">cwist_sstring_create()</a>, <a class="el" href="../../dd/d79/sstring_8c_source.html#l00787">cwist_sstring_destroy()</a>, <a class="el" href="../../d9/d39/alloc_8c_source.html#l00347">cwist_strdup()</a>, <a class="el" href="../../d4/dbd/core_2sstring_2sstring_8h_source.html#l00015">cwist_sstring::data</a>, and <a class="el" href="../../d4/dbd/core_2sstring_2sstring_8h_source.html#l00020">cwist_sstring::size</a>.</p>
+<p class="reference">References <a class="el" href="../../d8/d80/jwt_8c_source.html#l00152">JWT_ALG_HS256</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../d8/d80/jwt_8c_source.html#l00529">cwist_jwt_sign_chunks()</a>.</p>
+<p class="reference">Referenced by <a class="el" href="../../d8/d80/jwt_8c_source.html#l00759">cwist_jwt_sign_chunks()</a>.</p>
 
 </div>
 </div>
@@ -481,9 +572,123 @@ Functions</h2></td></tr>
 <dl class="section return"><dt>Returns</dt><dd>Heap-allocated chunk array, or NULL when signing or chunking fails.</dd></dl>
 <p>Free the result with <a class="el" href="../../d5/d6c/jwt_8h.html#aea871d4338c9ae6eae0aa726f45e0e68" title="Free chunk objects returned by cwist_jwt_split_chunks().">cwist_jwt_chunks_free()</a>. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d8/d80/jwt_8c_source.html#l00529">529</a> of file <a class="el" href="../../d8/d80/jwt_8c_source.html">jwt.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d8/d80/jwt_8c_source.html#l00759">759</a> of file <a class="el" href="../../d8/d80/jwt_8c_source.html">jwt.c</a>.</p>
 
-<p class="reference">References <a class="el" href="../../d9/d39/alloc_8c_source.html#l00390">cwist_free()</a>, <a class="el" href="../../d8/d80/jwt_8c_source.html#l00173">cwist_jwt_sign()</a>, and <a class="el" href="../../d8/d80/jwt_8c_source.html#l00432">cwist_jwt_split_chunks()</a>.</p>
+<p class="reference">References <a class="el" href="../../d9/d39/alloc_8c_source.html#l00391">cwist_free()</a>, <a class="el" href="../../d8/d80/jwt_8c_source.html#l00482">cwist_jwt_sign()</a>, and <a class="el" href="../../d8/d80/jwt_8c_source.html#l00662">cwist_jwt_split_chunks()</a>.</p>
+
+</div>
+</div>
+<a id="afbea518478ac45e5f86153c41da97347" name="afbea518478ac45e5f86153c41da97347"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#afbea518478ac45e5f86153c41da97347">&#9670;&#160;</a></span>cwist_jwt_sign_ed25519()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">char * cwist_jwt_sign_ed25519 </td>
+          <td>(</td>
+          <td class="paramtype">const char *&#160;</td>
+          <td class="paramname"><em>payload_json</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">const char *&#160;</td>
+          <td class="paramname"><em>pem_private_key</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">const char *&#160;</td>
+          <td class="paramname"><em>kid</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">long&#160;</td>
+          <td class="paramname"><em>exp_seconds</em>&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Sign a JWT token with EdDSA (Ed25519, RFC 8037). </p>
+<p>Like <a class="el" href="../../d5/d6c/jwt_8h.html#a99a9d7d8249d30e9ac1c349fee2ad480" title="Sign a JWT token with ES256 (ECDSA over P-256 with SHA-256).">cwist_jwt_sign_es256()</a> but with an Ed25519 PEM private key; the header declares "alg":"EdDSA".</p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">payload_json</td><td>JSON string for the payload (see <a class="el" href="../../d5/d6c/jwt_8h.html#a7a722b14dc0d9fc508c800bbe3671417" title="Sign a JWT token with HMAC-SHA256.">cwist_jwt_sign()</a>). </td></tr>
+    <tr><td class="paramname">pem_private_key</td><td>PEM-encoded Ed25519 private key, null-terminated. </td></tr>
+    <tr><td class="paramname">kid</td><td>Optional key id written into the JWT header, or NULL. </td></tr>
+    <tr><td class="paramname">exp_seconds</td><td>Seconds until expiry (see <a class="el" href="../../d5/d6c/jwt_8h.html#a7a722b14dc0d9fc508c800bbe3671417" title="Sign a JWT token with HMAC-SHA256.">cwist_jwt_sign()</a>). </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section return"><dt>Returns</dt><dd>Heap-allocated null-terminated JWT string, or NULL on error. Caller must free with <a class="el" href="../../d2/dfe/alloc_8h.html#a220abeebe2823e72511d1690fc561306" title="Free memory obtained via cwist_alloc/cwist_strdup/etc.">cwist_free()</a>. </dd></dl>
+
+<p class="definition">Definition at line <a class="el" href="../../d8/d80/jwt_8c_source.html#l00491">491</a> of file <a class="el" href="../../d8/d80/jwt_8c_source.html">jwt.c</a>.</p>
+
+<p class="reference">References <a class="el" href="../../d8/d80/jwt_8c_source.html#l00154">JWT_ALG_ED25519</a>.</p>
+
+</div>
+</div>
+<a id="a99a9d7d8249d30e9ac1c349fee2ad480" name="a99a9d7d8249d30e9ac1c349fee2ad480"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a99a9d7d8249d30e9ac1c349fee2ad480">&#9670;&#160;</a></span>cwist_jwt_sign_es256()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">char * cwist_jwt_sign_es256 </td>
+          <td>(</td>
+          <td class="paramtype">const char *&#160;</td>
+          <td class="paramname"><em>payload_json</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">const char *&#160;</td>
+          <td class="paramname"><em>pem_private_key</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">const char *&#160;</td>
+          <td class="paramname"><em>kid</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">long&#160;</td>
+          <td class="paramname"><em>exp_seconds</em>&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Sign a JWT token with ES256 (ECDSA over P-256 with SHA-256). </p>
+<p>Behaves like <a class="el" href="../../d5/d6c/jwt_8h.html#a7a722b14dc0d9fc508c800bbe3671417" title="Sign a JWT token with HMAC-SHA256.">cwist_jwt_sign()</a> except the signature is asymmetric: the header declares "alg":"ES256" and the signature is the 64-byte raw R||S form required by JOSE (RFC 7518 section 3.4).</p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">payload_json</td><td>JSON string for the payload (see <a class="el" href="../../d5/d6c/jwt_8h.html#a7a722b14dc0d9fc508c800bbe3671417" title="Sign a JWT token with HMAC-SHA256.">cwist_jwt_sign()</a>). </td></tr>
+    <tr><td class="paramname">pem_private_key</td><td>PEM-encoded EC private key (SEC 1 or PKCS#8), null-terminated. The key's curve must be P-256. </td></tr>
+    <tr><td class="paramname">kid</td><td>Optional key id written into the JWT header, or NULL. </td></tr>
+    <tr><td class="paramname">exp_seconds</td><td>Seconds until expiry (see <a class="el" href="../../d5/d6c/jwt_8h.html#a7a722b14dc0d9fc508c800bbe3671417" title="Sign a JWT token with HMAC-SHA256.">cwist_jwt_sign()</a>). </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section return"><dt>Returns</dt><dd>Heap-allocated null-terminated JWT string, or NULL on error. Caller must free with <a class="el" href="../../d2/dfe/alloc_8h.html#a220abeebe2823e72511d1690fc561306" title="Free memory obtained via cwist_alloc/cwist_strdup/etc.">cwist_free()</a>. </dd></dl>
+
+<p class="definition">Definition at line <a class="el" href="../../d8/d80/jwt_8c_source.html#l00486">486</a> of file <a class="el" href="../../d8/d80/jwt_8c_source.html">jwt.c</a>.</p>
+
+<p class="reference">References <a class="el" href="../../d8/d80/jwt_8c_source.html#l00153">JWT_ALG_ES256</a>.</p>
 
 </div>
 </div>
@@ -532,11 +737,11 @@ Functions</h2></td></tr>
 <dl class="section return"><dt>Returns</dt><dd>Heap-allocated array of <code>out_count</code> chunks, or NULL on invalid input, split failure, or allocation failure.</dd></dl>
 <p>Each chunk's <code>data</code> buffer is owned by the caller and must be released with <a class="el" href="../../d5/d6c/jwt_8h.html#aea871d4338c9ae6eae0aa726f45e0e68" title="Free chunk objects returned by cwist_jwt_split_chunks().">cwist_jwt_chunks_free()</a>. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d8/d80/jwt_8c_source.html#l00432">432</a> of file <a class="el" href="../../d8/d80/jwt_8c_source.html">jwt.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d8/d80/jwt_8c_source.html#l00662">662</a> of file <a class="el" href="../../d8/d80/jwt_8c_source.html">jwt.c</a>.</p>
 
-<p class="reference">References <a class="el" href="../../d6/d3c/seq_8h_source.html#l00062">cwist_seq_message::chunk_lens</a>, <a class="el" href="../../d6/d3c/seq_8h_source.html#l00061">cwist_seq_message::chunks</a>, <a class="el" href="../../d6/d3c/seq_8h_source.html#l00063">cwist_seq_message::count</a>, <a class="el" href="../../d9/d39/alloc_8c_source.html#l00289">cwist_alloc_array()</a>, <a class="el" href="../../d2/d8b/seq_8c_source.html#l00178">cwist_seq_message_free()</a>, <a class="el" href="../../d2/d8b/seq_8c_source.html#l00125">cwist_seq_split()</a>, <a class="el" href="../../d5/d6c/jwt_8h_source.html#l00080">cwist_jwt_chunk::data</a>, and <a class="el" href="../../d5/d6c/jwt_8h_source.html#l00081">cwist_jwt_chunk::len</a>.</p>
+<p class="reference">References <a class="el" href="../../d6/d3c/seq_8h_source.html#l00062">cwist_seq_message::chunk_lens</a>, <a class="el" href="../../d6/d3c/seq_8h_source.html#l00061">cwist_seq_message::chunks</a>, <a class="el" href="../../d6/d3c/seq_8h_source.html#l00063">cwist_seq_message::count</a>, <a class="el" href="../../d9/d39/alloc_8c_source.html#l00290">cwist_alloc_array()</a>, <a class="el" href="../../d2/d8b/seq_8c_source.html#l00178">cwist_seq_message_free()</a>, <a class="el" href="../../d2/d8b/seq_8c_source.html#l00125">cwist_seq_split()</a>, <a class="el" href="../../d5/d6c/jwt_8h_source.html#l00081">cwist_jwt_chunk::data</a>, and <a class="el" href="../../d5/d6c/jwt_8h_source.html#l00082">cwist_jwt_chunk::len</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../d8/d80/jwt_8c_source.html#l00529">cwist_jwt_sign_chunks()</a>.</p>
+<p class="reference">Referenced by <a class="el" href="../../d8/d80/jwt_8c_source.html#l00759">cwist_jwt_sign_chunks()</a>.</p>
 
 </div>
 </div>
@@ -566,22 +771,26 @@ Functions</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p>Verify a JWT signature, parse its payload, and enforce the exp claim when present. </p>
-<p>Verify a JWT token and return the decoded claims.</p>
+<p>Verify a JWT token and return the decoded claims. </p>
+<p>Validates:</p><ul>
+<li>Structural integrity (three Base64URL-encoded parts).</li>
+<li>HMAC-SHA256 signature.</li>
+<li>"exp" claim (token must not be expired) if present.</li>
+</ul>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
-    <tr><td class="paramname">token</td><td>JWT string in header.payload.signature form. </td></tr>
-    <tr><td class="paramname">secret</td><td>Shared HS256 signing secret. </td></tr>
+    <tr><td class="paramname">token</td><td>Null-terminated JWT string ("header.payload.sig"). </td></tr>
+    <tr><td class="paramname">secret</td><td>HMAC secret key (null-terminated). </td></tr>
   </table>
   </dd>
 </dl>
-<dl class="section return"><dt>Returns</dt><dd>Heap-allocated claims object, or NULL when verification/parsing fails. </dd></dl>
+<dl class="section return"><dt>Returns</dt><dd>Pointer to a cwist_jwt_claims object on success, NULL on failure. Caller must free with <a class="el" href="../../d5/d6c/jwt_8h.html#a22f0ad8ebf932941f73e52625fbf78da" title="Free a claims object.">cwist_jwt_claims_destroy()</a>. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d8/d80/jwt_8c_source.html#l00261">261</a> of file <a class="el" href="../../d8/d80/jwt_8c_source.html">jwt.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d8/d80/jwt_8c_source.html#l00610">610</a> of file <a class="el" href="../../d8/d80/jwt_8c_source.html">jwt.c</a>.</p>
 
-<p class="reference">References <a class="el" href="../../d9/d39/alloc_8c_source.html#l00275">cwist_alloc()</a>, <a class="el" href="../../d9/d39/alloc_8c_source.html#l00390">cwist_free()</a>, <a class="el" href="../../d8/d80/jwt_8c.html#a9fada6926f06cf6c89e800725c76577e">CWIST_JWT_TIME_LEEWAY</a>, <a class="el" href="../../dd/d79/sstring_8c_source.html#l00086">cwist_sstring_assign_len()</a>, <a class="el" href="../../dd/d79/sstring_8c_source.html#l00766">cwist_sstring_create()</a>, <a class="el" href="../../dd/d79/sstring_8c_source.html#l00787">cwist_sstring_destroy()</a>, <a class="el" href="../../d9/d39/alloc_8c_source.html#l00347">cwist_strdup()</a>, <a class="el" href="../../d4/dbd/core_2sstring_2sstring_8h_source.html#l00015">cwist_sstring::data</a>, and <a class="el" href="../../d4/dbd/core_2sstring_2sstring_8h_source.html#l00020">cwist_sstring::size</a>.</p>
+<p class="reference">References <a class="el" href="../../d8/d80/jwt_8c_source.html#l00152">JWT_ALG_HS256</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../d8/d80/jwt_8c_source.html#l00553">cwist_jwt_verify_chunks()</a>.</p>
+<p class="reference">Referenced by <a class="el" href="../../d8/d80/jwt_8c_source.html#l00783">cwist_jwt_verify_chunks()</a>.</p>
 
 </div>
 </div>
@@ -630,16 +839,106 @@ Functions</h2></td></tr>
 <dl class="section return"><dt>Returns</dt><dd>Heap-allocated verified claims object, or NULL when assembly, parsing, signature verification, or claim validation fails.</dd></dl>
 <p>The caller owns the result and must release it with <a class="el" href="../../d5/d6c/jwt_8h.html#a22f0ad8ebf932941f73e52625fbf78da" title="Free a claims object.">cwist_jwt_claims_destroy()</a>. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d8/d80/jwt_8c_source.html#l00553">553</a> of file <a class="el" href="../../d8/d80/jwt_8c_source.html">jwt.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d8/d80/jwt_8c_source.html#l00783">783</a> of file <a class="el" href="../../d8/d80/jwt_8c_source.html">jwt.c</a>.</p>
 
-<p class="reference">References <a class="el" href="../../d9/d39/alloc_8c_source.html#l00390">cwist_free()</a>, <a class="el" href="../../d8/d80/jwt_8c_source.html#l00484">cwist_jwt_join_chunks()</a>, and <a class="el" href="../../d8/d80/jwt_8c_source.html#l00261">cwist_jwt_verify()</a>.</p>
+<p class="reference">References <a class="el" href="../../d9/d39/alloc_8c_source.html#l00391">cwist_free()</a>, <a class="el" href="../../d8/d80/jwt_8c_source.html#l00714">cwist_jwt_join_chunks()</a>, and <a class="el" href="../../d8/d80/jwt_8c_source.html#l00610">cwist_jwt_verify()</a>.</p>
+
+</div>
+</div>
+<a id="af92c64b451fdba1c2e3065572daaf5fc" name="af92c64b451fdba1c2e3065572daaf5fc"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#af92c64b451fdba1c2e3065572daaf5fc">&#9670;&#160;</a></span>cwist_jwt_verify_ed25519()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">cwist_jwt_claims * cwist_jwt_verify_ed25519 </td>
+          <td>(</td>
+          <td class="paramtype">const char *&#160;</td>
+          <td class="paramname"><em>token</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">const char *&#160;</td>
+          <td class="paramname"><em>pem_key</em>&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Verify an Ed25519-signed JWT token and return the decoded claims. </p>
+<p>The header must declare exactly "alg":"EdDSA". See <a class="el" href="../../d5/d6c/jwt_8h.html#a449066f8812ceed8be3af264d626b123" title="Verify an ES256-signed JWT token and return the decoded claims.">cwist_jwt_verify_es256()</a> for the verification contract.</p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">token</td><td>Null-terminated JWT string ("header.payload.sig"). </td></tr>
+    <tr><td class="paramname">pem_key</td><td>PEM-encoded Ed25519 public key (or private key), null-terminated. </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section return"><dt>Returns</dt><dd>Pointer to a cwist_jwt_claims object on success, NULL on failure. Caller must free with <a class="el" href="../../d5/d6c/jwt_8h.html#a22f0ad8ebf932941f73e52625fbf78da" title="Free a claims object.">cwist_jwt_claims_destroy()</a>. </dd></dl>
+
+<p class="definition">Definition at line <a class="el" href="../../d8/d80/jwt_8c_source.html#l00618">618</a> of file <a class="el" href="../../d8/d80/jwt_8c_source.html">jwt.c</a>.</p>
+
+<p class="reference">References <a class="el" href="../../d8/d80/jwt_8c_source.html#l00154">JWT_ALG_ED25519</a>.</p>
+
+</div>
+</div>
+<a id="a449066f8812ceed8be3af264d626b123" name="a449066f8812ceed8be3af264d626b123"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a449066f8812ceed8be3af264d626b123">&#9670;&#160;</a></span>cwist_jwt_verify_es256()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">cwist_jwt_claims * cwist_jwt_verify_es256 </td>
+          <td>(</td>
+          <td class="paramtype">const char *&#160;</td>
+          <td class="paramname"><em>token</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">const char *&#160;</td>
+          <td class="paramname"><em>pem_key</em>&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Verify an ES256-signed JWT token and return the decoded claims. </p>
+<p>The header must declare exactly "alg":"ES256" (a token signed with any other algorithm is rejected, which also closes the HS256/ES256 confusion class of RFC 8725 section 2.1) and the signature must verify against the public half of <code>pem_key</code>. The "exp"/"nbf" checks match <a class="el" href="../../d5/d6c/jwt_8h.html#a7ebdc506413955dc760508df1943b0ca" title="Verify a JWT token and return the decoded claims.">cwist_jwt_verify()</a>.</p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">token</td><td>Null-terminated JWT string ("header.payload.sig"). </td></tr>
+    <tr><td class="paramname">pem_key</td><td>PEM-encoded EC P-256 public key (or private key; the public half is used), null-terminated. </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section return"><dt>Returns</dt><dd>Pointer to a cwist_jwt_claims object on success, NULL on failure. Caller must free with <a class="el" href="../../d5/d6c/jwt_8h.html#a22f0ad8ebf932941f73e52625fbf78da" title="Free a claims object.">cwist_jwt_claims_destroy()</a>. </dd></dl>
+
+<p class="definition">Definition at line <a class="el" href="../../d8/d80/jwt_8c_source.html#l00614">614</a> of file <a class="el" href="../../d8/d80/jwt_8c_source.html">jwt.c</a>.</p>
+
+<p class="reference">References <a class="el" href="../../d8/d80/jwt_8c_source.html#l00153">JWT_ALG_ES256</a>.</p>
 
 </div>
 </div>
 </div><!-- contents -->
+</div><!-- doc-content -->
 <!-- start footer part -->
-<hr class="footer"/><address class="footer"><small>
-Generated by&#160;<a href="https://www.doxygen.org/index.html"><img class="footer" src="../../doxygen.svg" width="104" height="31" alt="doxygen"/></a> 1.9.8
-</small></address>
+<div id="nav-path" class="navpath"><!-- id is needed for treeview function! -->
+  <ul>
+    <li class="navelem"><a class="el" href="../../dir_68267d1309a1af8e8297ef4c3efbcdba.html">src</a></li><li class="navelem"><a class="el" href="../../dir_8a6c31bbbfb30065ee9a683ead3fe21a.html">security</a></li><li class="navelem"><a class="el" href="../../dir_1e885d2206a7d7f75b3ade40dad03d8b.html">jwt</a></li><li class="navelem"><a class="el" href="../../d8/d80/jwt_8c.html">jwt.c</a></li>
+    <li class="footer">Generated by <a href="https://www.doxygen.org/index.html"><img class="footer" src="../../doxygen.svg" width="104" height="31" alt="doxygen"/></a> 1.9.8 </li>
+  </ul>
+</div>
 </body>
 </html>

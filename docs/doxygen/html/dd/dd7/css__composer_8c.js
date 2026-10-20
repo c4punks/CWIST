@@ -6,8 +6,15 @@ var css__composer_8c =
     [ "cwist_color_hsl_to_rgb", "dd/dd7/css__composer_8c.html#ad141d4a8a639ca176c7a6f08bb77af7f", null ],
     [ "cwist_color_rgb_to_hex", "dd/dd7/css__composer_8c.html#adc63d0cf0403d9c103a3d218adff64b0", null ],
     [ "cwist_color_rgb_to_hsl", "dd/dd7/css__composer_8c.html#af1d6b42d55ec612d65e9672a16732066", null ],
+    [ "cwist_css_bundle", "dd/dd7/css__composer_8c.html#a3029c761b9435f80c32692fa0e0fa95a", null ],
     [ "cwist_css_config_init", "dd/dd7/css__composer_8c.html#a951abb29e77f91b62c54ab9d07f724a2", null ],
     [ "cwist_css_generate_stylesheet", "dd/dd7/css__composer_8c.html#a4b035df6ad72782fe3ada62f32dd848e", null ],
     [ "cwist_css_generate_utility_classes", "dd/dd7/css__composer_8c.html#aea3b03fdcde20651bdb2766dee0ddce5", null ],
-    [ "cwist_css_generate_variables", "dd/dd7/css__composer_8c.html#a884932455fa36524d08bb4f42b745852", null ]
+    [ "cwist_css_generate_variables", "dd/dd7/css__composer_8c.html#a884932455fa36524d08bb4f42b745852", null ],
+    [ "cwist_css_minify", "dd/dd7/css__composer_8c.html#ad2d9d42dba722d41086e03430b47e7b2", null ],
+    [ "cwist_css_scope_add_rule", "dd/dd7/css__composer_8c.html#a8518b78a2adfbeaa0180ee46810ac1e2", null ],
+    [ "cwist_css_scope_class", "dd/dd7/css__composer_8c.html#a5fab8d2c3f3845ef4570dc2c9d294fbf", null ],
+    [ "cwist_css_scope_destroy", "dd/dd7/css__composer_8c.html#afc594bea07a8331de0980dfaddf0e638", null ],
+    [ "cwist_css_scope_generate_stylesheet", "dd/dd7/css__composer_8c.html#abf8d5f614b9af5e7755a29b86e96f498", null ],
+    [ "cwist_css_scope_init", "dd/dd7/css__composer_8c.html#add6f2e01a325ab20f34fabc5abcf06bb", null ]
 ];

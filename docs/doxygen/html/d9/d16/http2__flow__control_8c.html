@@ -1,3 +1,4 @@
+<!-- HTML header for doxygen 1.9.8-->
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "https://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml" lang="en-US">
 <head>
@@ -5,14 +6,32 @@
 <meta http-equiv="X-UA-Compatible" content="IE=11"/>
 <meta name="generator" content="Doxygen 1.9.8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
-<title>cwist: src/net/http/http2_flow_control.c File Reference</title>
+<title>src/net/http/http2_flow_control.c File Reference - CWIST High-Performance C Web Framework</title>
+<meta name="description" content="CWIST: High-performance C17 web framework and application server (HTTP/1.1, HTTP/2, HTTP/3, WebTransport, WebSocket, PQC TLS) powered by io_uring and libttak."/>
+<meta name="keywords" content="C web framework, C17, HTTP3, QUIC, io_uring, web server, actix alternative, high performance, REST API in C, C web server"/>
+<meta name="author" content="c4punks"/>
+<meta name="robots" content="index, follow"/>
+<!-- Open Graph / Facebook -->
+<meta property="og:type" content="website"/>
+<meta property="og:title" content="src/net/http/http2_flow_control.c File Reference - CWIST Modern C Web Framework"/>
+<meta property="og:description" content="High-performance C17 web framework & application server with zero-copy io_uring reactor, PQC TLS, and HTTP/3 support."/>
+<meta property="og:url" content="https://c4punks.github.io/CWIST/"/>
+<!-- Twitter -->
+<meta name="twitter:card" content="summary_large_image"/>
+<meta name="twitter:title" content="src/net/http/http2_flow_control.c File Reference - CWIST Modern C Web Framework"/>
+<meta name="twitter:description" content="High-performance C17 web framework & application server with zero-copy io_uring reactor, PQC TLS, and HTTP/3 support."/>
 <link href="../../tabs.css" rel="stylesheet" type="text/css"/>
 <script type="text/javascript" src="../../jquery.js"></script>
 <script type="text/javascript" src="../../dynsections.js"></script>
+<link href="../../navtree.css" rel="stylesheet" type="text/css"/>
+<script type="text/javascript" src="../../resize.js"></script>
+<script type="text/javascript" src="../../navtreedata.js"></script>
+<script type="text/javascript" src="../../navtree.js"></script>
 <link href="../../search/search.css" rel="stylesheet" type="text/css"/>
 <script type="text/javascript" src="../../search/searchdata.js"></script>
 <script type="text/javascript" src="../../search/search.js"></script>
 <link href="../../doxygen.css" rel="stylesheet" type="text/css" />
+<link href="../../doxygen-awesome.css" rel="stylesheet" type="text/css"/>
 </head>
 <body>
 <div id="top"><!-- do not remove this div, it is closed by doxygen! -->
@@ -47,6 +66,23 @@ $(function() {
 /* @license-end */
 </script>
 <div id="main-nav"></div>
+</div><!-- top -->
+<div id="side-nav" class="ui-resizable side-nav-resizable">
+  <div id="nav-tree">
+    <div id="nav-tree-contents">
+      <div id="nav-sync" class="sync"></div>
+    </div>
+  </div>
+  <div id="splitbar" style="-moz-user-select:none;" 
+       class="ui-resizable-handle">
+  </div>
+</div>
+<script type="text/javascript">
+/* @license magnet:?xt=urn:btih:d3d9a9a6595521f9666a5e94cc830dab83b65699&amp;dn=expat.txt MIT */
+$(document).ready(function(){initNavTree('d9/d16/http2__flow__control_8c.html','../../'); initResizable(); });
+/* @license-end */
+</script>
+<div id="doc-content">
 <!-- window showing the filter options -->
 <div id="MSearchSelectWindow"
      onmouseover="return searchBox.OnSearchSelectShow()"
@@ -68,11 +104,6 @@ $(function() {
 </div>
 </div>
 
-<div id="nav-path" class="navpath">
-  <ul>
-<li class="navelem"><a class="el" href="../../dir_68267d1309a1af8e8297ef4c3efbcdba.html">src</a></li><li class="navelem"><a class="el" href="../../dir_c72b25b75abe208498b36a3e44a3726c.html">net</a></li><li class="navelem"><a class="el" href="../../dir_dd2d28fd72df0d33d2116010ecf4f11d.html">http</a></li>  </ul>
-</div>
-</div><!-- top -->
 <div class="header">
   <div class="summary">
 <a href="#func-members">Functions</a>  </div>
@@ -82,24 +113,28 @@ $(function() {
 <div class="textblock"><code>#include &quot;<a class="el" href="../../d7/de9/http2__flow__control_8h_source.html">cwist/net/http/http2_flow_control.h</a>&quot;</code><br />
 <code>#include &lt;limits.h&gt;</code><br />
 <code>#include &lt;string.h&gt;</code><br />
+<code>#include &quot;<a class="el" href="../../d4/dce/h2__wire_8h_source.html">h2_wire.h</a>&quot;</code><br />
 </div><div class="textblock"><div class="dynheader">
 Include dependency graph for http2_flow_control.c:</div>
 <div class="dyncontent">
 <div class="center"><img src="../../da/d4e/http2__flow__control_8c__incl.png" border="0" usemap="#asrc_2net_2http_2http2__flow__control_8c" alt=""/></div>
 <map name="asrc_2net_2http_2http2__flow__control_8c" id="asrc_2net_2http_2http2__flow__control_8c">
-<area shape="rect" title=" " alt="" coords="217,5,351,45"/>
-<area shape="rect" href="../../d7/de9/http2__flow__control_8h.html" title=" " alt="" coords="75,93,224,133"/>
-<area shape="poly" title=" " alt="" coords="256,48,192,88,189,84,253,43"/>
-<area shape="rect" title=" " alt="" coords="249,101,319,126"/>
-<area shape="poly" title=" " alt="" coords="287,46,287,87,281,87,281,46"/>
-<area shape="rect" title=" " alt="" coords="343,101,414,126"/>
-<area shape="poly" title=" " alt="" coords="307,44,357,89,354,93,303,48"/>
+<area shape="rect" title=" " alt="" coords="211,5,346,45"/>
+<area shape="rect" href="../../d7/de9/http2__flow__control_8h.html" title=" " alt="" coords="23,93,172,133"/>
+<area shape="poly" title=" " alt="" coords="240,48,150,90,148,85,238,43"/>
+<area shape="rect" title=" " alt="" coords="197,101,267,126"/>
+<area shape="poly" title=" " alt="" coords="271,47,247,90,243,87,266,44"/>
+<area shape="rect" title=" " alt="" coords="291,101,362,126"/>
+<area shape="poly" title=" " alt="" coords="292,44,316,87,311,90,287,47"/>
+<area shape="rect" href="../../d4/dce/h2__wire_8h.html" title="HTTP/2 wire integers in network byte order (private)." alt="" coords="387,101,472,126"/>
+<area shape="poly" title=" " alt="" coords="313,43,399,92,396,96,310,48"/>
 <area shape="rect" title=" " alt="" coords="5,181,88,207"/>
-<area shape="poly" title=" " alt="" coords="126,136,74,175,71,171,123,131"/>
+<area shape="poly" title=" " alt="" coords="87,135,64,171,59,168,83,132"/>
 <area shape="rect" title=" " alt="" coords="112,181,187,207"/>
-<area shape="poly" title=" " alt="" coords="152,134,152,167,147,167,147,134"/>
-<area shape="rect" title=" " alt="" coords="211,181,282,207"/>
-<area shape="poly" title=" " alt="" coords="175,131,223,170,220,175,171,136"/>
+<area shape="poly" title=" " alt="" coords="112,132,136,168,132,171,108,135"/>
+<area shape="rect" title=" " alt="" coords="302,181,373,207"/>
+<area shape="poly" title=" " alt="" coords="156,131,290,175,288,180,154,136"/>
+<area shape="poly" title=" " alt="" coords="417,128,363,174,360,170,414,124"/>
 </map>
 </div>
 </div>
@@ -184,7 +219,7 @@ Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d9/d16/http2__flow__control_8c_source.html#l00505">505</a> of file <a class="el" href="../../d9/d16/http2__flow__control_8c_source.html">http2_flow_control.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d9/d16/http2__flow__control_8c_source.html#l00498">498</a> of file <a class="el" href="../../d9/d16/http2__flow__control_8c_source.html">http2_flow_control.c</a>.</p>
 
 <p class="reference">References <a class="el" href="../../d7/de9/http2__flow__control_8h_source.html#l00010">CWIST_HTTP2_MAX_WINDOW</a>, and <a class="el" href="../../d7/de9/http2__flow__control_8h_source.html#l00028">cwist_http2_flow_control::send_window</a>.</p>
 
@@ -226,11 +261,11 @@ Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d9/d16/http2__flow__control_8c_source.html#l00287">287</a> of file <a class="el" href="../../d9/d16/http2__flow__control_8c_source.html">http2_flow_control.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d9/d16/http2__flow__control_8c_source.html#l00280">280</a> of file <a class="el" href="../../d9/d16/http2__flow__control_8c_source.html">http2_flow_control.c</a>.</p>
 
 <p class="reference">References <a class="el" href="../../d7/de9/http2__flow__control_8h_source.html#l00027">cwist_http2_flow_control::pending_update</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../d2/db0/http2_8c_source.html#l03587">cwist_http2_serve_connection_ex()</a>.</p>
+<p class="reference">Referenced by <a class="el" href="../../d2/db0/http2_8c_source.html#l03573">cwist_http2_serve_connection_ex()</a>.</p>
 
 </div>
 </div>
@@ -277,7 +312,7 @@ Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d9/d16/http2__flow__control_8c_source.html#l00144">144</a> of file <a class="el" href="../../d9/d16/http2__flow__control_8c_source.html">http2_flow_control.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d9/d16/http2__flow__control_8c_source.html#l00137">137</a> of file <a class="el" href="../../d9/d16/http2__flow__control_8c_source.html">http2_flow_control.c</a>.</p>
 
 <p class="reference">References <a class="el" href="../../d7/de9/http2__flow__control_8h_source.html#l00008">CWIST_HTTP2_INITIAL_CONNECTION_WINDOW</a>, <a class="el" href="../../d7/de9/http2__flow__control_8h_source.html#l00010">CWIST_HTTP2_MAX_WINDOW</a>, <a class="el" href="../../d7/de9/http2__flow__control_8h_source.html#l00017">CWIST_HTTP2_NETWORK_QUALITY_NORMAL</a>, <a class="el" href="../../d7/de9/http2__flow__control_8h_source.html#l00026">cwist_http2_flow_control::max_window</a>, <a class="el" href="../../d7/de9/http2__flow__control_8h_source.html#l00025">cwist_http2_flow_control::min_window</a>, <a class="el" href="../../d7/de9/http2__flow__control_8h_source.html#l00032">cwist_http2_flow_control::network_quality</a>, <a class="el" href="../../d7/de9/http2__flow__control_8h_source.html#l00035">cwist_http2_flow_control::pacing_rate_bytes_per_sec</a>, <a class="el" href="../../d7/de9/http2__flow__control_8h_source.html#l00034">cwist_http2_flow_control::pacing_tokens</a>, <a class="el" href="../../d7/de9/http2__flow__control_8h_source.html#l00023">cwist_http2_flow_control::receive_window</a>, <a class="el" href="../../d7/de9/http2__flow__control_8h_source.html#l00028">cwist_http2_flow_control::send_window</a>, and <a class="el" href="../../d7/de9/http2__flow__control_8h_source.html#l00024">cwist_http2_flow_control::target_window</a>.</p>
 
@@ -348,7 +383,7 @@ Functions</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>1 when a WINDOW_UPDATE frame was written, 0 when no update is due or <code>flow_control</code> is NULL, -1 when the frame could not be serialized. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d9/d16/http2__flow__control_8c_source.html#l00392">392</a> of file <a class="el" href="../../d9/d16/http2__flow__control_8c_source.html">http2_flow_control.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d9/d16/http2__flow__control_8c_source.html#l00385">385</a> of file <a class="el" href="../../d9/d16/http2__flow__control_8c_source.html">http2_flow_control.c</a>.</p>
 
 <p class="reference">References <a class="el" href="../../d7/de9/http2__flow__control_8h_source.html#l00010">CWIST_HTTP2_MAX_WINDOW</a>, <a class="el" href="../../d7/de9/http2__flow__control_8h_source.html#l00033">cwist_http2_flow_control::last_window_update_us</a>, <a class="el" href="../../d7/de9/http2__flow__control_8h_source.html#l00026">cwist_http2_flow_control::max_window</a>, <a class="el" href="../../d7/de9/http2__flow__control_8h_source.html#l00025">cwist_http2_flow_control::min_window</a>, <a class="el" href="../../d7/de9/http2__flow__control_8h_source.html#l00027">cwist_http2_flow_control::pending_update</a>, <a class="el" href="../../d7/de9/http2__flow__control_8h_source.html#l00023">cwist_http2_flow_control::receive_window</a>, <a class="el" href="../../d7/de9/http2__flow__control_8h_source.html#l00031">cwist_http2_flow_control::rtt_initialized</a>, <a class="el" href="../../d7/de9/http2__flow__control_8h_source.html#l00029">cwist_http2_flow_control::srtt_us</a>, and <a class="el" href="../../d7/de9/http2__flow__control_8h_source.html#l00024">cwist_http2_flow_control::target_window</a>.</p>
 
@@ -405,11 +440,11 @@ Functions</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>Allowed byte count; 0 when either flow-control pointer is NULL or no credit of any kind is available. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d9/d16/http2__flow__control_8c_source.html#l00548">548</a> of file <a class="el" href="../../d9/d16/http2__flow__control_8c_source.html">http2_flow_control.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d9/d16/http2__flow__control_8c_source.html#l00541">541</a> of file <a class="el" href="../../d9/d16/http2__flow__control_8c_source.html">http2_flow_control.c</a>.</p>
 
 <p class="reference">References <a class="el" href="../../d7/de9/http2__flow__control_8h_source.html#l00036">cwist_http2_flow_control::pacing_last_us</a>, <a class="el" href="../../d7/de9/http2__flow__control_8h_source.html#l00035">cwist_http2_flow_control::pacing_rate_bytes_per_sec</a>, <a class="el" href="../../d7/de9/http2__flow__control_8h_source.html#l00034">cwist_http2_flow_control::pacing_tokens</a>, <a class="el" href="../../d7/de9/http2__flow__control_8h_source.html#l00028">cwist_http2_flow_control::send_window</a>, <a class="el" href="../../d7/de9/http2__flow__control_8h_source.html#l00046">cwist_http2_stream_flow_control::send_window</a>, and <a class="el" href="../../d7/de9/http2__flow__control_8h_source.html#l00024">cwist_http2_flow_control::target_window</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../d9/d16/http2__flow__control_8c_source.html#l00613">cwist_http2_flow_control_reserve_send()</a>.</p>
+<p class="reference">Referenced by <a class="el" href="../../d9/d16/http2__flow__control_8c_source.html#l00606">cwist_http2_flow_control_reserve_send()</a>.</p>
 
 </div>
 </div>
@@ -455,11 +490,11 @@ Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d9/d16/http2__flow__control_8c_source.html#l00253">253</a> of file <a class="el" href="../../d9/d16/http2__flow__control_8c_source.html">http2_flow_control.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d9/d16/http2__flow__control_8c_source.html#l00246">246</a> of file <a class="el" href="../../d9/d16/http2__flow__control_8c_source.html">http2_flow_control.c</a>.</p>
 
 <p class="reference">References <a class="el" href="../../d7/de9/http2__flow__control_8h_source.html#l00023">cwist_http2_flow_control::receive_window</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../d2/db0/http2_8c_source.html#l03587">cwist_http2_serve_connection_ex()</a>.</p>
+<p class="reference">Referenced by <a class="el" href="../../d2/db0/http2_8c_source.html#l03573">cwist_http2_serve_connection_ex()</a>.</p>
 
 </div>
 </div>
@@ -520,9 +555,9 @@ Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d9/d16/http2__flow__control_8c_source.html#l00613">613</a> of file <a class="el" href="../../d9/d16/http2__flow__control_8c_source.html">http2_flow_control.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d9/d16/http2__flow__control_8c_source.html#l00606">606</a> of file <a class="el" href="../../d9/d16/http2__flow__control_8c_source.html">http2_flow_control.c</a>.</p>
 
-<p class="reference">References <a class="el" href="../../d9/d16/http2__flow__control_8c_source.html#l00548">cwist_http2_flow_control_pacing_allowance()</a>, <a class="el" href="../../d7/de9/http2__flow__control_8h_source.html#l00034">cwist_http2_flow_control::pacing_tokens</a>, <a class="el" href="../../d7/de9/http2__flow__control_8h_source.html#l00028">cwist_http2_flow_control::send_window</a>, and <a class="el" href="../../d7/de9/http2__flow__control_8h_source.html#l00046">cwist_http2_stream_flow_control::send_window</a>.</p>
+<p class="reference">References <a class="el" href="../../d9/d16/http2__flow__control_8c_source.html#l00541">cwist_http2_flow_control_pacing_allowance()</a>, <a class="el" href="../../d7/de9/http2__flow__control_8h_source.html#l00034">cwist_http2_flow_control::pacing_tokens</a>, <a class="el" href="../../d7/de9/http2__flow__control_8h_source.html#l00028">cwist_http2_flow_control::send_window</a>, and <a class="el" href="../../d7/de9/http2__flow__control_8h_source.html#l00046">cwist_http2_stream_flow_control::send_window</a>.</p>
 
 </div>
 </div>
@@ -562,11 +597,11 @@ Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d9/d16/http2__flow__control_8c_source.html#l00226">226</a> of file <a class="el" href="../../d9/d16/http2__flow__control_8c_source.html">http2_flow_control.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d9/d16/http2__flow__control_8c_source.html#l00219">219</a> of file <a class="el" href="../../d9/d16/http2__flow__control_8c_source.html">http2_flow_control.c</a>.</p>
 
 <p class="reference">References <a class="el" href="../../d7/de9/http2__flow__control_8h_source.html#l00031">cwist_http2_flow_control::rtt_initialized</a>, <a class="el" href="../../d7/de9/http2__flow__control_8h_source.html#l00030">cwist_http2_flow_control::rttvar_us</a>, and <a class="el" href="../../d7/de9/http2__flow__control_8h_source.html#l00029">cwist_http2_flow_control::srtt_us</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../d2/db0/http2_8c_source.html#l03587">cwist_http2_serve_connection_ex()</a>.</p>
+<p class="reference">Referenced by <a class="el" href="../../d2/db0/http2_8c_source.html#l03573">cwist_http2_serve_connection_ex()</a>.</p>
 
 </div>
 </div>
@@ -606,7 +641,7 @@ Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d9/d16/http2__flow__control_8c_source.html#l00522">522</a> of file <a class="el" href="../../d9/d16/http2__flow__control_8c_source.html">http2_flow_control.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d9/d16/http2__flow__control_8c_source.html#l00515">515</a> of file <a class="el" href="../../d9/d16/http2__flow__control_8c_source.html">http2_flow_control.c</a>.</p>
 
 <p class="reference">References <a class="el" href="../../d7/de9/http2__flow__control_8h_source.html#l00010">CWIST_HTTP2_MAX_WINDOW</a>, and <a class="el" href="../../d7/de9/http2__flow__control_8h_source.html#l00046">cwist_http2_stream_flow_control::send_window</a>.</p>
 
@@ -648,11 +683,11 @@ Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d9/d16/http2__flow__control_8c_source.html#l00304">304</a> of file <a class="el" href="../../d9/d16/http2__flow__control_8c_source.html">http2_flow_control.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d9/d16/http2__flow__control_8c_source.html#l00297">297</a> of file <a class="el" href="../../d9/d16/http2__flow__control_8c_source.html">http2_flow_control.c</a>.</p>
 
 <p class="reference">References <a class="el" href="../../d7/de9/http2__flow__control_8h_source.html#l00045">cwist_http2_stream_flow_control::pending_update</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../d2/db0/http2_8c_source.html#l03587">cwist_http2_serve_connection_ex()</a>.</p>
+<p class="reference">Referenced by <a class="el" href="../../d2/db0/http2_8c_source.html#l03573">cwist_http2_serve_connection_ex()</a>.</p>
 
 </div>
 </div>
@@ -706,7 +741,7 @@ Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d9/d16/http2__flow__control_8c_source.html#l00188">188</a> of file <a class="el" href="../../d9/d16/http2__flow__control_8c_source.html">http2_flow_control.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d9/d16/http2__flow__control_8c_source.html#l00181">181</a> of file <a class="el" href="../../d9/d16/http2__flow__control_8c_source.html">http2_flow_control.c</a>.</p>
 
 <p class="reference">References <a class="el" href="../../d7/de9/http2__flow__control_8h_source.html#l00009">CWIST_HTTP2_INITIAL_STREAM_WINDOW</a>, <a class="el" href="../../d7/de9/http2__flow__control_8h_source.html#l00010">CWIST_HTTP2_MAX_WINDOW</a>, <a class="el" href="../../d7/de9/http2__flow__control_8h_source.html#l00044">cwist_http2_stream_flow_control::max_window</a>, <a class="el" href="../../d7/de9/http2__flow__control_8h_source.html#l00043">cwist_http2_stream_flow_control::min_window</a>, <a class="el" href="../../d7/de9/http2__flow__control_8h_source.html#l00041">cwist_http2_stream_flow_control::receive_window</a>, <a class="el" href="../../d7/de9/http2__flow__control_8h_source.html#l00046">cwist_http2_stream_flow_control::send_window</a>, <a class="el" href="../../d7/de9/http2__flow__control_8h_source.html#l00040">cwist_http2_stream_flow_control::stream_id</a>, and <a class="el" href="../../d7/de9/http2__flow__control_8h_source.html#l00042">cwist_http2_stream_flow_control::target_window</a>.</p>
 
@@ -784,7 +819,7 @@ Functions</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>1 when a WINDOW_UPDATE frame was written, 0 when the stream is ineligible or no update is due, -1 when <code>flow_control</code> arguments are NULL or the frame could not be serialized. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d9/d16/http2__flow__control_8c_source.html#l00450">450</a> of file <a class="el" href="../../d9/d16/http2__flow__control_8c_source.html">http2_flow_control.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d9/d16/http2__flow__control_8c_source.html#l00443">443</a> of file <a class="el" href="../../d9/d16/http2__flow__control_8c_source.html">http2_flow_control.c</a>.</p>
 
 <p class="reference">References <a class="el" href="../../d7/de9/http2__flow__control_8h_source.html#l00010">CWIST_HTTP2_MAX_WINDOW</a>, <a class="el" href="../../d7/de9/http2__flow__control_8h_source.html#l00033">cwist_http2_flow_control::last_window_update_us</a>, <a class="el" href="../../d7/de9/http2__flow__control_8h_source.html#l00047">cwist_http2_stream_flow_control::last_window_update_us</a>, <a class="el" href="../../d7/de9/http2__flow__control_8h_source.html#l00044">cwist_http2_stream_flow_control::max_window</a>, <a class="el" href="../../d7/de9/http2__flow__control_8h_source.html#l00043">cwist_http2_stream_flow_control::min_window</a>, <a class="el" href="../../d7/de9/http2__flow__control_8h_source.html#l00045">cwist_http2_stream_flow_control::pending_update</a>, <a class="el" href="../../d7/de9/http2__flow__control_8h_source.html#l00041">cwist_http2_stream_flow_control::receive_window</a>, <a class="el" href="../../d7/de9/http2__flow__control_8h_source.html#l00031">cwist_http2_flow_control::rtt_initialized</a>, <a class="el" href="../../d7/de9/http2__flow__control_8h_source.html#l00029">cwist_http2_flow_control::srtt_us</a>, <a class="el" href="../../d7/de9/http2__flow__control_8h_source.html#l00040">cwist_http2_stream_flow_control::stream_id</a>, and <a class="el" href="../../d7/de9/http2__flow__control_8h_source.html#l00042">cwist_http2_stream_flow_control::target_window</a>.</p>
 
@@ -832,18 +867,22 @@ Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d9/d16/http2__flow__control_8c_source.html#l00269">269</a> of file <a class="el" href="../../d9/d16/http2__flow__control_8c_source.html">http2_flow_control.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d9/d16/http2__flow__control_8c_source.html#l00262">262</a> of file <a class="el" href="../../d9/d16/http2__flow__control_8c_source.html">http2_flow_control.c</a>.</p>
 
 <p class="reference">References <a class="el" href="../../d7/de9/http2__flow__control_8h_source.html#l00041">cwist_http2_stream_flow_control::receive_window</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../d2/db0/http2_8c_source.html#l03587">cwist_http2_serve_connection_ex()</a>.</p>
+<p class="reference">Referenced by <a class="el" href="../../d2/db0/http2_8c_source.html#l03573">cwist_http2_serve_connection_ex()</a>.</p>
 
 </div>
 </div>
 </div><!-- contents -->
+</div><!-- doc-content -->
 <!-- start footer part -->
-<hr class="footer"/><address class="footer"><small>
-Generated by&#160;<a href="https://www.doxygen.org/index.html"><img class="footer" src="../../doxygen.svg" width="104" height="31" alt="doxygen"/></a> 1.9.8
-</small></address>
+<div id="nav-path" class="navpath"><!-- id is needed for treeview function! -->
+  <ul>
+    <li class="navelem"><a class="el" href="../../dir_68267d1309a1af8e8297ef4c3efbcdba.html">src</a></li><li class="navelem"><a class="el" href="../../dir_c72b25b75abe208498b36a3e44a3726c.html">net</a></li><li class="navelem"><a class="el" href="../../dir_dd2d28fd72df0d33d2116010ecf4f11d.html">http</a></li><li class="navelem"><a class="el" href="../../d9/d16/http2__flow__control_8c.html">http2_flow_control.c</a></li>
+    <li class="footer">Generated by <a href="https://www.doxygen.org/index.html"><img class="footer" src="../../doxygen.svg" width="104" height="31" alt="doxygen"/></a> 1.9.8 </li>
+  </ul>
+</div>
 </body>
 </html>

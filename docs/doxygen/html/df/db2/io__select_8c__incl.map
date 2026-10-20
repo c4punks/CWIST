@@ -1,5 +1,5 @@
 <map id="src/sys/io/io_select.c" name="src/sys/io/io_select.c">
-<area shape="rect" id="Node000001" title="Lock&#45;free job queue fallback used when no platform&#45;specific async backend is selected." alt="" coords="519,5,675,31"/>
+<area shape="rect" id="Node000001" title="Job queue fallback used when no platform&#45;specific async backend is selected." alt="" coords="519,5,675,31"/>
 <area shape="rect" id="Node000002" href="$d1/df5/cwist__io_8h.html" title="Platform Agnostic Async Job Queue Interface." alt="" coords="392,152,559,177"/>
 <area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="589,33,496,143,492,140,585,29"/>
 <area shape="rect" id="Node000004" title=" " alt="" coords="434,225,517,251"/>

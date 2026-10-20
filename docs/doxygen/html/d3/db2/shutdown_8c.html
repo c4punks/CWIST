@@ -1,3 +1,4 @@
+<!-- HTML header for doxygen 1.9.8-->
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "https://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml" lang="en-US">
 <head>
@@ -5,14 +6,32 @@
 <meta http-equiv="X-UA-Compatible" content="IE=11"/>
 <meta name="generator" content="Doxygen 1.9.8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
-<title>cwist: src/sys/app/shutdown.c File Reference</title>
+<title>src/sys/app/shutdown.c File Reference - CWIST High-Performance C Web Framework</title>
+<meta name="description" content="CWIST: High-performance C17 web framework and application server (HTTP/1.1, HTTP/2, HTTP/3, WebTransport, WebSocket, PQC TLS) powered by io_uring and libttak."/>
+<meta name="keywords" content="C web framework, C17, HTTP3, QUIC, io_uring, web server, actix alternative, high performance, REST API in C, C web server"/>
+<meta name="author" content="c4punks"/>
+<meta name="robots" content="index, follow"/>
+<!-- Open Graph / Facebook -->
+<meta property="og:type" content="website"/>
+<meta property="og:title" content="src/sys/app/shutdown.c File Reference - CWIST Modern C Web Framework"/>
+<meta property="og:description" content="High-performance C17 web framework & application server with zero-copy io_uring reactor, PQC TLS, and HTTP/3 support."/>
+<meta property="og:url" content="https://c4punks.github.io/CWIST/"/>
+<!-- Twitter -->
+<meta name="twitter:card" content="summary_large_image"/>
+<meta name="twitter:title" content="src/sys/app/shutdown.c File Reference - CWIST Modern C Web Framework"/>
+<meta name="twitter:description" content="High-performance C17 web framework & application server with zero-copy io_uring reactor, PQC TLS, and HTTP/3 support."/>
 <link href="../../tabs.css" rel="stylesheet" type="text/css"/>
 <script type="text/javascript" src="../../jquery.js"></script>
 <script type="text/javascript" src="../../dynsections.js"></script>
+<link href="../../navtree.css" rel="stylesheet" type="text/css"/>
+<script type="text/javascript" src="../../resize.js"></script>
+<script type="text/javascript" src="../../navtreedata.js"></script>
+<script type="text/javascript" src="../../navtree.js"></script>
 <link href="../../search/search.css" rel="stylesheet" type="text/css"/>
 <script type="text/javascript" src="../../search/searchdata.js"></script>
 <script type="text/javascript" src="../../search/search.js"></script>
 <link href="../../doxygen.css" rel="stylesheet" type="text/css" />
+<link href="../../doxygen-awesome.css" rel="stylesheet" type="text/css"/>
 </head>
 <body>
 <div id="top"><!-- do not remove this div, it is closed by doxygen! -->
@@ -47,6 +66,23 @@ $(function() {
 /* @license-end */
 </script>
 <div id="main-nav"></div>
+</div><!-- top -->
+<div id="side-nav" class="ui-resizable side-nav-resizable">
+  <div id="nav-tree">
+    <div id="nav-tree-contents">
+      <div id="nav-sync" class="sync"></div>
+    </div>
+  </div>
+  <div id="splitbar" style="-moz-user-select:none;" 
+       class="ui-resizable-handle">
+  </div>
+</div>
+<script type="text/javascript">
+/* @license magnet:?xt=urn:btih:d3d9a9a6595521f9666a5e94cc830dab83b65699&amp;dn=expat.txt MIT */
+$(document).ready(function(){initNavTree('d3/db2/shutdown_8c.html','../../'); initResizable(); });
+/* @license-end */
+</script>
+<div id="doc-content">
 <!-- window showing the filter options -->
 <div id="MSearchSelectWindow"
      onmouseover="return searchBox.OnSearchSelectShow()"
@@ -68,11 +104,6 @@ $(function() {
 </div>
 </div>
 
-<div id="nav-path" class="navpath">
-  <ul>
-<li class="navelem"><a class="el" href="../../dir_68267d1309a1af8e8297ef4c3efbcdba.html">src</a></li><li class="navelem"><a class="el" href="../../dir_220d2bd384b446346a1cdcf02b1b2295.html">sys</a></li><li class="navelem"><a class="el" href="../../dir_e04fe21c322c71eff13b3bcded2b17f6.html">app</a></li>  </ul>
-</div>
-</div><!-- top -->
 <div class="header">
   <div class="summary">
 <a href="#define-members">Macros</a> &#124;
@@ -194,9 +225,9 @@ Variables</h2></td></tr>
 <p>Install SIGTERM and SIGINT handlers for graceful shutdown.</p>
 <p>Both signals are routed to cwist_shutdown_handler() with SA_RESTART. The pre-existing handlers are saved on the first install after a restore so <a class="el" href="../../da/d39/shutdown_8h.html#ab4c262bb875f1568c4944e36bfa68a5d" title="Put back the SIGTERM and SIGINT handlers that were in place before cwist_shutdown_install_handlers()....">cwist_shutdown_restore_handlers()</a> can put them back; a second install without a restore does not overwrite the saved handlers. The previous handlers are only recorded when both sigaction() calls succeed. No-op on WASI hosts, which own the instance lifecycle. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d3/db2/shutdown_8c_source.html#l00107">107</a> of file <a class="el" href="../../d3/db2/shutdown_8c_source.html">shutdown.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d3/db2/shutdown_8c_source.html#l00110">110</a> of file <a class="el" href="../../d3/db2/shutdown_8c_source.html">shutdown.c</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../df/d7f/app_8c_source.html#l04459">cwist_app_listen_ex()</a>, and <a class="el" href="../../df/d7f/app_8c_source.html#l04210">cwist_app_multiport()</a>.</p>
+<p class="reference">Referenced by <a class="el" href="../../df/d7f/app_8c_source.html#l04548">cwist_app_listen_ex()</a>, and <a class="el" href="../../df/d7f/app_8c_source.html#l04298">cwist_app_multiport()</a>.</p>
 
 </div>
 </div>
@@ -218,9 +249,10 @@ Variables</h2></td></tr>
 
 <p>Request a graceful shutdown of the server. </p>
 <p>Request a graceful shutdown, as SIGTERM/SIGINT do: clear the running flag and shut down the listening sockets, so <a class="el" href="../../d0/d77/sys_2app_2app_8h.html#a05f9a10f4d2ab307c211dd56d54fe7c3" title="Serve app on port until SIGTERM, SIGINT or cwist_shutdown_request(); blocks the calling thread.">cwist_app_listen()</a> drains and returns. Safe from any thread, a handler or a signal handler; repeated calls are harmless.</p>
-<p>Clears the g_cwist_running flag and closes the listening and UDP descriptors (if open). Closing the listen descriptor also calls shutdown(SHUT_RDWR) so accept() loops blocked in other threads wake up with EINVAL. Safe to call more than once and from any thread: each descriptor is claimed atomically, so a second call cannot close a descriptor number that has been reused for an unrelated file. </p>
+<p>Clears the g_cwist_running flag and releases the listening and UDP descriptors (if open). Closing the listen descriptor also calls shutdown(SHUT_RDWR) so accept() loops blocked in other threads wake up with EINVAL. Safe to call more than once and from any thread: each descriptor is claimed atomically, so a second call cannot close a descriptor number that has been reused for an unrelated file.</p>
+<p>The UDP descriptor is only claimed, never closed here: the HTTP/3 loop thread may be inside recvmmsg() on it, and closing under it both races with the read and can later close a reused descriptor number. The loop observes g_cwist_running within its poll timeout (&lt;= 1s) and the owning server path closes the descriptor after joining that thread. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d3/db2/shutdown_8c_source.html#l00056">56</a> of file <a class="el" href="../../d3/db2/shutdown_8c_source.html">shutdown.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d3/db2/shutdown_8c_source.html#l00062">62</a> of file <a class="el" href="../../d3/db2/shutdown_8c_source.html">shutdown.c</a>.</p>
 
 <p class="reference">References <a class="el" href="../../d3/db2/shutdown_8c_source.html#l00017">g_cwist_listen_fd</a>, <a class="el" href="../../d3/db2/shutdown_8c_source.html#l00016">g_cwist_running</a>, and <a class="el" href="../../d3/db2/shutdown_8c_source.html#l00018">g_cwist_udp_fd</a>.</p>
 
@@ -246,7 +278,7 @@ Variables</h2></td></tr>
 <p>Reset shutdown state (useful in test suites).</p>
 <p>Sets g_cwist_running back to 1 and marks the listening and UDP descriptors as closed (-1). Does not close any open descriptors or touch signal handlers. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d3/db2/shutdown_8c_source.html#l00169">169</a> of file <a class="el" href="../../d3/db2/shutdown_8c_source.html">shutdown.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d3/db2/shutdown_8c_source.html#l00172">172</a> of file <a class="el" href="../../d3/db2/shutdown_8c_source.html">shutdown.c</a>.</p>
 
 <p class="reference">References <a class="el" href="../../d3/db2/shutdown_8c_source.html#l00017">g_cwist_listen_fd</a>, <a class="el" href="../../d3/db2/shutdown_8c_source.html#l00016">g_cwist_running</a>, and <a class="el" href="../../d3/db2/shutdown_8c_source.html#l00018">g_cwist_udp_fd</a>.</p>
 
@@ -272,9 +304,9 @@ Variables</h2></td></tr>
 <p>Put back the SIGTERM and SIGINT handlers that were in place before <a class="el" href="../../da/d39/shutdown_8h.html#a842323fa5d238344cac27795d7b1f0a0" title="Install SIGTERM and SIGINT handlers for graceful shutdown.">cwist_shutdown_install_handlers()</a>. Does nothing if they are not installed. <a class="el" href="../../d0/d77/sys_2app_2app_8h.html#ac41b80406f8bc60ccf68ba36b2810db2" title="cwist_app_listen() with the worker count and server mode given explicitly.">cwist_app_listen_ex()</a> calls it before returning, so the signals request a graceful stop only while a server runs.</p>
 <p>Does nothing if no previous handlers were saved. After restoring, the saved state is cleared so a later install records the handlers then in effect. No-op on WASI hosts. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d3/db2/shutdown_8c_source.html#l00129">129</a> of file <a class="el" href="../../d3/db2/shutdown_8c_source.html">shutdown.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d3/db2/shutdown_8c_source.html#l00132">132</a> of file <a class="el" href="../../d3/db2/shutdown_8c_source.html">shutdown.c</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../df/d7f/app_8c_source.html#l04459">cwist_app_listen_ex()</a>.</p>
+<p class="reference">Referenced by <a class="el" href="../../df/d7f/app_8c_source.html#l04548">cwist_app_listen_ex()</a>.</p>
 
 </div>
 </div>
@@ -313,7 +345,7 @@ Variables</h2></td></tr>
 
 <p class="definition">Definition at line <a class="el" href="../../d3/db2/shutdown_8c_source.html#l00017">17</a> of file <a class="el" href="../../d3/db2/shutdown_8c_source.html">shutdown.c</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../df/d7f/app_8c_source.html#l04210">cwist_app_multiport()</a>, <a class="el" href="../../d0/d3d/async__server_8c_source.html#l00129">cwist_async_server_loop()</a>, <a class="el" href="../../d3/db2/shutdown_8c_source.html#l00056">cwist_shutdown_request()</a>, and <a class="el" href="../../d3/db2/shutdown_8c_source.html#l00169">cwist_shutdown_reset()</a>.</p>
+<p class="reference">Referenced by <a class="el" href="../../df/d7f/app_8c_source.html#l04298">cwist_app_multiport()</a>, <a class="el" href="../../d0/d3d/async__server_8c_source.html#l00174">cwist_async_server_loop()</a>, <a class="el" href="../../d3/db2/shutdown_8c_source.html#l00062">cwist_shutdown_request()</a>, and <a class="el" href="../../d3/db2/shutdown_8c_source.html#l00172">cwist_shutdown_reset()</a>.</p>
 
 </div>
 </div>
@@ -333,7 +365,7 @@ Variables</h2></td></tr>
 
 <p class="definition">Definition at line <a class="el" href="../../d3/db2/shutdown_8c_source.html#l00016">16</a> of file <a class="el" href="../../d3/db2/shutdown_8c_source.html">shutdown.c</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../df/d7f/app_8c_source.html#l04210">cwist_app_multiport()</a>, <a class="el" href="../../d2/db0/http2_8c_source.html#l03587">cwist_http2_serve_connection_ex()</a>, <a class="el" href="../../de/daf/http3_8c_source.html#l02610">cwist_http3_server_loop()</a>, <a class="el" href="../../dd/d43/http_8c_source.html#l03100">cwist_http_async_send_response()</a>, <a class="el" href="../../dd/d43/http_8c_source.html#l03367">cwist_http_coalesce_flush()</a>, <a class="el" href="../../dd/d43/http_8c_source.html#l05204">cwist_http_server_loop()</a>, <a class="el" href="../../d2/db2/https_8c_source.html#l02017">cwist_https_server_loop()</a>, <a class="el" href="../../d3/db2/shutdown_8c_source.html#l00056">cwist_shutdown_request()</a>, and <a class="el" href="../../d3/db2/shutdown_8c_source.html#l00169">cwist_shutdown_reset()</a>.</p>
+<p class="reference">Referenced by <a class="el" href="../../df/d7f/app_8c_source.html#l04298">cwist_app_multiport()</a>, <a class="el" href="../../d2/db0/http2_8c_source.html#l03573">cwist_http2_serve_connection_ex()</a>, <a class="el" href="../../de/daf/http3_8c_source.html#l02932">cwist_http3_server_loop()</a>, <a class="el" href="../../dd/d43/http_8c_source.html#l03398">cwist_http_async_send_response()</a>, <a class="el" href="../../dd/d43/http_8c_source.html#l03667">cwist_http_coalesce_flush()</a>, <a class="el" href="../../dd/d43/http_8c_source.html#l05568">cwist_http_server_loop()</a>, <a class="el" href="../../d2/db2/https_8c_source.html#l02294">cwist_https_server_loop()</a>, <a class="el" href="../../d3/db2/shutdown_8c_source.html#l00062">cwist_shutdown_request()</a>, and <a class="el" href="../../d3/db2/shutdown_8c_source.html#l00172">cwist_shutdown_reset()</a>.</p>
 
 </div>
 </div>
@@ -353,14 +385,18 @@ Variables</h2></td></tr>
 
 <p class="definition">Definition at line <a class="el" href="../../d3/db2/shutdown_8c_source.html#l00018">18</a> of file <a class="el" href="../../d3/db2/shutdown_8c_source.html">shutdown.c</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../df/d7f/app_8c_source.html#l04210">cwist_app_multiport()</a>, <a class="el" href="../../d3/db2/shutdown_8c_source.html#l00056">cwist_shutdown_request()</a>, and <a class="el" href="../../d3/db2/shutdown_8c_source.html#l00169">cwist_shutdown_reset()</a>.</p>
+<p class="reference">Referenced by <a class="el" href="../../df/d7f/app_8c_source.html#l04298">cwist_app_multiport()</a>, <a class="el" href="../../d3/db2/shutdown_8c_source.html#l00062">cwist_shutdown_request()</a>, and <a class="el" href="../../d3/db2/shutdown_8c_source.html#l00172">cwist_shutdown_reset()</a>.</p>
 
 </div>
 </div>
 </div><!-- contents -->
+</div><!-- doc-content -->
 <!-- start footer part -->
-<hr class="footer"/><address class="footer"><small>
-Generated by&#160;<a href="https://www.doxygen.org/index.html"><img class="footer" src="../../doxygen.svg" width="104" height="31" alt="doxygen"/></a> 1.9.8
-</small></address>
+<div id="nav-path" class="navpath"><!-- id is needed for treeview function! -->
+  <ul>
+    <li class="navelem"><a class="el" href="../../dir_68267d1309a1af8e8297ef4c3efbcdba.html">src</a></li><li class="navelem"><a class="el" href="../../dir_220d2bd384b446346a1cdcf02b1b2295.html">sys</a></li><li class="navelem"><a class="el" href="../../dir_e04fe21c322c71eff13b3bcded2b17f6.html">app</a></li><li class="navelem"><a class="el" href="../../d3/db2/shutdown_8c.html">shutdown.c</a></li>
+    <li class="footer">Generated by <a href="https://www.doxygen.org/index.html"><img class="footer" src="../../doxygen.svg" width="104" height="31" alt="doxygen"/></a> 1.9.8 </li>
+  </ul>
+</div>
 </body>
 </html>

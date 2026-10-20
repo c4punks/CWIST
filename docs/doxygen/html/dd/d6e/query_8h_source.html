@@ -1,3 +1,4 @@
+<!-- HTML header for doxygen 1.9.8-->
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "https://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml" lang="en-US">
 <head>
@@ -5,14 +6,32 @@
 <meta http-equiv="X-UA-Compatible" content="IE=11"/>
 <meta name="generator" content="Doxygen 1.9.8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
-<title>cwist: include/cwist/query.h Source File</title>
+<title>include/cwist/query.h Source File - CWIST High-Performance C Web Framework</title>
+<meta name="description" content="CWIST: High-performance C17 web framework and application server (HTTP/1.1, HTTP/2, HTTP/3, WebTransport, WebSocket, PQC TLS) powered by io_uring and libttak."/>
+<meta name="keywords" content="C web framework, C17, HTTP3, QUIC, io_uring, web server, actix alternative, high performance, REST API in C, C web server"/>
+<meta name="author" content="c4punks"/>
+<meta name="robots" content="index, follow"/>
+<!-- Open Graph / Facebook -->
+<meta property="og:type" content="website"/>
+<meta property="og:title" content="include/cwist/query.h Source File - CWIST Modern C Web Framework"/>
+<meta property="og:description" content="High-performance C17 web framework & application server with zero-copy io_uring reactor, PQC TLS, and HTTP/3 support."/>
+<meta property="og:url" content="https://c4punks.github.io/CWIST/"/>
+<!-- Twitter -->
+<meta name="twitter:card" content="summary_large_image"/>
+<meta name="twitter:title" content="include/cwist/query.h Source File - CWIST Modern C Web Framework"/>
+<meta name="twitter:description" content="High-performance C17 web framework & application server with zero-copy io_uring reactor, PQC TLS, and HTTP/3 support."/>
 <link href="../../tabs.css" rel="stylesheet" type="text/css"/>
 <script type="text/javascript" src="../../jquery.js"></script>
 <script type="text/javascript" src="../../dynsections.js"></script>
+<link href="../../navtree.css" rel="stylesheet" type="text/css"/>
+<script type="text/javascript" src="../../resize.js"></script>
+<script type="text/javascript" src="../../navtreedata.js"></script>
+<script type="text/javascript" src="../../navtree.js"></script>
 <link href="../../search/search.css" rel="stylesheet" type="text/css"/>
 <script type="text/javascript" src="../../search/searchdata.js"></script>
 <script type="text/javascript" src="../../search/search.js"></script>
 <link href="../../doxygen.css" rel="stylesheet" type="text/css" />
+<link href="../../doxygen-awesome.css" rel="stylesheet" type="text/css"/>
 </head>
 <body>
 <div id="top"><!-- do not remove this div, it is closed by doxygen! -->
@@ -52,6 +71,23 @@ $(function() {
 $(document).ready(function() { init_codefold(1); });
 /* @license-end */
 </script>
+</div><!-- top -->
+<div id="side-nav" class="ui-resizable side-nav-resizable">
+  <div id="nav-tree">
+    <div id="nav-tree-contents">
+      <div id="nav-sync" class="sync"></div>
+    </div>
+  </div>
+  <div id="splitbar" style="-moz-user-select:none;" 
+       class="ui-resizable-handle">
+  </div>
+</div>
+<script type="text/javascript">
+/* @license magnet:?xt=urn:btih:d3d9a9a6595521f9666a5e94cc830dab83b65699&amp;dn=expat.txt MIT */
+$(document).ready(function(){initNavTree('dd/d6e/query_8h_source.html','../../'); initResizable(); });
+/* @license-end */
+</script>
+<div id="doc-content">
 <!-- window showing the filter options -->
 <div id="MSearchSelectWindow"
      onmouseover="return searchBox.OnSearchSelectShow()"
@@ -73,64 +109,26 @@ $(document).ready(function() { init_codefold(1); });
 </div>
 </div>
 
-<div id="nav-path" class="navpath">
-  <ul>
-<li class="navelem"><a class="el" href="../../dir_d44c64559bbebec7f509842c48db8b23.html">include</a></li><li class="navelem"><a class="el" href="../../dir_2109d32ae718f50aecd8856dacda770b.html">cwist</a></li>  </ul>
-</div>
-</div><!-- top -->
 <div class="header">
   <div class="headertitle"><div class="title">query.h</div></div>
 </div><!--header-->
 <div class="contents">
 <a href="../../dd/d6e/query_8h.html">Go to the documentation of this file.</a><div class="fragment"><div class="line"><a id="l00001" name="l00001"></a><span class="lineno">    1</span> </div>
-<div class="line"><a id="l00004" name="l00004"></a><span class="lineno">    4</span><span class="preprocessor">#ifndef __CWIST_QUERY_H__</span></div>
-<div class="line"><a id="l00005" name="l00005"></a><span class="lineno">    5</span><span class="preprocessor">#define __CWIST_QUERY_H__</span></div>
-<div class="line"><a id="l00006" name="l00006"></a><span class="lineno">    6</span> </div>
-<div class="line"><a id="l00007" name="l00007"></a><span class="lineno">    7</span><span class="preprocessor">#include &lt;stdint.h&gt;</span></div>
-<div class="line"><a id="l00008" name="l00008"></a><span class="lineno">    8</span><span class="preprocessor">#include &lt;stddef.h&gt;</span></div>
-<div class="line"><a id="l00009" name="l00009"></a><span class="lineno">    9</span> </div>
-<div class="line"><a id="l00010" name="l00010"></a><span class="lineno">   10</span><span class="keyword">typedef</span> <span class="keyword">struct </span><a class="code hl_struct" href="../../d1/d8f/structcwist__query__bucket.html">cwist_query_bucket</a> {</div>
-<div class="line"><a id="l00011" name="l00011"></a><span class="lineno">   11</span>    <span class="keywordtype">char</span> *<a class="code hl_variable" href="../../d1/d8f/structcwist__query__bucket.html#a296bb148e799cb02e6ca83b3e1bd912e">key</a>;</div>
-<div class="line"><a id="l00012" name="l00012"></a><span class="lineno">   12</span>    <span class="keywordtype">char</span> *<a class="code hl_variable" href="../../d1/d8f/structcwist__query__bucket.html#aad4481720c4bd1fb461bf31d140fb1dd">value</a>;</div>
-<div class="line"><a id="l00013" name="l00013"></a><span class="lineno">   13</span>    <span class="keyword">struct </span><a class="code hl_struct" href="../../d1/d8f/structcwist__query__bucket.html">cwist_query_bucket</a> *<a class="code hl_variable" href="../../d1/d8f/structcwist__query__bucket.html#ac304b9d09fe271ac77c2f61c0c36a8ee">next</a>;</div>
-<div class="line"><a id="l00014" name="l00014"></a><span class="lineno"><a class="line" href="../../dd/d6e/query_8h.html#af861d7cc30780457f9dc5fb01ab6f534">   14</a></span>} <a class="code hl_typedef" href="../../d1/d7a/net_2http_2query_8h.html#af861d7cc30780457f9dc5fb01ab6f534">cwist_query_bucket</a>;</div>
-<div class="line"><a id="l00015" name="l00015"></a><span class="lineno">   15</span> </div>
-<div class="line"><a id="l00016" name="l00016"></a><span class="lineno">   16</span><span class="keyword">typedef</span> <span class="keyword">struct </span><a class="code hl_struct" href="../../dd/d72/structcwist__query__map.html">cwist_query_map</a> {</div>
-<div class="line"><a id="l00017" name="l00017"></a><span class="lineno">   17</span>    <a class="code hl_struct" href="../../d1/d8f/structcwist__query__bucket.html">cwist_query_bucket</a> **<a class="code hl_variable" href="../../dd/d72/structcwist__query__map.html#ac1e3dd84d9be78003eb40ef9118db817">buckets</a>;</div>
-<div class="line"><a id="l00018" name="l00018"></a><span class="lineno">   18</span>    <span class="keywordtype">size_t</span> <a class="code hl_variable" href="../../dd/d72/structcwist__query__map.html#ad8078a16c537ae27310ec33881456c96">size</a>;</div>
-<div class="line"><a id="l00019" name="l00019"></a><span class="lineno">   19</span>    uint8_t <a class="code hl_variable" href="../../dd/d72/structcwist__query__map.html#a15d55876e8d7e1857e1b683c4bfafeb4">seed</a>[16];</div>
-<div class="line"><a id="l00020" name="l00020"></a><span class="lineno"><a class="line" href="../../dd/d6e/query_8h.html#a4a5f2e219d3c22f751460bc5b2479a31">   20</a></span>} <a class="code hl_typedef" href="../../d1/d7a/net_2http_2query_8h.html#a4a5f2e219d3c22f751460bc5b2479a31">cwist_query_map</a>;</div>
-<div class="line"><a id="l00021" name="l00021"></a><span class="lineno">   21</span> </div>
-<div class="line"><a id="l00028" name="l00028"></a><span class="lineno">   28</span><a class="code hl_struct" href="../../dd/d72/structcwist__query__map.html">cwist_query_map</a> *<a class="code hl_function" href="../../d1/d7a/net_2http_2query_8h.html#a93eddf49027cbbc8fc6a0a3270a0985a">cwist_query_map_create</a>(<span class="keywordtype">void</span>);</div>
-<div class="line"><a id="l00029" name="l00029"></a><span class="lineno">   29</span> </div>
-<div class="line"><a id="l00033" name="l00033"></a><span class="lineno">   33</span><span class="keywordtype">void</span> <a class="code hl_function" href="../../d1/d7a/net_2http_2query_8h.html#ac8607e9171334f329fa4a248ddd3bfe1">cwist_query_map_destroy</a>(<a class="code hl_struct" href="../../dd/d72/structcwist__query__map.html">cwist_query_map</a> *map);</div>
-<div class="line"><a id="l00034" name="l00034"></a><span class="lineno">   34</span> </div>
-<div class="line"><a id="l00043" name="l00043"></a><span class="lineno">   43</span><span class="keywordtype">void</span> <a class="code hl_function" href="../../d1/d7a/net_2http_2query_8h.html#afc1bffaa7da52b648d4306067c8d21b8">cwist_query_map_parse</a>(<a class="code hl_struct" href="../../dd/d72/structcwist__query__map.html">cwist_query_map</a> *map, <span class="keyword">const</span> <span class="keywordtype">char</span> *raw_query);</div>
-<div class="line"><a id="l00044" name="l00044"></a><span class="lineno">   44</span> </div>
-<div class="line"><a id="l00053" name="l00053"></a><span class="lineno">   53</span><span class="keyword">const</span> <span class="keywordtype">char</span> *<a class="code hl_function" href="../../d1/d7a/net_2http_2query_8h.html#a2df19e2544e3de48d2340412b2e03f32">cwist_query_map_get</a>(<a class="code hl_struct" href="../../dd/d72/structcwist__query__map.html">cwist_query_map</a> *map, <span class="keyword">const</span> <span class="keywordtype">char</span> *key);</div>
-<div class="line"><a id="l00054" name="l00054"></a><span class="lineno">   54</span> </div>
-<div class="line"><a id="l00058" name="l00058"></a><span class="lineno">   58</span><span class="keywordtype">void</span> <a class="code hl_function" href="../../d1/d7a/net_2http_2query_8h.html#a85c42bf26fba0b85420412688e5781d5">cwist_query_map_set</a>(<a class="code hl_struct" href="../../dd/d72/structcwist__query__map.html">cwist_query_map</a> *map, <span class="keyword">const</span> <span class="keywordtype">char</span> *key, <span class="keyword">const</span> <span class="keywordtype">char</span> *value);</div>
-<div class="line"><a id="l00059" name="l00059"></a><span class="lineno">   59</span> </div>
-<div class="line"><a id="l00062" name="l00062"></a><span class="lineno">   62</span><span class="preprocessor">#endif</span></div>
-<div class="ttc" id="anet_2http_2query_8h_html_a2df19e2544e3de48d2340412b2e03f32"><div class="ttname"><a href="../../d1/d7a/net_2http_2query_8h.html#a2df19e2544e3de48d2340412b2e03f32">cwist_query_map_get</a></div><div class="ttdeci">const char * cwist_query_map_get(cwist_query_map *map, const char *key)</div><div class="ttdoc">Get a value by key.</div><div class="ttdef"><b>Definition</b> <a href="../../dd/d7f/query_8c_source.html#l00162">query.c:162</a></div></div>
-<div class="ttc" id="anet_2http_2query_8h_html_a4a5f2e219d3c22f751460bc5b2479a31"><div class="ttname"><a href="../../d1/d7a/net_2http_2query_8h.html#a4a5f2e219d3c22f751460bc5b2479a31">cwist_query_map</a></div><div class="ttdeci">struct cwist_query_map cwist_query_map</div></div>
-<div class="ttc" id="anet_2http_2query_8h_html_a85c42bf26fba0b85420412688e5781d5"><div class="ttname"><a href="../../d1/d7a/net_2http_2query_8h.html#a85c42bf26fba0b85420412688e5781d5">cwist_query_map_set</a></div><div class="ttdeci">void cwist_query_map_set(cwist_query_map *map, const char *key, const char *value)</div><div class="ttdoc">Set a key-value pair.</div><div class="ttdef"><b>Definition</b> <a href="../../dd/d7f/query_8c_source.html#l00122">query.c:122</a></div></div>
-<div class="ttc" id="anet_2http_2query_8h_html_a93eddf49027cbbc8fc6a0a3270a0985a"><div class="ttname"><a href="../../d1/d7a/net_2http_2query_8h.html#a93eddf49027cbbc8fc6a0a3270a0985a">cwist_query_map_create</a></div><div class="ttdeci">cwist_query_map * cwist_query_map_create(void)</div><div class="ttdoc">Create a new query map.</div><div class="ttdef"><b>Definition</b> <a href="../../dd/d7f/query_8c_source.html#l00042">query.c:42</a></div></div>
-<div class="ttc" id="anet_2http_2query_8h_html_ac8607e9171334f329fa4a248ddd3bfe1"><div class="ttname"><a href="../../d1/d7a/net_2http_2query_8h.html#ac8607e9171334f329fa4a248ddd3bfe1">cwist_query_map_destroy</a></div><div class="ttdeci">void cwist_query_map_destroy(cwist_query_map *map)</div><div class="ttdoc">Destroy a query map.</div><div class="ttdef"><b>Definition</b> <a href="../../dd/d7f/query_8c_source.html#l00083">query.c:83</a></div></div>
-<div class="ttc" id="anet_2http_2query_8h_html_af861d7cc30780457f9dc5fb01ab6f534"><div class="ttname"><a href="../../d1/d7a/net_2http_2query_8h.html#af861d7cc30780457f9dc5fb01ab6f534">cwist_query_bucket</a></div><div class="ttdeci">struct cwist_query_bucket cwist_query_bucket</div></div>
-<div class="ttc" id="anet_2http_2query_8h_html_afc1bffaa7da52b648d4306067c8d21b8"><div class="ttname"><a href="../../d1/d7a/net_2http_2query_8h.html#afc1bffaa7da52b648d4306067c8d21b8">cwist_query_map_parse</a></div><div class="ttdeci">void cwist_query_map_parse(cwist_query_map *map, const char *raw_query)</div><div class="ttdoc">Parse raw query strings (e.g., &quot;a=1&amp;b=2&quot;) into the map.</div><div class="ttdef"><b>Definition</b> <a href="../../dd/d7f/query_8c_source.html#l00291">query.c:291</a></div></div>
-<div class="ttc" id="astructcwist__query__bucket_html"><div class="ttname"><a href="../../d1/d8f/structcwist__query__bucket.html">cwist_query_bucket</a></div><div class="ttdef"><b>Definition</b> <a href="../../d1/d7a/net_2http_2query_8h_source.html#l00012">query.h:12</a></div></div>
-<div class="ttc" id="astructcwist__query__bucket_html_a296bb148e799cb02e6ca83b3e1bd912e"><div class="ttname"><a href="../../d1/d8f/structcwist__query__bucket.html#a296bb148e799cb02e6ca83b3e1bd912e">cwist_query_bucket::key</a></div><div class="ttdeci">char * key</div><div class="ttdef"><b>Definition</b> <a href="../../d1/d7a/net_2http_2query_8h_source.html#l00013">query.h:13</a></div></div>
-<div class="ttc" id="astructcwist__query__bucket_html_aad4481720c4bd1fb461bf31d140fb1dd"><div class="ttname"><a href="../../d1/d8f/structcwist__query__bucket.html#aad4481720c4bd1fb461bf31d140fb1dd">cwist_query_bucket::value</a></div><div class="ttdeci">char * value</div><div class="ttdef"><b>Definition</b> <a href="../../d1/d7a/net_2http_2query_8h_source.html#l00014">query.h:14</a></div></div>
-<div class="ttc" id="astructcwist__query__bucket_html_ac304b9d09fe271ac77c2f61c0c36a8ee"><div class="ttname"><a href="../../d1/d8f/structcwist__query__bucket.html#ac304b9d09fe271ac77c2f61c0c36a8ee">cwist_query_bucket::next</a></div><div class="ttdeci">struct cwist_query_bucket * next</div><div class="ttdef"><b>Definition</b> <a href="../../d1/d7a/net_2http_2query_8h_source.html#l00015">query.h:15</a></div></div>
-<div class="ttc" id="astructcwist__query__map_html"><div class="ttname"><a href="../../dd/d72/structcwist__query__map.html">cwist_query_map</a></div><div class="ttdef"><b>Definition</b> <a href="../../d1/d7a/net_2http_2query_8h_source.html#l00018">query.h:18</a></div></div>
-<div class="ttc" id="astructcwist__query__map_html_a15d55876e8d7e1857e1b683c4bfafeb4"><div class="ttname"><a href="../../dd/d72/structcwist__query__map.html#a15d55876e8d7e1857e1b683c4bfafeb4">cwist_query_map::seed</a></div><div class="ttdeci">uint8_t seed[16]</div><div class="ttdef"><b>Definition</b> <a href="../../d1/d7a/net_2http_2query_8h_source.html#l00021">query.h:21</a></div></div>
-<div class="ttc" id="astructcwist__query__map_html_ac1e3dd84d9be78003eb40ef9118db817"><div class="ttname"><a href="../../dd/d72/structcwist__query__map.html#ac1e3dd84d9be78003eb40ef9118db817">cwist_query_map::buckets</a></div><div class="ttdeci">cwist_query_bucket ** buckets</div><div class="ttdef"><b>Definition</b> <a href="../../d1/d7a/net_2http_2query_8h_source.html#l00019">query.h:19</a></div></div>
-<div class="ttc" id="astructcwist__query__map_html_ad8078a16c537ae27310ec33881456c96"><div class="ttname"><a href="../../dd/d72/structcwist__query__map.html#ad8078a16c537ae27310ec33881456c96">cwist_query_map::size</a></div><div class="ttdeci">size_t size</div><div class="ttdef"><b>Definition</b> <a href="../../d1/d7a/net_2http_2query_8h_source.html#l00020">query.h:20</a></div></div>
+<div class="line"><a id="l00009" name="l00009"></a><span class="lineno">    9</span><span class="preprocessor">#ifndef CWIST_QUERY_COMPAT_H</span></div>
+<div class="line"><a id="l00010" name="l00010"></a><span class="lineno">   10</span><span class="preprocessor">#define CWIST_QUERY_COMPAT_H</span></div>
+<div class="line"><a id="l00011" name="l00011"></a><span class="lineno">   11</span> </div>
+<div class="line"><a id="l00012" name="l00012"></a><span class="lineno">   12</span><span class="preprocessor">#include &lt;<a class="code" href="../../d1/d7a/net_2http_2query_8h.html">cwist/net/http/query.h</a>&gt;</span></div>
+<div class="line"><a id="l00013" name="l00013"></a><span class="lineno">   13</span> </div>
+<div class="line"><a id="l00014" name="l00014"></a><span class="lineno">   14</span><span class="preprocessor">#endif</span></div>
+<div class="ttc" id="anet_2http_2query_8h_html"><div class="ttname"><a href="../../d1/d7a/net_2http_2query_8h.html">query.h</a></div><div class="ttdoc">Query string parser and map.</div></div>
 </div><!-- fragment --></div><!-- contents -->
+</div><!-- doc-content -->
 <!-- start footer part -->
-<hr class="footer"/><address class="footer"><small>
-Generated by&#160;<a href="https://www.doxygen.org/index.html"><img class="footer" src="../../doxygen.svg" width="104" height="31" alt="doxygen"/></a> 1.9.8
-</small></address>
+<div id="nav-path" class="navpath"><!-- id is needed for treeview function! -->
+  <ul>
+    <li class="navelem"><a class="el" href="../../dir_d44c64559bbebec7f509842c48db8b23.html">include</a></li><li class="navelem"><a class="el" href="../../dir_2109d32ae718f50aecd8856dacda770b.html">cwist</a></li><li class="navelem"><a class="el" href="../../dd/d6e/query_8h.html">query.h</a></li>
+    <li class="footer">Generated by <a href="https://www.doxygen.org/index.html"><img class="footer" src="../../doxygen.svg" width="104" height="31" alt="doxygen"/></a> 1.9.8 </li>
+  </ul>
+</div>
 </body>
 </html>

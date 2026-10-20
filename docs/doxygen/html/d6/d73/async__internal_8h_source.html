@@ -1,3 +1,4 @@
+<!-- HTML header for doxygen 1.9.8-->
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "https://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml" lang="en-US">
 <head>
@@ -5,14 +6,32 @@
 <meta http-equiv="X-UA-Compatible" content="IE=11"/>
 <meta name="generator" content="Doxygen 1.9.8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
-<title>cwist: src/net/http/async_internal.h Source File</title>
+<title>src/net/http/async_internal.h Source File - CWIST High-Performance C Web Framework</title>
+<meta name="description" content="CWIST: High-performance C17 web framework and application server (HTTP/1.1, HTTP/2, HTTP/3, WebTransport, WebSocket, PQC TLS) powered by io_uring and libttak."/>
+<meta name="keywords" content="C web framework, C17, HTTP3, QUIC, io_uring, web server, actix alternative, high performance, REST API in C, C web server"/>
+<meta name="author" content="c4punks"/>
+<meta name="robots" content="index, follow"/>
+<!-- Open Graph / Facebook -->
+<meta property="og:type" content="website"/>
+<meta property="og:title" content="src/net/http/async_internal.h Source File - CWIST Modern C Web Framework"/>
+<meta property="og:description" content="High-performance C17 web framework & application server with zero-copy io_uring reactor, PQC TLS, and HTTP/3 support."/>
+<meta property="og:url" content="https://c4punks.github.io/CWIST/"/>
+<!-- Twitter -->
+<meta name="twitter:card" content="summary_large_image"/>
+<meta name="twitter:title" content="src/net/http/async_internal.h Source File - CWIST Modern C Web Framework"/>
+<meta name="twitter:description" content="High-performance C17 web framework & application server with zero-copy io_uring reactor, PQC TLS, and HTTP/3 support."/>
 <link href="../../tabs.css" rel="stylesheet" type="text/css"/>
 <script type="text/javascript" src="../../jquery.js"></script>
 <script type="text/javascript" src="../../dynsections.js"></script>
+<link href="../../navtree.css" rel="stylesheet" type="text/css"/>
+<script type="text/javascript" src="../../resize.js"></script>
+<script type="text/javascript" src="../../navtreedata.js"></script>
+<script type="text/javascript" src="../../navtree.js"></script>
 <link href="../../search/search.css" rel="stylesheet" type="text/css"/>
 <script type="text/javascript" src="../../search/searchdata.js"></script>
 <script type="text/javascript" src="../../search/search.js"></script>
 <link href="../../doxygen.css" rel="stylesheet" type="text/css" />
+<link href="../../doxygen-awesome.css" rel="stylesheet" type="text/css"/>
 </head>
 <body>
 <div id="top"><!-- do not remove this div, it is closed by doxygen! -->
@@ -52,6 +71,23 @@ $(function() {
 $(document).ready(function() { init_codefold(1); });
 /* @license-end */
 </script>
+</div><!-- top -->
+<div id="side-nav" class="ui-resizable side-nav-resizable">
+  <div id="nav-tree">
+    <div id="nav-tree-contents">
+      <div id="nav-sync" class="sync"></div>
+    </div>
+  </div>
+  <div id="splitbar" style="-moz-user-select:none;" 
+       class="ui-resizable-handle">
+  </div>
+</div>
+<script type="text/javascript">
+/* @license magnet:?xt=urn:btih:d3d9a9a6595521f9666a5e94cc830dab83b65699&amp;dn=expat.txt MIT */
+$(document).ready(function(){initNavTree('d6/d73/async__internal_8h_source.html','../../'); initResizable(); });
+/* @license-end */
+</script>
+<div id="doc-content">
 <!-- window showing the filter options -->
 <div id="MSearchSelectWindow"
      onmouseover="return searchBox.OnSearchSelectShow()"
@@ -73,11 +109,6 @@ $(document).ready(function() { init_codefold(1); });
 </div>
 </div>
 
-<div id="nav-path" class="navpath">
-  <ul>
-<li class="navelem"><a class="el" href="../../dir_68267d1309a1af8e8297ef4c3efbcdba.html">src</a></li><li class="navelem"><a class="el" href="../../dir_c72b25b75abe208498b36a3e44a3726c.html">net</a></li><li class="navelem"><a class="el" href="../../dir_dd2d28fd72df0d33d2116010ecf4f11d.html">http</a></li>  </ul>
-</div>
-</div><!-- top -->
 <div class="header">
   <div class="headertitle"><div class="title">async_internal.h</div></div>
 </div><!--header-->
@@ -91,26 +122,55 @@ $(document).ready(function() { init_codefold(1); });
 <div class="line"><a id="l00012" name="l00012"></a><span class="lineno">   12</span><span class="preprocessor">#include &lt;stdbool.h&gt;</span></div>
 <div class="line"><a id="l00013" name="l00013"></a><span class="lineno">   13</span><span class="preprocessor">#include &lt;stdint.h&gt;</span></div>
 <div class="line"><a id="l00014" name="l00014"></a><span class="lineno">   14</span> </div>
-<div class="line"><a id="l00016" name="l00016"></a><span class="lineno">   16</span>uint64_t <a class="code hl_function" href="../../d6/d73/async__internal_8h.html#a4212369d5a88e570c7c231df1f26e36c">cwist_http_reactor_generation</a>(<span class="keywordtype">void</span>);</div>
-<div class="line"><a id="l00017" name="l00017"></a><span class="lineno">   17</span> </div>
-<div class="line"><a id="l00023" name="l00023"></a><span class="lineno">   23</span><span class="keywordtype">bool</span> <a class="code hl_function" href="../../d6/d73/async__internal_8h.html#af3261ed92180c369e2b52cbcfb0e174f">cwist_http_reactor_post_live</a>(<a class="code hl_typedef" href="../../dc/d85/reactor_8h.html#a255365d0eb6a437c8aa4cae182f3ee0d">cwist_reactor_t</a> *reactor, uint64_t gen,</div>
-<div class="line"><a id="l00024" name="l00024"></a><span class="lineno">   24</span>                                  <a class="code hl_struct" href="../../d2/dcc/structcwist__reactor__post.html">cwist_reactor_post_t</a> *node);</div>
-<div class="line"><a id="l00025" name="l00025"></a><span class="lineno">   25</span> </div>
-<div class="line"><a id="l00030" name="l00030"></a><span class="lineno">   30</span><span class="keywordtype">void</span> <a class="code hl_function" href="../../d6/d73/async__internal_8h.html#ab5d519d4fe569356efe9a73671d8f38d">cwist_http_async_close_orphan</a>(<span class="keywordtype">int</span> client_fd, <a class="code hl_struct" href="../../db/d8a/structcwist__http__async__conn.html">cwist_http_async_conn_t</a> *conn);</div>
-<div class="line"><a id="l00031" name="l00031"></a><span class="lineno">   31</span> </div>
-<div class="line"><a id="l00032" name="l00032"></a><span class="lineno">   32</span><span class="preprocessor">#endif</span></div>
-<div class="ttc" id="aasync__internal_8h_html_a4212369d5a88e570c7c231df1f26e36c"><div class="ttname"><a href="../../d6/d73/async__internal_8h.html#a4212369d5a88e570c7c231df1f26e36c">cwist_http_reactor_generation</a></div><div class="ttdeci">uint64_t cwist_http_reactor_generation(void)</div><div class="ttdoc">Return the current reactor generation counter.</div><div class="ttdef"><b>Definition</b> <a href="../../dd/d43/http_8c_source.html#l00256">http.c:256</a></div></div>
-<div class="ttc" id="aasync__internal_8h_html_ab5d519d4fe569356efe9a73671d8f38d"><div class="ttname"><a href="../../d6/d73/async__internal_8h.html#ab5d519d4fe569356efe9a73671d8f38d">cwist_http_async_close_orphan</a></div><div class="ttdeci">void cwist_http_async_close_orphan(int client_fd, cwist_http_async_conn_t *conn)</div><div class="ttdoc">Close an async connection whose owning worker pool is gone.</div><div class="ttdef"><b>Definition</b> <a href="../../dd/d43/http_8c_source.html#l01145">http.c:1145</a></div></div>
-<div class="ttc" id="aasync__internal_8h_html_af3261ed92180c369e2b52cbcfb0e174f"><div class="ttname"><a href="../../d6/d73/async__internal_8h.html#af3261ed92180c369e2b52cbcfb0e174f">cwist_http_reactor_post_live</a></div><div class="ttdeci">bool cwist_http_reactor_post_live(cwist_reactor_t *reactor, uint64_t gen, cwist_reactor_post_t *node)</div><div class="ttdoc">Post a reactor node only while the captured generation is current.</div><div class="ttdef"><b>Definition</b> <a href="../../dd/d43/http_8c_source.html#l00271">http.c:271</a></div></div>
+<div class="line"><a id="l00015" name="l00015"></a><span class="lineno">   15</span><span class="keyword">struct </span><a class="code hl_typedef" href="../../de/d91/async_8h.html#ae244d7d9cf651f3763b6fc706f342056">cwist_async</a>;</div>
+<div class="line"><a id="l00016" name="l00016"></a><span class="lineno">   16</span> </div>
+<div class="line"><a id="l00018" name="l00018"></a><span class="lineno">   18</span>uint64_t <a class="code hl_function" href="../../d6/d73/async__internal_8h.html#a4212369d5a88e570c7c231df1f26e36c">cwist_http_reactor_generation</a>(<span class="keywordtype">void</span>);</div>
+<div class="line"><a id="l00019" name="l00019"></a><span class="lineno">   19</span> </div>
+<div class="line"><a id="l00025" name="l00025"></a><span class="lineno">   25</span><span class="keywordtype">bool</span> <a class="code hl_function" href="../../d6/d73/async__internal_8h.html#af3261ed92180c369e2b52cbcfb0e174f">cwist_http_reactor_post_live</a>(<a class="code hl_typedef" href="../../dc/d85/reactor_8h.html#a255365d0eb6a437c8aa4cae182f3ee0d">cwist_reactor_t</a> *reactor, uint64_t gen,</div>
+<div class="line"><a id="l00026" name="l00026"></a><span class="lineno">   26</span>                                  <a class="code hl_struct" href="../../d2/dcc/structcwist__reactor__post.html">cwist_reactor_post_t</a> *node);</div>
+<div class="line"><a id="l00027" name="l00027"></a><span class="lineno">   27</span> </div>
+<div class="line"><a id="l00032" name="l00032"></a><span class="lineno">   32</span><span class="keywordtype">void</span> <a class="code hl_function" href="../../d6/d73/async__internal_8h.html#ab5d519d4fe569356efe9a73671d8f38d">cwist_http_async_close_orphan</a>(<span class="keywordtype">int</span> client_fd, <a class="code hl_struct" href="../../db/d8a/structcwist__http__async__conn.html">cwist_http_async_conn_t</a> *conn);</div>
+<div class="line"><a id="l00033" name="l00033"></a><span class="lineno">   33</span> </div>
+<div class="line"><a id="l00041" name="l00041"></a><span class="lineno">   41</span><span class="keywordtype">bool</span> <a class="code hl_function" href="../../d6/d73/async__internal_8h.html#a399c36abe1fca2dbdeb931c66fdcdabf">cwist_async_https_take_deferred</a>(<span class="keywordtype">void</span>);</div>
+<div class="line"><a id="l00042" name="l00042"></a><span class="lineno">   42</span> </div>
+<div class="line"><a id="l00043" name="l00043"></a><span class="lineno">   43</span><span class="comment">/* Dispatch-thread handoff record (async_tls.c). It has no other dependency,</span></div>
+<div class="line"><a id="l00044" name="l00044"></a><span class="lineno">   44</span><span class="comment"> * so http.c and the middleware link it on every target, WASM included. */</span></div>
+<div class="line"><a id="l00045" name="l00045"></a><span class="lineno">   45</span> </div>
+<div class="line"><a id="l00047" name="l00047"></a><span class="lineno">   47</span><span class="keywordtype">void</span> <a class="code hl_function" href="../../d6/d73/async__internal_8h.html#a07f4289d2cf0b129fa2c3ceb3bd28063">cwist_async_record_pending</a>(<span class="keyword">struct</span> cwist_async *a, <span class="keyword">const</span> <a class="code hl_struct" href="../../dd/d22/structcwist__http__response.html">cwist_http_response</a> *res);</div>
+<div class="line"><a id="l00048" name="l00048"></a><span class="lineno">   48</span> </div>
+<div class="line"><a id="l00050" name="l00050"></a><span class="lineno"><a class="line" href="../../d6/d73/async__internal_8h.html#ac18dbc06e0fd4adf751239bd5b9d1875">   50</a></span><span class="keywordtype">void</span> <a class="code hl_function" href="../../d6/d73/async__internal_8h.html#ac18dbc06e0fd4adf751239bd5b9d1875">cwist_async_forget_handle</a>(<span class="keyword">const</span> <span class="keyword">struct</span> cwist_async *a);</div>
+<div class="line"><a id="l00051" name="l00051"></a><span class="lineno">   51</span> </div>
+<div class="line"><a id="l00060" name="l00060"></a><span class="lineno">   60</span><span class="keyword">struct </span><a class="code hl_typedef" href="../../de/d91/async_8h.html#ae244d7d9cf651f3763b6fc706f342056">cwist_async</a> *<a class="code hl_function" href="../../d6/d73/async__internal_8h.html#a78a38e16122ebfeac99f75ee5ad0523a">cwist_async_dispatch_take</a>(<a class="code hl_struct" href="../../dd/d22/structcwist__http__response.html">cwist_http_response</a> *res);</div>
+<div class="line"><a id="l00061" name="l00061"></a><span class="lineno">   61</span> </div>
+<div class="line"><a id="l00068" name="l00068"></a><span class="lineno">   68</span><span class="keywordtype">bool</span> <a class="code hl_function" href="../../d6/d73/async__internal_8h.html#a566f936ffa5db743344af9e792fb70f5">cwist_async_res_deferred</a>(<span class="keyword">const</span> <a class="code hl_struct" href="../../dd/d22/structcwist__http__response.html">cwist_http_response</a> *res);</div>
+<div class="line"><a id="l00069" name="l00069"></a><span class="lineno">   69</span> </div>
+<div class="line"><a id="l00076" name="l00076"></a><span class="lineno">   76</span><span class="keywordtype">void</span> <a class="code hl_function" href="../../d6/d73/async__internal_8h.html#a6840135ac516b43ef0ac7dc4d4283a00">cwist_async_forget_response</a>(<span class="keyword">const</span> <a class="code hl_struct" href="../../dd/d22/structcwist__http__response.html">cwist_http_response</a> *res);</div>
+<div class="line"><a id="l00077" name="l00077"></a><span class="lineno">   77</span> </div>
+<div class="line"><a id="l00078" name="l00078"></a><span class="lineno">   78</span><span class="preprocessor">#endif</span></div>
+<div class="ttc" id="aasync_8h_html_ae244d7d9cf651f3763b6fc706f342056"><div class="ttname"><a href="../../de/d91/async_8h.html#ae244d7d9cf651f3763b6fc706f342056">cwist_async</a></div><div class="ttdeci">struct cwist_async cwist_async</div><div class="ttdef"><b>Definition</b> <a href="../../de/d91/async_8h_source.html#l00054">async.h:54</a></div></div>
+<div class="ttc" id="aasync__internal_8h_html_a07f4289d2cf0b129fa2c3ceb3bd28063"><div class="ttname"><a href="../../d6/d73/async__internal_8h.html#a07f4289d2cf0b129fa2c3ceb3bd28063">cwist_async_record_pending</a></div><div class="ttdeci">void cwist_async_record_pending(struct cwist_async *a, const cwist_http_response *res)</div><div class="ttdef"><b>Definition</b> <a href="../../d0/dbc/async__tls_8c_source.html#l00038">async_tls.c:38</a></div></div>
+<div class="ttc" id="aasync__internal_8h_html_a399c36abe1fca2dbdeb931c66fdcdabf"><div class="ttname"><a href="../../d6/d73/async__internal_8h.html#a399c36abe1fca2dbdeb931c66fdcdabf">cwist_async_https_take_deferred</a></div><div class="ttdeci">bool cwist_async_https_take_deferred(void)</div><div class="ttdef"><b>Definition</b> <a href="../../db/d84/async_8c_source.html#l00094">async.c:94</a></div></div>
+<div class="ttc" id="aasync__internal_8h_html_a4212369d5a88e570c7c231df1f26e36c"><div class="ttname"><a href="../../d6/d73/async__internal_8h.html#a4212369d5a88e570c7c231df1f26e36c">cwist_http_reactor_generation</a></div><div class="ttdeci">uint64_t cwist_http_reactor_generation(void)</div><div class="ttdoc">Return the current reactor generation counter.</div><div class="ttdef"><b>Definition</b> <a href="../../dd/d43/http_8c_source.html#l00259">http.c:259</a></div></div>
+<div class="ttc" id="aasync__internal_8h_html_a566f936ffa5db743344af9e792fb70f5"><div class="ttname"><a href="../../d6/d73/async__internal_8h.html#a566f936ffa5db743344af9e792fb70f5">cwist_async_res_deferred</a></div><div class="ttdeci">bool cwist_async_res_deferred(const cwist_http_response *res)</div><div class="ttdef"><b>Definition</b> <a href="../../d0/dbc/async__tls_8c_source.html#l00071">async_tls.c:71</a></div></div>
+<div class="ttc" id="aasync__internal_8h_html_a6840135ac516b43ef0ac7dc4d4283a00"><div class="ttname"><a href="../../d6/d73/async__internal_8h.html#a6840135ac516b43ef0ac7dc4d4283a00">cwist_async_forget_response</a></div><div class="ttdeci">void cwist_async_forget_response(const cwist_http_response *res)</div><div class="ttdef"><b>Definition</b> <a href="../../d0/dbc/async__tls_8c_source.html#l00050">async_tls.c:50</a></div></div>
+<div class="ttc" id="aasync__internal_8h_html_a78a38e16122ebfeac99f75ee5ad0523a"><div class="ttname"><a href="../../d6/d73/async__internal_8h.html#a78a38e16122ebfeac99f75ee5ad0523a">cwist_async_dispatch_take</a></div><div class="ttdeci">struct cwist_async * cwist_async_dispatch_take(cwist_http_response *res)</div><div class="ttdef"><b>Definition</b> <a href="../../d0/dbc/async__tls_8c_source.html#l00057">async_tls.c:57</a></div></div>
+<div class="ttc" id="aasync__internal_8h_html_ab5d519d4fe569356efe9a73671d8f38d"><div class="ttname"><a href="../../d6/d73/async__internal_8h.html#ab5d519d4fe569356efe9a73671d8f38d">cwist_http_async_close_orphan</a></div><div class="ttdeci">void cwist_http_async_close_orphan(int client_fd, cwist_http_async_conn_t *conn)</div><div class="ttdoc">Close an async connection whose owning worker pool is gone.</div><div class="ttdef"><b>Definition</b> <a href="../../dd/d43/http_8c_source.html#l01444">http.c:1444</a></div></div>
+<div class="ttc" id="aasync__internal_8h_html_ac18dbc06e0fd4adf751239bd5b9d1875"><div class="ttname"><a href="../../d6/d73/async__internal_8h.html#ac18dbc06e0fd4adf751239bd5b9d1875">cwist_async_forget_handle</a></div><div class="ttdeci">void cwist_async_forget_handle(const struct cwist_async *a)</div></div>
+<div class="ttc" id="aasync__internal_8h_html_af3261ed92180c369e2b52cbcfb0e174f"><div class="ttname"><a href="../../d6/d73/async__internal_8h.html#af3261ed92180c369e2b52cbcfb0e174f">cwist_http_reactor_post_live</a></div><div class="ttdeci">bool cwist_http_reactor_post_live(cwist_reactor_t *reactor, uint64_t gen, cwist_reactor_post_t *node)</div><div class="ttdoc">Post a reactor node only while the captured generation is current.</div><div class="ttdef"><b>Definition</b> <a href="../../dd/d43/http_8c_source.html#l00274">http.c:274</a></div></div>
 <div class="ttc" id="anet_2http_2http_8h_html"><div class="ttname"><a href="../../d9/dab/net_2http_2http_8h.html">http.h</a></div><div class="ttdoc">HTTP Protocol Definitions and Helpers.</div></div>
 <div class="ttc" id="areactor_8h_html"><div class="ttname"><a href="../../dc/d85/reactor_8h.html">reactor.h</a></div></div>
 <div class="ttc" id="areactor_8h_html_a255365d0eb6a437c8aa4cae182f3ee0d"><div class="ttname"><a href="../../dc/d85/reactor_8h.html#a255365d0eb6a437c8aa4cae182f3ee0d">cwist_reactor_t</a></div><div class="ttdeci">struct cwist_reactor cwist_reactor_t</div><div class="ttdef"><b>Definition</b> <a href="../../dc/d85/reactor_8h_source.html#l00014">reactor.h:14</a></div></div>
 <div class="ttc" id="astructcwist__http__async__conn_html"><div class="ttname"><a href="../../db/d8a/structcwist__http__async__conn.html">cwist_http_async_conn</a></div><div class="ttdef"><b>Definition</b> <a href="../../d9/dab/net_2http_2http_8h_source.html#l00450">http.h:450</a></div></div>
+<div class="ttc" id="astructcwist__http__response_html"><div class="ttname"><a href="../../dd/d22/structcwist__http__response.html">cwist_http_response</a></div><div class="ttdoc">HTTP Response Object. Supports standard string body or Zero-Copy pointer body.</div><div class="ttdef"><b>Definition</b> <a href="../../dd/d56/http_8h_source.html#l00082">http.h:82</a></div></div>
 <div class="ttc" id="astructcwist__reactor__post_html"><div class="ttname"><a href="../../d2/dcc/structcwist__reactor__post.html">cwist_reactor_post</a></div><div class="ttdef"><b>Definition</b> <a href="../../dc/d85/reactor_8h_source.html#l00046">reactor.h:46</a></div></div>
 </div><!-- fragment --></div><!-- contents -->
+</div><!-- doc-content -->
 <!-- start footer part -->
-<hr class="footer"/><address class="footer"><small>
-Generated by&#160;<a href="https://www.doxygen.org/index.html"><img class="footer" src="../../doxygen.svg" width="104" height="31" alt="doxygen"/></a> 1.9.8
-</small></address>
+<div id="nav-path" class="navpath"><!-- id is needed for treeview function! -->
+  <ul>
+    <li class="navelem"><a class="el" href="../../dir_68267d1309a1af8e8297ef4c3efbcdba.html">src</a></li><li class="navelem"><a class="el" href="../../dir_c72b25b75abe208498b36a3e44a3726c.html">net</a></li><li class="navelem"><a class="el" href="../../dir_dd2d28fd72df0d33d2116010ecf4f11d.html">http</a></li><li class="navelem"><a class="el" href="../../d6/d73/async__internal_8h.html">async_internal.h</a></li>
+    <li class="footer">Generated by <a href="https://www.doxygen.org/index.html"><img class="footer" src="../../doxygen.svg" width="104" height="31" alt="doxygen"/></a> 1.9.8 </li>
+  </ul>
+</div>
 </body>
 </html>

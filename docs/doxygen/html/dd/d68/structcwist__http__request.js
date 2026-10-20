@@ -1,13 +1,19 @@
 var structcwist__http__request =
 [
     [ "app", "dd/d68/structcwist__http__request.html#a747dd16054b62bfb37a209af22349812", null ],
+    [ "arena", "dd/d68/structcwist__http__request.html#a998d09d0c1226ea371439ddbdd8e5e22", null ],
+    [ "async_conn", "dd/d68/structcwist__http__request.html#a3ae269550a9725fd7b28ee78a73ccf98", null ],
     [ "body", "dd/d68/structcwist__http__request.html#a91ec3900626efc7889a2a2ff2d52adf1", null ],
     [ "client_fd", "dd/d68/structcwist__http__request.html#addc89bf60a027521db1c0e7e6747a4b9", null ],
     [ "content_length", "dd/d68/structcwist__http__request.html#a1f602a232914359b2fd3405c5813a8ef", null ],
+    [ "csrf_token", "dd/d68/structcwist__http__request.html#a1a2b6c7dc52c6069b30267b562a3e45f", null ],
     [ "db", "dd/d68/structcwist__http__request.html#af27c8211e63dc55d48b084e9c819a59b", null ],
     [ "endpoint_opts", "dd/d68/structcwist__http__request.html#adf88b2e318367b6bfba0ac2fa500f54e", null ],
+    [ "expect_100_seen", "dd/d68/structcwist__http__request.html#a5b8785aeefb2697d11f7dbe43b0eb23a", null ],
     [ "flash", "dd/d68/structcwist__http__request.html#a302bd47292d045682cebc9f1c97641fa", null ],
+    [ "h2_queue", "dd/d68/structcwist__http__request.html#a6cdd82d14bdd230ee18ca75a6fe04bb6", null ],
     [ "headers", "dd/d68/structcwist__http__request.html#ac5dd8aba8a06ff00f75e5357acca3bd6", null ],
+    [ "https_conn", "dd/d68/structcwist__http__request.html#aa66fbe825b5f747dd76c893f0d09fc02", null ],
     [ "keep_alive", "dd/d68/structcwist__http__request.html#ad08e696b64981dd3886f3af37832a6e0", null ],
     [ "method", "dd/d68/structcwist__http__request.html#afa70fc531f9a23cfef539b091f2d7559", null ],
     [ "path", "dd/d68/structcwist__http__request.html#a391864f084971e16903d40942c186c18", null ],
@@ -16,7 +22,10 @@ var structcwist__http__request =
     [ "query", "dd/d68/structcwist__http__request.html#a49024fbbb1e599f5d8efcc0b00fc50be", null ],
     [ "query_params", "dd/d68/structcwist__http__request.html#a004b3d61d997aa7847cb3c5e9fc64e20", null ],
     [ "route_middleware_state", "dd/d68/structcwist__http__request.html#a620f6ffc8da54b44d1849a4968c4bd62", null ],
+    [ "session", "dd/d68/structcwist__http__request.html#a9af21e2d67bd5beebe1d273cae31354e", null ],
     [ "stream_id", "dd/d68/structcwist__http__request.html#a7ae8498045aa64de63dc00cee14b074d", null ],
+    [ "te_chunked_seen", "dd/d68/structcwist__http__request.html#a10266ac748fd6062f8f9c4f07d785b92", null ],
     [ "upgraded", "dd/d68/structcwist__http__request.html#a93bc1facc9f75e9d2e243ea9f82b5669", null ],
-    [ "version", "dd/d68/structcwist__http__request.html#a9d21d4ffb5eb56a1e555898e2dd3da38", null ]
+    [ "version", "dd/d68/structcwist__http__request.html#a9d21d4ffb5eb56a1e555898e2dd3da38", null ],
+    [ "ws_async_handoff", "dd/d68/structcwist__http__request.html#a7b1638bf9bf448d8e1b9834839df655c", null ]
 ];

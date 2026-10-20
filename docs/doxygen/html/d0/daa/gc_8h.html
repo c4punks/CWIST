@@ -1,3 +1,4 @@
+<!-- HTML header for doxygen 1.9.8-->
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "https://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml" lang="en-US">
 <head>
@@ -5,14 +6,32 @@
 <meta http-equiv="X-UA-Compatible" content="IE=11"/>
 <meta name="generator" content="Doxygen 1.9.8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
-<title>cwist: include/cwist/core/mem/gc.h File Reference</title>
+<title>include/cwist/core/mem/gc.h File Reference - CWIST High-Performance C Web Framework</title>
+<meta name="description" content="CWIST: High-performance C17 web framework and application server (HTTP/1.1, HTTP/2, HTTP/3, WebTransport, WebSocket, PQC TLS) powered by io_uring and libttak."/>
+<meta name="keywords" content="C web framework, C17, HTTP3, QUIC, io_uring, web server, actix alternative, high performance, REST API in C, C web server"/>
+<meta name="author" content="c4punks"/>
+<meta name="robots" content="index, follow"/>
+<!-- Open Graph / Facebook -->
+<meta property="og:type" content="website"/>
+<meta property="og:title" content="include/cwist/core/mem/gc.h File Reference - CWIST Modern C Web Framework"/>
+<meta property="og:description" content="High-performance C17 web framework & application server with zero-copy io_uring reactor, PQC TLS, and HTTP/3 support."/>
+<meta property="og:url" content="https://c4punks.github.io/CWIST/"/>
+<!-- Twitter -->
+<meta name="twitter:card" content="summary_large_image"/>
+<meta name="twitter:title" content="include/cwist/core/mem/gc.h File Reference - CWIST Modern C Web Framework"/>
+<meta name="twitter:description" content="High-performance C17 web framework & application server with zero-copy io_uring reactor, PQC TLS, and HTTP/3 support."/>
 <link href="../../tabs.css" rel="stylesheet" type="text/css"/>
 <script type="text/javascript" src="../../jquery.js"></script>
 <script type="text/javascript" src="../../dynsections.js"></script>
+<link href="../../navtree.css" rel="stylesheet" type="text/css"/>
+<script type="text/javascript" src="../../resize.js"></script>
+<script type="text/javascript" src="../../navtreedata.js"></script>
+<script type="text/javascript" src="../../navtree.js"></script>
 <link href="../../search/search.css" rel="stylesheet" type="text/css"/>
 <script type="text/javascript" src="../../search/searchdata.js"></script>
 <script type="text/javascript" src="../../search/search.js"></script>
 <link href="../../doxygen.css" rel="stylesheet" type="text/css" />
+<link href="../../doxygen-awesome.css" rel="stylesheet" type="text/css"/>
 </head>
 <body>
 <div id="top"><!-- do not remove this div, it is closed by doxygen! -->
@@ -47,6 +66,23 @@ $(function() {
 /* @license-end */
 </script>
 <div id="main-nav"></div>
+</div><!-- top -->
+<div id="side-nav" class="ui-resizable side-nav-resizable">
+  <div id="nav-tree">
+    <div id="nav-tree-contents">
+      <div id="nav-sync" class="sync"></div>
+    </div>
+  </div>
+  <div id="splitbar" style="-moz-user-select:none;" 
+       class="ui-resizable-handle">
+  </div>
+</div>
+<script type="text/javascript">
+/* @license magnet:?xt=urn:btih:d3d9a9a6595521f9666a5e94cc830dab83b65699&amp;dn=expat.txt MIT */
+$(document).ready(function(){initNavTree('d0/daa/gc_8h.html','../../'); initResizable(); });
+/* @license-end */
+</script>
+<div id="doc-content">
 <!-- window showing the filter options -->
 <div id="MSearchSelectWindow"
      onmouseover="return searchBox.OnSearchSelectShow()"
@@ -68,11 +104,6 @@ $(function() {
 </div>
 </div>
 
-<div id="nav-path" class="navpath">
-  <ul>
-<li class="navelem"><a class="el" href="../../dir_d44c64559bbebec7f509842c48db8b23.html">include</a></li><li class="navelem"><a class="el" href="../../dir_2109d32ae718f50aecd8856dacda770b.html">cwist</a></li><li class="navelem"><a class="el" href="../../dir_10b21726104ad23c5e3d9a30e698c859.html">core</a></li><li class="navelem"><a class="el" href="../../dir_6be49a6af745edc4b6aec6d50aadcc72.html">mem</a></li>  </ul>
-</div>
-</div><!-- top -->
 <div class="header">
   <div class="summary">
 <a href="#nested-classes">Classes</a> &#124;
@@ -151,7 +182,7 @@ Typedefs</h2></td></tr>
 <tr class="memdesc:ab69481b637dc8d922721fdd6945c8e27"><td class="mdescLeft">&#160;</td><td class="mdescRight">One-shot guard ensuring a shared teardown path runs exactly once.  <br /></td></tr>
 <tr class="separator:ab69481b637dc8d922721fdd6945c8e27"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a5c0209f90f79b0e8b7b893b5d8c9d8ed" id="r_a5c0209f90f79b0e8b7b893b5d8c9d8ed"><td class="memItemLeft" align="right" valign="top">typedef void(*&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d0/daa/gc_8h.html#a5c0209f90f79b0e8b7b893b5d8c9d8ed">cwist_conn_close_fn</a>) (void *handle)</td></tr>
-<tr class="memdesc:a5c0209f90f79b0e8b7b893b5d8c9d8ed"><td class="mdescLeft">&#160;</td><td class="mdescRight">Full-GC's connection registry: thread/process-exit sweep for resources that aren't plain <a class="el" href="../../d2/dfe/alloc_8h.html#aeba69949fe17751318e6b5fc84a74096" title="Allocate zeroed memory tracked by libttak.">cwist_alloc()</a> memory &ndash; sockets, TLS sessions, protocol-level state &ndash; so a worker thread (or the whole process) ending without an explicit destroy-family call still closes them, instead of leaving them for the peer/OS to notice. See docs/GC.md sections 2-3. There is no cwist_conn_t in this codebase (connection lifecycle is protocol-specific &ndash; <a class="el" href="../../dd/d43/http_8c.html" title="Core HTTP request/response allocation, serialization, socket, and server-loop helpers.">http.c</a>/http2.c/http3.c/ <a class="el" href="../../d2/db2/https_8c.html" title="OpenSSL-backed HTTPS accept, receive, send, and server-loop helpers.">https.c</a>/grpc.<a class="el" href="../../d4/d54/grpc__client_8c.html" title="HTTP/2-based gRPC client (h2c cleartext, or TLS with ALPN &quot;h2&quot;).">c/grpc_client.c</a> each own their own), so this tracks (handle, close_fn) pairs instead of a concrete type.  <br /></td></tr>
+<tr class="memdesc:a5c0209f90f79b0e8b7b893b5d8c9d8ed"><td class="mdescLeft">&#160;</td><td class="mdescRight">Full-GC's connection registry: thread/process-exit sweep for resources that aren't plain <a class="el" href="../../d2/dfe/alloc_8h.html#aeba69949fe17751318e6b5fc84a74096" title="Allocate zeroed memory tracked by libttak.">cwist_alloc()</a> memory &ndash; sockets, TLS sessions, protocol-level state &ndash; so a worker thread (or the whole process) ending without an explicit destroy-family call still closes them, instead of leaving them for the peer/OS to notice. See <a class="el" href="../../d6/d91/GC_8md.html">docs/GC.md</a> sections 2-3. There is no cwist_conn_t in this codebase (connection lifecycle is protocol-specific &ndash; <a class="el" href="../../dd/d43/http_8c.html" title="Core HTTP request/response allocation, serialization, socket, and server-loop helpers.">http.c</a>/http2.c/http3.c/ <a class="el" href="../../d2/db2/https_8c.html" title="OpenSSL-backed HTTPS accept, receive, send, and server-loop helpers.">https.c</a>/grpc.<a class="el" href="../../d4/d54/grpc__client_8c.html" title="HTTP/2-based gRPC client (h2c cleartext, or TLS with ALPN &quot;h2&quot;).">c/grpc_client.c</a> each own their own), so this tracks (handle, close_fn) pairs instead of a concrete type.  <br /></td></tr>
 <tr class="separator:a5c0209f90f79b0e8b7b893b5d8c9d8ed"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="func-members" name="func-members"></a>
@@ -223,19 +254,22 @@ Functions</h2></td></tr>
 <tr class="memdesc:a6e9bae201702c4c1417e366ec3ab1919"><td class="mdescLeft">&#160;</td><td class="mdescRight">Attempt to claim the guard.  <br /></td></tr>
 <tr class="separator:a6e9bae201702c4c1417e366ec3ab1919"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:ab26f402453c12fa53637372d37bc9aed" id="r_ab26f402453c12fa53637372d37bc9aed"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d0/daa/gc_8h.html#ab26f402453c12fa53637372d37bc9aed">cwist_conn_registry_track</a> (void *handle, <a class="el" href="../../d0/daa/gc_8h.html#a5c0209f90f79b0e8b7b893b5d8c9d8ed">cwist_conn_close_fn</a> close_fn)</td></tr>
-<tr class="memdesc:ab26f402453c12fa53637372d37bc9aed"><td class="mdescLeft">&#160;</td><td class="mdescRight">Register a connection handle with the current thread's pending-sweep list (full-GC mode only; a no-op otherwise, so callers can call this unconditionally at connection-open time).  <br /></td></tr>
+<tr class="memdesc:ab26f402453c12fa53637372d37bc9aed"><td class="mdescLeft">&#160;</td><td class="mdescRight">Register a connection handle for the full-GC exit sweep, owned by the calling thread (full-GC mode only; a no-op otherwise, so callers can call this unconditionally at connection-open time).  <br /></td></tr>
 <tr class="separator:ab26f402453c12fa53637372d37bc9aed"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a508dbea3a902e11b26c082674079e011" id="r_a508dbea3a902e11b26c082674079e011"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d0/daa/gc_8h.html#a508dbea3a902e11b26c082674079e011">cwist_conn_registry_adopt</a> (void *handle)</td></tr>
+<tr class="memdesc:a508dbea3a902e11b26c082674079e011"><td class="mdescLeft">&#160;</td><td class="mdescRight">Make the calling thread the owner of a tracked handle.  <br /></td></tr>
+<tr class="separator:a508dbea3a902e11b26c082674079e011"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a1bb3e29d15dcaab029c19c82f0707035" id="r_a1bb3e29d15dcaab029c19c82f0707035"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d0/daa/gc_8h.html#a1bb3e29d15dcaab029c19c82f0707035">cwist_conn_registry_untrack</a> (void *handle)</td></tr>
-<tr class="memdesc:a1bb3e29d15dcaab029c19c82f0707035"><td class="mdescLeft">&#160;</td><td class="mdescRight">Remove a handle from the <em>calling thread's</em> pending-sweep list before closing it yourself through the normal explicit path.  <br /></td></tr>
+<tr class="memdesc:a1bb3e29d15dcaab029c19c82f0707035"><td class="mdescLeft">&#160;</td><td class="mdescRight">Remove a handle from the registry before closing it yourself through the normal explicit path.  <br /></td></tr>
 <tr class="separator:a1bb3e29d15dcaab029c19c82f0707035"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:aa0e57fd4f5152ff19be1e832e8dfa3cc" id="r_aa0e57fd4f5152ff19be1e832e8dfa3cc"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d0/daa/gc_8h.html#aa0e57fd4f5152ff19be1e832e8dfa3cc">cwist_conn_registry_flush</a> (void)</td></tr>
-<tr class="memdesc:aa0e57fd4f5152ff19be1e832e8dfa3cc"><td class="mdescLeft">&#160;</td><td class="mdescRight">Sweep (close) everything still on the calling thread's pending-sweep list right now, without waiting for thread exit. Analogous to <a class="el" href="../../d0/daa/gc_8h.html#a9722c1690dcf7f4e07c62bd0d1dd8047" title="Retire every block still on the current thread&#39;s pending-sweep list right now, instead of waiting for...">cwist_gc_scope_flush()</a> but for connections.  <br /></td></tr>
+<tr class="memdesc:aa0e57fd4f5152ff19be1e832e8dfa3cc"><td class="mdescLeft">&#160;</td><td class="mdescRight">Close every handle the calling thread owns right now, without waiting for thread exit. Analogous to <a class="el" href="../../d0/daa/gc_8h.html#a9722c1690dcf7f4e07c62bd0d1dd8047" title="Retire every block still on the current thread&#39;s pending-sweep list right now, instead of waiting for...">cwist_gc_scope_flush()</a> but for connections.  <br /></td></tr>
 <tr class="separator:aa0e57fd4f5152ff19be1e832e8dfa3cc"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a190fb06d2ebdb046377b856d47bbbc15" id="r_a190fb06d2ebdb046377b856d47bbbc15"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d0/daa/gc_8h.html#a190fb06d2ebdb046377b856d47bbbc15">cwist_conn_registry_sweep_all</a> (void)</td></tr>
 <tr class="memdesc:a190fb06d2ebdb046377b856d47bbbc15"><td class="mdescLeft">&#160;</td><td class="mdescRight">Sweep every thread's pending-sweep list right now. This is what the process-exit (atexit) hook calls; exposed directly for testing, or for callers that want a deterministic sweep point earlier than actual process exit (e.g. <a class="el" href="../../d0/d77/sys_2app_2app_8h.html#a8d6f015a001b2d189ebea808de9da254" title="Destroys the application and frees all resources.">cwist_app_destroy()</a>).  <br /></td></tr>
 <tr class="separator:a190fb06d2ebdb046377b856d47bbbc15"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a9e4705e4cecb1de3290481eef3500c2e" id="r_a9e4705e4cecb1de3290481eef3500c2e"><td class="memItemLeft" align="right" valign="top">size_t&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d0/daa/gc_8h.html#a9e4705e4cecb1de3290481eef3500c2e">cwist_conn_registry_pending_count</a> (void)</td></tr>
-<tr class="memdesc:a9e4705e4cecb1de3290481eef3500c2e"><td class="mdescLeft">&#160;</td><td class="mdescRight">Number of connections currently on the calling thread's pending-sweep list. Introspection/testing helper.  <br /></td></tr>
+<tr class="memdesc:a9e4705e4cecb1de3290481eef3500c2e"><td class="mdescLeft">&#160;</td><td class="mdescRight">Number of tracked connections the calling thread owns. Introspection/testing helper.  <br /></td></tr>
 <tr class="separator:a9e4705e4cecb1de3290481eef3500c2e"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
@@ -255,9 +289,9 @@ Functions</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p>Full-GC's connection registry: thread/process-exit sweep for resources that aren't plain <a class="el" href="../../d2/dfe/alloc_8h.html#aeba69949fe17751318e6b5fc84a74096" title="Allocate zeroed memory tracked by libttak.">cwist_alloc()</a> memory &ndash; sockets, TLS sessions, protocol-level state &ndash; so a worker thread (or the whole process) ending without an explicit destroy-family call still closes them, instead of leaving them for the peer/OS to notice. See docs/GC.md sections 2-3. There is no cwist_conn_t in this codebase (connection lifecycle is protocol-specific &ndash; <a class="el" href="../../dd/d43/http_8c.html" title="Core HTTP request/response allocation, serialization, socket, and server-loop helpers.">http.c</a>/http2.c/http3.c/ <a class="el" href="../../d2/db2/https_8c.html" title="OpenSSL-backed HTTPS accept, receive, send, and server-loop helpers.">https.c</a>/grpc.<a class="el" href="../../d4/d54/grpc__client_8c.html" title="HTTP/2-based gRPC client (h2c cleartext, or TLS with ALPN &quot;h2&quot;).">c/grpc_client.c</a> each own their own), so this tracks (handle, close_fn) pairs instead of a concrete type. </p>
+<p>Full-GC's connection registry: thread/process-exit sweep for resources that aren't plain <a class="el" href="../../d2/dfe/alloc_8h.html#aeba69949fe17751318e6b5fc84a74096" title="Allocate zeroed memory tracked by libttak.">cwist_alloc()</a> memory &ndash; sockets, TLS sessions, protocol-level state &ndash; so a worker thread (or the whole process) ending without an explicit destroy-family call still closes them, instead of leaving them for the peer/OS to notice. See <a class="el" href="../../d6/d91/GC_8md.html">docs/GC.md</a> sections 2-3. There is no cwist_conn_t in this codebase (connection lifecycle is protocol-specific &ndash; <a class="el" href="../../dd/d43/http_8c.html" title="Core HTTP request/response allocation, serialization, socket, and server-loop helpers.">http.c</a>/http2.c/http3.c/ <a class="el" href="../../d2/db2/https_8c.html" title="OpenSSL-backed HTTPS accept, receive, send, and server-loop helpers.">https.c</a>/grpc.<a class="el" href="../../d4/d54/grpc__client_8c.html" title="HTTP/2-based gRPC client (h2c cleartext, or TLS with ALPN &quot;h2&quot;).">c/grpc_client.c</a> each own their own), so this tracks (handle, close_fn) pairs instead of a concrete type. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d0/daa/gc_8h_source.html#l00251">251</a> of file <a class="el" href="../../d0/daa/gc_8h_source.html">gc.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d0/daa/gc_8h_source.html#l00301">301</a> of file <a class="el" href="../../d0/daa/gc_8h_source.html">gc.h</a>.</p>
 
 </div>
 </div>
@@ -293,11 +327,44 @@ Functions</h2></td></tr>
 <p>One-shot guard ensuring a shared teardown path runs exactly once. </p>
 <p>Use this when the same release path (e.g. detaching two sibling references and freeing what they both point to) may be entered concurrently from more than one thread, and exactly one of them must win. Initialize with <a class="el" href="../../d0/daa/gc_8h.html#a4eb61c3775d0863b9eedc5b79904725c" title="Initialize a release guard to its unclaimed state.">cwist_release_guard_init()</a>; every racer then calls <a class="el" href="../../d0/daa/gc_8h.html#a6e9bae201702c4c1417e366ec3ab1919" title="Attempt to claim the guard.">cwist_release_guard_acquire()</a> and only the caller that gets <code>true</code> back performs the detach + free. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d0/daa/gc_8h_source.html#l00226">226</a> of file <a class="el" href="../../d0/daa/gc_8h_source.html">gc.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d0/daa/gc_8h_source.html#l00276">276</a> of file <a class="el" href="../../d0/daa/gc_8h_source.html">gc.h</a>.</p>
 
 </div>
 </div>
 <h2 class="groupheader">Function Documentation</h2>
+<a id="a508dbea3a902e11b26c082674079e011" name="a508dbea3a902e11b26c082674079e011"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a508dbea3a902e11b26c082674079e011">&#9670;&#160;</a></span>cwist_conn_registry_adopt()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">bool cwist_conn_registry_adopt </td>
+          <td>(</td>
+          <td class="paramtype">void *&#160;</td>
+          <td class="paramname"><em>handle</em></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Make the calling thread the owner of a tracked handle. </p>
+<p>Call this when a thread takes over serving a connection another thread tracked (pool resubmit, parked-connection resume, async completion that keeps the connection). Without it, the tracking thread's exit would close a connection the new thread is still using (#345).</p>
+<dl class="section return"><dt>Returns</dt><dd>true if <code>handle</code> is tracked and now owned by the caller; false if it is not tracked or full GC is off.</dd></dl>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">handle</td><td>Handle previously passed to <a class="el" href="../../d8/d16/gc_8c.html#ab26f402453c12fa53637372d37bc9aed" title="Track a non-memory resource for the full-GC exit sweep.">cwist_conn_registry_track()</a>. </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section return"><dt>Returns</dt><dd>true when <code>handle</code> is tracked (and now owned by the caller); false when it is not tracked or full GC is off. </dd></dl>
+
+<p class="definition">Definition at line <a class="el" href="../../d8/d16/gc_8c_source.html#l01022">1022</a> of file <a class="el" href="../../d8/d16/gc_8c_source.html">gc.c</a>.</p>
+
+<p class="reference">References <a class="el" href="../../d8/d16/gc_8c_source.html#l00514">cwist_full_gc_enabled()</a>.</p>
+
+</div>
+</div>
 <a id="aa0e57fd4f5152ff19be1e832e8dfa3cc" name="aa0e57fd4f5152ff19be1e832e8dfa3cc"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#aa0e57fd4f5152ff19be1e832e8dfa3cc">&#9670;&#160;</a></span>cwist_conn_registry_flush()</h2>
 
@@ -314,11 +381,12 @@ Functions</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p>Sweep (close) everything still on the calling thread's pending-sweep list right now, without waiting for thread exit. Analogous to <a class="el" href="../../d0/daa/gc_8h.html#a9722c1690dcf7f4e07c62bd0d1dd8047" title="Retire every block still on the current thread&#39;s pending-sweep list right now, instead of waiting for...">cwist_gc_scope_flush()</a> but for connections. </p>
-<p>Sweep (close) everything still on the calling thread's pending-sweep list right now, without waiting for thread exit. Analogous to <a class="el" href="../../d0/daa/gc_8h.html#a9722c1690dcf7f4e07c62bd0d1dd8047" title="Retire every block still on the current thread&#39;s pending-sweep list right now, instead of waiting for...">cwist_gc_scope_flush()</a> but for connections.</p>
-<p>Unlike the sweeps, the list stays usable afterwards: entries are closed and cleared but the list is not marked swept, so later tracks still work. </p>
+<p>Close every handle the calling thread owns right now, without waiting for thread exit. Analogous to <a class="el" href="../../d0/daa/gc_8h.html#a9722c1690dcf7f4e07c62bd0d1dd8047" title="Retire every block still on the current thread&#39;s pending-sweep list right now, instead of waiting for...">cwist_gc_scope_flush()</a> but for connections. </p>
+<p>Ownership follows <a class="el" href="../../d0/daa/gc_8h.html#a508dbea3a902e11b26c082674079e011" title="Make the calling thread the owner of a tracked handle.">cwist_conn_registry_adopt()</a>, but a connection this thread tracked and another thread serves without adopting it (a parked or deferred connection) is still owned here, so call this only when none of them can still be in use. The <code>cwist</code> CLI warns on call sites not marked <code>cwist-ack: cwist_conn_registry_flush</code>.</p>
+<p>Close every handle the calling thread owns right now, without waiting for thread exit. Analogous to <a class="el" href="../../d0/daa/gc_8h.html#a9722c1690dcf7f4e07c62bd0d1dd8047" title="Retire every block still on the current thread&#39;s pending-sweep list right now, instead of waiting for...">cwist_gc_scope_flush()</a> but for connections.</p>
+<p>The registry stays usable afterwards; later tracks work as before. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d8/d16/gc_8c_source.html#l00732">732</a> of file <a class="el" href="../../d8/d16/gc_8c_source.html">gc.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d8/d16/gc_8c_source.html#l01038">1038</a> of file <a class="el" href="../../d8/d16/gc_8c_source.html">gc.c</a>.</p>
 
 </div>
 </div>
@@ -338,11 +406,12 @@ Functions</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p>Number of connections currently on the calling thread's pending-sweep list. Introspection/testing helper. </p>
-<p>Number of connections currently on the calling thread's pending-sweep list. Introspection/testing helper.</p>
-<dl class="section return"><dt>Returns</dt><dd>Number of pending entries; 0 when nothing is tracked. </dd></dl>
+<p>Number of tracked connections the calling thread owns. Introspection/testing helper. </p>
+<p>After fork() the child starts with an empty registry: the inherited connections belong to the parent, and a child that exits must not shut them down.</p>
+<p>Number of tracked connections the calling thread owns. Introspection/testing helper.</p>
+<dl class="section return"><dt>Returns</dt><dd>Number of owned entries; 0 when nothing is tracked. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d8/d16/gc_8c_source.html#l00757">757</a> of file <a class="el" href="../../d8/d16/gc_8c_source.html">gc.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d8/d16/gc_8c_source.html#l01057">1057</a> of file <a class="el" href="../../d8/d16/gc_8c_source.html">gc.c</a>.</p>
 
 </div>
 </div>
@@ -364,9 +433,9 @@ Functions</h2></td></tr>
 
 <p>Sweep every thread's pending-sweep list right now. This is what the process-exit (atexit) hook calls; exposed directly for testing, or for callers that want a deterministic sweep point earlier than actual process exit (e.g. <a class="el" href="../../d0/d77/sys_2app_2app_8h.html#a8d6f015a001b2d189ebea808de9da254" title="Destroys the application and frees all resources.">cwist_app_destroy()</a>). </p>
 <p>Sweep every thread's pending-sweep list right now. This is what the process-exit (atexit) hook calls; exposed directly for testing, or for callers that want a deterministic sweep point earlier than actual process exit (e.g. <a class="el" href="../../d0/d77/sys_2app_2app_8h.html#a8d6f015a001b2d189ebea808de9da254" title="Destroys the application and frees all resources.">cwist_app_destroy()</a>).</p>
-<p>Intended for process-exit paths; each list is closed at most once even if a thread's TLS destructor sweep races with this call. </p>
+<p>Intended for process-exit paths. Each handle is removed before it is closed, so racing sweeps (atexit vs. a thread's own exit) close it once. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d8/d16/gc_8c_source.html#l00749">749</a> of file <a class="el" href="../../d8/d16/gc_8c_source.html">gc.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d8/d16/gc_8c_source.html#l01049">1049</a> of file <a class="el" href="../../d8/d16/gc_8c_source.html">gc.c</a>.</p>
 
 </div>
 </div>
@@ -396,16 +465,17 @@ Functions</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p>Register a connection handle with the current thread's pending-sweep list (full-GC mode only; a no-op otherwise, so callers can call this unconditionally at connection-open time). </p>
+<p>Register a connection handle for the full-GC exit sweep, owned by the calling thread (full-GC mode only; a no-op otherwise, so callers can call this unconditionally at connection-open time). </p>
+<p>The registry is one process-wide table. Each handle has an owner thread; that thread's exit sweep (or <a class="el" href="../../d0/daa/gc_8h.html#aa0e57fd4f5152ff19be1e832e8dfa3cc" title="Close every handle the calling thread owns right now, without waiting for thread exit....">cwist_conn_registry_flush()</a>) closes it. The owner is the tracking thread until <a class="el" href="../../d0/daa/gc_8h.html#a508dbea3a902e11b26c082674079e011" title="Make the calling thread the owner of a tracked handle.">cwist_conn_registry_adopt()</a> moves it.</p>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
     <tr><td class="paramname">handle</td><td>Opaque connection handle, passed back to <code>close_fn</code>. </td></tr>
-    <tr><td class="paramname">close_fn</td><td>Called with <code>handle</code> to close/tear it down; must be safe to call from whichever thread ends up sweeping it (the owning thread at its own exit, or any thread running the atexit sweep at process exit).</td></tr>
+    <tr><td class="paramname">close_fn</td><td>Called with <code>handle</code> to close/tear it down; must be safe to call from whichever thread ends up sweeping it (the owning thread at its own exit, or any thread running the atexit sweep at process exit). It is called with no registry lock held and may track or untrack other handles.</td></tr>
   </table>
   </dd>
 </dl>
-<p>Register a connection handle with the current thread's pending-sweep list (full-GC mode only; a no-op otherwise, so callers can call this unconditionally at connection-open time).</p>
-<p>No-op unless full-GC mode is enabled. Best-effort: if the per-thread list cannot grow, the handle is dropped rather than failing the caller.</p>
+<p>Register a connection handle for the full-GC exit sweep, owned by the calling thread (full-GC mode only; a no-op otherwise, so callers can call this unconditionally at connection-open time).</p>
+<p>No-op unless full-GC mode is enabled. Best-effort: if the table cannot grow, the handle is dropped rather than failing the caller. Tracking a handle that is already tracked updates its close_fn and makes the caller its owner.</p>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
     <tr><td class="paramname">handle</td><td>Resource handle to close later (e.g. socket, TLS session). </td></tr>
@@ -414,9 +484,9 @@ Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d8/d16/gc_8c_source.html#l00680">680</a> of file <a class="el" href="../../d8/d16/gc_8c_source.html">gc.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d8/d16/gc_8c_source.html#l00981">981</a> of file <a class="el" href="../../d8/d16/gc_8c_source.html">gc.c</a>.</p>
 
-<p class="reference">References <a class="el" href="../../d8/d16/gc_8c_source.html#l00291">cwist_full_gc_enabled()</a>.</p>
+<p class="reference">References <a class="el" href="../../d8/d16/gc_8c_source.html#l00514">cwist_full_gc_enabled()</a>.</p>
 
 </div>
 </div>
@@ -436,21 +506,21 @@ Functions</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p>Remove a handle from the <em>calling thread's</em> pending-sweep list before closing it yourself through the normal explicit path. </p>
-<p>Only looks at the calling thread's own list &ndash; a handle closed from a different thread than the one that tracked it will not be found here (returns false) and the sweep will still run <code>close_fn</code> on it later. If a handle's close can legitimately happen from another thread, that code path needs its own coordination (e.g. cwist_release_guard_t) on top of this, same as <a class="el" href="../../d0/daa/gc_8h.html#aa346f21856d29592c1c544275cac74e3" title="Remove a block from the current thread&#39;s pending-sweep list.">cwist_gc_scope_untrack()</a>'s cross-thread caveat.</p>
-<dl class="section return"><dt>Returns</dt><dd>true if <code>handle</code> was pending and has been removed; false if it was never tracked, already swept, or tracked by a different thread. Either way the caller should proceed to close it.</dd></dl>
-<p>Remove a handle from the <em>calling thread's</em> pending-sweep list before closing it yourself through the normal explicit path.</p>
+<p>Remove a handle from the registry before closing it yourself through the normal explicit path. </p>
+<p>Works from any thread, whichever thread owns the handle: a connection is usually tracked on the thread that accepted it but closed on another one (async completion, keep-alive resubmit, parked-connection expiry), and a handle left behind would be closed a second time by a sweep (#344). Untrack must still happen before the handle is freed, and only one party may close it; coordinate racing closers yourself (e.g. cwist_release_guard_t).</p>
+<dl class="section return"><dt>Returns</dt><dd>true if <code>handle</code> was pending and has been removed; false if it was never tracked or already swept. Either way the caller should proceed to close it.</dd></dl>
+<p>Remove a handle from the registry before closing it yourself through the normal explicit path.</p>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
-    <tr><td class="paramname">handle</td><td>Handle previously passed to <a class="el" href="../../d0/daa/gc_8h.html#ab26f402453c12fa53637372d37bc9aed" title="Register a connection handle with the current thread&#39;s pending-sweep list (full-GC mode only; a no-op...">cwist_conn_registry_track()</a>. </td></tr>
+    <tr><td class="paramname">handle</td><td>Handle previously passed to <a class="el" href="../../d0/daa/gc_8h.html#ab26f402453c12fa53637372d37bc9aed" title="Register a connection handle for the full-GC exit sweep, owned by the calling thread (full-GC mode on...">cwist_conn_registry_track()</a>. </td></tr>
   </table>
   </dd>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>true when found and removed; false otherwise. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d8/d16/gc_8c_source.html#l00708">708</a> of file <a class="el" href="../../d8/d16/gc_8c_source.html">gc.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d8/d16/gc_8c_source.html#l01007">1007</a> of file <a class="el" href="../../d8/d16/gc_8c_source.html">gc.c</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../d2/db2/https_8c_source.html#l01612">cwist_https_close_connection()</a>.</p>
+<p class="reference">Referenced by <a class="el" href="../../d2/db2/https_8c_source.html#l01874">cwist_https_close_connection()</a>.</p>
 
 </div>
 </div>
@@ -488,9 +558,9 @@ Functions</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>Newly allocated block, or NULL on failure. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d8/d16/gc_8c_source.html#l00104">104</a> of file <a class="el" href="../../d8/d16/gc_8c_source.html">gc.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d8/d16/gc_8c_source.html#l00330">330</a> of file <a class="el" href="../../d8/d16/gc_8c_source.html">gc.c</a>.</p>
 
-<p class="reference">References <a class="el" href="../../d9/d39/alloc_8c_source.html#l00275">cwist_alloc()</a>.</p>
+<p class="reference">References <a class="el" href="../../d9/d39/alloc_8c_source.html#l00276">cwist_alloc()</a>.</p>
 
 </div>
 </div>
@@ -528,7 +598,7 @@ Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d8/d16/gc_8c_source.html#l00123">123</a> of file <a class="el" href="../../d8/d16/gc_8c_source.html">gc.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d8/d16/gc_8c_source.html#l00349">349</a> of file <a class="el" href="../../d8/d16/gc_8c_source.html">gc.c</a>.</p>
 
 </div>
 </div>
@@ -565,9 +635,9 @@ Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d8/d16/gc_8c_source.html#l00257">257</a> of file <a class="el" href="../../d8/d16/gc_8c_source.html">gc.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d8/d16/gc_8c_source.html#l00482">482</a> of file <a class="el" href="../../d8/d16/gc_8c_source.html">gc.c</a>.</p>
 
-<p class="reference">References <a class="el" href="../../d8/d16/gc_8c_source.html#l00055">cwist_gc_auto_rotate()</a>.</p>
+<p class="reference">References <a class="el" href="../../d8/d16/gc_8c_source.html#l00211">cwist_gc_auto_rotate()</a>.</p>
 
 </div>
 </div>
@@ -591,9 +661,9 @@ Functions</h2></td></tr>
 <p>Check whether full-GC mode is currently enabled.</p>
 <dl class="section return"><dt>Returns</dt><dd>Current enabled state; false when the guard page was never mapped. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d8/d16/gc_8c_source.html#l00291">291</a> of file <a class="el" href="../../d8/d16/gc_8c_source.html">gc.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d8/d16/gc_8c_source.html#l00514">514</a> of file <a class="el" href="../../d8/d16/gc_8c_source.html">gc.c</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../d9/d39/alloc_8c_source.html#l00275">cwist_alloc()</a>, <a class="el" href="../../db/d84/async_8c_source.html#l00084">cwist_async_defer()</a>, <a class="el" href="../../d9/d39/alloc_8c_source.html#l00428">cwist_calloc_shim()</a>, <a class="el" href="../../d8/d16/gc_8c_source.html#l00680">cwist_conn_registry_track()</a>, <a class="el" href="../../d9/d39/alloc_8c_source.html#l00390">cwist_free()</a>, <a class="el" href="../../d9/d39/alloc_8c_source.html#l00464">cwist_free_shim()</a>, <a class="el" href="../../d2/db0/http2_8c_source.html#l00350">cwist_h2_async_queue_enqueue()</a>, <a class="el" href="../../de/d67/session_8c_source.html#l00450">cwist_http_async_disown_session()</a>, <a class="el" href="../../d2/db2/https_8c_source.html#l01612">cwist_https_close_connection()</a>, <a class="el" href="../../d1/de4/io__queue_8c_source.html#l00220">cwist_io_queue_create()</a>, <a class="el" href="../../d1/de4/io__queue_8c_source.html#l00285">cwist_io_queue_run()</a>, <a class="el" href="../../dd/d2e/kqueue_8c_source.html#l00057">cwist_io_queue_submit()</a>, <a class="el" href="../../d9/d39/alloc_8c_source.html#l00417">cwist_malloc_shim()</a>, <a class="el" href="../../d9/d39/alloc_8c_source.html#l00305">cwist_realloc()</a>, <a class="el" href="../../d9/d39/alloc_8c_source.html#l00443">cwist_realloc_shim()</a>, and <a class="el" href="../../dd/d6c/scheduler_8c_source.html#l00259">cwist_scheduler_create()</a>.</p>
+<p class="reference">Referenced by <a class="el" href="../../d9/d39/alloc_8c_source.html#l00276">cwist_alloc()</a>, <a class="el" href="../../db/d84/async_8c_source.html#l00100">cwist_async_defer()</a>, <a class="el" href="../../d9/d39/alloc_8c_source.html#l00433">cwist_calloc_shim()</a>, <a class="el" href="../../d8/d16/gc_8c_source.html#l01022">cwist_conn_registry_adopt()</a>, <a class="el" href="../../d8/d16/gc_8c_source.html#l00981">cwist_conn_registry_track()</a>, <a class="el" href="../../d9/d39/alloc_8c_source.html#l00391">cwist_free()</a>, <a class="el" href="../../d9/d39/alloc_8c_source.html#l00469">cwist_free_shim()</a>, <a class="el" href="../../d2/db0/http2_8c_source.html#l00339">cwist_h2_async_queue_enqueue()</a>, <a class="el" href="../../de/d67/session_8c_source.html#l00454">cwist_http_async_disown_session()</a>, <a class="el" href="../../d2/db2/https_8c_source.html#l01874">cwist_https_close_connection()</a>, <a class="el" href="../../d2/db2/https_8c_source.html#l01886">cwist_https_receive_request()</a>, <a class="el" href="../../d1/de4/io__queue_8c_source.html#l00228">cwist_io_queue_create()</a>, <a class="el" href="../../d1/de4/io__queue_8c_source.html#l00293">cwist_io_queue_run()</a>, <a class="el" href="../../dd/d2e/kqueue_8c_source.html#l00080">cwist_io_queue_submit()</a>, <a class="el" href="../../d9/d39/alloc_8c_source.html#l00422">cwist_malloc_shim()</a>, <a class="el" href="../../d9/d39/alloc_8c_source.html#l00306">cwist_realloc()</a>, <a class="el" href="../../d9/d39/alloc_8c_source.html#l00448">cwist_realloc_shim()</a>, and <a class="el" href="../../dd/d6c/scheduler_8c_source.html#l00265">cwist_scheduler_create()</a>.</p>
 
 </div>
 </div>
@@ -617,7 +687,7 @@ Functions</h2></td></tr>
 <p>Raw pointer to the full-GC toggle's guard page, or NULL if the mmap() backing it failed at process startup. Advanced/testing use only &ndash; e.g. to confirm the page is actually read-only after <a class="el" href="../../d0/daa/gc_8h.html#a0d7297e8d4a073c018f97fa6e7f0a372" title="Enable or disable full-GC mode process-wide.">cwist_full_gc()</a> has been called once.</p>
 <dl class="section return"><dt>Returns</dt><dd>Pointer to the guard page, or NULL if mmap() failed at startup. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d8/d16/gc_8c_source.html#l00309">309</a> of file <a class="el" href="../../d8/d16/gc_8c_source.html">gc.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d8/d16/gc_8c_source.html#l00532">532</a> of file <a class="el" href="../../d8/d16/gc_8c_source.html">gc.c</a>.</p>
 
 </div>
 </div>
@@ -641,7 +711,7 @@ Functions</h2></td></tr>
 <p>Check whether the full-GC toggle has been latched (i.e. <a class="el" href="../../d0/daa/gc_8h.html#a0d7297e8d4a073c018f97fa6e7f0a372" title="Enable or disable full-GC mode process-wide.">cwist_full_gc()</a> has been called once already and every further call will be ignored). Diagnostic/testing use.</p>
 <dl class="section return"><dt>Returns</dt><dd>true once <a class="el" href="../../d0/daa/gc_8h.html#a0d7297e8d4a073c018f97fa6e7f0a372" title="Enable or disable full-GC mode process-wide.">cwist_full_gc()</a> has run its claiming path exactly once. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d8/d16/gc_8c_source.html#l00300">300</a> of file <a class="el" href="../../d8/d16/gc_8c_source.html">gc.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d8/d16/gc_8c_source.html#l00523">523</a> of file <a class="el" href="../../d8/d16/gc_8c_source.html">gc.c</a>.</p>
 
 </div>
 </div>
@@ -688,7 +758,7 @@ Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d8/d16/gc_8c_source.html#l00023">23</a> of file <a class="el" href="../../d8/d16/gc_8c_source.html">gc.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d8/d16/gc_8c_source.html#l00172">172</a> of file <a class="el" href="../../d8/d16/gc_8c_source.html">gc.c</a>.</p>
 
 <p class="reference">References <a class="el" href="../../d0/daa/gc_8h_source.html#l00021">cwist_gc::impl</a>, and <a class="el" href="../../d0/daa/gc_8h_source.html#l00023">cwist_gc::initialized</a>.</p>
 
@@ -736,11 +806,11 @@ Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d8/d16/gc_8c_source.html#l00055">55</a> of file <a class="el" href="../../d8/d16/gc_8c_source.html">gc.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d8/d16/gc_8c_source.html#l00211">211</a> of file <a class="el" href="../../d8/d16/gc_8c_source.html">gc.c</a>.</p>
 
 <p class="reference">References <a class="el" href="../../d0/daa/gc_8h_source.html#l00025">cwist_gc::auto_rotated</a>, and <a class="el" href="../../d0/daa/gc_8h_source.html#l00023">cwist_gc::initialized</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../d8/d16/gc_8c_source.html#l00257">cwist_full_gc()</a>.</p>
+<p class="reference">Referenced by <a class="el" href="../../d8/d16/gc_8c_source.html#l00482">cwist_full_gc()</a>.</p>
 
 </div>
 </div>
@@ -763,7 +833,7 @@ Functions</h2></td></tr>
 <p>Check whether the GC context is currently set to auto-rotate. </p>
 <p>Check whether the GC context is currently set to auto-rotate. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d8/d16/gc_8c_source.html#l00065">65</a> of file <a class="el" href="../../d8/d16/gc_8c_source.html">gc.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d8/d16/gc_8c_source.html#l00221">221</a> of file <a class="el" href="../../d8/d16/gc_8c_source.html">gc.c</a>.</p>
 
 <p class="reference">References <a class="el" href="../../d0/daa/gc_8h_source.html#l00025">cwist_gc::auto_rotated</a>.</p>
 
@@ -789,7 +859,7 @@ Functions</h2></td></tr>
 <p>Call this periodically (e.g. once per event-loop tick) from a single well-known place; nothing retired via <a class="el" href="../../d0/daa/gc_8h.html#a2406b97d2e5c876a65e828c15e656347" title="Defer release of a block shared across threads via epoch reclamation.">cwist_ebr_free()</a> is ever actually released unless this runs.</p>
 <p>Drive the EBR pipeline: attempt to advance the epoch and run any <a class="el" href="../../d0/daa/gc_8h.html#a2406b97d2e5c876a65e828c15e656347" title="Defer release of a block shared across threads via epoch reclamation.">cwist_ebr_free()</a> callbacks that are now safe to execute. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d8/d16/gc_8c_source.html#l00131">131</a> of file <a class="el" href="../../d8/d16/gc_8c_source.html">gc.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d8/d16/gc_8c_source.html#l00357">357</a> of file <a class="el" href="../../d8/d16/gc_8c_source.html">gc.c</a>.</p>
 
 </div>
 </div>
@@ -810,7 +880,9 @@ Functions</h2></td></tr>
 </div><div class="memdoc">
 
 <p>Obtain the raw libttak epoch GC pointer (advanced usage). </p>
+<p>Intended for registering pointers that carry a libttak block header (ttak_mem_alloc_safe() et al.) via ttak_epoch_gc_register(): such blocks are released by ttak_mem_free() when the context is destroyed. Use <a class="el" href="../../d0/daa/gc_8h.html#a349ae8f8d434ff73172bffbb90ab72de" title="Register a pointer without specifying a size (defaults to 0).">cwist_reg_ptr()</a> for <a class="el" href="../../d2/dfe/alloc_8h.html#aeba69949fe17751318e6b5fc84a74096" title="Allocate zeroed memory tracked by libttak.">cwist_alloc()</a> blocks instead.</p>
 <p>Obtain the raw libttak epoch GC pointer (advanced usage).</p>
+<p>Use this to register pointers that carry a libttak block header (ttak_mem_alloc_safe() et al.) via ttak_epoch_gc_register(): such blocks keep libttak's native teardown semantics and are released by ttak_mem_free() at destroy. <a class="el" href="../../d0/daa/gc_8h.html#a349ae8f8d434ff73172bffbb90ab72de" title="Register a pointer without specifying a size (defaults to 0).">cwist_reg_ptr()</a> is the right API for <a class="el" href="../../d2/dfe/alloc_8h.html#aeba69949fe17751318e6b5fc84a74096" title="Allocate zeroed memory tracked by libttak.">cwist_alloc()</a> blocks instead.</p>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
     <tr><td class="paramname">gc</td><td>GC wrapper owned by CWIST. </td></tr>
@@ -819,7 +891,7 @@ Functions</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>Raw libttak GC handle, or NULL when the wrapper is unavailable. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d8/d16/gc_8c_source.html#l00094">94</a> of file <a class="el" href="../../d8/d16/gc_8c_source.html">gc.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d8/d16/gc_8c_source.html#l00320">320</a> of file <a class="el" href="../../d8/d16/gc_8c_source.html">gc.c</a>.</p>
 
 <p class="reference">References <a class="el" href="../../d0/daa/gc_8h_source.html#l00021">cwist_gc::impl</a>, and <a class="el" href="../../d0/daa/gc_8h_source.html#l00023">cwist_gc::initialized</a>.</p>
 
@@ -850,7 +922,7 @@ Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d8/d16/gc_8c_source.html#l00046">46</a> of file <a class="el" href="../../d8/d16/gc_8c_source.html">gc.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d8/d16/gc_8c_source.html#l00202">202</a> of file <a class="el" href="../../d8/d16/gc_8c_source.html">gc.c</a>.</p>
 
 <p class="reference">References <a class="el" href="../../d0/daa/gc_8h_source.html#l00021">cwist_gc::impl</a>, and <a class="el" href="../../d0/daa/gc_8h_source.html#l00023">cwist_gc::initialized</a>.</p>
 
@@ -885,11 +957,11 @@ Functions</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>true when <code>ptr</code> was tracked and removed; false otherwise. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d8/d16/gc_8c_source.html#l00527">527</a> of file <a class="el" href="../../d8/d16/gc_8c_source.html">gc.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d8/d16/gc_8c_source.html#l00765">765</a> of file <a class="el" href="../../d8/d16/gc_8c_source.html">gc.c</a>.</p>
 
-<p class="reference">References <a class="el" href="../../d8/d16/gc_8c_source.html#l00495">cwist_gc_scope_untrack()</a>.</p>
+<p class="reference">References <a class="el" href="../../d8/d16/gc_8c_source.html#l00733">cwist_gc_scope_untrack()</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../db/d84/async_8c_source.html#l00084">cwist_async_defer()</a>, <a class="el" href="../../d2/db0/http2_8c_source.html#l00350">cwist_h2_async_queue_enqueue()</a>, <a class="el" href="../../de/d67/session_8c_source.html#l00450">cwist_http_async_disown_session()</a>, <a class="el" href="../../d1/de4/io__queue_8c_source.html#l00220">cwist_io_queue_create()</a>, <a class="el" href="../../dd/d2e/kqueue_8c_source.html#l00057">cwist_io_queue_submit()</a>, and <a class="el" href="../../dd/d6c/scheduler_8c_source.html#l00259">cwist_scheduler_create()</a>.</p>
+<p class="reference">Referenced by <a class="el" href="../../db/d84/async_8c_source.html#l00100">cwist_async_defer()</a>, <a class="el" href="../../d2/db0/http2_8c_source.html#l00339">cwist_h2_async_queue_enqueue()</a>, <a class="el" href="../../de/d67/session_8c_source.html#l00454">cwist_http_async_disown_session()</a>, <a class="el" href="../../d2/db2/https_8c_source.html#l01886">cwist_https_receive_request()</a>, <a class="el" href="../../d1/de4/io__queue_8c_source.html#l00228">cwist_io_queue_create()</a>, <a class="el" href="../../dd/d2e/kqueue_8c_source.html#l00080">cwist_io_queue_submit()</a>, and <a class="el" href="../../dd/d6c/scheduler_8c_source.html#l00265">cwist_scheduler_create()</a>.</p>
 
 </div>
 </div>
@@ -910,13 +982,20 @@ Functions</h2></td></tr>
 </div><div class="memdoc">
 
 <p>Retire every block still on the current thread's pending-sweep list right now, instead of waiting for the thread to exit. </p>
-<p>Call this at the end of each unit of work a worker thread processes (a request, a queued job) so a forgotten <a class="el" href="../../d2/dfe/alloc_8h.html#a220abeebe2823e72511d1690fc561306" title="Free memory obtained via cwist_alloc/cwist_strdup/etc.">cwist_free()</a> is caught immediately rather than accumulating for the lifetime of a long-lived worker thread. The actual free still only happens once something calls <a class="el" href="../../d0/daa/gc_8h.html#aa040287ba20204989d60d04e984d0937" title="Drive the EBR pipeline: attempt to advance the epoch and run any cwist_ebr_free() callbacks that are ...">cwist_gc_pipeline_tick()</a> / ttak_epoch_reclaim() afterwards.</p>
+<p>"Every block" means every block, live or not: the flush cannot tell a forgotten allocation from one that is still in use, so it retires both.</p>
+<p><b>Contract.</b> Call this only at a point where the calling thread holds no tracked block that anything will touch again:</p><ul>
+<li>OK: the end of a self-contained job on a dedicated worker thread, after everything the job hands on has been disowned (<a class="el" href="../../d0/daa/gc_8h.html#a28b862cd5828d70bdb18dfad374d97ef" title="Remove ptr from the current thread&#39;s pending-sweep list without freeing it, because ownership is bein...">cwist_gc_scope_disown()</a>) or handed to a CWIST API that disowns it (e.g. <a class="el" href="../../de/d91/async_8h.html#a06d2294a5d48650ba613d6a608858b14" title="Complete the exchange with a caller-built response. On success the framework takes ownership of res (...">cwist_async_respond_with()</a>).</li>
+<li>Not OK: inside a request handler or middleware (the response is still being built and sent after next() returns), or on any thread that serves connections (HTTP/2 session state and other per-connection objects live across requests on that thread).</li>
+</ul>
+<p><b>Reclamation.</b> Retired blocks go to <a class="el" href="../../d0/daa/gc_8h.html#a2406b97d2e5c876a65e828c15e656347" title="Defer release of a block shared across threads via epoch reclamation.">cwist_ebr_free()</a>, and the flush then drives reclamation itself (ttak_epoch_reclaim()), so they are freed as soon as no thread is inside an older epoch, normally before this call returns. The thread-exit sweep does the same. Request-serving threads never enter an epoch, so reclaim treats a retired block as unreferenced even if a thread is still using it: a block flushed while still in use is freed while still in use. (Before #347 nothing drove reclaim unless the app ran an io_queue, so misuse leaked instead of crashing.)</p>
+<p>Misuse is a use-after-free, so the <code>cwist</code> CLI (<code>cwist audit</code>, <code>cwist watcher</code>) warns on every call site that is not marked <code>cwist-ack: cwist_gc_scope_flush</code>. See <a class="el" href="../../d6/d91/GC_8md.html">docs/GC.md</a>, "Explicit
+flushes and reclamation", and c4punks/CWIST#347.</p>
 <p>Retire every block still on the current thread's pending-sweep list right now, instead of waiting for the thread to exit.</p>
 <p>Each tracked block is handed to <a class="el" href="../../d0/daa/gc_8h.html#a2406b97d2e5c876a65e828c15e656347" title="Defer release of a block shared across threads via epoch reclamation.">cwist_ebr_free()</a>, so reclamation is deferred until no thread can still be reading inside an epoch. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d8/d16/gc_8c_source.html#l00537">537</a> of file <a class="el" href="../../d8/d16/gc_8c_source.html">gc.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d8/d16/gc_8c_source.html#l00775">775</a> of file <a class="el" href="../../d8/d16/gc_8c_source.html">gc.c</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../d1/de4/io__queue_8c_source.html#l00285">cwist_io_queue_run()</a>.</p>
+<p class="reference">Referenced by <a class="el" href="../../d1/de4/io__queue_8c_source.html#l00293">cwist_io_queue_run()</a>.</p>
 
 </div>
 </div>
@@ -940,7 +1019,7 @@ Functions</h2></td></tr>
 <p>Number of blocks currently on the calling thread's pending-sweep list. Introspection/testing helper.</p>
 <dl class="section return"><dt>Returns</dt><dd>Number of pending entries; 0 when nothing is tracked. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d8/d16/gc_8c_source.html#l00545">545</a> of file <a class="el" href="../../d8/d16/gc_8c_source.html">gc.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d8/d16/gc_8c_source.html#l00783">783</a> of file <a class="el" href="../../d8/d16/gc_8c_source.html">gc.c</a>.</p>
 
 </div>
 </div>
@@ -971,9 +1050,9 @@ Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d8/d16/gc_8c_source.html#l00468">468</a> of file <a class="el" href="../../d8/d16/gc_8c_source.html">gc.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d8/d16/gc_8c_source.html#l00706">706</a> of file <a class="el" href="../../d8/d16/gc_8c_source.html">gc.c</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../d9/d39/alloc_8c_source.html#l00275">cwist_alloc()</a>, <a class="el" href="../../d9/d39/alloc_8c_source.html#l00428">cwist_calloc_shim()</a>, <a class="el" href="../../d9/d39/alloc_8c_source.html#l00417">cwist_malloc_shim()</a>, <a class="el" href="../../d9/d39/alloc_8c_source.html#l00305">cwist_realloc()</a>, and <a class="el" href="../../d9/d39/alloc_8c_source.html#l00443">cwist_realloc_shim()</a>.</p>
+<p class="reference">Referenced by <a class="el" href="../../d9/d39/alloc_8c_source.html#l00276">cwist_alloc()</a>, <a class="el" href="../../d9/d39/alloc_8c_source.html#l00433">cwist_calloc_shim()</a>, <a class="el" href="../../d9/d39/alloc_8c_source.html#l00422">cwist_malloc_shim()</a>, <a class="el" href="../../d9/d39/alloc_8c_source.html#l00306">cwist_realloc()</a>, and <a class="el" href="../../d9/d39/alloc_8c_source.html#l00448">cwist_realloc_shim()</a>.</p>
 
 </div>
 </div>
@@ -1006,9 +1085,9 @@ Functions</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>true when <code>ptr</code> was tracked and removed; false otherwise. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d8/d16/gc_8c_source.html#l00495">495</a> of file <a class="el" href="../../d8/d16/gc_8c_source.html">gc.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d8/d16/gc_8c_source.html#l00733">733</a> of file <a class="el" href="../../d8/d16/gc_8c_source.html">gc.c</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../d9/d39/alloc_8c_source.html#l00390">cwist_free()</a>, <a class="el" href="../../d9/d39/alloc_8c_source.html#l00464">cwist_free_shim()</a>, <a class="el" href="../../d8/d16/gc_8c_source.html#l00527">cwist_gc_scope_disown()</a>, <a class="el" href="../../d9/d39/alloc_8c_source.html#l00305">cwist_realloc()</a>, and <a class="el" href="../../d9/d39/alloc_8c_source.html#l00443">cwist_realloc_shim()</a>.</p>
+<p class="reference">Referenced by <a class="el" href="../../d9/d39/alloc_8c_source.html#l00391">cwist_free()</a>, <a class="el" href="../../d9/d39/alloc_8c_source.html#l00469">cwist_free_shim()</a>, <a class="el" href="../../d8/d16/gc_8c_source.html#l00765">cwist_gc_scope_disown()</a>, <a class="el" href="../../d9/d39/alloc_8c_source.html#l00306">cwist_realloc()</a>, and <a class="el" href="../../d9/d39/alloc_8c_source.html#l00448">cwist_realloc_shim()</a>.</p>
 
 </div>
 </div>
@@ -1029,7 +1108,9 @@ Functions</h2></td></tr>
 </div><div class="memdoc">
 
 <p>Shut down and free internal GC state. </p>
+<p>Releases every block still registered through <a class="el" href="../../d0/daa/gc_8h.html#a349ae8f8d434ff73172bffbb90ab72de" title="Register a pointer without specifying a size (defaults to 0).">cwist_reg_ptr()</a> / <a class="el" href="../../d0/daa/gc_8h.html#ab2568896e448fb825ed2b5bebbdfdc57" title="Register a pointer and its size for better accounting.">cwist_reg_ptr_sized()</a> with <a class="el" href="../../d2/dfe/alloc_8h.html#a220abeebe2823e72511d1690fc561306" title="Free memory obtained via cwist_alloc/cwist_strdup/etc.">cwist_free()</a>; blocks registered directly with ttak via <a class="el" href="../../d0/daa/gc_8h.html#a0ec6a82fe196a811d41577f091577282" title="Obtain the raw libttak epoch GC pointer (advanced usage).">cwist_gc_raw()</a> are released by libttak instead.</p>
 <p>Shut down and free internal GC state.</p>
+<p>Blocks still registered through <a class="el" href="../../d0/daa/gc_8h.html#a349ae8f8d434ff73172bffbb90ab72de" title="Register a pointer without specifying a size (defaults to 0).">cwist_reg_ptr()</a>/cwist_reg_ptr_sized() are detached from the libttak tree and released with <a class="el" href="../../d2/dfe/alloc_8h.html#a220abeebe2823e72511d1690fc561306" title="Free memory obtained via cwist_alloc/cwist_strdup/etc.">cwist_free()</a> first; anything registered directly with ttak via <a class="el" href="../../d0/daa/gc_8h.html#a0ec6a82fe196a811d41577f091577282" title="Obtain the raw libttak epoch GC pointer (advanced usage).">cwist_gc_raw()</a> is left for ttak_epoch_gc_destroy() to release with ttak_mem_free().</p>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
     <tr><td class="paramname">gc</td><td>GC context to shut down. </td></tr>
@@ -1037,7 +1118,7 @@ Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d8/d16/gc_8c_source.html#l00036">36</a> of file <a class="el" href="../../d8/d16/gc_8c_source.html">gc.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d8/d16/gc_8c_source.html#l00191">191</a> of file <a class="el" href="../../d8/d16/gc_8c_source.html">gc.c</a>.</p>
 
 <p class="reference">References <a class="el" href="../../d0/daa/gc_8h_source.html#l00021">cwist_gc::impl</a>, and <a class="el" href="../../d0/daa/gc_8h_source.html#l00023">cwist_gc::initialized</a>.</p>
 
@@ -1070,7 +1151,9 @@ Functions</h2></td></tr>
 </div><div class="memdoc">
 
 <p>Register a pointer without specifying a size (defaults to 0). </p>
+<p>Hands ownership of the block to the context: <a class="el" href="../../d0/daa/gc_8h.html#a611a910d8f44de93236dec0d77fe470b" title="Shut down and free internal GC state.">cwist_gc_shutdown()</a> releases it with <a class="el" href="../../d2/dfe/alloc_8h.html#a220abeebe2823e72511d1690fc561306" title="Free memory obtained via cwist_alloc/cwist_strdup/etc.">cwist_free()</a>, and an explicit <a class="el" href="../../d2/dfe/alloc_8h.html#a220abeebe2823e72511d1690fc561306" title="Free memory obtained via cwist_alloc/cwist_strdup/etc.">cwist_free()</a> detaches it first. The pointer must come from CWIST's allocator (<a class="el" href="../../d2/dfe/alloc_8h.html#aeba69949fe17751318e6b5fc84a74096" title="Allocate zeroed memory tracked by libttak.">cwist_alloc()</a> and family); see <a class="el" href="../../d0/daa/gc_8h.html#ab2568896e448fb825ed2b5bebbdfdc57" title="Register a pointer and its size for better accounting.">cwist_reg_ptr_sized()</a> for the full contract.</p>
 <p>Register a pointer without specifying a size (defaults to 0).</p>
+<p>See <a class="el" href="../../d0/daa/gc_8h.html#ab2568896e448fb825ed2b5bebbdfdc57" title="Register a pointer and its size for better accounting.">cwist_reg_ptr_sized()</a> for the full contract: registering hands ownership of the block to the context, which releases it with <a class="el" href="../../d2/dfe/alloc_8h.html#a220abeebe2823e72511d1690fc561306" title="Free memory obtained via cwist_alloc/cwist_strdup/etc.">cwist_free()</a> at <a class="el" href="../../d0/daa/gc_8h.html#a611a910d8f44de93236dec0d77fe470b" title="Shut down and free internal GC state.">cwist_gc_shutdown()</a>.</p>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
     <tr><td class="paramname">gc</td><td>GC context that tracks the pointer. </td></tr>
@@ -1079,9 +1162,9 @@ Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d8/d16/gc_8c_source.html#l00074">74</a> of file <a class="el" href="../../d8/d16/gc_8c_source.html">gc.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d8/d16/gc_8c_source.html#l00235">235</a> of file <a class="el" href="../../d8/d16/gc_8c_source.html">gc.c</a>.</p>
 
-<p class="reference">References <a class="el" href="../../d8/d16/gc_8c_source.html#l00084">cwist_reg_ptr_sized()</a>.</p>
+<p class="reference">References <a class="el" href="../../d8/d16/gc_8c_source.html#l00260">cwist_reg_ptr_sized()</a>.</p>
 
 </div>
 </div>
@@ -1118,7 +1201,11 @@ Functions</h2></td></tr>
 </div><div class="memdoc">
 
 <p>Register a pointer and its size for better accounting. </p>
+<p>The pointer must be releasable with <a class="el" href="../../d2/dfe/alloc_8h.html#a220abeebe2823e72511d1690fc561306" title="Free memory obtained via cwist_alloc/cwist_strdup/etc.">cwist_free()</a> (i.e. come from CWIST's allocator: <a class="el" href="../../d2/dfe/alloc_8h.html#aeba69949fe17751318e6b5fc84a74096" title="Allocate zeroed memory tracked by libttak.">cwist_alloc()</a> and family). The wrapper keeps its own registry of such pointers so that <a class="el" href="../../d0/daa/gc_8h.html#a611a910d8f44de93236dec0d77fe470b" title="Shut down and free internal GC state.">cwist_gc_shutdown()</a> can detach them from libttak's mem_tree and release them with <a class="el" href="../../d2/dfe/alloc_8h.html#a220abeebe2823e72511d1690fc561306" title="Free memory obtained via cwist_alloc/cwist_strdup/etc.">cwist_free()</a>; libttak's own destroy-time pass frees with ttak_mem_free() and aborts on a cwist_alloc block, which carries no ttak block header. Pointers allocated directly from libttak (ttak_mem_alloc_safe()) keep libttak's teardown semantics instead: register them through <a class="el" href="../../d0/daa/gc_8h.html#a0ec6a82fe196a811d41577f091577282" title="Obtain the raw libttak epoch GC pointer (advanced usage).">cwist_gc_raw()</a> with ttak_epoch_gc_register().</p>
+<p>After registration the context owns the block. An explicit <a class="el" href="../../d2/dfe/alloc_8h.html#a220abeebe2823e72511d1690fc561306" title="Free memory obtained via cwist_alloc/cwist_strdup/etc.">cwist_free()</a> detaches it automatically (staying correct, just unregistering early), and registering the same pointer with another context moves tracking there.</p>
 <p>Register a pointer and its size for better accounting.</p>
+<p>The pointer must be releasable with <a class="el" href="../../d2/dfe/alloc_8h.html#a220abeebe2823e72511d1690fc561306" title="Free memory obtained via cwist_alloc/cwist_strdup/etc.">cwist_free()</a> (i.e. come from CWIST's allocator: <a class="el" href="../../d2/dfe/alloc_8h.html#aeba69949fe17751318e6b5fc84a74096" title="Allocate zeroed memory tracked by libttak.">cwist_alloc()</a> and family). The wrapper records the pointer in its own registry so that <a class="el" href="../../d0/daa/gc_8h.html#a611a910d8f44de93236dec0d77fe470b" title="Shut down and free internal GC state.">cwist_gc_shutdown()</a> can detach it from libttak's mem_tree and release it with <a class="el" href="../../d2/dfe/alloc_8h.html#a220abeebe2823e72511d1690fc561306" title="Free memory obtained via cwist_alloc/cwist_strdup/etc.">cwist_free()</a>; libttak's destroy-time pass frees with ttak_mem_free(), which aborts on headerless cwist_alloc blocks. Pointers allocated directly from libttak (ttak_mem_alloc_safe()) must NOT go through here; register them with the raw context instead — ttak_epoch_gc_register(cwist_gc_raw(gc), ptr, size) — so libttak's own teardown releases them.</p>
+<p>Ownership: after registration the context owns the block and will free it at shutdown. An explicit <a class="el" href="../../d2/dfe/alloc_8h.html#a220abeebe2823e72511d1690fc561306" title="Free memory obtained via cwist_alloc/cwist_strdup/etc.">cwist_free()</a> first detaches it automatically; registering the same pointer with another context moves tracking there.</p>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
     <tr><td class="paramname">gc</td><td>GC context that tracks the pointer. </td></tr>
@@ -1128,11 +1215,11 @@ Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d8/d16/gc_8c_source.html#l00084">84</a> of file <a class="el" href="../../d8/d16/gc_8c_source.html">gc.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d8/d16/gc_8c_source.html#l00260">260</a> of file <a class="el" href="../../d8/d16/gc_8c_source.html">gc.c</a>.</p>
 
 <p class="reference">References <a class="el" href="../../d0/daa/gc_8h_source.html#l00021">cwist_gc::impl</a>, and <a class="el" href="../../d0/daa/gc_8h_source.html#l00023">cwist_gc::initialized</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../d8/d16/gc_8c_source.html#l00074">cwist_reg_ptr()</a>.</p>
+<p class="reference">Referenced by <a class="el" href="../../d8/d16/gc_8c_source.html#l00235">cwist_reg_ptr()</a>.</p>
 
 </div>
 </div>
@@ -1163,7 +1250,7 @@ Functions</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>true for exactly one caller across all racers; false otherwise. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d8/d16/gc_8c_source.html#l00149">149</a> of file <a class="el" href="../../d8/d16/gc_8c_source.html">gc.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d8/d16/gc_8c_source.html#l00375">375</a> of file <a class="el" href="../../d8/d16/gc_8c_source.html">gc.c</a>.</p>
 
 </div>
 </div>
@@ -1192,14 +1279,18 @@ Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d8/d16/gc_8c_source.html#l00139">139</a> of file <a class="el" href="../../d8/d16/gc_8c_source.html">gc.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d8/d16/gc_8c_source.html#l00365">365</a> of file <a class="el" href="../../d8/d16/gc_8c_source.html">gc.c</a>.</p>
 
 </div>
 </div>
 </div><!-- contents -->
+</div><!-- doc-content -->
 <!-- start footer part -->
-<hr class="footer"/><address class="footer"><small>
-Generated by&#160;<a href="https://www.doxygen.org/index.html"><img class="footer" src="../../doxygen.svg" width="104" height="31" alt="doxygen"/></a> 1.9.8
-</small></address>
+<div id="nav-path" class="navpath"><!-- id is needed for treeview function! -->
+  <ul>
+    <li class="navelem"><a class="el" href="../../dir_d44c64559bbebec7f509842c48db8b23.html">include</a></li><li class="navelem"><a class="el" href="../../dir_2109d32ae718f50aecd8856dacda770b.html">cwist</a></li><li class="navelem"><a class="el" href="../../dir_10b21726104ad23c5e3d9a30e698c859.html">core</a></li><li class="navelem"><a class="el" href="../../dir_6be49a6af745edc4b6aec6d50aadcc72.html">mem</a></li><li class="navelem"><a class="el" href="../../d0/daa/gc_8h.html">gc.h</a></li>
+    <li class="footer">Generated by <a href="https://www.doxygen.org/index.html"><img class="footer" src="../../doxygen.svg" width="104" height="31" alt="doxygen"/></a> 1.9.8 </li>
+  </ul>
+</div>
 </body>
 </html>

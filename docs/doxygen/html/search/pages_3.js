@@ -1,4 +1,5 @@
 var searchData=
 [
-  ['format_20produced_20by_20cwist_5fdb_5fcrypt_5fseal_0',['Wire format produced by cwist_db_crypt_seal()',['../d9/df9/db__crypt_8h.html#autotoc_md2',1,'']]]
+  ['5_200_20release_20roadmap_0',['v3.5.0 release roadmap',['../d7/df9/md_docs_2roadmap-v3_85.html',1,'']]],
+  ['5600x_1',['Issue #297 syscall-reduction audit (local, 12-core Ryzen 5600X)',['../d0/d34/md_docs_2performance_2issue-297-syscall-audit.html',1,'']]]
 ];

@@ -1,12 +1,15 @@
 var sstring_8c =
 [
+    [ "cwist_sstring_adopt_len", "dd/d79/sstring_8c.html#afb493e14730a93db7c28bd4b0a313e23", null ],
+    [ "cwist_sstring_adopt_region", "dd/d79/sstring_8c.html#a1b09d76d51607d900ddd9a946e3129a5", null ],
     [ "cwist_sstring_append", "dd/d79/sstring_8c.html#a51c2c4f709f0a58ab21544fd04117cdc", null ],
     [ "cwist_sstring_append_escaped", "dd/d79/sstring_8c.html#afcafb0b26d49515dada57927d802265e", null ],
     [ "cwist_sstring_append_len", "dd/d79/sstring_8c.html#a19ce355c545bc67898dee6f43fa93264", null ],
     [ "cwist_sstring_append_sstring", "dd/d79/sstring_8c.html#a8bc78edad080c5674dd925a00cca08de", null ],
     [ "cwist_sstring_append_sstring_escaped", "dd/d79/sstring_8c.html#a9e00cf632770d4986bf383ffaf53f89a", null ],
-    [ "cwist_sstring_assign", "dd/d79/sstring_8c.html#a037bc837dea3a542983417892eb0644a", null ],
+    [ "cwist_sstring_assign", "dd/d79/sstring_8c.html#a6a0c23aa9b205fc952f848cc925a1a28", null ],
     [ "cwist_sstring_assign_len", "dd/d79/sstring_8c.html#a652db21824d157b0fb7ba3b71ef19d96", null ],
+    [ "cwist_sstring_borrow", "dd/d79/sstring_8c.html#ab685a5bd9ea64839b9976b3c88791525", null ],
     [ "cwist_sstring_change_size", "dd/d79/sstring_8c.html#ab7bf18b96622f8e41bd235111a180c82", null ],
     [ "cwist_sstring_compare", "dd/d79/sstring_8c.html#a0635443143b442d0e6ddd1d25d1d2174", null ],
     [ "cwist_sstring_compare_sstring", "dd/d79/sstring_8c.html#af3f8760a0a6dc6ae84f6f574ec6f71ef", null ],

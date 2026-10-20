@@ -1,0 +1,13 @@
+<map id="src/net/http/h3_hdr_out.h" name="src/net/http/h3_hdr_out.h">
+<area shape="rect" id="Node000001" title="Outgoing HTTP/3 header set builder for lsquic (private)." alt="" coords="231,5,375,45"/>
+<area shape="rect" id="Node000002" title=" " alt="" coords="5,93,77,119"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="241,48,91,92,90,87,239,43"/>
+<area shape="rect" id="Node000003" title=" " alt="" coords="102,93,237,119"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="272,48,202,89,199,84,269,43"/>
+<area shape="rect" id="Node000004" title=" " alt="" coords="261,93,344,119"/>
+<area shape="poly" id="edge3_Node000001_Node000004" title=" " alt="" coords="305,46,305,79,300,79,300,46"/>
+<area shape="rect" id="Node000005" title=" " alt="" coords="368,93,443,119"/>
+<area shape="poly" id="edge4_Node000001_Node000005" title=" " alt="" coords="329,43,381,83,378,87,326,48"/>
+<area shape="rect" id="Node000006" title=" " alt="" coords="467,93,538,119"/>
+<area shape="poly" id="edge5_Node000001_Node000006" title=" " alt="" coords="352,43,462,86,460,91,350,48"/>
+</map>

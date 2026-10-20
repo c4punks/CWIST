@@ -1,3 +1,4 @@
+<!-- HTML header for doxygen 1.9.8-->
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "https://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml" lang="en-US">
 <head>
@@ -5,14 +6,32 @@
 <meta http-equiv="X-UA-Compatible" content="IE=11"/>
 <meta name="generator" content="Doxygen 1.9.8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
-<title>cwist: include/cwist/mux.h Source File</title>
+<title>include/cwist/mux.h Source File - CWIST High-Performance C Web Framework</title>
+<meta name="description" content="CWIST: High-performance C17 web framework and application server (HTTP/1.1, HTTP/2, HTTP/3, WebTransport, WebSocket, PQC TLS) powered by io_uring and libttak."/>
+<meta name="keywords" content="C web framework, C17, HTTP3, QUIC, io_uring, web server, actix alternative, high performance, REST API in C, C web server"/>
+<meta name="author" content="c4punks"/>
+<meta name="robots" content="index, follow"/>
+<!-- Open Graph / Facebook -->
+<meta property="og:type" content="website"/>
+<meta property="og:title" content="include/cwist/mux.h Source File - CWIST Modern C Web Framework"/>
+<meta property="og:description" content="High-performance C17 web framework & application server with zero-copy io_uring reactor, PQC TLS, and HTTP/3 support."/>
+<meta property="og:url" content="https://c4punks.github.io/CWIST/"/>
+<!-- Twitter -->
+<meta name="twitter:card" content="summary_large_image"/>
+<meta name="twitter:title" content="include/cwist/mux.h Source File - CWIST Modern C Web Framework"/>
+<meta name="twitter:description" content="High-performance C17 web framework & application server with zero-copy io_uring reactor, PQC TLS, and HTTP/3 support."/>
 <link href="../../tabs.css" rel="stylesheet" type="text/css"/>
 <script type="text/javascript" src="../../jquery.js"></script>
 <script type="text/javascript" src="../../dynsections.js"></script>
+<link href="../../navtree.css" rel="stylesheet" type="text/css"/>
+<script type="text/javascript" src="../../resize.js"></script>
+<script type="text/javascript" src="../../navtreedata.js"></script>
+<script type="text/javascript" src="../../navtree.js"></script>
 <link href="../../search/search.css" rel="stylesheet" type="text/css"/>
 <script type="text/javascript" src="../../search/searchdata.js"></script>
 <script type="text/javascript" src="../../search/search.js"></script>
 <link href="../../doxygen.css" rel="stylesheet" type="text/css" />
+<link href="../../doxygen-awesome.css" rel="stylesheet" type="text/css"/>
 </head>
 <body>
 <div id="top"><!-- do not remove this div, it is closed by doxygen! -->
@@ -52,6 +71,23 @@ $(function() {
 $(document).ready(function() { init_codefold(1); });
 /* @license-end */
 </script>
+</div><!-- top -->
+<div id="side-nav" class="ui-resizable side-nav-resizable">
+  <div id="nav-tree">
+    <div id="nav-tree-contents">
+      <div id="nav-sync" class="sync"></div>
+    </div>
+  </div>
+  <div id="splitbar" style="-moz-user-select:none;" 
+       class="ui-resizable-handle">
+  </div>
+</div>
+<script type="text/javascript">
+/* @license magnet:?xt=urn:btih:d3d9a9a6595521f9666a5e94cc830dab83b65699&amp;dn=expat.txt MIT */
+$(document).ready(function(){initNavTree('d5/d57/mux_8h_source.html','../../'); initResizable(); });
+/* @license-end */
+</script>
+<div id="doc-content">
 <!-- window showing the filter options -->
 <div id="MSearchSelectWindow"
      onmouseover="return searchBox.OnSearchSelectShow()"
@@ -73,11 +109,6 @@ $(document).ready(function() { init_codefold(1); });
 </div>
 </div>
 
-<div id="nav-path" class="navpath">
-  <ul>
-<li class="navelem"><a class="el" href="../../dir_d44c64559bbebec7f509842c48db8b23.html">include</a></li><li class="navelem"><a class="el" href="../../dir_2109d32ae718f50aecd8856dacda770b.html">cwist</a></li>  </ul>
-</div>
-</div><!-- top -->
 <div class="header">
   <div class="headertitle"><div class="title">mux.h</div></div>
 </div><!--header-->
@@ -119,7 +150,7 @@ $(document).ready(function() { init_codefold(1); });
 <div class="ttc" id="ahttp_8h_html"><div class="ttname"><a href="../../dd/d56/http_8h.html">http.h</a></div><div class="ttdoc">http.h interface.</div></div>
 <div class="ttc" id="ahttp_8h_html_aa7eeb74d97e9a5416ffc3cd53366683d"><div class="ttname"><a href="../../dd/d56/http_8h.html#aa7eeb74d97e9a5416ffc3cd53366683d">cwist_http_method_t</a></div><div class="ttdeci">cwist_http_method_t</div><div class="ttdef"><b>Definition</b> <a href="../../dd/d56/http_8h_source.html#l00016">http.h:16</a></div></div>
 <div class="ttc" id="amux_8h_html_a0597f3346e5c7f96984a9a1f8fc72c74"><div class="ttname"><a href="../../d5/d57/mux_8h.html#a0597f3346e5c7f96984a9a1f8fc72c74">cwist_mux_route</a></div><div class="ttdeci">struct cwist_mux_route cwist_mux_route</div></div>
-<div class="ttc" id="amux_8h_html_a48a6012e8d8b1a226160d5374eca116b"><div class="ttname"><a href="../../d5/d57/mux_8h.html#a48a6012e8d8b1a226160d5374eca116b">cwist_mux_serve</a></div><div class="ttdeci">bool cwist_mux_serve(cwist_mux_router *router, cwist_http_request *req, cwist_http_response *res)</div><div class="ttdoc">Dispatch a request.</div><div class="ttdef"><b>Definition</b> <a href="../../dd/d49/mux_8c_source.html#l00434">mux.c:434</a></div></div>
+<div class="ttc" id="amux_8h_html_a48a6012e8d8b1a226160d5374eca116b"><div class="ttname"><a href="../../d5/d57/mux_8h.html#a48a6012e8d8b1a226160d5374eca116b">cwist_mux_serve</a></div><div class="ttdeci">bool cwist_mux_serve(cwist_mux_router *router, cwist_http_request *req, cwist_http_response *res)</div><div class="ttdoc">Dispatch a request.</div><div class="ttdef"><b>Definition</b> <a href="../../dd/d49/mux_8c_source.html#l00435">mux.c:435</a></div></div>
 <div class="ttc" id="amux_8h_html_a53a0bd703fe17831f5b0ad878328c4cb"><div class="ttname"><a href="../../d5/d57/mux_8h.html#a53a0bd703fe17831f5b0ad878328c4cb">cwist_http_handler_func</a></div><div class="ttdeci">void(* cwist_http_handler_func)(cwist_http_request *req, cwist_http_response *res)</div><div class="ttdef"><b>Definition</b> <a href="../../d5/d57/mux_8h_source.html#l00012">mux.h:12</a></div></div>
 <div class="ttc" id="amux_8h_html_a6290a5d6bf876fcbca27e7fc79603427"><div class="ttname"><a href="../../d5/d57/mux_8h.html#a6290a5d6bf876fcbca27e7fc79603427">cwist_mux_handle</a></div><div class="ttdeci">void cwist_mux_handle(cwist_mux_router *router, cwist_http_method_t method, const char *path, cwist_http_handler_func handler)</div><div class="ttdoc">Register a route handler.</div><div class="ttdef"><b>Definition</b> <a href="../../dd/d49/mux_8c_source.html#l00160">mux.c:160</a></div></div>
 <div class="ttc" id="amux_8h_html_a6d025333791250b8cf0e301f1fadcf1f"><div class="ttname"><a href="../../d5/d57/mux_8h.html#a6d025333791250b8cf0e301f1fadcf1f">cwist_mux_router_create</a></div><div class="ttdeci">cwist_mux_router * cwist_mux_router_create(void)</div><div class="ttdoc">Create a new router.</div><div class="ttdef"><b>Definition</b> <a href="../../dd/d49/mux_8c_source.html#l00113">mux.c:113</a></div></div>
@@ -138,9 +169,13 @@ $(document).ready(function() { init_codefold(1); });
 <div class="ttc" id="astructcwist__mux__router_html_ad5b4624408c39be478b40c3aaef7cc43"><div class="ttname"><a href="../../d0/d0c/structcwist__mux__router.html#ad5b4624408c39be478b40c3aaef7cc43">cwist_mux_router::routes</a></div><div class="ttdeci">cwist_mux_route * routes</div><div class="ttdef"><b>Definition</b> <a href="../../d5/d57/mux_8h_source.html#l00022">mux.h:22</a></div></div>
 <div class="ttc" id="astructcwist__sstring_html"><div class="ttname"><a href="../../d5/ddc/structcwist__sstring.html">cwist_sstring</a></div><div class="ttdef"><b>Definition</b> <a href="../../d4/dbd/core_2sstring_2sstring_8h_source.html#l00014">sstring.h:14</a></div></div>
 </div><!-- fragment --></div><!-- contents -->
+</div><!-- doc-content -->
 <!-- start footer part -->
-<hr class="footer"/><address class="footer"><small>
-Generated by&#160;<a href="https://www.doxygen.org/index.html"><img class="footer" src="../../doxygen.svg" width="104" height="31" alt="doxygen"/></a> 1.9.8
-</small></address>
+<div id="nav-path" class="navpath"><!-- id is needed for treeview function! -->
+  <ul>
+    <li class="navelem"><a class="el" href="../../dir_d44c64559bbebec7f509842c48db8b23.html">include</a></li><li class="navelem"><a class="el" href="../../dir_2109d32ae718f50aecd8856dacda770b.html">cwist</a></li><li class="navelem"><a class="el" href="../../d5/d57/mux_8h.html">mux.h</a></li>
+    <li class="footer">Generated by <a href="https://www.doxygen.org/index.html"><img class="footer" src="../../doxygen.svg" width="104" height="31" alt="doxygen"/></a> 1.9.8 </li>
+  </ul>
+</div>
 </body>
 </html>

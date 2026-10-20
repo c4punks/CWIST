@@ -16,6 +16,9 @@ var net_2websocket_2websocket_8h =
     [ "cwist_websocket_destroy", "dd/dec/net_2websocket_2websocket_8h.html#adfa3c97f06abeb3ba1a0fe252b8e4eac", null ],
     [ "cwist_websocket_frame_destroy", "dd/dec/net_2websocket_2websocket_8h.html#ad0076021ccbab9a5990c269dca59df99", null ],
     [ "cwist_websocket_receive", "dd/dec/net_2websocket_2websocket_8h.html#a7c4cc8a5486ce33aab2199a8f5ec82d0", null ],
+    [ "cwist_websocket_receive_sequenced", "dd/dec/net_2websocket_2websocket_8h.html#a89fcb0410ea4c7aabc529702bfcdd6a1", null ],
     [ "cwist_websocket_send", "dd/dec/net_2websocket_2websocket_8h.html#a84b014c343b059d06c899fd2b9285966", null ],
-    [ "cwist_websocket_upgrade", "dd/dec/net_2websocket_2websocket_8h.html#a25531b0d899d92a6618a28ed0b5482d0", null ]
+    [ "cwist_websocket_send_sequenced", "dd/dec/net_2websocket_2websocket_8h.html#a4d6e2a770ce633eff74dafbf509fb4d6", null ],
+    [ "cwist_websocket_upgrade", "dd/dec/net_2websocket_2websocket_8h.html#a25531b0d899d92a6618a28ed0b5482d0", null ],
+    [ "cwist_websocket_upgrade_response", "dd/dec/net_2websocket_2websocket_8h.html#a972fc2f9a831e71fa91f87b96339fb1f", null ]
 ];

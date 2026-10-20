@@ -1,3 +1,4 @@
+<!-- HTML header for doxygen 1.9.8-->
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "https://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml" lang="en-US">
 <head>
@@ -5,14 +6,32 @@
 <meta http-equiv="X-UA-Compatible" content="IE=11"/>
 <meta name="generator" content="Doxygen 1.9.8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
-<title>cwist: include/cwist/https.h Source File</title>
+<title>include/cwist/https.h Source File - CWIST High-Performance C Web Framework</title>
+<meta name="description" content="CWIST: High-performance C17 web framework and application server (HTTP/1.1, HTTP/2, HTTP/3, WebTransport, WebSocket, PQC TLS) powered by io_uring and libttak."/>
+<meta name="keywords" content="C web framework, C17, HTTP3, QUIC, io_uring, web server, actix alternative, high performance, REST API in C, C web server"/>
+<meta name="author" content="c4punks"/>
+<meta name="robots" content="index, follow"/>
+<!-- Open Graph / Facebook -->
+<meta property="og:type" content="website"/>
+<meta property="og:title" content="include/cwist/https.h Source File - CWIST Modern C Web Framework"/>
+<meta property="og:description" content="High-performance C17 web framework & application server with zero-copy io_uring reactor, PQC TLS, and HTTP/3 support."/>
+<meta property="og:url" content="https://c4punks.github.io/CWIST/"/>
+<!-- Twitter -->
+<meta name="twitter:card" content="summary_large_image"/>
+<meta name="twitter:title" content="include/cwist/https.h Source File - CWIST Modern C Web Framework"/>
+<meta name="twitter:description" content="High-performance C17 web framework & application server with zero-copy io_uring reactor, PQC TLS, and HTTP/3 support."/>
 <link href="../../tabs.css" rel="stylesheet" type="text/css"/>
 <script type="text/javascript" src="../../jquery.js"></script>
 <script type="text/javascript" src="../../dynsections.js"></script>
+<link href="../../navtree.css" rel="stylesheet" type="text/css"/>
+<script type="text/javascript" src="../../resize.js"></script>
+<script type="text/javascript" src="../../navtreedata.js"></script>
+<script type="text/javascript" src="../../navtree.js"></script>
 <link href="../../search/search.css" rel="stylesheet" type="text/css"/>
 <script type="text/javascript" src="../../search/searchdata.js"></script>
 <script type="text/javascript" src="../../search/search.js"></script>
 <link href="../../doxygen.css" rel="stylesheet" type="text/css" />
+<link href="../../doxygen-awesome.css" rel="stylesheet" type="text/css"/>
 </head>
 <body>
 <div id="top"><!-- do not remove this div, it is closed by doxygen! -->
@@ -52,6 +71,23 @@ $(function() {
 $(document).ready(function() { init_codefold(1); });
 /* @license-end */
 </script>
+</div><!-- top -->
+<div id="side-nav" class="ui-resizable side-nav-resizable">
+  <div id="nav-tree">
+    <div id="nav-tree-contents">
+      <div id="nav-sync" class="sync"></div>
+    </div>
+  </div>
+  <div id="splitbar" style="-moz-user-select:none;" 
+       class="ui-resizable-handle">
+  </div>
+</div>
+<script type="text/javascript">
+/* @license magnet:?xt=urn:btih:d3d9a9a6595521f9666a5e94cc830dab83b65699&amp;dn=expat.txt MIT */
+$(document).ready(function(){initNavTree('d7/d95/https_8h_source.html','../../'); initResizable(); });
+/* @license-end */
+</script>
+<div id="doc-content">
 <!-- window showing the filter options -->
 <div id="MSearchSelectWindow"
      onmouseover="return searchBox.OnSearchSelectShow()"
@@ -73,11 +109,6 @@ $(document).ready(function() { init_codefold(1); });
 </div>
 </div>
 
-<div id="nav-path" class="navpath">
-  <ul>
-<li class="navelem"><a class="el" href="../../dir_d44c64559bbebec7f509842c48db8b23.html">include</a></li><li class="navelem"><a class="el" href="../../dir_2109d32ae718f50aecd8856dacda770b.html">cwist</a></li>  </ul>
-</div>
-</div><!-- top -->
 <div class="header">
   <div class="headertitle"><div class="title">https.h</div></div>
 </div><!--header-->
@@ -134,14 +165,14 @@ $(document).ready(function() { init_codefold(1); });
 <div class="line"><a id="l00077" name="l00077"></a><span class="lineno">   77</span><span class="preprocessor">#endif</span></div>
 <div class="ttc" id="aerr_2cwist__err_8h_html"><div class="ttname"><a href="../../d3/d73/err_2cwist__err_8h.html">cwist_err.h</a></div><div class="ttdoc">cwist_err.h interface.</div></div>
 <div class="ttc" id="ahttp_8h_html"><div class="ttname"><a href="../../dd/d56/http_8h.html">http.h</a></div><div class="ttdoc">http.h interface.</div></div>
-<div class="ttc" id="ahttps_8h_html_a251baaa81315b64e15308af9287d9a10"><div class="ttname"><a href="../../d7/d95/https_8h.html#a251baaa81315b64e15308af9287d9a10">cwist_https_receive_request</a></div><div class="ttdeci">cwist_http_request * cwist_https_receive_request(cwist_https_connection *conn)</div><div class="ttdoc">Read from the TLS stream until a full HTTP request has been assembled.</div><div class="ttdef"><b>Definition</b> <a href="../../d2/db2/https_8c_source.html#l01624">https.c:1624</a></div></div>
-<div class="ttc" id="ahttps_8h_html_a323a4ec2f5001e354c8b443b676ee3d0"><div class="ttname"><a href="../../d7/d95/https_8h.html#a323a4ec2f5001e354c8b443b676ee3d0">cwist_https_accept</a></div><div class="ttdeci">cwist_error_t cwist_https_accept(cwist_https_context *ctx, int client_fd, cwist_https_connection **conn)</div><div class="ttdef"><b>Definition</b> <a href="../../d2/db2/https_8c_source.html#l01493">https.c:1493</a></div></div>
+<div class="ttc" id="ahttps_8h_html_a251baaa81315b64e15308af9287d9a10"><div class="ttname"><a href="../../d7/d95/https_8h.html#a251baaa81315b64e15308af9287d9a10">cwist_https_receive_request</a></div><div class="ttdeci">cwist_http_request * cwist_https_receive_request(cwist_https_connection *conn)</div><div class="ttdoc">Read from the TLS stream until a full HTTP request has been assembled.</div><div class="ttdef"><b>Definition</b> <a href="../../d2/db2/https_8c_source.html#l01886">https.c:1886</a></div></div>
+<div class="ttc" id="ahttps_8h_html_a323a4ec2f5001e354c8b443b676ee3d0"><div class="ttname"><a href="../../d7/d95/https_8h.html#a323a4ec2f5001e354c8b443b676ee3d0">cwist_https_accept</a></div><div class="ttdeci">cwist_error_t cwist_https_accept(cwist_https_context *ctx, int client_fd, cwist_https_connection **conn)</div><div class="ttdef"><b>Definition</b> <a href="../../d2/db2/https_8c_source.html#l01755">https.c:1755</a></div></div>
 <div class="ttc" id="ahttps_8h_html_a4509e2d33db6bb7f45e3060802866dbe"><div class="ttname"><a href="../../d7/d95/https_8h.html#a4509e2d33db6bb7f45e3060802866dbe">cwist_https_server_loop</a></div><div class="ttdeci">cwist_error_t cwist_https_server_loop(int server_fd, cwist_https_context *ctx, void(*handler)(cwist_https_connection *conn, void *), void *user_ctx)</div></div>
-<div class="ttc" id="ahttps_8h_html_a52d82fd02567a54801fafd539f5e70bd"><div class="ttname"><a href="../../d7/d95/https_8h.html#a52d82fd02567a54801fafd539f5e70bd">cwist_https_send_response</a></div><div class="ttdeci">cwist_error_t cwist_https_send_response(cwist_https_connection *conn, cwist_http_response *res)</div><div class="ttdoc">Serialize an HTTP response and send it over an active TLS connection.</div><div class="ttdef"><b>Definition</b> <a href="../../d2/db2/https_8c_source.html#l01829">https.c:1829</a></div></div>
-<div class="ttc" id="ahttps_8h_html_a530998c08356b749a885011d96a89496"><div class="ttname"><a href="../../d7/d95/https_8h.html#a530998c08356b749a885011d96a89496">cwist_https_init_context</a></div><div class="ttdeci">cwist_error_t cwist_https_init_context(cwist_https_context **ctx, const char *cert_path, const char *key_path)</div><div class="ttdef"><b>Definition</b> <a href="../../d2/db2/https_8c_source.html#l01202">https.c:1202</a></div></div>
+<div class="ttc" id="ahttps_8h_html_a52d82fd02567a54801fafd539f5e70bd"><div class="ttname"><a href="../../d7/d95/https_8h.html#a52d82fd02567a54801fafd539f5e70bd">cwist_https_send_response</a></div><div class="ttdeci">cwist_error_t cwist_https_send_response(cwist_https_connection *conn, cwist_http_response *res)</div><div class="ttdoc">Serialize an HTTP response and send it over an active TLS connection.</div><div class="ttdef"><b>Definition</b> <a href="../../d2/db2/https_8c_source.html#l02101">https.c:2101</a></div></div>
+<div class="ttc" id="ahttps_8h_html_a530998c08356b749a885011d96a89496"><div class="ttname"><a href="../../d7/d95/https_8h.html#a530998c08356b749a885011d96a89496">cwist_https_init_context</a></div><div class="ttdeci">cwist_error_t cwist_https_init_context(cwist_https_context **ctx, const char *cert_path, const char *key_path)</div><div class="ttdef"><b>Definition</b> <a href="../../d2/db2/https_8c_source.html#l01368">https.c:1368</a></div></div>
 <div class="ttc" id="ahttps_8h_html_a57036d3716d46234778fd71ea953da6f"><div class="ttname"><a href="../../d7/d95/https_8h.html#a57036d3716d46234778fd71ea953da6f">cwist_https_connection</a></div><div class="ttdeci">struct cwist_https_connection cwist_https_connection</div></div>
-<div class="ttc" id="ahttps_8h_html_a6360fe1aca001bb34f9aff6c5a012428"><div class="ttname"><a href="../../d7/d95/https_8h.html#a6360fe1aca001bb34f9aff6c5a012428">cwist_https_close_connection</a></div><div class="ttdeci">void cwist_https_close_connection(cwist_https_connection *conn)</div><div class="ttdef"><b>Definition</b> <a href="../../d2/db2/https_8c_source.html#l01612">https.c:1612</a></div></div>
-<div class="ttc" id="ahttps_8h_html_acbe47c933c7464136b05dbbd42864b80"><div class="ttname"><a href="../../d7/d95/https_8h.html#acbe47c933c7464136b05dbbd42864b80">cwist_https_destroy_context</a></div><div class="ttdeci">void cwist_https_destroy_context(cwist_https_context *ctx)</div><div class="ttdoc">Free an HTTPS context and release its OpenSSL resources.</div><div class="ttdef"><b>Definition</b> <a href="../../d2/db2/https_8c_source.html#l01296">https.c:1296</a></div></div>
+<div class="ttc" id="ahttps_8h_html_a6360fe1aca001bb34f9aff6c5a012428"><div class="ttname"><a href="../../d7/d95/https_8h.html#a6360fe1aca001bb34f9aff6c5a012428">cwist_https_close_connection</a></div><div class="ttdeci">void cwist_https_close_connection(cwist_https_connection *conn)</div><div class="ttdef"><b>Definition</b> <a href="../../d2/db2/https_8c_source.html#l01874">https.c:1874</a></div></div>
+<div class="ttc" id="ahttps_8h_html_acbe47c933c7464136b05dbbd42864b80"><div class="ttname"><a href="../../d7/d95/https_8h.html#acbe47c933c7464136b05dbbd42864b80">cwist_https_destroy_context</a></div><div class="ttdeci">void cwist_https_destroy_context(cwist_https_context *ctx)</div><div class="ttdoc">Free an HTTPS context and release its OpenSSL resources.</div><div class="ttdef"><b>Definition</b> <a href="../../d2/db2/https_8c_source.html#l01557">https.c:1557</a></div></div>
 <div class="ttc" id="ahttps_8h_html_ad0e22ac9c5d5988de90f087ddbe13328"><div class="ttname"><a href="../../d7/d95/https_8h.html#ad0e22ac9c5d5988de90f087ddbe13328">cwist_https_context</a></div><div class="ttdeci">struct cwist_https_context cwist_https_context</div></div>
 <div class="ttc" id="astructcwist__error__t_html"><div class="ttname"><a href="../../d4/d50/structcwist__error__t.html">cwist_error_t</a></div><div class="ttdoc">Integrated error structure used throughout the system.</div><div class="ttdef"><b>Definition</b> <a href="../../d3/d73/err_2cwist__err_8h_source.html#l00072">cwist_err.h:72</a></div></div>
 <div class="ttc" id="astructcwist__http__request_html"><div class="ttname"><a href="../../dd/d68/structcwist__http__request.html">cwist_http_request</a></div><div class="ttdef"><b>Definition</b> <a href="../../dd/d56/http_8h_source.html#l00065">http.h:65</a></div></div>
@@ -153,9 +184,13 @@ $(document).ready(function() { init_codefold(1); });
 <div class="ttc" id="astructcwist__https__context_html_a3944c4b316e51cfcbd3869dc729fd2f6"><div class="ttname"><a href="../../dd/dcc/structcwist__https__context.html#a3944c4b316e51cfcbd3869dc729fd2f6">cwist_https_context::ticket_key</a></div><div class="ttdeci">void * ticket_key</div><div class="ttdoc">Shared session-ticket key material (forked workers inherit it)</div><div class="ttdef"><b>Definition</b> <a href="../../d7/d95/https_8h_source.html#l00018">https.h:18</a></div></div>
 <div class="ttc" id="astructcwist__https__context_html_a4db307ff91ce22bb73317f63ca9aa8a9"><div class="ttname"><a href="../../dd/dcc/structcwist__https__context.html#a4db307ff91ce22bb73317f63ca9aa8a9">cwist_https_context::ctx</a></div><div class="ttdeci">SSL_CTX * ctx</div><div class="ttdef"><b>Definition</b> <a href="../../d7/d95/https_8h_source.html#l00017">https.h:17</a></div></div>
 </div><!-- fragment --></div><!-- contents -->
+</div><!-- doc-content -->
 <!-- start footer part -->
-<hr class="footer"/><address class="footer"><small>
-Generated by&#160;<a href="https://www.doxygen.org/index.html"><img class="footer" src="../../doxygen.svg" width="104" height="31" alt="doxygen"/></a> 1.9.8
-</small></address>
+<div id="nav-path" class="navpath"><!-- id is needed for treeview function! -->
+  <ul>
+    <li class="navelem"><a class="el" href="../../dir_d44c64559bbebec7f509842c48db8b23.html">include</a></li><li class="navelem"><a class="el" href="../../dir_2109d32ae718f50aecd8856dacda770b.html">cwist</a></li><li class="navelem"><a class="el" href="../../d7/d95/https_8h.html">https.h</a></li>
+    <li class="footer">Generated by <a href="https://www.doxygen.org/index.html"><img class="footer" src="../../doxygen.svg" width="104" height="31" alt="doxygen"/></a> 1.9.8 </li>
+  </ul>
+</div>
 </body>
 </html>

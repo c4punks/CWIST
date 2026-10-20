@@ -1,9 +1,11 @@
 <map id="include/cwist/net/http/async.h" name="include/cwist/net/http/async.h">
-<area shape="rect" id="Node000001" title="Deferred&#45;response (async handler) API for CWIST." alt="" coords="171,5,333,45"/>
-<area shape="rect" id="Node000002" href="$db/d84/async_8c.html" title="Deferred&#45;response (async handler) implementation." alt="" coords="5,93,155,119"/>
-<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="200,53,107,96,104,91,197,49"/>
-<area shape="rect" id="Node000003" href="$d2/db0/http2_8c.html" title="Implementation of HTTP/2 protocol handler for CWIST." alt="" coords="179,93,325,119"/>
-<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="255,59,255,93,249,93,249,59"/>
-<area shape="rect" id="Node000004" href="$df/d7f/app_8c.html" title=" " alt="" coords="349,93,483,119"/>
-<area shape="poly" id="edge3_Node000001_Node000004" title=" " alt="" coords="305,49,393,91,391,96,302,54"/>
+<area shape="rect" id="Node000001" title="Deferred&#45;response (async handler) API for CWIST." alt="" coords="249,5,412,45"/>
+<area shape="rect" id="Node000002" href="$db/d84/async_8c.html" title="Deferred&#45;response (async handler) implementation." alt="" coords="5,101,155,126"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="263,52,114,103,113,98,262,47"/>
+<area shape="rect" id="Node000003" href="$d0/dbc/async__tls_8c.html" title="Dispatch&#45;thread record of a deferred&#45;response handoff." alt="" coords="179,93,317,133"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="305,57,268,95,264,91,301,54"/>
+<area shape="rect" id="Node000004" href="$d2/db0/http2_8c.html" title="Implementation of HTTP/2 protocol handler for CWIST." alt="" coords="342,101,487,126"/>
+<area shape="poly" id="edge3_Node000001_Node000004" title=" " alt="" coords="361,53,405,98,401,102,357,57"/>
+<area shape="rect" id="Node000005" href="$df/d7f/app_8c.html" title=" " alt="" coords="511,101,646,126"/>
+<area shape="poly" id="edge4_Node000001_Node000005" title=" " alt="" coords="399,47,547,98,545,103,397,52"/>
 </map>

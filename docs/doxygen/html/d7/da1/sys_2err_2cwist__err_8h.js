@@ -26,5 +26,7 @@ var sys_2err_2cwist__err_8h =
       [ "CWIST_ERR_FLOAT", "d7/da1/sys_2err_2cwist__err_8h.html#a5d9104925cd11ab0ded2ddfcef4375baa10e5e1544fb76378eff6e0f49522e084", null ],
       [ "CWIST_ERR_DOUBLE", "d7/da1/sys_2err_2cwist__err_8h.html#a5d9104925cd11ab0ded2ddfcef4375baa80bf13a613bd9d3b95dd5c7f0898aa1d", null ]
     ] ],
+    [ "cwist_error_dispose", "d7/da1/sys_2err_2cwist__err_8h.html#acafffea2368d859053b87d99f7e77aaf", null ],
+    [ "cwist_error_is_ok_extern", "d7/da1/sys_2err_2cwist__err_8h.html#a685c1a8878ff4ee80d80314800d2b82e", null ],
     [ "make_error", "d7/da1/sys_2err_2cwist__err_8h.html#acebd12423b82bb0e4580503397972ac0", null ]
 ];

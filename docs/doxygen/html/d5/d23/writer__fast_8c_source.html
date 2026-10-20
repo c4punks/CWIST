@@ -1,3 +1,4 @@
+<!-- HTML header for doxygen 1.9.8-->
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "https://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml" lang="en-US">
 <head>
@@ -5,14 +6,32 @@
 <meta http-equiv="X-UA-Compatible" content="IE=11"/>
 <meta name="generator" content="Doxygen 1.9.8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
-<title>cwist: src/net/http/writer_fast.c Source File</title>
+<title>src/net/http/writer_fast.c Source File - CWIST High-Performance C Web Framework</title>
+<meta name="description" content="CWIST: High-performance C17 web framework and application server (HTTP/1.1, HTTP/2, HTTP/3, WebTransport, WebSocket, PQC TLS) powered by io_uring and libttak."/>
+<meta name="keywords" content="C web framework, C17, HTTP3, QUIC, io_uring, web server, actix alternative, high performance, REST API in C, C web server"/>
+<meta name="author" content="c4punks"/>
+<meta name="robots" content="index, follow"/>
+<!-- Open Graph / Facebook -->
+<meta property="og:type" content="website"/>
+<meta property="og:title" content="src/net/http/writer_fast.c Source File - CWIST Modern C Web Framework"/>
+<meta property="og:description" content="High-performance C17 web framework & application server with zero-copy io_uring reactor, PQC TLS, and HTTP/3 support."/>
+<meta property="og:url" content="https://c4punks.github.io/CWIST/"/>
+<!-- Twitter -->
+<meta name="twitter:card" content="summary_large_image"/>
+<meta name="twitter:title" content="src/net/http/writer_fast.c Source File - CWIST Modern C Web Framework"/>
+<meta name="twitter:description" content="High-performance C17 web framework & application server with zero-copy io_uring reactor, PQC TLS, and HTTP/3 support."/>
 <link href="../../tabs.css" rel="stylesheet" type="text/css"/>
 <script type="text/javascript" src="../../jquery.js"></script>
 <script type="text/javascript" src="../../dynsections.js"></script>
+<link href="../../navtree.css" rel="stylesheet" type="text/css"/>
+<script type="text/javascript" src="../../resize.js"></script>
+<script type="text/javascript" src="../../navtreedata.js"></script>
+<script type="text/javascript" src="../../navtree.js"></script>
 <link href="../../search/search.css" rel="stylesheet" type="text/css"/>
 <script type="text/javascript" src="../../search/searchdata.js"></script>
 <script type="text/javascript" src="../../search/search.js"></script>
 <link href="../../doxygen.css" rel="stylesheet" type="text/css" />
+<link href="../../doxygen-awesome.css" rel="stylesheet" type="text/css"/>
 </head>
 <body>
 <div id="top"><!-- do not remove this div, it is closed by doxygen! -->
@@ -52,6 +71,23 @@ $(function() {
 $(document).ready(function() { init_codefold(1); });
 /* @license-end */
 </script>
+</div><!-- top -->
+<div id="side-nav" class="ui-resizable side-nav-resizable">
+  <div id="nav-tree">
+    <div id="nav-tree-contents">
+      <div id="nav-sync" class="sync"></div>
+    </div>
+  </div>
+  <div id="splitbar" style="-moz-user-select:none;" 
+       class="ui-resizable-handle">
+  </div>
+</div>
+<script type="text/javascript">
+/* @license magnet:?xt=urn:btih:d3d9a9a6595521f9666a5e94cc830dab83b65699&amp;dn=expat.txt MIT */
+$(document).ready(function(){initNavTree('d5/d23/writer__fast_8c_source.html','../../'); initResizable(); });
+/* @license-end */
+</script>
+<div id="doc-content">
 <!-- window showing the filter options -->
 <div id="MSearchSelectWindow"
      onmouseover="return searchBox.OnSearchSelectShow()"
@@ -73,11 +109,6 @@ $(document).ready(function() { init_codefold(1); });
 </div>
 </div>
 
-<div id="nav-path" class="navpath">
-  <ul>
-<li class="navelem"><a class="el" href="../../dir_68267d1309a1af8e8297ef4c3efbcdba.html">src</a></li><li class="navelem"><a class="el" href="../../dir_c72b25b75abe208498b36a3e44a3726c.html">net</a></li><li class="navelem"><a class="el" href="../../dir_dd2d28fd72df0d33d2116010ecf4f11d.html">http</a></li>  </ul>
-</div>
-</div><!-- top -->
 <div class="header">
   <div class="headertitle"><div class="title">writer_fast.c</div></div>
 </div><!--header-->
@@ -242,9 +273,9 @@ $(document).ready(function() { init_codefold(1); });
 <div class="line"><a id="l00208" name="l00208"></a><span class="lineno">  208</span>}</div>
 </div>
 <div class="ttc" id="aalloc_8h_html"><div class="ttname"><a href="../../d2/dfe/alloc_8h.html">alloc.h</a></div><div class="ttdoc">Memory allocation wrappers backed by libttak.</div></div>
-<div class="ttc" id="aalloc_8h_html_a220abeebe2823e72511d1690fc561306"><div class="ttname"><a href="../../d2/dfe/alloc_8h.html#a220abeebe2823e72511d1690fc561306">cwist_free</a></div><div class="ttdeci">void cwist_free(void *ptr)</div><div class="ttdoc">Free memory obtained via cwist_alloc/cwist_strdup/etc.</div><div class="ttdef"><b>Definition</b> <a href="../../d9/d39/alloc_8c_source.html#l00390">alloc.c:390</a></div></div>
-<div class="ttc" id="aalloc_8h_html_aeba69949fe17751318e6b5fc84a74096"><div class="ttname"><a href="../../d2/dfe/alloc_8h.html#aeba69949fe17751318e6b5fc84a74096">cwist_alloc</a></div><div class="ttdeci">void * cwist_alloc(size_t size)</div><div class="ttdoc">Allocate zeroed memory tracked by libttak.</div><div class="ttdef"><b>Definition</b> <a href="../../d9/d39/alloc_8c_source.html#l00275">alloc.c:275</a></div></div>
-<div class="ttc" id="ahttp3_8c_html_ab18d3d439e4a9c8d0f73e7166e8eb376"><div class="ttname"><a href="../../de/daf/http3_8c.html#ab18d3d439e4a9c8d0f73e7166e8eb376">MSG_DONTWAIT</a></div><div class="ttdeci">#define MSG_DONTWAIT</div><div class="ttdef"><b>Definition</b> <a href="../../de/daf/http3_8c_source.html#l00067">http3.c:67</a></div></div>
+<div class="ttc" id="aalloc_8h_html_a220abeebe2823e72511d1690fc561306"><div class="ttname"><a href="../../d2/dfe/alloc_8h.html#a220abeebe2823e72511d1690fc561306">cwist_free</a></div><div class="ttdeci">void cwist_free(void *ptr)</div><div class="ttdoc">Free memory obtained via cwist_alloc/cwist_strdup/etc.</div><div class="ttdef"><b>Definition</b> <a href="../../d9/d39/alloc_8c_source.html#l00391">alloc.c:391</a></div></div>
+<div class="ttc" id="aalloc_8h_html_aeba69949fe17751318e6b5fc84a74096"><div class="ttname"><a href="../../d2/dfe/alloc_8h.html#aeba69949fe17751318e6b5fc84a74096">cwist_alloc</a></div><div class="ttdeci">void * cwist_alloc(size_t size)</div><div class="ttdoc">Allocate zeroed memory tracked by libttak.</div><div class="ttdef"><b>Definition</b> <a href="../../d9/d39/alloc_8c_source.html#l00276">alloc.c:276</a></div></div>
+<div class="ttc" id="ahttp3_8c_html_ab18d3d439e4a9c8d0f73e7166e8eb376"><div class="ttname"><a href="../../de/daf/http3_8c.html#ab18d3d439e4a9c8d0f73e7166e8eb376">MSG_DONTWAIT</a></div><div class="ttdeci">#define MSG_DONTWAIT</div><div class="ttdef"><b>Definition</b> <a href="../../de/daf/http3_8c_source.html#l00082">http3.c:82</a></div></div>
 <div class="ttc" id="awasi_8h_html"><div class="ttname"><a href="../../d3/da3/wasi_8h.html">wasi.h</a></div><div class="ttdoc">WASI target feature detection shared by all CWIST sources.</div></div>
 <div class="ttc" id="awriter__fast_8c_html_a06ed175634b9901258ea518ed140fb92"><div class="ttname"><a href="../../d5/d23/writer__fast_8c.html#a06ed175634b9901258ea518ed140fb92">cwist_http_send_speculative</a></div><div class="ttdeci">cwist_write_status_t cwist_http_send_speculative(int fd, const void *buf, size_t len, size_t *sent_out)</div><div class="ttdoc">Attempt a single non-blocking speculative write of a buffer to a socket.</div><div class="ttdef"><b>Definition</b> <a href="../../d5/d23/writer__fast_8c_source.html#l00031">writer_fast.c:31</a></div></div>
 <div class="ttc" id="awriter__fast_8c_html_a969d674be3d25584e3ec36e8f75a83d9"><div class="ttname"><a href="../../d5/d23/writer__fast_8c.html#a969d674be3d25584e3ec36e8f75a83d9">cwist_http_sendmsg_speculative</a></div><div class="ttdeci">cwist_write_status_t cwist_http_sendmsg_speculative(int fd, struct iovec *iov, int iovcnt, int flags, size_t *total_sent)</div><div class="ttdoc">Attempt a single non-blocking speculative sendmsg over an iovec array.</div><div class="ttdef"><b>Definition</b> <a href="../../d5/d23/writer__fast_8c_source.html#l00083">writer_fast.c:83</a></div></div>
@@ -256,9 +287,13 @@ $(document).ready(function() { init_codefold(1); });
 <div class="ttc" id="awriter__fast_8h_html_a16d29465f9bdc2f8fc3de524bffc6e20a911a5902280085239f582c8055ec4a74"><div class="ttname"><a href="../../d2/d7d/writer__fast_8h.html#a16d29465f9bdc2f8fc3de524bffc6e20a911a5902280085239f582c8055ec4a74">CWIST_WRITE_PENDING</a></div><div class="ttdeci">@ CWIST_WRITE_PENDING</div><div class="ttdef"><b>Definition</b> <a href="../../d2/d7d/writer__fast_8h_source.html#l00023">writer_fast.h:22</a></div></div>
 <div class="ttc" id="awriter__fast_8h_html_a16d29465f9bdc2f8fc3de524bffc6e20ae526a8c934797fb2571868ee9206c873"><div class="ttname"><a href="../../d2/d7d/writer__fast_8h.html#a16d29465f9bdc2f8fc3de524bffc6e20ae526a8c934797fb2571868ee9206c873">CWIST_WRITE_ERR</a></div><div class="ttdeci">@ CWIST_WRITE_ERR</div><div class="ttdef"><b>Definition</b> <a href="../../d2/d7d/writer__fast_8h_source.html#l00025">writer_fast.h:24</a></div></div>
 </div><!-- fragment --></div><!-- contents -->
+</div><!-- doc-content -->
 <!-- start footer part -->
-<hr class="footer"/><address class="footer"><small>
-Generated by&#160;<a href="https://www.doxygen.org/index.html"><img class="footer" src="../../doxygen.svg" width="104" height="31" alt="doxygen"/></a> 1.9.8
-</small></address>
+<div id="nav-path" class="navpath"><!-- id is needed for treeview function! -->
+  <ul>
+    <li class="navelem"><a class="el" href="../../dir_68267d1309a1af8e8297ef4c3efbcdba.html">src</a></li><li class="navelem"><a class="el" href="../../dir_c72b25b75abe208498b36a3e44a3726c.html">net</a></li><li class="navelem"><a class="el" href="../../dir_dd2d28fd72df0d33d2116010ecf4f11d.html">http</a></li><li class="navelem"><a class="el" href="../../d5/d23/writer__fast_8c.html">writer_fast.c</a></li>
+    <li class="footer">Generated by <a href="https://www.doxygen.org/index.html"><img class="footer" src="../../doxygen.svg" width="104" height="31" alt="doxygen"/></a> 1.9.8 </li>
+  </ul>
+</div>
 </body>
 </html>

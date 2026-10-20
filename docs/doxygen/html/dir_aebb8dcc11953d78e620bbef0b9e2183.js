@@ -5,6 +5,7 @@ var dir_aebb8dcc11953d78e620bbef0b9e2183 =
     [ "log", "dir_2aa9c0e397d40306fad4535cf762fffd.html", "dir_2aa9c0e397d40306fad4535cf762fffd" ],
     [ "mem", "dir_2e21ef81af60b83a3a2fa72422531fbe.html", "dir_2e21ef81af60b83a3a2fa72422531fbe" ],
     [ "orm", "dir_2d899f0cc47fd9ae18405c437e131fb3.html", "dir_2d899f0cc47fd9ae18405c437e131fb3" ],
+    [ "seq", "dir_dd1613bb083b4b78a96eef7c705632ec.html", "dir_dd1613bb083b4b78a96eef7c705632ec" ],
     [ "siphash", "dir_f9e81f47a10b7b2626a974bebbf0c2ea.html", "dir_f9e81f47a10b7b2626a974bebbf0c2ea" ],
     [ "sstring", "dir_4faecd16b6f1682903bf41927182acfd.html", "dir_4faecd16b6f1682903bf41927182acfd" ],
     [ "template", "dir_95d490715213f9100aef655f0eb7877e.html", "dir_95d490715213f9100aef655f0eb7877e" ],

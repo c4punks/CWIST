@@ -1,3 +1,4 @@
+<!-- HTML header for doxygen 1.9.8-->
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "https://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml" lang="en-US">
 <head>
@@ -5,14 +6,32 @@
 <meta http-equiv="X-UA-Compatible" content="IE=11"/>
 <meta name="generator" content="Doxygen 1.9.8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
-<title>cwist: src/sys/job/scheduler.c File Reference</title>
+<title>src/sys/job/scheduler.c File Reference - CWIST High-Performance C Web Framework</title>
+<meta name="description" content="CWIST: High-performance C17 web framework and application server (HTTP/1.1, HTTP/2, HTTP/3, WebTransport, WebSocket, PQC TLS) powered by io_uring and libttak."/>
+<meta name="keywords" content="C web framework, C17, HTTP3, QUIC, io_uring, web server, actix alternative, high performance, REST API in C, C web server"/>
+<meta name="author" content="c4punks"/>
+<meta name="robots" content="index, follow"/>
+<!-- Open Graph / Facebook -->
+<meta property="og:type" content="website"/>
+<meta property="og:title" content="src/sys/job/scheduler.c File Reference - CWIST Modern C Web Framework"/>
+<meta property="og:description" content="High-performance C17 web framework & application server with zero-copy io_uring reactor, PQC TLS, and HTTP/3 support."/>
+<meta property="og:url" content="https://c4punks.github.io/CWIST/"/>
+<!-- Twitter -->
+<meta name="twitter:card" content="summary_large_image"/>
+<meta name="twitter:title" content="src/sys/job/scheduler.c File Reference - CWIST Modern C Web Framework"/>
+<meta name="twitter:description" content="High-performance C17 web framework & application server with zero-copy io_uring reactor, PQC TLS, and HTTP/3 support."/>
 <link href="../../tabs.css" rel="stylesheet" type="text/css"/>
 <script type="text/javascript" src="../../jquery.js"></script>
 <script type="text/javascript" src="../../dynsections.js"></script>
+<link href="../../navtree.css" rel="stylesheet" type="text/css"/>
+<script type="text/javascript" src="../../resize.js"></script>
+<script type="text/javascript" src="../../navtreedata.js"></script>
+<script type="text/javascript" src="../../navtree.js"></script>
 <link href="../../search/search.css" rel="stylesheet" type="text/css"/>
 <script type="text/javascript" src="../../search/searchdata.js"></script>
 <script type="text/javascript" src="../../search/search.js"></script>
 <link href="../../doxygen.css" rel="stylesheet" type="text/css" />
+<link href="../../doxygen-awesome.css" rel="stylesheet" type="text/css"/>
 </head>
 <body>
 <div id="top"><!-- do not remove this div, it is closed by doxygen! -->
@@ -47,6 +66,23 @@ $(function() {
 /* @license-end */
 </script>
 <div id="main-nav"></div>
+</div><!-- top -->
+<div id="side-nav" class="ui-resizable side-nav-resizable">
+  <div id="nav-tree">
+    <div id="nav-tree-contents">
+      <div id="nav-sync" class="sync"></div>
+    </div>
+  </div>
+  <div id="splitbar" style="-moz-user-select:none;" 
+       class="ui-resizable-handle">
+  </div>
+</div>
+<script type="text/javascript">
+/* @license magnet:?xt=urn:btih:d3d9a9a6595521f9666a5e94cc830dab83b65699&amp;dn=expat.txt MIT */
+$(document).ready(function(){initNavTree('dd/d6c/scheduler_8c.html','../../'); initResizable(); });
+/* @license-end */
+</script>
+<div id="doc-content">
 <!-- window showing the filter options -->
 <div id="MSearchSelectWindow"
      onmouseover="return searchBox.OnSearchSelectShow()"
@@ -68,11 +104,6 @@ $(function() {
 </div>
 </div>
 
-<div id="nav-path" class="navpath">
-  <ul>
-<li class="navelem"><a class="el" href="../../dir_68267d1309a1af8e8297ef4c3efbcdba.html">src</a></li><li class="navelem"><a class="el" href="../../dir_220d2bd384b446346a1cdcf02b1b2295.html">sys</a></li><li class="navelem"><a class="el" href="../../dir_02ab18fb2aa5eb69827b91507825008a.html">job</a></li>  </ul>
-</div>
-</div><!-- top -->
 <div class="header">
   <div class="summary">
 <a href="#define-members">Macros</a> &#124;
@@ -83,7 +114,8 @@ $(function() {
 
 <p>Background job scheduler with delayed execution.  
 <a href="#details">More...</a></p>
-<div class="textblock"><code>#include &lt;<a class="el" href="../../d2/dd8/scheduler_8h_source.html">cwist/sys/job/scheduler.h</a>&gt;</code><br />
+<div class="textblock"><code>#include &lt;stdatomic.h&gt;</code><br />
+<code>#include &lt;<a class="el" href="../../d2/dd8/scheduler_8h_source.html">cwist/sys/job/scheduler.h</a>&gt;</code><br />
 <code>#include &lt;<a class="el" href="../../d2/dfe/alloc_8h_source.html">cwist/core/mem/alloc.h</a>&gt;</code><br />
 <code>#include &lt;<a class="el" href="../../d0/daa/gc_8h_source.html">cwist/core/mem/gc.h</a>&gt;</code><br />
 <code>#include &lt;pthread.h&gt;</code><br />
@@ -96,46 +128,48 @@ Include dependency graph for scheduler.c:</div>
 <div class="dyncontent">
 <div class="center"><img src="../../d4/dee/scheduler_8c__incl.png" border="0" usemap="#asrc_2sys_2job_2scheduler_8c" alt=""/></div>
 <map name="asrc_2sys_2job_2scheduler_8c" id="asrc_2sys_2job_2scheduler_8c">
-<area shape="rect" title="Background job scheduler with delayed execution." alt="" coords="806,5,974,31"/>
-<area shape="rect" href="../../d2/dd8/scheduler_8h.html" title="Background job scheduler / delayed task queue for CWIST." alt="" coords="113,79,297,104"/>
-<area shape="poly" title=" " alt="" coords="807,31,311,82,311,76,806,25"/>
-<area shape="rect" href="../../d2/dfe/alloc_8h.html" title="Memory allocation wrappers backed by libttak." alt="" coords="550,79,724,104"/>
-<area shape="poly" title=" " alt="" coords="850,33,692,77,691,72,849,28"/>
-<area shape="rect" href="../../d0/daa/gc_8h.html" title="Epoch&#45;based garbage collection wrapper." alt="" coords="782,152,940,177"/>
-<area shape="poly" title=" " alt="" coords="852,33,817,51,801,64,789,80,785,97,793,114,809,130,828,143,825,147,805,134,789,117,780,98,784,78,797,60,814,47,850,28"/>
-<area shape="rect" title=" " alt="" coords="799,79,883,104"/>
-<area shape="poly" title=" " alt="" coords="885,33,859,69,855,66,880,29"/>
-<area shape="rect" title=" " alt="" coords="908,79,972,104"/>
-<area shape="poly" title=" " alt="" coords="901,29,926,66,922,69,896,33"/>
-<area shape="rect" title=" " alt="" coords="996,79,1067,104"/>
-<area shape="poly" title=" " alt="" coords="914,28,998,70,995,75,912,33"/>
-<area shape="rect" title=" " alt="" coords="1091,79,1162,104"/>
-<area shape="poly" title=" " alt="" coords="929,28,1079,73,1077,78,928,33"/>
-<area shape="rect" title=" " alt="" coords="1186,79,1254,104"/>
-<area shape="poly" title=" " alt="" coords="949,28,1173,76,1172,81,948,33"/>
-<area shape="rect" href="../../d1/df5/cwist__io_8h.html" title="Platform Agnostic Async Job Queue Interface." alt="" coords="122,152,288,177"/>
-<area shape="poly" title=" " alt="" coords="208,104,208,138,202,138,202,104"/>
-<area shape="rect" title=" " alt="" coords="416,225,490,251"/>
-<area shape="poly" title=" " alt="" coords="226,102,423,216,420,221,224,107"/>
-<area shape="rect" title=" " alt="" coords="237,225,320,251"/>
-<area shape="poly" title=" " alt="" coords="113,106,67,116,29,131,16,140,9,151,9,162,17,176,29,186,49,196,103,212,165,223,224,230,223,235,165,228,102,217,47,201,27,191,12,179,4,163,4,149,12,137,26,126,65,111,112,100"/>
-<area shape="rect" title=" " alt="" coords="27,152,98,177"/>
-<area shape="poly" title=" " alt="" coords="183,106,99,148,97,143,181,102"/>
-<area shape="poly" title=" " alt="" coords="246,175,403,220,402,225,244,180"/>
-<area shape="poly" title=" " alt="" coords="219,176,258,214,255,218,215,180"/>
-<area shape="poly" title=" " alt="" coords="664,102,690,116,714,134,728,155,728,167,722,179,707,191,686,202,629,218,564,229,504,235,504,230,563,223,628,212,684,197,704,187,718,176,723,166,722,157,710,138,687,120,662,106"/>
-<area shape="rect" title=" " alt="" coords="566,152,708,177"/>
-<area shape="poly" title=" " alt="" coords="640,104,640,138,634,138,634,104"/>
-<area shape="rect" href="../../da/d0c/arena_8h.html" title="Request&#45;scoped arena allocator backed by libttak arena generations." alt="" coords="364,152,542,177"/>
-<area shape="poly" title=" " alt="" coords="609,107,497,149,495,144,607,102"/>
-<area shape="poly" title=" " alt="" coords="456,178,456,212,450,212,450,178"/>
-<area shape="poly" title=" " alt="" coords="426,180,321,222,319,218,424,175"/>
-<area shape="poly" title=" " alt="" coords="796,180,505,230,504,225,795,175"/>
-<area shape="poly" title=" " alt="" coords="782,178,334,233,334,227,782,173"/>
-<area shape="rect" title=" " alt="" coords="671,225,854,251"/>
-<area shape="poly" title=" " alt="" coords="847,180,791,219,788,215,844,175"/>
-<area shape="rect" title=" " alt="" coords="878,225,1041,251"/>
-<area shape="poly" title=" " alt="" coords="879,175,934,215,931,219,875,180"/>
+<area shape="rect" title="Background job scheduler with delayed execution." alt="" coords="661,5,829,31"/>
+<area shape="rect" title=" " alt="" coords="9,79,108,104"/>
+<area shape="poly" title=" " alt="" coords="661,28,423,47,122,81,121,76,422,42,661,22"/>
+<area shape="rect" href="../../d2/dd8/scheduler_8h.html" title="Background job scheduler / delayed task queue for CWIST." alt="" coords="132,79,316,104"/>
+<area shape="poly" title=" " alt="" coords="662,33,322,79,321,74,661,28"/>
+<area shape="rect" href="../../d2/dfe/alloc_8h.html" title="Memory allocation wrappers backed by libttak." alt="" coords="455,79,628,104"/>
+<area shape="poly" title=" " alt="" coords="713,33,588,77,586,72,712,28"/>
+<area shape="rect" href="../../d0/daa/gc_8h.html" title="Epoch&#45;based garbage collection wrapper." alt="" coords="779,152,936,177"/>
+<area shape="poly" title=" " alt="" coords="730,33,713,47,697,65,688,85,689,94,693,103,707,119,725,132,766,149,764,154,722,136,704,123,688,105,683,95,683,84,692,63,709,44,727,29"/>
+<area shape="rect" title=" " alt="" coords="703,79,787,104"/>
+<area shape="poly" title=" " alt="" coords="748,31,748,65,743,65,743,31"/>
+<area shape="rect" title=" " alt="" coords="812,79,876,104"/>
+<area shape="poly" title=" " alt="" coords="763,29,818,68,815,73,760,33"/>
+<area shape="rect" title=" " alt="" coords="901,79,971,104"/>
+<area shape="poly" title=" " alt="" coords="777,28,893,71,891,76,775,33"/>
+<area shape="rect" title=" " alt="" coords="995,79,1066,104"/>
+<area shape="poly" title=" " alt="" coords="792,28,983,75,981,81,790,33"/>
+<area shape="rect" title=" " alt="" coords="1090,79,1158,104"/>
+<area shape="poly" title=" " alt="" coords="818,28,1077,76,1076,81,817,33"/>
+<area shape="rect" href="../../d1/df5/cwist__io_8h.html" title="Platform Agnostic Async Job Queue Interface." alt="" coords="118,152,285,177"/>
+<area shape="poly" title=" " alt="" coords="223,105,212,140,207,138,218,104"/>
+<area shape="rect" title=" " alt="" coords="412,225,487,251"/>
+<area shape="poly" title=" " alt="" coords="242,102,349,175,419,216,416,221,346,180,239,106"/>
+<area shape="rect" title=" " alt="" coords="233,225,316,251"/>
+<area shape="poly" title=" " alt="" coords="148,107,66,126,33,139,13,154,8,165,13,176,25,186,45,196,99,212,162,223,220,230,219,235,161,228,98,217,43,201,23,191,8,179,3,165,8,150,30,134,64,121,147,101"/>
+<area shape="rect" title=" " alt="" coords="23,152,94,177"/>
+<area shape="poly" title=" " alt="" coords="198,106,99,149,97,144,196,102"/>
+<area shape="poly" title=" " alt="" coords="242,175,399,220,398,225,240,180"/>
+<area shape="poly" title=" " alt="" coords="215,176,255,214,251,218,211,180"/>
+<area shape="poly" title=" " alt="" coords="624,101,668,112,705,128,718,138,726,150,726,164,718,179,703,191,682,202,625,218,560,229,501,235,500,230,559,223,624,212,680,197,700,187,714,176,721,163,720,152,714,142,702,133,666,117,622,107"/>
+<area shape="rect" title=" " alt="" coords="563,152,704,177"/>
+<area shape="poly" title=" " alt="" coords="558,102,609,141,606,146,554,106"/>
+<area shape="rect" href="../../da/d0c/arena_8h.html" title="Request&#45;scoped arena allocator backed by libttak arena generations." alt="" coords="360,152,539,177"/>
+<area shape="poly" title=" " alt="" coords="528,106,477,146,473,141,525,102"/>
+<area shape="poly" title=" " alt="" coords="452,178,452,212,447,212,447,178"/>
+<area shape="poly" title=" " alt="" coords="422,180,317,222,315,218,420,175"/>
+<area shape="poly" title=" " alt="" coords="792,180,501,230,500,225,791,175"/>
+<area shape="poly" title=" " alt="" coords="778,178,330,233,330,227,778,173"/>
+<area shape="rect" title=" " alt="" coords="667,225,850,251"/>
+<area shape="poly" title=" " alt="" coords="843,180,787,219,784,215,840,175"/>
+<area shape="rect" title=" " alt="" coords="875,225,1037,251"/>
+<area shape="poly" title=" " alt="" coords="875,175,930,215,927,219,872,180"/>
 </map>
 </div>
 </div>
@@ -165,6 +199,9 @@ Functions</h2></td></tr>
 <tr class="memitem:a93a77a1ca7d1ac21f8d0a91123ca2f83" id="r_a93a77a1ca7d1ac21f8d0a91123ca2f83"><td class="memItemLeft" align="right" valign="top">size_t&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../dd/d6c/scheduler_8c.html#a93a77a1ca7d1ac21f8d0a91123ca2f83">cwist_scheduler_pending_count</a> (<a class="el" href="../../d2/dd8/scheduler_8h.html#a6f0ae6fce1a81f7dc35c2b235415d1ed">cwist_scheduler_t</a> *s)</td></tr>
 <tr class="memdesc:a93a77a1ca7d1ac21f8d0a91123ca2f83"><td class="mdescLeft">&#160;</td><td class="mdescRight">Return the number of jobs waiting on the delayed-job heap.  <br /></td></tr>
 <tr class="separator:a93a77a1ca7d1ac21f8d0a91123ca2f83"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ac55dd12761ee804a6a7c49d2782d9b47" id="r_ac55dd12761ee804a6a7c49d2782d9b47"><td class="memItemLeft" align="right" valign="top">size_t&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../dd/d6c/scheduler_8c.html#ac55dd12761ee804a6a7c49d2782d9b47">cwist_scheduler_cancel_pending</a> (<a class="el" href="../../d2/dd8/scheduler_8h.html#a6f0ae6fce1a81f7dc35c2b235415d1ed">cwist_scheduler_t</a> *s, <a class="el" href="../../d2/dd8/scheduler_8h.html#af9cff7a369239215c4ff522fbc48f7d1">cwist_scheduler_drop_cb</a> drop_cb)</td></tr>
+<tr class="memdesc:ac55dd12761ee804a6a7c49d2782d9b47"><td class="mdescLeft">&#160;</td><td class="mdescRight">Cancel all delayed jobs that have not yet fired.  <br /></td></tr>
+<tr class="separator:ac55dd12761ee804a6a7c49d2782d9b47"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
 <div class="textblock"><p>Background job scheduler with delayed execution. </p>
@@ -200,11 +237,54 @@ Functions</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../dd/d6c/scheduler_8c_source.html#l00020">20</a> of file <a class="el" href="../../dd/d6c/scheduler_8c_source.html">scheduler.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../dd/d6c/scheduler_8c_source.html#l00021">21</a> of file <a class="el" href="../../dd/d6c/scheduler_8c_source.html">scheduler.c</a>.</p>
 
 </div>
 </div>
 <h2 class="groupheader">Function Documentation</h2>
+<a id="ac55dd12761ee804a6a7c49d2782d9b47" name="ac55dd12761ee804a6a7c49d2782d9b47"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ac55dd12761ee804a6a7c49d2782d9b47">&#9670;&#160;</a></span>cwist_scheduler_cancel_pending()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">size_t cwist_scheduler_cancel_pending </td>
+          <td>(</td>
+          <td class="paramtype"><a class="el" href="../../d2/dd8/scheduler_8h.html#a6f0ae6fce1a81f7dc35c2b235415d1ed">cwist_scheduler_t</a> *&#160;</td>
+          <td class="paramname"><em>s</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype"><a class="el" href="../../d2/dd8/scheduler_8h.html#af9cff7a369239215c4ff522fbc48f7d1">cwist_scheduler_drop_cb</a>&#160;</td>
+          <td class="paramname"><em>drop_cb</em>&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Cancel all delayed jobs that have not yet fired. </p>
+<p>Detaches the delayed-job heap under <code>s-&gt;delayed_mtx</code> and invokes <code>drop_cb(arg)</code> for each cancelled job outside the lock so caller destructors cannot deadlock on scheduler re-entry. Jobs already submitted to the io queue by the timer thread before this call are not affected.</p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">s</td><td>Scheduler whose pending jobs are to be cancelled. </td></tr>
+    <tr><td class="paramname">drop_cb</td><td>Destructor called once per cancelled job's arg; may be NULL. </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section return"><dt>Returns</dt><dd>Number of jobs cancelled. </dd></dl>
+
+<p class="definition">Definition at line <a class="el" href="../../dd/d6c/scheduler_8c_source.html#l00429">429</a> of file <a class="el" href="../../dd/d6c/scheduler_8c_source.html">scheduler.c</a>.</p>
+
+<p class="reference">References <a class="el" href="../../d9/d39/alloc_8c_source.html#l00391">cwist_free()</a>.</p>
+
+</div>
+</div>
 <a id="ae0f1c3ad3074a69d79ea27d641ac2294" name="ae0f1c3ad3074a69d79ea27d641ac2294"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#ae0f1c3ad3074a69d79ea27d641ac2294">&#9670;&#160;</a></span>cwist_scheduler_create()</h2>
 
@@ -243,11 +323,11 @@ Functions</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>The new scheduler, or NULL on allocation or thread-creation failure. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="../../dd/d6c/scheduler_8c_source.html#l00259">259</a> of file <a class="el" href="../../dd/d6c/scheduler_8c_source.html">scheduler.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../dd/d6c/scheduler_8c_source.html#l00265">265</a> of file <a class="el" href="../../dd/d6c/scheduler_8c_source.html">scheduler.c</a>.</p>
 
-<p class="reference">References <a class="el" href="../../d9/d39/alloc_8c_source.html#l00275">cwist_alloc()</a>, <a class="el" href="../../d9/d39/alloc_8c_source.html#l00289">cwist_alloc_array()</a>, <a class="el" href="../../d9/d39/alloc_8c_source.html#l00390">cwist_free()</a>, <a class="el" href="../../d8/d16/gc_8c_source.html#l00291">cwist_full_gc_enabled()</a>, <a class="el" href="../../d8/d16/gc_8c_source.html#l00527">cwist_gc_scope_disown()</a>, <a class="el" href="../../d1/de4/io__queue_8c_source.html#l00220">cwist_io_queue_create()</a>, and <a class="el" href="../../d1/de4/io__queue_8c_source.html#l00340">cwist_io_queue_destroy()</a>.</p>
+<p class="reference">References <a class="el" href="../../d9/d39/alloc_8c_source.html#l00276">cwist_alloc()</a>, <a class="el" href="../../d9/d39/alloc_8c_source.html#l00290">cwist_alloc_array()</a>, <a class="el" href="../../d9/d39/alloc_8c_source.html#l00391">cwist_free()</a>, <a class="el" href="../../d8/d16/gc_8c_source.html#l00514">cwist_full_gc_enabled()</a>, <a class="el" href="../../d8/d16/gc_8c_source.html#l00765">cwist_gc_scope_disown()</a>, <a class="el" href="../../d1/de4/io__queue_8c_source.html#l00228">cwist_io_queue_create()</a>, and <a class="el" href="../../d1/de4/io__queue_8c_source.html#l00343">cwist_io_queue_destroy()</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../df/d7f/app_8c_source.html#l01920">cwist_app_use_scheduler()</a>.</p>
+<p class="reference">Referenced by <a class="el" href="../../df/d7f/app_8c_source.html#l01996">cwist_app_use_scheduler()</a>.</p>
 
 </div>
 </div>
@@ -277,11 +357,11 @@ Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="../../dd/d6c/scheduler_8c_source.html#l00321">321</a> of file <a class="el" href="../../dd/d6c/scheduler_8c_source.html">scheduler.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../dd/d6c/scheduler_8c_source.html#l00327">327</a> of file <a class="el" href="../../dd/d6c/scheduler_8c_source.html">scheduler.c</a>.</p>
 
-<p class="reference">References <a class="el" href="../../d9/d39/alloc_8c_source.html#l00390">cwist_free()</a>, <a class="el" href="../../d1/de4/io__queue_8c_source.html#l00340">cwist_io_queue_destroy()</a>, and <a class="el" href="../../d1/de4/io__queue_8c_source.html#l00328">cwist_io_queue_stop()</a>.</p>
+<p class="reference">References <a class="el" href="../../d9/d39/alloc_8c_source.html#l00391">cwist_free()</a>, <a class="el" href="../../d1/de4/io__queue_8c_source.html#l00343">cwist_io_queue_destroy()</a>, and <a class="el" href="../../d1/de4/io__queue_8c_source.html#l00331">cwist_io_queue_stop()</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../df/d7f/app_8c_source.html#l01428">cwist_app_destroy()</a>, and <a class="el" href="../../df/d7f/app_8c_source.html#l01920">cwist_app_use_scheduler()</a>.</p>
+<p class="reference">Referenced by <a class="el" href="../../df/d7f/app_8c_source.html#l01449">cwist_app_destroy()</a>, and <a class="el" href="../../df/d7f/app_8c_source.html#l01996">cwist_app_use_scheduler()</a>.</p>
 
 </div>
 </div>
@@ -312,7 +392,7 @@ Functions</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>Number of pending delayed jobs; 0 if <code>s</code> is NULL. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="../../dd/d6c/scheduler_8c_source.html#l00406">406</a> of file <a class="el" href="../../dd/d6c/scheduler_8c_source.html">scheduler.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../dd/d6c/scheduler_8c_source.html#l00412">412</a> of file <a class="el" href="../../dd/d6c/scheduler_8c_source.html">scheduler.c</a>.</p>
 
 </div>
 </div>
@@ -374,11 +454,11 @@ Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="../../dd/d6c/scheduler_8c_source.html#l00374">374</a> of file <a class="el" href="../../dd/d6c/scheduler_8c_source.html">scheduler.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../dd/d6c/scheduler_8c_source.html#l00380">380</a> of file <a class="el" href="../../dd/d6c/scheduler_8c_source.html">scheduler.c</a>.</p>
 
-<p class="reference">References <a class="el" href="../../d1/de4/io__queue_8c_source.html#l00269">cwist_io_queue_submit()</a>.</p>
+<p class="reference">References <a class="el" href="../../d1/de4/io__queue_8c_source.html#l00277">cwist_io_queue_submit()</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../db/d84/async_8c_source.html#l00281">cwist_async_set_timeout()</a>.</p>
+<p class="reference">Referenced by <a class="el" href="../../db/d84/async_8c_source.html#l00325">cwist_async_set_timeout()</a>.</p>
 
 </div>
 </div>
@@ -432,16 +512,20 @@ Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="../../dd/d6c/scheduler_8c_source.html#l00354">354</a> of file <a class="el" href="../../dd/d6c/scheduler_8c_source.html">scheduler.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../dd/d6c/scheduler_8c_source.html#l00360">360</a> of file <a class="el" href="../../dd/d6c/scheduler_8c_source.html">scheduler.c</a>.</p>
 
-<p class="reference">References <a class="el" href="../../d1/de4/io__queue_8c_source.html#l00269">cwist_io_queue_submit()</a>.</p>
+<p class="reference">References <a class="el" href="../../d1/de4/io__queue_8c_source.html#l00277">cwist_io_queue_submit()</a>.</p>
 
 </div>
 </div>
 </div><!-- contents -->
+</div><!-- doc-content -->
 <!-- start footer part -->
-<hr class="footer"/><address class="footer"><small>
-Generated by&#160;<a href="https://www.doxygen.org/index.html"><img class="footer" src="../../doxygen.svg" width="104" height="31" alt="doxygen"/></a> 1.9.8
-</small></address>
+<div id="nav-path" class="navpath"><!-- id is needed for treeview function! -->
+  <ul>
+    <li class="navelem"><a class="el" href="../../dir_68267d1309a1af8e8297ef4c3efbcdba.html">src</a></li><li class="navelem"><a class="el" href="../../dir_220d2bd384b446346a1cdcf02b1b2295.html">sys</a></li><li class="navelem"><a class="el" href="../../dir_02ab18fb2aa5eb69827b91507825008a.html">job</a></li><li class="navelem"><a class="el" href="../../dd/d6c/scheduler_8c.html">scheduler.c</a></li>
+    <li class="footer">Generated by <a href="https://www.doxygen.org/index.html"><img class="footer" src="../../doxygen.svg" width="104" height="31" alt="doxygen"/></a> 1.9.8 </li>
+  </ul>
+</div>
 </body>
 </html>
