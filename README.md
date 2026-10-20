@@ -348,12 +348,12 @@ CI regenerates this block from each benchmark run.
 
 <!-- WEBSERVER_BENCHMARKS:START -->
 Latest Web Server Benchmark (wrk -t12 -c400 -d10s (after 10s warmup, warmup discarded)):
-- **CWIST Classic pool**: 155941 req/s | Latency 1.49ms (P90 3.02ms, P99 5.92ms, P99.999 18.63ms) | RSS 61100KiB | Csw 1488999
-- **CWIST reactor**: 183303 req/s | Latency 2.24ms (P90 4.38ms, P99 7.57ms, P99.999 22.01ms) | RSS 22060KiB | Csw 145617
-- **Actix**: 174662 req/s | Latency 2.30ms (P90 4.30ms, P99 7.08ms, P99.999 13.55ms) | RSS 11980KiB | Csw 189420
-- **Axum**: 151695 req/s | Latency 2.60ms (P90 4.53ms, P99 6.92ms, P99.999 14.29ms) | RSS 14928KiB | Csw 260600
-- **Gin (Go)**: 116080 req/s | Latency 4.31ms (P90 10.13ms, P99 21.34ms, P99.999 43.03ms) | RSS 30780KiB | Csw 367969
-- **Spring Boot**: 74789 req/s | Latency 5.27ms (P90 7.17ms, P99 10.37ms, P99.999 42.51ms) | RSS 1312936KiB | Csw 338919
+- **CWIST Classic pool**: 194157 req/s | Latency 1.19ms (P90 2.46ms, P99 5.13ms, P99.999 18.86ms) | RSS 59116KiB | Csw 1940764
+- **CWIST reactor**: 236606 req/s | Latency 1.74ms (P90 3.53ms, P99 5.88ms, P99.999 12.22ms) | RSS 21948KiB | Csw 231835
+- **Actix**: 215870 req/s | Latency 1.90ms (P90 3.75ms, P99 6.23ms, P99.999 14.93ms) | RSS 12536KiB | Csw 254623
+- **Axum**: 179266 req/s | Latency 2.22ms (P90 3.97ms, P99 6.27ms, P99.999 13.11ms) | RSS 15580KiB | Csw 400383
+- **Gin (Go)**: 141961 req/s | Latency 4.98ms (P90 13.53ms, P99 31.72ms, P99.999 89.26ms) | RSS 28360KiB | Csw 545661
+- **Spring Boot**: 112147 req/s | Latency 3.57ms (P90 5.47ms, P99 9.01ms, P99.999 42.75ms) | RSS 1285480KiB | Csw 409552
 
 _Settled CWIST-internal tuning variants (glibc arena cap from PR #35, cooperative drain chunk from issue #25) are recorded in docs/cooperative-queuing.md and benchmarks/webserver.json; they are no longer rendered as comparison rows._
 
@@ -396,7 +396,6 @@ wrk -t12 -c400 -d10s (after 10s warmup, warmup discarded)
 Latency distribution (density curve reconstructed from each server's percentiles - shows the shape of the tail, not just its P99.999 number):
 
 ![Web Server Latency Distribution](docs/webserver-latency-distribution.svg)
-
 <!-- WEBSERVER_BENCHMARKS:END -->
 
 _Methodology, JVM options, and fairness settings: [docs/webserver-benchmark.md](docs/webserver-benchmark.md)_
