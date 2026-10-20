@@ -9,7 +9,6 @@ from pathlib import Path
 # scripts/ci/benchmark.py from the repository root in CI and from a copied
 # tree in the tests.
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from runner_baseline import summarize
 
 ROOT = Path(__file__).resolve().parents[2]
 HISTORY = ROOT / "benchmarks" / "db.json"
@@ -447,31 +446,9 @@ def render() -> None:
             f"P99.999 number):\n\n"
             f"![Web Server Latency Distribution](docs/webserver-latency-distribution.svg)"
         )
-    # The runner CPU model changes from run to run and moves these numbers
-    # more than most code changes do, so the single latest row above cannot
-    # be compared against the previous one. Break the history out per CPU
-    # so a reader sees which hardware produced what (see runner_baseline.py,
-    # which gates regressions on the same split).
-    ws_by_runner = summarize(ws_history, ["cwist_lat_ms", "cwist_c1m_lat_ms",
-                                          "axum_lat_ms", "cwist_c1m_rps", "axum_rps"])
-    if ws_by_runner:
-        lines = ["", "### Per runner CPU", "",
-                 "GitHub hands out a different CPU model per run, which moves these "
-                 "numbers more than most code changes do. Medians of every recorded "
-                 "run, split by the CPU it landed on, so rows are only comparable "
-                 "down a column:", "",
-                 "| Runner CPU | Runs | CWIST Classic ms | CWIST ms | Axum ms | "
-                 "CWIST req/s | Axum req/s |",
-                 "|---|---:|---:|---:|---:|---:|---:|"]
-        for runner, count, stats in ws_by_runner:
-            def cell(key, digits=2):
-                value = stats.get(key)
-                return f"{value:,.{digits}f}" if value is not None else "N/A"
-            lines.append(
-                f"| {runner} | {count} | {cell('cwist_lat_ms')} | "
-                f"{cell('cwist_c1m_lat_ms')} | {cell('axum_lat_ms')} | "
-                f"{cell('cwist_c1m_rps', 0)} | {cell('axum_rps', 0)} |")
-        ws_summary += "\n" + "\n".join(lines) + "\n"
+    # No per-CPU history table here: recorded runs measured different
+    # commits, so medians across them describe the history, not the code
+    # this block reports on. runner_baseline.py still gates on the split.
 
     if README.exists(): replace(README, "<!-- WEBSERVER_BENCHMARKS:START -->", "<!-- WEBSERVER_BENCHMARKS:END -->", ws_summary)
     if README_MD.exists(): replace(README_MD, "<!-- WEBSERVER_BENCHMARKS:START -->", "<!-- WEBSERVER_BENCHMARKS:END -->", ws_summary)
