@@ -1,17 +1,20 @@
 # FIXED endpoint caching: current behavior
 
-**Status:** known documentation/runtime mismatch — active investigation.
-**Related:** [issue #25](https://github.com/c4punks/CWIST/issues/25),
-ADR-0001 (draft PR #85, `CWIST_ENDPOINT_PUBLIC_FIXED`).
+**Status:** settled. `CWIST_ENDPOINT_FIXED` is a non-caching hint, and the
+docs now say so. The opt-in `CWIST_ENDPOINT_PUBLIC_FIXED` cache proposed in
+ADR-0001 shipped on 2026-09-14 and was removed on 2026-09-21 after the BDR
+cursor fast path (#194) replaced it; the bit is still defined but inert.
+**Related:** [issue #25](https://github.com/c4punks/CWIST/issues/25) (closed),
+[ADR-0001](decisions/0001-safe-public-fixed-response-cache.md) (superseded).
 
 ## What the runtime actually does today
 
 `CWIST_ENDPOINT_FIXED` **does not activate an automatic response cache in
 the current revision**. In both classic and C1M modes, every request to a
-FIXED route is dispatched to the handler through ordinary routing. The
-"cache the response in RAM and reply instantly after the first hit"
-wording in `endpoint_opts.h` and `docs/api/app.md` describes the intended
-contract, not the runtime behavior.
+FIXED route is dispatched to the handler through ordinary routing.
+`endpoint_opts.h` and `docs/api/app.md` describe this behavior; older
+"cache the response in RAM after the first hit" wording described an
+intended contract that the runtime never delivered.
 
 ## Evidence
 
@@ -42,15 +45,13 @@ unsafe:
   a C string (fixed independently by PR #84, which does not make cached
   replay safe).
 
-## Recommended handling until the contract is restored
+## Recommended handling
 
 - Treat FIXED routes as ordinary dispatch. Do not rely on automatic
   cache hits; do not preseed whole-wire BDR blobs expecting HTTP replay.
-- The safe restoration path is ADR-0001 (draft PR #85): a new explicit
-  `CWIST_ENDPOINT_PUBLIC_FIXED` opt-in with a parsed eligibility
-  boundary, representation (not wire-blob) caching, and ownership
-  isolation, plus an explicit compatibility change. Review that ADR
-  before implementing or enabling any cache path.
+- Setting `CWIST_ENDPOINT_PUBLIC_FIXED` has no runtime effect. Any future
+  cache path should start from the eligibility, representation and
+  ownership requirements recorded in ADR-0001 rather than from raw replay.
 - A correct response is mandatory even when a cache miss costs
   performance; no performance objective should reactivate the unsafe raw
   replay path.

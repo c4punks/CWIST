@@ -1,6 +1,10 @@
 # ADR-0001: Restore HTTP response caching through an explicit public FIXED contract
 
-- **Status:** Proposed for maintainer review; not implemented or released.
+- **Status:** Superseded (2026-09-21). Implemented as an opt-in cache in
+  `ce9cde55` (2026-09-14), then replaced by the BDR per-connection cursor fast
+  path (#194, `c5e4e3cc`) and removed in `cf693627`. `CWIST_ENDPOINT_PUBLIC_FIXED`
+  stays defined as an inert bit so existing code keeps compiling. The text
+  below is the original proposal, kept as a historical record.
 - **Date:** 2026-09-13
 - **Scope:** Cleartext HTTP/1 in classic and C1M modes.
 - **Source baseline:** `7e19b461c5772f4e46e7d58fb96827bbb954cf97`.
