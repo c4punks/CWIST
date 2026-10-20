@@ -1,10 +1,20 @@
 var searchData=
 [
-  ['valid_0',['valid',['../d5/d16/structcwist__multiport__t.html#a34b24bf2e2818b98a582709f1e02cdca',1,'cwist_multiport_t::valid'],['../dd/d71/structcwist__zod__result.html#a8802f4209c31c178a72e8fc9132bf145',1,'cwist_zod_result::valid']]],
-  ['value_1',['value',['../dc/d5b/structcwist__metric.html#a9c22145f1a219a0898035fe87b49ac2f',1,'cwist_metric::value'],['../df/d38/structcwist__test__client__kv.html#aa744bad96358b7481c28c0300672d9b9',1,'cwist_test_client_kv::value'],['../d0/d82/structcwist__test__client__cookie.html#a3e09f1890a2df2844d1f506273e26700',1,'cwist_test_client_cookie::value'],['../d7/db7/structcwist__config__bucket.html#ac09c20aa17c05eb4fe54e9f9eb86befe',1,'cwist_config_bucket::value'],['../d1/d8f/structcwist__query__bucket.html#aad4481720c4bd1fb461bf31d140fb1dd',1,'cwist_query_bucket::value'],['../d5/d79/structcwist__http2__static__header.html#a7f75bdfce006a49e876b073cb930621d',1,'cwist_http2_static_header::value'],['../d6/db0/structcwist__http2__header.html#a05e57ee99b3c69d09c82ef0fea54a83e',1,'cwist_http2_header::value'],['../d3/d72/structcwist__http__header__node.html#a2532d7724af5c67b4e4a2231599fc24f',1,'cwist_http_header_node::value']]],
-  ['varint_2',['varint',['../d0/de5/structcwist__pb__field.html#aa833098e8781504405593508cc509a2e',1,'cwist_pb_field']]],
-  ['verify_5fpeer_3',['verify_peer',['../d7/d79/structcwist__grpc__channel__options.html#a9299d848b53704f3f0532bd641ebd7dd',1,'cwist_grpc_channel_options::verify_peer'],['../da/d65/structcwist__grpc__client__options.html#aebdb7dcd0ef3aa8e1884084089fa3427',1,'cwist_grpc_client_options::verify_peer']]],
-  ['version_4',['version',['../da/d46/structcwist__migration__t.html#a0c6a71066cbcb8c37e8a7238b397019e',1,'cwist_migration_t::version'],['../dd/d68/structcwist__http__request.html#a9d21d4ffb5eb56a1e555898e2dd3da38',1,'cwist_http_request::version'],['../dd/d22/structcwist__http__response.html#a17b6aef7a3abc8194e7e422dca5c2cba',1,'cwist_http_response::version']]],
-  ['virgin_5',['virgin',['../db/d8a/structcwist__http__async__conn.html#a9da8ac048454f074c458a85300a857bf',1,'cwist_http_async_conn']]],
-  ['visibility_5ftimeout_5fms_6',['visibility_timeout_ms',['../da/da7/structcwist__job__queue__opts.html#a3b6d6c0cf3f5d9322f34258c2fabb6f5',1,'cwist_job_queue_opts']]]
+  ['keep_20alive_20처리_0',['Keep-alive 처리',['../db/ddd/md_docs_2ko_2api_2http.html#autotoc_md413',1,'']]],
+  ['keep_20alive_20handling_1',['Keep-alive handling',['../d2/d9e/md_docs_2api_2http.html#autotoc_md117',1,'']]],
+  ['keep_5falive_2',['keep_alive',['../dd/d68/structcwist__http__request.html#ad08e696b64981dd3886f3af37832a6e0',1,'cwist_http_request::keep_alive'],['../dd/d22/structcwist__http__response.html#a36505e8264c8426a8d0bcfb9444fab0a',1,'cwist_http_response::keep_alive']]],
+  ['keeps_20the_20session_20ticket_20key_20stek_20unchanged_3',['ADR-0002: TLS certificate hot reload keeps the session-ticket key (STEK) unchanged',['../d1/dd3/md_docs_2decisions_20002-tls-hot-reload-stek.html',1,'']]],
+  ['kek_4',['kek',['../dc/d2b/structcwist__db__crypt__ctx__t.html#a0b3dc3ba33e220c07834a5a71da6247d',1,'cwist_db_crypt_ctx_t']]],
+  ['kern_5flast_5fmono_5fns_5',['kern_last_mono_ns',['../db/d8a/structcwist__http__async__conn.html#aa9a37cba9773d5df7ed57fe803484e21',1,'cwist_http_async_conn']]],
+  ['kern_5fvalid_6',['kern_valid',['../db/d8a/structcwist__http__async__conn.html#a05cb78ef3a88e86995a786cd1b8451c1',1,'cwist_http_async_conn']]],
+  ['key_7',['key',['../dc/d13/structcwist__bind__error.html#a62159217efef059794a3b9acf9a510d7',1,'cwist_bind_error::key'],['../d3/d72/structcwist__http__header__node.html#a830998dc592d48d6c2f7174d04efaf16',1,'cwist_http_header_node::key'],['../d1/d8f/structcwist__query__bucket.html#a22c5ba17b3ad33c63b534f73f530ad9e',1,'cwist_query_bucket::key'],['../d7/db7/structcwist__config__bucket.html#a211f44794fa3fb8983c58c8a3bce1723',1,'cwist_config_bucket::key'],['../df/d38/structcwist__test__client__kv.html#a847e4a3b764bcba7a4607bfc57f32cb0',1,'cwist_test_client_kv::key']]],
+  ['key_20exchange_8',['7. PQC TLS (Post-Quantum Hybrid Key Exchange)',['../dd/d4c/md_docs_2tutorial_2cwist__tutorial.html#autotoc_md809',1,'']]],
+  ['key_20stek_20unchanged_9',['ADR-0002: TLS certificate hot reload keeps the session-ticket key (STEK) unchanged',['../d1/dd3/md_docs_2decisions_20002-tls-hot-reload-stek.html',1,'']]],
+  ['key_5fpath_10',['key_path',['../dc/da0/structcwist__app.html#a983c96102d6dd7b5e9229985ad0f17fa',1,'cwist_app']]],
+  ['kick_5fpost_11',['kick_post',['../d9/daa/structcwist__webrtc__conn.html#acf29d22321870243e4650e81f7733967',1,'cwist_webrtc_conn']]],
+  ['known_20limitations_12',['Known limitations',['../d6/d42/md_docs_2webserver-benchmark.html#autotoc_md892',1,'']]],
+  ['known_20performance_20caveat_13',['Known performance caveat',['../d9/dd1/md_docs_2GC.html#autotoc_md314',1,'']]],
+  ['known_20revision_14',['1. Build a known revision',['../db/de3/md_docs_2deployment_2wasmtime-appliance.html#autotoc_md282',1,'']]],
+  ['kq_5fwake_5fident_15',['KQ_WAKE_IDENT',['../dd/d2e/kqueue_8c.html#a63e26ec989f4bd26fb81e81fd85c5fbe',1,'kqueue.c']]],
+  ['kqueue_2ec_16',['kqueue.c',['../dd/d2e/kqueue_8c.html',1,'']]]
 ];

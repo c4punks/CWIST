@@ -1,3 +1,4 @@
+<!-- HTML header for doxygen 1.9.8-->
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "https://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml" lang="en-US">
 <head>
@@ -5,14 +6,32 @@
 <meta http-equiv="X-UA-Compatible" content="IE=11"/>
 <meta name="generator" content="Doxygen 1.9.8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
-<title>cwist: include/cwist/sstring.h File Reference</title>
+<title>include/cwist/sstring.h File Reference - CWIST High-Performance C Web Framework</title>
+<meta name="description" content="CWIST: High-performance C17 web framework and application server (HTTP/1.1, HTTP/2, HTTP/3, WebTransport, WebSocket, PQC TLS) powered by io_uring and libttak."/>
+<meta name="keywords" content="C web framework, C17, HTTP3, QUIC, io_uring, web server, actix alternative, high performance, REST API in C, C web server"/>
+<meta name="author" content="c4punks"/>
+<meta name="robots" content="index, follow"/>
+<!-- Open Graph / Facebook -->
+<meta property="og:type" content="website"/>
+<meta property="og:title" content="include/cwist/sstring.h File Reference - CWIST Modern C Web Framework"/>
+<meta property="og:description" content="High-performance C17 web framework & application server with zero-copy io_uring reactor, PQC TLS, and HTTP/3 support."/>
+<meta property="og:url" content="https://c4punks.github.io/CWIST/"/>
+<!-- Twitter -->
+<meta name="twitter:card" content="summary_large_image"/>
+<meta name="twitter:title" content="include/cwist/sstring.h File Reference - CWIST Modern C Web Framework"/>
+<meta name="twitter:description" content="High-performance C17 web framework & application server with zero-copy io_uring reactor, PQC TLS, and HTTP/3 support."/>
 <link href="../../tabs.css" rel="stylesheet" type="text/css"/>
 <script type="text/javascript" src="../../jquery.js"></script>
 <script type="text/javascript" src="../../dynsections.js"></script>
+<link href="../../navtree.css" rel="stylesheet" type="text/css"/>
+<script type="text/javascript" src="../../resize.js"></script>
+<script type="text/javascript" src="../../navtreedata.js"></script>
+<script type="text/javascript" src="../../navtree.js"></script>
 <link href="../../search/search.css" rel="stylesheet" type="text/css"/>
 <script type="text/javascript" src="../../search/searchdata.js"></script>
 <script type="text/javascript" src="../../search/search.js"></script>
 <link href="../../doxygen.css" rel="stylesheet" type="text/css" />
+<link href="../../doxygen-awesome.css" rel="stylesheet" type="text/css"/>
 </head>
 <body>
 <div id="top"><!-- do not remove this div, it is closed by doxygen! -->
@@ -47,6 +66,23 @@ $(function() {
 /* @license-end */
 </script>
 <div id="main-nav"></div>
+</div><!-- top -->
+<div id="side-nav" class="ui-resizable side-nav-resizable">
+  <div id="nav-tree">
+    <div id="nav-tree-contents">
+      <div id="nav-sync" class="sync"></div>
+    </div>
+  </div>
+  <div id="splitbar" style="-moz-user-select:none;" 
+       class="ui-resizable-handle">
+  </div>
+</div>
+<script type="text/javascript">
+/* @license magnet:?xt=urn:btih:d3d9a9a6595521f9666a5e94cc830dab83b65699&amp;dn=expat.txt MIT */
+$(document).ready(function(){initNavTree('d1/d34/sstring_8h.html','../../'); initResizable(); });
+/* @license-end */
+</script>
+<div id="doc-content">
 <!-- window showing the filter options -->
 <div id="MSearchSelectWindow"
      onmouseover="return searchBox.OnSearchSelectShow()"
@@ -68,11 +104,6 @@ $(function() {
 </div>
 </div>
 
-<div id="nav-path" class="navpath">
-  <ul>
-<li class="navelem"><a class="el" href="../../dir_d44c64559bbebec7f509842c48db8b23.html">include</a></li><li class="navelem"><a class="el" href="../../dir_2109d32ae718f50aecd8856dacda770b.html">cwist</a></li>  </ul>
-</div>
-</div><!-- top -->
 <div class="header">
   <div class="summary">
 <a href="#nested-classes">Classes</a> &#124;
@@ -319,7 +350,7 @@ Functions</h2></td></tr>
 <dl class="section return"><dt>Returns</dt><dd>ERR_SSTRING_OKAY on success, or ERR_SSTRING_NULL_STRING for NULL input. </dd></dl>
 <p>&lt; adopted buffer size is unknown beyond len + NUL</p>
 
-<p class="definition">Definition at line <a class="el" href="../../dd/d79/sstring_8c_source.html#l00149">149</a> of file <a class="el" href="../../dd/d79/sstring_8c_source.html">sstring.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../dd/d79/sstring_8c_source.html#l00151">151</a> of file <a class="el" href="../../dd/d79/sstring_8c_source.html">sstring.c</a>.</p>
 
 </div>
 </div>
@@ -386,7 +417,7 @@ Functions</h2></td></tr>
 <dl class="section note"><dt>Note</dt><dd>Growth reallocs <code>base</code> and preserves the offset, so data keeps viewing the same region. </dd></dl>
 <p>&lt; adopted region size is unknown beyond len + NUL</p>
 
-<p class="definition">Definition at line <a class="el" href="../../dd/d79/sstring_8c_source.html#l00181">181</a> of file <a class="el" href="../../dd/d79/sstring_8c_source.html">sstring.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../dd/d79/sstring_8c_source.html#l00183">183</a> of file <a class="el" href="../../dd/d79/sstring_8c_source.html">sstring.c</a>.</p>
 
 </div>
 </div>
@@ -427,9 +458,9 @@ Functions</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>ERR_SSTRING_OKAY on success, or an error payload describing the failure. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="../../dd/d79/sstring_8c_source.html#l00525">525</a> of file <a class="el" href="../../dd/d79/sstring_8c_source.html">sstring.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../dd/d79/sstring_8c_source.html#l00559">559</a> of file <a class="el" href="../../dd/d79/sstring_8c_source.html">sstring.c</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../dd/d79/sstring_8c_source.html#l00664">cwist_sstring_append_sstring()</a>.</p>
+<p class="reference">Referenced by <a class="el" href="../../dd/d79/sstring_8c_source.html#l00559">cwist_sstring_append()</a>, and <a class="el" href="../../dd/d79/sstring_8c_source.html#l00700">cwist_sstring_append_sstring()</a>.</p>
 
 </div>
 </div>
@@ -477,7 +508,7 @@ Functions</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>ERR_SSTRING_OKAY on success, or an error payload describing the failure. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="../../dd/d79/sstring_8c_source.html#l00210">210</a> of file <a class="el" href="../../dd/d79/sstring_8c_source.html">sstring.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../dd/d79/sstring_8c_source.html#l00212">212</a> of file <a class="el" href="../../dd/d79/sstring_8c_source.html">sstring.c</a>.</p>
 
 </div>
 </div>
@@ -519,9 +550,9 @@ Functions</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>ERR_SSTRING_OKAY on success, or an error describing invalid input. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="../../dd/d79/sstring_8c_source.html#l00664">664</a> of file <a class="el" href="../../dd/d79/sstring_8c_source.html">sstring.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../dd/d79/sstring_8c_source.html#l00700">700</a> of file <a class="el" href="../../dd/d79/sstring_8c_source.html">sstring.c</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../dd/d79/sstring_8c_source.html#l00766">cwist_sstring_create()</a>, and <a class="el" href="../../dd/d79/sstring_8c_source.html#l00248">cwist_sstring_init()</a>.</p>
+<p class="reference">Referenced by <a class="el" href="../../dd/d79/sstring_8c_source.html#l00802">cwist_sstring_create()</a>, and <a class="el" href="../../dd/d79/sstring_8c_source.html#l00250">cwist_sstring_init()</a>.</p>
 
 </div>
 </div>
@@ -562,9 +593,9 @@ Functions</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>ERR_SSTRING_OKAY on success, or an error payload describing the failure. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="../../dd/d79/sstring_8c_source.html#l00471">471</a> of file <a class="el" href="../../dd/d79/sstring_8c_source.html">sstring.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../dd/d79/sstring_8c_source.html#l00504">504</a> of file <a class="el" href="../../dd/d79/sstring_8c_source.html">sstring.c</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../dd/d79/sstring_8c_source.html#l00750">cwist_sstring_copy_sstring()</a>.</p>
+<p class="reference">Referenced by <a class="el" href="../../dd/d79/sstring_8c_source.html#l00504">cwist_sstring_assign()</a>, and <a class="el" href="../../dd/d79/sstring_8c_source.html#l00786">cwist_sstring_copy_sstring()</a>.</p>
 
 </div>
 </div>
@@ -612,7 +643,7 @@ Functions</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>ERR_SSTRING_OKAY on success, or an error payload describing the failure. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="../../dd/d79/sstring_8c_source.html#l00086">86</a> of file <a class="el" href="../../dd/d79/sstring_8c_source.html">sstring.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../dd/d79/sstring_8c_source.html#l00088">88</a> of file <a class="el" href="../../dd/d79/sstring_8c_source.html">sstring.c</a>.</p>
 
 </div>
 </div>
@@ -663,7 +694,7 @@ Functions</h2></td></tr>
 <dl class="section note"><dt>Note</dt><dd>The first mutating call detaches the contents into owned heap storage, so the borrowed source is never written through. </dd></dl>
 <p>&lt; borrowed capacity is unknown until detach</p>
 
-<p class="definition">Definition at line <a class="el" href="../../dd/d79/sstring_8c_source.html#l00120">120</a> of file <a class="el" href="../../dd/d79/sstring_8c_source.html">sstring.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../dd/d79/sstring_8c_source.html#l00122">122</a> of file <a class="el" href="../../dd/d79/sstring_8c_source.html">sstring.c</a>.</p>
 
 </div>
 </div>
@@ -711,9 +742,9 @@ Functions</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>ERR_SSTRING_OKAY on success, or an error describing the resize failure. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="../../dd/d79/sstring_8c_source.html#l00415">415</a> of file <a class="el" href="../../dd/d79/sstring_8c_source.html">sstring.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../dd/d79/sstring_8c_source.html#l00417">417</a> of file <a class="el" href="../../dd/d79/sstring_8c_source.html">sstring.c</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../dd/d79/sstring_8c_source.html#l00471">cwist_sstring_assign()</a>.</p>
+<p class="reference">Referenced by <a class="el" href="../../dd/d79/sstring_8c_source.html#l00504">cwist_sstring_assign()</a>.</p>
 
 </div>
 </div>
@@ -754,7 +785,7 @@ Functions</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>Negative, zero, or positive depending on lexical ordering. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="../../dd/d79/sstring_8c_source.html#l00816">816</a> of file <a class="el" href="../../dd/d79/sstring_8c_source.html">sstring.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../dd/d79/sstring_8c_source.html#l00852">852</a> of file <a class="el" href="../../dd/d79/sstring_8c_source.html">sstring.c</a>.</p>
 
 </div>
 </div>
@@ -796,9 +827,9 @@ Functions</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>Negative, zero, or positive depending on lexical ordering. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="../../dd/d79/sstring_8c_source.html#l00318">318</a> of file <a class="el" href="../../dd/d79/sstring_8c_source.html">sstring.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../dd/d79/sstring_8c_source.html#l00320">320</a> of file <a class="el" href="../../dd/d79/sstring_8c_source.html">sstring.c</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../dd/d79/sstring_8c_source.html#l00766">cwist_sstring_create()</a>, <a class="el" href="../../dd/d79/sstring_8c_source.html#l00248">cwist_sstring_init()</a>, and <a class="el" href="../../dd/d79/sstring_8c_source.html#l00276">cwist_sstring_init_escaped()</a>.</p>
+<p class="reference">Referenced by <a class="el" href="../../dd/d79/sstring_8c_source.html#l00802">cwist_sstring_create()</a>, <a class="el" href="../../dd/d79/sstring_8c_source.html#l00250">cwist_sstring_init()</a>, and <a class="el" href="../../dd/d79/sstring_8c_source.html#l00278">cwist_sstring_init_escaped()</a>.</p>
 
 </div>
 </div>
@@ -839,7 +870,7 @@ Functions</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>ERR_SSTRING_OKAY on success, or an error describing invalid input. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="../../dd/d79/sstring_8c_source.html#l00730">730</a> of file <a class="el" href="../../dd/d79/sstring_8c_source.html">sstring.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../dd/d79/sstring_8c_source.html#l00766">766</a> of file <a class="el" href="../../dd/d79/sstring_8c_source.html">sstring.c</a>.</p>
 
 </div>
 </div>
@@ -881,9 +912,9 @@ Functions</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>ERR_SSTRING_OKAY on success, or an error describing invalid input. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="../../dd/d79/sstring_8c_source.html#l00750">750</a> of file <a class="el" href="../../dd/d79/sstring_8c_source.html">sstring.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../dd/d79/sstring_8c_source.html#l00786">786</a> of file <a class="el" href="../../dd/d79/sstring_8c_source.html">sstring.c</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../dd/d79/sstring_8c_source.html#l00766">cwist_sstring_create()</a>, <a class="el" href="../../dd/d79/sstring_8c_source.html#l00248">cwist_sstring_init()</a>, and <a class="el" href="../../dd/d79/sstring_8c_source.html#l00276">cwist_sstring_init_escaped()</a>.</p>
+<p class="reference">Referenced by <a class="el" href="../../dd/d79/sstring_8c_source.html#l00802">cwist_sstring_create()</a>, <a class="el" href="../../dd/d79/sstring_8c_source.html#l00250">cwist_sstring_init()</a>, and <a class="el" href="../../dd/d79/sstring_8c_source.html#l00278">cwist_sstring_init_escaped()</a>.</p>
 
 </div>
 </div>
@@ -907,9 +938,9 @@ Functions</h2></td></tr>
 <p>Create a new sstring instance.</p>
 <dl class="section return"><dt>Returns</dt><dd>Newly allocated string object, or NULL on allocation failure. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="../../dd/d79/sstring_8c_source.html#l00766">766</a> of file <a class="el" href="../../dd/d79/sstring_8c_source.html">sstring.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../dd/d79/sstring_8c_source.html#l00802">802</a> of file <a class="el" href="../../dd/d79/sstring_8c_source.html">sstring.c</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../dd/d79/sstring_8c_source.html#l00827">cwist_sstring_substr()</a>.</p>
+<p class="reference">Referenced by <a class="el" href="../../dd/d79/sstring_8c_source.html#l00863">cwist_sstring_substr()</a>.</p>
 
 </div>
 </div>
@@ -938,9 +969,9 @@ Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="../../dd/d79/sstring_8c_source.html#l00787">787</a> of file <a class="el" href="../../dd/d79/sstring_8c_source.html">sstring.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../dd/d79/sstring_8c_source.html#l00823">823</a> of file <a class="el" href="../../dd/d79/sstring_8c_source.html">sstring.c</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../dd/d79/sstring_8c_source.html#l00827">cwist_sstring_substr()</a>.</p>
+<p class="reference">Referenced by <a class="el" href="../../dd/d79/sstring_8c_source.html#l00863">cwist_sstring_substr()</a>.</p>
 
 </div>
 </div>
@@ -971,9 +1002,9 @@ Functions</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>Stored size, or 0 when the string is NULL. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="../../dd/d79/sstring_8c_source.html#l00304">304</a> of file <a class="el" href="../../dd/d79/sstring_8c_source.html">sstring.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../dd/d79/sstring_8c_source.html#l00306">306</a> of file <a class="el" href="../../dd/d79/sstring_8c_source.html">sstring.c</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../dd/d79/sstring_8c_source.html#l00766">cwist_sstring_create()</a>, <a class="el" href="../../dd/d79/sstring_8c_source.html#l00248">cwist_sstring_init()</a>, and <a class="el" href="../../dd/d79/sstring_8c_source.html#l00276">cwist_sstring_init_escaped()</a>.</p>
+<p class="reference">Referenced by <a class="el" href="../../dd/d79/sstring_8c_source.html#l00802">cwist_sstring_create()</a>, <a class="el" href="../../dd/d79/sstring_8c_source.html#l00250">cwist_sstring_init()</a>, and <a class="el" href="../../dd/d79/sstring_8c_source.html#l00278">cwist_sstring_init_escaped()</a>.</p>
 
 </div>
 </div>
@@ -1003,7 +1034,7 @@ Functions</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>ERR_SSTRING_OKAY on success, or ERR_SSTRING_NULL_STRING for NULL input. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="../../dd/d79/sstring_8c_source.html#l00248">248</a> of file <a class="el" href="../../dd/d79/sstring_8c_source.html">sstring.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../dd/d79/sstring_8c_source.html#l00250">250</a> of file <a class="el" href="../../dd/d79/sstring_8c_source.html">sstring.c</a>.</p>
 
 </div>
 </div>
@@ -1033,9 +1064,9 @@ Functions</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>ERR_SSTRING_OKAY on success, or ERR_SSTRING_NULL_STRING for invalid input. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="../../dd/d79/sstring_8c_source.html#l00327">327</a> of file <a class="el" href="../../dd/d79/sstring_8c_source.html">sstring.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../dd/d79/sstring_8c_source.html#l00329">329</a> of file <a class="el" href="../../dd/d79/sstring_8c_source.html">sstring.c</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../dd/d79/sstring_8c_source.html#l00402">cwist_sstring_trim()</a>.</p>
+<p class="reference">Referenced by <a class="el" href="../../dd/d79/sstring_8c_source.html#l00404">cwist_sstring_trim()</a>.</p>
 
 </div>
 </div>
@@ -1065,9 +1096,9 @@ Functions</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>ERR_SSTRING_OKAY on success, or an error describing invalid input. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="../../dd/d79/sstring_8c_source.html#l00363">363</a> of file <a class="el" href="../../dd/d79/sstring_8c_source.html">sstring.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../dd/d79/sstring_8c_source.html#l00365">365</a> of file <a class="el" href="../../dd/d79/sstring_8c_source.html">sstring.c</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../dd/d79/sstring_8c_source.html#l00402">cwist_sstring_trim()</a>.</p>
+<p class="reference">Referenced by <a class="el" href="../../dd/d79/sstring_8c_source.html#l00404">cwist_sstring_trim()</a>.</p>
 
 </div>
 </div>
@@ -1115,7 +1146,7 @@ Functions</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>ERR_SSTRING_OKAY on success, or an error describing invalid bounds/input. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="../../dd/d79/sstring_8c_source.html#l00705">705</a> of file <a class="el" href="../../dd/d79/sstring_8c_source.html">sstring.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../dd/d79/sstring_8c_source.html#l00741">741</a> of file <a class="el" href="../../dd/d79/sstring_8c_source.html">sstring.c</a>.</p>
 
 </div>
 </div>
@@ -1163,7 +1194,7 @@ Functions</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>Newly allocated substring, or NULL when the range is invalid or OOM occurs. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="../../dd/d79/sstring_8c_source.html#l00827">827</a> of file <a class="el" href="../../dd/d79/sstring_8c_source.html">sstring.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../dd/d79/sstring_8c_source.html#l00863">863</a> of file <a class="el" href="../../dd/d79/sstring_8c_source.html">sstring.c</a>.</p>
 
 </div>
 </div>
@@ -1193,14 +1224,18 @@ Functions</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>ERR_SSTRING_OKAY on success, or the first trim error encountered. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="../../dd/d79/sstring_8c_source.html#l00402">402</a> of file <a class="el" href="../../dd/d79/sstring_8c_source.html">sstring.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../dd/d79/sstring_8c_source.html#l00404">404</a> of file <a class="el" href="../../dd/d79/sstring_8c_source.html">sstring.c</a>.</p>
 
 </div>
 </div>
 </div><!-- contents -->
+</div><!-- doc-content -->
 <!-- start footer part -->
-<hr class="footer"/><address class="footer"><small>
-Generated by&#160;<a href="https://www.doxygen.org/index.html"><img class="footer" src="../../doxygen.svg" width="104" height="31" alt="doxygen"/></a> 1.9.8
-</small></address>
+<div id="nav-path" class="navpath"><!-- id is needed for treeview function! -->
+  <ul>
+    <li class="navelem"><a class="el" href="../../dir_d44c64559bbebec7f509842c48db8b23.html">include</a></li><li class="navelem"><a class="el" href="../../dir_2109d32ae718f50aecd8856dacda770b.html">cwist</a></li><li class="navelem"><a class="el" href="../../d1/d34/sstring_8h.html">sstring.h</a></li>
+    <li class="footer">Generated by <a href="https://www.doxygen.org/index.html"><img class="footer" src="../../doxygen.svg" width="104" height="31" alt="doxygen"/></a> 1.9.8 </li>
+  </ul>
+</div>
 </body>
 </html>

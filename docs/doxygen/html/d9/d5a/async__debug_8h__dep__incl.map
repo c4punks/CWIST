@@ -1,0 +1,9 @@
+<map id="src/sys/io/async_debug.h" name="src/sys/io/async_debug.h">
+<area shape="rect" id="Node000001" title=" " alt="" coords="142,5,326,31"/>
+<area shape="rect" id="Node000002" href="$dd/d43/http_8c.html" title="Core HTTP request/response allocation, serialization, socket, and server&#45;loop helpers." alt="" coords="5,79,143,104"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="197,39,101,81,99,76,195,34"/>
+<area shape="rect" id="Node000003" href="$df/d7f/app_8c.html" title=" " alt="" coords="167,79,301,104"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="237,44,237,79,231,79,231,44"/>
+<area shape="rect" id="Node000004" href="$d3/d99/reactor_8c.html" title="Readiness multiplexer (io_uring / epoll / kqueue) driving CWIST&#39;s synchronous callback model." alt="" coords="325,79,468,104"/>
+<area shape="poly" id="edge3_Node000001_Node000004" title=" " alt="" coords="274,34,371,76,369,81,272,39"/>
+</map>

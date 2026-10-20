@@ -1,0 +1,9 @@
+<map id="src/sys/app/log_async.h" name="src/sys/app/log_async.h">
+<area shape="rect" id="Node000001" title="Internal hook from the log call sites into the async log writer." alt="" coords="191,5,367,31"/>
+<area shape="rect" id="Node000002" href="$df/dff/log__async_8c.html" title="Opt&#45;in background writer for log lines (cwist_log_async_start())." alt="" coords="5,79,180,104"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="238,38,124,81,122,76,236,33"/>
+<area shape="rect" id="Node000003" href="$d1/d22/logger_8c.html" title="logger.c interface." alt="" coords="204,79,355,104"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="282,44,282,79,277,79,277,44"/>
+<area shape="rect" id="Node000004" href="$d9/dc9/middleware_8c.html" title="Built&#45;in middleware implementations for request IDs, logging, rate limits, CORS, and JWT auth." alt="" coords="379,79,566,104"/>
+<area shape="poly" id="edge3_Node000001_Node000004" title=" " alt="" coords="324,33,442,76,440,81,322,38"/>
+</map>

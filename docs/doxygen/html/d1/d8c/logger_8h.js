@@ -8,6 +8,10 @@ var logger_8h =
       [ "CWIST_LOG_WARN", "d1/d8c/logger_8h.html#a5eab471d74c604fefaa9d315979b4f28ab6184775e2bdf8a23a8fac3984941710", null ],
       [ "CWIST_LOG_ERROR", "d1/d8c/logger_8h.html#a5eab471d74c604fefaa9d315979b4f28a8f6d479cf149502aaf4121c1dc854326", null ]
     ] ],
+    [ "cwist_log_async_active", "d1/d8c/logger_8h.html#ad3de8e13965c87f92fdcf8e284fb2d1c", null ],
+    [ "cwist_log_async_flush", "d1/d8c/logger_8h.html#a712c81a3202f8bc7bacd6585f7510c72", null ],
+    [ "cwist_log_async_start", "d1/d8c/logger_8h.html#a8a8af6f5b6c085b4da130e85ae1a86cb", null ],
+    [ "cwist_log_async_stop", "d1/d8c/logger_8h.html#ac553ffa36d0e379f04bfbbdd33957a21", null ],
     [ "cwist_logger_create", "d1/d8c/logger_8h.html#a0addd75c1758784e98136bfa174ead16", null ],
     [ "cwist_logger_debug", "d1/d8c/logger_8h.html#afacc05c0c9aa9cc7167e697e037dc8c9", null ],
     [ "cwist_logger_destroy", "d1/d8c/logger_8h.html#af8e75f74e366b81f796c1f8528b00ccf", null ],

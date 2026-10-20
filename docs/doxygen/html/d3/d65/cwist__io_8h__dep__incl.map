@@ -4,7 +4,7 @@
 <area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="3212,52,3072,96,3071,91,3210,47"/>
 <area shape="rect" id="Node000035" href="$d1/de4/io__queue_8c.html" title="Lock&#45;free job queue backing cwist_io_queue. Despite the old file name (io_uring.c),..." alt="" coords="3115,101,3272,126"/>
 <area shape="poly" id="edge41_Node000001_Node000035" title=" " alt="" coords="3256,57,3208,102,3204,98,3252,53"/>
-<area shape="rect" id="Node000036" href="$d9/d70/io__select_8c.html" title="Lock&#45;free job queue fallback used when no platform&#45;specific async backend is selected." alt="" coords="3297,101,3453,126"/>
+<area shape="rect" id="Node000036" href="$d9/d70/io__select_8c.html" title="Job queue fallback used when no platform&#45;specific async backend is selected." alt="" coords="3297,101,3453,126"/>
 <area shape="poly" id="edge42_Node000001_Node000036" title=" " alt="" coords="3316,53,3364,98,3360,102,3312,57"/>
 <area shape="rect" id="Node000037" href="$dd/d2e/kqueue_8c.html" title="BSD kqueue backend for the generic CWIST job queue interface." alt="" coords="3477,101,3624,126"/>
 <area shape="poly" id="edge43_Node000001_Node000037" title=" " alt="" coords="3356,47,3516,98,3514,103,3354,52"/>

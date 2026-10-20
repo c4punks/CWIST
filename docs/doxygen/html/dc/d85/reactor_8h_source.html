@@ -1,3 +1,4 @@
+<!-- HTML header for doxygen 1.9.8-->
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "https://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml" lang="en-US">
 <head>
@@ -5,14 +6,32 @@
 <meta http-equiv="X-UA-Compatible" content="IE=11"/>
 <meta name="generator" content="Doxygen 1.9.8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
-<title>cwist: include/cwist/sys/io/reactor.h Source File</title>
+<title>include/cwist/sys/io/reactor.h Source File - CWIST High-Performance C Web Framework</title>
+<meta name="description" content="CWIST: High-performance C17 web framework and application server (HTTP/1.1, HTTP/2, HTTP/3, WebTransport, WebSocket, PQC TLS) powered by io_uring and libttak."/>
+<meta name="keywords" content="C web framework, C17, HTTP3, QUIC, io_uring, web server, actix alternative, high performance, REST API in C, C web server"/>
+<meta name="author" content="c4punks"/>
+<meta name="robots" content="index, follow"/>
+<!-- Open Graph / Facebook -->
+<meta property="og:type" content="website"/>
+<meta property="og:title" content="include/cwist/sys/io/reactor.h Source File - CWIST Modern C Web Framework"/>
+<meta property="og:description" content="High-performance C17 web framework & application server with zero-copy io_uring reactor, PQC TLS, and HTTP/3 support."/>
+<meta property="og:url" content="https://c4punks.github.io/CWIST/"/>
+<!-- Twitter -->
+<meta name="twitter:card" content="summary_large_image"/>
+<meta name="twitter:title" content="include/cwist/sys/io/reactor.h Source File - CWIST Modern C Web Framework"/>
+<meta name="twitter:description" content="High-performance C17 web framework & application server with zero-copy io_uring reactor, PQC TLS, and HTTP/3 support."/>
 <link href="../../tabs.css" rel="stylesheet" type="text/css"/>
 <script type="text/javascript" src="../../jquery.js"></script>
 <script type="text/javascript" src="../../dynsections.js"></script>
+<link href="../../navtree.css" rel="stylesheet" type="text/css"/>
+<script type="text/javascript" src="../../resize.js"></script>
+<script type="text/javascript" src="../../navtreedata.js"></script>
+<script type="text/javascript" src="../../navtree.js"></script>
 <link href="../../search/search.css" rel="stylesheet" type="text/css"/>
 <script type="text/javascript" src="../../search/searchdata.js"></script>
 <script type="text/javascript" src="../../search/search.js"></script>
 <link href="../../doxygen.css" rel="stylesheet" type="text/css" />
+<link href="../../doxygen-awesome.css" rel="stylesheet" type="text/css"/>
 </head>
 <body>
 <div id="top"><!-- do not remove this div, it is closed by doxygen! -->
@@ -52,6 +71,23 @@ $(function() {
 $(document).ready(function() { init_codefold(1); });
 /* @license-end */
 </script>
+</div><!-- top -->
+<div id="side-nav" class="ui-resizable side-nav-resizable">
+  <div id="nav-tree">
+    <div id="nav-tree-contents">
+      <div id="nav-sync" class="sync"></div>
+    </div>
+  </div>
+  <div id="splitbar" style="-moz-user-select:none;" 
+       class="ui-resizable-handle">
+  </div>
+</div>
+<script type="text/javascript">
+/* @license magnet:?xt=urn:btih:d3d9a9a6595521f9666a5e94cc830dab83b65699&amp;dn=expat.txt MIT */
+$(document).ready(function(){initNavTree('dc/d85/reactor_8h_source.html','../../'); initResizable(); });
+/* @license-end */
+</script>
+<div id="doc-content">
 <!-- window showing the filter options -->
 <div id="MSearchSelectWindow"
      onmouseover="return searchBox.OnSearchSelectShow()"
@@ -73,11 +109,6 @@ $(document).ready(function() { init_codefold(1); });
 </div>
 </div>
 
-<div id="nav-path" class="navpath">
-  <ul>
-<li class="navelem"><a class="el" href="../../dir_d44c64559bbebec7f509842c48db8b23.html">include</a></li><li class="navelem"><a class="el" href="../../dir_2109d32ae718f50aecd8856dacda770b.html">cwist</a></li><li class="navelem"><a class="el" href="../../dir_25e5ef8a21ecb7bc8582f64237a0de4b.html">sys</a></li><li class="navelem"><a class="el" href="../../dir_55dc0eef07f14ac1b128d5e03c141bde.html">io</a></li>  </ul>
-</div>
-</div><!-- top -->
 <div class="header">
   <div class="headertitle"><div class="title">reactor.h</div></div>
 </div><!--header-->
@@ -167,21 +198,21 @@ $(document).ready(function() { init_codefold(1); });
 <div class="line"><a id="l00079" name="l00079"></a><span class="lineno">   79</span> </div>
 <div class="line"><a id="l00080" name="l00080"></a><span class="lineno">   80</span><span class="preprocessor">#endif</span></div>
 <div class="ttc" id="areactor_8h_html_a255365d0eb6a437c8aa4cae182f3ee0d"><div class="ttname"><a href="../../dc/d85/reactor_8h.html#a255365d0eb6a437c8aa4cae182f3ee0d">cwist_reactor_t</a></div><div class="ttdeci">struct cwist_reactor cwist_reactor_t</div><div class="ttdef"><b>Definition</b> <a href="../../dc/d85/reactor_8h_source.html#l00014">reactor.h:14</a></div></div>
-<div class="ttc" id="areactor_8h_html_a3672497adf44052b571dcedf9b67250d"><div class="ttname"><a href="../../dc/d85/reactor_8h.html#a3672497adf44052b571dcedf9b67250d">cwist_reactor_timer_arm</a></div><div class="ttdeci">bool cwist_reactor_timer_arm(cwist_reactor_t *reactor, cwist_reactor_timer_t *timer, uint64_t delay_us)</div><div class="ttdef"><b>Definition</b> <a href="../../d3/d99/reactor_8c_source.html#l00588">reactor.c:588</a></div></div>
-<div class="ttc" id="areactor_8h_html_a36ad427aab3be386e5dcc81cfc9f1103"><div class="ttname"><a href="../../dc/d85/reactor_8h.html#a36ad427aab3be386e5dcc81cfc9f1103">cwist_reactor_add</a></div><div class="ttdeci">bool cwist_reactor_add(cwist_reactor_t *reactor, int fd, cwist_reactor_cb_t cb, const void *payload, size_t payload_size)</div><div class="ttdef"><b>Definition</b> <a href="../../d3/d99/reactor_8c_source.html#l00999">reactor.c:999</a></div></div>
-<div class="ttc" id="areactor_8h_html_a4233b1b17f49e6bd82c718d75dfbe010"><div class="ttname"><a href="../../dc/d85/reactor_8h.html#a4233b1b17f49e6bd82c718d75dfbe010">cwist_reactor_timer_init</a></div><div class="ttdeci">void cwist_reactor_timer_init(cwist_reactor_timer_t *timer, void(*cb)(void *ctx), void *ctx)</div><div class="ttdef"><b>Definition</b> <a href="../../d3/d99/reactor_8c_source.html#l00580">reactor.c:580</a></div></div>
-<div class="ttc" id="areactor_8h_html_a48813b43eecb4b6630de99cb0006f8df"><div class="ttname"><a href="../../dc/d85/reactor_8h.html#a48813b43eecb4b6630de99cb0006f8df">cwist_reactor_del</a></div><div class="ttdeci">bool cwist_reactor_del(cwist_reactor_t *reactor, int fd)</div><div class="ttdef"><b>Definition</b> <a href="../../d3/d99/reactor_8c_source.html#l01051">reactor.c:1051</a></div></div>
+<div class="ttc" id="areactor_8h_html_a3672497adf44052b571dcedf9b67250d"><div class="ttname"><a href="../../dc/d85/reactor_8h.html#a3672497adf44052b571dcedf9b67250d">cwist_reactor_timer_arm</a></div><div class="ttdeci">bool cwist_reactor_timer_arm(cwist_reactor_t *reactor, cwist_reactor_timer_t *timer, uint64_t delay_us)</div><div class="ttdef"><b>Definition</b> <a href="../../d3/d99/reactor_8c_source.html#l00937">reactor.c:937</a></div></div>
+<div class="ttc" id="areactor_8h_html_a36ad427aab3be386e5dcc81cfc9f1103"><div class="ttname"><a href="../../dc/d85/reactor_8h.html#a36ad427aab3be386e5dcc81cfc9f1103">cwist_reactor_add</a></div><div class="ttdeci">bool cwist_reactor_add(cwist_reactor_t *reactor, int fd, cwist_reactor_cb_t cb, const void *payload, size_t payload_size)</div><div class="ttdef"><b>Definition</b> <a href="../../d3/d99/reactor_8c_source.html#l01357">reactor.c:1357</a></div></div>
+<div class="ttc" id="areactor_8h_html_a4233b1b17f49e6bd82c718d75dfbe010"><div class="ttname"><a href="../../dc/d85/reactor_8h.html#a4233b1b17f49e6bd82c718d75dfbe010">cwist_reactor_timer_init</a></div><div class="ttdeci">void cwist_reactor_timer_init(cwist_reactor_timer_t *timer, void(*cb)(void *ctx), void *ctx)</div><div class="ttdef"><b>Definition</b> <a href="../../d3/d99/reactor_8c_source.html#l00929">reactor.c:929</a></div></div>
+<div class="ttc" id="areactor_8h_html_a48813b43eecb4b6630de99cb0006f8df"><div class="ttname"><a href="../../dc/d85/reactor_8h.html#a48813b43eecb4b6630de99cb0006f8df">cwist_reactor_del</a></div><div class="ttdeci">bool cwist_reactor_del(cwist_reactor_t *reactor, int fd)</div><div class="ttdef"><b>Definition</b> <a href="../../d3/d99/reactor_8c_source.html#l01410">reactor.c:1410</a></div></div>
 <div class="ttc" id="areactor_8h_html_a49a1587e6cc611da57554c043cf68f95"><div class="ttname"><a href="../../dc/d85/reactor_8h.html#a49a1587e6cc611da57554c043cf68f95">cwist_reactor_post_t</a></div><div class="ttdeci">struct cwist_reactor_post cwist_reactor_post_t</div></div>
 <div class="ttc" id="areactor_8h_html_a55f44fe46a653a795375be3b803ba4ad"><div class="ttname"><a href="../../dc/d85/reactor_8h.html#a55f44fe46a653a795375be3b803ba4ad">cwist_reactor_cb_t</a></div><div class="ttdeci">void(* cwist_reactor_cb_t)(int fd, void *ctx)</div><div class="ttdef"><b>Definition</b> <a href="../../dc/d85/reactor_8h_source.html#l00012">reactor.h:12</a></div></div>
 <div class="ttc" id="areactor_8h_html_a6e1227da6b13c449c76dbe283d1f0be2"><div class="ttname"><a href="../../dc/d85/reactor_8h.html#a6e1227da6b13c449c76dbe283d1f0be2">cwist_reactor_timer_t</a></div><div class="ttdeci">struct cwist_reactor_timer cwist_reactor_timer_t</div></div>
-<div class="ttc" id="areactor_8h_html_a7596f973cbd936b017e527e3ddde5808"><div class="ttname"><a href="../../dc/d85/reactor_8h.html#a7596f973cbd936b017e527e3ddde5808">cwist_reactor_destroy</a></div><div class="ttdeci">void cwist_reactor_destroy(cwist_reactor_t *reactor)</div><div class="ttdef"><b>Definition</b> <a href="../../d3/d99/reactor_8c_source.html#l00767">reactor.c:767</a></div></div>
-<div class="ttc" id="areactor_8h_html_a9df66b83bfa0785186eeb5d2f3f81b2a"><div class="ttname"><a href="../../dc/d85/reactor_8h.html#a9df66b83bfa0785186eeb5d2f3f81b2a">cwist_reactor_stop</a></div><div class="ttdeci">void cwist_reactor_stop(cwist_reactor_t *reactor)</div><div class="ttdef"><b>Definition</b> <a href="../../d3/d99/reactor_8c_source.html#l01407">reactor.c:1407</a></div></div>
-<div class="ttc" id="areactor_8h_html_a9ff56888792460aa778107dde4e91bbe"><div class="ttname"><a href="../../dc/d85/reactor_8h.html#a9ff56888792460aa778107dde4e91bbe">cwist_reactor_create</a></div><div class="ttdeci">cwist_reactor_t * cwist_reactor_create(void)</div><div class="ttdef"><b>Definition</b> <a href="../../d3/d99/reactor_8c_source.html#l00657">reactor.c:657</a></div></div>
-<div class="ttc" id="areactor_8h_html_ac07bb3ce2393c0588f863eb97c4d6f5c"><div class="ttname"><a href="../../dc/d85/reactor_8h.html#ac07bb3ce2393c0588f863eb97c4d6f5c">cwist_reactor_run</a></div><div class="ttdeci">void cwist_reactor_run(cwist_reactor_t *reactor)</div><div class="ttdef"><b>Definition</b> <a href="../../d3/d99/reactor_8c_source.html#l01163">reactor.c:1163</a></div></div>
-<div class="ttc" id="areactor_8h_html_ac41bb6897a1bfa0bf507bc50183f2311"><div class="ttname"><a href="../../dc/d85/reactor_8h.html#ac41bb6897a1bfa0bf507bc50183f2311">cwist_reactor_mod</a></div><div class="ttdeci">bool cwist_reactor_mod(cwist_reactor_t *reactor, int fd, cwist_reactor_cb_t cb, const void *payload, size_t payload_size)</div><div class="ttdef"><b>Definition</b> <a href="../../d3/d99/reactor_8c_source.html#l01009">reactor.c:1009</a></div></div>
-<div class="ttc" id="areactor_8h_html_acb0608bc68f4668fdbacfc78606e55d4"><div class="ttname"><a href="../../dc/d85/reactor_8h.html#acb0608bc68f4668fdbacfc78606e55d4">cwist_reactor_timer_armed</a></div><div class="ttdeci">bool cwist_reactor_timer_armed(const cwist_reactor_timer_t *timer)</div><div class="ttdef"><b>Definition</b> <a href="../../d3/d99/reactor_8c_source.html#l00612">reactor.c:612</a></div></div>
-<div class="ttc" id="areactor_8h_html_ace9d400afac10f7afd20113fc4aba894"><div class="ttname"><a href="../../dc/d85/reactor_8h.html#ace9d400afac10f7afd20113fc4aba894">cwist_reactor_timer_cancel</a></div><div class="ttdeci">void cwist_reactor_timer_cancel(cwist_reactor_t *reactor, cwist_reactor_timer_t *timer)</div><div class="ttdef"><b>Definition</b> <a href="../../d3/d99/reactor_8c_source.html#l00607">reactor.c:607</a></div></div>
-<div class="ttc" id="areactor_8h_html_aff14d90bc843e993808c68cf41c3cad2"><div class="ttname"><a href="../../dc/d85/reactor_8h.html#aff14d90bc843e993808c68cf41c3cad2">cwist_reactor_add_out</a></div><div class="ttdeci">bool cwist_reactor_add_out(cwist_reactor_t *reactor, int fd, cwist_reactor_cb_t cb, const void *payload, size_t payload_size)</div><div class="ttdef"><b>Definition</b> <a href="../../d3/d99/reactor_8c_source.html#l01004">reactor.c:1004</a></div></div>
+<div class="ttc" id="areactor_8h_html_a7596f973cbd936b017e527e3ddde5808"><div class="ttname"><a href="../../dc/d85/reactor_8h.html#a7596f973cbd936b017e527e3ddde5808">cwist_reactor_destroy</a></div><div class="ttdeci">void cwist_reactor_destroy(cwist_reactor_t *reactor)</div><div class="ttdef"><b>Definition</b> <a href="../../d3/d99/reactor_8c_source.html#l01116">reactor.c:1116</a></div></div>
+<div class="ttc" id="areactor_8h_html_a9df66b83bfa0785186eeb5d2f3f81b2a"><div class="ttname"><a href="../../dc/d85/reactor_8h.html#a9df66b83bfa0785186eeb5d2f3f81b2a">cwist_reactor_stop</a></div><div class="ttdeci">void cwist_reactor_stop(cwist_reactor_t *reactor)</div><div class="ttdef"><b>Definition</b> <a href="../../d3/d99/reactor_8c_source.html#l01904">reactor.c:1904</a></div></div>
+<div class="ttc" id="areactor_8h_html_a9ff56888792460aa778107dde4e91bbe"><div class="ttname"><a href="../../dc/d85/reactor_8h.html#a9ff56888792460aa778107dde4e91bbe">cwist_reactor_create</a></div><div class="ttdeci">cwist_reactor_t * cwist_reactor_create(void)</div><div class="ttdef"><b>Definition</b> <a href="../../d3/d99/reactor_8c_source.html#l01006">reactor.c:1006</a></div></div>
+<div class="ttc" id="areactor_8h_html_ac07bb3ce2393c0588f863eb97c4d6f5c"><div class="ttname"><a href="../../dc/d85/reactor_8h.html#ac07bb3ce2393c0588f863eb97c4d6f5c">cwist_reactor_run</a></div><div class="ttdeci">void cwist_reactor_run(cwist_reactor_t *reactor)</div><div class="ttdef"><b>Definition</b> <a href="../../d3/d99/reactor_8c_source.html#l01579">reactor.c:1579</a></div></div>
+<div class="ttc" id="areactor_8h_html_ac41bb6897a1bfa0bf507bc50183f2311"><div class="ttname"><a href="../../dc/d85/reactor_8h.html#ac41bb6897a1bfa0bf507bc50183f2311">cwist_reactor_mod</a></div><div class="ttdeci">bool cwist_reactor_mod(cwist_reactor_t *reactor, int fd, cwist_reactor_cb_t cb, const void *payload, size_t payload_size)</div><div class="ttdef"><b>Definition</b> <a href="../../d3/d99/reactor_8c_source.html#l01367">reactor.c:1367</a></div></div>
+<div class="ttc" id="areactor_8h_html_acb0608bc68f4668fdbacfc78606e55d4"><div class="ttname"><a href="../../dc/d85/reactor_8h.html#acb0608bc68f4668fdbacfc78606e55d4">cwist_reactor_timer_armed</a></div><div class="ttdeci">bool cwist_reactor_timer_armed(const cwist_reactor_timer_t *timer)</div><div class="ttdef"><b>Definition</b> <a href="../../d3/d99/reactor_8c_source.html#l00961">reactor.c:961</a></div></div>
+<div class="ttc" id="areactor_8h_html_ace9d400afac10f7afd20113fc4aba894"><div class="ttname"><a href="../../dc/d85/reactor_8h.html#ace9d400afac10f7afd20113fc4aba894">cwist_reactor_timer_cancel</a></div><div class="ttdeci">void cwist_reactor_timer_cancel(cwist_reactor_t *reactor, cwist_reactor_timer_t *timer)</div><div class="ttdef"><b>Definition</b> <a href="../../d3/d99/reactor_8c_source.html#l00956">reactor.c:956</a></div></div>
+<div class="ttc" id="areactor_8h_html_aff14d90bc843e993808c68cf41c3cad2"><div class="ttname"><a href="../../dc/d85/reactor_8h.html#aff14d90bc843e993808c68cf41c3cad2">cwist_reactor_add_out</a></div><div class="ttdeci">bool cwist_reactor_add_out(cwist_reactor_t *reactor, int fd, cwist_reactor_cb_t cb, const void *payload, size_t payload_size)</div><div class="ttdef"><b>Definition</b> <a href="../../d3/d99/reactor_8c_source.html#l01362">reactor.c:1362</a></div></div>
 <div class="ttc" id="astructcwist__reactor__post_html"><div class="ttname"><a href="../../d2/dcc/structcwist__reactor__post.html">cwist_reactor_post</a></div><div class="ttdef"><b>Definition</b> <a href="../../dc/d85/reactor_8h_source.html#l00046">reactor.h:46</a></div></div>
 <div class="ttc" id="astructcwist__reactor__post_html_a2567534d9e25ace33a12c2fea271be88"><div class="ttname"><a href="../../d2/dcc/structcwist__reactor__post.html#a2567534d9e25ace33a12c2fea271be88">cwist_reactor_post::next</a></div><div class="ttdeci">struct cwist_reactor_post * next</div><div class="ttdef"><b>Definition</b> <a href="../../dc/d85/reactor_8h_source.html#l00047">reactor.h:47</a></div></div>
 <div class="ttc" id="astructcwist__reactor__post_html_a272d4492105ccf4400156e18ff7b653e"><div class="ttname"><a href="../../d2/dcc/structcwist__reactor__post.html#a272d4492105ccf4400156e18ff7b653e">cwist_reactor_post::ctx</a></div><div class="ttdeci">void * ctx</div><div class="ttdef"><b>Definition</b> <a href="../../dc/d85/reactor_8h_source.html#l00049">reactor.h:49</a></div></div>
@@ -192,9 +223,13 @@ $(document).ready(function() { init_codefold(1); });
 <div class="ttc" id="astructcwist__reactor__timer_html_a96fe135187d9c869c5327e29571f5418"><div class="ttname"><a href="../../df/d51/structcwist__reactor__timer.html#a96fe135187d9c869c5327e29571f5418">cwist_reactor_timer::heap_slot</a></div><div class="ttdeci">uint32_t heap_slot</div><div class="ttdef"><b>Definition</b> <a href="../../dc/d85/reactor_8h_source.html#l00064">reactor.h:64</a></div></div>
 <div class="ttc" id="astructcwist__reactor__timer_html_ab4d9b324d69d47ae5b24305029417600"><div class="ttname"><a href="../../df/d51/structcwist__reactor__timer.html#ab4d9b324d69d47ae5b24305029417600">cwist_reactor_timer::cb</a></div><div class="ttdeci">void(* cb)(void *ctx)</div><div class="ttdef"><b>Definition</b> <a href="../../dc/d85/reactor_8h_source.html#l00065">reactor.h:65</a></div></div>
 </div><!-- fragment --></div><!-- contents -->
+</div><!-- doc-content -->
 <!-- start footer part -->
-<hr class="footer"/><address class="footer"><small>
-Generated by&#160;<a href="https://www.doxygen.org/index.html"><img class="footer" src="../../doxygen.svg" width="104" height="31" alt="doxygen"/></a> 1.9.8
-</small></address>
+<div id="nav-path" class="navpath"><!-- id is needed for treeview function! -->
+  <ul>
+    <li class="navelem"><a class="el" href="../../dir_d44c64559bbebec7f509842c48db8b23.html">include</a></li><li class="navelem"><a class="el" href="../../dir_2109d32ae718f50aecd8856dacda770b.html">cwist</a></li><li class="navelem"><a class="el" href="../../dir_25e5ef8a21ecb7bc8582f64237a0de4b.html">sys</a></li><li class="navelem"><a class="el" href="../../dir_55dc0eef07f14ac1b128d5e03c141bde.html">io</a></li><li class="navelem"><a class="el" href="../../dc/d85/reactor_8h.html">reactor.h</a></li>
+    <li class="footer">Generated by <a href="https://www.doxygen.org/index.html"><img class="footer" src="../../doxygen.svg" width="104" height="31" alt="doxygen"/></a> 1.9.8 </li>
+  </ul>
+</div>
 </body>
 </html>

@@ -1,3 +1,4 @@
+<!-- HTML header for doxygen 1.9.8-->
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "https://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml" lang="en-US">
 <head>
@@ -5,14 +6,32 @@
 <meta http-equiv="X-UA-Compatible" content="IE=11"/>
 <meta name="generator" content="Doxygen 1.9.8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
-<title>cwist: src/net/http/simd_parser.h Source File</title>
+<title>src/net/http/simd_parser.h Source File - CWIST High-Performance C Web Framework</title>
+<meta name="description" content="CWIST: High-performance C17 web framework and application server (HTTP/1.1, HTTP/2, HTTP/3, WebTransport, WebSocket, PQC TLS) powered by io_uring and libttak."/>
+<meta name="keywords" content="C web framework, C17, HTTP3, QUIC, io_uring, web server, actix alternative, high performance, REST API in C, C web server"/>
+<meta name="author" content="c4punks"/>
+<meta name="robots" content="index, follow"/>
+<!-- Open Graph / Facebook -->
+<meta property="og:type" content="website"/>
+<meta property="og:title" content="src/net/http/simd_parser.h Source File - CWIST Modern C Web Framework"/>
+<meta property="og:description" content="High-performance C17 web framework & application server with zero-copy io_uring reactor, PQC TLS, and HTTP/3 support."/>
+<meta property="og:url" content="https://c4punks.github.io/CWIST/"/>
+<!-- Twitter -->
+<meta name="twitter:card" content="summary_large_image"/>
+<meta name="twitter:title" content="src/net/http/simd_parser.h Source File - CWIST Modern C Web Framework"/>
+<meta name="twitter:description" content="High-performance C17 web framework & application server with zero-copy io_uring reactor, PQC TLS, and HTTP/3 support."/>
 <link href="../../tabs.css" rel="stylesheet" type="text/css"/>
 <script type="text/javascript" src="../../jquery.js"></script>
 <script type="text/javascript" src="../../dynsections.js"></script>
+<link href="../../navtree.css" rel="stylesheet" type="text/css"/>
+<script type="text/javascript" src="../../resize.js"></script>
+<script type="text/javascript" src="../../navtreedata.js"></script>
+<script type="text/javascript" src="../../navtree.js"></script>
 <link href="../../search/search.css" rel="stylesheet" type="text/css"/>
 <script type="text/javascript" src="../../search/searchdata.js"></script>
 <script type="text/javascript" src="../../search/search.js"></script>
 <link href="../../doxygen.css" rel="stylesheet" type="text/css" />
+<link href="../../doxygen-awesome.css" rel="stylesheet" type="text/css"/>
 </head>
 <body>
 <div id="top"><!-- do not remove this div, it is closed by doxygen! -->
@@ -52,6 +71,23 @@ $(function() {
 $(document).ready(function() { init_codefold(1); });
 /* @license-end */
 </script>
+</div><!-- top -->
+<div id="side-nav" class="ui-resizable side-nav-resizable">
+  <div id="nav-tree">
+    <div id="nav-tree-contents">
+      <div id="nav-sync" class="sync"></div>
+    </div>
+  </div>
+  <div id="splitbar" style="-moz-user-select:none;" 
+       class="ui-resizable-handle">
+  </div>
+</div>
+<script type="text/javascript">
+/* @license magnet:?xt=urn:btih:d3d9a9a6595521f9666a5e94cc830dab83b65699&amp;dn=expat.txt MIT */
+$(document).ready(function(){initNavTree('d9/d9b/simd__parser_8h_source.html','../../'); initResizable(); });
+/* @license-end */
+</script>
+<div id="doc-content">
 <!-- window showing the filter options -->
 <div id="MSearchSelectWindow"
      onmouseover="return searchBox.OnSearchSelectShow()"
@@ -73,11 +109,6 @@ $(document).ready(function() { init_codefold(1); });
 </div>
 </div>
 
-<div id="nav-path" class="navpath">
-  <ul>
-<li class="navelem"><a class="el" href="../../dir_68267d1309a1af8e8297ef4c3efbcdba.html">src</a></li><li class="navelem"><a class="el" href="../../dir_c72b25b75abe208498b36a3e44a3726c.html">net</a></li><li class="navelem"><a class="el" href="../../dir_dd2d28fd72df0d33d2116010ecf4f11d.html">http</a></li>  </ul>
-</div>
-</div><!-- top -->
 <div class="header">
   <div class="headertitle"><div class="title">simd_parser.h</div></div>
 </div><!--header-->
@@ -271,27 +302,170 @@ $(document).ready(function() { init_codefold(1); });
 <div class="line"><a id="l00206" name="l00206"></a><span class="lineno">  206</span><span class="keyword">static</span> <span class="keyword">inline</span> <span class="keyword">const</span> <span class="keywordtype">char</span> *cwist_simd_find_crlfcrlf(<span class="keyword">const</span> <span class="keywordtype">char</span> *buf, <span class="keywordtype">size_t</span> len) {</div>
 <div class="line"><a id="l00207" name="l00207"></a><span class="lineno">  207</span>    <span class="keywordflow">if</span> (!buf || len &lt; 4) <span class="keywordflow">return</span> NULL;</div>
 <div class="line"><a id="l00208" name="l00208"></a><span class="lineno">  208</span> </div>
-<div class="line"><a id="l00209" name="l00209"></a><span class="lineno">  209</span>    <span class="keyword">const</span> <span class="keywordtype">char</span> *curr = buf;</div>
-<div class="line"><a id="l00210" name="l00210"></a><span class="lineno">  210</span>    <span class="keywordtype">size_t</span> remaining = len;</div>
-<div class="line"><a id="l00211" name="l00211"></a><span class="lineno">  211</span> </div>
-<div class="line"><a id="l00212" name="l00212"></a><span class="lineno">  212</span>    <span class="keywordflow">while</span> (remaining &gt;= 4) {</div>
-<div class="line"><a id="l00213" name="l00213"></a><span class="lineno">  213</span>        <span class="keyword">const</span> <span class="keywordtype">char</span> *cr = cwist_simd_find_char(curr, remaining, <span class="charliteral">&#39;\r&#39;</span>);</div>
-<div class="line"><a id="l00214" name="l00214"></a><span class="lineno">  214</span>        <span class="keywordflow">if</span> (!cr) <span class="keywordflow">return</span> NULL;</div>
-<div class="line"><a id="l00215" name="l00215"></a><span class="lineno">  215</span>        <span class="keywordflow">if</span> (cr + 3 &lt; buf + len &amp;&amp; cr[1] == <span class="charliteral">&#39;\n&#39;</span> &amp;&amp; cr[2] == <span class="charliteral">&#39;\r&#39;</span> &amp;&amp; cr[3] == <span class="charliteral">&#39;\n&#39;</span>) {</div>
-<div class="line"><a id="l00216" name="l00216"></a><span class="lineno">  216</span>            <span class="keywordflow">return</span> cr;</div>
-<div class="line"><a id="l00217" name="l00217"></a><span class="lineno">  217</span>        }</div>
-<div class="line"><a id="l00218" name="l00218"></a><span class="lineno">  218</span>        <span class="keywordtype">size_t</span> consumed = (size_t)(cr + 1 - curr);</div>
-<div class="line"><a id="l00219" name="l00219"></a><span class="lineno">  219</span>        curr += consumed;</div>
-<div class="line"><a id="l00220" name="l00220"></a><span class="lineno">  220</span>        remaining -= consumed;</div>
-<div class="line"><a id="l00221" name="l00221"></a><span class="lineno">  221</span>    }</div>
-<div class="line"><a id="l00222" name="l00222"></a><span class="lineno">  222</span>    <span class="keywordflow">return</span> NULL;</div>
-<div class="line"><a id="l00223" name="l00223"></a><span class="lineno">  223</span>}</div>
-<div class="line"><a id="l00224" name="l00224"></a><span class="lineno">  224</span> </div>
-<div class="line"><a id="l00225" name="l00225"></a><span class="lineno">  225</span><span class="preprocessor">#endif </span><span class="comment">/* __CWIST_SIMD_PARSER_H__ */</span><span class="preprocessor"></span></div>
+<div class="line"><a id="l00209" name="l00209"></a><span class="lineno">  209</span>    <span class="keywordtype">size_t</span> i = 0;</div>
+<div class="line"><a id="l00210" name="l00210"></a><span class="lineno">  210</span> </div>
+<div class="line"><a id="l00211" name="l00211"></a><span class="lineno">  211</span>    <span class="comment">/* Paired matcher: a &quot;\r\n\r\n&quot; occurrence at offset j requires</span></div>
+<div class="line"><a id="l00212" name="l00212"></a><span class="lineno">  212</span><span class="comment">     *   buf[j] == &#39;\r&#39; &amp;&amp; buf[j+1] == &#39;\n&#39; &amp;&amp; buf[j+2] == &#39;\r&#39; &amp;&amp; buf[j+3] == &#39;\n&#39;</span></div>
+<div class="line"><a id="l00213" name="l00213"></a><span class="lineno">  213</span><span class="comment">     * Compare four unaligned loads (at j, j+1, j+2, j+3) and AND the four</span></div>
+<div class="line"><a id="l00214" name="l00214"></a><span class="lineno">  214</span><span class="comment">     * equality masks, so every offset is tested in a single pass with no</span></div>
+<div class="line"><a id="l00215" name="l00215"></a><span class="lineno">  215</span><span class="comment">     * rescan on bare-&#39;\r&#39; data. The unaligned load idiom matches</span></div>
+<div class="line"><a id="l00216" name="l00216"></a><span class="lineno">  216</span><span class="comment">     * cwist_simd_find_char above; the scalar tail below keeps the</span></div>
+<div class="line"><a id="l00217" name="l00217"></a><span class="lineno">  217</span><span class="comment">     * memchr/SWAR structure and covers the vector-safety margin and the</span></div>
+<div class="line"><a id="l00218" name="l00218"></a><span class="lineno">  218</span><span class="comment">     * non-vector architectures. */</span></div>
+<div class="line"><a id="l00219" name="l00219"></a><span class="lineno">  219</span><span class="preprocessor">#if defined(CWIST_SIMD_AVX2)</span></div>
+<div class="line"><a id="l00220" name="l00220"></a><span class="lineno">  220</span>    <span class="keyword">const</span> __m256i cr_v = _mm256_set1_epi8(<span class="charliteral">&#39;\r&#39;</span>);</div>
+<div class="line"><a id="l00221" name="l00221"></a><span class="lineno">  221</span>    <span class="keyword">const</span> __m256i lf_v = _mm256_set1_epi8(<span class="charliteral">&#39;\n&#39;</span>);</div>
+<div class="line"><a id="l00222" name="l00222"></a><span class="lineno">  222</span>    <span class="keywordflow">while</span> (i + 32 + 3 &lt;= len) {</div>
+<div class="line"><a id="l00223" name="l00223"></a><span class="lineno">  223</span>        __m256i v0 = _mm256_loadu_si256((<span class="keyword">const</span> __m256i *)(<span class="keyword">const</span> <span class="keywordtype">void</span> *)(buf + i));</div>
+<div class="line"><a id="l00224" name="l00224"></a><span class="lineno">  224</span>        __m256i v1 = _mm256_loadu_si256((<span class="keyword">const</span> __m256i *)(<span class="keyword">const</span> <span class="keywordtype">void</span> *)(buf + i + 1));</div>
+<div class="line"><a id="l00225" name="l00225"></a><span class="lineno">  225</span>        __m256i v2 = _mm256_loadu_si256((<span class="keyword">const</span> __m256i *)(<span class="keyword">const</span> <span class="keywordtype">void</span> *)(buf + i + 2));</div>
+<div class="line"><a id="l00226" name="l00226"></a><span class="lineno">  226</span>        __m256i v3 = _mm256_loadu_si256((<span class="keyword">const</span> __m256i *)(<span class="keyword">const</span> <span class="keywordtype">void</span> *)(buf + i + 3));</div>
+<div class="line"><a id="l00227" name="l00227"></a><span class="lineno">  227</span>        __m256i m = _mm256_and_si256(_mm256_cmpeq_epi8(v0, cr_v), _mm256_cmpeq_epi8(v1, lf_v));</div>
+<div class="line"><a id="l00228" name="l00228"></a><span class="lineno">  228</span>        m = _mm256_and_si256(m, _mm256_cmpeq_epi8(v2, cr_v));</div>
+<div class="line"><a id="l00229" name="l00229"></a><span class="lineno">  229</span>        m = _mm256_and_si256(m, _mm256_cmpeq_epi8(v3, lf_v));</div>
+<div class="line"><a id="l00230" name="l00230"></a><span class="lineno">  230</span>        uint32_t mask = (uint32_t)_mm256_movemask_epi8(m);</div>
+<div class="line"><a id="l00231" name="l00231"></a><span class="lineno">  231</span>        <span class="keywordflow">if</span> (mask != 0) {</div>
+<div class="line"><a id="l00232" name="l00232"></a><span class="lineno">  232</span>            <span class="keywordflow">return</span> buf + i + __builtin_ctz(mask);</div>
+<div class="line"><a id="l00233" name="l00233"></a><span class="lineno">  233</span>        }</div>
+<div class="line"><a id="l00234" name="l00234"></a><span class="lineno">  234</span>        i += 32;</div>
+<div class="line"><a id="l00235" name="l00235"></a><span class="lineno">  235</span>    }</div>
+<div class="line"><a id="l00236" name="l00236"></a><span class="lineno">  236</span><span class="preprocessor">#elif defined(CWIST_SIMD_SSE2)</span></div>
+<div class="line"><a id="l00237" name="l00237"></a><span class="lineno">  237</span>    <span class="keyword">const</span> __m128i cr_v = _mm_set1_epi8(<span class="charliteral">&#39;\r&#39;</span>);</div>
+<div class="line"><a id="l00238" name="l00238"></a><span class="lineno">  238</span>    <span class="keyword">const</span> __m128i lf_v = _mm_set1_epi8(<span class="charliteral">&#39;\n&#39;</span>);</div>
+<div class="line"><a id="l00239" name="l00239"></a><span class="lineno">  239</span>    <span class="keywordflow">while</span> (i + 16 + 3 &lt;= len) {</div>
+<div class="line"><a id="l00240" name="l00240"></a><span class="lineno">  240</span>        __m128i v0 = _mm_loadu_si128((<span class="keyword">const</span> __m128i *)(<span class="keyword">const</span> <span class="keywordtype">void</span> *)(buf + i));</div>
+<div class="line"><a id="l00241" name="l00241"></a><span class="lineno">  241</span>        __m128i v1 = _mm_loadu_si128((<span class="keyword">const</span> __m128i *)(<span class="keyword">const</span> <span class="keywordtype">void</span> *)(buf + i + 1));</div>
+<div class="line"><a id="l00242" name="l00242"></a><span class="lineno">  242</span>        __m128i v2 = _mm_loadu_si128((<span class="keyword">const</span> __m128i *)(<span class="keyword">const</span> <span class="keywordtype">void</span> *)(buf + i + 2));</div>
+<div class="line"><a id="l00243" name="l00243"></a><span class="lineno">  243</span>        __m128i v3 = _mm_loadu_si128((<span class="keyword">const</span> __m128i *)(<span class="keyword">const</span> <span class="keywordtype">void</span> *)(buf + i + 3));</div>
+<div class="line"><a id="l00244" name="l00244"></a><span class="lineno">  244</span>        __m128i m = _mm_and_si128(_mm_and_si128(_mm_cmpeq_epi8(v0, cr_v), _mm_cmpeq_epi8(v1, lf_v)),</div>
+<div class="line"><a id="l00245" name="l00245"></a><span class="lineno">  245</span>                                  _mm_and_si128(_mm_cmpeq_epi8(v2, cr_v), _mm_cmpeq_epi8(v3, lf_v)));</div>
+<div class="line"><a id="l00246" name="l00246"></a><span class="lineno">  246</span>        uint32_t mask = (uint32_t)_mm_movemask_epi8(m);</div>
+<div class="line"><a id="l00247" name="l00247"></a><span class="lineno">  247</span>        <span class="keywordflow">if</span> (mask != 0) {</div>
+<div class="line"><a id="l00248" name="l00248"></a><span class="lineno">  248</span>            <span class="keywordflow">return</span> buf + i + __builtin_ctz(mask);</div>
+<div class="line"><a id="l00249" name="l00249"></a><span class="lineno">  249</span>        }</div>
+<div class="line"><a id="l00250" name="l00250"></a><span class="lineno">  250</span>        i += 16;</div>
+<div class="line"><a id="l00251" name="l00251"></a><span class="lineno">  251</span>    }</div>
+<div class="line"><a id="l00252" name="l00252"></a><span class="lineno">  252</span><span class="preprocessor">#elif defined(CWIST_SIMD_NEON)</span></div>
+<div class="line"><a id="l00253" name="l00253"></a><span class="lineno">  253</span>    <span class="keyword">const</span> uint8x16_t cr_v = vdupq_n_u8((uint8_t)<span class="charliteral">&#39;\r&#39;</span>);</div>
+<div class="line"><a id="l00254" name="l00254"></a><span class="lineno">  254</span>    <span class="keyword">const</span> uint8x16_t lf_v = vdupq_n_u8((uint8_t)<span class="charliteral">&#39;\n&#39;</span>);</div>
+<div class="line"><a id="l00255" name="l00255"></a><span class="lineno">  255</span>    <span class="keywordflow">while</span> (i + 16 + 3 &lt;= len) {</div>
+<div class="line"><a id="l00256" name="l00256"></a><span class="lineno">  256</span>        uint8x16_t v0 = vld1q_u8((<span class="keyword">const</span> uint8_t *)(buf + i));</div>
+<div class="line"><a id="l00257" name="l00257"></a><span class="lineno">  257</span>        uint8x16_t v1 = vld1q_u8((<span class="keyword">const</span> uint8_t *)(buf + i + 1));</div>
+<div class="line"><a id="l00258" name="l00258"></a><span class="lineno">  258</span>        uint8x16_t v2 = vld1q_u8((<span class="keyword">const</span> uint8_t *)(buf + i + 2));</div>
+<div class="line"><a id="l00259" name="l00259"></a><span class="lineno">  259</span>        uint8x16_t v3 = vld1q_u8((<span class="keyword">const</span> uint8_t *)(buf + i + 3));</div>
+<div class="line"><a id="l00260" name="l00260"></a><span class="lineno">  260</span>        uint8x16_t m = vandq_u8(vandq_u8(vceqq_u8(v0, cr_v), vceqq_u8(v1, lf_v)),</div>
+<div class="line"><a id="l00261" name="l00261"></a><span class="lineno">  261</span>                                vandq_u8(vceqq_u8(v2, cr_v), vceqq_u8(v3, lf_v)));</div>
+<div class="line"><a id="l00262" name="l00262"></a><span class="lineno">  262</span><span class="preprocessor">#if defined(__aarch64__)</span></div>
+<div class="line"><a id="l00263" name="l00263"></a><span class="lineno">  263</span>        <span class="keywordflow">if</span> (vmaxvq_u8(m) != 0) {</div>
+<div class="line"><a id="l00264" name="l00264"></a><span class="lineno">  264</span>            <span class="keywordflow">for</span> (<span class="keywordtype">size_t</span> k = 0; k &lt; 16; k++) {</div>
+<div class="line"><a id="l00265" name="l00265"></a><span class="lineno">  265</span>                <span class="keywordflow">if</span> (buf[i + k] == <span class="charliteral">&#39;\r&#39;</span> &amp;&amp; buf[i + k + 1] == <span class="charliteral">&#39;\n&#39;</span> &amp;&amp; buf[i + k + 2] == <span class="charliteral">&#39;\r&#39;</span> &amp;&amp;</div>
+<div class="line"><a id="l00266" name="l00266"></a><span class="lineno">  266</span>                    buf[i + k + 3] == <span class="charliteral">&#39;\n&#39;</span>)</div>
+<div class="line"><a id="l00267" name="l00267"></a><span class="lineno">  267</span>                    <span class="keywordflow">return</span> buf + i + k;</div>
+<div class="line"><a id="l00268" name="l00268"></a><span class="lineno">  268</span>            }</div>
+<div class="line"><a id="l00269" name="l00269"></a><span class="lineno">  269</span>        }</div>
+<div class="line"><a id="l00270" name="l00270"></a><span class="lineno">  270</span><span class="preprocessor">#else</span></div>
+<div class="line"><a id="l00271" name="l00271"></a><span class="lineno">  271</span>        uint64x2_t m64 = vreinterpretq_u64_u8(m);</div>
+<div class="line"><a id="l00272" name="l00272"></a><span class="lineno">  272</span>        <span class="keywordflow">if</span> (vgetq_lane_u64(m64, 0) != 0 || vgetq_lane_u64(m64, 1) != 0) {</div>
+<div class="line"><a id="l00273" name="l00273"></a><span class="lineno">  273</span>            <span class="keywordflow">for</span> (<span class="keywordtype">size_t</span> k = 0; k &lt; 16; k++) {</div>
+<div class="line"><a id="l00274" name="l00274"></a><span class="lineno">  274</span>                <span class="keywordflow">if</span> (buf[i + k] == <span class="charliteral">&#39;\r&#39;</span> &amp;&amp; buf[i + k + 1] == <span class="charliteral">&#39;\n&#39;</span> &amp;&amp; buf[i + k + 2] == <span class="charliteral">&#39;\r&#39;</span> &amp;&amp;</div>
+<div class="line"><a id="l00275" name="l00275"></a><span class="lineno">  275</span>                    buf[i + k + 3] == <span class="charliteral">&#39;\n&#39;</span>)</div>
+<div class="line"><a id="l00276" name="l00276"></a><span class="lineno">  276</span>                    <span class="keywordflow">return</span> buf + i + k;</div>
+<div class="line"><a id="l00277" name="l00277"></a><span class="lineno">  277</span>            }</div>
+<div class="line"><a id="l00278" name="l00278"></a><span class="lineno">  278</span>        }</div>
+<div class="line"><a id="l00279" name="l00279"></a><span class="lineno">  279</span><span class="preprocessor">#endif</span></div>
+<div class="line"><a id="l00280" name="l00280"></a><span class="lineno">  280</span>        i += 16;</div>
+<div class="line"><a id="l00281" name="l00281"></a><span class="lineno">  281</span>    }</div>
+<div class="line"><a id="l00282" name="l00282"></a><span class="lineno">  282</span><span class="preprocessor">#elif defined(CWIST_SIMD_RISCV_VECTOR)</span></div>
+<div class="line"><a id="l00283" name="l00283"></a><span class="lineno">  283</span>    <span class="keywordflow">while</span> (len - i &gt;= 4) {</div>
+<div class="line"><a id="l00284" name="l00284"></a><span class="lineno">  284</span>        <span class="keywordtype">size_t</span> vl = __riscv_vsetvl_e8m1(len - i - 3);</div>
+<div class="line"><a id="l00285" name="l00285"></a><span class="lineno">  285</span>        <span class="keywordflow">if</span> (vl == 0) <span class="keywordflow">break</span>;</div>
+<div class="line"><a id="l00286" name="l00286"></a><span class="lineno">  286</span>        vuint8m1_t v0 = __riscv_vle8_v_u8m1((<span class="keyword">const</span> uint8_t *)(buf + i), vl);</div>
+<div class="line"><a id="l00287" name="l00287"></a><span class="lineno">  287</span>        vuint8m1_t v1 = __riscv_vle8_v_u8m1((<span class="keyword">const</span> uint8_t *)(buf + i + 1), vl);</div>
+<div class="line"><a id="l00288" name="l00288"></a><span class="lineno">  288</span>        vuint8m1_t v2 = __riscv_vle8_v_u8m1((<span class="keyword">const</span> uint8_t *)(buf + i + 2), vl);</div>
+<div class="line"><a id="l00289" name="l00289"></a><span class="lineno">  289</span>        vuint8m1_t v3 = __riscv_vle8_v_u8m1((<span class="keyword">const</span> uint8_t *)(buf + i + 3), vl);</div>
+<div class="line"><a id="l00290" name="l00290"></a><span class="lineno">  290</span>        vbool8_t m = __riscv_vmand_mm(__riscv_vmseq_vx_u8m1_b8(v0, (uint8_t)<span class="charliteral">&#39;\r&#39;</span>, vl),</div>
+<div class="line"><a id="l00291" name="l00291"></a><span class="lineno">  291</span>                                      __riscv_vmseq_vx_u8m1_b8(v1, (uint8_t)<span class="charliteral">&#39;\n&#39;</span>, vl), vl);</div>
+<div class="line"><a id="l00292" name="l00292"></a><span class="lineno">  292</span>        m = __riscv_vmand_mm(m, __riscv_vmseq_vx_u8m1_b8(v2, (uint8_t)<span class="charliteral">&#39;\r&#39;</span>, vl), vl);</div>
+<div class="line"><a id="l00293" name="l00293"></a><span class="lineno">  293</span>        m = __riscv_vmand_mm(m, __riscv_vmseq_vx_u8m1_b8(v3, (uint8_t)<span class="charliteral">&#39;\n&#39;</span>, vl), vl);</div>
+<div class="line"><a id="l00294" name="l00294"></a><span class="lineno">  294</span>        <span class="keywordtype">long</span> first = __riscv_vfirst_m_b8(m, vl);</div>
+<div class="line"><a id="l00295" name="l00295"></a><span class="lineno">  295</span>        <span class="keywordflow">if</span> (first &gt;= 0) {</div>
+<div class="line"><a id="l00296" name="l00296"></a><span class="lineno">  296</span>            <span class="keywordflow">return</span> buf + i + first;</div>
+<div class="line"><a id="l00297" name="l00297"></a><span class="lineno">  297</span>        }</div>
+<div class="line"><a id="l00298" name="l00298"></a><span class="lineno">  298</span>        i += vl;</div>
+<div class="line"><a id="l00299" name="l00299"></a><span class="lineno">  299</span>    }</div>
+<div class="line"><a id="l00300" name="l00300"></a><span class="lineno">  300</span><span class="preprocessor">#elif defined(CWIST_SIMD_PPC_ALTIVEC)</span></div>
+<div class="line"><a id="l00301" name="l00301"></a><span class="lineno">  301</span>    <span class="keyword">const</span> __vector <span class="keywordtype">unsigned</span> <span class="keywordtype">char</span> cr_v = vec_splats((<span class="keywordtype">unsigned</span> <span class="keywordtype">char</span>)<span class="charliteral">&#39;\r&#39;</span>);</div>
+<div class="line"><a id="l00302" name="l00302"></a><span class="lineno">  302</span>    <span class="keyword">const</span> __vector <span class="keywordtype">unsigned</span> <span class="keywordtype">char</span> lf_v = vec_splats((<span class="keywordtype">unsigned</span> <span class="keywordtype">char</span>)<span class="charliteral">&#39;\n&#39;</span>);</div>
+<div class="line"><a id="l00303" name="l00303"></a><span class="lineno">  303</span>    <span class="keyword">const</span> __vector <span class="keywordtype">unsigned</span> <span class="keywordtype">char</span> zero_v = vec_splats((<span class="keywordtype">unsigned</span> <span class="keywordtype">char</span>)0);</div>
+<div class="line"><a id="l00304" name="l00304"></a><span class="lineno">  304</span>    <span class="keywordflow">while</span> (i + 16 + 3 &lt;= len) {</div>
+<div class="line"><a id="l00305" name="l00305"></a><span class="lineno">  305</span>        __vector <span class="keywordtype">unsigned</span> <span class="keywordtype">char</span> v0, v1, v2, v3;</div>
+<div class="line"><a id="l00306" name="l00306"></a><span class="lineno">  306</span>        memcpy(&amp;v0, buf + i, 16);</div>
+<div class="line"><a id="l00307" name="l00307"></a><span class="lineno">  307</span>        memcpy(&amp;v1, buf + i + 1, 16);</div>
+<div class="line"><a id="l00308" name="l00308"></a><span class="lineno">  308</span>        memcpy(&amp;v2, buf + i + 2, 16);</div>
+<div class="line"><a id="l00309" name="l00309"></a><span class="lineno">  309</span>        memcpy(&amp;v3, buf + i + 3, 16);</div>
+<div class="line"><a id="l00310" name="l00310"></a><span class="lineno">  310</span>        __vector <span class="keywordtype">unsigned</span> <span class="keywordtype">char</span> m = vec_and(vec_and(vec_cmpeq(v0, cr_v), vec_cmpeq(v1, lf_v)),</div>
+<div class="line"><a id="l00311" name="l00311"></a><span class="lineno">  311</span>                                           vec_and(vec_cmpeq(v2, cr_v), vec_cmpeq(v3, lf_v)));</div>
+<div class="line"><a id="l00312" name="l00312"></a><span class="lineno">  312</span>        <span class="keywordflow">if</span> (!vec_all_eq(m, zero_v)) {</div>
+<div class="line"><a id="l00313" name="l00313"></a><span class="lineno">  313</span>            <span class="keywordflow">for</span> (<span class="keywordtype">size_t</span> k = 0; k &lt; 16; k++) {</div>
+<div class="line"><a id="l00314" name="l00314"></a><span class="lineno">  314</span>                <span class="keywordflow">if</span> (buf[i + k] == <span class="charliteral">&#39;\r&#39;</span> &amp;&amp; buf[i + k + 1] == <span class="charliteral">&#39;\n&#39;</span> &amp;&amp; buf[i + k + 2] == <span class="charliteral">&#39;\r&#39;</span> &amp;&amp;</div>
+<div class="line"><a id="l00315" name="l00315"></a><span class="lineno">  315</span>                    buf[i + k + 3] == <span class="charliteral">&#39;\n&#39;</span>)</div>
+<div class="line"><a id="l00316" name="l00316"></a><span class="lineno">  316</span>                    <span class="keywordflow">return</span> buf + i + k;</div>
+<div class="line"><a id="l00317" name="l00317"></a><span class="lineno">  317</span>            }</div>
+<div class="line"><a id="l00318" name="l00318"></a><span class="lineno">  318</span>        }</div>
+<div class="line"><a id="l00319" name="l00319"></a><span class="lineno">  319</span>        i += 16;</div>
+<div class="line"><a id="l00320" name="l00320"></a><span class="lineno">  320</span>    }</div>
+<div class="line"><a id="l00321" name="l00321"></a><span class="lineno">  321</span><span class="preprocessor">#elif defined(CWIST_SIMD_MIPS_MSA)</span></div>
+<div class="line"><a id="l00322" name="l00322"></a><span class="lineno">  322</span>    v16u8 cr_v = (v16u8)__builtin_msa_fill_b((<span class="keywordtype">unsigned</span> <span class="keywordtype">char</span>)<span class="charliteral">&#39;\r&#39;</span>);</div>
+<div class="line"><a id="l00323" name="l00323"></a><span class="lineno">  323</span>    v16u8 lf_v = (v16u8)__builtin_msa_fill_b((<span class="keywordtype">unsigned</span> <span class="keywordtype">char</span>)<span class="charliteral">&#39;\n&#39;</span>);</div>
+<div class="line"><a id="l00324" name="l00324"></a><span class="lineno">  324</span>    <span class="keywordflow">while</span> (i + 16 + 3 &lt;= len) {</div>
+<div class="line"><a id="l00325" name="l00325"></a><span class="lineno">  325</span>        v16u8 v0, v1, v2, v3;</div>
+<div class="line"><a id="l00326" name="l00326"></a><span class="lineno">  326</span>        memcpy(&amp;v0, buf + i, 16);</div>
+<div class="line"><a id="l00327" name="l00327"></a><span class="lineno">  327</span>        memcpy(&amp;v1, buf + i + 1, 16);</div>
+<div class="line"><a id="l00328" name="l00328"></a><span class="lineno">  328</span>        memcpy(&amp;v2, buf + i + 2, 16);</div>
+<div class="line"><a id="l00329" name="l00329"></a><span class="lineno">  329</span>        memcpy(&amp;v3, buf + i + 3, 16);</div>
+<div class="line"><a id="l00330" name="l00330"></a><span class="lineno">  330</span>        v16u8 m = (v16u8)__builtin_msa_and_v(</div>
+<div class="line"><a id="l00331" name="l00331"></a><span class="lineno">  331</span>            __builtin_msa_and_v(__builtin_msa_ceq_b((v16i8)v0, (v16i8)cr_v),</div>
+<div class="line"><a id="l00332" name="l00332"></a><span class="lineno">  332</span>                                __builtin_msa_ceq_b((v16i8)v1, (v16i8)lf_v)),</div>
+<div class="line"><a id="l00333" name="l00333"></a><span class="lineno">  333</span>            __builtin_msa_and_v(__builtin_msa_ceq_b((v16i8)v2, (v16i8)cr_v),</div>
+<div class="line"><a id="l00334" name="l00334"></a><span class="lineno">  334</span>                                __builtin_msa_ceq_b((v16i8)v3, (v16i8)lf_v)));</div>
+<div class="line"><a id="l00335" name="l00335"></a><span class="lineno">  335</span>        <span class="keywordflow">if</span> (__builtin_msa_bnz_b(m)) {</div>
+<div class="line"><a id="l00336" name="l00336"></a><span class="lineno">  336</span>            <span class="keywordflow">for</span> (<span class="keywordtype">size_t</span> k = 0; k &lt; 16; k++) {</div>
+<div class="line"><a id="l00337" name="l00337"></a><span class="lineno">  337</span>                <span class="keywordflow">if</span> (buf[i + k] == <span class="charliteral">&#39;\r&#39;</span> &amp;&amp; buf[i + k + 1] == <span class="charliteral">&#39;\n&#39;</span> &amp;&amp; buf[i + k + 2] == <span class="charliteral">&#39;\r&#39;</span> &amp;&amp;</div>
+<div class="line"><a id="l00338" name="l00338"></a><span class="lineno">  338</span>                    buf[i + k + 3] == <span class="charliteral">&#39;\n&#39;</span>)</div>
+<div class="line"><a id="l00339" name="l00339"></a><span class="lineno">  339</span>                    <span class="keywordflow">return</span> buf + i + k;</div>
+<div class="line"><a id="l00340" name="l00340"></a><span class="lineno">  340</span>            }</div>
+<div class="line"><a id="l00341" name="l00341"></a><span class="lineno">  341</span>        }</div>
+<div class="line"><a id="l00342" name="l00342"></a><span class="lineno">  342</span>        i += 16;</div>
+<div class="line"><a id="l00343" name="l00343"></a><span class="lineno">  343</span>    }</div>
+<div class="line"><a id="l00344" name="l00344"></a><span class="lineno">  344</span><span class="preprocessor">#endif</span></div>
+<div class="line"><a id="l00345" name="l00345"></a><span class="lineno">  345</span> </div>
+<div class="line"><a id="l00346" name="l00346"></a><span class="lineno">  346</span>    <span class="comment">/* Scalar tail: memchr-driven (with the 64-bit SWAR loop inside</span></div>
+<div class="line"><a id="l00347" name="l00347"></a><span class="lineno">  347</span><span class="comment">     * cwist_simd_find_char) over the remaining bytes. */</span></div>
+<div class="line"><a id="l00348" name="l00348"></a><span class="lineno">  348</span>    <span class="keyword">const</span> <span class="keywordtype">char</span> *curr = buf + i;</div>
+<div class="line"><a id="l00349" name="l00349"></a><span class="lineno">  349</span>    <span class="keywordtype">size_t</span> remaining = len - i;</div>
+<div class="line"><a id="l00350" name="l00350"></a><span class="lineno">  350</span> </div>
+<div class="line"><a id="l00351" name="l00351"></a><span class="lineno">  351</span>    <span class="keywordflow">while</span> (remaining &gt;= 4) {</div>
+<div class="line"><a id="l00352" name="l00352"></a><span class="lineno">  352</span>        <span class="keyword">const</span> <span class="keywordtype">char</span> *cr = cwist_simd_find_char(curr, remaining, <span class="charliteral">&#39;\r&#39;</span>);</div>
+<div class="line"><a id="l00353" name="l00353"></a><span class="lineno">  353</span>        <span class="keywordflow">if</span> (!cr) <span class="keywordflow">return</span> NULL;</div>
+<div class="line"><a id="l00354" name="l00354"></a><span class="lineno">  354</span>        <span class="keywordflow">if</span> (cr + 3 &lt; buf + len &amp;&amp; cr[1] == <span class="charliteral">&#39;\n&#39;</span> &amp;&amp; cr[2] == <span class="charliteral">&#39;\r&#39;</span> &amp;&amp; cr[3] == <span class="charliteral">&#39;\n&#39;</span>) {</div>
+<div class="line"><a id="l00355" name="l00355"></a><span class="lineno">  355</span>            <span class="keywordflow">return</span> cr;</div>
+<div class="line"><a id="l00356" name="l00356"></a><span class="lineno">  356</span>        }</div>
+<div class="line"><a id="l00357" name="l00357"></a><span class="lineno">  357</span>        <span class="keywordtype">size_t</span> consumed = (size_t)(cr + 1 - curr);</div>
+<div class="line"><a id="l00358" name="l00358"></a><span class="lineno">  358</span>        curr += consumed;</div>
+<div class="line"><a id="l00359" name="l00359"></a><span class="lineno">  359</span>        remaining -= consumed;</div>
+<div class="line"><a id="l00360" name="l00360"></a><span class="lineno">  360</span>    }</div>
+<div class="line"><a id="l00361" name="l00361"></a><span class="lineno">  361</span>    <span class="keywordflow">return</span> NULL;</div>
+<div class="line"><a id="l00362" name="l00362"></a><span class="lineno">  362</span>}</div>
+<div class="line"><a id="l00363" name="l00363"></a><span class="lineno">  363</span> </div>
+<div class="line"><a id="l00364" name="l00364"></a><span class="lineno">  364</span><span class="preprocessor">#endif </span><span class="comment">/* __CWIST_SIMD_PARSER_H__ */</span><span class="preprocessor"></span></div>
 </div><!-- fragment --></div><!-- contents -->
+</div><!-- doc-content -->
 <!-- start footer part -->
-<hr class="footer"/><address class="footer"><small>
-Generated by&#160;<a href="https://www.doxygen.org/index.html"><img class="footer" src="../../doxygen.svg" width="104" height="31" alt="doxygen"/></a> 1.9.8
-</small></address>
+<div id="nav-path" class="navpath"><!-- id is needed for treeview function! -->
+  <ul>
+    <li class="navelem"><a class="el" href="../../dir_68267d1309a1af8e8297ef4c3efbcdba.html">src</a></li><li class="navelem"><a class="el" href="../../dir_c72b25b75abe208498b36a3e44a3726c.html">net</a></li><li class="navelem"><a class="el" href="../../dir_dd2d28fd72df0d33d2116010ecf4f11d.html">http</a></li><li class="navelem"><a class="el" href="../../d9/d9b/simd__parser_8h.html">simd_parser.h</a></li>
+    <li class="footer">Generated by <a href="https://www.doxygen.org/index.html"><img class="footer" src="../../doxygen.svg" width="104" height="31" alt="doxygen"/></a> 1.9.8 </li>
+  </ul>
+</div>
 </body>
 </html>

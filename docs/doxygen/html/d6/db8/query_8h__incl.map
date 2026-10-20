@@ -1,7 +1,9 @@
 <map id="include/cwist/query.h" name="include/cwist/query.h">
-<area shape="rect" id="Node000001" title="query.h interface." alt="" coords="9,5,168,31"/>
-<area shape="rect" id="Node000002" title=" " alt="" coords="5,79,76,104"/>
-<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="83,33,58,69,54,66,79,30"/>
-<area shape="rect" id="Node000003" title=" " alt="" coords="101,79,175,104"/>
-<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="99,29,124,66,120,69,95,33"/>
+<area shape="rect" id="Node000001" title="Compatibility header: forwards to &lt;cwist/net/http/query.h&gt;." alt="" coords="9,5,168,31"/>
+<area shape="rect" id="Node000002" href="$d1/d7a/net_2http_2query_8h.html" title="Query string parser and map." alt="" coords="7,79,170,104"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="91,31,91,65,86,65,86,31"/>
+<area shape="rect" id="Node000003" title=" " alt="" coords="5,152,76,177"/>
+<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="83,106,58,142,54,139,79,103"/>
+<area shape="rect" id="Node000004" title=" " alt="" coords="101,152,175,177"/>
+<area shape="poly" id="edge3_Node000002_Node000004" title=" " alt="" coords="99,103,124,139,120,142,95,106"/>
 </map>

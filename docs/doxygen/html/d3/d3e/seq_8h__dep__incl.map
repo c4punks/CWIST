@@ -10,7 +10,7 @@
 <area shape="poly" id="edge5_Node000001_Node000006" title=" " alt="" coords="536,53,581,98,578,102,533,57"/>
 <area shape="rect" id="Node000007" href="$d4/de6/websocket_8c.html" title="WebSocket handshake and frame transport helpers for CWIST handlers." alt="" coords="688,101,911,126"/>
 <area shape="poly" id="edge6_Node000001_Node000007" title=" " alt="" coords="584,47,761,98,760,103,583,52"/>
-<area shape="rect" id="Node000008" href="$d8/d80/jwt_8c.html" title="HS256 JWT signing, verification, and decoded&#45;claims access helpers." alt="" coords="935,101,1091,126"/>
+<area shape="rect" id="Node000008" href="$d8/d80/jwt_8c.html" title="HS256/ES256/EdDSA JWT signing, verification, and decoded&#45;claims access helpers." alt="" coords="935,101,1091,126"/>
 <area shape="poly" id="edge7_Node000001_Node000008" title=" " alt="" coords="590,36,924,91,961,98,960,103,923,96,589,41"/>
 <area shape="rect" id="Node000003" href="$d0/d3c/seq__auth_8c.html" title=" " alt="" coords="5,181,180,207"/>
 <area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="95,147,95,181,90,181,90,147"/>

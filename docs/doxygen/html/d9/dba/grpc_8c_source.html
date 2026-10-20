@@ -1,3 +1,4 @@
+<!-- HTML header for doxygen 1.9.8-->
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "https://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml" lang="en-US">
 <head>
@@ -5,14 +6,32 @@
 <meta http-equiv="X-UA-Compatible" content="IE=11"/>
 <meta name="generator" content="Doxygen 1.9.8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
-<title>cwist: src/net/grpc/grpc.c Source File</title>
+<title>src/net/grpc/grpc.c Source File - CWIST High-Performance C Web Framework</title>
+<meta name="description" content="CWIST: High-performance C17 web framework and application server (HTTP/1.1, HTTP/2, HTTP/3, WebTransport, WebSocket, PQC TLS) powered by io_uring and libttak."/>
+<meta name="keywords" content="C web framework, C17, HTTP3, QUIC, io_uring, web server, actix alternative, high performance, REST API in C, C web server"/>
+<meta name="author" content="c4punks"/>
+<meta name="robots" content="index, follow"/>
+<!-- Open Graph / Facebook -->
+<meta property="og:type" content="website"/>
+<meta property="og:title" content="src/net/grpc/grpc.c Source File - CWIST Modern C Web Framework"/>
+<meta property="og:description" content="High-performance C17 web framework & application server with zero-copy io_uring reactor, PQC TLS, and HTTP/3 support."/>
+<meta property="og:url" content="https://c4punks.github.io/CWIST/"/>
+<!-- Twitter -->
+<meta name="twitter:card" content="summary_large_image"/>
+<meta name="twitter:title" content="src/net/grpc/grpc.c Source File - CWIST Modern C Web Framework"/>
+<meta name="twitter:description" content="High-performance C17 web framework & application server with zero-copy io_uring reactor, PQC TLS, and HTTP/3 support."/>
 <link href="../../tabs.css" rel="stylesheet" type="text/css"/>
 <script type="text/javascript" src="../../jquery.js"></script>
 <script type="text/javascript" src="../../dynsections.js"></script>
+<link href="../../navtree.css" rel="stylesheet" type="text/css"/>
+<script type="text/javascript" src="../../resize.js"></script>
+<script type="text/javascript" src="../../navtreedata.js"></script>
+<script type="text/javascript" src="../../navtree.js"></script>
 <link href="../../search/search.css" rel="stylesheet" type="text/css"/>
 <script type="text/javascript" src="../../search/searchdata.js"></script>
 <script type="text/javascript" src="../../search/search.js"></script>
 <link href="../../doxygen.css" rel="stylesheet" type="text/css" />
+<link href="../../doxygen-awesome.css" rel="stylesheet" type="text/css"/>
 </head>
 <body>
 <div id="top"><!-- do not remove this div, it is closed by doxygen! -->
@@ -52,6 +71,23 @@ $(function() {
 $(document).ready(function() { init_codefold(1); });
 /* @license-end */
 </script>
+</div><!-- top -->
+<div id="side-nav" class="ui-resizable side-nav-resizable">
+  <div id="nav-tree">
+    <div id="nav-tree-contents">
+      <div id="nav-sync" class="sync"></div>
+    </div>
+  </div>
+  <div id="splitbar" style="-moz-user-select:none;" 
+       class="ui-resizable-handle">
+  </div>
+</div>
+<script type="text/javascript">
+/* @license magnet:?xt=urn:btih:d3d9a9a6595521f9666a5e94cc830dab83b65699&amp;dn=expat.txt MIT */
+$(document).ready(function(){initNavTree('d9/dba/grpc_8c_source.html','../../'); initResizable(); });
+/* @license-end */
+</script>
+<div id="doc-content">
 <!-- window showing the filter options -->
 <div id="MSearchSelectWindow"
      onmouseover="return searchBox.OnSearchSelectShow()"
@@ -73,11 +109,6 @@ $(document).ready(function() { init_codefold(1); });
 </div>
 </div>
 
-<div id="nav-path" class="navpath">
-  <ul>
-<li class="navelem"><a class="el" href="../../dir_68267d1309a1af8e8297ef4c3efbcdba.html">src</a></li><li class="navelem"><a class="el" href="../../dir_c72b25b75abe208498b36a3e44a3726c.html">net</a></li><li class="navelem"><a class="el" href="../../dir_a738ffd196b7a521d927e1330e6dd6af.html">grpc</a></li>  </ul>
-</div>
-</div><!-- top -->
 <div class="header">
   <div class="headertitle"><div class="title">grpc.c</div></div>
 </div><!--header-->
@@ -1298,7 +1329,7 @@ $(document).ready(function() { init_codefold(1); });
 <div class="line"><a id="l01590" name="l01590"></a><span class="lineno"> 1590</span>                              <span class="keyword">const</span> <span class="keywordtype">char</span> *message) {</div>
 <div class="line"><a id="l01591" name="l01591"></a><span class="lineno"> 1591</span>    pthread_mutex_lock(&amp;session-&gt;mu);</div>
 <div class="line"><a id="l01592" name="l01592"></a><span class="lineno"> 1592</span>    session-&gt;cancelled = 1;</div>
-<div class="line"><a id="l01593" name="l01593"></a><span class="lineno"> 1593</span>    session-&gt;stream.cancelled = 1;</div>
+<div class="line"><a id="l01593" name="l01593"></a><span class="lineno"> 1593</span>    __atomic_store_n(&amp;session-&gt;stream.cancelled, 1, __ATOMIC_RELEASE);</div>
 <div class="line"><a id="l01594" name="l01594"></a><span class="lineno"> 1594</span>    session-&gt;stream.status = status;</div>
 <div class="line"><a id="l01595" name="l01595"></a><span class="lineno"> 1595</span>    session-&gt;stream.status_message = message;</div>
 <div class="line"><a id="l01596" name="l01596"></a><span class="lineno"> 1596</span>    pthread_cond_broadcast(&amp;session-&gt;cond);</div>
@@ -1327,7 +1358,7 @@ $(document).ready(function() { init_codefold(1); });
 <div class="line"><a id="l01639" name="l01639"></a><span class="lineno"> 1639</span>    <span class="keywordflow">if</span> (session-&gt;stream.retry_pushback_set)</div>
 <div class="line"><a id="l01640" name="l01640"></a><span class="lineno"> 1640</span>        snprintf(pushback_buf, <span class="keyword">sizeof</span>(pushback_buf), <span class="stringliteral">&quot;%d&quot;</span>, (<span class="keywordtype">int</span>)session-&gt;stream.retry_pushback_ms);</div>
 <div class="line"><a id="l01641" name="l01641"></a><span class="lineno"> 1641</span>    pthread_mutex_lock(&amp;session-&gt;wmu);</div>
-<div class="line"><a id="l01642" name="l01642"></a><span class="lineno"> 1642</span>    <span class="keywordflow">if</span> (session-&gt;h2s &amp;&amp; !session-&gt;trailers_sent) {</div>
+<div class="line"><a id="l01642" name="l01642"></a><span class="lineno"> 1642</span>    <span class="keywordflow">if</span> (session-&gt;h2s &amp;&amp; !__atomic_load_n(&amp;session-&gt;trailers_sent, __ATOMIC_ACQUIRE)) {</div>
 <div class="line"><a id="l01643" name="l01643"></a><span class="lineno"> 1643</span>        <span class="keywordflow">if</span> (!session-&gt;headers_sent &amp;&amp; status != <a class="code hl_enumvalue" href="../../d6/dbb/grpc_8h.html#a15850515e26e871db8c849e393d4fc36a2eea144e80cec02747cbb9d06d038e70">CWIST_GRPC_OK</a>) {</div>
 <div class="line"><a id="l01644" name="l01644"></a><span class="lineno"> 1644</span>            <span class="comment">/* Trailers-Only (PROTOCOL-HTTP2, gRFC A6): the whole response is</span></div>
 <div class="line"><a id="l01645" name="l01645"></a><span class="lineno"> 1645</span><span class="comment">             * one HEADERS frame with END_STREAM.  Response-Headers never went</span></div>
@@ -1342,7 +1373,7 @@ $(document).ready(function() { init_codefold(1); });
 <div class="line"><a id="l01654" name="l01654"></a><span class="lineno"> 1654</span>                hdrs[count++] = (<a class="code hl_struct" href="../../d6/db0/structcwist__http2__header.html">cwist_http2_header</a>){<span class="stringliteral">&quot;grpc-retry-pushback-ms&quot;</span>, pushback_buf};</div>
 <div class="line"><a id="l01655" name="l01655"></a><span class="lineno"> 1655</span>            <span class="keywordflow">if</span> (<a class="code hl_function" href="../../de/d65/http2_8h.html#a2047eae56537a00b46a2a7d7a1463818">cwist_http2_stream_send_headers</a>(session-&gt;h2s, 200, hdrs, count, 1) == 0)</div>
 <div class="line"><a id="l01656" name="l01656"></a><span class="lineno"> 1656</span>                session-&gt;headers_sent = 1;</div>
-<div class="line"><a id="l01657" name="l01657"></a><span class="lineno"> 1657</span>            session-&gt;trailers_sent = 1;</div>
+<div class="line"><a id="l01657" name="l01657"></a><span class="lineno"> 1657</span>            __atomic_store_n(&amp;session-&gt;trailers_sent, 1, __ATOMIC_RELEASE);</div>
 <div class="line"><a id="l01658" name="l01658"></a><span class="lineno"> 1658</span>        } <span class="keywordflow">else</span> <span class="keywordflow">if</span> (grpc_session_send_headers_locked(session) == 0) {</div>
 <div class="line"><a id="l01659" name="l01659"></a><span class="lineno"> 1659</span>            <a class="code hl_struct" href="../../d6/db0/structcwist__http2__header.html">cwist_http2_header</a> pairs[3];</div>
 <div class="line"><a id="l01660" name="l01660"></a><span class="lineno"> 1660</span>            <span class="keywordtype">size_t</span> count = 0;</div>
@@ -1360,342 +1391,348 @@ $(document).ready(function() { init_codefold(1); });
 <div class="line"><a id="l01672" name="l01672"></a><span class="lineno"> 1672</span>                count++;</div>
 <div class="line"><a id="l01673" name="l01673"></a><span class="lineno"> 1673</span>            }</div>
 <div class="line"><a id="l01674" name="l01674"></a><span class="lineno"> 1674</span>            (void)<a class="code hl_function" href="../../de/d65/http2_8h.html#a1ab4b2ededc52b8f4798b3d76045b445">cwist_http2_stream_send_trailers</a>(session-&gt;h2s, pairs, count);</div>
-<div class="line"><a id="l01675" name="l01675"></a><span class="lineno"> 1675</span>            session-&gt;trailers_sent = 1;</div>
+<div class="line"><a id="l01675" name="l01675"></a><span class="lineno"> 1675</span>            __atomic_store_n(&amp;session-&gt;trailers_sent, 1, __ATOMIC_RELEASE);</div>
 <div class="line"><a id="l01676" name="l01676"></a><span class="lineno"> 1676</span>        } <span class="keywordflow">else</span> {</div>
-<div class="line"><a id="l01677" name="l01677"></a><span class="lineno"> 1677</span>            session-&gt;trailers_sent = 1; <span class="comment">/* transport broken; do not retry */</span></div>
-<div class="line"><a id="l01678" name="l01678"></a><span class="lineno"> 1678</span>        }</div>
-<div class="line"><a id="l01679" name="l01679"></a><span class="lineno"> 1679</span>    }</div>
-<div class="line"><a id="l01680" name="l01680"></a><span class="lineno"> 1680</span>    pthread_mutex_unlock(&amp;session-&gt;wmu);</div>
-<div class="line"><a id="l01681" name="l01681"></a><span class="lineno"> 1681</span>}</div>
-<div class="line"><a id="l01682" name="l01682"></a><span class="lineno"> 1682</span> </div>
-<div class="line"><a id="l01694" name="l01694"></a><span class="lineno"> 1694</span><span class="keyword">static</span> <span class="keywordtype">int</span> grpc_session_write_frame(<span class="keywordtype">void</span> *ctx, <span class="keyword">const</span> uint8_t *frame, <span class="keywordtype">size_t</span> frame_len,</div>
-<div class="line"><a id="l01695" name="l01695"></a><span class="lineno"> 1695</span>                                    <span class="keywordtype">int</span> end_stream) {</div>
-<div class="line"><a id="l01696" name="l01696"></a><span class="lineno"> 1696</span>    (void)end_stream;</div>
-<div class="line"><a id="l01697" name="l01697"></a><span class="lineno"> 1697</span>    <a class="code hl_typedef" href="../../d9/dba/grpc_8c.html#a079d16355f3697861c3e01e82857aae1">cwist_grpc_session</a> *session = ctx;</div>
-<div class="line"><a id="l01698" name="l01698"></a><span class="lineno"> 1698</span>    pthread_mutex_lock(&amp;session-&gt;wmu);</div>
-<div class="line"><a id="l01699" name="l01699"></a><span class="lineno"> 1699</span>    <span class="keywordtype">int</span> rc = -1;</div>
-<div class="line"><a id="l01700" name="l01700"></a><span class="lineno"> 1700</span>    <span class="keywordflow">if</span> (session-&gt;h2s &amp;&amp; !session-&gt;trailers_sent &amp;&amp; grpc_session_send_headers_locked(session) == 0)</div>
-<div class="line"><a id="l01701" name="l01701"></a><span class="lineno"> 1701</span>        rc = <a class="code hl_function" href="../../de/d65/http2_8h.html#ad9e5c4cf6b03ee73297494895b88a864">cwist_http2_stream_send_data</a>(session-&gt;h2s, frame, frame_len);</div>
-<div class="line"><a id="l01702" name="l01702"></a><span class="lineno"> 1702</span>    pthread_mutex_unlock(&amp;session-&gt;wmu);</div>
-<div class="line"><a id="l01703" name="l01703"></a><span class="lineno"> 1703</span>    <span class="keywordflow">return</span> rc;</div>
-<div class="line"><a id="l01704" name="l01704"></a><span class="lineno"> 1704</span>}</div>
-<div class="line"><a id="l01705" name="l01705"></a><span class="lineno"> 1705</span> </div>
-<div class="line"><a id="l01714" name="l01714"></a><span class="lineno"> 1714</span><span class="keyword">static</span> <span class="keywordtype">void</span> *grpc_session_thread(<span class="keywordtype">void</span> *arg) {</div>
-<div class="line"><a id="l01715" name="l01715"></a><span class="lineno"> 1715</span>    <a class="code hl_typedef" href="../../d9/dba/grpc_8c.html#a079d16355f3697861c3e01e82857aae1">cwist_grpc_session</a> *session = arg;</div>
-<div class="line"><a id="l01716" name="l01716"></a><span class="lineno"> 1716</span>    session-&gt;handler(&amp;session-&gt;stream, session-&gt;user_ctx);</div>
-<div class="line"><a id="l01717" name="l01717"></a><span class="lineno"> 1717</span>    <span class="keywordflow">if</span> (!session-&gt;stream.closed) {</div>
-<div class="line"><a id="l01718" name="l01718"></a><span class="lineno"> 1718</span>        <a class="code hl_function" href="../../d9/dba/grpc_8c.html#acee0a3feacfaa784845f9ab3210f3a29">cwist_grpc_stream_close</a>(&amp;session-&gt;stream, session-&gt;stream.status,</div>
-<div class="line"><a id="l01719" name="l01719"></a><span class="lineno"> 1719</span>                                session-&gt;stream.status_message);</div>
-<div class="line"><a id="l01720" name="l01720"></a><span class="lineno"> 1720</span>    }</div>
-<div class="line"><a id="l01721" name="l01721"></a><span class="lineno"> 1721</span>    grpc_session_release(session);</div>
-<div class="line"><a id="l01722" name="l01722"></a><span class="lineno"> 1722</span>    <span class="keywordflow">return</span> NULL;</div>
-<div class="line"><a id="l01723" name="l01723"></a><span class="lineno"> 1723</span>}</div>
-<div class="line"><a id="l01724" name="l01724"></a><span class="lineno"> 1724</span> </div>
-<div class="foldopen" id="foldopen01738" data-start="{" data-end="}">
-<div class="line"><a id="l01738" name="l01738"></a><span class="lineno"><a class="line" href="../../d6/dbb/grpc_8h.html#a5549b1d690dd333ec8ab0dbb6ff6ddfe"> 1738</a></span><span class="keywordtype">int</span> <a class="code hl_function" href="../../d9/dba/grpc_8c.html#a5549b1d690dd333ec8ab0dbb6ff6ddfe">cwist_grpc_stream_recv</a>(<a class="code hl_struct" href="../../dc/df5/structcwist__grpc__stream.html">cwist_grpc_stream</a> *stream, <a class="code hl_struct" href="../../d3/dec/structcwist__grpc__message.html">cwist_grpc_message</a> *out) {</div>
-<div class="line"><a id="l01739" name="l01739"></a><span class="lineno"> 1739</span>    <span class="keywordflow">if</span> (!stream || !out) <span class="keywordflow">return</span> -1;</div>
-<div class="line"><a id="l01740" name="l01740"></a><span class="lineno"> 1740</span> </div>
-<div class="line"><a id="l01741" name="l01741"></a><span class="lineno"> 1741</span>    <span class="keywordflow">if</span> (!stream-&gt;<a class="code hl_variable" href="../../dc/df5/structcwist__grpc__stream.html#a2ec2a7d307538e2e7f89f17d4ba8c2e1">session</a>) {</div>
-<div class="line"><a id="l01742" name="l01742"></a><span class="lineno"> 1742</span>        <span class="comment">/* Buffered path: pop the pre-decoded message array. */</span></div>
-<div class="line"><a id="l01743" name="l01743"></a><span class="lineno"> 1743</span>        <span class="keywordflow">if</span> (stream-&gt;<a class="code hl_variable" href="../../dc/df5/structcwist__grpc__stream.html#a6c596915aeab39ed2a99f9253673be26">deadline_ms</a> &amp;&amp; grpc_now_ms() &gt;= stream-&gt;<a class="code hl_variable" href="../../dc/df5/structcwist__grpc__stream.html#a6c596915aeab39ed2a99f9253673be26">deadline_ms</a>) {</div>
-<div class="line"><a id="l01744" name="l01744"></a><span class="lineno"> 1744</span>            stream-&gt;<a class="code hl_variable" href="../../dc/df5/structcwist__grpc__stream.html#a3637b576d5d6a56e5eac90b944ffeccf">cancelled</a> = 1;</div>
-<div class="line"><a id="l01745" name="l01745"></a><span class="lineno"> 1745</span>            <span class="keywordflow">return</span> -1;</div>
-<div class="line"><a id="l01746" name="l01746"></a><span class="lineno"> 1746</span>        }</div>
-<div class="line"><a id="l01747" name="l01747"></a><span class="lineno"> 1747</span>        <span class="keywordflow">if</span> (stream-&gt;<a class="code hl_variable" href="../../dc/df5/structcwist__grpc__stream.html#ae84f8a8b11ddd5db05847fb8b933fda2">recv_pos</a> &gt;= stream-&gt;<a class="code hl_variable" href="../../dc/df5/structcwist__grpc__stream.html#a1ab1ae970309d49c816761ecf3ff8348">message_count</a>) <span class="keywordflow">return</span> 0;</div>
-<div class="line"><a id="l01748" name="l01748"></a><span class="lineno"> 1748</span>        *out = stream-&gt;<a class="code hl_variable" href="../../dc/df5/structcwist__grpc__stream.html#ad983b3f1d52fdc9d4061478e46220a23">messages</a>[stream-&gt;<a class="code hl_variable" href="../../dc/df5/structcwist__grpc__stream.html#ae84f8a8b11ddd5db05847fb8b933fda2">recv_pos</a>++];</div>
-<div class="line"><a id="l01749" name="l01749"></a><span class="lineno"> 1749</span>        <span class="keywordflow">return</span> 1;</div>
-<div class="line"><a id="l01750" name="l01750"></a><span class="lineno"> 1750</span>    }</div>
-<div class="line"><a id="l01751" name="l01751"></a><span class="lineno"> 1751</span> </div>
-<div class="line"><a id="l01752" name="l01752"></a><span class="lineno"> 1752</span>    <a class="code hl_typedef" href="../../d9/dba/grpc_8c.html#a079d16355f3697861c3e01e82857aae1">cwist_grpc_session</a> *session = stream-&gt;<a class="code hl_variable" href="../../dc/df5/structcwist__grpc__stream.html#a2ec2a7d307538e2e7f89f17d4ba8c2e1">session</a>;</div>
-<div class="line"><a id="l01753" name="l01753"></a><span class="lineno"> 1753</span>    pthread_mutex_lock(&amp;session-&gt;mu);</div>
-<div class="line"><a id="l01754" name="l01754"></a><span class="lineno"> 1754</span>    <span class="keywordflow">for</span> (;;) {</div>
-<div class="line"><a id="l01755" name="l01755"></a><span class="lineno"> 1755</span>        <span class="keywordflow">if</span> (session-&gt;qhead) {</div>
-<div class="line"><a id="l01756" name="l01756"></a><span class="lineno"> 1756</span>            <a class="code hl_typedef" href="../../d9/dba/grpc_8c.html#a772139c0354322e4d8ee3bdf8e7e562d">grpc_qnode</a> *node = session-&gt;qhead;</div>
-<div class="line"><a id="l01757" name="l01757"></a><span class="lineno"> 1757</span>            session-&gt;qhead = node-&gt;next;</div>
-<div class="line"><a id="l01758" name="l01758"></a><span class="lineno"> 1758</span>            <span class="keywordflow">if</span> (!session-&gt;qhead) session-&gt;qtail = NULL;</div>
-<div class="line"><a id="l01759" name="l01759"></a><span class="lineno"> 1759</span>            pthread_mutex_unlock(&amp;session-&gt;mu);</div>
-<div class="line"><a id="l01760" name="l01760"></a><span class="lineno"> 1760</span>            <a class="code hl_function" href="../../d2/dfe/alloc_8h.html#a220abeebe2823e72511d1690fc561306">cwist_free</a>(session-&gt;recv_buf);</div>
-<div class="line"><a id="l01761" name="l01761"></a><span class="lineno"> 1761</span>            session-&gt;recv_buf = node-&gt;data;</div>
-<div class="line"><a id="l01762" name="l01762"></a><span class="lineno"> 1762</span>            out-&gt;<a class="code hl_variable" href="../../d3/dec/structcwist__grpc__message.html#ad215e16bf1b6627f2b9a440c1a22c158">compressed</a> = 0;</div>
-<div class="line"><a id="l01763" name="l01763"></a><span class="lineno"> 1763</span>            out-&gt;<a class="code hl_variable" href="../../d3/dec/structcwist__grpc__message.html#ab2c8efe2f06c9c9709541a620a6531de">data</a> = node-&gt;data;</div>
-<div class="line"><a id="l01764" name="l01764"></a><span class="lineno"> 1764</span>            out-&gt;<a class="code hl_variable" href="../../d3/dec/structcwist__grpc__message.html#a98e80360d310dd8d074e7ba8149d2939">len</a> = node-&gt;len;</div>
-<div class="line"><a id="l01765" name="l01765"></a><span class="lineno"> 1765</span>            <a class="code hl_function" href="../../d2/dfe/alloc_8h.html#a220abeebe2823e72511d1690fc561306">cwist_free</a>(node);</div>
-<div class="line"><a id="l01766" name="l01766"></a><span class="lineno"> 1766</span>            <span class="keywordflow">return</span> 1;</div>
-<div class="line"><a id="l01767" name="l01767"></a><span class="lineno"> 1767</span>        }</div>
-<div class="line"><a id="l01768" name="l01768"></a><span class="lineno"> 1768</span>        <span class="keywordflow">if</span> (session-&gt;cancelled) {</div>
-<div class="line"><a id="l01769" name="l01769"></a><span class="lineno"> 1769</span>            pthread_mutex_unlock(&amp;session-&gt;mu);</div>
-<div class="line"><a id="l01770" name="l01770"></a><span class="lineno"> 1770</span>            <span class="keywordflow">return</span> -1;</div>
-<div class="line"><a id="l01771" name="l01771"></a><span class="lineno"> 1771</span>        }</div>
-<div class="line"><a id="l01772" name="l01772"></a><span class="lineno"> 1772</span>        <span class="keywordflow">if</span> (session-&gt;eof) {</div>
-<div class="line"><a id="l01773" name="l01773"></a><span class="lineno"> 1773</span>            pthread_mutex_unlock(&amp;session-&gt;mu);</div>
-<div class="line"><a id="l01774" name="l01774"></a><span class="lineno"> 1774</span>            <span class="keywordflow">return</span> 0;</div>
-<div class="line"><a id="l01775" name="l01775"></a><span class="lineno"> 1775</span>        }</div>
-<div class="line"><a id="l01776" name="l01776"></a><span class="lineno"> 1776</span>        <span class="keywordflow">if</span> (stream-&gt;<a class="code hl_variable" href="../../dc/df5/structcwist__grpc__stream.html#a6c596915aeab39ed2a99f9253673be26">deadline_ms</a>) {</div>
-<div class="line"><a id="l01777" name="l01777"></a><span class="lineno"> 1777</span>            uint64_t now = grpc_now_ms();</div>
-<div class="line"><a id="l01778" name="l01778"></a><span class="lineno"> 1778</span>            <span class="keywordflow">if</span> (now &gt;= stream-&gt;<a class="code hl_variable" href="../../dc/df5/structcwist__grpc__stream.html#a6c596915aeab39ed2a99f9253673be26">deadline_ms</a>) {</div>
-<div class="line"><a id="l01779" name="l01779"></a><span class="lineno"> 1779</span>                session-&gt;cancelled = 1;</div>
-<div class="line"><a id="l01780" name="l01780"></a><span class="lineno"> 1780</span>                stream-&gt;<a class="code hl_variable" href="../../dc/df5/structcwist__grpc__stream.html#a3637b576d5d6a56e5eac90b944ffeccf">cancelled</a> = 1;</div>
-<div class="line"><a id="l01781" name="l01781"></a><span class="lineno"> 1781</span>                <span class="comment">/* Report the real outcome so a handler that simply closes</span></div>
-<div class="line"><a id="l01782" name="l01782"></a><span class="lineno"> 1782</span><span class="comment">                 * with stream-&gt;status still emits DEADLINE_EXCEEDED. */</span></div>
-<div class="line"><a id="l01783" name="l01783"></a><span class="lineno"> 1783</span>                stream-&gt;<a class="code hl_variable" href="../../dc/df5/structcwist__grpc__stream.html#a6c135867501af98b2a4af10b67a19909">status</a> = <a class="code hl_enumvalue" href="../../d6/dbb/grpc_8h.html#a15850515e26e871db8c849e393d4fc36aadb458091b8ed7abbf88ac2ef8f86714">CWIST_GRPC_DEADLINE_EXCEEDED</a>;</div>
-<div class="line"><a id="l01784" name="l01784"></a><span class="lineno"> 1784</span>                stream-&gt;<a class="code hl_variable" href="../../dc/df5/structcwist__grpc__stream.html#a142001fe0fa4251ff27c09a8fcf011d2">status_message</a> = <span class="stringliteral">&quot;deadline exceeded&quot;</span>;</div>
-<div class="line"><a id="l01785" name="l01785"></a><span class="lineno"> 1785</span>                pthread_mutex_unlock(&amp;session-&gt;mu);</div>
-<div class="line"><a id="l01786" name="l01786"></a><span class="lineno"> 1786</span>                <span class="keywordflow">return</span> -1;</div>
-<div class="line"><a id="l01787" name="l01787"></a><span class="lineno"> 1787</span>            }</div>
-<div class="line"><a id="l01788" name="l01788"></a><span class="lineno"> 1788</span>            uint64_t left = stream-&gt;<a class="code hl_variable" href="../../dc/df5/structcwist__grpc__stream.html#a6c596915aeab39ed2a99f9253673be26">deadline_ms</a> - now;</div>
-<div class="line"><a id="l01789" name="l01789"></a><span class="lineno"> 1789</span>            <span class="keyword">struct </span>timespec ts;</div>
-<div class="line"><a id="l01790" name="l01790"></a><span class="lineno"> 1790</span>            <span class="keyword">struct </span>timespec rt;</div>
-<div class="line"><a id="l01791" name="l01791"></a><span class="lineno"> 1791</span>            clock_gettime(CLOCK_REALTIME, &amp;rt);</div>
-<div class="line"><a id="l01792" name="l01792"></a><span class="lineno"> 1792</span>            ts.tv_sec = rt.tv_sec + (time_t)(left / 1000);</div>
-<div class="line"><a id="l01793" name="l01793"></a><span class="lineno"> 1793</span>            ts.tv_nsec = rt.tv_nsec + (long)((left % 1000) * 1000000);</div>
-<div class="line"><a id="l01794" name="l01794"></a><span class="lineno"> 1794</span>            <span class="keywordflow">if</span> (ts.tv_nsec &gt;= 1000000000L) {</div>
-<div class="line"><a id="l01795" name="l01795"></a><span class="lineno"> 1795</span>                ts.tv_sec++;</div>
-<div class="line"><a id="l01796" name="l01796"></a><span class="lineno"> 1796</span>                ts.tv_nsec -= 1000000000L;</div>
-<div class="line"><a id="l01797" name="l01797"></a><span class="lineno"> 1797</span>            }</div>
-<div class="line"><a id="l01798" name="l01798"></a><span class="lineno"> 1798</span>            pthread_cond_timedwait(&amp;session-&gt;cond, &amp;session-&gt;mu, &amp;ts);</div>
-<div class="line"><a id="l01799" name="l01799"></a><span class="lineno"> 1799</span>        } <span class="keywordflow">else</span> {</div>
-<div class="line"><a id="l01800" name="l01800"></a><span class="lineno"> 1800</span>            pthread_cond_wait(&amp;session-&gt;cond, &amp;session-&gt;mu);</div>
-<div class="line"><a id="l01801" name="l01801"></a><span class="lineno"> 1801</span>        }</div>
-<div class="line"><a id="l01802" name="l01802"></a><span class="lineno"> 1802</span>    }</div>
-<div class="line"><a id="l01803" name="l01803"></a><span class="lineno"> 1803</span>}</div>
+<div class="line"><a id="l01677" name="l01677"></a><span class="lineno"> 1677</span>            <span class="comment">/* transport broken; do not retry */</span></div>
+<div class="line"><a id="l01678" name="l01678"></a><span class="lineno"> 1678</span>            __atomic_store_n(&amp;session-&gt;trailers_sent, 1, __ATOMIC_RELEASE);</div>
+<div class="line"><a id="l01679" name="l01679"></a><span class="lineno"> 1679</span>        }</div>
+<div class="line"><a id="l01680" name="l01680"></a><span class="lineno"> 1680</span>    }</div>
+<div class="line"><a id="l01681" name="l01681"></a><span class="lineno"> 1681</span>    pthread_mutex_unlock(&amp;session-&gt;wmu);</div>
+<div class="line"><a id="l01682" name="l01682"></a><span class="lineno"> 1682</span>}</div>
+<div class="line"><a id="l01683" name="l01683"></a><span class="lineno"> 1683</span> </div>
+<div class="line"><a id="l01695" name="l01695"></a><span class="lineno"> 1695</span><span class="keyword">static</span> <span class="keywordtype">int</span> grpc_session_write_frame(<span class="keywordtype">void</span> *ctx, <span class="keyword">const</span> uint8_t *frame, <span class="keywordtype">size_t</span> frame_len,</div>
+<div class="line"><a id="l01696" name="l01696"></a><span class="lineno"> 1696</span>                                    <span class="keywordtype">int</span> end_stream) {</div>
+<div class="line"><a id="l01697" name="l01697"></a><span class="lineno"> 1697</span>    (void)end_stream;</div>
+<div class="line"><a id="l01698" name="l01698"></a><span class="lineno"> 1698</span>    <a class="code hl_typedef" href="../../d9/dba/grpc_8c.html#a079d16355f3697861c3e01e82857aae1">cwist_grpc_session</a> *session = ctx;</div>
+<div class="line"><a id="l01699" name="l01699"></a><span class="lineno"> 1699</span>    pthread_mutex_lock(&amp;session-&gt;wmu);</div>
+<div class="line"><a id="l01700" name="l01700"></a><span class="lineno"> 1700</span>    <span class="keywordtype">int</span> rc = -1;</div>
+<div class="line"><a id="l01701" name="l01701"></a><span class="lineno"> 1701</span>    <span class="keywordflow">if</span> (session-&gt;h2s &amp;&amp; !__atomic_load_n(&amp;session-&gt;trailers_sent, __ATOMIC_ACQUIRE) &amp;&amp;</div>
+<div class="line"><a id="l01702" name="l01702"></a><span class="lineno"> 1702</span>        grpc_session_send_headers_locked(session) == 0)</div>
+<div class="line"><a id="l01703" name="l01703"></a><span class="lineno"> 1703</span>        rc = <a class="code hl_function" href="../../de/d65/http2_8h.html#ad9e5c4cf6b03ee73297494895b88a864">cwist_http2_stream_send_data</a>(session-&gt;h2s, frame, frame_len);</div>
+<div class="line"><a id="l01704" name="l01704"></a><span class="lineno"> 1704</span>    pthread_mutex_unlock(&amp;session-&gt;wmu);</div>
+<div class="line"><a id="l01705" name="l01705"></a><span class="lineno"> 1705</span>    <span class="keywordflow">return</span> rc;</div>
+<div class="line"><a id="l01706" name="l01706"></a><span class="lineno"> 1706</span>}</div>
+<div class="line"><a id="l01707" name="l01707"></a><span class="lineno"> 1707</span> </div>
+<div class="line"><a id="l01716" name="l01716"></a><span class="lineno"> 1716</span><span class="keyword">static</span> <span class="keywordtype">void</span> *grpc_session_thread(<span class="keywordtype">void</span> *arg) {</div>
+<div class="line"><a id="l01717" name="l01717"></a><span class="lineno"> 1717</span>    <a class="code hl_typedef" href="../../d9/dba/grpc_8c.html#a079d16355f3697861c3e01e82857aae1">cwist_grpc_session</a> *session = arg;</div>
+<div class="line"><a id="l01718" name="l01718"></a><span class="lineno"> 1718</span>    session-&gt;handler(&amp;session-&gt;stream, session-&gt;user_ctx);</div>
+<div class="line"><a id="l01719" name="l01719"></a><span class="lineno"> 1719</span>    <span class="keywordflow">if</span> (!session-&gt;stream.closed) {</div>
+<div class="line"><a id="l01720" name="l01720"></a><span class="lineno"> 1720</span>        <a class="code hl_function" href="../../d9/dba/grpc_8c.html#acee0a3feacfaa784845f9ab3210f3a29">cwist_grpc_stream_close</a>(&amp;session-&gt;stream, session-&gt;stream.status,</div>
+<div class="line"><a id="l01721" name="l01721"></a><span class="lineno"> 1721</span>                                session-&gt;stream.status_message);</div>
+<div class="line"><a id="l01722" name="l01722"></a><span class="lineno"> 1722</span>    }</div>
+<div class="line"><a id="l01723" name="l01723"></a><span class="lineno"> 1723</span>    grpc_session_release(session);</div>
+<div class="line"><a id="l01724" name="l01724"></a><span class="lineno"> 1724</span>    <span class="keywordflow">return</span> NULL;</div>
+<div class="line"><a id="l01725" name="l01725"></a><span class="lineno"> 1725</span>}</div>
+<div class="line"><a id="l01726" name="l01726"></a><span class="lineno"> 1726</span> </div>
+<div class="foldopen" id="foldopen01740" data-start="{" data-end="}">
+<div class="line"><a id="l01740" name="l01740"></a><span class="lineno"><a class="line" href="../../d6/dbb/grpc_8h.html#a5549b1d690dd333ec8ab0dbb6ff6ddfe"> 1740</a></span><span class="keywordtype">int</span> <a class="code hl_function" href="../../d9/dba/grpc_8c.html#a5549b1d690dd333ec8ab0dbb6ff6ddfe">cwist_grpc_stream_recv</a>(<a class="code hl_struct" href="../../dc/df5/structcwist__grpc__stream.html">cwist_grpc_stream</a> *stream, <a class="code hl_struct" href="../../d3/dec/structcwist__grpc__message.html">cwist_grpc_message</a> *out) {</div>
+<div class="line"><a id="l01741" name="l01741"></a><span class="lineno"> 1741</span>    <span class="keywordflow">if</span> (!stream || !out) <span class="keywordflow">return</span> -1;</div>
+<div class="line"><a id="l01742" name="l01742"></a><span class="lineno"> 1742</span> </div>
+<div class="line"><a id="l01743" name="l01743"></a><span class="lineno"> 1743</span>    <span class="keywordflow">if</span> (!stream-&gt;<a class="code hl_variable" href="../../dc/df5/structcwist__grpc__stream.html#a2ec2a7d307538e2e7f89f17d4ba8c2e1">session</a>) {</div>
+<div class="line"><a id="l01744" name="l01744"></a><span class="lineno"> 1744</span>        <span class="comment">/* Buffered path: pop the pre-decoded message array. */</span></div>
+<div class="line"><a id="l01745" name="l01745"></a><span class="lineno"> 1745</span>        <span class="keywordflow">if</span> (stream-&gt;<a class="code hl_variable" href="../../dc/df5/structcwist__grpc__stream.html#a6c596915aeab39ed2a99f9253673be26">deadline_ms</a> &amp;&amp; grpc_now_ms() &gt;= stream-&gt;<a class="code hl_variable" href="../../dc/df5/structcwist__grpc__stream.html#a6c596915aeab39ed2a99f9253673be26">deadline_ms</a>) {</div>
+<div class="line"><a id="l01746" name="l01746"></a><span class="lineno"> 1746</span>            __atomic_store_n(&amp;stream-&gt;<a class="code hl_variable" href="../../dc/df5/structcwist__grpc__stream.html#a3637b576d5d6a56e5eac90b944ffeccf">cancelled</a>, 1, __ATOMIC_RELEASE);</div>
+<div class="line"><a id="l01747" name="l01747"></a><span class="lineno"> 1747</span>            <span class="keywordflow">return</span> -1;</div>
+<div class="line"><a id="l01748" name="l01748"></a><span class="lineno"> 1748</span>        }</div>
+<div class="line"><a id="l01749" name="l01749"></a><span class="lineno"> 1749</span>        <span class="keywordflow">if</span> (stream-&gt;<a class="code hl_variable" href="../../dc/df5/structcwist__grpc__stream.html#ae84f8a8b11ddd5db05847fb8b933fda2">recv_pos</a> &gt;= stream-&gt;<a class="code hl_variable" href="../../dc/df5/structcwist__grpc__stream.html#a1ab1ae970309d49c816761ecf3ff8348">message_count</a>) <span class="keywordflow">return</span> 0;</div>
+<div class="line"><a id="l01750" name="l01750"></a><span class="lineno"> 1750</span>        *out = stream-&gt;<a class="code hl_variable" href="../../dc/df5/structcwist__grpc__stream.html#ad983b3f1d52fdc9d4061478e46220a23">messages</a>[stream-&gt;<a class="code hl_variable" href="../../dc/df5/structcwist__grpc__stream.html#ae84f8a8b11ddd5db05847fb8b933fda2">recv_pos</a>++];</div>
+<div class="line"><a id="l01751" name="l01751"></a><span class="lineno"> 1751</span>        <span class="keywordflow">return</span> 1;</div>
+<div class="line"><a id="l01752" name="l01752"></a><span class="lineno"> 1752</span>    }</div>
+<div class="line"><a id="l01753" name="l01753"></a><span class="lineno"> 1753</span> </div>
+<div class="line"><a id="l01754" name="l01754"></a><span class="lineno"> 1754</span>    <a class="code hl_typedef" href="../../d9/dba/grpc_8c.html#a079d16355f3697861c3e01e82857aae1">cwist_grpc_session</a> *session = stream-&gt;<a class="code hl_variable" href="../../dc/df5/structcwist__grpc__stream.html#a2ec2a7d307538e2e7f89f17d4ba8c2e1">session</a>;</div>
+<div class="line"><a id="l01755" name="l01755"></a><span class="lineno"> 1755</span>    pthread_mutex_lock(&amp;session-&gt;mu);</div>
+<div class="line"><a id="l01756" name="l01756"></a><span class="lineno"> 1756</span>    <span class="keywordflow">for</span> (;;) {</div>
+<div class="line"><a id="l01757" name="l01757"></a><span class="lineno"> 1757</span>        <span class="keywordflow">if</span> (session-&gt;qhead) {</div>
+<div class="line"><a id="l01758" name="l01758"></a><span class="lineno"> 1758</span>            <a class="code hl_typedef" href="../../d9/dba/grpc_8c.html#a772139c0354322e4d8ee3bdf8e7e562d">grpc_qnode</a> *node = session-&gt;qhead;</div>
+<div class="line"><a id="l01759" name="l01759"></a><span class="lineno"> 1759</span>            session-&gt;qhead = node-&gt;next;</div>
+<div class="line"><a id="l01760" name="l01760"></a><span class="lineno"> 1760</span>            <span class="keywordflow">if</span> (!session-&gt;qhead) session-&gt;qtail = NULL;</div>
+<div class="line"><a id="l01761" name="l01761"></a><span class="lineno"> 1761</span>            pthread_mutex_unlock(&amp;session-&gt;mu);</div>
+<div class="line"><a id="l01762" name="l01762"></a><span class="lineno"> 1762</span>            <a class="code hl_function" href="../../d2/dfe/alloc_8h.html#a220abeebe2823e72511d1690fc561306">cwist_free</a>(session-&gt;recv_buf);</div>
+<div class="line"><a id="l01763" name="l01763"></a><span class="lineno"> 1763</span>            session-&gt;recv_buf = node-&gt;data;</div>
+<div class="line"><a id="l01764" name="l01764"></a><span class="lineno"> 1764</span>            out-&gt;<a class="code hl_variable" href="../../d3/dec/structcwist__grpc__message.html#ad215e16bf1b6627f2b9a440c1a22c158">compressed</a> = 0;</div>
+<div class="line"><a id="l01765" name="l01765"></a><span class="lineno"> 1765</span>            out-&gt;<a class="code hl_variable" href="../../d3/dec/structcwist__grpc__message.html#ab2c8efe2f06c9c9709541a620a6531de">data</a> = node-&gt;data;</div>
+<div class="line"><a id="l01766" name="l01766"></a><span class="lineno"> 1766</span>            out-&gt;<a class="code hl_variable" href="../../d3/dec/structcwist__grpc__message.html#a98e80360d310dd8d074e7ba8149d2939">len</a> = node-&gt;len;</div>
+<div class="line"><a id="l01767" name="l01767"></a><span class="lineno"> 1767</span>            <a class="code hl_function" href="../../d2/dfe/alloc_8h.html#a220abeebe2823e72511d1690fc561306">cwist_free</a>(node);</div>
+<div class="line"><a id="l01768" name="l01768"></a><span class="lineno"> 1768</span>            <span class="keywordflow">return</span> 1;</div>
+<div class="line"><a id="l01769" name="l01769"></a><span class="lineno"> 1769</span>        }</div>
+<div class="line"><a id="l01770" name="l01770"></a><span class="lineno"> 1770</span>        <span class="keywordflow">if</span> (session-&gt;cancelled) {</div>
+<div class="line"><a id="l01771" name="l01771"></a><span class="lineno"> 1771</span>            pthread_mutex_unlock(&amp;session-&gt;mu);</div>
+<div class="line"><a id="l01772" name="l01772"></a><span class="lineno"> 1772</span>            <span class="keywordflow">return</span> -1;</div>
+<div class="line"><a id="l01773" name="l01773"></a><span class="lineno"> 1773</span>        }</div>
+<div class="line"><a id="l01774" name="l01774"></a><span class="lineno"> 1774</span>        <span class="keywordflow">if</span> (session-&gt;eof) {</div>
+<div class="line"><a id="l01775" name="l01775"></a><span class="lineno"> 1775</span>            pthread_mutex_unlock(&amp;session-&gt;mu);</div>
+<div class="line"><a id="l01776" name="l01776"></a><span class="lineno"> 1776</span>            <span class="keywordflow">return</span> 0;</div>
+<div class="line"><a id="l01777" name="l01777"></a><span class="lineno"> 1777</span>        }</div>
+<div class="line"><a id="l01778" name="l01778"></a><span class="lineno"> 1778</span>        <span class="keywordflow">if</span> (stream-&gt;<a class="code hl_variable" href="../../dc/df5/structcwist__grpc__stream.html#a6c596915aeab39ed2a99f9253673be26">deadline_ms</a>) {</div>
+<div class="line"><a id="l01779" name="l01779"></a><span class="lineno"> 1779</span>            uint64_t now = grpc_now_ms();</div>
+<div class="line"><a id="l01780" name="l01780"></a><span class="lineno"> 1780</span>            <span class="keywordflow">if</span> (now &gt;= stream-&gt;<a class="code hl_variable" href="../../dc/df5/structcwist__grpc__stream.html#a6c596915aeab39ed2a99f9253673be26">deadline_ms</a>) {</div>
+<div class="line"><a id="l01781" name="l01781"></a><span class="lineno"> 1781</span>                session-&gt;cancelled = 1;</div>
+<div class="line"><a id="l01782" name="l01782"></a><span class="lineno"> 1782</span>                __atomic_store_n(&amp;stream-&gt;<a class="code hl_variable" href="../../dc/df5/structcwist__grpc__stream.html#a3637b576d5d6a56e5eac90b944ffeccf">cancelled</a>, 1, __ATOMIC_RELEASE);</div>
+<div class="line"><a id="l01783" name="l01783"></a><span class="lineno"> 1783</span>                <span class="comment">/* Report the real outcome so a handler that simply closes</span></div>
+<div class="line"><a id="l01784" name="l01784"></a><span class="lineno"> 1784</span><span class="comment">                 * with stream-&gt;status still emits DEADLINE_EXCEEDED. */</span></div>
+<div class="line"><a id="l01785" name="l01785"></a><span class="lineno"> 1785</span>                stream-&gt;<a class="code hl_variable" href="../../dc/df5/structcwist__grpc__stream.html#a6c135867501af98b2a4af10b67a19909">status</a> = <a class="code hl_enumvalue" href="../../d6/dbb/grpc_8h.html#a15850515e26e871db8c849e393d4fc36aadb458091b8ed7abbf88ac2ef8f86714">CWIST_GRPC_DEADLINE_EXCEEDED</a>;</div>
+<div class="line"><a id="l01786" name="l01786"></a><span class="lineno"> 1786</span>                stream-&gt;<a class="code hl_variable" href="../../dc/df5/structcwist__grpc__stream.html#a142001fe0fa4251ff27c09a8fcf011d2">status_message</a> = <span class="stringliteral">&quot;deadline exceeded&quot;</span>;</div>
+<div class="line"><a id="l01787" name="l01787"></a><span class="lineno"> 1787</span>                pthread_mutex_unlock(&amp;session-&gt;mu);</div>
+<div class="line"><a id="l01788" name="l01788"></a><span class="lineno"> 1788</span>                <span class="keywordflow">return</span> -1;</div>
+<div class="line"><a id="l01789" name="l01789"></a><span class="lineno"> 1789</span>            }</div>
+<div class="line"><a id="l01790" name="l01790"></a><span class="lineno"> 1790</span>            uint64_t left = stream-&gt;<a class="code hl_variable" href="../../dc/df5/structcwist__grpc__stream.html#a6c596915aeab39ed2a99f9253673be26">deadline_ms</a> - now;</div>
+<div class="line"><a id="l01791" name="l01791"></a><span class="lineno"> 1791</span>            <span class="keyword">struct </span>timespec ts;</div>
+<div class="line"><a id="l01792" name="l01792"></a><span class="lineno"> 1792</span>            <span class="keyword">struct </span>timespec rt;</div>
+<div class="line"><a id="l01793" name="l01793"></a><span class="lineno"> 1793</span>            clock_gettime(CLOCK_REALTIME, &amp;rt);</div>
+<div class="line"><a id="l01794" name="l01794"></a><span class="lineno"> 1794</span>            ts.tv_sec = rt.tv_sec + (time_t)(left / 1000);</div>
+<div class="line"><a id="l01795" name="l01795"></a><span class="lineno"> 1795</span>            ts.tv_nsec = rt.tv_nsec + (long)((left % 1000) * 1000000);</div>
+<div class="line"><a id="l01796" name="l01796"></a><span class="lineno"> 1796</span>            <span class="keywordflow">if</span> (ts.tv_nsec &gt;= 1000000000L) {</div>
+<div class="line"><a id="l01797" name="l01797"></a><span class="lineno"> 1797</span>                ts.tv_sec++;</div>
+<div class="line"><a id="l01798" name="l01798"></a><span class="lineno"> 1798</span>                ts.tv_nsec -= 1000000000L;</div>
+<div class="line"><a id="l01799" name="l01799"></a><span class="lineno"> 1799</span>            }</div>
+<div class="line"><a id="l01800" name="l01800"></a><span class="lineno"> 1800</span>            pthread_cond_timedwait(&amp;session-&gt;cond, &amp;session-&gt;mu, &amp;ts);</div>
+<div class="line"><a id="l01801" name="l01801"></a><span class="lineno"> 1801</span>        } <span class="keywordflow">else</span> {</div>
+<div class="line"><a id="l01802" name="l01802"></a><span class="lineno"> 1802</span>            pthread_cond_wait(&amp;session-&gt;cond, &amp;session-&gt;mu);</div>
+<div class="line"><a id="l01803" name="l01803"></a><span class="lineno"> 1803</span>        }</div>
+<div class="line"><a id="l01804" name="l01804"></a><span class="lineno"> 1804</span>    }</div>
+<div class="line"><a id="l01805" name="l01805"></a><span class="lineno"> 1805</span>}</div>
 </div>
-<div class="line"><a id="l01804" name="l01804"></a><span class="lineno"> 1804</span> </div>
-<div class="foldopen" id="foldopen01812" data-start="{" data-end="}">
-<div class="line"><a id="l01812" name="l01812"></a><span class="lineno"><a class="line" href="../../d6/dbb/grpc_8h.html#a9881bea7354d82ec5a2e1739d76cfb2d"> 1812</a></span><span class="keywordtype">int</span> <a class="code hl_function" href="../../d9/dba/grpc_8c.html#a9881bea7354d82ec5a2e1739d76cfb2d">cwist_grpc_stream_cancelled</a>(<a class="code hl_struct" href="../../dc/df5/structcwist__grpc__stream.html">cwist_grpc_stream</a> *stream) {</div>
-<div class="line"><a id="l01813" name="l01813"></a><span class="lineno"> 1813</span>    <span class="keywordflow">if</span> (!stream) <span class="keywordflow">return</span> 0;</div>
-<div class="line"><a id="l01814" name="l01814"></a><span class="lineno"> 1814</span>    <span class="keywordflow">if</span> (stream-&gt;<a class="code hl_variable" href="../../dc/df5/structcwist__grpc__stream.html#a3637b576d5d6a56e5eac90b944ffeccf">cancelled</a>) <span class="keywordflow">return</span> 1;</div>
-<div class="line"><a id="l01815" name="l01815"></a><span class="lineno"> 1815</span>    <span class="keywordflow">if</span> (stream-&gt;<a class="code hl_variable" href="../../dc/df5/structcwist__grpc__stream.html#a2ec2a7d307538e2e7f89f17d4ba8c2e1">session</a>) {</div>
-<div class="line"><a id="l01816" name="l01816"></a><span class="lineno"> 1816</span>        <a class="code hl_typedef" href="../../d9/dba/grpc_8c.html#a079d16355f3697861c3e01e82857aae1">cwist_grpc_session</a> *session = stream-&gt;<a class="code hl_variable" href="../../dc/df5/structcwist__grpc__stream.html#a2ec2a7d307538e2e7f89f17d4ba8c2e1">session</a>;</div>
-<div class="line"><a id="l01817" name="l01817"></a><span class="lineno"> 1817</span>        pthread_mutex_lock(&amp;session-&gt;mu);</div>
-<div class="line"><a id="l01818" name="l01818"></a><span class="lineno"> 1818</span>        <span class="keywordtype">int</span> cancelled = session-&gt;cancelled;</div>
-<div class="line"><a id="l01819" name="l01819"></a><span class="lineno"> 1819</span>        pthread_mutex_unlock(&amp;session-&gt;mu);</div>
-<div class="line"><a id="l01820" name="l01820"></a><span class="lineno"> 1820</span>        <span class="keywordflow">return</span> cancelled;</div>
-<div class="line"><a id="l01821" name="l01821"></a><span class="lineno"> 1821</span>    }</div>
-<div class="line"><a id="l01822" name="l01822"></a><span class="lineno"> 1822</span>    <span class="keywordflow">return</span> 0;</div>
-<div class="line"><a id="l01823" name="l01823"></a><span class="lineno"> 1823</span>}</div>
+<div class="line"><a id="l01806" name="l01806"></a><span class="lineno"> 1806</span> </div>
+<div class="foldopen" id="foldopen01814" data-start="{" data-end="}">
+<div class="line"><a id="l01814" name="l01814"></a><span class="lineno"><a class="line" href="../../d6/dbb/grpc_8h.html#a9881bea7354d82ec5a2e1739d76cfb2d"> 1814</a></span><span class="keywordtype">int</span> <a class="code hl_function" href="../../d9/dba/grpc_8c.html#a9881bea7354d82ec5a2e1739d76cfb2d">cwist_grpc_stream_cancelled</a>(<a class="code hl_struct" href="../../dc/df5/structcwist__grpc__stream.html">cwist_grpc_stream</a> *stream) {</div>
+<div class="line"><a id="l01815" name="l01815"></a><span class="lineno"> 1815</span>    <span class="keywordflow">if</span> (!stream) <span class="keywordflow">return</span> 0;</div>
+<div class="line"><a id="l01816" name="l01816"></a><span class="lineno"> 1816</span>    <span class="comment">/* Public field, also set by the poll/deadline path without the</span></div>
+<div class="line"><a id="l01817" name="l01817"></a><span class="lineno"> 1817</span><span class="comment">     * handler&#39;s lock: always accessed atomically (#351). */</span></div>
+<div class="line"><a id="l01818" name="l01818"></a><span class="lineno"> 1818</span>    <span class="keywordflow">if</span> (__atomic_load_n(&amp;stream-&gt;<a class="code hl_variable" href="../../dc/df5/structcwist__grpc__stream.html#a3637b576d5d6a56e5eac90b944ffeccf">cancelled</a>, __ATOMIC_ACQUIRE)) <span class="keywordflow">return</span> 1;</div>
+<div class="line"><a id="l01819" name="l01819"></a><span class="lineno"> 1819</span>    <span class="keywordflow">if</span> (stream-&gt;<a class="code hl_variable" href="../../dc/df5/structcwist__grpc__stream.html#a2ec2a7d307538e2e7f89f17d4ba8c2e1">session</a>) {</div>
+<div class="line"><a id="l01820" name="l01820"></a><span class="lineno"> 1820</span>        <a class="code hl_typedef" href="../../d9/dba/grpc_8c.html#a079d16355f3697861c3e01e82857aae1">cwist_grpc_session</a> *session = stream-&gt;<a class="code hl_variable" href="../../dc/df5/structcwist__grpc__stream.html#a2ec2a7d307538e2e7f89f17d4ba8c2e1">session</a>;</div>
+<div class="line"><a id="l01821" name="l01821"></a><span class="lineno"> 1821</span>        pthread_mutex_lock(&amp;session-&gt;mu);</div>
+<div class="line"><a id="l01822" name="l01822"></a><span class="lineno"> 1822</span>        <span class="keywordtype">int</span> cancelled = session-&gt;cancelled;</div>
+<div class="line"><a id="l01823" name="l01823"></a><span class="lineno"> 1823</span>        pthread_mutex_unlock(&amp;session-&gt;mu);</div>
+<div class="line"><a id="l01824" name="l01824"></a><span class="lineno"> 1824</span>        <span class="keywordflow">return</span> cancelled;</div>
+<div class="line"><a id="l01825" name="l01825"></a><span class="lineno"> 1825</span>    }</div>
+<div class="line"><a id="l01826" name="l01826"></a><span class="lineno"> 1826</span>    <span class="keywordflow">return</span> 0;</div>
+<div class="line"><a id="l01827" name="l01827"></a><span class="lineno"> 1827</span>}</div>
 </div>
-<div class="line"><a id="l01824" name="l01824"></a><span class="lineno"> 1824</span> </div>
-<div class="foldopen" id="foldopen01830" data-start="{" data-end="}">
-<div class="line"><a id="l01830" name="l01830"></a><span class="lineno"><a class="line" href="../../d6/dbb/grpc_8h.html#ab70d77489f060ba6548ce07d52deb578"> 1830</a></span>uint64_t <a class="code hl_function" href="../../d9/dba/grpc_8c.html#ab70d77489f060ba6548ce07d52deb578">cwist_grpc_stream_deadline_remaining_ms</a>(<a class="code hl_struct" href="../../dc/df5/structcwist__grpc__stream.html">cwist_grpc_stream</a> *stream) {</div>
-<div class="line"><a id="l01831" name="l01831"></a><span class="lineno"> 1831</span>    <span class="keywordflow">if</span> (!stream || !stream-&gt;<a class="code hl_variable" href="../../dc/df5/structcwist__grpc__stream.html#a6c596915aeab39ed2a99f9253673be26">deadline_ms</a>) <span class="keywordflow">return</span> UINT64_MAX;</div>
-<div class="line"><a id="l01832" name="l01832"></a><span class="lineno"> 1832</span>    uint64_t now = grpc_now_ms();</div>
-<div class="line"><a id="l01833" name="l01833"></a><span class="lineno"> 1833</span>    <span class="keywordflow">return</span> now &gt;= stream-&gt;<a class="code hl_variable" href="../../dc/df5/structcwist__grpc__stream.html#a6c596915aeab39ed2a99f9253673be26">deadline_ms</a> ? 0 : stream-&gt;<a class="code hl_variable" href="../../dc/df5/structcwist__grpc__stream.html#a6c596915aeab39ed2a99f9253673be26">deadline_ms</a> - now;</div>
-<div class="line"><a id="l01834" name="l01834"></a><span class="lineno"> 1834</span>}</div>
+<div class="line"><a id="l01828" name="l01828"></a><span class="lineno"> 1828</span> </div>
+<div class="foldopen" id="foldopen01834" data-start="{" data-end="}">
+<div class="line"><a id="l01834" name="l01834"></a><span class="lineno"><a class="line" href="../../d6/dbb/grpc_8h.html#ab70d77489f060ba6548ce07d52deb578"> 1834</a></span>uint64_t <a class="code hl_function" href="../../d9/dba/grpc_8c.html#ab70d77489f060ba6548ce07d52deb578">cwist_grpc_stream_deadline_remaining_ms</a>(<a class="code hl_struct" href="../../dc/df5/structcwist__grpc__stream.html">cwist_grpc_stream</a> *stream) {</div>
+<div class="line"><a id="l01835" name="l01835"></a><span class="lineno"> 1835</span>    <span class="keywordflow">if</span> (!stream || !stream-&gt;<a class="code hl_variable" href="../../dc/df5/structcwist__grpc__stream.html#a6c596915aeab39ed2a99f9253673be26">deadline_ms</a>) <span class="keywordflow">return</span> UINT64_MAX;</div>
+<div class="line"><a id="l01836" name="l01836"></a><span class="lineno"> 1836</span>    uint64_t now = grpc_now_ms();</div>
+<div class="line"><a id="l01837" name="l01837"></a><span class="lineno"> 1837</span>    <span class="keywordflow">return</span> now &gt;= stream-&gt;<a class="code hl_variable" href="../../dc/df5/structcwist__grpc__stream.html#a6c596915aeab39ed2a99f9253673be26">deadline_ms</a> ? 0 : stream-&gt;<a class="code hl_variable" href="../../dc/df5/structcwist__grpc__stream.html#a6c596915aeab39ed2a99f9253673be26">deadline_ms</a> - now;</div>
+<div class="line"><a id="l01838" name="l01838"></a><span class="lineno"> 1838</span>}</div>
 </div>
-<div class="line"><a id="l01835" name="l01835"></a><span class="lineno"> 1835</span> </div>
-<div class="line"><a id="l01836" name="l01836"></a><span class="lineno"> 1836</span><span class="comment">/* --- HTTP/2 stream hooks --- */</span></div>
-<div class="line"><a id="l01837" name="l01837"></a><span class="lineno"> 1837</span> </div>
-<div class="line"><a id="l01843" name="l01843"></a><span class="lineno"> 1843</span><span class="keyword">static</span> <span class="keywordtype">void</span> *grpc_h2_on_conn_open(<span class="keywordtype">void</span> *user_ctx) {</div>
-<div class="line"><a id="l01844" name="l01844"></a><span class="lineno"> 1844</span>    <a class="code hl_typedef" href="../../d9/dba/grpc_8c.html#a8f4ad33e1ecc8ed43795a10e818fa394">cwist_grpc_h2_conn_ctx</a> *ctx = (<a class="code hl_typedef" href="../../d9/dba/grpc_8c.html#a8f4ad33e1ecc8ed43795a10e818fa394">cwist_grpc_h2_conn_ctx</a> *)<a class="code hl_function" href="../../d2/dfe/alloc_8h.html#aeba69949fe17751318e6b5fc84a74096">cwist_alloc</a>(<span class="keyword">sizeof</span>(*ctx));</div>
-<div class="line"><a id="l01845" name="l01845"></a><span class="lineno"> 1845</span>    <span class="keywordflow">if</span> (!ctx) <span class="keywordflow">return</span> NULL;</div>
-<div class="line"><a id="l01846" name="l01846"></a><span class="lineno"> 1846</span>    ctx-&gt;app = (<a class="code hl_struct" href="../../dc/da0/structcwist__app.html">cwist_app</a> *)user_ctx;</div>
-<div class="line"><a id="l01847" name="l01847"></a><span class="lineno"> 1847</span>    ctx-&gt;refs = 1;</div>
-<div class="line"><a id="l01848" name="l01848"></a><span class="lineno"> 1848</span>    ctx-&gt;sessions = NULL;</div>
-<div class="line"><a id="l01849" name="l01849"></a><span class="lineno"> 1849</span>    pthread_mutex_init(&amp;ctx-&gt;mu, NULL);</div>
-<div class="line"><a id="l01850" name="l01850"></a><span class="lineno"> 1850</span>    <span class="keywordflow">return</span> ctx;</div>
-<div class="line"><a id="l01851" name="l01851"></a><span class="lineno"> 1851</span>}</div>
-<div class="line"><a id="l01852" name="l01852"></a><span class="lineno"> 1852</span> </div>
-<div class="line"><a id="l01856" name="l01856"></a><span class="lineno"> 1856</span><span class="keyword">static</span> <span class="keywordtype">void</span> grpc_h2_on_conn_close(<span class="keywordtype">void</span> *conn_ctx) {</div>
-<div class="line"><a id="l01857" name="l01857"></a><span class="lineno"> 1857</span>    <span class="keywordflow">if</span> (conn_ctx) grpc_conn_ctx_release(conn_ctx);</div>
-<div class="line"><a id="l01858" name="l01858"></a><span class="lineno"> 1858</span>}</div>
-<div class="line"><a id="l01859" name="l01859"></a><span class="lineno"> 1859</span> </div>
-<div class="line"><a id="l01874" name="l01874"></a><span class="lineno"> 1874</span><span class="keyword">static</span> <span class="keywordtype">void</span> *grpc_h2_on_headers(<span class="keywordtype">void</span> *conn_ctx, <a class="code hl_struct" href="../../dd/d68/structcwist__http__request.html">cwist_http_request</a> *req, cwist_h2_stream *stream) {</div>
-<div class="line"><a id="l01875" name="l01875"></a><span class="lineno"> 1875</span>    <a class="code hl_typedef" href="../../d9/dba/grpc_8c.html#a8f4ad33e1ecc8ed43795a10e818fa394">cwist_grpc_h2_conn_ctx</a> *ctx = conn_ctx;</div>
-<div class="line"><a id="l01876" name="l01876"></a><span class="lineno"> 1876</span>    <span class="keywordflow">if</span> (!ctx || !ctx-&gt;app || !req || !req-&gt;<a class="code hl_variable" href="../../dd/d68/structcwist__http__request.html#a391864f084971e16903d40942c186c18">path</a> || !req-&gt;<a class="code hl_variable" href="../../dd/d68/structcwist__http__request.html#a391864f084971e16903d40942c186c18">path</a>-&gt;<a class="code hl_variable" href="../../d5/ddc/structcwist__sstring.html#a5db1637d58cb0690522ba232d49e8189">data</a>) <span class="keywordflow">return</span> NULL;</div>
-<div class="line"><a id="l01877" name="l01877"></a><span class="lineno"> 1877</span> </div>
-<div class="line"><a id="l01878" name="l01878"></a><span class="lineno"> 1878</span>    <a class="code hl_typedef" href="../../d9/dba/grpc_8c.html#a85b5ec2c9c1558c2dbaf1a5b5b6092df">cwist_grpc_route</a> *route = grpc_find_route(ctx-&gt;app, req-&gt;<a class="code hl_variable" href="../../dd/d68/structcwist__http__request.html#a391864f084971e16903d40942c186c18">path</a>-&gt;<a class="code hl_variable" href="../../d5/ddc/structcwist__sstring.html#a5db1637d58cb0690522ba232d49e8189">data</a>);</div>
-<div class="line"><a id="l01879" name="l01879"></a><span class="lineno"> 1879</span>    <span class="comment">/* Unary-only builtins (health Check) and reflection stay on the buffered</span></div>
-<div class="line"><a id="l01880" name="l01880"></a><span class="lineno"> 1880</span><span class="comment">     * dispatch path; the health Watch builtin streams live. */</span></div>
-<div class="line"><a id="l01881" name="l01881"></a><span class="lineno"> 1881</span>    <span class="keywordflow">if</span> (!route || !route-&gt;stream_handler || (route-&gt;builtin &amp;&amp; route-&gt;builtin != 2)) <span class="keywordflow">return</span> NULL;</div>
-<div class="line"><a id="l01882" name="l01882"></a><span class="lineno"> 1882</span> </div>
-<div class="line"><a id="l01883" name="l01883"></a><span class="lineno"> 1883</span>    <span class="keyword">const</span> <span class="keywordtype">char</span> *ct = grpc_header_get(req, <span class="stringliteral">&quot;content-type&quot;</span>);</div>
-<div class="line"><a id="l01884" name="l01884"></a><span class="lineno"> 1884</span>    <span class="keywordflow">if</span> (!grpc_content_type_is_grpc(ct)) <span class="keywordflow">return</span> NULL;</div>
-<div class="line"><a id="l01885" name="l01885"></a><span class="lineno"> 1885</span> </div>
-<div class="line"><a id="l01886" name="l01886"></a><span class="lineno"> 1886</span>    <span class="keywordtype">int</span> encoding = grpc_request_encoding(req);</div>
-<div class="line"><a id="l01887" name="l01887"></a><span class="lineno"> 1887</span>    <span class="keywordflow">if</span> (encoding &lt; 0) <span class="keywordflow">return</span> NULL; <span class="comment">/* buffered dispatch replies UNIMPLEMENTED */</span></div>
-<div class="line"><a id="l01888" name="l01888"></a><span class="lineno"> 1888</span> </div>
-<div class="line"><a id="l01889" name="l01889"></a><span class="lineno"> 1889</span>    <a class="code hl_typedef" href="../../d9/dba/grpc_8c.html#a079d16355f3697861c3e01e82857aae1">cwist_grpc_session</a> *session = (<a class="code hl_typedef" href="../../d9/dba/grpc_8c.html#a079d16355f3697861c3e01e82857aae1">cwist_grpc_session</a> *)<a class="code hl_function" href="../../d2/dfe/alloc_8h.html#aeba69949fe17751318e6b5fc84a74096">cwist_alloc</a>(<span class="keyword">sizeof</span>(*session));</div>
-<div class="line"><a id="l01890" name="l01890"></a><span class="lineno"> 1890</span>    <span class="keywordflow">if</span> (!session) <span class="keywordflow">return</span> NULL;</div>
-<div class="line"><a id="l01891" name="l01891"></a><span class="lineno"> 1891</span>    memset(session, 0, <span class="keyword">sizeof</span>(*session));</div>
-<div class="line"><a id="l01892" name="l01892"></a><span class="lineno"> 1892</span>    pthread_mutex_init(&amp;session-&gt;mu, NULL);</div>
-<div class="line"><a id="l01893" name="l01893"></a><span class="lineno"> 1893</span>    pthread_cond_init(&amp;session-&gt;cond, NULL);</div>
-<div class="line"><a id="l01894" name="l01894"></a><span class="lineno"> 1894</span>    pthread_mutex_init(&amp;session-&gt;wmu, NULL);</div>
-<div class="line"><a id="l01895" name="l01895"></a><span class="lineno"> 1895</span>    session-&gt;h2s = stream;</div>
-<div class="line"><a id="l01896" name="l01896"></a><span class="lineno"> 1896</span>    session-&gt;conn_ctx = ctx;</div>
-<div class="line"><a id="l01897" name="l01897"></a><span class="lineno"> 1897</span>    session-&gt;encoding = encoding;</div>
-<div class="line"><a id="l01898" name="l01898"></a><span class="lineno"> 1898</span>    <a class="code hl_function" href="../../d9/dba/grpc_8c.html#aa3ce467a304806b53187bcf18233be7c">cwist_grpc_decoder_init</a>(&amp;session-&gt;decoder, 0);</div>
-<div class="line"><a id="l01899" name="l01899"></a><span class="lineno"> 1899</span>    atomic_store(&amp;session-&gt;refs, 2); <span class="comment">/* transport + handler thread */</span></div>
-<div class="line"><a id="l01900" name="l01900"></a><span class="lineno"> 1900</span> </div>
-<div class="line"><a id="l01901" name="l01901"></a><span class="lineno"> 1901</span>    session-&gt;stream.req = req;</div>
-<div class="line"><a id="l01902" name="l01902"></a><span class="lineno"> 1902</span>    session-&gt;stream.res = NULL;</div>
-<div class="line"><a id="l01903" name="l01903"></a><span class="lineno"> 1903</span>    session-&gt;stream.messages = NULL;</div>
-<div class="line"><a id="l01904" name="l01904"></a><span class="lineno"> 1904</span>    session-&gt;stream.message_count = 0;</div>
-<div class="line"><a id="l01905" name="l01905"></a><span class="lineno"> 1905</span>    session-&gt;stream.status = <a class="code hl_enumvalue" href="../../d6/dbb/grpc_8h.html#a15850515e26e871db8c849e393d4fc36a2eea144e80cec02747cbb9d06d038e70">CWIST_GRPC_OK</a>;</div>
-<div class="line"><a id="l01906" name="l01906"></a><span class="lineno"> 1906</span>    session-&gt;stream.status_message = NULL;</div>
-<div class="line"><a id="l01907" name="l01907"></a><span class="lineno"> 1907</span>    session-&gt;stream.closed = 0;</div>
-<div class="line"><a id="l01908" name="l01908"></a><span class="lineno"> 1908</span>    session-&gt;stream.write_frame = grpc_session_write_frame;</div>
-<div class="line"><a id="l01909" name="l01909"></a><span class="lineno"> 1909</span>    session-&gt;stream.write_frame_ctx = session;</div>
-<div class="line"><a id="l01910" name="l01910"></a><span class="lineno"> 1910</span>    session-&gt;stream.session = session;</div>
-<div class="line"><a id="l01911" name="l01911"></a><span class="lineno"> 1911</span>    session-&gt;stream.cancelled = 0;</div>
-<div class="line"><a id="l01912" name="l01912"></a><span class="lineno"> 1912</span>    session-&gt;stream.recv_pos = 0;</div>
-<div class="line"><a id="l01913" name="l01913"></a><span class="lineno"> 1913</span>    <span class="keyword">const</span> <span class="keywordtype">char</span> *timeout = grpc_header_get(req, <span class="stringliteral">&quot;grpc-timeout&quot;</span>);</div>
-<div class="line"><a id="l01914" name="l01914"></a><span class="lineno"> 1914</span>    <span class="keywordflow">if</span> (timeout) {</div>
-<div class="line"><a id="l01915" name="l01915"></a><span class="lineno"> 1915</span>        uint64_t timeout_ms = 0;</div>
-<div class="line"><a id="l01916" name="l01916"></a><span class="lineno"> 1916</span>        <span class="keywordflow">if</span> (<a class="code hl_function" href="../../d9/dba/grpc_8c.html#a617d7d28fe63d6e1b19060560e8ff55a">cwist_grpc_parse_timeout</a>(timeout, &amp;timeout_ms) == 0)</div>
-<div class="line"><a id="l01917" name="l01917"></a><span class="lineno"> 1917</span>            session-&gt;stream.deadline_ms = grpc_now_ms() + timeout_ms;</div>
-<div class="line"><a id="l01918" name="l01918"></a><span class="lineno"> 1918</span>    }</div>
-<div class="line"><a id="l01919" name="l01919"></a><span class="lineno"> 1919</span>    session-&gt;handler = route-&gt;stream_handler;</div>
-<div class="line"><a id="l01920" name="l01920"></a><span class="lineno"> 1920</span>    session-&gt;user_ctx = route-&gt;user_ctx;</div>
-<div class="line"><a id="l01921" name="l01921"></a><span class="lineno"> 1921</span>    session-&gt;resp_encoding = grpc_client_accepts_gzip(req) ? 1 : 0;</div>
-<div class="line"><a id="l01922" name="l01922"></a><span class="lineno"> 1922</span> </div>
-<div class="line"><a id="l01923" name="l01923"></a><span class="lineno"> 1923</span>    <span class="comment">/* Response-Headers are deliberately not sent yet (gRFC A6): they go out</span></div>
-<div class="line"><a id="l01924" name="l01924"></a><span class="lineno"> 1924</span><span class="comment">     * with the first DATA frame, or the call ends in Trailers-Only form so</span></div>
-<div class="line"><a id="l01925" name="l01925"></a><span class="lineno"> 1925</span><span class="comment">     * conforming clients may retry the RPC. */</span></div>
+<div class="line"><a id="l01839" name="l01839"></a><span class="lineno"> 1839</span> </div>
+<div class="line"><a id="l01840" name="l01840"></a><span class="lineno"> 1840</span><span class="comment">/* --- HTTP/2 stream hooks --- */</span></div>
+<div class="line"><a id="l01841" name="l01841"></a><span class="lineno"> 1841</span> </div>
+<div class="line"><a id="l01847" name="l01847"></a><span class="lineno"> 1847</span><span class="keyword">static</span> <span class="keywordtype">void</span> *grpc_h2_on_conn_open(<span class="keywordtype">void</span> *user_ctx) {</div>
+<div class="line"><a id="l01848" name="l01848"></a><span class="lineno"> 1848</span>    <a class="code hl_typedef" href="../../d9/dba/grpc_8c.html#a8f4ad33e1ecc8ed43795a10e818fa394">cwist_grpc_h2_conn_ctx</a> *ctx = (<a class="code hl_typedef" href="../../d9/dba/grpc_8c.html#a8f4ad33e1ecc8ed43795a10e818fa394">cwist_grpc_h2_conn_ctx</a> *)<a class="code hl_function" href="../../d2/dfe/alloc_8h.html#aeba69949fe17751318e6b5fc84a74096">cwist_alloc</a>(<span class="keyword">sizeof</span>(*ctx));</div>
+<div class="line"><a id="l01849" name="l01849"></a><span class="lineno"> 1849</span>    <span class="keywordflow">if</span> (!ctx) <span class="keywordflow">return</span> NULL;</div>
+<div class="line"><a id="l01850" name="l01850"></a><span class="lineno"> 1850</span>    ctx-&gt;app = (<a class="code hl_struct" href="../../dc/da0/structcwist__app.html">cwist_app</a> *)user_ctx;</div>
+<div class="line"><a id="l01851" name="l01851"></a><span class="lineno"> 1851</span>    ctx-&gt;refs = 1;</div>
+<div class="line"><a id="l01852" name="l01852"></a><span class="lineno"> 1852</span>    ctx-&gt;sessions = NULL;</div>
+<div class="line"><a id="l01853" name="l01853"></a><span class="lineno"> 1853</span>    pthread_mutex_init(&amp;ctx-&gt;mu, NULL);</div>
+<div class="line"><a id="l01854" name="l01854"></a><span class="lineno"> 1854</span>    <span class="keywordflow">return</span> ctx;</div>
+<div class="line"><a id="l01855" name="l01855"></a><span class="lineno"> 1855</span>}</div>
+<div class="line"><a id="l01856" name="l01856"></a><span class="lineno"> 1856</span> </div>
+<div class="line"><a id="l01860" name="l01860"></a><span class="lineno"> 1860</span><span class="keyword">static</span> <span class="keywordtype">void</span> grpc_h2_on_conn_close(<span class="keywordtype">void</span> *conn_ctx) {</div>
+<div class="line"><a id="l01861" name="l01861"></a><span class="lineno"> 1861</span>    <span class="keywordflow">if</span> (conn_ctx) grpc_conn_ctx_release(conn_ctx);</div>
+<div class="line"><a id="l01862" name="l01862"></a><span class="lineno"> 1862</span>}</div>
+<div class="line"><a id="l01863" name="l01863"></a><span class="lineno"> 1863</span> </div>
+<div class="line"><a id="l01878" name="l01878"></a><span class="lineno"> 1878</span><span class="keyword">static</span> <span class="keywordtype">void</span> *grpc_h2_on_headers(<span class="keywordtype">void</span> *conn_ctx, <a class="code hl_struct" href="../../dd/d68/structcwist__http__request.html">cwist_http_request</a> *req, cwist_h2_stream *stream) {</div>
+<div class="line"><a id="l01879" name="l01879"></a><span class="lineno"> 1879</span>    <a class="code hl_typedef" href="../../d9/dba/grpc_8c.html#a8f4ad33e1ecc8ed43795a10e818fa394">cwist_grpc_h2_conn_ctx</a> *ctx = conn_ctx;</div>
+<div class="line"><a id="l01880" name="l01880"></a><span class="lineno"> 1880</span>    <span class="keywordflow">if</span> (!ctx || !ctx-&gt;app || !req || !req-&gt;<a class="code hl_variable" href="../../dd/d68/structcwist__http__request.html#a391864f084971e16903d40942c186c18">path</a> || !req-&gt;<a class="code hl_variable" href="../../dd/d68/structcwist__http__request.html#a391864f084971e16903d40942c186c18">path</a>-&gt;<a class="code hl_variable" href="../../d5/ddc/structcwist__sstring.html#a5db1637d58cb0690522ba232d49e8189">data</a>) <span class="keywordflow">return</span> NULL;</div>
+<div class="line"><a id="l01881" name="l01881"></a><span class="lineno"> 1881</span> </div>
+<div class="line"><a id="l01882" name="l01882"></a><span class="lineno"> 1882</span>    <a class="code hl_typedef" href="../../d9/dba/grpc_8c.html#a85b5ec2c9c1558c2dbaf1a5b5b6092df">cwist_grpc_route</a> *route = grpc_find_route(ctx-&gt;app, req-&gt;<a class="code hl_variable" href="../../dd/d68/structcwist__http__request.html#a391864f084971e16903d40942c186c18">path</a>-&gt;<a class="code hl_variable" href="../../d5/ddc/structcwist__sstring.html#a5db1637d58cb0690522ba232d49e8189">data</a>);</div>
+<div class="line"><a id="l01883" name="l01883"></a><span class="lineno"> 1883</span>    <span class="comment">/* Unary-only builtins (health Check) and reflection stay on the buffered</span></div>
+<div class="line"><a id="l01884" name="l01884"></a><span class="lineno"> 1884</span><span class="comment">     * dispatch path; the health Watch builtin streams live. */</span></div>
+<div class="line"><a id="l01885" name="l01885"></a><span class="lineno"> 1885</span>    <span class="keywordflow">if</span> (!route || !route-&gt;stream_handler || (route-&gt;builtin &amp;&amp; route-&gt;builtin != 2)) <span class="keywordflow">return</span> NULL;</div>
+<div class="line"><a id="l01886" name="l01886"></a><span class="lineno"> 1886</span> </div>
+<div class="line"><a id="l01887" name="l01887"></a><span class="lineno"> 1887</span>    <span class="keyword">const</span> <span class="keywordtype">char</span> *ct = grpc_header_get(req, <span class="stringliteral">&quot;content-type&quot;</span>);</div>
+<div class="line"><a id="l01888" name="l01888"></a><span class="lineno"> 1888</span>    <span class="keywordflow">if</span> (!grpc_content_type_is_grpc(ct)) <span class="keywordflow">return</span> NULL;</div>
+<div class="line"><a id="l01889" name="l01889"></a><span class="lineno"> 1889</span> </div>
+<div class="line"><a id="l01890" name="l01890"></a><span class="lineno"> 1890</span>    <span class="keywordtype">int</span> encoding = grpc_request_encoding(req);</div>
+<div class="line"><a id="l01891" name="l01891"></a><span class="lineno"> 1891</span>    <span class="keywordflow">if</span> (encoding &lt; 0) <span class="keywordflow">return</span> NULL; <span class="comment">/* buffered dispatch replies UNIMPLEMENTED */</span></div>
+<div class="line"><a id="l01892" name="l01892"></a><span class="lineno"> 1892</span> </div>
+<div class="line"><a id="l01893" name="l01893"></a><span class="lineno"> 1893</span>    <a class="code hl_typedef" href="../../d9/dba/grpc_8c.html#a079d16355f3697861c3e01e82857aae1">cwist_grpc_session</a> *session = (<a class="code hl_typedef" href="../../d9/dba/grpc_8c.html#a079d16355f3697861c3e01e82857aae1">cwist_grpc_session</a> *)<a class="code hl_function" href="../../d2/dfe/alloc_8h.html#aeba69949fe17751318e6b5fc84a74096">cwist_alloc</a>(<span class="keyword">sizeof</span>(*session));</div>
+<div class="line"><a id="l01894" name="l01894"></a><span class="lineno"> 1894</span>    <span class="keywordflow">if</span> (!session) <span class="keywordflow">return</span> NULL;</div>
+<div class="line"><a id="l01895" name="l01895"></a><span class="lineno"> 1895</span>    memset(session, 0, <span class="keyword">sizeof</span>(*session));</div>
+<div class="line"><a id="l01896" name="l01896"></a><span class="lineno"> 1896</span>    pthread_mutex_init(&amp;session-&gt;mu, NULL);</div>
+<div class="line"><a id="l01897" name="l01897"></a><span class="lineno"> 1897</span>    pthread_cond_init(&amp;session-&gt;cond, NULL);</div>
+<div class="line"><a id="l01898" name="l01898"></a><span class="lineno"> 1898</span>    pthread_mutex_init(&amp;session-&gt;wmu, NULL);</div>
+<div class="line"><a id="l01899" name="l01899"></a><span class="lineno"> 1899</span>    session-&gt;h2s = stream;</div>
+<div class="line"><a id="l01900" name="l01900"></a><span class="lineno"> 1900</span>    session-&gt;conn_ctx = ctx;</div>
+<div class="line"><a id="l01901" name="l01901"></a><span class="lineno"> 1901</span>    session-&gt;encoding = encoding;</div>
+<div class="line"><a id="l01902" name="l01902"></a><span class="lineno"> 1902</span>    <a class="code hl_function" href="../../d9/dba/grpc_8c.html#aa3ce467a304806b53187bcf18233be7c">cwist_grpc_decoder_init</a>(&amp;session-&gt;decoder, 0);</div>
+<div class="line"><a id="l01903" name="l01903"></a><span class="lineno"> 1903</span>    atomic_store(&amp;session-&gt;refs, 2); <span class="comment">/* transport + handler thread */</span></div>
+<div class="line"><a id="l01904" name="l01904"></a><span class="lineno"> 1904</span> </div>
+<div class="line"><a id="l01905" name="l01905"></a><span class="lineno"> 1905</span>    session-&gt;stream.req = req;</div>
+<div class="line"><a id="l01906" name="l01906"></a><span class="lineno"> 1906</span>    session-&gt;stream.res = NULL;</div>
+<div class="line"><a id="l01907" name="l01907"></a><span class="lineno"> 1907</span>    session-&gt;stream.messages = NULL;</div>
+<div class="line"><a id="l01908" name="l01908"></a><span class="lineno"> 1908</span>    session-&gt;stream.message_count = 0;</div>
+<div class="line"><a id="l01909" name="l01909"></a><span class="lineno"> 1909</span>    session-&gt;stream.status = <a class="code hl_enumvalue" href="../../d6/dbb/grpc_8h.html#a15850515e26e871db8c849e393d4fc36a2eea144e80cec02747cbb9d06d038e70">CWIST_GRPC_OK</a>;</div>
+<div class="line"><a id="l01910" name="l01910"></a><span class="lineno"> 1910</span>    session-&gt;stream.status_message = NULL;</div>
+<div class="line"><a id="l01911" name="l01911"></a><span class="lineno"> 1911</span>    session-&gt;stream.closed = 0;</div>
+<div class="line"><a id="l01912" name="l01912"></a><span class="lineno"> 1912</span>    session-&gt;stream.write_frame = grpc_session_write_frame;</div>
+<div class="line"><a id="l01913" name="l01913"></a><span class="lineno"> 1913</span>    session-&gt;stream.write_frame_ctx = session;</div>
+<div class="line"><a id="l01914" name="l01914"></a><span class="lineno"> 1914</span>    session-&gt;stream.session = session;</div>
+<div class="line"><a id="l01915" name="l01915"></a><span class="lineno"> 1915</span>    __atomic_store_n(&amp;session-&gt;stream.cancelled, 0, __ATOMIC_RELEASE);</div>
+<div class="line"><a id="l01916" name="l01916"></a><span class="lineno"> 1916</span>    session-&gt;stream.recv_pos = 0;</div>
+<div class="line"><a id="l01917" name="l01917"></a><span class="lineno"> 1917</span>    <span class="keyword">const</span> <span class="keywordtype">char</span> *timeout = grpc_header_get(req, <span class="stringliteral">&quot;grpc-timeout&quot;</span>);</div>
+<div class="line"><a id="l01918" name="l01918"></a><span class="lineno"> 1918</span>    <span class="keywordflow">if</span> (timeout) {</div>
+<div class="line"><a id="l01919" name="l01919"></a><span class="lineno"> 1919</span>        uint64_t timeout_ms = 0;</div>
+<div class="line"><a id="l01920" name="l01920"></a><span class="lineno"> 1920</span>        <span class="keywordflow">if</span> (<a class="code hl_function" href="../../d9/dba/grpc_8c.html#a617d7d28fe63d6e1b19060560e8ff55a">cwist_grpc_parse_timeout</a>(timeout, &amp;timeout_ms) == 0)</div>
+<div class="line"><a id="l01921" name="l01921"></a><span class="lineno"> 1921</span>            session-&gt;stream.deadline_ms = grpc_now_ms() + timeout_ms;</div>
+<div class="line"><a id="l01922" name="l01922"></a><span class="lineno"> 1922</span>    }</div>
+<div class="line"><a id="l01923" name="l01923"></a><span class="lineno"> 1923</span>    session-&gt;handler = route-&gt;stream_handler;</div>
+<div class="line"><a id="l01924" name="l01924"></a><span class="lineno"> 1924</span>    session-&gt;user_ctx = route-&gt;user_ctx;</div>
+<div class="line"><a id="l01925" name="l01925"></a><span class="lineno"> 1925</span>    session-&gt;resp_encoding = grpc_client_accepts_gzip(req) ? 1 : 0;</div>
 <div class="line"><a id="l01926" name="l01926"></a><span class="lineno"> 1926</span> </div>
-<div class="line"><a id="l01927" name="l01927"></a><span class="lineno"> 1927</span>    pthread_mutex_lock(&amp;ctx-&gt;mu);</div>
-<div class="line"><a id="l01928" name="l01928"></a><span class="lineno"> 1928</span>    ctx-&gt;refs++;</div>
-<div class="line"><a id="l01929" name="l01929"></a><span class="lineno"> 1929</span>    session-&gt;next = ctx-&gt;sessions;</div>
-<div class="line"><a id="l01930" name="l01930"></a><span class="lineno"> 1930</span>    ctx-&gt;sessions = session;</div>
-<div class="line"><a id="l01931" name="l01931"></a><span class="lineno"> 1931</span>    pthread_mutex_unlock(&amp;ctx-&gt;mu);</div>
-<div class="line"><a id="l01932" name="l01932"></a><span class="lineno"> 1932</span> </div>
-<div class="line"><a id="l01933" name="l01933"></a><span class="lineno"> 1933</span>    pthread_t tid;</div>
-<div class="line"><a id="l01934" name="l01934"></a><span class="lineno"> 1934</span>    <span class="keywordflow">if</span> (pthread_create(&amp;tid, NULL, grpc_session_thread, session) != 0) {</div>
-<div class="line"><a id="l01935" name="l01935"></a><span class="lineno"> 1935</span>        pthread_mutex_lock(&amp;ctx-&gt;mu);</div>
-<div class="line"><a id="l01936" name="l01936"></a><span class="lineno"> 1936</span>        ctx-&gt;refs--;</div>
-<div class="line"><a id="l01937" name="l01937"></a><span class="lineno"> 1937</span>        <a class="code hl_typedef" href="../../d9/dba/grpc_8c.html#a079d16355f3697861c3e01e82857aae1">cwist_grpc_session</a> **pp = &amp;ctx-&gt;sessions;</div>
-<div class="line"><a id="l01938" name="l01938"></a><span class="lineno"> 1938</span>        <span class="keywordflow">while</span> (*pp &amp;&amp; *pp != session) pp = &amp;(*pp)-&gt;next;</div>
-<div class="line"><a id="l01939" name="l01939"></a><span class="lineno"> 1939</span>        <span class="keywordflow">if</span> (*pp) *pp = session-&gt;next;</div>
-<div class="line"><a id="l01940" name="l01940"></a><span class="lineno"> 1940</span>        pthread_mutex_unlock(&amp;ctx-&gt;mu);</div>
-<div class="line"><a id="l01941" name="l01941"></a><span class="lineno"> 1941</span>        pthread_mutex_destroy(&amp;session-&gt;mu);</div>
-<div class="line"><a id="l01942" name="l01942"></a><span class="lineno"> 1942</span>        pthread_cond_destroy(&amp;session-&gt;cond);</div>
-<div class="line"><a id="l01943" name="l01943"></a><span class="lineno"> 1943</span>        pthread_mutex_destroy(&amp;session-&gt;wmu);</div>
-<div class="line"><a id="l01944" name="l01944"></a><span class="lineno"> 1944</span>        <a class="code hl_function" href="../../d9/dba/grpc_8c.html#ab258f530cf5685a72a5a07d626529ceb">cwist_grpc_decoder_destroy</a>(&amp;session-&gt;decoder);</div>
-<div class="line"><a id="l01945" name="l01945"></a><span class="lineno"> 1945</span>        <a class="code hl_function" href="../../d2/dfe/alloc_8h.html#a220abeebe2823e72511d1690fc561306">cwist_free</a>(session);</div>
-<div class="line"><a id="l01946" name="l01946"></a><span class="lineno"> 1946</span>        <span class="keywordflow">return</span> NULL;</div>
-<div class="line"><a id="l01947" name="l01947"></a><span class="lineno"> 1947</span>    }</div>
-<div class="line"><a id="l01948" name="l01948"></a><span class="lineno"> 1948</span>    pthread_detach(tid);</div>
-<div class="line"><a id="l01949" name="l01949"></a><span class="lineno"> 1949</span>    <span class="keywordflow">return</span> session;</div>
-<div class="line"><a id="l01950" name="l01950"></a><span class="lineno"> 1950</span>}</div>
-<div class="line"><a id="l01951" name="l01951"></a><span class="lineno"> 1951</span> </div>
-<div class="line"><a id="l01967" name="l01967"></a><span class="lineno"> 1967</span><span class="keyword">static</span> <span class="keywordtype">int</span> grpc_h2_on_data(<span class="keywordtype">void</span> *conn_ctx, <span class="keywordtype">void</span> *stream_ctx, <span class="keyword">const</span> <span class="keywordtype">unsigned</span> <span class="keywordtype">char</span> *data, <span class="keywordtype">size_t</span> len,</div>
-<div class="line"><a id="l01968" name="l01968"></a><span class="lineno"> 1968</span>                           <span class="keywordtype">int</span> end_stream) {</div>
-<div class="line"><a id="l01969" name="l01969"></a><span class="lineno"> 1969</span>    (void)conn_ctx;</div>
-<div class="line"><a id="l01970" name="l01970"></a><span class="lineno"> 1970</span>    <a class="code hl_typedef" href="../../d9/dba/grpc_8c.html#a079d16355f3697861c3e01e82857aae1">cwist_grpc_session</a> *session = stream_ctx;</div>
-<div class="line"><a id="l01971" name="l01971"></a><span class="lineno"> 1971</span>    <span class="keywordflow">if</span> (!session) <span class="keywordflow">return</span> 1;</div>
-<div class="line"><a id="l01972" name="l01972"></a><span class="lineno"> 1972</span> </div>
-<div class="line"><a id="l01973" name="l01973"></a><span class="lineno"> 1973</span>    <span class="keywordflow">if</span> (data &amp;&amp; len &gt; 0) {</div>
-<div class="line"><a id="l01974" name="l01974"></a><span class="lineno"> 1974</span>        <span class="keywordflow">if</span> (<a class="code hl_function" href="../../d9/dba/grpc_8c.html#a4fb80caa1415dea8763f283f6545f3bc">cwist_grpc_decoder_feed</a>(&amp;session-&gt;decoder, data, len, grpc_session_decoded, session) !=</div>
-<div class="line"><a id="l01975" name="l01975"></a><span class="lineno"> 1975</span>            0) {</div>
-<div class="line"><a id="l01976" name="l01976"></a><span class="lineno"> 1976</span>            <span class="keywordflow">if</span> (session-&gt;encoding != 1) {</div>
-<div class="line"><a id="l01977" name="l01977"></a><span class="lineno"> 1977</span>                <span class="comment">/* Compressed flag set without grpc-encoding: gzip. */</span></div>
-<div class="line"><a id="l01978" name="l01978"></a><span class="lineno"> 1978</span>                grpc_session_fail(session, <a class="code hl_enumvalue" href="../../d6/dbb/grpc_8h.html#a15850515e26e871db8c849e393d4fc36a7a77fcc75d4f5de8f40e67065bde09d0">CWIST_GRPC_UNIMPLEMENTED</a>,</div>
-<div class="line"><a id="l01979" name="l01979"></a><span class="lineno"> 1979</span>                                  <span class="stringliteral">&quot;compressed gRPC message without grpc-encoding: gzip&quot;</span>);</div>
-<div class="line"><a id="l01980" name="l01980"></a><span class="lineno"> 1980</span>            } <span class="keywordflow">else</span> {</div>
-<div class="line"><a id="l01981" name="l01981"></a><span class="lineno"> 1981</span>                grpc_session_fail(session, <a class="code hl_enumvalue" href="../../d6/dbb/grpc_8h.html#a15850515e26e871db8c849e393d4fc36a746d6d2a7cdb2e619deae06f2ddccc04">CWIST_GRPC_INVALID_ARGUMENT</a>,</div>
-<div class="line"><a id="l01982" name="l01982"></a><span class="lineno"> 1982</span>                                  <span class="stringliteral">&quot;malformed gRPC message frame&quot;</span>);</div>
-<div class="line"><a id="l01983" name="l01983"></a><span class="lineno"> 1983</span>            }</div>
-<div class="line"><a id="l01984" name="l01984"></a><span class="lineno"> 1984</span>            <span class="keywordflow">return</span> 0; <span class="comment">/* trailers carry the error; the poll sweep reaps us */</span></div>
-<div class="line"><a id="l01985" name="l01985"></a><span class="lineno"> 1985</span>        }</div>
-<div class="line"><a id="l01986" name="l01986"></a><span class="lineno"> 1986</span>    }</div>
-<div class="line"><a id="l01987" name="l01987"></a><span class="lineno"> 1987</span>    <span class="keywordflow">if</span> (end_stream) {</div>
-<div class="line"><a id="l01988" name="l01988"></a><span class="lineno"> 1988</span>        pthread_mutex_lock(&amp;session-&gt;mu);</div>
-<div class="line"><a id="l01989" name="l01989"></a><span class="lineno"> 1989</span>        session-&gt;eof = 1;</div>
-<div class="line"><a id="l01990" name="l01990"></a><span class="lineno"> 1990</span>        pthread_cond_broadcast(&amp;session-&gt;cond);</div>
-<div class="line"><a id="l01991" name="l01991"></a><span class="lineno"> 1991</span>        pthread_mutex_unlock(&amp;session-&gt;mu);</div>
-<div class="line"><a id="l01992" name="l01992"></a><span class="lineno"> 1992</span>    }</div>
-<div class="line"><a id="l01993" name="l01993"></a><span class="lineno"> 1993</span>    <span class="keywordflow">return</span> 0;</div>
-<div class="line"><a id="l01994" name="l01994"></a><span class="lineno"> 1994</span>}</div>
-<div class="line"><a id="l01995" name="l01995"></a><span class="lineno"> 1995</span> </div>
-<div class="line"><a id="l02003" name="l02003"></a><span class="lineno"> 2003</span><span class="keyword">static</span> <span class="keywordtype">void</span> grpc_h2_on_cancel(<span class="keywordtype">void</span> *conn_ctx, <span class="keywordtype">void</span> *stream_ctx) {</div>
-<div class="line"><a id="l02004" name="l02004"></a><span class="lineno"> 2004</span>    (void)conn_ctx;</div>
-<div class="line"><a id="l02005" name="l02005"></a><span class="lineno"> 2005</span>    <a class="code hl_typedef" href="../../d9/dba/grpc_8c.html#a079d16355f3697861c3e01e82857aae1">cwist_grpc_session</a> *session = stream_ctx;</div>
-<div class="line"><a id="l02006" name="l02006"></a><span class="lineno"> 2006</span>    <span class="keywordflow">if</span> (!session) <span class="keywordflow">return</span>;</div>
-<div class="line"><a id="l02007" name="l02007"></a><span class="lineno"> 2007</span>    pthread_mutex_lock(&amp;session-&gt;mu);</div>
-<div class="line"><a id="l02008" name="l02008"></a><span class="lineno"> 2008</span>    session-&gt;cancelled = 1;</div>
-<div class="line"><a id="l02009" name="l02009"></a><span class="lineno"> 2009</span>    session-&gt;stream.cancelled = 1;</div>
-<div class="line"><a id="l02010" name="l02010"></a><span class="lineno"> 2010</span>    pthread_cond_broadcast(&amp;session-&gt;cond);</div>
-<div class="line"><a id="l02011" name="l02011"></a><span class="lineno"> 2011</span>    pthread_mutex_unlock(&amp;session-&gt;mu);</div>
-<div class="line"><a id="l02012" name="l02012"></a><span class="lineno"> 2012</span>}</div>
-<div class="line"><a id="l02013" name="l02013"></a><span class="lineno"> 2013</span> </div>
-<div class="line"><a id="l02024" name="l02024"></a><span class="lineno"> 2024</span><span class="keyword">static</span> <span class="keywordtype">int</span> grpc_h2_on_poll(<span class="keywordtype">void</span> *conn_ctx, <span class="keywordtype">void</span> *stream_ctx) {</div>
-<div class="line"><a id="l02025" name="l02025"></a><span class="lineno"> 2025</span>    (void)conn_ctx;</div>
-<div class="line"><a id="l02026" name="l02026"></a><span class="lineno"> 2026</span>    <a class="code hl_typedef" href="../../d9/dba/grpc_8c.html#a079d16355f3697861c3e01e82857aae1">cwist_grpc_session</a> *session = stream_ctx;</div>
-<div class="line"><a id="l02027" name="l02027"></a><span class="lineno"> 2027</span>    <span class="keywordflow">if</span> (!session) <span class="keywordflow">return</span> 1;</div>
-<div class="line"><a id="l02028" name="l02028"></a><span class="lineno"> 2028</span> </div>
-<div class="line"><a id="l02029" name="l02029"></a><span class="lineno"> 2029</span>    <span class="comment">/* Deadline enforcement: cancel the handler and emit DEADLINE_EXCEEDED</span></div>
-<div class="line"><a id="l02030" name="l02030"></a><span class="lineno"> 2030</span><span class="comment">     * trailers so the client learns the outcome. */</span></div>
-<div class="line"><a id="l02031" name="l02031"></a><span class="lineno"> 2031</span>    <span class="keywordflow">if</span> (session-&gt;stream.deadline_ms &amp;&amp; !session-&gt;trailers_sent &amp;&amp;</div>
-<div class="line"><a id="l02032" name="l02032"></a><span class="lineno"> 2032</span>        grpc_now_ms() &gt;= session-&gt;stream.deadline_ms) {</div>
-<div class="line"><a id="l02033" name="l02033"></a><span class="lineno"> 2033</span>        pthread_mutex_lock(&amp;session-&gt;mu);</div>
-<div class="line"><a id="l02034" name="l02034"></a><span class="lineno"> 2034</span>        session-&gt;cancelled = 1;</div>
-<div class="line"><a id="l02035" name="l02035"></a><span class="lineno"> 2035</span>        session-&gt;stream.cancelled = 1;</div>
-<div class="line"><a id="l02036" name="l02036"></a><span class="lineno"> 2036</span>        pthread_cond_broadcast(&amp;session-&gt;cond);</div>
-<div class="line"><a id="l02037" name="l02037"></a><span class="lineno"> 2037</span>        pthread_mutex_unlock(&amp;session-&gt;mu);</div>
-<div class="line"><a id="l02038" name="l02038"></a><span class="lineno"> 2038</span>        grpc_session_send_trailers(session, <a class="code hl_enumvalue" href="../../d6/dbb/grpc_8h.html#a15850515e26e871db8c849e393d4fc36aadb458091b8ed7abbf88ac2ef8f86714">CWIST_GRPC_DEADLINE_EXCEEDED</a>, <span class="stringliteral">&quot;deadline exceeded&quot;</span>);</div>
-<div class="line"><a id="l02039" name="l02039"></a><span class="lineno"> 2039</span>    }</div>
-<div class="line"><a id="l02040" name="l02040"></a><span class="lineno"> 2040</span>    <span class="keywordflow">return</span> session-&gt;trailers_sent;</div>
-<div class="line"><a id="l02041" name="l02041"></a><span class="lineno"> 2041</span>}</div>
-<div class="line"><a id="l02042" name="l02042"></a><span class="lineno"> 2042</span> </div>
-<div class="line"><a id="l02051" name="l02051"></a><span class="lineno"> 2051</span><span class="keyword">static</span> uint64_t grpc_h2_next_deadline_ms(<span class="keywordtype">void</span> *conn_ctx) {</div>
-<div class="line"><a id="l02052" name="l02052"></a><span class="lineno"> 2052</span>    <a class="code hl_typedef" href="../../d9/dba/grpc_8c.html#a8f4ad33e1ecc8ed43795a10e818fa394">cwist_grpc_h2_conn_ctx</a> *ctx = conn_ctx;</div>
-<div class="line"><a id="l02053" name="l02053"></a><span class="lineno"> 2053</span>    <span class="keywordflow">if</span> (!ctx) <span class="keywordflow">return</span> 0;</div>
-<div class="line"><a id="l02054" name="l02054"></a><span class="lineno"> 2054</span>    uint64_t nearest = 0;</div>
-<div class="line"><a id="l02055" name="l02055"></a><span class="lineno"> 2055</span>    pthread_mutex_lock(&amp;ctx-&gt;mu);</div>
-<div class="line"><a id="l02056" name="l02056"></a><span class="lineno"> 2056</span>    <span class="keywordflow">for</span> (cwist_grpc_session *s = ctx-&gt;sessions; s; s = s-&gt;next) {</div>
-<div class="line"><a id="l02057" name="l02057"></a><span class="lineno"> 2057</span>        <span class="keywordflow">if</span> (s-&gt;trailers_sent || !s-&gt;stream.deadline_ms) <span class="keywordflow">continue</span>;</div>
-<div class="line"><a id="l02058" name="l02058"></a><span class="lineno"> 2058</span>        <span class="keywordflow">if</span> (!nearest || s-&gt;stream.deadline_ms &lt; nearest) nearest = s-&gt;stream.deadline_ms;</div>
-<div class="line"><a id="l02059" name="l02059"></a><span class="lineno"> 2059</span>    }</div>
-<div class="line"><a id="l02060" name="l02060"></a><span class="lineno"> 2060</span>    pthread_mutex_unlock(&amp;ctx-&gt;mu);</div>
-<div class="line"><a id="l02061" name="l02061"></a><span class="lineno"> 2061</span>    <span class="keywordflow">return</span> nearest;</div>
-<div class="line"><a id="l02062" name="l02062"></a><span class="lineno"> 2062</span>}</div>
-<div class="line"><a id="l02063" name="l02063"></a><span class="lineno"> 2063</span> </div>
-<div class="line"><a id="l02072" name="l02072"></a><span class="lineno"> 2072</span><span class="keyword">static</span> <span class="keywordtype">void</span> grpc_h2_on_close(<span class="keywordtype">void</span> *conn_ctx, <span class="keywordtype">void</span> *stream_ctx) {</div>
-<div class="line"><a id="l02073" name="l02073"></a><span class="lineno"> 2073</span>    (void)conn_ctx;</div>
-<div class="line"><a id="l02074" name="l02074"></a><span class="lineno"> 2074</span>    <a class="code hl_typedef" href="../../d9/dba/grpc_8c.html#a079d16355f3697861c3e01e82857aae1">cwist_grpc_session</a> *session = stream_ctx;</div>
-<div class="line"><a id="l02075" name="l02075"></a><span class="lineno"> 2075</span>    <span class="keywordflow">if</span> (!session) <span class="keywordflow">return</span>;</div>
-<div class="line"><a id="l02076" name="l02076"></a><span class="lineno"> 2076</span>    <span class="comment">/* Transport is gone: detach so handler-thread sends fail fast. */</span></div>
-<div class="line"><a id="l02077" name="l02077"></a><span class="lineno"> 2077</span>    pthread_mutex_lock(&amp;session-&gt;wmu);</div>
-<div class="line"><a id="l02078" name="l02078"></a><span class="lineno"> 2078</span>    session-&gt;h2s = NULL;</div>
-<div class="line"><a id="l02079" name="l02079"></a><span class="lineno"> 2079</span>    pthread_mutex_unlock(&amp;session-&gt;wmu);</div>
-<div class="line"><a id="l02080" name="l02080"></a><span class="lineno"> 2080</span>    pthread_mutex_lock(&amp;session-&gt;mu);</div>
-<div class="line"><a id="l02081" name="l02081"></a><span class="lineno"> 2081</span>    session-&gt;cancelled = 1;</div>
-<div class="line"><a id="l02082" name="l02082"></a><span class="lineno"> 2082</span>    session-&gt;stream.cancelled = 1;</div>
-<div class="line"><a id="l02083" name="l02083"></a><span class="lineno"> 2083</span>    pthread_cond_broadcast(&amp;session-&gt;cond);</div>
-<div class="line"><a id="l02084" name="l02084"></a><span class="lineno"> 2084</span>    pthread_mutex_unlock(&amp;session-&gt;mu);</div>
-<div class="line"><a id="l02085" name="l02085"></a><span class="lineno"> 2085</span>    grpc_session_release(session);</div>
-<div class="line"><a id="l02086" name="l02086"></a><span class="lineno"> 2086</span>}</div>
-<div class="line"><a id="l02087" name="l02087"></a><span class="lineno"> 2087</span> </div>
-<div class="line"><a id="l02088" name="l02088"></a><span class="lineno"> 2088</span><span class="keyword">static</span> <span class="keyword">const</span> <a class="code hl_struct" href="../../d6/d48/structcwist__http2__stream__hooks.html">cwist_http2_stream_hooks</a> grpc_h2_hooks = {</div>
-<div class="line"><a id="l02089" name="l02089"></a><span class="lineno"> 2089</span>    .<a class="code hl_variable" href="../../d6/d48/structcwist__http2__stream__hooks.html#a4cb1c164289077cef35e4e77c4a7fe62">on_conn_open</a> = grpc_h2_on_conn_open,</div>
-<div class="line"><a id="l02090" name="l02090"></a><span class="lineno"> 2090</span>    .on_conn_close = grpc_h2_on_conn_close,</div>
-<div class="line"><a id="l02091" name="l02091"></a><span class="lineno"> 2091</span>    .on_headers = grpc_h2_on_headers,</div>
-<div class="line"><a id="l02092" name="l02092"></a><span class="lineno"> 2092</span>    .on_data = grpc_h2_on_data,</div>
-<div class="line"><a id="l02093" name="l02093"></a><span class="lineno"> 2093</span>    .on_cancel = grpc_h2_on_cancel,</div>
-<div class="line"><a id="l02094" name="l02094"></a><span class="lineno"> 2094</span>    .on_poll = grpc_h2_on_poll,</div>
-<div class="line"><a id="l02095" name="l02095"></a><span class="lineno"> 2095</span>    .next_deadline_ms = grpc_h2_next_deadline_ms,</div>
-<div class="line"><a id="l02096" name="l02096"></a><span class="lineno"> 2096</span>    .on_close = grpc_h2_on_close,</div>
-<div class="line"><a id="l02097" name="l02097"></a><span class="lineno"> 2097</span>};</div>
-<div class="line"><a id="l02098" name="l02098"></a><span class="lineno"> 2098</span> </div>
-<div class="foldopen" id="foldopen02103" data-start="{" data-end="}">
-<div class="line"><a id="l02103" name="l02103"></a><span class="lineno"><a class="line" href="../../d6/dbb/grpc_8h.html#afb73c094b3d9d2cb364dff34986a8e3b"> 2103</a></span><span class="keyword">const</span> <a class="code hl_struct" href="../../d6/d48/structcwist__http2__stream__hooks.html">cwist_http2_stream_hooks</a> *<a class="code hl_function" href="../../d9/dba/grpc_8c.html#afb73c094b3d9d2cb364dff34986a8e3b">cwist_grpc_http2_hooks</a>(<span class="keywordtype">void</span>) {</div>
-<div class="line"><a id="l02104" name="l02104"></a><span class="lineno"> 2104</span>    <span class="keywordflow">return</span> &amp;grpc_h2_hooks;</div>
-<div class="line"><a id="l02105" name="l02105"></a><span class="lineno"> 2105</span>}</div>
+<div class="line"><a id="l01927" name="l01927"></a><span class="lineno"> 1927</span>    <span class="comment">/* Response-Headers are deliberately not sent yet (gRFC A6): they go out</span></div>
+<div class="line"><a id="l01928" name="l01928"></a><span class="lineno"> 1928</span><span class="comment">     * with the first DATA frame, or the call ends in Trailers-Only form so</span></div>
+<div class="line"><a id="l01929" name="l01929"></a><span class="lineno"> 1929</span><span class="comment">     * conforming clients may retry the RPC. */</span></div>
+<div class="line"><a id="l01930" name="l01930"></a><span class="lineno"> 1930</span> </div>
+<div class="line"><a id="l01931" name="l01931"></a><span class="lineno"> 1931</span>    pthread_mutex_lock(&amp;ctx-&gt;mu);</div>
+<div class="line"><a id="l01932" name="l01932"></a><span class="lineno"> 1932</span>    ctx-&gt;refs++;</div>
+<div class="line"><a id="l01933" name="l01933"></a><span class="lineno"> 1933</span>    session-&gt;next = ctx-&gt;sessions;</div>
+<div class="line"><a id="l01934" name="l01934"></a><span class="lineno"> 1934</span>    ctx-&gt;sessions = session;</div>
+<div class="line"><a id="l01935" name="l01935"></a><span class="lineno"> 1935</span>    pthread_mutex_unlock(&amp;ctx-&gt;mu);</div>
+<div class="line"><a id="l01936" name="l01936"></a><span class="lineno"> 1936</span> </div>
+<div class="line"><a id="l01937" name="l01937"></a><span class="lineno"> 1937</span>    pthread_t tid;</div>
+<div class="line"><a id="l01938" name="l01938"></a><span class="lineno"> 1938</span>    <span class="keywordflow">if</span> (pthread_create(&amp;tid, NULL, grpc_session_thread, session) != 0) {</div>
+<div class="line"><a id="l01939" name="l01939"></a><span class="lineno"> 1939</span>        pthread_mutex_lock(&amp;ctx-&gt;mu);</div>
+<div class="line"><a id="l01940" name="l01940"></a><span class="lineno"> 1940</span>        ctx-&gt;refs--;</div>
+<div class="line"><a id="l01941" name="l01941"></a><span class="lineno"> 1941</span>        <a class="code hl_typedef" href="../../d9/dba/grpc_8c.html#a079d16355f3697861c3e01e82857aae1">cwist_grpc_session</a> **pp = &amp;ctx-&gt;sessions;</div>
+<div class="line"><a id="l01942" name="l01942"></a><span class="lineno"> 1942</span>        <span class="keywordflow">while</span> (*pp &amp;&amp; *pp != session) pp = &amp;(*pp)-&gt;next;</div>
+<div class="line"><a id="l01943" name="l01943"></a><span class="lineno"> 1943</span>        <span class="keywordflow">if</span> (*pp) *pp = session-&gt;next;</div>
+<div class="line"><a id="l01944" name="l01944"></a><span class="lineno"> 1944</span>        pthread_mutex_unlock(&amp;ctx-&gt;mu);</div>
+<div class="line"><a id="l01945" name="l01945"></a><span class="lineno"> 1945</span>        pthread_mutex_destroy(&amp;session-&gt;mu);</div>
+<div class="line"><a id="l01946" name="l01946"></a><span class="lineno"> 1946</span>        pthread_cond_destroy(&amp;session-&gt;cond);</div>
+<div class="line"><a id="l01947" name="l01947"></a><span class="lineno"> 1947</span>        pthread_mutex_destroy(&amp;session-&gt;wmu);</div>
+<div class="line"><a id="l01948" name="l01948"></a><span class="lineno"> 1948</span>        <a class="code hl_function" href="../../d9/dba/grpc_8c.html#ab258f530cf5685a72a5a07d626529ceb">cwist_grpc_decoder_destroy</a>(&amp;session-&gt;decoder);</div>
+<div class="line"><a id="l01949" name="l01949"></a><span class="lineno"> 1949</span>        <a class="code hl_function" href="../../d2/dfe/alloc_8h.html#a220abeebe2823e72511d1690fc561306">cwist_free</a>(session);</div>
+<div class="line"><a id="l01950" name="l01950"></a><span class="lineno"> 1950</span>        <span class="keywordflow">return</span> NULL;</div>
+<div class="line"><a id="l01951" name="l01951"></a><span class="lineno"> 1951</span>    }</div>
+<div class="line"><a id="l01952" name="l01952"></a><span class="lineno"> 1952</span>    pthread_detach(tid);</div>
+<div class="line"><a id="l01953" name="l01953"></a><span class="lineno"> 1953</span>    <span class="keywordflow">return</span> session;</div>
+<div class="line"><a id="l01954" name="l01954"></a><span class="lineno"> 1954</span>}</div>
+<div class="line"><a id="l01955" name="l01955"></a><span class="lineno"> 1955</span> </div>
+<div class="line"><a id="l01971" name="l01971"></a><span class="lineno"> 1971</span><span class="keyword">static</span> <span class="keywordtype">int</span> grpc_h2_on_data(<span class="keywordtype">void</span> *conn_ctx, <span class="keywordtype">void</span> *stream_ctx, <span class="keyword">const</span> <span class="keywordtype">unsigned</span> <span class="keywordtype">char</span> *data, <span class="keywordtype">size_t</span> len,</div>
+<div class="line"><a id="l01972" name="l01972"></a><span class="lineno"> 1972</span>                           <span class="keywordtype">int</span> end_stream) {</div>
+<div class="line"><a id="l01973" name="l01973"></a><span class="lineno"> 1973</span>    (void)conn_ctx;</div>
+<div class="line"><a id="l01974" name="l01974"></a><span class="lineno"> 1974</span>    <a class="code hl_typedef" href="../../d9/dba/grpc_8c.html#a079d16355f3697861c3e01e82857aae1">cwist_grpc_session</a> *session = stream_ctx;</div>
+<div class="line"><a id="l01975" name="l01975"></a><span class="lineno"> 1975</span>    <span class="keywordflow">if</span> (!session) <span class="keywordflow">return</span> 1;</div>
+<div class="line"><a id="l01976" name="l01976"></a><span class="lineno"> 1976</span> </div>
+<div class="line"><a id="l01977" name="l01977"></a><span class="lineno"> 1977</span>    <span class="keywordflow">if</span> (data &amp;&amp; len &gt; 0) {</div>
+<div class="line"><a id="l01978" name="l01978"></a><span class="lineno"> 1978</span>        <span class="keywordflow">if</span> (<a class="code hl_function" href="../../d9/dba/grpc_8c.html#a4fb80caa1415dea8763f283f6545f3bc">cwist_grpc_decoder_feed</a>(&amp;session-&gt;decoder, data, len, grpc_session_decoded, session) !=</div>
+<div class="line"><a id="l01979" name="l01979"></a><span class="lineno"> 1979</span>            0) {</div>
+<div class="line"><a id="l01980" name="l01980"></a><span class="lineno"> 1980</span>            <span class="keywordflow">if</span> (session-&gt;encoding != 1) {</div>
+<div class="line"><a id="l01981" name="l01981"></a><span class="lineno"> 1981</span>                <span class="comment">/* Compressed flag set without grpc-encoding: gzip. */</span></div>
+<div class="line"><a id="l01982" name="l01982"></a><span class="lineno"> 1982</span>                grpc_session_fail(session, <a class="code hl_enumvalue" href="../../d6/dbb/grpc_8h.html#a15850515e26e871db8c849e393d4fc36a7a77fcc75d4f5de8f40e67065bde09d0">CWIST_GRPC_UNIMPLEMENTED</a>,</div>
+<div class="line"><a id="l01983" name="l01983"></a><span class="lineno"> 1983</span>                                  <span class="stringliteral">&quot;compressed gRPC message without grpc-encoding: gzip&quot;</span>);</div>
+<div class="line"><a id="l01984" name="l01984"></a><span class="lineno"> 1984</span>            } <span class="keywordflow">else</span> {</div>
+<div class="line"><a id="l01985" name="l01985"></a><span class="lineno"> 1985</span>                grpc_session_fail(session, <a class="code hl_enumvalue" href="../../d6/dbb/grpc_8h.html#a15850515e26e871db8c849e393d4fc36a746d6d2a7cdb2e619deae06f2ddccc04">CWIST_GRPC_INVALID_ARGUMENT</a>,</div>
+<div class="line"><a id="l01986" name="l01986"></a><span class="lineno"> 1986</span>                                  <span class="stringliteral">&quot;malformed gRPC message frame&quot;</span>);</div>
+<div class="line"><a id="l01987" name="l01987"></a><span class="lineno"> 1987</span>            }</div>
+<div class="line"><a id="l01988" name="l01988"></a><span class="lineno"> 1988</span>            <span class="keywordflow">return</span> 0; <span class="comment">/* trailers carry the error; the poll sweep reaps us */</span></div>
+<div class="line"><a id="l01989" name="l01989"></a><span class="lineno"> 1989</span>        }</div>
+<div class="line"><a id="l01990" name="l01990"></a><span class="lineno"> 1990</span>    }</div>
+<div class="line"><a id="l01991" name="l01991"></a><span class="lineno"> 1991</span>    <span class="keywordflow">if</span> (end_stream) {</div>
+<div class="line"><a id="l01992" name="l01992"></a><span class="lineno"> 1992</span>        pthread_mutex_lock(&amp;session-&gt;mu);</div>
+<div class="line"><a id="l01993" name="l01993"></a><span class="lineno"> 1993</span>        session-&gt;eof = 1;</div>
+<div class="line"><a id="l01994" name="l01994"></a><span class="lineno"> 1994</span>        pthread_cond_broadcast(&amp;session-&gt;cond);</div>
+<div class="line"><a id="l01995" name="l01995"></a><span class="lineno"> 1995</span>        pthread_mutex_unlock(&amp;session-&gt;mu);</div>
+<div class="line"><a id="l01996" name="l01996"></a><span class="lineno"> 1996</span>    }</div>
+<div class="line"><a id="l01997" name="l01997"></a><span class="lineno"> 1997</span>    <span class="keywordflow">return</span> 0;</div>
+<div class="line"><a id="l01998" name="l01998"></a><span class="lineno"> 1998</span>}</div>
+<div class="line"><a id="l01999" name="l01999"></a><span class="lineno"> 1999</span> </div>
+<div class="line"><a id="l02007" name="l02007"></a><span class="lineno"> 2007</span><span class="keyword">static</span> <span class="keywordtype">void</span> grpc_h2_on_cancel(<span class="keywordtype">void</span> *conn_ctx, <span class="keywordtype">void</span> *stream_ctx) {</div>
+<div class="line"><a id="l02008" name="l02008"></a><span class="lineno"> 2008</span>    (void)conn_ctx;</div>
+<div class="line"><a id="l02009" name="l02009"></a><span class="lineno"> 2009</span>    <a class="code hl_typedef" href="../../d9/dba/grpc_8c.html#a079d16355f3697861c3e01e82857aae1">cwist_grpc_session</a> *session = stream_ctx;</div>
+<div class="line"><a id="l02010" name="l02010"></a><span class="lineno"> 2010</span>    <span class="keywordflow">if</span> (!session) <span class="keywordflow">return</span>;</div>
+<div class="line"><a id="l02011" name="l02011"></a><span class="lineno"> 2011</span>    pthread_mutex_lock(&amp;session-&gt;mu);</div>
+<div class="line"><a id="l02012" name="l02012"></a><span class="lineno"> 2012</span>    session-&gt;cancelled = 1;</div>
+<div class="line"><a id="l02013" name="l02013"></a><span class="lineno"> 2013</span>    __atomic_store_n(&amp;session-&gt;stream.cancelled, 1, __ATOMIC_RELEASE);</div>
+<div class="line"><a id="l02014" name="l02014"></a><span class="lineno"> 2014</span>    pthread_cond_broadcast(&amp;session-&gt;cond);</div>
+<div class="line"><a id="l02015" name="l02015"></a><span class="lineno"> 2015</span>    pthread_mutex_unlock(&amp;session-&gt;mu);</div>
+<div class="line"><a id="l02016" name="l02016"></a><span class="lineno"> 2016</span>}</div>
+<div class="line"><a id="l02017" name="l02017"></a><span class="lineno"> 2017</span> </div>
+<div class="line"><a id="l02028" name="l02028"></a><span class="lineno"> 2028</span><span class="keyword">static</span> <span class="keywordtype">int</span> grpc_h2_on_poll(<span class="keywordtype">void</span> *conn_ctx, <span class="keywordtype">void</span> *stream_ctx) {</div>
+<div class="line"><a id="l02029" name="l02029"></a><span class="lineno"> 2029</span>    (void)conn_ctx;</div>
+<div class="line"><a id="l02030" name="l02030"></a><span class="lineno"> 2030</span>    <a class="code hl_typedef" href="../../d9/dba/grpc_8c.html#a079d16355f3697861c3e01e82857aae1">cwist_grpc_session</a> *session = stream_ctx;</div>
+<div class="line"><a id="l02031" name="l02031"></a><span class="lineno"> 2031</span>    <span class="keywordflow">if</span> (!session) <span class="keywordflow">return</span> 1;</div>
+<div class="line"><a id="l02032" name="l02032"></a><span class="lineno"> 2032</span> </div>
+<div class="line"><a id="l02033" name="l02033"></a><span class="lineno"> 2033</span>    <span class="comment">/* Deadline enforcement: cancel the handler and emit DEADLINE_EXCEEDED</span></div>
+<div class="line"><a id="l02034" name="l02034"></a><span class="lineno"> 2034</span><span class="comment">     * trailers so the client learns the outcome. */</span></div>
+<div class="line"><a id="l02035" name="l02035"></a><span class="lineno"> 2035</span>    <span class="keywordflow">if</span> (session-&gt;stream.deadline_ms &amp;&amp;</div>
+<div class="line"><a id="l02036" name="l02036"></a><span class="lineno"> 2036</span>        !__atomic_load_n(&amp;session-&gt;trailers_sent, __ATOMIC_ACQUIRE) &amp;&amp;</div>
+<div class="line"><a id="l02037" name="l02037"></a><span class="lineno"> 2037</span>        grpc_now_ms() &gt;= session-&gt;stream.deadline_ms) {</div>
+<div class="line"><a id="l02038" name="l02038"></a><span class="lineno"> 2038</span>        pthread_mutex_lock(&amp;session-&gt;mu);</div>
+<div class="line"><a id="l02039" name="l02039"></a><span class="lineno"> 2039</span>        session-&gt;cancelled = 1;</div>
+<div class="line"><a id="l02040" name="l02040"></a><span class="lineno"> 2040</span>        __atomic_store_n(&amp;session-&gt;stream.cancelled, 1, __ATOMIC_RELEASE);</div>
+<div class="line"><a id="l02041" name="l02041"></a><span class="lineno"> 2041</span>        pthread_cond_broadcast(&amp;session-&gt;cond);</div>
+<div class="line"><a id="l02042" name="l02042"></a><span class="lineno"> 2042</span>        pthread_mutex_unlock(&amp;session-&gt;mu);</div>
+<div class="line"><a id="l02043" name="l02043"></a><span class="lineno"> 2043</span>        grpc_session_send_trailers(session, <a class="code hl_enumvalue" href="../../d6/dbb/grpc_8h.html#a15850515e26e871db8c849e393d4fc36aadb458091b8ed7abbf88ac2ef8f86714">CWIST_GRPC_DEADLINE_EXCEEDED</a>, <span class="stringliteral">&quot;deadline exceeded&quot;</span>);</div>
+<div class="line"><a id="l02044" name="l02044"></a><span class="lineno"> 2044</span>    }</div>
+<div class="line"><a id="l02045" name="l02045"></a><span class="lineno"> 2045</span>    <span class="keywordflow">return</span> __atomic_load_n(&amp;session-&gt;trailers_sent, __ATOMIC_ACQUIRE);</div>
+<div class="line"><a id="l02046" name="l02046"></a><span class="lineno"> 2046</span>}</div>
+<div class="line"><a id="l02047" name="l02047"></a><span class="lineno"> 2047</span> </div>
+<div class="line"><a id="l02056" name="l02056"></a><span class="lineno"> 2056</span><span class="keyword">static</span> uint64_t grpc_h2_next_deadline_ms(<span class="keywordtype">void</span> *conn_ctx) {</div>
+<div class="line"><a id="l02057" name="l02057"></a><span class="lineno"> 2057</span>    <a class="code hl_typedef" href="../../d9/dba/grpc_8c.html#a8f4ad33e1ecc8ed43795a10e818fa394">cwist_grpc_h2_conn_ctx</a> *ctx = conn_ctx;</div>
+<div class="line"><a id="l02058" name="l02058"></a><span class="lineno"> 2058</span>    <span class="keywordflow">if</span> (!ctx) <span class="keywordflow">return</span> 0;</div>
+<div class="line"><a id="l02059" name="l02059"></a><span class="lineno"> 2059</span>    uint64_t nearest = 0;</div>
+<div class="line"><a id="l02060" name="l02060"></a><span class="lineno"> 2060</span>    pthread_mutex_lock(&amp;ctx-&gt;mu);</div>
+<div class="line"><a id="l02061" name="l02061"></a><span class="lineno"> 2061</span>    <span class="keywordflow">for</span> (cwist_grpc_session *s = ctx-&gt;sessions; s; s = s-&gt;next) {</div>
+<div class="line"><a id="l02062" name="l02062"></a><span class="lineno"> 2062</span>        <span class="keywordflow">if</span> (__atomic_load_n(&amp;s-&gt;trailers_sent, __ATOMIC_ACQUIRE) || !s-&gt;stream.deadline_ms)</div>
+<div class="line"><a id="l02063" name="l02063"></a><span class="lineno"> 2063</span>            <span class="keywordflow">continue</span>;</div>
+<div class="line"><a id="l02064" name="l02064"></a><span class="lineno"> 2064</span>        <span class="keywordflow">if</span> (!nearest || s-&gt;stream.deadline_ms &lt; nearest) nearest = s-&gt;stream.deadline_ms;</div>
+<div class="line"><a id="l02065" name="l02065"></a><span class="lineno"> 2065</span>    }</div>
+<div class="line"><a id="l02066" name="l02066"></a><span class="lineno"> 2066</span>    pthread_mutex_unlock(&amp;ctx-&gt;mu);</div>
+<div class="line"><a id="l02067" name="l02067"></a><span class="lineno"> 2067</span>    <span class="keywordflow">return</span> nearest;</div>
+<div class="line"><a id="l02068" name="l02068"></a><span class="lineno"> 2068</span>}</div>
+<div class="line"><a id="l02069" name="l02069"></a><span class="lineno"> 2069</span> </div>
+<div class="line"><a id="l02078" name="l02078"></a><span class="lineno"> 2078</span><span class="keyword">static</span> <span class="keywordtype">void</span> grpc_h2_on_close(<span class="keywordtype">void</span> *conn_ctx, <span class="keywordtype">void</span> *stream_ctx) {</div>
+<div class="line"><a id="l02079" name="l02079"></a><span class="lineno"> 2079</span>    (void)conn_ctx;</div>
+<div class="line"><a id="l02080" name="l02080"></a><span class="lineno"> 2080</span>    <a class="code hl_typedef" href="../../d9/dba/grpc_8c.html#a079d16355f3697861c3e01e82857aae1">cwist_grpc_session</a> *session = stream_ctx;</div>
+<div class="line"><a id="l02081" name="l02081"></a><span class="lineno"> 2081</span>    <span class="keywordflow">if</span> (!session) <span class="keywordflow">return</span>;</div>
+<div class="line"><a id="l02082" name="l02082"></a><span class="lineno"> 2082</span>    <span class="comment">/* Transport is gone: detach so handler-thread sends fail fast. */</span></div>
+<div class="line"><a id="l02083" name="l02083"></a><span class="lineno"> 2083</span>    pthread_mutex_lock(&amp;session-&gt;wmu);</div>
+<div class="line"><a id="l02084" name="l02084"></a><span class="lineno"> 2084</span>    session-&gt;h2s = NULL;</div>
+<div class="line"><a id="l02085" name="l02085"></a><span class="lineno"> 2085</span>    pthread_mutex_unlock(&amp;session-&gt;wmu);</div>
+<div class="line"><a id="l02086" name="l02086"></a><span class="lineno"> 2086</span>    pthread_mutex_lock(&amp;session-&gt;mu);</div>
+<div class="line"><a id="l02087" name="l02087"></a><span class="lineno"> 2087</span>    session-&gt;cancelled = 1;</div>
+<div class="line"><a id="l02088" name="l02088"></a><span class="lineno"> 2088</span>    __atomic_store_n(&amp;session-&gt;stream.cancelled, 1, __ATOMIC_RELEASE);</div>
+<div class="line"><a id="l02089" name="l02089"></a><span class="lineno"> 2089</span>    pthread_cond_broadcast(&amp;session-&gt;cond);</div>
+<div class="line"><a id="l02090" name="l02090"></a><span class="lineno"> 2090</span>    pthread_mutex_unlock(&amp;session-&gt;mu);</div>
+<div class="line"><a id="l02091" name="l02091"></a><span class="lineno"> 2091</span>    grpc_session_release(session);</div>
+<div class="line"><a id="l02092" name="l02092"></a><span class="lineno"> 2092</span>}</div>
+<div class="line"><a id="l02093" name="l02093"></a><span class="lineno"> 2093</span> </div>
+<div class="line"><a id="l02094" name="l02094"></a><span class="lineno"> 2094</span><span class="keyword">static</span> <span class="keyword">const</span> <a class="code hl_struct" href="../../d6/d48/structcwist__http2__stream__hooks.html">cwist_http2_stream_hooks</a> grpc_h2_hooks = {</div>
+<div class="line"><a id="l02095" name="l02095"></a><span class="lineno"> 2095</span>    .<a class="code hl_variable" href="../../d6/d48/structcwist__http2__stream__hooks.html#a4cb1c164289077cef35e4e77c4a7fe62">on_conn_open</a> = grpc_h2_on_conn_open,</div>
+<div class="line"><a id="l02096" name="l02096"></a><span class="lineno"> 2096</span>    .on_conn_close = grpc_h2_on_conn_close,</div>
+<div class="line"><a id="l02097" name="l02097"></a><span class="lineno"> 2097</span>    .on_headers = grpc_h2_on_headers,</div>
+<div class="line"><a id="l02098" name="l02098"></a><span class="lineno"> 2098</span>    .on_data = grpc_h2_on_data,</div>
+<div class="line"><a id="l02099" name="l02099"></a><span class="lineno"> 2099</span>    .on_cancel = grpc_h2_on_cancel,</div>
+<div class="line"><a id="l02100" name="l02100"></a><span class="lineno"> 2100</span>    .on_poll = grpc_h2_on_poll,</div>
+<div class="line"><a id="l02101" name="l02101"></a><span class="lineno"> 2101</span>    .next_deadline_ms = grpc_h2_next_deadline_ms,</div>
+<div class="line"><a id="l02102" name="l02102"></a><span class="lineno"> 2102</span>    .on_close = grpc_h2_on_close,</div>
+<div class="line"><a id="l02103" name="l02103"></a><span class="lineno"> 2103</span>};</div>
+<div class="line"><a id="l02104" name="l02104"></a><span class="lineno"> 2104</span> </div>
+<div class="foldopen" id="foldopen02109" data-start="{" data-end="}">
+<div class="line"><a id="l02109" name="l02109"></a><span class="lineno"><a class="line" href="../../d6/dbb/grpc_8h.html#afb73c094b3d9d2cb364dff34986a8e3b"> 2109</a></span><span class="keyword">const</span> <a class="code hl_struct" href="../../d6/d48/structcwist__http2__stream__hooks.html">cwist_http2_stream_hooks</a> *<a class="code hl_function" href="../../d9/dba/grpc_8c.html#afb73c094b3d9d2cb364dff34986a8e3b">cwist_grpc_http2_hooks</a>(<span class="keywordtype">void</span>) {</div>
+<div class="line"><a id="l02110" name="l02110"></a><span class="lineno"> 2110</span>    <span class="keywordflow">return</span> &amp;grpc_h2_hooks;</div>
+<div class="line"><a id="l02111" name="l02111"></a><span class="lineno"> 2111</span>}</div>
 </div>
 <div class="ttc" id="aalloc_8h_html"><div class="ttname"><a href="../../d2/dfe/alloc_8h.html">alloc.h</a></div><div class="ttdoc">Memory allocation wrappers backed by libttak.</div></div>
-<div class="ttc" id="aalloc_8h_html_a220abeebe2823e72511d1690fc561306"><div class="ttname"><a href="../../d2/dfe/alloc_8h.html#a220abeebe2823e72511d1690fc561306">cwist_free</a></div><div class="ttdeci">void cwist_free(void *ptr)</div><div class="ttdoc">Free memory obtained via cwist_alloc/cwist_strdup/etc.</div><div class="ttdef"><b>Definition</b> <a href="../../d9/d39/alloc_8c_source.html#l00390">alloc.c:390</a></div></div>
-<div class="ttc" id="aalloc_8h_html_a42c763d29fa97fa0fb23b0fd91dab294"><div class="ttname"><a href="../../d2/dfe/alloc_8h.html#a42c763d29fa97fa0fb23b0fd91dab294">cwist_realloc</a></div><div class="ttdeci">void * cwist_realloc(void *ptr, size_t new_size)</div><div class="ttdoc">Resize an existing allocation (libttak tracked).</div><div class="ttdef"><b>Definition</b> <a href="../../d9/d39/alloc_8c_source.html#l00305">alloc.c:305</a></div></div>
+<div class="ttc" id="aalloc_8h_html_a220abeebe2823e72511d1690fc561306"><div class="ttname"><a href="../../d2/dfe/alloc_8h.html#a220abeebe2823e72511d1690fc561306">cwist_free</a></div><div class="ttdeci">void cwist_free(void *ptr)</div><div class="ttdoc">Free memory obtained via cwist_alloc/cwist_strdup/etc.</div><div class="ttdef"><b>Definition</b> <a href="../../d9/d39/alloc_8c_source.html#l00391">alloc.c:391</a></div></div>
+<div class="ttc" id="aalloc_8h_html_a42c763d29fa97fa0fb23b0fd91dab294"><div class="ttname"><a href="../../d2/dfe/alloc_8h.html#a42c763d29fa97fa0fb23b0fd91dab294">cwist_realloc</a></div><div class="ttdeci">void * cwist_realloc(void *ptr, size_t new_size)</div><div class="ttdoc">Resize an existing allocation (libttak tracked).</div><div class="ttdef"><b>Definition</b> <a href="../../d9/d39/alloc_8c_source.html#l00306">alloc.c:306</a></div></div>
 <div class="ttc" id="aalloc_8h_html_ab1eb512404134824144360d2885654d4"><div class="ttname"><a href="../../d2/dfe/alloc_8h.html#ab1eb512404134824144360d2885654d4">CWIST_DEFER_FREE</a></div><div class="ttdeci">#define CWIST_DEFER_FREE</div><div class="ttdoc">Attach to a pointer variable's declaration to cwist_free() it automatically when that variable's encl...</div><div class="ttdef"><b>Definition</b> <a href="../../d2/dfe/alloc_8h_source.html#l00101">alloc.h:101</a></div></div>
-<div class="ttc" id="aalloc_8h_html_aeba69949fe17751318e6b5fc84a74096"><div class="ttname"><a href="../../d2/dfe/alloc_8h.html#aeba69949fe17751318e6b5fc84a74096">cwist_alloc</a></div><div class="ttdeci">void * cwist_alloc(size_t size)</div><div class="ttdoc">Allocate zeroed memory tracked by libttak.</div><div class="ttdef"><b>Definition</b> <a href="../../d9/d39/alloc_8c_source.html#l00275">alloc.c:275</a></div></div>
+<div class="ttc" id="aalloc_8h_html_aeba69949fe17751318e6b5fc84a74096"><div class="ttname"><a href="../../d2/dfe/alloc_8h.html#aeba69949fe17751318e6b5fc84a74096">cwist_alloc</a></div><div class="ttdeci">void * cwist_alloc(size_t size)</div><div class="ttdoc">Allocate zeroed memory tracked by libttak.</div><div class="ttdef"><b>Definition</b> <a href="../../d9/d39/alloc_8c_source.html#l00276">alloc.c:276</a></div></div>
 <div class="ttc" id="aalloc_8h_html_af24e2adb2619df9938c0b45a40b4614d"><div class="ttname"><a href="../../d2/dfe/alloc_8h.html#af24e2adb2619df9938c0b45a40b4614d">CWIST_SCRATCH_DEFER</a></div><div class="ttdeci">#define CWIST_SCRATCH_DEFER</div><div class="ttdoc">Attach to a cwist_scratch_t variable's declaration so its allocation (arena- or heap-backed,...</div><div class="ttdef"><b>Definition</b> <a href="../../d2/dfe/alloc_8h_source.html#l00190">alloc.h:190</a></div></div>
-<div class="ttc" id="acore_2sstring_2sstring_8h_html_a19ce355c545bc67898dee6f43fa93264"><div class="ttname"><a href="../../d4/dbd/core_2sstring_2sstring_8h.html#a19ce355c545bc67898dee6f43fa93264">cwist_sstring_append_len</a></div><div class="ttdeci">cwist_error_t cwist_sstring_append_len(cwist_sstring *str, const char *data, size_t len)</div><div class="ttdoc">Append raw bytes with length.</div><div class="ttdef"><b>Definition</b> <a href="../../dd/d79/sstring_8c_source.html#l00210">sstring.c:210</a></div></div>
-<div class="ttc" id="acore_2sstring_2sstring_8h_html_a652db21824d157b0fb7ba3b71ef19d96"><div class="ttname"><a href="../../d4/dbd/core_2sstring_2sstring_8h.html#a652db21824d157b0fb7ba3b71ef19d96">cwist_sstring_assign_len</a></div><div class="ttdeci">cwist_error_t cwist_sstring_assign_len(cwist_sstring *str, const char *data, size_t len)</div><div class="ttdoc">Assign raw bytes with length.</div><div class="ttdef"><b>Definition</b> <a href="../../dd/d79/sstring_8c_source.html#l00086">sstring.c:86</a></div></div>
-<div class="ttc" id="acore_2sstring_2sstring_8h_html_a6a0c23aa9b205fc952f848cc925a1a28"><div class="ttname"><a href="../../d4/dbd/core_2sstring_2sstring_8h.html#a6a0c23aa9b205fc952f848cc925a1a28">cwist_sstring_assign</a></div><div class="ttdeci">cwist_error_t cwist_sstring_assign(cwist_sstring *str, const char *data)</div><div class="ttdoc">Assign a C string.</div><div class="ttdef"><b>Definition</b> <a href="../../dd/d79/sstring_8c_source.html#l00471">sstring.c:471</a></div></div>
+<div class="ttc" id="acore_2sstring_2sstring_8h_html_a19ce355c545bc67898dee6f43fa93264"><div class="ttname"><a href="../../d4/dbd/core_2sstring_2sstring_8h.html#a19ce355c545bc67898dee6f43fa93264">cwist_sstring_append_len</a></div><div class="ttdeci">cwist_error_t cwist_sstring_append_len(cwist_sstring *str, const char *data, size_t len)</div><div class="ttdoc">Append raw bytes with length.</div><div class="ttdef"><b>Definition</b> <a href="../../dd/d79/sstring_8c_source.html#l00212">sstring.c:212</a></div></div>
+<div class="ttc" id="acore_2sstring_2sstring_8h_html_a652db21824d157b0fb7ba3b71ef19d96"><div class="ttname"><a href="../../d4/dbd/core_2sstring_2sstring_8h.html#a652db21824d157b0fb7ba3b71ef19d96">cwist_sstring_assign_len</a></div><div class="ttdeci">cwist_error_t cwist_sstring_assign_len(cwist_sstring *str, const char *data, size_t len)</div><div class="ttdoc">Assign raw bytes with length.</div><div class="ttdef"><b>Definition</b> <a href="../../dd/d79/sstring_8c_source.html#l00088">sstring.c:88</a></div></div>
+<div class="ttc" id="acore_2sstring_2sstring_8h_html_a6a0c23aa9b205fc952f848cc925a1a28"><div class="ttname"><a href="../../d4/dbd/core_2sstring_2sstring_8h.html#a6a0c23aa9b205fc952f848cc925a1a28">cwist_sstring_assign</a></div><div class="ttdeci">cwist_error_t cwist_sstring_assign(cwist_sstring *str, const char *data)</div><div class="ttdoc">Assign a C string.</div><div class="ttdef"><b>Definition</b> <a href="../../dd/d79/sstring_8c_source.html#l00504">sstring.c:504</a></div></div>
 <div class="ttc" id="agrpc_8c_html_a079d16355f3697861c3e01e82857aae1"><div class="ttname"><a href="../../d9/dba/grpc_8c.html#a079d16355f3697861c3e01e82857aae1">cwist_grpc_session</a></div><div class="ttdeci">struct cwist_grpc_session cwist_grpc_session</div><div class="ttdef"><b>Definition</b> <a href="../../d9/dba/grpc_8c_source.html#l00058">grpc.c:58</a></div></div>
 <div class="ttc" id="agrpc_8c_html_a393c9e476159d0804a68c9d47aaee672"><div class="ttname"><a href="../../d9/dba/grpc_8c.html#a393c9e476159d0804a68c9d47aaee672">cwist_grpc_set_response</a></div><div class="ttdeci">void cwist_grpc_set_response(cwist_http_response *res, cwist_grpc_status_t status, const char *message, const void *payload, size_t payload_len)</div><div class="ttdoc">Build a complete buffered unary gRPC response.</div><div class="ttdef"><b>Definition</b> <a href="../../d9/dba/grpc_8c_source.html#l00784">grpc.c:784</a></div></div>
 <div class="ttc" id="agrpc_8c_html_a3b09cb692604a0b165a65ac5cdbe9a7c"><div class="ttname"><a href="../../d9/dba/grpc_8c.html#a3b09cb692604a0b165a65ac5cdbe9a7c">cwist_app_grpc_health_watchers</a></div><div class="ttdeci">int cwist_app_grpc_health_watchers(cwist_app *app)</div><div class="ttdoc">Count currently active Health/Watch streams.</div><div class="ttdef"><b>Definition</b> <a href="../../d9/dba/grpc_8c_source.html#l01212">grpc.c:1212</a></div></div>
 <div class="ttc" id="agrpc_8c_html_a4fb80caa1415dea8763f283f6545f3bc"><div class="ttname"><a href="../../d9/dba/grpc_8c.html#a4fb80caa1415dea8763f283f6545f3bc">cwist_grpc_decoder_feed</a></div><div class="ttdeci">int cwist_grpc_decoder_feed(cwist_grpc_decoder *decoder, const void *data, size_t len, cwist_grpc_message_callback callback, void *ctx)</div><div class="ttdoc">Feed bytes into an incremental gRPC message decoder.</div><div class="ttdef"><b>Definition</b> <a href="../../d9/dba/grpc_8c_source.html#l00734">grpc.c:734</a></div></div>
 <div class="ttc" id="agrpc_8c_html_a5263f8ff26d9b4ad3a082af438ddafb0"><div class="ttname"><a href="../../d9/dba/grpc_8c.html#a5263f8ff26d9b4ad3a082af438ddafb0">cwist_grpc_metadata_get_binary</a></div><div class="ttdeci">int cwist_grpc_metadata_get_binary(cwist_http_request *req, const char *key, uint8_t *out, size_t out_cap, size_t *out_len)</div><div class="ttdoc">Decode a binary (&quot;-bin&quot; suffixed) metadata header from base64.</div><div class="ttdef"><b>Definition</b> <a href="../../d9/dba/grpc_8c_source.html#l00385">grpc.c:385</a></div></div>
-<div class="ttc" id="agrpc_8c_html_a5549b1d690dd333ec8ab0dbb6ff6ddfe"><div class="ttname"><a href="../../d9/dba/grpc_8c.html#a5549b1d690dd333ec8ab0dbb6ff6ddfe">cwist_grpc_stream_recv</a></div><div class="ttdeci">int cwist_grpc_stream_recv(cwist_grpc_stream *stream, cwist_grpc_message *out)</div><div class="ttdoc">Receive the next inbound message on a stream.</div><div class="ttdef"><b>Definition</b> <a href="../../d9/dba/grpc_8c_source.html#l01738">grpc.c:1738</a></div></div>
+<div class="ttc" id="agrpc_8c_html_a5549b1d690dd333ec8ab0dbb6ff6ddfe"><div class="ttname"><a href="../../d9/dba/grpc_8c.html#a5549b1d690dd333ec8ab0dbb6ff6ddfe">cwist_grpc_stream_recv</a></div><div class="ttdeci">int cwist_grpc_stream_recv(cwist_grpc_stream *stream, cwist_grpc_message *out)</div><div class="ttdoc">Receive the next inbound message on a stream.</div><div class="ttdef"><b>Definition</b> <a href="../../d9/dba/grpc_8c_source.html#l01740">grpc.c:1740</a></div></div>
 <div class="ttc" id="agrpc_8c_html_a617d7d28fe63d6e1b19060560e8ff55a"><div class="ttname"><a href="../../d9/dba/grpc_8c.html#a617d7d28fe63d6e1b19060560e8ff55a">cwist_grpc_parse_timeout</a></div><div class="ttdeci">int cwist_grpc_parse_timeout(const char *value, uint64_t *out_ms)</div><div class="ttdoc">Parse a gRPC timeout value into milliseconds.</div><div class="ttdef"><b>Definition</b> <a href="../../d9/dba/grpc_8c_source.html#l00146">grpc.c:146</a></div></div>
 <div class="ttc" id="agrpc_8c_html_a772139c0354322e4d8ee3bdf8e7e562d"><div class="ttname"><a href="../../d9/dba/grpc_8c.html#a772139c0354322e4d8ee3bdf8e7e562d">grpc_qnode</a></div><div class="ttdeci">struct grpc_qnode grpc_qnode</div></div>
 <div class="ttc" id="agrpc_8c_html_a8271cee716c2c5cb716bb6c836b2ee45"><div class="ttname"><a href="../../d9/dba/grpc_8c.html#a8271cee716c2c5cb716bb6c836b2ee45">cwist_app_grpc_health_set_status</a></div><div class="ttdeci">int cwist_app_grpc_health_set_status(cwist_app *app, const char *service, int serving)</div><div class="ttdoc">Set or update the serving status of a named service.</div><div class="ttdef"><b>Definition</b> <a href="../../d9/dba/grpc_8c_source.html#l01173">grpc.c:1173</a></div></div>
@@ -1704,7 +1741,7 @@ $(document).ready(function() { init_codefold(1); });
 <div class="ttc" id="agrpc_8c_html_a8f4ad33e1ecc8ed43795a10e818fa394"><div class="ttname"><a href="../../d9/dba/grpc_8c.html#a8f4ad33e1ecc8ed43795a10e818fa394">cwist_grpc_h2_conn_ctx</a></div><div class="ttdeci">struct cwist_grpc_h2_conn_ctx cwist_grpc_h2_conn_ctx</div></div>
 <div class="ttc" id="agrpc_8c_html_a8f70cb6013649eb30b4c7056eaf403db"><div class="ttname"><a href="../../d9/dba/grpc_8c.html#a8f70cb6013649eb30b4c7056eaf403db">cwist_app_grpc_stream</a></div><div class="ttdeci">int cwist_app_grpc_stream(cwist_app *app, const char *service, const char *method, cwist_grpc_stream_handler_func handler, void *user_ctx)</div><div class="ttdoc">Register a client-streaming gRPC method on an app.</div><div class="ttdef"><b>Definition</b> <a href="../../d9/dba/grpc_8c_source.html#l01371">grpc.c:1371</a></div></div>
 <div class="ttc" id="agrpc_8c_html_a9259930281f5ae377592fecd4528e3b8"><div class="ttname"><a href="../../d9/dba/grpc_8c.html#a9259930281f5ae377592fecd4528e3b8">cwist_grpc_set_error</a></div><div class="ttdeci">void cwist_grpc_set_error(cwist_http_response *res, cwist_grpc_status_t status, const char *message)</div><div class="ttdoc">Build a buffered gRPC error response with an empty message.</div><div class="ttdef"><b>Definition</b> <a href="../../d9/dba/grpc_8c_source.html#l00819">grpc.c:819</a></div></div>
-<div class="ttc" id="agrpc_8c_html_a9881bea7354d82ec5a2e1739d76cfb2d"><div class="ttname"><a href="../../d9/dba/grpc_8c.html#a9881bea7354d82ec5a2e1739d76cfb2d">cwist_grpc_stream_cancelled</a></div><div class="ttdeci">int cwist_grpc_stream_cancelled(cwist_grpc_stream *stream)</div><div class="ttdoc">Check whether a stream has been cancelled.</div><div class="ttdef"><b>Definition</b> <a href="../../d9/dba/grpc_8c_source.html#l01812">grpc.c:1812</a></div></div>
+<div class="ttc" id="agrpc_8c_html_a9881bea7354d82ec5a2e1739d76cfb2d"><div class="ttname"><a href="../../d9/dba/grpc_8c.html#a9881bea7354d82ec5a2e1739d76cfb2d">cwist_grpc_stream_cancelled</a></div><div class="ttdeci">int cwist_grpc_stream_cancelled(cwist_grpc_stream *stream)</div><div class="ttdoc">Check whether a stream has been cancelled.</div><div class="ttdef"><b>Definition</b> <a href="../../d9/dba/grpc_8c_source.html#l01814">grpc.c:1814</a></div></div>
 <div class="ttc" id="agrpc_8c_html_a9b9857dbb3560e7d067aa0988b3a9fec"><div class="ttname"><a href="../../d9/dba/grpc_8c.html#a9b9857dbb3560e7d067aa0988b3a9fec">cwist_grpc_metadata_get</a></div><div class="ttdeci">const char * cwist_grpc_metadata_get(cwist_http_request *req, const char *key)</div><div class="ttdoc">Fetch a metadata header value from a gRPC request.</div><div class="ttdef"><b>Definition</b> <a href="../../d9/dba/grpc_8c_source.html#l00371">grpc.c:371</a></div></div>
 <div class="ttc" id="agrpc_8c_html_a9e0ffa638a5c6f610f4fbc8bc831735a"><div class="ttname"><a href="../../d9/dba/grpc_8c.html#a9e0ffa638a5c6f610f4fbc8bc831735a">cwist_grpc_routes_destroy</a></div><div class="ttdeci">void cwist_grpc_routes_destroy(cwist_app *app)</div><div class="ttdoc">Free all gRPC routes and per-route resources on an app.</div><div class="ttdef"><b>Definition</b> <a href="../../d9/dba/grpc_8c_source.html#l01382">grpc.c:1382</a></div></div>
 <div class="ttc" id="agrpc_8c_html_aa3ce467a304806b53187bcf18233be7c"><div class="ttname"><a href="../../d9/dba/grpc_8c.html#aa3ce467a304806b53187bcf18233be7c">cwist_grpc_decoder_init</a></div><div class="ttdeci">void cwist_grpc_decoder_init(cwist_grpc_decoder *decoder, size_t max_message_size)</div><div class="ttdoc">Initialize an incremental gRPC message decoder.</div><div class="ttdef"><b>Definition</b> <a href="../../d9/dba/grpc_8c_source.html#l00701">grpc.c:701</a></div></div>
@@ -1714,7 +1751,7 @@ $(document).ready(function() { init_codefold(1); });
 <div class="ttc" id="agrpc_8c_html_ab2be59fbbff6602bc573223d3d114615"><div class="ttname"><a href="../../d9/dba/grpc_8c.html#ab2be59fbbff6602bc573223d3d114615">cwist_grpc_stream_set_writer</a></div><div class="ttdeci">void cwist_grpc_stream_set_writer(cwist_grpc_stream *stream, int(*write_frame)(void *, const uint8_t *, size_t, int), void *ctx)</div><div class="ttdoc">Install a custom frame writer on a stream.</div><div class="ttdef"><b>Definition</b> <a href="../../d9/dba/grpc_8c_source.html#l00916">grpc.c:916</a></div></div>
 <div class="ttc" id="agrpc_8c_html_ab5ab2e462d6e514d8671f6fb36b77e11"><div class="ttname"><a href="../../d9/dba/grpc_8c.html#ab5ab2e462d6e514d8671f6fb36b77e11">cwist_grpc_encode_message</a></div><div class="ttdeci">int cwist_grpc_encode_message(const void *payload, size_t payload_len, uint8_t compressed, uint8_t **out, size_t *out_len)</div><div class="ttdoc">Wrap a payload in a gRPC length-prefixed message frame.</div><div class="ttdef"><b>Definition</b> <a href="../../d9/dba/grpc_8c_source.html#l00677">grpc.c:677</a></div></div>
 <div class="ttc" id="agrpc_8c_html_ab614ff7635f8c9b40ee73a8973561f4d"><div class="ttname"><a href="../../d9/dba/grpc_8c.html#ab614ff7635f8c9b40ee73a8973561f4d">cwist_grpc_routes_clone</a></div><div class="ttdeci">int cwist_grpc_routes_clone(cwist_app *dst, const cwist_app *src)</div><div class="ttdoc">Copy all gRPC routes (and built-in service state) to another app.</div><div class="ttdef"><b>Definition</b> <a href="../../d9/dba/grpc_8c_source.html#l01417">grpc.c:1417</a></div></div>
-<div class="ttc" id="agrpc_8c_html_ab70d77489f060ba6548ce07d52deb578"><div class="ttname"><a href="../../d9/dba/grpc_8c.html#ab70d77489f060ba6548ce07d52deb578">cwist_grpc_stream_deadline_remaining_ms</a></div><div class="ttdeci">uint64_t cwist_grpc_stream_deadline_remaining_ms(cwist_grpc_stream *stream)</div><div class="ttdoc">Milliseconds remaining until the stream deadline.</div><div class="ttdef"><b>Definition</b> <a href="../../d9/dba/grpc_8c_source.html#l01830">grpc.c:1830</a></div></div>
+<div class="ttc" id="agrpc_8c_html_ab70d77489f060ba6548ce07d52deb578"><div class="ttname"><a href="../../d9/dba/grpc_8c.html#ab70d77489f060ba6548ce07d52deb578">cwist_grpc_stream_deadline_remaining_ms</a></div><div class="ttdeci">uint64_t cwist_grpc_stream_deadline_remaining_ms(cwist_grpc_stream *stream)</div><div class="ttdoc">Milliseconds remaining until the stream deadline.</div><div class="ttdef"><b>Definition</b> <a href="../../d9/dba/grpc_8c_source.html#l01834">grpc.c:1834</a></div></div>
 <div class="ttc" id="agrpc_8c_html_ac262c7ef78102de6a4889a146c111107"><div class="ttname"><a href="../../d9/dba/grpc_8c.html#ac262c7ef78102de6a4889a146c111107">cwist_app_grpc_unary</a></div><div class="ttdeci">int cwist_app_grpc_unary(cwist_app *app, const char *service, const char *method, cwist_grpc_unary_handler_func handler, void *user_ctx)</div><div class="ttdoc">Register a unary gRPC method on an app.</div><div class="ttdef"><b>Definition</b> <a href="../../d9/dba/grpc_8c_source.html#l01357">grpc.c:1357</a></div></div>
 <div class="ttc" id="agrpc_8c_html_acee0a3feacfaa784845f9ab3210f3a29"><div class="ttname"><a href="../../d9/dba/grpc_8c.html#acee0a3feacfaa784845f9ab3210f3a29">cwist_grpc_stream_close</a></div><div class="ttdeci">void cwist_grpc_stream_close(cwist_grpc_stream *stream, cwist_grpc_status_t status, const char *message)</div><div class="ttdoc">Close a gRPC stream with a final status.</div><div class="ttdef"><b>Definition</b> <a href="../../d9/dba/grpc_8c_source.html#l00933">grpc.c:933</a></div></div>
 <div class="ttc" id="agrpc_8c_html_adcce8fde359f747d26b8b83e7504a92c"><div class="ttname"><a href="../../d9/dba/grpc_8c.html#adcce8fde359f747d26b8b83e7504a92c">cwist_grpc_health_registry</a></div><div class="ttdeci">struct cwist_grpc_health_registry cwist_grpc_health_registry</div></div>
@@ -1722,7 +1759,7 @@ $(document).ready(function() { init_codefold(1); });
 <div class="ttc" id="agrpc_8c_html_ae6d54ac7b7f38f562c3b13a4b82c59d6"><div class="ttname"><a href="../../d9/dba/grpc_8c.html#ae6d54ac7b7f38f562c3b13a4b82c59d6">cwist_grpc_decode_message</a></div><div class="ttdeci">int cwist_grpc_decode_message(const void *frame, size_t frame_len, cwist_grpc_message *out)</div><div class="ttdoc">Decode a single gRPC length-prefixed message frame.</div><div class="ttdef"><b>Definition</b> <a href="../../d9/dba/grpc_8c_source.html#l00622">grpc.c:622</a></div></div>
 <div class="ttc" id="agrpc_8c_html_aeddec863a921a2f2ee9a10aa7fca87ca"><div class="ttname"><a href="../../d9/dba/grpc_8c.html#aeddec863a921a2f2ee9a10aa7fca87ca">cwist_grpc_decode_next_message</a></div><div class="ttdeci">int cwist_grpc_decode_next_message(const void *frames, size_t frames_len, size_t *offset, cwist_grpc_message *out)</div><div class="ttdoc">Decode the next message in a concatenated gRPC frame buffer.</div><div class="ttdef"><b>Definition</b> <a href="../../d9/dba/grpc_8c_source.html#l00649">grpc.c:649</a></div></div>
 <div class="ttc" id="agrpc_8c_html_af157abdbdb92e21efa3a0f3412b82766"><div class="ttname"><a href="../../d9/dba/grpc_8c.html#af157abdbdb92e21efa3a0f3412b82766">cwist_app_grpc_health</a></div><div class="ttdeci">int cwist_app_grpc_health(cwist_app *app)</div><div class="ttdoc">Register the built-in grpc.health.v1.Health service on an app.</div><div class="ttdef"><b>Definition</b> <a href="../../d9/dba/grpc_8c_source.html#l01137">grpc.c:1137</a></div></div>
-<div class="ttc" id="agrpc_8c_html_afb73c094b3d9d2cb364dff34986a8e3b"><div class="ttname"><a href="../../d9/dba/grpc_8c.html#afb73c094b3d9d2cb364dff34986a8e3b">cwist_grpc_http2_hooks</a></div><div class="ttdeci">const cwist_http2_stream_hooks * cwist_grpc_http2_hooks(void)</div><div class="ttdoc">Access the gRPC HTTP/2 stream hooks table.</div><div class="ttdef"><b>Definition</b> <a href="../../d9/dba/grpc_8c_source.html#l02103">grpc.c:2103</a></div></div>
+<div class="ttc" id="agrpc_8c_html_afb73c094b3d9d2cb364dff34986a8e3b"><div class="ttname"><a href="../../d9/dba/grpc_8c.html#afb73c094b3d9d2cb364dff34986a8e3b">cwist_grpc_http2_hooks</a></div><div class="ttdeci">const cwist_http2_stream_hooks * cwist_grpc_http2_hooks(void)</div><div class="ttdoc">Access the gRPC HTTP/2 stream hooks table.</div><div class="ttdef"><b>Definition</b> <a href="../../d9/dba/grpc_8c_source.html#l02109">grpc.c:2109</a></div></div>
 <div class="ttc" id="agrpc_8h_html"><div class="ttname"><a href="../../d6/dbb/grpc_8h.html">grpc.h</a></div><div class="ttdoc">gRPC over HTTP/2 helpers for CWIST.</div></div>
 <div class="ttc" id="agrpc_8h_html_a15850515e26e871db8c849e393d4fc36a2eea144e80cec02747cbb9d06d038e70"><div class="ttname"><a href="../../d6/dbb/grpc_8h.html#a15850515e26e871db8c849e393d4fc36a2eea144e80cec02747cbb9d06d038e70">CWIST_GRPC_OK</a></div><div class="ttdeci">@ CWIST_GRPC_OK</div><div class="ttdef"><b>Definition</b> <a href="../../d6/dbb/grpc_8h_source.html#l00022">grpc.h:22</a></div></div>
 <div class="ttc" id="agrpc_8h_html_a15850515e26e871db8c849e393d4fc36a5cb2b0221d244134195f61b25d96beb8"><div class="ttname"><a href="../../d6/dbb/grpc_8h.html#a15850515e26e871db8c849e393d4fc36a5cb2b0221d244134195f61b25d96beb8">CWIST_GRPC_RESOURCE_EXHAUSTED</a></div><div class="ttdeci">@ CWIST_GRPC_RESOURCE_EXHAUSTED</div><div class="ttdef"><b>Definition</b> <a href="../../d6/dbb/grpc_8h_source.html#l00030">grpc.h:30</a></div></div>
@@ -1735,16 +1772,16 @@ $(document).ready(function() { init_codefold(1); });
 <div class="ttc" id="agrpc_8h_html_aad89e9df63216e14db383247d98a7c7c"><div class="ttname"><a href="../../d6/dbb/grpc_8h.html#aad89e9df63216e14db383247d98a7c7c">cwist_grpc_status_t</a></div><div class="ttdeci">enum cwist_grpc_status cwist_grpc_status_t</div></div>
 <div class="ttc" id="agrpc_8h_html_ad85f8487426d3de37b7e063482bd4c0e"><div class="ttname"><a href="../../d6/dbb/grpc_8h.html#ad85f8487426d3de37b7e063482bd4c0e">cwist_grpc_unary_handler_func</a></div><div class="ttdeci">void(* cwist_grpc_unary_handler_func)(cwist_http_request *req, cwist_http_response *res, const cwist_grpc_message *message, void *user_ctx)</div><div class="ttdef"><b>Definition</b> <a href="../../d6/dbb/grpc_8h_source.html#l00082">grpc.h:82</a></div></div>
 <div class="ttc" id="agrpc_8h_html_aeeaedaf908a50ccc6ebd4ab4b07b0491"><div class="ttname"><a href="../../d6/dbb/grpc_8h.html#aeeaedaf908a50ccc6ebd4ab4b07b0491">cwist_grpc_stream_handler_func</a></div><div class="ttdeci">void(* cwist_grpc_stream_handler_func)(cwist_grpc_stream *stream, void *user_ctx)</div><div class="ttdef"><b>Definition</b> <a href="../../d6/dbb/grpc_8h_source.html#l00085">grpc.h:85</a></div></div>
-<div class="ttc" id="ahttp2_8h_html_a1ab4b2ededc52b8f4798b3d76045b445"><div class="ttname"><a href="../../de/d65/http2_8h.html#a1ab4b2ededc52b8f4798b3d76045b445">cwist_http2_stream_send_trailers</a></div><div class="ttdeci">int cwist_http2_stream_send_trailers(cwist_h2_stream *stream, const cwist_http2_header *trailers, size_t trailer_count)</div><div class="ttdef"><b>Definition</b> <a href="../../d2/db0/http2_8c_source.html#l02726">http2.c:2726</a></div></div>
-<div class="ttc" id="ahttp2_8h_html_a2047eae56537a00b46a2a7d7a1463818"><div class="ttname"><a href="../../de/d65/http2_8h.html#a2047eae56537a00b46a2a7d7a1463818">cwist_http2_stream_send_headers</a></div><div class="ttdeci">int cwist_http2_stream_send_headers(cwist_h2_stream *stream, int status, const cwist_http2_header *headers, size_t header_count, int end_stream)</div><div class="ttdef"><b>Definition</b> <a href="../../d2/db0/http2_8c_source.html#l02646">http2.c:2646</a></div></div>
+<div class="ttc" id="ahttp2_8h_html_a1ab4b2ededc52b8f4798b3d76045b445"><div class="ttname"><a href="../../de/d65/http2_8h.html#a1ab4b2ededc52b8f4798b3d76045b445">cwist_http2_stream_send_trailers</a></div><div class="ttdeci">int cwist_http2_stream_send_trailers(cwist_h2_stream *stream, const cwist_http2_header *trailers, size_t trailer_count)</div><div class="ttdef"><b>Definition</b> <a href="../../d2/db0/http2_8c_source.html#l02688">http2.c:2688</a></div></div>
+<div class="ttc" id="ahttp2_8h_html_a2047eae56537a00b46a2a7d7a1463818"><div class="ttname"><a href="../../de/d65/http2_8h.html#a2047eae56537a00b46a2a7d7a1463818">cwist_http2_stream_send_headers</a></div><div class="ttdeci">int cwist_http2_stream_send_headers(cwist_h2_stream *stream, int status, const cwist_http2_header *headers, size_t header_count, int end_stream)</div><div class="ttdef"><b>Definition</b> <a href="../../d2/db0/http2_8c_source.html#l02608">http2.c:2608</a></div></div>
 <div class="ttc" id="ahttp2_8h_html_a3406c29e0b32ca049dd57b360cd95ba4"><div class="ttname"><a href="../../de/d65/http2_8h.html#a3406c29e0b32ca049dd57b360cd95ba4">cwist_h2_stream</a></div><div class="ttdeci">struct cwist_h2_stream cwist_h2_stream</div><div class="ttdef"><b>Definition</b> <a href="../../de/d65/http2_8h_source.html#l00023">http2.h:23</a></div></div>
-<div class="ttc" id="ahttp2_8h_html_ad9e5c4cf6b03ee73297494895b88a864"><div class="ttname"><a href="../../de/d65/http2_8h.html#ad9e5c4cf6b03ee73297494895b88a864">cwist_http2_stream_send_data</a></div><div class="ttdeci">int cwist_http2_stream_send_data(cwist_h2_stream *stream, const unsigned char *data, size_t len)</div><div class="ttdoc">Send DATA on a hook-taken stream, honoring flow-control credit. Splits data into peer_max_frame_size ...</div><div class="ttdef"><b>Definition</b> <a href="../../d2/db0/http2_8c_source.html#l02680">http2.c:2680</a></div></div>
-<div class="ttc" id="ahttp_8h_html_a8b09daf7dd857271cac1bccc2666d2cb"><div class="ttname"><a href="../../dd/d56/http_8h.html#a8b09daf7dd857271cac1bccc2666d2cb">cwist_http_header_get</a></div><div class="ttdeci">char * cwist_http_header_get(cwist_http_header_node *head, const char *key)</div><div class="ttdoc">Find a header value by key.</div><div class="ttdef"><b>Definition</b> <a href="../../dd/d43/http_8c_source.html#l01570">http.c:1570</a></div></div>
+<div class="ttc" id="ahttp2_8h_html_ad9e5c4cf6b03ee73297494895b88a864"><div class="ttname"><a href="../../de/d65/http2_8h.html#ad9e5c4cf6b03ee73297494895b88a864">cwist_http2_stream_send_data</a></div><div class="ttdeci">int cwist_http2_stream_send_data(cwist_h2_stream *stream, const unsigned char *data, size_t len)</div><div class="ttdoc">Send DATA on a hook-taken stream, honoring flow-control credit. Splits data into peer_max_frame_size ...</div><div class="ttdef"><b>Definition</b> <a href="../../d2/db0/http2_8c_source.html#l02642">http2.c:2642</a></div></div>
+<div class="ttc" id="ahttp_8h_html_a8b09daf7dd857271cac1bccc2666d2cb"><div class="ttname"><a href="../../dd/d56/http_8h.html#a8b09daf7dd857271cac1bccc2666d2cb">cwist_http_header_get</a></div><div class="ttdeci">char * cwist_http_header_get(cwist_http_header_node *head, const char *key)</div><div class="ttdoc">Find a header value by key.</div><div class="ttdef"><b>Definition</b> <a href="../../dd/d43/http_8c_source.html#l01870">http.c:1870</a></div></div>
 <div class="ttc" id="ahttp_8h_html_a99b5ad0e71431205a397a336983f4f4da4e0bf06042170d9640ead15ebe658935"><div class="ttname"><a href="../../dd/d56/http_8h.html#a99b5ad0e71431205a397a336983f4f4da4e0bf06042170d9640ead15ebe658935">CWIST_HTTP_INTERNAL_ERROR</a></div><div class="ttdeci">@ CWIST_HTTP_INTERNAL_ERROR</div><div class="ttdef"><b>Definition</b> <a href="../../dd/d56/http_8h_source.html#l00035">http.h:35</a></div></div>
 <div class="ttc" id="ahttp_8h_html_a99b5ad0e71431205a397a336983f4f4daa09679670b837c107e83024d1df2f676"><div class="ttname"><a href="../../dd/d56/http_8h.html#a99b5ad0e71431205a397a336983f4f4daa09679670b837c107e83024d1df2f676">CWIST_HTTP_OK</a></div><div class="ttdeci">@ CWIST_HTTP_OK</div><div class="ttdef"><b>Definition</b> <a href="../../dd/d56/http_8h_source.html#l00028">http.h:28</a></div></div>
-<div class="ttc" id="ahttp_8h_html_aa3fb04b2c1647163832969e3ee5ac9f1"><div class="ttname"><a href="../../dd/d56/http_8h.html#aa3fb04b2c1647163832969e3ee5ac9f1">cwist_http_request_destroy</a></div><div class="ttdeci">void cwist_http_request_destroy(cwist_http_request *req)</div><div class="ttdoc">Destroy an HTTP request object.</div><div class="ttdef"><b>Definition</b> <a href="../../dd/d43/http_8c_source.html#l01869">http.c:1869</a></div></div>
-<div class="ttc" id="ahttp_8h_html_ab75bffc747ca7b55ac62f581702f1e2a"><div class="ttname"><a href="../../dd/d56/http_8h.html#ab75bffc747ca7b55ac62f581702f1e2a">cwist_http_header_add</a></div><div class="ttdeci">cwist_error_t cwist_http_header_add(cwist_http_header_node **head, const char *key, const char *value)</div><div class="ttdoc">Add a header to the list.</div><div class="ttdef"><b>Definition</b> <a href="../../dd/d43/http_8c_source.html#l01551">http.c:1551</a></div></div>
-<div class="ttc" id="anet_2http_2http_8h_html_a634dbffe29953aca5d6beab2d448f0f9"><div class="ttname"><a href="../../d9/dab/net_2http_2http_8h.html#a634dbffe29953aca5d6beab2d448f0f9">cwist_http_header_remove</a></div><div class="ttdeci">size_t cwist_http_header_remove(cwist_http_header_node **head, const char *key)</div><div class="ttdoc">Remove all headers matching a name, honoring per-node ownership (heap vs arena vs borrowed buffers).</div><div class="ttdef"><b>Definition</b> <a href="../../dd/d43/http_8c_source.html#l01597">http.c:1597</a></div></div>
+<div class="ttc" id="ahttp_8h_html_aa3fb04b2c1647163832969e3ee5ac9f1"><div class="ttname"><a href="../../dd/d56/http_8h.html#aa3fb04b2c1647163832969e3ee5ac9f1">cwist_http_request_destroy</a></div><div class="ttdeci">void cwist_http_request_destroy(cwist_http_request *req)</div><div class="ttdoc">Destroy an HTTP request object.</div><div class="ttdef"><b>Definition</b> <a href="../../dd/d43/http_8c_source.html#l02166">http.c:2166</a></div></div>
+<div class="ttc" id="ahttp_8h_html_ab75bffc747ca7b55ac62f581702f1e2a"><div class="ttname"><a href="../../dd/d56/http_8h.html#ab75bffc747ca7b55ac62f581702f1e2a">cwist_http_header_add</a></div><div class="ttdeci">cwist_error_t cwist_http_header_add(cwist_http_header_node **head, const char *key, const char *value)</div><div class="ttdoc">Add a header to the list.</div><div class="ttdef"><b>Definition</b> <a href="../../dd/d43/http_8c_source.html#l01851">http.c:1851</a></div></div>
+<div class="ttc" id="anet_2http_2http_8h_html_a634dbffe29953aca5d6beab2d448f0f9"><div class="ttname"><a href="../../d9/dab/net_2http_2http_8h.html#a634dbffe29953aca5d6beab2d448f0f9">cwist_http_header_remove</a></div><div class="ttdeci">size_t cwist_http_header_remove(cwist_http_header_node **head, const char *key)</div><div class="ttdoc">Remove all headers matching a name, honoring per-node ownership (heap vs arena vs borrowed buffers).</div><div class="ttdef"><b>Definition</b> <a href="../../dd/d43/http_8c_source.html#l01897">http.c:1897</a></div></div>
 <div class="ttc" id="aprotobuf_8h_html_a243949d43f89df2df2a36235ee7250f3"><div class="ttname"><a href="../../db/d5b/protobuf_8h.html#a243949d43f89df2df2a36235ee7250f3">cwist_pb_reader_init</a></div><div class="ttdeci">void cwist_pb_reader_init(cwist_pb_reader *r, const void *data, size_t len)</div><div class="ttdoc">Initialize a reader over a caller-owned buffer.</div><div class="ttdef"><b>Definition</b> <a href="../../d5/da8/protobuf_8c_source.html#l00244">protobuf.c:244</a></div></div>
 <div class="ttc" id="aprotobuf_8h_html_a43142d6ab3468b97ce62f91fc10dd9e3"><div class="ttname"><a href="../../db/d5b/protobuf_8h.html#a43142d6ab3468b97ce62f91fc10dd9e3">cwist_pb_write_uint64_field</a></div><div class="ttdeci">int cwist_pb_write_uint64_field(cwist_pb_writer *w, uint32_t field_number, uint64_t value)</div><div class="ttdoc">Write a uint64 field as a varint.</div><div class="ttdef"><b>Definition</b> <a href="../../d5/da8/protobuf_8c_source.html#l00104">protobuf.c:104</a></div></div>
 <div class="ttc" id="aprotobuf_8h_html_a73a3cd2e4cd083192ee319a569bcbf1aa513bc80a1d31ef18be46a5358dfc8274"><div class="ttname"><a href="../../db/d5b/protobuf_8h.html#a73a3cd2e4cd083192ee319a569bcbf1aa513bc80a1d31ef18be46a5358dfc8274">CWIST_PB_LEN</a></div><div class="ttdeci">@ CWIST_PB_LEN</div><div class="ttdef"><b>Definition</b> <a href="../../db/d5b/protobuf_8h_source.html#l00020">protobuf.h:20</a></div></div>
@@ -1799,25 +1836,29 @@ $(document).ready(function() { init_codefold(1); });
 <div class="ttc" id="astructcwist__http__response_html_a342acf59fe7ce906f6d80a01bfdc1e6e"><div class="ttname"><a href="../../dd/d22/structcwist__http__response.html#a342acf59fe7ce906f6d80a01bfdc1e6e">cwist_http_response::body</a></div><div class="ttdeci">cwist_sstring * body</div><div class="ttdef"><b>Definition</b> <a href="../../dd/d56/http_8h_source.html#l00087">http.h:87</a></div></div>
 <div class="ttc" id="astructcwist__http__response_html_a501dbd60856eb6710143dd87acd64b2d"><div class="ttname"><a href="../../dd/d22/structcwist__http__response.html#a501dbd60856eb6710143dd87acd64b2d">cwist_http_response::status_code</a></div><div class="ttdeci">cwist_http_status_t status_code</div><div class="ttdef"><b>Definition</b> <a href="../../dd/d56/http_8h_source.html#l00084">http.h:84</a></div></div>
 <div class="ttc" id="astructcwist__http__response_html_a6cb73c494e78ce41b88b785c8c8d3e9b"><div class="ttname"><a href="../../dd/d22/structcwist__http__response.html#a6cb73c494e78ce41b88b785c8c8d3e9b">cwist_http_response::headers</a></div><div class="ttdeci">cwist_http_header_node * headers</div><div class="ttdef"><b>Definition</b> <a href="../../dd/d56/http_8h_source.html#l00086">http.h:86</a></div></div>
-<div class="ttc" id="astructcwist__pb__field_html"><div class="ttname"><a href="../../d0/de5/structcwist__pb__field.html">cwist_pb_field</a></div><div class="ttdef"><b>Definition</b> <a href="../../db/d5b/protobuf_8h_source.html#l00036">protobuf.h:36</a></div></div>
-<div class="ttc" id="astructcwist__pb__field_html_a4a938eeaad71a9d57a17f26011303aa3"><div class="ttname"><a href="../../d0/de5/structcwist__pb__field.html#a4a938eeaad71a9d57a17f26011303aa3">cwist_pb_field::number</a></div><div class="ttdeci">uint32_t number</div><div class="ttdef"><b>Definition</b> <a href="../../db/d5b/protobuf_8h_source.html#l00037">protobuf.h:37</a></div></div>
-<div class="ttc" id="astructcwist__pb__field_html_a8241dc71db68b3af68e26d4957e0e48d"><div class="ttname"><a href="../../d0/de5/structcwist__pb__field.html#a8241dc71db68b3af68e26d4957e0e48d">cwist_pb_field::bytes</a></div><div class="ttdeci">const uint8_t * bytes</div><div class="ttdef"><b>Definition</b> <a href="../../db/d5b/protobuf_8h_source.html#l00040">protobuf.h:40</a></div></div>
-<div class="ttc" id="astructcwist__pb__field_html_aaf0fae364208ffb06b76ba14286f06db"><div class="ttname"><a href="../../d0/de5/structcwist__pb__field.html#aaf0fae364208ffb06b76ba14286f06db">cwist_pb_field::len</a></div><div class="ttdeci">size_t len</div><div class="ttdef"><b>Definition</b> <a href="../../db/d5b/protobuf_8h_source.html#l00041">protobuf.h:41</a></div></div>
-<div class="ttc" id="astructcwist__pb__field_html_ac3620674544d73892f2ed633513c9127"><div class="ttname"><a href="../../d0/de5/structcwist__pb__field.html#ac3620674544d73892f2ed633513c9127">cwist_pb_field::wire_type</a></div><div class="ttdeci">cwist_pb_wire_type_t wire_type</div><div class="ttdef"><b>Definition</b> <a href="../../db/d5b/protobuf_8h_source.html#l00038">protobuf.h:38</a></div></div>
-<div class="ttc" id="astructcwist__pb__reader_html"><div class="ttname"><a href="../../db/dad/structcwist__pb__reader.html">cwist_pb_reader</a></div><div class="ttdef"><b>Definition</b> <a href="../../db/d5b/protobuf_8h_source.html#l00030">protobuf.h:30</a></div></div>
-<div class="ttc" id="astructcwist__pb__writer_html"><div class="ttname"><a href="../../dd/d89/structcwist__pb__writer.html">cwist_pb_writer</a></div><div class="ttdef"><b>Definition</b> <a href="../../db/d5b/protobuf_8h_source.html#l00024">protobuf.h:24</a></div></div>
-<div class="ttc" id="astructcwist__pb__writer_html_a635561dcbf7949dd34ebb0d3976cceef"><div class="ttname"><a href="../../dd/d89/structcwist__pb__writer.html#a635561dcbf7949dd34ebb0d3976cceef">cwist_pb_writer::len</a></div><div class="ttdeci">size_t len</div><div class="ttdef"><b>Definition</b> <a href="../../db/d5b/protobuf_8h_source.html#l00026">protobuf.h:26</a></div></div>
-<div class="ttc" id="astructcwist__pb__writer_html_a868530bbc45ea9a6a0caf9defdb86c00"><div class="ttname"><a href="../../dd/d89/structcwist__pb__writer.html#a868530bbc45ea9a6a0caf9defdb86c00">cwist_pb_writer::data</a></div><div class="ttdeci">uint8_t * data</div><div class="ttdef"><b>Definition</b> <a href="../../db/d5b/protobuf_8h_source.html#l00025">protobuf.h:25</a></div></div>
+<div class="ttc" id="astructcwist__pb__field_html"><div class="ttname"><a href="../../d0/de5/structcwist__pb__field.html">cwist_pb_field</a></div><div class="ttdef"><b>Definition</b> <a href="../../db/d5b/protobuf_8h_source.html#l00039">protobuf.h:39</a></div></div>
+<div class="ttc" id="astructcwist__pb__field_html_a4a938eeaad71a9d57a17f26011303aa3"><div class="ttname"><a href="../../d0/de5/structcwist__pb__field.html#a4a938eeaad71a9d57a17f26011303aa3">cwist_pb_field::number</a></div><div class="ttdeci">uint32_t number</div><div class="ttdef"><b>Definition</b> <a href="../../db/d5b/protobuf_8h_source.html#l00040">protobuf.h:40</a></div></div>
+<div class="ttc" id="astructcwist__pb__field_html_a8241dc71db68b3af68e26d4957e0e48d"><div class="ttname"><a href="../../d0/de5/structcwist__pb__field.html#a8241dc71db68b3af68e26d4957e0e48d">cwist_pb_field::bytes</a></div><div class="ttdeci">const uint8_t * bytes</div><div class="ttdef"><b>Definition</b> <a href="../../db/d5b/protobuf_8h_source.html#l00043">protobuf.h:43</a></div></div>
+<div class="ttc" id="astructcwist__pb__field_html_aaf0fae364208ffb06b76ba14286f06db"><div class="ttname"><a href="../../d0/de5/structcwist__pb__field.html#aaf0fae364208ffb06b76ba14286f06db">cwist_pb_field::len</a></div><div class="ttdeci">size_t len</div><div class="ttdef"><b>Definition</b> <a href="../../db/d5b/protobuf_8h_source.html#l00044">protobuf.h:44</a></div></div>
+<div class="ttc" id="astructcwist__pb__field_html_ac3620674544d73892f2ed633513c9127"><div class="ttname"><a href="../../d0/de5/structcwist__pb__field.html#ac3620674544d73892f2ed633513c9127">cwist_pb_field::wire_type</a></div><div class="ttdeci">cwist_pb_wire_type_t wire_type</div><div class="ttdef"><b>Definition</b> <a href="../../db/d5b/protobuf_8h_source.html#l00041">protobuf.h:41</a></div></div>
+<div class="ttc" id="astructcwist__pb__reader_html"><div class="ttname"><a href="../../db/dad/structcwist__pb__reader.html">cwist_pb_reader</a></div><div class="ttdef"><b>Definition</b> <a href="../../db/d5b/protobuf_8h_source.html#l00033">protobuf.h:33</a></div></div>
+<div class="ttc" id="astructcwist__pb__writer_html"><div class="ttname"><a href="../../dd/d89/structcwist__pb__writer.html">cwist_pb_writer</a></div><div class="ttdef"><b>Definition</b> <a href="../../db/d5b/protobuf_8h_source.html#l00027">protobuf.h:27</a></div></div>
+<div class="ttc" id="astructcwist__pb__writer_html_a635561dcbf7949dd34ebb0d3976cceef"><div class="ttname"><a href="../../dd/d89/structcwist__pb__writer.html#a635561dcbf7949dd34ebb0d3976cceef">cwist_pb_writer::len</a></div><div class="ttdeci">size_t len</div><div class="ttdef"><b>Definition</b> <a href="../../db/d5b/protobuf_8h_source.html#l00029">protobuf.h:29</a></div></div>
+<div class="ttc" id="astructcwist__pb__writer_html_a868530bbc45ea9a6a0caf9defdb86c00"><div class="ttname"><a href="../../dd/d89/structcwist__pb__writer.html#a868530bbc45ea9a6a0caf9defdb86c00">cwist_pb_writer::data</a></div><div class="ttdeci">uint8_t * data</div><div class="ttdef"><b>Definition</b> <a href="../../db/d5b/protobuf_8h_source.html#l00028">protobuf.h:28</a></div></div>
 <div class="ttc" id="astructcwist__scratch__t_html"><div class="ttname"><a href="../../d2/d50/structcwist__scratch__t.html">cwist_scratch_t</a></div><div class="ttdoc">Backing state for cwist_scratch_alloc()/CWIST_SCRATCH_DEFER: a single block-scoped allocation that pr...</div><div class="ttdef"><b>Definition</b> <a href="../../d2/dfe/alloc_8h_source.html#l00131">alloc.h:131</a></div></div>
 <div class="ttc" id="astructcwist__sstring_html_a5c28462dd26584de37a7bc0a9c139f97"><div class="ttname"><a href="../../d5/ddc/structcwist__sstring.html#a5c28462dd26584de37a7bc0a9c139f97">cwist_sstring::size</a></div><div class="ttdeci">size_t size</div><div class="ttdef"><b>Definition</b> <a href="../../d4/dbd/core_2sstring_2sstring_8h_source.html#l00020">sstring.h:20</a></div></div>
 <div class="ttc" id="astructcwist__sstring_html_a5db1637d58cb0690522ba232d49e8189"><div class="ttname"><a href="../../d5/ddc/structcwist__sstring.html#a5db1637d58cb0690522ba232d49e8189">cwist_sstring::data</a></div><div class="ttdeci">char * data</div><div class="ttdoc">Access directly only when raw handling is necessary.</div><div class="ttdef"><b>Definition</b> <a href="../../d4/dbd/core_2sstring_2sstring_8h_source.html#l00015">sstring.h:15</a></div></div>
 <div class="ttc" id="asys_2app_2app_8h_html"><div class="ttname"><a href="../../d0/d77/sys_2app_2app_8h.html">app.h</a></div><div class="ttdoc">Core Application Structure and Lifecycle Management.</div></div>
-<div class="ttc" id="asys_2app_2app_8h_html_a556c24cde3276a70fb9772a727f7e66e"><div class="ttname"><a href="../../d0/d77/sys_2app_2app_8h.html#a556c24cde3276a70fb9772a727f7e66e">cwist_app_post</a></div><div class="ttdeci">void cwist_app_post(cwist_app *app, const char *path, cwist_handler_func handler)</div><div class="ttdoc">Register a POST handler with default endpoint options.</div><div class="ttdef"><b>Definition</b> <a href="../../df/d7f/app_8c_source.html#l02167">app.c:2167</a></div></div>
+<div class="ttc" id="asys_2app_2app_8h_html_a556c24cde3276a70fb9772a727f7e66e"><div class="ttname"><a href="../../d0/d77/sys_2app_2app_8h.html#a556c24cde3276a70fb9772a727f7e66e">cwist_app_post</a></div><div class="ttdeci">void cwist_app_post(cwist_app *app, const char *path, cwist_handler_func handler)</div><div class="ttdoc">Register a POST handler with default endpoint options.</div><div class="ttdef"><b>Definition</b> <a href="../../df/d7f/app_8c_source.html#l02243">app.c:2243</a></div></div>
 <div class="ttc" id="asys_2err_2cwist__err_8h_html_acafffea2368d859053b87d99f7e77aaf"><div class="ttname"><a href="../../d7/da1/sys_2err_2cwist__err_8h.html#acafffea2368d859053b87d99f7e77aaf">cwist_error_dispose</a></div><div class="ttdeci">void cwist_error_dispose(cwist_error_t *err)</div><div class="ttdoc">Release resources owned by an error value. Currently only CWIST_ERR_JSON owns memory (the cJSON paylo...</div><div class="ttdef"><b>Definition</b> <a href="../../db/dcc/error_8c_source.html#l00043">error.c:43</a></div></div>
 </div><!-- fragment --></div><!-- contents -->
+</div><!-- doc-content -->
 <!-- start footer part -->
-<hr class="footer"/><address class="footer"><small>
-Generated by&#160;<a href="https://www.doxygen.org/index.html"><img class="footer" src="../../doxygen.svg" width="104" height="31" alt="doxygen"/></a> 1.9.8
-</small></address>
+<div id="nav-path" class="navpath"><!-- id is needed for treeview function! -->
+  <ul>
+    <li class="navelem"><a class="el" href="../../dir_68267d1309a1af8e8297ef4c3efbcdba.html">src</a></li><li class="navelem"><a class="el" href="../../dir_c72b25b75abe208498b36a3e44a3726c.html">net</a></li><li class="navelem"><a class="el" href="../../dir_a738ffd196b7a521d927e1330e6dd6af.html">grpc</a></li><li class="navelem"><a class="el" href="../../d9/dba/grpc_8c.html">grpc.c</a></li>
+    <li class="footer">Generated by <a href="https://www.doxygen.org/index.html"><img class="footer" src="../../doxygen.svg" width="104" height="31" alt="doxygen"/></a> 1.9.8 </li>
+  </ul>
+</div>
 </body>
 </html>

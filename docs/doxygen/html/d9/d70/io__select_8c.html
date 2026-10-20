@@ -1,3 +1,4 @@
+<!-- HTML header for doxygen 1.9.8-->
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "https://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml" lang="en-US">
 <head>
@@ -5,14 +6,32 @@
 <meta http-equiv="X-UA-Compatible" content="IE=11"/>
 <meta name="generator" content="Doxygen 1.9.8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
-<title>cwist: src/sys/io/io_select.c File Reference</title>
+<title>src/sys/io/io_select.c File Reference - CWIST High-Performance C Web Framework</title>
+<meta name="description" content="CWIST: High-performance C17 web framework and application server (HTTP/1.1, HTTP/2, HTTP/3, WebTransport, WebSocket, PQC TLS) powered by io_uring and libttak."/>
+<meta name="keywords" content="C web framework, C17, HTTP3, QUIC, io_uring, web server, actix alternative, high performance, REST API in C, C web server"/>
+<meta name="author" content="c4punks"/>
+<meta name="robots" content="index, follow"/>
+<!-- Open Graph / Facebook -->
+<meta property="og:type" content="website"/>
+<meta property="og:title" content="src/sys/io/io_select.c File Reference - CWIST Modern C Web Framework"/>
+<meta property="og:description" content="High-performance C17 web framework & application server with zero-copy io_uring reactor, PQC TLS, and HTTP/3 support."/>
+<meta property="og:url" content="https://c4punks.github.io/CWIST/"/>
+<!-- Twitter -->
+<meta name="twitter:card" content="summary_large_image"/>
+<meta name="twitter:title" content="src/sys/io/io_select.c File Reference - CWIST Modern C Web Framework"/>
+<meta name="twitter:description" content="High-performance C17 web framework & application server with zero-copy io_uring reactor, PQC TLS, and HTTP/3 support."/>
 <link href="../../tabs.css" rel="stylesheet" type="text/css"/>
 <script type="text/javascript" src="../../jquery.js"></script>
 <script type="text/javascript" src="../../dynsections.js"></script>
+<link href="../../navtree.css" rel="stylesheet" type="text/css"/>
+<script type="text/javascript" src="../../resize.js"></script>
+<script type="text/javascript" src="../../navtreedata.js"></script>
+<script type="text/javascript" src="../../navtree.js"></script>
 <link href="../../search/search.css" rel="stylesheet" type="text/css"/>
 <script type="text/javascript" src="../../search/searchdata.js"></script>
 <script type="text/javascript" src="../../search/search.js"></script>
 <link href="../../doxygen.css" rel="stylesheet" type="text/css" />
+<link href="../../doxygen-awesome.css" rel="stylesheet" type="text/css"/>
 </head>
 <body>
 <div id="top"><!-- do not remove this div, it is closed by doxygen! -->
@@ -47,6 +66,23 @@ $(function() {
 /* @license-end */
 </script>
 <div id="main-nav"></div>
+</div><!-- top -->
+<div id="side-nav" class="ui-resizable side-nav-resizable">
+  <div id="nav-tree">
+    <div id="nav-tree-contents">
+      <div id="nav-sync" class="sync"></div>
+    </div>
+  </div>
+  <div id="splitbar" style="-moz-user-select:none;" 
+       class="ui-resizable-handle">
+  </div>
+</div>
+<script type="text/javascript">
+/* @license magnet:?xt=urn:btih:d3d9a9a6595521f9666a5e94cc830dab83b65699&amp;dn=expat.txt MIT */
+$(document).ready(function(){initNavTree('d9/d70/io__select_8c.html','../../'); initResizable(); });
+/* @license-end */
+</script>
+<div id="doc-content">
 <!-- window showing the filter options -->
 <div id="MSearchSelectWindow"
      onmouseover="return searchBox.OnSearchSelectShow()"
@@ -68,11 +104,6 @@ $(function() {
 </div>
 </div>
 
-<div id="nav-path" class="navpath">
-  <ul>
-<li class="navelem"><a class="el" href="../../dir_68267d1309a1af8e8297ef4c3efbcdba.html">src</a></li><li class="navelem"><a class="el" href="../../dir_220d2bd384b446346a1cdcf02b1b2295.html">sys</a></li><li class="navelem"><a class="el" href="../../dir_aef783019c9f3e78be17adb7c366224e.html">io</a></li>  </ul>
-</div>
-</div><!-- top -->
 <div class="header">
   <div class="summary">
 <a href="#define-members">Macros</a> &#124;
@@ -82,7 +113,7 @@ $(function() {
 </div><!--header-->
 <div class="contents">
 
-<p>Lock-free job queue fallback used when no platform-specific async backend is selected.  
+<p>Job queue fallback used when no platform-specific async backend is selected.  
 <a href="#details">More...</a></p>
 <div class="textblock"><code>#include &lt;<a class="el" href="../../d1/df5/cwist__io_8h_source.html">cwist/sys/io/cwist_io.h</a>&gt;</code><br />
 <code>#include &lt;<a class="el" href="../../d2/dfe/alloc_8h_source.html">cwist/core/mem/alloc.h</a>&gt;</code><br />
@@ -94,7 +125,7 @@ Include dependency graph for io_select.c:</div>
 <div class="dyncontent">
 <div class="center"><img src="../../df/db2/io__select_8c__incl.png" border="0" usemap="#asrc_2sys_2io_2io__select_8c" alt=""/></div>
 <map name="asrc_2sys_2io_2io__select_8c" id="asrc_2sys_2io_2io__select_8c">
-<area shape="rect" title="Lock&#45;free job queue fallback used when no platform&#45;specific async backend is selected." alt="" coords="519,5,675,31"/>
+<area shape="rect" title="Job queue fallback used when no platform&#45;specific async backend is selected." alt="" coords="519,5,675,31"/>
 <area shape="rect" href="../../d1/df5/cwist__io_8h.html" title="Platform Agnostic Async Job Queue Interface." alt="" coords="392,152,559,177"/>
 <area shape="poly" title=" " alt="" coords="589,33,496,143,492,140,585,29"/>
 <area shape="rect" title=" " alt="" coords="434,225,517,251"/>
@@ -149,7 +180,8 @@ Functions</h2></td></tr>
 <tr class="separator:a90a553923ea4f601ffb5acaf8660d9fe"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
-<div class="textblock"><p>Lock-free job queue fallback used when no platform-specific async backend is selected. </p>
+<div class="textblock"><p>Job queue fallback used when no platform-specific async backend is selected. </p>
+<p>A Michael &amp; Scott two-lock queue: producers append under tail_lock and consumers pop under head_lock, around a dummy sentinel node. The lock-free variant needs safe memory reclamation (see <a class="el" href="../../d1/de4/io__queue_8c.html" title="Lock-free job queue backing cwist_io_queue. Despite the old file name (io_uring.c),...">io_queue.c</a>), which this portable fallback does without: a node is freed only by a consumer holding head_lock, after it stopped being the sentinel, and no producer reads a node after linking past it, so nothing can still hold a freed node. </p>
 
 <p class="definition">Definition in file <a class="el" href="../../d9/d70/io__select_8c_source.html">io_select.c</a>.</p>
 </div><h2 class="groupheader">Macro Definition Documentation</h2>
@@ -213,7 +245,7 @@ Functions</h2></td></tr>
 
 <p class="definition">Definition at line <a class="el" href="../../d9/d70/io__select_8c_source.html#l00133">133</a> of file <a class="el" href="../../d9/d70/io__select_8c_source.html">io_select.c</a>.</p>
 
-<p class="reference">References <a class="el" href="../../d9/d39/alloc_8c_source.html#l00275">cwist_alloc()</a>, and <a class="el" href="../../d9/d39/alloc_8c_source.html#l00390">cwist_free()</a>.</p>
+<p class="reference">References <a class="el" href="../../d9/d39/alloc_8c_source.html#l00276">cwist_alloc()</a>, and <a class="el" href="../../d9/d39/alloc_8c_source.html#l00391">cwist_free()</a>.</p>
 
 </div>
 </div>
@@ -242,9 +274,9 @@ Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d9/d70/io__select_8c_source.html#l00223">223</a> of file <a class="el" href="../../d9/d70/io__select_8c_source.html">io_select.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d9/d70/io__select_8c_source.html#l00224">224</a> of file <a class="el" href="../../d9/d70/io__select_8c_source.html">io_select.c</a>.</p>
 
-<p class="reference">References <a class="el" href="../../d9/d39/alloc_8c_source.html#l00390">cwist_free()</a>.</p>
+<p class="reference">References <a class="el" href="../../d9/d39/alloc_8c_source.html#l00391">cwist_free()</a>.</p>
 
 </div>
 </div>
@@ -273,7 +305,7 @@ Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d9/d70/io__select_8c_source.html#l00186">186</a> of file <a class="el" href="../../d9/d70/io__select_8c_source.html">io_select.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d9/d70/io__select_8c_source.html#l00190">190</a> of file <a class="el" href="../../d9/d70/io__select_8c_source.html">io_select.c</a>.</p>
 
 </div>
 </div>
@@ -302,7 +334,7 @@ Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d9/d70/io__select_8c_source.html#l00211">211</a> of file <a class="el" href="../../d9/d70/io__select_8c_source.html">io_select.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d9/d70/io__select_8c_source.html#l00212">212</a> of file <a class="el" href="../../d9/d70/io__select_8c_source.html">io_select.c</a>.</p>
 
 </div>
 </div>
@@ -350,14 +382,18 @@ Functions</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>true on success, or false when the queue is shutting down or OOM. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d9/d70/io__select_8c_source.html#l00170">170</a> of file <a class="el" href="../../d9/d70/io__select_8c_source.html">io_select.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d9/d70/io__select_8c_source.html#l00174">174</a> of file <a class="el" href="../../d9/d70/io__select_8c_source.html">io_select.c</a>.</p>
 
 </div>
 </div>
 </div><!-- contents -->
+</div><!-- doc-content -->
 <!-- start footer part -->
-<hr class="footer"/><address class="footer"><small>
-Generated by&#160;<a href="https://www.doxygen.org/index.html"><img class="footer" src="../../doxygen.svg" width="104" height="31" alt="doxygen"/></a> 1.9.8
-</small></address>
+<div id="nav-path" class="navpath"><!-- id is needed for treeview function! -->
+  <ul>
+    <li class="navelem"><a class="el" href="../../dir_68267d1309a1af8e8297ef4c3efbcdba.html">src</a></li><li class="navelem"><a class="el" href="../../dir_220d2bd384b446346a1cdcf02b1b2295.html">sys</a></li><li class="navelem"><a class="el" href="../../dir_aef783019c9f3e78be17adb7c366224e.html">io</a></li><li class="navelem"><a class="el" href="../../d9/d70/io__select_8c.html">io_select.c</a></li>
+    <li class="footer">Generated by <a href="https://www.doxygen.org/index.html"><img class="footer" src="../../doxygen.svg" width="104" height="31" alt="doxygen"/></a> 1.9.8 </li>
+  </ul>
+</div>
 </body>
 </html>

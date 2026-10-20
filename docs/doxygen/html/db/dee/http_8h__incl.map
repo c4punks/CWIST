@@ -5,13 +5,13 @@
 <area shape="rect" id="Node000006" href="$d3/d73/err_2cwist__err_8h.html" title="cwist_err.h interface." alt="" coords="246,152,398,177"/>
 <area shape="poly" id="edge9_Node000001_Node000006" title=" " alt="" coords="469,33,347,144,343,140,466,29"/>
 <area shape="rect" id="Node000007" title=" " alt="" coords="405,225,476,251"/>
-<area shape="poly" id="edge13_Node000001_Node000007" title=" " alt="" coords="479,32,463,79,451,151,445,212,440,211,446,150,458,78,473,30"/>
-<area shape="rect" id="Node000009" href="$dd/d6e/query_8h.html" title="query.h interface." alt="" coords="473,79,579,104"/>
+<area shape="poly" id="edge14_Node000001_Node000007" title=" " alt="" coords="479,32,463,79,451,151,445,212,440,211,446,150,458,78,473,30"/>
+<area shape="rect" id="Node000009" href="$dd/d6e/query_8h.html" title="Compatibility header: forwards to &lt;cwist/net/http/query.h&gt;." alt="" coords="473,79,579,104"/>
 <area shape="poly" id="edge10_Node000001_Node000009" title=" " alt="" coords="490,30,514,66,509,69,486,32"/>
-<area shape="rect" id="Node000011" title=" " alt="" coords="603,79,699,104"/>
-<area shape="poly" id="edge14_Node000001_Node000011" title=" " alt="" coords="509,28,612,71,610,76,507,33"/>
-<area shape="rect" id="Node000012" title=" " alt="" coords="724,79,827,104"/>
-<area shape="poly" id="edge15_Node000001_Node000012" title=" " alt="" coords="529,28,715,73,714,78,527,33"/>
+<area shape="rect" id="Node000012" title=" " alt="" coords="603,79,699,104"/>
+<area shape="poly" id="edge15_Node000001_Node000012" title=" " alt="" coords="509,28,612,71,610,76,507,33"/>
+<area shape="rect" id="Node000013" title=" " alt="" coords="724,79,827,104"/>
+<area shape="poly" id="edge16_Node000001_Node000013" title=" " alt="" coords="529,28,715,73,714,78,527,33"/>
 <area shape="rect" id="Node000003" title=" " alt="" coords="5,152,76,177"/>
 <area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="183,106,82,149,80,144,181,102"/>
 <area shape="rect" id="Node000004" title=" " alt="" coords="100,152,171,177"/>
@@ -23,7 +23,9 @@
 <area shape="poly" id="edge6_Node000006_Node000007" title=" " alt="" coords="342,175,411,216,408,220,340,180"/>
 <area shape="rect" id="Node000008" title=" " alt="" coords="271,225,381,251"/>
 <area shape="poly" id="edge8_Node000006_Node000008" title=" " alt="" coords="325,178,327,212,322,212,320,178"/>
-<area shape="poly" id="edge11_Node000009_Node000007" title=" " alt="" coords="521,106,457,215,452,212,517,103"/>
-<area shape="rect" id="Node000010" title=" " alt="" coords="523,152,598,177"/>
-<area shape="poly" id="edge12_Node000009_Node000010" title=" " alt="" coords="534,103,551,138,547,141,529,106"/>
+<area shape="rect" id="Node000010" href="$d1/d7a/net_2http_2query_8h.html" title="Query string parser and map." alt="" coords="473,152,635,177"/>
+<area shape="poly" id="edge11_Node000009_Node000010" title=" " alt="" coords="533,103,547,138,542,140,528,105"/>
+<area shape="poly" id="edge12_Node000010_Node000007" title=" " alt="" coords="537,180,472,220,469,216,534,175"/>
+<area shape="rect" id="Node000011" title=" " alt="" coords="517,225,591,251"/>
+<area shape="poly" id="edge13_Node000010_Node000011" title=" " alt="" coords="557,178,557,212,551,212,551,178"/>
 </map>

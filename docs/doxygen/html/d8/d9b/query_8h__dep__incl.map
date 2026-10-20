@@ -1,5 +1,5 @@
 <map id="include/cwist/query.h" name="include/cwist/query.h">
-<area shape="rect" id="Node000001" title="query.h interface." alt="" coords="691,5,849,31"/>
+<area shape="rect" id="Node000001" title="Compatibility header: forwards to &lt;cwist/net/http/query.h&gt;." alt="" coords="691,5,849,31"/>
 <area shape="rect" id="Node000002" href="$dd/d56/http_8h.html" title="http.h interface." alt="" coords="286,86,435,111"/>
 <area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="698,36,421,89,420,83,697,31"/>
 <area shape="rect" id="Node000006" href="$d5/dfd/cookie_8h.html" title="HTTP cookie parsing and construction helpers." alt="" coords="689,79,851,119"/>

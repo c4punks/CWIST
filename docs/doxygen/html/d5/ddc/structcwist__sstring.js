@@ -1,6 +1,9 @@
 var structcwist__sstring =
 [
     [ "append", "d5/ddc/structcwist__sstring.html#a7a0eaf576579f4be709a413e04fe9eb2", null ],
+    [ "base", "d5/ddc/structcwist__sstring.html#a5c7a06ed87c6bbafbd835b6a56d5dbe8", null ],
+    [ "borrows_buffer", "d5/ddc/structcwist__sstring.html#ae3a908701875f6cfa80492ba371dddcb", null ],
+    [ "capacity", "d5/ddc/structcwist__sstring.html#a6c4d631a707d31ce72802cdfde55c79c", null ],
     [ "compare", "d5/ddc/structcwist__sstring.html#a505fdf4514f46088163bc411dc6436a3", null ],
     [ "copy", "d5/ddc/structcwist__sstring.html#aa46bffddf99b0c171926022be492f766", null ],
     [ "data", "d5/ddc/structcwist__sstring.html#a5db1637d58cb0690522ba232d49e8189", null ],

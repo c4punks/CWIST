@@ -1,3 +1,4 @@
+<!-- HTML header for doxygen 1.9.8-->
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "https://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml" lang="en-US">
 <head>
@@ -5,14 +6,32 @@
 <meta http-equiv="X-UA-Compatible" content="IE=11"/>
 <meta name="generator" content="Doxygen 1.9.8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
-<title>cwist: Main Page</title>
+<title>cwist - CWIST High-Performance C Web Framework</title>
+<meta name="description" content="CWIST: High-performance C17 web framework and application server (HTTP/1.1, HTTP/2, HTTP/3, WebTransport, WebSocket, PQC TLS) powered by io_uring and libttak."/>
+<meta name="keywords" content="C web framework, C17, HTTP3, QUIC, io_uring, web server, actix alternative, high performance, REST API in C, C web server"/>
+<meta name="author" content="c4punks"/>
+<meta name="robots" content="index, follow"/>
+<!-- Open Graph / Facebook -->
+<meta property="og:type" content="website"/>
+<meta property="og:title" content="cwist - CWIST Modern C Web Framework"/>
+<meta property="og:description" content="High-performance C17 web framework & application server with zero-copy io_uring reactor, PQC TLS, and HTTP/3 support."/>
+<meta property="og:url" content="https://c4punks.github.io/CWIST/"/>
+<!-- Twitter -->
+<meta name="twitter:card" content="summary_large_image"/>
+<meta name="twitter:title" content="cwist - CWIST Modern C Web Framework"/>
+<meta name="twitter:description" content="High-performance C17 web framework & application server with zero-copy io_uring reactor, PQC TLS, and HTTP/3 support."/>
 <link href="tabs.css" rel="stylesheet" type="text/css"/>
 <script type="text/javascript" src="jquery.js"></script>
 <script type="text/javascript" src="dynsections.js"></script>
+<link href="navtree.css" rel="stylesheet" type="text/css"/>
+<script type="text/javascript" src="resize.js"></script>
+<script type="text/javascript" src="navtreedata.js"></script>
+<script type="text/javascript" src="navtree.js"></script>
 <link href="search/search.css" rel="stylesheet" type="text/css"/>
 <script type="text/javascript" src="search/searchdata.js"></script>
 <script type="text/javascript" src="search/search.js"></script>
 <link href="doxygen.css" rel="stylesheet" type="text/css" />
+<link href="doxygen-awesome.css" rel="stylesheet" type="text/css"/>
 </head>
 <body>
 <div id="top"><!-- do not remove this div, it is closed by doxygen! -->
@@ -48,6 +67,22 @@ $(function() {
 </script>
 <div id="main-nav"></div>
 </div><!-- top -->
+<div id="side-nav" class="ui-resizable side-nav-resizable">
+  <div id="nav-tree">
+    <div id="nav-tree-contents">
+      <div id="nav-sync" class="sync"></div>
+    </div>
+  </div>
+  <div id="splitbar" style="-moz-user-select:none;" 
+       class="ui-resizable-handle">
+  </div>
+</div>
+<script type="text/javascript">
+/* @license magnet:?xt=urn:btih:d3d9a9a6595521f9666a5e94cc830dab83b65699&amp;dn=expat.txt MIT */
+$(document).ready(function(){initNavTree('index.html',''); initResizable(); });
+/* @license-end */
+</script>
+<div id="doc-content">
 <!-- window showing the filter options -->
 <div id="MSearchSelectWindow"
      onmouseover="return searchBox.OnSearchSelectShow()"
@@ -69,14 +104,346 @@ $(function() {
 </div>
 </div>
 
-<div class="header">
-  <div class="headertitle"><div class="title">cwist Documentation</div></div>
+<div><div class="header">
+  <div class="headertitle"><div class="title">cwist </div></div>
 </div><!--header-->
 <div class="contents">
+<div class="textblock"><p align="center"><a class="anchor" id="md_README"></a> </p>
+<p><img src="./logo.png" alt="CWIST logo" width="220" class="inline"/> </p>
+<h1 align="center">CWIST</h1>
+<p align="center"></p>
+<p><b>C Web development Is Still Trustworthy</b></p>
+<p align="center"></p>
+<p><a href="https://discord.gg/6F8HDmNAPg"><img src="https://img.shields.io/badge/Discord-Join%20chat-5865F2?logo=discord&amp;logoColor=white" alt="Discord" class="inline"/></a> <a href="https://oborona.zip"><img src="https://img.shields.io/badge/Live%20in%20Production-oborona.zip-00A86B" alt="Live in Production: oborona.zip" class="inline"/></a> <a href="https://c4punks.github.io/CWIST/"><img src="https://img.shields.io/badge/Docs-API%20Reference-blue" alt="API Reference" class="inline"/></a> </p>
+<p align="center"></p>
+<p><b>Write a web app once in C. Serve it from a native server, from a WASI 0.2 edge runtime, or from inside the browser's Service Worker.</b> </p>
+<p align="center"></p>
+<p>CWIST is a C17 web framework and application server: routing, middleware, templates, sessions, validation and an embedded SQLite ORM on top of HTTP/1.1, HTTP/2, HTTP/3, WebSocket and WebTransport, with an io_uring/epoll/kqueue reactor. </p>
+<p align="center"></p>
+<p><b>Powered by CWIST in production:</b> <a href="https://oborona.zip">oborona.zip</a> (daily engineering blog) · <a href="https://github.com/gg582/fly.board">fly.board</a> </p>
+<h2><a class="anchor" id="autotoc_md3"></a>
+Quick start</h2>
+<div class="fragment"><div class="line">brew tap c4punks/cwist</div>
+<div class="line">brew install c4punks/cwist/cwist</div>
+</div><!-- fragment --><div class="fragment"><div class="line"><span class="preprocessor">#include &lt;<a class="code" href="d2/d39/app_8h.html">cwist/app.h</a>&gt;</span></div>
+<div class="line"> </div>
+<div class="line"><span class="keyword">static</span> <span class="keywordtype">void</span> hello(<a class="code hl_struct" href="dd/d68/structcwist__http__request.html">cwist_http_request</a> *req, <a class="code hl_struct" href="dd/d22/structcwist__http__response.html">cwist_http_response</a> *res) {</div>
+<div class="line">    (void)req;</div>
+<div class="line">    <a class="code hl_function" href="d4/dbd/core_2sstring_2sstring_8h.html#a6a0c23aa9b205fc952f848cc925a1a28">cwist_sstring_assign</a>(res-&gt;<a class="code hl_variable" href="dd/d22/structcwist__http__response.html#a342acf59fe7ce906f6d80a01bfdc1e6e">body</a>, <span class="stringliteral">&quot;Hello from CWIST!&quot;</span>);</div>
+<div class="line">}</div>
+<div class="line"> </div>
+<div class="line"><span class="keywordtype">int</span> main(<span class="keywordtype">void</span>) {</div>
+<div class="line">    <a class="code hl_struct" href="dc/da0/structcwist__app.html">cwist_app</a> *app = <a class="code hl_function" href="d0/d77/sys_2app_2app_8h.html#a9aeebb72e5908f56c1b5823ae4a773c8">cwist_app_create</a>();</div>
+<div class="line">    <a class="code hl_function" href="d0/d77/sys_2app_2app_8h.html#a2e05d7cf1fd66d956d6928d465c3aa72">cwist_app_get</a>(app, <span class="stringliteral">&quot;/&quot;</span>, hello);</div>
+<div class="line">    <a class="code hl_function" href="d0/d77/sys_2app_2app_8h.html#a05f9a10f4d2ab307c211dd56d54fe7c3">cwist_app_listen</a>(app, 8080);</div>
+<div class="line">    <a class="code hl_function" href="d0/d77/sys_2app_2app_8h.html#a8d6f015a001b2d189ebea808de9da254">cwist_app_destroy</a>(app);</div>
+<div class="line">    <span class="keywordflow">return</span> 0;</div>
+<div class="line">}</div>
+<div class="ttc" id="aapp_8h_html"><div class="ttname"><a href="d2/d39/app_8h.html">app.h</a></div><div class="ttdoc">Top-level application header.</div></div>
+<div class="ttc" id="acore_2sstring_2sstring_8h_html_a6a0c23aa9b205fc952f848cc925a1a28"><div class="ttname"><a href="d4/dbd/core_2sstring_2sstring_8h.html#a6a0c23aa9b205fc952f848cc925a1a28">cwist_sstring_assign</a></div><div class="ttdeci">cwist_error_t cwist_sstring_assign(cwist_sstring *str, const char *data)</div><div class="ttdoc">Assign a C string.</div><div class="ttdef"><b>Definition</b> <a href="dd/d79/sstring_8c_source.html#l00504">sstring.c:504</a></div></div>
+<div class="ttc" id="astructcwist__app_html"><div class="ttname"><a href="dc/da0/structcwist__app.html">cwist_app</a></div><div class="ttdoc">Main Application Context.</div><div class="ttdef"><b>Definition</b> <a href="d0/d77/sys_2app_2app_8h_source.html#l00155">app.h:155</a></div></div>
+<div class="ttc" id="astructcwist__http__request_html"><div class="ttname"><a href="dd/d68/structcwist__http__request.html">cwist_http_request</a></div><div class="ttdef"><b>Definition</b> <a href="dd/d56/http_8h_source.html#l00065">http.h:65</a></div></div>
+<div class="ttc" id="astructcwist__http__response_html"><div class="ttname"><a href="dd/d22/structcwist__http__response.html">cwist_http_response</a></div><div class="ttdoc">HTTP Response Object. Supports standard string body or Zero-Copy pointer body.</div><div class="ttdef"><b>Definition</b> <a href="dd/d56/http_8h_source.html#l00082">http.h:82</a></div></div>
+<div class="ttc" id="astructcwist__http__response_html_a342acf59fe7ce906f6d80a01bfdc1e6e"><div class="ttname"><a href="dd/d22/structcwist__http__response.html#a342acf59fe7ce906f6d80a01bfdc1e6e">cwist_http_response::body</a></div><div class="ttdeci">cwist_sstring * body</div><div class="ttdef"><b>Definition</b> <a href="dd/d56/http_8h_source.html#l00087">http.h:87</a></div></div>
+<div class="ttc" id="asys_2app_2app_8h_html_a05f9a10f4d2ab307c211dd56d54fe7c3"><div class="ttname"><a href="d0/d77/sys_2app_2app_8h.html#a05f9a10f4d2ab307c211dd56d54fe7c3">cwist_app_listen</a></div><div class="ttdeci">int cwist_app_listen(cwist_app *app, int port)</div><div class="ttdoc">Serve app on port until SIGTERM, SIGINT or cwist_shutdown_request(); blocks the calling thread.</div><div class="ttdef"><b>Definition</b> <a href="df/d7f/app_8c_source.html#l04540">app.c:4540</a></div></div>
+<div class="ttc" id="asys_2app_2app_8h_html_a2e05d7cf1fd66d956d6928d465c3aa72"><div class="ttname"><a href="d0/d77/sys_2app_2app_8h.html#a2e05d7cf1fd66d956d6928d465c3aa72">cwist_app_get</a></div><div class="ttdeci">void cwist_app_get(cwist_app *app, const char *path, cwist_handler_func handler)</div><div class="ttdoc">Registers a GET route handler.</div><div class="ttdef"><b>Definition</b> <a href="df/d7f/app_8c_source.html#l02192">app.c:2192</a></div></div>
+<div class="ttc" id="asys_2app_2app_8h_html_a8d6f015a001b2d189ebea808de9da254"><div class="ttname"><a href="d0/d77/sys_2app_2app_8h.html#a8d6f015a001b2d189ebea808de9da254">cwist_app_destroy</a></div><div class="ttdeci">void cwist_app_destroy(cwist_app *app)</div><div class="ttdoc">Destroys the application and frees all resources.</div><div class="ttdef"><b>Definition</b> <a href="df/d7f/app_8c_source.html#l01449">app.c:1449</a></div></div>
+<div class="ttc" id="asys_2app_2app_8h_html_a9aeebb72e5908f56c1b5823ae4a773c8"><div class="ttname"><a href="d0/d77/sys_2app_2app_8h.html#a9aeebb72e5908f56c1b5823ae4a773c8">cwist_app_create</a></div><div class="ttdeci">cwist_app * cwist_app_create(void)</div><div class="ttdoc">Creates a new CWIST application instance.</div><div class="ttdef"><b>Definition</b> <a href="df/d7f/app_8c_source.html#l01277">app.c:1277</a></div></div>
+</div><!-- fragment --><div class="fragment"><div class="line">gcc -o server main.c $(pkg-config --cflags --libs cwist)</div>
+<div class="line">./server</div>
+</div><!-- fragment --><p>Or scaffold a hot-reloading project with <code>cwist new project demo &amp;&amp; cwist watcher</code>. Next steps: the 30 modules in tutorials/ and the guides in <a class="el" href="/home/yjlee/cwist/docs/README.md#md_docs_2README">docs/</a>.</p>
+<h2><a class="anchor" id="autotoc_md4"></a>
+One app, three places to run it</h2>
+<p>A CWIST app is a set of routes on a <code><a class="el" href="dc/da0/structcwist__app.html" title="Main Application Context.">cwist_app</a></code>. Where it runs depends only on how you hand that app to a host:</p>
+<table class="markdownTable">
+<tr class="markdownTableHead">
+<th class="markdownTableHeadNone">Host   </th><th class="markdownTableHeadNone">Entry point   </th><th class="markdownTableHeadNone">What you get   </th><th class="markdownTableHeadNone">Example    </th></tr>
+<tr class="markdownTableRowOdd">
+<td class="markdownTableBodyNone"><b>Native server</b> (Linux, macOS, BSD)   </td><td class="markdownTableBodyNone"><code>cwist_app_listen(app, port)</code>   </td><td class="markdownTableBodyNone">The full stack: HTTP/1.1–3, TLS, WebSocket, WebTransport, C1M reactor   </td><td class="markdownTableBodyNone"><a href="example/simple-server">simple-server</a>    </td></tr>
+<tr class="markdownTableRowEven">
+<td class="markdownTableBodyNone"><b>Browser Service Worker</b>   </td><td class="markdownTableBodyNone"><code>CWIST_WASM_DEFINE_ENTRY(app)</code>, built with emcc   </td><td class="markdownTableBodyNone">Routing, zod validation, templates, <code><a class="el" href="dd/d55/structcwist__db.html" title="Wrapper for Database Operations. Currently uses SQLite3.">cwist_db</a></code> and signed-cookie sessions answering <code>fetch</code> inside the browser: no origin server, no framework JS   </td><td class="markdownTableBodyNone"><a href="example/wasm-service-worker">wasm-service-worker</a>    </td></tr>
+<tr class="markdownTableRowOdd">
+<td class="markdownTableBodyNone"><b>WASI 0.2 edge runtime</b> (Wasmtime)   </td><td class="markdownTableBodyNone"><code>cwist_app_listen</code> on WASI sockets, built for <code>wasm32-wasip2</code>   </td><td class="markdownTableBodyNone">The same app on Wasmtime; the host owns persistence as a KV-style blob   </td><td class="markdownTableBodyNone"><a href="example/wasip2-kv">wasip2-kv</a>   </td></tr>
+</table>
+<p>The WASM hosts speak serialized HTTP/1.1 across a <a href="wit/cwist.wit">WIT interface</a>, and the <a href="wasm/npm"><code>cwist-wasm</code></a> npm package wraps both the Emscripten module and the jco-transpiled component for JavaScript hosts. They are newer than the native server: read each example's README for what is and is not guaranteed yet (for example, the wasip2 demo does not promise crash-durable writes).</p>
+<h2><a class="anchor" id="autotoc_md5"></a>
+What CWIST includes</h2>
+<table class="markdownTable">
+<tr class="markdownTableHead">
+<th class="markdownTableHeadNone">Layer   </th><th class="markdownTableHeadNone">What you get    </th></tr>
+<tr class="markdownTableRowOdd">
+<td class="markdownTableBodyNone"><b>Protocols</b>   </td><td class="markdownTableBodyNone">HTTP/1.1, HTTP/2 (h2/h2c), HTTP/3 (QUIC, via lsquic), WebSocket, WebTransport, WebRTC data channels    </td></tr>
+<tr class="markdownTableRowEven">
+<td class="markdownTableBodyNone"><b>TLS / Security</b>   </td><td class="markdownTableBodyNone">BoringSSL, one-call hybrid post-quantum TLS (X25519MLKEM768), ECH, certificate hot reload, JWT, CSRF, WAF, rate limiting, secure headers, encrypted DB columns    </td></tr>
+<tr class="markdownTableRowOdd">
+<td class="markdownTableBodyNone"><b>Database</b>   </td><td class="markdownTableBodyNone">SQLite3 + ORM and migrations, Nuke DB (in-memory SQLite synced to disk on COMMIT), PostgreSQL/MySQL/MariaDB detection by wire protocol    </td></tr>
+<tr class="markdownTableRowEven">
+<td class="markdownTableBodyNone"><b>Routing</b>   </td><td class="markdownTableBodyNone">Express-style <code>:param</code> routes, mux router, chainable middleware    </td></tr>
+<tr class="markdownTableRowOdd">
+<td class="markdownTableBodyNone"><b>Async handlers</b>   </td><td class="markdownTableBodyNone"><code>cwist_async_defer</code> / <code>cwist_async_respond</code>: move blocking work to a job thread and answer later without stalling the reactor    </td></tr>
+<tr class="markdownTableRowEven">
+<td class="markdownTableBodyNone"><b>gRPC / Protobuf</b>   </td><td class="markdownTableBodyNone">Unary and streaming routes, health/reflection, <code>cwist proto</code> code generation, and a channel client with load balancing and gRFC A6 retries    </td></tr>
+<tr class="markdownTableRowOdd">
+<td class="markdownTableBodyNone"><b>Rendering</b>   </td><td class="markdownTableBodyNone">HTML builder, scoped-CSS components, template engine, JSON builder    </td></tr>
+<tr class="markdownTableRowEven">
+<td class="markdownTableBodyNone"><b>Observability</b>   </td><td class="markdownTableBodyNone">Structured access logs, metrics endpoint, healthz    </td></tr>
+<tr class="markdownTableRowOdd">
+<td class="markdownTableBodyNone"><b>Tooling</b>   </td><td class="markdownTableBodyNone"><code>cwist</code> CLI: scaffolding, incremental hot reload, OpenAPI 3.1 from Doxygen annotations, proto3 codegen    </td></tr>
+<tr class="markdownTableRowEven">
+<td class="markdownTableBodyNone"><b>Bindings</b>   </td><td class="markdownTableBodyNone"><a href="bindings/rust">Rust</a> and <a href="bindings/zig">Zig</a>   </td></tr>
+</table>
+<h2><a class="anchor" id="autotoc_md6"></a>
+Performance, including where it loses</h2>
+<p>Every push and pull request runs CWIST against Actix, Axum, Gin and Spring Boot under <code>wrk -t12 -c400 -d10s</code> on a GitHub runner.</p>
+<p><b>Latest run at the time of writing</b> (2026-10-20, commit <code>94937494</code>, 4 vCPU AMD EPYC 9V74):</p>
+<table class="markdownTable">
+<tr class="markdownTableHead">
+<th class="markdownTableHeadNone"></th><th class="markdownTableHeadRight">CWIST reactor   </th><th class="markdownTableHeadRight">CWIST Classic   </th><th class="markdownTableHeadRight">Actix   </th><th class="markdownTableHeadRight">Axum   </th><th class="markdownTableHeadRight">Gin   </th><th class="markdownTableHeadRight">Spring Boot    </th></tr>
+<tr class="markdownTableRowOdd">
+<td class="markdownTableBodyNone">req/s   </td><td class="markdownTableBodyRight"><b>183,303</b>   </td><td class="markdownTableBodyRight">155,941   </td><td class="markdownTableBodyRight">174,662   </td><td class="markdownTableBodyRight">151,695   </td><td class="markdownTableBodyRight">116,080   </td><td class="markdownTableBodyRight">74,789    </td></tr>
+<tr class="markdownTableRowEven">
+<td class="markdownTableBodyNone">p50   </td><td class="markdownTableBodyRight">1.95 ms   </td><td class="markdownTableBodyRight"><b>1.21 ms</b>   </td><td class="markdownTableBodyRight">2.04 ms   </td><td class="markdownTableBodyRight">2.38 ms   </td><td class="markdownTableBodyRight">3.31 ms   </td><td class="markdownTableBodyRight">4.98 ms    </td></tr>
+<tr class="markdownTableRowOdd">
+<td class="markdownTableBodyNone">p99   </td><td class="markdownTableBodyRight">7.57 ms   </td><td class="markdownTableBodyRight"><b>5.92 ms</b>   </td><td class="markdownTableBodyRight">7.08 ms   </td><td class="markdownTableBodyRight">6.92 ms   </td><td class="markdownTableBodyRight">21.34 ms   </td><td class="markdownTableBodyRight">10.37 ms    </td></tr>
+<tr class="markdownTableRowEven">
+<td class="markdownTableBodyNone">P99.999   </td><td class="markdownTableBodyRight">22.01 ms   </td><td class="markdownTableBodyRight">18.63 ms   </td><td class="markdownTableBodyRight"><b>13.55 ms</b>   </td><td class="markdownTableBodyRight">14.29 ms   </td><td class="markdownTableBodyRight">43.04 ms   </td><td class="markdownTableBodyRight">42.51 ms    </td></tr>
+<tr class="markdownTableRowOdd">
+<td class="markdownTableBodyNone">RSS   </td><td class="markdownTableBodyRight">21.5 MiB   </td><td class="markdownTableBodyRight">59.7 MiB   </td><td class="markdownTableBodyRight"><b>11.7 MiB</b>   </td><td class="markdownTableBodyRight">14.6 MiB   </td><td class="markdownTableBodyRight">30.1 MiB   </td><td class="markdownTableBodyRight">1.25 GiB    </td></tr>
+<tr class="markdownTableRowEven">
+<td class="markdownTableBodyNone">Context switches   </td><td class="markdownTableBodyRight"><b>145,617</b>   </td><td class="markdownTableBodyRight">1,488,999   </td><td class="markdownTableBodyRight">189,420   </td><td class="markdownTableBodyRight">260,600   </td><td class="markdownTableBodyRight">367,969   </td><td class="markdownTableBodyRight">338,919   </td></tr>
+</table>
+<p>In this run the reactor has the highest throughput and the fewest context switches, and the Classic pool answers the median request in about half of Axum's time and has the lowest p99. <b>Actix and Axum have the tighter extreme tail (P99.999) and the smaller memory footprint</b>; closing the tail gap is open work. The benchmark section below is regenerated by CI, so it shows the most recent run, which may be newer than this table. Methodology and fairness settings are in <a class="el" href="d6/d42/md_docs_2webserver-benchmark.html">docs/webserver-benchmark.md</a>.</p>
+<h3><a class="anchor" id="autotoc_md7"></a>
+Two server modes</h3>
+<p>The mode is one environment variable; pick per workload.</p>
+<ul>
+<li><b>CWIST reactor</b> (default, <code>CWIST_C1M_MODE</code> unset or <code>1</code>) takes throughput and connection density. Many connections share each event loop, so a held connection costs a reactor slot (about 5 KB over TLS) instead of a parked thread. Start here for APIs, web pages, webhooks, SSE fan-out, WebSocket chat and anything that holds many mostly idle connections.</li>
+<li><b>CWIST Classic pool</b> (<code>CWIST_C1M_MODE=0</code>) takes median latency. Each connection gets its own thread, so no request waits behind another in a batch. Pick it for short request bursts where the median matters more than connection count; it cannot reach C1M, because a million threads exceeds <code>threads-max</code>.</li>
+</ul>
+<h3><a class="anchor" id="autotoc_md8"></a>
+Holding a million connections</h3>
+<p>Measured on one 12-core machine (Ryzen 5 5600X, 62 GB, Linux 6.12, loopback):</p>
+<table class="markdownTable">
+<tr class="markdownTableHead">
+<th class="markdownTableHeadNone">Run   </th><th class="markdownTableHeadNone">Result   </th><th class="markdownTableHeadNone">Server memory    </th></tr>
+<tr class="markdownTableRowOdd">
+<td class="markdownTableBodyNone">C1M cleartext, reactor, 12 workers (2026-09-29)   </td><td class="markdownTableBodyNone">1,000,000 / 1,000,000 responded   </td><td class="markdownTableBodyNone">~22.9 GiB peak RSS (~24 KB per connection)    </td></tr>
+<tr class="markdownTableRowEven">
+<td class="markdownTableBodyNone">C100K HTTPS, reactor, 4 workers (2026-10-17)   </td><td class="markdownTableBodyNone">100,000 / 100,000 established, 0 dropped, all answered   </td><td class="markdownTableBodyNone">4,975 B per open connection    </td></tr>
+<tr class="markdownTableRowOdd">
+<td class="markdownTableBodyNone">C1M HTTPS, reactor (2026-10-18)   </td><td class="markdownTableBodyNone">1,000,000 / 1,000,000 established, 0 dropped, all answered   </td><td class="markdownTableBodyNone">4.56 GiB above idle (4,866 B per open connection)    </td></tr>
+<tr class="markdownTableRowEven">
+<td class="markdownTableBodyNone">C1M over TLS HTTP/1.1 and HTTP/2 via <a href="https://github.com/gg582/fly.board#scalability-benchmark">fly.board</a>   </td><td class="markdownTableBodyNone">1,000,000 / 1,000,000 held and served, zero failures   </td><td class="markdownTableBodyNone">19.9 GB / 30.1 GB PSS   </td></tr>
+</table>
+<p>The HTTPS ramp is handshake-bound (~2,900 full P-256 handshakes/s, so ~340 s to open 1M connections). Kernel prerequisites, the client tooling fixes the runs needed, and the per-run details are in <a class="el" href="d0/d49/md_docs_2performance_2https-c100k.html">docs/performance/https-c100k.md</a> and <a class="el" href="db/d4d/md_docs_2c1m-file-limits.html">docs/c1m-file-limits.md</a>.</p>
+<p>Known limits of the async path: HTTPS still runs the request phase on pool threads, a handler that writes faster than the socket drains waits inside the reactor thread (bounded by <code>CWIST_HTTP_TIMEOUT_MS</code>), and idle cleartext keep-alive connections are not yet reaped by a timer.</p>
+<h2><a class="anchor" id="autotoc_md9"></a>
+Why C, when Axum and Gin exist?</h2>
+<ol type="1">
+<li><b>Your C and C++ code is already the backend.</b> Libraries for finance, game servers, ML inference or device control link straight into the server with no FFI layer, no serialization boundary and no second runtime.</li>
+<li><b>The same app reaches the browser and the edge.</b> C compiles to WASM with mature toolchains, which is what lets one CWIST app run in all three hosts above.</li>
+<li><b>Predictable footprint and start-up.</b> No garbage collector, VM or JIT warm-up: the reactor's RSS is above the Rust frameworks but below Go and about 60× below the JVM.</li>
+<li><b>Competitive throughput and median latency</b>, with the tail trade-off stated in the table above rather than hidden.</li>
+</ol>
+<h2><a class="anchor" id="autotoc_md10"></a>
+Memory safety and security in C</h2>
+<p>The first question about a C web server is buffer overflows, use-after-free and leaks. What CWIST does about it, and where each check lives:</p>
+<ul>
+<li><b>Sanitizers on every push and PR.</b> The test suite, tutorials and examples build with <code>SANITIZE=address,undefined WERROR=1</code> and run under ASan/UBSan (<a href=".github/workflows/asan.yml">asan.yml</a>); ThreadSanitizer, CodeQL and cppcheck run in their own workflows.</li>
+<li><b>Protocol conformance.</b> An h2spec HTTP/2 run is diffed against a pinned baseline (<code>scripts/ci/h2spec-baseline.txt</code>); regressions fail the build.</li>
+<li><b>Allocator gate.</b> New raw <code>malloc</code>/<code>free</code> calls in the framework fail <code>cwist audit --gate</code> against <code>scripts/ci/malloc-baseline.txt</code> (<a href="scripts/ci/malloc_lint.sh">malloc_lint.sh</a>).</li>
+<li><b>Fuzzing.</b> A libFuzzer target covers the sequenced-chunk assembler (<code>make fuzz_seq</code>, <a href="tests/fuzz_seq.c">tests/fuzz_seq.c</a>). Fuzz targets for the HTTP/1.1, HTTP/2, WebSocket and multipart parsers are not written yet, and contributions are welcome.</li>
+<li><b>Deterministic lifetimes.</b> Request buffers and cached replies live in libttak generational arenas and epoch-based reclamation critical sections. Deferred responses use an explicit ownership handoff, and <code>CWIST_ASYNC_STRICT=1</code> turns misuse into an abort instead of a warning.</li>
+<li><b>Secure defaults.</b> Hybrid post-quantum TLS with TLS 1.3 minimum, a built-in WAF, token-bucket rate limiting, timing-safe HMAC session verification, CSRF tokens and strict security headers (HSTS, COOP, Permissions-Policy).</li>
+</ul>
+<p>Design decisions and their current status are recorded in <a class="el" href="/home/yjlee/cwist/docs/decisions/README.md#md_docs_2decisions_2README">docs/decisions/</a>.</p>
+<h2><a class="anchor" id="autotoc_md11"></a>
+Install</h2>
+<p>CWIST vendors its dependencies (BoringSSL, lsquic, libttak, SQLite3), so a plain build works on a fresh Linux, macOS, or BSD machine:</p>
+<div class="fragment"><div class="line">git clone https://github.com/c4punks/CWIST.git</div>
+<div class="line">cd cwist</div>
+<div class="line">make</div>
+<div class="line">sudo make install        # optional, installs to /usr/local (override with PREFIX=/opt/cwist)</div>
+</div><!-- fragment --><h3><a class="anchor" id="autotoc_md12"></a>
+Homebrew</h3>
+<p>macOS and Linux (Linuxbrew) users can install the latest release from the <a href="https://github.com/c4punks/homebrew-cwist">CWIST tap</a>:</p>
+<div class="fragment"><div class="line">brew tap c4punks/cwist</div>
+<div class="line">brew install cwist</div>
+</div><!-- fragment --><p>The formula builds from the release source tarball (<code>dist/cwist-&lt;version&gt;.tar.gz</code>, vendored dependencies included) and installs <code>libcwist.a</code>, public headers, the <code>cwist</code> CLI, and <code>cwist.pc</code> pkg-config metadata under the Homebrew prefix.</p>
+<h2><a class="anchor" id="autotoc_md13"></a>
+Platform support</h2>
+<p>CWIST builds on Linux, macOS, and BSD. On Linux the reactor uses <code>io_uring</code> (raw syscalls, no liburing) and falls back to epoll if ring setup fails; macOS and BSD use kqueue. The HTTP/3 server and native client use non-blocking UDP sockets on every platform, and ECN metadata is enabled only when the host exposes the required socket options. Reactor internals (one-shot polls vs completion-staged receives, <code>CWIST_RX_URING</code>, latency probes) are described in <a class="el" href="d2/dc2/md_docs_2http-reactor-fairness.html">docs/http-reactor-fairness.md</a> and <a class="el" href="d9/dfa/md_docs_2runtime-config.html">docs/runtime-config.md</a>.</p>
+<h2><a class="anchor" id="autotoc_md14"></a>
+The cwist CLI and hot reload</h2>
+<p><code>make install</code> also installs the <code>cwist</code> command line tool into <code>$(PREFIX)/bin</code>.</p>
+<div class="fragment"><div class="line"># Scaffold a project: src/main.c, Makefile, and a demo.cwpro manifest</div>
+<div class="line">cwist new project demo --directory ~/src</div>
+<div class="line">cd ~/src/demo</div>
+<div class="line"> </div>
+<div class="line"># Develop with hot reload (incremental rebuild + zero-downtime restart)</div>
+<div class="line">cwist watcher</div>
+<div class="line"> </div>
+<div class="line"># Generate OpenAPI 3.1 from Doxygen @openapi.* route annotations</div>
+<div class="line">cwist openapi</div>
+<div class="line"> </div>
+<div class="line"># Generate C models and gRPC method paths from proto3 definitions</div>
+<div class="line">cwist proto api.proto</div>
+<div class="line"> </div>
+<div class="line"># Inspect the project manifest and detected routes</div>
+<div class="line">cwist describe</div>
+</div><!-- fragment --><p>The watcher rebuilds only the affected translation units and restarts the app only after a successful build, so the previous process keeps serving if a build fails. It wakes on <code>inotify</code> (Linux) or <code>kqueue</code> (BSD/macOS) with a polling fallback; <code>--no-run</code> rebuilds without running and <code>--poll</code> forces polling. The <code>.cwpro</code> manifest (<code>cwist-project/v1</code>) holds the entry point, include paths, debounce/stop timeouts and route discovery scope for the watcher and generators.</p>
+<h2><a class="anchor" id="autotoc_md15"></a>
+Linking</h2>
+<p><code>libcwist.a</code> is a <b>thin static archive</b>: it contains only CWIST objects. <code>make install</code> installs the vendored libraries under <code>$(PREFIX)/lib/cwist</code> and their headers under <code>$(PREFIX)/include/cwist/vendor</code>. pkg-config resolves all of it:</p>
+<div class="fragment"><div class="line">gcc -o server main.c $(pkg-config --cflags --libs cwist)</div>
+<div class="line"># fully static:</div>
+<div class="line">gcc -o server main.c $(pkg-config --cflags --libs --static cwist)</div>
+</div><!-- fragment --><p>Without pkg-config, link CWIST first and its dependencies after it:</p>
+<div class="fragment"><div class="line">gcc -I/opt/cwist/include -I/opt/cwist/include/cwist/vendor main.c \</div>
+<div class="line">    -L/opt/cwist/lib -L/opt/cwist/lib/cwist -lcwist \</div>
+<div class="line">    -llsquic -lssl -lcrypto -lnats_static -lttak -lcjson -luriparser \</div>
+<div class="line">    -lz -lzstd -lbrotlienc -lbrotlicommon -ldl -lpthread -lm -lstdc++</div>
+</div><!-- fragment --><p><code>-lnghttp2</code> (HTTP/2) and <code>-lcurl</code> (RDBMS auto-mount probing) are optional. Brotli ships as <code>libbrotli-dev</code> on Debian/Ubuntu and <code>brotli-devel</code> on Fedora/RHEL; zstd as <code>libzstd-dev</code> / <code>libzstd-devel</code>. <code>DESTDIR</code> is supported for staged packages.</p>
+<h2><a class="anchor" id="autotoc_md16"></a>
+Configuration</h2>
+<p>CWIST reads <code>.env</code> files and prefixed environment variables:</p>
+<div class="fragment"><div class="line"><a class="code hl_struct" href="db/dcb/structcwist__config.html">cwist_config</a> *cfg = <a class="code hl_function" href="db/d16/config_8h.html#a697a68cef7e438402320a481f0a2f59b">cwist_config_create</a>();</div>
+<div class="line"><a class="code hl_function" href="db/d16/config_8h.html#a438170d182ee20247735b3869c7905bf">cwist_config_load_file</a>(cfg, <span class="stringliteral">&quot;.env&quot;</span>);</div>
+<div class="line"><a class="code hl_function" href="db/d16/config_8h.html#a65cb03dd1203b4c1a33bf4aed3a6eb1b">cwist_config_load_env</a>(cfg, <span class="stringliteral">&quot;CWIST_&quot;</span>);</div>
+<div class="line"> </div>
+<div class="line"><span class="keyword">const</span> <span class="keywordtype">char</span> *db_url = <a class="code hl_function" href="db/d16/config_8h.html#af8e3d0f53c8bd0c22544691e4aff2b5b">cwist_config_get</a>(cfg, <span class="stringliteral">&quot;DATABASE_URL&quot;</span>);</div>
+<div class="line"><span class="keywordtype">int</span> workers       = <a class="code hl_function" href="db/d16/config_8h.html#a30b090377dfd1a1cf5628d625d4b4c97">cwist_config_get_int</a>(cfg, <span class="stringliteral">&quot;WORKERS&quot;</span>, 4);</div>
+<div class="line"><span class="keywordtype">bool</span> debug        = <a class="code hl_function" href="db/d16/config_8h.html#aa8f4565f716404e26b2f5f7d9fb5257f">cwist_config_get_bool</a>(cfg, <span class="stringliteral">&quot;DEBUG&quot;</span>, <span class="keyword">false</span>);</div>
+<div class="line"> </div>
+<div class="line"><a class="code hl_function" href="db/d16/config_8h.html#a73b9f467f61c4339ae1ddbfd05883506">cwist_config_destroy</a>(cfg);</div>
+<div class="ttc" id="aconfig_8h_html_a30b090377dfd1a1cf5628d625d4b4c97"><div class="ttname"><a href="db/d16/config_8h.html#a30b090377dfd1a1cf5628d625d4b4c97">cwist_config_get_int</a></div><div class="ttdeci">int cwist_config_get_int(cwist_config *cfg, const char *key, int default_val)</div><div class="ttdoc">Get an integer value by key.</div><div class="ttdef"><b>Definition</b> <a href="d3/d95/config_8c_source.html#l00122">config.c:122</a></div></div>
+<div class="ttc" id="aconfig_8h_html_a438170d182ee20247735b3869c7905bf"><div class="ttname"><a href="db/d16/config_8h.html#a438170d182ee20247735b3869c7905bf">cwist_config_load_file</a></div><div class="ttdeci">void cwist_config_load_file(cwist_config *cfg, const char *path)</div><div class="ttdoc">Load a configuration file.</div><div class="ttdef"><b>Definition</b> <a href="d3/d95/config_8c_source.html#l00184">config.c:184</a></div></div>
+<div class="ttc" id="aconfig_8h_html_a65cb03dd1203b4c1a33bf4aed3a6eb1b"><div class="ttname"><a href="db/d16/config_8h.html#a65cb03dd1203b4c1a33bf4aed3a6eb1b">cwist_config_load_env</a></div><div class="ttdeci">void cwist_config_load_env(cwist_config *cfg, const char *prefix)</div><div class="ttdoc">Load environment variables with a prefix.</div><div class="ttdef"><b>Definition</b> <a href="d3/d95/config_8c_source.html#l00157">config.c:157</a></div></div>
+<div class="ttc" id="aconfig_8h_html_a697a68cef7e438402320a481f0a2f59b"><div class="ttname"><a href="db/d16/config_8h.html#a697a68cef7e438402320a481f0a2f59b">cwist_config_create</a></div><div class="ttdeci">cwist_config * cwist_config_create(void)</div><div class="ttdoc">Create a new configuration object.</div><div class="ttdef"><b>Definition</b> <a href="d3/d95/config_8c_source.html#l00029">config.c:29</a></div></div>
+<div class="ttc" id="aconfig_8h_html_a73b9f467f61c4339ae1ddbfd05883506"><div class="ttname"><a href="db/d16/config_8h.html#a73b9f467f61c4339ae1ddbfd05883506">cwist_config_destroy</a></div><div class="ttdeci">void cwist_config_destroy(cwist_config *cfg)</div><div class="ttdoc">Destroy a configuration object.</div><div class="ttdef"><b>Definition</b> <a href="d3/d95/config_8c_source.html#l00045">config.c:45</a></div></div>
+<div class="ttc" id="aconfig_8h_html_aa8f4565f716404e26b2f5f7d9fb5257f"><div class="ttname"><a href="db/d16/config_8h.html#aa8f4565f716404e26b2f5f7d9fb5257f">cwist_config_get_bool</a></div><div class="ttdeci">bool cwist_config_get_bool(cwist_config *cfg, const char *key, bool default_val)</div><div class="ttdoc">Get a boolean value by key.</div><div class="ttdef"><b>Definition</b> <a href="d3/d95/config_8c_source.html#l00140">config.c:140</a></div></div>
+<div class="ttc" id="aconfig_8h_html_af8e3d0f53c8bd0c22544691e4aff2b5b"><div class="ttname"><a href="db/d16/config_8h.html#af8e3d0f53c8bd0c22544691e4aff2b5b">cwist_config_get</a></div><div class="ttdeci">const char * cwist_config_get(cwist_config *cfg, const char *key)</div><div class="ttdoc">Get a string value by key.</div><div class="ttdef"><b>Definition</b> <a href="d3/d95/config_8c_source.html#l00102">config.c:102</a></div></div>
+<div class="ttc" id="astructcwist__config_html"><div class="ttname"><a href="db/dcb/structcwist__config.html">cwist_config</a></div><div class="ttdef"><b>Definition</b> <a href="db/d16/config_8h_source.html#l00018">config.h:18</a></div></div>
+</div><!-- fragment --><p>The framework itself reads these without a prefix; every <code>CWIST_*</code> variable, with its default and v4 support status, is in <a class="el" href="d9/dfa/md_docs_2runtime-config.html">docs/runtime-config.md</a>.</p>
+<table class="markdownTable">
+<tr class="markdownTableHead">
+<th class="markdownTableHeadNone">Variable   </th><th class="markdownTableHeadNone">Default   </th><th class="markdownTableHeadNone">Description    </th></tr>
+<tr class="markdownTableRowOdd">
+<td class="markdownTableBodyNone"><code>CWIST_WORKERS</code>   </td><td class="markdownTableBodyNone"><code>1</code>   </td><td class="markdownTableBodyNone">Worker processes to fork before entering the event loop.    </td></tr>
+<tr class="markdownTableRowEven">
+<td class="markdownTableBodyNone"><code>CWIST_C1M_MODE</code>   </td><td class="markdownTableBodyNone"><code>true</code>   </td><td class="markdownTableBodyNone"><code>1</code> selects the CWIST reactor, <code>0</code> the Classic pool.    </td></tr>
+<tr class="markdownTableRowOdd">
+<td class="markdownTableBodyNone"><code>CWIST_HTTP_BATCH</code>   </td><td class="markdownTableBodyNone"><code>16</code>   </td><td class="markdownTableBodyNone">Pipelined HTTP/1.1 requests dispatched per event-loop turn (clamped to <code>[1, 1024]</code>).    </td></tr>
+<tr class="markdownTableRowEven">
+<td class="markdownTableBodyNone"><code>CWIST_HTTP_YIELD_BATCH</code>   </td><td class="markdownTableBodyNone"><code>16</code>   </td><td class="markdownTableBodyNone">Dispatch yield granularity within a batch before re-posting the connection.    </td></tr>
+<tr class="markdownTableRowOdd">
+<td class="markdownTableBodyNone"><code>CWIST_ASYNC_DEBUG</code>   </td><td class="markdownTableBodyNone">unset   </td><td class="markdownTableBodyNone">Log rare reactor failure events (rearm/submit/SQ failures) to stderr.    </td></tr>
+<tr class="markdownTableRowEven">
+<td class="markdownTableBodyNone"><code>CWIST_ASYNC_STRICT</code>   </td><td class="markdownTableBodyNone">unset   </td><td class="markdownTableBodyNone"><code>1</code> aborts on deferred-response misuse instead of warning once.   </td></tr>
+</table>
+<h2><a class="anchor" id="autotoc_md17"></a>
+Feature notes</h2>
+<p><b>PQC TLS.</b> <code>cwist_app_use_pqc_layer(app, true)</code> forces <code>X25519MLKEM768:X25519:P-256</code>, sets TLS 1.3 as the minimum and strips legacy ciphers. Application code never touches OpenSSL directly.</p>
+<p><b>WebTransport.</b> <code>cwist_app_use_webtransport(app, handler)</code> handles the CONNECT negotiation over HTTP/3 and exposes <code>cwist_webtransport_read/write/flush/close/open_bidi/open_uni</code>.</p>
+<p><b>Nuke DB.</b> <code>cwist_nuke_init("data.db", 5000)</code> loads an on-disk SQLite file into memory with <code>sqlite3_deserialize</code>, runs <code>PRAGMA integrity_check</code>, serves every query from RAM and syncs to disk on COMMIT. If bootstrap fails, it falls back to read-only disk protection mode.</p>
+<p><b>RDBMS auto-mount.</b> <code>cwist_app_auto_rdbms(app, 5432)</code> classifies the server by wire protocol (a PostgreSQL StartupMessage or a MySQL handshake packet) instead of guessing from the port number.</p>
+<p><b>libttak.</b> The in-tree allocator/reactor toolkit provides generational arenas, epoch-based reclamation, signal-safe detachable arenas for TLS and WebSocket buffers, and a lock-free job queue.</p>
+<h2><a class="anchor" id="autotoc_md18"></a>
+Latest benchmark run</h2>
+<p>CI regenerates this block from each benchmark run.</p>
+<p>Latest Web Server Benchmark (wrk -t12 -c400 -d10s (after 10s warmup, warmup discarded)):</p><ul>
+<li><b>CWIST Classic pool</b>: 155941 req/s | Latency 1.49ms (P90 3.02ms, P99 5.92ms, P99.999 18.63ms) | RSS 61100KiB | Csw 1488999</li>
+<li><b>CWIST reactor</b>: 183303 req/s | Latency 2.24ms (P90 4.38ms, P99 7.57ms, P99.999 22.01ms) | RSS 22060KiB | Csw 145617</li>
+<li><b>Actix</b>: 174662 req/s | Latency 2.30ms (P90 4.30ms, P99 7.08ms, P99.999 13.55ms) | RSS 11980KiB | Csw 189420</li>
+<li><b>Axum</b>: 151695 req/s | Latency 2.60ms (P90 4.53ms, P99 6.92ms, P99.999 14.29ms) | RSS 14928KiB | Csw 260600</li>
+<li><b>Gin (Go)</b>: 116080 req/s | Latency 4.31ms (P90 10.13ms, P99 21.34ms, P99.999 43.03ms) | RSS 30780KiB | Csw 367969</li>
+<li><b>Spring Boot</b>: 74789 req/s | Latency 5.27ms (P90 7.17ms, P99 10.37ms, P99.999 42.51ms) | RSS 1312936KiB | Csw 338919</li>
+</ul>
+<p><em>Settled CWIST-internal tuning variants (glibc arena cap from PR #35, cooperative drain chunk from issue #25) are recorded in <a class="el" href="d9/d15/cooperative-queuing_8md.html">docs/cooperative-queuing.md</a> and benchmarks/webserver.json; they are no longer rendered as comparison rows.</em></p>
+<p><b>Spring runtime environment</b></p>
+<ul>
+<li><b>JDK:</b> <code>openjdk version "25.0.4.1" 2026-08-18 LTS</code></li>
+<li><b>Spring Boot:</b> 3.2.3</li>
+<li><b>Stack:</b> Spring WebFlux + Reactor Netty on native epoll (G1GC, JDK 25 Leyden AOT, virtual threads disabled)</li>
+<li><b>Virtual threads:</b> disabled</li>
+</ul>
+<p><b>JVM options</b></p>
+<div class="fragment"><div class="line">-Xms1024m</div>
+<div class="line">-Xmx1024m</div>
+<div class="line">-XX:+UseG1GC</div>
+<div class="line">-XX:GCTimeRatio=99</div>
+<div class="line">-XX:G1HeapRegionSize=1m</div>
+<div class="line">-XX:+AlwaysPreTouch</div>
+<div class="line">-XX:CompileThreshold=1500</div>
+<div class="line">-XX:CICompilerCount=4</div>
+<div class="line">-Djava.security.egd=file:/dev/urandom</div>
+<div class="line">-Djava.net.preferIPv4Stack=true</div>
+<div class="line">-Dio.netty.allocator.type=pooled</div>
+<div class="line">-Dio.netty.leakDetection.level=disabled</div>
+<div class="line">-Dio.netty.buffer.checkBounds=false</div>
+<div class="line">-Dio.netty.buffer.checkAccessible=false</div>
+<div class="line">-Dreactor.netty.ioWorkerCount=4</div>
+<div class="line">-Xlog:gc*:file=/tmp/spring_gc.log:time,uptime,level,tags</div>
+<div class="line">-XX:+AOTClassLinking</div>
+<div class="line">-XX:AOTCache=/tmp/spring_bench/app.aot (JEP 483 + JEP 514 single-step AOT)</div>
+</div><!-- fragment --><p><b>Warmup/profile</b></p>
+<p>wrk -t12 -c400 -d10s (after 10s warmup, warmup discarded)</p>
+<p><img src="docs/webserver-benchmark-trends.svg" alt="Web Server Benchmark Trends" style="pointer-events: none;" class="inline"/></p>
+<p>Latency distribution (density curve reconstructed from each server's percentiles - shows the shape of the tail, not just its P99.999 number):</p>
+<p><img src="docs/webserver-latency-distribution.svg" alt="Web Server Latency Distribution" style="pointer-events: none;" class="inline"/></p>
+<p><em>Methodology, JVM options, and fairness settings: <a class="el" href="d6/d42/md_docs_2webserver-benchmark.html">docs/webserver-benchmark.md</a></em></p>
+<h2><a class="anchor" id="autotoc_md19"></a>
+Stability and conformance</h2>
+<ul>
+<li><b>Versioning</b>: v4 is the first LTS line. Draft-level features cycle through <code>dev</code> and may appear or disappear between tags; pin an exact tag in production. See <a class="el" href="d0/db4/md_docs_2versioning.html">docs/versioning.md</a>.</li>
+<li><b>Conformance gates</b>: ASan/UBSan with <code>-Werror</code> on every push, and an h2spec HTTP/2 diff against a pinned baseline; known gaps are tracked in <code>scripts/ci/h2spec-baseline.txt</code>.</li>
+</ul>
+<h2><a class="anchor" id="autotoc_md20"></a>
+Documentation</h2>
+<p>The full map is <a class="el" href="/home/yjlee/cwist/docs/README.md#md_docs_2README">docs/README.md</a>. In suggested reading order:</p>
+<ul>
+<li><b>Tutorials</b>: 30 hands-on modules, each with a runnable <code>main.c</code>, a <code>CMakeLists.txt</code> and a guided README.</li>
+<li><b><a href="docs/tutorials/">Guides</a></b>: <a class="el" href="d4/db0/md_docs_2tutorials_2blog-crud.html">CRUD blog</a>, <a class="el" href="da/d48/md_docs_2tutorials_2nats-integration.html">NATS integration</a>, <a class="el" href="d2/dcb/md_docs_2tutorials_2webtransport-server.html">WebTransport server</a>.</li>
+<li><b><a class="el" href="d7/d15/md_docs_2API.html">API reference</a></b>: per-module docs under <code>docs/api/</code>, the <a class="el" href="d1/d7e/md_docs_2api-quickref.html">flat quick reference</a> and generated <a href="https://c4punks.github.io/CWIST/">Doxygen HTML</a>.</li>
+<li><b><a class="el" href="/home/yjlee/cwist/docs/decisions/README.md#md_docs_2decisions_2README">Decision records</a></b> and <b>ROADMAP.md</b>.</li>
+</ul>
+<h2><a class="anchor" id="autotoc_md21"></a>
+Examples</h2>
+<p>Runnable demos under <a href="example/">example/</a>: a <a href="example/simple-server">minimal server</a>, <a href="example/http">step-by-step HTTP</a>, <a href="example/db">SQLite</a> and <a href="example/db-crypt">encrypted-column DB</a>, <a href="example/jwt">JWT auth</a>, a <a href="example/othello-web">WebSocket Othello game</a>, <a href="example/webrtc">WebRTC</a>, <a href="example/webtransport">WebTransport</a>, the WASM hosts (<a href="example/wasm-service-worker">Service Worker</a>, <a href="example/wasip2-kv">wasip2</a>), <a href="example/rust-hello">Rust</a> and <a href="example/zig-hello">Zig</a> hello-worlds, and the <a href="example/rps-showcase">rps-showcase</a> throughput demo. The <a href="docs/README.md#4-runnable-examples">examples table</a> lists them all.</p>
+<p>Production deployments built on CWIST: <a href="https://oborona.zip">oborona.zip</a> (live daily engineering blog) and <a href="https://github.com/gg582/fly.board">fly.board</a>.</p>
+<h2><a class="anchor" id="autotoc_md22"></a>
+Community</h2>
+<p>The official CWIST Discord: <b><a href="https://discord.gg/6F8HDmNAPg">https://discord.gg/6F8HDmNAPg</a></b>. Questions, design discussion and contribution coordination happen there; see CONTRIBUTING.md to send a patch.</p>
+<h2><a class="anchor" id="autotoc_md23"></a>
+Third-party licenses</h2>
+<p>CWIST vendors its dependencies under <code>lib/</code>; each keeps its own license (summary in NOTICE.md, authoritative text in each submodule's license file):</p>
+<table class="markdownTable">
+<tr class="markdownTableHead">
+<th class="markdownTableHeadNone">Component   </th><th class="markdownTableHeadNone">License    </th></tr>
+<tr class="markdownTableRowOdd">
+<td class="markdownTableBodyNone">BoringSSL   </td><td class="markdownTableBodyNone">Apache-2.0    </td></tr>
+<tr class="markdownTableRowEven">
+<td class="markdownTableBodyNone">lsquic   </td><td class="markdownTableBodyNone">MIT (some Chromium-derived parts BSD-3-Clause)    </td></tr>
+<tr class="markdownTableRowOdd">
+<td class="markdownTableBodyNone">cJSON, multipart-parser-c   </td><td class="markdownTableBodyNone">MIT    </td></tr>
+<tr class="markdownTableRowEven">
+<td class="markdownTableBodyNone">libttak   </td><td class="markdownTableBodyNone">BSD-3-Clause    </td></tr>
+<tr class="markdownTableRowOdd">
+<td class="markdownTableBodyNone">SQLite   </td><td class="markdownTableBodyNone">Public Domain    </td></tr>
+<tr class="markdownTableRowEven">
+<td class="markdownTableBodyNone">cnats   </td><td class="markdownTableBodyNone">Apache-2.0    </td></tr>
+<tr class="markdownTableRowOdd">
+<td class="markdownTableBodyNone">uriparser   </td><td class="markdownTableBodyNone">BSD-3-Clause (library only; its test suite is LGPL-2.1-or-later and is not linked)   </td></tr>
+</table>
+<p>Static linking propagates each component's license obligations to linked binaries; review NOTICE.md when distributing. </p>
+</div></div><!-- PageDoc -->
 </div><!-- contents -->
+</div><!-- doc-content -->
 <!-- start footer part -->
-<hr class="footer"/><address class="footer"><small>
-Generated by&#160;<a href="https://www.doxygen.org/index.html"><img class="footer" src="doxygen.svg" width="104" height="31" alt="doxygen"/></a> 1.9.8
-</small></address>
+<div id="nav-path" class="navpath"><!-- id is needed for treeview function! -->
+  <ul>
+    <li class="footer">Generated by <a href="https://www.doxygen.org/index.html"><img class="footer" src="doxygen.svg" width="104" height="31" alt="doxygen"/></a> 1.9.8 </li>
+  </ul>
+</div>
 </body>
 </html>

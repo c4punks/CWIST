@@ -1,4 +1,5 @@
 var tls__chain_8h =
 [
-    [ "cwist_tls_autoload_intermediates", "dc/d94/tls__chain_8h.html#a402fcbdd8e93c407e64d09ff4c405eb1", null ]
+    [ "cwist_tls_autoload_intermediates", "dc/d94/tls__chain_8h.html#a402fcbdd8e93c407e64d09ff4c405eb1", null ],
+    [ "cwist_tls_sess_cache_size", "dc/d94/tls__chain_8h.html#ae95c36416e4d96a4296216a19efb46b9", null ]
 ];

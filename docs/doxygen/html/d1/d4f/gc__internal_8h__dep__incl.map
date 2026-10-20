@@ -1,0 +1,5 @@
+<map id="src/core/mem/gc_internal.h" name="src/core/mem/gc_internal.h">
+<area shape="rect" id="Node000001" title="Internal bridge between the allocator and the epoch GC wrapper." alt="" coords="5,5,204,31"/>
+<area shape="rect" id="Node000002" href="$d9/d39/alloc_8c.html" title="Memory allocation bridge that can route CWIST allocations through libttak owner guards." alt="" coords="26,79,183,104"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="107,44,107,79,102,79,102,44"/>
+</map>

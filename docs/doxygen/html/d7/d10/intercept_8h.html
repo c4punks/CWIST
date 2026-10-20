@@ -1,3 +1,4 @@
+<!-- HTML header for doxygen 1.9.8-->
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "https://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml" lang="en-US">
 <head>
@@ -5,14 +6,32 @@
 <meta http-equiv="X-UA-Compatible" content="IE=11"/>
 <meta name="generator" content="Doxygen 1.9.8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
-<title>cwist: include/cwist/core/mem/intercept.h File Reference</title>
+<title>include/cwist/core/mem/intercept.h File Reference - CWIST High-Performance C Web Framework</title>
+<meta name="description" content="CWIST: High-performance C17 web framework and application server (HTTP/1.1, HTTP/2, HTTP/3, WebTransport, WebSocket, PQC TLS) powered by io_uring and libttak."/>
+<meta name="keywords" content="C web framework, C17, HTTP3, QUIC, io_uring, web server, actix alternative, high performance, REST API in C, C web server"/>
+<meta name="author" content="c4punks"/>
+<meta name="robots" content="index, follow"/>
+<!-- Open Graph / Facebook -->
+<meta property="og:type" content="website"/>
+<meta property="og:title" content="include/cwist/core/mem/intercept.h File Reference - CWIST Modern C Web Framework"/>
+<meta property="og:description" content="High-performance C17 web framework & application server with zero-copy io_uring reactor, PQC TLS, and HTTP/3 support."/>
+<meta property="og:url" content="https://c4punks.github.io/CWIST/"/>
+<!-- Twitter -->
+<meta name="twitter:card" content="summary_large_image"/>
+<meta name="twitter:title" content="include/cwist/core/mem/intercept.h File Reference - CWIST Modern C Web Framework"/>
+<meta name="twitter:description" content="High-performance C17 web framework & application server with zero-copy io_uring reactor, PQC TLS, and HTTP/3 support."/>
 <link href="../../tabs.css" rel="stylesheet" type="text/css"/>
 <script type="text/javascript" src="../../jquery.js"></script>
 <script type="text/javascript" src="../../dynsections.js"></script>
+<link href="../../navtree.css" rel="stylesheet" type="text/css"/>
+<script type="text/javascript" src="../../resize.js"></script>
+<script type="text/javascript" src="../../navtreedata.js"></script>
+<script type="text/javascript" src="../../navtree.js"></script>
 <link href="../../search/search.css" rel="stylesheet" type="text/css"/>
 <script type="text/javascript" src="../../search/searchdata.js"></script>
 <script type="text/javascript" src="../../search/search.js"></script>
 <link href="../../doxygen.css" rel="stylesheet" type="text/css" />
+<link href="../../doxygen-awesome.css" rel="stylesheet" type="text/css"/>
 </head>
 <body>
 <div id="top"><!-- do not remove this div, it is closed by doxygen! -->
@@ -47,6 +66,23 @@ $(function() {
 /* @license-end */
 </script>
 <div id="main-nav"></div>
+</div><!-- top -->
+<div id="side-nav" class="ui-resizable side-nav-resizable">
+  <div id="nav-tree">
+    <div id="nav-tree-contents">
+      <div id="nav-sync" class="sync"></div>
+    </div>
+  </div>
+  <div id="splitbar" style="-moz-user-select:none;" 
+       class="ui-resizable-handle">
+  </div>
+</div>
+<script type="text/javascript">
+/* @license magnet:?xt=urn:btih:d3d9a9a6595521f9666a5e94cc830dab83b65699&amp;dn=expat.txt MIT */
+$(document).ready(function(){initNavTree('d7/d10/intercept_8h.html','../../'); initResizable(); });
+/* @license-end */
+</script>
+<div id="doc-content">
 <!-- window showing the filter options -->
 <div id="MSearchSelectWindow"
      onmouseover="return searchBox.OnSearchSelectShow()"
@@ -68,11 +104,6 @@ $(function() {
 </div>
 </div>
 
-<div id="nav-path" class="navpath">
-  <ul>
-<li class="navelem"><a class="el" href="../../dir_d44c64559bbebec7f509842c48db8b23.html">include</a></li><li class="navelem"><a class="el" href="../../dir_2109d32ae718f50aecd8856dacda770b.html">cwist</a></li><li class="navelem"><a class="el" href="../../dir_10b21726104ad23c5e3d9a30e698c859.html">core</a></li><li class="navelem"><a class="el" href="../../dir_6be49a6af745edc4b6aec6d50aadcc72.html">mem</a></li>  </ul>
-</div>
-</div><!-- top -->
 <div class="header">
   <div class="summary">
 <a href="#func-members">Functions</a>  </div>
@@ -116,7 +147,7 @@ Functions</h2></td></tr>
 </table>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
 <div class="textblock"><p>Opt-in, translation-unit-scoped malloc/calloc/realloc/free interception onto the full-GC epoch pipeline. </p>
-<p>Design rationale (see docs/GC.md section 5 for the full writeup): this is deliberately a <em>header-level</em> macro redefinition, not a link-level <code>-Wl,--wrap=malloc</code>. A link-level wrap intercepts every <code>malloc</code> reference in the final binary, including vendored dependencies (BoringSSL, lsquic, cnats, sqlite3) that never see CWIST's headers and have no reason to expect a non-libc allocator underneath them - concretely, BoringSSL calls <code>OPENSSL_cleanse()</code> on secret key material before freeing it, on the assumption of plain heap semantics; routing that through an epoch-deferred GC arena would be a security regression, not a performance footnote.</p>
+<p>Design rationale (see <a class="el" href="../../d6/d91/GC_8md.html">docs/GC.md</a> section 5 for the full writeup): this is deliberately a <em>header-level</em> macro redefinition, not a link-level <code>-Wl,--wrap=malloc</code>. A link-level wrap intercepts every <code>malloc</code> reference in the final binary, including vendored dependencies (BoringSSL, lsquic, cnats, sqlite3) that never see CWIST's headers and have no reason to expect a non-libc allocator underneath them - concretely, BoringSSL calls <code>OPENSSL_cleanse()</code> on secret key material before freeing it, on the assumption of plain heap semantics; routing that through an epoch-deferred GC arena would be a security regression, not a performance footnote.</p>
 <p>A <code>#define malloc cwist_malloc_shim</code> here only ever takes effect in a translation unit that (a) includes this header and (b) defines <code>CWIST_INTERCEPT_MALLOC</code> before doing so. Vendored dependencies do neither, structurally: they are built as separate compilation units that never include a CWIST header. This excludes them by construction, at the cost of not extending coverage beyond code that opts in.</p>
 <p>Usage (typically a handler translation unit that wants "write malloc by
 habit and it still evaporates under cwist_full_gc(true)"): </p><div class="fragment"><div class="line"><span class="preprocessor">#define CWIST_INTERCEPT_MALLOC</span></div>
@@ -169,9 +200,9 @@ habit and it still evaporates under cwist_full_gc(true)"): </p><div class="fragm
 <p>calloc() replacement: real libc calloc() (zeroed), registered with the full-GC pending-sweep list when <a class="el" href="../../d0/daa/gc_8h.html#a35e613a89ca213039b7b8b80464c223c" title="Check whether full-GC mode is currently enabled.">cwist_full_gc_enabled()</a>; a plain, untracked passthrough otherwise. </p>
 <p>calloc() replacement: real libc calloc() (zeroed), registered with the full-GC pending-sweep list when <a class="el" href="../../d0/daa/gc_8h.html#a35e613a89ca213039b7b8b80464c223c" title="Check whether full-GC mode is currently enabled.">cwist_full_gc_enabled()</a>; a plain, untracked passthrough otherwise. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d9/d39/alloc_8c_source.html#l00428">428</a> of file <a class="el" href="../../d9/d39/alloc_8c_source.html">alloc.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d9/d39/alloc_8c_source.html#l00433">433</a> of file <a class="el" href="../../d9/d39/alloc_8c_source.html">alloc.c</a>.</p>
 
-<p class="reference">References <a class="el" href="../../d8/d16/gc_8c_source.html#l00277">cwist_full_gc_enabled()</a>, and <a class="el" href="../../d8/d16/gc_8c_source.html#l00454">cwist_gc_scope_track()</a>.</p>
+<p class="reference">References <a class="el" href="../../d8/d16/gc_8c_source.html#l00514">cwist_full_gc_enabled()</a>, and <a class="el" href="../../d8/d16/gc_8c_source.html#l00706">cwist_gc_scope_track()</a>.</p>
 
 </div>
 </div>
@@ -194,9 +225,9 @@ habit and it still evaporates under cwist_full_gc(true)"): </p><div class="fragm
 <p>free() replacement: untracks <code>ptr</code> first if it was tracked (safe no-op if it wasn't - same contract as <a class="el" href="../../d2/dfe/alloc_8h.html#a220abeebe2823e72511d1690fc561306" title="Free memory obtained via cwist_alloc/cwist_strdup/etc.">cwist_free()</a>), then calls the real libc free(). </p>
 <p>free() replacement: untracks <code>ptr</code> first if it was tracked (safe no-op if it wasn't - same contract as <a class="el" href="../../d2/dfe/alloc_8h.html#a220abeebe2823e72511d1690fc561306" title="Free memory obtained via cwist_alloc/cwist_strdup/etc.">cwist_free()</a>), then calls the real libc free(). </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d9/d39/alloc_8c_source.html#l00464">464</a> of file <a class="el" href="../../d9/d39/alloc_8c_source.html">alloc.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d9/d39/alloc_8c_source.html#l00469">469</a> of file <a class="el" href="../../d9/d39/alloc_8c_source.html">alloc.c</a>.</p>
 
-<p class="reference">References <a class="el" href="../../d8/d16/gc_8c_source.html#l00277">cwist_full_gc_enabled()</a>, and <a class="el" href="../../d8/d16/gc_8c_source.html#l00481">cwist_gc_scope_untrack()</a>.</p>
+<p class="reference">References <a class="el" href="../../d8/d16/gc_8c_source.html#l00514">cwist_full_gc_enabled()</a>, and <a class="el" href="../../d8/d16/gc_8c_source.html#l00733">cwist_gc_scope_untrack()</a>.</p>
 
 </div>
 </div>
@@ -219,11 +250,11 @@ habit and it still evaporates under cwist_full_gc(true)"): </p><div class="fragm
 <p>malloc() replacement: real libc malloc() (uninitialized memory, exactly like malloc - unlike <a class="el" href="../../d2/dfe/alloc_8h.html#aeba69949fe17751318e6b5fc84a74096" title="Allocate zeroed memory tracked by libttak.">cwist_alloc()</a>, this does not zero), registered with the full-GC pending-sweep list when <a class="el" href="../../d0/daa/gc_8h.html#a35e613a89ca213039b7b8b80464c223c" title="Check whether full-GC mode is currently enabled.">cwist_full_gc_enabled()</a>; a plain, untracked passthrough otherwise. </p>
 <p>malloc() replacement: real libc malloc() (uninitialized memory, exactly like malloc - unlike <a class="el" href="../../d2/dfe/alloc_8h.html#aeba69949fe17751318e6b5fc84a74096" title="Allocate zeroed memory tracked by libttak.">cwist_alloc()</a>, this does not zero), registered with the full-GC pending-sweep list when <a class="el" href="../../d0/daa/gc_8h.html#a35e613a89ca213039b7b8b80464c223c" title="Check whether full-GC mode is currently enabled.">cwist_full_gc_enabled()</a>; a plain, untracked passthrough otherwise. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d9/d39/alloc_8c_source.html#l00417">417</a> of file <a class="el" href="../../d9/d39/alloc_8c_source.html">alloc.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d9/d39/alloc_8c_source.html#l00422">422</a> of file <a class="el" href="../../d9/d39/alloc_8c_source.html">alloc.c</a>.</p>
 
-<p class="reference">References <a class="el" href="../../d8/d16/gc_8c_source.html#l00277">cwist_full_gc_enabled()</a>, and <a class="el" href="../../d8/d16/gc_8c_source.html#l00454">cwist_gc_scope_track()</a>.</p>
+<p class="reference">References <a class="el" href="../../d8/d16/gc_8c_source.html#l00514">cwist_full_gc_enabled()</a>, and <a class="el" href="../../d8/d16/gc_8c_source.html#l00706">cwist_gc_scope_track()</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../d9/d39/alloc_8c_source.html#l00443">cwist_realloc_shim()</a>.</p>
+<p class="reference">Referenced by <a class="el" href="../../d9/d39/alloc_8c_source.html#l00448">cwist_realloc_shim()</a>.</p>
 
 </div>
 </div>
@@ -256,16 +287,20 @@ habit and it still evaporates under cwist_full_gc(true)"): </p><div class="fragm
 <p>realloc() replacement. Tracking follows the incoming pointer: if <code>ptr</code> was tracked (shimmed-and-full-GC-was-on at allocation time), the old registration is removed and the new pointer is re-registered (a moved block must not leave a stale entry pointing at freed memory, and should stay reclaimable exactly as the original was). If <code>ptr</code> was untracked (allocated before full-GC was enabled, already disowned, or is NULL), the result is left untracked too - matching <a class="el" href="../../d2/dfe/alloc_8h.html#a42c763d29fa97fa0fb23b0fd91dab294" title="Resize an existing allocation (libttak tracked).">cwist_realloc()</a>'s existing behavior of not opting a pointer into tracking on its own. </p>
 <p>realloc() replacement. Tracking follows the incoming pointer: if <code>ptr</code> was tracked (shimmed-and-full-GC-was-on at allocation time), the old registration is removed and the new pointer is re-registered (a moved block must not leave a stale entry pointing at freed memory, and should stay reclaimable exactly as the original was). If <code>ptr</code> was untracked (allocated before full-GC was enabled, already disowned, or is NULL), the result is left untracked too - matching <a class="el" href="../../d2/dfe/alloc_8h.html#a42c763d29fa97fa0fb23b0fd91dab294" title="Resize an existing allocation (libttak tracked).">cwist_realloc()</a>'s existing behavior of not opting a pointer into tracking on its own. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d9/d39/alloc_8c_source.html#l00443">443</a> of file <a class="el" href="../../d9/d39/alloc_8c_source.html">alloc.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d9/d39/alloc_8c_source.html#l00448">448</a> of file <a class="el" href="../../d9/d39/alloc_8c_source.html">alloc.c</a>.</p>
 
-<p class="reference">References <a class="el" href="../../d8/d16/gc_8c_source.html#l00277">cwist_full_gc_enabled()</a>, <a class="el" href="../../d8/d16/gc_8c_source.html#l00454">cwist_gc_scope_track()</a>, <a class="el" href="../../d8/d16/gc_8c_source.html#l00481">cwist_gc_scope_untrack()</a>, and <a class="el" href="../../d9/d39/alloc_8c_source.html#l00417">cwist_malloc_shim()</a>.</p>
+<p class="reference">References <a class="el" href="../../d8/d16/gc_8c_source.html#l00514">cwist_full_gc_enabled()</a>, <a class="el" href="../../d8/d16/gc_8c_source.html#l00706">cwist_gc_scope_track()</a>, <a class="el" href="../../d8/d16/gc_8c_source.html#l00733">cwist_gc_scope_untrack()</a>, and <a class="el" href="../../d9/d39/alloc_8c_source.html#l00422">cwist_malloc_shim()</a>.</p>
 
 </div>
 </div>
 </div><!-- contents -->
+</div><!-- doc-content -->
 <!-- start footer part -->
-<hr class="footer"/><address class="footer"><small>
-Generated by&#160;<a href="https://www.doxygen.org/index.html"><img class="footer" src="../../doxygen.svg" width="104" height="31" alt="doxygen"/></a> 1.9.8
-</small></address>
+<div id="nav-path" class="navpath"><!-- id is needed for treeview function! -->
+  <ul>
+    <li class="navelem"><a class="el" href="../../dir_d44c64559bbebec7f509842c48db8b23.html">include</a></li><li class="navelem"><a class="el" href="../../dir_2109d32ae718f50aecd8856dacda770b.html">cwist</a></li><li class="navelem"><a class="el" href="../../dir_10b21726104ad23c5e3d9a30e698c859.html">core</a></li><li class="navelem"><a class="el" href="../../dir_6be49a6af745edc4b6aec6d50aadcc72.html">mem</a></li><li class="navelem"><a class="el" href="../../d7/d10/intercept_8h.html">intercept.h</a></li>
+    <li class="footer">Generated by <a href="https://www.doxygen.org/index.html"><img class="footer" src="../../doxygen.svg" width="104" height="31" alt="doxygen"/></a> 1.9.8 </li>
+  </ul>
+</div>
 </body>
 </html>

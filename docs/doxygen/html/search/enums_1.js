@@ -26,11 +26,12 @@ var searchData=
   ['cwist_5fmetric_5fid_23',['cwist_metric_id',['../df/d34/metrics_8h.html#a4b994f8e8094a926156bcc218559ffe5',1,'metrics.h']]],
   ['cwist_5fmetric_5ftype_24',['cwist_metric_type',['../df/d34/metrics_8h.html#a757fbefdb6fdfb162a0cec119b076a16',1,'metrics.h']]],
   ['cwist_5form_5fdialect_25',['cwist_orm_dialect',['../d6/d9b/orm_8h.html#a8a140e98cb138fd4575440dc18836a9a',1,'orm.h']]],
-  ['cwist_5fpb_5fwire_5ftype_26',['cwist_pb_wire_type',['../db/d5b/protobuf_8h.html#a73a3cd2e4cd083192ee319a569bcbf1a',1,'protobuf.h']]],
-  ['cwist_5frdbms_5fprovider_27',['cwist_rdbms_provider',['../d0/d77/sys_2app_2app_8h.html#a9325ff1c8f9f0efd5a28f1baf4458559',1,'app.h']]],
-  ['cwist_5frecv_5fstatus_5ft_28',['cwist_recv_status_t',['../d9/dab/net_2http_2http_8h.html#adf74f5afddf591f2a9d8246a091ed763',1,'http.h']]],
-  ['cwist_5fsstring_5ferror_5ft_29',['cwist_sstring_error_t',['../d4/dbd/core_2sstring_2sstring_8h.html#a03c9abb424e867cd0433ad37f6bab154',1,'cwist_sstring_error_t:&#160;sstring.h'],['../d1/d34/sstring_8h.html#a03c9abb424e867cd0433ad37f6bab154',1,'cwist_sstring_error_t:&#160;sstring.h']]],
-  ['cwist_5fwebrtc_5fdata_5ftype_30',['cwist_webrtc_data_type',['../dd/d3b/webrtc_8h.html#a6d619d01bf86adcc6cc48f4cd49d2b9f',1,'webrtc.h']]],
-  ['cwist_5fwrite_5fstatus_5ft_31',['cwist_write_status_t',['../d2/d7d/writer__fast_8h.html#a16d29465f9bdc2f8fc3de524bffc6e20',1,'writer_fast.h']]],
-  ['cwist_5fws_5fopcode_5ft_32',['cwist_ws_opcode_t',['../dd/dec/net_2websocket_2websocket_8h.html#a8095ae87a6487e56281d92a11c419254',1,'cwist_ws_opcode_t:&#160;websocket.h'],['../db/d64/websocket_8h.html#a8095ae87a6487e56281d92a11c419254',1,'cwist_ws_opcode_t:&#160;websocket.h']]]
+  ['cwist_5form_5fvalue_5ftype_26',['cwist_orm_value_type',['../d6/d9b/orm_8h.html#a84b532ec7398ed41c2ef6dbcdbf05e24',1,'orm.h']]],
+  ['cwist_5fpb_5fwire_5ftype_27',['cwist_pb_wire_type',['../db/d5b/protobuf_8h.html#a73a3cd2e4cd083192ee319a569bcbf1a',1,'protobuf.h']]],
+  ['cwist_5frdbms_5fprovider_28',['cwist_rdbms_provider',['../d0/d77/sys_2app_2app_8h.html#a9325ff1c8f9f0efd5a28f1baf4458559',1,'app.h']]],
+  ['cwist_5frecv_5fstatus_5ft_29',['cwist_recv_status_t',['../d9/dab/net_2http_2http_8h.html#adf74f5afddf591f2a9d8246a091ed763',1,'http.h']]],
+  ['cwist_5fsstring_5ferror_5ft_30',['cwist_sstring_error_t',['../d4/dbd/core_2sstring_2sstring_8h.html#a03c9abb424e867cd0433ad37f6bab154',1,'cwist_sstring_error_t:&#160;sstring.h'],['../d1/d34/sstring_8h.html#a03c9abb424e867cd0433ad37f6bab154',1,'cwist_sstring_error_t:&#160;sstring.h']]],
+  ['cwist_5fwebrtc_5fdata_5ftype_31',['cwist_webrtc_data_type',['../dd/d3b/webrtc_8h.html#a6d619d01bf86adcc6cc48f4cd49d2b9f',1,'webrtc.h']]],
+  ['cwist_5fwrite_5fstatus_5ft_32',['cwist_write_status_t',['../d2/d7d/writer__fast_8h.html#a16d29465f9bdc2f8fc3de524bffc6e20',1,'writer_fast.h']]],
+  ['cwist_5fws_5fopcode_5ft_33',['cwist_ws_opcode_t',['../dd/dec/net_2websocket_2websocket_8h.html#a8095ae87a6487e56281d92a11c419254',1,'cwist_ws_opcode_t:&#160;websocket.h'],['../db/d64/websocket_8h.html#a8095ae87a6487e56281d92a11c419254',1,'cwist_ws_opcode_t:&#160;websocket.h']]]
 ];

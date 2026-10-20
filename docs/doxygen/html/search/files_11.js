@@ -1,8 +1,8 @@
 var searchData=
 [
-  ['rdbms_5fauto_5fmount_2ec_0',['rdbms_auto_mount.c',['../da/dec/rdbms__auto__mount_8c.html',1,'']]],
-  ['reactor_2ec_1',['reactor.c',['../d3/d99/reactor_8c.html',1,'']]],
-  ['reactor_2eh_2',['reactor.h',['../dc/d85/reactor_8h.html',1,'']]],
-  ['reactor_5frx_2eh_3',['reactor_rx.h',['../d2/d6b/reactor__rx_8h.html',1,'']]],
-  ['redis_2eh_4',['redis.h',['../d6/d4f/redis_8h.html',1,'']]]
+  ['query_2ec_0',['query.c',['../dd/d7f/query_8c.html',1,'']]],
+  ['query_2eh_1',['query.h',['../d1/d7a/net_2http_2query_8h.html',1,'(Global Namespace)'],['../dd/d6e/query_8h.html',1,'(Global Namespace)']]],
+  ['query_2emd_2',['query.md',['../d6/db3/api_2query_8md.html',1,'(Global Namespace)'],['../db/d5c/ko_2api_2query_8md.html',1,'(Global Namespace)']]],
+  ['quic_5fflow_5fcontrol_2ec_3',['quic_flow_control.c',['../dc/d43/quic__flow__control_8c.html',1,'']]],
+  ['quic_5fflow_5fcontrol_2eh_4',['quic_flow_control.h',['../df/db2/quic__flow__control_8h.html',1,'']]]
 ];

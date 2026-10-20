@@ -1,3 +1,4 @@
+<!-- HTML header for doxygen 1.9.8-->
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "https://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml" lang="en-US">
 <head>
@@ -5,14 +6,32 @@
 <meta http-equiv="X-UA-Compatible" content="IE=11"/>
 <meta name="generator" content="Doxygen 1.9.8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
-<title>cwist: include/cwist/net/grpc/grpc.h File Reference</title>
+<title>include/cwist/net/grpc/grpc.h File Reference - CWIST High-Performance C Web Framework</title>
+<meta name="description" content="CWIST: High-performance C17 web framework and application server (HTTP/1.1, HTTP/2, HTTP/3, WebTransport, WebSocket, PQC TLS) powered by io_uring and libttak."/>
+<meta name="keywords" content="C web framework, C17, HTTP3, QUIC, io_uring, web server, actix alternative, high performance, REST API in C, C web server"/>
+<meta name="author" content="c4punks"/>
+<meta name="robots" content="index, follow"/>
+<!-- Open Graph / Facebook -->
+<meta property="og:type" content="website"/>
+<meta property="og:title" content="include/cwist/net/grpc/grpc.h File Reference - CWIST Modern C Web Framework"/>
+<meta property="og:description" content="High-performance C17 web framework & application server with zero-copy io_uring reactor, PQC TLS, and HTTP/3 support."/>
+<meta property="og:url" content="https://c4punks.github.io/CWIST/"/>
+<!-- Twitter -->
+<meta name="twitter:card" content="summary_large_image"/>
+<meta name="twitter:title" content="include/cwist/net/grpc/grpc.h File Reference - CWIST Modern C Web Framework"/>
+<meta name="twitter:description" content="High-performance C17 web framework & application server with zero-copy io_uring reactor, PQC TLS, and HTTP/3 support."/>
 <link href="../../tabs.css" rel="stylesheet" type="text/css"/>
 <script type="text/javascript" src="../../jquery.js"></script>
 <script type="text/javascript" src="../../dynsections.js"></script>
+<link href="../../navtree.css" rel="stylesheet" type="text/css"/>
+<script type="text/javascript" src="../../resize.js"></script>
+<script type="text/javascript" src="../../navtreedata.js"></script>
+<script type="text/javascript" src="../../navtree.js"></script>
 <link href="../../search/search.css" rel="stylesheet" type="text/css"/>
 <script type="text/javascript" src="../../search/searchdata.js"></script>
 <script type="text/javascript" src="../../search/search.js"></script>
 <link href="../../doxygen.css" rel="stylesheet" type="text/css" />
+<link href="../../doxygen-awesome.css" rel="stylesheet" type="text/css"/>
 </head>
 <body>
 <div id="top"><!-- do not remove this div, it is closed by doxygen! -->
@@ -47,6 +66,23 @@ $(function() {
 /* @license-end */
 </script>
 <div id="main-nav"></div>
+</div><!-- top -->
+<div id="side-nav" class="ui-resizable side-nav-resizable">
+  <div id="nav-tree">
+    <div id="nav-tree-contents">
+      <div id="nav-sync" class="sync"></div>
+    </div>
+  </div>
+  <div id="splitbar" style="-moz-user-select:none;" 
+       class="ui-resizable-handle">
+  </div>
+</div>
+<script type="text/javascript">
+/* @license magnet:?xt=urn:btih:d3d9a9a6595521f9666a5e94cc830dab83b65699&amp;dn=expat.txt MIT */
+$(document).ready(function(){initNavTree('d6/dbb/grpc_8h.html','../../'); initResizable(); });
+/* @license-end */
+</script>
+<div id="doc-content">
 <!-- window showing the filter options -->
 <div id="MSearchSelectWindow"
      onmouseover="return searchBox.OnSearchSelectShow()"
@@ -68,11 +104,6 @@ $(function() {
 </div>
 </div>
 
-<div id="nav-path" class="navpath">
-  <ul>
-<li class="navelem"><a class="el" href="../../dir_d44c64559bbebec7f509842c48db8b23.html">include</a></li><li class="navelem"><a class="el" href="../../dir_2109d32ae718f50aecd8856dacda770b.html">cwist</a></li><li class="navelem"><a class="el" href="../../dir_128dc3127079b4729ef62b563d74b417.html">net</a></li><li class="navelem"><a class="el" href="../../dir_b8b17afe85045460f2583be2e3fd9a7a.html">grpc</a></li>  </ul>
-</div>
-</div><!-- top -->
 <div class="header">
   <div class="summary">
 <a href="#nested-classes">Classes</a> &#124;
@@ -95,95 +126,96 @@ Include dependency graph for grpc.h:</div>
 <div class="dyncontent">
 <div class="center"><img src="../../d5/d95/grpc_8h__incl.png" border="0" usemap="#ainclude_2cwist_2net_2grpc_2grpc_8h" alt=""/></div>
 <map name="ainclude_2cwist_2net_2grpc_2grpc_8h" id="ainclude_2cwist_2net_2grpc_2grpc_8h">
-<area shape="rect" title="gRPC over HTTP/2 helpers for CWIST." alt="" coords="949,5,1113,45"/>
-<area shape="rect" href="../../d9/dab/net_2http_2http_8h.html" title="HTTP Protocol Definitions and Helpers." alt="" coords="913,240,1067,265"/>
-<area shape="poly" title=" " alt="" coords="1031,46,997,227,992,226,1025,45"/>
-<area shape="rect" title=" " alt="" coords="1404,577,1475,603"/>
-<area shape="poly" title=" " alt="" coords="1114,24,1293,31,1398,39,1503,52,1599,72,1678,98,1709,114,1732,133,1747,154,1753,178,1753,423,1751,444,1745,464,1724,498,1692,525,1653,546,1611,562,1567,574,1489,587,1488,582,1566,569,1609,557,1651,541,1689,520,1719,494,1740,462,1745,443,1747,423,1747,178,1742,156,1728,136,1706,119,1676,103,1598,77,1502,58,1397,44,1292,36,1113,29"/>
-<area shape="rect" title=" " alt="" coords="497,577,571,603"/>
-<area shape="poly" title=" " alt="" coords="949,33,703,48,396,76,252,96,134,120,88,133,53,148,32,163,25,179,25,335,21,394,18,442,20,464,26,485,38,506,57,527,88,546,133,561,189,571,251,579,378,586,483,587,483,592,378,592,250,584,188,577,131,566,85,551,54,531,34,509,21,487,14,465,12,442,16,393,19,335,19,177,28,159,51,143,86,128,132,115,251,91,395,71,703,43,949,28"/>
-<area shape="rect" href="../../de/d65/http2_8h.html" title="HTTP/2 Protocol Definitions for CWIST." alt="" coords="832,93,993,119"/>
-<area shape="poly" title=" " alt="" coords="1004,48,943,88,940,84,1001,43"/>
-<area shape="rect" href="../../db/d5b/protobuf_8h.html" title="Small Protobuf wire&#45;format reader/writer helpers." alt="" coords="1327,409,1509,434"/>
-<area shape="poly" title=" " alt="" coords="1114,26,1281,35,1378,44,1474,58,1562,77,1634,103,1662,118,1683,136,1697,156,1702,178,1702,254,1697,287,1683,315,1662,339,1636,359,1605,376,1573,389,1508,408,1506,403,1571,384,1603,371,1633,355,1658,335,1679,312,1692,285,1697,254,1697,178,1692,158,1680,139,1659,123,1632,108,1560,82,1473,63,1377,49,1280,40,1113,31"/>
-<area shape="rect" href="../../d4/dbd/core_2sstring_2sstring_8h.html" title="Safe string type with helper methods." alt="" coords="797,401,933,441"/>
-<area shape="poly" title=" " alt="" coords="1008,264,1029,281,1049,304,1060,329,1059,342,1053,355,1037,369,1011,382,947,403,945,398,1009,377,1034,365,1049,352,1054,341,1054,330,1044,306,1025,285,1005,268"/>
-<area shape="rect" title=" " alt="" coords="583,497,653,522"/>
-<area shape="poly" title=" " alt="" coords="913,259,837,265,756,275,685,291,659,302,641,315,628,334,618,354,609,400,610,446,615,483,610,484,604,446,604,400,613,353,623,331,637,311,656,298,684,286,755,270,837,259,913,254"/>
-<area shape="rect" href="../../d7/da1/sys_2err_2cwist__err_8h.html" title="Unified error code and type definitions for the CWIST system layer." alt="" coords="416,489,559,529"/>
-<area shape="poly" title=" " alt="" coords="913,261,833,268,745,279,666,295,635,305,613,316,582,343,566,371,554,404,534,443,510,479,505,476,529,440,549,402,562,369,578,339,610,311,633,300,665,290,744,274,832,263,913,256"/>
-<area shape="poly" title=" " alt="" coords="1067,255,1176,261,1302,272,1420,289,1467,299,1503,311,1537,328,1561,347,1605,400,1632,433,1653,464,1659,480,1661,496,1657,513,1647,531,1621,549,1581,564,1489,584,1488,579,1579,559,1619,544,1643,528,1652,511,1656,496,1654,481,1649,467,1628,436,1601,403,1558,350,1534,333,1501,316,1466,304,1419,294,1302,278,1176,267,1067,260"/>
-<area shape="rect" href="../../d1/d7a/net_2http_2query_8h.html" title="Query string parser and map." alt="" coords="678,497,841,522"/>
-<area shape="poly" title=" " alt="" coords="1000,265,1009,283,1017,307,1019,332,1010,355,984,377,956,387,928,387,899,383,870,378,841,378,813,385,787,403,774,421,766,442,761,483,756,482,761,440,769,418,783,399,811,380,841,372,870,373,900,378,928,382,955,381,981,373,1005,352,1013,331,1012,308,1004,286,995,267"/>
-<area shape="rect" href="../../d0/dae/core_2db_2sql_8h.html" title="Database operations wrapper (SQLite3)." alt="" coords="236,321,379,346"/>
-<area shape="poly" title=" " alt="" coords="913,265,393,325,392,320,913,260"/>
-<area shape="rect" href="../../de/d66/endpoint__opts_8h.html" title="Endpoint&#45;level behavior flags for CWIST apps." alt="" coords="1441,489,1611,529"/>
-<area shape="poly" title=" " alt="" coords="1067,255,1278,274,1381,290,1422,300,1454,311,1487,328,1511,345,1530,368,1547,400,1552,420,1552,440,1543,477,1538,476,1547,439,1547,421,1542,402,1526,371,1508,349,1484,332,1452,316,1421,305,1380,295,1277,279,1067,261"/>
-<area shape="rect" href="../../da/d2c/big__dumb__reply_8h.html" title="Auto&#45;Caching Layer for repetitive requests." alt="" coords="1171,313,1350,353"/>
-<area shape="poly" title=" " alt="" coords="1030,263,1183,307,1182,312,1029,268"/>
-<area shape="rect" href="../../dc/d85/reactor_8h.html" title=" " alt="" coords="1061,497,1220,522"/>
-<area shape="poly" title=" " alt="" coords="1019,263,1050,282,1064,296,1075,312,1082,333,1075,355,1066,366,1056,373,1035,380,1014,386,1005,392,998,403,991,422,998,440,1012,457,1029,470,1069,490,1067,495,1026,475,1008,461,993,443,986,422,993,400,1002,389,1012,381,1033,375,1054,368,1063,362,1070,352,1076,333,1070,315,1060,299,1046,287,1016,268"/>
-<area shape="rect" title=" " alt="" coords="651,321,747,346"/>
-<area shape="poly" title=" " alt="" coords="944,268,760,316,749,319,747,314,759,311,942,263"/>
-<area shape="rect" title=" " alt="" coords="772,321,875,346"/>
-<area shape="poly" title=" " alt="" coords="967,268,861,317,859,312,965,263"/>
-<area shape="rect" title=" " alt="" coords="899,321,995,346"/>
-<area shape="poly" title=" " alt="" coords="986,267,962,310,958,307,981,264"/>
-<area shape="rect" title=" " alt="" coords="1374,321,1441,346"/>
-<area shape="poly" title=" " alt="" coords="1067,258,1206,277,1285,292,1363,311,1370,313,1369,318,1361,316,1284,297,1205,282,1067,264"/>
-<area shape="rect" title=" " alt="" coords="967,497,1037,522"/>
-<area shape="poly" title=" " alt="" coords="896,439,973,487,971,492,893,444"/>
-<area shape="poly" title=" " alt="" coords="807,444,667,492,660,494,659,489,665,487,806,439"/>
-<area shape="rect" title=" " alt="" coords="887,577,970,603"/>
-<area shape="poly" title=" " alt="" coords="874,441,922,564,917,566,870,443"/>
-<area shape="poly" title=" " alt="" coords="797,441,573,491,572,486,796,436"/>
-<area shape="poly" title=" " alt="" coords="559,524,570,527,736,556,874,578,873,583,735,561,570,532,558,530"/>
-<area shape="poly" title=" " alt="" coords="559,525,570,527,811,555,1047,572,1250,581,1390,585,1390,591,1250,587,1047,577,810,560,570,532,558,530"/>
-<area shape="rect" title=" " alt="" coords="5,577,116,603"/>
-<area shape="poly" title=" " alt="" coords="416,526,130,579,129,573,415,521"/>
-<area shape="poly" title=" " alt="" coords="841,517,1391,580,1390,586,840,523"/>
-<area shape="poly" title=" " alt="" coords="727,525,580,575,579,570,726,519"/>
-<area shape="poly" title=" " alt="" coords="344,344,391,365,415,381,437,400,463,437,480,475,475,477,459,439,433,403,412,385,389,370,342,348"/>
-<area shape="poly" title=" " alt="" coords="236,346,125,368,78,384,61,393,49,403,38,421,32,442,31,486,39,528,52,563,47,565,34,530,25,486,27,441,33,419,45,400,58,389,76,379,124,363,235,341"/>
-<area shape="poly" title=" " alt="" coords="311,346,318,389,335,440,363,489,405,527,445,552,486,570,483,575,442,557,402,531,359,492,330,442,313,390,306,347"/>
-<area shape="rect" title=" " alt="" coords="345,409,424,434"/>
-<area shape="poly" title=" " alt="" coords="320,344,367,396,363,400,316,348"/>
-<area shape="rect" href="../../db/dd3/json__heal_8h.html" title="Self&#45;Healing JSON Recovery Layer (CWIST)" alt="" coords="68,489,219,529"/>
-<area shape="poly" title=" " alt="" coords="303,348,274,391,232,443,185,483,181,479,228,439,270,388,298,345"/>
-<area shape="rect" href="../../dc/d6e/zod_8h.html" title="Strict JSON schema validation (Zod&#45;style) for CWIST." alt="" coords="60,409,219,434"/>
-<area shape="poly" title=" " alt="" coords="286,349,176,405,173,400,283,344"/>
-<area shape="poly" title=" " alt="" coords="220,524,238,527,420,549,600,565,874,583,874,589,600,570,420,554,238,532,219,529"/>
-<area shape="poly" title=" " alt="" coords="125,531,85,570,81,566,121,528"/>
-<area shape="poly" title=" " alt="" coords="220,523,484,576,483,581,219,528"/>
-<area shape="poly" title=" " alt="" coords="163,432,265,479,333,505,404,527,535,553,666,570,783,580,874,585,874,590,783,585,665,576,534,559,403,532,332,510,263,484,160,437"/>
-<area shape="poly" title=" " alt="" coords="117,436,84,458,69,473,58,490,52,508,51,527,55,563,50,564,45,527,47,507,53,488,65,470,81,454,114,432"/>
-<area shape="poly" title=" " alt="" coords="143,434,144,475,139,475,137,434"/>
-<area shape="poly" title=" " alt="" coords="1441,529,1422,532,1178,564,984,586,983,580,1177,559,1422,527,1440,524"/>
-<area shape="poly" title=" " alt="" coords="1507,532,1464,570,1461,566,1503,528"/>
-<area shape="poly" title=" " alt="" coords="1174,356,947,405,946,400,1173,351"/>
-<area shape="poly" title=" " alt="" coords="1351,349,1459,374,1502,387,1524,400,1533,421,1524,443,1497,461,1445,480,1294,520,1123,556,984,582,983,576,1122,551,1293,515,1443,475,1494,456,1520,440,1527,421,1520,403,1500,392,1458,379,1350,355"/>
-<area shape="poly" title=" " alt="" coords="1351,350,1488,379,1567,399,1591,418,1606,437,1617,459,1626,489,1632,510,1631,520,1625,531,1597,558,1561,576,1524,586,1489,591,1488,585,1523,581,1560,571,1594,554,1621,528,1626,519,1627,511,1621,490,1612,461,1602,440,1587,422,1565,404,1487,384,1350,355"/>
-<area shape="rect" title=" " alt="" coords="1007,409,1106,434"/>
-<area shape="poly" title=" " alt="" coords="1217,356,1097,406,1095,401,1215,351"/>
-<area shape="rect" title=" " alt="" coords="1130,409,1194,434"/>
-<area shape="poly" title=" " alt="" coords="1241,356,1188,401,1184,397,1237,352"/>
-<area shape="rect" title=" " alt="" coords="1219,409,1303,434"/>
-<area shape="poly" title=" " alt="" coords="1263,354,1263,395,1258,395,1258,354"/>
-<area shape="poly" title=" " alt="" coords="1111,525,973,575,971,570,1109,520"/>
-<area shape="poly" title=" " alt="" coords="1185,519,1391,573,1390,579,1183,525"/>
-<area shape="poly" title=" " alt="" coords="1090,525,1050,532,789,567,585,587,585,582,789,561,1050,527,1089,519"/>
-<area shape="poly" title=" " alt="" coords="921,118,980,227,975,229,917,120"/>
-<area shape="rect" href="../../d7/d67/net_2http_2https_8h.html" title="HTTPS/TLS wrapper interface." alt="" coords="433,167,593,192"/>
-<area shape="poly" title=" " alt="" coords="849,121,591,167,591,162,848,116"/>
-<area shape="poly" title=" " alt="" coords="590,189,900,235,899,241,589,195"/>
-<area shape="poly" title=" " alt="" coords="514,193,492,476,487,475,509,192"/>
-<area shape="rect" title=" " alt="" coords="369,240,475,265"/>
-<area shape="poly" title=" " alt="" coords="500,194,449,233,446,229,496,190"/>
-<area shape="rect" title=" " alt="" coords="239,240,344,265"/>
-<area shape="poly" title=" " alt="" coords="478,195,341,238,339,233,476,189"/>
-<area shape="poly" title=" " alt="" coords="1356,437,1316,444,1182,464,1124,474,1051,492,1042,495,1040,489,1049,487,1123,469,1181,459,1315,439,1355,431"/>
-<area shape="poly" title=" " alt="" coords="1422,434,1431,529,1437,563,1432,564,1426,530,1416,435"/>
-<area shape="poly" title=" " alt="" coords="1359,437,1316,444,1214,456,1134,462,1056,471,956,492,927,501,905,511,853,532,709,565,586,585,585,579,708,560,852,527,903,506,925,496,955,487,1055,466,1134,457,1214,451,1315,439,1358,431"/>
+<area shape="rect" title="gRPC over HTTP/2 helpers for CWIST." alt="" coords="1015,5,1179,45"/>
+<area shape="rect" href="../../d9/dab/net_2http_2http_8h.html" title="HTTP Protocol Definitions and Helpers." alt="" coords="946,240,1099,265"/>
+<area shape="poly" title=" " alt="" coords="1095,46,1073,119,1035,228,1030,226,1068,118,1090,45"/>
+<area shape="rect" title=" " alt="" coords="1395,577,1466,603"/>
+<area shape="poly" title=" " alt="" coords="1179,24,1364,29,1472,37,1581,50,1681,69,1763,96,1795,112,1819,131,1834,153,1840,178,1840,423,1838,445,1833,463,1813,490,1783,511,1745,532,1677,561,1605,579,1537,589,1480,592,1479,586,1536,583,1604,574,1675,556,1743,527,1780,506,1809,486,1828,460,1833,444,1835,423,1835,178,1830,155,1815,135,1792,117,1761,101,1679,74,1580,55,1472,42,1363,35,1179,29"/>
+<area shape="rect" title=" " alt="" coords="163,577,237,603"/>
+<area shape="poly" title=" " alt="" coords="1015,32,750,45,584,56,415,72,258,91,128,116,78,130,40,145,16,162,10,170,8,178,8,423,12,457,25,481,45,503,72,527,110,553,150,571,148,576,107,558,69,531,41,507,20,485,7,458,3,423,3,178,5,168,12,158,37,140,76,125,127,111,258,86,415,66,584,51,750,40,1015,27"/>
+<area shape="rect" href="../../de/d65/http2_8h.html" title="HTTP/2 Protocol Definitions for CWIST." alt="" coords="898,93,1059,119"/>
+<area shape="poly" title=" " alt="" coords="1070,48,1009,88,1006,84,1067,43"/>
+<area shape="rect" href="../../db/d5b/protobuf_8h.html" title="Small Protobuf wire&#45;format reader/writer helpers." alt="" coords="1566,409,1749,434"/>
+<area shape="poly" title=" " alt="" coords="1180,30,1317,45,1394,56,1469,72,1537,91,1593,115,1615,128,1631,143,1642,160,1645,178,1645,254,1649,331,1656,395,1651,395,1644,331,1640,254,1640,178,1637,162,1627,147,1611,133,1590,119,1535,96,1468,77,1393,62,1316,50,1179,35"/>
+<area shape="rect" href="../../d4/dbd/core_2sstring_2sstring_8h.html" title="Safe string type with helper methods." alt="" coords="935,401,1071,441"/>
+<area shape="poly" title=" " alt="" coords="956,268,878,288,846,301,827,315,820,330,821,343,828,355,840,366,877,385,922,400,920,405,875,390,837,370,823,358,816,344,815,328,823,312,844,296,876,283,955,263"/>
+<area shape="rect" title=" " alt="" coords="1017,497,1087,522"/>
+<area shape="poly" title=" " alt="" coords="948,268,867,287,834,300,814,315,808,333,814,352,835,384,859,404,924,439,971,466,1015,489,1013,493,968,471,921,444,856,408,831,388,810,354,802,333,810,312,831,296,865,282,947,263"/>
+<area shape="rect" href="../../d7/da1/sys_2err_2cwist__err_8h.html" title="Unified error code and type definitions for the CWIST system layer." alt="" coords="850,489,993,529"/>
+<area shape="poly" title=" " alt="" coords="946,267,859,286,824,300,802,315,792,336,790,358,797,380,809,402,845,445,885,479,881,483,841,448,804,405,792,382,785,358,786,334,798,312,821,295,857,281,945,262"/>
+<area shape="poly" title=" " alt="" coords="1100,254,1266,265,1366,275,1467,289,1565,308,1651,332,1719,362,1745,380,1764,400,1771,420,1770,441,1763,462,1751,483,1725,516,1710,531,1682,548,1653,562,1591,580,1531,589,1480,592,1479,587,1530,584,1590,575,1651,557,1680,544,1706,527,1721,513,1746,480,1758,460,1765,440,1766,420,1759,403,1742,384,1717,367,1649,337,1564,313,1467,294,1365,280,1265,270,1100,259"/>
+<area shape="rect" href="../../d1/d7a/net_2http_2query_8h.html" title="Query string parser and map." alt="" coords="429,497,592,522"/>
+<area shape="poly" title=" " alt="" coords="955,268,842,290,791,303,754,316,686,356,623,404,570,451,532,488,529,485,567,447,620,400,683,351,752,311,789,298,841,285,954,263"/>
+<area shape="rect" href="../../d0/dae/core_2db_2sql_8h.html" title="Database operations wrapper (SQLite3)." alt="" coords="270,321,413,346"/>
+<area shape="poly" title=" " alt="" coords="946,266,934,268,427,325,426,320,933,263,945,261"/>
+<area shape="rect" href="../../de/d66/endpoint__opts_8h.html" title="Endpoint&#45;level behavior flags for CWIST apps." alt="" coords="1407,489,1577,529"/>
+<area shape="poly" title=" " alt="" coords="1100,256,1331,275,1434,291,1469,301,1489,311,1495,322,1496,332,1489,354,1480,370,1468,379,1458,388,1449,402,1445,421,1449,440,1469,477,1464,480,1444,442,1440,421,1444,400,1454,385,1465,375,1476,366,1484,352,1491,332,1490,324,1485,315,1467,306,1433,296,1330,281,1099,261"/>
+<area shape="rect" href="../../da/d2c/big__dumb__reply_8h.html" title="Auto&#45;Caching Layer for repetitive requests." alt="" coords="1296,313,1475,353"/>
+<area shape="poly" title=" " alt="" coords="1076,263,1286,308,1285,313,1075,268"/>
+<area shape="rect" href="../../dc/d85/reactor_8h.html" title=" " alt="" coords="667,497,826,522"/>
+<area shape="poly" title=" " alt="" coords="946,266,850,286,810,299,784,315,770,334,760,355,748,401,744,446,746,483,741,483,739,446,743,400,755,353,766,331,781,311,808,295,849,281,945,261"/>
+<area shape="rect" title=" " alt="" coords="837,321,933,346"/>
+<area shape="poly" title=" " alt="" coords="1004,268,919,316,916,312,1001,263"/>
+<area shape="rect" title=" " alt="" coords="958,321,1061,346"/>
+<area shape="poly" title=" " alt="" coords="1023,266,1016,308,1011,307,1018,265"/>
+<area shape="rect" title=" " alt="" coords="1085,321,1181,346"/>
+<area shape="poly" title=" " alt="" coords="1041,263,1107,310,1104,315,1037,268"/>
+<area shape="rect" title=" " alt="" coords="1205,321,1272,346"/>
+<area shape="poly" title=" " alt="" coords="1058,263,1194,311,1200,313,1198,318,1192,316,1057,268"/>
+<area shape="rect" title=" " alt="" coords="1602,497,1673,522"/>
+<area shape="poly" title=" " alt="" coords="1072,437,1083,439,1160,449,1225,454,1337,457,1449,462,1514,471,1590,487,1600,489,1598,495,1589,492,1513,476,1448,468,1337,462,1225,460,1159,454,1082,444,1071,442"/>
+<area shape="poly" title=" " alt="" coords="1016,440,1041,483,1036,486,1011,443"/>
+<area shape="rect" title=" " alt="" coords="880,577,963,603"/>
+<area shape="poly" title=" " alt="" coords="1048,439,1078,460,1101,488,1108,510,1101,531,1075,556,1043,573,1009,584,977,589,976,584,1008,578,1041,568,1072,552,1096,528,1103,510,1096,491,1074,463,1045,444"/>
+<area shape="poly" title=" " alt="" coords="987,443,951,481,947,477,983,440"/>
+<area shape="poly" title=" " alt="" coords="924,530,924,563,919,563,919,530"/>
+<area shape="poly" title=" " alt="" coords="993,525,1004,527,1214,559,1382,581,1381,586,1214,565,1004,532,992,530"/>
+<area shape="rect" title=" " alt="" coords="274,577,385,603"/>
+<area shape="poly" title=" " alt="" coords="850,530,838,532,597,565,399,585,398,580,596,560,837,527,849,524"/>
+<area shape="poly" title=" " alt="" coords="592,519,655,527,1075,563,1382,583,1381,588,1075,568,654,532,592,525"/>
+<area shape="poly" title=" " alt="" coords="466,525,251,579,250,573,465,519"/>
+<area shape="poly" title=" " alt="" coords="369,344,482,388,630,439,837,486,836,491,629,444,480,393,367,348"/>
+<area shape="poly" title=" " alt="" coords="343,346,333,564,328,563,338,346"/>
+<area shape="poly" title=" " alt="" coords="270,342,232,349,193,361,155,379,122,403,95,433,80,462,78,493,92,528,103,543,117,555,151,572,148,577,114,559,99,546,87,531,73,494,75,461,91,430,118,399,152,374,191,356,231,344,269,337"/>
+<area shape="rect" title=" " alt="" coords="379,409,458,434"/>
+<area shape="poly" title=" " alt="" coords="354,344,401,396,397,400,350,348"/>
+<area shape="rect" href="../../db/dd3/json__heal_8h.html" title="Self&#45;Healing JSON Recovery Layer (CWIST)" alt="" coords="102,489,253,529"/>
+<area shape="poly" title=" " alt="" coords="270,340,233,346,196,358,162,376,134,403,128,421,130,440,139,459,152,477,148,481,135,462,125,441,122,420,130,400,158,372,194,353,232,341,269,334"/>
+<area shape="rect" href="../../dc/d6e/zod_8h.html" title="Strict JSON schema validation (Zod&#45;style) for CWIST." alt="" coords="145,409,303,434"/>
+<area shape="poly" title=" " alt="" coords="327,348,253,402,249,398,324,344"/>
+<area shape="poly" title=" " alt="" coords="253,516,867,580,866,586,252,521"/>
+<area shape="poly" title=" " alt="" coords="215,527,296,568,293,573,213,532"/>
+<area shape="poly" title=" " alt="" coords="185,529,195,563,190,565,180,530"/>
+<area shape="poly" title=" " alt="" coords="241,432,315,479,365,506,418,527,479,544,541,557,666,575,778,584,866,586,866,592,778,589,665,580,540,562,477,549,416,532,363,510,312,484,238,436"/>
+<area shape="poly" title=" " alt="" coords="233,433,317,564,312,567,229,436"/>
+<area shape="poly" title=" " alt="" coords="220,435,197,478,192,476,215,433"/>
+<area shape="poly" title=" " alt="" coords="1407,525,977,584,976,579,1406,520"/>
+<area shape="poly" title=" " alt="" coords="1479,531,1450,568,1446,565,1475,528"/>
+<area shape="poly" title=" " alt="" coords="1300,356,1085,404,1084,398,1299,351"/>
+<area shape="poly" title=" " alt="" coords="1375,355,1341,398,1295,443,1256,471,1215,495,1128,534,1046,562,977,580,976,575,1044,557,1126,529,1212,490,1253,466,1292,439,1337,395,1370,352"/>
+<area shape="poly" title=" " alt="" coords="1386,354,1383,431,1387,480,1397,528,1416,565,1411,567,1392,530,1382,481,1378,431,1381,353"/>
+<area shape="rect" title=" " alt="" coords="1095,409,1193,434"/>
+<area shape="poly" title=" " alt="" coords="1333,356,1190,407,1188,402,1331,351"/>
+<area shape="rect" title=" " alt="" coords="1217,409,1281,434"/>
+<area shape="poly" title=" " alt="" coords="1357,356,1280,404,1278,399,1354,351"/>
+<area shape="rect" title=" " alt="" coords="1458,409,1542,434"/>
+<area shape="poly" title=" " alt="" coords="1412,351,1475,398,1472,402,1409,356"/>
+<area shape="poly" title=" " alt="" coords="773,520,884,569,882,574,771,524"/>
+<area shape="poly" title=" " alt="" coords="798,519,838,527,993,547,1147,564,1382,583,1381,588,1146,569,992,553,837,532,797,525"/>
+<area shape="poly" title=" " alt="" coords="690,525,648,532,540,547,455,556,262,580,251,582,251,576,261,575,454,551,539,542,648,527,689,519"/>
+<area shape="poly" title=" " alt="" coords="985,118,1018,226,1013,228,980,120"/>
+<area shape="rect" href="../../d7/d67/net_2http_2https_8h.html" title="HTTPS/TLS wrapper interface." alt="" coords="799,167,959,192"/>
+<area shape="poly" title=" " alt="" coords="964,121,908,161,905,156,961,117"/>
+<area shape="poly" title=" " alt="" coords="903,190,988,231,986,236,901,194"/>
+<area shape="poly" title=" " alt="" coords="799,186,749,194,706,208,689,218,678,231,673,246,676,265,698,321,724,362,757,398,803,439,834,462,866,481,864,486,831,467,800,443,753,402,719,365,693,324,671,266,668,246,674,228,686,214,703,203,748,188,798,181"/>
+<area shape="poly" title=" " alt="" coords="959,183,1100,196,1266,219,1345,236,1416,257,1472,282,1494,296,1510,312,1520,332,1522,355,1513,396,1508,395,1517,354,1515,333,1506,315,1491,300,1470,286,1414,262,1344,241,1265,225,1100,201,959,188"/>
+<area shape="rect" title=" " alt="" coords="685,240,792,265"/>
+<area shape="poly" title=" " alt="" coords="857,194,775,236,772,231,855,190"/>
+<area shape="rect" title=" " alt="" coords="817,240,922,265"/>
+<area shape="poly" title=" " alt="" coords="880,193,875,227,870,226,874,192"/>
+<area shape="poly" title=" " alt="" coords="1657,435,1646,483,1641,482,1652,434"/>
+<area shape="poly" title=" " alt="" coords="1668,433,1681,453,1693,478,1697,505,1694,519,1687,531,1673,543,1653,553,1599,569,1537,580,1480,587,1480,582,1536,575,1598,564,1651,548,1671,538,1683,528,1689,517,1691,505,1687,480,1676,455,1664,436"/>
+<area shape="poly" title=" " alt="" coords="1603,437,1555,444,1467,450,1356,451,1100,450,969,452,847,458,739,471,694,480,656,492,641,500,631,511,621,522,605,532,556,550,513,561,437,569,359,571,262,580,251,582,251,576,261,575,359,565,436,564,512,556,554,545,603,527,618,518,627,507,637,496,654,487,693,475,739,465,846,453,969,447,1100,445,1356,446,1466,445,1554,439,1602,431"/>
 </map>
 </div>
 </div><div class="textblock"><div class="dynheader">
@@ -594,7 +626,7 @@ Functions</h2></td></tr>
 
 <p class="definition">Definition at line <a class="el" href="../../d9/dba/grpc_8c_source.html#l01137">1137</a> of file <a class="el" href="../../d9/dba/grpc_8c_source.html">grpc.c</a>.</p>
 
-<p class="reference">References <a class="el" href="../../d9/d39/alloc_8c_source.html#l00275">cwist_alloc()</a>, and <a class="el" href="../../d9/d39/alloc_8c_source.html#l00390">cwist_free()</a>.</p>
+<p class="reference">References <a class="el" href="../../d9/d39/alloc_8c_source.html#l00276">cwist_alloc()</a>, and <a class="el" href="../../d9/d39/alloc_8c_source.html#l00391">cwist_free()</a>.</p>
 
 <p class="reference">Referenced by <a class="el" href="../../d9/dba/grpc_8c_source.html#l01417">cwist_grpc_routes_clone()</a>.</p>
 
@@ -652,7 +684,7 @@ Functions</h2></td></tr>
 
 <p class="definition">Definition at line <a class="el" href="../../d9/dba/grpc_8c_source.html#l01173">1173</a> of file <a class="el" href="../../d9/dba/grpc_8c_source.html">grpc.c</a>.</p>
 
-<p class="reference">References <a class="el" href="../../d9/d39/alloc_8c_source.html#l00275">cwist_alloc()</a>, and <a class="el" href="../../d9/d39/alloc_8c_source.html#l00390">cwist_free()</a>.</p>
+<p class="reference">References <a class="el" href="../../d9/d39/alloc_8c_source.html#l00276">cwist_alloc()</a>, and <a class="el" href="../../d9/d39/alloc_8c_source.html#l00391">cwist_free()</a>.</p>
 
 <p class="reference">Referenced by <a class="el" href="../../d9/dba/grpc_8c_source.html#l01417">cwist_grpc_routes_clone()</a>.</p>
 
@@ -1016,7 +1048,7 @@ Functions</h2></td></tr>
 
 <p class="definition">Definition at line <a class="el" href="../../d9/dba/grpc_8c_source.html#l00713">713</a> of file <a class="el" href="../../d9/dba/grpc_8c_source.html">grpc.c</a>.</p>
 
-<p class="reference">References <a class="el" href="../../d9/d39/alloc_8c_source.html#l00390">cwist_free()</a>, and <a class="el" href="../../d6/dbb/grpc_8h_source.html#l00073">cwist_grpc_decoder::payload</a>.</p>
+<p class="reference">References <a class="el" href="../../d9/d39/alloc_8c_source.html#l00391">cwist_free()</a>, and <a class="el" href="../../d6/dbb/grpc_8h_source.html#l00073">cwist_grpc_decoder::payload</a>.</p>
 
 <p class="reference">Referenced by <a class="el" href="../../d4/d54/grpc__client_8c_source.html#l01323">cwist_grpc_call_destroy()</a>, and <a class="el" href="../../d4/d54/grpc__client_8c_source.html#l01112">cwist_grpc_call_start_ex()</a>.</p>
 
@@ -1089,7 +1121,7 @@ Functions</h2></td></tr>
 
 <p class="definition">Definition at line <a class="el" href="../../d9/dba/grpc_8c_source.html#l00734">734</a> of file <a class="el" href="../../d9/dba/grpc_8c_source.html">grpc.c</a>.</p>
 
-<p class="reference">References <a class="el" href="../../d6/dbb/grpc_8h_source.html#l00076">cwist_grpc_decoder::compressed</a>, <a class="el" href="../../d9/d39/alloc_8c_source.html#l00275">cwist_alloc()</a>, <a class="el" href="../../d9/d39/alloc_8c_source.html#l00390">cwist_free()</a>, <a class="el" href="../../d6/dbb/grpc_8h_source.html#l00071">cwist_grpc_decoder::header</a>, <a class="el" href="../../d6/dbb/grpc_8h_source.html#l00072">cwist_grpc_decoder::header_len</a>, <a class="el" href="../../d6/dbb/grpc_8h_source.html#l00077">cwist_grpc_decoder::max_message_size</a>, <a class="el" href="../../d6/dbb/grpc_8h_source.html#l00073">cwist_grpc_decoder::payload</a>, <a class="el" href="../../d6/dbb/grpc_8h_source.html#l00074">cwist_grpc_decoder::payload_len</a>, and <a class="el" href="../../d6/dbb/grpc_8h_source.html#l00075">cwist_grpc_decoder::payload_used</a>.</p>
+<p class="reference">References <a class="el" href="../../d6/dbb/grpc_8h_source.html#l00076">cwist_grpc_decoder::compressed</a>, <a class="el" href="../../d9/d39/alloc_8c_source.html#l00276">cwist_alloc()</a>, <a class="el" href="../../d9/d39/alloc_8c_source.html#l00391">cwist_free()</a>, <a class="el" href="../../d6/dbb/grpc_8h_source.html#l00071">cwist_grpc_decoder::header</a>, <a class="el" href="../../d6/dbb/grpc_8h_source.html#l00072">cwist_grpc_decoder::header_len</a>, <a class="el" href="../../d6/dbb/grpc_8h_source.html#l00077">cwist_grpc_decoder::max_message_size</a>, <a class="el" href="../../d6/dbb/grpc_8h_source.html#l00073">cwist_grpc_decoder::payload</a>, <a class="el" href="../../d6/dbb/grpc_8h_source.html#l00074">cwist_grpc_decoder::payload_len</a>, and <a class="el" href="../../d6/dbb/grpc_8h_source.html#l00075">cwist_grpc_decoder::payload_used</a>.</p>
 
 </div>
 </div>
@@ -1201,7 +1233,7 @@ Functions</h2></td></tr>
 
 <p class="definition">Definition at line <a class="el" href="../../d9/dba/grpc_8c_source.html#l00677">677</a> of file <a class="el" href="../../d9/dba/grpc_8c_source.html">grpc.c</a>.</p>
 
-<p class="reference">References <a class="el" href="../../d9/d39/alloc_8c_source.html#l00275">cwist_alloc()</a>.</p>
+<p class="reference">References <a class="el" href="../../d9/d39/alloc_8c_source.html#l00276">cwist_alloc()</a>.</p>
 
 <p class="reference">Referenced by <a class="el" href="../../d4/d54/grpc__client_8c_source.html#l01112">cwist_grpc_call_start_ex()</a>, <a class="el" href="../../d9/dba/grpc_8c_source.html#l00784">cwist_grpc_set_response()</a>, and <a class="el" href="../../d9/dba/grpc_8c_source.html#l00836">cwist_grpc_stream_send()</a>.</p>
 
@@ -1227,9 +1259,9 @@ Functions</h2></td></tr>
 <p>HTTP/2 stream hooks that route gRPC streaming calls through the incremental transport path. The hook context is the <a class="el" href="../../dc/da0/structcwist__app.html" title="Main Application Context.">cwist_app</a> pointer already passed as user_ctx to <a class="el" href="../../de/d65/http2_8h.html#a4adac7434d422ecc351ca2c5b2aa789d" title="Serve one HTTP/2 connection until it closes. Verifies the preface, sends our SETTINGS,...">cwist_http2_serve_connection_ex()</a>.</p>
 <dl class="section return"><dt>Returns</dt><dd>Static hooks structure wiring the incremental gRPC streaming engine into the HTTP/2 transport. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d9/dba/grpc_8c_source.html#l02103">2103</a> of file <a class="el" href="../../d9/dba/grpc_8c_source.html">grpc.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d9/dba/grpc_8c_source.html#l02109">2109</a> of file <a class="el" href="../../d9/dba/grpc_8c_source.html">grpc.c</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../df/d7f/app_8c_source.html#l03375">cwist_app_http_handler()</a>, and <a class="el" href="../../df/d7f/app_8c_source.html#l03212">cwist_app_http_handler_async()</a>.</p>
+<p class="reference">Referenced by <a class="el" href="../../df/d7f/app_8c_source.html#l03451">cwist_app_http_handler()</a>, and <a class="el" href="../../df/d7f/app_8c_source.html#l03288">cwist_app_http_handler_async()</a>.</p>
 
 </div>
 </div>
@@ -1445,9 +1477,9 @@ Functions</h2></td></tr>
 
 <p class="definition">Definition at line <a class="el" href="../../d9/dba/grpc_8c_source.html#l01382">1382</a> of file <a class="el" href="../../d9/dba/grpc_8c_source.html">grpc.c</a>.</p>
 
-<p class="reference">References <a class="el" href="../../d9/d39/alloc_8c_source.html#l00390">cwist_free()</a>, and <a class="el" href="../../d0/d77/sys_2app_2app_8h_source.html#l00219">cwist_app::grpc_routes</a>.</p>
+<p class="reference">References <a class="el" href="../../d9/d39/alloc_8c_source.html#l00391">cwist_free()</a>, and <a class="el" href="../../d0/d77/sys_2app_2app_8h_source.html#l00219">cwist_app::grpc_routes</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../df/d7f/app_8c_source.html#l01428">cwist_app_destroy()</a>.</p>
+<p class="reference">Referenced by <a class="el" href="../../df/d7f/app_8c_source.html#l01449">cwist_app_destroy()</a>.</p>
 
 </div>
 </div>
@@ -1559,7 +1591,7 @@ Functions</h2></td></tr>
 
 <p class="definition">Definition at line <a class="el" href="../../d9/dba/grpc_8c_source.html#l00784">784</a> of file <a class="el" href="../../d9/dba/grpc_8c_source.html">grpc.c</a>.</p>
 
-<p class="reference">References <a class="el" href="../../dd/d56/http_8h_source.html#l00087">cwist_http_response::body</a>, <a class="el" href="../../d9/d39/alloc_8c_source.html#l00390">cwist_free()</a>, <a class="el" href="../../d9/dba/grpc_8c_source.html#l00677">cwist_grpc_encode_message()</a>, <a class="el" href="../../dd/d43/http_8c_source.html#l01551">cwist_http_header_add()</a>, <a class="el" href="../../dd/d56/http_8h_source.html#l00035">CWIST_HTTP_INTERNAL_ERROR</a>, <a class="el" href="../../dd/d56/http_8h_source.html#l00028">CWIST_HTTP_OK</a>, <a class="el" href="../../dd/d79/sstring_8c_source.html#l00471">cwist_sstring_assign()</a>, <a class="el" href="../../dd/d79/sstring_8c_source.html#l00086">cwist_sstring_assign_len()</a>, <a class="el" href="../../dd/d56/http_8h_source.html#l00086">cwist_http_response::headers</a>, and <a class="el" href="../../dd/d56/http_8h_source.html#l00084">cwist_http_response::status_code</a>.</p>
+<p class="reference">References <a class="el" href="../../dd/d56/http_8h_source.html#l00087">cwist_http_response::body</a>, <a class="el" href="../../d9/d39/alloc_8c_source.html#l00391">cwist_free()</a>, <a class="el" href="../../d9/dba/grpc_8c_source.html#l00677">cwist_grpc_encode_message()</a>, <a class="el" href="../../dd/d43/http_8c_source.html#l01851">cwist_http_header_add()</a>, <a class="el" href="../../dd/d56/http_8h_source.html#l00035">CWIST_HTTP_INTERNAL_ERROR</a>, <a class="el" href="../../dd/d56/http_8h_source.html#l00028">CWIST_HTTP_OK</a>, <a class="el" href="../../dd/d79/sstring_8c_source.html#l00504">cwist_sstring_assign()</a>, <a class="el" href="../../dd/d79/sstring_8c_source.html#l00088">cwist_sstring_assign_len()</a>, <a class="el" href="../../dd/d56/http_8h_source.html#l00086">cwist_http_response::headers</a>, and <a class="el" href="../../dd/d56/http_8h_source.html#l00084">cwist_http_response::status_code</a>.</p>
 
 <p class="reference">Referenced by <a class="el" href="../../d9/dba/grpc_8c_source.html#l00819">cwist_grpc_set_error()</a>.</p>
 
@@ -1598,7 +1630,7 @@ Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d9/dba/grpc_8c_source.html#l01812">1812</a> of file <a class="el" href="../../d9/dba/grpc_8c_source.html">grpc.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d9/dba/grpc_8c_source.html#l01814">1814</a> of file <a class="el" href="../../d9/dba/grpc_8c_source.html">grpc.c</a>.</p>
 
 <p class="reference">References <a class="el" href="../../d6/dbb/grpc_8h_source.html#l00060">cwist_grpc_stream::cancelled</a>, and <a class="el" href="../../d6/dbb/grpc_8h_source.html#l00059">cwist_grpc_stream::session</a>.</p>
 
@@ -1649,7 +1681,7 @@ Functions</h2></td></tr>
 
 <p class="definition">Definition at line <a class="el" href="../../d9/dba/grpc_8c_source.html#l00933">933</a> of file <a class="el" href="../../d9/dba/grpc_8c_source.html">grpc.c</a>.</p>
 
-<p class="reference">References <a class="el" href="../../d6/dbb/grpc_8h_source.html#l00054">cwist_grpc_stream::closed</a>, <a class="el" href="../../dd/d43/http_8c_source.html#l01551">cwist_http_header_add()</a>, <a class="el" href="../../dd/d56/http_8h_source.html#l00086">cwist_http_response::headers</a>, <a class="el" href="../../d6/dbb/grpc_8h_source.html#l00049">cwist_grpc_stream::res</a>, <a class="el" href="../../d6/dbb/grpc_8h_source.html#l00059">cwist_grpc_stream::session</a>, <a class="el" href="../../d6/dbb/grpc_8h_source.html#l00052">cwist_grpc_stream::status</a>, and <a class="el" href="../../d6/dbb/grpc_8h_source.html#l00053">cwist_grpc_stream::status_message</a>.</p>
+<p class="reference">References <a class="el" href="../../d6/dbb/grpc_8h_source.html#l00054">cwist_grpc_stream::closed</a>, <a class="el" href="../../dd/d43/http_8c_source.html#l01851">cwist_http_header_add()</a>, <a class="el" href="../../dd/d56/http_8h_source.html#l00086">cwist_http_response::headers</a>, <a class="el" href="../../d6/dbb/grpc_8h_source.html#l00049">cwist_grpc_stream::res</a>, <a class="el" href="../../d6/dbb/grpc_8h_source.html#l00059">cwist_grpc_stream::session</a>, <a class="el" href="../../d6/dbb/grpc_8h_source.html#l00052">cwist_grpc_stream::status</a>, and <a class="el" href="../../d6/dbb/grpc_8h_source.html#l00053">cwist_grpc_stream::status_message</a>.</p>
 
 </div>
 </div>
@@ -1679,7 +1711,7 @@ Functions</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>Milliseconds left, 0 when the deadline has passed, or UINT64_MAX when no deadline was set. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d9/dba/grpc_8c_source.html#l01830">1830</a> of file <a class="el" href="../../d9/dba/grpc_8c_source.html">grpc.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d9/dba/grpc_8c_source.html#l01834">1834</a> of file <a class="el" href="../../d9/dba/grpc_8c_source.html">grpc.c</a>.</p>
 
 <p class="reference">References <a class="el" href="../../d6/dbb/grpc_8h_source.html#l00061">cwist_grpc_stream::deadline_ms</a>.</p>
 
@@ -1730,9 +1762,9 @@ Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d9/dba/grpc_8c_source.html#l01738">1738</a> of file <a class="el" href="../../d9/dba/grpc_8c_source.html">grpc.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d9/dba/grpc_8c_source.html#l01740">1740</a> of file <a class="el" href="../../d9/dba/grpc_8c_source.html">grpc.c</a>.</p>
 
-<p class="reference">References <a class="el" href="../../d6/dbb/grpc_8h_source.html#l00060">cwist_grpc_stream::cancelled</a>, <a class="el" href="../../d6/dbb/grpc_8h_source.html#l00042">cwist_grpc_message::compressed</a>, <a class="el" href="../../d9/d39/alloc_8c_source.html#l00390">cwist_free()</a>, <a class="el" href="../../d6/dbb/grpc_8h_source.html#l00026">CWIST_GRPC_DEADLINE_EXCEEDED</a>, <a class="el" href="../../d6/dbb/grpc_8h_source.html#l00043">cwist_grpc_message::data</a>, <a class="el" href="../../d6/dbb/grpc_8h_source.html#l00061">cwist_grpc_stream::deadline_ms</a>, <a class="el" href="../../d6/dbb/grpc_8h_source.html#l00044">cwist_grpc_message::len</a>, <a class="el" href="../../d6/dbb/grpc_8h_source.html#l00051">cwist_grpc_stream::message_count</a>, <a class="el" href="../../d6/dbb/grpc_8h_source.html#l00050">cwist_grpc_stream::messages</a>, <a class="el" href="../../d6/dbb/grpc_8h_source.html#l00062">cwist_grpc_stream::recv_pos</a>, <a class="el" href="../../d6/dbb/grpc_8h_source.html#l00059">cwist_grpc_stream::session</a>, <a class="el" href="../../d6/dbb/grpc_8h_source.html#l00052">cwist_grpc_stream::status</a>, and <a class="el" href="../../d6/dbb/grpc_8h_source.html#l00053">cwist_grpc_stream::status_message</a>.</p>
+<p class="reference">References <a class="el" href="../../d6/dbb/grpc_8h_source.html#l00060">cwist_grpc_stream::cancelled</a>, <a class="el" href="../../d6/dbb/grpc_8h_source.html#l00042">cwist_grpc_message::compressed</a>, <a class="el" href="../../d9/d39/alloc_8c_source.html#l00391">cwist_free()</a>, <a class="el" href="../../d6/dbb/grpc_8h_source.html#l00026">CWIST_GRPC_DEADLINE_EXCEEDED</a>, <a class="el" href="../../d6/dbb/grpc_8h_source.html#l00043">cwist_grpc_message::data</a>, <a class="el" href="../../d6/dbb/grpc_8h_source.html#l00061">cwist_grpc_stream::deadline_ms</a>, <a class="el" href="../../d6/dbb/grpc_8h_source.html#l00044">cwist_grpc_message::len</a>, <a class="el" href="../../d6/dbb/grpc_8h_source.html#l00051">cwist_grpc_stream::message_count</a>, <a class="el" href="../../d6/dbb/grpc_8h_source.html#l00050">cwist_grpc_stream::messages</a>, <a class="el" href="../../d6/dbb/grpc_8h_source.html#l00062">cwist_grpc_stream::recv_pos</a>, <a class="el" href="../../d6/dbb/grpc_8h_source.html#l00059">cwist_grpc_stream::session</a>, <a class="el" href="../../d6/dbb/grpc_8h_source.html#l00052">cwist_grpc_stream::status</a>, and <a class="el" href="../../d6/dbb/grpc_8h_source.html#l00053">cwist_grpc_stream::status_message</a>.</p>
 
 </div>
 </div>
@@ -1788,7 +1820,7 @@ Functions</h2></td></tr>
 
 <p class="definition">Definition at line <a class="el" href="../../d9/dba/grpc_8c_source.html#l00836">836</a> of file <a class="el" href="../../d9/dba/grpc_8c_source.html">grpc.c</a>.</p>
 
-<p class="reference">References <a class="el" href="../../dd/d56/http_8h_source.html#l00087">cwist_http_response::body</a>, <a class="el" href="../../db/dcc/error_8c_source.html#l00043">cwist_error_dispose()</a>, <a class="el" href="../../d9/d39/alloc_8c_source.html#l00390">cwist_free()</a>, <a class="el" href="../../d9/dba/grpc_8c_source.html#l00677">cwist_grpc_encode_message()</a>, <a class="el" href="../../d6/dbb/grpc_8h_source.html#l00035">CWIST_GRPC_INTERNAL</a>, <a class="el" href="../../d6/dbb/grpc_8h_source.html#l00036">CWIST_GRPC_UNAVAILABLE</a>, <a class="el" href="../../dd/d79/sstring_8c_source.html#l00210">cwist_sstring_append_len()</a>, <a class="el" href="../../d6/dbb/grpc_8h_source.html#l00048">cwist_grpc_stream::req</a>, <a class="el" href="../../d6/dbb/grpc_8h_source.html#l00049">cwist_grpc_stream::res</a>, <a class="el" href="../../d6/dbb/grpc_8h_source.html#l00059">cwist_grpc_stream::session</a>, <a class="el" href="../../d6/dbb/grpc_8h_source.html#l00052">cwist_grpc_stream::status</a>, <a class="el" href="../../d6/dbb/grpc_8h_source.html#l00053">cwist_grpc_stream::status_message</a>, <a class="el" href="../../d6/dbb/grpc_8h_source.html#l00055">cwist_grpc_stream::write_frame</a>, and <a class="el" href="../../d6/dbb/grpc_8h_source.html#l00056">cwist_grpc_stream::write_frame_ctx</a>.</p>
+<p class="reference">References <a class="el" href="../../dd/d56/http_8h_source.html#l00087">cwist_http_response::body</a>, <a class="el" href="../../db/dcc/error_8c_source.html#l00043">cwist_error_dispose()</a>, <a class="el" href="../../d9/d39/alloc_8c_source.html#l00391">cwist_free()</a>, <a class="el" href="../../d9/dba/grpc_8c_source.html#l00677">cwist_grpc_encode_message()</a>, <a class="el" href="../../d6/dbb/grpc_8h_source.html#l00035">CWIST_GRPC_INTERNAL</a>, <a class="el" href="../../d6/dbb/grpc_8h_source.html#l00036">CWIST_GRPC_UNAVAILABLE</a>, <a class="el" href="../../dd/d79/sstring_8c_source.html#l00212">cwist_sstring_append_len()</a>, <a class="el" href="../../d6/dbb/grpc_8h_source.html#l00048">cwist_grpc_stream::req</a>, <a class="el" href="../../d6/dbb/grpc_8h_source.html#l00049">cwist_grpc_stream::res</a>, <a class="el" href="../../d6/dbb/grpc_8h_source.html#l00059">cwist_grpc_stream::session</a>, <a class="el" href="../../d6/dbb/grpc_8h_source.html#l00052">cwist_grpc_stream::status</a>, <a class="el" href="../../d6/dbb/grpc_8h_source.html#l00053">cwist_grpc_stream::status_message</a>, <a class="el" href="../../d6/dbb/grpc_8h_source.html#l00055">cwist_grpc_stream::write_frame</a>, and <a class="el" href="../../d6/dbb/grpc_8h_source.html#l00056">cwist_grpc_stream::write_frame_ctx</a>.</p>
 
 </div>
 </div>
@@ -1831,7 +1863,7 @@ Functions</h2></td></tr>
 
 <p class="definition">Definition at line <a class="el" href="../../d9/dba/grpc_8c_source.html#l00963">963</a> of file <a class="el" href="../../d9/dba/grpc_8c_source.html">grpc.c</a>.</p>
 
-<p class="reference">References <a class="el" href="../../dd/d43/http_8c_source.html#l01551">cwist_http_header_add()</a>, <a class="el" href="../../dd/d56/http_8h_source.html#l00086">cwist_http_response::headers</a>, <a class="el" href="../../d6/dbb/grpc_8h_source.html#l00049">cwist_grpc_stream::res</a>, <a class="el" href="../../d6/dbb/grpc_8h_source.html#l00066">cwist_grpc_stream::retry_pushback_ms</a>, <a class="el" href="../../d6/dbb/grpc_8h_source.html#l00065">cwist_grpc_stream::retry_pushback_set</a>, and <a class="el" href="../../d6/dbb/grpc_8h_source.html#l00059">cwist_grpc_stream::session</a>.</p>
+<p class="reference">References <a class="el" href="../../dd/d43/http_8c_source.html#l01851">cwist_http_header_add()</a>, <a class="el" href="../../dd/d56/http_8h_source.html#l00086">cwist_http_response::headers</a>, <a class="el" href="../../d6/dbb/grpc_8h_source.html#l00049">cwist_grpc_stream::res</a>, <a class="el" href="../../d6/dbb/grpc_8h_source.html#l00066">cwist_grpc_stream::retry_pushback_ms</a>, <a class="el" href="../../d6/dbb/grpc_8h_source.html#l00065">cwist_grpc_stream::retry_pushback_set</a>, and <a class="el" href="../../d6/dbb/grpc_8h_source.html#l00059">cwist_grpc_stream::session</a>.</p>
 
 </div>
 </div>
@@ -1886,9 +1918,13 @@ Functions</h2></td></tr>
 </div>
 </div>
 </div><!-- contents -->
+</div><!-- doc-content -->
 <!-- start footer part -->
-<hr class="footer"/><address class="footer"><small>
-Generated by&#160;<a href="https://www.doxygen.org/index.html"><img class="footer" src="../../doxygen.svg" width="104" height="31" alt="doxygen"/></a> 1.9.8
-</small></address>
+<div id="nav-path" class="navpath"><!-- id is needed for treeview function! -->
+  <ul>
+    <li class="navelem"><a class="el" href="../../dir_d44c64559bbebec7f509842c48db8b23.html">include</a></li><li class="navelem"><a class="el" href="../../dir_2109d32ae718f50aecd8856dacda770b.html">cwist</a></li><li class="navelem"><a class="el" href="../../dir_128dc3127079b4729ef62b563d74b417.html">net</a></li><li class="navelem"><a class="el" href="../../dir_b8b17afe85045460f2583be2e3fd9a7a.html">grpc</a></li><li class="navelem"><a class="el" href="../../d6/dbb/grpc_8h.html">grpc.h</a></li>
+    <li class="footer">Generated by <a href="https://www.doxygen.org/index.html"><img class="footer" src="../../doxygen.svg" width="104" height="31" alt="doxygen"/></a> 1.9.8 </li>
+  </ul>
+</div>
 </body>
 </html>

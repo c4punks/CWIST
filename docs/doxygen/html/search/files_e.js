@@ -1,8 +1,6 @@
 var searchData=
 [
-  ['openapi_2eh_0',['openapi.h',['../da/db7/openapi_8h.html',1,'']]],
-  ['orm_2ec_1',['orm.c',['../d8/d03/orm_8c.html',1,'']]],
-  ['orm_2eh_2',['orm.h',['../d6/d9b/orm_8h.html',1,'']]],
-  ['orm_5fsocket_2ec_3',['orm_socket.c',['../d5/dcf/orm__socket_8c.html',1,'']]],
-  ['orm_5fsocket_2eh_4',['orm_socket.h',['../d0/d11/orm__socket_8h.html',1,'']]]
+  ['nats_2dintegration_2emd_0',['nats-integration.md',['../df/d42/ko_2tutorials_2nats-integration_8md.html',1,'(Global Namespace)'],['../d4/d8d/tutorials_2nats-integration_8md.html',1,'(Global Namespace)']]],
+  ['nuke_5fdb_2ec_1',['nuke_db.c',['../d0/d14/nuke__db_8c.html',1,'']]],
+  ['nuke_5fdb_2eh_2',['nuke_db.h',['../dc/dfe/nuke__db_8h.html',1,'']]]
 ];

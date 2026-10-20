@@ -6,5 +6,6 @@ var tls__chain_8c =
     [ "CWIST_AIA_MAX_RESPONSE_BYTES", "d3/d65/tls__chain_8c.html#a9b9e785df2773ec98b577cc9da22e0e4", null ],
     [ "CWIST_AIA_TIMEOUT_MS", "d3/d65/tls__chain_8c.html#a7b89b87459a99604abebd679d5446df4", null ],
     [ "cwist_cert_fetch_buffer", "d3/d65/tls__chain_8c.html#a9aa965c5db46729f7083407fa1245412", null ],
-    [ "cwist_tls_autoload_intermediates", "d3/d65/tls__chain_8c.html#a402fcbdd8e93c407e64d09ff4c405eb1", null ]
+    [ "cwist_tls_autoload_intermediates", "d3/d65/tls__chain_8c.html#a402fcbdd8e93c407e64d09ff4c405eb1", null ],
+    [ "cwist_tls_sess_cache_size", "d3/d65/tls__chain_8c.html#ae95c36416e4d96a4296216a19efb46b9", null ]
 ];

@@ -1,9 +1,27 @@
 var http2_8h =
 [
+    [ "cwist_http2_header", "d6/db0/structcwist__http2__header.html", "d6/db0/structcwist__http2__header" ],
+    [ "cwist_http2_stream_hooks", "d6/d48/structcwist__http2__stream__hooks.html", "d6/d48/structcwist__http2__stream__hooks" ],
+    [ "cwist_http2_static_header", "d5/d79/structcwist__http2__static__header.html", "d5/d79/structcwist__http2__static__header" ],
+    [ "cwist_h2_async_queue", "de/d65/http2_8h.html#aa1d13c13d37ee19fde9b6bdab7906fac", null ],
+    [ "cwist_h2_stream", "de/d65/http2_8h.html#a3406c29e0b32ca049dd57b360cd95ba4", null ],
+    [ "cwist_http2_header", "de/d65/http2_8h.html#afdaf7b152c47228567ce746ff7a9131d", null ],
     [ "cwist_http2_request_handler_func", "de/d65/http2_8h.html#ab3c7f9d157d3b6011309728d05b54772", null ],
+    [ "cwist_http2_static_header", "de/d65/http2_8h.html#a73c884adf29420dfcf856a9d2562606c", null ],
+    [ "cwist_http2_stream_hooks", "de/d65/http2_8h.html#a9f90241032923a7b0efd9f35c3ad3ce4", null ],
+    [ "cwist_h2_async_queue_acquire", "de/d65/http2_8h.html#a005f477d90e364d0e540ae001e8bee10", null ],
+    [ "cwist_h2_async_queue_enqueue", "de/d65/http2_8h.html#a4c502b611558897b0054e27c10d8ce92", null ],
+    [ "cwist_h2_async_queue_release", "de/d65/http2_8h.html#a9b1003c118085eb4f9e41581ed27c9b6", null ],
     [ "cwist_http2_push_resource", "de/d65/http2_8h.html#ab8e27dab5d9316a6e42601f3e7ad547f", null ],
     [ "cwist_http2_serve_connection", "de/d65/http2_8h.html#a655fe1a9b4231e4423977a46082b78e3", null ],
+    [ "cwist_http2_serve_connection_ex", "de/d65/http2_8h.html#a4adac7434d422ecc351ca2c5b2aa789d", null ],
+    [ "cwist_http2_stream_send_data", "de/d65/http2_8h.html#ad9e5c4cf6b03ee73297494895b88a864", null ],
+    [ "cwist_http2_stream_send_headers", "de/d65/http2_8h.html#a2047eae56537a00b46a2a7d7a1463818", null ],
+    [ "cwist_http2_stream_send_trailers", "de/d65/http2_8h.html#a1ab4b2ededc52b8f4798b3d76045b445", null ],
     [ "h2_decode_integer", "de/d65/http2_8h.html#a08e987ec85e0ca22bb03640728e7b4a0", null ],
     [ "h2_decode_string", "de/d65/http2_8h.html#a4324a19e49964166740c377db74756bd", null ],
-    [ "h2_huffman_decode", "de/d65/http2_8h.html#ad3cacd80a9c74c7df2bd1d0fdcc45cbb", null ]
+    [ "h2_encode_integer", "de/d65/http2_8h.html#ad4881dedbb0b3d8bd969e4e61be0a820", null ],
+    [ "h2_encode_string", "de/d65/http2_8h.html#a37d03bbdef699ac7464e84eb95210461", null ],
+    [ "h2_huffman_decode", "de/d65/http2_8h.html#ad3cacd80a9c74c7df2bd1d0fdcc45cbb", null ],
+    [ "h2_static_header", "de/d65/http2_8h.html#a20c9077e2ef8bf078047b9daf2c396ea", null ]
 ];
