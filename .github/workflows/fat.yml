@@ -1,0 +1,83 @@
+name: "Fat archive"
+
+# CWIST_FAT=1 folds the vendored static archives into libcwist.a and
+# `make fat-dist` stages it with the headers the public API pulls in, so an
+# embedded target needs only the bundle plus the app source at link time;
+# CWIST_APP_FAT=1 links the example apps against that fat archive alone.
+# This job builds the bundle, proves a server app links and serves with
+# nothing but the bundle copied next to its source, and builds an example
+# with CWIST_APP_FAT=1.
+
+on:
+  push:
+    branches: [main, master, dev]
+  pull_request:
+    branches: [main, master, dev]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  fat:
+    name: Fat archive build + embedded-style link smoke
+    if: github.event_name != 'push' || !contains(github.event.head_commit.message, '[skip ci]')
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      with:
+        submodules: recursive
+
+    - name: Install build dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y cmake libcurl4-openssl-dev libnghttp2-dev libbrotli-dev libzstd-dev
+
+    - name: Build the fat archive and embedded bundle
+      run: make fat-dist -j"$(nproc)"
+
+    - name: Verify vendored archives are folded in
+      run: |
+        # Members of every vendored archive must be present, not just the
+        # CWIST objects: the archive alone has to satisfy an app link.
+        ar t libcwist.a | grep -q '^cJSON\.o$'
+        ar t libcwist.a | grep -q '^bio_ssl\.cc\.o$'
+        ar t libcwist.a | grep -q '^lsqpack\.c\.o$'
+        ar t libcwist.a | grep -q '^UriCommon\.c\.o$'
+        nm --defined-only libcwist.a | grep -qw 'T SSL_new'
+        nm --defined-only libcwist.a | grep -qw 'T lsquic_engine_new'
+        nm --defined-only libcwist.a | grep -qw 'T natsConnection_Connect'
+        nm --defined-only libcwist.a | grep -qw 'T sqlite3_open'
+
+    - name: Embedded-style link smoke (bundle + app source only)
+      run: |
+        # Mirror the embedded workflow: copy just the fat-dist bundle and
+        # the app source onto the target, link against system libs only.
+        work=$(mktemp -d)
+        cp -r dist/cwist-fat "$work/bundle"
+        cp example/micro/01-hello/main.c "$work/"
+        cd "$work"
+        "${CC:-gcc}" -O2 -std=gnu17 -Ibundle/include -o hello main.c \
+          bundle/lib/libcwist.a \
+          $(pkg-config --libs libcurl libnghttp2 libbrotlienc libbrotlicommon libbrotlidec libzstd) \
+          -pthread -ldl -lm -lstdc++ -lz
+        ./hello &
+        pid=$!
+        sleep 2
+        test "$(curl -s -m 3 http://127.0.0.1:8080/)" = "Hello, CWIST!"
+        kill "$pid"
+
+    - name: CWIST_APP_FAT example build
+      run: |
+        # The app link must reference libcwist.a and no vendored archive.
+        out=$(make CWIST_APP_FAT=1 example/micro/01-hello/hello 2>&1 | tail -1)
+        echo "$out"
+        echo "$out" | grep -q 'libcwist\.a'
+        ! echo "$out" | grep -q 'lib/[a-z0-9_/-]*/[^ ]*\.a'
+        ./example/micro/01-hello/hello &
+        pid=$!
+        sleep 2
+        test "$(curl -s -m 3 http://127.0.0.1:8080/)" = "Hello, CWIST!"
+        kill "$pid"
