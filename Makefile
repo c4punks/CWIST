@@ -707,7 +707,7 @@ LIB_NAME = libcwist.a
 .build-fat: FORCE
 	@printf '%s' 'fat=$(CWIST_FAT)' | cmp -s - $@ || printf '%s' 'fat=$(CWIST_FAT)' > $@
 FORCE:
-.PHONY: FORCE
+.PHONY: FORCE fat-dist
 $(OBJS): .build-flags
 LIBTTAK_DIR = lib/libttak
 LIBTTAK_LIB = $(LIBTTAK_DIR)/lib/libttak.a
@@ -831,23 +831,38 @@ lib/lsquic/include/lsquic.h:
 	fi
 
 $(LIB_NAME): .build-fat $(EXTERNAL_LIBS) $(OBJS)
-ifeq ($(CWIST_FAT),1)
-	@echo "Creating fat static library (CWIST objects + vendored archives)..."
 	@rm -f $@
-  ifeq ($(UNAME_S),Darwin)
-	libtool -static -o $@ $(OBJS) $(EXTERNAL_LIBS)
-  else
-	@{ echo "CREATE $@"; \
-	   for o in $(sort $(OBJS)); do echo "ADDMOD $$o"; done; \
-	   for l in $(EXTERNAL_LIBS); do echo "ADDLIB $$l"; done; \
-	   echo "SAVE"; echo "END"; } | $(AR) -M
-	$(RANLIB) $@
-  endif
-else
-	@echo "Creating static library..."
-	@rm -f $@
-	$(AR) rcs $@ $(OBJS)
-endif
+	@if [ "$(CWIST_FAT)" = "1" ]; then \
+	    echo "Creating fat static library (CWIST objects + vendored archives)..."; \
+	    if [ "$(UNAME_S)" = "Darwin" ]; then \
+	        libtool -static -o $@ $(sort $(OBJS)) $(EXTERNAL_LIBS); \
+	    else \
+	        { echo "CREATE $@"; \
+	          for o in $(sort $(OBJS)); do echo "ADDMOD $$o"; done; \
+	          for l in $(EXTERNAL_LIBS); do echo "ADDLIB $$l"; done; \
+	          echo "SAVE"; echo "END"; } | $(AR) -M && $(RANLIB) $@; \
+	    fi; \
+	else \
+	    echo "Creating static library..."; \
+	    $(AR) rcs $@ $(OBJS); \
+	fi
+
+# The embedded bundle: the fat archive plus every header the public API
+# pulls in (the public headers reference cjson, openssl, sqlite3 and ttak),
+# laid out as the compiler expects. Copy FAT_DIST_DIR onto the target board
+# and build apps with -I<dir>/include <dir>/lib/libcwist.a; only system
+# libraries stay external.
+FAT_DIST_DIR ?= dist/cwist-fat
+fat-dist: CWIST_FAT = 1
+fat-dist: $(LIB_NAME)
+	rm -rf $(FAT_DIST_DIR)
+	mkdir -p $(FAT_DIST_DIR)/lib $(FAT_DIST_DIR)/include/cjson
+	cp $(LIB_NAME) $(FAT_DIST_DIR)/lib/
+	cp -R include/cwist $(FAT_DIST_DIR)/include/
+	cp $(CJSON_DIR)/cJSON.h $(FAT_DIST_DIR)/include/cjson/
+	cp -R $(LIBTTAK_DIR)/include/ttak $(FAT_DIST_DIR)/include/
+	cp -R $(BORINGSSL_DIR)/include/openssl $(FAT_DIST_DIR)/include/
+	cp $(SQLITE_DIR)/sqlite3.h $(FAT_DIST_DIR)/include/
 
 $(LIBTTAK_LIB):
 	@echo "Building libttak..."

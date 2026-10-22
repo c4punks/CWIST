@@ -1,11 +1,12 @@
 name: "Fat archive"
 
-# CWIST_FAT=1 folds the vendored static archives into libcwist.a so an
-# embedded target needs only the archive plus the CWIST headers at link
-# time; CWIST_APP_FAT=1 links the example apps against that fat archive
-# alone. This job builds the fat archive, proves a server app links and
-# serves with nothing but libcwist.a copied next to its source, and builds
-# an example with CWIST_APP_FAT=1.
+# CWIST_FAT=1 folds the vendored static archives into libcwist.a and
+# `make fat-dist` stages it with the headers the public API pulls in, so an
+# embedded target needs only the bundle plus the app source at link time;
+# CWIST_APP_FAT=1 links the example apps against that fat archive alone.
+# This job builds the bundle, proves a server app links and serves with
+# nothing but the bundle copied next to its source, and builds an example
+# with CWIST_APP_FAT=1.
 
 on:
   push:
@@ -34,8 +35,8 @@ jobs:
         sudo apt-get update
         sudo apt-get install -y cmake libcurl4-openssl-dev libnghttp2-dev libbrotli-dev libzstd-dev
 
-    - name: Build the fat archive
-      run: make CWIST_FAT=1 libcwist.a -j"$(nproc)"
+    - name: Build the fat archive and embedded bundle
+      run: make fat-dist -j"$(nproc)"
 
     - name: Verify vendored archives are folded in
       run: |
@@ -50,16 +51,16 @@ jobs:
         nm --defined-only libcwist.a | grep -qw 'T natsConnection_Connect'
         nm --defined-only libcwist.a | grep -qw 'T sqlite3_open'
 
-    - name: Embedded-style link smoke (archive + headers + app source only)
+    - name: Embedded-style link smoke (bundle + app source only)
       run: |
-        # Mirror the embedded workflow: copy just libcwist.a, the headers
-        # and the app source onto the target, link against system libs only.
+        # Mirror the embedded workflow: copy just the fat-dist bundle and
+        # the app source onto the target, link against system libs only.
         work=$(mktemp -d)
-        cp libcwist.a "$work/"
-        cp -r include "$work/"
+        cp -r dist/cwist-fat "$work/bundle"
         cp example/micro/01-hello/main.c "$work/"
         cd "$work"
-        "${CC:-gcc}" -O2 -std=gnu17 -Iinclude -o hello main.c libcwist.a \
+        "${CC:-gcc}" -O2 -std=gnu17 -Ibundle/include -o hello main.c \
+          bundle/lib/libcwist.a \
           $(pkg-config --libs libcurl libnghttp2 libbrotlienc libbrotlicommon libbrotlidec libzstd) \
           -pthread -ldl -lm -lstdc++ -lz
         ./hello &
