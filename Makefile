@@ -645,6 +645,11 @@ component-stream-smoke: $(COMPONENT_BUILD_DIR)/stream_guest.component.wasm
 	    --alias:c4punks:cwist/host=$(abspath tests/wasm_component_stream_host.js) \
 	    --external:@bytecodealliance/jco-node-fs* \
 	    --outfile=$(STREAM_JCO_DIR)/bundle.mjs
+	# preview3-shim pulls in preview2-shim's io worker, which spawns
+	# new Worker(new URL("./worker-thread.bundle.js", import.meta.url));
+	# esbuild does not emit that file, so place it next to the bundle.
+	cp $(STREAM_JCO_DIR)/node_modules/@bytecodealliance/preview2-shim/dist/io/worker-thread.bundle.js \
+	    $(STREAM_JCO_DIR)/worker-thread.bundle.js
 	BUNDLE=$(abspath $(STREAM_JCO_DIR)/bundle.mjs) \
 	    $(NODE) --experimental-wasm-jspi tests/wasm_component_stream_test.js
 

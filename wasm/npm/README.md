@@ -76,11 +76,41 @@ for browsers as-is (verified with esbuild in the CWIST repo,
 returns a Promise and `await` is required; 0.2 guests stay synchronous.
 See `docs/api/wasm-component.md` in the CWIST repo for building the guest.
 
+### Streaming (0.3 guests)
+
+A guest built for the `cwist-guest-stream` world (wasm32-wasip3) streams a
+response through its `c4punks:cwist/host` import instead of returning it.
+`createStreamHost()` returns that import. Wire it in when you instantiate or
+bundle the component, and give the same object to the adapter:
+
+```js
+const { createCwistFromComponent, createStreamHost } = require('cwist-wasm/component');
+
+const host = createStreamHost(); // { sendChunk }: the c4punks:cwist/host import
+// ...instantiate or bundle the transpiled guest with `host` as that import...
+const handle = createCwistFromComponent({
+  dispatch: guest.dispatch,
+  useSession: guest.useSession,
+  dispatchStream: guestStream.dispatchStream,
+  streamHost: host,
+});
+
+await handle.stream({ method: 'GET', path: '/events' }, async (chunk) => {
+  // chunk is a Uint8Array: the serialized head first, then body slices
+  await writer.write(chunk);
+});
+```
+
+The guest waits for each callback, so a callback that returns a Promise
+applies backpressure. If the callback throws or rejects, the dispatch stops
+and `stream()` rejects with that error. Streaming dispatches on one handle
+run one at a time.
+
 ## Scope
 
 This wrapper is intentionally thin: routing, middleware, validation, and
 rendering all stay in your C handlers. It only serializes requests into
 HTTP/1.1 bytes, calls `cwist_app_dispatch_memory()` inside WASM, and parses
-the serialized response back into JS objects. Streaming and session
-persistence are not handled here; see `docs/api/wasm.md` in the CWIST repo
-for the current caveats.
+the serialized response back into JS objects. Session persistence is not
+handled here, and streaming is only available on the component path above;
+see `docs/api/wasm.md` in the CWIST repo for the current caveats.

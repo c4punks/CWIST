@@ -86,6 +86,14 @@ waitable-set/callback bindings that compile for wasm32-wasip3 with
 wasi-sdk 34; jco surfaces custom host imports as plain ESM imports, which
 is how the smoke (and any bundler consumer) wires `sendChunk`.
 
+The npm adapter exposes this world as `handle.stream(init, onChunk)`:
+`createStreamHost()` from `cwist-wasm/component` is the `c4punks:cwist/host`
+import, and binding the same object as `streamHost` routes each chunk to
+the callback of the stream in flight. A failing callback reaches the guest
+as the `err` arm of `send-chunk`, which aborts the pump, and `stream()`
+rejects with the callback's own error. `make component-stream-smoke-p3`
+drives the guest through the adapter, including that abort path.
+
 Only wasm32-wasip3 builds this world: 0.2 components cannot lower async
 imports. Bindings are generated per world (`wit-bindgen --world`), and
 `wasm-tools component embed` picks the world explicitly
@@ -141,7 +149,9 @@ overhead is what crosses the default limit.
    Emscripten stays supported regardless.
 3. **0.3 cutover (conditional).** Both preconditions held up under
    evaluation and the streaming boundary has landed in
-   `cwist-guest-stream`. Remaining before the cutover: track JSPI
+   `cwist-guest-stream`, with a JS entry point in the npm adapter
+   (`handle.stream()`, the counterpart of `Module.cwistStreamChunk` on
+   the Emscripten path). Remaining before the cutover: track JSPI
    shipping unflagged in node and browsers, and port the SSE examples
    off the EM_JS callback. Only then does the Emscripten build leave CI.
 
