@@ -3,13 +3,12 @@
  * 'c4punks:cwist/host' to this file when bundling the transpiled stream
  * guest, which is how a bundler consumer wires a custom host import.
  *
- * Chunks are collected on globalThis so the test driver can read them
- * through its own (esbuild-bundled) copy of this module. */
+ * The import is the cwist-wasm adapter's createStreamHost(); the host
+ * object is published on globalThis so the test driver can bind its
+ * handle to the same instance the bundled guest calls into. */
+import { createStreamHost } from '../wasm/npm/component.js';
 
-export const chunks = [];
-globalThis.__cwistStreamChunks = chunks;
+const host = createStreamHost();
+globalThis.__cwistStreamHost = host;
 
-export async function sendChunk(chunk) {
-    /* chunk arrives as a Uint8Array copy owned by the canonical ABI. */
-    chunks.push(Buffer.from(chunk));
-}
+export const sendChunk = host.sendChunk;
