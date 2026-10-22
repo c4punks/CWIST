@@ -4,9 +4,13 @@ name: "Fat archive"
 # `make fat-dist` stages it with the headers the public API pulls in, so an
 # embedded target needs only the bundle plus the app source at link time;
 # CWIST_APP_FAT=1 links the example apps against that fat archive alone.
-# This job builds the bundle, proves a server app links and serves with
-# nothing but the bundle copied next to its source, and builds an example
-# with CWIST_APP_FAT=1.
+#
+# Jobs:
+#   fat          — bundle build + embedded-style link smoke, gcc and clang
+#   fat-macos    — same on macOS, where the merge goes through libtool
+#   fat-toggle   — flipping CWIST_FAT re-archives without recompiling objects
+#   fat-examples — every example builds with CWIST_APP_FAT=1 and no vendored
+#                  archive on its link line
 
 on:
   push:
@@ -20,10 +24,16 @@ permissions:
 
 jobs:
   fat:
-    name: Fat archive build + embedded-style link smoke
+    name: Fat archive build + embedded-style link smoke (${{ matrix.compiler }})
     if: github.event_name != 'push' || !contains(github.event.head_commit.message, '[skip ci]')
     runs-on: ubuntu-latest
     timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        compiler: [gcc, clang]
+    env:
+      CC: ${{ matrix.compiler }}
     steps:
     - name: Checkout repository
       uses: actions/checkout@v4
@@ -81,3 +91,130 @@ jobs:
         sleep 2
         test "$(curl -s -m 3 http://127.0.0.1:8080/)" = "Hello, CWIST!"
         kill "$pid"
+
+  fat-macos:
+    name: Fat archive on macOS (libtool merge)
+    if: github.event_name != 'push' || !contains(github.event.head_commit.message, '[skip ci]')
+    runs-on: macos-15
+    timeout-minutes: 60
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      with:
+        submodules: recursive
+
+    - name: Install build dependencies
+      run: brew install cmake pkg-config curl nghttp2 brotli zstd
+
+    - name: Build the fat archive and embedded bundle
+      run: |
+        # Homebrew curl is keg-only; expose its .pc so the Makefile's
+        # pkg-config probes see it.
+        export PKG_CONFIG_PATH="$(brew --prefix curl)/lib/pkgconfig:${PKG_CONFIG_PATH:-}"
+        make fat-dist -j"$(sysctl -n hw.ncpu)"
+
+    - name: Verify vendored archives are folded in
+      run: |
+        # Darwin merges via libtool, not the GNU ar MRI script; the result
+        # must still be the complete archive. Mach-O symbols carry a
+        # leading underscore.
+        ar t libcwist.a | grep -q '^cJSON\.o$'
+        ar t libcwist.a | grep -q '^bio_ssl\.cc\.o$'
+        ar t libcwist.a | grep -q '^lsqpack\.c\.o$'
+        ar t libcwist.a | grep -q '^UriCommon\.c\.o$'
+        nm libcwist.a | grep -q 'T _SSL_new'
+        nm libcwist.a | grep -q 'T _lsquic_engine_new'
+        nm libcwist.a | grep -q 'T _natsConnection_Connect'
+        nm libcwist.a | grep -q 'T _sqlite3_open'
+
+    - name: Embedded-style link smoke (bundle + app source only)
+      run: |
+        export PKG_CONFIG_PATH="$(brew --prefix curl)/lib/pkgconfig:${PKG_CONFIG_PATH:-}"
+        work=$(mktemp -d)
+        cp -r dist/cwist-fat "$work/bundle"
+        cp example/micro/01-hello/main.c "$work/"
+        cd "$work"
+        cc -O2 -std=gnu17 -Ibundle/include -o hello main.c \
+          bundle/lib/libcwist.a \
+          $(pkg-config --libs libcurl libnghttp2 libbrotlienc libbrotlicommon libbrotlidec libzstd) \
+          -pthread -lm -lc++ -lz
+        ./hello &
+        pid=$!
+        sleep 2
+        test "$(curl -s -m 3 http://127.0.0.1:8080/)" = "Hello, CWIST!"
+        kill "$pid"
+
+  fat-toggle:
+    name: Thin/fat toggle re-archives without recompiling
+    if: github.event_name != 'push' || !contains(github.event.head_commit.message, '[skip ci]')
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      with:
+        submodules: recursive
+
+    - name: Install build dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y cmake libcurl4-openssl-dev libnghttp2-dev libbrotli-dev libzstd-dev
+
+    - name: Flip thin -> fat -> thin -> CWIST_APP_FAT
+      run: |
+        set -e
+        # Plain build: no vendored members in the archive.
+        make libcwist.a -j"$(nproc)" > /tmp/thin1.log 2>&1
+        ! ar t libcwist.a | grep -q '^cJSON\.o$'
+
+        # fat-dist forces the fat archive and stages the bundle.
+        make fat-dist -j"$(nproc)" > /tmp/fat.log 2>&1
+        ar t libcwist.a | grep -q '^cJSON\.o$'
+        test -f dist/cwist-fat/lib/libcwist.a
+        test -d dist/cwist-fat/include/cwist
+        test -f dist/cwist-fat/include/cjson/cJSON.h
+        test -d dist/cwist-fat/include/openssl
+        test -d dist/cwist-fat/include/ttak
+        test -f dist/cwist-fat/include/sqlite3.h
+
+        # Every later flip must only re-archive: a compile line ('-c -o')
+        # in the log means the .build-fat stamp rebuilt objects.
+        make libcwist.a > /tmp/thin2.log 2>&1
+        ! ar t libcwist.a | grep -q '^cJSON\.o$'
+        ! grep -q -- '-c -o' /tmp/thin2.log
+
+        # CWIST_APP_FAT=1 implies CWIST_FAT=1 for the library itself.
+        make CWIST_APP_FAT=1 libcwist.a > /tmp/appfat.log 2>&1
+        ar t libcwist.a | grep -q '^cJSON\.o$'
+        ! grep -q -- '-c -o' /tmp/appfat.log
+
+  fat-examples:
+    name: Example apps link against the fat archive alone
+    if: github.event_name != 'push' || !contains(github.event.head_commit.message, '[skip ci]')
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      with:
+        submodules: recursive
+
+    - name: Install build dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y cmake libcurl4-openssl-dev libnghttp2-dev libbrotli-dev libzstd-dev
+
+    - name: Build every example with CWIST_APP_FAT=1
+      run: |
+        set -o pipefail
+        make CWIST_APP_FAT=1 examples micro-examples -j"$(nproc)" 2>&1 | tee /tmp/examples.log
+
+    - name: Verify no link line carries a vendored archive
+      run: |
+        # Every example must link libcwist.a plus system -l flags only; a
+        # lib/<vendor>/....a path on a link line means APP_LIBS leaked.
+        links=$(grep -E '(^|/)(gcc|clang|cc) .*-o ' /tmp/examples.log | grep 'libcwist\.a')
+        count=$(printf '%s\n' "$links" | wc -l)
+        echo "$count example link lines"
+        test "$count" -ge 20
+        ! printf '%s\n' "$links" | grep -q 'lib/[a-z0-9_/-]*/[^ ]*\.a'
