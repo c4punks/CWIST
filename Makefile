@@ -335,6 +335,7 @@ SRCS = src/core/sstring/sstring.c \
 EMCC ?= emcc
 EMAR ?= emar
 NODE ?= node
+RANLIB ?= ranlib
 WASM_BUILD_DIR = .wasm-build
 WASM_SRCS = src/core/sstring/sstring.c \
        src/core/seq/seq.c \
@@ -701,6 +702,10 @@ LIB_NAME = libcwist.a
 # flags and every object depends on it, so a changed flag forces a rebuild.
 .build-flags: FORCE
 	@printf '%s' '$(CFLAGS)' | cmp -s - $@ || printf '%s' '$(CFLAGS)' > $@
+# Records the fat-archive toggle so flipping CWIST_FAT re-archives libcwist.a
+# without forcing a recompile of unchanged objects.
+.build-fat: FORCE
+	@printf '%s' 'fat=$(CWIST_FAT)' | cmp -s - $@ || printf '%s' 'fat=$(CWIST_FAT)' > $@
 FORCE:
 .PHONY: FORCE
 $(OBJS): .build-flags
@@ -761,6 +766,19 @@ ifeq ($(CWIST_WEBRTC),1)
     LIBS += $(USRSCTP_LIB)
 endif
 
+# --- Fat (embedded-friendly) build options -----------------------------------
+# CWIST_FAT=1 folds every vendored static archive into libcwist.a, so copying
+# the single archive plus the CWIST headers onto an embedded target is enough
+# to link a server app; only system libraries stay external.
+# CWIST_APP_FAT=1 builds the example apps against the fat archive alone (the
+# vendored archives drop off their link line); it implies CWIST_FAT=1.
+ifeq ($(CWIST_APP_FAT),1)
+CWIST_FAT = 1
+APP_LIBS = $(filter-out $(EXTERNAL_LIBS),$(LIBS))
+else
+APP_LIBS = $(LIBS)
+endif
+
 # --- Build Targets ---
 
 all: $(LIBTTAK_LIB) $(CJSON_LIB) $(URIPARSER_LIB) $(SQLITE_DIR)/sqlite3.c $(LSQUIC_LIB) $(LIB_NAME)
@@ -812,10 +830,24 @@ lib/lsquic/include/lsquic.h:
 		git submodule update --init --recursive $(LSQUIC_DIR); \
 	fi
 
-$(LIB_NAME): $(EXTERNAL_LIBS) $(OBJS)
-	@echo "Creating thin static library..."
+$(LIB_NAME): .build-fat $(EXTERNAL_LIBS) $(OBJS)
+ifeq ($(CWIST_FAT),1)
+	@echo "Creating fat static library (CWIST objects + vendored archives)..."
 	@rm -f $@
-	ar rcs $@ $(OBJS)
+  ifeq ($(UNAME_S),Darwin)
+	libtool -static -o $@ $(OBJS) $(EXTERNAL_LIBS)
+  else
+	@{ echo "CREATE $@"; \
+	   for o in $(sort $(OBJS)); do echo "ADDMOD $$o"; done; \
+	   for l in $(EXTERNAL_LIBS); do echo "ADDLIB $$l"; done; \
+	   echo "SAVE"; echo "END"; } | $(AR) -M
+	$(RANLIB) $@
+  endif
+else
+	@echo "Creating static library..."
+	@rm -f $@
+	$(AR) rcs $@ $(OBJS)
+endif
 
 $(LIBTTAK_LIB):
 	@echo "Building libttak..."
@@ -1570,37 +1602,37 @@ EXAMPLE_BINS = example/simple-server/simple-server \
 examples: $(EXAMPLE_BINS)
 
 example/simple-server/simple-server: $(LIB_NAME) example/simple-server/main.c
-	$(CC) $(CFLAGS) -o $@ example/simple-server/main.c $(LIB_NAME) $(LIBS)
+	$(CC) $(CFLAGS) -o $@ example/simple-server/main.c $(LIB_NAME) $(APP_LIBS)
 
 example/http/step-1-hello-world/hello-world: $(LIB_NAME) example/http/step-1-hello-world/main.c
-	$(CC) $(CFLAGS) -o $@ example/http/step-1-hello-world/main.c $(LIB_NAME) $(LIBS)
+	$(CC) $(CFLAGS) -o $@ example/http/step-1-hello-world/main.c $(LIB_NAME) $(APP_LIBS)
 
 example/http/step-2-mux-router/mux-router: $(LIB_NAME) example/http/step-2-mux-router/main.c
-	$(CC) $(CFLAGS) -o $@ example/http/step-2-mux-router/main.c $(LIB_NAME) $(LIBS)
+	$(CC) $(CFLAGS) -o $@ example/http/step-2-mux-router/main.c $(LIB_NAME) $(APP_LIBS)
 
 example/http/step-3-query-params/query-params: $(LIB_NAME) example/http/step-3-query-params/main.c
-	$(CC) $(CFLAGS) -o $@ example/http/step-3-query-params/main.c $(LIB_NAME) $(LIBS)
+	$(CC) $(CFLAGS) -o $@ example/http/step-3-query-params/main.c $(LIB_NAME) $(APP_LIBS)
 
 example/http/step-4-json-api/json-api: $(LIB_NAME) example/http/step-4-json-api/main.c
-	$(CC) $(CFLAGS) -o $@ example/http/step-4-json-api/main.c $(LIB_NAME) $(LIBS)
+	$(CC) $(CFLAGS) -o $@ example/http/step-4-json-api/main.c $(LIB_NAME) $(APP_LIBS)
 
 example/jwt/step-2-http-auth/jwt-auth: $(LIB_NAME) example/jwt/step-2-http-auth/main.c
-	$(CC) $(CFLAGS) -o $@ example/jwt/step-2-http-auth/main.c $(LIB_NAME) $(LIBS)
+	$(CC) $(CFLAGS) -o $@ example/jwt/step-2-http-auth/main.c $(LIB_NAME) $(APP_LIBS)
 
 example/cde-json-viewer/cde-json-viewer: $(LIB_NAME) example/cde-json-viewer/main.c
-	$(CC) $(CFLAGS) -o $@ example/cde-json-viewer/main.c $(LIB_NAME) $(LIBS)
+	$(CC) $(CFLAGS) -o $@ example/cde-json-viewer/main.c $(LIB_NAME) $(APP_LIBS)
 
 example/db/step-1-open-query/open-query: $(LIB_NAME) example/db/step-1-open-query/main.c
-	$(CC) $(CFLAGS) -o $@ example/db/step-1-open-query/main.c $(LIB_NAME) $(LIBS)
+	$(CC) $(CFLAGS) -o $@ example/db/step-1-open-query/main.c $(LIB_NAME) $(APP_LIBS)
 
 example/db/step-2-migrations/migrations: $(LIB_NAME) example/db/step-2-migrations/main.c
-	$(CC) $(CFLAGS) -o $@ example/db/step-2-migrations/main.c $(LIB_NAME) $(LIBS)
+	$(CC) $(CFLAGS) -o $@ example/db/step-2-migrations/main.c $(LIB_NAME) $(APP_LIBS)
 
 example/db/step-4-json-insert/json-insert: $(LIB_NAME) example/db/step-4-json-insert/main.c
-	$(CC) $(CFLAGS) -o $@ example/db/step-4-json-insert/main.c $(LIB_NAME) $(LIBS)
+	$(CC) $(CFLAGS) -o $@ example/db/step-4-json-insert/main.c $(LIB_NAME) $(APP_LIBS)
 
 example/rps-showcase/rps-showcase: $(LIB_NAME) example/rps-showcase/main.c
-	$(CC) $(CFLAGS) -o $@ example/rps-showcase/main.c $(LIB_NAME) $(LIBS)
+	$(CC) $(CFLAGS) -o $@ example/rps-showcase/main.c $(LIB_NAME) $(APP_LIBS)
 
 # Micro examples
 MICRO_BINS = example/micro/01-hello/hello \
@@ -1648,55 +1680,55 @@ examples-check: $(LIB_NAME) $(EXAMPLE_BINS) $(MICRO_BINS)
 	done
 
 example/micro/01-hello/hello: $(LIB_NAME) example/micro/01-hello/main.c
-	$(CC) $(CFLAGS) -o $@ example/micro/01-hello/main.c $(LIB_NAME) $(LIBS)
+	$(CC) $(CFLAGS) -o $@ example/micro/01-hello/main.c $(LIB_NAME) $(APP_LIBS)
 
 example/micro/02-routes/routes: $(LIB_NAME) example/micro/02-routes/main.c
-	$(CC) $(CFLAGS) -o $@ example/micro/02-routes/main.c $(LIB_NAME) $(LIBS)
+	$(CC) $(CFLAGS) -o $@ example/micro/02-routes/main.c $(LIB_NAME) $(APP_LIBS)
 
 example/micro/03-path-params/path-params: $(LIB_NAME) example/micro/03-path-params/main.c
-	$(CC) $(CFLAGS) -o $@ example/micro/03-path-params/main.c $(LIB_NAME) $(LIBS)
+	$(CC) $(CFLAGS) -o $@ example/micro/03-path-params/main.c $(LIB_NAME) $(APP_LIBS)
 
 example/micro/04-query-params/query-params: $(LIB_NAME) example/micro/04-query-params/main.c
-	$(CC) $(CFLAGS) -o $@ example/micro/04-query-params/main.c $(LIB_NAME) $(LIBS)
+	$(CC) $(CFLAGS) -o $@ example/micro/04-query-params/main.c $(LIB_NAME) $(APP_LIBS)
 
 example/micro/05-json/json: $(LIB_NAME) example/micro/05-json/main.c
-	$(CC) $(CFLAGS) -o $@ example/micro/05-json/main.c $(LIB_NAME) $(LIBS)
+	$(CC) $(CFLAGS) -o $@ example/micro/05-json/main.c $(LIB_NAME) $(APP_LIBS)
 
 example/micro/06-orm-insert/orm-insert: $(LIB_NAME) example/micro/06-orm-insert/main.c
-	$(CC) $(CFLAGS) -o $@ example/micro/06-orm-insert/main.c $(LIB_NAME) $(LIBS)
+	$(CC) $(CFLAGS) -o $@ example/micro/06-orm-insert/main.c $(LIB_NAME) $(APP_LIBS)
 
 example/micro/07-orm-query/orm-query: $(LIB_NAME) example/micro/07-orm-query/main.c
-	$(CC) $(CFLAGS) -o $@ example/micro/07-orm-query/main.c $(LIB_NAME) $(LIBS)
+	$(CC) $(CFLAGS) -o $@ example/micro/07-orm-query/main.c $(LIB_NAME) $(APP_LIBS)
 
 example/micro/08-orm-update-delete/orm-update-delete: $(LIB_NAME) example/micro/08-orm-update-delete/main.c
-	$(CC) $(CFLAGS) -o $@ example/micro/08-orm-update-delete/main.c $(LIB_NAME) $(LIBS)
+	$(CC) $(CFLAGS) -o $@ example/micro/08-orm-update-delete/main.c $(LIB_NAME) $(APP_LIBS)
 
 example/micro/09-html-builder/html-builder: $(LIB_NAME) example/micro/09-html-builder/main.c
-	$(CC) $(CFLAGS) -o $@ example/micro/09-html-builder/main.c $(LIB_NAME) $(LIBS)
+	$(CC) $(CFLAGS) -o $@ example/micro/09-html-builder/main.c $(LIB_NAME) $(APP_LIBS)
 
 example/micro/10-static-files/static-files: $(LIB_NAME) example/micro/10-static-files/main.c
-	$(CC) $(CFLAGS) -o $@ example/micro/10-static-files/main.c $(LIB_NAME) $(LIBS)
+	$(CC) $(CFLAGS) -o $@ example/micro/10-static-files/main.c $(LIB_NAME) $(APP_LIBS)
 
 example/micro/11-jwt-auth/jwt-auth: $(LIB_NAME) example/micro/11-jwt-auth/main.c
-	$(CC) $(CFLAGS) -o $@ example/micro/11-jwt-auth/main.c $(LIB_NAME) $(LIBS)
+	$(CC) $(CFLAGS) -o $@ example/micro/11-jwt-auth/main.c $(LIB_NAME) $(APP_LIBS)
 
 example/micro/12-middleware/middleware: $(LIB_NAME) example/micro/12-middleware/main.c
-	$(CC) $(CFLAGS) -o $@ example/micro/12-middleware/main.c $(LIB_NAME) $(LIBS)
+	$(CC) $(CFLAGS) -o $@ example/micro/12-middleware/main.c $(LIB_NAME) $(APP_LIBS)
 
 example/micro/13-nuke-db/nuke-db: $(LIB_NAME) example/micro/13-nuke-db/main.c
-	$(CC) $(CFLAGS) -o $@ example/micro/13-nuke-db/main.c $(LIB_NAME) $(LIBS)
+	$(CC) $(CFLAGS) -o $@ example/micro/13-nuke-db/main.c $(LIB_NAME) $(APP_LIBS)
 
 example/micro/14-websocket/websocket: $(LIB_NAME) example/micro/14-websocket/main.c
-	$(CC) $(CFLAGS) -o $@ example/micro/14-websocket/main.c $(LIB_NAME) $(LIBS)
+	$(CC) $(CFLAGS) -o $@ example/micro/14-websocket/main.c $(LIB_NAME) $(APP_LIBS)
 
 example/micro/15-pqc-tls/pqc-tls: $(LIB_NAME) example/micro/15-pqc-tls/main.c
-	$(CC) $(CFLAGS) -o $@ example/micro/15-pqc-tls/main.c $(LIB_NAME) $(LIBS)
+	$(CC) $(CFLAGS) -o $@ example/micro/15-pqc-tls/main.c $(LIB_NAME) $(APP_LIBS)
 
 example/micro/16-rdbms-auto/rdbms-auto: $(LIB_NAME) example/micro/16-rdbms-auto/main.c
-	$(CC) $(CFLAGS) -o $@ example/micro/16-rdbms-auto/main.c $(LIB_NAME) $(LIBS)
+	$(CC) $(CFLAGS) -o $@ example/micro/16-rdbms-auto/main.c $(LIB_NAME) $(APP_LIBS)
 
 example/micro/17-blog-crud/blog-crud: $(LIB_NAME) example/micro/17-blog-crud/main.c
-	$(CC) $(CFLAGS) -o $@ example/micro/17-blog-crud/main.c $(LIB_NAME) $(LIBS)
+	$(CC) $(CFLAGS) -o $@ example/micro/17-blog-crud/main.c $(LIB_NAME) $(APP_LIBS)
 
 clean-examples:
 	rm -f $(EXAMPLE_BINS) $(MICRO_BINS)
