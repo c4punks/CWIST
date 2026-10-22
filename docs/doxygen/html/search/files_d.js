@@ -11,6 +11,6 @@ var searchData=
   ['multipart_2ec_8',['multipart.c',['../d3/d79/multipart_8c.html',1,'']]],
   ['multipart_2eh_9',['multipart.h',['../d0/dd6/multipart_8h.html',1,'']]],
   ['mux_2ec_10',['mux.c',['../dd/d49/mux_8c.html',1,'']]],
-  ['mux_2eh_11',['mux.h',['../d5/d57/mux_8h.html',1,'(Global Namespace)'],['../d5/da9/net_2http_2mux_8h.html',1,'(Global Namespace)']]],
+  ['mux_2eh_11',['mux.h',['../d5/da9/net_2http_2mux_8h.html',1,'(Global Namespace)'],['../d5/d57/mux_8h.html',1,'(Global Namespace)']]],
   ['mux_5falgorithm_5freferences_2emd_12',['mux_algorithm_references.md',['../d1/d39/references_2mux__algorithm__references_8md.html',1,'(Global Namespace)'],['../d4/da1/ko_2references_2mux__algorithm__references_8md.html',1,'(Global Namespace)']]]
 ];

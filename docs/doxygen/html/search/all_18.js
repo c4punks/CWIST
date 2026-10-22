@@ -96,6 +96,6 @@ var searchData=
   ['mux_20algorithm_20references_93',['Mux Algorithm References',['../d6/d9f/md_docs_2references_2mux__algorithm__references.html',1,'']]],
   ['mux_20router_94',['mux router',['../df/df1/md_docs_2tutorial_2korean_2cwist__tutorial.html#autotoc_md827',1,'2. 라우팅과 핸들러 (Mux Router)'],['../dd/d4c/md_docs_2tutorial_2cwist__tutorial.html#autotoc_md799',1,'2. Routing and Handlers (Mux Router)']]],
   ['mux_2ec_95',['mux.c',['../dd/d49/mux_8c.html',1,'']]],
-  ['mux_2eh_96',['mux.h',['../d5/d57/mux_8h.html',1,'(Global Namespace)'],['../d5/da9/net_2http_2mux_8h.html',1,'(Global Namespace)']]],
+  ['mux_2eh_96',['mux.h',['../d5/da9/net_2http_2mux_8h.html',1,'(Global Namespace)'],['../d5/d57/mux_8h.html',1,'(Global Namespace)']]],
   ['mux_5falgorithm_5freferences_2emd_97',['mux_algorithm_references.md',['../d1/d39/references_2mux__algorithm__references_8md.html',1,'(Global Namespace)'],['../d4/da1/ko_2references_2mux__algorithm__references_8md.html',1,'(Global Namespace)']]]
 ];

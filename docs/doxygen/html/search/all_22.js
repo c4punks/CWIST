@@ -50,7 +50,7 @@ var searchData=
   ['webrtc_2ec_47',['webrtc.c',['../d3/d90/webrtc_8c.html',1,'']]],
   ['webrtc_2eh_48',['webrtc.h',['../dd/d3b/webrtc_8h.html',1,'']]],
   ['webrtc_5finternal_2eh_49',['webrtc_internal.h',['../da/d89/webrtc__internal_8h.html',1,'']]],
-  ['webserver_2dbenchmark_2emd_50',['webserver-benchmark.md',['../d4/d0f/ko_2webserver-benchmark_8md.html',1,'(Global Namespace)'],['../dd/dc3/webserver-benchmark_8md.html',1,'(Global Namespace)']]],
+  ['webserver_2dbenchmark_2emd_50',['webserver-benchmark.md',['../dd/dc3/webserver-benchmark_8md.html',1,'(Global Namespace)'],['../d4/d0f/ko_2webserver-benchmark_8md.html',1,'(Global Namespace)']]],
   ['websocket_51',['websocket',['../d9/dfa/md_docs_2runtime-config.html#autotoc_md784',1,'WebSocket'],['../d5/d08/md_docs_2ko_2runtime-config.html#autotoc_md662',1,'WebSocket']]],
   ['websocket_20api_52',['websocket api',['../d7/dec/md_docs_2ko_2api_2websocket.html#autotoc_md530',1,'비동기 (C1M) WebSocket API'],['../db/dc5/md_docs_2api_2websocket.html#autotoc_md234',1,'Async (C1M) WebSocket API'],['../db/dc5/md_docs_2api_2websocket.html',1,'WebSocket API'],['../d7/dec/md_docs_2ko_2api_2websocket.html',1,'WebSocket API']]],
   ['websocket_20integration_20real_20time_20bidirectional_20communication_53',['8. WebSocket Integration (Real-Time Bidirectional Communication)',['../dd/d4c/md_docs_2tutorial_2cwist__tutorial.html#autotoc_md812',1,'']]],
