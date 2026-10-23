@@ -6,7 +6,7 @@ CURL_CFLAGS := $(shell pkg-config --cflags libcurl 2>/dev/null)
 NGHTTP2_CFLAGS := $(shell pkg-config --cflags libnghttp2 2>/dev/null)
 BROTLI_CFLAGS := $(shell pkg-config --cflags libbrotlienc libbrotlicommon libbrotlidec 2>/dev/null)
 
-INCLUDE_PATHS = -I./include -I./lib -I./lib/libttak/include -I./lib/cjson -I./lib/sqlite3 -I./lib/uriparser/include -I./lib/cnats/src -I./lib/boringssl/include -I./lib/lsquic/include -I./lib/multipart-parser-c $(CURL_CFLAGS) $(NGHTTP2_CFLAGS) $(BROTLI_CFLAGS)
+INCLUDE_PATHS = -I./include -I./lib -I./lib/libttak/include -I./lib/cjson -I./lib/sqlite3 -I./lib/uriparser/include -I./lib/cnats/src $(TLS_INCLUDE_PATHS) -I./lib/lsquic/include -I./lib/multipart-parser-c $(CURL_CFLAGS) $(NGHTTP2_CFLAGS) $(BROTLI_CFLAGS)
 COMMON_DEFINES = -D_GNU_SOURCE -D_XOPEN_SOURCE=700 -D_REENTRANT -DSQLITE_ENABLE_DESERIALIZE
 COMMON_WARNINGS = -std=c17 -Wall -pthread -fPIC
 COMMON_CFLAGS = $(INCLUDE_PATHS) $(COMMON_WARNINGS) $(COMMON_DEFINES)
@@ -97,6 +97,12 @@ BORINGSSL_BUILD_DIR = $(BORINGSSL_DIR)/build
 BORINGSSL_SSL_LIB = $(BORINGSSL_BUILD_DIR)/libssl.a
 BORINGSSL_CRYPTO_LIB = $(BORINGSSL_BUILD_DIR)/libcrypto.a
 
+MBEDTLS_DIR = lib/mbedtls
+MBEDTLS_BUILD_DIR = $(MBEDTLS_DIR)/build
+MBEDTLS_TLS_LIB = $(MBEDTLS_BUILD_DIR)/library/libmbedtls.a
+MBEDTLS_X509_LIB = $(MBEDTLS_BUILD_DIR)/library/libmbedx509.a
+MBEDTLS_CRYPTO_LIB = $(MBEDTLS_BUILD_DIR)/library/libmbedcrypto.a
+
 LSQUIC_DIR = lib/lsquic
 LSQUIC_BUILD_DIR = $(LSQUIC_DIR)/build
 LSQUIC_LIB = $(LSQUIC_BUILD_DIR)/src/liblsquic/liblsquic.a
@@ -117,16 +123,16 @@ endif
 
 # $(CNATS_LIB) and $(LSQUIC_LIB) stay in their historical positions (before
 # the system libraries: link order matters with --as-needed) but are gated on
-# CWIST_NATS and CWIST_HTTP3; BoringSSL always stays (HTTPS/JWT sessions need
-# it).  The knobs are assigned further down; LIBS is recursively expanded, so
-# the filters see the final values.
+# CWIST_NATS and CWIST_HTTP3; the TLS backend archives ($(TLS_VENDOR_LIBS):
+# BoringSSL, or mbedTLS when CWIST_TLS=mbedtls) always stay (HTTPS/JWT
+# sessions need them).  The knobs are assigned further down; LIBS is
+# recursively expanded, so the filters see the final values.
 LIBS = $(if $(filter 1,$(CWIST_NATS)),$(CNATS_LIB)) \
        $(LIBTTAK_LIB) \
        $(CJSON_LIB) \
        $(URIPARSER_LIB) \
        $(if $(filter 1,$(CWIST_HTTP3)),$(LSQUIC_LIB)) \
-       $(BORINGSSL_SSL_LIB) \
-       $(BORINGSSL_CRYPTO_LIB) \
+       $(TLS_VENDOR_LIBS) \
        $(CURL_LIBS) \
        $(NGHTTP2_LIBS) \
        $(BROTLI_LIBS) \
@@ -155,6 +161,45 @@ CWIST_WS ?= $(if $(filter 1,$(CWIST_TINY)),0,1)
 CWIST_DB ?= $(if $(filter 1,$(CWIST_TINY)),0,1)
 CWIST_NATS ?= $(if $(filter 1,$(CWIST_TINY)),0,1)
 CWIST_JWT ?= $(if $(filter 1,$(CWIST_TINY)),0,1)
+
+# --- TLS backend selection ---------------------------------------------------
+# CWIST_TLS picks the TLS/crypto backend:
+#   boringssl (default) - the vendored BoringSSL; required for HTTP/3 (lsquic
+#                         needs BoringSSL's QUIC API), WebRTC DataChannel
+#                         (DTLS), ECH and the hybrid PQC group list
+#   mbedtls             - the vendored mbedTLS 3.6 LTS (lib/mbedtls), reached
+#                         through the internal backend seam in
+#                         src/security/tls/ (shim/openssl headers +
+#                         backend_mbedtls.c).  A CWIST_TLS=mbedtls archive
+#                         contains no BoringSSL objects or symbols.
+# Degradations under mbedtls (documented in docs/performance/tls-backends.md):
+# Ed25519 JWT algs fail at runtime (HS256/ES256 work), the TLS session-
+# resumption counter stays 0, AIA intermediate autoload is a no-op, ECH and
+# the hybrid PQC groups are unavailable.
+CWIST_TLS ?= boringssl
+ifneq ($(filter $(CWIST_TLS),boringssl mbedtls),$(CWIST_TLS))
+    $(error CWIST_TLS: unknown backend '$(CWIST_TLS)' (use boringssl or mbedtls))
+endif
+ifeq ($(CWIST_TLS),mbedtls)
+    ifneq ($(CWIST_HTTP3),0)
+        $(warning CWIST_TLS=mbedtls: HTTP/3 (lsquic) needs BoringSSL's QUIC API; forcing CWIST_HTTP3=0)
+        CWIST_HTTP3 := 0
+    endif
+    # CWIST serves TLS from many threads per process (HTTPS pool, handshake
+    # shepherd) sharing the SSL config, session cache, ticket context and
+    # CTR-DRBG; the pthread threading layer serializes those.  Both the
+    # vendored mbedTLS build ($(MBEDTLS_STAMP)) and every CWIST object must
+    # see the same defines or the public struct layouts diverge.
+    CFLAGS += -DCWIST_TLS_MBEDTLS -DMBEDTLS_THREADING_C -DMBEDTLS_THREADING_PTHREAD
+    # The shim directory shadows <openssl/*.h>; it must precede any system
+    # OpenSSL headers that pkg-config pulls in via CURL_CFLAGS.
+    TLS_INCLUDE_PATHS = -I./src/security/tls/shim -I./lib/mbedtls/include
+    TLS_VENDOR_LIBS = $(MBEDTLS_TLS_LIB) $(MBEDTLS_X509_LIB) $(MBEDTLS_CRYPTO_LIB)
+else
+    TLS_INCLUDE_PATHS = -I./lib/boringssl/include
+    TLS_VENDOR_LIBS = $(BORINGSSL_SSL_LIB) $(BORINGSSL_CRYPTO_LIB)
+endif
+
 ifeq ($(CWIST_HTTP3),1)
     CFLAGS += -DCWIST_HTTP3
 else
@@ -218,6 +263,12 @@ endif
 # DTLS. Set CWIST_WEBRTC=0 to leave it out.  CWIST_TINY=1 (above) defaults
 # it to off as well.
 CWIST_WEBRTC ?= $(if $(filter 1,$(CWIST_TINY)),0,1)
+ifeq ($(CWIST_TLS),mbedtls)
+    ifneq ($(CWIST_WEBRTC),0)
+        $(warning CWIST_TLS=mbedtls: WebRTC DataChannel uses BoringSSL DTLS; forcing CWIST_WEBRTC=0)
+    endif
+    CWIST_WEBRTC := 0
+endif
 ifeq ($(CWIST_WEBRTC),1)
     CFLAGS += -DCWIST_WEBRTC -I$(USRSCTP_DIR)/usrsctplib
 endif
@@ -729,7 +780,6 @@ LIB_NAME = libcwist.a
 	@printf '%s' 'fat=$(CWIST_FAT)' | cmp -s - $@ || printf '%s' 'fat=$(CWIST_FAT)' > $@
 FORCE:
 .PHONY: FORCE fat-dist
-$(OBJS): .build-flags
 LIBTTAK_DIR = lib/libttak
 LIBTTAK_LIB = $(LIBTTAK_DIR)/lib/libttak.a
 LIBTTAK_EXTRA_CFLAGS =
@@ -772,12 +822,14 @@ INSTALL_PCDIR = $(DESTDIR)$(PCDIR)
 EXTERNAL_LIBS = $(URIPARSER_LIB) \
                 $(CJSON_LIB) \
                 $(LIBTTAK_LIB) \
-                $(BORINGSSL_SSL_LIB) \
-                $(BORINGSSL_CRYPTO_LIB)
+                $(TLS_VENDOR_LIBS)
 
 # Feature-gated sources and their vendored archives.  When a knob is 0 the
 # objects stay out of libcwist.a (and out of the fat archive) entirely; the
 # app-level public functions remain as compiled-in stubs (see src/sys/app).
+ifeq ($(CWIST_TLS),mbedtls)
+    SRCS += src/security/tls/backend_mbedtls.c
+endif
 ifeq ($(CWIST_HTTP3),1)
     SRCS += src/net/http/http3.c \
             src/net/http/http3_client.c
@@ -823,6 +875,12 @@ ifeq ($(CWIST_WEBRTC),1)
     LIBS += $(USRSCTP_LIB)
 endif
 
+# Attach the flag-change rebuild guard here, after every feature append above:
+# make expands $(OBJS) eagerly at this line, and an attachment placed before
+# the appends would cover only the core sources, leaving feature objects
+# (jwt.o, http3.o, ...) stale across knob flips such as CWIST_TLS.
+$(OBJS): .build-flags
+
 # --- Fat (embedded-friendly) build options -----------------------------------
 # CWIST_FAT=1 folds every vendored static archive into libcwist.a, so copying
 # the single archive plus the CWIST headers onto an embedded target is enough
@@ -852,6 +910,18 @@ $(SQLITE_DIR)/sqlite3.c:
 
 # Ensure lsquic submodule is checked out before compiling objects that need its headers
 $(OBJS): | lib/lsquic/include/lsquic.h
+
+ifeq ($(CWIST_TLS),mbedtls)
+# Ensure the mbedTLS submodule is checked out before compiling objects that
+# include its headers (backend_mbedtls.c, jwt.c).
+$(OBJS): | $(MBEDTLS_DIR)/include/mbedtls/ssl.h
+
+$(MBEDTLS_DIR)/include/mbedtls/ssl.h:
+	@if [ ! -f "$@" ]; then \
+		echo "Initializing mbedtls submodule..."; \
+		git submodule update --init --recursive $(MBEDTLS_DIR); \
+	fi
+endif
 
 ifeq ($(CWIST_WEBRTC),1)
 $(OBJS): | $(USRSCTP_DIR)/usrsctplib/usrsctp.h
@@ -921,7 +991,13 @@ fat-dist: $(SQLITE_DIR)/sqlite3.c $(LIB_NAME)
 	cp -R include/cwist $(FAT_DIST_DIR)/include/
 	cp $(CJSON_DIR)/cJSON.h $(FAT_DIST_DIR)/include/cjson/
 	cp -R $(LIBTTAK_DIR)/include/ttak $(FAT_DIST_DIR)/include/
-	cp -R $(BORINGSSL_DIR)/include/openssl $(FAT_DIST_DIR)/include/
+	@if [ "$(CWIST_TLS)" = "mbedtls" ]; then \
+	    cp -R src/security/tls/shim/openssl $(FAT_DIST_DIR)/include/; \
+	    cp -R $(MBEDTLS_DIR)/include/mbedtls $(FAT_DIST_DIR)/include/; \
+	    cp -R $(MBEDTLS_DIR)/include/psa $(FAT_DIST_DIR)/include/; \
+	else \
+	    cp -R $(BORINGSSL_DIR)/include/openssl $(FAT_DIST_DIR)/include/; \
+	fi
 	cp $(SQLITE_DIR)/sqlite3.h $(FAT_DIST_DIR)/include/
 
 $(LIBTTAK_LIB):
@@ -953,6 +1029,30 @@ $(BORINGSSL_STAMP):
 	@touch $@
 
 $(BORINGSSL_SSL_LIB) $(BORINGSSL_CRYPTO_LIB): $(BORINGSSL_STAMP)
+
+# Same stamp-file pattern as BoringSSL: keyed on the pinned submodule commit
+# so moving the pin forces a rebuild.  The pthread threading layer defines
+# must match the CWIST objects' CFLAGS (see the CWIST_TLS block above) or the
+# mbedTLS public struct layouts diverge between library and callers.
+MBEDTLS_CONFIG_DEFINES = -DMBEDTLS_THREADING_C -DMBEDTLS_THREADING_PTHREAD
+MBEDTLS_REV := $(if $(wildcard $(MBEDTLS_DIR)/.git),$(shell git -C $(MBEDTLS_DIR) rev-parse HEAD 2>/dev/null))
+MBEDTLS_STAMP = $(MBEDTLS_BUILD_DIR)/.mbedtls_built_$(or $(MBEDTLS_REV),unversioned)
+
+$(MBEDTLS_TLS_LIB) $(MBEDTLS_X509_LIB) $(MBEDTLS_CRYPTO_LIB): $(MBEDTLS_STAMP)
+
+$(MBEDTLS_STAMP):
+	@echo "Building mbedTLS..."
+	@mkdir -p $(MBEDTLS_BUILD_DIR)
+	cmake -S $(MBEDTLS_DIR) -B $(MBEDTLS_BUILD_DIR) \
+		-DCMAKE_C_COMPILER=$(CC) \
+		-DCMAKE_BUILD_TYPE=Release \
+		-DCMAKE_C_FLAGS="$(MBEDTLS_CONFIG_DEFINES)" \
+		-DBUILD_SHARED_LIBS=OFF \
+		-DENABLE_TESTING=OFF \
+		-DENABLE_PROGRAMS=OFF
+	cmake --build $(MBEDTLS_BUILD_DIR) --target mbedtls mbedx509 mbedcrypto
+	@rm -f $(MBEDTLS_BUILD_DIR)/.mbedtls_built_*
+	@touch $@
 
 # The archive must follow the pinned lsquic commit, not just exist: lsquic's
 # public structs (e.g. struct lsquic_stream_if) change layout between
@@ -1157,7 +1257,8 @@ fuzz_seq: $(LIBTTAK_LIB) $(CJSON_LIB) tests/fuzz_seq.c src/core/seq/seq.c src/co
 	$(FUZZ_CC) $(INCLUDE_PATHS) $(COMMON_DEFINES) -std=c17 -g -O1 \
 		-fsanitize=fuzzer,address,undefined -o $@ tests/fuzz_seq.c \
 		src/core/seq/seq.c src/core/seq/seq_auth.c src/core/mem/alloc.c \
-		$(LIBTTAK_LIB) $(CJSON_LIB) $(BORINGSSL_SSL_LIB) $(BORINGSSL_CRYPTO_LIB) -pthread
+		$(if $(filter mbedtls,$(CWIST_TLS)),src/security/tls/backend_mbedtls.c) \
+		$(LIBTTAK_LIB) $(CJSON_LIB) $(TLS_VENDOR_LIBS) -pthread
 	./$@ -runs=$(FUZZ_RUNS)
 
 bench_security_pool: $(LIB_NAME) tests/bench_security_pool.c
@@ -1476,9 +1577,17 @@ test_https_park_full_gc: $(LIB_NAME) tests/test_https_park_full_gc.c tests/test_
 	$(CC) $(CFLAGS) -o test_https_park_full_gc tests/test_https_park_full_gc.c $(LIB_NAME) $(LIBS)
 	./test_https_park_full_gc
 
+ifeq ($(CWIST_TLS),mbedtls)
+# CWIST_TLS=mbedtls: the test asserts resumed-handshake counters, but mbedTLS
+# exposes no per-connection resumption flag, so the counter stays 0 (see
+# docs/performance/tls-backends.md).
+test_https_metrics:
+	@echo "CWIST_TLS=mbedtls: skipping $@"
+else
 test_https_metrics: $(LIB_NAME) tests/test_https_metrics.c
 	$(CC) $(CFLAGS) -o test_https_metrics tests/test_https_metrics.c $(LIB_NAME) $(LIBS)
 	./test_https_metrics
+endif
 
 test_http2: $(LIB_NAME) tests/test_http2.c
 	$(CC) $(CFLAGS) -o test_http2 tests/test_http2.c $(LIB_NAME) $(LIBS)
@@ -1793,7 +1902,8 @@ MICRO_BINS = example/micro/01-hello/hello \
              example/micro/09-html-builder/html-builder \
              example/micro/10-static-files/static-files \
              example/micro/12-middleware/middleware \
-             example/micro/15-pqc-tls/pqc-tls
+             example/micro/15-pqc-tls/pqc-tls \
+             example/micro/18-https-hello/https-hello
 
 ifeq ($(CWIST_DB),1)
 MICRO_BINS += example/micro/06-orm-insert/orm-insert \
@@ -1885,6 +1995,9 @@ example/micro/14-websocket/websocket: $(LIB_NAME) example/micro/14-websocket/mai
 
 example/micro/15-pqc-tls/pqc-tls: $(LIB_NAME) example/micro/15-pqc-tls/main.c
 	$(CC) $(CFLAGS) -o $@ example/micro/15-pqc-tls/main.c $(LIB_NAME) $(APP_LIBS)
+
+example/micro/18-https-hello/https-hello: $(LIB_NAME) example/micro/18-https-hello/main.c
+	$(CC) $(CFLAGS) -o $@ example/micro/18-https-hello/main.c $(LIB_NAME) $(APP_LIBS)
 
 example/micro/16-rdbms-auto/rdbms-auto: $(LIB_NAME) example/micro/16-rdbms-auto/main.c
 	$(CC) $(CFLAGS) -o $@ example/micro/16-rdbms-auto/main.c $(LIB_NAME) $(APP_LIBS)

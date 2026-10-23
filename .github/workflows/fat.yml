@@ -225,6 +225,82 @@ jobs:
   # dropped subsystems must leave no objects in the fat archive, the kept
   # core must still satisfy the same embedded-style link smoke as the full
   # build, and the sizes go on record for comparison.
+  # Pluggable TLS backend (issue #430): CWIST_TLS=mbedtls swaps BoringSSL for
+  # the vendored mbedTLS 3.6 LTS behind the internal seam in
+  # src/security/tls/.  The fat archive must contain zero BoringSSL objects or
+  # symbols, and an HTTPS app linked against the bundle alone must answer a
+  # TLS request.  CWIST_HTTP3 stays explicitly 0 (lsquic needs BoringSSL's
+  # QUIC API; the Makefile would force it off anyway).
+  fat-mbedtls:
+    name: Fat archive with the mbedTLS TLS backend (CWIST_TLS=mbedtls)
+    if: github.event_name != 'push' || !contains(github.event.head_commit.message, '[skip ci]')
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      with:
+        submodules: recursive
+
+    - name: Install build dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y cmake libcurl4-openssl-dev libnghttp2-dev libbrotli-dev libzstd-dev
+
+    - name: Build the fat archive and embedded bundle (CWIST_TLS=mbedtls)
+      run: make CWIST_TLS=mbedtls CWIST_HTTP3=0 fat-dist -j"$(nproc)"
+
+    - name: Verify no BoringSSL objects or symbols, mbedTLS folded in
+      run: |
+        ! ar t libcwist.a | grep -q '^bio_ssl\.cc\.o$'
+        ! nm --defined-only libcwist.a 2>/dev/null | grep -qw 'T SSL_new'
+        ar t libcwist.a | grep -q '^ssl_tls\.c\.o$'
+        nm --defined-only libcwist.a | grep -qw 'T mbedtls_ssl_handshake'
+        # The bundle stages the seam shim as include/openssl plus the real
+        # mbedTLS headers, instead of BoringSSL's openssl tree.
+        test -f dist/cwist-fat/include/openssl/ssl.h
+        grep -q 'CWIST_SHIM_OPENSSL_SSL_H' dist/cwist-fat/include/openssl/ssl.h
+        test -d dist/cwist-fat/include/mbedtls
+        test -d dist/cwist-fat/include/psa
+
+    - name: HTTPS smoke against the bundle (curl -k)
+      run: |
+        # Embedded-style: only the bundle, the app source and system libs.
+        # openssl CLI generates the throwaway cert; the linked TLS library is
+        # mbedTLS, not BoringSSL (asserted above).
+        work=$(mktemp -d)
+        cp -r dist/cwist-fat "$work/bundle"
+        cp example/micro/18-https-hello/main.c "$work/"
+        cd "$work"
+        openssl req -x509 -newkey rsa:2048 -nodes -keyout server.key -out server.crt \
+          -days 1 -subj "/CN=127.0.0.1" 2>/dev/null
+        "${CC:-gcc}" -O2 -std=gnu17 -Ibundle/include -o https-hello main.c \
+          bundle/lib/libcwist.a \
+          $(pkg-config --libs libcurl libnghttp2 libbrotlienc libbrotlicommon libbrotlidec libzstd) \
+          -pthread -ldl -lm -lz
+        ./https-hello &
+        pid=$!
+        trap 'kill $pid 2>/dev/null || true' EXIT
+        body=
+        for i in $(seq 1 20); do
+          body=$(curl -sk -m 2 https://127.0.0.1:8443/) && break
+          sleep 0.3
+        done
+        test "$body" = "Hello, CWIST!"
+        kill "$pid"
+
+    - name: Run the TLS-adjacent test subset under CWIST_TLS=mbedtls
+      run: |
+        make CWIST_TLS=mbedtls CWIST_HTTP3=0 -j"$(nproc)" \
+          test_https test_https_park test_https_pool_queue test_https_metrics \
+          test_http2 test_http2_prebuffer test_jwt test_middleware_jwt \
+          test_session test_seq_auth test_sha256
+
+    - name: Record archive sizes
+      run: |
+        ls -l libcwist.a dist/cwist-fat/lib/libcwist.a
+        size libcwist.a 2>/dev/null || true
+
   fat-trim:
     name: Trimmed fat archive (${{ matrix.cfg }})
     if: github.event_name != 'push' || !contains(github.event.head_commit.message, '[skip ci]')

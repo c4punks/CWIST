@@ -134,6 +134,9 @@ static void test_app_http2_toggle_rebuilds_context(void) {
     printf("Passed HTTPS/2 toggle context rebuild.\n");
 }
 
+#ifndef CWIST_TLS_MBEDTLS
+/* AIA intermediate autoload test helpers; the feature is BoringSSL-only, so
+ * none of this compiles on the mbedTLS backend. */
 static bool run_cmd(const char *cmd) {
     return system(cmd) == 0;
 }
@@ -388,6 +391,7 @@ static void test_https_autoloads_aia_intermediate(void) {
     remove_tree(tmp_dir);
     printf("Passed HTTPS AIA intermediate autoload.\n");
 }
+#endif /* !CWIST_TLS_MBEDTLS */
 
 static void *async_https_worker_fn(void *arg) {
     cwist_async *a = (cwist_async *)arg;
@@ -562,7 +566,13 @@ int main(void) {
     test_https_defaults();
     test_https_alpn_negotiates_h2_and_http11_fallback();
     test_app_http2_toggle_rebuilds_context();
+#ifdef CWIST_TLS_MBEDTLS
+    /* AIA intermediate autoload is a BoringSSL-only feature (no-op stub on
+     * the mbedTLS backend; see docs/performance/tls-backends.md). */
+    printf("Skipping HTTPS AIA intermediate autoload on CWIST_TLS=mbedtls.\n");
+#else
     test_https_autoloads_aia_intermediate();
+#endif
     test_https_async_defer();
     test_https_async_defer_completes_before_ack();
     printf("All HTTPS tests passed!\n");
