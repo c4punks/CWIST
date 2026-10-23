@@ -25,9 +25,13 @@
 #define _POSIX_C_SOURCE 200809L
 #include <cwist/sys/job/durable_queue.h>
 #include <cwist/core/mem/alloc.h>
+#ifdef CWIST_NATS
 #include <cwist/net/nats/cwist_nats.h>
+#endif
 #include <cwist/net/redis/cwist_redis.h>
+#ifdef CWIST_NATS
 #include <nats.h>
+#endif
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -80,7 +84,9 @@ static const char *JQ_GROUP_SCRIPT =
 
 typedef cwist_error_t (*jq_dead_count_fn)(cwist_job_queue_t *q, uint64_t *out_count);
 
+#ifdef CWIST_NATS
 static cwist_error_t jq_nats_dead_count(cwist_job_queue_t *q, uint64_t *out_count);
+#endif
 
 typedef struct {
     cwist_redis_t *conn; /* borrowed */
@@ -91,6 +97,7 @@ typedef struct {
     char *consumer; /* owned copy */
 } jq_redis_t;
 
+#ifdef CWIST_NATS
 typedef struct {
     natsConnection *conn; /* borrowed */
     jsCtx *js;
@@ -99,6 +106,7 @@ typedef struct {
     char *dead_subject; /* <base>.dead */
     char *dead_stream;  /* <base>_DEAD */
 } jq_nats_t;
+#endif
 
 struct cwist_job_queue {
     int backend; /* 0 = redis, 1 = nats */
@@ -110,7 +118,9 @@ struct cwist_job_queue {
     jq_dead_count_fn dead_count;
     union {
         jq_redis_t redis;
+#ifdef CWIST_NATS
         jq_nats_t nats;
+#endif
     } u;
 };
 
@@ -168,7 +178,9 @@ static bool jq_opts_init(cwist_job_queue_t *q, const cwist_job_queue_opts_t *opt
  */
 static void cwist_job_free(cwist_job_t *job) {
     if (!job) return;
+#ifdef CWIST_NATS
     if (job->backend) natsMsg_Destroy((natsMsg *)job->backend);
+#endif
     cwist_free(job->id);
     cwist_free(job->type);
     cwist_free(job->payload);
@@ -617,6 +629,7 @@ fail:
 
 /* --- NATS backend ------------------------------------------------------- */
 
+#ifdef CWIST_NATS
 /** [A-Za-z0-9_-] only; everything else becomes '_' (stream/consumer name and
  * subject-safe base). */
 static char *jq_sanitize(const char *name) {
@@ -903,6 +916,16 @@ static cwist_error_t jq_nats_dead_count(cwist_job_queue_t *q, uint64_t *out_coun
     jsStreamInfo_Destroy(si);
     return jq_err(0);
 }
+#else
+/* CWIST_NATS=0: the JetStream backend is compiled out; creation reports
+ * unsupported the same way an invalid wrapper does. */
+cwist_job_queue_t *cwist_job_queue_create_nats(cwist_nats_t *nats,
+                                               const cwist_job_queue_opts_t *opts) {
+    (void)nats;
+    (void)opts;
+    return NULL;
+}
+#endif /* CWIST_NATS */
 
 /* --- Dispatch ----------------------------------------------------------- */
 
@@ -915,13 +938,16 @@ void cwist_job_queue_destroy(cwist_job_queue_t *q) {
         cwist_free(q->u.redis.dead);
         cwist_free(q->u.redis.delay);
         cwist_free(q->u.redis.consumer);
-    } else {
+    }
+#ifdef CWIST_NATS
+    else {
         if (q->u.nats.sub) natsSubscription_Destroy(q->u.nats.sub);
         if (q->u.nats.js) jsCtx_Destroy(q->u.nats.js);
         cwist_free(q->u.nats.subject);
         cwist_free(q->u.nats.dead_subject);
         cwist_free(q->u.nats.dead_stream);
     }
+#endif
     cwist_free(q->name);
     cwist_free(q->consumer);
     cwist_free(q);
@@ -935,8 +961,12 @@ cwist_error_t cwist_job_queue_enqueue(cwist_job_queue_t *q, const void *payload,
                                       const char *type) {
     if (!q || (!payload && payload_len)) return jq_err(CWIST_ERROR_INVALID_PARAM);
     if (!payload) payload = "";
+#ifdef CWIST_NATS
     return q->backend == 0 ? jq_redis_enqueue(q, payload, payload_len, type)
                            : jq_nats_enqueue(q, payload, payload_len, type);
+#else
+    return jq_redis_enqueue(q, payload, payload_len, type);
+#endif
 }
 
 /**
@@ -946,7 +976,11 @@ cwist_error_t cwist_job_queue_enqueue(cwist_job_queue_t *q, const void *payload,
 cwist_error_t cwist_job_queue_claim(cwist_job_queue_t *q, uint64_t timeout_ms, cwist_job_t **job) {
     if (!q || !job) return jq_err(CWIST_ERROR_INVALID_PARAM);
     *job = NULL;
+#ifdef CWIST_NATS
     return q->backend == 0 ? jq_redis_claim(q, timeout_ms, job) : jq_nats_claim(q, timeout_ms, job);
+#else
+    return jq_redis_claim(q, timeout_ms, job);
+#endif
 }
 
 /**
@@ -955,7 +989,11 @@ cwist_error_t cwist_job_queue_claim(cwist_job_queue_t *q, uint64_t timeout_ms, c
  */
 cwist_error_t cwist_job_queue_ack(cwist_job_queue_t *q, cwist_job_t *job) {
     if (!q || !job || job->q != q) return jq_err(CWIST_ERROR_INVALID_PARAM);
+#ifdef CWIST_NATS
     cwist_error_t err = q->backend == 0 ? jq_redis_ack(q, job) : jq_nats_ack(q, job);
+#else
+    cwist_error_t err = jq_redis_ack(q, job);
+#endif
     cwist_job_free(job);
     return err;
 }
@@ -966,7 +1004,11 @@ cwist_error_t cwist_job_queue_ack(cwist_job_queue_t *q, cwist_job_t *job) {
  */
 cwist_error_t cwist_job_queue_nack(cwist_job_queue_t *q, cwist_job_t *job) {
     if (!q || !job || job->q != q) return jq_err(CWIST_ERROR_INVALID_PARAM);
+#ifdef CWIST_NATS
     cwist_error_t err = q->backend == 0 ? jq_redis_nack(q, job) : jq_nats_nack(q, job);
+#else
+    cwist_error_t err = jq_redis_nack(q, job);
+#endif
     cwist_job_free(job);
     return err;
 }

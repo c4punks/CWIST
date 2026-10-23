@@ -553,6 +553,7 @@ static _Thread_local cwist_jwt_ctx_t *t_jwt_ctx = NULL;
 static __thread cwist_jwt_ctx_t *t_jwt_ctx = NULL;
 #endif
 
+#ifdef CWIST_JWT
 /**
  * @brief Validate a bearer token and expose its decoded claims to downstream handlers.
  * @param req Incoming HTTP request.
@@ -637,13 +638,16 @@ static cwist_middleware_func s_jwt_wrappers[CWIST_JWT_MAX_SECRETS] = {
     cwist_mw_jwt_wrap_0, cwist_mw_jwt_wrap_1, cwist_mw_jwt_wrap_2, cwist_mw_jwt_wrap_3,
     cwist_mw_jwt_wrap_4, cwist_mw_jwt_wrap_5, cwist_mw_jwt_wrap_6, cwist_mw_jwt_wrap_7,
 };
+#endif /* CWIST_JWT */
 
 /**
  * @brief Register a JWT secret in a static slot and return the matching middleware wrapper.
  * @param secret Borrowed signing secret used to verify bearer tokens.
- * @return Middleware wrapper bound to the supplied secret, or NULL on overflow.
+ * @return Middleware wrapper bound to the supplied secret, or NULL on overflow
+ *         or when the JWT module is compiled out (CWIST_JWT=0).
  */
 cwist_middleware_func cwist_mw_jwt_auth(const char *secret) {
+#ifdef CWIST_JWT
     if (!secret) return NULL;
 
     pthread_mutex_lock(&s_jwt_cfg_mutex);
@@ -667,6 +671,11 @@ cwist_middleware_func cwist_mw_jwt_auth(const char *secret) {
 
     pthread_mutex_unlock(&s_jwt_cfg_mutex);
     return s_jwt_wrappers[slot];
+#else
+    /* JWT compiled out (CWIST_JWT=0): no wrapper can verify tokens. */
+    (void)secret;
+    return NULL;
+#endif
 }
 
 /**
