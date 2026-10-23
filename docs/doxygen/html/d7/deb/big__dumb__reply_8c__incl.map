@@ -1,27 +1,25 @@
 <map id="src/sys/app/big_dumb_reply.c" name="src/sys/app/big_dumb_reply.c">
-<area shape="rect" id="Node000001" title="Opportunistic response cache that stores stable GET replies in memory or on disk." alt="" coords="842,5,1005,45"/>
+<area shape="rect" id="Node000001" title="Opportunistic response cache that stores stable GET replies in memory or on disk." alt="" coords="817,5,979,45"/>
 <area shape="rect" id="Node000002" href="$da/d2c/big__dumb__reply_8h.html" title="Auto&#45;Caching Layer for repetitive requests." alt="" coords="315,93,494,133"/>
-<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="842,43,508,98,507,92,841,37"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="817,43,508,97,507,92,816,38"/>
 <area shape="rect" id="Node000004" title=" " alt="" coords="435,277,505,302"/>
-<area shape="poly" id="edge32_Node000001_Node000004" title=" " alt="" coords="891,48,821,95,794,123,761,161,727,198,697,224,649,245,609,254,568,259,517,272,511,274,509,269,516,267,567,254,608,249,648,240,694,219,723,194,757,157,790,119,818,91,888,43"/>
+<area shape="poly" id="edge31_Node000001_Node000004" title=" " alt="" coords="872,48,811,95,756,161,725,198,697,224,650,246,609,254,568,260,517,272,511,274,509,269,516,267,567,254,609,249,648,241,694,219,721,195,752,158,807,91,868,43"/>
 <area shape="rect" id="Node000005" title=" " alt="" coords="529,277,600,302"/>
-<area shape="poly" id="edge31_Node000001_Node000005" title=" " alt="" coords="906,48,859,95,827,132,804,164,779,193,741,224,708,242,679,252,614,272,608,274,606,269,612,267,678,247,705,238,738,219,775,189,800,160,823,129,855,92,902,44"/>
+<area shape="poly" id="edge30_Node000001_Node000005" title=" " alt="" coords="885,47,802,151,741,223,708,243,680,253,614,272,608,274,606,269,612,267,678,248,706,238,738,219,798,147,881,44"/>
 <area shape="rect" id="Node000013" href="$d2/dfe/alloc_8h.html" title="Memory allocation wrappers backed by libttak." alt="" coords="1045,189,1218,214"/>
-<area shape="poly" id="edge15_Node000001_Node000013" title=" " alt="" coords="925,45,930,89,938,111,951,132,970,149,992,163,1040,183,1038,188,989,168,966,153,947,135,933,114,925,90,920,46"/>
+<area shape="poly" id="edge15_Node000001_Node000013" title=" " alt="" coords="905,45,920,88,933,111,951,131,973,149,999,163,1052,183,1050,188,996,168,970,153,947,135,929,114,916,90,900,46"/>
 <area shape="rect" id="Node000017" href="$d0/db0/core_2siphash_2siphash_8h.html" title=" " alt="" coords="801,269,944,309"/>
-<area shape="poly" id="edge21_Node000001_Node000017" title=" " alt="" coords="922,46,882,256,876,255,917,45"/>
+<area shape="poly" id="edge21_Node000001_Node000017" title=" " alt="" coords="899,46,878,256,873,255,894,45"/>
 <area shape="rect" id="Node000018" href="$da/d41/sys__info_8h.html" title="System Resource Monitoring Utilities." alt="" coords="625,277,777,302"/>
-<area shape="poly" id="edge24_Node000001_Node000018" title=" " alt="" coords="915,47,867,127,832,177,792,223,762,250,732,271,729,267,759,246,788,219,827,173,862,125,911,44"/>
+<area shape="poly" id="edge24_Node000001_Node000018" title=" " alt="" coords="893,47,856,127,827,177,792,223,763,250,734,271,731,267,760,246,788,220,822,174,851,125,888,44"/>
 <area shape="rect" id="Node000019" href="$da/dec/core_2macros_8h.html" title="Convenience size&#45;conversion and utility macros shared across CWIST." alt="" coords="961,101,1113,126"/>
-<area shape="poly" id="edge28_Node000001_Node000019" title=" " alt="" coords="950,43,1012,90,1009,94,947,48"/>
+<area shape="poly" id="edge28_Node000001_Node000019" title=" " alt="" coords="930,43,1008,91,1005,96,927,48"/>
 <area shape="rect" id="Node000020" title=" " alt="" coords="1137,101,1278,126"/>
-<area shape="poly" id="edge29_Node000001_Node000020" title=" " alt="" coords="986,43,1157,94,1156,99,985,48"/>
-<area shape="rect" id="Node000021" title=" " alt="" coords="1303,101,1381,126"/>
-<area shape="poly" id="edge30_Node000001_Node000021" title=" " alt="" coords="1005,35,1140,57,1291,91,1301,94,1299,99,1289,96,1139,62,1005,40"/>
-<area shape="rect" id="Node000022" title=" " alt="" coords="1406,101,1473,126"/>
-<area shape="poly" id="edge33_Node000001_Node000022" title=" " alt="" coords="1005,29,1185,49,1291,67,1395,91,1403,93,1401,98,1393,96,1290,72,1185,55,1005,35"/>
-<area shape="rect" id="Node000023" title=" " alt="" coords="1497,101,1568,126"/>
-<area shape="poly" id="edge34_Node000001_Node000023" title=" " alt="" coords="1005,27,1103,34,1224,45,1355,64,1485,91,1495,93,1493,99,1484,96,1354,69,1223,51,1103,39,1005,33"/>
+<area shape="poly" id="edge29_Node000001_Node000020" title=" " alt="" coords="967,43,1154,94,1152,100,965,48"/>
+<area shape="rect" id="Node000021" title=" " alt="" coords="1302,101,1369,126"/>
+<area shape="poly" id="edge32_Node000001_Node000021" title=" " alt="" coords="980,33,1126,54,1209,70,1291,91,1298,93,1297,98,1289,96,1208,75,1125,59,979,38"/>
+<area shape="rect" id="Node000022" title=" " alt="" coords="1393,101,1464,126"/>
+<area shape="poly" id="edge33_Node000001_Node000022" title=" " alt="" coords="980,29,1165,50,1274,67,1381,91,1391,94,1389,99,1380,96,1273,72,1164,55,979,35"/>
 <area shape="rect" id="Node000003" href="$d4/dbd/core_2sstring_2sstring_8h.html" title="Safe string type with helper methods." alt="" coords="337,181,473,221"/>
 <area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="407,134,407,167,402,167,402,134"/>
 <area shape="rect" id="Node000006" title=" " alt="" coords="383,357,466,383"/>

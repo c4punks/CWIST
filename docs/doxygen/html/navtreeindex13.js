@@ -1,7 +1,5 @@
 var NAVTREEINDEX13 =
 {
-"da/dc2/bind_8h.html#a454338c5b7f23725d0bd86c03fcc1c8b":[87,0,1,0,0,10,0,31],
-"da/dc2/bind_8h.html#a4cadc78d10cf4e3c57e5ef4e05736335":[87,0,1,0,0,10,0,8],
 "da/dc2/bind_8h.html#a503e73e8a6906b3b83d523314eabba4c":[87,0,1,0,0,10,0,6],
 "da/dc2/bind_8h.html#a52ad8ad07ea09774858867d4270634cd":[87,0,1,0,0,10,0,11],
 "da/dc2/bind_8h.html#a592b5bbf485e97a586a3db5735fab508":[87,0,1,0,0,10,0,12],
@@ -249,5 +247,7 @@ var NAVTREEINDEX13 =
 "db/d8a/structcwist__http__async__conn.html#a0b9d8ab4353bbd3ce2876d5a8fb5e9f6":[86,0,44,7],
 "db/d8a/structcwist__http__async__conn.html#a29aafbe9496f8be60a5d9f4c8b83d8bc":[86,0,44,9],
 "db/d8a/structcwist__http__async__conn.html#a30a010d2d9caa8d4a79e95bcf6acfde1":[86,0,44,2],
-"db/d8a/structcwist__http__async__conn.html#a47b7632336be932d12e25ab0cd318a34":[86,0,44,3]
+"db/d8a/structcwist__http__async__conn.html#a47b7632336be932d12e25ab0cd318a34":[86,0,44,3],
+"db/d8a/structcwist__http__async__conn.html#a5e64d22487c86624d3f8ac5c16f3cd65":[86,0,44,8],
+"db/d8a/structcwist__http__async__conn.html#a64bce0dc8e29f81e1bb4d84549a191c8":[86,0,44,19]
 };

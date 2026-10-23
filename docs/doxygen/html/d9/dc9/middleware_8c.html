@@ -327,10 +327,6 @@ Macros</h2></td></tr>
 <tr class="separator:aaa145c8dd649048698cdf6e086f6d9f9"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a48d6e1ee5e0431412e7421e08d29750e" id="r_a48d6e1ee5e0431412e7421e08d29750e"><td class="memItemLeft" align="right" valign="top">#define&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d9/dc9/middleware_8c.html#a48d6e1ee5e0431412e7421e08d29750e">CWIST_RATE_LIMIT_DEFINE_WRAPPER</a>(N)</td></tr>
 <tr class="separator:a48d6e1ee5e0431412e7421e08d29750e"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a2288bbf3d5e4da30f5da07dec19971ad" id="r_a2288bbf3d5e4da30f5da07dec19971ad"><td class="memItemLeft" align="right" valign="top">#define&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d9/dc9/middleware_8c.html#a2288bbf3d5e4da30f5da07dec19971ad">CWIST_JWT_MAX_SECRETS</a>&#160;&#160;&#160;8</td></tr>
-<tr class="separator:a2288bbf3d5e4da30f5da07dec19971ad"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:ad7de38f8347fe00c4118c9bb64fca2f2" id="r_ad7de38f8347fe00c4118c9bb64fca2f2"><td class="memItemLeft" align="right" valign="top">#define&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d9/dc9/middleware_8c.html#ad7de38f8347fe00c4118c9bb64fca2f2">CWIST_JWT_DEFINE_WRAPPER</a>(N)</td></tr>
-<tr class="separator:ad7de38f8347fe00c4118c9bb64fca2f2"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="typedef-members" name="typedef-members"></a>
 Typedefs</h2></td></tr>
@@ -394,49 +390,6 @@ Functions</h2></td></tr>
 
 </div>
 </div>
-<a id="ad7de38f8347fe00c4118c9bb64fca2f2" name="ad7de38f8347fe00c4118c9bb64fca2f2"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#ad7de38f8347fe00c4118c9bb64fca2f2">&#9670;&#160;</a></span>CWIST_JWT_DEFINE_WRAPPER</h2>
-
-<div class="memitem">
-<div class="memproto">
-      <table class="memname">
-        <tr>
-          <td class="memname">#define CWIST_JWT_DEFINE_WRAPPER</td>
-          <td>(</td>
-          <td class="paramtype">&#160;</td>
-          <td class="paramname">N</td><td>)</td>
-          <td></td>
-        </tr>
-      </table>
-</div><div class="memdoc">
-<b>Value:</b><div class="fragment"><div class="line">    <span class="keyword">static</span> <span class="keywordtype">void</span> cwist_mw_jwt_wrap_##N(<a class="code hl_struct" href="../../dd/d68/structcwist__http__request.html">cwist_http_request</a> *req, <a class="code hl_struct" href="../../dd/d22/structcwist__http__response.html">cwist_http_response</a> *res, \</div>
-<div class="line">                                      <a class="code hl_typedef" href="../../d0/d77/sys_2app_2app_8h.html#a2a3910c6b268a4a04e17075671a4c28c">cwist_handler_func</a> next) {                         \</div>
-<div class="line">        cwist_mw_jwt_auth_handler(req, res, next, s_jwt_cfgs[N].secret);                 \</div>
-<div class="line">    }</div>
-<div class="ttc" id="astructcwist__http__request_html"><div class="ttname"><a href="../../dd/d68/structcwist__http__request.html">cwist_http_request</a></div><div class="ttdef"><b>Definition</b> <a href="../../dd/d56/http_8h_source.html#l00065">http.h:65</a></div></div>
-<div class="ttc" id="astructcwist__http__response_html"><div class="ttname"><a href="../../dd/d22/structcwist__http__response.html">cwist_http_response</a></div><div class="ttdoc">HTTP Response Object. Supports standard string body or Zero-Copy pointer body.</div><div class="ttdef"><b>Definition</b> <a href="../../dd/d56/http_8h_source.html#l00082">http.h:82</a></div></div>
-<div class="ttc" id="asys_2app_2app_8h_html_a2a3910c6b268a4a04e17075671a4c28c"><div class="ttname"><a href="../../d0/d77/sys_2app_2app_8h.html#a2a3910c6b268a4a04e17075671a4c28c">cwist_handler_func</a></div><div class="ttdeci">void(* cwist_handler_func)(cwist_http_request *req, cwist_http_response *res)</div><div class="ttdoc">Function pointer type for HTTP route handlers.</div><div class="ttdef"><b>Definition</b> <a href="../../d0/d77/sys_2app_2app_8h_source.html#l00032">app.h:32</a></div></div>
-</div><!-- fragment -->
-<p class="definition">Definition at line <a class="el" href="../../d9/dc9/middleware_8c_source.html#l00621">621</a> of file <a class="el" href="../../d9/dc9/middleware_8c_source.html">middleware.c</a>.</p>
-
-</div>
-</div>
-<a id="a2288bbf3d5e4da30f5da07dec19971ad" name="a2288bbf3d5e4da30f5da07dec19971ad"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a2288bbf3d5e4da30f5da07dec19971ad">&#9670;&#160;</a></span>CWIST_JWT_MAX_SECRETS</h2>
-
-<div class="memitem">
-<div class="memproto">
-      <table class="memname">
-        <tr>
-          <td class="memname">#define CWIST_JWT_MAX_SECRETS&#160;&#160;&#160;8</td>
-        </tr>
-      </table>
-</div><div class="memdoc">
-
-<p class="definition">Definition at line <a class="el" href="../../d9/dc9/middleware_8c_source.html#l00612">612</a> of file <a class="el" href="../../d9/dc9/middleware_8c_source.html">middleware.c</a>.</p>
-
-</div>
-</div>
 <a id="a48d6e1ee5e0431412e7421e08d29750e" name="a48d6e1ee5e0431412e7421e08d29750e"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#a48d6e1ee5e0431412e7421e08d29750e">&#9670;&#160;</a></span>CWIST_RATE_LIMIT_DEFINE_WRAPPER</h2>
 
@@ -456,6 +409,9 @@ Functions</h2></td></tr>
 <div class="line">                                             <a class="code hl_typedef" href="../../d0/d77/sys_2app_2app_8h.html#a2a3910c6b268a4a04e17075671a4c28c">cwist_handler_func</a> next) {                         \</div>
 <div class="line">        cwist_mw_rate_limit_ip_handler(req, res, next, s_rate_cfgs[N].rpm);                     \</div>
 <div class="line">    }</div>
+<div class="ttc" id="astructcwist__http__request_html"><div class="ttname"><a href="../../dd/d68/structcwist__http__request.html">cwist_http_request</a></div><div class="ttdef"><b>Definition</b> <a href="../../dd/d56/http_8h_source.html#l00065">http.h:65</a></div></div>
+<div class="ttc" id="astructcwist__http__response_html"><div class="ttname"><a href="../../dd/d22/structcwist__http__response.html">cwist_http_response</a></div><div class="ttdoc">HTTP Response Object. Supports standard string body or Zero-Copy pointer body.</div><div class="ttdef"><b>Definition</b> <a href="../../dd/d56/http_8h_source.html#l00082">http.h:82</a></div></div>
+<div class="ttc" id="asys_2app_2app_8h_html_a2a3910c6b268a4a04e17075671a4c28c"><div class="ttname"><a href="../../d0/d77/sys_2app_2app_8h.html#a2a3910c6b268a4a04e17075671a4c28c">cwist_handler_func</a></div><div class="ttdeci">void(* cwist_handler_func)(cwist_http_request *req, cwist_http_response *res)</div><div class="ttdoc">Function pointer type for HTTP route handlers.</div><div class="ttdef"><b>Definition</b> <a href="../../d0/d77/sys_2app_2app_8h_source.html#l00032">app.h:32</a></div></div>
 </div><!-- fragment -->
 <p class="definition">Definition at line <a class="el" href="../../d9/dc9/middleware_8c_source.html#l00426">426</a> of file <a class="el" href="../../d9/dc9/middleware_8c_source.html">middleware.c</a>.</p>
 
@@ -641,11 +597,9 @@ Functions</h2></td></tr>
   </table>
   </dd>
 </dl>
-<dl class="section return"><dt>Returns</dt><dd>Middleware wrapper bound to the supplied secret, or NULL on overflow. </dd></dl>
+<dl class="section return"><dt>Returns</dt><dd>Middleware wrapper bound to the supplied secret, or NULL on overflow or when the JWT module is compiled out (CWIST_JWT=0). </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d9/dc9/middleware_8c_source.html#l00646">646</a> of file <a class="el" href="../../d9/dc9/middleware_8c_source.html">middleware.c</a>.</p>
-
-<p class="reference">References <a class="el" href="../../d9/dc9/middleware_8c_source.html#l00612">CWIST_JWT_MAX_SECRETS</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d9/dc9/middleware_8c_source.html#l00649">649</a> of file <a class="el" href="../../d9/dc9/middleware_8c_source.html">middleware.c</a>.</p>
 
 </div>
 </div>
@@ -675,7 +629,7 @@ Functions</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>Active decoded claims, or NULL when the request is not inside JWT auth on this thread. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d9/dc9/middleware_8c_source.html#l00678">678</a> of file <a class="el" href="../../d9/dc9/middleware_8c_source.html">middleware.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d9/dc9/middleware_8c_source.html#l00687">687</a> of file <a class="el" href="../../d9/dc9/middleware_8c_source.html">middleware.c</a>.</p>
 
 </div>
 </div>

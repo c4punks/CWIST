@@ -1,7 +1,5 @@
 var NAVTREEINDEX17 =
 {
-"dd/d56/http_8h.html#ae7b52eebcb4d266bd4ec47b2649c16eb":[87,0,1,0,9,35],
-"dd/d56/http_8h.html#ae892deec8136b97f649a018b019e94fb":[87,0,1,0,9,42],
 "dd/d56/http_8h.html#aea59d45103e34f92d265b2df3d7102cf":[87,0,1,0,9,8],
 "dd/d56/http_8h.html#afe92033adc5b6922f589f9c5125b2666":[87,0,1,0,9,25],
 "dd/d56/http_8h_source.html":[87,0,1,0,9],
@@ -249,5 +247,7 @@ var NAVTREEINDEX17 =
 "de/d49/cookie_8c.html#af0cbca640a3104b61278dd2d9a6b91d0":[87,0,2,2,3,5,2],
 "de/d49/cookie_8c.html#afdcb10d812fd677194c8a6a96742ece1":[87,0,2,2,3,5,3],
 "de/d49/cookie_8c.html#affe5d5d5278e31c936fb16a3777edfc1":[87,0,2,2,3,5,5],
-"de/d49/cookie_8c_source.html":[87,0,2,2,3,5]
+"de/d49/cookie_8c_source.html":[87,0,2,2,3,5],
+"de/d51/md_docs_2decisions_20001-safe-public-fixed-response-cache.html":[21],
+"de/d51/md_docs_2decisions_20001-safe-public-fixed-response-cache.html#autotoc_md265":[21,0]
 };

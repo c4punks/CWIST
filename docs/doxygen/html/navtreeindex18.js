@@ -1,7 +1,5 @@
 var NAVTREEINDEX18 =
 {
-"de/d51/md_docs_2decisions_20001-safe-public-fixed-response-cache.html":[21],
-"de/d51/md_docs_2decisions_20001-safe-public-fixed-response-cache.html#autotoc_md265":[21,0],
 "de/d51/md_docs_2decisions_20001-safe-public-fixed-response-cache.html#autotoc_md266":[21,1],
 "de/d51/md_docs_2decisions_20001-safe-public-fixed-response-cache.html#autotoc_md267":[21,1,0],
 "de/d51/md_docs_2decisions_20001-safe-public-fixed-response-cache.html#autotoc_md268":[21,1,1],
@@ -249,5 +247,7 @@ var NAVTREEINDEX18 =
 "df/d4c/compress_8h.html#a013f1603572acfd49aae53b6dc30e062":[87,0,1,0,4,0,3,5],
 "df/d4c/compress_8h.html#a0c3f9fa4779047ccee5dee85989a7153":[87,0,1,0,4,0,3,3],
 "df/d4c/compress_8h.html#a57c833698905b401cc5e4914870c4c4c":[87,0,1,0,4,0,3,6],
-"df/d4c/compress_8h.html#a61f0495c65b6e9a71ddbc224699d06f2":[87,0,1,0,4,0,3,2]
+"df/d4c/compress_8h.html#a61f0495c65b6e9a71ddbc224699d06f2":[87,0,1,0,4,0,3,2],
+"df/d4c/compress_8h.html#aa1b3515b51073e8b429cfa5f442ae56f":[87,0,1,0,4,0,3,1],
+"df/d4c/compress_8h.html#abf34e6f515162b89d169d928fd34327c":[87,0,1,0,4,0,3,8]
 };

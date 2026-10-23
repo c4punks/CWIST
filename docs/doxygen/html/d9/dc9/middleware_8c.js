@@ -1,8 +1,6 @@
 var middleware_8c =
 [
     [ "_POSIX_C_SOURCE", "d9/dc9/middleware_8c.html#a3024ccd4a9af5109d24e6c57565d74a1", null ],
-    [ "CWIST_JWT_DEFINE_WRAPPER", "d9/dc9/middleware_8c.html#ad7de38f8347fe00c4118c9bb64fca2f2", null ],
-    [ "CWIST_JWT_MAX_SECRETS", "d9/dc9/middleware_8c.html#a2288bbf3d5e4da30f5da07dec19971ad", null ],
     [ "CWIST_RATE_LIMIT_DEFINE_WRAPPER", "d9/dc9/middleware_8c.html#a48d6e1ee5e0431412e7421e08d29750e", null ],
     [ "CWIST_RATE_LIMIT_MAX_CFGS", "d9/dc9/middleware_8c.html#aaa145c8dd649048698cdf6e086f6d9f9", null ],
     [ "MAX_IP_BUCKETS", "d9/dc9/middleware_8c.html#afab03948cc93e496f7212921f92ae4a1", null ],

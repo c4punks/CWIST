@@ -1,7 +1,5 @@
 var NAVTREEINDEX20 =
 {
-"df/df1/md_docs_2tutorial_2korean_2cwist__tutorial.html#autotoc_md848":[78,12,2],
-"df/dff/log__async_8c.html":[87,0,2,4,0,7],
 "df/dff/log__async_8c.html#a13c44db93f8c16244d93695832086aa4":[87,0,2,4,0,7,2],
 "df/dff/log__async_8c.html#a3024ccd4a9af5109d24e6c57565d74a1":[87,0,2,4,0,7,0],
 "df/dff/log__async_8c.html#a322344c51ccd91d70f8434d1aa2d9275":[87,0,2,4,0,7,7],
@@ -156,8 +154,8 @@ var NAVTREEINDEX20 =
 "globals_b.html":[87,1,0,2],
 "globals_c.html":[87,1,0,3],
 "globals_d.html":[87,1,0,4],
-"globals_defs.html":[87,1,6],
 "globals_defs.html":[87,1,6,0],
+"globals_defs.html":[87,1,6],
 "globals_defs_a.html":[87,1,6,1],
 "globals_defs_b.html":[87,1,6,2],
 "globals_defs_c.html":[87,1,6,3],

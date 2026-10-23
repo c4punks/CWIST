@@ -1,7 +1,5 @@
 var NAVTREEINDEX16 =
 {
-"dd/d38/md_docs_2ko_2tutorials_2nats-integration.html#autotoc_md673":[63,2],
-"dd/d3b/webrtc_8h.html":[87,0,1,0,2,8],
 "dd/d3b/webrtc_8h.html#a1ebc38dcb3ff4fc59ed6a8f06451e7c2":[87,0,1,0,2,8,7],
 "dd/d3b/webrtc_8h.html#a2d398afca3c8bd21b75b5f4275e4138c":[87,0,1,0,2,8,12],
 "dd/d3b/webrtc_8h.html#a2e68b4fd4a81537765e7213744f75812":[87,0,1,0,2,8,18],
@@ -249,5 +247,7 @@ var NAVTREEINDEX16 =
 "dd/d56/http_8h.html#ad4f205483fdf9bae9a40d62840abbfd7":[87,0,1,0,9,14],
 "dd/d56/http_8h.html#ad5e721abc6a6d21ff0678514184ecedb":[87,0,1,0,9,18],
 "dd/d56/http_8h.html#add049d61615496ffa26d43acd4b6fbc5":[87,0,1,0,9,43],
-"dd/d56/http_8h.html#adde639ceb53c7811c918fc8ceb0a655b":[87,0,1,0,9,22]
+"dd/d56/http_8h.html#adde639ceb53c7811c918fc8ceb0a655b":[87,0,1,0,9,22],
+"dd/d56/http_8h.html#ae7b52eebcb4d266bd4ec47b2649c16eb":[87,0,1,0,9,35],
+"dd/d56/http_8h.html#ae892deec8136b97f649a018b019e94fb":[87,0,1,0,9,42]
 };

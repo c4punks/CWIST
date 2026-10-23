@@ -1,7 +1,5 @@
 var NAVTREEINDEX19 =
 {
-"df/d4c/compress_8h.html#aa1b3515b51073e8b429cfa5f442ae56f":[87,0,1,0,4,0,3,1],
-"df/d4c/compress_8h.html#abf34e6f515162b89d169d928fd34327c":[87,0,1,0,4,0,3,8],
 "df/d4c/compress_8h.html#ac4d46953471ce216fe2ab53d6ad2fb3a":[87,0,1,0,4,0,3,7],
 "df/d4c/compress_8h.html#af0fe70fc60745ce6e5a640b044a53f5d":[87,0,1,0,4,0,3,4],
 "df/d4c/compress_8h_source.html":[87,0,1,0,4,0,3],
@@ -249,5 +247,7 @@ var NAVTREEINDEX19 =
 "df/df1/md_docs_2tutorial_2korean_2cwist__tutorial.html#autotoc_md842":[78,11],
 "df/df1/md_docs_2tutorial_2korean_2cwist__tutorial.html#autotoc_md844":[78,12],
 "df/df1/md_docs_2tutorial_2korean_2cwist__tutorial.html#autotoc_md845":[78,12,0],
-"df/df1/md_docs_2tutorial_2korean_2cwist__tutorial.html#autotoc_md846":[78,12,1]
+"df/df1/md_docs_2tutorial_2korean_2cwist__tutorial.html#autotoc_md846":[78,12,1],
+"df/df1/md_docs_2tutorial_2korean_2cwist__tutorial.html#autotoc_md848":[78,12,2],
+"df/dff/log__async_8c.html":[87,0,2,4,0,7]
 };

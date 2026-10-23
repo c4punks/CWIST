@@ -475,11 +475,9 @@ Functions</h2></td></tr>
   </table>
   </dd>
 </dl>
-<dl class="section return"><dt>Returns</dt><dd>Middleware wrapper bound to the supplied secret, or NULL on overflow. </dd></dl>
+<dl class="section return"><dt>Returns</dt><dd>Middleware wrapper bound to the supplied secret, or NULL on overflow or when the JWT module is compiled out (CWIST_JWT=0). </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d9/dc9/middleware_8c_source.html#l00646">646</a> of file <a class="el" href="../../d9/dc9/middleware_8c_source.html">middleware.c</a>.</p>
-
-<p class="reference">References <a class="el" href="../../d9/dc9/middleware_8c_source.html#l00612">CWIST_JWT_MAX_SECRETS</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d9/dc9/middleware_8c_source.html#l00649">649</a> of file <a class="el" href="../../d9/dc9/middleware_8c_source.html">middleware.c</a>.</p>
 
 </div>
 </div>
@@ -517,7 +515,7 @@ Functions</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>Active decoded claims, or NULL when the request is not inside JWT auth on this thread. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d9/dc9/middleware_8c_source.html#l00678">678</a> of file <a class="el" href="../../d9/dc9/middleware_8c_source.html">middleware.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d9/dc9/middleware_8c_source.html#l00687">687</a> of file <a class="el" href="../../d9/dc9/middleware_8c_source.html">middleware.c</a>.</p>
 
 </div>
 </div>
