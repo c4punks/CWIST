@@ -11,6 +11,8 @@ name: "Fat archive"
 #   fat-toggle   — flipping CWIST_FAT re-archives without recompiling objects
 #   fat-examples — every example builds with CWIST_APP_FAT=1 and no vendored
 #                  archive on its link line
+#   fat-trim     — CWIST_TINY=1 / CWIST_DB=0 trimmed bundles drop the right
+#                  members and still pass the link smoke
 
 on:
   push:
@@ -218,3 +220,70 @@ jobs:
         echo "$count example link lines"
         test "$count" -ge 20
         ! printf '%s\n' "$links" | grep -q 'lib/[a-z0-9_/-]*/[^ ]*\.a'
+
+  # Compile-time feature trimming (CWIST_TINY / CWIST_DB and friends): the
+  # dropped subsystems must leave no objects in the fat archive, the kept
+  # core must still satisfy the same embedded-style link smoke as the full
+  # build, and the sizes go on record for comparison.
+  fat-trim:
+    name: Trimmed fat archive (${{ matrix.cfg }})
+    if: github.event_name != 'push' || !contains(github.event.head_commit.message, '[skip ci]')
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        cfg: ["CWIST_TINY=1", "CWIST_DB=0"]
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      with:
+        submodules: recursive
+
+    - name: Install build dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y cmake libcurl4-openssl-dev libnghttp2-dev libbrotli-dev libzstd-dev
+
+    - name: Build the trimmed fat archive and embedded bundle
+      run: make ${{ matrix.cfg }} fat-dist -j"$(nproc)"
+
+    - name: Verify dropped members are gone and kept members stay
+      run: |
+        if [ "${{ matrix.cfg }}" = "CWIST_TINY=1" ]; then
+          # HTTP/3 off: no lsquic objects; DB off: no sqlite; NATS off: no
+          # libnats symbols (its member names carry no 'nats' substring).
+          ! ar t libcwist.a | grep -q '^lsqpack\.c\.o$'
+          ! ar t libcwist.a | grep -q '^sqlite3\.o$'
+          ! nm --defined-only libcwist.a 2>/dev/null | grep -qw 'T natsConnection_Connect'
+        else
+          # CWIST_DB=0: sqlite is out, HTTP/3 (lsquic) stays in.
+          ! ar t libcwist.a | grep -q '^sqlite3\.o$'
+          ar t libcwist.a | grep -q '^lsqpack\.c\.o$'
+        fi
+        # Always kept: cJSON and BoringSSL (HTTPS and sessions need it).
+        ar t libcwist.a | grep -q '^cJSON\.o$'
+        nm --defined-only libcwist.a 2>/dev/null | grep -qw 'T SSL_new'
+
+    - name: Embedded-style link smoke (bundle + app source only)
+      run: |
+        # Same smoke as the full-feature fat job: only the bundle, the app
+        # source, and system libraries participate in the link.
+        work=$(mktemp -d)
+        cp -r dist/cwist-fat "$work/bundle"
+        cp example/micro/01-hello/main.c "$work/"
+        cd "$work"
+        "${CC:-gcc}" -O2 -std=gnu17 -Ibundle/include -o hello main.c \
+          bundle/lib/libcwist.a \
+          $(pkg-config --libs libcurl libnghttp2 libbrotlienc libbrotlicommon libbrotlidec libzstd) \
+          -pthread -ldl -lm -lstdc++ -lz
+        ./hello &
+        pid=$!
+        sleep 2
+        test "$(curl -s -m 3 http://127.0.0.1:8080/)" = "Hello, CWIST!"
+        kill "$pid"
+
+    - name: Record archive sizes
+      run: |
+        ls -l libcwist.a dist/cwist-fat/lib/libcwist.a
+        size libcwist.a 2>/dev/null || true
