@@ -32,6 +32,8 @@
 #include <openssl/rand.h>
 #include <openssl/crypto.h>
 
+#include <cwist/core/mem/alloc.h>
+
 #include <mbedtls/ssl.h>
 #include <mbedtls/ssl_cache.h>
 #include <mbedtls/ssl_ticket.h>
@@ -109,8 +111,8 @@ static int cwist_mtls_rng_init_locked(void) {
 
     mbedtls_entropy_init(&cwist_mtls_entropy);
     mbedtls_ctr_drbg_init(&cwist_mtls_drbg);
-    int ret = mbedtls_ctr_drbg_seed(&cwist_mtls_drbg, mbedtls_entropy_func, &cwist_mtls_entropy,
-                                    NULL, 0);
+    int ret =
+        mbedtls_ctr_drbg_seed(&cwist_mtls_drbg, mbedtls_entropy_func, &cwist_mtls_entropy, NULL, 0);
     if (ret != 0) {
         cwist_mtls_set_err(ret);
         mbedtls_ctr_drbg_free(&cwist_mtls_drbg);
@@ -185,7 +187,8 @@ struct cwist_mtls_hmac_ctx {
 };
 
 HMAC_CTX *cwist_mtls_HMAC_CTX_new(void) {
-    HMAC_CTX *ctx = (HMAC_CTX *)calloc(1, sizeof(*ctx));
+    HMAC_CTX *ctx = (HMAC_CTX *)cwist_malloc(sizeof(*ctx));
+    if (ctx) memset(ctx, 0, sizeof(*ctx));
     if (ctx) mbedtls_md_init(&ctx->md);
     return ctx;
 }
@@ -193,7 +196,7 @@ HMAC_CTX *cwist_mtls_HMAC_CTX_new(void) {
 void cwist_mtls_HMAC_CTX_free(HMAC_CTX *ctx) {
     if (!ctx) return;
     mbedtls_md_free(&ctx->md);
-    free(ctx);
+    cwist_free(ctx);
 }
 
 int cwist_mtls_HMAC_Init_ex(HMAC_CTX *ctx, const void *key, int key_len, const EVP_MD *md,
@@ -243,7 +246,8 @@ struct cwist_mtls_cipher_ctx {
 };
 
 EVP_CIPHER_CTX *cwist_mtls_EVP_CIPHER_CTX_new(void) {
-    EVP_CIPHER_CTX *ctx = (EVP_CIPHER_CTX *)calloc(1, sizeof(*ctx));
+    EVP_CIPHER_CTX *ctx = (EVP_CIPHER_CTX *)cwist_malloc(sizeof(*ctx));
+    if (ctx) memset(ctx, 0, sizeof(*ctx));
     if (ctx) mbedtls_cipher_init(&ctx->cipher);
     return ctx;
 }
@@ -251,7 +255,7 @@ EVP_CIPHER_CTX *cwist_mtls_EVP_CIPHER_CTX_new(void) {
 void cwist_mtls_EVP_CIPHER_CTX_free(EVP_CIPHER_CTX *ctx) {
     if (!ctx) return;
     mbedtls_cipher_free(&ctx->cipher);
-    free(ctx);
+    cwist_free(ctx);
 }
 
 static int cwist_mtls_cipher_init(EVP_CIPHER_CTX *ctx, const EVP_CIPHER *type,
@@ -389,7 +393,8 @@ static _Atomic int cwist_mtls_ex_data_next;
 
 SSL_CTX *cwist_mtls_SSL_CTX_new(const SSL_METHOD *method) {
     if (!method) return NULL;
-    SSL_CTX *ctx = (SSL_CTX *)calloc(1, sizeof(*ctx));
+    SSL_CTX *ctx = (SSL_CTX *)cwist_malloc(sizeof(*ctx));
+    if (ctx) memset(ctx, 0, sizeof(*ctx));
     if (!ctx) return NULL;
 
     ctx->is_server = method->is_server;
@@ -399,16 +404,15 @@ SSL_CTX *cwist_mtls_SSL_CTX_new(const SSL_METHOD *method) {
     mbedtls_x509_crt_init(&ctx->ca_chain);
     mbedtls_ssl_cache_init(&ctx->cache);
 
-    if (mbedtls_ssl_config_defaults(&ctx->conf,
-                                    ctx->is_server ? MBEDTLS_SSL_IS_SERVER : MBEDTLS_SSL_IS_CLIENT,
-                                    MBEDTLS_SSL_TRANSPORT_STREAM,
-                                    MBEDTLS_SSL_PRESET_DEFAULT) != 0) {
+    if (mbedtls_ssl_config_defaults(
+            &ctx->conf, ctx->is_server ? MBEDTLS_SSL_IS_SERVER : MBEDTLS_SSL_IS_CLIENT,
+            MBEDTLS_SSL_TRANSPORT_STREAM, MBEDTLS_SSL_PRESET_DEFAULT) != 0) {
         mbedtls_ssl_cache_free(&ctx->cache);
         mbedtls_x509_crt_free(&ctx->ca_chain);
         mbedtls_pk_free(&ctx->pkey);
         mbedtls_x509_crt_free(&ctx->cert);
         mbedtls_ssl_config_free(&ctx->conf);
-        free(ctx);
+        cwist_free(ctx);
         return NULL;
     }
 
@@ -443,9 +447,9 @@ static void cwist_mtls_ctx_destroy(SSL_CTX *ctx) {
     mbedtls_ssl_cache_free(&ctx->cache);
     if (ctx->ticket) {
         mbedtls_ssl_ticket_free(ctx->ticket);
-        free(ctx->ticket);
+        cwist_free(ctx->ticket);
     }
-    free(ctx);
+    cwist_free(ctx);
 }
 
 void cwist_mtls_SSL_CTX_free(SSL_CTX *ctx) {
@@ -646,11 +650,11 @@ long cwist_mtls_SSL_CTX_set_timeout(SSL_CTX *ctx, long seconds) {
     return seconds;
 }
 
-void cwist_mtls_SSL_CTX_set_alpn_select_cb(
-    SSL_CTX *ctx,
-    int (*cb)(SSL *ssl, const unsigned char **out, unsigned char *outlen, const unsigned char *in,
-              unsigned int inlen, void *arg),
-    void *arg) {
+void cwist_mtls_SSL_CTX_set_alpn_select_cb(SSL_CTX *ctx,
+                                           int (*cb)(SSL *ssl, const unsigned char **out,
+                                                     unsigned char *outlen, const unsigned char *in,
+                                                     unsigned int inlen, void *arg),
+                                           void *arg) {
     if (!ctx || !cb) return;
 
     /* mbedTLS has no server ALPN callback; it picks the first conf-list
@@ -726,10 +730,10 @@ struct cwist_mtls_ticket_key {
     unsigned char hmac_key[32];
 };
 
-void cwist_mtls_SSL_CTX_set_tlsext_ticket_key_cb(
-    SSL_CTX *ctx,
-    int (*cb)(SSL *ssl, unsigned char *key_name, unsigned char *iv, EVP_CIPHER_CTX *ectx,
-              HMAC_CTX *hctx, int enc)) {
+void cwist_mtls_SSL_CTX_set_tlsext_ticket_key_cb(SSL_CTX *ctx,
+                                                 int (*cb)(SSL *ssl, unsigned char *key_name,
+                                                           unsigned char *iv, EVP_CIPHER_CTX *ectx,
+                                                           HMAC_CTX *hctx, int enc)) {
     (void)cb; /* the mbedTLS ticket module replaces the callback mechanism */
     if (!ctx || !ctx->is_server) return;
     if (ctx->options & SSL_OP_NO_TICKET) {
@@ -751,16 +755,17 @@ void cwist_mtls_SSL_CTX_set_tlsext_ticket_key_cb(
     }
     if (!key) return; /* no shared key: leave tickets unconfigured */
 
-    mbedtls_ssl_ticket_context *t = (mbedtls_ssl_ticket_context *)calloc(1, sizeof(*t));
+    mbedtls_ssl_ticket_context *t = (mbedtls_ssl_ticket_context *)cwist_malloc(sizeof(*t));
+    if (t) memset(t, 0, sizeof(*t));
     if (!t) return;
     mbedtls_ssl_ticket_init(t);
     uint32_t lifetime = ctx->timeout_sec > 0 ? (uint32_t)ctx->timeout_sec : 300;
-    int ret = mbedtls_ssl_ticket_setup(t, cwist_mtls_rng_cb, NULL, MBEDTLS_CIPHER_AES_256_GCM,
-                                       lifetime);
+    int ret =
+        mbedtls_ssl_ticket_setup(t, cwist_mtls_rng_cb, NULL, MBEDTLS_CIPHER_AES_256_GCM, lifetime);
     if (ret != 0) {
         cwist_mtls_set_err(ret);
         mbedtls_ssl_ticket_free(t);
-        free(t);
+        cwist_free(t);
         return;
     }
 
@@ -778,7 +783,7 @@ void cwist_mtls_SSL_CTX_set_tlsext_ticket_key_cb(
     if (ret != 0) {
         cwist_mtls_set_err(ret);
         mbedtls_ssl_ticket_free(t);
-        free(t);
+        cwist_free(t);
         return;
     }
     memcpy(t->MBEDTLS_PRIVATE(keys)[0].MBEDTLS_PRIVATE(name), key->name,
@@ -790,7 +795,7 @@ void cwist_mtls_SSL_CTX_set_tlsext_ticket_key_cb(
                                         mbedtls_ssl_ticket_parse, t);
     if (ctx->ticket) {
         mbedtls_ssl_ticket_free(ctx->ticket);
-        free(ctx->ticket);
+        cwist_free(ctx->ticket);
     }
     ctx->ticket = t;
 }
@@ -867,7 +872,8 @@ struct cwist_mtls_ssl {
 
 SSL *cwist_mtls_SSL_new(SSL_CTX *ctx) {
     if (!ctx) return NULL;
-    SSL *s = (SSL *)calloc(1, sizeof(*s));
+    SSL *s = (SSL *)cwist_malloc(sizeof(*s));
+    if (s) memset(s, 0, sizeof(*s));
     if (!s) return NULL;
     mbedtls_ssl_init(&s->ssl);
     mbedtls_net_init(&s->net);
@@ -875,7 +881,7 @@ SSL *cwist_mtls_SSL_new(SSL_CTX *ctx) {
     if (mbedtls_ssl_setup(&s->ssl, &s->conf) != 0) {
         mbedtls_net_free(&s->net);
         mbedtls_ssl_free(&s->ssl);
-        free(s);
+        cwist_free(s);
         return NULL;
     }
     atomic_fetch_add_explicit(&ctx->refs, 1, memory_order_relaxed);
@@ -890,7 +896,7 @@ void cwist_mtls_SSL_free(SSL *ssl) {
     SSL_CTX *ctx = ssl->ctx;
     mbedtls_ssl_free(&ssl->ssl);
     mbedtls_net_free(&ssl->net);
-    free(ssl);
+    cwist_free(ssl);
     if (ctx) cwist_mtls_SSL_CTX_free(ctx);
 }
 
@@ -912,15 +918,9 @@ static int cwist_mtls_map_result(SSL *ssl, int ret, int ok_value) {
         return 1;
     }
     switch (ret) {
-        case MBEDTLS_ERR_SSL_WANT_READ:
-            ssl->last_err = SSL_ERROR_WANT_READ;
-            return -1;
-        case MBEDTLS_ERR_SSL_WANT_WRITE:
-            ssl->last_err = SSL_ERROR_WANT_WRITE;
-            return -1;
-        case MBEDTLS_ERR_SSL_PEER_CLOSE_NOTIFY:
-            ssl->last_err = SSL_ERROR_ZERO_RETURN;
-            return 0;
+        case MBEDTLS_ERR_SSL_WANT_READ: ssl->last_err = SSL_ERROR_WANT_READ; return -1;
+        case MBEDTLS_ERR_SSL_WANT_WRITE: ssl->last_err = SSL_ERROR_WANT_WRITE; return -1;
+        case MBEDTLS_ERR_SSL_PEER_CLOSE_NOTIFY: ssl->last_err = SSL_ERROR_ZERO_RETURN; return 0;
         default:
             cwist_mtls_set_err(ret);
             ssl->last_err = SSL_ERROR_SSL;
@@ -1037,9 +1037,11 @@ const char *cwist_mtls_SSL_get_cipher_name(const SSL *ssl) {
         case MBEDTLS_TLS1_3_AES_128_GCM_SHA256: return "TLS_AES_128_GCM_SHA256";
         case MBEDTLS_TLS1_3_AES_256_GCM_SHA384: return "TLS_AES_256_GCM_SHA384";
         case MBEDTLS_TLS1_3_CHACHA20_POLY1305_SHA256: return "TLS_CHACHA20_POLY1305_SHA256";
-        case MBEDTLS_TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256: return "ECDHE-ECDSA-AES128-GCM-SHA256";
+        case MBEDTLS_TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256:
+            return "ECDHE-ECDSA-AES128-GCM-SHA256";
         case MBEDTLS_TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256: return "ECDHE-RSA-AES128-GCM-SHA256";
-        case MBEDTLS_TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384: return "ECDHE-ECDSA-AES256-GCM-SHA384";
+        case MBEDTLS_TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384:
+            return "ECDHE-ECDSA-AES256-GCM-SHA384";
         case MBEDTLS_TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384: return "ECDHE-RSA-AES256-GCM-SHA384";
         case MBEDTLS_TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305_SHA256:
             return "ECDHE-ECDSA-CHACHA20-POLY1305";

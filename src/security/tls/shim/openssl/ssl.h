@@ -137,11 +137,11 @@ long cwist_mtls_SSL_CTX_sess_set_cache_size(SSL_CTX *ctx, unsigned long size);
 int cwist_mtls_SSL_CTX_set_session_id_context(SSL_CTX *ctx, const unsigned char *sid_ctx,
                                               unsigned int sid_ctx_len);
 long cwist_mtls_SSL_CTX_set_timeout(SSL_CTX *ctx, long seconds);
-void cwist_mtls_SSL_CTX_set_alpn_select_cb(
-    SSL_CTX *ctx,
-    int (*cb)(SSL *ssl, const unsigned char **out, unsigned char *outlen, const unsigned char *in,
-              unsigned int inlen, void *arg),
-    void *arg);
+void cwist_mtls_SSL_CTX_set_alpn_select_cb(SSL_CTX *ctx,
+                                           int (*cb)(SSL *ssl, const unsigned char **out,
+                                                     unsigned char *outlen, const unsigned char *in,
+                                                     unsigned int inlen, void *arg),
+                                           void *arg);
 int cwist_mtls_SSL_CTX_set_alpn_protos(SSL_CTX *ctx, const unsigned char *protos,
                                        unsigned int protos_len);
 #define SSL_set_alpn_protos cwist_mtls_SSL_set_alpn_protos
@@ -150,10 +150,10 @@ int cwist_mtls_SSL_set_alpn_protos(SSL *ssl, const unsigned char *protos, unsign
 int cwist_mtls_SSL_CTX_use_certificate_file(SSL_CTX *ctx, const char *path, int type);
 #define SSL_CTX_get_min_proto_version cwist_mtls_SSL_CTX_get_min_proto_version
 int cwist_mtls_SSL_CTX_get_min_proto_version(const SSL_CTX *ctx);
-void cwist_mtls_SSL_CTX_set_tlsext_ticket_key_cb(
-    SSL_CTX *ctx,
-    int (*cb)(SSL *ssl, unsigned char *key_name, unsigned char *iv, EVP_CIPHER_CTX *ectx,
-              HMAC_CTX *hctx, int enc));
+void cwist_mtls_SSL_CTX_set_tlsext_ticket_key_cb(SSL_CTX *ctx,
+                                                 int (*cb)(SSL *ssl, unsigned char *key_name,
+                                                           unsigned char *iv, EVP_CIPHER_CTX *ectx,
+                                                           HMAC_CTX *hctx, int enc));
 int cwist_mtls_SSL_CTX_get_ex_new_index(long argl, void *argp, void *new_func, void *dup_func,
                                         void *free_func);
 int cwist_mtls_SSL_CTX_set_ex_data(SSL_CTX *ctx, int idx, void *data);
