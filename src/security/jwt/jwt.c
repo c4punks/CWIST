@@ -4,6 +4,19 @@
 #include <cwist/core/seq/seq.h>
 
 #include <cjson/cJSON.h>
+
+#if defined(CWIST_TLS_MBEDTLS)
+/* mbedTLS backend: HS256 via the md module, ES256 via pk/ecp. Ed25519 has no
+ * mbedTLS 3.6 implementation, so EdDSA sign/verify fails at runtime (the
+ * public API surface is unchanged). */
+#include <mbedtls/pk.h>
+#include <mbedtls/ecp.h>
+#include <mbedtls/ecdsa.h>
+#include <mbedtls/md.h>
+#include <mbedtls/bignum.h>
+#include <openssl/rand.h> /* seam shim: RAND_bytes over CTR-DRBG */
+#include <stdint.h>
+#else
 #include <openssl/hmac.h>
 #include <openssl/sha.h>
 #include <openssl/evp.h>
@@ -13,6 +26,7 @@
 #include <openssl/ecdsa.h>
 #include <openssl/bn.h>
 #include <openssl/obj.h>
+#endif
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -166,11 +180,112 @@ static const char *jwt_alg_name(jwt_alg_t alg) {
 /** Compute HMAC-SHA256 of @p msg using @p key; writes to @p out (32 bytes). */
 static bool hmac_sha256(const char *key, size_t key_len, const char *msg, size_t msg_len,
                         unsigned char out[32]) {
+#if defined(CWIST_TLS_MBEDTLS)
+    return mbedtls_md_hmac(mbedtls_md_info_from_type(MBEDTLS_MD_SHA256),
+                           (const unsigned char *)key, key_len,
+                           (const unsigned char *)msg, msg_len, out) == 0;
+#else
     unsigned int out_len = 0;
     unsigned char *r =
         HMAC(EVP_sha256(), key, (int)key_len, (const unsigned char *)msg, msg_len, out, &out_len);
     return r != NULL && out_len == 32;
+#endif
 }
+
+#if defined(CWIST_TLS_MBEDTLS)
+
+/** f_rng adapter for the mbedTLS pk/ecp calls, fed by the seam's CTR-DRBG. */
+static int jwt_mbedtls_rng(void *p_rng, unsigned char *buf, size_t len) {
+    (void)p_rng;
+    return len <= (size_t)INT32_MAX && RAND_bytes(buf, (int)len) == 1 ? 0 : -1;
+}
+
+/** Load a PEM-encoded private key. Returns true on success. */
+static bool jwt_load_private_key(mbedtls_pk_context *pk, const char *pem) {
+    mbedtls_pk_init(pk);
+    return mbedtls_pk_parse_key(pk, (const unsigned char *)pem, strlen(pem) + 1, NULL, 0,
+                                jwt_mbedtls_rng, NULL) == 0;
+}
+
+/** Load a PEM-encoded public key, falling back to a private key (public half used). */
+static bool jwt_load_public_key(mbedtls_pk_context *pk, const char *pem) {
+    mbedtls_pk_init(pk);
+    if (mbedtls_pk_parse_public_key(pk, (const unsigned char *)pem, strlen(pem) + 1) == 0) {
+        return true;
+    }
+    mbedtls_pk_free(pk);
+    mbedtls_pk_init(pk);
+    return mbedtls_pk_parse_key(pk, (const unsigned char *)pem, strlen(pem) + 1, NULL, 0,
+                                jwt_mbedtls_rng, NULL) == 0;
+}
+
+/** Whether @p pk is an EC key on P-256, as ES256 requires. */
+static bool jwt_key_is_p256(const mbedtls_pk_context *pk) {
+    return mbedtls_pk_get_type(pk) == MBEDTLS_PK_ECKEY &&
+           mbedtls_pk_ec(*pk)->MBEDTLS_PRIVATE(grp).id == MBEDTLS_ECP_DP_SECP256R1;
+}
+
+/** SHA-256 of the signing input, for the ES256 sign/verify calls. */
+static bool jwt_sha256(const char *msg, size_t msg_len, unsigned char out[32]) {
+    return mbedtls_md(mbedtls_md_info_from_type(MBEDTLS_MD_SHA256), (const unsigned char *)msg,
+                      msg_len, out) == 0;
+}
+
+/** ES256: sign the 32-byte hash, return the JOSE raw R||S (64 bytes). */
+static unsigned char *jwt_mbedtls_es256_sign(const char *key, const unsigned char *hash,
+                                             size_t *out_len) {
+    mbedtls_pk_context pk;
+    if (!jwt_load_private_key(&pk, key)) return NULL;
+    if (!jwt_key_is_p256(&pk)) {
+        mbedtls_pk_free(&pk);
+        return NULL;
+    }
+    mbedtls_ecp_keypair *kp = mbedtls_pk_ec(pk);
+    mbedtls_mpi r, s;
+    mbedtls_mpi_init(&r);
+    mbedtls_mpi_init(&s);
+    unsigned char *sig = NULL;
+    if (mbedtls_ecdsa_sign(&kp->MBEDTLS_PRIVATE(grp), &r, &s, &kp->MBEDTLS_PRIVATE(d), hash, 32,
+                           jwt_mbedtls_rng, NULL) == 0) {
+        sig = (unsigned char *)cwist_alloc(64);
+        if (sig && (mbedtls_mpi_write_binary(&r, sig, 32) != 0 ||
+                    mbedtls_mpi_write_binary(&s, sig + 32, 32) != 0)) {
+            cwist_free(sig);
+            sig = NULL;
+        }
+        if (sig) *out_len = 64;
+    }
+    mbedtls_mpi_free(&r);
+    mbedtls_mpi_free(&s);
+    mbedtls_pk_free(&pk);
+    return sig;
+}
+
+/** ES256: verify the JOSE raw R||S signature against the 32-byte hash. */
+static bool jwt_mbedtls_es256_verify(const char *key, const unsigned char *hash,
+                                     const unsigned char *sig, size_t sig_len) {
+    if (sig_len != 64) return false;
+    mbedtls_pk_context pk;
+    if (!jwt_load_public_key(&pk, key)) return false;
+    if (!jwt_key_is_p256(&pk)) {
+        mbedtls_pk_free(&pk);
+        return false;
+    }
+    mbedtls_ecp_keypair *kp = mbedtls_pk_ec(pk);
+    mbedtls_mpi r, s;
+    mbedtls_mpi_init(&r);
+    mbedtls_mpi_init(&s);
+    bool ok = mbedtls_mpi_read_binary(&r, sig, 32) == 0 &&
+              mbedtls_mpi_read_binary(&s, sig + 32, 32) == 0 &&
+              mbedtls_ecdsa_verify(&kp->MBEDTLS_PRIVATE(grp), hash, 32, &kp->MBEDTLS_PRIVATE(Q), &r,
+                                   &s) == 0;
+    mbedtls_mpi_free(&r);
+    mbedtls_mpi_free(&s);
+    mbedtls_pk_free(&pk);
+    return ok;
+}
+
+#else /* BoringSSL backend */
 
 /** Load a PEM-encoded private key, or NULL. */
 static EVP_PKEY *jwt_load_private_key(const char *pem) {
@@ -204,6 +319,8 @@ static bool jwt_key_is_p256(EVP_PKEY *key) {
     return group && EC_GROUP_get_curve_name(group) == NID_X9_62_prime256v1;
 }
 
+#endif /* CWIST_TLS_MBEDTLS */
+
 /**
  * Sign @p msg with @p alg; @p key is the HMAC secret for HS256 or a PEM
  * private key otherwise. Returns a cwist_alloc'd signature in JOSE form
@@ -222,6 +339,16 @@ static unsigned char *jwt_sign_bytes(jwt_alg_t alg, const char *key, const char 
         return sig;
     }
 
+#if defined(CWIST_TLS_MBEDTLS)
+    if (alg == JWT_ALG_ES256) {
+        unsigned char hash[32];
+        if (!jwt_sha256(msg, msg_len, hash)) return NULL;
+        return jwt_mbedtls_es256_sign(key, hash, out_len);
+    }
+    /* EdDSA: mbedTLS 3.6 LTS has no Ed25519; report signing failure rather
+     * than emitting an unverifiable token. */
+    return NULL;
+#else
     EVP_PKEY *pkey = jwt_load_private_key(key);
     if (!pkey) return NULL;
     if (alg == JWT_ALG_ES256 && !jwt_key_is_p256(pkey)) {
@@ -290,6 +417,7 @@ fail:
     EVP_MD_CTX_free(ctx);
     EVP_PKEY_free(pkey);
     return NULL;
+#endif /* CWIST_TLS_MBEDTLS */
 }
 
 /**
@@ -312,6 +440,15 @@ static bool jwt_verify_bytes(jwt_alg_t alg, const char *key, const char *msg, si
         return cmp == 0;
     }
 
+#if defined(CWIST_TLS_MBEDTLS)
+    if (alg == JWT_ALG_ES256) {
+        unsigned char hash[32];
+        if (!jwt_sha256(msg, msg_len, hash)) return false;
+        return jwt_mbedtls_es256_verify(key, hash, sig, sig_len);
+    }
+    /* EdDSA: mbedTLS 3.6 LTS has no Ed25519; verification always fails. */
+    return false;
+#else
     bool ok = false;
     EVP_MD_CTX *ctx = NULL;
     EVP_PKEY *pkey = jwt_load_public_key(key);
@@ -352,6 +489,7 @@ out_ctx:
 fail:
     EVP_PKEY_free(pkey);
     return ok;
+#endif /* CWIST_TLS_MBEDTLS */
 }
 
 /* --------------------------------------------------------------------------
