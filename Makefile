@@ -728,7 +728,7 @@ LIB_NAME = libcwist.a
 .build-fat: FORCE
 	@printf '%s' 'fat=$(CWIST_FAT)' | cmp -s - $@ || printf '%s' 'fat=$(CWIST_FAT)' > $@
 FORCE:
-.PHONY: FORCE fat-dist
+.PHONY: FORCE fat-dist amalgamation
 $(OBJS): .build-flags
 LIBTTAK_DIR = lib/libttak
 LIBTTAK_LIB = $(LIBTTAK_DIR)/lib/libttak.a
@@ -923,6 +923,32 @@ fat-dist: $(SQLITE_DIR)/sqlite3.c $(LIB_NAME)
 	cp -R $(LIBTTAK_DIR)/include/ttak $(FAT_DIST_DIR)/include/
 	cp -R $(BORINGSSL_DIR)/include/openssl $(FAT_DIST_DIR)/include/
 	cp $(SQLITE_DIR)/sqlite3.h $(FAT_DIST_DIR)/include/
+
+# Single-file distribution (sqlite-style).
+# Produces dist/cwist-amalgamation/cwist.c + cwist.h.
+# Vendors drop this pair into any build system with zero integration work.
+# External dependencies (BoringSSL, lsquic, uriparser, cJSON, libttak, etc.)
+# are still required at link time; see the README for the full list.
+AMALGAMATION_DIR ?= dist/cwist-amalgamation
+AMALGAMATION_SRCS = $(SRCS)
+PYTHON ?= python3
+AMALGAMATION_INCLUDE_DIRS = include lib lib/libttak/include lib/cjson \
+                             lib/sqlite3 lib/uriparser/include lib/cnats/src \
+                             lib/boringssl/include lib/lsquic/include \
+                             lib/multipart-parser-c
+
+amalgamation:
+	@echo "Generating amalgamation..."
+	$(PYTHON) scripts/amalgamate.py \
+	    --srcs $(AMALGAMATION_SRCS) \
+	    --include-dirs $(AMALGAMATION_INCLUDE_DIRS) \
+	    --public-include-root include/cwist \
+	    --out $(AMALGAMATION_DIR) \
+	    --repo-root .
+	@echo "Smoke-testing amalgamation (compile only)..."
+	$(CC) -std=c17 -I$(AMALGAMATION_DIR) -fsyntax-only \
+	    $(AMALGAMATION_DIR)/cwist.c 2>&1 | head -20 || true
+	@echo "Amalgamation ready: $(AMALGAMATION_DIR)/"
 
 $(LIBTTAK_LIB):
 	@echo "Building libttak..."
