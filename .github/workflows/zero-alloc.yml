@@ -1,0 +1,68 @@
+name: "Zero-allocation gate"
+
+# Verify that the CWIST hot path performs no heap allocations after
+# cwist_app_listen() completes initialization (#432).
+#
+# Uses an LD_PRELOAD shim (tests/zero_alloc_counter.c) that counts
+# malloc/calloc/realloc calls occurring between an arm and disarm signal
+# sent to the server over HTTP.  The gate script
+# (scripts/ci/zero_alloc_gate.sh) warms up the server for
+# ZERO_ALLOC_WARMUP_REQS requests to let arenas and caches reach steady
+# state before arming the counter for ZERO_ALLOC_GATE_REQS gate requests.
+
+on:
+  push:
+    branches: [main, master, dev]
+  pull_request:
+    branches: [main, master, dev]
+  schedule:
+    # Nightly at 03:00 UTC.
+    - cron: '0 3 * * *'
+  workflow_dispatch:
+    inputs:
+      warmup_reqs:
+        description: 'Warm-up request count (default: 200)'
+        required: false
+        default: '200'
+      gate_reqs:
+        description: 'Gate request count (default: 1000)'
+        required: false
+        default: '1000'
+
+permissions:
+  contents: read
+
+jobs:
+  zero-alloc:
+    name: Zero-allocation gate
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Install build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y cmake libcurl4-openssl-dev libnghttp2-dev \
+            libbrotli-dev libzstd-dev libssl-dev gcc curl
+
+      - name: Build gate server
+        run: make -j"$(nproc)" rss_gate_server
+
+      - name: Build LD_PRELOAD shim
+        run: |
+          gcc -O2 -fPIC -shared -o /tmp/cwist_zero_alloc_shim.so \
+            tests/zero_alloc_counter.c -ldl
+
+      - name: Run zero-allocation gate
+        env:
+          SHIM_LIB: /tmp/cwist_zero_alloc_shim.so
+          ZERO_ALLOC_WARMUP_REQS: ${{ github.event.inputs.warmup_reqs || '200' }}
+          ZERO_ALLOC_GATE_REQS: ${{ github.event.inputs.gate_reqs || '1000' }}
+        run: bash scripts/ci/zero_alloc_gate.sh
+
+      - name: Server log
+        if: always()
+        run: cat zero_alloc_server.log 2>/dev/null || true
