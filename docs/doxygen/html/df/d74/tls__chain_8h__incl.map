@@ -1,5 +1,16 @@
 <map id="src/net/http/tls_chain.h" name="src/net/http/tls_chain.h">
-<area shape="rect" id="Node000001" title=" " alt="" coords="5,5,176,31"/>
-<area shape="rect" id="Node000002" title=" " alt="" coords="37,79,144,104"/>
-<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="93,31,93,65,88,65,88,31"/>
+<area shape="rect" id="Node000001" title=" " alt="" coords="7,5,178,31"/>
+<area shape="rect" id="Node000002" href="$df/d6d/ssl_8h.html" title="mbedTLS TLS backend: OpenSSL&#45;shaped seam over the CWIST TLS subset." alt="" coords="39,79,146,104"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="95,31,95,65,90,65,90,31"/>
+<area shape="rect" id="Node000003" title=" " alt="" coords="94,299,169,324"/>
+<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="66,106,35,125,22,138,11,153,8,164,11,176,28,211,52,242,79,268,104,289,101,293,76,272,48,246,24,214,6,178,3,164,6,151,18,135,32,121,63,102"/>
+<area shape="rect" id="Node000004" title=" " alt="" coords="21,152,92,177"/>
+<area shape="poly" id="edge3_Node000002_Node000004" title=" " alt="" coords="89,106,71,141,67,138,84,103"/>
+<area shape="rect" id="Node000005" href="$d5/d67/evp_8h.html" title="mbedTLS TLS backend: EVP subset (HMAC digest tags, AES&#45;256&#45;CBC)." alt="" coords="75,225,187,251"/>
+<area shape="poly" id="edge4_Node000002_Node000005" title=" " alt="" coords="99,104,127,211,122,213,93,105"/>
+<area shape="rect" id="Node000006" href="$d0/dc6/hmac_8h.html" title="mbedTLS TLS backend: HMAC subset (HMAC&#45;SHA256, one&#45;shot + streaming)." alt="" coords="168,152,292,177"/>
+<area shape="poly" id="edge6_Node000002_Node000006" title=" " alt="" coords="116,102,197,143,194,148,114,106"/>
+<area shape="poly" id="edge5_Node000005_Node000003" title=" " alt="" coords="134,251,134,285,129,285,129,251"/>
+<area shape="poly" id="edge8_Node000006_Node000003" title=" " alt="" coords="230,179,221,213,202,252,183,274,162,292,158,288,179,270,197,249,216,211,225,177"/>
+<area shape="poly" id="edge7_Node000006_Node000005" title=" " alt="" coords="216,180,160,219,157,215,213,175"/>
 </map>

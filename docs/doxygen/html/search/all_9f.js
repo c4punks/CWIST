@@ -2,7 +2,7 @@ var searchData=
 [
   ['요구_20사항_0',['요구 사항',['../d1/d45/md_docs_2ko_2deployment_2zero-downtime-restart.html#autotoc_md579',1,'']]],
   ['요소_20측정_202026_2009_2012_1',['구성 요소 측정 (2026-09-12)',['../dc/dd4/md_docs_2ko_2reactor-wakeup-regression.html#autotoc_md618',1,'']]],
-  ['요약_2',['요약',['../df/df1/md_docs_2tutorial_2korean_2cwist__tutorial.html#autotoc_md838',1,'보안 정책 요약'],['../d1/dde/md_docs_2ko_2GC.html#autotoc_md603',1,'의미 요약']]],
+  ['요약_2',['요약',['../df/df1/md_docs_2tutorial_2korean_2cwist__tutorial.html#autotoc_md843',1,'보안 정책 요약'],['../d1/dde/md_docs_2ko_2GC.html#autotoc_md603',1,'의미 요약']]],
   ['요청과_20워커의_20책임_20나누기_3',['1. 요청과 워커의 책임 나누기',['../dd/d38/md_docs_2ko_2tutorials_2nats-integration.html#autotoc_md671',1,'']]],
   ['요청_20경로_202026_2009_2022_20감사_4',['해결됨: wasip3에서의 소켓 요청 경로 (2026-09-22 감사)',['../dd/d41/md_docs_2ko_2api_2wasm-component.html#autotoc_md506',1,'']]],
   ['요청_20도우미_5',['요청 도우미',['../da/dc3/md_docs_2ko_2api_2app.html#autotoc_md366',1,'']]],

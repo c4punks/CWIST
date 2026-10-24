@@ -287,7 +287,7 @@ Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d8/d80/jwt_8c_source.html#l00699">699</a> of file <a class="el" href="../../d8/d80/jwt_8c_source.html">jwt.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d8/d80/jwt_8c_source.html#l00837">837</a> of file <a class="el" href="../../d8/d80/jwt_8c_source.html">jwt.c</a>.</p>
 
 <p class="reference">References <a class="el" href="../../d9/d39/alloc_8c_source.html#l00391">cwist_free()</a>.</p>
 
@@ -324,7 +324,7 @@ Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d8/d80/jwt_8c_source.html#l00641">641</a> of file <a class="el" href="../../d8/d80/jwt_8c_source.html">jwt.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d8/d80/jwt_8c_source.html#l00779">779</a> of file <a class="el" href="../../d8/d80/jwt_8c_source.html">jwt.c</a>.</p>
 
 <p class="reference">References <a class="el" href="../../d9/d39/alloc_8c_source.html#l00391">cwist_free()</a>.</p>
 
@@ -375,7 +375,7 @@ Functions</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>Borrowed pointer to the claim string, or NULL when absent/non-string. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d8/d80/jwt_8c_source.html#l00628">628</a> of file <a class="el" href="../../d8/d80/jwt_8c_source.html">jwt.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d8/d80/jwt_8c_source.html#l00766">766</a> of file <a class="el" href="../../d8/d80/jwt_8c_source.html">jwt.c</a>.</p>
 
 </div>
 </div>
@@ -426,11 +426,11 @@ Functions</h2></td></tr>
 <dl class="section return"><dt>Returns</dt><dd>Heap-allocated null-terminated JWT string, or NULL when the chunk set is invalid/incomplete or assembly/allocation fails.</dd></dl>
 <p>The caller owns the returned string and must free it with <a class="el" href="../../d2/dfe/alloc_8h.html#a220abeebe2823e72511d1690fc561306" title="Free memory obtained via cwist_alloc/cwist_strdup/etc.">cwist_free()</a>. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d8/d80/jwt_8c_source.html#l00714">714</a> of file <a class="el" href="../../d8/d80/jwt_8c_source.html">jwt.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d8/d80/jwt_8c_source.html#l00852">852</a> of file <a class="el" href="../../d8/d80/jwt_8c_source.html">jwt.c</a>.</p>
 
 <p class="reference">References <a class="el" href="../../d9/d39/alloc_8c_source.html#l00276">cwist_alloc()</a>, <a class="el" href="../../d2/d8b/seq_8c_source.html#l00196">cwist_seq_assembler_create()</a>, <a class="el" href="../../d2/d8b/seq_8c_source.html#l00223">cwist_seq_assembler_destroy()</a>, <a class="el" href="../../d2/d8b/seq_8c_source.html#l00268">cwist_seq_assembler_feed()</a>, <a class="el" href="../../d2/d8b/seq_8c_source.html#l00390">cwist_seq_assembler_get_data()</a>, and <a class="el" href="../../d2/d8b/seq_8c_source.html#l00063">cwist_seq_chunk_parse()</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../d8/d80/jwt_8c_source.html#l00783">cwist_jwt_verify_chunks()</a>.</p>
+<p class="reference">Referenced by <a class="el" href="../../d8/d80/jwt_8c_source.html#l00921">cwist_jwt_verify_chunks()</a>.</p>
 
 </div>
 </div>
@@ -477,11 +477,11 @@ Functions</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>Heap-allocated null-terminated JWT string, or NULL on error. Caller must free with <a class="el" href="../../d2/dfe/alloc_8h.html#a220abeebe2823e72511d1690fc561306" title="Free memory obtained via cwist_alloc/cwist_strdup/etc.">cwist_free()</a>. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d8/d80/jwt_8c_source.html#l00482">482</a> of file <a class="el" href="../../d8/d80/jwt_8c_source.html">jwt.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d8/d80/jwt_8c_source.html#l00620">620</a> of file <a class="el" href="../../d8/d80/jwt_8c_source.html">jwt.c</a>.</p>
 
-<p class="reference">References <a class="el" href="../../d8/d80/jwt_8c_source.html#l00152">JWT_ALG_HS256</a>.</p>
+<p class="reference">References <a class="el" href="../../d8/d80/jwt_8c_source.html#l00166">JWT_ALG_HS256</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../d8/d80/jwt_8c_source.html#l00759">cwist_jwt_sign_chunks()</a>.</p>
+<p class="reference">Referenced by <a class="el" href="../../d8/d80/jwt_8c_source.html#l00897">cwist_jwt_sign_chunks()</a>.</p>
 
 </div>
 </div>
@@ -556,9 +556,9 @@ Functions</h2></td></tr>
 <dl class="section return"><dt>Returns</dt><dd>Heap-allocated chunk array, or NULL when signing or chunking fails.</dd></dl>
 <p>Free the result with <a class="el" href="../../d5/d6c/jwt_8h.html#aea871d4338c9ae6eae0aa726f45e0e68" title="Free chunk objects returned by cwist_jwt_split_chunks().">cwist_jwt_chunks_free()</a>. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d8/d80/jwt_8c_source.html#l00759">759</a> of file <a class="el" href="../../d8/d80/jwt_8c_source.html">jwt.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d8/d80/jwt_8c_source.html#l00897">897</a> of file <a class="el" href="../../d8/d80/jwt_8c_source.html">jwt.c</a>.</p>
 
-<p class="reference">References <a class="el" href="../../d9/d39/alloc_8c_source.html#l00391">cwist_free()</a>, <a class="el" href="../../d8/d80/jwt_8c_source.html#l00482">cwist_jwt_sign()</a>, and <a class="el" href="../../d8/d80/jwt_8c_source.html#l00662">cwist_jwt_split_chunks()</a>.</p>
+<p class="reference">References <a class="el" href="../../d9/d39/alloc_8c_source.html#l00391">cwist_free()</a>, <a class="el" href="../../d8/d80/jwt_8c_source.html#l00620">cwist_jwt_sign()</a>, and <a class="el" href="../../d8/d80/jwt_8c_source.html#l00800">cwist_jwt_split_chunks()</a>.</p>
 
 </div>
 </div>
@@ -613,9 +613,9 @@ Functions</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>Heap-allocated null-terminated JWT string, or NULL on error. Caller must free with <a class="el" href="../../d2/dfe/alloc_8h.html#a220abeebe2823e72511d1690fc561306" title="Free memory obtained via cwist_alloc/cwist_strdup/etc.">cwist_free()</a>. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d8/d80/jwt_8c_source.html#l00491">491</a> of file <a class="el" href="../../d8/d80/jwt_8c_source.html">jwt.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d8/d80/jwt_8c_source.html#l00629">629</a> of file <a class="el" href="../../d8/d80/jwt_8c_source.html">jwt.c</a>.</p>
 
-<p class="reference">References <a class="el" href="../../d8/d80/jwt_8c_source.html#l00154">JWT_ALG_ED25519</a>.</p>
+<p class="reference">References <a class="el" href="../../d8/d80/jwt_8c_source.html#l00168">JWT_ALG_ED25519</a>.</p>
 
 </div>
 </div>
@@ -670,9 +670,9 @@ Functions</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>Heap-allocated null-terminated JWT string, or NULL on error. Caller must free with <a class="el" href="../../d2/dfe/alloc_8h.html#a220abeebe2823e72511d1690fc561306" title="Free memory obtained via cwist_alloc/cwist_strdup/etc.">cwist_free()</a>. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d8/d80/jwt_8c_source.html#l00486">486</a> of file <a class="el" href="../../d8/d80/jwt_8c_source.html">jwt.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d8/d80/jwt_8c_source.html#l00624">624</a> of file <a class="el" href="../../d8/d80/jwt_8c_source.html">jwt.c</a>.</p>
 
-<p class="reference">References <a class="el" href="../../d8/d80/jwt_8c_source.html#l00153">JWT_ALG_ES256</a>.</p>
+<p class="reference">References <a class="el" href="../../d8/d80/jwt_8c_source.html#l00167">JWT_ALG_ES256</a>.</p>
 
 </div>
 </div>
@@ -731,11 +731,11 @@ Functions</h2></td></tr>
 <dl class="section return"><dt>Returns</dt><dd>Heap-allocated array of <code>out_count</code> chunks, or NULL on invalid input, split failure, or allocation failure.</dd></dl>
 <p>Each chunk's <code>data</code> buffer is owned by the caller and must be released with <a class="el" href="../../d5/d6c/jwt_8h.html#aea871d4338c9ae6eae0aa726f45e0e68" title="Free chunk objects returned by cwist_jwt_split_chunks().">cwist_jwt_chunks_free()</a>. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d8/d80/jwt_8c_source.html#l00662">662</a> of file <a class="el" href="../../d8/d80/jwt_8c_source.html">jwt.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d8/d80/jwt_8c_source.html#l00800">800</a> of file <a class="el" href="../../d8/d80/jwt_8c_source.html">jwt.c</a>.</p>
 
 <p class="reference">References <a class="el" href="../../d6/d3c/seq_8h_source.html#l00062">cwist_seq_message::chunk_lens</a>, <a class="el" href="../../d6/d3c/seq_8h_source.html#l00061">cwist_seq_message::chunks</a>, <a class="el" href="../../d6/d3c/seq_8h_source.html#l00063">cwist_seq_message::count</a>, <a class="el" href="../../d9/d39/alloc_8c_source.html#l00290">cwist_alloc_array()</a>, <a class="el" href="../../d2/d8b/seq_8c_source.html#l00178">cwist_seq_message_free()</a>, <a class="el" href="../../d2/d8b/seq_8c_source.html#l00125">cwist_seq_split()</a>, <a class="el" href="../../d5/d6c/jwt_8h_source.html#l00081">cwist_jwt_chunk::data</a>, and <a class="el" href="../../d5/d6c/jwt_8h_source.html#l00082">cwist_jwt_chunk::len</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../d8/d80/jwt_8c_source.html#l00759">cwist_jwt_sign_chunks()</a>.</p>
+<p class="reference">Referenced by <a class="el" href="../../d8/d80/jwt_8c_source.html#l00897">cwist_jwt_sign_chunks()</a>.</p>
 
 </div>
 </div>
@@ -780,11 +780,11 @@ Functions</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>Pointer to a cwist_jwt_claims object on success, NULL on failure. Caller must free with <a class="el" href="../../d5/d6c/jwt_8h.html#a22f0ad8ebf932941f73e52625fbf78da" title="Free a claims object.">cwist_jwt_claims_destroy()</a>. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d8/d80/jwt_8c_source.html#l00610">610</a> of file <a class="el" href="../../d8/d80/jwt_8c_source.html">jwt.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d8/d80/jwt_8c_source.html#l00748">748</a> of file <a class="el" href="../../d8/d80/jwt_8c_source.html">jwt.c</a>.</p>
 
-<p class="reference">References <a class="el" href="../../d8/d80/jwt_8c_source.html#l00152">JWT_ALG_HS256</a>.</p>
+<p class="reference">References <a class="el" href="../../d8/d80/jwt_8c_source.html#l00166">JWT_ALG_HS256</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../d8/d80/jwt_8c_source.html#l00783">cwist_jwt_verify_chunks()</a>.</p>
+<p class="reference">Referenced by <a class="el" href="../../d8/d80/jwt_8c_source.html#l00921">cwist_jwt_verify_chunks()</a>.</p>
 
 </div>
 </div>
@@ -843,9 +843,9 @@ Functions</h2></td></tr>
 <dl class="section return"><dt>Returns</dt><dd>Heap-allocated verified claims object, or NULL when assembly, parsing, signature verification, or claim validation fails.</dd></dl>
 <p>The caller owns the result and must release it with <a class="el" href="../../d5/d6c/jwt_8h.html#a22f0ad8ebf932941f73e52625fbf78da" title="Free a claims object.">cwist_jwt_claims_destroy()</a>. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d8/d80/jwt_8c_source.html#l00783">783</a> of file <a class="el" href="../../d8/d80/jwt_8c_source.html">jwt.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d8/d80/jwt_8c_source.html#l00921">921</a> of file <a class="el" href="../../d8/d80/jwt_8c_source.html">jwt.c</a>.</p>
 
-<p class="reference">References <a class="el" href="../../d9/d39/alloc_8c_source.html#l00391">cwist_free()</a>, <a class="el" href="../../d8/d80/jwt_8c_source.html#l00714">cwist_jwt_join_chunks()</a>, and <a class="el" href="../../d8/d80/jwt_8c_source.html#l00610">cwist_jwt_verify()</a>.</p>
+<p class="reference">References <a class="el" href="../../d9/d39/alloc_8c_source.html#l00391">cwist_free()</a>, <a class="el" href="../../d8/d80/jwt_8c_source.html#l00852">cwist_jwt_join_chunks()</a>, and <a class="el" href="../../d8/d80/jwt_8c_source.html#l00748">cwist_jwt_verify()</a>.</p>
 
 </div>
 </div>
@@ -886,9 +886,9 @@ Functions</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>Pointer to a cwist_jwt_claims object on success, NULL on failure. Caller must free with <a class="el" href="../../d5/d6c/jwt_8h.html#a22f0ad8ebf932941f73e52625fbf78da" title="Free a claims object.">cwist_jwt_claims_destroy()</a>. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d8/d80/jwt_8c_source.html#l00618">618</a> of file <a class="el" href="../../d8/d80/jwt_8c_source.html">jwt.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d8/d80/jwt_8c_source.html#l00756">756</a> of file <a class="el" href="../../d8/d80/jwt_8c_source.html">jwt.c</a>.</p>
 
-<p class="reference">References <a class="el" href="../../d8/d80/jwt_8c_source.html#l00154">JWT_ALG_ED25519</a>.</p>
+<p class="reference">References <a class="el" href="../../d8/d80/jwt_8c_source.html#l00168">JWT_ALG_ED25519</a>.</p>
 
 </div>
 </div>
@@ -929,9 +929,9 @@ Functions</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>Pointer to a cwist_jwt_claims object on success, NULL on failure. Caller must free with <a class="el" href="../../d5/d6c/jwt_8h.html#a22f0ad8ebf932941f73e52625fbf78da" title="Free a claims object.">cwist_jwt_claims_destroy()</a>. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d8/d80/jwt_8c_source.html#l00614">614</a> of file <a class="el" href="../../d8/d80/jwt_8c_source.html">jwt.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d8/d80/jwt_8c_source.html#l00752">752</a> of file <a class="el" href="../../d8/d80/jwt_8c_source.html">jwt.c</a>.</p>
 
-<p class="reference">References <a class="el" href="../../d8/d80/jwt_8c_source.html#l00153">JWT_ALG_ES256</a>.</p>
+<p class="reference">References <a class="el" href="../../d8/d80/jwt_8c_source.html#l00167">JWT_ALG_ES256</a>.</p>
 
 </div>
 </div>

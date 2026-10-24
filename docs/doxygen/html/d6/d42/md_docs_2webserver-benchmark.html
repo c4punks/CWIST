@@ -108,9 +108,9 @@ $(document).ready(function(){initNavTree('d6/d42/md_docs_2webserver-benchmark.ht
   <div class="headertitle"><div class="title">Web Server Benchmark Methodology</div></div>
 </div><!--header-->
 <div class="contents">
-<div class="textblock"><p><a class="anchor" id="autotoc_md881"></a> This document describes exactly how the CWIST vs Actix vs Axum vs Gin vs Spring Boot comparison in <code>benchmarks/webserver.json</code> (rendered into <code>docs/webserver-benchmark-trends.svg</code>) is produced, so every published number can be reproduced and audited.</p>
+<div class="textblock"><p><a class="anchor" id="autotoc_md886"></a> This document describes exactly how the CWIST vs Actix vs Axum vs Gin vs Spring Boot comparison in <code>benchmarks/webserver.json</code> (rendered into <code>docs/webserver-benchmark-trends.svg</code>) is produced, so every published number can be reproduced and audited.</p>
 <p>The suite runs in GitHub Actions (<code>web-server-benchmark</code> job in <code>.github/workflows/bsd-kqueue-benchmarks.yml</code>) on <code>ubuntu-latest</code>. All five servers are minimal <code>GET / -&gt; "Hello, World!"</code> applications generated inline by the workflow; no framework-specific tuning is applied beyond what is documented here.</p>
-<h1><a class="anchor" id="autotoc_md882"></a>
+<h1><a class="anchor" id="autotoc_md887"></a>
 Load profile</h1>
 <table class="markdownTable">
 <tr class="markdownTableHead">
@@ -126,7 +126,7 @@ Load profile</h1>
 <li><b>Peak RSS</b> is sampled from <code>ps -o rss=</code> immediately after the measured run.</li>
 <li><b>Context switches</b> (<code>nvcsw + nivcsw</code> from <code>ps</code>) are counted only over the measured window — the counter baseline is taken <em>after</em> warmup.</li>
 </ul>
-<h2><a class="anchor" id="autotoc_md883"></a>
+<h2><a class="anchor" id="autotoc_md888"></a>
 Interpreting the context-switch column</h2>
 <p>CWIST classic (<code>CWIST_C1M_MODE=0</code>) is the only blocking thread-per-connection server in the matrix; every other row multiplexes connections onto a small thread pool. That difference shows up almost entirely in this column, and it is a property of the concurrency model, not of wasted work:</p>
 <ul>
@@ -134,34 +134,34 @@ Interpreting the context-switch column</h2>
 <li>CWIST C1M and the async runtimes batch many requests per wake, so their per-request switch count is much lower.</li>
 </ul>
 <p>This was attributed by re-running the workload under a throttled CPU quota and splitting per-thread voluntary/non-voluntary counters: nearly all classic switches are voluntary recv wakeups (the model floor), and pool scaling reaches one worker per connection without spawn failures. Low-context-switch operation is what C1M — the default profile — is for; classic trades that for its latency behavior at low concurrency (the tuned <code>wrk -t4 -c100</code> run).</p>
-<h2><a class="anchor" id="autotoc_md884"></a>
+<h2><a class="anchor" id="autotoc_md889"></a>
 Tuned low-latency run</h2>
 <p>CWIST and Spring Boot are each measured a second time under <code>wrk -t4 -c100 -d10s</code> (lower concurrency than the main <code>-t12 -c400</code> profile above), each in its own dedicated process — for Spring Boot this is a fresh boot replaying the same trained AOT cache used for its main run, so it isn't paying a second cold-start penalty CWIST doesn't pay either. This is CWIST's own published low-latency profile; giving Spring Boot the identical treatment keeps the "tuned" numbers comparable instead of showing CWIST's best case next to a number Spring was never measured at. Axum and Gin are not yet included in this second pass.</p>
-<h1><a class="anchor" id="autotoc_md885"></a>
+<h1><a class="anchor" id="autotoc_md890"></a>
 CWIST</h1>
 <ul>
 <li>Built from the checked-out commit: <code>make</code>, then the bench server linked against <code>libcwist.a</code> with <code>gcc -O3</code>.</li>
 <li>Listens on port <code>9091</code>.</li>
 </ul>
-<h1><a class="anchor" id="autotoc_md886"></a>
+<h1><a class="anchor" id="autotoc_md891"></a>
 Actix</h1>
 <ul>
 <li><code>actix-web = "4"</code>, <code>cargo build --release</code>.</li>
 <li>Listens on port <code>9095</code>.</li>
 </ul>
-<h1><a class="anchor" id="autotoc_md887"></a>
+<h1><a class="anchor" id="autotoc_md892"></a>
 Axum</h1>
 <ul>
 <li><code>axum = "0.7"</code>, <code>tokio = "1"</code> (<code>full</code> features), <code>cargo build --release</code>.</li>
 <li>Listens on port <code>9092</code>.</li>
 </ul>
-<h1><a class="anchor" id="autotoc_md888"></a>
+<h1><a class="anchor" id="autotoc_md893"></a>
 Gin (Go)</h1>
 <ul>
 <li><code>github.com/gin-gonic/gin</code> <b>v1.10.0</b> on the Go toolchain provisioned by <code>actions/setup-go</code> (Go <b>1.22</b>), <code>go build</code> with <code>gin.ReleaseMode</code> and the default <code>net/http</code> server underneath.</li>
 <li>Listens on port <code>9094</code>.</li>
 </ul>
-<h1><a class="anchor" id="autotoc_md889"></a>
+<h1><a class="anchor" id="autotoc_md894"></a>
 Spring Boot (JVM fairness configuration)</h1>
 <p>The JVM is not a measure-once runtime: tiered JIT compilation, heap resizing, and class loading dominate short runs. The suite therefore fixes and <em>records</em> the following.</p>
 <p>The benchmarked stack is <b>Spring WebFlux on Reactor Netty</b> — Spring's reactive, event-loop server — rather than Spring MVC on the thread-per-request Tomcat servlet container. Netty's event loop is the appropriate Java comparison point for the async CWIST (io_uring/epoll) and Axum (tokio) servers. On top of the event loop, <b>virtual threads are enabled</b> (<code>spring.threads.virtual.enabled=true</code>, Project Loom) so that any work dispatched off the Netty event loop runs on Loom virtual threads instead of a bounded platform-thread pool.</p>
@@ -187,7 +187,7 @@ Spring Boot (JVM fairness configuration)</h1>
 </table>
 <p>The full Spring run command is:</p>
 <div class="fragment"><div class="line">java -Xms512m -Xmx512m -XX:SharedArchiveFile=app.jsa -jar spring-bench-0.0.1-SNAPSHOT.jar</div>
-</div><!-- fragment --><h1><a class="anchor" id="autotoc_md890"></a>
+</div><!-- fragment --><h1><a class="anchor" id="autotoc_md895"></a>
 Recorded metadata</h1>
 <p>Every measurement appended to <code>benchmarks/webserver.json</code> carries the runtime facts next to the numbers, so a result is never an isolated req/s figure:</p>
 <div class="fragment"><div class="line">{</div>
@@ -206,11 +206,11 @@ Recorded metadata</h1>
 <div class="line">  }</div>
 <div class="line">}</div>
 </div><!-- fragment --><p><code>scripts/ci/benchmark.py render</code> prints this environment block as the SVG footer and in the README benchmark summary.</p>
-<h1><a class="anchor" id="autotoc_md891"></a>
+<h1><a class="anchor" id="autotoc_md896"></a>
 Latency distribution chart</h1>
 <p><code>docs/webserver-latency-distribution.svg</code> (linked in the README right below the bar-chart trends SVG) plots each server's latency distribution as a density curve, so the <em>shape</em> of the tail is visible at a glance instead of only its P99.999 number. It compares the same five servers as the summary table above (<code>cwist</code>, <code>cwist_c1m</code>, <code>axum</code>, <code>gin</code>, <code>spring</code>) — the <code>_tuned</code> entries (different, lower-concurrency load profile) and the opt-in experimental A/Bs (<code>cwist_c1m_arena1</code>, <code>cwist_sharded</code>) are excluded so the chart only ever compares runs made under the identical <code>wrk -t12 -c400 -d10s</code> profile.</p>
 <p>This is <b>reconstructed, not raw</b>: wrk only ever reports percentiles (min/p50/p75/p90/p99/p99.9/p99.99/p99.999/max — all now captured by the workflow's <code>parse_wrk()</code>, see <code>.github/workflows/bsd-kqueue-benchmarks.yml</code>), never the underlying per-request samples. <code>scripts/ci/benchmark.py</code> (<code>_inverse_cdf_samples</code>) linearly interpolates the inverse CDF between those known percentile points to synthesize a representative sample set, then runs a standard Gaussian KDE (<code>_gaussian_kde</code>, Silverman's rule of thumb for bandwidth) over it. The x-axis uses <code>log1p(ms)</code> so a long tail (Gin, Spring Boot) doesn't compress the tighter CWIST/Axum curves into an unreadable spike at the left edge. Treat the curve shapes as representative, not exact — a server with sparser percentile data (an older history row missing the newer p75/p999/p9999/min/max fields) still renders, just with fewer anchor points to interpolate between.</p>
-<h1><a class="anchor" id="autotoc_md892"></a>
+<h1><a class="anchor" id="autotoc_md897"></a>
 Known limitations</h1>
 <ul>
 <li>GitHub-hosted runners are shared, noisy <b>4-vCPU</b> machines; treat absolute numbers as trend data, not lab-grade measurements. Each entry records <code>runner_hw</code> (vCPU count and CPU model) precisely so that entries from different machines are never compared directly — a full-core local machine serves the same profile at a large multiple of the CI runner's rate. A drop between entries with different <code>runner_hw</code> reflects the machine, not the code.</li>

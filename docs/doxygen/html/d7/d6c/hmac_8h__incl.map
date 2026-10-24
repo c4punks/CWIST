@@ -1,0 +1,8 @@
+<map id="src/security/tls/shim/openssl/hmac.h" name="src/security/tls/shim/openssl/hmac.h">
+<area shape="rect" id="Node000001" title="mbedTLS TLS backend: HMAC subset (HMAC&#45;SHA256, one&#45;shot + streaming)." alt="" coords="31,5,185,45"/>
+<area shape="rect" id="Node000002" href="$d5/d67/evp_8h.html" title="mbedTLS TLS backend: EVP subset (HMAC digest tags, AES&#45;256&#45;CBC)." alt="" coords="5,93,117,119"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="99,47,78,83,73,80,94,44"/>
+<area shape="rect" id="Node000003" title=" " alt="" coords="71,167,145,192"/>
+<area shape="poly" id="edge3_Node000001_Node000003" title=" " alt="" coords="119,45,130,79,133,99,132,119,121,155,116,153,127,118,128,99,125,80,114,46"/>
+<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="71,118,95,154,91,157,67,120"/>
+</map>

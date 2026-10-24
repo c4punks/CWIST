@@ -1,8 +1,8 @@
 var searchData=
 [
-  ['naak_20seo_20洛書_0',['1. Lo Shu Magic Square (Naak-seo / 洛書)',['../d6/d9f/md_docs_2references_2mux__algorithm__references.html#autotoc_md765',1,'']]],
+  ['naak_20seo_20洛書_0',['1. Lo Shu Magic Square (Naak-seo / 洛書)',['../d6/d9f/md_docs_2references_2mux__algorithm__references.html#autotoc_md770',1,'']]],
   ['name_1',['name',['../dc/d5b/structcwist__metric.html#a861fd2503d547b1e22d624da0b50333d',1,'cwist_metric::name'],['../da/d46/structcwist__migration__t.html#ab5671599e792c956fb272ca0f2c30f32',1,'cwist_migration_t::name'],['../d6/d03/structcwist__schema__field.html#a614f209f705773c3d39f6a47034fa54d',1,'cwist_schema_field::name'],['../d6/db0/structcwist__http2__header.html#ad7022abdccd100a06f26f16cb31fd028',1,'cwist_http2_header::name'],['../d5/d79/structcwist__http2__static__header.html#a2ff4de5b23249e10f1ab580ecf2c7e8b',1,'cwist_http2_static_header::name'],['../d9/d34/structcwist__multipart__field.html#a673a6ed58c680fa10a4b89d67c184578',1,'cwist_multipart_field::name'],['../d0/dd4/structcwist__logger.html#a8f1ce07df523c405390565a0ac609ea9',1,'cwist_logger::name'],['../d0/d82/structcwist__test__client__cookie.html#acd0fa778aac9138cb4a17936a152bd37',1,'cwist_test_client_cookie::name'],['../d7/d5f/structcwist__health__probe.html#a42c977e652fe2331a3d4d68bc54a4a0e',1,'cwist_health_probe::name'],['../da/da7/structcwist__job__queue__opts.html#a832698f6fa4ba3a4424092bf6a9dfd4c',1,'cwist_job_queue_opts::name']]],
-  ['naming_20rationale_2',['Naming Rationale',['../d6/d9f/md_docs_2references_2mux__algorithm__references.html#autotoc_md775',1,'']]],
+  ['naming_20rationale_2',['Naming Rationale',['../d6/d9f/md_docs_2references_2mux__algorithm__references.html#autotoc_md780',1,'']]],
   ['native_20async_20for_20streaming_20sse_202026_2009_2023_3',['Landed: native async for streaming/SSE (2026-09-23)',['../d8/d77/md_docs_2api_2wasm-component.html#autotoc_md209',1,'']]],
   ['nats_20연동하기_4',['CWIST와 NATS 연동하기',['../dd/d38/md_docs_2ko_2tutorials_2nats-integration.html',1,'']]],
   ['nats_20with_20cwist_5',['Integrate NATS with CWIST',['../da/d48/md_docs_2tutorials_2nats-integration.html',1,'']]],
@@ -27,7 +27,7 @@ var searchData=
   ['not_20fix_24',['What this does not fix',['../d1/ddd/md_docs_2cooperative-queuing.html#autotoc_md262',1,'']]],
   ['not_20simply_20moved_25',['Why the learning block is not simply moved',['../d3/ddd/md_docs_2fixed-cache-status.html#autotoc_md300',1,'']]],
   ['not_20wire_20responses_26',['2. Cache representations, not wire responses',['../de/d51/md_docs_2decisions_20001-safe-public-fixed-response-cache.html#autotoc_md268',1,'']]],
-  ['notation_27',['4. Notation',['../d0/db4/md_docs_2versioning.html#autotoc_md876',1,'']]],
+  ['notation_27',['4. Notation',['../d0/db4/md_docs_2versioning.html#autotoc_md881',1,'']]],
   ['notes_28',['notes',['../index.html#autotoc_md17',1,'Feature notes'],['../d0/d34/md_docs_2performance_2issue-297-syscall-audit.html#autotoc_md733',1,'Method notes'],['../d9/dd1/md_docs_2GC.html#autotoc_md313',1,'Non-goals and notes']]],
   ['notified_5fopen_29',['notified_open',['../d9/daa/structcwist__webrtc__conn.html#ad7c988463c237b3edf6301ff3d13a436',1,'cwist_webrtc_conn']]],
   ['now_5fns_30',['now_ns',['../dc/d88/structcwist__webrtc__ctx.html#a382d786a4e664b89a2e12a281f756382',1,'cwist_webrtc_ctx']]],

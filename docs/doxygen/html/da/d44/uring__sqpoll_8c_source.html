@@ -124,7 +124,7 @@ $(document).ready(function(){initNavTree('da/d44/uring__sqpoll_8c_source.html','
 <div class="line"><a id="l00009" name="l00009"></a><span class="lineno">    9</span><span class="preprocessor">#include &lt;string.h&gt;</span></div>
 <div class="line"><a id="l00010" name="l00010"></a><span class="lineno">   10</span><span class="preprocessor">#include &lt;errno.h&gt;</span></div>
 <div class="line"><a id="l00011" name="l00011"></a><span class="lineno">   11</span> </div>
-<div class="line"><a id="l00019" name="l00019"></a><span class="lineno">   19</span><span class="keyword">static</span> <span class="keyword">inline</span> <span class="keywordtype">int</span> sys_io_uring_setup(<span class="keywordtype">unsigned</span> entries, <span class="keyword">struct</span> io_uring_params *p) {</div>
+<div class="line"><a id="l00019" name="l00019"></a><span class="lineno">   19</span><span class="keyword">static</span> <span class="keyword">inline</span> <span class="keywordtype">int</span> sqpoll_io_uring_setup(<span class="keywordtype">unsigned</span> entries, <span class="keyword">struct</span> io_uring_params *p) {</div>
 <div class="line"><a id="l00020" name="l00020"></a><span class="lineno">   20</span>    <span class="keywordflow">return</span> (<span class="keywordtype">int</span>)syscall(__NR_io_uring_setup, entries, p);</div>
 <div class="line"><a id="l00021" name="l00021"></a><span class="lineno">   21</span>}</div>
 <div class="line"><a id="l00022" name="l00022"></a><span class="lineno">   22</span> </div>
@@ -138,7 +138,7 @@ $(document).ready(function(){initNavTree('da/d44/uring__sqpoll_8c_source.html','
 <div class="line"><a id="l00043" name="l00043"></a><span class="lineno">   43</span>    p.flags = IORING_SETUP_SQPOLL;</div>
 <div class="line"><a id="l00044" name="l00044"></a><span class="lineno">   44</span>    p.sq_thread_idle = sq_thread_idle_ms ? sq_thread_idle_ms : 2000;</div>
 <div class="line"><a id="l00045" name="l00045"></a><span class="lineno">   45</span> </div>
-<div class="line"><a id="l00046" name="l00046"></a><span class="lineno">   46</span>    <span class="keywordtype">int</span> fd = sys_io_uring_setup(entries, &amp;p);</div>
+<div class="line"><a id="l00046" name="l00046"></a><span class="lineno">   46</span>    <span class="keywordtype">int</span> fd = sqpoll_io_uring_setup(entries, &amp;p);</div>
 <div class="line"><a id="l00047" name="l00047"></a><span class="lineno">   47</span>    <span class="keywordflow">if</span> (fd &lt; 0) {</div>
 <div class="line"><a id="l00048" name="l00048"></a><span class="lineno">   48</span>        <span class="keywordflow">return</span> -1;</div>
 <div class="line"><a id="l00049" name="l00049"></a><span class="lineno">   49</span>    }</div>

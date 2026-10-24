@@ -1,5 +1,4 @@
 var searchData=
 [
-  ['quic_5fconn_5ffc_5ft_0',['quic_conn_fc_t',['../df/db2/quic__flow__control_8h.html#a67029576c55f77659b6ac7216e42ad58',1,'quic_flow_control.h']]],
-  ['quic_5fstream_5ffc_5ft_1',['quic_stream_fc_t',['../df/db2/quic__flow__control_8h.html#aa6aa8f2bde244bec283ea7f79729cd99',1,'quic_flow_control.h']]]
+  ['natsconnection_0',['natsConnection',['../d1/de1/cwist__nats_8h.html#af88dca0a18efb5c5e994d265a9f04aec',1,'cwist_nats.h']]]
 ];

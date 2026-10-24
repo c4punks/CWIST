@@ -142,13 +142,13 @@ $(document).ready(function(){initNavTree('de/daf/http3_8c.html','../../'); initR
 <code>#include &lt;ctype.h&gt;</code><br />
 <code>#include &lt;strings.h&gt;</code><br />
 <code>#include &lt;inttypes.h&gt;</code><br />
-<code>#include &lt;openssl/ssl.h&gt;</code><br />
+<code>#include &lt;<a class="el" href="../../df/d6d/ssl_8h_source.html">openssl/ssl.h</a>&gt;</code><br />
 <code>#include &lt;openssl/x509.h&gt;</code><br />
-<code>#include &lt;openssl/evp.h&gt;</code><br />
+<code>#include &lt;<a class="el" href="../../d5/d67/evp_8h_source.html">openssl/evp.h</a>&gt;</code><br />
 <code>#include &lt;openssl/rsa.h&gt;</code><br />
 <code>#include &lt;openssl/bn.h&gt;</code><br />
-<code>#include &lt;openssl/rand.h&gt;</code><br />
-<code>#include &lt;openssl/hmac.h&gt;</code><br />
+<code>#include &lt;<a class="el" href="../../d5/d66/rand_8h_source.html">openssl/rand.h</a>&gt;</code><br />
+<code>#include &lt;<a class="el" href="../../d0/dc6/hmac_8h_source.html">openssl/hmac.h</a>&gt;</code><br />
 <code>#include &lt;lsquic.h&gt;</code><br />
 <code>#include &lt;lsxpack_header.h&gt;</code><br />
 </div><div class="textblock"><div class="dynheader">
@@ -156,142 +156,149 @@ Include dependency graph for http3.c:</div>
 <div class="dyncontent">
 <div class="center"><img src="../../d4/d10/http3_8c__incl.png" border="0" usemap="#asrc_2net_2http_2http3_8c" alt=""/></div>
 <map name="asrc_2net_2http_2http3_8c" id="asrc_2net_2http_2http3_8c">
-<area shape="rect" title="lsquic/BoringSSL&#45;based HTTP/3 server for CWIST." alt="" coords="1823,5,1969,31"/>
-<area shape="rect" href="../../dd/dff/http3_8h.html" title="HTTP/3 (QUIC&#45;based) Protocol Definitions for CWIST." alt="" coords="943,152,1105,177"/>
-<area shape="poly" title=" " alt="" coords="1823,22,1661,24,1458,33,1263,50,1184,64,1125,81,1101,94,1079,109,1044,143,1041,139,1076,105,1099,89,1123,76,1183,59,1262,45,1458,27,1661,19,1823,17"/>
-<area shape="rect" title=" " alt="" coords="639,394,710,419"/>
-<area shape="poly" title=" " alt="" coords="1823,22,1521,26,1095,35,664,53,485,66,350,81,298,86,247,85,153,81,114,85,84,98,74,109,66,123,60,141,59,163,59,239,58,294,65,316,83,336,151,348,305,365,626,398,625,403,304,370,151,353,80,341,61,318,53,295,53,239,53,163,55,140,61,121,69,105,82,94,113,80,152,76,247,79,298,80,349,76,485,60,664,47,1095,30,1521,21,1823,17"/>
-<area shape="rect" title=" " alt="" coords="387,394,458,419"/>
-<area shape="poly" title=" " alt="" coords="1823,23,1421,28,853,38,333,56,157,67,102,74,73,81,45,96,25,113,12,134,8,164,8,239,10,271,17,295,30,316,54,336,78,350,111,361,199,379,293,392,374,399,373,405,293,397,198,385,110,366,75,355,50,341,26,319,12,297,5,272,3,239,3,163,7,132,21,109,42,92,71,76,101,69,156,62,332,50,853,33,1421,22,1823,17"/>
-<area shape="rect" href="../../d7/da1/sys_2err_2cwist__err_8h.html" title="Unified error code and type definitions for the CWIST system layer." alt="" coords="905,387,1047,427"/>
-<area shape="poly" title=" " alt="" coords="1823,24,1676,29,1501,39,1350,56,1298,67,1271,80,1268,90,1272,103,1280,127,1288,151,1301,204,1300,227,1287,252,1267,272,1247,283,1225,288,1203,288,1156,287,1130,291,1104,301,1049,338,1004,379,1001,375,1045,334,1101,296,1129,286,1155,282,1203,282,1224,282,1245,278,1264,268,1283,249,1295,226,1295,205,1283,153,1275,129,1267,105,1263,90,1267,77,1296,62,1349,51,1501,33,1675,23,1823,18"/>
-<area shape="rect" title=" " alt="" coords="93,306,189,331"/>
-<area shape="poly" title=" " alt="" coords="1823,22,1501,24,1056,31,835,39,640,49,489,63,437,72,402,81,361,102,322,127,252,187,196,248,159,296,155,293,192,245,248,184,319,123,358,97,400,76,435,66,488,58,639,44,835,33,1056,26,1500,18,1823,17"/>
-<area shape="rect" title=" " alt="" coords="214,306,317,331"/>
-<area shape="poly" title=" " alt="" coords="1823,23,1049,42,644,59,508,70,444,81,412,102,383,127,335,186,300,246,277,294,272,292,295,244,331,183,379,123,409,97,442,76,508,64,644,54,1048,37,1823,18"/>
-<area shape="rect" title=" " alt="" coords="341,306,408,331"/>
-<area shape="poly" title=" " alt="" coords="1823,23,1501,28,1063,39,668,56,536,68,495,74,475,81,451,102,431,128,415,156,402,186,386,245,379,293,374,292,381,244,397,185,410,154,426,125,447,98,472,76,494,69,535,62,668,51,1063,34,1501,23,1823,18"/>
-<area shape="rect" title=" " alt="" coords="1167,225,1273,251"/>
-<area shape="poly" title=" " alt="" coords="1823,24,1664,31,1473,43,1303,59,1244,70,1211,81,1186,101,1171,122,1166,147,1172,176,1183,197,1198,214,1194,218,1179,200,1167,178,1160,147,1166,120,1182,97,1208,76,1243,64,1303,54,1472,37,1664,26,1823,19"/>
-<area shape="rect" title=" " alt="" coords="905,225,989,251"/>
-<area shape="poly" title=" " alt="" coords="1823,23,1574,26,1247,36,947,53,839,66,777,81,743,100,715,123,707,135,703,148,705,161,713,175,735,187,781,200,892,224,891,229,780,205,733,192,709,179,700,163,698,147,702,133,711,119,740,96,775,76,838,61,946,48,1247,31,1574,21,1823,17"/>
-<area shape="rect" href="../../de/d65/http2_8h.html" title="HTTP/2 Protocol Definitions for CWIST." alt="" coords="486,79,647,104"/>
-<area shape="poly" title=" " alt="" coords="1823,24,1338,41,1006,58,667,81,661,82,661,77,666,76,1005,53,1338,36,1823,19"/>
-<area shape="rect" href="../../d7/d7f/log_8h.html" title="Lightweight macro&#45;based internal logging for CWIST." alt="" coords="1802,225,1926,251"/>
-<area shape="poly" title=" " alt="" coords="1900,31,1901,94,1899,136,1892,178,1879,214,1874,212,1887,177,1893,135,1896,94,1894,31"/>
-<area shape="rect" href="../../d2/dfe/alloc_8h.html" title="Memory allocation wrappers backed by libttak." alt="" coords="1600,225,1773,251"/>
-<area shape="poly" title=" " alt="" coords="1894,32,1860,99,1833,141,1799,179,1766,204,1731,222,1729,218,1763,199,1796,175,1828,138,1855,97,1889,30"/>
-<area shape="rect" href="../../d6/d3c/seq_8h.html" title="TCP&#45;like sequenced message fragmentation and reassembly." alt="" coords="1973,306,2128,331"/>
-<area shape="poly" title=" " alt="" coords="1904,30,2041,292,2036,295,1900,32"/>
-<area shape="rect" href="../../da/d39/shutdown_8h.html" title="Unified Graceful Shutdown support for CWIST." alt="" coords="788,79,977,104"/>
-<area shape="poly" title=" " alt="" coords="1823,27,1040,81,991,85,991,79,1040,76,1823,22"/>
-<area shape="rect" title=" " alt="" coords="1463,79,1615,104"/>
-<area shape="poly" title=" " alt="" coords="1839,33,1610,79,1609,73,1838,28"/>
-<area shape="rect" title=" " alt="" coords="1639,79,1783,104"/>
-<area shape="poly" title=" " alt="" coords="1867,33,1754,76,1753,71,1865,28"/>
-<area shape="rect" href="../../dc/d94/tls__chain_8h.html" title=" " alt="" coords="1181,152,1273,177"/>
-<area shape="poly" title=" " alt="" coords="1823,23,1666,27,1477,37,1313,54,1256,66,1238,73,1227,80,1220,93,1217,108,1221,139,1216,139,1212,108,1215,91,1223,77,1236,69,1255,61,1312,49,1477,32,1665,22,1823,18"/>
-<area shape="rect" href="../../dd/d34/h3__hdr__out_8h.html" title="Outgoing HTTP/3 header set builder for lsquic (private)." alt="" coords="1281,79,1388,104"/>
-<area shape="poly" title=" " alt="" coords="1823,30,1407,81,1402,82,1401,77,1406,76,1823,25"/>
-<area shape="rect" title=" " alt="" coords="1504,152,1576,177"/>
-<area shape="poly" title=" " alt="" coords="1823,27,1601,47,1503,62,1470,71,1453,81,1448,89,1447,97,1457,114,1477,130,1501,144,1498,148,1474,134,1453,117,1442,98,1443,87,1449,77,1468,66,1502,57,1601,41,1823,21"/>
-<area shape="rect" title=" " alt="" coords="1650,152,1785,177"/>
-<area shape="poly" title=" " alt="" coords="1884,33,1796,106,1746,145,1742,141,1793,102,1881,29"/>
-<area shape="rect" title=" " alt="" coords="2009,79,2084,104"/>
-<area shape="poly" title=" " alt="" coords="1921,28,2011,70,2008,75,1919,33"/>
-<area shape="rect" title=" " alt="" coords="2109,79,2177,104"/>
-<area shape="poly" title=" " alt="" coords="1936,28,2096,74,2095,79,1935,33"/>
-<area shape="rect" title=" " alt="" coords="2201,79,2263,104"/>
-<area shape="poly" title=" " alt="" coords="1959,28,2188,76,2187,81,1957,33"/>
-<area shape="rect" title=" " alt="" coords="2287,79,2379,104"/>
-<area shape="poly" title=" " alt="" coords="1969,27,2274,76,2273,81,1969,32"/>
-<area shape="rect" title=" " alt="" coords="2404,79,2484,104"/>
-<area shape="poly" title=" " alt="" coords="1969,23,2156,43,2391,76,2390,81,2156,48,1969,29"/>
-<area shape="rect" title=" " alt="" coords="2508,79,2593,104"/>
-<area shape="poly" title=" " alt="" coords="1969,21,2199,40,2345,56,2495,76,2494,81,2344,61,2199,46,1969,27"/>
-<area shape="rect" title=" " alt="" coords="2617,79,2676,104"/>
-<area shape="poly" title=" " alt="" coords="1969,18,2088,23,2245,33,2422,50,2604,76,2604,81,2422,56,2244,39,2088,29,1969,24"/>
-<area shape="rect" title=" " alt="" coords="2701,79,2771,104"/>
-<area shape="poly" title=" " alt="" coords="1969,18,2278,33,2480,50,2687,76,2687,82,2479,56,2278,39,1969,24"/>
-<area shape="rect" title=" " alt="" coords="2795,79,2874,104"/>
-<area shape="poly" title=" " alt="" coords="1969,18,2116,22,2316,32,2546,49,2782,76,2781,81,2545,54,2316,37,2116,27,1969,23"/>
-<area shape="rect" title=" " alt="" coords="2898,79,2985,104"/>
-<area shape="poly" title=" " alt="" coords="1969,17,2132,21,2357,31,2617,48,2885,76,2884,81,2617,53,2357,36,2131,27,1969,23"/>
-<area shape="rect" title=" " alt="" coords="3009,79,3129,104"/>
-<area shape="poly" title=" " alt="" coords="1969,18,2400,33,2694,50,2996,76,2996,81,2693,56,2400,38,1969,23"/>
-<area shape="rect" title=" " alt="" coords="3153,79,3265,104"/>
-<area shape="poly" title=" " alt="" coords="1969,17,2169,20,2456,29,2793,47,3140,76,3139,81,2792,52,2456,35,2168,26,1969,22"/>
-<area shape="rect" title=" " alt="" coords="3290,79,3398,104"/>
-<area shape="poly" title=" " alt="" coords="1969,17,2188,19,2509,27,2887,44,3083,58,3277,76,3276,81,3083,64,2886,50,2509,32,2188,24,1969,22"/>
-<area shape="rect" title=" " alt="" coords="3423,79,3527,104"/>
-<area shape="poly" title=" " alt="" coords="1969,16,2206,17,2560,23,2978,41,3195,56,3409,76,3408,81,3194,62,2977,47,2560,29,2206,22,1969,21"/>
-<area shape="rect" title=" " alt="" coords="3551,79,3668,104"/>
-<area shape="poly" title=" " alt="" coords="1969,16,2224,17,2609,23,3065,42,3303,56,3537,76,3537,81,3303,62,3065,47,2608,29,2224,22,1969,21"/>
-<area shape="rect" title=" " alt="" coords="3691,79,3815,104"/>
-<area shape="poly" title=" " alt="" coords="1969,16,2243,16,2662,22,3162,40,3422,56,3678,76,3677,81,3421,61,3162,46,2662,27,2243,21,1969,21"/>
-<area shape="rect" href="../../d9/dab/net_2http_2http_8h.html" title="HTTP Protocol Definitions and Helpers." alt="" coords="459,225,613,251"/>
-<area shape="poly" title=" " alt="" coords="946,180,627,226,626,221,945,175"/>
-<area shape="rect" title=" " alt="" coords="1349,475,1432,500"/>
-<area shape="poly" title=" " alt="" coords="1042,175,1101,215,1156,248,1200,262,1239,265,1276,272,1295,281,1315,297,1347,335,1368,380,1382,424,1390,461,1385,462,1377,426,1363,382,1342,338,1311,301,1292,286,1274,277,1238,270,1199,267,1154,253,1098,220,1039,180"/>
-<area shape="poly" title=" " alt="" coords="1025,178,1015,246,997,339,988,374,983,373,992,338,1010,245,1020,177"/>
-<area shape="rect" title=" " alt="" coords="1161,475,1231,500"/>
-<area shape="poly" title=" " alt="" coords="1035,176,1066,212,1088,232,1112,248,1138,259,1162,264,1208,263,1230,263,1251,267,1272,277,1291,297,1303,319,1304,343,1299,367,1288,390,1256,434,1222,467,1218,464,1252,430,1283,388,1294,365,1299,342,1297,321,1287,300,1269,282,1249,272,1229,268,1208,268,1161,269,1136,264,1109,253,1085,236,1063,216,1031,180"/>
-<area shape="poly" title=" " alt="" coords="1056,175,1176,218,1174,223,1055,180"/>
-<area shape="poly" title=" " alt="" coords="1013,179,971,218,968,214,1010,175"/>
-<area shape="rect" href="../../d4/dbd/core_2sstring_2sstring_8h.html" title="Safe string type with helper methods." alt="" coords="533,299,669,339"/>
-<area shape="poly" title=" " alt="" coords="548,249,579,286,575,290,544,253"/>
-<area shape="poly" title=" " alt="" coords="524,253,502,274,479,300,454,343,435,382,430,380,449,340,475,297,498,270,520,249"/>
-<area shape="poly" title=" " alt="" coords="613,242,773,261,848,277,900,296,921,313,939,332,964,373,960,376,934,336,917,317,897,301,847,282,772,267,613,248"/>
-<area shape="poly" title=" " alt="" coords="533,252,521,291,519,315,524,338,537,368,552,390,572,408,601,424,632,433,687,442,842,458,1147,480,1147,486,841,464,687,447,631,438,599,429,569,412,548,394,533,371,519,339,514,315,516,290,528,250"/>
-<area shape="rect" href="../../d1/d7a/net_2http_2query_8h.html" title="Query string parser and map." alt="" coords="1115,306,1277,331"/>
-<area shape="poly" title=" " alt="" coords="613,246,1101,303,1100,309,613,251"/>
-<area shape="rect" href="../../d0/dae/core_2db_2sql_8h.html" title="Database operations wrapper (SQLite3)." alt="" coords="745,306,887,331"/>
-<area shape="poly" title=" " alt="" coords="577,248,763,300,761,305,576,253"/>
-<area shape="poly" title=" " alt="" coords="459,253,338,273,202,301,189,305,188,300,201,296,337,268,459,248"/>
-<area shape="poly" title=" " alt="" coords="497,253,330,301,318,305,317,300,329,296,495,248"/>
-<area shape="poly" title=" " alt="" coords="514,253,411,303,409,298,511,248"/>
-<area shape="poly" title=" " alt="" coords="620,337,658,381,654,385,616,341"/>
-<area shape="poly" title=" " alt="" coords="563,341,460,390,458,386,561,336"/>
-<area shape="poly" title=" " alt="" coords="602,339,606,383,614,406,628,424,1336,479,1335,484,625,429,609,408,601,384,597,339"/>
-<area shape="poly" title=" " alt="" coords="670,333,892,383,891,389,669,338"/>
-<area shape="poly" title=" " alt="" coords="1048,419,1336,473,1335,478,1047,424"/>
-<area shape="poly" title=" " alt="" coords="1030,424,1152,467,1150,472,1028,429"/>
-<area shape="rect" title=" " alt="" coords="841,475,951,500"/>
-<area shape="poly" title=" " alt="" coords="958,429,920,467,916,463,955,425"/>
-<area shape="poly" title=" " alt="" coords="1199,331,1199,461,1193,461,1193,331"/>
-<area shape="rect" title=" " alt="" coords="1645,394,1720,419"/>
-<area shape="poly" title=" " alt="" coords="1262,329,1632,394,1631,399,1261,334"/>
-<area shape="poly" title=" " alt="" coords="839,329,930,378,927,382,836,334"/>
-<area shape="poly" title=" " alt="" coords="824,330,887,461,882,463,819,333"/>
-<area shape="poly" title=" " alt="" coords="888,324,1632,398,1632,403,887,330"/>
-<area shape="poly" title=" " alt="" coords="536,106,504,125,490,138,478,153,475,170,481,186,493,201,508,215,505,219,489,205,476,188,470,170,474,151,486,134,501,121,534,102"/>
-<area shape="rect" href="../../d7/d67/net_2http_2https_8h.html" title="HTTPS/TLS wrapper interface." alt="" coords="488,152,648,177"/>
-<area shape="poly" title=" " alt="" coords="570,104,570,138,565,139,564,104"/>
-<area shape="poly" title=" " alt="" coords="565,179,549,214,544,212,560,177"/>
-<area shape="poly" title=" " alt="" coords="649,172,718,186,795,210,872,246,907,269,939,297,953,314,963,334,974,372,969,374,958,336,948,317,935,301,904,274,869,250,793,215,716,191,648,177"/>
-<area shape="poly" title=" " alt="" coords="649,172,1153,227,1153,232,648,177"/>
-<area shape="poly" title=" " alt="" coords="629,175,891,224,890,229,628,180"/>
-<area shape="poly" title=" " alt="" coords="1838,253,1799,273,1760,301,1724,342,1698,383,1693,380,1720,339,1757,297,1796,268,1835,248"/>
-<area shape="poly" title=" " alt="" coords="1689,251,1686,380,1681,380,1684,251"/>
-<area shape="rect" title=" " alt="" coords="1504,306,1645,331"/>
-<area shape="poly" title=" " alt="" coords="1672,253,1604,300,1601,296,1669,249"/>
-<area shape="rect" href="../../da/d0c/arena_8h.html" title="Request&#45;scoped arena allocator backed by libttak arena generations." alt="" coords="1771,306,1949,331"/>
-<area shape="poly" title=" " alt="" coords="1713,248,1823,298,1821,303,1711,253"/>
-<area shape="poly" title=" " alt="" coords="1852,333,1804,381,1771,407,1733,429,1658,456,1580,474,1507,483,1446,488,1446,482,1506,478,1579,468,1657,451,1731,424,1768,403,1801,377,1848,330"/>
-<area shape="poly" title=" " alt="" coords="1837,334,1720,390,1718,386,1835,329"/>
-<area shape="poly" title=" " alt="" coords="2046,333,2009,381,1982,408,1949,429,1907,444,1850,456,1710,473,1564,483,1446,488,1445,482,1563,478,1710,468,1849,451,1906,439,1947,424,1978,404,2005,378,2042,330"/>
-<area shape="poly" title=" " alt="" coords="2024,334,1899,381,1817,407,1733,429,1633,445,1497,461,1245,485,1245,479,1496,456,1633,440,1731,424,1816,402,1898,376,2022,329"/>
-<area shape="poly" title=" " alt="" coords="2002,334,1734,396,1733,391,2001,329"/>
-<area shape="rect" title=" " alt="" coords="723,152,821,177"/>
-<area shape="poly" title=" " alt="" coords="866,106,803,147,800,142,863,102"/>
-<area shape="rect" title=" " alt="" coords="846,152,919,177"/>
-<area shape="poly" title=" " alt="" coords="885,104,885,138,880,138,880,104"/>
-<area shape="poly" title=" " alt="" coords="1228,178,1225,212,1220,212,1223,177"/>
-<area shape="poly" title=" " alt="" coords="1338,104,1337,135,1330,175,1315,217,1303,237,1287,253,1266,266,1239,275,1173,284,1095,285,1011,281,927,277,849,276,782,283,755,290,733,301,715,318,701,339,683,382,678,380,696,336,711,314,731,296,753,285,781,278,848,271,927,271,1011,276,1095,279,1173,279,1238,270,1263,261,1284,249,1299,233,1310,215,1325,174,1331,134,1332,104"/>
-<area shape="poly" title=" " alt="" coords="1349,102,1369,125,1392,157,1411,195,1419,236,1419,320,1412,398,1399,462,1394,461,1407,397,1413,320,1413,237,1406,197,1388,159,1365,128,1345,106"/>
-<area shape="poly" title=" " alt="" coords="1367,102,1403,121,1437,150,1452,176,1460,201,1464,247,1468,292,1477,314,1494,337,1525,361,1561,379,1598,390,1632,398,1631,403,1596,396,1559,384,1522,366,1490,341,1472,317,1463,293,1458,248,1455,202,1448,178,1433,154,1400,125,1365,106"/>
-<area shape="poly" title=" " alt="" coords="1369,101,1495,145,1493,150,1367,107"/>
-<area shape="poly" title=" " alt="" coords="1389,100,1643,147,1642,152,1388,105"/>
+<area shape="rect" title="lsquic/BoringSSL&#45;based HTTP/3 server for CWIST." alt="" coords="1813,5,1959,31"/>
+<area shape="rect" href="../../dd/dff/http3_8h.html" title="HTTP/3 (QUIC&#45;based) Protocol Definitions for CWIST." alt="" coords="200,152,361,177"/>
+<area shape="poly" title=" " alt="" coords="1813,23,1495,27,1058,37,649,55,500,67,413,81,382,94,353,110,305,145,302,141,350,106,380,89,412,76,499,62,649,49,1058,32,1495,22,1813,17"/>
+<area shape="rect" title=" " alt="" coords="1187,394,1257,419"/>
+<area shape="poly" title=" " alt="" coords="1813,24,1679,29,1516,39,1362,56,1300,67,1253,81,1222,94,1198,107,1179,125,1162,153,1158,172,1166,187,1180,203,1192,224,1206,266,1215,309,1223,380,1218,381,1209,310,1200,268,1188,226,1175,206,1162,190,1153,173,1157,151,1175,122,1195,103,1219,89,1252,76,1299,62,1362,51,1516,34,1678,24,1813,18"/>
+<area shape="rect" title=" " alt="" coords="737,394,808,419"/>
+<area shape="poly" title=" " alt="" coords="1813,23,1645,28,1441,39,1260,56,1198,67,1163,81,1138,109,1127,140,1126,172,1129,206,1132,240,1132,274,1121,308,1097,341,1057,357,984,373,822,401,821,396,982,368,1055,352,1094,337,1117,306,1126,273,1127,240,1123,206,1120,172,1122,139,1134,107,1160,76,1196,62,1260,50,1441,33,1645,23,1813,18"/>
+<area shape="rect" href="../../d7/da1/sys_2err_2cwist__err_8h.html" title="Unified error code and type definitions for the CWIST system layer." alt="" coords="231,387,373,427"/>
+<area shape="poly" title=" " alt="" coords="1813,23,1030,42,602,59,446,70,354,81,258,99,240,106,222,117,206,132,189,154,177,165,164,171,153,175,147,183,147,198,156,226,217,337,235,359,257,377,253,381,231,363,213,340,152,228,142,199,142,181,150,171,162,166,174,160,185,150,202,128,219,112,237,101,257,94,354,76,446,64,602,54,1030,36,1813,18"/>
+<area shape="rect" title=" " alt="" coords="769,306,865,331"/>
+<area shape="poly" title=" " alt="" coords="1813,23,1605,27,1341,37,1101,55,1016,67,968,81,940,102,914,127,873,187,844,246,826,294,821,292,839,244,868,184,910,124,936,98,966,76,1015,61,1101,49,1340,32,1605,22,1813,18"/>
+<area shape="rect" title=" " alt="" coords="889,306,992,331"/>
+<area shape="poly" title=" " alt="" coords="1813,22,1609,24,1351,32,1227,39,1120,50,1039,64,1012,72,996,81,975,103,960,129,950,158,943,187,938,246,940,292,935,292,933,245,938,187,945,156,956,127,971,100,992,77,1010,67,1038,58,1119,45,1227,34,1351,27,1608,19,1813,17"/>
+<area shape="rect" title=" " alt="" coords="1017,306,1083,331"/>
+<area shape="poly" title=" " alt="" coords="1813,21,1611,22,1359,29,1238,37,1134,47,1056,62,1031,71,1016,81,1000,104,993,132,992,161,996,191,1016,248,1038,293,1034,296,1011,250,991,192,986,161,987,131,995,102,1012,77,1028,66,1055,57,1133,42,1238,31,1359,24,1611,17,1813,16"/>
+<area shape="rect" href="../../df/d6d/ssl_8h.html" title="mbedTLS TLS backend: OpenSSL&#45;shaped seam over the CWIST TLS subset." alt="" coords="1405,225,1511,251"/>
+<area shape="poly" title=" " alt="" coords="1838,33,1789,52,1765,65,1742,81,1723,105,1715,130,1705,155,1684,179,1646,202,1605,218,1564,229,1525,235,1525,230,1563,223,1604,213,1644,197,1680,175,1701,152,1710,128,1719,103,1739,77,1762,60,1787,47,1836,28"/>
+<area shape="rect" href="../../d5/d67/evp_8h.html" title="mbedTLS TLS backend: EVP subset (HMAC digest tags, AES&#45;256&#45;CBC)." alt="" coords="1521,394,1633,419"/>
+<area shape="poly" title=" " alt="" coords="1881,33,1798,162,1733,252,1659,341,1606,387,1602,383,1655,337,1728,249,1794,159,1877,30"/>
+<area shape="rect" href="../../d0/dc6/hmac_8h.html" title="mbedTLS TLS backend: HMAC subset (HMAC&#45;SHA256, one&#45;shot + streaming)." alt="" coords="1521,306,1645,331"/>
+<area shape="poly" title=" " alt="" coords="1864,33,1829,54,1793,81,1768,106,1751,128,1713,179,1605,298,1602,294,1709,176,1747,124,1764,102,1790,77,1827,49,1862,29"/>
+<area shape="rect" title=" " alt="" coords="239,225,323,251"/>
+<area shape="poly" title=" " alt="" coords="1813,23,1147,42,790,60,660,70,584,81,527,104,452,142,313,221,310,216,449,137,525,99,583,76,659,65,789,54,1146,37,1813,18"/>
+<area shape="rect" href="../../de/d65/http2_8h.html" title="HTTP/2 Protocol Definitions for CWIST." alt="" coords="596,79,757,104"/>
+<area shape="poly" title=" " alt="" coords="1813,26,857,81,771,87,771,81,856,76,1813,21"/>
+<area shape="rect" href="../../d7/d7f/log_8h.html" title="Lightweight macro&#45;based internal logging for CWIST." alt="" coords="1988,225,2112,251"/>
+<area shape="poly" title=" " alt="" coords="1891,30,1914,96,1935,137,1961,176,1987,199,2014,217,2012,221,1983,203,1957,179,1930,140,1909,98,1886,32"/>
+<area shape="rect" href="../../d2/dfe/alloc_8h.html" title="Memory allocation wrappers backed by libttak." alt="" coords="1825,306,1998,331"/>
+<area shape="poly" title=" " alt="" coords="1890,31,1912,292,1906,292,1884,31"/>
+<area shape="rect" href="../../d6/d3c/seq_8h.html" title="TCP&#45;like sequenced message fragmentation and reassembly." alt="" coords="921,394,1075,419"/>
+<area shape="poly" title=" " alt="" coords="1813,24,1652,31,1459,43,1288,60,1228,70,1194,81,1176,95,1166,111,1153,153,1147,180,1147,205,1156,249,1159,270,1160,292,1155,315,1141,340,1126,358,1108,372,1067,392,1065,387,1105,368,1123,354,1137,337,1150,313,1155,291,1154,271,1150,250,1142,205,1142,180,1147,151,1161,108,1172,92,1191,76,1227,65,1287,54,1459,38,1652,26,1813,19"/>
+<area shape="rect" href="../../da/d39/shutdown_8h.html" title="Unified Graceful Shutdown support for CWIST." alt="" coords="1949,79,2138,104"/>
+<area shape="poly" title=" " alt="" coords="1912,28,2006,71,2004,75,1910,33"/>
+<area shape="rect" title=" " alt="" coords="2162,79,2314,104"/>
+<area shape="poly" title=" " alt="" coords="1943,28,2168,73,2167,79,1942,33"/>
+<area shape="rect" title=" " alt="" coords="2338,79,2482,104"/>
+<area shape="poly" title=" " alt="" coords="1959,27,2325,76,2324,81,1958,32"/>
+<area shape="rect" href="../../dc/d94/tls__chain_8h.html" title=" " alt="" coords="1579,152,1671,177"/>
+<area shape="poly" title=" " alt="" coords="1814,33,1752,51,1720,64,1692,81,1661,110,1639,141,1635,138,1657,106,1688,77,1718,59,1750,46,1813,28"/>
+<area shape="rect" href="../../dd/d34/h3__hdr__out_8h.html" title="Outgoing HTTP/3 header set builder for lsquic (private)." alt="" coords="1303,79,1410,104"/>
+<area shape="poly" title=" " alt="" coords="1813,32,1424,84,1423,78,1813,26"/>
+<area shape="rect" title=" " alt="" coords="1171,152,1243,177"/>
+<area shape="poly" title=" " alt="" coords="1813,23,1686,28,1535,37,1392,54,1335,66,1292,81,1272,93,1254,109,1225,142,1221,139,1250,105,1269,89,1290,76,1333,61,1391,49,1534,32,1686,22,1813,18"/>
+<area shape="rect" title=" " alt="" coords="1420,152,1555,177"/>
+<area shape="poly" title=" " alt="" coords="1831,33,1749,53,1660,81,1584,114,1520,148,1518,143,1582,110,1658,76,1748,48,1829,28"/>
+<area shape="rect" title=" " alt="" coords="2506,79,2581,104"/>
+<area shape="poly" title=" " alt="" coords="1959,21,2193,39,2340,55,2492,76,2492,81,2340,60,2192,44,1959,26"/>
+<area shape="rect" title=" " alt="" coords="2605,79,2673,104"/>
+<area shape="poly" title=" " alt="" coords="1959,19,2233,35,2410,52,2592,76,2592,82,2410,57,2233,41,1958,24"/>
+<area shape="rect" title=" " alt="" coords="2697,79,2760,104"/>
+<area shape="poly" title=" " alt="" coords="1959,18,2092,21,2271,31,2475,48,2684,76,2683,81,2474,54,2271,36,2092,27,1959,23"/>
+<area shape="rect" title=" " alt="" coords="2784,79,2876,104"/>
+<area shape="poly" title=" " alt="" coords="1959,18,2305,34,2535,51,2771,76,2770,81,2534,56,2305,39,1959,24"/>
+<area shape="rect" title=" " alt="" coords="2901,79,2981,104"/>
+<area shape="poly" title=" " alt="" coords="1959,17,2123,20,2351,29,2615,47,2887,76,2886,81,2615,52,2351,35,2123,26,1959,22"/>
+<area shape="rect" title=" " alt="" coords="3005,79,3090,104"/>
+<area shape="poly" title=" " alt="" coords="1959,17,2138,19,2392,28,2687,46,2840,59,2991,76,2991,81,2840,64,2687,51,2392,33,2138,25,1959,22"/>
+<area shape="rect" title=" " alt="" coords="3114,79,3173,104"/>
+<area shape="poly" title=" " alt="" coords="1959,18,2521,35,2850,53,2990,64,3100,76,3100,82,2989,69,2849,58,2521,41,1959,23"/>
+<area shape="rect" title=" " alt="" coords="3197,79,3268,104"/>
+<area shape="poly" title=" " alt="" coords="1959,18,2560,36,2914,53,3065,64,3184,76,3183,82,3065,70,2914,59,2560,42,1959,24"/>
+<area shape="rect" title=" " alt="" coords="3292,79,3371,104"/>
+<area shape="poly" title=" " alt="" coords="1959,18,2604,36,2987,53,3150,64,3278,76,3278,81,3150,69,2987,58,2604,41,1959,23"/>
+<area shape="rect" title=" " alt="" coords="3395,79,3481,104"/>
+<area shape="poly" title=" " alt="" coords="1959,18,2652,36,3066,53,3243,64,3381,76,3381,81,3243,69,3066,58,2652,41,1959,23"/>
+<area shape="rect" title=" " alt="" coords="3506,79,3626,104"/>
+<area shape="poly" title=" " alt="" coords="1959,16,2209,17,2585,24,3031,42,3264,57,3492,76,3492,81,3263,62,3031,48,2585,30,2209,23,1959,22"/>
+<area shape="rect" title=" " alt="" coords="3651,79,3759,104"/>
+<area shape="poly" title=" " alt="" coords="1959,18,2770,36,3263,53,3474,64,3637,76,3637,81,3473,69,3263,58,2770,41,1959,23"/>
+<area shape="rect" title=" " alt="" coords="3783,79,3887,104"/>
+<area shape="poly" title=" " alt="" coords="1959,18,2831,34,3366,51,3593,63,3770,76,3769,81,3593,68,3365,57,2831,39,1959,23"/>
+<area shape="rect" href="../../d5/d66/rand_8h.html" title="mbedTLS TLS backend: RAND_bytes over mbedTLS CTR&#45;DRBG." alt="" coords="3911,79,4029,104"/>
+<area shape="poly" title=" " alt="" coords="1959,18,2889,34,3464,52,3708,63,3897,76,3897,81,3708,68,3463,57,2889,40,1959,23"/>
+<area shape="rect" href="../../d9/dab/net_2http_2http_8h.html" title="HTTP Protocol Definitions and Helpers." alt="" coords="527,225,680,251"/>
+<area shape="poly" title=" " alt="" coords="333,175,538,220,537,225,332,180"/>
+<area shape="rect" title=" " alt="" coords="782,475,865,500"/>
+<area shape="poly" title=" " alt="" coords="262,180,237,199,218,227,194,283,183,332,183,355,189,378,201,401,219,424,242,432,292,440,446,456,769,480,768,485,445,461,291,445,240,437,216,429,197,404,184,380,178,356,177,332,189,281,213,224,234,196,259,176"/>
+<area shape="poly" title=" " alt="" coords="267,180,245,200,228,226,223,247,221,273,224,304,235,338,248,358,266,376,262,380,244,361,230,340,219,305,215,274,218,246,224,224,241,196,263,176"/>
+<area shape="rect" title=" " alt="" coords="493,475,564,500"/>
+<area shape="poly" title=" " alt="" coords="221,180,171,195,117,219,68,254,48,275,32,300,16,335,9,366,13,395,31,424,210,447,480,478,479,483,209,453,29,429,8,397,3,366,11,333,28,297,44,272,65,250,114,215,169,190,220,175"/>
+<area shape="poly" title=" " alt="" coords="362,168,467,175,1391,230,1391,235,467,180,361,174"/>
+<area shape="poly" title=" " alt="" coords="283,178,283,212,278,212,278,178"/>
+<area shape="rect" href="../../d4/dbd/core_2sstring_2sstring_8h.html" title="Safe string type with helper methods." alt="" coords="558,299,694,339"/>
+<area shape="poly" title=" " alt="" coords="609,250,619,285,614,286,604,252"/>
+<area shape="poly" title=" " alt="" coords="632,248,670,268,708,297,741,339,764,380,760,383,737,342,704,301,667,273,630,253"/>
+<area shape="poly" title=" " alt="" coords="527,249,411,268,361,283,329,301,317,316,310,335,304,373,298,373,305,333,313,314,326,297,359,278,410,263,526,244"/>
+<area shape="poly" title=" " alt="" coords="527,242,444,251,399,260,354,274,311,292,274,317,243,349,220,388,214,408,215,416,220,425,232,432,255,439,324,454,480,477,479,483,323,460,253,445,229,437,216,429,210,418,209,407,216,386,238,345,270,313,309,288,352,269,397,255,443,245,526,237"/>
+<area shape="rect" href="../../d1/d7a/net_2http_2query_8h.html" title="Query string parser and map." alt="" coords="449,394,611,419"/>
+<area shape="poly" title=" " alt="" coords="589,253,567,273,548,300,536,341,532,380,527,380,531,340,544,297,563,270,586,249"/>
+<area shape="rect" href="../../d0/dae/core_2db_2sql_8h.html" title="Database operations wrapper (SQLite3)." alt="" coords="340,306,483,331"/>
+<area shape="poly" title=" " alt="" coords="576,253,453,303,451,298,574,248"/>
+<area shape="poly" title=" " alt="" coords="635,248,774,299,772,304,633,253"/>
+<area shape="poly" title=" " alt="" coords="662,248,877,296,891,300,890,305,876,301,661,253"/>
+<area shape="poly" title=" " alt="" coords="681,243,831,261,918,276,1004,296,1013,299,1011,304,1003,301,917,281,831,266,680,248"/>
+<area shape="poly" title=" " alt="" coords="695,327,1173,396,1173,401,694,332"/>
+<area shape="poly" title=" " alt="" coords="659,336,743,385,740,389,657,341"/>
+<area shape="poly" title=" " alt="" coords="643,337,679,379,726,425,790,466,787,470,723,429,675,383,639,341"/>
+<area shape="poly" title=" " alt="" coords="558,341,387,386,386,381,557,335"/>
+<area shape="poly" title=" " alt="" coords="374,416,769,475,768,480,373,421"/>
+<area shape="poly" title=" " alt="" coords="357,424,483,468,482,473,355,429"/>
+<area shape="rect" title=" " alt="" coords="301,475,412,500"/>
+<area shape="poly" title=" " alt="" coords="317,425,343,462,339,465,313,428"/>
+<area shape="poly" title=" " alt="" coords="532,420,532,461,526,461,527,419"/>
+<area shape="rect" title=" " alt="" coords="1493,475,1567,500"/>
+<area shape="poly" title=" " alt="" coords="612,416,681,424,1143,461,1479,481,1479,486,1143,466,680,429,611,422"/>
+<area shape="poly" title=" " alt="" coords="398,334,338,380,335,376,395,329"/>
+<area shape="poly" title=" " alt="" coords="412,332,403,374,387,428,372,463,367,461,382,426,397,373,407,331"/>
+<area shape="poly" title=" " alt="" coords="451,329,624,384,674,406,696,416,725,424,793,436,882,446,1098,463,1479,482,1479,487,1098,468,882,451,792,441,724,429,694,421,672,411,622,389,449,334"/>
+<area shape="poly" title=" " alt="" coords="1453,252,1427,289,1387,338,1333,389,1302,411,1269,429,1170,443,972,459,578,486,577,480,971,454,1170,438,1268,424,1300,407,1330,385,1383,335,1423,285,1448,249"/>
+<area shape="poly" title=" " alt="" coords="1462,251,1475,325,1486,376,1502,426,1519,462,1514,464,1497,428,1481,377,1470,327,1457,251"/>
+<area shape="poly" title=" " alt="" coords="1465,250,1483,290,1511,337,1554,383,1550,387,1506,340,1478,292,1460,252"/>
+<area shape="poly" title=" " alt="" coords="1478,249,1555,296,1552,301,1475,253"/>
+<area shape="poly" title=" " alt="" coords="1572,421,1546,464,1542,461,1567,418"/>
+<area shape="poly" title=" " alt="" coords="1564,334,1535,356,1521,371,1511,388,1507,406,1508,426,1519,462,1514,463,1502,427,1501,406,1506,386,1517,368,1531,352,1561,329"/>
+<area shape="poly" title=" " alt="" coords="1585,332,1581,380,1576,380,1580,331"/>
+<area shape="poly" title=" " alt="" coords="677,105,669,139,654,179,626,217,622,213,649,176,664,137,672,104"/>
+<area shape="rect" href="../../d7/d67/net_2http_2https_8h.html" title="HTTPS/TLS wrapper interface." alt="" coords="479,152,639,177"/>
+<area shape="poly" title=" " alt="" coords="659,106,592,147,589,142,656,102"/>
+<area shape="poly" title=" " alt="" coords="569,176,591,212,587,215,564,179"/>
+<area shape="poly" title=" " alt="" coords="503,180,452,195,396,220,344,254,322,275,304,300,297,317,294,336,296,373,291,373,289,335,292,316,300,297,318,272,341,250,394,215,450,190,501,175"/>
+<area shape="poly" title=" " alt="" coords="640,170,1391,229,1391,234,639,175"/>
+<area shape="poly" title=" " alt="" coords="515,180,337,225,335,220,514,175"/>
+<area shape="poly" title=" " alt="" coords="2060,249,2080,283,2100,331,2106,357,2107,382,2101,407,2088,429,2061,442,2012,453,1870,470,1711,481,1581,487,1581,482,1710,476,1870,465,2011,448,2059,437,2084,425,2096,405,2101,382,2100,357,2095,332,2075,286,2056,252"/>
+<area shape="poly" title=" " alt="" coords="1956,329,2002,345,2046,367,2063,380,2073,395,2075,411,2065,429,2040,442,1993,453,1858,469,1706,481,1581,487,1581,481,1706,475,1858,464,1992,447,2038,437,2061,425,2069,410,2068,397,2059,384,2044,372,2000,350,1954,334"/>
+<area shape="rect" title=" " alt="" coords="1707,394,1849,419"/>
+<area shape="poly" title=" " alt="" coords="1895,334,1809,389,1806,384,1892,329"/>
+<area shape="rect" href="../../da/d0c/arena_8h.html" title="Request&#45;scoped arena allocator backed by libttak arena generations." alt="" coords="1873,394,2051,419"/>
+<area shape="poly" title=" " alt="" coords="1920,330,1950,380,1946,383,1916,333"/>
+<area shape="poly" title=" " alt="" coords="1907,422,1861,429,1572,457,1288,474,1045,484,879,488,879,483,1045,479,1288,469,1571,452,1860,424,1907,417"/>
+<area shape="poly" title=" " alt="" coords="1901,422,1861,429,1582,480,1581,474,1860,424,1900,417"/>
+<area shape="poly" title=" " alt="" coords="974,422,862,471,860,467,971,417"/>
+<area shape="poly" title=" " alt="" coords="930,422,578,480,577,475,929,417"/>
+<area shape="poly" title=" " alt="" coords="1076,417,1479,476,1478,481,1075,422"/>
+<area shape="rect" title=" " alt="" coords="1971,152,2070,177"/>
+<area shape="poly" title=" " alt="" coords="2042,105,2031,140,2026,138,2037,104"/>
+<area shape="rect" title=" " alt="" coords="2095,152,2168,177"/>
+<area shape="poly" title=" " alt="" coords="2059,102,2108,141,2105,145,2056,106"/>
+<area shape="poly" title=" " alt="" coords="1599,180,1499,222,1497,217,1597,175"/>
+<area shape="poly" title=" " alt="" coords="1349,106,1315,153,1295,199,1272,262,1232,382,1227,380,1267,261,1290,197,1310,151,1344,103"/>
+<area shape="poly" title=" " alt="" coords="1356,105,1342,161,1336,199,1334,237,1334,320,1331,356,1319,384,1300,407,1270,429,1239,444,1196,455,1089,473,975,483,878,487,878,482,974,477,1089,467,1195,450,1237,439,1267,424,1296,403,1315,381,1325,355,1329,320,1329,237,1331,198,1337,160,1351,103"/>
+<area shape="poly" title=" " alt="" coords="1363,103,1380,138,1393,158,1409,175,1443,199,1478,213,1544,226,1576,232,1606,244,1634,264,1659,298,1665,326,1663,365,1656,403,1647,428,1633,444,1617,456,1581,474,1579,470,1614,452,1630,440,1642,425,1651,402,1658,364,1660,326,1654,300,1630,268,1603,249,1574,237,1543,231,1476,218,1441,204,1406,179,1389,161,1375,141,1358,105"/>
+<area shape="poly" title=" " alt="" coords="1334,106,1245,148,1243,144,1331,102"/>
+<area shape="poly" title=" " alt="" coords="1379,102,1455,143,1453,148,1376,106"/>
 </map>
 </div>
 </div>
@@ -732,9 +739,9 @@ Functions</h2></td></tr>
 
 <p class="definition">Definition at line <a class="el" href="../../de/daf/http3_8c_source.html#l02891">2891</a> of file <a class="el" href="../../de/daf/http3_8c_source.html">http3.c</a>.</p>
 
-<p class="reference">References <a class="el" href="../../d9/d39/alloc_8c_source.html#l00391">cwist_free()</a>, <a class="el" href="../../dd/dff/http3_8h_source.html#l00038">cwist_http3_context::engine</a>, <a class="el" href="../../dd/dff/http3_8h_source.html#l00036">cwist_http3_context::ssl_ctx</a>, <a class="el" href="../../dd/dff/http3_8h_source.html#l00068">cwist_http3_context::ssl_ctx_handout</a>, <a class="el" href="../../dd/dff/http3_8h_source.html#l00067">cwist_http3_context::ssl_ctx_lock</a>, and <a class="el" href="../../dd/dff/http3_8h_source.html#l00069">cwist_http3_context::ticket_key</a>.</p>
+<p class="reference">References <a class="el" href="../../d9/d39/alloc_8c_source.html#l00391">cwist_free()</a>, <a class="el" href="../../dd/dff/http3_8h_source.html#l00038">cwist_http3_context::engine</a>, <a class="el" href="../../dd/dff/http3_8h_source.html#l00036">cwist_http3_context::ssl_ctx</a>, <a class="el" href="../../df/d6d/ssl_8h_source.html#l00099">SSL_CTX_free</a>, <a class="el" href="../../dd/dff/http3_8h_source.html#l00068">cwist_http3_context::ssl_ctx_handout</a>, <a class="el" href="../../dd/dff/http3_8h_source.html#l00067">cwist_http3_context::ssl_ctx_lock</a>, and <a class="el" href="../../dd/dff/http3_8h_source.html#l00069">cwist_http3_context::ticket_key</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../df/d7f/app_8c_source.html#l01456">cwist_app_destroy()</a>.</p>
+<p class="reference">Referenced by <a class="el" href="../../df/d7f/app_8c_source.html#l01458">cwist_app_destroy()</a>.</p>
 
 </div>
 </div>
@@ -785,7 +792,7 @@ Functions</h2></td></tr>
 
 <p class="definition">Definition at line <a class="el" href="../../de/daf/http3_8c_source.html#l02716">2716</a> of file <a class="el" href="../../de/daf/http3_8c_source.html">http3.c</a>.</p>
 
-<p class="reference">References <a class="el" href="../../d9/d39/alloc_8c_source.html#l00276">cwist_alloc()</a>, <a class="el" href="../../d3/d73/err_2cwist__err_8h_source.html#l00016">CWIST_ERR_INT16</a>, <a class="el" href="../../d3/d73/err_2cwist__err_8h_source.html#l00049">__prim_cwist_error_t::err_i16</a>, <a class="el" href="../../d3/d73/err_2cwist__err_8h_source.html#l00074">cwist_error_t::error</a>, and <a class="el" href="../../db/dcc/error_8c_source.html#l00014">make_error()</a>.</p>
+<p class="reference">References <a class="el" href="../../d9/d39/alloc_8c_source.html#l00276">cwist_alloc()</a>, <a class="el" href="../../d3/d73/err_2cwist__err_8h_source.html#l00016">CWIST_ERR_INT16</a>, <a class="el" href="../../d3/d73/err_2cwist__err_8h_source.html#l00049">__prim_cwist_error_t::err_i16</a>, <a class="el" href="../../d3/d73/err_2cwist__err_8h_source.html#l00074">cwist_error_t::error</a>, <a class="el" href="../../db/dcc/error_8c_source.html#l00014">make_error()</a>, and <a class="el" href="../../df/d6d/ssl_8h_source.html#l00099">SSL_CTX_free</a>.</p>
 
 </div>
 </div>
@@ -818,7 +825,7 @@ Functions</h2></td></tr>
 
 <p class="definition">Definition at line <a class="el" href="../../de/daf/http3_8c_source.html#l02764">2764</a> of file <a class="el" href="../../de/daf/http3_8c_source.html">http3.c</a>.</p>
 
-<p class="reference">References <a class="el" href="../../d9/d39/alloc_8c_source.html#l00276">cwist_alloc()</a>, <a class="el" href="../../d3/d73/err_2cwist__err_8h_source.html#l00016">CWIST_ERR_INT16</a>, <a class="el" href="../../d3/d73/err_2cwist__err_8h_source.html#l00049">__prim_cwist_error_t::err_i16</a>, <a class="el" href="../../d3/d73/err_2cwist__err_8h_source.html#l00074">cwist_error_t::error</a>, and <a class="el" href="../../db/dcc/error_8c_source.html#l00014">make_error()</a>.</p>
+<p class="reference">References <a class="el" href="../../d9/d39/alloc_8c_source.html#l00276">cwist_alloc()</a>, <a class="el" href="../../d3/d73/err_2cwist__err_8h_source.html#l00016">CWIST_ERR_INT16</a>, <a class="el" href="../../d3/d73/err_2cwist__err_8h_source.html#l00049">__prim_cwist_error_t::err_i16</a>, <a class="el" href="../../d3/d73/err_2cwist__err_8h_source.html#l00074">cwist_error_t::error</a>, <a class="el" href="../../d5/d67/evp_8h_source.html#l00025">EVP_sha256</a>, <a class="el" href="../../db/dcc/error_8c_source.html#l00014">make_error()</a>, <a class="el" href="../../df/d6d/ssl_8h_source.html#l00099">SSL_CTX_free</a>, and <a class="el" href="../../df/d6d/ssl_8h_source.html#l00098">SSL_CTX_new</a>.</p>
 
 </div>
 </div>
@@ -1070,9 +1077,9 @@ Functions</h2></td></tr>
 
 <p class="definition">Definition at line <a class="el" href="../../de/daf/http3_8c_source.html#l02922">2922</a> of file <a class="el" href="../../de/daf/http3_8c_source.html">http3.c</a>.</p>
 
-<p class="reference">References <a class="el" href="../../d3/d73/err_2cwist__err_8h_source.html#l00016">CWIST_ERR_INT16</a>, <a class="el" href="../../dd/dff/http3_8h_source.html#l00044">cwist_http3_context::early_data_enabled</a>, <a class="el" href="../../d3/d73/err_2cwist__err_8h_source.html#l00049">__prim_cwist_error_t::err_i16</a>, <a class="el" href="../../d3/d73/err_2cwist__err_8h_source.html#l00074">cwist_error_t::error</a>, <a class="el" href="../../db/dcc/error_8c_source.html#l00014">make_error()</a>, <a class="el" href="../../dd/dff/http3_8h_source.html#l00036">cwist_http3_context::ssl_ctx</a>, <a class="el" href="../../dd/dff/http3_8h_source.html#l00067">cwist_http3_context::ssl_ctx_lock</a>, and <a class="el" href="../../dd/dff/http3_8h_source.html#l00069">cwist_http3_context::ticket_key</a>.</p>
+<p class="reference">References <a class="el" href="../../d3/d73/err_2cwist__err_8h_source.html#l00016">CWIST_ERR_INT16</a>, <a class="el" href="../../dd/dff/http3_8h_source.html#l00044">cwist_http3_context::early_data_enabled</a>, <a class="el" href="../../d3/d73/err_2cwist__err_8h_source.html#l00049">__prim_cwist_error_t::err_i16</a>, <a class="el" href="../../d3/d73/err_2cwist__err_8h_source.html#l00074">cwist_error_t::error</a>, <a class="el" href="../../db/dcc/error_8c_source.html#l00014">make_error()</a>, <a class="el" href="../../dd/dff/http3_8h_source.html#l00036">cwist_http3_context::ssl_ctx</a>, <a class="el" href="../../df/d6d/ssl_8h_source.html#l00099">SSL_CTX_free</a>, <a class="el" href="../../dd/dff/http3_8h_source.html#l00067">cwist_http3_context::ssl_ctx_lock</a>, and <a class="el" href="../../dd/dff/http3_8h_source.html#l00069">cwist_http3_context::ticket_key</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../df/d7f/app_8c_source.html#l01683">cwist_app_reload_tls()</a>.</p>
+<p class="reference">Referenced by <a class="el" href="../../df/d7f/app_8c_source.html#l01685">cwist_app_reload_tls()</a>.</p>
 
 </div>
 </div>
@@ -1618,7 +1625,7 @@ Functions</h2></td></tr>
 
 <p class="reference">References <a class="el" href="../../dd/dff/http3_8h_source.html#l00050">cwist_http3_context::wt_handler</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../df/d7f/app_8c_source.html#l01827">cwist_app_use_webtransport()</a>.</p>
+<p class="reference">Referenced by <a class="el" href="../../df/d7f/app_8c_source.html#l01829">cwist_app_use_webtransport()</a>.</p>
 
 </div>
 </div>
