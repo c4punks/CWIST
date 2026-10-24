@@ -1,5 +1,7 @@
 #define _POSIX_C_SOURCE 200809L
+#ifndef _DEFAULT_SOURCE
 #define _DEFAULT_SOURCE
+#endif
 #if defined(__APPLE__)
 /* Keep kqueue/kevent visible: strict _POSIX_C_SOURCE hides them on macOS. */
 #define _DARWIN_C_SOURCE

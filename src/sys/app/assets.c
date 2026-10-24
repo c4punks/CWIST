@@ -454,7 +454,7 @@ static bool etag_matches(const char *if_none_match, const char *etag) {
 }
 
 /** Add a header to a response, returning whether it was added (error disposed). */
-static bool add_header(cwist_http_response *res, const char *name, const char *value) {
+static bool assets_add_header(cwist_http_response *res, const char *name, const char *value) {
     cwist_error_t err = cwist_http_header_add(&res->headers, name, value);
     bool ok = cwist_error_is_ok(&err);
     cwist_error_dispose(&err);
@@ -484,8 +484,8 @@ void cwist_assets_respond(cwist_http_request *req, cwist_http_response *res,
     const char *inm = cwist_http_header_get(req->headers, "If-None-Match");
     bool not_modified = inm && etag_matches(inm, asset->etag);
 
-    bool ok = add_header(res, "ETag", asset->etag) && add_header(res, "Cache-Control", cache);
-    if (ok && !not_modified) ok = add_header(res, "Content-Type", asset->content_type);
+    bool ok = assets_add_header(res, "ETag", asset->etag) && assets_add_header(res, "Cache-Control", cache);
+    if (ok && !not_modified) ok = assets_add_header(res, "Content-Type", asset->content_type);
     if (!ok) {
         res->status_code = CWIST_HTTP_INTERNAL_ERROR;
         return;

@@ -2,7 +2,9 @@
 #define _GNU_SOURCE
 #endif
 #define _POSIX_C_SOURCE 200809L
+#ifndef _DEFAULT_SOURCE
 #define _DEFAULT_SOURCE
+#endif
 #include <sched.h>
 #if defined(__linux__) && defined(_GNU_SOURCE)
 #include "worker_affinity.h"
@@ -141,7 +143,7 @@ static void cwist_app_tune_system(void) {
  * @brief Read the current libttak tick count used for static-file retirement deadlines.
  * @return Monotonic tick value compatible with libttak memory APIs.
  */
-static inline uint64_t cwist_mem_now(void) {
+static inline uint64_t cwist_app_mem_now(void) {
     return ttak_get_tick_count();
 }
 #endif
@@ -207,7 +209,7 @@ static bool cwist_mem_create_payload(cwist_fix_server_mem *mem, const char *fs_p
     if (!mem || !fs_path || !data_out || !node_out) return false;
 
     void *buffer = ttak_mem_alloc_safe(size ? size : 1, __TTAK_UNSAFE_MEM_FOREVER__,
-                                       cwist_mem_now(), true, false, true, true, TTAK_MEM_DEFAULT);
+                                       cwist_app_mem_now(), true, false, true, true, TTAK_MEM_DEFAULT);
     if (!buffer) {
         fprintf(stderr, "[StaticMem] Failed to allocate %zu bytes via libttak for %s\n", size,
                 fs_path);
@@ -253,7 +255,7 @@ static bool cwist_mem_create_payload(cwist_fix_server_mem *mem, const char *fs_p
  */
 static void cwist_mem_release_node_delayed(cwist_fix_server_mem *mem, ttak_mem_node_t *node) {
     if (!mem || !node) return;
-    uint64_t now = cwist_mem_now();
+    uint64_t now = cwist_app_mem_now();
     pthread_mutex_lock(&node->lock);
     node->expires_tick = now + mem->retire_grace_ns;
     pthread_mutex_unlock(&node->lock);
@@ -1916,7 +1918,7 @@ cwist_error_t cwist_app_use_nuke_db(cwist_app *app, const char *db_path, int syn
     }
 
     app->db = (cwist_db *)ttak_mem_alloc_safe(sizeof(cwist_db), __TTAK_UNSAFE_MEM_FOREVER__,
-                                              cwist_mem_now(), false, false, true, true,
+                                              cwist_app_mem_now(), false, false, true, true,
                                               TTAK_MEM_DEFAULT);
     if (!app->db) {
         cwist_nuke_close();

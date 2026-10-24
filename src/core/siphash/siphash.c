@@ -14,7 +14,9 @@
  */
 
 /* Left-rotate a 64-bit integer by 'b' bits */
+#ifndef ROTL
 #define ROTL(x, b) (uint64_t)(((x) << (b)) | ((x) >> (64 - (b))))
+#endif
 
 /**
  * SipRound: the core mix function of SipHash.
@@ -218,3 +220,7 @@ void cwist_generate_hash_seed(uint8_t key[16]) {
         }
     }
 }
+
+/* Do not leak the helper macro into later bodies of the amalgamated unity
+ * build (issue #429); sqlite3.c defines its own ROTL. */
+#undef ROTL

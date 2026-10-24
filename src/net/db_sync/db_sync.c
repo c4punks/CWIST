@@ -30,7 +30,7 @@ static const unsigned char SYNC_MAGIC[4] = {0x43, 0x57, 0x53, 0x59}; /* "CWSY" *
  * @param len Number of bytes to send.
  * @return 0 on success, or -1 on short/failed writes.
  */
-static int write_all(int fd, const void *buf, size_t len) {
+static int db_sync_write_all(int fd, const void *buf, size_t len) {
     const unsigned char *p = (const unsigned char *)buf;
     while (len > 0) {
         ssize_t n = write(fd, p, len);
@@ -140,7 +140,7 @@ int cwist_db_sync_serve(sqlite3 *db, const cwist_db_crypt_ctx_t *ctx, int port) 
     /* 6. Send length (little-endian uint64) then blob. */
     unsigned char len_buf[8];
     for (int i = 0; i < 8; i++) len_buf[i] = (unsigned char)((uint64_t)blob_len >> (8 * i));
-    if (write_all(cli_fd, len_buf, 8) < 0 || write_all(cli_fd, blob, blob_len) < 0) {
+    if (db_sync_write_all(cli_fd, len_buf, 8) < 0 || db_sync_write_all(cli_fd, blob, blob_len) < 0) {
         close(cli_fd);
         free(blob);
         return CWIST_DB_SYNC_ERR_NET;
@@ -195,7 +195,7 @@ int cwist_db_sync_pull(const char *host, int port, const cwist_db_crypt_ctx_t *c
     freeaddrinfo(res);
 
     /* 3. Send magic. */
-    if (write_all(fd, SYNC_MAGIC, 4) < 0) {
+    if (db_sync_write_all(fd, SYNC_MAGIC, 4) < 0) {
         close(fd);
         return CWIST_DB_SYNC_ERR_NET;
     }

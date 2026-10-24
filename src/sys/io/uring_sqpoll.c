@@ -16,7 +16,7 @@
  * @param params  io_uring_params filled in by the kernel on success.
  * @return Ring file descriptor on success, or -1 with errno set by the syscall.
  */
-static inline int sys_io_uring_setup(unsigned entries, struct io_uring_params *p) {
+static inline int sqpoll_io_uring_setup(unsigned entries, struct io_uring_params *p) {
     return (int)syscall(__NR_io_uring_setup, entries, p);
 }
 
@@ -43,7 +43,7 @@ int cwist_io_uring_init_sqpoll(cwist_sqpoll_ring_t *r, unsigned entries,
     p.flags = IORING_SETUP_SQPOLL;
     p.sq_thread_idle = sq_thread_idle_ms ? sq_thread_idle_ms : 2000;
 
-    int fd = sys_io_uring_setup(entries, &p);
+    int fd = sqpoll_io_uring_setup(entries, &p);
     if (fd < 0) {
         return -1;
     }
