@@ -46,7 +46,9 @@ static const char ES256_HDR[] = "eyJhbGciOiJFUzI1NiIsInR5cCI6IkpXVCJ9";
 /* base64url of {"alg":"ES256","typ":"JWT","kid":"key-1"} */
 static const char ES256_KID_HDR[] = "eyJhbGciOiJFUzI1NiIsInR5cCI6IkpXVCIsImtpZCI6ImtleS0xIn0";
 /* base64url of {"alg":"EdDSA","typ":"JWT"} */
+#ifndef CWIST_TLS_MBEDTLS
 static const char EDDSA_HDR[] = "eyJhbGciOiJFZERTQSIsInR5cCI6IkpXVCJ9";
+#endif
 
 static void test_es256_round_trip(void) {
     printf("Testing ES256 sign/verify round trip...\n");
@@ -117,12 +119,18 @@ static void test_alg_confusion(void) {
     assert(cwist_jwt_verify_ed25519(es, ED25519_PUB) == NULL);
     cwist_free(es);
 
+#ifndef CWIST_TLS_MBEDTLS
     /* An EdDSA token must never verify as HS256 or ES256. */
     char *ed = cwist_jwt_sign_ed25519("{\"sub\":\"1\"}", ED25519_PRIV, NULL, 3600);
     assert(ed != NULL);
     assert(cwist_jwt_verify(ed, "secret") == NULL);
     assert(cwist_jwt_verify_es256(ed, EC256_PUB) == NULL);
     cwist_free(ed);
+#else
+    /* EdDSA has no mbedTLS 3.6 implementation: signing fails, and failing
+     * closed is itself the cross-algorithm safety property. */
+    assert(cwist_jwt_sign_ed25519("{\"sub\":\"1\"}", ED25519_PRIV, NULL, 3600) == NULL);
+#endif
 
     printf("  Passed cross-algorithm rejection.\n");
 }
@@ -141,6 +149,7 @@ static void test_es256_key_type_mismatch(void) {
     printf("  Passed ES256 key type mismatch.\n");
 }
 
+#ifndef CWIST_TLS_MBEDTLS
 static void test_ed25519_round_trip(void) {
     printf("Testing Ed25519 sign/verify round trip...\n");
 
@@ -164,6 +173,7 @@ static void test_ed25519_round_trip(void) {
     cwist_free(token);
     printf("  Passed Ed25519 round trip.\n");
 }
+#endif /* !CWIST_TLS_MBEDTLS */
 
 static void test_es256_expired(void) {
     printf("Testing ES256 expired token rejection...\n");
@@ -185,7 +195,12 @@ int main(void) {
     test_es256_wrong_key();
     test_alg_confusion();
     test_es256_key_type_mismatch();
+#ifdef CWIST_TLS_MBEDTLS
+    /* EdDSA is unavailable on the mbedTLS backend (no Ed25519 in 3.6 LTS). */
+    printf("Skipping Ed25519 round trip on CWIST_TLS=mbedtls.\n");
+#else
     test_ed25519_round_trip();
+#endif
     test_es256_expired();
     printf("All JWT asymmetric tests passed!\n");
     return 0;

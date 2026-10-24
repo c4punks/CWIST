@@ -24,6 +24,7 @@ steps 06–08, 13, and 16 are console programs that print and exit.
 | [`15-pqc-tls`](15-pqc-tls/main.c) | HTTPS plus the post-quantum hybrid layer in two lines |
 | [`16-rdbms-auto`](16-rdbms-auto/main.c) | `cwist_app_auto_rdbms` probing localhost for PostgreSQL / MySQL / MariaDB |
 | [`17-blog-crud`](17-blog-crud/main.c) | full blog combining all of the above: ORM, JSON API, HTML, JWT, middleware, static files, PQC TLS, metrics, healthz |
+| [`18-https-hello`](18-https-hello/main.c) | minimal HTTPS server (`cwist_app_use_https`); needs `server.crt`/`server.key` next to the binary |
 
 ## Build
 
