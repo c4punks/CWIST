@@ -4,7 +4,7 @@
 # (parameter names dropped) and struct/union/enum layouts in member order.
 # `make api-check` (CI) fails when the headers no longer match this file.
 
-== functions (778) ==
+== functions (780) ==
 cwist_accept_socket
 cwist_alloc
 cwist_alloc_array
@@ -537,6 +537,8 @@ cwist_mw_csrf
 cwist_mw_jwt_auth
 cwist_mw_jwt_get_claims
 cwist_mw_metrics
+cwist_mw_otel_get_trace_id
+cwist_mw_otel_trace
 cwist_mw_rate_limit_ip
 cwist_mw_rate_limit_reset
 cwist_mw_request_id
@@ -784,7 +786,7 @@ cwist_zod_parse
 cwist_zod_print_errors
 cwist_zod_validate
 
-== function signatures (779) ==
+== function signatures (781) ==
 cwist_accept_socket: cwist_error_t (int, struct sockaddr *, void (*)(int client_fd, void *ctx), void *)
 cwist_alloc: void * (size_t)
 cwist_alloc_array: void * (size_t, size_t)
@@ -1318,6 +1320,8 @@ cwist_mw_csrf: cwist_middleware_func (cwist_app *)
 cwist_mw_jwt_auth: cwist_middleware_func (const char *)
 cwist_mw_jwt_get_claims: const cwist_jwt_claims * (const cwist_http_request *)
 cwist_mw_metrics: cwist_middleware_func (void)
+cwist_mw_otel_get_trace_id: const char * (const cwist_http_request *)
+cwist_mw_otel_trace: cwist_middleware_func (const cwist_otel_cfg_t *)
 cwist_mw_rate_limit_ip: cwist_middleware_func (int)
 cwist_mw_rate_limit_reset: void (void)
 cwist_mw_request_id: cwist_middleware_func (const char *)
@@ -1744,7 +1748,7 @@ cwist_zod_result
 quic_conn_fc
 quic_stream_fc
 
-== typedefs (205) ==
+== typedefs (207) ==
 __prim_cwist_error_t
 bdr_blob_t
 bdr_entry_t
@@ -1884,6 +1888,8 @@ cwist_orm_result_t
 cwist_orm_t
 cwist_orm_value_t
 cwist_orm_value_type_t
+cwist_otel_cfg_t
+cwist_otel_proto_t
 cwist_pb_field
 cwist_pb_reader
 cwist_pb_wire_type_t
@@ -1951,7 +1957,7 @@ quic_conn_fc_t
 quic_net_quality_t
 quic_stream_fc_t
 
-== enum constants (229) ==
+== enum constants (231) ==
 CWIST_ASYNC_CLOSE
 CWIST_ASYNC_DEFER
 CWIST_ASYNC_DETACH
@@ -2159,6 +2165,8 @@ CWIST_ORM_TYPE_INTEGER
 CWIST_ORM_TYPE_NULL
 CWIST_ORM_TYPE_REAL
 CWIST_ORM_TYPE_TEXT
+CWIST_OTEL_PROTO_GRPC
+CWIST_OTEL_PROTO_HTTP
 CWIST_PB_32BIT
 CWIST_PB_64BIT
 CWIST_PB_LEN
@@ -2184,7 +2192,7 @@ CWIST_WS_FRAME_TEXT
 
 == globals (extern) (0) ==
 
-== layouts (81) ==
+== layouts (83) ==
 enum cwist_async_action_t [0] CWIST_ASYNC_CLOSE = 0
 enum cwist_async_action_t [1] CWIST_ASYNC_REARM
 enum cwist_async_action_t [2] CWIST_ASYNC_DETACH
@@ -2312,6 +2320,8 @@ enum cwist_log_level_t [0] CWIST_LOG_DEBUG
 enum cwist_log_level_t [1] CWIST_LOG_INFO
 enum cwist_log_level_t [2] CWIST_LOG_WARN
 enum cwist_log_level_t [3] CWIST_LOG_ERROR
+enum cwist_otel_proto_t [0] CWIST_OTEL_PROTO_HTTP = 0
+enum cwist_otel_proto_t [1] CWIST_OTEL_PROTO_GRPC
 enum cwist_rdbms_provider_t [0] CWIST_RDBMS_NONE = 0
 enum cwist_rdbms_provider_t [1] CWIST_RDBMS_POSTGRES
 enum cwist_rdbms_provider_t [2] CWIST_RDBMS_MYSQL
@@ -2679,6 +2689,11 @@ struct cwist_nuke_db_t [3] bool auto_sync
 struct cwist_nuke_db_t [4] int sync_interval_ms
 struct cwist_nuke_db_t [5] bool is_disk_mode
 struct cwist_nuke_db_t [6] bool load_successful
+struct cwist_otel_cfg_t [0] const char *endpoint
+struct cwist_otel_cfg_t [1] const char *service_name
+struct cwist_otel_cfg_t [2] cwist_otel_proto_t proto
+struct cwist_otel_cfg_t [3] size_t queue_cap
+struct cwist_otel_cfg_t [4] size_t batch_size
 struct cwist_query_bucket [0] char *key
 struct cwist_query_bucket [1] char *value
 struct cwist_query_bucket [2] struct cwist_query_bucket *next
