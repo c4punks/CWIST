@@ -2,6 +2,32 @@ CC ?= gcc
 CXX ?= g++
 FUZZ_CC ?= clang
 
+# Cross-compilation support.
+# Usage: make CROSS_COMPILE=aarch64-linux-gnu-
+# Sets CC/AR/RANLIB/STRIP from the triplet prefix when CROSS_COMPILE is given
+# and the individual tool is not already set in the environment.  The vendored
+# cmake dependencies (BoringSSL, uriparser, lsquic) pick up the same toolchain
+# via CMAKE_C_COMPILER and CMAKE_SYSTEM_NAME.
+ifneq ($(CROSS_COMPILE),)
+    CC     ?= $(CROSS_COMPILE)gcc
+    CXX    ?= $(CROSS_COMPILE)g++
+    AR     ?= $(CROSS_COMPILE)ar
+    RANLIB ?= $(CROSS_COMPILE)ranlib
+    STRIP  ?= $(CROSS_COMPILE)strip
+    # Derive a CMake system name from the triplet (e.g. aarch64-linux-gnu -> Linux).
+    _CROSS_SYSTEM := $(shell echo $(CROSS_COMPILE) | sed 's/.*-\([^-]*\)-[^-]*-$$/\1/' | sed 's/\b./\u&/')
+    ifneq ($(_CROSS_SYSTEM),)
+        EXTRA_CMAKE_FLAGS += -DCMAKE_SYSTEM_NAME=$(_CROSS_SYSTEM) \
+                             -DCMAKE_C_COMPILER=$(CC) \
+                             -DCMAKE_CXX_COMPILER=$(CXX) \
+                             -DCMAKE_AR=$(AR) \
+                             -DCMAKE_RANLIB=$(RANLIB)
+    endif
+endif
+AR     ?= ar
+RANLIB ?= ranlib
+STRIP  ?= strip
+
 CURL_CFLAGS := $(shell pkg-config --cflags libcurl 2>/dev/null)
 NGHTTP2_CFLAGS := $(shell pkg-config --cflags libnghttp2 2>/dev/null)
 BROTLI_CFLAGS := $(shell pkg-config --cflags libbrotlienc libbrotlicommon libbrotlidec 2>/dev/null)
@@ -936,7 +962,7 @@ $(CJSON_LIB):
 
 $(URIPARSER_LIB):
 	@echo "Configuring uriparser..."
-	cmake -S $(URIPARSER_DIR) -B $(URIPARSER_BUILD_DIR) -DCMAKE_C_COMPILER=$(CC) $(URIPARSER_CMAKE_FLAGS)
+	cmake -S $(URIPARSER_DIR) -B $(URIPARSER_BUILD_DIR) -DCMAKE_C_COMPILER=$(CC) $(URIPARSER_CMAKE_FLAGS) $(EXTRA_CMAKE_FLAGS)
 	@echo "Building uriparser..."
 	cmake --build $(URIPARSER_BUILD_DIR) --target uriparser
 
@@ -948,7 +974,7 @@ $(BORINGSSL_STAMP):
 	cmake -S $(BORINGSSL_DIR) -B $(BORINGSSL_BUILD_DIR) \
 		-DCMAKE_C_COMPILER=$(CC) \
 		-DCMAKE_CXX_COMPILER=$(CXX) \
-		-DCMAKE_BUILD_TYPE=Release
+		-DCMAKE_BUILD_TYPE=Release $(EXTRA_CMAKE_FLAGS)
 	cmake --build $(BORINGSSL_BUILD_DIR) --target ssl crypto
 	@touch $@
 
@@ -977,7 +1003,7 @@ $(LSQUIC_STAMP): $(BORINGSSL_SSL_LIB) $(BORINGSSL_CRYPTO_LIB)
 		-DBORINGSSL_LIB_crypto=$(abspath $(BORINGSSL_CRYPTO_LIB)) \
 		-DBORINGSSL_INCLUDE=$(abspath $(BORINGSSL_DIR)/include) \
 		-DLSQUIC_WEBTRANSPORT=ON \
-		-DBUILD_SHARED_LIBS=OFF
+		-DBUILD_SHARED_LIBS=OFF $(EXTRA_CMAKE_FLAGS)
 	cmake --build $(LSQUIC_BUILD_DIR) --target lsquic
 	@rm -f $(LSQUIC_BUILD_DIR)/.lsquic_built_*
 	@touch $@
