@@ -917,6 +917,53 @@ fat-dist: $(SQLITE_DIR)/sqlite3.c $(LIB_NAME)
 	cp -R $(BORINGSSL_DIR)/include/openssl $(FAT_DIST_DIR)/include/
 	cp $(SQLITE_DIR)/sqlite3.h $(FAT_DIST_DIR)/include/
 
+# --- Amalgamated single-file distribution (issue #429) ----------------------
+# `make amalgamation` stages a drop-in bundle in AMALGAMATION_DIR: cwist.c
+# pastes every enabled translation unit (the knob-expanded SRCS, in order)
+# into one file, and include/ carries the public headers plus every vendored
+# and private header they pull in, laid out so that
+#   gcc -O2 -std=gnu17 -Idist/amalgamation/include -c dist/amalgamation/cwist.c
+# is the whole compile line.  The trim knobs (CWIST_TINY & friends) apply
+# exactly as for libcwist.a; the vendored code itself still links from its
+# static archives (see fat-dist).
+AMALGAMATION_DIR ?= dist/amalgamation
+AMALGAMATION_DEFINES = $(filter-out -D_FORTIFY_SOURCE=%,$(filter -D%,$(CFLAGS)))
+AMALGAMATION_KNOBS = CWIST_TINY=$(CWIST_TINY) CWIST_HTTP3=$(CWIST_HTTP3) \
+    CWIST_WS=$(CWIST_WS) CWIST_DB=$(CWIST_DB) CWIST_NATS=$(CWIST_NATS) \
+    CWIST_JWT=$(CWIST_JWT) CWIST_WEBRTC=$(CWIST_WEBRTC) \
+    CWIST_WEBTRANSPORT=$(CWIST_WEBTRANSPORT)
+
+# Submodule header anchors the bundle stages.  Initializing submodules is a
+# no-op once they are checked out, so a clean checkout works out of the box.
+AMALGAMATION_HEADER_ANCHORS = $(BORINGSSL_DIR)/include/openssl/ssl.h \
+                              $(CJSON_DIR)/cJSON.h \
+                              $(LIBTTAK_DIR)/include/ttak/mem/mem.h \
+                              lib/multipart-parser-c/multipart_parser.h
+ifeq ($(CWIST_NATS),1)
+AMALGAMATION_HEADER_ANCHORS += $(CNATS_DIR)/src/nats.h
+endif
+
+$(AMALGAMATION_HEADER_ANCHORS):
+	@if [ ! -f "$@" ]; then \
+	    echo "Initializing submodules..."; \
+	    git submodule update --init --recursive; \
+	fi
+
+ifeq ($(CWIST_HTTP3),1)
+AMALGAMATION_ORDER_ONLY = lib/lsquic/include/lsquic.h
+endif
+ifeq ($(CWIST_WEBRTC),1)
+AMALGAMATION_ORDER_ONLY += $(USRSCTP_DIR)/usrsctplib/usrsctp.h
+endif
+
+amalgamation: $(SQLITE_DIR)/sqlite3.c $(AMALGAMATION_HEADER_ANCHORS) | $(AMALGAMATION_ORDER_ONLY)
+	python3 scripts/gen_amalgamation.py --root . --out $(AMALGAMATION_DIR) \
+	    --srcs "$(SRCS)" \
+	    --defines "$(AMALGAMATION_DEFINES)" \
+	    --knobs "$(AMALGAMATION_KNOBS)"
+
+.PHONY: amalgamation
+
 $(LIBTTAK_LIB):
 	@echo "Building libttak..."
 	$(MAKE) -C $(LIBTTAK_DIR) EXTRA_CFLAGS="$(LIBTTAK_EXTRA_CFLAGS)"

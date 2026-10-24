@@ -1,0 +1,77 @@
+name: "Amalgamation"
+
+# `make amalgamation` generates the drop-in single-file distribution
+# (issue #429): dist/amalgamation/cwist.c pastes every enabled translation
+# unit into one file, and dist/amalgamation/include carries the public,
+# vendored and private headers so the bundle compiles with a single -I.
+#
+# Jobs:
+#   amalgamation — build the bundle (default and CWIST_TINY=1), compile
+#                  cwist.c standalone outside the repo tree, link the hello
+#                  example against it plus the fat archive (vendored code),
+#                  and run the HTTP smoke test
+
+on:
+  push:
+    branches: [main, master, dev]
+  pull_request:
+    branches: [main, master, dev]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  amalgamation:
+    name: Amalgamated cwist.c drop-in (${{ matrix.name }})
+    if: github.event_name != 'push' || !contains(github.event.head_commit.message, '[skip ci]')
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: default
+            cfg: ""
+          - name: tiny
+            cfg: "CWIST_TINY=1"
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      with:
+        submodules: recursive
+
+    - name: Install build dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y cmake libcurl4-openssl-dev libnghttp2-dev libbrotli-dev libzstd-dev
+
+    - name: Generate the amalgamation and the fat archive (vendored code)
+      run: make ${{ matrix.cfg }} amalgamation fat-dist -j"$(nproc)"
+
+    - name: Compile cwist.c standalone, outside the repo tree
+      run: |
+        # Mirror the drop-in workflow: only the bundle and the app source
+        # leave the repo; the compile line is a single -I plus the file.
+        work=$(mktemp -d)
+        cp -r dist/amalgamation "$work/bundle"
+        cd "$work"
+        gcc -O2 -std=gnu17 -Ibundle/include -pthread -c bundle/cwist.c -o cwist.o
+        ar rcs libcwist_amalgamated.a cwist.o
+        echo "$work" > /tmp/amalg_workdir
+
+    - name: Link and run the hello smoke
+      run: |
+        work=$(cat /tmp/amalg_workdir)
+        cd "$work"
+        cp "$GITHUB_WORKSPACE/example/micro/01-hello/main.c" .
+        gcc -O2 -std=gnu17 -Ibundle/include -o hello main.c \
+          libcwist_amalgamated.a \
+          "$GITHUB_WORKSPACE/dist/cwist-fat/lib/libcwist.a" \
+          $(pkg-config --libs libcurl libnghttp2 libbrotlienc libbrotlicommon libbrotlidec libzstd) \
+          -pthread -ldl -lm -lstdc++ -lz
+        ./hello &
+        pid=$!
+        sleep 2
+        test "$(curl -s -m 3 http://127.0.0.1:8080/)" = "Hello, CWIST!"
+        kill "$pid"

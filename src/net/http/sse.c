@@ -180,7 +180,7 @@ cwist_error_t cwist_sse_response_write(cwist_http_response *res, const cwist_sse
  * @param len Number of bytes in @p data.
  * @return 0 when all bytes were sent, -1 on send error or closed socket.
  */
-static int send_all(int fd, const char *data, size_t len) {
+static int sse_send_all(int fd, const char *data, size_t len) {
     while (len) {
         ssize_t n = send(fd, data, len, MSG_NOSIGNAL);
         if (n < 0 && errno == EINTR) continue;
@@ -206,7 +206,7 @@ cwist_sse_stream_t *cwist_sse_stream_open(cwist_http_request *req) {
     static const char headers[] =
         "HTTP/1.1 200 OK\r\nContent-Type: text/event-stream; charset=utf-8\r\nCache-Control: no-cache\r\nX-Accel-Buffering: no\r\nConnection: keep-alive\r\n\r\n";
     if (!req || req->client_fd < 0 || req->upgraded ||
-        send_all(req->client_fd, headers, sizeof(headers) - 1))
+        sse_send_all(req->client_fd, headers, sizeof(headers) - 1))
         return NULL;
     cwist_sse_stream_t *stream = cwist_alloc(sizeof(*stream));
     if (!stream) return NULL;
@@ -236,7 +236,7 @@ cwist_error_t cwist_sse_stream_send(cwist_sse_stream_t *stream, const char *even
     cwist_sstring *frame = format_event(event, id, retry_ms, data, 0);
     if (!frame) return sse_error(-1);
     pthread_mutex_lock(&stream->mutex);
-    int rc = stream->closed ? -1 : send_all(stream->fd, frame->data, frame->size);
+    int rc = stream->closed ? -1 : sse_send_all(stream->fd, frame->data, frame->size);
     if (rc) stream->closed = 1;
     pthread_mutex_unlock(&stream->mutex);
     cwist_sstring_destroy(frame);
@@ -258,7 +258,7 @@ cwist_error_t cwist_sse_stream_comment(cwist_sse_stream_t *stream, const char *c
     cwist_sstring *frame = format_event(NULL, NULL, -1, comment, 1);
     if (!frame) return sse_error(-1);
     pthread_mutex_lock(&stream->mutex);
-    int rc = stream->closed ? -1 : send_all(stream->fd, frame->data, frame->size);
+    int rc = stream->closed ? -1 : sse_send_all(stream->fd, frame->data, frame->size);
     if (rc) stream->closed = 1;
     pthread_mutex_unlock(&stream->mutex);
     cwist_sstring_destroy(frame);
