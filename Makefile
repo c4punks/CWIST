@@ -805,9 +805,15 @@ LIBTTAK_EXTRA_CFLAGS =
 ifeq ($(UNAME_S),Darwin)
     LIBTTAK_EXTRA_CFLAGS += -D_DARWIN_C_SOURCE
 endif
-# libttak tunes for the build host (-march=native) by default; a cross build
-# hands it our compiler and drops the host tuning.
+# libttak tunes for the build host (-march=native) by default.  CWIST_PORTABLE=1
+# drops the host tuning so the archive runs on any CPU of the target
+# architecture (release assets are built this way); a cross build implies it
+# and also hands libttak our compiler.
 ifneq ($(CROSS_COMPILE),)
+CWIST_PORTABLE ?= 1
+endif
+CWIST_PORTABLE ?= 0
+ifeq ($(CWIST_PORTABLE),1)
     LIBTTAK_MAKE_FLAGS = CC="$(CC)" AR="$(AR)" \
         PERF_STACK_FLAGS="-O3 -pipe -fomit-frame-pointer -funroll-loops \
             -fstrict-aliasing -ffunction-sections -fdata-sections \
