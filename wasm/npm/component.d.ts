@@ -62,8 +62,7 @@ export interface CwistComponent {
 }
 
 /**
- * Bind the wrapper to a jco-transpiled cwist-guest component. Returns the
- * same handle shape as createCwist() from the package root; throws on the
+ * Bind the wrapper to a jco-transpiled cwist-guest component; throws on the
  * dispatch-error variant.
  */
 export function createCwistFromComponent(component: CwistComponent): CwistHandle;

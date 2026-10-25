@@ -71,8 +71,8 @@ how you hand that app to a host:
 | **WASI 0.2 edge runtime** (Wasmtime) | `cwist_app_listen` on WASI sockets, built for `wasm32-wasip2` | The same app on Wasmtime; the host owns persistence as a KV-style blob | [wasip2-kv](example/wasip2-kv) |
 
 The WASM hosts speak serialized HTTP/1.1 across a [WIT interface](wit/cwist.wit),
-and the [`cwist-wasm`](wasm/npm) npm package wraps both the Emscripten module
-and the jco-transpiled component for JavaScript hosts. They are newer than the
+and the [`cwist-wasm`](wasm/npm) npm package wraps the jco-transpiled
+component for JavaScript hosts. They are newer than the
 native server: read each example's README for what is and is not guaranteed
 yet (for example, the wasip2 demo does not promise crash-durable writes).
 

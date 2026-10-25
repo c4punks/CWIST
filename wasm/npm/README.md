@@ -1,9 +1,10 @@
 # cwist-wasm
 
-First-party JS wrapper over CWIST's WASM `dispatch_memory` path (issue #93
-Phase 2). You compile your CWIST app (routes + handlers) to WebAssembly with
-Emscripten; this package hides the Emscripten glue and gives you a
-fetch-shaped API.
+First-party JS API over a CWIST app compiled to WebAssembly as a
+`cwist-guest` WASI component (`wit/cwist.wit` in the CWIST repo) and
+transpiled to JS with [jco](https://github.com/bytecodealliance/jco). You
+write a normal CWIST app; this package turns its dispatch export into a
+fetch-shaped call.
 
 ## Install
 
@@ -11,14 +12,15 @@ fetch-shaped API.
 npm install cwist-wasm
 ```
 
-## Build your app module
+## Build your app as a component
 
-Write a normal CWIST app, register routes, then define the standard entry
-points once:
+Register routes in `main()` and define the component exports once:
 
 ```c
 #include <cwist/sys/app/app.h>
-#include <cwist/wasm/wasm_entry.h>
+#include <cwist/wasm/wasm_component.h>
+
+#include "cwist_guest.h" /* wit-bindgen c wit/ --world cwist-guest */
 
 static cwist_app *g_app;
 
@@ -28,30 +30,29 @@ static void hello(cwist_http_request *req, cwist_http_response *res) {
     cwist_http_header_add(&res->headers, "Content-Type", "text/plain");
 }
 
+CWIST_WASM_COMPONENT_DEFINE_GUEST(g_app)
+
 int main(void) {
     g_app = cwist_app_create();
     cwist_app_get(g_app, "/hello", hello);
-    CWIST_WASM_DEFINE_ENTRY(g_app);
     return 0;
 }
 ```
 
-Compile against `libcwist_wasm.a` (built with `make wasm` in the CWIST
-repo) with the entry points and runtime methods exported:
-
-```sh
-emcc -O2 -std=c17 -I$cwist/include -I$cwist/lib -o app.js my_app.c \
-    $cwist/libcwist_wasm.a \
-    -sEXPORTED_FUNCTIONS=_cwist_wasm_dispatch,_cwist_wasm_dispose,_malloc,_free \
-    -sEXPORTED_RUNTIME_METHODS=HEAPU8,HEAPU32
-```
+Compile it for `wasm32-wasip2` with wasi-sdk against the CWIST WASI archive,
+embed the world with `wasm-tools component embed`, and transpile with
+`jco transpile`. `docs/api/wasm-component.md` in the CWIST repo has the full
+recipe; `make component-smoke` and `make wasm-sw-example` are working
+examples.
 
 ## Use from JS
 
 ```js
-const { createCwist } = require('cwist-wasm');
-// In Node, load app.js first (e.g. require('./app.js')) so `Module` exists.
-const handle = createCwist(Module);
+const { createCwistFromComponent } = require('cwist-wasm');
+const component = await import('./out/app.component.js'); // jco output
+
+component.run.run(); // main(): registers the routes
+const handle = createCwistFromComponent(component.guest);
 
 const res = handle({ method: 'GET', path: '/hello' });
 console.log(res.status);                  // 200
@@ -59,32 +60,33 @@ console.log(res.headers['Content-Type']); // text/plain
 console.log(new TextDecoder().decode(res.body)); // hello from wasm
 ```
 
-Request `body` may be a string or a `Uint8Array`. The response `body` is a
-copy, so it stays valid across subsequent calls even if the WASM heap is
-reused.
+Request `body` may be a string or a `Uint8Array`; the response `body` is a
+copy, safe to keep across calls. `handle.useSession(secret)` pins the session
+signing secret before the first session-bearing dispatch (`null` lets CWIST
+generate a per-instance one).
 
-## Component pipeline (experimental)
+Against a 0.2 (`wasm32-wasip2`) guest `handle()` is synchronous. jco lowers
+the exports of a 0.3 (`wasm32-wasip3`) guest to async functions, so against
+one `handle()` returns a Promise.
 
-`const { createCwistFromComponent } = require('cwist-wasm/component')` binds
-the same handler shape to a jco-transpiled `cwist-guest` component (issue
-#203) instead of an Emscripten module. `component` is the guest interface of
-the transpiled output: `{ dispatch(Uint8Array): Uint8Array, useSession(string|null) }`.
-The adapter and its dependencies are environment-neutral JS, so it bundles
-for browsers as-is (verified with esbuild in the CWIST repo,
-`make component-browser-smoke`). One asymmetry: jco lowers exports of 0.3
-(wasip3) components to async functions, so against a 0.3 guest `handle()`
-returns a Promise and `await` is required; 0.2 guests stay synchronous.
-See `docs/api/wasm-component.md` in the CWIST repo for building the guest.
+The adapter is environment-neutral JS and bundles for browsers as-is. In a
+service worker, transpile with `jco transpile --instantiation async` (a
+service worker may not use top-level await) and instantiate on first use;
+`example/wasm-service-worker` in the CWIST repo does exactly that.
 
-### Streaming (0.3 guests)
+`require('cwist-wasm/component')` resolves to the same adapter.
 
-A guest built for the `cwist-guest-stream` world (wasm32-wasip3) streams a
-response through its `c4punks:cwist/host` import instead of returning it.
-`createStreamHost()` returns that import. Wire it in when you instantiate or
-bundle the component, and give the same object to the adapter:
+## Streaming (0.3 guests, JSPI)
+
+A guest built for the `cwist-guest-stream` world (`wasm32-wasip3` only)
+streams a response through its `c4punks:cwist/host` import instead of
+returning it. The import is async, so running such a guest needs JSPI, which
+is still behind a flag: `node --experimental-wasm-jspi`, and the equivalent
+browser flag. `createStreamHost()` returns the import; wire it in when you
+instantiate or bundle the component, and give the same object to the adapter:
 
 ```js
-const { createCwistFromComponent, createStreamHost } = require('cwist-wasm/component');
+const { createCwistFromComponent, createStreamHost } = require('cwist-wasm');
 
 const host = createStreamHost(); // { sendChunk }: the c4punks:cwist/host import
 // ...instantiate or bundle the transpiled guest with `host` as that import...
@@ -108,9 +110,16 @@ run one at a time.
 
 ## Scope
 
-This wrapper is intentionally thin: routing, middleware, validation, and
-rendering all stay in your C handlers. It only serializes requests into
-HTTP/1.1 bytes, calls `cwist_app_dispatch_memory()` inside WASM, and parses
-the serialized response back into JS objects. Session persistence is not
-handled here, and streaming is only available on the component path above;
-see `docs/api/wasm.md` in the CWIST repo for the current caveats.
+This package is intentionally thin: routing, middleware, validation and
+rendering all stay in your C handlers. It serializes requests into HTTP/1.1
+bytes, calls the component's dispatch export (`cwist_app_dispatch_memory()`
+inside the guest), and parses the serialized response back into JS objects.
+
+## Migrating from the Emscripten wrapper
+
+Up to CWIST v4, the package's main export was `createCwist(Module)` over an
+Emscripten module built against `libcwist_wasm.a`. That build is gone (issue
+#203): rebuild the app as a component as above, replace
+`CWIST_WASM_DEFINE_ENTRY(g_app)` with `CWIST_WASM_COMPONENT_DEFINE_GUEST(g_app)`
+at file scope, and call `createCwistFromComponent(component.guest)` instead of
+`createCwist(Module)`. The handle has the same shape.

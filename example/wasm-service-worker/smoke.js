@@ -3,25 +3,43 @@
  * Node smoke test for the WASM service-worker example app (issue #93 Phase 4).
  *
  * The Service Worker itself only runs in a browser, so this drives the same
- * built module (app.js/app.wasm) through the real cwist-wasm JS wrapper
- * (wasm/npm, referenced by relative path - no external npm dependency) and
- * covers the app's WASM logic: routing, zod validation, template rendering,
- * cwist_db, the serialized-db image endpoint, sessions, and the 404 fallthrough.
+ * component (app.c built as a cwist-guest component, transpiled by jco for
+ * node) through the real cwist-wasm adapter (wasm/npm, referenced by relative
+ * path) and covers the app's WASM logic: routing, zod validation, template
+ * rendering, cwist_db, the serialized-db image endpoint, sessions, and the 404
+ * fallthrough.
  *
- * Run:  ./build.sh && node smoke.js
+ * Run:  make wasm-sw-smoke   (SW_JCO_DIR points at build/node)
  */
 const path = require('path');
+const fs = require('fs');
+const { pathToFileURL } = require('url');
 const assert = require('assert');
-const { createCwist } = require(path.join(__dirname, '..', '..', 'wasm', 'npm'));
-const createCwistAppModule = require(path.join(__dirname, 'app.js'));
+const { createCwistFromComponent } = require(path.join(__dirname, '..', '..', 'wasm', 'npm'));
+
+const JCO_DIR = path.resolve(process.env.SW_JCO_DIR || path.join(__dirname, 'build', 'node'));
+/* jco emits ESM; make node treat the generated dir as a module package. */
+if (!fs.existsSync(path.join(JCO_DIR, 'package.json'))) {
+    fs.writeFileSync(path.join(JCO_DIR, 'package.json'), JSON.stringify({ type: 'module' }));
+}
 
 const SECRET = 'cwist-sw-demo-secret-change-me-0123456789abcdef';
 const decode = (u8) => new TextDecoder().decode(u8);
 
-(async () => {
-    const Module = await createCwistAppModule();
-    const handle = createCwist(Module);
+/* One fresh component instance per call: jco's node output instantiates on
+ * import, so each distinct module URL is a new instance. */
+async function newInstance(tag) {
+    const url = pathToFileURL(path.join(JCO_DIR, 'app.component.js'));
+    url.search = '?instance=' + tag;
+    const component = await import(url.href);
+    component.run.run(); /* main(): routes, db schema, components */
+    const handle = createCwistFromComponent(component.guest);
     handle.useSession(SECRET);
+    return handle;
+}
+
+(async () => {
+    const handle = await newInstance(1);
 
     /* 1. GET / -> 200 HTML, first visit counts as visit #1 and sets a session
      *    cookie. */
@@ -120,9 +138,7 @@ const decode = (u8) => new TextDecoder().decode(u8);
 
     /* 8. GET /items on a second "instance" with the same pinned secret still
      *    sees the data (in-memory db is per-instance; sessions are not). */
-    const Module2 = await createCwistAppModule();
-    const handle2 = createCwist(Module2);
-    handle2.useSession(SECRET);
+    const handle2 = await newInstance(2);
     res = handle2({ method: 'GET', path: '/', headers: { Cookie: cookiePair2 } });
     assert.ok(decode(res.body).includes('Session visits: <strong>3</strong>'),
               'session survives instance swap with pinned secret');

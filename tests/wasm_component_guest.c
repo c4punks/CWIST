@@ -49,43 +49,7 @@ static void session_get_handler(cwist_http_request *req, cwist_http_response *re
     cwist_sstring_assign(res->body, user ? user : "anonymous");
 }
 
-/* wit-bindgen guest export: fill *ret on success (return true), *err on
- * failure (return false). The canonical ABI copies the returned list out of
- * guest memory and frees it via cabi_realloc, so the response buffer must be
- * a libc allocation. cwist_alloc is exactly that under __wasi__. */
-bool exports_c4punks_cwist_guest_dispatch(cwist_guest_list_u8_t *request,
-                                          cwist_guest_list_u8_t *ret,
-                                          exports_c4punks_cwist_guest_dispatch_error_t *err) {
-    uint8_t *res_buf = NULL;
-    size_t res_len = 0;
-    if (cwist_wasm_component_dispatch(g_app, request->ptr, request->len, &res_buf, &res_len) != 0) {
-        err->tag = EXPORTS_C4PUNKS_CWIST_GUEST_DISPATCH_ERROR_INVALID_REQUEST;
-        return false;
-    }
-    ret->ptr = res_buf;
-    ret->len = res_len;
-    return true;
-}
-
-bool exports_c4punks_cwist_guest_use_session(cwist_guest_string_t *maybe_secret,
-                                             exports_c4punks_cwist_guest_session_error_t *err) {
-    char buf[256];
-    const char *secret = NULL;
-    if (maybe_secret) {
-        if (maybe_secret->len >= sizeof(buf)) {
-            err->tag = EXPORTS_C4PUNKS_CWIST_GUEST_SESSION_ERROR_REJECTED;
-            return false;
-        }
-        memcpy(buf, maybe_secret->ptr, maybe_secret->len);
-        buf[maybe_secret->len] = '\0';
-        secret = buf;
-    }
-    if (cwist_app_use_session(g_app, secret) != 0) {
-        err->tag = EXPORTS_C4PUNKS_CWIST_GUEST_SESSION_ERROR_REJECTED;
-        return false;
-    }
-    return true;
-}
+CWIST_WASM_COMPONENT_DEFINE_GUEST(g_app)
 
 int main(void) {
     g_app = cwist_app_create();

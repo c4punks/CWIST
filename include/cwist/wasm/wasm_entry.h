@@ -1,6 +1,11 @@
 /**
  * @file wasm_entry.h
- * @brief Standard WASM entry points the cwist-wasm JS wrapper calls.
+ * @brief (Deprecated) Legacy Emscripten WASM entry points.
+ *
+ * @deprecated The Emscripten browser bundle has been superseded by the WASI
+ * component pipeline (issue #203). For new code, build for wasm32-wasip2
+ * using CWIST_WASM_COMPONENT_DEFINE_GUEST() from <cwist/wasm/wasm_component.h>.
+ * This header and its functions are retained for v4 LTS ABI compatibility.
  *
  * A consumer app compiles against libcwist_wasm.a and expands
  * CWIST_WASM_DEFINE_ENTRY(app_symbol) exactly once, after its routes are

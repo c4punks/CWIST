@@ -1,6 +1,11 @@
-# CWIST on WASM (Emscripten)
+# CWIST on WASM (Legacy Emscripten)
 
-CWIST can be compiled to WebAssembly via Emscripten and driven entirely from
+> [!NOTE]
+> The Emscripten browser bundle has been superseded by the WASI component
+> pipeline (issue #203). See [wasm-component.md](wasm-component.md) for the
+> supported WASM target.
+
+CWIST historically compiled to WebAssembly via Emscripten and was driven from
 JS: an HTTP request goes in as bytes, the router + middleware + handlers run
 inside WASM, and the serialized HTTP response comes back as a zero-copy
 `Uint8Array` view on the WASM heap.
