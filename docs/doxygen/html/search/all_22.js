@@ -31,7 +31,7 @@ var searchData=
   ['wasm_20and_20ssr_28',['10. Dynamic CSS Composer (WASM and SSR)',['../dd/d4c/md_docs_2tutorial_2cwist__tutorial.html#autotoc_md829',1,'']]],
   ['wasm_20build_29',['What is in the WASM build',['../d5/d0e/md_docs_2api_2wasm.html#autotoc_md217',1,'']]],
   ['wasm_20component_20model_30',['CWIST on the WASM component model',['../d8/d77/md_docs_2api_2wasm-component.html',1,'']]],
-  ['wasm_20emscripten_31',['CWIST on WASM (Emscripten)',['../d5/d0e/md_docs_2api_2wasm.html',1,'']]],
+  ['wasm_20legacy_20emscripten_31',['CWIST on WASM (Legacy Emscripten)',['../d5/d0e/md_docs_2api_2wasm.html',1,'']]],
   ['wasm_20typedarray_20h_20tt_32',['wasm typedarray h tt',['../d2/d56/md_docs_2ko_2api_2wasm.html#autotoc_md519',1,'제로 카피 뷰: &lt;tt&gt;cwist/wasm/typedarray.h&lt;/tt&gt;'],['../d5/d0e/md_docs_2api_2wasm.html#autotoc_md219',1,'Zero-copy views: &lt;tt&gt;cwist/wasm/typedarray.h&lt;/tt&gt;']]],
   ['wasm_2dcomponent_2emd_33',['wasm-component.md',['../d9/d53/api_2wasm-component_8md.html',1,'(Global Namespace)'],['../da/d7d/ko_2api_2wasm-component_8md.html',1,'(Global Namespace)']]],
   ['wasm_2emd_34',['wasm.md',['../dd/d12/api_2wasm_8md.html',1,'(Global Namespace)'],['../d0/d5a/ko_2api_2wasm_8md.html',1,'(Global Namespace)']]],

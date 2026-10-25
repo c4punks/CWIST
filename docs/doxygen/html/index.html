@@ -166,7 +166,7 @@ One app, three places to run it</h2>
 <tr class="markdownTableRowOdd">
 <td class="markdownTableBodyNone"><b>WASI 0.2 edge runtime</b> (Wasmtime)   </td><td class="markdownTableBodyNone"><code>cwist_app_listen</code> on WASI sockets, built for <code>wasm32-wasip2</code>   </td><td class="markdownTableBodyNone">The same app on Wasmtime; the host owns persistence as a KV-style blob   </td><td class="markdownTableBodyNone"><a href="example/wasip2-kv">wasip2-kv</a>   </td></tr>
 </table>
-<p>The WASM hosts speak serialized HTTP/1.1 across a <a href="wit/cwist.wit">WIT interface</a>, and the <a href="wasm/npm"><code>cwist-wasm</code></a> npm package wraps both the Emscripten module and the jco-transpiled component for JavaScript hosts. They are newer than the native server: read each example's README for what is and is not guaranteed yet (for example, the wasip2 demo does not promise crash-durable writes).</p>
+<p>The WASM hosts speak serialized HTTP/1.1 across a <a href="wit/cwist.wit">WIT interface</a>, and the <a href="wasm/npm"><code>cwist-wasm</code></a> npm package wraps the jco-transpiled component for JavaScript hosts. They are newer than the native server: read each example's README for what is and is not guaranteed yet (for example, the wasip2 demo does not promise crash-durable writes).</p>
 <h2><a class="anchor" id="autotoc_md5"></a>
 What CWIST includes</h2>
 <table class="markdownTable">

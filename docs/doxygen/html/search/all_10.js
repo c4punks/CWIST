@@ -9,7 +9,7 @@ var searchData=
   ['elements_6',['elements',['../d1/d53/structcwist__redis__reply.html#a24dbe62d2d794b7d0822f8953ecbd8c9',1,'cwist_redis_reply']]],
   ['eligibility_20boundary_7',['1. One parsed eligibility boundary',['../de/d51/md_docs_2decisions_20001-safe-public-fixed-response-cache.html#autotoc_md267',1,'']]],
   ['embedded_20bundle_8',['Embedded bundle',['../d9/dda/md_docs_2performance_2tls-backends.html#autotoc_md746',1,'']]],
-  ['emscripten_9',['emscripten',['../d5/d0e/md_docs_2api_2wasm.html',1,'CWIST on WASM (Emscripten)'],['../d2/d56/md_docs_2ko_2api_2wasm.html',1,'WASM 위의 CWIST (Emscripten)']]],
+  ['emscripten_9',['emscripten',['../d5/d0e/md_docs_2api_2wasm.html',1,'CWIST on WASM (Legacy Emscripten)'],['../d2/d56/md_docs_2ko_2api_2wasm.html',1,'WASM 위의 CWIST (Emscripten)']]],
   ['enable_5fhttp2_10',['enable_http2',['../d9/d1f/structcwist__https__options.html#a46a68eba0d9ccebfb016cac0cbb2235e',1,'cwist_https_options']]],
   ['enable_5fhttp3_11',['enable_http3',['../d9/d1f/structcwist__https__options.html#ac298c2b9b980b2ab7acc77a09d6e35eb',1,'cwist_https_options']]],
   ['encoding_12',['Encoding',['../dc/d80/md_docs_2api_2cookie.html#autotoc_md81',1,'']]],

@@ -263,7 +263,7 @@ var NAVTREE =
       [ "Measured while building stage 2", "d8/d77/md_docs_2api_2wasm-component.html#autotoc_md213", null ],
       [ "Non-goals", "d8/d77/md_docs_2api_2wasm-component.html#autotoc_md214", null ]
     ] ],
-    [ "CWIST on WASM (Emscripten)", "d5/d0e/md_docs_2api_2wasm.html", [
+    [ "CWIST on WASM (Legacy Emscripten)", "d5/d0e/md_docs_2api_2wasm.html", [
       [ "Building", "d5/d0e/md_docs_2api_2wasm.html#autotoc_md216", null ],
       [ "What is in the WASM build", "d5/d0e/md_docs_2api_2wasm.html#autotoc_md217", null ],
       [ "Request dispatch from JS", "d5/d0e/md_docs_2api_2wasm.html#autotoc_md218", null ],

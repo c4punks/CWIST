@@ -8,7 +8,7 @@ var searchData=
   ['wasm_20위의_20cwist_20emscripten_5',['WASM 위의 CWIST (Emscripten)',['../d2/d56/md_docs_2ko_2api_2wasm.html',1,'']]],
   ['wasm_20컴포넌트_20모델_20위의_20cwist_6',['WASM 컴포넌트 모델 위의 CWIST',['../dd/d41/md_docs_2ko_2api_2wasm-component.html',1,'']]],
   ['wasm_20component_20model_7',['CWIST on the WASM component model',['../d8/d77/md_docs_2api_2wasm-component.html',1,'']]],
-  ['wasm_20emscripten_8',['CWIST on WASM (Emscripten)',['../d5/d0e/md_docs_2api_2wasm.html',1,'']]],
+  ['wasm_20legacy_20emscripten_8',['CWIST on WASM (Legacy Emscripten)',['../d5/d0e/md_docs_2api_2wasm.html',1,'']]],
   ['wasmtime으로_20wasi_200_202_20예제_20배포하기_9',['Wasmtime으로 WASI 0.2 예제 배포하기',['../d1/dc3/md_docs_2ko_2deployment_2wasmtime-appliance.html',1,'']]],
   ['wasmtime_10',['Deploy the WASI 0.2 example with Wasmtime',['../db/de3/md_docs_2deployment_2wasmtime-appliance.html',1,'']]],
   ['web_20development_20tutorial_20a_20to_20z_11',['CWIST Web Development Tutorial (A to Z)',['../dd/d4c/md_docs_2tutorial_2cwist__tutorial.html',1,'']]],

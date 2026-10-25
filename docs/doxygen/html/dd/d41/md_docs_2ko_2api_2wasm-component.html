@@ -114,7 +114,7 @@ $(document).ready(function(){initNavTree('dd/d41/md_docs_2ko_2api_2wasm-componen
 <p>v3.6은 WASM 종류 세 가지를 냈습니다. Emscripten 브라우저 번들(지원), WASI preview1 스모크(이 작업으로 폐기; WASI 0.2가 용도를 대신함), WASI 0.2 소켓 서버(<code><a class="el" href="../../d6/da1/api_2wasi_8md.html">docs/api/wasi.md</a></code>)입니다. 도구 체인 세 개는 얻는 것보다 비용이 크고, Emscripten 경로는 운영상의 마찰을 낳습니다. 무거운 emsdk, 버전에 민감한 접착 코드, EM_JS 서식 사고(#176)가 그 예입니다. 최종 상태는 파이프라인 하나입니다. wasi-sdk로 컴파일하고, 어디서나 실행하며, 브라우저는 jco로 변환한 JS 번들로, 엣지 런타임은 wasmtime으로 실행합니다.</p>
 <h1><a class="anchor" id="autotoc_md506"></a>
 경계</h1>
-<p><code>wit/cwist.wit</code>는 <code><a class="el" href="../../d9/d60/wasm__entry_8h.html" title="Standard WASM entry points the cwist-wasm JS wrapper calls.">include/cwist/wasm/wasm_entry.h</a></code>의 컴포넌트 모델 대응물인 <code>world cwist-guest</code>를 정의합니다.</p>
+<p><code>wit/cwist.wit</code>는 <code><a class="el" href="../../d9/d60/wasm__entry_8h.html" title="(Deprecated) Legacy Emscripten WASM entry points.">include/cwist/wasm/wasm_entry.h</a></code>의 컴포넌트 모델 대응물인 <code>world cwist-guest</code>를 정의합니다.</p>
 <ul>
 <li><code>dispatch(request: list&lt;u8&gt;) -&gt; result&lt;list&lt;u8&gt;, dispatch-error&gt;</code>: 직렬화된 HTTP/1.1이 들어가고 나오며, 오늘날 <code>_cwist_wasm_dispatch</code>가 처리하는 것과 정확히 같습니다. 앱 쪽 파서는 바뀔 것이 없습니다.</li>
 <li><code>use-session(secret: option&lt;string&gt;)</code>: 호스트가 주입하는 세션 서명 비밀 값. <code>_cwist_wasm_use_session</code>과 같은 계약입니다.</li>

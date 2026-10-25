@@ -184,7 +184,7 @@ var searchData=
   ['cwist_20includes_181',['What CWIST includes',['../index.html#autotoc_md5',1,'']]],
   ['cwist_20library_20reference_182',['CWIST Library Reference',['../da/dca/md_docs_2REFERENCE.html',1,'']]],
   ['cwist_20on_20the_20wasm_20component_20model_183',['CWIST on the WASM component model',['../d8/d77/md_docs_2api_2wasm-component.html',1,'']]],
-  ['cwist_20on_20wasm_20emscripten_184',['CWIST on WASM (Emscripten)',['../d5/d0e/md_docs_2api_2wasm.html',1,'']]],
+  ['cwist_20on_20wasm_20legacy_20emscripten_184',['CWIST on WASM (Legacy Emscripten)',['../d5/d0e/md_docs_2api_2wasm.html',1,'']]],
   ['cwist_20wasm_20typedarray_20h_20tt_185',['cwist wasm typedarray h tt',['../d2/d56/md_docs_2ko_2api_2wasm.html#autotoc_md519',1,'제로 카피 뷰: &lt;tt&gt;cwist/wasm/typedarray.h&lt;/tt&gt;'],['../d5/d0e/md_docs_2api_2wasm.html#autotoc_md219',1,'Zero-copy views: &lt;tt&gt;cwist/wasm/typedarray.h&lt;/tt&gt;']]],
   ['cwist_20web_20development_20tutorial_20a_20to_20z_186',['CWIST Web Development Tutorial (A to Z)',['../dd/d4c/md_docs_2tutorial_2cwist__tutorial.html',1,'']]],
   ['cwist_5faccept_5fcb_5ft_187',['cwist_accept_cb_t',['../d2/d6b/reactor__rx_8h.html#aa0ff369796ed2d081cf5a74ec126549d',1,'reactor_rx.h']]],
