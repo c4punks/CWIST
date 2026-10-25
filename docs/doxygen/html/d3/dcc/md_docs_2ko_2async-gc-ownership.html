@@ -108,12 +108,12 @@ $(document).ready(function(){initNavTree('d3/dcc/md_docs_2ko_2async-gc-ownership
   <div class="headertitle"><div class="title">full GC에서의 연기된 HTTP 소유권</div></div>
 </div><!--header-->
 <div class="contents">
-<div class="textblock"><p><a class="anchor" id="autotoc_md536"></a> 연기된(deferred) 교환에는 명시적인 파괴 소유자가 있습니다. 참조 카운트는 CWIST의 스레드 로컬 pending-sweep 목록에서 할당을 빼 주지 않습니다. 게시(publication) 전에 할당한 스레드에서 <code>cwist_gc_scope_disown</code>이 실행되어야 합니다. 이 변경은 GC를 끄지도, 할당자를 바꾸지도, 받는 작업의 범위에 할당을 등록하지도 않습니다.</p>
+<div class="textblock"><p><a class="anchor" id="autotoc_md536"></a> <a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">연기된(deferred)</a> 교환에는 명시적인 파괴 소유자가 있습니다. 참조 카운트는 CWIST의 스레드 로컬 pending-sweep 목록에서 할당을 빼 주지 않습니다. <a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">게시(publication)</a> 전에 할당한 스레드에서 <code>cwist_gc_scope_disown</code>이 실행되어야 합니다. 이 변경은 GC를 끄지도, 할당자를 바꾸지도, 받는 작업의 범위에 할당을 등록하지도 않습니다.</p>
 <h1><a class="anchor" id="autotoc_md537"></a>
 인계 순서</h1>
 <ol type="1">
-<li><code>cwist_async_defer</code>는 응답의 async/deferred 필드를 설정하고 핸들을 반환하기 전에, 핸들과 기존에 소유한 요청/응답 그래프의 소유를 해제(disown)합니다.</li>
-<li>동기 미들웨어는 디스패치 스레드에서 후처리 작업을 마칠 수 있습니다. <code>cwist_async_dispatch_ack</code>는 그래프를 다시 순회해 미들웨어가 되감기는 동안 생긴 할당을 잡아내고, keep-alive 정책을 갱신한 뒤, 확인(acknowledgement)을 release로 게시합니다. 그 이후 디스패처는 교환을 건드리면 안 됩니다.</li>
+<li><code>cwist_async_defer</code>는 응답의 async/deferred 필드를 설정하고 핸들을 반환하기 전에, 핸들과 기존에 소유한 요청/응답 그래프의 소유를 <a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">해제(disown)</a>합니다.</li>
+<li>동기 미들웨어는 디스패치 스레드에서 후처리 작업을 마칠 수 있습니다. <code>cwist_async_dispatch_ack</code>는 그래프를 다시 순회해 미들웨어가 되감기는 동안 생긴 할당을 잡아내고, keep-alive 정책을 갱신한 뒤, <a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">확인(acknowledgement)</a>을 release로 게시합니다. 그 이후 디스패처는 교환을 건드리면 안 됩니다.</li>
 <li>경쟁에서 이긴 완료 생산자는 교환 객체를 변경, 교체, 전송, 파괴하기 <b>전에</b> 그 확인을 acquire합니다. 따라서 확인 시점의 그래프 순회가 응답 변경과 경쟁할 수 없습니다. 경쟁에서 진 쪽은 호출자가 넘긴 응답을 순회하거나 소유하지 않습니다.</li>
 <li><code>cwist_async_finish</code>는 리액터에 post하거나 HTTP/2 큐에 들어가기 전에 생산자 스레드에서 최종 응답의 소유 그래프를 disown합니다. 이는 <code>respond</code>, <code>respond_with</code>, <code>abort</code>와 타임아웃이 만든 헤더/본문 문자열을 모두 포함합니다.</li>
 <li>최종 해제는 기존의 완료/파괴 경로가 계속 책임집니다. 순서는 최종 응답(다를 경우), 원래 응답, 그다음 요청입니다. 이 순서는 요청 아레나에서 빌린 응답 저장소를 보존합니다. 원래 응답을 <code>respond_with</code>에 넘겨도 중복 파괴가 일어나지 않습니다.</li>
@@ -150,7 +150,7 @@ HTTP/2 큐 소유권</h1>
 <p>HTTP 그래프 순회기가 아니라 큐 모듈이, 명시적으로 참조 카운트되는 큐를 생성 시에 분리하고 완료 노드를 공유 큐에 연결하기 직전에 분리합니다. 생산자는 연결이 비워지기 전에 종료할 수 있고, 유지된 큐는 연결 정리보다 오래 살 수 있습니다. 닫힌 큐는 기존 소멸자 순서로 교환을 버립니다. 노드 할당이 실패해도 이전받은 교환을 소비하고 파괴하므로, 생산자가 소유권을 내려놓은 뒤의 누수를 피합니다.</p>
 <h1><a class="anchor" id="autotoc_md541"></a>
 검증과 한계</h1>
-<p>초기 구현은 런타임 테스트 전에 소스 검토를 거쳤습니다. 커밋 <code>5b128f1178df374ee5bc3db1aba8f921a6af7d68</code>에서 Linux ASan/UBSan CI가 GC 켬/끔에 대한 실제 TCP classic/C1M 행렬을 통과했고, NDEBUG로도 반복했습니다. 이것만으로 크로스 플랫폼 수용을 뜻하지는 않습니다. 이후 macOS 수신 타임아웃 회귀를 전체 네이티브 라이브러리에서 재현했습니다. 종료가 이미 리액터를 멈췄는데, 합쳐진(coalesced) 묶음이 남은 바이트를 대기열에 남겨 두었던 것입니다. 이제 종료를 감지한 flush는 기존 전송 도우미로 그 묶음을 마무리합니다. 이 변경 후 네이티브 TCP 행렬은 여덟 가지 모드 모두에서 통과했습니다. 이것은 절대적인 종료 기한이나 이미 대기 중인 콜백에 대한 보장이 아니며, 도우미는 poll마다의 타임아웃을 유지합니다. 최종 통합 CI는 여전히 필요합니다.</p>
+<p>초기 구현은 런타임 테스트 전에 소스 검토를 거쳤습니다. 커밋 <code>5b128f1178df374ee5bc3db1aba8f921a6af7d68</code>에서 Linux ASan/UBSan CI가 GC 켬/끔에 대한 실제 TCP classic/C1M 행렬을 통과했고, NDEBUG로도 반복했습니다. 이것만으로 크로스 플랫폼 수용을 뜻하지는 않습니다. 이후 macOS 수신 타임아웃 회귀를 전체 네이티브 라이브러리에서 재현했습니다. 종료가 이미 리액터를 멈췄는데, <a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">합쳐진(coalesced)</a> 묶음이 남은 바이트를 대기열에 남겨 두었던 것입니다. 이제 종료를 감지한 flush는 기존 전송 도우미로 그 묶음을 마무리합니다. 이 변경 후 네이티브 TCP 행렬은 여덟 가지 모드 모두에서 통과했습니다. 이것은 절대적인 종료 기한이나 이미 대기 중인 콜백에 대한 보장이 아니며, 도우미는 poll마다의 타임아웃을 유지합니다. 최종 통합 CI는 여전히 필요합니다.</p>
 <p>검증 범위에는 완료 전의 생성자 종료나 범위 flush, 힙 헤더/맵/세션/채택된(adopted) 버퍼와 아레나 고갈 시의 대체, 리액터/HTTP2 비우기 전의 생산자 종료, 미들웨어 후처리, 진 쪽의 완료, 타임아웃/abort 경합, 정확히 한 번의 관리형 정리가 포함됩니다. 소유권 목록에서 실행되지 않은 커버리지를 추론하지 마세요.</p>
 <h1><a class="anchor" id="autotoc_md542"></a>
 스케줄러와 IO 큐 소유권</h1>

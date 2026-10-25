@@ -115,13 +115,13 @@ $(document).ready(function(){initNavTree('d9/d60/wasm__entry_8h.html','../../');
 <p><a href="../../d9/d60/wasm__entry_8h_source.html">Go to the source code of this file.</a></p>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
 <div class="textblock"><p>Standard WASM entry points the cwist-wasm JS wrapper calls. </p>
-<p>A consumer app compiles against libcwist_wasm.a and expands CWIST_WASM_DEFINE_ENTRY(app_symbol) exactly once, after its routes are registered and before the module is used. It exports:</p>
+<p>A consumer app compiles against libcwist_wasm.a and expands <a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">CWIST_WASM_DEFINE_ENTRY(app_symbol)</a> exactly once, after its routes are registered and before the module is used. It exports:</p>
 <ul>
-<li>_cwist_wasm_dispatch(req_ptr, req_len, out_len_ptr) -&gt; res_ptr</li>
-<li>_cwist_wasm_dispose(res_ptr)</li>
-<li>_cwist_wasm_use_session(secret_ptr) -&gt; 0/-1 (optional; pins the session signing secret so cookies survive module restarts)</li>
+<li><a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">_cwist_wasm_dispatch(req_ptr, req_len, out_len_ptr)</a> -&gt; res_ptr</li>
+<li><a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">_cwist_wasm_dispose(res_ptr)</a></li>
+<li><a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">_cwist_wasm_use_session(secret_ptr)</a> -&gt; 0/-1 (optional; pins the session signing secret so cookies survive module restarts)</li>
 </ul>
-<p>JS side (via the npm package <code>cwist-wasm</code>): const { createCwist } = require('cwist-wasm'); const handle = createCwist(Module); const res = handle({ method: 'GET', path: '/hello' }); // res.status, res.headers, res.body (Uint8Array)</p>
+<p>JS side (via the npm package <code>cwist-wasm</code>): const { createCwist } = require('cwist-wasm'); const handle = <a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">createCwist(Module)</a>; const res = handle({ method: 'GET', path: '/hello' }); // res.status, res.headers, res.body (Uint8Array)</p>
 <p>Build the consumer module with the entry exported and the runtime methods the wrapper needs, e.g.:</p>
 <p>emcc -O2 -std=c17 -I./include -I./lib -o app.js my_app.c \ libcwist_wasm.a \ -sEXPORTED_FUNCTIONS=_cwist_wasm_dispatch,_cwist_wasm_free,_malloc,_free \ -sEXPORTED_RUNTIME_METHODS=ccall</p>
 <p>Emscripten-only, like <a class="el" href="../../d1/d4f/typedarray_8h.html" title="Emscripten-only zero-copy helpers: expose C arrays and in-memory dispatch responses to JS as TypedArr...">typedarray.h</a>: everything is guarded by <b>EMSCRIPTEN</b> and this header is a no-op on native toolchains. </p>

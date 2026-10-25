@@ -116,11 +116,11 @@ $(document).ready(function(){initNavTree('d8/d7e/md_docs_2ko_2webserver-benchmar
 <tr class="markdownTableHead">
 <th class="markdownTableHeadNone">단계   </th><th class="markdownTableHeadNone">명령   </th><th class="markdownTableHeadNone">목적    </th></tr>
 <tr class="markdownTableRowOdd">
-<td class="markdownTableBodyNone">워밍업   </td><td class="markdownTableBodyNone"><code>wrk -t12 -c400 -d10s <a href="http://127.0.0.1:">http://127.0.0.1:</a>$PORT/</code>   </td><td class="markdownTableBodyNone">버림. JIT 계층형 런타임(JVM)이 정상 상태에 도달하게 함. 네 서버에 똑같이 적용.    </td></tr>
+<td class="markdownTableBodyNone">워밍업   </td><td class="markdownTableBodyNone"><code>wrk -t12 -c400 -d10s <a href="http://127.0.0.1:">http://127.0.0.1:</a>$PORT/</code>   </td><td class="markdownTableBodyNone">버림. JIT 계층형 <a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">런타임(JVM)</a>이 정상 상태에 도달하게 함. 네 서버에 똑같이 적용.    </td></tr>
 <tr class="markdownTableRowEven">
 <td class="markdownTableBodyNone">측정   </td><td class="markdownTableBodyNone"><code>wrk -t12 -c400 -d10s <a href="http://127.0.0.1:">http://127.0.0.1:</a>$PORT/</code>   </td><td class="markdownTableBodyNone">기록: <code>Requests/sec</code>, 평균 <code>Latency</code>.   </td></tr>
 </table>
-<p><b>CPU 예산:</b> 모든 서버와 부하 생성기는 러너의 CPU 전체를 봅니다. 고정(pinning)도, 런타임별 스레드 상한도 없습니다. 각 런타임은 자체 기본/자동 워커 크기를 씁니다 (CWIST <code>CWIST_WORKERS=auto</code>, Tokio <code>available_parallelism</code>, Go <code>GOMAXPROCS=default</code>, Netty <code>ioWorkerCount=nproc</code>). 이렇게 해야 비교가 공정합니다. 어떤 프레임워크도 다른 프레임워크가 받지 못하는 수동 튜닝의 이점을 얻지 않습니다.</p>
+<p><b>CPU 예산:</b> 모든 서버와 부하 생성기는 러너의 CPU 전체를 봅니다. <a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">고정(pinning)</a>도, 런타임별 스레드 상한도 없습니다. 각 런타임은 자체 기본/자동 워커 크기를 씁니다 (CWIST <code>CWIST_WORKERS=auto</code>, Tokio <code>available_parallelism</code>, Go <code>GOMAXPROCS=default</code>, Netty <code>ioWorkerCount=nproc</code>). 이렇게 해야 비교가 공정합니다. 어떤 프레임워크도 다른 프레임워크가 받지 못하는 수동 튜닝의 이점을 얻지 않습니다.</p>
 <ul>
 <li>서버 시작 대기는 고정 sleep이 아니라 준비 확인 루프(<code>curl</code> poll, JVM은 최대 90초)입니다.</li>
 <li><b>최대 RSS**는 측정 실행 직후 <code>ps -o rss=</code>로 샘플링합니다.</b></li>
@@ -158,7 +158,7 @@ Gin (Go)</h1>
 <h1><a class="anchor" id="autotoc_md704"></a>
 Spring Boot (JVM 공정성 설정)</h1>
 <p>JVM은 한 번 재고 끝낼 수 있는 런타임이 아닙니다. 계층형 JIT 컴파일, 힙 크기 조정, 클래스 로딩이 짧은 실행을 지배합니다. 그래서 스위트는 다음 설정을 고정하고 *기록*합니다.</p>
-<p>벤치마크하는 스택은 스레드당 요청인 Tomcat 서블릿 컨테이너 위의 Spring MVC가 아니라, Spring의 리액티브 이벤트 루프 서버인 <b>Reactor Netty 위의 Spring WebFlux**입니다. Netty의 이벤트 루프가 비동기 CWIST(io_uring/epoll)와 Axum(tokio) 서버에 대한 적절한 Java 비교 대상입니다. 이벤트 루프 위에 **가상 스레드를 켜서</b>(<code>spring.threads.virtual.enabled=true</code>, Project Loom) Netty 이벤트 루프 밖으로 보내는 작업이 제한된 플랫폼 스레드 풀 대신 Loom 가상 스레드에서 실행되게 합니다.</p>
+<p>벤치마크하는 스택은 스레드당 요청인 Tomcat 서블릿 컨테이너 위의 Spring MVC가 아니라, Spring의 리액티브 이벤트 루프 서버인 <b>Reactor Netty 위의 Spring WebFlux**입니다. Netty의 이벤트 루프가 비동기 CWIST(io_uring/epoll)와 <a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">Axum(tokio)</a> 서버에 대한 적절한 Java 비교 대상입니다. 이벤트 루프 위에 **가상 스레드를 켜서</b>(<code>spring.threads.virtual.enabled=true</code>, Project Loom) Netty 이벤트 루프 밖으로 보내는 작업이 제한된 플랫폼 스레드 풀 대신 Loom 가상 스레드에서 실행되게 합니다.</p>
 <table class="markdownTable">
 <tr class="markdownTableHead">
 <th class="markdownTableHeadNone">설정   </th><th class="markdownTableHeadNone">값    </th></tr>
@@ -203,7 +203,7 @@ Spring Boot (JVM 공정성 설정)</h1>
 <h1><a class="anchor" id="autotoc_md706"></a>
 지연 분포 차트</h1>
 <p><code>docs/webserver-latency-distribution.svg</code>(README에서 막대 차트 추이 SVG 바로 아래에 링크됨)는 각 서버의 지연 분포를 밀도 곡선으로 그립니다. 그래서 꼬리의 P99.999 수치만이 아니라 *모양*을 한눈에 볼 수 있습니다. 위 요약 표와 같은 다섯 서버(<code>cwist</code>, <code>cwist_c1m</code>, <code>axum</code>, <code>gin</code>, <code>spring</code>)를 비교하며, <code>_tuned</code> 항목(다른, 더 낮은 동시성의 부하 프로필)과 옵트인 실험 A/B (<code>cwist_c1m_arena1</code>, <code>cwist_sharded</code>)는 제외합니다. 그래서 차트는 항상 똑같은 <code>wrk -t12 -c400 -d10s</code> 프로필로 만든 실행만 비교합니다.</p>
-<p>이것은 **원시 데이터가 아니라 재구성한 것**입니다. wrk는 백분위수(min/p50/p75/p90/p99/p99.9/ p99.99/p99.999/max, 이제 모두 워크플로의 <code>parse_wrk()</code>가 수집함. <code>.github/workflows/bsd-kqueue-benchmarks.yml</code> 참고)만 보고하며, 그 아래의 요청별 샘플은 보고하지 않습니다. <code>scripts/ci/benchmark.py</code>(<code>_inverse_cdf_samples</code>)는 알려진 백분위수 지점 사이에서 역누적분포함수를 선형 보간해 대표 샘플 집합을 합성하고, 그 위에서 표준 가우시안 KDE (<code>_gaussian_kde</code>, 대역폭은 Silverman의 경험 법칙)를 실행합니다. x축은 <code>log1p(ms)</code>를 써서, 긴 꼬리(Gin, Spring Boot)가 더 촘촘한 CWIST/Axum 곡선을 왼쪽 끝의 읽을 수 없는 뾰족한 모양으로 눌러 버리지 않게 합니다. 곡선 모양은 정확한 값이 아니라 대표적인 것으로 보세요. 백분위수 데이터가 더 듬성듬성한 서버(새로운 p75/p999/p9999/min/max 필드가 없는 오래된 기록 행)도 렌더링되지만, 보간할 기준점이 더 적을 뿐입니다.</p>
+<p>이것은 **원시 데이터가 아니라 재구성한 것**입니다. wrk는 백분위수(min/p50/p75/p90/p99/p99.9/ p99.99/p99.999/max, 이제 모두 워크플로의 <code><a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">parse_wrk()</a></code>가 수집함. <code>.github/workflows/bsd-kqueue-benchmarks.yml</code> 참고)만 보고하며, 그 아래의 요청별 샘플은 보고하지 않습니다. <code>scripts/ci/benchmark.py</code>(<code>_inverse_cdf_samples</code>)는 알려진 백분위수 지점 사이에서 역누적분포함수를 선형 보간해 대표 샘플 집합을 합성하고, 그 위에서 표준 가우시안 KDE (<code>_gaussian_kde</code>, 대역폭은 Silverman의 경험 법칙)를 실행합니다. x축은 <code><a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">log1p(ms)</a></code>를 써서, 긴 <a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">꼬리(Gin, Spring Boot)</a>가 더 촘촘한 CWIST/Axum 곡선을 왼쪽 끝의 읽을 수 없는 뾰족한 모양으로 눌러 버리지 않게 합니다. 곡선 모양은 정확한 값이 아니라 대표적인 것으로 보세요. 백분위수 데이터가 더 듬성듬성한 서버(새로운 p75/p999/p9999/min/max 필드가 없는 오래된 기록 행)도 렌더링되지만, 보간할 기준점이 더 적을 뿐입니다.</p>
 <h1><a class="anchor" id="autotoc_md707"></a>
 알려진 한계</h1>
 <ul>

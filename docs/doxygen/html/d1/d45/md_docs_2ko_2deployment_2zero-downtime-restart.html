@@ -115,14 +115,14 @@ $(document).ready(function(){initNavTree('d1/d45/md_docs_2ko_2deployment_2zero-d
 <ul>
 <li>TCP용 <code>SO_REUSEPORT</code>를 위해서는 **Linux 커널 3.9 이상**이 필요합니다. FreeBSD, macOS 및 다른 BSD에서도 지원됩니다. 이 옵션이 없는 환경에서는 CWIST가 해당 코드를 빼고 컴파일하므로, 두 번째 바인드는 예전처럼 <code>EADDRINUSE</code>로 실패합니다.</li>
 <li>두 프로세스 모두 <code>SO_REUSEPORT</code>를 설정해야 합니다. CWIST는 모든 리슨 소켓(TCP와 HTTP/3 UDP 소켓)에 기본으로 설정하므로, 두 CWIST 프로세스(또는 같은 바이너리의 두 세대)는 항상 조건을 만족합니다.</li>
-<li><code>CWIST_REUSEPORT</code>로 이 동작을 제어합니다. 기본값은 켜짐이며, <code>0</code>이나 <code>false</code>로 설정하면 "두 번째 바인드 실패"라는 고전적 동작으로 돌아갑니다. 인스턴스를 실수로 두 개 띄우는 것을 막는 장치로 선호하는 배포도 있습니다. 워커 프로세스는 <code>fork()</code> 후 포트를 다시 바인드하므로, 이 knob을 끄면 <code>CWIST_WORKERS=1</code>이 필요합니다.</li>
+<li><code>CWIST_REUSEPORT</code>로 이 동작을 제어합니다. 기본값은 켜짐이며, <code>0</code>이나 <code>false</code>로 설정하면 "두 번째 바인드 실패"라는 고전적 동작으로 돌아갑니다. 인스턴스를 실수로 두 개 띄우는 것을 막는 장치로 선호하는 배포도 있습니다. 워커 프로세스는 <code><a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">fork()</a></code> 후 포트를 다시 바인드하므로, 이 knob을 끄면 <code>CWIST_WORKERS=1</code>이 필요합니다.</li>
 </ul>
 <h1><a class="anchor" id="autotoc_md580"></a>
 핸드오프 순서</h1>
 <ol type="1">
 <li>같은 포트에서 새 프로세스를 시작합니다. <code>SO_REUSEPORT</code> 덕분에 바인드가 성공하고, 커널은 이제 <b>새</b> 연결을 두 프로세스의 accept 큐에 분산합니다.</li>
 <li>기존 프로세스에 <code>SIGTERM</code>(또는 <code>SIGINT</code>)을 보냅니다. CWIST의 그레이스풀 셧다운이 기존 리슨 소켓을 즉시 닫으므로, 그 순간부터 모든 새 연결은 새 프로세스로만 해시됩니다.</li>
-<li>기존 프로세스는 처리 중인 요청을 <code>CWIST_DRAIN_TIMEOUT</code>(기본 5초, 처리 중인 것이 없어지면 조기 종료)까지 마무리하고 종료합니다. 아직 들고 있는 유휴 keep-alive 연결은 그레이스풀하게(FIN) 닫히므로, "낡은 keep-alive 연결이면
+<li>기존 프로세스는 처리 중인 요청을 <code>CWIST_DRAIN_TIMEOUT</code>(기본 5초, 처리 중인 것이 없어지면 조기 종료)까지 마무리하고 종료합니다. 아직 들고 있는 유휴 keep-alive 연결은 <a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">그레이스풀하게(FIN)</a> 닫히므로, "낡은 keep-alive 연결이면
    재시도"라는 일반적인 클라이언트 로직이 있으면 새 프로세스로 재접속하면서 실패하는 요청이 없습니다.</li>
 </ol>
 <p>이미 맺어진 연결은 절대 마이그레이션되지 않습니다. 기존 프로세스가 accept한 플로우는 끝날 때까지 기존 프로세스가 서비스하고, 2단계 이후에 accept된 플로우는 항상 새 프로세스에 도달합니다. 1단계와 2단계 사이의 짧은 겹침 구간에서 새 연결이 기존 프로세스에 배정될 수도 있지만, 정상적으로 서비스되고 드레인 때 닫히므로, 드레인 타임아웃은 겹침 구간이 아니라 가장 긴 요청 시간에 맞추면 됩니다.</p>
@@ -139,7 +139,7 @@ systemd 통합</h1>
 </ul>
 <h1><a class="anchor" id="autotoc_md582"></a>
 UDP와 HTTP/3</h1>
-<p>HTTP/3(QUIC) UDP 소켓도 기본으로 <code>SO_REUSEPORT</code>를 받으므로 겹침 바인드는 같은 방식으로 동작하고, 새 QUIC Initial 패킷은 커널이 해시하는 프로세스에 도달합니다. 마이그레이션되지 <b>않는</b> 것은 연결 상태입니다. QUIC 연결은 수락한 프로세스에 암호화 키가 있는 connection ID로 식별되며, CWIST(lsquic)는 살아있는 연결을 다른 프로세스에 넘길 수 없습니다. 드레인 중인 프로세스 소유 연결의 데이터그램이 새 프로세스에 배달될 수 있지만 새 프로세스는 복호화할 수 없고, 클라이언트의 QUIC 스택은 이를 경로 손실로 보고 재전송으로 복구하며, 최악의 경우 새 연결(또는 새 프로세스에 대한 TLS 세션 재개)로 돌아갑니다. 요약하면 TCP 핸드오프는 무손실이고, HTTP/3 핸드오프는 요청 수준에서는 무손실이지만 일부 QUIC 연결이 리셋 후 재접속할 수 있습니다. HTTP/3 배포는 이에 맞춰 계획하세요. 더 길게 드레인하고, 연결 재시도를 견디는 클라이언트를 선호하는 것이 좋습니다.</p>
+<p>HTTP/3(QUIC) UDP 소켓도 기본으로 <code>SO_REUSEPORT</code>를 받으므로 겹침 바인드는 같은 방식으로 동작하고, 새 QUIC Initial 패킷은 커널이 해시하는 프로세스에 도달합니다. 마이그레이션되지 <b>않는</b> 것은 연결 상태입니다. QUIC 연결은 수락한 프로세스에 암호화 키가 있는 connection ID로 식별되며, <a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">CWIST(lsquic)</a>는 살아있는 연결을 다른 프로세스에 넘길 수 없습니다. 드레인 중인 프로세스 소유 연결의 데이터그램이 새 프로세스에 배달될 수 있지만 새 프로세스는 복호화할 수 없고, 클라이언트의 QUIC 스택은 이를 경로 손실로 보고 재전송으로 복구하며, 최악의 경우 새 연결(또는 새 프로세스에 대한 TLS 세션 재개)로 돌아갑니다. 요약하면 TCP 핸드오프는 무손실이고, HTTP/3 핸드오프는 요청 수준에서는 무손실이지만 일부 QUIC 연결이 리셋 후 재접속할 수 있습니다. HTTP/3 배포는 이에 맞춰 계획하세요. 더 길게 드레인하고, 연결 재시도를 견디는 클라이언트를 선호하는 것이 좋습니다.</p>
 <h1><a class="anchor" id="autotoc_md583"></a>
 배포 검증</h1>
 <ul>

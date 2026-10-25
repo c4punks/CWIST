@@ -115,7 +115,7 @@ Requirements</h1>
 <ul>
 <li><b>Linux kernel 3.9 or later</b> for <code>SO_REUSEPORT</code> on TCP. FreeBSD, macOS, and the other BSDs support it as well; where the option does not exist CWIST compiles it out and a second bind fails with <code>EADDRINUSE</code> as before.</li>
 <li>Both processes must set <code>SO_REUSEPORT</code>. CWIST sets it by default on every listen socket (TCP and the HTTP/3 UDP socket), so two CWIST processes — or two generations of the same binary — always qualify.</li>
-<li><code>CWIST_REUSEPORT</code> controls the behavior. It defaults to on; setting it to <code>0</code> or <code>false</code> restores the classic "second bind fails" behavior, which some deployments prefer as a guard against accidentally starting two instances. Worker processes re-bind the port after <code>fork()</code>, so disabling the knob requires <code>CWIST_WORKERS=1</code>.</li>
+<li><code>CWIST_REUSEPORT</code> controls the behavior. It defaults to on; setting it to <code>0</code> or <code>false</code> restores the classic "second bind fails" behavior, which some deployments prefer as a guard against accidentally starting two instances. Worker processes re-bind the port after <code><a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">fork()</a></code>, so disabling the knob requires <code>CWIST_WORKERS=1</code>.</li>
 </ul>
 <h1><a class="anchor" id="autotoc_md289"></a>
 Handoff sequence</h1>

@@ -9,6 +9,7 @@ var globals_type =
     [ "h", "globals_type_h.html", null ],
     [ "j", "globals_type_j.html", null ],
     [ "n", "globals_type_n.html", null ],
+    [ "o", "globals_type_o.html", null ],
     [ "q", "globals_type_q.html", null ],
     [ "r", "globals_type_r.html", null ],
     [ "s", "globals_type_s.html", null ],

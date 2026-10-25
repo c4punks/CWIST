@@ -1,5 +1,7 @@
 <map id="include/cwist/net/http/http_client.h" name="include/cwist/net/http/http_client.h">
-<area shape="rect" id="Node000001" title="Unified HTTP/1.1 and HTTP/2 client using libcurl." alt="" coords="14,5,177,45"/>
+<area shape="rect" id="Node000001" title="Unified HTTP/1.1 and HTTP/2 client using libcurl." alt="" coords="105,5,267,45"/>
 <area shape="rect" id="Node000002" href="$d6/d32/http__client_8c.html" title="libcurl&#45;based HTTP/1.1 and HTTP/2 client for CWIST." alt="" coords="5,93,185,119"/>
-<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="98,59,98,93,93,93,93,59"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="156,56,111,95,107,91,152,52"/>
+<area shape="rect" id="Node000003" href="$d3/db2/otel_8c.html" title="OpenTelemetry tracing middleware (#402)." alt="" coords="209,93,344,119"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="220,52,265,91,261,95,216,56"/>
 </map>

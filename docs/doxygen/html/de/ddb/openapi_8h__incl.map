@@ -1,5 +1,5 @@
 <map id="include/cwist/openapi.h" name="include/cwist/openapi.h">
-<area shape="rect" id="Node000001" title="Source&#45;level OpenAPI annotations consumed by cwist openapi." alt="" coords="1583,5,1758,31"/>
+<area shape="rect" id="Node000001" title="OpenAPI 3.1 generation — source annotations and runtime serving." alt="" coords="1583,5,1758,31"/>
 <area shape="rect" id="Node000002" href="$d0/d77/sys_2app_2app_8h.html" title="Core Application Structure and Lifecycle Management." alt="" coords="1595,79,1746,104"/>
 <area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="1673,31,1673,65,1668,65,1668,31"/>
 <area shape="rect" id="Node000003" href="$d9/dab/net_2http_2http_8h.html" title="HTTP Protocol Definitions and Helpers." alt="" coords="1042,401,1195,427"/>

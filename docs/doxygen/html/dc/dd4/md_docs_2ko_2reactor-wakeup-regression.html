@@ -136,8 +136,8 @@ $(document).ready(function(){initNavTree('dc/dd4/md_docs_2ko_2reactor-wakeup-reg
 <p>환경: Linux <code>6.8.0-117-generic</code>, GCC <code>13.3.0</code>, ARM64 Mac 위의 x86_64 Colima/QEMU 게스트, vCPU 6개와 RAM 12 GiB로 설정. 공유되는 에뮬레이션 VM이며, 프로덕션 처리량 벤치마크가 아닙니다. 각 바이너리는 같은 테스트와 <code>-std=gnu11 -O2 -g -Wall -Wextra -Werror -pthread</code>로 빌드했고 리액터 소스만 달랐습니다. <code>--bench</code>는 의도적으로 실패하는 커널 회귀 관문을 건너뛰고, 게시 직전부터 콜백 실행까지의 <code>CLOCK_MONOTONIC</code> 시간을 기록합니다. 명시적 워밍업 없음, 소켓 없음, 생산자 하나와 리액터 하나, 미처리 post는 한 번에 하나씩. 기존 100 ms 실행 루프 타임아웃은 그대로였습니다.</p>
 <p>짝지은 실행 세 번, 바이너리당 샘플 64개, 순서는 base/fixed, fixed/base, base/fixed:</p>
 <ul>
-<li>기준(base) 실행 중앙값: 103.955, 103.537, 103.490 ms.</li>
-<li>수정(fixed) 실행 중앙값: 0.033433, 0.036471, 0.038093 ms.</li>
+<li><a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">기준(base)</a> 실행 중앙값: 103.955, 103.537, 103.490 ms.</li>
+<li><a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">수정(fixed)</a> 실행 중앙값: 0.033433, 0.036471, 0.038093 ms.</li>
 <li>바이너리당 샘플 192개 전체에서 base 중앙값/최댓값: 103.787046 / 109.251727 ms.</li>
 <li>바이너리당 샘플 192개 전체에서 fixed 중앙값/최댓값: 0.034446 / 0.273538 ms.</li>
 </ul>

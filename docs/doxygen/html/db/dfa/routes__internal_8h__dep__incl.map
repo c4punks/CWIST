@@ -1,0 +1,7 @@
+<map id="src/sys/app/routes_internal.h" name="src/sys/app/routes_internal.h">
+<area shape="rect" id="Node000001" title="Read&#45;only walk of an app&#39;s route table for in&#45;tree consumers (the runtime OpenAPI generator in openap..." alt="" coords="89,5,229,45"/>
+<area shape="rect" id="Node000002" href="$df/d7f/app_8c.html" title=" " alt="" coords="5,93,140,119"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="130,57,87,95,84,91,126,53"/>
+<area shape="rect" id="Node000003" href="$d3/d8f/openapi_8c.html" title="Runtime OpenAPI 3.1 endpoint (#408)." alt="" coords="165,93,327,119"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="192,53,235,91,231,95,189,57"/>
+</map>

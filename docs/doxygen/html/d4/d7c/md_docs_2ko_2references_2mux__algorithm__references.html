@@ -116,7 +116,7 @@ $(document).ready(function(){initNavTree('d4/d7c/md_docs_2ko_2references_2mux__a
 <p><b>mux.c에서의 적용</b> 마방진은 라우트 시그니처를 작은 정수 좌표로 대응시키는 결정론적 조회 테이블로 쓰였습니다. 행과 열의 합이 같다는 성질은 라우트 수가 늘어나도 버킷 부하를 고르게 유지하려는 의도였습니다.</p>
 <p><b>현재 코드 이름</b></p><ul>
 <li><code>CWIST_ROUTING_HASH_SLOT</code> (이전 <code>CWIST_LO_SHU</code>)</li>
-<li><code>cwist_routing_hash_slot()</code> (이전 <code>cwist_magic_square_coord()</code>)</li>
+<li><code><a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">cwist_routing_hash_slot()</a></code> (이전 <code><a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">cwist_magic_square_coord()</a></code>)</li>
 </ul>
 <hr  />
 <h1><a class="anchor" id="autotoc_md645"></a>
@@ -126,17 +126,17 @@ $(document).ready(function(){initNavTree('d4/d7c/md_docs_2ko_2references_2mux__a
 <p><b>현재 코드 이름</b></p><ul>
 <li><code>MUX_PERM_TABLE_A</code> (이전 <code>NAM_LS_PRIMARY</code>)</li>
 <li><code>MUX_PERM_TABLE_B</code> (이전 <code>NAM_LS_SECONDARY</code>)</li>
-<li><code>mux_byte_permute()</code> (이전 <code>nam_latin_merge()</code>)</li>
+<li><code><a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">mux_byte_permute()</a></code> (이전 <code><a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">nam_latin_merge()</a></code>)</li>
 </ul>
 <hr  />
 <h1><a class="anchor" id="autotoc_md647"></a>
 3. 계수 행렬과 선형 연립방정식 풀이</h1>
 <p><b>개념</b> 『승제개방법(乘除開方法)』은 비율을 조정하고 정규화하는 조선 시대의 기법입니다. 여기서 쓰는 행렬은 미지의 가중치 세 개에 대해 풀 수 있는 선형 연립방정식을 만드는 3x3 고정 계수 행렬입니다.</p>
-<p><b>mux.c에서의 적용</b> 행렬(<code>MUX_COEFF_MATRIX</code>)과 가우스 소거 풀이기(<code>mux_solve_linear3()</code>)가 라우트 시그니처의 상위, 하위 64비트 절반에서 가중치 세 개를 끌어냅니다. 그 가중치는 최종 버킷 인덱스에 섞입니다.</p>
+<p><b>mux.c에서의 적용</b> 행렬(<code>MUX_COEFF_MATRIX</code>)과 가우스 소거 풀이기(<code><a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">mux_solve_linear3()</a></code>)가 라우트 시그니처의 상위, 하위 64비트 절반에서 가중치 세 개를 끌어냅니다. 그 가중치는 최종 버킷 인덱스에 섞입니다.</p>
 <p><b>현재 코드 이름</b></p><ul>
 <li><code>MUX_COEFF_MATRIX</code> (이전 <code>JOSEON_RATIO_MATRIX</code>)</li>
-<li><code>mux_solve_linear3()</code> (이전 <code>cwist_dawonsul_solve3()</code>)</li>
-<li><code>mux_derive_coeffs()</code> (이전 <code>cwist_jungseung_coeffs()</code>)</li>
+<li><code><a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">mux_solve_linear3()</a></code> (이전 <code><a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">cwist_dawonsul_solve3()</a></code>)</li>
+<li><code><a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">mux_derive_coeffs()</a></code> (이전 <code><a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">cwist_jungseung_coeffs()</a></code>)</li>
 </ul>
 <hr  />
 <h1><a class="anchor" id="autotoc_md649"></a>
@@ -144,7 +144,7 @@ $(document).ready(function(){initNavTree('d4/d7c/md_docs_2ko_2references_2mux__a
 <p><b>개념</b> 알카시(al-Kāshī, 15세기 천문학자이자 수학자)는 반복적인 근 찾기 방법을 널리 알렸습니다. 여기서 쓰는 단계는 두 번 반복하는 뉴턴-랩슨 방식의 제곱근 정제입니다.</p>
 <p><b>mux.c에서의 적용</b> 최종 혼합 단계에 넣기 전에 중간 크기 추정값을 정제합니다. 서로 다른 버킷 크기 전반에서 비트 확산을 개선합니다.</p>
 <p><b>현재 코드 이름</b></p><ul>
-<li><code>mux_refine_magnitude()</code> (이전 <code>cwist_al_kashi_refine()</code>)</li>
+<li><code><a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">mux_refine_magnitude()</a></code> (이전 <code><a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">cwist_al_kashi_refine()</a></code>)</li>
 </ul>
 <hr  />
 <h1><a class="anchor" id="autotoc_md651"></a>
@@ -152,7 +152,7 @@ $(document).ready(function(){initNavTree('d4/d7c/md_docs_2ko_2references_2mux__a
 <p><b>개념</b> 상미분방정식에 대한 오일러 방법은 현재 기울기에 작은 단계 크기를 곱해 더함으로써 다음 상태를 예측합니다.</p>
 <p><b>mux.c에서의 적용</b> 정제된 크기와 시그니처 바이트 차이에서 얻은 기울기로 다음 해시 혼합 상태를 예측합니다. 경로가 조금 바뀌어도 버킷 인덱스가 안정적으로 유지됩니다.</p>
 <p><b>현재 코드 이름</b></p><ul>
-<li><code>mux_predict_state()</code> (이전 <code>cwist_euler_predict()</code>)</li>
+<li><code><a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">mux_predict_state()</a></code> (이전 <code><a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">cwist_euler_predict()</a></code>)</li>
 </ul>
 <hr  />
 <h1><a class="anchor" id="autotoc_md653"></a>

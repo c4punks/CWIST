@@ -131,7 +131,7 @@ This graph shows which files directly or indirectly include this file:</div>
 <p><a href="../../d3/da3/wasi_8h_source.html">Go to the source code of this file.</a></p>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
 <div class="textblock"><p>WASI target feature detection shared by all CWIST sources. </p>
-<p><code>__wasi__</code> is defined by both WASI preview1 (<code>wasm32-wasi</code>) and WASI 0.2 (<code>wasm32-wasip2</code>) targets, but their libc capabilities differ sharply: preview1 has no sockets at all, while wasip2 exposes <code>wasi:sockets</code> through the standard &lt;sys/socket.h&gt; API (plus netdb, MSG_NOSIGNAL, poll). Neither has fork(2), signals, or rlimits, and both are single-threaded unless the -threads sysroot variant is used.</p>
+<p><code>__wasi__</code> is defined by both WASI preview1 (<code>wasm32-wasi</code>) and WASI 0.2 (<code>wasm32-wasip2</code>) targets, but their libc capabilities differ sharply: preview1 has no sockets at all, while wasip2 exposes <code>wasi:sockets</code> through the standard &lt;sys/socket.h&gt; API (plus netdb, MSG_NOSIGNAL, poll). Neither has <a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">fork(2)</a>, signals, or rlimits, and both are single-threaded unless the -threads sysroot variant is used.</p>
 <p>Feature-gate on what the sysroot actually provides instead of the bare <code>__wasi__</code> macro:</p>
 <ul>
 <li>CWIST_WASI_SOCKETS: socket server runtime compiles in (wasip2).</li>

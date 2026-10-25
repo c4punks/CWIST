@@ -112,7 +112,7 @@ $(document).ready(function(){initNavTree('d4/de5/pool_8c.html','../../'); initRe
 </div><!--header-->
 <div class="contents">
 
-<p>Bounded SQLite pool with O(1) lease bookkeeping.  
+<p>Bounded SQLite pool with <a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">O(1)</a> lease bookkeeping.  
 <a href="#details">More...</a></p>
 <div class="textblock"><code>#include &lt;<a class="el" href="../../db/db7/pool_8h_source.html">cwist/core/db/pool.h</a>&gt;</code><br />
 <code>#include &lt;<a class="el" href="../../d2/dfe/alloc_8h_source.html">cwist/core/mem/alloc.h</a>&gt;</code><br />
@@ -186,41 +186,41 @@ Include dependency graph for pool.c:</div>
 <table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="define-members" name="define-members"></a>
 Macros</h2></td></tr>
-<tr class="memitem:a3024ccd4a9af5109d24e6c57565d74a1" id="r_a3024ccd4a9af5109d24e6c57565d74a1"><td class="memItemLeft" align="right" valign="top">#define&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d4/de5/pool_8c.html#a3024ccd4a9af5109d24e6c57565d74a1">_POSIX_C_SOURCE</a>&#160;&#160;&#160;200809L</td></tr>
+<tr class="memitem:a3024ccd4a9af5109d24e6c57565d74a1" id="r_a3024ccd4a9af5109d24e6c57565d74a1"><td class="memItemLeft" align="right" valign="top">#<a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">define</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d4/de5/pool_8c.html#a3024ccd4a9af5109d24e6c57565d74a1">_POSIX_C_SOURCE</a>&#160;&#160;&#160;200809<a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">L</a></td></tr>
 <tr class="separator:a3024ccd4a9af5109d24e6c57565d74a1"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="func-members" name="func-members"></a>
 Functions</h2></td></tr>
-<tr class="memitem:a6abf2b34d8ed1af895e6a675adb41b95" id="r_a6abf2b34d8ed1af895e6a675adb41b95"><td class="memItemLeft" align="right" valign="top"><a class="el" href="../../db/db7/pool_8h.html#ac514a17cb5ebe045e1a57b8d6a636dd5">cwist_db_pool_t</a> *&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d4/de5/pool_8c.html#a6abf2b34d8ed1af895e6a675adb41b95">cwist_db_pool_create</a> (const char *path, size_t max_conns)</td></tr>
+<tr class="memitem:a6abf2b34d8ed1af895e6a675adb41b95" id="r_a6abf2b34d8ed1af895e6a675adb41b95"><td class="memItemLeft" align="right" valign="top"><a class="el" href="../../db/db7/pool_8h.html#ac514a17cb5ebe045e1a57b8d6a636dd5">cwist_db_pool_t</a> *&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d4/de5/pool_8c.html#a6abf2b34d8ed1af895e6a675adb41b95">cwist_db_pool_create</a> (<a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">const</a> <a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">char</a> *path, <a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">size_t</a> max_conns)</td></tr>
 <tr class="memdesc:a6abf2b34d8ed1af895e6a675adb41b95"><td class="mdescLeft">&#160;</td><td class="mdescRight">Create a pool of <em>max_conns</em> SQLite connections to <em>path</em>.  <br /></td></tr>
 <tr class="separator:a6abf2b34d8ed1af895e6a675adb41b95"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a21a30f958c2c3390d37ad6ecc145ee13" id="r_a21a30f958c2c3390d37ad6ecc145ee13"><td class="memItemLeft" align="right" valign="top"><a class="el" href="../../dd/d55/structcwist__db.html">cwist_db</a> *&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d4/de5/pool_8c.html#a21a30f958c2c3390d37ad6ecc145ee13">cwist_db_pool_acquire</a> (<a class="el" href="../../db/db7/pool_8h.html#ac514a17cb5ebe045e1a57b8d6a636dd5">cwist_db_pool_t</a> *pool)</td></tr>
+<tr class="memitem:a21a30f958c2c3390d37ad6ecc145ee13" id="r_a21a30f958c2c3390d37ad6ecc145ee13"><td class="memItemLeft" align="right" valign="top"><a class="el" href="../../dd/d55/structcwist__db.html">cwist_db</a> *&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d4/de5/pool_8c.html#a21a30f958c2c3390d37ad6ecc145ee13">cwist_db_pool_acquire</a> (<a class="el" href="../../db/db7/pool_8h.html#ac514a17cb5ebe045e1a57b8d6a636dd5">cwist_db_pool_t</a> *<a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">pool</a>)</td></tr>
 <tr class="memdesc:a21a30f958c2c3390d37ad6ecc145ee13"><td class="mdescLeft">&#160;</td><td class="mdescRight">Lease a pooled connection, blocking indefinitely until one is available.  <br /></td></tr>
 <tr class="separator:a21a30f958c2c3390d37ad6ecc145ee13"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a30cf23d393c54aa060b0c4d188227d79" id="r_a30cf23d393c54aa060b0c4d188227d79"><td class="memItemLeft" align="right" valign="top"><a class="el" href="../../dd/d55/structcwist__db.html">cwist_db</a> *&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d4/de5/pool_8c.html#a30cf23d393c54aa060b0c4d188227d79">cwist_db_pool_acquire_timeout</a> (<a class="el" href="../../db/db7/pool_8h.html#ac514a17cb5ebe045e1a57b8d6a636dd5">cwist_db_pool_t</a> *pool, int timeout_ms)</td></tr>
+<tr class="memitem:a30cf23d393c54aa060b0c4d188227d79" id="r_a30cf23d393c54aa060b0c4d188227d79"><td class="memItemLeft" align="right" valign="top"><a class="el" href="../../dd/d55/structcwist__db.html">cwist_db</a> *&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d4/de5/pool_8c.html#a30cf23d393c54aa060b0c4d188227d79">cwist_db_pool_acquire_timeout</a> (<a class="el" href="../../db/db7/pool_8h.html#ac514a17cb5ebe045e1a57b8d6a636dd5">cwist_db_pool_t</a> *<a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">pool</a>, <a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">int</a> timeout_ms)</td></tr>
 <tr class="memdesc:a30cf23d393c54aa060b0c4d188227d79"><td class="mdescLeft">&#160;</td><td class="mdescRight">Lease a pooled connection, waiting at most <em>timeout_ms</em>.  <br /></td></tr>
 <tr class="separator:a30cf23d393c54aa060b0c4d188227d79"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a64f8b2613447724d5d3c25ce06c58d28" id="r_a64f8b2613447724d5d3c25ce06c58d28"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d4/de5/pool_8c.html#a64f8b2613447724d5d3c25ce06c58d28">cwist_db_pool_release</a> (<a class="el" href="../../db/db7/pool_8h.html#ac514a17cb5ebe045e1a57b8d6a636dd5">cwist_db_pool_t</a> *pool, <a class="el" href="../../dd/d55/structcwist__db.html">cwist_db</a> *conn)</td></tr>
+<tr class="memitem:a64f8b2613447724d5d3c25ce06c58d28" id="r_a64f8b2613447724d5d3c25ce06c58d28"><td class="memItemLeft" align="right" valign="top"><a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">void</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d4/de5/pool_8c.html#a64f8b2613447724d5d3c25ce06c58d28">cwist_db_pool_release</a> (<a class="el" href="../../db/db7/pool_8h.html#ac514a17cb5ebe045e1a57b8d6a636dd5">cwist_db_pool_t</a> *<a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">pool</a>, <a class="el" href="../../dd/d55/structcwist__db.html">cwist_db</a> *conn)</td></tr>
 <tr class="memdesc:a64f8b2613447724d5d3c25ce06c58d28"><td class="mdescLeft">&#160;</td><td class="mdescRight">Return a leased connection to the pool and wake one waiting acquirer.  <br /></td></tr>
 <tr class="separator:a64f8b2613447724d5d3c25ce06c58d28"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:acb2f785c8fb40817c2b713590adba0f6" id="r_acb2f785c8fb40817c2b713590adba0f6"><td class="memItemLeft" align="right" valign="top">size_t&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d4/de5/pool_8c.html#acb2f785c8fb40817c2b713590adba0f6">cwist_db_pool_in_use</a> (<a class="el" href="../../db/db7/pool_8h.html#ac514a17cb5ebe045e1a57b8d6a636dd5">cwist_db_pool_t</a> *pool)</td></tr>
+<tr class="memitem:acb2f785c8fb40817c2b713590adba0f6" id="r_acb2f785c8fb40817c2b713590adba0f6"><td class="memItemLeft" align="right" valign="top"><a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">size_t</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d4/de5/pool_8c.html#acb2f785c8fb40817c2b713590adba0f6">cwist_db_pool_in_use</a> (<a class="el" href="../../db/db7/pool_8h.html#ac514a17cb5ebe045e1a57b8d6a636dd5">cwist_db_pool_t</a> *<a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">pool</a>)</td></tr>
 <tr class="memdesc:acb2f785c8fb40817c2b713590adba0f6"><td class="mdescLeft">&#160;</td><td class="mdescRight">Count connections currently leased from the pool.  <br /></td></tr>
 <tr class="separator:acb2f785c8fb40817c2b713590adba0f6"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a82f72f2eb13a9072b25351856152839e" id="r_a82f72f2eb13a9072b25351856152839e"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d4/de5/pool_8c.html#a82f72f2eb13a9072b25351856152839e">cwist_db_pool_destroy_timeout</a> (<a class="el" href="../../db/db7/pool_8h.html#ac514a17cb5ebe045e1a57b8d6a636dd5">cwist_db_pool_t</a> *pool, int timeout_ms)</td></tr>
+<tr class="memitem:a82f72f2eb13a9072b25351856152839e" id="r_a82f72f2eb13a9072b25351856152839e"><td class="memItemLeft" align="right" valign="top"><a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">bool</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d4/de5/pool_8c.html#a82f72f2eb13a9072b25351856152839e">cwist_db_pool_destroy_timeout</a> (<a class="el" href="../../db/db7/pool_8h.html#ac514a17cb5ebe045e1a57b8d6a636dd5">cwist_db_pool_t</a> *<a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">pool</a>, <a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">int</a> timeout_ms)</td></tr>
 <tr class="memdesc:a82f72f2eb13a9072b25351856152839e"><td class="mdescLeft">&#160;</td><td class="mdescRight">Close a pool, waiting up to <em>timeout_ms</em> for leased connections.  <br /></td></tr>
 <tr class="separator:a82f72f2eb13a9072b25351856152839e"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:aa1e09018ceaf9e09828563d70e26a5fa" id="r_aa1e09018ceaf9e09828563d70e26a5fa"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d4/de5/pool_8c.html#aa1e09018ceaf9e09828563d70e26a5fa">cwist_db_pool_destroy</a> (<a class="el" href="../../db/db7/pool_8h.html#ac514a17cb5ebe045e1a57b8d6a636dd5">cwist_db_pool_t</a> *pool)</td></tr>
+<tr class="memitem:aa1e09018ceaf9e09828563d70e26a5fa" id="r_aa1e09018ceaf9e09828563d70e26a5fa"><td class="memItemLeft" align="right" valign="top"><a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">void</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d4/de5/pool_8c.html#aa1e09018ceaf9e09828563d70e26a5fa">cwist_db_pool_destroy</a> (<a class="el" href="../../db/db7/pool_8h.html#ac514a17cb5ebe045e1a57b8d6a636dd5">cwist_db_pool_t</a> *<a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">pool</a>)</td></tr>
 <tr class="memdesc:aa1e09018ceaf9e09828563d70e26a5fa"><td class="mdescLeft">&#160;</td><td class="mdescRight">Close a pool, blocking until all leased connections are released.  <br /></td></tr>
 <tr class="separator:aa1e09018ceaf9e09828563d70e26a5fa"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a220d5ca673506fc5dc56376b8879e67e" id="r_a220d5ca673506fc5dc56376b8879e67e"><td class="memItemLeft" align="right" valign="top"><a class="el" href="../../d4/d50/structcwist__error__t.html">cwist_error_t</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d4/de5/pool_8c.html#a220d5ca673506fc5dc56376b8879e67e">cwist_db_pool_exec</a> (<a class="el" href="../../db/db7/pool_8h.html#ac514a17cb5ebe045e1a57b8d6a636dd5">cwist_db_pool_t</a> *pool, const char *sql)</td></tr>
+<tr class="memitem:a220d5ca673506fc5dc56376b8879e67e" id="r_a220d5ca673506fc5dc56376b8879e67e"><td class="memItemLeft" align="right" valign="top"><a class="el" href="../../d4/d50/structcwist__error__t.html">cwist_error_t</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d4/de5/pool_8c.html#a220d5ca673506fc5dc56376b8879e67e">cwist_db_pool_exec</a> (<a class="el" href="../../db/db7/pool_8h.html#ac514a17cb5ebe045e1a57b8d6a636dd5">cwist_db_pool_t</a> *<a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">pool</a>, <a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">const</a> <a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">char</a> *<a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">sql</a>)</td></tr>
 <tr class="memdesc:a220d5ca673506fc5dc56376b8879e67e"><td class="mdescLeft">&#160;</td><td class="mdescRight">Execute a SQL statement on a leased pooled connection.  <br /></td></tr>
 <tr class="separator:a220d5ca673506fc5dc56376b8879e67e"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:aa275c4ab7cebcdb99d53be64c0cd3dc2" id="r_aa275c4ab7cebcdb99d53be64c0cd3dc2"><td class="memItemLeft" align="right" valign="top"><a class="el" href="../../d4/d50/structcwist__error__t.html">cwist_error_t</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d4/de5/pool_8c.html#aa275c4ab7cebcdb99d53be64c0cd3dc2">cwist_db_pool_query</a> (<a class="el" href="../../db/db7/pool_8h.html#ac514a17cb5ebe045e1a57b8d6a636dd5">cwist_db_pool_t</a> *pool, const char *sql, cJSON **result)</td></tr>
+<tr class="memitem:aa275c4ab7cebcdb99d53be64c0cd3dc2" id="r_aa275c4ab7cebcdb99d53be64c0cd3dc2"><td class="memItemLeft" align="right" valign="top"><a class="el" href="../../d4/d50/structcwist__error__t.html">cwist_error_t</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d4/de5/pool_8c.html#aa275c4ab7cebcdb99d53be64c0cd3dc2">cwist_db_pool_query</a> (<a class="el" href="../../db/db7/pool_8h.html#ac514a17cb5ebe045e1a57b8d6a636dd5">cwist_db_pool_t</a> *<a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">pool</a>, <a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">const</a> <a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">char</a> *<a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">sql</a>, <a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">cJSON</a> **result)</td></tr>
 <tr class="memdesc:aa275c4ab7cebcdb99d53be64c0cd3dc2"><td class="mdescLeft">&#160;</td><td class="mdescRight">Run a query on a leased pooled connection.  <br /></td></tr>
 <tr class="separator:aa275c4ab7cebcdb99d53be64c0cd3dc2"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
-<div class="textblock"><p>Bounded SQLite pool with O(1) lease bookkeeping. </p>
+<div class="textblock"><p>Bounded SQLite pool with <a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">O(1)</a> lease bookkeeping. </p>
 
 <p class="definition">Definition in file <a class="el" href="../../d4/de5/pool_8c_source.html">pool.c</a>.</p>
 </div><h2 class="groupheader">Macro Definition Documentation</h2>
@@ -231,7 +231,7 @@ Functions</h2></td></tr>
 <div class="memproto">
       <table class="memname">
         <tr>
-          <td class="memname">#define _POSIX_C_SOURCE&#160;&#160;&#160;200809L</td>
+          <td class="memname">#<a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">define</a> _POSIX_C_SOURCE&#160;&#160;&#160;200809<a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">L</a></td>
         </tr>
       </table>
 </div><div class="memdoc">
@@ -288,7 +288,7 @@ Functions</h2></td></tr>
         <tr>
           <td class="paramkey"></td>
           <td></td>
-          <td class="paramtype">int&#160;</td>
+          <td class="paramtype"><a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">int</a>&#160;</td>
           <td class="paramname"><em>timeout_ms</em>&#160;</td>
         </tr>
         <tr>
@@ -322,13 +322,13 @@ Functions</h2></td></tr>
         <tr>
           <td class="memname"><a class="el" href="../../db/db7/pool_8h.html#ac514a17cb5ebe045e1a57b8d6a636dd5">cwist_db_pool_t</a> * cwist_db_pool_create </td>
           <td>(</td>
-          <td class="paramtype">const char *&#160;</td>
+          <td class="paramtype"><a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">const</a> <a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">char</a> *&#160;</td>
           <td class="paramname"><em>path</em>, </td>
         </tr>
         <tr>
           <td class="paramkey"></td>
           <td></td>
-          <td class="paramtype">size_t&#160;</td>
+          <td class="paramtype"><a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">size_t</a>&#160;</td>
           <td class="paramname"><em>max_conns</em>&#160;</td>
         </tr>
         <tr>
@@ -354,7 +354,7 @@ Functions</h2></td></tr>
 
 <p class="reference">References <a class="el" href="../../d9/d39/alloc_8c_source.html#l00276">cwist_alloc()</a>, <a class="el" href="../../d9/d39/alloc_8c_source.html#l00290">cwist_alloc_array()</a>, <a class="el" href="../../d2/db5/db_8c_source.html#l00295">cwist_db_close()</a>, <a class="el" href="../../d2/db5/db_8c_source.html#l00154">cwist_db_open()</a>, <a class="el" href="../../db/dcc/error_8c_source.html#l00043">cwist_error_dispose()</a>, <a class="el" href="../../d9/d39/alloc_8c_source.html#l00391">cwist_free()</a>, and <a class="el" href="../../d9/d39/alloc_8c_source.html#l00348">cwist_strdup()</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../df/d7f/app_8c_source.html#l01952">cwist_app_use_db_pool()</a>.</p>
+<p class="reference">Referenced by <a class="el" href="../../df/d7f/app_8c_source.html#l01953">cwist_app_use_db_pool()</a>.</p>
 
 </div>
 </div>
@@ -365,7 +365,7 @@ Functions</h2></td></tr>
 <div class="memproto">
       <table class="memname">
         <tr>
-          <td class="memname">void cwist_db_pool_destroy </td>
+          <td class="memname"><a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">void</a> cwist_db_pool_destroy </td>
           <td>(</td>
           <td class="paramtype"><a class="el" href="../../db/db7/pool_8h.html#ac514a17cb5ebe045e1a57b8d6a636dd5">cwist_db_pool_t</a> *&#160;</td>
           <td class="paramname"><em>pool</em></td><td>)</td>
@@ -387,7 +387,7 @@ Functions</h2></td></tr>
 
 <p class="reference">References <a class="el" href="../../d4/de5/pool_8c_source.html#l00222">cwist_db_pool_destroy_timeout()</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../df/d7f/app_8c_source.html#l01458">cwist_app_destroy()</a>, and <a class="el" href="../../df/d7f/app_8c_source.html#l01952">cwist_app_use_db_pool()</a>.</p>
+<p class="reference">Referenced by <a class="el" href="../../df/d7f/app_8c_source.html#l01459">cwist_app_destroy()</a>, and <a class="el" href="../../df/d7f/app_8c_source.html#l01953">cwist_app_use_db_pool()</a>.</p>
 
 </div>
 </div>
@@ -398,7 +398,7 @@ Functions</h2></td></tr>
 <div class="memproto">
       <table class="memname">
         <tr>
-          <td class="memname">bool cwist_db_pool_destroy_timeout </td>
+          <td class="memname"><a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">bool</a> cwist_db_pool_destroy_timeout </td>
           <td>(</td>
           <td class="paramtype"><a class="el" href="../../db/db7/pool_8h.html#ac514a17cb5ebe045e1a57b8d6a636dd5">cwist_db_pool_t</a> *&#160;</td>
           <td class="paramname"><em>pool</em>, </td>
@@ -406,7 +406,7 @@ Functions</h2></td></tr>
         <tr>
           <td class="paramkey"></td>
           <td></td>
-          <td class="paramtype">int&#160;</td>
+          <td class="paramtype"><a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">int</a>&#160;</td>
           <td class="paramname"><em>timeout_ms</em>&#160;</td>
         </tr>
         <tr>
@@ -456,7 +456,7 @@ Functions</h2></td></tr>
         <tr>
           <td class="paramkey"></td>
           <td></td>
-          <td class="paramtype">const char *&#160;</td>
+          <td class="paramtype"><a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">const</a> <a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">char</a> *&#160;</td>
           <td class="paramname"><em>sql</em>&#160;</td>
         </tr>
         <tr>
@@ -491,7 +491,7 @@ Functions</h2></td></tr>
 <div class="memproto">
       <table class="memname">
         <tr>
-          <td class="memname">size_t cwist_db_pool_in_use </td>
+          <td class="memname"><a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">size_t</a> cwist_db_pool_in_use </td>
           <td>(</td>
           <td class="paramtype"><a class="el" href="../../db/db7/pool_8h.html#ac514a17cb5ebe045e1a57b8d6a636dd5">cwist_db_pool_t</a> *&#160;</td>
           <td class="paramname"><em>pool</em></td><td>)</td>
@@ -511,6 +511,8 @@ Functions</h2></td></tr>
 
 <p class="definition">Definition at line <a class="el" href="../../d4/de5/pool_8c_source.html#l00206">206</a> of file <a class="el" href="../../d4/de5/pool_8c_source.html">pool.c</a>.</p>
 
+<p class="reference">References <a class="el" href="../../d3/db2/otel_8c_source.html#l00058">count</a>.</p>
+
 </div>
 </div>
 <a id="aa275c4ab7cebcdb99d53be64c0cd3dc2" name="aa275c4ab7cebcdb99d53be64c0cd3dc2"></a>
@@ -528,13 +530,13 @@ Functions</h2></td></tr>
         <tr>
           <td class="paramkey"></td>
           <td></td>
-          <td class="paramtype">const char *&#160;</td>
+          <td class="paramtype"><a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">const</a> <a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">char</a> *&#160;</td>
           <td class="paramname"><em>sql</em>, </td>
         </tr>
         <tr>
           <td class="paramkey"></td>
           <td></td>
-          <td class="paramtype">cJSON **&#160;</td>
+          <td class="paramtype"><a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">cJSON</a> **&#160;</td>
           <td class="paramname"><em>result</em>&#160;</td>
         </tr>
         <tr>
@@ -570,7 +572,7 @@ Functions</h2></td></tr>
 <div class="memproto">
       <table class="memname">
         <tr>
-          <td class="memname">void cwist_db_pool_release </td>
+          <td class="memname"><a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">void</a> cwist_db_pool_release </td>
           <td>(</td>
           <td class="paramtype"><a class="el" href="../../db/db7/pool_8h.html#ac514a17cb5ebe045e1a57b8d6a636dd5">cwist_db_pool_t</a> *&#160;</td>
           <td class="paramname"><em>pool</em>, </td>
