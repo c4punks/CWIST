@@ -172,3 +172,4 @@ c100k_https_client
 c100k_server.log
 c100k_client.log
 webtransport_echo_server
+/.stm32-spike/
