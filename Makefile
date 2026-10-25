@@ -415,22 +415,17 @@ SRCS = src/core/sstring/sstring.c \
        src/sys/health/healthz.c \
        $(IO_SRC)
 
-# --- WASM (Emscripten) static library -------------------------------------
-# Socket-independent core only: app dispatch, mux/middleware, HTTP/1
-# parser/serializer, sstring/arena/mem, query, JSON, template, validation.
-# Excluded: all of src/sys/io, sockets/accept, TLS/BoringSSL, QUIC/HTTP/3,
-# gRPC (needs HTTP/2), WebSocket transport, threads/scheduler, compression,
-# database/sync clients.  Build with e.g.
-#   make wasm EMCC=/workspace/emsdk/upstream/emscripten/emcc
-# The wasm section sits above `all` in this file; without an explicit default
-# goal, bare `make` would try to build the wasm archive with emcc.
+# --- WASM core sources -------------------------------------------------------
+# Socket-independent core shared by every WASI build below: app dispatch,
+# mux/middleware, HTTP/1 parser/serializer, sstring/arena/mem, query, JSON,
+# template, validation, sqlite.  Excluded: TLS/BoringSSL, QUIC/HTTP/3, gRPC
+# (needs HTTP/2), WebSocket transport, threads/scheduler, compression and the
+# database/sync clients.  The WASM section sits above `all` in this file;
+# without an explicit default goal, bare `make` would build a WASI archive.
 .DEFAULT_GOAL := all
 
-EMCC ?= emcc
-EMAR ?= emar
 NODE ?= node
 RANLIB ?= ranlib
-WASM_BUILD_DIR = .wasm-build
 WASM_SRCS = src/core/sstring/sstring.c \
        src/core/seq/seq.c \
        src/core/seq/seq_auth.c \
@@ -466,64 +461,12 @@ WASM_SRCS = src/core/sstring/sstring.c \
        src/core/db/db.c \
        lib/sqlite3/sqlite3.c \
        lib/cjson/cJSON.c
-WASM_OBJS = $(WASM_SRCS:%.c=$(WASM_BUILD_DIR)/%.o)
-# Host pkg-config -I paths (curl/nghttp2/...) must NOT leak into the
-# emscripten sysroot, so the WASM build uses its own minimal include set.
+# Host pkg-config -I paths (curl/nghttp2/...) must NOT leak into the WASI
+# sysroot, so the WASM builds use their own minimal include set.
 WASM_INCLUDE_PATHS = -I./include -I./lib -I./lib/cjson -I./lib/boringssl/include -I./lib/libttak/include -I./lib/sqlite3
-WASM_CFLAGS = -std=c17 -O2 -Wall $(WASM_INCLUDE_PATHS) $(COMMON_DEFINES)
-
-$(WASM_BUILD_DIR)/%.o: %.c
-	@mkdir -p $(dir $@)
-	$(EMCC) $(WASM_CFLAGS) -c -o $@ $<
-
-libcwist_wasm.a: $(WASM_OBJS)
-	$(EMAR) rcs $@ $(WASM_OBJS)
-
-wasm: libcwist_wasm.a
-
-# Manual smoke test (requires Emscripten + node; intentionally not part of
-# `make test` since CI has no Emscripten toolchain). NODE is overridable so
-# CI can point at a specific node binary.
-wasm-smoke: libcwist_wasm.a
-	$(EMCC) $(WASM_CFLAGS) -o wasm_smoke.js tests/wasm_smoke.c libcwist_wasm.a
-	$(NODE) wasm_smoke.js
-
-# The struct layout contract (tests/abi_layout.h) on wasm32. Same sources as
-# the native test_abi_layout; requires Emscripten + node like wasm-smoke.
-wasm-abi-layout: libcwist_wasm.a
-	$(EMCC) $(WASM_CFLAGS) -o wasm_abi_layout.js tests/test_abi_layout.c tests/abi_layout_legacy.c
-	$(NODE) wasm_abi_layout.js
-
-# Integration test for the cwist-wasm JS wrapper (wasm/npm): builds a
-# consumer-style module through include/cwist/wasm/wasm_entry.h, then drives
-# it from node via the wrapper with no Emscripten glue on the JS side.
-# Requires Emscripten + node, same as wasm-smoke.
-# _main is in EXPORTED_FUNCTIONS on purpose: without it the linker dead-code
-# eliminates main() (nothing else references it), and the app would never be
-# created - dispatch would return NULL on every call.
-wasm-wrapper-test: libcwist_wasm.a
-	$(EMCC) $(WASM_CFLAGS) -o wrapper_test.js tests/wasm_wrapper_test.c libcwist_wasm.a \
-	    -sEXPORTED_FUNCTIONS=_main,_cwist_wasm_dispatch,_cwist_wasm_dispose,_cwist_wasm_use_session,_malloc,_free \
-	    -sEXPORTED_RUNTIME_METHODS=HEAPU8,HEAPU32 -sMODULARIZE -sEXPORT_NAME=createCwistModule
-	$(NODE) tests/wasm_wrapper_test.js
-
-# Versioned npm-package tarball for the cwist-wasm JS wrapper (issue #93
-# Phase 2a). Packs wasm/npm into dist/cwist-wasm-<version>.tgz; CI installs
-# the tarball into a clean directory to prove it stands alone.
-wasm-dist: wasm-wrapper-test
-	mkdir -p dist
-	npm --prefix wasm/npm pkg set version=$(VERSION) >/dev/null
-	npm pack ./wasm/npm --pack-destination dist >/dev/null
-	git checkout -- wasm/npm/package.json 2>/dev/null || true
-	@echo "dist/$$(ls dist | grep cwist-wasm | tail -1)"
-
-clean-wasm:
-	rm -rf $(WASM_BUILD_DIR) libcwist_wasm.a wasm_smoke.js wasm_smoke.wasm \
-	    wasm_abi_layout.js wasm_abi_layout.wasm \
-	    wrapper_test.js wrapper_test.wasm dist
 
 # --- WASI 0.2 (wasm32-wasip2) smoke ------------------------------------------------
-# Same WASM_SRCS subset as the Emscripten target, built with wasi-sdk and run
+# The WASM_SRCS core plus the WASI compat layer, built with wasi-sdk and run
 # under a WASI host (wasmtime). The preview1 target was retired: 0.2 covers
 # its use, and three WASM flavors cost more than they earn (issue #203).
 # WASI_SDK / WASMTIME are shared with the component targets below.
@@ -591,7 +534,7 @@ wasip2-smoke: $(WASIP2_ARCHIVE)
 	echo "wasip2-smoke: PASS (socket server served /hello over wasi:sockets)"
 
 clean-wasip2:
-	rm -rf .wasip2-build libcwist_wasip2_*.a wasip2_smoke.wasm
+	rm -rf .wasip2-build libcwist_wasip2_*.a wasip2_smoke.wasm wasm_abi_layout.wasm
 
 # --- Component boundary (experimental, issue #203) --------------------------------
 # wit/cwist.wit is the component-model counterpart of wasm_entry.h. Both
@@ -675,6 +618,74 @@ $(COMPONENT_BUILD_DIR)/guest.component.wasm: $(COMPONENT_BUILD_DIR)/guest.o \
 
 component-guest: $(COMPONENT_BUILD_DIR)/guest.component.wasm
 
+# --- Service-worker example (example/wasm-service-worker) ---------------------
+# The example app as a cwist-guest component.  wasm-sw-example transpiles it
+# twice: for node (smoke.js) and for the browser with async instantiation,
+# because a service worker may not use top-level await, which jco's default
+# self-instantiating output needs.  esbuild then bundles sw.js with the
+# adapter and the preview2-shim browser imports into site/, which is what a
+# static host serves.
+SW_EXAMPLE_DIR = example/wasm-service-worker
+SW_BUILD_DIR = $(SW_EXAMPLE_DIR)/build
+
+$(SW_BUILD_DIR)/app.o: $(SW_EXAMPLE_DIR)/app.c wit-bindings
+	@mkdir -p $(SW_BUILD_DIR)
+	$(WASI_SDK)/bin/clang --target=$(WASIP2_TARGET) $(WASIP2_CFLAGS) \
+	    -I$(WIT_BINDINGS_DIR)/cwist-guest -c -o $@ $<
+
+$(SW_BUILD_DIR)/app.component.wasm: $(SW_BUILD_DIR)/app.o $(COMPONENT_BUILD_DIR)/cwist_guest.o \
+                                    libcwist_wasip2_$(WASIP2_TARGET).a
+	$(WASI_SDK)/bin/clang --target=$(WASIP2_TARGET) $(WASIP2_CFLAGS) \
+	    -o $(SW_BUILD_DIR)/app.core.wasm \
+	    $(SW_BUILD_DIR)/app.o $(COMPONENT_BUILD_DIR)/cwist_guest.o \
+	    $(WIT_BINDINGS_DIR)/cwist-guest/cwist_guest_component_type.o \
+	    $(WASIP2_ARCHIVE) $(WASIP2_LDLIBS) \
+	    -Wl,--gc-sections -Wl,--allow-undefined -Wl,-z,stack-size=$(WASIP2_STACK_BYTES)
+	wasm-tools component embed wit/ --world cwist-guest $(SW_BUILD_DIR)/app.core.wasm -o $@
+
+wasm-sw-example: $(SW_BUILD_DIR)/app.component.wasm
+	npm exec -y --package=@bytecodealliance/jco -- \
+	    jco transpile $(SW_BUILD_DIR)/app.component.wasm --out-dir $(SW_BUILD_DIR)/node
+	npm install --prefix $(SW_BUILD_DIR)/node --no-save --no-fund --no-audit \
+	    --silent @bytecodealliance/preview2-shim
+	npm exec -y --package=@bytecodealliance/jco -- \
+	    jco transpile $(SW_BUILD_DIR)/app.component.wasm --out-dir $(SW_BUILD_DIR)/browser \
+	    --instantiation async --no-nodejs-compat
+	mkdir -p $(SW_BUILD_DIR)/site
+	npm exec -y --package=esbuild -- esbuild $(SW_EXAMPLE_DIR)/sw.js \
+	    --bundle --platform=browser --format=iife --conditions=browser \
+	    --alias:@bytecodealliance/preview2-shim=./$(SW_BUILD_DIR)/node/node_modules/@bytecodealliance/preview2-shim/dist/browser/index.js \
+	    --outfile=$(SW_BUILD_DIR)/site/sw.js
+	cp $(SW_EXAMPLE_DIR)/index.html $(SW_BUILD_DIR)/browser/*.wasm $(SW_BUILD_DIR)/site/
+	@echo "wasm-sw-example: serve $(SW_BUILD_DIR)/site/ over http://localhost"
+
+# Node smoke of the example app: the same component through the same adapter
+# the service worker uses (the worker itself needs a browser).
+wasm-sw-smoke: wasm-sw-example
+	SW_JCO_DIR=$(abspath $(SW_BUILD_DIR)/node) $(NODE) $(SW_EXAMPLE_DIR)/smoke.js
+
+# Browser test of the service-worker example in headless Chromium via Playwright.
+wasm-sw-browser-test: wasm-sw-example
+	$(NODE) tests/browser/sw_example.mjs
+
+# The struct layout contract (tests/abi_layout.h) on wasm32, where pointers
+# are 4 bytes: the native test_abi_layout covers the 64-bit targets.
+wasm-abi-layout:
+	$(WASI_SDK)/bin/clang --target=$(WASIP2_TARGET) $(WASIP2_CFLAGS) \
+	    -o wasm_abi_layout.wasm tests/test_abi_layout.c tests/abi_layout_legacy.c \
+	    -lwasi-emulated-getpid
+	$(WASMTIME) run wasm_abi_layout.wasm
+
+# Versioned npm tarball of the cwist-wasm adapter (wasm/npm): packs it into
+# dist/cwist-wasm-<version>.tgz once the component smoke has driven the same
+# adapter; CI installs the tarball into a clean directory.
+wasm-dist: component-smoke
+	mkdir -p dist
+	npm --prefix wasm/npm pkg set version=$(VERSION) >/dev/null
+	npm pack ./wasm/npm --pack-destination dist >/dev/null
+	git checkout -- wasm/npm/package.json 2>/dev/null || true
+	@echo "dist/$$(ls dist | grep cwist-wasm | tail -1)"
+
 component-smoke: component-guest
 	npm exec -y --package=@bytecodealliance/jco -- \
 	    jco transpile $(COMPONENT_BUILD_DIR)/guest.component.wasm --out-dir $(JCO_GUEST_DIR)
@@ -756,7 +767,7 @@ component-stream-smoke-p3:
 	$(MAKE) component-stream-smoke WASIP2_TARGET=wasm32-wasip3
 
 clean-component:
-	rm -rf $(WIT_BINDINGS_DIR) .component-build .jco-guest .jco-guest-stream
+	rm -rf $(WIT_BINDINGS_DIR) .component-build .jco-guest .jco-guest-stream $(SW_BUILD_DIR)
 
 # Packaging gate for the browser bundle (issue #203, stage 2 remainder): the
 # transpiled component plus the cwist-wasm adapter must bundle for a browser
@@ -1305,7 +1316,7 @@ TEST_TARGETS = test_worker_affinity \
                test_css_composer \
                test_multipart
 
-.PHONY: all test tsan-test $(TEST_TARGETS) fuzz_seq install uninstall dist clean rebuild examples clean-examples micro-examples examples-check wasm wasm-smoke wasm-abi-layout clean-wasm wasip2-smoke clean-wasip2 wit-check jco-transpile wit-bindings component-guest component-smoke clean-component api-baseline api-check env-check
+.PHONY: all test tsan-test $(TEST_TARGETS) fuzz_seq install uninstall dist clean rebuild examples clean-examples micro-examples examples-check wasm-abi-layout wasm-sw-example wasm-sw-smoke wasm-sw-browser-test wasm-dist wasip2-smoke clean-wasip2 wit-check jco-transpile wit-bindings component-guest component-smoke clean-component api-baseline api-check env-check
 
 # Regenerate docs/api/v4.0-api-baseline.txt (the recorded v4.0 public API
 # symbol surface). See CONTRIBUTING.md "Releases and patch releases".
