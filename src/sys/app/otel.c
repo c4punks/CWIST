@@ -109,12 +109,14 @@ static void otel_random_id(char *out, size_t nibbles) {
 
 /* W3C trace-context: "vv-<32 hex trace-id>-<16 hex parent-id>-ff", version
  * not "ff", ids not all zero.  Later versions may append "-..." fields. */
-static bool parse_traceparent(const char *h, char *trace_id, char *parent_id) {
+static bool otel_parse_traceparent(const char *h, char *trace_id, char *parent_id) {
     if (!h || strlen(h) < 55) return false;
     if (!otel_is_hex(h, 2) || strncmp(h, "ff", 2) == 0 || h[2] != '-') return false;
-    if (!otel_is_hex(h + 3, OTEL_TRACE_ID_HEX) || otel_is_zero(h + 3, OTEL_TRACE_ID_HEX) || h[35] != '-')
+    if (!otel_is_hex(h + 3, OTEL_TRACE_ID_HEX) || otel_is_zero(h + 3, OTEL_TRACE_ID_HEX) ||
+        h[35] != '-')
         return false;
-    if (!otel_is_hex(h + 36, OTEL_SPAN_ID_HEX) || otel_is_zero(h + 36, OTEL_SPAN_ID_HEX) || h[52] != '-')
+    if (!otel_is_hex(h + 36, OTEL_SPAN_ID_HEX) || otel_is_zero(h + 36, OTEL_SPAN_ID_HEX) ||
+        h[52] != '-')
         return false;
     if (!otel_is_hex(h + 53, 2) || (h[55] != '\0' && (strncmp(h, "00", 2) == 0 || h[55] != '-')))
         return false;
@@ -139,8 +141,8 @@ static char *otel_encode_spans(const otel_span_t *spans, size_t n) {
     cJSON *rs = cJSON_CreateObject();
     cJSON_AddItemToArray(cJSON_AddArrayToObject(root, "resourceSpans"), rs);
     cJSON *rattrs = cJSON_AddArrayToObject(cJSON_AddObjectToObject(rs, "resource"), "attributes");
-    cJSON_AddItemToArray(rattrs,
-                         otel_attr("service.name", cJSON_CreateString(g_otel.service_name), "stringValue"));
+    cJSON_AddItemToArray(
+        rattrs, otel_attr("service.name", cJSON_CreateString(g_otel.service_name), "stringValue"));
     cJSON *ss = cJSON_CreateObject();
     cJSON_AddItemToArray(cJSON_AddArrayToObject(rs, "scopeSpans"), ss);
     cJSON_AddStringToObject(cJSON_AddObjectToObject(ss, "scope"), "name", "cwist");
@@ -161,13 +163,15 @@ static char *otel_encode_spans(const otel_span_t *spans, size_t n) {
         snprintf(num, sizeof(num), "%llu", (unsigned long long)s->end_ns);
         cJSON_AddStringToObject(span, "endTimeUnixNano", num);
         cJSON *attrs = cJSON_AddArrayToObject(span, "attributes");
-        cJSON_AddItemToArray(attrs, otel_attr("http.request.method", cJSON_CreateString(method),
-                                         "stringValue"));
-        cJSON_AddItemToArray(attrs, otel_attr("url.path", cJSON_CreateString(s->path), "stringValue"));
+        cJSON_AddItemToArray(
+            attrs, otel_attr("http.request.method", cJSON_CreateString(method), "stringValue"));
+        cJSON_AddItemToArray(attrs,
+                             otel_attr("url.path", cJSON_CreateString(s->path), "stringValue"));
         snprintf(num, sizeof(num), "%d", s->status);
-        cJSON_AddItemToArray(attrs, otel_attr("http.response.status_code", cJSON_CreateString(num),
-                                         "intValue"));
-        if (s->status >= 500) cJSON_AddNumberToObject(cJSON_AddObjectToObject(span, "status"), "code", 2);
+        cJSON_AddItemToArray(
+            attrs, otel_attr("http.response.status_code", cJSON_CreateString(num), "intValue"));
+        if (s->status >= 500)
+            cJSON_AddNumberToObject(cJSON_AddObjectToObject(span, "status"), "code", 2);
         cJSON_AddItemToArray(out, span);
     }
     char *body = cJSON_PrintUnformatted(root);
@@ -181,8 +185,8 @@ static void otel_export_batch(cwist_http_client *client, const otel_span_t *span
     cwist_http_header_node *headers = NULL;
     cwist_http_header_add(&headers, "Content-Type", "application/json");
     cwist_http_response *res = NULL;
-    cwist_http_client_request(client, g_otel.endpoint, CWIST_HTTP_POST, headers, body,
-                              strlen(body), &res);
+    cwist_http_client_request(client, g_otel.endpoint, CWIST_HTTP_POST, headers, body, strlen(body),
+                              &res);
     if (res) cwist_http_response_destroy(res);
     cwist_http_header_free_all(headers);
     cJSON_free(body);
@@ -231,7 +235,8 @@ static void otel_atfork_child(void) {
 static void otel_enqueue(const otel_span_t *span) {
     pthread_mutex_lock(&g_otel_lock);
     if (!g_otel.exporter_alive)
-        g_otel.exporter_alive = pthread_create(&g_otel.exporter, NULL, otel_exporter_main, NULL) == 0;
+        g_otel.exporter_alive =
+            pthread_create(&g_otel.exporter, NULL, otel_exporter_main, NULL) == 0;
     if (g_otel.exporter_alive) {
         if (g_otel.count == g_otel.cap) { /* full: drop the oldest */
             g_otel.head = (g_otel.head + 1) % g_otel.cap;
@@ -247,8 +252,8 @@ static void otel_enqueue(const otel_span_t *span) {
 static void otel_middleware(cwist_http_request *req, cwist_http_response *res,
                             cwist_handler_func next) {
     otel_span_t span = {.method = req->method, .start_ns = otel_unix_nanos()};
-    if (!parse_traceparent(cwist_http_header_get(req->headers, "traceparent"), span.trace_id,
-                           span.parent_span_id))
+    if (!otel_parse_traceparent(cwist_http_header_get(req->headers, "traceparent"), span.trace_id,
+                                span.parent_span_id))
         otel_random_id(span.trace_id, OTEL_TRACE_ID_HEX);
     otel_random_id(span.span_id, OTEL_SPAN_ID_HEX);
 
