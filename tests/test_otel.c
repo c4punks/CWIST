@@ -38,8 +38,7 @@ static int is_lower_hex(const char *s, size_t len) {
 }
 
 /* GET / with an optional traceparent header; copies the response body. */
-static int get_trace_id(cwist_test_client *client, const char *traceparent, char *out,
-                        size_t cap) {
+static int get_trace_id(cwist_test_client *client, const char *traceparent, char *out, size_t cap) {
     cwist_test_client_kv hdr = {"traceparent", traceparent};
     cwist_test_client_request_options opts = {
         .headers = traceparent ? &hdr : NULL,
