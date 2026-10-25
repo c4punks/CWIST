@@ -1,5 +1,4 @@
 var searchData=
 [
-  ['소유권_0',['full GC에서의 연기된 HTTP 소유권',['../d3/dcc/md_docs_2ko_2async-gc-ownership.html',1,'']]],
-  ['소켓_20핸드오프로_20무중단_20재시작하기_1',['소켓 핸드오프로 무중단 재시작하기',['../d1/d45/md_docs_2ko_2deployment_2zero-downtime-restart.html',1,'']]]
+  ['선택적_20wrk_20원시_20보정_20지연_20히스토그램_0',['선택적 wrk 원시/보정 지연 히스토그램',['../d2/de4/md_docs_2ko_2performance_2wrk-dual-histogram.html',1,'']]]
 ];

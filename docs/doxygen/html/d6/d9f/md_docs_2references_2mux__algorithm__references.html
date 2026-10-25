@@ -108,9 +108,9 @@ $(document).ready(function(){initNavTree('d6/d9f/md_docs_2references_2mux__algor
   <div class="headertitle"><div class="title">Mux Algorithm References</div></div>
 </div><!--header-->
 <div class="contents">
-<div class="textblock"><p><a class="anchor" id="autotoc_md768"></a> This document preserves the historical and mathematical background behind the hashing and indexing techniques used in <code><a class="el" href="../../dd/d49/mux_8c.html" title="Fixed-bucket HTTP route dispatch using a lightweight path signature.">src/net/http/mux.c</a></code>. The ideas were carried over into the router implementation, but the <b>production source code</b> has been refactored to use standard systems-programming terminology so that future maintainers can focus on control logic rather than cultural context.</p>
+<div class="textblock"><p><a class="anchor" id="autotoc_md776"></a> This document preserves the historical and mathematical background behind the hashing and indexing techniques used in <code><a class="el" href="../../dd/d49/mux_8c.html" title="Fixed-bucket HTTP route dispatch using a lightweight path signature.">src/net/http/mux.c</a></code>. The ideas were carried over into the router implementation, but the <b>production source code</b> has been refactored to use standard systems-programming terminology so that future maintainers can focus on control logic rather than cultural context.</p>
 <hr  />
-<h1><a class="anchor" id="autotoc_md770"></a>
+<h1><a class="anchor" id="autotoc_md778"></a>
 1. Lo Shu Magic Square (Naak-seo / 洛書)</h1>
 <p><b>Concept</b> A 3×3 magic square documented in ancient Chinese mathematics and later studied extensively by the Joseon scholar <b>Choi Seok-jeong (崔錫鼎, 1646–1715)</b> in his work <em>Gusuryak</em> (九數略). In a magic square all rows, columns, and diagonals sum to the same constant (15 for Lo Shu). Choi expanded this into larger orders and explored their combinatorial properties.</p>
 <p><b>Application in <a class="el" href="../../dd/d49/mux_8c.html" title="Fixed-bucket HTTP route dispatch using a lightweight path signature.">mux.c</a></b> The square was used as a deterministic lookup table to map a route signature to a small integer coordinate. The equal row/column sums were intended to keep bucket-pressure uniform as route counts grow.</p>
@@ -119,7 +119,7 @@ $(document).ready(function(){initNavTree('d6/d9f/md_docs_2references_2mux__algor
 <li><code><a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">cwist_routing_hash_slot()</a></code> (was <code><a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">cwist_magic_square_coord()</a></code>)</li>
 </ul>
 <hr  />
-<h1><a class="anchor" id="autotoc_md772"></a>
+<h1><a class="anchor" id="autotoc_md780"></a>
 2. Orthogonal Latin-Square Permutation</h1>
 <p><b>Concept</b> Latin squares and their orthogonal pairs are combinatorial designs studied in classical Korean mathematics by <b>Choi Seok-jeong</b> in <em>Gusuryak</em> (九數略) and later examined by <b>Hong Jeong-ha (洪正夏)</b> in <em>Gu-iljip</em> (九一集). Two Latin squares are orthogonal when every ordered pair of symbols occurs exactly once. Choi’s work on these structures predates the formal European treatment of orthogonal Latin squares by more than a century.</p>
 <p><b>Application in <a class="el" href="../../dd/d49/mux_8c.html" title="Fixed-bucket HTTP route dispatch using a lightweight path signature.">mux.c</a></b> Two 4×4 orthogonal tables (<code>MUX_PERM_TABLE_A</code> / <code>MUX_PERM_TABLE_B</code>) were used to fold a route byte and its segment index into a compact 4-bit nibble. This nibble perturbs the 128-bit route signature during segment mixing.</p>
@@ -129,7 +129,7 @@ $(document).ready(function(){initNavTree('d6/d9f/md_docs_2references_2mux__algor
 <li><code><a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">mux_byte_permute()</a></code> (was <code><a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">nam_latin_merge()</a></code>)</li>
 </ul>
 <hr  />
-<h1><a class="anchor" id="autotoc_md774"></a>
+<h1><a class="anchor" id="autotoc_md782"></a>
 3. Coefficient Matrix &amp; Linear System Solver</h1>
 <p><b>Concept</b> <em>Jeungseung Gaebangbeop</em> (乘除開方法) is a Joseon-era technique for scaling and normalizing ratios. The matrix used here is a 3×3 fixed-coefficient matrix that produces a solvable linear system for three unknown weights.</p>
 <p><b>Application in <a class="el" href="../../dd/d49/mux_8c.html" title="Fixed-bucket HTTP route dispatch using a lightweight path signature.">mux.c</a></b> The matrix (<code>MUX_COEFF_MATRIX</code>) and a Gaussian-elimination solver (<code><a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">mux_solve_linear3()</a></code>) derive three weights from the high and low 64-bit halves of the route signature. Those weights are then blended into the final bucket index.</p>
@@ -139,7 +139,7 @@ $(document).ready(function(){initNavTree('d6/d9f/md_docs_2references_2mux__algor
 <li><code><a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">mux_derive_coeffs()</a></code> (was <code><a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">cwist_jungseung_coeffs()</a></code>)</li>
 </ul>
 <hr  />
-<h1><a class="anchor" id="autotoc_md776"></a>
+<h1><a class="anchor" id="autotoc_md784"></a>
 4. Iterative Magnitude Refinement</h1>
 <p><b>Concept</b> al-Kāshī (15th-century astronomer and mathematician) popularised iterative root-finding methods. The specific step used here is a two-iteration Newton-Raphson-style square-root refinement.</p>
 <p><b>Application in <a class="el" href="../../dd/d49/mux_8c.html" title="Fixed-bucket HTTP route dispatch using a lightweight path signature.">mux.c</a></b> Refines an intermediate magnitude guess before it is fed into the final mixing step. Improves bit diffusion across different bucket sizes.</p>
@@ -147,7 +147,7 @@ $(document).ready(function(){initNavTree('d6/d9f/md_docs_2references_2mux__algor
 <li><code><a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">mux_refine_magnitude()</a></code> (was <code><a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">cwist_al_kashi_refine()</a></code>)</li>
 </ul>
 <hr  />
-<h1><a class="anchor" id="autotoc_md778"></a>
+<h1><a class="anchor" id="autotoc_md786"></a>
 5. Single-Step Linear Extrapolation</h1>
 <p><b>Concept</b> Euler’s method for ordinary differential equations predicts the next state by adding the current slope multiplied by a small step size.</p>
 <p><b>Application in <a class="el" href="../../dd/d49/mux_8c.html" title="Fixed-bucket HTTP route dispatch using a lightweight path signature.">mux.c</a></b> Predicts the next hash-mix state from the refined magnitude and a slope derived from signature byte differences. Keeps the bucket index stable under small path perturbations.</p>
@@ -155,7 +155,7 @@ $(document).ready(function(){initNavTree('d6/d9f/md_docs_2references_2mux__algor
 <li><code><a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">mux_predict_state()</a></code> (was <code><a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">cwist_euler_predict()</a></code>)</li>
 </ul>
 <hr  />
-<h1><a class="anchor" id="autotoc_md780"></a>
+<h1><a class="anchor" id="autotoc_md788"></a>
 Naming Rationale</h1>
 <p>While the mathematical ideas above are valid for hash-distribution design, embedding historical person names, era names, or cultural concepts directly into production identifiers creates unnecessary cognitive load for later engineers. The refactored names describe <b>what the code does</b> (routing hash slot, byte permutation, linear solver, magnitude refinement, state prediction) rather than <b>where the idea came from</b>.</p>
 <p>For further reading on the original mathematics, consult the respective fields of combinatorics, numerical analysis, and linear algebra literature. </p>

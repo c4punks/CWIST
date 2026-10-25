@@ -1,6 +1,6 @@
 var searchData=
 [
-  ['종료_20정리_0',['3. 스레드/프로세스 종료 정리',['../d1/dde/md_docs_2ko_2GC.html#autotoc_md598',1,'']]],
-  ['종류_1',['Opcode 종류',['../d7/dec/md_docs_2ko_2api_2websocket.html#autotoc_md528',1,'']]],
-  ['종류_20감지_2',['종류 감지',['../d0/d3c/md_docs_2ko_2api_2wasi.html#autotoc_md495',1,'']]]
+  ['종료_20정리_0',['3. 스레드/프로세스 종료 정리',['../d1/dde/md_docs_2ko_2GC.html#autotoc_md606',1,'']]],
+  ['종류_1',['Opcode 종류',['../d7/dec/md_docs_2ko_2api_2websocket.html#autotoc_md532',1,'']]],
+  ['종류_20감지_2',['종류 감지',['../d0/d3c/md_docs_2ko_2api_2wasi.html#autotoc_md499',1,'']]]
 ];

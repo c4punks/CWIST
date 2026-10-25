@@ -1,4 +1,4 @@
 var searchData=
 [
-  ['예제_20배포하기_0',['Wasmtime으로 WASI 0.2 예제 배포하기',['../d1/dc3/md_docs_2ko_2deployment_2wasmtime-appliance.html',1,'']]]
+  ['엔드포인트_20캐싱_3a_20현재_20동작_0',['FIXED 엔드포인트 캐싱: 현재 동작',['../d7/dab/md_docs_2ko_2fixed-cache-status.html',1,'']]]
 ];

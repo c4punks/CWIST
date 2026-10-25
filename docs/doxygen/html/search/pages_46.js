@@ -1,5 +1,4 @@
 var searchData=
 [
-  ['위의_20cwist_0',['WASM 컴포넌트 모델 위의 CWIST',['../dd/d41/md_docs_2ko_2api_2wasm-component.html',1,'']]],
-  ['위의_20cwist_20emscripten_1',['WASM 위의 CWIST (Emscripten)',['../d2/d56/md_docs_2ko_2api_2wasm.html',1,'']]]
+  ['예제_20배포하기_0',['Wasmtime으로 WASI 0.2 예제 배포하기',['../d1/dc3/md_docs_2ko_2deployment_2wasmtime-appliance.html',1,'']]]
 ];

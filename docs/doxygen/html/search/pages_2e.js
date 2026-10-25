@@ -1,5 +1,4 @@
 var searchData=
 [
-  ['문서화하기_0',['OpenAPI와 Swagger UI로 API 문서화하기',['../dc/dbf/md_docs_2ko_2tutorials_2openapi-swagger.html',1,'']]],
-  ['문서_1',['CWIST API 문서',['../dc/d79/md_docs_2ko_2API.html',1,'']]]
+  ['묶음_20비우기에서의_20협력적_20큐잉_20이슈_2025_0',['C1M 리액터 묶음 비우기에서의 협력적 큐잉 (이슈 #25)',['../da/d90/md_docs_2ko_2cooperative-queuing.html',1,'']]]
 ];

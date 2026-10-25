@@ -1,4 +1,4 @@
 var searchData=
 [
-  ['엔드포인트_20캐싱_3a_20현재_20동작_0',['FIXED 엔드포인트 캐싱: 현재 동작',['../d7/dab/md_docs_2ko_2fixed-cache-status.html',1,'']]]
+  ['알고리즘_20참고_20자료_0',['Mux 알고리즘 참고 자료',['../d4/d7c/md_docs_2ko_2references_2mux__algorithm__references.html',1,'']]]
 ];

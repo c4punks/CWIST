@@ -1,4 +1,4 @@
 var searchData=
 [
-  ['영속_20큐_20필수_20게이트_0',['영속 큐 필수 게이트',['../dd/dd4/md_docs_2ko_2durable-queue-gate.html',1,'']]]
+  ['에셋_0',['릴리스 사전 빌드 에셋',['../da/dcd/md_docs_2ko_2deployment_2release-assets.html',1,'']]]
 ];
