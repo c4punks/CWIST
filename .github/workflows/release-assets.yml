@@ -160,23 +160,9 @@ jobs:
       run: |
         # The drop-in contract: one -I plus the file; the vendored code links
         # from the fat archive of the same configuration.
-        work=$(mktemp -d)
-        cp -r dist/amalgamation "$work/bundle"
-        cp example/micro/01-hello/main.c "$work/"
-        cd "$work"
-        gcc -O2 -std=gnu17 -Ibundle/include -pthread -c bundle/cwist.c -o cwist.o
-        gcc -O2 -std=gnu17 -Ibundle/include -o hello main.c cwist.o \
-          "$GITHUB_WORKSPACE/dist/cwist-fat/lib/libcwist.a" \
-          $(pkg-config --libs libcurl libnghttp2 libbrotlienc libbrotlicommon libbrotlidec libzstd) \
-          -pthread -ldl -lm -lstdc++ -lz
-        ./hello &
-        pid=$!
-        for _ in $(seq 1 30); do
-          out=$(curl -s -m 2 http://127.0.0.1:8080/) && [ -n "$out" ] && break
-          sleep 1
-        done
-        kill "$pid"
-        test "$out" = "Hello, CWIST!"
+        gcc -O2 -std=gnu17 -Idist/amalgamation/include -pthread \
+          -c dist/amalgamation/cwist.c -o "$RUNNER_TEMP/cwist.o"
+        APP_OBJS="$RUNNER_TEMP/cwist.o" ./scripts/ci/bundle_smoke.sh dist/cwist-fat
 
     - name: Package
       run: |

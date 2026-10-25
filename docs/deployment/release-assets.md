@@ -35,7 +35,8 @@ cc -O2 -std=gnu17 -Icwist-4-fat-linux-x86_64/include -o app main.c \
 ```
 
 On macOS replace `-ldl -lstdc++` with `-lc++`. This is the link line
-`scripts/ci/bundle_smoke.sh` runs against every bundle before it is attached.
+`scripts/ci/bundle_smoke.sh` runs against every bundle before it is attached
+(the amalgamation runs it too, with `cwist.o` linked ahead of the archive).
 
 - **CPU baseline.** Bundles are built with `CWIST_PORTABLE=1`: no
   `-march=native`, so they run on any CPU of the target architecture. Build

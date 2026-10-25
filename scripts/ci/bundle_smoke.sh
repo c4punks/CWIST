@@ -7,9 +7,10 @@
 # Usage: scripts/ci/bundle_smoke.sh <bundle-dir>
 #
 # Environment:
-#   CC    compiler for the app (default: cc)
-#   RUN   prefix for running the binary, e.g. "qemu-aarch64 -L /usr/aarch64-linux-gnu"
-#   PORT  port example/micro/01-hello listens on (default: 8080)
+#   CC        compiler for the app (default: cc)
+#   RUN       prefix for running the binary, e.g. "qemu-aarch64 -L /usr/aarch64-linux-gnu"
+#   PORT      port example/micro/01-hello listens on (default: 8080)
+#   APP_OBJS  objects linked ahead of the archive, e.g. the amalgamated cwist.o
 #
 # pkg-config is consulted for the system libraries, so a cross run sets
 # PKG_CONFIG_LIBDIR to the target's .pc directory.
@@ -31,7 +32,7 @@ cp "$repo/example/micro/01-hello/main.c" "$work/"
 cd "$work"
 
 # shellcheck disable=SC2046,SC2086
-"$cc" -O2 -std=gnu17 -I"$bundle/include" -o hello main.c "$bundle/lib/libcwist.a" \
+"$cc" -O2 -std=gnu17 -I"$bundle/include" -o hello main.c ${APP_OBJS:-} "$bundle/lib/libcwist.a" \
     $(pkg-config --libs libcurl libnghttp2 libbrotlienc libbrotlicommon libbrotlidec libzstd) \
     -pthread -lm $cxx_lib -lz
 

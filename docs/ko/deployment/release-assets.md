@@ -34,7 +34,8 @@ cc -O2 -std=gnu17 -Icwist-4-fat-linux-x86_64/include -o app main.c \
 ```
 
 macOS에서는 `-ldl -lstdc++` 대신 `-lc++`를 씁니다. 첨부 전에
-`scripts/ci/bundle_smoke.sh`가 모든 번들에 대해 실행하는 링크 명령이 이것입니다.
+`scripts/ci/bundle_smoke.sh`가 모든 번들에 대해 실행하는 링크 명령이 이것입니다
+(amalgamation도 `cwist.o`를 아카이브 앞에 링크해 같은 스크립트로 검증합니다).
 
 - **CPU 기준.** 번들은 `CWIST_PORTABLE=1`로 빌드됩니다. `-march=native`가 없으므로
   대상 아키텍처의 어떤 CPU에서도 실행됩니다. 호스트에 맞춘 코드가 필요하면
