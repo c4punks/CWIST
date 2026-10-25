@@ -1,10 +1,9 @@
 # CWIST on the WASM component model
 
-**Status:** experimental (issue #203, v3.7 Phase 1; v3.8 defers the
-production switch to v4.0). The supported browser path remains the
-Emscripten bundle (`docs/api/wasm.md`); this document describes the component
-pipeline that is slated to replace it once the WASI 0.3 world and unflagged
-JSPI are usable end to end.
+**Status:** supported (issue #203). The WASI component pipeline is the
+standard WebAssembly path for CWIST in browsers (via jco transpilation),
+service workers, Node, and edge runtimes. The legacy Emscripten build
+has been retired.
 
 ## Why
 

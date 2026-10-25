@@ -1,6 +1,13 @@
 /**
  * @file typedarray.h
- * @brief Emscripten-only zero-copy helpers: expose C arrays and in-memory
+ * @brief (Deprecated) Legacy Emscripten zero-copy helpers.
+ *
+ * @deprecated The Emscripten browser bundle has been superseded by the WASI
+ * component pipeline (issue #203). For new code, build for wasm32-wasip2
+ * using the component pipeline. This header and its functions are retained
+ * for v4 LTS ABI compatibility.
+ *
+ * Emscripten-only zero-copy helpers: expose C arrays and in-memory
  * dispatch responses to JS as TypedArray views over the WASM heap, instead
  * of round-tripping through snprintf/JSON.
  *
