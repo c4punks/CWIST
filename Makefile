@@ -1361,6 +1361,12 @@ tsan-test: $(TSAN_TEST_TARGETS)
 rss_gate_server: $(LIB_NAME) tests/rss_gate_server.c
 	$(CC) $(CFLAGS) -o $@ tests/rss_gate_server.c $(LIB_NAME) $(LIBS)
 
+zero_alloc_server: $(LIB_NAME) tests/zero_alloc_server.c
+	$(CC) $(CFLAGS) -o $@ tests/zero_alloc_server.c $(LIB_NAME) $(LIBS)
+
+zero_alloc_shim.so: tests/zero_alloc_counter.c
+	$(CC) -O2 -fPIC -shared -o $@ tests/zero_alloc_counter.c
+
 # HTTPS C100k load client for scripts/ci/c100k_https.sh (needs a running
 # server; not a test). Plain OpenSSL + epoll, no libcwist.
 c100k_https_client: tests/c100k_https_client.c
