@@ -1,10 +1,34 @@
+# Cross-compilation: make CROSS_COMPILE=aarch64-linux-gnu- takes CC, CXX, AR
+# and RANLIB from the triplet prefix unless they are set on the command line or
+# in the environment, and hands the same toolchain to every vendored CMake
+# build through CROSS_CMAKE_FLAGS.  `?=` cannot do this: make predefines CC and
+# AR, so a conditional assignment never fires for them.
+ifneq ($(CROSS_COMPILE),)
+ifneq ($(filter default undefined,$(origin CC)),)
+CC := $(CROSS_COMPILE)gcc
+endif
+ifneq ($(filter default undefined,$(origin CXX)),)
+CXX := $(CROSS_COMPILE)g++
+endif
+ifneq ($(filter default undefined,$(origin AR)),)
+AR := $(CROSS_COMPILE)ar
+endif
+RANLIB ?= $(CROSS_COMPILE)ranlib
+PKG_CONFIG ?= $(CROSS_COMPILE)pkg-config
+CROSS_CMAKE_FLAGS = -DCMAKE_SYSTEM_NAME=Linux \
+                    -DCMAKE_SYSTEM_PROCESSOR=$(firstword $(subst -, ,$(CROSS_COMPILE))) \
+                    -DCMAKE_AR=$(shell command -v $(AR)) \
+                    -DCMAKE_RANLIB=$(shell command -v $(RANLIB))
+endif
 CC ?= gcc
 CXX ?= g++
+RANLIB ?= ranlib
+PKG_CONFIG ?= pkg-config
 FUZZ_CC ?= clang
 
-CURL_CFLAGS := $(shell pkg-config --cflags libcurl 2>/dev/null)
-NGHTTP2_CFLAGS := $(shell pkg-config --cflags libnghttp2 2>/dev/null)
-BROTLI_CFLAGS := $(shell pkg-config --cflags libbrotlienc libbrotlicommon libbrotlidec 2>/dev/null)
+CURL_CFLAGS := $(shell $(PKG_CONFIG) --cflags libcurl 2>/dev/null)
+NGHTTP2_CFLAGS := $(shell $(PKG_CONFIG) --cflags libnghttp2 2>/dev/null)
+BROTLI_CFLAGS := $(shell $(PKG_CONFIG) --cflags libbrotlienc libbrotlicommon libbrotlidec 2>/dev/null)
 
 INCLUDE_PATHS = -I./include -I./lib -I./lib/libttak/include -I./lib/cjson -I./lib/sqlite3 -I./lib/uriparser/include -I./lib/cnats/src $(TLS_INCLUDE_PATHS) -I./lib/lsquic/include -I./lib/multipart-parser-c $(CURL_CFLAGS) $(NGHTTP2_CFLAGS) $(BROTLI_CFLAGS)
 COMMON_DEFINES = -D_GNU_SOURCE -D_XOPEN_SOURCE=700 -D_REENTRANT -DSQLITE_ENABLE_DESERIALIZE
@@ -111,12 +135,12 @@ USRSCTP_DIR = lib/usrsctp
 USRSCTP_BUILD_DIR = $(USRSCTP_DIR)/build
 USRSCTP_LIB = $(USRSCTP_BUILD_DIR)/usrsctplib/libusrsctp.a
 
-CURL_LIBS := $(shell pkg-config --libs libcurl 2>/dev/null)
-NGHTTP2_LIBS := $(shell pkg-config --libs libnghttp2 2>/dev/null)
-BROTLI_LIBS := $(shell pkg-config --libs libbrotlienc libbrotlicommon libbrotlidec 2>/dev/null)
+CURL_LIBS := $(shell $(PKG_CONFIG) --libs libcurl 2>/dev/null)
+NGHTTP2_LIBS := $(shell $(PKG_CONFIG) --libs libnghttp2 2>/dev/null)
+BROTLI_LIBS := $(shell $(PKG_CONFIG) --libs libbrotlienc libbrotlicommon libbrotlidec 2>/dev/null)
 # zstd via pkg-config so Homebrew's non-standard lib path (-L/opt/homebrew/...)
 # is picked up on macOS; fall back to a bare -lzstd elsewhere.
-ZSTD_LIBS := $(shell pkg-config --libs libzstd 2>/dev/null)
+ZSTD_LIBS := $(shell $(PKG_CONFIG) --libs libzstd 2>/dev/null)
 ifeq ($(strip $(ZSTD_LIBS)),)
 ZSTD_LIBS = -lzstd
 endif
@@ -779,6 +803,14 @@ LIBTTAK_EXTRA_CFLAGS =
 ifeq ($(UNAME_S),Darwin)
     LIBTTAK_EXTRA_CFLAGS += -D_DARWIN_C_SOURCE
 endif
+# libttak tunes for the build host (-march=native) by default; a cross build
+# hands it our compiler and drops the host tuning.
+ifneq ($(CROSS_COMPILE),)
+    LIBTTAK_MAKE_FLAGS = CC="$(CC)" AR="$(AR)" \
+        PERF_STACK_FLAGS="-O3 -pipe -fomit-frame-pointer -funroll-loops \
+            -fstrict-aliasing -ffunction-sections -fdata-sections \
+            -fvisibility=hidden -DNDEBUG"
+endif
 CJSON_DIR = lib/cjson
 CJSON_LIB = $(CJSON_DIR)/libcjson.a
 CNATS_DIR = lib/cnats
@@ -938,7 +970,7 @@ $(USRSCTP_STAMP):
 		-DCMAKE_BUILD_TYPE=Release \
 		-DBUILD_SHARED_LIBS=OFF \
 		-Dsctp_build_programs=OFF \
-		-Dsctp_build_fuzzer=OFF
+		-Dsctp_build_fuzzer=OFF $(CROSS_CMAKE_FLAGS)
 	cmake --build $(USRSCTP_BUILD_DIR) --target usrsctp
 	@rm -f $(USRSCTP_BUILD_DIR)/.usrsctp_built_*
 	@touch $@
@@ -1042,7 +1074,7 @@ amalgamation: $(SQLITE_DIR)/sqlite3.c $(AMALGAMATION_HEADER_ANCHORS) | $(AMALGAM
 
 $(LIBTTAK_LIB):
 	@echo "Building libttak..."
-	$(MAKE) -C $(LIBTTAK_DIR) EXTRA_CFLAGS="$(LIBTTAK_EXTRA_CFLAGS)"
+	$(MAKE) -C $(LIBTTAK_DIR) $(LIBTTAK_MAKE_FLAGS) EXTRA_CFLAGS="$(LIBTTAK_EXTRA_CFLAGS)"
 
 $(CJSON_LIB):
 	@echo "Building cJSON..."
@@ -1052,7 +1084,7 @@ $(CJSON_LIB):
 
 $(URIPARSER_LIB):
 	@echo "Configuring uriparser..."
-	cmake -S $(URIPARSER_DIR) -B $(URIPARSER_BUILD_DIR) -DCMAKE_C_COMPILER=$(CC) $(URIPARSER_CMAKE_FLAGS)
+	cmake -S $(URIPARSER_DIR) -B $(URIPARSER_BUILD_DIR) -DCMAKE_C_COMPILER=$(CC) $(URIPARSER_CMAKE_FLAGS) $(CROSS_CMAKE_FLAGS)
 	@echo "Building uriparser..."
 	cmake --build $(URIPARSER_BUILD_DIR) --target uriparser
 
@@ -1064,7 +1096,7 @@ $(BORINGSSL_STAMP):
 	cmake -S $(BORINGSSL_DIR) -B $(BORINGSSL_BUILD_DIR) \
 		-DCMAKE_C_COMPILER=$(CC) \
 		-DCMAKE_CXX_COMPILER=$(CXX) \
-		-DCMAKE_BUILD_TYPE=Release
+		-DCMAKE_BUILD_TYPE=Release $(CROSS_CMAKE_FLAGS)
 	cmake --build $(BORINGSSL_BUILD_DIR) --target ssl crypto
 	@touch $@
 
@@ -1089,7 +1121,7 @@ $(MBEDTLS_STAMP):
 		-DCMAKE_C_FLAGS="$(MBEDTLS_CONFIG_DEFINES)" \
 		-DBUILD_SHARED_LIBS=OFF \
 		-DENABLE_TESTING=OFF \
-		-DENABLE_PROGRAMS=OFF
+		-DENABLE_PROGRAMS=OFF $(CROSS_CMAKE_FLAGS)
 	cmake --build $(MBEDTLS_BUILD_DIR) --target mbedtls mbedx509 mbedcrypto
 	@rm -f $(MBEDTLS_BUILD_DIR)/.mbedtls_built_*
 	@touch $@
@@ -1117,7 +1149,7 @@ $(LSQUIC_STAMP): $(BORINGSSL_SSL_LIB) $(BORINGSSL_CRYPTO_LIB)
 		-DBORINGSSL_LIB_crypto=$(abspath $(BORINGSSL_CRYPTO_LIB)) \
 		-DBORINGSSL_INCLUDE=$(abspath $(BORINGSSL_DIR)/include) \
 		-DLSQUIC_WEBTRANSPORT=ON \
-		-DBUILD_SHARED_LIBS=OFF
+		-DBUILD_SHARED_LIBS=OFF $(CROSS_CMAKE_FLAGS)
 	cmake --build $(LSQUIC_BUILD_DIR) --target lsquic
 	@rm -f $(LSQUIC_BUILD_DIR)/.lsquic_built_*
 	@touch $@
@@ -1130,7 +1162,7 @@ $(CNATS_LIB):
 		-DCMAKE_BUILD_TYPE=Release \
 		-DBUILD_SHARED_LIBS=OFF \
 		-DNATS_BUILD_WITH_TLS=OFF \
-		-DNATS_BUILD_STREAMING=OFF
+		-DNATS_BUILD_STREAMING=OFF $(CROSS_CMAKE_FLAGS)
 	cmake --build $(CNATS_DIR)/build --target nats_static
 
 # --- Test Targets ---
