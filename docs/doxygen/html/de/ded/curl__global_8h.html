@@ -129,10 +129,10 @@ This graph shows which files directly or indirectly include this file:</div>
 <table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="func-members" name="func-members"></a>
 Functions</h2></td></tr>
-<tr class="memitem:a675b7fde640c58c1f8f7431064c82c83" id="r_a675b7fde640c58c1f8f7431064c82c83"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../de/ded/curl__global_8h.html#a675b7fde640c58c1f8f7431064c82c83">cwist_curl_global_acquire</a> (void)</td></tr>
+<tr class="memitem:a675b7fde640c58c1f8f7431064c82c83" id="r_a675b7fde640c58c1f8f7431064c82c83"><td class="memItemLeft" align="right" valign="top"><a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">void</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../de/ded/curl__global_8h.html#a675b7fde640c58c1f8f7431064c82c83">cwist_curl_global_acquire</a> (<a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">void</a>)</td></tr>
 <tr class="memdesc:a675b7fde640c58c1f8f7431064c82c83"><td class="mdescLeft">&#160;</td><td class="mdescRight">Acquire a reference on the global libcurl instance.  <br /></td></tr>
 <tr class="separator:a675b7fde640c58c1f8f7431064c82c83"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:aa9e5e759823be656703d7ae5cc85bc60" id="r_aa9e5e759823be656703d7ae5cc85bc60"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../de/ded/curl__global_8h.html#aa9e5e759823be656703d7ae5cc85bc60">cwist_curl_global_release</a> (void)</td></tr>
+<tr class="memitem:aa9e5e759823be656703d7ae5cc85bc60" id="r_aa9e5e759823be656703d7ae5cc85bc60"><td class="memItemLeft" align="right" valign="top"><a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">void</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../de/ded/curl__global_8h.html#aa9e5e759823be656703d7ae5cc85bc60">cwist_curl_global_release</a> (<a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">void</a>)</td></tr>
 <tr class="memdesc:aa9e5e759823be656703d7ae5cc85bc60"><td class="mdescLeft">&#160;</td><td class="mdescRight">Release a reference on the global libcurl instance.  <br /></td></tr>
 <tr class="separator:aa9e5e759823be656703d7ae5cc85bc60"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
@@ -144,9 +144,9 @@ Functions</h2></td></tr>
 <div class="memproto">
       <table class="memname">
         <tr>
-          <td class="memname">void cwist_curl_global_acquire </td>
+          <td class="memname"><a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">void</a> cwist_curl_global_acquire </td>
           <td>(</td>
-          <td class="paramtype">void&#160;</td>
+          <td class="paramtype"><a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">void</a>&#160;</td>
           <td class="paramname"></td><td>)</td>
           <td></td>
         </tr>
@@ -154,9 +154,11 @@ Functions</h2></td></tr>
 </div><div class="memdoc">
 
 <p>Acquire a reference on the global libcurl instance. </p>
-<p>Initializes libcurl via curl_global_init() on the first acquisition (reference count transitions from 0 to 1). Thread-safe; subsequent calls only increment the reference count. Each call must be paired with exactly one <a class="el" href="../../da/d7f/curl__global_8c.html#aa9e5e759823be656703d7ae5cc85bc60" title="Release a reference on the global libcurl instance.">cwist_curl_global_release()</a>. </p>
+<p>Initializes libcurl via <a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">curl_global_init()</a> on the first acquisition (reference count transitions from 0 to 1). Thread-safe; subsequent calls only increment the reference count. Each call must be paired with exactly one <a class="el" href="../../da/d7f/curl__global_8c.html#aa9e5e759823be656703d7ae5cc85bc60" title="Release a reference on the global libcurl instance.">cwist_curl_global_release()</a>. </p>
 
 <p class="definition">Definition at line <a class="el" href="../../da/d7f/curl__global_8c_source.html#l00019">19</a> of file <a class="el" href="../../da/d7f/curl__global_8c_source.html">curl_global.c</a>.</p>
+
+<p class="reference">References <a class="el" href="../../d3/db2/otel_8c_source.html#l00056">cap</a>.</p>
 
 <p class="reference">Referenced by <a class="el" href="../../d6/d32/http__client_8c_source.html#l00185">cwist_http_client_create()</a>.</p>
 
@@ -169,9 +171,9 @@ Functions</h2></td></tr>
 <div class="memproto">
       <table class="memname">
         <tr>
-          <td class="memname">void cwist_curl_global_release </td>
+          <td class="memname"><a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">void</a> cwist_curl_global_release </td>
           <td>(</td>
-          <td class="paramtype">void&#160;</td>
+          <td class="paramtype"><a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">void</a>&#160;</td>
           <td class="paramname"></td><td>)</td>
           <td></td>
         </tr>
@@ -179,9 +181,11 @@ Functions</h2></td></tr>
 </div><div class="memdoc">
 
 <p>Release a reference on the global libcurl instance. </p>
-<p>Decrements the reference count and calls curl_global_cleanup() when the last reference is dropped. Thread-safe. Calls made without a matching <a class="el" href="../../da/d7f/curl__global_8c.html#a675b7fde640c58c1f8f7431064c82c83" title="Acquire a reference on the global libcurl instance.">cwist_curl_global_acquire()</a> are ignored (the reference count never goes below zero). </p>
+<p>Decrements the reference count and calls <a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">curl_global_cleanup()</a> when the last reference is dropped. Thread-safe. Calls made without a matching <a class="el" href="../../da/d7f/curl__global_8c.html#a675b7fde640c58c1f8f7431064c82c83" title="Acquire a reference on the global libcurl instance.">cwist_curl_global_acquire()</a> are ignored (the reference count never goes below zero). </p>
 
 <p class="definition">Definition at line <a class="el" href="../../da/d7f/curl__global_8c_source.html#l00036">36</a> of file <a class="el" href="../../da/d7f/curl__global_8c_source.html">curl_global.c</a>.</p>
+
+<p class="reference">References <a class="el" href="../../d3/db2/otel_8c_source.html#l00056">cap</a>.</p>
 
 <p class="reference">Referenced by <a class="el" href="../../d6/d32/http__client_8c_source.html#l00185">cwist_http_client_create()</a>, and <a class="el" href="../../d6/d32/http__client_8c_source.html#l00226">cwist_http_client_destroy()</a>.</p>
 

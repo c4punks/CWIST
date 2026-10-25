@@ -131,7 +131,7 @@ $(document).ready(function(){initNavTree('dd/d41/md_docs_2ko_2api_2wasm-componen
 </ul>
 <h1><a class="anchor" id="autotoc_md504"></a>
 평가 완료: preview3-shim (2026-09-23)</h1>
-<p><code>make component-smoke-p3</code>는 전체 디스패치 게스트를 0.3 컴포넌트로 실행합니다. 같은 게스트 C 소스를 wasi-sdk 34 이상으로 <code>wasm32-wasip3</code>용으로 빌드하고, <code>wasm-tools component embed</code>로 컴포넌트화하고, jco 1.34로 변환하고, node에서 preview3-shim 0.6.1로 호스팅한 뒤, 0.2 스모크와 같은 다섯 단언으로 구동합니다. 통과(PASS). 주의 사항은 모두 호스트 쪽입니다.</p>
+<p><code>make component-smoke-p3</code>는 전체 디스패치 게스트를 0.3 컴포넌트로 실행합니다. 같은 게스트 C 소스를 wasi-sdk 34 이상으로 <code>wasm32-wasip3</code>용으로 빌드하고, <code>wasm-tools component embed</code>로 컴포넌트화하고, jco 1.34로 변환하고, node에서 preview3-shim 0.6.1로 호스팅한 뒤, 0.2 스모크와 같은 다섯 단언으로 구동합니다. <a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">통과(PASS)</a>. 주의 사항은 모두 호스트 쪽입니다.</p>
 <ul>
 <li>node에는 <code>--experimental-wasm-jspi</code>가 필요합니다 (JSPI가 canonical ABI 비동기 낮춤을 구동). Makefile이 이를 넘기며, 브라우저 플래그 결정은 들어 있지 않습니다.</li>
 <li>jco는 모든 0.3 export를 async 함수로 낮추므로, wasip3 게스트에 대해서는 <code>handle()</code>이 Promise를 반환합니다. <code>wasm/npm/component.js</code>가 이를 감지하므로 두 대상 모두에서 <code>await</code>가 똑같이 동작합니다.</li>

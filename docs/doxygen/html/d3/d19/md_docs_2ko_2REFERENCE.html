@@ -147,7 +147,7 @@ $(document).ready(function(){initNavTree('d3/d19/md_docs_2ko_2REFERENCE.html','.
 <p><code>liburiparser</code>를 사용하는 견고한 쿼리 문자열 파싱입니다.</p><ul>
 <li><b>헤더:</b> <code>&lt;<a class="el" href="../../d1/d7a/net_2http_2query_8h.html" title="Query string parser and map.">cwist/net/http/query.h</a>&gt;</code></li>
 <li><b>함수:</b> <code>void cwist_query_map_parse(map, raw_query)</code></li>
-<li><b>동작:</b> <code>key=value&amp;key2=val2</code>를 해시 맵(SipHash)으로 파싱합니다.</li>
+<li><b>동작:</b> <code>key=value&amp;key2=val2</code>를 해시 <a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">맵(SipHash)</a>으로 파싱합니다.</li>
 </ul>
 <h2><a class="anchor" id="autotoc_md633"></a>
 5. 데이터베이스 (SQL)</h2>
@@ -183,9 +183,9 @@ $(document).ready(function(){initNavTree('d3/d19/md_docs_2ko_2REFERENCE.html','.
 LibTTAK 메모리 기능</h1>
 <p>CWIST는 libttak을 내장하고 최신 메모리 런타임을 노출합니다.</p>
 <ul>
-<li><b>세대별 아레나(Generational Arenas):</b> 정적 자산과 캐시 항목을 <code>ttak_mem_tree</code>로 추적하고 세대 단위로 해제해 RSS 급증을 피합니다.</li>
+<li><b>세대별 <a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">아레나(Generational Arenas)</a>:</b> 정적 자산과 캐시 항목을 <code>ttak_mem_tree</code>로 추적하고 세대 단위로 해제해 RSS 급증을 피합니다.</li>
 <li><b>에포크 기반 회수(Epoch-Based Reclamation):</b> 핫 리로드와 Big Dumb Reply 교체 시 <code>ttak_epoch_enter/exit</code>를 호출하므로, 아레나가 교체되는 동안에도 읽는 쪽은 막히지 않습니다.</li>
-<li><b>분리 가능한 메모리(Detachable Memory):</b> <code>ttak_detachable_mem_alloc</code>이 제로 카피 HTTP 본문을 뒷받침합니다. 캐시된 조각은 작은 detachable 캐시를 재사용하고 <code>cwist_http_response_set_body_ptr_managed</code>로 정리 훅을 등록합니다.</li>
+<li><b>분리 가능한 <a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">메모리(Detachable Memory)</a>:</b> <code>ttak_detachable_mem_alloc</code>이 제로 카피 HTTP 본문을 뒷받침합니다. 캐시된 조각은 작은 detachable 캐시를 재사용하고 <code>cwist_http_response_set_body_ptr_managed</code>로 정리 훅을 등록합니다.</li>
 </ul>
 <p>세 가지를 모두 조합해 부하 테스트 중에도 <code>/rps</code>를 포화 상태로 유지하는 실행 가능한 예제는 <code>example/rps-showcase/</code>에 있습니다.</p>
 <h1><a class="anchor" id="autotoc_md638"></a>
