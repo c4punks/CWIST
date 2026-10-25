@@ -93,6 +93,13 @@ jobs:
         echo "/tmp/wasm-tools-1.259.0-x86_64-linux" >> "$GITHUB_PATH"
         echo "/tmp/wit-bindgen-0.62.0-x86_64-linux" >> "$GITHUB_PATH"
 
+    - name: Install wasmtime 25
+      run: |
+        curl -sSL -o /tmp/wasmtime.tar.xz \
+          https://github.com/bytecodealliance/wasmtime/releases/download/v25.0.0/wasmtime-v25.0.0-x86_64-linux.tar.xz
+        tar -xJf /tmp/wasmtime.tar.xz -C /tmp
+        echo "/tmp/wasmtime-v25.0.0-x86_64-linux" >> "$GITHUB_PATH"
+
     - name: Validate WIT worlds (wit-check)
       run: make wit-check
 
