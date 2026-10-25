@@ -126,11 +126,11 @@ $(document).ready(function(){initNavTree('d0/d3c/md_docs_2ko_2api_2wasi.html','.
 <tr class="markdownTableRowOdd">
 <td class="markdownTableBodyNone"><code>getpid</code>   </td><td class="markdownTableBodyNone">없음   </td><td class="markdownTableBodyNone"><code>libwasi-emulated-getpid</code>    </td></tr>
 <tr class="markdownTableRowEven">
-<td class="markdownTableBodyNone"><code>sendmsg(2)</code>   </td><td class="markdownTableBodyNone">-   </td><td class="markdownTableBodyNone">없음: <code>send()</code>로 합침    </td></tr>
+<td class="markdownTableBodyNone"><code><a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">sendmsg(2)</a></code>   </td><td class="markdownTableBodyNone">-   </td><td class="markdownTableBodyNone">없음: <code>send()</code>로 합침    </td></tr>
 <tr class="markdownTableRowOdd">
 <td class="markdownTableBodyNone">UDP / TLS   </td><td class="markdownTableBodyNone">-   </td><td class="markdownTableBodyNone">UDP는 선택; TLS는 링크되지 않음 (평문)   </td></tr>
 </table>
-<p>fork/신호/rlimit/스레드를 제외하는 가드는 그냥 <code>__wasi__</code>에 남고, 소켓 서버 런타임 주변의 가드는 <code>CWIST_WASI_(NO_)SOCKETS</code>를 기준으로 합니다.</p>
+<p>fork/신호/rlimit/스레드를 제외하는 가드는 그냥 <code>__wasi__</code>에 남고, 소켓 서버 런타임 주변의 가드는 <code><a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">CWIST_WASI_(NO_)</a>SOCKETS</code>를 기준으로 합니다.</p>
 <h1><a class="anchor" id="autotoc_md496"></a>
 WASI 0.2 소켓 서버</h1>
 <p>빌드, 배포, 재시작 전체 안내는 <a class="el" href="../../d1/dc3/md_docs_2ko_2deployment_2wasmtime-appliance.html">Wasmtime 어플라이언스 가이드</a>를 보세요. 예제의 네트워크와 영속성 한계도 설명합니다.</p>
@@ -158,7 +158,7 @@ preview1 빌드가 다르게 했던 것</h2>
 <ul>
 <li><b>libttak</b>(업스트림 <code>c4punks/libttak</code> main): <code>ttak/compat/pthread.h</code>는 sysroot 자체의 <code>&lt;pthread.h&gt;</code>가 있으면 그것을 우선하고, 없으면 자체 포함된 단일 스레드 스텁으로 대체합니다. <code>ttak/mem/mem.h</code>는 <code>mincore</code>/<code>VirtualQuery</code>가 없는 대상에서 <code>page_base</code>를 조용히 처리합니다.</li>
 <li><b>소켓 서버 런타임</b>: <code><a class="el" href="../../dd/d43/http_8c.html" title="Core HTTP request/response allocation, serialization, socket, and server-loop helpers.">http.c</a></code>/<code><a class="el" href="../../df/d7f/app_8c.html">app.c</a></code>의 소켓 장치는 <code>CWIST_WASI_NO_SOCKETS</code>에서 컴파일에서 빠집니다. <code><a class="el" href="../../d0/d77/sys_2app_2app_8h.html#a05f9a10f4d2ab307c211dd56d54fe7c3" title="Serve app on port until SIGTERM, SIGINT or cwist_shutdown_request(); blocks the calling thread.">cwist_app_listen()</a></code>은 Emscripten처럼 -1을 반환하고, 호스트는 <code><a class="el" href="../../d0/d77/sys_2app_2app_8h.html#aeb91a66106e8a027272fb5b711ac0ba7" title="Run the full router/middleware/handler pipeline on a raw HTTP/1.x request held in a memory buffer,...">cwist_app_dispatch_memory()</a></code>로 요청을 처리합니다.</li>
-<li><b>암호</b>: <code><a class="el" href="../../de/d67/session_8c.html" title="Signed client-side session cookie implementation.">session.c</a></code>와 <code><a class="el" href="../../d0/d3c/seq__auth_8c.html">seq_auth.c</a></code>는 함께 들어 있는 헤더 전용 SHA-256/HMAC (<code><a class="el" href="../../d5/de3/sha256_8h.html" title="Minimal self-contained SHA-256 and HMAC-SHA256 (RFC 4634 style).">include/cwist/core/crypto/sha256.h</a></code>)을 씁니다. 엔트로피는 <code>getentropy()</code> (<code>__wasi_random_get</code>)에서 옵니다.</li>
+<li><b>암호</b>: <code><a class="el" href="../../de/d67/session_8c.html" title="Signed client-side session cookie implementation.">session.c</a></code>와 <code><a class="el" href="../../d0/d3c/seq__auth_8c.html">seq_auth.c</a></code>는 함께 들어 있는 헤더 전용 SHA-256/HMAC (<code><a class="el" href="../../d5/de3/sha256_8h.html" title="Minimal self-contained SHA-256 and HMAC-SHA256 (RFC 4634 style).">include/cwist/core/crypto/sha256.h</a></code>)을 씁니다. 엔트로피는 <code><a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">getentropy()</a></code> (<code>__wasi_random_get</code>)에서 옵니다.</li>
 <li><b>할당</b>: <code><a class="el" href="../../d9/d39/alloc_8c.html" title="Memory allocation bridge that can route CWIST allocations through libttak owner guards.">alloc.c</a></code>/<code><a class="el" href="../../de/d6c/arena_8c.html" title="Request-scoped arena allocator built on libttak arena generations.">arena.c</a></code>는 <code>__wasi__</code>에서 Emscripten 방식의 평범한 libc 경로를 탑니다.</li>
 <li><b>링크 모델</b>: <code>-fvisibility=hidden -Wl,--gc-sections -Wl,--allow-undefined -lwasi-emulated-pthread</code>. Emscripten 링크가 시스템 스텁 라이브러리와 binaryen DCE로 같은 서버 전용 참조를 만족시키는 방식을 그대로 따릅니다.</li>
 </ul>

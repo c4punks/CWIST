@@ -302,13 +302,13 @@ Include dependency graph for rdbms_auto_mount.c:</div>
 <table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="func-members" name="func-members"></a>
 Functions</h2></td></tr>
-<tr class="memitem:a09a61118d4a0a593bb221345ec265c2c" id="r_a09a61118d4a0a593bb221345ec265c2c"><td class="memItemLeft" align="right" valign="top"><a class="el" href="../../d0/d77/sys_2app_2app_8h.html#a073fa10a3d7a6d7d24cc378118202ddd">cwist_rdbms_provider_t</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../da/dec/rdbms__auto__mount_8c.html#a09a61118d4a0a593bb221345ec265c2c">cwist_rdbms_probe_port</a> (int port)</td></tr>
+<tr class="memitem:a09a61118d4a0a593bb221345ec265c2c" id="r_a09a61118d4a0a593bb221345ec265c2c"><td class="memItemLeft" align="right" valign="top"><a class="el" href="../../d0/d77/sys_2app_2app_8h.html#a073fa10a3d7a6d7d24cc378118202ddd">cwist_rdbms_provider_t</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../da/dec/rdbms__auto__mount_8c.html#a09a61118d4a0a593bb221345ec265c2c">cwist_rdbms_probe_port</a> (<a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">int</a> port)</td></tr>
 <tr class="memdesc:a09a61118d4a0a593bb221345ec265c2c"><td class="mdescLeft">&#160;</td><td class="mdescRight">Probe a TCP port on 127.0.0.1 to detect the RDBMS provider.  <br /></td></tr>
 <tr class="separator:a09a61118d4a0a593bb221345ec265c2c"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:af58bf0bc10f785708119dd9e557fab28" id="r_af58bf0bc10f785708119dd9e557fab28"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../da/dec/rdbms__auto__mount_8c.html#af58bf0bc10f785708119dd9e557fab28">cwist_rdbms_mount_runtime</a> (<a class="el" href="../../dc/da0/structcwist__app.html">cwist_app</a> *app, <a class="el" href="../../d0/d77/sys_2app_2app_8h.html#a073fa10a3d7a6d7d24cc378118202ddd">cwist_rdbms_provider_t</a> provider, int port)</td></tr>
+<tr class="memitem:af58bf0bc10f785708119dd9e557fab28" id="r_af58bf0bc10f785708119dd9e557fab28"><td class="memItemLeft" align="right" valign="top"><a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">bool</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../da/dec/rdbms__auto__mount_8c.html#af58bf0bc10f785708119dd9e557fab28">cwist_rdbms_mount_runtime</a> (<a class="el" href="../../dc/da0/structcwist__app.html">cwist_app</a> *app, <a class="el" href="../../d0/d77/sys_2app_2app_8h.html#a073fa10a3d7a6d7d24cc378118202ddd">cwist_rdbms_provider_t</a> provider, <a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">int</a> port)</td></tr>
 <tr class="memdesc:af58bf0bc10f785708119dd9e557fab28"><td class="mdescLeft">&#160;</td><td class="mdescRight">Allocate and attach an RDBMS runtime record to an app.  <br /></td></tr>
 <tr class="separator:af58bf0bc10f785708119dd9e557fab28"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a7c3eba79841911d3e8219ba772550ef5" id="r_a7c3eba79841911d3e8219ba772550ef5"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../da/dec/rdbms__auto__mount_8c.html#a7c3eba79841911d3e8219ba772550ef5">cwist_app_auto_rdbms</a> (<a class="el" href="../../dc/da0/structcwist__app.html">cwist_app</a> *app, int port)</td></tr>
+<tr class="memitem:a7c3eba79841911d3e8219ba772550ef5" id="r_a7c3eba79841911d3e8219ba772550ef5"><td class="memItemLeft" align="right" valign="top"><a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">bool</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../da/dec/rdbms__auto__mount_8c.html#a7c3eba79841911d3e8219ba772550ef5">cwist_app_auto_rdbms</a> (<a class="el" href="../../dc/da0/structcwist__app.html">cwist_app</a> *app, <a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">int</a> port)</td></tr>
 <tr class="memdesc:a7c3eba79841911d3e8219ba772550ef5"><td class="mdescLeft">&#160;</td><td class="mdescRight">Auto-detect an RDBMS on a local port and mount its runtime on an app.  <br /></td></tr>
 <tr class="separator:a7c3eba79841911d3e8219ba772550ef5"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
@@ -324,7 +324,7 @@ Functions</h2></td></tr>
 <div class="memproto">
       <table class="memname">
         <tr>
-          <td class="memname">bool cwist_app_auto_rdbms </td>
+          <td class="memname"><a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">bool</a> cwist_app_auto_rdbms </td>
           <td>(</td>
           <td class="paramtype"><a class="el" href="../../dc/da0/structcwist__app.html">cwist_app</a> *&#160;</td>
           <td class="paramname"><em>app</em>, </td>
@@ -332,7 +332,7 @@ Functions</h2></td></tr>
         <tr>
           <td class="paramkey"></td>
           <td></td>
-          <td class="paramtype">int&#160;</td>
+          <td class="paramtype"><a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">int</a>&#160;</td>
           <td class="paramname"><em>port</em>&#160;</td>
         </tr>
         <tr>
@@ -368,7 +368,7 @@ Functions</h2></td></tr>
 <div class="memproto">
       <table class="memname">
         <tr>
-          <td class="memname">bool cwist_rdbms_mount_runtime </td>
+          <td class="memname"><a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">bool</a> cwist_rdbms_mount_runtime </td>
           <td>(</td>
           <td class="paramtype"><a class="el" href="../../dc/da0/structcwist__app.html">cwist_app</a> *&#160;</td>
           <td class="paramname"><em>app</em>, </td>
@@ -382,7 +382,7 @@ Functions</h2></td></tr>
         <tr>
           <td class="paramkey"></td>
           <td></td>
-          <td class="paramtype">int&#160;</td>
+          <td class="paramtype"><a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">int</a>&#160;</td>
           <td class="paramname"><em>port</em>&#160;</td>
         </tr>
         <tr>
@@ -408,7 +408,7 @@ Functions</h2></td></tr>
 
 <p class="definition">Definition at line <a class="el" href="../../da/dec/rdbms__auto__mount_8c_source.html#l00155">155</a> of file <a class="el" href="../../da/dec/rdbms__auto__mount_8c_source.html">rdbms_auto_mount.c</a>.</p>
 
-<p class="reference">References <a class="el" href="../../d9/d39/alloc_8c_source.html#l00290">cwist_alloc_array()</a>, <a class="el" href="../../d7/d7f/log_8h_source.html#l00057">CWIST_LOG_ERROR</a>, <a class="el" href="../../d7/d7f/log_8h_source.html#l00055">CWIST_LOG_INFO</a>, <a class="el" href="../../d0/d77/sys_2app_2app_8h_source.html#l00091">cwist_rdbms_runtime::port</a>, <a class="el" href="../../d0/d77/sys_2app_2app_8h_source.html#l00090">cwist_rdbms_runtime::provider</a>, <a class="el" href="../../d0/d77/sys_2app_2app_8h_source.html#l00192">cwist_app::rdbms</a>, and <a class="el" href="../../d0/d77/sys_2app_2app_8h_source.html#l00093">cwist_rdbms_runtime::ready</a>.</p>
+<p class="reference">References <a class="el" href="../../d3/db2/otel_8c_source.html#l00056">cap</a>, <a class="el" href="../../d9/d39/alloc_8c_source.html#l00290">cwist_alloc_array()</a>, <a class="el" href="../../d7/d7f/log_8h_source.html#l00057">CWIST_LOG_ERROR</a>, <a class="el" href="../../d7/d7f/log_8h_source.html#l00055">CWIST_LOG_INFO</a>, <a class="el" href="../../d0/d77/sys_2app_2app_8h_source.html#l00091">cwist_rdbms_runtime::port</a>, <a class="el" href="../../d0/d77/sys_2app_2app_8h_source.html#l00090">cwist_rdbms_runtime::provider</a>, and <a class="el" href="../../d0/d77/sys_2app_2app_8h_source.html#l00192">cwist_app::rdbms</a>.</p>
 
 <p class="reference">Referenced by <a class="el" href="../../da/dec/rdbms__auto__mount_8c_source.html#l00189">cwist_app_auto_rdbms()</a>.</p>
 
@@ -423,7 +423,7 @@ Functions</h2></td></tr>
         <tr>
           <td class="memname"><a class="el" href="../../d0/d77/sys_2app_2app_8h.html#a073fa10a3d7a6d7d24cc378118202ddd">cwist_rdbms_provider_t</a> cwist_rdbms_probe_port </td>
           <td>(</td>
-          <td class="paramtype">int&#160;</td>
+          <td class="paramtype"><a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">int</a>&#160;</td>
           <td class="paramname"><em>port</em></td><td>)</td>
           <td></td>
         </tr>
@@ -443,7 +443,7 @@ Functions</h2></td></tr>
 
 <p class="definition">Definition at line <a class="el" href="../../da/dec/rdbms__auto__mount_8c_source.html#l00083">83</a> of file <a class="el" href="../../da/dec/rdbms__auto__mount_8c_source.html">rdbms_auto_mount.c</a>.</p>
 
-<p class="reference">References <a class="el" href="../../d7/d7f/log_8h_source.html#l00057">CWIST_LOG_ERROR</a>, <a class="el" href="../../d0/d77/sys_2app_2app_8h_source.html#l00082">CWIST_RDBMS_NONE</a>, and <a class="el" href="../../d0/d77/sys_2app_2app_8h_source.html#l00083">CWIST_RDBMS_POSTGRES</a>.</p>
+<p class="reference">References <a class="el" href="../../d3/db2/otel_8c_source.html#l00056">cap</a>, <a class="el" href="../../d7/d7f/log_8h_source.html#l00057">CWIST_LOG_ERROR</a>, <a class="el" href="../../d0/d77/sys_2app_2app_8h_source.html#l00082">CWIST_RDBMS_NONE</a>, and <a class="el" href="../../d0/d77/sys_2app_2app_8h_source.html#l00083">CWIST_RDBMS_POSTGRES</a>.</p>
 
 <p class="reference">Referenced by <a class="el" href="../../da/dec/rdbms__auto__mount_8c_source.html#l00189">cwist_app_auto_rdbms()</a>.</p>
 

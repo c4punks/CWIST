@@ -116,10 +116,11 @@ $(document).ready(function(){initNavTree('d1/d4f/typedarray_8h.html','../../'); 
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
 <div class="textblock"><p>Emscripten-only zero-copy helpers: expose C arrays and in-memory dispatch responses to JS as TypedArray views over the WASM heap, instead of round-tripping through snprintf/JSON. </p>
 <p>This header is a deliberate no-op on native toolchains: every definition is guarded by <b>EMSCRIPTEN</b>, so including it from shared code is safe.</p>
-<p>JS side, once per module: </p><div class="fragment"><div class="line">cwist_wasm_install_views();            <span class="comment">// C, from main() — installs:</span></div>
-<div class="line">Module.cwistView.u8(ptr, len)          <span class="comment">//   -&gt; Uint8Array view</span></div>
-<div class="line">Module.cwistView.i32(ptr, len)         <span class="comment">//   -&gt; Int32Array view</span></div>
-<div class="line">Module.cwistView.f64(ptr, len)         <span class="comment">//   -&gt; Float64Array view</span></div>
+<p>JS side, once per module: </p><div class="fragment"><div class="line"><a class="code hl_variable" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">cwist_wasm_install_views</a>();            <span class="comment">// C, from main() — installs:</span></div>
+<div class="line"><a class="code hl_variable" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">Module</a>.cwistView.u8(ptr, len)          <span class="comment">//   -&gt; Uint8Array view</span></div>
+<div class="line"><a class="code hl_variable" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">Module</a>.cwistView.i32(ptr, len)         <span class="comment">//   -&gt; Int32Array view</span></div>
+<div class="line"><a class="code hl_variable" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">Module</a>.cwistView.f64(ptr, len)         <span class="comment">//   -&gt; Float64Array view</span></div>
+<div class="ttc" id="aotel_8c_html_a856fa22aef923b4a345805d81580aebe"><div class="ttname"><a href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">cap</a></div><div class="ttdeci">size_t cap</div><div class="ttdef"><b>Definition</b> <a href="../../d3/db2/otel_8c_source.html#l00056">otel.c:56</a></div></div>
 </div><!-- fragment --> 
 <p class="definition">Definition in file <a class="el" href="../../d1/d4f/typedarray_8h_source.html">typedarray.h</a>.</p>
 </div></div><!-- contents -->

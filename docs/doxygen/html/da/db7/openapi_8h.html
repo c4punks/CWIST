@@ -106,12 +106,14 @@ $(document).ready(function(){initNavTree('da/db7/openapi_8h.html','../../'); ini
 
 <div class="header">
   <div class="summary">
-<a href="#define-members">Macros</a>  </div>
+<a href="#nested-classes">Classes</a> &#124;
+<a href="#define-members">Macros</a> &#124;
+<a href="#func-members">Functions</a>  </div>
   <div class="headertitle"><div class="title">openapi.h File Reference</div></div>
 </div><!--header-->
 <div class="contents">
 
-<p>Source-level OpenAPI annotations consumed by <code>cwist openapi</code>.  
+<p>OpenAPI 3.1 generation — source annotations and runtime serving.  
 <a href="#details">More...</a></p>
 <div class="textblock"><code>#include &lt;<a class="el" href="../../d0/d77/sys_2app_2app_8h_source.html">cwist/sys/app/app.h</a>&gt;</code><br />
 </div><div class="textblock"><div class="dynheader">
@@ -119,7 +121,7 @@ Include dependency graph for openapi.h:</div>
 <div class="dyncontent">
 <div class="center"><img src="../../de/ddb/openapi_8h__incl.png" border="0" usemap="#ainclude_2cwist_2openapi_8h" alt=""/></div>
 <map name="ainclude_2cwist_2openapi_8h" id="ainclude_2cwist_2openapi_8h">
-<area shape="rect" title="Source&#45;level OpenAPI annotations consumed by cwist openapi." alt="" coords="1583,5,1758,31"/>
+<area shape="rect" title="OpenAPI 3.1 generation — source annotations and runtime serving." alt="" coords="1583,5,1758,31"/>
 <area shape="rect" href="../../d0/d77/sys_2app_2app_8h.html" title="Core Application Structure and Lifecycle Management." alt="" coords="1595,79,1746,104"/>
 <area shape="poly" title=" " alt="" coords="1673,31,1673,65,1668,65,1668,31"/>
 <area shape="rect" href="../../d9/dab/net_2http_2http_8h.html" title="HTTP Protocol Definitions and Helpers." alt="" coords="1042,401,1195,427"/>
@@ -263,25 +265,65 @@ Include dependency graph for openapi.h:</div>
 <area shape="poly" title=" " alt="" coords="201,266,201,299,196,299,196,266"/>
 </map>
 </div>
+</div><div class="textblock"><div class="dynheader">
+This graph shows which files directly or indirectly include this file:</div>
+<div class="dyncontent">
+<div class="center"><img src="../../df/d85/openapi_8h__dep__incl.png" border="0" usemap="#ainclude_2cwist_2openapi_8hdep" alt=""/></div>
+<map name="ainclude_2cwist_2openapi_8hdep" id="ainclude_2cwist_2openapi_8hdep">
+<area shape="rect" title="OpenAPI 3.1 generation — source annotations and runtime serving." alt="" coords="5,5,180,31"/>
+<area shape="rect" href="../../d3/d8f/openapi_8c.html" title="Runtime OpenAPI 3.1 endpoint (#408)." alt="" coords="11,79,174,104"/>
+<area shape="poly" title=" " alt="" coords="95,44,95,79,90,79,90,44"/>
+</map>
+</div>
 </div>
 <p><a href="../../da/db7/openapi_8h_source.html">Go to the source code of this file.</a></p>
 <table class="memberdecls">
+<tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="nested-classes" name="nested-classes"></a>
+Classes</h2></td></tr>
+<tr class="memitem:"><td class="memItemLeft" align="right" valign="top">struct &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d7/dbc/structcwist__openapi__meta__t.html">cwist_openapi_meta_t</a></td></tr>
+<tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">Per-application metadata for the generated OpenAPI document.  <a href="../../d7/dbc/structcwist__openapi__meta__t.html#details">More...</a><br /></td></tr>
+<tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
+</table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="define-members" name="define-members"></a>
 Macros</h2></td></tr>
-<tr class="memitem:a3371f45954c4dade6e45618ea62a7ef3" id="r_a3371f45954c4dade6e45618ea62a7ef3"><td class="memItemLeft" align="right" valign="top">#define&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../da/db7/openapi_8h.html#a3371f45954c4dade6e45618ea62a7ef3">CWIST_OPENAPI_GET</a>(app,  path,  handler)&#160;&#160;&#160;<a class="el" href="../../d0/d77/sys_2app_2app_8h.html#a2e05d7cf1fd66d956d6928d465c3aa72">cwist_app_get</a>((app), (path), (handler))</td></tr>
+<tr class="memitem:a3371f45954c4dade6e45618ea62a7ef3" id="r_a3371f45954c4dade6e45618ea62a7ef3"><td class="memItemLeft" align="right" valign="top">#<a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">define</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../da/db7/openapi_8h.html#a3371f45954c4dade6e45618ea62a7ef3">CWIST_OPENAPI_GET</a>(app,  path,  handler)&#160;&#160;&#160;<a class="el" href="../../d0/d77/sys_2app_2app_8h.html#a2e05d7cf1fd66d956d6928d465c3aa72">cwist_app_get</a>((app), (path), (handler))</td></tr>
 <tr class="separator:a3371f45954c4dade6e45618ea62a7ef3"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a954c86ab63e97d7bee85e784955b0dfb" id="r_a954c86ab63e97d7bee85e784955b0dfb"><td class="memItemLeft" align="right" valign="top">#define&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../da/db7/openapi_8h.html#a954c86ab63e97d7bee85e784955b0dfb">CWIST_OPENAPI_POST</a>(app,  path,  handler)&#160;&#160;&#160;<a class="el" href="../../d0/d77/sys_2app_2app_8h.html#a556c24cde3276a70fb9772a727f7e66e">cwist_app_post</a>((app), (path), (handler))</td></tr>
+<tr class="memitem:a954c86ab63e97d7bee85e784955b0dfb" id="r_a954c86ab63e97d7bee85e784955b0dfb"><td class="memItemLeft" align="right" valign="top">#<a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">define</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../da/db7/openapi_8h.html#a954c86ab63e97d7bee85e784955b0dfb">CWIST_OPENAPI_POST</a>(app,  path,  handler)&#160;&#160;&#160;<a class="el" href="../../d0/d77/sys_2app_2app_8h.html#a556c24cde3276a70fb9772a727f7e66e">cwist_app_post</a>((app), (path), (handler))</td></tr>
 <tr class="separator:a954c86ab63e97d7bee85e784955b0dfb"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a108228aedcb69c93af2fc61831ec7cc0" id="r_a108228aedcb69c93af2fc61831ec7cc0"><td class="memItemLeft" align="right" valign="top">#define&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../da/db7/openapi_8h.html#a108228aedcb69c93af2fc61831ec7cc0">CWIST_OPENAPI_PUT</a>(app,  path,  handler)&#160;&#160;&#160;<a class="el" href="../../d0/d77/sys_2app_2app_8h.html#a5b50a4f91ce67816bb3320c1e43de590">cwist_app_put</a>((app), (path), (handler))</td></tr>
+<tr class="memitem:a108228aedcb69c93af2fc61831ec7cc0" id="r_a108228aedcb69c93af2fc61831ec7cc0"><td class="memItemLeft" align="right" valign="top">#<a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">define</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../da/db7/openapi_8h.html#a108228aedcb69c93af2fc61831ec7cc0">CWIST_OPENAPI_PUT</a>(app,  path,  handler)&#160;&#160;&#160;<a class="el" href="../../d0/d77/sys_2app_2app_8h.html#a5b50a4f91ce67816bb3320c1e43de590">cwist_app_put</a>((app), (path), (handler))</td></tr>
 <tr class="separator:a108228aedcb69c93af2fc61831ec7cc0"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a2cdbd433d49af35da051770f40df466f" id="r_a2cdbd433d49af35da051770f40df466f"><td class="memItemLeft" align="right" valign="top">#define&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../da/db7/openapi_8h.html#a2cdbd433d49af35da051770f40df466f">CWIST_OPENAPI_DELETE</a>(app,  path,  handler)&#160;&#160;&#160;<a class="el" href="../../d0/d77/sys_2app_2app_8h.html#a08ba6cd36bd3885ce4f8820a3e9f0cb7">cwist_app_delete</a>((app), (path), (handler))</td></tr>
+<tr class="memitem:a2cdbd433d49af35da051770f40df466f" id="r_a2cdbd433d49af35da051770f40df466f"><td class="memItemLeft" align="right" valign="top">#<a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">define</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../da/db7/openapi_8h.html#a2cdbd433d49af35da051770f40df466f">CWIST_OPENAPI_DELETE</a>(app,  path,  handler)&#160;&#160;&#160;<a class="el" href="../../d0/d77/sys_2app_2app_8h.html#a08ba6cd36bd3885ce4f8820a3e9f0cb7">cwist_app_delete</a>((app), (path), (handler))</td></tr>
 <tr class="separator:a2cdbd433d49af35da051770f40df466f"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a1cf1e1cd77823b19201d28a96bbb1016" id="r_a1cf1e1cd77823b19201d28a96bbb1016"><td class="memItemLeft" align="right" valign="top">#define&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../da/db7/openapi_8h.html#a1cf1e1cd77823b19201d28a96bbb1016">CWIST_OPENAPI_PATCH</a>(app,  path,  handler)&#160;&#160;&#160;<a class="el" href="../../d0/d77/sys_2app_2app_8h.html#acf71ebb3a7e5c9a84791648312279dc7">cwist_app_patch</a>((app), (path), (handler))</td></tr>
+<tr class="memitem:a1cf1e1cd77823b19201d28a96bbb1016" id="r_a1cf1e1cd77823b19201d28a96bbb1016"><td class="memItemLeft" align="right" valign="top">#<a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">define</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../da/db7/openapi_8h.html#a1cf1e1cd77823b19201d28a96bbb1016">CWIST_OPENAPI_PATCH</a>(app,  path,  handler)&#160;&#160;&#160;<a class="el" href="../../d0/d77/sys_2app_2app_8h.html#acf71ebb3a7e5c9a84791648312279dc7">cwist_app_patch</a>((app), (path), (handler))</td></tr>
 <tr class="separator:a1cf1e1cd77823b19201d28a96bbb1016"><td class="memSeparator" colspan="2">&#160;</td></tr>
+</table><table class="memberdecls">
+<tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="func-members" name="func-members"></a>
+Functions</h2></td></tr>
+<tr class="memitem:a531229994bcd1a255b532a42bdd1fdbb" id="r_a531229994bcd1a255b532a42bdd1fdbb"><td class="memItemLeft" align="right" valign="top"><a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">void</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../da/db7/openapi_8h.html#a531229994bcd1a255b532a42bdd1fdbb">cwist_app_enable_openapi</a> (<a class="el" href="../../dc/da0/structcwist__app.html">cwist_app</a> *app, <a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">const</a> <a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">char</a> *json_path, <a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">const</a> <a class="el" href="../../d7/dbc/structcwist__openapi__meta__t.html">cwist_openapi_meta_t</a> *<a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">meta</a>)</td></tr>
+<tr class="memdesc:a531229994bcd1a255b532a42bdd1fdbb"><td class="mdescLeft">&#160;</td><td class="mdescRight">Serve the app's OpenAPI 3.1 document.  <br /></td></tr>
+<tr class="separator:a531229994bcd1a255b532a42bdd1fdbb"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ae929c04755757a9918cd6351da5627d3" id="r_ae929c04755757a9918cd6351da5627d3"><td class="memItemLeft" align="right" valign="top"><a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">void</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../da/db7/openapi_8h.html#ae929c04755757a9918cd6351da5627d3">cwist_openapi_annotate</a> (<a class="el" href="../../dc/da0/structcwist__app.html">cwist_app</a> *app, <a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">const</a> <a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">char</a> *method, <a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">const</a> <a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">char</a> *path, <a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">const</a> <a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">char</a> *summary, <a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">const</a> <a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">char</a> *tags)</td></tr>
+<tr class="memdesc:ae929c04755757a9918cd6351da5627d3"><td class="mdescLeft">&#160;</td><td class="mdescRight">Attach a summary and tags to one operation of the document.  <br /></td></tr>
+<tr class="separator:ae929c04755757a9918cd6351da5627d3"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
-<div class="textblock"><p>Source-level OpenAPI annotations consumed by <code>cwist openapi</code>. </p>
-<p>Put Doxygen tags immediately before a CWIST_OPENAPI_* route declaration: </p><div class="fragment"><div class="line"> </div>
+<div class="textblock"><p>OpenAPI 3.1 generation — source annotations and runtime serving. </p>
+<p>The CWIST_OPENAPI_* macros register a route normally and leave a parseable declaration in C source for off-line tooling (<code>cwist openapi</code>).</p>
+<p><a class="el" href="../../da/db7/openapi_8h.html#a531229994bcd1a255b532a42bdd1fdbb" title="Serve the app&#39;s OpenAPI 3.1 document.">cwist_app_enable_openapi()</a> serves an OpenAPI 3.1 document built from the app's live route table on every request: each HTTP route appears with its path (":id" segments become "{id}" path parameters) and method, however it was registered. <a class="el" href="../../da/db7/openapi_8h.html#ae929c04755757a9918cd6351da5627d3" title="Attach a summary and tags to one operation of the document.">cwist_openapi_annotate()</a> adds a summary and tags.</p>
+<p>Minimal example: </p><div class="fragment"><div class="line"><a class="code hl_struct" href="../../d7/dbc/structcwist__openapi__meta__t.html">cwist_openapi_meta_t</a> <a class="code hl_variable" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">meta</a> = {</div>
+<div class="line">    .<a class="code hl_variable" href="../../d7/dbc/structcwist__openapi__meta__t.html#a80c44e84bab46f78666fae1e525ec51a">title</a>   = <span class="stringliteral">&quot;My API&quot;</span>,</div>
+<div class="line">    .version = <span class="stringliteral">&quot;1.0.0&quot;</span>,</div>
+<div class="line">};</div>
+<div class="line"><a class="code hl_function" href="../../da/db7/openapi_8h.html#a531229994bcd1a255b532a42bdd1fdbb">cwist_app_enable_openapi</a>(app, <span class="stringliteral">&quot;/openapi.json&quot;</span>, &amp;<a class="code hl_variable" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">meta</a>);</div>
+<div class="line"> </div>
+<div class="line"><a class="code hl_define" href="../../da/db7/openapi_8h.html#a3371f45954c4dade6e45618ea62a7ef3">CWIST_OPENAPI_GET</a>(app, <span class="stringliteral">&quot;/users&quot;</span>, <a class="code hl_variable" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">list_users</a>);</div>
+<div class="line"><a class="code hl_function" href="../../da/db7/openapi_8h.html#ae929c04755757a9918cd6351da5627d3">cwist_openapi_annotate</a>(app, <span class="stringliteral">&quot;GET&quot;</span>, <span class="stringliteral">&quot;/users&quot;</span>, <span class="stringliteral">&quot;List users&quot;</span>, <span class="stringliteral">&quot;users&quot;</span>);</div>
+<div class="ttc" id="aopenapi_8h_html_a3371f45954c4dade6e45618ea62a7ef3"><div class="ttname"><a href="../../da/db7/openapi_8h.html#a3371f45954c4dade6e45618ea62a7ef3">CWIST_OPENAPI_GET</a></div><div class="ttdeci">#define CWIST_OPENAPI_GET(app, path, handler)</div><div class="ttdef"><b>Definition</b> <a href="../../da/db7/openapi_8h_source.html#l00032">openapi.h:32</a></div></div>
+<div class="ttc" id="aopenapi_8h_html_a531229994bcd1a255b532a42bdd1fdbb"><div class="ttname"><a href="../../da/db7/openapi_8h.html#a531229994bcd1a255b532a42bdd1fdbb">cwist_app_enable_openapi</a></div><div class="ttdeci">void cwist_app_enable_openapi(cwist_app *app, const char *json_path, const cwist_openapi_meta_t *meta)</div><div class="ttdoc">Serve the app's OpenAPI 3.1 document.</div><div class="ttdef"><b>Definition</b> <a href="../../d3/d8f/openapi_8c_source.html#l00210">openapi.c:210</a></div></div>
+<div class="ttc" id="aopenapi_8h_html_ae929c04755757a9918cd6351da5627d3"><div class="ttname"><a href="../../da/db7/openapi_8h.html#ae929c04755757a9918cd6351da5627d3">cwist_openapi_annotate</a></div><div class="ttdeci">void cwist_openapi_annotate(cwist_app *app, const char *method, const char *path, const char *summary, const char *tags)</div><div class="ttdoc">Attach a summary and tags to one operation of the document.</div><div class="ttdef"><b>Definition</b> <a href="../../d3/d8f/openapi_8c_source.html#l00242">openapi.c:242</a></div></div>
+<div class="ttc" id="aotel_8c_html_a856fa22aef923b4a345805d81580aebe"><div class="ttname"><a href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">cap</a></div><div class="ttdeci">size_t cap</div><div class="ttdef"><b>Definition</b> <a href="../../d3/db2/otel_8c_source.html#l00056">otel.c:56</a></div></div>
+<div class="ttc" id="astructcwist__openapi__meta__t_html"><div class="ttname"><a href="../../d7/dbc/structcwist__openapi__meta__t.html">cwist_openapi_meta_t</a></div><div class="ttdoc">Per-application metadata for the generated OpenAPI document.</div><div class="ttdef"><b>Definition</b> <a href="../../da/db7/openapi_8h_source.html#l00044">openapi.h:44</a></div></div>
+<div class="ttc" id="astructcwist__openapi__meta__t_html_a80c44e84bab46f78666fae1e525ec51a"><div class="ttname"><a href="../../d7/dbc/structcwist__openapi__meta__t.html#a80c44e84bab46f78666fae1e525ec51a">cwist_openapi_meta_t::title</a></div><div class="ttdeci">const char * title</div><div class="ttdef"><b>Definition</b> <a href="../../da/db7/openapi_8h_source.html#l00045">openapi.h:45</a></div></div>
 </div><!-- fragment --> 
 <p class="definition">Definition in file <a class="el" href="../../da/db7/openapi_8h_source.html">openapi.h</a>.</p>
 </div><h2 class="groupheader">Macro Definition Documentation</h2>
@@ -292,7 +334,7 @@ Macros</h2></td></tr>
 <div class="memproto">
       <table class="memname">
         <tr>
-          <td class="memname">#define CWIST_OPENAPI_DELETE</td>
+          <td class="memname">#<a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">define</a> CWIST_OPENAPI_DELETE</td>
           <td>(</td>
           <td class="paramtype">&#160;</td>
           <td class="paramname">app, </td>
@@ -317,7 +359,7 @@ Macros</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../da/db7/openapi_8h_source.html#l00024">24</a> of file <a class="el" href="../../da/db7/openapi_8h_source.html">openapi.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../da/db7/openapi_8h_source.html#l00035">35</a> of file <a class="el" href="../../da/db7/openapi_8h_source.html">openapi.h</a>.</p>
 
 </div>
 </div>
@@ -328,7 +370,7 @@ Macros</h2></td></tr>
 <div class="memproto">
       <table class="memname">
         <tr>
-          <td class="memname">#define CWIST_OPENAPI_GET</td>
+          <td class="memname">#<a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">define</a> CWIST_OPENAPI_GET</td>
           <td>(</td>
           <td class="paramtype">&#160;</td>
           <td class="paramname">app, </td>
@@ -353,7 +395,7 @@ Macros</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../da/db7/openapi_8h_source.html#l00021">21</a> of file <a class="el" href="../../da/db7/openapi_8h_source.html">openapi.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../da/db7/openapi_8h_source.html#l00032">32</a> of file <a class="el" href="../../da/db7/openapi_8h_source.html">openapi.h</a>.</p>
 
 </div>
 </div>
@@ -364,7 +406,7 @@ Macros</h2></td></tr>
 <div class="memproto">
       <table class="memname">
         <tr>
-          <td class="memname">#define CWIST_OPENAPI_PATCH</td>
+          <td class="memname">#<a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">define</a> CWIST_OPENAPI_PATCH</td>
           <td>(</td>
           <td class="paramtype">&#160;</td>
           <td class="paramname">app, </td>
@@ -389,7 +431,7 @@ Macros</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../da/db7/openapi_8h_source.html#l00025">25</a> of file <a class="el" href="../../da/db7/openapi_8h_source.html">openapi.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../da/db7/openapi_8h_source.html#l00036">36</a> of file <a class="el" href="../../da/db7/openapi_8h_source.html">openapi.h</a>.</p>
 
 </div>
 </div>
@@ -400,7 +442,7 @@ Macros</h2></td></tr>
 <div class="memproto">
       <table class="memname">
         <tr>
-          <td class="memname">#define CWIST_OPENAPI_POST</td>
+          <td class="memname">#<a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">define</a> CWIST_OPENAPI_POST</td>
           <td>(</td>
           <td class="paramtype">&#160;</td>
           <td class="paramname">app, </td>
@@ -425,7 +467,7 @@ Macros</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../da/db7/openapi_8h_source.html#l00022">22</a> of file <a class="el" href="../../da/db7/openapi_8h_source.html">openapi.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../da/db7/openapi_8h_source.html#l00033">33</a> of file <a class="el" href="../../da/db7/openapi_8h_source.html">openapi.h</a>.</p>
 
 </div>
 </div>
@@ -436,7 +478,7 @@ Macros</h2></td></tr>
 <div class="memproto">
       <table class="memname">
         <tr>
-          <td class="memname">#define CWIST_OPENAPI_PUT</td>
+          <td class="memname">#<a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">define</a> CWIST_OPENAPI_PUT</td>
           <td>(</td>
           <td class="paramtype">&#160;</td>
           <td class="paramname">app, </td>
@@ -461,7 +503,120 @@ Macros</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../da/db7/openapi_8h_source.html#l00023">23</a> of file <a class="el" href="../../da/db7/openapi_8h_source.html">openapi.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../da/db7/openapi_8h_source.html#l00034">34</a> of file <a class="el" href="../../da/db7/openapi_8h_source.html">openapi.h</a>.</p>
+
+</div>
+</div>
+<h2 class="groupheader">Function Documentation</h2>
+<a id="a531229994bcd1a255b532a42bdd1fdbb" name="a531229994bcd1a255b532a42bdd1fdbb"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a531229994bcd1a255b532a42bdd1fdbb">&#9670;&#160;</a></span>cwist_app_enable_openapi()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname"><a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">void</a> cwist_app_enable_openapi </td>
+          <td>(</td>
+          <td class="paramtype"><a class="el" href="../../dc/da0/structcwist__app.html">cwist_app</a> *&#160;</td>
+          <td class="paramname"><em>app</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype"><a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">const</a> <a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">char</a> *&#160;</td>
+          <td class="paramname"><em>json_path</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype"><a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">const</a> <a class="el" href="../../d7/dbc/structcwist__openapi__meta__t.html">cwist_openapi_meta_t</a> *&#160;</td>
+          <td class="paramname"><em>meta</em>&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Serve the app's OpenAPI 3.1 document. </p>
+<p>Registers GET <code>json_path</code>. The document lists every HTTP route of <code>app</code> at request time (the spec route itself and WebSocket routes excepted), so routes added before or after this call are all included. A second call on the same <code>app</code> is ignored.</p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">app</td><td>Application to serve the document from. </td></tr>
+    <tr><td class="paramname">json_path</td><td>URL path of the document; NULL means "/openapi.json". </td></tr>
+    <tr><td class="paramname">meta</td><td>Document metadata; NULL uses the defaults. </td></tr>
+  </table>
+  </dd>
+</dl>
+
+<p class="definition">Definition at line <a class="el" href="../../d3/d8f/openapi_8c_source.html#l00210">210</a> of file <a class="el" href="../../d3/d8f/openapi_8c_source.html">openapi.c</a>.</p>
+
+<p class="reference">References <a class="el" href="../../d3/db2/otel_8c_source.html#l00056">cap</a>, <a class="el" href="../../d9/d39/alloc_8c_source.html#l00276">cwist_alloc()</a>, <a class="el" href="../../df/d7f/app_8c_source.html#l02175">cwist_app_get_ex()</a>, <a class="el" href="../../d9/d39/alloc_8c_source.html#l00391">cwist_free()</a>, and <a class="el" href="../../d9/d39/alloc_8c_source.html#l00348">cwist_strdup()</a>.</p>
+
+</div>
+</div>
+<a id="ae929c04755757a9918cd6351da5627d3" name="ae929c04755757a9918cd6351da5627d3"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ae929c04755757a9918cd6351da5627d3">&#9670;&#160;</a></span>cwist_openapi_annotate()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname"><a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">void</a> cwist_openapi_annotate </td>
+          <td>(</td>
+          <td class="paramtype"><a class="el" href="../../dc/da0/structcwist__app.html">cwist_app</a> *&#160;</td>
+          <td class="paramname"><em>app</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype"><a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">const</a> <a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">char</a> *&#160;</td>
+          <td class="paramname"><em>method</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype"><a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">const</a> <a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">char</a> *&#160;</td>
+          <td class="paramname"><em>path</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype"><a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">const</a> <a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">char</a> *&#160;</td>
+          <td class="paramname"><em>summary</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype"><a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">const</a> <a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">char</a> *&#160;</td>
+          <td class="paramname"><em>tags</em>&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Attach a summary and tags to one operation of the document. </p>
+<p>Takes effect only after <a class="el" href="../../da/db7/openapi_8h.html#a531229994bcd1a255b532a42bdd1fdbb" title="Serve the app&#39;s OpenAPI 3.1 document.">cwist_app_enable_openapi()</a> on the same <code>app</code>. Annotating the same method and path again replaces the earlier values.</p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">app</td><td>Application owning the route. </td></tr>
+    <tr><td class="paramname">method</td><td>HTTP method name, case-insensitive ("GET", "post", ...). </td></tr>
+    <tr><td class="paramname">path</td><td>Route path exactly as registered (e.g. "/users/:id"). </td></tr>
+    <tr><td class="paramname">summary</td><td>Operation summary, or NULL. </td></tr>
+    <tr><td class="paramname">tags</td><td>Comma-separated tag list, or NULL. </td></tr>
+  </table>
+  </dd>
+</dl>
+
+<p class="definition">Definition at line <a class="el" href="../../d3/d8f/openapi_8c_source.html#l00242">242</a> of file <a class="el" href="../../d3/d8f/openapi_8c_source.html">openapi.c</a>.</p>
+
+<p class="reference">References <a class="el" href="../../d3/db2/otel_8c_source.html#l00056">cap</a>, <a class="el" href="../../d9/d39/alloc_8c_source.html#l00276">cwist_alloc()</a>, <a class="el" href="../../d9/d39/alloc_8c_source.html#l00391">cwist_free()</a>, <a class="el" href="../../dd/d56/http_8h_source.html#l00024">CWIST_HTTP_UNKNOWN</a>, and <a class="el" href="../../d9/d39/alloc_8c_source.html#l00348">cwist_strdup()</a>.</p>
 
 </div>
 </div>

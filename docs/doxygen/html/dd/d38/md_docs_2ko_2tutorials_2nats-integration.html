@@ -113,7 +113,7 @@ $(document).ready(function(){initNavTree('dd/d38/md_docs_2ko_2tutorials_2nats-in
 1. 요청과 워커의 책임 나누기</h1>
 <p>HTTP 핸들러는 JSON 명령을 검증하고, 요청 id를 부여하고, 다음과 같은 간결한 이벤트를 게시해야 합니다.</p>
 <div class="fragment"><div class="line">{&quot;type&quot;:&quot;post.created&quot;,&quot;post_id&quot;:42,&quot;request_id&quot;:&quot;...&quot;}</div>
-</div><!-- fragment --><p>워커는 <code>blog.post.created</code>를 구독하고, 파생 작업을 저장하고, 결과나 실패 이벤트를 게시합니다. 주제(subject) 이름에는 소유자와 버전을 담으세요. 예: <code>blog.v1.post.created</code>.</p>
+</div><!-- fragment --><p>워커는 <code>blog.post.created</code>를 구독하고, 파생 작업을 저장하고, 결과나 실패 이벤트를 게시합니다. <a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">주제(subject)</a> 이름에는 소유자와 버전을 담으세요. 예: <code>blog.v1.post.created</code>.</p>
 <h1><a class="anchor" id="autotoc_md672"></a>
 2. 라우트에서 게시하기</h1>
 <p>NATS 클라이언트는 애플리케이션 시작 시 한 번 초기화하고, 요청마다 다시 연결하지 말고 오래 사는 연결을 공유하세요. 핸들러는 선택한 영속성 경계를 넘은 뒤에만 성공을 확인해야 합니다. 보내고 잊는 작업이라면 게시 성공이, 브로커 장애를 견뎌야 하는 작업이라면 데이터베이스 트랜잭션/아웃박스 기록이 그 경계입니다.</p>

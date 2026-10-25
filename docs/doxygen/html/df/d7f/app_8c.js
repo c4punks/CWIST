@@ -36,6 +36,7 @@ var app_8c =
     [ "cwist_app_enable_healthz", "df/d7f/app_8c.html#a91c0e4f2faf1811afd080ba7f2cdfa54", null ],
     [ "cwist_app_enable_metrics", "df/d7f/app_8c.html#a0ed60a094a20a9d489b195f85a0d673d", null ],
     [ "cwist_app_enable_swagger", "df/d7f/app_8c.html#a10cd19026940e0c4631093aa86cd041f", null ],
+    [ "cwist_app_foreach_route", "df/d7f/app_8c.html#a43da26398d9302191de80c134431390e", null ],
     [ "cwist_app_get", "df/d7f/app_8c.html#a2e05d7cf1fd66d956d6928d465c3aa72", null ],
     [ "cwist_app_get_db", "df/d7f/app_8c.html#af87347ebdea5e8226c86ae8965fa23e1", null ],
     [ "cwist_app_get_db_pool", "df/d7f/app_8c.html#a4eb9279afc57bb5313bf500fdc41d50e", null ],
