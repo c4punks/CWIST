@@ -400,6 +400,7 @@ SRCS = src/core/sstring/sstring.c \
        src/core/html/component.c \
        src/net/http/html_response.c \
        src/sys/app/assets.c \
+       src/sys/app/openapi.c \
        src/sys/app/big_dumb_reply.c \
        src/core/mem/alloc.c \
        src/core/mem/arena.c \
@@ -1268,6 +1269,7 @@ TEST_TARGETS = test_worker_affinity \
                test_http_fairness \
                test_http_pipeline \
                test_test_client \
+               test_openapi \
                test_multiport \
                test_route_ctx \
                test_middleware_ctx \
@@ -2239,6 +2241,10 @@ test_async_file_park: $(LIB_NAME) tests/test_async_file_park.c
 test_test_client: $(LIB_NAME) tests/test_test_client.c
 	$(CC) $(CFLAGS) -o test_test_client tests/test_test_client.c $(LIB_NAME) $(LIBS)
 	./test_test_client
+
+test_openapi: $(LIB_NAME) tests/test_openapi.c
+	$(CC) $(CFLAGS) -o test_openapi tests/test_openapi.c $(LIB_NAME) $(LIBS)
+	./test_openapi
 
 test_multiport: $(LIB_NAME) tests/test_multiport.c
 	$(CC) $(CFLAGS) -o test_multiport tests/test_multiport.c $(LIB_NAME) $(LIBS)

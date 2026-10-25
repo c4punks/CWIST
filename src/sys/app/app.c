@@ -10,6 +10,7 @@
 #include "worker_affinity.h"
 #endif
 #include "assets_internal.h"
+#include "routes_internal.h"
 /* Application headers (external) */
 #include <cwist/sys/app/app.h>
 #include <cwist/sys/app/config.h>
@@ -3834,6 +3835,23 @@ static cwist_route_target cwist_route_clone_target(const cwist_route_entry *entr
                                  .ctx_destroy = NULL,
                                  .ws_handler = entry->ws_handler};
     return target;
+}
+
+static bool cwist_route_is_http(const cwist_route_entry *entry) {
+    return !entry->ws_handler && !entry->ws_async_on_message;
+}
+
+void cwist_app_foreach_route(cwist_app *app, cwist_route_visit_fn visit, void *ctx) {
+    if (!app || !app->router || !visit) return;
+    cwist_route_table *table = app->router;
+    for (size_t i = 0; i < table->bucket_count; i++) {
+        for (cwist_route_entry *entry = table->buckets[i]; entry; entry = entry->next) {
+            if (cwist_route_is_http(entry)) visit(ctx, entry->method, entry->path);
+        }
+    }
+    for (cwist_route_entry *entry = table->param_routes; entry; entry = entry->next) {
+        if (cwist_route_is_http(entry)) visit(ctx, entry->method, entry->path);
+    }
 }
 
 static cwist_route_table *cwist_route_table_clone(cwist_route_table *src) {
