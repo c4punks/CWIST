@@ -108,16 +108,16 @@ $(document).ready(function(){initNavTree('d3/d19/md_docs_2ko_2REFERENCE.html','.
   <div class="headertitle"><div class="title">CWIST 라이브러리 레퍼런스</div></div>
 </div><!--header-->
 <div class="contents">
-<div class="textblock"><p><a class="anchor" id="autotoc_md627"></a> CWIST는 안전하고 확장 가능한 웹 애플리케이션을 만들기 위한 C 라이브러리입니다. 문자열 처리, HTTP/HTTPS, URI 파싱, 데이터베이스 접근, 암호학적 해시를 위한 모듈을 포함합니다.</p>
-<h1><a class="anchor" id="autotoc_md628"></a>
+<div class="textblock"><p><a class="anchor" id="autotoc_md635"></a> CWIST는 안전하고 확장 가능한 웹 애플리케이션을 만들기 위한 C 라이브러리입니다. 문자열 처리, HTTP/HTTPS, URI 파싱, 데이터베이스 접근, 암호학적 해시를 위한 모듈을 포함합니다.</p>
+<h1><a class="anchor" id="autotoc_md636"></a>
 모듈</h1>
-<h2><a class="anchor" id="autotoc_md629"></a>
+<h2><a class="anchor" id="autotoc_md637"></a>
 1. SString (스마트 문자열)</h2>
 <p>안전한 동적 문자열 구현입니다.</p><ul>
 <li><b>헤더:</b> <code>&lt;<a class="el" href="../../d4/dbd/core_2sstring_2sstring_8h.html" title="Safe string type with helper methods.">cwist/core/sstring/sstring.h</a>&gt;</code></li>
 <li><b>기능:</b> 자동 크기 조절, 이어 붙이기, 안전한 조작.</li>
 </ul>
-<h2><a class="anchor" id="autotoc_md630"></a>
+<h2><a class="anchor" id="autotoc_md638"></a>
 2. HTTP 서버</h2>
 <p>멀티 프로세스/스레드 HTTP 서버 프레임워크입니다.</p><ul>
 <li><b>헤더:</b> <code>&lt;<a class="el" href="../../d9/dab/net_2http_2http_8h.html" title="HTTP Protocol Definitions and Helpers.">cwist/net/http/http.h</a>&gt;</code></li>
@@ -129,7 +129,7 @@ $(document).ready(function(){initNavTree('d3/d19/md_docs_2ko_2REFERENCE.html','.
 </ul>
 </li>
 </ul>
-<h2><a class="anchor" id="autotoc_md631"></a>
+<h2><a class="anchor" id="autotoc_md639"></a>
 3. HTTPS 지원</h2>
 <p>포스트 양자 암호를 지원하는 BoringSSL 기반 보안 전송 계층입니다.</p><ul>
 <li><b>헤더:</b> <code>&lt;<a class="el" href="../../d7/d67/net_2http_2https_8h.html" title="HTTPS/TLS wrapper interface.">cwist/net/http/https.h</a>&gt;</code></li>
@@ -142,14 +142,14 @@ $(document).ready(function(){initNavTree('d3/d19/md_docs_2ko_2REFERENCE.html','.
 </ul>
 </li>
 </ul>
-<h2><a class="anchor" id="autotoc_md632"></a>
+<h2><a class="anchor" id="autotoc_md640"></a>
 4. 쿼리 파싱</h2>
 <p><code>liburiparser</code>를 사용하는 견고한 쿼리 문자열 파싱입니다.</p><ul>
 <li><b>헤더:</b> <code>&lt;<a class="el" href="../../d1/d7a/net_2http_2query_8h.html" title="Query string parser and map.">cwist/net/http/query.h</a>&gt;</code></li>
 <li><b>함수:</b> <code>void cwist_query_map_parse(map, raw_query)</code></li>
 <li><b>동작:</b> <code>key=value&amp;key2=val2</code>를 해시 <a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">맵(SipHash)</a>으로 파싱합니다.</li>
 </ul>
-<h2><a class="anchor" id="autotoc_md633"></a>
+<h2><a class="anchor" id="autotoc_md641"></a>
 5. 데이터베이스 (SQL)</h2>
 <p>영구 저장을 위한 <code>sqlite3</code> 래퍼입니다.</p><ul>
 <li><b>헤더:</b> <code>&lt;<a class="el" href="../../d0/dae/core_2db_2sql_8h.html" title="Database operations wrapper (SQLite3).">cwist/core/db/sql.h</a>&gt;</code></li>
@@ -160,26 +160,26 @@ $(document).ready(function(){initNavTree('d3/d19/md_docs_2ko_2REFERENCE.html','.
 </ul>
 </li>
 </ul>
-<h2><a class="anchor" id="autotoc_md634"></a>
+<h2><a class="anchor" id="autotoc_md642"></a>
 6. SipHash</h2>
 <p>해시 맵에 쓰이는 암호학적 해시 함수입니다 (쿼리/헤더에서 사용).</p><ul>
 <li><b>헤더:</b> <code>&lt;<a class="el" href="../../d0/db0/core_2siphash_2siphash_8h.html">cwist/core/siphash/siphash.h</a>&gt;</code></li>
 </ul>
-<h2><a class="anchor" id="autotoc_md635"></a>
+<h2><a class="anchor" id="autotoc_md643"></a>
 7. 에러 처리</h2>
 <p><code><a class="el" href="../../d4/d50/structcwist__error__t.html" title="Integrated error structure used throughout the system.">cwist_error_t</a></code>를 사용하는 통합 에러 처리 시스템입니다.</p><ul>
 <li><b>헤더:</b> <code>&lt;<a class="el" href="../../d7/da1/sys_2err_2cwist__err_8h.html" title="Unified error code and type definitions for the CWIST system layer.">cwist/sys/err/cwist_err.h</a>&gt;</code></li>
 <li><b>기능:</b> 단순한 정수 코드나 복잡한 JSON 객체(예: OpenSSL/SQLite 에러)를 반환할 수 있습니다.</li>
 <li><b>메모리 할당 실패:</b> CWIST는 공개 경로에서 할당 실패로 abort하거나 NULL을 역참조하지 않습니다. 설정 호출(<code>*_create</code>, <code>*_init</code>, <code>*_use_*</code>, setter)은 실패를 반환값으로 알리고 기존 상태를 그대로 둡니다. 요청 경로에서는 해당 요청이 실패하며(500 같은 에러 상태 또는 연결 종료), 요청 ID, 정적 파일 캐시, 세션 쿠키 같은 선택 기능은 건너뜁니다.</li>
 </ul>
-<h2><a class="anchor" id="autotoc_md636"></a>
+<h2><a class="anchor" id="autotoc_md644"></a>
 8. Big Dumb Reply (BDR)</h2>
 <p>비용이 큰 핸들러의 직렬화된 응답을 자동으로 캐시합니다.</p><ul>
 <li><b>헤더:</b> <code>&lt;<a class="el" href="../../da/d2c/big__dumb__reply_8h.html" title="Auto-Caching Layer for repetitive requests.">cwist/sys/app/big_dumb_reply.h</a>&gt;</code></li>
 <li><b>함수:</b> <code>cwist_bdr_get</code>, <code>cwist_bdr_put</code>, <code>cwist_bdr_set_limits</code>.</li>
 <li><b>안전장치:</b> 항목은 설정 가능한 TTL이나 히트 횟수 예산이 지나면 만료되고, 캐시는 소프트 바이트 상한(기본 32 MiB)을 유지합니다. 애플리케이션별 동작은 <code>cwist_app_configure_bdr</code>로 조정합니다.</li>
 </ul>
-<h1><a class="anchor" id="autotoc_md637"></a>
+<h1><a class="anchor" id="autotoc_md645"></a>
 LibTTAK 메모리 기능</h1>
 <p>CWIST는 libttak을 내장하고 최신 메모리 런타임을 노출합니다.</p>
 <ul>
@@ -188,7 +188,7 @@ LibTTAK 메모리 기능</h1>
 <li><b>분리 가능한 <a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">메모리(Detachable Memory)</a>:</b> <code>ttak_detachable_mem_alloc</code>이 제로 카피 HTTP 본문을 뒷받침합니다. 캐시된 조각은 작은 detachable 캐시를 재사용하고 <code>cwist_http_response_set_body_ptr_managed</code>로 정리 훅을 등록합니다.</li>
 </ul>
 <p>세 가지를 모두 조합해 부하 테스트 중에도 <code>/rps</code>를 포화 상태로 유지하는 실행 가능한 예제는 <code>example/rps-showcase/</code>에 있습니다.</p>
-<h1><a class="anchor" id="autotoc_md638"></a>
+<h1><a class="anchor" id="autotoc_md646"></a>
 예제: Othello Web</h1>
 <p>위치: <code>example/othello-web/</code>.</p><ul>
 <li><b>스택:</b> HTML/CSS/JS (프론트엔드), C (백엔드).</li>
@@ -200,7 +200,7 @@ LibTTAK 메모리 기능</h1>
 </ul>
 </li>
 </ul>
-<h1><a class="anchor" id="autotoc_md639"></a>
+<h1><a class="anchor" id="autotoc_md647"></a>
 의존성</h1>
 <ul>
 <li><code>libssl-dev</code> (OpenSSL)</li>
@@ -208,7 +208,7 @@ LibTTAK 메모리 기능</h1>
 <li><code>liburiparser-dev</code> (URI 파싱)</li>
 <li><code>libsqlite3-dev</code> (데이터베이스)</li>
 </ul>
-<h1><a class="anchor" id="autotoc_md640"></a>
+<h1><a class="anchor" id="autotoc_md648"></a>
 빌드</h1>
 <p><code>make</code>를 실행하면 정적 라이브러리 <code>libcwist.a</code>가 만들어집니다. <code>make test</code>를 실행하면 단위 테스트가 돌아갑니다. </p>
 </div></div><!-- contents -->

@@ -108,9 +108,9 @@ $(document).ready(function(){initNavTree('d0/db4/md_docs_2versioning.html','../.
   <div class="headertitle"><div class="title">Release Codename Sequencing Specification</div></div>
 </div><!--header-->
 <div class="contents">
-<div class="textblock"><p><a class="anchor" id="autotoc_md873"></a> The codename of a CWIST LTS release is a state identifier. It carries no semantic meaning and no tier (major, minor, and so on); it follows only the alphabet's <b>tail-in sequential propagation</b> rule.</p>
+<div class="textblock"><p><a class="anchor" id="autotoc_md881"></a> The codename of a CWIST LTS release is a state identifier. It carries no semantic meaning and no tier (major, minor, and so on); it follows only the alphabet's <b>tail-in sequential propagation</b> rule.</p>
 <hr  />
-<h1><a class="anchor" id="autotoc_md875"></a>
+<h1><a class="anchor" id="autotoc_md883"></a>
 1. Principles</h1>
 <ul>
 <li>A codename consists of uppercase ASCII letters.</li>
@@ -119,7 +119,7 @@ $(document).ready(function(){initNavTree('d0/db4/md_docs_2versioning.html','../.
 <li>No position carries a functional meaning or a version weight.</li>
 </ul>
 <hr  />
-<h1><a class="anchor" id="autotoc_md877"></a>
+<h1><a class="anchor" id="autotoc_md885"></a>
 2. Two-letter sequence (default)</h1>
 <p>$$\text{AA} \rightarrow \text{AB} \rightarrow \text{BA} \rightarrow \text{BB} \rightarrow \text{BC} \rightarrow \text{CB} \rightarrow \text{CC} \rightarrow \text{CD} \rightarrow \dots$$</p>
 <ol type="1">
@@ -132,7 +132,7 @@ $(document).ready(function(){initNavTree('d0/db4/md_docs_2versioning.html','../.
 <li><code>CC</code> (<code>C</code> complete)</li>
 </ol>
 <hr  />
-<h1><a class="anchor" id="autotoc_md879"></a>
+<h1><a class="anchor" id="autotoc_md887"></a>
 3. Three-letter extension</h1>
 <p>Codenames extend to three letters only when the two-letter sequence is exhausted. A three-letter codename expands the same way as the two-letter one: the new letter always enters at the tail (rightmost position) and propagates one position to the left per release until every position holds it; then the next letter enters at the tail.</p>
 <p>$$\text{AAA} \rightarrow \text{AAB} \rightarrow \text{ABB} \rightarrow \text{BBB} \rightarrow \text{BBC} \rightarrow \text{BCC} \rightarrow \text{CCC} \rightarrow \dots$$</p>
@@ -146,13 +146,13 @@ $(document).ready(function(){initNavTree('d0/db4/md_docs_2versioning.html','../.
 <li><code>CCC</code> (<code>C</code> complete)</li>
 </ol>
 <hr  />
-<h1><a class="anchor" id="autotoc_md881"></a>
+<h1><a class="anchor" id="autotoc_md889"></a>
 4. Notation</h1>
 <p>The codename is shown next to the release identifier in build binaries and CLI output:</p>
 <div class="fragment"><div class="line">$ cwist --version</div>
 <div class="line">cwist 4.0.0-LTS (AA)</div>
 </div><!-- fragment --><hr  />
-<h1><a class="anchor" id="autotoc_md883"></a>
+<h1><a class="anchor" id="autotoc_md891"></a>
 5. API stability gate (from the v4 LTS)</h1>
 <p>Independently of the codename, from v4 on the existing public API does not change (ROADMAP.md "API stability from v4.0"). CI checks this with <code>scripts/ci/check_api_baseline.py</code>.</p>
 <ul>
@@ -161,7 +161,7 @@ $(document).ready(function(){initNavTree('d0/db4/md_docs_2versioning.html','../.
 <li>Once the LTS tag <code>v4</code> exists, CI also fails when a guaranteed entry from that tag's baseline is removed or changed, even with the baseline regenerated. New API passes; the experimental (WebTransport) sections are not checked.</li>
 </ul>
 <hr  />
-<h1><a class="anchor" id="autotoc_md885"></a>
+<h1><a class="anchor" id="autotoc_md893"></a>
 6. First ascent of a major version</h1>
 <p>When a major version line opens for the first time (the major number increments), the releases of that line are named sequentially from <code>v1</code>: <code>v1 → v2 → v3 → v4 → …</code>. The counter always starts at 1 and never skips.</p>
 <p>This rule applies to every fresh major line independently: the first ascent of the next major starts again at <code>v1</code>, regardless of how far the previous line counted. Do not carry the previous line's counter over, and do not jump ahead (for example to a <code>.0</code> style name) because an editor or autocomplete suggested it. </p>

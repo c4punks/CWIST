@@ -108,11 +108,11 @@ $(document).ready(function(){initNavTree('db/d04/md_docs_2ko_2api_2cookie.html',
   <div class="headertitle"><div class="title">쿠키 API</div></div>
 </div><!--header-->
 <div class="contents">
-<div class="textblock"><p><a class="anchor" id="autotoc_md369"></a> <em>헤더:</em> <code>&lt;<a class="el" href="../../d5/dfd/cookie_8h.html" title="HTTP cookie parsing and construction helpers.">cwist/net/http/cookie.h</a>&gt;</code></p>
+<div class="textblock"><p><a class="anchor" id="autotoc_md373"></a> <em>헤더:</em> <code>&lt;<a class="el" href="../../d5/dfd/cookie_8h.html" title="HTTP cookie parsing and construction helpers.">cwist/net/http/cookie.h</a>&gt;</code></p>
 <p>요청의 <code>Cookie</code> 헤더를 읽고 <code>Set-Cookie</code> 응답 헤더를 쓰기 위한 도우미입니다. 파싱된 쿠키는 <code><a class="el" href="../../dd/d72/structcwist__query__map.html">cwist_query_map</a></code>에 저장됩니다 (<a class="el" href="../../dd/da8/md_docs_2ko_2api_2query.html">쿼리와 URI API</a> 참고).</p>
-<h1><a class="anchor" id="autotoc_md370"></a>
+<h1><a class="anchor" id="autotoc_md374"></a>
 쿠키 읽기</h1>
-<h2><a class="anchor" id="autotoc_md371"></a>
+<h2><a class="anchor" id="autotoc_md375"></a>
 &lt;tt&gt;cwist_cookie_parse&lt;/tt&gt;</h2>
 <div class="fragment"><div class="line"><span class="keywordtype">void</span> <a class="code hl_function" href="../../d5/dfd/cookie_8h.html#affe5d5d5278e31c936fb16a3777edfc1">cwist_cookie_parse</a>(<a class="code hl_struct" href="../../dd/d72/structcwist__query__map.html">cwist_query_map</a> *<a class="code hl_variable" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">map</a>, <span class="keyword">const</span> <span class="keywordtype">char</span> *header);</div>
 <div class="ttc" id="acookie_8h_html_affe5d5d5278e31c936fb16a3777edfc1"><div class="ttname"><a href="../../d5/dfd/cookie_8h.html#affe5d5d5278e31c936fb16a3777edfc1">cwist_cookie_parse</a></div><div class="ttdeci">void cwist_cookie_parse(cwist_query_map *map, const char *header)</div><div class="ttdoc">Parse a Cookie header value into a query-style map.</div><div class="ttdef"><b>Definition</b> <a href="../../de/d49/cookie_8c_source.html#l00080">cookie.c:80</a></div></div>
@@ -125,14 +125,14 @@ $(document).ready(function(){initNavTree('db/d04/md_docs_2ko_2api_2cookie.html',
 <li><code>=</code>가 없거나, 이름이 비어 있거나, 디코딩한 값이 4096바이트에 들어가지 않는 쌍은 건너뜁니다.</li>
 <li><code>NULL</code>이거나 빈 <code>header</code>, 또는 <code>NULL</code> <code>map</code>이면 아무것도 하지 않습니다.</li>
 </ul>
-<h2><a class="anchor" id="autotoc_md372"></a>
+<h2><a class="anchor" id="autotoc_md376"></a>
 &lt;tt&gt;cwist_cookie_get&lt;/tt&gt;</h2>
 <div class="fragment"><div class="line"><span class="keyword">const</span> <span class="keywordtype">char</span> *<a class="code hl_function" href="../../d5/dfd/cookie_8h.html#a9305cd705685dd014d6d8d1a9277fd11">cwist_cookie_get</a>(<a class="code hl_struct" href="../../dd/d72/structcwist__query__map.html">cwist_query_map</a> *<a class="code hl_variable" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">map</a>, <span class="keyword">const</span> <span class="keywordtype">char</span> *name);</div>
 <div class="ttc" id="acookie_8h_html_a9305cd705685dd014d6d8d1a9277fd11"><div class="ttname"><a href="../../d5/dfd/cookie_8h.html#a9305cd705685dd014d6d8d1a9277fd11">cwist_cookie_get</a></div><div class="ttdeci">const char * cwist_cookie_get(cwist_query_map *map, const char *name)</div><div class="ttdoc">Get a cookie value by name from a parsed map.</div><div class="ttdef"><b>Definition</b> <a href="../../de/d49/cookie_8c_source.html#l00114">cookie.c:114</a></div></div>
 </div><!-- fragment --><p> <code>name</code>에 저장된 디코딩된 값을 반환하며, 없으면 <code>NULL</code>입니다. 포인터는 <code>map</code>에 속하며 맵이 파괴될 때까지 유효합니다.</p>
-<h1><a class="anchor" id="autotoc_md373"></a>
+<h1><a class="anchor" id="autotoc_md377"></a>
 쿠키 쓰기</h1>
-<h2><a class="anchor" id="autotoc_md374"></a>
+<h2><a class="anchor" id="autotoc_md378"></a>
 &lt;tt&gt;cwist_cookie_options&lt;/tt&gt;</h2>
 <div class="fragment"><div class="line"><span class="keyword">typedef</span> <span class="keyword">struct </span><a class="code hl_struct" href="../../db/d11/structcwist__cookie__options.html">cwist_cookie_options</a> {</div>
 <div class="line">    <span class="keyword">const</span> <span class="keywordtype">char</span> *<a class="code hl_variable" href="../../db/d11/structcwist__cookie__options.html#a479ff309f54d7fb09f207ce931fdd6e4">path</a>;</div>
@@ -151,7 +151,7 @@ $(document).ready(function(){initNavTree('db/d04/md_docs_2ko_2api_2cookie.html',
 <div class="ttc" id="astructcwist__cookie__options_html_adb82f6607a952bd8372f96833e4d7770"><div class="ttname"><a href="../../db/d11/structcwist__cookie__options.html#adb82f6607a952bd8372f96833e4d7770">cwist_cookie_options::same_site</a></div><div class="ttdeci">const char * same_site</div><div class="ttdef"><b>Definition</b> <a href="../../d5/dfd/cookie_8h_source.html#l00051">cookie.h:51</a></div></div>
 </div><!-- fragment --><p> <code>cwist_cookie_set</code>의 속성입니다. <code>NULL</code>인 <code>path</code>, <code>domain</code>, <code>same_site</code>는 생략되고, <code>http_only</code>와 <code>secure</code>는 <code>true</code>일 때만 추가됩니다.</p>
 <p><code>max_age_seconds</code>는 <code>0</code> 이상이면 항상 기록되므로, 0으로 초기화한 구조체는 <code>Max-Age=0</code>을 만들어 클라이언트에게 쿠키 삭제를 지시합니다. 속성을 생략하려면 <code>-1</code>로 설정하세요. <code>same_site</code>는 주어진 그대로 복사되며 위 세 값 중 하나인지 검사하지 않습니다.</p>
-<h2><a class="anchor" id="autotoc_md375"></a>
+<h2><a class="anchor" id="autotoc_md379"></a>
 &lt;tt&gt;cwist_cookie_set&lt;/tt&gt;</h2>
 <div class="fragment"><div class="line"><span class="keywordtype">int</span> <a class="code hl_function" href="../../d5/dfd/cookie_8h.html#aba587adb658090bcc0cc8ae7840aa4c3">cwist_cookie_set</a>(<a class="code hl_struct" href="../../dd/d22/structcwist__http__response.html">cwist_http_response</a> *res, <span class="keyword">const</span> <span class="keywordtype">char</span> *name, <span class="keyword">const</span> <span class="keywordtype">char</span> *value,</div>
 <div class="line">                     <span class="keyword">const</span> <a class="code hl_struct" href="../../db/d11/structcwist__cookie__options.html">cwist_cookie_options</a> *opts);</div>
@@ -159,25 +159,25 @@ $(document).ready(function(){initNavTree('db/d04/md_docs_2ko_2api_2cookie.html',
 <div class="ttc" id="astructcwist__http__response_html"><div class="ttname"><a href="../../dd/d22/structcwist__http__response.html">cwist_http_response</a></div><div class="ttdoc">HTTP Response Object. Supports standard string body or Zero-Copy pointer body.</div><div class="ttdef"><b>Definition</b> <a href="../../dd/d56/http_8h_source.html#l00082">http.h:82</a></div></div>
 </div><!-- fragment --><p> <code>name=&lt;encoded value&gt;; Path=...; Domain=...; Max-Age=...; HttpOnly; Secure; SameSite=...</code> 형식의 <code>Set-Cookie</code> 헤더를 <code>res</code>에 추가합니다. 값은 <code>cwist_cookie_encode</code>로 인코딩하고, 이름과 속성 문자열은 주어진 그대로 씁니다. <code>NULL</code> <code>value</code>는 빈 값으로 보내고, <code>NULL</code> <code>opts</code>는 <code>name=value</code>만 보냅니다.</p>
 <p>성공하면 <code>0</code>, 실패하면 <code>-1</code>을 반환합니다. 실패 조건은 <code>res</code>나 <code>name</code>이 <code>NULL</code>인 경우, 할당 실패, CR 또는 LF 문자가 들어 있어 헤더가 거부된 경우입니다.</p>
-<h2><a class="anchor" id="autotoc_md376"></a>
+<h2><a class="anchor" id="autotoc_md380"></a>
 &lt;tt&gt;cwist_cookie_delete&lt;/tt&gt;</h2>
 <div class="fragment"><div class="line"><span class="keywordtype">int</span> <a class="code hl_function" href="../../d5/dfd/cookie_8h.html#af0cbca640a3104b61278dd2d9a6b91d0">cwist_cookie_delete</a>(<a class="code hl_struct" href="../../dd/d22/structcwist__http__response.html">cwist_http_response</a> *res, <span class="keyword">const</span> <span class="keywordtype">char</span> *name);</div>
 <div class="ttc" id="acookie_8h_html_af0cbca640a3104b61278dd2d9a6b91d0"><div class="ttname"><a href="../../d5/dfd/cookie_8h.html#af0cbca640a3104b61278dd2d9a6b91d0">cwist_cookie_delete</a></div><div class="ttdeci">int cwist_cookie_delete(cwist_http_response *res, const char *name)</div><div class="ttdoc">Add a Set-Cookie header that deletes a cookie.</div><div class="ttdef"><b>Definition</b> <a href="../../de/d49/cookie_8c_source.html#l00167">cookie.c:167</a></div></div>
 </div><!-- fragment --><p> 클라이언트에게 쿠키 삭제를 지시하는 <code>Set-Cookie: name=; Path=/; Max-Age=0</code> 헤더를 추가합니다. 경로가 <code>/</code>로 고정되어 있으므로, 다른 <code>path</code>로 설정된 쿠키는 이 헤더로 지워지지 않습니다. 성공하면 <code>0</code>, 실패하면 <code>-1</code>을 반환합니다.</p>
-<h1><a class="anchor" id="autotoc_md377"></a>
+<h1><a class="anchor" id="autotoc_md381"></a>
 인코딩</h1>
-<h2><a class="anchor" id="autotoc_md378"></a>
+<h2><a class="anchor" id="autotoc_md382"></a>
 &lt;tt&gt;cwist_cookie_encode&lt;/tt&gt;</h2>
 <div class="fragment"><div class="line"><span class="keywordtype">char</span> *<a class="code hl_function" href="../../d5/dfd/cookie_8h.html#afdcb10d812fd677194c8a6a96742ece1">cwist_cookie_encode</a>(<span class="keyword">const</span> <span class="keywordtype">char</span> *value);</div>
 <div class="ttc" id="acookie_8h_html_afdcb10d812fd677194c8a6a96742ece1"><div class="ttname"><a href="../../d5/dfd/cookie_8h.html#afdcb10d812fd677194c8a6a96742ece1">cwist_cookie_encode</a></div><div class="ttdeci">char * cwist_cookie_encode(const char *value)</div><div class="ttdoc">URL-encode a string for safe cookie values.</div><div class="ttdef"><b>Definition</b> <a href="../../de/d49/cookie_8c_source.html#l00035">cookie.c:35</a></div></div>
 </div><!-- fragment --><p> <code>value</code>를 퍼센트 인코딩합니다. <code>A-Z a-z 0-9 - _ . ~</code> 문자는 그대로 두고, 나머지 바이트는 모두 대문자 16진수 <code>XX</code>로 바꿉니다 (공백은 <code>%20</code>). 호출자가 <code><a class="el" href="../../d2/dfe/alloc_8h.html#a220abeebe2823e72511d1690fc561306" title="Free memory obtained via cwist_alloc/cwist_strdup/etc.">cwist_free()</a></code>로 해제하는 힙 문자열을 반환하며, <code>value</code>가 <code>NULL</code>이거나 할당에 실패하면 <code>NULL</code>입니다.</p>
-<h2><a class="anchor" id="autotoc_md379"></a>
+<h2><a class="anchor" id="autotoc_md383"></a>
 &lt;tt&gt;cwist_cookie_decode&lt;/tt&gt;</h2>
 <div class="fragment"><div class="line"><span class="keywordtype">int</span> <a class="code hl_function" href="../../d5/dfd/cookie_8h.html#aa93670e23e2f4421dd33059449e7f40f">cwist_cookie_decode</a>(<span class="keyword">const</span> <span class="keywordtype">char</span> *<a class="code hl_variable" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">in</a>, <span class="keywordtype">char</span> *out, <span class="keywordtype">size_t</span> out_len);</div>
 <div class="ttc" id="acookie_8h_html_aa93670e23e2f4421dd33059449e7f40f"><div class="ttname"><a href="../../d5/dfd/cookie_8h.html#aa93670e23e2f4421dd33059449e7f40f">cwist_cookie_decode</a></div><div class="ttdeci">int cwist_cookie_decode(const char *in, char *out, size_t out_len)</div><div class="ttdoc">URL-decode a cookie value in-place into a caller-owned buffer.</div><div class="ttdef"><b>Definition</b> <a href="../../de/d49/cookie_8c_source.html#l00055">cookie.c:55</a></div></div>
 </div><!-- fragment --><p> <code>in</code>을 크기가 <code>out_len</code>인 호출자 버퍼 <code>out</code>으로 디코딩합니다. <code>XX</code> 시퀀스(16진수 대소문자 모두)는 해당 바이트가 되고 <code>+</code>는 공백이 됩니다. 뒤에 16진수 두 자리가 오지 않는 <code>%</code>는 그대로 복사됩니다.</p>
 <p>종료 <code>\0</code>을 제외하고 쓴 바이트 수를 반환합니다. 인자가 <code>NULL</code>이거나, <code>out_len</code>이 <code>0</code>이거나, 결과가 종료 <code>\0</code>과 함께 <code>out</code>에 들어가지 않으면 <code>-1</code>입니다.</p>
-<h1><a class="anchor" id="autotoc_md380"></a>
+<h1><a class="anchor" id="autotoc_md384"></a>
 예제</h1>
 <p>요청에서 쿠키를 읽고 응답에 쿠키를 설정합니다.</p>
 <div class="fragment"><div class="line"><span class="keyword">static</span> <span class="keywordtype">void</span> <a class="code hl_variable" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">handle_login</a>(<a class="code hl_struct" href="../../dd/d68/structcwist__http__request.html">cwist_http_request</a> *req, <a class="code hl_struct" href="../../dd/d22/structcwist__http__response.html">cwist_http_response</a> *res) {</div>

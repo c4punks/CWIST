@@ -1,4 +1,4 @@
 var searchData=
 [
-  ['버스트_20기아_2025_20후속_0',['Classic 풀의 버스트 기아 (#25 후속)',['../da/d07/md_docs_2ko_2classic-pool-starvation.html',1,'']]]
+  ['배포하기_0',['Wasmtime으로 WASI 0.2 예제 배포하기',['../d1/dc3/md_docs_2ko_2deployment_2wasmtime-appliance.html',1,'']]]
 ];

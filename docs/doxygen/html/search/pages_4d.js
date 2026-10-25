@@ -1,4 +1,4 @@
 var searchData=
 [
-  ['참고_20자료_0',['Mux 알고리즘 참고 자료',['../d4/d7c/md_docs_2ko_2references_2mux__algorithm__references.html',1,'']]]
+  ['작업_20깨우기_20회귀_2025_0',['io_uring 게시 작업 깨우기 회귀 (#25)',['../dc/dd4/md_docs_2ko_2reactor-wakeup-regression.html',1,'']]]
 ];

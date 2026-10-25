@@ -108,8 +108,8 @@ $(document).ready(function(){initNavTree('d0/d49/md_docs_2performance_2https-c10
   <div class="headertitle"><div class="title">HTTPS C100k gate</div></div>
 </div><!--header-->
 <div class="contents">
-<div class="textblock"><p><a class="anchor" id="autotoc_md708"></a> <code>scripts/ci/c100k_https.sh</code> checks that one CWIST HTTPS server holds and serves 100,000 concurrent TLS connections. CI runs it in <code>.github/workflows/c100k.yml</code>.</p>
-<h1><a class="anchor" id="autotoc_md709"></a>
+<div class="textblock"><p><a class="anchor" id="autotoc_md716"></a> <code>scripts/ci/c100k_https.sh</code> checks that one CWIST HTTPS server holds and serves 100,000 concurrent TLS connections. CI runs it in <code>.github/workflows/c100k.yml</code>.</p>
+<h1><a class="anchor" id="autotoc_md717"></a>
 What runs</h1>
 <ul>
 <li>Server: <code>tests/rss_gate_server</code> on the normal <code><a class="el" href="../../d0/d77/sys_2app_2app_8h.html#a05f9a10f4d2ab307c211dd56d54fe7c3" title="Serve app on port until SIGTERM, SIGINT or cwist_shutdown_request(); blocks the calling thread.">cwist_app_listen()</a></code> path with 4 prefork workers and a throwaway ECDSA P-256 certificate. <code>CWIST_HTTPS_IDLE_TIMEOUT_MS</code> is set to 600000 so the idle budget outlasts the ramp and the hold.</li>
@@ -130,11 +130,11 @@ What runs</h1>
 <li>Server memory with all connections open stays at or below 8 KiB per connection, measured above the idle baseline. (The limit was 16 KiB until parked connections released their read buffer; see below.)</li>
 </ul>
 <p>Each limit can be overridden with an environment variable. The variables are listed in the script header.</p>
-<h1><a class="anchor" id="autotoc_md710"></a>
+<h1><a class="anchor" id="autotoc_md718"></a>
 Loopback port space</h1>
 <p>The client spreads connections over 127.0.0.1 to 127.0.0.4. The server binds <code>0.0.0.0</code>. Each destination address has its own ephemeral-port space, so the default Linux range (32768 to 60999, about 28k ports) gives about 112k ports across the four addresses.</p>
 <p>With only two addresses and the ports nearly used up, the ramp took 55 s instead of 18.5 s. As the free ports run out, <code><a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">connect()</a></code> takes longer to find one. The slowdown came from the client side, not from the server.</p>
-<h1><a class="anchor" id="autotoc_md711"></a>
+<h1><a class="anchor" id="autotoc_md719"></a>
 Results (2026-10-17, dev)</h1>
 <p>Local machine, 12 cores, C1M reactor mode (default), HTTPS gate server <code>tests/rss_gate_server</code> (4 prefork workers) driven by <code>tests/c100k_https_client</code> through <code>scripts/ci/c100k_https.sh</code>:</p>
 <table class="markdownTable">
@@ -146,7 +146,7 @@ Results (2026-10-17, dev)</h1>
 <td class="markdownTableBodyNone">C100K (default)   </td><td class="markdownTableBodyNone">100000   </td><td class="markdownTableBodyNone">0   </td><td class="markdownTableBodyNone">100000 ok, 73.0k rps   </td><td class="markdownTableBodyNone">100000 ok, 106.4k rps   </td><td class="markdownTableBodyNone">18.14 s   </td><td class="markdownTableBodyNone">4975 B   </td></tr>
 </table>
 <p>Both runs PASS every gate criterion (ramp under 180 s, no dropped connection, every request answered, memory at most 8192 B per open connection). The per-connection figure is consistent with the ~5 KB parked-connection cost measured 2026-10-11 after parked connections started releasing their 16 KiB read buffer.</p>
-<h1><a class="anchor" id="autotoc_md712"></a>
+<h1><a class="anchor" id="autotoc_md720"></a>
 Results (2026-10-18, dev): C1M over TLS</h1>
 <p>Same server, driven by 8 <code>c100k_https_client</code> processes x 125,000 connections through <code>scripts/ci/c1m_local.sh</code> inside an unprivileged user+network namespace (<code>unshare -Urn</code>), clients linked against the repo's BoringSSL:</p>
 <table class="markdownTable">
@@ -156,7 +156,7 @@ Results (2026-10-18, dev): C1M over TLS</h1>
 <td class="markdownTableBodyNone">C1M (8x125K, TLS 1.3)   </td><td class="markdownTableBodyNone">1,000,000   </td><td class="markdownTableBodyNone">0   </td><td class="markdownTableBodyNone">328-341 s per client   </td><td class="markdownTableBodyNone">all 2,000,000 answered, 0 failed   </td><td class="markdownTableBodyNone">4.56 GiB (4866 B/conn)   </td></tr>
 </table>
 <p>The ramp is TLS-handshake-bound, not server-bound: ~2,900 full P-256 handshakes/s across the 8 clients while 12 cores are shared with the server, so opening 1M connections takes ~340 s (C100K: 18 s). Every client reported 125000 ok in both keep-alive rounds. The server holds ~4.9 KB per open TLS connection — the same parked-connection cost as C100K. The whole client fleet resident-uses ~7 GiB thanks to BoringSSL honoring <code>SSL_MODE_RELEASE_BUFFERS</code> (the OpenSSL build idles at ~4.2 GiB per 125K-connection client; see below).</p>
-<h1><a class="anchor" id="autotoc_md713"></a>
+<h1><a class="anchor" id="autotoc_md721"></a>
 Results (2026-10-11, dev)</h1>
 <table class="markdownTable">
 <tr class="markdownTableHead">
@@ -171,7 +171,7 @@ Results (2026-10-11, dev)</h1>
 <td class="markdownTableBodyNone">C1M / classic / full GC   </td><td class="markdownTableBodyNone">GitHub runner, 4 cores   </td><td class="markdownTableBodyNone">100000   </td><td class="markdownTableBodyNone">0   </td><td class="markdownTableBodyNone">100000 ok, ~33k rps   </td><td class="markdownTableBodyNone">100000 ok, ~52-56k rps   </td><td class="markdownTableBodyNone">~33.8 s   </td><td class="markdownTableBodyNone">~13.2 KB   </td></tr>
 </table>
 <p>Total server memory is 32 MB idle and about 1.3 GB with 100k connections open, across the master and 3 forked workers. With <code>CWIST_WORKERS=4</code> the master serves connections too.</p>
-<h2><a class="anchor" id="autotoc_md714"></a>
+<h2><a class="anchor" id="autotoc_md722"></a>
 Where the memory goes</h2>
 <p>The table above was measured before parked connections released their read buffer. Since then, the gate measures ~5.0 KB per open connection locally (C1M 4982 B, full GC 5064 B, 2026-10-11). Total server memory with 100k connections open dropped from ~1.3 GB to ~0.52 GB.</p>
 <ul>
@@ -179,7 +179,7 @@ Where the memory goes</h2>
 <li>The remaining ~5 KB is the TLS session state (BoringSSL <code>SSL</code> object) plus the conn, park entry and allocator overhead.</li>
 </ul>
 <p>An earlier local run reported ~3.4 KB per connection. That run was wrong. A server left over from a previous run was still listening on the same port with <code>SO_REUSEPORT</code>, so it received part of the connections. The script now fails at start if the port already answers. It also counts swapped-out pages together with RSS.</p>
-<h1><a class="anchor" id="autotoc_md715"></a>
+<h1><a class="anchor" id="autotoc_md723"></a>
 Scaling past the gate on a single host</h1>
 <p>Five limits gate a 1M-connection HTTPS run, all outside CWIST. The first two are why <code>c1m_local.sh</code> self-configures its namespace; the last three were found by failing at each of them in turn:</p>
 <ul>
@@ -199,7 +199,7 @@ Scaling past the gate on a single host</h1>
 <div class="line">  C1M_CLIENT_BIN=./c100k_bssl_client scripts/ci/c1m_local.sh</div>
 <div class="line">&#39;</div>
 </div><!-- fragment --><p>On a host with less free RAM, stagger the client starts so at most one ramp is in flight (<code>C1M_STAGGER_S=60</code>) and keep earlier clients' sockets open with <code>C1M_LINGER_S</code> until the last client finishes; both trade wall time for peak memory.</p>
-<h1><a class="anchor" id="autotoc_md716"></a>
+<h1><a class="anchor" id="autotoc_md724"></a>
 Running it</h1>
 <div class="fragment"><div class="line">make rss_gate_server c100k_https_client</div>
 <div class="line">scripts/ci/c100k_https.sh                      # C1M</div>

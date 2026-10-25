@@ -1,5 +1,5 @@
 var searchData=
 [
-  ['서버_20만들기_0',['CWIST로 WebTransport 서버 만들기',['../df/d10/md_docs_2ko_2tutorials_2webtransport-server.html',1,'']]],
-  ['서버_20벤치마크_20측정_20방법_1',['웹 서버 벤치마크 측정 방법',['../d8/d7e/md_docs_2ko_2webserver-benchmark.html',1,'']]]
+  ['빌더_20api_0',['JSON 빌더 API',['../d8/d3f/md_docs_2ko_2api_2json.html',1,'']]],
+  ['빌드_20에셋_1',['릴리스 사전 빌드 에셋',['../da/dcd/md_docs_2ko_2deployment_2release-assets.html',1,'']]]
 ];
