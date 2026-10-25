@@ -130,6 +130,11 @@ taken. Ask in the issue or on Discord if it is unclear which happened.
     `make dist VERSION=X.Y.Z` from a checkout whose submodules match the
     recorded gitlinks, then `make WERROR=1` and `make WERROR=1 test` in the
     unpacked tree.
+- Publishing a release triggers `.github/workflows/release-assets.yml`,
+  which builds the CI-verified targets (fat bundles per platform and TLS
+  backend, the amalgamation, cwist-wasm) from the tag and attaches them with
+  a checksum file once every build passed; see
+  `docs/deployment/release-assets.md`. It never replaces the source tarball.
 - **Public API baseline:** `docs/api/v4.0-api-baseline.txt` records the
   public headers: names, function signatures (parameter names dropped) and
   struct/union/enum layouts in member order. CI runs
