@@ -76,7 +76,7 @@ static const char b64[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0
  * @return Newly allocated NUL-terminated string, or NULL on allocation
  * failure. Caller owns the returned buffer.
  */
-static char *base64_encode(const uint8_t *data, size_t len) {
+static char *session_base64_encode(const uint8_t *data, size_t len) {
     size_t out_len = 4 * ((len + 2) / 3);
     char *out = cwist_alloc(out_len + 1);
     if (!out) return NULL;
@@ -143,8 +143,8 @@ static int base64_decode(const char *in, uint8_t *out, size_t out_len) {
  * @param out Output buffer of exactly 32 bytes.
  * @return true on success, false if the MAC could not be computed.
  */
-static bool hmac_sha256(const char *key, size_t key_len, const char *msg, size_t msg_len,
-                        uint8_t out[32]) {
+static bool session_hmac_sha256(const char *key, size_t key_len, const char *msg, size_t msg_len,
+                                uint8_t out[32]) {
 #if defined(__EMSCRIPTEN__) || defined(__wasi__)
     return cwist_hmac_sha256((const uint8_t *)key, key_len, (const uint8_t *)msg, msg_len, out);
 #else
@@ -293,8 +293,8 @@ static bool verify_signature(cwist_app *app, const char *payload_b64, const char
     uint8_t sig[32];
     if (base64_decode(sig_b64, sig, sizeof(sig)) != 32) return false;
     uint8_t expected[32];
-    if (!hmac_sha256(app->session_secret, strlen(app->session_secret), payload_b64,
-                     strlen(payload_b64), expected)) {
+    if (!session_hmac_sha256(app->session_secret, strlen(app->session_secret), payload_b64,
+                             strlen(payload_b64), expected)) {
         return false;
     }
 #if defined(__EMSCRIPTEN__) || defined(__wasi__)
@@ -475,17 +475,17 @@ int cwist_session_commit(cwist_session_t *session, cwist_http_response *res) {
     cJSON_Delete(ctx.json);
     if (!raw) return -1;
 
-    char *payload_b64 = base64_encode((const uint8_t *)raw, strlen(raw));
+    char *payload_b64 = session_base64_encode((const uint8_t *)raw, strlen(raw));
     free(raw);
     if (!payload_b64) return -1;
 
     uint8_t sig[32];
-    if (!hmac_sha256(session->app->session_secret, strlen(session->app->session_secret),
-                     payload_b64, strlen(payload_b64), sig)) {
+    if (!session_hmac_sha256(session->app->session_secret, strlen(session->app->session_secret),
+                             payload_b64, strlen(payload_b64), sig)) {
         cwist_free(payload_b64);
         return -1;
     }
-    char *sig_b64 = base64_encode(sig, sizeof(sig));
+    char *sig_b64 = session_base64_encode(sig, sizeof(sig));
     if (!sig_b64) {
         cwist_free(payload_b64);
         return -1;

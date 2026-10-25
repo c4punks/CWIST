@@ -1,0 +1,50 @@
+name: "Hot-path allocation gate"
+
+# Heap allocations per keep-alive request must stay within budget
+# (scripts/ci/zero_alloc_gate.sh, #432): an LD_PRELOAD shim counts the
+# allocations a single-worker server makes while serving warmed-up requests.
+
+on:
+  push:
+    branches: [main, master, dev]
+  pull_request:
+    branches: [main, master, dev]
+  workflow_dispatch:
+    inputs:
+      gate_reqs:
+        description: 'Counted requests'
+        required: false
+        default: '1000'
+
+permissions:
+  contents: read
+
+jobs:
+  zero-alloc:
+    name: Hot-path allocation gate
+    if: github.event_name != 'push' || !contains(github.event.head_commit.message, '[skip ci]')
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      with:
+        submodules: recursive
+
+    - name: Install build dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y cmake libcurl4-openssl-dev libnghttp2-dev \
+          libbrotli-dev libzstd-dev curl
+
+    - name: Build gate server and shim
+      run: make -j"$(nproc)" zero_alloc_server zero_alloc_shim.so
+
+    - name: Run allocation gate
+      env:
+        ZERO_ALLOC_GATE_REQS: ${{ github.event.inputs.gate_reqs || '1000' }}
+      run: ./scripts/ci/zero_alloc_gate.sh
+
+    - name: Server log
+      if: always()
+      run: cat zero_alloc_server.log 2>/dev/null || true

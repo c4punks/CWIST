@@ -5,7 +5,9 @@
 #include <cwist/sys/sys_info.h>
 #include <cwist/core/macros.h>
 #include <ttak/mem/epoch.h>
+#ifdef CWIST_DB
 #include <sqlite3.h>
+#endif
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
@@ -382,8 +384,9 @@ static bool bdr_trim_oldest(cwist_bdr_t *bdr, time_t now) {
  * @param bdr Cache instance.
  */
 static void bdr_check_ram(cwist_bdr_t *bdr) {
-#ifdef __EMSCRIPTEN__
-    /* No SQLite disk fallback in the WASM core; the in-RAM cache stands alone. */
+#if defined(__EMSCRIPTEN__) || !defined(CWIST_DB)
+    /* No SQLite disk fallback in the WASM core or when the DB tier is
+     * compiled out (CWIST_DB=0); the in-RAM cache stands alone. */
     (void)bdr;
     return;
 #else
@@ -526,7 +529,7 @@ void cwist_bdr_destroy(cwist_bdr_t *bdr) {
         bdr->retired_entries = next;
     }
     cwist_free(bdr->buckets);
-#ifndef __EMSCRIPTEN__
+#if !defined(__EMSCRIPTEN__) && defined(CWIST_DB)
     if (bdr->disk_db) {
         sqlite3_close(bdr->disk_db);
         remove("cwist_bdr_fallback.db");
@@ -750,6 +753,7 @@ void *cwist_bdr_copy_get(cwist_bdr_t *bdr, const char *method, const char *path,
  * @param data Response bytes.
  * @param len Length of @p data in bytes.
  */
+#ifdef CWIST_DB
 static void cwist_bdr_put_disk(cwist_bdr_t *bdr, uint64_t req_h, const void *data, size_t len) {
     pthread_mutex_lock(&bdr->lock);
     sqlite3_stmt *stmt;
@@ -761,6 +765,7 @@ static void cwist_bdr_put_disk(cwist_bdr_t *bdr, uint64_t req_h, const void *dat
     sqlite3_finalize(stmt);
     pthread_mutex_unlock(&bdr->lock);
 }
+#endif
 
 /**
  * @brief Learn a reply observation into the cache (lock-free fast path).
@@ -784,10 +789,12 @@ void cwist_bdr_put(cwist_bdr_t *bdr, const char *method, const char *path, const
     uint64_t req_h = bdr_hash(method, path);
     uint64_t res_h = bdr_hash_data(data, len);
 
+#ifdef CWIST_DB
     if (atomic_load_explicit(&bdr->is_disk_mode, memory_order_acquire)) {
         cwist_bdr_put_disk(bdr, req_h, data, len);
         return;
     }
+#endif
 
     bdr_entry_t *entry = bdr_find_or_insert(bdr, req_h);
     if (!entry) return;
@@ -845,10 +852,12 @@ void cwist_bdr_put_fixed(cwist_bdr_t *bdr, const char *method, const char *path,
 
     uint64_t req_h = bdr_hash(method, path);
 
+#ifdef CWIST_DB
     if (atomic_load_explicit(&bdr->is_disk_mode, memory_order_acquire)) {
         cwist_bdr_put_disk(bdr, req_h, data, len);
         return;
     }
+#endif
 
     bdr_entry_t *entry = bdr_find_or_insert(bdr, req_h);
     if (!entry) return;
@@ -890,10 +899,12 @@ void cwist_bdr_put_revalidatable(cwist_bdr_t *bdr, const char *method, const cha
 
     uint64_t req_h = bdr_hash(method, path);
 
+#ifdef CWIST_DB
     if (atomic_load_explicit(&bdr->is_disk_mode, memory_order_acquire)) {
         cwist_bdr_put_disk(bdr, req_h, data, len);
         return;
     }
+#endif
 
     bdr_entry_t *entry = bdr_find_or_insert(bdr, req_h);
     if (!entry) return;

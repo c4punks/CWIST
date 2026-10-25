@@ -1,12 +1,36 @@
+# Cross-compilation: make CROSS_COMPILE=aarch64-linux-gnu- takes CC, CXX, AR
+# and RANLIB from the triplet prefix unless they are set on the command line or
+# in the environment, and hands the same toolchain to every vendored CMake
+# build through CROSS_CMAKE_FLAGS.  `?=` cannot do this: make predefines CC and
+# AR, so a conditional assignment never fires for them.
+ifneq ($(CROSS_COMPILE),)
+ifneq ($(filter default undefined,$(origin CC)),)
+CC := $(CROSS_COMPILE)gcc
+endif
+ifneq ($(filter default undefined,$(origin CXX)),)
+CXX := $(CROSS_COMPILE)g++
+endif
+ifneq ($(filter default undefined,$(origin AR)),)
+AR := $(CROSS_COMPILE)ar
+endif
+RANLIB ?= $(CROSS_COMPILE)ranlib
+PKG_CONFIG ?= $(CROSS_COMPILE)pkg-config
+CROSS_CMAKE_FLAGS = -DCMAKE_SYSTEM_NAME=Linux \
+                    -DCMAKE_SYSTEM_PROCESSOR=$(firstword $(subst -, ,$(CROSS_COMPILE))) \
+                    -DCMAKE_AR=$(shell command -v $(AR)) \
+                    -DCMAKE_RANLIB=$(shell command -v $(RANLIB))
+endif
 CC ?= gcc
 CXX ?= g++
+RANLIB ?= ranlib
+PKG_CONFIG ?= pkg-config
 FUZZ_CC ?= clang
 
-CURL_CFLAGS := $(shell pkg-config --cflags libcurl 2>/dev/null)
-NGHTTP2_CFLAGS := $(shell pkg-config --cflags libnghttp2 2>/dev/null)
-BROTLI_CFLAGS := $(shell pkg-config --cflags libbrotlienc libbrotlicommon libbrotlidec 2>/dev/null)
+CURL_CFLAGS := $(shell $(PKG_CONFIG) --cflags libcurl 2>/dev/null)
+NGHTTP2_CFLAGS := $(shell $(PKG_CONFIG) --cflags libnghttp2 2>/dev/null)
+BROTLI_CFLAGS := $(shell $(PKG_CONFIG) --cflags libbrotlienc libbrotlicommon libbrotlidec 2>/dev/null)
 
-INCLUDE_PATHS = -I./include -I./lib -I./lib/libttak/include -I./lib/cjson -I./lib/sqlite3 -I./lib/uriparser/include -I./lib/cnats/src -I./lib/boringssl/include -I./lib/lsquic/include -I./lib/multipart-parser-c $(CURL_CFLAGS) $(NGHTTP2_CFLAGS) $(BROTLI_CFLAGS)
+INCLUDE_PATHS = -I./include -I./lib -I./lib/libttak/include -I./lib/cjson -I./lib/sqlite3 -I./lib/uriparser/include -I./lib/cnats/src $(TLS_INCLUDE_PATHS) -I./lib/lsquic/include -I./lib/multipart-parser-c $(CURL_CFLAGS) $(NGHTTP2_CFLAGS) $(BROTLI_CFLAGS)
 COMMON_DEFINES = -D_GNU_SOURCE -D_XOPEN_SOURCE=700 -D_REENTRANT -DSQLITE_ENABLE_DESERIALIZE
 COMMON_WARNINGS = -std=c17 -Wall -pthread -fPIC
 COMMON_CFLAGS = $(INCLUDE_PATHS) $(COMMON_WARNINGS) $(COMMON_DEFINES)
@@ -97,6 +121,12 @@ BORINGSSL_BUILD_DIR = $(BORINGSSL_DIR)/build
 BORINGSSL_SSL_LIB = $(BORINGSSL_BUILD_DIR)/libssl.a
 BORINGSSL_CRYPTO_LIB = $(BORINGSSL_BUILD_DIR)/libcrypto.a
 
+MBEDTLS_DIR = lib/mbedtls
+MBEDTLS_BUILD_DIR = $(MBEDTLS_DIR)/build
+MBEDTLS_TLS_LIB = $(MBEDTLS_BUILD_DIR)/library/libmbedtls.a
+MBEDTLS_X509_LIB = $(MBEDTLS_BUILD_DIR)/library/libmbedx509.a
+MBEDTLS_CRYPTO_LIB = $(MBEDTLS_BUILD_DIR)/library/libmbedcrypto.a
+
 LSQUIC_DIR = lib/lsquic
 LSQUIC_BUILD_DIR = $(LSQUIC_DIR)/build
 LSQUIC_LIB = $(LSQUIC_BUILD_DIR)/src/liblsquic/liblsquic.a
@@ -105,23 +135,28 @@ USRSCTP_DIR = lib/usrsctp
 USRSCTP_BUILD_DIR = $(USRSCTP_DIR)/build
 USRSCTP_LIB = $(USRSCTP_BUILD_DIR)/usrsctplib/libusrsctp.a
 
-CURL_LIBS := $(shell pkg-config --libs libcurl 2>/dev/null)
-NGHTTP2_LIBS := $(shell pkg-config --libs libnghttp2 2>/dev/null)
-BROTLI_LIBS := $(shell pkg-config --libs libbrotlienc libbrotlicommon libbrotlidec 2>/dev/null)
+CURL_LIBS := $(shell $(PKG_CONFIG) --libs libcurl 2>/dev/null)
+NGHTTP2_LIBS := $(shell $(PKG_CONFIG) --libs libnghttp2 2>/dev/null)
+BROTLI_LIBS := $(shell $(PKG_CONFIG) --libs libbrotlienc libbrotlicommon libbrotlidec 2>/dev/null)
 # zstd via pkg-config so Homebrew's non-standard lib path (-L/opt/homebrew/...)
 # is picked up on macOS; fall back to a bare -lzstd elsewhere.
-ZSTD_LIBS := $(shell pkg-config --libs libzstd 2>/dev/null)
+ZSTD_LIBS := $(shell $(PKG_CONFIG) --libs libzstd 2>/dev/null)
 ifeq ($(strip $(ZSTD_LIBS)),)
 ZSTD_LIBS = -lzstd
 endif
 
-LIBS = $(CNATS_LIB) \
+# $(CNATS_LIB) and $(LSQUIC_LIB) stay in their historical positions (before
+# the system libraries: link order matters with --as-needed) but are gated on
+# CWIST_NATS and CWIST_HTTP3; the TLS backend archives ($(TLS_VENDOR_LIBS):
+# BoringSSL, or mbedTLS when CWIST_TLS=mbedtls) always stay (HTTPS/JWT
+# sessions need them).  The knobs are assigned further down; LIBS is
+# recursively expanded, so the filters see the final values.
+LIBS = $(if $(filter 1,$(CWIST_NATS)),$(CNATS_LIB)) \
        $(LIBTTAK_LIB) \
        $(CJSON_LIB) \
        $(URIPARSER_LIB) \
-       $(LSQUIC_LIB) \
-       $(BORINGSSL_SSL_LIB) \
-       $(BORINGSSL_CRYPTO_LIB) \
+       $(if $(filter 1,$(CWIST_HTTP3)),$(LSQUIC_LIB)) \
+       $(TLS_VENDOR_LIBS) \
        $(CURL_LIBS) \
        $(NGHTTP2_LIBS) \
        $(BROTLI_LIBS) \
@@ -134,13 +169,79 @@ SQLITE_ZIP = sqlite-amalgamation-$(SQLITE_VER).zip
 SQLITE_URL = https://www.sqlite.org/$(SQLITE_YEAR)/$(SQLITE_ZIP)
 SQLITE_DIR = lib/sqlite3
 
-# WebRTC DataChannel (src/net/webrtc/). DataChannel-only: SDP offer/answer,
-# ICE-lite, DTLS via the vendored BoringSSL, and SCTP DataChannels (RFC 8831)
-# through the lib/usrsctp submodule running in AF_CONN raw mode tunneled over
-# DTLS. Set CWIST_WEBRTC=0 to leave it out.
-CWIST_WEBRTC ?= 1
-ifeq ($(CWIST_WEBRTC),1)
-    CFLAGS += -DCWIST_WEBRTC -I$(USRSCTP_DIR)/usrsctplib
+# --- Compile-time feature trimming -------------------------------------------
+# Embedded builds can drop whole subsystems at compile time to shrink
+# libcwist.a and the fat archive.  A knob set to 0 removes the feature's
+# sources from SRCS (and its vendored archive from the link) and compiles the
+# app-level entry points as stubs that report the feature as unavailable,
+# using the same err_i16 = -1 idiom the WASM builds use; public headers and
+# the rest of the API surface are untouched.  CWIST_TINY=1 flips every
+# default (including CWIST_WEBRTC and CWIST_WEBTRANSPORT below) to off; an
+# individual feature can still be re-enabled by passing its knob explicitly,
+# e.g. `make CWIST_TINY=1 CWIST_DB=1`.
+CWIST_TINY ?= 0
+CWIST_HTTP3 ?= $(if $(filter 1,$(CWIST_TINY)),0,1)
+CWIST_WS ?= $(if $(filter 1,$(CWIST_TINY)),0,1)
+CWIST_DB ?= $(if $(filter 1,$(CWIST_TINY)),0,1)
+CWIST_NATS ?= $(if $(filter 1,$(CWIST_TINY)),0,1)
+CWIST_JWT ?= $(if $(filter 1,$(CWIST_TINY)),0,1)
+
+# --- TLS backend selection ---------------------------------------------------
+# CWIST_TLS picks the TLS/crypto backend:
+#   boringssl (default) - the vendored BoringSSL; required for HTTP/3 (lsquic
+#                         needs BoringSSL's QUIC API), WebRTC DataChannel
+#                         (DTLS), ECH and the hybrid PQC group list
+#   mbedtls             - the vendored mbedTLS 3.6 LTS (lib/mbedtls), reached
+#                         through the internal backend seam in
+#                         src/security/tls/ (shim/openssl headers +
+#                         backend_mbedtls.c).  A CWIST_TLS=mbedtls archive
+#                         contains no BoringSSL objects or symbols.
+# Degradations under mbedtls (documented in docs/performance/tls-backends.md):
+# Ed25519 JWT algs fail at runtime (HS256/ES256 work), the TLS session-
+# resumption counter stays 0, AIA intermediate autoload is a no-op, ECH and
+# the hybrid PQC groups are unavailable.
+CWIST_TLS ?= boringssl
+ifneq ($(filter $(CWIST_TLS),boringssl mbedtls),$(CWIST_TLS))
+    $(error CWIST_TLS: unknown backend '$(CWIST_TLS)' (use boringssl or mbedtls))
+endif
+ifeq ($(CWIST_TLS),mbedtls)
+    ifneq ($(CWIST_HTTP3),0)
+        $(warning CWIST_TLS=mbedtls: HTTP/3 (lsquic) needs BoringSSL's QUIC API; forcing CWIST_HTTP3=0)
+        CWIST_HTTP3 := 0
+    endif
+    # CWIST serves TLS from many threads per process (HTTPS pool, handshake
+    # shepherd) sharing the SSL config, session cache, ticket context and
+    # CTR-DRBG; the pthread threading layer serializes those.  Both the
+    # vendored mbedTLS build ($(MBEDTLS_STAMP)) and every CWIST object must
+    # see the same defines or the public struct layouts diverge.
+    CFLAGS += -DCWIST_TLS_MBEDTLS -DMBEDTLS_THREADING_C -DMBEDTLS_THREADING_PTHREAD
+    # The shim directory shadows <openssl/*.h>; it must precede any system
+    # OpenSSL headers that pkg-config pulls in via CURL_CFLAGS.
+    TLS_INCLUDE_PATHS = -I./src/security/tls/shim -I./lib/mbedtls/include
+    TLS_VENDOR_LIBS = $(MBEDTLS_TLS_LIB) $(MBEDTLS_X509_LIB) $(MBEDTLS_CRYPTO_LIB)
+else
+    TLS_INCLUDE_PATHS = -I./lib/boringssl/include
+    TLS_VENDOR_LIBS = $(BORINGSSL_SSL_LIB) $(BORINGSSL_CRYPTO_LIB)
+endif
+
+ifeq ($(CWIST_HTTP3),1)
+    CFLAGS += -DCWIST_HTTP3
+else
+    # WebTransport rides on the HTTP/3 QUIC engine; without it there is
+    # nothing to build, so force the role list empty.
+    CWIST_WEBTRANSPORT := none
+endif
+ifeq ($(CWIST_WS),1)
+    CFLAGS += -DCWIST_WS
+endif
+ifeq ($(CWIST_DB),1)
+    CFLAGS += -DCWIST_DB
+endif
+ifeq ($(CWIST_NATS),1)
+    CFLAGS += -DCWIST_NATS
+endif
+ifeq ($(CWIST_JWT),1)
+    CFLAGS += -DCWIST_JWT
 endif
 
 # WebTransport over HTTP/3, as a comma-separated list of roles:
@@ -153,7 +254,7 @@ endif
 # uses that session API; otherwise it uses the client-bidi-stream support of
 # stock lsquic (LSQUIC_WEBTRANSPORT_SERVER_SUPPORT), which cannot open server
 # streams. The client needs lsquic_wt.h. Object files rebuild on a change.
-CWIST_WEBTRANSPORT ?= server
+CWIST_WEBTRANSPORT ?= $(if $(filter 1,$(CWIST_TINY)),none,server)
 comma := ,
 CWIST_WT_ROLES := $(strip $(subst $(comma), ,$(CWIST_WEBTRANSPORT)))
 ifeq ($(CWIST_WT_ROLES),1)
@@ -178,6 +279,22 @@ ifneq ($(filter client,$(CWIST_WT_ROLES)),)
 endif
 ifeq ($(CWIST_HAVE_LSQUIC_WT),1)
     CFLAGS += -DCWIST_HAVE_LSQUIC_WT
+endif
+
+# WebRTC DataChannel (src/net/webrtc/). DataChannel-only: SDP offer/answer,
+# ICE-lite, DTLS via the vendored BoringSSL, and SCTP DataChannels (RFC 8831)
+# through the lib/usrsctp submodule running in AF_CONN raw mode tunneled over
+# DTLS. Set CWIST_WEBRTC=0 to leave it out.  CWIST_TINY=1 (above) defaults
+# it to off as well.
+CWIST_WEBRTC ?= $(if $(filter 1,$(CWIST_TINY)),0,1)
+ifeq ($(CWIST_TLS),mbedtls)
+    ifneq ($(CWIST_WEBRTC),0)
+        $(warning CWIST_TLS=mbedtls: WebRTC DataChannel uses BoringSSL DTLS; forcing CWIST_WEBRTC=0)
+    endif
+    CWIST_WEBRTC := 0
+endif
+ifeq ($(CWIST_WEBRTC),1)
+    CFLAGS += -DCWIST_WEBRTC -I$(USRSCTP_DIR)/usrsctplib
 endif
 
 # Detect OS
@@ -227,6 +344,8 @@ lib/multipart-parser-c/multipart_parser.o: CFLAGS := $(filter-out -Werror,$(CFLA
 lib/sqlite3/sqlite3.o: CFLAGS := $(filter-out -Werror -flto=auto -ffat-lto-objects,$(CFLAGS))
 
 # Source Files
+# Feature sources (HTTP/3, WebSocket, DB/ORM, NATS, JWT) are appended
+# conditionally below, gated on their CWIST_* knobs.
 SRCS = src/core/sstring/sstring.c \
        src/core/seq/seq.c \
        src/core/seq/seq_auth.c \
@@ -234,11 +353,8 @@ SRCS = src/core/sstring/sstring.c \
        src/net/http/http.c \
        src/net/http/sse.c \
        src/net/graphql/graphql.c \
-       src/net/graphql/graphql_ws.c \
        src/net/http/http2.c \
        src/net/http/http2_flow_control.c \
-       src/net/http/http3.c \
-       src/net/http/http3_client.c \
        src/net/http/curl_global.c \
        src/net/http/http_client.c \
        src/net/http/https.c \
@@ -265,21 +381,12 @@ SRCS = src/core/sstring/sstring.c \
        src/sys/app/csrf.c \
        src/sys/app/waf.c \
        src/core/siphash/siphash.c \
-       src/core/db/db.c \
-       src/core/db/pool.c \
-       src/core/db/nuke_db.c \
-       src/core/db/migrate.c \
-       src/core/orm/orm.c \
-       src/core/orm/orm_socket.c \
-       src/core/orm/rdbms_auto_mount.c \
        src/sys/app/app.c \
-       src/net/websocket/websocket.c \
-       src/net/websocket/websocket_async.c \
-       src/net/websocket/ws_utils.c \
        src/core/utils/json_builder.c \
        src/core/utils/json_heal.c \
        src/core/utils/zod.c \
        src/sys/app/middleware.c \
+       src/sys/app/otel.c \
        src/sys/app/config.c \
        src/sys/app/logger.c \
        src/sys/app/log_async.c \
@@ -287,9 +394,6 @@ SRCS = src/core/sstring/sstring.c \
        src/sys/app/compress.c \
        src/sys/app/test_client.c \
        src/core/log/log.c lib/libttak/src/net/mols_control.c \
-    src/net/http/async.c src/net/http/async_tls.c src/core/mem/gc.c lib/libttak/src/mem/epoch.c src/sys/sys_info.c \
-    lib/libttak/src/mem/mem.c lib/libttak/src/mem/fastpath.c \
-    lib/libttak/src/mem/owner.c lib/libttak/src/mem/abstract.c \
        src/sys/session/flash.c \
        src/core/template/template.c \
        src/core/html/builder.c \
@@ -297,17 +401,11 @@ SRCS = src/core/sstring/sstring.c \
        src/core/html/component.c \
        src/net/http/html_response.c \
        src/sys/app/assets.c \
+       src/sys/app/openapi.c \
        src/sys/app/big_dumb_reply.c \
-       src/sys/sys_info.c \
        src/core/mem/alloc.c \
        src/core/mem/arena.c \
-       src/core/mem/gc.c \
-       lib/sqlite3/sqlite3.c \
-       src/security/jwt/jwt.c \
-       src/security/db_crypt/db_crypt.c \
        src/security/tls/ech.c \
-       src/net/db_sync/db_sync.c \
-       src/net/nats/cwist_nats.c \
        src/net/redis/cwist_redis.c \
        src/core/validation/bind.c \
        src/sys/io/reactor.c \
@@ -701,12 +799,25 @@ LIB_NAME = libcwist.a
 	@printf '%s' 'fat=$(CWIST_FAT)' | cmp -s - $@ || printf '%s' 'fat=$(CWIST_FAT)' > $@
 FORCE:
 .PHONY: FORCE fat-dist
-$(OBJS): .build-flags
 LIBTTAK_DIR = lib/libttak
 LIBTTAK_LIB = $(LIBTTAK_DIR)/lib/libttak.a
 LIBTTAK_EXTRA_CFLAGS =
 ifeq ($(UNAME_S),Darwin)
     LIBTTAK_EXTRA_CFLAGS += -D_DARWIN_C_SOURCE
+endif
+# libttak tunes for the build host (-march=native) by default.  CWIST_PORTABLE=1
+# drops the host tuning so the archive runs on any CPU of the target
+# architecture (release assets are built this way); a cross build implies it
+# and also hands libttak our compiler.
+ifneq ($(CROSS_COMPILE),)
+CWIST_PORTABLE ?= 1
+endif
+CWIST_PORTABLE ?= 0
+ifeq ($(CWIST_PORTABLE),1)
+    LIBTTAK_MAKE_FLAGS = CC="$(CC)" AR="$(AR)" \
+        PERF_STACK_FLAGS="-O3 -pipe -fomit-frame-pointer -funroll-loops \
+            -fstrict-aliasing -ffunction-sections -fdata-sections \
+            -fvisibility=hidden -DNDEBUG"
 endif
 CJSON_DIR = lib/cjson
 CJSON_LIB = $(CJSON_DIR)/libcjson.a
@@ -744,10 +855,48 @@ INSTALL_PCDIR = $(DESTDIR)$(PCDIR)
 EXTERNAL_LIBS = $(URIPARSER_LIB) \
                 $(CJSON_LIB) \
                 $(LIBTTAK_LIB) \
-                $(CNATS_LIB) \
-                $(LSQUIC_LIB) \
-                $(BORINGSSL_SSL_LIB) \
-                $(BORINGSSL_CRYPTO_LIB)
+                $(TLS_VENDOR_LIBS)
+
+# Feature-gated sources and their vendored archives.  When a knob is 0 the
+# objects stay out of libcwist.a (and out of the fat archive) entirely; the
+# app-level public functions remain as compiled-in stubs (see src/sys/app).
+ifeq ($(CWIST_TLS),mbedtls)
+    SRCS += src/security/tls/backend_mbedtls.c
+endif
+ifeq ($(CWIST_HTTP3),1)
+    SRCS += src/net/http/http3.c \
+            src/net/http/http3_client.c
+    EXTERNAL_LIBS += $(LSQUIC_LIB)
+endif
+
+ifeq ($(CWIST_WS),1)
+    SRCS += src/net/websocket/websocket.c \
+            src/net/websocket/websocket_async.c \
+            src/net/websocket/ws_utils.c \
+            src/net/graphql/graphql_ws.c
+endif
+
+ifeq ($(CWIST_DB),1)
+    SRCS += lib/sqlite3/sqlite3.c \
+            src/core/db/db.c \
+            src/core/db/pool.c \
+            src/core/db/nuke_db.c \
+            src/core/db/migrate.c \
+            src/core/orm/orm.c \
+            src/core/orm/orm_socket.c \
+            src/core/orm/rdbms_auto_mount.c \
+            src/net/db_sync/db_sync.c \
+            src/security/db_crypt/db_crypt.c
+endif
+
+ifeq ($(CWIST_NATS),1)
+    SRCS += src/net/nats/cwist_nats.c
+    EXTERNAL_LIBS += $(CNATS_LIB)
+endif
+
+ifeq ($(CWIST_JWT),1)
+    SRCS += src/security/jwt/jwt.c
+endif
 
 ifeq ($(CWIST_WEBRTC),1)
     SRCS += src/net/webrtc/webrtc.c \
@@ -758,6 +907,12 @@ ifeq ($(CWIST_WEBRTC),1)
     EXTERNAL_LIBS += $(USRSCTP_LIB)
     LIBS += $(USRSCTP_LIB)
 endif
+
+# Attach the flag-change rebuild guard here, after every feature append above:
+# make expands $(OBJS) eagerly at this line, and an attachment placed before
+# the appends would cover only the core sources, leaving feature objects
+# (jwt.o, http3.o, ...) stale across knob flips such as CWIST_TLS.
+$(OBJS): .build-flags
 
 # --- Fat (embedded-friendly) build options -----------------------------------
 # CWIST_FAT=1 folds every vendored static archive into libcwist.a, so copying
@@ -774,7 +929,7 @@ endif
 
 # --- Build Targets ---
 
-all: $(LIBTTAK_LIB) $(CJSON_LIB) $(URIPARSER_LIB) $(SQLITE_DIR)/sqlite3.c $(LSQUIC_LIB) $(LIB_NAME)
+all: $(LIBTTAK_LIB) $(CJSON_LIB) $(URIPARSER_LIB) $(if $(filter 1,$(CWIST_DB)),$(SQLITE_DIR)/sqlite3.c) $(if $(filter 1,$(CWIST_HTTP3)),$(LSQUIC_LIB)) $(LIB_NAME)
 
 # SQLite Download & Extraction Rule
 $(SQLITE_DIR)/sqlite3.c:
@@ -788,6 +943,18 @@ $(SQLITE_DIR)/sqlite3.c:
 
 # Ensure lsquic submodule is checked out before compiling objects that need its headers
 $(OBJS): | lib/lsquic/include/lsquic.h
+
+ifeq ($(CWIST_TLS),mbedtls)
+# Ensure the mbedTLS submodule is checked out before compiling objects that
+# include its headers (backend_mbedtls.c, jwt.c).
+$(OBJS): | $(MBEDTLS_DIR)/include/mbedtls/ssl.h
+
+$(MBEDTLS_DIR)/include/mbedtls/ssl.h:
+	@if [ ! -f "$@" ]; then \
+		echo "Initializing mbedtls submodule..."; \
+		git submodule update --init --recursive $(MBEDTLS_DIR); \
+	fi
+endif
 
 ifeq ($(CWIST_WEBRTC),1)
 $(OBJS): | $(USRSCTP_DIR)/usrsctplib/usrsctp.h
@@ -811,7 +978,7 @@ $(USRSCTP_STAMP):
 		-DCMAKE_BUILD_TYPE=Release \
 		-DBUILD_SHARED_LIBS=OFF \
 		-Dsctp_build_programs=OFF \
-		-Dsctp_build_fuzzer=OFF
+		-Dsctp_build_fuzzer=OFF $(CROSS_CMAKE_FLAGS)
 	cmake --build $(USRSCTP_BUILD_DIR) --target usrsctp
 	@rm -f $(USRSCTP_BUILD_DIR)/.usrsctp_built_*
 	@touch $@
@@ -846,20 +1013,76 @@ $(LIB_NAME): .build-fat $(EXTERNAL_LIBS) $(OBJS)
 # and build apps with -I<dir>/include <dir>/lib/libcwist.a; only system
 # libraries stay external.
 FAT_DIST_DIR ?= dist/cwist-fat
+# The bundle stages every public-API header (including sqlite3.h, kept even
+# when CWIST_DB=0 trims the objects), so make sure the amalgamation download
+# has happened before the copies run.
 fat-dist: CWIST_FAT = 1
-fat-dist: $(LIB_NAME)
+fat-dist: $(SQLITE_DIR)/sqlite3.c $(LIB_NAME)
 	rm -rf $(FAT_DIST_DIR)
 	mkdir -p $(FAT_DIST_DIR)/lib $(FAT_DIST_DIR)/include/cjson
 	cp $(LIB_NAME) $(FAT_DIST_DIR)/lib/
 	cp -R include/cwist $(FAT_DIST_DIR)/include/
 	cp $(CJSON_DIR)/cJSON.h $(FAT_DIST_DIR)/include/cjson/
 	cp -R $(LIBTTAK_DIR)/include/ttak $(FAT_DIST_DIR)/include/
-	cp -R $(BORINGSSL_DIR)/include/openssl $(FAT_DIST_DIR)/include/
+	@if [ "$(CWIST_TLS)" = "mbedtls" ]; then \
+	    cp -R src/security/tls/shim/openssl $(FAT_DIST_DIR)/include/; \
+	    cp -R $(MBEDTLS_DIR)/include/mbedtls $(FAT_DIST_DIR)/include/; \
+	    cp -R $(MBEDTLS_DIR)/include/psa $(FAT_DIST_DIR)/include/; \
+	else \
+	    cp -R $(BORINGSSL_DIR)/include/openssl $(FAT_DIST_DIR)/include/; \
+	fi
 	cp $(SQLITE_DIR)/sqlite3.h $(FAT_DIST_DIR)/include/
+
+# --- Amalgamated single-file distribution (issue #429) ----------------------
+# `make amalgamation` stages a drop-in bundle in AMALGAMATION_DIR: cwist.c
+# pastes every enabled translation unit (the knob-expanded SRCS, in order)
+# into one file, and include/ carries the public headers plus every vendored
+# and private header they pull in, laid out so that
+#   gcc -O2 -std=gnu17 -Idist/amalgamation/include -c dist/amalgamation/cwist.c
+# is the whole compile line.  The trim knobs (CWIST_TINY & friends) apply
+# exactly as for libcwist.a; the vendored code itself still links from its
+# static archives (see fat-dist).
+AMALGAMATION_DIR ?= dist/amalgamation
+AMALGAMATION_DEFINES = $(filter-out -D_FORTIFY_SOURCE=%,$(filter -D%,$(CFLAGS)))
+AMALGAMATION_KNOBS = CWIST_TINY=$(CWIST_TINY) CWIST_HTTP3=$(CWIST_HTTP3) \
+    CWIST_WS=$(CWIST_WS) CWIST_DB=$(CWIST_DB) CWIST_NATS=$(CWIST_NATS) \
+    CWIST_JWT=$(CWIST_JWT) CWIST_WEBRTC=$(CWIST_WEBRTC) \
+    CWIST_WEBTRANSPORT=$(CWIST_WEBTRANSPORT)
+
+# Submodule header anchors the bundle stages.  Initializing submodules is a
+# no-op once they are checked out, so a clean checkout works out of the box.
+AMALGAMATION_HEADER_ANCHORS = $(BORINGSSL_DIR)/include/openssl/ssl.h \
+                              $(CJSON_DIR)/cJSON.h \
+                              $(LIBTTAK_DIR)/include/ttak/mem/mem.h \
+                              lib/multipart-parser-c/multipart_parser.h
+ifeq ($(CWIST_NATS),1)
+AMALGAMATION_HEADER_ANCHORS += $(CNATS_DIR)/src/nats.h
+endif
+
+$(AMALGAMATION_HEADER_ANCHORS):
+	@if [ ! -f "$@" ]; then \
+	    echo "Initializing submodules..."; \
+	    git submodule update --init --recursive; \
+	fi
+
+ifeq ($(CWIST_HTTP3),1)
+AMALGAMATION_ORDER_ONLY = lib/lsquic/include/lsquic.h
+endif
+ifeq ($(CWIST_WEBRTC),1)
+AMALGAMATION_ORDER_ONLY += $(USRSCTP_DIR)/usrsctplib/usrsctp.h
+endif
+
+amalgamation: $(SQLITE_DIR)/sqlite3.c $(AMALGAMATION_HEADER_ANCHORS) | $(AMALGAMATION_ORDER_ONLY)
+	python3 scripts/gen_amalgamation.py --root . --out $(AMALGAMATION_DIR) \
+	    --srcs "$(SRCS)" \
+	    --defines "$(AMALGAMATION_DEFINES)" \
+	    --knobs "$(AMALGAMATION_KNOBS)"
+
+.PHONY: amalgamation
 
 $(LIBTTAK_LIB):
 	@echo "Building libttak..."
-	$(MAKE) -C $(LIBTTAK_DIR) EXTRA_CFLAGS="$(LIBTTAK_EXTRA_CFLAGS)"
+	$(MAKE) -C $(LIBTTAK_DIR) $(LIBTTAK_MAKE_FLAGS) EXTRA_CFLAGS="$(LIBTTAK_EXTRA_CFLAGS)"
 
 $(CJSON_LIB):
 	@echo "Building cJSON..."
@@ -869,7 +1092,7 @@ $(CJSON_LIB):
 
 $(URIPARSER_LIB):
 	@echo "Configuring uriparser..."
-	cmake -S $(URIPARSER_DIR) -B $(URIPARSER_BUILD_DIR) -DCMAKE_C_COMPILER=$(CC) $(URIPARSER_CMAKE_FLAGS)
+	cmake -S $(URIPARSER_DIR) -B $(URIPARSER_BUILD_DIR) -DCMAKE_C_COMPILER=$(CC) $(URIPARSER_CMAKE_FLAGS) $(CROSS_CMAKE_FLAGS)
 	@echo "Building uriparser..."
 	cmake --build $(URIPARSER_BUILD_DIR) --target uriparser
 
@@ -881,11 +1104,35 @@ $(BORINGSSL_STAMP):
 	cmake -S $(BORINGSSL_DIR) -B $(BORINGSSL_BUILD_DIR) \
 		-DCMAKE_C_COMPILER=$(CC) \
 		-DCMAKE_CXX_COMPILER=$(CXX) \
-		-DCMAKE_BUILD_TYPE=Release
+		-DCMAKE_BUILD_TYPE=Release $(CROSS_CMAKE_FLAGS)
 	cmake --build $(BORINGSSL_BUILD_DIR) --target ssl crypto
 	@touch $@
 
 $(BORINGSSL_SSL_LIB) $(BORINGSSL_CRYPTO_LIB): $(BORINGSSL_STAMP)
+
+# Same stamp-file pattern as BoringSSL: keyed on the pinned submodule commit
+# so moving the pin forces a rebuild.  The pthread threading layer defines
+# must match the CWIST objects' CFLAGS (see the CWIST_TLS block above) or the
+# mbedTLS public struct layouts diverge between library and callers.
+MBEDTLS_CONFIG_DEFINES = -DMBEDTLS_THREADING_C -DMBEDTLS_THREADING_PTHREAD
+MBEDTLS_REV := $(if $(wildcard $(MBEDTLS_DIR)/.git),$(shell git -C $(MBEDTLS_DIR) rev-parse HEAD 2>/dev/null))
+MBEDTLS_STAMP = $(MBEDTLS_BUILD_DIR)/.mbedtls_built_$(or $(MBEDTLS_REV),unversioned)
+
+$(MBEDTLS_TLS_LIB) $(MBEDTLS_X509_LIB) $(MBEDTLS_CRYPTO_LIB): $(MBEDTLS_STAMP)
+
+$(MBEDTLS_STAMP):
+	@echo "Building mbedTLS..."
+	@mkdir -p $(MBEDTLS_BUILD_DIR)
+	cmake -S $(MBEDTLS_DIR) -B $(MBEDTLS_BUILD_DIR) \
+		-DCMAKE_C_COMPILER=$(CC) \
+		-DCMAKE_BUILD_TYPE=Release \
+		-DCMAKE_C_FLAGS="$(MBEDTLS_CONFIG_DEFINES)" \
+		-DBUILD_SHARED_LIBS=OFF \
+		-DENABLE_TESTING=OFF \
+		-DENABLE_PROGRAMS=OFF $(CROSS_CMAKE_FLAGS)
+	cmake --build $(MBEDTLS_BUILD_DIR) --target mbedtls mbedx509 mbedcrypto
+	@rm -f $(MBEDTLS_BUILD_DIR)/.mbedtls_built_*
+	@touch $@
 
 # The archive must follow the pinned lsquic commit, not just exist: lsquic's
 # public structs (e.g. struct lsquic_stream_if) change layout between
@@ -910,7 +1157,7 @@ $(LSQUIC_STAMP): $(BORINGSSL_SSL_LIB) $(BORINGSSL_CRYPTO_LIB)
 		-DBORINGSSL_LIB_crypto=$(abspath $(BORINGSSL_CRYPTO_LIB)) \
 		-DBORINGSSL_INCLUDE=$(abspath $(BORINGSSL_DIR)/include) \
 		-DLSQUIC_WEBTRANSPORT=ON \
-		-DBUILD_SHARED_LIBS=OFF
+		-DBUILD_SHARED_LIBS=OFF $(CROSS_CMAKE_FLAGS)
 	cmake --build $(LSQUIC_BUILD_DIR) --target lsquic
 	@rm -f $(LSQUIC_BUILD_DIR)/.lsquic_built_*
 	@touch $@
@@ -923,7 +1170,7 @@ $(CNATS_LIB):
 		-DCMAKE_BUILD_TYPE=Release \
 		-DBUILD_SHARED_LIBS=OFF \
 		-DNATS_BUILD_WITH_TLS=OFF \
-		-DNATS_BUILD_STREAMING=OFF
+		-DNATS_BUILD_STREAMING=OFF $(CROSS_CMAKE_FLAGS)
 	cmake --build $(CNATS_DIR)/build --target nats_static
 
 # --- Test Targets ---
@@ -1029,6 +1276,8 @@ TEST_TARGETS = test_worker_affinity \
                test_http_fairness \
                test_http_pipeline \
                test_test_client \
+               test_openapi \
+               test_otel \
                test_multiport \
                test_route_ctx \
                test_middleware_ctx \
@@ -1082,7 +1331,8 @@ fuzz_seq: $(LIBTTAK_LIB) $(CJSON_LIB) tests/fuzz_seq.c src/core/seq/seq.c src/co
 	$(FUZZ_CC) $(INCLUDE_PATHS) $(COMMON_DEFINES) -std=c17 -g -O1 \
 		-fsanitize=fuzzer,address,undefined -o $@ tests/fuzz_seq.c \
 		src/core/seq/seq.c src/core/seq/seq_auth.c src/core/mem/alloc.c \
-		$(LIBTTAK_LIB) $(CJSON_LIB) $(BORINGSSL_SSL_LIB) $(BORINGSSL_CRYPTO_LIB) -pthread
+		$(if $(filter mbedtls,$(CWIST_TLS)),src/security/tls/backend_mbedtls.c) \
+		$(LIBTTAK_LIB) $(CJSON_LIB) $(TLS_VENDOR_LIBS) -pthread
 	./$@ -runs=$(FUZZ_RUNS)
 
 bench_security_pool: $(LIB_NAME) tests/bench_security_pool.c
@@ -1118,6 +1368,12 @@ tsan-test: $(TSAN_TEST_TARGETS)
 # HTTPS server for scripts/ci/rss_gate.sh (runs until SIGTERM; not a test).
 rss_gate_server: $(LIB_NAME) tests/rss_gate_server.c
 	$(CC) $(CFLAGS) -o $@ tests/rss_gate_server.c $(LIB_NAME) $(LIBS)
+
+zero_alloc_server: $(LIB_NAME) tests/zero_alloc_server.c
+	$(CC) $(CFLAGS) -o $@ tests/zero_alloc_server.c $(LIB_NAME) $(LIBS)
+
+zero_alloc_shim.so: tests/zero_alloc_counter.c
+	$(CC) -O2 -fPIC -shared -o $@ tests/zero_alloc_counter.c
 
 # HTTPS C100k load client for scripts/ci/c100k_https.sh (needs a running
 # server; not a test). Plain OpenSSL + epoll, no libcwist.
@@ -1203,9 +1459,15 @@ bench_cooperative_queuing: tests/bench_cooperative_queuing.c src/sys/io/reactor.
 bench_cooperative_queuing_epoll: tests/bench_cooperative_queuing.c src/sys/io/reactor.c
 	$(CC) $(CFLAGS) -DCWIST_BENCH_EPOLL -o $@ tests/bench_cooperative_queuing.c -pthread
 
+ifeq ($(CWIST_DB),1)
 test_orm: $(LIB_NAME) tests/test_orm.c
 	$(CC) $(CFLAGS) -o test_orm tests/test_orm.c $(LIB_NAME) $(LIBS)
 	./test_orm
+else
+# CWIST_DB=0: the module and its test are compiled out.
+test_orm:
+	@echo "CWIST_DB=0: skipping $@"
+endif
 
 test_core_utils: $(LIB_NAME) tests/test_core_utils.c
 	$(CC) $(CFLAGS) -o test_core_utils tests/test_core_utils.c $(LIB_NAME) $(LIBS)
@@ -1255,10 +1517,6 @@ test_error: $(LIB_NAME) tests/test_error.c
 	$(CC) $(CFLAGS) -o test_error tests/test_error.c $(LIB_NAME) $(LIBS)
 	./test_error
 
-test_middleware_jwt: $(LIB_NAME) tests/test_middleware_jwt.c
-	$(CC) $(CFLAGS) -o test_middleware_jwt tests/test_middleware_jwt.c $(LIB_NAME) $(LIBS)
-	./test_middleware_jwt
-
 # Out-of-line wrappers for public static inline helpers: same results as the
 # inline versions, and defined global symbols in the archive and in a program
 # linked against it (what a binding generated from the headers links to).
@@ -1298,6 +1556,16 @@ test_flash: $(LIB_NAME) tests/test_flash.c
 	$(CC) $(CFLAGS) -o test_flash tests/test_flash.c $(LIB_NAME) $(LIBS)
 	./test_flash
 
+ifeq ($(CWIST_JWT),1)
+test_middleware_jwt: $(LIB_NAME) tests/test_middleware_jwt.c
+	$(CC) $(CFLAGS) -o test_middleware_jwt tests/test_middleware_jwt.c $(LIB_NAME) $(LIBS)
+	./test_middleware_jwt
+else
+# CWIST_JWT=0: the module and its test are compiled out.
+test_middleware_jwt:
+	@echo "CWIST_JWT=0: skipping $@"
+endif
+
 test_http: $(LIB_NAME) tests/test_http.c
 	$(CC) $(CFLAGS) -o test_http tests/test_http.c $(LIB_NAME) $(LIBS)
 	./test_http
@@ -1329,6 +1597,7 @@ test_mux_param: $(LIB_NAME) tests/test_mux_param.c
 	$(CC) $(CFLAGS) -o test_mux_param tests/test_mux_param.c $(LIB_NAME) $(LIBS)
 	./test_mux_param
 
+ifeq ($(CWIST_JWT),1)
 test_jwt: $(LIB_NAME) tests/test_jwt.c
 	$(CC) $(CFLAGS) -o test_jwt tests/test_jwt.c $(LIB_NAME) $(LIBS)
 	./test_jwt
@@ -1336,22 +1605,45 @@ test_jwt: $(LIB_NAME) tests/test_jwt.c
 test_jwt_asym: $(LIB_NAME) tests/test_jwt_asym.c
 	$(CC) $(CFLAGS) -o $@ tests/test_jwt_asym.c $(LIB_NAME) $(LIBS)
 	./$@
+else
+# CWIST_JWT=0: the module and its tests are compiled out.
+test_jwt test_jwt_asym:
+	@echo "CWIST_JWT=0: skipping $@"
+endif
 
+ifeq ($(CWIST_DB),1)
 test_migrate: $(LIB_NAME) tests/test_migrate.c
 	$(CC) $(CFLAGS) -o test_migrate tests/test_migrate.c $(LIB_NAME) $(LIBS)
 	./test_migrate
+else
+# CWIST_DB=0: the module and its test are compiled out.
+test_migrate:
+	@echo "CWIST_DB=0: skipping $@"
+endif
 
+ifeq ($(CWIST_DB),1)
 test_json_heal: $(LIB_NAME) tests/test_json_heal.c
 	$(CC) $(CFLAGS) -o test_json_heal tests/test_json_heal.c $(LIB_NAME) $(LIBS)
 	./test_json_heal
+else
+# CWIST_DB=0: json_heal's DB round-trip path is compiled out with the module.
+test_json_heal:
+	@echo "CWIST_DB=0: skipping $@"
+endif
 
 test_https: $(LIB_NAME) tests/test_https.c
 	$(CC) $(CFLAGS) -o test_https tests/test_https.c $(LIB_NAME) $(LIBS)
 	./test_https
 
+ifeq ($(CWIST_HTTP3),1)
 test_tls_hot_reload: $(LIB_NAME) tests/test_tls_hot_reload.c
 	$(CC) $(CFLAGS) -o test_tls_hot_reload tests/test_tls_hot_reload.c $(LIB_NAME) $(LIBS)
 	./test_tls_hot_reload
+else
+# CWIST_HTTP3=0: the test drives the HTTP/3 context reload path directly.
+test_tls_hot_reload:
+	@echo "CWIST_HTTP3=0: skipping $@"
+endif
 
 test_https_park: $(LIB_NAME) tests/test_https_park.c
 	$(CC) $(CFLAGS) -o test_https_park tests/test_https_park.c $(LIB_NAME) $(LIBS)
@@ -1365,9 +1657,17 @@ test_https_park_full_gc: $(LIB_NAME) tests/test_https_park_full_gc.c tests/test_
 	$(CC) $(CFLAGS) -o test_https_park_full_gc tests/test_https_park_full_gc.c $(LIB_NAME) $(LIBS)
 	./test_https_park_full_gc
 
+ifeq ($(CWIST_TLS),mbedtls)
+# CWIST_TLS=mbedtls: the test asserts resumed-handshake counters, but mbedTLS
+# exposes no per-connection resumption flag, so the counter stays 0 (see
+# docs/performance/tls-backends.md).
+test_https_metrics:
+	@echo "CWIST_TLS=mbedtls: skipping $@"
+else
 test_https_metrics: $(LIB_NAME) tests/test_https_metrics.c
 	$(CC) $(CFLAGS) -o test_https_metrics tests/test_https_metrics.c $(LIB_NAME) $(LIBS)
 	./test_https_metrics
+endif
 
 test_http2: $(LIB_NAME) tests/test_http2.c
 	$(CC) $(CFLAGS) -o test_http2 tests/test_http2.c $(LIB_NAME) $(LIBS)
@@ -1382,17 +1682,25 @@ test_http2_prebuffer: $(LIB_NAME) tests/test_http2_prebuffer.c
 h2c-server: $(LIB_NAME) tests/h2c_server.c
 	$(CC) $(CFLAGS) -o h2c-server tests/h2c_server.c $(LIB_NAME) $(LIBS)
 
+ifeq ($(CWIST_HTTP3),1)
 test_http3: $(LIB_NAME) tests/test_http3.c
 	$(CC) $(CFLAGS) -o test_http3 tests/test_http3.c $(LIB_NAME) $(LIBS)
 	./test_http3
+else
+# CWIST_HTTP3=0: the module and its test are compiled out.
+test_http3:
+	@echo "CWIST_HTTP3=0: skipping $@"
+endif
 
-test_webtransport: $(LIB_NAME) tests/test_webtransport.c
-	$(CC) $(CFLAGS) -o test_webtransport tests/test_webtransport.c $(LIB_NAME) $(LIBS)
-	./test_webtransport
-
+ifeq ($(CWIST_DB),1)
 test_rdbms_auto_mount: $(LIB_NAME) tests/test_rdbms_auto_mount.c
 	$(CC) $(CFLAGS) -o test_rdbms_auto_mount tests/test_rdbms_auto_mount.c $(LIB_NAME) $(LIBS)
 	./test_rdbms_auto_mount
+else
+# CWIST_DB=0: the module and its test are compiled out.
+test_rdbms_auto_mount:
+	@echo "CWIST_DB=0: skipping $@"
+endif
 
 stress_test: $(LIB_NAME) tests/stress_test.c
 	$(CC) $(CFLAGS) -o stress_test tests/stress_test.c $(LIB_NAME) $(LIBS)
@@ -1402,6 +1710,7 @@ test_cors: $(LIB_NAME) tests/test_cors.c
 	$(CC) $(CFLAGS) -o test_cors tests/test_cors.c $(LIB_NAME) $(LIBS)
 	./test_cors
 
+ifeq ($(CWIST_WS),1)
 test_websocket: $(LIB_NAME) tests/test_websocket.c
 	$(CC) $(CFLAGS) -o test_websocket tests/test_websocket.c $(LIB_NAME) $(LIBS)
 	./test_websocket
@@ -1409,6 +1718,11 @@ test_websocket: $(LIB_NAME) tests/test_websocket.c
 test_websocket_async: $(LIB_NAME) tests/test_websocket_async.c
 	$(CC) $(CFLAGS) -o test_websocket_async tests/test_websocket_async.c $(LIB_NAME) $(LIBS)
 	./test_websocket_async
+else
+# CWIST_WS=0: the module and its tests are compiled out.
+test_websocket test_websocket_async:
+	@echo "CWIST_WS=0: skipping $@"
+endif
 
 test_shutdown: $(LIB_NAME) tests/test_shutdown.c
 	$(CC) $(CFLAGS) -o test_shutdown tests/test_shutdown.c $(LIB_NAME) $(LIBS)
@@ -1446,9 +1760,15 @@ test_log: $(LIB_NAME) tests/test_log.c
 	$(CC) $(CFLAGS) -o test_log tests/test_log.c $(LIB_NAME) $(LIBS)
 	./test_log
 
+ifeq ($(CWIST_DB),1)
 nuke_missing_user_test: $(LIB_NAME) tests/nuke_missing_user_test.c
 	$(CC) $(CFLAGS) -o nuke_missing_user_test tests/nuke_missing_user_test.c $(LIB_NAME) $(LIBS)
 	./nuke_missing_user_test
+else
+# CWIST_DB=0: the module and its test are compiled out.
+nuke_missing_user_test:
+	@echo "CWIST_DB=0: skipping $@"
+endif
 
 test_bind: $(LIB_NAME) tests/test_bind.c
 	$(CC) $(CFLAGS) -o test_bind tests/test_bind.c $(LIB_NAME) $(LIBS)
@@ -1482,6 +1802,7 @@ test_cache: $(LIB_NAME) tests/test_cache.c
 	$(CC) $(CFLAGS) -o test_cache tests/test_cache.c $(LIB_NAME) $(LIBS)
 	./test_cache
 
+ifeq ($(CWIST_DB),1)
 test_bdr: $(LIB_NAME) tests/test_bdr.c
 	$(CC) $(CFLAGS) -o test_bdr tests/test_bdr.c $(LIB_NAME) $(LIBS)
 	./test_bdr
@@ -1489,8 +1810,13 @@ test_bdr: $(LIB_NAME) tests/test_bdr.c
 test_bdr_cache: $(LIB_NAME) tests/test_bdr_cache.c
 	$(CC) $(CFLAGS) -o $@ tests/test_bdr_cache.c $(LIB_NAME) $(LIBS)
 	./$@
+else
+# CWIST_DB=0: the BDR disk fallback is compiled out, so its tests are skipped.
+test_bdr test_bdr_cache:
+	@echo "CWIST_DB=0: skipping $@"
+endif
 
-install: $(LIB_NAME) $(PC_FILE)
+install: $(SQLITE_DIR)/sqlite3.c $(LIB_NAME) $(PC_FILE)
 	@echo "Installing CWIST library to $(LIBDIR)..."
 	install -d $(INSTALL_LIBDIR)
 	install -m 644 $(LIB_NAME) $(INSTALL_LIBDIR)/
@@ -1596,12 +1922,21 @@ EXAMPLE_BINS = example/simple-server/simple-server \
                example/http/step-2-mux-router/mux-router \
                example/http/step-3-query-params/query-params \
                example/http/step-4-json-api/json-api \
-               example/jwt/step-2-http-auth/jwt-auth \
                example/cde-json-viewer/cde-json-viewer \
-               example/db/step-1-open-query/open-query \
-               example/db/step-2-migrations/migrations \
-               example/db/step-4-json-insert/json-insert \
                example/rps-showcase/rps-showcase
+
+# Feature-dependent examples link against module-level symbols that are
+# compiled out when the matching knob is 0, so they only build in
+# full-feature configurations (the app-level stubs keep hello-style apps
+# linkable; these call the modules directly).
+ifeq ($(CWIST_JWT),1)
+EXAMPLE_BINS += example/jwt/step-2-http-auth/jwt-auth
+endif
+ifeq ($(CWIST_DB),1)
+EXAMPLE_BINS += example/db/step-1-open-query/open-query \
+                example/db/step-2-migrations/migrations \
+                example/db/step-4-json-insert/json-insert
+endif
 
 examples: $(EXAMPLE_BINS)
 
@@ -1644,29 +1979,35 @@ MICRO_BINS = example/micro/01-hello/hello \
              example/micro/03-path-params/path-params \
              example/micro/04-query-params/query-params \
              example/micro/05-json/json \
-             example/micro/06-orm-insert/orm-insert \
-             example/micro/07-orm-query/orm-query \
-             example/micro/08-orm-update-delete/orm-update-delete \
              example/micro/09-html-builder/html-builder \
              example/micro/10-static-files/static-files \
-             example/micro/11-jwt-auth/jwt-auth \
              example/micro/12-middleware/middleware \
-             example/micro/13-nuke-db/nuke-db \
-             example/micro/14-websocket/websocket \
              example/micro/15-pqc-tls/pqc-tls \
-             example/micro/16-rdbms-auto/rdbms-auto \
-             example/micro/17-blog-crud/blog-crud
+             example/micro/18-https-hello/https-hello
+
+ifeq ($(CWIST_DB),1)
+MICRO_BINS += example/micro/06-orm-insert/orm-insert \
+              example/micro/07-orm-query/orm-query \
+              example/micro/08-orm-update-delete/orm-update-delete \
+              example/micro/13-nuke-db/nuke-db \
+              example/micro/16-rdbms-auto/rdbms-auto \
+              example/micro/17-blog-crud/blog-crud
+endif
+ifeq ($(CWIST_JWT),1)
+MICRO_BINS += example/micro/11-jwt-auth/jwt-auth
+endif
+ifeq ($(CWIST_WS),1)
+MICRO_BINS += example/micro/14-websocket/websocket
+endif
 
 micro-examples: $(MICRO_BINS)
 
 # Examples that ship their own Makefile instead of a rule here. They are
 # built through those Makefiles so a broken per-directory link line fails
 # the check, not only a broken main.c.
-STANDALONE_EXAMPLE_DIRS = example/db-crypt/step-1-seal-open \
-                          example/db/step-3-zod-validate \
+STANDALONE_EXAMPLE_DIRS = example/db/step-3-zod-validate \
                           example/html/step-1-builder \
                           example/json-builder/step-1-basic \
-                          example/jwt/step-1-sign-verify \
                           example/mem/step-1-alloc \
                           example/mem/step-2-gc \
                           example/siphash/simple-hashing \
@@ -1674,6 +2015,13 @@ STANDALONE_EXAMPLE_DIRS = example/db-crypt/step-1-seal-open \
                           example/sstring/step-2-compare-copy \
                           example/sstring/step-3-substr-append \
                           example/template/step-1-render
+
+ifeq ($(CWIST_DB),1)
+STANDALONE_EXAMPLE_DIRS += example/db-crypt/step-1-seal-open
+endif
+ifeq ($(CWIST_JWT),1)
+STANDALONE_EXAMPLE_DIRS += example/jwt/step-1-sign-verify
+endif
 
 # Build-only (nothing is run): every example must keep building against the
 # current library. Under SANITIZE the standalone Makefiles get the same
@@ -1727,6 +2075,9 @@ example/micro/14-websocket/websocket: $(LIB_NAME) example/micro/14-websocket/mai
 
 example/micro/15-pqc-tls/pqc-tls: $(LIB_NAME) example/micro/15-pqc-tls/main.c
 	$(CC) $(CFLAGS) -o $@ example/micro/15-pqc-tls/main.c $(LIB_NAME) $(APP_LIBS)
+
+example/micro/18-https-hello/https-hello: $(LIB_NAME) example/micro/18-https-hello/main.c
+	$(CC) $(CFLAGS) -o $@ example/micro/18-https-hello/main.c $(LIB_NAME) $(APP_LIBS)
 
 example/micro/16-rdbms-auto/rdbms-auto: $(LIB_NAME) example/micro/16-rdbms-auto/main.c
 	$(CC) $(CFLAGS) -o $@ example/micro/16-rdbms-auto/main.c $(LIB_NAME) $(APP_LIBS)
@@ -1809,6 +2160,7 @@ test_waf: $(LIB_NAME) tests/test_waf.c
 	$(CC) $(CFLAGS) -o test_waf tests/test_waf.c $(LIB_NAME) $(LIBS)
 	./test_waf
 
+ifeq ($(CWIST_DB),1)
 test_db_pool: $(LIB_NAME) tests/test_db_pool.c
 	$(CC) $(CFLAGS) -o test_db_pool tests/test_db_pool.c $(LIB_NAME) $(LIBS)
 	./test_db_pool
@@ -1816,6 +2168,11 @@ test_db_pool: $(LIB_NAME) tests/test_db_pool.c
 test_db_memory: $(LIB_NAME) tests/test_db_memory.c
 	$(CC) $(CFLAGS) -o test_db_memory tests/test_db_memory.c $(LIB_NAME) $(LIBS)
 	./test_db_memory
+else
+# CWIST_DB=0: the module and its tests are compiled out.
+test_db_pool test_db_memory:
+	@echo "CWIST_DB=0: skipping $@"
+endif
 
 test_redis: $(LIB_NAME) tests/test_redis.c
 	$(CC) $(CFLAGS) -o test_redis tests/test_redis.c $(LIB_NAME) $(LIBS)
@@ -1829,9 +2186,15 @@ test_graphql: $(LIB_NAME) tests/test_graphql.c
 	$(CC) $(CFLAGS) -o test_graphql tests/test_graphql.c $(LIB_NAME) $(LIBS)
 	./test_graphql
 
+ifeq ($(CWIST_WS),1)
 test_graphql_subscriptions: $(LIB_NAME) tests/test_graphql_subscriptions.c
 	$(CC) $(CFLAGS) -o test_graphql_subscriptions tests/test_graphql_subscriptions.c $(LIB_NAME) $(LIBS)
 	./test_graphql_subscriptions
+else
+# CWIST_WS=0: graphql_ws.c rides on websocket_async, so its test is compiled out.
+test_graphql_subscriptions:
+	@echo "CWIST_WS=0: skipping $@"
+endif
 
 test_core_hardening: $(LIB_NAME) tests/test_core_hardening.c
 	$(CC) $(CFLAGS) -o test_core_hardening tests/test_core_hardening.c $(LIB_NAME) $(LIBS)
@@ -1855,9 +2218,15 @@ test_gc_job_handoff: $(LIB_NAME) tests/test_gc_job_handoff.c
 	./$@ nogc
 
 
+ifeq ($(CWIST_NATS),1)
 test_durable_queue: $(LIB_NAME) tests/test_durable_queue.c
 	$(CC) $(CFLAGS) -o test_durable_queue tests/test_durable_queue.c $(LIB_NAME) $(LIBS)
 	./test_durable_queue
+else
+# CWIST_NATS=0: the NATS backend and its test are compiled out.
+test_durable_queue:
+	@echo "CWIST_NATS=0: skipping $@"
+endif
 
 test_http_pipeline: $(LIB_NAME) tests/test_http_pipeline.c
 	$(CC) $(CFLAGS) -o $@ tests/test_http_pipeline.c $(LIB_NAME) $(LIBS)
@@ -1887,6 +2256,14 @@ test_test_client: $(LIB_NAME) tests/test_test_client.c
 	$(CC) $(CFLAGS) -o test_test_client tests/test_test_client.c $(LIB_NAME) $(LIBS)
 	./test_test_client
 
+test_openapi: $(LIB_NAME) tests/test_openapi.c
+	$(CC) $(CFLAGS) -o test_openapi tests/test_openapi.c $(LIB_NAME) $(LIBS)
+	./test_openapi
+
+test_otel: $(LIB_NAME) tests/test_otel.c
+	$(CC) $(CFLAGS) -o test_otel tests/test_otel.c $(LIB_NAME) $(LIBS)
+	./test_otel
+
 test_multiport: $(LIB_NAME) tests/test_multiport.c
 	$(CC) $(CFLAGS) -o test_multiport tests/test_multiport.c $(LIB_NAME) $(LIBS)
 	./test_multiport
@@ -1899,9 +2276,15 @@ test_middleware_ctx: $(LIB_NAME) tests/test_middleware_ctx.c
 	$(CC) $(CFLAGS) -o test_middleware_ctx tests/test_middleware_ctx.c $(LIB_NAME) $(LIBS)
 	./test_middleware_ctx
 
+ifeq ($(CWIST_JWT),1)
 test_builtin_mw_chain: $(LIB_NAME) tests/test_builtin_mw_chain.c
 	$(CC) $(CFLAGS) -o test_builtin_mw_chain tests/test_builtin_mw_chain.c $(LIB_NAME) $(LIBS)
 	./test_builtin_mw_chain
+else
+# CWIST_JWT=0: the chain test signs tokens with the compiled-out jwt module.
+test_builtin_mw_chain:
+	@echo "CWIST_JWT=0: skipping $@"
+endif
 
 test_grpc: $(LIB_NAME) tests/test_grpc.c
 	$(CC) $(CFLAGS) -o test_grpc tests/test_grpc.c $(LIB_NAME) $(LIBS)
@@ -2037,17 +2420,38 @@ test_linux_writer_fast: $(LIB_NAME) tests/test_linux_writer_fast.c
 	$(CC) $(CFLAGS) -o test_linux_writer_fast tests/test_linux_writer_fast.c $(LIB_NAME) $(LIBS)
 	./test_linux_writer_fast
 
+ifeq ($(CWIST_DB),1)
 test_orm_socket: $(LIB_NAME) tests/test_orm_socket.c
 	$(CC) $(CFLAGS) -o test_orm_socket tests/test_orm_socket.c $(LIB_NAME) $(LIBS)
 	./test_orm_socket
+else
+# CWIST_DB=0: the module and its test are compiled out.
+test_orm_socket:
+	@echo "CWIST_DB=0: skipping $@"
+endif
 
 
+ifeq ($(CWIST_HTTP3),1)
+test_webtransport: $(LIB_NAME) tests/test_webtransport.c
+	$(CC) $(CFLAGS) -o test_webtransport tests/test_webtransport.c $(LIB_NAME) $(LIBS)
+	./test_webtransport
+else
+# CWIST_HTTP3=0: WebTransport rides on HTTP/3, so its tests are compiled out.
+test_webtransport:
+	@echo "CWIST_HTTP3=0: skipping $@"
+endif
 
 # WebTransport server end to end: tests/webtransport_echo_server driven by
 # an aioquic client (pip install aioquic). Needs CWIST_WEBTRANSPORT=server and
 # runs on the stock lsquic backend (main's pin).
+ifeq ($(CWIST_HTTP3),1)
 webtransport_echo_server: $(LIB_NAME) tests/webtransport_echo_server.c
 	$(CC) $(CFLAGS) -o $@ tests/webtransport_echo_server.c $(LIB_NAME) $(LIBS)
+else
+# CWIST_HTTP3=0: WebTransport rides on HTTP/3, so the echo server is compiled out.
+webtransport_echo_server:
+	@echo "CWIST_HTTP3=0: skipping $@"
+endif
 
 PYTHON ?= python3
 webtransport-e2e: webtransport_echo_server

@@ -20,6 +20,8 @@ Longer walkthroughs that combine several subsystems:
   live listener without dropping connections; STEK/session-resumption behavior.
 * [Zero-downtime restart](deployment/zero-downtime-restart.md) - SO_REUSEPORT
   socket handoff, drain sequence, systemd integration, HTTP/3 behavior.
+* [Prebuilt release assets](deployment/release-assets.md) - fat bundles per
+  platform, amalgamation and cwist-wasm attached to every release.
 * [Build a CRUD blog with CWIST](tutorials/blog-crud.md) — routing + SQLite + JSON.
 * [NATS integration](tutorials/nats-integration.md) — messaging from handlers.
 * [WebTransport server](tutorials/webtransport-server.md) — experimental HTTP/3

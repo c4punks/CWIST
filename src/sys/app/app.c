@@ -2,12 +2,15 @@
 #define _GNU_SOURCE
 #endif
 #define _POSIX_C_SOURCE 200809L
+#ifndef _DEFAULT_SOURCE
 #define _DEFAULT_SOURCE
+#endif
 #include <sched.h>
 #if defined(__linux__) && defined(_GNU_SOURCE)
 #include "worker_affinity.h"
 #endif
 #include "assets_internal.h"
+#include "routes_internal.h"
 /* Application headers (external) */
 #include <cwist/sys/app/app.h>
 #include <cwist/sys/app/config.h>
@@ -141,7 +144,7 @@ static void cwist_app_tune_system(void) {
  * @brief Read the current libttak tick count used for static-file retirement deadlines.
  * @return Monotonic tick value compatible with libttak memory APIs.
  */
-static inline uint64_t cwist_mem_now(void) {
+static inline uint64_t cwist_app_mem_now(void) {
     return ttak_get_tick_count();
 }
 #endif
@@ -207,7 +210,7 @@ static bool cwist_mem_create_payload(cwist_fix_server_mem *mem, const char *fs_p
     if (!mem || !fs_path || !data_out || !node_out) return false;
 
     void *buffer = ttak_mem_alloc_safe(size ? size : 1, __TTAK_UNSAFE_MEM_FOREVER__,
-                                       cwist_mem_now(), true, false, true, true, TTAK_MEM_DEFAULT);
+                                       cwist_app_mem_now(), true, false, true, true, TTAK_MEM_DEFAULT);
     if (!buffer) {
         fprintf(stderr, "[StaticMem] Failed to allocate %zu bytes via libttak for %s\n", size,
                 fs_path);
@@ -253,7 +256,7 @@ static bool cwist_mem_create_payload(cwist_fix_server_mem *mem, const char *fs_p
  */
 static void cwist_mem_release_node_delayed(cwist_fix_server_mem *mem, ttak_mem_node_t *node) {
     if (!mem || !node) return;
-    uint64_t now = cwist_mem_now();
+    uint64_t now = cwist_app_mem_now();
     pthread_mutex_lock(&node->lock);
     node->expires_tick = now + mem->retire_grace_ns;
     pthread_mutex_unlock(&node->lock);
@@ -1251,6 +1254,7 @@ static cwist_error_t cwist_app_refresh_http3_context(cwist_app *app) {
         return err;
     }
 
+#ifdef CWIST_HTTP3
     if (app->h3_ctx) {
         cwist_http3_destroy_context(app->h3_ctx);
         app->h3_ctx = NULL;
@@ -1270,6 +1274,12 @@ static cwist_error_t cwist_app_refresh_http3_context(cwist_app *app) {
     } else {
         err.error.err_i16 = 0;
     }
+#else
+    /* HTTP/3 compiled out (CWIST_HTTP3=0): the context stays NULL and an
+     * explicit enable request reports unsupported, like the WASM arm. */
+    app->h3_ctx = NULL;
+    err.error.err_i16 = (app->use_https3 || app->use_http3) ? -1 : 0;
+#endif
     return err;
 }
 #endif /* __EMSCRIPTEN__ */
@@ -1457,7 +1467,9 @@ void cwist_app_destroy(cwist_app *app) {
     if (app->tls_groups) cwist_free(app->tls_groups);
 #if !defined(__EMSCRIPTEN__) && !defined(__wasi__)
     if (app->ssl_ctx) cwist_https_destroy_context(app->ssl_ctx);
+#ifdef CWIST_HTTP3
     if (app->h3_ctx) cwist_http3_destroy_context(app->h3_ctx);
+#endif
 #endif
 
     cwist_route_table_destroy(app->router);
@@ -1527,7 +1539,7 @@ void cwist_app_destroy(cwist_app *app) {
     cwist_assets_destroy(app->assets);
     app->assets = NULL;
 
-#if !defined(__EMSCRIPTEN__) && !defined(__wasi__)
+#if !defined(__EMSCRIPTEN__) && !defined(__wasi__) && defined(CWIST_DB)
     if (app->nuke_enabled) {
         cwist_nuke_close();
     }
@@ -1557,9 +1569,11 @@ void cwist_app_destroy(cwist_app *app) {
     if (app->session_name) cwist_free(app->session_name);
 
 #if !defined(__EMSCRIPTEN__) && !defined(__wasi__)
+#ifdef CWIST_DB
     if (app->db_pool) {
         cwist_db_pool_destroy((cwist_db_pool_t *)app->db_pool);
     }
+#endif
     if (app->redis_pool) {
         cwist_redis_pool_destroy((cwist_redis_pool_t *)app->redis_pool);
     }
@@ -1695,12 +1709,14 @@ cwist_error_t cwist_app_reload_tls(cwist_app *app, const char *cert_path, const 
 
     /* HTTPS/3 keeps its own SSL_CTX for the QUIC engine; swap it too so both
      * transports present the new certificate together. */
+#ifdef CWIST_HTTP3
     if (app->use_https3 && app->h3_ctx) {
         err = cwist_http3_reload_context(app->h3_ctx, cert_path, key_path);
         if (!cwist_error_is_ok(&err)) {
             return err;
         }
     }
+#endif
 
     /* Publish the new paths last so a later refresh (e.g. an HTTP/2 toggle)
      * rebuilds from them; they are config-time state, not read per accept. */
@@ -1767,8 +1783,8 @@ cwist_error_t cwist_app_use_https3(cwist_app *app, bool enabled) {
     }
 
     app->use_https3 = enabled;
-#if defined(__EMSCRIPTEN__) || defined(__wasi__)
-    err.error.err_i16 = -1; /* HTTP/3 transport is native-only */
+#if defined(__EMSCRIPTEN__) || defined(__wasi__) || !defined(CWIST_HTTP3)
+    err.error.err_i16 = -1; /* HTTP/3 transport is native-only, or compiled out (CWIST_HTTP3=0) */
     return err;
 #else
     err.error.err_i16 = 0;
@@ -1802,8 +1818,8 @@ cwist_error_t cwist_app_use_http3(cwist_app *app, bool enabled) {
     }
 
     app->use_http3 = enabled;
-#if defined(__EMSCRIPTEN__) || defined(__wasi__)
-    err.error.err_i16 = -1; /* HTTP/3 transport is native-only */
+#if defined(__EMSCRIPTEN__) || defined(__wasi__) || !defined(CWIST_HTTP3)
+    err.error.err_i16 = -1; /* HTTP/3 transport is native-only, or compiled out (CWIST_HTTP3=0) */
     return err;
 #else
     err.error.err_i16 = 0;
@@ -1814,7 +1830,7 @@ cwist_error_t cwist_app_use_http3(cwist_app *app, bool enabled) {
 void cwist_app_use_webtransport(cwist_app *app, cwist_webtransport_handler_func handler) {
     if (!app) return;
     app->wt_handler = handler;
-#if !defined(__EMSCRIPTEN__) && !defined(__wasi__)
+#if !defined(__EMSCRIPTEN__) && !defined(__wasi__) && defined(CWIST_HTTP3)
     if (app->h3_ctx) {
         cwist_http3_set_webtransport_handler(app->h3_ctx, handler);
     }
@@ -1834,8 +1850,9 @@ cwist_error_t cwist_app_use_db(cwist_app *app, const char *db_path) {
         return err;
     }
 
-#if defined(__EMSCRIPTEN__) || defined(__wasi__)
-    err.error.err_i16 = -1; /* SQLite lives outside the minimal WASM core */
+#if defined(__EMSCRIPTEN__) || defined(__wasi__) || !defined(CWIST_DB)
+    err.error.err_i16 =
+        -1; /* SQLite lives outside the minimal WASM core, or is compiled out (CWIST_DB=0) */
     return err;
 #else
     cwist_db *db = NULL;
@@ -1872,9 +1889,10 @@ cwist_error_t cwist_app_use_nuke_db(cwist_app *app, const char *db_path, int syn
         return err;
     }
 
-#if defined(__EMSCRIPTEN__) || defined(__wasi__)
+#if defined(__EMSCRIPTEN__) || defined(__wasi__) || !defined(CWIST_DB)
     (void)sync_interval_ms;
-    err.error.err_i16 = -1; /* NUKE DB needs native libttak memory */
+    err.error.err_i16 =
+        -1; /* NUKE DB needs native libttak memory, or is compiled out (CWIST_DB=0) */
     return err;
 #else
     int nuke_rc = cwist_nuke_init(db_path, sync_interval_ms);
@@ -1901,7 +1919,7 @@ cwist_error_t cwist_app_use_nuke_db(cwist_app *app, const char *db_path, int syn
     }
 
     app->db = (cwist_db *)ttak_mem_alloc_safe(sizeof(cwist_db), __TTAK_UNSAFE_MEM_FOREVER__,
-                                              cwist_mem_now(), false, false, true, true,
+                                              cwist_app_mem_now(), false, false, true, true,
                                               TTAK_MEM_DEFAULT);
     if (!app->db) {
         cwist_nuke_close();
@@ -1924,7 +1942,7 @@ cwist_error_t cwist_app_use_nuke_db(cwist_app *app, const char *db_path, int syn
  */
 cwist_db *cwist_app_get_db(cwist_app *app) {
     if (!app) return NULL;
-#if !defined(__EMSCRIPTEN__) && !defined(__wasi__)
+#if !defined(__EMSCRIPTEN__) && !defined(__wasi__) && defined(CWIST_DB)
     if (app->nuke_enabled) {
         app->db->conn = cwist_nuke_get_db();
     }
@@ -1938,10 +1956,11 @@ cwist_error_t cwist_app_use_db_pool(cwist_app *app, const char *db_path, size_t 
         err.error.err_i16 = -1;
         return err;
     }
-#if defined(__EMSCRIPTEN__) || defined(__wasi__)
+#if defined(__EMSCRIPTEN__) || defined(__wasi__) || !defined(CWIST_DB)
     (void)db_path;
     (void)max_conns;
-    err.error.err_i16 = -1; /* connection pools need native sockets/threads */
+    err.error.err_i16 =
+        -1; /* connection pools need native sockets/threads, or are compiled out (CWIST_DB=0) */
     return err;
 #else
     if (app->db_pool) {
@@ -2283,10 +2302,17 @@ void cwist_app_patch_named(cwist_app *app, const char *path, const char *name,
  * @param handler WebSocket handler invoked after a successful upgrade.
  */
 void cwist_app_ws(cwist_app *app, const char *path, cwist_ws_handler_func handler) {
+#ifdef CWIST_WS
     if (!app || !app->router || !path) return;
     const cwist_route_target target = {.ws_handler = handler};
     cwist_route_table_insert(app->router, path, NULL, CWIST_HTTP_GET, &target,
                              CWIST_ENDPOINT_DEFAULT);
+#else
+    /* WebSocket compiled out (CWIST_WS=0): registration is a no-op. */
+    (void)app;
+    (void)path;
+    (void)handler;
+#endif
 }
 
 /**
@@ -2298,6 +2324,7 @@ void cwist_app_ws(cwist_app *app, const char *path, cwist_ws_handler_func handle
  */
 void cwist_app_ws_async(cwist_app *app, const char *path, cwist_ws_on_message_t on_message,
                         void *user_data) {
+#ifdef CWIST_WS
     if (!app || !app->router || !path || !on_message) return;
     const cwist_route_target target = {0};
     cwist_route_table_insert(app->router, path, NULL, CWIST_HTTP_GET, &target,
@@ -2307,6 +2334,13 @@ void cwist_app_ws_async(cwist_app *app, const char *path, cwist_ws_on_message_t 
         entry->ws_async_on_message = on_message;
         entry->ws_async_user_data = user_data;
     }
+#else
+    /* WebSocket compiled out (CWIST_WS=0): registration is a no-op. */
+    (void)app;
+    (void)path;
+    (void)on_message;
+    (void)user_data;
+#endif
 }
 
 /* Forwards to the inline helper so the two can never disagree. */
@@ -2362,12 +2396,20 @@ void cwist_app_patch_opt(cwist_app *app, const char *path, cwist_handler_func ha
  */
 void cwist_app_ws_opt(cwist_app *app, const char *path, cwist_ws_handler_func handler,
                       cwist_endpoint_opt_t opts) {
+#ifdef CWIST_WS
     if (!app || !app->router || !path) return;
     if (opts == 0) {
         opts = CWIST_ENDPOINT_DEFAULT;
     }
     const cwist_route_target target = {.ws_handler = handler};
     cwist_route_table_insert(app->router, path, NULL, CWIST_HTTP_GET, &target, opts);
+#else
+    /* WebSocket compiled out (CWIST_WS=0): registration is a no-op. */
+    (void)app;
+    (void)path;
+    (void)handler;
+    (void)opts;
+#endif
 }
 
 static bool match_path(const char *pattern, const char *actual, cwist_query_map *params) {
@@ -2731,6 +2773,7 @@ static void internal_route_handler(cwist_app *app, cwist_http_request *req,
     if (found_route) {
         req->endpoint_opts = found_route->opts ? found_route->opts : CWIST_ENDPOINT_DEFAULT;
         if (res) res->endpoint_opts = req->endpoint_opts;
+#ifdef CWIST_WS
         if (found_route->ws_async_on_message && req->async_conn) {
 #if !defined(__EMSCRIPTEN__) && !defined(__wasi__)
             /* C1M path (issue #181): the route handler runs on the reactor
@@ -2793,6 +2836,11 @@ static void internal_route_handler(cwist_app *app, cwist_http_request *req,
         } else {
             execute_route(app, req, res, found_route);
         }
+#else
+        /* WebSocket compiled out (CWIST_WS=0): ws routes can never register,
+         * so every matched route is a plain HTTP route. */
+        execute_route(app, req, res, found_route);
+#endif
         return;
     }
 
@@ -2853,6 +2901,7 @@ static void static_http2_route_bridge(void *user_ctx, cwist_http_request *req,
     internal_route_handler(app, req, res);
 }
 
+#ifdef CWIST_HTTP3
 static void static_http3_route_bridge(void *user_ctx, cwist_http_request *req,
                                       cwist_http_response *res) {
     cwist_app *app = (cwist_app *)user_ctx;
@@ -2864,6 +2913,7 @@ static void static_http3_route_bridge(void *user_ctx, cwist_http_request *req,
      * handoff so a later dispatch cannot mistake it for its own. */
     (void)cwist_async_dispatch_take(res);
 }
+#endif
 
 #ifndef __wasi__
 /* TLS connection handlers: BoringSSL is not linked on WASI, and the only
@@ -3727,10 +3777,12 @@ static void cwist_multiport_h3_stop_group(cwist_multiport_group *group) {
             close(listener->udp_fd);
             listener->udp_fd = -1;
         }
+#ifdef CWIST_HTTP3
         if (listener->ctx) {
             cwist_http3_destroy_context(listener->ctx);
             listener->ctx = NULL;
         }
+#endif
     }
     group->h3_listener_count = 0;
 }
@@ -3783,6 +3835,23 @@ static cwist_route_target cwist_route_clone_target(const cwist_route_entry *entr
                                  .ctx_destroy = NULL,
                                  .ws_handler = entry->ws_handler};
     return target;
+}
+
+static bool cwist_route_is_http(const cwist_route_entry *entry) {
+    return !entry->ws_handler && !entry->ws_async_on_message;
+}
+
+void cwist_app_foreach_route(cwist_app *app, cwist_route_visit_fn visit, void *ctx) {
+    if (!app || !app->router || !visit) return;
+    cwist_route_table *table = app->router;
+    for (size_t i = 0; i < table->bucket_count; i++) {
+        for (cwist_route_entry *entry = table->buckets[i]; entry; entry = entry->next) {
+            if (cwist_route_is_http(entry)) visit(ctx, entry->method, entry->path);
+        }
+    }
+    for (cwist_route_entry *entry = table->param_routes; entry; entry = entry->next) {
+        if (cwist_route_is_http(entry)) visit(ctx, entry->method, entry->path);
+    }
 }
 
 static cwist_route_table *cwist_route_table_clone(cwist_route_table *src) {
@@ -4088,6 +4157,7 @@ static void cwist_multiport_h3_copy_tunables(cwist_http3_context *dst,
     dst->noprogress_timeout_ms = src->noprogress_timeout_ms;
 }
 
+#ifdef CWIST_HTTP3
 /**
  * @brief Create a fresh HTTP/3 context for one multiport UDP listener.
  * @param app Application whose protocol settings should be copied.
@@ -4168,6 +4238,7 @@ static void *cwist_multiport_h3_thread(void *arg) {
     listener->running = false;
     return NULL;
 }
+#endif /* CWIST_HTTP3 (multiport fan-out context, UDP bind, listener thread) */
 
 /**
  * @brief Start one HTTP/3 UDP fan-out listener for a bound port.
@@ -4178,6 +4249,7 @@ static void *cwist_multiport_h3_thread(void *arg) {
  */
 static int cwist_multiport_h3_start_one(cwist_multiport_group *group, cwist_app *app,
                                         unsigned short port) {
+#ifdef CWIST_HTTP3
     if (!group || !app || (!app->use_http3 && !app->use_https3)) return 0;
     if (group->h3_listener_count >= CWIST_MULTIPORT_MAX_PORTS) return -1;
 
@@ -4214,6 +4286,12 @@ static int cwist_multiport_h3_start_one(cwist_multiport_group *group, cwist_app 
         __atomic_store_n(&g_cwist_udp_fd, listener->udp_fd, __ATOMIC_SEQ_CST);
     }
     printf("CWIST multiport HTTP/3 fan-out listening on UDP port %hu\n", port);
+#else
+    /* HTTP/3 compiled out (CWIST_HTTP3=0): no fan-out listeners to start. */
+    (void)group;
+    (void)app;
+    (void)port;
+#endif
     return 0;
 }
 
@@ -4475,10 +4553,15 @@ struct h3_thread_payload {
 };
 
 static void *h3_server_thread_func(void *arg) {
+#ifdef CWIST_HTTP3
     struct h3_thread_payload *payload = arg;
     cwist_http3_server_loop(payload->udp_fd, payload->app->h3_ctx, static_http3_route_bridge,
                             payload->app);
     free(payload);
+#else
+    /* HTTP/3 compiled out (CWIST_HTTP3=0). */
+    (void)arg;
+#endif
     return NULL;
 }
 #endif /* __EMSCRIPTEN__ */

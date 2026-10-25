@@ -4,6 +4,27 @@
 #include "curl_global.h"
 
 #include <curl/curl.h>
+
+#include <limits.h>
+#include <stdatomic.h>
+#include <stdbool.h>
+#include <stdint.h>
+#include <stdlib.h>
+#include <string.h>
+#include <strings.h>
+
+#ifdef CWIST_TLS_MBEDTLS
+/* mbedTLS backend (CWIST_TLS=mbedtls): the AIA chain-autoload machinery
+ * below is built on BoringSSL's X509/ASN.1/PKCS#7 API, which has no mbedTLS
+ * counterpart in the seam.  Chain autoload degrades to a no-op: the PEM
+ * served by cwist_https_init_context() must already carry any intermediates
+ * (mbedtls_x509_crt_parse_file() loads the whole file). */
+
+int cwist_tls_autoload_intermediates(SSL_CTX *ssl_ctx) {
+    (void)ssl_ctx;
+    return 0;
+}
+#else
 #include <openssl/asn1.h>
 #include <openssl/bio.h>
 #include <openssl/bytestring.h>
@@ -13,14 +34,6 @@
 #include <openssl/pem.h>
 #include <openssl/pkcs7.h>
 #include <openssl/x509.h>
-
-#include <limits.h>
-#include <stdatomic.h>
-#include <stdbool.h>
-#include <stdint.h>
-#include <stdlib.h>
-#include <string.h>
-#include <strings.h>
 
 #define CWIST_AIA_MAX_RESPONSE_BYTES (1024u * 1024u)
 #define CWIST_AIA_MAX_CHAIN_DEPTH 8
@@ -504,6 +517,7 @@ static X509 *cwist_fetch_issuer_from_aia(X509 *subject) {
     AUTHORITY_INFO_ACCESS_free(aia);
     return issuer;
 }
+#endif /* !CWIST_TLS_MBEDTLS */
 
 /** Bounded retention for the BoringSSL server-side session cache.
  *
@@ -550,6 +564,7 @@ unsigned long cwist_tls_sess_cache_size(void) {
  * @return number of intermediate certificates added (0 if none were needed or
  *         found), or -1 on error.
  */
+#ifndef CWIST_TLS_MBEDTLS
 int cwist_tls_autoload_intermediates(SSL_CTX *ssl_ctx) {
     if (!ssl_ctx) return -1;
 
@@ -582,3 +597,5 @@ int cwist_tls_autoload_intermediates(SSL_CTX *ssl_ctx) {
 
     return added;
 }
+
+#endif /* !CWIST_TLS_MBEDTLS */
