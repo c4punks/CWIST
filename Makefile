@@ -390,6 +390,7 @@ SRCS = src/core/sstring/sstring.c \
        src/core/utils/json_heal.c \
        src/core/utils/zod.c \
        src/sys/app/middleware.c \
+       src/sys/app/otel.c \
        src/sys/app/config.c \
        src/sys/app/logger.c \
        src/sys/app/log_async.c \
@@ -1287,6 +1288,7 @@ TEST_TARGETS = test_worker_affinity \
                test_http_pipeline \
                test_test_client \
                test_openapi \
+               test_otel \
                test_multiport \
                test_route_ctx \
                test_middleware_ctx \
@@ -2256,6 +2258,10 @@ test_test_client: $(LIB_NAME) tests/test_test_client.c
 test_openapi: $(LIB_NAME) tests/test_openapi.c
 	$(CC) $(CFLAGS) -o test_openapi tests/test_openapi.c $(LIB_NAME) $(LIBS)
 	./test_openapi
+
+test_otel: $(LIB_NAME) tests/test_otel.c
+	$(CC) $(CFLAGS) -o test_otel tests/test_otel.c $(LIB_NAME) $(LIBS)
+	./test_otel
 
 test_multiport: $(LIB_NAME) tests/test_multiport.c
 	$(CC) $(CFLAGS) -o test_multiport tests/test_multiport.c $(LIB_NAME) $(LIBS)
