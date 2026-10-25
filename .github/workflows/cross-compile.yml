@@ -1,0 +1,96 @@
+name: "Cross-compile (embedded targets)"
+
+# `make fat-dist CROSS_COMPILE=<triplet>-` builds CWIST and every vendored
+# dependency with the cross toolchain (#431).  The bundle is then linked the
+# way an embedded user would (bundle + app source + target system libs) and
+# the binary is served under qemu-user, so a host object slipping into the
+# archive fails the link and a broken target build fails the request.
+
+on:
+  push:
+    branches: [main, master, dev]
+  pull_request:
+    branches: [main, master, dev]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  cross-compile:
+    name: fat-dist (${{ matrix.triplet }})
+    if: github.event_name != 'push' || !contains(github.event.head_commit.message, '[skip ci]')
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        # arm-linux-gnueabihf joins once libttak builds on 32-bit targets:
+        # src/accel/accel_cpu.c needs __int128, which ILP32 ARM lacks.
+        include:
+          - triplet: aarch64-linux-gnu
+            deb_arch: arm64
+            qemu_arch: aarch64
+    env:
+      # Target .pc files only, so no host -I/-L path leaks into the build.
+      PKG_CONFIG_LIBDIR: /usr/lib/${{ matrix.triplet }}/pkgconfig:/usr/share/pkgconfig
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      with:
+        submodules: recursive
+
+    - name: Install cross toolchain, target libraries and qemu
+      run: |
+        # The runner mirrors carry amd64 only; foreign architectures come
+        # from ports.ubuntu.com.
+        sudo dpkg --add-architecture ${{ matrix.deb_arch }}
+        sudo sed -i '/^Types:/a Architectures: amd64' /etc/apt/sources.list.d/ubuntu.sources
+        codename=$(. /etc/os-release && echo "$VERSION_CODENAME")
+        sudo tee /etc/apt/sources.list.d/ports.sources >/dev/null <<EOF
+        Types: deb
+        URIs: http://ports.ubuntu.com/ubuntu-ports
+        Suites: $codename $codename-updates $codename-security
+        Components: main universe
+        Architectures: ${{ matrix.deb_arch }}
+        Signed-By: /usr/share/keyrings/ubuntu-archive-keyring.gpg
+        EOF
+        sudo apt-get update
+        sudo apt-get install -y cmake pkg-config qemu-user curl \
+          gcc-${{ matrix.triplet }} g++-${{ matrix.triplet }} \
+          libcurl4-openssl-dev:${{ matrix.deb_arch }} \
+          libnghttp2-dev:${{ matrix.deb_arch }} \
+          libbrotli-dev:${{ matrix.deb_arch }} \
+          libzstd-dev:${{ matrix.deb_arch }} \
+          zlib1g-dev:${{ matrix.deb_arch }}
+
+    - name: Cross-compile fat-dist
+      run: make fat-dist -j"$(nproc)" CROSS_COMPILE=${{ matrix.triplet }}- PKG_CONFIG=pkg-config
+
+    - name: Verify the archive targets ${{ matrix.triplet }}
+      run: |
+        cd dist/cwist-fat/lib
+        mkdir members && cd members
+        ${{ matrix.triplet }}-ar x ../libcwist.a sstring.o cJSON.o
+        file sstring.o cJSON.o
+        ! file sstring.o cJSON.o | grep -q x86-64
+
+    - name: Embedded-style link smoke under qemu-user
+      run: |
+        work=$(mktemp -d)
+        cp -r dist/cwist-fat "$work/bundle"
+        cp example/micro/01-hello/main.c "$work/"
+        cd "$work"
+        ${{ matrix.triplet }}-gcc -O2 -std=gnu17 -Ibundle/include -o hello main.c \
+          bundle/lib/libcwist.a \
+          $(pkg-config --libs libcurl libnghttp2 libbrotlienc libbrotlicommon libbrotlidec libzstd) \
+          -pthread -ldl -lm -lstdc++ -lz
+        file hello
+        qemu-${{ matrix.qemu_arch }} -L /usr/${{ matrix.triplet }} ./hello &
+        pid=$!
+        for _ in $(seq 1 30); do
+          out=$(curl -s -m 2 http://127.0.0.1:8080/) && break
+          sleep 1
+        done
+        kill "$pid"
+        test "$out" = "Hello, CWIST!"
