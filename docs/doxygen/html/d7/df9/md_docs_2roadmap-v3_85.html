@@ -108,10 +108,10 @@ $(document).ready(function(){initNavTree('d7/df9/md_docs_2roadmap-v3_85.html','.
   <div class="headertitle"><div class="title">v3.5.0 release roadmap</div></div>
 </div><!--header-->
 <div class="contents">
-<div class="textblock"><p><a class="anchor" id="autotoc_md407"></a> Status: candidate work in PR #91. Not released.</p>
+<div class="textblock"><p><a class="anchor" id="autotoc_md416"></a> Status: candidate work in PR #91. Not released.</p>
 <p><b>Release hold:</b> a separate CVE-fix PR must be included in v3.5.0 and its associated issue resolved before publication. This is an additional required gate even if PR #91 and its CI pass. The issue/PR identifiers are pending confirmation; do not treat the missing identifiers as permission to release.</p>
 <p>The release target is v3.5.0, not v3.4.2. This release adds an explicit public FIXED cache and changes the public API. It also includes HTTP correctness fixes and benchmark controls. See the <a href="https://github.com/c4punks/CWIST/pull/91#issuecomment-5660861288">maintainer proposal</a> and <a href="https://github.com/c4punks/CWIST/pull/91#issuecomment-5660948894">release decision</a>.</p>
-<h1><a class="anchor" id="autotoc_md408"></a>
+<h1><a class="anchor" id="autotoc_md417"></a>
 Scope</h1>
 <ol type="1">
 <li>Public FIXED cache: implement ADR-0001 with explicit opt-in, strict admission, owned response data, process-wide limits, and cache invalidation. Requests that do not qualify must use ordinary dispatch. Keep the BDR storage API. See <a class="el" href="../../d3/ddd/md_docs_2fixed-cache-status.html">cache contract and migration</a>.</li>
@@ -120,7 +120,7 @@ Scope</h1>
 <li>Packaging: build and test the source archive as version 3.5.0. Publish the source commit, tree, submodule identities, and archive checksums.</li>
 </ol>
 <p>PRs #85 and #87 are merged into dev. Their integration into main is part of PR #91. Their merge is not evidence that this release has passed its checks.</p>
-<h1><a class="anchor" id="autotoc_md409"></a>
+<h1><a class="anchor" id="autotoc_md418"></a>
 Release gates</h1>
 <ul>
 <li>[ ] Close the real TCP regressions on the final candidate. Run classic and C1M modes with GC enabled and disabled, including NDEBUG and sanitizer builds.</li>
@@ -132,7 +132,7 @@ Release gates</h1>
 <li>[ ] Download the published assets and verify their identities and checksums.</li>
 <li>[ ] Remeasure the exact released version. Keep the workload arguments and admission rules unchanged. Publish raw results, request/error counts, percentile definitions, source identity, and cleanup evidence.</li>
 </ul>
-<h1><a class="anchor" id="autotoc_md410"></a>
+<h1><a class="anchor" id="autotoc_md419"></a>
 Evidence and limits</h1>
 <p>The earlier ASan failure is a real failure, not a passing result for a later candidate. Cache unit results and static review do not prove full TCP safety. Failed warmup attempts remain invalid benchmark evidence. Earlier performance results must keep their original source/version labels.</p>
 <p>The version change does not close issue #25 or prove a P99.999 improvement. Report correctness, benchmark validity, measured latency, and release status separately. Keep issue #25 open until its acceptance evidence is established.</p>

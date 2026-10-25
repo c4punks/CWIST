@@ -1,12 +1,7 @@
 var searchData=
 [
-  ['waf_5falphabet_0',['WAF_ALPHABET',['../db/d6e/waf_8c.html#af9b2c24183516121184552fd8425b624',1,'waf.c']]],
-  ['waf_5fmax_5fpatterns_1',['WAF_MAX_PATTERNS',['../db/d6e/waf_8c.html#af0df1c7922e652b5d892554e3a4e9214',1,'waf.c']]],
-  ['waf_5fmax_5ftext_2',['WAF_MAX_TEXT',['../db/d6e/waf_8c.html#a8bd6e03c93445c706149208856d62c9b',1,'waf.c']]],
-  ['ws_5fasync_5fmax_5fmessage_5fbytes_3',['WS_ASYNC_MAX_MESSAGE_BYTES',['../d4/d57/websocket__async_8c.html#a165d9025b8d5feacc0653f12fff43ba3',1,'websocket_async.c']]],
-  ['ws_5fasync_5fmax_5fpayload_5fbytes_4',['WS_ASYNC_MAX_PAYLOAD_BYTES',['../d4/d57/websocket__async_8c.html#aea06fcb2cd6d147b08071ae4f7d66675',1,'websocket_async.c']]],
-  ['ws_5fasync_5fpark_5fdeadline_5fsec_5',['WS_ASYNC_PARK_DEADLINE_SEC',['../d4/d57/websocket__async_8c.html#aea47dc15a41ca2b941e768194f61be9d',1,'websocket_async.c']]],
-  ['ws_5fasync_5fread_5fchunk_6',['WS_ASYNC_READ_CHUNK',['../d4/d57/websocket__async_8c.html#a5cf032d4c28bb50870c5883e674c052e',1,'websocket_async.c']]],
-  ['ws_5fasync_5fsweep_5fslice_5fms_7',['WS_ASYNC_SWEEP_SLICE_MS',['../d4/d57/websocket__async_8c.html#aa28675a91478dc851ce867eb04a5eda1',1,'websocket_async.c']]],
-  ['ws_5fguid_8',['WS_GUID',['../d4/de6/websocket_8c.html#a19b2fa8561bcd550d68b56b81d783e98',1,'websocket.c']]]
+  ['tls1_5f2_5fversion_0',['TLS1_2_VERSION',['../df/d6d/ssl_8h.html#aa293d4c7d6f54fc4a34b30cf3c0838aa',1,'ssl.h']]],
+  ['tls1_5f3_5fversion_1',['TLS1_3_VERSION',['../df/d6d/ssl_8h.html#a1b86d29dd59af123e0c589d679bf396d',1,'ssl.h']]],
+  ['tls_5fclient_5fmethod_2',['TLS_client_method',['../df/d6d/ssl_8h.html#adb2ce1f01a284261394ebe69ecc0dcfa',1,'ssl.h']]],
+  ['tls_5fserver_5fmethod_3',['TLS_server_method',['../df/d6d/ssl_8h.html#a4ee626962875906e2e5186ac9c4f3cde',1,'ssl.h']]]
 ];

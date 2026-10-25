@@ -220,7 +220,7 @@ This graph shows which files directly or indirectly include this file:</div>
 <table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="typedef-members" name="typedef-members"></a>
 Typedefs</h2></td></tr>
-<tr class="memitem:ae244d7d9cf651f3763b6fc706f342056" id="r_ae244d7d9cf651f3763b6fc706f342056"><td class="memItemLeft" align="right" valign="top">typedef struct cwist_async&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../de/d91/async_8h.html#ae244d7d9cf651f3763b6fc706f342056">cwist_async</a></td></tr>
+<tr class="memitem:ae244d7d9cf651f3763b6fc706f342056" id="r_ae244d7d9cf651f3763b6fc706f342056"><td class="memItemLeft" align="right" valign="top"><a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">typedef</a> <a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">struct</a> cwist_async&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../de/d91/async_8h.html#ae244d7d9cf651f3763b6fc706f342056">cwist_async</a></td></tr>
 <tr class="separator:ae244d7d9cf651f3763b6fc706f342056"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="func-members" name="func-members"></a>
@@ -228,28 +228,28 @@ Functions</h2></td></tr>
 <tr class="memitem:aa7497b55c03864f9357f57a4d8a3a4a9" id="r_aa7497b55c03864f9357f57a4d8a3a4a9"><td class="memItemLeft" align="right" valign="top">cwist_async *&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../de/d91/async_8h.html#aa7497b55c03864f9357f57a4d8a3a4a9">cwist_async_defer</a> (<a class="el" href="../../dd/d68/structcwist__http__request.html">cwist_http_request</a> *req, <a class="el" href="../../dd/d22/structcwist__http__response.html">cwist_http_response</a> *res)</td></tr>
 <tr class="memdesc:aa7497b55c03864f9357f57a4d8a3a4a9"><td class="mdescLeft">&#160;</td><td class="mdescRight">Defer the response for the current request.  <br /></td></tr>
 <tr class="separator:aa7497b55c03864f9357f57a4d8a3a4a9"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a8d9ff737a1c4079316cf024d6e0e33a9" id="r_a8d9ff737a1c4079316cf024d6e0e33a9"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../de/d91/async_8h.html#a8d9ff737a1c4079316cf024d6e0e33a9">cwist_async_wait_dispatched</a> (cwist_async *a)</td></tr>
+<tr class="memitem:a8d9ff737a1c4079316cf024d6e0e33a9" id="r_a8d9ff737a1c4079316cf024d6e0e33a9"><td class="memItemLeft" align="right" valign="top"><a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">void</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../de/d91/async_8h.html#a8d9ff737a1c4079316cf024d6e0e33a9">cwist_async_wait_dispatched</a> (cwist_async *<a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">a</a>)</td></tr>
 <tr class="memdesc:a8d9ff737a1c4079316cf024d6e0e33a9"><td class="mdescLeft">&#160;</td><td class="mdescRight">Wait until dispatch has acknowledged the handoff of <code>a</code>.  <br /></td></tr>
 <tr class="separator:a8d9ff737a1c4079316cf024d6e0e33a9"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a1ca4ddf51cd2ebb5df71fb044776c837" id="r_a1ca4ddf51cd2ebb5df71fb044776c837"><td class="memItemLeft" align="right" valign="top">cwist_async *&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../de/d91/async_8h.html#a1ca4ddf51cd2ebb5df71fb044776c837">cwist_async_retain</a> (cwist_async *a)</td></tr>
+<tr class="memitem:a1ca4ddf51cd2ebb5df71fb044776c837" id="r_a1ca4ddf51cd2ebb5df71fb044776c837"><td class="memItemLeft" align="right" valign="top">cwist_async *&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../de/d91/async_8h.html#a1ca4ddf51cd2ebb5df71fb044776c837">cwist_async_retain</a> (cwist_async *<a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">a</a>)</td></tr>
 <tr class="memdesc:a1ca4ddf51cd2ebb5df71fb044776c837"><td class="mdescLeft">&#160;</td><td class="mdescRight">Retain a live handle for a producer that may outlive completion. Must be called while the caller already holds a reference, or before the dispatch handoff can complete. It cannot resurrect an expired handle. Returns <code>a</code> (NULL is accepted). Each retain requires one release.  <br /></td></tr>
 <tr class="separator:a1ca4ddf51cd2ebb5df71fb044776c837"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:ad75d2be28c09c9b29e945e99d38f534b" id="r_ad75d2be28c09c9b29e945e99d38f534b"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../de/d91/async_8h.html#ad75d2be28c09c9b29e945e99d38f534b">cwist_async_release</a> (cwist_async *a)</td></tr>
+<tr class="memitem:ad75d2be28c09c9b29e945e99d38f534b" id="r_ad75d2be28c09c9b29e945e99d38f534b"><td class="memItemLeft" align="right" valign="top"><a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">void</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../de/d91/async_8h.html#ad75d2be28c09c9b29e945e99d38f534b">cwist_async_release</a> (cwist_async *<a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">a</a>)</td></tr>
 <tr class="memdesc:ad75d2be28c09c9b29e945e99d38f534b"><td class="mdescLeft">&#160;</td><td class="mdescRight">Release a reference acquired with <a class="el" href="../../de/d91/async_8h.html#a1ca4ddf51cd2ebb5df71fb044776c837" title="Retain a live handle for a producer that may outlive completion. Must be called while the caller alre...">cwist_async_retain()</a>. Does not complete or abort the exchange. NULL is accepted.  <br /></td></tr>
 <tr class="separator:ad75d2be28c09c9b29e945e99d38f534b"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a80cddf82937d9e5479118c32ca524c38" id="r_a80cddf82937d9e5479118c32ca524c38"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../de/d91/async_8h.html#a80cddf82937d9e5479118c32ca524c38">cwist_async_set_timeout</a> (cwist_async *a, uint64_t ms)</td></tr>
+<tr class="memitem:a80cddf82937d9e5479118c32ca524c38" id="r_a80cddf82937d9e5479118c32ca524c38"><td class="memItemLeft" align="right" valign="top"><a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">void</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../de/d91/async_8h.html#a80cddf82937d9e5479118c32ca524c38">cwist_async_set_timeout</a> (cwist_async *<a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">a</a>, <a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">uint64_t</a> <a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">ms</a>)</td></tr>
 <tr class="memdesc:a80cddf82937d9e5479118c32ca524c38"><td class="mdescLeft">&#160;</td><td class="mdescRight">Answer with a 504 Gateway Timeout if the exchange is still pending after <code>ms</code> milliseconds. The timeout routes through the same completion path as a normal response. The timer holds its own handle reference until its callback runs, even if another producer wins. Default is no timeout (0).  <br /></td></tr>
 <tr class="separator:a80cddf82937d9e5479118c32ca524c38"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a5579bd72e5661235924a5adf8c4f2d0d" id="r_a5579bd72e5661235924a5adf8c4f2d0d"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../de/d91/async_8h.html#a5579bd72e5661235924a5adf8c4f2d0d">cwist_async_respond</a> (cwist_async *a, <a class="el" href="../../dd/d56/http_8h.html#a99b5ad0e71431205a397a336983f4f4d">cwist_http_status_t</a> status, const char *content_type, const void *body, size_t len)</td></tr>
+<tr class="memitem:a5579bd72e5661235924a5adf8c4f2d0d" id="r_a5579bd72e5661235924a5adf8c4f2d0d"><td class="memItemLeft" align="right" valign="top"><a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">bool</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../de/d91/async_8h.html#a5579bd72e5661235924a5adf8c4f2d0d">cwist_async_respond</a> (cwist_async *<a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">a</a>, <a class="el" href="../../dd/d56/http_8h.html#a99b5ad0e71431205a397a336983f4f4d">cwist_http_status_t</a> status, <a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">const</a> <a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">char</a> *content_type, <a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">const</a> <a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">void</a> *body, <a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">size_t</a> len)</td></tr>
 <tr class="memdesc:a5579bd72e5661235924a5adf8c4f2d0d"><td class="mdescLeft">&#160;</td><td class="mdescRight">Complete the exchange with a simple body response. Thread-safe and one-shot: the first of respond/respond_with/abort wins, later calls return false. <code>body</code> is copied. A winning foreign call may wait for dispatch/middleware to return.  <br /></td></tr>
 <tr class="separator:a5579bd72e5661235924a5adf8c4f2d0d"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a06d2294a5d48650ba613d6a608858b14" id="r_a06d2294a5d48650ba613d6a608858b14"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../de/d91/async_8h.html#a06d2294a5d48650ba613d6a608858b14">cwist_async_respond_with</a> (cwist_async *a, <a class="el" href="../../dd/d22/structcwist__http__response.html">cwist_http_response</a> *res)</td></tr>
+<tr class="memitem:a06d2294a5d48650ba613d6a608858b14" id="r_a06d2294a5d48650ba613d6a608858b14"><td class="memItemLeft" align="right" valign="top"><a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">bool</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../de/d91/async_8h.html#a06d2294a5d48650ba613d6a608858b14">cwist_async_respond_with</a> (cwist_async *<a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">a</a>, <a class="el" href="../../dd/d22/structcwist__http__response.html">cwist_http_response</a> *res)</td></tr>
 <tr class="memdesc:a06d2294a5d48650ba613d6a608858b14"><td class="mdescLeft">&#160;</td><td class="mdescRight">Complete the exchange with a caller-built response. On success the framework takes ownership of <code>res</code> (destroyed after send). On false the caller retains ownership. Build the response on the calling producer thread, or explicitly disown its GC-tracked owned allocations on their allocating thread before passing it to this producer. Borrowed data and opaque cleanup-context dependencies must remain live until destruction; the framework transfers a managed payload but cannot traverse its context.  <br /></td></tr>
 <tr class="separator:a06d2294a5d48650ba613d6a608858b14"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a87757fc539bf8f235361387a873c517a" id="r_a87757fc539bf8f235361387a873c517a"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../de/d91/async_8h.html#a87757fc539bf8f235361387a873c517a">cwist_async_abort</a> (cwist_async *a, <a class="el" href="../../dd/d56/http_8h.html#a99b5ad0e71431205a397a336983f4f4d">cwist_http_status_t</a> status)</td></tr>
+<tr class="memitem:a87757fc539bf8f235361387a873c517a" id="r_a87757fc539bf8f235361387a873c517a"><td class="memItemLeft" align="right" valign="top"><a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">bool</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../de/d91/async_8h.html#a87757fc539bf8f235361387a873c517a">cwist_async_abort</a> (cwist_async *<a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">a</a>, <a class="el" href="../../dd/d56/http_8h.html#a99b5ad0e71431205a397a336983f4f4d">cwist_http_status_t</a> status)</td></tr>
 <tr class="memdesc:a87757fc539bf8f235361387a873c517a"><td class="mdescLeft">&#160;</td><td class="mdescRight">Complete the exchange with an error status and close the connection.  <br /></td></tr>
 <tr class="separator:a87757fc539bf8f235361387a873c517a"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a05ff15225c324776acc3990374458c1b" id="r_a05ff15225c324776acc3990374458c1b"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../de/d91/async_8h.html#a05ff15225c324776acc3990374458c1b">cwist_async_dispatch_ack</a> (cwist_async *a)</td></tr>
+<tr class="memitem:a05ff15225c324776acc3990374458c1b" id="r_a05ff15225c324776acc3990374458c1b"><td class="memItemLeft" align="right" valign="top"><a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">void</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../de/d91/async_8h.html#a05ff15225c324776acc3990374458c1b">cwist_async_dispatch_ack</a> (cwist_async *<a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">a</a>)</td></tr>
 <tr class="memdesc:a05ff15225c324776acc3990374458c1b"><td class="mdescLeft">&#160;</td><td class="mdescRight">Internal: on the dispatch thread, after all middleware has unwound. Call exactly once; do not touch the exchange after this release-publication.  <br /></td></tr>
 <tr class="separator:a05ff15225c324776acc3990374458c1b"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
@@ -274,7 +274,7 @@ Functions</h2></td></tr>
 <div class="memproto">
       <table class="memname">
         <tr>
-          <td class="memname">typedef struct cwist_async cwist_async</td>
+          <td class="memname"><a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">typedef</a> <a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">struct</a> cwist_async cwist_async</td>
         </tr>
       </table>
 </div><div class="memdoc">
@@ -291,7 +291,7 @@ Functions</h2></td></tr>
 <div class="memproto">
       <table class="memname">
         <tr>
-          <td class="memname">bool cwist_async_abort </td>
+          <td class="memname"><a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">bool</a> cwist_async_abort </td>
           <td>(</td>
           <td class="paramtype">cwist_async *&#160;</td>
           <td class="paramname"><em>a</em>, </td>
@@ -314,7 +314,7 @@ Functions</h2></td></tr>
 
 <p class="definition">Definition at line <a class="el" href="../../db/d84/async_8c_source.html#l00367">367</a> of file <a class="el" href="../../db/d84/async_8c_source.html">async.c</a>.</p>
 
-<p class="reference">References <a class="el" href="../../dd/d56/http_8h_source.html#l00087">cwist_http_response::body</a>, <a class="el" href="../../dd/d43/http_8c_source.html#l01851">cwist_http_header_add()</a>, <a class="el" href="../../dd/d79/sstring_8c_source.html#l00504">cwist_sstring_assign()</a>, <a class="el" href="../../dd/d56/http_8h_source.html#l00086">cwist_http_response::headers</a>, <a class="el" href="../../dd/d56/http_8h_source.html#l00084">cwist_http_response::status_code</a>, and <a class="el" href="../../dd/d56/http_8h_source.html#l00085">cwist_http_response::status_text</a>.</p>
+<p class="reference">References <a class="el" href="../../dd/d56/http_8h_source.html#l00087">cwist_http_response::body</a>, <a class="el" href="../../d3/db2/otel_8c_source.html#l00056">cap</a>, <a class="el" href="../../dd/d43/http_8c_source.html#l01851">cwist_http_header_add()</a>, <a class="el" href="../../dd/d79/sstring_8c_source.html#l00504">cwist_sstring_assign()</a>, <a class="el" href="../../dd/d56/http_8h_source.html#l00086">cwist_http_response::headers</a>, <a class="el" href="../../dd/d56/http_8h_source.html#l00084">cwist_http_response::status_code</a>, and <a class="el" href="../../dd/d56/http_8h_source.html#l00085">cwist_http_response::status_text</a>.</p>
 
 </div>
 </div>
@@ -349,7 +349,7 @@ Functions</h2></td></tr>
 
 <p class="definition">Definition at line <a class="el" href="../../db/d84/async_8c_source.html#l00100">100</a> of file <a class="el" href="../../db/d84/async_8c_source.html">async.c</a>.</p>
 
-<p class="reference">References <a class="el" href="../../d9/dab/net_2http_2http_8h_source.html#l00170">cwist_http_request::app</a>, <a class="el" href="../../d9/dab/net_2http_2http_8h_source.html#l00239">cwist_http_response::async</a>, <a class="el" href="../../d9/dab/net_2http_2http_8h_source.html#l00182">cwist_http_request::async_conn</a>, <a class="el" href="../../dd/d56/http_8h_source.html#l00075">cwist_http_request::client_fd</a>, <a class="el" href="../../d9/d39/alloc_8c_source.html#l00276">cwist_alloc()</a>, <a class="el" href="../../d0/dbc/async__tls_8c_source.html#l00038">cwist_async_record_pending()</a>, <a class="el" href="../../db/d84/async_8c_source.html#l00036">CWIST_ASYNC_ST_PENDING</a>, <a class="el" href="../../d9/d39/alloc_8c_source.html#l00391">cwist_free()</a>, <a class="el" href="../../d8/d16/gc_8c_source.html#l00514">cwist_full_gc_enabled()</a>, <a class="el" href="../../d8/d16/gc_8c_source.html#l00765">cwist_gc_scope_disown()</a>, <a class="el" href="../../d2/db0/http2_8c_source.html#l00316">cwist_h2_async_queue_acquire()</a>, <a class="el" href="../../dd/d43/http_8c_source.html#l00259">cwist_http_reactor_generation()</a>, <a class="el" href="../../d9/dab/net_2http_2http_8h_source.html#l00238">cwist_http_response::deferred</a>, <a class="el" href="../../d9/dab/net_2http_2http_8h_source.html#l00185">cwist_http_request::h2_queue</a>, <a class="el" href="../../d9/dab/net_2http_2http_8h_source.html#l00184">cwist_http_request::https_conn</a>, <a class="el" href="../../dd/d56/http_8h_source.html#l00074">cwist_http_request::keep_alive</a>, <a class="el" href="../../dd/d56/http_8h_source.html#l00088">cwist_http_response::keep_alive</a>, <a class="el" href="../../d9/dab/net_2http_2http_8h_source.html#l00463">cwist_http_async_conn::reactor</a>, and <a class="el" href="../../dd/d56/http_8h_source.html#l00077">cwist_http_request::stream_id</a>.</p>
+<p class="reference">References <a class="el" href="../../d9/dab/net_2http_2http_8h_source.html#l00170">cwist_http_request::app</a>, <a class="el" href="../../d9/dab/net_2http_2http_8h_source.html#l00239">cwist_http_response::async</a>, <a class="el" href="../../d9/dab/net_2http_2http_8h_source.html#l00182">cwist_http_request::async_conn</a>, <a class="el" href="../../d3/db2/otel_8c_source.html#l00056">cap</a>, <a class="el" href="../../dd/d56/http_8h_source.html#l00075">cwist_http_request::client_fd</a>, <a class="el" href="../../d9/d39/alloc_8c_source.html#l00276">cwist_alloc()</a>, <a class="el" href="../../d0/dbc/async__tls_8c_source.html#l00038">cwist_async_record_pending()</a>, <a class="el" href="../../db/d84/async_8c_source.html#l00036">CWIST_ASYNC_ST_PENDING</a>, <a class="el" href="../../d9/d39/alloc_8c_source.html#l00391">cwist_free()</a>, <a class="el" href="../../d8/d16/gc_8c_source.html#l00514">cwist_full_gc_enabled()</a>, <a class="el" href="../../d8/d16/gc_8c_source.html#l00765">cwist_gc_scope_disown()</a>, <a class="el" href="../../d2/db0/http2_8c_source.html#l00316">cwist_h2_async_queue_acquire()</a>, <a class="el" href="../../dd/d43/http_8c_source.html#l00259">cwist_http_reactor_generation()</a>, <a class="el" href="../../d9/dab/net_2http_2http_8h_source.html#l00238">cwist_http_response::deferred</a>, <a class="el" href="../../d9/dab/net_2http_2http_8h_source.html#l00185">cwist_http_request::h2_queue</a>, <a class="el" href="../../d9/dab/net_2http_2http_8h_source.html#l00184">cwist_http_request::https_conn</a>, <a class="el" href="../../dd/d56/http_8h_source.html#l00074">cwist_http_request::keep_alive</a>, <a class="el" href="../../dd/d56/http_8h_source.html#l00088">cwist_http_response::keep_alive</a>, <a class="el" href="../../d9/dab/net_2http_2http_8h_source.html#l00463">cwist_http_async_conn::reactor</a>, and <a class="el" href="../../dd/d56/http_8h_source.html#l00077">cwist_http_request::stream_id</a>.</p>
 
 </div>
 </div>
@@ -360,7 +360,7 @@ Functions</h2></td></tr>
 <div class="memproto">
       <table class="memname">
         <tr>
-          <td class="memname">void cwist_async_dispatch_ack </td>
+          <td class="memname"><a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">void</a> cwist_async_dispatch_ack </td>
           <td>(</td>
           <td class="paramtype">cwist_async *&#160;</td>
           <td class="paramname"><em>a</em></td><td>)</td>
@@ -373,7 +373,7 @@ Functions</h2></td></tr>
 
 <p class="definition">Definition at line <a class="el" href="../../db/d84/async_8c_source.html#l00164">164</a> of file <a class="el" href="../../db/d84/async_8c_source.html">async.c</a>.</p>
 
-<p class="reference">References <a class="el" href="../../d6/d73/async__internal_8h.html#ac18dbc06e0fd4adf751239bd5b9d1875">cwist_async_forget_handle()</a>.</p>
+<p class="reference">References <a class="el" href="../../d3/db2/otel_8c_source.html#l00056">cap</a>, and <a class="el" href="../../d6/d73/async__internal_8h.html#ac18dbc06e0fd4adf751239bd5b9d1875">cwist_async_forget_handle()</a>.</p>
 
 <p class="reference">Referenced by <a class="el" href="../../d2/db0/http2_8c_source.html#l03573">cwist_http2_serve_connection_ex()</a>.</p>
 
@@ -386,7 +386,7 @@ Functions</h2></td></tr>
 <div class="memproto">
       <table class="memname">
         <tr>
-          <td class="memname">void cwist_async_release </td>
+          <td class="memname"><a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">void</a> cwist_async_release </td>
           <td>(</td>
           <td class="paramtype">cwist_async *&#160;</td>
           <td class="paramname"><em>a</em></td><td>)</td>
@@ -399,7 +399,7 @@ Functions</h2></td></tr>
 
 <p class="definition">Definition at line <a class="el" href="../../db/d84/async_8c_source.html#l00156">156</a> of file <a class="el" href="../../db/d84/async_8c_source.html">async.c</a>.</p>
 
-<p class="reference">References <a class="el" href="../../d6/d73/async__internal_8h.html#ac18dbc06e0fd4adf751239bd5b9d1875">cwist_async_forget_handle()</a>, and <a class="el" href="../../d9/d39/alloc_8c_source.html#l00391">cwist_free()</a>.</p>
+<p class="reference">References <a class="el" href="../../d3/db2/otel_8c_source.html#l00056">cap</a>, <a class="el" href="../../d6/d73/async__internal_8h.html#ac18dbc06e0fd4adf751239bd5b9d1875">cwist_async_forget_handle()</a>, and <a class="el" href="../../d9/d39/alloc_8c_source.html#l00391">cwist_free()</a>.</p>
 
 <p class="reference">Referenced by <a class="el" href="../../db/d84/async_8c_source.html#l00325">cwist_async_set_timeout()</a>.</p>
 
@@ -412,7 +412,7 @@ Functions</h2></td></tr>
 <div class="memproto">
       <table class="memname">
         <tr>
-          <td class="memname">bool cwist_async_respond </td>
+          <td class="memname"><a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">bool</a> cwist_async_respond </td>
           <td>(</td>
           <td class="paramtype">cwist_async *&#160;</td>
           <td class="paramname"><em>a</em>, </td>
@@ -426,19 +426,19 @@ Functions</h2></td></tr>
         <tr>
           <td class="paramkey"></td>
           <td></td>
-          <td class="paramtype">const char *&#160;</td>
+          <td class="paramtype"><a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">const</a> <a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">char</a> *&#160;</td>
           <td class="paramname"><em>content_type</em>, </td>
         </tr>
         <tr>
           <td class="paramkey"></td>
           <td></td>
-          <td class="paramtype">const void *&#160;</td>
+          <td class="paramtype"><a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">const</a> <a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">void</a> *&#160;</td>
           <td class="paramname"><em>body</em>, </td>
         </tr>
         <tr>
           <td class="paramkey"></td>
           <td></td>
-          <td class="paramtype">size_t&#160;</td>
+          <td class="paramtype"><a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">size_t</a>&#160;</td>
           <td class="paramname"><em>len</em>&#160;</td>
         </tr>
         <tr>
@@ -453,7 +453,7 @@ Functions</h2></td></tr>
 
 <p class="definition">Definition at line <a class="el" href="../../db/d84/async_8c_source.html#l00337">337</a> of file <a class="el" href="../../db/d84/async_8c_source.html">async.c</a>.</p>
 
-<p class="reference">References <a class="el" href="../../dd/d56/http_8h_source.html#l00087">cwist_http_response::body</a>, <a class="el" href="../../dd/d43/http_8c_source.html#l01851">cwist_http_header_add()</a>, <a class="el" href="../../dd/d79/sstring_8c_source.html#l00504">cwist_sstring_assign()</a>, <a class="el" href="../../dd/d79/sstring_8c_source.html#l00088">cwist_sstring_assign_len()</a>, <a class="el" href="../../dd/d56/http_8h_source.html#l00086">cwist_http_response::headers</a>, <a class="el" href="../../dd/d56/http_8h_source.html#l00084">cwist_http_response::status_code</a>, and <a class="el" href="../../dd/d56/http_8h_source.html#l00085">cwist_http_response::status_text</a>.</p>
+<p class="reference">References <a class="el" href="../../dd/d56/http_8h_source.html#l00087">cwist_http_response::body</a>, <a class="el" href="../../d3/db2/otel_8c_source.html#l00056">cap</a>, <a class="el" href="../../dd/d43/http_8c_source.html#l01851">cwist_http_header_add()</a>, <a class="el" href="../../dd/d79/sstring_8c_source.html#l00504">cwist_sstring_assign()</a>, <a class="el" href="../../dd/d79/sstring_8c_source.html#l00088">cwist_sstring_assign_len()</a>, <a class="el" href="../../dd/d56/http_8h_source.html#l00086">cwist_http_response::headers</a>, <a class="el" href="../../dd/d56/http_8h_source.html#l00084">cwist_http_response::status_code</a>, and <a class="el" href="../../dd/d56/http_8h_source.html#l00085">cwist_http_response::status_text</a>.</p>
 
 </div>
 </div>
@@ -464,7 +464,7 @@ Functions</h2></td></tr>
 <div class="memproto">
       <table class="memname">
         <tr>
-          <td class="memname">bool cwist_async_respond_with </td>
+          <td class="memname"><a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">bool</a> cwist_async_respond_with </td>
           <td>(</td>
           <td class="paramtype">cwist_async *&#160;</td>
           <td class="paramname"><em>a</em>, </td>
@@ -486,6 +486,8 @@ Functions</h2></td></tr>
 <p>Complete the exchange with a caller-built response. On success the framework takes ownership of <code>res</code> (destroyed after send). On false the caller retains ownership. Build the response on the calling producer thread, or explicitly disown its GC-tracked owned allocations on their allocating thread before passing it to this producer. Borrowed data and opaque cleanup-context dependencies must remain live until destruction; the framework transfers a managed payload but cannot traverse its context. </p>
 
 <p class="definition">Definition at line <a class="el" href="../../db/d84/async_8c_source.html#l00356">356</a> of file <a class="el" href="../../db/d84/async_8c_source.html">async.c</a>.</p>
+
+<p class="reference">References <a class="el" href="../../d3/db2/otel_8c_source.html#l00056">cap</a>.</p>
 
 </div>
 </div>
@@ -509,6 +511,8 @@ Functions</h2></td></tr>
 
 <p class="definition">Definition at line <a class="el" href="../../db/d84/async_8c_source.html#l00151">151</a> of file <a class="el" href="../../db/d84/async_8c_source.html">async.c</a>.</p>
 
+<p class="reference">References <a class="el" href="../../d3/db2/otel_8c_source.html#l00056">cap</a>.</p>
+
 <p class="reference">Referenced by <a class="el" href="../../db/d84/async_8c_source.html#l00325">cwist_async_set_timeout()</a>.</p>
 
 </div>
@@ -520,7 +524,7 @@ Functions</h2></td></tr>
 <div class="memproto">
       <table class="memname">
         <tr>
-          <td class="memname">void cwist_async_set_timeout </td>
+          <td class="memname"><a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">void</a> cwist_async_set_timeout </td>
           <td>(</td>
           <td class="paramtype">cwist_async *&#160;</td>
           <td class="paramname"><em>a</em>, </td>
@@ -528,7 +532,7 @@ Functions</h2></td></tr>
         <tr>
           <td class="paramkey"></td>
           <td></td>
-          <td class="paramtype">uint64_t&#160;</td>
+          <td class="paramtype"><a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">uint64_t</a>&#160;</td>
           <td class="paramname"><em>ms</em>&#160;</td>
         </tr>
         <tr>
@@ -543,7 +547,7 @@ Functions</h2></td></tr>
 
 <p class="definition">Definition at line <a class="el" href="../../db/d84/async_8c_source.html#l00325">325</a> of file <a class="el" href="../../db/d84/async_8c_source.html">async.c</a>.</p>
 
-<p class="reference">References <a class="el" href="../../db/d84/async_8c_source.html#l00156">cwist_async_release()</a>, <a class="el" href="../../db/d84/async_8c_source.html#l00151">cwist_async_retain()</a>, and <a class="el" href="../../dd/d6c/scheduler_8c_source.html#l00380">cwist_scheduler_schedule()</a>.</p>
+<p class="reference">References <a class="el" href="../../d3/db2/otel_8c_source.html#l00056">cap</a>, <a class="el" href="../../db/d84/async_8c_source.html#l00156">cwist_async_release()</a>, <a class="el" href="../../db/d84/async_8c_source.html#l00151">cwist_async_retain()</a>, and <a class="el" href="../../dd/d6c/scheduler_8c_source.html#l00380">cwist_scheduler_schedule()</a>.</p>
 
 </div>
 </div>
@@ -554,7 +558,7 @@ Functions</h2></td></tr>
 <div class="memproto">
       <table class="memname">
         <tr>
-          <td class="memname">void cwist_async_wait_dispatched </td>
+          <td class="memname"><a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">void</a> cwist_async_wait_dispatched </td>
           <td>(</td>
           <td class="paramtype">cwist_async *&#160;</td>
           <td class="paramname"><em>a</em></td><td>)</td>
@@ -567,6 +571,8 @@ Functions</h2></td></tr>
 <p>A producer on another thread must not read or mutate the deferred request or response until dispatch and the middleware chain have unwound: until then the dispatch thread still reads the response (including res-&gt;deferred) and may send and destroy it. Call this on the producer before touching req/res directly; respond, respond_with and abort already wait on their own. Returns immediately on the dispatch thread itself (an inline producer runs before the acknowledgement by construction) and for NULL. The wait is short: dispatch acknowledges as soon as the handler and middleware return. </p>
 
 <p class="definition">Definition at line <a class="el" href="../../db/d84/async_8c_source.html#l00182">182</a> of file <a class="el" href="../../db/d84/async_8c_source.html">async.c</a>.</p>
+
+<p class="reference">References <a class="el" href="../../d3/db2/otel_8c_source.html#l00056">cap</a>.</p>
 
 </div>
 </div>

@@ -1,0 +1,14 @@
+<map id="src/security/tls/shim/openssl/ssl.h" name="src/security/tls/shim/openssl/ssl.h">
+<area shape="rect" id="Node000001" title="mbedTLS TLS backend: OpenSSL&#45;shaped seam over the CWIST TLS subset." alt="" coords="16,5,169,45"/>
+<area shape="rect" id="Node000002" title=" " alt="" coords="94,240,169,265"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="57,48,31,68,11,94,8,106,11,118,28,153,52,183,79,210,104,230,101,234,75,214,48,187,24,155,6,120,3,106,6,92,27,64,54,43"/>
+<area shape="rect" id="Node000003" title=" " alt="" coords="21,93,92,119"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="86,47,70,82,65,79,82,44"/>
+<area shape="rect" id="Node000004" href="$d5/d67/evp_8h.html" title="mbedTLS TLS backend: EVP subset (HMAC digest tags, AES&#45;256&#45;CBC)." alt="" coords="75,167,187,192"/>
+<area shape="poly" id="edge3_Node000001_Node000004" title=" " alt="" coords="100,45,128,153,122,154,95,46"/>
+<area shape="rect" id="Node000005" href="$d0/dc6/hmac_8h.html" title="mbedTLS TLS backend: HMAC subset (HMAC&#45;SHA256, one&#45;shot + streaming)." alt="" coords="168,93,292,119"/>
+<area shape="poly" id="edge5_Node000001_Node000005" title=" " alt="" coords="127,43,199,84,196,89,124,48"/>
+<area shape="poly" id="edge4_Node000004_Node000002" title=" " alt="" coords="134,192,134,226,129,226,129,192"/>
+<area shape="poly" id="edge7_Node000005_Node000002" title=" " alt="" coords="230,120,221,154,202,193,183,216,162,234,158,230,179,212,197,191,216,152,225,118"/>
+<area shape="poly" id="edge6_Node000005_Node000004" title=" " alt="" coords="216,121,160,161,157,156,213,117"/>
+</map>

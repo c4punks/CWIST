@@ -145,10 +145,10 @@ This graph shows which files directly or indirectly include this file:</div>
 <table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="func-members" name="func-members"></a>
 Functions</h2></td></tr>
-<tr class="memitem:ac197ccec3b022b078a62dc878ce336e0" id="r_ac197ccec3b022b078a62dc878ce336e0"><td class="memItemLeft" align="right" valign="top">uint64_t&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d0/db0/core_2siphash_2siphash_8h.html#ac197ccec3b022b078a62dc878ce336e0">siphash24</a> (const void *src, size_t len, const uint8_t key[16])</td></tr>
+<tr class="memitem:ac197ccec3b022b078a62dc878ce336e0" id="r_ac197ccec3b022b078a62dc878ce336e0"><td class="memItemLeft" align="right" valign="top"><a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">uint64_t</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d0/db0/core_2siphash_2siphash_8h.html#ac197ccec3b022b078a62dc878ce336e0">siphash24</a> (<a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">const</a> <a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">void</a> *src, <a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">size_t</a> len, <a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">const</a> <a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">uint8_t</a> key[16])</td></tr>
 <tr class="memdesc:ac197ccec3b022b078a62dc878ce336e0"><td class="mdescLeft">&#160;</td><td class="mdescRight">Compute SipHash-2-4 over a byte range using a 16-byte secret key.  <br /></td></tr>
 <tr class="separator:ac197ccec3b022b078a62dc878ce336e0"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:afc6a74b5cc4fd3de6eebb0e7d83604c0" id="r_afc6a74b5cc4fd3de6eebb0e7d83604c0"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d0/db0/core_2siphash_2siphash_8h.html#afc6a74b5cc4fd3de6eebb0e7d83604c0">cwist_generate_hash_seed</a> (uint8_t key[16])</td></tr>
+<tr class="memitem:afc6a74b5cc4fd3de6eebb0e7d83604c0" id="r_afc6a74b5cc4fd3de6eebb0e7d83604c0"><td class="memItemLeft" align="right" valign="top"><a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">void</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d0/db0/core_2siphash_2siphash_8h.html#afc6a74b5cc4fd3de6eebb0e7d83604c0">cwist_generate_hash_seed</a> (<a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">uint8_t</a> key[16])</td></tr>
 <tr class="memdesc:afc6a74b5cc4fd3de6eebb0e7d83604c0"><td class="mdescLeft">&#160;</td><td class="mdescRight">Generates a random SipHash seed.  <br /></td></tr>
 <tr class="separator:afc6a74b5cc4fd3de6eebb0e7d83604c0"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
@@ -160,9 +160,9 @@ Functions</h2></td></tr>
 <div class="memproto">
       <table class="memname">
         <tr>
-          <td class="memname">void cwist_generate_hash_seed </td>
+          <td class="memname"><a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">void</a> cwist_generate_hash_seed </td>
           <td>(</td>
-          <td class="paramtype">uint8_t&#160;</td>
+          <td class="paramtype"><a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">uint8_t</a>&#160;</td>
           <td class="paramname"><em>key</em>[16]</td><td>)</td>
           <td></td>
         </tr>
@@ -170,11 +170,12 @@ Functions</h2></td></tr>
 </div><div class="memdoc">
 
 <p>Generates a random SipHash seed. </p>
-<div class="fragment"><div class="line">uint8_t key[16];</div>
+<div class="fragment"><div class="line"><a class="code hl_variable" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">uint8_t</a> key[16];</div>
 <div class="line"><a class="code hl_function" href="../../d0/db0/core_2siphash_2siphash_8h.html#afc6a74b5cc4fd3de6eebb0e7d83604c0">cwist_generate_hash_seed</a>(key);</div>
-<div class="line">uint64_t hash = <a class="code hl_function" href="../../d0/db0/core_2siphash_2siphash_8h.html#ac197ccec3b022b078a62dc878ce336e0">siphash24</a>(src, len, key);</div>
-<div class="ttc" id="acore_2siphash_2siphash_8h_html_ac197ccec3b022b078a62dc878ce336e0"><div class="ttname"><a href="../../d0/db0/core_2siphash_2siphash_8h.html#ac197ccec3b022b078a62dc878ce336e0">siphash24</a></div><div class="ttdeci">uint64_t siphash24(const void *src, size_t len, const uint8_t key[16])</div><div class="ttdoc">Compute SipHash-2-4 over a byte range using a 16-byte secret key.</div><div class="ttdef"><b>Definition</b> <a href="../../dd/d2d/siphash_8c_source.html#l00047">siphash.c:47</a></div></div>
-<div class="ttc" id="acore_2siphash_2siphash_8h_html_afc6a74b5cc4fd3de6eebb0e7d83604c0"><div class="ttname"><a href="../../d0/db0/core_2siphash_2siphash_8h.html#afc6a74b5cc4fd3de6eebb0e7d83604c0">cwist_generate_hash_seed</a></div><div class="ttdeci">void cwist_generate_hash_seed(uint8_t key[16])</div><div class="ttdoc">Generates a random SipHash seed.</div><div class="ttdef"><b>Definition</b> <a href="../../dd/d2d/siphash_8c_source.html#l00209">siphash.c:209</a></div></div>
+<div class="line"><a class="code hl_variable" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">uint64_t</a> <a class="code hl_variable" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">hash</a> = <a class="code hl_function" href="../../d0/db0/core_2siphash_2siphash_8h.html#ac197ccec3b022b078a62dc878ce336e0">siphash24</a>(src, len, key);</div>
+<div class="ttc" id="acore_2siphash_2siphash_8h_html_ac197ccec3b022b078a62dc878ce336e0"><div class="ttname"><a href="../../d0/db0/core_2siphash_2siphash_8h.html#ac197ccec3b022b078a62dc878ce336e0">siphash24</a></div><div class="ttdeci">uint64_t siphash24(const void *src, size_t len, const uint8_t key[16])</div><div class="ttdoc">Compute SipHash-2-4 over a byte range using a 16-byte secret key.</div><div class="ttdef"><b>Definition</b> <a href="../../dd/d2d/siphash_8c_source.html#l00049">siphash.c:49</a></div></div>
+<div class="ttc" id="acore_2siphash_2siphash_8h_html_afc6a74b5cc4fd3de6eebb0e7d83604c0"><div class="ttname"><a href="../../d0/db0/core_2siphash_2siphash_8h.html#afc6a74b5cc4fd3de6eebb0e7d83604c0">cwist_generate_hash_seed</a></div><div class="ttdeci">void cwist_generate_hash_seed(uint8_t key[16])</div><div class="ttdoc">Generates a random SipHash seed.</div><div class="ttdef"><b>Definition</b> <a href="../../dd/d2d/siphash_8c_source.html#l00211">siphash.c:211</a></div></div>
+<div class="ttc" id="aotel_8c_html_a856fa22aef923b4a345805d81580aebe"><div class="ttname"><a href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">cap</a></div><div class="ttdeci">size_t cap</div><div class="ttdef"><b>Definition</b> <a href="../../d3/db2/otel_8c_source.html#l00056">otel.c:56</a></div></div>
 </div><!-- fragment --><p>Generates a random SipHash seed.</p>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
@@ -183,7 +184,9 @@ Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="../../dd/d2d/siphash_8c_source.html#l00209">209</a> of file <a class="el" href="../../dd/d2d/siphash_8c_source.html">siphash.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../dd/d2d/siphash_8c_source.html#l00211">211</a> of file <a class="el" href="../../dd/d2d/siphash_8c_source.html">siphash.c</a>.</p>
+
+<p class="reference">References <a class="el" href="../../d3/db2/otel_8c_source.html#l00056">cap</a>.</p>
 
 <p class="reference">Referenced by <a class="el" href="../../dd/d7f/query_8c_source.html#l00061">cwist_query_map_create_in_arena()</a>.</p>
 
@@ -196,21 +199,21 @@ Functions</h2></td></tr>
 <div class="memproto">
       <table class="memname">
         <tr>
-          <td class="memname">uint64_t siphash24 </td>
+          <td class="memname"><a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">uint64_t</a> siphash24 </td>
           <td>(</td>
-          <td class="paramtype">const void *&#160;</td>
+          <td class="paramtype"><a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">const</a> <a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">void</a> *&#160;</td>
           <td class="paramname"><em>src</em>, </td>
         </tr>
         <tr>
           <td class="paramkey"></td>
           <td></td>
-          <td class="paramtype">size_t&#160;</td>
+          <td class="paramtype"><a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">size_t</a>&#160;</td>
           <td class="paramname"><em>len</em>, </td>
         </tr>
         <tr>
           <td class="paramkey"></td>
           <td></td>
-          <td class="paramtype">const uint8_t&#160;</td>
+          <td class="paramtype"><a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">const</a> <a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">uint8_t</a>&#160;</td>
           <td class="paramname"><em>key</em>[16]&#160;</td>
         </tr>
         <tr>
@@ -235,7 +238,9 @@ Functions</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>64-bit keyed hash value. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="../../dd/d2d/siphash_8c_source.html#l00047">47</a> of file <a class="el" href="../../dd/d2d/siphash_8c_source.html">siphash.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../dd/d2d/siphash_8c_source.html#l00049">49</a> of file <a class="el" href="../../dd/d2d/siphash_8c_source.html">siphash.c</a>.</p>
+
+<p class="reference">References <a class="el" href="../../d3/db2/otel_8c_source.html#l00056">cap</a>.</p>
 
 <p class="reference">Referenced by <a class="el" href="../../d1/d4d/flash_8c_source.html#l00055">cwist_flash_get()</a>, <a class="el" href="../../dd/d7f/query_8c_source.html#l00220">cwist_query_map_delete()</a>, <a class="el" href="../../dd/d7f/query_8c_source.html#l00196">cwist_query_map_get()</a>, and <a class="el" href="../../dd/d7f/query_8c_source.html#l00146">cwist_query_map_set()</a>.</p>
 

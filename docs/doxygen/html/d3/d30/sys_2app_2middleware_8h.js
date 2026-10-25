@@ -1,5 +1,6 @@
 var sys_2app_2middleware_8h =
 [
+    [ "cwist_otel_cfg_t", "d9/da9/structcwist__otel__cfg__t.html", "d9/da9/structcwist__otel__cfg__t" ],
     [ "cwist_log_format_t", "d3/d30/sys_2app_2middleware_8h.html#a22009cad9633c4143994338668ad016a", [
       [ "CWIST_LOG_COMMON", "d3/d30/sys_2app_2middleware_8h.html#a22009cad9633c4143994338668ad016aaf7fe6ed857656ecde6c59ba7b767f08b", null ],
       [ "CWIST_LOG_COMBINED", "d3/d30/sys_2app_2middleware_8h.html#a22009cad9633c4143994338668ad016aa43f3b8eb07e442bd1148d6c33f1858c3", null ],
@@ -11,6 +12,8 @@ var sys_2app_2middleware_8h =
     [ "cwist_mw_jwt_auth", "d3/d30/sys_2app_2middleware_8h.html#a49bd9e920c1ec6ff450b7225b544ff40", null ],
     [ "cwist_mw_jwt_get_claims", "d3/d30/sys_2app_2middleware_8h.html#a4e08ffed838908a792a6b7f431cdca4e", null ],
     [ "cwist_mw_metrics", "d3/d30/sys_2app_2middleware_8h.html#a191277779bc3efb796dad9be0b0ab8b7", null ],
+    [ "cwist_mw_otel_get_trace_id", "d3/d30/sys_2app_2middleware_8h.html#a31d80e3bdebd1c24797265f083fe1a07", null ],
+    [ "cwist_mw_otel_trace", "d3/d30/sys_2app_2middleware_8h.html#accb52384a62e90d75f0c77b40a363f16", null ],
     [ "cwist_mw_rate_limit_ip", "d3/d30/sys_2app_2middleware_8h.html#aea3a871e2f49f765a5ab7ae87f3354df", null ],
     [ "cwist_mw_rate_limit_reset", "d3/d30/sys_2app_2middleware_8h.html#a946b66e746c16cac070accecd554530c", null ],
     [ "cwist_mw_request_id", "d3/d30/sys_2app_2middleware_8h.html#a4b6f6d40a953fcbe496f65902a7f0797", null ]

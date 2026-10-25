@@ -133,9 +133,9 @@ $(document).ready(function(){initNavTree('d1/d88/http3__client_8c.html','../../'
 <code>#include &lt;pthread.h&gt;</code><br />
 <code>#include &lt;ctype.h&gt;</code><br />
 <code>#include &lt;strings.h&gt;</code><br />
-<code>#include &lt;openssl/ssl.h&gt;</code><br />
+<code>#include &lt;<a class="el" href="../../df/d6d/ssl_8h_source.html">openssl/ssl.h</a>&gt;</code><br />
 <code>#include &lt;openssl/x509.h&gt;</code><br />
-<code>#include &lt;openssl/evp.h&gt;</code><br />
+<code>#include &lt;<a class="el" href="../../d5/d67/evp_8h_source.html">openssl/evp.h</a>&gt;</code><br />
 <code>#include &lt;lsquic.h&gt;</code><br />
 <code>#include &lt;lsxpack_header.h&gt;</code><br />
 </div><div class="textblock"><div class="dynheader">
@@ -143,131 +143,139 @@ Include dependency graph for http3_client.c:</div>
 <div class="dyncontent">
 <div class="center"><img src="../../db/de3/http3__client_8c__incl.png" border="0" usemap="#asrc_2net_2http_2http3__client_8c" alt=""/></div>
 <map name="asrc_2net_2http_2http3__client_8c" id="asrc_2net_2http_2http3__client_8c">
-<area shape="rect" title="lsquic/BoringSSL&#45;based HTTP/3 client for CWIST." alt="" coords="1974,5,2109,45"/>
-<area shape="rect" href="../../df/dad/http3__client_8h.html" title="HTTP/3 client using lsquic/BoringSSL." alt="" coords="917,93,1067,133"/>
-<area shape="poly" title=" " alt="" coords="1974,35,1081,107,1080,102,1973,30"/>
-<area shape="rect" title=" " alt="" coords="1489,438,1559,463"/>
-<area shape="poly" title=" " alt="" coords="1974,33,1920,40,1859,52,1796,70,1736,96,1697,115,1665,133,1653,143,1644,156,1638,172,1636,193,1636,276,1634,300,1627,323,1605,366,1577,403,1550,431,1546,427,1573,400,1600,364,1622,322,1628,299,1631,276,1631,193,1633,171,1639,154,1649,140,1662,128,1694,110,1734,91,1794,65,1858,46,1919,35,1973,28"/>
-<area shape="rect" title=" " alt="" coords="1342,438,1413,463"/>
-<area shape="poly" title=" " alt="" coords="1974,35,1798,57,1714,74,1680,85,1656,95,1545,235,1397,428,1392,425,1541,231,1653,91,1679,80,1713,69,1797,52,1973,30"/>
-<area shape="rect" href="../../d7/da1/sys_2err_2cwist__err_8h.html" title="Unified error code and type definitions for the CWIST system layer." alt="" coords="27,431,170,471"/>
-<area shape="poly" title=" " alt="" coords="1974,31,1517,47,857,79,535,102,264,128,157,144,76,160,25,177,12,185,8,193,8,276,14,317,30,356,52,390,73,419,69,422,47,393,26,358,9,318,3,276,3,192,8,182,22,172,75,154,156,138,263,123,535,96,857,74,1517,42,1973,26"/>
-<area shape="rect" title=" " alt="" coords="1309,350,1393,375"/>
-<area shape="poly" title=" " alt="" coords="1974,31,1870,37,1750,48,1640,67,1596,80,1565,96,1540,117,1524,140,1514,164,1507,189,1493,241,1479,268,1458,297,1425,325,1390,346,1387,341,1422,320,1454,293,1475,266,1488,239,1502,187,1509,162,1519,138,1536,114,1563,91,1595,75,1639,62,1749,43,1870,32,1974,26"/>
-<area shape="rect" title=" " alt="" coords="1250,262,1353,287"/>
-<area shape="poly" title=" " alt="" coords="1974,30,1842,33,1683,44,1604,52,1533,63,1473,78,1429,96,1388,129,1355,171,1330,214,1313,250,1308,248,1325,212,1350,168,1384,125,1427,91,1471,73,1531,58,1603,47,1682,38,1842,28,1974,24"/>
-<area shape="rect" title=" " alt="" coords="1377,262,1444,287"/>
-<area shape="poly" title=" " alt="" coords="1974,33,1839,42,1679,55,1539,74,1491,84,1464,96,1449,111,1437,129,1422,171,1414,213,1413,248,1407,248,1409,212,1417,170,1433,127,1445,108,1461,91,1489,79,1538,68,1678,50,1838,36,1974,28"/>
-<area shape="rect" href="../../d2/dfe/alloc_8h.html" title="Memory allocation wrappers backed by libttak." alt="" coords="1721,350,1895,375"/>
-<area shape="poly" title=" " alt="" coords="1974,36,1913,44,1849,57,1795,74,1775,84,1762,95,1746,124,1739,156,1740,189,1746,223,1769,288,1795,337,1791,339,1764,290,1741,225,1734,190,1734,155,1741,122,1758,92,1772,79,1793,69,1848,52,1912,39,1973,31"/>
-<area shape="rect" href="../../dd/d34/h3__hdr__out_8h.html" title="Outgoing HTTP/3 header set builder for lsquic (private)." alt="" coords="1772,101,1879,126"/>
-<area shape="poly" title=" " alt="" coords="1995,48,1868,98,1866,93,1993,43"/>
-<area shape="rect" title=" " alt="" coords="2104,181,2176,207"/>
-<area shape="poly" title=" " alt="" coords="2006,48,1979,66,1956,87,1944,109,1945,120,1950,132,1968,141,2003,154,2092,178,2090,183,2002,159,1965,146,1946,135,1940,122,1939,108,1952,83,1976,61,2003,43"/>
-<area shape="rect" title=" " alt="" coords="2201,181,2335,207"/>
-<area shape="poly" title=" " alt="" coords="2023,47,2006,67,1993,89,1987,112,1989,122,1994,131,2018,143,2066,155,2188,178,2187,183,2065,161,2016,148,1990,135,1984,124,1982,111,1988,87,2002,63,2019,44"/>
-<area shape="rect" title=" " alt="" coords="2004,101,2079,126"/>
-<area shape="poly" title=" " alt="" coords="2044,46,2044,87,2039,87,2039,46"/>
-<area shape="rect" title=" " alt="" coords="2103,101,2171,126"/>
-<area shape="poly" title=" " alt="" coords="2064,44,2115,89,2112,93,2061,48"/>
-<area shape="rect" title=" " alt="" coords="2195,101,2258,126"/>
-<area shape="poly" title=" " alt="" coords="2083,43,2191,92,2188,97,2081,48"/>
-<area shape="rect" title=" " alt="" coords="2282,101,2374,126"/>
-<area shape="poly" title=" " alt="" coords="2108,43,2271,91,2281,94,2280,99,2270,96,2107,48"/>
-<area shape="rect" title=" " alt="" coords="2398,101,2469,126"/>
-<area shape="poly" title=" " alt="" coords="2110,33,2239,55,2387,91,2395,93,2394,98,2386,96,2238,61,2109,38"/>
-<area shape="rect" title=" " alt="" coords="2493,101,2573,126"/>
-<area shape="poly" title=" " alt="" coords="2109,30,2279,51,2381,69,2482,91,2492,94,2491,99,2481,96,2380,74,2279,57,2109,35"/>
-<area shape="rect" title=" " alt="" coords="2597,101,2656,126"/>
-<area shape="poly" title=" " alt="" coords="2109,26,2204,31,2324,42,2455,61,2586,91,2593,93,2591,98,2585,96,2454,67,2323,48,2203,36,2109,31"/>
-<area shape="rect" title=" " alt="" coords="2681,101,2751,126"/>
-<area shape="poly" title=" " alt="" coords="2109,25,2218,30,2358,41,2513,61,2669,91,2678,93,2677,99,2667,96,2512,66,2357,47,2217,36,2109,31"/>
-<area shape="rect" title=" " alt="" coords="2775,101,2854,126"/>
-<area shape="poly" title=" " alt="" coords="2109,24,2233,28,2396,38,2580,58,2674,73,2765,91,2776,94,2774,99,2763,96,2673,78,2580,63,2396,44,2232,33,2109,30"/>
-<area shape="rect" title=" " alt="" coords="2879,101,2985,126"/>
-<area shape="poly" title=" " alt="" coords="2109,25,2248,29,2437,40,2651,60,2867,91,2884,94,2883,100,2866,96,2650,65,2436,45,2248,35,2109,30"/>
-<area shape="rect" title=" " alt="" coords="3009,101,3129,126"/>
-<area shape="poly" title=" " alt="" coords="2109,24,2268,28,2489,38,2742,58,2871,72,2998,91,3018,95,3017,100,2997,96,2871,78,2741,63,2488,43,2268,33,2109,30"/>
-<area shape="rect" title=" " alt="" coords="3153,101,3265,126"/>
-<area shape="poly" title=" " alt="" coords="2109,23,2289,24,2545,33,2841,53,2993,69,3142,91,3160,95,3159,100,3141,96,2993,75,2841,58,2545,38,2289,30,2109,29"/>
-<area shape="rect" href="../../d9/dab/net_2http_2http_8h.html" title="HTTP Protocol Definitions and Helpers." alt="" coords="833,181,986,207"/>
-<area shape="poly" title=" " alt="" coords="974,135,933,174,930,170,970,132"/>
-<area shape="poly" title=" " alt="" coords="917,121,737,133,509,158,396,176,294,198,209,225,176,240,150,257,134,272,121,291,105,334,99,378,99,417,93,417,94,377,100,332,116,288,130,269,146,253,173,236,207,220,293,193,395,171,509,153,736,128,917,116"/>
-<area shape="rect" title=" " alt="" coords="1305,519,1380,544"/>
-<area shape="poly" title=" " alt="" coords="1068,124,1172,143,1289,172,1345,189,1393,209,1432,230,1458,253,1480,284,1487,301,1490,322,1487,347,1476,380,1456,421,1426,472,1405,496,1381,514,1378,510,1402,492,1422,469,1452,418,1471,378,1482,346,1485,322,1482,302,1475,286,1454,256,1429,234,1391,213,1343,194,1288,177,1171,149,1067,129"/>
-<area shape="rect" href="../../d4/dbd/core_2sstring_2sstring_8h.html" title="Safe string type with helper methods." alt="" coords="1097,343,1233,383"/>
-<area shape="poly" title=" " alt="" coords="963,204,1020,223,1076,252,1117,290,1148,329,1144,333,1113,293,1073,257,1017,228,961,209"/>
-<area shape="poly" title=" " alt="" coords="987,204,1077,222,1172,252,1206,272,1238,292,1263,300,1287,304,1330,304,1350,306,1369,311,1388,322,1406,341,1415,362,1413,386,1406,408,1396,428,1391,425,1401,406,1408,385,1409,363,1402,344,1385,326,1367,316,1349,311,1330,310,1286,309,1262,306,1236,297,1203,277,1170,257,1075,227,986,209"/>
-<area shape="poly" title=" " alt="" coords="832,200,666,206,465,217,287,234,225,245,191,257,172,273,156,291,132,335,115,379,106,418,101,417,110,378,127,332,152,288,168,269,188,252,224,239,287,229,465,212,665,201,832,195"/>
-<area shape="rect" title=" " alt="" coords="571,519,642,544"/>
-<area shape="poly" title=" " alt="" coords="832,201,696,207,540,219,405,235,359,245,334,257,311,282,296,308,287,334,285,362,288,389,298,416,315,443,336,469,351,479,373,489,432,505,558,523,557,528,431,510,372,494,349,484,333,473,310,446,294,418,283,390,279,362,282,333,291,305,307,278,330,253,357,240,404,230,539,213,696,202,832,195"/>
-<area shape="rect" href="../../d1/d7a/net_2http_2query_8h.html" title="Query string parser and map." alt="" coords="1155,438,1317,463"/>
-<area shape="poly" title=" " alt="" coords="967,204,1039,223,1116,252,1187,290,1224,316,1248,341,1255,363,1256,385,1248,425,1243,424,1250,385,1249,364,1243,344,1221,320,1184,295,1114,257,1037,228,965,209"/>
-<area shape="rect" href="../../d0/dae/core_2db_2sql_8h.html" title="Database operations wrapper (SQLite3)." alt="" coords="390,262,533,287"/>
-<area shape="poly" title=" " alt="" coords="833,209,546,257,524,262,523,256,545,252,832,204"/>
-<area shape="rect" href="../../de/d66/endpoint__opts_8h.html" title="Endpoint&#45;level behavior flags for CWIST apps." alt="" coords="347,431,517,471"/>
-<area shape="poly" title=" " alt="" coords="832,198,717,200,583,209,461,227,413,240,379,257,348,284,330,313,326,328,325,345,337,381,354,404,377,421,374,426,350,408,332,384,320,346,320,328,325,311,344,280,376,252,411,235,460,222,583,204,717,195,832,192"/>
-<area shape="rect" href="../../da/d2c/big__dumb__reply_8h.html" title="Auto&#45;Caching Layer for repetitive requests." alt="" coords="884,255,1063,295"/>
-<area shape="poly" title=" " alt="" coords="921,205,951,242,947,246,917,209"/>
-<area shape="rect" href="../../dc/d85/reactor_8h.html" title=" " alt="" coords="819,438,978,463"/>
-<area shape="poly" title=" " alt="" coords="902,208,862,264,842,302,827,343,822,363,826,382,845,408,869,428,865,432,841,411,822,384,817,363,821,342,837,300,858,261,897,205"/>
-<area shape="rect" title=" " alt="" coords="557,262,653,287"/>
-<area shape="poly" title=" " alt="" coords="859,209,666,257,655,261,653,255,665,252,858,204"/>
-<area shape="poly" title=" " alt="" coords="980,204,1098,225,1231,252,1248,256,1247,261,1230,257,1097,230,979,209"/>
-<area shape="rect" title=" " alt="" coords="677,262,773,287"/>
-<area shape="poly" title=" " alt="" coords="884,209,765,259,763,254,882,204"/>
-<area shape="poly" title=" " alt="" coords="986,197,1161,214,1263,230,1365,252,1374,255,1372,260,1363,257,1262,235,1160,219,986,202"/>
-<area shape="poly" title=" " alt="" coords="1234,378,1476,435,1475,440,1233,383"/>
-<area shape="poly" title=" " alt="" coords="1213,380,1337,430,1335,435,1211,385"/>
-<area shape="rect" title=" " alt="" coords="857,519,940,544"/>
-<area shape="poly" title=" " alt="" coords="1158,384,1130,429,1110,452,1087,473,1055,492,1020,506,954,524,953,519,1019,501,1053,487,1084,469,1106,449,1126,426,1154,382"/>
-<area shape="poly" title=" " alt="" coords="1098,377,1035,385,838,403,685,413,335,433,184,445,184,440,334,428,685,408,838,398,1034,380,1097,372"/>
-<area shape="poly" title=" " alt="" coords="170,456,844,522,844,527,170,462"/>
-<area shape="poly" title=" " alt="" coords="171,465,190,468,394,500,557,521,557,527,393,505,189,473,170,470"/>
-<area shape="rect" title=" " alt="" coords="229,519,339,544"/>
-<area shape="poly" title=" " alt="" coords="144,468,245,511,243,516,142,473"/>
-<area shape="poly" title=" " alt="" coords="1155,465,656,527,656,521,1154,459"/>
-<area shape="poly" title=" " alt="" coords="1253,461,1317,508,1314,513,1250,466"/>
-<area shape="poly" title=" " alt="" coords="429,290,365,314,292,345,212,386,142,426,140,421,209,382,290,340,363,309,427,285"/>
-<area shape="poly" title=" " alt="" coords="424,290,378,311,356,326,337,344,313,384,298,427,290,470,287,505,282,505,285,469,293,426,308,381,333,341,353,322,376,306,422,285"/>
-<area shape="poly" title=" " alt="" coords="501,285,825,380,1293,513,1291,518,823,385,499,290"/>
-<area shape="rect" title=" " alt="" coords="530,350,609,375"/>
-<area shape="poly" title=" " alt="" coords="478,285,546,339,542,343,474,290"/>
-<area shape="rect" href="../../db/dd3/json__heal_8h.html" title="Self&#45;Healing JSON Recovery Layer (CWIST)" alt="" coords="593,431,743,471"/>
-<area shape="poly" title=" " alt="" coords="515,285,570,306,597,321,622,341,636,358,648,377,663,416,658,418,643,380,632,361,618,345,594,326,567,310,513,290"/>
-<area shape="rect" href="../../dc/d6e/zod_8h.html" title="Strict JSON schema validation (Zod&#45;style) for CWIST." alt="" coords="347,350,506,375"/>
-<area shape="poly" title=" " alt="" coords="459,289,439,338,434,336,454,287"/>
-<area shape="poly" title=" " alt="" coords="724,468,853,512,851,517,722,473"/>
-<area shape="poly" title=" " alt="" coords="593,470,353,519,352,513,592,465"/>
-<area shape="poly" title=" " alt="" coords="744,460,807,468,1291,522,1291,527,806,473,743,465"/>
-<area shape="poly" title=" " alt="" coords="447,373,531,429,555,450,581,468,649,493,720,510,787,520,844,525,843,530,786,525,719,515,648,498,579,473,552,455,528,433,444,378"/>
-<area shape="poly" title=" " alt="" coords="407,378,372,401,337,432,312,470,295,507,290,504,307,467,333,429,368,396,404,373"/>
-<area shape="poly" title=" " alt="" coords="460,373,603,424,601,429,458,378"/>
-<area shape="poly" title=" " alt="" coords="518,465,536,468,844,519,843,524,536,473,517,470"/>
-<area shape="poly" title=" " alt="" coords="475,468,570,510,567,515,473,473"/>
-<area shape="poly" title=" " alt="" coords="1017,292,1112,335,1110,340,1014,297"/>
-<area shape="poly" title=" " alt="" coords="1000,293,1021,314,1037,342,1041,362,1037,383,1022,432,991,472,965,496,936,514,934,510,962,492,987,469,1017,429,1032,382,1036,362,1032,344,1016,318,996,297"/>
-<area shape="poly" title=" " alt="" coords="909,297,865,317,826,345,812,361,802,376,792,408,782,440,772,456,756,473,733,490,707,504,656,522,654,517,705,499,730,485,753,469,767,453,777,438,787,406,798,374,807,357,822,341,863,312,907,292"/>
-<area shape="rect" title=" " alt="" coords="924,350,1023,375"/>
-<area shape="poly" title=" " alt="" coords="976,295,976,336,971,336,971,295"/>
-<area shape="rect" title=" " alt="" coords="836,350,900,375"/>
-<area shape="poly" title=" " alt="" coords="952,297,895,343,891,339,948,293"/>
-<area shape="poly" title=" " alt="" coords="1057,292,1296,346,1295,351,1056,297"/>
-<area shape="poly" title=" " alt="" coords="901,464,901,505,896,505,896,464"/>
-<area shape="poly" title=" " alt="" coords="857,466,656,520,655,514,856,461"/>
-<area shape="poly" title=" " alt="" coords="959,461,998,468,1292,519,1291,524,997,473,958,466"/>
-<area shape="poly" title=" " alt="" coords="1811,376,1805,423,1794,450,1776,473,1747,489,1706,502,1601,520,1488,529,1394,532,1394,527,1488,524,1601,515,1705,497,1745,484,1773,469,1790,447,1799,422,1805,375"/>
-<area shape="rect" title=" " alt="" coords="1837,438,1979,463"/>
-<area shape="poly" title=" " alt="" coords="1823,373,1885,426,1882,430,1820,378"/>
-<area shape="rect" href="../../da/d0c/arena_8h.html" title="Request&#45;scoped arena allocator backed by libttak arena generations." alt="" coords="1584,438,1763,463"/>
-<area shape="poly" title=" " alt="" coords="1791,378,1704,433,1701,428,1788,373"/>
-<area shape="poly" title=" " alt="" coords="1617,466,1572,473,1395,494,1221,511,954,530,954,524,1220,505,1395,489,1572,468,1616,461"/>
-<area shape="poly" title=" " alt="" coords="1626,466,1394,521,1393,515,1625,461"/>
-<area shape="poly" title=" " alt="" coords="1823,127,1802,173,1765,241,1715,316,1686,352,1654,385,1615,409,1563,435,1560,430,1612,404,1650,381,1682,348,1711,313,1761,238,1797,171,1818,125"/>
-<area shape="poly" title=" " alt="" coords="1862,124,1910,144,1961,175,1984,195,2002,218,2014,244,2019,273,2019,364,2020,424,2013,449,1992,473,1950,480,1851,488,1547,505,954,531,954,525,1547,500,1851,483,1949,475,1989,468,2008,446,2015,424,2013,364,2013,274,2009,246,1997,221,1980,199,1958,180,1907,149,1860,129"/>
-<area shape="poly" title=" " alt="" coords="1880,123,1970,148,2010,163,2036,179,2055,201,2065,222,2069,245,2069,273,2069,364,2070,397,2068,425,2058,449,2036,473,2000,487,1935,499,1753,516,1551,527,1394,532,1394,526,1551,521,1752,511,1935,494,1998,482,2033,468,2054,446,2062,424,2064,397,2064,364,2064,273,2063,245,2060,223,2051,204,2033,183,2007,168,1968,153,1878,129"/>
-<area shape="poly" title=" " alt="" coords="1869,123,1898,131,2091,178,2090,183,1897,136,1868,129"/>
-<area shape="poly" title=" " alt="" coords="1879,121,2191,176,2190,182,1878,127"/>
+<area shape="rect" title="lsquic/BoringSSL&#45;based HTTP/3 client for CWIST." alt="" coords="2024,5,2158,45"/>
+<area shape="rect" href="../../df/dad/http3__client_8h.html" title="HTTP/3 client using lsquic/BoringSSL." alt="" coords="1151,93,1300,133"/>
+<area shape="poly" title=" " alt="" coords="2024,36,1314,106,1314,101,2023,31"/>
+<area shape="rect" title=" " alt="" coords="1584,438,1654,463"/>
+<area shape="poly" title=" " alt="" coords="2024,31,1935,42,1887,53,1841,68,1799,89,1766,117,1744,151,1738,171,1736,193,1736,276,1734,300,1727,324,1704,367,1675,403,1646,431,1643,427,1671,399,1699,364,1722,322,1729,299,1731,276,1731,193,1733,170,1739,149,1762,113,1796,85,1839,64,1885,48,1934,37,2023,26"/>
+<area shape="rect" title=" " alt="" coords="1068,438,1138,463"/>
+<area shape="poly" title=" " alt="" coords="2024,29,1962,33,1890,43,1817,63,1781,78,1748,96,1718,118,1697,142,1669,191,1643,243,1622,270,1594,297,1544,332,1501,353,1396,385,1327,402,1273,410,1218,417,1150,433,1143,436,1141,431,1149,428,1218,412,1272,405,1326,397,1394,380,1499,348,1541,327,1591,293,1618,267,1638,241,1664,189,1693,138,1715,114,1745,91,1779,73,1815,58,1889,38,1961,27,2023,23"/>
+<area shape="rect" href="../../d7/da1/sys_2err_2cwist__err_8h.html" title="Unified error code and type definitions for the CWIST system layer." alt="" coords="444,431,586,471"/>
+<area shape="poly" title=" " alt="" coords="2024,32,1603,50,1002,84,709,106,463,133,367,147,294,162,247,178,236,186,232,193,232,276,234,297,239,313,258,338,288,358,324,380,377,408,431,428,429,433,374,413,322,385,285,362,255,342,234,316,229,298,227,276,227,192,232,182,245,173,292,157,366,142,463,127,709,101,1001,78,1602,44,2023,26"/>
+<area shape="rect" title=" " alt="" coords="1300,350,1384,375"/>
+<area shape="poly" title=" " alt="" coords="2024,33,1931,40,1826,52,1730,70,1693,82,1666,96,1641,118,1626,142,1617,167,1611,192,1597,245,1582,271,1558,297,1520,321,1478,339,1436,351,1398,358,1397,353,1435,346,1476,334,1518,317,1555,293,1578,268,1592,243,1606,191,1612,165,1621,139,1637,114,1663,91,1691,77,1729,65,1825,46,1930,34,2023,27"/>
+<area shape="rect" title=" " alt="" coords="1350,262,1453,287"/>
+<area shape="poly" title=" " alt="" coords="2023,32,1912,39,1780,52,1657,70,1607,82,1571,96,1520,130,1477,172,1442,216,1418,252,1413,249,1438,212,1473,169,1517,126,1568,91,1606,77,1656,65,1779,46,1911,34,2023,27"/>
+<area shape="rect" title=" " alt="" coords="1478,262,1544,287"/>
+<area shape="poly" title=" " alt="" coords="2024,32,1920,37,1800,49,1690,68,1646,81,1615,96,1579,129,1552,171,1532,213,1520,249,1515,247,1527,211,1547,169,1575,126,1612,91,1644,76,1688,63,1799,44,1920,32,2023,26"/>
+<area shape="rect" href="../../d2/dfe/alloc_8h.html" title="Memory allocation wrappers backed by libttak." alt="" coords="1850,350,2023,375"/>
+<area shape="poly" title=" " alt="" coords="2023,36,1964,45,1902,57,1850,74,1831,84,1818,95,1803,126,1800,159,1808,193,1824,227,1845,260,1869,291,1914,338,1910,342,1865,294,1841,263,1819,230,1803,195,1795,159,1798,124,1814,92,1828,80,1848,69,1901,52,1963,40,2023,31"/>
+<area shape="rect" href="../../dd/d34/h3__hdr__out_8h.html" title="Outgoing HTTP/3 header set builder for lsquic (private)." alt="" coords="1923,101,2030,126"/>
+<area shape="poly" title=" " alt="" coords="2067,48,2005,94,2001,90,2064,43"/>
+<area shape="rect" title=" " alt="" coords="1872,181,1944,207"/>
+<area shape="poly" title=" " alt="" coords="2024,36,1993,43,1963,55,1935,72,1913,95,1905,112,1902,131,1904,167,1899,168,1896,130,1900,110,1909,92,1932,68,1961,50,1992,38,2023,31"/>
+<area shape="rect" title=" " alt="" coords="2482,181,2617,207"/>
+<area shape="poly" title=" " alt="" coords="2158,24,2349,28,2589,37,2704,46,2803,57,2877,72,2903,81,2918,91,2925,102,2928,113,2918,135,2899,150,2871,162,2797,179,2711,189,2631,194,2631,189,2711,184,2796,174,2869,157,2896,145,2914,132,2922,113,2921,104,2914,95,2900,86,2876,77,2802,63,2703,51,2588,43,2349,33,2158,30"/>
+<area shape="rect" title=" " alt="" coords="2054,101,2128,126"/>
+<area shape="poly" title=" " alt="" coords="2094,46,2094,87,2088,87,2088,46"/>
+<area shape="rect" title=" " alt="" coords="2153,101,2221,126"/>
+<area shape="poly" title=" " alt="" coords="2114,44,2165,89,2161,93,2110,48"/>
+<area shape="rect" title=" " alt="" coords="2245,101,2308,126"/>
+<area shape="poly" title=" " alt="" coords="2133,43,2240,92,2238,97,2130,48"/>
+<area shape="rect" title=" " alt="" coords="2332,101,2424,126"/>
+<area shape="poly" title=" " alt="" coords="2158,43,2321,91,2331,94,2329,99,2319,96,2157,48"/>
+<area shape="rect" title=" " alt="" coords="2448,101,2518,126"/>
+<area shape="poly" title=" " alt="" coords="2159,33,2289,55,2437,91,2445,93,2443,98,2436,96,2288,61,2158,38"/>
+<area shape="rect" title=" " alt="" coords="2543,101,2623,126"/>
+<area shape="poly" title=" " alt="" coords="2159,30,2329,51,2431,69,2532,91,2542,94,2540,99,2530,96,2430,74,2328,57,2158,35"/>
+<area shape="rect" title=" " alt="" coords="2647,101,2706,126"/>
+<area shape="poly" title=" " alt="" coords="2159,26,2253,31,2373,42,2505,61,2636,91,2643,93,2641,98,2634,96,2504,67,2373,48,2253,36,2158,31"/>
+<area shape="rect" title=" " alt="" coords="2730,101,2801,126"/>
+<area shape="poly" title=" " alt="" coords="2159,25,2267,30,2407,41,2563,61,2718,91,2728,93,2726,99,2717,96,2562,66,2407,47,2267,36,2159,31"/>
+<area shape="rect" title=" " alt="" coords="2825,101,2904,126"/>
+<area shape="poly" title=" " alt="" coords="2159,24,2282,28,2446,38,2630,58,2723,73,2814,91,2825,94,2824,99,2813,96,2722,78,2629,63,2446,44,2282,33,2159,30"/>
+<area shape="rect" href="../../df/d6d/ssl_8h.html" title="mbedTLS TLS backend: OpenSSL&#45;shaped seam over the CWIST TLS subset." alt="" coords="2328,262,2435,287"/>
+<area shape="poly" title=" " alt="" coords="2159,24,2354,27,2601,37,2720,45,2822,56,2899,72,2925,81,2941,91,2961,120,2969,145,2965,168,2950,188,2926,205,2895,220,2815,243,2720,259,2621,268,2449,276,2449,270,2620,263,2719,253,2814,238,2893,215,2923,201,2946,185,2960,166,2964,146,2957,122,2937,95,2922,86,2897,77,2821,62,2719,50,2601,42,2354,32,2158,30"/>
+<area shape="rect" href="../../d5/d67/evp_8h.html" title="mbedTLS TLS backend: EVP subset (HMAC digest tags, AES&#45;256&#45;CBC)." alt="" coords="2250,438,2362,463"/>
+<area shape="poly" title=" " alt="" coords="2024,37,1991,45,1956,56,1923,73,1894,95,1870,122,1855,148,1851,175,1863,205,1888,235,1930,267,1982,299,2042,331,2165,389,2264,430,2262,435,2163,394,2040,336,1980,304,1927,271,1885,239,1858,208,1846,175,1850,146,1866,119,1890,91,1920,69,1954,52,1989,40,2023,32"/>
+<area shape="rect" title=" " alt="" coords="3030,101,3150,126"/>
+<area shape="poly" title=" " alt="" coords="2158,25,2311,30,2523,41,2766,60,3011,91,3034,95,3033,100,3011,96,2765,66,2523,46,2311,35,2158,31"/>
+<area shape="rect" href="../../d9/dab/net_2http_2http_8h.html" title="HTTP Protocol Definitions and Helpers." alt="" coords="1058,181,1212,207"/>
+<area shape="poly" title=" " alt="" coords="1205,136,1161,174,1157,170,1202,132"/>
+<area shape="poly" title=" " alt="" coords="1151,117,952,121,828,129,699,140,575,158,464,182,416,198,375,215,341,235,317,256,310,271,309,288,321,326,342,361,358,381,393,406,432,425,429,429,390,411,354,385,338,364,316,329,304,289,305,269,313,253,338,230,373,210,414,193,463,177,574,153,699,135,828,123,952,116,1151,112"/>
+<area shape="rect" title=" " alt="" coords="1731,519,1806,544"/>
+<area shape="poly" title=" " alt="" coords="1301,121,1366,136,1436,161,1471,178,1504,199,1533,224,1558,253,1573,283,1576,311,1572,338,1565,365,1557,390,1554,416,1558,442,1573,469,1603,496,1641,513,1680,523,1718,527,1717,533,1679,528,1639,518,1601,500,1569,472,1553,444,1549,416,1552,389,1559,363,1567,337,1571,311,1568,284,1554,256,1530,228,1501,203,1468,183,1434,166,1364,141,1300,126"/>
+<area shape="rect" href="../../d4/dbd/core_2sstring_2sstring_8h.html" title="Safe string type with helper methods." alt="" coords="936,343,1072,383"/>
+<area shape="poly" title=" " alt="" coords="1128,208,1030,333,1025,330,1124,205"/>
+<area shape="poly" title=" " alt="" coords="1149,205,1167,226,1181,254,1192,290,1197,319,1194,349,1181,384,1162,412,1137,432,1134,428,1158,408,1177,381,1189,348,1192,320,1187,291,1176,256,1162,229,1145,208"/>
+<area shape="poly" title=" " alt="" coords="1058,204,934,222,866,237,799,257,643,345,591,385,547,423,543,419,588,381,640,340,797,252,864,232,934,217,1058,199"/>
+<area shape="rect" title=" " alt="" coords="944,519,1014,544"/>
+<area shape="poly" title=" " alt="" coords="1140,206,1145,239,1147,285,1140,336,1132,361,1120,384,1105,401,1090,411,1074,419,1057,433,1023,471,996,508,992,505,1019,468,1053,429,1071,415,1087,406,1101,397,1115,381,1127,359,1135,335,1141,285,1139,240,1135,207"/>
+<area shape="rect" href="../../d1/d7a/net_2http_2query_8h.html" title="Query string parser and map." alt="" coords="1346,438,1508,463"/>
+<area shape="poly" title=" " alt="" coords="1162,204,1289,267,1354,306,1380,324,1397,341,1409,361,1418,383,1427,424,1422,425,1413,384,1405,363,1393,344,1376,328,1351,310,1286,272,1159,209"/>
+<area shape="rect" href="../../d0/dae/core_2db_2sql_8h.html" title="Database operations wrapper (SQLite3)." alt="" coords="328,262,470,287"/>
+<area shape="poly" title=" " alt="" coords="1058,202,802,220,643,236,483,257,459,262,458,256,483,252,642,231,802,215,1058,196"/>
+<area shape="rect" href="../../de/d66/endpoint__opts_8h.html" title="Endpoint&#45;level behavior flags for CWIST apps." alt="" coords="720,431,891,471"/>
+<area shape="poly" title=" " alt="" coords="1138,207,1138,242,1132,289,1116,340,1103,364,1086,385,1056,402,1011,417,905,439,904,434,1010,412,1054,398,1083,381,1099,361,1111,338,1127,288,1132,241,1133,207"/>
+<area shape="rect" href="../../da/d2c/big__dumb__reply_8h.html" title="Auto&#45;Caching Layer for repetitive requests." alt="" coords="810,255,988,295"/>
+<area shape="poly" title=" " alt="" coords="1101,209,970,253,968,248,1100,204"/>
+<area shape="rect" href="../../dc/d85/reactor_8h.html" title=" " alt="" coords="1162,438,1321,463"/>
+<area shape="poly" title=" " alt="" coords="1156,205,1183,225,1207,253,1226,298,1237,345,1245,424,1239,425,1232,346,1221,300,1202,256,1179,229,1153,209"/>
+<area shape="rect" title=" " alt="" coords="495,262,591,287"/>
+<area shape="poly" title=" " alt="" coords="1058,202,852,219,727,235,603,257,589,261,588,256,602,252,726,230,851,214,1058,197"/>
+<area shape="poly" title=" " alt="" coords="1174,204,1350,256,1349,261,1173,209"/>
+<area shape="rect" title=" " alt="" coords="615,262,711,287"/>
+<area shape="poly" title=" " alt="" coords="1059,206,906,226,730,257,714,261,713,256,729,252,905,221,1058,201"/>
+<area shape="poly" title=" " alt="" coords="1212,202,1332,221,1465,252,1473,255,1471,260,1464,257,1331,227,1211,207"/>
+<area shape="poly" title=" " alt="" coords="1073,369,1274,393,1521,428,1570,437,1570,442,1520,433,1273,398,1072,374"/>
+<area shape="poly" title=" " alt="" coords="1028,381,1081,427,1077,431,1024,385"/>
+<area shape="rect" title=" " alt="" coords="642,519,724,544"/>
+<area shape="poly" title=" " alt="" coords="937,378,798,405,740,420,710,433,698,448,691,467,685,505,680,504,686,466,694,446,707,429,738,415,797,400,936,373"/>
+<area shape="poly" title=" " alt="" coords="937,378,600,437,600,432,936,373"/>
+<area shape="poly" title=" " alt="" coords="556,468,647,510,645,515,554,473"/>
+<area shape="poly" title=" " alt="" coords="587,461,930,519,929,524,586,467"/>
+<area shape="rect" title=" " alt="" coords="174,519,285,544"/>
+<area shape="poly" title=" " alt="" coords="447,473,285,518,284,512,446,468"/>
+<area shape="poly" title=" " alt="" coords="1371,466,1333,473,1028,525,1027,520,1332,468,1370,461"/>
+<area shape="poly" title=" " alt="" coords="1477,461,1718,516,1717,521,1476,466"/>
+<area shape="poly" title=" " alt="" coords="413,286,436,310,461,341,485,380,503,417,499,419,480,382,457,344,432,314,409,289"/>
+<area shape="poly" title=" " alt="" coords="327,281,243,286,152,298,71,316,42,329,22,344,14,357,10,370,12,394,27,418,52,441,84,463,119,482,185,511,183,516,116,486,81,467,49,446,23,422,7,396,4,369,9,355,18,341,39,325,70,311,151,292,243,281,327,275"/>
+<area shape="poly" title=" " alt="" coords="424,285,527,330,594,357,664,380,730,397,783,407,836,415,904,428,979,450,1055,468,1246,494,1435,512,1718,526,1717,531,1434,517,1245,500,1054,473,978,455,902,433,835,420,782,412,729,402,662,385,592,362,525,335,422,290"/>
+<area shape="rect" title=" " alt="" coords="369,350,448,375"/>
+<area shape="poly" title=" " alt="" coords="403,287,408,336,403,336,398,288"/>
+<area shape="rect" href="../../db/dd3/json__heal_8h.html" title="Self&#45;Healing JSON Recovery Layer (CWIST)" alt="" coords="256,431,406,471"/>
+<area shape="poly" title=" " alt="" coords="392,289,375,314,359,344,346,381,338,418,333,416,341,380,354,342,370,311,388,286"/>
+<area shape="rect" href="../../dc/d6e/zod_8h.html" title="Strict JSON schema validation (Zod&#45;style) for CWIST." alt="" coords="33,350,192,375"/>
+<area shape="poly" title=" " alt="" coords="361,290,164,349,163,343,360,285"/>
+<area shape="poly" title=" " alt="" coords="407,466,628,515,627,520,406,471"/>
+<area shape="poly" title=" " alt="" coords="308,473,257,512,254,508,305,469"/>
+<area shape="poly" title=" " alt="" coords="407,465,431,468,622,487,818,502,1195,520,1512,527,1717,528,1717,533,1512,532,1195,525,817,507,622,492,431,473,406,470"/>
+<area shape="poly" title=" " alt="" coords="126,373,185,426,218,452,244,468,276,479,318,488,423,504,628,524,627,529,422,509,317,493,274,484,242,473,215,457,182,430,123,377"/>
+<area shape="poly" title=" " alt="" coords="122,374,188,469,215,506,210,509,183,472,118,377"/>
+<area shape="poly" title=" " alt="" coords="143,373,271,423,269,428,141,378"/>
+<area shape="poly" title=" " alt="" coords="777,473,714,513,711,509,774,469"/>
+<area shape="poly" title=" " alt="" coords="848,468,942,510,940,515,846,473"/>
+<area shape="poly" title=" " alt="" coords="924,293,972,332,969,336,921,297"/>
+<area shape="poly" title=" " alt="" coords="810,292,722,314,686,328,665,344,655,363,649,384,649,428,660,470,673,505,668,507,654,472,644,428,644,383,650,361,661,341,684,324,720,309,809,287"/>
+<area shape="poly" title=" " alt="" coords="905,294,927,382,971,505,966,507,922,383,900,295"/>
+<area shape="rect" title=" " alt="" coords="675,350,774,375"/>
+<area shape="poly" title=" " alt="" coords="862,297,761,346,758,342,859,292"/>
+<area shape="rect" title=" " alt="" coords="798,350,862,375"/>
+<area shape="poly" title=" " alt="" coords="886,297,850,341,846,337,881,293"/>
+<area shape="poly" title=" " alt="" coords="989,291,1286,348,1285,353,988,296"/>
+<area shape="poly" title=" " alt="" coords="1189,466,1150,473,921,506,738,527,738,522,921,501,1149,468,1188,461"/>
+<area shape="poly" title=" " alt="" coords="1204,466,1028,518,1027,513,1203,461"/>
+<area shape="poly" title=" " alt="" coords="1295,461,1334,468,1547,500,1718,521,1717,527,1546,505,1333,473,1294,466"/>
+<area shape="poly" title=" " alt="" coords="1962,373,1994,391,2025,414,2037,428,2044,442,2044,457,2037,472,2022,485,2001,495,1944,511,1879,522,1820,529,1819,523,1878,517,1943,506,1999,490,2019,480,2033,469,2039,456,2039,444,2032,431,2021,418,1991,395,1960,378"/>
+<area shape="rect" title=" " alt="" coords="1882,438,2023,463"/>
+<area shape="poly" title=" " alt="" coords="1941,375,1950,424,1945,425,1936,376"/>
+<area shape="rect" href="../../da/d0c/arena_8h.html" title="Request&#45;scoped arena allocator backed by libttak arena generations." alt="" coords="1679,438,1858,463"/>
+<area shape="poly" title=" " alt="" coords="1915,378,1805,434,1802,429,1912,373"/>
+<area shape="poly" title=" " alt="" coords="1713,466,1666,473,1470,490,1201,507,739,530,738,525,1201,502,1469,485,1665,468,1712,461"/>
+<area shape="poly" title=" " alt="" coords="1771,464,1771,505,1766,505,1766,464"/>
+<area shape="poly" title=" " alt="" coords="1979,127,1974,164,1968,187,1959,208,1929,251,1893,289,1853,324,1812,354,1730,403,1662,435,1660,430,1727,398,1809,350,1850,319,1889,285,1924,247,1954,205,1963,185,1969,163,1973,126"/>
+<area shape="poly" title=" " alt="" coords="1990,125,2011,149,2035,185,2055,227,2061,250,2063,273,2063,364,2064,424,2057,449,2036,473,2016,480,1977,486,1851,497,1488,511,931,521,738,530,738,525,931,516,1488,506,1851,492,1976,481,2015,475,2033,468,2052,446,2059,424,2058,364,2058,273,2055,251,2050,229,2030,187,2006,153,1986,128"/>
+<area shape="poly" title=" " alt="" coords="2010,124,2049,145,2067,161,2081,180,2102,222,2117,261,2126,299,2128,335,2123,371,2110,405,2089,439,2058,473,2041,484,2016,494,1953,510,1820,529,1819,523,1952,505,2015,489,2038,480,2055,469,2084,436,2105,403,2118,369,2123,335,2121,300,2112,263,2097,224,2077,183,2063,165,2046,150,2008,128"/>
+<area shape="poly" title=" " alt="" coords="1968,128,1929,173,1925,169,1964,124"/>
+<area shape="poly" title=" " alt="" coords="2013,124,2042,131,2157,151,2273,166,2469,185,2468,190,2273,171,2157,156,2041,136,2012,129"/>
+<area shape="poly" title=" " alt="" coords="2368,290,2228,388,2145,441,2080,473,2013,485,1901,495,1591,513,1028,531,1028,526,1591,507,1900,490,2013,480,2078,468,2142,436,2225,384,2365,285"/>
+<area shape="poly" title=" " alt="" coords="2404,285,2434,308,2448,324,2459,342,2466,363,2468,382,2466,400,2460,417,2437,447,2402,473,2354,493,2288,508,2209,519,2124,526,1953,533,1820,534,1820,528,1953,528,2123,521,2209,513,2287,503,2352,488,2399,468,2433,443,2455,414,2461,399,2463,382,2461,364,2454,344,2444,327,2430,312,2401,290"/>
+<area shape="poly" title=" " alt="" coords="2364,290,2334,312,2321,327,2311,344,2304,364,2302,385,2303,424,2298,424,2296,384,2299,362,2306,342,2317,324,2331,308,2360,285"/>
+<area shape="rect" href="../../d0/dc6/hmac_8h.html" title="mbedTLS TLS backend: HMAC subset (HMAC&#45;SHA256, one&#45;shot + streaming)." alt="" coords="2320,350,2444,375"/>
+<area shape="poly" title=" " alt="" coords="2384,288,2384,336,2379,336,2379,288"/>
+<area shape="poly" title=" " alt="" coords="2265,466,2231,473,2116,493,2002,508,1819,528,1819,523,2001,503,2116,487,2230,468,2263,461"/>
+<area shape="poly" title=" " alt="" coords="2388,376,2393,422,2389,449,2375,473,2345,487,2291,498,2134,516,1959,526,1819,531,1819,526,1959,521,2134,510,2290,493,2344,482,2372,469,2384,447,2388,422,2382,376"/>
+<area shape="poly" title=" " alt="" coords="2373,377,2327,429,2323,425,2369,374"/>
 </map>
 </div>
 </div>
@@ -275,62 +283,62 @@ Include dependency graph for http3_client.c:</div>
 <table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="define-members" name="define-members"></a>
 Macros</h2></td></tr>
-<tr class="memitem:a3024ccd4a9af5109d24e6c57565d74a1" id="r_a3024ccd4a9af5109d24e6c57565d74a1"><td class="memItemLeft" align="right" valign="top">#define&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d1/d88/http3__client_8c.html#a3024ccd4a9af5109d24e6c57565d74a1">_POSIX_C_SOURCE</a>&#160;&#160;&#160;200809L</td></tr>
+<tr class="memitem:a3024ccd4a9af5109d24e6c57565d74a1" id="r_a3024ccd4a9af5109d24e6c57565d74a1"><td class="memItemLeft" align="right" valign="top">#<a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">define</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d1/d88/http3__client_8c.html#a3024ccd4a9af5109d24e6c57565d74a1">_POSIX_C_SOURCE</a>&#160;&#160;&#160;200809<a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">L</a></td></tr>
 <tr class="separator:a3024ccd4a9af5109d24e6c57565d74a1"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:ab18d3d439e4a9c8d0f73e7166e8eb376" id="r_ab18d3d439e4a9c8d0f73e7166e8eb376"><td class="memItemLeft" align="right" valign="top">#define&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d1/d88/http3__client_8c.html#ab18d3d439e4a9c8d0f73e7166e8eb376">MSG_DONTWAIT</a>&#160;&#160;&#160;0</td></tr>
+<tr class="memitem:ab18d3d439e4a9c8d0f73e7166e8eb376" id="r_ab18d3d439e4a9c8d0f73e7166e8eb376"><td class="memItemLeft" align="right" valign="top">#<a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">define</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d1/d88/http3__client_8c.html#ab18d3d439e4a9c8d0f73e7166e8eb376">MSG_DONTWAIT</a>&#160;&#160;&#160;0</td></tr>
 <tr class="separator:ab18d3d439e4a9c8d0f73e7166e8eb376"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a208ac5a7c624b5a693c19340fe7dcbf9" id="r_a208ac5a7c624b5a693c19340fe7dcbf9"><td class="memItemLeft" align="right" valign="top">#define&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d1/d88/http3__client_8c.html#a208ac5a7c624b5a693c19340fe7dcbf9">H3C_MAX_HEADERS</a>&#160;&#160;&#160;64</td></tr>
+<tr class="memitem:a208ac5a7c624b5a693c19340fe7dcbf9" id="r_a208ac5a7c624b5a693c19340fe7dcbf9"><td class="memItemLeft" align="right" valign="top">#<a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">define</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d1/d88/http3__client_8c.html#a208ac5a7c624b5a693c19340fe7dcbf9">H3C_MAX_HEADERS</a>&#160;&#160;&#160;64</td></tr>
 <tr class="separator:a208ac5a7c624b5a693c19340fe7dcbf9"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a8ea871fd705b062c103809ee494f21f6" id="r_a8ea871fd705b062c103809ee494f21f6"><td class="memItemLeft" align="right" valign="top">#define&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d1/d88/http3__client_8c.html#a8ea871fd705b062c103809ee494f21f6">H3C_DECODE_BUF_SIZE</a>&#160;&#160;&#160;65536</td></tr>
+<tr class="memitem:a8ea871fd705b062c103809ee494f21f6" id="r_a8ea871fd705b062c103809ee494f21f6"><td class="memItemLeft" align="right" valign="top">#<a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">define</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d1/d88/http3__client_8c.html#a8ea871fd705b062c103809ee494f21f6">H3C_DECODE_BUF_SIZE</a>&#160;&#160;&#160;65536</td></tr>
 <tr class="separator:a8ea871fd705b062c103809ee494f21f6"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="typedef-members" name="typedef-members"></a>
 Typedefs</h2></td></tr>
-<tr class="memitem:a3931c7046d8358bdeed239f9a1ab3bc9" id="r_a3931c7046d8358bdeed239f9a1ab3bc9"><td class="memItemLeft" align="right" valign="top">typedef struct h3c_stream_ctx&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d1/d88/http3__client_8c.html#a3931c7046d8358bdeed239f9a1ab3bc9">h3c_stream_ctx_t</a></td></tr>
+<tr class="memitem:a3931c7046d8358bdeed239f9a1ab3bc9" id="r_a3931c7046d8358bdeed239f9a1ab3bc9"><td class="memItemLeft" align="right" valign="top"><a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">typedef</a> <a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">struct</a> h3c_stream_ctx&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d1/d88/http3__client_8c.html#a3931c7046d8358bdeed239f9a1ab3bc9">h3c_stream_ctx_t</a></td></tr>
 <tr class="separator:a3931c7046d8358bdeed239f9a1ab3bc9"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a9e70aa40b49dbe2711f30381c94b424f" id="r_a9e70aa40b49dbe2711f30381c94b424f"><td class="memItemLeft" align="right" valign="top">typedef struct h3c_hset&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d1/d88/http3__client_8c.html#a9e70aa40b49dbe2711f30381c94b424f">h3c_hset_t</a></td></tr>
+<tr class="memitem:a9e70aa40b49dbe2711f30381c94b424f" id="r_a9e70aa40b49dbe2711f30381c94b424f"><td class="memItemLeft" align="right" valign="top"><a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">typedef</a> <a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">struct</a> h3c_hset&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d1/d88/http3__client_8c.html#a9e70aa40b49dbe2711f30381c94b424f">h3c_hset_t</a></td></tr>
 <tr class="separator:a9e70aa40b49dbe2711f30381c94b424f"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="func-members" name="func-members"></a>
 Functions</h2></td></tr>
-<tr class="memitem:abe7533eacceb1cc102b6a080895f42c5" id="r_abe7533eacceb1cc102b6a080895f42c5"><td class="memItemLeft" align="right" valign="top">cwist_http3_client *&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d1/d88/http3__client_8c.html#abe7533eacceb1cc102b6a080895f42c5">cwist_http3_client_create</a> (void)</td></tr>
+<tr class="memitem:abe7533eacceb1cc102b6a080895f42c5" id="r_abe7533eacceb1cc102b6a080895f42c5"><td class="memItemLeft" align="right" valign="top">cwist_http3_client *&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d1/d88/http3__client_8c.html#abe7533eacceb1cc102b6a080895f42c5">cwist_http3_client_create</a> (<a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">void</a>)</td></tr>
 <tr class="separator:abe7533eacceb1cc102b6a080895f42c5"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:ad8d8dca1705ea3cbec5a18788338158c" id="r_ad8d8dca1705ea3cbec5a18788338158c"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d1/d88/http3__client_8c.html#ad8d8dca1705ea3cbec5a18788338158c">cwist_http3_client_destroy</a> (cwist_http3_client *client)</td></tr>
+<tr class="memitem:ad8d8dca1705ea3cbec5a18788338158c" id="r_ad8d8dca1705ea3cbec5a18788338158c"><td class="memItemLeft" align="right" valign="top"><a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">void</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d1/d88/http3__client_8c.html#ad8d8dca1705ea3cbec5a18788338158c">cwist_http3_client_destroy</a> (cwist_http3_client *client)</td></tr>
 <tr class="separator:ad8d8dca1705ea3cbec5a18788338158c"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a4cbc79d88db96feabfdf0ea8eb150026" id="r_a4cbc79d88db96feabfdf0ea8eb150026"><td class="memItemLeft" align="right" valign="top">int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d1/d88/http3__client_8c.html#a4cbc79d88db96feabfdf0ea8eb150026">cwist_http3_client_set_server</a> (cwist_http3_client *client, const char *host, uint16_t port)</td></tr>
+<tr class="memitem:a4cbc79d88db96feabfdf0ea8eb150026" id="r_a4cbc79d88db96feabfdf0ea8eb150026"><td class="memItemLeft" align="right" valign="top"><a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">int</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d1/d88/http3__client_8c.html#a4cbc79d88db96feabfdf0ea8eb150026">cwist_http3_client_set_server</a> (cwist_http3_client *client, <a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">const</a> <a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">char</a> *host, <a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">uint16_t</a> port)</td></tr>
 <tr class="memdesc:a4cbc79d88db96feabfdf0ea8eb150026"><td class="mdescLeft">&#160;</td><td class="mdescRight">Set server address for subsequent requests.  <br /></td></tr>
 <tr class="separator:a4cbc79d88db96feabfdf0ea8eb150026"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a28c4dd00a14d72470fd8a43f6b7eb1fc" id="r_a28c4dd00a14d72470fd8a43f6b7eb1fc"><td class="memItemLeft" align="right" valign="top">int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d1/d88/http3__client_8c.html#a28c4dd00a14d72470fd8a43f6b7eb1fc">cwist_http3_client_set_ca_bundle</a> (cwist_http3_client *client, const char *ca_path)</td></tr>
+<tr class="memitem:a28c4dd00a14d72470fd8a43f6b7eb1fc" id="r_a28c4dd00a14d72470fd8a43f6b7eb1fc"><td class="memItemLeft" align="right" valign="top"><a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">int</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d1/d88/http3__client_8c.html#a28c4dd00a14d72470fd8a43f6b7eb1fc">cwist_http3_client_set_ca_bundle</a> (cwist_http3_client *client, <a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">const</a> <a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">char</a> *<a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">ca_path</a>)</td></tr>
 <tr class="memdesc:a28c4dd00a14d72470fd8a43f6b7eb1fc"><td class="mdescLeft">&#160;</td><td class="mdescRight">Load CA bundle for TLS certificate verification.  <br /></td></tr>
 <tr class="separator:a28c4dd00a14d72470fd8a43f6b7eb1fc"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a49f4f83bbef401eb4930274dfa5dcbcf" id="r_a49f4f83bbef401eb4930274dfa5dcbcf"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d1/d88/http3__client_8c.html#a49f4f83bbef401eb4930274dfa5dcbcf">cwist_http3_client_set_insecure</a> (cwist_http3_client *client, int enabled)</td></tr>
+<tr class="memitem:a49f4f83bbef401eb4930274dfa5dcbcf" id="r_a49f4f83bbef401eb4930274dfa5dcbcf"><td class="memItemLeft" align="right" valign="top"><a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">void</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d1/d88/http3__client_8c.html#a49f4f83bbef401eb4930274dfa5dcbcf">cwist_http3_client_set_insecure</a> (cwist_http3_client *client, <a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">int</a> enabled)</td></tr>
 <tr class="memdesc:a49f4f83bbef401eb4930274dfa5dcbcf"><td class="mdescLeft">&#160;</td><td class="mdescRight">Disable or re-enable TLS certificate verification.  <br /></td></tr>
 <tr class="separator:a49f4f83bbef401eb4930274dfa5dcbcf"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a6cb0e76254a4609d507e9958823c18f7" id="r_a6cb0e76254a4609d507e9958823c18f7"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d1/d88/http3__client_8c.html#a6cb0e76254a4609d507e9958823c18f7">cwist_http3_client_set_timeout_ms</a> (cwist_http3_client *client, int timeout_ms)</td></tr>
+<tr class="memitem:a6cb0e76254a4609d507e9958823c18f7" id="r_a6cb0e76254a4609d507e9958823c18f7"><td class="memItemLeft" align="right" valign="top"><a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">void</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d1/d88/http3__client_8c.html#a6cb0e76254a4609d507e9958823c18f7">cwist_http3_client_set_timeout_ms</a> (cwist_http3_client *client, <a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">int</a> timeout_ms)</td></tr>
 <tr class="memdesc:a6cb0e76254a4609d507e9958823c18f7"><td class="mdescLeft">&#160;</td><td class="mdescRight">Set request timeout in milliseconds.  <br /></td></tr>
 <tr class="separator:a6cb0e76254a4609d507e9958823c18f7"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a86b9d00f817e3b072e6d3abfb72479a6" id="r_a86b9d00f817e3b072e6d3abfb72479a6"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d1/d88/http3__client_8c.html#a86b9d00f817e3b072e6d3abfb72479a6">cwist_http3_client_enable_0rtt</a> (cwist_http3_client *client, int enabled)</td></tr>
+<tr class="memitem:a86b9d00f817e3b072e6d3abfb72479a6" id="r_a86b9d00f817e3b072e6d3abfb72479a6"><td class="memItemLeft" align="right" valign="top"><a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">void</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d1/d88/http3__client_8c.html#a86b9d00f817e3b072e6d3abfb72479a6">cwist_http3_client_enable_0rtt</a> (cwist_http3_client *client, <a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">int</a> enabled)</td></tr>
 <tr class="memdesc:a86b9d00f817e3b072e6d3abfb72479a6"><td class="mdescLeft">&#160;</td><td class="mdescRight">Enable or disable 0-RTT session resumption.  <br /></td></tr>
 <tr class="separator:a86b9d00f817e3b072e6d3abfb72479a6"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a3c2b697641812cf3867fd89d504b19c6" id="r_a3c2b697641812cf3867fd89d504b19c6"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d1/d88/http3__client_8c.html#a3c2b697641812cf3867fd89d504b19c6">cwist_http3_client_enable_datagrams</a> (cwist_http3_client *client, int enabled)</td></tr>
+<tr class="memitem:a3c2b697641812cf3867fd89d504b19c6" id="r_a3c2b697641812cf3867fd89d504b19c6"><td class="memItemLeft" align="right" valign="top"><a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">void</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d1/d88/http3__client_8c.html#a3c2b697641812cf3867fd89d504b19c6">cwist_http3_client_enable_datagrams</a> (cwist_http3_client *client, <a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">int</a> enabled)</td></tr>
 <tr class="memdesc:a3c2b697641812cf3867fd89d504b19c6"><td class="mdescLeft">&#160;</td><td class="mdescRight">Enable or disable QUIC datagram support (RFC 9221).  <br /></td></tr>
 <tr class="separator:a3c2b697641812cf3867fd89d504b19c6"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a1cebceb867dbe446f274df968cb30cdd" id="r_a1cebceb867dbe446f274df968cb30cdd"><td class="memItemLeft" align="right" valign="top"><a class="el" href="../../d4/d50/structcwist__error__t.html">cwist_error_t</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d1/d88/http3__client_8c.html#a1cebceb867dbe446f274df968cb30cdd">cwist_http3_client_request</a> (cwist_http3_client *client, const char *path, <a class="el" href="../../dd/d56/http_8h.html#aa7eeb74d97e9a5416ffc3cd53366683d">cwist_http_method_t</a> method, <a class="el" href="../../d3/d72/structcwist__http__header__node.html">cwist_http_header_node</a> *headers, const char *body, size_t body_len, <a class="el" href="../../dd/d22/structcwist__http__response.html">cwist_http_response</a> **out_response)</td></tr>
+<tr class="memitem:a1cebceb867dbe446f274df968cb30cdd" id="r_a1cebceb867dbe446f274df968cb30cdd"><td class="memItemLeft" align="right" valign="top"><a class="el" href="../../d4/d50/structcwist__error__t.html">cwist_error_t</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d1/d88/http3__client_8c.html#a1cebceb867dbe446f274df968cb30cdd">cwist_http3_client_request</a> (cwist_http3_client *client, <a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">const</a> <a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">char</a> *path, <a class="el" href="../../dd/d56/http_8h.html#aa7eeb74d97e9a5416ffc3cd53366683d">cwist_http_method_t</a> method, <a class="el" href="../../d3/d72/structcwist__http__header__node.html">cwist_http_header_node</a> *headers, <a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">const</a> <a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">char</a> *body, <a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">size_t</a> body_len, <a class="el" href="../../dd/d22/structcwist__http__response.html">cwist_http_response</a> **<a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">out_response</a>)</td></tr>
 <tr class="memdesc:a1cebceb867dbe446f274df968cb30cdd"><td class="mdescLeft">&#160;</td><td class="mdescRight">Perform a synchronous HTTP/3 request.  <br /></td></tr>
 <tr class="separator:a1cebceb867dbe446f274df968cb30cdd"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a1a558af1f6551d6c6d42e83575c90c6a" id="r_a1a558af1f6551d6c6d42e83575c90c6a"><td class="memItemLeft" align="right" valign="top">int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d1/d88/http3__client_8c.html#a1a558af1f6551d6c6d42e83575c90c6a">cwist_http3_client_send_datagram</a> (cwist_http3_client *client, const void *data, size_t len)</td></tr>
+<tr class="memitem:a1a558af1f6551d6c6d42e83575c90c6a" id="r_a1a558af1f6551d6c6d42e83575c90c6a"><td class="memItemLeft" align="right" valign="top"><a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">int</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d1/d88/http3__client_8c.html#a1a558af1f6551d6c6d42e83575c90c6a">cwist_http3_client_send_datagram</a> (cwist_http3_client *client, <a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">const</a> <a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">void</a> *data, <a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">size_t</a> len)</td></tr>
 <tr class="memdesc:a1a558af1f6551d6c6d42e83575c90c6a"><td class="mdescLeft">&#160;</td><td class="mdescRight">Send an unreliable QUIC datagram.  <br /></td></tr>
 <tr class="separator:a1a558af1f6551d6c6d42e83575c90c6a"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a03516b78e233ff5f770ea7f78d16f12d" id="r_a03516b78e233ff5f770ea7f78d16f12d"><td class="memItemLeft" align="right" valign="top">ssize_t&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d1/d88/http3__client_8c.html#a03516b78e233ff5f770ea7f78d16f12d">cwist_http3_client_recv_datagram</a> (cwist_http3_client *client, void *buf, size_t len)</td></tr>
+<tr class="memitem:a03516b78e233ff5f770ea7f78d16f12d" id="r_a03516b78e233ff5f770ea7f78d16f12d"><td class="memItemLeft" align="right" valign="top"><a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">ssize_t</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d1/d88/http3__client_8c.html#a03516b78e233ff5f770ea7f78d16f12d">cwist_http3_client_recv_datagram</a> (cwist_http3_client *client, <a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">void</a> *buf, <a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">size_t</a> len)</td></tr>
 <tr class="memdesc:a03516b78e233ff5f770ea7f78d16f12d"><td class="mdescLeft">&#160;</td><td class="mdescRight">Receive an unreliable QUIC datagram.  <br /></td></tr>
 <tr class="separator:a03516b78e233ff5f770ea7f78d16f12d"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a78d1955471e84c4babe44723cf26310d" id="r_a78d1955471e84c4babe44723cf26310d"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d1/d88/http3__client_8c.html#a78d1955471e84c4babe44723cf26310d">cwist_http3_client_set_max_retries</a> (cwist_http3_client *client, int max_retries)</td></tr>
+<tr class="memitem:a78d1955471e84c4babe44723cf26310d" id="r_a78d1955471e84c4babe44723cf26310d"><td class="memItemLeft" align="right" valign="top"><a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">void</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d1/d88/http3__client_8c.html#a78d1955471e84c4babe44723cf26310d">cwist_http3_client_set_max_retries</a> (cwist_http3_client *client, <a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">int</a> max_retries)</td></tr>
 <tr class="memdesc:a78d1955471e84c4babe44723cf26310d"><td class="mdescLeft">&#160;</td><td class="mdescRight">Set the maximum number of request retries on transient failure.  <br /></td></tr>
 <tr class="separator:a78d1955471e84c4babe44723cf26310d"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:abd1ebf9c90a1b821e174a5143a26c475" id="r_abd1ebf9c90a1b821e174a5143a26c475"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d1/d88/http3__client_8c.html#abd1ebf9c90a1b821e174a5143a26c475">cwist_http3_client_set_retry_delay_ms</a> (cwist_http3_client *client, int delay_ms)</td></tr>
+<tr class="memitem:abd1ebf9c90a1b821e174a5143a26c475" id="r_abd1ebf9c90a1b821e174a5143a26c475"><td class="memItemLeft" align="right" valign="top"><a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">void</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d1/d88/http3__client_8c.html#abd1ebf9c90a1b821e174a5143a26c475">cwist_http3_client_set_retry_delay_ms</a> (cwist_http3_client *client, <a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">int</a> <a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">delay_ms</a>)</td></tr>
 <tr class="memdesc:abd1ebf9c90a1b821e174a5143a26c475"><td class="mdescLeft">&#160;</td><td class="mdescRight">Set the base delay between retries in milliseconds.  <br /></td></tr>
 <tr class="separator:abd1ebf9c90a1b821e174a5143a26c475"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a051ca5d9ea16c24867801ccde546cd42" id="r_a051ca5d9ea16c24867801ccde546cd42"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d1/d88/http3__client_8c.html#a051ca5d9ea16c24867801ccde546cd42">cwist_http3_client_set_conn_timeout_ms</a> (cwist_http3_client *client, int timeout_ms)</td></tr>
+<tr class="memitem:a051ca5d9ea16c24867801ccde546cd42" id="r_a051ca5d9ea16c24867801ccde546cd42"><td class="memItemLeft" align="right" valign="top"><a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">void</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d1/d88/http3__client_8c.html#a051ca5d9ea16c24867801ccde546cd42">cwist_http3_client_set_conn_timeout_ms</a> (cwist_http3_client *client, <a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">int</a> timeout_ms)</td></tr>
 <tr class="memdesc:a051ca5d9ea16c24867801ccde546cd42"><td class="mdescLeft">&#160;</td><td class="mdescRight">Set the connection establishment / stream creation timeout.  <br /></td></tr>
 <tr class="separator:a051ca5d9ea16c24867801ccde546cd42"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
@@ -346,7 +354,7 @@ Functions</h2></td></tr>
 <div class="memproto">
       <table class="memname">
         <tr>
-          <td class="memname">#define _POSIX_C_SOURCE&#160;&#160;&#160;200809L</td>
+          <td class="memname">#<a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">define</a> _POSIX_C_SOURCE&#160;&#160;&#160;200809<a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">L</a></td>
         </tr>
       </table>
 </div><div class="memdoc">
@@ -362,7 +370,7 @@ Functions</h2></td></tr>
 <div class="memproto">
       <table class="memname">
         <tr>
-          <td class="memname">#define H3C_DECODE_BUF_SIZE&#160;&#160;&#160;65536</td>
+          <td class="memname">#<a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">define</a> H3C_DECODE_BUF_SIZE&#160;&#160;&#160;65536</td>
         </tr>
       </table>
 </div><div class="memdoc">
@@ -378,7 +386,7 @@ Functions</h2></td></tr>
 <div class="memproto">
       <table class="memname">
         <tr>
-          <td class="memname">#define H3C_MAX_HEADERS&#160;&#160;&#160;64</td>
+          <td class="memname">#<a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">define</a> H3C_MAX_HEADERS&#160;&#160;&#160;64</td>
         </tr>
       </table>
 </div><div class="memdoc">
@@ -394,7 +402,7 @@ Functions</h2></td></tr>
 <div class="memproto">
       <table class="memname">
         <tr>
-          <td class="memname">#define MSG_DONTWAIT&#160;&#160;&#160;0</td>
+          <td class="memname">#<a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">define</a> MSG_DONTWAIT&#160;&#160;&#160;0</td>
         </tr>
       </table>
 </div><div class="memdoc">
@@ -411,7 +419,7 @@ Functions</h2></td></tr>
 <div class="memproto">
       <table class="memname">
         <tr>
-          <td class="memname">typedef struct h3c_hset <a class="el" href="../../d1/d88/http3__client_8c.html#a9e70aa40b49dbe2711f30381c94b424f">h3c_hset_t</a></td>
+          <td class="memname"><a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">typedef</a> <a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">struct</a> h3c_hset <a class="el" href="../../d1/d88/http3__client_8c.html#a9e70aa40b49dbe2711f30381c94b424f">h3c_hset_t</a></td>
         </tr>
       </table>
 </div><div class="memdoc">
@@ -425,7 +433,7 @@ Functions</h2></td></tr>
 <div class="memproto">
       <table class="memname">
         <tr>
-          <td class="memname">typedef struct h3c_stream_ctx <a class="el" href="../../d1/d88/http3__client_8c.html#a3931c7046d8358bdeed239f9a1ab3bc9">h3c_stream_ctx_t</a></td>
+          <td class="memname"><a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">typedef</a> <a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">struct</a> h3c_stream_ctx <a class="el" href="../../d1/d88/http3__client_8c.html#a3931c7046d8358bdeed239f9a1ab3bc9">h3c_stream_ctx_t</a></td>
         </tr>
       </table>
 </div><div class="memdoc">
@@ -442,7 +450,7 @@ Functions</h2></td></tr>
         <tr>
           <td class="memname">cwist_http3_client * cwist_http3_client_create </td>
           <td>(</td>
-          <td class="paramtype">void&#160;</td>
+          <td class="paramtype"><a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">void</a>&#160;</td>
           <td class="paramname"></td><td>)</td>
           <td></td>
         </tr>
@@ -450,6 +458,8 @@ Functions</h2></td></tr>
 </div><div class="memdoc">
 
 <p class="definition">Definition at line <a class="el" href="../../d1/d88/http3__client_8c_source.html#l00784">784</a> of file <a class="el" href="../../d1/d88/http3__client_8c_source.html">http3_client.c</a>.</p>
+
+<p class="reference">References <a class="el" href="../../d3/db2/otel_8c_source.html#l00056">cap</a>, <a class="el" href="../../df/d6d/ssl_8h_source.html#l00099">SSL_CTX_free</a>, <a class="el" href="../../df/d6d/ssl_8h_source.html#l00098">SSL_CTX_new</a>, <a class="el" href="../../df/d6d/ssl_8h_source.html#l00125">SSL_CTX_set_default_verify_paths</a>, <a class="el" href="../../df/d6d/ssl_8h_source.html#l00106">SSL_CTX_set_min_proto_version</a>, <a class="el" href="../../df/d6d/ssl_8h_source.html#l00124">SSL_CTX_set_verify</a>, <a class="el" href="../../df/d6d/ssl_8h_source.html#l00081">SSL_VERIFY_PEER</a>, and <a class="el" href="../../df/d6d/ssl_8h_source.html#l00049">TLS1_3_VERSION</a>.</p>
 
 </div>
 </div>
@@ -460,7 +470,7 @@ Functions</h2></td></tr>
 <div class="memproto">
       <table class="memname">
         <tr>
-          <td class="memname">void cwist_http3_client_destroy </td>
+          <td class="memname"><a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">void</a> cwist_http3_client_destroy </td>
           <td>(</td>
           <td class="paramtype">cwist_http3_client *&#160;</td>
           <td class="paramname"><em>client</em></td><td>)</td>
@@ -471,6 +481,8 @@ Functions</h2></td></tr>
 
 <p class="definition">Definition at line <a class="el" href="../../d1/d88/http3__client_8c_source.html#l00870">870</a> of file <a class="el" href="../../d1/d88/http3__client_8c_source.html">http3_client.c</a>.</p>
 
+<p class="reference">References <a class="el" href="../../d3/db2/otel_8c_source.html#l00056">cap</a>, and <a class="el" href="../../df/d6d/ssl_8h_source.html#l00099">SSL_CTX_free</a>.</p>
+
 </div>
 </div>
 <a id="a86b9d00f817e3b072e6d3abfb72479a6" name="a86b9d00f817e3b072e6d3abfb72479a6"></a>
@@ -480,7 +492,7 @@ Functions</h2></td></tr>
 <div class="memproto">
       <table class="memname">
         <tr>
-          <td class="memname">void cwist_http3_client_enable_0rtt </td>
+          <td class="memname"><a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">void</a> cwist_http3_client_enable_0rtt </td>
           <td>(</td>
           <td class="paramtype">cwist_http3_client *&#160;</td>
           <td class="paramname"><em>client</em>, </td>
@@ -488,7 +500,7 @@ Functions</h2></td></tr>
         <tr>
           <td class="paramkey"></td>
           <td></td>
-          <td class="paramtype">int&#160;</td>
+          <td class="paramtype"><a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">int</a>&#160;</td>
           <td class="paramname"><em>enabled</em>&#160;</td>
         </tr>
         <tr>
@@ -511,6 +523,8 @@ Functions</h2></td></tr>
 
 <p class="definition">Definition at line <a class="el" href="../../d1/d88/http3__client_8c_source.html#l00924">924</a> of file <a class="el" href="../../d1/d88/http3__client_8c_source.html">http3_client.c</a>.</p>
 
+<p class="reference">References <a class="el" href="../../d3/db2/otel_8c_source.html#l00056">cap</a>.</p>
+
 </div>
 </div>
 <a id="a3c2b697641812cf3867fd89d504b19c6" name="a3c2b697641812cf3867fd89d504b19c6"></a>
@@ -520,7 +534,7 @@ Functions</h2></td></tr>
 <div class="memproto">
       <table class="memname">
         <tr>
-          <td class="memname">void cwist_http3_client_enable_datagrams </td>
+          <td class="memname"><a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">void</a> cwist_http3_client_enable_datagrams </td>
           <td>(</td>
           <td class="paramtype">cwist_http3_client *&#160;</td>
           <td class="paramname"><em>client</em>, </td>
@@ -528,7 +542,7 @@ Functions</h2></td></tr>
         <tr>
           <td class="paramkey"></td>
           <td></td>
-          <td class="paramtype">int&#160;</td>
+          <td class="paramtype"><a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">int</a>&#160;</td>
           <td class="paramname"><em>enabled</em>&#160;</td>
         </tr>
         <tr>
@@ -540,7 +554,7 @@ Functions</h2></td></tr>
 </div><div class="memdoc">
 
 <p>Enable or disable QUIC datagram support (RFC 9221). </p>
-<p>When enabled, unreliable datagrams can be sent and received via <a class="el" href="../../df/dad/http3__client_8h.html#a1a558af1f6551d6c6d42e83575c90c6a" title="Send an unreliable QUIC datagram.">cwist_http3_client_send_datagram()</a> / recv_datagram().</p>
+<p>When enabled, unreliable datagrams can be sent and received via <a class="el" href="../../df/dad/http3__client_8h.html#a1a558af1f6551d6c6d42e83575c90c6a" title="Send an unreliable QUIC datagram.">cwist_http3_client_send_datagram()</a> / <a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">recv_datagram()</a>.</p>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
     <tr><td class="paramname">client</td><td>Client handle. </td></tr>
@@ -560,7 +574,7 @@ Functions</h2></td></tr>
 <div class="memproto">
       <table class="memname">
         <tr>
-          <td class="memname">ssize_t cwist_http3_client_recv_datagram </td>
+          <td class="memname"><a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">ssize_t</a> cwist_http3_client_recv_datagram </td>
           <td>(</td>
           <td class="paramtype">cwist_http3_client *&#160;</td>
           <td class="paramname"><em>client</em>, </td>
@@ -568,13 +582,13 @@ Functions</h2></td></tr>
         <tr>
           <td class="paramkey"></td>
           <td></td>
-          <td class="paramtype">void *&#160;</td>
+          <td class="paramtype"><a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">void</a> *&#160;</td>
           <td class="paramname"><em>buf</em>, </td>
         </tr>
         <tr>
           <td class="paramkey"></td>
           <td></td>
-          <td class="paramtype">size_t&#160;</td>
+          <td class="paramtype"><a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">size_t</a>&#160;</td>
           <td class="paramname"><em>len</em>&#160;</td>
         </tr>
         <tr>
@@ -599,6 +613,8 @@ Functions</h2></td></tr>
 
 <p class="definition">Definition at line <a class="el" href="../../d1/d88/http3__client_8c_source.html#l01185">1185</a> of file <a class="el" href="../../d1/d88/http3__client_8c_source.html">http3_client.c</a>.</p>
 
+<p class="reference">References <a class="el" href="../../d3/db2/otel_8c_source.html#l00056">cap</a>.</p>
+
 </div>
 </div>
 <a id="a1cebceb867dbe446f274df968cb30cdd" name="a1cebceb867dbe446f274df968cb30cdd"></a>
@@ -616,7 +632,7 @@ Functions</h2></td></tr>
         <tr>
           <td class="paramkey"></td>
           <td></td>
-          <td class="paramtype">const char *&#160;</td>
+          <td class="paramtype"><a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">const</a> <a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">char</a> *&#160;</td>
           <td class="paramname"><em>path</em>, </td>
         </tr>
         <tr>
@@ -634,13 +650,13 @@ Functions</h2></td></tr>
         <tr>
           <td class="paramkey"></td>
           <td></td>
-          <td class="paramtype">const char *&#160;</td>
+          <td class="paramtype"><a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">const</a> <a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">char</a> *&#160;</td>
           <td class="paramname"><em>body</em>, </td>
         </tr>
         <tr>
           <td class="paramkey"></td>
           <td></td>
-          <td class="paramtype">size_t&#160;</td>
+          <td class="paramtype"><a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">size_t</a>&#160;</td>
           <td class="paramname"><em>body_len</em>, </td>
         </tr>
         <tr>
@@ -675,7 +691,7 @@ Functions</h2></td></tr>
 
 <p class="definition">Definition at line <a class="el" href="../../d1/d88/http3__client_8c_source.html#l00937">937</a> of file <a class="el" href="../../d1/d88/http3__client_8c_source.html">http3_client.c</a>.</p>
 
-<p class="reference">References <a class="el" href="../../d3/d73/err_2cwist__err_8h_source.html#l00016">CWIST_ERR_INT16</a>, <a class="el" href="../../dd/d43/http_8c_source.html#l02300">cwist_http_response_destroy()</a>, <a class="el" href="../../d3/d73/err_2cwist__err_8h_source.html#l00049">__prim_cwist_error_t::err_i16</a>, <a class="el" href="../../d3/d73/err_2cwist__err_8h_source.html#l00074">cwist_error_t::error</a>, <a class="el" href="../../db/dcc/error_8c_source.html#l00014">make_error()</a>, and <a class="el" href="../../dd/d56/http_8h_source.html#l00062">cwist_http_header_node::next</a>.</p>
+<p class="reference">References <a class="el" href="../../d3/db2/otel_8c_source.html#l00056">cap</a>, <a class="el" href="../../d3/d73/err_2cwist__err_8h_source.html#l00016">CWIST_ERR_INT16</a>, <a class="el" href="../../dd/d43/http_8c_source.html#l02300">cwist_http_response_destroy()</a>, <a class="el" href="../../db/dcc/error_8c_source.html#l00014">make_error()</a>, and <a class="el" href="../../dd/d56/http_8h_source.html#l00062">cwist_http_header_node::next</a>.</p>
 
 </div>
 </div>
@@ -686,7 +702,7 @@ Functions</h2></td></tr>
 <div class="memproto">
       <table class="memname">
         <tr>
-          <td class="memname">int cwist_http3_client_send_datagram </td>
+          <td class="memname"><a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">int</a> cwist_http3_client_send_datagram </td>
           <td>(</td>
           <td class="paramtype">cwist_http3_client *&#160;</td>
           <td class="paramname"><em>client</em>, </td>
@@ -694,13 +710,13 @@ Functions</h2></td></tr>
         <tr>
           <td class="paramkey"></td>
           <td></td>
-          <td class="paramtype">const void *&#160;</td>
+          <td class="paramtype"><a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">const</a> <a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">void</a> *&#160;</td>
           <td class="paramname"><em>data</em>, </td>
         </tr>
         <tr>
           <td class="paramkey"></td>
           <td></td>
-          <td class="paramtype">size_t&#160;</td>
+          <td class="paramtype"><a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">size_t</a>&#160;</td>
           <td class="paramname"><em>len</em>&#160;</td>
         </tr>
         <tr>
@@ -725,6 +741,8 @@ Functions</h2></td></tr>
 
 <p class="definition">Definition at line <a class="el" href="../../d1/d88/http3__client_8c_source.html#l01162">1162</a> of file <a class="el" href="../../d1/d88/http3__client_8c_source.html">http3_client.c</a>.</p>
 
+<p class="reference">References <a class="el" href="../../d3/db2/otel_8c_source.html#l00056">cap</a>.</p>
+
 </div>
 </div>
 <a id="a28c4dd00a14d72470fd8a43f6b7eb1fc" name="a28c4dd00a14d72470fd8a43f6b7eb1fc"></a>
@@ -734,7 +752,7 @@ Functions</h2></td></tr>
 <div class="memproto">
       <table class="memname">
         <tr>
-          <td class="memname">int cwist_http3_client_set_ca_bundle </td>
+          <td class="memname"><a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">int</a> cwist_http3_client_set_ca_bundle </td>
           <td>(</td>
           <td class="paramtype">cwist_http3_client *&#160;</td>
           <td class="paramname"><em>client</em>, </td>
@@ -742,7 +760,7 @@ Functions</h2></td></tr>
         <tr>
           <td class="paramkey"></td>
           <td></td>
-          <td class="paramtype">const char *&#160;</td>
+          <td class="paramtype"><a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">const</a> <a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">char</a> *&#160;</td>
           <td class="paramname"><em>ca_path</em>&#160;</td>
         </tr>
         <tr>
@@ -765,6 +783,8 @@ Functions</h2></td></tr>
 
 <p class="definition">Definition at line <a class="el" href="../../d1/d88/http3__client_8c_source.html#l00904">904</a> of file <a class="el" href="../../d1/d88/http3__client_8c_source.html">http3_client.c</a>.</p>
 
+<p class="reference">References <a class="el" href="../../d3/db2/otel_8c_source.html#l00056">cap</a>, and <a class="el" href="../../df/d6d/ssl_8h_source.html#l00125">SSL_CTX_set_default_verify_paths</a>.</p>
+
 </div>
 </div>
 <a id="a051ca5d9ea16c24867801ccde546cd42" name="a051ca5d9ea16c24867801ccde546cd42"></a>
@@ -774,7 +794,7 @@ Functions</h2></td></tr>
 <div class="memproto">
       <table class="memname">
         <tr>
-          <td class="memname">void cwist_http3_client_set_conn_timeout_ms </td>
+          <td class="memname"><a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">void</a> cwist_http3_client_set_conn_timeout_ms </td>
           <td>(</td>
           <td class="paramtype">cwist_http3_client *&#160;</td>
           <td class="paramname"><em>client</em>, </td>
@@ -782,7 +802,7 @@ Functions</h2></td></tr>
         <tr>
           <td class="paramkey"></td>
           <td></td>
-          <td class="paramtype">int&#160;</td>
+          <td class="paramtype"><a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">int</a>&#160;</td>
           <td class="paramname"><em>timeout_ms</em>&#160;</td>
         </tr>
         <tr>
@@ -814,7 +834,7 @@ Functions</h2></td></tr>
 <div class="memproto">
       <table class="memname">
         <tr>
-          <td class="memname">void cwist_http3_client_set_insecure </td>
+          <td class="memname"><a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">void</a> cwist_http3_client_set_insecure </td>
           <td>(</td>
           <td class="paramtype">cwist_http3_client *&#160;</td>
           <td class="paramname"><em>client</em>, </td>
@@ -822,7 +842,7 @@ Functions</h2></td></tr>
         <tr>
           <td class="paramkey"></td>
           <td></td>
-          <td class="paramtype">int&#160;</td>
+          <td class="paramtype"><a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">int</a>&#160;</td>
           <td class="paramname"><em>enabled</em>&#160;</td>
         </tr>
         <tr>
@@ -845,6 +865,8 @@ Functions</h2></td></tr>
 
 <p class="definition">Definition at line <a class="el" href="../../d1/d88/http3__client_8c_source.html#l00915">915</a> of file <a class="el" href="../../d1/d88/http3__client_8c_source.html">http3_client.c</a>.</p>
 
+<p class="reference">References <a class="el" href="../../d3/db2/otel_8c_source.html#l00056">cap</a>, <a class="el" href="../../df/d6d/ssl_8h_source.html#l00124">SSL_CTX_set_verify</a>, <a class="el" href="../../df/d6d/ssl_8h_source.html#l00080">SSL_VERIFY_NONE</a>, and <a class="el" href="../../df/d6d/ssl_8h_source.html#l00081">SSL_VERIFY_PEER</a>.</p>
+
 </div>
 </div>
 <a id="a78d1955471e84c4babe44723cf26310d" name="a78d1955471e84c4babe44723cf26310d"></a>
@@ -854,7 +876,7 @@ Functions</h2></td></tr>
 <div class="memproto">
       <table class="memname">
         <tr>
-          <td class="memname">void cwist_http3_client_set_max_retries </td>
+          <td class="memname"><a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">void</a> cwist_http3_client_set_max_retries </td>
           <td>(</td>
           <td class="paramtype">cwist_http3_client *&#160;</td>
           <td class="paramname"><em>client</em>, </td>
@@ -862,7 +884,7 @@ Functions</h2></td></tr>
         <tr>
           <td class="paramkey"></td>
           <td></td>
-          <td class="paramtype">int&#160;</td>
+          <td class="paramtype"><a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">int</a>&#160;</td>
           <td class="paramname"><em>max_retries</em>&#160;</td>
         </tr>
         <tr>
@@ -894,7 +916,7 @@ Functions</h2></td></tr>
 <div class="memproto">
       <table class="memname">
         <tr>
-          <td class="memname">void cwist_http3_client_set_retry_delay_ms </td>
+          <td class="memname"><a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">void</a> cwist_http3_client_set_retry_delay_ms </td>
           <td>(</td>
           <td class="paramtype">cwist_http3_client *&#160;</td>
           <td class="paramname"><em>client</em>, </td>
@@ -902,7 +924,7 @@ Functions</h2></td></tr>
         <tr>
           <td class="paramkey"></td>
           <td></td>
-          <td class="paramtype">int&#160;</td>
+          <td class="paramtype"><a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">int</a>&#160;</td>
           <td class="paramname"><em>delay_ms</em>&#160;</td>
         </tr>
         <tr>
@@ -925,6 +947,8 @@ Functions</h2></td></tr>
 
 <p class="definition">Definition at line <a class="el" href="../../d1/d88/http3__client_8c_source.html#l01210">1210</a> of file <a class="el" href="../../d1/d88/http3__client_8c_source.html">http3_client.c</a>.</p>
 
+<p class="reference">References <a class="el" href="../../d3/db2/otel_8c_source.html#l00056">cap</a>.</p>
+
 </div>
 </div>
 <a id="a4cbc79d88db96feabfdf0ea8eb150026" name="a4cbc79d88db96feabfdf0ea8eb150026"></a>
@@ -934,7 +958,7 @@ Functions</h2></td></tr>
 <div class="memproto">
       <table class="memname">
         <tr>
-          <td class="memname">int cwist_http3_client_set_server </td>
+          <td class="memname"><a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">int</a> cwist_http3_client_set_server </td>
           <td>(</td>
           <td class="paramtype">cwist_http3_client *&#160;</td>
           <td class="paramname"><em>client</em>, </td>
@@ -942,13 +966,13 @@ Functions</h2></td></tr>
         <tr>
           <td class="paramkey"></td>
           <td></td>
-          <td class="paramtype">const char *&#160;</td>
+          <td class="paramtype"><a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">const</a> <a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">char</a> *&#160;</td>
           <td class="paramname"><em>host</em>, </td>
         </tr>
         <tr>
           <td class="paramkey"></td>
           <td></td>
-          <td class="paramtype">uint16_t&#160;</td>
+          <td class="paramtype"><a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">uint16_t</a>&#160;</td>
           <td class="paramname"><em>port</em>&#160;</td>
         </tr>
         <tr>
@@ -972,6 +996,8 @@ Functions</h2></td></tr>
 
 <p class="definition">Definition at line <a class="el" href="../../d1/d88/http3__client_8c_source.html#l00894">894</a> of file <a class="el" href="../../d1/d88/http3__client_8c_source.html">http3_client.c</a>.</p>
 
+<p class="reference">References <a class="el" href="../../d3/db2/otel_8c_source.html#l00056">cap</a>.</p>
+
 </div>
 </div>
 <a id="a6cb0e76254a4609d507e9958823c18f7" name="a6cb0e76254a4609d507e9958823c18f7"></a>
@@ -981,7 +1007,7 @@ Functions</h2></td></tr>
 <div class="memproto">
       <table class="memname">
         <tr>
-          <td class="memname">void cwist_http3_client_set_timeout_ms </td>
+          <td class="memname"><a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">void</a> cwist_http3_client_set_timeout_ms </td>
           <td>(</td>
           <td class="paramtype">cwist_http3_client *&#160;</td>
           <td class="paramname"><em>client</em>, </td>
@@ -989,7 +1015,7 @@ Functions</h2></td></tr>
         <tr>
           <td class="paramkey"></td>
           <td></td>
-          <td class="paramtype">int&#160;</td>
+          <td class="paramtype"><a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">int</a>&#160;</td>
           <td class="paramname"><em>timeout_ms</em>&#160;</td>
         </tr>
         <tr>

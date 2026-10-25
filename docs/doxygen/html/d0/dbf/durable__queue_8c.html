@@ -117,9 +117,7 @@ $(document).ready(function(){initNavTree('d0/dbf/durable__queue_8c.html','../../
 <a href="#details">More...</a></p>
 <div class="textblock"><code>#include &lt;<a class="el" href="../../dd/d3c/durable__queue_8h_source.html">cwist/sys/job/durable_queue.h</a>&gt;</code><br />
 <code>#include &lt;<a class="el" href="../../d2/dfe/alloc_8h_source.html">cwist/core/mem/alloc.h</a>&gt;</code><br />
-<code>#include &lt;<a class="el" href="../../d1/de1/cwist__nats_8h_source.html">cwist/net/nats/cwist_nats.h</a>&gt;</code><br />
 <code>#include &lt;<a class="el" href="../../d0/d39/cwist__redis_8h_source.html">cwist/net/redis/cwist_redis.h</a>&gt;</code><br />
-<code>#include &lt;nats.h&gt;</code><br />
 <code>#include &lt;stdio.h&gt;</code><br />
 <code>#include &lt;stdlib.h&gt;</code><br />
 <code>#include &lt;string.h&gt;</code><br />
@@ -130,49 +128,43 @@ Include dependency graph for durable_queue.c:</div>
 <div class="dyncontent">
 <div class="center"><img src="../../da/d7a/durable__queue_8c__incl.png" border="0" usemap="#asrc_2sys_2job_2durable__queue_8c" alt=""/></div>
 <map name="asrc_2sys_2job_2durable__queue_8c" id="asrc_2sys_2job_2durable__queue_8c">
-<area shape="rect" title="Durable job queue backends over Redis (streams) and NATS (JetStream)." alt="" coords="745,5,889,45"/>
-<area shape="rect" href="../../dd/d3c/durable__queue_8h.html" title="Durable (persistent) job queue backends over Redis and NATS." alt="" coords="7,93,165,133"/>
-<area shape="poly" title=" " alt="" coords="745,35,498,57,341,74,179,96,179,91,341,69,498,51,744,29"/>
-<area shape="rect" href="../../d2/dfe/alloc_8h.html" title="Memory allocation wrappers backed by libttak." alt="" coords="543,101,717,126"/>
-<area shape="poly" title=" " alt="" coords="777,48,668,97,666,92,775,43"/>
-<area shape="rect" href="../../d1/de1/cwist__nats_8h.html" title="NATS client interface." alt="" coords="189,93,340,133"/>
-<area shape="poly" title=" " alt="" coords="745,38,571,62,354,96,353,91,570,56,744,33"/>
-<area shape="rect" href="../../d0/d39/cwist__redis_8h.html" title="Minimal in&#45;tree Redis client (RESP2) with connection pooling." alt="" coords="365,93,519,133"/>
-<area shape="poly" title=" " alt="" coords="745,46,534,94,532,89,744,41"/>
-<area shape="rect" title=" " alt="" coords="741,101,804,126"/>
-<area shape="poly" title=" " alt="" coords="809,47,787,89,783,87,805,44"/>
-<area shape="rect" title=" " alt="" coords="829,101,895,126"/>
-<area shape="poly" title=" " alt="" coords="829,44,852,87,847,89,824,47"/>
-<area shape="rect" title=" " alt="" coords="920,101,991,126"/>
-<area shape="poly" title=" " alt="" coords="848,43,926,91,924,96,846,48"/>
-<area shape="rect" title=" " alt="" coords="1015,101,1085,126"/>
-<area shape="poly" title=" " alt="" coords="872,43,1004,91,1010,93,1008,98,1002,96,870,48"/>
-<area shape="rect" title=" " alt="" coords="1110,101,1174,126"/>
-<area shape="poly" title=" " alt="" coords="889,38,989,60,1099,91,1105,93,1104,98,1097,96,988,65,888,43"/>
-<area shape="rect" title=" " alt="" coords="1198,101,1273,126"/>
-<area shape="poly" title=" " alt="" coords="889,33,1028,55,1187,91,1196,94,1195,99,1185,96,1027,60,888,38"/>
-<area shape="rect" href="../../d7/da1/sys_2err_2cwist__err_8h.html" title="Unified error code and type definitions for the CWIST system layer." alt="" coords="83,181,225,221"/>
-<area shape="poly" title=" " alt="" coords="103,132,133,169,128,172,99,135"/>
+<area shape="rect" title="Durable job queue backends over Redis (streams) and NATS (JetStream)." alt="" coords="627,5,771,45"/>
+<area shape="rect" href="../../dd/d3c/durable__queue_8h.html" title="Durable (persistent) job queue backends over Redis and NATS." alt="" coords="60,93,219,133"/>
+<area shape="poly" title=" " alt="" coords="627,38,452,62,233,96,232,91,451,57,627,33"/>
+<area shape="rect" href="../../d2/dfe/alloc_8h.html" title="Memory allocation wrappers backed by libttak." alt="" coords="422,101,595,126"/>
+<area shape="poly" title=" " alt="" coords="659,48,548,98,545,93,656,43"/>
+<area shape="rect" href="../../d0/d39/cwist__redis_8h.html" title="Minimal in&#45;tree Redis client (RESP2) with connection pooling." alt="" coords="243,93,398,133"/>
+<area shape="poly" title=" " alt="" coords="628,46,412,94,411,89,627,40"/>
+<area shape="rect" title=" " alt="" coords="619,101,686,126"/>
+<area shape="poly" title=" " alt="" coords="691,47,668,90,663,87,687,44"/>
+<area shape="rect" title=" " alt="" coords="711,101,781,126"/>
+<area shape="poly" title=" " alt="" coords="712,44,735,87,731,90,707,47"/>
+<area shape="rect" title=" " alt="" coords="805,101,876,126"/>
+<area shape="poly" title=" " alt="" coords="732,43,812,91,809,96,729,48"/>
+<area shape="rect" title=" " alt="" coords="901,101,965,126"/>
+<area shape="poly" title=" " alt="" coords="756,43,890,91,895,93,893,98,888,96,755,48"/>
+<area shape="rect" title=" " alt="" coords="989,101,1063,126"/>
+<area shape="poly" title=" " alt="" coords="772,39,870,61,977,91,985,93,984,98,976,96,869,67,771,44"/>
+<area shape="rect" href="../../d7/da1/sys_2err_2cwist__err_8h.html" title="Unified error code and type definitions for the CWIST system layer." alt="" coords="79,181,221,221"/>
+<area shape="poly" title=" " alt="" coords="144,133,149,167,143,168,139,134"/>
 <area shape="rect" title=" " alt="" coords="5,269,76,295"/>
-<area shape="poly" title=" " alt="" coords="83,134,50,257,45,256,78,133"/>
-<area shape="rect" title=" " alt="" coords="342,269,417,295"/>
-<area shape="poly" title=" " alt="" coords="136,131,186,153,238,179,303,220,356,259,353,263,300,225,235,184,183,157,134,136"/>
-<area shape="poly" title=" " alt="" coords="128,224,70,263,67,259,125,219"/>
-<area shape="rect" title=" " alt="" coords="235,269,318,295"/>
-<area shape="poly" title=" " alt="" coords="185,219,248,260,246,264,182,224"/>
+<area shape="poly" title=" " alt="" coords="113,136,89,157,68,183,53,220,46,256,40,255,48,218,64,180,85,153,110,132"/>
+<area shape="rect" title=" " alt="" coords="385,269,459,295"/>
+<area shape="poly" title=" " alt="" coords="171,131,317,219,390,260,388,265,314,224,168,136"/>
+<area shape="poly" title=" " alt="" coords="125,224,69,263,66,259,122,219"/>
+<area shape="rect" title=" " alt="" coords="263,269,346,295"/>
+<area shape="poly" title=" " alt="" coords="188,219,271,261,269,265,186,224"/>
 <area shape="rect" title=" " alt="" coords="100,269,211,295"/>
-<area shape="poly" title=" " alt="" coords="157,222,158,255,152,255,152,222"/>
-<area shape="poly" title=" " alt="" coords="665,124,705,141,744,163,758,177,767,191,768,207,760,223,737,240,703,253,614,271,515,280,431,283,430,278,515,275,613,266,702,248,735,235,756,220,763,206,762,193,754,180,741,168,703,145,663,129"/>
-<area shape="rect" title=" " alt="" coords="605,189,746,214"/>
-<area shape="poly" title=" " alt="" coords="638,125,665,175,660,178,634,127"/>
-<area shape="rect" href="../../da/d0c/arena_8h.html" title="Request&#45;scoped arena allocator backed by libttak arena generations." alt="" coords="402,189,581,214"/>
-<area shape="poly" title=" " alt="" coords="613,128,523,184,520,179,610,124"/>
-<area shape="poly" title=" " alt="" coords="461,217,322,267,320,262,459,212"/>
-<area shape="poly" title=" " alt="" coords="476,216,408,264,405,259,473,212"/>
-<area shape="poly" title=" " alt="" coords="242,136,191,175,188,171,238,131"/>
-<area shape="poly" title=" " alt="" coords="280,132,366,257,362,260,276,135"/>
-<area shape="poly" title=" " alt="" coords="380,136,231,180,230,175,378,131"/>
-<area shape="poly" title=" " alt="" coords="424,135,407,157,392,182,383,220,381,256,376,255,378,219,388,180,402,154,420,132"/>
+<area shape="poly" title=" " alt="" coords="154,221,156,255,151,256,149,222"/>
+<area shape="poly" title=" " alt="" coords="564,123,648,147,683,162,705,180,714,202,705,223,690,236,667,247,606,263,536,274,473,280,473,275,536,268,604,258,665,242,687,231,701,220,709,202,701,183,680,167,646,152,563,129"/>
+<area shape="rect" title=" " alt="" coords="550,189,691,214"/>
+<area shape="poly" title=" " alt="" coords="525,124,596,178,593,182,522,128"/>
+<area shape="rect" href="../../da/d0c/arena_8h.html" title="Request&#45;scoped arena allocator backed by libttak arena generations." alt="" coords="347,189,526,214"/>
+<area shape="poly" title=" " alt="" coords="501,128,458,179,453,176,497,124"/>
+<area shape="poly" title=" " alt="" coords="419,216,337,265,334,260,416,212"/>
+<area shape="poly" title=" " alt="" coords="437,215,429,256,424,255,432,214"/>
+<area shape="poly" title=" " alt="" coords="284,136,201,178,198,173,282,131"/>
+<area shape="poly" title=" " alt="" coords="322,133,323,175,328,199,338,220,358,243,384,261,381,265,355,247,333,223,323,200,318,176,316,134"/>
 </map>
 </div>
 </div>
@@ -180,61 +172,61 @@ Include dependency graph for durable_queue.c:</div>
 <table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="define-members" name="define-members"></a>
 Macros</h2></td></tr>
-<tr class="memitem:a3024ccd4a9af5109d24e6c57565d74a1" id="r_a3024ccd4a9af5109d24e6c57565d74a1"><td class="memItemLeft" align="right" valign="top">#define&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d0/dbf/durable__queue_8c.html#a3024ccd4a9af5109d24e6c57565d74a1">_POSIX_C_SOURCE</a>&#160;&#160;&#160;200809L</td></tr>
+<tr class="memitem:a3024ccd4a9af5109d24e6c57565d74a1" id="r_a3024ccd4a9af5109d24e6c57565d74a1"><td class="memItemLeft" align="right" valign="top">#<a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">define</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d0/dbf/durable__queue_8c.html#a3024ccd4a9af5109d24e6c57565d74a1">_POSIX_C_SOURCE</a>&#160;&#160;&#160;200809<a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">L</a></td></tr>
 <tr class="separator:a3024ccd4a9af5109d24e6c57565d74a1"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a3df45d37cbea58574a2373a7ba9cfe31" id="r_a3df45d37cbea58574a2373a7ba9cfe31"><td class="memItemLeft" align="right" valign="top">#define&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d0/dbf/durable__queue_8c.html#a3df45d37cbea58574a2373a7ba9cfe31">CWIST_JQ_GROUP</a>&#160;&#160;&#160;&quot;cwist-jq&quot;</td></tr>
+<tr class="memitem:a3df45d37cbea58574a2373a7ba9cfe31" id="r_a3df45d37cbea58574a2373a7ba9cfe31"><td class="memItemLeft" align="right" valign="top">#<a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">define</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d0/dbf/durable__queue_8c.html#a3df45d37cbea58574a2373a7ba9cfe31">CWIST_JQ_GROUP</a>&#160;&#160;&#160;&quot;cwist-<a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">jq&quot;</a></td></tr>
 <tr class="separator:a3df45d37cbea58574a2373a7ba9cfe31"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:afab2ce8eeac943bb1d4aab50f9c6ec5c" id="r_afab2ce8eeac943bb1d4aab50f9c6ec5c"><td class="memItemLeft" align="right" valign="top">#define&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d0/dbf/durable__queue_8c.html#afab2ce8eeac943bb1d4aab50f9c6ec5c">CWIST_JQ_DEFAULT_VISIBILITY_MS</a>&#160;&#160;&#160;30000u</td></tr>
+<tr class="memitem:afab2ce8eeac943bb1d4aab50f9c6ec5c" id="r_afab2ce8eeac943bb1d4aab50f9c6ec5c"><td class="memItemLeft" align="right" valign="top">#<a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">define</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d0/dbf/durable__queue_8c.html#afab2ce8eeac943bb1d4aab50f9c6ec5c">CWIST_JQ_DEFAULT_VISIBILITY_MS</a>&#160;&#160;&#160;30000u</td></tr>
 <tr class="separator:afab2ce8eeac943bb1d4aab50f9c6ec5c"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:af3b83c681939e1fcbf57c5d2e23a3d95" id="r_af3b83c681939e1fcbf57c5d2e23a3d95"><td class="memItemLeft" align="right" valign="top">#define&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d0/dbf/durable__queue_8c.html#af3b83c681939e1fcbf57c5d2e23a3d95">CWIST_JQ_DEFAULT_MAX_RETRIES</a>&#160;&#160;&#160;5u</td></tr>
+<tr class="memitem:af3b83c681939e1fcbf57c5d2e23a3d95" id="r_af3b83c681939e1fcbf57c5d2e23a3d95"><td class="memItemLeft" align="right" valign="top">#<a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">define</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d0/dbf/durable__queue_8c.html#af3b83c681939e1fcbf57c5d2e23a3d95">CWIST_JQ_DEFAULT_MAX_RETRIES</a>&#160;&#160;&#160;5u</td></tr>
 <tr class="separator:af3b83c681939e1fcbf57c5d2e23a3d95"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a1b22d6ca47e8df886f25e54781d8396f" id="r_a1b22d6ca47e8df886f25e54781d8396f"><td class="memItemLeft" align="right" valign="top">#define&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d0/dbf/durable__queue_8c.html#a1b22d6ca47e8df886f25e54781d8396f">CWIST_JQ_MAX_POLL_SLICE_MS</a>&#160;&#160;&#160;200u /* max single XREADGROUP BLOCK */</td></tr>
+<tr class="memitem:a1b22d6ca47e8df886f25e54781d8396f" id="r_a1b22d6ca47e8df886f25e54781d8396f"><td class="memItemLeft" align="right" valign="top">#<a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">define</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d0/dbf/durable__queue_8c.html#a1b22d6ca47e8df886f25e54781d8396f">CWIST_JQ_MAX_POLL_SLICE_MS</a>&#160;&#160;&#160;200u /* max <a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">single</a> <a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">XREADGROUP</a> <a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">BLOCK</a> */</td></tr>
 <tr class="separator:a1b22d6ca47e8df886f25e54781d8396f"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="typedef-members" name="typedef-members"></a>
 Typedefs</h2></td></tr>
-<tr class="memitem:abd00118bfaf83a4e406d91c1ed818979" id="r_abd00118bfaf83a4e406d91c1ed818979"><td class="memItemLeft" align="right" valign="top">typedef <a class="el" href="../../d4/d50/structcwist__error__t.html">cwist_error_t</a>(*&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d0/dbf/durable__queue_8c.html#abd00118bfaf83a4e406d91c1ed818979">jq_dead_count_fn</a>) (<a class="el" href="../../dd/d3c/durable__queue_8h.html#a6c1cff460557a096aba388f7e02ded7e">cwist_job_queue_t</a> *q, uint64_t *out_count)</td></tr>
+<tr class="memitem:abd00118bfaf83a4e406d91c1ed818979" id="r_abd00118bfaf83a4e406d91c1ed818979"><td class="memItemLeft" align="right" valign="top"><a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">typedef</a> <a class="el" href="../../d4/d50/structcwist__error__t.html">cwist_error_t</a>(*&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d0/dbf/durable__queue_8c.html#abd00118bfaf83a4e406d91c1ed818979">jq_dead_count_fn</a>) (<a class="el" href="../../dd/d3c/durable__queue_8h.html#a6c1cff460557a096aba388f7e02ded7e">cwist_job_queue_t</a> *q, <a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">uint64_t</a> *<a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">out_count</a>)</td></tr>
 <tr class="separator:abd00118bfaf83a4e406d91c1ed818979"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="func-members" name="func-members"></a>
 Functions</h2></td></tr>
-<tr class="memitem:a4a6bc5bebe8df55dcd570ff064912188" id="r_a4a6bc5bebe8df55dcd570ff064912188"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d0/dbf/durable__queue_8c.html#a4a6bc5bebe8df55dcd570ff064912188">cwist_job_destroy</a> (<a class="el" href="../../dd/d3c/durable__queue_8h.html#a8fc7622c97a13c1026b60ca0f5cb8034">cwist_job_t</a> *job)</td></tr>
+<tr class="memitem:a4a6bc5bebe8df55dcd570ff064912188" id="r_a4a6bc5bebe8df55dcd570ff064912188"><td class="memItemLeft" align="right" valign="top"><a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">void</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d0/dbf/durable__queue_8c.html#a4a6bc5bebe8df55dcd570ff064912188">cwist_job_destroy</a> (<a class="el" href="../../dd/d3c/durable__queue_8h.html#a8fc7622c97a13c1026b60ca0f5cb8034">cwist_job_t</a> *<a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">job</a>)</td></tr>
 <tr class="memdesc:a4a6bc5bebe8df55dcd570ff064912188"><td class="mdescLeft">&#160;</td><td class="mdescRight">Public alias of cwist_job_free(); releases a job returned by claim.  <br /></td></tr>
 <tr class="separator:a4a6bc5bebe8df55dcd570ff064912188"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a1f4aaf3e2d56af200ca2d2150e583345" id="r_a1f4aaf3e2d56af200ca2d2150e583345"><td class="memItemLeft" align="right" valign="top">const void *&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d0/dbf/durable__queue_8c.html#a1f4aaf3e2d56af200ca2d2150e583345">cwist_job_payload</a> (const <a class="el" href="../../dd/d3c/durable__queue_8h.html#a8fc7622c97a13c1026b60ca0f5cb8034">cwist_job_t</a> *job, size_t *len)</td></tr>
+<tr class="memitem:a1f4aaf3e2d56af200ca2d2150e583345" id="r_a1f4aaf3e2d56af200ca2d2150e583345"><td class="memItemLeft" align="right" valign="top"><a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">const</a> <a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">void</a> *&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d0/dbf/durable__queue_8c.html#a1f4aaf3e2d56af200ca2d2150e583345">cwist_job_payload</a> (<a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">const</a> <a class="el" href="../../dd/d3c/durable__queue_8h.html#a8fc7622c97a13c1026b60ca0f5cb8034">cwist_job_t</a> *<a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">job</a>, <a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">size_t</a> *len)</td></tr>
 <tr class="memdesc:a1f4aaf3e2d56af200ca2d2150e583345"><td class="mdescLeft">&#160;</td><td class="mdescRight">Return the job payload pointer and store its length in <em>len</em> (0 on NULL job).  <br /></td></tr>
 <tr class="separator:a1f4aaf3e2d56af200ca2d2150e583345"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a843186092bd3f991311f860adba30810" id="r_a843186092bd3f991311f860adba30810"><td class="memItemLeft" align="right" valign="top">const char *&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d0/dbf/durable__queue_8c.html#a843186092bd3f991311f860adba30810">cwist_job_type</a> (const <a class="el" href="../../dd/d3c/durable__queue_8h.html#a8fc7622c97a13c1026b60ca0f5cb8034">cwist_job_t</a> *job)</td></tr>
+<tr class="memitem:a843186092bd3f991311f860adba30810" id="r_a843186092bd3f991311f860adba30810"><td class="memItemLeft" align="right" valign="top"><a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">const</a> <a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">char</a> *&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d0/dbf/durable__queue_8c.html#a843186092bd3f991311f860adba30810">cwist_job_type</a> (<a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">const</a> <a class="el" href="../../dd/d3c/durable__queue_8h.html#a8fc7622c97a13c1026b60ca0f5cb8034">cwist_job_t</a> *<a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">job</a>)</td></tr>
 <tr class="memdesc:a843186092bd3f991311f860adba30810"><td class="mdescLeft">&#160;</td><td class="mdescRight">Return the job type string, or NULL if none / NULL job.  <br /></td></tr>
 <tr class="separator:a843186092bd3f991311f860adba30810"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a0232a14d05af3b981b4751a4c46941a9" id="r_a0232a14d05af3b981b4751a4c46941a9"><td class="memItemLeft" align="right" valign="top">const char *&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d0/dbf/durable__queue_8c.html#a0232a14d05af3b981b4751a4c46941a9">cwist_job_id</a> (const <a class="el" href="../../dd/d3c/durable__queue_8h.html#a8fc7622c97a13c1026b60ca0f5cb8034">cwist_job_t</a> *job)</td></tr>
+<tr class="memitem:a0232a14d05af3b981b4751a4c46941a9" id="r_a0232a14d05af3b981b4751a4c46941a9"><td class="memItemLeft" align="right" valign="top"><a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">const</a> <a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">char</a> *&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d0/dbf/durable__queue_8c.html#a0232a14d05af3b981b4751a4c46941a9">cwist_job_id</a> (<a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">const</a> <a class="el" href="../../dd/d3c/durable__queue_8h.html#a8fc7622c97a13c1026b60ca0f5cb8034">cwist_job_t</a> *<a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">job</a>)</td></tr>
 <tr class="memdesc:a0232a14d05af3b981b4751a4c46941a9"><td class="mdescLeft">&#160;</td><td class="mdescRight">Return the backend entry id of the job, or NULL for a NULL job.  <br /></td></tr>
 <tr class="separator:a0232a14d05af3b981b4751a4c46941a9"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a82a4d762c0345882dcd00561308030d8" id="r_a82a4d762c0345882dcd00561308030d8"><td class="memItemLeft" align="right" valign="top">uint32_t&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d0/dbf/durable__queue_8c.html#a82a4d762c0345882dcd00561308030d8">cwist_job_attempts</a> (const <a class="el" href="../../dd/d3c/durable__queue_8h.html#a8fc7622c97a13c1026b60ca0f5cb8034">cwist_job_t</a> *job)</td></tr>
+<tr class="memitem:a82a4d762c0345882dcd00561308030d8" id="r_a82a4d762c0345882dcd00561308030d8"><td class="memItemLeft" align="right" valign="top"><a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">uint32_t</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d0/dbf/durable__queue_8c.html#a82a4d762c0345882dcd00561308030d8">cwist_job_attempts</a> (<a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">const</a> <a class="el" href="../../dd/d3c/durable__queue_8h.html#a8fc7622c97a13c1026b60ca0f5cb8034">cwist_job_t</a> *<a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">job</a>)</td></tr>
 <tr class="memdesc:a82a4d762c0345882dcd00561308030d8"><td class="mdescLeft">&#160;</td><td class="mdescRight">Return the delivery attempt count of the job (0 for a NULL job).  <br /></td></tr>
 <tr class="separator:a82a4d762c0345882dcd00561308030d8"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a0481af7c524b46c84dc96fe89e563ec4" id="r_a0481af7c524b46c84dc96fe89e563ec4"><td class="memItemLeft" align="right" valign="top"><a class="el" href="../../dd/d3c/durable__queue_8h.html#a6c1cff460557a096aba388f7e02ded7e">cwist_job_queue_t</a> *&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d0/dbf/durable__queue_8c.html#a0481af7c524b46c84dc96fe89e563ec4">cwist_job_queue_create_redis</a> (<a class="el" href="../../d0/d39/cwist__redis_8h.html#a0fd305ee018783b230e1ab78a686d7b7">cwist_redis_t</a> *conn, const <a class="el" href="../../dd/d3c/durable__queue_8h.html#a470d43aa89b26a956099ea688a818baa">cwist_job_queue_opts_t</a> *opts)</td></tr>
+<tr class="memitem:a0481af7c524b46c84dc96fe89e563ec4" id="r_a0481af7c524b46c84dc96fe89e563ec4"><td class="memItemLeft" align="right" valign="top"><a class="el" href="../../dd/d3c/durable__queue_8h.html#a6c1cff460557a096aba388f7e02ded7e">cwist_job_queue_t</a> *&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d0/dbf/durable__queue_8c.html#a0481af7c524b46c84dc96fe89e563ec4">cwist_job_queue_create_redis</a> (<a class="el" href="../../d0/d39/cwist__redis_8h.html#a0fd305ee018783b230e1ab78a686d7b7">cwist_redis_t</a> *conn, <a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">const</a> <a class="el" href="../../dd/d3c/durable__queue_8h.html#a470d43aa89b26a956099ea688a818baa">cwist_job_queue_opts_t</a> *opts)</td></tr>
 <tr class="memdesc:a0481af7c524b46c84dc96fe89e563ec4"><td class="mdescLeft">&#160;</td><td class="mdescRight">Create a durable job queue backed by Redis streams.  <br /></td></tr>
 <tr class="separator:a0481af7c524b46c84dc96fe89e563ec4"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:ad938cf77198be34b469d14cd39078409" id="r_ad938cf77198be34b469d14cd39078409"><td class="memItemLeft" align="right" valign="top"><a class="el" href="../../dd/d3c/durable__queue_8h.html#a6c1cff460557a096aba388f7e02ded7e">cwist_job_queue_t</a> *&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d0/dbf/durable__queue_8c.html#ad938cf77198be34b469d14cd39078409">cwist_job_queue_create_nats</a> (<a class="el" href="../../d1/de1/cwist__nats_8h.html#a5692a2f056a6005cf60cafbb3b283cb0">cwist_nats_t</a> *nats, const <a class="el" href="../../dd/d3c/durable__queue_8h.html#a470d43aa89b26a956099ea688a818baa">cwist_job_queue_opts_t</a> *opts)</td></tr>
-<tr class="memdesc:ad938cf77198be34b469d14cd39078409"><td class="mdescLeft">&#160;</td><td class="mdescRight">Create a durable job queue backed by NATS JetStream.  <br /></td></tr>
+<tr class="memitem:ad938cf77198be34b469d14cd39078409" id="r_ad938cf77198be34b469d14cd39078409"><td class="memItemLeft" align="right" valign="top"><a class="el" href="../../dd/d3c/durable__queue_8h.html#a6c1cff460557a096aba388f7e02ded7e">cwist_job_queue_t</a> *&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d0/dbf/durable__queue_8c.html#ad938cf77198be34b469d14cd39078409">cwist_job_queue_create_nats</a> (<a class="el" href="../../d1/de1/cwist__nats_8h.html#a5692a2f056a6005cf60cafbb3b283cb0">cwist_nats_t</a> *<a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">nats</a>, <a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">const</a> <a class="el" href="../../dd/d3c/durable__queue_8h.html#a470d43aa89b26a956099ea688a818baa">cwist_job_queue_opts_t</a> *opts)</td></tr>
+<tr class="memdesc:ad938cf77198be34b469d14cd39078409"><td class="mdescLeft">&#160;</td><td class="mdescRight">Create a durable queue over an existing NATS connection.  <br /></td></tr>
 <tr class="separator:ad938cf77198be34b469d14cd39078409"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a122c21ac81ba47f8b662b4786b68d4ea" id="r_a122c21ac81ba47f8b662b4786b68d4ea"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d0/dbf/durable__queue_8c.html#a122c21ac81ba47f8b662b4786b68d4ea">cwist_job_queue_destroy</a> (<a class="el" href="../../dd/d3c/durable__queue_8h.html#a6c1cff460557a096aba388f7e02ded7e">cwist_job_queue_t</a> *q)</td></tr>
+<tr class="memitem:a122c21ac81ba47f8b662b4786b68d4ea" id="r_a122c21ac81ba47f8b662b4786b68d4ea"><td class="memItemLeft" align="right" valign="top"><a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">void</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d0/dbf/durable__queue_8c.html#a122c21ac81ba47f8b662b4786b68d4ea">cwist_job_queue_destroy</a> (<a class="el" href="../../dd/d3c/durable__queue_8h.html#a6c1cff460557a096aba388f7e02ded7e">cwist_job_queue_t</a> *q)</td></tr>
 <tr class="memdesc:a122c21ac81ba47f8b662b4786b68d4ea"><td class="mdescLeft">&#160;</td><td class="mdescRight">Destroy a queue and all backend resources it owns; NULL is a no-op. In-flight jobs are not touched.  <br /></td></tr>
 <tr class="separator:a122c21ac81ba47f8b662b4786b68d4ea"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a392dee74f5dd41f35495a81d45089df4" id="r_a392dee74f5dd41f35495a81d45089df4"><td class="memItemLeft" align="right" valign="top"><a class="el" href="../../d4/d50/structcwist__error__t.html">cwist_error_t</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d0/dbf/durable__queue_8c.html#a392dee74f5dd41f35495a81d45089df4">cwist_job_queue_enqueue</a> (<a class="el" href="../../dd/d3c/durable__queue_8h.html#a6c1cff460557a096aba388f7e02ded7e">cwist_job_queue_t</a> *q, const void *payload, size_t payload_len, const char *type)</td></tr>
+<tr class="memitem:a392dee74f5dd41f35495a81d45089df4" id="r_a392dee74f5dd41f35495a81d45089df4"><td class="memItemLeft" align="right" valign="top"><a class="el" href="../../d4/d50/structcwist__error__t.html">cwist_error_t</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d0/dbf/durable__queue_8c.html#a392dee74f5dd41f35495a81d45089df4">cwist_job_queue_enqueue</a> (<a class="el" href="../../dd/d3c/durable__queue_8h.html#a6c1cff460557a096aba388f7e02ded7e">cwist_job_queue_t</a> *q, <a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">const</a> <a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">void</a> *payload, <a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">size_t</a> payload_len, <a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">const</a> <a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">char</a> *type)</td></tr>
 <tr class="memdesc:a392dee74f5dd41f35495a81d45089df4"><td class="mdescLeft">&#160;</td><td class="mdescRight">Enqueue a job payload with an optional type.  <br /></td></tr>
 <tr class="separator:a392dee74f5dd41f35495a81d45089df4"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:abc844eef2c375b546b75dd35c94ca58a" id="r_abc844eef2c375b546b75dd35c94ca58a"><td class="memItemLeft" align="right" valign="top"><a class="el" href="../../d4/d50/structcwist__error__t.html">cwist_error_t</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d0/dbf/durable__queue_8c.html#abc844eef2c375b546b75dd35c94ca58a">cwist_job_queue_claim</a> (<a class="el" href="../../dd/d3c/durable__queue_8h.html#a6c1cff460557a096aba388f7e02ded7e">cwist_job_queue_t</a> *q, uint64_t timeout_ms, <a class="el" href="../../dd/d3c/durable__queue_8h.html#a8fc7622c97a13c1026b60ca0f5cb8034">cwist_job_t</a> **job)</td></tr>
+<tr class="memitem:abc844eef2c375b546b75dd35c94ca58a" id="r_abc844eef2c375b546b75dd35c94ca58a"><td class="memItemLeft" align="right" valign="top"><a class="el" href="../../d4/d50/structcwist__error__t.html">cwist_error_t</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d0/dbf/durable__queue_8c.html#abc844eef2c375b546b75dd35c94ca58a">cwist_job_queue_claim</a> (<a class="el" href="../../dd/d3c/durable__queue_8h.html#a6c1cff460557a096aba388f7e02ded7e">cwist_job_queue_t</a> *q, <a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">uint64_t</a> timeout_ms, <a class="el" href="../../dd/d3c/durable__queue_8h.html#a8fc7622c97a13c1026b60ca0f5cb8034">cwist_job_t</a> **<a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">job</a>)</td></tr>
 <tr class="memdesc:abc844eef2c375b546b75dd35c94ca58a"><td class="mdescLeft">&#160;</td><td class="mdescRight">Claim one job, waiting up to timeout_ms.  <br /></td></tr>
 <tr class="separator:abc844eef2c375b546b75dd35c94ca58a"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a2d7bb58dde2dd3504d61bb65490ac652" id="r_a2d7bb58dde2dd3504d61bb65490ac652"><td class="memItemLeft" align="right" valign="top"><a class="el" href="../../d4/d50/structcwist__error__t.html">cwist_error_t</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d0/dbf/durable__queue_8c.html#a2d7bb58dde2dd3504d61bb65490ac652">cwist_job_queue_ack</a> (<a class="el" href="../../dd/d3c/durable__queue_8h.html#a6c1cff460557a096aba388f7e02ded7e">cwist_job_queue_t</a> *q, <a class="el" href="../../dd/d3c/durable__queue_8h.html#a8fc7622c97a13c1026b60ca0f5cb8034">cwist_job_t</a> *job)</td></tr>
+<tr class="memitem:a2d7bb58dde2dd3504d61bb65490ac652" id="r_a2d7bb58dde2dd3504d61bb65490ac652"><td class="memItemLeft" align="right" valign="top"><a class="el" href="../../d4/d50/structcwist__error__t.html">cwist_error_t</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d0/dbf/durable__queue_8c.html#a2d7bb58dde2dd3504d61bb65490ac652">cwist_job_queue_ack</a> (<a class="el" href="../../dd/d3c/durable__queue_8h.html#a6c1cff460557a096aba388f7e02ded7e">cwist_job_queue_t</a> *q, <a class="el" href="../../dd/d3c/durable__queue_8h.html#a8fc7622c97a13c1026b60ca0f5cb8034">cwist_job_t</a> *<a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">job</a>)</td></tr>
 <tr class="memdesc:a2d7bb58dde2dd3504d61bb65490ac652"><td class="mdescLeft">&#160;</td><td class="mdescRight">Acknowledge a claimed job and free it.  <br /></td></tr>
 <tr class="separator:a2d7bb58dde2dd3504d61bb65490ac652"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a6e465b5ce123b9510377bfc398e5da42" id="r_a6e465b5ce123b9510377bfc398e5da42"><td class="memItemLeft" align="right" valign="top"><a class="el" href="../../d4/d50/structcwist__error__t.html">cwist_error_t</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d0/dbf/durable__queue_8c.html#a6e465b5ce123b9510377bfc398e5da42">cwist_job_queue_nack</a> (<a class="el" href="../../dd/d3c/durable__queue_8h.html#a6c1cff460557a096aba388f7e02ded7e">cwist_job_queue_t</a> *q, <a class="el" href="../../dd/d3c/durable__queue_8h.html#a8fc7622c97a13c1026b60ca0f5cb8034">cwist_job_t</a> *job)</td></tr>
+<tr class="memitem:a6e465b5ce123b9510377bfc398e5da42" id="r_a6e465b5ce123b9510377bfc398e5da42"><td class="memItemLeft" align="right" valign="top"><a class="el" href="../../d4/d50/structcwist__error__t.html">cwist_error_t</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d0/dbf/durable__queue_8c.html#a6e465b5ce123b9510377bfc398e5da42">cwist_job_queue_nack</a> (<a class="el" href="../../dd/d3c/durable__queue_8h.html#a6c1cff460557a096aba388f7e02ded7e">cwist_job_queue_t</a> *q, <a class="el" href="../../dd/d3c/durable__queue_8h.html#a8fc7622c97a13c1026b60ca0f5cb8034">cwist_job_t</a> *<a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">job</a>)</td></tr>
 <tr class="memdesc:a6e465b5ce123b9510377bfc398e5da42"><td class="mdescLeft">&#160;</td><td class="mdescRight">Negatively acknowledge a claimed job (retry or dead-letter) and free it.  <br /></td></tr>
 <tr class="separator:a6e465b5ce123b9510377bfc398e5da42"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:aae18dff28136530d9473f498fe438f7c" id="r_aae18dff28136530d9473f498fe438f7c"><td class="memItemLeft" align="right" valign="top"><a class="el" href="../../d4/d50/structcwist__error__t.html">cwist_error_t</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d0/dbf/durable__queue_8c.html#aae18dff28136530d9473f498fe438f7c">cwist_job_queue_dead_count</a> (<a class="el" href="../../dd/d3c/durable__queue_8h.html#a6c1cff460557a096aba388f7e02ded7e">cwist_job_queue_t</a> *q, uint64_t *out_count)</td></tr>
+<tr class="memitem:aae18dff28136530d9473f498fe438f7c" id="r_aae18dff28136530d9473f498fe438f7c"><td class="memItemLeft" align="right" valign="top"><a class="el" href="../../d4/d50/structcwist__error__t.html">cwist_error_t</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d0/dbf/durable__queue_8c.html#aae18dff28136530d9473f498fe438f7c">cwist_job_queue_dead_count</a> (<a class="el" href="../../dd/d3c/durable__queue_8h.html#a6c1cff460557a096aba388f7e02ded7e">cwist_job_queue_t</a> *q, <a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">uint64_t</a> *<a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">out_count</a>)</td></tr>
 <tr class="memdesc:aae18dff28136530d9473f498fe438f7c"><td class="mdescLeft">&#160;</td><td class="mdescRight">Store the number of dead-lettered jobs in *out_count.  <br /></td></tr>
 <tr class="separator:aae18dff28136530d9473f498fe438f7c"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
@@ -259,7 +251,7 @@ Functions</h2></td></tr>
 <div class="memproto">
       <table class="memname">
         <tr>
-          <td class="memname">#define _POSIX_C_SOURCE&#160;&#160;&#160;200809L</td>
+          <td class="memname">#<a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">define</a> _POSIX_C_SOURCE&#160;&#160;&#160;200809<a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">L</a></td>
         </tr>
       </table>
 </div><div class="memdoc">
@@ -275,12 +267,12 @@ Functions</h2></td></tr>
 <div class="memproto">
       <table class="memname">
         <tr>
-          <td class="memname">#define CWIST_JQ_DEFAULT_MAX_RETRIES&#160;&#160;&#160;5u</td>
+          <td class="memname">#<a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">define</a> CWIST_JQ_DEFAULT_MAX_RETRIES&#160;&#160;&#160;5u</td>
         </tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../d0/dbf/durable__queue_8c_source.html#l00039">39</a> of file <a class="el" href="../../d0/dbf/durable__queue_8c_source.html">durable_queue.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d0/dbf/durable__queue_8c_source.html#l00043">43</a> of file <a class="el" href="../../d0/dbf/durable__queue_8c_source.html">durable_queue.c</a>.</p>
 
 </div>
 </div>
@@ -291,12 +283,12 @@ Functions</h2></td></tr>
 <div class="memproto">
       <table class="memname">
         <tr>
-          <td class="memname">#define CWIST_JQ_DEFAULT_VISIBILITY_MS&#160;&#160;&#160;30000u</td>
+          <td class="memname">#<a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">define</a> CWIST_JQ_DEFAULT_VISIBILITY_MS&#160;&#160;&#160;30000u</td>
         </tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../d0/dbf/durable__queue_8c_source.html#l00038">38</a> of file <a class="el" href="../../d0/dbf/durable__queue_8c_source.html">durable_queue.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d0/dbf/durable__queue_8c_source.html#l00042">42</a> of file <a class="el" href="../../d0/dbf/durable__queue_8c_source.html">durable_queue.c</a>.</p>
 
 </div>
 </div>
@@ -307,12 +299,12 @@ Functions</h2></td></tr>
 <div class="memproto">
       <table class="memname">
         <tr>
-          <td class="memname">#define CWIST_JQ_GROUP&#160;&#160;&#160;&quot;cwist-jq&quot;</td>
+          <td class="memname">#<a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">define</a> CWIST_JQ_GROUP&#160;&#160;&#160;&quot;cwist-<a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">jq&quot;</a></td>
         </tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../d0/dbf/durable__queue_8c_source.html#l00037">37</a> of file <a class="el" href="../../d0/dbf/durable__queue_8c_source.html">durable_queue.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d0/dbf/durable__queue_8c_source.html#l00041">41</a> of file <a class="el" href="../../d0/dbf/durable__queue_8c_source.html">durable_queue.c</a>.</p>
 
 </div>
 </div>
@@ -323,12 +315,12 @@ Functions</h2></td></tr>
 <div class="memproto">
       <table class="memname">
         <tr>
-          <td class="memname">#define CWIST_JQ_MAX_POLL_SLICE_MS&#160;&#160;&#160;200u /* max single XREADGROUP BLOCK */</td>
+          <td class="memname">#<a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">define</a> CWIST_JQ_MAX_POLL_SLICE_MS&#160;&#160;&#160;200u /* max <a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">single</a> <a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">XREADGROUP</a> <a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">BLOCK</a> */</td>
         </tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../d0/dbf/durable__queue_8c_source.html#l00040">40</a> of file <a class="el" href="../../d0/dbf/durable__queue_8c_source.html">durable_queue.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d0/dbf/durable__queue_8c_source.html#l00044">44</a> of file <a class="el" href="../../d0/dbf/durable__queue_8c_source.html">durable_queue.c</a>.</p>
 
 </div>
 </div>
@@ -340,12 +332,12 @@ Functions</h2></td></tr>
 <div class="memproto">
       <table class="memname">
         <tr>
-          <td class="memname">typedef <a class="el" href="../../d4/d50/structcwist__error__t.html">cwist_error_t</a>(* jq_dead_count_fn) (<a class="el" href="../../dd/d3c/durable__queue_8h.html#a6c1cff460557a096aba388f7e02ded7e">cwist_job_queue_t</a> *q, uint64_t *out_count)</td>
+          <td class="memname"><a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">typedef</a> <a class="el" href="../../d4/d50/structcwist__error__t.html">cwist_error_t</a>(* jq_dead_count_fn) (<a class="el" href="../../dd/d3c/durable__queue_8h.html#a6c1cff460557a096aba388f7e02ded7e">cwist_job_queue_t</a> *q, <a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">uint64_t</a> *<a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">out_count</a>)</td>
         </tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../d0/dbf/durable__queue_8c_source.html#l00081">81</a> of file <a class="el" href="../../d0/dbf/durable__queue_8c_source.html">durable_queue.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d0/dbf/durable__queue_8c_source.html#l00085">85</a> of file <a class="el" href="../../d0/dbf/durable__queue_8c_source.html">durable_queue.c</a>.</p>
 
 </div>
 </div>
@@ -357,9 +349,9 @@ Functions</h2></td></tr>
 <div class="memproto">
       <table class="memname">
         <tr>
-          <td class="memname">uint32_t cwist_job_attempts </td>
+          <td class="memname"><a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">uint32_t</a> cwist_job_attempts </td>
           <td>(</td>
-          <td class="paramtype">const <a class="el" href="../../dd/d3c/durable__queue_8h.html#a8fc7622c97a13c1026b60ca0f5cb8034">cwist_job_t</a> *&#160;</td>
+          <td class="paramtype"><a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">const</a> <a class="el" href="../../dd/d3c/durable__queue_8h.html#a8fc7622c97a13c1026b60ca0f5cb8034">cwist_job_t</a> *&#160;</td>
           <td class="paramname"><em>job</em></td><td>)</td>
           <td></td>
         </tr>
@@ -369,7 +361,9 @@ Functions</h2></td></tr>
 <p>Return the delivery attempt count of the job (0 for a NULL job). </p>
 <p>Number of deliveries so far, including the current one. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d0/dbf/durable__queue_8c_source.html#l00204">204</a> of file <a class="el" href="../../d0/dbf/durable__queue_8c_source.html">durable_queue.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d0/dbf/durable__queue_8c_source.html#l00216">216</a> of file <a class="el" href="../../d0/dbf/durable__queue_8c_source.html">durable_queue.c</a>.</p>
+
+<p class="reference">References <a class="el" href="../../d3/db2/otel_8c_source.html#l00056">cap</a>.</p>
 
 </div>
 </div>
@@ -380,7 +374,7 @@ Functions</h2></td></tr>
 <div class="memproto">
       <table class="memname">
         <tr>
-          <td class="memname">void cwist_job_destroy </td>
+          <td class="memname"><a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">void</a> cwist_job_destroy </td>
           <td>(</td>
           <td class="paramtype"><a class="el" href="../../dd/d3c/durable__queue_8h.html#a8fc7622c97a13c1026b60ca0f5cb8034">cwist_job_t</a> *&#160;</td>
           <td class="paramname"><em>job</em></td><td>)</td>
@@ -392,7 +386,9 @@ Functions</h2></td></tr>
 <p>Public alias of cwist_job_free(); releases a job returned by claim. </p>
 <p>Release a job handle without ack/nack (the job is reclaimed later). Always safe on NULL. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d0/dbf/durable__queue_8c_source.html#l00179">179</a> of file <a class="el" href="../../d0/dbf/durable__queue_8c_source.html">durable_queue.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d0/dbf/durable__queue_8c_source.html#l00191">191</a> of file <a class="el" href="../../d0/dbf/durable__queue_8c_source.html">durable_queue.c</a>.</p>
+
+<p class="reference">References <a class="el" href="../../d3/db2/otel_8c_source.html#l00056">cap</a>.</p>
 
 </div>
 </div>
@@ -403,9 +399,9 @@ Functions</h2></td></tr>
 <div class="memproto">
       <table class="memname">
         <tr>
-          <td class="memname">const char * cwist_job_id </td>
+          <td class="memname"><a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">const</a> <a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">char</a> * cwist_job_id </td>
           <td>(</td>
-          <td class="paramtype">const <a class="el" href="../../dd/d3c/durable__queue_8h.html#a8fc7622c97a13c1026b60ca0f5cb8034">cwist_job_t</a> *&#160;</td>
+          <td class="paramtype"><a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">const</a> <a class="el" href="../../dd/d3c/durable__queue_8h.html#a8fc7622c97a13c1026b60ca0f5cb8034">cwist_job_t</a> *&#160;</td>
           <td class="paramname"><em>job</em></td><td>)</td>
           <td></td>
         </tr>
@@ -415,7 +411,9 @@ Functions</h2></td></tr>
 <p>Return the backend entry id of the job, or NULL for a NULL job. </p>
 <p>Backend delivery token (Redis stream entry id / NATS sequence). </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d0/dbf/durable__queue_8c_source.html#l00199">199</a> of file <a class="el" href="../../d0/dbf/durable__queue_8c_source.html">durable_queue.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d0/dbf/durable__queue_8c_source.html#l00211">211</a> of file <a class="el" href="../../d0/dbf/durable__queue_8c_source.html">durable_queue.c</a>.</p>
+
+<p class="reference">References <a class="el" href="../../d3/db2/otel_8c_source.html#l00056">cap</a>.</p>
 
 </div>
 </div>
@@ -426,15 +424,15 @@ Functions</h2></td></tr>
 <div class="memproto">
       <table class="memname">
         <tr>
-          <td class="memname">const void * cwist_job_payload </td>
+          <td class="memname"><a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">const</a> <a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">void</a> * cwist_job_payload </td>
           <td>(</td>
-          <td class="paramtype">const <a class="el" href="../../dd/d3c/durable__queue_8h.html#a8fc7622c97a13c1026b60ca0f5cb8034">cwist_job_t</a> *&#160;</td>
+          <td class="paramtype"><a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">const</a> <a class="el" href="../../dd/d3c/durable__queue_8h.html#a8fc7622c97a13c1026b60ca0f5cb8034">cwist_job_t</a> *&#160;</td>
           <td class="paramname"><em>job</em>, </td>
         </tr>
         <tr>
           <td class="paramkey"></td>
           <td></td>
-          <td class="paramtype">size_t *&#160;</td>
+          <td class="paramtype"><a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">size_t</a> *&#160;</td>
           <td class="paramname"><em>len</em>&#160;</td>
         </tr>
         <tr>
@@ -448,7 +446,9 @@ Functions</h2></td></tr>
 <p>Return the job payload pointer and store its length in <em>len</em> (0 on NULL job). </p>
 <p>Job payload bytes (binary-safe); *<code>len</code> receives the length. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d0/dbf/durable__queue_8c_source.html#l00184">184</a> of file <a class="el" href="../../d0/dbf/durable__queue_8c_source.html">durable_queue.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d0/dbf/durable__queue_8c_source.html#l00196">196</a> of file <a class="el" href="../../d0/dbf/durable__queue_8c_source.html">durable_queue.c</a>.</p>
+
+<p class="reference">References <a class="el" href="../../d3/db2/otel_8c_source.html#l00056">cap</a>.</p>
 
 </div>
 </div>
@@ -486,9 +486,9 @@ Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d0/dbf/durable__queue_8c_source.html#l00956">956</a> of file <a class="el" href="../../d0/dbf/durable__queue_8c_source.html">durable_queue.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d0/dbf/durable__queue_8c_source.html#l00990">990</a> of file <a class="el" href="../../d0/dbf/durable__queue_8c_source.html">durable_queue.c</a>.</p>
 
-<p class="reference">References <a class="el" href="../../d7/da1/sys_2err_2cwist__err_8h_source.html#l00153">CWIST_ERROR_INVALID_PARAM</a>.</p>
+<p class="reference">References <a class="el" href="../../d3/db2/otel_8c_source.html#l00056">cap</a>, and <a class="el" href="../../d7/da1/sys_2err_2cwist__err_8h_source.html#l00153">CWIST_ERROR_INVALID_PARAM</a>.</p>
 
 </div>
 </div>
@@ -507,7 +507,7 @@ Functions</h2></td></tr>
         <tr>
           <td class="paramkey"></td>
           <td></td>
-          <td class="paramtype">uint64_t&#160;</td>
+          <td class="paramtype"><a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">uint64_t</a>&#160;</td>
           <td class="paramname"><em>timeout_ms</em>, </td>
         </tr>
         <tr>
@@ -528,9 +528,9 @@ Functions</h2></td></tr>
 <p>Claim one job, waiting up to <code>timeout_ms</code>.</p>
 <dl class="section return"><dt>Returns</dt><dd>0 with *job set (NULL on parameter error); backend errors propagate. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d0/dbf/durable__queue_8c_source.html#l00946">946</a> of file <a class="el" href="../../d0/dbf/durable__queue_8c_source.html">durable_queue.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d0/dbf/durable__queue_8c_source.html#l00976">976</a> of file <a class="el" href="../../d0/dbf/durable__queue_8c_source.html">durable_queue.c</a>.</p>
 
-<p class="reference">References <a class="el" href="../../d7/da1/sys_2err_2cwist__err_8h_source.html#l00153">CWIST_ERROR_INVALID_PARAM</a>.</p>
+<p class="reference">References <a class="el" href="../../d3/db2/otel_8c_source.html#l00056">cap</a>, and <a class="el" href="../../d7/da1/sys_2err_2cwist__err_8h_source.html#l00153">CWIST_ERROR_INVALID_PARAM</a>.</p>
 
 </div>
 </div>
@@ -549,7 +549,7 @@ Functions</h2></td></tr>
         <tr>
           <td class="paramkey"></td>
           <td></td>
-          <td class="paramtype">const <a class="el" href="../../dd/d3c/durable__queue_8h.html#a470d43aa89b26a956099ea688a818baa">cwist_job_queue_opts_t</a> *&#160;</td>
+          <td class="paramtype"><a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">const</a> <a class="el" href="../../dd/d3c/durable__queue_8h.html#a470d43aa89b26a956099ea688a818baa">cwist_job_queue_opts_t</a> *&#160;</td>
           <td class="paramname"><em>opts</em>&#160;</td>
         </tr>
         <tr>
@@ -560,19 +560,12 @@ Functions</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p>Create a durable job queue backed by NATS JetStream. </p>
-<p>Create a durable queue over an existing NATS connection.</p>
-<dl class="params"><dt>Parameters</dt><dd>
-  <table class="params">
-    <tr><td class="paramname">nats</td><td>Borrowed cwist_nats wrapper; its native connection must outlive the queue. </td></tr>
-  </table>
-  </dd>
-</dl>
-<dl class="section return"><dt>Returns</dt><dd>New queue with streams and durable pull consumer ensured, or NULL on invalid opts, ENOMEM, or NATS error. </dd></dl>
+<p>Create a durable queue over an existing NATS connection. </p>
+<p>Requires a JetStream-enabled server. Ensures the job stream and a durable pull consumer exist. Takes no ownership of <code>nats</code>; the connection must outlive the queue. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d0/dbf/durable__queue_8c_source.html#l00666">666</a> of file <a class="el" href="../../d0/dbf/durable__queue_8c_source.html">durable_queue.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d0/dbf/durable__queue_8c_source.html#l00922">922</a> of file <a class="el" href="../../d0/dbf/durable__queue_8c_source.html">durable_queue.c</a>.</p>
 
-<p class="reference">References <a class="el" href="../../d9/d39/alloc_8c_source.html#l00276">cwist_alloc()</a>, <a class="el" href="../../d9/d39/alloc_8c_source.html#l00391">cwist_free()</a>, and <a class="el" href="../../d6/d53/cwist__nats_8c_source.html#l00180">cwist_nats_native()</a>.</p>
+<p class="reference">References <a class="el" href="../../d3/db2/otel_8c_source.html#l00056">cap</a>.</p>
 
 </div>
 </div>
@@ -591,7 +584,7 @@ Functions</h2></td></tr>
         <tr>
           <td class="paramkey"></td>
           <td></td>
-          <td class="paramtype">const <a class="el" href="../../dd/d3c/durable__queue_8h.html#a470d43aa89b26a956099ea688a818baa">cwist_job_queue_opts_t</a> *&#160;</td>
+          <td class="paramtype"><a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">const</a> <a class="el" href="../../dd/d3c/durable__queue_8h.html#a470d43aa89b26a956099ea688a818baa">cwist_job_queue_opts_t</a> *&#160;</td>
           <td class="paramname"><em>opts</em>&#160;</td>
         </tr>
         <tr>
@@ -612,9 +605,9 @@ Functions</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>New queue with consumer group ensured, or NULL on invalid opts, ENOMEM, or Redis error. Frees nothing on <em>conn</em>. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d0/dbf/durable__queue_8c_source.html#l00579">579</a> of file <a class="el" href="../../d0/dbf/durable__queue_8c_source.html">durable_queue.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d0/dbf/durable__queue_8c_source.html#l00591">591</a> of file <a class="el" href="../../d0/dbf/durable__queue_8c_source.html">durable_queue.c</a>.</p>
 
-<p class="reference">References <a class="el" href="../../d9/d39/alloc_8c_source.html#l00276">cwist_alloc()</a>, <a class="el" href="../../d9/d39/alloc_8c_source.html#l00391">cwist_free()</a>, <a class="el" href="../../d0/dbf/durable__queue_8c_source.html#l00037">CWIST_JQ_GROUP</a>, and <a class="el" href="../../d9/d39/alloc_8c_source.html#l00348">cwist_strdup()</a>.</p>
+<p class="reference">References <a class="el" href="../../d3/db2/otel_8c_source.html#l00056">cap</a>, <a class="el" href="../../d9/d39/alloc_8c_source.html#l00276">cwist_alloc()</a>, <a class="el" href="../../d9/d39/alloc_8c_source.html#l00391">cwist_free()</a>, <a class="el" href="../../d0/dbf/durable__queue_8c_source.html#l00041">CWIST_JQ_GROUP</a>, and <a class="el" href="../../d9/d39/alloc_8c_source.html#l00348">cwist_strdup()</a>.</p>
 
 </div>
 </div>
@@ -633,7 +626,7 @@ Functions</h2></td></tr>
         <tr>
           <td class="paramkey"></td>
           <td></td>
-          <td class="paramtype">uint64_t *&#160;</td>
+          <td class="paramtype"><a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">uint64_t</a> *&#160;</td>
           <td class="paramname"><em>out_count</em>&#160;</td>
         </tr>
         <tr>
@@ -652,9 +645,9 @@ Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d0/dbf/durable__queue_8c_source.html#l00979">979</a> of file <a class="el" href="../../d0/dbf/durable__queue_8c_source.html">durable_queue.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d0/dbf/durable__queue_8c_source.html#l01021">1021</a> of file <a class="el" href="../../d0/dbf/durable__queue_8c_source.html">durable_queue.c</a>.</p>
 
-<p class="reference">References <a class="el" href="../../d7/da1/sys_2err_2cwist__err_8h_source.html#l00153">CWIST_ERROR_INVALID_PARAM</a>, and <a class="el" href="../../d7/da1/sys_2err_2cwist__err_8h_source.html#l00150">CWIST_FAILURE</a>.</p>
+<p class="reference">References <a class="el" href="../../d3/db2/otel_8c_source.html#l00056">cap</a>, <a class="el" href="../../d7/da1/sys_2err_2cwist__err_8h_source.html#l00153">CWIST_ERROR_INVALID_PARAM</a>, and <a class="el" href="../../d7/da1/sys_2err_2cwist__err_8h_source.html#l00150">CWIST_FAILURE</a>.</p>
 
 </div>
 </div>
@@ -665,7 +658,7 @@ Functions</h2></td></tr>
 <div class="memproto">
       <table class="memname">
         <tr>
-          <td class="memname">void cwist_job_queue_destroy </td>
+          <td class="memname"><a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">void</a> cwist_job_queue_destroy </td>
           <td>(</td>
           <td class="paramtype"><a class="el" href="../../dd/d3c/durable__queue_8h.html#a6c1cff460557a096aba388f7e02ded7e">cwist_job_queue_t</a> *&#160;</td>
           <td class="paramname"><em>q</em></td><td>)</td>
@@ -677,9 +670,9 @@ Functions</h2></td></tr>
 <p>Destroy a queue and all backend resources it owns; NULL is a no-op. In-flight jobs are not touched. </p>
 <p>Destroy the queue handle. Claimed-but-unacked jobs are reclaimed by other workers once their visibility timeout expires. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d0/dbf/durable__queue_8c_source.html#l00910">910</a> of file <a class="el" href="../../d0/dbf/durable__queue_8c_source.html">durable_queue.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d0/dbf/durable__queue_8c_source.html#l00933">933</a> of file <a class="el" href="../../d0/dbf/durable__queue_8c_source.html">durable_queue.c</a>.</p>
 
-<p class="reference">References <a class="el" href="../../d9/d39/alloc_8c_source.html#l00391">cwist_free()</a>.</p>
+<p class="reference">References <a class="el" href="../../d3/db2/otel_8c_source.html#l00056">cap</a>, and <a class="el" href="../../d9/d39/alloc_8c_source.html#l00391">cwist_free()</a>.</p>
 
 </div>
 </div>
@@ -698,19 +691,19 @@ Functions</h2></td></tr>
         <tr>
           <td class="paramkey"></td>
           <td></td>
-          <td class="paramtype">const void *&#160;</td>
+          <td class="paramtype"><a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">const</a> <a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">void</a> *&#160;</td>
           <td class="paramname"><em>payload</em>, </td>
         </tr>
         <tr>
           <td class="paramkey"></td>
           <td></td>
-          <td class="paramtype">size_t&#160;</td>
+          <td class="paramtype"><a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">size_t</a>&#160;</td>
           <td class="paramname"><em>payload_len</em>, </td>
         </tr>
         <tr>
           <td class="paramkey"></td>
           <td></td>
-          <td class="paramtype">const char *&#160;</td>
+          <td class="paramtype"><a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">const</a> <a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">char</a> *&#160;</td>
           <td class="paramname"><em>type</em>&#160;</td>
         </tr>
         <tr>
@@ -730,9 +723,9 @@ Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d0/dbf/durable__queue_8c_source.html#l00934">934</a> of file <a class="el" href="../../d0/dbf/durable__queue_8c_source.html">durable_queue.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d0/dbf/durable__queue_8c_source.html#l00960">960</a> of file <a class="el" href="../../d0/dbf/durable__queue_8c_source.html">durable_queue.c</a>.</p>
 
-<p class="reference">References <a class="el" href="../../d7/da1/sys_2err_2cwist__err_8h_source.html#l00153">CWIST_ERROR_INVALID_PARAM</a>.</p>
+<p class="reference">References <a class="el" href="../../d3/db2/otel_8c_source.html#l00056">cap</a>, and <a class="el" href="../../d7/da1/sys_2err_2cwist__err_8h_source.html#l00153">CWIST_ERROR_INVALID_PARAM</a>.</p>
 
 </div>
 </div>
@@ -771,9 +764,9 @@ Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d0/dbf/durable__queue_8c_source.html#l00967">967</a> of file <a class="el" href="../../d0/dbf/durable__queue_8c_source.html">durable_queue.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d0/dbf/durable__queue_8c_source.html#l01005">1005</a> of file <a class="el" href="../../d0/dbf/durable__queue_8c_source.html">durable_queue.c</a>.</p>
 
-<p class="reference">References <a class="el" href="../../d7/da1/sys_2err_2cwist__err_8h_source.html#l00153">CWIST_ERROR_INVALID_PARAM</a>.</p>
+<p class="reference">References <a class="el" href="../../d3/db2/otel_8c_source.html#l00056">cap</a>, and <a class="el" href="../../d7/da1/sys_2err_2cwist__err_8h_source.html#l00153">CWIST_ERROR_INVALID_PARAM</a>.</p>
 
 </div>
 </div>
@@ -784,9 +777,9 @@ Functions</h2></td></tr>
 <div class="memproto">
       <table class="memname">
         <tr>
-          <td class="memname">const char * cwist_job_type </td>
+          <td class="memname"><a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">const</a> <a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">char</a> * cwist_job_type </td>
           <td>(</td>
-          <td class="paramtype">const <a class="el" href="../../dd/d3c/durable__queue_8h.html#a8fc7622c97a13c1026b60ca0f5cb8034">cwist_job_t</a> *&#160;</td>
+          <td class="paramtype"><a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">const</a> <a class="el" href="../../dd/d3c/durable__queue_8h.html#a8fc7622c97a13c1026b60ca0f5cb8034">cwist_job_t</a> *&#160;</td>
           <td class="paramname"><em>job</em></td><td>)</td>
           <td></td>
         </tr>
@@ -796,7 +789,9 @@ Functions</h2></td></tr>
 <p>Return the job type string, or NULL if none / NULL job. </p>
 <p>Job type/tag, or NULL when the job was enqueued without one. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d0/dbf/durable__queue_8c_source.html#l00194">194</a> of file <a class="el" href="../../d0/dbf/durable__queue_8c_source.html">durable_queue.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d0/dbf/durable__queue_8c_source.html#l00206">206</a> of file <a class="el" href="../../d0/dbf/durable__queue_8c_source.html">durable_queue.c</a>.</p>
+
+<p class="reference">References <a class="el" href="../../d3/db2/otel_8c_source.html#l00056">cap</a>.</p>
 
 </div>
 </div>

@@ -16,7 +16,7 @@ var searchData=
   ['api_20reference_13',['CWIST API Reference',['../d1/d7e/md_docs_2api-quickref.html',1,'']]],
   ['api_20with_20openapi_20and_20swagger_20ui_14',['Document an API with OpenAPI and Swagger UI',['../d6/d8e/md_docs_2tutorials_2openapi-swagger.html',1,'']]],
   ['app_20api_15',['Framework &amp; App API',['../de/d19/md_docs_2api_2app.html',1,'']]],
-  ['assets_16',['HTML Components, Scoped CSS, Fragments and Assets',['../d8/d83/md_docs_2api_2html.html',1,'']]],
+  ['assets_16',['assets',['../d8/d83/md_docs_2api_2html.html',1,'HTML Components, Scoped CSS, Fragments and Assets'],['../d1/da3/md_docs_2deployment_2release-assets.html',1,'Prebuilt release assets']]],
   ['audit_20local_2012_20core_20ryzen_205600x_17',['Issue #297 syscall-reduction audit (local, 12-core Ryzen 5600X)',['../d0/d34/md_docs_2performance_2issue-297-syscall-audit.html',1,'']]],
   ['automatic_20resource_20reclamation_20in_20cwist_18',['Full GC: Automatic Resource Reclamation in CWIST',['../d9/dd1/md_docs_2GC.html',1,'']]]
 ];

@@ -108,9 +108,9 @@ $(document).ready(function(){initNavTree('db/d05/md_docs_2soak-testing.html','..
   <div class="headertitle"><div class="title">Soak testing</div></div>
 </div><!--header-->
 <div class="contents">
-<div class="textblock"><p><a class="anchor" id="autotoc_md422"></a> Soak testing catches the degradation classes that short benchmarks miss: memory leaks, file-descriptor growth, and request-latency drift under sustained load. It exists so regressions of that kind are found <b>before the v4.0 cut</b>, not by users after it. It is one of the v4.0 exit criteria (ROADMAP.md, "CWIST v4.0 Readiness").</p>
+<div class="textblock"><p><a class="anchor" id="autotoc_md431"></a> Soak testing catches the degradation classes that short benchmarks miss: memory leaks, file-descriptor growth, and request-latency drift under sustained load. It exists so regressions of that kind are found <b>before the v4.0 cut</b>, not by users after it. It is one of the v4.0 exit criteria (ROADMAP.md, "CWIST v4.0 Readiness").</p>
 <p>The runnable entry point for this document is <code>scripts/ci/soak.sh</code>. The release-candidate run is that script with the default durations; a quick smoke run is <code>DURATION=60 scripts/ci/soak.sh</code>.</p>
-<h1><a class="anchor" id="autotoc_md423"></a>
+<h1><a class="anchor" id="autotoc_md432"></a>
 Environment</h1>
 <ul>
 <li>Linux x86_64.</li>
@@ -118,7 +118,7 @@ Environment</h1>
 <li>Tools: <code>wrk</code> (workload generator), <code>curl</code>, <code>awk</code>, <code>/proc</code> (measurement).</li>
 <li>Run on a quiet machine; nothing else should compete for the cores <code>wrk</code> and the server use.</li>
 </ul>
-<h1><a class="anchor" id="autotoc_md424"></a>
+<h1><a class="anchor" id="autotoc_md433"></a>
 Bench server and workload mix</h1>
 <p>The bench server is <code>example/simple-server/simple-server</code>. It exercises the high-level app API, dynamic HTML composition, and routing (<code>/</code>, <code>/health</code>, <code>POST /echo</code>), which covers the allocation paths a long-lived CWIST app actually runs.</p>
 <p>The workload mixes two connection patterns, interleaved per slice:</p>
@@ -129,7 +129,7 @@ Bench server and workload mix</h1>
 <p>A warmup slice (<code>min(30s, DURATION/10)</code>, discarded) runs before any measurement so startup allocation (TLS context, worker pools) does not count as growth.</p>
 <p>The release-candidate configuration additionally runs with <b>HTTPS on</b> (terminate TLS in front of the same app, or point the script at an HTTPS base URL via <code>BASE_HTTPS</code> so every slice runs once more over TLS) and touches the <b>DB-pool and websocket</b> code paths if a bench app that wires them is available. Those touchpoints are cheap to add per-app but not part of the default self-contained run.</p>
 <p>Durations: <code>DURATION=1800</code> (30 minutes) for the release candidate; <code>DURATION=60</code> for a smoke run. The script's default is 600s (10 minutes).</p>
-<h1><a class="anchor" id="autotoc_md425"></a>
+<h1><a class="anchor" id="autotoc_md434"></a>
 Measurement points</h1>
 <p>All samples are taken over the whole process group (leader plus any prefork workers), read from <code>/proc</code>:</p>
 <ul>
@@ -138,7 +138,7 @@ Measurement points</h1>
 <li><b>Request latency</b> — the 99th-percentile latency of the <em>first</em> measured keep-alive slice is the baseline; the 99th percentile of the <em>last</em> keep-alive slice is compared against it.</li>
 <li><b>Error rate</b> — sum of <code>wrk</code> socket errors (connect/read/write/timeout) and non-2xx responses across all slices. Must be zero.</li>
 </ul>
-<h1><a class="anchor" id="autotoc_md426"></a>
+<h1><a class="anchor" id="autotoc_md435"></a>
 PASS/FAIL criteria</h1>
 <p>The run <b>FAILS</b> if any of these hold:</p>
 <ul>
@@ -148,7 +148,7 @@ PASS/FAIL criteria</h1>
 <li>Any slice reported a non-zero socket-error or non-2xx count, or the server process exited before the run completed.</li>
 </ul>
 <p>Otherwise the run <b>PASSES</b>. All thresholds are env-overridable in <code>scripts/ci/soak.sh</code> (<code>RSS_GROWTH_PCT</code>, <code>FD_GROWTH_ABS</code>, <code>LAT_DRIFT_PCT</code>) so a justified change to the criteria is a reviewed code change, not a quiet local tweak.</p>
-<h1><a class="anchor" id="autotoc_md427"></a>
+<h1><a class="anchor" id="autotoc_md436"></a>
 Interpreting a failure</h1>
 <ul>
 <li>RSS climbing with flat fds: heap growth — run <code>bench_full_gc_tracking</code> or ASAN/LSAN on the same workload.</li>

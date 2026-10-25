@@ -108,9 +108,9 @@ $(document).ready(function(){initNavTree('d0/d34/md_docs_2performance_2issue-297
   <div class="headertitle"><div class="title">Issue #297 syscall-reduction audit (local, 12-core Ryzen 5600X)</div></div>
 </div><!--header-->
 <div class="contents">
-<div class="textblock"><p><a class="anchor" id="autotoc_md356"></a> Date: 2026-10-10. Branch <code>perf/297-syscall-reduction</code>. <b>Result: all four proposed syscall-reduction items measured negative or were already implemented; no code landed.</b> This document preserves the profiling data and the measured reasons, so the items are not retried blind.</p>
+<div class="textblock"><p><a class="anchor" id="autotoc_md360"></a> Date: 2026-10-10. Branch <code>perf/297-syscall-reduction</code>. <b>Result: all four proposed syscall-reduction items measured negative or were already implemented; no code landed.</b> This document preserves the profiling data and the measured reasons, so the items are not retried blind.</p>
 <p>Workload: the-benchmarker contract app (<code>benchmarks/web-frameworks/main.c</code>), plain HTTP, C1M reactor path (default). <code>wrk -t4</code> keep-alive at c400, <code>ab -n 20000 -c 64</code> churn. Syscall counts from <code>strace -f -c</code> (absolute rps is depressed under strace; counts and ratios are the signal).</p>
-<h1><a class="anchor" id="autotoc_md357"></a>
+<h1><a class="anchor" id="autotoc_md361"></a>
 Baseline syscall profile</h1>
 <p>Keep-alive c400, 10 s (~1.19M requests):</p>
 <table class="markdownTable">
@@ -140,11 +140,11 @@ Baseline syscall profile</h1>
 <tr class="markdownTableRowEven">
 <td class="markdownTableBodyNone">sendmsg   </td><td class="markdownTableBodyNone">20,000   </td><td class="markdownTableBodyNone">1.0   </td></tr>
 </table>
-<h1><a class="anchor" id="autotoc_md358"></a>
+<h1><a class="anchor" id="autotoc_md362"></a>
 Item results</h1>
-<h2><a class="anchor" id="autotoc_md359"></a>
+<h2><a class="anchor" id="autotoc_md363"></a>
 1.1 io_uring multishot accept — NEGATIVE (reverted)</h2>
-<p>Implemented <code>cwist_reactor_arm_multishot_accept()</code> (IORING_OP_ACCEPT + IORING_ACCEPT_MULTISHOT, accepted fds delivered as CQEs, legacy POLL+accept4 fallback on -EOPNOTSUPP/-EINVAL/-ENOSYS). The syscall win is real: accept4 drops 26.3k -&gt; 0 at churn. Throughput regressed decisively:</p>
+<p>Implemented <code><a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">cwist_reactor_arm_multishot_accept()</a></code> (IORING_OP_ACCEPT + IORING_ACCEPT_MULTISHOT, accepted fds delivered as CQEs, legacy POLL+accept4 fallback on -EOPNOTSUPP/-EINVAL/-ENOSYS). The syscall win is real: accept4 drops 26.3k -&gt; 0 at churn. Throughput regressed decisively:</p>
 <table class="markdownTable">
 <tr class="markdownTableHead">
 <th class="markdownTableHeadNone">config   </th><th class="markdownTableHeadNone">c100   </th><th class="markdownTableHeadNone">c400   </th><th class="markdownTableHeadNone">churn    </th></tr>
@@ -158,18 +158,18 @@ Item results</h1>
 <p>-17-21% on keep-alive in both arming shapes. Cause: each accepted connection becomes its own CQE and its own dispatch-loop iteration, so the reactor wakes and re-waits far more often than the legacy path, which drains many connections per single POLL wake with a tight accept4 loop. Also visible: io_uring_enter count <em>rises</em> (48k -&gt; 54k per 20k requests). The issue anticipated this ("quirks around SO_REUSEPORT ordering and
 backpressure; needs a load-test gate") — the load-test gate failed, so the change was reverted, not committed.</p>
 <p>Implementation note for any retry: <code>IORING_OP_ACCEPT</code> is an <em>enum constant</em>, not a preprocessor macro — <code>#ifdef IORING_OP_ACCEPT</code> silently disables the code. Guard on <code>__linux__</code> only.</p>
-<h2><a class="anchor" id="autotoc_md360"></a>
+<h2><a class="anchor" id="autotoc_md364"></a>
 1.2 Larger SQE batches / fewer io_uring_enter — ALREADY IMPLEMENTED / BLOCKED</h2>
-<p>Already in place: re-arms and recvs are staged in a 1024-deep deferred SQE array and flushed with one <code>io_uring_enter</code> per dispatch round (<code>queue_deferred</code>/<code>flush_deferred</code>, <a class="el" href="../../d3/d99/reactor_8c.html" title="Readiness multiplexer (io_uring / epoll / kqueue) driving CWIST&#39;s synchronous callback model.">src/sys/io/reactor.c</a>:852-930); the remaining enters are completion waits (GETEVENTS), one per CQE batch, which is the epoll_wait(2) equivalent — no further batching is possible without busy-polling.</p>
+<p>Already in place: re-arms and recvs are staged in a 1024-deep deferred SQE array and flushed with one <code>io_uring_enter</code> per dispatch round (<code>queue_deferred</code>/<code>flush_deferred</code>, <a class="el" href="../../d3/d99/reactor_8c.html" title="Readiness multiplexer (io_uring / epoll / kqueue) driving CWIST&#39;s synchronous callback model.">src/sys/io/reactor.c</a>:852-930); the remaining enters are completion waits (GETEVENTS), one per CQE batch, which is the <a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">epoll_wait(2)</a> equivalent — no further batching is possible without busy-polling.</p>
 <p>The main reactor ring is deliberately created <em>without</em> <code>IORING_SETUP_SQPOLL</code> (<a class="el" href="../../d3/d99/reactor_8c.html" title="Readiness multiplexer (io_uring / epoll / kqueue) driving CWIST&#39;s synchronous callback model.">src/sys/io/reactor.c</a>:677): on an idle SQPOLL ring the kernel ignores the enter timeout, so the reactor's timer heap and shutdown wake would never fire (documented at <code>cwist_reactor_stop</code>, <a class="el" href="../../d3/d99/reactor_8c.html" title="Readiness multiplexer (io_uring / epoll / kqueue) driving CWIST&#39;s synchronous callback model.">src/sys/io/reactor.c</a>:1405-1416). Moving to SQPOLL requires a timerfd-based timer source and shutdown path first; deferred.</p>
 <p>The SQPOLL <em>probe</em> ring at startup (<code>[io_uring/SQPOLL] verified</code>) only proves the kernel supports SQPOLL; it is not the reactor's ring.</p>
-<h2><a class="anchor" id="autotoc_md361"></a>
+<h2><a class="anchor" id="autotoc_md365"></a>
 1.3 Per-accept setsockopt removal — NEGATIVE (reverted)</h2>
 <p>TCP_NODELAY on accepted sockets <em>is</em> inherited from the listen socket on Linux 6.12 (verified with a probe program), so setting it once on the listen fd did halve per-connection setsockopt calls (40.1k -&gt; 20.1k at churn). However the listen-socket TCP_NODELAY set itself — independent of inheritance, reproduced with per-accept NODELAY kept as well — regressed keep-alive throughput ~18% (c400: 372-385k -&gt; 305-310k, three interleaved rounds). Setting TCP_NODELAY on the listening socket changes the listener/SYN-ACK path enough to cost real throughput; per-accept setsockopt stays. TCP_QUICKACK was left untouched throughout (it is load-bearing for the #307 TLS handshake stall fix on the HTTPS path).</p>
-<h2><a class="anchor" id="autotoc_md362"></a>
+<h2><a class="anchor" id="autotoc_md366"></a>
 1.4 Time caching — ALREADY IMPLEMENTED</h2>
 <p>No <code>clock_gettime</code> syscalls appear in either profile: the hot paths use <code><a class="el" href="../../d2/d7d/writer__fast_8h.html#ab186943dcc3af4dc992c0dcbd5ddbe0c" title="Fast monotonic clock in seconds (vDSO coarse where available).">cwist_fast_monotonic_sec()</a></code> (<a class="el" href="../../d5/d23/writer__fast_8c.html">src/net/http/writer_fast.c</a>:200) which uses <code>CLOCK_MONOTONIC_COARSE</code>, resolved through the vDSO without entering the kernel. Nothing to cache.</p>
-<h1><a class="anchor" id="autotoc_md363"></a>
+<h1><a class="anchor" id="autotoc_md367"></a>
 What the profile says to do instead (ranked)</h1>
 <ol type="1">
 <li><b>Zero-syscall response write (serialization-adjacent, biggest count).</b> <code>sendmsg</code> is exactly 1 per request — 1.19M calls in a 10 s c400 run, the largest syscall count by two orders of magnitude. The SQPOLL send ring already exists (<code>cwist_io_uring_sqpoll_send</code>, <a class="el" href="../../da/d44/uring__sqpoll_8c.html">src/sys/io/uring_sqpoll.c</a>) and is only probed, never used. Wiring the coalesced <code>obuf</code> flush (<a class="el" href="../../dd/d43/http_8c.html" title="Core HTTP request/response allocation, serialization, socket, and server-loop helpers.">src/net/http/http.c</a>:3368) to an IORING_OP_SEND SQE removes one syscall per request, but requires: a completion-queue reader, obuf lifetime extension until CQE (obuf is reused across keep-alive requests today), and response/close ordering. That is a serialization-path change (issue #297 section 2.3 territory) and needs its own branch + gate.</li>
@@ -177,7 +177,7 @@ What the profile says to do instead (ranked)</h1>
 <li><b>SQPOLL reactor ring (#297 1.2 proper).</b> Requires timerfd timers and a shutdown nudge; eliminates the deferred-batch flush enters (~0.025/req today, so the ceiling is small unless (1) lands and the ring carries sends too).</li>
 <li><b>Accept path: leave as is.</b> accept4 is ~0 per request at keep-alive and the multishot alternative measured strictly worse.</li>
 </ol>
-<h1><a class="anchor" id="autotoc_md364"></a>
+<h1><a class="anchor" id="autotoc_md368"></a>
 Method notes</h1>
 <ul>
 <li>strace counts under <code>-f</code> follow all worker processes; absolute rps under strace is ~2-4x depressed, so only counts and unstraced wrk/ab numbers are reported as measurements.</li>

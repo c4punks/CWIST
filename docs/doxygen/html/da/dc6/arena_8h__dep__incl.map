@@ -6,10 +6,10 @@
 <area shape="poly" id="edge52_Node000001_Node000030" title=" " alt="" coords="8243,59,8262,188,8256,189,8237,60"/>
 <area shape="rect" id="Node000038" href="$dd/d7f/query_8c.html" title="Hash&#45;map based storage and parsing helpers for URL query parameters." alt="" coords="8354,189,8501,214"/>
 <area shape="poly" id="edge53_Node000001_Node000038" title=" " alt="" coords="8254,56,8280,94,8313,131,8358,164,8402,186,8399,191,8355,168,8310,135,8276,97,8250,59"/>
-<area shape="rect" id="Node000071" href="$de/d6c/arena_8c.html" title="Request&#45;scoped arena allocator built on libttak arena generations." alt="" coords="8323,101,8486,126"/>
-<area shape="poly" id="edge48_Node000001_Node000071" title=" " alt="" coords="8286,49,8383,98,8381,103,8284,54"/>
-<area shape="rect" id="Node000072" href="$df/dcd/async__gc_8h.html" title=" " alt="" coords="8001,101,8173,126"/>
-<area shape="poly" id="edge49_Node000001_Node000072" title=" " alt="" coords="8192,55,8108,103,8106,98,8190,50"/>
+<area shape="rect" id="Node000074" href="$de/d6c/arena_8c.html" title="Request&#45;scoped arena allocator built on libttak arena generations." alt="" coords="8323,101,8486,126"/>
+<area shape="poly" id="edge48_Node000001_Node000074" title=" " alt="" coords="8286,49,8383,98,8381,103,8284,54"/>
+<area shape="rect" id="Node000075" href="$df/dcd/async__gc_8h.html" title=" " alt="" coords="8001,101,8173,126"/>
+<area shape="poly" id="edge49_Node000001_Node000075" title=" " alt="" coords="8192,55,8108,103,8106,98,8190,50"/>
 <area shape="rect" id="Node000003" href="$d2/db5/db_8c.html" title="SQLite convenience wrappers plus lightweight heuristics for query execution and JSON healing." alt="" coords="5623,189,5747,214"/>
 <area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="4402,114,5011,136,5357,155,5501,166,5610,179,5646,186,5645,191,5610,184,5501,171,5357,160,5011,141,4402,120"/>
 <area shape="rect" id="Node000004" href="$d0/d14/nuke__db_8c.html" title="In&#45;memory SQLite mirroring layer that can fall back to disk under memory pressure." alt="" coords="5771,189,5934,214"/>
@@ -100,6 +100,6 @@
 <area shape="poly" id="edge46_Node000002_Node000047" title=" " alt="" coords="4402,116,4746,138,4966,156,5189,179,5202,180,5201,186,5188,184,4966,161,4745,143,4402,121"/>
 <area shape="rect" id="Node000048" href="$df/db2/ws__utils_8c.html" title="Small SHA&#45;1 and Base64 helpers used by the WebSocket handshake path." alt="" coords="5437,181,5599,221"/>
 <area shape="poly" id="edge47_Node000002_Node000048" title=" " alt="" coords="4403,113,4587,118,4841,129,5131,148,5425,179,5438,180,5437,186,5424,184,5131,153,4841,134,4587,123,4403,118"/>
-<area shape="poly" id="edge50_Node000072_Node000027" title=" " alt="" coords="8052,134,7934,191,7932,186,8050,130"/>
-<area shape="poly" id="edge51_Node000072_Node000039" title=" " alt="" coords="8090,140,8090,188,8085,188,8085,140"/>
+<area shape="poly" id="edge50_Node000075_Node000027" title=" " alt="" coords="8052,134,7934,191,7932,186,8050,130"/>
+<area shape="poly" id="edge51_Node000075_Node000039" title=" " alt="" coords="8090,140,8090,188,8085,188,8085,140"/>
 </map>
