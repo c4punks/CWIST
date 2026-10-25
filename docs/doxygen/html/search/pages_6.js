@@ -39,7 +39,7 @@ var searchData=
   ['cwist_20emscripten_36',['WASM 위의 CWIST (Emscripten)',['../d2/d56/md_docs_2ko_2api_2wasm.html',1,'']]],
   ['cwist_20library_20reference_37',['CWIST Library Reference',['../da/dca/md_docs_2REFERENCE.html',1,'']]],
   ['cwist_20on_20the_20wasm_20component_20model_38',['CWIST on the WASM component model',['../d8/d77/md_docs_2api_2wasm-component.html',1,'']]],
-  ['cwist_20on_20wasm_20emscripten_39',['CWIST on WASM (Emscripten)',['../d5/d0e/md_docs_2api_2wasm.html',1,'']]],
+  ['cwist_20on_20wasm_20legacy_20emscripten_39',['CWIST on WASM (Legacy Emscripten)',['../d5/d0e/md_docs_2api_2wasm.html',1,'']]],
   ['cwist_20web_20development_20tutorial_20a_20to_20z_40',['CWIST Web Development Tutorial (A to Z)',['../dd/d4c/md_docs_2tutorial_2cwist__tutorial.html',1,'']]],
   ['cwist_5ftls_41',['Pluggable TLS backend (CWIST_TLS)',['../d9/dda/md_docs_2performance_2tls-backends.html',1,'']]]
 ];

@@ -110,7 +110,11 @@ $(document).ready(function(){initNavTree('da/d58/deprecated.html','../../'); ini
 <div class="contents">
 <div class="textblock"><dl class="reflist">
 <dt>Member <a class="el" href="../../de/daf/http3_8c.html#af2f0b7cd7be74f6592ce2e2f99968242">cwist_http3_set_stream_priority</a>  (<a class="el" href="../../dd/d68/structcwist__http__request.html">cwist_http_request</a> *req, unsigned priority)</dt>
-<dd><a class="anchor" id="_deprecated000001"></a>Do NOT call this on a request stream. lsquic implements it by emitting a PRIORITY_UPDATE frame on the control stream, which violates RFC 9218 (PRIORITY_UPDATE is only valid for streams the client opened). Strict HTTP/3 stacks (Firefox/neqo) abort the whole connection with H3_FRAME_UNEXPECTED (0x105), surfacing in the browser as a network protocol error. Express response priority with the <code>Priority</code> response header (RFC 9218) instead.</dd>
+<dd><a class="anchor" id="_deprecated000001"></a>Do NOT call this on a request stream. lsquic implements it by emitting a PRIORITY_UPDATE frame on the control stream, which violates RFC 9218 (PRIORITY_UPDATE is only valid for streams the client opened). Strict HTTP/3 stacks (Firefox/neqo) abort the whole connection with H3_FRAME_UNEXPECTED (0x105), surfacing in the browser as a network protocol error. Express response priority with the <code>Priority</code> response header (RFC 9218) instead. </dd>
+<dt>File <a class="el" href="../../d1/d4f/typedarray_8h.html">typedarray.h</a>  </dt>
+<dd><a class="anchor" id="_deprecated000002"></a>The Emscripten browser bundle has been superseded by the WASI component pipeline (issue #203). For new code, build for wasm32-wasip2 using the component pipeline. This header and its functions are retained for v4 LTS ABI compatibility. </dd>
+<dt>File <a class="el" href="../../d9/d60/wasm__entry_8h.html">wasm_entry.h</a>  </dt>
+<dd><a class="anchor" id="_deprecated000003"></a>The Emscripten browser bundle has been superseded by the WASI component pipeline (issue #203). For new code, build for wasm32-wasip2 using <a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">CWIST_WASM_COMPONENT_DEFINE_GUEST()</a> from &lt;<a class="el" href="../../d2/dce/wasm__component_8h.html" title="WASI component-model helpers for CWIST guest apps (issue #203).">cwist/wasm/wasm_component.h</a>&gt;. This header and its functions are retained for v4 LTS ABI compatibility.</dd>
 </dl>
 </div></div><!-- contents -->
 </div><!-- PageDoc -->

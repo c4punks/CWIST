@@ -109,12 +109,14 @@ $(document).ready(function(){initNavTree('d1/d4f/typedarray_8h.html','../../'); 
 </div><!--header-->
 <div class="contents">
 
-<p>Emscripten-only zero-copy helpers: expose C arrays and in-memory dispatch responses to JS as TypedArray views over the WASM heap, instead of round-tripping through snprintf/JSON.  
+<p>(Deprecated) Legacy Emscripten zero-copy helpers.  
 <a href="#details">More...</a></p>
 
 <p><a href="../../d1/d4f/typedarray_8h_source.html">Go to the source code of this file.</a></p>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
-<div class="textblock"><p>Emscripten-only zero-copy helpers: expose C arrays and in-memory dispatch responses to JS as TypedArray views over the WASM heap, instead of round-tripping through snprintf/JSON. </p>
+<div class="textblock"><p>(Deprecated) Legacy Emscripten zero-copy helpers. </p>
+<dl class="deprecated"><dt><b><a class="el" href="../../da/d58/deprecated.html#_deprecated000002">Deprecated:</a></b></dt><dd>The Emscripten browser bundle has been superseded by the WASI component pipeline (issue #203). For new code, build for wasm32-wasip2 using the component pipeline. This header and its functions are retained for v4 LTS ABI compatibility.</dd></dl>
+<p>Emscripten-only zero-copy helpers: expose C arrays and in-memory dispatch responses to JS as TypedArray views over the WASM heap, instead of round-tripping through snprintf/JSON.</p>
 <p>This header is a deliberate no-op on native toolchains: every definition is guarded by <b>EMSCRIPTEN</b>, so including it from shared code is safe.</p>
 <p>JS side, once per module: </p><div class="fragment"><div class="line"><a class="code hl_variable" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">cwist_wasm_install_views</a>();            <span class="comment">// C, from main() — installs:</span></div>
 <div class="line"><a class="code hl_variable" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">Module</a>.cwistView.u8(ptr, len)          <span class="comment">//   -&gt; Uint8Array view</span></div>

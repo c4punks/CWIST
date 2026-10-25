@@ -108,13 +108,13 @@ $(document).ready(function(){initNavTree('d8/d77/md_docs_2api_2wasm-component.ht
   <div class="headertitle"><div class="title">CWIST on the WASM component model</div></div>
 </div><!--header-->
 <div class="contents">
-<div class="textblock"><p><a class="anchor" id="autotoc_md204"></a> <b>Status:</b> experimental (issue #203, v3.7 Phase 1; v3.8 defers the production switch to v4.0). The supported browser path remains the Emscripten bundle (<code><a class="el" href="../../dd/d12/api_2wasm_8md.html">docs/api/wasm.md</a></code>); this document describes the component pipeline that is slated to replace it once the WASI 0.3 world and unflagged JSPI are usable end to end.</p>
+<div class="textblock"><p><a class="anchor" id="autotoc_md204"></a> <b>Status:</b> supported (issue #203). The WASI component pipeline is the standard WebAssembly path for CWIST in browsers (via jco transpilation), service workers, Node, and edge runtimes. The legacy Emscripten build has been retired.</p>
 <h1><a class="anchor" id="autotoc_md205"></a>
 Why</h1>
 <p>v3.6 shipped three WASM flavors: the Emscripten browser bundle (supported), a WASI preview1 smoke (retired by this work; WASI 0.2 covers its use), and the WASI 0.2 socket server (<code><a class="el" href="../../d6/da1/api_2wasi_8md.html">docs/api/wasi.md</a></code>). Three toolchains cost more than they earn, and the Emscripten path carries operational friction: a heavy emsdk, version-sensitive glue, and the EM_JS formatting incident (#176). The end state is one pipeline: compile with wasi-sdk, run anywhere, browsers via a jco-transpiled JS bundle, edge runtimes via wasmtime.</p>
 <h1><a class="anchor" id="autotoc_md206"></a>
 The boundary</h1>
-<p><code>wit/cwist.wit</code> defines <code>world cwist-guest</code>, the component-model counterpart of <code><a class="el" href="../../d9/d60/wasm__entry_8h.html" title="Standard WASM entry points the cwist-wasm JS wrapper calls.">include/cwist/wasm/wasm_entry.h</a></code>:</p>
+<p><code>wit/cwist.wit</code> defines <code>world cwist-guest</code>, the component-model counterpart of <code><a class="el" href="../../d9/d60/wasm__entry_8h.html" title="(Deprecated) Legacy Emscripten WASM entry points.">include/cwist/wasm/wasm_entry.h</a></code>:</p>
 <ul>
 <li><code>dispatch(request: list&lt;u8&gt;) -&gt; result&lt;list&lt;u8&gt;, dispatch-error&gt;</code>: serialized HTTP/1.1 in and out, exactly what <code>_cwist_wasm_dispatch</code> handles today. The app-side parser needs no changes.</li>
 <li><code>use-session(secret: option&lt;string&gt;)</code>: host-injected session signing secret, same contract as <code>_cwist_wasm_use_session</code>.</li>
@@ -161,7 +161,7 @@ Stages</h1>
 <li><p class="startli"><b>0.3 cutover (conditional).</b> Both preconditions held up under evaluation and the streaming boundary has landed in <code>cwist-guest-stream</code>, with a JS entry point in the npm adapter (<code>handle.stream()</code>, the counterpart of <code>Module.cwistStreamChunk</code> on the Emscripten path). Remaining before the cutover: track JSPI shipping unflagged in node and browsers, and port the SSE examples off the EM_JS callback. Only then does the Emscripten build leave CI.</p>
 <p class="startli">Status checked 2026-10-20:</p><ul>
 <li>JSPI is still flagged in node. With Node v24.16.0 (<code>node --version</code>), <code>WebAssembly.promising</code> and <code>WebAssembly.Suspending</code> are undefined without <code>--experimental-wasm-jspi</code> and defined with it. The 0.3 smoke targets still pass that flag. Browser JSPI was not checked.</li>
-<li>No example under <code>example/</code> calls the EM_JS chunk callback or <code><a class="el" href="../../d0/d77/sys_2app_2app_8h.html#a60ffdd2b16922c6cb25d22bc9e164208" title="Like cwist_app_dispatch_memory(), but streams the serialized response through write_fn instead of ret...">cwist_app_dispatch_stream()</a></code>. The callback is defined in <code><a class="el" href="../../d9/d60/wasm__entry_8h.html" title="Standard WASM entry points the cwist-wasm JS wrapper calls.">include/cwist/wasm/wasm_entry.h</a></code>, so there is no example port to do yet. Stage 3 stays open until the flag condition changes.</li>
+<li>No example under <code>example/</code> calls the EM_JS chunk callback or <code><a class="el" href="../../d0/d77/sys_2app_2app_8h.html#a60ffdd2b16922c6cb25d22bc9e164208" title="Like cwist_app_dispatch_memory(), but streams the serialized response through write_fn instead of ret...">cwist_app_dispatch_stream()</a></code>. The callback is defined in <code><a class="el" href="../../d9/d60/wasm__entry_8h.html" title="(Deprecated) Legacy Emscripten WASM entry points.">include/cwist/wasm/wasm_entry.h</a></code>, so there is no example port to do yet. Stage 3 stays open until the flag condition changes.</li>
 </ul>
 </li>
 </ol>

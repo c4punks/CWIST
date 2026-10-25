@@ -13,7 +13,7 @@ var searchData=
   ['olen_10',['olen',['../db/d8a/structcwist__http__async__conn.html#a9b96713b430493a686e80bb0377f6200',1,'cwist_http_async_conn']]],
   ['on_20a_20single_20host_11',['Scaling past the gate on a single host',['../d0/d49/md_docs_2performance_2https-c100k.html#autotoc_md723',1,'']]],
   ['on_20the_20wasm_20component_20model_12',['CWIST on the WASM component model',['../d8/d77/md_docs_2api_2wasm-component.html',1,'']]],
-  ['on_20wasm_20emscripten_13',['CWIST on WASM (Emscripten)',['../d5/d0e/md_docs_2api_2wasm.html',1,'']]],
+  ['on_20wasm_20legacy_20emscripten_13',['CWIST on WASM (Legacy Emscripten)',['../d5/d0e/md_docs_2api_2wasm.html',1,'']]],
   ['on_5fcancel_14',['on_cancel',['../d6/d48/structcwist__http2__stream__hooks.html#add07e70d2ceb39d13ccd204622ba86ef',1,'cwist_http2_stream_hooks']]],
   ['on_5fclose_15',['on_close',['../d6/d48/structcwist__http2__stream__hooks.html#a9c603592b065e5c3ff213ae36cca0690',1,'cwist_http2_stream_hooks']]],
   ['on_5fconn_5fclose_16',['on_conn_close',['../d6/d48/structcwist__http2__stream__hooks.html#aec3bf56a54cf3b4dd1d1ad5ff0c942da',1,'cwist_http2_stream_hooks']]],
