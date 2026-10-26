@@ -1340,6 +1340,7 @@ TEST_TARGETS = test_worker_affinity \
                test_rate_limit \
                test_rate_limit_redis \
                test_redis_timeout \
+               test_redis_frame \
                test_cache \
                test_bdr \
                test_bdr_cache \
@@ -1903,6 +1904,12 @@ test_rate_limit_redis: $(LIB_NAME) tests/test_rate_limit_redis.c
 
 test_redis_timeout: $(LIB_NAME) tests/test_redis_timeout.c
 	$(CC) $(CFLAGS) -o $@ tests/test_redis_timeout.c $(LIB_NAME) $(LIBS)
+	./$@
+
+src/net/redis/cwist_redis.o: src/net/redis/redis_frame_internal.h
+
+test_redis_frame: tests/test_redis_frame.c src/net/redis/redis_frame_internal.h
+	$(CC) $(CFLAGS) -o $@ tests/test_redis_frame.c
 	./$@
 
 .PHONY: redis-rate-limit-e2e

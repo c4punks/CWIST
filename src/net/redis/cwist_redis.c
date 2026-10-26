@@ -4,6 +4,7 @@
  */
 #define _POSIX_C_SOURCE 200809L
 #include <cwist/net/redis/cwist_redis.h>
+#include "redis_frame_internal.h"
 #include <cwist/core/mem/alloc.h>
 #include <cwist/core/sstring/sstring.h>
 #include <cwist/sys/err/cwist_err.h>
@@ -1325,15 +1326,6 @@ static size_t redis_digits(size_t v) {
     return n;
 }
 
-/** Write @p v as decimal ASCII into @p dst using exactly redis_digits(v) bytes. */
-static void redis_write_u(size_t v, char *dst) {
-    size_t n = redis_digits(v);
-    for (size_t i = n; i > 0; i--) {
-        dst[i - 1] = (char)('0' + (v % 10));
-        v /= 10;
-    }
-}
-
 /** Validate argv and compute the exact RESP frame size without touching any
  * argument bytes. @return 0 or -EINVAL (bad pointer/length, size limits). */
 static int redis_frame_size(size_t argc, const void *const *argv, const size_t *argv_lens,
@@ -1350,39 +1342,6 @@ static int redis_frame_size(size_t argc, const void *const *argv, const size_t *
     }
     *out = total;
     return 0;
-}
-
-/** Encode argv into @p frame (sized by redis_frame_size()). */
-static void redis_frame_fill(char *frame, size_t frame_len, size_t argc, const void *const *argv,
-                             const size_t *argv_lens) {
-    char *p = frame;
-    char *end = frame + frame_len;
-
-    size_t n = redis_digits(argc);
-    if ((size_t)(end - p) < 1 + n + 2) return;
-    *p++ = '*';
-    redis_write_u(argc, p);
-    p += n;
-    memcpy(p, "\r\n", 2);
-    p += 2;
-
-    for (size_t i = 0; i < argc; i++) {
-        size_t len = argv_lens[i];
-        n = redis_digits(len);
-        if ((size_t)(end - p) < 1 + n + 2 + len + 2) return;
-
-        *p++ = '$';
-        redis_write_u(len, p);
-        p += n;
-        memcpy(p, "\r\n", 2);
-        p += 2;
-
-        if (len) memcpy(p, argv[i], len);
-        p += len;
-
-        memcpy(p, "\r\n", 2);
-        p += 2;
-    }
 }
 
 typedef struct redis_timed_parse {
@@ -1518,7 +1477,11 @@ cwist_error_t cwist_redis_pool_command_argv_reply_timeout(cwist_redis_pool_t *po
     if (rc != 0) return redis_code_error(rc);
     char *frame = cwist_malloc(frame_len + 1);
     if (!frame) return redis_code_error(-ENOMEM);
-    redis_frame_fill(frame, frame_len + 1, argc, argv, argv_lens);
+    rc = redis_frame_fill(frame, frame_len + 1, argc, argv, argv_lens);
+    if (rc != 0) {
+        cwist_free(frame);
+        return redis_code_error(rc);
+    }
 
     cwist_redis_t *r = NULL;
     rc = redis_pool_acquire_deadline(pool, deadline, &r);
