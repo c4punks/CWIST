@@ -1,6 +1,5 @@
 var searchData=
 [
-  ['http_5fpark_5fbodyref_0',['HTTP_PARK_BODYREF',['../dd/d43/http_8c.html#a99fb83031ce9923c84392b4e92f956b5abcb8c079abc0b33b8fff639556be0fce',1,'http.c']]],
-  ['http_5fpark_5ffile_1',['HTTP_PARK_FILE',['../dd/d43/http_8c.html#a99fb83031ce9923c84392b4e92f956b5a72c5cd8707db73faccc4666af62c3d9f',1,'http.c']]],
-  ['http_5fpark_5finline_2',['HTTP_PARK_INLINE',['../dd/d43/http_8c.html#a99fb83031ce9923c84392b4e92f956b5a5ce410224b056a2f00a5d750956d4a1c',1,'http.c']]]
+  ['gql_5fop_5fmutation_0',['GQL_OP_MUTATION',['../dd/d92/graphql_8c.html#ac46b8a6639c5677c326f2dd5d2ffe737a57d16abc77fd32fb079fc86a9af5d18d',1,'graphql.c']]],
+  ['gql_5fop_5fquery_1',['GQL_OP_QUERY',['../dd/d92/graphql_8c.html#ac46b8a6639c5677c326f2dd5d2ffe737ad2747d22ef2b2aab0da35e6a07b9e048',1,'graphql.c']]]
 ];

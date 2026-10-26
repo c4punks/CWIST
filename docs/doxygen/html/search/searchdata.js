@@ -6,8 +6,8 @@ var indexSectionsWithContent =
   3: "_bcghmqs",
   4: "abcdefghijklmnopqrstuvw",
   5: "_abceghjnoqrsw",
-  6: "acgjq",
-  7: "aceghjq",
+  6: "acfgjq",
+  7: "acefghjq",
   8: "_abcdeghklmnopqrstuw",
   9: "01235abcdefghijklmnopqrstuvwz개게계공기깨대데동라런레리릴만명모무묶문미방배버범벤보복블비빌사서선설소알앱에엔연영예원웹위응이자작재지참측캐컴코쿠쿼큐튜파풀프필한핸현협회후히"
 };

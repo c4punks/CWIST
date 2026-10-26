@@ -246,8 +246,8 @@ var NAVTREEINDEX4 =
 "d3/d99/reactor_8c.html#aefb0dd23945bafb2f325dec2eac17f74":[91,0,2,4,3,4,13],
 "d3/d99/reactor_8c.html#aff14d90bc843e993808c68cf41c3cad2":[91,0,2,4,3,4,5],
 "d3/d99/reactor_8c_source.html":[91,0,2,4,3,4],
-"d3/da3/wasi_8h.html":[91,0,1,0,4,10],
-"d3/da3/wasi_8h_source.html":[91,0,1,0,4,10],
+"d3/da3/wasi_8h.html":[91,0,1,0,4,11],
+"d3/da3/wasi_8h_source.html":[91,0,1,0,4,11],
 "d3/dac/structbdr__blob__t.html":[90,0,1],
 "d3/dac/structbdr__blob__t.html#a2301f726c92f30460786adffd347a75c":[90,0,1,0]
 };

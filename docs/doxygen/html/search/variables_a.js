@@ -1,6 +1,6 @@
 var searchData=
 [
-  ['keep_5falive_0',['keep_alive',['../dd/d68/structcwist__http__request.html#ad08e696b64981dd3886f3af37832a6e0',1,'cwist_http_request::keep_alive'],['../dd/d22/structcwist__http__response.html#a36505e8264c8426a8d0bcfb9444fab0a',1,'cwist_http_response::keep_alive']]],
+  ['keep_5falive_0',['keep_alive',['../dd/d68/structcwist__http__request.html#ad08e696b64981dd3886f3af37832a6e0',1,'cwist_http_request::keep_alive'],['../dd/d22/structcwist__http__response.html#a36505e8264c8426a8d0bcfb9444fab0a',1,'cwist_http_response::keep_alive'],['../d5/d41/structcwist__lwip__config.html#a1d4060b5f4d7af499001608aa7a9f366',1,'cwist_lwip_config::keep_alive']]],
   ['kek_1',['kek',['../dc/d2b/structcwist__db__crypt__ctx__t.html#a0b3dc3ba33e220c07834a5a71da6247d',1,'cwist_db_crypt_ctx_t']]],
   ['kern_5flast_5fmono_5fns_2',['kern_last_mono_ns',['../db/d8a/structcwist__http__async__conn.html#aa9a37cba9773d5df7ed57fe803484e21',1,'cwist_http_async_conn']]],
   ['kern_5fvalid_3',['kern_valid',['../db/d8a/structcwist__http__async__conn.html#a05cb78ef3a88e86995a786cd1b8451c1',1,'cwist_http_async_conn']]],
