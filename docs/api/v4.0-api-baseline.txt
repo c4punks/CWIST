@@ -4,7 +4,7 @@
 # (parameter names dropped) and struct/union/enum layouts in member order.
 # `make api-check` (CI) fails when the headers no longer match this file.
 
-== functions (783) ==
+== functions (787) ==
 cwist_accept_socket
 cwist_alloc
 cwist_alloc_array
@@ -502,6 +502,10 @@ cwist_logger_log
 cwist_logger_set_colors
 cwist_logger_set_level
 cwist_logger_warn
+cwist_lwip_active_connections
+cwist_lwip_close
+cwist_lwip_config_init
+cwist_lwip_listen
 cwist_make_socket_ipv4
 cwist_malloc
 cwist_malloc_shim
@@ -789,7 +793,7 @@ cwist_zod_parse
 cwist_zod_print_errors
 cwist_zod_validate
 
-== function signatures (784) ==
+== function signatures (788) ==
 cwist_accept_socket: cwist_error_t (int, struct sockaddr *, void (*)(int client_fd, void *ctx), void *)
 cwist_alloc: void * (size_t)
 cwist_alloc_array: void * (size_t, size_t)
@@ -1288,6 +1292,10 @@ cwist_logger_log: void (cwist_logger *, cwist_log_level_t, const char *, ...)
 cwist_logger_set_colors: void (cwist_logger *, bool)
 cwist_logger_set_level: void (cwist_logger *, cwist_log_level_t)
 cwist_logger_warn: void (cwist_logger *, const char *, ...)
+cwist_lwip_active_connections: size_t (const cwist_lwip_server *)
+cwist_lwip_close: void (cwist_lwip_server *)
+cwist_lwip_config_init: void (cwist_lwip_config *)
+cwist_lwip_listen: cwist_lwip_server * (cwist_app *, const cwist_lwip_config *)
 cwist_make_socket_ipv4: int (struct sockaddr_in *, const char *, uint16_t, uint16_t)
 cwist_malloc: void * (size_t)
 cwist_malloc_shim: void * (size_t)
@@ -1599,7 +1607,7 @@ cwist_wasm_component_dispose: void (void *)
 cwist_wasm_dispatch_memory: const char * (cwist_app *, const char *, size_t, size_t *)
 cwist_wasm_free: void (void *)
 
-== types (struct/union/enum names) (153) ==
+== types (struct/union/enum names) (155) ==
 __natsConnection
 __prim_cwist_error_t
 bdr_blob_t
@@ -1688,6 +1696,8 @@ cwist_json_builder
 cwist_jwt_chunk
 cwist_jwt_claims
 cwist_logger
+cwist_lwip_config
+cwist_lwip_server
 cwist_metric
 cwist_metric_id
 cwist_metric_type
@@ -1754,7 +1764,7 @@ cwist_zod_result
 quic_conn_fc
 quic_stream_fc
 
-== typedefs (207) ==
+== typedefs (209) ==
 __prim_cwist_error_t
 bdr_blob_t
 bdr_entry_t
@@ -1868,6 +1878,8 @@ cwist_jwt_claims
 cwist_log_format_t
 cwist_log_level_t
 cwist_logger
+cwist_lwip_config
+cwist_lwip_server
 cwist_macro_log_level_t
 cwist_metric_id_t
 cwist_metric_t

@@ -536,6 +536,13 @@ wasip2-smoke: $(WASIP2_ARCHIVE)
 clean-wasip2:
 	rm -rf .wasip2-build libcwist_wasip2_*.a wasip2_smoke.wasm wasm_abi_layout.wasm
 
+# --- lwIP (vendored for the adapter tests, issue #447 Phase 3) ---------------------
+# The core and IPv4 sources; tests/lwip/lwipopts.h turns off what the adapter
+# tests do not use, so the extra files compile to nothing.
+LWIP_DIR = lib/lwip
+LWIP_CORE_SRCS = $(wildcard $(LWIP_DIR)/src/core/*.c $(LWIP_DIR)/src/core/ipv4/*.c)
+LWIP_TEST_INCLUDES = -Itests/lwip -I$(LWIP_DIR)/src/include
+
 # --- Bare metal (arm-none-eabi / Cortex-M, issue #447) -------------------------
 # The WASI core (WASM_SRCS + WASIP2_EXTRA_SRCS) minus sqlite/db, the test
 # client and the WASI compat layer, built for a single-threaded firmware on
@@ -584,9 +591,22 @@ $(BAREMETAL_HELLO): $(BAREMETAL_ARCHIVE) tests/baremetal/hello.c tests/baremetal
 	    tests/baremetal/hello.c tests/baremetal/board.c $(BAREMETAL_ARCHIVE) -lm
 	$(BAREMETAL_CROSS)size $@
 
-baremetal-smoke: $(BAREMETAL_HELLO)
+# The lwIP adapter on Cortex-M: CWIST + src/sys/port/lwip.c + the vendored
+# lwIP core (tests/lwip/lwipopts.h), client and server over loopback.
+BAREMETAL_LWIP_SRCS = tests/baremetal/hello_lwip.c tests/baremetal/board.c src/sys/port/lwip.c \
+	tests/lwip/loop_client.c $(LWIP_CORE_SRCS)
+$(BAREMETAL_BUILD_DIR)/hello-lwip.elf: $(BAREMETAL_ARCHIVE) $(BAREMETAL_LWIP_SRCS) tests/baremetal/stm32h743.ld \
+	    tests/lwip/lwipopts.h tests/lwip/arch/cc.h tests/lwip/loop_client.h include/cwist/sys/port/lwip.h
+	$(BAREMETAL_CROSS)gcc $(BAREMETAL_CFLAGS) $(LWIP_TEST_INCLUDES) -DBOARD_QEMU_USER -nostartfiles \
+	    --specs=nosys.specs -T tests/baremetal/stm32h743.ld -Wl,--gc-sections \
+	    -Wl,--no-warn-rwx-segments -Wl,-Map=$(@:.elf=.map) -o $@ \
+	    $(BAREMETAL_LWIP_SRCS) $(BAREMETAL_ARCHIVE) -lm
+	$(BAREMETAL_CROSS)size $@
+
+baremetal-smoke: $(BAREMETAL_HELLO) $(BAREMETAL_BUILD_DIR)/hello-lwip.elf
 	$(QEMU_ARM) -cpu cortex-m7 $(BAREMETAL_BUILD_DIR)/hello.elf
 	$(QEMU_ARM) -cpu cortex-m7 $(BAREMETAL_BUILD_DIR)/hello-rtc.elf
+	$(QEMU_ARM) -cpu cortex-m7 $(BAREMETAL_BUILD_DIR)/hello-lwip.elf
 
 clean-baremetal:
 	rm -rf $(BAREMETAL_BUILD_DIR) $(BAREMETAL_ARCHIVE)
@@ -1264,6 +1284,7 @@ TEST_TARGETS = test_worker_affinity \
                test_seq_auth \
                test_sha256 \
                test_baremetal_port \
+               test_lwip_adapter \
                test_error \
                test_middleware_jwt \
                test_inline_exports \
@@ -1578,6 +1599,14 @@ test_seq_auth: $(LIB_NAME) tests/test_seq_auth.c
 
 test_sha256: tests/test_sha256.c include/cwist/core/crypto/sha256.h
 	$(CC) $(CFLAGS) -o $@ tests/test_sha256.c
+	./$@
+
+# lwIP adapter (src/sys/port/lwip.c) on the host: the vendored lwIP core in
+# NO_SYS mode with tests/lwip/lwipopts.h, client and server over loopback.
+test_lwip_adapter: $(LIB_NAME) tests/test_lwip_adapter.c src/sys/port/lwip.c include/cwist/sys/port/lwip.h \
+	    tests/lwip/loop_client.c tests/lwip/loop_client.h tests/lwip/lwipopts.h tests/lwip/arch/cc.h
+	$(CC) $(CFLAGS) $(LWIP_TEST_INCLUDES) -o $@ tests/test_lwip_adapter.c src/sys/port/lwip.c \
+	    tests/lwip/loop_client.c $(LWIP_CORE_SRCS) $(LIB_NAME) $(LIBS)
 	./$@
 
 # Bare-metal port layer on the host: siphash.c and baremetal_time.c built as
