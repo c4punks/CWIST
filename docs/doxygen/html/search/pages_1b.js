@@ -1,5 +1,25 @@
 var searchData=
 [
-  ['z_0',['z',['../df/df1/md_docs_2tutorial_2korean_2cwist__tutorial.html',1,'CWIST 웹 개발 튜토리얼 (A to Z)'],['../dd/d4c/md_docs_2tutorial_2cwist__tutorial.html',1,'CWIST Web Development Tutorial (A to Z)']]],
-  ['zero_20downtime_20restart_20via_20socket_20handoff_1',['Zero-downtime restart via socket handoff',['../d1/d54/md_docs_2deployment_2zero-downtime-restart.html',1,'']]]
+  ['wake_20up_20regression_2025_0',['io_uring posted-work wake-up regression (#25)',['../dd/d56/md_docs_2reactor-wakeup-regression.html',1,'']]],
+  ['wasi_20대상_1',['WASI 대상',['../d0/d3c/md_docs_2ko_2api_2wasi.html',1,'']]],
+  ['wasi_200_202_20예제_20배포하기_2',['Wasmtime으로 WASI 0.2 예제 배포하기',['../d1/dc3/md_docs_2ko_2deployment_2wasmtime-appliance.html',1,'']]],
+  ['wasi_200_202_20example_20with_20wasmtime_3',['Deploy the WASI 0.2 example with Wasmtime',['../db/de3/md_docs_2deployment_2wasmtime-appliance.html',1,'']]],
+  ['wasi_20targets_4',['WASI targets',['../d6/d26/md_docs_2api_2wasi.html',1,'']]],
+  ['wasm_20위의_20cwist_20emscripten_5',['WASM 위의 CWIST (Emscripten)',['../d2/d56/md_docs_2ko_2api_2wasm.html',1,'']]],
+  ['wasm_20컴포넌트_20모델_20위의_20cwist_6',['WASM 컴포넌트 모델 위의 CWIST',['../dd/d41/md_docs_2ko_2api_2wasm-component.html',1,'']]],
+  ['wasm_20component_20model_7',['CWIST on the WASM component model',['../d8/d77/md_docs_2api_2wasm-component.html',1,'']]],
+  ['wasm_20legacy_20emscripten_8',['CWIST on WASM (Legacy Emscripten)',['../d5/d0e/md_docs_2api_2wasm.html',1,'']]],
+  ['wasmtime으로_20wasi_200_202_20예제_20배포하기_9',['Wasmtime으로 WASI 0.2 예제 배포하기',['../d1/dc3/md_docs_2ko_2deployment_2wasmtime-appliance.html',1,'']]],
+  ['wasmtime_10',['Deploy the WASI 0.2 example with Wasmtime',['../db/de3/md_docs_2deployment_2wasmtime-appliance.html',1,'']]],
+  ['web_20development_20tutorial_20a_20to_20z_11',['CWIST Web Development Tutorial (A to Z)',['../dd/d4c/md_docs_2tutorial_2cwist__tutorial.html',1,'']]],
+  ['web_20server_20benchmark_20methodology_12',['Web Server Benchmark Methodology',['../d6/d42/md_docs_2webserver-benchmark.html',1,'']]],
+  ['websocket_20api_13',['websocket api',['../d7/dec/md_docs_2ko_2api_2websocket.html',1,'WebSocket API'],['../db/dc5/md_docs_2api_2websocket.html',1,'WebSocket API']]],
+  ['webtransport_20서버_20만들기_14',['CWIST로 WebTransport 서버 만들기',['../df/d10/md_docs_2ko_2tutorials_2webtransport-server.html',1,'']]],
+  ['webtransport_20server_20with_20cwist_15',['Build a WebTransport server with CWIST',['../d2/dcb/md_docs_2tutorials_2webtransport-server.html',1,'']]],
+  ['with_20cwist_16',['with cwist',['../d4/db0/md_docs_2tutorials_2blog-crud.html',1,'Build a CRUD blog with CWIST'],['../d2/dcb/md_docs_2tutorials_2webtransport-server.html',1,'Build a WebTransport server with CWIST'],['../da/d48/md_docs_2tutorials_2nats-integration.html',1,'Integrate NATS with CWIST']]],
+  ['with_20openapi_20and_20swagger_20ui_17',['Document an API with OpenAPI and Swagger UI',['../d6/d8e/md_docs_2tutorials_2openapi-swagger.html',1,'']]],
+  ['with_20wasmtime_18',['Deploy the WASI 0.2 example with Wasmtime',['../db/de3/md_docs_2deployment_2wasmtime-appliance.html',1,'']]],
+  ['work_20wake_20up_20regression_2025_19',['io_uring posted-work wake-up regression (#25)',['../dd/d56/md_docs_2reactor-wakeup-regression.html',1,'']]],
+  ['wrk_20원시_20보정_20지연_20히스토그램_20',['선택적 wrk 원시/보정 지연 히스토그램',['../d2/de4/md_docs_2ko_2performance_2wrk-dual-histogram.html',1,'']]],
+  ['wrk_20raw_20corrected_20latency_20histograms_21',['Opt-in wrk raw/corrected latency histograms',['../d1/dfd/md_docs_2performance_2wrk-dual-histogram.html',1,'']]]
 ];

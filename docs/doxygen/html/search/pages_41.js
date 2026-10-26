@@ -1,4 +1,4 @@
 var searchData=
 [
-  ['앱_20api_0',['프레임워크와 앱 API',['../da/dc3/md_docs_2ko_2api_2app.html',1,'']]]
+  ['알고리즘_20참고_20자료_0',['Mux 알고리즘 참고 자료',['../d4/d7c/md_docs_2ko_2references_2mux__algorithm__references.html',1,'']]]
 ];

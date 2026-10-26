@@ -1,4 +1,5 @@
 var searchData=
 [
-  ['후속_0',['Classic 풀의 버스트 기아 (#25 후속)',['../da/d07/md_docs_2ko_2classic-pool-starvation.html',1,'']]]
+  ['회귀_2025_0',['io_uring 게시 작업 깨우기 회귀 (#25)',['../dc/dd4/md_docs_2ko_2reactor-wakeup-regression.html',1,'']]],
+  ['회수_1',['Full GC: CWIST의 자동 자원 회수',['../d1/dde/md_docs_2ko_2GC.html',1,'']]]
 ];

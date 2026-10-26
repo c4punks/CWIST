@@ -1,5 +1,5 @@
 var searchData=
 [
-  ['컴포넌트_20모델_20위의_20cwist_0',['WASM 컴포넌트 모델 위의 CWIST',['../dd/d41/md_docs_2ko_2api_2wasm-component.html',1,'']]],
-  ['컴포넌트_20범위_20css_20프래그먼트와_20자산_1',['HTML 컴포넌트, 범위 CSS, 프래그먼트와 자산',['../d1/df9/md_docs_2ko_2api_2html.html',1,'']]]
+  ['캐싱_20복원하기_0',['ADR-0001: 명시적인 공개 FIXED 계약으로 HTTP 응답 캐싱 복원하기',['../d6/dda/md_docs_2ko_2decisions_20001-safe-public-fixed-response-cache.html',1,'']]],
+  ['캐싱_3a_20현재_20동작_1',['FIXED 엔드포인트 캐싱: 현재 동작',['../d7/dab/md_docs_2ko_2fixed-cache-status.html',1,'']]]
 ];

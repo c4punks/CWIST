@@ -1,5 +1,4 @@
 var searchData=
 [
-  ['회귀_2025_0',['io_uring 게시 작업 깨우기 회귀 (#25)',['../dc/dd4/md_docs_2ko_2reactor-wakeup-regression.html',1,'']]],
-  ['회수_1',['Full GC: CWIST의 자동 자원 회수',['../d1/dde/md_docs_2ko_2GC.html',1,'']]]
+  ['협력적_20큐잉_20이슈_2025_0',['C1M 리액터 묶음 비우기에서의 협력적 큐잉 (이슈 #25)',['../da/d90/md_docs_2ko_2cooperative-queuing.html',1,'']]]
 ];

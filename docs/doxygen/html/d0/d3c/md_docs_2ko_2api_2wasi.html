@@ -108,8 +108,8 @@ $(document).ready(function(){initNavTree('d0/d3c/md_docs_2ko_2api_2wasi.html','.
   <div class="headertitle"><div class="title">WASI 대상</div></div>
 </div><!--header-->
 <div class="contents">
-<div class="textblock"><p><a class="anchor" id="autotoc_md498"></a> WASI 0.2(<code>wasm32-wasip2</code>)가 지원되는 WASI 종류입니다. 실제 소켓을 바인딩하고 <code>wasi:sockets</code>로 HTTP를 제공하며, CI에서 <code>.github/workflows/wasm.yml</code>의 <code>wasip2</code> 작업(wasi-sdk 25 + wasmtime 25에서 <code>make wasip2-smoke</code>)이 관문 역할을 합니다. Preview1(<code>wasm32-wasi</code>)은 인메모리 디스패치 범위만 다루며 소켓 런타임이 없습니다. 특이 사항은 CWIST 쪽에서 처리합니다 (아래 참고).</p>
-<h1><a class="anchor" id="autotoc_md499"></a>
+<div class="textblock"><p><a class="anchor" id="autotoc_md503"></a> WASI 0.2(<code>wasm32-wasip2</code>)가 지원되는 WASI 종류입니다. 실제 소켓을 바인딩하고 <code>wasi:sockets</code>로 HTTP를 제공하며, CI에서 <code>.github/workflows/wasm.yml</code>의 <code>wasip2</code> 작업(wasi-sdk 25 + wasmtime 25에서 <code>make wasip2-smoke</code>)이 관문 역할을 합니다. Preview1(<code>wasm32-wasi</code>)은 인메모리 디스패치 범위만 다루며 소켓 런타임이 없습니다. 특이 사항은 CWIST 쪽에서 처리합니다 (아래 참고).</p>
+<h1><a class="anchor" id="autotoc_md504"></a>
 종류 감지</h1>
 <p><code>__wasi__</code>는 두 종류 모두에서 정의되지만 libc 능력이 크게 다르므로, CWIST는 sysroot가 실제로 제공하는 것을 기준으로 기능을 나눕니다 (<code><a class="el" href="../../d3/da3/wasi_8h.html" title="WASI target feature detection shared by all CWIST sources.">include/cwist/sys/wasi.h</a></code>).</p>
 <table class="markdownTable">
@@ -131,7 +131,7 @@ $(document).ready(function(){initNavTree('d0/d3c/md_docs_2ko_2api_2wasi.html','.
 <td class="markdownTableBodyNone">UDP / TLS   </td><td class="markdownTableBodyNone">-   </td><td class="markdownTableBodyNone">UDP는 선택; TLS는 링크되지 않음 (평문)   </td></tr>
 </table>
 <p>fork/신호/rlimit/스레드를 제외하는 가드는 그냥 <code>__wasi__</code>에 남고, 소켓 서버 런타임 주변의 가드는 <code><a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">CWIST_WASI_(NO_)</a>SOCKETS</code>를 기준으로 합니다.</p>
-<h1><a class="anchor" id="autotoc_md500"></a>
+<h1><a class="anchor" id="autotoc_md505"></a>
 WASI 0.2 소켓 서버</h1>
 <p>빌드, 배포, 재시작 전체 안내는 <a class="el" href="../../d1/dc3/md_docs_2ko_2deployment_2wasmtime-appliance.html">Wasmtime 어플라이언스 가이드</a>를 보세요. 예제의 네트워크와 영속성 한계도 설명합니다.</p>
 <p><code>make wasip2-smoke</code>는 <code>libcwist_wasip2.a</code>를 빌드합니다. 여기에는 <code>WASM_SRCS</code>와 함께 <code><a class="el" href="../../d0/d5b/compat_8c.html" title="WASI (preview1) compatibility stubs for server-only subsystems.">src/sys/wasi/compat.c</a></code>, <code><a class="el" href="../../db/d59/metrics_8c.html" title="Lock-free metrics registry and Prometheus exposition.">metrics.c</a></code>, <code><a class="el" href="../../d5/d23/writer__fast_8c.html">writer_fast.c</a></code>, <code><a class="el" href="../../db/d84/async_8c.html" title="Deferred-response (async handler) implementation.">async.c</a></code>, <code><a class="el" href="../../d7/df8/log_8c.html" title="Macro-based logging implementation.">src/core/log/log.c</a></code>, <code><a class="el" href="../../d8/d99/sys__info_8c.html" title="Cross-platform helpers for estimating available RAM and low-memory pressure.">src/sys/sys_info.c</a></code>, 그리고 서빙 경로가 끌어오는 libttak 단위(<code>net/lattice.c</code>, <code>net/mols_control.c</code>, <code>shared/shared.c</code>, <code>timing/deadline.c</code>, <code>mem/epoch.c</code>, <code>mem/mem.c</code>, <code>mem/fastpath.c</code>, <code>mem/owner.c</code>, <code>mem/abstract.c</code>)가 들어갑니다. 그다음 다음 명령으로 <code>tests/wasip2_smoke.c</code>를 실행합니다.</p>
@@ -149,20 +149,20 @@ WASI 0.2 소켓 서버</h1>
 <li>대기 쓰기/비동기 경로가 링크 시점에 참조하는 리액터 진입점은 <code><a class="el" href="../../d0/d5b/compat_8c.html" title="WASI (preview1) compatibility stubs for server-only subsystems.">src/sys/wasi/compat.c</a></code>의 평범한 C 스텁입니다. 그 파일의 metrics와 writer-fast 스텁은 실제 단위가 wasip2 빌드에 들어오므로 preview1 전용입니다.</li>
 <li>요청 처리 호출 체인은 스택을 96KB 가까이까지 씁니다. 이는 wasm-ld의 기본값 64KB를 넘으며, 넘침은 트랩되지 않고 선형 메모리를 조용히 손상시킵니다. wasip2 바이너리는 더 큰 스택으로 링크하세요 (<code>-Wl,-z,stack-size=...</code>, Makefile의 <code>WASIP2_STACK_BYTES</code>).</li>
 </ul>
-<h1><a class="anchor" id="autotoc_md501"></a>
+<h1><a class="anchor" id="autotoc_md506"></a>
 WASI preview1 (폐기됨)</h1>
 <p>preview1 대상은 WASI 0.2로 대체되며 제거되었습니다. 0.2 빌드가 같은 인메모리 디스패치 범위를 다루면서 소켓 서버를 더하고, WASM 종류 세 가지는 얻는 것보다 비용이 컸기 때문입니다 (이슈 #203). 아래 내용은 preview1 빌드가 있었을 때의 동작을 기록한 것입니다.</p>
 <p><code>make wasi-smoke</code>는 wasi-sdk로 <code>WASM_SRCS</code> 부분 집합을 컴파일하고 wasmtime에서 디스패치 + 세션 스모크를 실행했습니다. <code>WASI_SDK</code>(기본값 <code>~/toolchains/wasi-sdk-25.0-x86_64-linux</code>)와 PATH의 <code>WASMTIME</code>, 그리고 <code>libwasi-emulated-pthread</code>가 필요했습니다.</p>
-<h2><a class="anchor" id="autotoc_md502"></a>
+<h2><a class="anchor" id="autotoc_md507"></a>
 preview1 빌드가 다르게 했던 것</h2>
 <ul>
 <li><b>libttak</b>(업스트림 <code>c4punks/libttak</code> main): <code>ttak/compat/pthread.h</code>는 sysroot 자체의 <code>&lt;pthread.h&gt;</code>가 있으면 그것을 우선하고, 없으면 자체 포함된 단일 스레드 스텁으로 대체합니다. <code>ttak/mem/mem.h</code>는 <code>mincore</code>/<code>VirtualQuery</code>가 없는 대상에서 <code>page_base</code>를 조용히 처리합니다.</li>
 <li><b>소켓 서버 런타임</b>: <code><a class="el" href="../../dd/d43/http_8c.html" title="Core HTTP request/response allocation, serialization, socket, and server-loop helpers.">http.c</a></code>/<code><a class="el" href="../../df/d7f/app_8c.html">app.c</a></code>의 소켓 장치는 <code>CWIST_WASI_NO_SOCKETS</code>에서 컴파일에서 빠집니다. <code><a class="el" href="../../d0/d77/sys_2app_2app_8h.html#a05f9a10f4d2ab307c211dd56d54fe7c3" title="Serve app on port until SIGTERM, SIGINT or cwist_shutdown_request(); blocks the calling thread.">cwist_app_listen()</a></code>은 Emscripten처럼 -1을 반환하고, 호스트는 <code><a class="el" href="../../d0/d77/sys_2app_2app_8h.html#aeb91a66106e8a027272fb5b711ac0ba7" title="Run the full router/middleware/handler pipeline on a raw HTTP/1.x request held in a memory buffer,...">cwist_app_dispatch_memory()</a></code>로 요청을 처리합니다.</li>
 <li><b>암호</b>: <code><a class="el" href="../../de/d67/session_8c.html" title="Signed client-side session cookie implementation.">session.c</a></code>와 <code><a class="el" href="../../d0/d3c/seq__auth_8c.html">seq_auth.c</a></code>는 함께 들어 있는 헤더 전용 SHA-256/HMAC (<code><a class="el" href="../../d5/de3/sha256_8h.html" title="Minimal self-contained SHA-256 and HMAC-SHA256 (RFC 4634 style).">include/cwist/core/crypto/sha256.h</a></code>)을 씁니다. 엔트로피는 <code><a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">getentropy()</a></code> (<code>__wasi_random_get</code>)에서 옵니다.</li>
-<li><b>할당</b>: <code><a class="el" href="../../d9/d39/alloc_8c.html" title="Memory allocation bridge that can route CWIST allocations through libttak owner guards.">alloc.c</a></code>/<code><a class="el" href="../../de/d6c/arena_8c.html" title="Request-scoped arena allocator built on libttak arena generations.">arena.c</a></code>는 <code>__wasi__</code>에서 Emscripten 방식의 평범한 libc 경로를 탑니다.</li>
+<li><b>할당</b>: <code><a class="el" href="../../d9/d39/alloc_8c.html">alloc.c</a></code>/<code><a class="el" href="../../de/d6c/arena_8c.html" title="Request-scoped arena allocator built on libttak arena generations.">arena.c</a></code>는 <code>__wasi__</code>에서 Emscripten 방식의 평범한 libc 경로를 탑니다.</li>
 <li><b>링크 모델</b>: <code>-fvisibility=hidden -Wl,--gc-sections -Wl,--allow-undefined -lwasi-emulated-pthread</code>. Emscripten 링크가 시스템 스텁 라이브러리와 binaryen DCE로 같은 서버 전용 참조를 만족시키는 방식을 그대로 따릅니다.</li>
 </ul>
-<h2><a class="anchor" id="autotoc_md503"></a>
+<h2><a class="anchor" id="autotoc_md508"></a>
 검증 (기록)</h2>
 <p><code>make wasi-smoke</code> 출력 (wasmtime):</p>
 <div class="fragment"><div class="line">WASI dispatch OK (73 bytes)</div>

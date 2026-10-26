@@ -1,4 +1,4 @@
 var searchData=
 [
-  ['예제_20배포하기_0',['Wasmtime으로 WASI 0.2 예제 배포하기',['../d1/dc3/md_docs_2ko_2deployment_2wasmtime-appliance.html',1,'']]]
+  ['영속_20큐_20필수_20게이트_0',['영속 큐 필수 게이트',['../dd/dd4/md_docs_2ko_2durable-queue-gate.html',1,'']]]
 ];

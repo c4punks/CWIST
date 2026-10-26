@@ -1,6 +1,6 @@
 var searchData=
 [
-  ['keep_20alive_20처리_0',['Keep-alive 처리',['../db/ddd/md_docs_2ko_2api_2http.html#autotoc_md417',1,'']]],
+  ['keep_20alive_20처리_0',['Keep-alive 처리',['../db/ddd/md_docs_2ko_2api_2http.html#autotoc_md422',1,'']]],
   ['keep_20alive_20handling_1',['Keep-alive handling',['../d2/d9e/md_docs_2api_2http.html#autotoc_md117',1,'']]],
   ['keep_5falive_2',['keep_alive',['../dd/d68/structcwist__http__request.html#ad08e696b64981dd3886f3af37832a6e0',1,'cwist_http_request::keep_alive'],['../dd/d22/structcwist__http__response.html#a36505e8264c8426a8d0bcfb9444fab0a',1,'cwist_http_response::keep_alive']]],
   ['keeps_20the_20session_20ticket_20key_20stek_20unchanged_3',['ADR-0002: TLS certificate hot reload keeps the session-ticket key (STEK) unchanged',['../d1/dd3/md_docs_2decisions_20002-tls-hot-reload-stek.html',1,'']]],
@@ -8,11 +8,11 @@ var searchData=
   ['kern_5flast_5fmono_5fns_5',['kern_last_mono_ns',['../db/d8a/structcwist__http__async__conn.html#aa9a37cba9773d5df7ed57fe803484e21',1,'cwist_http_async_conn']]],
   ['kern_5fvalid_6',['kern_valid',['../db/d8a/structcwist__http__async__conn.html#a05cb78ef3a88e86995a786cd1b8451c1',1,'cwist_http_async_conn']]],
   ['key_7',['key',['../dc/d13/structcwist__bind__error.html#a62159217efef059794a3b9acf9a510d7',1,'cwist_bind_error::key'],['../d3/d72/structcwist__http__header__node.html#a830998dc592d48d6c2f7174d04efaf16',1,'cwist_http_header_node::key'],['../d1/d8f/structcwist__query__bucket.html#a22c5ba17b3ad33c63b534f73f530ad9e',1,'cwist_query_bucket::key'],['../d7/db7/structcwist__config__bucket.html#a211f44794fa3fb8983c58c8a3bce1723',1,'cwist_config_bucket::key'],['../df/d38/structcwist__test__client__kv.html#a847e4a3b764bcba7a4607bfc57f32cb0',1,'cwist_test_client_kv::key']]],
-  ['key_20exchange_8',['7. PQC TLS (Post-Quantum Hybrid Key Exchange)',['../dd/d4c/md_docs_2tutorial_2cwist__tutorial.html#autotoc_md822',1,'']]],
+  ['key_20exchange_8',['7. PQC TLS (Post-Quantum Hybrid Key Exchange)',['../dd/d4c/md_docs_2tutorial_2cwist__tutorial.html#autotoc_md827',1,'']]],
   ['key_20stek_20unchanged_9',['ADR-0002: TLS certificate hot reload keeps the session-ticket key (STEK) unchanged',['../d1/dd3/md_docs_2decisions_20002-tls-hot-reload-stek.html',1,'']]],
   ['key_5fpath_10',['key_path',['../dc/da0/structcwist__app.html#a983c96102d6dd7b5e9229985ad0f17fa',1,'cwist_app']]],
   ['kick_5fpost_11',['kick_post',['../d9/daa/structcwist__webrtc__conn.html#acf29d22321870243e4650e81f7733967',1,'cwist_webrtc_conn']]],
-  ['known_20limitations_12',['Known limitations',['../d6/d42/md_docs_2webserver-benchmark.html#autotoc_md905',1,'']]],
+  ['known_20limitations_12',['Known limitations',['../d6/d42/md_docs_2webserver-benchmark.html#autotoc_md910',1,'']]],
   ['known_20performance_20caveat_13',['Known performance caveat',['../d9/dd1/md_docs_2GC.html#autotoc_md318',1,'']]],
   ['known_20revision_14',['1. Build a known revision',['../db/de3/md_docs_2deployment_2wasmtime-appliance.html#autotoc_md286',1,'']]],
   ['kq_5fwake_5fident_15',['KQ_WAKE_IDENT',['../dd/d2e/kqueue_8c.html#a63e26ec989f4bd26fb81e81fd85c5fbe',1,'kqueue.c']]],

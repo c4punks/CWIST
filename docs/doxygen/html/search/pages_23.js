@@ -1,4 +1,4 @@
 var searchData=
 [
-  ['데이터베이스_20api_0',['데이터베이스 API',['../d5/d75/md_docs_2ko_2api_2sql.html',1,'']]]
+  ['대상_0',['WASI 대상',['../d0/d3c/md_docs_2ko_2api_2wasi.html',1,'']]]
 ];

@@ -1,5 +1,4 @@
 var searchData=
 [
-  ['연기된_20http_20소유권_0',['full GC에서의 연기된 HTTP 소유권',['../d3/dcc/md_docs_2ko_2async-gc-ownership.html',1,'']]],
-  ['연동하기_1',['CWIST와 NATS 연동하기',['../dd/d38/md_docs_2ko_2tutorials_2nats-integration.html',1,'']]]
+  ['엔드포인트_20캐싱_3a_20현재_20동작_0',['FIXED 엔드포인트 캐싱: 현재 동작',['../d7/dab/md_docs_2ko_2fixed-cache-status.html',1,'']]]
 ];

@@ -108,9 +108,9 @@ $(document).ready(function(){initNavTree('d1/dfd/md_docs_2performance_2wrk-dual-
   <div class="headertitle"><div class="title">Opt-in wrk raw/corrected latency histograms</div></div>
 </div><!--header-->
 <div class="contents">
-<div class="textblock"><p><a class="anchor" id="autotoc_md747"></a> This diagnostic tool addresses measurement ambiguity in issue #25. It does not change CWIST, normal CI workload flags, or runtime defaults. CI's existing Python test discovery exercises its offline contract tests; benchmarks use it only when an operator explicitly builds the generated wrk source.</p>
+<div class="textblock"><p><a class="anchor" id="autotoc_md752"></a> This diagnostic tool addresses measurement ambiguity in issue #25. It does not change CWIST, normal CI workload flags, or runtime defaults. CI's existing Python test discovery exercises its offline contract tests; benchmarks use it only when an operator explicitly builds the generated wrk source.</p>
 <p>wrk 4.2.0 calls <code>stats_correct</code> before its normal reporting and Lua <code>done</code> callback. Consequently Lua <code>latency:percentile(99.999)</code> is not the unmodified observed histogram. This exporter emits both distributions from the same run, after all worker joins and after the measured duration has been frozen, bracketing the existing correction call. No request-loop or timing changes are introduced.</p>
-<h1><a class="anchor" id="autotoc_md748"></a>
+<h1><a class="anchor" id="autotoc_md753"></a>
 Build in a disposable wrk checkout</h1>
 <p>Use wg/wrk tag <code>4.2.0</code>. The generator accepts the exact upstream <code>wrk.c</code>, <code>stats.c</code>, and <code>stats.h</code>, or the explicitly fingerprinted CLOCK_MONOTONIC timing variant used in the #25 experiments. It rejects other contents. That alternate variant changes only <code>time_us</code> to CLOCK_MONOTONIC and adds its time header; the exporter does not itself change clocks.</p>
 <div class="fragment"><div class="line">python3 scripts/ci/instrument_wrk_histogram.py \</div>
@@ -121,7 +121,7 @@ Build in a disposable wrk checkout</h1>
 <div class="line">cp /path/to/new-output/wrk_dual_histogram.h /path/to/disposable-wrk/src/</div>
 <div class="line">make -C /path/to/disposable-wrk</div>
 </div><!-- fragment --><p>The input source directory is read-only to the generator. The output directory must not exist, its parent must exist, and generation is not resumable or transactional: an I/O failure can leave a partial new output directory. Inspect that directory after failure; do not use partially generated files. Use private operator-owned directories. The generated header is only for wrk's build and is not a CWIST public header. Re-generation against already patched wrk is deliberately rejected.</p>
-<h1><a class="anchor" id="autotoc_md749"></a>
+<h1><a class="anchor" id="autotoc_md754"></a>
 Output and interpretation</h1>
 <p>Retain stdout/stderr, exits, workload errors, topology, source/build manifest and binary hash. In addition to unchanged standard output, there are two JSON lines prefixed <code>CWIST_HISTOGRAM</code>:</p>
 <div class="fragment"><div class="line">CWIST_HISTOGRAM {&quot;kind&quot;:&quot;raw&quot;,&quot;count&quot;:2,&quot;unit&quot;:&quot;us&quot;,&quot;bins&quot;:[[40,2]]}</div>
@@ -129,7 +129,7 @@ Output and interpretation</h1>
 </div><!-- fragment --><p>These illustrative bins are sparse <code>[latency_us, sample_count]</code> pairs. Always require each kind exactly once, strictly increasing integer bucket positions, positive counts, and sum(bins)==count. The exporter scans below the old <code>min</code> because correction can populate lower buckets without updating that field. Empty distributions have count0 and bins[]; percentiles are unavailable, not zero.</p>
 <p>The raw distribution is wrk's <b>recorded</b> latency histogram, not proof that all requests/arrivals were observed. Preserve request totals and error/timeout counts separately and account for any count gap, pipeline batching, out-of-range samples and in-flight requests. Neither histogram repairs coordinated omission in the offered workload or establishes an open-loop SLO. Document the percentile rank convention when reducing bins; do not silently equate a nearest-rank statistic with wrk's own rounding algorithm. Never infer raw quantiles from old corrected summary scalars.</p>
 <p>Printing happens after timing and worker joins but still costs CPU, I/O, output volume and wall-clock time. Isolate runs through process cleanup and allow enough supervisor timeout for final output. Do not interleave another load while export/cleanup is active. Compare raw and corrected results from the same run; a prior uninstrumented run is not a paired performance control.</p>
-<h1><a class="anchor" id="autotoc_md750"></a>
+<h1><a class="anchor" id="autotoc_md755"></a>
 Verification</h1>
 <div class="fragment"><div class="line">python3 scripts/ci/test_wrk_dual_histogram.py</div>
 <div class="line">python3 -O scripts/ci/test_wrk_dual_histogram.py</div>

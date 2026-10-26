@@ -122,7 +122,7 @@ $(document).ready(function(){initNavTree('d8/d16/gc_8c.html','../../'); initResi
 <code>#include &lt;stdint.h&gt;</code><br />
 <code>#include &lt;stdlib.h&gt;</code><br />
 <code>#include &lt;string.h&gt;</code><br />
-<code>#include &lt;sys/mman.h&gt;</code><br />
+<code>#include &lt;<a class="el" href="../../de/d03/platform_8h_source.html">cwist/sys/platform.h</a>&gt;</code><br />
 <code>#include &lt;unistd.h&gt;</code><br />
 </div><div class="textblock"><div class="dynheader">
 Include dependency graph for gc.c:</div>
@@ -144,10 +144,10 @@ Include dependency graph for gc.c:</div>
 <area shape="poly" title=" " alt="" coords="985,29,1038,68,1035,72,982,33"/>
 <area shape="rect" title=" " alt="" coords="1123,79,1193,104"/>
 <area shape="poly" title=" " alt="" coords="1000,28,1115,71,1113,76,998,33"/>
-<area shape="rect" title=" " alt="" coords="1217,79,1320,104"/>
-<area shape="poly" title=" " alt="" coords="1017,28,1208,73,1206,78,1016,33"/>
-<area shape="rect" title=" " alt="" coords="1345,79,1419,104"/>
-<area shape="poly" title=" " alt="" coords="1040,27,1171,47,1332,76,1331,81,1170,53,1039,32"/>
+<area shape="rect" href="../../de/d03/platform_8h.html" title="Target capability macros shared by all CWIST sources." alt="" coords="1218,79,1373,104"/>
+<area shape="poly" title=" " alt="" coords="1022,28,1230,73,1228,78,1021,33"/>
+<area shape="rect" title=" " alt="" coords="1397,79,1471,104"/>
+<area shape="poly" title=" " alt="" coords="1040,25,1194,45,1384,76,1383,81,1193,51,1039,30"/>
 <area shape="rect" title=" " alt="" coords="399,225,482,251"/>
 <area shape="poly" title=" " alt="" coords="319,175,406,217,403,222,316,180"/>
 <area shape="rect" title=" " alt="" coords="506,225,581,251"/>
@@ -163,6 +163,8 @@ Include dependency graph for gc.c:</div>
 <area shape="poly" title=" " alt="" coords="540,106,507,143,503,140,536,103"/>
 <area shape="poly" title=" " alt="" coords="481,179,458,215,453,212,476,176"/>
 <area shape="poly" title=" " alt="" coords="498,176,527,213,523,216,493,179"/>
+<area shape="rect" href="../../d3/da3/wasi_8h.html" title="WASI target feature detection shared by all CWIST sources." alt="" coords="1231,152,1359,177"/>
+<area shape="poly" title=" " alt="" coords="1298,104,1298,138,1293,138,1293,104"/>
 </map>
 </div>
 </div>
@@ -291,7 +293,7 @@ Functions</h2></td></tr>
 </div><div class="memdoc">
 <p>A flush keeps a table up to this size for reuse and frees larger ones, so one burst of allocations does not pin a big table to the thread. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d8/d16/gc_8c_source.html#l00563">563</a> of file <a class="el" href="../../d8/d16/gc_8c_source.html">gc.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d8/d16/gc_8c_source.html#l00564">564</a> of file <a class="el" href="../../d8/d16/gc_8c_source.html">gc.c</a>.</p>
 
 </div>
 </div>
@@ -308,7 +310,7 @@ Functions</h2></td></tr>
 </div><div class="memdoc">
 <p>Initial table size. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d8/d16/gc_8c_source.html#l00560">560</a> of file <a class="el" href="../../d8/d16/gc_8c_source.html">gc.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d8/d16/gc_8c_source.html#l00561">561</a> of file <a class="el" href="../../d8/d16/gc_8c_source.html">gc.c</a>.</p>
 
 </div>
 </div>
@@ -347,7 +349,7 @@ Functions</h2></td></tr>
 
 <p>Map the guard page before <a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">main()</a> runs, so <a class="el" href="../../d8/d16/gc_8c.html#a35e613a89ca213039b7b8b80464c223c" title="Query whether full-GC mode was enabled by the (single) cwist_full_gc() claim.">cwist_full_gc_enabled()</a> &ndash; called on every <a class="el" href="../../d2/dfe/alloc_8h.html#aeba69949fe17751318e6b5fc84a74096" title="Allocate zeroed memory tracked by libttak.">cwist_alloc()</a>/cwist_free() &ndash; never needs a pthread_once/lazy-init check on its hot path (that check itself regressed the C1M reactor latency gate in CI once already). </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d8/d16/gc_8c_source.html#l00421">421</a> of file <a class="el" href="../../d8/d16/gc_8c_source.html">gc.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d8/d16/gc_8c_source.html#l00422">422</a> of file <a class="el" href="../../d8/d16/gc_8c_source.html">gc.c</a>.</p>
 
 </div>
 </div>
@@ -376,9 +378,9 @@ Functions</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>true when <code>handle</code> is tracked (and now owned by the caller); false when it is not tracked or full GC is off. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d8/d16/gc_8c_source.html#l01022">1022</a> of file <a class="el" href="../../d8/d16/gc_8c_source.html">gc.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d8/d16/gc_8c_source.html#l01025">1025</a> of file <a class="el" href="../../d8/d16/gc_8c_source.html">gc.c</a>.</p>
 
-<p class="reference">References <a class="el" href="../../d3/db2/otel_8c_source.html#l00056">cap</a>, and <a class="el" href="../../d8/d16/gc_8c_source.html#l00514">cwist_full_gc_enabled()</a>.</p>
+<p class="reference">References <a class="el" href="../../d3/db2/otel_8c_source.html#l00056">cap</a>, and <a class="el" href="../../d8/d16/gc_8c_source.html#l00515">cwist_full_gc_enabled()</a>.</p>
 
 </div>
 </div>
@@ -402,7 +404,7 @@ Functions</h2></td></tr>
 <p>Close every handle the calling thread owns right now, without waiting for thread exit. Analogous to <a class="el" href="../../d0/daa/gc_8h.html#a9722c1690dcf7f4e07c62bd0d1dd8047" title="Retire every block still on the current thread&#39;s pending-sweep list right now, instead of waiting for...">cwist_gc_scope_flush()</a> but for connections.</p>
 <p>The registry stays usable afterwards; later tracks work as before. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d8/d16/gc_8c_source.html#l01038">1038</a> of file <a class="el" href="../../d8/d16/gc_8c_source.html">gc.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d8/d16/gc_8c_source.html#l01041">1041</a> of file <a class="el" href="../../d8/d16/gc_8c_source.html">gc.c</a>.</p>
 
 </div>
 </div>
@@ -426,7 +428,7 @@ Functions</h2></td></tr>
 <p>Number of tracked connections the calling thread owns. Introspection/testing helper.</p>
 <dl class="section return"><dt>Returns</dt><dd>Number of owned entries; 0 when nothing is tracked. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d8/d16/gc_8c_source.html#l01057">1057</a> of file <a class="el" href="../../d8/d16/gc_8c_source.html">gc.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d8/d16/gc_8c_source.html#l01060">1060</a> of file <a class="el" href="../../d8/d16/gc_8c_source.html">gc.c</a>.</p>
 
 <p class="reference">References <a class="el" href="../../d3/db2/otel_8c_source.html#l00056">cap</a>.</p>
 
@@ -452,7 +454,7 @@ Functions</h2></td></tr>
 <p>Sweep every thread's pending-sweep list right now. This is what the process-exit (atexit) hook calls; exposed directly for testing, or for callers that want a deterministic sweep point earlier than actual process exit (e.g. <a class="el" href="../../d0/d77/sys_2app_2app_8h.html#a8d6f015a001b2d189ebea808de9da254" title="Destroys the application and frees all resources.">cwist_app_destroy()</a>).</p>
 <p>Intended for process-exit paths. Each handle is removed before it is closed, so racing sweeps (atexit vs. a thread's own exit) close it once. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d8/d16/gc_8c_source.html#l01049">1049</a> of file <a class="el" href="../../d8/d16/gc_8c_source.html">gc.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d8/d16/gc_8c_source.html#l01052">1052</a> of file <a class="el" href="../../d8/d16/gc_8c_source.html">gc.c</a>.</p>
 
 <p class="reference">References <a class="el" href="../../d3/db2/otel_8c_source.html#l00056">cap</a>.</p>
 
@@ -495,9 +497,9 @@ Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d8/d16/gc_8c_source.html#l00981">981</a> of file <a class="el" href="../../d8/d16/gc_8c_source.html">gc.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d8/d16/gc_8c_source.html#l00984">984</a> of file <a class="el" href="../../d8/d16/gc_8c_source.html">gc.c</a>.</p>
 
-<p class="reference">References <a class="el" href="../../d3/db2/otel_8c_source.html#l00056">cap</a>, and <a class="el" href="../../d8/d16/gc_8c_source.html#l00514">cwist_full_gc_enabled()</a>.</p>
+<p class="reference">References <a class="el" href="../../d3/db2/otel_8c_source.html#l00056">cap</a>, and <a class="el" href="../../d8/d16/gc_8c_source.html#l00515">cwist_full_gc_enabled()</a>.</p>
 
 </div>
 </div>
@@ -527,7 +529,7 @@ Functions</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>true when found and removed; false otherwise. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d8/d16/gc_8c_source.html#l01007">1007</a> of file <a class="el" href="../../d8/d16/gc_8c_source.html">gc.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d8/d16/gc_8c_source.html#l01010">1010</a> of file <a class="el" href="../../d8/d16/gc_8c_source.html">gc.c</a>.</p>
 
 <p class="reference">References <a class="el" href="../../d3/db2/otel_8c_source.html#l00056">cap</a>.</p>
 
@@ -561,9 +563,9 @@ Functions</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>Newly allocated block, or NULL on failure. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d8/d16/gc_8c_source.html#l00330">330</a> of file <a class="el" href="../../d8/d16/gc_8c_source.html">gc.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d8/d16/gc_8c_source.html#l00331">331</a> of file <a class="el" href="../../d8/d16/gc_8c_source.html">gc.c</a>.</p>
 
-<p class="reference">References <a class="el" href="../../d9/d39/alloc_8c_source.html#l00276">cwist_alloc()</a>.</p>
+<p class="reference">References <a class="el" href="../../d9/d39/alloc_8c_source.html#l00017">cwist_alloc()</a>.</p>
 
 </div>
 </div>
@@ -592,7 +594,7 @@ Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d8/d16/gc_8c_source.html#l00349">349</a> of file <a class="el" href="../../d8/d16/gc_8c_source.html">gc.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d8/d16/gc_8c_source.html#l00350">350</a> of file <a class="el" href="../../d8/d16/gc_8c_source.html">gc.c</a>.</p>
 
 </div>
 </div>
@@ -622,9 +624,9 @@ Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d8/d16/gc_8c_source.html#l00482">482</a> of file <a class="el" href="../../d8/d16/gc_8c_source.html">gc.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d8/d16/gc_8c_source.html#l00483">483</a> of file <a class="el" href="../../d8/d16/gc_8c_source.html">gc.c</a>.</p>
 
-<p class="reference">References <a class="el" href="../../d8/d16/gc_8c_source.html#l00211">cwist_gc_auto_rotate()</a>.</p>
+<p class="reference">References <a class="el" href="../../d8/d16/gc_8c_source.html#l00212">cwist_gc_auto_rotate()</a>.</p>
 
 </div>
 </div>
@@ -648,9 +650,9 @@ Functions</h2></td></tr>
 <p>Check whether full-GC mode is currently enabled.</p>
 <dl class="section return"><dt>Returns</dt><dd>Current enabled state; false when the guard page was never mapped. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d8/d16/gc_8c_source.html#l00514">514</a> of file <a class="el" href="../../d8/d16/gc_8c_source.html">gc.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d8/d16/gc_8c_source.html#l00515">515</a> of file <a class="el" href="../../d8/d16/gc_8c_source.html">gc.c</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../d9/d39/alloc_8c_source.html#l00276">cwist_alloc()</a>, <a class="el" href="../../db/d84/async_8c_source.html#l00100">cwist_async_defer()</a>, <a class="el" href="../../d9/d39/alloc_8c_source.html#l00433">cwist_calloc_shim()</a>, <a class="el" href="../../d8/d16/gc_8c_source.html#l01022">cwist_conn_registry_adopt()</a>, <a class="el" href="../../d8/d16/gc_8c_source.html#l00981">cwist_conn_registry_track()</a>, <a class="el" href="../../d9/d39/alloc_8c_source.html#l00391">cwist_free()</a>, <a class="el" href="../../d9/d39/alloc_8c_source.html#l00469">cwist_free_shim()</a>, <a class="el" href="../../d2/db0/http2_8c_source.html#l00339">cwist_h2_async_queue_enqueue()</a>, <a class="el" href="../../de/d67/session_8c_source.html#l00454">cwist_http_async_disown_session()</a>, <a class="el" href="../../d2/db2/https_8c_source.html#l01875">cwist_https_close_connection()</a>, <a class="el" href="../../d2/db2/https_8c_source.html#l01887">cwist_https_receive_request()</a>, <a class="el" href="../../d1/de4/io__queue_8c_source.html#l00228">cwist_io_queue_create()</a>, <a class="el" href="../../d1/de4/io__queue_8c_source.html#l00293">cwist_io_queue_run()</a>, <a class="el" href="../../dd/d2e/kqueue_8c_source.html#l00080">cwist_io_queue_submit()</a>, <a class="el" href="../../d9/d39/alloc_8c_source.html#l00422">cwist_malloc_shim()</a>, <a class="el" href="../../d9/d39/alloc_8c_source.html#l00306">cwist_realloc()</a>, <a class="el" href="../../d9/d39/alloc_8c_source.html#l00448">cwist_realloc_shim()</a>, and <a class="el" href="../../dd/d6c/scheduler_8c_source.html#l00265">cwist_scheduler_create()</a>.</p>
+<p class="reference">Referenced by <a class="el" href="../../db/d84/async_8c_source.html#l00103">cwist_async_defer()</a>, <a class="el" href="../../d8/d16/gc_8c_source.html#l01025">cwist_conn_registry_adopt()</a>, <a class="el" href="../../d8/d16/gc_8c_source.html#l00984">cwist_conn_registry_track()</a>, <a class="el" href="../../d2/db0/http2_8c_source.html#l00339">cwist_h2_async_queue_enqueue()</a>, <a class="el" href="../../de/d67/session_8c_source.html#l00470">cwist_http_async_disown_session()</a>, <a class="el" href="../../d2/db2/https_8c_source.html#l01875">cwist_https_close_connection()</a>, <a class="el" href="../../d2/db2/https_8c_source.html#l01887">cwist_https_receive_request()</a>, <a class="el" href="../../d1/de4/io__queue_8c_source.html#l00228">cwist_io_queue_create()</a>, <a class="el" href="../../d1/de4/io__queue_8c_source.html#l00293">cwist_io_queue_run()</a>, <a class="el" href="../../dd/d2e/kqueue_8c_source.html#l00080">cwist_io_queue_submit()</a>, and <a class="el" href="../../dd/d6c/scheduler_8c_source.html#l00265">cwist_scheduler_create()</a>.</p>
 
 </div>
 </div>
@@ -674,7 +676,7 @@ Functions</h2></td></tr>
 <p>Raw pointer to the full-GC toggle's guard page, or NULL if the <a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">mmap()</a> backing it failed at process startup. Advanced/testing use only &ndash; e.g. to confirm the page is actually read-only after <a class="el" href="../../d0/daa/gc_8h.html#a0d7297e8d4a073c018f97fa6e7f0a372" title="Enable or disable full-GC mode process-wide.">cwist_full_gc()</a> has been called once.</p>
 <dl class="section return"><dt>Returns</dt><dd>Pointer to the guard page, or NULL if <a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">mmap()</a> failed at startup. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d8/d16/gc_8c_source.html#l00532">532</a> of file <a class="el" href="../../d8/d16/gc_8c_source.html">gc.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d8/d16/gc_8c_source.html#l00533">533</a> of file <a class="el" href="../../d8/d16/gc_8c_source.html">gc.c</a>.</p>
 
 </div>
 </div>
@@ -698,7 +700,7 @@ Functions</h2></td></tr>
 <p>Check whether the full-GC toggle has been latched (i.e. <a class="el" href="../../d0/daa/gc_8h.html#a0d7297e8d4a073c018f97fa6e7f0a372" title="Enable or disable full-GC mode process-wide.">cwist_full_gc()</a> has been called once already and every further call will be ignored). Diagnostic/testing use.</p>
 <dl class="section return"><dt>Returns</dt><dd>true once <a class="el" href="../../d0/daa/gc_8h.html#a0d7297e8d4a073c018f97fa6e7f0a372" title="Enable or disable full-GC mode process-wide.">cwist_full_gc()</a> has run its claiming path exactly once. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d8/d16/gc_8c_source.html#l00523">523</a> of file <a class="el" href="../../d8/d16/gc_8c_source.html">gc.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d8/d16/gc_8c_source.html#l00524">524</a> of file <a class="el" href="../../d8/d16/gc_8c_source.html">gc.c</a>.</p>
 
 </div>
 </div>
@@ -738,7 +740,7 @@ Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d8/d16/gc_8c_source.html#l00172">172</a> of file <a class="el" href="../../d8/d16/gc_8c_source.html">gc.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d8/d16/gc_8c_source.html#l00173">173</a> of file <a class="el" href="../../d8/d16/gc_8c_source.html">gc.c</a>.</p>
 
 <p class="reference">References <a class="el" href="../../d0/daa/gc_8h_source.html#l00021">cwist_gc::impl</a>, and <a class="el" href="../../d0/daa/gc_8h_source.html#l00023">cwist_gc::initialized</a>.</p>
 
@@ -779,11 +781,11 @@ Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d8/d16/gc_8c_source.html#l00211">211</a> of file <a class="el" href="../../d8/d16/gc_8c_source.html">gc.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d8/d16/gc_8c_source.html#l00212">212</a> of file <a class="el" href="../../d8/d16/gc_8c_source.html">gc.c</a>.</p>
 
 <p class="reference">References <a class="el" href="../../d0/daa/gc_8h_source.html#l00025">cwist_gc::auto_rotated</a>, and <a class="el" href="../../d0/daa/gc_8h_source.html#l00023">cwist_gc::initialized</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../d8/d16/gc_8c_source.html#l00482">cwist_full_gc()</a>.</p>
+<p class="reference">Referenced by <a class="el" href="../../d8/d16/gc_8c_source.html#l00483">cwist_full_gc()</a>.</p>
 
 </div>
 </div>
@@ -806,7 +808,7 @@ Functions</h2></td></tr>
 <p>Return if epoch GC is auto-rotated. @ param gc GC context to get status. </p>
 <p>Check whether the GC context is currently set to auto-rotate. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d8/d16/gc_8c_source.html#l00221">221</a> of file <a class="el" href="../../d8/d16/gc_8c_source.html">gc.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d8/d16/gc_8c_source.html#l00222">222</a> of file <a class="el" href="../../d8/d16/gc_8c_source.html">gc.c</a>.</p>
 
 <p class="reference">References <a class="el" href="../../d0/daa/gc_8h_source.html#l00025">cwist_gc::auto_rotated</a>.</p>
 
@@ -831,7 +833,7 @@ Functions</h2></td></tr>
 <p>Advance the EBR epoch and run any callbacks that are now safe. </p>
 <p>Drive the EBR pipeline: attempt to advance the epoch and run any <a class="el" href="../../d0/daa/gc_8h.html#a2406b97d2e5c876a65e828c15e656347" title="Defer release of a block shared across threads via epoch reclamation.">cwist_ebr_free()</a> callbacks that are now safe to execute. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d8/d16/gc_8c_source.html#l00357">357</a> of file <a class="el" href="../../d8/d16/gc_8c_source.html">gc.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d8/d16/gc_8c_source.html#l00358">358</a> of file <a class="el" href="../../d8/d16/gc_8c_source.html">gc.c</a>.</p>
 
 </div>
 </div>
@@ -862,7 +864,7 @@ Functions</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>Raw libttak GC handle, or NULL when the wrapper is unavailable. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d8/d16/gc_8c_source.html#l00320">320</a> of file <a class="el" href="../../d8/d16/gc_8c_source.html">gc.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d8/d16/gc_8c_source.html#l00321">321</a> of file <a class="el" href="../../d8/d16/gc_8c_source.html">gc.c</a>.</p>
 
 <p class="reference">References <a class="el" href="../../d0/daa/gc_8h_source.html#l00021">cwist_gc::impl</a>, and <a class="el" href="../../d0/daa/gc_8h_source.html#l00023">cwist_gc::initialized</a>.</p>
 
@@ -895,11 +897,9 @@ Functions</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>true when <code>ptr</code> was registered and has been detached. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d8/d16/gc_8c_source.html#l00112">112</a> of file <a class="el" href="../../d8/d16/gc_8c_source.html">gc.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d8/d16/gc_8c_source.html#l00113">113</a> of file <a class="el" href="../../d8/d16/gc_8c_source.html">gc.c</a>.</p>
 
 <p class="reference">References <a class="el" href="../../d0/daa/gc_8h_source.html#l00021">cwist_gc::impl</a>, and <a class="el" href="../../d0/daa/gc_8h_source.html#l00023">cwist_gc::initialized</a>.</p>
-
-<p class="reference">Referenced by <a class="el" href="../../d9/d39/alloc_8c_source.html#l00391">cwist_free()</a>.</p>
 
 </div>
 </div>
@@ -928,7 +928,7 @@ Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d8/d16/gc_8c_source.html#l00202">202</a> of file <a class="el" href="../../d8/d16/gc_8c_source.html">gc.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d8/d16/gc_8c_source.html#l00203">203</a> of file <a class="el" href="../../d8/d16/gc_8c_source.html">gc.c</a>.</p>
 
 <p class="reference">References <a class="el" href="../../d0/daa/gc_8h_source.html#l00021">cwist_gc::impl</a>, and <a class="el" href="../../d0/daa/gc_8h_source.html#l00023">cwist_gc::initialized</a>.</p>
 
@@ -960,11 +960,11 @@ Functions</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>true when <code>ptr</code> was tracked and removed; false otherwise. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d8/d16/gc_8c_source.html#l00765">765</a> of file <a class="el" href="../../d8/d16/gc_8c_source.html">gc.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d8/d16/gc_8c_source.html#l00766">766</a> of file <a class="el" href="../../d8/d16/gc_8c_source.html">gc.c</a>.</p>
 
-<p class="reference">References <a class="el" href="../../d8/d16/gc_8c_source.html#l00733">cwist_gc_scope_untrack()</a>.</p>
+<p class="reference">References <a class="el" href="../../d8/d16/gc_8c_source.html#l00734">cwist_gc_scope_untrack()</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../db/d84/async_8c_source.html#l00100">cwist_async_defer()</a>, <a class="el" href="../../d2/db0/http2_8c_source.html#l00339">cwist_h2_async_queue_enqueue()</a>, <a class="el" href="../../de/d67/session_8c_source.html#l00454">cwist_http_async_disown_session()</a>, <a class="el" href="../../d2/db2/https_8c_source.html#l01887">cwist_https_receive_request()</a>, <a class="el" href="../../d1/de4/io__queue_8c_source.html#l00228">cwist_io_queue_create()</a>, <a class="el" href="../../dd/d2e/kqueue_8c_source.html#l00080">cwist_io_queue_submit()</a>, and <a class="el" href="../../dd/d6c/scheduler_8c_source.html#l00265">cwist_scheduler_create()</a>.</p>
+<p class="reference">Referenced by <a class="el" href="../../db/d84/async_8c_source.html#l00103">cwist_async_defer()</a>, <a class="el" href="../../d2/db0/http2_8c_source.html#l00339">cwist_h2_async_queue_enqueue()</a>, <a class="el" href="../../de/d67/session_8c_source.html#l00470">cwist_http_async_disown_session()</a>, <a class="el" href="../../d2/db2/https_8c_source.html#l01887">cwist_https_receive_request()</a>, <a class="el" href="../../d1/de4/io__queue_8c_source.html#l00228">cwist_io_queue_create()</a>, <a class="el" href="../../dd/d2e/kqueue_8c_source.html#l00080">cwist_io_queue_submit()</a>, and <a class="el" href="../../dd/d6c/scheduler_8c_source.html#l00265">cwist_scheduler_create()</a>.</p>
 
 </div>
 </div>
@@ -988,7 +988,7 @@ Functions</h2></td></tr>
 <p>Retire every block still on the current thread's pending-sweep list right now, instead of waiting for the thread to exit.</p>
 <p>Each tracked block is handed to <a class="el" href="../../d0/daa/gc_8h.html#a2406b97d2e5c876a65e828c15e656347" title="Defer release of a block shared across threads via epoch reclamation.">cwist_ebr_free()</a>, so reclamation is deferred until no thread can still be reading inside an epoch. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d8/d16/gc_8c_source.html#l00775">775</a> of file <a class="el" href="../../d8/d16/gc_8c_source.html">gc.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d8/d16/gc_8c_source.html#l00776">776</a> of file <a class="el" href="../../d8/d16/gc_8c_source.html">gc.c</a>.</p>
 
 <p class="reference">Referenced by <a class="el" href="../../d1/de4/io__queue_8c_source.html#l00293">cwist_io_queue_run()</a>.</p>
 
@@ -1014,7 +1014,7 @@ Functions</h2></td></tr>
 <p>Number of blocks currently on the calling thread's pending-sweep list. Introspection/testing helper.</p>
 <dl class="section return"><dt>Returns</dt><dd>Number of pending entries; 0 when nothing is tracked. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d8/d16/gc_8c_source.html#l00783">783</a> of file <a class="el" href="../../d8/d16/gc_8c_source.html">gc.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d8/d16/gc_8c_source.html#l00784">784</a> of file <a class="el" href="../../d8/d16/gc_8c_source.html">gc.c</a>.</p>
 
 </div>
 </div>
@@ -1044,11 +1044,9 @@ Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d8/d16/gc_8c_source.html#l00706">706</a> of file <a class="el" href="../../d8/d16/gc_8c_source.html">gc.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d8/d16/gc_8c_source.html#l00707">707</a> of file <a class="el" href="../../d8/d16/gc_8c_source.html">gc.c</a>.</p>
 
 <p class="reference">References <a class="el" href="../../d3/db2/otel_8c_source.html#l00056">cap</a>.</p>
-
-<p class="reference">Referenced by <a class="el" href="../../d9/d39/alloc_8c_source.html#l00276">cwist_alloc()</a>, <a class="el" href="../../d9/d39/alloc_8c_source.html#l00433">cwist_calloc_shim()</a>, <a class="el" href="../../d9/d39/alloc_8c_source.html#l00422">cwist_malloc_shim()</a>, <a class="el" href="../../d9/d39/alloc_8c_source.html#l00306">cwist_realloc()</a>, and <a class="el" href="../../d9/d39/alloc_8c_source.html#l00448">cwist_realloc_shim()</a>.</p>
 
 </div>
 </div>
@@ -1079,11 +1077,11 @@ Functions</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>true when <code>ptr</code> was tracked and removed; false otherwise. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d8/d16/gc_8c_source.html#l00733">733</a> of file <a class="el" href="../../d8/d16/gc_8c_source.html">gc.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d8/d16/gc_8c_source.html#l00734">734</a> of file <a class="el" href="../../d8/d16/gc_8c_source.html">gc.c</a>.</p>
 
 <p class="reference">References <a class="el" href="../../d3/db2/otel_8c_source.html#l00056">cap</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../d9/d39/alloc_8c_source.html#l00391">cwist_free()</a>, <a class="el" href="../../d9/d39/alloc_8c_source.html#l00469">cwist_free_shim()</a>, <a class="el" href="../../d8/d16/gc_8c_source.html#l00765">cwist_gc_scope_disown()</a>, <a class="el" href="../../d9/d39/alloc_8c_source.html#l00306">cwist_realloc()</a>, and <a class="el" href="../../d9/d39/alloc_8c_source.html#l00448">cwist_realloc_shim()</a>.</p>
+<p class="reference">Referenced by <a class="el" href="../../d8/d16/gc_8c_source.html#l00766">cwist_gc_scope_disown()</a>.</p>
 
 </div>
 </div>
@@ -1113,7 +1111,7 @@ Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d8/d16/gc_8c_source.html#l00191">191</a> of file <a class="el" href="../../d8/d16/gc_8c_source.html">gc.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d8/d16/gc_8c_source.html#l00192">192</a> of file <a class="el" href="../../d8/d16/gc_8c_source.html">gc.c</a>.</p>
 
 <p class="reference">References <a class="el" href="../../d0/daa/gc_8h_source.html#l00021">cwist_gc::impl</a>, and <a class="el" href="../../d0/daa/gc_8h_source.html#l00023">cwist_gc::initialized</a>.</p>
 
@@ -1156,9 +1154,9 @@ Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d8/d16/gc_8c_source.html#l00235">235</a> of file <a class="el" href="../../d8/d16/gc_8c_source.html">gc.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d8/d16/gc_8c_source.html#l00236">236</a> of file <a class="el" href="../../d8/d16/gc_8c_source.html">gc.c</a>.</p>
 
-<p class="reference">References <a class="el" href="../../d8/d16/gc_8c_source.html#l00260">cwist_reg_ptr_sized()</a>.</p>
+<p class="reference">References <a class="el" href="../../d8/d16/gc_8c_source.html#l00261">cwist_reg_ptr_sized()</a>.</p>
 
 </div>
 </div>
@@ -1207,11 +1205,11 @@ Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d8/d16/gc_8c_source.html#l00260">260</a> of file <a class="el" href="../../d8/d16/gc_8c_source.html">gc.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d8/d16/gc_8c_source.html#l00261">261</a> of file <a class="el" href="../../d8/d16/gc_8c_source.html">gc.c</a>.</p>
 
 <p class="reference">References <a class="el" href="../../d0/daa/gc_8h_source.html#l00021">cwist_gc::impl</a>, and <a class="el" href="../../d0/daa/gc_8h_source.html#l00023">cwist_gc::initialized</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../d8/d16/gc_8c_source.html#l00235">cwist_reg_ptr()</a>.</p>
+<p class="reference">Referenced by <a class="el" href="../../d8/d16/gc_8c_source.html#l00236">cwist_reg_ptr()</a>.</p>
 
 </div>
 </div>
@@ -1241,7 +1239,7 @@ Functions</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>true for exactly one caller across all racers; false otherwise. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d8/d16/gc_8c_source.html#l00375">375</a> of file <a class="el" href="../../d8/d16/gc_8c_source.html">gc.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d8/d16/gc_8c_source.html#l00376">376</a> of file <a class="el" href="../../d8/d16/gc_8c_source.html">gc.c</a>.</p>
 
 </div>
 </div>
@@ -1270,7 +1268,7 @@ Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d8/d16/gc_8c_source.html#l00365">365</a> of file <a class="el" href="../../d8/d16/gc_8c_source.html">gc.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d8/d16/gc_8c_source.html#l00366">366</a> of file <a class="el" href="../../d8/d16/gc_8c_source.html">gc.c</a>.</p>
 
 </div>
 </div>

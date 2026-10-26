@@ -1,4 +1,4 @@
 var searchData=
 [
-  ['블로그_20만들기_0',['CWIST로 CRUD 블로그 만들기',['../d6/d25/md_docs_2ko_2tutorials_2blog-crud.html',1,'']]]
+  ['복원하기_0',['ADR-0001: 명시적인 공개 FIXED 계약으로 HTTP 응답 캐싱 복원하기',['../d6/dda/md_docs_2ko_2decisions_20001-safe-public-fixed-response-cache.html',1,'']]]
 ];

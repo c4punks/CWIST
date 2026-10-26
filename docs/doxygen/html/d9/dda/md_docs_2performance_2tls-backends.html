@@ -108,15 +108,15 @@ $(document).ready(function(){initNavTree('d9/dda/md_docs_2performance_2tls-backe
   <div class="headertitle"><div class="title">Pluggable TLS backend (CWIST_TLS)</div></div>
 </div><!--header-->
 <div class="contents">
-<div class="textblock"><p><a class="anchor" id="autotoc_md742"></a> CWIST links exactly one TLS/crypto backend, selected at build time:</p>
+<div class="textblock"><p><a class="anchor" id="autotoc_md747"></a> CWIST links exactly one TLS/crypto backend, selected at build time:</p>
 <div class="fragment"><div class="line">make                          # CWIST_TLS=boringssl (default, unchanged)</div>
 <div class="line">make CWIST_TLS=mbedtls        # mbedTLS 3.6 LTS (vendored at lib/mbedtls)</div>
 </div><!-- fragment --><p><code>CWIST_TLS=mbedtls</code> is meant for embedded targets: mbedTLS 3.6 is a pure-C LTS release with a fraction of BoringSSL's archive footprint, and the produced <code>libcwist.a</code> (thin or fat) contains <b>no BoringSSL objects or symbols</b>.</p>
-<h1><a class="anchor" id="autotoc_md743"></a>
+<h1><a class="anchor" id="autotoc_md748"></a>
 The seam</h1>
 <p>Call sites keep their OpenSSL-shaped code. When <code>CWIST_TLS=mbedtls</code> the Makefile puts <code>src/security/tls/shim/</code> on the include path instead of <code>lib/boringssl/include</code>, so <code>&lt;<a class="el" href="../../df/d6d/ssl_8h.html" title="mbedTLS TLS backend: OpenSSL-shaped seam over the CWIST TLS subset.">openssl/ssl.h</a>&gt;</code> and friends resolve to the shim headers in <code>src/security/tls/shim/openssl/</code>. Each <code>SSL_*</code>/<code>HMAC_*</code>/<code>EVP_*</code> name is a macro alias for a <code>cwist_mtls_*</code> function genuinely implemented on mbedTLS in <code><a class="el" href="../../db/d2e/backend__mbedtls_8c.html" title="mbedTLS implementation of the CWIST TLS backend seam.">src/security/tls/backend_mbedtls.c</a></code>. Public headers are unchanged (<code>SSL</code>/<code>SSL_CTX</code> become opaque typedefs), so the API baseline and existing applications are untouched.</p>
 <p>Covered by the seam: server and client TLS 1.2/1.3, certificate chain and key loading, ALPN (HTTP/2), SNI, the session cache, pre-fork shared session tickets (armed from the same CWIST key material, so tickets survive <code><a class="el" href="../../d7/d67/net_2http_2https_8h.html#a730210fa8bf88c03bf8e3a3820f82890" title="Hot-reload the certificate chain and key of a live HTTPS context.">cwist_https_reload_context()</a></code> and resume on any forked worker), certificate hot reload, error mapping (<code>SSL_get_error</code>/<code>ERR_*</code>), HMAC-SHA256 (sessions, seq_auth, JWT HS256), AES-256-CBC (db_crypt, format-compatible with the BoringSSL build), and a fork-aware CTR-DRBG behind <code>RAND_bytes</code>.</p>
-<h1><a class="anchor" id="autotoc_md744"></a>
+<h1><a class="anchor" id="autotoc_md749"></a>
 Forced-off features under CWIST_TLS=mbedtls</h1>
 <table class="markdownTable">
 <tr class="markdownTableHead">
@@ -128,7 +128,7 @@ Forced-off features under CWIST_TLS=mbedtls</h1>
 <tr class="markdownTableRowOdd">
 <td class="markdownTableBodyNone">WebRTC DataChannel (<code>CWIST_WEBRTC</code>)   </td><td class="markdownTableBodyNone">DTLS stack is BoringSSL-specific   </td><td class="markdownTableBodyNone">forced to 0 with a <code>$(warning)</code>   </td></tr>
 </table>
-<h1><a class="anchor" id="autotoc_md745"></a>
+<h1><a class="anchor" id="autotoc_md750"></a>
 Degraded features under CWIST_TLS=mbedtls</h1>
 <table class="markdownTable">
 <tr class="markdownTableHead">
@@ -144,7 +144,7 @@ Degraded features under CWIST_TLS=mbedtls</h1>
 <tr class="markdownTableRowOdd">
 <td class="markdownTableBodyNone">Hybrid PQC groups (<code>cwist_app_use_pqc_layer</code>)   </td><td class="markdownTableBodyNone">warns and enforces TLS 1.3 with classical groups (no X25519MLKEM768 in mbedTLS 3.6)   </td></tr>
 </table>
-<h1><a class="anchor" id="autotoc_md746"></a>
+<h1><a class="anchor" id="autotoc_md751"></a>
 Embedded bundle</h1>
 <p><code>make CWIST_TLS=mbedtls CWIST_HTTP3=0 fat-dist</code> stages <code>dist/cwist-fat/include/openssl/</code> from the seam shim (plus <code>mbedtls/</code> and <code>psa/</code> for direct mbedTLS use) instead of BoringSSL's headers, so an app source that builds against the BoringSSL bundle builds against the mbedTLS bundle unchanged. </p>
 </div></div><!-- contents -->

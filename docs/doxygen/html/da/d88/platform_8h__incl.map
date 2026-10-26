@@ -1,0 +1,5 @@
+<map id="include/cwist/sys/platform.h" name="include/cwist/sys/platform.h">
+<area shape="rect" id="Node000001" title="Target capability macros shared by all CWIST sources." alt="" coords="5,5,211,31"/>
+<area shape="rect" id="Node000002" href="$d3/da3/wasi_8h.html" title="WASI target feature detection shared by all CWIST sources." alt="" coords="44,79,172,104"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="111,31,111,65,105,65,105,31"/>
+</map>

@@ -108,9 +108,9 @@ $(document).ready(function(){initNavTree('d8/d7e/md_docs_2ko_2webserver-benchmar
   <div class="headertitle"><div class="title">웹 서버 벤치마크 측정 방법</div></div>
 </div><!--header-->
 <div class="contents">
-<div class="textblock"><p><a class="anchor" id="autotoc_md705"></a> 이 문서는 <code>benchmarks/webserver.json</code>에 기록되고 <code>docs/webserver-benchmark-trends.svg</code>로 렌더링되는 CWIST vs Axum vs Gin vs Spring Boot 비교가 정확히 어떻게 만들어지는지 설명합니다. 그래야 공개된 모든 수치를 재현하고 감사할 수 있습니다.</p>
+<div class="textblock"><p><a class="anchor" id="autotoc_md710"></a> 이 문서는 <code>benchmarks/webserver.json</code>에 기록되고 <code>docs/webserver-benchmark-trends.svg</code>로 렌더링되는 CWIST vs Axum vs Gin vs Spring Boot 비교가 정확히 어떻게 만들어지는지 설명합니다. 그래야 공개된 모든 수치를 재현하고 감사할 수 있습니다.</p>
 <p>스위트는 GitHub Actions(<code>.github/workflows/bsd-kqueue-benchmarks.yml</code>의 <code>web-server-benchmark</code> 작업)에서 <code>ubuntu-latest</code>로 실행됩니다. 네 서버 모두 워크플로가 인라인으로 생성하는 최소한의 <code>GET / -&gt; "Hello, World!"</code> 애플리케이션이며, 여기 문서화된 것 외에 프레임워크별 튜닝은 적용하지 않습니다.</p>
-<h1><a class="anchor" id="autotoc_md706"></a>
+<h1><a class="anchor" id="autotoc_md711"></a>
 부하 프로필</h1>
 <table class="markdownTable">
 <tr class="markdownTableHead">
@@ -126,7 +126,7 @@ $(document).ready(function(){initNavTree('d8/d7e/md_docs_2ko_2webserver-benchmar
 <li><b>최대 RSS**는 측정 실행 직후 <code>ps -o rss=</code>로 샘플링합니다.</b></li>
 <li><b>**컨텍스트 스위치</b>(<code>ps</code>의 <code>nvcsw + nivcsw</code>)는 측정 구간에서만 셉니다. 카운터 기준값은 워밍업 <em>후에</em> 잡습니다.</li>
 </ul>
-<h2><a class="anchor" id="autotoc_md707"></a>
+<h2><a class="anchor" id="autotoc_md712"></a>
 컨텍스트 스위치 열 해석하기</h2>
 <p>CWIST classic(<code>CWIST_C1M_MODE=0</code>)은 행렬에서 유일한 블로킹 연결당 스레드 서버입니다. 다른 모든 행은 연결을 작은 스레드 풀에 다중화합니다. 그 차이는 거의 전부 이 열에 나타나며, 낭비된 작업이 아니라 동시성 모델의 성질입니다.</p>
 <ul>
@@ -134,28 +134,28 @@ $(document).ready(function(){initNavTree('d8/d7e/md_docs_2ko_2webserver-benchmar
 <li>CWIST C1M과 비동기 런타임은 깨어날 때마다 많은 요청을 묶어 처리하므로 요청당 스위치 수가 훨씬 적습니다.</li>
 </ul>
 <p>이는 CPU 할당량을 제한한 상태로 작업을 다시 실행하고 스레드별 자발/비자발 카운터를 나눠서 원인을 확인했습니다. classic 스위치는 거의 모두 자발적인 recv 깨우기(모델의 하한)이며, 풀은 생성 실패 없이 연결당 워커 하나까지 늘어납니다. 낮은 컨텍스트 스위치 운영이 바로 기본 프로필인 C1M의 목적입니다. classic은 그 대신 낮은 동시성에서의 지연 특성(튜닝된 <code>wrk -t4 -c100</code> 실행)을 택합니다.</p>
-<h2><a class="anchor" id="autotoc_md708"></a>
+<h2><a class="anchor" id="autotoc_md713"></a>
 튜닝된 저지연 실행</h2>
 <p>CWIST와 Spring Boot는 각각 별도의 전용 프로세스에서 <code>wrk -t4 -c100 -d10s</code>(위 주 프로필 <code>-t12 -c400</code>보다 낮은 동시성)로 한 번 더 측정합니다. Spring Boot의 경우 주 실행에 쓴 것과 같은 학습된 AOT 캐시를 재생하는 새 부팅이므로, CWIST가 내지 않는 두 번째 콜드 스타트 비용을 내지 않습니다. 이는 CWIST가 공개하는 저지연 프로필이며, Spring Boot에도 똑같은 처리를 해야 "튜닝된" 수치를 비교할 수 있습니다. 그렇지 않으면 CWIST의 최선의 경우를 Spring이 측정된 적 없는 조건의 수치 옆에 보여 주게 됩니다. Axum과 Gin은 아직 이 두 번째 측정에 포함되지 않습니다.</p>
-<h1><a class="anchor" id="autotoc_md709"></a>
+<h1><a class="anchor" id="autotoc_md714"></a>
 CWIST</h1>
 <ul>
 <li>체크아웃한 커밋으로 빌드합니다: <code>make</code> 후 <code>gcc -O3</code>로 <code>libcwist.a</code>에 링크한 벤치 서버.</li>
 <li>포트 <code>9091</code>에서 대기합니다.</li>
 </ul>
-<h1><a class="anchor" id="autotoc_md710"></a>
+<h1><a class="anchor" id="autotoc_md715"></a>
 Axum</h1>
 <ul>
 <li><code>axum = "0.7"</code>, <code>tokio = "1"</code>(<code>full</code> 기능), <code>cargo build --release</code>.</li>
 <li>포트 <code>9092</code>에서 대기합니다.</li>
 </ul>
-<h1><a class="anchor" id="autotoc_md711"></a>
+<h1><a class="anchor" id="autotoc_md716"></a>
 Gin (Go)</h1>
 <ul>
 <li><code>actions/setup-go</code>가 준비한 Go 도구(Go <b>1.22</b>) 위의 <code>github.com/gin-gonic/gin</code> <b>v1.10.0</b>, <code>gin.ReleaseMode</code>로 <code>go build</code>, 그 아래는 기본 <code>net/http</code> 서버.</li>
 <li>포트 <code>9094</code>에서 대기합니다.</li>
 </ul>
-<h1><a class="anchor" id="autotoc_md712"></a>
+<h1><a class="anchor" id="autotoc_md717"></a>
 Spring Boot (JVM 공정성 설정)</h1>
 <p>JVM은 한 번 재고 끝낼 수 있는 런타임이 아닙니다. 계층형 JIT 컴파일, 힙 크기 조정, 클래스 로딩이 짧은 실행을 지배합니다. 그래서 스위트는 다음 설정을 고정하고 *기록*합니다.</p>
 <p>벤치마크하는 스택은 스레드당 요청인 Tomcat 서블릿 컨테이너 위의 Spring MVC가 아니라, Spring의 리액티브 이벤트 루프 서버인 <b>Reactor Netty 위의 Spring WebFlux**입니다. Netty의 이벤트 루프가 비동기 CWIST(io_uring/epoll)와 <a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">Axum(tokio)</a> 서버에 대한 적절한 Java 비교 대상입니다. 이벤트 루프 위에 **가상 스레드를 켜서</b>(<code>spring.threads.virtual.enabled=true</code>, Project Loom) Netty 이벤트 루프 밖으로 보내는 작업이 제한된 플랫폼 스레드 풀 대신 Loom 가상 스레드에서 실행되게 합니다.</p>
@@ -181,7 +181,7 @@ Spring Boot (JVM 공정성 설정)</h1>
 </table>
 <p>전체 Spring 실행 명령은 다음과 같습니다.</p>
 <div class="fragment"><div class="line">java -Xms512m -Xmx512m -XX:SharedArchiveFile=app.jsa -jar spring-bench-0.0.1-SNAPSHOT.jar</div>
-</div><!-- fragment --><h1><a class="anchor" id="autotoc_md713"></a>
+</div><!-- fragment --><h1><a class="anchor" id="autotoc_md718"></a>
 기록하는 메타데이터</h1>
 <p><code>benchmarks/webserver.json</code>에 추가되는 모든 측정에는 수치 옆에 런타임 정보가 함께 들어가므로, 결과가 고립된 req/s 수치로 남지 않습니다.</p>
 <div class="fragment"><div class="line">{</div>
@@ -200,11 +200,11 @@ Spring Boot (JVM 공정성 설정)</h1>
 <div class="line">  }</div>
 <div class="line">}</div>
 </div><!-- fragment --><p><code>scripts/ci/benchmark.py render</code>는 이 환경 블록을 SVG 하단과 README 벤치마크 요약에 출력합니다.</p>
-<h1><a class="anchor" id="autotoc_md714"></a>
+<h1><a class="anchor" id="autotoc_md719"></a>
 지연 분포 차트</h1>
 <p><code>docs/webserver-latency-distribution.svg</code>(README에서 막대 차트 추이 SVG 바로 아래에 링크됨)는 각 서버의 지연 분포를 밀도 곡선으로 그립니다. 그래서 꼬리의 P99.999 수치만이 아니라 *모양*을 한눈에 볼 수 있습니다. 위 요약 표와 같은 다섯 서버(<code>cwist</code>, <code>cwist_c1m</code>, <code>axum</code>, <code>gin</code>, <code>spring</code>)를 비교하며, <code>_tuned</code> 항목(다른, 더 낮은 동시성의 부하 프로필)과 옵트인 실험 A/B (<code>cwist_c1m_arena1</code>, <code>cwist_sharded</code>)는 제외합니다. 그래서 차트는 항상 똑같은 <code>wrk -t12 -c400 -d10s</code> 프로필로 만든 실행만 비교합니다.</p>
 <p>이것은 **원시 데이터가 아니라 재구성한 것**입니다. wrk는 백분위수(min/p50/p75/p90/p99/p99.9/ p99.99/p99.999/max, 이제 모두 워크플로의 <code><a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">parse_wrk()</a></code>가 수집함. <code>.github/workflows/bsd-kqueue-benchmarks.yml</code> 참고)만 보고하며, 그 아래의 요청별 샘플은 보고하지 않습니다. <code>scripts/ci/benchmark.py</code>(<code>_inverse_cdf_samples</code>)는 알려진 백분위수 지점 사이에서 역누적분포함수를 선형 보간해 대표 샘플 집합을 합성하고, 그 위에서 표준 가우시안 KDE (<code>_gaussian_kde</code>, 대역폭은 Silverman의 경험 법칙)를 실행합니다. x축은 <code><a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">log1p(ms)</a></code>를 써서, 긴 <a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">꼬리(Gin, Spring Boot)</a>가 더 촘촘한 CWIST/Axum 곡선을 왼쪽 끝의 읽을 수 없는 뾰족한 모양으로 눌러 버리지 않게 합니다. 곡선 모양은 정확한 값이 아니라 대표적인 것으로 보세요. 백분위수 데이터가 더 듬성듬성한 서버(새로운 p75/p999/p9999/min/max 필드가 없는 오래된 기록 행)도 렌더링되지만, 보간할 기준점이 더 적을 뿐입니다.</p>
-<h1><a class="anchor" id="autotoc_md715"></a>
+<h1><a class="anchor" id="autotoc_md720"></a>
 알려진 한계</h1>
 <ul>
 <li>GitHub 호스팅 러너는 공유되고 잡음이 많은 <b>vCPU 4개</b> 머신입니다. 절대 수치는 실험실 수준의 측정이 아니라 추이 데이터로 보세요. 각 항목은 <code>runner_hw</code>(vCPU 수와 CPU 모델)를 정확히 기록하므로, 서로 다른 머신의 항목을 직접 비교하는 일이 없습니다. 코어를 모두 쓰는 로컬 머신은 같은 프로필을 CI 러너 속도의 몇 배로 처리합니다. <code>runner_hw</code>가 다른 항목 사이의 하락은 코드가 아니라 머신을 반영합니다.</li>
