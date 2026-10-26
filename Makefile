@@ -390,6 +390,7 @@ SRCS = src/core/sstring/sstring.c \
        src/core/utils/json_heal.c \
        src/core/utils/zod.c \
        src/sys/app/middleware.c \
+       src/sys/app/rate_limit_redis.c \
        src/sys/app/otel.c \
        src/sys/app/config.c \
        src/sys/app/logger.c \
@@ -1337,6 +1338,8 @@ TEST_TARGETS = test_worker_affinity \
                test_metrics \
                test_access_log \
                test_rate_limit \
+               test_rate_limit_redis \
+               test_redis_timeout \
                test_cache \
                test_bdr \
                test_bdr_cache \
@@ -1893,6 +1896,19 @@ test_profile: $(LIB_NAME) tests/test_profile.c
 test_rate_limit: $(LIB_NAME) tests/test_rate_limit.c
 	$(CC) $(CFLAGS) -o test_rate_limit tests/test_rate_limit.c $(LIB_NAME) $(LIBS)
 	./test_rate_limit
+
+test_rate_limit_redis: $(LIB_NAME) tests/test_rate_limit_redis.c
+	$(CC) $(CFLAGS) -o $@ tests/test_rate_limit_redis.c $(LIB_NAME) $(LIBS)
+	./$@
+
+test_redis_timeout: $(LIB_NAME) tests/test_redis_timeout.c
+	$(CC) $(CFLAGS) -o $@ tests/test_redis_timeout.c $(LIB_NAME) $(LIBS)
+	./$@
+
+.PHONY: redis-rate-limit-e2e
+redis-rate-limit-e2e: $(LIB_NAME) tests/test_rate_limit_redis.c
+	$(CC) $(CFLAGS) -o test_rate_limit_redis tests/test_rate_limit_redis.c $(LIB_NAME) $(LIBS)
+	$(PYTHON) scripts/ci/redis_rate_limit_e2e.py ./test_rate_limit_redis
 
 test_cache: $(LIB_NAME) tests/test_cache.c
 	$(CC) $(CFLAGS) -o test_cache tests/test_cache.c $(LIB_NAME) $(LIBS)
