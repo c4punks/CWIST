@@ -1,5 +1,5 @@
 var searchData=
 [
-  ['keeps_20the_20session_20ticket_20key_20stek_20unchanged_0',['ADR-0002: TLS certificate hot reload keeps the session-ticket key (STEK) unchanged',['../d1/dd3/md_docs_2decisions_20002-tls-hot-reload-stek.html',1,'']]],
-  ['key_20stek_20unchanged_1',['ADR-0002: TLS certificate hot reload keeps the session-ticket key (STEK) unchanged',['../d1/dd3/md_docs_2decisions_20002-tls-hot-reload-stek.html',1,'']]]
+  ['json_20빌더_20api_0',['JSON 빌더 API',['../d8/d3f/md_docs_2ko_2api_2json.html',1,'']]],
+  ['json_20builder_20api_1',['JSON Builder API',['../d8/deb/md_docs_2api_2json.html',1,'']]]
 ];

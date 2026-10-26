@@ -22,7 +22,7 @@
 <area shape="poly" id="edge6_Node000002_Node000007" title=" " alt="" coords="4402,113,5331,134,5888,153,6121,165,6297,179,6349,186,6349,191,6296,184,6120,171,5888,159,5331,139,4402,119"/>
 <area shape="rect" id="Node000008" href="$dd/dd7/css__composer_8c.html" title="Dynamic CSS Synthesis and Color Mathematics Implementation." alt="" coords="6529,189,6742,214"/>
 <area shape="poly" id="edge7_Node000002_Node000008" title=" " alt="" coords="4402,113,5432,133,6057,152,6319,165,6517,179,6573,186,6572,191,6516,184,6319,170,6057,158,5432,138,4402,118"/>
-<area shape="rect" id="Node000009" href="$d9/d39/alloc_8c.html" title="Memory allocation bridge that can route CWIST allocations through libttak owner guards." alt="" coords="6766,189,6923,214"/>
+<area shape="rect" id="Node000009" href="$d9/d39/alloc_8c.html" title=" " alt="" coords="6766,189,6923,214"/>
 <area shape="poly" id="edge8_Node000002_Node000009" title=" " alt="" coords="4403,112,4861,116,5541,126,6241,146,6533,160,6754,179,6798,186,6797,191,6754,184,6533,166,6240,151,5541,131,4861,121,4403,118"/>
 <area shape="rect" id="Node000010" href="$d8/d16/gc_8c.html" title="Thin implementation wrapper around libttak epoch&#45;based reclamation." alt="" coords="6947,189,7089,214"/>
 <area shape="poly" id="edge9_Node000002_Node000010" title=" " alt="" coords="4403,112,4892,113,5625,122,6014,130,6381,142,6697,158,6936,179,6975,186,6974,191,6935,184,6697,163,6380,147,6014,135,5625,127,4891,119,4403,117"/>

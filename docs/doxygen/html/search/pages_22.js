@@ -1,4 +1,4 @@
 var searchData=
 [
-  ['대상_0',['WASI 대상',['../d0/d3c/md_docs_2ko_2api_2wasi.html',1,'']]]
+  ['깨우기_20회귀_2025_0',['io_uring 게시 작업 깨우기 회귀 (#25)',['../dc/dd4/md_docs_2ko_2reactor-wakeup-regression.html',1,'']]]
 ];

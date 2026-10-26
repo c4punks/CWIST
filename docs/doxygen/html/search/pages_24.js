@@ -1,4 +1,4 @@
 var searchData=
 [
-  ['동작_0',['FIXED 엔드포인트 캐싱: 현재 동작',['../d7/dab/md_docs_2ko_2fixed-cache-status.html',1,'']]]
+  ['데이터베이스_20api_0',['데이터베이스 API',['../d5/d75/md_docs_2ko_2api_2sql.html',1,'']]]
 ];

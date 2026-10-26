@@ -1,4 +1,4 @@
 var searchData=
 [
-  ['읽기_0',['쿠키 읽기',['../db/d04/md_docs_2ko_2api_2cookie.html#autotoc_md374',1,'']]]
+  ['읽기_0',['쿠키 읽기',['../db/d04/md_docs_2ko_2api_2cookie.html#autotoc_md379',1,'']]]
 ];

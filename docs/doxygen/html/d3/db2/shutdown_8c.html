@@ -120,29 +120,35 @@ $(document).ready(function(){initNavTree('d3/db2/shutdown_8c.html','../../'); in
 <code>#include &lt;stdio.h&gt;</code><br />
 <code>#include &lt;stdlib.h&gt;</code><br />
 <code>#include &lt;stdbool.h&gt;</code><br />
+<code>#include &lt;<a class="el" href="../../de/d03/platform_8h_source.html">cwist/sys/platform.h</a>&gt;</code><br />
 <code>#include &lt;sys/socket.h&gt;</code><br />
 </div><div class="textblock"><div class="dynheader">
 Include dependency graph for shutdown.c:</div>
 <div class="dyncontent">
 <div class="center"><img src="../../d9/dac/shutdown_8c__incl.png" border="0" usemap="#asrc_2sys_2app_2shutdown_8c" alt=""/></div>
 <map name="asrc_2sys_2app_2shutdown_8c" id="asrc_2sys_2app_2shutdown_8c">
-<area shape="rect" title="Graceful shutdown implementation." alt="" coords="320,5,493,31"/>
-<area shape="rect" href="../../da/d39/shutdown_8h.html" title="Unified Graceful Shutdown support for CWIST." alt="" coords="15,79,204,104"/>
-<area shape="poly" title=" " alt="" coords="360,33,171,78,170,73,358,28"/>
-<area shape="rect" title=" " alt="" coords="228,79,303,104"/>
-<area shape="poly" title=" " alt="" coords="385,33,302,75,299,70,383,28"/>
-<area shape="rect" title=" " alt="" coords="327,79,393,104"/>
-<area shape="poly" title=" " alt="" coords="401,32,377,69,373,66,397,30"/>
-<area shape="rect" title=" " alt="" coords="418,79,489,104"/>
-<area shape="poly" title=" " alt="" coords="417,30,440,66,436,69,412,32"/>
-<area shape="rect" title=" " alt="" coords="513,79,596,104"/>
-<area shape="poly" title=" " alt="" coords="432,28,519,70,517,75,429,33"/>
-<area shape="rect" title=" " alt="" coords="621,79,723,104"/>
-<area shape="poly" title=" " alt="" coords="450,28,616,72,615,78,449,33"/>
+<area shape="rect" title="Graceful shutdown implementation." alt="" coords="384,5,557,31"/>
+<area shape="rect" href="../../da/d39/shutdown_8h.html" title="Unified Graceful Shutdown support for CWIST." alt="" coords="73,79,263,104"/>
+<area shape="poly" title=" " alt="" coords="423,33,231,78,230,73,421,28"/>
+<area shape="rect" href="../../de/d03/platform_8h.html" title="Target capability macros shared by all CWIST sources." alt="" coords="227,152,381,177"/>
+<area shape="poly" title=" " alt="" coords="412,33,367,51,347,64,329,80,314,108,308,138,302,137,309,106,325,77,343,60,365,46,411,28"/>
+<area shape="rect" title=" " alt="" coords="339,79,413,104"/>
+<area shape="poly" title=" " alt="" coords="457,33,404,72,401,68,454,29"/>
+<area shape="rect" title=" " alt="" coords="437,79,504,104"/>
+<area shape="poly" title=" " alt="" coords="473,31,473,65,468,65,468,31"/>
+<area shape="rect" title=" " alt="" coords="529,79,599,104"/>
+<area shape="poly" title=" " alt="" coords="487,29,540,68,536,72,484,33"/>
+<area shape="rect" title=" " alt="" coords="624,79,707,104"/>
+<area shape="poly" title=" " alt="" coords="503,28,622,71,620,76,501,33"/>
+<area shape="rect" title=" " alt="" coords="731,79,834,104"/>
+<area shape="poly" title=" " alt="" coords="521,28,720,73,718,78,520,33"/>
 <area shape="rect" title=" " alt="" coords="5,152,104,177"/>
-<area shape="poly" title=" " alt="" coords="102,106,74,143,70,140,98,103"/>
+<area shape="poly" title=" " alt="" coords="151,106,86,147,83,142,148,102"/>
+<area shape="poly" title=" " alt="" coords="191,102,271,143,269,148,189,106"/>
 <area shape="rect" title=" " alt="" coords="129,152,202,177"/>
-<area shape="poly" title=" " alt="" coords="121,103,150,140,146,143,116,106"/>
+<area shape="poly" title=" " alt="" coords="170,104,169,139,164,138,165,104"/>
+<area shape="rect" href="../../d3/da3/wasi_8h.html" title="WASI target feature detection shared by all CWIST sources." alt="" coords="240,225,368,251"/>
+<area shape="poly" title=" " alt="" coords="307,178,307,212,301,212,301,178"/>
 </map>
 </div>
 </div>
@@ -225,11 +231,11 @@ Variables</h2></td></tr>
 <p>Install SIGTERM and SIGINT handlers for graceful shutdown.</p>
 <p>Both signals are routed to cwist_shutdown_handler() with SA_RESTART. The pre-existing handlers are saved on the first install after a restore so <a class="el" href="../../da/d39/shutdown_8h.html#ab4c262bb875f1568c4944e36bfa68a5d" title="Put back the SIGTERM and SIGINT handlers that were in place before cwist_shutdown_install_handlers()....">cwist_shutdown_restore_handlers()</a> can put them back; a second install without a restore does not overwrite the saved handlers. The previous handlers are only recorded when both <a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">sigaction()</a> calls succeed. No-op on WASI hosts, which own the instance lifecycle. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d3/db2/shutdown_8c_source.html#l00110">110</a> of file <a class="el" href="../../d3/db2/shutdown_8c_source.html">shutdown.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d3/db2/shutdown_8c_source.html#l00111">111</a> of file <a class="el" href="../../d3/db2/shutdown_8c_source.html">shutdown.c</a>.</p>
 
 <p class="reference">References <a class="el" href="../../d3/db2/otel_8c_source.html#l00056">cap</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../df/d7f/app_8c_source.html#l04631">cwist_app_listen_ex()</a>, and <a class="el" href="../../df/d7f/app_8c_source.html#l04376">cwist_app_multiport()</a>.</p>
+<p class="reference">Referenced by <a class="el" href="../../df/d7f/app_8c_source.html#l04636">cwist_app_listen_ex()</a>.</p>
 
 </div>
 </div>
@@ -254,9 +260,9 @@ Variables</h2></td></tr>
 <p>Clears the g_cwist_running flag and releases the listening and UDP descriptors (if open). Closing the listen descriptor also calls shutdown(SHUT_RDWR) so <a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">accept()</a> loops blocked in other threads wake up with EINVAL. Safe to call more than once and from any thread: each descriptor is claimed atomically, so a second call cannot close a descriptor number that has been reused for an unrelated file.</p>
 <p>The UDP descriptor is only claimed, never closed here: the HTTP/3 loop thread may be inside <a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">recvmmsg()</a> on it, and closing under it both races with the read and can later close a reused descriptor number. The loop observes g_cwist_running within its poll timeout (&lt;= 1s) and the owning server path closes the descriptor after joining that thread. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d3/db2/shutdown_8c_source.html#l00062">62</a> of file <a class="el" href="../../d3/db2/shutdown_8c_source.html">shutdown.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d3/db2/shutdown_8c_source.html#l00063">63</a> of file <a class="el" href="../../d3/db2/shutdown_8c_source.html">shutdown.c</a>.</p>
 
-<p class="reference">References <a class="el" href="../../d3/db2/otel_8c_source.html#l00056">cap</a>, <a class="el" href="../../d3/db2/shutdown_8c_source.html#l00017">g_cwist_listen_fd</a>, <a class="el" href="../../d3/db2/shutdown_8c_source.html#l00016">g_cwist_running</a>, and <a class="el" href="../../d3/db2/shutdown_8c_source.html#l00018">g_cwist_udp_fd</a>.</p>
+<p class="reference">References <a class="el" href="../../d3/db2/otel_8c_source.html#l00056">cap</a>, <a class="el" href="../../d3/db2/shutdown_8c_source.html#l00018">g_cwist_listen_fd</a>, <a class="el" href="../../d3/db2/shutdown_8c_source.html#l00017">g_cwist_running</a>, and <a class="el" href="../../d3/db2/shutdown_8c_source.html#l00019">g_cwist_udp_fd</a>.</p>
 
 </div>
 </div>
@@ -280,9 +286,9 @@ Variables</h2></td></tr>
 <p>Reset shutdown state (useful in test suites).</p>
 <p>Sets g_cwist_running back to 1 and marks the listening and UDP descriptors as closed (-1). Does not close any open descriptors or touch signal handlers. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d3/db2/shutdown_8c_source.html#l00172">172</a> of file <a class="el" href="../../d3/db2/shutdown_8c_source.html">shutdown.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d3/db2/shutdown_8c_source.html#l00173">173</a> of file <a class="el" href="../../d3/db2/shutdown_8c_source.html">shutdown.c</a>.</p>
 
-<p class="reference">References <a class="el" href="../../d3/db2/otel_8c_source.html#l00056">cap</a>, <a class="el" href="../../d3/db2/shutdown_8c_source.html#l00017">g_cwist_listen_fd</a>, <a class="el" href="../../d3/db2/shutdown_8c_source.html#l00016">g_cwist_running</a>, and <a class="el" href="../../d3/db2/shutdown_8c_source.html#l00018">g_cwist_udp_fd</a>.</p>
+<p class="reference">References <a class="el" href="../../d3/db2/otel_8c_source.html#l00056">cap</a>, <a class="el" href="../../d3/db2/shutdown_8c_source.html#l00018">g_cwist_listen_fd</a>, <a class="el" href="../../d3/db2/shutdown_8c_source.html#l00017">g_cwist_running</a>, and <a class="el" href="../../d3/db2/shutdown_8c_source.html#l00019">g_cwist_udp_fd</a>.</p>
 
 </div>
 </div>
@@ -306,11 +312,11 @@ Variables</h2></td></tr>
 <p>Put back the SIGTERM and SIGINT handlers that were in place before <a class="el" href="../../da/d39/shutdown_8h.html#a842323fa5d238344cac27795d7b1f0a0" title="Install SIGTERM and SIGINT handlers for graceful shutdown.">cwist_shutdown_install_handlers()</a>. Does nothing if they are not installed. <a class="el" href="../../d0/d77/sys_2app_2app_8h.html#ac41b80406f8bc60ccf68ba36b2810db2" title="cwist_app_listen() with the worker count and server mode given explicitly.">cwist_app_listen_ex()</a> calls it before returning, so the signals request a graceful stop only while a server runs.</p>
 <p>Does nothing if no previous handlers were saved. After restoring, the saved state is cleared so a later install records the handlers then in effect. No-op on WASI hosts. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d3/db2/shutdown_8c_source.html#l00132">132</a> of file <a class="el" href="../../d3/db2/shutdown_8c_source.html">shutdown.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d3/db2/shutdown_8c_source.html#l00133">133</a> of file <a class="el" href="../../d3/db2/shutdown_8c_source.html">shutdown.c</a>.</p>
 
 <p class="reference">References <a class="el" href="../../d3/db2/otel_8c_source.html#l00056">cap</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../df/d7f/app_8c_source.html#l04631">cwist_app_listen_ex()</a>.</p>
+<p class="reference">Referenced by <a class="el" href="../../df/d7f/app_8c_source.html#l04636">cwist_app_listen_ex()</a>.</p>
 
 </div>
 </div>
@@ -329,7 +335,7 @@ Variables</h2></td></tr>
 
 <p>Drain timeout in seconds before process exits. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d3/db2/shutdown_8c_source.html#l00023">23</a> of file <a class="el" href="../../d3/db2/shutdown_8c_source.html">shutdown.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d3/db2/shutdown_8c_source.html#l00024">24</a> of file <a class="el" href="../../d3/db2/shutdown_8c_source.html">shutdown.c</a>.</p>
 
 </div>
 </div>
@@ -347,9 +353,9 @@ Variables</h2></td></tr>
 
 <p>Registered TCP listening socket (for signal-handler closure). </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d3/db2/shutdown_8c_source.html#l00017">17</a> of file <a class="el" href="../../d3/db2/shutdown_8c_source.html">shutdown.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d3/db2/shutdown_8c_source.html#l00018">18</a> of file <a class="el" href="../../d3/db2/shutdown_8c_source.html">shutdown.c</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../df/d7f/app_8c_source.html#l04376">cwist_app_multiport()</a>, <a class="el" href="../../d0/d3d/async__server_8c_source.html#l00174">cwist_async_server_loop()</a>, <a class="el" href="../../d3/db2/shutdown_8c_source.html#l00062">cwist_shutdown_request()</a>, and <a class="el" href="../../d3/db2/shutdown_8c_source.html#l00172">cwist_shutdown_reset()</a>.</p>
+<p class="reference">Referenced by <a class="el" href="../../d0/d3d/async__server_8c_source.html#l00174">cwist_async_server_loop()</a>, <a class="el" href="../../d3/db2/shutdown_8c_source.html#l00063">cwist_shutdown_request()</a>, and <a class="el" href="../../d3/db2/shutdown_8c_source.html#l00173">cwist_shutdown_reset()</a>.</p>
 
 </div>
 </div>
@@ -367,9 +373,9 @@ Variables</h2></td></tr>
 
 <p>Global running flag. Checked by all server event loops. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d3/db2/shutdown_8c_source.html#l00016">16</a> of file <a class="el" href="../../d3/db2/shutdown_8c_source.html">shutdown.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d3/db2/shutdown_8c_source.html#l00017">17</a> of file <a class="el" href="../../d3/db2/shutdown_8c_source.html">shutdown.c</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../df/d7f/app_8c_source.html#l04376">cwist_app_multiport()</a>, <a class="el" href="../../d2/db0/http2_8c_source.html#l03573">cwist_http2_serve_connection_ex()</a>, <a class="el" href="../../de/daf/http3_8c_source.html#l03004">cwist_http3_server_loop()</a>, <a class="el" href="../../dd/d43/http_8c_source.html#l03399">cwist_http_async_send_response()</a>, <a class="el" href="../../dd/d43/http_8c_source.html#l03668">cwist_http_coalesce_flush()</a>, <a class="el" href="../../dd/d43/http_8c_source.html#l05568">cwist_http_server_loop()</a>, <a class="el" href="../../d2/db2/https_8c_source.html#l02295">cwist_https_server_loop()</a>, <a class="el" href="../../d3/db2/shutdown_8c_source.html#l00062">cwist_shutdown_request()</a>, and <a class="el" href="../../d3/db2/shutdown_8c_source.html#l00172">cwist_shutdown_reset()</a>.</p>
+<p class="reference">Referenced by <a class="el" href="../../d2/db0/http2_8c_source.html#l03573">cwist_http2_serve_connection_ex()</a>, <a class="el" href="../../de/daf/http3_8c_source.html#l03004">cwist_http3_server_loop()</a>, <a class="el" href="../../dd/d43/http_8c_source.html#l03414">cwist_http_async_send_response()</a>, <a class="el" href="../../dd/d43/http_8c_source.html#l03683">cwist_http_coalesce_flush()</a>, <a class="el" href="../../dd/d43/http_8c_source.html#l05590">cwist_http_server_loop()</a>, <a class="el" href="../../d2/db2/https_8c_source.html#l02295">cwist_https_server_loop()</a>, <a class="el" href="../../d3/db2/shutdown_8c_source.html#l00063">cwist_shutdown_request()</a>, and <a class="el" href="../../d3/db2/shutdown_8c_source.html#l00173">cwist_shutdown_reset()</a>.</p>
 
 </div>
 </div>
@@ -387,9 +393,9 @@ Variables</h2></td></tr>
 
 <p>Registered UDP socket for HTTP/3 (for signal-handler closure). </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d3/db2/shutdown_8c_source.html#l00018">18</a> of file <a class="el" href="../../d3/db2/shutdown_8c_source.html">shutdown.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d3/db2/shutdown_8c_source.html#l00019">19</a> of file <a class="el" href="../../d3/db2/shutdown_8c_source.html">shutdown.c</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../df/d7f/app_8c_source.html#l04376">cwist_app_multiport()</a>, <a class="el" href="../../d3/db2/shutdown_8c_source.html#l00062">cwist_shutdown_request()</a>, and <a class="el" href="../../d3/db2/shutdown_8c_source.html#l00172">cwist_shutdown_reset()</a>.</p>
+<p class="reference">Referenced by <a class="el" href="../../d3/db2/shutdown_8c_source.html#l00063">cwist_shutdown_request()</a>, and <a class="el" href="../../d3/db2/shutdown_8c_source.html#l00173">cwist_shutdown_reset()</a>.</p>
 
 </div>
 </div>

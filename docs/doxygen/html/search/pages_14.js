@@ -1,7 +1,10 @@
 var searchData=
 [
-  ['query_20uri_20api_0',['Query &amp; URI API',['../dc/d49/md_docs_2api_2query.html',1,'']]],
-  ['queue_20required_20gate_1',['Durable queue required gate',['../d3/dd5/md_docs_2durable-queue-gate.html',1,'']]],
-  ['queue_3a_20static_20ring_20vs_20growable_20ring_2',['HTTPS pool task queue: static ring vs growable ring',['../df/d28/md_docs_2performance_2https-pool-dynamic-queue.html',1,'']]],
-  ['queuing_20in_20the_20c1m_20reactor_20s_20batch_20drain_20issue_2025_3',['Cooperative queuing in the C1M reactor&apos;s batch drain (issue #25)',['../d1/ddd/md_docs_2cooperative-queuing.html',1,'']]]
+  ['pipeline_20fairness_20and_20framing_0',['HTTP/1.1 pipeline fairness and framing',['../d2/dc2/md_docs_2http-reactor-fairness.html',1,'']]],
+  ['pluggable_20tls_20backend_20cwist_5ftls_1',['Pluggable TLS backend (CWIST_TLS)',['../d9/dda/md_docs_2performance_2tls-backends.html',1,'']]],
+  ['pool_20burst_20starvation_2025_20follow_20up_2',['Classic pool burst starvation (#25 follow-up)',['../d9/d56/md_docs_2classic-pool-starvation.html',1,'']]],
+  ['pool_20task_20queue_3a_20static_20ring_20vs_20growable_20ring_3',['HTTPS pool task queue: static ring vs growable ring',['../df/d28/md_docs_2performance_2https-pool-dynamic-queue.html',1,'']]],
+  ['posted_20work_20wake_20up_20regression_2025_4',['io_uring posted-work wake-up regression (#25)',['../dd/d56/md_docs_2reactor-wakeup-regression.html',1,'']]],
+  ['prebuilt_20release_20assets_5',['Prebuilt release assets',['../d1/da3/md_docs_2deployment_2release-assets.html',1,'']]],
+  ['public_20fixed_20contract_6',['ADR-0001: Restore HTTP response caching through an explicit public FIXED contract',['../de/d51/md_docs_2decisions_20001-safe-public-fixed-response-cache.html',1,'']]]
 ];

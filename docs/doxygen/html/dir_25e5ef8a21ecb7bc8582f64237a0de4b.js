@@ -7,6 +7,8 @@ var dir_25e5ef8a21ecb7bc8582f64237a0de4b =
     [ "job", "dir_932b3c57892abf23d339e359154a5f22.html", "dir_932b3c57892abf23d339e359154a5f22" ],
     [ "metrics", "dir_3e4f699f83dcde97f65e79459162e415.html", "dir_3e4f699f83dcde97f65e79459162e415" ],
     [ "session", "dir_b86549bbc09f9cfd9ece7ac122530cb4.html", "dir_b86549bbc09f9cfd9ece7ac122530cb4" ],
+    [ "platform.h", "de/d03/platform_8h.html", "de/d03/platform_8h" ],
+    [ "port.h", "da/d00/port_8h.html", "da/d00/port_8h" ],
     [ "sys_info.h", "da/d41/sys__info_8h.html", "da/d41/sys__info_8h" ],
     [ "wasi.h", "d3/da3/wasi_8h.html", null ]
 ];

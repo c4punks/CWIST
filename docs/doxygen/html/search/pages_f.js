@@ -1,9 +1,5 @@
 var searchData=
 [
-  ['latency_20histograms_0',['Opt-in wrk raw/corrected latency histograms',['../d1/dfd/md_docs_2performance_2wrk-dual-histogram.html',1,'']]],
-  ['legacy_20emscripten_1',['CWIST on WASM (Legacy Emscripten)',['../d5/d0e/md_docs_2api_2wasm.html',1,'']]],
-  ['library_20reference_2',['CWIST Library Reference',['../da/dca/md_docs_2REFERENCE.html',1,'']]],
-  ['limits_3',['C1M file limits',['../db/d4d/md_docs_2c1m-file-limits.html',1,'']]],
-  ['list_4',['Deprecated List',['../da/d58/deprecated.html',1,'']]],
-  ['local_2012_20core_20ryzen_205600x_5',['Issue #297 syscall-reduction audit (local, 12-core Ryzen 5600X)',['../d0/d34/md_docs_2performance_2issue-297-syscall-audit.html',1,'']]]
+  ['keeps_20the_20session_20ticket_20key_20stek_20unchanged_0',['ADR-0002: TLS certificate hot reload keeps the session-ticket key (STEK) unchanged',['../d1/dd3/md_docs_2decisions_20002-tls-hot-reload-stek.html',1,'']]],
+  ['key_20stek_20unchanged_1',['ADR-0002: TLS certificate hot reload keeps the session-ticket key (STEK) unchanged',['../d1/dd3/md_docs_2decisions_20002-tls-hot-reload-stek.html',1,'']]]
 ];

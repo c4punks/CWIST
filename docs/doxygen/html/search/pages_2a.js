@@ -1,4 +1,4 @@
 var searchData=
 [
-  ['만들기_0',['만들기',['../d6/d25/md_docs_2ko_2tutorials_2blog-crud.html',1,'CWIST로 CRUD 블로그 만들기'],['../df/d10/md_docs_2ko_2tutorials_2webtransport-server.html',1,'CWIST로 WebTransport 서버 만들기']]]
+  ['릴리스_20사전_20빌드_20에셋_0',['릴리스 사전 빌드 에셋',['../da/dcd/md_docs_2ko_2deployment_2release-assets.html',1,'']]]
 ];
