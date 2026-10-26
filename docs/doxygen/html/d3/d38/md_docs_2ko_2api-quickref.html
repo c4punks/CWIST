@@ -108,52 +108,52 @@ $(document).ready(function(){initNavTree('d3/d38/md_docs_2ko_2api-quickref.html'
   <div class="headertitle"><div class="title">CWIST API 레퍼런스</div></div>
 </div><!--header-->
 <div class="contents">
-<div class="textblock"><p><a class="anchor" id="autotoc_md324"></a> </p>
-<h1><a class="anchor" id="autotoc_md325"></a>
+<div class="textblock"><p><a class="anchor" id="autotoc_md329"></a> </p>
+<h1><a class="anchor" id="autotoc_md330"></a>
 에러 처리</h1>
-<h2><a class="anchor" id="autotoc_md326"></a>
+<h2><a class="anchor" id="autotoc_md331"></a>
 &lt;tt&gt;make_error&lt;/tt&gt;</h2>
 <ul>
 <li><code><a class="el" href="../../d4/d50/structcwist__error__t.html" title="Integrated error structure used throughout the system.">cwist_error_t</a> <a class="el" href="../../d3/d73/err_2cwist__err_8h.html#acebd12423b82bb0e4580503397972ac0" title="Creates an error object initialized with the specified type.">make_error(cwist_errtype_t type)</a></code></li>
 <li>요청한 에러 타입으로 <code><a class="el" href="../../d4/d50/structcwist__error__t.html" title="Integrated error structure used throughout the system.">cwist_error_t</a></code>를 만듭니다.</li>
 </ul>
-<h2><a class="anchor" id="autotoc_md327"></a>
+<h2><a class="anchor" id="autotoc_md332"></a>
 &lt;tt&gt;cwist_error_is_ok&lt;/tt&gt; / &lt;tt&gt;cwist_error_is_ok_extern&lt;/tt&gt;</h2>
 <ul>
 <li><code>static inline bool cwist_error_is_ok(const cwist_error_t *err)</code></li>
 <li><code>bool <a class="el" href="../../d3/d73/err_2cwist__err_8h.html#a685c1a8878ff4ee80d80314800d2b82e" title="Out-of-line cwist_error_is_ok(); see include/cwist/sys/err/cwist_err.h.">cwist_error_is_ok_extern(const cwist_error_t *err)</a></code></li>
 <li>활성 채널이 0/빈 값을 담고 있으면 참입니다 (NULL도 성공으로 칩니다). <code>_extern</code> 형태는 같은 검사를 실제 심볼로 제공하는 것으로, 헤더에서 생성한 바인딩처럼 <code>static inline</code> 함수를 쓸 수 없는 호출자를 위한 것입니다.</li>
 </ul>
-<h2><a class="anchor" id="autotoc_md328"></a>
+<h2><a class="anchor" id="autotoc_md333"></a>
 그 밖에 내보낸 inline 도우미</h2>
 <ul>
 <li><code>bool <a class="el" href="../../de/d66/endpoint__opts_8h.html#a63bb21149c578f03971f34e8d19144e3" title="Out-of-line cwist_endpoint_has(), for callers that cannot use a static inline function,...">cwist_endpoint_has_extern(cwist_endpoint_opt_t opts, cwist_endpoint_opt_t flag)</a></code>는 <code>cwist_endpoint_has()</code>의 out-of-line 버전입니다.</li>
 <li><code>include/cwist/</code>의 모든 <code>static inline</code> 도우미는 이런 식으로 내보내지거나, CI가 실행하는 <code>scripts/ci/check_inline_exports.py</code>에 이유와 함께 등록되어 있습니다.</li>
 </ul>
-<h1><a class="anchor" id="autotoc_md329"></a>
+<h1><a class="anchor" id="autotoc_md334"></a>
 SString (&lt;tt&gt;cwist_sstring&lt;/tt&gt;)</h1>
-<h2><a class="anchor" id="autotoc_md330"></a>
+<h2><a class="anchor" id="autotoc_md335"></a>
 수명 주기</h2>
 <ul>
 <li><code><a class="el" href="../../d5/ddc/structcwist__sstring.html">cwist_sstring</a> *cwist_sstring_create(void)</code></li>
 <li><code>void <a class="el" href="../../d4/dbd/core_2sstring_2sstring_8h.html#a94c24bf2288f664859ecefedf6c1d234" title="Destroy an sstring instance.">cwist_sstring_destroy(cwist_sstring *str)</a></code></li>
 <li><code><a class="el" href="../../d4/d50/structcwist__error__t.html" title="Integrated error structure used throughout the system.">cwist_error_t</a> <a class="el" href="../../d4/dbd/core_2sstring_2sstring_8h.html#a323f5f736786dc0f7ffa999974745092" title="Initialize an sstring.">cwist_sstring_init(cwist_sstring *str)</a></code></li>
 </ul>
-<h2><a class="anchor" id="autotoc_md331"></a>
+<h2><a class="anchor" id="autotoc_md336"></a>
 핵심 도우미</h2>
 <ul>
 <li><code>size_t <a class="el" href="../../d4/dbd/core_2sstring_2sstring_8h.html#a28bc3c268c30fe1c9f5d7f5da8bd8123" title="Get the current size.">cwist_sstring_get_size(cwist_sstring *str)</a></code></li>
 <li><code><a class="el" href="../../d4/d50/structcwist__error__t.html" title="Integrated error structure used throughout the system.">cwist_error_t</a> <a class="el" href="../../d4/dbd/core_2sstring_2sstring_8h.html#ab06b403202d85e60cb1a4c1ca1a5f748" title="Change the internal buffer size.">cwist_sstring_change_size(cwist_sstring *str, size_t size, bool blow_data)</a></code></li>
 <li><code><a class="el" href="../../d4/d50/structcwist__error__t.html" title="Integrated error structure used throughout the system.">cwist_error_t</a> cwist_sstring_assign(cwist_sstring *str, char *data)</code></li>
 </ul>
-<h2><a class="anchor" id="autotoc_md332"></a>
+<h2><a class="anchor" id="autotoc_md337"></a>
 공백 제거</h2>
 <ul>
 <li><code><a class="el" href="../../d4/d50/structcwist__error__t.html" title="Integrated error structure used throughout the system.">cwist_error_t</a> <a class="el" href="../../d4/dbd/core_2sstring_2sstring_8h.html#ae8fa312af0b2de849d44e1f33eb2dd6c" title="Left-trim whitespace.">cwist_sstring_ltrim(cwist_sstring *str)</a></code></li>
 <li><code><a class="el" href="../../d4/d50/structcwist__error__t.html" title="Integrated error structure used throughout the system.">cwist_error_t</a> <a class="el" href="../../d4/dbd/core_2sstring_2sstring_8h.html#ac0811bcf8f4f42d716341a8ef30ae790" title="Right-trim whitespace.">cwist_sstring_rtrim(cwist_sstring *str)</a></code></li>
 <li><code><a class="el" href="../../d4/d50/structcwist__error__t.html" title="Integrated error structure used throughout the system.">cwist_error_t</a> <a class="el" href="../../d4/dbd/core_2sstring_2sstring_8h.html#ad9b7c3cd22db6dc53ea387a10d6f3687" title="Trim whitespace from both ends.">cwist_sstring_trim(cwist_sstring *str)</a></code></li>
 </ul>
-<h2><a class="anchor" id="autotoc_md333"></a>
+<h2><a class="anchor" id="autotoc_md338"></a>
 덧붙이기 / 복사</h2>
 <ul>
 <li><code><a class="el" href="../../d4/d50/structcwist__error__t.html" title="Integrated error structure used throughout the system.">cwist_error_t</a> <a class="el" href="../../d4/dbd/core_2sstring_2sstring_8h.html#a51c2c4f709f0a58ab21544fd04117cdc" title="Append a C string.">cwist_sstring_append(cwist_sstring *str, const char *data)</a></code></li>
@@ -161,7 +161,7 @@ SString (&lt;tt&gt;cwist_sstring&lt;/tt&gt;)</h1>
 <li><code><a class="el" href="../../d4/d50/structcwist__error__t.html" title="Integrated error structure used throughout the system.">cwist_error_t</a> <a class="el" href="../../d4/dbd/core_2sstring_2sstring_8h.html#a8a778faadfac9576e76552bb79b55d9b" title="Copy to a C string buffer.">cwist_sstring_copy(cwist_sstring *origin, char *destination)</a></code></li>
 <li><code><a class="el" href="../../d4/d50/structcwist__error__t.html" title="Integrated error structure used throughout the system.">cwist_error_t</a> <a class="el" href="../../d4/dbd/core_2sstring_2sstring_8h.html#aef30141d70c3a88662393018d2919ab8" title="Copy from another sstring.">cwist_sstring_copy_sstring(cwist_sstring *origin, const cwist_sstring *from)</a></code></li>
 </ul>
-<h2><a class="anchor" id="autotoc_md334"></a>
+<h2><a class="anchor" id="autotoc_md339"></a>
 비교 / 조회</h2>
 <ul>
 <li><code>int <a class="el" href="../../d4/dbd/core_2sstring_2sstring_8h.html#a0635443143b442d0e6ddd1d25d1d2174" title="Compare with a C string.">cwist_sstring_compare(cwist_sstring *str, const char *compare_to)</a></code></li>
@@ -169,52 +169,52 @@ SString (&lt;tt&gt;cwist_sstring&lt;/tt&gt;)</h1>
 <li><code><a class="el" href="../../d4/d50/structcwist__error__t.html" title="Integrated error structure used throughout the system.">cwist_error_t</a> <a class="el" href="../../d4/dbd/core_2sstring_2sstring_8h.html#af07d5aa301d5c4d4d90b3df5efe68b80" title="Seek a substring at a location.">cwist_sstring_seek(cwist_sstring *str, char *substr, int location)</a></code></li>
 <li><code><a class="el" href="../../d5/ddc/structcwist__sstring.html">cwist_sstring</a> *cwist_sstring_substr(<a class="el" href="../../d5/ddc/structcwist__sstring.html">cwist_sstring</a> *str, int start, int length)</code></li>
 </ul>
-<h1><a class="anchor" id="autotoc_md335"></a>
+<h1><a class="anchor" id="autotoc_md340"></a>
 HTTP</h1>
-<h2><a class="anchor" id="autotoc_md336"></a>
+<h2><a class="anchor" id="autotoc_md341"></a>
 요청 수명 주기</h2>
 <ul>
 <li><code><a class="el" href="../../dd/d68/structcwist__http__request.html">cwist_http_request</a> *cwist_http_request_create(void)</code></li>
 <li><code>void <a class="el" href="../../dd/d56/http_8h.html#aa3fb04b2c1647163832969e3ee5ac9f1" title="Destroy an HTTP request object.">cwist_http_request_destroy(cwist_http_request *req)</a></code></li>
 <li><code><a class="el" href="../../dd/d68/structcwist__http__request.html">cwist_http_request</a> *cwist_http_parse_request(const char *raw_request)</code></li>
 </ul>
-<h2><a class="anchor" id="autotoc_md337"></a>
+<h2><a class="anchor" id="autotoc_md342"></a>
 응답 수명 주기</h2>
 <ul>
 <li><code><a class="el" href="../../dd/d22/structcwist__http__response.html" title="HTTP Response Object. Supports standard string body or Zero-Copy pointer body.">cwist_http_response</a> *cwist_http_response_create(void)</code></li>
 <li><code>void <a class="el" href="../../dd/d56/http_8h.html#abb4d7c3cd5624faea1646f36b835ec69" title="Destroy an HTTP response object.">cwist_http_response_destroy(cwist_http_response *res)</a></code></li>
 <li><code><a class="el" href="../../d4/d50/structcwist__error__t.html" title="Integrated error structure used throughout the system.">cwist_error_t</a> <a class="el" href="../../dd/d56/http_8h.html#a770973e3aeea4a05dd890982a2afc76e" title="Send a response over a socket.">cwist_http_send_response(int client_fd, cwist_http_response *res)</a></code></li>
 </ul>
-<h2><a class="anchor" id="autotoc_md338"></a>
+<h2><a class="anchor" id="autotoc_md343"></a>
 헤더 도우미</h2>
 <ul>
 <li><code><a class="el" href="../../d4/d50/structcwist__error__t.html" title="Integrated error structure used throughout the system.">cwist_error_t</a> <a class="el" href="../../dd/d56/http_8h.html#ab75bffc747ca7b55ac62f581702f1e2a" title="Add a header to the list.">cwist_http_header_add(cwist_http_header_node **head, const char *key, const char *value)</a></code></li>
 <li><code>char *cwist_http_header_get(<a class="el" href="../../d3/d72/structcwist__http__header__node.html" title="Linked list for headers to handle multiple headers easily.">cwist_http_header_node</a> *head, const char *key)</code></li>
 <li><code>void <a class="el" href="../../dd/d56/http_8h.html#ac12c6d41a5af1dea9d3f825c245e7fbd" title="Free all headers.">cwist_http_header_free_all(cwist_http_header_node *head)</a></code></li>
 </ul>
-<h2><a class="anchor" id="autotoc_md339"></a>
+<h2><a class="anchor" id="autotoc_md344"></a>
 메서드 도우미</h2>
 <ul>
 <li><code>const char *cwist_http_method_to_string(cwist_http_method_t method)</code></li>
 <li><code>cwist_http_method_t <a class="el" href="../../dd/d56/http_8h.html#ae7b52eebcb4d266bd4ec47b2649c16eb" title="Convert method string to enum.">cwist_http_string_to_method(const char *method_str)</a></code></li>
 </ul>
-<h2><a class="anchor" id="autotoc_md340"></a>
+<h2><a class="anchor" id="autotoc_md345"></a>
 소켓 도우미</h2>
 <ul>
 <li><code>int <a class="el" href="../../dd/d56/http_8h.html#a89d1a241e43022d68253ad1590e85c93" title="Create an IPv4 socket and bind/listen.">cwist_make_socket_ipv4(struct sockaddr_in *sockv4, const char *address, uint16_t port, uint16_t backlog)</a></code></li>
 <li><code><a class="el" href="../../d4/d50/structcwist__error__t.html" title="Integrated error structure used throughout the system.">cwist_error_t</a> cwist_accept_socket(int server_fd, struct sockaddr *sockv4, void (*handler_func)(int client_fd))</code></li>
 <li><code><a class="el" href="../../d4/d50/structcwist__error__t.html" title="Integrated error structure used throughout the system.">cwist_error_t</a> cwist_http_server_loop(int server_fd, <a class="el" href="../../d5/d6e/structcwist__server__config.html">cwist_server_config</a> *config, void (*handler)(int))</code></li>
 </ul>
-<h1><a class="anchor" id="autotoc_md341"></a>
+<h1><a class="anchor" id="autotoc_md346"></a>
 세션 매니저</h1>
-<h2><a class="anchor" id="autotoc_md342"></a>
+<h2><a class="anchor" id="autotoc_md347"></a>
 아레나</h2>
 <ul>
 <li><code>void <a class="el" href="../../d7/d95/session__manager_8h.html#a2a5d881373cbf7beb360b73523916516" title="Initialize a session arena.">session_arena_init(struct session_arena *arena, uint8_t *buffer, size_t capacity)</a></code></li>
 <li><code>void *session_arena_alloc(struct <a class="el" href="../../d4/d6b/structsession__arena.html" title="Linear arena used for fast request-lifetime allocations.">session_arena</a> *arena, size_t size)</code></li>
 <li><code>void <a class="el" href="../../d7/d95/session__manager_8h.html#aa64bf27354f38734538f849d5f66f59a" title="Reset a session arena.">session_arena_reset(struct session_arena *arena)</a></code></li>
 </ul>
-<h2><a class="anchor" id="autotoc_md343"></a>
+<h2><a class="anchor" id="autotoc_md348"></a>
 공유 세션 (침습적 참조 카운트)</h2>
 <ul>
 <li><code>void session_rc_init(struct <a class="el" href="../../d7/d9b/structsession__rc__header.html" title="Reference-count header placed immediately before shared session payloads.">session_rc_header</a> *header, void (*destructor)(void *))</code></li>
@@ -222,7 +222,7 @@ HTTP</h1>
 <li><code>void <a class="el" href="../../d7/d95/session__manager_8h.html#ac971b59f4468f1bb04d3313d50cfc39e" title="Increment reference count.">session_shared_inc(void *payload)</a></code></li>
 <li><code>void <a class="el" href="../../d7/d95/session__manager_8h.html#a362a4383acec3e35d726ff7ba772fb48" title="Decrement reference count and free if zero.">session_shared_dec(void *payload)</a></code></li>
 </ul>
-<h2><a class="anchor" id="autotoc_md344"></a>
+<h2><a class="anchor" id="autotoc_md349"></a>
 매니저</h2>
 <ul>
 <li><code>void <a class="el" href="../../d7/d95/session__manager_8h.html#ace62b9475e52a9b0ffd9a43c68b5613d" title="Initialize session manager.">session_manager_init(struct session_manager *manager, uint8_t *buffer, size_t capacity)</a></code></li>

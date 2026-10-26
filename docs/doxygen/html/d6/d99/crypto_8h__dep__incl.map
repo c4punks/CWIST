@@ -1,15 +1,11 @@
 <map id="src/security/tls/shim/openssl/crypto.h" name="src/security/tls/shim/openssl/crypto.h">
-<area shape="rect" id="Node000001" title="mbedTLS TLS backend: OPENSSL_cleanse / CRYPTO_memcmp." alt="" coords="273,5,426,45"/>
+<area shape="rect" id="Node000001" title="mbedTLS TLS backend: OPENSSL_cleanse / CRYPTO_memcmp." alt="" coords="185,5,338,45"/>
 <area shape="rect" id="Node000002" href="$d2/db2/https_8c.html" title="OpenSSL&#45;backed HTTPS accept, receive, send, and server&#45;loop helpers." alt="" coords="5,101,149,126"/>
-<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="277,52,114,103,113,98,276,47"/>
-<area shape="rect" id="Node000003" href="$de/d67/session_8c.html" title="Signed client&#45;side session cookie implementation." alt="" coords="173,101,333,126"/>
-<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="320,57,268,102,265,98,316,53"/>
-<area shape="rect" id="Node000004" href="$db/d2e/backend__mbedtls_8c.html" title="mbedTLS implementation of the CWIST TLS backend seam." alt="" coords="358,93,533,133"/>
-<area shape="poly" id="edge3_Node000001_Node000004" title=" " alt="" coords="383,53,426,91,422,95,379,57"/>
-<area shape="rect" id="Node000005" href="$d9/d9a/mem_8h.html" title="mbedTLS TLS backend: OPENSSL_cleanse (BoringSSL puts it here)." alt="" coords="557,93,710,133"/>
-<area shape="poly" id="edge4_Node000001_Node000005" title=" " alt="" coords="426,47,572,91,570,96,424,52"/>
-<area shape="rect" id="Node000006" href="$d0/d3c/seq__auth_8c.html" title=" " alt="" coords="450,189,625,214"/>
-<area shape="poly" id="edge5_Node000005_Node000006" title=" " alt="" coords="604,145,552,190,549,186,600,141"/>
-<area shape="rect" id="Node000007" href="$dc/d64/db__crypt_8c.html" title=" " alt="" coords="649,181,807,221"/>
-<area shape="poly" id="edge6_Node000005_Node000007" title=" " alt="" coords="666,141,709,179,705,183,663,145"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="210,54,103,103,101,98,207,49"/>
+<area shape="rect" id="Node000003" href="$db/d2e/backend__mbedtls_8c.html" title="mbedTLS implementation of the CWIST TLS backend seam." alt="" coords="174,93,349,133"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="264,59,264,93,259,93,259,59"/>
+<area shape="rect" id="Node000004" href="$d9/d9a/mem_8h.html" title="mbedTLS TLS backend: OPENSSL_cleanse (BoringSSL puts it here)." alt="" coords="373,93,526,133"/>
+<area shape="poly" id="edge3_Node000001_Node000004" title=" " alt="" coords="316,49,409,91,407,96,314,53"/>
+<area shape="rect" id="Node000005" href="$dc/d64/db__crypt_8c.html" title=" " alt="" coords="371,181,528,221"/>
+<area shape="poly" id="edge4_Node000004_Node000005" title=" " alt="" coords="452,147,452,181,447,181,447,147"/>
 </map>

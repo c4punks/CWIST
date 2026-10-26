@@ -1,0 +1,7 @@
+<map id="include/cwist/sys/port.h" name="include/cwist/sys/port.h">
+<area shape="rect" id="Node000001" title="Hooks a bare&#45;metal firmware supplies to CWIST (issue #447)." alt="" coords="5,5,180,31"/>
+<area shape="rect" id="Node000002" title=" " alt="" coords="7,79,82,104"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="87,33,62,69,58,66,83,30"/>
+<area shape="rect" id="Node000003" title=" " alt="" coords="107,79,177,104"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="103,29,128,66,124,69,99,33"/>
+</map>

@@ -1,4 +1,4 @@
 var searchData=
 [
-  ['핸드오프로_20무중단_20재시작하기_0',['소켓 핸드오프로 무중단 재시작하기',['../d1/d45/md_docs_2ko_2deployment_2zero-downtime-restart.html',1,'']]]
+  ['한도_0',['C1M 파일 한도',['../db/dc4/md_docs_2ko_2c1m-file-limits.html',1,'']]]
 ];

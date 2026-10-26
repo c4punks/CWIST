@@ -1,41 +1,38 @@
 <map id="src/core/seq/seq_auth.c" name="src/core/seq/seq_auth.c">
-<area shape="rect" id="Node000001" title=" " alt="" coords="749,5,923,31"/>
-<area shape="rect" id="Node000002" href="$d0/dd2/seq__auth_8h.html" title="Authenticated v2 envelope for CWIST sequenced payloads." alt="" coords="101,79,243,119"/>
-<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="749,32,323,81,258,89,257,84,322,76,748,27"/>
-<area shape="rect" id="Node000007" href="$d2/dfe/alloc_8h.html" title="Memory allocation wrappers backed by libttak." alt="" coords="335,86,508,111"/>
-<area shape="poly" id="edge6_Node000001_Node000007" title=" " alt="" coords="776,33,496,86,495,81,775,28"/>
-<area shape="rect" id="Node000010" href="$d0/dc6/hmac_8h.html" title="mbedTLS TLS backend: HMAC subset (HMAC&#45;SHA256, one&#45;shot + streaming)." alt="" coords="554,86,678,111"/>
-<area shape="poly" id="edge12_Node000001_Node000010" title=" " alt="" coords="805,33,662,84,660,79,803,28"/>
-<area shape="rect" id="Node000012" href="$d9/d9a/mem_8h.html" title="mbedTLS TLS backend: OPENSSL_cleanse (BoringSSL puts it here)." alt="" coords="703,86,825,111"/>
-<area shape="poly" id="edge16_Node000001_Node000012" title=" " alt="" coords="827,33,786,77,782,74,823,29"/>
-<area shape="rect" id="Node000014" href="$d5/d66/rand_8h.html" title="mbedTLS TLS backend: RAND_bytes over mbedTLS CTR&#45;DRBG." alt="" coords="849,86,967,111"/>
-<area shape="poly" id="edge19_Node000001_Node000014" title=" " alt="" coords="849,29,890,74,886,77,845,33"/>
-<area shape="rect" id="Node000015" title=" " alt="" coords="990,86,1061,111"/>
-<area shape="poly" id="edge20_Node000001_Node000015" title=" " alt="" coords="865,28,986,78,984,83,863,33"/>
-<area shape="rect" id="Node000016" title=" " alt="" coords="1085,86,1169,111"/>
-<area shape="poly" id="edge21_Node000001_Node000016" title=" " alt="" coords="888,28,1074,76,1084,79,1082,84,1073,81,887,33"/>
-<area shape="rect" id="Node000017" title=" " alt="" coords="1193,86,1263,111"/>
-<area shape="poly" id="edge22_Node000001_Node000017" title=" " alt="" coords="924,27,1047,46,1182,76,1190,79,1188,84,1181,81,1046,51,923,32"/>
-<area shape="rect" id="Node000003" href="$d6/d3c/seq_8h.html" title="TCP&#45;like sequenced message fragmentation and reassembly." alt="" coords="5,167,160,192"/>
-<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="152,121,108,159,104,155,149,117"/>
-<area shape="rect" id="Node000004" title=" " alt="" coords="188,240,271,265"/>
-<area shape="poly" id="edge3_Node000003_Node000004" title=" " alt="" coords="107,190,194,232,192,236,105,194"/>
-<area shape="rect" id="Node000005" title=" " alt="" coords="471,240,545,265"/>
-<area shape="poly" id="edge4_Node000003_Node000005" title=" " alt="" coords="151,189,457,240,456,245,151,195"/>
-<area shape="rect" id="Node000006" title=" " alt="" coords="47,240,118,265"/>
-<area shape="poly" id="edge5_Node000003_Node000006" title=" " alt="" coords="85,192,85,226,80,226,80,192"/>
-<area shape="poly" id="edge7_Node000007_Node000005" title=" " alt="" coords="421,112,418,149,421,171,428,191,447,214,471,231,468,236,443,218,423,193,415,172,413,149,416,111"/>
-<area shape="rect" id="Node000008" title=" " alt="" coords="437,167,579,192"/>
-<area shape="poly" id="edge8_Node000007_Node000008" title=" " alt="" coords="436,110,487,155,483,159,432,113"/>
-<area shape="rect" id="Node000009" href="$da/d0c/arena_8h.html" title="Request&#45;scoped arena allocator backed by libttak arena generations." alt="" coords="184,167,363,192"/>
-<area shape="poly" id="edge9_Node000007_Node000009" title=" " alt="" coords="401,114,309,162,306,158,398,109"/>
-<area shape="poly" id="edge10_Node000009_Node000004" title=" " alt="" coords="268,194,246,230,241,227,264,191"/>
-<area shape="poly" id="edge11_Node000009_Node000005" title=" " alt="" coords="312,189,458,234,457,239,310,195"/>
-<area shape="poly" id="edge15_Node000010_Node000005" title=" " alt="" coords="618,112,611,150,604,173,593,194,571,217,546,235,543,231,567,213,588,190,599,170,606,149,613,111"/>
-<area shape="rect" id="Node000011" href="$d5/d67/evp_8h.html" title="mbedTLS TLS backend: EVP subset (HMAC digest tags, AES&#45;256&#45;CBC)." alt="" coords="653,167,765,192"/>
-<area shape="poly" id="edge13_Node000010_Node000011" title=" " alt="" coords="631,109,687,156,683,160,628,114"/>
-<area shape="poly" id="edge14_Node000011_Node000005" title=" " alt="" coords="678,195,554,238,553,233,676,190"/>
-<area shape="rect" id="Node000013" href="$da/da0/crypto_8h.html" title="mbedTLS TLS backend: OPENSSL_cleanse / CRYPTO_memcmp." alt="" coords="789,167,918,192"/>
-<area shape="poly" id="edge17_Node000012_Node000013" title=" " alt="" coords="779,110,832,156,828,160,775,114"/>
-<area shape="poly" id="edge18_Node000013_Node000005" title=" " alt="" coords="798,195,560,244,559,238,797,189"/>
+<area shape="rect" id="Node000001" title=" " alt="" coords="737,5,912,31"/>
+<area shape="rect" id="Node000002" href="$d0/dd2/seq__auth_8h.html" title="Authenticated v2 envelope for CWIST sequenced payloads." alt="" coords="417,79,560,119"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="776,33,574,80,573,75,775,28"/>
+<area shape="rect" id="Node000007" href="$d2/dfe/alloc_8h.html" title="Memory allocation wrappers backed by libttak." alt="" coords="132,86,306,111"/>
+<area shape="poly" id="edge6_Node000001_Node000007" title=" " alt="" coords="737,33,320,87,319,82,737,28"/>
+<area shape="rect" id="Node000010" href="$de/d03/platform_8h.html" title="Target capability macros shared by all CWIST sources." alt="" coords="600,86,755,111"/>
+<area shape="poly" id="edge12_Node000001_Node000010" title=" " alt="" coords="804,33,713,82,710,77,801,28"/>
+<area shape="rect" id="Node000012" href="$d5/de3/sha256_8h.html" title="Minimal self&#45;contained SHA&#45;256 and HMAC&#45;SHA256 (RFC 4634 style)." alt="" coords="726,167,922,192"/>
+<area shape="poly" id="edge14_Node000001_Node000012" title=" " alt="" coords="827,31,827,153,822,153,822,31"/>
+<area shape="rect" id="Node000013" title=" " alt="" coords="857,240,928,265"/>
+<area shape="poly" id="edge21_Node000001_Node000013" title=" " alt="" coords="839,29,890,83,917,122,938,166,939,184,935,201,916,231,912,228,930,199,934,183,932,167,913,125,886,87,835,33"/>
+<area shape="rect" id="Node000014" title=" " alt="" coords="998,86,1069,111"/>
+<area shape="poly" id="edge19_Node000001_Node000014" title=" " alt="" coords="856,28,991,79,989,84,854,33"/>
+<area shape="rect" id="Node000015" title=" " alt="" coords="1093,86,1177,111"/>
+<area shape="poly" id="edge20_Node000001_Node000015" title=" " alt="" coords="883,28,977,49,1082,76,1092,79,1091,84,1081,81,975,54,881,33"/>
+<area shape="rect" id="Node000003" href="$d6/d3c/seq_8h.html" title="TCP&#45;like sequenced message fragmentation and reassembly." alt="" coords="395,167,550,192"/>
+<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="487,119,480,154,475,153,482,118"/>
+<area shape="rect" id="Node000004" title=" " alt="" coords="431,240,514,265"/>
+<area shape="poly" id="edge3_Node000003_Node000004" title=" " alt="" coords="475,192,475,226,470,226,470,192"/>
+<area shape="rect" id="Node000005" title=" " alt="" coords="206,240,280,265"/>
+<area shape="poly" id="edge4_Node000003_Node000005" title=" " alt="" coords="436,195,294,238,293,233,435,189"/>
+<area shape="rect" id="Node000006" title=" " alt="" coords="685,240,756,265"/>
+<area shape="poly" id="edge5_Node000003_Node000006" title=" " alt="" coords="513,189,672,235,671,240,511,195"/>
+<area shape="poly" id="edge7_Node000007_Node000005" title=" " alt="" coords="133,112,79,123,34,139,19,150,10,161,9,175,17,190,28,200,44,208,90,223,192,243,191,248,88,229,42,213,25,204,13,194,4,176,5,160,15,146,32,135,78,118,132,107"/>
+<area shape="rect" id="Node000008" title=" " alt="" coords="230,167,371,192"/>
+<area shape="poly" id="edge8_Node000007_Node000008" title=" " alt="" coords="233,110,280,155,277,159,229,113"/>
+<area shape="rect" id="Node000009" href="$da/d0c/arena_8h.html" title="Request&#45;scoped arena allocator backed by libttak arena generations." alt="" coords="27,167,206,192"/>
+<area shape="poly" id="edge9_Node000007_Node000009" title=" " alt="" coords="205,114,144,160,141,156,202,109"/>
+<area shape="poly" id="edge10_Node000009_Node000004" title=" " alt="" coords="174,189,418,238,417,243,173,195"/>
+<area shape="poly" id="edge11_Node000009_Node000005" title=" " alt="" coords="138,190,211,231,209,235,135,194"/>
+<area shape="rect" id="Node000011" href="$d3/da3/wasi_8h.html" title="WASI target feature detection shared by all CWIST sources." alt="" coords="574,167,702,192"/>
+<area shape="poly" id="edge13_Node000010_Node000011" title=" " alt="" coords="674,113,652,156,647,153,669,110"/>
+<area shape="poly" id="edge17_Node000012_Node000004" title=" " alt="" coords="768,195,528,243,527,238,767,189"/>
+<area shape="poly" id="edge15_Node000012_Node000005" title=" " alt="" coords="731,195,295,248,294,242,731,189"/>
+<area shape="poly" id="edge16_Node000012_Node000006" title=" " alt="" coords="809,194,750,234,747,230,806,190"/>
+<area shape="poly" id="edge18_Node000012_Node000013" title=" " alt="" coords="837,190,874,228,870,232,834,194"/>
 </map>

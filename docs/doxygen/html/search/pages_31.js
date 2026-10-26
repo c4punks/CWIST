@@ -1,4 +1,4 @@
 var searchData=
 [
-  ['방법_0',['웹 서버 벤치마크 측정 방법',['../d8/d7e/md_docs_2ko_2webserver-benchmark.html',1,'']]]
+  ['미들웨어_20api_0',['미들웨어 API',['../d5/d3e/md_docs_2ko_2api_2middleware.html',1,'']]]
 ];

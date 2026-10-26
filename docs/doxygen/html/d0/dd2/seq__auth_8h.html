@@ -379,9 +379,9 @@ Functions</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>New context, or NULL on invalid arguments or allocation failure. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d0/d3c/seq__auth_8c_source.html#l00233">233</a> of file <a class="el" href="../../d0/d3c/seq__auth_8c_source.html">seq_auth.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d0/d3c/seq__auth_8c_source.html#l00237">237</a> of file <a class="el" href="../../d0/d3c/seq__auth_8c_source.html">seq_auth.c</a>.</p>
 
-<p class="reference">References <a class="el" href="../../d3/db2/otel_8c_source.html#l00056">cap</a>, <a class="el" href="../../d9/d39/alloc_8c_source.html#l00276">cwist_alloc()</a>, <a class="el" href="../../d9/d39/alloc_8c_source.html#l00290">cwist_alloc_array()</a>, <a class="el" href="../../d9/d39/alloc_8c_source.html#l00391">cwist_free()</a>, <a class="el" href="../../d0/d3c/seq__auth_8c_source.html#l00264">cwist_seq_auth_context_destroy()</a>, <a class="el" href="../../d0/dd2/seq__auth_8h_source.html#l00020">CWIST_SEQ_AUTH_MESSAGE_ID_SIZE</a>, and <a class="el" href="../../d0/dd2/seq__auth_8h_source.html#l00021">CWIST_SEQ_AUTH_NONCE_SIZE</a>.</p>
+<p class="reference">References <a class="el" href="../../d3/db2/otel_8c_source.html#l00056">cap</a>, <a class="el" href="../../d9/d39/alloc_8c_source.html#l00017">cwist_alloc()</a>, <a class="el" href="../../d9/d39/alloc_8c_source.html#l00021">cwist_alloc_array()</a>, <a class="el" href="../../d9/d39/alloc_8c_source.html#l00052">cwist_free()</a>, <a class="el" href="../../d0/d3c/seq__auth_8c_source.html#l00268">cwist_seq_auth_context_destroy()</a>, <a class="el" href="../../d0/dd2/seq__auth_8h_source.html#l00020">CWIST_SEQ_AUTH_MESSAGE_ID_SIZE</a>, and <a class="el" href="../../d0/dd2/seq__auth_8h_source.html#l00021">CWIST_SEQ_AUTH_NONCE_SIZE</a>.</p>
 
 </div>
 </div>
@@ -410,11 +410,11 @@ Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d0/d3c/seq__auth_8c_source.html#l00264">264</a> of file <a class="el" href="../../d0/d3c/seq__auth_8c_source.html">seq_auth.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d0/d3c/seq__auth_8c_source.html#l00268">268</a> of file <a class="el" href="../../d0/d3c/seq__auth_8c_source.html">seq_auth.c</a>.</p>
 
-<p class="reference">References <a class="el" href="../../d3/db2/otel_8c_source.html#l00056">cap</a>, <a class="el" href="../../d9/d39/alloc_8c_source.html#l00391">cwist_free()</a>, and <a class="el" href="../../d0/d3c/seq__auth_8c_source.html#l00050">SEQ_AUTH_CLEANSE</a>.</p>
+<p class="reference">References <a class="el" href="../../d3/db2/otel_8c_source.html#l00056">cap</a>, <a class="el" href="../../d9/d39/alloc_8c_source.html#l00052">cwist_free()</a>, and <a class="el" href="../../d0/d3c/seq__auth_8c_source.html#l00050">SEQ_AUTH_CLEANSE</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../d0/d3c/seq__auth_8c_source.html#l00233">cwist_seq_auth_context_create()</a>.</p>
+<p class="reference">Referenced by <a class="el" href="../../d0/d3c/seq__auth_8c_source.html#l00237">cwist_seq_auth_context_create()</a>.</p>
 
 </div>
 </div>
@@ -455,7 +455,7 @@ Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d0/d3c/seq__auth_8c_source.html#l00411">411</a> of file <a class="el" href="../../d0/d3c/seq__auth_8c_source.html">seq_auth.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d0/d3c/seq__auth_8c_source.html#l00418">418</a> of file <a class="el" href="../../d0/d3c/seq__auth_8c_source.html">seq_auth.c</a>.</p>
 
 <p class="reference">References <a class="el" href="../../d3/db2/otel_8c_source.html#l00056">cap</a>, and <a class="el" href="../../d0/dd2/seq__auth_8h_source.html#l00020">CWIST_SEQ_AUTH_MESSAGE_ID_SIZE</a>.</p>
 
@@ -489,7 +489,7 @@ Functions</h2></td></tr>
 
 <p>Fill a buffer with cryptographically secure random bytes. </p>
 <p>Generate a cryptographically random message ID or fragment nonce.</p>
-<p>Source is crypto.getRandomValues on Emscripten, getentropy under WASI, and OpenSSL RAND_bytes elsewhere.</p>
+<p>Source is crypto.getRandomValues on Emscripten, getentropy under WASI, the firmware TRNG (cwist_port_entropy) on bare metal, and OpenSSL RAND_bytes elsewhere.</p>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
     <tr><td class="paramname">out</td><td>Output buffer. </td></tr>
@@ -505,9 +505,9 @@ Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d0/d3c/seq__auth_8c_source.html#l00285">285</a> of file <a class="el" href="../../d0/d3c/seq__auth_8c_source.html">seq_auth.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d0/d3c/seq__auth_8c_source.html#l00290">290</a> of file <a class="el" href="../../d0/d3c/seq__auth_8c_source.html">seq_auth.c</a>.</p>
 
-<p class="reference">References <a class="el" href="../../d3/db2/otel_8c_source.html#l00056">cap</a>, and <a class="el" href="../../d5/d66/rand_8h_source.html#l00017">RAND_bytes</a>.</p>
+<p class="reference">References <a class="el" href="../../d3/db2/otel_8c_source.html#l00056">cap</a>, <a class="el" href="../../da/d00/port_8h.html#a4e3716f7c991b336200a53504327d412">cwist_port_entropy()</a>, and <a class="el" href="../../d5/d66/rand_8h_source.html#l00017">RAND_bytes</a>.</p>
 
 </div>
 </div>
@@ -576,9 +576,9 @@ Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d0/d3c/seq__auth_8c_source.html#l00367">367</a> of file <a class="el" href="../../d0/d3c/seq__auth_8c_source.html">seq_auth.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d0/d3c/seq__auth_8c_source.html#l00374">374</a> of file <a class="el" href="../../d0/d3c/seq__auth_8c_source.html">seq_auth.c</a>.</p>
 
-<p class="reference">References <a class="el" href="../../d3/db2/otel_8c_source.html#l00056">cap</a>, <a class="el" href="../../d0/dd2/seq__auth_8h_source.html#l00023">CWIST_SEQ_AUTH_HEADER_SIZE</a>, <a class="el" href="../../d0/dd2/seq__auth_8h_source.html#l00020">CWIST_SEQ_AUTH_MESSAGE_ID_SIZE</a>, <a class="el" href="../../d0/dd2/seq__auth_8h_source.html#l00021">CWIST_SEQ_AUTH_NONCE_SIZE</a>, <a class="el" href="../../d0/dd2/seq__auth_8h_source.html#l00022">CWIST_SEQ_AUTH_TAG_SIZE</a>, <a class="el" href="../../d6/d3c/seq_8h_source.html#l00029">CWIST_SEQ_HEADER_SIZE</a>, <a class="el" href="../../d0/d3c/seq__auth_8c_source.html#l00049">SEQ_AUTH_MEMCMP</a>, and <a class="el" href="../../d0/d3c/seq__auth_8c_source.html#l00048">SEQ_AUTH_TAG_CAP</a>.</p>
+<p class="reference">References <a class="el" href="../../d3/db2/otel_8c_source.html#l00056">cap</a>, <a class="el" href="../../d0/dd2/seq__auth_8h_source.html#l00023">CWIST_SEQ_AUTH_HEADER_SIZE</a>, <a class="el" href="../../d0/dd2/seq__auth_8h_source.html#l00020">CWIST_SEQ_AUTH_MESSAGE_ID_SIZE</a>, <a class="el" href="../../d0/dd2/seq__auth_8h_source.html#l00021">CWIST_SEQ_AUTH_NONCE_SIZE</a>, <a class="el" href="../../d0/dd2/seq__auth_8h_source.html#l00022">CWIST_SEQ_AUTH_TAG_SIZE</a>, <a class="el" href="../../d6/d3c/seq_8h_source.html#l00029">CWIST_SEQ_HEADER_SIZE</a>, <a class="el" href="../../d0/d3c/seq__auth_8c_source.html#l00049">SEQ_AUTH_MEMCMP</a>, and <a class="el" href="../../d0/d3c/seq__auth_8c_source.html#l00030">SEQ_AUTH_TAG_CAP</a>.</p>
 
 </div>
 </div>
@@ -661,9 +661,9 @@ Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d0/d3c/seq__auth_8c_source.html#l00316">316</a> of file <a class="el" href="../../d0/d3c/seq__auth_8c_source.html">seq_auth.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d0/d3c/seq__auth_8c_source.html#l00323">323</a> of file <a class="el" href="../../d0/d3c/seq__auth_8c_source.html">seq_auth.c</a>.</p>
 
-<p class="reference">References <a class="el" href="../../d3/db2/otel_8c_source.html#l00056">cap</a>, <a class="el" href="../../d9/d39/alloc_8c_source.html#l00276">cwist_alloc()</a>, <a class="el" href="../../d9/d39/alloc_8c_source.html#l00391">cwist_free()</a>, <a class="el" href="../../d0/dd2/seq__auth_8h_source.html#l00023">CWIST_SEQ_AUTH_HEADER_SIZE</a>, <a class="el" href="../../d0/dd2/seq__auth_8h_source.html#l00020">CWIST_SEQ_AUTH_MESSAGE_ID_SIZE</a>, <a class="el" href="../../d0/dd2/seq__auth_8h_source.html#l00021">CWIST_SEQ_AUTH_NONCE_SIZE</a>, <a class="el" href="../../d0/dd2/seq__auth_8h_source.html#l00022">CWIST_SEQ_AUTH_TAG_SIZE</a>, <a class="el" href="../../d2/d8b/seq_8c_source.html#l00063">cwist_seq_chunk_parse()</a>, <a class="el" href="../../d6/d3c/seq_8h_source.html#l00029">CWIST_SEQ_HEADER_SIZE</a>, and <a class="el" href="../../d0/d3c/seq__auth_8c_source.html#l00048">SEQ_AUTH_TAG_CAP</a>.</p>
+<p class="reference">References <a class="el" href="../../d3/db2/otel_8c_source.html#l00056">cap</a>, <a class="el" href="../../d9/d39/alloc_8c_source.html#l00017">cwist_alloc()</a>, <a class="el" href="../../d9/d39/alloc_8c_source.html#l00052">cwist_free()</a>, <a class="el" href="../../d0/dd2/seq__auth_8h_source.html#l00023">CWIST_SEQ_AUTH_HEADER_SIZE</a>, <a class="el" href="../../d0/dd2/seq__auth_8h_source.html#l00020">CWIST_SEQ_AUTH_MESSAGE_ID_SIZE</a>, <a class="el" href="../../d0/dd2/seq__auth_8h_source.html#l00021">CWIST_SEQ_AUTH_NONCE_SIZE</a>, <a class="el" href="../../d0/dd2/seq__auth_8h_source.html#l00022">CWIST_SEQ_AUTH_TAG_SIZE</a>, <a class="el" href="../../d2/d8b/seq_8c_source.html#l00063">cwist_seq_chunk_parse()</a>, <a class="el" href="../../d6/d3c/seq_8h_source.html#l00029">CWIST_SEQ_HEADER_SIZE</a>, and <a class="el" href="../../d0/d3c/seq__auth_8c_source.html#l00030">SEQ_AUTH_TAG_CAP</a>.</p>
 
 </div>
 </div>

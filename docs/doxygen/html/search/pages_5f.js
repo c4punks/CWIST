@@ -1,4 +1,4 @@
 var searchData=
 [
-  ['현재_20동작_0',['FIXED 엔드포인트 캐싱: 현재 동작',['../d7/dab/md_docs_2ko_2fixed-cache-status.html',1,'']]]
+  ['핸드오프로_20무중단_20재시작하기_0',['소켓 핸드오프로 무중단 재시작하기',['../d1/d45/md_docs_2ko_2deployment_2zero-downtime-restart.html',1,'']]]
 ];
