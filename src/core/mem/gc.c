@@ -5,7 +5,8 @@
 #include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
-#if !defined(__EMSCRIPTEN__) && !defined(__wasi__)
+#include <cwist/sys/platform.h>
+#if defined(CWIST_PLATFORM_HOSTED)
 #include <sys/mman.h>
 #endif
 #include <unistd.h>
@@ -419,7 +420,7 @@ static cwist_full_gc_guard_t *g_full_gc_guard = NULL;
  * regressed the C1M reactor latency gate in CI once already).
  */
 __attribute__((constructor)) static void cwist_full_gc_guard_init(void) {
-#if defined(__EMSCRIPTEN__) || defined(__wasi__)
+#if !defined(CWIST_PLATFORM_HOSTED)
     static cwist_full_gc_guard_t s_wasm_guard;
     atomic_init(&s_wasm_guard.enabled, false);
     atomic_init(&s_wasm_guard.locked, false);
@@ -498,7 +499,7 @@ void cwist_full_gc(bool enable) {
      * the page yet, so it is still writable and we are its sole writer. */
     atomic_store_explicit(&g_full_gc_guard->enabled, enable, memory_order_relaxed);
     atomic_store_explicit(&g_full_gc_guard->locked, true, memory_order_release);
-#if !defined(__EMSCRIPTEN__) && !defined(__wasi__)
+#if defined(CWIST_PLATFORM_HOSTED)
     long page_size = sysconf(_SC_PAGESIZE);
     mprotect(g_full_gc_guard, (size_t)(page_size > 0 ? page_size : 4096), PROT_READ);
 #endif
@@ -821,9 +822,11 @@ static size_t g_conn_count = 0;
 static _Atomic bool g_conn_hooks_registered = false;
 
 static size_t cwist_conn_slot(const void *handle, size_t mask) {
-    uintptr_t x = (uintptr_t)handle;
+    /* 64-bit mix even where pointers are 32-bit (wasm32, Cortex-M): a
+     * 33-bit shift of a 32-bit uintptr_t is undefined. */
+    uint64_t x = (uint64_t)(uintptr_t)handle;
     x ^= x >> 33;
-    x *= (uintptr_t)0xff51afd7ed558ccdULL;
+    x *= 0xff51afd7ed558ccdULL;
     x ^= x >> 33;
     return (size_t)x & mask;
 }

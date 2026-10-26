@@ -15,7 +15,8 @@
 
 #include <cwist/core/mem/arena.h>
 
-#if defined(__EMSCRIPTEN__) || defined(__wasi__)
+#include <cwist/sys/platform.h>
+#if !defined(CWIST_PLATFORM_HOSTED)
 /* WASM hosts are single-threaded and lack libttak's epoch/GC machinery;
  * the arena degenerates to a plain malloc-backed bump buffer. */
 #include <stdbool.h>

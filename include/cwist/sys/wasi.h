@@ -16,8 +16,10 @@
  *   - CWIST_WASI_NO_SOCKETS: in-memory dispatch only (preview1, Emscripten
  *     is covered separately by its own __EMSCRIPTEN__ guards).
  *
- * Guards that exclude fork/signals/rlimits/threads stay on plain
- * `__wasi__` because neither WASI flavour provides those.
+ * Capability guards go through <cwist/sys/platform.h>, which folds these
+ * into CWIST_PLATFORM_NO_SOCKETS and CWIST_PLATFORM_NO_PROC (the
+ * fork/signals/rlimits/threads neither WASI flavour provides) so bare-metal
+ * targets share them. CWIST_WASI_SOCKETS stays for wasi:sockets quirks.
  */
 
 #ifndef __CWIST_SYS_WASI_H__

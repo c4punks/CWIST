@@ -1,4 +1,4 @@
-/* Phase 0 spike: STM32H743-shaped memory map (2 MB flash, 512 KB AXI SRAM).
+/* Bare-metal smoke: STM32H743-shaped memory map (2 MB flash, 512 KB AXI SRAM).
  * Stack lives in DTCM so its size is visible separately from heap/data. */
 ENTRY(Reset_Handler)
 
@@ -20,8 +20,6 @@ SECTIONS
   .init_array : { PROVIDE_HIDDEN(__init_array_start = .); KEEP(*(SORT(.init_array.*))) KEEP(*(.init_array*)) PROVIDE_HIDDEN(__init_array_end = .); } > FLASH
   .fini_array : { PROVIDE_HIDDEN(__fini_array_start = .); KEEP(*(.fini_array*)) PROVIDE_HIDDEN(__fini_array_end = .); } > FLASH
 
-  .tdata : { _stdata = .; *(.tdata*) _etdata = .; } > FLASH
-  .tbss : { _stbss = .; *(.tbss*) _etbss = .; } > FLASH
 
   _sidata = LOADADDR(.data);
   .data : { _sdata = .; *(.data*) _edata = .; } > AXI AT > FLASH

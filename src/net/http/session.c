@@ -8,7 +8,11 @@
 #include <cwist/core/mem/alloc.h>
 #include "async_gc.h"
 #include <cjson/cJSON.h>
-#if defined(__EMSCRIPTEN__) || defined(__wasi__)
+#include <cwist/sys/platform.h>
+#ifdef CWIST_BAREMETAL
+#include <cwist/sys/port.h>
+#endif
+#if !defined(CWIST_PLATFORM_HOSTED)
 /* WASM links no OpenSSL: verify cookie signatures with the bundled
  * header-only SHA-256/HMAC instead. */
 #include <cwist/core/crypto/sha256.h>
@@ -145,7 +149,7 @@ static int base64_decode(const char *in, uint8_t *out, size_t out_len) {
  */
 static bool session_hmac_sha256(const char *key, size_t key_len, const char *msg, size_t msg_len,
                                 uint8_t out[32]) {
-#if defined(__EMSCRIPTEN__) || defined(__wasi__)
+#if !defined(CWIST_PLATFORM_HOSTED)
     return cwist_hmac_sha256((const uint8_t *)key, key_len, (const uint8_t *)msg, msg_len, out);
 #else
     unsigned int len = 32;
@@ -198,6 +202,18 @@ static char *generate_secret(size_t len) {
         for (size_t i = 0; i < len; i++) {
             secret[i * 2] = hex[wbuf[i] >> 4];
             secret[i * 2 + 1] = hex[wbuf[i] & 0x0F];
+        }
+        secret[len * 2] = '\0';
+        return secret;
+    }
+#endif
+#ifdef CWIST_BAREMETAL
+    unsigned char *pbuf CWIST_DEFER_FREE = cwist_alloc(len);
+    if (pbuf && cwist_port_entropy(pbuf, len) == 0) {
+        static const char hex[] = "0123456789abcdef";
+        for (size_t i = 0; i < len; i++) {
+            secret[i * 2] = hex[pbuf[i] >> 4];
+            secret[i * 2 + 1] = hex[pbuf[i] & 0x0F];
         }
         secret[len * 2] = '\0';
         return secret;
@@ -297,7 +313,7 @@ static bool verify_signature(cwist_app *app, const char *payload_b64, const char
                              strlen(payload_b64), expected)) {
         return false;
     }
-#if defined(__EMSCRIPTEN__) || defined(__wasi__)
+#if !defined(CWIST_PLATFORM_HOSTED)
     /* No OpenSSL on WASM: use a portable constant-time loop. */
     unsigned int diff = 0;
     for (size_t i = 0; i < 32; i++) diff |= sig[i] ^ expected[i];

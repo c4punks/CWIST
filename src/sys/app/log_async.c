@@ -25,11 +25,12 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
+#include <cwist/sys/platform.h>
 
-#if defined(__wasm__)
+#if defined(__wasm__) || defined(CWIST_BAREMETAL)
 /* WASM builds have no fork() and, without the threads proposal, no
- * background thread: async logging never starts and every line is written
- * synchronously. */
+ * background thread (bare metal has neither): async logging never starts
+ * and every line is written synchronously. */
 bool cwist_log_async_start(size_t buffer_bytes) {
     (void)buffer_bytes;
     return false;

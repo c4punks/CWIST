@@ -30,7 +30,10 @@
 #include <fcntl.h>
 #include <sched.h>
 #include <string.h>
+#include <cwist/sys/platform.h>
+#ifndef CWIST_BAREMETAL
 #include <sys/socket.h>
+#endif
 #include <unistd.h>
 
 enum cwist_async_state { CWIST_ASYNC_ST_PENDING = 0, CWIST_ASYNC_ST_CLAIMED };
