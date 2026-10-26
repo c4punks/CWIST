@@ -265,7 +265,7 @@ int main(void) {
     assert(request(shared, fd) == 200);
     assert(number(redis, "GET", key) == 1);
     puts("[PASS] key expiry opens a fresh shared window");
-    char other[96];
+    char other[sizeof(prefix) + sizeof("other:")];
     snprintf(other, sizeof(other), "%sother:", prefix);
     cwist_middleware_func isolated = limiter(pool, other, 1, 1);
     assert(request(isolated, fd) == 200 && request(isolated, fd) == 429);

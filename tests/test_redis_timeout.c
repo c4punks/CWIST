@@ -63,7 +63,7 @@ static atomic_bool g_pipe_failure;
 typedef int (*pipe_fn)(int *);
 static pipe_fn g_real_pipe;
 
-int pipe(int *fds) {
+int pipe(int fds[2]) {
     if (atomic_load(&g_pipe_failure) || !g_real_pipe) {
         errno = EMFILE;
         return -1;
