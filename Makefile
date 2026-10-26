@@ -1928,7 +1928,7 @@ clean:
 	@echo "Cleaning up build artifacts..."
 	rm -f $(OBJS) $(LIB_NAME) $(PC_FILE)
 	rm -rf include/cwist/vendor
-	rm -f $(TEST_TARGETS)
+	rm -f $(TEST_TARGETS) http3_migration_server
 	rm -rf $(TUTORIALS_BUILD_DIR)
 	rm -f $(CJSON_DIR)/cJSON.o $(CJSON_LIB)
 	rm -rf $(URIPARSER_BUILD_DIR)
@@ -2490,6 +2490,19 @@ webtransport_echo_server:
 endif
 
 PYTHON ?= python3
+HTTP3_MIGRATION_ARGS ?=
+.PHONY: http3-migration-e2e
+ifeq ($(CWIST_HTTP3),1)
+http3_migration_server: $(LIB_NAME) tests/http3_migration_server.c
+	$(CC) $(CFLAGS) -o $@ tests/http3_migration_server.c $(LIB_NAME) $(LIBS)
+
+http3-migration-e2e: http3_migration_server
+	$(PYTHON) scripts/ci/http3_migration_e2e.py ./http3_migration_server $(HTTP3_MIGRATION_ARGS)
+else
+http3-migration-e2e:
+	@echo "CWIST_HTTP3=0: skipping $@"
+endif
+
 webtransport-e2e: webtransport_echo_server
 ifeq ($(CWIST_HAVE_LSQUIC_WT),1)
 	@echo "webtransport-e2e: skipped: lib/lsquic has lsquic_wt.h, whose session API negotiates newer WebTransport drafts than aioquic's draft-02"
