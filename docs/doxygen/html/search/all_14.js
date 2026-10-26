@@ -8,7 +8,7 @@ var searchData=
   ['id_5',['id',['../d8/d63/structcwist__sse__event.html#a362b084bf75c80e5c0ecbfaa5bd3478e',1,'cwist_sse_event']]],
   ['id_20미들웨어_6',['Request ID 미들웨어',['../d5/d3e/md_docs_2ko_2api_2middleware.html#autotoc_md453',1,'']]],
   ['id_20middleware_7',['Request ID Middleware',['../da/dbc/md_docs_2api_2middleware.html#autotoc_md148',1,'']]],
-  ['idle_5ftimeout_5fms_8',['idle_timeout_ms',['../d9/dae/structcwist__http3__context.html#a829ac929ba99618ff2b4800c69a26c80',1,'cwist_http3_context']]],
+  ['idle_5ftimeout_5fms_8',['idle_timeout_ms',['../d9/dae/structcwist__http3__context.html#a829ac929ba99618ff2b4800c69a26c80',1,'cwist_http3_context::idle_timeout_ms'],['../d5/d41/structcwist__lwip__config.html#a4965ed1bc498f6f1bfd2c983320a3de9',1,'cwist_lwip_config::idle_timeout_ms']]],
   ['immutable_9',['immutable',['../d6/d37/structcwist__asset__match.html#a639ba25b6e5910200a37505ac52c8a76',1,'cwist_asset_match']]],
   ['impact_20of_20tt_20cwist_5fdb_20tt_10',['Bundle size impact of &lt;tt&gt;cwist_db&lt;/tt&gt;',['../d5/d0e/md_docs_2api_2wasm.html#autotoc_md221',1,'']]],
   ['impl_11',['impl',['../d8/d25/structcwist__gc.html#af74b458f468ac44c86149c45e810f78c',1,'cwist_gc']]],
