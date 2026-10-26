@@ -10,9 +10,11 @@
 #define __CWIST_SHUTDOWN_H__
 
 #include <stdatomic.h>
+#include <cwist/sys/platform.h>
 /* WASI preview1 has no signals (wasi-libc's <signal.h> is a hard #error
- * without emulation); signal-based shutdown is compiled out there. */
-#ifndef __wasi__
+ * without emulation), nor does bare metal; signal-based shutdown is
+ * compiled out there. */
+#ifndef CWIST_PLATFORM_NO_PROC
 #include <signal.h>
 #endif
 

@@ -35,26 +35,34 @@
 #include <stdbool.h>
 #include <strings.h>
 #include <errno.h>
+#include <cwist/sys/platform.h>
+#ifndef CWIST_BAREMETAL /* newlib ships no poll/socket/inet headers */
 #include <poll.h>
-#ifndef __wasi__
+#endif
+#ifndef CWIST_PLATFORM_NO_PROC
 #include <signal.h>
 #endif
 #include <time.h>
+#ifdef CWIST_BAREMETAL
+time_t timegm(struct tm *tm); /* newlib has none: src/sys/port/baremetal.c */
+#endif
 
 #include <sys/types.h>
 #include <unistd.h>
-#if !defined(__EMSCRIPTEN__) && !defined(__wasi__)
+#if defined(CWIST_PLATFORM_HOSTED)
 #include <sys/wait.h>
 #endif
 #include <pthread.h>
 #include <sched.h>
 #include <stdatomic.h>
+#ifndef CWIST_BAREMETAL
 #include <arpa/inet.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <netinet/tcp.h>
+#endif
 #include <sys/stat.h>
-#ifndef __wasi__
+#ifndef CWIST_PLATFORM_NO_PROC
 #include <sys/resource.h>
 #endif
 #include <fcntl.h>
@@ -222,6 +230,7 @@ long get_optimal_thread_count(void) {
     return threads_per_worker;
 }
 
+#ifndef CWIST_PLATFORM_NO_SOCKETS /* socket worker runtime: thread pool, live-connection registry, async connections */
 #define HTTP_TASKS_PER_THREAD 32768
 
 typedef struct {
@@ -305,7 +314,7 @@ long cwist_http_inflight_count(void) {
 static long cwist_http_inflight_limit(void) {
     long base = g_http_thread_count > 0 ? g_http_thread_count : get_optimal_thread_count();
     long floor = base * CWIST_HTTP_INFLIGHT_PER_THREAD;
-#ifndef __wasi__
+#ifndef CWIST_PLATFORM_NO_PROC
     struct rlimit rl;
     if (getrlimit(RLIMIT_NOFILE, &rl) != 0) return floor;
     long budget = (rl.rlim_cur == RLIM_INFINITY)
@@ -388,7 +397,7 @@ typedef struct http_live_conn {
     struct http_live_conn *prev, *next;
 } http_live_conn_t;
 
-#ifndef __wasi__
+#ifndef CWIST_PLATFORM_NO_PROC
 static pthread_mutex_t g_live_lock = PTHREAD_MUTEX_INITIALIZER;
 static http_live_conn_t *g_live_head;
 static _Atomic bool g_draining = false;
@@ -398,7 +407,7 @@ static pthread_cond_t g_drain_cond = PTHREAD_COND_INITIALIZER;
 static _Atomic long g_live_count;
 static __thread http_live_conn_t *t_live_conn;
 
-#ifndef __wasi__
+#ifndef CWIST_PLATFORM_NO_PROC
 static void http_live_dec(void) {
     long prev = atomic_fetch_sub_explicit(&g_live_count, 1, memory_order_acq_rel);
     if (atomic_load_explicit(&g_draining, memory_order_acquire)) {
@@ -428,7 +437,7 @@ void cwist_http_live_idle_leave(void) {
 
 /** Run @p handler on a dup of @p fd with the connection registered. */
 static void http_live_serve(int fd, void (*handler)(int, void *), void *ctx) {
-#ifdef __wasi__
+#ifdef CWIST_PLATFORM_NO_PROC
     handler(fd, ctx);
 #else
     int hfd = fd >= 0 ? dup(fd) : -1;
@@ -462,7 +471,7 @@ static void http_live_serve(int fd, void (*handler)(int, void *), void *ctx) {
 
 /** shutdown(@p how) every registered connection, or only the idle ones. */
 static void http_live_kick(int how, bool idle_only) {
-#ifdef __wasi__
+#ifdef CWIST_PLATFORM_NO_PROC
     (void)how;
     (void)idle_only;
 #else
@@ -476,7 +485,7 @@ static void http_live_kick(int how, bool idle_only) {
 
 /** Wait until no handler is serving a classic connection. */
 static void http_live_drain(void) {
-#ifdef __wasi__
+#ifdef CWIST_PLATFORM_NO_PROC
     return;
 #else
     if (atomic_load_explicit(&g_live_count, memory_order_acquire) == 0) return;
@@ -1522,6 +1531,7 @@ bool cwist_http_pool_submit_async(int client_fd, cwist_async_handler_t handler, 
 }
 
 /* --- End Async Connection Path --- */
+#endif /* !CWIST_PLATFORM_NO_SOCKETS (socket worker runtime) */
 
 /**
  * @file http.c
@@ -2010,15 +2020,19 @@ void cwist_http_header_free_all(cwist_http_header_node *head) {
 /**
  * @brief Copy the cached RFC 7231 IMF-fixdate string for the current second.
  * @param out_buf Destination buffer; receives 29 date bytes plus NUL.
+ * @return false when the host has no wall clock (time() fails, e.g. a board
+ *         without an RTC); the caller then omits Date, as RFC 9110 section
+ *         6.6.1 requires of servers without a clock.
  * @note Each thread caches its own (second, string) pair, so the once-per-second
  *       recompute needs no lock: at a second boundary every worker recomputes
  *       its own copy once and concurrent one-time recomputes yield the same value.
  */
-static void cwist_get_cached_date_header(char out_buf[36]) {
+static bool cwist_get_cached_date_header(char out_buf[36]) {
     static _Thread_local time_t cached_sec = (time_t)-1;
     static _Thread_local char date_str[36];
 
     time_t now = time(NULL);
+    if (now == (time_t)-1) return false;
     if (now != cached_sec) {
         struct tm gmt;
 #if defined(_WIN32)
@@ -2031,6 +2045,7 @@ static void cwist_get_cached_date_header(char out_buf[36]) {
     }
     memcpy(out_buf, date_str, 30);
     out_buf[29] = '\0';
+    return true;
 }
 
 /* --- Request Lifecycle --- */
@@ -2131,7 +2146,7 @@ cwist_sstring *cwist_get_client_ip_from_fd(int fd) {
     // If unavailable, return localhost
     if (fd <= 0) return s;
 
-#ifndef CWIST_WASI_NO_SOCKETS
+#ifndef CWIST_PLATFORM_NO_SOCKETS
     /* WASI preview1 has no socket peer addresses; the caller only needs a
      * placeholder when running under a WASM host. */
     struct sockaddr_storage addr;
@@ -2512,9 +2527,8 @@ static size_t serialize_headers(cwist_http_response *res, char *buf, size_t buf_
         curr = curr->next;
     }
 
-    if (!have_date && offset + 37 <= buf_size) {
-        char date_str[36];
-        cwist_get_cached_date_header(date_str); /* 29 bytes, NUL-terminated */
+    char date_str[36];
+    if (!have_date && offset + 37 <= buf_size && cwist_get_cached_date_header(date_str)) {
         memcpy(buf + offset, "Date: ", 6);
         memcpy(buf + offset + 6, date_str, 29);
         buf[offset + 35] = '\r';
@@ -2597,6 +2611,7 @@ size_t cwist_http_serialize_headers(cwist_http_response *res, char *buf, size_t 
     return serialize_headers(res, buf, buf_size);
 }
 
+#ifndef CWIST_PLATFORM_NO_SOCKETS /* socket send paths; in-memory dispatch serializes instead */
 #include <sys/uio.h> // For writev and BSD sendfile
 
 /* --- Optional TCP_CORK coalescing layer (cleartext HTTP/1.1) -------------
@@ -2713,7 +2728,7 @@ static int cwist_http_sendmsg_all(int fd, struct iovec *iov, int iovcnt, int fla
 wasi_done:
     cwist_free(buf);
     return rc;
-#elif !defined(CWIST_WASI_NO_SOCKETS)
+#elif !defined(CWIST_PLATFORM_NO_SOCKETS)
     /* Speculative zero-latency fast-path attempt:
      * Completes immediately for non-saturated sockets without entering poll() loops. */
     size_t fast_sent = 0;
@@ -3947,6 +3962,8 @@ cwist_async_send_status_t cwist_http_send_response_coalesced(int client_fd,
     return keep_alive ? CWIST_ASYNC_SEND_KEEPALIVE : CWIST_ASYNC_SEND_CLOSE;
 }
 
+#endif /* !CWIST_PLATFORM_NO_SOCKETS (socket send paths) */
+
 /**
  * @brief Map an HTTP status code to its RFC reason phrase.
  * @return Static reason phrase, or NULL for unknown codes.
@@ -4019,6 +4036,7 @@ const char *cwist_http_status_reason(int status) {
     }
 }
 
+#ifndef CWIST_PLATFORM_NO_SOCKETS /* direct socket writers */
 /**
  * @brief Send a minimal error response with Connection: close, used to answer
  * malformed requests (400/413/417/431/501) before the connection is dropped.
@@ -4071,6 +4089,8 @@ static void http_send_100_continue(int fd) {
 #endif
     (void)cwist_http_sendmsg_all(fd, &iov, 1, flags);
 }
+
+#endif /* !CWIST_PLATFORM_NO_SOCKETS (direct socket writers) */
 
 /**
  * @brief Materialize an HTTP response into a contiguous string for debugging or TLS writes.
@@ -4542,6 +4562,7 @@ int cwist_http_response_stream_end(cwist_http_response *res) {
     return 0;
 }
 
+#ifndef CWIST_PLATFORM_NO_SOCKETS /* socket receive (blocking and reactor) */
 /**
  * @brief Read and reassemble a chunked transfer-encoded body.
  * @return 0 on success, -1 on error.
@@ -5151,6 +5172,7 @@ cwist_recv_status_t cwist_http_receive_request_nb(cwist_http_async_conn_t *conn,
 }
 
 /* --- End Non-blocking Request Assembly --- */
+#endif /* !CWIST_PLATFORM_NO_SOCKETS (socket receive) */
 
 typedef struct {
     const char *ext;
@@ -5320,7 +5342,7 @@ const char CWIST_BLOB_500[] =
 /* Everything from here on is the socket server runtime: WASI preview1 has
  * no sockets, so the whole section compiles out there. WASM hosts drive
  * requests through cwist_app_dispatch_memory() instead. */
-#ifndef CWIST_WASI_NO_SOCKETS
+#ifndef CWIST_PLATFORM_NO_SOCKETS
 
 bool cwist_reuseport_enabled(void) {
     const char *env = getenv("CWIST_REUSEPORT");
@@ -5464,7 +5486,7 @@ static void cwist_accept_error_backoff(int err) {
  * @param handler_func Request handler callback.
  * @param ctx Opaque callback context.
  */
-#if !defined(__wasi__)
+#if !defined(CWIST_PLATFORM_NO_PROC)
 static void handle_client_forking(int client_fd, void (*handler_func)(int, void *), void *ctx) {
     pid_t pid = fork();
     if (pid == 0) {
@@ -5573,7 +5595,7 @@ cwist_error_t cwist_http_server_loop(int server_fd, cwist_server_config *config,
         return err;
     }
 
-#if !defined(__wasi__)
+#if !defined(CWIST_PLATFORM_NO_PROC)
     if (config->use_forking) {
         while (atomic_load(&g_cwist_running)) {
             int client_fd = http_accept_blocking(server_fd);

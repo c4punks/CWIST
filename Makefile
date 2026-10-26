@@ -543,6 +543,61 @@ wasip2-smoke: $(WASIP2_ARCHIVE)
 clean-wasip2:
 	rm -rf .wasip2-build libcwist_wasip2_*.a wasip2_smoke.wasm wasm_abi_layout.wasm
 
+# --- Bare metal (arm-none-eabi / Cortex-M, issue #447) -------------------------
+# The WASI core (WASM_SRCS + WASIP2_EXTRA_SRCS) minus sqlite/db, the test
+# client and the WASI compat layer, built for a single-threaded firmware on
+# newlib-nano.  Requests arrive through cwist_app_dispatch_memory() only.
+# The -D_POSIX_* knobs make newlib declare the pthread/timer APIs that
+# src/sys/port/baremetal.c implements; _Thread_local/__thread collapse to
+# plain statics (one thread: no TLS block, no __aeabi_read_tp).  The
+# firmware defines the <cwist/sys/port.h> hooks and links with --gc-sections.
+BAREMETAL_CROSS ?= arm-none-eabi-
+BAREMETAL_ARCH ?= -mcpu=cortex-m7 -mthumb -mfpu=fpv5-d16 -mfloat-abi=hard
+BAREMETAL_BUILD_DIR = .baremetal-build
+BAREMETAL_ARCHIVE = libcwist_baremetal.a
+BAREMETAL_CFLAGS = -std=c17 -Os -Wall $(BAREMETAL_ARCH) --specs=nano.specs \
+	-ffunction-sections -fdata-sections -DCWIST_BAREMETAL \
+	-D_POSIX_THREADS=200809L -D_POSIX_READER_WRITER_LOCKS=200809L \
+	-D_POSIX_TIMERS=200809L -D_POSIX_MONOTONIC_CLOCK=200809L \
+	-D_POSIX_PRIORITY_SCHEDULING=200809L -D_Thread_local= -D__thread= \
+	$(WASM_INCLUDE_PATHS) $(COMMON_DEFINES)
+BAREMETAL_SRCS = $(filter-out lib/sqlite3/sqlite3.c src/core/db/db.c src/sys/app/test_client.c,$(WASM_SRCS)) \
+	$(filter-out src/sys/wasi/compat.c src/net/http/writer_fast.c,$(WASIP2_EXTRA_SRCS)) \
+	src/sys/port/baremetal.c src/sys/port/baremetal_time.c
+BAREMETAL_OBJS = $(BAREMETAL_SRCS:%.c=$(BAREMETAL_BUILD_DIR)/%.o)
+# qemu-arm (user mode) runs the Thumb-2 firmware with semihosting output; it
+# is not a board model (no NVIC/SysTick), see tests/baremetal/board.c.
+QEMU_ARM ?= qemu-arm
+
+$(BAREMETAL_BUILD_DIR)/%.o: %.c
+	@mkdir -p $(dir $@)
+	$(BAREMETAL_CROSS)gcc $(BAREMETAL_CFLAGS) -c -o $@ $<
+
+$(BAREMETAL_ARCHIVE): $(BAREMETAL_OBJS)
+	$(BAREMETAL_CROSS)ar rcs $@ $(BAREMETAL_OBJS)
+
+baremetal: $(BAREMETAL_ARCHIVE)
+
+# Hello firmware on an STM32H743-shaped memory map: routes, JSON, 404, the
+# entropy hook and a heap/stack high-water report, all through in-memory
+# dispatch.  hello.elf has no RTC (time() fails, so no Date header);
+# hello-rtc.elf backs _gettimeofday and expects Date.
+BAREMETAL_HELLO = $(BAREMETAL_BUILD_DIR)/hello.elf $(BAREMETAL_BUILD_DIR)/hello-rtc.elf
+$(BAREMETAL_BUILD_DIR)/hello-rtc.elf: BOARD_FLAGS = -DBOARD_RTC
+$(BAREMETAL_HELLO): $(BAREMETAL_ARCHIVE) tests/baremetal/hello.c tests/baremetal/board.c tests/baremetal/stm32h743.ld
+	$(BAREMETAL_CROSS)gcc $(BAREMETAL_CFLAGS) $(BOARD_FLAGS) -DBOARD_QEMU_USER -nostartfiles \
+	    --specs=nosys.specs -T tests/baremetal/stm32h743.ld -Wl,--gc-sections \
+	    -Wl,--no-warn-rwx-segments -Wl,-Map=$(@:.elf=.map) -o $@ \
+	    tests/baremetal/hello.c tests/baremetal/board.c $(BAREMETAL_ARCHIVE) -lm
+	$(BAREMETAL_CROSS)size $@
+
+baremetal-smoke: $(BAREMETAL_HELLO)
+	$(QEMU_ARM) -cpu cortex-m7 $(BAREMETAL_BUILD_DIR)/hello.elf
+	$(QEMU_ARM) -cpu cortex-m7 $(BAREMETAL_BUILD_DIR)/hello-rtc.elf
+
+clean-baremetal:
+	rm -rf $(BAREMETAL_BUILD_DIR) $(BAREMETAL_ARCHIVE)
+
 # --- Component boundary (experimental, issue #203) --------------------------------
 # wit/cwist.wit is the component-model counterpart of wasm_entry.h. Both
 # worlds are validated wherever wit-bindgen is installed; a loud no-op
@@ -1215,6 +1270,7 @@ TEST_TARGETS = test_worker_affinity \
                test_seq \
                test_seq_auth \
                test_sha256 \
+               test_baremetal_port \
                test_error \
                test_inline_exports \
                test_arena \
@@ -1333,7 +1389,7 @@ TEST_TARGETS = test_worker_affinity \
                test_css_composer \
                test_multipart
 
-.PHONY: all test tsan-test $(TEST_TARGETS) fuzz_seq install uninstall dist clean rebuild examples clean-examples micro-examples examples-check wasm-abi-layout wasm-sw-example wasm-sw-smoke wasm-sw-browser-test wasm-dist wasip2-smoke clean-wasip2 wit-check jco-transpile wit-bindings component-guest component-smoke clean-component api-baseline api-check env-check
+.PHONY: all test tsan-test $(TEST_TARGETS) fuzz_seq install uninstall dist clean rebuild examples clean-examples micro-examples examples-check wasm-abi-layout wasm-sw-example wasm-sw-smoke wasm-sw-browser-test wasm-dist wasip2-smoke clean-wasip2 baremetal baremetal-smoke clean-baremetal wit-check jco-transpile wit-bindings component-guest component-smoke clean-component api-baseline api-check env-check
 
 # Regenerate docs/api/v4.0-api-baseline.txt (the recorded v4.0 public API
 # symbol surface). See CONTRIBUTING.md "Releases and patch releases".
@@ -1537,6 +1593,20 @@ test_seq_auth: $(LIB_NAME) tests/test_seq_auth.c
 
 test_sha256: tests/test_sha256.c include/cwist/core/crypto/sha256.h
 	$(CC) $(CFLAGS) -o $@ tests/test_sha256.c
+	./$@
+
+# Bare-metal port layer on the host: siphash.c and baremetal_time.c built as
+# CWIST_BAREMETAL (no libcwist.a), with baremetal_time.c's libc names renamed
+# so they do not collide with the host's.
+BAREMETAL_PORT_TEST_RENAMES = -Dclock_gettime=cwist_bm_clock_gettime \
+	-Dnanosleep=cwist_bm_nanosleep -Dtimegm=cwist_bm_timegm
+test_baremetal_port: tests/test_baremetal_port.c src/core/siphash/siphash.c src/sys/port/baremetal_time.c include/cwist/sys/port.h
+	$(CC) -std=c17 -Wall -Wextra -g -I./include $(COMMON_DEFINES) -DCWIST_BAREMETAL -c -o $@.siphash.o src/core/siphash/siphash.c
+	$(CC) -std=c17 -Wall -Wextra -g -I./include $(COMMON_DEFINES) -DCWIST_BAREMETAL $(BAREMETAL_PORT_TEST_RENAMES) \
+	    -c -o $@.time.o src/sys/port/baremetal_time.c
+	$(CC) -std=c17 -Wall -Wextra -g -I./include $(COMMON_DEFINES) -o $@ tests/test_baremetal_port.c \
+	    $@.siphash.o $@.time.o
+	rm -f $@.siphash.o $@.time.o
 	./$@
 
 test_error: $(LIB_NAME) tests/test_error.c

@@ -10,7 +10,12 @@
 #include <stdint.h>
 #include <stdbool.h>
 #include <sys/types.h>
+#include <cwist/sys/platform.h>
+#ifndef CWIST_BAREMETAL
 #include <sys/uio.h>
+#else
+struct iovec;
+#endif
 
 #ifdef __cplusplus
 extern "C" {
