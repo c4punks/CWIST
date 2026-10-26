@@ -14,8 +14,14 @@
 #include <cwist/sys/app/big_dumb_reply.h>
 #include <cwist/sys/io/reactor.h>
 #include <stdint.h>
+#include <cwist/sys/platform.h>
+#ifndef CWIST_BAREMETAL
 #include <netinet/in.h>
 #include <sys/socket.h>
+#else
+struct sockaddr;
+struct sockaddr_in;
+#endif
 #include <sys/types.h>
 #include <stdio.h>
 #include <stdlib.h>

@@ -9,7 +9,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdbool.h>
-#ifndef __wasi__
+#include <cwist/sys/platform.h>
+#ifndef CWIST_PLATFORM_NO_PROC
 #include <sys/socket.h>
 #endif
 
@@ -66,7 +67,7 @@ void cwist_shutdown_request(void) {
      * been reused for an unrelated file. */
     int fd = __atomic_exchange_n(&g_cwist_listen_fd, -1, __ATOMIC_SEQ_CST);
     if (fd >= 0) {
-#ifndef __wasi__
+#ifndef CWIST_PLATFORM_NO_PROC
         /* close() alone does not interrupt an accept() already blocked in
          * another thread on Linux; shutdown() makes it return (EINVAL),
          * which the accept loops treat as the end of the server. */
@@ -77,7 +78,7 @@ void cwist_shutdown_request(void) {
     __atomic_exchange_n(&g_cwist_udp_fd, -1, __ATOMIC_SEQ_CST);
 }
 
-#ifndef __wasi__
+#ifndef CWIST_PLATFORM_NO_PROC
 /**
  * @brief Signal handler for SIGTERM/SIGINT; forwards to cwist_shutdown_request().
  * @param sig Signal number (ignored).
@@ -88,7 +89,7 @@ static void cwist_shutdown_handler(int sig) {
 }
 #endif
 
-#ifndef __wasi__
+#ifndef CWIST_PLATFORM_NO_PROC
 /* What SIGTERM/SIGINT did before CWIST installed its handlers, so
  * cwist_shutdown_restore_handlers() can put it back. Saved only on the first
  * install after a restore: a second install would otherwise record CWIST's

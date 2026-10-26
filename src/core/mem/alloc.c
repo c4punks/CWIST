@@ -1,5 +1,6 @@
 #include <cwist/core/mem/alloc.h>
-#if defined(__EMSCRIPTEN__) || defined(__wasi__)
+#include <cwist/sys/platform.h>
+#if !defined(CWIST_PLATFORM_HOSTED)
 /* WASM hosts are single-threaded and lack libttak's mmap/pthread machinery;
  * allocations go straight to libc.  The owner-guard bridge is native-only. */
 #include <cjson/cJSON.h>

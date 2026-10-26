@@ -4,7 +4,7 @@
 # (parameter names dropped) and struct/union/enum layouts in member order.
 # `make api-check` (CI) fails when the headers no longer match this file.
 
-== functions (781) ==
+== functions (783) ==
 cwist_accept_socket
 cwist_alloc
 cwist_alloc_array
@@ -609,6 +609,8 @@ cwist_pb_writer_init
 cwist_pb_writer_reserve
 cwist_pb_zigzag_decode
 cwist_pb_zigzag_encode
+cwist_port_entropy
+cwist_port_monotonic_ns
 cwist_query_map_clear
 cwist_query_map_create
 cwist_query_map_create_in_arena
@@ -787,7 +789,7 @@ cwist_zod_parse
 cwist_zod_print_errors
 cwist_zod_validate
 
-== function signatures (782) ==
+== function signatures (784) ==
 cwist_accept_socket: cwist_error_t (int, struct sockaddr *, void (*)(int client_fd, void *ctx), void *)
 cwist_alloc: void * (size_t)
 cwist_alloc_array: void * (size_t, size_t)
@@ -1393,6 +1395,8 @@ cwist_pb_writer_init: void (cwist_pb_writer *)
 cwist_pb_writer_reserve: int (cwist_pb_writer *, size_t)
 cwist_pb_zigzag_decode: int64_t (uint64_t)
 cwist_pb_zigzag_encode: uint64_t (int64_t)
+cwist_port_entropy: int (void *, size_t)
+cwist_port_monotonic_ns: uint64_t (void)
 cwist_query_map_clear: void (cwist_query_map *)
 cwist_query_map_create: cwist_query_map * (void)
 cwist_query_map_create_in_arena: cwist_query_map * (void *)
