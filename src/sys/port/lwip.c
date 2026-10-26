@@ -29,7 +29,9 @@
 #include <string.h>
 #include <strings.h>
 
-#if !LWIP_TCP || !LWIP_CALLBACK_API
+/* lwip/opt.h always defines both; testing for it keeps tools that analyze
+ * this file without the firmware's lwIP tree (cppcheck) off the #error. */
+#if defined(LWIP_TCP) && (!LWIP_TCP || !LWIP_CALLBACK_API)
 #error "cwist lwIP adapter needs LWIP_TCP and LWIP_CALLBACK_API"
 #endif
 
