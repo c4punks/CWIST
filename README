@@ -179,19 +179,19 @@ missing optional API does not prevent an HTTP/3 build.
   ./server
 
 <!-- BENCHMARKS:START -->
-Latest automated benchmark: **Linux**: 9.83 M leases/s, 161.18% CPU, 685648 KiB RSS.
+Latest automated benchmark: **Darwin**: 11.79 M leases/s, 145.34% CPU, 902112 KiB RSS.
 
 ![CWIST benchmark trends](docs/benchmark-trends.svg)
 <!-- BENCHMARKS:END -->
 
 <!-- WEBSERVER_BENCHMARKS:START -->
 Latest Web Server Benchmark (wrk -t12 -c400 -d10s (after 10s warmup, warmup discarded)):
-- **CWIST Classic pool**: 194157 req/s | Latency 1.19ms (P90 2.46ms, P99 5.13ms, P99.999 18.86ms) | RSS 59116KiB | Csw 1940764
-- **CWIST reactor**: 236606 req/s | Latency 1.74ms (P90 3.53ms, P99 5.88ms, P99.999 12.22ms) | RSS 21948KiB | Csw 231835
-- **Actix**: 215870 req/s | Latency 1.90ms (P90 3.75ms, P99 6.23ms, P99.999 14.93ms) | RSS 12536KiB | Csw 254623
-- **Axum**: 179266 req/s | Latency 2.22ms (P90 3.97ms, P99 6.27ms, P99.999 13.11ms) | RSS 15580KiB | Csw 400383
-- **Gin (Go)**: 141961 req/s | Latency 4.98ms (P90 13.53ms, P99 31.72ms, P99.999 89.26ms) | RSS 28360KiB | Csw 545661
-- **Spring Boot**: 112147 req/s | Latency 3.57ms (P90 5.47ms, P99 9.01ms, P99.999 42.75ms) | RSS 1285480KiB | Csw 409552
+- **CWIST Classic pool**: 114927 req/s | Latency 2.03ms (P90 4.27ms, P99 8.58ms, P99.999 32.30ms) | RSS 59432KiB | Csw 1144329
+- **CWIST reactor**: 142613 req/s | Latency 2.76ms (P90 4.97ms, P99 7.72ms, P99.999 15.79ms) | RSS 21884KiB | Csw 111794
+- **Actix**: 129257 req/s | Latency 3.03ms (P90 5.16ms, P99 7.62ms, P99.999 15.36ms) | RSS 12216KiB | Csw 151993
+- **Axum**: 111299 req/s | Latency 3.51ms (P90 5.92ms, P99 8.73ms, P99.999 16.44ms) | RSS 16272KiB | Csw 209744
+- **Gin (Go)**: 79120 req/s | Latency 6.68ms (P90 15.98ms, P99 35.16ms, P99.999 76.87ms) | RSS 30332KiB | Csw 287452
+- **Spring Boot**: 43966 req/s | Latency 9.07ms (P90 11.84ms, P99 18.38ms, P99.999 83.36ms) | RSS 1308192KiB | Csw 223670
 
 _Settled CWIST-internal tuning variants (glibc arena cap from PR #35, cooperative drain chunk from issue #25) are recorded in docs/cooperative-queuing.md and benchmarks/webserver.json; they are no longer rendered as comparison rows._
 
