@@ -562,7 +562,8 @@ BAREMETAL_CFLAGS = -std=c17 -Os -Wall $(BAREMETAL_ARCH) --specs=nano.specs \
 	-D_POSIX_PRIORITY_SCHEDULING=200809L -D_Thread_local= -D__thread= \
 	$(WASM_INCLUDE_PATHS) $(COMMON_DEFINES)
 BAREMETAL_SRCS = $(filter-out lib/sqlite3/sqlite3.c src/core/db/db.c src/sys/app/test_client.c,$(WASM_SRCS)) \
-	$(filter-out src/sys/wasi/compat.c src/net/http/writer_fast.c,$(WASIP2_EXTRA_SRCS)) src/sys/port/baremetal.c
+	$(filter-out src/sys/wasi/compat.c src/net/http/writer_fast.c,$(WASIP2_EXTRA_SRCS)) \
+	src/sys/port/baremetal.c src/sys/port/baremetal_time.c
 BAREMETAL_OBJS = $(BAREMETAL_SRCS:%.c=$(BAREMETAL_BUILD_DIR)/%.o)
 # qemu-arm (user mode) runs the Thumb-2 firmware with semihosting output; it
 # is not a board model (no NVIC/SysTick), see tests/baremetal/board.c.
@@ -1269,6 +1270,7 @@ TEST_TARGETS = test_worker_affinity \
                test_seq \
                test_seq_auth \
                test_sha256 \
+               test_baremetal_port \
                test_error \
                test_inline_exports \
                test_arena \
@@ -1591,6 +1593,20 @@ test_seq_auth: $(LIB_NAME) tests/test_seq_auth.c
 
 test_sha256: tests/test_sha256.c include/cwist/core/crypto/sha256.h
 	$(CC) $(CFLAGS) -o $@ tests/test_sha256.c
+	./$@
+
+# Bare-metal port layer on the host: siphash.c and baremetal_time.c built as
+# CWIST_BAREMETAL (no libcwist.a), with baremetal_time.c's libc names renamed
+# so they do not collide with the host's.
+BAREMETAL_PORT_TEST_RENAMES = -Dclock_gettime=cwist_bm_clock_gettime \
+	-Dnanosleep=cwist_bm_nanosleep -Dtimegm=cwist_bm_timegm
+test_baremetal_port: tests/test_baremetal_port.c src/core/siphash/siphash.c src/sys/port/baremetal_time.c include/cwist/sys/port.h
+	$(CC) -std=c17 -Wall -Wextra -g -I./include $(COMMON_DEFINES) -DCWIST_BAREMETAL -c -o $@.siphash.o src/core/siphash/siphash.c
+	$(CC) -std=c17 -Wall -Wextra -g -I./include $(COMMON_DEFINES) -DCWIST_BAREMETAL $(BAREMETAL_PORT_TEST_RENAMES) \
+	    -c -o $@.time.o src/sys/port/baremetal_time.c
+	$(CC) -std=c17 -Wall -Wextra -g -I./include $(COMMON_DEFINES) -o $@ tests/test_baremetal_port.c \
+	    $@.siphash.o $@.time.o
+	rm -f $@.siphash.o $@.time.o
 	./$@
 
 test_error: $(LIB_NAME) tests/test_error.c

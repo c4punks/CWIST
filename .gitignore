@@ -10,6 +10,7 @@ bindings/rust/Cargo.lock
 
 # Test binaries
 test_sstring
+test_baremetal_port
 test_http
 test_http_client
 test_siphash

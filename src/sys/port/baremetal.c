@@ -12,10 +12,9 @@
  *     block (callers re-check their predicate), pthread_create() fails with
  *     EAGAIN so every background-thread path takes its no-thread fallback.
  *     Same contract as libttak's WASI preview1 stubs.
- *   - clock_gettime(CLOCK_MONOTONIC) from cwist_port_monotonic_ns();
- *     CLOCK_REALTIME from gettimeofday(), i.e. the firmware's RTC if any.
- *   - nanosleep() busy-waits on the monotonic clock; sched_yield() is a no-op.
- *   - timegm(), which newlib does not provide.
+ *   - clock_gettime(), nanosleep() and timegm() live in baremetal_time.c,
+ *     which the host unit test (tests/test_baremetal_port.c) also builds.
+ *   - sched_yield() is a no-op.
  *   - 64-bit __atomic_* helpers: ARMv7-M/ARMv8-M have no LDREXD/STREXD, so
  *     GCC emits libcalls that libgcc does not implement for Cortex-M.
  */
@@ -32,7 +31,6 @@
 #include <stdbool.h>
 #include <stdint.h>
 #include <string.h>
-#include <sys/time.h>
 #include <time.h>
 
 /* --- pthread: one thread, nothing contends --------------------------------- */
@@ -146,58 +144,7 @@ int pthread_setspecific(pthread_key_t key, const void *value) {
     return 0;
 }
 
-/* --- time ------------------------------------------------------------------- */
-
-int clock_gettime(clockid_t id, struct timespec *ts) {
-    if (!ts) {
-        errno = EINVAL;
-        return -1;
-    }
-    if (id == CLOCK_REALTIME) {
-        struct timeval tv;
-        if (gettimeofday(&tv, NULL) != 0) return -1;
-        ts->tv_sec = tv.tv_sec;
-        ts->tv_nsec = (long)tv.tv_usec * 1000L;
-        return 0;
-    }
-    if (id != CLOCK_MONOTONIC) {
-        errno = EINVAL;
-        return -1;
-    }
-    uint64_t ns = cwist_port_monotonic_ns();
-    ts->tv_sec = (time_t)(ns / 1000000000u);
-    ts->tv_nsec = (long)(ns % 1000000000u);
-    return 0;
-}
-
-int nanosleep(const struct timespec *req, struct timespec *rem) {
-    if (!req || req->tv_nsec < 0 || req->tv_nsec >= 1000000000L) {
-        errno = EINVAL;
-        return -1;
-    }
-    uint64_t until = cwist_port_monotonic_ns() + (uint64_t)req->tv_sec * 1000000000u +
-                     (uint64_t)req->tv_nsec;
-    while (cwist_port_monotonic_ns() < until) {
-    }
-    if (rem) rem->tv_sec = 0, rem->tv_nsec = 0;
-    return 0;
-}
-
 int sched_yield(void) { return 0; }
-
-/* Days from 1970-01-01 to y-m-d (proleptic Gregorian), Howard Hinnant's
- * days_from_civil. */
-time_t timegm(struct tm *tm) {
-    long long y = (long long)tm->tm_year + 1900;
-    int m = tm->tm_mon + 1;
-    y -= m <= 2;
-    long long era = (y >= 0 ? y : y - 399) / 400;
-    unsigned yoe = (unsigned)(y - era * 400);
-    unsigned doy = (153u * (unsigned)(m > 2 ? m - 3 : m + 9) + 2u) / 5u + (unsigned)tm->tm_mday - 1u;
-    unsigned doe = yoe * 365u + yoe / 4u - yoe / 100u + doy;
-    long long days = era * 146097LL + (long long)doe - 719468LL;
-    return (time_t)(days * 86400LL + tm->tm_hour * 3600LL + tm->tm_min * 60LL + tm->tm_sec);
-}
 
 /* --- 64-bit atomics (Cortex-M: mask interrupts around the access) ------------ */
 
