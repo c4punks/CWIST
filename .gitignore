@@ -106,6 +106,7 @@ test_grpc_client
 test_grpc_stream
 test_http2
 test_http3
+/http3_migration_server
 test_http_chunked
 test_http_fairness
 test_http_pipeline
