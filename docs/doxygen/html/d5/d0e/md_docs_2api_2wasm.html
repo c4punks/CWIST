@@ -6,19 +6,19 @@
 <meta http-equiv="X-UA-Compatible" content="IE=11"/>
 <meta name="generator" content="Doxygen 1.9.8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
-<title>CWIST on WASM (Emscripten) - CWIST High-Performance C Web Framework</title>
+<title>CWIST on WASM (Legacy Emscripten) - CWIST High-Performance C Web Framework</title>
 <meta name="description" content="CWIST: High-performance C17 web framework and application server (HTTP/1.1, HTTP/2, HTTP/3, WebTransport, WebSocket, PQC TLS) powered by io_uring and libttak."/>
 <meta name="keywords" content="C web framework, C17, HTTP3, QUIC, io_uring, web server, actix alternative, high performance, REST API in C, C web server"/>
 <meta name="author" content="c4punks"/>
 <meta name="robots" content="index, follow"/>
 <!-- Open Graph / Facebook -->
 <meta property="og:type" content="website"/>
-<meta property="og:title" content="CWIST on WASM (Emscripten) - CWIST Modern C Web Framework"/>
+<meta property="og:title" content="CWIST on WASM (Legacy Emscripten) - CWIST Modern C Web Framework"/>
 <meta property="og:description" content="High-performance C17 web framework & application server with zero-copy io_uring reactor, PQC TLS, and HTTP/3 support."/>
 <meta property="og:url" content="https://c4punks.github.io/CWIST/"/>
 <!-- Twitter -->
 <meta name="twitter:card" content="summary_large_image"/>
-<meta name="twitter:title" content="CWIST on WASM (Emscripten) - CWIST Modern C Web Framework"/>
+<meta name="twitter:title" content="CWIST on WASM (Legacy Emscripten) - CWIST Modern C Web Framework"/>
 <meta name="twitter:description" content="High-performance C17 web framework & application server with zero-copy io_uring reactor, PQC TLS, and HTTP/3 support."/>
 <link href="../../tabs.css" rel="stylesheet" type="text/css"/>
 <script type="text/javascript" src="../../jquery.js"></script>
@@ -105,10 +105,13 @@ $(document).ready(function(){initNavTree('d5/d0e/md_docs_2api_2wasm.html','../..
 </div>
 
 <div><div class="header">
-  <div class="headertitle"><div class="title">CWIST on WASM (Emscripten)</div></div>
+  <div class="headertitle"><div class="title">CWIST on WASM (Legacy Emscripten)</div></div>
 </div><!--header-->
 <div class="contents">
-<div class="textblock"><p><a class="anchor" id="autotoc_md214"></a> CWIST can be compiled to WebAssembly via Emscripten and driven entirely from JS: an HTTP request goes in as bytes, the router + middleware + handlers run inside WASM, and the serialized HTTP response comes back as a zero-copy <code>Uint8Array</code> view on the WASM heap.</p>
+<div class="textblock"><p><a class="anchor" id="autotoc_md214"></a> </p><blockquote class="doxtable">
+<p>&zwj;[!NOTE] The Emscripten browser bundle has been superseded by the WASI component pipeline (issue #203). See <a class="el" href="../../d8/d77/md_docs_2api_2wasm-component.html">wasm-component.md</a> for the supported WASM target. </p>
+</blockquote>
+<p>CWIST historically compiled to WebAssembly via Emscripten and was driven from JS: an HTTP request goes in as bytes, the router + middleware + handlers run inside WASM, and the serialized HTTP response comes back as a zero-copy <code>Uint8Array</code> view on the WASM heap.</p>
 <p>This page documents what is in scope, how to build it, and the two integration points (<code>cwist_app_dispatch_memory</code> and the TypedArray helpers). See <code>tests/wasm_smoke.c</code> for a complete, runnable low-level example and <code>example/wasm-service-worker/</code> for a full app behind a Service Worker host.</p>
 <h1><a class="anchor" id="autotoc_md215"></a>
 Building</h1>
@@ -137,7 +140,7 @@ Request dispatch from JS</h1>
 <div class="line"><a class="code hl_function" href="../../d0/d77/sys_2app_2app_8h.html#aeb91a66106e8a027272fb5b711ac0ba7">cwist_app_dispatch_memory</a>(app, <a class="code hl_variable" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">req_buf</a>, <a class="code hl_variable" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">req_len</a>, &amp;<a class="code hl_variable" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">res_buf</a>, &amp;<a class="code hl_variable" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">res_len</a>);</div>
 <div class="line"><span class="comment">/* res_buf is heap-allocated; free it with cwist_free() when done */</span></div>
 <div class="ttc" id="aotel_8c_html_a856fa22aef923b4a345805d81580aebe"><div class="ttname"><a href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">cap</a></div><div class="ttdeci">size_t cap</div><div class="ttdef"><b>Definition</b> <a href="../../d3/db2/otel_8c_source.html#l00056">otel.c:56</a></div></div>
-<div class="ttc" id="asys_2app_2app_8h_html_aeb91a66106e8a027272fb5b711ac0ba7"><div class="ttname"><a href="../../d0/d77/sys_2app_2app_8h.html#aeb91a66106e8a027272fb5b711ac0ba7">cwist_app_dispatch_memory</a></div><div class="ttdeci">int cwist_app_dispatch_memory(cwist_app *app, const char *req_buf, size_t req_len, char **res_buf, size_t *res_len)</div><div class="ttdoc">Run the full router/middleware/handler pipeline on a raw HTTP/1.x request held in a memory buffer,...</div><div class="ttdef"><b>Definition</b> <a href="../../df/d7f/app_8c_source.html#l02518">app.c:2518</a></div></div>
+<div class="ttc" id="asys_2app_2app_8h_html_aeb91a66106e8a027272fb5b711ac0ba7"><div class="ttname"><a href="../../d0/d77/sys_2app_2app_8h.html#aeb91a66106e8a027272fb5b711ac0ba7">cwist_app_dispatch_memory</a></div><div class="ttdeci">int cwist_app_dispatch_memory(cwist_app *app, const char *req_buf, size_t req_len, char **res_buf, size_t *res_len)</div><div class="ttdoc">Run the full router/middleware/handler pipeline on a raw HTTP/1.x request held in a memory buffer,...</div><div class="ttdef"><b>Definition</b> <a href="../../df/d7f/app_8c_source.html#l02523">app.c:2523</a></div></div>
 </div><!-- fragment --><h1><a class="anchor" id="autotoc_md218"></a>
 Zero-copy views: &lt;tt&gt;cwist/wasm/typedarray.h&lt;/tt&gt;</h1>
 <p>Include this header (Emscripten builds only) to expose C arrays to JS as typed-array views and to install the <code>Module.cwistView</code> helper bundle:</p>
@@ -204,7 +207,7 @@ Not covered (yet)</h1>
 <ul>
 <li>WASI 0.2 (<code>wasm32-wasip2</code>) is now supported and CI-gated; see <code><a class="el" href="../../da/dca/wasi_8md.html">docs/api/wasi.md</a></code>. Cloudflare Workers and Fastly Compute are not yet evaluated — everything here still assumes an Emscripten <code>Module</code> host.</li>
 <li>Published npm package / release artifact; today every consumer builds from source with <code>make wasm</code>.</li>
-<li>WASM CI; <code>wasm-smoke</code> is a manual check, so run it before touching <code>WASM_SRCS</code>, <code><a class="el" href="../../d1/d4f/typedarray_8h.html" title="Emscripten-only zero-copy helpers: expose C arrays and in-memory dispatch responses to JS as TypedArr...">typedarray.h</a></code>, or anything under <code>EM_JS</code>.</li>
+<li>WASM CI; <code>wasm-smoke</code> is a manual check, so run it before touching <code>WASM_SRCS</code>, <code><a class="el" href="../../d1/d4f/typedarray_8h.html" title="(Deprecated) Legacy Emscripten zero-copy helpers.">typedarray.h</a></code>, or anything under <code>EM_JS</code>.</li>
 </ul>
 <h1><a class="anchor" id="autotoc_md225"></a>
 Streaming producer (handlers generate the body chunk-by-chunk)</h1>

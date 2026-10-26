@@ -9,7 +9,7 @@ var indexSectionsWithContent =
   6: "acgjq",
   7: "aceghjq",
   8: "_abcdeghklmnopqrstuw",
-  9: "0125abcdefghijklmnopqrstuvwz개런설웹튜"
+  9: "01235abcdefghijklmnopqrstuvwz개런설웹튜"
 };
 
 var indexSectionNames =

@@ -1,35 +1,39 @@
 <map id="src/sys/app/log_async.c" name="src/sys/app/log_async.c">
-<area shape="rect" id="Node000001" title="Opt&#45;in background writer for log lines (cwist_log_async_start())." alt="" coords="474,5,648,31"/>
+<area shape="rect" id="Node000001" title="Opt&#45;in background writer for log lines (cwist_log_async_start())." alt="" coords="510,5,684,31"/>
 <area shape="rect" id="Node000002" href="$de/da3/log__async_8h.html" title="Internal hook from the log call sites into the async log writer." alt="" coords="214,152,313,177"/>
-<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="474,27,394,44,355,60,319,81,293,109,275,140,271,138,288,106,315,77,353,55,393,39,473,22"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="510,31,391,50,340,64,305,81,293,93,284,108,271,140,266,138,279,106,289,90,302,77,338,59,390,45,509,26"/>
 <area shape="rect" id="Node000003" title=" " alt="" coords="194,225,277,251"/>
-<area shape="poly" id="edge16_Node000001_Node000003" title=" " alt="" coords="474,29,349,44,209,69,144,86,86,105,41,128,13,154,8,165,12,176,34,186,76,199,181,223,180,228,75,204,32,191,8,179,3,165,8,150,38,124,84,100,142,81,208,64,349,39,473,24"/>
+<area shape="poly" id="edge16_Node000001_Node000003" title=" " alt="" coords="509,28,377,42,226,66,155,82,92,102,43,126,26,139,13,153,8,165,12,176,34,186,76,199,181,223,180,228,75,204,32,191,8,179,3,165,8,151,22,135,41,122,90,97,153,77,225,60,376,36,509,23"/>
 <area shape="rect" id="Node000005" href="$d1/d8c/logger_8h.html" title="Application&#45;level structured logging." alt="" coords="23,152,190,177"/>
-<area shape="poly" id="edge4_Node000001_Node000005" title=" " alt="" coords="488,33,392,53,289,81,208,114,140,148,138,143,205,109,287,76,391,47,487,28"/>
-<area shape="rect" id="Node000007" href="$d2/dfe/alloc_8h.html" title="Memory allocation wrappers backed by libttak." alt="" coords="329,79,502,104"/>
-<area shape="poly" id="edge8_Node000001_Node000007" title=" " alt="" coords="539,33,453,75,450,70,537,28"/>
-<area shape="rect" id="Node000010" title=" " alt="" coords="527,79,595,104"/>
-<area shape="poly" id="edge14_Node000001_Node000010" title=" " alt="" coords="564,31,564,65,558,65,558,31"/>
-<area shape="rect" id="Node000011" title=" " alt="" coords="619,79,703,104"/>
-<area shape="poly" id="edge15_Node000001_Node000011" title=" " alt="" coords="579,29,635,68,632,73,576,33"/>
-<area shape="rect" id="Node000012" title=" " alt="" coords="727,79,798,104"/>
-<area shape="poly" id="edge17_Node000001_Node000012" title=" " alt="" coords="594,28,718,71,716,77,593,33"/>
-<area shape="rect" id="Node000013" title=" " alt="" coords="822,79,892,104"/>
-<area shape="poly" id="edge18_Node000001_Node000013" title=" " alt="" coords="610,28,809,76,808,81,609,33"/>
-<area shape="rect" id="Node000014" title=" " alt="" coords="917,79,992,104"/>
-<area shape="poly" id="edge19_Node000001_Node000014" title=" " alt="" coords="634,28,904,76,903,81,633,33"/>
+<area shape="poly" id="edge4_Node000001_Node000005" title=" " alt="" coords="510,32,399,50,338,64,279,81,202,114,138,147,136,143,200,109,278,76,337,59,398,45,509,26"/>
+<area shape="rect" id="Node000007" href="$d2/dfe/alloc_8h.html" title="Memory allocation wrappers backed by libttak." alt="" coords="316,79,489,104"/>
+<area shape="poly" id="edge8_Node000001_Node000007" title=" " alt="" coords="567,33,448,76,446,71,565,28"/>
+<area shape="rect" id="Node000010" title=" " alt="" coords="514,79,582,104"/>
+<area shape="poly" id="edge14_Node000001_Node000010" title=" " alt="" coords="591,33,566,69,561,66,587,29"/>
+<area shape="rect" id="Node000011" title=" " alt="" coords="606,79,690,104"/>
+<area shape="poly" id="edge15_Node000001_Node000011" title=" " alt="" coords="608,29,634,66,629,69,603,33"/>
+<area shape="rect" id="Node000012" title=" " alt="" coords="714,79,784,104"/>
+<area shape="poly" id="edge17_Node000001_Node000012" title=" " alt="" coords="623,28,713,70,711,75,620,33"/>
+<area shape="rect" id="Node000013" title=" " alt="" coords="808,79,879,104"/>
+<area shape="poly" id="edge18_Node000001_Node000013" title=" " alt="" coords="637,28,796,74,794,79,636,33"/>
+<area shape="rect" id="Node000014" title=" " alt="" coords="904,79,978,104"/>
+<area shape="poly" id="edge19_Node000001_Node000014" title=" " alt="" coords="656,28,891,76,890,81,655,33"/>
+<area shape="rect" id="Node000015" href="$de/d03/platform_8h.html" title="Target capability macros shared by all CWIST sources." alt="" coords="1002,79,1157,104"/>
+<area shape="poly" id="edge20_Node000001_Node000015" title=" " alt="" coords="675,28,989,74,988,79,674,33"/>
 <area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="262,179,248,214,243,212,257,177"/>
-<area shape="rect" id="Node000004" title=" " alt="" coords="345,225,420,251"/>
-<area shape="poly" id="edge3_Node000002_Node000004" title=" " alt="" coords="284,175,352,216,350,220,281,180"/>
+<area shape="rect" id="Node000004" title=" " alt="" coords="428,225,502,251"/>
+<area shape="poly" id="edge3_Node000002_Node000004" title=" " alt="" coords="297,175,420,218,419,223,295,180"/>
 <area shape="poly" id="edge6_Node000005_Node000003" title=" " alt="" coords="128,175,204,216,201,221,126,180"/>
-<area shape="poly" id="edge5_Node000005_Node000004" title=" " alt="" coords="151,175,332,221,331,226,150,180"/>
+<area shape="poly" id="edge5_Node000005_Node000004" title=" " alt="" coords="165,175,415,224,414,229,164,180"/>
 <area shape="rect" id="Node000006" title=" " alt="" coords="69,225,144,251"/>
 <area shape="poly" id="edge7_Node000005_Node000006" title=" " alt="" coords="109,178,109,212,104,212,104,178"/>
-<area shape="poly" id="edge9_Node000007_Node000004" title=" " alt="" coords="493,101,618,124,668,137,695,150,701,165,695,179,677,193,651,205,581,222,503,232,434,237,433,232,503,227,580,216,649,200,675,189,691,176,696,165,691,154,666,142,616,129,492,107"/>
-<area shape="rect" id="Node000008" title=" " alt="" coords="540,152,681,177"/>
-<area shape="poly" id="edge10_Node000007_Node000008" title=" " alt="" coords="448,102,567,145,565,150,446,107"/>
-<area shape="rect" id="Node000009" href="$da/d0c/arena_8h.html" title="Request&#45;scoped arena allocator backed by libttak arena generations." alt="" coords="337,152,516,177"/>
-<area shape="poly" id="edge11_Node000007_Node000009" title=" " alt="" coords="420,104,425,138,420,139,415,105"/>
-<area shape="poly" id="edge12_Node000009_Node000003" title=" " alt="" coords="397,180,281,223,279,218,395,175"/>
-<area shape="poly" id="edge13_Node000009_Node000004" title=" " alt="" coords="421,179,399,215,394,212,417,176"/>
+<area shape="poly" id="edge9_Node000007_Node000004" title=" " alt="" coords="485,101,615,124,667,137,695,150,706,173,700,192,682,206,655,217,585,231,516,238,516,232,585,226,653,212,679,202,696,189,701,173,691,154,665,142,614,129,484,107"/>
+<area shape="rect" id="Node000008" title=" " alt="" coords="337,152,478,177"/>
+<area shape="poly" id="edge10_Node000007_Node000008" title=" " alt="" coords="406,104,409,138,403,139,401,105"/>
+<area shape="rect" id="Node000009" href="$da/d0c/arena_8h.html" title="Request&#45;scoped arena allocator backed by libttak arena generations." alt="" coords="502,152,681,177"/>
+<area shape="poly" id="edge11_Node000007_Node000009" title=" " alt="" coords="434,102,549,144,547,149,432,107"/>
+<area shape="poly" id="edge12_Node000009_Node000003" title=" " alt="" coords="535,180,291,228,290,223,534,175"/>
+<area shape="poly" id="edge13_Node000009_Node000004" title=" " alt="" coords="573,180,499,221,497,216,570,175"/>
+<area shape="rect" id="Node000016" href="$d3/da3/wasi_8h.html" title="WASI target feature detection shared by all CWIST sources." alt="" coords="1016,152,1144,177"/>
+<area shape="poly" id="edge21_Node000015_Node000016" title=" " alt="" coords="1082,104,1082,138,1077,138,1077,104"/>
 </map>

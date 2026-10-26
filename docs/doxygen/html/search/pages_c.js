@@ -1,10 +1,15 @@
 var searchData=
 [
-  ['in_20cwist_0',['Full GC: Automatic Resource Reclamation in CWIST',['../d9/dd1/md_docs_2GC.html',1,'']]],
-  ['in_20the_20c1m_20reactor_20s_20batch_20drain_20issue_2025_1',['Cooperative queuing in the C1M reactor&apos;s batch drain (issue #25)',['../d1/ddd/md_docs_2cooperative-queuing.html',1,'']]],
-  ['in_20wrk_20raw_20corrected_20latency_20histograms_2',['Opt-in wrk raw/corrected latency histograms',['../d1/dfd/md_docs_2performance_2wrk-dual-histogram.html',1,'']]],
-  ['integrate_20nats_20with_20cwist_3',['Integrate NATS with CWIST',['../da/d48/md_docs_2tutorials_2nats-integration.html',1,'']]],
-  ['io_5furing_20posted_20work_20wake_20up_20regression_2025_4',['io_uring posted-work wake-up regression (#25)',['../dd/d56/md_docs_2reactor-wakeup-regression.html',1,'']]],
-  ['issue_2025_5',['Cooperative queuing in the C1M reactor&apos;s batch drain (issue #25)',['../d1/ddd/md_docs_2cooperative-queuing.html',1,'']]],
-  ['issue_20297_20syscall_20reduction_20audit_20local_2012_20core_20ryzen_205600x_6',['Issue #297 syscall-reduction audit (local, 12-core Ryzen 5600X)',['../d0/d34/md_docs_2performance_2issue-297-syscall-audit.html',1,'']]]
+  ['handoff_0',['Zero-downtime restart via socket handoff',['../d1/d54/md_docs_2deployment_2zero-downtime-restart.html',1,'']]],
+  ['histograms_1',['Opt-in wrk raw/corrected latency histograms',['../d1/dfd/md_docs_2performance_2wrk-dual-histogram.html',1,'']]],
+  ['hot_20reload_20keeps_20the_20session_20ticket_20key_20stek_20unchanged_2',['ADR-0002: TLS certificate hot reload keeps the session-ticket key (STEK) unchanged',['../d1/dd3/md_docs_2decisions_20002-tls-hot-reload-stek.html',1,'']]],
+  ['html_20components_20scoped_20css_20fragments_20and_20assets_3',['HTML Components, Scoped CSS, Fragments and Assets',['../d8/d83/md_docs_2api_2html.html',1,'']]],
+  ['http_201_201_20pipeline_20fairness_20and_20framing_4',['HTTP/1.1 pipeline fairness and framing',['../d2/dc2/md_docs_2http-reactor-fairness.html',1,'']]],
+  ['http_203_20connection_20migration_5',['HTTP/3 connection migration',['../d8/d64/md_docs_2http3-migration.html',1,'']]],
+  ['http_20core_20api_6',['HTTP Core API',['../d2/d9e/md_docs_2api_2http.html',1,'']]],
+  ['http_20ownership_20under_20full_20gc_7',['Deferred HTTP ownership under full GC',['../df/dc5/md_docs_2async-gc-ownership.html',1,'']]],
+  ['http_20response_20caching_20through_20an_20explicit_20public_20fixed_20contract_8',['ADR-0001: Restore HTTP response caching through an explicit public FIXED contract',['../de/d51/md_docs_2decisions_20001-safe-public-fixed-response-cache.html',1,'']]],
+  ['https_20api_9',['HTTPS API',['../d4/d45/md_docs_2api_2https.html',1,'']]],
+  ['https_20c100k_20gate_10',['HTTPS C100k gate',['../d0/d49/md_docs_2performance_2https-c100k.html',1,'']]],
+  ['https_20pool_20task_20queue_3a_20static_20ring_20vs_20growable_20ring_11',['HTTPS pool task queue: static ring vs growable ring',['../df/d28/md_docs_2performance_2https-pool-dynamic-queue.html',1,'']]]
 ];

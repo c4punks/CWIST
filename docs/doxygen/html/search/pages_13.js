@@ -1,10 +1,8 @@
 var searchData=
 [
-  ['pipeline_20fairness_20and_20framing_0',['HTTP/1.1 pipeline fairness and framing',['../d2/dc2/md_docs_2http-reactor-fairness.html',1,'']]],
-  ['pluggable_20tls_20backend_20cwist_5ftls_1',['Pluggable TLS backend (CWIST_TLS)',['../d9/dda/md_docs_2performance_2tls-backends.html',1,'']]],
-  ['pool_20burst_20starvation_2025_20follow_20up_2',['Classic pool burst starvation (#25 follow-up)',['../d9/d56/md_docs_2classic-pool-starvation.html',1,'']]],
-  ['pool_20task_20queue_3a_20static_20ring_20vs_20growable_20ring_3',['HTTPS pool task queue: static ring vs growable ring',['../df/d28/md_docs_2performance_2https-pool-dynamic-queue.html',1,'']]],
-  ['posted_20work_20wake_20up_20regression_2025_4',['io_uring posted-work wake-up regression (#25)',['../dd/d56/md_docs_2reactor-wakeup-regression.html',1,'']]],
-  ['prebuilt_20release_20assets_5',['Prebuilt release assets',['../d1/da3/md_docs_2deployment_2release-assets.html',1,'']]],
-  ['public_20fixed_20contract_6',['ADR-0001: Restore HTTP response caching through an explicit public FIXED contract',['../de/d51/md_docs_2decisions_20001-safe-public-fixed-response-cache.html',1,'']]]
+  ['on_20the_20wasm_20component_20model_0',['CWIST on the WASM component model',['../d8/d77/md_docs_2api_2wasm-component.html',1,'']]],
+  ['on_20wasm_20legacy_20emscripten_1',['CWIST on WASM (Legacy Emscripten)',['../d5/d0e/md_docs_2api_2wasm.html',1,'']]],
+  ['openapi_20and_20swagger_20ui_2',['Document an API with OpenAPI and Swagger UI',['../d6/d8e/md_docs_2tutorials_2openapi-swagger.html',1,'']]],
+  ['opt_20in_20wrk_20raw_20corrected_20latency_20histograms_3',['Opt-in wrk raw/corrected latency histograms',['../d1/dfd/md_docs_2performance_2wrk-dual-histogram.html',1,'']]],
+  ['ownership_20under_20full_20gc_4',['Deferred HTTP ownership under full GC',['../df/dc5/md_docs_2async-gc-ownership.html',1,'']]]
 ];

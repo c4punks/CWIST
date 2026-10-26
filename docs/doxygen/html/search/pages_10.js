@@ -1,7 +1,9 @@
 var searchData=
 [
-  ['methodology_0',['Web Server Benchmark Methodology',['../d6/d42/md_docs_2webserver-benchmark.html',1,'']]],
-  ['middleware_20api_1',['Middleware API',['../da/dbc/md_docs_2api_2middleware.html',1,'']]],
-  ['model_2',['CWIST on the WASM component model',['../d8/d77/md_docs_2api_2wasm-component.html',1,'']]],
-  ['mux_20algorithm_20references_3',['Mux Algorithm References',['../d6/d9f/md_docs_2references_2mux__algorithm__references.html',1,'']]]
+  ['latency_20histograms_0',['Opt-in wrk raw/corrected latency histograms',['../d1/dfd/md_docs_2performance_2wrk-dual-histogram.html',1,'']]],
+  ['legacy_20emscripten_1',['CWIST on WASM (Legacy Emscripten)',['../d5/d0e/md_docs_2api_2wasm.html',1,'']]],
+  ['library_20reference_2',['CWIST Library Reference',['../da/dca/md_docs_2REFERENCE.html',1,'']]],
+  ['limits_3',['C1M file limits',['../db/d4d/md_docs_2c1m-file-limits.html',1,'']]],
+  ['list_4',['Deprecated List',['../da/d58/deprecated.html',1,'']]],
+  ['local_2012_20core_20ryzen_205600x_5',['Issue #297 syscall-reduction audit (local, 12-core Ryzen 5600X)',['../d0/d34/md_docs_2performance_2issue-297-syscall-audit.html',1,'']]]
 ];

@@ -1,6 +1,9 @@
 var searchData=
 [
-  ['v3_205_200_20release_20roadmap_0',['v3.5.0 release roadmap',['../d7/df9/md_docs_2roadmap-v3_85.html',1,'']]],
-  ['via_20socket_20handoff_1',['Zero-downtime restart via socket handoff',['../d1/d54/md_docs_2deployment_2zero-downtime-restart.html',1,'']]],
-  ['vs_20growable_20ring_2',['HTTPS pool task queue: static ring vs growable ring',['../df/d28/md_docs_2performance_2https-pool-dynamic-queue.html',1,'']]]
+  ['ui_0',['Document an API with OpenAPI and Swagger UI',['../d6/d8e/md_docs_2tutorials_2openapi-swagger.html',1,'']]],
+  ['unchanged_1',['ADR-0002: TLS certificate hot reload keeps the session-ticket key (STEK) unchanged',['../d1/dd3/md_docs_2decisions_20002-tls-hot-reload-stek.html',1,'']]],
+  ['under_20full_20gc_2',['Deferred HTTP ownership under full GC',['../df/dc5/md_docs_2async-gc-ownership.html',1,'']]],
+  ['up_3',['Classic pool burst starvation (#25 follow-up)',['../d9/d56/md_docs_2classic-pool-starvation.html',1,'']]],
+  ['up_20regression_2025_4',['io_uring posted-work wake-up regression (#25)',['../dd/d56/md_docs_2reactor-wakeup-regression.html',1,'']]],
+  ['uri_20api_5',['Query &amp; URI API',['../dc/d49/md_docs_2api_2query.html',1,'']]]
 ];
