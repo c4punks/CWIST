@@ -57,3 +57,26 @@ jobs:
 
     - name: Echo session, stream, datagram, refusal and close
       run: make -j"$(nproc)" webtransport-e2e CWIST_WEBTRANSPORT=server PYTHON="$RUNNER_TEMP/wt/bin/python"
+
+  http3-migration:
+    name: HTTP/3 connection migration (aioquic)
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      with:
+        submodules: recursive
+
+    - name: Install build dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y cmake libcurl4-openssl-dev libnghttp2-dev libbrotli-dev libzstd-dev
+
+    - name: Install aioquic
+      run: |
+        python3 -m venv "$RUNNER_TEMP/h3-migration"
+        "$RUNNER_TEMP/h3-migration/bin/pip" install aioquic==1.4.0
+
+    - name: Test requests through 400 address changes
+      run: make -j"$(nproc)" http3-migration-e2e CWIST_WEBRTC=0 PYTHON="$RUNNER_TEMP/h3-migration/bin/python"
