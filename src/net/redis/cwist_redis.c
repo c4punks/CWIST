@@ -1325,6 +1325,15 @@ static size_t redis_digits(size_t v) {
     return n;
 }
 
+/** Write @p v as decimal ASCII into @p dst using exactly redis_digits(v) bytes. */
+static void redis_write_u(size_t v, char *dst) {
+    size_t n = redis_digits(v);
+    for (size_t i = n; i > 0; i--) {
+        dst[i - 1] = (char)('0' + (v % 10));
+        v /= 10;
+    }
+}
+
 /** Validate argv and compute the exact RESP frame size without touching any
  * argument bytes. @return 0 or -EINVAL (bad pointer/length, size limits). */
 static int redis_frame_size(size_t argc, const void *const *argv, const size_t *argv_lens,
@@ -1348,12 +1357,29 @@ static void redis_frame_fill(char *frame, size_t frame_len, size_t argc, const v
                              const size_t *argv_lens) {
     char *p = frame;
     char *end = frame + frame_len;
-    p += snprintf(p, (size_t)(end - p), "*%zu\r\n", argc);
+
+    size_t n = redis_digits(argc);
+    if ((size_t)(end - p) < 1 + n + 2) return;
+    *p++ = '*';
+    redis_write_u(argc, p);
+    p += n;
+    memcpy(p, "\r\n", 2);
+    p += 2;
+
     for (size_t i = 0; i < argc; i++) {
-        /* snprintf writes a NUL after "\r\n"; the payload overwrites it. */
-        p += snprintf(p, (size_t)(end - p), "$%zu\r\n", argv_lens[i]);
-        if (argv_lens[i]) memcpy(p, argv[i], argv_lens[i]);
-        p += argv_lens[i];
+        size_t len = argv_lens[i];
+        n = redis_digits(len);
+        if ((size_t)(end - p) < 1 + n + 2 + len + 2) return;
+
+        *p++ = '$';
+        redis_write_u(len, p);
+        p += n;
+        memcpy(p, "\r\n", 2);
+        p += 2;
+
+        if (len) memcpy(p, argv[i], len);
+        p += len;
+
         memcpy(p, "\r\n", 2);
         p += 2;
     }
