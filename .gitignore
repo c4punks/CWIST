@@ -9,6 +9,7 @@ bindings/rust/Cargo.lock
 
 # Test binaries
 test_sstring
+test_baremetal_port
 test_http
 test_http_client
 test_siphash
@@ -103,6 +104,7 @@ test_grpc_client
 test_grpc_stream
 test_http2
 test_http3
+/http3_migration_server
 test_http_chunked
 test_http_fairness
 test_http_pipeline
@@ -140,10 +142,7 @@ test_https_pool_queue
 benchmarks/web-frameworks/cwist_bench
 dist/
 cwist.pc
-.wasm-build/
-libcwist_wasm.a
-wasm_smoke.js
-wasm_smoke.wasm
+wasm_abi_layout.wasm
 .wit-check/
 .wit-bindings/
 .component-build/
@@ -161,9 +160,8 @@ tests/test_proto_gen_desc_sample.cwist.pb.h
 __pycache__/
 *.pyc
 
-# WASM service-worker example artifacts (built by example/wasm-service-worker/build.sh)
-example/wasm-service-worker/app.js
-example/wasm-service-worker/app.wasm
+# WASM service-worker example artifacts (built by make wasm-sw-example)
+example/wasm-service-worker/build/
 tutorials/*/build/
 build-tutorials/
 rss_gate_server
@@ -175,3 +173,5 @@ c100k_https_client
 c100k_server.log
 c100k_client.log
 webtransport_echo_server
+.baremetal-build/
+

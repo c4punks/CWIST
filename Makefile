@@ -415,22 +415,17 @@ SRCS = src/core/sstring/sstring.c \
        src/sys/health/healthz.c \
        $(IO_SRC)
 
-# --- WASM (Emscripten) static library -------------------------------------
-# Socket-independent core only: app dispatch, mux/middleware, HTTP/1
-# parser/serializer, sstring/arena/mem, query, JSON, template, validation.
-# Excluded: all of src/sys/io, sockets/accept, TLS/BoringSSL, QUIC/HTTP/3,
-# gRPC (needs HTTP/2), WebSocket transport, threads/scheduler, compression,
-# database/sync clients.  Build with e.g.
-#   make wasm EMCC=/workspace/emsdk/upstream/emscripten/emcc
-# The wasm section sits above `all` in this file; without an explicit default
-# goal, bare `make` would try to build the wasm archive with emcc.
+# --- WASM core sources -------------------------------------------------------
+# Socket-independent core shared by every WASI build below: app dispatch,
+# mux/middleware, HTTP/1 parser/serializer, sstring/arena/mem, query, JSON,
+# template, validation, sqlite.  Excluded: TLS/BoringSSL, QUIC/HTTP/3, gRPC
+# (needs HTTP/2), WebSocket transport, threads/scheduler, compression and the
+# database/sync clients.  The WASM section sits above `all` in this file;
+# without an explicit default goal, bare `make` would build a WASI archive.
 .DEFAULT_GOAL := all
 
-EMCC ?= emcc
-EMAR ?= emar
 NODE ?= node
 RANLIB ?= ranlib
-WASM_BUILD_DIR = .wasm-build
 WASM_SRCS = src/core/sstring/sstring.c \
        src/core/seq/seq.c \
        src/core/seq/seq_auth.c \
@@ -466,64 +461,12 @@ WASM_SRCS = src/core/sstring/sstring.c \
        src/core/db/db.c \
        lib/sqlite3/sqlite3.c \
        lib/cjson/cJSON.c
-WASM_OBJS = $(WASM_SRCS:%.c=$(WASM_BUILD_DIR)/%.o)
-# Host pkg-config -I paths (curl/nghttp2/...) must NOT leak into the
-# emscripten sysroot, so the WASM build uses its own minimal include set.
+# Host pkg-config -I paths (curl/nghttp2/...) must NOT leak into the WASI
+# sysroot, so the WASM builds use their own minimal include set.
 WASM_INCLUDE_PATHS = -I./include -I./lib -I./lib/cjson -I./lib/boringssl/include -I./lib/libttak/include -I./lib/sqlite3
-WASM_CFLAGS = -std=c17 -O2 -Wall $(WASM_INCLUDE_PATHS) $(COMMON_DEFINES)
-
-$(WASM_BUILD_DIR)/%.o: %.c
-	@mkdir -p $(dir $@)
-	$(EMCC) $(WASM_CFLAGS) -c -o $@ $<
-
-libcwist_wasm.a: $(WASM_OBJS)
-	$(EMAR) rcs $@ $(WASM_OBJS)
-
-wasm: libcwist_wasm.a
-
-# Manual smoke test (requires Emscripten + node; intentionally not part of
-# `make test` since CI has no Emscripten toolchain). NODE is overridable so
-# CI can point at a specific node binary.
-wasm-smoke: libcwist_wasm.a
-	$(EMCC) $(WASM_CFLAGS) -o wasm_smoke.js tests/wasm_smoke.c libcwist_wasm.a
-	$(NODE) wasm_smoke.js
-
-# The struct layout contract (tests/abi_layout.h) on wasm32. Same sources as
-# the native test_abi_layout; requires Emscripten + node like wasm-smoke.
-wasm-abi-layout: libcwist_wasm.a
-	$(EMCC) $(WASM_CFLAGS) -o wasm_abi_layout.js tests/test_abi_layout.c tests/abi_layout_legacy.c
-	$(NODE) wasm_abi_layout.js
-
-# Integration test for the cwist-wasm JS wrapper (wasm/npm): builds a
-# consumer-style module through include/cwist/wasm/wasm_entry.h, then drives
-# it from node via the wrapper with no Emscripten glue on the JS side.
-# Requires Emscripten + node, same as wasm-smoke.
-# _main is in EXPORTED_FUNCTIONS on purpose: without it the linker dead-code
-# eliminates main() (nothing else references it), and the app would never be
-# created - dispatch would return NULL on every call.
-wasm-wrapper-test: libcwist_wasm.a
-	$(EMCC) $(WASM_CFLAGS) -o wrapper_test.js tests/wasm_wrapper_test.c libcwist_wasm.a \
-	    -sEXPORTED_FUNCTIONS=_main,_cwist_wasm_dispatch,_cwist_wasm_dispose,_cwist_wasm_use_session,_malloc,_free \
-	    -sEXPORTED_RUNTIME_METHODS=HEAPU8,HEAPU32 -sMODULARIZE -sEXPORT_NAME=createCwistModule
-	$(NODE) tests/wasm_wrapper_test.js
-
-# Versioned npm-package tarball for the cwist-wasm JS wrapper (issue #93
-# Phase 2a). Packs wasm/npm into dist/cwist-wasm-<version>.tgz; CI installs
-# the tarball into a clean directory to prove it stands alone.
-wasm-dist: wasm-wrapper-test
-	mkdir -p dist
-	npm --prefix wasm/npm pkg set version=$(VERSION) >/dev/null
-	npm pack ./wasm/npm --pack-destination dist >/dev/null
-	git checkout -- wasm/npm/package.json 2>/dev/null || true
-	@echo "dist/$$(ls dist | grep cwist-wasm | tail -1)"
-
-clean-wasm:
-	rm -rf $(WASM_BUILD_DIR) libcwist_wasm.a wasm_smoke.js wasm_smoke.wasm \
-	    wasm_abi_layout.js wasm_abi_layout.wasm \
-	    wrapper_test.js wrapper_test.wasm dist
 
 # --- WASI 0.2 (wasm32-wasip2) smoke ------------------------------------------------
-# Same WASM_SRCS subset as the Emscripten target, built with wasi-sdk and run
+# The WASM_SRCS core plus the WASI compat layer, built with wasi-sdk and run
 # under a WASI host (wasmtime). The preview1 target was retired: 0.2 covers
 # its use, and three WASM flavors cost more than they earn (issue #203).
 # WASI_SDK / WASMTIME are shared with the component targets below.
@@ -591,7 +534,62 @@ wasip2-smoke: $(WASIP2_ARCHIVE)
 	echo "wasip2-smoke: PASS (socket server served /hello over wasi:sockets)"
 
 clean-wasip2:
-	rm -rf .wasip2-build libcwist_wasip2_*.a wasip2_smoke.wasm
+	rm -rf .wasip2-build libcwist_wasip2_*.a wasip2_smoke.wasm wasm_abi_layout.wasm
+
+# --- Bare metal (arm-none-eabi / Cortex-M, issue #447) -------------------------
+# The WASI core (WASM_SRCS + WASIP2_EXTRA_SRCS) minus sqlite/db, the test
+# client and the WASI compat layer, built for a single-threaded firmware on
+# newlib-nano.  Requests arrive through cwist_app_dispatch_memory() only.
+# The -D_POSIX_* knobs make newlib declare the pthread/timer APIs that
+# src/sys/port/baremetal.c implements; _Thread_local/__thread collapse to
+# plain statics (one thread: no TLS block, no __aeabi_read_tp).  The
+# firmware defines the <cwist/sys/port.h> hooks and links with --gc-sections.
+BAREMETAL_CROSS ?= arm-none-eabi-
+BAREMETAL_ARCH ?= -mcpu=cortex-m7 -mthumb -mfpu=fpv5-d16 -mfloat-abi=hard
+BAREMETAL_BUILD_DIR = .baremetal-build
+BAREMETAL_ARCHIVE = libcwist_baremetal.a
+BAREMETAL_CFLAGS = -std=c17 -Os -Wall $(BAREMETAL_ARCH) --specs=nano.specs \
+	-ffunction-sections -fdata-sections -DCWIST_BAREMETAL \
+	-D_POSIX_THREADS=200809L -D_POSIX_READER_WRITER_LOCKS=200809L \
+	-D_POSIX_TIMERS=200809L -D_POSIX_MONOTONIC_CLOCK=200809L \
+	-D_POSIX_PRIORITY_SCHEDULING=200809L -D_Thread_local= -D__thread= \
+	$(WASM_INCLUDE_PATHS) $(COMMON_DEFINES)
+BAREMETAL_SRCS = $(filter-out lib/sqlite3/sqlite3.c src/core/db/db.c src/sys/app/test_client.c,$(WASM_SRCS)) \
+	$(filter-out src/sys/wasi/compat.c src/net/http/writer_fast.c,$(WASIP2_EXTRA_SRCS)) \
+	src/sys/port/baremetal.c src/sys/port/baremetal_time.c
+BAREMETAL_OBJS = $(BAREMETAL_SRCS:%.c=$(BAREMETAL_BUILD_DIR)/%.o)
+# qemu-arm (user mode) runs the Thumb-2 firmware with semihosting output; it
+# is not a board model (no NVIC/SysTick), see tests/baremetal/board.c.
+QEMU_ARM ?= qemu-arm
+
+$(BAREMETAL_BUILD_DIR)/%.o: %.c
+	@mkdir -p $(dir $@)
+	$(BAREMETAL_CROSS)gcc $(BAREMETAL_CFLAGS) -c -o $@ $<
+
+$(BAREMETAL_ARCHIVE): $(BAREMETAL_OBJS)
+	$(BAREMETAL_CROSS)ar rcs $@ $(BAREMETAL_OBJS)
+
+baremetal: $(BAREMETAL_ARCHIVE)
+
+# Hello firmware on an STM32H743-shaped memory map: routes, JSON, 404, the
+# entropy hook and a heap/stack high-water report, all through in-memory
+# dispatch.  hello.elf has no RTC (time() fails, so no Date header);
+# hello-rtc.elf backs _gettimeofday and expects Date.
+BAREMETAL_HELLO = $(BAREMETAL_BUILD_DIR)/hello.elf $(BAREMETAL_BUILD_DIR)/hello-rtc.elf
+$(BAREMETAL_BUILD_DIR)/hello-rtc.elf: BOARD_FLAGS = -DBOARD_RTC
+$(BAREMETAL_HELLO): $(BAREMETAL_ARCHIVE) tests/baremetal/hello.c tests/baremetal/board.c tests/baremetal/stm32h743.ld
+	$(BAREMETAL_CROSS)gcc $(BAREMETAL_CFLAGS) $(BOARD_FLAGS) -DBOARD_QEMU_USER -nostartfiles \
+	    --specs=nosys.specs -T tests/baremetal/stm32h743.ld -Wl,--gc-sections \
+	    -Wl,--no-warn-rwx-segments -Wl,-Map=$(@:.elf=.map) -o $@ \
+	    tests/baremetal/hello.c tests/baremetal/board.c $(BAREMETAL_ARCHIVE) -lm
+	$(BAREMETAL_CROSS)size $@
+
+baremetal-smoke: $(BAREMETAL_HELLO)
+	$(QEMU_ARM) -cpu cortex-m7 $(BAREMETAL_BUILD_DIR)/hello.elf
+	$(QEMU_ARM) -cpu cortex-m7 $(BAREMETAL_BUILD_DIR)/hello-rtc.elf
+
+clean-baremetal:
+	rm -rf $(BAREMETAL_BUILD_DIR) $(BAREMETAL_ARCHIVE)
 
 # --- Component boundary (experimental, issue #203) --------------------------------
 # wit/cwist.wit is the component-model counterpart of wasm_entry.h. Both
@@ -675,6 +673,74 @@ $(COMPONENT_BUILD_DIR)/guest.component.wasm: $(COMPONENT_BUILD_DIR)/guest.o \
 
 component-guest: $(COMPONENT_BUILD_DIR)/guest.component.wasm
 
+# --- Service-worker example (example/wasm-service-worker) ---------------------
+# The example app as a cwist-guest component.  wasm-sw-example transpiles it
+# twice: for node (smoke.js) and for the browser with async instantiation,
+# because a service worker may not use top-level await, which jco's default
+# self-instantiating output needs.  esbuild then bundles sw.js with the
+# adapter and the preview2-shim browser imports into site/, which is what a
+# static host serves.
+SW_EXAMPLE_DIR = example/wasm-service-worker
+SW_BUILD_DIR = $(SW_EXAMPLE_DIR)/build
+
+$(SW_BUILD_DIR)/app.o: $(SW_EXAMPLE_DIR)/app.c wit-bindings
+	@mkdir -p $(SW_BUILD_DIR)
+	$(WASI_SDK)/bin/clang --target=$(WASIP2_TARGET) $(WASIP2_CFLAGS) \
+	    -I$(WIT_BINDINGS_DIR)/cwist-guest -c -o $@ $<
+
+$(SW_BUILD_DIR)/app.component.wasm: $(SW_BUILD_DIR)/app.o $(COMPONENT_BUILD_DIR)/cwist_guest.o \
+                                    libcwist_wasip2_$(WASIP2_TARGET).a
+	$(WASI_SDK)/bin/clang --target=$(WASIP2_TARGET) $(WASIP2_CFLAGS) \
+	    -o $(SW_BUILD_DIR)/app.core.wasm \
+	    $(SW_BUILD_DIR)/app.o $(COMPONENT_BUILD_DIR)/cwist_guest.o \
+	    $(WIT_BINDINGS_DIR)/cwist-guest/cwist_guest_component_type.o \
+	    $(WASIP2_ARCHIVE) $(WASIP2_LDLIBS) \
+	    -Wl,--gc-sections -Wl,--allow-undefined -Wl,-z,stack-size=$(WASIP2_STACK_BYTES)
+	wasm-tools component embed wit/ --world cwist-guest $(SW_BUILD_DIR)/app.core.wasm -o $@
+
+wasm-sw-example: $(SW_BUILD_DIR)/app.component.wasm
+	npm exec -y --package=@bytecodealliance/jco -- \
+	    jco transpile $(SW_BUILD_DIR)/app.component.wasm --out-dir $(SW_BUILD_DIR)/node
+	npm install --prefix $(SW_BUILD_DIR)/node --no-save --no-fund --no-audit \
+	    --silent @bytecodealliance/preview2-shim
+	npm exec -y --package=@bytecodealliance/jco -- \
+	    jco transpile $(SW_BUILD_DIR)/app.component.wasm --out-dir $(SW_BUILD_DIR)/browser \
+	    --instantiation async --no-nodejs-compat
+	mkdir -p $(SW_BUILD_DIR)/site
+	npm exec -y --package=esbuild -- esbuild $(SW_EXAMPLE_DIR)/sw.js \
+	    --bundle --platform=browser --format=iife --conditions=browser \
+	    --alias:@bytecodealliance/preview2-shim=./$(SW_BUILD_DIR)/node/node_modules/@bytecodealliance/preview2-shim/dist/browser/index.js \
+	    --outfile=$(SW_BUILD_DIR)/site/sw.js
+	cp $(SW_EXAMPLE_DIR)/index.html $(SW_BUILD_DIR)/browser/*.wasm $(SW_BUILD_DIR)/site/
+	@echo "wasm-sw-example: serve $(SW_BUILD_DIR)/site/ over http://localhost"
+
+# Node smoke of the example app: the same component through the same adapter
+# the service worker uses (the worker itself needs a browser).
+wasm-sw-smoke: wasm-sw-example
+	SW_JCO_DIR=$(abspath $(SW_BUILD_DIR)/node) $(NODE) $(SW_EXAMPLE_DIR)/smoke.js
+
+# Browser test of the service-worker example in headless Chromium via Playwright.
+wasm-sw-browser-test: wasm-sw-example
+	$(NODE) tests/browser/sw_example.mjs
+
+# The struct layout contract (tests/abi_layout.h) on wasm32, where pointers
+# are 4 bytes: the native test_abi_layout covers the 64-bit targets.
+wasm-abi-layout:
+	$(WASI_SDK)/bin/clang --target=$(WASIP2_TARGET) $(WASIP2_CFLAGS) \
+	    -o wasm_abi_layout.wasm tests/test_abi_layout.c tests/abi_layout_legacy.c \
+	    -lwasi-emulated-getpid
+	$(WASMTIME) run wasm_abi_layout.wasm
+
+# Versioned npm tarball of the cwist-wasm adapter (wasm/npm): packs it into
+# dist/cwist-wasm-<version>.tgz once the component smoke has driven the same
+# adapter; CI installs the tarball into a clean directory.
+wasm-dist: component-smoke
+	mkdir -p dist
+	npm --prefix wasm/npm pkg set version=$(VERSION) >/dev/null
+	npm pack ./wasm/npm --pack-destination dist >/dev/null
+	git checkout -- wasm/npm/package.json 2>/dev/null || true
+	@echo "dist/$$(ls dist | grep cwist-wasm | tail -1)"
+
 component-smoke: component-guest
 	npm exec -y --package=@bytecodealliance/jco -- \
 	    jco transpile $(COMPONENT_BUILD_DIR)/guest.component.wasm --out-dir $(JCO_GUEST_DIR)
@@ -756,7 +822,7 @@ component-stream-smoke-p3:
 	$(MAKE) component-stream-smoke WASIP2_TARGET=wasm32-wasip3
 
 clean-component:
-	rm -rf $(WIT_BINDINGS_DIR) .component-build .jco-guest .jco-guest-stream
+	rm -rf $(WIT_BINDINGS_DIR) .component-build .jco-guest .jco-guest-stream $(SW_BUILD_DIR)
 
 # Packaging gate for the browser bundle (issue #203, stage 2 remainder): the
 # transpiled component plus the cwist-wasm adapter must bundle for a browser
@@ -1197,6 +1263,7 @@ TEST_TARGETS = test_worker_affinity \
                test_seq \
                test_seq_auth \
                test_sha256 \
+               test_baremetal_port \
                test_error \
                test_middleware_jwt \
                test_inline_exports \
@@ -1305,7 +1372,7 @@ TEST_TARGETS = test_worker_affinity \
                test_css_composer \
                test_multipart
 
-.PHONY: all test tsan-test $(TEST_TARGETS) fuzz_seq install uninstall dist clean rebuild examples clean-examples micro-examples examples-check wasm wasm-smoke wasm-abi-layout clean-wasm wasip2-smoke clean-wasip2 wit-check jco-transpile wit-bindings component-guest component-smoke clean-component api-baseline api-check env-check
+.PHONY: all test tsan-test $(TEST_TARGETS) fuzz_seq install uninstall dist clean rebuild examples clean-examples micro-examples examples-check wasm-abi-layout wasm-sw-example wasm-sw-smoke wasm-sw-browser-test wasm-dist wasip2-smoke clean-wasip2 baremetal baremetal-smoke clean-baremetal wit-check jco-transpile wit-bindings component-guest component-smoke clean-component api-baseline api-check env-check
 
 # Regenerate docs/api/v4.0-api-baseline.txt (the recorded v4.0 public API
 # symbol surface). See CONTRIBUTING.md "Releases and patch releases".
@@ -1511,6 +1578,20 @@ test_seq_auth: $(LIB_NAME) tests/test_seq_auth.c
 
 test_sha256: tests/test_sha256.c include/cwist/core/crypto/sha256.h
 	$(CC) $(CFLAGS) -o $@ tests/test_sha256.c
+	./$@
+
+# Bare-metal port layer on the host: siphash.c and baremetal_time.c built as
+# CWIST_BAREMETAL (no libcwist.a), with baremetal_time.c's libc names renamed
+# so they do not collide with the host's.
+BAREMETAL_PORT_TEST_RENAMES = -Dclock_gettime=cwist_bm_clock_gettime \
+	-Dnanosleep=cwist_bm_nanosleep -Dtimegm=cwist_bm_timegm
+test_baremetal_port: tests/test_baremetal_port.c src/core/siphash/siphash.c src/sys/port/baremetal_time.c include/cwist/sys/port.h
+	$(CC) -std=c17 -Wall -Wextra -g -I./include $(COMMON_DEFINES) -DCWIST_BAREMETAL -c -o $@.siphash.o src/core/siphash/siphash.c
+	$(CC) -std=c17 -Wall -Wextra -g -I./include $(COMMON_DEFINES) -DCWIST_BAREMETAL $(BAREMETAL_PORT_TEST_RENAMES) \
+	    -c -o $@.time.o src/sys/port/baremetal_time.c
+	$(CC) -std=c17 -Wall -Wextra -g -I./include $(COMMON_DEFINES) -o $@ tests/test_baremetal_port.c \
+	    $@.siphash.o $@.time.o
+	rm -f $@.siphash.o $@.time.o
 	./$@
 
 test_error: $(LIB_NAME) tests/test_error.c
@@ -1902,7 +1983,7 @@ clean:
 	@echo "Cleaning up build artifacts..."
 	rm -f $(OBJS) $(LIB_NAME) $(PC_FILE)
 	rm -rf include/cwist/vendor
-	rm -f $(TEST_TARGETS)
+	rm -f $(TEST_TARGETS) http3_migration_server
 	rm -rf $(TUTORIALS_BUILD_DIR)
 	rm -f $(CJSON_DIR)/cJSON.o $(CJSON_LIB)
 	rm -rf $(URIPARSER_BUILD_DIR)
@@ -2454,6 +2535,19 @@ webtransport_echo_server:
 endif
 
 PYTHON ?= python3
+HTTP3_MIGRATION_ARGS ?=
+.PHONY: http3-migration-e2e
+ifeq ($(CWIST_HTTP3),1)
+http3_migration_server: $(LIB_NAME) tests/http3_migration_server.c
+	$(CC) $(CFLAGS) -o $@ tests/http3_migration_server.c $(LIB_NAME) $(LIBS)
+
+http3-migration-e2e: http3_migration_server
+	$(PYTHON) scripts/ci/http3_migration_e2e.py ./http3_migration_server $(HTTP3_MIGRATION_ARGS)
+else
+http3-migration-e2e:
+	@echo "CWIST_HTTP3=0: skipping $@"
+endif
+
 webtransport-e2e: webtransport_echo_server
 ifeq ($(CWIST_HAVE_LSQUIC_WT),1)
 	@echo "webtransport-e2e: skipped: lib/lsquic has lsquic_wt.h, whose session API negotiates newer WebTransport drafts than aioquic's draft-02"

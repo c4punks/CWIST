@@ -189,10 +189,28 @@ jobs:
         ref: ${{ env.TAG }}
         submodules: recursive
 
-    - name: Install Emscripten
-      uses: mymindstorm/setup-emsdk@v14
+    - name: Install node 24
+      uses: actions/setup-node@v4
       with:
-        version: 5.0.0
+        node-version: 24
+
+    - name: Install wasi-sdk 25.0
+      run: |
+        mkdir -p "$HOME/toolchains"
+        curl -sSL -o /tmp/wasi-sdk.tar.gz \
+          https://github.com/WebAssembly/wasi-sdk/releases/download/wasi-sdk-25/wasi-sdk-25.0-x86_64-linux.tar.gz
+        tar -xzf /tmp/wasi-sdk.tar.gz -C "$HOME/toolchains"
+
+    - name: Install wasm-tools 1.259.0 and wit-bindgen 0.62.0
+      run: |
+        curl -sSL -o /tmp/wasm-tools.tar.gz \
+          https://github.com/bytecodealliance/wasm-tools/releases/download/v1.259.0/wasm-tools-1.259.0-x86_64-linux.tar.gz
+        tar -xzf /tmp/wasm-tools.tar.gz -C /tmp
+        curl -sSL -o /tmp/wit-bindgen.tar.gz \
+          https://github.com/bytecodealliance/wit-bindgen/releases/download/v0.62.0/wit-bindgen-0.62.0-x86_64-linux.tar.gz
+        tar -xzf /tmp/wit-bindgen.tar.gz -C /tmp
+        echo "/tmp/wasm-tools-1.259.0-x86_64-linux" >> "$GITHUB_PATH"
+        echo "/tmp/wit-bindgen-0.62.0-x86_64-linux" >> "$GITHUB_PATH"
 
     - name: Pack cwist-wasm and verify clean-directory install
       run: |

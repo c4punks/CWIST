@@ -1,7 +1,8 @@
 #include <cwist/core/seq/seq_auth.h>
 #include <cwist/core/mem/alloc.h>
 
-#if defined(__EMSCRIPTEN__) || defined(__wasi__)
+#include <cwist/sys/platform.h>
+#if !defined(CWIST_PLATFORM_HOSTED)
 /* WASM links no OpenSSL: HMAC-SHA256 comes from the bundled header-only
  * implementation and entropy from the host (crypto.getRandomValues under
  * Emscripten, getentropy/__wasi_random_get under WASI). */
@@ -20,8 +21,11 @@
 #if defined(__wasi__)
 #include <unistd.h> /* getentropy */
 #endif
+#if defined(CWIST_BAREMETAL)
+#include <cwist/sys/port.h>
+#endif
 
-#if defined(__EMSCRIPTEN__) || defined(__wasi__)
+#if !defined(CWIST_PLATFORM_HOSTED)
 #define SEQ_AUTH_WASM_CRYPTO 1
 #define SEQ_AUTH_TAG_CAP CWIST_SHA256_DIGEST_LEN
 /* Constant-time compare + secure cleanse without OpenSSL. */
@@ -275,7 +279,8 @@ void cwist_seq_auth_context_destroy(cwist_seq_auth_context_t *ctx) {
  * @brief Fill a buffer with cryptographically secure random bytes.
  *
  * Source is crypto.getRandomValues on Emscripten, getentropy under WASI,
- * and OpenSSL RAND_bytes elsewhere.
+ * the firmware TRNG (cwist_port_entropy) on bare metal, and OpenSSL
+ * RAND_bytes elsewhere.
  *
  * @param out Output buffer.
  * @param len Number of bytes to write; must be non-zero and at most INT_MAX.
@@ -288,6 +293,8 @@ bool cwist_seq_auth_random(uint8_t *out, size_t len) {
     return seq_auth_random_js(out, (int)len) == 1;
 #elif defined(__wasi__)
     return getentropy(out, len) == 0;
+#elif defined(CWIST_BAREMETAL)
+    return cwist_port_entropy(out, len) == 0;
 #else
     return RAND_bytes(out, (int)len) == 1;
 #endif
