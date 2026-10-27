@@ -96,6 +96,7 @@ def run(binary, redis_server):
                 try:
                     os.killpg(test.pid, signal.SIGKILL)
                 except ProcessLookupError:
+                    # Process group already exited; nothing left to kill.
                     pass
                 test.wait()
             if log.exists():
