@@ -36,6 +36,18 @@
  *     accept time, are closed (the latter aborted).
  *   - Deferred (cwist_async) and upgraded (WebSocket) responses are not
  *     supported here.
+ *
+ * TLS (issue #447 Phase 4): build lwip.c with -DCWIST_LWIP_TLS and link
+ * mbedTLS 3.6 (TLS 1.2 server, X.509, PK parse, CTR_DRBG), then set
+ * cfg.tls to a context from cwist_lwip_tls_create(). The adapter drives
+ * mbedTLS itself over the pcb (lwIP's altcp_tls_mbedtls only supports
+ * mbedTLS 2.x). The DRBG is seeded from cwist_port_entropy(); a failing
+ * hook makes cwist_lwip_tls_create() fail rather than run unseeded.
+ * Ciphertext goes out with TCP_WRITE_FLAG_COPY. Each TLS connection costs
+ * one mbedtls_ssl_context plus MBEDTLS_SSL_IN_CONTENT_LEN and
+ * MBEDTLS_SSL_OUT_CONTENT_LEN record buffers. A failed handshake aborts the
+ * connection. Without CWIST_LWIP_TLS, cwist_lwip_tls_create() returns NULL
+ * and the adapter serves plaintext only.
  */
 
 #ifndef __CWIST_SYS_PORT_LWIP_H__
@@ -59,7 +71,11 @@ typedef struct cwist_lwip_config {
     size_t max_body_bytes;    /**< Content-Length cap; 413 above (default 16384). */
     uint32_t idle_timeout_ms; /**< Close a connection with no traffic for this long; 0 = never (default 30000). */
     bool keep_alive;          /**< Allow persistent connections (default true). */
+    struct cwist_lwip_tls *tls; /**< Serve HTTPS with this context; NULL = plaintext (default). Not owned. */
 } cwist_lwip_config;
+
+/** @brief Opaque TLS server context: certificate chain, key, DRBG and mbedTLS config. */
+typedef struct cwist_lwip_tls cwist_lwip_tls;
 
 /** @brief Opaque listener handle returned by cwist_lwip_listen(). */
 typedef struct cwist_lwip_server cwist_lwip_server;
@@ -91,6 +107,31 @@ void cwist_lwip_close(cwist_lwip_server *srv);
  * @return Open connection count (0 for NULL).
  */
 size_t cwist_lwip_active_connections(const cwist_lwip_server *srv);
+
+/**
+ * @brief Create a TLS server context from a certificate chain and private key.
+ *
+ * PEM input must be NUL-terminated and @p cert_len / @p key_len must count
+ * the NUL (mbedTLS's PEM rule: pass sizeof() of a string literal); DER input
+ * is passed as is. The context may be shared by several servers and must
+ * outlive every server that uses it.
+ *
+ * @param cert Certificate chain, leaf first (PEM or DER).
+ * @param cert_len Length of @p cert.
+ * @param key Private key matching the leaf certificate (PEM or DER, unencrypted).
+ * @param key_len Length of @p key.
+ * @return Context, or NULL when parsing fails, the key does not match the
+ *         certificate, cwist_port_entropy() fails while seeding the DRBG,
+ *         memory runs out, or lwip.c was built without CWIST_LWIP_TLS.
+ */
+cwist_lwip_tls *cwist_lwip_tls_create(const unsigned char *cert, size_t cert_len,
+                                      const unsigned char *key, size_t key_len);
+
+/**
+ * @brief Free a TLS context. Close every server using it first.
+ * @param tls Context from cwist_lwip_tls_create(); NULL is a no-op.
+ */
+void cwist_lwip_tls_destroy(cwist_lwip_tls *tls);
 
 #ifdef __cplusplus
 }

@@ -12,6 +12,7 @@ bindings/rust/Cargo.lock
 test_sstring
 test_baremetal_port
 test_lwip_adapter
+test_lwip_tls
 test_http
 test_http_client
 test_siphash
@@ -179,4 +180,5 @@ c100k_server.log
 c100k_client.log
 webtransport_echo_server
 .baremetal-build/
+.mbedtls-test/
 

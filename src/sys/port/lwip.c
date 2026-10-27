@@ -14,6 +14,13 @@
  *
  * tx is written without TCP_WRITE_FLAG_COPY, so lwIP references it until
  * the peer acknowledges; it is freed only once tx_acked reaches tx_len.
+ *
+ * With CWIST_LWIP_TLS and cfg.tls set, mbedTLS sits between the pcb and the
+ * same rx/tx buffers: received ciphertext queues in tin and is decrypted
+ * into rx by the pump; tx goes through mbedtls_ssl_write, whose records are
+ * copied into lwIP (TCP_WRITE_FLAG_COPY) by the BIO, so tx can be freed as
+ * soon as mbedTLS has taken all of it. The next pipelined request is then
+ * picked up from tcp_sent, as on the plaintext path.
  */
 
 #include <cwist/sys/port/lwip.h>
@@ -29,6 +36,18 @@
 #include <string.h>
 #include <strings.h>
 
+#ifdef CWIST_LWIP_TLS
+#include <cwist/sys/port.h>
+
+#include "mbedtls/ctr_drbg.h"
+#include "mbedtls/pk.h"
+#include "mbedtls/ssl.h"
+#include "mbedtls/x509_crt.h"
+
+/* Received ciphertext not yet consumed by mbedTLS: one full record plus slack. */
+#define CWIST_LWIP_TLS_IN_MAX (MBEDTLS_SSL_IN_CONTENT_LEN + 2048)
+#endif
+
 /* lwip/opt.h always defines both; testing for it keeps tools that analyze
  * this file without the firmware's lwIP tree (cppcheck) off the #error. */
 #if defined(LWIP_TCP) && (!LWIP_TCP || !LWIP_CALLBACK_API)
@@ -41,6 +60,15 @@
 static const char CWIST_LWIP_100_CONTINUE[] = "HTTP/1.1 100 Continue\r\n\r\n";
 
 typedef struct cwist_lwip_conn cwist_lwip_conn;
+
+#ifdef CWIST_LWIP_TLS
+struct cwist_lwip_tls {
+    mbedtls_ssl_config conf;
+    mbedtls_ctr_drbg_context drbg;
+    mbedtls_x509_crt cert;
+    mbedtls_pk_context key;
+};
+#endif
 
 struct cwist_lwip_server {
     cwist_app *app;
@@ -69,6 +97,17 @@ struct cwist_lwip_conn {
     bool peer_closed;
     bool continue_sent;
     u32_t last_active_ms;
+
+#ifdef CWIST_LWIP_TLS
+    mbedtls_ssl_context *ssl; /* NULL on a plaintext server */
+    char *tin;                /* ciphertext queue: [tin_off, tin_len) unread */
+    size_t tin_off;
+    size_t tin_len;
+    size_t tin_cap;
+    bool tcp_fin;             /* TCP FIN seen; the TLS stream ends once tin drains */
+    bool handshake_done;
+    bool tx_static;           /* tx is the static 100 Continue, not a heap buffer */
+#endif
 };
 
 typedef enum {
@@ -187,8 +226,30 @@ static void conn_unlink(cwist_lwip_conn *c) {
 static void conn_free(cwist_lwip_conn *c) {
     conn_unlink(c);
     cwist_free(c->rx);
+#ifdef CWIST_LWIP_TLS
+    if (!c->tx_static) cwist_free(c->tx);
+    if (c->ssl) {
+        mbedtls_ssl_free(c->ssl);
+        cwist_free(c->ssl);
+    }
+    cwist_free(c->tin);
+#else
     cwist_free(c->tx);
+#endif
     cwist_free(c);
+}
+
+/* Grow rx to hold @p need bytes. @return false on allocation failure. */
+static bool rx_reserve(cwist_lwip_conn *c, size_t need, size_t limit) {
+    if (need <= c->rx_cap) return true;
+    size_t cap = c->rx_cap ? c->rx_cap : 512;
+    while (cap < need) cap *= 2;
+    if (cap > limit + 1) cap = limit + 1;
+    char *grown = cwist_realloc(c->rx, cap);
+    if (!grown) return false;
+    c->rx = grown;
+    c->rx_cap = cap;
+    return true;
 }
 
 static void conn_detach_pcb(cwist_lwip_conn *c) {
@@ -227,7 +288,14 @@ static err_t conn_close(cwist_lwip_conn *c) {
 
 /* Hand as much of tx to lwIP as the send buffer allows.
  * @return ERR_OK, or ERR_ABRT when the connection was aborted. */
+#ifdef CWIST_LWIP_TLS
+static err_t tls_push(cwist_lwip_conn *c);
+#endif
+
 static err_t conn_push(cwist_lwip_conn *c) {
+#ifdef CWIST_LWIP_TLS
+    if (c->ssl) return tls_push(c);
+#endif
     while (c->tx && c->tx_queued < c->tx_len) {
         size_t room = tcp_sndbuf(c->pcb);
         if (room == 0) break;
@@ -305,6 +373,13 @@ static err_t conn_process(cwist_lwip_conn *c) {
         if (c->peer_closed) return conn_close(c); /* truncated request */
         if (expect_continue && !c->continue_sent) {
             c->continue_sent = true;
+#ifdef CWIST_LWIP_TLS
+            if (c->ssl) { /* must go through the record layer, like any reply */
+                c->tx_static = true;
+                return conn_send(c, (char *)CWIST_LWIP_100_CONTINUE,
+                                 sizeof(CWIST_LWIP_100_CONTINUE) - 1, false);
+            }
+#endif
             if (tcp_write(c->pcb, CWIST_LWIP_100_CONTINUE, sizeof(CWIST_LWIP_100_CONTINUE) - 1, 0) ==
                 ERR_OK) {
                 c->ack_skip += sizeof(CWIST_LWIP_100_CONTINUE) - 1;
@@ -344,6 +419,157 @@ static err_t conn_process(cwist_lwip_conn *c) {
     return conn_send(c, out, out_len, !keep);
 }
 
+#ifdef CWIST_LWIP_TLS
+/* --- TLS (mbedTLS over the pcb) ----------------------------------------------- */
+
+/* BIO send: copy one chunk of ciphertext into lwIP's send buffer. */
+static int tls_bio_send(void *ctx, const unsigned char *buf, size_t len) {
+    cwist_lwip_conn *c = ctx;
+    if (!c->pcb) return MBEDTLS_ERR_SSL_INTERNAL_ERROR;
+    size_t room = tcp_sndbuf(c->pcb);
+    if (room == 0) return MBEDTLS_ERR_SSL_WANT_WRITE;
+    size_t n = len < room ? len : room;
+    if (n > 0xFFFF) n = 0xFFFF;
+    err_t err = tcp_write(c->pcb, buf, (u16_t)n, TCP_WRITE_FLAG_COPY);
+    if (err == ERR_MEM) return MBEDTLS_ERR_SSL_WANT_WRITE; /* segment queue full */
+    if (err != ERR_OK) return MBEDTLS_ERR_SSL_INTERNAL_ERROR;
+    return (int)n;
+}
+
+/* BIO recv: hand mbedTLS queued ciphertext; 0 (EOF) once FIN arrived and it drained. */
+static int tls_bio_recv(void *ctx, unsigned char *buf, size_t len) {
+    cwist_lwip_conn *c = ctx;
+    size_t avail = c->tin_len - c->tin_off;
+    if (avail == 0) return c->tcp_fin ? 0 : MBEDTLS_ERR_SSL_WANT_READ;
+    size_t n = len < avail ? len : avail;
+    memcpy(buf, c->tin + c->tin_off, n);
+    c->tin_off += n;
+    if (c->tin_off == c->tin_len) c->tin_off = c->tin_len = 0;
+    return (int)n;
+}
+
+/* Best-effort close_notify, then a graceful TCP close. */
+static err_t tls_close(cwist_lwip_conn *c) {
+    if (c->handshake_done) mbedtls_ssl_close_notify(c->ssl); /* WANT_WRITE: skip it */
+    if (c->pcb) tcp_output(c->pcb);
+    return conn_close(c);
+}
+
+/* tx fully taken by mbedTLS: release it. The next request is read from
+ * tcp_sent (tls_pump), never recursively from here. */
+static err_t tls_tx_done(cwist_lwip_conn *c) {
+    if (!c->tx_static) cwist_free(c->tx);
+    c->tx = NULL;
+    c->tx_static = false;
+    c->tx_len = c->tx_queued = c->tx_acked = 0;
+    if (c->close_after_tx) return tls_close(c);
+    return ERR_OK;
+}
+
+/* Encrypt as much of tx as lwIP's send buffer takes. */
+static err_t tls_push(cwist_lwip_conn *c) {
+    while (c->tx && c->tx_queued < c->tx_len) {
+        int r = mbedtls_ssl_write(c->ssl, (const unsigned char *)c->tx + c->tx_queued,
+                                  c->tx_len - c->tx_queued);
+        if (r == MBEDTLS_ERR_SSL_WANT_WRITE || r == MBEDTLS_ERR_SSL_WANT_READ) break;
+        if (r < 0) {
+            conn_abort(c);
+            return ERR_ABRT;
+        }
+        c->tx_queued += (size_t)r; /* retried with the same pointer after WANT_WRITE */
+    }
+    if (c->pcb) tcp_output(c->pcb);
+    if (c->tx && c->tx_queued == c->tx_len) return tls_tx_done(c);
+    return ERR_OK;
+}
+
+/* Advance the handshake, decrypt into rx (within the request limits), and
+ * answer whatever request that completes. */
+static err_t tls_pump(cwist_lwip_conn *c) {
+    if (!c->pcb) return ERR_OK;
+    if (c->tx) return tls_push(c); /* one exchange at a time */
+    if (!c->handshake_done) {
+        int r = mbedtls_ssl_handshake(c->ssl);
+        tcp_output(c->pcb);
+        if (r == MBEDTLS_ERR_SSL_WANT_READ || r == MBEDTLS_ERR_SSL_WANT_WRITE) return ERR_OK;
+        if (r != 0) { /* bad client hello, no shared cipher, peer alert, ... */
+            conn_abort(c);
+            return ERR_ABRT;
+        }
+        c->handshake_done = true;
+    }
+    if (c->close_after_tx) return ERR_OK;
+
+    size_t limit = c->srv->cfg.max_header_bytes + c->srv->cfg.max_body_bytes;
+    while (c->rx_len < limit + 1) {
+        size_t want = limit + 1 - c->rx_len;
+        if (want > 2048) want = 2048;
+        if (!rx_reserve(c, c->rx_len + want, limit)) {
+            conn_abort(c);
+            return ERR_ABRT;
+        }
+        int r = mbedtls_ssl_read(c->ssl, (unsigned char *)c->rx + c->rx_len, want);
+        if (r > 0) {
+            c->rx_len += (size_t)r;
+            continue;
+        }
+        if (r == MBEDTLS_ERR_SSL_WANT_READ || r == MBEDTLS_ERR_SSL_WANT_WRITE) break;
+        if (r == 0 || r == MBEDTLS_ERR_SSL_PEER_CLOSE_NOTIFY || r == MBEDTLS_ERR_SSL_CONN_EOF) {
+            c->peer_closed = true;
+            break;
+        }
+        conn_abort(c); /* bad record MAC, unexpected message, ... */
+        return ERR_ABRT;
+    }
+    tcp_output(c->pcb); /* alerts or renegotiation refusals */
+    return conn_process(c);
+}
+
+/* Queue received ciphertext; refuse it (lwIP redelivers) while the queue is full. */
+static err_t tls_on_recv(cwist_lwip_conn *c, struct tcp_pcb *pcb, struct pbuf *p, err_t err) {
+    if (!p) {
+        c->tcp_fin = true;
+        return tls_pump(c);
+    }
+    if (err != ERR_OK) {
+        pbuf_free(p);
+        return err;
+    }
+    c->last_active_ms = sys_now();
+    if (c->tin_off > 0) { /* compact before growing */
+        memmove(c->tin, c->tin + c->tin_off, c->tin_len - c->tin_off);
+        c->tin_len -= c->tin_off;
+        c->tin_off = 0;
+    }
+    size_t need = c->tin_len + p->tot_len;
+    if (need > CWIST_LWIP_TLS_IN_MAX) return ERR_MEM;
+    if (need > c->tin_cap) {
+        size_t cap = c->tin_cap ? c->tin_cap : 1024;
+        while (cap < need) cap *= 2;
+        if (cap > CWIST_LWIP_TLS_IN_MAX) cap = CWIST_LWIP_TLS_IN_MAX;
+        char *grown = cwist_realloc(c->tin, cap);
+        if (!grown) {
+            pbuf_free(p);
+            conn_abort(c);
+            return ERR_ABRT;
+        }
+        c->tin = grown;
+        c->tin_cap = cap;
+    }
+    pbuf_copy_partial(p, c->tin + c->tin_len, p->tot_len, 0);
+    c->tin_len += p->tot_len;
+    tcp_recved(pcb, p->tot_len);
+    pbuf_free(p);
+    return tls_pump(c);
+}
+
+/* CTR_DRBG entropy source: the firmware TRNG, nothing else. */
+static int tls_entropy(void *ctx, unsigned char *out, size_t len) {
+    (void)ctx;
+    return cwist_port_entropy(out, len) == 0 ? 0 : MBEDTLS_ERR_CTR_DRBG_ENTROPY_SOURCE_FAILED;
+}
+#endif /* CWIST_LWIP_TLS */
+
 /* --- lwIP callbacks ------------------------------------------------------------- */
 
 static err_t on_sent(void *arg, struct tcp_pcb *pcb, u16_t len) {
@@ -351,6 +577,9 @@ static err_t on_sent(void *arg, struct tcp_pcb *pcb, u16_t len) {
     (void)pcb;
     if (!c) return ERR_OK;
     c->last_active_ms = sys_now();
+#ifdef CWIST_LWIP_TLS
+    if (c->ssl) return tls_pump(c); /* resume handshake / writes, then the next request */
+#endif
     size_t acked = len;
     size_t skip = acked < c->ack_skip ? acked : c->ack_skip;
     c->ack_skip -= skip;
@@ -372,6 +601,9 @@ static err_t on_recv(void *arg, struct tcp_pcb *pcb, struct pbuf *p, err_t err) 
         if (p) pbuf_free(p);
         return ERR_OK;
     }
+#ifdef CWIST_LWIP_TLS
+    if (c->ssl) return tls_on_recv(c, pcb, p, err);
+#endif
     if (!p) { /* FIN */
         c->peer_closed = true;
         return conn_process(c);
@@ -395,18 +627,10 @@ static err_t on_recv(void *arg, struct tcp_pcb *pcb, struct pbuf *p, err_t err) 
         if (c->tx) return ERR_MEM; /* lwIP keeps p and redelivers it later */
         need = limit + 1;           /* enough to classify as 413/431 */
     }
-    if (need > c->rx_cap) {
-        size_t cap = c->rx_cap ? c->rx_cap : 512;
-        while (cap < need) cap *= 2;
-        if (cap > limit + 1) cap = limit + 1;
-        char *grown = cwist_realloc(c->rx, cap);
-        if (!grown) {
-            pbuf_free(p);
-            conn_abort(c);
-            return ERR_ABRT;
-        }
-        c->rx = grown;
-        c->rx_cap = cap;
+    if (!rx_reserve(c, need, limit)) {
+        pbuf_free(p);
+        conn_abort(c);
+        return ERR_ABRT;
     }
     size_t take = need - c->rx_len;
     pbuf_copy_partial(p, c->rx + c->rx_len, (u16_t)take, 0);
@@ -431,6 +655,9 @@ static err_t on_poll(void *arg, struct tcp_pcb *pcb) {
     uint32_t timeout = c->srv->cfg.idle_timeout_ms;
     if (timeout && (u32_t)(sys_now() - c->last_active_ms) >= timeout) return conn_close(c);
     if (c->tx && c->tx_queued < c->tx_len) return conn_push(c); /* retry after ERR_MEM */
+#ifdef CWIST_LWIP_TLS
+    if (c->ssl) return tls_pump(c); /* refused ciphertext / a stalled handshake */
+#endif
     return ERR_OK;
 }
 
@@ -454,6 +681,20 @@ static err_t on_accept(void *arg, struct tcp_pcb *pcb, err_t err) {
     srv->conns = c;
     srv->nconns++;
 
+#ifdef CWIST_LWIP_TLS
+    if (srv->cfg.tls) {
+        c->ssl = cwist_alloc(sizeof(*c->ssl));
+        if (c->ssl) mbedtls_ssl_init(c->ssl);
+        if (!c->ssl || mbedtls_ssl_setup(c->ssl, &srv->cfg.tls->conf) != 0) {
+            c->pcb = NULL;
+            conn_free(c);
+            tcp_abort(pcb);
+            return ERR_ABRT;
+        }
+        mbedtls_ssl_set_bio(c->ssl, c, tls_bio_send, tls_bio_recv, NULL);
+    }
+#endif
+
     tcp_arg(pcb, c);
     tcp_recv(pcb, on_recv);
     tcp_sent(pcb, on_sent);
@@ -476,6 +717,7 @@ void cwist_lwip_config_init(cwist_lwip_config *cfg) {
     cfg->max_body_bytes = 16384;
     cfg->idle_timeout_ms = 30000;
     cfg->keep_alive = true;
+    cfg->tls = NULL;
 }
 
 /**
@@ -495,6 +737,9 @@ cwist_lwip_server *cwist_lwip_listen(cwist_app *app, const cwist_lwip_config *cf
     else
         cwist_lwip_config_init(&srv->cfg);
     if (srv->cfg.max_conns == 0) srv->cfg.max_conns = 1;
+#ifndef CWIST_LWIP_TLS
+    if (srv->cfg.tls) goto fail; /* never fall back to plaintext silently */
+#endif
 
     struct tcp_pcb *pcb = tcp_new_ip_type(IPADDR_TYPE_ANY);
     if (!pcb) goto fail;
@@ -545,4 +790,63 @@ void cwist_lwip_close(cwist_lwip_server *srv) {
  */
 size_t cwist_lwip_active_connections(const cwist_lwip_server *srv) {
     return srv ? srv->nconns : 0;
+}
+
+/**
+ * @brief Create a TLS server context from a certificate chain and private key.
+ * @param cert Certificate chain, leaf first (PEM with its NUL counted, or DER).
+ * @param cert_len Length of @p cert.
+ * @param key Matching private key (PEM with its NUL counted, or DER).
+ * @param key_len Length of @p key.
+ * @return Context, or NULL on parse/pairing/seeding/allocation failure or
+ *         when built without CWIST_LWIP_TLS.
+ */
+cwist_lwip_tls *cwist_lwip_tls_create(const unsigned char *cert, size_t cert_len,
+                                      const unsigned char *key, size_t key_len) {
+#ifdef CWIST_LWIP_TLS
+    static const unsigned char pers[] = "cwist-lwip-tls";
+    if (!cert || !key) return NULL;
+    cwist_lwip_tls *tls = cwist_alloc(sizeof(*tls));
+    if (!tls) return NULL;
+    mbedtls_ssl_config_init(&tls->conf);
+    mbedtls_ctr_drbg_init(&tls->drbg);
+    mbedtls_x509_crt_init(&tls->cert);
+    mbedtls_pk_init(&tls->key);
+    if (mbedtls_ctr_drbg_seed(&tls->drbg, tls_entropy, NULL, pers, sizeof(pers) - 1) != 0 ||
+        mbedtls_x509_crt_parse(&tls->cert, cert, cert_len) != 0 ||
+        mbedtls_pk_parse_key(&tls->key, key, key_len, NULL, 0, mbedtls_ctr_drbg_random,
+                             &tls->drbg) != 0 ||
+        mbedtls_pk_check_pair(&tls->cert.pk, &tls->key, mbedtls_ctr_drbg_random, &tls->drbg) != 0 ||
+        mbedtls_ssl_config_defaults(&tls->conf, MBEDTLS_SSL_IS_SERVER, MBEDTLS_SSL_TRANSPORT_STREAM,
+                                    MBEDTLS_SSL_PRESET_DEFAULT) != 0 ||
+        mbedtls_ssl_conf_own_cert(&tls->conf, &tls->cert, &tls->key) != 0) {
+        cwist_lwip_tls_destroy(tls);
+        return NULL;
+    }
+    mbedtls_ssl_conf_rng(&tls->conf, mbedtls_ctr_drbg_random, &tls->drbg);
+    return tls;
+#else
+    (void)cert;
+    (void)cert_len;
+    (void)key;
+    (void)key_len;
+    return NULL;
+#endif
+}
+
+/**
+ * @brief Free a TLS context; close every server using it first.
+ * @param tls Context from cwist_lwip_tls_create(); NULL is a no-op.
+ */
+void cwist_lwip_tls_destroy(cwist_lwip_tls *tls) {
+#ifdef CWIST_LWIP_TLS
+    if (!tls) return;
+    mbedtls_ssl_config_free(&tls->conf);
+    mbedtls_x509_crt_free(&tls->cert);
+    mbedtls_pk_free(&tls->key);
+    mbedtls_ctr_drbg_free(&tls->drbg);
+    cwist_free(tls);
+#else
+    (void)tls;
+#endif
 }

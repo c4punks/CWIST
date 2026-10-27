@@ -23,3 +23,10 @@ hello-lwip flash       83968  # 74964 / 74808
 hello-lwip static_ram  69632  # 62384 / 62384
 hello-lwip heap        61440  # 55364
 hello-lwip stack        9216  #  8320 /  8316
+# hello-tls adds mbedTLS 3.6 (tests/lwip/cwist_test_mbedtls_config.h) and the
+# TLS test client. heap covers both TLS sessions: after the handshake they
+# hold ~50 KB together (16 KB in + 4 KB out record buffers each, plus state).
+hello-tls  flash      151552  # 137052 / 137344
+hello-tls  static_ram  83968  #  75520 /  75520
+hello-tls  heap       118784  # 106640
+hello-tls  stack        9216  #   8344 /   8340
