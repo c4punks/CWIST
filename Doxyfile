@@ -17,6 +17,7 @@ OUTPUT_LANGUAGE        = English
 #--------------------------------------------------------------------------
 INPUT                  = include src README.md docs
 FILE_PATTERNS          = *.c *.h *.md
+FILTER_PATTERNS        = *.md="python3 scripts/ci/doxygen_markdown_filter.py"
 RECURSIVE              = YES
 EXCLUDE_PATTERNS       = */tests/* */example/* */docs/doxygen/* */lib/*
 EXCLUDE_SYMLINKS       = YES
