@@ -108,7 +108,7 @@ $(document).ready(function(){initNavTree('d3/df7/md_docs_2ko_2api_2sse.html','..
   <div class="headertitle"><div class="title">Server-Sent Events API</div></div>
 </div><!--header-->
 <div class="contents">
-<div class="textblock"><p><a class="anchor" id="autotoc_md477"></a> <em>헤더:</em> <code>&lt;<a class="el" href="../../df/d58/net_2http_2sse_8h.html" title="Server-Sent Events stream API.">cwist/net/http/sse.h</a>&gt;</code></p>
+<div class="textblock"><p><a class="anchor" id="autotoc_md479"></a> <em>헤더:</em> <code>&lt;<a class="el" href="../../df/d58/net_2http_2sse_8h.html" title="Server-Sent Events stream API.">cwist/net/http/sse.h</a>&gt;</code></p>
 <p><code>text/event-stream</code> 데이터를 보내기 위한 도우미입니다. 사용 방법은 두 가지입니다.</p>
 <ul>
 <li><b>응답 모드</b> (<code>cwist_sse_response_*</code>): 일반 핸들러의 응답 본문에 프레임을 덧붙입니다. 응답은 핸들러가 반환할 때 전송되므로 정해진 묶음의 이벤트에 알맞습니다.</li>
@@ -121,9 +121,9 @@ $(document).ready(function(){initNavTree('d3/df7/md_docs_2ko_2api_2sse.html','..
 <div class="line">retry:1500</div>
 <div class="line">data:first</div>
 <div class="line">data:second</div>
-</div><!-- fragment --><h1><a class="anchor" id="autotoc_md478"></a>
+</div><!-- fragment --><h1><a class="anchor" id="autotoc_md480"></a>
 타입</h1>
-<h2><a class="anchor" id="autotoc_md479"></a>
+<h2><a class="anchor" id="autotoc_md481"></a>
 &lt;tt&gt;cwist_sse_event_t&lt;/tt&gt;</h2>
 <div class="fragment"><div class="line"><span class="keyword">typedef</span> <span class="keyword">struct </span><a class="code hl_struct" href="../../d8/d63/structcwist__sse__event.html">cwist_sse_event</a> {</div>
 <div class="line">    <span class="keyword">const</span> <span class="keywordtype">char</span> *<a class="code hl_variable" href="../../d8/d63/structcwist__sse__event.html#aa7b18ec5113395098d27dc896d5c1ad0">event</a>;</div>
@@ -138,12 +138,12 @@ $(document).ready(function(){initNavTree('d3/df7/md_docs_2ko_2api_2sse.html','..
 <div class="ttc" id="astructcwist__sse__event_html_a6b9d5f671372661165205d7d2a6c86c3"><div class="ttname"><a href="../../d8/d63/structcwist__sse__event.html#a6b9d5f671372661165205d7d2a6c86c3">cwist_sse_event::data</a></div><div class="ttdeci">const char * data</div><div class="ttdef"><b>Definition</b> <a href="../../df/d58/net_2http_2sse_8h_source.html#l00018">sse.h:18</a></div></div>
 <div class="ttc" id="astructcwist__sse__event_html_aa7b18ec5113395098d27dc896d5c1ad0"><div class="ttname"><a href="../../d8/d63/structcwist__sse__event.html#aa7b18ec5113395098d27dc896d5c1ad0">cwist_sse_event::event</a></div><div class="ttdeci">const char * event</div><div class="ttdef"><b>Definition</b> <a href="../../df/d58/net_2http_2sse_8h_source.html#l00015">sse.h:15</a></div></div>
 </div><!-- fragment --><p> <code>cwist_sse_response_write</code>와 <code>cwist_sse_stream_write</code>에 쓰는 구조화된 이벤트입니다. <code>NULL</code> 필드는 생략합니다. <code>retry_ms</code>는 <code>0</code> 이상이면 전송되고 <code>-1</code>이면 생략됩니다.</p>
-<h2><a class="anchor" id="autotoc_md480"></a>
+<h2><a class="anchor" id="autotoc_md482"></a>
 &lt;tt&gt;cwist_sse_stream_t&lt;/tt&gt;</h2>
 <p><code>cwist_sse_stream_open</code>으로 만드는, 열린 스트림에 대한 불투명 핸들입니다.</p>
-<h1><a class="anchor" id="autotoc_md481"></a>
+<h1><a class="anchor" id="autotoc_md483"></a>
 응답 모드</h1>
-<h2><a class="anchor" id="autotoc_md482"></a>
+<h2><a class="anchor" id="autotoc_md484"></a>
 &lt;tt&gt;cwist_sse_response_init&lt;/tt&gt;</h2>
 <div class="fragment"><div class="line"><a class="code hl_struct" href="../../d4/d50/structcwist__error__t.html">cwist_error_t</a> <a class="code hl_function" href="../../df/d58/net_2http_2sse_8h.html#a11159f8f94ba6e260a8705bddc0cb8fd">cwist_sse_response_init</a>(<a class="code hl_struct" href="../../dd/d22/structcwist__http__response.html">cwist_http_response</a> *res);</div>
 <div class="ttc" id="anet_2http_2sse_8h_html_a11159f8f94ba6e260a8705bddc0cb8fd"><div class="ttname"><a href="../../df/d58/net_2http_2sse_8h.html#a11159f8f94ba6e260a8705bddc0cb8fd">cwist_sse_response_init</a></div><div class="ttdeci">cwist_error_t cwist_sse_response_init(cwist_http_response *res)</div><div class="ttdoc">Prepare a response buffer for a Server-Sent Events reply.</div><div class="ttdef"><b>Definition</b> <a href="../../d2/dd2/sse_8c_source.html#l00117">sse.c:117</a></div></div>
@@ -161,56 +161,56 @@ $(document).ready(function(){initNavTree('d3/df7/md_docs_2ko_2api_2sse.html','..
 <td class="markdownTableBodyNone"><code>X-Accel-Buffering</code>   </td><td class="markdownTableBodyNone"><code>no</code>   </td></tr>
 </table>
 <p><code>res</code>가 <code>NULL</code>이거나 헤더를 추가하지 못하면 <code>err_i16 == -1</code>을 반환합니다.</p>
-<h2><a class="anchor" id="autotoc_md483"></a>
+<h2><a class="anchor" id="autotoc_md485"></a>
 &lt;tt&gt;cwist_sse_response_event&lt;/tt&gt;</h2>
 <div class="fragment"><div class="line"><a class="code hl_struct" href="../../d4/d50/structcwist__error__t.html">cwist_error_t</a> <a class="code hl_function" href="../../df/d58/net_2http_2sse_8h.html#a579b2c4ad140329cb2048f671cd87041">cwist_sse_response_event</a>(<a class="code hl_struct" href="../../dd/d22/structcwist__http__response.html">cwist_http_response</a> *res, <span class="keyword">const</span> <span class="keywordtype">char</span> *event,</div>
 <div class="line">                                       <span class="keyword">const</span> <span class="keywordtype">char</span> *<span class="keywordtype">id</span>, <span class="keywordtype">int</span> retry_ms, <span class="keyword">const</span> <span class="keywordtype">char</span> *data);</div>
 <div class="ttc" id="anet_2http_2sse_8h_html_a579b2c4ad140329cb2048f671cd87041"><div class="ttname"><a href="../../df/d58/net_2http_2sse_8h.html#a579b2c4ad140329cb2048f671cd87041">cwist_sse_response_event</a></div><div class="ttdeci">cwist_error_t cwist_sse_response_event(cwist_http_response *res, const char *event, const char *id, int retry_ms, const char *data)</div><div class="ttdoc">Append a formatted SSE event to a response buffer.</div><div class="ttdef"><b>Definition</b> <a href="../../d2/dd2/sse_8c_source.html#l00138">sse.c:138</a></div></div>
 </div><!-- fragment --><p> 응답 본문에 이벤트 하나를 덧붙입니다. 해당 필드를 생략하려면 <code>event</code>나 <code>id</code>에 <code>NULL</code>을, <code>retry_ms</code>에 <code>-1</code>을 넘기세요. <code>-1</code>보다 작은 <code>retry_ms</code>는 <code>err_i16 == -1</code>로 거부됩니다.</p>
-<h2><a class="anchor" id="autotoc_md484"></a>
+<h2><a class="anchor" id="autotoc_md486"></a>
 &lt;tt&gt;cwist_sse_response_write&lt;/tt&gt;</h2>
 <div class="fragment"><div class="line"><a class="code hl_struct" href="../../d4/d50/structcwist__error__t.html">cwist_error_t</a> <a class="code hl_function" href="../../df/d58/net_2http_2sse_8h.html#ab4e660b65ffc4c8c6fb53b95428fd2e0">cwist_sse_response_write</a>(<a class="code hl_struct" href="../../dd/d22/structcwist__http__response.html">cwist_http_response</a> *res,</div>
 <div class="line">                                       <span class="keyword">const</span> <a class="code hl_struct" href="../../d8/d63/structcwist__sse__event.html">cwist_sse_event_t</a> *event);</div>
 <div class="ttc" id="anet_2http_2sse_8h_html_ab4e660b65ffc4c8c6fb53b95428fd2e0"><div class="ttname"><a href="../../df/d58/net_2http_2sse_8h.html#ab4e660b65ffc4c8c6fb53b95428fd2e0">cwist_sse_response_write</a></div><div class="ttdeci">cwist_error_t cwist_sse_response_write(cwist_http_response *res, const cwist_sse_event_t *event)</div><div class="ttdoc">Append an SSE event described by a cwist_sse_event_t to a response.</div><div class="ttdef"><b>Definition</b> <a href="../../d2/dd2/sse_8c_source.html#l00168">sse.c:168</a></div></div>
 </div><!-- fragment --><p> <code>cwist_sse_response_event</code>와 같지만 필드를 <code>cwist_sse_event_t</code>에서 가져옵니다. <code>event</code>가 <code>NULL</code>이면 <code>err_i16 == -1</code>을 반환합니다.</p>
-<h2><a class="anchor" id="autotoc_md485"></a>
+<h2><a class="anchor" id="autotoc_md487"></a>
 &lt;tt&gt;cwist_sse_response_comment&lt;/tt&gt;</h2>
 <div class="fragment"><div class="line"><a class="code hl_struct" href="../../d4/d50/structcwist__error__t.html">cwist_error_t</a> <a class="code hl_function" href="../../df/d58/net_2http_2sse_8h.html#a144359ec2805ddd170fc3d38d7d2e491">cwist_sse_response_comment</a>(<a class="code hl_struct" href="../../dd/d22/structcwist__http__response.html">cwist_http_response</a> *res, <span class="keyword">const</span> <span class="keywordtype">char</span> *<a class="code hl_variable" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">comment</a>);</div>
 <div class="ttc" id="anet_2http_2sse_8h_html_a144359ec2805ddd170fc3d38d7d2e491"><div class="ttname"><a href="../../df/d58/net_2http_2sse_8h.html#a144359ec2805ddd170fc3d38d7d2e491">cwist_sse_response_comment</a></div><div class="ttdeci">cwist_error_t cwist_sse_response_comment(cwist_http_response *res, const char *comment)</div><div class="ttdoc">Append an SSE comment line to a response buffer.</div><div class="ttdef"><b>Definition</b> <a href="../../d2/dd2/sse_8c_source.html#l00154">sse.c:154</a></div></div>
 <div class="ttc" id="aotel_8c_html_a856fa22aef923b4a345805d81580aebe"><div class="ttname"><a href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">cap</a></div><div class="ttdeci">size_t cap</div><div class="ttdef"><b>Definition</b> <a href="../../d3/db2/otel_8c_source.html#l00056">otel.c:56</a></div></div>
 </div><!-- fragment --><p> 주석 줄(<code>:text</code>)과 빈 줄을 덧붙입니다. 클라이언트는 주석을 무시하므로, 연결을 열어 두는 하트비트로 쓰입니다.</p>
-<h1><a class="anchor" id="autotoc_md486"></a>
+<h1><a class="anchor" id="autotoc_md488"></a>
 스트림 모드</h1>
-<h2><a class="anchor" id="autotoc_md487"></a>
+<h2><a class="anchor" id="autotoc_md489"></a>
 &lt;tt&gt;cwist_sse_stream_open&lt;/tt&gt;</h2>
 <div class="fragment"><div class="line"><a class="code hl_typedef" href="../../df/d58/net_2http_2sse_8h.html#a1814cb23b06dfb500d1f266a97cc8d2d">cwist_sse_stream_t</a> *<a class="code hl_function" href="../../df/d58/net_2http_2sse_8h.html#a1dac4f5c4a77d713f4863cd02b6fbce1">cwist_sse_stream_open</a>(<a class="code hl_struct" href="../../dd/d68/structcwist__http__request.html">cwist_http_request</a> *req);</div>
 <div class="ttc" id="anet_2http_2sse_8h_html_a1814cb23b06dfb500d1f266a97cc8d2d"><div class="ttname"><a href="../../df/d58/net_2http_2sse_8h.html#a1814cb23b06dfb500d1f266a97cc8d2d">cwist_sse_stream_t</a></div><div class="ttdeci">struct cwist_sse_stream cwist_sse_stream_t</div><div class="ttdef"><b>Definition</b> <a href="../../df/d58/net_2http_2sse_8h_source.html#l00011">sse.h:11</a></div></div>
 <div class="ttc" id="anet_2http_2sse_8h_html_a1dac4f5c4a77d713f4863cd02b6fbce1"><div class="ttname"><a href="../../df/d58/net_2http_2sse_8h.html#a1dac4f5c4a77d713f4863cd02b6fbce1">cwist_sse_stream_open</a></div><div class="ttdeci">cwist_sse_stream_t * cwist_sse_stream_open(cwist_http_request *req)</div><div class="ttdoc">Upgrade a request connection to a live SSE stream.</div><div class="ttdef"><b>Definition</b> <a href="../../d2/dd2/sse_8c_source.html#l00205">sse.c:205</a></div></div>
 <div class="ttc" id="astructcwist__http__request_html"><div class="ttname"><a href="../../dd/d68/structcwist__http__request.html">cwist_http_request</a></div><div class="ttdef"><b>Definition</b> <a href="../../dd/d56/http_8h_source.html#l00065">http.h:65</a></div></div>
 </div><!-- fragment --><p> <code>200 OK</code> 상태 줄과 SSE 헤더를 <code>req-&gt;client_fd</code>에 쓰고 <code>req-&gt;upgraded</code>를 설정합니다. 핸들러가 반환하면 서버는 <code>req-&gt;upgraded</code>를 보고 자체 응답을 쓰지 않으며 연결을 유지하지도 않으므로, 모든 이벤트는 핸들러가 반환하기 전에 보내야 합니다. <code>req</code>가 <code>NULL</code>이거나, <code>req-&gt;client_fd</code>가 음수이거나, <code>req-&gt;upgraded</code>가 이미 설정되어 있거나, 쓰기에 실패하면 <code>NULL</code>을 반환합니다.</p>
-<h2><a class="anchor" id="autotoc_md488"></a>
+<h2><a class="anchor" id="autotoc_md490"></a>
 &lt;tt&gt;cwist_sse_stream_send&lt;/tt&gt;</h2>
 <div class="fragment"><div class="line"><a class="code hl_struct" href="../../d4/d50/structcwist__error__t.html">cwist_error_t</a> <a class="code hl_function" href="../../df/d58/net_2http_2sse_8h.html#a5976a412b17a2afad4c59e85873b8622">cwist_sse_stream_send</a>(<a class="code hl_typedef" href="../../df/d58/net_2http_2sse_8h.html#a1814cb23b06dfb500d1f266a97cc8d2d">cwist_sse_stream_t</a> *stream, <span class="keyword">const</span> <span class="keywordtype">char</span> *event,</div>
 <div class="line">                                    <span class="keyword">const</span> <span class="keywordtype">char</span> *<span class="keywordtype">id</span>, <span class="keywordtype">int</span> retry_ms, <span class="keyword">const</span> <span class="keywordtype">char</span> *data);</div>
 <div class="ttc" id="anet_2http_2sse_8h_html_a5976a412b17a2afad4c59e85873b8622"><div class="ttname"><a href="../../df/d58/net_2http_2sse_8h.html#a5976a412b17a2afad4c59e85873b8622">cwist_sse_stream_send</a></div><div class="ttdeci">cwist_error_t cwist_sse_stream_send(cwist_sse_stream_t *stream, const char *event, const char *id, int retry_ms, const char *data)</div><div class="ttdoc">Send a formatted SSE event on a live stream.</div><div class="ttdef"><b>Definition</b> <a href="../../d2/dd2/sse_8c_source.html#l00233">sse.c:233</a></div></div>
 </div><!-- fragment --><p> <code>cwist_sse_response_event</code>와 같은 필드 규칙으로 스트림에 이벤트 하나를 보냅니다. 쓰기는 뮤텍스로 직렬화되므로 하나의 스트림을 여러 스레드에서 사용할 수 있습니다. 쓰기가 실패하면 스트림은 닫힘으로 표시되고, 이후의 모든 전송은 <code>err_i16 == -1</code>을 반환합니다.</p>
-<h2><a class="anchor" id="autotoc_md489"></a>
+<h2><a class="anchor" id="autotoc_md491"></a>
 &lt;tt&gt;cwist_sse_stream_write&lt;/tt&gt;</h2>
 <div class="fragment"><div class="line"><a class="code hl_struct" href="../../d4/d50/structcwist__error__t.html">cwist_error_t</a> <a class="code hl_function" href="../../df/d58/net_2http_2sse_8h.html#ac2660f9225c5593ad76f91b6b71607c5">cwist_sse_stream_write</a>(<a class="code hl_typedef" href="../../df/d58/net_2http_2sse_8h.html#a1814cb23b06dfb500d1f266a97cc8d2d">cwist_sse_stream_t</a> *stream,</div>
 <div class="line">                                     <span class="keyword">const</span> <a class="code hl_struct" href="../../d8/d63/structcwist__sse__event.html">cwist_sse_event_t</a> *event);</div>
 <div class="ttc" id="anet_2http_2sse_8h_html_ac2660f9225c5593ad76f91b6b71607c5"><div class="ttname"><a href="../../df/d58/net_2http_2sse_8h.html#ac2660f9225c5593ad76f91b6b71607c5">cwist_sse_stream_write</a></div><div class="ttdeci">cwist_error_t cwist_sse_stream_write(cwist_sse_stream_t *stream, const cwist_sse_event_t *event)</div><div class="ttdoc">Send an SSE event described by a cwist_sse_event_t on a stream.</div><div class="ttdef"><b>Definition</b> <a href="../../d2/dd2/sse_8c_source.html#l00273">sse.c:273</a></div></div>
 </div><!-- fragment --><p> <code>cwist_sse_stream_send</code>와 같지만 필드를 <code>cwist_sse_event_t</code>에서 가져옵니다.</p>
-<h2><a class="anchor" id="autotoc_md490"></a>
+<h2><a class="anchor" id="autotoc_md492"></a>
 &lt;tt&gt;cwist_sse_stream_comment&lt;/tt&gt;</h2>
 <div class="fragment"><div class="line"><a class="code hl_struct" href="../../d4/d50/structcwist__error__t.html">cwist_error_t</a> <a class="code hl_function" href="../../df/d58/net_2http_2sse_8h.html#a142c15574a54fd8be066c83f2c7f3479">cwist_sse_stream_comment</a>(<a class="code hl_typedef" href="../../df/d58/net_2http_2sse_8h.html#a1814cb23b06dfb500d1f266a97cc8d2d">cwist_sse_stream_t</a> *stream, <span class="keyword">const</span> <span class="keywordtype">char</span> *<a class="code hl_variable" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">comment</a>);</div>
 <div class="ttc" id="anet_2http_2sse_8h_html_a142c15574a54fd8be066c83f2c7f3479"><div class="ttname"><a href="../../df/d58/net_2http_2sse_8h.html#a142c15574a54fd8be066c83f2c7f3479">cwist_sse_stream_comment</a></div><div class="ttdeci">cwist_error_t cwist_sse_stream_comment(cwist_sse_stream_t *stream, const char *comment)</div><div class="ttdoc">Send an SSE comment line on a live stream.</div><div class="ttdef"><b>Definition</b> <a href="../../d2/dd2/sse_8c_source.html#l00256">sse.c:256</a></div></div>
 </div><!-- fragment --><p> 스트림에 주석 줄을 보냅니다. 예를 들어 하트비트로 씁니다.</p>
-<h2><a class="anchor" id="autotoc_md491"></a>
+<h2><a class="anchor" id="autotoc_md493"></a>
 &lt;tt&gt;cwist_sse_stream_close&lt;/tt&gt;</h2>
 <div class="fragment"><div class="line"><span class="keywordtype">void</span> <a class="code hl_function" href="../../df/d58/net_2http_2sse_8h.html#a7d76c3563188807802e793f29369d2ab">cwist_sse_stream_close</a>(<a class="code hl_typedef" href="../../df/d58/net_2http_2sse_8h.html#a1814cb23b06dfb500d1f266a97cc8d2d">cwist_sse_stream_t</a> *stream);</div>
 <div class="ttc" id="anet_2http_2sse_8h_html_a7d76c3563188807802e793f29369d2ab"><div class="ttname"><a href="../../df/d58/net_2http_2sse_8h.html#a7d76c3563188807802e793f29369d2ab">cwist_sse_stream_close</a></div><div class="ttdeci">void cwist_sse_stream_close(cwist_sse_stream_t *stream)</div><div class="ttdoc">Close a live SSE stream and release its resources.</div><div class="ttdef"><b>Definition</b> <a href="../../d2/dd2/sse_8c_source.html#l00285">sse.c:285</a></div></div>
 </div><!-- fragment --><p> 스트림 핸들을 해제합니다. 클라이언트 소켓은 닫지 않습니다. <code>NULL</code>을 넘겨도 됩니다.</p>
-<h1><a class="anchor" id="autotoc_md492"></a>
+<h1><a class="anchor" id="autotoc_md494"></a>
 편의 매크로</h1>
 <table class="markdownTable">
 <tr class="markdownTableHead">
@@ -227,7 +227,7 @@ $(document).ready(function(){initNavTree('d3/df7/md_docs_2ko_2api_2sse.html','..
 <td class="markdownTableBodyNone"><code><a class="el" href="../../df/d58/net_2http_2sse_8h.html#a7de122039208241b758d2c29ad809ce4">CWIST_SSE_STREAM_SEND(stream, event)</a></code>   </td><td class="markdownTableBodyNone"><code>cwist_sse_stream_write(stream, &amp;event)</code>   </td></tr>
 </table>
 <p>두 <code>SEND</code> 매크로는 이벤트의 주소를 취하므로 lvalue로 받습니다.</p>
-<h1><a class="anchor" id="autotoc_md493"></a>
+<h1><a class="anchor" id="autotoc_md495"></a>
 예제</h1>
 <p>정해진 묶음의 이벤트를 보내는 핸들러입니다 (튜토리얼 08에서 쓰는 패턴입니다).</p>
 <div class="fragment"><div class="line"><span class="keyword">static</span> <span class="keywordtype">void</span> <a class="code hl_variable" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">handle_events</a>(<a class="code hl_struct" href="../../dd/d68/structcwist__http__request.html">cwist_http_request</a> *req, <a class="code hl_struct" href="../../dd/d22/structcwist__http__response.html">cwist_http_response</a> *res) {</div>

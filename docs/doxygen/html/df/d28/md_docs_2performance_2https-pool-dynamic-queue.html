@@ -108,13 +108,13 @@ $(document).ready(function(){initNavTree('df/d28/md_docs_2performance_2https-poo
   <div class="headertitle"><div class="title">HTTPS pool task queue: static ring vs growable ring</div></div>
 </div><!--header-->
 <div class="contents">
-<div class="textblock"><p><a class="anchor" id="autotoc_md730"></a> Experiments behind commit <code>8d5a5958</code> ("grow the pool task ring on demand
+<div class="textblock"><p><a class="anchor" id="autotoc_md732"></a> Experiments behind commit <code>8d5a5958</code> ("grow the pool task ring on demand
 instead of a 96 MiB static array"), main <code>e7568313</code>.</p>
-<h1><a class="anchor" id="autotoc_md731"></a>
+<h1><a class="anchor" id="autotoc_md733"></a>
 What changed</h1>
 <p><code>https_thread_pool_t.queue</code> was a static <code>https_pool_task_t[2097152]</code>. Each task is 48 bytes, so the array was about 96 MiB. <code><a class="el" href="../../d7/d67/net_2http_2https_8h.html#a733cdf1eb87589d9f055ab20c80e12a5" title="Create the worker threads, mutex, and condition variables of the global HTTPS thread pool....">https_pool_init()</a></code> memsets the whole pool struct, so that 96 MiB became resident in every process that starts the pool, before the first connection. With <code>CWIST_C1M_MODE=1</code> that is every worker process plus the master.</p>
 <p>The queue is now <code>queue</code> / <code>queue_len</code>: a ring that starts empty, takes <code>HTTPS_TASK_QUEUE_INITIAL</code> (1024) slots on first use, and doubles through <code>resize_queue()</code> when full, up to the old limit <code>HTTPS_TASK_QUEUE_MAX</code> (2097152). At that limit, or if an allocation fails, submitters block on <code>cond_not_full</code> as before. The ring is not shrunk.</p>
-<h1><a class="anchor" id="autotoc_md732"></a>
+<h1><a class="anchor" id="autotoc_md734"></a>
 Setup</h1>
 <ul>
 <li>AMD Ryzen 5 5600X (6 cores / 12 threads), Linux; client and server on loopback.</li>
@@ -122,7 +122,7 @@ Setup</h1>
 <li>Server: a minimal <code><a class="el" href="../../dc/da0/structcwist__app.html" title="Main Application Context.">cwist_app</a></code> with HTTPS (<code>GET /</code> returns <code>ok</code>), started with <code>CWIST_C1M_MODE=1</code>.</li>
 <li>RSS is the sum of <code>VmRSS</code> over the master and its workers.</li>
 </ul>
-<h1><a class="anchor" id="autotoc_md733"></a>
+<h1><a class="anchor" id="autotoc_md735"></a>
 1. RSS of &lt;tt&gt;https_pool_init()&lt;/tt&gt; alone</h1>
 <table class="markdownTable">
 <tr class="markdownTableHead">
@@ -133,7 +133,7 @@ Setup</h1>
 <td class="markdownTableBodyNone">growable ring   </td><td class="markdownTableBodyNone">10 104 KiB   </td><td class="markdownTableBodyNone">10 280 KiB   </td><td class="markdownTableBodyNone"><b>+176 KiB</b> (thread stacks)   </td></tr>
 </table>
 <p><code>size(1)</code>: the server binary's <code>.bss</code> drops from 100 861 061 to 197 765 bytes.</p>
-<h1><a class="anchor" id="autotoc_md734"></a>
+<h1><a class="anchor" id="autotoc_md736"></a>
 2. 4 workers, steady and churn load (3 alternating rounds)</h1>
 <p><code>CWIST_WORKERS=4</code>. Load in order: <code>wrk -t4 -c64 -d10s</code> (keep-alive), <code>ab -n 5000 -c 64</code> (a new TLS connection per request), then <code>h2load --h1 -n 3000 -c 3000</code> (burst).</p>
 <table class="markdownTable">
@@ -156,7 +156,7 @@ Setup</h1>
 <li>Idle RSS drops by about 393 MiB, which is 5 processes × ~96 MiB less a little. Peak RSS under load drops by the same amount.</li>
 <li>Throughput, churn rate, and burst completion are within run-to-run noise. Round 2's keep-alive gap goes the other way in rounds 1 and 3.</li>
 </ul>
-<h1><a class="anchor" id="autotoc_md735"></a>
+<h1><a class="anchor" id="autotoc_md737"></a>
 3. Forcing the ring to grow: 1 worker, 2 pool threads, 6000 simultaneous connections</h1>
 <p><code>CWIST_WORKERS=1 CWIST_WORKER_THREADS=2</code>, then <code>h2load --h1 -n 6000 -c 6000 -t 8</code>.</p>
 <table class="markdownTable">
@@ -172,10 +172,10 @@ Setup</h1>
 <td class="markdownTableBodyNone">2   </td><td class="markdownTableBodyNone">growable   </td><td class="markdownTableBodyNone">14 388 KiB   </td><td class="markdownTableBodyNone">62 244 KiB   </td><td class="markdownTableBodyNone">6000/6000, 0 failed   </td><td class="markdownTableBodyNone">6.46 s   </td></tr>
 </table>
 <p>Afterwards, gdb on the worker of the growable build showed <code>g_https_pool.queue_len = 4096</code> and <code>count = 0</code>. So the burst did grow the ring twice (1024 → 2048 → 4096), every task was served, and the queue drained.</p>
-<h1><a class="anchor" id="autotoc_md736"></a>
+<h1><a class="anchor" id="autotoc_md738"></a>
 4. Order and loss under growth: &lt;tt&gt;tests/test_https_pool_queue.c&lt;/tt&gt;</h1>
 <p>One pool thread is held in a handler while 5000 tasks queue behind it. The ring first wraps at its initial size, then grows several times while wrapped. Every task carries a sequence number and must run exactly once, in submission order. It passes under ASan + UBSan. <code>test_https</code>, <code>test_https_park</code>, <code>test_https_park_full_gc</code>, <code>test_https_full_gc</code>, <code>test_http2</code>, and <code>test_shutdown</code> also pass under ASan with the change.</p>
-<h1><a class="anchor" id="autotoc_md737"></a>
+<h1><a class="anchor" id="autotoc_md739"></a>
 Not done / open</h1>
 <ul>
 <li><b>Shrinking.</b> A process keeps the capacity of its largest burst: 48 bytes per slot, so 4096 slots are 192 KiB and the full 2097152 slots are back to 96 MiB. Shrinking when the ring drains below a quarter would bound this, but needs a policy against resize thrash, so it is not part of the minimal change.</li>

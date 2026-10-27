@@ -13,6 +13,7 @@ var dir_e04fe21c322c71eff13b3bcded2b17f6 =
     [ "middleware.c", "d9/dc9/middleware_8c.html", "d9/dc9/middleware_8c" ],
     [ "openapi.c", "d3/d8f/openapi_8c.html", "d3/d8f/openapi_8c" ],
     [ "otel.c", "d3/db2/otel_8c.html", "d3/db2/otel_8c" ],
+    [ "rate_limit_redis.c", "dc/d97/rate__limit__redis_8c.html", "dc/d97/rate__limit__redis_8c" ],
     [ "routes_internal.h", "d4/d50/routes__internal_8h.html", "d4/d50/routes__internal_8h" ],
     [ "shutdown.c", "d3/db2/shutdown_8c.html", "d3/db2/shutdown_8c" ],
     [ "test_client.c", "dc/df0/test__client_8c.html", "dc/df0/test__client_8c" ],

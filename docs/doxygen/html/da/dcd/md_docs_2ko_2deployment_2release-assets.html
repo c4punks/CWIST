@@ -108,7 +108,7 @@ $(document).ready(function(){initNavTree('da/dcd/md_docs_2ko_2deployment_2releas
   <div class="headertitle"><div class="title">릴리스 사전 빌드 에셋</div></div>
 </div><!--header-->
 <div class="contents">
-<div class="textblock"><p><a class="anchor" id="autotoc_md580"></a> 공개된 모든 GitHub 릴리스에는 소스 tarball <code>cwist-&lt;version&gt;.tar.gz</code> 옆에, CI가 빌드하고 검증하는 사전 빌드 타깃이 함께 올라갑니다. <code>.github/workflows/release-assets.yml</code>이 릴리스가 공개될 때 릴리스 태그에서 이를 빌드하고, 각각 스모크 테스트를 거친 뒤 체크섬 파일과 함께 첨부합니다. <code>&lt;version&gt;</code>은 태그에서 앞의 <code>v</code>를 뗀 값입니다(<code>v4</code>는 <code>4</code>, <code>v4.1</code>은 <code>4.1</code>).</p>
+<div class="textblock"><p><a class="anchor" id="autotoc_md582"></a> 공개된 모든 GitHub 릴리스에는 소스 tarball <code>cwist-&lt;version&gt;.tar.gz</code> 옆에, CI가 빌드하고 검증하는 사전 빌드 타깃이 함께 올라갑니다. <code>.github/workflows/release-assets.yml</code>이 릴리스가 공개될 때 릴리스 태그에서 이를 빌드하고, 각각 스모크 테스트를 거친 뒤 체크섬 파일과 함께 첨부합니다. <code>&lt;version&gt;</code>은 태그에서 앞의 <code>v</code>를 뗀 값입니다(<code>v4</code>는 <code>4</code>, <code>v4.1</code>은 <code>4.1</code>).</p>
 <table class="markdownTable">
 <tr class="markdownTableHead">
 <th class="markdownTableHeadNone">에셋   </th><th class="markdownTableHeadNone">내용   </th><th class="markdownTableHeadNone">빌드 환경    </th></tr>
@@ -130,7 +130,7 @@ $(document).ready(function(){initNavTree('da/dcd/md_docs_2ko_2deployment_2releas
 <td class="markdownTableBodyNone"><code>cwist-&lt;version&gt;-assets-SHA256SUMS</code>   </td><td class="markdownTableBodyNone">위 모든 에셋의 sha256   </td><td class="markdownTableBodyNone"></td></tr>
 </table>
 <p>소스 tarball은 이 워크플로가 빌드하지 않습니다. 메인테이너가 올리며, Homebrew formula가 그 체크섬을 고정합니다.</p>
-<h1><a class="anchor" id="autotoc_md581"></a>
+<h1><a class="anchor" id="autotoc_md583"></a>
 fat 번들 사용하기</h1>
 <p>번들을 풀면 <code>cwist-&lt;version&gt;-fat-&lt;target&gt;/</code> 아래에 <code>lib/libcwist.a</code>(CWIST와 모든 vendored 아카이브)와 <code>include/</code>가 있습니다. 시스템 라이브러리만 외부에 남습니다.</p>
 <div class="fragment"><div class="line">cc -O2 -std=gnu17 -Icwist-4-fat-linux-x86_64/include -o app main.c \</div>
@@ -143,12 +143,12 @@ fat 번들 사용하기</h1>
 <li><b>glibc.</b> Linux 번들은 Ubuntu 22.04(glibc 2.35)에서 빌드되어 그보다 새로운 glibc 심볼을 참조하지 않으므로, 해당 릴리스 이후 환경에서 링크됩니다.</li>
 <li><b>armhf 번들 없음.</b> libttak이 아직 32비트 ARM에서 빌드되지 않습니다 (<code>src/accel/accel_cpu.c</code>가 <code>__int128</code>을 요구).</li>
 </ul>
-<h1><a class="anchor" id="autotoc_md582"></a>
+<h1><a class="anchor" id="autotoc_md584"></a>
 amalgamation 사용하기</h1>
 <p>amalgamation에는 CWIST 코드만 들어 있습니다. vendored 라이브러리는 같은 구성의 fat 번들에서 링크합니다(예: 기본 amalgamation에는 <code>fat-linux-x86_64</code>). 컴파일 명령은 <code>-I</code> 하나와 파일 하나입니다.</p>
 <div class="fragment"><div class="line">gcc -O2 -std=gnu17 -Ibundle/include -pthread -c bundle/cwist.c -o cwist.o</div>
 </div><!-- fragment --><p>빌드 시점의 Linux 플랫폼 정의를 담고 있어 이름에 <code>linux</code>가 붙습니다.</p>
-<h1><a class="anchor" id="autotoc_md583"></a>
+<h1><a class="anchor" id="autotoc_md585"></a>
 다시 실행하기</h1>
 <p>워크플로는 기존 태그를 지정해 수동으로 실행할 수 있습니다(Actions, "Release
 assets", Run workflow). 예를 들어 워크플로가 생기기 전에 공개된 릴리스에 에셋을 첨부할 때 씁니다. 에셋은 모든 빌드와 스모크 테스트가 통과한 뒤에만 올라가며, 다시 실행하면 이 워크플로가 관리하는 에셋을 교체합니다. </p>

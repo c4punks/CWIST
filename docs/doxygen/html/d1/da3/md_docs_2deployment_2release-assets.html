@@ -108,7 +108,7 @@ $(document).ready(function(){initNavTree('d1/da3/md_docs_2deployment_2release-as
   <div class="headertitle"><div class="title">Prebuilt release assets</div></div>
 </div><!--header-->
 <div class="contents">
-<div class="textblock"><p><a class="anchor" id="autotoc_md280"></a> Every published GitHub release carries, next to the source tarball <code>cwist-&lt;version&gt;.tar.gz</code>, the prebuilt targets that CI builds and verifies. <code>.github/workflows/release-assets.yml</code> builds them from the release tag when the release is published, smoke-tests each one, and attaches them together with a checksum file. <code>&lt;version&gt;</code> is the tag without the leading <code>v</code> (<code>4</code> for <code>v4</code>, <code>4.1</code> for <code>v4.1</code>).</p>
+<div class="textblock"><p><a class="anchor" id="autotoc_md281"></a> Every published GitHub release carries, next to the source tarball <code>cwist-&lt;version&gt;.tar.gz</code>, the prebuilt targets that CI builds and verifies. <code>.github/workflows/release-assets.yml</code> builds them from the release tag when the release is published, smoke-tests each one, and attaches them together with a checksum file. <code>&lt;version&gt;</code> is the tag without the leading <code>v</code> (<code>4</code> for <code>v4</code>, <code>4.1</code> for <code>v4.1</code>).</p>
 <table class="markdownTable">
 <tr class="markdownTableHead">
 <th class="markdownTableHeadNone">Asset   </th><th class="markdownTableHeadNone">Contents   </th><th class="markdownTableHeadNone">Built on    </th></tr>
@@ -130,7 +130,7 @@ $(document).ready(function(){initNavTree('d1/da3/md_docs_2deployment_2release-as
 <td class="markdownTableBodyNone"><code>cwist-&lt;version&gt;-assets-SHA256SUMS</code>   </td><td class="markdownTableBodyNone">sha256 of every asset above   </td><td class="markdownTableBodyNone"></td></tr>
 </table>
 <p>The source tarball is not built by this workflow; the maintainer uploads it and the Homebrew formula pins its checksum.</p>
-<h1><a class="anchor" id="autotoc_md281"></a>
+<h1><a class="anchor" id="autotoc_md282"></a>
 Using a fat bundle</h1>
 <p>A bundle unpacks to <code>cwist-&lt;version&gt;-fat-&lt;target&gt;/</code> with <code>lib/libcwist.a</code> (CWIST plus every vendored archive) and <code>include/</code>. Only system libraries stay external:</p>
 <div class="fragment"><div class="line">cc -O2 -std=gnu17 -Icwist-4-fat-linux-x86_64/include -o app main.c \</div>
@@ -143,12 +143,12 @@ Using a fat bundle</h1>
 <li><b>glibc.</b> The Linux bundles are built on Ubuntu 22.04 (glibc 2.35) and do not reference newer glibc symbols, so they link on that release and later.</li>
 <li><b>No armhf bundle.</b> libttak does not build for 32-bit ARM yet (<code>src/accel/accel_cpu.c</code> requires <code>__int128</code>).</li>
 </ul>
-<h1><a class="anchor" id="autotoc_md282"></a>
+<h1><a class="anchor" id="autotoc_md283"></a>
 Using the amalgamation</h1>
 <p>The amalgamation is the CWIST code only; the vendored libraries still link from a fat bundle of the same configuration (the default amalgamation with <code>fat-linux-x86_64</code>, for example). The compile line is one <code>-I</code> plus the file:</p>
 <div class="fragment"><div class="line">gcc -O2 -std=gnu17 -Ibundle/include -pthread -c bundle/cwist.c -o cwist.o</div>
 </div><!-- fragment --><p>It carries the Linux platform defines of the build, hence the <code>linux</code> name.</p>
-<h1><a class="anchor" id="autotoc_md283"></a>
+<h1><a class="anchor" id="autotoc_md284"></a>
 Re-running</h1>
 <p>The workflow can be started by hand (Actions, "Release assets", Run workflow) with an existing tag, for example to attach assets to a release published before the workflow existed. Assets are uploaded only after every build and smoke test has passed, and a re-run replaces the assets this workflow owns. </p>
 </div></div><!-- contents -->

@@ -108,9 +108,9 @@ $(document).ready(function(){initNavTree('db/ddd/md_docs_2ko_2api_2http.html','.
   <div class="headertitle"><div class="title">HTTP 코어 API</div></div>
 </div><!--header-->
 <div class="contents">
-<div class="textblock"><p><a class="anchor" id="autotoc_md412"></a> <em>헤더:</em> <code>&lt;<a class="el" href="../../d9/dab/net_2http_2http_8h.html" title="HTTP Protocol Definitions and Helpers.">cwist/net/http/http.h</a>&gt;</code></p>
+<div class="textblock"><p><a class="anchor" id="autotoc_md413"></a> <em>헤더:</em> <code>&lt;<a class="el" href="../../d9/dab/net_2http_2http_8h.html" title="HTTP Protocol Definitions and Helpers.">cwist/net/http/http.h</a>&gt;</code></p>
 <p>저수준 HTTP 구조체, 프레이밍 한도, 파싱 로직입니다.</p>
-<h1><a class="anchor" id="autotoc_md413"></a>
+<h1><a class="anchor" id="autotoc_md414"></a>
 상수</h1>
 <p>모든 연결을 자원 고갈로부터 보호하기 위해 <code>&lt;<a class="el" href="../../d9/dab/net_2http_2http_8h.html" title="HTTP Protocol Definitions and Helpers.">cwist/net/http/http.h</a>&gt;</code>에 정의되어 있습니다.</p>
 <ul>
@@ -119,7 +119,7 @@ $(document).ready(function(){initNavTree('db/ddd/md_docs_2ko_2api_2http.html','.
 <li><code>CWIST_HTTP_READ_BUFFER_SIZE</code> - 파이프라인/keep-alive 트래픽을 위한 연결별 임시 버퍼.</li>
 <li><code>CWIST_HTTP_TIMEOUT_MS</code> - 헤더/본문을 기다리는 동안과 응답을 보내는 동안 쓰는 poll 타임아웃.</li>
 </ul>
-<h2><a class="anchor" id="autotoc_md414"></a>
+<h2><a class="anchor" id="autotoc_md415"></a>
 &lt;tt&gt;cwist_http_request_create&lt;/tt&gt;</h2>
 <div class="fragment"><div class="line"><a class="code hl_struct" href="../../dd/d68/structcwist__http__request.html">cwist_http_request</a> *<a class="code hl_function" href="../../dd/d56/http_8h.html#afe92033adc5b6922f589f9c5125b2666">cwist_http_request_create</a>(<span class="keywordtype">void</span>);</div>
 <div class="ttc" id="ahttp_8h_html_afe92033adc5b6922f589f9c5125b2666"><div class="ttname"><a href="../../dd/d56/http_8h.html#afe92033adc5b6922f589f9c5125b2666">cwist_http_request_create</a></div><div class="ttdeci">cwist_http_request * cwist_http_request_create(void)</div><div class="ttdoc">Create a new HTTP request object.</div><div class="ttdef"><b>Definition</b> <a href="../../dd/d43/http_8c_source.html#l02057">http.c:2057</a></div></div>
@@ -129,13 +129,13 @@ $(document).ready(function(){initNavTree('db/ddd/md_docs_2ko_2api_2http.html','.
 <li><code>req-&gt;app</code> - 실행 중인 <code><a class="el" href="../../dc/da0/structcwist__app.html" title="Main Application Context.">cwist_app</a></code>에 대한 역참조 (전역 설정을 가져올 때 유용).</li>
 <li><code>req-&gt;db</code> - <code>cwist_app_use_db</code>로 설정한 공유 <code><a class="el" href="../../dd/d55/structcwist__db.html" title="Wrapper for Database Operations. Currently uses SQLite3.">cwist_db</a></code> 핸들.</li>
 </ul>
-<h2><a class="anchor" id="autotoc_md415"></a>
+<h2><a class="anchor" id="autotoc_md416"></a>
 &lt;tt&gt;cwist_http_parse_request&lt;/tt&gt;</h2>
 <div class="fragment"><div class="line"><a class="code hl_struct" href="../../dd/d68/structcwist__http__request.html">cwist_http_request</a> *<a class="code hl_function" href="../../dd/d56/http_8h.html#aa46e254982091a9abaae4a4030a84831">cwist_http_parse_request</a>(<span class="keyword">const</span> <span class="keywordtype">char</span> *<a class="code hl_variable" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">raw_request</a>);</div>
 <div class="ttc" id="ahttp_8h_html_aa46e254982091a9abaae4a4030a84831"><div class="ttname"><a href="../../dd/d56/http_8h.html#aa46e254982091a9abaae4a4030a84831">cwist_http_parse_request</a></div><div class="ttdeci">cwist_http_request * cwist_http_parse_request(const char *raw_request)</div><div class="ttdoc">Parse a raw HTTP request string.</div><div class="ttdef"><b>Definition</b> <a href="../../dd/d43/http_8c_source.html#l04412">http.c:4412</a></div></div>
 <div class="ttc" id="aotel_8c_html_a856fa22aef923b4a345805d81580aebe"><div class="ttname"><a href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">cap</a></div><div class="ttdeci">size_t cap</div><div class="ttdef"><b>Definition</b> <a href="../../d3/db2/otel_8c_source.html#l00056">otel.c:56</a></div></div>
 </div><!-- fragment --><p> 원시 HTTP 문자열을 <code><a class="el" href="../../dd/d68/structcwist__http__request.html">cwist_http_request</a></code> 객체로 파싱합니다.</p>
-<h2><a class="anchor" id="autotoc_md416"></a>
+<h2><a class="anchor" id="autotoc_md417"></a>
 &lt;tt&gt;cwist_http_receive_request&lt;/tt&gt;</h2>
 <div class="fragment"><div class="line"><a class="code hl_struct" href="../../dd/d68/structcwist__http__request.html">cwist_http_request</a> *<a class="code hl_function" href="../../dd/d56/http_8h.html#a0d582b995b805e28d989c8a27b9eec2b">cwist_http_receive_request</a>(</div>
 <div class="line">    <span class="keywordtype">int</span> client_fd,</div>
@@ -150,13 +150,13 @@ $(document).ready(function(){initNavTree('db/ddd/md_docs_2ko_2api_2http.html','.
 <li><em>다음</em> 요청의 바이트는 <code>read_buf</code>에 남겨 두며, 호출자는 다음 반복에서 같은 버퍼를 다시 넘깁니다.</li>
 <li>타임아웃, 잘못된 프레이밍, 한도 초과 시 <code>NULL</code>을 반환합니다.</li>
 </ul>
-<h2><a class="anchor" id="autotoc_md417"></a>
+<h2><a class="anchor" id="autotoc_md418"></a>
 &lt;tt&gt;cwist_http_response_create&lt;/tt&gt;</h2>
 <div class="fragment"><div class="line"><a class="code hl_struct" href="../../dd/d22/structcwist__http__response.html">cwist_http_response</a> *<a class="code hl_function" href="../../dd/d56/http_8h.html#acbf3f0c4f02e638a4cb9d4b6c7057e18">cwist_http_response_create</a>(<span class="keywordtype">void</span>);</div>
 <div class="ttc" id="ahttp_8h_html_acbf3f0c4f02e638a4cb9d4b6c7057e18"><div class="ttname"><a href="../../dd/d56/http_8h.html#acbf3f0c4f02e638a4cb9d4b6c7057e18">cwist_http_response_create</a></div><div class="ttdeci">cwist_http_response * cwist_http_response_create(void)</div><div class="ttdoc">Create a new HTTP response object.</div><div class="ttdef"><b>Definition</b> <a href="../../dd/d43/http_8c_source.html#l02292">http.c:2292</a></div></div>
 <div class="ttc" id="astructcwist__http__response_html"><div class="ttname"><a href="../../dd/d22/structcwist__http__response.html">cwist_http_response</a></div><div class="ttdoc">HTTP Response Object. Supports standard string body or Zero-Copy pointer body.</div><div class="ttdef"><b>Definition</b> <a href="../../dd/d56/http_8h_source.html#l00082">http.h:82</a></div></div>
 </div><!-- fragment --><p> 새 HTTP 응답 구조체를 할당합니다. 기본 상태는 200 OK입니다.</p>
-<h2><a class="anchor" id="autotoc_md418"></a>
+<h2><a class="anchor" id="autotoc_md419"></a>
 &lt;tt&gt;cwist_http_response_send_file&lt;/tt&gt;</h2>
 <div class="fragment"><div class="line"><a class="code hl_struct" href="../../d4/d50/structcwist__error__t.html">cwist_error_t</a> <a class="code hl_function" href="../../d9/dab/net_2http_2http_8h.html#a884fff00eb8188a3b2cde3fc02dc931c">cwist_http_response_send_file</a>(</div>
 <div class="line">    <a class="code hl_struct" href="../../dd/d22/structcwist__http__response.html">cwist_http_response</a> *res,</div>
@@ -167,29 +167,29 @@ $(document).ready(function(){initNavTree('db/ddd/md_docs_2ko_2api_2http.html','.
 <div class="ttc" id="anet_2http_2http_8h_html_a884fff00eb8188a3b2cde3fc02dc931c"><div class="ttname"><a href="../../d9/dab/net_2http_2http_8h.html#a884fff00eb8188a3b2cde3fc02dc931c">cwist_http_response_send_file</a></div><div class="ttdeci">cwist_error_t cwist_http_response_send_file(cwist_http_response *res, const char *file_path, const char *content_type_hint, size_t *out_size)</div><div class="ttdoc">Prepare a response to serve a file either by buffering or direct streaming.</div><div class="ttdef"><b>Definition</b> <a href="../../dd/d43/http_8c_source.html#l05223">http.c:5223</a></div></div>
 <div class="ttc" id="astructcwist__error__t_html"><div class="ttname"><a href="../../d4/d50/structcwist__error__t.html">cwist_error_t</a></div><div class="ttdoc">Integrated error structure used throughout the system.</div><div class="ttdef"><b>Definition</b> <a href="../../d3/d73/err_2cwist__err_8h_source.html#l00072">cwist_err.h:72</a></div></div>
 </div><!-- fragment --><p> 디스크의 정적 파일을 읽어 응답 본문에 복사하고 적절한 <code>Content-Type</code>을 설정합니다. <code>CWIST_HTTP_MAX_BODY_SIZE</code>보다 큰 파일은 <code>-EFBIG</code>로 거부하지만, 라우트에 <code>CWIST_ENDPOINT_FILE</code>이 붙어 있으면 Linux/macOS/FreeBSD에서 <code><a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">sendfile(2)</a></code>로 전환해 커널이 직접 내용을 스트리밍합니다. 성공하면 <code>0</code>을 반환하고 실패하면 <code>-errno</code>(<code>-ENOENT</code>, <code>-EISDIR</code> 등)를 그대로 전달합니다. <code>out_size</code>는 선택 사항이며, 넘기면 파일 길이를 받으므로 핸들러가 페이로드를 버퍼에 담지 않고도 HEAD 응답을 만들 수 있습니다. 내장 테이블에는 <code>.wasm</code>, <code>.mjs</code> 같은 최신 웹 확장자도 들어 있습니다.</p>
-<h2><a class="anchor" id="autotoc_md419"></a>
+<h2><a class="anchor" id="autotoc_md420"></a>
 &lt;tt&gt;cwist_http_header_add&lt;/tt&gt;</h2>
 <div class="fragment"><div class="line"><a class="code hl_struct" href="../../d4/d50/structcwist__error__t.html">cwist_error_t</a> <a class="code hl_function" href="../../dd/d56/http_8h.html#ab75bffc747ca7b55ac62f581702f1e2a">cwist_http_header_add</a>(<a class="code hl_struct" href="../../d3/d72/structcwist__http__header__node.html">cwist_http_header_node</a> **<a class="code hl_variable" href="../../d3/db2/otel_8c.html#a75844ce74940ef333d11ae090e07c9af">head</a>, <span class="keyword">const</span> <span class="keywordtype">char</span> *key, <span class="keyword">const</span> <span class="keywordtype">char</span> *value);</div>
 <div class="ttc" id="ahttp_8h_html_ab75bffc747ca7b55ac62f581702f1e2a"><div class="ttname"><a href="../../dd/d56/http_8h.html#ab75bffc747ca7b55ac62f581702f1e2a">cwist_http_header_add</a></div><div class="ttdeci">cwist_error_t cwist_http_header_add(cwist_http_header_node **head, const char *key, const char *value)</div><div class="ttdoc">Add a header to the list.</div><div class="ttdef"><b>Definition</b> <a href="../../dd/d43/http_8c_source.html#l01861">http.c:1861</a></div></div>
 <div class="ttc" id="aotel_8c_html_a75844ce74940ef333d11ae090e07c9af"><div class="ttname"><a href="../../d3/db2/otel_8c.html#a75844ce74940ef333d11ae090e07c9af">head</a></div><div class="ttdeci">size_t head</div><div class="ttdef"><b>Definition</b> <a href="../../d3/db2/otel_8c_source.html#l00057">otel.c:57</a></div></div>
 <div class="ttc" id="astructcwist__http__header__node_html"><div class="ttname"><a href="../../d3/d72/structcwist__http__header__node.html">cwist_http_header_node</a></div><div class="ttdoc">Linked list for headers to handle multiple headers easily.</div><div class="ttdef"><b>Definition</b> <a href="../../dd/d56/http_8h_source.html#l00059">http.h:59</a></div></div>
 </div><!-- fragment --><p> 연결 리스트에 헤더를 추가합니다.</p>
-<h2><a class="anchor" id="autotoc_md420"></a>
+<h2><a class="anchor" id="autotoc_md421"></a>
 &lt;tt&gt;cwist_http_header_get&lt;/tt&gt;</h2>
 <div class="fragment"><div class="line"><span class="keywordtype">char</span> *<a class="code hl_function" href="../../dd/d56/http_8h.html#a8b09daf7dd857271cac1bccc2666d2cb">cwist_http_header_get</a>(<a class="code hl_struct" href="../../d3/d72/structcwist__http__header__node.html">cwist_http_header_node</a> *<a class="code hl_variable" href="../../d3/db2/otel_8c.html#a75844ce74940ef333d11ae090e07c9af">head</a>, <span class="keyword">const</span> <span class="keywordtype">char</span> *key);</div>
 <div class="ttc" id="ahttp_8h_html_a8b09daf7dd857271cac1bccc2666d2cb"><div class="ttname"><a href="../../dd/d56/http_8h.html#a8b09daf7dd857271cac1bccc2666d2cb">cwist_http_header_get</a></div><div class="ttdeci">char * cwist_http_header_get(cwist_http_header_node *head, const char *key)</div><div class="ttdoc">Find a header value by key.</div><div class="ttdef"><b>Definition</b> <a href="../../dd/d43/http_8c_source.html#l01880">http.c:1880</a></div></div>
 </div><!-- fragment --><p> 키로 헤더 값을 가져옵니다. 없으면 <code>NULL</code>을 반환합니다. 헤더 조회는 대소문자를 구분하지 않습니다 (<code>Host</code>와 <code>host</code>는 같습니다).</p>
-<h1><a class="anchor" id="autotoc_md421"></a>
+<h1><a class="anchor" id="autotoc_md422"></a>
 서버 코어</h1>
-<h2><a class="anchor" id="autotoc_md422"></a>
+<h2><a class="anchor" id="autotoc_md423"></a>
 Keep-alive 처리</h2>
 <p><code>src/framework/app.c</code>의 <code>static_http_handler</code>는 이제 어느 한쪽이 <code>Connection: close</code>를 요청할 때까지 <code>cwist_http_receive_request</code>를 반복합니다. <code><a class="el" href="../../dd/d56/http_8h.html#a770973e3aeea4a05dd890982a2afc76e" title="Send a response over a socket.">cwist_http_send_response()</a></code>로 만든 모든 응답에는 명시적인 <code>Content-Length</code>가 들어가고, 전송 경로는 <code><a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">poll()</a></code>+<code>send(MSG_NOSIGNAL)</code>을 사용하므로 ApacheBench가 keep-alive POST 64개를 동시에 쏟아붓는 동안에도 무한정 블로킹하거나 SIGPIPE를 일으키지 않습니다.</p>
-<h2><a class="anchor" id="autotoc_md423"></a>
+<h2><a class="anchor" id="autotoc_md424"></a>
 회귀 테스트</h2>
 <p><code>tests/stress_test.c</code>는 최소한의 <code>/api</code> 엔드포인트를 띄우고 다음을 실행합니다.</p>
 <div class="fragment"><div class="line">ab -k -n 20000 -c 64 -p payload.json -T application/json http://127.0.0.1:31744/api</div>
 </div><!-- fragment --><p>이 테스트는 서버가 각 요청 본문을 모두 읽고, 남은 바이트를 같은 소켓의 다음 요청에 재사용하고, <code>apr_pollset_poll timeout</code>이나 <code>connection reset</code> 없이 모든 응답을 마무리할 때만 성공합니다.</p>
-<h2><a class="anchor" id="autotoc_md424"></a>
+<h2><a class="anchor" id="autotoc_md425"></a>
 &lt;tt&gt;cwist_http_server_loop&lt;/tt&gt;</h2>
 <div class="fragment"><div class="line"><a class="code hl_struct" href="../../d4/d50/structcwist__error__t.html">cwist_error_t</a> <a class="code hl_function" href="../../dd/d56/http_8h.html#a4d9cb2d2fb1e7ea1475c1bef7aeb7e5f">cwist_http_server_loop</a>(<span class="keywordtype">int</span> <a class="code hl_variable" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">server_fd</a>, <a class="code hl_struct" href="../../d5/d6e/structcwist__server__config.html">cwist_server_config</a> *config, <span class="keywordtype">void</span> (*handler)(<span class="keywordtype">int</span>, <span class="keywordtype">void</span> *), <span class="keywordtype">void</span> *ctx);</div>
 <div class="ttc" id="ahttp_8h_html_a4d9cb2d2fb1e7ea1475c1bef7aeb7e5f"><div class="ttname"><a href="../../dd/d56/http_8h.html#a4d9cb2d2fb1e7ea1475c1bef7aeb7e5f">cwist_http_server_loop</a></div><div class="ttdeci">cwist_error_t cwist_http_server_loop(int server_fd, cwist_server_config *config, void(*handler)(int, void *), void *ctx)</div><div class="ttdoc">Run the main HTTP accept loop using the configured concurrency strategy.</div><div class="ttdef"><b>Definition</b> <a href="../../dd/d43/http_8c_source.html#l05590">http.c:5590</a></div></div>
@@ -198,19 +198,19 @@ Keep-alive 처리</h2>
 <li><code>config</code>로 반복형, 포크형, 멀티스레드 모델을 지원합니다.</li>
 <li>스레드 안전한 상태 관리를 위해 <code>ctx</code>가 핸들러로 전달됩니다.</li>
 </ul>
-<h2><a class="anchor" id="autotoc_md425"></a>
+<h2><a class="anchor" id="autotoc_md426"></a>
 &lt;tt&gt;cwist_accept_socket&lt;/tt&gt;</h2>
 <div class="fragment"><div class="line"><a class="code hl_struct" href="../../d4/d50/structcwist__error__t.html">cwist_error_t</a> <a class="code hl_function" href="../../dd/d56/http_8h.html#ad5e721abc6a6d21ff0678514184ecedb">cwist_accept_socket</a>(<span class="keywordtype">int</span> <a class="code hl_variable" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">server_fd</a>, <span class="keyword">struct</span> <a class="code hl_variable" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">sockaddr</a> *<a class="code hl_variable" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">sockv4</a>, <span class="keywordtype">void</span> (*handler_func)(<span class="keywordtype">int</span>, <span class="keywordtype">void</span> *), <span class="keywordtype">void</span> *ctx);</div>
 <div class="ttc" id="ahttp_8h_html_ad5e721abc6a6d21ff0678514184ecedb"><div class="ttname"><a href="../../dd/d56/http_8h.html#ad5e721abc6a6d21ff0678514184ecedb">cwist_accept_socket</a></div><div class="ttdeci">cwist_error_t cwist_accept_socket(int server_fd, struct sockaddr *sockv4, void(*handler_func)(int client_fd, void *ctx), void *ctx)</div><div class="ttdoc">Accept sockets and invoke a handler callback.</div></div>
 </div><!-- fragment --><p> 저수준 accept 루프 래퍼입니다.</p>
-<h2><a class="anchor" id="autotoc_md426"></a>
+<h2><a class="anchor" id="autotoc_md427"></a>
 &lt;tt&gt;cwist_http_continuation_shed_count&lt;/tt&gt;</h2>
 <div class="fragment"><div class="line"><span class="keywordtype">long</span> <a class="code hl_function" href="../../d9/dab/net_2http_2http_8h.html#ab63b801028ac78418a65fa2a6fd0fdb9">cwist_http_continuation_shed_count</a>(<span class="keywordtype">void</span>);</div>
 <div class="ttc" id="anet_2http_2http_8h_html_ab63b801028ac78418a65fa2a6fd0fdb9"><div class="ttname"><a href="../../d9/dab/net_2http_2http_8h.html#ab63b801028ac78418a65fa2a6fd0fdb9">cwist_http_continuation_shed_count</a></div><div class="ttdeci">long cwist_http_continuation_shed_count(void)</div><div class="ttdef"><b>Definition</b> <a href="../../dd/d43/http_8c_source.html#l00293">http.c:293</a></div></div>
 </div><!-- fragment --><p> 리액터 post 큐가 가득 차서 버려진(그리고 연결이 닫힌) 파이프라인 HTTP/1.1 continuation의 단조 증가 카운터입니다. Prometheus <code>/metrics</code>에서도 <code>cwist_http_continuation_shed_total</code>로 노출됩니다. 백프레셔와 버림 비율 경보에 유용합니다.</p>
-<h1><a class="anchor" id="autotoc_md427"></a>
+<h1><a class="anchor" id="autotoc_md428"></a>
 보안 헤더</h1>
-<h2><a class="anchor" id="autotoc_md428"></a>
+<h2><a class="anchor" id="autotoc_md429"></a>
 &lt;tt&gt;cwist_http_response_add_security_headers&lt;/tt&gt;</h2>
 <div class="fragment"><div class="line"><span class="keywordtype">void</span> <a class="code hl_function" href="../../dd/d56/http_8h.html#aa4e5e5bca52e4006cfe98a309ebea5cf">cwist_http_response_add_security_headers</a>(<a class="code hl_struct" href="../../dd/d22/structcwist__http__response.html">cwist_http_response</a> *res);</div>
 <div class="ttc" id="ahttp_8h_html_aa4e5e5bca52e4006cfe98a309ebea5cf"><div class="ttname"><a href="../../dd/d56/http_8h.html#aa4e5e5bca52e4006cfe98a309ebea5cf">cwist_http_response_add_security_headers</a></div><div class="ttdeci">void cwist_http_response_add_security_headers(cwist_http_response *res)</div><div class="ttdoc">Add default security headers (CSP, X-Frame-Options, etc.) if missing.</div><div class="ttdef"><b>Definition</b> <a href="../../dd/d43/http_8c_source.html#l01935">http.c:1935</a></div></div>
@@ -234,7 +234,7 @@ Keep-alive 처리</h2>
 <tr class="markdownTableRowOdd">
 <td class="markdownTableBodyNone"><code>Cross-Origin-Opener-Policy</code>   </td><td class="markdownTableBodyNone"><code>same-origin</code>   </td></tr>
 </table>
-<h2><a class="anchor" id="autotoc_md429"></a>
+<h2><a class="anchor" id="autotoc_md430"></a>
 &lt;tt&gt;cwist_http_response_add_hsts&lt;/tt&gt;</h2>
 <div class="fragment"><div class="line"><span class="keywordtype">void</span> <a class="code hl_function" href="../../d9/dab/net_2http_2http_8h.html#a9e1dbb26e490c6b24d9279daf46d6ec2">cwist_http_response_add_hsts</a>(<a class="code hl_struct" href="../../dd/d22/structcwist__http__response.html">cwist_http_response</a> *res);</div>
 <div class="ttc" id="anet_2http_2http_8h_html_a9e1dbb26e490c6b24d9279daf46d6ec2"><div class="ttname"><a href="../../d9/dab/net_2http_2http_8h.html#a9e1dbb26e490c6b24d9279daf46d6ec2">cwist_http_response_add_hsts</a></div><div class="ttdeci">void cwist_http_response_add_hsts(cwist_http_response *res)</div><div class="ttdoc">Add Strict-Transport-Security to a TLS response (HTTPS only).</div><div class="ttdef"><b>Definition</b> <a href="../../dd/d43/http_8c_source.html#l01994">http.c:1994</a></div></div>
