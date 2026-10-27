@@ -551,6 +551,23 @@ LWIP_DIR = lib/lwip
 LWIP_CORE_SRCS = $(wildcard $(LWIP_DIR)/src/core/*.c $(LWIP_DIR)/src/core/ipv4/*.c)
 LWIP_TEST_INCLUDES = -Itests/lwip -I$(LWIP_DIR)/src/include
 
+# mbedTLS (lib/mbedtls, 3.6) for the lwIP TLS tests, configured by
+# tests/lwip/cwist_test_mbedtls_config.h: a small TLS 1.2 server profile.
+# Host and Cortex-M objects build in their own directories.
+MBEDTLS_TEST_SRCS = $(wildcard $(MBEDTLS_DIR)/library/*.c)
+MBEDTLS_TEST_CFLAGS = -DMBEDTLS_CONFIG_FILE='"cwist_test_mbedtls_config.h"' -Itests/lwip \
+	-I$(MBEDTLS_DIR)/include -I$(MBEDTLS_DIR)/library
+MBEDTLS_TEST_HOST_DIR = .mbedtls-test/host
+MBEDTLS_TEST_HOST_LIB = $(MBEDTLS_TEST_HOST_DIR)/libmbedtls-test.a
+MBEDTLS_TEST_HOST_OBJS = $(MBEDTLS_TEST_SRCS:$(MBEDTLS_DIR)/library/%.c=$(MBEDTLS_TEST_HOST_DIR)/%.o)
+
+$(MBEDTLS_TEST_HOST_DIR)/%.o: $(MBEDTLS_DIR)/library/%.c tests/lwip/cwist_test_mbedtls_config.h
+	@mkdir -p $(dir $@)
+	$(CC) -std=c99 -O2 $(MBEDTLS_TEST_CFLAGS) -c -o $@ $<
+
+$(MBEDTLS_TEST_HOST_LIB): $(MBEDTLS_TEST_HOST_OBJS)
+	$(AR) rcs $@ $^
+
 # --- Bare metal (arm-none-eabi / Cortex-M, issue #447) -------------------------
 # The WASI core (WASM_SRCS + WASIP2_EXTRA_SRCS) minus sqlite/db, the test
 # client and the WASI compat layer, built for a single-threaded firmware on
@@ -611,10 +628,33 @@ $(BAREMETAL_BUILD_DIR)/hello-lwip.elf: $(BAREMETAL_ARCHIVE) $(BAREMETAL_LWIP_SRC
 	    $(BAREMETAL_LWIP_SRCS) $(BAREMETAL_ARCHIVE) -lm
 	$(BAREMETAL_CROSS)size $@
 
+# HTTPS on Cortex-M: the adapter built with CWIST_LWIP_TLS, lwIP, and the
+# vendored mbedTLS (tests/lwip/cwist_test_mbedtls_config.h) cross-compiled
+# into its own archive, against the shared TLS test client.
+BAREMETAL_MBEDTLS_DIR = $(BAREMETAL_BUILD_DIR)/mbedtls
+BAREMETAL_MBEDTLS_LIB = $(BAREMETAL_MBEDTLS_DIR)/libmbedtls-test.a
+BAREMETAL_MBEDTLS_OBJS = $(MBEDTLS_TEST_SRCS:$(MBEDTLS_DIR)/library/%.c=$(BAREMETAL_MBEDTLS_DIR)/%.o)
+$(BAREMETAL_MBEDTLS_DIR)/%.o: $(MBEDTLS_DIR)/library/%.c tests/lwip/cwist_test_mbedtls_config.h
+	@mkdir -p $(dir $@)
+	$(BAREMETAL_CROSS)gcc -std=c99 -Os $(BAREMETAL_ARCH) --specs=nano.specs -ffunction-sections \
+	    -fdata-sections $(MBEDTLS_TEST_CFLAGS) -c -o $@ $<
+$(BAREMETAL_MBEDTLS_LIB): $(BAREMETAL_MBEDTLS_OBJS)
+	$(BAREMETAL_CROSS)ar rcs $@ $^
+BAREMETAL_TLS_SRCS = tests/baremetal/hello_tls.c tests/baremetal/board.c src/sys/port/lwip.c \
+	tests/lwip/loop_client.c tests/lwip/tls_client.c $(LWIP_CORE_SRCS)
+$(BAREMETAL_BUILD_DIR)/hello-tls.elf: $(BAREMETAL_ARCHIVE) $(BAREMETAL_MBEDTLS_LIB) $(BAREMETAL_TLS_SRCS) \
+	    tests/baremetal/stm32h743.ld tests/lwip/lwipopts.h tests/lwip/arch/cc.h tests/lwip/loop_client.h \
+	    tests/lwip/tls_client.h tests/lwip/test_tls_cert.h include/cwist/sys/port/lwip.h
+	$(BAREMETAL_CROSS)gcc $(BAREMETAL_CFLAGS) $(LWIP_TEST_INCLUDES) $(MBEDTLS_TEST_CFLAGS) -DCWIST_LWIP_TLS \
+	    -DBOARD_QEMU_USER -nostartfiles --specs=nosys.specs -T tests/baremetal/stm32h743.ld \
+	    -Wl,--gc-sections -Wl,--no-warn-rwx-segments -Wl,-Map=$(@:.elf=.map) -o $@ \
+	    $(BAREMETAL_TLS_SRCS) $(BAREMETAL_MBEDTLS_LIB) $(BAREMETAL_ARCHIVE) -lm
+	$(BAREMETAL_CROSS)size $@
+
 # Each run's output is kept next to its ELF (<name>.log): the size gate
 # reads the heap/stack high-water marks from it.
-BAREMETAL_FIRMWARE = hello hello-rtc hello-lwip
-baremetal-smoke: $(BAREMETAL_HELLO) $(BAREMETAL_BUILD_DIR)/hello-lwip.elf
+BAREMETAL_FIRMWARE = hello hello-rtc hello-lwip hello-tls
+baremetal-smoke: $(BAREMETAL_HELLO) $(BAREMETAL_BUILD_DIR)/hello-lwip.elf $(BAREMETAL_BUILD_DIR)/hello-tls.elf
 	@set -e; for fw in $(BAREMETAL_FIRMWARE); do \
 	    echo "$(QEMU_ARM) -cpu cortex-m7 $(BAREMETAL_BUILD_DIR)/$$fw.elf"; \
 	    $(QEMU_ARM) -cpu cortex-m7 $(BAREMETAL_BUILD_DIR)/$$fw.elf > $(BAREMETAL_BUILD_DIR)/$$fw.log 2>&1 \
@@ -1306,6 +1346,7 @@ TEST_TARGETS = test_worker_affinity \
                test_sha256 \
                test_baremetal_port \
                test_lwip_adapter \
+               test_lwip_tls \
                test_error \
                test_inline_exports \
                test_arena \
@@ -1639,6 +1680,23 @@ test_lwip_adapter: $(LIB_NAME) tests/test_lwip_adapter.c src/sys/port/lwip.c inc
 	    tests/lwip/loop_client.c tests/lwip/loop_client.h tests/lwip/lwipopts.h tests/lwip/arch/cc.h
 	$(CC) $(CFLAGS) $(LWIP_TEST_INCLUDES) -o $@ tests/test_lwip_adapter.c src/sys/port/lwip.c \
 	    tests/lwip/loop_client.c $(LWIP_CORE_SRCS) $(LIB_NAME) $(LIBS)
+	./$@
+
+# HTTPS through the lwIP adapter (CWIST_LWIP_TLS) on the host. Under
+# CWIST_TLS=mbedtls libcwist already links the vendored mbedTLS (default
+# config), so the test uses that copy instead of a second one.
+ifeq ($(CWIST_TLS),mbedtls)
+LWIP_TLS_TEST_MBEDTLS_CFLAGS =
+LWIP_TLS_TEST_MBEDTLS_LIB =
+else
+LWIP_TLS_TEST_MBEDTLS_CFLAGS = $(MBEDTLS_TEST_CFLAGS)
+LWIP_TLS_TEST_MBEDTLS_LIB = $(MBEDTLS_TEST_HOST_LIB)
+endif
+test_lwip_tls: $(LIB_NAME) $(LWIP_TLS_TEST_MBEDTLS_LIB) tests/test_lwip_tls.c src/sys/port/lwip.c \
+	    include/cwist/sys/port/lwip.h tests/lwip/loop_client.c tests/lwip/tls_client.c tests/lwip/tls_client.h tests/lwip/test_tls_cert.h
+	$(CC) $(CFLAGS) $(LWIP_TEST_INCLUDES) $(LWIP_TLS_TEST_MBEDTLS_CFLAGS) -DCWIST_LWIP_TLS -o $@ \
+	    tests/test_lwip_tls.c src/sys/port/lwip.c tests/lwip/loop_client.c tests/lwip/tls_client.c $(LWIP_CORE_SRCS) \
+	    $(LWIP_TLS_TEST_MBEDTLS_LIB) $(LIB_NAME) $(LIBS)
 	./$@
 
 # Bare-metal port layer on the host: siphash.c and baremetal_time.c built as
