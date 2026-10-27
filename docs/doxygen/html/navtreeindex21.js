@@ -1,5 +1,11 @@
 var NAVTREEINDEX21 =
 {
+"df/d7f/app_8c.html#afb8be8339f747ad1a0d0604d95e66341":[91,0,2,4,0,0,67],
+"df/d7f/app_8c.html#aff460c5e46e982b055da55e2fc976d0f":[91,0,2,4,0,0,32],
+"df/d7f/app_8c_source.html":[91,0,2,4,0,0],
+"df/dac/siphash_8h.html":[91,0,1,0,19],
+"df/dac/siphash_8h.html#ac197ccec3b022b078a62dc878ce336e0":[91,0,1,0,19,1],
+"df/dac/siphash_8h.html#afc6a74b5cc4fd3de6eebb0e7d83604c0":[91,0,1,0,19,0],
 "df/dac/siphash_8h_source.html":[91,0,1,0,19],
 "df/dad/http3__client_8h.html":[91,0,1,0,2,3,8],
 "df/dad/http3__client_8h.html#a03516b78e233ff5f770ea7f78d16f12d":[91,0,1,0,2,3,8,6],
@@ -243,11 +249,5 @@ var NAVTREEINDEX21 =
 "functions_s.html":[90,2,0,19],
 "functions_t.html":[90,2,0,20],
 "functions_u.html":[90,2,0,21],
-"functions_v.html":[90,2,0,22],
-"functions_vars.html":[90,2,2,0],
-"functions_vars.html":[90,2,2],
-"functions_vars_b.html":[90,2,2,1],
-"functions_vars_c.html":[90,2,2,2],
-"functions_vars_d.html":[90,2,2,3],
-"functions_vars_e.html":[90,2,2,4]
+"functions_v.html":[90,2,0,22]
 };
