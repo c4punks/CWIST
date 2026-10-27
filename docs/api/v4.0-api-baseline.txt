@@ -4,7 +4,7 @@
 # (parameter names dropped) and struct/union/enum layouts in member order.
 # `make api-check` (CI) fails when the headers no longer match this file.
 
-== functions (787) ==
+== functions (789) ==
 cwist_accept_socket
 cwist_alloc
 cwist_alloc_array
@@ -544,6 +544,7 @@ cwist_mw_metrics
 cwist_mw_otel_get_trace_id
 cwist_mw_otel_trace
 cwist_mw_rate_limit_ip
+cwist_mw_rate_limit_ip_redis
 cwist_mw_rate_limit_reset
 cwist_mw_request_id
 cwist_mw_session
@@ -651,6 +652,7 @@ cwist_redis_del
 cwist_redis_expire
 cwist_redis_get
 cwist_redis_pool_command_argv
+cwist_redis_pool_command_argv_reply_timeout
 cwist_redis_pool_create
 cwist_redis_pool_del
 cwist_redis_pool_destroy
@@ -793,7 +795,7 @@ cwist_zod_parse
 cwist_zod_print_errors
 cwist_zod_validate
 
-== function signatures (788) ==
+== function signatures (790) ==
 cwist_accept_socket: cwist_error_t (int, struct sockaddr *, void (*)(int client_fd, void *ctx), void *)
 cwist_alloc: void * (size_t)
 cwist_alloc_array: void * (size_t, size_t)
@@ -1334,6 +1336,7 @@ cwist_mw_metrics: cwist_middleware_func (void)
 cwist_mw_otel_get_trace_id: const char * (const cwist_http_request *)
 cwist_mw_otel_trace: cwist_middleware_func (const cwist_otel_cfg_t *)
 cwist_mw_rate_limit_ip: cwist_middleware_func (int)
+cwist_mw_rate_limit_ip_redis: cwist_middleware_func (const cwist_rate_limit_redis_cfg_t *)
 cwist_mw_rate_limit_reset: void (void)
 cwist_mw_request_id: cwist_middleware_func (const char *)
 cwist_mw_session: cwist_middleware_func (cwist_app *)
@@ -1441,6 +1444,7 @@ cwist_redis_del: cwist_error_t (cwist_redis_t *, const char *)
 cwist_redis_expire: cwist_error_t (cwist_redis_t *, const char *, int)
 cwist_redis_get: cwist_error_t (cwist_redis_t *, const char *, char **)
 cwist_redis_pool_command_argv: cwist_error_t (cwist_redis_pool_t *, size_t, const void *const *, const size_t *, char **, size_t *)
+cwist_redis_pool_command_argv_reply_timeout: cwist_error_t (cwist_redis_pool_t *, size_t, const void *const *, const size_t *, unsigned timeout_ms, cwist_redis_reply_t **)
 cwist_redis_pool_create: cwist_redis_pool_t * (const char *, int, size_t)
 cwist_redis_pool_del: cwist_error_t (cwist_redis_pool_t *, const char *)
 cwist_redis_pool_destroy: void (cwist_redis_pool_t *)
@@ -1764,7 +1768,7 @@ cwist_zod_result
 quic_conn_fc
 quic_stream_fc
 
-== typedefs (209) ==
+== typedefs (210) ==
 __prim_cwist_error_t
 bdr_blob_t
 bdr_entry_t
@@ -1915,6 +1919,7 @@ cwist_pb_writer
 cwist_query_bucket
 cwist_query_map
 cwist_query_map_iter_func
+cwist_rate_limit_redis_cfg_t
 cwist_rdbms_provider_t
 cwist_rdbms_runtime
 cwist_reactor_cb_t
@@ -2208,7 +2213,7 @@ CWIST_WS_FRAME_TEXT
 
 == globals (extern) (0) ==
 
-== layouts (83) ==
+== layouts (84) ==
 enum cwist_async_action_t [0] CWIST_ASYNC_CLOSE = 0
 enum cwist_async_action_t [1] CWIST_ASYNC_REARM
 enum cwist_async_action_t [2] CWIST_ASYNC_DETACH
@@ -2715,6 +2720,11 @@ struct cwist_query_map [1] size_t size
 struct cwist_query_map [2] uint8_t seed[16]
 struct cwist_query_map [3] void *arena
 struct cwist_query_map [4] size_t count
+struct cwist_rate_limit_redis_cfg_t [0] cwist_redis_pool_t *pool
+struct cwist_rate_limit_redis_cfg_t [1] int requests_per_minute
+struct cwist_rate_limit_redis_cfg_t [2] const char *key_prefix
+struct cwist_rate_limit_redis_cfg_t [3] unsigned timeout_ms
+struct cwist_rate_limit_redis_cfg_t [4] bool fail_closed
 struct cwist_rdbms_runtime [0] cwist_rdbms_provider_t provider
 struct cwist_rdbms_runtime [1] int port
 struct cwist_rdbms_runtime [2] char *host
