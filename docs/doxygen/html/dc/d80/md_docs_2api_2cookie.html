@@ -113,7 +113,7 @@ $(document).ready(function(){initNavTree('dc/d80/md_docs_2api_2cookie.html','../
 <h1><a class="anchor" id="autotoc_md74"></a>
 Reading cookies</h1>
 <h2><a class="anchor" id="autotoc_md75"></a>
-&lt;tt&gt;cwist_cookie_parse&lt;/tt&gt;</h2>
+cwist_cookie_parse</h2>
 <div class="fragment"><div class="line"><span class="keywordtype">void</span> <a class="code hl_function" href="../../d5/dfd/cookie_8h.html#affe5d5d5278e31c936fb16a3777edfc1">cwist_cookie_parse</a>(<a class="code hl_struct" href="../../dd/d72/structcwist__query__map.html">cwist_query_map</a> *<a class="code hl_variable" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">map</a>, <span class="keyword">const</span> <span class="keywordtype">char</span> *header);</div>
 <div class="ttc" id="acookie_8h_html_affe5d5d5278e31c936fb16a3777edfc1"><div class="ttname"><a href="../../d5/dfd/cookie_8h.html#affe5d5d5278e31c936fb16a3777edfc1">cwist_cookie_parse</a></div><div class="ttdeci">void cwist_cookie_parse(cwist_query_map *map, const char *header)</div><div class="ttdoc">Parse a Cookie header value into a query-style map.</div><div class="ttdef"><b>Definition</b> <a href="../../de/d49/cookie_8c_source.html#l00080">cookie.c:80</a></div></div>
 <div class="ttc" id="aotel_8c_html_a856fa22aef923b4a345805d81580aebe"><div class="ttname"><a href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">cap</a></div><div class="ttdeci">size_t cap</div><div class="ttdef"><b>Definition</b> <a href="../../d3/db2/otel_8c_source.html#l00056">otel.c:56</a></div></div>
@@ -126,14 +126,14 @@ Reading cookies</h1>
 <li>A <code>NULL</code> or empty <code>header</code>, or a <code>NULL</code> <code>map</code>, does nothing.</li>
 </ul>
 <h2><a class="anchor" id="autotoc_md76"></a>
-&lt;tt&gt;cwist_cookie_get&lt;/tt&gt;</h2>
+cwist_cookie_get</h2>
 <div class="fragment"><div class="line"><span class="keyword">const</span> <span class="keywordtype">char</span> *<a class="code hl_function" href="../../d5/dfd/cookie_8h.html#a9305cd705685dd014d6d8d1a9277fd11">cwist_cookie_get</a>(<a class="code hl_struct" href="../../dd/d72/structcwist__query__map.html">cwist_query_map</a> *<a class="code hl_variable" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">map</a>, <span class="keyword">const</span> <span class="keywordtype">char</span> *name);</div>
 <div class="ttc" id="acookie_8h_html_a9305cd705685dd014d6d8d1a9277fd11"><div class="ttname"><a href="../../d5/dfd/cookie_8h.html#a9305cd705685dd014d6d8d1a9277fd11">cwist_cookie_get</a></div><div class="ttdeci">const char * cwist_cookie_get(cwist_query_map *map, const char *name)</div><div class="ttdoc">Get a cookie value by name from a parsed map.</div><div class="ttdef"><b>Definition</b> <a href="../../de/d49/cookie_8c_source.html#l00114">cookie.c:114</a></div></div>
 </div><!-- fragment --><p> Returns the decoded value stored for <code>name</code>, or <code>NULL</code> if there is none. The pointer belongs to <code>map</code> and is valid until the map is destroyed.</p>
 <h1><a class="anchor" id="autotoc_md77"></a>
 Writing cookies</h1>
 <h2><a class="anchor" id="autotoc_md78"></a>
-&lt;tt&gt;cwist_cookie_options&lt;/tt&gt;</h2>
+cwist_cookie_options</h2>
 <div class="fragment"><div class="line"><span class="keyword">typedef</span> <span class="keyword">struct </span><a class="code hl_struct" href="../../db/d11/structcwist__cookie__options.html">cwist_cookie_options</a> {</div>
 <div class="line">    <span class="keyword">const</span> <span class="keywordtype">char</span> *<a class="code hl_variable" href="../../db/d11/structcwist__cookie__options.html#a479ff309f54d7fb09f207ce931fdd6e4">path</a>;</div>
 <div class="line">    <span class="keyword">const</span> <span class="keywordtype">char</span> *<a class="code hl_variable" href="../../db/d11/structcwist__cookie__options.html#a7edc5041cf406830c29817cfca6beb7e">domain</a>;</div>
@@ -152,7 +152,7 @@ Writing cookies</h1>
 </div><!-- fragment --><p> Attributes for <code>cwist_cookie_set</code>. A <code>NULL</code> <code>path</code>, <code>domain</code> or <code>same_site</code> is left out, and <code>http_only</code> and <code>secure</code> are added only when <code>true</code>.</p>
 <p><code>max_age_seconds</code> is written whenever it is <code>0</code> or greater, so a zero-initialised struct produces <code>Max-Age=0</code>, which tells the client to delete the cookie. Set it to <code>-1</code> to omit the attribute. <code>same_site</code> is copied as given and is not checked against the three listed values.</p>
 <h2><a class="anchor" id="autotoc_md79"></a>
-&lt;tt&gt;cwist_cookie_set&lt;/tt&gt;</h2>
+cwist_cookie_set</h2>
 <div class="fragment"><div class="line"><span class="keywordtype">int</span> <a class="code hl_function" href="../../d5/dfd/cookie_8h.html#aba587adb658090bcc0cc8ae7840aa4c3">cwist_cookie_set</a>(<a class="code hl_struct" href="../../dd/d22/structcwist__http__response.html">cwist_http_response</a> *res, <span class="keyword">const</span> <span class="keywordtype">char</span> *name, <span class="keyword">const</span> <span class="keywordtype">char</span> *value,</div>
 <div class="line">                     <span class="keyword">const</span> <a class="code hl_struct" href="../../db/d11/structcwist__cookie__options.html">cwist_cookie_options</a> *opts);</div>
 <div class="ttc" id="acookie_8h_html_aba587adb658090bcc0cc8ae7840aa4c3"><div class="ttname"><a href="../../d5/dfd/cookie_8h.html#aba587adb658090bcc0cc8ae7840aa4c3">cwist_cookie_set</a></div><div class="ttdeci">int cwist_cookie_set(cwist_http_response *res, const char *name, const char *value, const cwist_cookie_options *opts)</div><div class="ttdoc">Add a Set-Cookie header to the response.</div><div class="ttdef"><b>Definition</b> <a href="../../de/d49/cookie_8c_source.html#l00119">cookie.c:119</a></div></div>
@@ -160,19 +160,19 @@ Writing cookies</h1>
 </div><!-- fragment --><p> Adds a <code>Set-Cookie</code> header to <code>res</code> in the form <code>name=&lt;encoded value&gt;; Path=...; Domain=...; Max-Age=...; HttpOnly; Secure; SameSite=...</code>. The value is encoded with <code>cwist_cookie_encode</code>; the name and the attribute strings are written as given. A <code>NULL</code> <code>value</code> is sent as an empty value, and a <code>NULL</code> <code>opts</code> sends only <code>name=value</code>.</p>
 <p>Returns <code>0</code> on success and <code>-1</code> on failure: <code>res</code> or <code>name</code> is <code>NULL</code>, an allocation fails, or the header is rejected because it contains a CR or LF character.</p>
 <h2><a class="anchor" id="autotoc_md80"></a>
-&lt;tt&gt;cwist_cookie_delete&lt;/tt&gt;</h2>
+cwist_cookie_delete</h2>
 <div class="fragment"><div class="line"><span class="keywordtype">int</span> <a class="code hl_function" href="../../d5/dfd/cookie_8h.html#af0cbca640a3104b61278dd2d9a6b91d0">cwist_cookie_delete</a>(<a class="code hl_struct" href="../../dd/d22/structcwist__http__response.html">cwist_http_response</a> *res, <span class="keyword">const</span> <span class="keywordtype">char</span> *name);</div>
 <div class="ttc" id="acookie_8h_html_af0cbca640a3104b61278dd2d9a6b91d0"><div class="ttname"><a href="../../d5/dfd/cookie_8h.html#af0cbca640a3104b61278dd2d9a6b91d0">cwist_cookie_delete</a></div><div class="ttdeci">int cwist_cookie_delete(cwist_http_response *res, const char *name)</div><div class="ttdoc">Add a Set-Cookie header that deletes a cookie.</div><div class="ttdef"><b>Definition</b> <a href="../../de/d49/cookie_8c_source.html#l00167">cookie.c:167</a></div></div>
 </div><!-- fragment --><p> Adds a <code>Set-Cookie: name=; Path=/; Max-Age=0</code> header, which tells the client to remove the cookie. The path is fixed to <code>/</code>, so a cookie that was set with a different <code>path</code> is not matched by this header. Returns <code>0</code> on success and <code>-1</code> on failure.</p>
 <h1><a class="anchor" id="autotoc_md81"></a>
 Encoding</h1>
 <h2><a class="anchor" id="autotoc_md82"></a>
-&lt;tt&gt;cwist_cookie_encode&lt;/tt&gt;</h2>
+cwist_cookie_encode</h2>
 <div class="fragment"><div class="line"><span class="keywordtype">char</span> *<a class="code hl_function" href="../../d5/dfd/cookie_8h.html#afdcb10d812fd677194c8a6a96742ece1">cwist_cookie_encode</a>(<span class="keyword">const</span> <span class="keywordtype">char</span> *value);</div>
 <div class="ttc" id="acookie_8h_html_afdcb10d812fd677194c8a6a96742ece1"><div class="ttname"><a href="../../d5/dfd/cookie_8h.html#afdcb10d812fd677194c8a6a96742ece1">cwist_cookie_encode</a></div><div class="ttdeci">char * cwist_cookie_encode(const char *value)</div><div class="ttdoc">URL-encode a string for safe cookie values.</div><div class="ttdef"><b>Definition</b> <a href="../../de/d49/cookie_8c_source.html#l00035">cookie.c:35</a></div></div>
 </div><!-- fragment --><p> Percent-encodes <code>value</code>. The characters <code>A-Z a-z 0-9 - _ . ~</code> are kept and every other byte becomes <code>XX</code> with upper-case hex digits (a space becomes <code>%20</code>). Returns a heap string that the caller releases with <code><a class="el" href="../../d2/dfe/alloc_8h.html#a220abeebe2823e72511d1690fc561306" title="Free memory obtained via cwist_alloc/cwist_strdup/etc.">cwist_free()</a></code>, or <code>NULL</code> if <code>value</code> is <code>NULL</code> or allocation fails.</p>
 <h2><a class="anchor" id="autotoc_md83"></a>
-&lt;tt&gt;cwist_cookie_decode&lt;/tt&gt;</h2>
+cwist_cookie_decode</h2>
 <div class="fragment"><div class="line"><span class="keywordtype">int</span> <a class="code hl_function" href="../../d5/dfd/cookie_8h.html#aa93670e23e2f4421dd33059449e7f40f">cwist_cookie_decode</a>(<span class="keyword">const</span> <span class="keywordtype">char</span> *<a class="code hl_variable" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">in</a>, <span class="keywordtype">char</span> *out, <span class="keywordtype">size_t</span> out_len);</div>
 <div class="ttc" id="acookie_8h_html_aa93670e23e2f4421dd33059449e7f40f"><div class="ttname"><a href="../../d5/dfd/cookie_8h.html#aa93670e23e2f4421dd33059449e7f40f">cwist_cookie_decode</a></div><div class="ttdeci">int cwist_cookie_decode(const char *in, char *out, size_t out_len)</div><div class="ttdoc">URL-decode a cookie value in-place into a caller-owned buffer.</div><div class="ttdef"><b>Definition</b> <a href="../../de/d49/cookie_8c_source.html#l00055">cookie.c:55</a></div></div>
 </div><!-- fragment --><p> Decodes <code>in</code> into the caller's buffer <code>out</code> of size <code>out_len</code>. <code>XX</code> sequences (upper or lower case hex) become the byte they name, and <code>+</code> becomes a space. A <code>%</code> that is not followed by two hex digits is copied unchanged.</p>

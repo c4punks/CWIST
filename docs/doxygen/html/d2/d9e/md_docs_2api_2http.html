@@ -120,7 +120,7 @@ Constants</h1>
 <li><code>CWIST_HTTP_TIMEOUT_MS</code> – poll timeout used while waiting for header/body as well as while sending responses.</li>
 </ul>
 <h2><a class="anchor" id="autotoc_md109"></a>
-&lt;tt&gt;cwist_http_request_create&lt;/tt&gt;</h2>
+cwist_http_request_create</h2>
 <div class="fragment"><div class="line"><a class="code hl_struct" href="../../dd/d68/structcwist__http__request.html">cwist_http_request</a> *<a class="code hl_function" href="../../dd/d56/http_8h.html#afe92033adc5b6922f589f9c5125b2666">cwist_http_request_create</a>(<span class="keywordtype">void</span>);</div>
 <div class="ttc" id="ahttp_8h_html_afe92033adc5b6922f589f9c5125b2666"><div class="ttname"><a href="../../dd/d56/http_8h.html#afe92033adc5b6922f589f9c5125b2666">cwist_http_request_create</a></div><div class="ttdeci">cwist_http_request * cwist_http_request_create(void)</div><div class="ttdoc">Create a new HTTP request object.</div><div class="ttdef"><b>Definition</b> <a href="../../dd/d43/http_8c_source.html#l02056">http.c:2056</a></div></div>
 <div class="ttc" id="astructcwist__http__request_html"><div class="ttname"><a href="../../dd/d68/structcwist__http__request.html">cwist_http_request</a></div><div class="ttdef"><b>Definition</b> <a href="../../dd/d56/http_8h_source.html#l00065">http.h:65</a></div></div>
@@ -130,13 +130,13 @@ Constants</h1>
 <li><code>req-&gt;db</code> – shared <code><a class="el" href="../../dd/d55/structcwist__db.html" title="Wrapper for Database Operations. Currently uses SQLite3.">cwist_db</a></code> handle configured via <code>cwist_app_use_db</code>.</li>
 </ul>
 <h2><a class="anchor" id="autotoc_md110"></a>
-&lt;tt&gt;cwist_http_parse_request&lt;/tt&gt;</h2>
+cwist_http_parse_request</h2>
 <div class="fragment"><div class="line"><a class="code hl_struct" href="../../dd/d68/structcwist__http__request.html">cwist_http_request</a> *<a class="code hl_function" href="../../dd/d56/http_8h.html#aa46e254982091a9abaae4a4030a84831">cwist_http_parse_request</a>(<span class="keyword">const</span> <span class="keywordtype">char</span> *<a class="code hl_variable" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">raw_request</a>);</div>
 <div class="ttc" id="ahttp_8h_html_aa46e254982091a9abaae4a4030a84831"><div class="ttname"><a href="../../dd/d56/http_8h.html#aa46e254982091a9abaae4a4030a84831">cwist_http_parse_request</a></div><div class="ttdeci">cwist_http_request * cwist_http_parse_request(const char *raw_request)</div><div class="ttdoc">Parse a raw HTTP request string.</div><div class="ttdef"><b>Definition</b> <a href="../../dd/d43/http_8c_source.html#l04412">http.c:4412</a></div></div>
 <div class="ttc" id="aotel_8c_html_a856fa22aef923b4a345805d81580aebe"><div class="ttname"><a href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">cap</a></div><div class="ttdeci">size_t cap</div><div class="ttdef"><b>Definition</b> <a href="../../d3/db2/otel_8c_source.html#l00056">otel.c:56</a></div></div>
 </div><!-- fragment --><p> Parses a raw HTTP string into a <code><a class="el" href="../../dd/d68/structcwist__http__request.html">cwist_http_request</a></code> object.</p>
 <h2><a class="anchor" id="autotoc_md111"></a>
-&lt;tt&gt;cwist_http_receive_request&lt;/tt&gt;</h2>
+cwist_http_receive_request</h2>
 <div class="fragment"><div class="line"><a class="code hl_struct" href="../../dd/d68/structcwist__http__request.html">cwist_http_request</a> *<a class="code hl_function" href="../../dd/d56/http_8h.html#a0d582b995b805e28d989c8a27b9eec2b">cwist_http_receive_request</a>(</div>
 <div class="line">    <span class="keywordtype">int</span> client_fd,</div>
 <div class="line">    <span class="keywordtype">char</span> *read_buf,</div>
@@ -151,13 +151,13 @@ Constants</h1>
 <li>Returns <code>NULL</code> on timeout, malformed framing, or when limits are exceeded.</li>
 </ul>
 <h2><a class="anchor" id="autotoc_md112"></a>
-&lt;tt&gt;cwist_http_response_create&lt;/tt&gt;</h2>
+cwist_http_response_create</h2>
 <div class="fragment"><div class="line"><a class="code hl_struct" href="../../dd/d22/structcwist__http__response.html">cwist_http_response</a> *<a class="code hl_function" href="../../dd/d56/http_8h.html#acbf3f0c4f02e638a4cb9d4b6c7057e18">cwist_http_response_create</a>(<span class="keywordtype">void</span>);</div>
 <div class="ttc" id="ahttp_8h_html_acbf3f0c4f02e638a4cb9d4b6c7057e18"><div class="ttname"><a href="../../dd/d56/http_8h.html#acbf3f0c4f02e638a4cb9d4b6c7057e18">cwist_http_response_create</a></div><div class="ttdeci">cwist_http_response * cwist_http_response_create(void)</div><div class="ttdoc">Create a new HTTP response object.</div><div class="ttdef"><b>Definition</b> <a href="../../dd/d43/http_8c_source.html#l02291">http.c:2291</a></div></div>
 <div class="ttc" id="astructcwist__http__response_html"><div class="ttname"><a href="../../dd/d22/structcwist__http__response.html">cwist_http_response</a></div><div class="ttdoc">HTTP Response Object. Supports standard string body or Zero-Copy pointer body.</div><div class="ttdef"><b>Definition</b> <a href="../../dd/d56/http_8h_source.html#l00082">http.h:82</a></div></div>
 </div><!-- fragment --><p> Allocates a new HTTP response structure. Default status is 200 OK.</p>
 <h2><a class="anchor" id="autotoc_md113"></a>
-&lt;tt&gt;cwist_http_response_send_file&lt;/tt&gt;</h2>
+cwist_http_response_send_file</h2>
 <div class="fragment"><div class="line"><a class="code hl_struct" href="../../d4/d50/structcwist__error__t.html">cwist_error_t</a> <a class="code hl_function" href="../../d9/dab/net_2http_2http_8h.html#a884fff00eb8188a3b2cde3fc02dc931c">cwist_http_response_send_file</a>(</div>
 <div class="line">    <a class="code hl_struct" href="../../dd/d22/structcwist__http__response.html">cwist_http_response</a> *res,</div>
 <div class="line">    <span class="keyword">const</span> <span class="keywordtype">char</span> *<a class="code hl_variable" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">file_path</a>,</div>
@@ -168,14 +168,14 @@ Constants</h1>
 <div class="ttc" id="astructcwist__error__t_html"><div class="ttname"><a href="../../d4/d50/structcwist__error__t.html">cwist_error_t</a></div><div class="ttdoc">Integrated error structure used throughout the system.</div><div class="ttdef"><b>Definition</b> <a href="../../d3/d73/err_2cwist__err_8h_source.html#l00072">cwist_err.h:72</a></div></div>
 </div><!-- fragment --><p> Reads a static file from disk, copies it into the response body, and sets a sensible <code>Content-Type</code>. Files larger than <code>CWIST_HTTP_MAX_BODY_SIZE</code> are rejected with <code>-EFBIG</code> unless the route is tagged with <code>CWIST_ENDPOINT_FILE</code>, which switches Linux/macOS/FreeBSD to <code><a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">sendfile(2)</a></code> so the kernel streams the payload directly. Returns <code>0</code> on success and propagates <code>-errno</code> on failures (<code>-ENOENT</code>, <code>-EISDIR</code>, etc.). <code>out_size</code> is optional; when provided it receives the file length so handlers can emit HEAD responses without buffering the payload. The built-in table includes modern web extensions such as <code>.wasm</code> and <code>.mjs</code>.</p>
 <h2><a class="anchor" id="autotoc_md114"></a>
-&lt;tt&gt;cwist_http_header_add&lt;/tt&gt;</h2>
+cwist_http_header_add</h2>
 <div class="fragment"><div class="line"><a class="code hl_struct" href="../../d4/d50/structcwist__error__t.html">cwist_error_t</a> <a class="code hl_function" href="../../dd/d56/http_8h.html#ab75bffc747ca7b55ac62f581702f1e2a">cwist_http_header_add</a>(<a class="code hl_struct" href="../../d3/d72/structcwist__http__header__node.html">cwist_http_header_node</a> **<a class="code hl_variable" href="../../d3/db2/otel_8c.html#a75844ce74940ef333d11ae090e07c9af">head</a>, <span class="keyword">const</span> <span class="keywordtype">char</span> *key, <span class="keyword">const</span> <span class="keywordtype">char</span> *value);</div>
 <div class="ttc" id="ahttp_8h_html_ab75bffc747ca7b55ac62f581702f1e2a"><div class="ttname"><a href="../../dd/d56/http_8h.html#ab75bffc747ca7b55ac62f581702f1e2a">cwist_http_header_add</a></div><div class="ttdeci">cwist_error_t cwist_http_header_add(cwist_http_header_node **head, const char *key, const char *value)</div><div class="ttdoc">Add a header to the list.</div><div class="ttdef"><b>Definition</b> <a href="../../dd/d43/http_8c_source.html#l01861">http.c:1861</a></div></div>
 <div class="ttc" id="aotel_8c_html_a75844ce74940ef333d11ae090e07c9af"><div class="ttname"><a href="../../d3/db2/otel_8c.html#a75844ce74940ef333d11ae090e07c9af">head</a></div><div class="ttdeci">size_t head</div><div class="ttdef"><b>Definition</b> <a href="../../d3/db2/otel_8c_source.html#l00057">otel.c:57</a></div></div>
 <div class="ttc" id="astructcwist__http__header__node_html"><div class="ttname"><a href="../../d3/d72/structcwist__http__header__node.html">cwist_http_header_node</a></div><div class="ttdoc">Linked list for headers to handle multiple headers easily.</div><div class="ttdef"><b>Definition</b> <a href="../../dd/d56/http_8h_source.html#l00059">http.h:59</a></div></div>
 </div><!-- fragment --><p> Adds a header to the linked list.</p>
 <h2><a class="anchor" id="autotoc_md115"></a>
-&lt;tt&gt;cwist_http_header_get&lt;/tt&gt;</h2>
+cwist_http_header_get</h2>
 <div class="fragment"><div class="line"><span class="keywordtype">char</span> *<a class="code hl_function" href="../../dd/d56/http_8h.html#a8b09daf7dd857271cac1bccc2666d2cb">cwist_http_header_get</a>(<a class="code hl_struct" href="../../d3/d72/structcwist__http__header__node.html">cwist_http_header_node</a> *<a class="code hl_variable" href="../../d3/db2/otel_8c.html#a75844ce74940ef333d11ae090e07c9af">head</a>, <span class="keyword">const</span> <span class="keywordtype">char</span> *key);</div>
 <div class="ttc" id="ahttp_8h_html_a8b09daf7dd857271cac1bccc2666d2cb"><div class="ttname"><a href="../../dd/d56/http_8h.html#a8b09daf7dd857271cac1bccc2666d2cb">cwist_http_header_get</a></div><div class="ttdeci">char * cwist_http_header_get(cwist_http_header_node *head, const char *key)</div><div class="ttdoc">Find a header value by key.</div><div class="ttdef"><b>Definition</b> <a href="../../dd/d43/http_8c_source.html#l01880">http.c:1880</a></div></div>
 </div><!-- fragment --><p> Retrieves the value of a header by key. Returns <code>NULL</code> if not found. Header lookup is case-insensitive (<code>Host</code> and <code>host</code> are equivalent).</p>
@@ -190,7 +190,7 @@ Regression testing</h2>
 <div class="fragment"><div class="line">ab -k -n 20000 -c 64 -p payload.json -T application/json http://127.0.0.1:31744/api</div>
 </div><!-- fragment --><p>The test succeeds only when the server drains each request body, recycles the leftover bytes for the next request on the same socket, and finalizes every response without triggering <code>apr_pollset_poll timeout</code> or <code>connection reset</code>.</p>
 <h2><a class="anchor" id="autotoc_md119"></a>
-&lt;tt&gt;cwist_http_server_loop&lt;/tt&gt;</h2>
+cwist_http_server_loop</h2>
 <div class="fragment"><div class="line"><a class="code hl_struct" href="../../d4/d50/structcwist__error__t.html">cwist_error_t</a> <a class="code hl_function" href="../../dd/d56/http_8h.html#a4d9cb2d2fb1e7ea1475c1bef7aeb7e5f">cwist_http_server_loop</a>(<span class="keywordtype">int</span> <a class="code hl_variable" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">server_fd</a>, <a class="code hl_struct" href="../../d5/d6e/structcwist__server__config.html">cwist_server_config</a> *config, <span class="keywordtype">void</span> (*handler)(<span class="keywordtype">int</span>, <span class="keywordtype">void</span> *), <span class="keywordtype">void</span> *ctx);</div>
 <div class="ttc" id="ahttp_8h_html_a4d9cb2d2fb1e7ea1475c1bef7aeb7e5f"><div class="ttname"><a href="../../dd/d56/http_8h.html#a4d9cb2d2fb1e7ea1475c1bef7aeb7e5f">cwist_http_server_loop</a></div><div class="ttdeci">cwist_error_t cwist_http_server_loop(int server_fd, cwist_server_config *config, void(*handler)(int, void *), void *ctx)</div><div class="ttdoc">Run the main HTTP accept loop using the configured concurrency strategy.</div><div class="ttdef"><b>Definition</b> <a href="../../dd/d43/http_8c_source.html#l05590">http.c:5590</a></div></div>
 <div class="ttc" id="astructcwist__server__config_html"><div class="ttname"><a href="../../d5/d6e/structcwist__server__config.html">cwist_server_config</a></div><div class="ttdef"><b>Definition</b> <a href="../../dd/d56/http_8h_source.html#l00219">http.h:219</a></div></div>
@@ -199,19 +199,19 @@ Regression testing</h2>
 <li><code>ctx</code> is passed to the handler for thread-safe state management.</li>
 </ul>
 <h2><a class="anchor" id="autotoc_md120"></a>
-&lt;tt&gt;cwist_accept_socket&lt;/tt&gt;</h2>
+cwist_accept_socket</h2>
 <div class="fragment"><div class="line"><a class="code hl_struct" href="../../d4/d50/structcwist__error__t.html">cwist_error_t</a> <a class="code hl_function" href="../../dd/d56/http_8h.html#ad5e721abc6a6d21ff0678514184ecedb">cwist_accept_socket</a>(<span class="keywordtype">int</span> <a class="code hl_variable" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">server_fd</a>, <span class="keyword">struct</span> <a class="code hl_variable" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">sockaddr</a> *<a class="code hl_variable" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">sockv4</a>, <span class="keywordtype">void</span> (*handler_func)(<span class="keywordtype">int</span>, <span class="keywordtype">void</span> *), <span class="keywordtype">void</span> *ctx);</div>
 <div class="ttc" id="ahttp_8h_html_ad5e721abc6a6d21ff0678514184ecedb"><div class="ttname"><a href="../../dd/d56/http_8h.html#ad5e721abc6a6d21ff0678514184ecedb">cwist_accept_socket</a></div><div class="ttdeci">cwist_error_t cwist_accept_socket(int server_fd, struct sockaddr *sockv4, void(*handler_func)(int client_fd, void *ctx), void *ctx)</div><div class="ttdoc">Accept sockets and invoke a handler callback.</div></div>
 </div><!-- fragment --><p> Low-level accept loop wrapper.</p>
 <h2><a class="anchor" id="autotoc_md121"></a>
-&lt;tt&gt;cwist_http_continuation_shed_count&lt;/tt&gt;</h2>
+cwist_http_continuation_shed_count</h2>
 <div class="fragment"><div class="line"><span class="keywordtype">long</span> <a class="code hl_function" href="../../d9/dab/net_2http_2http_8h.html#ab63b801028ac78418a65fa2a6fd0fdb9">cwist_http_continuation_shed_count</a>(<span class="keywordtype">void</span>);</div>
 <div class="ttc" id="anet_2http_2http_8h_html_ab63b801028ac78418a65fa2a6fd0fdb9"><div class="ttname"><a href="../../d9/dab/net_2http_2http_8h.html#ab63b801028ac78418a65fa2a6fd0fdb9">cwist_http_continuation_shed_count</a></div><div class="ttdeci">long cwist_http_continuation_shed_count(void)</div><div class="ttdef"><b>Definition</b> <a href="../../dd/d43/http_8c_source.html#l00293">http.c:293</a></div></div>
 </div><!-- fragment --><p> Monotonic counter of pipelined HTTP/1.1 continuations dropped (and whose connections were closed) because the reactor post queue was full. Also exposed via Prometheus <code>/metrics</code> as <code>cwist_http_continuation_shed_total</code>. Useful for backpressure and shed-rate alerting.</p>
 <h1><a class="anchor" id="autotoc_md122"></a>
 Security Headers</h1>
 <h2><a class="anchor" id="autotoc_md123"></a>
-&lt;tt&gt;cwist_http_response_add_security_headers&lt;/tt&gt;</h2>
+cwist_http_response_add_security_headers</h2>
 <div class="fragment"><div class="line"><span class="keywordtype">void</span> <a class="code hl_function" href="../../dd/d56/http_8h.html#aa4e5e5bca52e4006cfe98a309ebea5cf">cwist_http_response_add_security_headers</a>(<a class="code hl_struct" href="../../dd/d22/structcwist__http__response.html">cwist_http_response</a> *res);</div>
 <div class="ttc" id="ahttp_8h_html_aa4e5e5bca52e4006cfe98a309ebea5cf"><div class="ttname"><a href="../../dd/d56/http_8h.html#aa4e5e5bca52e4006cfe98a309ebea5cf">cwist_http_response_add_security_headers</a></div><div class="ttdeci">void cwist_http_response_add_security_headers(cwist_http_response *res)</div><div class="ttdoc">Add default security headers (CSP, X-Frame-Options, etc.) if missing.</div><div class="ttdef"><b>Definition</b> <a href="../../dd/d43/http_8c_source.html#l01935">http.c:1935</a></div></div>
 </div><!-- fragment --><p> Injects a default set of hardening headers into the response if each is not already present (first-one-wins, so a handler can pre-set a header to override the default). Safe to call on both HTTP and HTTPS responses. Does <b>not</b> set <code>Strict-Transport-Security</code>; use <code><a class="el" href="../../d9/dab/net_2http_2http_8h.html#a9e1dbb26e490c6b24d9279daf46d6ec2" title="Add Strict-Transport-Security to a TLS response (HTTPS only).">cwist_http_response_add_hsts()</a></code> for that.</p>
@@ -235,7 +235,7 @@ Security Headers</h1>
 <td class="markdownTableBodyNone"><code>Cross-Origin-Opener-Policy</code>   </td><td class="markdownTableBodyNone"><code>same-origin</code>   </td></tr>
 </table>
 <h2><a class="anchor" id="autotoc_md124"></a>
-&lt;tt&gt;cwist_http_response_add_hsts&lt;/tt&gt;</h2>
+cwist_http_response_add_hsts</h2>
 <div class="fragment"><div class="line"><span class="keywordtype">void</span> <a class="code hl_function" href="../../d9/dab/net_2http_2http_8h.html#a9e1dbb26e490c6b24d9279daf46d6ec2">cwist_http_response_add_hsts</a>(<a class="code hl_struct" href="../../dd/d22/structcwist__http__response.html">cwist_http_response</a> *res);</div>
 <div class="ttc" id="anet_2http_2http_8h_html_a9e1dbb26e490c6b24d9279daf46d6ec2"><div class="ttname"><a href="../../d9/dab/net_2http_2http_8h.html#a9e1dbb26e490c6b24d9279daf46d6ec2">cwist_http_response_add_hsts</a></div><div class="ttdeci">void cwist_http_response_add_hsts(cwist_http_response *res)</div><div class="ttdoc">Add Strict-Transport-Security to a TLS response (HTTPS only).</div><div class="ttdef"><b>Definition</b> <a href="../../dd/d43/http_8c_source.html#l01993">http.c:1993</a></div></div>
 </div><!-- fragment --><p> Adds <code>Strict-Transport-Security: max-age=31536000; includeSubDomains</code> to a TLS response. No-op when the header is already present. Per RFC 6797 section 7.2, call this only from an HTTPS handler; never call it on a plain-HTTP response. </p>

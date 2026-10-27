@@ -108,11 +108,11 @@ $(document).ready(function(){initNavTree('d2/dcb/md_docs_2tutorials_2webtranspor
   <div class="headertitle"><div class="title">Build a WebTransport server with CWIST</div></div>
 </div><!--header-->
 <div class="contents">
-<div class="textblock"><p><a class="anchor" id="autotoc_md513"></a> CWIST exposes WebTransport over its HTTP/3 server. WebTransport requires TLS and QUIC; browsers also require a certificate they trust during development.</p>
+<div class="textblock"><p><a class="anchor" id="autotoc_md477"></a> CWIST exposes WebTransport over its HTTP/3 server. WebTransport requires TLS and QUIC; browsers also require a certificate they trust during development.</p>
 <blockquote class="doxtable">
 <p>&zwj;<b>Platform note:</b> the HTTP/3 listener uses <code>epoll</code> on Linux and a portable polling path on macOS/BSD. ECN receive metadata is optional, so missing BSD socket extensions do not block a WebTransport build or listener startup. </p>
 </blockquote>
-<h1><a class="anchor" id="autotoc_md514"></a>
+<h1><a class="anchor" id="autotoc_md478"></a>
 Build</h1>
 <p><code>CWIST_WEBTRANSPORT</code> takes a comma-separated list of roles: <code>server</code>, <code>client,server</code> or <code>none</code>. <code>make CWIST_WEBTRANSPORT=server</code> builds the server and is the default on main; the client is experimental and builds only with <code>client</code>.</p>
 <p>The server builds against either lsquic:</p>
@@ -125,7 +125,7 @@ Build</h1>
 <td class="markdownTableBodyNone">With <code>lsquic_wt.h</code> (LSQUIC PR #629)   </td><td class="markdownTableBodyNone">yes   </td><td class="markdownTableBodyNone">yes   </td><td class="markdownTableBodyNone">yes   </td><td class="markdownTableBodyNone">yes   </td><td class="markdownTableBodyNone">yes   </td></tr>
 </table>
 <p>Stock lsquic advertises the draft-02 SETTINGS, and the server answers an accepted session with <code>sec-webtransport-http3-draft: draft02</code>. On that backend, <code><a class="el" href="../../dd/dff/http3_8h.html#a698c07295ab057e148fe6744f21c2adf" title="Close a WebTransport session with an application error code.">cwist_webtransport_close_session()</a></code> writes a CLOSE_WEBTRANSPORT_SESSION capsule and finishes the CONNECT stream. <code>make webtransport-e2e</code> runs an echo server against an aioquic client (needs <code>pip install aioquic</code>).</p>
-<h1><a class="anchor" id="autotoc_md515"></a>
+<h1><a class="anchor" id="autotoc_md479"></a>
 1. Configure HTTP/3 and a session handler</h1>
 <div class="fragment"><div class="line"><span class="preprocessor">#include &lt;<a class="code" href="../../d0/d77/sys_2app_2app_8h.html">cwist/sys/app/app.h</a>&gt;</span></div>
 <div class="line"> </div>
@@ -158,11 +158,11 @@ Build</h1>
 <div class="ttc" id="asys_2app_2app_8h_html_aaba8ab795d2a1c18e1982e6b5845abd8"><div class="ttname"><a href="../../d0/d77/sys_2app_2app_8h.html#aaba8ab795d2a1c18e1982e6b5845abd8">cwist_app_use_webtransport</a></div><div class="ttdeci">void cwist_app_use_webtransport(cwist_app *app, cwist_webtransport_handler_func handler)</div><div class="ttdoc">Enable WebTransport over HTTP/3 on the application.</div><div class="ttdef"><b>Definition</b> <a href="../../df/d7f/app_8c_source.html#l01835">app.c:1835</a></div></div>
 <div class="ttc" id="asys_2app_2app_8h_html_ae25776f28fe20124440a2aabba50f2d1"><div class="ttname"><a href="../../d0/d77/sys_2app_2app_8h.html#ae25776f28fe20124440a2aabba50f2d1">cwist_app_use_https3</a></div><div class="ttdeci">cwist_error_t cwist_app_use_https3(cwist_app *app, bool enabled)</div><div class="ttdef"><b>Definition</b> <a href="../../df/d7f/app_8c_source.html#l01783">app.c:1783</a></div></div>
 </div><!-- fragment --><p><code>cwist_app_use_http3(app, true)</code> is suitable for local experimentation because it creates an ephemeral certificate. For a browser deployment, use a real TLS certificate and make the public endpoint reachable over UDP.</p>
-<h1><a class="anchor" id="autotoc_md516"></a>
+<h1><a class="anchor" id="autotoc_md480"></a>
 2. Design the session protocol</h1>
 <p>WebTransport gives an application reliable streams and optional datagrams. Put a small versioned envelope around each application message, cap message sizes, and authenticate the session before accepting commands. Use streams for CRUD, chat history, and acknowledgements; use datagrams only for replaceable state such as cursor positions or game snapshots.</p>
 <p>Do not assume datagrams arrive, arrive once, or arrive in order. Include a monotonic sequence number and discard stale updates. For reliable stream data, CWIST's sequence helpers can reassemble application-level fragmented payloads when a protocol intentionally splits large messages.</p>
-<h1><a class="anchor" id="autotoc_md517"></a>
+<h1><a class="anchor" id="autotoc_md481"></a>
 3. Operate safely</h1>
 <p>Set per-session limits for concurrent streams, buffered bytes, and idle time. Reject unsupported CONNECT paths before allocating a session. Log the request identifier, negotiated origin, close reason, and transport errors, but never log credentials or application payloads. Exercise the handler with the WebTransport regression test before enabling it on a public listener. </p>
 </div></div><!-- contents -->

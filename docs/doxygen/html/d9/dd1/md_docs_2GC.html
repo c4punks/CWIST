@@ -120,7 +120,7 @@ Motivation</h1>
 <h1><a class="anchor" id="autotoc_md304"></a>
 Design</h1>
 <h2><a class="anchor" id="autotoc_md305"></a>
-1. &lt;tt&gt;cwist_full_gc(bool)&lt;/tt&gt; — the global toggle</h2>
+1. cwist_full_gc(bool) — the global toggle</h2>
 <div class="fragment"><div class="line"><a class="code hl_function" href="../../d0/daa/gc_8h.html#a0d7297e8d4a073c018f97fa6e7f0a372">cwist_full_gc</a>(<span class="keyword">true</span>);   <span class="comment">/* enable automatic reclamation */</span></div>
 <div class="ttc" id="agc_8h_html_a0d7297e8d4a073c018f97fa6e7f0a372"><div class="ttname"><a href="../../d0/daa/gc_8h.html#a0d7297e8d4a073c018f97fa6e7f0a372">cwist_full_gc</a></div><div class="ttdeci">void cwist_full_gc(bool enable)</div><div class="ttdoc">Enable or disable full-GC mode process-wide.</div><div class="ttdef"><b>Definition</b> <a href="../../d8/d16/gc_8c_source.html#l00483">gc.c:483</a></div></div>
 </div><!-- fragment --><p>One process-wide switch. <b>This cuts across <code><a class="el" href="../../d0/d77/sys_2app_2app_8h.html#a17cdd1726dda152b71012f8b45e2c25e" title="Detach one additional multiport port into its own tunable application.">cwist_multiport_get_app()</a></code>'s per-port sub-applications.</b> Multiport advertises detached ports as "independently tunable sub-applications," but that independence is app-level config only (routes, middleware, TLS, size limits) &ndash; it was never true of process-wide subsystems, and <code><a class="el" href="../../d0/daa/gc_8h.html#a0d7297e8d4a073c018f97fa6e7f0a372" title="Enable or disable full-GC mode process-wide.">cwist_full_gc()</a></code> is one. Several <code><a class="el" href="../../dc/da0/structcwist__app.html" title="Main Application Context.">cwist_app</a></code> instances can share a process (that's the whole point of multiport), but they cannot have different full-GC settings: enabling it from any one of them enables it for all of them, with no per-app opt-out, because the toggle, the pending-sweep bookkeeping, and the epoch-retire pipeline it drives are all singletons scoped to the process, not to a <code><a class="el" href="../../dc/da0/structcwist__app.html" title="Main Application Context.">cwist_app</a> *</code>. (The cJSON allocator hook installed at process start via a constructor function is the same shape, for the same reason: there's one cJSON allocator per process, not per app.) A deployment that genuinely needs different memory-management behavior for different sub-apps needs separate processes &ndash; separate <code><a class="el" href="../../dc/da0/structcwist__app.html" title="Main Application Context.">cwist_app</a></code> instances in one process cannot get it.</p>
@@ -155,7 +155,7 @@ Design</h1>
 <li>Raw borrowing of LibTTAK RAII primitives where the cleanup-attribute trick is unavailable.</li>
 </ul>
 <h2><a class="anchor" id="autotoc_md309"></a>
-5. Transparent &lt;tt&gt;malloc&lt;/tt&gt; interception</h2>
+5. Transparent malloc interception</h2>
 <p>Users will habitually write <code>malloc</code>, not <code>cwist_alloc</code> — depending on finger discipline is how leak-free claims fail. <code>&lt;<a class="el" href="../../d7/d10/intercept_8h.html" title="Opt-in, translation-unit-scoped malloc/calloc/realloc/free interception onto the full-GC epoch pipeli...">cwist/core/mem/intercept.h</a>&gt;</code> makes the two spellings equivalent, opt-in per translation unit:</p>
 <div class="fragment"><div class="line"><span class="preprocessor">#define CWIST_INTERCEPT_MALLOC</span></div>
 <div class="line"><span class="preprocessor">#include &lt;<a class="code" href="../../d7/d10/intercept_8h.html">cwist/core/mem/intercept.h</a>&gt;</span></div>
@@ -193,7 +193,7 @@ Design</h1>
 </table>
 <p>The "off" cost is one relaxed atomic load (<code><a class="el" href="../../d0/daa/gc_8h.html#a35e613a89ca213039b7b8b80464c223c" title="Check whether full-GC mode is currently enabled.">cwist_full_gc_enabled()</a></code>) plus one extra function call per operation, the same overhead <code><a class="el" href="../../d2/dfe/alloc_8h.html#aeba69949fe17751318e6b5fc84a74096" title="Allocate zeroed memory tracked by libttak.">cwist_alloc()</a></code>/ <code><a class="el" href="../../d2/dfe/alloc_8h.html#a220abeebe2823e72511d1690fc561306" title="Free memory obtained via cwist_alloc/cwist_strdup/etc.">cwist_free()</a></code> already pay. The "on" cost is the safety net itself: one insertion into and one removal from the calling thread's pending set per <code>malloc</code>/<code>free</code> pair. See "Known performance caveat" below for how that cost behaves with many live blocks and several threads.</p>
 <h2><a class="anchor" id="autotoc_md310"></a>
-6. &lt;tt&gt;cwist_alloc&lt;/tt&gt; internals</h2>
+6. cwist_alloc internals</h2>
 <p><code><a class="el" href="../../d9/d39/alloc_8c.html">src/core/mem/alloc.c</a></code> gains a registration hook: under full-GC mode every <code>cwist_alloc</code> block is recorded with the epoch GC (size-aware via <code>cwist_reg_ptr_sized</code>) so epoch rotation reclaims it; explicit <code>cwist_free</code> remains correct and simply unregisters the block early.</p>
 <h2><a class="anchor" id="autotoc_md311"></a>
 7. Explicit flushes and reclamation</h2>

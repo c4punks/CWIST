@@ -108,8 +108,8 @@ $(document).ready(function(){initNavTree('d6/d8e/md_docs_2tutorials_2openapi-swa
   <div class="headertitle"><div class="title">Document an API with OpenAPI and Swagger UI</div></div>
 </div><!--header-->
 <div class="contents">
-<div class="textblock"><p><a class="anchor" id="autotoc_md508"></a> This guide shows how to describe routes with <code>CWIST_OPENAPI_*</code> annotations, generate an <code>openapi.json</code> file with the <code>cwist openapi</code> command, and serve it next to an interactive Swagger UI page with <code><a class="el" href="../../d0/d77/sys_2app_2app_8h.html#a10cd19026940e0c4631093aa86cd041f" title="Enables embedded Swagger UI interactive documentation page.">cwist_app_enable_swagger()</a></code>.</p>
-<h1><a class="anchor" id="autotoc_md509"></a>
+<div class="textblock"><p><a class="anchor" id="autotoc_md472"></a> This guide shows how to describe routes with <code>CWIST_OPENAPI_*</code> annotations, generate an <code>openapi.json</code> file with the <code>cwist openapi</code> command, and serve it next to an interactive Swagger UI page with <code><a class="el" href="../../d0/d77/sys_2app_2app_8h.html#a10cd19026940e0c4631093aa86cd041f" title="Enables embedded Swagger UI interactive documentation page.">cwist_app_enable_swagger()</a></code>.</p>
+<h1><a class="anchor" id="autotoc_md473"></a>
 1. Annotate the routes</h1>
 <p>Declare each route with a <code>CWIST_OPENAPI_&lt;METHOD&gt;</code> macro from <code>&lt;<a class="el" href="../../da/db7/openapi_8h.html" title="OpenAPI 3.1 generation — source annotations and runtime serving.">cwist/openapi.h</a>&gt;</code> instead of the matching <code>cwist_app_&lt;method&gt;</code> call. The macros (<code>GET</code>, <code>POST</code>, <code>PUT</code>, <code>DELETE</code>, <code>PATCH</code>) expand to the normal routing call, so the server behaves the same. They exist so that <code>cwist openapi</code> can find the route in the C source.</p>
 <p>Put a Doxygen comment (<code>/** ... */</code>) directly above the macro to describe the operation:</p>
@@ -156,7 +156,7 @@ $(document).ready(function(){initNavTree('d6/d8e/md_docs_2tutorials_2openapi-swa
 <div class="ttc" id="asys_2app_2app_8h_html_a8d6f015a001b2d189ebea808de9da254"><div class="ttname"><a href="../../d0/d77/sys_2app_2app_8h.html#a8d6f015a001b2d189ebea808de9da254">cwist_app_destroy</a></div><div class="ttdeci">void cwist_app_destroy(cwist_app *app)</div><div class="ttdoc">Destroys the application and frees all resources.</div><div class="ttdef"><b>Definition</b> <a href="../../df/d7f/app_8c_source.html#l01464">app.c:1464</a></div></div>
 <div class="ttc" id="asys_2app_2app_8h_html_a9aeebb72e5908f56c1b5823ae4a773c8"><div class="ttname"><a href="../../d0/d77/sys_2app_2app_8h.html#a9aeebb72e5908f56c1b5823ae4a773c8">cwist_app_create</a></div><div class="ttdeci">cwist_app * cwist_app_create(void)</div><div class="ttdoc">Creates a new CWIST application instance.</div><div class="ttdef"><b>Definition</b> <a href="../../df/d7f/app_8c_source.html#l01292">app.c:1292</a></div></div>
 </div><!-- fragment --><p>Build it like any other CWIST program (see the <a class="el" href="../../index.html#md_README">README</a>).</p>
-<h2><a class="anchor" id="autotoc_md510"></a>
+<h2><a class="anchor" id="autotoc_md474"></a>
 Annotation tags</h2>
 <p>Each tag goes on its own line of the comment.</p>
 <table class="markdownTable">
@@ -179,8 +179,8 @@ Annotation tags</h2>
 <li>In <code>@openapi.response</code>, the second word is always read as the media type. Write one (for example <code>application/json</code>) on every line: <code>500 Internal error.</code> would be emitted as <code>"description": "error."</code>, because <code>Internal</code> is taken as the media type and dropped. A media type produces a <code>content</code> entry whose schema is <code>{"type": "object"}</code>; no request or response schemas are generated.</li>
 <li>A <code>:name</code> segment in the route path becomes <code>{name}</code> and is listed as a required string path parameter, so <code>/users/:id</code> is emitted as <code>/users/{id}</code>.</li>
 </ul>
-<h1><a class="anchor" id="autotoc_md511"></a>
-2. Generate &lt;tt&gt;openapi.json&lt;/tt&gt;</h1>
+<h1><a class="anchor" id="autotoc_md475"></a>
+2. Generate openapi.json</h1>
 <p><code>cwist openapi</code> takes a source file or a directory (searched recursively for <code>*.c</code>) and writes an OpenAPI 3.1 document. Run it from the project directory:</p>
 <div class="fragment"><div class="line">cwist openapi src --title &quot;Users API&quot; --version 1.0.0</div>
 </div><!-- fragment --><div class="fragment"><div class="line">wrote openapi.json (2 paths)</div>
@@ -218,7 +218,7 @@ Annotation tags</h2>
 <div class="line">  }</div>
 <div class="line">}</div>
 </div><!-- fragment --><p>Re-run the command whenever the annotations change. The server does not generate the file itself.</p>
-<h1><a class="anchor" id="autotoc_md512"></a>
+<h1><a class="anchor" id="autotoc_md476"></a>
 3. Serve the UI</h1>
 <div class="fragment"><div class="line"><span class="keywordtype">void</span> <a class="code hl_function" href="../../d0/d77/sys_2app_2app_8h.html#a10cd19026940e0c4631093aa86cd041f">cwist_app_enable_swagger</a>(<a class="code hl_struct" href="../../dc/da0/structcwist__app.html">cwist_app</a> *app, <span class="keyword">const</span> <span class="keywordtype">char</span> *<a class="code hl_variable" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">mount_path</a>,</div>
 <div class="line">                              <span class="keyword">const</span> <span class="keywordtype">char</span> *<a class="code hl_variable" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">openapi_json_path</a>);</div>
