@@ -154,6 +154,58 @@ cwist_error_t cwist_redis_pool_command_argv(cwist_redis_pool_t *pool, size_t arg
                                             char **out, size_t *out_len);
 /** @} */
 
+/**
+ * @brief Run one binary-safe pooled command under a single deadline.
+ *
+ * One CLOCK_MONOTONIC budget of @p timeout_ms covers
+ * waiting for a free pool connection, reconnecting a discarded connection,
+ * writing the request, and reading the complete reply. The pool's legacy
+ * blocking APIs keep their unbounded behavior; pool creation still performs
+ * blocking DNS and connects.
+ *
+ * Connection safety: an idle connection with buffered or readable bytes, a
+ * hang-up, or a previous failure is discarded before use and replaced by a
+ * new connection to the peer address resolved by cwist_redis_pool_create()
+ * (no DNS at request time). Once any request byte has been written the
+ * command is never retried; on timeout, transport error, or malformed reply
+ * the connection is closed so a late reply can never be read by a later
+ * caller. SIGPIPE is not raised. Reply parsing is strict RESP2 with limits
+ * (8 nesting levels, 65536 nodes, 8 MiB per bulk string, 16 MiB of payload,
+ * 8 KiB status/header lines).
+ *
+ * Replacement connections start fresh: AUTH, SELECT, HELLO and other
+ * per-connection state are not replayed. Pools used with this API must not
+ * rely on such state. Legacy pooled calls may also receive a fresh connection
+ * after a timed call discards a socket. Use a dedicated default-state pool.
+ *
+ * Reply types follow cwist_redis_reply_t. A null bulk string is '$' with
+ * @c str == NULL and @c integer == -1; a null array is '*' with
+ * @c elements == 0 and @c integer == -1. Nested '-' elements are data.
+ *
+ * The pool must have been created by the calling process (a pool inherited
+ * across fork() is rejected without touching it) and must not be destroyed
+ * concurrently with this call.
+ *
+ * @param pool       Pool from cwist_redis_pool_create().
+ * @param argc       Number of arguments (1 .. 1048576).
+ * @param argv       Argument pointers; an entry may be NULL only if its length is 0.
+ * @param argv_lens  Byte length of each argument (frame limited to 512 MiB).
+ * @param timeout_ms Total budget in milliseconds; must be positive.
+ * @param reply      Out: reply tree on success (free with cwist_redis_reply_free());
+ *                   always set to NULL on failure.
+ * @return CWIST_ERR_INT16 error whose @c err_i16 is 0 on success or a negative
+ *         errno: -EINVAL invalid argument or timeout 0; -EPERM pool inherited
+ *         from another process; -ETIMEDOUT budget exhausted; -EIO connect,
+ *         send, or receive failure, or peer EOF; -EPROTO malformed or
+ *         over-limit reply; -EBADMSG top-level Redis error reply (the
+ *         connection stays in sync and reusable); -ENOMEM allocation failure.
+ */
+cwist_error_t cwist_redis_pool_command_argv_reply_timeout(cwist_redis_pool_t *pool, size_t argc,
+                                                          const void *const *argv,
+                                                          const size_t *argv_lens,
+                                                          unsigned timeout_ms,
+                                                          cwist_redis_reply_t **reply);
+
 #ifdef __cplusplus
 }
 #endif

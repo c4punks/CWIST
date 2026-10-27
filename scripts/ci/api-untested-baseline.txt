@@ -169,11 +169,9 @@ cwist_redis_auth
 cwist_redis_command
 cwist_redis_command_argv_reply
 cwist_redis_expire
-cwist_redis_pool_command_argv
 cwist_redis_pool_publish
 cwist_redis_pool_setex
 cwist_redis_publish
-cwist_redis_reply_free
 cwist_redis_select
 cwist_redis_subscribe
 cwist_reg_ptr
