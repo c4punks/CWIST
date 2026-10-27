@@ -9,6 +9,8 @@
 #include <cwist/sys/app/app.h>
 #include <cwist/sys/app/waf.h>
 #include <cwist/security/jwt/jwt.h>
+#include <cwist/net/redis/cwist_redis.h>
+#include <stdbool.h>
 
 /**
  * @brief Request ID middleware.
@@ -25,7 +27,36 @@ cwist_middleware_func cwist_mw_access_log(cwist_log_format_t format);
 /** @brief Fixed-window rate limiter middleware (per-IP). */
 cwist_middleware_func cwist_mw_rate_limit_ip(int requests_per_minute);
 
-/** @brief Reset the internal rate-limit IP bucket table (test helper). */
+/** @brief Redis-backed rate limiter configuration. Strings are copied. */
+typedef struct {
+    cwist_redis_pool_t *pool; /**< Borrowed; must outlive all middleware calls. */
+    int requests_per_minute; /**< Positive shared limit per IP and window. */
+    const char *key_prefix;  /**< Default "cwist:rl:"; at most 128 bytes. */
+    unsigned timeout_ms;    /**< Total Redis I/O budget; zero selects 50 ms, max 60000. */
+    bool fail_closed;        /**< False: allow on backend error; true: return 503. */
+} cwist_rate_limit_redis_cfg_t;
+
+/**
+ * @brief Shared per-IP 60-second window using one atomic Redis Lua command.
+ *
+ * Uses the socket peer, never forwarded headers. A rejected request returns
+ * 429 with Retry-After: 60. Backend errors and missing peer addresses follow
+ * fail_closed. The first backend failure per configuration in each process
+ * writes its error code and policy to stderr (no keys or credentials).
+ * No local fallback counter is used. Requests do not extend TTL.
+ * Use a dedicated pool on DB 0, with the default user and no AUTH.
+ *
+ * Create the pool separately in every serving process after fork.
+ * Pool creation and DNS are blocking; timeout_ms bounds request-time pool wait and I/O.
+ * Use cwist_app_listen_ex() with one worker or CWIST_WORKERS=1, so the
+ * application listener does not fork the initialized pool.
+ * Do not destroy the pool while calls may still run. Eight distinct immutable
+ * configurations are supported per process; equal configurations reuse a slot.
+ * @return Middleware, or NULL for invalid configuration or exhausted slots.
+ */
+cwist_middleware_func cwist_mw_rate_limit_ip_redis(const cwist_rate_limit_redis_cfg_t *cfg);
+
+/** @brief Reset the process-local IP table; Redis configs and keys are unchanged. */
 void cwist_mw_rate_limit_reset(void);
 
 /** @brief Prometheus metrics collection middleware. */

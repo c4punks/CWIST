@@ -121,6 +121,9 @@ test_middleware_ctx
 test_builtin_mw_chain
 test_proto_desc
 test_rate_limit
+/test_rate_limit_redis
+/test_redis_timeout
+/test_redis_frame
 test_redis
 test_scheduler
 test_secure_headers

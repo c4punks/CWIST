@@ -80,3 +80,25 @@ jobs:
 
     - name: Test requests through 400 address changes
       run: make -j"$(nproc)" http3-migration-e2e CWIST_WEBRTC=0 PYTHON="$RUNNER_TEMP/h3-migration/bin/python"
+
+  redis-rate-limit:
+    name: Shared Redis rate limit (two processes)
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      with:
+        submodules: recursive
+
+    - name: Install build dependencies and isolated Redis
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y cmake libcurl4-openssl-dev libnghttp2-dev libbrotli-dev libzstd-dev redis-server
+
+    - name: Test shared window, failures and bounded Redis calls
+      run: |
+        make -j"$(nproc)" SANITIZE=address,undefined WERROR=1 CWIST_HTTP3=0 CWIST_WEBRTC=0 redis-rate-limit-e2e test_redis_timeout test_redis_frame
+      env:
+        ASAN_OPTIONS: detect_leaks=1:abort_on_error=1:halt_on_error=1
+        UBSAN_OPTIONS: halt_on_error=1:abort_on_error=1

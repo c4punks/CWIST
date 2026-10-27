@@ -53,6 +53,84 @@ Limits the number of requests per minute from a single IP.
 cwist_app_use(app, cwist_mw_rate_limit_ip(60));
 ```
 
+### Redis-backed shared rate limiter
+
+The local limiter above keeps its buckets in one process. To share one
+limit across independent server processes, give each process its own
+**dedicated pool on DB 0, with the default user and no AUTH**, and use the
+same prefix and limit. Replacement connections start fresh: AUTH, SELECT,
+HELLO and other connection state are not replayed. Legacy calls that share
+this pool may also receive fresh connections after a timed call discards one.
+Use one prefix per rate policy: different limits with the same prefix
+share one counter, not independent buckets.
+
+```c
+cwist_redis_pool_t *pool = cwist_redis_pool_create("127.0.0.1", 6379, 4);
+cwist_rate_limit_redis_cfg_t cfg = {
+    .pool = pool,
+    .requests_per_minute = 60,
+    .key_prefix = "my-service:rate:",
+    .timeout_ms = 50,
+    .fail_closed = true,
+};
+cwist_middleware_func limit = cwist_mw_rate_limit_ip_redis(&cfg);
+/* Inside main: fail startup if registration did not succeed. */
+if (!pool || !limit) return 1;
+cwist_app_use(app, limit);
+/* One process per instance: do not fork a live pool. */
+cwist_app_listen_ex(app, 8080, 1, -1);
+cwist_redis_pool_destroy(pool);
+```
+
+Each key is `prefix + peer-IP`. One Lua EVAL increments the counter and
+sets a 60-second expiry on the first request. It repairs missing expiry
+without extending a running window. The window starts at the first hit,
+not a process-local clock boundary. Allowed and rejected attempts count.
+Over-limit replies are 429 with a conservative `Retry-After: 60`.
+
+With `fail_closed = false` (default), backend errors allow the request.
+With `true`, errors return 503, not 429. This includes timeout, pool
+exhaustion, malformed replies, and a missing socket peer. A failed command
+is never retried: it might already have incremented the counter. There is
+no local fallback counter.
+
+The request-time budget covers pool wait, cached-peer reconnect, write,
+and reply I/O. Zero selects 50 ms; the maximum is 60000 ms. This is a
+blocking middleware, not an async reactor call. Scheduling delays are not
+a real-time guarantee. Initial pool creation and DNS are outside this
+budget. The first backend failure per config and process emits a warning
+with the error code and policy to stderr. Keys and credentials are not logged.
+The Redis command budget does not bound application logging.
+Failed initial pool creation or invalid config returns NULL.
+
+Create pools after fork, separately in each serving process. Inherited
+pools are rejected by the timed API. Keep the pool alive until every call
+has stopped, then destroy it. Do not register a pre-fork pool for automatic
+`CWIST_WORKERS` children; this API does not add a worker-start hook. Eight
+distinct immutable configs fit per process; equal configs reuse a slot.
+Prefixes are copied and limited to 128 bytes.
+
+Only the socket peer is used. Forwarded headers cannot choose the key.
+A request without a connected TCP peer fd (for example, a QUIC request)
+follows the missing-peer failure policy; this API does not extract QUIC
+path metadata. IPv6 keys use the full address (/128), not a /64 prefix;
+clients that rotate IPv6 addresses obtain separate buckets.
+Behind a reverse proxy, this limits the proxy address unless a trusted
+upstream preserves client source addresses. Redis RESP2 is plaintext: use
+loopback, a private network, or a separate TLS tunnel. The default user's
+ACL must allow EVAL, INCR, PTTL, and PEXPIRE. A server requiring AUTH makes
+every call fail; the configured failure policy then applies to every request.
+Eviction, failover, or external deletion
+can reset counters; this is not a global consistency guarantee across
+Redis data loss.
+
+Run `make redis-rate-limit-e2e` with redis-server installed. The runner
+starts its own loopback Redis and never silently skips. Two C processes
+create separate pools and invoke the middleware with real TCP peer fds.
+Their 40 attempts share seven admissions. The test also checks TTL,
+expiry, namespaces, and failure policies. The normal unit target skips
+only the live-Redis part when no test port is supplied.
+
 ### CORS Middleware
 Enables Cross-Origin Resource Sharing (CORS) support.
 - Adds `Access-Control-Allow-Origin: *` to all responses.
