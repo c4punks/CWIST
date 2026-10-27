@@ -108,10 +108,10 @@ $(document).ready(function(){initNavTree('db/dc5/md_docs_2api_2websocket.html','
   <div class="headertitle"><div class="title">WebSocket API</div></div>
 </div><!--header-->
 <div class="contents">
-<div class="textblock"><p><a class="anchor" id="autotoc_md227"></a> The WebSocket module allows upgrading standard HTTP connections to persistent WebSocket connections.</p>
-<h1><a class="anchor" id="autotoc_md228"></a>
+<div class="textblock"><p><a class="anchor" id="autotoc_md228"></a> The WebSocket module allows upgrading standard HTTP connections to persistent WebSocket connections.</p>
+<h1><a class="anchor" id="autotoc_md229"></a>
 Functions</h1>
-<h2><a class="anchor" id="autotoc_md229"></a>
+<h2><a class="anchor" id="autotoc_md230"></a>
 &lt;tt&gt;cwist_websocket_upgrade&lt;/tt&gt;</h2>
 <p>Upgrades an incoming HTTP request to a WebSocket connection. </p><div class="fragment"><div class="line"><a class="code hl_struct" href="../../d9/d2c/structcwist__websocket.html">cwist_websocket</a> *<a class="code hl_function" href="../../dd/dec/net_2websocket_2websocket_8h.html#a25531b0d899d92a6618a28ed0b5482d0">cwist_websocket_upgrade</a>(<a class="code hl_struct" href="../../dd/d68/structcwist__http__request.html">cwist_http_request</a> *req, <span class="keywordtype">int</span> client_fd);</div>
 <div class="ttc" id="anet_2websocket_2websocket_8h_html_a25531b0d899d92a6618a28ed0b5482d0"><div class="ttname"><a href="../../dd/dec/net_2websocket_2websocket_8h.html#a25531b0d899d92a6618a28ed0b5482d0">cwist_websocket_upgrade</a></div><div class="ttdeci">cwist_websocket * cwist_websocket_upgrade(cwist_http_request *req, int client_fd)</div><div class="ttdoc">Upgrade a standard HTTP request to a WebSocket connection.</div><div class="ttdef"><b>Definition</b> <a href="../../d4/de6/websocket_8c_source.html#l00119">websocket.c:119</a></div></div>
@@ -122,7 +122,7 @@ Functions</h1>
 <li>Automatically handles the handshake and sends the <code>101 Switching Protocols</code> response.</li>
 <li><b>Ownership:</b> The returned pointer is owned by the caller and must be destroyed with <code>cwist_websocket_destroy</code>.</li>
 </ul>
-<h2><a class="anchor" id="autotoc_md230"></a>
+<h2><a class="anchor" id="autotoc_md231"></a>
 &lt;tt&gt;cwist_websocket_receive&lt;/tt&gt;</h2>
 <p>Receives a single WebSocket frame. </p><div class="fragment"><div class="line"><a class="code hl_struct" href="../../db/d40/structcwist__ws__frame.html">cwist_ws_frame</a> *<a class="code hl_function" href="../../dd/dec/net_2websocket_2websocket_8h.html#a7c4cc8a5486ce33aab2199a8f5ec82d0">cwist_websocket_receive</a>(<a class="code hl_struct" href="../../d9/d2c/structcwist__websocket.html">cwist_websocket</a> *ws);</div>
 <div class="ttc" id="anet_2websocket_2websocket_8h_html_a7c4cc8a5486ce33aab2199a8f5ec82d0"><div class="ttname"><a href="../../dd/dec/net_2websocket_2websocket_8h.html#a7c4cc8a5486ce33aab2199a8f5ec82d0">cwist_websocket_receive</a></div><div class="ttdeci">cwist_ws_frame * cwist_websocket_receive(cwist_websocket *ws)</div><div class="ttdoc">Receive a frame, blocking until data arrives or the socket closes.</div><div class="ttdef"><b>Definition</b> <a href="../../d4/de6/websocket_8c_source.html#l00217">websocket.c:217</a></div></div>
@@ -132,13 +132,13 @@ Functions</h1>
 <li>Returns <code>NULL</code> if the connection is closed or an error occurs.</li>
 <li><b>Ownership:</b> The returned frame must be freed with <code>cwist_websocket_frame_destroy</code>.</li>
 </ul>
-<h2><a class="anchor" id="autotoc_md231"></a>
+<h2><a class="anchor" id="autotoc_md232"></a>
 &lt;tt&gt;cwist_websocket_send&lt;/tt&gt;</h2>
 <p>Sends data as a WebSocket frame. </p><div class="fragment"><div class="line"><span class="keywordtype">int</span> <a class="code hl_function" href="../../dd/dec/net_2websocket_2websocket_8h.html#a84b014c343b059d06c899fd2b9285966">cwist_websocket_send</a>(<a class="code hl_struct" href="../../d9/d2c/structcwist__websocket.html">cwist_websocket</a> *ws, <a class="code hl_enumeration" href="../../dd/dec/net_2websocket_2websocket_8h.html#a8095ae87a6487e56281d92a11c419254">cwist_ws_opcode_t</a> opcode, <span class="keyword">const</span> <a class="code hl_variable" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">uint8_t</a> *data, <span class="keywordtype">size_t</span> len);</div>
 <div class="ttc" id="anet_2websocket_2websocket_8h_html_a8095ae87a6487e56281d92a11c419254"><div class="ttname"><a href="../../dd/dec/net_2websocket_2websocket_8h.html#a8095ae87a6487e56281d92a11c419254">cwist_ws_opcode_t</a></div><div class="ttdeci">cwist_ws_opcode_t</div><div class="ttdef"><b>Definition</b> <a href="../../dd/dec/net_2websocket_2websocket_8h_source.html#l00013">websocket.h:13</a></div></div>
 <div class="ttc" id="anet_2websocket_2websocket_8h_html_a84b014c343b059d06c899fd2b9285966"><div class="ttname"><a href="../../dd/dec/net_2websocket_2websocket_8h.html#a84b014c343b059d06c899fd2b9285966">cwist_websocket_send</a></div><div class="ttdeci">int cwist_websocket_send(cwist_websocket *ws, cwist_ws_opcode_t opcode, const uint8_t *data, size_t len)</div><div class="ttdoc">Send a frame with the specified opcode and payload.</div><div class="ttdef"><b>Definition</b> <a href="../../d4/de6/websocket_8c_source.html#l00398">websocket.c:398</a></div></div>
 <div class="ttc" id="aotel_8c_html_a856fa22aef923b4a345805d81580aebe"><div class="ttname"><a href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">cap</a></div><div class="ttdeci">size_t cap</div><div class="ttdef"><b>Definition</b> <a href="../../d3/db2/otel_8c_source.html#l00056">otel.c:56</a></div></div>
-</div><!-- fragment --><h1><a class="anchor" id="autotoc_md232"></a>
+</div><!-- fragment --><h1><a class="anchor" id="autotoc_md233"></a>
 Opcode Types</h1>
 <ul>
 <li><code>CWIST_WS_FRAME_TEXT</code>: Text data (UTF-8)</li>
@@ -146,7 +146,7 @@ Opcode Types</h1>
 <li><code>CWIST_WS_FRAME_CLOSE</code>: Connection close</li>
 <li><code>CWIST_WS_FRAME_PING</code> / <code>CWIST_WS_FRAME_PONG</code>: Heartbeat</li>
 </ul>
-<h1><a class="anchor" id="autotoc_md233"></a>
+<h1><a class="anchor" id="autotoc_md234"></a>
 Integration with &lt;tt&gt;cwist_app&lt;/tt&gt;</h1>
 <p>Use <code>cwist_app_ws</code> to register a WebSocket route.</p>
 <div class="fragment"><div class="line"><span class="keywordtype">void</span> <a class="code hl_variable" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">my_ws_handler</a>(<a class="code hl_struct" href="../../d9/d2c/structcwist__websocket.html">cwist_websocket</a> *ws) {</div>
@@ -155,11 +155,11 @@ Integration with &lt;tt&gt;cwist_app&lt;/tt&gt;</h1>
 <div class="line"> </div>
 <div class="line"><a class="code hl_function" href="../../d0/d77/sys_2app_2app_8h.html#ae4d097319d239ddd750eebffd027ccef">cwist_app_ws</a>(app, <span class="stringliteral">&quot;/chat&quot;</span>, <a class="code hl_variable" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">my_ws_handler</a>);</div>
 <div class="ttc" id="asys_2app_2app_8h_html_ae4d097319d239ddd750eebffd027ccef"><div class="ttname"><a href="../../d0/d77/sys_2app_2app_8h.html#ae4d097319d239ddd750eebffd027ccef">cwist_app_ws</a></div><div class="ttdeci">void cwist_app_ws(cwist_app *app, const char *path, cwist_ws_handler_func handler)</div><div class="ttdoc">Register a WebSocket upgrade endpoint with default options.</div><div class="ttdef"><b>Definition</b> <a href="../../df/d7f/app_8c_source.html#l02309">app.c:2309</a></div></div>
-</div><!-- fragment --><h1><a class="anchor" id="autotoc_md234"></a>
+</div><!-- fragment --><h1><a class="anchor" id="autotoc_md235"></a>
 Async (C1M) WebSocket API</h1>
 <p><em>Header:</em> <code>&lt;<a class="el" href="../../d6/dad/websocket__async_8h.html" title="Reactor-driven, callback-shaped non-blocking WebSocket API (C1M mode).">cwist/net/websocket/websocket_async.h</a>&gt;</code></p>
 <p>In C1M mode (<code>CWIST_C1M_MODE=1</code>) the reactor watches sockets and delivers each complete message through a callback instead of blocking in <code>cwist_websocket_receive</code>. Use <code>cwist_app_ws_async</code> to register a route on this path.</p>
-<h2><a class="anchor" id="autotoc_md235"></a>
+<h2><a class="anchor" id="autotoc_md236"></a>
 &lt;tt&gt;cwist_app_ws_async&lt;/tt&gt;</h2>
 <div class="fragment"><div class="line"><span class="keywordtype">void</span> <a class="code hl_function" href="../../d0/d77/sys_2app_2app_8h.html#ab9f44f80c861f66b8d9647cff0d675a3">cwist_app_ws_async</a>(<a class="code hl_struct" href="../../dc/da0/structcwist__app.html">cwist_app</a> *app, <span class="keyword">const</span> <span class="keywordtype">char</span> *path,</div>
 <div class="line">                        <a class="code hl_typedef" href="../../d6/dad/websocket__async_8h.html#ab124d32a1729a18003160bace463d30e">cwist_ws_on_message_t</a> on_message, <span class="keywordtype">void</span> *user_data);</div>
@@ -167,26 +167,26 @@ Async (C1M) WebSocket API</h1>
 <div class="ttc" id="asys_2app_2app_8h_html_ab9f44f80c861f66b8d9647cff0d675a3"><div class="ttname"><a href="../../d0/d77/sys_2app_2app_8h.html#ab9f44f80c861f66b8d9647cff0d675a3">cwist_app_ws_async</a></div><div class="ttdeci">void cwist_app_ws_async(cwist_app *app, const char *path, cwist_ws_on_message_t on_message, void *user_data)</div><div class="ttdoc">Register a callback-shaped non-blocking WebSocket endpoint (C1M mode).</div><div class="ttdef"><b>Definition</b> <a href="../../df/d7f/app_8c_source.html#l02330">app.c:2330</a></div></div>
 <div class="ttc" id="awebsocket__async_8h_html_ab124d32a1729a18003160bace463d30e"><div class="ttname"><a href="../../d6/dad/websocket__async_8h.html#ab124d32a1729a18003160bace463d30e">cwist_ws_on_message_t</a></div><div class="ttdeci">void(* cwist_ws_on_message_t)(cwist_websocket_async *ws, cwist_ws_frame *frame, void *user_data)</div><div class="ttdoc">Callback invoked for each complete WebSocket message on the C1M path.</div><div class="ttdef"><b>Definition</b> <a href="../../d6/dad/websocket__async_8h_source.html#l00032">websocket_async.h:32</a></div></div>
 </div><!-- fragment --><p> Registers a reactor-driven WebSocket route. For each complete message the reactor invokes <code>on_message(ws, frame, user_data)</code> on the reactor thread. <code>user_data</code> is an opaque pointer passed through unchanged; use it for per-handler state (broadcast list, room context, etc.).</p>
-<h2><a class="anchor" id="autotoc_md236"></a>
+<h2><a class="anchor" id="autotoc_md237"></a>
 &lt;tt&gt;cwist_ws_on_message_t&lt;/tt&gt;</h2>
 <div class="fragment"><div class="line"><span class="keyword">typedef</span> <a class="code hl_variable" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">void</a> (*<a class="code hl_typedef" href="../../d6/dad/websocket__async_8h.html#ab124d32a1729a18003160bace463d30e">cwist_ws_on_message_t</a>)(<a class="code hl_typedef" href="../../d6/dad/websocket__async_8h.html#a4c8280877a537556488ba90ba5ec1716">cwist_websocket_async</a> *ws,</div>
 <div class="line">                                      <a class="code hl_struct" href="../../db/d40/structcwist__ws__frame.html">cwist_ws_frame</a> *<a class="code hl_variable" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">frame</a>,</div>
 <div class="line">                                      <span class="keywordtype">void</span> *user_data);</div>
 <div class="ttc" id="awebsocket__async_8h_html_a4c8280877a537556488ba90ba5ec1716"><div class="ttname"><a href="../../d6/dad/websocket__async_8h.html#a4c8280877a537556488ba90ba5ec1716">cwist_websocket_async</a></div><div class="ttdeci">struct cwist_websocket_async cwist_websocket_async</div><div class="ttdef"><b>Definition</b> <a href="../../d6/dad/websocket__async_8h_source.html#l00022">websocket_async.h:22</a></div></div>
 </div><!-- fragment --><p> Callback invoked once per complete message. The callback <b>must</b> release <code>frame</code> with <code><a class="el" href="../../dd/dec/net_2websocket_2websocket_8h.html#ad0076021ccbab9a5990c269dca59df99" title="Destroy a frame.">cwist_websocket_frame_destroy()</a></code>. It is safe to call <code><a class="el" href="../../d6/dad/websocket__async_8h.html#a3029917957e6cb47adc4d97dae14c7d7" title="Serialize and send one FIN-terminated frame without blocking.">cwist_websocket_async_send()</a></code> and <code><a class="el" href="../../d6/dad/websocket__async_8h.html#a58cd0931439fe5825a93da77fc25542e" title="Initiate the close handshake without blocking.">cwist_websocket_async_close()</a></code> from inside this callback.</p>
-<h2><a class="anchor" id="autotoc_md237"></a>
+<h2><a class="anchor" id="autotoc_md238"></a>
 &lt;tt&gt;cwist_websocket_async_send&lt;/tt&gt;</h2>
 <div class="fragment"><div class="line"><span class="keywordtype">int</span> <a class="code hl_function" href="../../d6/dad/websocket__async_8h.html#a3029917957e6cb47adc4d97dae14c7d7">cwist_websocket_async_send</a>(cwist_websocket_async *ws,</div>
 <div class="line">                               <a class="code hl_enumeration" href="../../dd/dec/net_2websocket_2websocket_8h.html#a8095ae87a6487e56281d92a11c419254">cwist_ws_opcode_t</a> opcode,</div>
 <div class="line">                               <span class="keyword">const</span> <a class="code hl_variable" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">uint8_t</a> *data, <span class="keywordtype">size_t</span> len);</div>
 <div class="ttc" id="awebsocket__async_8h_html_a3029917957e6cb47adc4d97dae14c7d7"><div class="ttname"><a href="../../d6/dad/websocket__async_8h.html#a3029917957e6cb47adc4d97dae14c7d7">cwist_websocket_async_send</a></div><div class="ttdeci">int cwist_websocket_async_send(cwist_websocket_async *ws, cwist_ws_opcode_t opcode, const uint8_t *data, size_t len)</div><div class="ttdoc">Serialize and send one FIN-terminated frame without blocking.</div><div class="ttdef"><b>Definition</b> <a href="../../d4/d57/websocket__async_8c_source.html#l00710">websocket_async.c:710</a></div></div>
 </div><!-- fragment --><p> Sends one FIN-terminated frame without blocking. On <code>EAGAIN</code> or a short write the remainder is parked on a one-shot reactor write slot and drained when the socket becomes writable. Returns <code>0</code> on success, <code>-1</code> on failure.</p>
-<h2><a class="anchor" id="autotoc_md238"></a>
+<h2><a class="anchor" id="autotoc_md239"></a>
 &lt;tt&gt;cwist_websocket_async_close&lt;/tt&gt;</h2>
 <div class="fragment"><div class="line"><span class="keywordtype">void</span> <a class="code hl_function" href="../../d6/dad/websocket__async_8h.html#a58cd0931439fe5825a93da77fc25542e">cwist_websocket_async_close</a>(cwist_websocket_async *ws);</div>
 <div class="ttc" id="awebsocket__async_8h_html_a58cd0931439fe5825a93da77fc25542e"><div class="ttname"><a href="../../d6/dad/websocket__async_8h.html#a58cd0931439fe5825a93da77fc25542e">cwist_websocket_async_close</a></div><div class="ttdeci">void cwist_websocket_async_close(cwist_websocket_async *ws)</div><div class="ttdoc">Initiate the close handshake without blocking.</div><div class="ttdef"><b>Definition</b> <a href="../../d4/d57/websocket__async_8c_source.html#l00725">websocket_async.c:725</a></div></div>
 </div><!-- fragment --><p> Initiates the close handshake without blocking. Queues a CLOSE frame and schedules connection cleanup. Safe to call from inside the <code>on_message</code> callback; <code>NULL</code> is ignored.</p>
-<h1><a class="anchor" id="autotoc_md239"></a>
+<h1><a class="anchor" id="autotoc_md240"></a>
 GraphQL subscriptions (graphql-ws)</h1>
 <blockquote class="doxtable">
 <p>&zwj;Supported since v3.8. The feature is opt-in only and changes no existing behavior when unused. </p>

@@ -108,8 +108,8 @@ $(document).ready(function(){initNavTree('db/de3/md_docs_2deployment_2wasmtime-a
   <div class="headertitle"><div class="title">Deploy the WASI 0.2 example with Wasmtime</div></div>
 </div><!--header-->
 <div class="contents">
-<div class="textblock"><p><a class="anchor" id="autotoc_md284"></a> This walkthrough runs the edge-KV example as a single-instance Wasmtime appliance: a versioned <code>app.wasm</code> artifact, a separate writable state directory, and a host process that owns its lifetime. It covers build, startup, verification, restart, backup, and rollback on a POSIX host (Linux or macOS). It does not install a system service.</p>
-<h1><a class="anchor" id="autotoc_md285"></a>
+<div class="textblock"><p><a class="anchor" id="autotoc_md285"></a> This walkthrough runs the edge-KV example as a single-instance Wasmtime appliance: a versioned <code>app.wasm</code> artifact, a separate writable state directory, and a host process that owns its lifetime. It covers build, startup, verification, restart, backup, and rollback on a POSIX host (Linux or macOS). It does not install a system service.</p>
+<h1><a class="anchor" id="autotoc_md286"></a>
 Scope and safety</h1>
 <p>This is a deployment example, <b>not a production-ready database service</b>. Use disposable data on an isolated development host or network:</p>
 <ul>
@@ -120,7 +120,7 @@ Scope and safety</h1>
 <li>Startup can fall back to an empty database when the file is absent or cannot be loaded. Do not use <code>GET /</code> as proof of durable-data integrity. If expected data is missing, stop writes and investigate the blob/backup.</li>
 </ul>
 <p>Cloudflare Workers is <b>not</b> a drop-in host for this binary. It is a <code>wasi:cli/run</code> command that binds sockets and uses WASI filesystem calls. <code>wasmtime serve</code> expects <code>wasi:http/proxy</code>, a different interface. A Workers port needs a host adapter and a different request/persistence boundary; the blob serialization APIs alone do not supply one.</p>
-<h1><a class="anchor" id="autotoc_md286"></a>
+<h1><a class="anchor" id="autotoc_md287"></a>
 1. Build a known revision</h1>
 <p>Install Git, make, curl, Python 3, wasi-sdk with <code>wasm32-wasip2</code> support, and Wasmtime with component-model and <code>wasi:sockets</code> support. Obtain tools from the official <a href="https://github.com/WebAssembly/wasi-sdk/releases">wasi-sdk releases</a> and <a href="https://github.com/bytecodealliance/wasmtime/releases">Wasmtime releases</a>, verify the release artifacts, and choose the host architecture correctly. Use a maintained, security-patched Wasmtime release for any real deployment. The repository's CI compatibility baseline is wasi-sdk 25.0 / Wasmtime 25.0.0; the commands below were also exercised with wasi-sdk 25.0 / Wasmtime 48.0.2 on macOS arm64.</p>
 <p>In a fresh checkout, select the reviewed <code>dev</code> commit you intend to deploy (the release branch does not necessarily contain this example):</p>
@@ -138,7 +138,7 @@ Scope and safety</h1>
 <div class="line">./example/wasip2-kv/build.sh</div>
 </div><!-- fragment --><p>Use a clean checkout when changing the SDK, source revision, or compiler flags. <code>build.sh</code> reuses an existing library archive rather than rebuilding it. It links the guest with <code>-Wl,-z,stack-size=1048576</code>; retain this flag when writing your own link command. This is the guest C stack in linear memory, not Wasmtime's native stack setting. See the <a class="el" href="../../d6/d26/md_docs_2api_2wasi.html">WASI reference</a>.</p>
 <p><code>make wasip2-smoke</code> uses port 18099. Ensure both 18099 and the example's 18100 are unused. The example's port is compiled into <code><a class="el" href="../../df/d7f/app_8c.html">app.c</a></code> as <code>KV_PORT</code>; setting a host <code>PORT</code> environment variable does not reconfigure the binary.</p>
-<h1><a class="anchor" id="autotoc_md287"></a>
+<h1><a class="anchor" id="autotoc_md288"></a>
 2. Separate the artifact from state</h1>
 <p>For this disposable walkthrough, create a fresh private appliance directory. For a long-lived appliance, provision an equivalent directory owned by a non-root service account on persistent storage instead of a temporary path.</p>
 <div class="fragment"><div class="line">umask 077</div>
@@ -155,7 +155,7 @@ Scope and safety</h1>
 <div class="line">p = pathlib.Path(sys.argv[1])</div>
 <div class="line">print(hashlib.sha256(p.read_bytes()).hexdigest(), p)</div>
 <div class="line">PY</div>
-</div><!-- fragment --><h1><a class="anchor" id="autotoc_md288"></a>
+</div><!-- fragment --><h1><a class="anchor" id="autotoc_md289"></a>
 3. Start and verify</h1>
 <div class="fragment"><div class="line">start() {</div>
 <div class="line">    &quot;$WASMTIME&quot; run -S preview2=y -S tcp=y -S udp=n \</div>
@@ -188,7 +188,7 @@ Scope and safety</h1>
 <div class="line">    -d &#39;{&quot;name&quot;:&quot;edge&quot;,&quot;qty&quot;:7}&#39; http://127.0.0.1:18100/items</div>
 <div class="line">curl --fail --show-error --silent --max-time 5 http://127.0.0.1:18100/items</div>
 </div><!-- fragment --><p>The POST returns <code>{"ok":true,"id":1}</code> for a fresh database. The list contains <code>{"id":"1","name":"edge","qty":"7"}</code>: this example's query callback encodes SQLite values as JSON strings. Check the status and returned content; do not blindly retry a failed POST.</p>
-<h1><a class="anchor" id="autotoc_md289"></a>
+<h1><a class="anchor" id="autotoc_md290"></a>
 4. Restart, back up, and restore</h1>
 <p>Stop incoming writes before stopping the process. Stopping Wasmtime does not invoke a graceful guest shutdown or flush an in-flight mutation. The example writes its blob during POST; stop only after requests have finished.</p>
 <div class="fragment"><div class="line">stop</div>
@@ -206,7 +206,7 @@ Scope and safety</h1>
 <div class="line">start</div>
 </div><!-- fragment --><p><code>MODULE</code> still names the original release artifact. Repeat readiness and <code>GET /items</code>, compare the returned rows with the expected data, and call <code>stop</code> when finished. The backup and original state remain untouched.</p>
 <p>For an upgrade, first stop writes and the old process, preserve an offline backup, and select a separately built and verified <code>MODULE</code>. Start one process against the intended state and verify the records. Roll back the module only if its schema is compatible; otherwise restore the matching backup into a new state directory and explicitly accept losing writes made after that backup. Never start old and new versions concurrently on the same blob.</p>
-<h1><a class="anchor" id="autotoc_md290"></a>
+<h1><a class="anchor" id="autotoc_md291"></a>
 Before adapting this for production</h1>
 <p>Provide authentication, TLS termination, request limits, protected ingress, least-privilege network policy, resource limits, monitoring, and host process supervision. The database persistence adapter also needs atomic writes, error propagation, a fail-closed load policy, and a defined crash-recovery contract. Backup retention and schema migration are host/application concerns. The current example does not implement those controls.</p>
 <p>For runtime option semantics, see the official <a href="https://docs.wasmtime.dev/cli-options.html">Wasmtime CLI documentation</a> and the installed binary's <code>wasmtime run --help</code> / <code>wasmtime run -S help</code>. </p>

@@ -108,14 +108,14 @@ $(document).ready(function(){initNavTree('dd/dd4/md_docs_2ko_2durable-queue-gate
   <div class="headertitle"><div class="title">영속 큐 필수 게이트</div></div>
 </div><!--header-->
 <div class="contents">
-<div class="textblock"><p><a class="anchor" id="autotoc_md597"></a> <code>tests/test_durable_queue.c</code>는 Redis와 NATS JetStream에서 enqueue/claim/ack, nack 재전달, 가시성 타임아웃, 데드레터 동작을 다룹니다. 로컬 <code>make test</code> 실행에서는 서버가 없어도 선택 사항으로 남습니다.</p>
+<div class="textblock"><p><a class="anchor" id="autotoc_md599"></a> <code>tests/test_durable_queue.c</code>는 Redis와 NATS JetStream에서 enqueue/claim/ack, nack 재전달, 가시성 타임아웃, 데드레터 동작을 다룹니다. 로컬 <code>make test</code> 실행에서는 서버가 없어도 선택 사항으로 남습니다.</p>
 <p><code>CWIST_TEST_REQUIRE_DURABLE_QUEUE=1</code>이면 서버 부재, JetStream 사용 불가, 큐 팩토리 에러, 시나리오 실패가 모두 테스트 실패가 됩니다. 성공하려면 두 백엔드가 모든 시나리오를 실행해야 합니다. 설정하지 않거나, 비어 있거나, <code>0</code>이면 기존의 선택 동작을 유지하고, 그 밖의 비어 있지 않은 값은 엄격 모드를 켭니다. Redis 팩토리 에러는 선택 모드에서도 계속 실패로 처리됩니다.</p>
-<h1><a class="anchor" id="autotoc_md598"></a>
+<h1><a class="anchor" id="autotoc_md600"></a>
 로컬 실행</h1>
 <div class="fragment"><div class="line">make test_durable_queue</div>
 <div class="line">CWIST_TEST_REQUIRE_DURABLE_QUEUE=1 ./test_durable_queue</div>
 </div><!-- fragment --><p>이 바이너리는 기존 <code>CWIST_REDIS_HOST</code>, <code>CWIST_REDIS_PORT</code>, <code>CWIST_NATS_URL</code> 설정을 따릅니다. 테스트용 인스턴스만 가리키도록 하세요.</p>
-<h1><a class="anchor" id="autotoc_md599"></a>
+<h1><a class="anchor" id="autotoc_md601"></a>
 격리된 통합 게이트</h1>
 <p><code>redis-server</code>, <code>nats-server</code>, Python 3을 설치한 뒤 다음을 실행합니다.</p>
 <div class="fragment"><div class="line">make test_durable_queue</div>
@@ -133,7 +133,7 @@ $(document).ready(function(){initNavTree('dd/dd4/md_docs_2ko_2durable-queue-gate
 <li>명시적 선택 모드(<code>0</code>), 둘 다 없음: 두 건너뛰기 메시지와 함께 종료 코드 0.</li>
 </ol>
 <p>부정적인 결과는 정확히 종료 코드 1과 특정 진단을 요구하며, 크래시와 타임아웃은 인정하지 않습니다. 임시 데이터와 직접 띄운 자식 프로세스는 성공, 실패, INT, TERM 모두에서 정리됩니다. 로컬 게이트는 <code>FLUSHALL</code>, 외부 브로커 종료, 전역 설치, 프로덕션 큐 API 변경을 하지 않습니다.</p>
-<h1><a class="anchor" id="autotoc_md600"></a>
+<h1><a class="anchor" id="autotoc_md602"></a>
 CI</h1>
 <p><code>.github/workflows/durable-queue.yml</code>은 Ubuntu 러너에 체크섬으로 고정한 Redis 8.0.3과 NATS 2.12.3을 설치하고, 실제 테스트 바이너리를 빌드한 뒤, 도우미 테스트와 같은 일곱 모드 게이트를 실제로 실행합니다. 이 작업은 <code>contents: read</code> 권한만 요청하며 30분 제한이 있습니다. 이것은 기존 큐 시나리오를 테스트하는 것이며, 브로커 재시작 영속성이나 크래시 복구 의미를 테스트하지는 않습니다. </p>
 </div></div><!-- contents -->

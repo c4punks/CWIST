@@ -108,14 +108,14 @@ $(document).ready(function(){initNavTree('d7/dab/md_docs_2ko_2fixed-cache-status
   <div class="headertitle"><div class="title">FIXED 엔드포인트 캐싱: 현재 동작</div></div>
 </div><!--header-->
 <div class="contents">
-<div class="textblock"><p><a class="anchor" id="autotoc_md601"></a> <b>상태:</b> 알려진 문서/런타임 불일치. 조사 진행 중. <b>관련:</b> <a href="https://github.com/c4punks/CWIST/issues/25">이슈 #25</a>, ADR-0001 (초안 PR #85, <code>CWIST_ENDPOINT_PUBLIC_FIXED</code>).</p>
-<h1><a class="anchor" id="autotoc_md602"></a>
+<div class="textblock"><p><a class="anchor" id="autotoc_md603"></a> <b>상태:</b> 알려진 문서/런타임 불일치. 조사 진행 중. <b>관련:</b> <a href="https://github.com/c4punks/CWIST/issues/25">이슈 #25</a>, ADR-0001 (초안 PR #85, <code>CWIST_ENDPOINT_PUBLIC_FIXED</code>).</p>
+<h1><a class="anchor" id="autotoc_md604"></a>
 지금 런타임이 실제로 하는 일</h1>
 <p><code>CWIST_ENDPOINT_FIXED</code>는 <b>현재 리비전에서 자동 응답 캐시를 켜지 않습니다</b>. classic과 C1M 두 모드 모두에서 FIXED 라우트로 오는 모든 요청은 일반 라우팅을 거쳐 핸들러로 디스패치됩니다. <code><a class="el" href="../../de/d66/endpoint__opts_8h.html" title="Endpoint-level behavior flags for CWIST apps.">endpoint_opts.h</a></code>와 <code><a class="el" href="../../df/d72/api_2app_8md.html">docs/api/app.md</a></code>의 "응답을 RAM에 캐시하고 첫 히트 이후 즉시 응답한다"는 문구는 의도한 계약을 설명한 것이지 런타임 동작이 아닙니다.</p>
-<h1><a class="anchor" id="autotoc_md603"></a>
+<h1><a class="anchor" id="autotoc_md605"></a>
 근거</h1>
 <p>공개 TCP 관찰(이슈 #25 참고): FIXED 요청 16개가 핸들러를 16번 호출했습니다. keep-alive 요청 여덟 개와 새 연결 여덟 개였고, DYNAMIC 대조군과 독립적으로 미리 넣어 둔 캐시 응답이 있었으며, 지연 시간 기반 적응 학습은 억제한 상태였습니다. 이는 꼬리 지연에 대한 기여와 무관하게, 캐시가 전혀 채워지거나 사용되지 않는다는 것(채움 실패)을 보여 줍니다.</p>
-<h1><a class="anchor" id="autotoc_md604"></a>
+<h1><a class="anchor" id="autotoc_md606"></a>
 학습 블록을 그냥 옮기지 않는 이유</h1>
 <p>두 가지 순서 결함이 채움 실패를 설명합니다. 공통 서빙 함수가 라우팅이 엔드포인트 옵션을 지정하기 전에 그 값을 읽고, C1M 분기는 학습 블록 전에 반환합니다. 그 블록만 옮기는 것은 안전하지 않습니다.</p>
 <ul>
@@ -125,7 +125,7 @@ $(document).ready(function(){initNavTree('d7/dab/md_docs_2ko_2fixed-cache-status
 <li>일반 전송은 전송 후 학습이 읽기 전에 관리형 포인터 본문을 해제할 수 있습니다;</li>
 <li>문자열화 도우미가 NUL로 끝나지 않는 헤더 범위를 C 문자열로 다뤘습니다 (PR #84로 따로 수정되었지만, 그것이 캐시 재생을 안전하게 만들지는 않습니다).</li>
 </ul>
-<h1><a class="anchor" id="autotoc_md605"></a>
+<h1><a class="anchor" id="autotoc_md607"></a>
 계약이 복원될 때까지의 권장 처리</h1>
 <ul>
 <li>FIXED 라우트를 일반 디스패치로 취급하세요. 자동 캐시 히트에 의존하지 말고, HTTP 재생을 기대하며 전체 와이어 BDR blob을 미리 넣지 마세요.</li>

@@ -1,7 +1,9 @@
 <map id="include/cwist/sys/app/middleware.h" name="include/cwist/sys/app/middleware.h">
-<area shape="rect" id="Node000001" title="Built&#45;in middleware factories." alt="" coords="110,5,271,45"/>
-<area shape="rect" id="Node000002" href="$d9/dc9/middleware_8c.html" title="Built&#45;in middleware implementations for request IDs, logging, rate limits, CORS, and JWT auth." alt="" coords="5,93,192,119"/>
-<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="160,56,114,95,111,91,156,52"/>
-<area shape="rect" id="Node000003" href="$d3/db2/otel_8c.html" title="OpenTelemetry tracing middleware (#402)." alt="" coords="217,93,351,119"/>
-<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="225,52,272,91,268,95,222,56"/>
+<area shape="rect" id="Node000001" title="Built&#45;in middleware factories." alt="" coords="203,5,365,45"/>
+<area shape="rect" id="Node000002" href="$d9/dc9/middleware_8c.html" title="Built&#45;in middleware implementations for request IDs, logging, rate limits, CORS, and JWT auth." alt="" coords="5,101,192,126"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="232,54,124,103,122,98,230,49"/>
+<area shape="rect" id="Node000003" href="$d3/db2/otel_8c.html" title="OpenTelemetry tracing middleware (#402)." alt="" coords="217,101,351,126"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="287,59,287,100,281,100,281,59"/>
+<area shape="rect" id="Node000004" href="$dc/d97/rate__limit__redis_8c.html" title="Optional process&#45;shared Redis rate limiter." alt="" coords="376,93,539,133"/>
+<area shape="poly" id="edge3_Node000001_Node000004" title=" " alt="" coords="335,49,421,91,418,96,333,54"/>
 </map>

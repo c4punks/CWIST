@@ -108,16 +108,16 @@ $(document).ready(function(){initNavTree('da/dca/md_docs_2REFERENCE.html','../..
   <div class="headertitle"><div class="title">CWIST Library Reference</div></div>
 </div><!--header-->
 <div class="contents">
-<div class="textblock"><p><a class="anchor" id="autotoc_md767"></a> CWIST is a custom C library for building secure, scalable web applications. It includes modules for string handling, HTTP/HTTPS, URI parsing, database access, and cryptographic hashing.</p>
-<h1><a class="anchor" id="autotoc_md768"></a>
+<div class="textblock"><p><a class="anchor" id="autotoc_md769"></a> CWIST is a custom C library for building secure, scalable web applications. It includes modules for string handling, HTTP/HTTPS, URI parsing, database access, and cryptographic hashing.</p>
+<h1><a class="anchor" id="autotoc_md770"></a>
 Modules</h1>
-<h2><a class="anchor" id="autotoc_md769"></a>
+<h2><a class="anchor" id="autotoc_md771"></a>
 1. SString (Smart String)</h2>
 <p>A safe, dynamic string implementation.</p><ul>
 <li><b>Header:</b> <code>&lt;<a class="el" href="../../d4/dbd/core_2sstring_2sstring_8h.html" title="Safe string type with helper methods.">cwist/core/sstring/sstring.h</a>&gt;</code></li>
 <li><b>Features:</b> Automatic resizing, concatenation, safe manipulation.</li>
 </ul>
-<h2><a class="anchor" id="autotoc_md770"></a>
+<h2><a class="anchor" id="autotoc_md772"></a>
 2. HTTP Server</h2>
 <p>A multi-process/threaded HTTP server framework.</p><ul>
 <li><b>Header:</b> <code>&lt;<a class="el" href="../../d9/dab/net_2http_2http_8h.html" title="HTTP Protocol Definitions and Helpers.">cwist/net/http/http.h</a>&gt;</code></li>
@@ -129,7 +129,7 @@ Modules</h1>
 </ul>
 </li>
 </ul>
-<h2><a class="anchor" id="autotoc_md771"></a>
+<h2><a class="anchor" id="autotoc_md773"></a>
 3. HTTPS Support</h2>
 <p>Secure transport layer using BoringSSL with post-quantum cryptography support.</p><ul>
 <li><b>Header:</b> <code>&lt;<a class="el" href="../../d7/d67/net_2http_2https_8h.html" title="HTTPS/TLS wrapper interface.">cwist/net/http/https.h</a>&gt;</code></li>
@@ -142,14 +142,14 @@ Modules</h1>
 </ul>
 </li>
 </ul>
-<h2><a class="anchor" id="autotoc_md772"></a>
+<h2><a class="anchor" id="autotoc_md774"></a>
 4. Query Parsing</h2>
 <p>Robust query string parsing using <code>liburiparser</code>.</p><ul>
 <li><b>Header:</b> <code>&lt;<a class="el" href="../../d1/d7a/net_2http_2query_8h.html" title="Query string parser and map.">cwist/net/http/query.h</a>&gt;</code></li>
 <li><b>Function:</b> <code>void cwist_query_map_parse(map, raw_query)</code></li>
 <li><b>Behavior:</b> Parses <code>key=value&amp;key2=val2</code> into a hash map (SipHash).</li>
 </ul>
-<h2><a class="anchor" id="autotoc_md773"></a>
+<h2><a class="anchor" id="autotoc_md775"></a>
 5. Database (SQL)</h2>
 <p>A wrapper around <code>sqlite3</code> for persistent storage.</p><ul>
 <li><b>Header:</b> <code>&lt;<a class="el" href="../../d0/dae/core_2db_2sql_8h.html" title="Database operations wrapper (SQLite3).">cwist/core/db/sql.h</a>&gt;</code></li>
@@ -160,26 +160,26 @@ Modules</h1>
 </ul>
 </li>
 </ul>
-<h2><a class="anchor" id="autotoc_md774"></a>
+<h2><a class="anchor" id="autotoc_md776"></a>
 6. SipHash</h2>
 <p>Cryptographic hash function for hash maps (used in Query/Headers).</p><ul>
 <li><b>Header:</b> <code>&lt;<a class="el" href="../../d0/db0/core_2siphash_2siphash_8h.html">cwist/core/siphash/siphash.h</a>&gt;</code></li>
 </ul>
-<h2><a class="anchor" id="autotoc_md775"></a>
+<h2><a class="anchor" id="autotoc_md777"></a>
 7. Error Handling</h2>
 <p>Unified error handling system using <code><a class="el" href="../../d4/d50/structcwist__error__t.html" title="Integrated error structure used throughout the system.">cwist_error_t</a></code>.</p><ul>
 <li><b>Header:</b> <code>&lt;<a class="el" href="../../d7/da1/sys_2err_2cwist__err_8h.html" title="Unified error code and type definitions for the CWIST system layer.">cwist/sys/err/cwist_err.h</a>&gt;</code></li>
 <li><b>Features:</b> Can return simple integer codes or complex JSON objects (e.g., OpenSSL/SQLite errors).</li>
 <li><b>Allocation failure:</b> CWIST never aborts and never dereferences a failed allocation on a public path. A setup call (<code>*_create</code>, <code>*_init</code>, <code>*_use_*</code>, setters) reports the failure through its return value and leaves earlier state in place. On a request path, the request fails: an error status such as 500, or a closed connection. An optional per-request feature is skipped instead: no request ID, no static cache, no session cookie.</li>
 </ul>
-<h2><a class="anchor" id="autotoc_md776"></a>
+<h2><a class="anchor" id="autotoc_md778"></a>
 8. Big Dumb Reply (BDR)</h2>
 <p>Auto-caches serialized responses for expensive handlers.</p><ul>
 <li><b>Header:</b> <code>&lt;<a class="el" href="../../da/d2c/big__dumb__reply_8h.html" title="Auto-Caching Layer for repetitive requests.">cwist/sys/app/big_dumb_reply.h</a>&gt;</code></li>
 <li><b>Functions:</b> <code>cwist_bdr_get</code>, <code>cwist_bdr_put</code>, <code>cwist_bdr_set_limits</code>.</li>
 <li><b>Guard Rails:</b> Entries expire after a configurable TTL or hit budget and the cache maintains a soft byte cap (32 MiB by default). Use <code>cwist_app_configure_bdr</code> to tune per-application behavior.</li>
 </ul>
-<h1><a class="anchor" id="autotoc_md777"></a>
+<h1><a class="anchor" id="autotoc_md779"></a>
 LibTTAK Memory Features</h1>
 <p>CWIST embeds libttak and exposes its latest memory runtime:</p>
 <ul>
@@ -188,7 +188,7 @@ LibTTAK Memory Features</h1>
 <li><b>Detachable Memory:</b> <code>ttak_detachable_mem_alloc</code> backs zero-copy HTTP bodies; cached slices reuse the tiny detachable cache and register cleanup hooks with <code>cwist_http_response_set_body_ptr_managed</code>.</li>
 </ul>
 <p>See <code>example/rps-showcase/</code> for a runnable demonstration that combines all three pieces to keep <code>/rps</code> saturated during load tests.</p>
-<h1><a class="anchor" id="autotoc_md778"></a>
+<h1><a class="anchor" id="autotoc_md780"></a>
 Example: Othello Web</h1>
 <p>Located in <code>example/othello-web/</code>.</p><ul>
 <li><b>Stack:</b> HTML/CSS/JS (Frontend), C (Backend).</li>
@@ -200,7 +200,7 @@ Example: Othello Web</h1>
 </ul>
 </li>
 </ul>
-<h1><a class="anchor" id="autotoc_md779"></a>
+<h1><a class="anchor" id="autotoc_md781"></a>
 Dependencies</h1>
 <ul>
 <li><code>libssl-dev</code> (OpenSSL)</li>
@@ -208,7 +208,7 @@ Dependencies</h1>
 <li><code>liburiparser-dev</code> (URI Parsing)</li>
 <li><code>libsqlite3-dev</code> (Database)</li>
 </ul>
-<h1><a class="anchor" id="autotoc_md780"></a>
+<h1><a class="anchor" id="autotoc_md782"></a>
 Build</h1>
 <p>Run <code>make</code> to build the static library <code>libcwist.a</code>. Run <code>make test</code> to run unit tests. </p>
 </div></div><!-- contents -->

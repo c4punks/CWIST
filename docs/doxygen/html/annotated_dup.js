@@ -77,6 +77,7 @@ var annotated_dup =
     [ "cwist_pb_writer", "dd/d89/structcwist__pb__writer.html", "dd/d89/structcwist__pb__writer" ],
     [ "cwist_query_bucket", "d1/d8f/structcwist__query__bucket.html", "d1/d8f/structcwist__query__bucket" ],
     [ "cwist_query_map", "dd/d72/structcwist__query__map.html", "dd/d72/structcwist__query__map" ],
+    [ "cwist_rate_limit_redis_cfg_t", "d8/d24/structcwist__rate__limit__redis__cfg__t.html", "d8/d24/structcwist__rate__limit__redis__cfg__t" ],
     [ "cwist_rdbms_runtime", "d1/dda/structcwist__rdbms__runtime.html", "d1/dda/structcwist__rdbms__runtime" ],
     [ "cwist_reactor_post", "d2/dcc/structcwist__reactor__post.html", "d2/dcc/structcwist__reactor__post" ],
     [ "cwist_reactor_timer", "df/d51/structcwist__reactor__timer.html", "df/d51/structcwist__reactor__timer" ],

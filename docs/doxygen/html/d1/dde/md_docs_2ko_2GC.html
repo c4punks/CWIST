@@ -108,8 +108,8 @@ $(document).ready(function(){initNavTree('d1/dde/md_docs_2ko_2GC.html','../../')
   <div class="headertitle"><div class="title">Full GC: CWIST의 자동 자원 회수</div></div>
 </div><!--header-->
 <div class="contents">
-<div class="textblock"><p><a class="anchor" id="autotoc_md606"></a> 상태: <b>지원되는 옵트인 기능</b> (<code><a class="el" href="../../d8/d16/gc_8c.html" title="Thin implementation wrapper around libttak epoch-based reclamation.">src/core/mem/gc.c</a></code>, <code><a class="el" href="../../d0/daa/gc_8h.html" title="Epoch-based garbage collection wrapper.">include/cwist/core/mem/gc.h</a></code>). <code>cwist_full_gc(true)</code>는 앞으로 생길 기능이 아니라 지금 실제로 호출할 수 있는 스위치입니다. 최소 예제는 튜토리얼 30(<code>tutorials/30-graceful-shutdown/</code>)을 보세요. 아래 여섯 개의 설계 절은 5절(투명한 <code>malloc</code> 가로채기)을 포함해 모두 구현되고 테스트되었습니다. 이 문서는 이 모드가 다루는 범위와 다루지 않는 범위에 대한 설계 계약으로 남아 있으며, 명시적인 destroy 계열 모델은 full-GC 모드를 켜든 켜지 않든 계속 완전히 지원되고 기본값입니다.</p>
-<h1><a class="anchor" id="autotoc_md607"></a>
+<div class="textblock"><p><a class="anchor" id="autotoc_md608"></a> 상태: <b>지원되는 옵트인 기능</b> (<code><a class="el" href="../../d8/d16/gc_8c.html" title="Thin implementation wrapper around libttak epoch-based reclamation.">src/core/mem/gc.c</a></code>, <code><a class="el" href="../../d0/daa/gc_8h.html" title="Epoch-based garbage collection wrapper.">include/cwist/core/mem/gc.h</a></code>). <code>cwist_full_gc(true)</code>는 앞으로 생길 기능이 아니라 지금 실제로 호출할 수 있는 스위치입니다. 최소 예제는 튜토리얼 30(<code>tutorials/30-graceful-shutdown/</code>)을 보세요. 아래 여섯 개의 설계 절은 5절(투명한 <code>malloc</code> 가로채기)을 포함해 모두 구현되고 테스트되었습니다. 이 문서는 이 모드가 다루는 범위와 다루지 않는 범위에 대한 설계 계약으로 남아 있으며, 명시적인 destroy 계열 모델은 full-GC 모드를 켜든 켜지 않든 계속 완전히 지원되고 기본값입니다.</p>
+<h1><a class="anchor" id="autotoc_md609"></a>
 동기</h1>
 <p>지금의 CWIST는 규율 있는 명시적 정리에 의존합니다. <code><a class="el" href="../../d0/d77/sys_2app_2app_8h.html#a8d6f015a001b2d189ebea808de9da254" title="Destroys the application and frees all resources.">cwist_app_destroy()</a></code>, 전송 계층의 연결/세션 정리, 요청 아레나와 짝을 이루는 <code><a class="el" href="../../d2/dfe/alloc_8h.html#a220abeebe2823e72511d1690fc561306" title="Free memory obtained via cwist_alloc/cwist_strdup/etc.">cwist_free()</a></code>가 그것입니다. 여기에는 두 가지 빈틈이 남아 있습니다.</p>
 <ol type="1">
@@ -117,9 +117,9 @@ $(document).ready(function(){initNavTree('d1/dde/md_docs_2ko_2GC.html','../../')
 <li>**<code>cwist_alloc</code>에는 여전히 수동 <code>cwist_free</code>가 필요합니다.** 하나라도 빠뜨리면 그 객체는 소유자가 살아 있는 동안 계속 새어 나갑니다.</li>
 </ol>
 <p>Full-GC 모드(<code>cwist_full_gc(true)</code>)는 두 빈틈을 모두 메웁니다. 꺼져 있으면(기본값) 현재의 명시적 모델이 비용 없이 그대로 동작합니다.</p>
-<h1><a class="anchor" id="autotoc_md608"></a>
+<h1><a class="anchor" id="autotoc_md610"></a>
 설계</h1>
-<h2><a class="anchor" id="autotoc_md609"></a>
+<h2><a class="anchor" id="autotoc_md611"></a>
 1. &lt;tt&gt;cwist_full_gc(bool)&lt;/tt&gt; - 전역 스위치</h2>
 <div class="fragment"><div class="line"><a class="code hl_function" href="../../d0/daa/gc_8h.html#a0d7297e8d4a073c018f97fa6e7f0a372">cwist_full_gc</a>(<span class="keyword">true</span>);   <span class="comment">/* enable automatic reclamation */</span></div>
 <div class="ttc" id="agc_8h_html_a0d7297e8d4a073c018f97fa6e7f0a372"><div class="ttname"><a href="../../d0/daa/gc_8h.html#a0d7297e8d4a073c018f97fa6e7f0a372">cwist_full_gc</a></div><div class="ttdeci">void cwist_full_gc(bool enable)</div><div class="ttdoc">Enable or disable full-GC mode process-wide.</div><div class="ttdef"><b>Definition</b> <a href="../../d8/d16/gc_8c_source.html#l00483">gc.c:483</a></div></div>
@@ -131,7 +131,7 @@ $(document).ready(function(){initNavTree('d1/dde/md_docs_2ko_2GC.html','../../')
 <li><code>cwist_alloc</code> 객체가 회수 엔진에 등록되어, 수동 <code>cwist_free</code> 호출 대신 에포크 순환으로 해제됩니다.</li>
 </ul>
 <p>꺼져 있으면 추적 장치가 하나도 동작하지 않으며, 명시적 모델은 현재의 성능 특성을 유지합니다.</p>
-<h2><a class="anchor" id="autotoc_md610"></a>
+<h2><a class="anchor" id="autotoc_md612"></a>
 2. 회수 엔진: libttak 에포크 GC</h2>
 <p>엔진은 libttak의 에포크 GC(<code>ttak_epoch_gc</code>, <code>lib/libttak/include/ttak/mem/epoch_gc.h</code> 참고)이며, CWIST가 이미 <code><a class="el" href="../../d8/d16/gc_8c.html" title="Thin implementation wrapper around libttak epoch-based reclamation.">src/core/mem/gc.c</a></code>에서 감싸 두었습니다 (<code><a class="el" href="../../d8/d25/structcwist__gc.html" title="High-level wrapper over libttak&#39;s epoch GC.">cwist_gc</a></code>, <code>cwist_reg_ptr</code>, <code>cwist_gc_rotate</code>).</p>
 <ul>
@@ -140,7 +140,7 @@ $(document).ready(function(){initNavTree('d1/dde/md_docs_2ko_2GC.html','../../')
 <li>순환은 자동(할당 힌트에 따라 주기를 조절하는 백그라운드 순환 스레드)이거나 수동(이벤트 루프에서 <code>cwist_gc_rotate</code> 호출)일 수 있으며, 기존 래퍼의 의미와 같습니다.</li>
 </ul>
 <p><b>등록은 블록의 소유권을 넘깁니다.</b> <code>cwist_reg_ptr</code> / <code>cwist_reg_ptr_sized</code>는 등록된 포인터의 소유권을 컨텍스트에 넘기며, 컨텍스트는 <code>cwist_gc_shutdown</code>에서 <code>cwist_free</code>로 그 블록을 해제합니다. <code>cwist_free</code>로 해제할 수 있는 포인터, 즉 CWIST 할당기(<code>cwist_alloc</code> 계열)에서 온 포인터만 등록하세요. 명시적인 <code>cwist_free</code>는 그대로 올바릅니다. 먼저 (자동으로) 컨텍스트에서 포인터를 분리한 뒤 해제하므로, 아래의 "명시적 free는 조기에 등록 해제" 규칙과 정확히 같습니다. libttak의 소멸 시점 정리는 자기 트리에 남은 것을 <code>ttak_mem_free</code>로 해제하는데, 이 함수는 ttak 블록 헤더를 검증하므로 헤더가 없는 <code>cwist_alloc</code> 블록을 만나면 <a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">중단(abort)</a>합니다. 래퍼의 레지스트리가 두 해제 경로가 만나지 않게 막습니다. 반대로 libttak에서 직접 할당한 (<code>ttak_mem_alloc_safe</code>) 포인터는 libttak의 종료 의미를 그대로 따라야 합니다. 원시 컨텍스트에 등록하세요 — <code><a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">ttak_epoch_gc_register(cwist_gc_raw(gc), ptr, size)</a></code> — 그러면 libttak이 소멸 시점에 해제합니다(<code>example/rps-showcase</code> 참고). 같은 포인터를 두 경로로 등록하지 마세요.</p>
-<h2><a class="anchor" id="autotoc_md611"></a>
+<h2><a class="anchor" id="autotoc_md613"></a>
 3. 스레드/프로세스 종료 정리</h2>
 <ul>
 <li><b>스레드 종료</b>: 연결 레지스트리는 프로세스 전체에 하나 있는 테이블입니다. 추적하는 핸들마다 close 함수와 <em>소유</em> 스레드를 기록합니다. pthread TLS 소멸자는 종료하는 스레드가 아직 소유한 것을 닫습니다. 소유자는 핸들을 추적한 스레드이고, 다른 스레드가 <code><a class="el" href="../../d0/daa/gc_8h.html#a508dbea3a902e11b26c082674079e011" title="Make the calling thread the owner of a tracked handle.">cwist_conn_registry_adopt()</a></code>를 호출하면 그 스레드로 바뀝니다. HTTPS pool은 다시 맡거나 재제출된 연결을 모두 adopt하므로, 종료하는 스레드가 다른 스레드가 처리 중인 연결을 닫지 않습니다(#345).</li>
@@ -148,14 +148,14 @@ $(document).ready(function(){initNavTree('d1/dde/md_docs_2ko_2GC.html','../../')
 <li><b>**fork()</b>: 자식 프로세스는 빈 레지스트리로 시작합니다. 물려받은 연결은 부모의 것이고, 자식이 <code><a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">exit()</a></code>해도 그 연결을 닫으면 안 됩니다.</li>
 <li><b>프로세스 종료</b>: <code>atexit</code> 정리가 프로세스 전체에 대해 같은 마무리를 수행하므로, 남은 연결은 버려지지 않고 정상적으로 종료됩니다 (TLS 종료, 소켓 닫기, 세션 정리).</li>
 </ul>
-<h2><a class="anchor" id="autotoc_md612"></a>
+<h2><a class="anchor" id="autotoc_md614"></a>
 4. 핸들 같은 지역 변수를 위한 의사 RAII</h2>
 <p>스택 범위의 핸들을 위해 CWIST는 의사 RAII 가드를 제공합니다.</p>
 <ul>
 <li>변수가 범위를 벗어날 때 대응하는 정리를 실행하는 GCC/Clang <code>__attribute__((cleanup))</code> 범위 가드. C에서 RAII에 해당하는 실용적인 방법입니다.</li>
 <li>cleanup 속성을 쓸 수 없는 곳에서는 LibTTAK RAII 기본 요소를 그대로 빌려 씁니다.</li>
 </ul>
-<h2><a class="anchor" id="autotoc_md613"></a>
+<h2><a class="anchor" id="autotoc_md615"></a>
 5. 투명한 &lt;tt&gt;malloc&lt;/tt&gt; 가로채기</h2>
 <p>사용자는 습관적으로 <code>cwist_alloc</code>이 아니라 <code>malloc</code>을 씁니다. 손가락의 규율에 기대는 것이 누수 없음 주장이 무너지는 지점입니다. <code>&lt;<a class="el" href="../../d7/d10/intercept_8h.html" title="Opt-in, translation-unit-scoped malloc/calloc/realloc/free interception onto the full-GC epoch pipeli...">cwist/core/mem/intercept.h</a>&gt;</code>는 번역 단위별 옵트인으로 두 표기를 동등하게 만듭니다.</p>
 <div class="fragment"><div class="line"><span class="preprocessor">#define CWIST_INTERCEPT_MALLOC</span></div>
@@ -194,10 +194,10 @@ $(document).ready(function(){initNavTree('d1/dde/md_docs_2ko_2GC.html','../../')
 </table>
 <p>"끔" 비용은 연산마다 relaxed atomic load 한 번(<code><a class="el" href="../../d0/daa/gc_8h.html#a35e613a89ca213039b7b8b80464c223c" title="Check whether full-GC mode is currently enabled.">cwist_full_gc_enabled()</a></code>)과 함수 호출 하나가 더 드는 것으로, <code><a class="el" href="../../d2/dfe/alloc_8h.html#aeba69949fe17751318e6b5fc84a74096" title="Allocate zeroed memory tracked by libttak.">cwist_alloc()</a></code>/<code><a class="el" href="../../d2/dfe/alloc_8h.html#a220abeebe2823e72511d1690fc561306" title="Free memory obtained via cwist_alloc/cwist_strdup/etc.">cwist_free()</a></code>가 이미 내는 비용과 같습니다. "켬" 비용은 안전망 자체의 비용으로, <code>malloc</code>/<code>free</code> 한 쌍마다 호출 스레드의 pending 집합에 한 번 넣고 한 번 빼는 것입니다. 살아 있는 블록이 많고 스레드가 여럿일 때 이 비용이 어떻게 되는지는 아래 "알려진 성능
 주의 사항"을 보세요.</p>
-<h2><a class="anchor" id="autotoc_md614"></a>
+<h2><a class="anchor" id="autotoc_md616"></a>
 6. &lt;tt&gt;cwist_alloc&lt;/tt&gt; 내부</h2>
 <p><code><a class="el" href="../../d9/d39/alloc_8c.html">src/core/mem/alloc.c</a></code>에 등록 훅이 추가됩니다. full-GC 모드에서는 모든 <code>cwist_alloc</code> 블록이 에포크 GC에 기록되므로(<code>cwist_reg_ptr_sized</code>로 크기 인식) 에포크 순환이 그것을 회수합니다. 명시적 <code>cwist_free</code>도 여전히 올바르며, 단지 블록의 등록을 일찍 해제할 뿐입니다.</p>
-<h2><a class="anchor" id="autotoc_md615"></a>
+<h2><a class="anchor" id="autotoc_md617"></a>
 7. 명시적 flush와 회수</h2>
 <p>쉽게 가정하기 쉽지만 둘 다 틀린 내용이 두 가지 있습니다.</p>
 <ul>
@@ -221,7 +221,7 @@ $(document).ready(function(){initNavTree('d1/dde/md_docs_2ko_2GC.html','../../')
 <div class="line"><a class="code hl_function" href="../../d0/daa/gc_8h.html#a9722c1690dcf7f4e07c62bd0d1dd8047">cwist_gc_scope_flush</a>(); <span class="comment">/* cwist-ack: cwist_gc_scope_flush */</span></div>
 <div class="ttc" id="agc_8h_html_a9722c1690dcf7f4e07c62bd0d1dd8047"><div class="ttname"><a href="../../d0/daa/gc_8h.html#a9722c1690dcf7f4e07c62bd0d1dd8047">cwist_gc_scope_flush</a></div><div class="ttdeci">void cwist_gc_scope_flush(void)</div><div class="ttdoc">Retire every block still on the current thread's pending-sweep list right now, instead of waiting for...</div><div class="ttdef"><b>Definition</b> <a href="../../d8/d16/gc_8c_source.html#l00776">gc.c:776</a></div></div>
 </div><!-- fragment --><p>(표시는 호출 바로 윗줄에 달아도 됩니다.) 이 내용은 c4punks/CWIST#347에서 나왔습니다. 한 애플리케이션이 요청 미들웨어에서 flush를 하고 있었는데, 그 프로세스에서 회수를 구동하는 곳이 하나도 없었기 때문에 문제가 드러나지 않았을 뿐입니다.</p>
-<h1><a class="anchor" id="autotoc_md616"></a>
+<h1><a class="anchor" id="autotoc_md618"></a>
 의미 요약</h1>
 <table class="markdownTable">
 <tr class="markdownTableHead">
@@ -239,14 +239,14 @@ $(document).ready(function(){initNavTree('d1/dde/md_docs_2ko_2GC.html','../../')
 <tr class="markdownTableRowEven">
 <td class="markdownTableBodyNone">정리 안전성   </td><td class="markdownTableBodyNone">호출자의 규율   </td><td class="markdownTableBodyNone"><code><a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">ttak_epoch_enter()</a></code> 안의 읽기 스레드에 한해 에포크 지연; 요청 처리 스레드는 해당하지 않으므로 명시적 flush는 7절을 따라야 함   </td></tr>
 </table>
-<h1><a class="anchor" id="autotoc_md617"></a>
+<h1><a class="anchor" id="autotoc_md619"></a>
 목표가 아닌 것과 참고 사항</h1>
 <ul>
 <li>Full-GC 모드는 **옵트인**입니다. 기본 빌드는 추적 오버헤드가 없는 명시적 모델을 유지합니다.</li>
 <li>이것은 <a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">추적(tracing)</a> 가비지 컬렉터가 아닙니다. 회수는 에포크 기반이며 프레임워크가 관리하는 자원(연결, <code>cwist_alloc</code> 블록, 핸들러 컨텍스트의 <code>malloc</code>)으로 범위가 정해져 있습니다.</li>
 <li>커널 수준 자원(파일 디스크립터, TLS 세션)은 종료 정리에서 결정적으로 닫히며, 에포크 지연은 그 뒤의 메모리 회수에만 적용됩니다.</li>
 </ul>
-<h1><a class="anchor" id="autotoc_md618"></a>
+<h1><a class="anchor" id="autotoc_md620"></a>
 알려진 성능 주의 사항</h1>
 <p><code>cwist_full_gc(true)</code>에서는 모든 <code><a class="el" href="../../d2/dfe/alloc_8h.html#aeba69949fe17751318e6b5fc84a74096" title="Allocate zeroed memory tracked by libttak.">cwist_alloc()</a></code>이 블록을 호출 스레드의 pending 집합에 넣고, 모든 <code><a class="el" href="../../d2/dfe/alloc_8h.html#a220abeebe2823e72511d1690fc561306" title="Free memory obtained via cwist_alloc/cwist_strdup/etc.">cwist_free()</a></code>가 그것을 뺍니다 (<code><a class="el" href="../../d2/dfe/alloc_8h.html#a59e88ae09b889a715cfdec6966d9cb43" title="Duplicate a string using libttak-backed storage.">cwist_strdup()</a></code> 결과처럼 추적된 적 없는 블록이라면 찾아보고 실패합니다). 이 집합은 개방 주소법 해시 테이블이므로, 스레드가 블록을 몇 개 가지고 있든 두 연산 모두 평균 <a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">O(1)</a>이고, 스레드의 집합은 스레드 로컬 load 한 번으로 찾습니다. 스레드마다 자기 집합이 있고 공유 락은 없습니다.</p>
 <p><code>tests/bench_full_gc_tracking.c</code>(<code>make bench_full_gc_tracking</code>)는 스레드에 추적 블록 N개를 살려 둔 채로 이를 측정합니다. GitHub Actions <code>ubuntu-latest</code> (AMD EPYC 7763, vCPU 4개), 측정당 200000쌍, 3회 실행 중앙값, <code><a class="el" href="../../d2/dfe/alloc_8h.html#aeba69949fe17751318e6b5fc84a74096" title="Allocate zeroed memory tracked by libttak.">cwist_alloc()</a></code> + <code><a class="el" href="../../d2/dfe/alloc_8h.html#a220abeebe2823e72511d1690fc561306" title="Free memory obtained via cwist_alloc/cwist_strdup/etc.">cwist_free()</a></code> 한 쌍당 ns:</p>

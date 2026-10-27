@@ -8,7 +8,10 @@ var searchData=
   ['rand_5fbytes_5',['RAND_bytes',['../d5/d66/rand_8h.html#aa683720bff9343cedea7c81dda04f8c0',1,'rand.h']]],
   ['reactor_5fchunk_5fevents_6',['REACTOR_CHUNK_EVENTS',['../d3/d99/reactor_8c.html#a68e30fb245e8d8625ef6b0500d8acfc9',1,'reactor.c']]],
   ['reactor_5fidle_5fwait_5fns_7',['REACTOR_IDLE_WAIT_NS',['../d3/d99/reactor_8c.html#a68ce423571de7595079eb22c297295c6',1,'reactor.c']]],
-  ['rol_8',['ROL',['../df/db2/ws__utils_8c.html#a3555c76a15091ea5b573174edc5ce86f',1,'ws_utils.c']]],
-  ['rotl_9',['ROTL',['../dd/d2d/siphash_8c.html#addd42b95ef425979d1d0dca095dec800',1,'siphash.c']]],
-  ['rx_5fbudget_10',['RX_BUDGET',['../d3/d90/webrtc_8c.html#a2aa9c68fd6d6eee8a6d3966485859d28',1,'webrtc.c']]]
+  ['redis_5frate_5fprefix_5fmax_8',['REDIS_RATE_PREFIX_MAX',['../dc/d97/rate__limit__redis_8c.html#abcda5fb35baad215d5ea4c82fdad09a9',1,'rate_limit_redis.c']]],
+  ['redis_5frate_5fslots_9',['REDIS_RATE_SLOTS',['../dc/d97/rate__limit__redis_8c.html#af3f8d777ee87ccbedcea4949700e4078',1,'rate_limit_redis.c']]],
+  ['redis_5frate_5fwrapper_10',['REDIS_RATE_WRAPPER',['../dc/d97/rate__limit__redis_8c.html#aa5b999ab0e2586db3679f1adfa10b410',1,'rate_limit_redis.c']]],
+  ['rol_11',['ROL',['../df/db2/ws__utils_8c.html#a3555c76a15091ea5b573174edc5ce86f',1,'ws_utils.c']]],
+  ['rotl_12',['ROTL',['../dd/d2d/siphash_8c.html#addd42b95ef425979d1d0dca095dec800',1,'siphash.c']]],
+  ['rx_5fbudget_13',['RX_BUDGET',['../d3/d90/webrtc_8c.html#a2aa9c68fd6d6eee8a6d3966485859d28',1,'webrtc.c']]]
 ];

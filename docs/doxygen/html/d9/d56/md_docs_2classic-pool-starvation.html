@@ -108,13 +108,13 @@ $(document).ready(function(){initNavTree('d9/d56/md_docs_2classic-pool-starvatio
   <div class="headertitle"><div class="title">Classic pool burst starvation (#25 follow-up)</div></div>
 </div><!--header-->
 <div class="contents">
-<div class="textblock"><p><a class="anchor" id="autotoc_md252"></a> This is a liveness repair, not a claim that the original HTTP P99.999 report has been resolved. It is independent of the io_uring wake-up repair in #37.</p>
-<h1><a class="anchor" id="autotoc_md253"></a>
+<div class="textblock"><p><a class="anchor" id="autotoc_md253"></a> This is a liveness repair, not a claim that the original HTTP P99.999 report has been resolved. It is independent of the io_uring wake-up repair in #37.</p>
+<h1><a class="anchor" id="autotoc_md254"></a>
 Cause and change</h1>
 <p>A condition-variable worker remains counted as idle until it wakes and reacquires the queue mutex. Previously, submission only grew the classic pool when <code>idle_workers == 0</code>. A burst could queue several connections while one signalled worker still counted idle; once it started a long-lived keep-alive handler, the remaining connections had no worker and no further submission to trigger growth.</p>
 <p>Submission now compares <b>queued demand against idle capacity</b> under the queue mutex. The maximum-worker check and thread reservation occur in that same critical section, so concurrent submitters cannot reserve the same remaining slot. It still attempts at most one growth per submission and keeps the existing two-attempt thread-creation failure rollback.</p>
 <p>No pool defaults, public interfaces, reactor backend, allocator, or pipeline budget change. Failed creation can still leave work for existing workers; this does not promise progress when resources are exhausted and every existing handler is blocked. Existing detached-worker shutdown behavior is outside this repair.</p>
-<h1><a class="anchor" id="autotoc_md254"></a>
+<h1><a class="anchor" id="autotoc_md255"></a>
 Deterministic regression</h1>
 <p><code>make WERROR=1 test_classic_pool_scaling</code> runs four separate processes:</p>
 <ul>
@@ -124,11 +124,11 @@ Deterministic regression</h1>
 <li>Two injected <code>pthread_create</code> failures: one reservation rolls back, seven handlers can start, and all eight finish after release.</li>
 </ul>
 <p>The harness executes production queue code. It delays the condition-wait reacquisition and makes captured worker threads joinable solely for safe test cleanup; it does not claim to test production detached-worker shutdown. The test is included in the normal <code>make test</code> suite.</p>
-<h1><a class="anchor" id="autotoc_md255"></a>
+<h1><a class="anchor" id="autotoc_md256"></a>
 Validation status</h1>
 <p>On the local ARM64 Linux environment, the <code>-Werror</code> build succeeded. Running all 57 Makefile test targets with <code>make -k WERROR=1 test</code> produced 56 passes and one failure: <code>test_grpc.c:243</code>, the <code>append_grpc_string_frame</code> append assertion. Rebuilding with the original <code>dev</code> HTTP source reproduced the same failure. This is an observed pre-existing failure in this environment, not a claim that its underlying cause is understood or that the full suite is green.</p>
 <p>A clean ASan/UBSan build passed these six targets, with leak detection enabled and the repository's existing LSan suppression file: <code>test_classic_pool_scaling</code>, <code>test_http</code>, <code>test_http_pipeline</code>, <code>test_http_fairness</code>, <code>test_async_defer</code>, and <code>test_conn_registry</code>. The four pool modes all passed. Independent static review found no blocking candidate defect. Hosted CI must still be reviewed; this remains a draft until the outstanding validation concerns are resolved.</p>
-<h1><a class="anchor" id="autotoc_md256"></a>
+<h1><a class="anchor" id="autotoc_md257"></a>
 HTTP measurements and limits</h1>
 <p>Local measurements used a dedicated ARM64 Linux VM (4 vCPUs, 4 GiB, kernel 6.8.0-117), the repository's fixed empty-GET benchmark, four classic worker processes, two load-generator threads, and an FD limit of 65536. Each measured 20-second run followed 5 seconds of discarded warmup. Three paired rounds at 64, 256 and 512 connections produced 18 error-free runs after correcting the measurement clock. Both sides had #37 applied; this patch changes only the classic pool, which does not use that reactor wake-up path.</p>
 <p>wrk 4.2.0 (<code>a211dd5a7050b1f9e8a9870b95513060e72ac4a0</code>) was built locally with its <code><a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">time_us()</a></code> using <code><a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">clock_gettime(CLOCK_MONOTONIC)</a></code> instead of <code>gettimeofday</code>. Initial system-wrk results were discarded: Lima clock-sync logs showed backwards wall-clock steps, and wrk's unsigned latency subtraction can classify those as histogram-overflow timeouts. This is a measurement-tool adjustment, not a server optimization. wrk's reported percentiles also include its built-in synthetic latency correction, not only raw observations.</p>
