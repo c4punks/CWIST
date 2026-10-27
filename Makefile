@@ -604,10 +604,23 @@ $(BAREMETAL_BUILD_DIR)/hello-lwip.elf: $(BAREMETAL_ARCHIVE) $(BAREMETAL_LWIP_SRC
 	    $(BAREMETAL_LWIP_SRCS) $(BAREMETAL_ARCHIVE) -lm
 	$(BAREMETAL_CROSS)size $@
 
+# Each run's output is kept next to its ELF (<name>.log): the size gate
+# reads the heap/stack high-water marks from it.
+BAREMETAL_FIRMWARE = hello hello-rtc hello-lwip
 baremetal-smoke: $(BAREMETAL_HELLO) $(BAREMETAL_BUILD_DIR)/hello-lwip.elf
-	$(QEMU_ARM) -cpu cortex-m7 $(BAREMETAL_BUILD_DIR)/hello.elf
-	$(QEMU_ARM) -cpu cortex-m7 $(BAREMETAL_BUILD_DIR)/hello-rtc.elf
-	$(QEMU_ARM) -cpu cortex-m7 $(BAREMETAL_BUILD_DIR)/hello-lwip.elf
+	@set -e; for fw in $(BAREMETAL_FIRMWARE); do \
+	    echo "$(QEMU_ARM) -cpu cortex-m7 $(BAREMETAL_BUILD_DIR)/$$fw.elf"; \
+	    $(QEMU_ARM) -cpu cortex-m7 $(BAREMETAL_BUILD_DIR)/$$fw.elf > $(BAREMETAL_BUILD_DIR)/$$fw.log 2>&1 \
+	        || { cat $(BAREMETAL_BUILD_DIR)/$$fw.log; exit 1; }; \
+	    cat $(BAREMETAL_BUILD_DIR)/$$fw.log; \
+	done
+
+# Flash, static RAM and heap/stack high-water budgets for the smoke firmware
+# (scripts/ci/baremetal-budget.txt). Run after baremetal-smoke.
+baremetal-size-gate: baremetal-smoke
+	$(PYTHON) scripts/ci/baremetal_size_gate.py --size $(BAREMETAL_CROSS)size \
+	    --budget scripts/ci/baremetal-budget.txt \
+	    $(foreach fw,$(BAREMETAL_FIRMWARE),$(BAREMETAL_BUILD_DIR)/$(fw).elf)
 
 clean-baremetal:
 	rm -rf $(BAREMETAL_BUILD_DIR) $(BAREMETAL_ARCHIVE)
@@ -1397,7 +1410,7 @@ TEST_TARGETS = test_worker_affinity \
                test_css_composer \
                test_multipart
 
-.PHONY: all test tsan-test $(TEST_TARGETS) fuzz_seq install uninstall dist clean rebuild examples clean-examples micro-examples examples-check wasm-abi-layout wasm-sw-example wasm-sw-smoke wasm-sw-browser-test wasm-dist wasip2-smoke clean-wasip2 baremetal baremetal-smoke clean-baremetal wit-check jco-transpile wit-bindings component-guest component-smoke clean-component api-baseline api-check env-check
+.PHONY: all test tsan-test $(TEST_TARGETS) fuzz_seq install uninstall dist clean rebuild examples clean-examples micro-examples examples-check wasm-abi-layout wasm-sw-example wasm-sw-smoke wasm-sw-browser-test wasm-dist wasip2-smoke clean-wasip2 baremetal baremetal-smoke baremetal-size-gate clean-baremetal wit-check jco-transpile wit-bindings component-guest component-smoke clean-component api-baseline api-check env-check
 
 # Regenerate docs/api/v4.0-api-baseline.txt (the recorded v4.0 public API
 # symbol surface). See CONTRIBUTING.md "Releases and patch releases".

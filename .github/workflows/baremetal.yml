@@ -1,0 +1,56 @@
+name: "Bare metal (Cortex-M)"
+
+# `make baremetal-size-gate` (#447): builds libcwist_baremetal.a with
+# arm-none-eabi-gcc for Cortex-M7, links the smoke firmware (in-memory
+# dispatch with and without an RTC, and the lwIP adapter over lwIP's
+# loopback netif), runs each under qemu-arm with semihosting output, then
+# holds flash, static RAM and the reported heap/stack high-water marks to
+# scripts/ci/baremetal-budget.txt. The runner is pinned to ubuntu-24.04 so
+# the toolchain (gcc 13.2, newlib 4.4, qemu 8.2) and therefore the sizes do
+# not move under the budget; changing it is a deliberate PR.
+
+on:
+  push:
+    branches: [main, master, dev]
+  pull_request:
+    branches: [main, master, dev]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  baremetal:
+    name: Cortex-M7 smoke + size gate
+    if: github.event_name != 'push' || !contains(github.event.head_commit.message, '[skip ci]')
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      with:
+        # Top-level only: the build uses headers from boringssl and lsquic
+        # (Makefile feature probes) and sources from cjson, libttak and lwip;
+        # nothing vendored is built.
+        submodules: true
+
+    - name: Install arm-none-eabi toolchain and qemu-user
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y gcc-arm-none-eabi libnewlib-arm-none-eabi qemu-user
+        arm-none-eabi-gcc --version | head -1
+        qemu-arm --version | head -1
+
+    - name: Smoke firmware under qemu-arm and size gate
+      run: make -j"$(nproc)" baremetal-size-gate
+
+    - name: Upload firmware maps and logs
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: baremetal-firmware
+        path: |
+          .baremetal-build/*.elf
+          .baremetal-build/*.map
+          .baremetal-build/*.log
+        if-no-files-found: ignore
