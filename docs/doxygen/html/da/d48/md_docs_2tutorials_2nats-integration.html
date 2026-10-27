@@ -108,17 +108,17 @@ $(document).ready(function(){initNavTree('da/d48/md_docs_2tutorials_2nats-integr
   <div class="headertitle"><div class="title">Integrate NATS with CWIST</div></div>
 </div><!--header-->
 <div class="contents">
-<div class="textblock"><p><a class="anchor" id="autotoc_md503"></a> CWIST includes an in-tree NATS integration point for event-driven services. Use NATS for asynchronous work and fan-out; keep HTTP handlers responsible for validating the request and returning a bounded response promptly.</p>
-<h1><a class="anchor" id="autotoc_md504"></a>
+<div class="textblock"><p><a class="anchor" id="autotoc_md504"></a> CWIST includes an in-tree NATS integration point for event-driven services. Use NATS for asynchronous work and fan-out; keep HTTP handlers responsible for validating the request and returning a bounded response promptly.</p>
+<h1><a class="anchor" id="autotoc_md505"></a>
 1. Separate request and worker responsibilities</h1>
 <p>An HTTP handler should validate a JSON command, assign a request id, and publish a compact event such as:</p>
 <div class="fragment"><div class="line">{&quot;type&quot;:&quot;post.created&quot;,&quot;post_id&quot;:42,&quot;request_id&quot;:&quot;...&quot;}</div>
 </div><!-- fragment --><p>Workers subscribe to <code>blog.post.created</code>, persist derived work, and publish a result or failure event. Use subject names that encode ownership and version, for example <code>blog.v1.post.created</code>.</p>
-<h1><a class="anchor" id="autotoc_md505"></a>
+<h1><a class="anchor" id="autotoc_md506"></a>
 2. Publish from a route</h1>
 <p>Initialize the NATS client once during application startup, then share the long-lived connection rather than reconnecting per request. A handler should only acknowledge success after the chosen durability boundary: successful publish for fire-and-forget work, or a database transaction/outbox record for work that must survive a broker outage.</p>
 <p>For request/reply, enforce a short deadline and translate timeout or unavailable errors to <code>503 Service Unavailable</code>. Do not keep an HTTP worker blocked on an unbounded NATS subscription.</p>
-<h1><a class="anchor" id="autotoc_md506"></a>
+<h1><a class="anchor" id="autotoc_md507"></a>
 3. Reliability checklist</h1>
 <ul>
 <li>Make consumers idempotent; messages can be redelivered.</li>

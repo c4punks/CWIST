@@ -1,20 +1,20 @@
 var searchData=
 [
   ['u_0',['u',['../de/d25/structcwist__bind__rule.html#a27bf8f3b31c5ea4171cbc12cf10aa066',1,'cwist_bind_rule']]],
-  ['udp_20and_20http_203_1',['UDP and HTTP/3',['../d1/d54/md_docs_2deployment_2zero-downtime-restart.html#autotoc_md294',1,'']]],
+  ['udp_20and_20http_203_1',['UDP and HTTP/3',['../d1/d54/md_docs_2deployment_2zero-downtime-restart.html#autotoc_md295',1,'']]],
   ['udp_5farmed_2',['udp_armed',['../dc/d88/structcwist__webrtc__ctx.html#aaa69c85e630d8ad4dff35615ba5e9ec5',1,'cwist_webrtc_ctx']]],
   ['udp_5ffd_3',['udp_fd',['../d9/dae/structcwist__http3__context.html#a213752bd0aa2f75b9d8e3fe1e764bc42',1,'cwist_http3_context::udp_fd'],['../dc/d88/structcwist__webrtc__ctx.html#a667b50602547a713edcdfa880ec7db0d',1,'cwist_webrtc_ctx::udp_fd']]],
   ['udp_5fsockbuf_4',['UDP_SOCKBUF',['../d3/d90/webrtc_8c.html#a42a7349257ad10380bcc9144b3fa2889',1,'webrtc.c']]],
-  ['ui_5',['ui',['../d6/d8e/md_docs_2tutorials_2openapi-swagger.html#autotoc_md511',1,'3. Serve the UI'],['../d6/d8e/md_docs_2tutorials_2openapi-swagger.html',1,'Document an API with OpenAPI and Swagger UI']]],
+  ['ui_5',['ui',['../d6/d8e/md_docs_2tutorials_2openapi-swagger.html#autotoc_md512',1,'3. Serve the UI'],['../d6/d8e/md_docs_2tutorials_2openapi-swagger.html',1,'Document an API with OpenAPI and Swagger UI']]],
   ['unchanged_6',['ADR-0002: TLS certificate hot reload keeps the session-ticket key (STEK) unchanged',['../d1/dd3/md_docs_2decisions_20002-tls-hot-reload-stek.html',1,'']]],
-  ['under_20cwist_5ftls_20mbedtls_7',['under cwist_tls mbedtls',['../d9/dda/md_docs_2performance_2tls-backends.html#autotoc_md377',1,'Degraded features under CWIST_TLS=mbedtls'],['../d9/dda/md_docs_2performance_2tls-backends.html#autotoc_md376',1,'Forced-off features under CWIST_TLS=mbedtls']]],
+  ['under_20cwist_5ftls_20mbedtls_7',['under cwist_tls mbedtls',['../d9/dda/md_docs_2performance_2tls-backends.html#autotoc_md378',1,'Degraded features under CWIST_TLS=mbedtls'],['../d9/dda/md_docs_2performance_2tls-backends.html#autotoc_md377',1,'Forced-off features under CWIST_TLS=mbedtls']]],
   ['under_20full_20gc_8',['Deferred HTTP ownership under full GC',['../df/dc5/md_docs_2async-gc-ownership.html',1,'']]],
-  ['under_20growth_3a_20tt_20tests_20test_5fhttps_5fpool_5fqueue_20c_20tt_9',['4. Order and loss under growth: &lt;tt&gt;tests/test_https_pool_queue.c&lt;/tt&gt;',['../df/d28/md_docs_2performance_2https-pool-dynamic-queue.html#autotoc_md363',1,'']]],
-  ['under_20wasip3_20audited_202026_2009_2022_10',['Resolved: socket request path under wasip3 (audited 2026-09-22)',['../d8/d77/md_docs_2api_2wasm-component.html#autotoc_md210',1,'']]],
-  ['under_20wasm_11',['Databases under WASM',['../d5/d0e/md_docs_2api_2wasm.html#autotoc_md219',1,'']]],
+  ['under_20growth_3a_20tt_20tests_20test_5fhttps_5fpool_5fqueue_20c_20tt_9',['4. Order and loss under growth: &lt;tt&gt;tests/test_https_pool_queue.c&lt;/tt&gt;',['../df/d28/md_docs_2performance_2https-pool-dynamic-queue.html#autotoc_md364',1,'']]],
+  ['under_20wasip3_20audited_202026_2009_2022_10',['Resolved: socket request path under wasip3 (audited 2026-09-22)',['../d8/d77/md_docs_2api_2wasm-component.html#autotoc_md211',1,'']]],
+  ['under_20wasm_11',['Databases under WASM',['../d5/d0e/md_docs_2api_2wasm.html#autotoc_md220',1,'']]],
   ['unused_20variables_12',['Unused Variables',['../de/d19/md_docs_2api_2app.html#autotoc_md64',1,'']]],
-  ['up_13',['up',['../d9/d56/md_docs_2classic-pool-starvation.html',1,'Classic pool burst starvation (#25 follow-up)'],['../dd/d4c/md_docs_2tutorial_2cwist__tutorial.html#autotoc_md469',1,'Wrapping Up']]],
-  ['up_20and_20restore_14',['4. Restart, back up, and restore',['../db/de3/md_docs_2deployment_2wasmtime-appliance.html#autotoc_md288',1,'']]],
+  ['up_13',['up',['../d9/d56/md_docs_2classic-pool-starvation.html',1,'Classic pool burst starvation (#25 follow-up)'],['../dd/d4c/md_docs_2tutorial_2cwist__tutorial.html#autotoc_md470',1,'Wrapping Up']]],
+  ['up_20and_20restore_14',['4. Restart, back up, and restore',['../db/de3/md_docs_2deployment_2wasmtime-appliance.html#autotoc_md289',1,'']]],
   ['up_20regression_2025_15',['io_uring posted-work wake-up regression (#25)',['../dd/d56/md_docs_2reactor-wakeup-regression.html',1,'']]],
   ['up_5fsql_16',['up_sql',['../da/d46/structcwist__migration__t.html#a60afc48bf07d4005997e8a659e411ec5',1,'cwist_migration_t']]],
   ['upgraded_17',['upgraded',['../dd/d68/structcwist__http__request.html#a93bc1facc9f75e9d2e243ea9f82b5669',1,'cwist_http_request']]],
@@ -33,6 +33,6 @@ var searchData=
   ['use_5fthreading_30',['use_threading',['../d5/d6e/structcwist__server__config.html#a8d288dcc0631f8e4ba48a2b0e386e52e',1,'cwist_server_config']]],
   ['use_5ftls_31',['use_tls',['../da/d65/structcwist__grpc__client__options.html#a04b2c0e299109ff5c96b01338cbd57c7',1,'cwist_grpc_client_options::use_tls'],['../d7/d79/structcwist__grpc__channel__options.html#a7588283b20da9d8fd929d32bf870c2d7',1,'cwist_grpc_channel_options::use_tls']]],
   ['user_5fctx_32',['user_ctx',['../d9/dae/structcwist__http3__context.html#a2cc515d04c26458bddeb106ef2bca285',1,'cwist_http3_context::user_ctx'],['../db/d8a/structcwist__http__async__conn.html#ae11aabec78487fd25035496636eb734c',1,'cwist_http_async_conn::user_ctx'],['../d8/d41/structcwist__middleware__node.html#a084c59d501931888acc0e38280bac35e',1,'cwist_middleware_node::user_ctx']]],
-  ['using_20a_20fat_20bundle_33',['Using a fat bundle',['../d1/da3/md_docs_2deployment_2release-assets.html#autotoc_md280',1,'']]],
-  ['using_20the_20amalgamation_34',['Using the amalgamation',['../d1/da3/md_docs_2deployment_2release-assets.html#autotoc_md281',1,'']]]
+  ['using_20a_20fat_20bundle_33',['Using a fat bundle',['../d1/da3/md_docs_2deployment_2release-assets.html#autotoc_md281',1,'']]],
+  ['using_20the_20amalgamation_34',['Using the amalgamation',['../d1/da3/md_docs_2deployment_2release-assets.html#autotoc_md282',1,'']]]
 ];

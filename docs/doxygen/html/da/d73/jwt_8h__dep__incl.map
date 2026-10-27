@@ -1,11 +1,13 @@
 <map id="include/cwist/security/jwt/jwt.h" name="include/cwist/security/jwt/jwt.h">
-<area shape="rect" id="Node000001" title="JWT (JSON Web Token) generation and verification." alt="" coords="200,5,363,45"/>
-<area shape="rect" id="Node000002" href="$d3/d30/sys_2app_2middleware_8h.html" title="Built&#45;in middleware factories." alt="" coords="110,93,271,133"/>
-<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="253,57,213,95,209,91,250,53"/>
-<area shape="rect" id="Node000005" href="$d8/d80/jwt_8c.html" title="HS256/ES256/EdDSA JWT signing, verification, and decoded&#45;claims access helpers." alt="" coords="295,101,451,126"/>
-<area shape="poly" id="edge4_Node000001_Node000005" title=" " alt="" coords="313,53,362,98,359,102,310,57"/>
-<area shape="rect" id="Node000003" href="$d9/dc9/middleware_8c.html" title="Built&#45;in middleware implementations for request IDs, logging, rate limits, CORS, and JWT auth." alt="" coords="5,181,192,207"/>
-<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="160,144,114,183,111,179,156,140"/>
-<area shape="rect" id="Node000004" href="$d3/db2/otel_8c.html" title="OpenTelemetry tracing middleware (#402)." alt="" coords="217,181,351,207"/>
-<area shape="poly" id="edge3_Node000002_Node000004" title=" " alt="" coords="225,140,272,179,268,183,222,144"/>
+<area shape="rect" id="Node000001" title="JWT (JSON Web Token) generation and verification." alt="" coords="293,5,456,45"/>
+<area shape="rect" id="Node000002" href="$d3/d30/sys_2app_2middleware_8h.html" title="Built&#45;in middleware factories." alt="" coords="203,93,365,133"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="347,57,306,95,302,91,343,53"/>
+<area shape="rect" id="Node000006" href="$d8/d80/jwt_8c.html" title="HS256/ES256/EdDSA JWT signing, verification, and decoded&#45;claims access helpers." alt="" coords="389,101,545,126"/>
+<area shape="poly" id="edge5_Node000001_Node000006" title=" " alt="" coords="407,53,456,98,452,102,403,57"/>
+<area shape="rect" id="Node000003" href="$d9/dc9/middleware_8c.html" title="Built&#45;in middleware implementations for request IDs, logging, rate limits, CORS, and JWT auth." alt="" coords="5,189,192,214"/>
+<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="232,142,124,191,122,186,230,137"/>
+<area shape="rect" id="Node000004" href="$d3/db2/otel_8c.html" title="OpenTelemetry tracing middleware (#402)." alt="" coords="217,189,351,214"/>
+<area shape="poly" id="edge3_Node000002_Node000004" title=" " alt="" coords="287,147,287,188,281,188,281,147"/>
+<area shape="rect" id="Node000005" href="$dc/d97/rate__limit__redis_8c.html" title="Optional process&#45;shared Redis rate limiter." alt="" coords="376,181,539,221"/>
+<area shape="poly" id="edge4_Node000002_Node000005" title=" " alt="" coords="335,137,421,179,418,184,333,142"/>
 </map>

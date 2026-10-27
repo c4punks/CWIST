@@ -108,21 +108,21 @@ $(document).ready(function(){initNavTree('db/d4d/md_docs_2c1m-file-limits.html',
   <div class="headertitle"><div class="title">C1M file limits</div></div>
 </div><!--header-->
 <div class="contents">
-<div class="textblock"><p><a class="anchor" id="autotoc_md246"></a> This is a partial fix for issue #25.</p>
-<h1><a class="anchor" id="autotoc_md247"></a>
+<div class="textblock"><p><a class="anchor" id="autotoc_md247"></a> This is a partial fix for issue #25.</p>
+<h1><a class="anchor" id="autotoc_md248"></a>
 Cause</h1>
 <p>The old code sets both file limits to 1050000 before it calls <code>setrlimit</code>. If the call fails, the second call uses the value that the code already changed. The code loses the original hard-limit value.</p>
 <p>In the test container, the soft limit stayed at 1024. The hard limit was 524288. The low soft limit caused a low C1M connection limit. With one process and one HTTP worker, eight of 40 open connections received HTTP 503.</p>
-<h1><a class="anchor" id="autotoc_md248"></a>
+<h1><a class="anchor" id="autotoc_md249"></a>
 Change</h1>
 <p>The code increases the soft limit only within the existing hard limit. It does not change the hard limit or decrease a higher soft limit. A failed system call produces an error message, not a success message.</p>
 <p>With this change, the test container used a soft limit of 524288. All 40 connections received HTTP 200. The hard limit did not change.</p>
-<h1><a class="anchor" id="autotoc_md249"></a>
+<h1><a class="anchor" id="autotoc_md250"></a>
 Tuning</h1>
 <p>The 1050000 target is a compile-time default (<code>CWIST_DEFAULT_FD_LIMIT_TARGET</code> in <code><a class="el" href="../../df/d7f/app_8c.html">src/sys/app/app.c</a></code>), overridable via <code>CWIST_FD_LIMIT_TARGET</code> - matching the project's convention for this kind of knob (<code>CWIST_MALLOC_ARENA_MAX</code>, <code>CWIST_POOL_SHARDS</code>, <code>CWIST_HTTP_YIELD_BATCH</code>, ...). Set it when the default doesn't fit a deployment: a smaller container quota, or a workload that opens more than one fd per connection (proxying, per-connection temp/log files).</p>
 <p>Any value that isn't a valid positive integer (unset, empty, non-numeric, trailing garbage, zero, negative) falls back to the default - <code>cwist_app_tune_system()</code> never runs with <code>target == 0</code> or a partially-parsed number. The hard-limit clamp and no-op-if-already-sufficient behavior above apply identically whether the target came from the env var or the default.</p>
 <div class="fragment"><div class="line">CWIST_FD_LIMIT_TARGET=200000 ./your_cwist_app</div>
-</div><!-- fragment --><h1><a class="anchor" id="autotoc_md250"></a>
+</div><!-- fragment --><h1><a class="anchor" id="autotoc_md251"></a>
 Checks</h1>
 <ul>
 <li>Three child-process checks use real file limits.</li>

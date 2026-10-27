@@ -108,17 +108,17 @@ $(document).ready(function(){initNavTree('d1/dd3/md_docs_2decisions_20002-tls-ho
   <div class="headertitle"><div class="title">ADR-0002: TLS certificate hot reload keeps the session-ticket key (STEK) unchanged</div></div>
 </div><!--header-->
 <div class="contents">
-<div class="textblock"><p><a class="anchor" id="autotoc_md274"></a></p><ul>
+<div class="textblock"><p><a class="anchor" id="autotoc_md275"></a></p><ul>
 <li><b>Status:</b> Implemented.</li>
 <li><b>Date:</b> 2026-10-18</li>
 <li><b>Scope:</b> HTTPS (TLS over TCP) and HTTPS/3 (QUIC) listeners reloaded through <code><a class="el" href="../../d0/d77/sys_2app_2app_8h.html#a4fb1e1d94a22473d74464ca4152840e6" title="Hot-reload the TLS certificate chain and key without restarting the listener.">cwist_app_reload_tls()</a></code>, <code><a class="el" href="../../d7/d67/net_2http_2https_8h.html#a730210fa8bf88c03bf8e3a3820f82890" title="Hot-reload the certificate chain and key of a live HTTPS context.">cwist_https_reload_context()</a></code> and <code><a class="el" href="../../dd/dff/http3_8h.html#a7bb102c8e1d282026b8103570713420e" title="Hot-reload the certificate chain and key of a live HTTP/3 context.">cwist_http3_reload_context()</a></code>.</li>
 <li><b>Related:</b> <a href="https://github.com/c4punks/CWIST/issues/404">issue #404</a>, the process-lifetime STEK discussion in <code><a class="el" href="../../d2/db2/https_8c.html" title="OpenSSL-backed HTTPS accept, receive, send, and server-loop helpers.">src/net/http/https.c</a></code> ("Shared session ticket key", tracked as issue #98).</li>
 </ul>
-<h1><a class="anchor" id="autotoc_md275"></a>
+<h1><a class="anchor" id="autotoc_md276"></a>
 Context</h1>
 <p>Reloading a certificate in place means the listener swaps its <code>SSL_CTX</code> while old connections finish on the previous one. Both TLS stacks in CWIST install an explicit session-ticket key callback so that tickets issued by one pre-fork worker resume on any other; the key material is random, generated at context creation, and carried in an <code>SSL_CTX</code> ex-data slot.</p>
 <p>A reload builds a brand-new <code>SSL_CTX</code>. The question is whether the new context reuses the existing STEK or mints a fresh one.</p>
-<h1><a class="anchor" id="autotoc_md276"></a>
+<h1><a class="anchor" id="autotoc_md277"></a>
 Decision</h1>
 <p><b>A certificate reload does not rotate the STEK.</b> The new <code>SSL_CTX</code> is installed with the same ticket key the listener already used. The key is owned by the wrapper context (<code><a class="el" href="../../dd/dcc/structcwist__https__context.html#a3944c4b316e51cfcbd3869dc729fd2f6" title="Shared session-ticket key material (forked workers inherit it)">cwist_https_context.ticket_key</a></code> / <code><a class="el" href="../../d9/dae/structcwist__http3__context.html#aa4a24aa02618d1d5ffe11a22f9d7b4e2">cwist_http3_context.ticket_key</a></code>), which outlives every <code>SSL_CTX</code> it was ever installed on, and is freed once at wrapper destruction.</p>
 <p>Rationale:</p>
@@ -128,7 +128,7 @@ Decision</h1>
 <li>The STEK only protects session tickets, not bulk traffic. Traffic keys remain protected by (EC)DHE forward secrecy in both directions of the reload boundary.</li>
 </ul>
 <p>Explicitly <b>out of scope</b>: STEK rotation on a timer. The existing process-lifetime STEK trade-off (issue #98) is unchanged; an operator whose threat model requires STEK rotation still restarts the process, which is also the only way to rotate the key across the pre-fork worker set.</p>
-<h1><a class="anchor" id="autotoc_md277"></a>
+<h1><a class="anchor" id="autotoc_md278"></a>
 Consequences</h1>
 <ul>
 <li>A compromised STEK can decrypt tickets issued both before and after any number of reloads, for the process lifetime. This is identical to the pre-reload exposure; hot reload does not widen the window.</li>

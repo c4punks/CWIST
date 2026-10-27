@@ -108,9 +108,9 @@ $(document).ready(function(){initNavTree('d9/dfa/md_docs_2runtime-config.html','
   <div class="headertitle"><div class="title">Runtime configuration</div></div>
 </div><!--header-->
 <div class="contents">
-<div class="textblock"><p><a class="anchor" id="autotoc_md425"></a> Every <code>CWIST_*</code> environment variable the framework reads is listed here. <code>scripts/ci/check_env_knobs.py</code> (<code>make env-check</code>, run in CI) fails when <code>src/</code> reads a variable this page does not list, or when this page lists one <code>src/</code> no longer reads, so the table stays complete.</p>
+<div class="textblock"><p><a class="anchor" id="autotoc_md426"></a> Every <code>CWIST_*</code> environment variable the framework reads is listed here. <code>scripts/ci/check_env_knobs.py</code> (<code>make env-check</code>, run in CI) fails when <code>src/</code> reads a variable this page does not list, or when this page lists one <code>src/</code> no longer reads, so the table stays complete.</p>
 <p>Most variables are read once, on first use, and cached: set them before the process starts (or before <code><a class="el" href="../../d0/d77/sys_2app_2app_8h.html#a05f9a10f4d2ab307c211dd56d54fe7c3" title="Serve app on port until SIGTERM, SIGINT or cwist_shutdown_request(); blocks the calling thread.">cwist_app_listen()</a></code>), not while it is serving. An empty or malformed value falls back to the default unless the row says otherwise.</p>
-<h1><a class="anchor" id="autotoc_md426"></a>
+<h1><a class="anchor" id="autotoc_md427"></a>
 Status</h1>
 <p>Each variable has one status. The status says what v4 promises about it.</p>
 <table class="markdownTable">
@@ -123,7 +123,7 @@ Status</h1>
 <tr class="markdownTableRowOdd">
 <td class="markdownTableBodyNone"><code>diagnostic</code>   </td><td class="markdownTableBodyNone">For debugging only. Output format and behavior are not stable and may change or go away in any release.   </td></tr>
 </table>
-<h1><a class="anchor" id="autotoc_md427"></a>
+<h1><a class="anchor" id="autotoc_md428"></a>
 Processes and server mode</h1>
 <table class="markdownTable">
 <tr class="markdownTableHead">
@@ -145,7 +145,7 @@ Processes and server mode</h1>
 <tr class="markdownTableRowEven">
 <td class="markdownTableBodyNone"><code>CWIST_MALLOC_TRIM_IDLE_SEC</code>   </td><td class="markdownTableBodyNone">tuning   </td><td class="markdownTableBodyNone">seconds, <code>0</code>–<code>86400</code>   </td><td class="markdownTableBodyNone"><code>30</code>   </td><td class="markdownTableBodyNone">glibc only (no-op elsewhere): seconds of cumulative event-free reactor idleness after which the reactor calls <code><a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">malloc_trim(0)</a></code> on a zero-event wake, returning the free arena top to the OS. Runs only on idle wakes, so the hot path pays nothing. Measured ≈1.2 MiB median per worker after a load round. <code>0</code> disables the trim.   </td></tr>
 </table>
-<h1><a class="anchor" id="autotoc_md428"></a>
+<h1><a class="anchor" id="autotoc_md429"></a>
 Classic thread pool</h1>
 <table class="markdownTable">
 <tr class="markdownTableHead">
@@ -157,7 +157,7 @@ Classic thread pool</h1>
 <tr class="markdownTableRowOdd">
 <td class="markdownTableBodyNone"><code>CWIST_POOL_IDLE_TIMEOUT_MS</code>   </td><td class="markdownTableBodyNone">supported   </td><td class="markdownTableBodyNone">milliseconds ≥ 0   </td><td class="markdownTableBodyNone"><code>2000</code>   </td><td class="markdownTableBodyNone">How long a thread above the base pool idles before it exits. <code>0</code> keeps surplus threads forever.   </td></tr>
 </table>
-<h1><a class="anchor" id="autotoc_md429"></a>
+<h1><a class="anchor" id="autotoc_md430"></a>
 HTTP/1.1</h1>
 <table class="markdownTable">
 <tr class="markdownTableHead">
@@ -175,7 +175,7 @@ HTTP/1.1</h1>
 <tr class="markdownTableRowEven">
 <td class="markdownTableBodyNone"><code>CWIST_TCP_CORK_BURST</code>   </td><td class="markdownTableBodyNone">tuning   </td><td class="markdownTableBodyNone">bytes ≥ 16384   </td><td class="markdownTableBodyNone"><code>262144</code>   </td><td class="markdownTableBodyNone">With <code>CWIST_USE_TCP_CORK</code>, a file body is flushed every this many bytes instead of in one clump.   </td></tr>
 </table>
-<h1><a class="anchor" id="autotoc_md430"></a>
+<h1><a class="anchor" id="autotoc_md431"></a>
 HTTPS</h1>
 <table class="markdownTable">
 <tr class="markdownTableHead">
@@ -189,7 +189,7 @@ HTTPS</h1>
 <tr class="markdownTableRowEven">
 <td class="markdownTableBodyNone"><code>CWIST_TLS_SESS_CACHE_SIZE</code>   </td><td class="markdownTableBodyNone">tuning   </td><td class="markdownTableBodyNone">integer, <code>0</code>–<code>1048576</code>   </td><td class="markdownTableBodyNone"><code>1024</code>   </td><td class="markdownTableBodyNone">Cap on the BoringSSL server-side session cache (<code>SSL_CTX_sess_set_cache_size</code>), applied to every server TLS context (HTTP/1.1, HTTP/2, HTTP/3). Bounds TLS 1.2 session-ID retention per worker process. <code>0</code> leaves the BoringSSL default (uncapped). Consulted on session insert only.   </td></tr>
 </table>
-<h1><a class="anchor" id="autotoc_md431"></a>
+<h1><a class="anchor" id="autotoc_md432"></a>
 HTTP/2</h1>
 <table class="markdownTable">
 <tr class="markdownTableHead">
@@ -205,7 +205,7 @@ HTTP/2</h1>
 <tr class="markdownTableRowOdd">
 <td class="markdownTableBodyNone"><code>CWIST_H2_BATCH_BYTES</code>   </td><td class="markdownTableBodyNone">tuning   </td><td class="markdownTableBodyNone">bytes ≥ 4096   </td><td class="markdownTableBodyNone"><code>65536</code>   </td><td class="markdownTableBodyNone">Outgoing frames are coalesced and written once this many bytes are pending (or before any blocking wait).   </td></tr>
 </table>
-<h1><a class="anchor" id="autotoc_md432"></a>
+<h1><a class="anchor" id="autotoc_md433"></a>
 HTTP/3</h1>
 <table class="markdownTable">
 <tr class="markdownTableHead">
@@ -215,7 +215,7 @@ HTTP/3</h1>
 <tr class="markdownTableRowEven">
 <td class="markdownTableBodyNone"><code>CWIST_H3_DEBUG</code>   </td><td class="markdownTableBodyNone">diagnostic   </td><td class="markdownTableBodyNone">set   </td><td class="markdownTableBodyNone">unset   </td><td class="markdownTableBodyNone">Routes lsquic's own log to stderr (CONNECTION_CLOSE codes and so on). Read when the server loop starts.   </td></tr>
 </table>
-<h1><a class="anchor" id="autotoc_md433"></a>
+<h1><a class="anchor" id="autotoc_md434"></a>
 WebSocket</h1>
 <table class="markdownTable">
 <tr class="markdownTableHead">
@@ -223,7 +223,7 @@ WebSocket</h1>
 <tr class="markdownTableRowOdd">
 <td class="markdownTableBodyNone"><code>CWIST_WS_ASYNC_IDLE_TIMEOUT_SEC</code>   </td><td class="markdownTableBodyNone">supported   </td><td class="markdownTableBodyNone">seconds ≥ 0   </td><td class="markdownTableBodyNone"><code>300</code>   </td><td class="markdownTableBodyNone">Idle time before an async (reactor) WebSocket is closed. <code>0</code> never closes idle sockets.   </td></tr>
 </table>
-<h1><a class="anchor" id="autotoc_md434"></a>
+<h1><a class="anchor" id="autotoc_md435"></a>
 Reactor</h1>
 <table class="markdownTable">
 <tr class="markdownTableHead">
@@ -243,7 +243,7 @@ Reactor</h1>
 <tr class="markdownTableRowOdd">
 <td class="markdownTableBodyNone"><code>CWIST_REACTOR_CQ_GRACE_NS</code>   </td><td class="markdownTableBodyNone">tuning   </td><td class="markdownTableBodyNone">nanoseconds ≥ 0   </td><td class="markdownTableBodyNone"><code>20000</code>   </td><td class="markdownTableBodyNone">How long the reactor spins on the completion ring before it sleeps in the kernel. <code>0</code> disables the spin.   </td></tr>
 </table>
-<h1><a class="anchor" id="autotoc_md435"></a>
+<h1><a class="anchor" id="autotoc_md436"></a>
 Diagnostics</h1>
 <table class="markdownTable">
 <tr class="markdownTableHead">

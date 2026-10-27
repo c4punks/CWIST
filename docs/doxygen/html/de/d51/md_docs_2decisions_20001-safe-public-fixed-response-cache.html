@@ -108,14 +108,14 @@ $(document).ready(function(){initNavTree('de/d51/md_docs_2decisions_20001-safe-p
   <div class="headertitle"><div class="title">ADR-0001: Restore HTTP response caching through an explicit public FIXED contract</div></div>
 </div><!--header-->
 <div class="contents">
-<div class="textblock"><p><a class="anchor" id="autotoc_md263"></a></p><ul>
+<div class="textblock"><p><a class="anchor" id="autotoc_md264"></a></p><ul>
 <li><b>Status:</b> Superseded (2026-09-21). Implemented as an opt-in cache in <code>ce9cde55</code> (2026-09-14), then replaced by the BDR per-connection cursor fast path (#194, <code>c5e4e3cc</code>) and removed in <code>cf693627</code>. <code>CWIST_ENDPOINT_PUBLIC_FIXED</code> stays defined as an inert bit so existing code keeps compiling. The text below is the original proposal, kept as a historical record.</li>
 <li><b>Date:</b> 2026-09-13</li>
 <li><b>Scope:</b> Cleartext HTTP/1 in classic and C1M modes.</li>
 <li><b>Source baseline:</b> <code>7e19b461c5772f4e46e7d58fb96827bbb954cf97</code>.</li>
 <li><b>Related:</b> <a href="https://github.com/c4punks/CWIST/issues/25">issue #25</a>, <a href="https://github.com/c4punks/CWIST/pull/84">PR #84</a>.</li>
 </ul>
-<h1><a class="anchor" id="autotoc_md264"></a>
+<h1><a class="anchor" id="autotoc_md265"></a>
 Context</h1>
 <p>The existing <code>CWIST_ENDPOINT_FIXED</code> documentation promises RAM caching after the first request. Public TCP observations contradict that promise: in both classic and C1M modes, 16 FIXED requests invoked the handler 16 times. The observation included eight keep-alive requests and eight fresh connections, a DYNAMIC control, and independently preseeded cache responses. Adaptive latency-based learning was suppressed for this experiment. This establishes a population failure, not its contribution to P99.999.</p>
 <p>Two ordering defects explain the failure: the common serving function samples endpoint options before routing assigns them, and the C1M branch returns before the learning block. Moving that block alone is unsafe:</p>
@@ -127,11 +127,11 @@ Context</h1>
 <li>The stringification helper treats a non-NUL-terminated header span as a C string. PR #84 fixes that independent defect; it does not make cached replay safe.</li>
 </ul>
 <p>Native backend/thread screening has not established a universal runtime default or resolved the original tail-latency issue. A correct response is mandatory even when a cache miss costs performance.</p>
-<h1><a class="anchor" id="autotoc_md265"></a>
+<h1><a class="anchor" id="autotoc_md266"></a>
 Decision</h1>
 <p>Introduce a separately named opt-in, provisionally <code>CWIST_ENDPOINT_PUBLIC_FIXED</code>, for a restricted public, request-invariant representation cache. The symbol is a proposed API, not an existing one. It uses its own single flag bit: the current <code>cwist_endpoint_has</code> helper tests whether <b>any</b> supplied bit is present, so a composite mask must not be mistaken for an all-bits requirement.</p>
 <p>The opt-in is an application-author assertion that the handler performs no authorization, personalization, required per-request side effect, or request-dependent selection within the admitted profile. The framework cannot infer that assertion from a function pointer, absence of credentials, or a previously successful response. Existing FIXED declarations are not silently upgraded to this stronger contract.</p>
-<h2><a class="anchor" id="autotoc_md266"></a>
+<h2><a class="anchor" id="autotoc_md267"></a>
 1. One parsed eligibility boundary</h2>
 <p>Both classic and C1M must parse and validate the complete request before cache access. Resolve the current exact route using the same routing authority as ordinary dispatch. Remove the alternate classic raw-cache ingress path; it must not remain a way around the policy.</p>
 <p>The first profile admits only:</p>
@@ -144,22 +144,22 @@ Decision</h1>
 </ul>
 <p>An empty query is explicitly equivalent to no query in this profile. The current request model does not preserve a separate query-delimiter-presence bit; implementations must not pretend that a zero-length query proves the delimiter was absent. A later profile that needs that distinction must preserve it during parsing.</p>
 <p>The author contract requires independence from User-Agent, client address, time, and connection identity. Host and route identity remain separate key dimensions. Membership and value checks must examine every header node case-insensitively, not just the first value returned by a lookup helper. Invalid or unsupported values yield ordinary dispatch, never a best-effort cache hit.</p>
-<h2><a class="anchor" id="autotoc_md267"></a>
+<h2><a class="anchor" id="autotoc_md268"></a>
 2. Cache representations, not wire responses</h2>
 <p>Store an owned binary body, an optional validated Content-Type, and authoritative route/key identity. Only complete synchronous 200 responses with ordinary keep-alive capability, the default HTTP/1.1 version and standard reason phrase are eligible. Reject deferred, upgraded, file-stream, partial/non-200, or connection-closing responses. Reject connection-dependent overrides held outside the header list as well, including <code>alt_svc</code> and custom version/status-text fields. Any response header other than a single bounded Content-Type makes the initial profile ineligible. This deliberately excludes Set-Cookie, Vary, cache-control policy, Date, Alt-Svc, and framing overrides rather than partially implementing their semantics.</p>
 <p>A hit constructs an ordinary response for the current request. Derive Content-Length and connection/shutdown behavior anew and use the existing normal classic or coalesced/parked C1M sender. Never send the cache's storage with a one-shot raw <code>send</code>. Regenerate any transport-owned headers; do not replay the first request's close decision.</p>
 <p>Take a bounded owned snapshot after synchronous dispatch and its deferred-response guard, but before sending can consume a pointer body. Publication means successful eligible representation generation, not proof of network delivery. Allocation or insertion failure must fall back to sending the original response. A failed hit reconstruction falls back to ordinary dispatch before any cached bytes are emitted.</p>
-<h2><a class="anchor" id="autotoc_md268"></a>
+<h2><a class="anchor" id="autotoc_md269"></a>
 3. Isolate ownership, provenance and capacity</h2>
 <p>Use cache-owned immutable entries protected by a bounded lookup/update critical section. Copy a hit into request-owned storage while the entry is protected, then release the cache lock before sending. No cache lock, thread-local epoch pin, or borrowed body pointer crosses a blocking send, reactor park, deferred completion, or response destruction.</p>
 <p>Cache allocations must have application-cache lifetime, not request-arena or thread-GC lifetime. Copies and managed-body release hooks must retain exactly-once ownership under both enabled and disabled full GC. Cache destruction follows worker/connection shutdown and releases every entry.</p>
 <p>Initial limits are 64 KiB per body, 1 KiB for copied Content-Type, 256 entries, and 16 MiB of accounted entry/key/body/metadata storage per worker process, with a 60-second monotonic maximum age. These are conservative bounds, not measured optimal values. Accounted storage excludes allocator overhead and is not an RSS guarantee. On capacity pressure or expiry, evict safely or miss; do not add an unbounded queue or background worker. Check arithmetic before allocation.</p>
 <p>Key by the current exact route identity, method, path, and accepted Host value. Never treat an old heuristic or manually injected whole-wire BDR blob as a validated representation entry. Routes and middleware are configured before serving; live concurrent route mutation is outside this profile. The implementation must invalidate affected entries on supported reconfiguration and must not add a route-mutation safety claim that the router itself cannot support.</p>
-<h2><a class="anchor" id="autotoc_md269"></a>
+<h2><a class="anchor" id="autotoc_md270"></a>
 4. Make the compatibility change explicit</h2>
 <p>The recommended migration replaces automatic HTTP BDR lookup/learning with the restricted opt-in path. Existing BDR storage APIs remain available to applications, but legacy heuristic or manually preseeded wire blobs no longer automatically bypass HTTP routing. Bare FIXED and DYNAMIC routes continue through ordinary dispatch until explicitly migrated; document the resulting loss of legacy automatic cache hits.</p>
 <p>This is an intentional compatibility change requiring maintainer acceptance and release notes. It is not hidden inside the serializer fix. Do not expose an unsafe legacy-fast-path fallback as the cache's failure behavior. Migrate only demonstrated public constant-response examples and benchmark fixtures; do not bulk-convert application routes based on their existing FIXED bit.</p>
-<h1><a class="anchor" id="autotoc_md270"></a>
+<h1><a class="anchor" id="autotoc_md271"></a>
 Alternatives considered</h1>
 <ol type="1">
 <li><b>Move learning and resample FIXED only.</b> Small diff, but activates bypass, framing, partial-write and lifetime defects. Rejected.</li>
@@ -167,7 +167,7 @@ Alternatives considered</h1>
 <li><b>Implement general shared HTTP caching.</b> Variant-aware keys, middleware-preserving execution, validators, cache directives and broader transports could preserve more use cases. Deferred: substantially larger protocol and API scope than the current investigation.</li>
 <li><b>Leave caching dormant and investigate scheduler contention only.</b> Safe short-term fallback and still a valid parallel investigation. It does not repair the demonstrated cache contract failure.</li>
 </ol>
-<h1><a class="anchor" id="autotoc_md271"></a>
+<h1><a class="anchor" id="autotoc_md272"></a>
 Consequences</h1>
 <ul>
 <li>Unsupported traffic takes a safe miss; cache hit rate is secondary to confidentiality and valid framing.</li>
@@ -175,7 +175,7 @@ Consequences</h1>
 <li>Body copies and synchronization may add overhead. A lower handler count alone does not establish a tail-latency improvement.</li>
 <li>No new dependency, reactor-count default, backend default, TLS/H2/H3 cache path, deferred-response caching, or C1M heuristic caching is introduced by this decision.</li>
 </ul>
-<h1><a class="anchor" id="autotoc_md272"></a>
+<h1><a class="anchor" id="autotoc_md273"></a>
 Implementation and release gates</h1>
 <p>Implement in separately reviewable slices: eligibility/provenance and bounded storage; parsed lookup plus pre-send snapshot and normal sending; public API/documentation migration; then controlled performance validation. Keep PR #84 independent and verify the actual prerequisite revision rather than assuming it has merged.</p>
 <p>Before release, require:</p>
@@ -188,7 +188,7 @@ Implementation and release gates</h1>
 <li>paired same-runner baseline/candidate measurements on unchanged load and verified runtime topology, retaining every error and outlier. Report corrected P99.999 separately from throughput and do not equate closed-loop screening with a fixed-rate production SLO.</li>
 </ul>
 <p>Do not enable the cache if a confidentiality, framing or ownership gate is unresolved. Rollback disables the new automatic cache and keeps normal dispatch; it does not reactivate unsafe raw replay. Issue #25 remains open until its performance objective is demonstrated independently.</p>
-<h1><a class="anchor" id="autotoc_md273"></a>
+<h1><a class="anchor" id="autotoc_md274"></a>
 Evidence and source anchors</h1>
 <ul>
 <li><a href="https://github.com/c4punks/CWIST/issues/25#issuecomment-5653665938">Cache observation and serializer prerequisite</a>.</li>

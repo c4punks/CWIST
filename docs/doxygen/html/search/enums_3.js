@@ -1,4 +1,4 @@
 var searchData=
 [
-  ['jwt_5falg_5ft_0',['jwt_alg_t',['../d8/d80/jwt_8c.html#a889db178d8714ab67bc994f1d8faad33',1,'jwt.c']]]
+  ['gql_5fop_5ftype_5ft_0',['gql_op_type_t',['../dd/d92/graphql_8c.html#ac46b8a6639c5677c326f2dd5d2ffe737',1,'graphql.c']]]
 ];

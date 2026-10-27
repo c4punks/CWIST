@@ -108,13 +108,13 @@ $(document).ready(function(){initNavTree('df/df1/md_docs_2tutorial_2korean_2cwis
   <div class="headertitle"><div class="title">CWIST 웹 개발 튜토리얼 (A to Z)</div></div>
 </div><!--header-->
 <div class="contents">
-<div class="textblock"><p><a class="anchor" id="autotoc_md470"></a> Spring Boot나 ReactJS에 익숙한 개발자라면 환영합니다! CWIST는 C 언어로 작성된 고성능, 초경량 웹 프레임워크입니다. 이 튜토리얼은 CWIST의 철학과 구조를 빠르게 파악하고, 실제 웹 애플리케이션 개발에 즉시 활용할 수 있도록 작성되었습니다.</p>
+<div class="textblock"><p><a class="anchor" id="autotoc_md471"></a> Spring Boot나 ReactJS에 익숙한 개발자라면 환영합니다! CWIST는 C 언어로 작성된 고성능, 초경량 웹 프레임워크입니다. 이 튜토리얼은 CWIST의 철학과 구조를 빠르게 파악하고, 실제 웹 애플리케이션 개발에 즉시 활용할 수 있도록 작성되었습니다.</p>
 <blockquote class="doxtable">
 <p>&zwj;<b>철학</b>: "명시적이고, 가볍고, 안전하게." CWIST는 <a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">마법(Magic)</a>을 최소화하고, C의 성능을 100% 활용하면서도 현대적인 웹 개발 경험(라우팅, JSON, DB, JWT, Websocket)을 제공합니다. </p>
 </blockquote>
-<h1><a class="anchor" id="autotoc_md471"></a>
-&lt;/blockquote&gt;</h1>
 <h1><a class="anchor" id="autotoc_md472"></a>
+&lt;/blockquote&gt;</h1>
+<h1><a class="anchor" id="autotoc_md473"></a>
 목차</h1>
 <ol type="1">
 <li><a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">Hello World: 첫 서버 띄우기</a></li>
@@ -129,7 +129,7 @@ $(document).ready(function(){initNavTree('df/df1/md_docs_2tutorial_2korean_2cwis
 <li><a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">동적 CSS 합성기 (WASM 및 SSR)</a></li>
 </ol>
 <hr  />
-<h1><a class="anchor" id="autotoc_md474"></a>
+<h1><a class="anchor" id="autotoc_md475"></a>
 1. Hello World: 첫 서버 띄우기</h1>
 <p>CWIST의 핵심은 <code><a class="el" href="../../dc/da0/structcwist__app.html" title="Main Application Context.">cwist_app</a></code> 객체입니다. Spring의 <code>ApplicationContext</code>와 유사하게 앱의 수명 주기를 관리합니다.</p>
 <div class="fragment"><div class="line"><span class="preprocessor">#include &lt;<a class="code" href="../../d0/d77/sys_2app_2app_8h.html">cwist/sys/app/app.h</a>&gt;</span></div>
@@ -169,7 +169,7 @@ $(document).ready(function(){initNavTree('df/df1/md_docs_2tutorial_2korean_2cwis
 <div class="ttc" id="asys_2app_2app_8h_html_a8d6f015a001b2d189ebea808de9da254"><div class="ttname"><a href="../../d0/d77/sys_2app_2app_8h.html#a8d6f015a001b2d189ebea808de9da254">cwist_app_destroy</a></div><div class="ttdeci">void cwist_app_destroy(cwist_app *app)</div><div class="ttdoc">Destroys the application and frees all resources.</div><div class="ttdef"><b>Definition</b> <a href="../../df/d7f/app_8c_source.html#l01464">app.c:1464</a></div></div>
 <div class="ttc" id="asys_2app_2app_8h_html_a9aeebb72e5908f56c1b5823ae4a773c8"><div class="ttname"><a href="../../d0/d77/sys_2app_2app_8h.html#a9aeebb72e5908f56c1b5823ae4a773c8">cwist_app_create</a></div><div class="ttdeci">cwist_app * cwist_app_create(void)</div><div class="ttdoc">Creates a new CWIST application instance.</div><div class="ttdef"><b>Definition</b> <a href="../../df/d7f/app_8c_source.html#l01292">app.c:1292</a></div></div>
 </div><!-- fragment --><hr  />
-<h1><a class="anchor" id="autotoc_md476"></a>
+<h1><a class="anchor" id="autotoc_md477"></a>
 2. 라우팅과 핸들러 (Mux Router)</h1>
 <p>동적 <a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">경로(Path Parameter)</a>와 쿼리 <a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">문자열(Query Parameter)</a>을 처리하는 방법입니다. React Router나 Express와 매우 유사한 직관적인 패턴을 제공합니다.</p>
 <div class="fragment"><div class="line"><span class="preprocessor">#include &lt;<a class="code" href="../../d2/d39/app_8h.html">cwist/app.h</a>&gt;</span></div>
@@ -201,7 +201,7 @@ $(document).ready(function(){initNavTree('df/df1/md_docs_2tutorial_2korean_2cwis
 <div class="ttc" id="astructcwist__http__request_html_a004b3d61d997aa7847cb3c5e9fc64e20"><div class="ttname"><a href="../../dd/d68/structcwist__http__request.html#a004b3d61d997aa7847cb3c5e9fc64e20">cwist_http_request::query_params</a></div><div class="ttdeci">cwist_query_map * query_params</div><div class="ttdoc">Parsed query parameters.</div><div class="ttdef"><b>Definition</b> <a href="../../dd/d56/http_8h_source.html#l00069">http.h:69</a></div></div>
 <div class="ttc" id="astructcwist__http__request_html_a9ea74e77fc5419d5c4b83ad0ee4f84a5"><div class="ttname"><a href="../../dd/d68/structcwist__http__request.html#a9ea74e77fc5419d5c4b83ad0ee4f84a5">cwist_http_request::path_params</a></div><div class="ttdeci">cwist_query_map * path_params</div><div class="ttdoc">Parsed path parameters (e.g. :id)</div><div class="ttdef"><b>Definition</b> <a href="../../dd/d56/http_8h_source.html#l00070">http.h:70</a></div></div>
 </div><!-- fragment --><hr  />
-<h1><a class="anchor" id="autotoc_md478"></a>
+<h1><a class="anchor" id="autotoc_md479"></a>
 3. JSON 파싱과 Zod 스키마 검증</h1>
 <p>TypeScript 진영의 <code>zod</code>에서 영감을 받은 강력한 런타임 스키마 검증기입니다. 클라이언트가 보낸 JSON을 안전하게 파싱하고 타입을 검증합니다.</p>
 <div class="fragment"><div class="line"><span class="preprocessor">#include &lt;<a class="code" href="../../d2/d39/app_8h.html">cwist/app.h</a>&gt;</span></div>
@@ -256,7 +256,7 @@ $(document).ready(function(){initNavTree('df/df1/md_docs_2tutorial_2korean_2cwis
 <div class="ttc" id="azod_8h_html"><div class="ttname"><a href="../../dc/d6e/zod_8h.html">zod.h</a></div><div class="ttdoc">Strict JSON schema validation (Zod-style) for CWIST.</div></div>
 <div class="ttc" id="azod_8h_html_ad98b0b5700360eee85097c3323cd7e29"><div class="ttname"><a href="../../dc/d6e/zod_8h.html#ad98b0b5700360eee85097c3323cd7e29">cwist_zod_parse</a></div><div class="ttdeci">cwist_zod_result_t cwist_zod_parse(const char *raw, const cwist_schema_t *schema, cJSON **out)</div><div class="ttdoc">Parse a raw JSON string and validate it in one step.</div><div class="ttdef"><b>Definition</b> <a href="../../d7/d92/zod_8c_source.html#l00112">zod.c:112</a></div></div>
 </div><!-- fragment --><hr  />
-<h1><a class="anchor" id="autotoc_md480"></a>
+<h1><a class="anchor" id="autotoc_md481"></a>
 4. 미들웨어 (CORS, Logging)</h1>
 <p>모든 요청을 거쳐가는 파이프라인(Spring의 Interceptor, Express의 Middleware)을 쉽게 구축할 수 있습니다.</p>
 <div class="fragment"><div class="line"><span class="preprocessor">#include &lt;<a class="code" href="../../d2/d39/app_8h.html">cwist/app.h</a>&gt;</span></div>
@@ -288,7 +288,7 @@ $(document).ready(function(){initNavTree('df/df1/md_docs_2tutorial_2korean_2cwis
 <div class="ttc" id="asys_2app_2app_8h_html_a2a3910c6b268a4a04e17075671a4c28c"><div class="ttname"><a href="../../d0/d77/sys_2app_2app_8h.html#a2a3910c6b268a4a04e17075671a4c28c">cwist_handler_func</a></div><div class="ttdeci">void(* cwist_handler_func)(cwist_http_request *req, cwist_http_response *res)</div><div class="ttdoc">Function pointer type for HTTP route handlers.</div><div class="ttdef"><b>Definition</b> <a href="../../d0/d77/sys_2app_2app_8h_source.html#l00032">app.h:32</a></div></div>
 <div class="ttc" id="asys_2app_2app_8h_html_a88046a9e7f5c0f069c94aefd233dd815"><div class="ttname"><a href="../../d0/d77/sys_2app_2app_8h.html#a88046a9e7f5c0f069c94aefd233dd815">cwist_app_use</a></div><div class="ttdeci">void cwist_app_use(cwist_app *app, cwist_middleware_func mw)</div><div class="ttdoc">Append a middleware callback to the application's execution chain.</div><div class="ttdef"><b>Definition</b> <a href="../../df/d7f/app_8c_source.html#l01376">app.c:1376</a></div></div>
 </div><!-- fragment --><hr  />
-<h1><a class="anchor" id="autotoc_md482"></a>
+<h1><a class="anchor" id="autotoc_md483"></a>
 5. 데이터베이스와 마이그레이션 (SQLite)</h1>
 <p>CWIST는 내장형 SQLite를 완벽히 지원하며, 앱 라이프사이클에 연결된 커넥션 풀 및 마이그레이션 도구를 제공합니다.</p>
 <div class="fragment"><div class="line"><span class="preprocessor">#include &lt;<a class="code" href="../../d2/d39/app_8h.html">cwist/app.h</a>&gt;</span></div>
@@ -371,7 +371,7 @@ $(document).ready(function(){initNavTree('df/df1/md_docs_2tutorial_2korean_2cwis
 <div class="ttc" id="asys_2app_2app_8h_html_af87347ebdea5e8226c86ae8965fa23e1"><div class="ttname"><a href="../../d0/d77/sys_2app_2app_8h.html#af87347ebdea5e8226c86ae8965fa23e1">cwist_app_get_db</a></div><div class="ttdeci">cwist_db * cwist_app_get_db(cwist_app *app)</div><div class="ttdoc">Return the active shared database wrapper for the application.</div><div class="ttdef"><b>Definition</b> <a href="../../df/d7f/app_8c_source.html#l01948">app.c:1948</a></div></div>
 <div class="ttc" id="asys_2err_2cwist__err_8h_html_acafffea2368d859053b87d99f7e77aaf"><div class="ttname"><a href="../../d7/da1/sys_2err_2cwist__err_8h.html#acafffea2368d859053b87d99f7e77aaf">cwist_error_dispose</a></div><div class="ttdeci">void cwist_error_dispose(cwist_error_t *err)</div><div class="ttdoc">Release resources owned by an error value. Currently only CWIST_ERR_JSON owns memory (the cJSON paylo...</div><div class="ttdef"><b>Definition</b> <a href="../../db/dcc/error_8c_source.html#l00043">error.c:43</a></div></div>
 </div><!-- fragment --><hr  />
-<h1><a class="anchor" id="autotoc_md484"></a>
+<h1><a class="anchor" id="autotoc_md485"></a>
 6. 인증 (JWT 및 DB 암호화)</h1>
 <p>현대 웹의 필수인 Stateless JWT 인증을 내장 함수로 지원합니다.</p>
 <div class="fragment"><div class="line"><span class="preprocessor">#include &lt;<a class="code" href="../../d2/d39/app_8h.html">cwist/app.h</a>&gt;</span></div>
@@ -431,7 +431,7 @@ $(document).ready(function(){initNavTree('df/df1/md_docs_2tutorial_2korean_2cwis
 <div class="ttc" id="ajwt_8h_html_a7ebdc506413955dc760508df1943b0ca"><div class="ttname"><a href="../../d5/d6c/jwt_8h.html#a7ebdc506413955dc760508df1943b0ca">cwist_jwt_verify</a></div><div class="ttdeci">cwist_jwt_claims * cwist_jwt_verify(const char *token, const char *secret)</div><div class="ttdoc">Verify a JWT token and return the decoded claims.</div><div class="ttdef"><b>Definition</b> <a href="../../d8/d80/jwt_8c_source.html#l00748">jwt.c:748</a></div></div>
 <div class="ttc" id="astructcwist__http__request_html_ac5dd8aba8a06ff00f75e5357acca3bd6"><div class="ttname"><a href="../../dd/d68/structcwist__http__request.html#ac5dd8aba8a06ff00f75e5357acca3bd6">cwist_http_request::headers</a></div><div class="ttdeci">cwist_http_header_node * headers</div><div class="ttdef"><b>Definition</b> <a href="../../dd/d56/http_8h_source.html#l00072">http.h:72</a></div></div>
 </div><!-- fragment --><hr  />
-<h1><a class="anchor" id="autotoc_md486"></a>
+<h1><a class="anchor" id="autotoc_md487"></a>
 7. PQC TLS (양자내성 하이브리드 키 교환)</h1>
 <p>CWIST는 단 한 줄의 코드로 양자내성(Post-Quantum) 하이브리드 TLS를 활성화할 수 있습니다. 이는 기존 X25519 ECDH에 NIST 표준 ML-KEM-768(Kyber 계열)을 결합한 hybrid KEM 방식으로, 양자 컴퓨터 환경에서도 키 교환이 안전합니다.</p>
 <div class="fragment"><div class="line"><span class="preprocessor">#include &lt;<a class="code" href="../../d0/d77/sys_2app_2app_8h.html">cwist/sys/app/app.h</a>&gt;</span></div>
@@ -453,7 +453,7 @@ $(document).ready(function(){initNavTree('df/df1/md_docs_2tutorial_2korean_2cwis
 <div class="line">}</div>
 <div class="ttc" id="asys_2app_2app_8h_html_af780881525511196767c3e61e69c652c"><div class="ttname"><a href="../../d0/d77/sys_2app_2app_8h.html#af780881525511196767c3e61e69c652c">cwist_app_use_https</a></div><div class="ttdeci">cwist_error_t cwist_app_use_https(cwist_app *app, const char *cert_path, const char *key_path)</div><div class="ttdoc">Enable TLS for the application using the supplied certificate pair.</div><div class="ttdef"><b>Definition</b> <a href="../../df/d7f/app_8c_source.html#l01646">app.c:1646</a></div></div>
 <div class="ttc" id="asys_2app_2app_8h_html_afb8be8339f747ad1a0d0604d95e66341"><div class="ttname"><a href="../../d0/d77/sys_2app_2app_8h.html#afb8be8339f747ad1a0d0604d95e66341">cwist_app_use_pqc_layer</a></div><div class="ttdeci">void cwist_app_use_pqc_layer(cwist_app *app, bool enabled)</div><div class="ttdoc">Enable Post-Quantum Cryptography (PQC) hybrid key exchange layer.</div><div class="ttdef"><b>Definition</b> <a href="../../df/d7f/app_8c_source.html#l01744">app.c:1744</a></div></div>
-</div><!-- fragment --><h2><a class="anchor" id="autotoc_md487"></a>
+</div><!-- fragment --><h2><a class="anchor" id="autotoc_md488"></a>
 보안 정책 요약</h2>
 <table class="markdownTable">
 <tr class="markdownTableHead">
@@ -470,9 +470,9 @@ $(document).ready(function(){initNavTree('df/df1/md_docs_2tutorial_2korean_2cwis
 <blockquote class="doxtable">
 <p>&zwj;<b>참고</b>: 이 설정은 **transport 계층**의 키 교환에만 적용됩니다. 인증서 <a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">서명(signature)</a>까지 PQC로 전환하려면 별도의 <code><a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">cwist_app_use_pqc_cert()</a></code> 같은 기능이 필요하며, 이는 현재 생태계에서 아직 과도한 단계로 간주됩니다. </p>
 </blockquote>
-<h1><a class="anchor" id="autotoc_md488"></a>
-&lt;/blockquote&gt;</h1>
 <h1><a class="anchor" id="autotoc_md489"></a>
+&lt;/blockquote&gt;</h1>
+<h1><a class="anchor" id="autotoc_md490"></a>
 8. 웹소켓 연동 (실시간 양방향 통신)</h1>
 <p>CWIST는 동일한 포트에서 HTTP 통신을 WebSocket으로 쉽게 업그레이드 할 수 있습니다. <code><a class="el" href="../../d0/d77/sys_2app_2app_8h.html#ae4d097319d239ddd750eebffd027ccef" title="Register a WebSocket upgrade endpoint with default options.">cwist_app_ws()</a></code>로 경로를 등록하면 업그레이드 핸드셰이크는 프레임워크가 처리하고, 핸들러는 연결된 <code><a class="el" href="../../d9/d2c/structcwist__websocket.html">cwist_websocket</a></code>만 다룹니다.</p>
 <div class="fragment"><div class="line"><span class="preprocessor">#include &lt;<a class="code" href="../../d2/d39/app_8h.html">cwist/app.h</a>&gt;</span></div>
@@ -516,7 +516,7 @@ $(document).ready(function(){initNavTree('df/df1/md_docs_2tutorial_2korean_2cwis
 <div class="ttc" id="astructcwist__ws__frame_html"><div class="ttname"><a href="../../db/d40/structcwist__ws__frame.html">cwist_ws_frame</a></div><div class="ttdef"><b>Definition</b> <a href="../../dd/dec/net_2websocket_2websocket_8h_source.html#l00035">websocket.h:35</a></div></div>
 <div class="ttc" id="asys_2app_2app_8h_html_ae4d097319d239ddd750eebffd027ccef"><div class="ttname"><a href="../../d0/d77/sys_2app_2app_8h.html#ae4d097319d239ddd750eebffd027ccef">cwist_app_ws</a></div><div class="ttdeci">void cwist_app_ws(cwist_app *app, const char *path, cwist_ws_handler_func handler)</div><div class="ttdoc">Register a WebSocket upgrade endpoint with default options.</div><div class="ttdef"><b>Definition</b> <a href="../../df/d7f/app_8c_source.html#l02309">app.c:2309</a></div></div>
 </div><!-- fragment --><hr  />
-<h1><a class="anchor" id="autotoc_md491"></a>
+<h1><a class="anchor" id="autotoc_md492"></a>
 9. 템플릿 엔진과 정적 파일 제공</h1>
 <p>HTML 기반의 SSR(Server-Side Rendering) 프로젝트를 구축하거나, React의 빌드 결과물(정적 파일)을 서비스할 때 유용합니다.</p>
 <div class="fragment"><div class="line"><span class="preprocessor">#include &lt;<a class="code" href="../../d2/d39/app_8h.html">cwist/app.h</a>&gt;</span></div>
@@ -565,32 +565,32 @@ $(document).ready(function(){initNavTree('df/df1/md_docs_2tutorial_2korean_2cwis
 <div class="ttc" id="atemplate_8h_html"><div class="ttname"><a href="../../de/db8/template_8h.html">template.h</a></div><div class="ttdoc">Simple template engine.</div></div>
 <div class="ttc" id="atemplate_8h_html_ac506fb8f038486882fc9f0e4757d4b4e"><div class="ttname"><a href="../../de/db8/template_8h.html#ac506fb8f038486882fc9f0e4757d4b4e">cwist_template_render_file</a></div><div class="ttdeci">cwist_sstring * cwist_template_render_file(const char *file_path, const cJSON *context)</div><div class="ttdoc">Renders a template from a file with the given cJSON context.</div><div class="ttdef"><b>Definition</b> <a href="../../d6/d06/template_8c_source.html#l00442">template.c:442</a></div></div>
 </div><!-- fragment --><hr  />
-<h1><a class="anchor" id="autotoc_md493"></a>
+<h1><a class="anchor" id="autotoc_md494"></a>
 10. 동적 CSS 합성기 (WASM 및 SSR)</h1>
 <p>CWIST는 단순 백엔드 역할을 넘어, C 언어의 강력한 수학적 연산력을 바탕으로 <b>디자인 시스템을 런타임에 합성해내는 CSS Composer</b> 기능을 내장하고 있습니다. 색상의 <a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">명도(Lightness)</a>를 수학적으로 추론하여 Hover/Active 상태를 만들고, <a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">곡률(Roundness)</a>과 <a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">여백(Spacing)</a>을 동적으로 계산합니다.</p>
 <p>이를 활용하는 두 가지 대표적인 방식을 소개합니다.</p>
-<h2><a class="anchor" id="autotoc_md494"></a>
+<h2><a class="anchor" id="autotoc_md495"></a>
 방법 A: 100% Server-Side Rendering (SSR)</h2>
 <p>서버에서 동적으로 테마 CSS를 생성하여 렌더링 시점에 주입하는 방식입니다. 사용자별 커스텀 테마를 제공할 때 매우 유용합니다.</p>
 <div class="fragment"><div class="line"><span class="preprocessor">#include &lt;<a class="code" href="../../d2/d39/app_8h.html">cwist/app.h</a>&gt;</span></div>
 <div class="line"><span class="preprocessor">#include &lt;<a class="code" href="../../da/d0a/css__composer_8h.html">cwist/core/html/css_composer.h</a>&gt;</span></div>
 <div class="line"> </div>
 <div class="line"><span class="keywordtype">void</span> <a class="code hl_variable" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">theme_css_handler</a>(<a class="code hl_struct" href="../../dd/d68/structcwist__http__request.html">cwist_http_request</a> *req, <a class="code hl_struct" href="../../dd/d22/structcwist__http__response.html">cwist_http_response</a> *res) {</div>
-<div class="line">    <a class="code hl_struct" href="../../d3/dd1/structcwist__css__config.html">cwist_css_config</a> <a class="code hl_variable" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">cfg</a>;</div>
-<div class="line">    <a class="code hl_function" href="../../da/d0a/css__composer_8h.html#a951abb29e77f91b62c54ab9d07f724a2">cwist_css_config_init</a>(&amp;<a class="code hl_variable" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">cfg</a>);</div>
+<div class="line">    <a class="code hl_struct" href="../../d3/dd1/structcwist__css__config.html">cwist_css_config</a> cfg;</div>
+<div class="line">    <a class="code hl_function" href="../../da/d0a/css__composer_8h.html#a951abb29e77f91b62c54ab9d07f724a2">cwist_css_config_init</a>(&amp;cfg);</div>
 <div class="line"> </div>
 <div class="line">    <span class="comment">// 쿼리 파라미터로 받은 헥스(Hex) 코드를 파싱하여 메인 컬러 지정</span></div>
 <div class="line">    <span class="keyword">const</span> <span class="keywordtype">char</span> *<a class="code hl_variable" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">color</a> = <a class="code hl_function" href="../../d1/d7a/net_2http_2query_8h.html#a2df19e2544e3de48d2340412b2e03f32">cwist_query_map_get</a>(req-&gt;<a class="code hl_variable" href="../../dd/d68/structcwist__http__request.html#a004b3d61d997aa7847cb3c5e9fc64e20">query_params</a>, <span class="stringliteral">&quot;color&quot;</span>);</div>
 <div class="line">    <span class="keywordflow">if</span> (<a class="code hl_variable" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">color</a>) {</div>
-<div class="line">        <a class="code hl_variable" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">cfg</a>.primary_color = <a class="code hl_function" href="../../da/d0a/css__composer_8h.html#a9cad6a35c4f4cb0e3a475e54e69e8f15">cwist_color_hex_to_rgb</a>(<a class="code hl_variable" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">color</a>);</div>
+<div class="line">        cfg.<a class="code hl_variable" href="../../d3/dd1/structcwist__css__config.html#ae0116284ab70b3ede5b155e641ebc784">primary_color</a> = <a class="code hl_function" href="../../da/d0a/css__composer_8h.html#a9cad6a35c4f4cb0e3a475e54e69e8f15">cwist_color_hex_to_rgb</a>(<a class="code hl_variable" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">color</a>);</div>
 <div class="line">    }</div>
 <div class="line">    </div>
 <div class="line">    <span class="comment">// 다크모드 여부 지정</span></div>
 <div class="line">    <span class="keyword">const</span> <span class="keywordtype">char</span> *<a class="code hl_variable" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">dark</a> = <a class="code hl_function" href="../../d1/d7a/net_2http_2query_8h.html#a2df19e2544e3de48d2340412b2e03f32">cwist_query_map_get</a>(req-&gt;<a class="code hl_variable" href="../../dd/d68/structcwist__http__request.html#a004b3d61d997aa7847cb3c5e9fc64e20">query_params</a>, <span class="stringliteral">&quot;dark&quot;</span>);</div>
-<div class="line">    <a class="code hl_variable" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">cfg</a>.is_dark_mode = (<a class="code hl_variable" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">dark</a> &amp;&amp; <a class="code hl_variable" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">strcmp</a>(<a class="code hl_variable" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">dark</a>, <span class="stringliteral">&quot;1&quot;</span>) == 0);</div>
+<div class="line">    cfg.<a class="code hl_variable" href="../../d3/dd1/structcwist__css__config.html#a8bffbf55e6a32c542a93446c294cc963">is_dark_mode</a> = (<a class="code hl_variable" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">dark</a> &amp;&amp; <a class="code hl_variable" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">strcmp</a>(<a class="code hl_variable" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">dark</a>, <span class="stringliteral">&quot;1&quot;</span>) == 0);</div>
 <div class="line"> </div>
 <div class="line">    <span class="comment">// CSS 합성에 필요한 수학적 계산(HSL 변환 등) 수행 후 스타일시트 문자열 반환</span></div>
-<div class="line">    <a class="code hl_struct" href="../../d5/ddc/structcwist__sstring.html">cwist_sstring</a> *<a class="code hl_variable" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">css_output</a> = <a class="code hl_function" href="../../da/d0a/css__composer_8h.html#a4b035df6ad72782fe3ada62f32dd848e">cwist_css_generate_stylesheet</a>(&amp;<a class="code hl_variable" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">cfg</a>);</div>
+<div class="line">    <a class="code hl_struct" href="../../d5/ddc/structcwist__sstring.html">cwist_sstring</a> *<a class="code hl_variable" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">css_output</a> = <a class="code hl_function" href="../../da/d0a/css__composer_8h.html#a4b035df6ad72782fe3ada62f32dd848e">cwist_css_generate_stylesheet</a>(&amp;cfg);</div>
 <div class="line"> </div>
 <div class="line">    <a class="code hl_function" href="../../d4/dbd/core_2sstring_2sstring_8h.html#a6a0c23aa9b205fc952f848cc925a1a28">cwist_sstring_assign</a>(res-&gt;<a class="code hl_variable" href="../../dd/d22/structcwist__http__response.html#a342acf59fe7ce906f6d80a01bfdc1e6e">body</a>, <a class="code hl_variable" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">css_output</a>-&gt;<a class="code hl_variable" href="../../d5/ddc/structcwist__sstring.html#a5db1637d58cb0690522ba232d49e8189">data</a>);</div>
 <div class="line">    <a class="code hl_function" href="../../dd/d56/http_8h.html#ab75bffc747ca7b55ac62f581702f1e2a">cwist_http_header_add</a>(&amp;res-&gt;<a class="code hl_variable" href="../../dd/d22/structcwist__http__response.html#a6cb73c494e78ce41b88b785c8c8d3e9b">headers</a>, <span class="stringliteral">&quot;Content-Type&quot;</span>, <span class="stringliteral">&quot;text/css&quot;</span>);</div>
@@ -613,7 +613,9 @@ $(document).ready(function(){initNavTree('df/df1/md_docs_2tutorial_2korean_2cwis
 <div class="ttc" id="acss__composer_8h_html_a951abb29e77f91b62c54ab9d07f724a2"><div class="ttname"><a href="../../da/d0a/css__composer_8h.html#a951abb29e77f91b62c54ab9d07f724a2">cwist_css_config_init</a></div><div class="ttdeci">void cwist_css_config_init(cwist_css_config *cfg)</div><div class="ttdoc">Initializes a CSS configuration with sensible defaults.</div><div class="ttdef"><b>Definition</b> <a href="../../dd/dd7/css__composer_8c_source.html#l00168">css_composer.c:168</a></div></div>
 <div class="ttc" id="acss__composer_8h_html_a9cad6a35c4f4cb0e3a475e54e69e8f15"><div class="ttname"><a href="../../da/d0a/css__composer_8h.html#a9cad6a35c4f4cb0e3a475e54e69e8f15">cwist_color_hex_to_rgb</a></div><div class="ttdeci">cwist_color_rgb cwist_color_hex_to_rgb(const char *hex)</div><div class="ttdoc">Parses a hex string (e.g., &quot;#FF0000&quot;, &quot;FF0000&quot;, &quot;#F00&quot;, or &quot;F00&quot;) into an RGB struct.</div><div class="ttdef"><b>Definition</b> <a href="../../dd/dd7/css__composer_8c_source.html#l00121">css_composer.c:121</a></div></div>
 <div class="ttc" id="astructcwist__css__config_html"><div class="ttname"><a href="../../d3/dd1/structcwist__css__config.html">cwist_css_config</a></div><div class="ttdoc">Dynamic CSS configuration parameters. Contains base metrics used to extrapolate an entire design syst...</div><div class="ttdef"><b>Definition</b> <a href="../../da/d0a/css__composer_8h_source.html#l00034">css_composer.h:34</a></div></div>
-</div><!-- fragment --><h2><a class="anchor" id="autotoc_md495"></a>
+<div class="ttc" id="astructcwist__css__config_html_a8bffbf55e6a32c542a93446c294cc963"><div class="ttname"><a href="../../d3/dd1/structcwist__css__config.html#a8bffbf55e6a32c542a93446c294cc963">cwist_css_config::is_dark_mode</a></div><div class="ttdeci">bool is_dark_mode</div><div class="ttdoc">Flag to trigger dark mode palette generation.</div><div class="ttdef"><b>Definition</b> <a href="../../da/d0a/css__composer_8h_source.html#l00039">css_composer.h:39</a></div></div>
+<div class="ttc" id="astructcwist__css__config_html_ae0116284ab70b3ede5b155e641ebc784"><div class="ttname"><a href="../../d3/dd1/structcwist__css__config.html#ae0116284ab70b3ede5b155e641ebc784">cwist_css_config::primary_color</a></div><div class="ttdeci">cwist_color_rgb primary_color</div><div class="ttdoc">Base primary brand color.</div><div class="ttdef"><b>Definition</b> <a href="../../da/d0a/css__composer_8h_source.html#l00035">css_composer.h:35</a></div></div>
+</div><!-- fragment --><h2><a class="anchor" id="autotoc_md496"></a>
 방법 B: React + WebAssembly (WASM) 클라이언트 사이드 합성</h2>
 <p>CWIST의 <code><a class="el" href="../../dd/dd7/css__composer_8c.html" title="Dynamic CSS Synthesis and Color Mathematics Implementation.">css_composer.c</a></code>는 프레임워크 독립적으로 작성되어, Emscripten을 통해 <code>.wasm</code>으로 빌드한 뒤 React 앱 내부로 가져와 클라이언트 측에서 즉각적으로 연산시킬 수도 있습니다.</p>
 <ol type="1">
@@ -655,7 +657,7 @@ $(document).ready(function(){initNavTree('df/df1/md_docs_2tutorial_2korean_2cwis
 </div><!-- fragment --></li>
 </ol>
 <hr  />
-<h2><a class="anchor" id="autotoc_md497"></a>
+<h2><a class="anchor" id="autotoc_md498"></a>
 마치며</h2>
 <p>이 튜토리얼을 통해 C 기반 환경임에도 불구하고 얼마나 친숙하고 선언적으로 웹 개발을 할 수 있는지 확인하셨길 바랍니다. <code><a class="el" href="../../dc/da0/structcwist__app.html" title="Main Application Context.">cwist_app</a></code> 구조체가 전체 생명주기를, <code><a class="el" href="../../d0/d77/sys_2app_2app_8h.html#a2e05d7cf1fd66d956d6928d465c3aa72" title="Registers a GET route handler.">cwist_app_get()</a></code> 같은 등록 함수가 라우팅을 담당한다는 점만 기억하면 기존 모던 프레임워크와 동일한 아키텍처로 개발을 진행할 수 있습니다. </p>
 </div></div><!-- contents -->

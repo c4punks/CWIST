@@ -108,13 +108,13 @@ $(document).ready(function(){initNavTree('d2/dc2/md_docs_2http-reactor-fairness.
   <div class="headertitle"><div class="title">HTTP/1.1 pipeline fairness and framing</div></div>
 </div><!--header-->
 <div class="contents">
-<div class="textblock"><p><a class="anchor" id="autotoc_md314"></a> Related: <a href="https://github.com/c4punks/CWIST/issues/25">issue #25</a>.</p>
-<h1><a class="anchor" id="autotoc_md315"></a>
+<div class="textblock"><p><a class="anchor" id="autotoc_md315"></a> Related: <a href="https://github.com/c4punks/CWIST/issues/25">issue #25</a>.</p>
+<h1><a class="anchor" id="autotoc_md316"></a>
 Scope</h1>
 <p>The event-driven HTTP/1.1 handler serves at most <b>16 complete requests per invocation</b>. Buffered requests are continued through the reactor's FIFO post queue, not by recursively calling the handler or waiting for another read event. This bounds request dispatch count, not elapsed time: a blocking handler, large body, or synchronous file-stream operation can still occupy a reactor.</p>
 <p>The nonblocking parser's preliminary pass receives only the header block. The validated Content-Length/chunked assembler supplies the body afterward. This avoids copying subsequent pipeline messages into a body-less request and doing that unnecessary copy again for each request in a long pipeline.</p>
 <p>Half-close is preserved across continuations. Complete buffered requests are answered after the peer shuts down its write side; an incomplete trailing request is closed rather than rearmed forever. Pool destruction also prohibits new continuations from deferred completions in the final reactor drain.</p>
-<h1><a class="anchor" id="autotoc_md316"></a>
+<h1><a class="anchor" id="autotoc_md317"></a>
 Behavioral regression tests</h1>
 <div class="fragment"><div class="line">make WERROR=1 test_http_pipeline test_http_fairness test_async_defer test_http_chunked</div>
 </div><!-- fragment --><p><code>test_http_pipeline</code> checks no-body GET, Content-Length: 0, a positive length, and chunked framing, with another request in the same stash.</p>
@@ -128,13 +128,13 @@ Behavioral regression tests</h1>
 </ul>
 <p>The assertions use service order, framing, and lifecycle rather than latency thresholds. Watchdog/poll timeouts only prevent a broken test from hanging. The Makefile runs these variants in the full suite, and the macOS focused CI job explicitly runs both new test targets.</p>
 <p>The dev baseline served the probe only after <b>256/256</b> requests and exposed later pipeline bytes as a GET body. The initial fairness implementation exposed two additional lifecycle regressions (half-close truncation and a post created inside the final destruction drain); both have dedicated regressions.</p>
-<h1><a class="anchor" id="autotoc_md317"></a>
+<h1><a class="anchor" id="autotoc_md318"></a>
 Performance claim boundary</h1>
 <p>These tests establish removal of a specific head-of-line blocking mechanism. They do <b>not</b> establish resolution of the original issue's 645.72 ms P99.999.</p>
 <p>A separate closed-loop comparison of the repository's <code>GET /</code> benchmark app used Linux x86_64, GCC 13.3, wrk 4.1.0, one process/reactor, two client threads, concurrency 64/256/512, 2 s warmup, 10 s samples, and three rounds per variant. All 18 valid runs had zero transport/status errors. Throughput was similar; extreme percentile latency did not consistently improve. The experiment used the fairness/framing candidate before its final teardown-only guard and is not a final-release performance acceptance gate.</p>
 <p>Do not close #25 based on these results alone. Its source benchmark uses a different load generator; reproduce the original command, revision, worker settings, resource limits, and host conditions before making a general tail latency claim. P99.999 also needs enough observations and repeated runs.</p>
 <p>For comparable local runs, raise the <b>soft</b> descriptor limit before starting both client and server (within the existing hard limit), e.g. <code>ulimit -n 65536</code>. A 1024 soft limit made the initial diagnostic run hit CWIST's inflight admission limit and return 503s; those samples were discarded, not counted as latency wins.</p>
-<h1><a class="anchor" id="autotoc_md318"></a>
+<h1><a class="anchor" id="autotoc_md319"></a>
 Internal API compatibility</h1>
 <p>Consumers allocating <code>cwist_http_async_conn_t</code> must rebuild for its appended <code>peer_eof</code> field. <code><a class="el" href="../../d9/dab/net_2http_2http_8h.html#a1dd409ba636d610c94b01f96676e99a1" title="Drain the socket into the connection stash. Stops at EAGAIN, and also after a short read: poll is lev...">cwist_http_async_conn_fill()</a></code> now returns zero for orderly EOF and records it in that field; callers drain complete buffered requests and then close. Buffered <code><a class="el" href="../../d9/dab/net_2http_2http_8h.html#a230f3fe22f5eed8e14c6fcd3159aafab" title="Re-arm an async connection for its next event.">cwist_http_async_rearm()</a></code> schedules work instead of executing it inline. Its existing failure contract still consumes/closes the connection. </p>
 </div></div><!-- contents -->
