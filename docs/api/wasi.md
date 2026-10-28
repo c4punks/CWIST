@@ -102,8 +102,8 @@ dispatch + session smoke under wasmtime. It required `WASI_SDK` (default
 - **Crypto**: `session.c` and `seq_auth.c` use the bundled header-only
   SHA-256/HMAC (`include/cwist/core/crypto/sha256.h`). Entropy comes from
   `getentropy()` (`__wasi_random_get`).
-- **Allocation**: `alloc.c`/`arena.c` take the Emscripten-style plain-libc
-  path under `__wasi__`.
+- **Allocation**: `alloc.c`/`arena.c` take the single-threaded non-hosted path
+  under `__wasi__`, recycling default arena buffers after first use.
 - **Link model**: `-fvisibility=hidden -Wl,--gc-sections -Wl,--allow-undefined
   -lwasi-emulated-pthread`, mirroring how the Emscripten link satisfies the
   same server-only references through its system stub libraries plus

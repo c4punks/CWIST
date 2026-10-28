@@ -13,14 +13,15 @@
  *        -> tcp_sent acks drain tx -> next pipelined request or close
  *
  * tx is written without TCP_WRITE_FLAG_COPY, so lwIP references it until
- * the peer acknowledges; it is freed only once tx_acked reaches tx_len.
+ * the peer acknowledges. Its storage is retained and reused by the next
+ * response on the connection.
  *
  * With CWIST_LWIP_TLS and cfg.tls set, mbedTLS sits between the pcb and the
  * same rx/tx buffers: received ciphertext queues in tin and is decrypted
  * into rx by the pump; tx goes through mbedtls_ssl_write, whose records are
- * copied into lwIP (TCP_WRITE_FLAG_COPY) by the BIO, so tx can be freed as
- * soon as mbedTLS has taken all of it. The next pipelined request is then
- * picked up from tcp_sent, as on the plaintext path.
+ * copied into lwIP (TCP_WRITE_FLAG_COPY) by the BIO, so the next response can
+ * reuse the storage as soon as mbedTLS has taken all of it. The next pipelined
+ * request is then picked up from tcp_sent, as on the plaintext path.
  */
 
 #include <cwist/sys/port/lwip.h>
@@ -87,7 +88,9 @@ struct cwist_lwip_conn {
     size_t rx_len;
     size_t rx_cap;
 
-    char *tx;            /* serialized response; NULL when idle */
+    char *tx_store;      /* reusable serialized-response storage */
+    size_t tx_cap;
+    const char *tx;      /* active response; NULL when idle */
     size_t tx_len;
     size_t tx_queued;    /* bytes handed to tcp_write */
     size_t tx_acked;     /* bytes the peer acknowledged */
@@ -106,7 +109,6 @@ struct cwist_lwip_conn {
     size_t tin_cap;
     bool tcp_fin;             /* TCP FIN seen; the TLS stream ends once tin drains */
     bool handshake_done;
-    bool tx_static;           /* tx is the static 100 Continue, not a heap buffer */
 #endif
 };
 
@@ -226,15 +228,13 @@ static void conn_unlink(cwist_lwip_conn *c) {
 static void conn_free(cwist_lwip_conn *c) {
     conn_unlink(c);
     cwist_free(c->rx);
+    cwist_free(c->tx_store);
 #ifdef CWIST_LWIP_TLS
-    if (!c->tx_static) cwist_free(c->tx);
     if (c->ssl) {
         mbedtls_ssl_free(c->ssl);
         cwist_free(c->ssl);
     }
     cwist_free(c->tin);
-#else
-    cwist_free(c->tx);
 #endif
     cwist_free(c);
 }
@@ -250,6 +250,50 @@ static bool rx_reserve(cwist_lwip_conn *c, size_t need, size_t limit) {
     c->rx = grown;
     c->rx_cap = cap;
     return true;
+}
+
+static bool tx_reserve(cwist_lwip_conn *c, size_t need) {
+    if (need <= c->tx_cap) return true;
+    size_t cap = c->tx_cap ? c->tx_cap : 512;
+    while (cap < need) {
+        if (cap > SIZE_MAX / 2) {
+            cap = need;
+            break;
+        }
+        cap *= 2;
+    }
+    char *grown = cwist_realloc(c->tx_store, cap);
+    if (!grown) return false;
+    c->tx_store = grown;
+    c->tx_cap = cap;
+    return true;
+}
+
+static int conn_serialize_response(cwist_lwip_conn *c, cwist_http_response *res, size_t *out_len) {
+    if (res->use_file_stream) return -1;
+    char header_buf[CWIST_HTTP_MAX_HEADER_SIZE];
+    size_t header_len = cwist_http_serialize_headers(res, header_buf, sizeof(header_buf));
+
+    const void *body = NULL;
+    size_t body_len = 0;
+    if (res->stream_mode) {
+        if (!res->stream_ended) cwist_http_response_stream_end(res);
+        body = res->stream_buf ? res->stream_buf->data : NULL;
+        body_len = res->stream_buf ? res->stream_buf->size : 0;
+    } else if (res->is_ptr_body) {
+        body = res->ptr_body;
+        body_len = res->ptr_body_len;
+    } else if (res->body && res->body->data) {
+        body = res->body->data;
+        body_len = res->body->size;
+    }
+    if (body_len > SIZE_MAX - header_len - 1 || !tx_reserve(c, header_len + body_len + 1)) return -1;
+
+    memcpy(c->tx_store, header_buf, header_len);
+    if (body_len) memcpy(c->tx_store + header_len, body, body_len);
+    c->tx_store[header_len + body_len] = '\0';
+    *out_len = header_len + body_len;
+    return 0;
 }
 
 static void conn_detach_pcb(cwist_lwip_conn *c) {
@@ -315,8 +359,7 @@ static err_t conn_push(cwist_lwip_conn *c) {
     return ERR_OK;
 }
 
-/* Take ownership of a serialized response and start sending it. */
-static err_t conn_send(cwist_lwip_conn *c, char *buf, size_t len, bool close_after) {
+static err_t conn_send(cwist_lwip_conn *c, const char *buf, size_t len, bool close_after) {
     c->tx = buf;
     c->tx_len = len;
     c->tx_queued = 0;
@@ -329,21 +372,21 @@ static err_t conn_send(cwist_lwip_conn *c, char *buf, size_t len, bool close_aft
 static err_t conn_send_error(cwist_lwip_conn *c, int status) {
     c->rx_len = 0; /* the stream position is unknown past a framing error */
     cwist_http_response *res = cwist_http_response_create();
-    char *out = NULL;
     size_t out_len = 0;
+    int rc = -1;
     if (res) {
         const char *reason = cwist_http_status_reason(status);
         res->status_code = (cwist_http_status_t)status;
         res->keep_alive = false;
         if (reason) cwist_http_response_set_body_ptr(res, reason, strlen(reason));
-        if (cwist_http_response_serialize(res, &out, &out_len) != 0) out = NULL;
+        rc = conn_serialize_response(c, res, &out_len);
         cwist_http_response_destroy(res);
     }
-    if (!out) {
+    if (rc != 0) {
         conn_abort(c);
         return ERR_ABRT;
     }
-    return conn_send(c, out, out_len, true);
+    return conn_send(c, c->tx_store, out_len, true);
 }
 
 /* Length of the status line + headers + CRLFCRLF in a serialized response. */
@@ -375,8 +418,7 @@ static err_t conn_process(cwist_lwip_conn *c) {
             c->continue_sent = true;
 #ifdef CWIST_LWIP_TLS
             if (c->ssl) { /* must go through the record layer, like any reply */
-                c->tx_static = true;
-                return conn_send(c, (char *)CWIST_LWIP_100_CONTINUE,
+                return conn_send(c, CWIST_LWIP_100_CONTINUE,
                                  sizeof(CWIST_LWIP_100_CONTINUE) - 1, false);
             }
 #endif
@@ -410,13 +452,12 @@ static err_t conn_process(cwist_lwip_conn *c) {
     cwist_http_request_destroy(req);
     res->keep_alive = keep;
 
-    char *out = NULL;
     size_t out_len = 0;
-    int rc = cwist_http_response_serialize(res, &out, &out_len);
+    int rc = conn_serialize_response(c, res, &out_len);
     cwist_http_response_destroy(res);
-    if (rc != 0 || !out) return conn_send_error(c, CWIST_HTTP_INTERNAL_ERROR);
-    if (head) out_len = response_head_len(out, out_len);
-    return conn_send(c, out, out_len, !keep);
+    if (rc != 0) return conn_send_error(c, CWIST_HTTP_INTERNAL_ERROR);
+    if (head) out_len = response_head_len(c->tx_store, out_len);
+    return conn_send(c, c->tx_store, out_len, !keep);
 }
 
 #ifdef CWIST_LWIP_TLS
@@ -455,12 +496,10 @@ static err_t tls_close(cwist_lwip_conn *c) {
     return conn_close(c);
 }
 
-/* tx fully taken by mbedTLS: release it. The next request is read from
- * tcp_sent (tls_pump), never recursively from here. */
+/* tx fully taken by mbedTLS: retain its storage for the next response. The
+ * next request is read from tcp_sent (tls_pump), never recursively from here. */
 static err_t tls_tx_done(cwist_lwip_conn *c) {
-    if (!c->tx_static) cwist_free(c->tx);
     c->tx = NULL;
-    c->tx_static = false;
     c->tx_len = c->tx_queued = c->tx_acked = 0;
     if (c->close_after_tx) return tls_close(c);
     return ERR_OK;
@@ -588,7 +627,6 @@ static err_t on_sent(void *arg, struct tcp_pcb *pcb, u16_t len) {
     c->tx_acked += acked;
     if (c->tx_acked < c->tx_len) return conn_push(c);
 
-    cwist_free(c->tx);
     c->tx = NULL;
     c->tx_len = c->tx_queued = c->tx_acked = 0;
     if (c->close_after_tx) return conn_close(c);

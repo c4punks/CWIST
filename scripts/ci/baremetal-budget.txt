@@ -1,32 +1,35 @@
-# Size budgets for the bare-metal smoke firmware, checked by
-# scripts/ci/baremetal_size_gate.py (`make baremetal-size-gate`).
-# <firmware> <flash|static_ram|heap|stack> <max bytes>
-#
-# Set at roughly 10% above the measured values, rounded to KiB. Measured on
-# Cortex-M7 -Os, 2026-10-27, with arm-none-eabi-gcc 13.2.1 / newlib 4.4 (the
-# ubuntu-24.04 CI toolchain) and 14.2.1 / newlib 4.5; the two agree within
-# 0.6%. Raise a limit only together with the change that needs it, and say
-# why in the PR.
-#
-#                    measured (13.2 / 14.2)
-hello      flash       49152  # 44096 / 44360
-hello      static_ram   2048  #  1792 /  1792
-hello      heap        24576  # 22296
+# Size and steady-state allocation budgets for the bare-metal smoke firmware,
+# checked by scripts/ci/baremetal_size_gate.py (`make baremetal-size-gate`).
+# <firmware> <flash|static_ram|heap|stack|allocs> <limit>
+# Byte metrics are capped at roughly 10% above the measured values, rounded to
+# KiB. allocs is the exact allocation-call count per steady-state request.
+# The comments record arm-none-eabi-gcc 14.2.1 / newlib 4.5 measurements; CI
+# also checks gcc 13.2.1 / newlib 4.4 on ubuntu-24.04. Raise a limit only
+# together with the change that needs it, and say why in the PR.
+hello      flash       49152  # 45156
+hello      static_ram   2048  #  1840
+hello      heap        24576  # 23308
 hello      stack        9216  #  8352
-hello-rtc  flash       49152  # 44136 / 44400
-hello-rtc  static_ram   2048  #  1804 /  1804
-hello-rtc  heap        24576  # 22296
+hello      allocs           1
+hello-rtc  flash       49152  # 45132
+hello-rtc  static_ram   2048  #  1852
+hello-rtc  heap        24576  # 23312
 hello-rtc  stack        9728  #  8800
+hello-rtc  allocs           1
 # hello-lwip includes lwIP and the test client; static_ram is dominated by
 # tests/lwip/lwipopts.h (24 KB MEM_SIZE + 16-entry pbuf pool), not CWIST.
-hello-lwip flash       83968  # 74964 / 74808
-hello-lwip static_ram  69632  # 62384 / 62384
-hello-lwip heap        61440  # 55364
-hello-lwip stack        9216  #  8320 /  8316
+# Retained response storage and arena caches raise the high-water mark but
+# remove repeated allocation/free traffic.
+hello-lwip flash       83968  # 75328
+hello-lwip static_ram  69632  # 62432
+hello-lwip heap        79872  # 71212
+hello-lwip stack        9216  #  8316
+hello-lwip allocs           0
 # hello-tls adds mbedTLS 3.6 (tests/lwip/cwist_test_mbedtls_config.h) and the
 # TLS test client. heap covers both TLS sessions: after the handshake they
 # hold ~50 KB together (16 KB in + 4 KB out record buffers each, plus state).
-hello-tls  flash      151552  # 137052 / 137344
-hello-tls  static_ram  83968  #  75520 /  75520
-hello-tls  heap       118784  # 106640
-hello-tls  stack        9216  #   8344 /   8340
+hello-tls  flash      151552  # 138308
+hello-tls  static_ram  83968  #  75608
+hello-tls  heap       140288  # 127072
+hello-tls  stack        9216  #   8340
+hello-tls  allocs           0

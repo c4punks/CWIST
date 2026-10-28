@@ -14,17 +14,20 @@
 #ifndef HELLO_ITERS
 #define HELLO_ITERS 3
 #endif
+#define STEADY_ITERS 100
 
 extern void board_log(const char *s);
 extern size_t board_heap_high_water(void);
 extern void board_stack_paint(void);
 extern size_t board_stack_used(void);
 extern unsigned board_entropy_calls;
+extern void board_alloc_begin(void);
+extern size_t board_alloc_end(void);
 
 static void hello_handler(cwist_http_request *req, cwist_http_response *res) {
     (void)req;
     cwist_http_response_set_body_ptr(res, "hello from cortex-m", 19);
-    cwist_http_header_add(&res->headers, "Content-Type", "text/plain");
+    cwist_http_response_header_add(res, "Content-Type", "text/plain");
 }
 
 static void free_body(const void *ptr, size_t len, void *ctx) {
@@ -40,7 +43,7 @@ static void json_handler(cwist_http_request *req, cwist_http_response *res) {
     cJSON_AddNumberToObject(o, "uptime_ms", 1234);
     char *s = cJSON_PrintUnformatted(o);
     cwist_http_response_set_body_ptr_managed(res, s, strlen(s), free_body, NULL);
-    cwist_http_header_add(&res->headers, "Content-Type", "application/json");
+    cwist_http_response_header_add(res, "Content-Type", "application/json");
     cJSON_Delete(o);
 }
 
@@ -76,6 +79,17 @@ static int probe(cwist_app *app, const char *path, const char *want) {
     return fail;
 }
 
+static int memory_roundtrip(cwist_app *app, const char *path, const char *want) {
+    char req[96];
+    snprintf(req, sizeof req, "GET %s HTTP/1.1\r\nHost: x\r\n\r\n", path);
+    char *res = NULL;
+    size_t res_len = 0;
+    int rc = cwist_app_dispatch_memory(app, req, strlen(req), &res, &res_len);
+    int ok = rc == 0 && res && memmem(res, res_len, want, strlen(want)) != NULL;
+    free(res);
+    return ok;
+}
+
 int main(void) {
     board_stack_paint();
     cwist_app *app = cwist_app_create();
@@ -92,17 +106,30 @@ int main(void) {
     }
     fail |= check("query-map hash seed drawn from cwist_port_entropy", board_entropy_calls > 0);
 
+    int steady_ok = memory_roundtrip(app, "/hello", "hello from cortex-m");
+    steady_ok &= memory_roundtrip(app, "/missing", " 404 ");
+    board_alloc_begin();
+    for (int i = 0; i < STEADY_ITERS; i++) {
+        steady_ok &= memory_roundtrip(app, i & 1 ? "/missing" : "/hello",
+                                      i & 1 ? " 404 " : "hello from cortex-m");
+    }
+    size_t steady_allocs = board_alloc_end();
+    fail |= check("one returned-buffer allocation per steady in-memory response",
+                  steady_ok && steady_allocs == STEADY_ITERS);
+
     /* No threads: async logging must decline and lines go out synchronously
      * through newlib's _write (semihosting here, a UART on a board). */
     fail |= check("async logging declines without threads", !cwist_log_async_start(4096));
     cwist_logger *log = cwist_logger_create("fw");
     cwist_logger_set_colors(log, false);
-    cwist_logger_info(log, "served %d requests", HELLO_ITERS * 3);
+    cwist_logger_info(log, "served %d requests", HELLO_ITERS * 3 + STEADY_ITERS + 2);
     cwist_logger_destroy(log);
     fflush(NULL);
     cwist_app_destroy(app);
 
     char buf[96];
+    snprintf(buf, sizeof buf, "steady allocs per request: %u\n", (unsigned)(steady_allocs / STEADY_ITERS));
+    board_log(buf);
     snprintf(buf, sizeof buf, "heap high water: %u bytes, stack used: %u bytes\n",
              (unsigned)board_heap_high_water(), (unsigned)board_stack_used());
     board_log(buf);
