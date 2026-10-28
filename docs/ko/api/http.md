@@ -65,7 +65,15 @@ cwist_error_t cwist_http_response_send_file(
 ```c
 cwist_error_t cwist_http_header_add(cwist_http_header_node **head, const char *key, const char *value);
 ```
-연결 리스트에 헤더를 추가합니다.
+힙 소유 저장소를 사용해 연결 리스트에 헤더를 추가합니다.
+
+### `cwist_http_response_header_add`
+```c
+cwist_error_t cwist_http_response_header_add(cwist_http_response *res, const char *key, const char *value);
+```
+응답 arena를 사용해 헤더 노드와 키/값 저장소를 할당합니다. 할당에 민감한
+핸들러와 bare-metal 핸들러에서는 이 형태를 권장합니다. 두 API 모두 키와 값을
+복사하고 CR/LF를 거부하며, arena가 부족하면 힙으로 대체합니다.
 
 ### `cwist_http_header_get`
 ```c

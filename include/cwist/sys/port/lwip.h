@@ -28,8 +28,8 @@
  *   - Expect: 100-continue gets an interim 100 before the body is read.
  *   - Keep-alive follows the request and the response (as on the socket
  *     path); pipelined requests are answered in order, one at a time.
- *   - Responses are sent zero-copy from the serialized buffer, which is
- *     released once the peer has acknowledged it.
+ *   - Responses are sent zero-copy from per-connection serialized storage,
+ *     retained for reuse after the peer has acknowledged it.
  *   - Received data beyond the request limits is refused back to lwIP while
  *     a response is in flight, so the TCP window throttles the peer.
  *   - Connections idle longer than idle_timeout_ms, or beyond max_conns at

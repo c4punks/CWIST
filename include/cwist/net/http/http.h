@@ -320,6 +320,15 @@ cwist_http_response *cwist_http_response_create_in_arena(void *arena);
 void cwist_http_response_destroy(cwist_http_response *res);
 
 /**
+ * @brief Add a header using the response arena for its node and string storage.
+ * Heap fallback and CR/LF rejection match cwist_http_header_add(). Prefer this
+ * in allocation-sensitive handlers; key and value are copied.
+ * @return INT16 0 on success, or an allocation/validation error.
+ */
+cwist_error_t cwist_http_response_header_add(cwist_http_response *res, const char *key,
+                                             const char *value);
+
+/**
  * @brief Sets a direct pointer for the response body (Zero Copy).
  * Use this when serving large files from memory mapped regions.
  * The pointer must remain valid until the response is sent.

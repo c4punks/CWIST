@@ -22,6 +22,8 @@ extern size_t board_heap_high_water(void);
 extern void board_stack_paint(void);
 extern size_t board_stack_used(void);
 extern unsigned board_entropy_calls;
+extern void board_alloc_begin(void);
+extern size_t board_alloc_end(void);
 
 static char g_big[8192];
 static char g_echo[32];
@@ -119,9 +121,15 @@ int main(void) {
                   body && (size_t)(c.plain + c.plain_len - (body + 4)) == sizeof g_big &&
                       memcmp(body + 4, g_big, sizeof g_big) == 0);
 
+    board_alloc_begin();
+    tls_client_write(&c, get, sizeof get - 1);
+    int steady_ok = tls_client_wait(&c, 4, 3000);
+    size_t steady_allocs = board_alloc_end();
+    fail |= check("zero allocations per steady TLS response", steady_ok && steady_allocs == 0);
+
     static const char bye[] = "GET /close HTTP/1.1\r\nHost: localhost\r\n\r\n";
     tls_client_write(&c, bye, sizeof bye - 1);
-    tls_client_wait(&c, 4, 3000);
+    tls_client_wait(&c, 5, 3000);
     for (int i = 0; i < 100 && !c.close_notify; i++) {
         loop_run(10);
         tls_client_drain(&c);
@@ -137,6 +145,8 @@ int main(void) {
     cwist_app_destroy(app);
 
     char buf[112];
+    snprintf(buf, sizeof buf, "steady allocs per request: %u\n", (unsigned)steady_allocs);
+    board_log(buf);
     snprintf(buf, sizeof buf, "mbedtls_ssl_context: %u bytes, records: in %u + out %u bytes\n",
              (unsigned)sizeof(mbedtls_ssl_context), (unsigned)MBEDTLS_SSL_IN_CONTENT_LEN,
              (unsigned)MBEDTLS_SSL_OUT_CONTENT_LEN);

@@ -68,7 +68,7 @@ void test_response_lifecycle() {
     assert(res != NULL);
     assert(res->status_code == CWIST_HTTP_OK);
 
-    cwist_http_header_add(&res->headers, "Server", "Cwist/0.1");
+    cwist_http_response_header_add(res, "Server", "Cwist/0.1");
     assert(strcmp(cwist_http_header_get(res->headers, "Server"), "Cwist/0.1") == 0);
 
     cwist_http_response_destroy(res);

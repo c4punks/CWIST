@@ -88,7 +88,8 @@ preview1 대상은 WASI 0.2로 대체되며 제거되었습니다. 0.2 빌드가
 - **암호**: `session.c`와 `seq_auth.c`는 함께 들어 있는 헤더 전용 SHA-256/HMAC
   (`include/cwist/core/crypto/sha256.h`)을 씁니다. 엔트로피는 `getentropy()`
   (`__wasi_random_get`)에서 옵니다.
-- **할당**: `alloc.c`/`arena.c`는 `__wasi__`에서 Emscripten 방식의 평범한 libc 경로를 탑니다.
+- **할당**: `alloc.c`/`arena.c`는 `__wasi__`에서 단일 스레드 비호스트 경로를 사용하며,
+  첫 사용 후 기본 arena 버퍼를 재활용합니다.
 - **링크 모델**: `-fvisibility=hidden -Wl,--gc-sections -Wl,--allow-undefined
   -lwasi-emulated-pthread`. Emscripten 링크가 시스템 스텁 라이브러리와 binaryen DCE로 같은 서버
   전용 참조를 만족시키는 방식을 그대로 따릅니다.
