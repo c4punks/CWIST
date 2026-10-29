@@ -3,25 +3,24 @@
  * @brief Request-scoped arena allocator built on libttak arena generations.
  *
  * Performance notes:
- * - Generation buffers are recycled through a per-thread free list, so the
- *   steady-state request cycle performs no libttak mem-tree registration or
- *   epoch-GC work at all; ttak_mem_alloc/free is only touched when the cache
- *   underflows/overflows (thread start or concurrency watermark changes).
- * - The ttak_arena_env_t (epoch/GC coordinator) lives in thread-local storage
- *   and is initialized once per thread, never per request.
- * - Cleanup on thread exit is handled through a pthread key destructor, which
- *   keeps this file portable C11/POSIX with no architecture-specific code.
+ * - Generation buffers are recycled through target-specific free lists, so
+ *   steady-state requests avoid repeated allocator and epoch-GC work.
+ * - Hosted builds keep their arena environment in thread-local storage and
+ *   clean it with a pthread key destructor; non-hosted builds use a bounded
+ *   single-thread cache of arena structs and generation buffers.
  */
 
 #include <cwist/core/mem/arena.h>
 
 #include <cwist/sys/platform.h>
 #if !defined(CWIST_PLATFORM_HOSTED)
-/* WASM hosts are single-threaded and lack libttak's epoch/GC machinery;
- * the arena degenerates to a plain malloc-backed bump buffer. */
+/* Non-hosted hosts are single-threaded and lack libttak's epoch/GC machinery.
+ * Recycle both arena structs and default-sized buffers after the first use. */
 #include <stdbool.h>
 #include <stdint.h>
 #include <stdlib.h>
+
+#define CWIST_ARENA_CACHE_MAX 4
 
 struct cwist_arena {
     uint8_t *base;
@@ -29,15 +28,34 @@ struct cwist_arena {
     size_t used;
 };
 
+static cwist_arena_t *struct_cache[CWIST_ARENA_CACHE_MAX];
+static size_t struct_cache_count;
+static uint8_t *buffer_cache[CWIST_ARENA_CACHE_MAX];
+static size_t buffer_cache_count;
+
 cwist_arena_t *cwist_arena_create(size_t generation_bytes) {
-    cwist_arena_t *arena = (cwist_arena_t *)calloc(1, sizeof(cwist_arena_t));
+    size_t capacity = generation_bytes ? generation_bytes : CWIST_ARENA_DEFAULT_GENERATION_BYTES;
+    cwist_arena_t *arena = struct_cache_count > 0
+                               ? struct_cache[--struct_cache_count]
+                               : (cwist_arena_t *)calloc(1, sizeof(cwist_arena_t));
     if (!arena) return NULL;
-    arena->capacity = generation_bytes ? generation_bytes : CWIST_ARENA_DEFAULT_GENERATION_BYTES;
-    arena->base = (uint8_t *)malloc(arena->capacity);
-    if (!arena->base) {
-        free(arena);
+
+    uint8_t *base = NULL;
+    if (capacity == CWIST_ARENA_DEFAULT_GENERATION_BYTES && buffer_cache_count > 0) {
+        base = buffer_cache[--buffer_cache_count];
+    }
+    if (!base) base = (uint8_t *)malloc(capacity);
+    if (!base) {
+        if (struct_cache_count < CWIST_ARENA_CACHE_MAX) {
+            struct_cache[struct_cache_count++] = arena;
+        } else {
+            free(arena);
+        }
         return NULL;
     }
+    arena->base = base;
+    arena->capacity = capacity;
+    arena->used = 0;
     return arena;
 }
 
@@ -59,8 +77,19 @@ bool cwist_arena_owns(const cwist_arena_t *arena, const void *ptr) {
 
 void cwist_arena_destroy(cwist_arena_t *arena) {
     if (!arena) return;
-    free(arena->base);
-    free(arena);
+    uint8_t *base = arena->base;
+    size_t capacity = arena->capacity;
+    if (struct_cache_count < CWIST_ARENA_CACHE_MAX) {
+        struct_cache[struct_cache_count++] = arena;
+    } else {
+        free(arena);
+    }
+    if (base && capacity == CWIST_ARENA_DEFAULT_GENERATION_BYTES &&
+        buffer_cache_count < CWIST_ARENA_CACHE_MAX) {
+        buffer_cache[buffer_cache_count++] = base;
+    } else {
+        free(base);
+    }
 }
 #else
 #include <pthread.h>
@@ -258,4 +287,4 @@ void cwist_arena_destroy(cwist_arena_t *arena) {
         ttak_mem_free(buffer);
     }
 }
-#endif /* __EMSCRIPTEN__ / __wasi__ */
+#endif /* CWIST_PLATFORM_HOSTED */
