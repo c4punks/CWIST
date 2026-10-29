@@ -78,7 +78,12 @@ jobs:
         # The runner mirrors carry amd64 only; the target architecture comes
         # from ports.ubuntu.com.
         sudo dpkg --add-architecture ${{ matrix.deb_arch }}
-        sudo sed -i '/^Types:/a Architectures: amd64' /etc/apt/sources.list.d/ubuntu.sources
+        if [ -f /etc/apt/sources.list.d/ubuntu.sources ]; then
+          sudo sed -i '/^Types:/a Architectures: amd64' /etc/apt/sources.list.d/ubuntu.sources
+        else
+          sudo sed -i -E 's/^deb (https?:)/deb [arch=amd64] \1/; s/^deb \[/deb [arch=amd64 /; s/\[arch=amd64 arch=amd64\]/[arch=amd64]/' \
+            /etc/apt/sources.list
+        fi
         codename=$(. /etc/os-release && echo "$VERSION_CODENAME")
         sudo tee /etc/apt/sources.list.d/ports.sources >/dev/null <<EOF
         Types: deb
