@@ -181,5 +181,7 @@ c100k_server.log
 c100k_client.log
 webtransport_echo_server
 .baremetal-build/
+libcwist_baremetal.a
+example/stm32f769/build/
 .mbedtls-test/
 
