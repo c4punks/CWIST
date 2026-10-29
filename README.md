@@ -348,18 +348,18 @@ CI regenerates this block from each benchmark run.
 
 <!-- WEBSERVER_BENCHMARKS:START -->
 Latest Web Server Benchmark (wrk -t12 -c400 -d10s (after 10s warmup, warmup discarded)):
-- **CWIST Classic pool**: 168721 req/s | Latency 1.46ms (P90 3.15ms, P99 7.07ms, P99.999 23.59ms) | RSS 60164KiB | Csw 1638646
-- **CWIST reactor**: 222475 req/s | Latency 1.84ms (P90 3.63ms, P99 6.07ms, P99.999 14.26ms) | RSS 22400KiB | Csw 212348
-- **Actix**: 191903 req/s | Latency 2.10ms (P90 3.85ms, P99 6.21ms, P99.999 14.37ms) | RSS 12432KiB | Csw 306687
-- **Axum**: 153114 req/s | Latency 2.60ms (P90 4.48ms, P99 6.88ms, P99.999 15.06ms) | RSS 16676KiB | Csw 362024
-- **Gin (Go)**: 111264 req/s | Latency 7.04ms (P90 19.64ms, P99 46.28ms, P99.999 101.22ms) | RSS 28860KiB | Csw 549844
-- **Spring Boot**: 70299 req/s | Latency 5.66ms (P90 7.86ms, P99 12.36ms, P99.999 60.07ms) | RSS 1302132KiB | Csw 386300
+- **CWIST Classic pool**: 116576 req/s | Latency 1.96ms (P90 4.33ms, P99 8.12ms, P99.999 26.27ms) | RSS 61280KiB | Csw 1169277
+- **CWIST reactor**: 142801 req/s | Latency 2.77ms (P90 5.01ms, P99 7.94ms, P99.999 14.04ms) | RSS 23684KiB | Csw 113737
+- **Actix**: 128586 req/s | Latency 3.05ms (P90 5.22ms, P99 7.84ms, P99.999 13.91ms) | RSS 12204KiB | Csw 165162
+- **Axum**: 109689 req/s | Latency 3.57ms (P90 6.00ms, P99 8.74ms, P99.999 16.75ms) | RSS 15764KiB | Csw 236062
+- **Gin (Go)**: 77945 req/s | Latency 8.30ms (P90 21.08ms, P99 55.29ms, P99.999 139.55ms) | RSS 28108KiB | Csw 347149
+- **Spring Boot**: 44306 req/s | Latency 9.02ms (P90 11.89ms, P99 17.71ms, P99.999 92.35ms) | RSS 1309992KiB | Csw 237288
 
 _Settled CWIST-internal tuning variants (glibc arena cap from PR #35, cooperative drain chunk from issue #25) are recorded in docs/cooperative-queuing.md and benchmarks/webserver.json; they are no longer rendered as comparison rows._
 
 **Spring runtime environment**
 
-- **JDK:** `openjdk version "25.0.4.1" 2026-08-18 LTS`
+- **JDK:** `openjdk version "25.0.5" 2026-10-20 LTS`
 - **Spring Boot:** 3.2.3
 - **Stack:** Spring WebFlux + Reactor Netty on native epoll (G1GC, JDK 25 Leyden AOT, virtual threads disabled)
 - **Virtual threads:** disabled
