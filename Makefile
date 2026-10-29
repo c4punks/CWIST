@@ -584,7 +584,9 @@ BAREMETAL_CFLAGS = -std=c17 -Os -Wall $(BAREMETAL_ARCH) --specs=nano.specs \
 	-D_POSIX_TIMERS=200809L -D_POSIX_MONOTONIC_CLOCK=200809L \
 	-D_POSIX_PRIORITY_SCHEDULING=200809L -D_Thread_local= -D__thread= \
 	$(WASM_INCLUDE_PATHS) $(COMMON_DEFINES) $(BAREMETAL_EXTRA_CFLAGS)
-BAREMETAL_SRCS = $(filter-out lib/sqlite3/sqlite3.c src/core/db/db.c src/sys/app/test_client.c,$(WASM_SRCS)) \
+# gc.c is listed in both WASM_SRCS and WASIP2_EXTRA_SRCS on this branch; take
+# it once, or the single-file bundle (baremetal-dist) defines it twice.
+BAREMETAL_SRCS = $(filter-out lib/sqlite3/sqlite3.c src/core/db/db.c src/sys/app/test_client.c src/core/mem/gc.c,$(WASM_SRCS)) \
 	$(filter-out src/sys/wasi/compat.c src/net/http/writer_fast.c,$(WASIP2_EXTRA_SRCS)) \
 	src/sys/port/baremetal.c src/sys/port/baremetal_time.c
 BAREMETAL_OBJS = $(BAREMETAL_SRCS:%.c=$(BAREMETAL_BUILD_DIR)/%.o)
