@@ -5,6 +5,7 @@
  * descriptor and hope a blocked kevent() noticed; it runs on every backend.
  */
 #include <cwist/sys/io/cwist_io.h>
+#include <ttak/mem/epoch.h>
 #include <assert.h>
 #include <pthread.h>
 #include <stdatomic.h>
@@ -24,6 +25,7 @@ static void count_job(void *arg) {
 
 static void *run_queue(void *arg) {
     cwist_io_queue_run((cwist_io_queue *)arg);
+    assert(t_local_state == NULL);
     atomic_fetch_add_explicit(&g_exited, 1, memory_order_release);
     return NULL;
 }
