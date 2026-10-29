@@ -2587,6 +2587,10 @@ test_io_queue_stop: $(LIB_NAME) tests/test_io_queue_stop.c
 	$(CC) $(CFLAGS) -o $@ tests/test_io_queue_stop.c $(LIB_NAME) $(LIBS)
 	./$@
 
+# Manual short-lived-worker probe (not part of `make test`).
+bench_io_queue_threads: $(LIB_NAME) tests/bench_io_queue_threads.c
+	$(CC) $(CFLAGS) -o $@ tests/bench_io_queue_threads.c $(LIB_NAME) $(LIBS)
+
 test_full_gc_ownership_handoff: $(LIB_NAME) tests/test_full_gc_ownership_handoff.c
 	$(CC) $(CFLAGS) -o test_full_gc_ownership_handoff tests/test_full_gc_ownership_handoff.c $(LIB_NAME) $(LIBS)
 	./test_full_gc_ownership_handoff
