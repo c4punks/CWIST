@@ -1,7 +1,5 @@
 var searchData=
 [
-  ['데이터베이스와_20마이그레이션_20sqlite_0',['5. 데이터베이스와 마이그레이션 (SQLite)',['../df/df1/md_docs_2tutorial_2korean_2cwist__tutorial.html#autotoc_md853',1,'']]],
-  ['데이터베이스_1',['WASM에서의 데이터베이스',['../d2/d56/md_docs_2ko_2api_2wasm.html#autotoc_md527',1,'']]],
-  ['데이터베이스_20api_2',['데이터베이스 API',['../d5/d75/md_docs_2ko_2api_2sql.html',1,'']]],
-  ['데이터베이스_20sql_3',['5. 데이터베이스 (SQL)',['../d3/d19/md_docs_2ko_2REFERENCE.html#autotoc_md648',1,'']]]
+  ['도구_20체인_20현황_202026_2009_2021_20측정_0',['도구 체인 현황 (2026-09-21 측정)',['../dd/d41/md_docs_2ko_2api_2wasm-component.html#autotoc_md527',1,'']]],
+  ['도우미_1',['도우미',['../d3/d38/md_docs_2ko_2api-quickref.html#autotoc_md346',1,'그 밖에 내보낸 inline 도우미'],['../d3/d38/md_docs_2ko_2api-quickref.html#autotoc_md357',1,'메서드 도우미'],['../d3/d38/md_docs_2ko_2api-quickref.html#autotoc_md358',1,'소켓 도우미'],['../da/dc3/md_docs_2ko_2api_2app.html#autotoc_md388',1,'요청 도우미'],['../d3/d38/md_docs_2ko_2api-quickref.html#autotoc_md349',1,'핵심 도우미'],['../d3/d38/md_docs_2ko_2api-quickref.html#autotoc_md356',1,'헤더 도우미']]]
 ];

@@ -1,7 +1,7 @@
 var searchData=
 [
-  ['보기_0',['함께 보기',['../dc/d79/md_docs_2ko_2API.html#autotoc_md353',1,'']]],
-  ['보안_20정책_20요약_1',['보안 정책 요약',['../df/df1/md_docs_2tutorial_2korean_2cwist__tutorial.html#autotoc_md858',1,'']]],
-  ['보안_20헤더_2',['보안 헤더',['../db/ddd/md_docs_2ko_2api_2http.html#autotoc_md428',1,'']]],
-  ['보정_20지연_20히스토그램_3',['선택적 wrk 원시/보정 지연 히스토그램',['../d2/de4/md_docs_2ko_2performance_2wrk-dual-histogram.html',1,'']]]
+  ['복사_0',['덧붙이기 / 복사',['../d3/d38/md_docs_2ko_2api-quickref.html#autotoc_md351',1,'']]],
+  ['복원될_20때까지의_20권장_20처리_1',['계약이 복원될 때까지의 권장 처리',['../d7/dab/md_docs_2ko_2fixed-cache-status.html#autotoc_md631',1,'']]],
+  ['복원하기_2',['ADR-0001: 명시적인 공개 FIXED 계약으로 HTTP 응답 캐싱 복원하기',['../d6/dda/md_docs_2ko_2decisions_20001-safe-public-fixed-response-cache.html',1,'']]],
+  ['복원_3',['4. 재시작, 백업, 복원',['../d1/dc3/md_docs_2ko_2deployment_2wasmtime-appliance.html#autotoc_md604',1,'']]]
 ];

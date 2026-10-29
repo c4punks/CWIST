@@ -108,7 +108,7 @@ $(document).ready(function(){initNavTree('d0/d89/md_docs_2api_2sse.html','../../
   <div class="headertitle"><div class="title">Server-Sent Events API</div></div>
 </div><!--header-->
 <div class="contents">
-<div class="textblock"><p><a class="anchor" id="autotoc_md173"></a> <em>Header:</em> <code>&lt;<a class="el" href="../../df/d58/net_2http_2sse_8h.html" title="Server-Sent Events stream API.">cwist/net/http/sse.h</a>&gt;</code></p>
+<div class="textblock"><p><a class="anchor" id="autotoc_md174"></a> <em>Header:</em> <code>&lt;<a class="el" href="../../df/d58/net_2http_2sse_8h.html" title="Server-Sent Events stream API.">cwist/net/http/sse.h</a>&gt;</code></p>
 <p>Helpers for sending <code>text/event-stream</code> data. There are two ways to use them:</p>
 <ul>
 <li><b>Response mode</b> (<code>cwist_sse_response_*</code>): frames are appended to the response body of an ordinary handler. The response is sent when the handler returns, so this suits a fixed batch of events.</li>
@@ -121,10 +121,10 @@ $(document).ready(function(){initNavTree('d0/d89/md_docs_2api_2sse.html','../../
 <div class="line">retry:1500</div>
 <div class="line">data:first</div>
 <div class="line">data:second</div>
-</div><!-- fragment --><h1><a class="anchor" id="autotoc_md174"></a>
+</div><!-- fragment --><h1><a class="anchor" id="autotoc_md175"></a>
 Types</h1>
-<h2><a class="anchor" id="autotoc_md175"></a>
-&lt;tt&gt;cwist_sse_event_t&lt;/tt&gt;</h2>
+<h2><a class="anchor" id="autotoc_md176"></a>
+cwist_sse_event_t</h2>
 <div class="fragment"><div class="line"><span class="keyword">typedef</span> <span class="keyword">struct </span><a class="code hl_struct" href="../../d8/d63/structcwist__sse__event.html">cwist_sse_event</a> {</div>
 <div class="line">    <span class="keyword">const</span> <span class="keywordtype">char</span> *<a class="code hl_variable" href="../../d8/d63/structcwist__sse__event.html#aa7b18ec5113395098d27dc896d5c1ad0">event</a>;</div>
 <div class="line">    <span class="keyword">const</span> <span class="keywordtype">char</span> *<a class="code hl_variable" href="../../d8/d63/structcwist__sse__event.html#a362b084bf75c80e5c0ecbfaa5bd3478e">id</a>;</div>
@@ -138,13 +138,13 @@ Types</h1>
 <div class="ttc" id="astructcwist__sse__event_html_a6b9d5f671372661165205d7d2a6c86c3"><div class="ttname"><a href="../../d8/d63/structcwist__sse__event.html#a6b9d5f671372661165205d7d2a6c86c3">cwist_sse_event::data</a></div><div class="ttdeci">const char * data</div><div class="ttdef"><b>Definition</b> <a href="../../df/d58/net_2http_2sse_8h_source.html#l00018">sse.h:18</a></div></div>
 <div class="ttc" id="astructcwist__sse__event_html_aa7b18ec5113395098d27dc896d5c1ad0"><div class="ttname"><a href="../../d8/d63/structcwist__sse__event.html#aa7b18ec5113395098d27dc896d5c1ad0">cwist_sse_event::event</a></div><div class="ttdeci">const char * event</div><div class="ttdef"><b>Definition</b> <a href="../../df/d58/net_2http_2sse_8h_source.html#l00015">sse.h:15</a></div></div>
 </div><!-- fragment --><p> A structured event for <code>cwist_sse_response_write</code> and <code>cwist_sse_stream_write</code>. <code>NULL</code> fields are omitted. <code>retry_ms</code> is sent when it is <code>0</code> or greater and omitted when it is <code>-1</code>.</p>
-<h2><a class="anchor" id="autotoc_md176"></a>
-&lt;tt&gt;cwist_sse_stream_t&lt;/tt&gt;</h2>
+<h2><a class="anchor" id="autotoc_md177"></a>
+cwist_sse_stream_t</h2>
 <p>An opaque handle for an open stream, created by <code>cwist_sse_stream_open</code>.</p>
-<h1><a class="anchor" id="autotoc_md177"></a>
+<h1><a class="anchor" id="autotoc_md178"></a>
 Response mode</h1>
-<h2><a class="anchor" id="autotoc_md178"></a>
-&lt;tt&gt;cwist_sse_response_init&lt;/tt&gt;</h2>
+<h2><a class="anchor" id="autotoc_md179"></a>
+cwist_sse_response_init</h2>
 <div class="fragment"><div class="line"><a class="code hl_struct" href="../../d4/d50/structcwist__error__t.html">cwist_error_t</a> <a class="code hl_function" href="../../df/d58/net_2http_2sse_8h.html#a11159f8f94ba6e260a8705bddc0cb8fd">cwist_sse_response_init</a>(<a class="code hl_struct" href="../../dd/d22/structcwist__http__response.html">cwist_http_response</a> *res);</div>
 <div class="ttc" id="anet_2http_2sse_8h_html_a11159f8f94ba6e260a8705bddc0cb8fd"><div class="ttname"><a href="../../df/d58/net_2http_2sse_8h.html#a11159f8f94ba6e260a8705bddc0cb8fd">cwist_sse_response_init</a></div><div class="ttdeci">cwist_error_t cwist_sse_response_init(cwist_http_response *res)</div><div class="ttdoc">Prepare a response buffer for a Server-Sent Events reply.</div><div class="ttdef"><b>Definition</b> <a href="../../d2/dd2/sse_8c_source.html#l00117">sse.c:117</a></div></div>
 <div class="ttc" id="astructcwist__error__t_html"><div class="ttname"><a href="../../d4/d50/structcwist__error__t.html">cwist_error_t</a></div><div class="ttdoc">Integrated error structure used throughout the system.</div><div class="ttdef"><b>Definition</b> <a href="../../d3/d73/err_2cwist__err_8h_source.html#l00072">cwist_err.h:72</a></div></div>
@@ -161,56 +161,56 @@ Response mode</h1>
 <td class="markdownTableBodyNone"><code>X-Accel-Buffering</code>   </td><td class="markdownTableBodyNone"><code>no</code>   </td></tr>
 </table>
 <p>Returns <code>err_i16 == -1</code> if <code>res</code> is <code>NULL</code> or a header cannot be added.</p>
-<h2><a class="anchor" id="autotoc_md179"></a>
-&lt;tt&gt;cwist_sse_response_event&lt;/tt&gt;</h2>
+<h2><a class="anchor" id="autotoc_md180"></a>
+cwist_sse_response_event</h2>
 <div class="fragment"><div class="line"><a class="code hl_struct" href="../../d4/d50/structcwist__error__t.html">cwist_error_t</a> <a class="code hl_function" href="../../df/d58/net_2http_2sse_8h.html#a579b2c4ad140329cb2048f671cd87041">cwist_sse_response_event</a>(<a class="code hl_struct" href="../../dd/d22/structcwist__http__response.html">cwist_http_response</a> *res, <span class="keyword">const</span> <span class="keywordtype">char</span> *event,</div>
 <div class="line">                                       <span class="keyword">const</span> <span class="keywordtype">char</span> *<span class="keywordtype">id</span>, <span class="keywordtype">int</span> retry_ms, <span class="keyword">const</span> <span class="keywordtype">char</span> *data);</div>
 <div class="ttc" id="anet_2http_2sse_8h_html_a579b2c4ad140329cb2048f671cd87041"><div class="ttname"><a href="../../df/d58/net_2http_2sse_8h.html#a579b2c4ad140329cb2048f671cd87041">cwist_sse_response_event</a></div><div class="ttdeci">cwist_error_t cwist_sse_response_event(cwist_http_response *res, const char *event, const char *id, int retry_ms, const char *data)</div><div class="ttdoc">Append a formatted SSE event to a response buffer.</div><div class="ttdef"><b>Definition</b> <a href="../../d2/dd2/sse_8c_source.html#l00138">sse.c:138</a></div></div>
 </div><!-- fragment --><p> Appends one event to the response body. Pass <code>NULL</code> for <code>event</code> or <code>id</code>, and <code>-1</code> for <code>retry_ms</code>, to leave that field out. A <code>retry_ms</code> below <code>-1</code> is rejected with <code>err_i16 == -1</code>.</p>
-<h2><a class="anchor" id="autotoc_md180"></a>
-&lt;tt&gt;cwist_sse_response_write&lt;/tt&gt;</h2>
+<h2><a class="anchor" id="autotoc_md181"></a>
+cwist_sse_response_write</h2>
 <div class="fragment"><div class="line"><a class="code hl_struct" href="../../d4/d50/structcwist__error__t.html">cwist_error_t</a> <a class="code hl_function" href="../../df/d58/net_2http_2sse_8h.html#ab4e660b65ffc4c8c6fb53b95428fd2e0">cwist_sse_response_write</a>(<a class="code hl_struct" href="../../dd/d22/structcwist__http__response.html">cwist_http_response</a> *res,</div>
 <div class="line">                                       <span class="keyword">const</span> <a class="code hl_struct" href="../../d8/d63/structcwist__sse__event.html">cwist_sse_event_t</a> *event);</div>
 <div class="ttc" id="anet_2http_2sse_8h_html_ab4e660b65ffc4c8c6fb53b95428fd2e0"><div class="ttname"><a href="../../df/d58/net_2http_2sse_8h.html#ab4e660b65ffc4c8c6fb53b95428fd2e0">cwist_sse_response_write</a></div><div class="ttdeci">cwist_error_t cwist_sse_response_write(cwist_http_response *res, const cwist_sse_event_t *event)</div><div class="ttdoc">Append an SSE event described by a cwist_sse_event_t to a response.</div><div class="ttdef"><b>Definition</b> <a href="../../d2/dd2/sse_8c_source.html#l00168">sse.c:168</a></div></div>
 </div><!-- fragment --><p> Same as <code>cwist_sse_response_event</code>, taking the fields from a <code>cwist_sse_event_t</code>. Returns <code>err_i16 == -1</code> if <code>event</code> is <code>NULL</code>.</p>
-<h2><a class="anchor" id="autotoc_md181"></a>
-&lt;tt&gt;cwist_sse_response_comment&lt;/tt&gt;</h2>
+<h2><a class="anchor" id="autotoc_md182"></a>
+cwist_sse_response_comment</h2>
 <div class="fragment"><div class="line"><a class="code hl_struct" href="../../d4/d50/structcwist__error__t.html">cwist_error_t</a> <a class="code hl_function" href="../../df/d58/net_2http_2sse_8h.html#a144359ec2805ddd170fc3d38d7d2e491">cwist_sse_response_comment</a>(<a class="code hl_struct" href="../../dd/d22/structcwist__http__response.html">cwist_http_response</a> *res, <span class="keyword">const</span> <span class="keywordtype">char</span> *<a class="code hl_variable" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">comment</a>);</div>
 <div class="ttc" id="anet_2http_2sse_8h_html_a144359ec2805ddd170fc3d38d7d2e491"><div class="ttname"><a href="../../df/d58/net_2http_2sse_8h.html#a144359ec2805ddd170fc3d38d7d2e491">cwist_sse_response_comment</a></div><div class="ttdeci">cwist_error_t cwist_sse_response_comment(cwist_http_response *res, const char *comment)</div><div class="ttdoc">Append an SSE comment line to a response buffer.</div><div class="ttdef"><b>Definition</b> <a href="../../d2/dd2/sse_8c_source.html#l00154">sse.c:154</a></div></div>
 <div class="ttc" id="aotel_8c_html_a856fa22aef923b4a345805d81580aebe"><div class="ttname"><a href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">cap</a></div><div class="ttdeci">size_t cap</div><div class="ttdef"><b>Definition</b> <a href="../../d3/db2/otel_8c_source.html#l00056">otel.c:56</a></div></div>
 </div><!-- fragment --><p> Appends a comment line (<code>:text</code>) followed by a blank line. Clients ignore comments, so they are used as heartbeats to keep a connection open.</p>
-<h1><a class="anchor" id="autotoc_md182"></a>
+<h1><a class="anchor" id="autotoc_md183"></a>
 Stream mode</h1>
-<h2><a class="anchor" id="autotoc_md183"></a>
-&lt;tt&gt;cwist_sse_stream_open&lt;/tt&gt;</h2>
+<h2><a class="anchor" id="autotoc_md184"></a>
+cwist_sse_stream_open</h2>
 <div class="fragment"><div class="line"><a class="code hl_typedef" href="../../df/d58/net_2http_2sse_8h.html#a1814cb23b06dfb500d1f266a97cc8d2d">cwist_sse_stream_t</a> *<a class="code hl_function" href="../../df/d58/net_2http_2sse_8h.html#a1dac4f5c4a77d713f4863cd02b6fbce1">cwist_sse_stream_open</a>(<a class="code hl_struct" href="../../dd/d68/structcwist__http__request.html">cwist_http_request</a> *req);</div>
 <div class="ttc" id="anet_2http_2sse_8h_html_a1814cb23b06dfb500d1f266a97cc8d2d"><div class="ttname"><a href="../../df/d58/net_2http_2sse_8h.html#a1814cb23b06dfb500d1f266a97cc8d2d">cwist_sse_stream_t</a></div><div class="ttdeci">struct cwist_sse_stream cwist_sse_stream_t</div><div class="ttdef"><b>Definition</b> <a href="../../df/d58/net_2http_2sse_8h_source.html#l00011">sse.h:11</a></div></div>
 <div class="ttc" id="anet_2http_2sse_8h_html_a1dac4f5c4a77d713f4863cd02b6fbce1"><div class="ttname"><a href="../../df/d58/net_2http_2sse_8h.html#a1dac4f5c4a77d713f4863cd02b6fbce1">cwist_sse_stream_open</a></div><div class="ttdeci">cwist_sse_stream_t * cwist_sse_stream_open(cwist_http_request *req)</div><div class="ttdoc">Upgrade a request connection to a live SSE stream.</div><div class="ttdef"><b>Definition</b> <a href="../../d2/dd2/sse_8c_source.html#l00205">sse.c:205</a></div></div>
 <div class="ttc" id="astructcwist__http__request_html"><div class="ttname"><a href="../../dd/d68/structcwist__http__request.html">cwist_http_request</a></div><div class="ttdef"><b>Definition</b> <a href="../../dd/d56/http_8h_source.html#l00065">http.h:65</a></div></div>
 </div><!-- fragment --><p> Writes the <code>200 OK</code> status line and the SSE headers to <code>req-&gt;client_fd</code> and sets <code>req-&gt;upgraded</code>. When the handler returns, the server sees <code>req-&gt;upgraded</code>, writes no response of its own, and does not keep the connection alive, so every event must be sent before the handler returns. Returns <code>NULL</code> if <code>req</code> is <code>NULL</code>, <code>req-&gt;client_fd</code> is negative, <code>req-&gt;upgraded</code> is already set, or the write fails.</p>
-<h2><a class="anchor" id="autotoc_md184"></a>
-&lt;tt&gt;cwist_sse_stream_send&lt;/tt&gt;</h2>
+<h2><a class="anchor" id="autotoc_md185"></a>
+cwist_sse_stream_send</h2>
 <div class="fragment"><div class="line"><a class="code hl_struct" href="../../d4/d50/structcwist__error__t.html">cwist_error_t</a> <a class="code hl_function" href="../../df/d58/net_2http_2sse_8h.html#a5976a412b17a2afad4c59e85873b8622">cwist_sse_stream_send</a>(<a class="code hl_typedef" href="../../df/d58/net_2http_2sse_8h.html#a1814cb23b06dfb500d1f266a97cc8d2d">cwist_sse_stream_t</a> *stream, <span class="keyword">const</span> <span class="keywordtype">char</span> *event,</div>
 <div class="line">                                    <span class="keyword">const</span> <span class="keywordtype">char</span> *<span class="keywordtype">id</span>, <span class="keywordtype">int</span> retry_ms, <span class="keyword">const</span> <span class="keywordtype">char</span> *data);</div>
 <div class="ttc" id="anet_2http_2sse_8h_html_a5976a412b17a2afad4c59e85873b8622"><div class="ttname"><a href="../../df/d58/net_2http_2sse_8h.html#a5976a412b17a2afad4c59e85873b8622">cwist_sse_stream_send</a></div><div class="ttdeci">cwist_error_t cwist_sse_stream_send(cwist_sse_stream_t *stream, const char *event, const char *id, int retry_ms, const char *data)</div><div class="ttdoc">Send a formatted SSE event on a live stream.</div><div class="ttdef"><b>Definition</b> <a href="../../d2/dd2/sse_8c_source.html#l00233">sse.c:233</a></div></div>
 </div><!-- fragment --><p> Sends one event on the stream with the same field rules as <code>cwist_sse_response_event</code>. Writes are serialized with a mutex, so one stream can be used from several threads. If a write fails, the stream is marked closed and every later send on it returns <code>err_i16 == -1</code>.</p>
-<h2><a class="anchor" id="autotoc_md185"></a>
-&lt;tt&gt;cwist_sse_stream_write&lt;/tt&gt;</h2>
+<h2><a class="anchor" id="autotoc_md186"></a>
+cwist_sse_stream_write</h2>
 <div class="fragment"><div class="line"><a class="code hl_struct" href="../../d4/d50/structcwist__error__t.html">cwist_error_t</a> <a class="code hl_function" href="../../df/d58/net_2http_2sse_8h.html#ac2660f9225c5593ad76f91b6b71607c5">cwist_sse_stream_write</a>(<a class="code hl_typedef" href="../../df/d58/net_2http_2sse_8h.html#a1814cb23b06dfb500d1f266a97cc8d2d">cwist_sse_stream_t</a> *stream,</div>
 <div class="line">                                     <span class="keyword">const</span> <a class="code hl_struct" href="../../d8/d63/structcwist__sse__event.html">cwist_sse_event_t</a> *event);</div>
 <div class="ttc" id="anet_2http_2sse_8h_html_ac2660f9225c5593ad76f91b6b71607c5"><div class="ttname"><a href="../../df/d58/net_2http_2sse_8h.html#ac2660f9225c5593ad76f91b6b71607c5">cwist_sse_stream_write</a></div><div class="ttdeci">cwist_error_t cwist_sse_stream_write(cwist_sse_stream_t *stream, const cwist_sse_event_t *event)</div><div class="ttdoc">Send an SSE event described by a cwist_sse_event_t on a stream.</div><div class="ttdef"><b>Definition</b> <a href="../../d2/dd2/sse_8c_source.html#l00273">sse.c:273</a></div></div>
 </div><!-- fragment --><p> Same as <code>cwist_sse_stream_send</code>, taking the fields from a <code>cwist_sse_event_t</code>.</p>
-<h2><a class="anchor" id="autotoc_md186"></a>
-&lt;tt&gt;cwist_sse_stream_comment&lt;/tt&gt;</h2>
+<h2><a class="anchor" id="autotoc_md187"></a>
+cwist_sse_stream_comment</h2>
 <div class="fragment"><div class="line"><a class="code hl_struct" href="../../d4/d50/structcwist__error__t.html">cwist_error_t</a> <a class="code hl_function" href="../../df/d58/net_2http_2sse_8h.html#a142c15574a54fd8be066c83f2c7f3479">cwist_sse_stream_comment</a>(<a class="code hl_typedef" href="../../df/d58/net_2http_2sse_8h.html#a1814cb23b06dfb500d1f266a97cc8d2d">cwist_sse_stream_t</a> *stream, <span class="keyword">const</span> <span class="keywordtype">char</span> *<a class="code hl_variable" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">comment</a>);</div>
 <div class="ttc" id="anet_2http_2sse_8h_html_a142c15574a54fd8be066c83f2c7f3479"><div class="ttname"><a href="../../df/d58/net_2http_2sse_8h.html#a142c15574a54fd8be066c83f2c7f3479">cwist_sse_stream_comment</a></div><div class="ttdeci">cwist_error_t cwist_sse_stream_comment(cwist_sse_stream_t *stream, const char *comment)</div><div class="ttdoc">Send an SSE comment line on a live stream.</div><div class="ttdef"><b>Definition</b> <a href="../../d2/dd2/sse_8c_source.html#l00256">sse.c:256</a></div></div>
 </div><!-- fragment --><p> Sends a comment line on the stream, for example as a heartbeat.</p>
-<h2><a class="anchor" id="autotoc_md187"></a>
-&lt;tt&gt;cwist_sse_stream_close&lt;/tt&gt;</h2>
+<h2><a class="anchor" id="autotoc_md188"></a>
+cwist_sse_stream_close</h2>
 <div class="fragment"><div class="line"><span class="keywordtype">void</span> <a class="code hl_function" href="../../df/d58/net_2http_2sse_8h.html#a7d76c3563188807802e793f29369d2ab">cwist_sse_stream_close</a>(<a class="code hl_typedef" href="../../df/d58/net_2http_2sse_8h.html#a1814cb23b06dfb500d1f266a97cc8d2d">cwist_sse_stream_t</a> *stream);</div>
 <div class="ttc" id="anet_2http_2sse_8h_html_a7d76c3563188807802e793f29369d2ab"><div class="ttname"><a href="../../df/d58/net_2http_2sse_8h.html#a7d76c3563188807802e793f29369d2ab">cwist_sse_stream_close</a></div><div class="ttdeci">void cwist_sse_stream_close(cwist_sse_stream_t *stream)</div><div class="ttdoc">Close a live SSE stream and release its resources.</div><div class="ttdef"><b>Definition</b> <a href="../../d2/dd2/sse_8c_source.html#l00285">sse.c:285</a></div></div>
 </div><!-- fragment --><p> Frees the stream handle. It does not close the client socket. Passing <code>NULL</code> is allowed.</p>
-<h1><a class="anchor" id="autotoc_md188"></a>
+<h1><a class="anchor" id="autotoc_md189"></a>
 Convenience macros</h1>
 <table class="markdownTable">
 <tr class="markdownTableHead">
@@ -227,7 +227,7 @@ Convenience macros</h1>
 <td class="markdownTableBodyNone"><code><a class="el" href="../../df/d58/net_2http_2sse_8h.html#a7de122039208241b758d2c29ad809ce4">CWIST_SSE_STREAM_SEND(stream, event)</a></code>   </td><td class="markdownTableBodyNone"><code>cwist_sse_stream_write(stream, &amp;event)</code>   </td></tr>
 </table>
 <p>The two <code>SEND</code> macros take the event as an lvalue because they take its address.</p>
-<h1><a class="anchor" id="autotoc_md189"></a>
+<h1><a class="anchor" id="autotoc_md190"></a>
 Example</h1>
 <p>A handler that sends a fixed batch of events (this is the pattern used by tutorial 08):</p>
 <div class="fragment"><div class="line"><span class="keyword">static</span> <span class="keywordtype">void</span> <a class="code hl_variable" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">handle_events</a>(<a class="code hl_struct" href="../../dd/d68/structcwist__http__request.html">cwist_http_request</a> *req, <a class="code hl_struct" href="../../dd/d22/structcwist__http__response.html">cwist_http_response</a> *res) {</div>

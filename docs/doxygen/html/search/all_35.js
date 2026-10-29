@@ -1,5 +1,4 @@
 var searchData=
 [
-  ['관문_0',['구현과 릴리스 관문',['../d6/dda/md_docs_2ko_2decisions_20001-safe-public-fixed-response-cache.html#autotoc_md580',1,'']]],
-  ['관문_20wasi_200_202_1',['브라우저 런타임 관문 (WASI 0.2)',['../dd/d41/md_docs_2ko_2api_2wasm-component.html#autotoc_md519',1,'']]]
+  ['교환_0',['7. PQC TLS (양자내성 하이브리드 키 교환)',['../df/df1/md_docs_2tutorial_2korean_2cwist__tutorial.html#autotoc_md843',1,'']]]
 ];

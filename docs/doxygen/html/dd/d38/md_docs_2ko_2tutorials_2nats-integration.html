@@ -108,17 +108,17 @@ $(document).ready(function(){initNavTree('dd/d38/md_docs_2ko_2tutorials_2nats-in
   <div class="headertitle"><div class="title">CWIST와 NATS 연동하기</div></div>
 </div><!--header-->
 <div class="contents">
-<div class="textblock"><p><a class="anchor" id="autotoc_md685"></a> CWIST에는 이벤트 기반 서비스를 위한 트리 내장 NATS 연동 지점이 있습니다. 비동기 작업과 팬아웃에는 NATS를 쓰고, HTTP 핸들러는 요청을 검증하고 제한된 시간 안에 응답을 돌려주는 역할만 맡기세요.</p>
-<h1><a class="anchor" id="autotoc_md686"></a>
+<div class="textblock"><p><a class="anchor" id="autotoc_md703"></a> CWIST에는 이벤트 기반 서비스를 위한 트리 내장 NATS 연동 지점이 있습니다. 비동기 작업과 팬아웃에는 NATS를 쓰고, HTTP 핸들러는 요청을 검증하고 제한된 시간 안에 응답을 돌려주는 역할만 맡기세요.</p>
+<h1><a class="anchor" id="autotoc_md704"></a>
 1. 요청과 워커의 책임 나누기</h1>
 <p>HTTP 핸들러는 JSON 명령을 검증하고, 요청 id를 부여하고, 다음과 같은 간결한 이벤트를 게시해야 합니다.</p>
 <div class="fragment"><div class="line">{&quot;type&quot;:&quot;post.created&quot;,&quot;post_id&quot;:42,&quot;request_id&quot;:&quot;...&quot;}</div>
 </div><!-- fragment --><p>워커는 <code>blog.post.created</code>를 구독하고, 파생 작업을 저장하고, 결과나 실패 이벤트를 게시합니다. <a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">주제(subject)</a> 이름에는 소유자와 버전을 담으세요. 예: <code>blog.v1.post.created</code>.</p>
-<h1><a class="anchor" id="autotoc_md687"></a>
+<h1><a class="anchor" id="autotoc_md705"></a>
 2. 라우트에서 게시하기</h1>
 <p>NATS 클라이언트는 애플리케이션 시작 시 한 번 초기화하고, 요청마다 다시 연결하지 말고 오래 사는 연결을 공유하세요. 핸들러는 선택한 영속성 경계를 넘은 뒤에만 성공을 확인해야 합니다. 보내고 잊는 작업이라면 게시 성공이, 브로커 장애를 견뎌야 하는 작업이라면 데이터베이스 트랜잭션/아웃박스 기록이 그 경계입니다.</p>
 <p>요청/응답에는 짧은 기한을 강제하고, 타임아웃이나 사용 불가 에러는 <code>503 Service Unavailable</code>로 바꾸세요. 기한 없는 NATS 구독에 HTTP 워커를 붙잡아 두지 마세요.</p>
-<h1><a class="anchor" id="autotoc_md688"></a>
+<h1><a class="anchor" id="autotoc_md706"></a>
 3. 신뢰성 점검 목록</h1>
 <ul>
 <li>소비자를 멱등하게 만드세요. 메시지는 재전달될 수 있습니다.</li>

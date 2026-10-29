@@ -108,8 +108,8 @@ $(document).ready(function(){initNavTree('dc/dbf/md_docs_2ko_2tutorials_2openapi
   <div class="headertitle"><div class="title">OpenAPI와 Swagger UI로 API 문서화하기</div></div>
 </div><!--header-->
 <div class="contents">
-<div class="textblock"><p><a class="anchor" id="autotoc_md689"></a> 이 가이드는 <code>CWIST_OPENAPI_*</code> 주석으로 라우트를 설명하고, <code>cwist openapi</code> 명령으로 <code>openapi.json</code> 파일을 생성하고, <code><a class="el" href="../../d0/d77/sys_2app_2app_8h.html#a10cd19026940e0c4631093aa86cd041f" title="Enables embedded Swagger UI interactive documentation page.">cwist_app_enable_swagger()</a></code>로 대화형 Swagger UI 페이지와 함께 제공하는 방법을 보여 줍니다.</p>
-<h1><a class="anchor" id="autotoc_md690"></a>
+<div class="textblock"><p><a class="anchor" id="autotoc_md707"></a> 이 가이드는 <code>CWIST_OPENAPI_*</code> 주석으로 라우트를 설명하고, <code>cwist openapi</code> 명령으로 <code>openapi.json</code> 파일을 생성하고, <code><a class="el" href="../../d0/d77/sys_2app_2app_8h.html#a10cd19026940e0c4631093aa86cd041f" title="Enables embedded Swagger UI interactive documentation page.">cwist_app_enable_swagger()</a></code>로 대화형 Swagger UI 페이지와 함께 제공하는 방법을 보여 줍니다.</p>
+<h1><a class="anchor" id="autotoc_md708"></a>
 1. 라우트에 주석 달기</h1>
 <p>각 라우트는 대응하는 <code>cwist_app_&lt;method&gt;</code> 호출 대신 <code>&lt;<a class="el" href="../../da/db7/openapi_8h.html" title="OpenAPI 3.1 generation — source annotations and runtime serving.">cwist/openapi.h</a>&gt;</code>의 <code>CWIST_OPENAPI_&lt;METHOD&gt;</code> 매크로로 선언합니다. 매크로(<code>GET</code>, <code>POST</code>, <code>PUT</code>, <code>DELETE</code>, <code>PATCH</code>)는 일반 라우팅 호출로 전개되므로 서버 동작은 같습니다. 이 매크로는 <code>cwist openapi</code>가 C 소스에서 라우트를 찾을 수 있도록 하기 위해 존재합니다.</p>
 <p>연산을 설명하는 Doxygen 주석(<code>/** ... */</code>)을 매크로 바로 위에 둡니다.</p>
@@ -156,7 +156,7 @@ $(document).ready(function(){initNavTree('dc/dbf/md_docs_2ko_2tutorials_2openapi
 <div class="ttc" id="asys_2app_2app_8h_html_a8d6f015a001b2d189ebea808de9da254"><div class="ttname"><a href="../../d0/d77/sys_2app_2app_8h.html#a8d6f015a001b2d189ebea808de9da254">cwist_app_destroy</a></div><div class="ttdeci">void cwist_app_destroy(cwist_app *app)</div><div class="ttdoc">Destroys the application and frees all resources.</div><div class="ttdef"><b>Definition</b> <a href="../../df/d7f/app_8c_source.html#l01464">app.c:1464</a></div></div>
 <div class="ttc" id="asys_2app_2app_8h_html_a9aeebb72e5908f56c1b5823ae4a773c8"><div class="ttname"><a href="../../d0/d77/sys_2app_2app_8h.html#a9aeebb72e5908f56c1b5823ae4a773c8">cwist_app_create</a></div><div class="ttdeci">cwist_app * cwist_app_create(void)</div><div class="ttdoc">Creates a new CWIST application instance.</div><div class="ttdef"><b>Definition</b> <a href="../../df/d7f/app_8c_source.html#l01292">app.c:1292</a></div></div>
 </div><!-- fragment --><p>다른 CWIST 프로그램과 똑같이 빌드합니다 (<a class="el" href="../../index.html#md_README">README</a> 참고).</p>
-<h2><a class="anchor" id="autotoc_md691"></a>
+<h2><a class="anchor" id="autotoc_md709"></a>
 주석 태그</h2>
 <p>각 태그는 주석의 한 줄에 하나씩 씁니다.</p>
 <table class="markdownTable">
@@ -179,8 +179,8 @@ $(document).ready(function(){initNavTree('dc/dbf/md_docs_2ko_2tutorials_2openapi
 <li><code>@openapi.response</code>에서 두 번째 단어는 항상 미디어 타입으로 읽힙니다. 모든 줄에 미디어 타입을 쓰세요 (예: <code>application/json</code>). <code>500 Internal error.</code>라고 쓰면 <code>Internal</code>이 미디어 타입으로 처리되어 빠지므로 <code>"description": "error."</code>가 출력됩니다. 미디어 타입은 스키마가 <code>{"type": "object"}</code>인 <code>content</code> 항목을 만들며, 요청이나 응답 스키마는 생성되지 않습니다.</li>
 <li>라우트 경로의 <code>:name</code> 세그먼트는 <code>{name}</code>이 되고 필수 문자열 경로 파라미터로 나열되므로, <code>/users/:id</code>는 <code>/users/{id}</code>로 출력됩니다.</li>
 </ul>
-<h1><a class="anchor" id="autotoc_md692"></a>
-2. &lt;tt&gt;openapi.json&lt;/tt&gt; 생성하기</h1>
+<h1><a class="anchor" id="autotoc_md710"></a>
+2. openapi.json 생성하기</h1>
 <p><code>cwist openapi</code>는 소스 파일이나 디렉터리(<code>*.c</code>를 재귀적으로 검색)를 받아 OpenAPI 3.1 문서를 씁니다. 프로젝트 디렉터리에서 실행하세요.</p>
 <div class="fragment"><div class="line">cwist openapi src --title &quot;Users API&quot; --version 1.0.0</div>
 </div><!-- fragment --><div class="fragment"><div class="line">wrote openapi.json (2 paths)</div>
@@ -218,7 +218,7 @@ $(document).ready(function(){initNavTree('dc/dbf/md_docs_2ko_2tutorials_2openapi
 <div class="line">  }</div>
 <div class="line">}</div>
 </div><!-- fragment --><p>주석이 바뀔 때마다 명령을 다시 실행하세요. 서버가 파일을 직접 생성하지는 않습니다.</p>
-<h1><a class="anchor" id="autotoc_md693"></a>
+<h1><a class="anchor" id="autotoc_md711"></a>
 3. UI 제공하기</h1>
 <div class="fragment"><div class="line"><span class="keywordtype">void</span> <a class="code hl_function" href="../../d0/d77/sys_2app_2app_8h.html#a10cd19026940e0c4631093aa86cd041f">cwist_app_enable_swagger</a>(<a class="code hl_struct" href="../../dc/da0/structcwist__app.html">cwist_app</a> *app, <span class="keyword">const</span> <span class="keywordtype">char</span> *<a class="code hl_variable" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">mount_path</a>,</div>
 <div class="line">                              <span class="keyword">const</span> <span class="keywordtype">char</span> *<a class="code hl_variable" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">openapi_json_path</a>);</div>

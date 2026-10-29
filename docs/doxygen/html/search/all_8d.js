@@ -1,6 +1,7 @@
 var searchData=
 [
-  ['않는_20것_0',['않는 것',['../da/d90/md_docs_2ko_2cooperative-queuing.html#autotoc_md569',1,'이 수정이 해결하지 않는 것'],['../d2/d56/md_docs_2ko_2api_2wasm.html#autotoc_md532',1,'(아직) 다루지 않는 것']]],
-  ['않는_20변수_1',['사용하지 않는 변수',['../da/dc3/md_docs_2ko_2api_2app.html#autotoc_md370',1,'']]],
-  ['않는_20이유_2',['학습 블록을 그냥 옮기지 않는 이유',['../d7/dab/md_docs_2ko_2fixed-cache-status.html#autotoc_md606',1,'']]]
+  ['알고리즘_20참고_20자료_0',['Mux 알고리즘 참고 자료',['../d4/d7c/md_docs_2ko_2references_2mux__algorithm__references.html',1,'']]],
+  ['알려진_20리비전_20빌드하기_1',['1. 알려진 리비전 빌드하기',['../d1/dc3/md_docs_2ko_2deployment_2wasmtime-appliance.html#autotoc_md601',1,'']]],
+  ['알려진_20성능_20주의_20사항_2',['알려진 성능 주의 사항',['../d1/dde/md_docs_2ko_2GC.html#autotoc_md644',1,'']]],
+  ['알려진_20한계_3',['알려진 한계',['../d8/d7e/md_docs_2ko_2webserver-benchmark.html#autotoc_md734',1,'']]]
 ];

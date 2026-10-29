@@ -1,6 +1,7 @@
 var searchData=
 [
-  ['선택적_20wrk_20원시_20보정_20지연_20히스토그램_0',['선택적 wrk 원시/보정 지연 히스토그램',['../d2/de4/md_docs_2ko_2performance_2wrk-dual-histogram.html',1,'']]],
-  ['선형_20연립방정식_20풀이_1',['3. 계수 행렬과 선형 연립방정식 풀이',['../d4/d7c/md_docs_2ko_2references_2mux__algorithm__references.html#autotoc_md662',1,'']]],
-  ['선형_20외삽_2',['5. 단일 단계 선형 외삽',['../d4/d7c/md_docs_2ko_2references_2mux__algorithm__references.html#autotoc_md666',1,'']]]
+  ['설계하기_0',['2. 세션 프로토콜 설계하기',['../df/d10/md_docs_2ko_2tutorials_2webtransport-server.html#autotoc_md715',1,'']]],
+  ['설계_1',['설계',['../d1/dde/md_docs_2ko_2GC.html#autotoc_md634',1,'']]],
+  ['설정하기_2',['1. HTTP/3과 세션 핸들러 설정하기',['../df/d10/md_docs_2ko_2tutorials_2webtransport-server.html#autotoc_md714',1,'']]],
+  ['설정_3',['설정',['../d5/d08/md_docs_2ko_2runtime-config.html',1,'런타임 설정'],['../d8/d7e/md_docs_2ko_2webserver-benchmark.html#autotoc_md731',1,'Spring Boot (JVM 공정성 설정)']]]
 ];

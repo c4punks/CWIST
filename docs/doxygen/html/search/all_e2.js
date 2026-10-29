@@ -1,5 +1,6 @@
 var searchData=
 [
-  ['한계_0',['한계',['../d3/dcc/md_docs_2ko_2async-gc-ownership.html#autotoc_md552',1,'검증과 한계'],['../d8/d7e/md_docs_2ko_2webserver-benchmark.html#autotoc_md722',1,'알려진 한계'],['../da/d07/md_docs_2ko_2classic-pool-starvation.html#autotoc_md563',1,'HTTP 측정과 한계']]],
-  ['한도_1',['C1M 파일 한도',['../db/dc4/md_docs_2ko_2c1m-file-limits.html',1,'']]]
+  ['하나의_20파싱된_20자격_20경계_0',['1. 하나의 파싱된 자격 경계',['../d6/dda/md_docs_2ko_2decisions_20001-safe-public-fixed-response-cache.html#autotoc_md587',1,'']]],
+  ['하는_20일_1',['지금 런타임이 실제로 하는 일',['../d7/dab/md_docs_2ko_2fixed-cache-status.html#autotoc_md628',1,'']]],
+  ['하이브리드_20키_20교환_2',['7. PQC TLS (양자내성 하이브리드 키 교환)',['../df/df1/md_docs_2tutorial_2korean_2cwist__tutorial.html#autotoc_md843',1,'']]]
 ];

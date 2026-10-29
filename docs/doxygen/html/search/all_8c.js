@@ -1,7 +1,6 @@
 var searchData=
 [
-  ['안전성_0',['동시성과 스레드 안전성',['../da/dc3/md_docs_2ko_2api_2app.html#autotoc_md371',1,'']]],
-  ['안전하게_20운영하기_1',['3. 안전하게 운영하기',['../df/d10/md_docs_2ko_2tutorials_2webtransport-server.html#autotoc_md698',1,'']]],
-  ['안전_2',['범위와 안전',['../d1/dc3/md_docs_2ko_2deployment_2wasmtime-appliance.html#autotoc_md587',1,'']]],
-  ['안정성_20게이트_20v4_20lts부터_3',['5. API 안정성 게이트 (v4 LTS부터)',['../d6/de8/md_docs_2ko_2versioning.html#autotoc_md709',1,'']]]
+  ['않는_20것_0',['않는 것',['../da/d90/md_docs_2ko_2cooperative-queuing.html#autotoc_md582',1,'이 수정이 해결하지 않는 것'],['../d2/d56/md_docs_2ko_2api_2wasm.html#autotoc_md545',1,'(아직) 다루지 않는 것']]],
+  ['않는_20변수_1',['사용하지 않는 변수',['../da/dc3/md_docs_2ko_2api_2app.html#autotoc_md382',1,'']]],
+  ['않는_20이유_2',['학습 블록을 그냥 옮기지 않는 이유',['../d7/dab/md_docs_2ko_2fixed-cache-status.html#autotoc_md630',1,'']]]
 ];

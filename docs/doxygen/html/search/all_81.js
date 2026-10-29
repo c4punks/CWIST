@@ -1,8 +1,12 @@
 var searchData=
 [
-  ['세션과_20쿠키_0',['세션과 쿠키',['../d2/d56/md_docs_2ko_2api_2wasm.html#autotoc_md529',1,'']]],
-  ['세션_20매니저_1',['세션 매니저',['../d3/d38/md_docs_2ko_2api-quickref.html#autotoc_md347',1,'']]],
-  ['세션_20침습적_20참조_20카운트_2',['공유 세션 (침습적 참조 카운트)',['../d3/d38/md_docs_2ko_2api-quickref.html#autotoc_md349',1,'']]],
-  ['세션_20프로토콜_20설계하기_3',['2. 세션 프로토콜 설계하기',['../df/d10/md_docs_2ko_2tutorials_2webtransport-server.html#autotoc_md697',1,'']]],
-  ['세션_20핸들러_20설정하기_4',['1. HTTP/3과 세션 핸들러 설정하기',['../df/d10/md_docs_2ko_2tutorials_2webtransport-server.html#autotoc_md696',1,'']]]
+  ['소스_20기준점_0',['근거와 소스 기준점',['../d6/dda/md_docs_2ko_2decisions_20001-safe-public-fixed-response-cache.html#autotoc_md594',1,'']]],
+  ['소유권_1',['소유권',['../d3/dcc/md_docs_2ko_2async-gc-ownership.html#autotoc_md566',1,'스케줄러와 IO 큐 소유권'],['../d3/dcc/md_docs_2ko_2async-gc-ownership.html',1,'full GC에서의 연기된 HTTP 소유권'],['../d3/dcc/md_docs_2ko_2async-gc-ownership.html#autotoc_md564',1,'HTTP/2 큐 소유권']]],
+  ['소유권_20규칙_2',['메모리 소유권 규칙',['../da/dc3/md_docs_2ko_2api_2app.html#autotoc_md384',1,'']]],
+  ['소유권_20목록_3',['소유권 목록',['../d3/dcc/md_docs_2ko_2async-gc-ownership.html#autotoc_md562',1,'']]],
+  ['소유권_20출처_20용량_20격리하기_4',['3. 소유권, 출처, 용량 격리하기',['../d6/dda/md_docs_2ko_2decisions_20001-safe-public-fixed-response-cache.html#autotoc_md589',1,'']]],
+  ['소켓_20도우미_5',['소켓 도우미',['../d3/d38/md_docs_2ko_2api-quickref.html#autotoc_md358',1,'']]],
+  ['소켓_20서버_6',['WASI 0.2 소켓 서버',['../d0/d3c/md_docs_2ko_2api_2wasi.html#autotoc_md520',1,'']]],
+  ['소켓_20요청_20경로_202026_2009_2022_20감사_7',['해결됨: wasip3에서의 소켓 요청 경로 (2026-09-22 감사)',['../dd/d41/md_docs_2ko_2api_2wasm-component.html#autotoc_md530',1,'']]],
+  ['소켓_20핸드오프로_20무중단_20재시작하기_8',['소켓 핸드오프로 무중단 재시작하기',['../d1/d45/md_docs_2ko_2deployment_2zero-downtime-restart.html',1,'']]]
 ];

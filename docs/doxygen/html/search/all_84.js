@@ -1,6 +1,5 @@
 var searchData=
 [
-  ['수명_20주기_0',['수명 주기',['../d3/d38/md_docs_2ko_2api-quickref.html#autotoc_md336',1,'수명 주기'],['../d3/d38/md_docs_2ko_2api-quickref.html#autotoc_md342',1,'요청 수명 주기'],['../d3/d38/md_docs_2ko_2api-quickref.html#autotoc_md343',1,'응답 수명 주기']]],
-  ['수정이_20해결하지_20않는_20것_1',['이 수정이 해결하지 않는 것',['../da/d90/md_docs_2ko_2cooperative-queuing.html#autotoc_md569',1,'']]],
-  ['수정_2',['수정',['../da/d90/md_docs_2ko_2cooperative-queuing.html#autotoc_md567',1,'']]]
+  ['순서_0',['순서',['../d3/dcc/md_docs_2ko_2async-gc-ownership.html#autotoc_md561',1,'인계 순서'],['../d1/d45/md_docs_2ko_2deployment_2zero-downtime-restart.html#autotoc_md608',1,'핸드오프 순서']]],
+  ['순열_1',['2. 직교 라틴 방진 순열',['../d4/d7c/md_docs_2ko_2references_2mux__algorithm__references.html#autotoc_md682',1,'']]]
 ];

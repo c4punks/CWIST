@@ -108,14 +108,14 @@ $(document).ready(function(){initNavTree('d3/ddd/md_docs_2fixed-cache-status.htm
   <div class="headertitle"><div class="title">FIXED endpoint caching: current behavior</div></div>
 </div><!--header-->
 <div class="contents">
-<div class="textblock"><p><a class="anchor" id="autotoc_md302"></a> <b>Status:</b> settled. <code>CWIST_ENDPOINT_FIXED</code> is a non-caching hint, and the docs now say so. The opt-in <code>CWIST_ENDPOINT_PUBLIC_FIXED</code> cache proposed in ADR-0001 shipped on 2026-09-14 and was removed on 2026-09-21 after the BDR cursor fast path (#194) replaced it; the bit is still defined but inert. <b>Related:</b> <a href="https://github.com/c4punks/CWIST/issues/25">issue #25</a> (closed), <a class="el" href="../../de/d51/md_docs_2decisions_20001-safe-public-fixed-response-cache.html">ADR-0001</a> (superseded).</p>
-<h1><a class="anchor" id="autotoc_md303"></a>
+<div class="textblock"><p><a class="anchor" id="autotoc_md314"></a> <b>Status:</b> settled. <code>CWIST_ENDPOINT_FIXED</code> is a non-caching hint, and the docs now say so. The opt-in <code>CWIST_ENDPOINT_PUBLIC_FIXED</code> cache proposed in ADR-0001 shipped on 2026-09-14 and was removed on 2026-09-21 after the BDR cursor fast path (#194) replaced it; the bit is still defined but inert. <b>Related:</b> <a href="https://github.com/c4punks/CWIST/issues/25">issue #25</a> (closed), <a class="el" href="../../de/d51/md_docs_2decisions_20001-safe-public-fixed-response-cache.html">ADR-0001</a> (superseded).</p>
+<h1><a class="anchor" id="autotoc_md315"></a>
 What the runtime actually does today</h1>
 <p><code>CWIST_ENDPOINT_FIXED</code> <b>does not activate an automatic response cache in the current revision</b>. In both classic and C1M modes, every request to a FIXED route is dispatched to the handler through ordinary routing. <code><a class="el" href="../../de/d66/endpoint__opts_8h.html" title="Endpoint-level behavior flags for CWIST apps.">endpoint_opts.h</a></code> and <code><a class="el" href="../../df/d72/api_2app_8md.html">docs/api/app.md</a></code> describe this behavior; older "cache the response in RAM after the first hit" wording described an intended contract that the runtime never delivered.</p>
-<h1><a class="anchor" id="autotoc_md304"></a>
+<h1><a class="anchor" id="autotoc_md316"></a>
 Evidence</h1>
 <p>Public TCP observation (see issue #25): 16 FIXED requests invoked the handler 16 times — eight keep-alive requests and eight fresh connections — with a DYNAMIC control and independently preseeded cache responses, and adaptive latency-based learning suppressed. This establishes that the cache is not populated/used at all (a population failure), independent of its contribution to tail latency.</p>
-<h1><a class="anchor" id="autotoc_md305"></a>
+<h1><a class="anchor" id="autotoc_md317"></a>
 Why the learning block is not simply moved</h1>
 <p>Two ordering defects explain the population failure: the common serving function samples endpoint options before routing assigns them, and the C1M branch returns before the learning block. Moving that block alone is unsafe:</p>
 <ul>
@@ -125,7 +125,7 @@ Why the learning block is not simply moved</h1>
 <li>normal sending may release managed pointer bodies before post-send learning reads them;</li>
 <li>the stringification helper treated a non-NUL-terminated header span as a C string (fixed independently by PR #84, which does not make cached replay safe).</li>
 </ul>
-<h1><a class="anchor" id="autotoc_md306"></a>
+<h1><a class="anchor" id="autotoc_md318"></a>
 Recommended handling</h1>
 <ul>
 <li>Treat FIXED routes as ordinary dispatch. Do not rely on automatic cache hits; do not preseed whole-wire BDR blobs expecting HTTP replay.</li>

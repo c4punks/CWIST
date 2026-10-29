@@ -1,4 +1,6 @@
 var searchData=
 [
-  ['네이티브_20비동기_202026_2009_2023_0',['반영 완료: 스트리밍/SSE를 위한 네이티브 비동기 (2026-09-23)',['../dd/d41/md_docs_2ko_2api_2wasm-component.html#autotoc_md516',1,'']]]
+  ['다루지_20않는_20것_0',['(아직) 다루지 않는 것',['../d2/d56/md_docs_2ko_2api_2wasm.html#autotoc_md545',1,'']]],
+  ['다르게_20했던_20것_1',['preview1 빌드가 다르게 했던 것',['../d0/d3c/md_docs_2ko_2api_2wasi.html#autotoc_md522',1,'']]],
+  ['다시_20실행하기_2',['다시 실행하기',['../da/dcd/md_docs_2ko_2deployment_2release-assets.html#autotoc_md598',1,'']]]
 ];

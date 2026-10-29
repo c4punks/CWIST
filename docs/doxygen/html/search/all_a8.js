@@ -1,7 +1,8 @@
 var searchData=
 [
-  ['이름을_20바꾼_20이유_0',['이름을 바꾼 이유',['../d4/d7c/md_docs_2ko_2references_2mux__algorithm__references.html#autotoc_md668',1,'']]],
-  ['이슈_2025_1',['C1M 리액터 묶음 비우기에서의 협력적 큐잉 (이슈 #25)',['../da/d90/md_docs_2ko_2cooperative-queuing.html',1,'']]],
-  ['이유_2',['이유',['../d4/d7c/md_docs_2ko_2references_2mux__algorithm__references.html#autotoc_md668',1,'이름을 바꾼 이유'],['../dd/d41/md_docs_2ko_2api_2wasm-component.html#autotoc_md512',1,'이유'],['../d7/dab/md_docs_2ko_2fixed-cache-status.html#autotoc_md606',1,'학습 블록을 그냥 옮기지 않는 이유']]],
-  ['이_20수정이_20해결하지_20않는_20것_3',['이 수정이 해결하지 않는 것',['../da/d90/md_docs_2ko_2cooperative-queuing.html#autotoc_md569',1,'']]]
+  ['인계_20순서_0',['인계 순서',['../d3/dcc/md_docs_2ko_2async-gc-ownership.html#autotoc_md561',1,'']]],
+  ['인메모리_20테스트_20클라이언트_1',['인메모리 테스트 클라이언트',['../da/dc3/md_docs_2ko_2api_2app.html#autotoc_md386',1,'']]],
+  ['인증_20미들웨어_2',['JWT 인증 미들웨어',['../d5/d3e/md_docs_2ko_2api_2middleware.html#autotoc_md474',1,'']]],
+  ['인증_20jwt_20및_20db_20암호화_3',['6. 인증 (JWT 및 DB 암호화)',['../df/df1/md_docs_2tutorial_2korean_2cwist__tutorial.html#autotoc_md842',1,'']]],
+  ['인코딩_4',['인코딩',['../db/d04/md_docs_2ko_2api_2cookie.html#autotoc_md399',1,'']]]
 ];

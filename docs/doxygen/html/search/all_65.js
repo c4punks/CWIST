@@ -1,6 +1,7 @@
 var searchData=
 [
-  ['반복적인_20크기_20정제_0',['4. 반복적인 크기 정제',['../d4/d7c/md_docs_2ko_2references_2mux__algorithm__references.html#autotoc_md664',1,'']]],
-  ['반영_20완료_3a_20스트리밍_20sse를_20위한_20네이티브_20비동기_202026_2009_2023_1',['반영 완료: 스트리밍/SSE를 위한 네이티브 비동기 (2026-09-23)',['../dd/d41/md_docs_2ko_2api_2wasm-component.html#autotoc_md516',1,'']]],
-  ['반환_20코드_2',['반환 코드',['../d5/d75/md_docs_2ko_2api_2sql.html#autotoc_md474',1,'']]]
+  ['방법_0',['방법',['../d8/d7e/md_docs_2ko_2webserver-benchmark.html',1,'웹 서버 벤치마크 측정 방법'],['..//home/runner/work/CWIST/CWIST/docs/ko/README.md#autotoc_md663',1,'5. 벤치마크와 측정 방법']]],
+  ['방법_20a_3a_20100_20server_20side_20rendering_20ssr_1',['방법 A: 100% Server-Side Rendering (SSR)',['../df/df1/md_docs_2tutorial_2korean_2cwist__tutorial.html#autotoc_md848',1,'']]],
+  ['방법_20b_3a_20react_20webassembly_20wasm_20클라이언트_20사이드_20합성_2',['방법 B: React + WebAssembly (WASM) 클라이언트 사이드 합성',['../df/df1/md_docs_2tutorial_2korean_2cwist__tutorial.html#autotoc_md849',1,'']]],
+  ['방진_20순열_3',['2. 직교 라틴 방진 순열',['../d4/d7c/md_docs_2ko_2references_2mux__algorithm__references.html#autotoc_md682',1,'']]]
 ];

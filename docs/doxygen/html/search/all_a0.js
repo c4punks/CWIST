@@ -1,4 +1,4 @@
 var searchData=
 [
-  ['용량_20격리하기_0',['3. 소유권, 출처, 용량 격리하기',['../d6/dda/md_docs_2ko_2decisions_20001-safe-public-fixed-response-cache.html#autotoc_md576',1,'']]]
+  ['운영하기_0',['3. 안전하게 운영하기',['../df/d10/md_docs_2ko_2tutorials_2webtransport-server.html#autotoc_md716',1,'']]]
 ];

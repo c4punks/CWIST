@@ -1,8 +1,7 @@
 var searchData=
 [
-  ['응답이_20아니라_20표현을_20캐시하기_0',['2. 와이어 응답이 아니라 표현을 캐시하기',['../d6/dda/md_docs_2ko_2decisions_20001-safe-public-fixed-response-cache.html#autotoc_md575',1,'']]],
-  ['응답하기_1',['3. JSON을 검증하고 HTTP 의미에 맞게 응답하기',['../d6/d25/md_docs_2ko_2tutorials_2blog-crud.html#autotoc_md683',1,'']]],
-  ['응답_20모드_2',['응답 모드',['../d3/df7/md_docs_2ko_2api_2sse.html#autotoc_md483',1,'']]],
-  ['응답_20수명_20주기_3',['응답 수명 주기',['../d3/d38/md_docs_2ko_2api-quickref.html#autotoc_md343',1,'']]],
-  ['응답_20캐싱_20복원하기_4',['ADR-0001: 명시적인 공개 FIXED 계약으로 HTTP 응답 캐싱 복원하기',['../d6/dda/md_docs_2ko_2decisions_20001-safe-public-fixed-response-cache.html',1,'']]]
+  ['의미에_20맞게_20응답하기_0',['3. JSON을 검증하고 HTTP 의미에 맞게 응답하기',['../d6/d25/md_docs_2ko_2tutorials_2blog-crud.html#autotoc_md701',1,'']]],
+  ['의미_20요약_1',['의미 요약',['../d1/dde/md_docs_2ko_2GC.html#autotoc_md642',1,'']]],
+  ['의사_20raii_2',['4. 핸들 같은 지역 변수를 위한 의사 RAII',['../d1/dde/md_docs_2ko_2GC.html#autotoc_md638',1,'']]],
+  ['의존성_3',['의존성',['../d3/d19/md_docs_2ko_2REFERENCE.html#autotoc_md678',1,'']]]
 ];

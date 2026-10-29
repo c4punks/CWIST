@@ -1,6 +1,7 @@
 var searchData=
 [
-  ['웹소켓_20연동_20실시간_20양방향_20통신_0',['8. 웹소켓 연동 (실시간 양방향 통신)',['../df/df1/md_docs_2tutorial_2korean_2cwist__tutorial.html#autotoc_md860',1,'']]],
-  ['웹_20개발_20튜토리얼_20a_20to_20z_1',['CWIST 웹 개발 튜토리얼 (A to Z)',['../df/df1/md_docs_2tutorial_2korean_2cwist__tutorial.html',1,'']]],
-  ['웹_20서버_20벤치마크_20측정_20방법_2',['웹 서버 벤치마크 측정 방법',['../d8/d7e/md_docs_2ko_2webserver-benchmark.html',1,'']]]
+  ['위의_20cwist_0',['WASM 컴포넌트 모델 위의 CWIST',['../dd/d41/md_docs_2ko_2api_2wasm-component.html',1,'']]],
+  ['위의_20cwist_20emscripten_1',['WASM 위의 CWIST (Emscripten)',['../d2/d56/md_docs_2ko_2api_2wasm.html',1,'']]],
+  ['위한_20네이티브_20비동기_202026_2009_2023_2',['반영 완료: 스트리밍/SSE를 위한 네이티브 비동기 (2026-09-23)',['../dd/d41/md_docs_2ko_2api_2wasm-component.html#autotoc_md529',1,'']]],
+  ['위한_20의사_20raii_3',['4. 핸들 같은 지역 변수를 위한 의사 RAII',['../d1/dde/md_docs_2ko_2GC.html#autotoc_md638',1,'']]]
 ];

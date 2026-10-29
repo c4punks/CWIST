@@ -1,6 +1,5 @@
 var searchData=
 [
-  ['합성기_20wasm_20및_20ssr_0',['10. 동적 CSS 합성기 (WASM 및 SSR)',['../df/df1/md_docs_2tutorial_2korean_2cwist__tutorial.html#autotoc_md864',1,'']]],
-  ['합성_1',['방법 B: React + WebAssembly (WASM) 클라이언트 사이드 합성',['../df/df1/md_docs_2tutorial_2korean_2cwist__tutorial.html#autotoc_md866',1,'']]],
-  ['합치기_2',['모두 합치기',['../d1/df9/md_docs_2ko_2api_2html.html#autotoc_md410',1,'']]]
+  ['한계_0',['한계',['../d3/dcc/md_docs_2ko_2async-gc-ownership.html#autotoc_md565',1,'검증과 한계'],['../d8/d7e/md_docs_2ko_2webserver-benchmark.html#autotoc_md734',1,'알려진 한계'],['../da/d07/md_docs_2ko_2classic-pool-starvation.html#autotoc_md576',1,'HTTP 측정과 한계']]],
+  ['한도_1',['C1M 파일 한도',['../db/dc4/md_docs_2ko_2c1m-file-limits.html',1,'']]]
 ];

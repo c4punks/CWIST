@@ -1,4 +1,4 @@
 var searchData=
 [
-  ['했던_20것_0',['preview1 빌드가 다르게 했던 것',['../d0/d3c/md_docs_2ko_2api_2wasi.html#autotoc_md509',1,'']]]
+  ['핵심_20도우미_0',['핵심 도우미',['../d3/d38/md_docs_2ko_2api-quickref.html#autotoc_md349',1,'']]]
 ];
