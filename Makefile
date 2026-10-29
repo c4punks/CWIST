@@ -529,6 +529,10 @@ wasip2-smoke: $(WASIP2_ARCHIVE)
 	    body=$$(curl -s -m 2 http://127.0.0.1:$(WASIP2_PORT)/hello || true); \
 	    if [ "$$body" = "hello from WASI 0.2" ]; then ok=1; break; fi; \
 	done; \
+	if [ $$ok -eq 1 ]; then \
+	    body=$$(curl -s -m 2 http://127.0.0.1:$(WASIP2_PORT)/hello || true); \
+	    [ "$$body" = "hello from WASI 0.2" ] || ok=0; \
+	fi; \
 	cat $$LOG; rm -f $$LOG; \
 	if [ $$ok -ne 1 ]; then echo "wasip2-smoke: curl probe failed"; exit 1; fi; \
 	kill -9 $$WPID 2>/dev/null || true; \
