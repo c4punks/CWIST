@@ -1,5 +1,7 @@
 var NAVTREEINDEX9 =
 {
+"d6/de8/md_docs_2ko_2versioning.html#autotoc_md721":[71,3],
+"d6/de8/md_docs_2ko_2versioning.html#autotoc_md722":[71,4],
 "d6/de8/md_docs_2ko_2versioning.html#autotoc_md723":[71,5],
 "d6/deb/gc__internal_8h.html":[93,0,2,0,3,3],
 "d6/deb/gc__internal_8h.html#a45eb150717e87ba0b5eba6dc4738ddb1":[93,0,2,0,3,3,0],
@@ -247,7 +249,5 @@ var NAVTREEINDEX9 =
 "d7/de9/http2__flow__control_8h.html#a63e5b68cffce67e803c51f0e93eab8a7":[93,0,1,0,2,3,6,6],
 "d7/de9/http2__flow__control_8h.html#a6850c9a68fac55f99111b2db66b232c3":[93,0,1,0,2,3,6,5],
 "d7/de9/http2__flow__control_8h.html#a8c64b543d8f47feca78820a200c53506":[93,0,1,0,2,3,6,2],
-"d7/de9/http2__flow__control_8h.html#a8f715dfebf52ae7593f420f56a6802bf":[93,0,1,0,2,3,6,10],
-"d7/de9/http2__flow__control_8h.html#a947d19fa7e2aca3e99de73b0f95e7df6":[93,0,1,0,2,3,6,15],
-"d7/de9/http2__flow__control_8h.html#aa3ae955bf1fabd8f9267d13d5c63105d":[93,0,1,0,2,3,6,14]
+"d7/de9/http2__flow__control_8h.html#a8f715dfebf52ae7593f420f56a6802bf":[93,0,1,0,2,3,6,10]
 };

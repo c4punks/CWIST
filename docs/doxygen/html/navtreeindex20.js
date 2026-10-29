@@ -1,5 +1,7 @@
 var NAVTREEINDEX20 =
 {
+"df/d34/metrics_8h.html#a4b994f8e8094a926156bcc218559ffe5a8db70e6b63b8b2d364d0933e2e62684e":[93,0,1,0,4,5,0,7,9],
+"df/d34/metrics_8h.html#a4b994f8e8094a926156bcc218559ffe5abe0c35cf694af9c24f33eb2a7c4e612b":[93,0,1,0,4,5,0,7,4],
 "df/d34/metrics_8h.html#a4b994f8e8094a926156bcc218559ffe5ac05106d27bc9bb52cfb8cdcb2acaf978":[93,0,1,0,4,5,0,7,2],
 "df/d34/metrics_8h.html#a4b994f8e8094a926156bcc218559ffe5ac5d704420477232e50164cddd0b30ad4":[93,0,1,0,4,5,0,7,19],
 "df/d34/metrics_8h.html#a4b994f8e8094a926156bcc218559ffe5ac7a6b6128ce3a0ba66a5eaa6b9047826":[93,0,1,0,4,5,0,7,17],
@@ -247,7 +249,5 @@ var NAVTREEINDEX20 =
 "df/d7f/app_8c.html#a8d6f015a001b2d189ebea808de9da254":[93,0,2,4,0,0,19],
 "df/d7f/app_8c.html#a8fb447618db946a9e2a596d9ea18763f":[93,0,2,4,0,0,0],
 "df/d7f/app_8c.html#a90bebb111c9c949f6ab51a9d420c284f":[93,0,2,4,0,0,80],
-"df/d7f/app_8c.html#a91c0e4f2faf1811afd080ba7f2cdfa54":[93,0,2,4,0,0,23],
-"df/d7f/app_8c.html#a95fd64f2e957b0ba3b98187d5b320e84":[93,0,2,4,0,0,49],
-"df/d7f/app_8c.html#a98600c9c267a433596a5658fe533070a":[93,0,2,4,0,0,61]
+"df/d7f/app_8c.html#a91c0e4f2faf1811afd080ba7f2cdfa54":[93,0,2,4,0,0,23]
 };
