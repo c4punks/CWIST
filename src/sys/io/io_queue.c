@@ -292,6 +292,7 @@ bool cwist_io_queue_submit(cwist_io_queue *q, cwist_job_func func, void *arg) {
  */
 void cwist_io_queue_run(cwist_io_queue *q) {
     if (!q) return;
+    ttak_thread_state_t *initial_epoch_state = t_local_state;
     unsigned int since_reclaim = 0;
     while (atomic_load_explicit(&q->running, memory_order_acquire) ||
            atomic_load_explicit(&q->pending_jobs, memory_order_acquire) > 0) {
@@ -322,6 +323,7 @@ void cwist_io_queue_run(cwist_io_queue *q) {
             cwist_queue_reclaim(q);
         }
     }
+    if (t_local_state != initial_epoch_state) ttak_epoch_deregister_thread();
 }
 
 /**
