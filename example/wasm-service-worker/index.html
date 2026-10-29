@@ -23,16 +23,24 @@ sessions all run inside the worker. This static file is only the boot shell.</p>
     status.textContent = 'This browser has no Service Worker support.';
     return;
   }
+  /* This file is only the boot shell: once the worker controls the page it
+   * answers "/" through CWIST and never serves this file for it. So whenever
+   * this script runs, the CWIST app has not been loaded yet. */
+  const loadApp = () => location.replace('/');
   try {
     await navigator.serviceWorker.register('/sw.js');
-    if (!navigator.serviceWorker.controller) {
-      /* First visit: the SW just installed and claimed. Reload so this
-       * navigation goes through the SW and CWIST serves "/". */
-      status.textContent = 'Service worker installed - loading the CWIST app…';
-      location.reload();
+    if (navigator.serviceWorker.controller) {
+      /* The worker claimed this page while register() was resolving (its
+       * activate handler claims open clients), or the shell was opened as
+       * /index.html from the cache. Either way, load the app now. */
+      loadApp();
       return;
     }
-    status.textContent = 'Service worker active.';
+    /* First visit: wait until the worker is active and has claimed this page.
+     * Reloading earlier races the install: if the claim lands later, nothing
+     * reloads again and the shell stays up. */
+    status.textContent = 'Service worker installing - loading the CWIST app…';
+    navigator.serviceWorker.addEventListener('controllerchange', loadApp, { once: true });
   } catch (err) {
     status.textContent = 'Service worker registration failed: ' + err;
   }
