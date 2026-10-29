@@ -108,9 +108,9 @@ $(document).ready(function(){initNavTree('d5/d08/md_docs_2ko_2runtime-config.htm
   <div class="headertitle"><div class="title">런타임 설정</div></div>
 </div><!--header-->
 <div class="contents">
-<div class="textblock"><p><a class="anchor" id="autotoc_md325"></a> 프레임워크가 읽는 <code>CWIST_*</code> 환경 변수를 모두 여기에 적습니다. <code>scripts/ci/check_env_knobs.py</code>(<code>make env-check</code>, CI에서 실행)는 <code>src/</code>가 이 문서에 없는 변수를 읽거나, 이 문서에 있는 변수를 <code>src/</code>가 더 이상 읽지 않으면 실패합니다. 그래서 표가 빠짐없이 유지됩니다.</p>
+<div class="textblock"><p><a class="anchor" id="autotoc_md342"></a> 프레임워크가 읽는 <code>CWIST_*</code> 환경 변수를 모두 여기에 적습니다. <code>scripts/ci/check_env_knobs.py</code>(<code>make env-check</code>, CI에서 실행)는 <code>src/</code>가 이 문서에 없는 변수를 읽거나, 이 문서에 있는 변수를 <code>src/</code>가 더 이상 읽지 않으면 실패합니다. 그래서 표가 빠짐없이 유지됩니다.</p>
 <p>대부분의 변수는 처음 쓸 때 한 번 읽고 저장해 둡니다. 서비스 중에 바꾸지 말고 프로세스 시작 전(또는 <code><a class="el" href="../../d0/d77/sys_2app_2app_8h.html#a05f9a10f4d2ab307c211dd56d54fe7c3" title="Serve app on port until SIGTERM, SIGINT or cwist_shutdown_request(); blocks the calling thread.">cwist_app_listen()</a></code> 전)에 설정하세요. 비어 있거나 형식이 잘못된 값은, 행에 따로 적지 않은 한 기본값으로 돌아갑니다.</p>
-<h1><a class="anchor" id="autotoc_md326"></a>
+<h1><a class="anchor" id="autotoc_md343"></a>
 상태</h1>
 <p>변수마다 상태가 하나씩 있습니다. 상태는 v4가 그 변수에 대해 무엇을 약속하는지 나타냅니다.</p>
 <table class="markdownTable">
@@ -123,7 +123,7 @@ $(document).ready(function(){initNavTree('d5/d08/md_docs_2ko_2runtime-config.htm
 <tr class="markdownTableRowOdd">
 <td class="markdownTableBodyNone"><code>diagnostic</code>   </td><td class="markdownTableBodyNone">디버깅 전용입니다. 출력 형식과 동작은 안정적이지 않으며 어느 릴리스에서든 바뀌거나 없어질 수 있습니다.   </td></tr>
 </table>
-<h1><a class="anchor" id="autotoc_md327"></a>
+<h1><a class="anchor" id="autotoc_md344"></a>
 프로세스와 서버 모드</h1>
 <table class="markdownTable">
 <tr class="markdownTableHead">
@@ -145,7 +145,7 @@ $(document).ready(function(){initNavTree('d5/d08/md_docs_2ko_2runtime-config.htm
 <tr class="markdownTableRowEven">
 <td class="markdownTableBodyNone"><code>CWIST_MALLOC_TRIM_IDLE_SEC</code>   </td><td class="markdownTableBodyNone">tuning   </td><td class="markdownTableBodyNone">초, <code>0</code>–<code>86400</code>   </td><td class="markdownTableBodyNone"><code>30</code>   </td><td class="markdownTableBodyNone">glibc 전용(그 외 libc에서는 동작 없음): 이벤트 없이 유휴 상태가 누적된 시간이 이 값에 도달하면 리액터가 이벤트 없는 wake에서 <code><a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">malloc_trim(0)</a></code>을 호출해 glibc 아레나 상단의 여유 메모리를 OS에 반환합니다. 유휴 wake에서만 동작해 핫 패스 비용은 없습니다. 로드 라운드 후 워커당 중간값 약 1.2 MiB 절감. <code>0</code>이면 끕니다.   </td></tr>
 </table>
-<h1><a class="anchor" id="autotoc_md328"></a>
+<h1><a class="anchor" id="autotoc_md345"></a>
 Classic 스레드 풀</h1>
 <table class="markdownTable">
 <tr class="markdownTableHead">
@@ -157,7 +157,7 @@ Classic 스레드 풀</h1>
 <tr class="markdownTableRowOdd">
 <td class="markdownTableBodyNone"><code>CWIST_POOL_IDLE_TIMEOUT_MS</code>   </td><td class="markdownTableBodyNone">supported   </td><td class="markdownTableBodyNone">밀리초, 0 이상   </td><td class="markdownTableBodyNone"><code>2000</code>   </td><td class="markdownTableBodyNone">기본 풀을 넘는 스레드가 놀다가 종료하기까지의 시간. <code>0</code>이면 남는 스레드를 계속 유지합니다.   </td></tr>
 </table>
-<h1><a class="anchor" id="autotoc_md329"></a>
+<h1><a class="anchor" id="autotoc_md346"></a>
 HTTP/1.1</h1>
 <table class="markdownTable">
 <tr class="markdownTableHead">
@@ -175,7 +175,7 @@ HTTP/1.1</h1>
 <tr class="markdownTableRowEven">
 <td class="markdownTableBodyNone"><code>CWIST_TCP_CORK_BURST</code>   </td><td class="markdownTableBodyNone">tuning   </td><td class="markdownTableBodyNone">바이트, 16384 이상   </td><td class="markdownTableBodyNone"><code>262144</code>   </td><td class="markdownTableBodyNone"><code>CWIST_USE_TCP_CORK</code>를 켰을 때 파일 본문을 한꺼번에가 아니라 이 바이트마다 내보냅니다.   </td></tr>
 </table>
-<h1><a class="anchor" id="autotoc_md330"></a>
+<h1><a class="anchor" id="autotoc_md347"></a>
 HTTPS</h1>
 <table class="markdownTable">
 <tr class="markdownTableHead">
@@ -189,7 +189,7 @@ HTTPS</h1>
 <tr class="markdownTableRowEven">
 <td class="markdownTableBodyNone"><code>CWIST_TLS_SESS_CACHE_SIZE</code>   </td><td class="markdownTableBodyNone">tuning   </td><td class="markdownTableBodyNone">정수, <code>0</code>–<code>1048576</code>   </td><td class="markdownTableBodyNone"><code>1024</code>   </td><td class="markdownTableBodyNone">BoringSSL 서버측 세션 캐시 상한(<code>SSL_CTX_sess_set_cache_size</code>)으로, 모든 서버 TLS 컨텍스트(HTTP/1.1, HTTP/2, HTTP/3)에 적용됩니다. 워커 프로세스당 TLS 1.2 세션 ID 보유량을 제한합니다. <code>0</code>이면 BoringSSL 기본값(제한 없음)을 씁니다. 세션 삽입 시에만 참조합니다.   </td></tr>
 </table>
-<h1><a class="anchor" id="autotoc_md331"></a>
+<h1><a class="anchor" id="autotoc_md348"></a>
 HTTP/2</h1>
 <table class="markdownTable">
 <tr class="markdownTableHead">
@@ -205,7 +205,7 @@ HTTP/2</h1>
 <tr class="markdownTableRowOdd">
 <td class="markdownTableBodyNone"><code>CWIST_H2_BATCH_BYTES</code>   </td><td class="markdownTableBodyNone">tuning   </td><td class="markdownTableBodyNone">바이트, 4096 이상   </td><td class="markdownTableBodyNone"><code>65536</code>   </td><td class="markdownTableBodyNone">보낼 프레임을 모았다가 이만큼 쌓이면(또는 블로킹 대기 전에) 한 번에 씁니다.   </td></tr>
 </table>
-<h1><a class="anchor" id="autotoc_md332"></a>
+<h1><a class="anchor" id="autotoc_md349"></a>
 HTTP/3</h1>
 <table class="markdownTable">
 <tr class="markdownTableHead">
@@ -215,7 +215,7 @@ HTTP/3</h1>
 <tr class="markdownTableRowEven">
 <td class="markdownTableBodyNone"><code>CWIST_H3_DEBUG</code>   </td><td class="markdownTableBodyNone">diagnostic   </td><td class="markdownTableBodyNone">설정   </td><td class="markdownTableBodyNone">설정 안 함   </td><td class="markdownTableBodyNone">lsquic 자체 로그를 stderr로 보냅니다(CONNECTION_CLOSE 코드 등). 서버 루프가 시작할 때 읽습니다.   </td></tr>
 </table>
-<h1><a class="anchor" id="autotoc_md333"></a>
+<h1><a class="anchor" id="autotoc_md350"></a>
 WebSocket</h1>
 <table class="markdownTable">
 <tr class="markdownTableHead">
@@ -223,7 +223,7 @@ WebSocket</h1>
 <tr class="markdownTableRowOdd">
 <td class="markdownTableBodyNone"><code>CWIST_WS_ASYNC_IDLE_TIMEOUT_SEC</code>   </td><td class="markdownTableBodyNone">supported   </td><td class="markdownTableBodyNone">초, 0 이상   </td><td class="markdownTableBodyNone"><code>300</code>   </td><td class="markdownTableBodyNone">async(reactor) WebSocket을 닫기 전 유휴 시간. <code>0</code>이면 유휴 소켓을 닫지 않습니다.   </td></tr>
 </table>
-<h1><a class="anchor" id="autotoc_md334"></a>
+<h1><a class="anchor" id="autotoc_md351"></a>
 Reactor</h1>
 <table class="markdownTable">
 <tr class="markdownTableHead">
@@ -243,7 +243,7 @@ Reactor</h1>
 <tr class="markdownTableRowOdd">
 <td class="markdownTableBodyNone"><code>CWIST_REACTOR_CQ_GRACE_NS</code>   </td><td class="markdownTableBodyNone">tuning   </td><td class="markdownTableBodyNone">나노초, 0 이상   </td><td class="markdownTableBodyNone"><code>20000</code>   </td><td class="markdownTableBodyNone">커널에서 잠들기 전에 completion ring을 확인하며 도는 시간. <code>0</code>이면 돌지 않습니다.   </td></tr>
 </table>
-<h1><a class="anchor" id="autotoc_md335"></a>
+<h1><a class="anchor" id="autotoc_md352"></a>
 진단</h1>
 <table class="markdownTable">
 <tr class="markdownTableHead">

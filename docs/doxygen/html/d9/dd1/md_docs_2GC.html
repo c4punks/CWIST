@@ -108,8 +108,8 @@ $(document).ready(function(){initNavTree('d9/dd1/md_docs_2GC.html','../../'); in
   <div class="headertitle"><div class="title">Full GC: Automatic Resource Reclamation in CWIST</div></div>
 </div><!--header-->
 <div class="contents">
-<div class="textblock"><p><a class="anchor" id="autotoc_md302"></a> Status: <b>supported opt-in</b> (<code><a class="el" href="../../d8/d16/gc_8c.html" title="Thin implementation wrapper around libttak epoch-based reclamation.">src/core/mem/gc.c</a></code>, <code><a class="el" href="../../d0/daa/gc_8h.html" title="Epoch-based garbage collection wrapper.">include/cwist/core/mem/gc.h</a></code>). <code>cwist_full_gc(true)</code> is a real, callable toggle today, not a future one — see Tutorial 30 (<code>tutorials/30-graceful-shutdown/</code>) for a minimal example. All six design sections below, including section 5 (transparent <code>malloc</code> interception), are implemented and tested. This document remains the design contract for what the mode does and does not cover; the explicit destroy-family model stays fully supported (and is the default) whether or not full-GC mode is ever enabled.</p>
-<h1><a class="anchor" id="autotoc_md303"></a>
+<div class="textblock"><p><a class="anchor" id="autotoc_md319"></a> Status: <b>supported opt-in</b> (<code><a class="el" href="../../d8/d16/gc_8c.html" title="Thin implementation wrapper around libttak epoch-based reclamation.">src/core/mem/gc.c</a></code>, <code><a class="el" href="../../d0/daa/gc_8h.html" title="Epoch-based garbage collection wrapper.">include/cwist/core/mem/gc.h</a></code>). <code>cwist_full_gc(true)</code> is a real, callable toggle today, not a future one — see Tutorial 30 (<code>tutorials/30-graceful-shutdown/</code>) for a minimal example. All six design sections below, including section 5 (transparent <code>malloc</code> interception), are implemented and tested. This document remains the design contract for what the mode does and does not cover; the explicit destroy-family model stays fully supported (and is the default) whether or not full-GC mode is ever enabled.</p>
+<h1><a class="anchor" id="autotoc_md320"></a>
 Motivation</h1>
 <p>CWIST today relies on disciplined explicit cleanup: <code><a class="el" href="../../d0/d77/sys_2app_2app_8h.html#a8d6f015a001b2d189ebea808de9da254" title="Destroys the application and frees all resources.">cwist_app_destroy()</a></code>, connection/session teardown at the transport layer, and <code><a class="el" href="../../d2/dfe/alloc_8h.html#a220abeebe2823e72511d1690fc561306" title="Free memory obtained via cwist_alloc/cwist_strdup/etc.">cwist_free()</a></code> paired with request arenas. Two gaps remain:</p>
 <ol type="1">
@@ -117,9 +117,9 @@ Motivation</h1>
 <li>**<code>cwist_alloc</code> still requires manual <code>cwist_free</code>.** Miss one and the object leaks for the life of its owner.</li>
 </ol>
 <p>Full-GC mode (<code>cwist_full_gc(true)</code>) closes both gaps. When disabled (the default), the current explicit model runs unchanged at zero cost.</p>
-<h1><a class="anchor" id="autotoc_md304"></a>
+<h1><a class="anchor" id="autotoc_md321"></a>
 Design</h1>
-<h2><a class="anchor" id="autotoc_md305"></a>
+<h2><a class="anchor" id="autotoc_md322"></a>
 1. cwist_full_gc(bool) — the global toggle</h2>
 <div class="fragment"><div class="line"><a class="code hl_function" href="../../d0/daa/gc_8h.html#a0d7297e8d4a073c018f97fa6e7f0a372">cwist_full_gc</a>(<span class="keyword">true</span>);   <span class="comment">/* enable automatic reclamation */</span></div>
 <div class="ttc" id="agc_8h_html_a0d7297e8d4a073c018f97fa6e7f0a372"><div class="ttname"><a href="../../d0/daa/gc_8h.html#a0d7297e8d4a073c018f97fa6e7f0a372">cwist_full_gc</a></div><div class="ttdeci">void cwist_full_gc(bool enable)</div><div class="ttdoc">Enable or disable full-GC mode process-wide.</div><div class="ttdef"><b>Definition</b> <a href="../../d8/d16/gc_8c_source.html#l00483">gc.c:483</a></div></div>
@@ -130,7 +130,7 @@ Design</h1>
 <li><code>cwist_alloc</code> objects are registered with the reclamation engine and freed by epoch rotation instead of manual <code>cwist_free</code> calls.</li>
 </ul>
 <p>When disabled, none of the tracking machinery is active; the explicit model keeps its current performance profile.</p>
-<h2><a class="anchor" id="autotoc_md306"></a>
+<h2><a class="anchor" id="autotoc_md323"></a>
 2. Reclamation engine: libttak epoch GC</h2>
 <p>The engine is libttak's epoch GC (<code>ttak_epoch_gc</code>, see <code>lib/libttak/include/ttak/mem/epoch_gc.h</code>), already wrapped by CWIST in <code><a class="el" href="../../d8/d16/gc_8c.html" title="Thin implementation wrapper around libttak epoch-based reclamation.">src/core/mem/gc.c</a></code> (<code><a class="el" href="../../d8/d25/structcwist__gc.html" title="High-level wrapper over libttak&#39;s epoch GC.">cwist_gc</a></code>, <code>cwist_reg_ptr</code>, <code>cwist_gc_rotate</code>).</p>
 <ul>
@@ -139,7 +139,7 @@ Design</h1>
 <li>Rotation can be automatic (background rotate thread with adaptive cadence driven by allocation hints) or manual (<code>cwist_gc_rotate</code> from the event loop), matching the existing wrapper semantics.</li>
 </ul>
 <p><b>Registration owns the block.</b> <code>cwist_reg_ptr</code> / <code>cwist_reg_ptr_sized</code> hand ownership of the registered pointer to the context, and the context releases it with <code>cwist_free</code> at <code>cwist_gc_shutdown</code>. Register only pointers that <code>cwist_free</code> can release — that is, pointers from CWIST's allocator (<code>cwist_alloc</code> and family). An explicit <code>cwist_free</code> stays correct: it detaches the pointer from the context first (automatically) and then frees it, exactly the "explicit free unregisters early" rule below. This matters because libttak's own destroy-time pass frees whatever is left in its tree with <code>ttak_mem_free</code>, which validates ttak block headers and aborts on a headerless <code>cwist_alloc</code> block — the wrapper's registry is what keeps the two free paths from meeting. Pointers allocated directly from libttak (<code>ttak_mem_alloc_safe</code>) are the opposite case: they keep libttak's teardown semantics and must be registered with the raw context instead — <code><a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">ttak_epoch_gc_register(cwist_gc_raw(gc), ptr, size)</a></code> — so libttak frees them at destroy (see <code>example/rps-showcase</code>). Never register the same pointer through both paths.</p>
-<h2><a class="anchor" id="autotoc_md307"></a>
+<h2><a class="anchor" id="autotoc_md324"></a>
 3. Thread/process exit sweeps</h2>
 <ul>
 <li><b>Thread exit</b>: the connection registry is one process-wide table that maps each tracked handle to its close function and its <em>owner</em> thread. A pthread TLS destructor closes whatever the exiting thread still owns. The owner is the thread that tracked the handle until another thread calls <code><a class="el" href="../../d0/daa/gc_8h.html#a508dbea3a902e11b26c082674079e011" title="Make the calling thread the owner of a tracked handle.">cwist_conn_registry_adopt()</a></code>. The HTTPS pool adopts every connection it resumes or resubmits, so a thread that exits does not close a connection another thread is serving (#345).</li>
@@ -147,14 +147,14 @@ Design</h1>
 <li><b>Untrack</b> works from any thread in <a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">O(1)</a>. <b>Close functions</b> run with no registry lock held, so they may track or untrack other handles.</li>
 <li><b><a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">fork()</a></b>: the child starts with an empty registry. The inherited connections belong to the parent, and a child that calls <code><a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">exit()</a></code> must not shut them down.</li>
 </ul>
-<h2><a class="anchor" id="autotoc_md308"></a>
+<h2><a class="anchor" id="autotoc_md325"></a>
 4. Pseudo-RAII for handle-like locals</h2>
 <p>For stack-scoped handles, CWIST provides pseudo-RAII guards:</p>
 <ul>
 <li>GCC/Clang <code>__attribute__((cleanup))</code> scoped guards that run the matching teardown when the variable leaves scope — C's practical equivalent of RAII.</li>
 <li>Raw borrowing of LibTTAK RAII primitives where the cleanup-attribute trick is unavailable.</li>
 </ul>
-<h2><a class="anchor" id="autotoc_md309"></a>
+<h2><a class="anchor" id="autotoc_md326"></a>
 5. Transparent malloc interception</h2>
 <p>Users will habitually write <code>malloc</code>, not <code>cwist_alloc</code> — depending on finger discipline is how leak-free claims fail. <code>&lt;<a class="el" href="../../d7/d10/intercept_8h.html" title="Opt-in, translation-unit-scoped malloc/calloc/realloc/free interception onto the full-GC epoch pipeli...">cwist/core/mem/intercept.h</a>&gt;</code> makes the two spellings equivalent, opt-in per translation unit:</p>
 <div class="fragment"><div class="line"><span class="preprocessor">#define CWIST_INTERCEPT_MALLOC</span></div>
@@ -192,10 +192,10 @@ Design</h1>
 <td class="markdownTableBodyNone">shim, full-GC on   </td><td class="markdownTableBodyRight">24.3   </td><td class="markdownTableBodyRight">+46%   </td></tr>
 </table>
 <p>The "off" cost is one relaxed atomic load (<code><a class="el" href="../../d0/daa/gc_8h.html#a35e613a89ca213039b7b8b80464c223c" title="Check whether full-GC mode is currently enabled.">cwist_full_gc_enabled()</a></code>) plus one extra function call per operation, the same overhead <code><a class="el" href="../../d2/dfe/alloc_8h.html#aeba69949fe17751318e6b5fc84a74096" title="Allocate zeroed memory tracked by libttak.">cwist_alloc()</a></code>/ <code><a class="el" href="../../d2/dfe/alloc_8h.html#a220abeebe2823e72511d1690fc561306" title="Free memory obtained via cwist_alloc/cwist_strdup/etc.">cwist_free()</a></code> already pay. The "on" cost is the safety net itself: one insertion into and one removal from the calling thread's pending set per <code>malloc</code>/<code>free</code> pair. See "Known performance caveat" below for how that cost behaves with many live blocks and several threads.</p>
-<h2><a class="anchor" id="autotoc_md310"></a>
+<h2><a class="anchor" id="autotoc_md327"></a>
 6. cwist_alloc internals</h2>
 <p><code><a class="el" href="../../d9/d39/alloc_8c.html">src/core/mem/alloc.c</a></code> gains a registration hook: under full-GC mode every <code>cwist_alloc</code> block is recorded with the epoch GC (size-aware via <code>cwist_reg_ptr_sized</code>) so epoch rotation reclaims it; explicit <code>cwist_free</code> remains correct and simply unregisters the block early.</p>
-<h2><a class="anchor" id="autotoc_md311"></a>
+<h2><a class="anchor" id="autotoc_md328"></a>
 7. Explicit flushes and reclamation</h2>
 <p>Two things are easy to assume and both are wrong:</p>
 <ul>
@@ -219,7 +219,7 @@ Design</h1>
 <div class="line"><a class="code hl_function" href="../../d0/daa/gc_8h.html#a9722c1690dcf7f4e07c62bd0d1dd8047">cwist_gc_scope_flush</a>(); <span class="comment">/* cwist-ack: cwist_gc_scope_flush */</span></div>
 <div class="ttc" id="agc_8h_html_a9722c1690dcf7f4e07c62bd0d1dd8047"><div class="ttname"><a href="../../d0/daa/gc_8h.html#a9722c1690dcf7f4e07c62bd0d1dd8047">cwist_gc_scope_flush</a></div><div class="ttdeci">void cwist_gc_scope_flush(void)</div><div class="ttdoc">Retire every block still on the current thread's pending-sweep list right now, instead of waiting for...</div><div class="ttdef"><b>Definition</b> <a href="../../d8/d16/gc_8c_source.html#l00776">gc.c:776</a></div></div>
 </div><!-- fragment --><p>(The marker may also sit on the line directly above the call.) This came out of c4punks/CWIST#347: an application flushed from a request middleware, which was silent only because nothing in that process ever drove reclamation.</p>
-<h1><a class="anchor" id="autotoc_md312"></a>
+<h1><a class="anchor" id="autotoc_md329"></a>
 Semantics summary</h1>
 <table class="markdownTable">
 <tr class="markdownTableHead">
@@ -237,14 +237,14 @@ Semantics summary</h1>
 <tr class="markdownTableRowEven">
 <td class="markdownTableBodyNone">Teardown safety   </td><td class="markdownTableBodyNone">Caller discipline   </td><td class="markdownTableBodyNone">Epoch-deferred for readers inside <code><a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">ttak_epoch_enter()</a></code>; request-serving threads are not, so explicit flushes must follow section 7   </td></tr>
 </table>
-<h1><a class="anchor" id="autotoc_md313"></a>
+<h1><a class="anchor" id="autotoc_md330"></a>
 Non-goals and notes</h1>
 <ul>
 <li>Full-GC mode is <b>opt-in</b>; the default build keeps the explicit model with zero tracking overhead.</li>
 <li>This is not a tracing garbage collector: reclamation is epoch-based and scoped to framework-managed resources (connections, <code>cwist_alloc</code> blocks, handler-context <code>malloc</code>).</li>
 <li>Kernel-level resources (file descriptors, TLS sessions) are closed deterministically by the exit sweeps; the epoch deferral governs only the memory reclamation behind them.</li>
 </ul>
-<h1><a class="anchor" id="autotoc_md314"></a>
+<h1><a class="anchor" id="autotoc_md331"></a>
 Known performance caveat</h1>
 <p>With <code>cwist_full_gc(true)</code>, every <code><a class="el" href="../../d2/dfe/alloc_8h.html#aeba69949fe17751318e6b5fc84a74096" title="Allocate zeroed memory tracked by libttak.">cwist_alloc()</a></code> inserts the block into the calling thread's pending set and every <code><a class="el" href="../../d2/dfe/alloc_8h.html#a220abeebe2823e72511d1690fc561306" title="Free memory obtained via cwist_alloc/cwist_strdup/etc.">cwist_free()</a></code> removes it (or looks it up and misses, for blocks that were never tracked, such as <code><a class="el" href="../../d2/dfe/alloc_8h.html#a59e88ae09b889a715cfdec6966d9cb43" title="Duplicate a string using libttak-backed storage.">cwist_strdup()</a></code> results). The set is an open-addressing hash table, so both operations are <a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">O(1)</a> on average no matter how many blocks the thread holds, and the thread's set is found through one thread-local load. Each thread has its own set; there is no shared lock.</p>
 <p><code>tests/bench_full_gc_tracking.c</code> (<code>make bench_full_gc_tracking</code>) measures this with N tracked blocks kept alive on the thread. GitHub Actions <code>ubuntu-latest</code> (AMD EPYC 7763, 4 vCPUs), 200000 pairs per measurement, median of 3 runs, ns per <code><a class="el" href="../../d2/dfe/alloc_8h.html#aeba69949fe17751318e6b5fc84a74096" title="Allocate zeroed memory tracked by libttak.">cwist_alloc()</a></code> + <code><a class="el" href="../../d2/dfe/alloc_8h.html#a220abeebe2823e72511d1690fc561306" title="Free memory obtained via cwist_alloc/cwist_strdup/etc.">cwist_free()</a></code> pair:</p>

@@ -10,7 +10,7 @@ var searchData=
   ['web_20server_20benchmark_20methodology_7',['Web Server Benchmark Methodology',['../d6/d42/md_docs_2webserver-benchmark.html',1,'']]],
   ['websocket_20api_8',['WebSocket API',['../db/dc5/md_docs_2api_2websocket.html',1,'']]],
   ['webtransport_20server_20with_20cwist_9',['Build a WebTransport server with CWIST',['../d2/dcb/md_docs_2tutorials_2webtransport-server.html',1,'']]],
-  ['with_20cwist_10',['with cwist',['../d4/db0/md_docs_2tutorials_2blog-crud.html',1,'Build a CRUD blog with CWIST'],['../d2/dcb/md_docs_2tutorials_2webtransport-server.html',1,'Build a WebTransport server with CWIST'],['../da/d48/md_docs_2tutorials_2nats-integration.html',1,'Integrate NATS with CWIST']]],
+  ['with_20cwist_10',['with cwist',['../de/d87/md_docs_2embedded_2stm32.html',1,'Bare-metal STM32 with CWIST'],['../d4/db0/md_docs_2tutorials_2blog-crud.html',1,'Build a CRUD blog with CWIST'],['../d2/dcb/md_docs_2tutorials_2webtransport-server.html',1,'Build a WebTransport server with CWIST'],['../da/d48/md_docs_2tutorials_2nats-integration.html',1,'Integrate NATS with CWIST']]],
   ['with_20openapi_20and_20swagger_20ui_11',['Document an API with OpenAPI and Swagger UI',['../d6/d8e/md_docs_2tutorials_2openapi-swagger.html',1,'']]],
   ['with_20wasmtime_12',['Deploy the WASI 0.2 example with Wasmtime',['../db/de3/md_docs_2deployment_2wasmtime-appliance.html',1,'']]],
   ['work_20wake_20up_20regression_2025_13',['io_uring posted-work wake-up regression (#25)',['../dd/d56/md_docs_2reactor-wakeup-regression.html',1,'']]],

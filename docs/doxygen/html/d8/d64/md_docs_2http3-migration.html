@@ -108,12 +108,12 @@ $(document).ready(function(){initNavTree('d8/d64/md_docs_2http3-migration.html',
   <div class="headertitle"><div class="title">HTTP/3 connection migration</div></div>
 </div><!--header-->
 <div class="contents">
-<div class="textblock"><p><a class="anchor" id="autotoc_md320"></a> </p>
-<h1><a class="anchor" id="autotoc_md321"></a>
+<div class="textblock"><p><a class="anchor" id="autotoc_md337"></a> </p>
+<h1><a class="anchor" id="autotoc_md338"></a>
 Result for issue #407</h1>
 <p>The HTTP/3 server uses the connection and stream contexts that lsquic provides. It does not use a client address as the key for request state. <code><a class="el" href="../../dd/dff/http3_8h.html#a8d60b85d41105c404f177a04a03f0d51" title="Run the HTTP/3 server event loop.">cwist_http3_server_loop()</a></code> passes each packet's peer address to lsquic. The output callback sends each packet to the address that lsquic selects. lsquic performs path validation and selects the connection by its Connection ID.</p>
 <p>The address-change test passes with the existing HTTP/3 implementation on <code>dev</code>. No change to the transport implementation is necessary for these test cases. The missing part was an end-to-end test and a CI check. The test does not prove that all mobile network changes are supported.</p>
-<h1><a class="anchor" id="autotoc_md322"></a>
+<h1><a class="anchor" id="autotoc_md339"></a>
 Run the test</h1>
 <p>Install Python 3.11 or later and <code>aioquic==1.4.0</code> in a virtual environment. Then run:</p>
 <div class="fragment"><div class="line">make -j4 http3-migration-e2e PYTHON=/path/to/venv/bin/python</div>
@@ -122,7 +122,7 @@ Run the test</h1>
 <div class="fragment"><div class="line">make http3-migration-e2e PYTHON=/path/to/venv/bin/python \</div>
 <div class="line">  HTTP3_MIGRATION_ARGS=&quot;--migration-host &lt;local-IPv4-address&gt;&quot;</div>
 </div><!-- fragment --><p>Do not use an address from another host. The test fails if the second address cannot be bound. It does not skip the test. With <code>CWIST_HTTP3=0</code>, Make skips this target because HTTP/3 is not available.</p>
-<h1><a class="anchor" id="autotoc_md323"></a>
+<h1><a class="anchor" id="autotoc_md340"></a>
 Test coverage</h1>
 <p>Two clients connect through separate UDP proxies to one CWIST HTTP/3 server. Each client first completes a request to identify its server-side connection. Each client then performs 200 address changes:</p>
 <ol type="1">
@@ -139,7 +139,7 @@ Test coverage</h1>
 <p>The test uses the server's Connection ID only through lsquic. The fixture's response header identifies the <code>lsquic_conn_t</code> object, not a wire CID. A wire CID can change without a change to that object.</p>
 <p>The test waits for a spare Connection ID because lsquic limits CID issue rate. Calling aioquic's <code><a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">change_connection_id()</a></code> without a spare CID has no effect. The script checks private aioquic CID fields for this reason. CI pins aioquic 1.4.0.</p>
 <p>Use <code>HTTP3_MIGRATION_ARGS="--rounds N"</code> to change the number of test rounds. The script limits the complete run to 120 seconds and each PING or response to 10 seconds. This is a bounded migration-churn test, not a long-duration production soak test.</p>
-<h1><a class="anchor" id="autotoc_md324"></a>
+<h1><a class="anchor" id="autotoc_md341"></a>
 Limits</h1>
 <p>The test covers IPv4 NAT rebinding and an IPv4 source-address change. It does not cover IPv4-to-IPv6 changes, packet loss, a server address change, a load balancer, or a real Wi-Fi-to-cellular transition. <code>Interop / HTTP/3 connection migration (aioquic)</code> runs the default test on Linux CI. </p>
 </div></div><!-- contents -->

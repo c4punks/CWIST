@@ -108,8 +108,8 @@ $(document).ready(function(){initNavTree('d6/d26/md_docs_2api_2wasi.html','../..
   <div class="headertitle"><div class="title">WASI targets</div></div>
 </div><!--header-->
 <div class="contents">
-<div class="textblock"><p><a class="anchor" id="autotoc_md199"></a> WASI 0.2 (<code>wasm32-wasip2</code>) is the supported WASI flavour: it binds real sockets and serves HTTP through <code>wasi:sockets</code>, gated in CI by the <code>wasip2</code> job in <code>.github/workflows/wasm.yml</code> (<code>make wasip2-smoke</code> under wasi-sdk 25 + wasmtime 25). Preview1 (<code>wasm32-wasi</code>) covers only the in-memory dispatch surface and has no socket runtime. Quirks are handled on the CWIST side (see below).</p>
-<h1><a class="anchor" id="autotoc_md200"></a>
+<div class="textblock"><p><a class="anchor" id="autotoc_md200"></a> WASI 0.2 (<code>wasm32-wasip2</code>) is the supported WASI flavour: it binds real sockets and serves HTTP through <code>wasi:sockets</code>, gated in CI by the <code>wasip2</code> job in <code>.github/workflows/wasm.yml</code> (<code>make wasip2-smoke</code> under wasi-sdk 25 + wasmtime 25). Preview1 (<code>wasm32-wasi</code>) covers only the in-memory dispatch surface and has no socket runtime. Quirks are handled on the CWIST side (see below).</p>
+<h1><a class="anchor" id="autotoc_md201"></a>
 Flavour detection</h1>
 <p><code>__wasi__</code> is defined by both flavours but their libc capabilities differ sharply, so CWIST feature-gates on what the sysroot actually provides (<code><a class="el" href="../../d3/da3/wasi_8h.html" title="WASI target feature detection shared by all CWIST sources.">include/cwist/sys/wasi.h</a></code>):</p>
 <table class="markdownTable">
@@ -131,7 +131,7 @@ Flavour detection</h1>
 <td class="markdownTableBodyNone">UDP / TLS   </td><td class="markdownTableBodyNone">—   </td><td class="markdownTableBodyNone">UDP optional; TLS not linked (cleartext)   </td></tr>
 </table>
 <p>Guards that exclude fork/signals/rlimits/threads stay on plain <code>__wasi__</code>; guards around the socket server runtime key off <code><a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">CWIST_WASI_(NO_)</a>SOCKETS</code>.</p>
-<h1><a class="anchor" id="autotoc_md201"></a>
+<h1><a class="anchor" id="autotoc_md202"></a>
 WASI 0.2 socket server</h1>
 <p>For a complete build, deployment, and restart walkthrough, see the <a class="el" href="../../db/de3/md_docs_2deployment_2wasmtime-appliance.html">Wasmtime appliance guide</a>. It also explains the example's network and persistence limitations.</p>
 <p><code>make wasip2-smoke</code> builds <code>libcwist_wasip2.a</code> — <code>WASM_SRCS</code> plus <code><a class="el" href="../../d0/d5b/compat_8c.html" title="WASI (preview1) compatibility stubs for server-only subsystems.">src/sys/wasi/compat.c</a></code>, <code><a class="el" href="../../db/d59/metrics_8c.html" title="Lock-free metrics registry and Prometheus exposition.">metrics.c</a></code>, <code><a class="el" href="../../d5/d23/writer__fast_8c.html">writer_fast.c</a></code>, <code><a class="el" href="../../db/d84/async_8c.html" title="Deferred-response (async handler) implementation.">async.c</a></code>, <code><a class="el" href="../../d7/df8/log_8c.html" title="Macro-based logging implementation.">src/core/log/log.c</a></code>, <code><a class="el" href="../../d8/d99/sys__info_8c.html" title="Cross-platform helpers for estimating available RAM and low-memory pressure.">src/sys/sys_info.c</a></code>, and the libttak units the serving path pulls in (<code>net/lattice.c</code>, <code>net/mols_control.c</code>, <code>shared/shared.c</code>, <code>timing/deadline.c</code>, <code>mem/epoch.c</code>, <code>mem/mem.c</code>, <code>mem/fastpath.c</code>, <code>mem/owner.c</code>, <code>mem/abstract.c</code>) — then runs <code>tests/wasip2_smoke.c</code> under:</p>
@@ -147,21 +147,22 @@ WASI 0.2 socket server</h1>
 <li>The C1M reactor is epoll/eventfd-based; <code><a class="el" href="../../d0/d77/sys_2app_2app_8h.html#a05f9a10f4d2ab307c211dd56d54fe7c3" title="Serve app on port until SIGTERM, SIGINT or cwist_shutdown_request(); blocks the calling thread.">cwist_app_listen()</a></code> forces the blocking accept fallback under <code>__wasi__</code> (it ignores <code>CWIST_C1M_MODE</code> there).</li>
 <li>TLS connection handlers stay compiled out (no BoringSSL); asking for SSL on WASI fails with a clear error. HTTP/3 UDP, the static-cache watcher thread, and worker fork/reaping are off (no threads/processes).</li>
 <li>The reactor entry points that parked-write/async paths reference at link time are plain-C stubs in <code><a class="el" href="../../d0/d5b/compat_8c.html" title="WASI (preview1) compatibility stubs for server-only subsystems.">src/sys/wasi/compat.c</a></code>; the metrics and writer-fast stubs in that file are preview1-only since the real units join the wasip2 build.</li>
+<li>The request-serving call chain peaks near 96KB of stack — over wasm-ld's 64KB default, and the overflow silently corrupts linear memory rather than trapping. Link wasip2 binaries with a larger stack (<code>-Wl,-z,stack-size=…</code>, <code>WASIP2_STACK_BYTES</code> in the Makefile).</li>
 </ul>
-<h1><a class="anchor" id="autotoc_md202"></a>
+<h1><a class="anchor" id="autotoc_md203"></a>
 WASI preview1 (retired)</h1>
 <p>The preview1 target was removed in favor of WASI 0.2: the 0.2 build covers the same in-memory dispatch surface and adds the socket server, and three WASM flavors cost more than they earn (issue #203). The notes below record how the preview1 build behaved while it existed.</p>
 <p><code>make wasi-smoke</code> compiled the <code>WASM_SRCS</code> subset with wasi-sdk and ran a dispatch + session smoke under wasmtime. It required <code>WASI_SDK</code> (default <code>~/toolchains/wasi-sdk-25.0-x86_64-linux</code>) and <code>WASMTIME</code> on PATH, plus <code>libwasi-emulated-pthread</code>.</p>
-<h2><a class="anchor" id="autotoc_md203"></a>
+<h2><a class="anchor" id="autotoc_md204"></a>
 What the preview1 build did differently</h2>
 <ul>
 <li><b>libttak</b> (upstream <code>c4punks/libttak</code> main): <code>ttak/compat/pthread.h</code> prefers the sysroot's own <code>&lt;pthread.h&gt;</code> when one exists and falls back to self-contained single-threaded stubs otherwise; <code>ttak/mem/mem.h</code> silences <code>page_base</code> on targets without <code>mincore</code>/<code>VirtualQuery</code>.</li>
 <li><b>Socket server runtime</b>: the socket machinery in <code><a class="el" href="../../dd/d43/http_8c.html" title="Core HTTP request/response allocation, serialization, socket, and server-loop helpers.">http.c</a></code>/<code><a class="el" href="../../df/d7f/app_8c.html">app.c</a></code> compiles out under <code>CWIST_WASI_NO_SOCKETS</code>. <code><a class="el" href="../../d0/d77/sys_2app_2app_8h.html#a05f9a10f4d2ab307c211dd56d54fe7c3" title="Serve app on port until SIGTERM, SIGINT or cwist_shutdown_request(); blocks the calling thread.">cwist_app_listen()</a></code> returns -1 like on Emscripten; hosts drive requests through <code><a class="el" href="../../d0/d77/sys_2app_2app_8h.html#aeb91a66106e8a027272fb5b711ac0ba7" title="Run the full router/middleware/handler pipeline on a raw HTTP/1.x request held in a memory buffer,...">cwist_app_dispatch_memory()</a></code>.</li>
 <li><b>Crypto</b>: <code><a class="el" href="../../de/d67/session_8c.html" title="Signed client-side session cookie implementation.">session.c</a></code> and <code><a class="el" href="../../d0/d3c/seq__auth_8c.html">seq_auth.c</a></code> use the bundled header-only SHA-256/HMAC (<code><a class="el" href="../../d5/de3/sha256_8h.html" title="Minimal self-contained SHA-256 and HMAC-SHA256 (RFC 4634 style).">include/cwist/core/crypto/sha256.h</a></code>). Entropy comes from <code><a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">getentropy()</a></code> (<code>__wasi_random_get</code>).</li>
-<li><b>Allocation</b>: <code><a class="el" href="../../d9/d39/alloc_8c.html">alloc.c</a></code>/<code><a class="el" href="../../de/d6c/arena_8c.html" title="Request-scoped arena allocator built on libttak arena generations.">arena.c</a></code> take the Emscripten-style plain-libc path under <code>__wasi__</code>.</li>
+<li><b>Allocation</b>: <code><a class="el" href="../../d9/d39/alloc_8c.html">alloc.c</a></code>/<code><a class="el" href="../../de/d6c/arena_8c.html" title="Request-scoped arena allocator built on libttak arena generations.">arena.c</a></code> take the single-threaded non-hosted path under <code>__wasi__</code>, recycling default arena buffers after first use.</li>
 <li><b>Link model</b>: <code>-fvisibility=hidden -Wl,--gc-sections -Wl,--allow-undefined -lwasi-emulated-pthread</code>, mirroring how the Emscripten link satisfies the same server-only references through its system stub libraries plus binaryen DCE.</li>
 </ul>
-<h2><a class="anchor" id="autotoc_md204"></a>
+<h2><a class="anchor" id="autotoc_md205"></a>
 Verification (historical)</h2>
 <p><code>make wasi-smoke</code> output (wasmtime):</p>
 <div class="fragment"><div class="line">WASI dispatch OK (73 bytes)</div>

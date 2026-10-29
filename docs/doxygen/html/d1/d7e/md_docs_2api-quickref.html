@@ -189,6 +189,7 @@ Response lifecycle</h2>
 Header helpers</h2>
 <ul>
 <li><code><a class="el" href="../../d4/d50/structcwist__error__t.html" title="Integrated error structure used throughout the system.">cwist_error_t</a> <a class="el" href="../../dd/d56/http_8h.html#ab75bffc747ca7b55ac62f581702f1e2a" title="Add a header to the list.">cwist_http_header_add(cwist_http_header_node **head, const char *key, const char *value)</a></code></li>
+<li><code><a class="el" href="../../d4/d50/structcwist__error__t.html" title="Integrated error structure used throughout the system.">cwist_error_t</a> <a class="el" href="../../d9/dab/net_2http_2http_8h.html#a826bf28e16a9f9513da471cd1e4ad841" title="Add a header using the response arena for its node and string storage. Heap fallback and CR/LF reject...">cwist_http_response_header_add(cwist_http_response *res, const char *key, const char *value)</a></code></li>
 <li><code>char *cwist_http_header_get(<a class="el" href="../../d3/d72/structcwist__http__header__node.html" title="Linked list for headers to handle multiple headers easily.">cwist_http_header_node</a> *head, const char *key)</code></li>
 <li><code>void <a class="el" href="../../dd/d56/http_8h.html#ac12c6d41a5af1dea9d3f825c245e7fbd" title="Free all headers.">cwist_http_header_free_all(cwist_http_header_node *head)</a></code></li>
 </ul>

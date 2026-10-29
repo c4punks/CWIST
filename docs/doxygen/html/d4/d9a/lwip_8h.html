@@ -336,7 +336,7 @@ Functions</h2></td></tr>
 <li>Request bodies are framed by Content-Length. Transfer-Encoding is answered with 501, Content-Length together with Transfer-Encoding or an invalid/conflicting Content-Length with 400, an oversized header block with 431 and an oversized body with 413; the connection then closes.</li>
 <li>Expect: 100-continue gets an interim 100 before the body is read.</li>
 <li>Keep-alive follows the request and the response (as on the socket path); pipelined requests are answered in order, one at a time.</li>
-<li>Responses are sent zero-copy from the serialized buffer, which is released once the peer has acknowledged it.</li>
+<li>Responses are sent zero-copy from per-connection serialized storage allocated once from a static pool at listen time; a response larger than the buffer is streamed through it in chunks as the peer acknowledges, with the response object retained until the last chunk.</li>
 <li>Received data beyond the request limits is refused back to lwIP while a response is in flight, so the TCP window throttles the peer.</li>
 <li>Connections idle longer than idle_timeout_ms, or beyond max_conns at accept time, are closed (the latter aborted).</li>
 <li>Deferred (cwist_async) and upgraded (WebSocket) responses are not supported here.</li>
@@ -375,7 +375,7 @@ Functions</h2></td></tr>
 
 <p>Opaque listener handle returned by <a class="el" href="../../d4/d9a/lwip_8h.html#a8adcbe4d8e6bf7ba1e9e482c6e78337e" title="Bind a listening tcp_pcb on cfg-&gt;port (any address) and serve app on it.">cwist_lwip_listen()</a>. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d4/d9a/lwip_8h_source.html#l00081">81</a> of file <a class="el" href="../../d4/d9a/lwip_8h_source.html">lwip.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d4/d9a/lwip_8h_source.html#l00089">89</a> of file <a class="el" href="../../d4/d9a/lwip_8h_source.html">lwip.h</a>.</p>
 
 </div>
 </div>
@@ -393,7 +393,7 @@ Functions</h2></td></tr>
 
 <p>Opaque TLS server context: certificate chain, key, DRBG and mbedTLS config. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d4/d9a/lwip_8h_source.html#l00078">78</a> of file <a class="el" href="../../d4/d9a/lwip_8h_source.html">lwip.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d4/d9a/lwip_8h_source.html#l00086">86</a> of file <a class="el" href="../../d4/d9a/lwip_8h_source.html">lwip.h</a>.</p>
 
 </div>
 </div>
@@ -423,7 +423,7 @@ Functions</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>Open connection count (0 for NULL). </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d7/d5d/lwip_8c_source.html#l00791">791</a> of file <a class="el" href="../../d7/d5d/lwip_8c_source.html">lwip.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d7/d5d/lwip_8c_source.html#l00902">902</a> of file <a class="el" href="../../d7/d5d/lwip_8c_source.html">lwip.c</a>.</p>
 
 </div>
 </div>
@@ -458,7 +458,7 @@ Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d7/d5d/lwip_8c_source.html#l00774">774</a> of file <a class="el" href="../../d7/d5d/lwip_8c_source.html">lwip.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d7/d5d/lwip_8c_source.html#l00884">884</a> of file <a class="el" href="../../d7/d5d/lwip_8c_source.html">lwip.c</a>.</p>
 
 <p class="reference">References <a class="el" href="../../d3/db2/otel_8c_source.html#l00056">cap</a>, and <a class="el" href="../../d9/d39/alloc_8c_source.html#l00052">cwist_free()</a>.</p>
 
@@ -488,11 +488,11 @@ Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d7/d5d/lwip_8c_source.html#l00712">712</a> of file <a class="el" href="../../d7/d5d/lwip_8c_source.html">lwip.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d7/d5d/lwip_8c_source.html#l00797">797</a> of file <a class="el" href="../../d7/d5d/lwip_8c_source.html">lwip.c</a>.</p>
 
-<p class="reference">References <a class="el" href="../../d3/db2/otel_8c_source.html#l00056">cap</a>, <a class="el" href="../../d4/d9a/lwip_8h_source.html#l00072">cwist_lwip_config::idle_timeout_ms</a>, <a class="el" href="../../d4/d9a/lwip_8h_source.html#l00073">cwist_lwip_config::keep_alive</a>, <a class="el" href="../../d4/d9a/lwip_8h_source.html#l00071">cwist_lwip_config::max_body_bytes</a>, <a class="el" href="../../d4/d9a/lwip_8h_source.html#l00069">cwist_lwip_config::max_conns</a>, <a class="el" href="../../d4/d9a/lwip_8h_source.html#l00070">cwist_lwip_config::max_header_bytes</a>, <a class="el" href="../../d4/d9a/lwip_8h_source.html#l00068">cwist_lwip_config::port</a>, and <a class="el" href="../../d4/d9a/lwip_8h_source.html#l00074">cwist_lwip_config::tls</a>.</p>
+<p class="reference">References <a class="el" href="../../d3/db2/otel_8c_source.html#l00056">cap</a>, <a class="el" href="../../d4/d9a/lwip_8h_source.html#l00080">cwist_lwip_config::idle_timeout_ms</a>, <a class="el" href="../../d4/d9a/lwip_8h_source.html#l00081">cwist_lwip_config::keep_alive</a>, <a class="el" href="../../d4/d9a/lwip_8h_source.html#l00073">cwist_lwip_config::max_body_bytes</a>, <a class="el" href="../../d4/d9a/lwip_8h_source.html#l00071">cwist_lwip_config::max_conns</a>, <a class="el" href="../../d4/d9a/lwip_8h_source.html#l00072">cwist_lwip_config::max_header_bytes</a>, <a class="el" href="../../d4/d9a/lwip_8h_source.html#l00070">cwist_lwip_config::port</a>, <a class="el" href="../../d4/d9a/lwip_8h_source.html#l00074">cwist_lwip_config::rx_buffer_bytes</a>, <a class="el" href="../../d4/d9a/lwip_8h_source.html#l00082">cwist_lwip_config::tls</a>, and <a class="el" href="../../d4/d9a/lwip_8h_source.html#l00077">cwist_lwip_config::tx_buffer_bytes</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../d7/d5d/lwip_8c_source.html#l00729">cwist_lwip_listen()</a>.</p>
+<p class="reference">Referenced by <a class="el" href="../../d7/d5d/lwip_8c_source.html#l00816">cwist_lwip_listen()</a>.</p>
 
 </div>
 </div>
@@ -541,9 +541,9 @@ Functions</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>Server handle, or NULL on pcb or allocation failure. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d7/d5d/lwip_8c_source.html#l00729">729</a> of file <a class="el" href="../../d7/d5d/lwip_8c_source.html">lwip.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d7/d5d/lwip_8c_source.html#l00816">816</a> of file <a class="el" href="../../d7/d5d/lwip_8c_source.html">lwip.c</a>.</p>
 
-<p class="reference">References <a class="el" href="../../d3/db2/otel_8c_source.html#l00056">cap</a>, <a class="el" href="../../d9/d39/alloc_8c_source.html#l00017">cwist_alloc()</a>, <a class="el" href="../../d9/d39/alloc_8c_source.html#l00052">cwist_free()</a>, and <a class="el" href="../../d7/d5d/lwip_8c_source.html#l00712">cwist_lwip_config_init()</a>.</p>
+<p class="reference">References <a class="el" href="../../d3/db2/otel_8c_source.html#l00056">cap</a>, <a class="el" href="../../d9/d39/alloc_8c_source.html#l00017">cwist_alloc()</a>, <a class="el" href="../../d9/d39/alloc_8c_source.html#l00052">cwist_free()</a>, and <a class="el" href="../../d7/d5d/lwip_8c_source.html#l00797">cwist_lwip_config_init()</a>.</p>
 
 </div>
 </div>
@@ -608,9 +608,9 @@ Functions</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>Context, or NULL on parse/pairing/seeding/allocation failure or when built without CWIST_LWIP_TLS. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d7/d5d/lwip_8c_source.html#l00804">804</a> of file <a class="el" href="../../d7/d5d/lwip_8c_source.html">lwip.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d7/d5d/lwip_8c_source.html#l00915">915</a> of file <a class="el" href="../../d7/d5d/lwip_8c_source.html">lwip.c</a>.</p>
 
-<p class="reference">References <a class="el" href="../../d3/db2/otel_8c_source.html#l00056">cap</a>, <a class="el" href="../../d9/d39/alloc_8c_source.html#l00017">cwist_alloc()</a>, and <a class="el" href="../../d7/d5d/lwip_8c_source.html#l00841">cwist_lwip_tls_destroy()</a>.</p>
+<p class="reference">References <a class="el" href="../../d3/db2/otel_8c_source.html#l00056">cap</a>, <a class="el" href="../../d9/d39/alloc_8c_source.html#l00017">cwist_alloc()</a>, and <a class="el" href="../../d7/d5d/lwip_8c_source.html#l00952">cwist_lwip_tls_destroy()</a>.</p>
 
 </div>
 </div>
@@ -645,11 +645,11 @@ Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d7/d5d/lwip_8c_source.html#l00841">841</a> of file <a class="el" href="../../d7/d5d/lwip_8c_source.html">lwip.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d7/d5d/lwip_8c_source.html#l00952">952</a> of file <a class="el" href="../../d7/d5d/lwip_8c_source.html">lwip.c</a>.</p>
 
 <p class="reference">References <a class="el" href="../../d3/db2/otel_8c_source.html#l00056">cap</a>, and <a class="el" href="../../d9/d39/alloc_8c_source.html#l00052">cwist_free()</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../d7/d5d/lwip_8c_source.html#l00804">cwist_lwip_tls_create()</a>.</p>
+<p class="reference">Referenced by <a class="el" href="../../d7/d5d/lwip_8c_source.html#l00915">cwist_lwip_tls_create()</a>.</p>
 
 </div>
 </div>

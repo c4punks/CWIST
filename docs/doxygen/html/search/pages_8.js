@@ -8,5 +8,6 @@ var searchData=
   ['document_20an_20api_20with_20openapi_20and_20swagger_20ui_5',['Document an API with OpenAPI and Swagger UI',['../d6/d8e/md_docs_2tutorials_2openapi-swagger.html',1,'']]],
   ['documentation_6',['CWIST API Documentation',['../d7/d15/md_docs_2API.html',1,'']]],
   ['downtime_20restart_20via_20socket_20handoff_7',['Zero-downtime restart via socket handoff',['../d1/d54/md_docs_2deployment_2zero-downtime-restart.html',1,'']]],
-  ['drain_20issue_2025_8',['Cooperative queuing in the C1M reactor&apos;s batch drain (issue #25)',['../d1/ddd/md_docs_2cooperative-queuing.html',1,'']]]
+  ['drain_20issue_2025_8',['Cooperative queuing in the C1M reactor&apos;s batch drain (issue #25)',['../d1/ddd/md_docs_2cooperative-queuing.html',1,'']]],
+  ['durable_20queue_20required_20gate_9',['Durable queue required gate',['../d3/dd5/md_docs_2durable-queue-gate.html',1,'']]]
 ];

@@ -108,16 +108,16 @@ $(document).ready(function(){initNavTree('d1/d54/md_docs_2deployment_2zero-downt
   <div class="headertitle"><div class="title">Zero-downtime restart via socket handoff</div></div>
 </div><!--header-->
 <div class="contents">
-<div class="textblock"><p><a class="anchor" id="autotoc_md291"></a> A CWIST server can be replaced by a new process — a new binary, a new configuration, a new version — without dropping the listener. The new process binds the same port while the old one is still serving, the old one is then signalled to drain, and clients never see the port refuse a connection.</p>
+<div class="textblock"><p><a class="anchor" id="autotoc_md293"></a> A CWIST server can be replaced by a new process — a new binary, a new configuration, a new version — without dropping the listener. The new process binds the same port while the old one is still serving, the old one is then signalled to drain, and clients never see the port refuse a connection.</p>
 <p>This uses <code>SO_REUSEPORT</code> socket sharing, not file-descriptor passing: there is no handoff channel to set up, no supervisor protocol, and the two processes never need to trust each other beyond sharing a port.</p>
-<h1><a class="anchor" id="autotoc_md292"></a>
+<h1><a class="anchor" id="autotoc_md294"></a>
 Requirements</h1>
 <ul>
 <li><b>Linux kernel 3.9 or later</b> for <code>SO_REUSEPORT</code> on TCP. FreeBSD, macOS, and the other BSDs support it as well; where the option does not exist CWIST compiles it out and a second bind fails with <code>EADDRINUSE</code> as before.</li>
 <li>Both processes must set <code>SO_REUSEPORT</code>. CWIST sets it by default on every listen socket (TCP and the HTTP/3 UDP socket), so two CWIST processes — or two generations of the same binary — always qualify.</li>
 <li><code>CWIST_REUSEPORT</code> controls the behavior. It defaults to on; setting it to <code>0</code> or <code>false</code> restores the classic "second bind fails" behavior, which some deployments prefer as a guard against accidentally starting two instances. Worker processes re-bind the port after <code><a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">fork()</a></code>, so disabling the knob requires <code>CWIST_WORKERS=1</code>.</li>
 </ul>
-<h1><a class="anchor" id="autotoc_md293"></a>
+<h1><a class="anchor" id="autotoc_md295"></a>
 Handoff sequence</h1>
 <ol type="1">
 <li>Start the new process on the same port. The bind succeeds because of <code>SO_REUSEPORT</code>; the kernel now load-balances <b>new</b> connections across both processes' accept queues.</li>
@@ -129,17 +129,17 @@ Handoff sequence</h1>
 <div class="line">sleep 1                       # let it finish startup and health-check itself</div>
 <div class="line">kill -TERM &quot;$old_pid&quot;         # steps 2-3: old process drains and exits</div>
 </div><!-- fragment --><p><code>tests/test_socket_handoff.c</code> exercises exactly this sequence: 256 held keep-alive connections against the old process, the new process bound on top, <code>SIGTERM</code> to the old one, then verification that every request still gets a response (answered by the draining old process or by the new one after the client reconnects) and that all fresh connections reach the new process.</p>
-<h1><a class="anchor" id="autotoc_md294"></a>
+<h1><a class="anchor" id="autotoc_md296"></a>
 systemd integration</h1>
 <p>Two patterns work:</p>
 <ul>
 <li><b>Overlap restart (recommended for CWIST).</b> Give the service its own restart logic: on deploy, start the new process as above and <code>SIGTERM</code> the old one. A <code>Type=simple</code> unit plus a small deploy script is enough; do not use <code>systemctl restart</code>, which stops the old process before starting the new one and reopens the downtime window this feature exists to close.</li>
 <li><b>Socket activation (alternative).</b> Let systemd hold the listener: a <code>.socket</code> unit with <code>ListenStream=</code> passes an already-bound fd to each service instance, so <code>systemctl restart</code> never unbinds the port at all. This also survives full crashes (the socket outlives the process), at the cost of systemd-specific plumbing and no per-process accept queue.</li>
 </ul>
-<h1><a class="anchor" id="autotoc_md295"></a>
+<h1><a class="anchor" id="autotoc_md297"></a>
 UDP and HTTP/3</h1>
 <p>The HTTP/3 (QUIC) UDP socket also gets <code>SO_REUSEPORT</code> by default, so the overlap bind works the same way and new QUIC Initial packets reach whichever process the kernel hashes them to. What does <b>not</b> migrate is connection state: QUIC connections are identified by connection IDs whose encryption keys live in the process that accepted them, and CWIST (lsquic) cannot hand a live connection to another process. Datagrams for connections owned by the draining process may be delivered to the new process, which cannot decrypt them; the client's QUIC stack treats that as path loss and recovers by retransmitting, and falls back to a fresh connection (or TLS session resumption against the new process) in the worst case. In practice: TCP handoffs are lossless, HTTP/3 handoffs are lossless at the request level but a small share of QUIC connections may reset and reconnect. Plan HTTP/3 deploys accordingly — drain longer, and prefer clients that tolerate a connection retry.</p>
-<h1><a class="anchor" id="autotoc_md296"></a>
+<h1><a class="anchor" id="autotoc_md298"></a>
 Verifying a deploy</h1>
 <ul>
 <li>The new process logs <code>CWIST App running on port ...</code> only after its bind and listen succeeded; if the port were unavailable it would exit instead.</li>

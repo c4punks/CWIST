@@ -21,7 +21,7 @@ var searchData=
   ['crud_20blog_20with_20cwist_18',['Build a CRUD blog with CWIST',['../d4/db0/md_docs_2tutorials_2blog-crud.html',1,'']]],
   ['css_20fragments_20and_20assets_19',['HTML Components, Scoped CSS, Fragments and Assets',['../d8/d83/md_docs_2api_2html.html',1,'']]],
   ['current_20behavior_20',['FIXED endpoint caching: current behavior',['../d3/ddd/md_docs_2fixed-cache-status.html',1,'']]],
-  ['cwist_21',['cwist',['../d4/db0/md_docs_2tutorials_2blog-crud.html',1,'Build a CRUD blog with CWIST'],['../d2/dcb/md_docs_2tutorials_2webtransport-server.html',1,'Build a WebTransport server with CWIST'],['../index.html',1,'cwist'],['../d9/dd1/md_docs_2GC.html',1,'Full GC: Automatic Resource Reclamation in CWIST'],['../da/d48/md_docs_2tutorials_2nats-integration.html',1,'Integrate NATS with CWIST']]],
+  ['cwist_21',['cwist',['../de/d87/md_docs_2embedded_2stm32.html',1,'Bare-metal STM32 with CWIST'],['../d4/db0/md_docs_2tutorials_2blog-crud.html',1,'Build a CRUD blog with CWIST'],['../d2/dcb/md_docs_2tutorials_2webtransport-server.html',1,'Build a WebTransport server with CWIST'],['../index.html',1,'cwist'],['../d9/dd1/md_docs_2GC.html',1,'Full GC: Automatic Resource Reclamation in CWIST'],['../da/d48/md_docs_2tutorials_2nats-integration.html',1,'Integrate NATS with CWIST']]],
   ['cwist_20웹_20개발_20튜토리얼_20a_20to_20z_22',['CWIST 웹 개발 튜토리얼 (A to Z)',['../df/df1/md_docs_2tutorial_2korean_2cwist__tutorial.html',1,'']]],
   ['cwist_20api_20documentation_23',['CWIST API Documentation',['../d7/d15/md_docs_2API.html',1,'']]],
   ['cwist_20api_20reference_24',['CWIST API Reference',['../d1/d7e/md_docs_2api-quickref.html',1,'']]],

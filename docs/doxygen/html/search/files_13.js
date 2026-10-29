@@ -11,7 +11,7 @@ var searchData=
   ['session_2ec_8',['session.c',['../de/d67/session_8c.html',1,'']]],
   ['session_2eh_9',['session.h',['../da/d46/session_8h.html',1,'']]],
   ['session_5fmanager_2ec_10',['session_manager.c',['../d4/db3/session__manager_8c.html',1,'']]],
-  ['session_5fmanager_2eh_11',['session_manager.h',['../d5/d63/sys_2session_2session__manager_8h.html',1,'(Global Namespace)'],['../d7/d95/session__manager_8h.html',1,'(Global Namespace)']]],
+  ['session_5fmanager_2eh_11',['session_manager.h',['../d7/d95/session__manager_8h.html',1,'(Global Namespace)'],['../d5/d63/sys_2session_2session__manager_8h.html',1,'(Global Namespace)']]],
   ['sha256_2eh_12',['sha256.h',['../d5/de3/sha256_8h.html',1,'']]],
   ['shutdown_2ec_13',['shutdown.c',['../d3/db2/shutdown_8c.html',1,'']]],
   ['shutdown_2eh_14',['shutdown.h',['../da/d39/shutdown_8h.html',1,'']]],
@@ -29,6 +29,7 @@ var searchData=
   ['sstring_2ec_26',['sstring.c',['../dd/d79/sstring_8c.html',1,'']]],
   ['sstring_2eh_27',['sstring.h',['../d1/d34/sstring_8h.html',1,'(Global Namespace)'],['../d4/dbd/core_2sstring_2sstring_8h.html',1,'(Global Namespace)']]],
   ['sstring_2emd_28',['sstring.md',['../d3/dff/sstring_8md.html',1,'']]],
-  ['sys_5finfo_2ec_29',['sys_info.c',['../d8/d99/sys__info_8c.html',1,'']]],
-  ['sys_5finfo_2eh_30',['sys_info.h',['../da/d41/sys__info_8h.html',1,'']]]
+  ['stm32_2emd_29',['stm32.md',['../d7/d29/stm32_8md.html',1,'']]],
+  ['sys_5finfo_2ec_30',['sys_info.c',['../d8/d99/sys__info_8c.html',1,'']]],
+  ['sys_5finfo_2eh_31',['sys_info.h',['../da/d41/sys__info_8h.html',1,'']]]
 ];

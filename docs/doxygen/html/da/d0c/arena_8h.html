@@ -245,7 +245,7 @@ This graph shows which files directly or indirectly include this file:</div>
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="define-members" name="define-members"></a>
 Macros</h2></td></tr>
 <tr class="memitem:a439a8d3a1697dd0ae44a1b125bfbe417" id="r_a439a8d3a1697dd0ae44a1b125bfbe417"><td class="memItemLeft" align="right" valign="top">#<a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">define</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../da/d0c/arena_8h.html#a439a8d3a1697dd0ae44a1b125bfbe417">CWIST_ARENA_DEFAULT_GENERATION_BYTES</a>&#160;&#160;&#160;(8 * 1024)</td></tr>
-<tr class="memdesc:a439a8d3a1697dd0ae44a1b125bfbe417"><td class="mdescLeft">&#160;</td><td class="mdescRight">Default capacity of one arena generation buffer. A full HTTP/1.1 request+response pair (headers, query map, bodies, default security headers) bump-allocates ~3.5KB; spills fall back to the heap, so this only needs to cover the common case.  <br /></td></tr>
+<tr class="memdesc:a439a8d3a1697dd0ae44a1b125bfbe417"><td class="mdescLeft">&#160;</td><td class="mdescRight">Default capacity of one arena generation buffer. A full HTTP/1.1 request+response pair (headers, query map, bodies, default security headers) bump-allocates ~3.5KB; spills fall back to the heap, so this only needs to cover the common case. Define this macro at build time to size the common case for the target.  <br /></td></tr>
 <tr class="separator:a439a8d3a1697dd0ae44a1b125bfbe417"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="typedef-members" name="typedef-members"></a>
@@ -256,7 +256,7 @@ Typedefs</h2></td></tr>
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="func-members" name="func-members"></a>
 Functions</h2></td></tr>
 <tr class="memitem:af901a6d102a6cc17dd91197c3ea574cf" id="r_af901a6d102a6cc17dd91197c3ea574cf"><td class="memItemLeft" align="right" valign="top"><a class="el" href="../../da/d0c/arena_8h.html#a18e3b94906aace36413cfdec0fbe329b">cwist_arena_t</a> *&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../da/d0c/arena_8h.html#af901a6d102a6cc17dd91197c3ea574cf">cwist_arena_create</a> (<a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">size_t</a> <a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">generation_bytes</a>)</td></tr>
-<tr class="memdesc:af901a6d102a6cc17dd91197c3ea574cf"><td class="mdescLeft">&#160;</td><td class="mdescRight">Create an arena backed by a recycled thread-local generation buffer.  <br /></td></tr>
+<tr class="memdesc:af901a6d102a6cc17dd91197c3ea574cf"><td class="mdescLeft">&#160;</td><td class="mdescRight">Create an arena backed by a recycled generation buffer.  <br /></td></tr>
 <tr class="separator:af901a6d102a6cc17dd91197c3ea574cf"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a2314d237f2461e1d36e874b30ec9ffcf" id="r_a2314d237f2461e1d36e874b30ec9ffcf"><td class="memItemLeft" align="right" valign="top"><a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">void</a> *&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../da/d0c/arena_8h.html#a2314d237f2461e1d36e874b30ec9ffcf">cwist_arena_alloc</a> (<a class="el" href="../../da/d0c/arena_8h.html#a18e3b94906aace36413cfdec0fbe329b">cwist_arena_t</a> *arena, <a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">size_t</a> size)</td></tr>
 <tr class="memdesc:a2314d237f2461e1d36e874b30ec9ffcf"><td class="mdescLeft">&#160;</td><td class="mdescRight">Bump-allocate <code>size</code> bytes from the active generation.  <br /></td></tr>
@@ -286,9 +286,9 @@ Functions</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p>Default capacity of one arena generation buffer. A full HTTP/1.1 request+response pair (headers, query map, bodies, default security headers) bump-allocates ~3.5KB; spills fall back to the heap, so this only needs to cover the common case. </p>
+<p>Default capacity of one arena generation buffer. A full HTTP/1.1 request+response pair (headers, query map, bodies, default security headers) bump-allocates ~3.5KB; spills fall back to the heap, so this only needs to cover the common case. Define this macro at build time to size the common case for the target. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../da/d0c/arena_8h_source.html#l00020">20</a> of file <a class="el" href="../../da/d0c/arena_8h_source.html">arena.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../da/d0c/arena_8h_source.html#l00022">22</a> of file <a class="el" href="../../da/d0c/arena_8h_source.html">arena.h</a>.</p>
 
 </div>
 </div>
@@ -305,7 +305,7 @@ Functions</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../da/d0c/arena_8h_source.html#l00022">22</a> of file <a class="el" href="../../da/d0c/arena_8h_source.html">arena.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../da/d0c/arena_8h_source.html#l00025">25</a> of file <a class="el" href="../../da/d0c/arena_8h_source.html">arena.h</a>.</p>
 
 </div>
 </div>
@@ -340,7 +340,7 @@ Functions</h2></td></tr>
 <dl class="section return"><dt>Returns</dt><dd>Aligned chunk, or NULL when the generation is exhausted (callers should fall back to cwist_alloc). </dd></dl>
 <dl class="section note"><dt>Note</dt><dd>The returned memory is NOT zeroed. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="../../de/d6c/arena_8c_source.html#l00044">44</a> of file <a class="el" href="../../de/d6c/arena_8c_source.html">arena.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../de/d6c/arena_8c_source.html#l00062">62</a> of file <a class="el" href="../../de/d6c/arena_8c_source.html">arena.c</a>.</p>
 
 </div>
 </div>
@@ -360,7 +360,7 @@ Functions</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p>Create an arena backed by a recycled thread-local generation buffer. </p>
+<p>Create an arena backed by a recycled generation buffer. </p>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
     <tr><td class="paramname">generation_bytes</td><td>Capacity of the generation buffer (0 = default). </td></tr>
@@ -368,13 +368,13 @@ Functions</h2></td></tr>
   </dd>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>New arena, or NULL on failure (callers should fall back to heap). </dd></dl>
-<dl class="section note"><dt>Note</dt><dd>Default-sized buffers come from a per-thread recycle cache, so steady-state creation triggers no libttak GC/mem-tree activity. </dd></dl>
+<dl class="section note"><dt>Note</dt><dd>Default-sized buffers come from the target's single-thread or per-thread recycle cache, so steady-state creation does not allocate. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="../../de/d6c/arena_8c_source.html#l00032">32</a> of file <a class="el" href="../../de/d6c/arena_8c_source.html">arena.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../de/d6c/arena_8c_source.html#l00036">36</a> of file <a class="el" href="../../de/d6c/arena_8c_source.html">arena.c</a>.</p>
 
-<p class="reference">References <a class="el" href="../../da/d0c/arena_8h_source.html#l00020">CWIST_ARENA_DEFAULT_GENERATION_BYTES</a>.</p>
+<p class="reference">References <a class="el" href="../../de/d6c/arena_8c_source.html#l00023">CWIST_ARENA_CACHE_MAX</a>, and <a class="el" href="../../da/d0c/arena_8h_source.html#l00022">CWIST_ARENA_DEFAULT_GENERATION_BYTES</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../dd/d43/http_8c_source.html#l02056">cwist_http_request_create()</a>, and <a class="el" href="../../dd/d43/http_8c_source.html#l02291">cwist_http_response_create()</a>.</p>
+<p class="reference">Referenced by <a class="el" href="../../dd/d43/http_8c_source.html#l02066">cwist_http_request_create()</a>, and <a class="el" href="../../dd/d43/http_8c_source.html#l02301">cwist_http_response_create()</a>.</p>
 
 </div>
 </div>
@@ -396,9 +396,11 @@ Functions</h2></td></tr>
 
 <p>Retire the generation and destroy the arena, releasing every allocation made from it at once. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../de/d6c/arena_8c_source.html#l00060">60</a> of file <a class="el" href="../../de/d6c/arena_8c_source.html">arena.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../de/d6c/arena_8c_source.html#l00078">78</a> of file <a class="el" href="../../de/d6c/arena_8c_source.html">arena.c</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../dd/d43/http_8c_source.html#l02056">cwist_http_request_create()</a>, <a class="el" href="../../dd/d43/http_8c_source.html#l02180">cwist_http_request_destroy()</a>, <a class="el" href="../../dd/d43/http_8c_source.html#l02291">cwist_http_response_create()</a>, and <a class="el" href="../../dd/d43/http_8c_source.html#l02315">cwist_http_response_destroy()</a>.</p>
+<p class="reference">References <a class="el" href="../../de/d6c/arena_8c_source.html#l00023">CWIST_ARENA_CACHE_MAX</a>, and <a class="el" href="../../da/d0c/arena_8h_source.html#l00022">CWIST_ARENA_DEFAULT_GENERATION_BYTES</a>.</p>
+
+<p class="reference">Referenced by <a class="el" href="../../dd/d43/http_8c_source.html#l02066">cwist_http_request_create()</a>, <a class="el" href="../../dd/d43/http_8c_source.html#l02190">cwist_http_request_destroy()</a>, <a class="el" href="../../dd/d43/http_8c_source.html#l02301">cwist_http_response_create()</a>, and <a class="el" href="../../dd/d43/http_8c_source.html#l02325">cwist_http_response_destroy()</a>.</p>
 
 </div>
 </div>
@@ -430,9 +432,9 @@ Functions</h2></td></tr>
 
 <p>Check whether <code>ptr</code> lies inside the active generation buffer. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../de/d6c/arena_8c_source.html#l00054">54</a> of file <a class="el" href="../../de/d6c/arena_8c_source.html">arena.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../de/d6c/arena_8c_source.html#l00072">72</a> of file <a class="el" href="../../de/d6c/arena_8c_source.html">arena.c</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../dd/d43/http_8c_source.html#l02180">cwist_http_request_destroy()</a>, and <a class="el" href="../../dd/d43/http_8c_source.html#l02315">cwist_http_response_destroy()</a>.</p>
+<p class="reference">Referenced by <a class="el" href="../../dd/d43/http_8c_source.html#l02190">cwist_http_request_destroy()</a>, and <a class="el" href="../../dd/d43/http_8c_source.html#l02325">cwist_http_response_destroy()</a>.</p>
 
 </div>
 </div>
