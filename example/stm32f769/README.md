@@ -70,6 +70,32 @@ Then browse to `http://<address>/`.
 - **GPIO speed:** the RMII pins use `GPIO_SPEED_FREQ_VERY_HIGH` with the I/O
   compensation cell enabled; `GPIO_SPEED_HIGH` is marginal at 50 MHz.
 
+## Connection limits (measured on hardware)
+
+The firmware serves **4 simultaneous TCP connections**. This was measured by
+holding N sockets open and requesting `/hello` on all of them at once:
+
+- N = 1..4: every connection connects and gets its response immediately.
+- N = 5: the fifth TCP handshake still completes (lwIP's listen backlog), but
+  the adapter refuses the connection and no HTTP response arrives.
+- After closing everything, the next batch of 4 is served again immediately —
+  no slots leak across overloads.
+
+The limit is a configuration choice, not a hardware ceiling. To raise it,
+change together:
+
+- `cfg.max_conns` in `app.c` (currently 4) — the adapter's own cap; excess
+  connections are aborted at accept time.
+- `MEMP_NUM_TCP_PCB` in `lwipopts.h` (currently 6) — active PCBs, including
+  sockets sitting in TIME_WAIT after a close.
+- `MEMP_NUM_PBUF` / `PBUF_POOL_SIZE` and the newlib heap
+  (`_Min_Heap_Size` in the linker script) as connection count grows.
+
+Each connection costs one PCB plus its request/response buffers; responses
+are serialized into a per-connection buffer that is retained and reused
+after the peer acknowledges it (Phase 2 deterministic-memory design), so the
+steady-state per-request allocation count does not grow with connections.
+
 ## Memory budget
 
 Roughly 93 KB flash, 139 KB RAM (including a 64 KB newlib heap and the lwIP
