@@ -353,17 +353,17 @@ Feature notes</h2>
 Latest benchmark run</h2>
 <p>CI regenerates this block from each benchmark run.</p>
 <p>Latest Web Server Benchmark (wrk -t12 -c400 -d10s (after 10s warmup, warmup discarded)):</p><ul>
-<li><b>CWIST Classic pool</b>: 110436 req/s | Latency 2.11ms (P90 4.38ms, P99 7.88ms, P99.999 21.94ms) | RSS 59368KiB | Csw 1082879</li>
-<li><b>CWIST reactor</b>: 140383 req/s | Latency 2.82ms (P90 5.16ms, P99 8.12ms, P99.999 15.95ms) | RSS 21780KiB | Csw 108386</li>
-<li><b>Actix</b>: 124523 req/s | Latency 3.15ms (P90 5.36ms, P99 7.83ms, P99.999 13.89ms) | RSS 12044KiB | Csw 155664</li>
-<li><b>Axum</b>: 108355 req/s | Latency 3.63ms (P90 6.10ms, P99 9.10ms, P99.999 17.59ms) | RSS 16256KiB | Csw 187063</li>
-<li><b>Gin (Go)</b>: 75100 req/s | Latency 7.52ms (P90 18.71ms, P99 42.23ms, P99.999 90.43ms) | RSS 29648KiB | Csw 319085</li>
-<li><b>Spring Boot</b>: 43118 req/s | Latency 9.18ms (P90 12.00ms, P99 18.79ms, P99.999 67.33ms) | RSS 1342008KiB | Csw 220820</li>
+<li><b>CWIST Classic pool</b>: 121289 req/s | Latency 1.89ms (P90 4.10ms, P99 7.73ms, P99.999 27.93ms) | RSS 60856KiB | Csw 1244504</li>
+<li><b>CWIST reactor</b>: 146352 req/s | Latency 2.70ms (P90 4.86ms, P99 7.74ms, P99.999 20.30ms) | RSS 22440KiB | Csw 124210</li>
+<li><b>Actix</b>: 131217 req/s | Latency 2.99ms (P90 5.07ms, P99 7.66ms, P99.999 14.81ms) | RSS 12508KiB | Csw 170767</li>
+<li><b>Axum</b>: 115260 req/s | Latency 3.42ms (P90 5.76ms, P99 8.54ms, P99.999 16.05ms) | RSS 17108KiB | Csw 245922</li>
+<li><b>Gin (Go)</b>: 83270 req/s | Latency 7.47ms (P90 19.27ms, P99 45.83ms, P99.999 116.36ms) | RSS 28036KiB | Csw 340751</li>
+<li><b>Spring Boot</b>: 47132 req/s | Latency 8.46ms (P90 11.13ms, P99 17.48ms, P99.999 70.81ms) | RSS 1283828KiB | Csw 239202</li>
 </ul>
 <p><em>Settled CWIST-internal tuning variants (glibc arena cap from PR #35, cooperative drain chunk from issue #25) are recorded in <a class="el" href="d9/d15/cooperative-queuing_8md.html">docs/cooperative-queuing.md</a> and benchmarks/webserver.json; they are no longer rendered as comparison rows.</em></p>
 <p><b>Spring runtime environment</b></p>
 <ul>
-<li><b>JDK:</b> <code>openjdk version "25.0.4.1" 2026-08-18 LTS</code></li>
+<li><b>JDK:</b> <code>openjdk version "25.0.5" 2026-10-20 LTS</code></li>
 <li><b>Spring Boot:</b> 3.2.3</li>
 <li><b>Stack:</b> Spring WebFlux + Reactor Netty on native epoll (G1GC, JDK 25 Leyden AOT, virtual threads disabled)</li>
 <li><b>Virtual threads:</b> disabled</li>
