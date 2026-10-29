@@ -73,51 +73,48 @@ Then browse to `http://<address>/`.
 ## Connection limits (measured on hardware)
 
 Stock firmware: **4 simultaneous connections** (`cfg.max_conns = 4`). That is a
-configuration default, not a hardware limit. The table below was measured on
-the board by holding N sockets open and requesting `/hello` on all of them;
-`max_conns` is `cfg.max_conns` in `app.c`, `PCB` is `MEMP_NUM_TCP_PCB` in
-`lwipopts.h` (always set to N + 8 for TIME_WAIT headroom).
+configuration default, not a hardware limit. The adapter allocates one static
+pool at listen time — `max_conns` slots of
+`sizeof(conn) + rx_buffer_bytes + tx_buffer_bytes` — and never touches the
+heap per connection or per response afterwards, so the memory cost is fixed
+and known at build time. Responses larger than the TX buffer are streamed
+through it in chunks, so a big page does not inflate the pool.
 
-| max_conns / PCB | paced connects (50 ms apart) | tight 64-way SYN+GET burst |
+Measured on the board by holding N sockets open and requesting `/hello` on
+all of them (50 ms between connects); `PCB` is `MEMP_NUM_TCP_PCB` in
+`lwipopts.h`, always N + 8 for TIME_WAIT headroom. Buffer sizes are the new
+`cfg.rx_buffer_bytes` / `cfg.tx_buffer_bytes` (both default 2048).
+
+| max_conns / PCB | rx / tx bytes | result |
 |---|---|---|
-| 4 / 6 (stock)   | 4/4; a 5th connects but is not served | — |
-| 8 / 16          | 8/8    | 8/8 |
-| 16 / 24         | 16/16  | 16/16 |
-| 32 / 40         | 32/32  | 32/32 |
-| 64 / 72         | 64/64  | ~50/64 (see below) |
-| 96 / 104        | 96/96  | — |
-| 128 / 136       | 128/128 | — |
-| **192 / 200**   | **192/192** | — |
-| 256 / 264       | ~196 served, then resets (RAM ceiling) | — |
+| 4 / 6 (stock)   | 2048 / 2048 | 4/4; a 5th connects but is not served |
+| 32 / 40         | 2048 / 2048 | 32/32, clean even with tight bursts |
+| 128 / 136       | 2048 / 2048 | 128/128 |
+| 192 / 200       | 2048 / 2048 | 192/192 |
+| 256 / 264       | 512 / 256   | 256/256 |
+| **288 / 296**   | **512 / 256** | **288/288 — highest fully validated** |
+| 320 / 328       | 512 / 256   | pool does not fit the heap; `cwist_stm32_app_init()` fails at boot |
 
-**The highest fully validated configuration is 192 simultaneous connections**
-(`max_conns = 192`, `MEMP_NUM_TCP_PCB = 200`). No leaked slots after overload:
-every batch, once closed, is served again at the same rate.
+Before the static pool (dynamic per-connection buffers), 256 connections
+failed non-deterministically at ~196 as the heap ran out mid-run. With the
+pool, capacity is decided once at boot: 288 simultaneous connections are
+fully served, and 320 is a clean boot-time failure instead of resets under
+load. Slot sizing on this firmware: `~128 B conn + rx + tx`, so 288 slots of
+512+256 B cost ~258 KB out of the ~290 KB heap available after lwIP pools.
 
-Two distinct ceilings showed up:
+Two practical notes:
 
-- **Burst loss, not a connection cap.** With 64 SYNs and GETs fired in one
-  tight loop, some data frames never reach the driver; those connections sit
-  ESTABLISHED but silent and are reaped by the 30 s idle timeout. Pacing the
-  connects ~50 ms apart (or simply retrying) makes the same configuration
-  serve all 64. Raising `cfg.idle_timeout_ms` makes bursts more forgiving;
-  enlarging the RX pool did not change the outcome.
-- **RAM, around 196 connections with the stock per-connection buffers.** At
-  256 the first ~196 requests are answered and later ones are reset: each
-  connection owns a growable RX/TX buffer pair on the newlib heap, and the
-  heap runs out. To go further, shrink the initial buffer sizes in
-  `src/sys/port/lwip.c` or give the heap more of the 384 KB SRAM region (the
-  128 KB DTCM is currently unused, but DMA-visible buffers must stay in
-  SRAM1/2).
+- **Bursts:** with 64 SYNs and GETs fired in one tight loop, some data frames
+  never reach the driver and those connections idle out after 30 s. Pacing
+  the connects (or retrying) serves all of them; raising
+  `cfg.idle_timeout_ms` makes bursts more forgiving.
+- **TIME_WAIT:** closed connections keep their PCB for about a minute, so
+  back-to-back batches need the N + 8 headroom above or a short wait.
 
-Note for repeat tests: closed connections sit in TIME_WAIT and keep their
-PCB for about a minute. Back-to-back batches therefore need
-`MEMP_NUM_TCP_PCB` headroom or a short wait between runs.
-
-Each response is serialized into a per-connection buffer that is retained and
-reused after the peer acknowledges it (Phase 2 deterministic-memory design),
-so the steady-state per-request allocation count does not grow with the
-connection count.
+To raise the ceiling further, shrink `rx_buffer_bytes`/`tx_buffer_bytes`
+(smaller slots = more slots) or free RAM. The 128 KB DTCM is unused, but
+DMA-visible buffers must stay in SRAM1/2, and the TX buffers are handed to
+the Ethernet DMA zero-copy, so they cannot move there.
 
 ## Memory budget
 

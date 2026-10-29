@@ -113,8 +113,8 @@ Exact current budgets and measurements are recorded in
 |---|---:|---:|---:|---:|---:|
 | hello | 45,156 B | 1,840 B | 23,308 B | 8,352 B | 1 |
 | hello-rtc | 45,132 B | 1,852 B | 23,312 B | 8,800 B | 1 |
-| hello-lwip | 75,328 B | 62,432 B | 71,212 B | 8,316 B | 0 |
-| hello-tls | 138,308 B | 75,608 B | 127,072 B | 8,340 B | 0 |
+| hello-lwip | 75,584 B | 62,432 B | 70,440 B | 8,616 B | 0 |
+| hello-tls | 138,564 B | 75,608 B | 121,256 B | 8,740 B | 0 |
 
 The one in-memory allocation is the response buffer returned to the caller by
 `cwist_app_dispatch_memory()`. The lwIP and TLS measurements are taken after
@@ -140,18 +140,24 @@ does not eliminate handler or returned-response allocations.
 
 ### Connections and responses
 
-On 32-bit ARM, the adapter control block is about 60 bytes per plaintext
-connection, plus:
+At listen time the adapter allocates one static pool with `max_conns` slots of
+`sizeof(conn) + rx_buffer_bytes + tx_buffer_bytes` (defaults 2048 B each);
+accept and close only move slots between the free list and the active list, so
+there is no per-connection or per-response heap traffic. On 32-bit ARM a slot's
+control block is roughly 130 bytes, plus:
 
-- receive storage, grown up to `max_header_bytes + max_body_bytes + 1`;
-- response storage, grown to the largest serialized response and retained for
-  later keep-alive responses;
+- the slot's fixed request buffer (`rx_buffer_bytes`); a request that does not
+  fit is refused with 431/413 even when the protocol caps would allow it;
+- the slot's fixed response buffer (`tx_buffer_bytes`); larger responses keep
+  their response object alive and are streamed through the buffer in chunks
+  as the peer acknowledges, so response size does not inflate the pool;
 - lwIP's own PCB, pbuf, segment, and timer pools.
 
-Budget response storage for the largest response, not the average one. Limit
-`max_conns`, body sizes, and handler output together. Reserve at least 16 KB of
-main stack for the current serializer and parser, and validate that margin on
-the final application.
+Size the pool as `max_conns * (conn + rx + tx)` and validate it with a linker
+map. Smaller buffers buy more connections at the cost of tighter request
+limits and more response chunks. Reserve at least 16 KB of main stack for the
+current serializer and parser, and validate that margin on the final
+application.
 
 The TLS adapter additionally holds an mbedTLS session, ciphertext input that
 can grow to `MBEDTLS_SSL_IN_CONTENT_LEN + 2048`, and the same HTTP buffers. The

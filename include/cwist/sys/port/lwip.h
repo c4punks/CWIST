@@ -28,8 +28,10 @@
  *   - Expect: 100-continue gets an interim 100 before the body is read.
  *   - Keep-alive follows the request and the response (as on the socket
  *     path); pipelined requests are answered in order, one at a time.
- *   - Responses are sent zero-copy from per-connection serialized storage,
- *     retained for reuse after the peer has acknowledged it.
+ *   - Responses are sent zero-copy from per-connection serialized storage
+ *     allocated once from a static pool at listen time; a response larger
+ *     than the buffer is streamed through it in chunks as the peer
+ *     acknowledges, with the response object retained until the last chunk.
  *   - Received data beyond the request limits is refused back to lwIP while
  *     a response is in flight, so the TCP window throttles the peer.
  *   - Connections idle longer than idle_timeout_ms, or beyond max_conns at
@@ -69,6 +71,12 @@ typedef struct cwist_lwip_config {
     uint16_t max_conns;       /**< Concurrent connections; extra accepts are aborted (default 4). */
     size_t max_header_bytes;  /**< Request line + headers + CRLFCRLF cap; 431 above (default 4096). */
     size_t max_body_bytes;    /**< Content-Length cap; 413 above (default 16384). */
+    size_t rx_buffer_bytes;   /**< Per-connection request buffer in the static pool; a request that
+                                   does not fit is refused with 431/413 even when the protocol caps
+                                   above allow it (default 2048). */
+    size_t tx_buffer_bytes;   /**< Per-connection response buffer in the static pool; responses
+                                   larger than this are streamed through the buffer in chunks as
+                                   the peer acknowledges them (default 2048). */
     uint32_t idle_timeout_ms; /**< Close a connection with no traffic for this long; 0 = never (default 30000). */
     bool keep_alive;          /**< Allow persistent connections (default true). */
     struct cwist_lwip_tls *tls; /**< Serve HTTPS with this context; NULL = plaintext (default). Not owned. */
