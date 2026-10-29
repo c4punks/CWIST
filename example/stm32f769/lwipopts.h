@@ -51,8 +51,7 @@
 #define CHECKSUM_CHECK_TCP 0
 #define CHECKSUM_CHECK_ICMP 0
 
-#define LWIP_STATS 1
-#define LWIP_STATS_DISPLAY 0
+#define LWIP_STATS 0
 #define LWIP_DEBUG 0
 
 #endif

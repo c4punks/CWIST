@@ -175,20 +175,27 @@ static void rmii_watchdog(void) {
     /* ES0290 (F769 rev A): the RMII receiver can latch bad data after reset;
      * toggling MII_RMII_SEL clears it. ST ships the same workaround as a
      * thread; here it runs from the poll loop, wrapped in a full MAC
-     * stop/start so the receiver actually restarts. */
+     * stop/start so the receiver actually restarts. One toggle is not always
+     * enough, so retry (up to 40 times, 500 ms apart) while the MAC reports
+     * CRC errors but not a single good unicast frame; a healthy-but-quiet
+     * LAN sees no CRC errors and is left alone. */
     static uint32_t last_reset;
+    static unsigned attempts;
     if (HAL_GetREVID() != 0x1000) return;
+    if (EthHandle.gState != HAL_ETH_STATE_STARTED) return;
     if (EthHandle.Instance->MMCRGUFCR > 0U) return;
-    if (EthHandle.Instance->MMCRFCECR <= 2U) return;
-    if (HAL_GetTick() - last_reset < 1000) return;
+    if (EthHandle.Instance->MMCRFCECR == 0U) return;
+    if (attempts >= 40) return;
+    if (HAL_GetTick() - last_reset < 500) return;
     last_reset = HAL_GetTick();
+    attempts++;
 
     HAL_ETH_Stop_IT(&EthHandle);
     SYSCFG->PMC &= ~SYSCFG_PMC_MII_RMII_SEL;
     SYSCFG->PMC |= SYSCFG_PMC_MII_RMII_SEL;
     HAL_ETH_Start_IT(&EthHandle);
     EthHandle.Instance->MMCCR |= ETH_MMCCR_CR;
-    printf("cwist-f769: RMII watchdog reset\r\n");
+    printf("cwist-f769: RMII watchdog reset %u\r\n", attempts);
 }
 
 /* NO_SYS input pump: drain every pending frame into the stack. */
@@ -280,12 +287,7 @@ void HAL_ETH_MspInit(ETH_HandleTypeDef *heth) {
     __HAL_RCC_ETH_CLK_ENABLE();
 }
 
-volatile unsigned rx_irq_count;
-
-void HAL_ETH_RxCpltCallback(ETH_HandleTypeDef *heth) {
-    (void)heth;
-    rx_irq_count++;
-}
+void HAL_ETH_RxCpltCallback(ETH_HandleTypeDef *heth) { (void)heth; }
 void HAL_ETH_TxCpltCallback(ETH_HandleTypeDef *heth) { (void)heth; }
 
 void HAL_ETH_ErrorCallback(ETH_HandleTypeDef *heth) {
