@@ -113,6 +113,7 @@ $(document).ready(function(){initNavTree('de/d87/md_docs_2embedded_2stm32.html',
 Supported targets and validation</h1>
 <ul>
 <li><b>Reference integration:</b> NUCLEO-H743ZI2 (STM32H743, Cortex-M7, 2 MB flash, 1 MB SRAM, RMII Ethernet, TRNG). <code>example/stm32/</code> contains the application, HAL port hooks, lwIP options, CubeMX integration, and flashing instructions.</li>
+<li><b>Validated board:</b> STM32F769I-DISCO (STM32F769NI, Cortex-M7, 2 MB flash, 512 KB SRAM, LAN8742 RMII PHY). <code>example/stm32f769/</code> is a self-contained no-CubeMX build (upstream STM32CubeF7 HAL + CWIST bare-metal archive) serving an HTML wire inspector over real Ethernet, verified on hardware with ping, parallel/keep-alive <code>curl</code>, and browser POSTs. See its README for the rev-A RMII erratum workaround and the D-cache constraint.</li>
 <li><b>CI target:</b> Cortex-M7 Thumb-2 firmware built with <code>arm-none-eabi-gcc</code> and run with <code>qemu-arm</code> semihosting. This validates compiled instructions and the HTTP/lwIP/TLS logic, but not a board's NVIC, PHY, clock tree, or RNG.</li>
 <li><b>Sizing candidates:</b> STM32H7 first, then F767/F429-class parts with enough SRAM. Cortex-M4F and F429/F767 builds are not validated targets yet. Real hardware acceptance remains a manual step; do not infer it from QEMU success.</li>
 </ul>
