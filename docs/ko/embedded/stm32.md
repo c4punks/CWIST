@@ -109,8 +109,8 @@ Content-Length 프레이밍, keep-alive, 순서가 보장된 파이프라이닝,
 |---|---:|---:|---:|---:|---:|
 | hello | 45,156 B | 1,840 B | 23,308 B | 8,352 B | 1 |
 | hello-rtc | 45,132 B | 1,852 B | 23,312 B | 8,800 B | 1 |
-| hello-lwip | 75,328 B | 62,432 B | 71,212 B | 8,316 B | 0 |
-| hello-tls | 138,308 B | 75,608 B | 127,072 B | 8,340 B | 0 |
+| hello-lwip | 75,584 B | 62,432 B | 70,440 B | 8,616 B | 0 |
+| hello-tls | 138,564 B | 75,608 B | 121,256 B | 8,740 B | 0 |
 
 인메모리 요청의 한 번은 `cwist_app_dispatch_memory()`가 호출자에게 반환하는
 응답 버퍼입니다. lwIP/TLS는 warm-up된 연결의 steady-state를 측정합니다. cJSON
@@ -134,16 +134,23 @@ generation을 초과하는 할당은 arena에서 `NULL`을 반환하고 호출�
 
 ### 연결과 응답
 
-32-bit ARM에서 plain 연결의 어댑터 제어 블록은 약 60바이트이며 다음 메모리가
-추가됩니다.
+어댑터는 listen 시점에 `max_conns` 슬롯의 정적 풀 한 개를 할당합니다. 슬롯
+크기는 `sizeof(conn) + rx_buffer_bytes + tx_buffer_bytes`(기본 각 2048 B)이며,
+accept/close는 슬롯을 free list와 활성 목록 사이에서 옮길 뿐이므로 연결·응답
+단위의 힙 할당이 없습니다. 32-bit ARM에서 슬롯의 제어 블록은 약 130바이트이며
+다음 메모리가 추가됩니다.
 
-- 최대 `max_header_bytes + max_body_bytes + 1`까지 증가하는 수신 버퍼
-- 가장 큰 직렬화 응답까지 증가한 후 keep-alive 요청에 재사용하는 송신 버퍼
+- 슬롯 고정 수신 버퍼(`rx_buffer_bytes`): 들어오지 않는 요청은 프로토콜 상한
+  이내여도 431/413으로 거부됩니다.
+- 슬롯 고정 송신 버퍼(`tx_buffer_bytes`): 더 큰 응답은 응답 객체를 유지한 채
+  peer의 ACK에 따라 버퍼를 chunk 단위로 스트리밍하므로 응답 크기가 풀 크기에
+  영향을 주지 않습니다.
 - lwIP의 PCB, pbuf, segment, timer pool
 
-송신 버퍼는 평균이 아닌 최대 응답 기준으로 계산해야 합니다. `max_conns`, 본문
-제한, 핸들러 출력을 함께 제한하십시오. 현재 파서/직렬화기는 최소 16 KB의 메인
-스택 여유를 권장하며, 최종 애플리케이션에서 다시 측정해야 합니다.
+풀 크기는 `max_conns * (conn + rx + tx)`로 계산하고 링커 맵으로 검증하십시오.
+버퍼를 줄이면 요청 제한이 타이트해지고 응답 chunk가 늘어나는 대신 더 많은
+연결을 수용할 수 있습니다. 현재 파서/직렬화기는 최소 16 KB의 메인 스택 여유를
+권장하며, 최종 애플리케이션에서 다시 측정해야 합니다.
 
 TLS는 여기에 mbedTLS 세션, 최대 `MBEDTLS_SSL_IN_CONTENT_LEN + 2048`의 암호문
 입력, HTTP 버퍼를 더합니다. 테스트 프로파일의 서버 측 TLS 세션은 어댑터 버퍼
