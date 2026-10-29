@@ -46,7 +46,19 @@ try {
   await page.goto(origin + '/');
   await page.waitForFunction(() => navigator.serviceWorker.controller !== null, null,
                              { timeout: 30000 });
-  await page.waitForSelector('text=Session visits', { timeout: 30000 });
+  try {
+    await page.waitForSelector('text=Session visits', { timeout: 30000 });
+  } catch (err) {
+    /* Say where it stopped: still on the boot shell (and what it reported),
+     * or on a page the worker served. */
+    const where = await page.evaluate(() => ({
+      url: location.href,
+      controlled: navigator.serviceWorker.controller !== null,
+      shell: document.getElementById('status')?.textContent ?? null,
+    })).catch(() => ({}));
+    throw new Error(`CWIST page never appeared: ${JSON.stringify(where)}; ` +
+                    `errors ${JSON.stringify(errors)}; ${err.message}`);
+  }
   assert.match(await page.content(), /Session visits: <strong>1<\/strong>/, 'first visit');
 
   const created = await page.evaluate(async () => {
