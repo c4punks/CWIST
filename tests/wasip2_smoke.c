@@ -3,8 +3,15 @@
  * starts the module under wasmtime with a TCP grant and drives it with curl.
  *
  * The binary listens forever (no signals exist to stop the accept loop), so
- * the Makefile target kills the wasmtime process after the curl probe. */
+ * the Makefile target kills the wasmtime process after the curl probe.
+ *
+ * The handler runs a sqlite canary query on every request: a stack overflow
+ * in the request path silently corrupts linear memory (wasm has no guard
+ * page), and sqlite's parser tables are a sensitive tripwire — the Makefile
+ * probes twice so a corrupted second request fails the gate. */
 #include <cwist/app.h>
+#include <cwist/core/db/sql.h>
+#include <cjson/cJSON.h>
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
@@ -13,8 +20,21 @@
 #define WASIP2_SMOKE_PORT 18099
 #endif
 
+static cwist_db *g_canary_db;
+
 static void hello_handler(cwist_http_request *req, cwist_http_response *res) {
     (void)req;
+    cJSON *rows = NULL;
+    /* ORDER BY exercises more of sqlite's keyword/parser tables — the region
+     * a request-path stack overflow was observed corrupting. */
+    int db_ok = g_canary_db &&
+        cwist_db_query(g_canary_db, "SELECT 1 AS one ORDER BY one", &rows).error.err_i16 == 0 && rows;
+    if (rows) cJSON_Delete(rows);
+    if (!db_ok) {
+        res->status_code = CWIST_HTTP_INTERNAL_ERROR;
+        cwist_http_response_set_body_ptr(res, "db canary failed", 16);
+        return;
+    }
     cwist_http_response_set_body_ptr(res, "hello from WASI 0.2", 19);
     cwist_http_header_add(&res->headers, "Content-Type", "text/plain");
 }
@@ -25,6 +45,7 @@ int main(void) {
         fprintf(stderr, "app_create failed\n");
         return 1;
     }
+    cwist_db_open(&g_canary_db, ":memory:"); /* failure surfaces via the canary */
     cwist_app_get(app, "/hello", hello_handler);
 
     /* In-memory dispatch must keep working alongside the socket runtime. */

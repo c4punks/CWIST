@@ -529,6 +529,10 @@ wasip2-smoke: $(WASIP2_ARCHIVE)
 	    body=$$(curl -s -m 2 http://127.0.0.1:$(WASIP2_PORT)/hello || true); \
 	    if [ "$$body" = "hello from WASI 0.2" ]; then ok=1; break; fi; \
 	done; \
+	if [ $$ok -eq 1 ]; then \
+	    body=$$(curl -s -m 2 http://127.0.0.1:$(WASIP2_PORT)/hello || true); \
+	    [ "$$body" = "hello from WASI 0.2" ] || ok=0; \
+	fi; \
 	cat $$LOG; rm -f $$LOG; \
 	if [ $$ok -ne 1 ]; then echo "wasip2-smoke: curl probe failed"; exit 1; fi; \
 	kill -9 $$WPID 2>/dev/null || true; \
@@ -573,19 +577,36 @@ BAREMETAL_CROSS ?= arm-none-eabi-
 BAREMETAL_ARCH ?= -mcpu=cortex-m7 -mthumb -mfpu=fpv5-d16 -mfloat-abi=hard
 BAREMETAL_BUILD_DIR = .baremetal-build
 BAREMETAL_ARCHIVE = libcwist_baremetal.a
+BAREMETAL_EXTRA_CFLAGS ?=
 BAREMETAL_CFLAGS = -std=c17 -Os -Wall $(BAREMETAL_ARCH) --specs=nano.specs \
 	-ffunction-sections -fdata-sections -DCWIST_BAREMETAL \
 	-D_POSIX_THREADS=200809L -D_POSIX_READER_WRITER_LOCKS=200809L \
 	-D_POSIX_TIMERS=200809L -D_POSIX_MONOTONIC_CLOCK=200809L \
 	-D_POSIX_PRIORITY_SCHEDULING=200809L -D_Thread_local= -D__thread= \
-	$(WASM_INCLUDE_PATHS) $(COMMON_DEFINES)
-BAREMETAL_SRCS = $(filter-out lib/sqlite3/sqlite3.c src/core/db/db.c src/sys/app/test_client.c,$(WASM_SRCS)) \
+	$(WASM_INCLUDE_PATHS) $(COMMON_DEFINES) $(BAREMETAL_EXTRA_CFLAGS)
+# gc.c is listed in both WASM_SRCS and WASIP2_EXTRA_SRCS on this branch; take
+# it once, or the single-file bundle (baremetal-dist) defines it twice.
+BAREMETAL_SRCS = $(filter-out lib/sqlite3/sqlite3.c src/core/db/db.c src/sys/app/test_client.c src/core/mem/gc.c,$(WASM_SRCS)) \
 	$(filter-out src/sys/wasi/compat.c src/net/http/writer_fast.c,$(WASIP2_EXTRA_SRCS)) \
 	src/sys/port/baremetal.c src/sys/port/baremetal_time.c
 BAREMETAL_OBJS = $(BAREMETAL_SRCS:%.c=$(BAREMETAL_BUILD_DIR)/%.o)
+
+CWIST_PLATFORM ?= hosted
+DISTRIBUTION_SRCS = $(SRCS)
+DISTRIBUTION_CFLAGS = $(CFLAGS)
+DISTRIBUTION_ARCHIVE = $(LIB_NAME)
+ifeq ($(CWIST_PLATFORM),baremetal)
+BAREMETAL_CROSS = $(if $(CROSS_COMPILE),$(CROSS_COMPILE),arm-none-eabi-)
+DISTRIBUTION_SRCS = $(BAREMETAL_SRCS)
+DISTRIBUTION_CFLAGS = $(BAREMETAL_CFLAGS)
+DISTRIBUTION_ARCHIVE = $(BAREMETAL_ARCHIVE)
+else ifneq ($(CWIST_PLATFORM),hosted)
+$(error CWIST_PLATFORM: unknown target '$(CWIST_PLATFORM)' (use hosted or baremetal))
+endif
 # qemu-arm (user mode) runs the Thumb-2 firmware with semihosting output; it
 # is not a board model (no NVIC/SysTick), see tests/baremetal/board.c.
 QEMU_ARM ?= qemu-arm
+BAREMETAL_ALLOC_WRAP = -Wl,--wrap=malloc -Wl,--wrap=calloc -Wl,--wrap=realloc
 
 $(BAREMETAL_BUILD_DIR)/%.o: %.c
 	@mkdir -p $(dir $@)
@@ -605,7 +626,7 @@ $(BAREMETAL_BUILD_DIR)/hello-rtc.elf: BOARD_FLAGS = -DBOARD_RTC
 $(BAREMETAL_HELLO): $(BAREMETAL_ARCHIVE) tests/baremetal/hello.c tests/baremetal/board.c tests/baremetal/stm32h743.ld
 	$(BAREMETAL_CROSS)gcc $(BAREMETAL_CFLAGS) $(BOARD_FLAGS) -DBOARD_QEMU_USER -nostartfiles \
 	    --specs=nosys.specs -T tests/baremetal/stm32h743.ld -Wl,--gc-sections \
-	    -Wl,--no-warn-rwx-segments -Wl,-Map=$(@:.elf=.map) -o $@ \
+	    -Wl,--no-warn-rwx-segments $(BAREMETAL_ALLOC_WRAP) -Wl,-Map=$(@:.elf=.map) -o $@ \
 	    tests/baremetal/hello.c tests/baremetal/board.c $(BAREMETAL_ARCHIVE) -lm
 	$(BAREMETAL_CROSS)size $@
 
@@ -617,7 +638,7 @@ $(BAREMETAL_BUILD_DIR)/hello-lwip.elf: $(BAREMETAL_ARCHIVE) $(BAREMETAL_LWIP_SRC
 	    tests/lwip/lwipopts.h tests/lwip/arch/cc.h tests/lwip/loop_client.h include/cwist/sys/port/lwip.h
 	$(BAREMETAL_CROSS)gcc $(BAREMETAL_CFLAGS) $(LWIP_TEST_INCLUDES) -DBOARD_QEMU_USER -nostartfiles \
 	    --specs=nosys.specs -T tests/baremetal/stm32h743.ld -Wl,--gc-sections \
-	    -Wl,--no-warn-rwx-segments -Wl,-Map=$(@:.elf=.map) -o $@ \
+	    -Wl,--no-warn-rwx-segments $(BAREMETAL_ALLOC_WRAP) -Wl,-Map=$(@:.elf=.map) -o $@ \
 	    $(BAREMETAL_LWIP_SRCS) $(BAREMETAL_ARCHIVE) -lm
 	$(BAREMETAL_CROSS)size $@
 
@@ -630,7 +651,7 @@ BAREMETAL_MBEDTLS_OBJS = $(MBEDTLS_TEST_SRCS:$(MBEDTLS_DIR)/library/%.c=$(BAREME
 $(BAREMETAL_MBEDTLS_DIR)/%.o: $(MBEDTLS_DIR)/library/%.c tests/lwip/cwist_test_mbedtls_config.h
 	@mkdir -p $(dir $@)
 	$(BAREMETAL_CROSS)gcc -std=c99 -Os $(BAREMETAL_ARCH) --specs=nano.specs -ffunction-sections \
-	    -fdata-sections $(MBEDTLS_TEST_CFLAGS) -c -o $@ $<
+	    -fdata-sections $(MBEDTLS_TEST_CFLAGS) $(BAREMETAL_EXTRA_CFLAGS) -c -o $@ $<
 $(BAREMETAL_MBEDTLS_LIB): $(BAREMETAL_MBEDTLS_OBJS)
 	$(BAREMETAL_CROSS)ar rcs $@ $^
 BAREMETAL_TLS_SRCS = tests/baremetal/hello_tls.c tests/baremetal/board.c src/sys/port/lwip.c \
@@ -640,7 +661,7 @@ $(BAREMETAL_BUILD_DIR)/hello-tls.elf: $(BAREMETAL_ARCHIVE) $(BAREMETAL_MBEDTLS_L
 	    tests/lwip/tls_client.h tests/lwip/test_tls_cert.h include/cwist/sys/port/lwip.h
 	$(BAREMETAL_CROSS)gcc $(BAREMETAL_CFLAGS) $(LWIP_TEST_INCLUDES) $(MBEDTLS_TEST_CFLAGS) -DCWIST_LWIP_TLS \
 	    -DBOARD_QEMU_USER -nostartfiles --specs=nosys.specs -T tests/baremetal/stm32h743.ld \
-	    -Wl,--gc-sections -Wl,--no-warn-rwx-segments -Wl,-Map=$(@:.elf=.map) -o $@ \
+	    -Wl,--gc-sections -Wl,--no-warn-rwx-segments $(BAREMETAL_ALLOC_WRAP) -Wl,-Map=$(@:.elf=.map) -o $@ \
 	    $(BAREMETAL_TLS_SRCS) $(BAREMETAL_MBEDTLS_LIB) $(BAREMETAL_ARCHIVE) -lm
 	$(BAREMETAL_CROSS)size $@
 
@@ -1147,20 +1168,18 @@ $(LIB_NAME): .build-fat $(EXTERNAL_LIBS) $(OBJS)
 	    $(AR) rcs $@ $(OBJS); \
 	fi
 
-# The embedded bundle: the fat archive plus every header the public API
-# pulls in (the public headers reference cjson, openssl, sqlite3 and ttak),
-# laid out as the compiler expects. Copy FAT_DIST_DIR onto the target board
-# and build apps with -I<dir>/include <dir>/lib/libcwist.a; only system
-# libraries stay external.
+# The embedded bundle: the selected fat archive plus every header the public
+# API pulls in, laid out as the compiler expects. Copy FAT_DIST_DIR onto the
+# target and build apps with -I<dir>/include <dir>/lib/<archive>.
 FAT_DIST_DIR ?= dist/cwist-fat
 # The bundle stages every public-API header (including sqlite3.h, kept even
 # when CWIST_DB=0 trims the objects), so make sure the amalgamation download
 # has happened before the copies run.
 fat-dist: CWIST_FAT = 1
-fat-dist: $(SQLITE_DIR)/sqlite3.c $(LIB_NAME)
+fat-dist: $(SQLITE_DIR)/sqlite3.c $(DISTRIBUTION_ARCHIVE)
 	rm -rf $(FAT_DIST_DIR)
 	mkdir -p $(FAT_DIST_DIR)/lib $(FAT_DIST_DIR)/include/cjson
-	cp $(LIB_NAME) $(FAT_DIST_DIR)/lib/
+	cp $(DISTRIBUTION_ARCHIVE) $(FAT_DIST_DIR)/lib/
 	cp -R include/cwist $(FAT_DIST_DIR)/include/
 	cp $(CJSON_DIR)/cJSON.h $(FAT_DIST_DIR)/include/cjson/
 	cp -R $(LIBTTAK_DIR)/include/ttak $(FAT_DIST_DIR)/include/
@@ -1183,10 +1202,10 @@ fat-dist: $(SQLITE_DIR)/sqlite3.c $(LIB_NAME)
 # exactly as for libcwist.a; the vendored code itself still links from its
 # static archives (see fat-dist).
 AMALGAMATION_DIR ?= dist/amalgamation
-AMALGAMATION_DEFINES = $(filter-out -D_FORTIFY_SOURCE=%,$(filter -D%,$(CFLAGS)))
-AMALGAMATION_KNOBS = CWIST_TINY=$(CWIST_TINY) CWIST_HTTP3=$(CWIST_HTTP3) \
-    CWIST_WS=$(CWIST_WS) CWIST_DB=$(CWIST_DB) CWIST_NATS=$(CWIST_NATS) \
-    CWIST_JWT=$(CWIST_JWT) CWIST_WEBRTC=$(CWIST_WEBRTC) \
+AMALGAMATION_DEFINES = $(filter-out -D_FORTIFY_SOURCE=%,$(filter -D%,$(DISTRIBUTION_CFLAGS)))
+AMALGAMATION_KNOBS = CWIST_PLATFORM=$(CWIST_PLATFORM) CWIST_TINY=$(CWIST_TINY) \
+    CWIST_HTTP3=$(CWIST_HTTP3) CWIST_WS=$(CWIST_WS) CWIST_DB=$(CWIST_DB) \
+    CWIST_NATS=$(CWIST_NATS) CWIST_JWT=$(CWIST_JWT) CWIST_WEBRTC=$(CWIST_WEBRTC) \
     CWIST_WEBTRANSPORT=$(CWIST_WEBTRANSPORT)
 
 # Submodule header anchors the bundle stages.  Initializing submodules is a
@@ -1214,11 +1233,19 @@ endif
 
 amalgamation: $(SQLITE_DIR)/sqlite3.c $(AMALGAMATION_HEADER_ANCHORS) | $(AMALGAMATION_ORDER_ONLY)
 	python3 scripts/gen_amalgamation.py --root . --out $(AMALGAMATION_DIR) \
-	    --srcs "$(SRCS)" \
+	    --srcs "$(DISTRIBUTION_SRCS)" \
 	    --defines "$(AMALGAMATION_DEFINES)" \
 	    --knobs "$(AMALGAMATION_KNOBS)"
 
-.PHONY: amalgamation
+baremetal-dist-check:
+	$(MAKE) CROSS_COMPILE=$(BAREMETAL_CROSS) CWIST_PLATFORM=baremetal CWIST_TINY=1 \
+	    AMALGAMATION_DIR=$(BAREMETAL_BUILD_DIR)/amalgamation \
+	    FAT_DIST_DIR=$(BAREMETAL_BUILD_DIR)/fat amalgamation fat-dist
+	$(BAREMETAL_CROSS)gcc $(BAREMETAL_CFLAGS) -I$(BAREMETAL_BUILD_DIR)/amalgamation/include \
+	    -c $(BAREMETAL_BUILD_DIR)/amalgamation/cwist.c -o $(BAREMETAL_BUILD_DIR)/amalgamation-cwist.o
+	$(BAREMETAL_CROSS)ar t $(BAREMETAL_BUILD_DIR)/fat/lib/$(BAREMETAL_ARCHIVE)
+
+.PHONY: amalgamation baremetal-dist-check
 
 $(LIBTTAK_LIB):
 	@echo "Building libttak..."
@@ -1344,6 +1371,7 @@ TEST_TARGETS = test_worker_affinity \
                test_middleware_jwt \
                test_inline_exports \
                test_arena \
+               test_baremetal_arena \
                test_wasm_stream \
                test_stream_producer \
                test_healthz \
@@ -1720,6 +1748,11 @@ test_inline_exports: $(LIB_NAME) tests/test_inline_exports.c
 test_arena: $(LIB_NAME) tests/test_arena.c
 	$(CC) $(CFLAGS) -o test_arena tests/test_arena.c $(LIB_NAME) $(LIBS)
 	./test_arena
+
+test_baremetal_arena: tests/test_baremetal_arena.c src/core/mem/arena.c
+	$(CC) -std=c17 -Wall -Wextra -I./include -DCWIST_BAREMETAL \
+	    -DCWIST_ARENA_DEFAULT_GENERATION_BYTES=64 -o $@ $^
+	./$@
 
 test_healthz: $(LIB_NAME) tests/test_healthz.c
 	$(CC) $(CFLAGS) -o test_healthz tests/test_healthz.c $(LIB_NAME) $(LIBS)

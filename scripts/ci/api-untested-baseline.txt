@@ -190,7 +190,6 @@ cwist_sse_stream_comment
 cwist_sse_stream_open
 cwist_sse_stream_send
 cwist_sse_stream_write
-cwist_sstring_compare_sstring
 cwist_tcp_cork_enabled
 cwist_template_render
 cwist_template_render_file

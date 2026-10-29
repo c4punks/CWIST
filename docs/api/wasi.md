@@ -72,6 +72,10 @@ CWIST-side quirk handling for wasip2:
   time are plain-C stubs in `src/sys/wasi/compat.c`; the metrics and
   writer-fast stubs in that file are preview1-only since the real units
   join the wasip2 build.
+- The request-serving call chain peaks near 96KB of stack — over wasm-ld's
+  64KB default, and the overflow silently corrupts linear memory rather
+  than trapping. Link wasip2 binaries with a larger stack
+  (`-Wl,-z,stack-size=…`, `WASIP2_STACK_BYTES` in the Makefile).
 
 ## WASI preview1 (retired)
 
@@ -98,8 +102,8 @@ dispatch + session smoke under wasmtime. It required `WASI_SDK` (default
 - **Crypto**: `session.c` and `seq_auth.c` use the bundled header-only
   SHA-256/HMAC (`include/cwist/core/crypto/sha256.h`). Entropy comes from
   `getentropy()` (`__wasi_random_get`).
-- **Allocation**: `alloc.c`/`arena.c` take the Emscripten-style plain-libc
-  path under `__wasi__`.
+- **Allocation**: `alloc.c`/`arena.c` take the single-threaded non-hosted path
+  under `__wasi__`, recycling default arena buffers after first use.
 - **Link model**: `-fvisibility=hidden -Wl,--gc-sections -Wl,--allow-undefined
   -lwasi-emulated-pthread`, mirroring how the Emscripten link satisfies the
   same server-only references through its system stub libraries plus

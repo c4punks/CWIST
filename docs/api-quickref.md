@@ -62,6 +62,7 @@
 
 ### Header helpers
 - `cwist_error_t cwist_http_header_add(cwist_http_header_node **head, const char *key, const char *value)`
+- `cwist_error_t cwist_http_response_header_add(cwist_http_response *res, const char *key, const char *value)`
 - `char *cwist_http_header_get(cwist_http_header_node *head, const char *key)`
 - `void cwist_http_header_free_all(cwist_http_header_node *head)`
 

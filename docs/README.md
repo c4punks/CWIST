@@ -22,6 +22,8 @@ Longer walkthroughs that combine several subsystems:
   socket handoff, drain sequence, systemd integration, HTTP/3 behavior.
 * [Prebuilt release assets](deployment/release-assets.md) - fat bundles per
   platform, amalgamation and cwist-wasm attached to every release.
+* [Bare-metal STM32](embedded/stm32.md) — Cortex-M builds, deterministic memory,
+  raw-lwIP HTTP/TLS, and the NUCLEO-H743ZI2 integration.
 * [Build a CRUD blog with CWIST](tutorials/blog-crud.md) — routing + SQLite + JSON.
 * [NATS integration](tutorials/nats-integration.md) — messaging from handlers.
 * [WebTransport server](tutorials/webtransport-server.md) — experimental HTTP/3
@@ -48,6 +50,7 @@ Self-contained demos under [`example/`](../example/):
 | Example | Demonstrates |
 |---------|--------------|
 | [simple-server](../example/simple-server) | Minimal HTTP server |
+| [stm32](../example/stm32) | NUCLEO-H743ZI2 bare-metal HTTP over raw lwIP |
 | [http](../example/http) | Step-by-step HTTP features |
 | [db](../example/db) / [db-crypt](../example/db-crypt) | SQLite integration, transparent column encryption |
 | [jwt](../example/jwt) | Token issuing and verification |

@@ -65,7 +65,16 @@ Reads a static file from disk, copies it into the response body, and sets a sens
 ```c
 cwist_error_t cwist_http_header_add(cwist_http_header_node **head, const char *key, const char *value);
 ```
-Adds a header to the linked list.
+Adds a header to the linked list using heap-owned storage.
+
+### `cwist_http_response_header_add`
+```c
+cwist_error_t cwist_http_response_header_add(cwist_http_response *res, const char *key, const char *value);
+```
+Adds a header using the response arena for its node and key/value storage.
+This is the preferred form in allocation-sensitive and bare-metal handlers.
+Both APIs copy the key and value, reject CR/LF, and fall back to the heap when
+arena storage is exhausted.
 
 ### `cwist_http_header_get`
 ```c

@@ -8,9 +8,10 @@ For each ELF built by `make baremetal-smoke`, measures
   static_ram  .data + .bss (the linker's .heap region is not counted)
   heap        heap high-water mark the firmware reported (<name>.log)
   stack       stack high-water mark the firmware reported (<name>.log)
+  allocs      allocation calls per steady-state request (<name>.log)
 
 and fails when any value exceeds its limit in the budget file. The budget
-file holds one `<firmware> <metric> <max bytes>` line per limit; `#` starts
+file holds one `<firmware> <metric> <limit>` line per limit; `#` starts
 a comment. A firmware or metric without a limit is reported, not gated.
 
 Usage: baremetal_size_gate.py [--size arm-none-eabi-size] --budget FILE ELF...
@@ -27,8 +28,9 @@ from pathlib import Path
 FLASH_SECTIONS = {".isr_vector", ".text", ".rodata", ".ARM.exidx", ".ARM.extab",
                   ".preinit_array", ".init_array", ".fini_array", ".data"}
 RAM_SECTIONS = {".data", ".bss"}
-METRICS = ("flash", "static_ram", "heap", "stack")
+METRICS = ("flash", "static_ram", "heap", "stack", "allocs")
 HIGH_WATER = re.compile(r"heap high water: (\d+) bytes, stack used: (\d+) bytes")
+ALLOCS = re.compile(r"steady allocs per request: (\d+)")
 
 
 def parse_size_a(text: str) -> dict[str, int]:
@@ -49,8 +51,14 @@ def measure_sections(sections: dict[str, int]) -> dict[str, int]:
 
 
 def parse_log(text: str) -> dict[str, int]:
-    m = HIGH_WATER.search(text)
-    return {"heap": int(m.group(1)), "stack": int(m.group(2))} if m else {}
+    values = {}
+    high_water = HIGH_WATER.search(text)
+    if high_water:
+        values.update(heap=int(high_water.group(1)), stack=int(high_water.group(2)))
+    allocs = ALLOCS.search(text)
+    if allocs:
+        values["allocs"] = int(allocs.group(1))
+    return values
 
 
 def parse_budget(text: str) -> dict[tuple[str, str], int]:
@@ -61,7 +69,7 @@ def parse_budget(text: str) -> dict[tuple[str, str], int]:
             continue
         parts = line.split()
         if len(parts) != 3 or parts[1] not in METRICS or not parts[2].isdigit():
-            raise ValueError(f"budget line {n}: expected '<firmware> <{'|'.join(METRICS)}> <bytes>'")
+            raise ValueError(f"budget line {n}: expected '<firmware> <{'|'.join(METRICS)}> <limit>'")
         budget[(parts[0], parts[1])] = int(parts[2])
     return budget
 
@@ -74,9 +82,10 @@ def check(measured: dict[str, dict[str, int]], budget: dict[tuple[str, str], int
             continue
         value = measured[fw].get(metric)
         if value is None:
-            failures.append(f"{fw} {metric}: not measured (missing high-water line in {fw}.log?)")
+            failures.append(f"{fw} {metric}: not measured (missing metric in {fw}.log?)")
         elif value > limit:
-            failures.append(f"{fw} {metric}: {value} bytes > budget {limit} (+{value - limit})")
+            unit = "allocations/request" if metric == "allocs" else "bytes"
+            failures.append(f"{fw} {metric}: {value} {unit} > budget {limit} (+{value - limit})")
     return failures
 
 

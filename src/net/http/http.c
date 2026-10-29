@@ -1871,6 +1871,16 @@ cwist_error_t cwist_http_header_add(cwist_http_header_node **head, const char *k
     return cwist_http_header_add_ex(head, NULL, key, value);
 }
 
+cwist_error_t cwist_http_response_header_add(cwist_http_response *res, const char *key,
+                                             const char *value) {
+    if (!res || !cwist_http_header_text_is_safe(key) || !cwist_http_header_text_is_safe(value)) {
+        cwist_error_t err = make_error(CWIST_ERR_INT16);
+        err.error.err_i16 = -1;
+        return err;
+    }
+    return cwist_http_header_add_ex(&res->headers, (cwist_arena_t *)res->arena, key, value);
+}
+
 /**
  * @brief Find a header value using case-insensitive header-name comparison.
  * @param head Head of the header linked list.

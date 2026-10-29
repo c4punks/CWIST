@@ -98,6 +98,7 @@ test_full_gc_sweep
 test_gc_ebr_release
 test_full_gc_toggle_hardening
 test_conn_registry
+test_gc_job_handoff
 test_https_full_gc
 test_graphql
 test_grpc
@@ -152,6 +153,7 @@ wasm_abi_layout.wasm
 .wit-bindings/
 .component-build/
 .jco-guest/
+tests/browser/node_modules/
 .jco-guest-stream/
 .jco-out/
 .wasip2-build/
@@ -179,5 +181,7 @@ c100k_server.log
 c100k_client.log
 webtransport_echo_server
 .baremetal-build/
+libcwist_baremetal.a
+example/stm32f769/build/
 .mbedtls-test/
 
