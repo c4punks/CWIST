@@ -154,6 +154,16 @@ overhead is what crosses the default limit.
    shipping unflagged in node and browsers, and port the SSE examples
    off the EM_JS callback. Only then does the Emscripten build leave CI.
 
+   Status checked 2026-10-20:
+   - JSPI is still flagged in node. With Node v24.16.0 (`node --version`),
+     `WebAssembly.promising` and `WebAssembly.Suspending` are undefined
+     without `--experimental-wasm-jspi` and defined with it. The 0.3
+     smoke targets still pass that flag. Browser JSPI was not checked.
+   - No example under `example/` calls the EM_JS chunk callback or
+     `cwist_app_dispatch_stream()`. The callback is defined in
+     `include/cwist/wasm/wasm_entry.h`, so there is no example port to
+     do yet. Stage 3 stays open until the flag condition changes.
+
 ## Browser runtime gate (WASI 0.2)
 
 `make component-browser-smoke` remains a packaging-only check.
