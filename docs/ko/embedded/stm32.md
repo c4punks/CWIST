@@ -10,6 +10,12 @@ C1M 리액터는 이식하지 않습니다.
 - **참조 통합:** NUCLEO-H743ZI2(STM32H743, Cortex-M7, 2 MB flash, 1 MB SRAM,
   RMII Ethernet, TRNG). `example/stm32/`에 애플리케이션, HAL 포트 훅, lwIP
   옵션, CubeMX 통합 및 플래싱 방법이 있습니다.
+- **검증된 보드:** STM32F769I-DISCO(STM32F769NI, Cortex-M7, 2 MB flash,
+  512 KB SRAM, LAN8742 RMII PHY). `example/stm32f769/`는 CubeMX 없이 빌드되는
+  자급식 예제(업스트림 STM32CubeF7 HAL + CWIST 베어메탈 아카이브)로, 실제
+  Ethernet 위에서 HTML wire inspector를 서빙하며 ping, keep-alive `curl`,
+  브라우저 POST로 실기기 검증을 마쳤습니다. rev-A RMII errata 우회와
+  D-cache 제약은 해당 README를 참고하십시오.
 - **CI 대상:** `arm-none-eabi-gcc`로 빌드한 Cortex-M7 Thumb-2 펌웨어를
   `qemu-arm` semihosting으로 실행합니다. 명령어와 HTTP/lwIP/TLS 동작을 검증하지만
   실제 보드의 NVIC, PHY, 클럭 트리, RNG는 검증하지 않습니다.
