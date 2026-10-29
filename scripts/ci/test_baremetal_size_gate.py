@@ -28,27 +28,30 @@ class BaremetalSizeGateTests(unittest.TestCase):
         self.assertEqual(m["static_ram"], 216 + 1576)
 
     def test_high_water_line(self):
-        log = "PASS x\nheap high water: 22296 bytes, stack used: 8352 bytes\nbaremetal-smoke: PASS\n"
-        self.assertEqual(gate.parse_log(log), {"heap": 22296, "stack": 8352})
+        log = ("PASS x\nsteady allocs per request: 0\n"
+               "heap high water: 22296 bytes, stack used: 8352 bytes\nbaremetal-smoke: PASS\n")
+        self.assertEqual(gate.parse_log(log), {"heap": 22296, "stack": 8352, "allocs": 0})
         self.assertEqual(gate.parse_log("no numbers here"), {})
 
     def test_budget_parsing(self):
-        b = gate.parse_budget("# c\nhello flash 100  # note\n\nhello stack 9\n")
-        self.assertEqual(b, {("hello", "flash"): 100, ("hello", "stack"): 9})
+        b = gate.parse_budget("# c\nhello flash 100  # note\n\nhello stack 9\nhello allocs 0\n")
+        self.assertEqual(b, {("hello", "flash"): 100, ("hello", "stack"): 9, ("hello", "allocs"): 0})
         for bad in ("hello flash", "hello flsh 1", "hello flash 1k"):
             with self.assertRaises(ValueError):
                 gate.parse_budget(bad)
 
     def test_check(self):
-        budget = {("hello", "flash"): 100, ("hello", "heap"): 50, ("other", "flash"): 1}
-        self.assertEqual(gate.check({"hello": {"flash": 100, "heap": 50}}, budget), [])
-        over = gate.check({"hello": {"flash": 101, "heap": 50}}, budget)
-        self.assertEqual(len(over), 1)
-        self.assertIn("hello flash: 101 bytes > budget 100 (+1)", over[0])
+        budget = {("hello", "flash"): 100, ("hello", "heap"): 50, ("hello", "allocs"): 0,
+                  ("other", "flash"): 1}
+        self.assertEqual(gate.check({"hello": {"flash": 100, "heap": 50, "allocs": 0}}, budget), [])
+        over = gate.check({"hello": {"flash": 101, "heap": 50, "allocs": 1}}, budget)
+        self.assertEqual(len(over), 2)
+        self.assertIn("hello flash: 101 bytes > budget 100 (+1)", over)
+        self.assertIn("hello allocs: 1 allocations/request > budget 0 (+1)", over)
         # a budgeted metric the run did not report fails instead of passing silently
         missing = gate.check({"hello": {"flash": 1}}, budget)
-        self.assertEqual(len(missing), 1)
-        self.assertIn("hello heap: not measured", missing[0])
+        self.assertEqual(len(missing), 2)
+        self.assertTrue(any("hello heap: not measured" in failure for failure in missing))
 
 
 if __name__ == "__main__":

@@ -9,11 +9,10 @@
 1	src/core/mem/alloc.c:void *ptr = calloc(nmemb ? nmemb : 1, size ? size : 1);
 1	src/core/mem/alloc.c:void *ptr = malloc(size ? size : 1);
 1	src/core/mem/alloc.c:void *res = realloc(ptr, actual);
-1	src/core/mem/arena.c:: (cwist_arena_t *)calloc(1, sizeof(cwist_arena_t));
-1	src/core/mem/arena.c:arena->base = (uint8_t *)malloc(arena->capacity);
-1	src/core/mem/arena.c:cwist_arena_t *arena = (cwist_arena_t *)calloc(1, sizeof(cwist_arena_t));
+2	src/core/mem/arena.c:: (cwist_arena_t *)calloc(1, sizeof(cwist_arena_t));
+1	src/core/mem/arena.c:if (!base) base = (uint8_t *)malloc(capacity);
 3	src/core/mem/arena.c:free(arena);
-1	src/core/mem/arena.c:free(arena->base);
+1	src/core/mem/arena.c:free(base);
 3	src/core/mem/arena.c:free(tls);
 1	src/core/mem/arena.c:free(tls->structs[i]);
 1	src/core/mem/arena.c:tls = (cwist_arena_tls_t *)calloc(1, sizeof(cwist_arena_tls_t));

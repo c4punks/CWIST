@@ -51,6 +51,7 @@ VENDORED_ANGLE = {
 REWRITE_PREFIXES = [
     ("include/", ""),
     ("lib/libttak/include/", ""),
+    ("lib/cjson/", "cjson/"),
     ("lib/sqlite3/", ""),
     ("lib/lsquic/include/", "cwist-vendor/lsquic/"),
     ("lib/cnats/src/", "cwist-vendor/cnats/"),

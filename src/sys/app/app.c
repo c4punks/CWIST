@@ -2890,7 +2890,7 @@ static void internal_route_handler(cwist_app *app, cwist_http_request *req,
         eh(req, res, CWIST_HTTP_NOT_FOUND);
     } else {
         res->status_code = CWIST_HTTP_NOT_FOUND;
-        cwist_sstring_assign(res->body, "404 Not Found");
+        cwist_http_response_set_body_ptr(res, "404 Not Found", 13);
     }
 }
 
