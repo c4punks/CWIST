@@ -1,4 +1,4 @@
 var searchData=
 [
-  ['히스토그램_0',['선택적 wrk 원시/보정 지연 히스토그램',['../d2/de4/md_docs_2ko_2performance_2wrk-dual-histogram.html',1,'']]]
+  ['효과_0',['측정된 효과',['../da/d90/md_docs_2ko_2cooperative-queuing.html#autotoc_md581',1,'']]]
 ];

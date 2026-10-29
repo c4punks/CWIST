@@ -108,11 +108,11 @@ $(document).ready(function(){initNavTree('d8/d77/md_docs_2api_2wasm-component.ht
   <div class="headertitle"><div class="title">CWIST on the WASM component model</div></div>
 </div><!--header-->
 <div class="contents">
-<div class="textblock"><p><a class="anchor" id="autotoc_md205"></a> <b>Status:</b> supported (issue #203). The WASI component pipeline is the standard WebAssembly path for CWIST in browsers (via jco transpilation), service workers, Node, and edge runtimes. The legacy Emscripten build has been retired.</p>
-<h1><a class="anchor" id="autotoc_md206"></a>
+<div class="textblock"><p><a class="anchor" id="autotoc_md206"></a> <b>Status:</b> supported (issue #203). The WASI component pipeline is the standard WebAssembly path for CWIST in browsers (via jco transpilation), service workers, Node, and edge runtimes. The legacy Emscripten build has been retired.</p>
+<h1><a class="anchor" id="autotoc_md207"></a>
 Why</h1>
 <p>v3.6 shipped three WASM flavors: the Emscripten browser bundle (supported), a WASI preview1 smoke (retired by this work; WASI 0.2 covers its use), and the WASI 0.2 socket server (<code><a class="el" href="../../d6/da1/api_2wasi_8md.html">docs/api/wasi.md</a></code>). Three toolchains cost more than they earn, and the Emscripten path carries operational friction: a heavy emsdk, version-sensitive glue, and the EM_JS formatting incident (#176). The end state is one pipeline: compile with wasi-sdk, run anywhere, browsers via a jco-transpiled JS bundle, edge runtimes via wasmtime.</p>
-<h1><a class="anchor" id="autotoc_md207"></a>
+<h1><a class="anchor" id="autotoc_md208"></a>
 The boundary</h1>
 <p><code>wit/cwist.wit</code> defines <code>world cwist-guest</code>, the component-model counterpart of <code><a class="el" href="../../d9/d60/wasm__entry_8h.html" title="(Deprecated) Legacy Emscripten WASM entry points.">include/cwist/wasm/wasm_entry.h</a></code>:</p>
 <ul>
@@ -121,7 +121,7 @@ The boundary</h1>
 <li>Buffer disposal that today requires an explicit <code>_cwist_wasm_dispose</code> round-trip becomes implicit: the canonical ABI copies the result out of guest linear memory, and the guest frees its own buffer after return.</li>
 <li>Streaming lives in the separate <code>cwist-guest-stream</code> world (0.3 only): <code>host.send-chunk</code> delivers chunks with backpressure, and <code>dispatch-stream</code> mirrors <code>_cwist_wasm_dispatch_stream</code>. Landed and smoke-tested; see below.</li>
 </ul>
-<h1><a class="anchor" id="autotoc_md208"></a>
+<h1><a class="anchor" id="autotoc_md209"></a>
 Toolchain status (measured 2026-09-21)</h1>
 <ul>
 <li>WASI 0.3: ratified by the WASI subgroup; <code>wasi:cli 0.3.0</code> is official with component-model async native.</li>
@@ -129,7 +129,7 @@ Toolchain status (measured 2026-09-21)</h1>
 <li>wasmtime 48: runs the resulting component. Startup, in-memory dispatch, and socket listen all work.</li>
 <li>jco 1.34.0: transpiles both 0.2 and 0.3 components to JS. 0.3 exports lower to async functions; WASI 0.3 imports are satisfied by <code>@bytecodealliance/preview3-shim</code> (evaluated below).</li>
 </ul>
-<h1><a class="anchor" id="autotoc_md209"></a>
+<h1><a class="anchor" id="autotoc_md210"></a>
 Evaluated: preview3-shim (2026-09-23)</h1>
 <p><code>make component-smoke-p3</code> runs the full dispatch guest as a 0.3 component: same guest C source, built for <code>wasm32-wasip3</code> with wasi-sdk &gt;= 34, componentized with <code>wasm-tools component embed</code>, transpiled by jco 1.34, hosted in node by preview3-shim 0.6.1, and driven through the same five assertions as the 0.2 smoke. PASS. Caveats, all host-side:</p>
 <ul>
@@ -137,13 +137,13 @@ Evaluated: preview3-shim (2026-09-23)</h1>
 <li>jco lowers every 0.3 export to an async function, so against a wasip3 guest <code>handle()</code> returns a Promise; <code>wasm/npm/component.js</code> detects this and <code>await</code> works uniformly for both targets.</li>
 <li>preview3-shim keeps the node event loop alive after completion, so the smoke exits explicitly.</li>
 </ul>
-<h1><a class="anchor" id="autotoc_md210"></a>
+<h1><a class="anchor" id="autotoc_md211"></a>
 Landed: native async for streaming/SSE (2026-09-23)</h1>
 <p>The 0.3 shape for the SSE path (today an EM_JS chunk callback on Emscripten) is the <code>cwist-guest-stream</code> world in wit/cwist.wit: the async host import <code>host.send-chunk</code> plus the sync export <code>dispatch-stream</code>. <code>make component-stream-smoke-p3</code> proves it end to end: an SSE route (<code>/events</code>) dispatches through <code><a class="el" href="../../d0/d77/sys_2app_2app_8h.html#a60ffdd2b16922c6cb25d22bc9e164208" title="Like cwist_app_dispatch_memory(), but streams the serialized response through write_fn instead of ret...">cwist_app_dispatch_stream()</a></code>, each serialized chunk crosses to a JS host implementation of <code>sendChunk</code>, and the head-first chunk order is asserted.</p>
 <p>The pump needed no continuation rewrite. The chunk sink initiates the async import and, unless it returns immediately, blocks on a waitable set: the export task suspends mid-pump and resumes when the host resolves the call, so the synchronous <code>write_fn</code> loop in <code><a class="el" href="../../d0/d77/sys_2app_2app_8h.html#a60ffdd2b16922c6cb25d22bc9e164208" title="Like cwist_app_dispatch_memory(), but streams the serialized response through write_fn instead of ret...">cwist_app_dispatch_stream()</a></code> runs unchanged. Backpressure falls out of the host delaying resolution. What the spike established before this landed: <code>async func</code> parses and validates in WIT; wit-bindgen 0.62 emits waitable-set/callback bindings that compile for wasm32-wasip3 with wasi-sdk 34; jco surfaces custom host imports as plain ESM imports, which is how the smoke (and any bundler consumer) wires <code>sendChunk</code>.</p>
 <p>The npm adapter exposes this world as <code>handle.stream(init, onChunk)</code>: <code><a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">createStreamHost()</a></code> from <code>cwist-wasm/component</code> is the <code>c4punks:cwist/host</code> import, and binding the same object as <code>streamHost</code> routes each chunk to the callback of the stream in flight. A failing callback reaches the guest as the <code>err</code> arm of <code>send-chunk</code>, which aborts the pump, and <code>stream()</code> rejects with the callback's own error. <code>make component-stream-smoke-p3</code> drives the guest through the adapter, including that abort path.</p>
 <p>Only wasm32-wasip3 builds this world: 0.2 components cannot lower async imports. Bindings are generated per world (<code>wit-bindgen --world</code>), and <code>wasm-tools component embed</code> picks the world explicitly (<code>--world cwist-guest[-stream]</code>).</p>
-<h1><a class="anchor" id="autotoc_md211"></a>
+<h1><a class="anchor" id="autotoc_md212"></a>
 Resolved: socket request path under wasip3 (audited 2026-09-22)</h1>
 <p>The first HTTP request to a wasip3 socket server used to trap with an out-of-bounds read in <code>serialize_headers</code> (<code>res-&gt;version-&gt;data</code>, <a class="el" href="../../dd/d43/http_8c.html" title="Core HTTP request/response allocation, serialization, socket, and server-loop helpers.">http.c</a>:1885) at a wild negative address (~<code>0xffff9c00</code>), with the response object intact right up to the send call. The audit (wasi-sdk 34, wasmtime 49, <code>-O1</code>/<code>-O2</code>, buffer sizes from 1 KiB/2 KiB to 8 KiB/16 KiB) established by elimination:</p>
 <ul>
@@ -153,7 +153,7 @@ Resolved: socket request path under wasip3 (audited 2026-09-22)</h1>
 <li>Root cause: <b>stack exhaustion.</b> wasm-ld's default 64 KiB stack is too small for the socket-serving chain once p3's async lowering is in the frame mix. <code>-z stack-size=131072</code> passes at <code>-O1</code> and <code>-O2</code> deterministically; the Makefile links every wasip2/wasip3 guest with <code>-Wl,-z,stack-size=$(WASIP2_STACK_BYTES)</code> (default 1 MiB), which covers wasip3 with headroom.</li>
 </ul>
 <p>A plain BSD-socket minimal repro (accept/read/write, no CWIST) passes unchanged on the same toolchain, so small-frame guests are unaffected; CWIST's ~24 KiB of request/response stack buffers plus the p3 lowering overhead is what crosses the default limit.</p>
-<h1><a class="anchor" id="autotoc_md212"></a>
+<h1><a class="anchor" id="autotoc_md213"></a>
 Stages</h1>
 <ol type="1">
 <li><b>WIT + validation (landed).</b> The world definition, <code>make wit-check</code>, <code>make jco-transpile</code>, and this document.</li>
@@ -165,7 +165,7 @@ Stages</h1>
 </ul>
 </li>
 </ol>
-<h1><a class="anchor" id="autotoc_md213"></a>
+<h1><a class="anchor" id="autotoc_md214"></a>
 Browser runtime gate (WASI 0.2)</h1>
 <p><code>make component-browser-smoke</code> remains a packaging-only check. <code>make component-browser-test</code> runs that build, then executes the generated bundle and real WASM shards in headless Chromium through Playwright. Install the test-only dependencies and browser first:</p>
 <div class="fragment"><div class="line">npm ci --prefix tests/browser --ignore-scripts --no-audit --no-fund</div>
@@ -176,7 +176,7 @@ Browser runtime gate (WASI 0.2)</h1>
 <p>The target also starts two negative controls: unavailable WASM shards and an injected browser exception. Each must exit 1 with its own diagnostic; a crash, timeout, or missing browser is not accepted as the expected failure. To rerun against already-built artifacts:</p>
 <div class="fragment"><div class="line">node tests/browser/run.mjs --self-test</div>
 </div><!-- fragment --><p>This gate covers WASI 0.2 in Chromium only. It does not claim Service Worker coverage, WASI 0.3/JSPI support, or replacement of Emscripten.</p>
-<h1><a class="anchor" id="autotoc_md214"></a>
+<h1><a class="anchor" id="autotoc_md215"></a>
 Measured while building stage 2</h1>
 <ul>
 <li>The WIT never passed wit-bindgen validation as written: the error variants sat at package top level. They moved into the <code>guest</code> interface; <code>make wit-check</code> now actually validates the world.</li>
@@ -184,7 +184,7 @@ Measured while building stage 2</h1>
 <li>wit-bindgen 0.62 lowers guest exports to plain C functions returning bool (ok/err out-params). The returned <code>list&lt;u8&gt;</code> must be a libc allocation because the generated <code>cabi_post</code> hook frees it; <code>cwist_alloc</code> is libc-backed under <code>__wasi__</code>, so the dispatch response hands over directly and the explicit dispose entry point disappears as designed.</li>
 <li>With two worlds in wit/, both wit-bindgen and <code>wasm-tools component embed</code> require an explicit <code>--world</code>; bindings land in per-world directories under .wit-bindings and each guest links its own component-type object.</li>
 </ul>
-<h1><a class="anchor" id="autotoc_md215"></a>
+<h1><a class="anchor" id="autotoc_md216"></a>
 Non-goals</h1>
 <ul>
 <li>No ABI break for the <code>cwist-wasm</code> npm wrapper at any stage.</li>

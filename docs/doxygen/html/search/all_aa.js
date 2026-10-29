@@ -1,4 +1,4 @@
 var searchData=
 [
-  ['일_0',['지금 런타임이 실제로 하는 일',['../d7/dab/md_docs_2ko_2fixed-cache-status.html#autotoc_md604',1,'']]]
+  ['읽기_0',['쿠키 읽기',['../db/d04/md_docs_2ko_2api_2cookie.html#autotoc_md392',1,'']]]
 ];

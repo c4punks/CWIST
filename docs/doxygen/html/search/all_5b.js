@@ -1,6 +1,7 @@
 var searchData=
 [
-  ['명시적인_20공개_20fixed_20계약으로_20http_20응답_20캐싱_20복원하기_0',['ADR-0001: 명시적인 공개 FIXED 계약으로 HTTP 응답 캐싱 복원하기',['../d6/dda/md_docs_2ko_2decisions_20001-safe-public-fixed-response-cache.html',1,'']]],
-  ['명시적_20flush와_20회수_1',['7. 명시적 flush와 회수',['../d1/dde/md_docs_2ko_2GC.html#autotoc_md617',1,'']]],
-  ['명시하기_2',['4. 호환성 변경을 명시하기',['../d6/dda/md_docs_2ko_2decisions_20001-safe-public-fixed-response-cache.html#autotoc_md577',1,'']]]
+  ['모델_20위의_20cwist_0',['WASM 컴포넌트 모델 위의 CWIST',['../dd/d41/md_docs_2ko_2api_2wasm-component.html',1,'']]],
+  ['모두_20합치기_1',['모두 합치기',['../d1/df9/md_docs_2ko_2api_2html.html#autotoc_md422',1,'']]],
+  ['모듈_2',['모듈',['../dc/d79/md_docs_2ko_2API.html#autotoc_md364',1,'모듈'],['../d3/d19/md_docs_2ko_2REFERENCE.html#autotoc_md667',1,'모듈']]],
+  ['모드_3',['모드',['../d3/df7/md_docs_2ko_2api_2sse.html#autotoc_md501',1,'스트림 모드'],['../d3/df7/md_docs_2ko_2api_2sse.html#autotoc_md496',1,'응답 모드'],['../d5/d08/md_docs_2ko_2runtime-config.html#autotoc_md689',1,'프로세스와 서버 모드']]]
 ];

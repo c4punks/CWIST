@@ -1,6 +1,4 @@
 var searchData=
 [
-  ['구독_20graphql_20ws_0',['GraphQL 구독 (graphql-ws)',['../d7/dec/md_docs_2ko_2api_2websocket.html#autotoc_md546',1,'']]],
-  ['구성_20요소_20측정_202026_2009_2012_1',['구성 요소 측정 (2026-09-12)',['../dc/dd4/md_docs_2ko_2reactor-wakeup-regression.html#autotoc_md633',1,'']]],
-  ['구현과_20릴리스_20관문_2',['구현과 릴리스 관문',['../d6/dda/md_docs_2ko_2decisions_20001-safe-public-fixed-response-cache.html#autotoc_md580',1,'']]]
+  ['권장_20처리_0',['계약이 복원될 때까지의 권장 처리',['../d7/dab/md_docs_2ko_2fixed-cache-status.html#autotoc_md631',1,'']]]
 ];

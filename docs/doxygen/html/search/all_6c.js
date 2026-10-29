@@ -1,5 +1,7 @@
 var searchData=
 [
-  ['벤치마크와_20측정_20방법_0',['5. 벤치마크와 측정 방법',['..//home/runner/work/CWIST/CWIST/docs/ko/README.md#autotoc_md639',1,'']]],
-  ['벤치마크_20측정_20방법_1',['웹 서버 벤치마크 측정 방법',['../d8/d7e/md_docs_2ko_2webserver-benchmark.html',1,'']]]
+  ['변경을_20명시하기_0',['4. 호환성 변경을 명시하기',['../d6/dda/md_docs_2ko_2decisions_20001-safe-public-fixed-response-cache.html#autotoc_md590',1,'']]],
+  ['변경_1',['변경',['../db/dc4/md_docs_2ko_2c1m-file-limits.html#autotoc_md569',1,'변경'],['../da/d07/md_docs_2ko_2classic-pool-starvation.html#autotoc_md573',1,'원인과 변경']]],
+  ['변수를_20위한_20의사_20raii_2',['4. 핸들 같은 지역 변수를 위한 의사 RAII',['../d1/dde/md_docs_2ko_2GC.html#autotoc_md638',1,'']]],
+  ['변수_3',['사용하지 않는 변수',['../da/dc3/md_docs_2ko_2api_2app.html#autotoc_md382',1,'']]]
 ];

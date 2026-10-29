@@ -1,4 +1,4 @@
 var searchData=
 [
-  ['타입_0',['타입',['../d3/df7/md_docs_2ko_2api_2sse.html#autotoc_md480',1,'']]]
+  ['타입_0',['타입',['../d3/df7/md_docs_2ko_2api_2sse.html#autotoc_md493',1,'']]]
 ];

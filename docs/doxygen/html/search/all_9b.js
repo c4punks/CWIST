@@ -1,4 +1,4 @@
 var searchData=
 [
-  ['옮기지_20않는_20이유_0',['학습 블록을 그냥 옮기지 않는 이유',['../d7/dab/md_docs_2ko_2fixed-cache-status.html#autotoc_md606',1,'']]]
+  ['와이어_20응답이_20아니라_20표현을_20캐시하기_0',['2. 와이어 응답이 아니라 표현을 캐시하기',['../d6/dda/md_docs_2ko_2decisions_20001-safe-public-fixed-response-cache.html#autotoc_md588',1,'']]]
 ];

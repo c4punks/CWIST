@@ -11,7 +11,7 @@ var searchData=
   ['session_2ec_8',['session.c',['../de/d67/session_8c.html',1,'']]],
   ['session_2eh_9',['session.h',['../da/d46/session_8h.html',1,'']]],
   ['session_5fmanager_2ec_10',['session_manager.c',['../d4/db3/session__manager_8c.html',1,'']]],
-  ['session_5fmanager_2eh_11',['session_manager.h',['../d7/d95/session__manager_8h.html',1,'(Global Namespace)'],['../d5/d63/sys_2session_2session__manager_8h.html',1,'(Global Namespace)']]],
+  ['session_5fmanager_2eh_11',['session_manager.h',['../d5/d63/sys_2session_2session__manager_8h.html',1,'(Global Namespace)'],['../d7/d95/session__manager_8h.html',1,'(Global Namespace)']]],
   ['sha256_2eh_12',['sha256.h',['../d5/de3/sha256_8h.html',1,'']]],
   ['shutdown_2ec_13',['shutdown.c',['../d3/db2/shutdown_8c.html',1,'']]],
   ['shutdown_2eh_14',['shutdown.h',['../da/d39/shutdown_8h.html',1,'']]],
@@ -21,7 +21,7 @@ var searchData=
   ['soak_2dtesting_2emd_18',['soak-testing.md',['../d9/dd7/soak-testing_8md.html',1,'']]],
   ['sockopts_2eh_19',['sockopts.h',['../d8/dad/sockopts_8h.html',1,'']]],
   ['sql_2eh_20',['sql.h',['../d4/d59/sql_8h.html',1,'(Global Namespace)'],['../d0/dae/core_2db_2sql_8h.html',1,'(Global Namespace)']]],
-  ['sql_2emd_21',['sql.md',['../d9/d8d/ko_2api_2sql_8md.html',1,'(Global Namespace)'],['../d9/d7b/api_2sql_8md.html',1,'(Global Namespace)']]],
+  ['sql_2emd_21',['sql.md',['../d9/d7b/api_2sql_8md.html',1,'(Global Namespace)'],['../d9/d8d/ko_2api_2sql_8md.html',1,'(Global Namespace)']]],
   ['sse_2ec_22',['sse.c',['../d2/dd2/sse_8c.html',1,'']]],
   ['sse_2eh_23',['sse.h',['../da/d49/sse_8h.html',1,'(Global Namespace)'],['../df/d58/net_2http_2sse_8h.html',1,'(Global Namespace)']]],
   ['sse_2emd_24',['sse.md',['../de/d26/ko_2api_2sse_8md.html',1,'(Global Namespace)'],['../d2/d12/api_2sse_8md.html',1,'(Global Namespace)']]],
@@ -29,6 +29,7 @@ var searchData=
   ['sstring_2ec_26',['sstring.c',['../dd/d79/sstring_8c.html',1,'']]],
   ['sstring_2eh_27',['sstring.h',['../d1/d34/sstring_8h.html',1,'(Global Namespace)'],['../d4/dbd/core_2sstring_2sstring_8h.html',1,'(Global Namespace)']]],
   ['sstring_2emd_28',['sstring.md',['../d4/de4/ko_2api_2sstring_8md.html',1,'(Global Namespace)'],['../d6/d9e/api_2sstring_8md.html',1,'(Global Namespace)']]],
-  ['sys_5finfo_2ec_29',['sys_info.c',['../d8/d99/sys__info_8c.html',1,'']]],
-  ['sys_5finfo_2eh_30',['sys_info.h',['../da/d41/sys__info_8h.html',1,'']]]
+  ['stm32_2emd_29',['stm32.md',['../dd/dd4/ko_2embedded_2stm32_8md.html',1,'(Global Namespace)'],['../d9/d2c/embedded_2stm32_8md.html',1,'(Global Namespace)']]],
+  ['sys_5finfo_2ec_30',['sys_info.c',['../d8/d99/sys__info_8c.html',1,'']]],
+  ['sys_5finfo_2eh_31',['sys_info.h',['../da/d41/sys__info_8h.html',1,'']]]
 ];

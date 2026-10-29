@@ -1,6 +1,6 @@
 var searchData=
 [
-  ['버려도_20되는_20wrk_20체크아웃에서_20빌드하기_0',['버려도 되는 wrk 체크아웃에서 빌드하기',['../d2/de4/md_docs_2ko_2performance_2wrk-dual-histogram.html#autotoc_md627',1,'']]],
-  ['버스트_20기아_2025_20후속_1',['Classic 풀의 버스트 기아 (#25 후속)',['../da/d07/md_docs_2ko_2classic-pool-starvation.html',1,'']]],
-  ['버전의_20첫_20상승_2',['6. 메이저 버전의 첫 상승',['../d6/de8/md_docs_2ko_2versioning.html#autotoc_md711',1,'']]]
+  ['번들_20사용하기_0',['fat 번들 사용하기',['../da/dcd/md_docs_2ko_2deployment_2release-assets.html#autotoc_md596',1,'']]],
+  ['번들_20크기에_20주는_20영향_1',['cwist_db가 번들 크기에 주는 영향',['../d2/d56/md_docs_2ko_2api_2wasm.html#autotoc_md541',1,'']]],
+  ['번역된_20문서_20목록_2',['번역된 문서 목록',['..//home/runner/work/CWIST/CWIST/docs/ko/README.md#autotoc_md665',1,'']]]
 ];

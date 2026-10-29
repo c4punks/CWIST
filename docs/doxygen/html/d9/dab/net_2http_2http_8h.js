@@ -168,6 +168,7 @@ var net_2http_2http_8h =
     [ "cwist_http_response_create", "d9/dab/net_2http_2http_8h.html#acbf3f0c4f02e638a4cb9d4b6c7057e18", null ],
     [ "cwist_http_response_create_in_arena", "d9/dab/net_2http_2http_8h.html#ad98df3bf77f784d31a103049870b78ec", null ],
     [ "cwist_http_response_destroy", "d9/dab/net_2http_2http_8h.html#abb4d7c3cd5624faea1646f36b835ec69", null ],
+    [ "cwist_http_response_header_add", "d9/dab/net_2http_2http_8h.html#a826bf28e16a9f9513da471cd1e4ad841", null ],
     [ "cwist_http_response_send_file", "d9/dab/net_2http_2http_8h.html#a884fff00eb8188a3b2cde3fc02dc931c", null ],
     [ "cwist_http_response_serialize", "d9/dab/net_2http_2http_8h.html#ae32350c450c5a98ce9c41a448238406e", null ],
     [ "cwist_http_response_set_alt_svc", "d9/dab/net_2http_2http_8h.html#af6140be261fd150c36c3c8535e9e1a06", null ],

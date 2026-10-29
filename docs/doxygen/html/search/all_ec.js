@@ -1,4 +1,5 @@
 var searchData=
 [
-  ['협력적_20큐잉_20이슈_2025_0',['C1M 리액터 묶음 비우기에서의 협력적 큐잉 (이슈 #25)',['../da/d90/md_docs_2ko_2cooperative-queuing.html',1,'']]]
+  ['헤더_0',['보안 헤더',['../db/ddd/md_docs_2ko_2api_2http.html#autotoc_md441',1,'']]],
+  ['헤더_20도우미_1',['헤더 도우미',['../d3/d38/md_docs_2ko_2api-quickref.html#autotoc_md356',1,'']]]
 ];

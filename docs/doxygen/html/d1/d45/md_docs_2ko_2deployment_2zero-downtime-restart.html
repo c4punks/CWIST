@@ -108,16 +108,16 @@ $(document).ready(function(){initNavTree('d1/d45/md_docs_2ko_2deployment_2zero-d
   <div class="headertitle"><div class="title">소켓 핸드오프로 무중단 재시작하기</div></div>
 </div><!--header-->
 <div class="contents">
-<div class="textblock"><p><a class="anchor" id="autotoc_md593"></a> CWIST 서버는 리스너를 끊지 않고 새 프로세스(새 바이너리, 새 설정, 새 버전)로 교체할 수 있습니다. 새 프로세스가 기존 프로세스가 서비스하는 동안 같은 포트를 바인드하고, 이후 기존 프로세스에 드레인 신호를 보내면, 클라이언트는 포트가 연결을 거부하는 일을 겪지 않습니다.</p>
+<div class="textblock"><p><a class="anchor" id="autotoc_md606"></a> CWIST 서버는 리스너를 끊지 않고 새 프로세스(새 바이너리, 새 설정, 새 버전)로 교체할 수 있습니다. 새 프로세스가 기존 프로세스가 서비스하는 동안 같은 포트를 바인드하고, 이후 기존 프로세스에 드레인 신호를 보내면, 클라이언트는 포트가 연결을 거부하는 일을 겪지 않습니다.</p>
 <p>이 방식은 파일 디스크립터 전달이 아니라 <code>SO_REUSEPORT</code> 소켓 공유를 씁니다. 핸드오프 채널을 만들 필요도, 수퍼바이저 프로토콜도 없으며, 두 프로세스는 포트를 공유한다는 것 외에 서로를 신뢰할 필요가 없습니다.</p>
-<h1><a class="anchor" id="autotoc_md594"></a>
+<h1><a class="anchor" id="autotoc_md607"></a>
 요구 사항</h1>
 <ul>
 <li>TCP용 <code>SO_REUSEPORT</code>를 위해서는 **Linux 커널 3.9 이상**이 필요합니다. FreeBSD, macOS 및 다른 BSD에서도 지원됩니다. 이 옵션이 없는 환경에서는 CWIST가 해당 코드를 빼고 컴파일하므로, 두 번째 바인드는 예전처럼 <code>EADDRINUSE</code>로 실패합니다.</li>
 <li>두 프로세스 모두 <code>SO_REUSEPORT</code>를 설정해야 합니다. CWIST는 모든 리슨 소켓(TCP와 HTTP/3 UDP 소켓)에 기본으로 설정하므로, 두 CWIST 프로세스(또는 같은 바이너리의 두 세대)는 항상 조건을 만족합니다.</li>
 <li><code>CWIST_REUSEPORT</code>로 이 동작을 제어합니다. 기본값은 켜짐이며, <code>0</code>이나 <code>false</code>로 설정하면 "두 번째 바인드 실패"라는 고전적 동작으로 돌아갑니다. 인스턴스를 실수로 두 개 띄우는 것을 막는 장치로 선호하는 배포도 있습니다. 워커 프로세스는 <code><a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">fork()</a></code> 후 포트를 다시 바인드하므로, 이 knob을 끄면 <code>CWIST_WORKERS=1</code>이 필요합니다.</li>
 </ul>
-<h1><a class="anchor" id="autotoc_md595"></a>
+<h1><a class="anchor" id="autotoc_md608"></a>
 핸드오프 순서</h1>
 <ol type="1">
 <li>같은 포트에서 새 프로세스를 시작합니다. <code>SO_REUSEPORT</code> 덕분에 바인드가 성공하고, 커널은 이제 <b>새</b> 연결을 두 프로세스의 accept 큐에 분산합니다.</li>
@@ -130,17 +130,17 @@ $(document).ready(function(){initNavTree('d1/d45/md_docs_2ko_2deployment_2zero-d
 <div class="line">sleep 1                       # 시작을 마치고 스스로 헬스체크할 시간</div>
 <div class="line">kill -TERM &quot;$old_pid&quot;         # 2-3단계: 기존 프로세스가 드레인 후 종료</div>
 </div><!-- fragment --><p><code>tests/test_socket_handoff.c</code>가 정확히 이 순서를 검증합니다. 기존 프로세스에 256개의 keep-alive 연결을 유지한 채 새 프로세스를 같은 포트에 바인드하고, 기존 프로세스에 <code>SIGTERM</code>을 보낸 뒤, 모든 요청이 여전히 응답을 받는지(드레인 중인 기존 프로세스가 답하거나, 클라이언트가 재접속한 새 프로세스가 답함), 모든 새 연결이 새 프로세스에 도달하는지 확인합니다.</p>
-<h1><a class="anchor" id="autotoc_md596"></a>
+<h1><a class="anchor" id="autotoc_md609"></a>
 systemd 통합</h1>
 <p>두 가지 패턴이 가능합니다.</p>
 <ul>
 <li><b>겹침 재시작(CWIST에 권장).</b> 서비스에 자체 재시작 로직을 둡니다. 배포 시 위와 같이 새 프로세스를 시작하고 기존 프로세스에 <code>SIGTERM</code>을 보냅니다. <code>Type=simple</code> 유닛과 작은 배포 스크립트면 충분합니다. <code>systemctl restart</code>는 쓰지 마세요. 기존 프로세스를 먼저 멈추고 새 프로세스를 시작하므로 이 기능이 없애려는 다운타임 구간을 다시 엽니다.</li>
 <li><b>소켓 액티베이션(대안).</b> systemd가 리스너를 들고 있게 합니다. <code>ListenStream=</code>이 있는 <code>.socket</code> 유닛은 이미 바인드된 fd를 각 서비스 인스턴스에 넘기므로, <code>systemctl restart</code>도 포트를 언바인드하지 않습니다. 프로세스가 완전히 죽어도 소켓이 살아남는다는 장점이 있지만, systemd 전용 설정이 필요하고 프로세스별 accept 큐는 없습니다.</li>
 </ul>
-<h1><a class="anchor" id="autotoc_md597"></a>
+<h1><a class="anchor" id="autotoc_md610"></a>
 UDP와 HTTP/3</h1>
 <p>HTTP/3(QUIC) UDP 소켓도 기본으로 <code>SO_REUSEPORT</code>를 받으므로 겹침 바인드는 같은 방식으로 동작하고, 새 QUIC Initial 패킷은 커널이 해시하는 프로세스에 도달합니다. 마이그레이션되지 <b>않는</b> 것은 연결 상태입니다. QUIC 연결은 수락한 프로세스에 암호화 키가 있는 connection ID로 식별되며, <a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">CWIST(lsquic)</a>는 살아있는 연결을 다른 프로세스에 넘길 수 없습니다. 드레인 중인 프로세스 소유 연결의 데이터그램이 새 프로세스에 배달될 수 있지만 새 프로세스는 복호화할 수 없고, 클라이언트의 QUIC 스택은 이를 경로 손실로 보고 재전송으로 복구하며, 최악의 경우 새 연결(또는 새 프로세스에 대한 TLS 세션 재개)로 돌아갑니다. 요약하면 TCP 핸드오프는 무손실이고, HTTP/3 핸드오프는 요청 수준에서는 무손실이지만 일부 QUIC 연결이 리셋 후 재접속할 수 있습니다. HTTP/3 배포는 이에 맞춰 계획하세요. 더 길게 드레인하고, 연결 재시도를 견디는 클라이언트를 선호하는 것이 좋습니다.</p>
-<h1><a class="anchor" id="autotoc_md598"></a>
+<h1><a class="anchor" id="autotoc_md611"></a>
 배포 검증</h1>
 <ul>
 <li>새 프로세스는 바인드와 listen이 성공한 뒤에만 <code>CWIST App running on port ...</code>를 로그합니다. 포트를 쓸 수 없었다면 대신 종료했을 것입니다.</li>

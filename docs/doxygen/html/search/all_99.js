@@ -1,5 +1,7 @@
 var searchData=
 [
-  ['영속_20큐_20필수_20게이트_0',['영속 큐 필수 게이트',['../dd/dd4/md_docs_2ko_2durable-queue-gate.html',1,'']]],
-  ['영향_1',['&lt;tt&gt;cwist_db&lt;/tt&gt;가 번들 크기에 주는 영향',['../d2/d56/md_docs_2ko_2api_2wasm.html#autotoc_md528',1,'']]]
+  ['예제_0',['예제',['../db/d04/md_docs_2ko_2api_2cookie.html#autotoc_md402',1,'예제'],['../d1/df9/md_docs_2ko_2api_2html.html#autotoc_md424',1,'예제'],['../d8/d3f/md_docs_2ko_2api_2json.html#autotoc_md462',1,'예제'],['../d3/df7/md_docs_2ko_2api_2sse.html#autotoc_md508',1,'예제'],['../d1/df9/md_docs_2ko_2api_2html.html#autotoc_md418',1,'핸들러 예제'],['..//home/runner/work/CWIST/CWIST/docs/ko/README.md#autotoc_md662',1,'4. 실행 가능한 예제']]],
+  ['예제_20배포하기_1',['Wasmtime으로 WASI 0.2 예제 배포하기',['../d1/dc3/md_docs_2ko_2deployment_2wasmtime-appliance.html',1,'']]],
+  ['예제_3a_20othello_20web_2',['예제: Othello Web',['../d3/d19/md_docs_2ko_2REFERENCE.html#autotoc_md677',1,'']]],
+  ['예제_3a_20service_20worker_20앱_3',['실행 가능한 예제: Service Worker 앱',['../d2/d56/md_docs_2ko_2api_2wasm.html#autotoc_md544',1,'']]]
 ];

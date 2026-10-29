@@ -1,4 +1,4 @@
 var searchData=
 [
-  ['바꾼_20이유_0',['이름을 바꾼 이유',['../d4/d7c/md_docs_2ko_2references_2mux__algorithm__references.html#autotoc_md668',1,'']]]
+  ['밖에_20내보낸_20inline_20도우미_0',['그 밖에 내보낸 inline 도우미',['../d3/d38/md_docs_2ko_2api-quickref.html#autotoc_md346',1,'']]]
 ];

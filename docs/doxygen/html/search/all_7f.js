@@ -1,7 +1,5 @@
 var searchData=
 [
-  ['설계하기_0',['2. 세션 프로토콜 설계하기',['../df/d10/md_docs_2ko_2tutorials_2webtransport-server.html#autotoc_md697',1,'']]],
-  ['설계_1',['설계',['../d1/dde/md_docs_2ko_2GC.html#autotoc_md610',1,'']]],
-  ['설정하기_2',['1. HTTP/3과 세션 핸들러 설정하기',['../df/d10/md_docs_2ko_2tutorials_2webtransport-server.html#autotoc_md696',1,'']]],
-  ['설정_3',['설정',['../d5/d08/md_docs_2ko_2runtime-config.html',1,'런타임 설정'],['../d8/d7e/md_docs_2ko_2webserver-benchmark.html#autotoc_md719',1,'Spring Boot (JVM 공정성 설정)']]]
+  ['성능_20주의_20사항_0',['알려진 성능 주의 사항',['../d1/dde/md_docs_2ko_2GC.html#autotoc_md644',1,'']]],
+  ['성능_20주장의_20경계_1',['성능 주장의 경계',['../d4/dd7/md_docs_2ko_2http-reactor-fairness.html#autotoc_md648',1,'']]]
 ];

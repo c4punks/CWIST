@@ -1,8 +1,6 @@
 var searchData=
 [
-  ['상수_0',['상수',['../db/ddd/md_docs_2ko_2api_2http.html#autotoc_md414',1,'']]],
-  ['상승_1',['6. 메이저 버전의 첫 상승',['../d6/de8/md_docs_2ko_2versioning.html#autotoc_md711',1,'']]],
-  ['상태와_20외부_20상태_2',['빌린 상태와 외부 상태',['../d3/dcc/md_docs_2ko_2async-gc-ownership.html#autotoc_md550',1,'']]],
-  ['상태_3',['상태',['../da/d07/md_docs_2ko_2classic-pool-starvation.html#autotoc_md562',1,'검증 상태'],['../d3/dcc/md_docs_2ko_2async-gc-ownership.html#autotoc_md550',1,'빌린 상태와 외부 상태'],['../d5/d08/md_docs_2ko_2runtime-config.html#autotoc_md670',1,'상태']]],
-  ['상태_20분리하기_4',['2. 산출물과 상태 분리하기',['../d1/dc3/md_docs_2ko_2deployment_2wasmtime-appliance.html#autotoc_md589',1,'']]]
+  ['생산자_20핸들러가_20본문을_20청크_20단위로_20생성_0',['스트리밍 생산자 (핸들러가 본문을 청크 단위로 생성)',['../d2/d56/md_docs_2ko_2api_2wasm.html#autotoc_md546',1,'']]],
+  ['생성하기_1',['2. openapi.json 생성하기',['../dc/dbf/md_docs_2ko_2tutorials_2openapi-swagger.html#autotoc_md710',1,'']]],
+  ['생성_2',['스트리밍 생산자 (핸들러가 본문을 청크 단위로 생성)',['../d2/d56/md_docs_2ko_2api_2wasm.html#autotoc_md546',1,'']]]
 ];

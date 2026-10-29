@@ -1,5 +1,4 @@
 var searchData=
 [
-  ['함께_20보기_0',['함께 보기',['../dc/d79/md_docs_2ko_2API.html#autotoc_md353',1,'']]],
-  ['함수_1',['함수',['../d8/d3f/md_docs_2ko_2api_2json.html#autotoc_md439',1,'함수'],['../d5/d3e/md_docs_2ko_2api_2middleware.html#autotoc_md451',1,'함수'],['../d7/dec/md_docs_2ko_2api_2websocket.html#autotoc_md535',1,'함수']]]
+  ['학습_20블록을_20그냥_20옮기지_20않는_20이유_0',['학습 블록을 그냥 옮기지 않는 이유',['../d7/dab/md_docs_2ko_2fixed-cache-status.html#autotoc_md630',1,'']]]
 ];

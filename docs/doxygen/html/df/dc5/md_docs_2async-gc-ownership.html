@@ -108,8 +108,8 @@ $(document).ready(function(){initNavTree('df/dc5/md_docs_2async-gc-ownership.htm
   <div class="headertitle"><div class="title">Deferred HTTP ownership under full GC</div></div>
 </div><!--header-->
 <div class="contents">
-<div class="textblock"><p><a class="anchor" id="autotoc_md241"></a> Deferred exchanges have explicit destruction owners. A reference count does not remove an allocation from CWIST's thread-local pending-sweep list: <code>cwist_gc_scope_disown</code> must execute on the allocating thread before publication. These changes do not disable GC, change the allocator, or register allocations with the receiving job's scope.</p>
-<h1><a class="anchor" id="autotoc_md242"></a>
+<div class="textblock"><p><a class="anchor" id="autotoc_md242"></a> Deferred exchanges have explicit destruction owners. A reference count does not remove an allocation from CWIST's thread-local pending-sweep list: <code>cwist_gc_scope_disown</code> must execute on the allocating thread before publication. These changes do not disable GC, change the allocator, or register allocations with the receiving job's scope.</p>
+<h1><a class="anchor" id="autotoc_md243"></a>
 Handoff sequence</h1>
 <ol type="1">
 <li><code>cwist_async_defer</code> disowns the handle and the existing owned request/response graph before setting the response's async/deferred fields and returning it.</li>
@@ -119,7 +119,7 @@ Handoff sequence</h1>
 <li>Existing completion/destruction paths remain responsible for final release: final response when distinct, original response, then request. The ordering preserves response storage borrowed from the request arena. Passing the original response to <code>respond_with</code> does not cause duplicate destruction.</li>
 </ol>
 <p>Completion on the dispatch thread claims and records a pending response without sending or destroying it. If completion is produced before dispatch acknowledgement, it is recorded and dispatch acknowledgement finishes the execution, or the completion awaits the dispatch acknowledgement before destruction. Retained producer/timer reference rules remain unchanged.</p>
-<h1><a class="anchor" id="autotoc_md243"></a>
+<h1><a class="anchor" id="autotoc_md244"></a>
 Ownership inventory</h1>
 <p>The private <code><a class="el" href="../../df/dcd/async__gc_8h.html">src/net/http/async_gc.h</a></code> walkers mirror existing destructors:</p>
 <table class="markdownTable">
@@ -141,18 +141,18 @@ Ownership inventory</h1>
 <td class="markdownTableBodyNone">Managed pointer body   </td><td class="markdownTableBodyNone">Disown the payload pointer only when a cleanup callback is installed; keep callback, context and invocation semantics unchanged   </td></tr>
 </table>
 <p>Arenas have their own explicit lifecycle and are not TLS pending allocations. A non-NULL arena does <b>not</b> imply that every descendant is arena-owned. <code>scope_disown</code> does not dereference an arbitrary payload pointer; an untracked pointer is a no-op. Nulls and already-disowned allocations are harmless.</p>
-<h2><a class="anchor" id="autotoc_md244"></a>
+<h2><a class="anchor" id="autotoc_md245"></a>
 Borrowed and external state</h2>
 <p>The walkers do not follow app/database pointers, protocol shells, route middleware state, unmanaged pointer bodies, borrowed sstring buffers, or opaque cleanup contexts. Callers must keep those dependencies alive until final cleanup. If a cleanup context owns GC-tracked dependencies, their allocating thread must explicitly transfer them before handing over the response. The framework cannot infer an opaque graph or change user callback ownership.</p>
 <p>Build a caller-supplied response on the thread calling <code>respond_with</code>, or transfer its owned allocations from their actual allocator thread first. A later walk on another thread cannot remove entries from the original thread's pending list.</p>
-<h1><a class="anchor" id="autotoc_md245"></a>
+<h1><a class="anchor" id="autotoc_md246"></a>
 HTTP/2 queue ownership</h1>
 <p>The queue module, rather than the HTTP graph walker, detaches its explicitly refcounted queue on creation and completion nodes immediately before linking them into the shared queue. A producer may exit before the connection drains; a retained queue may outlive connection teardown. Closed queues discard the exchange through the existing destructor order. Node-allocation failure also consumes and destroys the transferred exchange, avoiding a leak after its producer has relinquished ownership.</p>
-<h1><a class="anchor" id="autotoc_md246"></a>
+<h1><a class="anchor" id="autotoc_md247"></a>
 Verification and limits</h1>
 <p>The initial implementation was source-reviewed before runtime testing. On commit <code>5b128f1178df374ee5bc3db1aba8f921a6af7d68</code>, Linux ASan/UBSan CI passed the real TCP classic/C1M matrix with GC on/off, repeated under NDEBUG. This is not cross-platform acceptance by itself. The macOS receive-timeout regression was then reproduced against the full native library: shutdown had already stopped the reactor, but the coalesced batch parked its remaining bytes. A flush that observes shutdown now finishes that batch through the existing send helper. The native TCP matrix passed in all eight modes after this change. This is not an absolute shutdown deadline or a guarantee about already-parked callbacks; the helper retains its per-poll timeout. Final integrated CI remains required.</p>
 <p>The verification boundary includes creator exit or scope flush before completion, heap headers/maps/session/adopted buffers and exhausted-arena fallback, producer exit before reactor/HTTP2 drain, middleware posthandlers, losing completion, timeout/abort races, and exactly-once managed cleanup. Do not infer unexecuted coverage from the ownership inventory.</p>
-<h1><a class="anchor" id="autotoc_md247"></a>
+<h1><a class="anchor" id="autotoc_md248"></a>
 Scheduler and IO queue ownership</h1>
 <p>The scheduler shell, IO queue shell, and sentinel/submitted nodes now leave the allocating thread's GC scope before publication. Existing explicit destruction and epoch-retirement paths remain their owners. Opaque callback arguments are not traversed or transferred by the queue. The caller must transfer a tracked payload itself before its receiving callback can use or free it.</p>
 <p>Unlike <code>cwist_alloc</code>, <code>cwist_alloc_array</code> uses untracked <code>cwist_malloc</code>; the scheduler worker array already has explicit lifetime. The delayed heap uses untracked <code>cwist_realloc</code>, including initial allocation. Neither needs a new disown operation.</p>

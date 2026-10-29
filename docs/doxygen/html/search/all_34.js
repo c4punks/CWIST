@@ -1,4 +1,5 @@
 var searchData=
 [
-  ['과의_20연동_0',['&lt;tt&gt;cwist_app&lt;/tt&gt;과의 연동',['../d7/dec/md_docs_2ko_2api_2websocket.html#autotoc_md540',1,'']]]
+  ['관문_0',['구현과 릴리스 관문',['../d6/dda/md_docs_2ko_2decisions_20001-safe-public-fixed-response-cache.html#autotoc_md593',1,'']]],
+  ['관문_20wasi_200_202_1',['브라우저 런타임 관문 (WASI 0.2)',['../dd/d41/md_docs_2ko_2api_2wasm-component.html#autotoc_md532',1,'']]]
 ];

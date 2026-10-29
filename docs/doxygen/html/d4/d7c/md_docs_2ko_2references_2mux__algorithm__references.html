@@ -108,9 +108,9 @@ $(document).ready(function(){initNavTree('d4/d7c/md_docs_2ko_2references_2mux__a
   <div class="headertitle"><div class="title">Mux 알고리즘 참고 자료</div></div>
 </div><!--header-->
 <div class="contents">
-<div class="textblock"><p><a class="anchor" id="autotoc_md656"></a> 이 문서는 <code><a class="el" href="../../dd/d49/mux_8c.html" title="Fixed-bucket HTTP route dispatch using a lightweight path signature.">src/net/http/mux.c</a></code>에서 쓰는 해싱과 인덱싱 기법의 역사적, 수학적 배경을 남겨 둡니다. 아이디어는 라우터 구현으로 이어졌지만, **프로덕션 소스 코드**는 이후 유지보수자가 문화적 맥락이 아니라 제어 로직에 집중할 수 있도록 표준 시스템 프로그래밍 용어를 쓰도록 리팩터링되었습니다.</p>
+<div class="textblock"><p><a class="anchor" id="autotoc_md680"></a> 이 문서는 <code><a class="el" href="../../dd/d49/mux_8c.html" title="Fixed-bucket HTTP route dispatch using a lightweight path signature.">src/net/http/mux.c</a></code>에서 쓰는 해싱과 인덱싱 기법의 역사적, 수학적 배경을 남겨 둡니다. 아이디어는 라우터 구현으로 이어졌지만, **프로덕션 소스 코드**는 이후 유지보수자가 문화적 맥락이 아니라 제어 로직에 집중할 수 있도록 표준 시스템 프로그래밍 용어를 쓰도록 리팩터링되었습니다.</p>
 <hr  />
-<h1><a class="anchor" id="autotoc_md658"></a>
+<h1><a class="anchor" id="autotoc_md681"></a>
 1. 낙서 마방진 (洛書)</h1>
 <p><b>개념</b> 고대 중국 수학에 기록되고, 이후 조선의 학자 **최석정(崔錫鼎, 1646-1715)**이 『구수략(九數略)』에서 깊이 연구한 3x3 마방진입니다. 마방진에서는 모든 행, 열, 대각선의 합이 같은 상수입니다 (낙서는 15). 최석정은 이를 더 큰 차수로 확장하고 그 조합론적 성질을 탐구했습니다.</p>
 <p><b>mux.c에서의 적용</b> 마방진은 라우트 시그니처를 작은 정수 좌표로 대응시키는 결정론적 조회 테이블로 쓰였습니다. 행과 열의 합이 같다는 성질은 라우트 수가 늘어나도 버킷 부하를 고르게 유지하려는 의도였습니다.</p>
@@ -119,7 +119,7 @@ $(document).ready(function(){initNavTree('d4/d7c/md_docs_2ko_2references_2mux__a
 <li><code><a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">cwist_routing_hash_slot()</a></code> (이전 <code><a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">cwist_magic_square_coord()</a></code>)</li>
 </ul>
 <hr  />
-<h1><a class="anchor" id="autotoc_md660"></a>
+<h1><a class="anchor" id="autotoc_md682"></a>
 2. 직교 라틴 방진 순열</h1>
 <p><b>개념</b> 라틴 방진과 그 직교 쌍은 **최석정**이 『구수략(九數略)』에서, 이후 **홍정하(洪正夏)**가 『구일집(九一集)』에서 다룬, 한국 고전 수학의 조합 설계입니다. 두 라틴 방진은 모든 기호의 순서쌍이 정확히 한 번씩 나타날 때 직교합니다. 이 구조에 대한 최석정의 연구는 직교 라틴 방진에 대한 유럽의 공식적인 연구보다 한 세기 이상 앞섭니다.</p>
 <p><b>mux.c에서의 적용</b> 4x4 직교 테이블 두 개(<code>MUX_PERM_TABLE_A</code> / <code>MUX_PERM_TABLE_B</code>)로 라우트 바이트와 그 세그먼트 인덱스를 4비트 니블 하나로 접었습니다. 이 니블은 세그먼트 혼합 중에 128비트 라우트 시그니처를 교란합니다.</p>
@@ -129,7 +129,7 @@ $(document).ready(function(){initNavTree('d4/d7c/md_docs_2ko_2references_2mux__a
 <li><code><a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">mux_byte_permute()</a></code> (이전 <code><a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">nam_latin_merge()</a></code>)</li>
 </ul>
 <hr  />
-<h1><a class="anchor" id="autotoc_md662"></a>
+<h1><a class="anchor" id="autotoc_md683"></a>
 3. 계수 행렬과 선형 연립방정식 풀이</h1>
 <p><b>개념</b> 『승제개방법(乘除開方法)』은 비율을 조정하고 정규화하는 조선 시대의 기법입니다. 여기서 쓰는 행렬은 미지의 가중치 세 개에 대해 풀 수 있는 선형 연립방정식을 만드는 3x3 고정 계수 행렬입니다.</p>
 <p><b>mux.c에서의 적용</b> 행렬(<code>MUX_COEFF_MATRIX</code>)과 가우스 소거 풀이기(<code><a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">mux_solve_linear3()</a></code>)가 라우트 시그니처의 상위, 하위 64비트 절반에서 가중치 세 개를 끌어냅니다. 그 가중치는 최종 버킷 인덱스에 섞입니다.</p>
@@ -139,7 +139,7 @@ $(document).ready(function(){initNavTree('d4/d7c/md_docs_2ko_2references_2mux__a
 <li><code><a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">mux_derive_coeffs()</a></code> (이전 <code><a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">cwist_jungseung_coeffs()</a></code>)</li>
 </ul>
 <hr  />
-<h1><a class="anchor" id="autotoc_md664"></a>
+<h1><a class="anchor" id="autotoc_md684"></a>
 4. 반복적인 크기 정제</h1>
 <p><b>개념</b> 알카시(al-Kāshī, 15세기 천문학자이자 수학자)는 반복적인 근 찾기 방법을 널리 알렸습니다. 여기서 쓰는 단계는 두 번 반복하는 뉴턴-랩슨 방식의 제곱근 정제입니다.</p>
 <p><b>mux.c에서의 적용</b> 최종 혼합 단계에 넣기 전에 중간 크기 추정값을 정제합니다. 서로 다른 버킷 크기 전반에서 비트 확산을 개선합니다.</p>
@@ -147,7 +147,7 @@ $(document).ready(function(){initNavTree('d4/d7c/md_docs_2ko_2references_2mux__a
 <li><code><a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">mux_refine_magnitude()</a></code> (이전 <code><a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">cwist_al_kashi_refine()</a></code>)</li>
 </ul>
 <hr  />
-<h1><a class="anchor" id="autotoc_md666"></a>
+<h1><a class="anchor" id="autotoc_md685"></a>
 5. 단일 단계 선형 외삽</h1>
 <p><b>개념</b> 상미분방정식에 대한 오일러 방법은 현재 기울기에 작은 단계 크기를 곱해 더함으로써 다음 상태를 예측합니다.</p>
 <p><b>mux.c에서의 적용</b> 정제된 크기와 시그니처 바이트 차이에서 얻은 기울기로 다음 해시 혼합 상태를 예측합니다. 경로가 조금 바뀌어도 버킷 인덱스가 안정적으로 유지됩니다.</p>
@@ -155,7 +155,7 @@ $(document).ready(function(){initNavTree('d4/d7c/md_docs_2ko_2references_2mux__a
 <li><code><a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">mux_predict_state()</a></code> (이전 <code><a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">cwist_euler_predict()</a></code>)</li>
 </ul>
 <hr  />
-<h1><a class="anchor" id="autotoc_md668"></a>
+<h1><a class="anchor" id="autotoc_md686"></a>
 이름을 바꾼 이유</h1>
 <p>위의 수학적 아이디어는 해시 분포 설계에 유효하지만, 역사적 인물 이름, 시대 이름, 문화적 개념을 프로덕션 식별자에 직접 넣으면 이후 엔지니어에게 불필요한 인지 부담이 생깁니다. 리팩터링한 이름은 아이디어가 <b>어디서 왔는지**가 아니라 코드가 **무엇을 하는지</b>(라우팅 해시 슬롯, 바이트 순열, 선형 풀이기, 크기 정제, 상태 예측)를 설명합니다.</p>
 <p>원래 수학에 대해 더 알고 싶다면 조합론, 수치 해석, 선형대수 분야의 문헌을 참고하세요. </p>

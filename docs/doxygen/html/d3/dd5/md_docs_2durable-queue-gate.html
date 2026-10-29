@@ -108,14 +108,14 @@ $(document).ready(function(){initNavTree('d3/dd5/md_docs_2durable-queue-gate.htm
   <div class="headertitle"><div class="title">Durable queue required gate</div></div>
 </div><!--header-->
 <div class="contents">
-<div class="textblock"><p><a class="anchor" id="autotoc_md298"></a> <code>tests/test_durable_queue.c</code> covers enqueue/claim/ack, nack redelivery, visibility timeout and dead-letter behavior on Redis and NATS JetStream. Missing servers remain optional in local <code>make test</code> runs.</p>
+<div class="textblock"><p><a class="anchor" id="autotoc_md299"></a> <code>tests/test_durable_queue.c</code> covers enqueue/claim/ack, nack redelivery, visibility timeout and dead-letter behavior on Redis and NATS JetStream. Missing servers remain optional in local <code>make test</code> runs.</p>
 <p><code>CWIST_TEST_REQUIRE_DURABLE_QUEUE=1</code> makes missing servers, unavailable JetStream, queue factory errors and scenario failures fail the test. Success requires both backends to execute all scenarios. Unset, empty or <code>0</code> keeps the existing optional behavior; other nonempty values enable strict mode. Redis factory errors continue to fail even in optional mode.</p>
-<h1><a class="anchor" id="autotoc_md299"></a>
+<h1><a class="anchor" id="autotoc_md300"></a>
 Local runs</h1>
 <div class="fragment"><div class="line">make test_durable_queue</div>
 <div class="line">CWIST_TEST_REQUIRE_DURABLE_QUEUE=1 ./test_durable_queue</div>
 </div><!-- fragment --><p>The binary honors the existing <code>CWIST_REDIS_HOST</code>, <code>CWIST_REDIS_PORT</code> and <code>CWIST_NATS_URL</code> settings. Point it only at test instances.</p>
-<h1><a class="anchor" id="autotoc_md300"></a>
+<h1><a class="anchor" id="autotoc_md301"></a>
 Isolated integration gate</h1>
 <p>Install <code>redis-server</code>, <code>nats-server</code> and Python 3, then run:</p>
 <div class="fragment"><div class="line">make test_durable_queue</div>
@@ -133,7 +133,7 @@ Isolated integration gate</h1>
 <li>Explicit optional (<code>0</code>), both absent: exit 0 with both skip messages.</li>
 </ol>
 <p>Negative results require exactly exit 1 plus the specific diagnostics; crashes and timeouts are not accepted. Temporary data and owned child processes are cleaned on success, failure, INT and TERM. No <code>FLUSHALL</code>, external broker shutdown, global installation or production queue API changes are performed by the local gate.</p>
-<h1><a class="anchor" id="autotoc_md301"></a>
+<h1><a class="anchor" id="autotoc_md302"></a>
 CI</h1>
 <p><code>.github/workflows/durable-queue.yml</code> installs checksum-pinned Redis 8.0.3 and NATS 2.12.3 on an Ubuntu runner, builds the real test binary, and runs both the helper tests and the same live seven-mode gate. The job requests only <code>contents: read</code> and has a 30-minute limit. This tests the existing queue scenarios, not broker restart durability or crash-recovery semantics. </p>
 </div></div><!-- contents -->

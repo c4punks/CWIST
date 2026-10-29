@@ -1,4 +1,4 @@
 var searchData=
 [
-  ['나누기_0',['1. 요청과 워커의 책임 나누기',['../dd/d38/md_docs_2ko_2tutorials_2nats-integration.html#autotoc_md686',1,'']]]
+  ['낙서_20마방진_20洛書_0',['1. 낙서 마방진 (洛書)',['../d4/d7c/md_docs_2ko_2references_2mux__algorithm__references.html#autotoc_md681',1,'']]]
 ];

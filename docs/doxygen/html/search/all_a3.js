@@ -1,7 +1,6 @@
 var searchData=
 [
-  ['원시_20보정_20지연_20히스토그램_0',['선택적 wrk 원시/보정 지연 히스토그램',['../d2/de4/md_docs_2ko_2performance_2wrk-dual-histogram.html',1,'']]],
-  ['원인과_20변경_1',['원인과 변경',['../da/d07/md_docs_2ko_2classic-pool-starvation.html#autotoc_md560',1,'']]],
-  ['원인_2',['원인',['../dc/dd4/md_docs_2ko_2reactor-wakeup-regression.html#autotoc_md631',1,'범위와 원인'],['../db/dc4/md_docs_2ko_2c1m-file-limits.html#autotoc_md555',1,'원인']]],
-  ['원칙_3',['1. 기본 원칙',['../d6/de8/md_docs_2ko_2versioning.html#autotoc_md701',1,'']]]
+  ['웹소켓_20연동_20실시간_20양방향_20통신_0',['8. 웹소켓 연동 (실시간 양방향 통신)',['../df/df1/md_docs_2tutorial_2korean_2cwist__tutorial.html#autotoc_md845',1,'']]],
+  ['웹_20개발_20튜토리얼_20a_20to_20z_1',['CWIST 웹 개발 튜토리얼 (A to Z)',['../df/df1/md_docs_2tutorial_2korean_2cwist__tutorial.html',1,'']]],
+  ['웹_20서버_20벤치마크_20측정_20방법_2',['웹 서버 벤치마크 측정 방법',['../d8/d7e/md_docs_2ko_2webserver-benchmark.html',1,'']]]
 ];

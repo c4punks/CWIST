@@ -1,5 +1,4 @@
 var searchData=
 [
-  ['현재_20동작_0',['FIXED 엔드포인트 캐싱: 현재 동작',['../d7/dab/md_docs_2ko_2fixed-cache-status.html',1,'']]],
-  ['현황_202026_2009_2021_20측정_1',['도구 체인 현황 (2026-09-21 측정)',['../dd/d41/md_docs_2ko_2api_2wasm-component.html#autotoc_md514',1,'']]]
+  ['행렬과_20선형_20연립방정식_20풀이_0',['3. 계수 행렬과 선형 연립방정식 풀이',['../d4/d7c/md_docs_2ko_2references_2mux__algorithm__references.html#autotoc_md683',1,'']]]
 ];

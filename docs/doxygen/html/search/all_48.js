@@ -1,5 +1,8 @@
 var searchData=
 [
-  ['도구_20체인_20현황_202026_2009_2021_20측정_0',['도구 체인 현황 (2026-09-21 측정)',['../dd/d41/md_docs_2ko_2api_2wasm-component.html#autotoc_md514',1,'']]],
-  ['도우미_1',['도우미',['../d3/d38/md_docs_2ko_2api-quickref.html#autotoc_md334',1,'그 밖에 내보낸 inline 도우미'],['../d3/d38/md_docs_2ko_2api-quickref.html#autotoc_md345',1,'메서드 도우미'],['../d3/d38/md_docs_2ko_2api-quickref.html#autotoc_md346',1,'소켓 도우미'],['../da/dc3/md_docs_2ko_2api_2app.html#autotoc_md376',1,'요청 도우미'],['../d3/d38/md_docs_2ko_2api-quickref.html#autotoc_md337',1,'핵심 도우미'],['../d3/d38/md_docs_2ko_2api-quickref.html#autotoc_md344',1,'헤더 도우미']]]
+  ['동기_0',['동기',['../d1/dde/md_docs_2ko_2GC.html#autotoc_md633',1,'']]],
+  ['동시성과_20스레드_20안전성_1',['동시성과 스레드 안전성',['../da/dc3/md_docs_2ko_2api_2app.html#autotoc_md383',1,'']]],
+  ['동작_2',['FIXED 엔드포인트 캐싱: 현재 동작',['../d7/dab/md_docs_2ko_2fixed-cache-status.html',1,'']]],
+  ['동작_20회귀_20테스트_3',['동작 회귀 테스트',['../d4/dd7/md_docs_2ko_2http-reactor-fairness.html#autotoc_md647',1,'']]],
+  ['동적_20css_20합성기_20wasm_20및_20ssr_4',['10. 동적 CSS 합성기 (WASM 및 SSR)',['../df/df1/md_docs_2tutorial_2korean_2cwist__tutorial.html#autotoc_md847',1,'']]]
 ];
