@@ -10,6 +10,12 @@ does not port `cwist_app_listen()`, pthreads, epoll, or the C1M reactor.
 - **Reference integration:** NUCLEO-H743ZI2 (STM32H743, Cortex-M7, 2 MB flash,
   1 MB SRAM, RMII Ethernet, TRNG). `example/stm32/` contains the application,
   HAL port hooks, lwIP options, CubeMX integration, and flashing instructions.
+- **Validated board:** STM32F769I-DISCO (STM32F769NI, Cortex-M7, 2 MB flash,
+  512 KB SRAM, LAN8742 RMII PHY). `example/stm32f769/` is a self-contained
+  no-CubeMX build (upstream STM32CubeF7 HAL + CWIST bare-metal archive)
+  serving an HTML wire inspector over real Ethernet, verified on hardware
+  with ping, parallel/keep-alive `curl`, and browser POSTs. See its README
+  for the rev-A RMII erratum workaround and the D-cache constraint.
 - **CI target:** Cortex-M7 Thumb-2 firmware built with `arm-none-eabi-gcc` and
   run with `qemu-arm` semihosting. This validates compiled instructions and the
   HTTP/lwIP/TLS logic, but not a board's NVIC, PHY, clock tree, or RNG.
