@@ -16,17 +16,20 @@
 /** @brief Default capacity of one arena generation buffer.
  *  A full HTTP/1.1 request+response pair (headers, query map, bodies,
  *  default security headers) bump-allocates ~3.5KB; spills fall back to
- *  the heap, so this only needs to cover the common case. */
+ *  the heap, so this only needs to cover the common case. Define this macro
+ *  at build time to size the common case for the target. */
+#ifndef CWIST_ARENA_DEFAULT_GENERATION_BYTES
 #define CWIST_ARENA_DEFAULT_GENERATION_BYTES (8 * 1024)
+#endif
 
 typedef struct cwist_arena cwist_arena_t;
 
 /**
- * @brief Create an arena backed by a recycled thread-local generation buffer.
+ * @brief Create an arena backed by a recycled generation buffer.
  * @param generation_bytes Capacity of the generation buffer (0 = default).
  * @return New arena, or NULL on failure (callers should fall back to heap).
- * @note Default-sized buffers come from a per-thread recycle cache, so
- *       steady-state creation triggers no libttak GC/mem-tree activity.
+ * @note Default-sized buffers come from the target's single-thread or
+ *       per-thread recycle cache, so steady-state creation does not allocate.
  */
 cwist_arena_t *cwist_arena_create(size_t generation_bytes);
 

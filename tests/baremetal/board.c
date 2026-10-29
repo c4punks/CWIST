@@ -98,6 +98,38 @@ void *_sbrk(ptrdiff_t incr) {
 
 size_t board_heap_high_water(void) { return heap_high; }
 
+static size_t alloc_count;
+static int track_allocs;
+
+void board_alloc_begin(void) {
+    alloc_count = 0;
+    track_allocs = 1;
+}
+
+size_t board_alloc_end(void) {
+    track_allocs = 0;
+    return alloc_count;
+}
+
+void *__real_malloc(size_t size);
+void *__real_calloc(size_t count, size_t size);
+void *__real_realloc(void *ptr, size_t size);
+
+void *__wrap_malloc(size_t size) {
+    if (track_allocs) alloc_count++;
+    return __real_malloc(size);
+}
+
+void *__wrap_calloc(size_t count, size_t size) {
+    if (track_allocs) alloc_count++;
+    return __real_calloc(count, size);
+}
+
+void *__wrap_realloc(void *ptr, size_t size) {
+    if (track_allocs) alloc_count++;
+    return __real_realloc(ptr, size);
+}
+
 /* --- stack high-water: paint below the current SP, scan after the run ------ */
 
 #define BOARD_STACK_PAINT (48u * 1024u)

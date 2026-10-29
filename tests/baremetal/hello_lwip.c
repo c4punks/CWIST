@@ -16,6 +16,8 @@ extern void board_log(const char *s);
 extern size_t board_heap_high_water(void);
 extern void board_stack_paint(void);
 extern size_t board_stack_used(void);
+extern void board_alloc_begin(void);
+extern size_t board_alloc_end(void);
 
 static char g_big[8192];
 static char g_echo[32];
@@ -81,6 +83,12 @@ int main(void) {
     fail |= check("8 KB response through a 2-segment window",
                   body && (size_t)(c.rx + c.rx_len - (body + 4)) == sizeof g_big &&
                       memcmp(body + 4, g_big, sizeof g_big) == 0);
+
+    board_alloc_begin();
+    loop_send(&c, get, sizeof get - 1);
+    int steady_ok = loop_wait_responses(&c, 5, 2000);
+    size_t steady_allocs = board_alloc_end();
+    fail |= check("zero allocations per steady lwIP response", steady_ok && steady_allocs == 0);
     loop_close(&c);
 
     loop_client e;
@@ -98,6 +106,8 @@ int main(void) {
     cwist_app_destroy(app);
 
     char buf[96];
+    snprintf(buf, sizeof buf, "steady allocs per request: %u\n", (unsigned)steady_allocs);
+    board_log(buf);
     snprintf(buf, sizeof buf, "heap high water: %u bytes, stack used: %u bytes\n",
              (unsigned)board_heap_high_water(), (unsigned)board_stack_used());
     board_log(buf);
