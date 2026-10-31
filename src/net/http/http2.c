@@ -198,6 +198,7 @@ static uint32_t h2_max_rst_rate(void) {
 /* --- Stream & Connection State --- */
 
 typedef struct h2_conn h2_conn;
+typedef struct h2_async_node h2_async_node;
 
 typedef struct cwist_h2_stream {
     uint32_t stream_id;
@@ -214,6 +215,13 @@ typedef struct cwist_h2_stream {
     h2_conn *hc;           /* owning connection (for hook-driven sends) */
     void *hook_ctx;        /* non-NULL when a stream hook owns this stream */
     bool hook_offered;     /* on_headers already consulted for this stream */
+    cwist_http_response *response;
+    h2_async_node *async_response;
+    size_t response_sent;
+    uint32_t response_chunk_index;
+    uint32_t response_total_chunks;
+    uint16_t response_chunk_payload;
+    bool response_headers_sent;
     struct cwist_h2_stream *next;
 } h2_stream;
 
@@ -226,12 +234,6 @@ typedef struct h2_hpack_entry {
     struct h2_hpack_entry *next;
 } h2_hpack_entry;
 
-typedef struct h2_deferred_frame {
-    unsigned char hdr[9];
-    unsigned char *payload; /* owned; NULL when the frame has no payload */
-    struct h2_deferred_frame *next;
-} h2_deferred_frame;
-
 /* --- Async defer completion queue ---
  *
  * Plan B for deferred responses: the worker thread that completes an async
@@ -240,14 +242,14 @@ typedef struct h2_deferred_frame {
  * frame writes itself, preserving single-threaded HPACK dynamic table and
  * flow-control integrity.  refs: one held by the connection, one per
  * in-flight cwist_async handle (acquired in cwist_async_defer). */
-typedef struct h2_async_node {
+struct h2_async_node {
     uint32_t stream_id;
     cwist_http_request *req;
-    cwist_http_response *send;      /* response to transmit (final_res) */
-    cwist_http_response *res;       /* handler's response (request arena) */
-    bool send_owned;                /* send came from respond_with */
+    cwist_http_response *send; /* response to transmit (final_res) */
+    cwist_http_response *res;  /* handler's response (request arena) */
+    bool send_owned;           /* send came from respond_with */
     struct h2_async_node *next;
-} h2_async_node;
+};
 
 struct cwist_h2_async_queue {
     int wake_rd;            /* read side: eventfd (Linux) or pipe */
@@ -433,11 +435,6 @@ typedef struct h2_conn {
     bool sequenced_data;   /* CWIST extension: DATA frames carry seq chunks */
     uint32_t last_processed_stream_id;
     uint64_t last_activity; /* monotonic ms of the last complete frame read */
-    /* Frames the send-window wait loop had to read off the wire but must not
-     * dispatch (HEADERS/SETTINGS of other streams, etc.). The main loop
-     * drains these before touching the socket again. */
-    h2_deferred_frame *deferred_head;
-    h2_deferred_frame *deferred_tail;
     /* HPACK decoder dynamic table state (RFC 7541 section 4). */
     h2_hpack_entry *hpack_head;
     uint32_t hpack_size;
@@ -571,6 +568,10 @@ static void h2_conn_destroy(h2_conn *hc) {
         h2_stream_drain_waiters(hc, s);
         if (s->hook_ctx && hc->hooks && hc->hooks->on_close)
             hc->hooks->on_close(hc->hook_ctx, s->hook_ctx);
+        if (s->async_response)
+            h2_async_node_discard(s->async_response);
+        else if (s->response)
+            cwist_http_response_destroy(s->response);
         if (s->req) cwist_http_request_destroy(s->req);
         cwist_seq_assembler_destroy(s->body_assembler);
         cwist_free(s);
@@ -589,13 +590,6 @@ static void h2_conn_destroy(h2_conn *hc) {
     }
     hc->hpack_head = NULL;
     hc->hpack_size = 0;
-    h2_deferred_frame *df = hc->deferred_head;
-    while (df) {
-        h2_deferred_frame *next = df->next;
-        cwist_free(df->payload);
-        cwist_free(df);
-        df = next;
-    }
     if (hc->out_mu_init) pthread_mutex_destroy(&hc->out_mu);
     if (hc->fc_mu_init) {
         pthread_cond_destroy(&hc->fc_cond);
@@ -743,11 +737,20 @@ static h2_stream *h2_stream_create(h2_conn *hc, uint32_t stream_id) {
     return s;
 }
 
+static void h2_stream_response_discard(h2_stream *s) {
+    if (s->async_response)
+        h2_async_node_discard(s->async_response);
+    else if (s->response)
+        cwist_http_response_destroy(s->response);
+    s->response = NULL;
+    s->async_response = NULL;
+}
+
 /**
  * @brief Remove and free a stream from the connection's table.
  * Drains send-credit waiters first, fires the on_close hook when the stream
- * was hook-taken, then destroys the request and body assembler and frees the
- * stream.  No-op when the ID is not present.
+ * was hook-taken, then destroys any pending response, the request, and the
+ * body assembler. No-op when the ID is not present.
  * @param hc Connection owning the stream table.
  * @param stream_id Identifier of the stream to retire.
  */
@@ -761,6 +764,7 @@ static void h2_stream_remove(h2_conn *hc, uint32_t stream_id) {
             h2_stream_drain_waiters(hc, s);
             if (s->hook_ctx && hc->hooks && hc->hooks->on_close)
                 hc->hooks->on_close(hc->hook_ctx, s->hook_ctx);
+            h2_stream_response_discard(s);
             if (s->req) cwist_http_request_destroy(s->req);
             cwist_seq_assembler_destroy(s->body_assembler);
             cwist_free(s);
@@ -2270,124 +2274,6 @@ static int h2_send_response_raw(cwist_https_connection *conn, uint32_t stream_id
 }
 
 /**
- * @brief Read exactly @p len bytes from the connection.
- * Thin wrapper over h2_read_full for code paths that treat any short read as
- * fatal.
- * @param hc Connection to read from.
- * @param buf Destination buffer.
- * @param len Number of bytes to read.
- * @return @p len on success, -1 on EOF, timeout, or socket error.
- */
-static int h2_read_all(h2_conn *hc, void *buf, int len) {
-    /* h2_read_full tolerates WANT_READ on the non-blocking TLS sockets;
-     * 0/EOF and real errors stay fatal. */
-    if (h2_read_full(hc, buf, (size_t)len) != 0) return -1;
-    return len;
-}
-
-/* Returns 0 normally, -1 when the peer vanished mid-frame (EOF/error).
- *
- * Two traps are handled here:
- * 1. poll(fd, 0) alone misses WINDOW_UPDATEs in the TLS or h2c replay
- *    buffer. These frames can remain after all socket bytes were read.
- *    Without the buffered-input check, the window wait loop misses them and the
- *    connection is torn down mid-body - the "some chunks arrive, then
- *    stuck" symptom.
- * 2. Frames this loop is not responsible for (HEADERS/SETTINGS of other
- *    streams, etc.) used to be read and discarded. They are now queued so
- *    the main frame loop can dispatch them. */
-static int h2_process_incoming_frames_nonblocking(h2_conn *hc, h2_stream *s) {
-    /* Never wait on the peer with unflushed frames in the batch buffer. */
-    if (h2_out_flush(hc) != 0) return -1;
-    struct pollfd pfd;
-    pfd.fd = hc->conn->fd;
-    pfd.events = POLLIN;
-
-    int pr = poll(&pfd, 1, 0);
-    if (pr > 0 && (pfd.revents & (POLLHUP | POLLERR)) && !(pfd.revents & POLLIN)) {
-        if (!h2_has_buffered_input(hc->conn)) return -1;
-    }
-
-    while (h2_has_buffered_input(hc->conn) || (poll(&pfd, 1, 0) > 0 && (pfd.revents & POLLIN))) {
-        unsigned char hdr[9];
-        int n = h2_read_all(hc, hdr, 9);
-        if (n != 9) return -1;
-
-        uint32_t len = h2_get_u24(hdr);
-        uint8_t type = hdr[3];
-        uint8_t flags = hdr[4];
-        uint32_t stream_id = h2_get_u31(hdr + 5);
-
-        unsigned char *payload = NULL;
-        if (len > 0) {
-            payload = (unsigned char *)cwist_alloc(len);
-            if (!payload) return -1;
-            int r = h2_read_all(hc, payload, len);
-            if (r != (int)len) {
-                cwist_free(payload);
-                return -1;
-            }
-        }
-
-        hc->last_activity = h2_now_ms();
-
-        if (type == 0x08) { // WINDOW_UPDATE
-            if (len == 4) {
-                int32_t increment = (int32_t)h2_get_u31(payload);
-                if (increment > 0) {
-                    if (stream_id == 0) {
-                        cwist_http2_flow_control_add_send_window(&hc->fc, (uint32_t)increment);
-                    } else if (s && stream_id == s->stream_id) {
-                        cwist_http2_stream_flow_control_add_send_window(&s->fc,
-                                                                        (uint32_t)increment);
-                    } else {
-                        h2_stream *other = h2_stream_find(hc, stream_id);
-                        if (other)
-                            cwist_http2_stream_flow_control_add_send_window(&other->fc,
-                                                                            (uint32_t)increment);
-                    }
-                    h2_fc_credit_signal(hc);
-                }
-            }
-        } else if (type == 0x06) { // PING
-            if ((flags & 0x01) == 0 && len == 8) { // ACK flag is 0x01
-                if (!h2_conn_consume_ping_budget(hc)) {
-                    cwist_free(payload);
-                    return -1;
-                }
-                h2_write_frame(hc, 0x06, 0x01, 0, payload, 8);
-            }
-        } else if (type == 0x03) { // RST_STREAM
-            if (!h2_conn_consume_rst_budget(hc)) {
-                cwist_free(payload);
-                return -1;
-            }
-            if (s && stream_id == s->stream_id) {
-                s->send_aborted = true;
-            }
-        } else {
-            /* Not ours to consume: hand the intact frame to the main loop. */
-            h2_deferred_frame *df = (h2_deferred_frame *)cwist_alloc(sizeof(*df));
-            if (!df) {
-                cwist_free(payload);
-                return -1;
-            }
-            memcpy(df->hdr, hdr, 9);
-            df->payload = payload;
-            df->next = NULL;
-            if (hc->deferred_tail)
-                hc->deferred_tail->next = df;
-            else
-                hc->deferred_head = df;
-            hc->deferred_tail = df;
-            continue;
-        }
-        cwist_free(payload);
-    }
-    return 0;
-}
-
-/**
  * @brief Compute a sequenced chunk payload size that fits the current window.
  */
 static uint16_t h2_seq_chunk_payload(h2_conn *hc, h2_stream *s, uint32_t max_frame_size) {
@@ -2399,128 +2285,124 @@ static uint16_t h2_seq_chunk_payload(h2_conn *hc, h2_stream *s, uint32_t max_fra
 }
 
 /**
- * @brief Send a file body as sequenced DATA frames with flow-control waits.
+ * @brief Send a file body as sequenced DATA frames that resume when credit arrives.
  */
 static int h2_send_seq_file_body(h2_conn *hc, h2_stream *s, uint32_t stream_id, int fd,
                                  off_t offset, size_t body_len, uint32_t max_frame_size) {
-    uint16_t chunk_payload = h2_seq_chunk_payload(hc, s, max_frame_size);
-    while (chunk_payload == 0 && body_len > 0) {
-        /* Window exhausted below one sequenced chunk: the HEADERS block is
-         * already on the wire, so failing here tears down the connection
-         * and the client sees a 0-byte body.  Wait for WINDOW_UPDATE. */
-        if (h2_process_incoming_frames_nonblocking(hc, s) != 0) return -1;
-        if (s && s->send_aborted) return -1;
-        if (h2_now_ms() - hc->last_activity >= (uint64_t)h2_idle_timeout_ms()) return -1;
-        struct timespec ts = {0, 2000000};
-        nanosleep(&ts, NULL);
-        chunk_payload = h2_seq_chunk_payload(hc, s, max_frame_size);
-    }
     if (body_len == 0) return -1;
-
-    uint32_t total_chunks = (uint32_t)((body_len + chunk_payload - 1) / chunk_payload);
-    size_t remaining = body_len;
-    off_t cur_offset = offset;
-
-    for (uint32_t i = 0; i < total_chunks && remaining > 0; i++) {
-        while (hc->fc.send_window == 0 || (s && s->fc.send_window == 0)) {
-            if (h2_process_incoming_frames_nonblocking(hc, s) != 0) return -1;
-            if (s && s->send_aborted) return -1;
-            if (hc->fc.send_window == 0 || (s && s->fc.send_window == 0)) {
-                /* Give up if no frame arrived within the idle deadline. */
-                if (h2_now_ms() - hc->last_activity >= (uint64_t)h2_idle_timeout_ms()) return -1;
-                struct timespec ts = {0, 2000000};
-                nanosleep(&ts, NULL);
+    if (s->response_chunk_payload == 0) {
+        uint16_t chunk_payload = h2_seq_chunk_payload(hc, s, max_frame_size);
+        while (chunk_payload == 0) {
+            if (hc->fc.send_window <= CWIST_SEQ_HEADER_SIZE ||
+                (int64_t)s->fc.send_window <= CWIST_SEQ_HEADER_SIZE) {
+                if (h2_out_flush(hc) != 0) return -1;
+                return 1;
             }
+            struct timespec ts = {0, 2000000};
+            nanosleep(&ts, NULL);
+            chunk_payload = h2_seq_chunk_payload(hc, s, max_frame_size);
         }
+        s->response_chunk_payload = chunk_payload;
+        s->response_total_chunks = (uint32_t)((body_len + chunk_payload - 1) / chunk_payload);
+    }
 
+    uint16_t chunk_payload = s->response_chunk_payload;
+    while (s->response_chunk_index < s->response_total_chunks && s->response_sent < body_len) {
+        if (hc->fc.send_window == 0 || s->fc.send_window == 0) {
+            if (h2_out_flush(hc) != 0) return -1;
+            return 1;
+        }
+        size_t remaining = body_len - s->response_sent;
         size_t plen = remaining > chunk_payload ? chunk_payload : remaining;
         size_t chunk_len = CWIST_SEQ_HEADER_SIZE + plen;
         if (h2_send_allowance(hc, s, (uint32_t)chunk_len) < chunk_len) {
-            /* Window too small for a full sequenced chunk; wait for update. */
-            if (h2_process_incoming_frames_nonblocking(hc, s) != 0) return -1;
-            if (h2_now_ms() - hc->last_activity >= (uint64_t)h2_idle_timeout_ms()) return -1;
+            if (hc->fc.send_window < (uint32_t)chunk_len ||
+                (int64_t)s->fc.send_window < (int64_t)chunk_len) {
+                if (h2_out_flush(hc) != 0) return -1;
+                return 1;
+            }
             struct timespec ts = {0, 2000000};
             nanosleep(&ts, NULL);
-            i--;
             continue;
         }
 
         cwist_scratch_t chunk_s CWIST_SCRATCH_DEFER = {0};
         unsigned char *chunk = (unsigned char *)cwist_scratch_alloc(&chunk_s, chunk_len);
         if (!chunk) return -1;
-        ssize_t r = pread(fd, chunk + CWIST_SEQ_HEADER_SIZE, plen, cur_offset);
+        ssize_t r =
+            pread(fd, chunk + CWIST_SEQ_HEADER_SIZE, plen, offset + (off_t)s->response_sent);
         if (r <= 0 || (size_t)r != plen) return -1;
-        cwist_seq_chunk_build_header(chunk, i + 1, (uint16_t)total_chunks, (uint16_t)plen,
-                                     chunk_payload);
-        uint8_t flags = (i + 1 == total_chunks) ? CWIST_HTTP2_FLAG_END_STREAM : 0;
+        uint32_t index = s->response_chunk_index + 1;
+        cwist_seq_chunk_build_header(chunk, index, (uint16_t)s->response_total_chunks,
+                                     (uint16_t)plen, chunk_payload);
+        uint8_t flags = (index == s->response_total_chunks) ? CWIST_HTTP2_FLAG_END_STREAM : 0;
         if (h2_write_frame(hc, CWIST_HTTP2_FRAME_DATA, flags, stream_id, chunk,
-                           (uint32_t)chunk_len) != 0) {
+                           (uint32_t)chunk_len) != 0)
             return -1;
-        }
-        if (s) s->send_xor ^= h2_xor_bytes(chunk, chunk_len);
+        s->send_xor ^= h2_xor_bytes(chunk, chunk_len);
         h2_commit_send(hc, s, (uint32_t)chunk_len);
-        cur_offset += (off_t)plen;
-        remaining -= plen;
+        s->response_sent += plen;
+        s->response_chunk_index = index;
     }
-    return 0;
+    return h2_out_flush(hc);
 }
 
 /**
- * @brief Send a memory body as sequenced DATA frames with flow-control waits.
+ * @brief Send a memory body as sequenced DATA frames that resume when credit arrives.
  */
 static int h2_send_seq_memory_body(h2_conn *hc, h2_stream *s, uint32_t stream_id,
                                    const uint8_t *body_data, size_t body_len,
                                    uint32_t max_frame_size) {
-    uint16_t chunk_payload = h2_seq_chunk_payload(hc, s, max_frame_size);
-    while (chunk_payload == 0) {
-        /* Window exhausted below one sequenced chunk: the HEADERS block is
-         * already on the wire, so failing here tears down the connection
-         * and the client sees a 0-byte body.  Wait for WINDOW_UPDATE. */
-        if (h2_process_incoming_frames_nonblocking(hc, s) != 0) return -1;
-        if (s && s->send_aborted) return -1;
-        if (h2_now_ms() - hc->last_activity >= (uint64_t)h2_idle_timeout_ms()) return -1;
-        struct timespec ts = {0, 2000000};
-        nanosleep(&ts, NULL);
-        chunk_payload = h2_seq_chunk_payload(hc, s, max_frame_size);
+    if (s->response_chunk_payload == 0) {
+        uint16_t chunk_payload = h2_seq_chunk_payload(hc, s, max_frame_size);
+        while (chunk_payload == 0) {
+            if (hc->fc.send_window <= CWIST_SEQ_HEADER_SIZE ||
+                (int64_t)s->fc.send_window <= CWIST_SEQ_HEADER_SIZE) {
+                if (h2_out_flush(hc) != 0) return -1;
+                return 1;
+            }
+            struct timespec ts = {0, 2000000};
+            nanosleep(&ts, NULL);
+            chunk_payload = h2_seq_chunk_payload(hc, s, max_frame_size);
+        }
+        s->response_chunk_payload = chunk_payload;
+        s->response_total_chunks = (uint32_t)((body_len + chunk_payload - 1) / chunk_payload);
     }
 
     cwist_seq_message_t msg;
-    if (!cwist_seq_split(body_data, body_len, chunk_payload, &msg)) return -1;
+    if (!cwist_seq_split(body_data, body_len, s->response_chunk_payload, &msg)) return -1;
 
-    for (size_t i = 0; i < msg.count; i++) {
-        while (hc->fc.send_window == 0 || (s && s->fc.send_window == 0)) {
-            if (h2_process_incoming_frames_nonblocking(hc, s) != 0) goto fail;
-            if (s && s->send_aborted) goto fail;
-            if (hc->fc.send_window == 0 || (s && s->fc.send_window == 0)) {
-                /* Give up if no frame arrived within the idle deadline. */
-                if (h2_now_ms() - hc->last_activity >= (uint64_t)h2_idle_timeout_ms()) goto fail;
-                struct timespec ts = {0, 2000000};
-                nanosleep(&ts, NULL);
-            }
+    for (size_t i = s->response_chunk_index; i < msg.count; i = s->response_chunk_index) {
+        if (hc->fc.send_window == 0 || s->fc.send_window == 0) {
+            if (h2_out_flush(hc) != 0) goto fail;
+            cwist_seq_message_free(&msg);
+            return 1;
         }
-
         size_t chunk_len = msg.chunk_lens[i];
         if (h2_send_allowance(hc, s, (uint32_t)chunk_len) < chunk_len) {
-            /* Window too small for a full sequenced chunk; wait for update. */
-            if (h2_process_incoming_frames_nonblocking(hc, s) != 0) goto fail;
-            if (h2_now_ms() - hc->last_activity >= (uint64_t)h2_idle_timeout_ms()) goto fail;
+            if (hc->fc.send_window < (uint32_t)chunk_len ||
+                (int64_t)s->fc.send_window < (int64_t)chunk_len) {
+                if (h2_out_flush(hc) != 0) goto fail;
+                cwist_seq_message_free(&msg);
+                return 1;
+            }
             struct timespec ts = {0, 2000000};
             nanosleep(&ts, NULL);
-            i--;
             continue;
         }
 
         uint8_t flags = (i + 1 == msg.count) ? CWIST_HTTP2_FLAG_END_STREAM : 0;
         if (h2_write_frame(hc, CWIST_HTTP2_FRAME_DATA, flags, stream_id, msg.chunks[i],
-                           (uint32_t)chunk_len) != 0) {
+                           (uint32_t)chunk_len) != 0)
             goto fail;
-        }
-        if (s) s->send_xor ^= h2_xor_bytes(msg.chunks[i], chunk_len);
+        s->send_xor ^= h2_xor_bytes(msg.chunks[i], chunk_len);
         h2_commit_send(hc, s, (uint32_t)chunk_len);
+        s->response_sent += chunk_len - CWIST_SEQ_HEADER_SIZE;
+        s->response_chunk_index++;
     }
 
     cwist_seq_message_free(&msg);
-    return 0;
+    return h2_out_flush(hc);
 
 fail:
     cwist_seq_message_free(&msg);
@@ -2840,30 +2722,15 @@ static int h2_send_grpc_trailers_only(h2_conn *hc, uint32_t stream_id, cwist_htt
 
 static int h2_send_response_hc(h2_conn *hc, uint32_t stream_id, cwist_http_response *res) {
     h2_stream *s = h2_stream_find(hc, stream_id);
+    if (!s) return -1;
 
     /* gRPC responses carry grpc-status in a trailer HEADERS frame, so the
      * main header block and the DATA frames never set END_STREAM. */
     bool grpc_mode = h2_response_is_grpc(res);
 
-    /* Error responses go out Trailers-Only (PROTOCOL-HTTP2, gRFC A6): one
-     * HEADERS frame with END_STREAM, so the call stays retryable. */
-    if (grpc_mode) {
-        const char *gs = h2_grpc_header_value(res, "grpc-status");
-        if (gs && strcmp(gs, "0") != 0) {
-            uint32_t tf = hc->peer_max_frame_size;
-            if (tf == 0) tf = CWIST_HTTP2_MAX_FRAME_SIZE;
-            return h2_send_grpc_trailers_only(hc, stream_id, res, tf);
-        }
-    }
-
-    size_t block_len = 0;
-    unsigned char *block = h2_encode_response_block(res, &block_len, grpc_mode);
-    if (!block) return -1;
-
     size_t body_len = 0;
     const unsigned char *body_data = NULL;
     if (grpc_mode) {
-        /* gRPC bodies are always the in-memory framed message buffer. */
         if (res->body) {
             body_len = res->body->size;
             body_data = (const unsigned char *)res->body->data;
@@ -2878,45 +2745,44 @@ static int h2_send_response_hc(h2_conn *hc, uint32_t stream_id, cwist_http_respo
         body_data = (const unsigned char *)res->body->data;
     }
 
-    /* HEAD responses and 1xx/204/304 statuses carry no content.  The
-     * content-length header (already encoded from the real body length for
-     * HEAD; suppressed by the encoder for bodyless statuses) stays, but no
-     * DATA frames may follow. */
-    bool no_content = h2_status_forbids_body(res->status_code) ||
-                      (s && s->req && s->req->method == CWIST_HTTP_HEAD);
-
-    uint8_t header_flags = 0;
-    if (body_len == 0 || no_content) {
-        body_len = 0;
-        if (!grpc_mode) header_flags |= CWIST_HTTP2_FLAG_END_STREAM;
-    }
-
+    bool no_content =
+        h2_status_forbids_body(res->status_code) || (s->req && s->req->method == CWIST_HTTP_HEAD);
     uint32_t max_frame = hc->peer_max_frame_size;
     if (max_frame == 0) max_frame = CWIST_HTTP2_MAX_FRAME_SIZE;
 
-    int rc =
-        h2_send_header_block(hc, hc->conn, stream_id, block, block_len, max_frame, header_flags);
-    cwist_free(block);
-    if (rc != 0) return -1;
+    if (!s->response_headers_sent) {
+        if (grpc_mode) {
+            const char *gs = h2_grpc_header_value(res, "grpc-status");
+            if (gs && strcmp(gs, "0") != 0)
+                return h2_send_grpc_trailers_only(hc, stream_id, res, max_frame);
+        }
 
-    if (body_len == 0) {
+        uint8_t header_flags = 0;
+        if (body_len == 0 || no_content) {
+            body_len = 0;
+            if (!grpc_mode) header_flags |= CWIST_HTTP2_FLAG_END_STREAM;
+        }
+        size_t block_len = 0;
+        unsigned char *block = h2_encode_response_block(res, &block_len, grpc_mode);
+        if (!block) return -1;
+        int rc = h2_send_header_block(hc, hc->conn, stream_id, block, block_len, max_frame,
+                                      header_flags);
+        cwist_free(block);
+        if (rc != 0) return -1;
+        s->response_headers_sent = true;
+    }
+
+    if (body_len == 0 || no_content) {
         if (grpc_mode) return h2_send_grpc_trailers(hc, stream_id, res, max_frame);
         return 0;
     }
 
     if (grpc_mode) {
-        /* Plain DATA frames (no END_STREAM; the trailers close the stream). */
-        size_t sent = 0;
+        size_t sent = s->response_sent;
         while (sent < body_len) {
-            while (hc->fc.send_window == 0 || (s && s->fc.send_window == 0)) {
-                if (h2_process_incoming_frames_nonblocking(hc, s) != 0) return -1;
-                if (s && s->send_aborted) return -1;
-                if (hc->fc.send_window == 0 || (s && s->fc.send_window == 0)) {
-                    if (h2_now_ms() - hc->last_activity >= (uint64_t)h2_idle_timeout_ms())
-                        return -1;
-                    struct timespec ts = {0, 2000000};
-                    nanosleep(&ts, NULL);
-                }
+            if (hc->fc.send_window == 0 || s->fc.send_window == 0) {
+                if (h2_out_flush(hc) != 0) return -1;
+                return 1;
             }
             size_t remaining = body_len - sent;
             uint32_t chunk = (uint32_t)(remaining > max_frame ? max_frame : remaining);
@@ -2928,101 +2794,56 @@ static int h2_send_response_hc(h2_conn *hc, uint32_t stream_id, cwist_http_respo
                 continue;
             }
             if (h2_write_frame(hc, CWIST_HTTP2_FRAME_DATA, 0, stream_id, body_data + sent,
-                               allowed) != 0) {
+                               allowed) != 0)
                 return -1;
-            }
-            if (s) s->send_xor ^= h2_xor_bytes(body_data + sent, allowed);
+            s->send_xor ^= h2_xor_bytes(body_data + sent, allowed);
             h2_commit_send(hc, s, allowed);
             sent += allowed;
+            s->response_sent = sent;
         }
         return h2_send_grpc_trailers(hc, stream_id, res, max_frame);
     }
 
     if (hc->sequenced_data) {
-        if (res->use_file_stream && res->file_stream_fd >= 0) {
+        if (res->use_file_stream && res->file_stream_fd >= 0)
             return h2_send_seq_file_body(hc, s, stream_id, res->file_stream_fd,
                                          res->file_stream_offset, body_len, max_frame);
-        }
         return h2_send_seq_memory_body(hc, s, stream_id, body_data, body_len, max_frame);
     }
 
-    /* Fallback: standard HTTP/2 DATA frames without sequence headers. */
-    if (res->use_file_stream && res->file_stream_fd >= 0) {
-        off_t offset = res->file_stream_offset;
-        size_t remaining = res->file_stream_len;
-        while (remaining > 0) {
-            while (hc->fc.send_window == 0 || (s && s->fc.send_window == 0)) {
-                if (h2_process_incoming_frames_nonblocking(hc, s) != 0) return -1;
-                if (s && s->send_aborted) return -1;
-                if (hc->fc.send_window == 0 || (s && s->fc.send_window == 0)) {
-                    /* Give up if no frame arrived within the idle deadline. */
-                    if (h2_now_ms() - hc->last_activity >= (uint64_t)h2_idle_timeout_ms())
-                        return -1;
-                    struct timespec ts = {0, 2000000};
-                    nanosleep(&ts, NULL);
-                }
-            }
+    size_t sent = s->response_sent;
+    while (sent < body_len) {
+        if (hc->fc.send_window == 0 || s->fc.send_window == 0) {
+            if (h2_out_flush(hc) != 0) return -1;
+            return 1;
+        }
+        size_t remaining = body_len - sent;
+        uint32_t chunk = (uint32_t)(remaining > max_frame ? max_frame : remaining);
+        uint32_t allowed = h2_send_allowance(hc, s, chunk);
+        if (allowed == 0) {
+            if (h2_out_flush(hc) != 0) return -1;
+            struct timespec ts = {0, 2000000};
+            nanosleep(&ts, NULL);
+            continue;
+        }
 
-            uint32_t chunk = (uint32_t)(remaining > max_frame ? max_frame : remaining);
-            uint32_t allowed = h2_send_allowance(hc, s, chunk);
-            if (allowed == 0) {
-                /* Pacing throttled us below one byte; flush and wait. */
-                if (h2_out_flush(hc) != 0) return -1;
-                struct timespec ts = {0, 2000000};
-                nanosleep(&ts, NULL);
-                continue;
-            }
-
-            cwist_scratch_t chunk_buf_s CWIST_SCRATCH_DEFER = {0};
-            unsigned char *chunk_buf = (unsigned char *)cwist_scratch_alloc(&chunk_buf_s, allowed);
-            if (!chunk_buf) return -1;
-            ssize_t r = pread(res->file_stream_fd, chunk_buf, allowed, offset);
+        const unsigned char *data = body_data ? body_data + sent : NULL;
+        cwist_scratch_t file_buf_s CWIST_SCRATCH_DEFER = {0};
+        if (res->use_file_stream && res->file_stream_fd >= 0) {
+            data = (const unsigned char *)cwist_scratch_alloc(&file_buf_s, allowed);
+            if (!data) return -1;
+            ssize_t r = pread(res->file_stream_fd, (void *)data, allowed,
+                              res->file_stream_offset + (off_t)sent);
             if (r <= 0) return -1;
-            uint8_t flags = (remaining == (size_t)r) ? CWIST_HTTP2_FLAG_END_STREAM : 0;
-            if (h2_write_frame(hc, CWIST_HTTP2_FRAME_DATA, flags, stream_id, chunk_buf,
-                               (uint32_t)r) != 0) {
-                return -1;
-            }
-            if (s) s->send_xor ^= h2_xor_bytes(chunk_buf, (size_t)r);
-            h2_commit_send(hc, s, (uint32_t)r);
-            offset += r;
-            remaining -= (size_t)r;
+            allowed = (uint32_t)r;
         }
-    } else {
-        size_t sent = 0;
-        while (sent < body_len) {
-            while (hc->fc.send_window == 0 || (s && s->fc.send_window == 0)) {
-                if (h2_process_incoming_frames_nonblocking(hc, s) != 0) return -1;
-                if (s && s->send_aborted) return -1;
-                if (hc->fc.send_window == 0 || (s && s->fc.send_window == 0)) {
-                    /* Give up if no frame arrived within the idle deadline. */
-                    if (h2_now_ms() - hc->last_activity >= (uint64_t)h2_idle_timeout_ms())
-                        return -1;
-                    struct timespec ts = {0, 2000000};
-                    nanosleep(&ts, NULL);
-                }
-            }
-
-            size_t remaining = body_len - sent;
-            uint32_t chunk = (uint32_t)(remaining > max_frame ? max_frame : remaining);
-            uint32_t allowed = h2_send_allowance(hc, s, chunk);
-            if (allowed == 0) {
-                /* Pacing throttled us below one byte; flush and wait. */
-                if (h2_out_flush(hc) != 0) return -1;
-                struct timespec ts = {0, 2000000};
-                nanosleep(&ts, NULL);
-                continue;
-            }
-
-            uint8_t flags = (sent + allowed == body_len) ? CWIST_HTTP2_FLAG_END_STREAM : 0;
-            if (h2_write_frame(hc, CWIST_HTTP2_FRAME_DATA, flags, stream_id, body_data + sent,
-                               allowed) != 0) {
-                return -1;
-            }
-            if (s) s->send_xor ^= h2_xor_bytes(body_data + sent, allowed);
-            h2_commit_send(hc, s, allowed);
-            sent += allowed;
-        }
+        uint8_t flags = (sent + allowed == body_len) ? CWIST_HTTP2_FLAG_END_STREAM : 0;
+        if (h2_write_frame(hc, CWIST_HTTP2_FRAME_DATA, flags, stream_id, data, allowed) != 0)
+            return -1;
+        s->send_xor ^= h2_xor_bytes(data, allowed);
+        h2_commit_send(hc, s, allowed);
+        sent += allowed;
+        s->response_sent = sent;
     }
     return h2_out_flush(hc);
 }
@@ -3430,13 +3251,8 @@ static void h2_inject_alt_svc(cwist_https_connection *conn, cwist_http_response 
     }
 }
 
-/* Drain completed deferred responses on the connection thread.  For each
- * node: when the stream is still open the request is re-attached (HEAD
- * checks in the send path, and h2_stream_remove destroys it), the response
- * is encoded and written here — never on the worker thread — and the stream
- * is retired.  Completions for streams the peer RST'd (already removed from
- * the table) are dropped without touching the socket.  Returns -1 when a
- * send failed and the connection must be torn down. */
+/* Drain completed deferred responses on the connection thread. Sends remain
+ * attached to their stream while flow control is exhausted. */
 static int h2_async_drain(h2_conn *hc) {
     cwist_h2_async_queue *q = hc->async_q;
     if (!q) return 0;
@@ -3459,14 +3275,13 @@ static int h2_async_drain(h2_conn *hc) {
             h2_async_node_discard(n);
             continue;
         }
-        s->req = NULL; /* Ownership of req/res was transferred to cwist_async */
+        s->req = NULL;
+        s->response = n->send;
+        s->async_response = n;
         h2_inject_alt_svc(hc->conn, n->send);
         int rc = h2_send_response_hc(hc, n->stream_id, n->send);
-        if (n->send_owned && n->send != n->res) cwist_http_response_destroy(n->send);
-        cwist_http_response_destroy(n->res);
-        cwist_http_request_destroy(n->req);
+        if (rc == 1) continue;
         h2_stream_remove(hc, n->stream_id);
-        cwist_free(n);
         if (rc != 0) {
             while (list) {
                 h2_async_node *next = list->next;
@@ -3475,6 +3290,25 @@ static int h2_async_drain(h2_conn *hc) {
             }
             return -1;
         }
+    }
+    return 0;
+}
+
+static int h2_resume_responses(h2_conn *hc) {
+    h2_stream *s = hc->streams;
+    while (s) {
+        h2_stream *next = s->next;
+        if (s->response) {
+            uint32_t stream_id = s->stream_id;
+            int rc = h2_send_response_hc(hc, stream_id, s->response);
+            if (rc == 1) {
+                s = next;
+                continue;
+            }
+            h2_stream_remove(hc, stream_id);
+            if (rc != 0) return -1;
+        }
+        s = next;
     }
     return 0;
 }
@@ -3522,7 +3356,7 @@ static void h2_session_free(void *p) {
  * @retval false Live work requires the connection thread.
  */
 static bool h2_can_park(h2_conn *hc) {
-    if (hc->streams || hc->deferred_head || hc->cont_len > 0) return false;
+    if (hc->streams || hc->cont_len > 0) return false;
     if (hc->hooks && hc->hooks->next_deadline_ms && hc->hooks->next_deadline_ms(hc->hook_ctx))
         return false;
     return true;
@@ -3596,47 +3430,47 @@ cwist_error_t cwist_http2_serve_connection_ex(cwist_https_connection *conn, void
     }
     h2_conn *hc = &st->hc;
     if (!resumed) {
-    h2_conn_init(hc, conn);
-    hc->hooks = hooks;
-    hc->hook_ctx = (hooks && hooks->on_conn_open) ? hooks->on_conn_open(user_ctx) : user_ctx;
-    hc->async_q = cwist_h2_async_queue_create();
+        h2_conn_init(hc, conn);
+        hc->hooks = hooks;
+        hc->hook_ctx = (hooks && hooks->on_conn_open) ? hooks->on_conn_open(user_ctx) : user_ctx;
+        hc->async_q = cwist_h2_async_queue_create();
 
-    if (cwist_http2_verify_preface(hc) != 0) {
-        h2_conn_destroy(hc);
-        cwist_free(st);
-        result = make_error(CWIST_ERR_INT16);
-        result.error.err_i16 = -1;
-        return result;
-    }
+        if (cwist_http2_verify_preface(hc) != 0) {
+            h2_conn_destroy(hc);
+            cwist_free(st);
+            result = make_error(CWIST_ERR_INT16);
+            result.error.err_i16 = -1;
+            return result;
+        }
 
-    /* One SETTINGS entry per row: 2-byte identifier then 4-byte value.  The
-       row grouping is the wire format, so it is laid out by hand. */
-    // clang-format off
+        /* One SETTINGS entry per row: 2-byte identifier then 4-byte value.  The
+           row grouping is the wire format, so it is laid out by hand. */
+        // clang-format off
     unsigned char settings[24] = {
         0x00, 0x01, 0x00, 0x00, 0x10, 0x00, // SETTINGS_HEADER_TABLE_SIZE = 4096 (CWIST_HTTP2_HEADER_TABLE_SIZE; HPACK dynamic table enabled)
         0x00, 0x03, 0x00, 0x00, 0x00, 0x64, // SETTINGS_MAX_CONCURRENT_STREAMS = 100 (CWIST_HTTP2_MAX_CONCURRENT_STREAMS)
         0x00, 0x04, 0x7f, 0xff, 0xff, 0xff, // SETTINGS_INITIAL_WINDOW_SIZE = 2147483647 (2GB)
         0x00, 0x06, 0x00, 0x01, 0x00, 0x00  // SETTINGS_MAX_HEADER_LIST_SIZE = 65536
     };
-    // clang-format on
-    if (h2_write_frame(hc, CWIST_HTTP2_FRAME_SETTINGS, 0, 0, settings, sizeof(settings)) != 0) {
-        h2_conn_destroy(hc);
-        cwist_free(st);
-        result = make_error(CWIST_ERR_INT16);
-        result.error.err_i16 = -1;
-        return result;
-    }
+        // clang-format on
+        if (h2_write_frame(hc, CWIST_HTTP2_FRAME_SETTINGS, 0, 0, settings, sizeof(settings)) != 0) {
+            h2_conn_destroy(hc);
+            cwist_free(st);
+            result = make_error(CWIST_ERR_INT16);
+            result.error.err_i16 = -1;
+            return result;
+        }
 
-    /* Upgrade connection flow control window to 2GB */
-    h2_send_window_update(hc, 0, 2147483647 - 65535);
-    hc->fc.receive_window = CWIST_HTTP2_MAX_WINDOW;
+        /* Upgrade connection flow control window to 2GB */
+        h2_send_window_update(hc, 0, 2147483647 - 65535);
+        hc->fc.receive_window = CWIST_HTTP2_MAX_WINDOW;
 
-    /* Kick off RTT sampling for the adaptive flow control; the ACK arrives
-     * in the main loop below.  Failure is non-fatal: pacing simply stays
-     * uncalibrated. */
-    h2_send_ping(hc);
-    conn->proto_state = st;
-    conn->proto_state_free = h2_session_free;
+        /* Kick off RTT sampling for the adaptive flow control; the ACK arrives
+         * in the main loop below.  Failure is non-fatal: pacing simply stays
+         * uncalibrated. */
+        h2_send_ping(hc);
+        conn->proto_state = st;
+        conn->proto_state_free = h2_session_free;
     }
 
     bool connected = true;
@@ -3669,6 +3503,10 @@ cwist_error_t cwist_http2_serve_connection_ex(cwist_https_connection *conn, void
             connected = false;
             break;
         }
+        if (h2_resume_responses(hc) != 0) {
+            connected = false;
+            break;
+        }
         /* Hook-taken streams: enforce deadlines and reap finished streams. */
         if (hooks && hooks->on_poll) {
             h2_stream *ps = hc->streams;
@@ -3682,84 +3520,73 @@ cwist_error_t cwist_http2_serve_connection_ex(cwist_https_connection *conn, void
         unsigned char hdr[9];
         unsigned char *payload CWIST_DEFER_FREE = NULL;
 
-        /* Frames the send-window wait loop pulled off the wire but could not
-         * dispatch are served first; only then touch the socket. */
-        h2_deferred_frame *df = hc->deferred_head;
-        if (df) {
-            hc->deferred_head = df->next;
-            if (!hc->deferred_head) hc->deferred_tail = NULL;
-            memcpy(hdr, df->hdr, 9);
-            payload = df->payload;
-            cwist_free(df);
-        } else {
-            /* Idle between requests: hand the session to the HTTPS park set
-             * instead of holding this pool thread in poll(). */
-            if (!sent_goaway && h2_can_park(hc)) {
-                if (h2_out_flush(hc) != 0) {
-                    connected = false;
-                    break;
-                }
-                uint64_t idle_ms = (uint64_t)h2_idle_timeout_ms();
-                uint64_t idle_for = h2_now_ms() - hc->last_activity;
-                if (idle_for < idle_ms && cwist_https_conn_idle(conn)) {
-                    st->sent_goaway = sent_goaway;
-                    st->goaway_close_at = goaway_close_at;
-                    h2_session_disown(st);
-                    if (cwist_https_park(conn, idle_ms - idle_for, CWIST_HTTPS_PARK_HTTP2)) {
-                        /* Another pool thread may own the session now. */
-                        result = make_error(CWIST_ERR_INT16);
-                        result.error.err_i16 = 0;
-                        return result;
-                    }
+        /* Idle between requests: hand the session to the HTTPS park set
+         * instead of holding this pool thread in poll(). */
+        if (!sent_goaway && h2_can_park(hc)) {
+            if (h2_out_flush(hc) != 0) {
+                connected = false;
+                break;
+            }
+            uint64_t idle_ms = (uint64_t)h2_idle_timeout_ms();
+            uint64_t idle_for = h2_now_ms() - hc->last_activity;
+            if (idle_for < idle_ms && cwist_https_conn_idle(conn)) {
+                st->sent_goaway = sent_goaway;
+                st->goaway_close_at = goaway_close_at;
+                h2_session_disown(st);
+                if (cwist_https_park(conn, idle_ms - idle_for, CWIST_HTTPS_PARK_HTTP2)) {
+                    /* Another pool thread may own the session now. */
+                    result = make_error(CWIST_ERR_INT16);
+                    result.error.err_i16 = 0;
+                    return result;
                 }
             }
-            /* Bound the wait for the next frame with the idle deadline so an
-             * idle connection cannot monopolize a pool worker forever.  A
-             * hook-provided deadline (gRPC timeout) tightens the wait. */
-            uint64_t wait_deadline = sent_goaway ? goaway_close_at : 0;
+        }
+        /* Bound the wait for the next frame with the idle deadline so an
+         * idle connection cannot monopolize a pool worker forever.  A
+         * hook-provided deadline (gRPC timeout) tightens the wait. */
+        uint64_t wait_deadline = sent_goaway ? goaway_close_at : 0;
+        if (hooks && hooks->next_deadline_ms) {
+            uint64_t gd = hooks->next_deadline_ms(hc->hook_ctx);
+            if (gd && (!wait_deadline || gd < wait_deadline)) wait_deadline = gd;
+        }
+        int wait_rc = h2_wait_readable(hc, wait_deadline);
+        if (wait_rc > 0) {
+            /* Async defer completions: send them before reading more. */
+            if (h2_async_drain(hc) != 0) {
+                connected = false;
+                break;
+            }
+            continue;
+        }
+        if (wait_rc != 0) {
+            uint64_t now = h2_now_ms();
+            /* A hook deadline expiring is not a connection error: the
+             * poll sweep at the loop top expires the stream. */
             if (hooks && hooks->next_deadline_ms) {
                 uint64_t gd = hooks->next_deadline_ms(hc->hook_ctx);
-                if (gd && (!wait_deadline || gd < wait_deadline)) wait_deadline = gd;
+                if (gd && now >= gd) continue;
             }
-            int wait_rc = h2_wait_readable(hc, wait_deadline);
-            if (wait_rc > 0) {
-                /* Async defer completions: send them before reading more. */
-                if (h2_async_drain(hc) != 0) {
+            if (!sent_goaway && now - hc->last_activity >= (uint64_t)h2_idle_timeout_ms()) {
+                /* Announce the shutdown, then keep serving briefly so a
+                 * request that raced onto the connection just before the
+                 * idle expiry still gets its response instead of a reset. */
+                if (h2_send_goaway(hc, hc->last_processed_stream_id, H2_ERR_NO_ERROR) != 0) {
                     connected = false;
                     break;
                 }
+                sent_goaway = true;
+                goaway_close_at = now + (uint64_t)h2_goaway_grace_ms();
                 continue;
             }
-            if (wait_rc != 0) {
-                uint64_t now = h2_now_ms();
-                /* A hook deadline expiring is not a connection error: the
-                 * poll sweep at the loop top expires the stream. */
-                if (hooks && hooks->next_deadline_ms) {
-                    uint64_t gd = hooks->next_deadline_ms(hc->hook_ctx);
-                    if (gd && now >= gd) continue;
-                }
-                if (!sent_goaway && now - hc->last_activity >= (uint64_t)h2_idle_timeout_ms()) {
-                    /* Announce the shutdown, then keep serving briefly so a
-                     * request that raced onto the connection just before the
-                     * idle expiry still gets its response instead of a reset. */
-                    if (h2_send_goaway(hc, hc->last_processed_stream_id, H2_ERR_NO_ERROR) != 0) {
-                        connected = false;
-                        break;
-                    }
-                    sent_goaway = true;
-                    goaway_close_at = now + (uint64_t)h2_goaway_grace_ms();
-                    continue;
-                }
-                connected = false;
-                break;
-            }
-            /* Frame bytes already in flight may still straddle TLS records or
-             * TCP segments; h2_read_full waits out WANT_READ instead of
-             * treating it as a dropped connection. */
-            if (h2_read_full(hc, hdr, 9) != 0) {
-                connected = false;
-                break;
-            }
+            connected = false;
+            break;
+        }
+        /* Frame bytes already in flight may still straddle TLS records or
+         * TCP segments; h2_read_full waits out WANT_READ instead of
+         * treating it as a dropped connection. */
+        if (h2_read_full(hc, hdr, 9) != 0) {
+            connected = false;
+            break;
         }
 
         uint32_t len = h2_get_u24(hdr);
@@ -3779,7 +3606,7 @@ cwist_error_t cwist_http2_serve_connection_ex(cwist_https_connection *conn, void
             }
         }
 
-        if (!df && len > 0) {
+        if (len > 0) {
             payload = (unsigned char *)cwist_alloc(len);
             if (!payload) {
                 connected = false;
@@ -3860,6 +3687,7 @@ cwist_error_t cwist_http2_serve_connection_ex(cwist_https_connection *conn, void
                     if (s && s->req) {
                         cwist_http_response *res =
                             cwist_http_response_create_in_arena(s->req->arena);
+                        int send_rc = 0;
                         if (res) {
                             handler(user_ctx, s->req, res);
                             cwist_async *deferred = cwist_async_dispatch_take(res);
@@ -3874,10 +3702,15 @@ cwist_error_t cwist_http2_serve_connection_ex(cwist_https_connection *conn, void
                                 break;
                             }
                             h2_inject_alt_svc(conn, res);
-                            if (h2_send_response_hc(hc, stream_id, res) != 0) connected = false;
-                            cwist_http_response_destroy(res);
+                            s->response = res;
+                            send_rc = h2_send_response_hc(hc, stream_id, res);
+                            if (send_rc < 0) connected = false;
+                            if (send_rc != 1) {
+                                s->response = NULL;
+                                cwist_http_response_destroy(res);
+                            }
                         }
-                        h2_stream_remove(hc, stream_id);
+                        if (send_rc != 1) h2_stream_remove(hc, stream_id);
                     }
                 }
                 break;
@@ -3919,6 +3752,7 @@ cwist_error_t cwist_http2_serve_connection_ex(cwist_https_connection *conn, void
                     if (s && s->req) {
                         cwist_http_response *res =
                             cwist_http_response_create_in_arena(s->req->arena);
+                        int send_rc = 0;
                         if (res) {
                             handler(user_ctx, s->req, res);
                             cwist_async *deferred = cwist_async_dispatch_take(res);
@@ -3933,10 +3767,15 @@ cwist_error_t cwist_http2_serve_connection_ex(cwist_https_connection *conn, void
                                 break;
                             }
                             h2_inject_alt_svc(conn, res);
-                            if (h2_send_response_hc(hc, stream_id, res) != 0) connected = false;
-                            cwist_http_response_destroy(res);
+                            s->response = res;
+                            send_rc = h2_send_response_hc(hc, stream_id, res);
+                            if (send_rc < 0) connected = false;
+                            if (send_rc != 1) {
+                                s->response = NULL;
+                                cwist_http_response_destroy(res);
+                            }
                         }
-                        h2_stream_remove(hc, stream_id);
+                        if (send_rc != 1) h2_stream_remove(hc, stream_id);
                     }
                 }
                 break;
@@ -4059,6 +3898,7 @@ cwist_error_t cwist_http2_serve_connection_ex(cwist_https_connection *conn, void
                         break;
                     }
                     cwist_http_response *res = cwist_http_response_create_in_arena(s->req->arena);
+                    int send_rc = 0;
                     if (res) {
                         handler(user_ctx, s->req, res);
                         cwist_async *deferred = cwist_async_dispatch_take(res);
@@ -4072,13 +3912,18 @@ cwist_error_t cwist_http2_serve_connection_ex(cwist_https_connection *conn, void
                             break;
                         }
                         h2_inject_alt_svc(conn, res);
-                        if (h2_send_response_hc(hc, stream_id, res) != 0) connected = false;
-                        cwist_http_response_destroy(res);
+                        s->response = res;
+                        send_rc = h2_send_response_hc(hc, stream_id, res);
+                        if (send_rc < 0) connected = false;
+                        if (send_rc != 1) {
+                            s->response = NULL;
+                            cwist_http_response_destroy(res);
+                        }
                     }
                     /* Keep the stream state alive until its final window
                      * credit is returned; h2_auto_window_update reads it. */
                     if (connected) h2_auto_window_update(hc, s);
-                    h2_stream_remove(hc, stream_id);
+                    if (send_rc != 1) h2_stream_remove(hc, stream_id);
                     s = NULL;
                 }
                 if (connected && s) {
@@ -4133,8 +3978,8 @@ cwist_error_t cwist_http2_serve_connection_ex(cwist_https_connection *conn, void
                         connected = false;
                         break;
                     }
-                    if (h2_write_frame(hc, CWIST_HTTP2_FRAME_PING, CWIST_HTTP2_FLAG_ACK, 0,
-                                       payload, 8) != 0) {
+                    if (h2_write_frame(hc, CWIST_HTTP2_FRAME_PING, CWIST_HTTP2_FLAG_ACK, 0, payload,
+                                       8) != 0) {
                         connected = false;
                     }
                 } else if (hc->ping_outstanding && memcmp(payload, hc->ping_payload, 8) == 0) {
