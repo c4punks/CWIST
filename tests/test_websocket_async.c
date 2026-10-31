@@ -232,12 +232,16 @@ int main(void) {
     cwist_reactor_t *reactor = cwist_reactor_create();
     assert(reactor);
 
-    int conn_a[2], conn_b[2];
+    int conn_a[2], conn_b[2], conn_c[2], conn_d[2];
     assert(socketpair(AF_UNIX, SOCK_STREAM, 0, conn_a) == 0);
     assert(socketpair(AF_UNIX, SOCK_STREAM, 0, conn_b) == 0);
+    assert(socketpair(AF_UNIX, SOCK_STREAM, 0, conn_c) == 0);
+    assert(socketpair(AF_UNIX, SOCK_STREAM, 0, conn_d) == 0);
 
     assert(cwist_websocket_async_attach(conn_a[0], reactor, on_message, NULL, NULL, 0));
     assert(cwist_websocket_async_attach(conn_b[0], reactor, on_message, NULL, NULL, 0));
+    assert(cwist_websocket_async_attach(conn_c[0], reactor, on_message, NULL, NULL, 0));
+    assert(cwist_websocket_async_attach(conn_d[0], reactor, on_message, NULL, NULL, 0));
 
     pthread_t rt;
     assert(pthread_create(&rt, NULL, reactor_thread, reactor) == 0);
@@ -264,6 +268,49 @@ int main(void) {
     assert(msg.len == 5);
     assert(memcmp(msg.payload, "hello", 5) == 0);
     printf("2. fragmented reassembly: ok\n");
+
+    /* Empty first, middle, and final fragments still form one message. */
+    seen_before = g_messages_seen;
+    write_masked(conn_a[1], 0x01, NULL, 0);
+    write_masked(conn_a[1], 0x00, NULL, 0);
+    write_masked(conn_a[1], 0x80, NULL, 0);
+    wait_for_seen(&msg, seen_before);
+    assert(msg.opcode == CWIST_WS_FRAME_TEXT);
+    assert(msg.len == 0);
+    printf("empty fragmented message: ok\n");
+
+    /* Control frames may arrive between fragments without ending the message. */
+    seen_before = g_messages_seen;
+    write_masked(conn_a[1], 0x01, (const uint8_t *)"a", 1);
+    write_masked(conn_a[1], 0x89, (const uint8_t *)"p", 1);
+    uint8_t fragment_opcode, fragment_payload[8];
+    size_t fragment_len;
+    read_server_frame(conn_a[1], &fragment_opcode, fragment_payload, &fragment_len);
+    assert(fragment_opcode == CWIST_WS_FRAME_PONG);
+    assert(fragment_len == 1 && fragment_payload[0] == 'p');
+    wait_for_seen(&msg, seen_before);
+    assert(msg.opcode == CWIST_WS_FRAME_PING);
+    write_masked(conn_a[1], 0x80, (const uint8_t *)"b", 1);
+    wait_for_message(&msg);
+    assert(msg.opcode == CWIST_WS_FRAME_TEXT);
+    assert(msg.len == 2 && memcmp(msg.payload, "ab", 2) == 0);
+    printf("control frame between fragments: ok\n");
+
+    /* A second data opcode is invalid until the fragmented message finishes. */
+    int before_invalid = g_messages_seen;
+    write_masked(conn_c[1], 0x01, (const uint8_t *)"x", 1);
+    write_masked(conn_c[1], 0x82, (const uint8_t *)"y", 1);
+    struct pollfd invalid_pfd = {.fd = conn_c[1], .events = POLLIN};
+    assert(poll(&invalid_pfd, 1, TIMEOUT_MS) == 1);
+    assert(read(conn_c[1], fragment_payload, sizeof(fragment_payload)) == 0);
+
+    write_masked(conn_d[1], 0x02, (const uint8_t *)"x", 1);
+    write_masked(conn_d[1], 0x81, (const uint8_t *)"y", 1);
+    invalid_pfd.fd = conn_d[1];
+    assert(poll(&invalid_pfd, 1, TIMEOUT_MS) == 1);
+    assert(read(conn_d[1], fragment_payload, sizeof(fragment_payload)) == 0);
+    assert(g_messages_seen == before_invalid);
+    printf("interleaved data opcodes rejected: ok\n");
 
     /* 5. A valid frame split across two TCP writes (partial header) is
      *    delivered after the second write (incremental stash parsing). */
@@ -346,9 +393,9 @@ int main(void) {
     cwist_reactor_destroy(reactor);
     close(conn_a[1]);
     close(conn_b[1]);
-    /* conn_a[0]/conn_b[0] were owned and closed by the WS async layer when
-     * each connection terminated; closing them here again would be a double
-     * close on a possibly-reused fd. */
+    close(conn_c[1]);
+    close(conn_d[1]);
+    /* Server-side descriptors were owned and closed by the WS async layer. */
 
     printf("websocket async (C1M) test passed\n");
     return 0;
