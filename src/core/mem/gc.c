@@ -821,9 +821,11 @@ static size_t g_conn_count = 0;
 static _Atomic bool g_conn_hooks_registered = false;
 
 static size_t cwist_conn_slot(const void *handle, size_t mask) {
-    uintptr_t x = (uintptr_t)handle;
+    /* 64-bit mix even where pointers are 32-bit (wasm32): a 33-bit shift
+     * of a 32-bit uintptr_t is undefined. */
+    uint64_t x = (uint64_t)(uintptr_t)handle;
     x ^= x >> 33;
-    x *= (uintptr_t)0xff51afd7ed558ccdULL;
+    x *= 0xff51afd7ed558ccdULL;
     x ^= x >> 33;
     return (size_t)x & mask;
 }
