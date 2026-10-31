@@ -1,4 +1,5 @@
 #include <cwist/sys/app/app.h>
+#include <cwist/sys/app/shutdown.h>
 #include <cwist/net/http/https.h>
 #include <cwist/net/http/async.h>
 #include <assert.h>
@@ -6,12 +7,15 @@
 #include <limits.h>
 #include <netinet/in.h>
 #include <pthread.h>
+#include <stdatomic.h>
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <poll.h>
 #include <sys/socket.h>
+#include <sys/wait.h>
+#include <time.h>
 #include <unistd.h>
 #include <signal.h>
 
@@ -460,8 +464,8 @@ static void run_sync_defer_round(cwist_app *app, const char *conn_hdr, int follo
     assert(SSL_connect(client) == 1);
 
     char req[160];
-    snprintf(req, sizeof(req), "GET /defer-sync HTTP/1.1\r\nHost: localhost\r\nConnection: %s\r\n\r\n",
-             conn_hdr);
+    snprintf(req, sizeof(req),
+             "GET /defer-sync HTTP/1.1\r\nHost: localhost\r\nConnection: %s\r\n\r\n", conn_hdr);
     assert(SSL_write(client, req, (int)strlen(req)) > 0);
     char buf[1024];
     memset(buf, 0, sizeof(buf));
@@ -561,6 +565,138 @@ static void test_https_async_defer(void) {
     printf("Passed HTTPS async defer and keep-alive.\n");
 }
 
+typedef enum https_write_case {
+    HTTPS_WRITE_NORMAL,
+    HTTPS_WRITE_DEADLINE,
+    HTTPS_WRITE_POOL_CANCEL,
+    HTTPS_WRITE_APP_CANCEL
+} https_write_case;
+
+typedef struct https_write_server_ctx {
+    int fd;
+    cwist_https_context *ctx;
+    cwist_error_t result;
+    _Atomic bool done;
+} https_write_server_ctx;
+
+static uint64_t https_test_now_ms(void) {
+    struct timespec ts;
+    assert(clock_gettime(CLOCK_MONOTONIC, &ts) == 0);
+    return (uint64_t)ts.tv_sec * 1000 + (uint64_t)ts.tv_nsec / 1000000;
+}
+
+static void *https_write_server(void *arg) {
+    https_write_server_ctx *server = arg;
+    cwist_https_connection *conn = NULL;
+    cwist_error_t err = cwist_https_accept(server->ctx, server->fd, &conn);
+    assert(cwist_error_is_ok(&err));
+
+    const size_t body_len = 8U * 1024U * 1024U;
+    char *body = malloc(body_len);
+    assert(body != NULL);
+    memset(body, 'x', body_len);
+    cwist_http_response *res = cwist_http_response_create();
+    assert(res != NULL);
+    cwist_http_response_set_body_ptr(res, body, body_len);
+    server->result = cwist_https_send_response(conn, res);
+    cwist_http_response_destroy(res);
+    cwist_https_close_connection(conn);
+    free(body);
+    atomic_store(&server->done, true);
+    return NULL;
+}
+
+static void run_https_write_case(https_write_case mode) {
+    setenv("CWIST_HTTPS_WRITE_TIMEOUT_MS", mode == HTTPS_WRITE_DEADLINE ? "300" : "5000", 1);
+    if (mode == HTTPS_WRITE_POOL_CANCEL) assert(https_pool_init() == 0);
+
+    cwist_https_context *ctx = NULL;
+    cwist_error_t err = cwist_https_init_context(&ctx, TEST_CERT, TEST_KEY);
+    assert(cwist_error_is_ok(&err));
+    int sv[2];
+    assert(socketpair(AF_UNIX, SOCK_STREAM, 0, sv) == 0);
+    https_write_server_ctx server = {
+        .fd = sv[0], .ctx = ctx, .result = make_error(CWIST_ERR_INT16)};
+    pthread_t tid;
+    assert(pthread_create(&tid, NULL, https_write_server, &server) == 0);
+
+    SSL_CTX *client_ctx = SSL_CTX_new(TLS_client_method());
+    assert(client_ctx != NULL);
+    SSL_CTX_set_verify(client_ctx, SSL_VERIFY_NONE, NULL);
+    SSL *client = SSL_new(client_ctx);
+    assert(client != NULL);
+    assert(SSL_set_fd(client, sv[1]) == 1);
+    assert(SSL_connect(client) == 1);
+
+    uint64_t started = https_test_now_ms();
+    size_t received = 0;
+    if (mode == HTTPS_WRITE_NORMAL) {
+        char buf[65536];
+        int n;
+        while ((n = SSL_read(client, buf, sizeof(buf))) > 0) received += (size_t)n;
+    } else if (mode == HTTPS_WRITE_DEADLINE) {
+        char byte;
+        while (!atomic_load(&server.done)) {
+            int n = SSL_read(client, &byte, 1);
+            if (n > 0) received++;
+            usleep(20000);
+        }
+    } else {
+        usleep(100000);
+        if (mode == HTTPS_WRITE_POOL_CANCEL)
+            https_pool_destroy();
+        else
+            cwist_shutdown_request();
+    }
+
+    pthread_join(tid, NULL);
+    uint64_t elapsed = https_test_now_ms() - started;
+    if (mode == HTTPS_WRITE_NORMAL) {
+        assert(cwist_error_is_ok(&server.result));
+        assert(received >= 8U * 1024U * 1024U);
+    } else {
+        assert(!cwist_error_is_ok(&server.result));
+        assert(elapsed < 3000);
+        if (mode == HTTPS_WRITE_DEADLINE) assert(received > 0);
+    }
+
+    SSL_free(client);
+    SSL_CTX_free(client_ctx);
+    close(sv[1]);
+    cwist_https_destroy_context(ctx);
+}
+
+static void run_https_write_case_forked(https_write_case mode) {
+    pid_t pid = fork();
+    assert(pid >= 0);
+    if (pid == 0) {
+        run_https_write_case(mode);
+        _exit(0);
+    }
+    int status = 0;
+    for (int i = 0; i < 200; ++i) {
+        pid_t got = waitpid(pid, &status, WNOHANG);
+        assert(got == 0 || got == pid);
+        if (got == pid) {
+            assert(WIFEXITED(status) && WEXITSTATUS(status) == 0);
+            return;
+        }
+        usleep(50000);
+    }
+    kill(pid, SIGKILL);
+    waitpid(pid, &status, 0);
+    assert(false && "HTTPS write case exceeded its deadline");
+}
+
+static void test_https_write_deadlines(void) {
+    printf("Testing HTTPS response write deadlines and cancellation...\n");
+    run_https_write_case_forked(HTTPS_WRITE_NORMAL);
+    run_https_write_case_forked(HTTPS_WRITE_DEADLINE);
+    run_https_write_case_forked(HTTPS_WRITE_POOL_CANCEL);
+    run_https_write_case_forked(HTTPS_WRITE_APP_CANCEL);
+    printf("Passed HTTPS response write deadlines and cancellation.\n");
+}
+
 int main(void) {
     signal(SIGPIPE, SIG_IGN);
     test_https_defaults();
@@ -573,6 +709,7 @@ int main(void) {
 #else
     test_https_autoloads_aia_intermediate();
 #endif
+    test_https_write_deadlines();
     test_https_async_defer();
     test_https_async_defer_completes_before_ack();
     printf("All HTTPS tests passed!\n");
