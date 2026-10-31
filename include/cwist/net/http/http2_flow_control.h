@@ -43,7 +43,7 @@ typedef struct cwist_http2_stream_flow_control {
     uint32_t min_window;
     uint32_t max_window;
     uint32_t pending_update;
-    uint32_t send_window;
+    int32_t send_window;
     uint64_t last_window_update_us;
 } cwist_http2_stream_flow_control;
 
@@ -82,6 +82,9 @@ void cwist_http2_flow_control_add_send_window(cwist_http2_flow_control *flow_con
 
 void cwist_http2_stream_flow_control_add_send_window(cwist_http2_stream_flow_control *flow_control,
                                                      uint32_t increment);
+
+void cwist_http2_stream_flow_control_adjust_send_window(
+    cwist_http2_stream_flow_control *flow_control, int32_t delta);
 
 size_t cwist_http2_flow_control_pacing_allowance(
     cwist_http2_flow_control *connection_flow_control,
