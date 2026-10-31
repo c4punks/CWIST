@@ -71,6 +71,7 @@ struct cwist_websocket_async {
     size_t frag_len;
     size_t frag_cap;
     cwist_ws_opcode_t frag_opcode;
+    bool frag_active;
 
     /* Parked write: owned buffer + offset, resumed by a one-shot POLLOUT slot
      * (model: http_parked_write_t in src/net/http/http.c). */
@@ -809,8 +810,7 @@ static bool ws_async_stash_append(cwist_websocket_async *ws, const uint8_t *src,
  *         WS_ASYNC_MAX_MESSAGE_BYTES.
  */
 static bool ws_async_frag_append(cwist_websocket_async *ws, const uint8_t *src, size_t len) {
-    if (len == 0) return true;
-    if (ws->frag_len + len > WS_ASYNC_MAX_MESSAGE_BYTES) return false;
+    if (len > WS_ASYNC_MAX_MESSAGE_BYTES - ws->frag_len) return false;
     size_t need = ws->frag_len + len + 1; /* +1 for null terminator */
     if (need > ws->frag_cap) {
         size_t new_cap = ws->frag_cap ? ws->frag_cap * 2 : 4096;
@@ -822,7 +822,7 @@ static bool ws_async_frag_append(cwist_websocket_async *ws, const uint8_t *src, 
         ws->frag_buf = nb;
         ws->frag_cap = new_cap;
     }
-    memcpy(ws->frag_buf + ws->frag_len, src, len);
+    if (len > 0) memcpy(ws->frag_buf + ws->frag_len, src, len);
     ws->frag_len += len;
     return true;
 }
@@ -850,55 +850,44 @@ static int ws_async_process_frame(cwist_websocket_async *ws, bool fin, cwist_ws_
     bool is_control = (opcode >= 0x8);
 
     /* --- Fragmented-message reassembly (RFC 6455 section 5.4) -------------- */
-    if (!is_control && !fin) {
-        /* Fragment with FIN=0: start or continue reassembly. */
+    if (!is_control) {
         if (opcode == CWIST_WS_FRAME_CONTINUATION) {
-            /* CONTINUATION is only valid when a fragmented message is
-             * already in progress. */
-            if (ws->frag_len == 0) {
+            if (!ws->frag_active) {
                 cwist_free(payload);
                 return -1;
             }
         } else {
-            /* First fragment: save opcode (text vs binary). */
-            ws->frag_opcode = opcode;
+            if (ws->frag_active) {
+                cwist_free(payload);
+                return -1;
+            }
+            if (!fin) {
+                ws->frag_active = true;
+                ws->frag_opcode = opcode;
+            }
         }
-        if (!ws_async_frag_append(ws, payload, payload_len)) {
-            cwist_free(payload);
-            return -1;
-        }
-        cwist_free(payload);
-        return 0;
-    }
 
-    /* A CONTINUATION frame is only valid inside an active fragmented-message
-     * sequence; an orphan CONTINUATION with FIN=1 must not be delivered as a
-     * complete message (mirrors the blocking path, issue #158). */
-    if (!is_control && opcode == CWIST_WS_FRAME_CONTINUATION && ws->frag_len == 0) {
-        cwist_free(payload);
-        return -1;
-    }
-
-    /* FIN=1 data frame: may be the last fragment of a multi-frame message. */
-    if (!is_control && ws->frag_len > 0) {
-        if (!ws_async_frag_append(ws, payload, payload_len)) {
+        if (ws->frag_active) {
+            if (!ws_async_frag_append(ws, payload, payload_len)) {
+                cwist_free(payload);
+                cwist_free(ws->frag_buf);
+                ws->frag_buf = NULL;
+                ws->frag_len = ws->frag_cap = 0;
+                ws->frag_active = false;
+                return -1;
+            }
             cwist_free(payload);
-            cwist_free(ws->frag_buf);
+            if (!fin) return 0;
+
+            payload = ws->frag_buf;
+            payload_len = ws->frag_len;
+            payload[payload_len] = '\0';
+            opcode = ws->frag_opcode;
+
             ws->frag_buf = NULL;
             ws->frag_len = ws->frag_cap = 0;
-            return -1;
+            ws->frag_active = false;
         }
-        cwist_free(payload);
-
-        /* Hand ownership of the reassembly buffer to the delivered frame. */
-        payload = ws->frag_buf;
-        payload_len = ws->frag_len;
-        payload[payload_len] = '\0';
-        opcode = ws->frag_opcode;
-        fin = true;
-
-        ws->frag_buf = NULL;
-        ws->frag_len = ws->frag_cap = 0;
     }
 
     /* --- Deliver the complete frame ---------------------------------- */
@@ -1135,6 +1124,7 @@ cwist_websocket_async *cwist_websocket_async_attach_ex(int fd, cwist_reactor_t *
     ws->frag_buf = NULL;
     ws->frag_len = ws->frag_cap = 0;
     ws->frag_opcode = CWIST_WS_FRAME_CONTINUATION;
+    ws->frag_active = false;
     ws->park_buf = NULL;
     ws->park_off = ws->park_len = 0;
     ws->park_deadline_sec = 0;
