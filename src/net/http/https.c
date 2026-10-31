@@ -109,7 +109,7 @@ typedef struct {
     pthread_mutex_t mutex;
     pthread_cond_t cond_not_empty;
     pthread_cond_t cond_not_full;
-    int shutdown;
+    _Atomic int shutdown;
     bool resizing; /* a submitter is allocating a bigger ring outside the mutex */
 } https_thread_pool_t;
 
@@ -174,7 +174,8 @@ static bool https_pool_reserve_locked(void) {
     while (g_https_pool.count >= g_https_pool.queue_len) {
         if (g_https_pool.resizing || g_https_pool.shutdown) return false;
         if (g_https_pool.queue_len >= HTTPS_TASK_QUEUE_MAX) return false;
-        size_t new_len = g_https_pool.queue_len ? g_https_pool.queue_len * 2 : HTTPS_TASK_QUEUE_INITIAL;
+        size_t new_len =
+            g_https_pool.queue_len ? g_https_pool.queue_len * 2 : HTTPS_TASK_QUEUE_INITIAL;
         if (new_len > HTTPS_TASK_QUEUE_MAX) new_len = HTTPS_TASK_QUEUE_MAX;
 
         g_https_pool.resizing = true;
@@ -377,7 +378,8 @@ void https_pool_destroy(void) {
      * out a submitter that is growing the ring outside the mutex: the ring
      * and the mutex are torn down below. */
     pthread_cond_broadcast(&g_https_pool.cond_not_full);
-    while (g_https_pool.resizing) pthread_cond_wait(&g_https_pool.cond_not_full, &g_https_pool.mutex);
+    while (g_https_pool.resizing)
+        pthread_cond_wait(&g_https_pool.cond_not_full, &g_https_pool.mutex);
     pthread_mutex_unlock(&g_https_pool.mutex);
     for (int i = 0; i < get_optimal_thread_count(); i++) {
         pthread_join(g_https_pool.threads[i], NULL);
@@ -454,10 +456,14 @@ static struct {
  * @note Called with g_park.lock held.
  */
 static void park_unlink_locked(https_parked_t *p) {
-    if (p->prev) p->prev->next = p->next;
-    else g_park.head[p->cls] = p->next;
-    if (p->next) p->next->prev = p->prev;
-    else g_park.tail[p->cls] = p->prev;
+    if (p->prev)
+        p->prev->next = p->next;
+    else
+        g_park.head[p->cls] = p->next;
+    if (p->next)
+        p->next->prev = p->prev;
+    else
+        g_park.tail[p->cls] = p->prev;
     p->prev = p->next = NULL;
     p->linked = false;
 }
@@ -620,8 +626,10 @@ bool cwist_https_park(cwist_https_connection *conn, uint64_t idle_ms, cwist_http
         return false;
     }
     p->prev = g_park.tail[p->cls];
-    if (p->prev) p->prev->next = p;
-    else g_park.head[p->cls] = p;
+    if (p->prev)
+        p->prev->next = p;
+    else
+        g_park.head[p->cls] = p;
     g_park.tail[p->cls] = p;
     p->linked = true;
     conn->park_expired = false;
@@ -719,6 +727,39 @@ uint64_t cwist_https_idle_timeout_ms(void) {
         cached = v;
     }
     return cached;
+}
+
+static uint64_t cwist_https_write_timeout_ms(void) {
+    static uint64_t cached = 0;
+    if (!cached) {
+        uint64_t v = 300000;
+        const char *env = getenv("CWIST_HTTPS_WRITE_TIMEOUT_MS");
+        if (env && *env) {
+            char *end = NULL;
+            unsigned long long parsed = strtoull(env, &end, 10);
+            if (end != env && *end == '\0' && parsed > 0) v = (uint64_t)parsed;
+        }
+        cached = v;
+    }
+    return cached;
+}
+
+/**
+ * @brief Create an SSL from the context's current SSL_CTX, reload-safe.
+ * @param ctx HTTPS context; may be NULL or hold no SSL_CTX.
+ * @return New SSL (which holds its own SSL_CTX reference), or NULL.
+ *
+ * The read lock spans the pointer load and SSL_new(): a concurrent
+ * cwist_https_reload_context() swaps and releases the listener's reference
+ * under the write lock, and once SSL_new() returns the connection owns its
+ * own reference, so the old SSL_CTX cannot die under the handshake.
+ */
+static SSL *cwist_https_ssl_new(cwist_https_context *ctx) {
+    if (!ctx) return NULL;
+    pthread_rwlock_rdlock(&ctx->ctx_lock);
+    SSL *ssl = ctx->ctx ? SSL_new(ctx->ctx) : NULL;
+    pthread_rwlock_unlock(&ctx->ctx_lock);
+    return ssl;
 }
 
 /* --- TLS handshake shepherd ------------------------------------------------
@@ -1346,20 +1387,26 @@ cwist_error_t cwist_https_init_context(cwist_https_context **ctx, const char *ce
     return cwist_https_init_context_with_options(ctx, cert_path, key_path, NULL, NULL);
 }
 
-cwist_error_t cwist_https_init_context_with_options(cwist_https_context **ctx,
-                                                    const char *cert_path, const char *key_path,
-                                                    const cwist_https_options *options,
-                                                    cwist_app *app) {
+/**
+ * @brief Build a fully configured server SSL_CTX from PEM files.
+ * @param out Receives the new SSL_CTX (caller owns the reference).
+ * @param cert_path Path to the PEM certificate chain.
+ * @param key_path Path to the PEM private key.
+ * @param options HTTP/2/HTTP/3 profile toggles (may be NULL).
+ * @param app Application context for the PQC layer (may be NULL).
+ * @return Tagged CWIST error describing success or failure.
+ *
+ * Shared by cwist_https_init_context_with_options() and
+ * cwist_https_reload_context() so a reloaded listener gets exactly the TLS
+ * profile a fresh one would.
+ */
+static cwist_error_t cwist_https_build_ssl_ctx(SSL_CTX **out, const char *cert_path,
+                                               const char *key_path,
+                                               const cwist_https_options *options, cwist_app *app) {
     cwist_error_t err = make_error(CWIST_ERR_INT16);
     bool enable_http3 = options && options->enable_http3;
     bool enable_http2 = options && (options->enable_http2 || enable_http3);
 
-    if (!ctx || !cert_path || !key_path) {
-        err.error.err_i16 = -1;
-        return err;
-    }
-
-    // Initialize OpenSSL
     SSL_load_error_strings();
     OpenSSL_add_ssl_algorithms();
 
@@ -1388,7 +1435,6 @@ cwist_error_t cwist_https_init_context_with_options(cwist_https_context **ctx,
         }
     }
 
-    // Load Cert and Key
     if (SSL_CTX_use_certificate_chain_file(ssl_ctx, cert_path) <= 0) {
         SSL_CTX_free(ssl_ctx);
         return make_ssl_error("Unable to load certificate");
@@ -1404,10 +1450,33 @@ cwist_error_t cwist_https_init_context_with_options(cwist_https_context **ctx,
         return make_ssl_error("Unable to load private key");
     }
 
-    // Verify key matches cert
     if (!SSL_CTX_check_private_key(ssl_ctx)) {
         SSL_CTX_free(ssl_ctx);
         return make_ssl_error("Private key does not match certificate");
+    }
+
+    *out = ssl_ctx;
+    err.error.err_i16 = 0;
+    return err;
+}
+
+cwist_error_t cwist_https_init_context_with_options(cwist_https_context **ctx,
+                                                    const char *cert_path, const char *key_path,
+                                                    const cwist_https_options *options,
+                                                    cwist_app *app) {
+    cwist_error_t err = make_error(CWIST_ERR_INT16);
+    bool enable_http3 = options && options->enable_http3;
+    bool enable_http2 = options && (options->enable_http2 || enable_http3);
+
+    if (!ctx || !cert_path || !key_path) {
+        err.error.err_i16 = -1;
+        return err;
+    }
+
+    SSL_CTX *ssl_ctx = NULL;
+    err = cwist_https_build_ssl_ctx(&ssl_ctx, cert_path, key_path, options, app);
+    if (!cwist_error_is_ok(&err)) {
+        return err;
     }
 
     *ctx = (cwist_https_context *)cwist_alloc(sizeof(cwist_https_context));
@@ -1420,6 +1489,7 @@ cwist_error_t cwist_https_init_context_with_options(cwist_https_context **ctx,
     (*ctx)->http2_enabled = enable_http2;
     (*ctx)->http3_enabled = enable_http3;
     (*ctx)->ticket_key = NULL;
+    pthread_rwlock_init(&(*ctx)->ctx_lock, NULL);
 
     /* Pre-fork shared ticket key so every forked worker can resume tickets
      * issued by any other worker. Must run before workers are forked. */
@@ -1427,7 +1497,44 @@ cwist_error_t cwist_https_init_context_with_options(cwist_https_context **ctx,
 
     SSL_CTX_set_alpn_select_cb(ssl_ctx, cwist_https_alpn_select_cb, (void *)*ctx);
 
-    err.error.err_i16 = 0; // Success
+    err.error.err_i16 = 0;
+    return err;
+}
+
+cwist_error_t cwist_https_reload_context(cwist_https_context *ctx, const char *cert_path,
+                                         const char *key_path, cwist_app *app) {
+    cwist_error_t err = make_error(CWIST_ERR_INT16);
+    if (!ctx || !cert_path || !key_path) {
+        err.error.err_i16 = -1;
+        return err;
+    }
+
+    cwist_https_options options = {.enable_http2 = ctx->http2_enabled,
+                                   .enable_http3 = ctx->http3_enabled};
+    SSL_CTX *new_ctx = NULL;
+    err = cwist_https_build_ssl_ctx(&new_ctx, cert_path, key_path, &options, app);
+    if (!cwist_error_is_ok(&err)) {
+        return err;
+    }
+
+    pthread_once(&g_ticket_key_ex_data_once, cwist_tls_ticket_key_ex_data_init);
+    if (ctx->ticket_key && g_ticket_key_ex_data_idx >= 0) {
+        SSL_CTX_set_ex_data(new_ctx, g_ticket_key_ex_data_idx, ctx->ticket_key);
+        SSL_CTX_set_tlsext_ticket_key_cb(new_ctx, cwist_tls_ticket_key_cb);
+    } else if (!ctx->ticket_key) {
+        cwist_tls_setup_shared_ticket_key(new_ctx, &ctx->ticket_key);
+    }
+
+    SSL_CTX_set_alpn_select_cb(new_ctx, cwist_https_alpn_select_cb, (void *)ctx);
+
+    pthread_rwlock_wrlock(&ctx->ctx_lock);
+    SSL_CTX *old_ctx = ctx->ctx;
+    ctx->ctx = new_ctx;
+    pthread_rwlock_unlock(&ctx->ctx_lock);
+
+    if (old_ctx) SSL_CTX_free(old_ctx);
+
+    err.error.err_i16 = 0;
     return err;
 }
 
@@ -1440,8 +1547,8 @@ void cwist_https_destroy_context(cwist_https_context *ctx) {
         if (ctx->ctx) {
             SSL_CTX_free(ctx->ctx);
         }
+        pthread_rwlock_destroy(&ctx->ctx_lock);
         if (ctx->ticket_key) {
-            /* Scrub key material before releasing it. */
             OPENSSL_cleanse(ctx->ticket_key, sizeof(cwist_tls_ticket_key));
             cwist_free(ctx->ticket_key);
         }
@@ -1937,16 +2044,41 @@ cwist_http_request *cwist_https_receive_request(cwist_https_connection *conn) {
     return req;
 }
 
+typedef struct cwist_ssl_write_budget {
+    uint64_t started_ms;
+    uint64_t last_progress_ms;
+} cwist_ssl_write_budget;
+
+static void cwist_ssl_write_budget_init(cwist_ssl_write_budget *budget) {
+    budget->started_ms = cwist_https_now_ms();
+    budget->last_progress_ms = budget->started_ms;
+}
+
+static bool cwist_https_write_cancelled(void) {
+    return !atomic_load(&g_cwist_running) || atomic_load(&g_https_pool.shutdown);
+}
+
 /**
  * @brief Write a full buffer over TLS, retrying through WANT_READ/WANT_WRITE.
  * @param conn Active HTTPS connection wrapper.
  * @param buf Bytes to write.
  * @param len Number of bytes to write.
- * @return 0 on success, -1 on timeout or fatal SSL error.
+ * @param budget Deadline and progress state shared by the whole response.
+ * @return 0 on success, -1 on timeout, shutdown, or fatal SSL error.
  */
-static int cwist_ssl_write_all(cwist_https_connection *conn, const char *buf, size_t len) {
+static int cwist_ssl_write_all(cwist_https_connection *conn, const char *buf, size_t len,
+                               cwist_ssl_write_budget *budget) {
+    int fl = fcntl(conn->fd, F_GETFL, 0);
+    if (fl >= 0) fcntl(conn->fd, F_SETFL, fl | O_NONBLOCK);
+
     size_t off = 0;
     while (off < len) {
+        uint64_t now = cwist_https_now_ms();
+        if (cwist_https_write_cancelled() ||
+            now - budget->started_ms >= cwist_https_write_timeout_ms() ||
+            now - budget->last_progress_ms >= CWIST_HTTP_TIMEOUT_MS)
+            return -1;
+
         /* SSL_write takes an int; cap each call well below INT_MAX. */
         size_t left = len - off;
         int chunk = left > 0x3fffffff ? 0x3fffffff : (int)left;
@@ -1954,14 +2086,24 @@ static int cwist_ssl_write_all(cwist_https_connection *conn, const char *buf, si
         if (sent <= 0) {
             int ssl_err = SSL_get_error(conn->ssl, sent);
             if (ssl_err == SSL_ERROR_WANT_WRITE || ssl_err == SSL_ERROR_WANT_READ) {
-                if (cwist_ssl_wait(conn->fd, ssl_err, CWIST_HTTP_TIMEOUT_MS) != 0) {
+                now = cwist_https_now_ms();
+                uint64_t total_elapsed = now - budget->started_ms;
+                uint64_t idle_elapsed = now - budget->last_progress_ms;
+                if (total_elapsed >= cwist_https_write_timeout_ms() ||
+                    idle_elapsed >= CWIST_HTTP_TIMEOUT_MS)
                     return -1;
-                }
+                uint64_t total_left = cwist_https_write_timeout_ms() - total_elapsed;
+                uint64_t idle_left = CWIST_HTTP_TIMEOUT_MS - idle_elapsed;
+                int wait_ms = 100;
+                if (total_left < (uint64_t)wait_ms) wait_ms = (int)total_left;
+                if (idle_left < (uint64_t)wait_ms) wait_ms = (int)idle_left;
+                if (wait_ms <= 0 || cwist_ssl_wait(conn->fd, ssl_err, wait_ms) != 0) return -1;
                 continue;
             }
             return -1;
         }
         off += (size_t)sent;
+        budget->last_progress_ms = cwist_https_now_ms();
     }
     return 0;
 }
@@ -1985,6 +2127,8 @@ cwist_error_t cwist_https_send_response(cwist_https_connection *conn, cwist_http
         err.error.err_i16 = -1;
         return err;
     }
+    cwist_ssl_write_budget write_budget;
+    cwist_ssl_write_budget_init(&write_budget);
 
     // Inject Alt-Svc when HTTP/3 is enabled so clients discover the QUIC endpoint,
     // unless the application already set or cleared the Alt-Svc header.
@@ -2027,7 +2171,7 @@ cwist_error_t cwist_https_send_response(cwist_https_connection *conn, cwist_http
         if (combined) {
             memcpy(combined, header_buf, header_len);
             memcpy(combined + header_len, body_ptr, body_len);
-            int rc = cwist_ssl_write_all(conn, combined, header_len + body_len);
+            int rc = cwist_ssl_write_all(conn, combined, header_len + body_len, &write_budget);
             cwist_free(combined);
             if (rc != 0) {
                 return make_ssl_error("SSL coalesced write failed");
@@ -2037,11 +2181,11 @@ cwist_error_t cwist_https_send_response(cwist_https_connection *conn, cwist_http
         /* Allocation failure: fall through to the split writes. */
     }
     if (!body_coalesced) {
-        if (cwist_ssl_write_all(conn, header_buf, header_len) != 0) {
+        if (cwist_ssl_write_all(conn, header_buf, header_len, &write_budget) != 0) {
             return make_ssl_error("SSL header write failed");
         }
         if (body_ptr && body_len > 0) {
-            if (cwist_ssl_write_all(conn, body_ptr, body_len) != 0) {
+            if (cwist_ssl_write_all(conn, body_ptr, body_len, &write_budget) != 0) {
                 return make_ssl_error("SSL body write failed");
             }
         }
@@ -2060,7 +2204,7 @@ cwist_error_t cwist_https_send_response(cwist_https_connection *conn, cwist_http
                 return make_ssl_error("file stream read failed");
             }
             if (n == 0) break;
-            if (cwist_ssl_write_all(conn, fbuf, (size_t)n) != 0) {
+            if (cwist_ssl_write_all(conn, fbuf, (size_t)n, &write_budget) != 0) {
                 return make_ssl_error("SSL file stream write failed");
             }
             offset += n;
@@ -2081,6 +2225,8 @@ cwist_error_t cwist_https_send_response_head(cwist_https_connection *conn,
         err.error.err_i16 = -1;
         return err;
     }
+    cwist_ssl_write_budget write_budget;
+    cwist_ssl_write_budget_init(&write_budget);
 
     if (conn->http3_enabled && !cwist_http_header_get(res->headers, "Alt-Svc")) {
         struct sockaddr_storage ss;
@@ -2100,7 +2246,7 @@ cwist_error_t cwist_https_send_response_head(cwist_https_connection *conn,
 
     char header_buf[CWIST_HTTP_MAX_HEADER_SIZE];
     size_t header_len = cwist_http_serialize_headers(res, header_buf, sizeof(header_buf));
-    if (cwist_ssl_write_all(conn, header_buf, header_len) != 0) {
+    if (cwist_ssl_write_all(conn, header_buf, header_len, &write_budget) != 0) {
         return make_ssl_error("SSL header write failed");
     }
 
