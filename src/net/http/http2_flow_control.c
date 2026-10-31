@@ -515,9 +515,18 @@ void cwist_http2_flow_control_add_send_window(cwist_http2_flow_control *flow_con
 void cwist_http2_stream_flow_control_add_send_window(cwist_http2_stream_flow_control *flow_control,
                                                      uint32_t increment) {
     if (flow_control != NULL) {
-        flow_control->send_window = increment > CWIST_HTTP2_MAX_WINDOW - flow_control->send_window
-                                        ? CWIST_HTTP2_MAX_WINDOW
-                                        : flow_control->send_window + increment;
+        int64_t next = (int64_t)flow_control->send_window + increment;
+        flow_control->send_window =
+            next > CWIST_HTTP2_MAX_WINDOW ? CWIST_HTTP2_MAX_WINDOW : (int32_t)next;
+    }
+}
+
+void cwist_http2_stream_flow_control_adjust_send_window(
+    cwist_http2_stream_flow_control *flow_control, int32_t delta) {
+    if (flow_control != NULL) {
+        int64_t next = (int64_t)flow_control->send_window + delta;
+        flow_control->send_window =
+            next > CWIST_HTTP2_MAX_WINDOW ? CWIST_HTTP2_MAX_WINDOW : (int32_t)next;
     }
 }
 
@@ -546,7 +555,8 @@ size_t cwist_http2_flow_control_pacing_allowance(
     uint64_t fill_us;
     size_t allowed;
 
-    if (connection_flow_control == NULL || stream_flow_control == NULL) {
+    if (connection_flow_control == NULL || stream_flow_control == NULL ||
+        stream_flow_control->send_window <= 0) {
         return 0;
     }
     if (connection_flow_control->pacing_last_us == 0U) {
