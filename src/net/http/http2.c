@@ -1192,9 +1192,10 @@ static int h2_auto_window_update(h2_conn *hc, h2_stream *s) {
 /* How many bytes may be sent right now: peer window credit, throttled by
  * RTT pacing once the first PING sample has calibrated it. */
 static uint32_t h2_send_allowance(h2_conn *hc, h2_stream *s, uint32_t requested) {
+    if (s && s->fc.send_window <= 0) return 0;
     uint32_t allowed = requested;
     if (allowed > hc->fc.send_window) allowed = hc->fc.send_window;
-    if (s && allowed > s->fc.send_window) allowed = s->fc.send_window;
+    if (s && (int64_t)allowed > s->fc.send_window) allowed = (uint32_t)s->fc.send_window;
     if (s && hc->fc.rtt_initialized && allowed > 0) {
         size_t paced =
             cwist_http2_flow_control_pacing_allowance(&hc->fc, &s->fc, allowed, h2_now_us());
@@ -2422,10 +2423,10 @@ static int h2_send_seq_file_body(h2_conn *hc, h2_stream *s, uint32_t stream_id, 
     off_t cur_offset = offset;
 
     for (uint32_t i = 0; i < total_chunks && remaining > 0; i++) {
-        while (hc->fc.send_window == 0 || (s && s->fc.send_window == 0)) {
+        while (hc->fc.send_window == 0 || (s && s->fc.send_window <= 0)) {
             if (h2_process_incoming_frames_nonblocking(hc, s) != 0) return -1;
             if (s && s->send_aborted) return -1;
-            if (hc->fc.send_window == 0 || (s && s->fc.send_window == 0)) {
+            if (hc->fc.send_window == 0 || (s && s->fc.send_window <= 0)) {
                 /* Give up if no frame arrived within the idle deadline. */
                 if (h2_now_ms() - hc->last_activity >= (uint64_t)h2_idle_timeout_ms()) return -1;
                 struct timespec ts = {0, 2000000};
@@ -2488,10 +2489,10 @@ static int h2_send_seq_memory_body(h2_conn *hc, h2_stream *s, uint32_t stream_id
     if (!cwist_seq_split(body_data, body_len, chunk_payload, &msg)) return -1;
 
     for (size_t i = 0; i < msg.count; i++) {
-        while (hc->fc.send_window == 0 || (s && s->fc.send_window == 0)) {
+        while (hc->fc.send_window == 0 || (s && s->fc.send_window <= 0)) {
             if (h2_process_incoming_frames_nonblocking(hc, s) != 0) goto fail;
             if (s && s->send_aborted) goto fail;
-            if (hc->fc.send_window == 0 || (s && s->fc.send_window == 0)) {
+            if (hc->fc.send_window == 0 || (s && s->fc.send_window <= 0)) {
                 /* Give up if no frame arrived within the idle deadline. */
                 if (h2_now_ms() - hc->last_activity >= (uint64_t)h2_idle_timeout_ms()) goto fail;
                 struct timespec ts = {0, 2000000};
@@ -2908,10 +2909,10 @@ static int h2_send_response_hc(h2_conn *hc, uint32_t stream_id, cwist_http_respo
         /* Plain DATA frames (no END_STREAM; the trailers close the stream). */
         size_t sent = 0;
         while (sent < body_len) {
-            while (hc->fc.send_window == 0 || (s && s->fc.send_window == 0)) {
+            while (hc->fc.send_window == 0 || (s && s->fc.send_window <= 0)) {
                 if (h2_process_incoming_frames_nonblocking(hc, s) != 0) return -1;
                 if (s && s->send_aborted) return -1;
-                if (hc->fc.send_window == 0 || (s && s->fc.send_window == 0)) {
+                if (hc->fc.send_window == 0 || (s && s->fc.send_window <= 0)) {
                     if (h2_now_ms() - hc->last_activity >= (uint64_t)h2_idle_timeout_ms())
                         return -1;
                     struct timespec ts = {0, 2000000};
@@ -2951,10 +2952,10 @@ static int h2_send_response_hc(h2_conn *hc, uint32_t stream_id, cwist_http_respo
         off_t offset = res->file_stream_offset;
         size_t remaining = res->file_stream_len;
         while (remaining > 0) {
-            while (hc->fc.send_window == 0 || (s && s->fc.send_window == 0)) {
+            while (hc->fc.send_window == 0 || (s && s->fc.send_window <= 0)) {
                 if (h2_process_incoming_frames_nonblocking(hc, s) != 0) return -1;
                 if (s && s->send_aborted) return -1;
-                if (hc->fc.send_window == 0 || (s && s->fc.send_window == 0)) {
+                if (hc->fc.send_window == 0 || (s && s->fc.send_window <= 0)) {
                     /* Give up if no frame arrived within the idle deadline. */
                     if (h2_now_ms() - hc->last_activity >= (uint64_t)h2_idle_timeout_ms())
                         return -1;
@@ -2991,10 +2992,10 @@ static int h2_send_response_hc(h2_conn *hc, uint32_t stream_id, cwist_http_respo
     } else {
         size_t sent = 0;
         while (sent < body_len) {
-            while (hc->fc.send_window == 0 || (s && s->fc.send_window == 0)) {
+            while (hc->fc.send_window == 0 || (s && s->fc.send_window <= 0)) {
                 if (h2_process_incoming_frames_nonblocking(hc, s) != 0) return -1;
                 if (s && s->send_aborted) return -1;
-                if (hc->fc.send_window == 0 || (s && s->fc.send_window == 0)) {
+                if (hc->fc.send_window == 0 || (s && s->fc.send_window <= 0)) {
                     /* Give up if no frame arrived within the idle deadline. */
                     if (h2_now_ms() - hc->last_activity >= (uint64_t)h2_idle_timeout_ms())
                         return -1;
@@ -3310,18 +3311,7 @@ static int h2_handle_settings(h2_conn *hc, const unsigned char *payload, size_t 
                     hc->peer_initial_window_size = value;
                     h2_stream *s = hc->streams;
                     while (s) {
-                        if (delta >= 0) {
-                            uint32_t inc = (uint32_t)delta;
-                            s->fc.send_window = inc > CWIST_HTTP2_MAX_WINDOW - s->fc.send_window
-                                                    ? CWIST_HTTP2_MAX_WINDOW
-                                                    : s->fc.send_window + inc;
-                        } else {
-                            uint32_t dec = (uint32_t)(-delta);
-                            /* RFC 7540 allows the adjusted window to go
-                             * negative; clamping to 0 is the safe subset. */
-                            s->fc.send_window =
-                                dec > s->fc.send_window ? 0 : s->fc.send_window - dec;
-                        }
+                        cwist_http2_stream_flow_control_adjust_send_window(&s->fc, delta);
                         s = s->next;
                     }
                     h2_fc_credit_signal(hc);
@@ -3370,8 +3360,9 @@ static int h2_handle_window_update(h2_conn *hc, uint32_t stream_id, const unsign
              * or may be ignored depending on state. We ignore for leniency. */
             return 0;
         }
-        if ((uint64_t)s->fc.send_window + (uint32_t)increment > CWIST_HTTP2_MAX_WINDOW) return -1;
-        s->fc.send_window += (uint32_t)increment;
+        int64_t next = (int64_t)s->fc.send_window + (uint32_t)increment;
+        if (next > CWIST_HTTP2_MAX_WINDOW) return -1;
+        s->fc.send_window = (int32_t)next;
     }
     h2_fc_credit_signal(hc);
     return 0;
@@ -3596,47 +3587,47 @@ cwist_error_t cwist_http2_serve_connection_ex(cwist_https_connection *conn, void
     }
     h2_conn *hc = &st->hc;
     if (!resumed) {
-    h2_conn_init(hc, conn);
-    hc->hooks = hooks;
-    hc->hook_ctx = (hooks && hooks->on_conn_open) ? hooks->on_conn_open(user_ctx) : user_ctx;
-    hc->async_q = cwist_h2_async_queue_create();
+        h2_conn_init(hc, conn);
+        hc->hooks = hooks;
+        hc->hook_ctx = (hooks && hooks->on_conn_open) ? hooks->on_conn_open(user_ctx) : user_ctx;
+        hc->async_q = cwist_h2_async_queue_create();
 
-    if (cwist_http2_verify_preface(hc) != 0) {
-        h2_conn_destroy(hc);
-        cwist_free(st);
-        result = make_error(CWIST_ERR_INT16);
-        result.error.err_i16 = -1;
-        return result;
-    }
+        if (cwist_http2_verify_preface(hc) != 0) {
+            h2_conn_destroy(hc);
+            cwist_free(st);
+            result = make_error(CWIST_ERR_INT16);
+            result.error.err_i16 = -1;
+            return result;
+        }
 
-    /* One SETTINGS entry per row: 2-byte identifier then 4-byte value.  The
-       row grouping is the wire format, so it is laid out by hand. */
-    // clang-format off
+        /* One SETTINGS entry per row: 2-byte identifier then 4-byte value.  The
+           row grouping is the wire format, so it is laid out by hand. */
+        // clang-format off
     unsigned char settings[24] = {
         0x00, 0x01, 0x00, 0x00, 0x10, 0x00, // SETTINGS_HEADER_TABLE_SIZE = 4096 (CWIST_HTTP2_HEADER_TABLE_SIZE; HPACK dynamic table enabled)
         0x00, 0x03, 0x00, 0x00, 0x00, 0x64, // SETTINGS_MAX_CONCURRENT_STREAMS = 100 (CWIST_HTTP2_MAX_CONCURRENT_STREAMS)
         0x00, 0x04, 0x7f, 0xff, 0xff, 0xff, // SETTINGS_INITIAL_WINDOW_SIZE = 2147483647 (2GB)
         0x00, 0x06, 0x00, 0x01, 0x00, 0x00  // SETTINGS_MAX_HEADER_LIST_SIZE = 65536
     };
-    // clang-format on
-    if (h2_write_frame(hc, CWIST_HTTP2_FRAME_SETTINGS, 0, 0, settings, sizeof(settings)) != 0) {
-        h2_conn_destroy(hc);
-        cwist_free(st);
-        result = make_error(CWIST_ERR_INT16);
-        result.error.err_i16 = -1;
-        return result;
-    }
+        // clang-format on
+        if (h2_write_frame(hc, CWIST_HTTP2_FRAME_SETTINGS, 0, 0, settings, sizeof(settings)) != 0) {
+            h2_conn_destroy(hc);
+            cwist_free(st);
+            result = make_error(CWIST_ERR_INT16);
+            result.error.err_i16 = -1;
+            return result;
+        }
 
-    /* Upgrade connection flow control window to 2GB */
-    h2_send_window_update(hc, 0, 2147483647 - 65535);
-    hc->fc.receive_window = CWIST_HTTP2_MAX_WINDOW;
+        /* Upgrade connection flow control window to 2GB */
+        h2_send_window_update(hc, 0, 2147483647 - 65535);
+        hc->fc.receive_window = CWIST_HTTP2_MAX_WINDOW;
 
-    /* Kick off RTT sampling for the adaptive flow control; the ACK arrives
-     * in the main loop below.  Failure is non-fatal: pacing simply stays
-     * uncalibrated. */
-    h2_send_ping(hc);
-    conn->proto_state = st;
-    conn->proto_state_free = h2_session_free;
+        /* Kick off RTT sampling for the adaptive flow control; the ACK arrives
+         * in the main loop below.  Failure is non-fatal: pacing simply stays
+         * uncalibrated. */
+        h2_send_ping(hc);
+        conn->proto_state = st;
+        conn->proto_state_free = h2_session_free;
     }
 
     bool connected = true;
@@ -4133,8 +4124,8 @@ cwist_error_t cwist_http2_serve_connection_ex(cwist_https_connection *conn, void
                         connected = false;
                         break;
                     }
-                    if (h2_write_frame(hc, CWIST_HTTP2_FRAME_PING, CWIST_HTTP2_FLAG_ACK, 0,
-                                       payload, 8) != 0) {
+                    if (h2_write_frame(hc, CWIST_HTTP2_FRAME_PING, CWIST_HTTP2_FLAG_ACK, 0, payload,
+                                       8) != 0) {
                         connected = false;
                     }
                 } else if (hc->ping_outstanding && memcmp(payload, hc->ping_payload, 8) == 0) {
