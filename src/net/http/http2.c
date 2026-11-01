@@ -417,6 +417,7 @@ typedef struct h2_conn {
      * receive target from PING-measured RTT, and paces sends once RTT is
      * known. */
     cwist_http2_flow_control fc;
+    bool pacing_waiting;
     uint64_t ping_sent_us;
     unsigned char ping_payload[8];
     bool ping_outstanding;
@@ -2299,9 +2300,8 @@ static int h2_send_seq_file_body(h2_conn *hc, h2_stream *s, uint32_t stream_id, 
                 if (h2_out_flush(hc) != 0) return -1;
                 return 1;
             }
-            struct timespec ts = {0, 2000000};
-            nanosleep(&ts, NULL);
-            chunk_payload = h2_seq_chunk_payload(hc, s, max_frame_size);
+            hc->pacing_waiting = true;
+            return 1;
         }
         s->response_chunk_payload = chunk_payload;
         s->response_total_chunks = (uint32_t)((body_len + chunk_payload - 1) / chunk_payload);
@@ -2322,9 +2322,9 @@ static int h2_send_seq_file_body(h2_conn *hc, h2_stream *s, uint32_t stream_id, 
                 if (h2_out_flush(hc) != 0) return -1;
                 return 1;
             }
-            struct timespec ts = {0, 2000000};
-            nanosleep(&ts, NULL);
-            continue;
+            if (h2_out_flush(hc) != 0) return -1;
+            hc->pacing_waiting = true;
+            return 1;
         }
 
         cwist_scratch_t chunk_s CWIST_SCRATCH_DEFER = {0};
@@ -2362,9 +2362,8 @@ static int h2_send_seq_memory_body(h2_conn *hc, h2_stream *s, uint32_t stream_id
                 if (h2_out_flush(hc) != 0) return -1;
                 return 1;
             }
-            struct timespec ts = {0, 2000000};
-            nanosleep(&ts, NULL);
-            chunk_payload = h2_seq_chunk_payload(hc, s, max_frame_size);
+            hc->pacing_waiting = true;
+            return 1;
         }
         s->response_chunk_payload = chunk_payload;
         s->response_total_chunks = (uint32_t)((body_len + chunk_payload - 1) / chunk_payload);
@@ -2387,9 +2386,10 @@ static int h2_send_seq_memory_body(h2_conn *hc, h2_stream *s, uint32_t stream_id
                 cwist_seq_message_free(&msg);
                 return 1;
             }
-            struct timespec ts = {0, 2000000};
-            nanosleep(&ts, NULL);
-            continue;
+            if (h2_out_flush(hc) != 0) goto fail;
+            cwist_seq_message_free(&msg);
+            hc->pacing_waiting = true;
+            return 1;
         }
 
         uint8_t flags = (i + 1 == msg.count) ? CWIST_HTTP2_FLAG_END_STREAM : 0;
@@ -2790,9 +2790,8 @@ static int h2_send_response_hc(h2_conn *hc, uint32_t stream_id, cwist_http_respo
             uint32_t allowed = h2_send_allowance(hc, s, chunk);
             if (allowed == 0) {
                 if (h2_out_flush(hc) != 0) return -1;
-                struct timespec ts = {0, 2000000};
-                nanosleep(&ts, NULL);
-                continue;
+                hc->pacing_waiting = true;
+                return 1;
             }
             if (h2_write_frame(hc, CWIST_HTTP2_FRAME_DATA, 0, stream_id, body_data + sent,
                                allowed) != 0)
@@ -2801,6 +2800,11 @@ static int h2_send_response_hc(h2_conn *hc, uint32_t stream_id, cwist_http_respo
             h2_commit_send(hc, s, allowed);
             sent += allowed;
             s->response_sent = sent;
+            if (allowed < chunk && hc->fc.send_window > 0 && s->fc.send_window > 0) {
+                if (h2_out_flush(hc) != 0) return -1;
+                hc->pacing_waiting = true;
+                return 1;
+            }
         }
         return h2_send_grpc_trailers(hc, stream_id, res, max_frame);
     }
@@ -2823,9 +2827,8 @@ static int h2_send_response_hc(h2_conn *hc, uint32_t stream_id, cwist_http_respo
         uint32_t allowed = h2_send_allowance(hc, s, chunk);
         if (allowed == 0) {
             if (h2_out_flush(hc) != 0) return -1;
-            struct timespec ts = {0, 2000000};
-            nanosleep(&ts, NULL);
-            continue;
+            hc->pacing_waiting = true;
+            return 1;
         }
 
         const unsigned char *data = body_data ? body_data + sent : NULL;
@@ -2845,6 +2848,11 @@ static int h2_send_response_hc(h2_conn *hc, uint32_t stream_id, cwist_http_respo
         h2_commit_send(hc, s, allowed);
         sent += allowed;
         s->response_sent = sent;
+        if (allowed < chunk && hc->fc.send_window > 0 && s->fc.send_window > 0) {
+            if (h2_out_flush(hc) != 0) return -1;
+            hc->pacing_waiting = true;
+            return 1;
+        }
     }
     return h2_out_flush(hc);
 }
@@ -3495,6 +3503,7 @@ cwist_error_t cwist_http2_serve_connection_ex(cwist_https_connection *conn, void
             connected = false;
             break;
         }
+        hc->pacing_waiting = false;
         if (h2_resume_responses(hc) != 0) {
             connected = false;
             break;
@@ -3536,7 +3545,10 @@ cwist_error_t cwist_http2_serve_connection_ex(cwist_https_connection *conn, void
         /* Bound the wait for the next frame with the idle deadline so an
          * idle connection cannot monopolize a pool worker forever.  A
          * hook-provided deadline (gRPC timeout) tightens the wait. */
+        uint64_t pacing_deadline = hc->pacing_waiting ? h2_now_ms() + 2 : 0;
         uint64_t wait_deadline = sent_goaway ? goaway_close_at : 0;
+        if (pacing_deadline && (!wait_deadline || pacing_deadline < wait_deadline))
+            wait_deadline = pacing_deadline;
         if (hooks && hooks->next_deadline_ms) {
             uint64_t gd = hooks->next_deadline_ms(hc->hook_ctx);
             if (gd && (!wait_deadline || gd < wait_deadline)) wait_deadline = gd;
@@ -3552,6 +3564,7 @@ cwist_error_t cwist_http2_serve_connection_ex(cwist_https_connection *conn, void
         }
         if (wait_rc != 0) {
             uint64_t now = h2_now_ms();
+            if (pacing_deadline && now >= pacing_deadline) continue;
             /* A hook deadline expiring is not a connection error: the
              * poll sweep at the loop top expires the stream. */
             if (hooks && hooks->next_deadline_ms) {
