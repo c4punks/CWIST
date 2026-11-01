@@ -1,5 +1,7 @@
 var NAVTREEINDEX8 =
 {
+"d6/d3c/seq_8h.html#a6d8d22e552f3c2cc545e4befb7248a9e":[93,0,1,0,0,5,0,2],
+"d6/d3c/seq_8h.html#a7df762fada017289f83eb725ac0b5f59":[93,0,1,0,0,5,0,11],
 "d6/d3c/seq_8h.html#ab396be91e3b59ec366de554e453032eb":[93,0,1,0,0,5,0,15],
 "d6/d3c/seq_8h.html#ac4556d6b030fb6c6604ee4e1a8073c89":[93,0,1,0,0,5,0,19],
 "d6/d3c/seq_8h.html#acd602b0fddc5aee076638e546f9eaa10":[93,0,1,0,0,5,0,13],
@@ -140,11 +142,12 @@ var NAVTREEINDEX8 =
 "d6/d9f/md_docs_2references_2mux__algorithm__references.html#autotoc_md800":[80,4],
 "d6/d9f/md_docs_2references_2mux__algorithm__references.html#autotoc_md801":[80,5],
 "d6/dad/websocket__async_8h.html":[93,0,1,0,2,6,1],
-"d6/dad/websocket__async_8h.html#a3029917957e6cb47adc4d97dae14c7d7":[93,0,1,0,2,6,1,4],
-"d6/dad/websocket__async_8h.html#a4c8280877a537556488ba90ba5ec1716":[93,0,1,0,2,6,1,0],
-"d6/dad/websocket__async_8h.html#a58cd0931439fe5825a93da77fc25542e":[93,0,1,0,2,6,1,3],
-"d6/dad/websocket__async_8h.html#ab124d32a1729a18003160bace463d30e":[93,0,1,0,2,6,1,2],
-"d6/dad/websocket__async_8h.html#af86e8fc7b87bc28e693009fabff2842f":[93,0,1,0,2,6,1,1],
+"d6/dad/websocket__async_8h.html#a3029917957e6cb47adc4d97dae14c7d7":[93,0,1,0,2,6,1,5],
+"d6/dad/websocket__async_8h.html#a4c8280877a537556488ba90ba5ec1716":[93,0,1,0,2,6,1,1],
+"d6/dad/websocket__async_8h.html#a58cd0931439fe5825a93da77fc25542e":[93,0,1,0,2,6,1,4],
+"d6/dad/websocket__async_8h.html#a72bceca28f1345c3db9f45b0f96e4017":[93,0,1,0,2,6,1,0],
+"d6/dad/websocket__async_8h.html#ab124d32a1729a18003160bace463d30e":[93,0,1,0,2,6,1,3],
+"d6/dad/websocket__async_8h.html#af86e8fc7b87bc28e693009fabff2842f":[93,0,1,0,2,6,1,2],
 "d6/dad/websocket__async_8h_source.html":[93,0,1,0,2,6,1],
 "d6/db0/structcwist__http2__header.html":[92,0,39],
 "d6/db0/structcwist__http2__header.html#a05e57ee99b3c69d09c82ef0fea54a83e":[92,0,39,1],
@@ -246,8 +249,5 @@ var NAVTREEINDEX8 =
 "d6/de0/structcwist__file__t.html#a57ddfa38195cb94a9f2579b71d24df5f":[92,0,24,2],
 "d6/de0/structcwist__file__t.html#aa3ac45f2b9ac20d97ee20cb0e71537e7":[92,0,24,6],
 "d6/de0/structcwist__file__t.html#ad3e53262315cab08ea1c7d0998488a5a":[92,0,24,4],
-"d6/de8/md_docs_2ko_2versioning.html":[71],
-"d6/de8/md_docs_2ko_2versioning.html#autotoc_md718":[71,0],
-"d6/de8/md_docs_2ko_2versioning.html#autotoc_md719":[71,1],
-"d6/de8/md_docs_2ko_2versioning.html#autotoc_md720":[71,2]
+"d6/de8/md_docs_2ko_2versioning.html":[71]
 };
