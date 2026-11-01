@@ -84,6 +84,7 @@
 | 변수 | 상태 | 값 | 기본값 | 효과 |
 |------|------|----|--------|------|
 | `CWIST_WS_ASYNC_IDLE_TIMEOUT_SEC` | supported | 초, 0 이상 | `300` | async(reactor) WebSocket을 닫기 전 유휴 시간. `0`이면 유휴 소켓을 닫지 않습니다. |
+| `CWIST_WS_ASYNC_MAX_PARKED_BYTES` | tuning | 0보다 큰 정수 | `16777226` | async WebSocket 연결별 미전송 대기 바이트 상한. 새 프레임은 이 상한을 넘는 대신 backpressure를 반환합니다. |
 
 ## Reactor
 
