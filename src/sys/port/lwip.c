@@ -274,6 +274,7 @@ static void conn_free(cwist_lwip_conn *c) {
 static void response_body(cwist_http_response *res, const void **body, size_t *body_len) {
     *body = NULL;
     *body_len = 0;
+    if (CWIST_HTTP_STATUS_FORBIDS_BODY(res->status_code)) return;
     if (res->stream_mode) {
         if (!res->stream_ended) cwist_http_response_stream_end(res);
         *body = res->stream_buf ? res->stream_buf->data : NULL;
@@ -467,7 +468,7 @@ static err_t conn_process(cwist_lwip_conn *c) {
     cwist_http_request_destroy(req);
     res->keep_alive = keep;
 
-    if (res->use_file_stream) {
+    if (!CWIST_HTTP_STATUS_FORBIDS_BODY(res->status_code) && res->use_file_stream) {
         cwist_http_response_destroy(res);
         return conn_send_error(c, CWIST_HTTP_INTERNAL_ERROR);
     }
