@@ -214,6 +214,8 @@ Functions</h2></td></tr>
 <tr class="memitem:a0350eabe77ee3c2766becdaad70f313f" id="r_a0350eabe77ee3c2766becdaad70f313f"><td class="memItemLeft" align="right" valign="top"><a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">void</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d7/de9/http2__flow__control_8h.html#a0350eabe77ee3c2766becdaad70f313f">cwist_http2_stream_flow_control_add_send_window</a> (<a class="el" href="../../d0/d2d/structcwist__http2__stream__flow__control.html">cwist_http2_stream_flow_control</a> *<a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">flow_control</a>, <a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">uint32_t</a> <a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">increment</a>)</td></tr>
 <tr class="memdesc:a0350eabe77ee3c2766becdaad70f313f"><td class="mdescLeft">&#160;</td><td class="mdescRight">Credit a stream send window from a WINDOW_UPDATE frame.  <br /></td></tr>
 <tr class="separator:a0350eabe77ee3c2766becdaad70f313f"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a8259cf59641d17ba7f55264447a892be" id="r_a8259cf59641d17ba7f55264447a892be"><td class="memItemLeft" align="right" valign="top"><a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">void</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d7/de9/http2__flow__control_8h.html#a8259cf59641d17ba7f55264447a892be">cwist_http2_stream_flow_control_adjust_send_window</a> (<a class="el" href="../../d0/d2d/structcwist__http2__stream__flow__control.html">cwist_http2_stream_flow_control</a> *<a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">flow_control</a>, <a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">int32_t</a> <a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">delta</a>)</td></tr>
+<tr class="separator:a8259cf59641d17ba7f55264447a892be"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:aa4645fc8b3bd6eb5cae49fb57edf1312" id="r_aa4645fc8b3bd6eb5cae49fb57edf1312"><td class="memItemLeft" align="right" valign="top"><a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">size_t</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d7/de9/http2__flow__control_8h.html#aa4645fc8b3bd6eb5cae49fb57edf1312">cwist_http2_flow_control_pacing_allowance</a> (<a class="el" href="../../d1/d92/structcwist__http2__flow__control.html">cwist_http2_flow_control</a> *<a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">connection_flow_control</a>, <a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">const</a> <a class="el" href="../../d0/d2d/structcwist__http2__stream__flow__control.html">cwist_http2_stream_flow_control</a> *<a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">stream_flow_control</a>, <a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">size_t</a> <a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">requested</a>, <a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">uint64_t</a> <a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">now_us</a>)</td></tr>
 <tr class="memdesc:aa4645fc8b3bd6eb5cae49fb57edf1312"><td class="mdescLeft">&#160;</td><td class="mdescRight">Compute how much of a send request may proceed right now.  <br /></td></tr>
 <tr class="separator:aa4645fc8b3bd6eb5cae49fb57edf1312"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -418,7 +420,7 @@ Functions</h2></td></tr>
 
 <p class="reference">References <a class="el" href="../../d3/db2/otel_8c_source.html#l00056">cap</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../d2/db0/http2_8c_source.html#l03573">cwist_http2_serve_connection_ex()</a>.</p>
+<p class="reference">Referenced by <a class="el" href="../../d2/db0/http2_8c_source.html#l03564">cwist_http2_serve_connection_ex()</a>.</p>
 
 </div>
 </div>
@@ -593,11 +595,11 @@ Functions</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>Allowed byte count; 0 when either flow-control pointer is NULL or no credit of any kind is available. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d9/d16/http2__flow__control_8c_source.html#l00541">541</a> of file <a class="el" href="../../d9/d16/http2__flow__control_8c_source.html">http2_flow_control.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d9/d16/http2__flow__control_8c_source.html#l00550">550</a> of file <a class="el" href="../../d9/d16/http2__flow__control_8c_source.html">http2_flow_control.c</a>.</p>
 
 <p class="reference">References <a class="el" href="../../d3/db2/otel_8c_source.html#l00056">cap</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../d9/d16/http2__flow__control_8c_source.html#l00606">cwist_http2_flow_control_reserve_send()</a>.</p>
+<p class="reference">Referenced by <a class="el" href="../../d9/d16/http2__flow__control_8c_source.html#l00616">cwist_http2_flow_control_reserve_send()</a>.</p>
 
 </div>
 </div>
@@ -647,7 +649,7 @@ Functions</h2></td></tr>
 
 <p class="reference">References <a class="el" href="../../d3/db2/otel_8c_source.html#l00056">cap</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../d2/db0/http2_8c_source.html#l03573">cwist_http2_serve_connection_ex()</a>.</p>
+<p class="reference">Referenced by <a class="el" href="../../d2/db0/http2_8c_source.html#l03564">cwist_http2_serve_connection_ex()</a>.</p>
 
 </div>
 </div>
@@ -708,9 +710,9 @@ Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d9/d16/http2__flow__control_8c_source.html#l00606">606</a> of file <a class="el" href="../../d9/d16/http2__flow__control_8c_source.html">http2_flow_control.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d9/d16/http2__flow__control_8c_source.html#l00616">616</a> of file <a class="el" href="../../d9/d16/http2__flow__control_8c_source.html">http2_flow_control.c</a>.</p>
 
-<p class="reference">References <a class="el" href="../../d3/db2/otel_8c_source.html#l00056">cap</a>, and <a class="el" href="../../d9/d16/http2__flow__control_8c_source.html#l00541">cwist_http2_flow_control_pacing_allowance()</a>.</p>
+<p class="reference">References <a class="el" href="../../d3/db2/otel_8c_source.html#l00056">cap</a>, and <a class="el" href="../../d9/d16/http2__flow__control_8c_source.html#l00550">cwist_http2_flow_control_pacing_allowance()</a>.</p>
 
 </div>
 </div>
@@ -754,7 +756,7 @@ Functions</h2></td></tr>
 
 <p class="reference">References <a class="el" href="../../d3/db2/otel_8c_source.html#l00056">cap</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../d2/db0/http2_8c_source.html#l03573">cwist_http2_serve_connection_ex()</a>.</p>
+<p class="reference">Referenced by <a class="el" href="../../d2/db0/http2_8c_source.html#l03564">cwist_http2_serve_connection_ex()</a>.</p>
 
 </div>
 </div>
@@ -800,6 +802,38 @@ Functions</h2></td></tr>
 
 </div>
 </div>
+<a id="a8259cf59641d17ba7f55264447a892be" name="a8259cf59641d17ba7f55264447a892be"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a8259cf59641d17ba7f55264447a892be">&#9670;&#160;</a></span>cwist_http2_stream_flow_control_adjust_send_window()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname"><a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">void</a> cwist_http2_stream_flow_control_adjust_send_window </td>
+          <td>(</td>
+          <td class="paramtype"><a class="el" href="../../d0/d2d/structcwist__http2__stream__flow__control.html">cwist_http2_stream_flow_control</a> *&#160;</td>
+          <td class="paramname"><em>flow_control</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype"><a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">int32_t</a>&#160;</td>
+          <td class="paramname"><em>delta</em>&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p class="definition">Definition at line <a class="el" href="../../d9/d16/http2__flow__control_8c_source.html#l00524">524</a> of file <a class="el" href="../../d9/d16/http2__flow__control_8c_source.html">http2_flow_control.c</a>.</p>
+
+<p class="reference">References <a class="el" href="../../d3/db2/otel_8c_source.html#l00056">cap</a>, and <a class="el" href="../../d7/de9/http2__flow__control_8h_source.html#l00010">CWIST_HTTP2_MAX_WINDOW</a>.</p>
+
+</div>
+</div>
 <a id="a1fbab4a381083644f0b838feca679d0d" name="a1fbab4a381083644f0b838feca679d0d"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#a1fbab4a381083644f0b838feca679d0d">&#9670;&#160;</a></span>cwist_http2_stream_flow_control_consume()</h2>
 
@@ -840,7 +874,7 @@ Functions</h2></td></tr>
 
 <p class="reference">References <a class="el" href="../../d3/db2/otel_8c_source.html#l00056">cap</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../d2/db0/http2_8c_source.html#l03573">cwist_http2_serve_connection_ex()</a>.</p>
+<p class="reference">Referenced by <a class="el" href="../../d2/db0/http2_8c_source.html#l03564">cwist_http2_serve_connection_ex()</a>.</p>
 
 </div>
 </div>
@@ -1024,7 +1058,7 @@ Functions</h2></td></tr>
 
 <p class="reference">References <a class="el" href="../../d3/db2/otel_8c_source.html#l00056">cap</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../d2/db0/http2_8c_source.html#l03573">cwist_http2_serve_connection_ex()</a>.</p>
+<p class="reference">Referenced by <a class="el" href="../../d2/db0/http2_8c_source.html#l03564">cwist_http2_serve_connection_ex()</a>.</p>
 
 </div>
 </div>

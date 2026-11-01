@@ -9,6 +9,7 @@ var http2__flow__control_8c =
     [ "cwist_http2_flow_control_reserve_send", "d9/d16/http2__flow__control_8c.html#a947d19fa7e2aca3e99de73b0f95e7df6", null ],
     [ "cwist_http2_flow_control_update_rtt", "d9/d16/http2__flow__control_8c.html#a610ff8a87c8908bc70fb52bf42880da0", null ],
     [ "cwist_http2_stream_flow_control_add_send_window", "d9/d16/http2__flow__control_8c.html#a0350eabe77ee3c2766becdaad70f313f", null ],
+    [ "cwist_http2_stream_flow_control_adjust_send_window", "d9/d16/http2__flow__control_8c.html#a8259cf59641d17ba7f55264447a892be", null ],
     [ "cwist_http2_stream_flow_control_consume", "d9/d16/http2__flow__control_8c.html#a1fbab4a381083644f0b838feca679d0d", null ],
     [ "cwist_http2_stream_flow_control_init", "d9/d16/http2__flow__control_8c.html#aa7025676c938d9afa1e86d754517c671", null ],
     [ "cwist_http2_stream_flow_control_maybe_window_update", "d9/d16/http2__flow__control_8c.html#aa5869ea88923114572747dc766484fec", null ],
