@@ -169,6 +169,9 @@ cwist_http_request *cwist_https_receive_request(cwist_https_connection *conn);
  * Serialize an HTTP response and send it over the SSL connection.
  * Streams the header block and body separately (zero-copy; no intermediate
  * serialization blob) and supports pointer bodies and file streams.
+ * CWIST_HTTPS_WRITE_TIMEOUT_MS bounds the complete response write (default:
+ * 300000). A write also stops after 30 seconds without progress or promptly
+ * after application/pool shutdown.
  */
 cwist_error_t cwist_https_send_response(cwist_https_connection *conn, cwist_http_response *res);
 cwist_error_t cwist_https_send_response_head(cwist_https_connection *conn,
