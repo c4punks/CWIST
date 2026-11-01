@@ -517,7 +517,7 @@ void cwist_http2_stream_flow_control_add_send_window(cwist_http2_stream_flow_con
     if (flow_control != NULL) {
         int64_t next = (int64_t)flow_control->send_window + increment;
         flow_control->send_window =
-            next > CWIST_HTTP2_MAX_WINDOW ? CWIST_HTTP2_MAX_WINDOW : (int32_t)next;
+            next > (int64_t)CWIST_HTTP2_MAX_WINDOW ? (int32_t)CWIST_HTTP2_MAX_WINDOW : (int32_t)next;
     }
 }
 
@@ -526,7 +526,7 @@ void cwist_http2_stream_flow_control_adjust_send_window(
     if (flow_control != NULL) {
         int64_t next = (int64_t)flow_control->send_window + delta;
         flow_control->send_window =
-            next > CWIST_HTTP2_MAX_WINDOW ? CWIST_HTTP2_MAX_WINDOW : (int32_t)next;
+            next > (int64_t)CWIST_HTTP2_MAX_WINDOW ? (int32_t)CWIST_HTTP2_MAX_WINDOW : (int32_t)next;
     }
 }
 
@@ -587,8 +587,8 @@ size_t cwist_http2_flow_control_pacing_allowance(
     if (allowed > connection_flow_control->send_window) {
         allowed = connection_flow_control->send_window;
     }
-    if (allowed > stream_flow_control->send_window) {
-        allowed = stream_flow_control->send_window;
+    if (allowed > (size_t)stream_flow_control->send_window) {
+        allowed = (size_t)stream_flow_control->send_window;
     }
     if (allowed > connection_flow_control->pacing_tokens) {
         allowed = (size_t)connection_flow_control->pacing_tokens;
