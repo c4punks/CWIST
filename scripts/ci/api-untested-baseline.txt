@@ -125,7 +125,6 @@ cwist_https_idle_timeout_ms
 cwist_https_park
 cwist_https_pending_handshakes
 cwist_https_receive_request
-cwist_https_send_response
 cwist_https_send_response_head
 cwist_https_server_loop
 cwist_io_uring_destroy_sqpoll
