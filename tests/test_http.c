@@ -1,6 +1,7 @@
 #include <cwist/net/http/http.h>
 #include <cwist/core/mem/alloc.h>
 #include <stdio.h>
+#include <errno.h>
 #include <string.h>
 #include <assert.h>
 #include <unistd.h>
@@ -487,6 +488,41 @@ static void test_no_content_statuses(void) {
     printf("Passed no-content status response suppression.\n");
 }
 
+static void test_response_header_overflow(void) {
+    char header_buf[CWIST_HTTP_MAX_HEADER_SIZE];
+    char huge[9000];
+    memset(huge, 'x', sizeof(huge) - 1);
+    huge[sizeof(huge) - 1] = '\0';
+
+    cwist_http_response *res = cwist_http_response_create();
+    cwist_http_header_add(&res->headers, "X-Oversized", huge);
+    assert(cwist_http_serialize_headers(res, header_buf, sizeof(header_buf)) == 0);
+    cwist_http_response_destroy(res);
+
+    char value[41];
+    memset(value, 'v', sizeof(value) - 1);
+    value[sizeof(value) - 1] = '\0';
+    res = cwist_http_response_create();
+    for (int i = 0; i < 300; i++) cwist_http_header_add(&res->headers, "X-Fill", value);
+    cwist_sstring_assign(res->body, "hello");
+    assert(cwist_http_serialize_headers(res, header_buf, sizeof(header_buf)) == 0);
+
+    int sv[2];
+    assert(socketpair(AF_UNIX, SOCK_STREAM, 0, sv) == 0);
+    assert(cwist_http_send_response(sv[0], res).error.err_i16 == -1);
+    char byte;
+    assert(recv(sv[1], &byte, 1, MSG_DONTWAIT) == -1 && errno == EAGAIN);
+    close(sv[0]);
+    close(sv[1]);
+    cwist_http_response_destroy(res);
+
+    res = cwist_http_response_create();
+    cwist_http_response_set_alt_svc(res, huge);
+    assert(cwist_http_serialize_headers(res, header_buf, sizeof(header_buf)) == 0);
+    cwist_http_response_destroy(res);
+    printf("Passed response header overflow rejection.\n");
+}
+
 /* A message longer than the internal header buffer must arrive in full, and
  * Content-Length must match the bytes actually sent. */
 static void test_error_response_long_message(void) {
@@ -533,6 +569,7 @@ int main() {
     test_expect_100_continue_flow();
     test_head_response_headers_only();
     test_no_content_statuses();
+    test_response_header_overflow();
     test_error_response_long_message();
     printf("All HTTP tests passed!\n");
     return 0;
