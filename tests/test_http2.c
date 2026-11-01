@@ -1627,6 +1627,7 @@ static void test_http2_lower_stream_trailers(void) {
 }
 
 static void test_http2_data_frame_size(size_t data_len, bool oversized) {
+    printf("Testing HTTP/2 %zu-byte DATA frame...\n", data_len);
     int sv[2];
     assert(socketpair(AF_UNIX, SOCK_STREAM, 0, sv) == 0);
     struct timeval timeout = {.tv_sec = 3};
@@ -1667,7 +1668,10 @@ static void test_http2_data_frame_size(size_t data_len, bool oversized) {
     assert(ssl_write_all(client, settings_frame, sizeof(settings_frame)) == 0);
     assert(ssl_write_all(client, headers_frame, sizeof(headers_frame)) == 0);
     assert(ssl_write_all(client, data_header, sizeof(data_header)) == 0);
-    assert(ssl_write_all(client, data, data_len) == 0);
+    /* An oversized frame is rejected at its header, so the server may close
+     * before the payload is fully written. */
+    int data_rc = ssl_write_all(client, data, data_len);
+    assert(oversized || data_rc == 0);
     free(data);
 
     bool saw_data = false;
@@ -1701,6 +1705,111 @@ static void test_http2_data_frame_size(size_t data_len, bool oversized) {
         assert(saw_data && !saw_goaway);
         assert(http2_request_count == 1);
     }
+    printf("Passed HTTP/2 %zu-byte DATA frame.\n", data_len);
+}
+
+/* Sends one 16,385-byte frame of @p type on stream 1, then a valid request on
+ * stream 3. A peer SETTINGS_MAX_FRAME_SIZE only limits what CWIST sends, so
+ * raising it must not let an oversized inbound frame through. */
+static void test_http2_oversized_frame(uint8_t type, bool raise_peer_max) {
+    printf("Testing HTTP/2 oversized frame type 0x%02x (peer max %s)...\n", type,
+           raise_peer_max ? "raised" : "default");
+    int sv[2];
+    assert(socketpair(AF_UNIX, SOCK_STREAM, 0, sv) == 0);
+    struct timeval timeout = {.tv_sec = 3};
+    assert(setsockopt(sv[1], SOL_SOCKET, SO_RCVTIMEO, &timeout, sizeof(timeout)) == 0);
+
+    http2_request_count = 0;
+    test_http2_server_ctx server_ctx = {
+        .fd = sv[0], .result = make_error(CWIST_ERR_INT16), .handler = http2_counting_handler};
+    pthread_t tid;
+    assert(pthread_create(&tid, NULL, http2_handler_server_thread, &server_ctx) == 0);
+
+    SSL_CTX *client_ctx = SSL_CTX_new(TLS_client_method());
+    assert(client_ctx != NULL);
+    SSL_CTX_set_verify(client_ctx, SSL_VERIFY_NONE, NULL);
+    SSL *client = SSL_new(client_ctx);
+    assert(client != NULL);
+    assert(SSL_set_fd(client, sv[1]) == 1);
+    assert(SSL_connect(client) == 1);
+
+    static const unsigned char preface[] = "PRI * HTTP/2.0\r\n\r\nSM\r\n\r\n";
+    static const unsigned char settings_default[] = {0x00, 0x00, 0x00, 0x04, 0x00,
+                                                     0x00, 0x00, 0x00, 0x00};
+    /* SETTINGS_MAX_FRAME_SIZE = 1 MiB. */
+    static const unsigned char settings_raised[] = {0x00, 0x00, 0x06, 0x04, 0x00, 0x00, 0x00, 0x00,
+                                                    0x00, 0x00, 0x05, 0x00, 0x10, 0x00, 0x00};
+    static const unsigned char headers_stream3[] = {0x00, 0x00, 0x03, 0x01, 0x05, 0x00,
+                                                    0x00, 0x00, 0x03, 0x82, 0x87, 0x84};
+    const size_t frame_len = 16385;
+    unsigned char *frame = calloc(1, 9 + frame_len);
+    assert(frame != NULL);
+    frame[0] = (unsigned char)(frame_len >> 16);
+    frame[1] = (unsigned char)(frame_len >> 8);
+    frame[2] = (unsigned char)frame_len;
+    frame[3] = type;
+    frame[8] = 0x01;
+    if (type == 0x01) {
+        /* END_STREAM|END_HEADERS GET / plus one literal header whose value
+         * fills the rest of the frame, so the block decodes if accepted. */
+        static const char name[] = "x-pad";
+        frame[4] = 0x05;
+        unsigned char *p = frame + 9;
+        *p++ = 0x82;
+        *p++ = 0x87;
+        *p++ = 0x84;
+        *p++ = 0x00;
+        *p++ = (unsigned char)(sizeof(name) - 1);
+        memcpy(p, name, sizeof(name) - 1);
+        p += sizeof(name) - 1;
+        size_t value_len = frame_len - (size_t)(p - (frame + 9)) - 3;
+        size_t rest = value_len - 127;
+        *p++ = 0x7f;
+        *p++ = (unsigned char)((rest & 0x7f) | 0x80);
+        *p++ = (unsigned char)(rest >> 7);
+        assert(rest >> 7 < 0x80);
+        memset(p, 'a', value_len);
+        assert((size_t)(p + value_len - (frame + 9)) == frame_len);
+    }
+
+    assert(ssl_write_all(client, preface, sizeof(preface) - 1) == 0);
+    if (raise_peer_max)
+        assert(ssl_write_all(client, settings_raised, sizeof(settings_raised)) == 0);
+    else
+        assert(ssl_write_all(client, settings_default, sizeof(settings_default)) == 0);
+    /* The server may stop reading at the oversized frame header, so the rest
+     * of the flight is allowed to fail; the verdict comes from what it sent. */
+    (void)(ssl_write_all(client, frame, 9 + frame_len) == 0 &&
+           ssl_write_all(client, headers_stream3, sizeof(headers_stream3)) == 0);
+    free(frame);
+
+    bool saw_response = false;
+    bool saw_goaway = false;
+    uint32_t goaway_err = 0;
+    for (int i = 0; i < 32 && !saw_response && !saw_goaway; ++i) {
+        unsigned char hdr[9];
+        if (ssl_read_exact(client, hdr, sizeof(hdr)) != 0) break;
+        uint32_t len = ((uint32_t)hdr[0] << 16) | ((uint32_t)hdr[1] << 8) | hdr[2];
+        unsigned char payload[4096];
+        assert(len < sizeof(payload));
+        if (len > 0 && ssl_read_exact(client, payload, len) != 0) break;
+        if (hdr[3] == 0x00 || hdr[3] == 0x01) saw_response = true;
+        if (hdr[3] == 0x07) {
+            assert(len >= 8);
+            goaway_err = ((uint32_t)payload[4] << 24) | ((uint32_t)payload[5] << 16) |
+                         ((uint32_t)payload[6] << 8) | payload[7];
+            saw_goaway = true;
+        }
+    }
+
+    SSL_shutdown(client);
+    SSL_free(client);
+    SSL_CTX_free(client_ctx);
+    close(sv[1]);
+    pthread_join(tid, NULL);
+    assert(saw_goaway && goaway_err == 0x6);
+    assert(!saw_response && http2_request_count == 0);
+    printf("Passed HTTP/2 oversized frame type 0x%02x rejection.\n", type);
 }
 
 int main(void) {
@@ -1726,6 +1835,8 @@ int main(void) {
     test_http2_lower_stream_trailers();
     test_http2_data_frame_size(16384, false);
     test_http2_data_frame_size(16385, true);
+    test_http2_oversized_frame(0x01, true);
+    test_http2_oversized_frame(0x20, false);
     printf("All HTTP/2 tests passed!\n");
     return 0;
 }
