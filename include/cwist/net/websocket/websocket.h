@@ -23,9 +23,8 @@ typedef struct cwist_websocket {
     int fd;
     bool is_closed;
     /* Fragmented-message reassembly state (RFC 6455 section 5.4).
-     * frag_buf accumulates payload bytes across FIN=0 frames; frag_opcode
-     * preserves the first fragment's opcode so the assembled frame reports
-     * the correct type (text vs binary). */
+     * frag_buf accumulates payload bytes across FIN=0 frames. frag_opcode is
+     * CONTINUATION while idle, or the first fragment's opcode while active. */
     uint8_t *frag_buf;
     size_t frag_len;
     size_t frag_cap;
