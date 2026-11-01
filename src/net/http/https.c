@@ -2154,6 +2154,7 @@ cwist_error_t cwist_https_send_response(cwist_https_connection *conn, cwist_http
     // records a big SSL_write at 16 KiB internally).
     char header_buf[CWIST_HTTP_MAX_HEADER_SIZE];
     size_t header_len = cwist_http_serialize_headers(res, header_buf, sizeof(header_buf));
+    if (header_len == 0) return make_ssl_error("HTTP response headers too large");
 
     const bool bodyless = CWIST_HTTP_STATUS_FORBIDS_BODY(res->status_code);
     const char *body_ptr = NULL;
@@ -2249,6 +2250,7 @@ cwist_error_t cwist_https_send_response_head(cwist_https_connection *conn,
 
     char header_buf[CWIST_HTTP_MAX_HEADER_SIZE];
     size_t header_len = cwist_http_serialize_headers(res, header_buf, sizeof(header_buf));
+    if (header_len == 0) return make_ssl_error("HTTP response headers too large");
     if (cwist_ssl_write_all(conn, header_buf, header_len, &write_budget) != 0) {
         return make_ssl_error("SSL header write failed");
     }
