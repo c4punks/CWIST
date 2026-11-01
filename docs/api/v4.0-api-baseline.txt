@@ -4,7 +4,7 @@
 # (parameter names dropped) and struct/union/enum layouts in member order.
 # `make api-check` (CI) fails when the headers no longer match this file.
 
-== functions (792) ==
+== functions (794) ==
 cwist_accept_socket
 cwist_alloc
 cwist_alloc_array
@@ -306,6 +306,7 @@ cwist_http2_push_resource
 cwist_http2_serve_connection
 cwist_http2_serve_connection_ex
 cwist_http2_stream_flow_control_add_send_window
+cwist_http2_stream_flow_control_adjust_send_window
 cwist_http2_stream_flow_control_consume
 cwist_http2_stream_flow_control_init
 cwist_http2_stream_flow_control_maybe_window_update
@@ -330,6 +331,7 @@ cwist_http3_client_set_timeout_ms
 cwist_http3_destroy_context
 cwist_http3_init_context
 cwist_http3_init_context_ephemeral
+cwist_http3_last_close_error
 cwist_http3_push_resource
 cwist_http3_reload_context
 cwist_http3_send_datagram
@@ -798,7 +800,7 @@ cwist_zod_parse
 cwist_zod_print_errors
 cwist_zod_validate
 
-== function signatures (793) ==
+== function signatures (795) ==
 cwist_accept_socket: cwist_error_t (int, struct sockaddr *, void (*)(int client_fd, void *ctx), void *)
 cwist_alloc: void * (size_t)
 cwist_alloc_array: void * (size_t, size_t)
@@ -1101,6 +1103,7 @@ cwist_http2_push_resource: int (cwist_http_request *, const char *, const char *
 cwist_http2_serve_connection: cwist_error_t (cwist_https_connection *, void *, cwist_http2_request_handler_func)
 cwist_http2_serve_connection_ex: cwist_error_t (cwist_https_connection *, void *, cwist_http2_request_handler_func, const cwist_http2_stream_hooks *)
 cwist_http2_stream_flow_control_add_send_window: void (cwist_http2_stream_flow_control *, uint32_t)
+cwist_http2_stream_flow_control_adjust_send_window: void (cwist_http2_stream_flow_control *, int32_t)
 cwist_http2_stream_flow_control_consume: void (cwist_http2_stream_flow_control *, uint32_t)
 cwist_http2_stream_flow_control_init: void (cwist_http2_stream_flow_control *, uint32_t, uint32_t, uint32_t)
 cwist_http2_stream_flow_control_maybe_window_update: int (cwist_http2_flow_control *, cwist_http2_stream_flow_control *, uint8_t *, size_t, size_t *, uint64_t, bool)
@@ -1125,6 +1128,7 @@ cwist_http3_client_set_timeout_ms: void (cwist_http3_client *, int)
 cwist_http3_destroy_context: void (cwist_http3_context *)
 cwist_http3_init_context: cwist_error_t (cwist_http3_context **, const char *, const char *)
 cwist_http3_init_context_ephemeral: cwist_error_t (cwist_http3_context **)
+cwist_http3_last_close_error: int (const cwist_http3_context *, bool *, uint64_t *, char *, size_t)
 cwist_http3_push_resource: int (cwist_http_request *, const char *, const char *)
 cwist_http3_reload_context: cwist_error_t (cwist_http3_context *, const char *, const char *)
 cwist_http3_send_datagram: int (void *, const void *, size_t)
@@ -2553,6 +2557,10 @@ struct cwist_http3_context [20] void *hsets
 struct cwist_http3_context [21] pthread_rwlock_t ssl_ctx_lock
 struct cwist_http3_context [22] SSL_CTX *ssl_ctx_handout
 struct cwist_http3_context [23] void *ticket_key
+struct cwist_http3_context [24] volatile int last_close_received
+struct cwist_http3_context [25] int last_close_app_error
+struct cwist_http3_context [26] uint64_t last_close_code
+struct cwist_http3_context [27] char last_close_reason[256]
 struct cwist_http_async_conn_t [0] int fd
 struct cwist_http_async_conn_t [1] void *user_ctx
 struct cwist_http_async_conn_t [2] char *rbuf
@@ -2800,9 +2808,20 @@ struct session_rc_header [1] void (*destructor)(void *)
 
 # Experimental: outside the v4.0 guarantee (WebTransport, until v4.1).
 
-== experimental functions (12) ==
+== experimental functions (23) ==
 cwist_app_use_webtransport
+cwist_http3_client_webtransport_connect
 cwist_http3_set_webtransport_handler
+cwist_webtransport_client_close
+cwist_webtransport_client_is_open
+cwist_webtransport_client_open_bidi
+cwist_webtransport_client_open_uni
+cwist_webtransport_client_poll
+cwist_webtransport_client_send_datagram
+cwist_webtransport_client_stream_close
+cwist_webtransport_client_stream_flush
+cwist_webtransport_client_stream_read
+cwist_webtransport_client_stream_write
 cwist_webtransport_close_session
 cwist_webtransport_close_stream
 cwist_webtransport_flush
@@ -2814,9 +2833,20 @@ cwist_webtransport_send_datagram
 cwist_webtransport_set_new_stream_handler
 cwist_webtransport_write
 
-== experimental function signatures (12) ==
+== experimental function signatures (23) ==
 cwist_app_use_webtransport: void (cwist_app *, cwist_webtransport_handler_func)
+cwist_http3_client_webtransport_connect: cwist_error_t (cwist_http3_client *, const char *, const char *, cwist_webtransport_client_session **)
 cwist_http3_set_webtransport_handler: void (cwist_http3_context *, cwist_webtransport_handler_func)
+cwist_webtransport_client_close: int (cwist_webtransport_client_session *, uint64_t, const char *)
+cwist_webtransport_client_is_open: int (const cwist_webtransport_client_session *)
+cwist_webtransport_client_open_bidi: void * (cwist_webtransport_client_session *)
+cwist_webtransport_client_open_uni: void * (cwist_webtransport_client_session *)
+cwist_webtransport_client_poll: int (cwist_http3_client *, int)
+cwist_webtransport_client_send_datagram: ssize_t (cwist_webtransport_client_session *, const void *, size_t)
+cwist_webtransport_client_stream_close: int (void *)
+cwist_webtransport_client_stream_flush: int (void *)
+cwist_webtransport_client_stream_read: ssize_t (void *, void *, size_t)
+cwist_webtransport_client_stream_write: ssize_t (void *, const void *, size_t)
 cwist_webtransport_close_session: int (void *, uint64_t, const char *)
 cwist_webtransport_close_stream: int (void *)
 cwist_webtransport_flush: int (void *)
@@ -2830,9 +2860,11 @@ cwist_webtransport_write: ssize_t (void *, const void *, size_t)
 
 == experimental inline function signatures (0) ==
 
-== experimental types (struct/union/enum names) (0) ==
+== experimental types (struct/union/enum names) (1) ==
+cwist_webtransport_client_session
 
-== experimental typedefs (1) ==
+== experimental typedefs (2) ==
+cwist_webtransport_client_session
 cwist_webtransport_handler_func
 
 == experimental enum constants (0) ==
