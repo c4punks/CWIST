@@ -395,6 +395,11 @@ static err_t conn_send_error(cwist_lwip_conn *c, int status) {
 
     char header_buf[CWIST_HTTP_MAX_HEADER_SIZE];
     size_t header_len = cwist_http_serialize_headers(res, header_buf, sizeof(header_buf));
+    if (header_len == 0) {
+        cwist_http_response_destroy(res);
+        conn_abort(c);
+        return ERR_ABRT;
+    }
     const void *body;
     size_t body_len;
     response_body(res, &body, &body_len);
@@ -475,6 +480,11 @@ static err_t conn_process(cwist_lwip_conn *c) {
 
     char header_buf[CWIST_HTTP_MAX_HEADER_SIZE];
     size_t header_len = cwist_http_serialize_headers(res, header_buf, sizeof(header_buf));
+    if (header_len == 0) {
+        cwist_http_response_destroy(res);
+        conn_abort(c);
+        return ERR_ABRT;
+    }
     const void *body;
     size_t body_len;
     response_body(res, &body, &body_len);

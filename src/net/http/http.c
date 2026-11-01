@@ -2418,7 +2418,7 @@ int headers_have_content_length(cwist_http_header_node *headers) {
  * @param res Response object to serialize.
  * @param buf Destination buffer for the header block.
  * @param buf_size Total capacity of @p buf in bytes.
- * @return Number of bytes written into the buffer.
+ * @return Number of bytes written, or 0 when the complete block does not fit.
  */
 static size_t serialize_headers(cwist_http_response *res, char *buf, size_t buf_size) {
     const bool bodyless = CWIST_HTTP_STATUS_FORBIDS_BODY(res->status_code);
@@ -2494,18 +2494,17 @@ static size_t serialize_headers(cwist_http_response *res, char *buf, size_t buf_
             code /= 10;
         } while (code > 0);
         const size_t code_len = (size_t)(code_buf + sizeof(code_buf) - cp);
-        if (offset + vlen + 1 + code_len + 1 + rlen + 2 <= buf_size) {
-            memcpy(buf + offset, version, vlen);
-            offset += vlen;
-            buf[offset++] = ' ';
-            memcpy(buf + offset, cp, code_len);
-            offset += code_len;
-            buf[offset++] = ' ';
-            memcpy(buf + offset, status_txt, rlen);
-            offset += rlen;
-            buf[offset++] = '\r';
-            buf[offset++] = '\n';
-        }
+        if (offset + vlen + 1 + code_len + 1 + rlen + 2 > buf_size) return 0;
+        memcpy(buf + offset, version, vlen);
+        offset += vlen;
+        buf[offset++] = ' ';
+        memcpy(buf + offset, cp, code_len);
+        offset += code_len;
+        buf[offset++] = ' ';
+        memcpy(buf + offset, status_txt, rlen);
+        offset += rlen;
+        buf[offset++] = '\r';
+        buf[offset++] = '\n';
     }
 
     // Headers: memcpy with known sstring lengths (no snprintf/strlen overhead),
@@ -2525,15 +2524,14 @@ static size_t serialize_headers(cwist_http_response *res, char *buf, size_t buf_
                 curr = curr->next;
                 continue;
             }
-            if (offset + klen + 2 + vlen + 2 <= buf_size) {
-                memcpy(buf + offset, curr->key->data, klen);
-                buf[offset + klen] = ':';
-                buf[offset + klen + 1] = ' ';
-                memcpy(buf + offset + klen + 2, curr->value->data, vlen);
-                buf[offset + klen + 2 + vlen] = '\r';
-                buf[offset + klen + 2 + vlen + 1] = '\n';
-                offset += klen + vlen + 4;
-            }
+            if (offset + klen + 2 + vlen + 2 > buf_size) return 0;
+            memcpy(buf + offset, curr->key->data, klen);
+            buf[offset + klen] = ':';
+            buf[offset + klen + 1] = ' ';
+            memcpy(buf + offset + klen + 2, curr->value->data, vlen);
+            buf[offset + klen + 2 + vlen] = '\r';
+            buf[offset + klen + 2 + vlen + 1] = '\n';
+            offset += klen + vlen + 4;
             char k0 = curr->key->data[0];
             if (klen == 4 && (k0 == 'D' || k0 == 'd')) {
                 if (strcasecmp(curr->key->data, "date") == 0) have_date = true;
@@ -2549,7 +2547,8 @@ static size_t serialize_headers(cwist_http_response *res, char *buf, size_t buf_
     }
 
     char date_str[36];
-    if (!have_date && offset + 37 <= buf_size && cwist_get_cached_date_header(date_str)) {
+    if (!have_date && cwist_get_cached_date_header(date_str)) {
+        if (offset + 37 > buf_size) return 0;
         memcpy(buf + offset, "Date: ", 6);
         memcpy(buf + offset + 6, date_str, 29);
         buf[offset + 35] = '\r';
@@ -2559,10 +2558,9 @@ static size_t serialize_headers(cwist_http_response *res, char *buf, size_t buf_
 
     if (!bodyless && res->stream_mode && !have_te && !have_clen) {
         static const char te_chunked[] = "Transfer-Encoding: chunked\r\n";
-        if (offset + sizeof(te_chunked) - 1 <= buf_size) {
-            memcpy(buf + offset, te_chunked, sizeof(te_chunked) - 1);
-            offset += sizeof(te_chunked) - 1;
-        }
+        if (offset + sizeof(te_chunked) - 1 > buf_size) return 0;
+        memcpy(buf + offset, te_chunked, sizeof(te_chunked) - 1);
+        offset += sizeof(te_chunked) - 1;
     }
 
     if (!bodyless && !have_clen && !res->stream_mode) {
@@ -2575,45 +2573,38 @@ static size_t serialize_headers(cwist_http_response *res, char *buf, size_t buf_
             tmp_len /= 10;
         } while (tmp_len > 0);
         size_t num_len = (size_t)((num_buf + sizeof(num_buf)) - p);
-        if (offset + 16 + num_len + 2 <= buf_size) {
-            memcpy(buf + offset, "Content-Length: ", 16);
-            memcpy(buf + offset + 16, p, num_len);
-            buf[offset + 16 + num_len] = '\r';
-            buf[offset + 16 + num_len + 1] = '\n';
-            offset += 16 + num_len + 2;
-        }
+        if (offset + 16 + num_len + 2 > buf_size) return 0;
+        memcpy(buf + offset, "Content-Length: ", 16);
+        memcpy(buf + offset + 16, p, num_len);
+        buf[offset + 16 + num_len] = '\r';
+        buf[offset + 16 + num_len + 1] = '\n';
+        offset += 16 + num_len + 2;
     }
 
     if (!have_conn) {
         if (res->keep_alive) {
             static const char conn_ka[] = "Connection: keep-alive\r\n";
-            if (offset + sizeof(conn_ka) - 1 <= buf_size) {
-                memcpy(buf + offset, conn_ka, sizeof(conn_ka) - 1);
-                offset += sizeof(conn_ka) - 1;
-            }
+            if (offset + sizeof(conn_ka) - 1 > buf_size) return 0;
+            memcpy(buf + offset, conn_ka, sizeof(conn_ka) - 1);
+            offset += sizeof(conn_ka) - 1;
         } else {
             static const char conn_cl[] = "Connection: close\r\n";
-            if (offset + sizeof(conn_cl) - 1 <= buf_size) {
-                memcpy(buf + offset, conn_cl, sizeof(conn_cl) - 1);
-                offset += sizeof(conn_cl) - 1;
-            }
+            if (offset + sizeof(conn_cl) - 1 > buf_size) return 0;
+            memcpy(buf + offset, conn_cl, sizeof(conn_cl) - 1);
+            offset += sizeof(conn_cl) - 1;
         }
     }
 
     if (res->alt_svc) {
-        if (offset < buf_size) {
-            int n = snprintf(buf + offset, buf_size - offset, "Alt-Svc: %s\r\n", res->alt_svc);
-            if (n > 0) {
-                offset += n;
-                if (offset > buf_size) offset = buf_size;
-            }
-        }
+        if (offset >= buf_size) return 0;
+        int n = snprintf(buf + offset, buf_size - offset, "Alt-Svc: %s\r\n", res->alt_svc);
+        if (n < 0 || (size_t)n >= buf_size - offset) return 0;
+        offset += (size_t)n;
     }
 
-    if (offset + 2 <= buf_size) {
-        buf[offset++] = '\r';
-        buf[offset++] = '\n';
-    }
+    if (offset + 2 > buf_size) return 0;
+    buf[offset++] = '\r';
+    buf[offset++] = '\n';
     return offset;
 }
 
@@ -2626,7 +2617,7 @@ static size_t serialize_headers(cwist_http_response *res, char *buf, size_t buf_
  * @param res Response object to serialize.
  * @param buf Destination buffer for the header block.
  * @param buf_size Total capacity of @p buf in bytes.
- * @return Number of bytes written into the buffer.
+ * @return Number of bytes written, or 0 when the complete block does not fit.
  */
 size_t cwist_http_serialize_headers(cwist_http_response *res, char *buf, size_t buf_size) {
     return serialize_headers(res, buf, buf_size);
@@ -2908,6 +2899,12 @@ cwist_error_t cwist_http_send_response(int client_fd, cwist_http_response *res) 
     // 1. Prepare Headers (On Stack)
     char header_buf[CWIST_HTTP_MAX_HEADER_SIZE];
     size_t header_len = serialize_headers(res, header_buf, sizeof(header_buf));
+    if (header_len == 0) {
+        cwist_http_response_release_ptr_body(res);
+        cwist_http_response_release_file_stream(res);
+        err.error.err_i16 = -1;
+        return err;
+    }
 
     const bool bodyless = CWIST_HTTP_STATUS_FORBIDS_BODY(res->status_code);
     const void *body_ptr = NULL;
@@ -2991,6 +2988,12 @@ cwist_error_t cwist_http_send_response_head(int client_fd, cwist_http_response *
 
     char header_buf[CWIST_HTTP_MAX_HEADER_SIZE];
     size_t header_len = serialize_headers(res, header_buf, sizeof(header_buf));
+    if (header_len == 0) {
+        cwist_http_response_release_ptr_body(res);
+        cwist_http_response_release_file_stream(res);
+        err.error.err_i16 = -1;
+        return err;
+    }
 
     struct iovec iov = {.iov_base = header_buf, .iov_len = header_len};
     int flags = 0;
@@ -3321,6 +3324,7 @@ static cwist_file_begin_result_t cwist_http_file_begin(int client_fd, cwist_http
 #else
     char header_buf[CWIST_HTTP_MAX_HEADER_SIZE];
     size_t header_len = serialize_headers(res, header_buf, sizeof(header_buf));
+    if (header_len == 0) return CWIST_FILE_BEGIN_FALLBACK;
 
     int flags = 0;
 #if defined(MSG_NOSIGNAL)
@@ -3464,6 +3468,12 @@ void cwist_http_async_send_response(int client_fd, cwist_http_response *res,
 
     char header_buf[CWIST_HTTP_MAX_HEADER_SIZE];
     size_t header_len = serialize_headers(res, header_buf, sizeof(header_buf));
+    if (header_len == 0) {
+        cwist_http_response_release_ptr_body(res);
+        cwist_http_response_release_file_stream(res);
+        http_async_close(client_fd, conn);
+        return;
+    }
 
     const void *body_ptr = NULL;
     size_t body_len = 0;
@@ -3575,6 +3585,11 @@ cwist_async_send_status_t cwist_http_send_response_async(int client_fd, cwist_ht
 
     char header_buf[CWIST_HTTP_MAX_HEADER_SIZE];
     size_t header_len = serialize_headers(res, header_buf, sizeof(header_buf));
+    if (header_len == 0) {
+        cwist_http_response_release_ptr_body(res);
+        cwist_http_response_release_file_stream(res);
+        return CWIST_ASYNC_SEND_CLOSE;
+    }
 
     const void *body_ptr = NULL;
     size_t body_len = 0;
@@ -3881,6 +3896,11 @@ cwist_async_send_status_t cwist_http_send_response_coalesced(int client_fd,
     if (upper > CWIST_HTTP_COALESCE_MAX) {
         char header_buf[CWIST_HTTP_MAX_HEADER_SIZE];
         size_t header_len = serialize_headers(res, header_buf, sizeof(header_buf));
+        if (header_len == 0) {
+            cwist_http_response_release_ptr_body(res);
+            cwist_http_response_release_file_stream(res);
+            return CWIST_ASYNC_SEND_CLOSE;
+        }
         size_t total = header_len + body_len;
         struct iovec iov[2];
         int iov_cnt = 1;
@@ -3974,6 +3994,11 @@ cwist_async_send_status_t cwist_http_send_response_coalesced(int client_fd,
         conn->stash_grown_sec = cwist_fast_monotonic_sec();
     }
     size_t header_len = serialize_headers(res, conn->obuf + conn->olen, CWIST_HTTP_MAX_HEADER_SIZE);
+    if (header_len == 0) {
+        cwist_http_response_release_ptr_body(res);
+        cwist_http_response_release_file_stream(res);
+        return CWIST_ASYNC_SEND_CLOSE;
+    }
     conn->olen += header_len;
     if (body_len > 0 && body_ptr) {
         memcpy(conn->obuf + conn->olen, body_ptr, body_len);
@@ -4127,6 +4152,10 @@ cwist_sstring *cwist_http_stringify_response(cwist_http_response *res) {
     char header_buf[CWIST_HTTP_MAX_HEADER_SIZE];
     /* serialize_headers returns a byte span, not a NUL-terminated string. */
     size_t header_len = serialize_headers(res, header_buf, sizeof(header_buf));
+    if (header_len == 0) {
+        cwist_sstring_destroy(s);
+        return NULL;
+    }
     cwist_sstring_assign_len(s, header_buf, header_len);
     if (!CWIST_HTTP_STATUS_FORBIDS_BODY(res->status_code) && res->is_ptr_body && res->ptr_body) {
         cwist_sstring_append_len(s, (char *)res->ptr_body, res->ptr_body_len);
@@ -4471,6 +4500,7 @@ int cwist_http_response_serialize(cwist_http_response *res, char **out, size_t *
 
     char header_buf[CWIST_HTTP_MAX_HEADER_SIZE];
     size_t header_len = serialize_headers(res, header_buf, sizeof(header_buf));
+    if (header_len == 0) return -1;
 
     const void *body = NULL;
     size_t body_len = 0;
