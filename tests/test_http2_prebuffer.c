@@ -39,6 +39,11 @@ static const unsigned char flow_flight[] = "PRI * HTTP/2.0\r\n\r\nSM\r\n\r\n"
                                            "\x82\x86\x84\x01\x09localhost"
                                            "\x00\x00\x04\x08\x00\x00\x00\x00\x01"
                                            "\x00\x00\xff\xff";
+static const unsigned char continuation_flight[] =
+    "PRI * HTTP/2.0\r\n\r\nSM\r\n\r\n"
+    "\x00\x00\x00\x04\x00\x00\x00\x00\x00"
+    "\x00\x00\x01\x01\x01\x00\x00\x00\x01\x82"
+    "\x00\x00\x02\x09\x04\x00\x00\x00\x01\x86\x84";
 static const char *const bodies[] = {"replayed stream one\n", "replayed stream three\n"};
 
 static int64_t now_ms(void) {
@@ -224,19 +229,10 @@ static int run_case(const char *name, const unsigned char *payload, size_t len, 
         perror("socketpair");
         goto done;
     }
-    /* The whole flight is written before the server starts, so the socket
-     * must buffer it; the macOS socketpair default (8 KiB) cannot hold a
-     * maximum-size DATA frame. */
-    int bufsize = 64 * 1024;
     for (int i = 0; i < 2; ++i) {
         int flags = fcntl(fd[i], F_GETFL, 0);
         if (flags < 0 || fcntl(fd[i], F_SETFL, flags | O_NONBLOCK) < 0) {
             perror("fcntl");
-            goto done;
-        }
-        if (setsockopt(fd[i], SOL_SOCKET, SO_SNDBUF, &bufsize, sizeof(bufsize)) != 0 ||
-            setsockopt(fd[i], SOL_SOCKET, SO_RCVBUF, &bufsize, sizeof(bufsize)) != 0) {
-            perror("setsockopt");
             goto done;
         }
     }
@@ -330,6 +326,8 @@ int main(int argc, char **argv) {
             run_case("split first HEADERS header", flight, sizeof(flight) - 1, 24 + 9 + 5, 2) != 0;
         failed |= run_case("all requests prebuffered", flight, sizeof(flight) - 1,
                            sizeof(flight) - 1, 2) != 0;
+        failed |= run_case("contiguous CONTINUATION", continuation_flight,
+                           sizeof(continuation_flight) - 1, 0, 1) != 0;
         failed |= data_frame_case(16384, 1) != 0;
         failed |= data_frame_case(16385, 0) != 0;
     }

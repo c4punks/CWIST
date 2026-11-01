@@ -7,7 +7,6 @@
 #include <cwist/core/seq/seq.h>
 #include "ws_utils.h"
 
-#include <ctype.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -36,24 +35,53 @@
  * multi-fragment OOM attacks while accommodating large real-world messages. */
 #define CWIST_WS_MAX_MESSAGE_BYTES ((size_t)(64u * 1024u * 1024u))
 
-/**
- * @brief Portable case-insensitive substring search.
- *
- * strcasestr() is a GNU extension that does not exist on macOS, so keep a
- * small ASCII-only variant for header validation.
- */
-static char *ws_strcasestr(const char *haystack, const char *needle) {
-    if (!*needle) return (char *)haystack;
-    for (; *haystack; haystack++) {
-        const char *h = haystack;
-        const char *n = needle;
-        while (*h && *n && tolower((unsigned char)*h) == tolower((unsigned char)*n)) {
-            h++;
-            n++;
-        }
-        if (!*n) return (char *)haystack;
+static bool ws_connection_has_upgrade(const char *connection) {
+    const char *p = connection;
+    while (*p) {
+        while (*p == ' ' || *p == '\t' || *p == ',') p++;
+        const char *start = p;
+        while (*p && *p != ',') p++;
+        const char *end = p;
+        while (end > start && (end[-1] == ' ' || end[-1] == '\t')) end--;
+        if ((size_t)(end - start) == 7 && strncasecmp(start, "Upgrade", 7) == 0) return true;
+        if (*p) p++;
     }
-    return NULL;
+    return false;
+}
+
+static int ws_b64_value(int c) {
+    if (c >= 'A' && c <= 'Z') return c - 'A';
+    if (c >= 'a' && c <= 'z') return c - 'a' + 26;
+    if (c >= '0' && c <= '9') return c - '0' + 52;
+    if (c == '+') return 62;
+    if (c == '/') return 63;
+    return -1;
+}
+
+static bool ws_valid_handshake_key(const char *key) {
+    if (strlen(key) != 24 || key[22] != '=' || key[23] != '=') return false;
+    uint8_t decoded[16];
+    size_t used = 0;
+    for (size_t i = 0; i < 24; i += 4) {
+        int a = ws_b64_value((unsigned char)key[i]);
+        int b = ws_b64_value((unsigned char)key[i + 1]);
+        int c = key[i + 2] == '=' ? 0 : ws_b64_value((unsigned char)key[i + 2]);
+        int d = key[i + 3] == '=' ? 0 : ws_b64_value((unsigned char)key[i + 3]);
+        if (a < 0 || b < 0 || c < 0 || d < 0) return false;
+        if (i + 2 < 22 && (key[i + 2] == '=' || key[i + 3] == '=')) return false;
+        uint32_t v = ((uint32_t)a << 18) | ((uint32_t)b << 12) | ((uint32_t)c << 6) | (uint32_t)d;
+        if (used >= sizeof(decoded)) return false;
+        decoded[used++] = (uint8_t)(v >> 16);
+        if (key[i + 2] != '=') {
+            if (used >= sizeof(decoded)) return false;
+            decoded[used++] = (uint8_t)(v >> 8);
+        }
+        if (key[i + 3] != '=') {
+            if (used >= sizeof(decoded)) return false;
+            decoded[used++] = (uint8_t)v;
+        }
+    }
+    return used == sizeof(decoded) && (ws_b64_value((unsigned char)key[21]) & 0x0f) == 0;
 }
 
 /**
@@ -77,8 +105,9 @@ bool cwist_websocket_upgrade_response(cwist_http_request *req, cwist_http_respon
     char *key = cwist_http_header_get(req->headers, "Sec-WebSocket-Key");
 
     if (!connection || !upgrade || !key) return false;
-    if (ws_strcasestr(connection, "Upgrade") == NULL) return false;
+    if (!ws_connection_has_upgrade(connection)) return false;
     if (strcasecmp(upgrade, "websocket") != 0) return false;
+    if (!ws_valid_handshake_key(key)) return false;
 
     /* RFC 6455 section 4.2.1: the client MUST include Sec-WebSocket-Version: 13. */
     char *ws_version = cwist_http_header_get(req->headers, "Sec-WebSocket-Version");
@@ -272,21 +301,23 @@ cwist_ws_frame *cwist_websocket_receive(cwist_websocket *ws) {
 
         /* --- Fragmented-message reassembly (RFC 6455 section 5.4) -------------- */
 
-        /* Control frames (CLOSE/PING/PONG) are never fragmented: deliver
-         * immediately, even when a data message fragmentation is underway. */
         bool is_control = (opcode >= 0x8);
+        if (is_control && !fin) {
+            cwist_free(payload);
+            return NULL;
+        }
 
         if (!is_control && !fin) {
-            /* Fragment with FIN=0: start or continue reassembly. */
             if (opcode == CWIST_WS_FRAME_CONTINUATION) {
-                /* RFC 6455 section 5.4: CONTINUATION is only valid when a fragmented
-                 * message is already in progress. */
-                if (ws->frag_len == 0) {
+                if (ws->frag_opcode == CWIST_WS_FRAME_CONTINUATION) {
                     cwist_free(payload);
                     return NULL;
                 }
             } else {
-                /* First fragment: save opcode (text vs binary). */
+                if (ws->frag_opcode != CWIST_WS_FRAME_CONTINUATION) {
+                    cwist_free(payload);
+                    return NULL;
+                }
                 ws->frag_opcode = opcode;
             }
             if (!ws_frag_append(ws, payload, (size_t)payload_len)) {
@@ -294,38 +325,37 @@ cwist_ws_frame *cwist_websocket_receive(cwist_websocket *ws) {
                 return NULL;
             }
             cwist_free(payload);
-            continue; /* read the next frame */
+            continue;
         }
 
-        /* RFC 6455 section 5.4: a CONTINUATION frame is only valid inside an
-         * active fragmented-message sequence.  The FIN=0 case is rejected in
-         * the reassembly branch above; without this check an orphan
-         * CONTINUATION with FIN=1 would fall through and be delivered as a
-         * complete message. */
-        if (!is_control && opcode == CWIST_WS_FRAME_CONTINUATION && ws->frag_len == 0) {
+        if (!is_control && opcode == CWIST_WS_FRAME_CONTINUATION &&
+            ws->frag_opcode == CWIST_WS_FRAME_CONTINUATION) {
             cwist_free(payload);
             return NULL;
         }
 
-        /* FIN=1 data frame: may be the last fragment of a multi-frame message. */
-        if (!is_control && ws->frag_len > 0) {
-            /* Final CONTINUATION frame: flush the reassembly buffer. */
+        if (!is_control && ws->frag_opcode != CWIST_WS_FRAME_CONTINUATION) {
+            if (opcode != CWIST_WS_FRAME_CONTINUATION) {
+                cwist_free(payload);
+                return NULL;
+            }
             if (!ws_frag_append(ws, payload, (size_t)payload_len)) {
                 cwist_free(payload);
                 cwist_free(ws->frag_buf);
                 ws->frag_buf = NULL;
                 ws->frag_len = ws->frag_cap = 0;
+                ws->frag_opcode = CWIST_WS_FRAME_CONTINUATION;
                 return NULL;
             }
             cwist_free(payload);
 
-            /* Hand ownership of frag_buf to the returned frame. */
             payload = ws->frag_buf;
             payload_len = ws->frag_len;
             opcode = ws->frag_opcode;
 
             ws->frag_buf = NULL;
             ws->frag_len = ws->frag_cap = 0;
+            ws->frag_opcode = CWIST_WS_FRAME_CONTINUATION;
         }
 
         /* --- Deliver the complete frame ---------------------------------- */
