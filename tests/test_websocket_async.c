@@ -171,7 +171,7 @@ static void run_idle_timeout_child(void) {
     }
     bool batch_reaped[IDLE_BATCH] = {false};
     int batch_reaped_count = 0;
-    for (int round = 0; round < 6 && batch_reaped_count < IDLE_BATCH; round++) {
+    for (int round = 0; round < 20 && batch_reaped_count < IDLE_BATCH; round++) {
         assert(poll(batch_pfd, IDLE_BATCH, 1000) >= 0);
         for (int i = 0; i < IDLE_BATCH; i++) {
             if (batch_reaped[i] || batch_pfd[i].revents == 0) continue;

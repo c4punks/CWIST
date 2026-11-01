@@ -82,6 +82,7 @@ Each variable has one status. The status says what v4 promises about it.
 | Variable | Status | Values | Default | Effect |
 |----------|--------|--------|---------|--------|
 | `CWIST_WS_ASYNC_IDLE_TIMEOUT_SEC` | supported | seconds ≥ 0 | `300` | Idle time before an async (reactor) WebSocket is closed. `0` never closes idle sockets. |
+| `CWIST_WS_ASYNC_MAX_PARKED_BYTES` | tuning | integer > 0 | `16777226` | Maximum unsent bytes queued per async WebSocket connection. New frames return backpressure instead of growing the queue past this limit. |
 
 ## Reactor
 
