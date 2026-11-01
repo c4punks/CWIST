@@ -3598,6 +3598,13 @@ cwist_error_t cwist_http2_serve_connection_ex(cwist_https_connection *conn, void
             }
         }
 
+        if (hc->expecting_continuation &&
+            (type != CWIST_HTTP2_FRAME_CONTINUATION || stream_id != hc->cont_stream_id)) {
+            h2_send_goaway(hc, hc->last_processed_stream_id, H2_ERR_PROTOCOL_ERROR);
+            connected = false;
+            break;
+        }
+
         if (len > 0) {
             payload = (unsigned char *)cwist_alloc(len);
             if (!payload) {
