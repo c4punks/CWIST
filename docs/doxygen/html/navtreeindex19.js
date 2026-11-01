@@ -1,5 +1,6 @@
 var NAVTREEINDEX19 =
 {
+"de/d19/md_docs_2api_2app.html#autotoc_md68":[2,5],
 "de/d19/md_docs_2api_2app.html#autotoc_md69":[2,5,0],
 "de/d19/md_docs_2api_2app.html#autotoc_md70":[2,5,1],
 "de/d19/md_docs_2api_2app.html#autotoc_md71":[2,5,2],
@@ -248,6 +249,5 @@ var NAVTREEINDEX19 =
 "df/d34/metrics_8h.html#a4b994f8e8094a926156bcc218559ffe5a12bd19aaf49ec57d41ca0594ca06208f":[93,0,1,0,4,5,0,7,8],
 "df/d34/metrics_8h.html#a4b994f8e8094a926156bcc218559ffe5a16399eddd142a8e8fe73e09aba91f112":[93,0,1,0,4,5,0,7,15],
 "df/d34/metrics_8h.html#a4b994f8e8094a926156bcc218559ffe5a1892fad67896641bb6203cf2f3b34a2d":[93,0,1,0,4,5,0,7,18],
-"df/d34/metrics_8h.html#a4b994f8e8094a926156bcc218559ffe5a20e1f55c02e623f514cf66bd9cf97caf":[93,0,1,0,4,5,0,7,16],
-"df/d34/metrics_8h.html#a4b994f8e8094a926156bcc218559ffe5a25f5adcc9b70caf97fbcea1f2fc4c74a":[93,0,1,0,4,5,0,7,14]
+"df/d34/metrics_8h.html#a4b994f8e8094a926156bcc218559ffe5a20e1f55c02e623f514cf66bd9cf97caf":[93,0,1,0,4,5,0,7,16]
 };
