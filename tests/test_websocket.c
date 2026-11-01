@@ -108,6 +108,38 @@ void test_handshake_rejects_bad_version() {
     printf("Passed version rejection.\n");
 }
 
+static void assert_handshake(const char *connection, const char *key, bool expected) {
+    cwist_http_request *req = cwist_http_request_create();
+    cwist_http_header_add(&req->headers, "Connection", connection);
+    cwist_http_header_add(&req->headers, "Upgrade", "websocket");
+    cwist_http_header_add(&req->headers, "Sec-WebSocket-Key", key);
+    cwist_http_header_add(&req->headers, "Sec-WebSocket-Version", "13");
+    cwist_http_response *res = cwist_http_response_create();
+    bool accepted = cwist_websocket_upgrade_response(req, res);
+    assert(accepted == expected);
+    if (accepted) {
+        assert(res->status_code == 101);
+        assert(strcmp(cwist_http_header_get(res->headers, "Sec-WebSocket-Accept"),
+                      "s3pPLMBiTxaQ9kYGzzhZRbK+xOo=") == 0);
+    }
+    cwist_http_response_destroy(res);
+    cwist_http_request_destroy(req);
+}
+
+static void test_handshake_validation(void) {
+    const char *valid_key = "dGhlIHNhbXBsZSBub25jZQ==";
+    assert_handshake("not-an-upgrade", valid_key, false);
+    assert_handshake("upgrade.invalid", valid_key, false);
+    assert_handshake("keep-alive, upgrade.invalid", valid_key, false);
+    assert_handshake("Upgrade", "x", false);
+    assert_handshake("Upgrade", "AAAAAAAAAAAAAAAAAAAA", false);
+    assert_handshake("Upgrade", "!!!!!!!!!!!!!!!!!!!!!!!!", false);
+    assert_handshake("Upgrade", "dGhlIHNhbXBsZSBub25jZQ=A", false);
+    assert_handshake("keep-alive, Upgrade", valid_key, true);
+    assert_handshake("upgrade", valid_key, true);
+    printf("WebSocket handshake validation tests passed.\n");
+}
+
 static void send_masked_frame(int fd, uint8_t head0, const uint8_t *payload, size_t len) {
     assert(len < 126);
     uint8_t frame[140];
@@ -283,6 +315,7 @@ static void test_websocket_sequenced(void) {
 int main() {
     test_handshake_key_generation();
     test_handshake_rejects_bad_version();
+    test_handshake_validation();
     test_websocket_sequenced();
     test_orphan_continuation_rejected();
     return 0;
