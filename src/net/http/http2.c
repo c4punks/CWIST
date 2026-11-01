@@ -3786,6 +3786,17 @@ cwist_error_t cwist_http2_serve_connection_ex(cwist_https_connection *conn, void
                     connected = false;
                     break;
                 }
+                const unsigned char *data = payload;
+                size_t data_len = len;
+                if (flags & CWIST_HTTP2_FLAG_PADDED) {
+                    if (len == 0 || payload[0] >= len - 1) {
+                        h2_send_goaway(hc, hc->last_processed_stream_id, H2_ERR_PROTOCOL_ERROR);
+                        connected = false;
+                        break;
+                    }
+                    data = payload + 1;
+                    data_len = len - 1 - payload[0];
+                }
                 h2_stream *s = h2_stream_find(hc, stream_id);
                 if (!s) {
                     /* DATA on closed/unknown stream: must check if it violates flow control */
@@ -3814,9 +3825,9 @@ cwist_error_t cwist_http2_serve_connection_ex(cwist_https_connection *conn, void
                      * arrives instead of being buffered for dispatch. */
                     int end_stream = (flags & CWIST_HTTP2_FLAG_END_STREAM) != 0;
                     int hook_rc = 0;
-                    if ((len > 0 || end_stream) && hooks->on_data)
+                    if ((data_len > 0 || end_stream) && hooks->on_data)
                         hook_rc =
-                            hooks->on_data(hc->hook_ctx, s->hook_ctx, payload, len, end_stream);
+                            hooks->on_data(hc->hook_ctx, s->hook_ctx, data, data_len, end_stream);
                     if (hook_rc != 0) {
                         h2_stream_remove(hc, stream_id);
                         s = NULL;
@@ -3831,10 +3842,10 @@ cwist_error_t cwist_http2_serve_connection_ex(cwist_https_connection *conn, void
                     h2_auto_window_update(hc, s);
                     break;
                 }
-                if (payload && len > 0) {
-                    if (hc->sequenced_data && len >= CWIST_SEQ_HEADER_SIZE) {
+                if (data && data_len > 0) {
+                    if (hc->sequenced_data && data_len >= CWIST_SEQ_HEADER_SIZE) {
                         cwist_seq_chunk_t chunk;
-                        if (cwist_seq_chunk_parse(payload, len, &chunk)) {
+                        if (cwist_seq_chunk_parse(data, data_len, &chunk)) {
                             if (!s->body_assembler) {
                                 s->body_assembler =
                                     cwist_seq_assembler_create_limited(CWIST_HTTP_MAX_BODY_SIZE);
@@ -3856,14 +3867,14 @@ cwist_error_t cwist_http2_serve_connection_ex(cwist_https_connection *conn, void
                         }
                         /* Malformed sequence chunks are ignored (discarded). */
                     } else if (!hc->sequenced_data) {
-                        if (s->req->body->size + len > CWIST_HTTP_MAX_BODY_SIZE) {
+                        if (s->req->body->size + data_len > CWIST_HTTP_MAX_BODY_SIZE) {
                             uint8_t rst[4] = {0, 0, 0, H2_ERR_REFUSED_STREAM};
                             h2_write_frame(hc, CWIST_HTTP2_FRAME_RST_STREAM, 0, stream_id, rst, 4);
                             h2_stream_remove(hc, stream_id);
                             break;
                         }
-                        s->recv_xor ^= h2_xor_bytes(payload, len);
-                        cwist_sstring_append_len(s->req->body, (const char *)payload, len);
+                        s->recv_xor ^= h2_xor_bytes(data, data_len);
+                        cwist_sstring_append_len(s->req->body, (const char *)data, data_len);
                     }
                 }
                 if (flags & CWIST_HTTP2_FLAG_END_STREAM) {
