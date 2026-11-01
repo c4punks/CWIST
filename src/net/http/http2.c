@@ -2942,6 +2942,7 @@ static int h2_begin_headers(h2_conn *hc, uint32_t stream_id, const unsigned char
     size_t block_len = len;
 
     bool is_new = (h2_stream_find(hc, stream_id) == NULL);
+    if (is_new && stream_id <= hc->last_processed_stream_id) return -1;
 
     if (end_headers) {
         h2_stream *s = h2_stream_find(hc, stream_id);
