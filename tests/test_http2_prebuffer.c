@@ -39,6 +39,11 @@ static const unsigned char flow_flight[] = "PRI * HTTP/2.0\r\n\r\nSM\r\n\r\n"
                                            "\x82\x86\x84\x01\x09localhost"
                                            "\x00\x00\x04\x08\x00\x00\x00\x00\x01"
                                            "\x00\x00\xff\xff";
+static const unsigned char continuation_flight[] =
+    "PRI * HTTP/2.0\r\n\r\nSM\r\n\r\n"
+    "\x00\x00\x00\x04\x00\x00\x00\x00\x00"
+    "\x00\x00\x01\x01\x01\x00\x00\x00\x01\x82"
+    "\x00\x00\x02\x09\x04\x00\x00\x00\x01\x86\x84";
 static const char *const bodies[] = {"replayed stream one\n", "replayed stream three\n"};
 
 static int64_t now_ms(void) {
@@ -275,6 +280,8 @@ int main(int argc, char **argv) {
             run_case("split first HEADERS header", flight, sizeof(flight) - 1, 24 + 9 + 5, 2) != 0;
         failed |= run_case("all requests prebuffered", flight, sizeof(flight) - 1,
                            sizeof(flight) - 1, 2) != 0;
+        failed |= run_case("contiguous CONTINUATION", continuation_flight,
+                           sizeof(continuation_flight) - 1, 0, 1) != 0;
     }
     if (argc == 1 || strcmp(argv[1], "flow") == 0) {
         failed |= run_case("flow-control socket control", flow_flight, sizeof(flow_flight) - 1, 0,
