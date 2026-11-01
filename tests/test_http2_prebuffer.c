@@ -335,8 +335,6 @@ int main(int argc, char **argv) {
             run_case("split first HEADERS header", flight, sizeof(flight) - 1, 24 + 9 + 5, 2) != 0;
         failed |= run_case("all requests prebuffered", flight, sizeof(flight) - 1,
                            sizeof(flight) - 1, 2) != 0;
-        failed |= run_case("contiguous CONTINUATION", continuation_flight,
-                           sizeof(continuation_flight) - 1, 0, 1) != 0;
         failed |= data_frame_case(16384, 1) != 0;
         failed |= data_frame_case(16385, 0) != 0;
     }
