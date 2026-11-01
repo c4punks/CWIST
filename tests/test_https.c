@@ -693,6 +693,58 @@ static void test_https_write_deadlines(void) {
     printf("Passed HTTPS response write deadlines and cancellation.\n");
 }
 
+static void *https_no_content_server(void *arg) {
+    https_write_server_ctx *server = arg;
+    cwist_https_connection *conn = NULL;
+    cwist_error_t err = cwist_https_accept(server->ctx, server->fd, &conn);
+    assert(cwist_error_is_ok(&err));
+    cwist_http_response *res = cwist_http_response_create();
+    assert(res != NULL);
+    res->status_code = 204;
+    cwist_http_header_add(&res->headers, "Content-Length", "15");
+    cwist_sstring_assign(res->body, "forbidden-body");
+    server->result = cwist_https_send_response(conn, res);
+    cwist_http_response_destroy(res);
+    cwist_https_close_connection(conn);
+    atomic_store(&server->done, true);
+    return NULL;
+}
+
+static void test_https_no_content_response(void) {
+    cwist_https_context *ctx = NULL;
+    cwist_error_t err = cwist_https_init_context(&ctx, TEST_CERT, TEST_KEY);
+    assert(cwist_error_is_ok(&err));
+    int sv[2];
+    assert(socketpair(AF_UNIX, SOCK_STREAM, 0, sv) == 0);
+    https_write_server_ctx server = {
+        .fd = sv[0], .ctx = ctx, .result = make_error(CWIST_ERR_INT16)};
+    pthread_t tid;
+    assert(pthread_create(&tid, NULL, https_no_content_server, &server) == 0);
+
+    SSL_CTX *client_ctx = SSL_CTX_new(TLS_client_method());
+    assert(client_ctx != NULL);
+    SSL_CTX_set_verify(client_ctx, SSL_VERIFY_NONE, NULL);
+    SSL *client = SSL_new(client_ctx);
+    assert(client != NULL);
+    assert(SSL_set_fd(client, sv[1]) == 1);
+    assert(SSL_connect(client) == 1);
+    char buf[4096];
+    size_t used = 0;
+    int n;
+    while ((n = SSL_read(client, buf + used, sizeof(buf) - 1 - used)) > 0) used += (size_t)n;
+    buf[used] = '\0';
+    SSL_free(client);
+    SSL_CTX_free(client_ctx);
+    close(sv[1]);
+    pthread_join(tid, NULL);
+    cwist_https_destroy_context(ctx);
+    assert(cwist_error_is_ok(&server.result));
+    assert(strncmp(buf, "HTTP/1.1 204 ", 13) == 0);
+    assert(strstr(buf, "forbidden-body") == NULL);
+    assert(strstr(buf, "Content-Length") == NULL);
+    printf("Passed HTTPS no-content response suppression.\n");
+}
+
 int main(void) {
     signal(SIGPIPE, SIG_IGN);
     test_https_defaults();
@@ -704,6 +756,7 @@ int main(void) {
     test_https_autoloads_aia_intermediate();
 #endif
     test_https_write_deadlines();
+    test_https_no_content_response();
     test_https_async_defer();
     test_https_async_defer_completes_before_ack();
     printf("All HTTPS tests passed!\n");

@@ -2377,13 +2377,16 @@ int headers_have_content_length(cwist_http_header_node *headers) {
  * @return Number of bytes written into the buffer.
  */
 static size_t serialize_headers(cwist_http_response *res, char *buf, size_t buf_size) {
+    const bool bodyless = CWIST_HTTP_STATUS_FORBIDS_BODY(res->status_code);
     size_t body_len = 0;
-    if (res->use_file_stream) {
-        body_len = res->file_stream_len;
-    } else if (res->is_ptr_body) {
-        body_len = res->ptr_body_len;
-    } else if (res->body) {
-        body_len = res->body->size;
+    if (!bodyless) {
+        if (res->use_file_stream) {
+            body_len = res->file_stream_len;
+        } else if (res->is_ptr_body) {
+            body_len = res->ptr_body_len;
+        } else if (res->body) {
+            body_len = res->body->size;
+        }
     }
 
     /* Fast path for default HTTP/1.1 200 OK response with no custom headers.
@@ -2470,6 +2473,14 @@ static size_t serialize_headers(cwist_http_response *res, char *buf, size_t buf_
         if (curr->key->data && curr->value->data) {
             size_t klen = curr->key->size;
             size_t vlen = curr->value->size;
+            bool suppress_cl = bodyless && res->status_code != 304 && klen == 14 &&
+                               strcasecmp(curr->key->data, "content-length") == 0;
+            bool suppress_te = bodyless && klen == 17 &&
+                               strcasecmp(curr->key->data, "transfer-encoding") == 0;
+            if (suppress_cl || suppress_te) {
+                curr = curr->next;
+                continue;
+            }
             if (offset + klen + 2 + vlen + 2 <= buf_size) {
                 memcpy(buf + offset, curr->key->data, klen);
                 buf[offset + klen] = ':';
@@ -2503,7 +2514,7 @@ static size_t serialize_headers(cwist_http_response *res, char *buf, size_t buf_
         offset += 37;
     }
 
-    if (res->stream_mode && !have_te && !have_clen) {
+    if (!bodyless && res->stream_mode && !have_te && !have_clen) {
         static const char te_chunked[] = "Transfer-Encoding: chunked\r\n";
         if (offset + sizeof(te_chunked) - 1 <= buf_size) {
             memcpy(buf + offset, te_chunked, sizeof(te_chunked) - 1);
@@ -2511,7 +2522,7 @@ static size_t serialize_headers(cwist_http_response *res, char *buf, size_t buf_
         }
     }
 
-    if (!have_clen && !res->stream_mode) {
+    if (!bodyless && !have_clen && !res->stream_mode) {
         /* Fast integer to ascii without snprintf overhead */
         char num_buf[20];
         char *p = num_buf + sizeof(num_buf);
@@ -2854,16 +2865,18 @@ cwist_error_t cwist_http_send_response(int client_fd, cwist_http_response *res) 
     char header_buf[CWIST_HTTP_MAX_HEADER_SIZE];
     size_t header_len = serialize_headers(res, header_buf, sizeof(header_buf));
 
-    // 2. Prepare Body
+    const bool bodyless = CWIST_HTTP_STATUS_FORBIDS_BODY(res->status_code);
     const void *body_ptr = NULL;
     size_t body_len = 0;
 
-    if (res->is_ptr_body) {
-        body_ptr = res->ptr_body;
-        body_len = res->ptr_body_len;
-    } else if (res->body && res->body->data) {
-        body_ptr = res->body->data;
-        body_len = res->body->size;
+    if (!bodyless) {
+        if (res->is_ptr_body) {
+            body_ptr = res->ptr_body;
+            body_len = res->ptr_body_len;
+        } else if (res->body && res->body->data) {
+            body_ptr = res->body->data;
+            body_len = res->body->size;
+        }
     }
 
     // 3. sendmsg (Scatter/Gather + Flags) - Zero Copy Send
@@ -2873,7 +2886,7 @@ cwist_error_t cwist_http_send_response(int client_fd, cwist_http_response *res) 
     iov[0].iov_base = header_buf;
     iov[0].iov_len = header_len;
 
-    if (!res->use_file_stream && body_len > 0 && body_ptr) {
+    if (!bodyless && !res->use_file_stream && body_len > 0 && body_ptr) {
         iov[1].iov_base = (void *)body_ptr;
         iov[1].iov_len = body_len;
         iov_cnt = 2;
@@ -2893,7 +2906,7 @@ cwist_error_t cwist_http_send_response(int client_fd, cwist_http_response *res) 
         cwist_tcp_cork_set(client_fd, true);
 #if defined(MSG_MORE)
         /* File body follows: let the headers merge with the first burst. */
-        if (res->use_file_stream) flags |= MSG_MORE;
+        if (!bodyless && res->use_file_stream) flags |= MSG_MORE;
 #endif
     }
 #endif
@@ -2902,7 +2915,7 @@ cwist_error_t cwist_http_send_response(int client_fd, cwist_http_response *res) 
         err.error.err_i16 = -1;
     } else {
         err.error.err_i16 = 0;
-        if (res->use_file_stream) {
+        if (!bodyless && res->use_file_stream) {
             if (!cwist_http_stream_file_fast(client_fd, res)) {
                 err.error.err_i16 = -1;
             }
@@ -3389,7 +3402,7 @@ void cwist_http_async_send_response(int client_fd, cwist_http_response *res,
      * sendfile; EAGAIN parks {fd, offset} state instead of blocking a
      * reactor thread in poll(). Falls back to the bounded-blocking path
      * only when nothing has been sent yet. */
-    if (!head_only && res->use_file_stream) {
+    if (!head_only && !CWIST_HTTP_STATUS_FORBIDS_BODY(res->status_code) && res->use_file_stream) {
 #if defined(__linux__)
         if (cwist_http_file_begin(client_fd, res, reactor, conn, keep_alive, false, NULL) ==
             CWIST_FILE_BEGIN_HANDLED) {
@@ -3410,7 +3423,7 @@ void cwist_http_async_send_response(int client_fd, cwist_http_response *res,
 
     const void *body_ptr = NULL;
     size_t body_len = 0;
-    if (!head_only) {
+    if (!head_only && !CWIST_HTTP_STATUS_FORBIDS_BODY(res->status_code)) {
         if (res->is_ptr_body) {
             body_ptr = res->ptr_body;
             body_len = res->ptr_body_len;
@@ -3503,7 +3516,7 @@ cwist_async_send_status_t cwist_http_send_response_async(int client_fd, cwist_ht
                                                          bool keep_alive, bool head_only) {
     if (client_fd < 0 || !res || !conn) return CWIST_ASYNC_SEND_CLOSE;
 
-    if (!head_only && res->use_file_stream) {
+    if (!head_only && !CWIST_HTTP_STATUS_FORBIDS_BODY(res->status_code) && res->use_file_stream) {
 #if defined(__linux__)
         cwist_async_send_status_t fstatus = CWIST_ASYNC_SEND_CLOSE;
         if (cwist_http_file_begin(client_fd, res, conn->reactor, conn, keep_alive, true,
@@ -3521,7 +3534,7 @@ cwist_async_send_status_t cwist_http_send_response_async(int client_fd, cwist_ht
 
     const void *body_ptr = NULL;
     size_t body_len = 0;
-    if (!head_only) {
+    if (!head_only && !CWIST_HTTP_STATUS_FORBIDS_BODY(res->status_code)) {
         if (res->is_ptr_body) {
             body_ptr = res->ptr_body;
             body_len = res->ptr_body_len;
@@ -3753,7 +3766,7 @@ cwist_async_send_status_t cwist_http_send_response_coalesced(int client_fd,
      * blocking the reactor (the obuf remainder parks as the file park's
      * prefix bytes), then stream the file through the non-blocking path;
      * EAGAIN parks {fd, offset} state. */
-    if (!head_only && res->use_file_stream) {
+    if (!head_only && !CWIST_HTTP_STATUS_FORBIDS_BODY(res->status_code) && res->use_file_stream) {
 #if defined(__linux__)
         int flags = 0;
 #if defined(MSG_NOSIGNAL)
@@ -3796,7 +3809,7 @@ cwist_async_send_status_t cwist_http_send_response_coalesced(int client_fd,
 
     const void *body_ptr = NULL;
     size_t body_len = 0;
-    if (!head_only) {
+    if (!head_only && !CWIST_HTTP_STATUS_FORBIDS_BODY(res->status_code)) {
         if (res->is_ptr_body) {
             body_ptr = res->ptr_body;
             body_len = res->ptr_body_len;
@@ -4067,9 +4080,9 @@ cwist_sstring *cwist_http_stringify_response(cwist_http_response *res) {
     /* serialize_headers returns a byte span, not a NUL-terminated string. */
     size_t header_len = serialize_headers(res, header_buf, sizeof(header_buf));
     cwist_sstring_assign_len(s, header_buf, header_len);
-    if (res->is_ptr_body && res->ptr_body) {
+    if (!CWIST_HTTP_STATUS_FORBIDS_BODY(res->status_code) && res->is_ptr_body && res->ptr_body) {
         cwist_sstring_append_len(s, (char *)res->ptr_body, res->ptr_body_len);
-    } else if (res->body) {
+    } else if (!CWIST_HTTP_STATUS_FORBIDS_BODY(res->status_code) && res->body) {
         cwist_sstring_append_len(s, res->body->data, res->body->size);
     }
     return s;
@@ -4400,30 +4413,33 @@ cwist_http_request *cwist_http_parse_request_len(const char *buf, size_t len) {
  *
  * Streaming responses are auto-finalized so the chunked terminator is
  * present even when the handler skipped cwist_http_response_stream_end().
- * @return 0 with @p out and @p out_len set, or -1 (invalid input, file-stream
- *         body, or allocation failure).
+ * @return 0 with @p out and @p out_len set, or -1 (invalid input, a file-stream
+ *         body whose status permits content, or allocation failure).
  */
 int cwist_http_response_serialize(cwist_http_response *res, char **out, size_t *out_len) {
     if (!res || !out || !out_len) return -1;
-    if (res->use_file_stream) return -1; /* streaming bodies need a socket */
+    const bool bodyless = CWIST_HTTP_STATUS_FORBIDS_BODY(res->status_code);
+    if (!bodyless && res->use_file_stream) return -1; /* streaming bodies need a socket */
 
     char header_buf[CWIST_HTTP_MAX_HEADER_SIZE];
     size_t header_len = serialize_headers(res, header_buf, sizeof(header_buf));
 
     const void *body = NULL;
     size_t body_len = 0;
-    if (res->stream_mode) {
-        /* Chunked framing was appended at write time; auto-finalize so the
-         * terminator is present even when the handler skipped end(). */
-        if (!res->stream_ended) cwist_http_response_stream_end(res);
-        body = res->stream_buf ? res->stream_buf->data : NULL;
-        body_len = res->stream_buf ? res->stream_buf->size : 0;
-    } else if (res->is_ptr_body) {
-        body = res->ptr_body;
-        body_len = res->ptr_body_len;
-    } else if (res->body && res->body->data) {
-        body = res->body->data;
-        body_len = res->body->size;
+    if (!bodyless) {
+        if (res->stream_mode) {
+            /* Chunked framing was appended at write time; auto-finalize so the
+             * terminator is present even when the handler skipped end(). */
+            if (!res->stream_ended) cwist_http_response_stream_end(res);
+            body = res->stream_buf ? res->stream_buf->data : NULL;
+            body_len = res->stream_buf ? res->stream_buf->size : 0;
+        } else if (res->is_ptr_body) {
+            body = res->ptr_body;
+            body_len = res->ptr_body_len;
+        } else if (res->body && res->body->data) {
+            body = res->body->data;
+            body_len = res->body->size;
+        }
     }
 
     char *buf = (char *)cwist_alloc(header_len + body_len + 1);
@@ -4486,6 +4502,7 @@ int cwist_http_response_stream_begin(cwist_http_response *res) {
 int cwist_http_response_stream_write(cwist_http_response *res, const char *data, size_t len) {
     if (!res || !res->stream_mode || res->stream_ended) return -1;
     if (!data) return -1;
+    if (CWIST_HTTP_STATUS_FORBIDS_BODY(res->status_code)) return cwist_response_stream_flush(res);
     if (len == 0) return 0; /* an empty chunk is the terminator; never emit one mid-stream */
     if (!res->stream_buf) {
         res->stream_buf = cwist_http_sstring_create(res->arena);
@@ -4515,6 +4532,10 @@ int cwist_http_response_stream_write(cwist_http_response *res, const char *data,
  */
 int cwist_http_response_stream_end(cwist_http_response *res) {
     if (!res || !res->stream_mode || res->stream_ended) return -1;
+    if (CWIST_HTTP_STATUS_FORBIDS_BODY(res->status_code)) {
+        res->stream_ended = true;
+        return cwist_response_stream_flush(res);
+    }
     if (!res->stream_buf) {
         res->stream_buf = cwist_http_sstring_create(res->arena);
         if (!res->stream_buf) return -1;

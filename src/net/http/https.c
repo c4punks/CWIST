@@ -2155,14 +2155,17 @@ cwist_error_t cwist_https_send_response(cwist_https_connection *conn, cwist_http
     char header_buf[CWIST_HTTP_MAX_HEADER_SIZE];
     size_t header_len = cwist_http_serialize_headers(res, header_buf, sizeof(header_buf));
 
+    const bool bodyless = CWIST_HTTP_STATUS_FORBIDS_BODY(res->status_code);
     const char *body_ptr = NULL;
     size_t body_len = 0;
-    if (res->is_ptr_body) {
-        body_ptr = (const char *)res->ptr_body;
-        body_len = res->ptr_body_len;
-    } else if (res->body && res->body->data) {
-        body_ptr = res->body->data;
-        body_len = res->body->size;
+    if (!bodyless) {
+        if (res->is_ptr_body) {
+            body_ptr = (const char *)res->ptr_body;
+            body_len = res->ptr_body_len;
+        } else if (res->body && res->body->data) {
+            body_ptr = res->body->data;
+            body_len = res->body->size;
+        }
     }
 
     bool body_coalesced = false;
@@ -2192,7 +2195,7 @@ cwist_error_t cwist_https_send_response(cwist_https_connection *conn, cwist_http
     }
 
     // 3. File streams cannot use sendfile() through userland TLS; chunk them
-    if (res->use_file_stream && res->file_stream_fd >= 0) {
+    if (!bodyless && res->use_file_stream && res->file_stream_fd >= 0) {
         char fbuf[65536];
         size_t remaining = res->file_stream_len;
         off_t offset = res->file_stream_offset;
