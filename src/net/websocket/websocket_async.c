@@ -368,9 +368,9 @@ static void ws_async_sweep_watchdog_free(ws_async_sweep_t *sweep) {
  * @brief Sweep tick callback; runs on the reactor thread, delivered by
  * cwist_reactor_post().
  *
- * Reaps at most one timed-out connection per tick, then decrements the posts
+ * Reaps every currently timed-out connection, then decrements the posts
  * counter; posts-- is the last touch of the context (the watchdog frees it
- * only after observing posts == 0).  Marks the sweep dead when the list is
+ * only after observing posts == 0). Marks the sweep dead when the list is
  * empty.
  *
  * @param ctx The sweep context (@p sweep pointer).
@@ -381,20 +381,19 @@ static void ws_async_sweep_post_cb(void *ctx) {
     uint32_t timeout_sec = ws_async_idle_timeout_sec();
     if (timeout_sec > 0) {
         uint32_t now = cwist_fast_monotonic_sec();
-        /* Reap at most one victim per tick: ws_async_terminate unlinks the
-         * connection (and marks the sweep dead when the list empties), so
-         * the next posted sweep restarts from the head.  Sweeps are small
-         * and ticks are ~interval apart, so the pace is fine. */
-        pthread_mutex_lock(&sweep->lock);
-        cwist_websocket_async *victim = NULL;
-        for (cwist_websocket_async *ws = sweep->head; ws; ws = ws->sweep_next) {
-            if (ws->last_active_sec > 0 && (now - ws->last_active_sec) > timeout_sec) {
-                victim = ws;
-                break;
+        for (;;) {
+            pthread_mutex_lock(&sweep->lock);
+            cwist_websocket_async *victim = NULL;
+            for (cwist_websocket_async *ws = sweep->head; ws; ws = ws->sweep_next) {
+                if (ws->last_active_sec > 0 && (now - ws->last_active_sec) > timeout_sec) {
+                    victim = ws;
+                    break;
+                }
             }
+            pthread_mutex_unlock(&sweep->lock);
+            if (!victim) break;
+            ws_async_terminate(victim);
         }
-        pthread_mutex_unlock(&sweep->lock);
-        if (victim) ws_async_terminate(victim);
     }
 
     /* posts-- is the last touch of the context: the watchdog frees it only
