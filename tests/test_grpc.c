@@ -67,6 +67,27 @@ static void echo_stream(cwist_grpc_stream *stream, void *user_ctx) {
     cwist_grpc_stream_close(stream, CWIST_GRPC_OK, NULL);
 }
 
+typedef struct grpc_size_ctx {
+    size_t calls;
+    size_t message_len;
+} grpc_size_ctx;
+
+static void size_unary(cwist_http_request *req, cwist_http_response *res,
+                       const cwist_grpc_message *message, void *user_ctx) {
+    (void)req;
+    grpc_size_ctx *ctx = user_ctx;
+    ctx->calls++;
+    ctx->message_len = message->len;
+    cwist_grpc_set_response(res, CWIST_GRPC_OK, NULL, NULL, 0);
+}
+
+static void size_stream(cwist_grpc_stream *stream, void *user_ctx) {
+    grpc_size_ctx *ctx = user_ctx;
+    ctx->calls++;
+    if (stream->message_count > 0) ctx->message_len = stream->messages[0].len;
+    cwist_grpc_stream_close(stream, CWIST_GRPC_OK, NULL);
+}
+
 static void meta_unary(cwist_http_request *req, cwist_http_response *res,
                        const cwist_grpc_message *message, void *user_ctx) {
     (void)message;
@@ -139,6 +160,33 @@ static void gzip_compress(const uint8_t *in, size_t in_len, uint8_t **out, size_
     *out_len = cap - zs.avail_out;
     *out = buf;
     deflateEnd(&zs);
+}
+
+static cwist_http_response *request_gzip_zeros(cwist_test_client *client, const char *path,
+                                               size_t plain_len) {
+    uint8_t *plain = cwist_alloc(plain_len);
+    assert(plain != NULL);
+    memset(plain, 0, plain_len);
+    uint8_t *zipped = NULL;
+    size_t zipped_len = 0;
+    gzip_compress(plain, plain_len, &zipped, &zipped_len);
+    uint8_t *frame = NULL;
+    size_t frame_len = 0;
+    assert(cwist_grpc_encode_message(zipped, zipped_len, 1, &frame, &frame_len) == 0);
+
+    static const cwist_test_client_kv headers[] = {{"grpc-encoding", "gzip"}};
+    cwist_test_client_request_options opts = {
+        .body = (const char *)frame,
+        .body_len = frame_len,
+        .content_type = "application/grpc",
+        .headers = headers,
+        .header_count = 1,
+    };
+    cwist_http_response *res = cwist_test_client_request_ex(client, CWIST_HTTP_POST, path, &opts);
+    cwist_free(frame);
+    cwist_free(zipped);
+    cwist_free(plain);
+    return res;
 }
 
 static void test_gzip_inflate(const uint8_t *in, size_t in_len, uint8_t **out, size_t *out_len) {
@@ -304,6 +352,11 @@ int main(void) {
     assert(cwist_app_grpc_unary(app, "cwist.test.Echo", "Meta", meta_unary, NULL) == 0);
     assert(cwist_app_grpc_stream(app, "cwist.test.Echo", "Chat", echo_stream, "chunk") == 0);
     assert(cwist_app_grpc_stream(app, "cwist.test.Echo", "Recv", recv_stream, NULL) == 0);
+    grpc_size_ctx unary_size = {0};
+    grpc_size_ctx stream_size = {0};
+    assert(cwist_app_grpc_unary(app, "cwist.test.Echo", "Size", size_unary, &unary_size) == 0);
+    assert(cwist_app_grpc_stream(app, "cwist.test.Echo", "SizeStream", size_stream, &stream_size) ==
+           0);
     assert(cwist_app_grpc_health(app) == 0);
     assert(cwist_app_grpc_health_set_status(app, "cwist.test.Echo", 1) == 0);
     assert(cwist_app_grpc_reflection(app) == 0);
@@ -455,6 +508,36 @@ int main(void) {
         cwist_free(zframe);
         cwist_free(zipped);
         cwist_pb_writer_free(&zip_pb);
+    }
+
+    /* Decompression is bounded without rejecting an exact-limit message. */
+    {
+        res = request_gzip_zeros(client, "/cwist.test.Echo/Size", CWIST_HTTP_MAX_BODY_SIZE);
+        assert(res != NULL);
+        assert(strcmp(cwist_http_header_get(res->headers, "grpc-status"), "0") == 0);
+        assert(unary_size.calls == 1);
+        assert(unary_size.message_len == CWIST_HTTP_MAX_BODY_SIZE);
+        cwist_http_response_destroy(res);
+
+        res = request_gzip_zeros(client, "/cwist.test.Echo/Size", CWIST_HTTP_MAX_BODY_SIZE + 1);
+        assert(res != NULL);
+        assert(strcmp(cwist_http_header_get(res->headers, "grpc-status"), "8") == 0);
+        assert(unary_size.calls == 1);
+        cwist_http_response_destroy(res);
+
+        res = request_gzip_zeros(client, "/cwist.test.Echo/SizeStream", 1024);
+        assert(res != NULL);
+        assert(strcmp(cwist_http_header_get(res->headers, "grpc-status"), "0") == 0);
+        assert(stream_size.calls == 1);
+        assert(stream_size.message_len == 1024);
+        cwist_http_response_destroy(res);
+
+        res = request_gzip_zeros(client, "/cwist.test.Echo/SizeStream",
+                                 CWIST_HTTP_MAX_BODY_SIZE + 1);
+        assert(res != NULL);
+        assert(strcmp(cwist_http_header_get(res->headers, "grpc-status"), "8") == 0);
+        assert(stream_size.calls == 1);
+        cwist_http_response_destroy(res);
     }
 
     /* Client sending grpc-accept-encoding: gzip receives a compressed response. */
