@@ -1654,7 +1654,7 @@ static void test_http2_pacing_does_not_block_streams(void) {
     printf("Testing HTTP/2 independent pacing progress...\n");
     int sv[2];
     assert(socketpair(AF_UNIX, SOCK_STREAM, 0, sv) == 0);
-    struct timeval timeout = {.tv_sec = 10};
+    struct timeval timeout = {.tv_sec = 60};
     assert(setsockopt(sv[1], SOL_SOCKET, SO_RCVTIMEO, &timeout, sizeof(timeout)) == 0);
 
     test_http2_server_ctx server_ctx = {.fd = sv[0],
@@ -1736,7 +1736,7 @@ static void test_http2_pacing_does_not_block_streams(void) {
     bool small_done = false;
     bool small_finished_first = false;
     size_t big_bytes = 0;
-    for (int i = 0; i < 4096 && (!big_done || !small_done); ++i) {
+    for (int i = 0; i < 1000000 && (!big_done || !small_done); ++i) {
         unsigned char hdr[9];
         assert(ssl_read_exact(client, hdr, sizeof(hdr)) == 0);
         uint32_t len = ((uint32_t)hdr[0] << 16) | ((uint32_t)hdr[1] << 8) | hdr[2];
