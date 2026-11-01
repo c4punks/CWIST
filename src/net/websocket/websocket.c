@@ -272,21 +272,23 @@ cwist_ws_frame *cwist_websocket_receive(cwist_websocket *ws) {
 
         /* --- Fragmented-message reassembly (RFC 6455 section 5.4) -------------- */
 
-        /* Control frames (CLOSE/PING/PONG) are never fragmented: deliver
-         * immediately, even when a data message fragmentation is underway. */
         bool is_control = (opcode >= 0x8);
+        if (is_control && !fin) {
+            cwist_free(payload);
+            return NULL;
+        }
 
         if (!is_control && !fin) {
-            /* Fragment with FIN=0: start or continue reassembly. */
             if (opcode == CWIST_WS_FRAME_CONTINUATION) {
-                /* RFC 6455 section 5.4: CONTINUATION is only valid when a fragmented
-                 * message is already in progress. */
-                if (ws->frag_len == 0) {
+                if (ws->frag_opcode == CWIST_WS_FRAME_CONTINUATION) {
                     cwist_free(payload);
                     return NULL;
                 }
             } else {
-                /* First fragment: save opcode (text vs binary). */
+                if (ws->frag_opcode != CWIST_WS_FRAME_CONTINUATION) {
+                    cwist_free(payload);
+                    return NULL;
+                }
                 ws->frag_opcode = opcode;
             }
             if (!ws_frag_append(ws, payload, (size_t)payload_len)) {
@@ -294,38 +296,37 @@ cwist_ws_frame *cwist_websocket_receive(cwist_websocket *ws) {
                 return NULL;
             }
             cwist_free(payload);
-            continue; /* read the next frame */
+            continue;
         }
 
-        /* RFC 6455 section 5.4: a CONTINUATION frame is only valid inside an
-         * active fragmented-message sequence.  The FIN=0 case is rejected in
-         * the reassembly branch above; without this check an orphan
-         * CONTINUATION with FIN=1 would fall through and be delivered as a
-         * complete message. */
-        if (!is_control && opcode == CWIST_WS_FRAME_CONTINUATION && ws->frag_len == 0) {
+        if (!is_control && opcode == CWIST_WS_FRAME_CONTINUATION &&
+            ws->frag_opcode == CWIST_WS_FRAME_CONTINUATION) {
             cwist_free(payload);
             return NULL;
         }
 
-        /* FIN=1 data frame: may be the last fragment of a multi-frame message. */
-        if (!is_control && ws->frag_len > 0) {
-            /* Final CONTINUATION frame: flush the reassembly buffer. */
+        if (!is_control && ws->frag_opcode != CWIST_WS_FRAME_CONTINUATION) {
+            if (opcode != CWIST_WS_FRAME_CONTINUATION) {
+                cwist_free(payload);
+                return NULL;
+            }
             if (!ws_frag_append(ws, payload, (size_t)payload_len)) {
                 cwist_free(payload);
                 cwist_free(ws->frag_buf);
                 ws->frag_buf = NULL;
                 ws->frag_len = ws->frag_cap = 0;
+                ws->frag_opcode = CWIST_WS_FRAME_CONTINUATION;
                 return NULL;
             }
             cwist_free(payload);
 
-            /* Hand ownership of frag_buf to the returned frame. */
             payload = ws->frag_buf;
             payload_len = ws->frag_len;
             opcode = ws->frag_opcode;
 
             ws->frag_buf = NULL;
             ws->frag_len = ws->frag_cap = 0;
+            ws->frag_opcode = CWIST_WS_FRAME_CONTINUATION;
         }
 
         /* --- Deliver the complete frame ---------------------------------- */
