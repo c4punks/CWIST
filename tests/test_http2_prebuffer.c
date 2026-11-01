@@ -229,10 +229,19 @@ static int run_case(const char *name, const unsigned char *payload, size_t len, 
         perror("socketpair");
         goto done;
     }
+    /* The whole flight is written before the server starts, so the socket
+     * must buffer it; the macOS socketpair default (8 KiB) cannot hold a
+     * maximum-size DATA frame. */
+    int bufsize = 64 * 1024;
     for (int i = 0; i < 2; ++i) {
         int flags = fcntl(fd[i], F_GETFL, 0);
         if (flags < 0 || fcntl(fd[i], F_SETFL, flags | O_NONBLOCK) < 0) {
             perror("fcntl");
+            goto done;
+        }
+        if (setsockopt(fd[i], SOL_SOCKET, SO_SNDBUF, &bufsize, sizeof(bufsize)) != 0 ||
+            setsockopt(fd[i], SOL_SOCKET, SO_RCVBUF, &bufsize, sizeof(bufsize)) != 0) {
+            perror("setsockopt");
             goto done;
         }
     }
