@@ -358,7 +358,7 @@ bool cwist_tcp_cork_enabled(void);
 /**
  * @brief Serialize only the status line and headers into a caller buffer.
  * Used by the TLS send path to stream header block and body separately.
- * @return Number of bytes written.
+ * @return Number of bytes written, or 0 when the complete block does not fit.
  */
 size_t cwist_http_serialize_headers(cwist_http_response *res, char *buf, size_t buf_size);
 cwist_error_t cwist_http_response_send_file(cwist_http_response *res, const char *file_path,
