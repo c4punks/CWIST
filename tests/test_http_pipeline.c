@@ -58,7 +58,29 @@ static void check_pipeline(const char *first, const char *body) {
     cwist_free(conn.rbuf);
 }
 
+static void check_header_colon_whitespace(void) {
+    const char raw[] = "POST /first HTTP/1.1\r\nHost: x\r\nContent-Length : 5\r\n\r\nabcde";
+    char buf[sizeof(raw)];
+    memcpy(buf, raw, sizeof(raw));
+    size_t len = sizeof(raw) - 1;
+    cwist_http_parse_error_t err;
+    cwist_http_request *req = cwist_http_receive_request(-1, buf, sizeof(buf), &len, &err);
+    assert(!req && err == CWIST_HTTP_PARSE_MALFORMED);
+
+    cwist_http_async_conn_t conn = {.fd = -1};
+    conn.cap = sizeof(raw);
+    conn.rbuf = cwist_alloc(conn.cap);
+    assert(conn.rbuf);
+    memcpy(conn.rbuf, raw, sizeof(raw));
+    conn.len = sizeof(raw) - 1;
+    req = NULL;
+    assert(cwist_http_receive_request_nb(&conn, &req, &err) == CWIST_RECV_FATAL);
+    assert(!req && err == CWIST_HTTP_PARSE_MALFORMED);
+    cwist_free(conn.rbuf);
+}
+
 int main(void) {
+    check_header_colon_whitespace();
     check_pipeline("GET /first HTTP/1.1\r\nHost: x\r\n\r\n", "");
     check_pipeline("POST /first HTTP/1.1\r\nHost: x\r\nContent-Length: 0\r\n\r\n", "");
     check_pipeline("POST /first HTTP/1.1\r\nHost: x\r\nContent-Length: 4\r\n\r\nbody", "body");

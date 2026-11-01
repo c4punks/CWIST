@@ -4267,6 +4267,11 @@ cwist_http_parse_request_with_header_end(const char *raw_request, size_t raw_len
         const char *colon = cwist_simd_find_char(line_start, (size_t)(line_end - line_start), ':');
         if (colon) {
             size_t key_len = colon - line_start;
+            if (key_len > 0 && (line_start[key_len - 1] == ' ' || line_start[key_len - 1] == '\t')) {
+                cwist_http_request_destroy(req);
+                if (err_out) *err_out = CWIST_HTTP_PARSE_MALFORMED;
+                return NULL;
+            }
             const char *val_start = colon + 1;
             while (val_start < line_end && *val_start == ' ') val_start++;
             size_t val_len = line_end - val_start;

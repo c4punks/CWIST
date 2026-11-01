@@ -268,6 +268,10 @@ void test_cl_te_smuggling_rules() {
     /* Non-numeric CL -> 400 */
     expect_parse_rejection("POST /x HTTP/1.1\r\nHost: h\r\nContent-Length: 4x\r\n\r\n",
                            CWIST_HTTP_PARSE_MALFORMED, 400);
+    /* Whitespace before the field-name colon is a framing error. */
+    expect_parse_rejection(
+        "POST /x HTTP/1.1\r\nHost: h\r\nContent-Length : 5\r\n\r\nabcdeGET /next HTTP/1.1\r\n",
+        CWIST_HTTP_PARSE_MALFORMED, 400);
     /* TE whose final coding is not chunked -> 400 */
     expect_parse_rejection(
         "POST /x HTTP/1.1\r\nHost: h\r\nTransfer-Encoding: chunked, gzip\r\n\r\n",
