@@ -223,7 +223,9 @@ WebSocket</h1>
 <tr class="markdownTableHead">
 <th class="markdownTableHeadNone">Variable   </th><th class="markdownTableHeadNone">Status   </th><th class="markdownTableHeadNone">Values   </th><th class="markdownTableHeadNone">Default   </th><th class="markdownTableHeadNone">Effect    </th></tr>
 <tr class="markdownTableRowOdd">
-<td class="markdownTableBodyNone"><code>CWIST_WS_ASYNC_IDLE_TIMEOUT_SEC</code>   </td><td class="markdownTableBodyNone">supported   </td><td class="markdownTableBodyNone">seconds ≥ 0   </td><td class="markdownTableBodyNone"><code>300</code>   </td><td class="markdownTableBodyNone">Idle time before an async (reactor) WebSocket is closed. <code>0</code> never closes idle sockets.   </td></tr>
+<td class="markdownTableBodyNone"><code>CWIST_WS_ASYNC_IDLE_TIMEOUT_SEC</code>   </td><td class="markdownTableBodyNone">supported   </td><td class="markdownTableBodyNone">seconds ≥ 0   </td><td class="markdownTableBodyNone"><code>300</code>   </td><td class="markdownTableBodyNone">Idle time before an async (reactor) WebSocket is closed. <code>0</code> never closes idle sockets.    </td></tr>
+<tr class="markdownTableRowEven">
+<td class="markdownTableBodyNone"><code>CWIST_WS_ASYNC_MAX_PARKED_BYTES</code>   </td><td class="markdownTableBodyNone">tuning   </td><td class="markdownTableBodyNone">integer &gt; 0   </td><td class="markdownTableBodyNone"><code>16777226</code>   </td><td class="markdownTableBodyNone">Maximum unsent bytes queued per async WebSocket connection. New frames return backpressure instead of growing the queue past this limit.   </td></tr>
 </table>
 <h1><a class="anchor" id="autotoc_md811"></a>
 Reactor</h1>
