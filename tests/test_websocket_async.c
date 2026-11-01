@@ -224,7 +224,121 @@ static void test_idle_timeout(void) {
     printf("idle timeout (CWIST_WS_ASYNC_IDLE_TIMEOUT_SEC) test passed\n");
 }
 
+typedef struct {
+    pthread_mutex_t lock;
+    pthread_cond_t cond;
+    int done;
+    int accepted;
+    int terminal_rc;
+    int repeat_rc;
+} backpressure_ctx_t;
+
+static void backpressure_on_message(cwist_websocket_async *ws, cwist_ws_frame *frame,
+                                    void *user_data) {
+    backpressure_ctx_t *ctx = user_data;
+    uint8_t payload[1024] = {0};
+    int rc = 0;
+    int accepted = 0;
+    for (int i = 0; i < 128; i++) {
+        rc = cwist_websocket_async_send(ws, CWIST_WS_FRAME_BINARY, payload, sizeof(payload));
+        if (rc != 0) break;
+        accepted++;
+    }
+    pthread_mutex_lock(&ctx->lock);
+    ctx->accepted = accepted;
+    ctx->terminal_rc = rc;
+    ctx->repeat_rc = rc == CWIST_WEBSOCKET_ASYNC_SEND_BACKPRESSURE
+                         ? cwist_websocket_async_send(ws, CWIST_WS_FRAME_BINARY, payload,
+                                                      sizeof(payload))
+                         : 0;
+    ctx->done = 1;
+    pthread_cond_signal(&ctx->cond);
+    pthread_mutex_unlock(&ctx->lock);
+    cwist_websocket_frame_destroy(frame);
+}
+
+static void run_backpressure_child(void) {
+    setenv("CWIST_WS_ASYNC_IDLE_TIMEOUT_SEC", "0", 1);
+    setenv("CWIST_WS_ASYNC_MAX_PARKED_BYTES", "4096", 1);
+    cwist_reactor_t *reactor = cwist_reactor_create();
+    assert(reactor);
+
+    int slow[2], other[2];
+    assert(socketpair(AF_UNIX, SOCK_STREAM, 0, slow) == 0);
+    assert(socketpair(AF_UNIX, SOCK_STREAM, 0, other) == 0);
+    int buffer_size = 1024;
+    assert(setsockopt(slow[0], SOL_SOCKET, SO_SNDBUF, &buffer_size, sizeof(buffer_size)) == 0);
+    assert(setsockopt(slow[1], SOL_SOCKET, SO_RCVBUF, &buffer_size, sizeof(buffer_size)) == 0);
+
+    backpressure_ctx_t ctx = {.lock = PTHREAD_MUTEX_INITIALIZER, .cond = PTHREAD_COND_INITIALIZER};
+    assert(cwist_websocket_async_attach(slow[0], reactor, backpressure_on_message, &ctx, NULL, 0));
+    assert(cwist_websocket_async_attach(other[0], reactor, on_message, NULL, NULL, 0));
+    pthread_t rt;
+    assert(pthread_create(&rt, NULL, reactor_thread, reactor) == 0);
+
+    write_masked(slow[1], 0x81, (const uint8_t *)"go", 2);
+    pthread_mutex_lock(&ctx.lock);
+    for (int i = 0; i < 500 && !ctx.done; i++) {
+        pthread_mutex_unlock(&ctx.lock);
+        usleep(10000);
+        pthread_mutex_lock(&ctx.lock);
+    }
+    assert(ctx.done);
+    assert(ctx.accepted > 0 && ctx.accepted < 128);
+    assert(ctx.terminal_rc == CWIST_WEBSOCKET_ASYNC_SEND_BACKPRESSURE);
+    assert(ctx.repeat_rc == CWIST_WEBSOCKET_ASYNC_SEND_BACKPRESSURE);
+    pthread_mutex_unlock(&ctx.lock);
+
+    recorded_msg_t msg;
+    write_masked(other[1], 0x81, (const uint8_t *)"ok", 2);
+    wait_for_message(&msg);
+    assert(msg.opcode == CWIST_WS_FRAME_TEXT);
+    assert(msg.len == 2 && memcmp(msg.payload, "ok", 2) == 0);
+
+    uint8_t code[2] = {0x03, 0xE8};
+    write_masked(other[1], 0x88, code, 2);
+    uint8_t opcode, payload[8];
+    size_t len;
+    read_server_frame(other[1], &opcode, payload, &len);
+    assert(opcode == CWIST_WS_FRAME_CLOSE);
+    close(other[1]);
+    close(slow[1]);
+    usleep(100000);
+
+    cwist_reactor_post_t stop_node = {.cb = stop_cb, .ctx = reactor};
+    assert(cwist_reactor_post(reactor, &stop_node));
+    assert(pthread_join(rt, NULL) == 0);
+    cwist_reactor_destroy(reactor);
+    pthread_cond_destroy(&ctx.cond);
+    pthread_mutex_destroy(&ctx.lock);
+}
+
+static void test_backpressure(void) {
+    int fds[2];
+    assert(pipe(fds) == 0);
+    pid_t pid = fork();
+    assert(pid >= 0);
+    if (pid == 0) {
+        close(fds[0]);
+        run_backpressure_child();
+        ssize_t w = write(fds[1], "0", 1);
+        (void)w;
+        close(fds[1]);
+        _exit(0);
+    }
+    close(fds[1]);
+    char result = '?';
+    ssize_t r = read(fds[0], &result, 1);
+    close(fds[0]);
+    int status;
+    assert(waitpid(pid, &status, 0) == pid);
+    assert(WIFEXITED(status) && WEXITSTATUS(status) == 0);
+    assert(r == 1 && result == '0');
+    printf("async WebSocket parked-output backpressure test passed\n");
+}
+
 int main(void) {
+    test_backpressure();
     /* Forked first: the child sets the 2s idle timeout, which is cached
      * once per process, before any WebSocket state exists. */
     test_idle_timeout();
