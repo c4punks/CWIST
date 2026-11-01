@@ -223,7 +223,9 @@ WebSocket</h1>
 <tr class="markdownTableHead">
 <th class="markdownTableHeadNone">변수   </th><th class="markdownTableHeadNone">상태   </th><th class="markdownTableHeadNone">값   </th><th class="markdownTableHeadNone">기본값   </th><th class="markdownTableHeadNone">효과    </th></tr>
 <tr class="markdownTableRowOdd">
-<td class="markdownTableBodyNone"><code>CWIST_WS_ASYNC_IDLE_TIMEOUT_SEC</code>   </td><td class="markdownTableBodyNone">supported   </td><td class="markdownTableBodyNone">초, 0 이상   </td><td class="markdownTableBodyNone"><code>300</code>   </td><td class="markdownTableBodyNone">async(reactor) WebSocket을 닫기 전 유휴 시간. <code>0</code>이면 유휴 소켓을 닫지 않습니다.   </td></tr>
+<td class="markdownTableBodyNone"><code>CWIST_WS_ASYNC_IDLE_TIMEOUT_SEC</code>   </td><td class="markdownTableBodyNone">supported   </td><td class="markdownTableBodyNone">초, 0 이상   </td><td class="markdownTableBodyNone"><code>300</code>   </td><td class="markdownTableBodyNone">async(reactor) WebSocket을 닫기 전 유휴 시간. <code>0</code>이면 유휴 소켓을 닫지 않습니다.    </td></tr>
+<tr class="markdownTableRowEven">
+<td class="markdownTableBodyNone"><code>CWIST_WS_ASYNC_MAX_PARKED_BYTES</code>   </td><td class="markdownTableBodyNone">tuning   </td><td class="markdownTableBodyNone">0보다 큰 정수   </td><td class="markdownTableBodyNone"><code>16777226</code>   </td><td class="markdownTableBodyNone">async WebSocket 연결별 미전송 대기 바이트 상한. 새 프레임은 이 상한을 넘는 대신 backpressure를 반환합니다.   </td></tr>
 </table>
 <h1><a class="anchor" id="autotoc_md696"></a>
 Reactor</h1>
