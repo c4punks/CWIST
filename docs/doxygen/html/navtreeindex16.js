@@ -1,5 +1,6 @@
 var NAVTREEINDEX16 =
 {
+"dc/d80/md_docs_2api_2cookie.html#autotoc_md76":[3,0,1],
 "dc/d80/md_docs_2api_2cookie.html#autotoc_md77":[3,1],
 "dc/d80/md_docs_2api_2cookie.html#autotoc_md78":[3,1,0],
 "dc/d80/md_docs_2api_2cookie.html#autotoc_md79":[3,1,1],
@@ -248,6 +249,5 @@ var NAVTREEINDEX16 =
 "dd/d22/structcwist__http__response.html#aa9dbfac0d47a8cc5a5304c6097049bcc":[92,0,47,26],
 "dd/d22/structcwist__http__response.html#aae4b1dd82d595385f6d99dfe143924db":[92,0,47,1],
 "dd/d22/structcwist__http__response.html#ab1bb73c2a78fe8fbbcbb329e70432a7d":[92,0,47,25],
-"dd/d22/structcwist__http__response.html#ab2921051ca7925e6f353788c10ced7c7":[92,0,47,20],
-"dd/d22/structcwist__http__response.html#aba9a54d6190af36db7ffcd4a9bf6d77a":[92,0,47,3]
+"dd/d22/structcwist__http__response.html#ab2921051ca7925e6f353788c10ced7c7":[92,0,47,20]
 };
