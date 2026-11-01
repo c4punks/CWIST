@@ -159,6 +159,32 @@ static void run_idle_timeout_child(void) {
     close(idle_fd[1]);
     printf("7. idle connection reaped: ok\n");
 
+    enum { IDLE_BATCH = 128 };
+    int idle_batch[IDLE_BATCH][2];
+    struct pollfd batch_pfd[IDLE_BATCH];
+    for (int i = 0; i < IDLE_BATCH; i++) {
+        assert(socketpair(AF_UNIX, SOCK_STREAM, 0, idle_batch[i]) == 0);
+        assert(cwist_websocket_async_attach(idle_batch[i][0], reactor, on_message, NULL, NULL, 0));
+        batch_pfd[i].fd = idle_batch[i][1];
+        batch_pfd[i].events = POLLIN;
+        batch_pfd[i].revents = 0;
+    }
+    bool batch_reaped[IDLE_BATCH] = {false};
+    int batch_reaped_count = 0;
+    for (int round = 0; round < 6 && batch_reaped_count < IDLE_BATCH; round++) {
+        assert(poll(batch_pfd, IDLE_BATCH, 1000) >= 0);
+        for (int i = 0; i < IDLE_BATCH; i++) {
+            if (batch_reaped[i] || batch_pfd[i].revents == 0) continue;
+            uint8_t b;
+            assert(read(idle_batch[i][1], &b, 1) == 0);
+            batch_reaped[i] = true;
+            batch_reaped_count++;
+        }
+    }
+    assert(batch_reaped_count == IDLE_BATCH);
+    for (int i = 0; i < IDLE_BATCH; i++) close(idle_batch[i][1]);
+    printf("7a. simultaneous idle connections reaped together: ok\n");
+
     /* Scenario 2: activity resets the clock.  timeout=2s, sweep=1s.
      * t=0 frame A (delivered, last_active=0); t=1 frame B (gap 1s < 2s, so
      * it survives and last_active=1); t=2.2 frame C (gap 1.2s < 2s thanks to
