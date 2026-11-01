@@ -2800,6 +2800,11 @@ static int h2_send_response_hc(h2_conn *hc, uint32_t stream_id, cwist_http_respo
             h2_commit_send(hc, s, allowed);
             sent += allowed;
             s->response_sent = sent;
+            if (allowed < chunk && hc->fc.send_window > 0 && s->fc.send_window > 0) {
+                if (h2_out_flush(hc) != 0) return -1;
+                hc->pacing_waiting = true;
+                return 1;
+            }
         }
         return h2_send_grpc_trailers(hc, stream_id, res, max_frame);
     }
@@ -2843,6 +2848,11 @@ static int h2_send_response_hc(h2_conn *hc, uint32_t stream_id, cwist_http_respo
         h2_commit_send(hc, s, allowed);
         sent += allowed;
         s->response_sent = sent;
+        if (allowed < chunk && hc->fc.send_window > 0 && s->fc.send_window > 0) {
+            if (h2_out_flush(hc) != 0) return -1;
+            hc->pacing_waiting = true;
+            return 1;
+        }
     }
     return h2_out_flush(hc);
 }
