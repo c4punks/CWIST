@@ -43,7 +43,7 @@ var searchData=
   ['seed_40',['seed',['../dd/d72/structcwist__query__map.html#a965ed949c3a2b9373ae9d8410ed6c10c',1,'cwist_query_map']]],
   ['semantics_41',['3. Validate JSON and return HTTP semantics',['../d4/db0/md_docs_2tutorials_2blog-crud.html#autotoc_md854',1,'']]],
   ['semantics_20summary_42',['Semantics summary',['../d9/dd1/md_docs_2GC.html#autotoc_md329',1,'']]],
-  ['send_5fwindow_43',['send_window',['../d1/d92/structcwist__http2__flow__control.html#a8c46fd2a1a489964d345a9c1472e7431',1,'cwist_http2_flow_control::send_window'],['../d0/d2d/structcwist__http2__stream__flow__control.html#ab28623cecb5cf0df99a1c14c8699877c',1,'cwist_http2_stream_flow_control::send_window']]],
+  ['send_5fwindow_43',['send_window',['../d1/d92/structcwist__http2__flow__control.html#a8c46fd2a1a489964d345a9c1472e7431',1,'cwist_http2_flow_control::send_window'],['../d0/d2d/structcwist__http2__stream__flow__control.html#a65ca5bc86267eb3d5990f67cedc2c3a8',1,'cwist_http2_stream_flow_control::send_window']]],
   ['sent_20events_20api_44',['sent events api',['../d3/df7/md_docs_2ko_2api_2sse.html',1,'Server-Sent Events API'],['../d0/d89/md_docs_2api_2sse.html',1,'Server-Sent Events API']]],
   ['seo_20洛書_45',['1. Lo Shu Magic Square (Naak-seo / 洛書)',['../d6/d9f/md_docs_2references_2mux__algorithm__references.html#autotoc_md796',1,'']]],
   ['separate_20request_20and_20worker_20responsibilities_46',['1. Separate request and worker responsibilities',['../da/d48/md_docs_2tutorials_2nats-integration.html#autotoc_md857',1,'']]],

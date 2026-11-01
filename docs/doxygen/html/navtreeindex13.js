@@ -1,5 +1,7 @@
 var NAVTREEINDEX13 =
 {
+"da/d0a/css__composer_8h.html#ae4110a5e02e468a566744b2778964793":[93,0,1,0,0,2,2,4],
+"da/d0a/css__composer_8h.html#aea3b03fdcde20651bdb2766dee0ddce5":[93,0,1,0,0,2,2,15],
 "da/d0a/css__composer_8h.html#af1d6b42d55ec612d65e9672a16732066":[93,0,1,0,0,2,2,11],
 "da/d0a/css__composer_8h.html#afc594bea07a8331de0980dfaddf0e638":[93,0,1,0,0,2,2,20],
 "da/d0a/css__composer_8h_source.html":[93,0,1,0,0,2,2],
@@ -247,7 +249,5 @@ var NAVTREEINDEX13 =
 "da/dc3/md_docs_2ko_2api_2app.html#autotoc_md379":[34,1,0],
 "da/dc3/md_docs_2ko_2api_2app.html#autotoc_md380":[34,2],
 "da/dc3/md_docs_2ko_2api_2app.html#autotoc_md381":[34,2,0],
-"da/dc3/md_docs_2ko_2api_2app.html#autotoc_md382":[34,2,1],
-"da/dc3/md_docs_2ko_2api_2app.html#autotoc_md383":[34,3],
-"da/dc3/md_docs_2ko_2api_2app.html#autotoc_md384":[34,4]
+"da/dc3/md_docs_2ko_2api_2app.html#autotoc_md382":[34,2,1]
 };
