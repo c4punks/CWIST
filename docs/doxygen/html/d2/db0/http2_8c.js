@@ -47,7 +47,6 @@ var http2_8c =
     [ "H2_ERR_STREAM_CLOSED", "d2/db0/http2_8c.html#a97b931c7f8809b55174e588b6b52efbc", null ],
     [ "h2_async_node", "d2/db0/http2_8c.html#aab4845b636c5ff9c90a4e91f2cd3b31d", null ],
     [ "h2_conn", "d2/db0/http2_8c.html#a66e0f65b16e6149690c5f15ffbcc9bb4", null ],
-    [ "h2_deferred_frame", "d2/db0/http2_8c.html#a460e28820446451b0c29cd5a117ce851", null ],
     [ "h2_header_state", "d2/db0/http2_8c.html#a48dac02d7110d53882e1490d83ec7fd1", null ],
     [ "h2_hpack_entry", "d2/db0/http2_8c.html#ab75c5128f861646966a2fa5642ed417b", null ],
     [ "h2_huffman_node", "d2/db0/http2_8c.html#aa964bb9aa40aa6b9d57b0ad049c665ea", null ],
