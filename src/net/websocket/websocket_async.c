@@ -53,6 +53,13 @@ _Static_assert(sizeof(ws_async_slot_t) <= CWIST_REACTOR_PAYLOAD_SIZE,
 
 typedef struct ws_async_sweep ws_async_sweep_t;
 
+typedef struct ws_async_park_node {
+    uint8_t *buf;
+    size_t off;
+    size_t len;
+    struct ws_async_park_node *next;
+} ws_async_park_node;
+
 struct cwist_websocket_async {
     int fd;
     cwist_reactor_t *reactor;
@@ -73,11 +80,10 @@ struct cwist_websocket_async {
     cwist_ws_opcode_t frag_opcode;
     bool frag_active;
 
-    /* Parked write: owned buffer + offset, resumed by a one-shot POLLOUT slot
-     * (model: http_parked_write_t in src/net/http/http.c). */
-    uint8_t *park_buf;
-    size_t park_off;
-    size_t park_len;
+    /* Parked frames are queued without copying previous frames on append. */
+    ws_async_park_node *park_head;
+    ws_async_park_node *park_tail;
+    size_t parked_bytes;
     uint32_t park_deadline_sec;
 
     uint32_t last_active_sec; /* Monotonic timestamp of last frame activity (idle reaping). */
@@ -87,6 +93,7 @@ struct cwist_websocket_async {
     bool closing;             /* Termination deferred to the woken slot callback. */
     bool terminate_pending;   /* Connection must be torn down this turn. */
     bool read_armed;          /* A one-shot read slot is registered. */
+    bool write_armed;         /* A one-shot write slot is registered. */
 };
 
 static void ws_async_read_ready(int fd, void *ctx);
@@ -135,6 +142,18 @@ static void ws_async_sweep_mark_dead(ws_async_sweep_t *sweep) {
 /* Lifecycle                                                           */
 /* ------------------------------------------------------------------ */
 
+static void ws_async_park_clear(cwist_websocket_async *ws) {
+    ws_async_park_node *node = ws->park_head;
+    while (node) {
+        ws_async_park_node *next = node->next;
+        cwist_free(node->buf);
+        cwist_free(node);
+        node = next;
+    }
+    ws->park_head = ws->park_tail = NULL;
+    ws->parked_bytes = 0;
+}
+
 /**
  * @brief Final teardown: close the fd and release all state.
  *
@@ -156,7 +175,7 @@ static void ws_async_teardown(cwist_websocket_async *ws) {
     }
     cwist_free(ws->stash);
     cwist_free(ws->frag_buf);
-    cwist_free(ws->park_buf);
+    ws_async_park_clear(ws);
     cwist_free(ws);
 }
 
@@ -201,7 +220,7 @@ static void ws_async_sweep_unlink(cwist_websocket_async *ws) {
 static void ws_async_terminate(cwist_websocket_async *ws) {
     if (!ws) return;
     ws_async_sweep_unlink(ws);
-    bool parked = ws->park_len > ws->park_off;
+    bool parked = ws->park_head != NULL;
     if (ws->read_armed || parked) {
         ws->closing = true;
         /* With a read slot armed, the read callback performs the teardown;
@@ -215,6 +234,24 @@ static void ws_async_terminate(cwist_websocket_async *ws) {
         return;
     }
     ws_async_teardown(ws);
+}
+
+#define WS_ASYNC_MAX_PARKED_BYTES_DEFAULT (16 * 1024 * 1024 + 10)
+
+static size_t ws_async_park_limit(void) {
+    static _Atomic long cached = -1;
+    long v = atomic_load_explicit(&cached, memory_order_relaxed);
+    if (v < 0) {
+        const char *env = getenv("CWIST_WS_ASYNC_MAX_PARKED_BYTES");
+        v = WS_ASYNC_MAX_PARKED_BYTES_DEFAULT;
+        if (env && *env) {
+            char *end = NULL;
+            long parsed = strtol(env, &end, 10);
+            if (end != env && *end == '\0' && parsed > 0) v = parsed;
+        }
+        atomic_store_explicit(&cached, v, memory_order_relaxed);
+    }
+    return (size_t)v;
 }
 
 /**
@@ -557,20 +594,37 @@ static uint8_t *ws_async_serialize_frame(cwist_ws_opcode_t opcode, const uint8_t
     return buf;
 }
 
+static int ws_async_park_drain(cwist_websocket_async *ws, bool *made_progress) {
+    int flags = MSG_NOSIGNAL | MSG_DONTWAIT;
+    *made_progress = false;
+    while (ws->park_head) {
+        ws_async_park_node *node = ws->park_head;
+        ssize_t n = send(ws->fd, node->buf + node->off, node->len - node->off, flags);
+        if (n > 0) {
+            node->off += (size_t)n;
+            ws->parked_bytes -= (size_t)n;
+            *made_progress = true;
+            if (node->off == node->len) {
+                ws->park_head = node->next;
+                if (!ws->park_head) ws->park_tail = NULL;
+                cwist_free(node->buf);
+                cwist_free(node);
+            }
+            continue;
+        }
+        if (n < 0 && errno == EINTR) continue;
+        if (n < 0 && (errno == EAGAIN || errno == EWOULDBLOCK)) return 1;
+        return -1;
+    }
+    return 0;
+}
+
 /**
- * @brief Queue raw frame bytes behind any already-parked unsent bytes, then
- * drain speculatively.
+ * @brief Queue one frame without copying previously parked frames.
  *
- * Whatever does not fit in the socket buffer is parked and resumed by a
- * one-shot POLLOUT slot.  Runs on the reactor thread only.
- *
- * @param ws Connection to send on.
- * @param opcode Frame opcode.
- * @param data Payload bytes; may be NULL when len is 0.
- * @param len Payload length in bytes.
  * @retval 0 The frame was fully sent or parked.
- * @retval -1 Allocation or send failure, or the POLLOUT slot could not be
- *         registered (the connection is terminated by the caller).
+ * @retval 1 The per-connection parked-byte limit would be exceeded.
+ * @retval -1 Allocation, send, or reactor registration failure.
  */
 static int ws_async_queue_frame(cwist_websocket_async *ws, cwist_ws_opcode_t opcode,
                                 const uint8_t *data, size_t len) {
@@ -578,112 +632,82 @@ static int ws_async_queue_frame(cwist_websocket_async *ws, cwist_ws_opcode_t opc
     uint8_t *frame = ws_async_serialize_frame(opcode, data, len, &frame_len);
     if (!frame) return -1;
 
-    size_t pending = ws->park_len - ws->park_off;
-    if (pending > 0) {
-        /* Append behind the unsent remainder, compacting to the front. */
-        uint8_t *nb = (uint8_t *)cwist_alloc(pending + frame_len);
-        if (!nb) {
-            cwist_free(frame);
-            return -1;
-        }
-        memcpy(nb, ws->park_buf + ws->park_off, pending);
-        memcpy(nb + pending, frame, frame_len);
-        cwist_free(ws->park_buf);
-        ws->park_buf = nb;
-        ws->park_off = 0;
-        ws->park_len = pending + frame_len;
-    } else {
-        cwist_free(ws->park_buf);
-        ws->park_buf = frame;
-        ws->park_off = 0;
-        ws->park_len = frame_len;
-        frame = NULL;
+    size_t limit = ws_async_park_limit();
+    if (frame_len > limit || ws->parked_bytes > limit - frame_len) {
+        cwist_free(frame);
+        return 1;
     }
-    cwist_free(frame);
-
-    int flags = MSG_NOSIGNAL | MSG_DONTWAIT;
-    while (ws->park_off < ws->park_len) {
-        ssize_t n = send(ws->fd, ws->park_buf + ws->park_off, ws->park_len - ws->park_off, flags);
-        if (n > 0) {
-            ws->park_off += (size_t)n;
-            continue;
-        }
-        if (n < 0 && errno == EINTR) continue;
-        if (n < 0 && (errno == EAGAIN || errno == EWOULDBLOCK)) break;
-        return -1; /* Fatal send error. */
+    ws_async_park_node *node = (ws_async_park_node *)cwist_alloc(sizeof(*node));
+    if (!node) {
+        cwist_free(frame);
+        return -1;
     }
+    node->buf = frame;
+    node->off = 0;
+    node->len = frame_len;
+    node->next = NULL;
+    if (ws->park_tail)
+        ws->park_tail->next = node;
+    else
+        ws->park_head = node;
+    ws->park_tail = node;
+    ws->parked_bytes += frame_len;
 
-    if (ws->park_off == ws->park_len) {
-        /* Fully drained. */
-        cwist_free(ws->park_buf);
-        ws->park_buf = NULL;
-        ws->park_off = ws->park_len = 0;
+    bool made_progress = false;
+    int drain_rc = ws_async_park_drain(ws, &made_progress);
+    if (drain_rc < 0) return -1;
+    if (drain_rc == 0) {
         ws_async_touch(ws);
         return 0;
     }
 
     ws->park_deadline_sec = ws_async_park_deadline();
+    if (ws->write_armed) return 0;
     ws_async_slot_t slot = {.ws = ws};
     if (!cwist_reactor_add_out(ws->reactor, ws->fd, ws_async_write_ready, &slot, sizeof(slot)))
         return -1;
+    ws->write_armed = true;
     return 0;
 }
 
 /**
- * @brief POLLOUT callback: resume a parked write.
+ * @brief POLLOUT callback: resume parked frames.
  *
- * Handles deferred termination first (shutdown() woke this slot so it can
- * perform the real teardown), then drains the parked buffer.  Send progress
- * resets the parked-write deadline; on timeout or fatal send error the
- * connection is terminated.  When the buffer drains, a pending termination
- * is performed or the read side is re-armed.  Runs on the reactor thread.
- *
- * @param fd The connection's socket fd.
- * @param ctx Reactor slot payload (ws_async_slot_t holding the connection).
+ * Send progress resets the parked-write deadline. When the queue drains, a
+ * pending termination is performed or the read side is re-armed.
  */
 static void ws_async_write_ready(int fd, void *ctx) {
     ws_async_slot_t *slot = (ws_async_slot_t *)ctx;
     cwist_websocket_async *ws = slot->ws;
-    int flags = MSG_NOSIGNAL | MSG_DONTWAIT;
+    (void)fd;
+    ws->write_armed = false;
 
-    /* Deferred termination: shutdown() woke this slot so it can perform the
-     * real teardown. */
     if (ws->closing) {
         ws_async_teardown(ws);
         return;
     }
-
     if (ws_async_idle_reap(ws)) return;
 
-    while (ws->park_off < ws->park_len) {
-        ssize_t n = send(fd, ws->park_buf + ws->park_off, ws->park_len - ws->park_off, flags);
-        if (n > 0) {
-            ws->park_off += (size_t)n;
-            /* Progress resets the budget so a slow-but-alive client can drain. */
-            ws->park_deadline_sec = ws_async_park_deadline();
-            ws_async_touch(ws);
-            continue;
-        }
-        if (n < 0 && errno == EINTR) continue;
-        if (n < 0 && (errno == EAGAIN || errno == EWOULDBLOCK) &&
-            cwist_fast_monotonic_sec() <= ws->park_deadline_sec &&
-            cwist_reactor_add_out(ws->reactor, fd, ws_async_write_ready, slot, sizeof(*slot))) {
-            /* Payload copied into the new slot; buffer ownership moves with it. */
-            return;
-        }
+    bool made_progress = false;
+    int drain_rc = ws_async_park_drain(ws, &made_progress);
+    if (made_progress) {
+        ws->park_deadline_sec = ws_async_park_deadline();
+        ws_async_touch(ws);
+    }
+    if (drain_rc > 0 && cwist_fast_monotonic_sec() <= ws->park_deadline_sec &&
+        cwist_reactor_add_out(ws->reactor, fd, ws_async_write_ready, slot, sizeof(*slot))) {
+        ws->write_armed = true;
+        return;
+    }
+    if (drain_rc != 0) {
         ws_async_terminate(ws);
         return;
     }
-
-    cwist_free(ws->park_buf);
-    ws->park_buf = NULL;
-    ws->park_off = ws->park_len = 0;
 
     if (ws->terminate_pending) {
         ws_async_terminate(ws);
         return;
     }
-    /* Re-arm the read side only when the read turn is not already armed. */
     if (!ws->read_armed) {
         ws_async_slot_t rslot = {.ws = ws};
         if (cwist_reactor_add(ws->reactor, fd, ws_async_read_ready, &rslot, sizeof(rslot)))
@@ -704,6 +728,7 @@ static void ws_async_write_ready(int fd, void *ctx) {
  * @param data Payload bytes; may be NULL when len is 0.
  * @param len Payload length in bytes.
  * @retval 0 The frame was sent or parked.
+ * @retval 1 The frame was rejected because the parked-byte limit is full.
  * @retval -1 Invalid arguments, the connection is already closing/closed, or
  *         queueing failed (the connection is torn down).
  */
@@ -730,7 +755,7 @@ void cwist_websocket_async_close(cwist_websocket_async *ws) {
         ws->terminate_pending = true;
         return;
     }
-    if (ws->park_off == ws->park_len) {
+    if (ws->parked_bytes == 0) {
         /* Nothing parked: the CLOSE frame is on the wire; tear down now.  The
          * enclosing read turn (we run on the reactor thread) performs the
          * actual free via terminate_pending. */
@@ -759,7 +784,7 @@ void cwist_websocket_async_close_code(cwist_websocket_async *ws, uint16_t code) 
         ws->terminate_pending = true;
         return;
     }
-    if (ws->park_off == ws->park_len) {
+    if (ws->parked_bytes == 0) {
         /* CLOSE frame drained: the enclosing reactor turn performs the free
          * via terminate_pending, mirroring cwist_websocket_async_close(). */
         ws->terminate_pending = true;
@@ -1124,8 +1149,8 @@ cwist_websocket_async *cwist_websocket_async_attach_ex(int fd, cwist_reactor_t *
     ws->frag_len = ws->frag_cap = 0;
     ws->frag_opcode = CWIST_WS_FRAME_CONTINUATION;
     ws->frag_active = false;
-    ws->park_buf = NULL;
-    ws->park_off = ws->park_len = 0;
+    ws->park_head = ws->park_tail = NULL;
+    ws->parked_bytes = 0;
     ws->park_deadline_sec = 0;
     ws->last_active_sec = cwist_fast_monotonic_sec();
     ws->sweep = NULL;
@@ -1134,6 +1159,7 @@ cwist_websocket_async *cwist_websocket_async_attach_ex(int fd, cwist_reactor_t *
     ws->closing = false;
     ws->terminate_pending = false;
     ws->read_armed = false;
+    ws->write_armed = false;
 
     /* The fd must never block the reactor thread. */
     int fl = fcntl(fd, F_GETFL, 0);
@@ -1154,7 +1180,7 @@ cwist_websocket_async *cwist_websocket_async_attach_ex(int fd, cwist_reactor_t *
         close(fd);
         cwist_free(ws->stash);
         cwist_free(ws->frag_buf);
-        cwist_free(ws->park_buf);
+        ws_async_park_clear(ws);
         cwist_free(ws);
         return NULL;
     }
@@ -1175,7 +1201,7 @@ cwist_websocket_async *cwist_websocket_async_attach_ex(int fd, cwist_reactor_t *
         close(fd);
         cwist_free(ws->stash);
         cwist_free(ws->frag_buf);
-        cwist_free(ws->park_buf);
+        ws_async_park_clear(ws);
         cwist_free(ws);
         return NULL;
     }
