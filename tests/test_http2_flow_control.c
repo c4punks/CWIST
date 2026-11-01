@@ -199,12 +199,40 @@ static void test_send_windows_and_pacing(void) {
     assert(connection.pacing_tokens == 100);
 }
 
+static void test_negative_stream_window_recovers_without_false_credit(void) {
+    cwist_http2_flow_control connection;
+    cwist_http2_stream_flow_control stream;
+
+    cwist_http2_flow_control_init(&connection, 0, 0);
+    cwist_http2_stream_flow_control_init(&stream, 1, 0, 0);
+    connection.send_window = 65535;
+    connection.pacing_tokens = 65535;
+    connection.pacing_last_us = 1;
+    stream.send_window = 64535;
+
+    cwist_http2_stream_flow_control_adjust_send_window(&stream, -65535);
+    assert(stream.send_window == -1000);
+    cwist_http2_stream_flow_control_add_send_window(&stream, 500);
+    assert(stream.send_window == -500);
+    assert(cwist_http2_flow_control_pacing_allowance(&connection, &stream, 100, 10) == 0);
+    assert(!cwist_http2_flow_control_reserve_send(&connection, &stream, 1, 10));
+
+    cwist_http2_stream_flow_control_add_send_window(&stream, 500);
+    assert(stream.send_window == 0);
+    assert(cwist_http2_flow_control_pacing_allowance(&connection, &stream, 100, 10) == 0);
+    cwist_http2_stream_flow_control_add_send_window(&stream, 1);
+    assert(stream.send_window == 1);
+    assert(cwist_http2_flow_control_reserve_send(&connection, &stream, 1, 10));
+    assert(stream.send_window == 0);
+}
+
 int main(void) {
     test_initialization_and_rtt();
     test_receive_consume_and_connection_window_update();
     test_connection_auto_tuning();
     test_stream_window_update();
     test_send_windows_and_pacing();
+    test_negative_stream_window_recovers_without_false_credit();
     puts("http2_flow_control tests passed");
     return 0;
 }
