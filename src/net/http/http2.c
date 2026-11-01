@@ -3648,12 +3648,21 @@ cwist_error_t cwist_http2_serve_connection_ex(cwist_https_connection *conn, void
                 /* Strip PADDED and PRIORITY from payload for decoding */
                 size_t block_offset = 0;
                 size_t block_len = len;
-                if ((flags & CWIST_HTTP2_FLAG_PADDED) != 0 && block_len > 0) {
+                if (flags & CWIST_HTTP2_FLAG_PADDED) {
+                    if (block_len == 0 || payload[0] >= block_len) {
+                        h2_send_goaway(hc, hc->last_processed_stream_id, H2_ERR_PROTOCOL_ERROR);
+                        connected = false;
+                        break;
+                    }
                     uint8_t pad_len = payload[block_offset++];
-                    block_len--;
-                    if (pad_len <= block_len) block_len -= pad_len;
+                    block_len -= (size_t)pad_len + 1;
                 }
-                if ((flags & CWIST_HTTP2_FLAG_PRIORITY) != 0 && block_len >= 5) {
+                if (flags & CWIST_HTTP2_FLAG_PRIORITY) {
+                    if (block_len < 5) {
+                        h2_send_goaway(hc, hc->last_processed_stream_id, H2_ERR_PROTOCOL_ERROR);
+                        connected = false;
+                        break;
+                    }
                     block_offset += 5;
                     block_len -= 5;
                 }
@@ -3797,7 +3806,7 @@ cwist_error_t cwist_http2_serve_connection_ex(cwist_https_connection *conn, void
                 const unsigned char *data = payload;
                 size_t data_len = len;
                 if (flags & CWIST_HTTP2_FLAG_PADDED) {
-                    if (len == 0 || payload[0] >= len - 1) {
+                    if (len == 0 || payload[0] > len - 1) {
                         h2_send_goaway(hc, hc->last_processed_stream_id, H2_ERR_PROTOCOL_ERROR);
                         connected = false;
                         break;
