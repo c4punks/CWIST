@@ -141,6 +141,8 @@ typedef enum cwist_http_parse_error_t {
 /** --- Constants and Limits --- */
 #define CWIST_HTTP_MAX_HEADER_SIZE (8 * 1024)
 #define CWIST_HTTP_MAX_BODY_SIZE (10 * 1024 * 1024)
+#define CWIST_HTTP_STATUS_FORBIDS_BODY(status) \
+    (((status) >= 100 && (status) < 200) || (status) == 204 || (status) == 205 || (status) == 304)
 #define CWIST_HTTP_READ_BUFFER_SIZE (16 * 1024)
 #define CWIST_HTTP_TIMEOUT_MS 30000
 #define CWIST_HTTPS_HANDSHAKE_TIMEOUT_MS 45000  /* Total TLS handshake budget */
@@ -260,7 +262,8 @@ cwist_http_request *cwist_http_parse_request_len(const char *buf, size_t len);
 /**
  * @brief Serialize a response into a freshly allocated HTTP/1.x buffer
  * (status line + headers + body).  Caller frees @p out with cwist_free().
- * File-streaming bodies cannot be serialized; the call fails for them.
+ * File-streaming bodies require a socket unless the status forbids content;
+ * no-content statuses serialize only their headers.
  * @return 0 on success, -1 on failure.
  */
 int cwist_http_response_serialize(cwist_http_response *res, char **out, size_t *out_len);
@@ -275,7 +278,7 @@ int cwist_http_response_serialize(cwist_http_response *res, char **out, size_t *
  * under cwist_app_dispatch_memory() the framed bytes buffer and serialize
  * like any other body. A body assigned before begin is discarded; writes
  * after end fail. When the handler returns without end, dispatch finalizes
- * the stream implicitly.
+ * the stream implicitly. Statuses that forbid content discard all chunks.
  */
 /** @{ */
 int cwist_http_response_stream_begin(cwist_http_response *res);
