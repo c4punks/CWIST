@@ -10,6 +10,7 @@ var https_8c =
     [ "CWIST_TLS_COALESCE_MAX", "d2/db2/https_8c.html#a6835b6b7a93f845248aaeec1bc5bc711", null ],
     [ "HTTPS_TASK_QUEUE_INITIAL", "d2/db2/https_8c.html#af21d4d9c6fb18c83be5a973f6f7c8e71", null ],
     [ "HTTPS_TASK_QUEUE_MAX", "d2/db2/https_8c.html#a51ec3d5395575ffa0b801f0242115470", null ],
+    [ "cwist_ssl_write_budget", "d2/db2/https_8c.html#a6dec2dbace9f2cb5039bca2cd2e1dcf0", null ],
     [ "cwist_tls_ticket_key", "d2/db2/https_8c.html#a1e23495ecd2d61e61cb5f145cba95179", null ],
     [ "cwist_https_accept", "d2/db2/https_8c.html#a323a4ec2f5001e354c8b443b676ee3d0", null ],
     [ "cwist_https_close_connection", "d2/db2/https_8c.html#a6360fe1aca001bb34f9aff6c5a012428", null ],
