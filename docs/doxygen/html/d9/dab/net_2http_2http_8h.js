@@ -13,6 +13,7 @@ var net_2http_2http_8h =
     [ "CWIST_HTTP_MAX_BODY_SIZE", "d9/dab/net_2http_2http_8h.html#a1d176e6dc8e2f08571683836eef15025", null ],
     [ "CWIST_HTTP_MAX_HEADER_SIZE", "d9/dab/net_2http_2http_8h.html#a488d35c02c682661ba4e8ab6e24d41e0", null ],
     [ "CWIST_HTTP_READ_BUFFER_SIZE", "d9/dab/net_2http_2http_8h.html#a108c55443dfb32b0de863b98c6c328a5", null ],
+    [ "CWIST_HTTP_STATUS_FORBIDS_BODY", "d9/dab/net_2http_2http_8h.html#af573428737f46c288e77e35bc78fdd3c", null ],
     [ "CWIST_HTTP_TIMEOUT_MS", "d9/dab/net_2http_2http_8h.html#ab39e3958c01bbe5e8cc785d180de112e", null ],
     [ "CWIST_HTTPS_HANDSHAKE_TIMEOUT_MS", "d9/dab/net_2http_2http_8h.html#a0a3e9bbda6dec33391d1d045edb62733", null ],
     [ "cwist_async_handler_t", "d9/dab/net_2http_2http_8h.html#a2170c9e6d94cfc97d68e7da060024f6c", null ],
