@@ -22,6 +22,45 @@
 
 static cwist_reactor_t *g_reactor = NULL;
 
+#define ASYNC_ACCEPT_REARM_MAX_ATTEMPTS 1000
+#define ASYNC_ACCEPT_REARM_DELAY_US 10000
+
+static cwist_reactor_timer_t g_accept_rearm_timer;
+static unsigned int g_accept_rearm_attempt;
+static bool g_accept_rearm_pending;
+
+static void async_accept_cb(int fd, void *ctx);
+
+static void async_accept_rearm_schedule(cwist_app *app) {
+    if (g_accept_rearm_pending) return;
+    if (g_accept_rearm_attempt >= ASYNC_ACCEPT_REARM_MAX_ATTEMPTS) {
+        fprintf(stderr, "[async] FATAL: listen socket re-arm failed 1000x; this worker stopped accepting\n");
+        return;
+    }
+    g_accept_rearm_attempt++;
+    g_accept_rearm_pending = true;
+    g_accept_rearm_timer.ctx = app;
+    if (!cwist_reactor_timer_arm(g_reactor, &g_accept_rearm_timer, ASYNC_ACCEPT_REARM_DELAY_US)) {
+        g_accept_rearm_pending = false;
+        fprintf(stderr, "[async] FATAL: listen socket re-arm timer failed; this worker stopped accepting\n");
+    }
+}
+
+static void async_accept_rearm_cb(void *ctx) {
+    cwist_app *app = ctx;
+    g_accept_rearm_pending = false;
+    if (!g_reactor) return;
+    if (!atomic_load(&g_cwist_running)) {
+        cwist_reactor_stop(g_reactor);
+        return;
+    }
+    if (cwist_reactor_add(g_reactor, g_cwist_listen_fd, async_accept_cb, &app, sizeof(app))) {
+        g_accept_rearm_attempt = 0;
+        return;
+    }
+    async_accept_rearm_schedule(app);
+}
+
 /**
  * @brief Decide whether the app is fully configured for HTTPS serving.
  *
@@ -46,8 +85,9 @@ static bool app_use_https(const cwist_app *app) {
  *
  * After the accept loop drains, the listening socket is re-armed so the worker
  * keeps accepting: transient reactor re-add failures (e.g. a full io_uring SQ)
- * are retried up to 1000 times with a 10 ms backoff before giving up with a
- * fatal message; if the process is shutting down (@c g_cwist_running cleared),
+ * are retried by a reactor timer up to 1000 times with a 10 ms backoff before
+ * giving up with a fatal message, never by sleeping in this callback. If the
+ * process is shutting down (@c g_cwist_running cleared),
  * the reactor is stopped instead. Runs on a reactor worker thread; the
  * accepted sockets are owned by the HTTP/HTTPS pools once dispatched.
  *
@@ -89,22 +129,15 @@ static void async_accept_cb(int fd, void *ctx) {
         }
     }
 
-    /* Re-arm the listening socket so we can accept the next batch.  A
-     * transient submission failure (e.g. a momentarily full io_uring SQ
-     * under a connect burst) must not silently stop accepting on this
-     * worker forever — retry with a short backoff, then scream. */
+    /* Re-arm through the reactor timer so submission backoff never blocks
+     * this worker's other connections. */
     if (g_reactor) {
         if (atomic_load(&g_cwist_running)) {
-            for (int attempt = 0; attempt < 1000; attempt++) {
-                if (cwist_reactor_add(g_reactor, fd, async_accept_cb, &app, sizeof(app))) {
-                    return;
-                }
-                struct timespec ts = {.tv_sec = 0, .tv_nsec = 10 * 1000 * 1000};
-                nanosleep(&ts, NULL);
+            if (cwist_reactor_add(g_reactor, fd, async_accept_cb, &app, sizeof(app))) {
+                g_accept_rearm_attempt = 0;
+                return;
             }
-            fprintf(
-                stderr,
-                "[async] FATAL: listen socket re-arm failed 1000x; this worker stopped accepting\n");
+            async_accept_rearm_schedule(app);
         } else {
             cwist_reactor_stop(g_reactor);
         }
@@ -177,6 +210,10 @@ cwist_error_t cwist_async_server_loop(int server_fd, cwist_app *app) {
             cwist_http_pool_destroy();
         return err;
     }
+
+    g_accept_rearm_attempt = 0;
+    g_accept_rearm_pending = false;
+    cwist_reactor_timer_init(&g_accept_rearm_timer, async_accept_rearm_cb, app);
 
     cwist_reactor_add(g_reactor, server_fd, async_accept_cb, &app, sizeof(app));
 #if defined(__linux__)
