@@ -182,14 +182,26 @@ static void test_conn_cap_idle_and_teardown(void) {
     cfg.max_conns = 2;
     cfg.idle_timeout_ms = 3000;
     start(&cfg);
+    cwist_lwip_server_stats stats;
+    cwist_lwip_conn_info info[2];
+    assert(cwist_lwip_get_connection_info(g_srv, info, 2) == 2);
+    assert(info[0].state == CWIST_LWIP_CONN_FREE && info[1].state == CWIST_LWIP_CONN_FREE);
     loop_client a, b, extra;
     assert(loop_connect(&a, 80));
     assert(loop_connect(&b, 80));
     loop_run(50);
     assert(cwist_lwip_active_connections(g_srv) == 2);
+    cwist_lwip_get_server_stats(g_srv, &stats);
+    assert(stats.max_connections == 2 && stats.active_connections == 2);
+    assert(stats.accepted_connections == 2 && stats.rejected_connections == 0);
+    assert(cwist_lwip_get_connection_info(g_srv, info, 2) == 2);
+    assert(info[0].state != CWIST_LWIP_CONN_FREE && info[1].state != CWIST_LWIP_CONN_FREE);
+    assert(cwist_lwip_get_connection_info(g_srv, info, 1) == 2);
     loop_connect(&extra, 80); /* accepted by TCP, then aborted by the adapter */
     assert(loop_wait_closed(&extra, 2000) && extra.errored);
     assert(cwist_lwip_active_connections(g_srv) == 2);
+    cwist_lwip_get_server_stats(g_srv, &stats);
+    assert(stats.rejected_connections == 1);
     loop_close(&extra);
 
     /* traffic on a keeps it alive while b idles out */

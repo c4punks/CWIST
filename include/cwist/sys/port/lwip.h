@@ -31,7 +31,8 @@
  *   - Responses are sent zero-copy from per-connection serialized storage
  *     allocated once from a static pool at listen time; a response larger
  *     than the buffer is streamed through it in chunks as the peer
- *     acknowledges, with the response object retained until the last chunk.
+ *     acknowledges. Owned bodies retain their response object; pointer bodies
+ *     release it before streaming because the application owns the storage.
  *   - Received data beyond the request limits is refused back to lwIP while
  *     a response is in flight, so the TCP window throttles the peer.
  *   - Connections idle longer than idle_timeout_ms, or beyond max_conns at
@@ -88,6 +89,31 @@ typedef struct cwist_lwip_tls cwist_lwip_tls;
 /** @brief Opaque listener handle returned by cwist_lwip_listen(). */
 typedef struct cwist_lwip_server cwist_lwip_server;
 
+/** @brief Snapshot of the fixed connection pool and its accept counters. */
+typedef struct cwist_lwip_server_stats {
+    size_t max_connections;
+    size_t active_connections;
+    uint64_t accepted_connections;
+    uint64_t rejected_connections;
+} cwist_lwip_server_stats;
+
+/** @brief Observable state of one fixed connection-pool slot. */
+typedef enum cwist_lwip_conn_state {
+    CWIST_LWIP_CONN_FREE = 0,
+    CWIST_LWIP_CONN_IDLE,
+    CWIST_LWIP_CONN_RECEIVING,
+    CWIST_LWIP_CONN_SENDING,
+    CWIST_LWIP_CONN_STREAMING,
+} cwist_lwip_conn_state;
+
+/** @brief Read-only state captured from one connection-pool slot. */
+typedef struct cwist_lwip_conn_info {
+    cwist_lwip_conn_state state;
+    size_t rx_buffered;
+    size_t tx_remaining;
+    uint32_t idle_ms;
+} cwist_lwip_conn_info;
+
 /**
  * @brief Fill @p cfg with the defaults documented on cwist_lwip_config.
  * @param cfg Configuration to initialize.
@@ -115,6 +141,23 @@ void cwist_lwip_close(cwist_lwip_server *srv);
  * @return Open connection count (0 for NULL).
  */
 size_t cwist_lwip_active_connections(const cwist_lwip_server *srv);
+
+/**
+ * @brief Capture pool capacity and accept counters without blocking lwIP.
+ * @param srv Server handle.
+ * @param stats Output structure; zeroed for a NULL server.
+ */
+void cwist_lwip_get_server_stats(const cwist_lwip_server *srv, cwist_lwip_server_stats *stats);
+
+/**
+ * @brief Capture fixed pool slots in stable slot-index order.
+ * @param srv Server handle.
+ * @param out Caller-provided array, or NULL to query the total slot count.
+ * @param capacity Number of entries in @p out.
+ * @return Total pool slots; at most @p capacity entries are written.
+ */
+size_t cwist_lwip_get_connection_info(const cwist_lwip_server *srv, cwist_lwip_conn_info *out,
+                                      size_t capacity);
 
 /**
  * @brief Create a TLS server context from a certificate chain and private key.

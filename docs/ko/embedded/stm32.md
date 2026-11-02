@@ -16,6 +16,9 @@ C1M 리액터는 이식하지 않습니다.
   Ethernet 위에서 HTML wire inspector를 서빙하며 ping, keep-alive `curl`,
   브라우저 POST로 실기기 검증을 마쳤습니다. rev-A RMII errata 우회와
   D-cache 제약은 해당 README를 참고하십시오.
+- **LCD 및 부하 데모:** `example/stm32f769-fortress/`는 실제 연결 풀 슬롯 288개를
+  보드의 800x480 LCD와 브라우저 대시보드에 표시하고, 192바이트 TX 버퍼로 최대
+  1 MiB 응답을 스트리밍합니다. 포함된 호스트 스크립트로 실기기 동시 연결을 측정합니다.
 - **CI 대상:** `arm-none-eabi-gcc`로 빌드한 Cortex-M7 Thumb-2 펌웨어를
   `qemu-arm` semihosting으로 실행합니다. 명령어와 HTTP/lwIP/TLS 동작을 검증하지만
   실제 보드의 NVIC, PHY, 클럭 트리, RNG는 검증하지 않습니다.
@@ -142,8 +145,9 @@ accept/close는 슬롯을 free list와 활성 목록 사이에서 옮길 뿐이�
 
 - 슬롯 고정 수신 버퍼(`rx_buffer_bytes`): 들어오지 않는 요청은 프로토콜 상한
   이내여도 431/413으로 거부됩니다.
-- 슬롯 고정 송신 버퍼(`tx_buffer_bytes`): 더 큰 응답은 응답 객체를 유지한 채
-  peer의 ACK에 따라 버퍼를 chunk 단위로 스트리밍하므로 응답 크기가 풀 크기에
+- 슬롯 고정 송신 버퍼(`tx_buffer_bytes`): 더 큰 응답은 peer의 ACK에 따라 버퍼를
+  chunk 단위로 스트리밍합니다. 소유형 본문은 응답 객체를 유지하지만 애플리케이션
+  소유 포인터 본문은 스트리밍 전에 객체를 해제하므로 응답 크기가 풀 크기에
   영향을 주지 않습니다.
 - lwIP의 PCB, pbuf, segment, timer pool
 
