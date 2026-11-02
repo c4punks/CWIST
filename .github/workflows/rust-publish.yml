@@ -62,7 +62,7 @@ jobs:
         env:
           PKG_CONFIG_PATH: ${{ env.CWIST_INSTALL }}/lib/pkgconfig
         run: |
-          cargo package --workspace --allow-dirty --manifest-path bindings/rust/Cargo.toml
+          cargo package --workspace --allow-dirty
           cargo check --manifest-path bindings/rust/Cargo.toml --all-targets
 
   # -------------------------------------------------------------------------
