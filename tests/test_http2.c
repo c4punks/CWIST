@@ -1693,7 +1693,8 @@ static void http2_body_handler(void *user_ctx, cwist_http_request *req, cwist_ht
     http2_request_count++;
     http2_request_body_size = req->body->size;
     assert(http2_request_body_size <= sizeof(http2_request_body));
-    memcpy(http2_request_body, req->body->data, http2_request_body_size);
+    if (http2_request_body_size > 0)
+        memcpy(http2_request_body, req->body->data, http2_request_body_size);
     cwist_sstring_assign(res->body, "h2 ok");
 }
 
