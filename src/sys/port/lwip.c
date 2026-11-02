@@ -19,11 +19,10 @@
  *
  * tx is written without TCP_WRITE_FLAG_COPY, so lwIP references it until
  * the peer acknowledges. A response that fits the buffer is copied into it
- * and the response object is destroyed immediately. Small streamed bodies are
- * referenced directly after the header so a tiny staging chunk never waits for
- * an ACK before the rest is queued. Larger bodies use tx_store chunks to bound
- * memory and avoid referencing external storage. Owned bodies retain their
- * response object, while application-owned pointer bodies release it early.
+ * and the response object is destroyed immediately; a larger response streams
+ * through the buffer one chunk at a time as acknowledgements arrive. Owned
+ * bodies retain their response object, while application-owned pointer bodies
+ * let the response and its arena be released before streaming starts.
  *
  * With CWIST_LWIP_TLS and cfg.tls set, mbedTLS sits between the pcb and the
  * same rx/tx buffers: received ciphertext queues in tin and is decrypted
@@ -121,7 +120,6 @@ struct cwist_lwip_conn {
     size_t stream_body_len;
     size_t stream_off;
     bool stream_active;
-    bool stream_direct;
 
     bool close_after_tx; /* Connection: close, error reply, or peer FIN */
     bool peer_closed;
@@ -532,7 +530,6 @@ static err_t conn_process(cwist_lwip_conn *c) {
         c->stream_res = res;
     }
     c->stream_active = true;
-    c->stream_direct = body_len <= CWIST_LWIP_DIRECT_STREAM_MAX;
     c->stream_body = body;
     c->stream_body_len = body_len;
     if (c->stream_direct) {

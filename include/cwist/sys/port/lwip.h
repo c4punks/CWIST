@@ -28,10 +28,11 @@
  *   - Expect: 100-continue gets an interim 100 before the body is read.
  *   - Keep-alive follows the request and the response (as on the socket
  *     path); pipelined requests are answered in order, one at a time.
- *   - Responses use a fixed per-connection staging buffer. Small streamed
- *     bodies are referenced directly after the header; larger bodies use
- *     bounded buffer chunks as the peer acknowledges. Owned bodies retain
- *     their response object; pointer bodies release it before streaming.
+ *   - Responses are sent zero-copy from per-connection serialized storage
+ *     allocated once from a static pool at listen time; a response larger
+ *     than the buffer is streamed through it in chunks as the peer
+ *     acknowledges. Owned bodies retain their response object; pointer bodies
+ *     release it before streaming because the application owns the storage.
  *   - Received data beyond the request limits is refused back to lwIP while
  *     a response is in flight, so the TCP window throttles the peer.
  *   - Connections idle longer than idle_timeout_ms, or beyond max_conns at
