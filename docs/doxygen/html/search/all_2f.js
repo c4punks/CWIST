@@ -1,4 +1,4 @@
 var searchData=
 [
-  ['라우팅과_20핸들러_20mux_20router_0',['2. 라우팅과 핸들러 (Mux Router)',['../df/df1/md_docs_2tutorial_2korean_2cwist__tutorial.html#autotoc_md468',1,'']]]
+  ['동적_20css_20합성기_20wasm_20및_20ssr_0',['10. 동적 CSS 합성기 (WASM 및 SSR)',['../df/df1/md_docs_2tutorial_2korean_2cwist__tutorial.html#autotoc_md488',1,'']]]
 ];

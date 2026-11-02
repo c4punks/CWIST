@@ -26,9 +26,10 @@ var searchData=
   ['cwist_20웹_20개발_20튜토리얼_20a_20to_20z_23',['CWIST 웹 개발 튜토리얼 (A to Z)',['../df/df1/md_docs_2tutorial_2korean_2cwist__tutorial.html',1,'']]],
   ['cwist_20api_20documentation_24',['CWIST API Documentation',['../d7/d15/md_docs_2API.html',1,'']]],
   ['cwist_20api_20reference_25',['CWIST API Reference',['../d1/d7e/md_docs_2api-quickref.html',1,'']]],
-  ['cwist_20library_20reference_26',['CWIST Library Reference',['../da/dca/md_docs_2REFERENCE.html',1,'']]],
-  ['cwist_20on_20the_20wasm_20component_20model_27',['CWIST on the WASM component model',['../d8/d77/md_docs_2api_2wasm-component.html',1,'']]],
-  ['cwist_20on_20wasm_20legacy_20emscripten_28',['CWIST on WASM (Legacy Emscripten)',['../d5/d0e/md_docs_2api_2wasm.html',1,'']]],
-  ['cwist_20web_20development_20tutorial_20a_20to_20z_29',['CWIST Web Development Tutorial (A to Z)',['../dd/d4c/md_docs_2tutorial_2cwist__tutorial.html',1,'']]],
-  ['cwist_5ftls_30',['Pluggable TLS backend (CWIST_TLS)',['../d9/dda/md_docs_2performance_2tls-backends.html',1,'']]]
+  ['cwist_20bare_20metal_20stm32_26',['CWIST bare-metal STM32',['../d4/dc9/md_docs_2ko_2embedded_2stm32.html',1,'']]],
+  ['cwist_20library_20reference_27',['CWIST Library Reference',['../da/dca/md_docs_2REFERENCE.html',1,'']]],
+  ['cwist_20on_20the_20wasm_20component_20model_28',['CWIST on the WASM component model',['../d8/d77/md_docs_2api_2wasm-component.html',1,'']]],
+  ['cwist_20on_20wasm_20legacy_20emscripten_29',['CWIST on WASM (Legacy Emscripten)',['../d5/d0e/md_docs_2api_2wasm.html',1,'']]],
+  ['cwist_20web_20development_20tutorial_20a_20to_20z_30',['CWIST Web Development Tutorial (A to Z)',['../dd/d4c/md_docs_2tutorial_2cwist__tutorial.html',1,'']]],
+  ['cwist_5ftls_31',['Pluggable TLS backend (CWIST_TLS)',['../d9/dda/md_docs_2performance_2tls-backends.html',1,'']]]
 ];

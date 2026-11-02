@@ -1,4 +1,4 @@
 var searchData=
 [
-  ['미들웨어_20cors_20logging_0',['4. 미들웨어 (CORS, Logging)',['../df/df1/md_docs_2tutorial_2korean_2cwist__tutorial.html#autotoc_md470',1,'']]]
+  ['모드_0',['프로세스와 서버 모드',['../d5/d08/md_docs_2ko_2runtime-config.html#autotoc_md356',1,'']]]
 ];

@@ -1,4 +1,4 @@
 var searchData=
 [
-  ['엔진과_20정적_20파일_20제공_0',['9. 템플릿 엔진과 정적 파일 제공',['../df/df1/md_docs_2tutorial_2korean_2cwist__tutorial.html#autotoc_md476',1,'']]]
+  ['실시간_20양방향_20통신_0',['8. 웹소켓 연동 (실시간 양방향 통신)',['../df/df1/md_docs_2tutorial_2korean_2cwist__tutorial.html#autotoc_md486',1,'']]]
 ];

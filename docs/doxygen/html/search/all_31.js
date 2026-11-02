@@ -1,5 +1,4 @@
 var searchData=
 [
-  ['마이그레이션_20sqlite_0',['5. 데이터베이스와 마이그레이션 (SQLite)',['../df/df1/md_docs_2tutorial_2korean_2cwist__tutorial.html#autotoc_md471',1,'']]],
-  ['마치며_1',['마치며',['../df/df1/md_docs_2tutorial_2korean_2cwist__tutorial.html#autotoc_md480',1,'']]]
+  ['라우팅과_20핸들러_20mux_20router_0',['2. 라우팅과 핸들러 (Mux Router)',['../df/df1/md_docs_2tutorial_2korean_2cwist__tutorial.html#autotoc_md479',1,'']]]
 ];

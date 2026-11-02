@@ -1,4 +1,4 @@
 var searchData=
 [
-  ['제공_0',['9. 템플릿 엔진과 정적 파일 제공',['../df/df1/md_docs_2tutorial_2korean_2cwist__tutorial.html#autotoc_md476',1,'']]]
+  ['원칙_0',['1. 기본 원칙',['../d6/de8/md_docs_2ko_2versioning.html#autotoc_md366',1,'']]]
 ];

@@ -1,4 +1,4 @@
 var searchData=
 [
-  ['동적_20css_20합성기_20wasm_20및_20ssr_0',['10. 동적 CSS 합성기 (WASM 및 SSR)',['../df/df1/md_docs_2tutorial_2korean_2cwist__tutorial.html#autotoc_md477',1,'']]]
+  ['대상과_20검증_20범위_0',['지원 대상과 검증 범위',['../d4/dc9/md_docs_2ko_2embedded_2stm32.html#autotoc_md344',1,'']]]
 ];

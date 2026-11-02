@@ -1,4 +1,4 @@
 var searchData=
 [
-  ['프로세스와_20서버_20모드_0',['프로세스와 서버 모드',['../d5/d08/md_docs_2ko_2runtime-config.html#autotoc_md345',1,'']]]
+  ['클라이언트_20사이드_20합성_0',['방법 B: React + WebAssembly (WASM) 클라이언트 사이드 합성',['../df/df1/md_docs_2tutorial_2korean_2cwist__tutorial.html#autotoc_md490',1,'']]]
 ];

@@ -1,4 +1,4 @@
 var searchData=
 [
-  ['확장_20시퀀스_0',['3. 3자리 확장 시퀀스',['../d6/de8/md_docs_2ko_2versioning.html#autotoc_md357',1,'']]]
+  ['튜토리얼_20a_20to_20z_0',['CWIST 웹 개발 튜토리얼 (A to Z)',['../df/df1/md_docs_2tutorial_2korean_2cwist__tutorial.html',1,'']]]
 ];

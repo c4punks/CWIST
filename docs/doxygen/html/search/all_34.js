@@ -1,4 +1,5 @@
 var searchData=
 [
-  ['목차_0',['목차',['../df/df1/md_docs_2tutorial_2korean_2cwist__tutorial.html#autotoc_md466',1,'']]]
+  ['메모리_20크기_0',['메모리 크기',['../d4/dc9/md_docs_2ko_2embedded_2stm32.html#autotoc_md348',1,'']]],
+  ['메이저_20버전의_20첫_20상승_1',['6. 메이저 버전의 첫 상승',['../d6/de8/md_docs_2ko_2versioning.html#autotoc_md371',1,'']]]
 ];

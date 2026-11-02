@@ -1,4 +1,5 @@
 var searchData=
 [
-  ['메이저_20버전의_20첫_20상승_0',['6. 메이저 버전의 첫 상승',['../d6/de8/md_docs_2ko_2versioning.html#autotoc_md360',1,'']]]
+  ['런타임_20계약_0',['포트 훅과 런타임 계약',['../d4/dc9/md_docs_2ko_2embedded_2stm32.html#autotoc_md346',1,'']]],
+  ['런타임_20설정_1',['런타임 설정',['../d5/d08/md_docs_2ko_2runtime-config.html',1,'']]]
 ];

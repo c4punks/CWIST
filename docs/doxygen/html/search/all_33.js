@@ -1,4 +1,5 @@
 var searchData=
 [
-  ['모드_0',['프로세스와 서버 모드',['../d5/d08/md_docs_2ko_2runtime-config.html#autotoc_md345',1,'']]]
+  ['마이그레이션_20sqlite_0',['5. 데이터베이스와 마이그레이션 (SQLite)',['../df/df1/md_docs_2tutorial_2korean_2cwist__tutorial.html#autotoc_md482',1,'']]],
+  ['마치며_1',['마치며',['../df/df1/md_docs_2tutorial_2korean_2cwist__tutorial.html#autotoc_md491',1,'']]]
 ];

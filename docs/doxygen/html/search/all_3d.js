@@ -1,4 +1,4 @@
 var searchData=
 [
-  ['설정_0',['런타임 설정',['../d5/d08/md_docs_2ko_2runtime-config.html',1,'']]]
+  ['빌드_0',['펌웨어 입력 빌드',['../d4/dc9/md_docs_2ko_2embedded_2stm32.html#autotoc_md345',1,'']]]
 ];

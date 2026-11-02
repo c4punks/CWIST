@@ -1,5 +1,4 @@
 var searchData=
 [
-  ['상승_0',['6. 메이저 버전의 첫 상승',['../d6/de8/md_docs_2ko_2versioning.html#autotoc_md360',1,'']]],
-  ['상태_1',['상태',['../d5/d08/md_docs_2ko_2runtime-config.html#autotoc_md344',1,'']]]
+  ['범위_0',['지원 대상과 검증 범위',['../d4/dc9/md_docs_2ko_2embedded_2stm32.html#autotoc_md344',1,'']]]
 ];
