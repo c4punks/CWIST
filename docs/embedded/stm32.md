@@ -16,6 +16,10 @@ does not port `cwist_app_listen()`, pthreads, epoll, or the C1M reactor.
   serving an HTML wire inspector over real Ethernet, verified on hardware
   with ping, parallel/keep-alive `curl`, and browser POSTs. See its README
   for the rev-A RMII erratum workaround and the D-cache constraint.
+- **LCD and load demo:** `example/stm32f769-fortress/` renders 288 real
+  connection-pool slots on the board's 800x480 LCD and in a browser dashboard,
+  with selectable responses up to 1 MiB streamed through 192-byte TX buffers.
+  Its host script measures successful concurrent connections on hardware.
 - **CI target:** Cortex-M7 Thumb-2 firmware built with `arm-none-eabi-gcc` and
   run with `qemu-arm` semihosting. This validates compiled instructions and the
   HTTP/lwIP/TLS logic, but not a board's NVIC, PHY, clock tree, or RNG.
@@ -148,9 +152,10 @@ control block is roughly 130 bytes, plus:
 
 - the slot's fixed request buffer (`rx_buffer_bytes`); a request that does not
   fit is refused with 431/413 even when the protocol caps would allow it;
-- the slot's fixed response buffer (`tx_buffer_bytes`); larger responses keep
-  their response object alive and are streamed through the buffer in chunks
-  as the peer acknowledges, so response size does not inflate the pool;
+- the slot's fixed response buffer (`tx_buffer_bytes`); larger responses are
+  streamed through the buffer in chunks as the peer acknowledges. Owned bodies
+  retain their response object, while application-owned pointer bodies release
+  it before streaming, so response size does not inflate the pool;
 - lwIP's own PCB, pbuf, segment, and timer pools.
 
 Size the pool as `max_conns * (conn + rx + tx)` and validate it with a linker
