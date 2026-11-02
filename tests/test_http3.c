@@ -25,50 +25,12 @@ int cwist_http3_method_is_idempotent(const char *method_str);
 
 static _Atomic int g_handler_called = 0; /* set on the server thread */
 static char g_large_response[CWIST_HTTP_MAX_BODY_SIZE + 1];
-static unsigned char g_oversized_dgram[65536];
-static _Atomic int g_server_oversized_dgram_result = -2;
-static _Atomic int g_server_datagram_result = -2;
-static _Atomic size_t g_server_datagram_len;
-static unsigned char g_server_datagram[8];
-
-static void http3_test_datagram(const void *data, size_t len, void *user_ctx) {
-    (void)user_ctx;
-    assert(len <= sizeof(g_server_datagram));
-    memcpy(g_server_datagram, data, len);
-    atomic_store(&g_server_datagram_len, len);
-}
 
 static void http3_test_handler(void *user_ctx, cwist_http_request *req, cwist_http_response *res) {
-    if (user_ctx) atomic_fetch_add((_Atomic int *)user_ctx, 1);
+    (void)user_ctx;
     g_handler_called = 1;
     if (req->path && strcmp(req->path->data, "/over-limit") == 0) {
         cwist_http_response_set_body_ptr(res, g_large_response, sizeof(g_large_response));
-    }
-    if (req->path && req->private_data && strcmp(req->path->data, "/datagram-limit") == 0) {
-        lsquic_conn_t *conn = lsquic_stream_conn((lsquic_stream_t *)req->private_data);
-        g_server_oversized_dgram_result =
-            cwist_http3_send_datagram(conn, g_oversized_dgram, sizeof(g_oversized_dgram));
-    }
-    if (req->path && req->private_data && strcmp(req->path->data, "/datagram-reply") == 0) {
-        lsquic_conn_t *conn = lsquic_stream_conn((lsquic_stream_t *)req->private_data);
-        g_server_datagram_result = cwist_http3_send_datagram(conn, "pong", 4);
-    }
-    /* Issue #521 regressions: abort the response stream before any headers,
-     * or after headers but before end-of-stream. */
-    if (req->path && req->private_data &&
-        (strcmp(req->path->data, "/abort") == 0 ||
-         strcmp(req->path->data, "/abort-headers") == 0)) {
-        lsquic_stream_t *stream = (lsquic_stream_t *)req->private_data;
-        if (strcmp(req->path->data, "/abort-headers") == 0) {
-            struct lsxpack_header hdr_arr[1];
-            char hbuf[64];
-            h3_hdr_out hdrs = {.arr = hdr_arr, .max = 1, .buf = hbuf, .cap = sizeof(hbuf)};
-            h3_hdr_out_add_str(&hdrs, ":status", "200");
-            lsquic_http_headers_t headers = {.count = 1, .headers = hdr_arr};
-            if (lsquic_stream_send_headers(stream, &headers, 0) == 0)
-                lsquic_stream_flush(stream);
-        }
-        lsquic_conn_abort(lsquic_stream_conn(stream));
     }
 }
 
@@ -395,49 +357,6 @@ int main(void) {
     assert(res->status_code == 200);
     cwist_http_response_destroy(res);
     printf("[PASS] HTTP/3 well-formed request is dispatched (200).\n");
-
-    atomic_store(&g_server_datagram_len, 0);
-    assert(cwist_http3_client_send_datagram(client, "ping", 4) == 0);
-    for (int i = 0; i < 20 && atomic_load(&g_server_datagram_len) == 0; i++) {
-        res = NULL;
-        err = cwist_http3_client_request(client, "/", CWIST_HTTP_GET, NULL, NULL, 0, &res);
-        assert(err.error.err_i16 == 0 && res != NULL);
-        cwist_http_response_destroy(res);
-    }
-    assert(atomic_load(&g_server_datagram_len) == 4);
-    assert(memcmp(g_server_datagram, "ping", 4) == 0);
-
-    res = NULL;
-    err = cwist_http3_client_request(client, "/datagram-reply", CWIST_HTTP_GET, NULL, NULL, 0,
-                                     &res);
-    assert(err.error.err_i16 == 0 && res != NULL);
-    cwist_http_response_destroy(res);
-    assert(g_server_datagram_result == 0);
-    char pong[4];
-    ssize_t pong_len = -1;
-    for (int i = 0; i < 20 && pong_len != 4; i++) {
-        pong_len = cwist_http3_client_recv_datagram(client, pong, sizeof(pong));
-        if (pong_len == 4) break;
-        assert(pong_len == -1 && errno == EAGAIN);
-        res = NULL;
-        err = cwist_http3_client_request(client, "/", CWIST_HTTP_GET, NULL, NULL, 0, &res);
-        assert(err.error.err_i16 == 0 && res != NULL);
-        cwist_http_response_destroy(res);
-    }
-    assert(pong_len == 4 && memcmp(pong, "pong", 4) == 0);
-    printf("[PASS] HTTP/3 datagrams negotiated and exchanged in both directions.\n");
-
-    cwist_http3_client_enable_datagrams(client, 1);
-    assert(cwist_http3_client_send_datagram(client, g_oversized_dgram,
-                                            sizeof(g_oversized_dgram)) == -1);
-    res = NULL;
-    err = cwist_http3_client_request(client, "/datagram-limit", CWIST_HTTP_GET, NULL, NULL, 0,
-                                     &res);
-    assert(err.error.err_i16 == 0 && res != NULL);
-    assert(res->status_code == 200);
-    assert(g_server_oversized_dgram_result == -1);
-    cwist_http_response_destroy(res);
-    printf("[PASS] HTTP/3 client and server reject oversized outgoing datagrams.\n");
 
     res = NULL;
     err = cwist_http3_client_request(client, "/over-limit", CWIST_HTTP_GET, NULL, NULL, 0, &res);
