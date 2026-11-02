@@ -32,6 +32,8 @@
 
 #define GRPC_CLIENT_FRAME_HEADER 9
 #define GRPC_CLIENT_MAX_FRAME (16u * 1024u * 1024u)
+#define GRPC_CLIENT_MAX_HEADER_BLOCK (64u * 1024u)
+#define GRPC_CLIENT_MAX_CONTINUATIONS 16u
 #define GRPC_CLIENT_DEFAULT_WINDOW 65535
 #define GRPC_CLIENT_HEADER_TABLE 4096
 
@@ -810,16 +812,28 @@ static void grpc_client_on_header(void *ctx, const char *name, const char *value
 static int grpc_client_read_header_block(cwist_grpc_client *c, cwist_grpc_call *call,
                                          grpc_client_frame *first, uint8_t **out, size_t *out_len,
                                          int *end_stream, uint64_t deadline_ms) {
+    if (first->len > GRPC_CLIENT_MAX_HEADER_BLOCK) return -1;
     size_t cap = first->len ? first->len : 1;
     uint8_t *block = cwist_alloc(cap);
     if (!block) return -1;
     size_t len = first->len;
     if (len) memcpy(block, first->payload, len);
     *end_stream = !!(first->flags & H2_FLAG_END_STREAM);
+    unsigned int continuation_count = 0;
     while (!(first->flags & H2_FLAG_END_HEADERS)) {
+        if (continuation_count == GRPC_CLIENT_MAX_CONTINUATIONS) {
+            cwist_free(block);
+            return -1;
+        }
+        continuation_count++;
         grpc_client_frame cont;
-        if (grpc_client_read_frame(c, &cont, deadline_ms) != 0 ||
-            cont.type != H2_FRAME_CONTINUATION || cont.stream_id != call->stream_id) {
+        if (grpc_client_read_frame(c, &cont, deadline_ms) != 0) {
+            cwist_free(block);
+            return -1;
+        }
+        if (cont.type != H2_FRAME_CONTINUATION || cont.stream_id != call->stream_id ||
+            cont.len > GRPC_CLIENT_MAX_HEADER_BLOCK - len) {
+            cwist_free(cont.payload);
             cwist_free(block);
             return -1;
         }
