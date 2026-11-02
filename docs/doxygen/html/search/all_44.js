@@ -1,4 +1,6 @@
 var searchData=
 [
-  ['실시간_20양방향_20통신_0',['8. 웹소켓 연동 (실시간 양방향 통신)',['../df/df1/md_docs_2tutorial_2korean_2cwist__tutorial.html#autotoc_md489',1,'']]]
+  ['대상과_20검증_20범위_0',['지원 대상과 검증 범위',['../d4/dc9/md_docs_2ko_2embedded_2stm32.html#autotoc_md618',1,'']]],
+  ['대상_1',['WASI 대상',['../d0/d3c/md_docs_2ko_2api_2wasi.html',1,'']]],
+  ['대안_2',['검토한 대안',['../d6/dda/md_docs_2ko_2decisions_20001-safe-public-fixed-response-cache.html#autotoc_md592',1,'']]]
 ];

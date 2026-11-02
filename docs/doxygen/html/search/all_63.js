@@ -1,4 +1,4 @@
 var searchData=
 [
-  ['핸들러_20mux_20router_0',['2. 라우팅과 핸들러 (Mux Router)',['../df/df1/md_docs_2tutorial_2korean_2cwist__tutorial.html#autotoc_md482',1,'']]]
+  ['밖에_20내보낸_20inline_20도우미_0',['그 밖에 내보낸 inline 도우미',['../d3/d38/md_docs_2ko_2api-quickref.html#autotoc_md347',1,'']]]
 ];

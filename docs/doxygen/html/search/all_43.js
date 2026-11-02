@@ -1,5 +1,4 @@
 var searchData=
 [
-  ['시퀀스_0',['3. 3자리 확장 시퀀스',['../d6/de8/md_docs_2ko_2versioning.html#autotoc_md371',1,'']]],
-  ['시퀀스_20기본_1',['2. 2자리 시퀀스 (기본)',['../d6/de8/md_docs_2ko_2versioning.html#autotoc_md370',1,'']]]
+  ['달기_0',['1. 라우트에 주석 달기',['../dc/dbf/md_docs_2ko_2tutorials_2openapi-swagger.html#autotoc_md709',1,'']]]
 ];

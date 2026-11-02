@@ -1,4 +1,5 @@
 var searchData=
 [
-  ['게이트_20v4_20lts부터_0',['5. API 안정성 게이트 (v4 LTS부터)',['../d6/de8/md_docs_2ko_2versioning.html#autotoc_md373',1,'']]]
+  ['같은_20뷰_20렌더링하기_0',['WASM에서 같은 뷰 렌더링하기',['../d1/df9/md_docs_2ko_2api_2html.html#autotoc_md424',1,'']]],
+  ['같은_20지역_20변수를_20위한_20의사_20raii_1',['4. 핸들 같은 지역 변수를 위한 의사 RAII',['../d1/dde/md_docs_2ko_2GC.html#autotoc_md639',1,'']]]
 ];

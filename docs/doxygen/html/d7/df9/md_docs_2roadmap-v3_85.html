@@ -108,35 +108,31 @@ $(document).ready(function(){initNavTree('d7/df9/md_docs_2roadmap-v3_85.html','.
   <div class="headertitle"><div class="title">v3.5.0 release roadmap</div></div>
 </div><!--header-->
 <div class="contents">
-<div class="textblock"><p><a class="anchor" id="autotoc_md442"></a> Status: candidate work in PR #91. Not released.</p>
-<p><b>Release hold:</b> a separate CVE-fix PR must be included in v3.5.0 and its associated issue resolved before publication. This is an additional required gate even if PR #91 and its CI pass. The issue/PR identifiers are pending confirmation; do not treat the missing identifiers as permission to release.</p>
-<p>The release target is v3.5.0, not v3.4.2. This release adds an explicit public FIXED cache and changes the public API. It also includes HTTP correctness fixes and benchmark controls. See the <a href="https://github.com/c4punks/CWIST/pull/91#issuecomment-5660861288">maintainer proposal</a> and <a href="https://github.com/c4punks/CWIST/pull/91#issuecomment-5660948894">release decision</a>.</p>
-<h1><a class="anchor" id="autotoc_md443"></a>
-Scope</h1>
+<div class="textblock"><p><a class="anchor" id="autotoc_md613"></a> <code>tests/test_durable_queue.c</code>는 Redis와 NATS JetStream에서 enqueue/claim/ack, nack 재전달, 가시성 타임아웃, 데드레터 동작을 다룹니다. 로컬 <code>make test</code> 실행에서는 서버가 없어도 선택 사항으로 남습니다.</p>
+<p><code>CWIST_TEST_REQUIRE_DURABLE_QUEUE=1</code>이면 서버 부재, JetStream 사용 불가, 큐 팩토리 에러, 시나리오 실패가 모두 테스트 실패가 됩니다. 성공하려면 두 백엔드가 모든 시나리오를 실행해야 합니다. 설정하지 않거나, 비어 있거나, <code>0</code>이면 기존의 선택 동작을 유지하고, 그 밖의 비어 있지 않은 값은 엄격 모드를 켭니다. Redis 팩토리 에러는 선택 모드에서도 계속 실패로 처리됩니다.</p>
+<h1><a class="anchor" id="autotoc_md614"></a>
+로컬 실행</h1>
+<div class="fragment"><div class="line">make test_durable_queue</div>
+<div class="line">CWIST_TEST_REQUIRE_DURABLE_QUEUE=1 ./test_durable_queue</div>
+</div><!-- fragment --><p>이 바이너리는 기존 <code>CWIST_REDIS_HOST</code>, <code>CWIST_REDIS_PORT</code>, <code>CWIST_NATS_URL</code> 설정을 따릅니다. 테스트용 인스턴스만 가리키도록 하세요.</p>
+<h1><a class="anchor" id="autotoc_md615"></a>
+격리된 통합 게이트</h1>
+<p><code>redis-server</code>, <code>nats-server</code>, Python 3을 설치한 뒤 다음을 실행합니다.</p>
+<div class="fragment"><div class="line">make test_durable_queue</div>
+<div class="line">python3 scripts/ci/durable_queue_gate.py</div>
+<div class="line">python3 -m unittest discover -s scripts/ci -p &#39;test_durable_queue_gate.py&#39;</div>
+</div><!-- fragment --><p>게이트는 루프백 전용 Redis와 NATS 자식 프로세스를 직접 띄웁니다. 서버가 없는 경우를 포함해 사용하지 않는 임의의 포트를 예약하며, 기본적으로 6379나 4222 포트는 절대 쓰지 않습니다. 선택적인 <code>CWIST_DQ_REDIS_PORT</code>, <code>CWIST_DQ_NATS_PORT</code>, <code>CWIST_DQ_NOJS_PORT</code> 덮어쓰기 값은 사용 중이지 않은 포트여야 합니다. 사용 중인 포트는 어떤 테스트 요청보다 먼저 실패합니다. <code>CWIST_DQ_REDIS_BIN</code>과 <code>CWIST_DQ_NATS_BIN</code>은 브로커 실행 파일을 고릅니다. 시작 대기 시간은 <code>CWIST_DQ_READY_SECS</code>(기본 20, 최대 120)로 제한되며, 테스트 호출마다 60초 타임아웃이 있습니다.</p>
+<p>일곱 가지 모드는 다음과 같습니다.</p>
 <ol type="1">
 <li>Public FIXED cache: implement ADR-0001 with explicit opt-in, strict admission, owned response data, process-wide limits, and cache invalidation. Requests that do not qualify must use ordinary dispatch. Keep the BDR storage API. See <a class="el" href="../../d3/ddd/md_docs_2fixed-cache-status.html">cache contract and migration</a>.</li>
 <li>HTTP correctness: fix blocking pipeline framing and transfer deferred request/response ownership before another thread can use the objects. Include middleware, producer response, and inline abort paths. See <a class="el" href="../../df/dc5/md_docs_2async-gc-ownership.html">async ownership</a>.</li>
 <li>Benchmark controls: use isolated process groups, reject failed or incomplete runs, and bind each result to its source and workload. Keep PUBLIC_FIXED as a separate case. Retain the dual-histogram tools from PR #87. See <a class="el" href="../../d6/d42/md_docs_2webserver-benchmark.html">benchmark contract</a>.</li>
 <li>Packaging: build and test the source archive as version 3.5.0. Publish the source commit, tree, submodule identities, and archive checksums.</li>
 </ol>
-<p>PRs #85 and #87 are merged into dev. Their integration into main is part of PR #91. Their merge is not evidence that this release has passed its checks.</p>
-<h1><a class="anchor" id="autotoc_md444"></a>
-Release gates</h1>
-<ul>
-<li>[ ] Close the real TCP regressions on the final candidate. Run classic and C1M modes with GC enabled and disabled, including NDEBUG and sanitizer builds.</li>
-<li>[ ] Verify inline abort from a keep-alive request: terminal response, forced connection close, and middleware unwind. Verify creator and producer exit schedules without use-after-free or duplicate cleanup.</li>
-<li>[ ] Resolve the separate TLS-GC ownership risk in lazy timeout scheduler and job/IO-queue allocations. An exchange-graph fix alone does not close this risk.</li>
-<li>[ ] Complete independent source/security review and all applicable CI checks on the exact candidate. Do not replace failed runs with source-only claims.</li>
-<li>[ ] Pass source archive build/tests and native platform checks. Rebuild and relink applications against the matching headers and library: the app structure grows, so this is not a binary-only drop-in update.</li>
-<li>[ ] Verify the main merge commit and its checks before publishing v3.5.0. Keep the existing v3.4 and v3.4.1 tags unchanged.</li>
-<li>[ ] Download the published assets and verify their identities and checksums.</li>
-<li>[ ] Remeasure the exact released version. Keep the workload arguments and admission rules unchanged. Publish raw results, request/error counts, percentile definitions, source identity, and cleanup evidence.</li>
-</ul>
-<h1><a class="anchor" id="autotoc_md445"></a>
-Evidence and limits</h1>
-<p>The earlier ASan failure is a real failure, not a passing result for a later candidate. Cache unit results and static review do not prove full TCP safety. Failed warmup attempts remain invalid benchmark evidence. Earlier performance results must keep their original source/version labels.</p>
-<p>The version change does not close issue #25 or prove a P99.999 improvement. Report correctness, benchmark validity, measured latency, and release status separately. Keep issue #25 open until its acceptance evidence is established.</p>
-<p>Do not publish a v3.4.2 backport as part of this roadmap. A separate urgent patch can be scoped if needed. If a release gate fails, hold v3.5.0 and retain the last verified release; do not move an existing tag or weaken a test. </p>
+<p>부정적인 결과는 정확히 종료 코드 1과 특정 진단을 요구하며, 크래시와 타임아웃은 인정하지 않습니다. 임시 데이터와 직접 띄운 자식 프로세스는 성공, 실패, INT, TERM 모두에서 정리됩니다. 로컬 게이트는 <code>FLUSHALL</code>, 외부 브로커 종료, 전역 설치, 프로덕션 큐 API 변경을 하지 않습니다.</p>
+<h1><a class="anchor" id="autotoc_md616"></a>
+CI</h1>
+<p><code>.github/workflows/durable-queue.yml</code>은 Ubuntu 러너에 체크섬으로 고정한 Redis 8.0.3과 NATS 2.12.3을 설치하고, 실제 테스트 바이너리를 빌드한 뒤, 도우미 테스트와 같은 일곱 모드 게이트를 실제로 실행합니다. 이 작업은 <code>contents: read</code> 권한만 요청하며 30분 제한이 있습니다. 이것은 기존 큐 시나리오를 테스트하는 것이며, 브로커 재시작 영속성이나 크래시 복구 의미를 테스트하지는 않습니다. </p>
 </div></div><!-- contents -->
 </div><!-- PageDoc -->
 </div><!-- doc-content -->

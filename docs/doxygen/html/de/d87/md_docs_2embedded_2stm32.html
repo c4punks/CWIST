@@ -108,8 +108,8 @@ $(document).ready(function(){initNavTree('de/d87/md_docs_2embedded_2stm32.html',
   <div class="headertitle"><div class="title">Bare-metal STM32 with CWIST</div></div>
 </div><!--header-->
 <div class="contents">
-<div class="textblock"><p><a class="anchor" id="autotoc_md307"></a> CWIST supports a socket-free Cortex-M path for small firmware that drives <code><a class="el" href="../../d0/d77/sys_2app_2app_8h.html#aeb91a66106e8a027272fb5b711ac0ba7" title="Run the full router/middleware/handler pipeline on a raw HTTP/1.x request held in a memory buffer,...">cwist_app_dispatch_memory()</a></code> or the raw-lwIP adapter. It uses the same router, middleware, handlers, JSON helpers, and HTTP/1.1 parser as hosted builds; it does not port <code><a class="el" href="../../d0/d77/sys_2app_2app_8h.html#a05f9a10f4d2ab307c211dd56d54fe7c3" title="Serve app on port until SIGTERM, SIGINT or cwist_shutdown_request(); blocks the calling thread.">cwist_app_listen()</a></code>, pthreads, epoll, or the C1M reactor.</p>
-<h1><a class="anchor" id="autotoc_md308"></a>
+<div class="textblock"><p><a class="anchor" id="autotoc_md304"></a> CWIST supports a socket-free Cortex-M path for small firmware that drives <code><a class="el" href="../../d0/d77/sys_2app_2app_8h.html#aeb91a66106e8a027272fb5b711ac0ba7" title="Run the full router/middleware/handler pipeline on a raw HTTP/1.x request held in a memory buffer,...">cwist_app_dispatch_memory()</a></code> or the raw-lwIP adapter. It uses the same router, middleware, handlers, JSON helpers, and HTTP/1.1 parser as hosted builds; it does not port <code><a class="el" href="../../d0/d77/sys_2app_2app_8h.html#a05f9a10f4d2ab307c211dd56d54fe7c3" title="Serve app on port until SIGTERM, SIGINT or cwist_shutdown_request(); blocks the calling thread.">cwist_app_listen()</a></code>, pthreads, epoll, or the C1M reactor.</p>
+<h1><a class="anchor" id="autotoc_md305"></a>
 Supported targets and validation</h1>
 <ul>
 <li><b>Reference integration:</b> NUCLEO-H743ZI2 (STM32H743, Cortex-M7, 2 MB flash, 1 MB SRAM, RMII Ethernet, TRNG). <code>example/stm32/</code> contains the application, HAL port hooks, lwIP options, CubeMX integration, and flashing instructions.</li>
@@ -119,7 +119,7 @@ Supported targets and validation</h1>
 <li><b>Sizing candidates:</b> STM32H7 first, then F767/F429-class parts with enough SRAM. Cortex-M4F and F429/F767 builds are not validated targets yet. Real hardware acceptance remains a manual step; do not infer it from QEMU success.</li>
 </ul>
 <p>Low-end F0/F1/L0 parts and parts below roughly 128 KB SRAM are outside this epic. Plain HTTP is the practical starting point for smaller parts; HTTPS is intended for H7-class memory budgets.</p>
-<h1><a class="anchor" id="autotoc_md309"></a>
+<h1><a class="anchor" id="autotoc_md306"></a>
 Build the firmware inputs</h1>
 <p>Install an ARM EABI GCC toolchain with newlib-nano, then run:</p>
 <div class="fragment"><div class="line">make CROSS_COMPILE=arm-none-eabi- CWIST_PLATFORM=baremetal CWIST_TINY=1 amalgamation fat-dist</div>
@@ -135,7 +135,7 @@ Build the firmware inputs</h1>
 <div class="line">make baremetal-smoke       # four qemu-arm firmware runs</div>
 <div class="line">make baremetal-size-gate   # smoke plus size and allocation budgets</div>
 </div><!-- fragment --><p><code>BAREMETAL_CROSS</code> and <code>BAREMETAL_ARCH</code> can select another prefix or Cortex-M FPU/CPU profile. Do not mix objects built for different ARM ABIs.</p>
-<h1><a class="anchor" id="autotoc_md310"></a>
+<h1><a class="anchor" id="autotoc_md307"></a>
 Port hooks and runtime contract</h1>
 <p>Firmware provides these link-time symbols from <code><a class="el" href="../../da/d00/port_8h.html" title="Hooks a bare-metal firmware supplies to CWIST (issue #447).">cwist/sys/port.h</a></code>:</p>
 <div class="fragment"><div class="line"><a class="code hl_variable" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">uint64_t</a> <a class="code hl_function" href="../../da/d00/port_8h.html#aa55c42241491b459c9ea265529c38e4a">cwist_port_monotonic_ns</a>(<span class="keywordtype">void</span>);</div>
@@ -146,7 +146,7 @@ Port hooks and runtime contract</h1>
 </div><!-- fragment --><p><code><a class="el" href="../../da/d00/port_8h.html#a4e3716f7c991b336200a53504327d412" title="Fill a buffer with cryptographically secure random bytes.">cwist_port_entropy()</a></code> is <b>required</b>. It must read the MCU's RNG peripheral and return nonzero on failure. Constant seeds and clock-plus-<code><a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">rand()</a></code> fallbacks are not accepted: entropy protects hash-flooding seeds, session IDs, and TLS.</p>
 <p>The monotonic hook normally uses SysTick, DWT, or a timer. Logging is synchronous through newlib's <code>_write</code>, which the example sends to USART3. There is no background logger, scheduler, GC thread, or RTOS lock hook. All lwIP adapter calls and callbacks must run in lwIP's core context.</p>
 <p>A wall clock is optional. Supply newlib's <code><a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">time()</a></code>/<code>_gettimeofday</code> when an RTC is available; otherwise CWIST omits the HTTP <code>Date</code> header as RFC 9110 requires. Compiled-in assets use the existing assets table rather than filesystem access.</p>
-<h1><a class="anchor" id="autotoc_md311"></a>
+<h1><a class="anchor" id="autotoc_md308"></a>
 HTTP over raw lwIP</h1>
 <p>Compile <code><a class="el" href="../../d7/d5d/lwip_8c.html" title="CWIST over lwIP&#39;s raw TCP API; see &lt;cwist/sys/port/lwip.h&gt;.">src/sys/port/lwip.c</a></code> with the firmware's own <code>lwipopts.h</code>, initialize lwIP, and then create the server in its core context:</p>
 <div class="fragment"><div class="line"><a class="code hl_struct" href="../../d5/d41/structcwist__lwip__config.html">cwist_lwip_config</a> cfg;</div>
@@ -164,7 +164,7 @@ HTTP over raw lwIP</h1>
 <div class="ttc" id="astructcwist__lwip__config_html_af67150cd1a35fb892c499674a261efc0"><div class="ttname"><a href="../../d5/d41/structcwist__lwip__config.html#af67150cd1a35fb892c499674a261efc0">cwist_lwip_config::max_header_bytes</a></div><div class="ttdeci">size_t max_header_bytes</div><div class="ttdef"><b>Definition</b> <a href="../../d4/d9a/lwip_8h_source.html#l00072">lwip.h:72</a></div></div>
 </div><!-- fragment --><p>The adapter supports Content-Length framing, keep-alive, ordered pipelining, <code>Expect: 100-continue</code>, HEAD, idle timeouts, connection limits, and 400/413/431 responses. Request bodies using Transfer-Encoding receive 501. Each connection has one exchange in flight; back-pressure uses <code>tcp_write</code>, <code>tcp_sent</code>, and <code>tcp_poll</code>.</p>
 <p>See <code>example/stm32/README.md</code> for CubeMX settings and the main-loop integration.</p>
-<h1><a class="anchor" id="autotoc_md312"></a>
+<h1><a class="anchor" id="autotoc_md309"></a>
 Memory sizing</h1>
 <p>The numbers below are for the complete <b>test firmware</b>, including the loopback client and test buffers. They are sizing ceilings, not the cost of CWIST alone. Exact current budgets and measurements are recorded in <code>scripts/ci/baremetal-budget.txt</code>.</p>
 <table class="markdownTable">
@@ -180,13 +180,13 @@ Memory sizing</h1>
 <td class="markdownTableBodyNone">hello-tls   </td><td class="markdownTableBodyRight">138,564 B   </td><td class="markdownTableBodyRight">75,608 B   </td><td class="markdownTableBodyRight">121,256 B   </td><td class="markdownTableBodyRight">8,740 B   </td><td class="markdownTableBodyRight">0   </td></tr>
 </table>
 <p>The one in-memory allocation is the response buffer returned to the caller by <code><a class="el" href="../../d0/d77/sys_2app_2app_8h.html#aeb91a66106e8a027272fb5b711ac0ba7" title="Run the full router/middleware/handler pipeline on a raw HTTP/1.x request held in a memory buffer,...">cwist_app_dispatch_memory()</a></code>. The lwIP and TLS measurements are taken after warm-up on an established connection; handlers that allocate, such as a cJSON handler, add their own allocations.</p>
-<h2><a class="anchor" id="autotoc_md313"></a>
+<h2><a class="anchor" id="autotoc_md310"></a>
 Request arenas</h2>
 <p>Request and response objects use two arenas. Non-hosted builds recycle arena structs and default-sized buffers after first use, so steady-state requests do not repeatedly fragment the heap. The default reserves two 8 KB generations; four buffers and four structs are cached at most.</p>
 <p>For smaller parts, override the common-case capacity at build time:</p>
 <div class="fragment"><div class="line">make baremetal BAREMETAL_EXTRA_CFLAGS=-DCWIST_ARENA_DEFAULT_GENERATION_BYTES=4096</div>
 </div><!-- fragment --><p>Allocations beyond a generation return <code>NULL</code> from the arena and use the caller's heap fallback. Reducing the arena does not change request limits and does not eliminate handler or returned-response allocations.</p>
-<h2><a class="anchor" id="autotoc_md314"></a>
+<h2><a class="anchor" id="autotoc_md311"></a>
 Connections and responses</h2>
 <p>At listen time the adapter allocates one static pool with <code>max_conns</code> slots of <code><a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">sizeof(conn)</a> + rx_buffer_bytes + tx_buffer_bytes</code> (defaults 2048 B each); accept and close only move slots between the free list and the active list, so there is no per-connection or per-response heap traffic. On 32-bit ARM a slot's control block is roughly 130 bytes, plus:</p>
 <ul>
@@ -196,7 +196,7 @@ Connections and responses</h2>
 </ul>
 <p>Size the pool as <code>max_conns * (conn + rx + tx)</code> and validate it with a linker map. Smaller buffers buy more connections at the cost of tighter request limits and more response chunks. Reserve at least 16 KB of main stack for the current serializer and parser, and validate that margin on the final application.</p>
 <p>The TLS adapter additionally holds an mbedTLS session, ciphertext input that can grow to <code>MBEDTLS_SSL_IN_CONTENT_LEN + 2048</code>, and the same HTTP buffers. The test profile uses about 25 KB for one server-side TLS session before adapter buffers. <code>MBEDTLS_SSL_IN_CONTENT_LEN</code> remains 16 KB because arbitrary clients can send full-size records.</p>
-<h2><a class="anchor" id="autotoc_md315"></a>
+<h2><a class="anchor" id="autotoc_md312"></a>
 lwIP pools</h2>
 <p>The example starts with these values; tune them with linker maps and runtime pool statistics enabled in a debug build:</p>
 <table class="markdownTable">
@@ -216,11 +216,11 @@ lwIP pools</h2>
 <td class="markdownTableBodyNone"><code>TCP_SND_BUF</code>   </td><td class="markdownTableBodyRight"><code>2 * TCP_MSS</code>   </td><td class="markdownTableBodyNone">transmit back-pressure; exercises streaming correctly   </td></tr>
 </table>
 <p><code>NO_SYS=1</code>, <code>LWIP_NETCONN=0</code>, and <code>LWIP_SOCKET=0</code> are required for the supplied raw-only example. <code>MEMP_NUM_TCP_PCB</code> must cover the listener and every accepted connection. Increase pools when enabling DHCP, DNS, or extra netifs.</p>
-<h1><a class="anchor" id="autotoc_md316"></a>
+<h1><a class="anchor" id="autotoc_md313"></a>
 HTTPS</h1>
 <p>Build the adapter with <code>CWIST_LWIP_TLS</code>, link mbedTLS 3.6, and set <code>cfg.tls</code> to a context returned by <code><a class="el" href="../../d4/d9a/lwip_8h.html#aa2dfb64bc973ea5eaed35da983e9ae38" title="Create a TLS server context from a certificate chain and private key.">cwist_lwip_tls_create()</a></code>. The current profile is a TLS 1.2 server using ECDHE-ECDSA P-256 and AES-128-GCM-SHA256. Certificate/key parsing and DRBG seeding fail closed; a TLS configuration never falls back to plaintext.</p>
 <p>MCU CRYP/HASH/PKA acceleration is a firmware-side <code>MBEDTLS_*_ALT</code> choice, not a CWIST hook. TLS 1.3, session tickets, and resumption are not included. Review record-buffer sizes before moving from the test profile to a product.</p>
-<h1><a class="anchor" id="autotoc_md317"></a>
+<h1><a class="anchor" id="autotoc_md314"></a>
 Limitations</h1>
 <ul>
 <li>No <code><a class="el" href="../../d0/d77/sys_2app_2app_8h.html#a05f9a10f4d2ab307c211dd56d54fe7c3" title="Serve app on port until SIGTERM, SIGINT or cwist_shutdown_request(); blocks the calling thread.">cwist_app_listen()</a></code>, sockets, worker pool, RTOS/netconn variant, or W5500 adapter in this epic.</li>

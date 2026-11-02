@@ -1,4 +1,5 @@
 var searchData=
 [
-  ['버전의_20첫_20상승_0',['6. 메이저 버전의 첫 상승',['../d6/de8/md_docs_2ko_2versioning.html#autotoc_md374',1,'']]]
+  ['근거와_20소스_20기준점_0',['근거와 소스 기준점',['../d6/dda/md_docs_2ko_2decisions_20001-safe-public-fixed-response-cache.html#autotoc_md595',1,'']]],
+  ['근거_1',['근거',['../d7/dab/md_docs_2ko_2fixed-cache-status.html#autotoc_md630',1,'']]]
 ];

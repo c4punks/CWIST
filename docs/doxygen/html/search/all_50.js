@@ -1,5 +1,4 @@
 var searchData=
 [
-  ['정적_20파일_20제공_0',['9. 템플릿 엔진과 정적 파일 제공',['../df/df1/md_docs_2tutorial_2korean_2cwist__tutorial.html#autotoc_md490',1,'']]],
-  ['정책_20요약_1',['보안 정책 요약',['../df/df1/md_docs_2tutorial_2korean_2cwist__tutorial.html#autotoc_md488',1,'']]]
+  ['레퍼런스_0',['레퍼런스',['..//home/runner/work/CWIST/CWIST/docs/ko/README.md#autotoc_md662',1,'3. API 레퍼런스'],['../d3/d19/md_docs_2ko_2REFERENCE.html',1,'CWIST 라이브러리 레퍼런스'],['../d3/d38/md_docs_2ko_2api-quickref.html',1,'CWIST API 레퍼런스']]]
 ];

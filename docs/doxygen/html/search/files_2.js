@@ -7,7 +7,7 @@ var searchData=
   ['big_5fdumb_5freply_2eh_4',['big_dumb_reply.h',['../da/d2c/big__dumb__reply_8h.html',1,'']]],
   ['bind_2ec_5',['bind.c',['../d6/d6d/bind_8c.html',1,'']]],
   ['bind_2eh_6',['bind.h',['../da/dc2/bind_8h.html',1,'']]],
-  ['blog_2dcrud_2emd_7',['blog-crud.md',['../d7/d27/blog-crud_8md.html',1,'']]],
+  ['blog_2dcrud_2emd_7',['blog-crud.md',['../d3/d58/ko_2tutorials_2blog-crud_8md.html',1,'(Global Namespace)'],['../d7/d7d/tutorials_2blog-crud_8md.html',1,'(Global Namespace)']]],
   ['build_2doptions_2emd_8',['build-options.md',['../d9/d85/build-options_8md.html',1,'']]],
   ['builder_2ec_9',['builder.c',['../d1/d43/builder_8c.html',1,'']]],
   ['builder_2eh_10',['builder.h',['../d5/d78/builder_8h.html',1,'']]]

@@ -1,5 +1,4 @@
 var searchData=
 [
-  ['및_20db_20암호화_0',['6. 인증 (JWT 및 DB 암호화)',['../df/df1/md_docs_2tutorial_2korean_2cwist__tutorial.html#autotoc_md486',1,'']]],
-  ['및_20ssr_1',['10. 동적 CSS 합성기 (WASM 및 SSR)',['../df/df1/md_docs_2tutorial_2korean_2cwist__tutorial.html#autotoc_md491',1,'']]]
+  ['규칙_0',['메모리 소유권 규칙',['../da/dc3/md_docs_2ko_2api_2app.html#autotoc_md385',1,'']]]
 ];
