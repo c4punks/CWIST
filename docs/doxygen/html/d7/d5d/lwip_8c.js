@@ -10,6 +10,8 @@ var lwip_8c =
     [ "cwist_lwip_active_connections", "d7/d5d/lwip_8c.html#af90b0a575595f192c8024c626eccd62a", null ],
     [ "cwist_lwip_close", "d7/d5d/lwip_8c.html#a306b4c825e47938c2d49c52e04461360", null ],
     [ "cwist_lwip_config_init", "d7/d5d/lwip_8c.html#ae69a6ce2322074574a3e2e3df229bf34", null ],
+    [ "cwist_lwip_get_connection_info", "d7/d5d/lwip_8c.html#a2484dde6f8a69de380a62682779f2739", null ],
+    [ "cwist_lwip_get_server_stats", "d7/d5d/lwip_8c.html#a89839658c70a3ddab630e8949eb52e04", null ],
     [ "cwist_lwip_listen", "d7/d5d/lwip_8c.html#a8adcbe4d8e6bf7ba1e9e482c6e78337e", null ],
     [ "cwist_lwip_tls_create", "d7/d5d/lwip_8c.html#aa2dfb64bc973ea5eaed35da983e9ae38", null ],
     [ "cwist_lwip_tls_destroy", "d7/d5d/lwip_8c.html#a0584908b78383b6bb11efbbc59c7aaa3", null ]
