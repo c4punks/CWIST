@@ -1478,6 +1478,7 @@ TEST_TARGETS = test_worker_affinity \
                test_grpc_append_error \
                test_grpc_stream \
                test_grpc_client \
+               test_grpc_client_headers \
                test_grpc_channel \
                test_dispatch_memory \
                test_durable_queue \
@@ -2553,6 +2554,10 @@ test_grpc_stream: $(LIB_NAME) tests/test_grpc_stream.c
 test_grpc_client: $(LIB_NAME) tests/test_grpc_client.c
 	$(CC) $(CFLAGS) -o test_grpc_client tests/test_grpc_client.c $(LIB_NAME) $(LIBS)
 	./test_grpc_client
+
+test_grpc_client_headers: $(LIB_NAME) tests/test_grpc_client_headers.c
+	$(CC) $(CFLAGS) -o test_grpc_client_headers tests/test_grpc_client_headers.c $(LIB_NAME) $(LIBS)
+	./test_grpc_client_headers
 
 test_grpc_channel: $(LIB_NAME) tests/test_grpc_channel.c
 	$(CC) $(CFLAGS) -o test_grpc_channel tests/test_grpc_channel.c $(LIB_NAME) $(LIBS)
