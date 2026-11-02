@@ -163,6 +163,13 @@ impl<'a> Request<'a> {
         unsafe { c_str(sys::cwist_http_header_get(self.get().headers, name.as_ptr())) }
     }
 
+    /// The 32-character OpenTelemetry trace ID for this request, if it is
+    /// running behind [`middleware::otel_trace`](crate::middleware::otel_trace).
+    pub fn otel_trace_id(&self) -> Option<&'a str> {
+        // SAFETY: CWIST keeps the ID valid for this handler call.
+        unsafe { c_str(sys::cwist_mw_otel_get_trace_id(self.raw.as_ptr())) }
+    }
+
     /// A path parameter captured by a `:name` segment of the route.
     pub fn param(&self, name: &str) -> Option<&'a str> {
         self.map_get(self.get().path_params, name)
