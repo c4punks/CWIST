@@ -2503,8 +2503,9 @@ static size_t serialize_headers(cwist_http_response *res, char *buf, size_t buf_
     }
 
     char date_str[36];
-    if (!have_date && cwist_get_cached_date_header(date_str)) {
+    if (!have_date) {
         if (offset + 37 > buf_size) return 0;
+        cwist_get_cached_date_header(date_str);
         memcpy(buf + offset, "Date: ", 6);
         memcpy(buf + offset + 6, date_str, 29);
         buf[offset + 35] = '\r';
