@@ -1,0 +1,35 @@
+name: SQLite FTS5
+
+on:
+  push:
+    branches: [main, master, dev]
+  pull_request:
+    branches: [main, master, dev]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  fts5:
+    name: FTS5 build and runtime test
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+      - name: Install build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y cmake libcurl4-openssl-dev libnghttp2-dev libbrotli-dev libzstd-dev
+      - name: Test FTS5-enabled build
+        run: make -j"$(nproc)" CWIST_SQLITE_FTS5=1 WERROR=1 test_sqlite_fts5
+      - name: Verify FTS5 does not enable the database subsystem
+        run: |
+          make CWIST_DB=0 CWIST_SQLITE_FTS5=1 WERROR=1 all test_sqlite_fts5
+          ! ar t libcwist.a | grep -q '^sqlite3\.o$'
+      - name: Verify switching back to the default build
+        run: |
+          make CWIST_SQLITE_FTS5=0 WERROR=1 all test_sqlite_fts5
+          ! nm lib/sqlite3/sqlite3.o | grep -q 'sqlite3Fts5'
