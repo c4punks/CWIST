@@ -520,10 +520,21 @@ static void h3c_on_read(lsquic_stream_t *stream, lsquic_stream_ctx_t *st_h) {
     }
 
     while ((nread = lsquic_stream_read(stream, buf, sizeof(buf))) > 0) {
+        if (st->resp_body_len > CWIST_HTTP_MAX_BODY_SIZE ||
+            (size_t)nread > CWIST_HTTP_MAX_BODY_SIZE - st->resp_body_len) {
+            lsquic_stream_close(stream);
+            return;
+        }
         size_t need = st->resp_body_len + (size_t)nread;
         if (need > st->resp_body_cap) {
-            size_t new_cap = st->resp_body_cap ? st->resp_body_cap * 2 : 4096;
-            while (new_cap < need) new_cap *= 2;
+            size_t new_cap = st->resp_body_cap ? st->resp_body_cap : 4096;
+            while (new_cap < need) {
+                if (new_cap > CWIST_HTTP_MAX_BODY_SIZE / 2) {
+                    new_cap = CWIST_HTTP_MAX_BODY_SIZE;
+                    break;
+                }
+                new_cap *= 2;
+            }
             char *tmp = realloc(st->resp_body, new_cap);
             if (!tmp) {
                 lsquic_stream_close(stream);
