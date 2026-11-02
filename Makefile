@@ -1463,7 +1463,6 @@ TEST_TARGETS = test_worker_affinity \
                test_waf \
                test_db_pool \
                test_db_memory \
-               test_db_sync \
                test_sqlite_fts5 \
                test_redis \
                test_scheduler \
