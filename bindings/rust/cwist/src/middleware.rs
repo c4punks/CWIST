@@ -174,3 +174,28 @@ pub fn compress(min_body_size: usize) -> BuiltinMiddleware {
     // SAFETY: cwist_mw_compress returns a static function pointer.
     BuiltinMiddleware::from_static(unsafe { sys::cwist_mw_compress(min_body_size) })
 }
+
+/// OpenTelemetry tracing middleware with OTLP/HTTP export.
+///
+/// The first configuration fixes the process-wide exporter; later calls reuse
+/// it. Export is fail-open and never fails or blocks a request on collector
+/// errors. Strings are copied by CWIST.
+pub fn otel_trace(
+    endpoint: Option<&str>,
+    service_name: Option<&str>,
+    queue_cap: usize,
+    batch_size: usize,
+) -> Result<BuiltinMiddleware, Error> {
+    let endpoint = endpoint.map(|s| CString::new(s).map_err(|_| Error::InteriorNul("OTLP endpoint")))
+        .transpose()?;
+    let service_name = service_name.map(|s| CString::new(s).map_err(|_| Error::InteriorNul("service name")))
+        .transpose()?;
+    let cfg = sys::cwist_otel_cfg_t {
+        endpoint: endpoint.as_ref().map_or(std::ptr::null(), |s| s.as_ptr()),
+        service_name: service_name.as_ref().map_or(std::ptr::null(), |s| s.as_ptr()),
+        queue_cap,
+        batch_size,
+    };
+    // SAFETY: all strings are live for the call and CWIST copies them.
+    BuiltinMiddleware::from_factory(unsafe { sys::cwist_mw_otel_trace(&cfg) }).ok_or(Error::Middleware)
+}
