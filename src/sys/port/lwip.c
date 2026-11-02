@@ -19,9 +19,10 @@
  *
  * tx is written without TCP_WRITE_FLAG_COPY, so lwIP references it until
  * the peer acknowledges. A response that fits the buffer is copied into it
- * and the response object is destroyed immediately; a larger response keeps
- * its object alive and is streamed through the buffer one chunk at a time
- * as acknowledgements arrive.
+ * and the response object is destroyed immediately; a larger response streams
+ * through the buffer one chunk at a time as acknowledgements arrive. Owned
+ * bodies retain their response object, while application-owned pointer bodies
+ * let the response and its arena be released before streaming starts.
  *
  * With CWIST_LWIP_TLS and cfg.tls set, mbedTLS sits between the pcb and the
  * same rx/tx buffers: received ciphertext queues in tin and is decrypted
@@ -85,7 +86,10 @@ struct cwist_lwip_server {
     cwist_lwip_conn *conns;
     cwist_lwip_conn *free_list; /* inactive pool slots */
     void *pool;                 /* one allocation: max_conns fixed-size slots */
+    size_t slot_bytes;
     size_t nconns;
+    uint64_t accepted_connections;
+    uint64_t rejected_connections;
 };
 
 struct cwist_lwip_conn {
@@ -112,10 +116,13 @@ struct cwist_lwip_conn {
     const char *stream_body;
     size_t stream_body_len;
     size_t stream_off;
+    bool stream_active;
 
     bool close_after_tx; /* Connection: close, error reply, or peer FIN */
     bool peer_closed;
     bool continue_sent;
+    bool in_use;
+    uint16_t slot_index;
     u32_t last_active_ms;
 
 #ifdef CWIST_LWIP_TLS
@@ -255,6 +262,7 @@ static void conn_free(cwist_lwip_conn *c) {
         cwist_http_response_destroy(c->stream_res);
         c->stream_res = NULL;
     }
+    c->stream_active = false;
 #ifdef CWIST_LWIP_TLS
     if (c->ssl) {
         mbedtls_ssl_free(c->ssl);
@@ -266,6 +274,7 @@ static void conn_free(cwist_lwip_conn *c) {
 #endif
     /* Back to the static pool: rx/tx/conn storage is not heap-owned. */
     c->pcb = NULL;
+    c->in_use = false;
     c->next = c->srv->free_list;
     c->srv->free_list = c;
 }
@@ -291,10 +300,11 @@ static void response_body(cwist_http_response *res, const void **body, size_t *b
 /* Load the next chunk of a streamed response into tx.
  * @return true when a chunk is ready to push; false when nothing is left. */
 static bool conn_stream_next(cwist_lwip_conn *c) {
-    if (!c->stream_res) return false;
+    if (!c->stream_active) return false;
     if (c->stream_off >= c->stream_body_len) {
-        cwist_http_response_destroy(c->stream_res);
+        if (c->stream_res) cwist_http_response_destroy(c->stream_res);
         c->stream_res = NULL;
+        c->stream_active = false;
         return false;
     }
     size_t n = c->stream_body_len - c->stream_off;
@@ -502,9 +512,15 @@ static err_t conn_process(cwist_lwip_conn *c) {
         return conn_send_error(c, CWIST_HTTP_INTERNAL_ERROR);
     }
 
-    /* Larger than the buffer: keep the response alive and stream the body
-     * through tx_store as acknowledgements free it up. */
-    c->stream_res = res;
+    /* Owned bodies keep their response alive. Pointer bodies are owned by the
+     * application, so the response and its arena can be released now. */
+    if (res->is_ptr_body) {
+        cwist_http_response_destroy(res);
+        c->stream_res = NULL;
+    } else {
+        c->stream_res = res;
+    }
+    c->stream_active = true;
     c->stream_body = body;
     c->stream_body_len = body_len;
     c->stream_off = c->tx_cap - header_len;
@@ -752,11 +768,13 @@ static err_t on_accept(void *arg, struct tcp_pcb *pcb, err_t err) {
     cwist_lwip_server *srv = arg;
     if (err != ERR_OK || !pcb) return ERR_VAL;
     if (srv->nconns >= srv->cfg.max_conns) {
+        srv->rejected_connections++;
         tcp_abort(pcb);
         return ERR_ABRT;
     }
     cwist_lwip_conn *c = srv->free_list;
     if (!c) {
+        srv->rejected_connections++;
         tcp_abort(pcb);
         return ERR_ABRT;
     }
@@ -765,23 +783,28 @@ static err_t on_accept(void *arg, struct tcp_pcb *pcb, err_t err) {
     size_t rx_cap = c->rx_cap;
     char *tx_store = c->tx_store;
     size_t tx_cap = c->tx_cap;
+    uint16_t slot_index = c->slot_index;
     memset(c, 0, sizeof(*c));
     c->srv = srv;
     c->rx = rx;
     c->rx_cap = rx_cap;
     c->tx_store = tx_store;
     c->tx_cap = tx_cap;
+    c->slot_index = slot_index;
+    c->in_use = true;
     c->pcb = pcb;
     c->last_active_ms = sys_now();
     c->next = srv->conns;
     srv->conns = c;
     srv->nconns++;
+    srv->accepted_connections++;
 
 #ifdef CWIST_LWIP_TLS
     if (srv->cfg.tls) {
         c->ssl = cwist_alloc(sizeof(*c->ssl));
         if (c->ssl) mbedtls_ssl_init(c->ssl);
         if (!c->ssl || mbedtls_ssl_setup(c->ssl, &srv->cfg.tls->conf) != 0) {
+            srv->rejected_connections++;
             c->pcb = NULL;
             conn_free(c);
             tcp_abort(pcb);
@@ -847,12 +870,14 @@ cwist_lwip_server *cwist_lwip_listen(cwist_app *app, const cwist_lwip_config *cf
     size_t slot = conn_bytes + srv->cfg.rx_buffer_bytes + srv->cfg.tx_buffer_bytes;
     slot = (slot + 7u) & ~7u;
     if (srv->cfg.max_conns > SIZE_MAX / slot) goto fail;
+    srv->slot_bytes = slot;
     srv->pool = cwist_alloc(slot * srv->cfg.max_conns);
     if (!srv->pool) goto fail;
     memset(srv->pool, 0, slot * srv->cfg.max_conns);
     for (uint16_t i = 0; i < srv->cfg.max_conns; i++) {
         cwist_lwip_conn *c = (cwist_lwip_conn *)((char *)srv->pool + (size_t)i * slot);
         c->srv = srv;
+        c->slot_index = i;
         c->rx = (char *)c + conn_bytes;
         c->rx_cap = srv->cfg.rx_buffer_bytes;
         c->tx_store = c->rx + c->rx_cap;
@@ -912,6 +937,45 @@ void cwist_lwip_close(cwist_lwip_server *srv) {
  */
 size_t cwist_lwip_active_connections(const cwist_lwip_server *srv) {
     return srv ? srv->nconns : 0;
+}
+
+void cwist_lwip_get_server_stats(const cwist_lwip_server *srv, cwist_lwip_server_stats *stats) {
+    if (!stats) return;
+    memset(stats, 0, sizeof(*stats));
+    if (!srv) return;
+    stats->max_connections = srv->cfg.max_conns;
+    stats->active_connections = srv->nconns;
+    stats->accepted_connections = srv->accepted_connections;
+    stats->rejected_connections = srv->rejected_connections;
+}
+
+size_t cwist_lwip_get_connection_info(const cwist_lwip_server *srv, cwist_lwip_conn_info *out,
+                                      size_t capacity) {
+    if (!srv) return 0;
+    if (!out) return srv->cfg.max_conns;
+    size_t count = capacity < srv->cfg.max_conns ? capacity : srv->cfg.max_conns;
+    u32_t now = sys_now();
+    for (size_t i = 0; i < count; i++) {
+        const cwist_lwip_conn *c =
+            (const cwist_lwip_conn *)((const char *)srv->pool + i * srv->slot_bytes);
+        memset(&out[i], 0, sizeof(out[i]));
+        if (!c->in_use) {
+            out[i].state = CWIST_LWIP_CONN_FREE;
+            continue;
+        }
+        out[i].rx_buffered = c->rx_len;
+        out[i].idle_ms = now - c->last_active_ms;
+        if (c->tx) {
+            out[i].state = c->stream_active ? CWIST_LWIP_CONN_STREAMING : CWIST_LWIP_CONN_SENDING;
+            out[i].tx_remaining = c->tx_len - c->tx_acked;
+            if (c->stream_active) out[i].tx_remaining += c->stream_body_len - c->stream_off;
+        } else if (c->rx_len) {
+            out[i].state = CWIST_LWIP_CONN_RECEIVING;
+        } else {
+            out[i].state = CWIST_LWIP_CONN_IDLE;
+        }
+    }
+    return srv->cfg.max_conns;
 }
 
 /**
