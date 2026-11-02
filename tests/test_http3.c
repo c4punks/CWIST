@@ -23,12 +23,14 @@ int cwist_http3_response_header_value_is_safe(const char *value);
 int cwist_http3_method_is_idempotent(const char *method_str);
 
 static _Atomic int g_handler_called = 0; /* set on the server thread */
+static char g_large_response[CWIST_HTTP_MAX_BODY_SIZE + 1];
 
 static void http3_test_handler(void *user_ctx, cwist_http_request *req, cwist_http_response *res) {
     (void)user_ctx;
-    (void)req;
-    (void)res;
     g_handler_called = 1;
+    if (req->path && strcmp(req->path->data, "/over-limit") == 0) {
+        cwist_http_response_set_body_ptr(res, g_large_response, sizeof(g_large_response));
+    }
 }
 
 typedef struct {
@@ -350,6 +352,12 @@ int main(void) {
     assert(res->status_code == 200);
     cwist_http_response_destroy(res);
     printf("[PASS] HTTP/3 well-formed request is dispatched (200).\n");
+
+    res = NULL;
+    err = cwist_http3_client_request(client, "/over-limit", CWIST_HTTP_GET, NULL, NULL, 0, &res);
+    assert(err.error.err_i16 != 0);
+    assert(res == NULL);
+    printf("[PASS] HTTP/3 client rejects a response above the body limit.\n");
 
     /* Unknown pseudo-header: malformed, 400, handler must not run. */
     g_handler_called = 0;
