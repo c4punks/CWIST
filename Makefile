@@ -1457,6 +1457,7 @@ TEST_TARGETS = test_worker_affinity \
                test_gc_job_handoff \
                test_async_defer \
                test_async_after_shutdown \
+               test_async_listener_rearm \
                test_async_file_park \
                test_http_fairness \
                test_http_pipeline \
@@ -2507,6 +2508,11 @@ test_async_defer: $(LIB_NAME) tests/test_async_defer.c
 test_async_after_shutdown: $(LIB_NAME) tests/test_async_after_shutdown.c
 	$(CC) $(CFLAGS) -o test_async_after_shutdown tests/test_async_after_shutdown.c $(LIB_NAME) $(LIBS)
 	./test_async_after_shutdown
+
+test_async_listener_rearm: $(LIB_NAME) tests/test_async_listener_rearm.c
+	$(CC) $(CFLAGS) -ffunction-sections -fdata-sections -fno-lto -Wl,--gc-sections \
+	    -o test_async_listener_rearm tests/test_async_listener_rearm.c $(LIB_NAME) $(LIBS)
+	./test_async_listener_rearm
 
 test_async_file_park: $(LIB_NAME) tests/test_async_file_park.c
 	$(CC) $(CFLAGS) -o test_async_file_park tests/test_async_file_park.c $(LIB_NAME) $(LIBS)
