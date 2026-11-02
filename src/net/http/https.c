@@ -754,11 +754,13 @@ static uint64_t cwist_https_write_timeout_ms(void) {
  * under the write lock, and once SSL_new() returns the connection owns its
  * own reference, so the old SSL_CTX cannot die under the handshake.
  */
+static pthread_rwlock_t g_https_ctx_lock = PTHREAD_RWLOCK_INITIALIZER;
+
 static SSL *cwist_https_ssl_new(cwist_https_context *ctx) {
     if (!ctx) return NULL;
-    pthread_rwlock_rdlock(&ctx->ctx_lock);
+    pthread_rwlock_rdlock(&g_https_ctx_lock);
     SSL *ssl = ctx->ctx ? SSL_new(ctx->ctx) : NULL;
-    pthread_rwlock_unlock(&ctx->ctx_lock);
+    pthread_rwlock_unlock(&g_https_ctx_lock);
     return ssl;
 }
 
@@ -1088,7 +1090,7 @@ void cwist_https_dispatch(int client_fd, cwist_https_context *ctx,
     int fl = fcntl(client_fd, F_GETFL, 0);
     if (fl >= 0) fcntl(client_fd, F_SETFL, fl | O_NONBLOCK);
 
-    SSL *ssl = SSL_new(ctx->ctx);
+    SSL *ssl = cwist_https_ssl_new(ctx);
     if (!ssl) {
         close(client_fd);
         return;
@@ -1489,7 +1491,6 @@ cwist_error_t cwist_https_init_context_with_options(cwist_https_context **ctx,
     (*ctx)->http2_enabled = enable_http2;
     (*ctx)->http3_enabled = enable_http3;
     (*ctx)->ticket_key = NULL;
-    pthread_rwlock_init(&(*ctx)->ctx_lock, NULL);
 
     /* Pre-fork shared ticket key so every forked worker can resume tickets
      * issued by any other worker. Must run before workers are forked. */
@@ -1527,10 +1528,10 @@ cwist_error_t cwist_https_reload_context(cwist_https_context *ctx, const char *c
 
     SSL_CTX_set_alpn_select_cb(new_ctx, cwist_https_alpn_select_cb, (void *)ctx);
 
-    pthread_rwlock_wrlock(&ctx->ctx_lock);
+    pthread_rwlock_wrlock(&g_https_ctx_lock);
     SSL_CTX *old_ctx = ctx->ctx;
     ctx->ctx = new_ctx;
-    pthread_rwlock_unlock(&ctx->ctx_lock);
+    pthread_rwlock_unlock(&g_https_ctx_lock);
 
     if (old_ctx) SSL_CTX_free(old_ctx);
 
@@ -1547,7 +1548,6 @@ void cwist_https_destroy_context(cwist_https_context *ctx) {
         if (ctx->ctx) {
             SSL_CTX_free(ctx->ctx);
         }
-        pthread_rwlock_destroy(&ctx->ctx_lock);
         if (ctx->ticket_key) {
             OPENSSL_cleanse(ctx->ticket_key, sizeof(cwist_tls_ticket_key));
             cwist_free(ctx->ticket_key);
@@ -1748,7 +1748,7 @@ cwist_error_t cwist_https_accept(cwist_https_context *ctx, int client_fd,
         return err;
     }
 
-    SSL *ssl = SSL_new(ctx->ctx);
+    SSL *ssl = cwist_https_ssl_new(ctx);
     if (!ssl) {
         return make_ssl_error("Failed to create SSL structure");
     }
