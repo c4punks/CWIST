@@ -56,6 +56,8 @@ var annotated_dup =
     [ "cwist_jwt_chunk", "d0/d64/structcwist__jwt__chunk.html", "d0/d64/structcwist__jwt__chunk" ],
     [ "cwist_logger", "d0/dd4/structcwist__logger.html", "d0/dd4/structcwist__logger" ],
     [ "cwist_lwip_config", "d5/d41/structcwist__lwip__config.html", "d5/d41/structcwist__lwip__config" ],
+    [ "cwist_lwip_conn_info", "d0/db5/structcwist__lwip__conn__info.html", "d0/db5/structcwist__lwip__conn__info" ],
+    [ "cwist_lwip_server_stats", "d1/de1/structcwist__lwip__server__stats.html", "d1/de1/structcwist__lwip__server__stats" ],
     [ "cwist_metric", "dc/d5b/structcwist__metric.html", "dc/d5b/structcwist__metric" ],
     [ "cwist_metric_value", "dd/d12/structcwist__metric__value.html", "dd/d12/structcwist__metric__value" ],
     [ "cwist_middleware_node", "d8/d41/structcwist__middleware__node.html", "d8/d41/structcwist__middleware__node" ],
