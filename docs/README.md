@@ -24,6 +24,8 @@ Longer walkthroughs that combine several subsystems:
   socket handoff, drain sequence, systemd integration, HTTP/3 behavior.
 * [Prebuilt release assets](deployment/release-assets.md) - fat bundles per
   platform, amalgamation and cwist-wasm attached to every release.
+* [Compile-time build options](build-options.md) - subsystem feature knobs and
+  the opt-in SQLite FTS5 build.
 * [Bare-metal STM32](embedded/stm32.md) — Cortex-M builds, deterministic memory,
   raw-lwIP HTTP/TLS, and the NUCLEO-H743ZI2 integration.
 * [Build a CRUD blog with CWIST](tutorials/blog-crud.md) — routing + SQLite + JSON.

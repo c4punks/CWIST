@@ -185,6 +185,10 @@ CWIST_WS ?= $(if $(filter 1,$(CWIST_TINY)),0,1)
 CWIST_DB ?= $(if $(filter 1,$(CWIST_TINY)),0,1)
 CWIST_NATS ?= $(if $(filter 1,$(CWIST_TINY)),0,1)
 CWIST_JWT ?= $(if $(filter 1,$(CWIST_TINY)),0,1)
+CWIST_SQLITE_FTS5 ?= 0
+ifneq ($(filter-out 0 1,$(CWIST_SQLITE_FTS5)),)
+    $(error CWIST_SQLITE_FTS5: unknown value '$(CWIST_SQLITE_FTS5)' (use 0 or 1))
+endif
 
 # --- TLS backend selection ---------------------------------------------------
 # CWIST_TLS picks the TLS/crypto backend:
@@ -342,10 +346,9 @@ lib/multipart-parser-c/multipart_parser.o: CFLAGS := $(filter-out -Werror,$(CFLA
 # trips a known -Wstringop-overread false positive (sqlite3Strlen30) that
 # -Werror then promotes to a build failure.
 lib/sqlite3/sqlite3.o: CFLAGS := $(filter-out -Werror -flto=auto -ffat-lto-objects,$(CFLAGS))
-# FTS5 (full-text search v5) lives inside the amalgamation but is disabled
-# unless requested; fly.board uses it for its post search index. The define
-# only reaches the sqlite3.o compile, not the rest of the library.
+ifeq ($(CWIST_SQLITE_FTS5),1)
 lib/sqlite3/sqlite3.o: CFLAGS += -DSQLITE_ENABLE_FTS5
+endif
 
 # Source Files
 # Feature sources (HTTP/3, WebSocket, DB/ORM, NATS, JWT) are appended
@@ -955,6 +958,9 @@ LIB_NAME = libcwist.a
 # flags and every object depends on it, so a changed flag forces a rebuild.
 .build-flags: FORCE
 	@printf '%s' '$(CFLAGS)' | cmp -s - $@ || printf '%s' '$(CFLAGS)' > $@
+.build-sqlite-flags: FORCE
+	@printf '%s' 'fts5=$(CWIST_SQLITE_FTS5)' | cmp -s - $@ || printf '%s' 'fts5=$(CWIST_SQLITE_FTS5)' > $@
+lib/sqlite3/sqlite3.o: .build-sqlite-flags
 # Records the fat-archive toggle so flipping CWIST_FAT re-archives libcwist.a
 # without forcing a recompile of unchanged objects.
 .build-fat: FORCE
@@ -1453,6 +1459,7 @@ TEST_TARGETS = test_worker_affinity \
                test_waf \
                test_db_pool \
                test_db_memory \
+               test_sqlite_fts5 \
                test_redis \
                test_scheduler \
                test_async_defer \
@@ -2418,6 +2425,15 @@ else
 # CWIST_DB=0: the module and its tests are compiled out.
 test_db_pool test_db_memory:
 	@echo "CWIST_DB=0: skipping $@"
+endif
+
+ifeq ($(CWIST_DB)$(CWIST_SQLITE_FTS5),11)
+test_sqlite_fts5: $(LIB_NAME) tests/test_sqlite_fts5.c
+	$(CC) $(CFLAGS) -o test_sqlite_fts5 tests/test_sqlite_fts5.c $(LIB_NAME) $(LIBS)
+	./test_sqlite_fts5
+else
+test_sqlite_fts5:
+	@echo "CWIST_DB=0 or CWIST_SQLITE_FTS5=0: skipping $@"
 endif
 
 test_redis: $(LIB_NAME) tests/test_redis.c
