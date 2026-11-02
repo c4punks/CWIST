@@ -3599,16 +3599,10 @@ cwist_error_t cwist_http2_serve_connection_ex(cwist_https_connection *conn, void
         uint8_t flags = hdr[4];
         uint32_t stream_id = h2_get_u31(hdr + 5);
 
-        /* Frame size validation */
         if (len > CWIST_HTTP2_MAX_FRAME_SIZE) {
-            if (type == CWIST_HTTP2_FRAME_SETTINGS || type == CWIST_HTTP2_FRAME_HEADERS ||
-                type == CWIST_HTTP2_FRAME_CONTINUATION || type == CWIST_HTTP2_FRAME_PUSH_PROMISE) {
-                if (type == CWIST_HTTP2_FRAME_SETTINGS || len > hc->peer_max_frame_size) {
-                    h2_send_goaway(hc, hc->last_processed_stream_id, H2_ERR_FRAME_SIZE_ERROR);
-                    connected = false;
-                    break;
-                }
-            }
+            h2_send_goaway(hc, hc->last_processed_stream_id, H2_ERR_FRAME_SIZE_ERROR);
+            connected = false;
+            break;
         }
 
         if (hc->expecting_continuation &&
