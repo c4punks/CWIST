@@ -1,7 +1,7 @@
 //! The safe API against the real libcwist: routing, request/response access,
 //! handler ownership and panic containment, driven through in-memory dispatch.
 
-use cwist::{App, Error, Method};
+use cwist::{App, Error, Method, OpenApiMeta};
 use std::ffi::{c_void, CStr, CString};
 use std::ptr;
 use std::sync::atomic::{AtomicUsize, Ordering};
@@ -620,4 +620,58 @@ fn a_jwt_secret_with_a_nul_byte_is_an_error_not_a_panic() {
         cwist::middleware::jwt_auth("bad\0secret").unwrap_err(),
         Error::InteriorNul("JWT secret")
     );
+}
+
+#[test]
+fn openapi_serves_live_routes_and_annotations() {
+    let mut app = App::new().unwrap();
+    app.get("/users/:id", |_, res| res.set_body("user").unwrap()).unwrap();
+    app.enable_openapi(
+        None,
+        OpenApiMeta {
+            title: Some("Rust API"),
+            version: Some("2.1.0"),
+            description: Some("CWIST Rust bindings"),
+            server_url: Some("http://localhost"),
+        },
+    )
+    .unwrap();
+    app.openapi_annotate("GET", "/users/:id", Some("Fetch a user"), Some("users")).unwrap();
+
+    let res = get(&app, "/openapi.json");
+    assert!(status_line(&res).starts_with("HTTP/1.1 200"), "{res}");
+    let json = body(&res);
+    assert!(json.contains("Rust API"), "{json}");
+    assert!(json.contains("2.1.0"), "{json}");
+    assert!(json.contains("/users/{id}"), "{json}");
+    assert!(json.contains("Fetch a user"), "{json}");
+}
+
+#[test]
+fn tls_reload_rejects_an_invalid_certificate_pair() {
+    let mut app = App::new().unwrap();
+    assert_eq!(
+        app.reload_tls("/definitely/missing-cert.pem", "/definitely/missing-key.pem"),
+        Err(Error::TlsReload)
+    );
+}
+
+#[test]
+fn otel_middleware_exposes_a_trace_id_to_handlers() {
+    let mut app = App::new().unwrap();
+    app.use_builtin_middleware(
+        cwist::middleware::otel_trace(None, Some("rust-test"), 4, 1).expect("OTel middleware"),
+    )
+    .unwrap();
+    app.get("/traced", |req, res| {
+        let id = req.otel_trace_id().expect("trace ID");
+        assert_eq!(id.len(), 32);
+        assert!(id.bytes().all(|b| b.is_ascii_hexdigit()));
+        res.set_body(id).unwrap();
+    })
+    .unwrap();
+
+    let res = get(&app, "/traced");
+    assert!(status_line(&res).starts_with("HTTP/1.1 200"), "{res}");
+    assert_eq!(body(&res).len(), 32);
 }
