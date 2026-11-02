@@ -4,7 +4,7 @@
 # (parameter names dropped) and struct/union/enum layouts in member order.
 # `make api-check` (CI) fails when the headers no longer match this file.
 
-== functions (792) ==
+== functions (793) ==
 cwist_accept_socket
 cwist_alloc
 cwist_alloc_array
@@ -306,6 +306,7 @@ cwist_http2_push_resource
 cwist_http2_serve_connection
 cwist_http2_serve_connection_ex
 cwist_http2_stream_flow_control_add_send_window
+cwist_http2_stream_flow_control_adjust_send_window
 cwist_http2_stream_flow_control_consume
 cwist_http2_stream_flow_control_init
 cwist_http2_stream_flow_control_maybe_window_update
@@ -798,7 +799,7 @@ cwist_zod_parse
 cwist_zod_print_errors
 cwist_zod_validate
 
-== function signatures (793) ==
+== function signatures (794) ==
 cwist_accept_socket: cwist_error_t (int, struct sockaddr *, void (*)(int client_fd, void *ctx), void *)
 cwist_alloc: void * (size_t)
 cwist_alloc_array: void * (size_t, size_t)
@@ -1101,6 +1102,7 @@ cwist_http2_push_resource: int (cwist_http_request *, const char *, const char *
 cwist_http2_serve_connection: cwist_error_t (cwist_https_connection *, void *, cwist_http2_request_handler_func)
 cwist_http2_serve_connection_ex: cwist_error_t (cwist_https_connection *, void *, cwist_http2_request_handler_func, const cwist_http2_stream_hooks *)
 cwist_http2_stream_flow_control_add_send_window: void (cwist_http2_stream_flow_control *, uint32_t)
+cwist_http2_stream_flow_control_adjust_send_window: void (cwist_http2_stream_flow_control *, int32_t)
 cwist_http2_stream_flow_control_consume: void (cwist_http2_stream_flow_control *, uint32_t)
 cwist_http2_stream_flow_control_init: void (cwist_http2_stream_flow_control *, uint32_t, uint32_t, uint32_t)
 cwist_http2_stream_flow_control_maybe_window_update: int (cwist_http2_flow_control *, cwist_http2_stream_flow_control *, uint8_t *, size_t, size_t *, uint64_t, bool)

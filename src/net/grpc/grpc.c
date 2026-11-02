@@ -8,6 +8,7 @@
 #include <cwist/sys/app/app.h>
 #include <cwist/core/mem/alloc.h>
 #include <ctype.h>
+#include <limits.h>
 #include <pthread.h>
 #include <stdatomic.h>
 #include <stdio.h>
@@ -248,20 +249,28 @@ static int grpc_gzip_deflate(const uint8_t *in, size_t in_len, uint8_t **out, si
 
 /** @brief Decompress a gzip buffer with zlib.
  *
- * The output buffer grows geometrically as needed.
+ * The output buffer grows geometrically up to the HTTP body limit. One extra
+ * byte of capacity distinguishes an exact-limit message from oversized output.
  *
  * @param in Compressed input bytes.
  * @param in_len Compressed length in bytes.
  * @param out Receives a newly allocated buffer (caller frees with cwist_free()).
  * @param out_len Receives the decompressed length in bytes.
  * @retval 0 Decompression succeeded.
- * @retval -1 zlib failure, corrupt input, or allocation failure. */
+ * @retval -1 zlib failure, corrupt input, or allocation failure.
+ * @retval -2 Decompressed output exceeds CWIST_HTTP_MAX_BODY_SIZE. */
 static int grpc_gzip_inflate(const uint8_t *in, size_t in_len, uint8_t **out, size_t *out_len) {
+    if (in_len > UINT_MAX) return -1;
     z_stream zs;
     memset(&zs, 0, sizeof(zs));
     if (inflateInit2(&zs, 16 + MAX_WBITS) != Z_OK) return -1;
-    size_t cap = in_len * 3 + 1024;
-    if (cap < 8192) cap = 8192;
+    const size_t max_cap = (size_t)CWIST_HTTP_MAX_BODY_SIZE + 1;
+    size_t cap = 8192;
+    if (in_len <= (size_t)CWIST_HTTP_MAX_BODY_SIZE) {
+        size_t suggested = in_len * 3 + 1024;
+        if (suggested > cap) cap = suggested;
+    }
+    if (cap > max_cap) cap = max_cap;
     uint8_t *buf = (uint8_t *)cwist_alloc(cap);
     if (!buf) {
         inflateEnd(&zs);
@@ -273,19 +282,26 @@ static int grpc_gzip_inflate(const uint8_t *in, size_t in_len, uint8_t **out, si
     int zrc = Z_OK;
     while (zrc == Z_OK) {
         if (used == cap) {
-            cap *= 2;
-            uint8_t *nb = (uint8_t *)cwist_realloc(buf, cap);
+            size_t next_cap = cap <= max_cap / 2 ? cap * 2 : max_cap;
+            if (next_cap > max_cap) next_cap = max_cap;
+            uint8_t *nb = (uint8_t *)cwist_realloc(buf, next_cap);
             if (!nb) {
                 cwist_free(buf);
                 inflateEnd(&zs);
                 return -1;
             }
             buf = nb;
+            cap = next_cap;
         }
         zs.next_out = buf + used;
         zs.avail_out = (uInt)(cap - used);
         zrc = inflate(&zs, Z_NO_FLUSH);
         used = cap - zs.avail_out;
+        if (used > (size_t)CWIST_HTTP_MAX_BODY_SIZE) {
+            cwist_free(buf);
+            inflateEnd(&zs);
+            return -2;
+        }
     }
     inflateEnd(&zs);
     if (zrc != Z_STREAM_END) {
@@ -300,8 +316,8 @@ static int grpc_gzip_inflate(const uint8_t *in, size_t in_len, uint8_t **out, si
 /** @brief Decompress a compressed-flag message according to grpc-encoding.
  *
  * On success the message points at an owned buffer returned in @p owned
- * (caller frees).  Returns 0 on success, -1 when the encoding is
- * unsupported or the payload is corrupt. */
+ * (caller frees). Returns 0 on success, -1 for an unsupported encoding or
+ * corrupt payload, and -2 when the decompressed message exceeds the limit. */
 static int grpc_message_inflate(cwist_http_request *req, cwist_grpc_message *message,
                                 uint8_t **owned) {
     *owned = NULL;
@@ -309,7 +325,8 @@ static int grpc_message_inflate(cwist_http_request *req, cwist_grpc_message *mes
     if (grpc_request_encoding(req) != 1) return -1;
     uint8_t *plain = NULL;
     size_t plain_len = 0;
-    if (grpc_gzip_inflate(message->data, message->len, &plain, &plain_len) != 0) return -1;
+    int rc = grpc_gzip_inflate(message->data, message->len, &plain, &plain_len);
+    if (rc != 0) return rc;
     message->data = plain;
     message->len = plain_len;
     message->compressed = 0;
@@ -436,8 +453,14 @@ static void grpc_dispatch_unary(cwist_http_request *req, cwist_http_response *re
         return;
     }
     uint8_t *inflated = NULL;
-    if (grpc_message_inflate(req, &message, &inflated) != 0) {
-        cwist_grpc_set_error(res, CWIST_GRPC_UNIMPLEMENTED, "unsupported compressed gRPC message");
+    int inflate_rc = grpc_message_inflate(req, &message, &inflated);
+    if (inflate_rc != 0) {
+        if (inflate_rc == -2)
+            cwist_grpc_set_error(res, CWIST_GRPC_RESOURCE_EXHAUSTED,
+                                 "decompressed gRPC message exceeds size limit");
+        else
+            cwist_grpc_set_error(res, CWIST_GRPC_UNIMPLEMENTED,
+                                 "unsupported compressed gRPC message");
         return;
     }
 
@@ -564,11 +587,16 @@ static void grpc_dispatch_stream(cwist_http_request *req, cwist_http_response *r
         }
         memset(owned, 0, count * sizeof(*owned));
         for (size_t i = 0; i < count; i++) {
-            if (grpc_message_inflate(req, &messages[i], &owned[i]) != 0) {
+            int inflate_rc = grpc_message_inflate(req, &messages[i], &owned[i]);
+            if (inflate_rc != 0) {
                 for (size_t j = 0; j < count; j++) cwist_free(owned[j]);
                 cwist_free(messages);
-                cwist_grpc_set_error(res, CWIST_GRPC_UNIMPLEMENTED,
-                                     "unsupported compressed gRPC message");
+                if (inflate_rc == -2)
+                    cwist_grpc_set_error(res, CWIST_GRPC_RESOURCE_EXHAUSTED,
+                                         "decompressed gRPC message exceeds size limit");
+                else
+                    cwist_grpc_set_error(res, CWIST_GRPC_UNIMPLEMENTED,
+                                         "unsupported compressed gRPC message");
                 return;
             }
         }

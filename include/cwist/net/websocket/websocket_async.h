@@ -21,6 +21,8 @@ extern "C" {
 
 typedef struct cwist_websocket_async cwist_websocket_async;
 
+#define CWIST_WEBSOCKET_ASYNC_SEND_BACKPRESSURE 1
+
 /**
  * @brief Callback invoked for each complete WebSocket message on the C1M path.
  * @param ws Connection the message arrived on. Safe to pass to
@@ -47,12 +49,17 @@ typedef void (*cwist_ws_on_close_t)(cwist_websocket_async *ws, void *user_data);
  * MSG_DONTWAIT|MSG_NOSIGNAL.  On EAGAIN or a short write the unsent remainder
  * is parked on a one-shot reactor write slot (same model as the HTTP
  * parked-response writer) and drained when the socket becomes writable again.
+ * CWIST_WS_ASYNC_MAX_PARKED_BYTES sets the per-connection queue limit, which
+ * defaults to 16 MiB plus the maximum frame header size. A frame that would
+ * exceed the limit is rejected without changing the queued data or closing
+ * the connection. Callers may close a slow consumer after backpressure.
  *
  * @param ws Active async WebSocket connection.
  * @param opcode WebSocket opcode describing the payload semantics.
  * @param data Optional payload buffer. May be NULL when @p len is zero.
  * @param len Number of payload bytes to transmit.
- * @return 0 on success, -1 on failure.
+ * @return 0 when sent or queued, CWIST_WEBSOCKET_ASYNC_SEND_BACKPRESSURE when
+ *         the queue is full, or -1 on failure.
  */
 int cwist_websocket_async_send(cwist_websocket_async *ws, cwist_ws_opcode_t opcode,
                                const uint8_t *data, size_t len);

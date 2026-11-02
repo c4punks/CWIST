@@ -39,6 +39,11 @@ static const unsigned char flow_flight[] = "PRI * HTTP/2.0\r\n\r\nSM\r\n\r\n"
                                            "\x82\x86\x84\x01\x09localhost"
                                            "\x00\x00\x04\x08\x00\x00\x00\x00\x01"
                                            "\x00\x00\xff\xff";
+static const unsigned char continuation_flight[] =
+    "PRI * HTTP/2.0\r\n\r\nSM\r\n\r\n"
+    "\x00\x00\x00\x04\x00\x00\x00\x00\x00"
+    "\x00\x00\x01\x01\x01\x00\x00\x00\x01\x82"
+    "\x00\x00\x02\x09\x04\x00\x00\x00\x01\x86\x84";
 static const char *const bodies[] = {"replayed stream one\n", "replayed stream three\n"};
 
 static int64_t now_ms(void) {
@@ -200,9 +205,23 @@ protocol_error:
     return -1;
 }
 
+static int goaway(int fd, int64_t end, const char *name) {
+    for (int i = 0; i < 16; i++) {
+        unsigned char h[9], p[16384];
+        if (transfer(fd, h, sizeof(h), 0, end) != 0) return -1;
+        size_t n = ((size_t)h[0] << 16) | ((size_t)h[1] << 8) | h[2];
+        if (n > sizeof(p) || transfer(fd, p, n, 0, end) != 0) return -1;
+        if (h[3] != 7) continue;
+        if (n < 8 || p[4] != 0 || p[5] != 0 || p[6] != 0 || p[7] != 6) return -1;
+        return 0;
+    }
+    fprintf(stderr, "%s: GOAWAY(FRAME_SIZE_ERROR) not received\n", name);
+    return -1;
+}
+
 static int run_case(const char *name, const unsigned char *payload, size_t len, size_t seed,
                     unsigned streams) {
-    if (len > 256 || seed > len || (streams != 1 && streams != 2)) return -1;
+    if (seed > len || seed > 256 || streams > 2) return -1;
     int fd[2] = {-1, -1}, started = 0, rc = -1;
     pthread_t thread;
     struct server s = {.flight = payload, .seed = seed};
@@ -221,9 +240,12 @@ static int run_case(const char *name, const unsigned char *payload, size_t len, 
     s.deadline = now_ms() + DEADLINE_MS;
     /* One logical flight, before the server starts. Short writes retry only
      * within this phase; absolutely no client sends occur in responses(). */
-    unsigned char sendbuf[256];
+    unsigned char *sendbuf = malloc(len);
+    if (!sendbuf) goto done;
     memcpy(sendbuf, payload, len);
-    if (transfer(fd[0], sendbuf, len, 1, s.deadline) != 0) {
+    int write_rc = transfer(fd[0], sendbuf, len, 1, s.deadline);
+    free(sendbuf);
+    if (write_rc != 0) {
         perror("request flight");
         goto done;
     }
@@ -233,7 +255,7 @@ static int run_case(const char *name, const unsigned char *payload, size_t len, 
         goto done;
     }
     started = 1;
-    rc = responses(fd[0], s.deadline, name, streams);
+    rc = streams == 0 ? goaway(fd[0], s.deadline, name) : responses(fd[0], s.deadline, name, streams);
 done:
     /* Verdict is fixed BEFORE shutdown can make a buggy poll readable.
      * Wake both endpoints, then join before closing/reusing their descriptors.
@@ -257,6 +279,35 @@ done:
     return rc;
 }
 
+static int data_frame_case(size_t data_len, unsigned streams) {
+    static const unsigned char preface[] = "PRI * HTTP/2.0\r\n\r\nSM\r\n\r\n";
+    static const unsigned char settings[] = {0, 0, 0, 4, 0, 0, 0, 0, 0};
+    static const unsigned char headers[] = {0, 0, 3, 1, 4, 0, 0, 0, 1, 0x82, 0x86, 0x84};
+    size_t len = sizeof(preface) - 1 + sizeof(settings) + sizeof(headers) + 9 + data_len;
+    unsigned char *payload = malloc(len);
+    if (!payload) return -1;
+    size_t off = 0;
+    memcpy(payload + off, preface, sizeof(preface) - 1);
+    off += sizeof(preface) - 1;
+    memcpy(payload + off, settings, sizeof(settings));
+    off += sizeof(settings);
+    memcpy(payload + off, headers, sizeof(headers));
+    off += sizeof(headers);
+    payload[off++] = (unsigned char)(data_len >> 16);
+    payload[off++] = (unsigned char)(data_len >> 8);
+    payload[off++] = (unsigned char)data_len;
+    payload[off++] = 0;
+    payload[off++] = 1;
+    payload[off++] = 0;
+    payload[off++] = 0;
+    payload[off++] = 0;
+    payload[off++] = 1;
+    memset(payload + off, 'a', data_len);
+    int rc = run_case(streams == 0 ? "oversized DATA" : "exact-size DATA", payload, len, 0, streams);
+    free(payload);
+    return rc;
+}
+
 int main(int argc, char **argv) {
     if (argc > 2 || (argc == 2 && strcmp(argv[1], "basic") && strcmp(argv[1], "flow"))) {
         fprintf(stderr, "usage: %s [basic|flow]\n", argv[0]);
@@ -275,6 +326,10 @@ int main(int argc, char **argv) {
             run_case("split first HEADERS header", flight, sizeof(flight) - 1, 24 + 9 + 5, 2) != 0;
         failed |= run_case("all requests prebuffered", flight, sizeof(flight) - 1,
                            sizeof(flight) - 1, 2) != 0;
+        failed |= run_case("contiguous CONTINUATION", continuation_flight,
+                           sizeof(continuation_flight) - 1, 0, 1) != 0;
+        failed |= data_frame_case(16384, 1) != 0;
+        failed |= data_frame_case(16385, 0) != 0;
     }
     if (argc == 1 || strcmp(argv[1], "flow") == 0) {
         failed |= run_case("flow-control socket control", flow_flight, sizeof(flow_flight) - 1, 0,

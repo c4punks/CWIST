@@ -1,5 +1,7 @@
 #include <cwist/net/http/http.h>
+#include <cwist/core/mem/alloc.h>
 #include <stdio.h>
+#include <errno.h>
 #include <string.h>
 #include <assert.h>
 #include <unistd.h>
@@ -268,6 +270,10 @@ void test_cl_te_smuggling_rules() {
     /* Non-numeric CL -> 400 */
     expect_parse_rejection("POST /x HTTP/1.1\r\nHost: h\r\nContent-Length: 4x\r\n\r\n",
                            CWIST_HTTP_PARSE_MALFORMED, 400);
+    /* Whitespace before the field-name colon is a framing error. */
+    expect_parse_rejection(
+        "POST /x HTTP/1.1\r\nHost: h\r\nContent-Length : 5\r\n\r\nabcdeGET /next HTTP/1.1\r\n",
+        CWIST_HTTP_PARSE_MALFORMED, 400);
     /* TE whose final coding is not chunked -> 400 */
     expect_parse_rejection(
         "POST /x HTTP/1.1\r\nHost: h\r\nTransfer-Encoding: chunked, gzip\r\n\r\n",
@@ -390,6 +396,133 @@ void test_head_response_headers_only() {
     printf("Passed HEAD response suppression.\n");
 }
 
+static int no_content_cleanup_calls;
+
+static void no_content_cleanup(const void *ptr, size_t len, void *ctx) {
+    (void)ptr;
+    (void)len;
+    (void)ctx;
+    no_content_cleanup_calls++;
+}
+
+static void assert_no_content_serialization(int status, int mode) {
+    cwist_http_response *res = cwist_http_response_create();
+    assert(res != NULL);
+    cwist_http_header_add(&res->headers, "Content-Length", "15");
+    cwist_http_header_add(&res->headers, "Transfer-Encoding", "chunked");
+    if (mode == 0) {
+        cwist_sstring_assign(res->body, "forbidden-body");
+    } else if (mode == 1) {
+        cwist_http_response_set_body_ptr(res, "forbidden-body", 15);
+    } else if (mode == 2) {
+        assert(cwist_http_response_stream_begin(res) == 0);
+        assert(cwist_http_response_stream_write(res, "forbidden-body", 15) == 0);
+        assert(cwist_http_response_stream_end(res) == 0);
+    } else {
+        char path[] = "/tmp/cwist-no-content-XXXXXX";
+        int fd = mkstemp(path);
+        assert(fd >= 0);
+        assert(write(fd, "forbidden-body", 15) == 15);
+        close(fd);
+        cwist_error_t err = cwist_http_response_send_file(res, path, NULL, NULL);
+        assert(cwist_error_is_ok(&err));
+        unlink(path);
+    }
+    res->status_code = status;
+
+    char *out = NULL;
+    size_t out_len = 0;
+    assert(cwist_http_response_serialize(res, &out, &out_len) == 0);
+    assert(out != NULL && out_len > 0);
+    assert(strstr(out, "forbidden-body") == NULL);
+    char *body = strstr(out, "\r\n\r\n");
+    assert(body != NULL && body[4] == '\0');
+    if (status == 304)
+        assert(strstr(out, "Content-Length: 15\r\n") != NULL);
+    else
+        assert(strstr(out, "Content-Length") == NULL);
+    assert(strstr(out, "Transfer-Encoding") == NULL);
+    cwist_free(out);
+    cwist_http_response_destroy(res);
+}
+
+static void test_no_content_statuses(void) {
+    const int statuses[] = {101, 204, 205, 304};
+    for (size_t i = 0; i < sizeof(statuses) / sizeof(statuses[0]); i++)
+        for (int mode = 0; mode < 4; mode++) assert_no_content_serialization(statuses[i], mode);
+
+    int sv[2];
+    assert(socketpair(AF_UNIX, SOCK_STREAM, 0, sv) == 0);
+    no_content_cleanup_calls = 0;
+    cwist_http_response *res = cwist_http_response_create();
+    res->status_code = 204;
+    res->keep_alive = true;
+    cwist_http_response_set_body_ptr_managed(res, "forbidden-body", 15, no_content_cleanup, NULL);
+    assert(cwist_http_send_response(sv[0], res).error.err_i16 == 0);
+    cwist_http_response_destroy(res);
+    assert(no_content_cleanup_calls == 1);
+
+    res = cwist_http_response_create();
+    res->keep_alive = false;
+    cwist_sstring_assign(res->body, "next");
+    assert(cwist_http_send_response(sv[0], res).error.err_i16 == 0);
+    cwist_http_response_destroy(res);
+    close(sv[0]);
+
+    char buf[4096];
+    size_t used = 0;
+    ssize_t n;
+    while ((n = read(sv[1], buf + used, sizeof(buf) - 1 - used)) > 0) used += (size_t)n;
+    buf[used] = '\0';
+    close(sv[1]);
+    assert(strstr(buf, "forbidden-body") == NULL);
+    char *next = strstr(buf, "\r\n\r\n");
+    assert(next != NULL);
+    char *second_response = next + 4;
+    char second_first = *second_response;
+    next[4] = '\0';
+    assert(strstr(buf, "Content-Length") == NULL);
+    next[4] = second_first;
+    assert(strncmp(second_response, "HTTP/1.1 200 ", 13) == 0);
+    assert(strstr(second_response, "\r\n\r\nnext") != NULL);
+    printf("Passed no-content status response suppression.\n");
+}
+
+static void test_response_header_overflow(void) {
+    char header_buf[CWIST_HTTP_MAX_HEADER_SIZE];
+    char huge[9000];
+    memset(huge, 'x', sizeof(huge) - 1);
+    huge[sizeof(huge) - 1] = '\0';
+
+    cwist_http_response *res = cwist_http_response_create();
+    cwist_http_header_add(&res->headers, "X-Oversized", huge);
+    assert(cwist_http_serialize_headers(res, header_buf, sizeof(header_buf)) == 0);
+    cwist_http_response_destroy(res);
+
+    char value[41];
+    memset(value, 'v', sizeof(value) - 1);
+    value[sizeof(value) - 1] = '\0';
+    res = cwist_http_response_create();
+    for (int i = 0; i < 300; i++) cwist_http_header_add(&res->headers, "X-Fill", value);
+    cwist_sstring_assign(res->body, "hello");
+    assert(cwist_http_serialize_headers(res, header_buf, sizeof(header_buf)) == 0);
+
+    int sv[2];
+    assert(socketpair(AF_UNIX, SOCK_STREAM, 0, sv) == 0);
+    assert(cwist_http_send_response(sv[0], res).error.err_i16 == -1);
+    char byte;
+    assert(recv(sv[1], &byte, 1, MSG_DONTWAIT) == -1 && errno == EAGAIN);
+    close(sv[0]);
+    close(sv[1]);
+    cwist_http_response_destroy(res);
+
+    res = cwist_http_response_create();
+    cwist_http_response_set_alt_svc(res, huge);
+    assert(cwist_http_serialize_headers(res, header_buf, sizeof(header_buf)) == 0);
+    cwist_http_response_destroy(res);
+    printf("Passed response header overflow rejection.\n");
+}
+
 /* A message longer than the internal header buffer must arrive in full, and
  * Content-Length must match the bytes actually sent. */
 static void test_error_response_long_message(void) {
@@ -435,6 +568,8 @@ int main() {
     test_malformed_request_line();
     test_expect_100_continue_flow();
     test_head_response_headers_only();
+    test_no_content_statuses();
+    test_response_header_overflow();
     test_error_response_long_message();
     printf("All HTTP tests passed!\n");
     return 0;

@@ -159,6 +159,32 @@ static void run_idle_timeout_child(void) {
     close(idle_fd[1]);
     printf("7. idle connection reaped: ok\n");
 
+    enum { IDLE_BATCH = 128 };
+    int idle_batch[IDLE_BATCH][2];
+    struct pollfd batch_pfd[IDLE_BATCH];
+    for (int i = 0; i < IDLE_BATCH; i++) {
+        assert(socketpair(AF_UNIX, SOCK_STREAM, 0, idle_batch[i]) == 0);
+        assert(cwist_websocket_async_attach(idle_batch[i][0], reactor, on_message, NULL, NULL, 0));
+        batch_pfd[i].fd = idle_batch[i][1];
+        batch_pfd[i].events = POLLIN;
+        batch_pfd[i].revents = 0;
+    }
+    bool batch_reaped[IDLE_BATCH] = {false};
+    int batch_reaped_count = 0;
+    for (int round = 0; round < 60 && batch_reaped_count < IDLE_BATCH; round++) {
+        assert(poll(batch_pfd, IDLE_BATCH, 1000) >= 0);
+        for (int i = 0; i < IDLE_BATCH; i++) {
+            if (batch_reaped[i] || batch_pfd[i].revents == 0) continue;
+            uint8_t b;
+            assert(read(idle_batch[i][1], &b, 1) == 0);
+            batch_reaped[i] = true;
+            batch_reaped_count++;
+        }
+    }
+    assert(batch_reaped_count == IDLE_BATCH);
+    for (int i = 0; i < IDLE_BATCH; i++) close(idle_batch[i][1]);
+    printf("7a. simultaneous idle connections reaped together: ok\n");
+
     /* Scenario 2: activity resets the clock.  timeout=2s, sweep=1s.
      * t=0 frame A (delivered, last_active=0); t=1 frame B (gap 1s < 2s, so
      * it survives and last_active=1); t=2.2 frame C (gap 1.2s < 2s thanks to
@@ -224,7 +250,121 @@ static void test_idle_timeout(void) {
     printf("idle timeout (CWIST_WS_ASYNC_IDLE_TIMEOUT_SEC) test passed\n");
 }
 
+typedef struct {
+    pthread_mutex_t lock;
+    pthread_cond_t cond;
+    int done;
+    int accepted;
+    int terminal_rc;
+    int repeat_rc;
+} backpressure_ctx_t;
+
+static void backpressure_on_message(cwist_websocket_async *ws, cwist_ws_frame *frame,
+                                    void *user_data) {
+    backpressure_ctx_t *ctx = user_data;
+    uint8_t payload[1024] = {0};
+    int rc = 0;
+    int accepted = 0;
+    for (int i = 0; i < 128; i++) {
+        rc = cwist_websocket_async_send(ws, CWIST_WS_FRAME_BINARY, payload, sizeof(payload));
+        if (rc != 0) break;
+        accepted++;
+    }
+    pthread_mutex_lock(&ctx->lock);
+    ctx->accepted = accepted;
+    ctx->terminal_rc = rc;
+    ctx->repeat_rc = rc == CWIST_WEBSOCKET_ASYNC_SEND_BACKPRESSURE
+                         ? cwist_websocket_async_send(ws, CWIST_WS_FRAME_BINARY, payload,
+                                                      sizeof(payload))
+                         : 0;
+    ctx->done = 1;
+    pthread_cond_signal(&ctx->cond);
+    pthread_mutex_unlock(&ctx->lock);
+    cwist_websocket_frame_destroy(frame);
+}
+
+static void run_backpressure_child(void) {
+    setenv("CWIST_WS_ASYNC_IDLE_TIMEOUT_SEC", "0", 1);
+    setenv("CWIST_WS_ASYNC_MAX_PARKED_BYTES", "4096", 1);
+    cwist_reactor_t *reactor = cwist_reactor_create();
+    assert(reactor);
+
+    int slow[2], other[2];
+    assert(socketpair(AF_UNIX, SOCK_STREAM, 0, slow) == 0);
+    assert(socketpair(AF_UNIX, SOCK_STREAM, 0, other) == 0);
+    int buffer_size = 1024;
+    assert(setsockopt(slow[0], SOL_SOCKET, SO_SNDBUF, &buffer_size, sizeof(buffer_size)) == 0);
+    assert(setsockopt(slow[1], SOL_SOCKET, SO_RCVBUF, &buffer_size, sizeof(buffer_size)) == 0);
+
+    backpressure_ctx_t ctx = {.lock = PTHREAD_MUTEX_INITIALIZER, .cond = PTHREAD_COND_INITIALIZER};
+    assert(cwist_websocket_async_attach(slow[0], reactor, backpressure_on_message, &ctx, NULL, 0));
+    assert(cwist_websocket_async_attach(other[0], reactor, on_message, NULL, NULL, 0));
+    pthread_t rt;
+    assert(pthread_create(&rt, NULL, reactor_thread, reactor) == 0);
+
+    write_masked(slow[1], 0x81, (const uint8_t *)"go", 2);
+    pthread_mutex_lock(&ctx.lock);
+    for (int i = 0; i < 500 && !ctx.done; i++) {
+        pthread_mutex_unlock(&ctx.lock);
+        usleep(10000);
+        pthread_mutex_lock(&ctx.lock);
+    }
+    assert(ctx.done);
+    assert(ctx.accepted > 0 && ctx.accepted < 128);
+    assert(ctx.terminal_rc == CWIST_WEBSOCKET_ASYNC_SEND_BACKPRESSURE);
+    assert(ctx.repeat_rc == CWIST_WEBSOCKET_ASYNC_SEND_BACKPRESSURE);
+    pthread_mutex_unlock(&ctx.lock);
+
+    recorded_msg_t msg;
+    write_masked(other[1], 0x81, (const uint8_t *)"ok", 2);
+    wait_for_message(&msg);
+    assert(msg.opcode == CWIST_WS_FRAME_TEXT);
+    assert(msg.len == 2 && memcmp(msg.payload, "ok", 2) == 0);
+
+    uint8_t code[2] = {0x03, 0xE8};
+    write_masked(other[1], 0x88, code, 2);
+    uint8_t opcode, payload[8];
+    size_t len;
+    read_server_frame(other[1], &opcode, payload, &len);
+    assert(opcode == CWIST_WS_FRAME_CLOSE);
+    close(other[1]);
+    close(slow[1]);
+    usleep(100000);
+
+    cwist_reactor_post_t stop_node = {.cb = stop_cb, .ctx = reactor};
+    assert(cwist_reactor_post(reactor, &stop_node));
+    assert(pthread_join(rt, NULL) == 0);
+    cwist_reactor_destroy(reactor);
+    pthread_cond_destroy(&ctx.cond);
+    pthread_mutex_destroy(&ctx.lock);
+}
+
+static void test_backpressure(void) {
+    int fds[2];
+    assert(pipe(fds) == 0);
+    pid_t pid = fork();
+    assert(pid >= 0);
+    if (pid == 0) {
+        close(fds[0]);
+        run_backpressure_child();
+        ssize_t w = write(fds[1], "0", 1);
+        (void)w;
+        close(fds[1]);
+        _exit(0);
+    }
+    close(fds[1]);
+    char result = '?';
+    ssize_t r = read(fds[0], &result, 1);
+    close(fds[0]);
+    int status;
+    assert(waitpid(pid, &status, 0) == pid);
+    assert(WIFEXITED(status) && WEXITSTATUS(status) == 0);
+    assert(r == 1 && result == '0');
+    printf("async WebSocket parked-output backpressure test passed\n");
+}
+
 int main(void) {
+    test_backpressure();
     /* Forked first: the child sets the 2s idle timeout, which is cached
      * once per process, before any WebSocket state exists. */
     test_idle_timeout();
@@ -232,12 +372,16 @@ int main(void) {
     cwist_reactor_t *reactor = cwist_reactor_create();
     assert(reactor);
 
-    int conn_a[2], conn_b[2];
+    int conn_a[2], conn_b[2], conn_c[2], conn_d[2];
     assert(socketpair(AF_UNIX, SOCK_STREAM, 0, conn_a) == 0);
     assert(socketpair(AF_UNIX, SOCK_STREAM, 0, conn_b) == 0);
+    assert(socketpair(AF_UNIX, SOCK_STREAM, 0, conn_c) == 0);
+    assert(socketpair(AF_UNIX, SOCK_STREAM, 0, conn_d) == 0);
 
     assert(cwist_websocket_async_attach(conn_a[0], reactor, on_message, NULL, NULL, 0));
     assert(cwist_websocket_async_attach(conn_b[0], reactor, on_message, NULL, NULL, 0));
+    assert(cwist_websocket_async_attach(conn_c[0], reactor, on_message, NULL, NULL, 0));
+    assert(cwist_websocket_async_attach(conn_d[0], reactor, on_message, NULL, NULL, 0));
 
     pthread_t rt;
     assert(pthread_create(&rt, NULL, reactor_thread, reactor) == 0);
@@ -264,6 +408,49 @@ int main(void) {
     assert(msg.len == 5);
     assert(memcmp(msg.payload, "hello", 5) == 0);
     printf("2. fragmented reassembly: ok\n");
+
+    /* Empty first, middle, and final fragments still form one message. */
+    seen_before = g_messages_seen;
+    write_masked(conn_a[1], 0x01, NULL, 0);
+    write_masked(conn_a[1], 0x00, NULL, 0);
+    write_masked(conn_a[1], 0x80, NULL, 0);
+    wait_for_seen(&msg, seen_before);
+    assert(msg.opcode == CWIST_WS_FRAME_TEXT);
+    assert(msg.len == 0);
+    printf("empty fragmented message: ok\n");
+
+    /* Control frames may arrive between fragments without ending the message. */
+    seen_before = g_messages_seen;
+    write_masked(conn_a[1], 0x01, (const uint8_t *)"a", 1);
+    write_masked(conn_a[1], 0x89, (const uint8_t *)"p", 1);
+    uint8_t fragment_opcode, fragment_payload[8];
+    size_t fragment_len;
+    read_server_frame(conn_a[1], &fragment_opcode, fragment_payload, &fragment_len);
+    assert(fragment_opcode == CWIST_WS_FRAME_PONG);
+    assert(fragment_len == 1 && fragment_payload[0] == 'p');
+    wait_for_seen(&msg, seen_before);
+    assert(msg.opcode == CWIST_WS_FRAME_PING);
+    write_masked(conn_a[1], 0x80, (const uint8_t *)"b", 1);
+    wait_for_message(&msg);
+    assert(msg.opcode == CWIST_WS_FRAME_TEXT);
+    assert(msg.len == 2 && memcmp(msg.payload, "ab", 2) == 0);
+    printf("control frame between fragments: ok\n");
+
+    /* A second data opcode is invalid until the fragmented message finishes. */
+    int before_invalid = g_messages_seen;
+    write_masked(conn_c[1], 0x01, (const uint8_t *)"x", 1);
+    write_masked(conn_c[1], 0x82, (const uint8_t *)"y", 1);
+    struct pollfd invalid_pfd = {.fd = conn_c[1], .events = POLLIN};
+    assert(poll(&invalid_pfd, 1, TIMEOUT_MS) == 1);
+    assert(read(conn_c[1], fragment_payload, sizeof(fragment_payload)) == 0);
+
+    write_masked(conn_d[1], 0x02, (const uint8_t *)"x", 1);
+    write_masked(conn_d[1], 0x81, (const uint8_t *)"y", 1);
+    invalid_pfd.fd = conn_d[1];
+    assert(poll(&invalid_pfd, 1, TIMEOUT_MS) == 1);
+    assert(read(conn_d[1], fragment_payload, sizeof(fragment_payload)) == 0);
+    assert(g_messages_seen == before_invalid);
+    printf("interleaved data opcodes rejected: ok\n");
 
     /* 5. A valid frame split across two TCP writes (partial header) is
      *    delivered after the second write (incremental stash parsing). */
@@ -346,9 +533,9 @@ int main(void) {
     cwist_reactor_destroy(reactor);
     close(conn_a[1]);
     close(conn_b[1]);
-    /* conn_a[0]/conn_b[0] were owned and closed by the WS async layer when
-     * each connection terminated; closing them here again would be a double
-     * close on a possibly-reused fd. */
+    close(conn_c[1]);
+    close(conn_d[1]);
+    /* Server-side descriptors were owned and closed by the WS async layer. */
 
     printf("websocket async (C1M) test passed\n");
     return 0;
