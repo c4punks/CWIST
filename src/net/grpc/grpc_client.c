@@ -47,6 +47,7 @@
 #define H2_FRAME_WINDOW_UPDATE 0x08
 #define H2_FRAME_CONTINUATION 0x09
 #define H2_FLAG_END_STREAM 0x01
+#define H2_FLAG_PADDED 0x08
 #define H2_FLAG_END_HEADERS 0x04
 #define H2_FLAG_ACK 0x01
 
@@ -989,8 +990,25 @@ static int grpc_client_pump(cwist_grpc_call *call) {
         }
         case H2_FRAME_DATA: {
             if (f.stream_id != call->stream_id) break;
-            if (f.len) {
-                if (cwist_grpc_decoder_feed(&call->decoder, f.payload, f.len, grpc_client_queue_msg,
+            const uint8_t *data = f.payload;
+            size_t data_len = f.len;
+            if (f.flags & H2_FLAG_PADDED) {
+                if (data_len == 0 || data[0] >= data_len) {
+                    uint8_t goaway[8] = {0};
+                    goaway[7] = 0x01; /* PROTOCOL_ERROR */
+                    grpc_client_write_frame(c, H2_FRAME_GOAWAY, 0, 0, goaway, sizeof(goaway),
+                                            call->deadline_ms);
+                    c->dead = 1;
+                    rc = -1;
+                    break;
+                }
+                size_t padding = data[0];
+                data++;
+                data_len--;
+                data_len -= padding;
+            }
+            if (data_len) {
+                if (cwist_grpc_decoder_feed(&call->decoder, data, data_len, grpc_client_queue_msg,
                                             call) != 0) {
                     call->failed = 1;
                     call->stream_ended = 1;
@@ -1002,7 +1020,9 @@ static int grpc_client_pump(cwist_grpc_call *call) {
                     rc = 1;
                     break;
                 }
-                /* Return flow-control credit for what we consumed. */
+            }
+            if (f.len) {
+                /* Return flow-control credit for the complete wire payload. */
                 uint8_t upd[4];
                 upd[0] = (uint8_t)((f.len >> 24) & 0x7f);
                 upd[1] = (uint8_t)(f.len >> 16);
