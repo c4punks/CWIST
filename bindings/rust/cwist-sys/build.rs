@@ -42,6 +42,11 @@ const FUNCTIONS: &[&str] = &[
     // Asymmetric algorithms (ES256, Ed25519); kid is an optional header claim.
     "cwist_jwt_(sign_es256|verify_es256|sign_ed25519|verify_ed25519)",
     "cwist_jwt_(verify|claims_get|claims_destroy)",
+    "cwist_db_transfer_sqlite_to_socket",
+    "cwist_orm_(open_socket|close_socket|exec|query_typed|result_free|result_column_index|result_cell)",
+    "cwist_app_(enable_openapi|reload_tls)",
+    "cwist_openapi_annotate",
+    "cwist_mw_(otel_trace|otel_get_trace_id)",
     "cwist_alloc",
     "cwist_free",
     "make_error",
@@ -65,6 +70,8 @@ const OPAQUE: &[&str] = &[
     "cwist_compress_backend",
     "cwist_scheduler_t",
     "cwist_arena_t",
+    "cwist_orm",
+    "cwist_orm_t",
 ];
 
 /// System libraries `cwist.pc` names as plain `-l` flags. Their own pkg-config
@@ -151,7 +158,8 @@ fn main() {
         .allowlist_type("cwist_handler(_ex)?_func|cwist_handler_ctx_destroy_func")
         .allowlist_type("cwist_middleware(_func|_func_ex|_ctx_destroy_func)")
         .allowlist_type("cwist_log_format_t")
-        .allowlist_type("cwist_job_func");
+        .allowlist_type("cwist_job_func")
+        .allowlist_type("cwist_(orm_result|orm_result_t|orm_value|orm_value_t|orm_value_type_t|openapi_meta_t|otel_cfg_t)");
     for f in FUNCTIONS {
         builder = builder.allowlist_function(f);
     }
