@@ -865,6 +865,10 @@ $(CNATS_LIB):
 
 # --- Test Targets ---
 
+LWIP_DIR = lib/lwip
+LWIP_CORE_SRCS = $(wildcard $(LWIP_DIR)/src/core/*.c $(LWIP_DIR)/src/core/ipv4/*.c)
+LWIP_TEST_INCLUDES = -Itests/lwip -I$(LWIP_DIR)/src/include
+
 TEST_TARGETS = test_worker_affinity \
                test_logger_config \
                test_log_async \
@@ -955,6 +959,7 @@ TEST_TARGETS = test_worker_affinity \
                test_async_defer \
                test_async_after_shutdown \
                test_async_listener_rearm \
+               test_lwip_adapter \
                test_async_file_park \
                test_http_fairness \
                test_http_pipeline \
@@ -1771,6 +1776,11 @@ test_async_listener_rearm: $(LIB_NAME) tests/test_async_listener_rearm.c
 	$(CC) $(CFLAGS) -ffunction-sections -fdata-sections -fno-lto -Wl,--gc-sections \
 	    -o test_async_listener_rearm tests/test_async_listener_rearm.c $(LIB_NAME) $(LIBS)
 	./test_async_listener_rearm
+
+test_lwip_adapter: $(LIB_NAME) tests/test_lwip_adapter.c src/sys/port/lwip.c include/cwist/sys/port/lwip.h
+	$(CC) $(CFLAGS) $(LWIP_TEST_INCLUDES) -o $@ tests/test_lwip_adapter.c src/sys/port/lwip.c \
+	    tests/lwip/loop_client.c $(LWIP_CORE_SRCS) $(LIB_NAME) $(LIBS)
+	./$@
 
 test_async_file_park: $(LIB_NAME) tests/test_async_file_park.c
 	$(CC) $(CFLAGS) -o test_async_file_park tests/test_async_file_park.c $(LIB_NAME) $(LIBS)
