@@ -40,7 +40,7 @@ type RegisterFn = unsafe extern "C" fn(
 /// the thread that owns it. Handlers themselves may run on CWIST worker
 /// threads, which is why they must be `Send + Sync`.
 pub struct App {
-    raw: NonNull<sys::cwist_app>,
+    pub(crate) raw: NonNull<sys::cwist_app>,
 }
 
 impl App {
@@ -184,6 +184,21 @@ impl App {
             Ok(())
         } else {
             Err(Error::Route { path: path.to_owned() })
+        }
+    }
+
+    /// Replaces the listener's certificate chain and private key without
+    /// restarting it. The previous certificate remains active on failure.
+    pub fn reload_tls(&mut self, cert_path: &str, key_path: &str) -> Result<(), Error> {
+        let cert = CString::new(cert_path).map_err(|_| Error::InteriorNul("certificate path"))?;
+        let key = CString::new(key_path).map_err(|_| Error::InteriorNul("private key path"))?;
+        // SAFETY: the app and paths are live for the call. CWIST validates the
+        // new pair before replacing the current listener context.
+        let err = unsafe { sys::cwist_app_reload_tls(self.raw.as_ptr(), cert.as_ptr(), key.as_ptr()) };
+        if consume(err) {
+            Ok(())
+        } else {
+            Err(Error::TlsReload)
         }
     }
 

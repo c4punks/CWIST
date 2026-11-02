@@ -40,6 +40,8 @@ pub enum Error {
     /// A database operation failed: the file could not be opened, the SQL was
     /// rejected, or a result/serialized image could not be produced.
     Database,
+    /// The certificate chain or private key could not be validated and installed.
+    TlsReload,
     /// `cwist_jwt_sign()` failed, for example because the claims were not
     /// valid JSON.
     JwtSign,
@@ -63,6 +65,7 @@ impl fmt::Display for Error {
             Error::Deferred => f.write_str("the response has been deferred"),
             Error::SString => f.write_str("could not allocate or grow the CWIST string"),
             Error::Database => f.write_str("the database operation failed"),
+            Error::TlsReload => f.write_str("could not reload the TLS certificate and key"),
             Error::JwtSign => f.write_str("CWIST could not sign the token"),
             Error::InvalidToken => f.write_str("the JWT token is invalid or expired"),
         }
