@@ -3,7 +3,7 @@
 
 use cwist::{
     sign, sign_ed25519, sign_es256, verify, verify_ed25519, verify_es256, Arena, Db, Error, Key,
-    Scheduler, SString,
+    Orm, OrmValue, Scheduler, SString,
 };
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::Arc;
@@ -105,6 +105,24 @@ fn db_open_memory_readonly_refuses_writes() {
 
     let ro = Db::open_memory(&image, true).expect("open_memory readonly");
     assert_eq!(ro.exec("INSERT INTO t VALUES (1)"), Err(Error::Database));
+}
+
+#[test]
+fn orm_typed_results_preserve_int64_text_null_and_blob() {
+    let orm = Orm::open(":memory:").expect("open ORM");
+    orm.exec("CREATE TABLE items (id INTEGER, txt TEXT, optional TEXT, data BLOB)").expect("create");
+    orm.exec("INSERT INTO items VALUES (9007199254740993, '123', NULL, x'0102')").expect("insert");
+
+    let result = orm.query_typed("SELECT id, txt, optional, data FROM items").expect("typed query");
+    assert_eq!(result.row_count(), 1);
+    assert_eq!(result.column_count(), 4);
+    assert_eq!(result.column_name(0), Some("id"));
+    assert_eq!(result.column_index("data"), 3);
+    assert_eq!(result.get(0, 0), Some(OrmValue::Integer(9007199254740993)));
+    assert_eq!(result.get(0, 1), Some(OrmValue::Text("123")));
+    assert_eq!(result.get(0, 2), Some(OrmValue::Null));
+    assert_eq!(result.get(0, 3), Some(OrmValue::Blob(&[1, 2])));
+    assert_eq!(result.get(1, 0), None);
 }
 
 #[test]
