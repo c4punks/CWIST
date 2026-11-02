@@ -19,10 +19,11 @@
  *
  * tx is written without TCP_WRITE_FLAG_COPY, so lwIP references it until
  * the peer acknowledges. A response that fits the buffer is copied into it
- * and the response object is destroyed immediately; a larger response streams
- * through the buffer one chunk at a time as acknowledgements arrive. Owned
- * bodies retain their response object, while application-owned pointer bodies
- * let the response and its arena be released before streaming starts.
+ * and the response object is destroyed immediately. Small streamed bodies are
+ * referenced directly after the header so a tiny staging chunk never waits for
+ * an ACK before the rest is queued. Larger bodies use tx_store chunks to bound
+ * memory and avoid referencing external storage. Owned bodies retain their
+ * response object, while application-owned pointer bodies release it early.
  *
  * With CWIST_LWIP_TLS and cfg.tls set, mbedTLS sits between the pcb and the
  * same rx/tx buffers: received ciphertext queues in tin and is decrypted
@@ -65,6 +66,9 @@
 
 /* tcp_poll interval in TCP coarse-timer ticks (TCP_TMR_INTERVAL * 2 = 500 ms). */
 #define CWIST_LWIP_POLL_TICKS 2
+#ifndef CWIST_LWIP_DIRECT_STREAM_MAX
+#define CWIST_LWIP_DIRECT_STREAM_MAX (64u * 1024u)
+#endif
 
 static const char CWIST_LWIP_100_CONTINUE[] = "HTTP/1.1 100 Continue\r\n\r\n";
 
@@ -117,6 +121,7 @@ struct cwist_lwip_conn {
     size_t stream_body_len;
     size_t stream_off;
     bool stream_active;
+    bool stream_direct;
 
     bool close_after_tx; /* Connection: close, error reply, or peer FIN */
     bool peer_closed;
@@ -308,11 +313,17 @@ static bool conn_stream_next(cwist_lwip_conn *c) {
         return false;
     }
     size_t n = c->stream_body_len - c->stream_off;
-    if (n > c->tx_cap) n = c->tx_cap;
-    memcpy(c->tx_store, c->stream_body + c->stream_off, n);
-    c->stream_off += n;
-    c->tx = c->tx_store;
-    c->tx_len = n;
+    if (c->stream_direct) {
+        c->tx = c->stream_body + c->stream_off;
+        c->stream_off = c->stream_body_len;
+        c->tx_len = n;
+    } else {
+        if (n > c->tx_cap) n = c->tx_cap;
+        memcpy(c->tx_store, c->stream_body + c->stream_off, n);
+        c->stream_off += n;
+        c->tx = c->tx_store;
+        c->tx_len = n;
+    }
     c->tx_queued = 0;
     c->tx_acked = 0;
     return true;
@@ -521,8 +532,18 @@ static err_t conn_process(cwist_lwip_conn *c) {
         c->stream_res = res;
     }
     c->stream_active = true;
+    c->stream_direct = body_len <= CWIST_LWIP_DIRECT_STREAM_MAX;
     c->stream_body = body;
     c->stream_body_len = body_len;
+    if (c->stream_direct) {
+        c->stream_off = 0;
+        memcpy(c->tx_store, header_buf, header_len);
+        c->ack_skip += header_len;
+        err_t err = conn_send(c, c->tx_store, header_len, !keep);
+        if (err != ERR_OK) return err;
+        if (conn_stream_next(c)) return conn_push(c);
+        return ERR_OK;
+    }
     c->stream_off = c->tx_cap - header_len;
     memcpy(c->tx_store, header_buf, header_len);
     memcpy(c->tx_store + header_len, body, c->stream_off);
@@ -793,6 +814,7 @@ static err_t on_accept(void *arg, struct tcp_pcb *pcb, err_t err) {
     c->slot_index = slot_index;
     c->in_use = true;
     c->pcb = pcb;
+    tcp_nagle_disable(c->pcb);
     c->last_active_ms = sys_now();
     c->next = srv->conns;
     srv->conns = c;
