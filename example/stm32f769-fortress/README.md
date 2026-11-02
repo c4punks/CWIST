@@ -2,7 +2,7 @@
 
 A no-RTOS firmware that turns the board's 800x480 LCD into a live connection-pool monitor. Each of the 288 cells represents one real CWIST lwIP pool slot and changes color as the slot receives, sends, or streams a response. Firefox shows the same state through a local HTML dashboard.
 
-The example also serves a configurable 64 B, 16 KiB, 256 KiB, or 1 MiB response through a 192-byte per-connection TX buffer. The response body occupies external SDRAM, not the MCU heap.
+The example also serves a configurable 64 B, 16 KiB, 256 KiB, or 1 MiB response. Small responses use direct body references to avoid delayed-ACK stalls; large responses use bounded 192-byte staging chunks. The 1 MiB response body occupies external SDRAM, not the MCU heap.
 
 ## What is on the board
 
@@ -11,7 +11,7 @@ The example also serves a configurable 64 B, 16 KiB, 256 KiB, or 1 MiB response 
 - `GET /`: self-contained HTML+CSS+JavaScript dashboard
 - `GET /api/stats`: pool counters and all 288 slot states as JSON
 - `POST /api/config`: `payload=64`, `16384`, `262144`, or `1048576`
-- `GET /stream`: the selected response, streamed in 192-byte chunks
+- `GET /stream`: the selected response, streamed without per-chunk allocation
 - Snapshot arrays in DTCM, LCD framebuffer at `0xC0000000`, response payload at `0xC0200000`
 
 ## 1. Fetch STM32CubeF7
@@ -86,9 +86,10 @@ The firmware is configured for 288 slots; use the script result, not the configu
 
 Validated on an STM32F769I-DISCO over real Ethernet on 2026-11-02:
 
+- A single keep-alive connection served 872.81 requests/second at 1.54 ms average latency, up from 22.40 requests/second at 44.03 ms.
 - 32/32 and 128/128 concurrent `/api/stats` exchanges succeeded.
 - 288/288 concurrent exchanges succeeded; connection 289 was reset by the configured capacity gate.
-- 32/32 concurrent 1 MiB streams returned the complete 32 MiB aggregate payload in 17.14 seconds.
+- 32/32 concurrent 1 MiB streams returned the complete 32 MiB aggregate payload in 27.61 seconds.
 - The HTML dashboard, JSON snapshot, payload selection, and exact 1 MiB payload contents were verified separately.
 
 ## Memory and timing notes
