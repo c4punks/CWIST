@@ -5,7 +5,7 @@ var structcwist__http2__stream__flow__control =
     [ "min_window", "d0/d2d/structcwist__http2__stream__flow__control.html#a5b00134ca4516d3cf51fe13c8f02f0ca", null ],
     [ "pending_update", "d0/d2d/structcwist__http2__stream__flow__control.html#a76d333c23c237b051ff52fdc0e4173dc", null ],
     [ "receive_window", "d0/d2d/structcwist__http2__stream__flow__control.html#ac5b361d4f2877b1b7396355125bb2f72", null ],
-    [ "send_window", "d0/d2d/structcwist__http2__stream__flow__control.html#ab28623cecb5cf0df99a1c14c8699877c", null ],
+    [ "send_window", "d0/d2d/structcwist__http2__stream__flow__control.html#a65ca5bc86267eb3d5990f67cedc2c3a8", null ],
     [ "stream_id", "d0/d2d/structcwist__http2__stream__flow__control.html#af1d42040ba0a6d8cdebab2a39f108171", null ],
     [ "target_window", "d0/d2d/structcwist__http2__stream__flow__control.html#a4599d62bea70e879cc8642b9f13151a8", null ]
 ];

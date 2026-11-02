@@ -108,7 +108,7 @@ $(document).ready(function(){initNavTree('dd/d4c/md_docs_2tutorial_2cwist__tutor
   <div class="headertitle"><div class="title">CWIST Web Development Tutorial (A to Z)</div></div>
 </div><!--header-->
 <div class="contents">
-<div class="textblock"><p><a class="anchor" id="autotoc_md448"></a> </p><blockquote class="doxtable">
+<div class="textblock"><p><a class="anchor" id="autotoc_md449"></a> </p><blockquote class="doxtable">
 <p>&zwj;한국어: <a class="el" href="../../df/df1/md_docs_2tutorial_2korean_2cwist__tutorial.html">korean/cwist_tutorial.md</a> </p>
 </blockquote>
 <p>Welcome, especially if you already know Spring Boot or ReactJS! CWIST is a high-performance, ultra-lightweight web framework written in C. This tutorial helps you quickly grasp CWIST's philosophy and structure so you can put it to work on real web applications right away.</p>
@@ -116,7 +116,7 @@ $(document).ready(function(){initNavTree('dd/d4c/md_docs_2tutorial_2cwist__tutor
 <p>&zwj;<b>Philosophy</b>: "Explicit, lightweight, and safe." CWIST keeps magic to a minimum and uses 100% of C's performance while still offering a modern web development experience (routing, JSON, DB, JWT, WebSocket). </p>
 </blockquote>
 <hr  />
-<h1><a class="anchor" id="autotoc_md449"></a>
+<h1><a class="anchor" id="autotoc_md450"></a>
 Table of Contents</h1>
 <ol type="1">
 <li><a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">Hello World: Starting Your First Server</a></li>
@@ -131,7 +131,7 @@ Table of Contents</h1>
 <li><a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">Dynamic CSS Composer (WASM and SSR)</a></li>
 </ol>
 <hr  />
-<h1><a class="anchor" id="autotoc_md450"></a>
+<h1><a class="anchor" id="autotoc_md451"></a>
 1. Hello World: Starting Your First Server</h1>
 <p>The heart of CWIST is the <code><a class="el" href="../../dc/da0/structcwist__app.html" title="Main Application Context.">cwist_app</a></code> object. Much like Spring's <code>ApplicationContext</code>, it manages the application's lifecycle.</p>
 <div class="fragment"><div class="line"><span class="preprocessor">#include &lt;<a class="code" href="../../d0/d77/sys_2app_2app_8h.html">cwist/sys/app/app.h</a>&gt;</span></div>
@@ -171,7 +171,7 @@ Table of Contents</h1>
 <div class="ttc" id="asys_2app_2app_8h_html_a8d6f015a001b2d189ebea808de9da254"><div class="ttname"><a href="../../d0/d77/sys_2app_2app_8h.html#a8d6f015a001b2d189ebea808de9da254">cwist_app_destroy</a></div><div class="ttdeci">void cwist_app_destroy(cwist_app *app)</div><div class="ttdoc">Destroys the application and frees all resources.</div><div class="ttdef"><b>Definition</b> <a href="../../df/d7f/app_8c_source.html#l01464">app.c:1464</a></div></div>
 <div class="ttc" id="asys_2app_2app_8h_html_a9aeebb72e5908f56c1b5823ae4a773c8"><div class="ttname"><a href="../../d0/d77/sys_2app_2app_8h.html#a9aeebb72e5908f56c1b5823ae4a773c8">cwist_app_create</a></div><div class="ttdeci">cwist_app * cwist_app_create(void)</div><div class="ttdoc">Creates a new CWIST application instance.</div><div class="ttdef"><b>Definition</b> <a href="../../df/d7f/app_8c_source.html#l01292">app.c:1292</a></div></div>
 </div><!-- fragment --><hr  />
-<h1><a class="anchor" id="autotoc_md451"></a>
+<h1><a class="anchor" id="autotoc_md452"></a>
 2. Routing and Handlers (Mux Router)</h1>
 <p>This section shows how to handle dynamic paths (path parameters) and query strings (query parameters). CWIST offers an intuitive pattern very similar to React Router or Express.</p>
 <div class="fragment"><div class="line"><span class="preprocessor">#include &lt;<a class="code" href="../../d2/d39/app_8h.html">cwist/app.h</a>&gt;</span></div>
@@ -203,7 +203,7 @@ Table of Contents</h1>
 <div class="ttc" id="astructcwist__http__request_html_a004b3d61d997aa7847cb3c5e9fc64e20"><div class="ttname"><a href="../../dd/d68/structcwist__http__request.html#a004b3d61d997aa7847cb3c5e9fc64e20">cwist_http_request::query_params</a></div><div class="ttdeci">cwist_query_map * query_params</div><div class="ttdoc">Parsed query parameters.</div><div class="ttdef"><b>Definition</b> <a href="../../dd/d56/http_8h_source.html#l00069">http.h:69</a></div></div>
 <div class="ttc" id="astructcwist__http__request_html_a9ea74e77fc5419d5c4b83ad0ee4f84a5"><div class="ttname"><a href="../../dd/d68/structcwist__http__request.html#a9ea74e77fc5419d5c4b83ad0ee4f84a5">cwist_http_request::path_params</a></div><div class="ttdeci">cwist_query_map * path_params</div><div class="ttdoc">Parsed path parameters (e.g. :id)</div><div class="ttdef"><b>Definition</b> <a href="../../dd/d56/http_8h_source.html#l00070">http.h:70</a></div></div>
 </div><!-- fragment --><hr  />
-<h1><a class="anchor" id="autotoc_md452"></a>
+<h1><a class="anchor" id="autotoc_md453"></a>
 3. JSON Parsing and Zod Schema Validation</h1>
 <p>A powerful runtime schema validator inspired by <code>zod</code> from the TypeScript world. It safely parses the JSON sent by the client and validates its types.</p>
 <div class="fragment"><div class="line"><span class="preprocessor">#include &lt;<a class="code" href="../../d2/d39/app_8h.html">cwist/app.h</a>&gt;</span></div>
@@ -258,7 +258,7 @@ Table of Contents</h1>
 <div class="ttc" id="azod_8h_html"><div class="ttname"><a href="../../dc/d6e/zod_8h.html">zod.h</a></div><div class="ttdoc">Strict JSON schema validation (Zod-style) for CWIST.</div></div>
 <div class="ttc" id="azod_8h_html_ad98b0b5700360eee85097c3323cd7e29"><div class="ttname"><a href="../../dc/d6e/zod_8h.html#ad98b0b5700360eee85097c3323cd7e29">cwist_zod_parse</a></div><div class="ttdeci">cwist_zod_result_t cwist_zod_parse(const char *raw, const cwist_schema_t *schema, cJSON **out)</div><div class="ttdoc">Parse a raw JSON string and validate it in one step.</div><div class="ttdef"><b>Definition</b> <a href="../../d7/d92/zod_8c_source.html#l00112">zod.c:112</a></div></div>
 </div><!-- fragment --><hr  />
-<h1><a class="anchor" id="autotoc_md453"></a>
+<h1><a class="anchor" id="autotoc_md454"></a>
 4. Middleware (CORS, Logging)</h1>
 <p>You can easily build a pipeline that every request passes through (Spring's Interceptor, Express's Middleware).</p>
 <div class="fragment"><div class="line"><span class="preprocessor">#include &lt;<a class="code" href="../../d2/d39/app_8h.html">cwist/app.h</a>&gt;</span></div>
@@ -290,7 +290,7 @@ Table of Contents</h1>
 <div class="ttc" id="asys_2app_2app_8h_html_a2a3910c6b268a4a04e17075671a4c28c"><div class="ttname"><a href="../../d0/d77/sys_2app_2app_8h.html#a2a3910c6b268a4a04e17075671a4c28c">cwist_handler_func</a></div><div class="ttdeci">void(* cwist_handler_func)(cwist_http_request *req, cwist_http_response *res)</div><div class="ttdoc">Function pointer type for HTTP route handlers.</div><div class="ttdef"><b>Definition</b> <a href="../../d0/d77/sys_2app_2app_8h_source.html#l00032">app.h:32</a></div></div>
 <div class="ttc" id="asys_2app_2app_8h_html_a88046a9e7f5c0f069c94aefd233dd815"><div class="ttname"><a href="../../d0/d77/sys_2app_2app_8h.html#a88046a9e7f5c0f069c94aefd233dd815">cwist_app_use</a></div><div class="ttdeci">void cwist_app_use(cwist_app *app, cwist_middleware_func mw)</div><div class="ttdoc">Append a middleware callback to the application's execution chain.</div><div class="ttdef"><b>Definition</b> <a href="../../df/d7f/app_8c_source.html#l01376">app.c:1376</a></div></div>
 </div><!-- fragment --><hr  />
-<h1><a class="anchor" id="autotoc_md454"></a>
+<h1><a class="anchor" id="autotoc_md455"></a>
 5. Databases and Migrations (SQLite)</h1>
 <p>CWIST fully supports embedded SQLite and provides a connection pool and migration tooling tied to the app lifecycle.</p>
 <div class="fragment"><div class="line"><span class="preprocessor">#include &lt;<a class="code" href="../../d2/d39/app_8h.html">cwist/app.h</a>&gt;</span></div>
@@ -366,14 +366,14 @@ Table of Contents</h1>
 <div class="ttc" id="astructcwist__db_html"><div class="ttname"><a href="../../dd/d55/structcwist__db.html">cwist_db</a></div><div class="ttdoc">Wrapper for Database Operations. Currently uses SQLite3.</div><div class="ttdef"><b>Definition</b> <a href="../../d0/dae/core_2db_2sql_8h_source.html#l00021">sql.h:21</a></div></div>
 <div class="ttc" id="astructcwist__db_html_a1ba9825f5e23bc68f8ebbbf259bf0fa0"><div class="ttname"><a href="../../dd/d55/structcwist__db.html#a1ba9825f5e23bc68f8ebbbf259bf0fa0">cwist_db::conn</a></div><div class="ttdeci">sqlite3 * conn</div><div class="ttdef"><b>Definition</b> <a href="../../d0/dae/core_2db_2sql_8h_source.html#l00022">sql.h:22</a></div></div>
 <div class="ttc" id="astructcwist__error__t_html"><div class="ttname"><a href="../../d4/d50/structcwist__error__t.html">cwist_error_t</a></div><div class="ttdoc">Integrated error structure used throughout the system.</div><div class="ttdef"><b>Definition</b> <a href="../../d3/d73/err_2cwist__err_8h_source.html#l00072">cwist_err.h:72</a></div></div>
-<div class="ttc" id="astructcwist__http__request_html_af27c8211e63dc55d48b084e9c819a59b"><div class="ttname"><a href="../../dd/d68/structcwist__http__request.html#af27c8211e63dc55d48b084e9c819a59b">cwist_http_request::db</a></div><div class="ttdeci">cwist_db * db</div><div class="ttdoc">Shared database handle from cwist_app.</div><div class="ttdef"><b>Definition</b> <a href="../../d9/dab/net_2http_2http_8h_source.html#l00177">http.h:177</a></div></div>
+<div class="ttc" id="astructcwist__http__request_html_af27c8211e63dc55d48b084e9c819a59b"><div class="ttname"><a href="../../dd/d68/structcwist__http__request.html#af27c8211e63dc55d48b084e9c819a59b">cwist_http_request::db</a></div><div class="ttdeci">cwist_db * db</div><div class="ttdoc">Shared database handle from cwist_app.</div><div class="ttdef"><b>Definition</b> <a href="../../d9/dab/net_2http_2http_8h_source.html#l00179">http.h:179</a></div></div>
 <div class="ttc" id="astructcwist__migration__t_html"><div class="ttname"><a href="../../da/d46/structcwist__migration__t.html">cwist_migration_t</a></div><div class="ttdoc">A single migration step.</div><div class="ttdef"><b>Definition</b> <a href="../../d1/d2a/migrate_8h_source.html#l00031">migrate.h:31</a></div></div>
 <div class="ttc" id="astructcwist__migration__t_html_a0c6a71066cbcb8c37e8a7238b397019e"><div class="ttname"><a href="../../da/d46/structcwist__migration__t.html#a0c6a71066cbcb8c37e8a7238b397019e">cwist_migration_t::version</a></div><div class="ttdeci">int version</div><div class="ttdef"><b>Definition</b> <a href="../../d1/d2a/migrate_8h_source.html#l00032">migrate.h:32</a></div></div>
 <div class="ttc" id="asys_2app_2app_8h_html_a5b408c1929ae8c1bbf52610f2e27a6db"><div class="ttname"><a href="../../d0/d77/sys_2app_2app_8h.html#a5b408c1929ae8c1bbf52610f2e27a6db">cwist_app_use_db</a></div><div class="ttdeci">cwist_error_t cwist_app_use_db(cwist_app *app, const char *db_path)</div><div class="ttdoc">Open a SQLite database and attach it as the shared application handle.</div><div class="ttdef"><b>Definition</b> <a href="../../df/d7f/app_8c_source.html#l01851">app.c:1851</a></div></div>
 <div class="ttc" id="asys_2app_2app_8h_html_af87347ebdea5e8226c86ae8965fa23e1"><div class="ttname"><a href="../../d0/d77/sys_2app_2app_8h.html#af87347ebdea5e8226c86ae8965fa23e1">cwist_app_get_db</a></div><div class="ttdeci">cwist_db * cwist_app_get_db(cwist_app *app)</div><div class="ttdoc">Return the active shared database wrapper for the application.</div><div class="ttdef"><b>Definition</b> <a href="../../df/d7f/app_8c_source.html#l01948">app.c:1948</a></div></div>
 <div class="ttc" id="asys_2err_2cwist__err_8h_html_acafffea2368d859053b87d99f7e77aaf"><div class="ttname"><a href="../../d7/da1/sys_2err_2cwist__err_8h.html#acafffea2368d859053b87d99f7e77aaf">cwist_error_dispose</a></div><div class="ttdeci">void cwist_error_dispose(cwist_error_t *err)</div><div class="ttdoc">Release resources owned by an error value. Currently only CWIST_ERR_JSON owns memory (the cJSON paylo...</div><div class="ttdef"><b>Definition</b> <a href="../../db/dcc/error_8c_source.html#l00043">error.c:43</a></div></div>
 </div><!-- fragment --><hr  />
-<h1><a class="anchor" id="autotoc_md455"></a>
+<h1><a class="anchor" id="autotoc_md456"></a>
 6. Authentication (JWT and DB Encryption)</h1>
 <p>Stateless JWT authentication, a must for the modern web, is supported through built-in functions.</p>
 <div class="fragment"><div class="line"><span class="preprocessor">#include &lt;<a class="code" href="../../d2/d39/app_8h.html">cwist/app.h</a>&gt;</span></div>
@@ -433,7 +433,7 @@ Table of Contents</h1>
 <div class="ttc" id="ajwt_8h_html_a7ebdc506413955dc760508df1943b0ca"><div class="ttname"><a href="../../d5/d6c/jwt_8h.html#a7ebdc506413955dc760508df1943b0ca">cwist_jwt_verify</a></div><div class="ttdeci">cwist_jwt_claims * cwist_jwt_verify(const char *token, const char *secret)</div><div class="ttdoc">Verify a JWT token and return the decoded claims.</div><div class="ttdef"><b>Definition</b> <a href="../../d8/d80/jwt_8c_source.html#l00748">jwt.c:748</a></div></div>
 <div class="ttc" id="astructcwist__http__request_html_ac5dd8aba8a06ff00f75e5357acca3bd6"><div class="ttname"><a href="../../dd/d68/structcwist__http__request.html#ac5dd8aba8a06ff00f75e5357acca3bd6">cwist_http_request::headers</a></div><div class="ttdeci">cwist_http_header_node * headers</div><div class="ttdef"><b>Definition</b> <a href="../../dd/d56/http_8h_source.html#l00072">http.h:72</a></div></div>
 </div><!-- fragment --><hr  />
-<h1><a class="anchor" id="autotoc_md456"></a>
+<h1><a class="anchor" id="autotoc_md457"></a>
 7. PQC TLS (Post-Quantum Hybrid Key Exchange)</h1>
 <p>CWIST can enable post-quantum hybrid TLS with a single line of code. It is a hybrid KEM that combines classic X25519 ECDH with the NIST-standard ML-KEM-768 (Kyber family), so the key exchange stays secure even against quantum computers.</p>
 <div class="fragment"><div class="line"><span class="preprocessor">#include &lt;<a class="code" href="../../d0/d77/sys_2app_2app_8h.html">cwist/sys/app/app.h</a>&gt;</span></div>
@@ -455,7 +455,7 @@ Table of Contents</h1>
 <div class="line">}</div>
 <div class="ttc" id="asys_2app_2app_8h_html_af780881525511196767c3e61e69c652c"><div class="ttname"><a href="../../d0/d77/sys_2app_2app_8h.html#af780881525511196767c3e61e69c652c">cwist_app_use_https</a></div><div class="ttdeci">cwist_error_t cwist_app_use_https(cwist_app *app, const char *cert_path, const char *key_path)</div><div class="ttdoc">Enable TLS for the application using the supplied certificate pair.</div><div class="ttdef"><b>Definition</b> <a href="../../df/d7f/app_8c_source.html#l01646">app.c:1646</a></div></div>
 <div class="ttc" id="asys_2app_2app_8h_html_afb8be8339f747ad1a0d0604d95e66341"><div class="ttname"><a href="../../d0/d77/sys_2app_2app_8h.html#afb8be8339f747ad1a0d0604d95e66341">cwist_app_use_pqc_layer</a></div><div class="ttdeci">void cwist_app_use_pqc_layer(cwist_app *app, bool enabled)</div><div class="ttdoc">Enable Post-Quantum Cryptography (PQC) hybrid key exchange layer.</div><div class="ttdef"><b>Definition</b> <a href="../../df/d7f/app_8c_source.html#l01744">app.c:1744</a></div></div>
-</div><!-- fragment --><h2><a class="anchor" id="autotoc_md457"></a>
+</div><!-- fragment --><h2><a class="anchor" id="autotoc_md458"></a>
 Security Policy Summary</h2>
 <table class="markdownTable">
 <tr class="markdownTableHead">
@@ -473,7 +473,7 @@ Security Policy Summary</h2>
 <p>&zwj;<b>Note</b>: This setting applies only to key exchange at the <b>transport layer</b>. Switching certificate signatures to PQC as well would require a separate feature such as <code><a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">cwist_app_use_pqc_cert()</a></code>, which is still considered a step too far for the current ecosystem. </p>
 </blockquote>
 <hr  />
-<h1><a class="anchor" id="autotoc_md458"></a>
+<h1><a class="anchor" id="autotoc_md459"></a>
 8. WebSocket Integration (Real-Time Bidirectional Communication)</h1>
 <p>CWIST can easily upgrade HTTP traffic to WebSocket on the same port. Once you register a path with <code><a class="el" href="../../d0/d77/sys_2app_2app_8h.html#ae4d097319d239ddd750eebffd027ccef" title="Register a WebSocket upgrade endpoint with default options.">cwist_app_ws()</a></code>, the framework handles the upgrade handshake and your handler only deals with the connected <code><a class="el" href="../../d9/d2c/structcwist__websocket.html">cwist_websocket</a></code>.</p>
 <div class="fragment"><div class="line"><span class="preprocessor">#include &lt;<a class="code" href="../../d2/d39/app_8h.html">cwist/app.h</a>&gt;</span></div>
@@ -508,16 +508,16 @@ Security Policy Summary</h2>
 <div class="line">    <span class="keywordflow">return</span> 0;</div>
 <div class="line">}</div>
 <div class="ttc" id="anet_2websocket_2websocket_8h_html"><div class="ttname"><a href="../../dd/dec/net_2websocket_2websocket_8h.html">websocket.h</a></div><div class="ttdoc">WebSocket upgrade and frame handling.</div></div>
-<div class="ttc" id="anet_2websocket_2websocket_8h_html_a7c4cc8a5486ce33aab2199a8f5ec82d0"><div class="ttname"><a href="../../dd/dec/net_2websocket_2websocket_8h.html#a7c4cc8a5486ce33aab2199a8f5ec82d0">cwist_websocket_receive</a></div><div class="ttdeci">cwist_ws_frame * cwist_websocket_receive(cwist_websocket *ws)</div><div class="ttdoc">Receive a frame, blocking until data arrives or the socket closes.</div><div class="ttdef"><b>Definition</b> <a href="../../d4/de6/websocket_8c_source.html#l00217">websocket.c:217</a></div></div>
+<div class="ttc" id="anet_2websocket_2websocket_8h_html_a7c4cc8a5486ce33aab2199a8f5ec82d0"><div class="ttname"><a href="../../dd/dec/net_2websocket_2websocket_8h.html#a7c4cc8a5486ce33aab2199a8f5ec82d0">cwist_websocket_receive</a></div><div class="ttdeci">cwist_ws_frame * cwist_websocket_receive(cwist_websocket *ws)</div><div class="ttdoc">Receive a frame, blocking until data arrives or the socket closes.</div><div class="ttdef"><b>Definition</b> <a href="../../d4/de6/websocket_8c_source.html#l00246">websocket.c:246</a></div></div>
 <div class="ttc" id="anet_2websocket_2websocket_8h_html_a8095ae87a6487e56281d92a11c419254aa6c2f0b59f1a830b71e12a116a891c7f"><div class="ttname"><a href="../../dd/dec/net_2websocket_2websocket_8h.html#a8095ae87a6487e56281d92a11c419254aa6c2f0b59f1a830b71e12a116a891c7f">CWIST_WS_FRAME_CLOSE</a></div><div class="ttdeci">@ CWIST_WS_FRAME_CLOSE</div><div class="ttdef"><b>Definition</b> <a href="../../dd/dec/net_2websocket_2websocket_8h_source.html#l00017">websocket.h:17</a></div></div>
 <div class="ttc" id="anet_2websocket_2websocket_8h_html_a8095ae87a6487e56281d92a11c419254ae9a1b08e8e2d749c8b22288bd1756606"><div class="ttname"><a href="../../dd/dec/net_2websocket_2websocket_8h.html#a8095ae87a6487e56281d92a11c419254ae9a1b08e8e2d749c8b22288bd1756606">CWIST_WS_FRAME_TEXT</a></div><div class="ttdeci">@ CWIST_WS_FRAME_TEXT</div><div class="ttdef"><b>Definition</b> <a href="../../dd/dec/net_2websocket_2websocket_8h_source.html#l00015">websocket.h:15</a></div></div>
-<div class="ttc" id="anet_2websocket_2websocket_8h_html_a84b014c343b059d06c899fd2b9285966"><div class="ttname"><a href="../../dd/dec/net_2websocket_2websocket_8h.html#a84b014c343b059d06c899fd2b9285966">cwist_websocket_send</a></div><div class="ttdeci">int cwist_websocket_send(cwist_websocket *ws, cwist_ws_opcode_t opcode, const uint8_t *data, size_t len)</div><div class="ttdoc">Send a frame with the specified opcode and payload.</div><div class="ttdef"><b>Definition</b> <a href="../../d4/de6/websocket_8c_source.html#l00398">websocket.c:398</a></div></div>
-<div class="ttc" id="anet_2websocket_2websocket_8h_html_ad0076021ccbab9a5990c269dca59df99"><div class="ttname"><a href="../../dd/dec/net_2websocket_2websocket_8h.html#ad0076021ccbab9a5990c269dca59df99">cwist_websocket_frame_destroy</a></div><div class="ttdeci">void cwist_websocket_frame_destroy(cwist_ws_frame *frame)</div><div class="ttdoc">Destroy a frame.</div><div class="ttdef"><b>Definition</b> <a href="../../d4/de6/websocket_8c_source.html#l00436">websocket.c:436</a></div></div>
+<div class="ttc" id="anet_2websocket_2websocket_8h_html_a84b014c343b059d06c899fd2b9285966"><div class="ttname"><a href="../../dd/dec/net_2websocket_2websocket_8h.html#a84b014c343b059d06c899fd2b9285966">cwist_websocket_send</a></div><div class="ttdeci">int cwist_websocket_send(cwist_websocket *ws, cwist_ws_opcode_t opcode, const uint8_t *data, size_t len)</div><div class="ttdoc">Send a frame with the specified opcode and payload.</div><div class="ttdef"><b>Definition</b> <a href="../../d4/de6/websocket_8c_source.html#l00428">websocket.c:428</a></div></div>
+<div class="ttc" id="anet_2websocket_2websocket_8h_html_ad0076021ccbab9a5990c269dca59df99"><div class="ttname"><a href="../../dd/dec/net_2websocket_2websocket_8h.html#ad0076021ccbab9a5990c269dca59df99">cwist_websocket_frame_destroy</a></div><div class="ttdeci">void cwist_websocket_frame_destroy(cwist_ws_frame *frame)</div><div class="ttdoc">Destroy a frame.</div><div class="ttdef"><b>Definition</b> <a href="../../d4/de6/websocket_8c_source.html#l00466">websocket.c:466</a></div></div>
 <div class="ttc" id="astructcwist__websocket_html"><div class="ttname"><a href="../../d9/d2c/structcwist__websocket.html">cwist_websocket</a></div><div class="ttdef"><b>Definition</b> <a href="../../dd/dec/net_2websocket_2websocket_8h_source.html#l00022">websocket.h:22</a></div></div>
-<div class="ttc" id="astructcwist__ws__frame_html"><div class="ttname"><a href="../../db/d40/structcwist__ws__frame.html">cwist_ws_frame</a></div><div class="ttdef"><b>Definition</b> <a href="../../dd/dec/net_2websocket_2websocket_8h_source.html#l00035">websocket.h:35</a></div></div>
+<div class="ttc" id="astructcwist__ws__frame_html"><div class="ttname"><a href="../../db/d40/structcwist__ws__frame.html">cwist_ws_frame</a></div><div class="ttdef"><b>Definition</b> <a href="../../dd/dec/net_2websocket_2websocket_8h_source.html#l00034">websocket.h:34</a></div></div>
 <div class="ttc" id="asys_2app_2app_8h_html_ae4d097319d239ddd750eebffd027ccef"><div class="ttname"><a href="../../d0/d77/sys_2app_2app_8h.html#ae4d097319d239ddd750eebffd027ccef">cwist_app_ws</a></div><div class="ttdeci">void cwist_app_ws(cwist_app *app, const char *path, cwist_ws_handler_func handler)</div><div class="ttdoc">Register a WebSocket upgrade endpoint with default options.</div><div class="ttdef"><b>Definition</b> <a href="../../df/d7f/app_8c_source.html#l02309">app.c:2309</a></div></div>
 </div><!-- fragment --><hr  />
-<h1><a class="anchor" id="autotoc_md459"></a>
+<h1><a class="anchor" id="autotoc_md460"></a>
 9. Template Engine and Static File Serving</h1>
 <p>Useful when building an HTML-based SSR (Server-Side Rendering) project or serving a React build output (static files).</p>
 <div class="fragment"><div class="line"><span class="preprocessor">#include &lt;<a class="code" href="../../d2/d39/app_8h.html">cwist/app.h</a>&gt;</span></div>
@@ -566,11 +566,11 @@ Security Policy Summary</h2>
 <div class="ttc" id="atemplate_8h_html"><div class="ttname"><a href="../../de/db8/template_8h.html">template.h</a></div><div class="ttdoc">Simple template engine.</div></div>
 <div class="ttc" id="atemplate_8h_html_ac506fb8f038486882fc9f0e4757d4b4e"><div class="ttname"><a href="../../de/db8/template_8h.html#ac506fb8f038486882fc9f0e4757d4b4e">cwist_template_render_file</a></div><div class="ttdeci">cwist_sstring * cwist_template_render_file(const char *file_path, const cJSON *context)</div><div class="ttdoc">Renders a template from a file with the given cJSON context.</div><div class="ttdef"><b>Definition</b> <a href="../../d6/d06/template_8c_source.html#l00442">template.c:442</a></div></div>
 </div><!-- fragment --><hr  />
-<h1><a class="anchor" id="autotoc_md460"></a>
+<h1><a class="anchor" id="autotoc_md461"></a>
 10. Dynamic CSS Composer (WASM and SSR)</h1>
 <p>Going beyond a plain backend, CWIST builds on C's strong numeric computation to ship a <b>CSS Composer that synthesizes a design system at runtime</b>. It mathematically derives Hover/Active states from a color's lightness and computes roundness and spacing dynamically.</p>
 <p>Here are two typical ways to use it.</p>
-<h2><a class="anchor" id="autotoc_md461"></a>
+<h2><a class="anchor" id="autotoc_md462"></a>
 Approach A: 100% Server-Side Rendering (SSR)</h2>
 <p>The server generates theme CSS dynamically and injects it at render time. This is very useful for offering per-user custom themes.</p>
 <div class="fragment"><div class="line"><span class="preprocessor">#include &lt;<a class="code" href="../../d2/d39/app_8h.html">cwist/app.h</a>&gt;</span></div>
@@ -616,7 +616,7 @@ Approach A: 100% Server-Side Rendering (SSR)</h2>
 <div class="ttc" id="astructcwist__css__config_html"><div class="ttname"><a href="../../d3/dd1/structcwist__css__config.html">cwist_css_config</a></div><div class="ttdoc">Dynamic CSS configuration parameters. Contains base metrics used to extrapolate an entire design syst...</div><div class="ttdef"><b>Definition</b> <a href="../../da/d0a/css__composer_8h_source.html#l00034">css_composer.h:34</a></div></div>
 <div class="ttc" id="astructcwist__css__config_html_a8bffbf55e6a32c542a93446c294cc963"><div class="ttname"><a href="../../d3/dd1/structcwist__css__config.html#a8bffbf55e6a32c542a93446c294cc963">cwist_css_config::is_dark_mode</a></div><div class="ttdeci">bool is_dark_mode</div><div class="ttdoc">Flag to trigger dark mode palette generation.</div><div class="ttdef"><b>Definition</b> <a href="../../da/d0a/css__composer_8h_source.html#l00039">css_composer.h:39</a></div></div>
 <div class="ttc" id="astructcwist__css__config_html_ae0116284ab70b3ede5b155e641ebc784"><div class="ttname"><a href="../../d3/dd1/structcwist__css__config.html#ae0116284ab70b3ede5b155e641ebc784">cwist_css_config::primary_color</a></div><div class="ttdeci">cwist_color_rgb primary_color</div><div class="ttdoc">Base primary brand color.</div><div class="ttdef"><b>Definition</b> <a href="../../da/d0a/css__composer_8h_source.html#l00035">css_composer.h:35</a></div></div>
-</div><!-- fragment --><h2><a class="anchor" id="autotoc_md462"></a>
+</div><!-- fragment --><h2><a class="anchor" id="autotoc_md463"></a>
 Approach B: Client-Side Composition with React + WebAssembly (WASM)</h2>
 <p>CWIST's <code><a class="el" href="../../dd/dd7/css__composer_8c.html" title="Dynamic CSS Synthesis and Color Mathematics Implementation.">css_composer.c</a></code> is written independently of the framework, so you can build it to <code>.wasm</code> with Emscripten, import it into a React app, and run the computation instantly on the client.</p>
 <ol type="1">
@@ -658,7 +658,7 @@ Approach B: Client-Side Composition with React + WebAssembly (WASM)</h2>
 </div><!-- fragment --></li>
 </ol>
 <hr  />
-<h2><a class="anchor" id="autotoc_md463"></a>
+<h2><a class="anchor" id="autotoc_md464"></a>
 Wrapping Up</h2>
 <p>We hope this tutorial showed how familiar and declarative web development can be, even in a C-based environment. Just remember that the <code><a class="el" href="../../dc/da0/structcwist__app.html" title="Main Application Context.">cwist_app</a></code> struct owns the whole lifecycle and registration functions such as <code><a class="el" href="../../d0/d77/sys_2app_2app_8h.html#a2e05d7cf1fd66d956d6928d465c3aa72" title="Registers a GET route handler.">cwist_app_get()</a></code> handle routing, and you can build with the same architecture as today's modern frameworks. </p>
 </div></div><!-- contents -->
