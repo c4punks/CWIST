@@ -901,10 +901,30 @@ static int grpc_client_pump(cwist_grpc_call *call) {
                 rc = -1;
                 break;
             }
-            if (f.stream_id == 0)
+            if (f.stream_id == 0) {
+                if ((int64_t)inc > (int64_t)INT32_MAX - c->conn_send_window) {
+                    uint8_t goaway[8] = {0};
+                    goaway[7] = 0x03; /* FLOW_CONTROL_ERROR */
+                    grpc_client_write_frame(c, H2_FRAME_GOAWAY, 0, 0, goaway, sizeof(goaway),
+                                            call->deadline_ms);
+                    c->dead = 1;
+                    rc = -1;
+                    break;
+                }
                 c->conn_send_window += inc;
-            else if (f.stream_id == call->stream_id)
+            } else if (f.stream_id == call->stream_id) {
+                if ((int64_t)inc > (int64_t)INT32_MAX - call->send_window) {
+                    uint8_t rst[4] = {0, 0, 0, 0x03}; /* FLOW_CONTROL_ERROR */
+                    grpc_client_write_frame(c, H2_FRAME_RST_STREAM, 0, call->stream_id, rst,
+                                            sizeof(rst), call->deadline_ms);
+                    call->failed = 1;
+                    call->stream_ended = 1;
+                    call->status = CWIST_GRPC_UNAVAILABLE;
+                    rc = 1;
+                    break;
+                }
                 call->send_window += inc;
+            }
             break;
         }
         case H2_FRAME_GOAWAY:
