@@ -6,7 +6,7 @@ var searchData=
   ['target_5foffset_3',['target_offset',['../df/d21/structcwist__bind__field.html#aec09730a4638a3a4ca3ccc99fd9f2397',1,'cwist_bind_field']]],
   ['target_5fsize_4',['target_size',['../df/d21/structcwist__bind__field.html#a0b46be239f1e7a5d1ce44e514b7e7957',1,'cwist_bind_field']]],
   ['target_5ftype_5',['target_type',['../df/d21/structcwist__bind__field.html#a0a05e69235df384fd8f2cb79e7d25d7a',1,'cwist_bind_field']]],
-  ['target_5fwindow_6',['target_window',['../d0/d2d/structcwist__http2__stream__flow__control.html#a4599d62bea70e879cc8642b9f13151a8',1,'cwist_http2_stream_flow_control::target_window'],['../d1/d92/structcwist__http2__flow__control.html#abcd175d42487fa57b50a369b5c18e218',1,'cwist_http2_flow_control::target_window']]],
+  ['target_5fwindow_6',['target_window',['../d1/d92/structcwist__http2__flow__control.html#abcd175d42487fa57b50a369b5c18e218',1,'cwist_http2_flow_control::target_window'],['../d0/d2d/structcwist__http2__stream__flow__control.html#a4599d62bea70e879cc8642b9f13151a8',1,'cwist_http2_stream_flow_control::target_window']]],
   ['targets_7',['WASI targets',['../d6/d26/md_docs_2api_2wasi.html',1,'']]],
   ['targets_20and_20validation_8',['Supported targets and validation',['../de/d87/md_docs_2embedded_2stm32.html#autotoc_md305',1,'']]],
   ['task_20oriented_20guides_9',['2. Task-oriented guides',['..//home/runner/work/CWIST/CWIST/docs/README.md#autotoc_md777',1,'']]],
@@ -59,7 +59,7 @@ var searchData=
   ['the_20wasi_200_202_20example_20with_20wasmtime_56',['Deploy the WASI 0.2 example with Wasmtime',['../db/de3/md_docs_2deployment_2wasmtime-appliance.html',1,'']]],
   ['the_20wasm_20build_57',['What is in the WASM build',['../d5/d0e/md_docs_2api_2wasm.html#autotoc_md220',1,'']]],
   ['the_20wasm_20component_20model_58',['CWIST on the WASM component model',['../d8/d77/md_docs_2api_2wasm-component.html',1,'']]],
-  ['the_20wire_59',['the wire',['../d1/df9/md_docs_2ko_2api_2html.html#autotoc_md413',1,'HTML over the wire'],['../d8/d83/md_docs_2api_2html.html#autotoc_md94',1,'HTML over the wire']]],
+  ['the_20wire_59',['the wire',['../d8/d83/md_docs_2api_2html.html#autotoc_md94',1,'HTML over the wire'],['../d1/df9/md_docs_2ko_2api_2html.html#autotoc_md413',1,'HTML over the wire']]],
   ['third_20party_20licenses_60',['Third-party licenses',['../index.html#autotoc_md23',1,'']]],
   ['this_20does_20not_20fix_61',['What this does not fix',['../d1/ddd/md_docs_2cooperative-queuing.html#autotoc_md265',1,'']]],
   ['this_20for_20production_62',['Before adapting this for production',['../db/de3/md_docs_2deployment_2wasmtime-appliance.html#autotoc_md293',1,'']]],
@@ -119,8 +119,9 @@ var searchData=
   ['tx_5fbufs_116',['tx_bufs',['../dc/d88/structcwist__webrtc__ctx.html#ae3fafd201b324006024245d3266e99a6',1,'cwist_webrtc_ctx']]],
   ['tx_5flen_117',['tx_len',['../dc/d88/structcwist__webrtc__ctx.html#af66e28061fd2049b3bdf45aeae77c824',1,'cwist_webrtc_ctx']]],
   ['tx_5fn_118',['tx_n',['../dc/d88/structcwist__webrtc__ctx.html#a51fcc615b126a45966045009cc0bdb56',1,'cwist_webrtc_ctx']]],
-  ['type_119',['type',['../dc/d5b/structcwist__metric.html#a5eb0fd5541685d75fa13505ee3705876',1,'cwist_metric::type'],['../d1/d53/structcwist__redis__reply.html#af01049073ffb3fe8e199ca8386c77249',1,'cwist_redis_reply::type'],['../de/d25/structcwist__bind__rule.html#a9025fb27be47d0d44a763e3775d6be0c',1,'cwist_bind_rule::type'],['../d6/d03/structcwist__schema__field.html#af620c93c71e77f81050175c30e1e82cd',1,'cwist_schema_field::type'],['../d2/dd9/structcwist__orm__value.html#a1928e15bdbdf591c25580d77ed2e2220',1,'cwist_orm_value::type']]],
-  ['typedarray_20h_120',['typedarray h',['../d2/d56/md_docs_2ko_2api_2wasm.html#autotoc_md540',1,'제로 카피 뷰: cwist/wasm/typedarray.h'],['../d5/d0e/md_docs_2api_2wasm.html#autotoc_md221',1,'Zero-copy views: cwist/wasm/typedarray.h']]],
-  ['typedarray_2eh_121',['typedarray.h',['../d1/d4f/typedarray_8h.html',1,'']]],
-  ['types_122',['types',['../db/dc5/md_docs_2api_2websocket.html#autotoc_md234',1,'Opcode Types'],['../d0/d89/md_docs_2api_2sse.html#autotoc_md175',1,'Types']]]
+  ['tx_5fremaining_119',['tx_remaining',['../d0/db5/structcwist__lwip__conn__info.html#a8e9d252a629dd8395a1329413093a2b6',1,'cwist_lwip_conn_info']]],
+  ['type_120',['type',['../dc/d5b/structcwist__metric.html#a5eb0fd5541685d75fa13505ee3705876',1,'cwist_metric::type'],['../d1/d53/structcwist__redis__reply.html#af01049073ffb3fe8e199ca8386c77249',1,'cwist_redis_reply::type'],['../de/d25/structcwist__bind__rule.html#a9025fb27be47d0d44a763e3775d6be0c',1,'cwist_bind_rule::type'],['../d6/d03/structcwist__schema__field.html#af620c93c71e77f81050175c30e1e82cd',1,'cwist_schema_field::type'],['../d2/dd9/structcwist__orm__value.html#a1928e15bdbdf591c25580d77ed2e2220',1,'cwist_orm_value::type']]],
+  ['typedarray_20h_121',['typedarray h',['../d2/d56/md_docs_2ko_2api_2wasm.html#autotoc_md540',1,'제로 카피 뷰: cwist/wasm/typedarray.h'],['../d5/d0e/md_docs_2api_2wasm.html#autotoc_md221',1,'Zero-copy views: cwist/wasm/typedarray.h']]],
+  ['typedarray_2eh_122',['typedarray.h',['../d1/d4f/typedarray_8h.html',1,'']]],
+  ['types_123',['types',['../db/dc5/md_docs_2api_2websocket.html#autotoc_md234',1,'Opcode Types'],['../d0/d89/md_docs_2api_2sse.html#autotoc_md175',1,'Types']]]
 ];
