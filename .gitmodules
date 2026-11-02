@@ -29,3 +29,9 @@
 [submodule "lib/usrsctp"]
 	path = lib/usrsctp
 	url = https://github.com/sctplab/usrsctp
+[submodule "lib/mbedtls"]
+	path = lib/mbedtls
+	url = https://github.com/Mbed-TLS/mbedtls
+[submodule "lib/lwip"]
+	path = lib/lwip
+	url = https://github.com/lwip-tcpip/lwip
