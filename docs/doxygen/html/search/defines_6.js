@@ -14,5 +14,7 @@ var searchData=
   ['grpc_5fclient_5fdefault_5fwindow_11',['GRPC_CLIENT_DEFAULT_WINDOW',['../d4/d54/grpc__client_8c.html#adc76ee18f14c9e7e7eec22dbfa38f745',1,'grpc_client.c']]],
   ['grpc_5fclient_5fframe_5fheader_12',['GRPC_CLIENT_FRAME_HEADER',['../d4/d54/grpc__client_8c.html#a96105767f678e5b75bdaebb5488bb64f',1,'grpc_client.c']]],
   ['grpc_5fclient_5fheader_5ftable_13',['GRPC_CLIENT_HEADER_TABLE',['../d4/d54/grpc__client_8c.html#a57dd4ba10e02923fd3291063363c97bc',1,'grpc_client.c']]],
-  ['grpc_5fclient_5fmax_5fframe_14',['GRPC_CLIENT_MAX_FRAME',['../d4/d54/grpc__client_8c.html#a4feaa805996df7081e7873e93f460d65',1,'grpc_client.c']]]
+  ['grpc_5fclient_5fmax_5fcontinuations_14',['GRPC_CLIENT_MAX_CONTINUATIONS',['../d4/d54/grpc__client_8c.html#aa57cfa43fa632f293b4281d71251c869',1,'grpc_client.c']]],
+  ['grpc_5fclient_5fmax_5fframe_15',['GRPC_CLIENT_MAX_FRAME',['../d4/d54/grpc__client_8c.html#a4feaa805996df7081e7873e93f460d65',1,'grpc_client.c']]],
+  ['grpc_5fclient_5fmax_5fheader_5fblock_16',['GRPC_CLIENT_MAX_HEADER_BLOCK',['../d4/d54/grpc__client_8c.html#a56e84851b712aa03ed380e75d24be700',1,'grpc_client.c']]]
 ];

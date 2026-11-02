@@ -1,5 +1,8 @@
 var NAVTREEINDEX14 =
 {
+"da/dc2/bind_8h.html#ae88989dbb2cd23835e1c8d6c1b933a27a232755ad434780c51a5294dcdd951422":[94,0,1,0,0,10,0,30,7],
+"da/dc2/bind_8h.html#ae88989dbb2cd23835e1c8d6c1b933a27a2ca76c9a0f86837bdf1eedb1430c1f34":[94,0,1,0,0,10,0,30,2],
+"da/dc2/bind_8h.html#ae88989dbb2cd23835e1c8d6c1b933a27a449f5a141d7e3bea88d77c89e8dc5d2a":[94,0,1,0,0,10,0,30,4],
 "da/dc2/bind_8h.html#ae88989dbb2cd23835e1c8d6c1b933a27a4a4c290a4f2d3d1d691787627edbd562":[94,0,1,0,0,10,0,30,6],
 "da/dc2/bind_8h.html#ae88989dbb2cd23835e1c8d6c1b933a27ab40318c186cf82f9b2b5b75e6d780680":[94,0,1,0,0,10,0,30,0],
 "da/dc2/bind_8h.html#ae88989dbb2cd23835e1c8d6c1b933a27acc9e073c23737b48149e3fa5e4fdfa4f":[94,0,1,0,0,10,0,30,5],
@@ -246,8 +249,5 @@ var NAVTREEINDEX14 =
 "db/d5b/protobuf_8h_source.html":[94,0,1,0,2,2,3],
 "db/d64/websocket_8h.html":[94,0,1,0,23],
 "db/d64/websocket_8h.html#a11f866b6d2c4d98b1cc8b835ac1b42d2":[94,0,1,0,23,2],
-"db/d64/websocket_8h.html#a17d24442b19360466e84496fe8ce8ac5":[94,0,1,0,23,3],
-"db/d64/websocket_8h.html#a25531b0d899d92a6618a28ed0b5482d0":[94,0,1,0,23,10],
-"db/d64/websocket_8h.html#a7c4cc8a5486ce33aab2199a8f5ec82d0":[94,0,1,0,23,8],
-"db/d64/websocket_8h.html#a8095ae87a6487e56281d92a11c419254":[94,0,1,0,23,4]
+"db/d64/websocket_8h.html#a17d24442b19360466e84496fe8ce8ac5":[94,0,1,0,23,3]
 };
