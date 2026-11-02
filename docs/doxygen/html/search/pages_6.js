@@ -9,6 +9,7 @@ var searchData=
   ['blog_20with_20cwist_6',['Build a CRUD blog with CWIST',['../d4/db0/md_docs_2tutorials_2blog-crud.html',1,'']]],
   ['build_20a_20crud_20blog_20with_20cwist_7',['Build a CRUD blog with CWIST',['../d4/db0/md_docs_2tutorials_2blog-crud.html',1,'']]],
   ['build_20a_20webtransport_20server_20with_20cwist_8',['Build a WebTransport server with CWIST',['../d2/dcb/md_docs_2tutorials_2webtransport-server.html',1,'']]],
-  ['builder_20api_9',['JSON Builder API',['../d8/deb/md_docs_2api_2json.html',1,'']]],
-  ['burst_20starvation_2025_20follow_20up_10',['Classic pool burst starvation (#25 follow-up)',['../d9/d56/md_docs_2classic-pool-starvation.html',1,'']]]
+  ['build_20options_9',['Compile-time build options',['../d5/d9e/md_docs_2build-options.html',1,'']]],
+  ['builder_20api_10',['JSON Builder API',['../d8/deb/md_docs_2api_2json.html',1,'']]],
+  ['burst_20starvation_2025_20follow_20up_11',['Classic pool burst starvation (#25 follow-up)',['../d9/d56/md_docs_2classic-pool-starvation.html',1,'']]]
 ];
