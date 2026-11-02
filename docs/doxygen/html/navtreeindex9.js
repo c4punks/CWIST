@@ -1,5 +1,8 @@
 var NAVTREEINDEX9 =
 {
+"d6/dd4/db__sync_8h.html#aa382487f8dabb5d3f73372dea0279508":[94,0,1,0,2,0,0,4],
+"d6/dd4/db__sync_8h.html#aac1908340753ffff8b39bf703a5d5905":[94,0,1,0,2,0,0,2],
+"d6/dd4/db__sync_8h.html#acc2790db099ccbaf5a0996fd86fd188a":[94,0,1,0,2,0,0,3],
 "d6/dd4/db__sync_8h_source.html":[94,0,1,0,2,0,0],
 "d6/dda/md_docs_2ko_2decisions_20001-safe-public-fixed-response-cache.html":[54],
 "d6/dda/md_docs_2ko_2decisions_20001-safe-public-fixed-response-cache.html#autotoc_md586":[54,0],
@@ -246,8 +249,5 @@ var NAVTREEINDEX9 =
 "d7/dba/structcwist__fix__server__mem.html":[93,0,25],
 "d7/dba/structcwist__fix__server__mem.html#a113ff4343f4d9e628b0d2871cc13f7c5":[93,0,25,6],
 "d7/dba/structcwist__fix__server__mem.html#a20f68233be797b56aa1f92d13f72be17":[93,0,25,0],
-"d7/dba/structcwist__fix__server__mem.html#a400b5c7499bb14fc1e0cef0a142ea332":[93,0,25,5],
-"d7/dba/structcwist__fix__server__mem.html#a4df4252f690bc25231ae689dfad64eaa":[93,0,25,3],
-"d7/dba/structcwist__fix__server__mem.html#a79dd4b7daf1adb464488b63d5be651eb":[93,0,25,1],
-"d7/dba/structcwist__fix__server__mem.html#a8e910ba23e514cca001e6d55071378c9":[93,0,25,9]
+"d7/dba/structcwist__fix__server__mem.html#a400b5c7499bb14fc1e0cef0a142ea332":[93,0,25,5]
 };

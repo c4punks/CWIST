@@ -1,5 +1,8 @@
 var NAVTREEINDEX19 =
 {
+"dd/dff/http3_8h.html#afcb37b5d853d39a6a2af74c1291ac89a":[94,0,1,0,2,3,7,24],
+"dd/dff/http3_8h.html#afe2dc023265c7f47f7f311b79e48973a":[94,0,1,0,2,3,7,8],
+"dd/dff/http3_8h.html#afec2cffad5a60cfc7c08f73eb268ec3c":[94,0,1,0,2,3,7,6],
 "dd/dff/http3_8h_source.html":[94,0,1,0,2,3,7],
 "de/d03/platform_8h.html":[94,0,1,0,4,8],
 "de/d03/platform_8h.html#ac82267aa854cd95c43a3b62652567e68":[94,0,1,0,4,8,0],
@@ -246,8 +249,5 @@ var NAVTREEINDEX19 =
 "df/d21/structcwist__bind__field.html#a0a05e69235df384fd8f2cb79e7d25d7a":[93,0,8,5],
 "df/d21/structcwist__bind__field.html#a0b46be239f1e7a5d1ce44e514b7e7957":[93,0,8,4],
 "df/d21/structcwist__bind__field.html#a608825203f2308730ed627352783c6b2":[93,0,8,2],
-"df/d21/structcwist__bind__field.html#a6c1267f1db8fbe35608602f835fb6b7e":[93,0,8,1],
-"df/d21/structcwist__bind__field.html#acadecd9ad542c78a2c32288171f9bbe2":[93,0,8,0],
-"df/d21/structcwist__bind__field.html#aec09730a4638a3a4ca3ccc99fd9f2397":[93,0,8,3],
-"df/d28/md_docs_2performance_2https-pool-dynamic-queue.html":[75]
+"df/d21/structcwist__bind__field.html#a6c1267f1db8fbe35608602f835fb6b7e":[93,0,8,1]
 };
