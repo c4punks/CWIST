@@ -4,6 +4,7 @@
 #include <string.h>
 
 #include <cwist/net/http/http2_flow_control.h>
+#include "../src/net/http/http2_flow_control_internal.h"
 
 #define FRAME_SIZE 13U
 

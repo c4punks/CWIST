@@ -25,6 +25,7 @@
 
 #include <cwist/net/http/http2.h>
 #include <cwist/net/http/http2_flow_control.h>
+#include "http2_flow_control_internal.h"
 #include <cwist/net/http/async.h>
 #include "async_internal.h"
 #include "h2_wire.h"
