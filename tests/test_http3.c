@@ -25,12 +25,19 @@ int cwist_http3_method_is_idempotent(const char *method_str);
 
 static _Atomic int g_handler_called = 0; /* set on the server thread */
 static char g_large_response[CWIST_HTTP_MAX_BODY_SIZE + 1];
+static unsigned char g_oversized_dgram[65536];
+static _Atomic int g_server_oversized_dgram_result = -2;
 
 static void http3_test_handler(void *user_ctx, cwist_http_request *req, cwist_http_response *res) {
     if (user_ctx) atomic_fetch_add((_Atomic int *)user_ctx, 1);
     g_handler_called = 1;
     if (req->path && strcmp(req->path->data, "/over-limit") == 0) {
         cwist_http_response_set_body_ptr(res, g_large_response, sizeof(g_large_response));
+    }
+    if (req->path && req->private_data && strcmp(req->path->data, "/datagram-limit") == 0) {
+        lsquic_conn_t *conn = lsquic_stream_conn((lsquic_stream_t *)req->private_data);
+        g_server_oversized_dgram_result =
+            cwist_http3_send_datagram(conn, g_oversized_dgram, sizeof(g_oversized_dgram));
     }
     /* Issue #521 regressions: abort the response stream before any headers,
      * or after headers but before end-of-stream. */
@@ -374,6 +381,18 @@ int main(void) {
     assert(res->status_code == 200);
     cwist_http_response_destroy(res);
     printf("[PASS] HTTP/3 well-formed request is dispatched (200).\n");
+
+    cwist_http3_client_enable_datagrams(client, 1);
+    assert(cwist_http3_client_send_datagram(client, g_oversized_dgram,
+                                            sizeof(g_oversized_dgram)) == -1);
+    res = NULL;
+    err = cwist_http3_client_request(client, "/datagram-limit", CWIST_HTTP_GET, NULL, NULL, 0,
+                                     &res);
+    assert(err.error.err_i16 == 0 && res != NULL);
+    assert(res->status_code == 200);
+    assert(g_server_oversized_dgram_result == -1);
+    cwist_http_response_destroy(res);
+    printf("[PASS] HTTP/3 client and server reject oversized outgoing datagrams.\n");
 
     res = NULL;
     err = cwist_http3_client_request(client, "/over-limit", CWIST_HTTP_GET, NULL, NULL, 0, &res);
