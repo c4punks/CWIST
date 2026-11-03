@@ -166,7 +166,8 @@ cwist_error_t cwist_http3_client_request(cwist_http3_client *client, const char 
  * @brief Send an unreliable QUIC datagram.
  *
  * Requires datagrams to be enabled.  The datagram is delivered on a
- * best-effort basis and may be silently dropped by the network.
+ * best-effort basis and may be silently dropped by the network. Payloads
+ * above the peer's advertised datagram limit are rejected before queueing.
  *
  * @param client Client handle.
  * @param data   Datagram payload.

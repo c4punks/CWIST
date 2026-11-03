@@ -2264,14 +2264,12 @@ static void cwist_h3_on_close(lsquic_stream_t *stream, lsquic_stream_ctx_t *st_h
 
 /**
  * @brief on_dg_write callback: hand the oldest queued datagram to lsquic.
- * @return Bytes copied into @p buf, or 0 when the connection's queue is
- *         empty or the connection has no wrapper ctx.
+ * @return Bytes copied into @p buf, or 0 when no complete datagram is emitted.
  *
  * Pulls from this connection's own mutex-guarded queue (see h3_conn_ctx_t).
- * Previously this read/freed a single process-wide g_h3_dgram struct with no
- * lock: two connections sending datagrams at the same time could free() the
- * same buffer twice or hand one connection's payload to another.  When the
- * queue drains, want_datagram_write is disarmed so lsquic stops calling back.
+ * An entry that no longer fits the supplied buffer is discarded whole rather
+ * than truncated. When the queue drains, the minimum datagram size is reset
+ * and want_datagram_write is disarmed so lsquic stops calling back.
  */
 static ssize_t cwist_h3_on_dg_write(lsquic_conn_t *conn, void *buf, size_t len) {
     h3_conn_ctx_t *cc = (h3_conn_ctx_t *)lsquic_conn_get_ctx(conn);
@@ -2283,19 +2281,22 @@ static ssize_t cwist_h3_on_dg_write(lsquic_conn_t *conn, void *buf, size_t len) 
         pthread_mutex_unlock(&cc->dgram_lock);
         return 0;
     }
-    size_t to_copy = n->len < len ? n->len : len;
-    memcpy(buf, n->data, to_copy);
+    ssize_t written = 0;
+    if (n->len <= len) {
+        memcpy(buf, n->data, n->len);
+        written = (ssize_t)n->len;
+    }
     cc->dgram_head = n->next;
-    if (!cc->dgram_head) cc->dgram_tail = NULL;
-    bool more_queued = cc->dgram_head != NULL;
+    if (!cc->dgram_head) {
+        cc->dgram_tail = NULL;
+        lsquic_conn_set_min_datagram_size(conn, 0);
+        lsquic_conn_want_datagram_write(conn, 0);
+    }
     pthread_mutex_unlock(&cc->dgram_lock);
 
     free(n->data);
     free(n);
-    /* Keep want_datagram_write armed while the queue is non-empty so
-     * lsquic calls back for the next entry. */
-    if (!more_queued) lsquic_conn_want_datagram_write(conn, 0);
-    return (ssize_t)to_copy;
+    return written;
 }
 
 /**
@@ -3887,7 +3888,8 @@ void cwist_http3_set_datagram_callback(cwist_http3_context *ctx,
  * @param len Payload length.
  * @retval 0 Datagram queued; lsquic is signaled to drain it via the
  *         on_dg_write callback.
- * @retval -1 Bad arguments, no per-connection ctx, or OOM (nothing queued).
+ * @retval -1 Bad arguments, no per-connection ctx, a payload above the peer's
+ *         advertised limit, or OOM (nothing queued).
  *
  * Thread-safe: the payload is copied and appended to the connection's own
  * mutex-guarded queue, so concurrent sends on different connections never
@@ -3901,22 +3903,31 @@ int cwist_http3_send_datagram(void *conn, const void *data, size_t len) {
     h3_conn_ctx_t *cc = (h3_conn_ctx_t *)lsquic_conn_get_ctx(c);
     if (!cc) return -1;
 
+    pthread_mutex_lock(&cc->dgram_lock);
+    size_t previous_min = lsquic_conn_get_min_datagram_size(c);
+    bool raise_min = len > previous_min;
+    if (raise_min && lsquic_conn_set_min_datagram_size(c, len) != 0) {
+        pthread_mutex_unlock(&cc->dgram_lock);
+        return -1;
+    }
+
     h3_dgram_node_t *node = (h3_dgram_node_t *)malloc(sizeof(*node));
-    if (!node) return -1;
+    if (!node) {
+        if (raise_min) lsquic_conn_set_min_datagram_size(c, previous_min);
+        pthread_mutex_unlock(&cc->dgram_lock);
+        return -1;
+    }
     node->data = malloc(len);
     if (!node->data) {
         free(node);
+        if (raise_min) lsquic_conn_set_min_datagram_size(c, previous_min);
+        pthread_mutex_unlock(&cc->dgram_lock);
         return -1;
     }
     memcpy(node->data, data, len);
     node->len = len;
     node->next = NULL;
 
-    /* Append to this connection's own queue - concurrent sends on other
-     * connections touch their own h3_conn_ctx_t and never see this lock,
-     * and concurrent sends on *this* connection now queue instead of one
-     * clobbering (free()ing) the other's buffer. */
-    pthread_mutex_lock(&cc->dgram_lock);
     if (cc->dgram_tail) {
         cc->dgram_tail->next = node;
     } else {
