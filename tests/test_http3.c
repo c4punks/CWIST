@@ -14,6 +14,7 @@
 #include <fcntl.h>
 #include <errno.h>
 #include <poll.h>
+#include "../src/net/http/h3_hdr_out.h"
 
 #define TEST_CERT "example/othello-web/server.crt"
 #define TEST_KEY "example/othello-web/server.key"
@@ -30,6 +31,23 @@ static void http3_test_handler(void *user_ctx, cwist_http_request *req, cwist_ht
     g_handler_called = 1;
     if (req->path && strcmp(req->path->data, "/over-limit") == 0) {
         cwist_http_response_set_body_ptr(res, g_large_response, sizeof(g_large_response));
+    }
+    /* Issue #521 regressions: abort the response stream before any headers,
+     * or after headers but before end-of-stream. */
+    if (req->path && req->private_data &&
+        (strcmp(req->path->data, "/abort") == 0 ||
+         strcmp(req->path->data, "/abort-headers") == 0)) {
+        lsquic_stream_t *stream = (lsquic_stream_t *)req->private_data;
+        if (strcmp(req->path->data, "/abort-headers") == 0) {
+            struct lsxpack_header hdr_arr[1];
+            char hbuf[64];
+            h3_hdr_out hdrs = {.arr = hdr_arr, .max = 1, .buf = hbuf, .cap = sizeof(hbuf)};
+            h3_hdr_out_add_str(&hdrs, ":status", "200");
+            lsquic_http_headers_t headers = {.count = 1, .headers = hdr_arr};
+            if (lsquic_stream_send_headers(stream, &headers, 0) == 0)
+                lsquic_stream_flush(stream);
+        }
+        lsquic_conn_abort(lsquic_stream_conn(stream));
     }
 }
 
@@ -545,6 +563,61 @@ int main(void) {
     printf("[PASS] HTTP/3 peer CONNECTION_CLOSE recorded (transport, code=0, reason=\"%s\").\n",
            close_reason);
 
+    __atomic_store_n(&ctx->running, 0, __ATOMIC_RELEASE);
+    rc = pthread_join(tid, NULL);
+    assert(rc == 0);
+    cwist_http3_destroy_context(ctx);
+    close(udp_fd);
+
+    /* --- Test 13: early stream close never yields success + NULL response
+     * (issue #521).  The server handler aborts the stream before response
+     * headers, then after headers but before end-of-stream; both must
+     * surface as errors.  A normal response still succeeds. --- */
+    ctx = NULL;
+    err = cwist_http3_init_context(&ctx, TEST_CERT, TEST_KEY);
+    assert(err.error.err_i16 == 0);
+
+    udp_fd = socket(AF_INET, SOCK_DGRAM, 0);
+    assert(udp_fd >= 0);
+    memset(&addr, 0, sizeof(addr));
+    addr.sin_family = AF_INET;
+    addr.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
+    addr.sin_port = htons(0);
+    assert(bind(udp_fd, (struct sockaddr *)&addr, sizeof(addr)) == 0);
+    addr_len = sizeof(addr);
+    assert(getsockname(udp_fd, (struct sockaddr *)&addr, &addr_len) == 0);
+
+    server_thread_args_t args13 = {.udp_fd = udp_fd, .ctx = ctx};
+    rc = pthread_create(&tid, NULL, http3_server_thread, &args13);
+    assert(rc == 0);
+    usleep(50000);
+
+    client = cwist_http3_client_create();
+    assert(client != NULL);
+    assert(cwist_http3_client_set_server(client, "localhost", ntohs(addr.sin_port)) == 0);
+    assert(cwist_http3_client_set_ca_bundle(client, TEST_CERT) == 0);
+    cwist_http3_client_set_timeout_ms(client, 5000);
+    cwist_http3_client_set_conn_timeout_ms(client, 5000);
+    cwist_http3_client_set_max_retries(client, 0);
+
+    static const char *paths13[] = {"/abort", "/abort-headers", "/"};
+    for (int i = 0; i < 3; ++i) {
+        res = NULL;
+        err = cwist_http3_client_request(client, paths13[i], CWIST_HTTP_GET, NULL, NULL, 0, &res);
+        if (i < 2) {
+            assert(err.error.err_i16 != 0);
+            assert(res == NULL);
+            printf("[PASS] HTTP/3 early close (%s) returns error, NULL response.\n", paths13[i]);
+        } else {
+            assert(err.error.err_i16 == 0);
+            assert(res != NULL);
+            assert(res->status_code == 200);
+            cwist_http_response_destroy(res);
+            printf("[PASS] HTTP/3 valid response after early closes succeeds.\n");
+        }
+    }
+
+    cwist_http3_client_destroy(client);
     __atomic_store_n(&ctx->running, 0, __ATOMIC_RELEASE);
     rc = pthread_join(tid, NULL);
     assert(rc == 0);
