@@ -31,7 +31,10 @@
 #include <openssl/ssl.h>
 
 #define GRPC_CLIENT_FRAME_HEADER 9
-#define GRPC_CLIENT_MAX_FRAME (16u * 1024u * 1024u)
+/* RFC 9113: the default maximum frame size is 2^14 octets.  The client sends
+ * an empty SETTINGS frame, so it never advertises a larger inbound maximum;
+ * peers must not exceed this regardless of the SETTINGS they send us. */
+#define GRPC_CLIENT_MAX_INBOUND_FRAME 16384u
 #define GRPC_CLIENT_MAX_HEADER_BLOCK (64u * 1024u)
 #define GRPC_CLIENT_MAX_CONTINUATIONS 16u
 #define GRPC_CLIENT_DEFAULT_WINDOW 65535
@@ -288,7 +291,9 @@ typedef struct grpc_client_frame {
  * @param deadline_ms Monotonic deadline in ms; 0 means no timeout.
  * @return 0 on success; on failure -1 and f->payload is NULL.
  * @note f->payload is owned by the caller (cwist_free) when non-NULL.
- *       Frames larger than GRPC_CLIENT_MAX_FRAME are rejected.
+ *       Frames larger than the locally advertised inbound maximum
+ *       (GRPC_CLIENT_MAX_INBOUND_FRAME) are rejected before allocation with
+ *       a FRAME_SIZE_ERROR connection error.
  */
 static int grpc_client_read_frame(cwist_grpc_client *c, grpc_client_frame *f,
                                   uint64_t deadline_ms) {
@@ -299,7 +304,12 @@ static int grpc_client_read_frame(cwist_grpc_client *c, grpc_client_frame *f,
     f->flags = hdr[4];
     f->stream_id = (((uint32_t)hdr[5] & 0x7f) << 24) | ((uint32_t)hdr[6] << 16) |
                    ((uint32_t)hdr[7] << 8) | hdr[8];
-    if (f->len > GRPC_CLIENT_MAX_FRAME) return -1;
+    if (f->len > GRPC_CLIENT_MAX_INBOUND_FRAME) {
+        uint8_t goaway[8] = {0};
+        goaway[7] = 0x06; /* FRAME_SIZE_ERROR */
+        grpc_client_write_frame(c, H2_FRAME_GOAWAY, 0, 0, goaway, sizeof(goaway), deadline_ms);
+        return -1;
+    }
     f->payload = NULL;
     if (f->len) {
         f->payload = cwist_alloc(f->len);
