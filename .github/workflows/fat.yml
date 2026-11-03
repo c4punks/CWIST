@@ -28,7 +28,7 @@ jobs:
   fat:
     name: Fat archive build + embedded-style link smoke (${{ matrix.compiler }})
     if: github.event_name != 'push' || !contains(github.event.head_commit.message, '[skip ci]')
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 60
     strategy:
       fail-fast: false
@@ -149,7 +149,7 @@ jobs:
   fat-toggle:
     name: Thin/fat toggle re-archives without recompiling
     if: github.event_name != 'push' || !contains(github.event.head_commit.message, '[skip ci]')
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 60
     steps:
     - name: Checkout repository
@@ -193,7 +193,7 @@ jobs:
   fat-examples:
     name: Example apps link against the fat archive alone
     if: github.event_name != 'push' || !contains(github.event.head_commit.message, '[skip ci]')
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 60
     steps:
     - name: Checkout repository
@@ -234,7 +234,7 @@ jobs:
   fat-mbedtls:
     name: Fat archive with the mbedTLS TLS backend (CWIST_TLS=mbedtls)
     if: github.event_name != 'push' || !contains(github.event.head_commit.message, '[skip ci]')
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 60
     steps:
     - name: Checkout repository
@@ -304,7 +304,7 @@ jobs:
   fat-trim:
     name: Trimmed fat archive (${{ matrix.cfg }})
     if: github.event_name != 'push' || !contains(github.event.head_commit.message, '[skip ci]')
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 60
     strategy:
       fail-fast: false
