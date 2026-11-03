@@ -211,6 +211,13 @@ static void unit_checks(void) {
                                              &parsed) == 1);
         assert(parsed.sin_port == htons(54321));
         assert(parsed.sin_addr.s_addr == htonl(0x7F000001));
+
+        uint8_t short_msg[20];
+        memcpy(short_msg, req, sizeof(short_msg));
+        short_msg[2] = 0xFF;
+        short_msg[3] = 0xFF;
+        assert(cwist_ice_stun_validate_request(short_msg, sizeof(short_msg),
+                                               "testpassword0123456789") == 1);
     }
 
     /* SDP. */
