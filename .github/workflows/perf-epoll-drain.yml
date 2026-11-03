@@ -13,7 +13,7 @@ permissions:
 jobs:
   epoll-drain-ab:
     name: CWIST_REACTOR_DRAIN_CHUNK epoll A/B
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
         with: { submodules: recursive }

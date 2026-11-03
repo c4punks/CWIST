@@ -189,7 +189,7 @@ jobs:
 
   wasm:
     name: cwist-wasm npm package
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 30
     steps:
     - name: Checkout the release tag
@@ -243,7 +243,7 @@ jobs:
   upload:
     name: Attach assets to the release
     needs: [fat, amalgamation, wasm]
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 15
     permissions:
       contents: write
