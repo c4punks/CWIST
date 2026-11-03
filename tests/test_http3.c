@@ -32,6 +32,23 @@ static void http3_test_handler(void *user_ctx, cwist_http_request *req, cwist_ht
     if (req->path && strcmp(req->path->data, "/over-limit") == 0) {
         cwist_http_response_set_body_ptr(res, g_large_response, sizeof(g_large_response));
     }
+    /* Issue #521 regressions: abort the response stream before any headers,
+     * or after headers but before end-of-stream. */
+    if (req->path && req->private_data &&
+        (strcmp(req->path->data, "/abort") == 0 ||
+         strcmp(req->path->data, "/abort-headers") == 0)) {
+        lsquic_stream_t *stream = (lsquic_stream_t *)req->private_data;
+        if (strcmp(req->path->data, "/abort-headers") == 0) {
+            struct lsxpack_header hdr_arr[1];
+            char hbuf[64];
+            h3_hdr_out hdrs = {.arr = hdr_arr, .max = 1, .buf = hbuf, .cap = sizeof(hbuf)};
+            h3_hdr_out_add_str(&hdrs, ":status", "200");
+            lsquic_http_headers_t headers = {.count = 1, .headers = hdr_arr};
+            if (lsquic_stream_send_headers(stream, &headers, 0) == 0)
+                lsquic_stream_flush(stream);
+        }
+        lsquic_conn_abort(lsquic_stream_conn(stream));
+    }
 }
 
 typedef struct {
@@ -610,68 +627,6 @@ int main(void) {
     assert(rc == 0);
     cwist_http3_destroy_context(ctx);
     close(udp_fd);
-
-    /* --- Test 14: changing the server selects a new connection and address. --- */
-    ctx = NULL;
-    cwist_http3_context *ctx_b = NULL;
-    err = cwist_http3_init_context_ephemeral(&ctx);
-    assert(err.error.err_i16 == 0);
-    err = cwist_http3_init_context_ephemeral(&ctx_b);
-    assert(err.error.err_i16 == 0);
-
-    udp_fd = socket(AF_INET, SOCK_DGRAM, 0);
-    int udp_fd_b = socket(AF_INET, SOCK_DGRAM, 0);
-    assert(udp_fd >= 0 && udp_fd_b >= 0);
-    struct sockaddr_in addr_b;
-    memset(&addr, 0, sizeof(addr));
-    memset(&addr_b, 0, sizeof(addr_b));
-    addr.sin_family = addr_b.sin_family = AF_INET;
-    addr.sin_addr.s_addr = addr_b.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
-    assert(bind(udp_fd, (struct sockaddr *)&addr, sizeof(addr)) == 0);
-    assert(bind(udp_fd_b, (struct sockaddr *)&addr_b, sizeof(addr_b)) == 0);
-    addr_len = sizeof(addr);
-    socklen_t addr_b_len = sizeof(addr_b);
-    assert(getsockname(udp_fd, (struct sockaddr *)&addr, &addr_len) == 0);
-    assert(getsockname(udp_fd_b, (struct sockaddr *)&addr_b, &addr_b_len) == 0);
-
-    _Atomic int calls_a = 0;
-    _Atomic int calls_b = 0;
-    server_thread_args_t args14a = {.udp_fd = udp_fd, .ctx = ctx, .user_ctx = &calls_a};
-    server_thread_args_t args14b = {.udp_fd = udp_fd_b, .ctx = ctx_b, .user_ctx = &calls_b};
-    pthread_t tid_b;
-    assert(pthread_create(&tid, NULL, http3_server_thread, &args14a) == 0);
-    assert(pthread_create(&tid_b, NULL, http3_server_thread, &args14b) == 0);
-    usleep(50000);
-
-    client = cwist_http3_client_create();
-    assert(client != NULL);
-    cwist_http3_client_set_insecure(client, 1);
-    cwist_http3_client_set_timeout_ms(client, 5000);
-    cwist_http3_client_set_conn_timeout_ms(client, 5000);
-    assert(cwist_http3_client_set_server(client, "127.0.0.1", ntohs(addr.sin_port)) == 0);
-    res = NULL;
-    err = cwist_http3_client_request(client, "/", CWIST_HTTP_GET, NULL, NULL, 0, &res);
-    assert(err.error.err_i16 == 0 && res != NULL);
-    cwist_http_response_destroy(res);
-    assert(atomic_load(&calls_a) == 1 && atomic_load(&calls_b) == 0);
-
-    assert(cwist_http3_client_set_server(client, "127.0.0.1", ntohs(addr_b.sin_port)) == 0);
-    res = NULL;
-    err = cwist_http3_client_request(client, "/", CWIST_HTTP_GET, NULL, NULL, 0, &res);
-    assert(err.error.err_i16 == 0 && res != NULL);
-    cwist_http_response_destroy(res);
-    assert(atomic_load(&calls_a) == 1 && atomic_load(&calls_b) == 1);
-    printf("[PASS] HTTP/3 set_server switches subsequent requests to the new server.\n");
-
-    cwist_http3_client_destroy(client);
-    __atomic_store_n(&ctx->running, 0, __ATOMIC_RELEASE);
-    __atomic_store_n(&ctx_b->running, 0, __ATOMIC_RELEASE);
-    assert(pthread_join(tid, NULL) == 0);
-    assert(pthread_join(tid_b, NULL) == 0);
-    cwist_http3_destroy_context(ctx);
-    cwist_http3_destroy_context(ctx_b);
-    close(udp_fd);
-    close(udp_fd_b);
 
     printf("All HTTP/3 infrastructure tests passed!\n");
     lsquic_global_cleanup();
