@@ -38,7 +38,7 @@ permissions:
 jobs:
   https-gates:
     name: HTTPS performance gates
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     # Write is needed only for the post-gate history commit on dev pushes;
     # that step never runs on pull_request events, and fork PRs get a
     # read-only token regardless.
