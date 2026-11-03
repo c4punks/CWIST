@@ -17,7 +17,7 @@ jobs:
   # the ones docs/api/wasi.md was verified against.
   wasip2:
     name: WASI 0.2 socket server smoke
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 20
     steps:
     - name: Checkout repository
@@ -51,7 +51,7 @@ jobs:
   # match docs/api/wasm-component.md.
   component:
     name: Component pipeline (WIT + jco guests)
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 30
     steps:
     - name: Checkout repository
