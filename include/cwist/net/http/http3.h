@@ -236,6 +236,8 @@ void cwist_http3_set_datagram_callback(cwist_http3_context *ctx,
  * @brief Send an unreliable datagram over the given QUIC connection.
  *
  * This is non-blocking; the datagram is queued and flushed by the engine.
+ * Payloads above the peer's advertised datagram limit are rejected before
+ * queueing.
  *
  * @param conn  Target QUIC connection.
  * @param data  Datagram payload.
