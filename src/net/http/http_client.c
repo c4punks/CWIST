@@ -89,11 +89,14 @@ static size_t header_callback(char *ptr, size_t size, size_t nmemb, void *userp)
 
     /* libcurl sends headers as "Name: value\r\n" or "HTTP/1.1 200 OK\r\n" */
     if (total > 5 && strncasecmp(ptr, "HTTP/", 5) == 0) {
-        /* Status line: parse status code */
-        char *p = ptr;
-        while (*p && !isspace((unsigned char)*p)) p++;
-        while (*p && isspace((unsigned char)*p)) p++;
-        rh->status_code = strtol(p, NULL, 10);
+        /* Status line: parse the three-digit status code within this buffer. */
+        size_t pos = 0;
+        while (pos < total && !isspace((unsigned char)ptr[pos])) pos++;
+        while (pos < total && isspace((unsigned char)ptr[pos])) pos++;
+        long status_code = 0;
+        for (int i = 0; i < 3 && pos < total && isdigit((unsigned char)ptr[pos]); i++, pos++)
+            status_code = status_code * 10 + (ptr[pos] - '0');
+        rh->status_code = status_code;
         /* Each status line starts a new response: a followed redirect hop
          * or a 1xx interim reply. Keep only the final response's headers,
          * and apply the header cap per response. */
