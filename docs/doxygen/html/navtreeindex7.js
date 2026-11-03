@@ -1,5 +1,7 @@
 var NAVTREEINDEX7 =
 {
+"d5/d57/mux_8h.html":[94,0,1,0,14],
+"d5/d57/mux_8h.html#a0597f3346e5c7f96984a9a1f8fc72c74":[94,0,1,0,14,3],
 "d5/d57/mux_8h.html#a48a6012e8d8b1a226160d5374eca116b":[94,0,1,0,14,8],
 "d5/d57/mux_8h.html#a53a0bd703fe17831f5b0ad878328c4cb":[94,0,1,0,14,2],
 "d5/d57/mux_8h.html#a6290a5d6bf876fcbca27e7fc79603427":[94,0,1,0,14,5],
@@ -247,7 +249,5 @@ var NAVTREEINDEX7 =
 "d6/d25/md_docs_2ko_2tutorials_2blog-crud.html#autotoc_md703":[68,3],
 "d6/d26/md_docs_2api_2wasi.html":[13],
 "d6/d26/md_docs_2api_2wasi.html#autotoc_md201":[13,0],
-"d6/d26/md_docs_2api_2wasi.html#autotoc_md202":[13,1],
-"d6/d26/md_docs_2api_2wasi.html#autotoc_md203":[13,2],
-"d6/d26/md_docs_2api_2wasi.html#autotoc_md204":[13,2,0]
+"d6/d26/md_docs_2api_2wasi.html#autotoc_md202":[13,1]
 };
