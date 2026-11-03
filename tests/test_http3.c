@@ -14,6 +14,7 @@
 #include <fcntl.h>
 #include <errno.h>
 #include <poll.h>
+#include "../src/net/http/h3_hdr_out.h"
 
 #define TEST_CERT "example/othello-web/server.crt"
 #define TEST_KEY "example/othello-web/server.key"
@@ -24,23 +25,170 @@ int cwist_http3_method_is_idempotent(const char *method_str);
 
 static _Atomic int g_handler_called = 0; /* set on the server thread */
 static char g_large_response[CWIST_HTTP_MAX_BODY_SIZE + 1];
+static unsigned char g_oversized_dgram[65536];
+static _Atomic int g_server_oversized_dgram_result = -2;
+static _Atomic int g_server_datagram_result = -2;
+static _Atomic size_t g_server_datagram_len;
+static unsigned char g_server_datagram[8];
+
+static void http3_test_datagram(const void *data, size_t len, void *user_ctx) {
+    (void)user_ctx;
+    assert(len <= sizeof(g_server_datagram));
+    memcpy(g_server_datagram, data, len);
+    atomic_store(&g_server_datagram_len, len);
+}
 
 static void http3_test_handler(void *user_ctx, cwist_http_request *req, cwist_http_response *res) {
-    (void)user_ctx;
+    if (user_ctx) atomic_fetch_add((_Atomic int *)user_ctx, 1);
     g_handler_called = 1;
     if (req->path && strcmp(req->path->data, "/over-limit") == 0) {
         cwist_http_response_set_body_ptr(res, g_large_response, sizeof(g_large_response));
+    }
+    if (req->path && req->private_data && strcmp(req->path->data, "/datagram-limit") == 0) {
+        lsquic_conn_t *conn = lsquic_stream_conn((lsquic_stream_t *)req->private_data);
+        g_server_oversized_dgram_result =
+            cwist_http3_send_datagram(conn, g_oversized_dgram, sizeof(g_oversized_dgram));
+    }
+    if (req->path && req->private_data && strcmp(req->path->data, "/datagram-reply") == 0) {
+        lsquic_conn_t *conn = lsquic_stream_conn((lsquic_stream_t *)req->private_data);
+        g_server_datagram_result = cwist_http3_send_datagram(conn, "pong", 4);
+    }
+    /* Issue #521 regressions: abort the response stream before any headers,
+     * or after headers but before end-of-stream. */
+    if (req->path && req->private_data &&
+        (strcmp(req->path->data, "/abort") == 0 ||
+         strcmp(req->path->data, "/abort-headers") == 0)) {
+        lsquic_stream_t *stream = (lsquic_stream_t *)req->private_data;
+        if (strcmp(req->path->data, "/abort-headers") == 0) {
+            struct lsxpack_header hdr_arr[1];
+            char hbuf[64];
+            h3_hdr_out hdrs = {.arr = hdr_arr, .max = 1, .buf = hbuf, .cap = sizeof(hbuf)};
+            h3_hdr_out_add_str(&hdrs, ":status", "200");
+            lsquic_http_headers_t headers = {.count = 1, .headers = hdr_arr};
+            if (lsquic_stream_send_headers(stream, &headers, 0) == 0)
+                lsquic_stream_flush(stream);
+        }
+        lsquic_conn_abort(lsquic_stream_conn(stream));
     }
 }
 
 typedef struct {
     int udp_fd;
     cwist_http3_context *ctx;
+    void *user_ctx;
 } server_thread_args_t;
+
+/* --- Minimal raw-lsquic client -----------------------------------------
+ * Used by Test 12 to exercise a peer-initiated CONNECTION_CLOSE.  The
+ * high-level cwist client has no connection-close API (its engine destroy
+ * drops connections silently), so drive lsquic directly: complete the
+ * handshake, then lsquic_conn_abort().  The pinned lsquic turns the abort
+ * into a transport-level CONNECTION_CLOSE (NO_ERROR, "user aborted
+ * connection"), which the server records on its context.
+ * ---------------------------------------------------------------------- */
+typedef struct {
+    int udp_fd;
+    lsquic_engine_t *engine;
+    SSL_CTX *ssl_ctx;
+    lsquic_conn_t *conn;
+    struct sockaddr_storage local_addr;
+    socklen_t local_addr_len;
+    int conn_closed;
+} raw_h3_client_t;
+
+static lsquic_conn_ctx_t *raw_on_new_conn(void *stream_if_ctx, lsquic_conn_t *conn) {
+    (void)conn;
+    return (lsquic_conn_ctx_t *)stream_if_ctx;
+}
+
+static void raw_on_conn_closed(lsquic_conn_t *conn) {
+    raw_h3_client_t *cl = (raw_h3_client_t *)lsquic_conn_get_ctx(conn);
+    if (cl) cl->conn_closed = 1;
+}
+
+static lsquic_stream_ctx_t *raw_on_new_stream(void *stream_if_ctx, lsquic_stream_t *stream) {
+    (void)stream_if_ctx;
+    lsquic_stream_wantread(stream, 1);
+    return NULL;
+}
+
+static void raw_on_read(lsquic_stream_t *stream, lsquic_stream_ctx_t *st_h) {
+    (void)st_h;
+    lsquic_stream_wantread(stream, 0);
+}
+
+static void raw_on_write(lsquic_stream_t *stream, lsquic_stream_ctx_t *st_h) {
+    (void)stream;
+    (void)st_h;
+}
+
+static void raw_on_close(lsquic_stream_t *stream, lsquic_stream_ctx_t *st_h) {
+    (void)stream;
+    (void)st_h;
+}
+
+static const struct lsquic_stream_if raw_stream_if = {
+    .on_new_conn = raw_on_new_conn,
+    .on_conn_closed = raw_on_conn_closed,
+    .on_new_stream = raw_on_new_stream,
+    .on_read = raw_on_read,
+    .on_write = raw_on_write,
+    .on_close = raw_on_close,
+};
+
+static int raw_packets_out(void *ctx, const struct lsquic_out_spec *specs, unsigned n_specs) {
+    raw_h3_client_t *cl = ctx;
+    unsigned i;
+    for (i = 0; i < n_specs; ++i) {
+        const struct lsquic_out_spec *spec = &specs[i];
+        struct msghdr msg = {0};
+        msg.msg_name = (void *)spec->dest_sa;
+        msg.msg_namelen = spec->dest_sa->sa_family == AF_INET ? sizeof(struct sockaddr_in)
+                                                              : sizeof(struct sockaddr_in6);
+        msg.msg_iov = (struct iovec *)spec->iov;
+        msg.msg_iovlen = spec->iovlen;
+        if (sendmsg(cl->udp_fd, &msg, MSG_DONTWAIT) < 0) {
+            if (errno == EAGAIN || errno == EWOULDBLOCK) break;
+            return -1;
+        }
+    }
+    return (int)i;
+}
+
+static SSL_CTX *raw_get_ssl_ctx(void *peer_ctx, const struct sockaddr *local) {
+    (void)local;
+    raw_h3_client_t *cl = peer_ctx;
+    return cl ? cl->ssl_ctx : NULL;
+}
+
+static void raw_process_io(raw_h3_client_t *cl, int timeout_ms) {
+    int diff = timeout_ms * 1000;
+    if (diff <= 0) diff = 1000;
+    if (lsquic_engine_earliest_adv_tick(cl->engine, &diff)) {
+        if (diff <= 0) diff = 0;
+        else if (diff > 1000000) diff = 1000000;
+    }
+
+    struct pollfd pfd = {.fd = cl->udp_fd, .events = POLLIN};
+    int pret = poll(&pfd, 1, diff / 1000);
+    if (pret > 0 && (pfd.revents & POLLIN)) {
+        unsigned char buf[65535];
+        struct sockaddr_storage peer_addr;
+        socklen_t peer_addr_len = sizeof(peer_addr);
+        ssize_t nr = recvfrom(cl->udp_fd, buf, sizeof(buf), 0, (struct sockaddr *)&peer_addr,
+                              &peer_addr_len);
+        if (nr > 0) {
+            lsquic_engine_packet_in(cl->engine, buf, (size_t)nr,
+                                    (struct sockaddr *)&cl->local_addr,
+                                    (struct sockaddr *)&peer_addr, NULL, 0);
+        }
+    }
+    lsquic_engine_process_conns(cl->engine);
+}
 
 static void *http3_server_thread(void *arg) {
     server_thread_args_t *args = (server_thread_args_t *)arg;
-    cwist_http3_server_loop(args->udp_fd, args->ctx, http3_test_handler, NULL);
+    cwist_http3_server_loop(args->udp_fd, args->ctx, http3_test_handler, args->user_ctx);
     return NULL;
 }
 
@@ -209,6 +357,8 @@ int main(void) {
     socklen_t addr_len = sizeof(addr);
     assert(getsockname(udp_fd, (struct sockaddr *)&addr, &addr_len) == 0);
 
+    cwist_http3_set_datagram_enabled(ctx, 1);
+    cwist_http3_set_datagram_callback(ctx, http3_test_datagram, NULL);
     server_thread_args_t args10 = {.udp_fd = udp_fd, .ctx = ctx};
     rc = pthread_create(&tid, NULL, http3_server_thread, &args10);
     assert(rc == 0);
@@ -216,6 +366,7 @@ int main(void) {
 
     cwist_http3_client *client = cwist_http3_client_create();
     assert(client != NULL);
+    cwist_http3_client_enable_datagrams(client, 1);
     assert(cwist_http3_client_set_server(client, "127.0.0.1", ntohs(addr.sin_port)) == 0);
     cwist_http3_client_set_timeout_ms(client, 10000);
     cwist_http3_client_set_conn_timeout_ms(client, 10000);
@@ -244,6 +395,49 @@ int main(void) {
     assert(res->status_code == 200);
     cwist_http_response_destroy(res);
     printf("[PASS] HTTP/3 well-formed request is dispatched (200).\n");
+
+    atomic_store(&g_server_datagram_len, 0);
+    assert(cwist_http3_client_send_datagram(client, "ping", 4) == 0);
+    for (int i = 0; i < 20 && atomic_load(&g_server_datagram_len) == 0; i++) {
+        res = NULL;
+        err = cwist_http3_client_request(client, "/", CWIST_HTTP_GET, NULL, NULL, 0, &res);
+        assert(err.error.err_i16 == 0 && res != NULL);
+        cwist_http_response_destroy(res);
+    }
+    assert(atomic_load(&g_server_datagram_len) == 4);
+    assert(memcmp(g_server_datagram, "ping", 4) == 0);
+
+    res = NULL;
+    err = cwist_http3_client_request(client, "/datagram-reply", CWIST_HTTP_GET, NULL, NULL, 0,
+                                     &res);
+    assert(err.error.err_i16 == 0 && res != NULL);
+    cwist_http_response_destroy(res);
+    assert(g_server_datagram_result == 0);
+    char pong[4];
+    ssize_t pong_len = -1;
+    for (int i = 0; i < 20 && pong_len != 4; i++) {
+        pong_len = cwist_http3_client_recv_datagram(client, pong, sizeof(pong));
+        if (pong_len == 4) break;
+        assert(pong_len == -1 && errno == EAGAIN);
+        res = NULL;
+        err = cwist_http3_client_request(client, "/", CWIST_HTTP_GET, NULL, NULL, 0, &res);
+        assert(err.error.err_i16 == 0 && res != NULL);
+        cwist_http_response_destroy(res);
+    }
+    assert(pong_len == 4 && memcmp(pong, "pong", 4) == 0);
+    printf("[PASS] HTTP/3 datagrams negotiated and exchanged in both directions.\n");
+
+    cwist_http3_client_enable_datagrams(client, 1);
+    assert(cwist_http3_client_send_datagram(client, g_oversized_dgram,
+                                            sizeof(g_oversized_dgram)) == -1);
+    res = NULL;
+    err = cwist_http3_client_request(client, "/datagram-limit", CWIST_HTTP_GET, NULL, NULL, 0,
+                                     &res);
+    assert(err.error.err_i16 == 0 && res != NULL);
+    assert(res->status_code == 200);
+    assert(g_server_oversized_dgram_result == -1);
+    cwist_http_response_destroy(res);
+    printf("[PASS] HTTP/3 client and server reject oversized outgoing datagrams.\n");
 
     res = NULL;
     err = cwist_http3_client_request(client, "/over-limit", CWIST_HTTP_GET, NULL, NULL, 0, &res);
@@ -329,6 +523,236 @@ int main(void) {
     assert(rc == 0);
     cwist_http3_destroy_context(ctx);
     close(udp_fd);
+
+    /* --- Test 12: a peer-initiated CONNECTION_CLOSE is recorded on the
+     * context.  The high-level client cannot close a connection (engine
+     * destroy is silent), so use the raw lsquic client above: complete the
+     * handshake, then abort.  The pinned lsquic notifies the peer with a
+     * transport-level CONNECTION_CLOSE (NO_ERROR, "user aborted
+     * connection"); the server must record it and expose it via
+     * cwist_http3_last_close_error(). --- */
+    ctx = NULL;
+    err = cwist_http3_init_context_ephemeral(&ctx);
+    assert(err.error.err_i16 == 0);
+
+    udp_fd = socket(AF_INET, SOCK_DGRAM, 0);
+    assert(udp_fd >= 0);
+    memset(&addr, 0, sizeof(addr));
+    addr.sin_family = AF_INET;
+    addr.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
+    addr.sin_port = htons(0);
+    assert(bind(udp_fd, (struct sockaddr *)&addr, sizeof(addr)) == 0);
+    addr_len = sizeof(addr);
+    assert(getsockname(udp_fd, (struct sockaddr *)&addr, &addr_len) == 0);
+
+    server_thread_args_t args12 = {.udp_fd = udp_fd, .ctx = ctx};
+    rc = pthread_create(&tid, NULL, http3_server_thread, &args12);
+    assert(rc == 0);
+    usleep(50000);
+
+    /* No close frame received yet. */
+    bool close_app = true;
+    uint64_t close_code = UINT64_MAX;
+    char close_reason[256];
+    assert(cwist_http3_last_close_error(ctx, &close_app, &close_code, close_reason,
+                                        sizeof(close_reason)) == -1);
+
+    /* Raw client: connect and wait for the handshake to complete. */
+    raw_h3_client_t raw = {0};
+    raw.udp_fd = socket(AF_INET, SOCK_DGRAM, 0);
+    assert(raw.udp_fd >= 0);
+    struct sockaddr_in raw_local = {0};
+    raw_local.sin_family = AF_INET;
+    raw_local.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
+    raw_local.sin_port = htons(0);
+    assert(bind(raw.udp_fd, (struct sockaddr *)&raw_local, sizeof(raw_local)) == 0);
+    raw.local_addr_len = sizeof(raw.local_addr);
+    assert(getsockname(raw.udp_fd, (struct sockaddr *)&raw.local_addr,
+                       &raw.local_addr_len) == 0);
+
+    raw.ssl_ctx = SSL_CTX_new(TLS_method());
+    assert(raw.ssl_ctx != NULL);
+    SSL_CTX_set_min_proto_version(raw.ssl_ctx, TLS1_3_VERSION);
+    SSL_CTX_set_max_proto_version(raw.ssl_ctx, TLS1_3_VERSION);
+    /* No verification: the server uses an ephemeral self-signed cert. */
+
+    struct lsquic_engine_settings raw_settings;
+    lsquic_engine_init_settings(&raw_settings, LSENG_HTTP);
+    raw_settings.es_versions = (1 << LSQVER_I001) | (1 << LSQVER_I002);
+
+    struct lsquic_engine_api raw_api = {
+        .ea_stream_if = &raw_stream_if,
+        .ea_stream_if_ctx = &raw,
+        .ea_packets_out = raw_packets_out,
+        .ea_packets_out_ctx = &raw,
+        .ea_get_ssl_ctx = raw_get_ssl_ctx,
+        .ea_settings = &raw_settings,
+        .ea_alpn = "h3",
+    };
+    raw.engine = lsquic_engine_new(LSENG_HTTP, &raw_api);
+    assert(raw.engine != NULL);
+
+    raw.conn = lsquic_engine_connect(raw.engine, N_LSQVER,
+                                     (struct sockaddr *)&raw.local_addr,
+                                     (struct sockaddr *)&addr, &raw, NULL, "localhost", 0,
+                                     NULL, 0, NULL, 0);
+    assert(raw.conn != NULL);
+
+    int hsk_ok = 0;
+    for (int i = 0; i < 200 && !hsk_ok; ++i) {
+        raw_process_io(&raw, 50);
+        if (!raw.conn_closed && lsquic_conn_status(raw.conn, NULL, 0) == LSCONN_ST_CONNECTED)
+            hsk_ok = 1;
+    }
+    assert(hsk_ok);
+    printf("[PASS] HTTP/3 raw client handshake completed.\n");
+
+    /* Let the server promote its mini connection to a full one. */
+    usleep(200000);
+
+    /* Abort: the pinned lsquic notifies the peer with CONNECTION_CLOSE. */
+    lsquic_conn_abort(raw.conn);
+    for (int i = 0; i < 20; ++i) raw_process_io(&raw, 25);
+
+    lsquic_engine_destroy(raw.engine);
+    SSL_CTX_free(raw.ssl_ctx);
+    close(raw.udp_fd);
+
+    /* The close frame is recorded on the engine thread; poll briefly. */
+    int close_rc = -1;
+    for (int i = 0; i < 60 && close_rc != 0; ++i) {
+        close_rc = cwist_http3_last_close_error(ctx, &close_app, &close_code, close_reason,
+                                                sizeof(close_reason));
+        if (close_rc != 0) usleep(50000);
+    }
+    assert(close_rc == 0);
+    assert(close_app == false); /* transport-level close (0x1C), not H3 */
+    assert(close_code == 0);    /* TEC_NO_ERROR pinned by lsquic abort path */
+    printf("[PASS] HTTP/3 peer CONNECTION_CLOSE recorded (transport, code=0, reason=\"%s\").\n",
+           close_reason);
+
+    __atomic_store_n(&ctx->running, 0, __ATOMIC_RELEASE);
+    rc = pthread_join(tid, NULL);
+    assert(rc == 0);
+    cwist_http3_destroy_context(ctx);
+    close(udp_fd);
+
+    /* --- Test 13: early stream close never yields success + NULL response
+     * (issue #521).  The server handler aborts the stream before response
+     * headers, then after headers but before end-of-stream; both must
+     * surface as errors.  A normal response still succeeds. --- */
+    ctx = NULL;
+    err = cwist_http3_init_context(&ctx, TEST_CERT, TEST_KEY);
+    assert(err.error.err_i16 == 0);
+
+    udp_fd = socket(AF_INET, SOCK_DGRAM, 0);
+    assert(udp_fd >= 0);
+    memset(&addr, 0, sizeof(addr));
+    addr.sin_family = AF_INET;
+    addr.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
+    addr.sin_port = htons(0);
+    assert(bind(udp_fd, (struct sockaddr *)&addr, sizeof(addr)) == 0);
+    addr_len = sizeof(addr);
+    assert(getsockname(udp_fd, (struct sockaddr *)&addr, &addr_len) == 0);
+
+    server_thread_args_t args13 = {.udp_fd = udp_fd, .ctx = ctx};
+    rc = pthread_create(&tid, NULL, http3_server_thread, &args13);
+    assert(rc == 0);
+    usleep(50000);
+
+    client = cwist_http3_client_create();
+    assert(client != NULL);
+    assert(cwist_http3_client_set_server(client, "localhost", ntohs(addr.sin_port)) == 0);
+    assert(cwist_http3_client_set_ca_bundle(client, TEST_CERT) == 0);
+    cwist_http3_client_set_timeout_ms(client, 5000);
+    cwist_http3_client_set_conn_timeout_ms(client, 5000);
+    cwist_http3_client_set_max_retries(client, 0);
+
+    static const char *paths13[] = {"/abort", "/abort-headers", "/"};
+    for (int i = 0; i < 3; ++i) {
+        res = NULL;
+        err = cwist_http3_client_request(client, paths13[i], CWIST_HTTP_GET, NULL, NULL, 0, &res);
+        if (i < 2) {
+            assert(err.error.err_i16 != 0);
+            assert(res == NULL);
+            printf("[PASS] HTTP/3 early close (%s) returns error, NULL response.\n", paths13[i]);
+        } else {
+            assert(err.error.err_i16 == 0);
+            assert(res != NULL);
+            assert(res->status_code == 200);
+            cwist_http_response_destroy(res);
+            printf("[PASS] HTTP/3 valid response after early closes succeeds.\n");
+        }
+    }
+
+    cwist_http3_client_destroy(client);
+    __atomic_store_n(&ctx->running, 0, __ATOMIC_RELEASE);
+    rc = pthread_join(tid, NULL);
+    assert(rc == 0);
+    cwist_http3_destroy_context(ctx);
+    close(udp_fd);
+
+    /* --- Test 14: changing the server selects a new connection and address. --- */
+    ctx = NULL;
+    cwist_http3_context *ctx_b = NULL;
+    err = cwist_http3_init_context_ephemeral(&ctx);
+    assert(err.error.err_i16 == 0);
+    err = cwist_http3_init_context_ephemeral(&ctx_b);
+    assert(err.error.err_i16 == 0);
+
+    udp_fd = socket(AF_INET, SOCK_DGRAM, 0);
+    int udp_fd_b = socket(AF_INET, SOCK_DGRAM, 0);
+    assert(udp_fd >= 0 && udp_fd_b >= 0);
+    struct sockaddr_in addr_b;
+    memset(&addr, 0, sizeof(addr));
+    memset(&addr_b, 0, sizeof(addr_b));
+    addr.sin_family = addr_b.sin_family = AF_INET;
+    addr.sin_addr.s_addr = addr_b.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
+    assert(bind(udp_fd, (struct sockaddr *)&addr, sizeof(addr)) == 0);
+    assert(bind(udp_fd_b, (struct sockaddr *)&addr_b, sizeof(addr_b)) == 0);
+    addr_len = sizeof(addr);
+    socklen_t addr_b_len = sizeof(addr_b);
+    assert(getsockname(udp_fd, (struct sockaddr *)&addr, &addr_len) == 0);
+    assert(getsockname(udp_fd_b, (struct sockaddr *)&addr_b, &addr_b_len) == 0);
+
+    _Atomic int calls_a = 0;
+    _Atomic int calls_b = 0;
+    server_thread_args_t args14a = {.udp_fd = udp_fd, .ctx = ctx, .user_ctx = &calls_a};
+    server_thread_args_t args14b = {.udp_fd = udp_fd_b, .ctx = ctx_b, .user_ctx = &calls_b};
+    pthread_t tid_b;
+    assert(pthread_create(&tid, NULL, http3_server_thread, &args14a) == 0);
+    assert(pthread_create(&tid_b, NULL, http3_server_thread, &args14b) == 0);
+    usleep(50000);
+
+    client = cwist_http3_client_create();
+    assert(client != NULL);
+    cwist_http3_client_set_insecure(client, 1);
+    cwist_http3_client_set_timeout_ms(client, 5000);
+    cwist_http3_client_set_conn_timeout_ms(client, 5000);
+    assert(cwist_http3_client_set_server(client, "127.0.0.1", ntohs(addr.sin_port)) == 0);
+    res = NULL;
+    err = cwist_http3_client_request(client, "/", CWIST_HTTP_GET, NULL, NULL, 0, &res);
+    assert(err.error.err_i16 == 0 && res != NULL);
+    cwist_http_response_destroy(res);
+    assert(atomic_load(&calls_a) == 1 && atomic_load(&calls_b) == 0);
+
+    assert(cwist_http3_client_set_server(client, "127.0.0.1", ntohs(addr_b.sin_port)) == 0);
+    res = NULL;
+    err = cwist_http3_client_request(client, "/", CWIST_HTTP_GET, NULL, NULL, 0, &res);
+    assert(err.error.err_i16 == 0 && res != NULL);
+    cwist_http_response_destroy(res);
+    assert(atomic_load(&calls_a) == 1 && atomic_load(&calls_b) == 1);
+    printf("[PASS] HTTP/3 set_server switches subsequent requests to the new server.\n");
+
+    cwist_http3_client_destroy(client);
+    __atomic_store_n(&ctx->running, 0, __ATOMIC_RELEASE);
+    __atomic_store_n(&ctx_b->running, 0, __ATOMIC_RELEASE);
+    assert(pthread_join(tid, NULL) == 0);
+    assert(pthread_join(tid_b, NULL) == 0);
+    cwist_http3_destroy_context(ctx);
+    cwist_http3_destroy_context(ctx_b);
+    close(udp_fd);
+    close(udp_fd_b);
 
     printf("All HTTP/3 infrastructure tests passed!\n");
     lsquic_global_cleanup();
