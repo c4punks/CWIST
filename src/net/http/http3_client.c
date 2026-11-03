@@ -661,27 +661,33 @@ static void h3c_on_close(lsquic_stream_t *stream, lsquic_stream_ctx_t *st_h) {
 /**
  * @brief lsquic datagram-write callback: emit one pending outgoing datagram.
  *
- * Copies the client-held pending datagram (protected by dgram_mtx) into
- * lsquic's buffer, frees the stored copy, and clears the pending flag.
+ * Copies the complete client-held pending datagram (protected by dgram_mtx)
+ * into lsquic's buffer, frees the stored copy, and clears the pending flag.
+ * An entry that no longer fits is discarded whole rather than truncated.
  *
  * @param conn   The lsquic connection asking for a datagram.
  * @param buf    Destination buffer provided by lsquic.
  * @param len    Capacity of @p buf in bytes.
- * @return Number of bytes written to @p buf, or 0 if nothing is pending.
+ * @return Number of bytes written to @p buf, or 0 if nothing was emitted.
  */
 static ssize_t h3c_on_dg_write(lsquic_conn_t *conn, void *buf, size_t len) {
     cwist_http3_client *client = (cwist_http3_client *)lsquic_conn_get_ctx(conn);
     if (!client) return 0;
     pthread_mutex_lock(&client->dgram_mtx);
     if (client->out_dgram.pending && client->out_dgram.data && client->out_dgram.len > 0) {
-        size_t to_copy = client->out_dgram.len < len ? client->out_dgram.len : len;
-        memcpy(buf, client->out_dgram.data, to_copy);
+        ssize_t written = 0;
+        if (client->out_dgram.len <= len) {
+            memcpy(buf, client->out_dgram.data, client->out_dgram.len);
+            written = (ssize_t)client->out_dgram.len;
+        }
         free(client->out_dgram.data);
         client->out_dgram.data = NULL;
         client->out_dgram.len = 0;
         client->out_dgram.pending = 0;
+        lsquic_conn_set_min_datagram_size(conn, 0);
+        lsquic_conn_want_datagram_write(conn, 0);
         pthread_mutex_unlock(&client->dgram_mtx);
-        return (ssize_t)to_copy;
+        return written;
     }
     pthread_mutex_unlock(&client->dgram_mtx);
     return 0;
@@ -1200,8 +1206,14 @@ int cwist_http3_client_send_datagram(cwist_http3_client *client, const void *dat
         pthread_mutex_unlock(&client->dgram_mtx);
         return -1;
     }
+    size_t previous_min = lsquic_conn_get_min_datagram_size(client->conn);
+    if (lsquic_conn_set_min_datagram_size(client->conn, len) != 0) {
+        pthread_mutex_unlock(&client->dgram_mtx);
+        return -1;
+    }
     client->out_dgram.data = malloc(len);
     if (!client->out_dgram.data) {
+        lsquic_conn_set_min_datagram_size(client->conn, previous_min);
         pthread_mutex_unlock(&client->dgram_mtx);
         return -1;
     }
