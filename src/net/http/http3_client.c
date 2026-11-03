@@ -102,6 +102,9 @@ typedef struct h3c_stream_ctx {
     size_t resp_body_cap;
     int headers_done;
     int response_ready;
+    int response_complete;
+    int stream_closed;
+    int request_waiting;
     int write_done;
 #ifdef CWIST_WEBTRANSPORT_CLIENT
     int is_webtransport_connect;
@@ -367,7 +370,10 @@ static lsquic_wt_session_ctx_t *h3c_wt_on_session_open(void *ctx, lsquic_wt_sess
     pthread_mutex_lock(&client->mtx);
     client->wt_connecting->native = native;
     client->wt_connecting->open = 1;
-    if (client->active_stream) client->active_stream->response_ready = 1;
+    if (client->active_stream) {
+        client->active_stream->response_complete = 1;
+        client->active_stream->response_ready = 1;
+    }
     pthread_cond_broadcast(&client->cond);
     pthread_mutex_unlock(&client->mtx);
     return (lsquic_wt_session_ctx_t *)client->wt_connecting;
@@ -389,7 +395,10 @@ static void h3c_wt_on_session_rejected(void *ctx, const struct lsquic_wt_connect
     if (!client || !client->wt_connecting) return;
     pthread_mutex_lock(&client->mtx);
     client->wt_connecting->rejected = 1;
-    if (client->active_stream) client->active_stream->response_ready = 1;
+    if (client->active_stream) {
+        client->active_stream->response_complete = 1;
+        client->active_stream->response_ready = 1;
+    }
     pthread_cond_broadcast(&client->cond);
     pthread_mutex_unlock(&client->mtx);
 }
@@ -496,6 +505,7 @@ static void h3c_on_read(lsquic_stream_t *stream, lsquic_stream_ctx_t *st_h) {
                 if (!client || !st->res || st->res->status_code < 200 ||
                     st->res->status_code >= 300) {
                     if (client && client->wt_connecting) client->wt_connecting->rejected = 1;
+                    st->response_complete = 1;
                     st->response_ready = 1;
                     return;
                 }
@@ -551,6 +561,7 @@ static void h3c_on_read(lsquic_stream_t *stream, lsquic_stream_ctx_t *st_h) {
         if (st->resp_body_len > 0 && st->res && st->res->body) {
             cwist_sstring_assign_len(st->res->body, st->resp_body, st->resp_body_len);
         }
+        st->response_complete = 1;
         st->response_ready = 1;
         lsquic_stream_wantread(stream, 0);
     }
@@ -642,13 +653,25 @@ static void h3c_on_write(lsquic_stream_t *stream, lsquic_stream_ctx_t *st_h) {
     }
 }
 
+static void h3c_stream_ctx_free(h3c_stream_ctx_t *st) {
+    free(st->req_path);
+    free(st->req_body);
+    free(st->resp_body);
+    free(st);
+}
+
 /**
  * @brief lsquic stream close callback: complete the request and free state.
  *
- * Signals @p st_h ->response_ready (if the response had not completed yet),
- * detaches the stream from the client's active_stream pointer, wakes any
- * waiter on the client condition variable, and releases the per-stream
- * request/response buffers and the context itself.
+ * Marks the stream closed and signals @p st_h ->response_ready to wake any
+ * waiter on the client condition variable, and detaches the stream from the
+ * client's active_stream pointer.  The close itself says nothing about
+ * response completeness: cwist_http3_client_request() only reports success
+ * when h3c_on_read() observed end-of-stream, so an early close (peer reset,
+ * truncated headers) surfaces as an error instead of a NULL response.
+ *
+ * The context is freed here unless the request thread is still waiting on
+ * it; in that case the request path frees it once it has observed the close.
  *
  * @param stream   The lsquic stream being closed.
  * @param st_h     Per-stream context (h3c_stream_ctx_t); may be NULL.
@@ -659,16 +682,17 @@ static void h3c_on_close(lsquic_stream_t *stream, lsquic_stream_ctx_t *st_h) {
     cwist_http3_client *client =
         (cwist_http3_client *)lsquic_conn_get_ctx(lsquic_stream_conn(stream));
     pthread_mutex_lock(&client->mtx);
+    st->stream_closed = 1;
     st->response_ready = 1;
     if (client->active_stream == st) {
         client->active_stream = NULL;
     }
     pthread_cond_broadcast(&client->cond);
+    int defer_free = st->request_waiting;
     pthread_mutex_unlock(&client->mtx);
-    free(st->req_path);
-    free(st->req_body);
-    free(st->resp_body);
-    free(st);
+    if (!defer_free) {
+        h3c_stream_ctx_free(st);
+    }
 }
 
 /**
@@ -1145,6 +1169,7 @@ cwist_error_t cwist_http3_client_request(cwist_http3_client *client, const char 
         }
 
         pthread_mutex_lock(&client->mtx);
+        st->request_waiting = 1;
         while (!st->response_ready) {
             pthread_mutex_unlock(&client->mtx);
             h3c_process_io(client, 100);
@@ -1158,27 +1183,43 @@ cwist_error_t cwist_http3_client_request(cwist_http3_client *client, const char 
         }
         pthread_mutex_unlock(&client->mtx);
 
-        if (st->response_ready) {
+        if (st->response_ready && st->response_complete && st->res) {
             *out_response = st->res;
             st->res = NULL; /* Transfer ownership */
+            pthread_mutex_lock(&client->mtx);
+            st->request_waiting = 0;
+            int closed = st->stream_closed;
+            pthread_mutex_unlock(&client->mtx);
+            if (closed) {
+                /* h3c_on_close() ran while we were waiting and deferred
+                 * the context free to this thread. */
+                h3c_stream_ctx_free(st);
+            }
             err.error.err_i16 = 0;
             return err;
         }
 
-        /* Timeout on this attempt: close the stream so lsquic releases the
+        /* Timeout or aborted stream: close the stream so lsquic releases the
          * context via h3c_on_close.  Freeing it here would leave lsquic
-         * holding a dangling stream ctx (use-after-free on the next event). */
+         * holding a dangling stream ctx (use-after-free on the next event).
+         * When the close callback already ran, it deferred the free to us. */
         err.error.err_i16 = -1;
         pthread_mutex_lock(&client->mtx);
         if (client->active_stream == st) {
             client->active_stream = NULL;
         }
+        st->request_waiting = 0;
+        int aborted = st->stream_closed;
         pthread_mutex_unlock(&client->mtx);
         if (st->res) {
             cwist_http_response_destroy(st->res);
             st->res = NULL;
         }
-        lsquic_stream_close(st->stream);
+        if (aborted) {
+            h3c_stream_ctx_free(st);
+        } else {
+            lsquic_stream_close(st->stream);
+        }
 
     retry_backoff:
         attempt++;
