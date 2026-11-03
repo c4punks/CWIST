@@ -86,6 +86,31 @@ int main(void) {
     assert(stop_calls == 1 && !g_accept_rearm_pending);
     assert(add_calls == 1);
 
+    /* Multishot -> one-shot fallback (issue #523): a failed fallback re-arm
+     * must enter the same bounded timer retry as the normal path instead of
+     * silently dropping the listener. */
+    reset_case(app);
+    g_accept_ctx.app = app;
+    g_accept_ctx.listen_fd = fd;
+    async_accept_uring_cb(&g_accept_ctx, -1);
+    assert(add_calls == 1 && timer_calls == 1 && stop_calls == 0);
+    assert(g_accept_rearm_pending && g_accept_rearm_attempt == 1);
+
+    g_accept_rearm_timer.cb(app);
+    assert(add_calls == 2 && timer_calls == 2);
+    assert(g_accept_rearm_pending && g_accept_rearm_attempt == 2);
+    g_accept_rearm_timer.cb(app);
+    assert(add_calls == 3 && !g_accept_rearm_pending);
+    assert(g_accept_rearm_attempt == 0);
+
+    /* Shutdown must not leave a pending fallback retry behind. */
+    reset_case(app);
+    async_accept_uring_cb(&g_accept_ctx, -1);
+    assert(g_accept_rearm_pending);
+    atomic_store(&g_cwist_running, 0);
+    g_accept_rearm_timer.cb(app);
+    assert(stop_calls == 1 && !g_accept_rearm_pending);
+
     close(fd);
     cwist_app_destroy(app);
     puts("test_async_listener_rearm: all passed");

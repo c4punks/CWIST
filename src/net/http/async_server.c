@@ -130,8 +130,14 @@ static void async_accept_uring_cb(void *ctx, int fd) {
     async_accept_ctx_t *ac = (async_accept_ctx_t *)ctx;
     if (fd < 0) {
         if (g_reactor && atomic_load(&g_cwist_running)) {
-            cwist_reactor_add(g_reactor, ac->listen_fd, async_accept_cb, &ac->app,
-                              sizeof(ac->app));
+            if (cwist_reactor_add(g_reactor, ac->listen_fd, async_accept_cb, &ac->app,
+                                  sizeof(ac->app))) {
+                return;
+            }
+            /* Same bounded asynchronous backoff as the normal listener
+             * re-arm path: never drop the listener silently on a transient
+             * submission/allocation failure. */
+            async_accept_rearm_schedule(ac->app);
         }
         return;
     }
