@@ -960,8 +960,29 @@ void cwist_http3_client_destroy(cwist_http3_client *client) {
 
 int cwist_http3_client_set_server(cwist_http3_client *client, const char *host, uint16_t port) {
     if (!client || !host) return -1;
+    if (client->host && client->port == port && strcmp(client->host, host) == 0) return 0;
+
     char *copy = strdup(host);
     if (!copy) return -1; /* keep the previous server */
+
+    if (client->conn) {
+        lsquic_conn_close(client->conn);
+        for (int i = 0; i < 100 && client->conn; ++i) h3c_process_io(client, 20);
+        if (client->conn) {
+            lsquic_conn_abort(client->conn);
+            for (int i = 0; i < 100 && client->conn; ++i) h3c_process_io(client, 20);
+        }
+        client->conn = NULL;
+    }
+    if (client->udp_fd >= 0) {
+        close(client->udp_fd);
+        client->udp_fd = -1;
+    }
+    memset(&client->peer_addr, 0, sizeof(client->peer_addr));
+    memset(&client->local_addr, 0, sizeof(client->local_addr));
+    client->peer_addr_len = 0;
+    client->local_addr_len = 0;
+
     free(client->host);
     client->host = copy;
     client->port = port;
