@@ -865,6 +865,7 @@ static cwist_webrtc_ctx *ctx_create(cwist_reactor_t *reactor, bool owns_reactor,
 
     cwist_ice_random_creds(ctx->ice_ufrag, sizeof(ctx->ice_ufrag), ctx->ice_pwd,
                            sizeof(ctx->ice_pwd));
+    if (ctx->ice_ufrag[0] == '\0' || ctx->ice_pwd[0] == '\0') goto fail;
     detect_host_ip(ctx->host_ip, sizeof(ctx->host_ip));
     return ctx;
 
