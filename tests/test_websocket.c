@@ -245,6 +245,25 @@ static void test_orphan_continuation_rejected(void) {
     printf("Orphan CONTINUATION rejection test passed.\n");
 }
 
+static cwist_websocket *upgrade_for_frames(int sv[2], cwist_http_request **out_req);
+
+static void test_reserved_opcodes_rejected(void) {
+    const uint8_t opcodes[] = {0x83, 0x8B};
+    for (size_t i = 0; i < 2; i++) {
+        int sv[2];
+        assert(socketpair(AF_UNIX, SOCK_STREAM, 0, sv) == 0);
+        cwist_http_request *req;
+        cwist_websocket *ws = upgrade_for_frames(sv, &req);
+        send_masked_frame(sv[1], opcodes[i], NULL, 0);
+        assert(cwist_websocket_receive(ws) == NULL);
+        cwist_websocket_destroy(ws);
+        cwist_http_request_destroy(req);
+        close(sv[0]);
+        close(sv[1]);
+    }
+    printf("Reserved WebSocket opcode rejection test passed.\n");
+}
+
 static cwist_websocket *upgrade_for_frames(int sv[2], cwist_http_request **out_req) {
     cwist_http_request *req = cwist_http_request_create();
     cwist_http_header_add(&req->headers, "Connection", "Upgrade");
@@ -396,6 +415,7 @@ int main() {
     test_handshake_validation();
     test_websocket_sequenced();
     test_orphan_continuation_rejected();
+    test_reserved_opcodes_rejected();
     test_fragmentation_state();
     return 0;
 }
