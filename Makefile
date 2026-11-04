@@ -1480,6 +1480,7 @@ TEST_TARGETS = test_worker_affinity \
                test_builtin_mw_chain \
                test_grpc \
                test_grpc_append_error \
+               test_grpc_route_alloc \
                test_grpc_health_alloc \
                test_grpc_stream \
                test_grpc_client \
@@ -2567,6 +2568,10 @@ test_grpc: $(LIB_NAME) tests/test_grpc.c
 test_grpc_append_error: $(LIB_NAME) tests/test_grpc_append_error.c
 	$(CC) $(CFLAGS) -o test_grpc_append_error tests/test_grpc_append_error.c $(LIB_NAME) $(LIBS)
 	./test_grpc_append_error
+
+test_grpc_route_alloc: $(LIB_NAME) tests/test_grpc_route_alloc.c
+	$(CC) $(CFLAGS) -Wl,--wrap=cwist_alloc -o test_grpc_route_alloc tests/test_grpc_route_alloc.c $(LIB_NAME) $(LIBS)
+	./test_grpc_route_alloc
 
 test_grpc_health_alloc: $(LIB_NAME) tests/test_grpc_health_alloc.c
 	$(CC) $(CFLAGS) -Wl,--wrap=cwist_alloc -o test_grpc_health_alloc tests/test_grpc_health_alloc.c $(LIB_NAME) $(LIBS)
