@@ -227,6 +227,7 @@ int main(void) {
     int fd_early = attach_conn(reactor);    /* subscribe-before-init */
     int fd_ping = attach_conn(reactor);     /* ping-before-init */
     int fd_garbage = attach_conn(reactor);  /* malformed JSON */
+    int fd_second_init = attach_conn(reactor); /* duplicate connection_init */
     int fd_dup = attach_conn(reactor);      /* duplicate operation id */
     int fd = attach_conn(reactor);          /* main flow */
 
@@ -256,7 +257,19 @@ int main(void) {
     close(fd_garbage);
     printf("3. malformed JSON -> close 4400: ok\n");
 
-    /* 4. Duplicate subscriber id closes with 4409. */
+    /* 4. A second connection_init closes with 4401. */
+    write_text(fd_second_init, "{\"type\":\"connection_init\"}");
+    {
+        cJSON *ack = read_json_message(fd_second_init);
+        cJSON_Delete(ack);
+    }
+    write_text(fd_second_init, "{\"type\":\"connection_init\"}");
+    expect_close_code(fd_second_init, CLOSE_UNAUTHORIZED);
+    expect_eof(fd_second_init);
+    close(fd_second_init);
+    printf("4. duplicate connection_init -> close 4401: ok\n");
+
+    /* 5. Duplicate subscriber id closes with 4409. */
     write_text(fd_dup, "{\"type\":\"connection_init\"}");
     {
         cJSON *ack = read_json_message(fd_dup);
