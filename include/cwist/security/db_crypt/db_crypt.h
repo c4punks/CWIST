@@ -8,19 +8,22 @@
  * Data Encryption Key (DEK).  The DEK is then wrapped (encrypted) with a
  * Key Encryption Key (KEK) that the caller manages.
  *
- * Wire format produced by cwist_db_crypt_seal()
- * ===============================================
+ * Version 2 wire format produced by cwist_db_crypt_seal()
+ * =========================================================
  *  Offset  Length   Content
  *  ------  ------   -------
  *     0      4      Magic "CWDB" (0x43 0x57 0x44 0x42)
- *     4      1      Version byte (0x01)
- *     5     16      KEK IV   – random IV used to encrypt the DEK blob
- *    21     64      Encrypted DEK blob – AES-256-CBC( KEK, KEK_IV,
- *                               DEK_IV(16) || DEK(32) ) = 64 bytes (48-byte
- *                               plaintext padded to next AES block boundary)
- *    85     16      DEK IV   – random IV used to encrypt the SQLite bytes
- *    85      8      Plaintext length (little-endian uint64)
- *    93      N      AES-256-CBC( DEK, DEK_IV, sqlite_bytes ) padded to 16
+ *     4      1      Version byte (0x02)
+ *     5     16      KEK IV used to encrypt the DEK blob
+ *    21     64      AES-256-CBC encrypted DEK_IV(16) || DEK(32)
+ *    85     16      DEK IV used to encrypt the SQLite bytes
+ *   101      8      Plaintext length (little-endian uint64)
+ *   109      N      AES-256-CBC encrypted SQLite bytes
+ * 109+N     32      HMAC-SHA256 over every preceding byte
+ *
+ * cwist_db_crypt_open() accepts only authenticated v2 blobs. Applications
+ * migrating v1 data must explicitly use cwist_db_crypt_open_legacy() and
+ * reseal it, which prevents silent downgrade to unauthenticated decryption.
  */
 
 #ifndef __CWIST_DB_CRYPT_H__
@@ -86,5 +89,15 @@ unsigned char *cwist_db_crypt_seal(const cwist_db_crypt_ctx_t *ctx,
  */
 unsigned char *cwist_db_crypt_open(const cwist_db_crypt_ctx_t *ctx, const unsigned char *blob,
                                    size_t blob_len, size_t *out_len);
+
+/**
+ * @brief Explicitly decrypt an unauthenticated legacy v1 blob for migration.
+ *
+ * This compatibility path provides no ciphertext integrity. Validate the
+ * result and reseal it with cwist_db_crypt_seal() before further use.
+ */
+unsigned char *cwist_db_crypt_open_legacy(const cwist_db_crypt_ctx_t *ctx,
+                                          const unsigned char *blob, size_t blob_len,
+                                          size_t *out_len);
 
 #endif /* __CWIST_DB_CRYPT_H__ */
