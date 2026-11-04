@@ -13,7 +13,7 @@
 
 typedef struct {
     int fd;
-    int invalid;
+    int mode;
 } server_ctx;
 
 static void read_all(int fd, void *buf, size_t len) {
@@ -79,15 +79,33 @@ static void *serve(void *arg) {
     } while (type != 0);
 
     static const unsigned char status_ok[] = {0x88};
-    send_frame(fd, 1, 4, stream, status_ok, sizeof(status_ok));
-    if (ctx->invalid) {
+    static const unsigned char padded_status[] = {2, 0x88, 0, 0};
+    static const unsigned char priority_status[] = {0, 0, 0, 0, 0, 0x88};
+    if (ctx->mode == 2)
+        send_frame(fd, 1, 0x0c, stream, padded_status, sizeof(padded_status));
+    else if (ctx->mode == 3)
+        send_frame(fd, 1, 0x24, stream, priority_status, sizeof(priority_status));
+    else
+        send_frame(fd, 1, 4, stream, status_ok, sizeof(status_ok));
+
+    if (ctx->mode == 1) {
         const unsigned char data[] = {1};
         send_frame(fd, 0, 9, stream, data, sizeof(data));
         read_frame(fd, &type, &stream);
         assert(type == 7); /* GOAWAY(PROTOCOL_ERROR) */
-    } else {
+    } else if (ctx->mode == 0) {
         const unsigned char data[] = {2, 0, 0, 0, 0, 1, 'x', 0, 0};
         send_frame(fd, 0, 9, stream, data, sizeof(data));
+    } else {
+        const unsigned char data[] = {0, 0, 0, 0, 1, 'x'};
+        send_frame(fd, 0, ctx->mode >= 4 ? 0 : 1, stream, data, sizeof(data));
+        if (ctx->mode == 4) {
+            const unsigned char trailer[] = {2, 0, 0};
+            send_frame(fd, 1, 0x0d, stream, trailer, sizeof(trailer));
+        } else if (ctx->mode == 5) {
+            const unsigned char trailer[] = {0, 0, 0, 0, 0};
+            send_frame(fd, 1, 0x25, stream, trailer, sizeof(trailer));
+        }
     }
     struct timespec delay = {0, 100000000L};
     nanosleep(&delay, NULL);
@@ -97,7 +115,7 @@ static void *serve(void *arg) {
     return NULL;
 }
 
-static uint16_t start_server(int invalid, pthread_t *tid) {
+static uint16_t start_server(int mode, pthread_t *tid) {
     int fd = socket(AF_INET, SOCK_STREAM, 0);
     assert(fd >= 0);
     int one = 1;
@@ -112,24 +130,25 @@ static uint16_t start_server(int invalid, pthread_t *tid) {
     server_ctx *ctx = malloc(sizeof(*ctx));
     assert(ctx != NULL);
     ctx->fd = fd;
-    ctx->invalid = invalid;
+    ctx->mode = mode;
     assert(pthread_create(tid, NULL, serve, ctx) == 0);
     return ntohs(addr.sin_port);
 }
 
-static void run_case(int invalid) {
+static void run_case(int mode) {
     pthread_t tid;
-    uint16_t port = start_server(invalid, &tid);
+    uint16_t port = start_server(mode, &tid);
     cwist_grpc_client *client = cwist_grpc_client_connect("127.0.0.1", port, NULL);
     assert(client != NULL);
     cwist_grpc_call *call = cwist_grpc_call_start(client, "/test.Test/Call", NULL, 0, 2000);
     assert(call != NULL);
     cwist_grpc_message msg;
     int rc = cwist_grpc_call_recv(call, &msg);
-    if (invalid) {
+    if (mode == 1) {
         assert(rc != 1);
     } else {
         assert(rc == 1 && msg.len == 1 && msg.data[0] == 'x');
+        if (mode >= 4) assert(cwist_grpc_call_recv(call, &msg) == 0);
     }
     cwist_grpc_call_destroy(call);
     cwist_grpc_client_close(client);
@@ -137,8 +156,7 @@ static void run_case(int invalid) {
 }
 
 int main(void) {
-    run_case(0);
-    run_case(1);
+    for (int mode = 0; mode < 6; mode++) run_case(mode);
     puts("test_grpc_client_padding: all passed");
     return 0;
 }
