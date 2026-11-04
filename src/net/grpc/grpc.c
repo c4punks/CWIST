@@ -1140,16 +1140,11 @@ static void grpc_health_watch(cwist_grpc_stream *stream, void *ctx) {
         cwist_grpc_message msg;
         int rc = cwist_grpc_stream_recv(stream, &msg);
         if (rc < 0) return; /* cancelled before the request arrived */
-        if (rc > 0) service = grpc_health_service_copy(&msg, &allocation_failed);
+        if (rc > 0) service = grpc_health_service_copy(&msg, NULL);
     } else {
         cwist_grpc_message empty = {0, NULL, 0};
         const cwist_grpc_message *message = stream->message_count ? &stream->messages[0] : &empty;
-        service = grpc_health_service_copy(message, &allocation_failed);
-    }
-    if (allocation_failed) {
-        stream->status = CWIST_GRPC_INTERNAL;
-        stream->status_message = "health request allocation failed";
-        goto out;
+        service = grpc_health_service_copy(message, NULL);
     }
 
     /* Send the current status immediately, as the protocol requires. */
