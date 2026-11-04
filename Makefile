@@ -2583,8 +2583,9 @@ test_grpc_route_alloc: $(LIB_NAME) tests/test_grpc_route_alloc.c
 	$(CC) $(CFLAGS) -Wl,--wrap=cwist_alloc -o test_grpc_route_alloc tests/test_grpc_route_alloc.c $(LIB_NAME) $(LIBS)
 	./test_grpc_route_alloc
 
+test_grpc_health_alloc: CFLAGS += -fno-lto
 test_grpc_health_alloc: $(LIB_NAME) tests/test_grpc_health_alloc.c
-	$(CC) $(CFLAGS) -Wl,--wrap=cwist_alloc -o test_grpc_health_alloc tests/test_grpc_health_alloc.c $(LIB_NAME) $(LIBS)
+	$(CC) $(CFLAGS) -fno-lto -Wl,--wrap=cwist_alloc -o test_grpc_health_alloc tests/test_grpc_health_alloc.c $(LIB_NAME) $(LIBS)
 	./test_grpc_health_alloc
 
 test_grpc_stream: $(LIB_NAME) tests/test_grpc_stream.c
