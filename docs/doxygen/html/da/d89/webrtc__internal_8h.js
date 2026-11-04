@@ -23,6 +23,7 @@ var webrtc__internal_8h =
     [ "cwist_dtls_fingerprint", "da/d89/webrtc__internal_8h.html#a0d60a73cbeb8877b16726af6280da623", null ],
     [ "cwist_dtls_generate_cert", "da/d89/webrtc__internal_8h.html#aefaae4860a9f7e83be891d6a56b795c8", null ],
     [ "cwist_dtls_link_mtu", "da/d89/webrtc__internal_8h.html#ab0399f52ba8316a589f281167ab8082e", null ],
+    [ "cwist_dtls_verify_fingerprint", "da/d89/webrtc__internal_8h.html#aa4648b9729c4ff987995efaf07f58c5a", null ],
     [ "cwist_ice_random_creds", "da/d89/webrtc__internal_8h.html#a7e2af2e306e3f6bf351869e96036d4bc", null ],
     [ "cwist_ice_stun_build_request", "da/d89/webrtc__internal_8h.html#a3fa759d0ff54408316bdab85d250628c", null ],
     [ "cwist_ice_stun_build_response", "da/d89/webrtc__internal_8h.html#aeb9a4b965f7448524d87fe13086ea534", null ],
@@ -48,6 +49,6 @@ var webrtc__internal_8h =
     [ "cwist_webrtc_conn_on_channel_open", "da/d89/webrtc__internal_8h.html#a14078fa92a111f838387e5f974705f3a", null ],
     [ "cwist_webrtc_conn_on_message", "da/d89/webrtc__internal_8h.html#af59b950077d100cbe2e9a762cd6ceb32", null ],
     [ "cwist_webrtc_conn_sctp_out", "da/d89/webrtc__internal_8h.html#a2f558b276749f810e6b852a37ac548a7", null ],
-    [ "cwist_webrtc_connect", "da/d89/webrtc__internal_8h.html#a93097ec91ded6b2fcfe789ab50677d28", null ],
+    [ "cwist_webrtc_connect", "da/d89/webrtc__internal_8h.html#a50395e2f81fe876f0d1b726173f62560", null ],
     [ "cwist_webrtc_on_owner", "da/d89/webrtc__internal_8h.html#aa86a04eeed6022ca8acc7d0ecc7a1ce6", null ]
 ];
