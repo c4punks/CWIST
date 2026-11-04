@@ -26,6 +26,7 @@
 #include <ttak/async/sched.h>
 #include "tls_chain.h"
 #include "h3_hdr_out.h"
+#include "http3_global.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -99,21 +100,21 @@ static int g_h3_global_ref = 0;
  * Initializes lsquic on the first reference; later calls only bump the
  * reference count.  Thread-safe via @ref g_h3_global_mtx.
  */
-static void h3_global_init(void) {
+void cwist_h3_global_acquire(void) {
     pthread_mutex_lock(&g_h3_global_mtx);
     if (g_h3_global_ref == 0) {
-        lsquic_global_init(LSQUIC_GLOBAL_SERVER);
+        lsquic_global_init(LSQUIC_GLOBAL_CLIENT | LSQUIC_GLOBAL_SERVER);
     }
     g_h3_global_ref++;
     pthread_mutex_unlock(&g_h3_global_mtx);
 }
 
 /**
- * @brief Release a reference taken by h3_global_init().
+ * @brief Release a reference taken by cwist_h3_global_acquire().
  * Runs lsquic_global_cleanup() when the last reference is dropped.
  * Thread-safe; safe to call with no matching init (no-op).
  */
-static void h3_global_cleanup(void) {
+void cwist_h3_global_release(void) {
     pthread_mutex_lock(&g_h3_global_mtx);
     if (g_h3_global_ref > 0) {
         g_h3_global_ref--;
@@ -2679,14 +2680,14 @@ cwist_error_t cwist_http3_init_context(cwist_http3_context **ctx, const char *ce
         return err;
     }
 
-    h3_global_init();
+    cwist_h3_global_acquire();
 
     cwist_h3_ticket_key *tkey = NULL;
     SSL_CTX *ssl_ctx = NULL;
     err = cwist_h3_build_ssl_ctx(&ssl_ctx, cert_path, key_path, 0, &tkey);
     if (!cwist_error_is_ok(&err)) {
         cwist_h3_free_ticket_key(tkey);
-        h3_global_cleanup();
+        cwist_h3_global_release();
         return err;
     }
 
@@ -2694,7 +2695,7 @@ cwist_error_t cwist_http3_init_context(cwist_http3_context **ctx, const char *ce
     if (!*ctx) {
         SSL_CTX_free(ssl_ctx);
         cwist_h3_free_ticket_key(tkey);
-        h3_global_cleanup();
+        cwist_h3_global_release();
         err.error.err_i16 = -1;
         return err;
     }
@@ -2726,13 +2727,13 @@ cwist_error_t cwist_http3_init_context_ephemeral(cwist_http3_context **ctx) {
         return err;
     }
 
-    h3_global_init();
+    cwist_h3_global_acquire();
 
     cwist_h3_ticket_key *tkey = NULL;
     const SSL_METHOD *method = TLS_method();
     SSL_CTX *ssl_ctx = SSL_CTX_new(method);
     if (!ssl_ctx) {
-        h3_global_cleanup();
+        cwist_h3_global_release();
         err.error.err_i16 = -1;
         return err;
     }
@@ -2743,7 +2744,7 @@ cwist_error_t cwist_http3_init_context_ephemeral(cwist_http3_context **ctx) {
     if (!pctx) {
         cwist_h3_free_ticket_key(tkey);
         SSL_CTX_free(ssl_ctx);
-        h3_global_cleanup();
+        cwist_h3_global_release();
         err.error.err_i16 = -1;
         return err;
     }
@@ -2751,7 +2752,7 @@ cwist_error_t cwist_http3_init_context_ephemeral(cwist_http3_context **ctx) {
         EVP_PKEY_CTX_free(pctx);
         cwist_h3_free_ticket_key(tkey);
         SSL_CTX_free(ssl_ctx);
-        h3_global_cleanup();
+        cwist_h3_global_release();
         err.error.err_i16 = -1;
         return err;
     }
@@ -2760,7 +2761,7 @@ cwist_error_t cwist_http3_init_context_ephemeral(cwist_http3_context **ctx) {
         EVP_PKEY_CTX_free(pctx);
         cwist_h3_free_ticket_key(tkey);
         SSL_CTX_free(ssl_ctx);
-        h3_global_cleanup();
+        cwist_h3_global_release();
         err.error.err_i16 = -1;
         return err;
     }
@@ -2771,7 +2772,7 @@ cwist_error_t cwist_http3_init_context_ephemeral(cwist_http3_context **ctx) {
         EVP_PKEY_free(pkey);
         cwist_h3_free_ticket_key(tkey);
         SSL_CTX_free(ssl_ctx);
-        h3_global_cleanup();
+        cwist_h3_global_release();
         err.error.err_i16 = -1;
         return err;
     }
@@ -2792,7 +2793,7 @@ cwist_error_t cwist_http3_init_context_ephemeral(cwist_http3_context **ctx) {
         EVP_PKEY_free(pkey);
         cwist_h3_free_ticket_key(tkey);
         SSL_CTX_free(ssl_ctx);
-        h3_global_cleanup();
+        cwist_h3_global_release();
         err.error.err_i16 = -1;
         return err;
     }
@@ -2804,7 +2805,7 @@ cwist_error_t cwist_http3_init_context_ephemeral(cwist_http3_context **ctx) {
     if (!*ctx) {
         cwist_h3_free_ticket_key(tkey);
         SSL_CTX_free(ssl_ctx);
-        h3_global_cleanup();
+        cwist_h3_global_release();
         err.error.err_i16 = -1;
         return err;
     }
@@ -2869,7 +2870,7 @@ void cwist_http3_destroy_context(cwist_http3_context *ctx) {
         cwist_h3_free_ticket_key((cwist_h3_ticket_key *)ctx->ticket_key);
         ctx->ticket_key = NULL;
         cwist_free(ctx);
-        h3_global_cleanup();
+        cwist_h3_global_release();
     }
 }
 
