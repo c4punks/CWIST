@@ -141,7 +141,7 @@
 1	src/net/http/http3_client.c:free(hset_p);
 2	src/net/http/http3_client.c:free(name);
 4	src/net/http/http3_client.c:free(node);
-4	src/net/http/http3_client.c:free(node->data);
+3	src/net/http/http3_client.c:free(node->data);
 2	src/net/http/http3_client.c:free(session);
 1	src/net/http/http3_client.c:free(st);
 1	src/net/http/http3_client.c:free(st->req_body);
