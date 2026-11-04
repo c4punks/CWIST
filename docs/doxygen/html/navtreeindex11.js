@@ -1,5 +1,9 @@
 var NAVTREEINDEX11 =
 {
+"d8/dad/sockopts_8h.html":[94,0,2,2,3,26],
+"d8/dad/sockopts_8h.html#a546e727db4f5d4420f59f7cc41c0e382":[94,0,2,2,3,26,0],
+"d8/dad/sockopts_8h_source.html":[94,0,2,2,3,26],
+"d8/dca/struct____prim__cwist__error__t.html":[93,0,0],
 "d8/dca/struct____prim__cwist__error__t.html#a28bfdaaec9dcf6682e1b8e0eee96d664":[93,0,0,4],
 "d8/dca/struct____prim__cwist__error__t.html#a353915bc7ca09777310250478c5afca4":[93,0,0,8],
 "d8/dca/struct____prim__cwist__error__t.html#a3e0460f5fb0e30575473fc42bc530ee1":[93,0,0,6],
@@ -126,8 +130,8 @@ var NAVTREEINDEX11 =
 "d9/d90/structcwist__bdr__t.html#af4ae5dc1251aa2639322682200fe5f28":[93,0,6,5],
 "d9/d9a/mem_8h.html":[94,0,2,3,2,0,0,4],
 "d9/d9a/mem_8h_source.html":[94,0,2,3,2,0,0,4],
-"d9/d9b/simd__parser_8h.html":[94,0,2,2,3,24],
-"d9/d9b/simd__parser_8h_source.html":[94,0,2,2,3,24],
+"d9/d9b/simd__parser_8h.html":[94,0,2,2,3,25],
+"d9/d9b/simd__parser_8h_source.html":[94,0,2,2,3,25],
 "d9/da9/structcwist__otel__cfg__t.html":[93,0,73],
 "d9/da9/structcwist__otel__cfg__t.html#a2052d8b6d1727106ef49568e4a65b788":[93,0,73,2],
 "d9/da9/structcwist__otel__cfg__t.html#a6bc2edec40d80f955d5c9af84ce796d3":[93,0,73,1],
@@ -245,9 +249,5 @@ var NAVTREEINDEX11 =
 "d9/dab/net_2http_2http_8h.html#a99b5ad0e71431205a397a336983f4f4da174cebaff97031977a213988619cf543":[94,0,1,0,2,3,4,31,23],
 "d9/dab/net_2http_2http_8h.html#a99b5ad0e71431205a397a336983f4f4da1bf89b3b252acb7e40a24a2b5cf96ede":[94,0,1,0,2,3,4,31,15],
 "d9/dab/net_2http_2http_8h.html#a99b5ad0e71431205a397a336983f4f4da1daec5d4263dc5e196a305ec03d5f368":[94,0,1,0,2,3,4,31,60],
-"d9/dab/net_2http_2http_8h.html#a99b5ad0e71431205a397a336983f4f4da200e870339450b701ebb484e81b223fc":[94,0,1,0,2,3,4,31,2],
-"d9/dab/net_2http_2http_8h.html#a99b5ad0e71431205a397a336983f4f4da20d383c7ab87705ef974ff808a5ac96a":[94,0,1,0,2,3,4,31,29],
-"d9/dab/net_2http_2http_8h.html#a99b5ad0e71431205a397a336983f4f4da25e907ccf9bba5ca3fb3bff79087f2a1":[94,0,1,0,2,3,4,31,47],
-"d9/dab/net_2http_2http_8h.html#a99b5ad0e71431205a397a336983f4f4da2fccb710d560d71e199b2ed4efdf2c74":[94,0,1,0,2,3,4,31,58],
-"d9/dab/net_2http_2http_8h.html#a99b5ad0e71431205a397a336983f4f4da3579f9a5cfc367d3b8d3eb3161606f29":[94,0,1,0,2,3,4,31,31]
+"d9/dab/net_2http_2http_8h.html#a99b5ad0e71431205a397a336983f4f4da200e870339450b701ebb484e81b223fc":[94,0,1,0,2,3,4,31,2]
 };

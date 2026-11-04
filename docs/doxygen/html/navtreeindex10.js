@@ -1,5 +1,9 @@
 var NAVTREEINDEX10 =
 {
+"d7/db7/structcwist__config__bucket.html":[93,0,16],
+"d7/db7/structcwist__config__bucket.html#a211f44794fa3fb8983c58c8a3bce1723":[93,0,16,0],
+"d7/db7/structcwist__config__bucket.html#a3a693d2501409ac50f610a00405a912d":[93,0,16,1],
+"d7/db7/structcwist__config__bucket.html#ac09c20aa17c05eb4fe54e9f9eb86befe":[93,0,16,2],
 "d7/dba/structcwist__fix__server__mem.html":[93,0,25],
 "d7/dba/structcwist__fix__server__mem.html#a113ff4343f4d9e628b0d2871cc13f7c5":[93,0,25,6],
 "d7/dba/structcwist__fix__server__mem.html#a20f68233be797b56aa1f92d13f72be17":[93,0,25,0],
@@ -245,9 +249,5 @@ var NAVTREEINDEX10 =
 "d8/d99/sys__info_8c.html#a3024ccd4a9af5109d24e6c57565d74a1":[94,0,2,4,9,0],
 "d8/d99/sys__info_8c.html#a6e6850d97cd1c683dc5ddd4af5c11303":[94,0,2,4,9,2],
 "d8/d99/sys__info_8c.html#ad4c237dc6aa45fedcf25cdd3a69f45ce":[94,0,2,4,9,1],
-"d8/d99/sys__info_8c_source.html":[94,0,2,4,9],
-"d8/dad/sockopts_8h.html":[94,0,2,2,3,25],
-"d8/dad/sockopts_8h.html#a546e727db4f5d4420f59f7cc41c0e382":[94,0,2,2,3,25,0],
-"d8/dad/sockopts_8h_source.html":[94,0,2,2,3,25],
-"d8/dca/struct____prim__cwist__error__t.html":[93,0,0]
+"d8/d99/sys__info_8c_source.html":[94,0,2,4,9]
 };
