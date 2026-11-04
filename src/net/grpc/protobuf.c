@@ -261,6 +261,7 @@ int cwist_pb_read_varint(cwist_pb_reader *r, uint64_t *out) {
     unsigned shift = 0;
     while (r->pos < r->len && shift <= 63) {
         uint8_t byte = r->data[r->pos++];
+        if (shift == 63 && (byte & 0x7f) > 1) return -1;
         value |= ((uint64_t)(byte & 0x7f)) << shift;
         if ((byte & 0x80) == 0) {
             *out = value;
