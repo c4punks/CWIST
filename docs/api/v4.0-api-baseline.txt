@@ -4,7 +4,7 @@
 # (parameter names dropped) and struct/union/enum layouts in member order.
 # `make api-check` (CI) fails when the headers no longer match this file.
 
-== functions (796) ==
+== functions (797) ==
 cwist_accept_socket
 cwist_alloc
 cwist_alloc_array
@@ -163,6 +163,7 @@ cwist_css_scope_generate_stylesheet
 cwist_css_scope_init
 cwist_db_close
 cwist_db_crypt_open
+cwist_db_crypt_open_legacy
 cwist_db_crypt_seal
 cwist_db_exec
 cwist_db_insert_healed
@@ -802,7 +803,7 @@ cwist_zod_parse
 cwist_zod_print_errors
 cwist_zod_validate
 
-== function signatures (797) ==
+== function signatures (798) ==
 cwist_accept_socket: cwist_error_t (int, struct sockaddr *, void (*)(int client_fd, void *ctx), void *)
 cwist_alloc: void * (size_t)
 cwist_alloc_array: void * (size_t, size_t)
@@ -962,6 +963,7 @@ cwist_css_scope_generate_stylesheet: cwist_sstring * (const cwist_css_scope *)
 cwist_css_scope_init: void (cwist_css_scope *, const char *)
 cwist_db_close: void (cwist_db *)
 cwist_db_crypt_open: unsigned char * (const cwist_db_crypt_ctx_t *, const unsigned char *, size_t, size_t *)
+cwist_db_crypt_open_legacy: unsigned char * (const cwist_db_crypt_ctx_t *, const unsigned char *, size_t, size_t *)
 cwist_db_crypt_seal: unsigned char * (const cwist_db_crypt_ctx_t *, const unsigned char *, size_t, size_t *)
 cwist_db_exec: cwist_error_t (cwist_db *, const char *)
 cwist_db_insert_healed: cwist_error_t (cwist_db *, const char *, const char *, const cwist_schema_t *, const cwist_heal_config_t *)

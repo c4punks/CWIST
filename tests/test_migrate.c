@@ -171,6 +171,7 @@ static void test_db_crypt_roundtrip(void) {
     unsigned char *blob = cwist_db_crypt_seal(&ctx, plaintext, pt_len, &blob_len);
     assert(blob != NULL);
     assert(blob_len > pt_len);
+    assert(blob[4] == 0x02);
 
     size_t out_len = 0;
     unsigned char *recovered = cwist_db_crypt_open(&ctx, blob, blob_len, &out_len);
@@ -207,6 +208,33 @@ static void test_db_crypt_wrong_kek(void) {
     printf("  Passed.\n");
 }
 
+static void test_db_crypt_rejects_tampering(void) {
+    printf("Testing db_crypt rejects authenticated blob tampering...\n");
+
+    cwist_db_crypt_ctx_t ctx;
+    memset(ctx.kek, 0x42, sizeof(ctx.kek));
+    unsigned char plaintext[64];
+    for (size_t i = 0; i < sizeof(plaintext); i++) plaintext[i] = (unsigned char)i;
+
+    size_t blob_len = 0;
+    unsigned char *blob = cwist_db_crypt_seal(&ctx, plaintext, sizeof(plaintext), &blob_len);
+    assert(blob != NULL);
+
+    blob[CWIST_DB_CRYPT_HDR_LEN] ^= 1;
+    size_t out_len = 0;
+    unsigned char *opened = cwist_db_crypt_open(&ctx, blob, blob_len, &out_len);
+    assert(opened == NULL);
+
+    blob[CWIST_DB_CRYPT_HDR_LEN] ^= 1;
+    blob[blob_len - 1] ^= 1;
+    opened = cwist_db_crypt_open(&ctx, blob, blob_len, &out_len);
+    assert(opened == NULL);
+
+    assert(cwist_db_crypt_open_legacy(&ctx, blob, blob_len, &out_len) == NULL);
+    free(blob);
+    printf("  Passed.\n");
+}
+
 /* -------------------------------------------------------------------------
  * Main
  * ---------------------------------------------------------------------- */
@@ -222,6 +250,7 @@ int main(void) {
     printf("=== DB Crypt tests ===\n");
     test_db_crypt_roundtrip();
     test_db_crypt_wrong_kek();
+    test_db_crypt_rejects_tampering();
 
     printf("\nAll tests passed.\n");
     return 0;
