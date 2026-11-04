@@ -1355,6 +1355,7 @@ TEST_TARGETS = test_worker_affinity \
                test_protobuf \
                test_core_utils \
                test_template \
+               test_config \
                test_simd_parser \
                test_orm \
                test_app_resource_limits \
@@ -1677,6 +1678,10 @@ test_core_utils: $(LIB_NAME) tests/test_core_utils.c
 test_template: $(LIB_NAME) tests/test_template.c
 	$(CC) $(CFLAGS) -o test_template tests/test_template.c $(LIB_NAME) $(LIBS)
 	./test_template
+
+test_config: $(LIB_NAME) tests/test_config.c
+	$(CC) $(CFLAGS) -o test_config tests/test_config.c $(LIB_NAME) $(LIBS)
+	./test_config
 
 test_simd_parser: $(LIB_NAME) tests/test_simd_parser.c
 	$(CC) $(CFLAGS) -o test_simd_parser tests/test_simd_parser.c $(LIB_NAME) $(LIBS)
