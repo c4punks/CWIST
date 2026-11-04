@@ -15,6 +15,7 @@
 #include <cwist/core/mem/alloc.h>
 #include <cwist/sys/err/cwist_err.h>
 #include "h3_hdr_out.h"
+#include "http3_global.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -36,11 +37,7 @@
 #include <openssl/evp.h>
 
 #include <lsquic.h>
-/* The WebTransport client is experimental and lives on dev. It needs
- * lsquic_wt.h, which main's lsquic does not have, so the Makefile refuses
- * CWIST_WEBTRANSPORT=client here; main builds CWIST_WEBTRANSPORT=server. */
 #ifdef CWIST_WEBTRANSPORT_CLIENT
-#error "the WebTransport client is experimental and not built on main"
 #include <lsquic_wt.h>
 #endif
 #include <lsxpack_header.h>
@@ -50,43 +47,6 @@
 #ifndef MSG_DONTWAIT
 #define MSG_DONTWAIT 0
 #endif
-
-/* ------------------------------------------------------------------ */
-/* Globals                                                            */
-/* ------------------------------------------------------------------ */
-
-static pthread_mutex_t g_h3c_global_mtx = PTHREAD_MUTEX_INITIALIZER;
-static int g_h3c_global_ref = 0;
-
-/**
- * @brief Initialize lsquic global client state on first use.
- * Thread-safe via g_h3c_global_mtx; reference-counted so paired calls with
- * h3c_global_cleanup() nest correctly.
- */
-static void h3c_global_init(void) {
-    pthread_mutex_lock(&g_h3c_global_mtx);
-    if (g_h3c_global_ref == 0) {
-        lsquic_global_init(LSQUIC_GLOBAL_CLIENT);
-    }
-    g_h3c_global_ref++;
-    pthread_mutex_unlock(&g_h3c_global_mtx);
-}
-
-/**
- * @brief Release one reference to lsquic global client state.
- * Runs lsquic_global_cleanup() when the last reference is dropped.
- * Safe to call more often than h3c_global_init().
- */
-static void h3c_global_cleanup(void) {
-    pthread_mutex_lock(&g_h3c_global_mtx);
-    if (g_h3c_global_ref > 0) {
-        g_h3c_global_ref--;
-        if (g_h3c_global_ref == 0) {
-            lsquic_global_cleanup();
-        }
-    }
-    pthread_mutex_unlock(&g_h3c_global_mtx);
-}
 
 /* ------------------------------------------------------------------ */
 /* Client handle                                                      */
@@ -124,6 +84,12 @@ struct cwist_webtransport_client_session {
 };
 #endif
 
+typedef struct h3c_dgram_node {
+    void *data;
+    size_t len;
+    struct h3c_dgram_node *next;
+} h3c_dgram_node;
+
 struct cwist_http3_client {
     SSL_CTX *ssl_ctx;
     lsquic_engine_t *engine;
@@ -152,9 +118,9 @@ struct cwist_http3_client {
         int pending;
     } out_dgram;
     struct {
-        void *data;
-        size_t len;
-        int ready;
+        h3c_dgram_node *head;
+        h3c_dgram_node *tail;
+        size_t count;
     } in_dgram;
 #ifdef CWIST_WEBTRANSPORT_CLIENT
     cwist_webtransport_client_session *wt_connecting;
@@ -407,8 +373,20 @@ static void h3c_wt_on_session_rejected(void *ctx, const struct lsquic_wt_connect
     pthread_mutex_unlock(&client->mtx);
 }
 
-static void h3c_wt_on_session_close(lsquic_wt_session_t *native, lsquic_wt_session_ctx_t *ctx,
-                                    uint64_t code, const char *reason, size_t reason_len) {
+/**
+ * @brief WebTransport callback: session closed by the peer or engine.
+ *
+ * Marks the session closed and drops the cached native session pointer; the
+ * session context itself is owned by cwist_webtransport_client_close().
+ *
+ * wti_on_session_close takes the WebTransport application error code, which
+ * is 32-bit on the wire. It was uint64_t in the older state of the lsquic
+ * WebTransport branch this file was first written against; the branch head
+ * (litespeedtech/lsquic#629) narrows it to uint32_t.
+ */
+static void
+h3c_wt_on_session_close(lsquic_wt_session_t *native, lsquic_wt_session_ctx_t *ctx, uint32_t code,
+                        const char *reason, size_t reason_len) {
     (void)native;
     (void)code;
     (void)reason;
@@ -484,6 +462,11 @@ static void h3c_on_read(lsquic_stream_t *stream, lsquic_stream_ctx_t *st_h) {
                 free(value);
                 free(name);
             }
+            /* Ownership moved to us with lsquic_stream_get_hset(): lsquic
+             * no longer discards the header set on stream teardown, so it
+             * must be freed here (it is a ~68 KiB h3c_hset_t).  All header
+             * name/value slices were copied out of decode_buf above. */
+            h3c_hsi_discard(hset);
             st->headers_done = 1;
 #ifdef CWIST_WEBTRANSPORT_CLIENT
             if (st->is_webtransport_connect) {
@@ -717,30 +700,40 @@ static ssize_t h3c_on_dg_write(lsquic_conn_t *conn, void *buf, size_t len) {
     return 0;
 }
 
-/**
- * @brief lsquic datagram-received callback: store one incoming datagram.
- *
- * Takes ownership of the datagram payload by copying it into the client's
- * in_dgram slot (protected by dgram_mtx), replacing any previously received
- * datagram that was not yet consumed, and sets the ready flag so the
- * receiving thread can pick it up.
- *
- * @param conn   The lsquic connection the datagram arrived on.
- * @param buf    Pointer to the datagram payload.
- * @param len    Payload length in bytes.
- */
+#define H3C_DGRAM_QUEUE_LIMIT 16
+
+static void h3c_dgram_enqueue(cwist_http3_client *client, const void *buf, size_t len) {
+    h3c_dgram_node *node = malloc(sizeof(*node));
+    if (!node) return;
+    node->data = malloc(len);
+    if (!node->data) {
+        free(node);
+        return;
+    }
+    memcpy(node->data, buf, len);
+    node->len = len;
+    node->next = NULL;
+
+    pthread_mutex_lock(&client->dgram_mtx);
+    if (client->in_dgram.count >= H3C_DGRAM_QUEUE_LIMIT) {
+        pthread_mutex_unlock(&client->dgram_mtx);
+        free(node->data);
+        free(node);
+        return;
+    }
+    if (client->in_dgram.tail)
+        client->in_dgram.tail->next = node;
+    else
+        client->in_dgram.head = node;
+    client->in_dgram.tail = node;
+    client->in_dgram.count++;
+    pthread_mutex_unlock(&client->dgram_mtx);
+}
+
 static void h3c_on_datagram(lsquic_conn_t *conn, const void *buf, size_t len) {
     cwist_http3_client *client = (cwist_http3_client *)lsquic_conn_get_ctx(conn);
     if (!client || !buf || len == 0) return;
-    pthread_mutex_lock(&client->dgram_mtx);
-    if (client->in_dgram.data) free(client->in_dgram.data);
-    client->in_dgram.data = malloc(len);
-    if (client->in_dgram.data) {
-        memcpy(client->in_dgram.data, buf, len);
-        client->in_dgram.len = len;
-        client->in_dgram.ready = 1;
-    }
-    pthread_mutex_unlock(&client->dgram_mtx);
+    h3c_dgram_enqueue(client, buf, len);
 }
 
 static const struct lsquic_stream_if h3c_stream_if = {
@@ -822,12 +815,49 @@ static SSL_CTX *h3c_get_ssl_ctx(void *peer_ctx, const struct sockaddr *local) {
 /* Client API                                                         */
 /* ------------------------------------------------------------------ */
 
+static lsquic_engine_t *h3c_engine_new(cwist_http3_client *client) {
+    struct lsquic_engine_settings settings;
+    lsquic_engine_init_settings(&settings, LSENG_HTTP);
+    settings.es_versions = (1 << LSQVER_I001) | (1 << LSQVER_I002);
+    settings.es_ping_period = 15;
+    settings.es_noprogress_timeout = 30;
+    settings.es_ecn = 1;
+    settings.es_pace_packets = 1;
+    settings.es_optimistic_nat = 1;
+    settings.es_datagrams = client->datagram_enabled ? 1 : 0;
+#ifdef CWIST_WEBTRANSPORT_CLIENT
+    settings.es_webtransport = client->datagram_enabled ? 0 : 1;
+    settings.es_max_webtransport_sessions = 1;
+    settings.es_http_datagrams = client->datagram_enabled ? 0 : 1;
+    settings.es_reset_stream_at = 1;
+#endif
+
+    char err_buf[256];
+    if (lsquic_engine_check_settings(&settings, LSENG_HTTP, err_buf, sizeof(err_buf)) != 0) {
+        fprintf(stderr, "[HTTP/3-CLIENT] Invalid engine settings: %s\n", err_buf);
+        return NULL;
+    }
+
+    struct lsquic_engine_api api = {
+        .ea_stream_if = &h3c_stream_if,
+        .ea_stream_if_ctx = client,
+        .ea_packets_out = h3c_packets_out,
+        .ea_packets_out_ctx = client,
+        .ea_get_ssl_ctx = h3c_get_ssl_ctx,
+        .ea_hsi_if = &h3c_hset_if,
+        .ea_hsi_ctx = NULL,
+        .ea_settings = &settings,
+        .ea_alpn = "h3",
+    };
+    return lsquic_engine_new(LSENG_HTTP, &api);
+}
+
 cwist_http3_client *cwist_http3_client_create(void) {
-    h3c_global_init();
+    cwist_h3_global_acquire();
 
     cwist_http3_client *client = calloc(1, sizeof(*client));
     if (!client) {
-        h3c_global_cleanup();
+        cwist_h3_global_release();
         return NULL;
     }
 
@@ -844,7 +874,7 @@ cwist_http3_client *cwist_http3_client_create(void) {
     client->ssl_ctx = SSL_CTX_new(method);
     if (!client->ssl_ctx) {
         free(client);
-        h3c_global_cleanup();
+        cwist_h3_global_release();
         return NULL;
     }
 
@@ -856,52 +886,14 @@ cwist_http3_client *cwist_http3_client_create(void) {
     SSL_CTX_set_verify(client->ssl_ctx, SSL_VERIFY_PEER, NULL);
     SSL_CTX_set_default_verify_paths(client->ssl_ctx);
 
-    struct lsquic_engine_settings settings;
-    lsquic_engine_init_settings(&settings, LSENG_HTTP);
-    settings.es_versions = (1 << LSQVER_I001) | (1 << LSQVER_I002);
-    settings.es_ping_period = 15;
-    settings.es_noprogress_timeout = 30;
-    settings.es_ecn = 1;
-    settings.es_pace_packets = 1;
-    settings.es_optimistic_nat = 1;
-    settings.es_datagrams = client->datagram_enabled ? 1 : 0;
-#ifdef CWIST_WEBTRANSPORT_CLIENT
-    settings.es_webtransport = 1;
-    settings.es_max_webtransport_sessions = 4;
-    settings.es_http_datagrams = 1;
-    settings.es_reset_stream_at = 1;
-#endif
-
-    char err_buf[256];
-    if (lsquic_engine_check_settings(&settings, LSENG_HTTP, err_buf, sizeof(err_buf)) != 0) {
-        fprintf(stderr, "[HTTP/3-CLIENT] Invalid engine settings: %s\n", err_buf);
-        SSL_CTX_free(client->ssl_ctx);
-        pthread_mutex_destroy(&client->mtx);
-        pthread_cond_destroy(&client->cond);
-        free(client);
-        h3c_global_cleanup();
-        return NULL;
-    }
-
-    struct lsquic_engine_api api = {
-        .ea_stream_if = &h3c_stream_if,
-        .ea_stream_if_ctx = client,
-        .ea_packets_out = h3c_packets_out,
-        .ea_packets_out_ctx = client,
-        .ea_get_ssl_ctx = h3c_get_ssl_ctx,
-        .ea_hsi_if = &h3c_hset_if,
-        .ea_hsi_ctx = NULL,
-        .ea_settings = &settings,
-        .ea_alpn = "h3",
-    };
-
-    client->engine = lsquic_engine_new(LSENG_HTTP, &api);
+    client->engine = h3c_engine_new(client);
     if (!client->engine) {
         SSL_CTX_free(client->ssl_ctx);
         pthread_mutex_destroy(&client->mtx);
         pthread_cond_destroy(&client->cond);
+        pthread_mutex_destroy(&client->dgram_mtx);
         free(client);
-        h3c_global_cleanup();
+        cwist_h3_global_release();
         return NULL;
     }
 
@@ -911,6 +903,16 @@ cwist_http3_client *cwist_http3_client_create(void) {
 void cwist_http3_client_destroy(cwist_http3_client *client) {
     if (!client) return;
     if (client->engine) {
+        /* Orderly teardown: lsquic_engine_destroy() drops live connections
+         * without draining them, which leaks lsquic-internal per-connection
+         * state (QPACK decoder header-in buffers, bandwidth sampler).
+         * Close the connection first and pump until the engine reaps it so
+         * lsquic can release that state; h3c_on_conn_closed() NULLs
+         * client->conn once the connection is gone. */
+        if (client->conn) {
+            lsquic_conn_close(client->conn);
+            for (int i = 0; i < 100 && client->conn; ++i) h3c_process_io(client, 20);
+        }
         lsquic_engine_destroy(client->engine);
     }
     if (client->ssl_ctx) {
@@ -921,7 +923,13 @@ void cwist_http3_client_destroy(cwist_http3_client *client) {
     }
     free(client->host);
     free(client->out_dgram.data);
-    free(client->in_dgram.data);
+    h3c_dgram_node *node = client->in_dgram.head;
+    while (node) {
+        h3c_dgram_node *next = node->next;
+        free(node->data);
+        free(node);
+        node = next;
+    }
 #ifdef CWIST_WEBTRANSPORT_CLIENT
     free(client->wt_connecting);
 #endif
@@ -929,7 +937,7 @@ void cwist_http3_client_destroy(cwist_http3_client *client) {
     pthread_mutex_destroy(&client->mtx);
     pthread_cond_destroy(&client->cond);
     free(client);
-    h3c_global_cleanup();
+    cwist_h3_global_release();
 }
 
 int cwist_http3_client_set_server(cwist_http3_client *client, const char *host, uint16_t port) {
@@ -989,7 +997,17 @@ void cwist_http3_client_enable_0rtt(cwist_http3_client *client, int enabled) {
 }
 
 void cwist_http3_client_enable_datagrams(cwist_http3_client *client, int enabled) {
-    if (client) client->datagram_enabled = enabled;
+    if (!client || client->conn || client->datagram_enabled == !!enabled) return;
+
+    int previous = client->datagram_enabled;
+    client->datagram_enabled = !!enabled;
+    lsquic_engine_t *engine = h3c_engine_new(client);
+    if (!engine) {
+        client->datagram_enabled = previous;
+        return;
+    }
+    lsquic_engine_destroy(client->engine);
+    client->engine = engine;
 }
 
 /* ------------------------------------------------------------------ */
@@ -1271,25 +1289,167 @@ ssize_t cwist_http3_client_recv_datagram(cwist_http3_client *client, void *buf, 
     if (!client || !buf || len == 0) return -1;
 
     pthread_mutex_lock(&client->dgram_mtx);
-    if (!client->in_dgram.ready || !client->in_dgram.data) {
+    h3c_dgram_node *node = client->in_dgram.head;
+    if (!node) {
         pthread_mutex_unlock(&client->dgram_mtx);
         errno = EAGAIN;
         return -1;
     }
-    if (len < client->in_dgram.len) {
+    if (len < node->len) {
         pthread_mutex_unlock(&client->dgram_mtx);
         errno = EMSGSIZE;
         return -1;
     }
-    size_t to_copy = client->in_dgram.len;
-    memcpy(buf, client->in_dgram.data, to_copy);
-    free(client->in_dgram.data);
-    client->in_dgram.data = NULL;
-    client->in_dgram.len = 0;
-    client->in_dgram.ready = 0;
+    size_t to_copy = node->len;
+    memcpy(buf, node->data, to_copy);
+    client->in_dgram.head = node->next;
+    if (!client->in_dgram.head) client->in_dgram.tail = NULL;
+    client->in_dgram.count--;
     pthread_mutex_unlock(&client->dgram_mtx);
+    free(node->data);
+    free(node);
     return (ssize_t)to_copy;
 }
+
+/* ------------------------------------------------------------------ */
+/* WebTransport client (LSQUIC proposal API)                          */
+/* ------------------------------------------------------------------ */
+
+#ifdef CWIST_WEBTRANSPORT_CLIENT
+/**
+ * @brief Add one request header. cwist_http_header_add() reports a failed
+ *        allocation on the JSON error channel (err_i16 stays 0), so the
+ *        result is checked with cwist_error_is_ok() and then released.
+ */
+static bool h3c_header_add(cwist_http_header_node **headers, const char *key, const char *value) {
+    cwist_error_t err = cwist_http_header_add(headers, key, value);
+    bool ok = cwist_error_is_ok(&err);
+    cwist_error_dispose(&err);
+    return ok;
+}
+#endif
+
+cwist_error_t
+cwist_http3_client_webtransport_connect(cwist_http3_client *client, const char *path,
+                                        const char *origin,
+                                        cwist_webtransport_client_session **out_session) {
+    cwist_error_t err = make_error(CWIST_ERR_INT16);
+    err.error.err_i16 = -1;
+    if (!client || !path || !out_session) return err;
+    *out_session = NULL;
+#ifndef CWIST_WEBTRANSPORT_CLIENT
+    (void)origin;
+    return err;
+#else
+    if (client->wt_connecting && client->wt_connecting->open) return err;
+
+    cwist_webtransport_client_session *session = calloc(1, sizeof(*session));
+    if (!session) return err;
+    session->client = client;
+    client->wt_connecting = session;
+
+    cwist_http_header_node *headers = NULL;
+    if (!h3c_header_add(&headers, ":protocol", "webtransport") ||
+        (origin && !h3c_header_add(&headers, "origin", origin))) {
+        cwist_http_header_free_all(headers);
+        free(session);
+        client->wt_connecting = NULL;
+        return err;
+    }
+
+    cwist_http_response *response = NULL;
+    err = cwist_http3_client_request(client, path, CWIST_HTTP_CONNECT, headers, NULL, 0, &response);
+    cwist_http_header_free_all(headers);
+    if (response) cwist_http_response_destroy(response);
+    if (err.error.err_i16 != 0 || !session->open || !session->native) {
+        if (client->wt_connecting == session) client->wt_connecting = NULL;
+        free(session);
+        err.error.err_i16 = -1;
+        return err;
+    }
+    *out_session = session;
+    return err;
+#endif
+}
+
+int cwist_webtransport_client_poll(cwist_http3_client *client, int timeout_ms) {
+    if (!client || !client->engine || client->udp_fd < 0) return -1;
+    h3c_process_io(client, timeout_ms > 0 ? timeout_ms : 1);
+    return 0;
+}
+
+int cwist_webtransport_client_is_open(const cwist_webtransport_client_session *session) {
+#ifdef CWIST_WEBTRANSPORT_CLIENT
+    return session && session->open && session->native;
+#else
+    (void)session;
+    return 0;
+#endif
+}
+
+void *cwist_webtransport_client_open_bidi(cwist_webtransport_client_session *session) {
+#ifdef CWIST_WEBTRANSPORT_CLIENT
+    return cwist_webtransport_client_is_open(session) ? lsquic_wt_open_bidi(session->native) : NULL;
+#else
+    (void)session;
+    return NULL;
+#endif
+}
+
+void *cwist_webtransport_client_open_uni(cwist_webtransport_client_session *session) {
+#ifdef CWIST_WEBTRANSPORT_CLIENT
+    return cwist_webtransport_client_is_open(session) ? lsquic_wt_open_uni(session->native) : NULL;
+#else
+    (void)session;
+    return NULL;
+#endif
+}
+
+ssize_t cwist_webtransport_client_stream_read(void *stream, void *buf, size_t len) {
+    return stream && buf && len ? lsquic_stream_read((lsquic_stream_t *)stream, buf, len) : -1;
+}
+
+ssize_t cwist_webtransport_client_stream_write(void *stream, const void *buf, size_t len) {
+    return stream && buf && len ? lsquic_stream_write((lsquic_stream_t *)stream, buf, len) : -1;
+}
+
+int cwist_webtransport_client_stream_flush(void *stream) {
+    return stream ? lsquic_stream_flush((lsquic_stream_t *)stream) : -1;
+}
+
+int cwist_webtransport_client_stream_close(void *stream) {
+    if (!stream) return -1;
+    lsquic_stream_close((lsquic_stream_t *)stream);
+    return 0;
+}
+
+ssize_t cwist_webtransport_client_send_datagram(cwist_webtransport_client_session *session,
+                                                const void *data, size_t len) {
+#ifdef CWIST_WEBTRANSPORT_CLIENT
+    return cwist_webtransport_client_is_open(session) && data && len
+               ? lsquic_wt_send_datagram(session->native, data, len)
+               : -1;
+#else
+    (void)session;
+    (void)data;
+    (void)len;
+    return -1;
+#endif
+}
+
+int cwist_webtransport_client_close(cwist_webtransport_client_session *session, uint64_t code,
+                                    const char *reason) {
+#ifdef CWIST_WEBTRANSPORT_CLIENT
+    if (!cwist_webtransport_client_is_open(session)) return -1;
+    return lsquic_wt_close(session->native, code, reason, reason ? strlen(reason) : 0);
+#else
+    (void)session;
+    (void)code;
+    (void)reason;
+    return -1;
+#endif
+}
+
 /* ------------------------------------------------------------------ */
 /* Resilience knobs                                                   */
 /* ------------------------------------------------------------------ */

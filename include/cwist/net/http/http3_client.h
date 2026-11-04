@@ -87,6 +87,9 @@ void cwist_http3_client_enable_0rtt(cwist_http3_client *client, int enabled);
  *
  * When enabled, unreliable datagrams can be sent and received
  * via cwist_http3_client_send_datagram() / recv_datagram().
+ * Configure this before the first connection. Changing the setting on an
+ * active connection has no effect. Raw QUIC datagram mode and WebTransport
+ * mode are mutually exclusive on one client.
  *
  * @param client Client handle.
  * @param enabled Non-zero to enable (default: 0).
