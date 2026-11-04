@@ -15,6 +15,7 @@
 #include <cwist/core/mem/alloc.h>
 #include <cwist/sys/err/cwist_err.h>
 #include "h3_hdr_out.h"
+#include "http3_global.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -46,43 +47,6 @@
 #ifndef MSG_DONTWAIT
 #define MSG_DONTWAIT 0
 #endif
-
-/* ------------------------------------------------------------------ */
-/* Globals                                                            */
-/* ------------------------------------------------------------------ */
-
-static pthread_mutex_t g_h3c_global_mtx = PTHREAD_MUTEX_INITIALIZER;
-static int g_h3c_global_ref = 0;
-
-/**
- * @brief Initialize lsquic global client state on first use.
- * Thread-safe via g_h3c_global_mtx; reference-counted so paired calls with
- * h3c_global_cleanup() nest correctly.
- */
-static void h3c_global_init(void) {
-    pthread_mutex_lock(&g_h3c_global_mtx);
-    if (g_h3c_global_ref == 0) {
-        lsquic_global_init(LSQUIC_GLOBAL_CLIENT);
-    }
-    g_h3c_global_ref++;
-    pthread_mutex_unlock(&g_h3c_global_mtx);
-}
-
-/**
- * @brief Release one reference to lsquic global client state.
- * Runs lsquic_global_cleanup() when the last reference is dropped.
- * Safe to call more often than h3c_global_init().
- */
-static void h3c_global_cleanup(void) {
-    pthread_mutex_lock(&g_h3c_global_mtx);
-    if (g_h3c_global_ref > 0) {
-        g_h3c_global_ref--;
-        if (g_h3c_global_ref == 0) {
-            lsquic_global_cleanup();
-        }
-    }
-    pthread_mutex_unlock(&g_h3c_global_mtx);
-}
 
 /* ------------------------------------------------------------------ */
 /* Client handle                                                      */
@@ -873,11 +837,11 @@ static lsquic_engine_t *h3c_engine_new(cwist_http3_client *client) {
 }
 
 cwist_http3_client *cwist_http3_client_create(void) {
-    h3c_global_init();
+    cwist_h3_global_acquire();
 
     cwist_http3_client *client = calloc(1, sizeof(*client));
     if (!client) {
-        h3c_global_cleanup();
+        cwist_h3_global_release();
         return NULL;
     }
 
@@ -894,7 +858,7 @@ cwist_http3_client *cwist_http3_client_create(void) {
     client->ssl_ctx = SSL_CTX_new(method);
     if (!client->ssl_ctx) {
         free(client);
-        h3c_global_cleanup();
+        cwist_h3_global_release();
         return NULL;
     }
 
@@ -913,7 +877,7 @@ cwist_http3_client *cwist_http3_client_create(void) {
         pthread_cond_destroy(&client->cond);
         pthread_mutex_destroy(&client->dgram_mtx);
         free(client);
-        h3c_global_cleanup();
+        cwist_h3_global_release();
         return NULL;
     }
 
@@ -951,7 +915,7 @@ void cwist_http3_client_destroy(cwist_http3_client *client) {
     pthread_mutex_destroy(&client->mtx);
     pthread_cond_destroy(&client->cond);
     free(client);
-    h3c_global_cleanup();
+    cwist_h3_global_release();
 }
 
 int cwist_http3_client_set_server(cwist_http3_client *client, const char *host, uint16_t port) {
