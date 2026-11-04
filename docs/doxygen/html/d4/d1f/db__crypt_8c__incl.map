@@ -1,25 +1,30 @@
 <map id="src/security/db_crypt/db_crypt.c" name="src/security/db_crypt/db_crypt.c">
-<area shape="rect" id="Node000001" title=" " alt="" coords="379,5,537,45"/>
+<area shape="rect" id="Node000001" title=" " alt="" coords="434,5,591,45"/>
 <area shape="rect" id="Node000002" href="$d9/df9/db__crypt_8h.html" title="Two&#45;level key hierarchy for encrypting an SQLite database blob." alt="" coords="5,93,177,133"/>
-<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="379,48,185,93,184,88,378,42"/>
-<area shape="rect" id="Node000005" href="$d5/d67/evp_8h.html" title="mbedTLS TLS backend: EVP subset (HMAC digest tags, AES&#45;256&#45;CBC)." alt="" coords="155,181,267,207"/>
-<area shape="poly" id="edge4_Node000001_Node000005" title=" " alt="" coords="380,35,344,43,307,54,273,72,243,95,231,111,223,130,215,168,210,167,217,129,226,109,239,91,270,67,305,49,343,37,379,30"/>
-<area shape="rect" id="Node000006" href="$d9/d9a/mem_8h.html" title="mbedTLS TLS backend: OPENSSL_cleanse (BoringSSL puts it here)." alt="" coords="253,101,375,126"/>
-<area shape="poly" id="edge6_Node000001_Node000006" title=" " alt="" coords="428,48,346,96,343,91,425,43"/>
-<area shape="rect" id="Node000008" href="$d5/d66/rand_8h.html" title="mbedTLS TLS backend: RAND_bytes over mbedTLS CTR&#45;DRBG." alt="" coords="399,101,517,126"/>
-<area shape="poly" id="edge9_Node000001_Node000008" title=" " alt="" coords="461,46,461,87,455,87,455,46"/>
-<area shape="rect" id="Node000009" title=" " alt="" coords="541,101,607,126"/>
-<area shape="poly" id="edge10_Node000001_Node000009" title=" " alt="" coords="485,43,549,90,546,95,482,48"/>
-<area shape="rect" id="Node000010" title=" " alt="" coords="632,101,703,126"/>
-<area shape="poly" id="edge11_Node000001_Node000010" title=" " alt="" coords="505,43,628,93,626,98,503,48"/>
-<area shape="rect" id="Node000011" title=" " alt="" coords="727,101,797,126"/>
-<area shape="poly" id="edge12_Node000001_Node000011" title=" " alt="" coords="538,42,624,64,716,91,723,93,721,98,715,96,623,69,536,47"/>
-<area shape="rect" id="Node000003" title=" " alt="" coords="174,255,249,280"/>
-<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="73,135,60,151,50,170,46,188,51,205,73,228,101,243,131,254,161,260,160,265,130,259,99,248,70,232,46,208,40,188,45,168,56,148,69,132"/>
-<area shape="rect" id="Node000004" title=" " alt="" coords="60,181,131,207"/>
-<area shape="poly" id="edge3_Node000002_Node000004" title=" " alt="" coords="95,133,97,167,91,168,90,134"/>
-<area shape="poly" id="edge5_Node000005_Node000003" title=" " alt="" coords="214,207,214,241,209,241,209,207"/>
-<area shape="rect" id="Node000007" href="$da/da0/crypto_8h.html" title="mbedTLS TLS backend: OPENSSL_cleanse / CRYPTO_memcmp." alt="" coords="291,181,420,207"/>
-<area shape="poly" id="edge7_Node000006_Node000007" title=" " alt="" coords="322,125,345,168,341,170,318,127"/>
-<area shape="poly" id="edge8_Node000007_Node000003" title=" " alt="" coords="333,209,248,251,246,246,331,204"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="434,45,191,94,190,89,433,40"/>
+<area shape="rect" id="Node000005" href="$da/da0/crypto_8h.html" title="mbedTLS TLS backend: OPENSSL_cleanse / CRYPTO_memcmp." alt="" coords="209,181,339,207"/>
+<area shape="poly" id="edge4_Node000001_Node000005" title=" " alt="" coords="434,38,377,47,320,59,272,75,254,85,243,95,236,112,238,132,246,151,258,169,253,172,242,154,233,133,231,112,238,92,251,80,270,70,319,54,376,42,433,33"/>
+<area shape="rect" id="Node000006" href="$d5/d67/evp_8h.html" title="mbedTLS TLS backend: EVP subset (HMAC digest tags, AES&#45;256&#45;CBC)." alt="" coords="363,181,475,207"/>
+<area shape="poly" id="edge6_Node000001_Node000006" title=" " alt="" coords="485,47,461,68,440,95,427,132,422,168,417,167,422,130,436,92,457,65,482,43"/>
+<area shape="rect" id="Node000007" href="$d0/dc6/hmac_8h.html" title="mbedTLS TLS backend: HMAC subset (HMAC&#45;SHA256, one&#45;shot + streaming)." alt="" coords="451,101,575,126"/>
+<area shape="poly" id="edge8_Node000001_Node000007" title=" " alt="" coords="515,46,515,87,510,87,510,46"/>
+<area shape="rect" id="Node000008" href="$d9/d9a/mem_8h.html" title="mbedTLS TLS backend: OPENSSL_cleanse (BoringSSL puts it here)." alt="" coords="253,101,375,126"/>
+<area shape="poly" id="edge11_Node000001_Node000008" title=" " alt="" coords="470,48,354,98,352,93,468,43"/>
+<area shape="rect" id="Node000009" href="$d5/d66/rand_8h.html" title="mbedTLS TLS backend: RAND_bytes over mbedTLS CTR&#45;DRBG." alt="" coords="599,101,717,126"/>
+<area shape="poly" id="edge13_Node000001_Node000009" title=" " alt="" coords="546,43,628,91,626,96,543,48"/>
+<area shape="rect" id="Node000010" title=" " alt="" coords="741,101,807,126"/>
+<area shape="poly" id="edge14_Node000001_Node000010" title=" " alt="" coords="580,43,730,91,735,93,734,98,728,96,578,48"/>
+<area shape="rect" id="Node000011" title=" " alt="" coords="832,101,903,126"/>
+<area shape="poly" id="edge15_Node000001_Node000011" title=" " alt="" coords="592,38,701,60,820,91,828,93,826,98,819,96,700,65,591,43"/>
+<area shape="rect" id="Node000012" title=" " alt="" coords="927,101,997,126"/>
+<area shape="poly" id="edge16_Node000001_Node000012" title=" " alt="" coords="592,32,743,53,830,70,916,91,924,93,922,98,915,96,829,75,743,59,591,37"/>
+<area shape="rect" id="Node000003" title=" " alt="" coords="309,255,383,280"/>
+<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="90,133,90,170,94,189,104,205,116,215,135,223,185,239,295,258,294,263,183,244,133,228,113,219,100,208,89,191,85,171,85,133"/>
+<area shape="rect" id="Node000004" title=" " alt="" coords="115,181,185,207"/>
+<area shape="poly" id="edge3_Node000002_Node000004" title=" " alt="" coords="108,132,135,168,131,172,103,135"/>
+<area shape="poly" id="edge5_Node000005_Node000003" title=" " alt="" coords="288,205,326,243,323,247,284,209"/>
+<area shape="poly" id="edge7_Node000006_Node000003" title=" " alt="" coords="409,209,370,247,366,243,405,205"/>
+<area shape="poly" id="edge10_Node000007_Node000003" title=" " alt="" coords="515,127,510,166,502,188,489,208,469,227,446,241,398,259,396,254,444,236,466,222,485,205,497,186,505,164,510,126"/>
+<area shape="poly" id="edge9_Node000007_Node000006" title=" " alt="" coords="501,128,445,174,442,170,497,124"/>
+<area shape="poly" id="edge12_Node000008_Node000005" title=" " alt="" coords="310,127,288,170,284,168,306,125"/>
 </map>

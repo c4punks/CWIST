@@ -11,5 +11,6 @@ var db__crypt_8h =
     [ "CWIST_DB_CRYPT_OK", "d9/df9/db__crypt_8h.html#a687fef102bb2c4b6c1491707409a6f94", null ],
     [ "cwist_db_crypt_ctx_t", "d9/df9/db__crypt_8h.html#a04ba672317171ec912e8c533a8b189b4", null ],
     [ "cwist_db_crypt_open", "d9/df9/db__crypt_8h.html#a535e9e0c49e217d59ea6c60e7cdd1101", null ],
+    [ "cwist_db_crypt_open_legacy", "d9/df9/db__crypt_8h.html#abd48d57a1d6b66cf87f0a080d1409e3b", null ],
     [ "cwist_db_crypt_seal", "d9/df9/db__crypt_8h.html#a143dd0293baa2219458fd4f1092763c8", null ]
 ];
