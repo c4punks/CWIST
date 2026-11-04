@@ -193,9 +193,9 @@ static cwist_sstring *render_internal(const char **template_str, const cJSON *co
                 char *filter = NULL;
                 char *pipe = strstr(trimmed_var, "|");
                 if (pipe) {
+                    char *ve = pipe;
+                    while (ve > trimmed_var && isspace((unsigned char)ve[-1])) *--ve = '\0';
                     *pipe = '\0';
-                    char *ve = pipe - 1;
-                    while (ve >= trimmed_var && isspace((unsigned char)*ve)) *ve-- = '\0';
                     filter = pipe + 1;
                     while (*filter == ' ') filter++;
                     char *fe = filter + strlen(filter) - 1;
