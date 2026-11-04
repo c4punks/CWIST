@@ -246,6 +246,8 @@ typedef struct gql_ws_conn {
     char **pending;
     size_t pending_count;
     size_t pending_cap;
+    size_t pending_bytes;
+    bool flush_pending;
 } gql_ws_conn_t;
 
 /* Reactor-posted flush node: drains a connection's pending queue on the
@@ -384,8 +386,14 @@ static void gql_ws_send_error(cwist_websocket_async *ws, const char *id, const c
 /* Pending queue + flush delivery                                      */
 /* ------------------------------------------------------------------ */
 
+#define GQL_WS_MAX_PENDING_BYTES (1024u * 1024u)
+
 /* Append a `next` message to the connection's queue (caller holds g_broker_lock). */
 static bool gql_ws_pending_push(gql_ws_conn_t *conn, char *msg) {
+    size_t msg_len = strlen(msg);
+    if (msg_len > GQL_WS_MAX_PENDING_BYTES ||
+        conn->pending_bytes > GQL_WS_MAX_PENDING_BYTES - msg_len)
+        return false;
     if (conn->pending_count == conn->pending_cap) {
         size_t new_cap = conn->pending_cap ? conn->pending_cap * 2 : 8;
         char **np = (char **)cwist_alloc_array(new_cap, sizeof(char *));
@@ -397,6 +405,7 @@ static bool gql_ws_pending_push(gql_ws_conn_t *conn, char *msg) {
         conn->pending_cap = new_cap;
     }
     conn->pending[conn->pending_count++] = msg;
+    conn->pending_bytes += msg_len;
     return true;
 }
 
@@ -442,10 +451,12 @@ static void gql_ws_flush_cb(void *ctx) {
         if (msgs) {
             memcpy(msgs, conn->pending, count * sizeof(char *));
             conn->pending_count = 0;
+            conn->pending_bytes = 0;
         } else {
             count = 0; /* OOM: leave queued for the next flush */
         }
     }
+    conn->flush_pending = false;
     pthread_mutex_unlock(&g_broker_lock);
 
     for (size_t i = 0; i < count; i++) {
@@ -463,13 +474,29 @@ static void gql_ws_flush_cb(void *ctx) {
 
 /* Queue a flush node for @p conn; takes a reference released by the callback. */
 static void gql_ws_post_flush(gql_ws_conn_t *conn) {
+    pthread_mutex_lock(&g_broker_lock);
+    if (conn->flush_pending) {
+        pthread_mutex_unlock(&g_broker_lock);
+        return;
+    }
+    conn->flush_pending = true;
+    pthread_mutex_unlock(&g_broker_lock);
+
     gql_ws_flush_t *flush = (gql_ws_flush_t *)cwist_alloc(sizeof(*flush));
-    if (!flush) return;
+    if (!flush) {
+        pthread_mutex_lock(&g_broker_lock);
+        conn->flush_pending = false;
+        pthread_mutex_unlock(&g_broker_lock);
+        return;
+    }
     flush->conn = conn;
     flush->node.cb = gql_ws_flush_cb;
     flush->node.ctx = flush;
     gql_ws_conn_ref(conn);
     if (!cwist_reactor_post(conn->reactor, &flush->node)) {
+        pthread_mutex_lock(&g_broker_lock);
+        conn->flush_pending = false;
+        pthread_mutex_unlock(&g_broker_lock);
         gql_ws_conn_unref(conn);
         cwist_free(flush);
     }
@@ -722,6 +749,8 @@ static gql_ws_conn_t *gql_ws_conn_create(cwist_graphql_ws_t *gws, cwist_reactor_
     conn->pending = NULL;
     conn->pending_count = 0;
     conn->pending_cap = 0;
+    conn->pending_bytes = 0;
+    conn->flush_pending = false;
     return conn;
 }
 
@@ -735,6 +764,7 @@ static void gql_ws_conn_dispose(gql_ws_conn_t *conn) {
     gql_ws_conn_purge_ops(conn);
     for (size_t i = 0; i < conn->pending_count; i++) cwist_free(conn->pending[i]);
     conn->pending_count = 0;
+    conn->pending_bytes = 0;
     pthread_mutex_unlock(&g_broker_lock);
     gql_ws_conn_unref(conn);
 }
