@@ -12,7 +12,7 @@ var searchData=
   ['1_20configure_20http_203_20and_20a_20session_20handler_9',['1. Configure HTTP/3 and a session handler',['../d2/dcb/md_docs_2tutorials_2webtransport-server.html#autotoc_md508',1,'']]],
   ['1_20create_20the_20application_10',['1. Create the application',['../d4/db0/md_docs_2tutorials_2blog-crud.html#autotoc_md493',1,'']]],
   ['1_20cwist_5ffull_5fgc_20bool_20—_20the_20global_20toggle_11',['1. cwist_full_gc(bool) — the global toggle',['../d9/dd1/md_docs_2GC.html#autotoc_md323',1,'']]],
-  ['1_20getting_20started_12',['1. Getting started',['..//home/yjlee/cwist/.main-v42/docs/README.md#autotoc_md412',1,'']]],
+  ['1_20getting_20started_12',['1. Getting started',['..//home/runner/work/CWIST/CWIST/docs/README.md#autotoc_md412',1,'']]],
   ['1_20hello_20world_3a_20첫_20서버_20띄우기_13',['1. Hello World: 첫 서버 띄우기',['../df/df1/md_docs_2tutorial_2korean_2cwist__tutorial.html#autotoc_md478',1,'']]],
   ['1_20hello_20world_3a_20starting_20your_20first_20server_14',['1. Hello World: Starting Your First Server',['../dd/d4c/md_docs_2tutorial_2cwist__tutorial.html#autotoc_md462',1,'']]],
   ['1_20lo_20shu_20magic_20square_20naak_20seo_20洛書_15',['1. Lo Shu Magic Square (Naak-seo / 洛書)',['../d6/d9f/md_docs_2references_2mux__algorithm__references.html#autotoc_md433',1,'']]],

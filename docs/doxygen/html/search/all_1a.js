@@ -42,7 +42,7 @@ var searchData=
   ['opt_20in_20wrk_20raw_20corrected_20latency_20histograms_39',['Opt-in wrk raw/corrected latency histograms',['../d1/dfd/md_docs_2performance_2wrk-dual-histogram.html',1,'']]],
   ['options_40',['Compile-time build options',['../d5/d9e/md_docs_2build-options.html',1,'']]],
   ['order_20and_20loss_20under_20growth_3a_20tests_20test_5fhttps_5fpool_5fqueue_20c_41',['4. Order and loss under growth: tests/test_https_pool_queue.c',['../df/d28/md_docs_2performance_2https-pool-dynamic-queue.html#autotoc_md387',1,'']]],
-  ['oriented_20guides_42',['2. Task-oriented guides',['..//home/yjlee/cwist/.main-v42/docs/README.md#autotoc_md413',1,'']]],
+  ['oriented_20guides_42',['2. Task-oriented guides',['..//home/runner/work/CWIST/CWIST/docs/README.md#autotoc_md413',1,'']]],
   ['orm_2ec_43',['orm.c',['../d8/d03/orm_8c.html',1,'']]],
   ['orm_2eh_44',['orm.h',['../d6/d9b/orm_8h.html',1,'']]],
   ['orm_5fproto_5fmagic_45',['ORM_PROTO_MAGIC',['../d5/dcf/orm__socket_8c.html#aad0e1b104655825167fa9ad8dcdd97be',1,'orm_socket.c']]],

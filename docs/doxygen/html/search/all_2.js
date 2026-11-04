@@ -20,7 +20,7 @@ var searchData=
   ['2_20routing_20and_20handlers_20mux_20router_17',['2. Routing and Handlers (Mux Router)',['../dd/d4c/md_docs_2tutorial_2cwist__tutorial.html#autotoc_md463',1,'']]],
   ['2_20separate_20the_20artifact_20from_20state_18',['2. Separate the artifact from state',['../db/de3/md_docs_2deployment_2wasmtime-appliance.html#autotoc_md290',1,'']]],
   ['2_20socket_20server_19',['WASI 0.2 socket server',['../d6/d26/md_docs_2api_2wasi.html#autotoc_md202',1,'']]],
-  ['2_20task_20oriented_20guides_20',['2. Task-oriented guides',['..//home/yjlee/cwist/.main-v42/docs/README.md#autotoc_md413',1,'']]],
+  ['2_20task_20oriented_20guides_20',['2. Task-oriented guides',['..//home/runner/work/CWIST/CWIST/docs/README.md#autotoc_md413',1,'']]],
   ['2_20two_20letter_20sequence_20default_21',['2. Two-letter sequence (default)',['../d0/db4/md_docs_2versioning.html#autotoc_md513',1,'']]],
   ['2_20wire_20format_20produced_20by_20cwist_5fdb_5fcrypt_5fseal_22',['Version 2 wire format produced by cwist_db_crypt_seal()',['../d9/df9/db__crypt_8h.html#autotoc_md2',1,'']]],
   ['2026_2009_2012_23',['Component measurement (2026-09-12)',['../dd/d56/md_docs_2reactor-wakeup-regression.html#autotoc_md410',1,'']]],

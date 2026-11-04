@@ -38,7 +38,7 @@ var searchData=
   ['bench_20server_20and_20workload_20mix_35',['Bench server and workload mix',['../db/d05/md_docs_2soak-testing.html#autotoc_md456',1,'']]],
   ['benchmark_20methodology_36',['Web Server Benchmark Methodology',['../d6/d42/md_docs_2webserver-benchmark.html',1,'']]],
   ['benchmark_20run_37',['Latest benchmark run',['../index.html#autotoc_md18',1,'']]],
-  ['benchmarks_20and_20methodology_38',['5. Benchmarks and methodology',['..//home/yjlee/cwist/.main-v42/docs/README.md#autotoc_md416',1,'']]],
+  ['benchmarks_20and_20methodology_38',['5. Benchmarks and methodology',['..//home/runner/work/CWIST/CWIST/docs/README.md#autotoc_md416',1,'']]],
   ['bidirectional_20communication_39',['8. WebSocket Integration (Real-Time Bidirectional Communication)',['../dd/d4c/md_docs_2tutorial_2cwist__tutorial.html#autotoc_md470',1,'']]],
   ['big_20dumb_20reply_20bdr_40',['8. Big Dumb Reply (BDR)',['../da/dca/md_docs_2REFERENCE.html#autotoc_md427',1,'']]],
   ['big_5fdumb_5freply_2ec_41',['big_dumb_reply.c',['../dc/da3/big__dumb__reply_8c.html',1,'']]],
