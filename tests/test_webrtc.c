@@ -217,6 +217,11 @@ static void unit_checks(void) {
         assert(parsed.sin_port == htons(54321));
         assert(parsed.sin_addr.s_addr == htonl(0x7F000001));
 
+        uint8_t truncated_req[19] = {0};
+        assert(cwist_ice_stun_build_response(resp, sizeof(resp), truncated_req,
+                                             sizeof(truncated_req), &mapped,
+                                             "testpassword0123456789") == -1);
+
         uint8_t short_msg[20];
         memcpy(short_msg, req, sizeof(short_msg));
         short_msg[2] = 0xFF;
