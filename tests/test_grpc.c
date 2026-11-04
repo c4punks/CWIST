@@ -608,6 +608,48 @@ int main(void) {
     cwist_test_client_destroy(client);
     cwist_app_destroy(app);
 
+    /* Replacing a route must replace both its gRPC mode and HTTP dispatcher. */
+    {
+        cwist_app *replace_app = cwist_app_create();
+        assert(replace_app != NULL);
+        grpc_size_ctx unary_calls = {0};
+        grpc_size_ctx stream_calls = {0};
+        const char *path = "/cwist.test.Echo/Replace";
+        uint8_t *replace_frame = NULL;
+        size_t replace_frame_len = 0;
+        assert(cwist_grpc_encode_message(NULL, 0, 0, &replace_frame, &replace_frame_len) == 0);
+        assert(cwist_app_grpc_unary(replace_app, "cwist.test.Echo", "Replace", size_unary,
+                                    &unary_calls) == 0);
+        cwist_test_client *replace_client = cwist_test_client_create(replace_app);
+        assert(replace_client != NULL);
+        cwist_test_client_request_options replace_opts = {
+            .body = (const char *)replace_frame,
+            .body_len = replace_frame_len,
+            .content_type = "application/grpc",
+        };
+        res = cwist_test_client_request_ex(replace_client, CWIST_HTTP_POST, path, &replace_opts);
+        assert(res != NULL && strcmp(cwist_http_header_get(res->headers, "grpc-status"), "0") == 0);
+        assert(unary_calls.calls == 1 && stream_calls.calls == 0);
+        cwist_http_response_destroy(res);
+
+        assert(cwist_app_grpc_stream(replace_app, "cwist.test.Echo", "Replace", size_stream,
+                                     &stream_calls) == 0);
+        res = cwist_test_client_request_ex(replace_client, CWIST_HTTP_POST, path, &replace_opts);
+        assert(res != NULL && strcmp(cwist_http_header_get(res->headers, "grpc-status"), "0") == 0);
+        assert(unary_calls.calls == 1 && stream_calls.calls == 1);
+        cwist_http_response_destroy(res);
+
+        assert(cwist_app_grpc_unary(replace_app, "cwist.test.Echo", "Replace", size_unary,
+                                    &unary_calls) == 0);
+        res = cwist_test_client_request_ex(replace_client, CWIST_HTTP_POST, path, &replace_opts);
+        assert(res != NULL && strcmp(cwist_http_header_get(res->headers, "grpc-status"), "0") == 0);
+        assert(unary_calls.calls == 2 && stream_calls.calls == 1);
+        cwist_http_response_destroy(res);
+        cwist_test_client_destroy(replace_client);
+        cwist_app_destroy(replace_app);
+        cwist_free(replace_frame);
+    }
+
     /* grpc-timeout parsing */
     uint64_t ms = 0;
     assert(cwist_grpc_parse_timeout("100m", &ms) == 0 && ms == 100);
