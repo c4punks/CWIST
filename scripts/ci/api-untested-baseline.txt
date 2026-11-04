@@ -144,8 +144,6 @@ cwist_session_delete
 cwist_session_invalidate
 cwist_sse_stream_comment
 cwist_tcp_cork_enabled
-cwist_template_render
-cwist_template_render_file
 cwist_test_client_clear_cookies
 cwist_webrtc_conn_retain
 cwist_websocket_async_close
