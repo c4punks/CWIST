@@ -252,6 +252,10 @@ cwist_ws_frame *cwist_websocket_receive(cwist_websocket *ws) {
 
         bool fin = (head[0] & 0x80) != 0;
         cwist_ws_opcode_t opcode = head[0] & 0x0F;
+        if (opcode != CWIST_WS_FRAME_CONTINUATION && opcode != CWIST_WS_FRAME_TEXT &&
+            opcode != CWIST_WS_FRAME_BINARY && opcode != CWIST_WS_FRAME_CLOSE &&
+            opcode != CWIST_WS_FRAME_PING && opcode != CWIST_WS_FRAME_PONG)
+            return NULL;
         bool masked = (head[1] & 0x80) != 0;
         uint64_t payload_len = head[1] & 0x7F;
 
