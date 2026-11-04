@@ -375,6 +375,11 @@ static void conn_start_dtls(struct cwist_webrtc_conn *conn) {
 /** @brief DTLS finished: open SCTP and start the usrsctp clock. */
 static void conn_on_dtls_up(struct cwist_webrtc_conn *conn) {
     cwist_webrtc_ctx *ctx = conn->ctx;
+    if (!cwist_dtls_verify_fingerprint(conn->ssl, conn->peer_fingerprint)) {
+        conn->close_requested = true;
+        conn_mark_dirty(conn);
+        return;
+    }
     conn->state = CWIST_CONN_ESTABLISHED;
     if (cwist_sctp_conn_open(conn) < 0) {
         conn->close_requested = true;
@@ -855,7 +860,7 @@ static cwist_webrtc_ctx *ctx_create(cwist_reactor_t *reactor, bool owns_reactor,
     if (cwist_dtls_fingerprint(ctx->cert, ctx->fingerprint, sizeof(ctx->fingerprint)) < 0)
         goto fail;
     ctx->server_ssl_ctx = cwist_dtls_ctx_new(1, ctx->cert, ctx->pkey);
-    ctx->client_ssl_ctx = cwist_dtls_ctx_new(0, NULL, NULL);
+    ctx->client_ssl_ctx = cwist_dtls_ctx_new(0, ctx->cert, ctx->pkey);
     if (!ctx->server_ssl_ctx || !ctx->client_ssl_ctx) goto fail;
 
     cwist_ice_random_creds(ctx->ice_ufrag, sizeof(ctx->ice_ufrag), ctx->ice_pwd,
@@ -1053,6 +1058,7 @@ int cwist_webrtc_handle_offer(cwist_webrtc_ctx *ctx, const char *offer, char *an
     if (!conn) return -1;
     snprintf(conn->peer_ufrag, sizeof(conn->peer_ufrag), "%s", info.ice_ufrag);
     snprintf(conn->peer_pwd, sizeof(conn->peer_pwd), "%s", info.ice_pwd);
+    snprintf(conn->peer_fingerprint, sizeof(conn->peer_fingerprint), "%s", info.fingerprint);
     atomic_store(&ctx->ice_lite_server, 1);
     conn->reg_post.cb = park_post_cb;
     conn->reg_post.ctx = conn;
@@ -1076,11 +1082,14 @@ static void connect_post_cb(void *arg) {
 }
 
 cwist_webrtc_conn *cwist_webrtc_connect(cwist_webrtc_ctx *ctx, const struct sockaddr_in *remote,
-                                        const char *peer_ufrag, const char *peer_pwd) {
+                                        const char *peer_ufrag, const char *peer_pwd,
+                                        const char *peer_fingerprint) {
     struct cwist_webrtc_conn *conn = conn_new(ctx, remote, false);
     if (!conn) return NULL;
     snprintf(conn->peer_ufrag, sizeof(conn->peer_ufrag), "%s", peer_ufrag);
     snprintf(conn->peer_pwd, sizeof(conn->peer_pwd), "%s", peer_pwd);
+    snprintf(conn->peer_fingerprint, sizeof(conn->peer_fingerprint), "%s",
+             peer_fingerprint ? peer_fingerprint : "");
     RAND_bytes(conn->stun_txid, sizeof(conn->stun_txid));
     cwist_webrtc_conn_retain(conn); /* returned to the caller */
     conn->reg_post.cb = connect_post_cb;
