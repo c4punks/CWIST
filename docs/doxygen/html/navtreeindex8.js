@@ -1,5 +1,11 @@
 var NAVTREEINDEX8 =
 {
+"d6/d25/md_docs_2ko_2tutorials_2blog-crud.html#autotoc_md701":[68,1],
+"d6/d25/md_docs_2ko_2tutorials_2blog-crud.html#autotoc_md702":[68,2],
+"d6/d25/md_docs_2ko_2tutorials_2blog-crud.html#autotoc_md703":[68,3],
+"d6/d26/md_docs_2api_2wasi.html":[13],
+"d6/d26/md_docs_2api_2wasi.html#autotoc_md201":[13,0],
+"d6/d26/md_docs_2api_2wasi.html#autotoc_md202":[13,1],
 "d6/d26/md_docs_2api_2wasi.html#autotoc_md203":[13,2],
 "d6/d26/md_docs_2api_2wasi.html#autotoc_md204":[13,2,0],
 "d6/d26/md_docs_2api_2wasi.html#autotoc_md205":[13,2,1],
@@ -243,11 +249,5 @@ var NAVTREEINDEX8 =
 "d6/dbb/grpc_8h_source.html":[94,0,1,0,2,2,0],
 "d6/dcf/component_8h.html":[94,0,1,0,0,2,1],
 "d6/dcf/component_8h.html#a3f108f0a594c2c2197a32d04929a7752":[94,0,1,0,0,2,1,3],
-"d6/dcf/component_8h.html#a596732529ce1c77fdbc9ec22361bd997":[94,0,1,0,0,2,1,2],
-"d6/dcf/component_8h.html#a7b6dda391f54db4c418c149e5ab3414c":[94,0,1,0,0,2,1,0],
-"d6/dcf/component_8h.html#ac97ffc0b00376420ef6e387675d8b284":[94,0,1,0,0,2,1,1],
-"d6/dcf/component_8h.html#af332cd7d6c29fd5b37fd223e4d69baea":[94,0,1,0,0,2,1,4],
-"d6/dcf/component_8h.html#af8728805ad38df742377aa923064eef0":[94,0,1,0,0,2,1,5],
-"d6/dcf/component_8h_source.html":[94,0,1,0,0,2,1],
-"d6/dd4/db__sync_8h.html":[94,0,1,0,2,0,0]
+"d6/dcf/component_8h.html#a596732529ce1c77fdbc9ec22361bd997":[94,0,1,0,0,2,1,2]
 };
